@@ -1,6 +1,25 @@
-# `@xeprime/mobile` — App di động XePrime
+# App di động XePrime — HAI app phát hành riêng (tách 25/09/2026)
 
-React Native (Expo SDK 57) + Expo Router, nằm trong monorepo pnpm của XePrime.
+> ⚠️ **`@xeprime/mobile` không còn tồn tại.** Thư mục này giờ chứa BA package:
+>
+> | Thư mục | Package | Là gì |
+> | --- | --- | --- |
+> | `customer/` | `@xeprime/mobile-customer` | **XePrime** — chợ thuê xe + Owner Lite (scheme `xeprime`, `vn.xeprime.mobile`, Metro 8081) |
+> | `manage/` | `@xeprime/mobile-manage` | **XePrime Partner** — bộ quản lý gian hàng tuyến gói (scheme `xeprimepartner`, `vn.xeprime.partner` — PLACEHOLDER chờ team chốt, Metro 8082) |
+> | `shared/` | `@xeprime/mobile-shared` | Phần dùng chung: `src/` (features, components, api, i18n, theme…), assets, plugins, scripts |
+>
+> Mỗi app là MỘT Expo project độc lập (app.json, metro, native `android/`/`ios/`, eas.json
+> riêng) — cài và chạy song song được trên cùng thiết bị. Alias `@/x` phân giải OVERLAY:
+> `<app>/src/x` trước, rơi về `shared/src/x` — hai file overlay quan trọng nhất của mỗi app là
+> `src/navigation/routes.ts` (bản đồ route CỦA APP) và `src/app-profile.ts` (clientApp, luật
+> chọn khu, allowlist deep link thông báo). Thiết kế + impact: `docs/mobile-split-impact.md`
+> ở gốc repo.
+>
+> Chạy: `pnpm --filter @xeprime/mobile-customer start` · `pnpm --filter @xeprime/mobile-manage start`.
+> Phần còn lại của README viết cho app HỢP NHẤT cũ — kiến trúc bên trong vẫn đúng, nhưng đường
+> dẫn `apps/mobile/src` nay là `apps/mobile/shared/src`, và cây `app/manage/**` sống ở app Partner.
+
+React Native (Expo SDK 54) + Expo Router, nằm trong monorepo pnpm của XePrime.
 Cùng backend, cùng hợp đồng API, cùng bộ ADR với `apps/web`.
 
 > Đọc `CLAUDE.md` ở gốc repo và `docs/decisions/` trước. README này chỉ nói phần **riêng của
@@ -9,7 +28,62 @@ Cùng backend, cùng hợp đồng API, cùng bộ ADR với `apps/web`.
 
 ---
 
-## 1. Chạy được trong 3 lệnh
+## 1. Lệnh thường dùng — HAI app
+
+Mỗi app là một Expo project riêng, nên mọi lệnh đều đi qua `--filter` của package đó:
+
+| Việc | XePrime (khách) | XePrime Partner |
+| --- | --- | --- |
+| Cài phụ thuộc (ở GỐC repo, một lần cho cả monorepo) | `pnpm install` | — |
+| Mở Metro | `pnpm --filter @xeprime/mobile-customer start` | `pnpm --filter @xeprime/mobile-manage start` |
+| Build + chạy Android | `… mobile-customer android` | `… mobile-manage android` |
+| Build + chạy iOS | `… mobile-customer ios` | `… mobile-manage ios` |
+| Sinh lại `android/` | `… mobile-customer prebuild` | `… mobile-manage prebuild` |
+| Sinh lại SẠCH (xoá native cũ) | `… mobile-customer prebuild:clean` | `… mobile-manage prebuild:clean` |
+| APK debug (Gradle, nhanh) | `… mobile-customer build:android:debug` | `… mobile-manage build:android:debug` |
+| Cài APK debug vừa build | `… mobile-customer install:android` | `… mobile-manage install:android` |
+| Dọn Gradle | `… mobile-customer clean:android` | `… mobile-manage clean:android` |
+| APK cài thử (EAS local) | `… mobile-customer build:android:apk` | `… mobile-manage build:android:apk` |
+| AAB phát hành (EAS local) | `… mobile-customer build:android:aab` | `… mobile-manage build:android:aab` |
+| Typecheck · Lint · Test | `… mobile-customer typecheck` / `lint` / `test` | `… mobile-manage typecheck` / `lint` / `test` |
+
+### Cổng Metro — mỗi app một cổng, KHÔNG đổi tuỳ tiện
+
+| App | Metro | Android `applicationId` | Scheme |
+| --- | --- | --- | --- |
+| XePrime (khách) | **8081** | `vn.xeprime.mobile` | `xeprime://` |
+| XePrime Partner | **8082** | `vn.xeprime.partner` | `xeprimepartner://` |
+
+Hai app cài song song trên MỘT máy, nên hai Metro phải chạy cùng lúc — cứ mở hai terminal và
+chạy `start` của từng app.
+
+Cổng nằm ở BA chỗ và phải khớp nhau, đổi thì đổi cả ba:
+
+1. `scripts` trong `package.json` của app (`--port`, và tham số của `adb:reverse`);
+2. `app.config.ts` → plugin `with-android-dev-server-port` — số này được ghim vào bản build
+   native, vì React Native mặc định hỏi Metro ở 8081 cho MỌI app;
+3. sau khi đổi (2) phải `prebuild` + build lại APK, nếu không bản cũ vẫn hỏi cổng cũ.
+
+Triệu chứng khi lệch: app mở lên báo "Unable to load script", hoặc tệ hơn là tải TRÚNG bundle
+của app kia và chạy sai cây route.
+
+### Chạy trên máy ảo / máy thật
+
+`start` và `android` tự chạy `adb reverse` cho cổng Metro của app đó + cổng 4000 (API). Nếu
+máy ảo vẫn không thấy Metro, trỏ thẳng host của emulator:
+
+```bash
+adb shell "run-as <applicationId> sh -c 'mkdir -p shared_prefs'"   # nếu chưa có
+# rồi đặt debug_http_host = 10.0.2.2:<cổng của app>
+```
+
+### Cấu hình môi trường
+
+Mỗi app một `.env` riêng (`customer/.env`, `manage/.env`; mẫu ở `.env.example`) —
+`shared/` KHÔNG có và không cần. Biến `EXPO_PUBLIC_*` được nhúng LÚC BUNDLE, nên **sửa `.env`
+xong phải khởi động lại Metro**; bấm `r` để reload là vẫn giá trị cũ.
+
+## 1b. Ghi chú cũ về cách chạy (app HỢP NHẤT trước khi tách)
 
 ```bash
 pnpm install                            # ở gốc repo

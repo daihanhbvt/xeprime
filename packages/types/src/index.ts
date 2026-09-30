@@ -41,6 +41,7 @@ export * from './rbac';
 export * from './tenant-support';
 export * from './notifications';
 export * from './push';
+export * from './mobile-client-app';
 export * from './badges';
 export * from './api';
 export * from './province';

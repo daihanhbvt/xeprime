@@ -91,6 +91,7 @@
     "DEPOSIT_ALWAYS_REQUIRED": "Shops on the commission track always collect deposits through XePrime — this switch cannot be turned off.",
     "SHOP_VERIFICATION_PENDING": "Your shop profile is already waiting to be verified.",
     "PACKAGE_ONBOARDING_INCOMPLETE": "Your shop has not finished paying for its first plan. Complete the transfer to unlock the shop management tools.",
+    "PARTNER_ACCESS_REQUIRED": "This account is not eligible for the XePrime Partner app. It is for shops on a service plan; if you are a renter or a commission-track owner, please use the XePrime app.",
     "SHOP_NOT_ACTIVE": "Your shop is locked, so this action is not available.",
     "TENANT_BILLING_NOT_CONFIGURED": "This shop has no active service plan, so fees cannot be calculated. Contact XePrime support before accepting new bookings.",
     "VEHICLE_PUBLISH_INCOMPLETE": "This vehicle is still missing required details, so it cannot be submitted.",
@@ -135,6 +136,8 @@
     "SUPPORT_ACTION_NOT_ALLOWED": "This action is outside the scope of the support session.",
     "SUPPORT_FIELD_NOT_ALLOWED": "The support session cannot change these fields (price, services, branch, operating status…).",
     "SUPPORT_MEDIA_OUT_OF_SCOPE": "This photo is not in this shop's photo storage. Upload it again within the support session.",
+    "CUSTOMER_APP_NOT_AVAILABLE": "Shop accounts use the XePrime Partner app. Please open XePrime Partner and sign in with this account.",
+    "PARTNER_REGISTRATION_NOT_SUPPORTED": "The XePrime Partner app does not create new accounts. Please sign up and register your shop in the XePrime app, then come back here to sign in.",
     "SUPPORT_REASON_REQUIRED": "This action needs its own reason — say why, or give the owner's request code.",
     "SUPPORT_OPEN_TRIPS": "The vehicle has trips that haven't ended — this can't be changed right now.",
     "SUPPORT_BLOCK_NOT_OWNED": "A support session can only edit or remove future blocks it created itself."

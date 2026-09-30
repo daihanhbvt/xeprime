@@ -419,6 +419,44 @@ export class AuthService {
    * bắt P2002 rồi đọc lại. User tạo bằng SĐT có `passwordHash = null` (như tài khoản Google/FB) —
    * sau này người dùng có thể tự đặt mật khẩu / liên kết Google mà không chặn luồng đặt xe.
    */
+  /**
+   * Tìm tài khoản theo SĐT — KHÔNG tạo mới. Trả `null` khi số chưa có tài khoản nào.
+   *
+   * Sinh ra cho app XePrime Partner: ở đó một số chưa đăng ký KHÔNG được âm thầm thành tài
+   * khoản mới (`PARTNER_REGISTRATION_NOT_SUPPORTED`), vì tài khoản đó chắc chắn không có gian
+   * hàng nên sẽ bị cổng phạm vi app chặn ngay sau đó — và thứ còn lại là một hàng rác đã
+   * CHIẾM mất số điện thoại của chính người dùng đó.
+   *
+   * Vẫn chạm `lastLoginAt`/`phoneVerifiedAt` như đường tạo-nếu-thiếu: OTP đã chứng minh sở
+   * hữu số, nên hai cột đó phải được cập nhật dù người gọi là app nào.
+   */
+  async resolveExistingUserByPhone(rawPhone: string): Promise<{ userId: string } | null> {
+    const phone = normalizePhone(rawPhone);
+    const existing = await this.prisma.user.findFirst({
+      where: { phone, deletedAt: null },
+      select: { id: true, status: true, phoneVerifiedAt: true },
+    });
+    if (!existing) return null;
+
+    if (existing.status !== USER_STATUS.ACTIVE) {
+      throw new UnauthorizedException({
+        code: API_ERROR_CODE.ACCOUNT_LOCKED,
+        message: 'Tài khoản đã bị khoá',
+      });
+    }
+
+    const now = new Date();
+    await this.prisma.user.update({
+      where: { id: existing.id },
+      data: {
+        lastLoginAt: now,
+        ...(existing.phoneVerifiedAt ? {} : { phoneVerifiedAt: now }),
+      },
+    });
+
+    return { userId: existing.id };
+  }
+
   async resolveOrCreateUserByPhone(
     rawPhone: string,
     displayNameFallback?: string | null,

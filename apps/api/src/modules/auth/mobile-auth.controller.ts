@@ -7,8 +7,10 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import { MOBILE_CLIENT_APP, type MobileClientApp } from '@xeprime/types';
 import { Public, VerifiesCredentials } from '../../common/decorators';
 import { AuthService } from './auth.service';
+import { assertMobileAppAccess, assertMobileAppCanCreateAccount } from './mobile-app-access';
 import { NativeAuthCodeService } from './social/native-auth-code.service';
 import {
   NativeSessionService,
@@ -61,7 +63,7 @@ export class MobileAuthController {
   @ApiOkResponse({ type: MobileSessionDto })
   async login(@Body() dto: MobileLoginDto): Promise<MobileSessionDto> {
     const { userId } = await this.auth.loginWithPassword(dto.identifier, dto.password);
-    return this.buildSession(userId, dto.device);
+    return this.buildSession(userId, dto.device, dto.clientApp);
   }
 
   /**
@@ -86,8 +88,13 @@ export class MobileAuthController {
   @ApiOperation({ summary: 'Native: đăng ký bằng số điện thoại + mật khẩu' })
   @ApiCreatedResponse({ type: MobileSessionDto })
   async register(@Body() dto: MobileRegisterDto): Promise<MobileSessionDto> {
+    // TRƯỚC `register`, không phải sau: tài khoản mới tinh chắc chắn không qua được cổng
+    // phạm vi app, và để nó tạo user rồi mới 403 là chiếm mất số điện thoại của chính người
+    // dùng đó. XePrime Partner không có màn đăng ký; hồ sơ gian hàng mở từ app XePrime.
+    assertMobileAppCanCreateAccount(dto.clientApp);
+
     const { userId } = await this.auth.register(dto);
-    return this.buildSession(userId, dto.device);
+    return this.buildSession(userId, dto.device, dto.clientApp);
   }
 
   /**
@@ -110,8 +117,10 @@ export class MobileAuthController {
   @ApiOperation({ summary: 'Native: đổi one-time code của social login lấy access + refresh token' })
   @ApiOkResponse({ type: MobileSessionDto })
   async exchangeSocialCode(@Body() dto: MobileSocialExchangeDto): Promise<MobileSessionDto> {
-    const { userId } = await this.nativeCodes.consume(dto.code, dto.codeVerifier);
-    return this.buildSession(userId, dto.device);
+    // `consume` đối chiếu `clientApp` với app đã khởi tạo luồng (suy từ `redirect_uri` lúc
+    // begin) — một code xin cho app này không đổi được phiên cho app kia.
+    const { userId } = await this.nativeCodes.consume(dto.code, dto.codeVerifier, dto.clientApp);
+    return this.buildSession(userId, dto.device, dto.clientApp);
   }
 
   /**
@@ -152,10 +161,19 @@ export class MobileAuthController {
   private async buildSession(
     userId: string,
     device: MobileDeviceDto | undefined,
+    clientApp: MobileClientApp | undefined,
   ): Promise<MobileSessionDto> {
-    const pair = await this.nativeSessions.issueSession(userId, toDeviceInfo(device));
     // `me()` đọc quyền + tenant scope từ DB. Chúng đi trong BODY, không trong token (ADR 0017 §1).
+    // Đọc TRƯỚC khi phát phiên: một lượt đăng nhập bị chặn phạm vi app (403
+    // `PARTNER_ACCESS_REQUIRED`) không được để lại phiên sống nào trong `native_auth_sessions`.
     const user = await this.auth.me(userId);
+    assertMobileAppAccess(user, clientApp);
+
+    const pair = await this.nativeSessions.issueSession(
+      userId,
+      toDeviceInfo(device),
+      clientApp ?? MOBILE_CLIENT_APP.CUSTOMER,
+    );
     return { tokens: toTokenPairDto(pair), user };
   }
 }

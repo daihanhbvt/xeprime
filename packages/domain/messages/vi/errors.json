@@ -91,6 +91,7 @@
     "DEPOSIT_ALWAYS_REQUIRED": "Gian hàng tuyến hoa hồng luôn thu cọc qua XePrime — không tắt được công tắc này.",
     "SHOP_VERIFICATION_PENDING": "Hồ sơ gian hàng đang chờ nền tảng xác minh.",
     "PACKAGE_ONBOARDING_INCOMPLETE": "Gian hàng chưa hoàn tất thanh toán gói đầu tiên. Hoàn tất chuyển khoản để mở bộ quản lý gian hàng.",
+    "PARTNER_ACCESS_REQUIRED": "Tài khoản này không thuộc phạm vi ứng dụng XePrime Partner. Ứng dụng dành cho gian hàng dùng gói dịch vụ; nếu bạn là khách thuê hoặc chủ xe tuyến hoa hồng, hãy dùng ứng dụng XePrime.",
     "SHOP_NOT_ACTIVE": "Gian hàng đang bị khoá nên chưa thực hiện được thao tác này.",
     "TENANT_BILLING_NOT_CONFIGURED": "Gian hàng chưa có gói dịch vụ hiệu lực nên chưa xác định được cách tính phí. Liên hệ hỗ trợ XePrime trước khi nhận đơn mới.",
     "VEHICLE_PUBLISH_INCOMPLETE": "Xe còn thiếu thông tin bắt buộc nên chưa gửi duyệt được.",
@@ -135,6 +136,8 @@
     "SUPPORT_ACTION_NOT_ALLOWED": "Thao tác này không nằm trong phạm vi của phiên hỗ trợ.",
     "SUPPORT_FIELD_NOT_ALLOWED": "Phiên hỗ trợ không được sửa các trường này (giá, dịch vụ, chi nhánh, trạng thái vận hành…).",
     "SUPPORT_MEDIA_OUT_OF_SCOPE": "Ảnh không thuộc kho ảnh của gian hàng này. Tải ảnh lên lại trong phiên hỗ trợ.",
+    "CUSTOMER_APP_NOT_AVAILABLE": "Tài khoản gian hàng dùng ứng dụng XePrime Partner. Hãy mở XePrime Partner và đăng nhập bằng tài khoản này.",
+    "PARTNER_REGISTRATION_NOT_SUPPORTED": "Ứng dụng XePrime Partner không tạo tài khoản mới. Hãy đăng ký tài khoản và mở gian hàng trên ứng dụng XePrime, rồi quay lại đây đăng nhập.",
     "SUPPORT_REASON_REQUIRED": "Thao tác này cần lý do riêng — ghi rõ vì sao hoặc mã yêu cầu của chủ xe.",
     "SUPPORT_OPEN_TRIPS": "Xe đang có chuyến chưa kết thúc — không thay đổi được lúc này.",
     "SUPPORT_BLOCK_NOT_OWNED": "Phiên hỗ trợ chỉ sửa hoặc gỡ lịch khoá tương lai do chính phiên này đặt."

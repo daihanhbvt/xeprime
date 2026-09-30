@@ -58,5 +58,19 @@
   "appVersion": {
     "label": "Phiên bản {version}",
     "labelWithBuild": "Phiên bản {version} ({build})"
+  },
+  "partner": {
+    "title": "Ứng dụng XePrime Partner",
+    "intro": "Khu quản lý gian hàng nằm trong ứng dụng XePrime Partner — ứng dụng riêng dành cho đối tác.",
+    "open": "Mở XePrime Partner",
+    "download": "Tải XePrime Partner",
+    "later": "Để sau",
+    "openFailed": "Chưa mở được XePrime Partner. Nếu chưa cài, hãy bấm Tải XePrime Partner.",
+    "successTitle": "Đăng ký gian hàng thành công",
+    "successDescription": "Hồ sơ gian hàng của bạn đã được tạo. Hãy mở hoặc tải ứng dụng XePrime Partner, đăng nhập bằng chính tài khoản này để hoàn tất thanh toán gói và quản lý gian hàng.",
+    "notAvailableTitle": "Phần này nằm ở ứng dụng XePrime",
+    "notAvailableDescription": "XePrime Partner chỉ dành cho việc quản lý gian hàng. Để tìm và thuê xe, hãy dùng ứng dụng XePrime.",
+    "notEligibleTitle": "Tài khoản chưa thuộc phạm vi XePrime Partner",
+    "notEligibleDescription": "Ứng dụng này dành cho gian hàng dùng gói dịch vụ. Nếu bạn là khách thuê hoặc chủ xe tuyến hoa hồng, hãy dùng ứng dụng XePrime."
   }
 }

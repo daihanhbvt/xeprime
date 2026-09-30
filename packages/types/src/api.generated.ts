@@ -11890,6 +11890,11 @@ export interface components {
             identifier: string;
             password: string;
             device?: components["schemas"]["MobileDeviceDto"];
+            /**
+             * @description App đang gọi: `customer` (XePrime) hay `partner` (XePrime Partner). Thiếu = `customer` (app hợp nhất cũ).
+             * @enum {string}
+             */
+            clientApp?: "customer" | "partner";
         };
         MobileLogoutDto: {
             /** @description Refresh token của thiết bị này — dùng để xác định phiên cần thu hồi */
@@ -11901,6 +11906,11 @@ export interface components {
             /** @example 123456 */
             code: string;
             device?: components["schemas"]["MobileDeviceDto"];
+            /**
+             * @description App đang gọi: `customer` (XePrime) hay `partner` (XePrime Partner). Thiếu = `customer` (app hợp nhất cũ).
+             * @enum {string}
+             */
+            clientApp?: "customer" | "partner";
         };
         MobileRefreshDto: {
             /** @description Refresh token opaque nhận được từ lần đăng nhập/refresh trước */
@@ -11914,6 +11924,11 @@ export interface components {
             /** @example 0901234567 */
             phone: string;
             device?: components["schemas"]["MobileDeviceDto"];
+            /**
+             * @description App đang gọi: `customer` (XePrime) hay `partner` (XePrime Partner). Thiếu = `customer` (app hợp nhất cũ).
+             * @enum {string}
+             */
+            clientApp?: "customer" | "partner";
         };
         MobileSessionDto: {
             tokens: components["schemas"]["MobileTokenPairDto"];
@@ -11925,6 +11940,11 @@ export interface components {
             /** @description PKCE code_verifier mà app đã sinh trước khi mở trình duyệt. Phải khớp `code_challenge` đã gửi ở bước bắt đầu. */
             codeVerifier: string;
             device?: components["schemas"]["MobileDeviceDto"];
+            /**
+             * @description App đang gọi: `customer` (XePrime) hay `partner` (XePrime Partner). Thiếu = `customer` (app hợp nhất cũ).
+             * @enum {string}
+             */
+            clientApp?: "customer" | "partner";
         };
         MobileTokenPairDto: {
             /** @description JWT ngắn hạn. Gửi ở header `Authorization: Bearer <accessToken>` */
@@ -14045,6 +14065,11 @@ export interface components {
             appVersion?: string;
             /** @description Tên máy do client tự khai — chỉ để người dùng nhận ra thiết bị. */
             deviceName?: string;
+            /**
+             * @description App đã cài token này: `customer` (XePrime) hay `partner` (XePrime Partner). Bỏ trống = app hợp nhất cũ — thiết bị nhận MỌI audience. Chỉ lọc thông báo, không mở quyền gì.
+             * @enum {string}
+             */
+            clientApp?: "customer" | "partner";
         };
         RegisterShopDto: {
             /** @example Cho thuê xe Bình Minh */

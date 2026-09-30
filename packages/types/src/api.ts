@@ -558,6 +558,39 @@ export const API_ERROR_CODE = {
    */
   PACKAGE_ONBOARDING_INCOMPLETE: 'PACKAGE_ONBOARDING_INCOMPLETE',
   /**
+   * Tài khoản xác thực THÀNH CÔNG nhưng không thuộc phạm vi app XePrime Partner (403, không
+   * phải 401): không có gian hàng tuyến gói hiệu lực và cũng không đang nợ bước thanh toán
+   * gói (`canUsePartnerApp` ở `mobile-client-app.ts`).
+   *
+   * Chỉ phát ra ở CỔNG PHÁT HÀNH PHIÊN native khi `clientApp = 'partner'` — và luôn SAU khi
+   * credentials đã xác minh, để thông báo eligibility không thành máy dò email/SĐT tồn tại.
+   * Sai mật khẩu/refresh hỏng vẫn là 401; mã này nói "đúng người, sai app".
+   */
+  PARTNER_ACCESS_REQUIRED: 'PARTNER_ACCESS_REQUIRED',
+  /**
+   * Chiều NGƯỢC LẠI của `PARTNER_ACCESS_REQUIRED` (28/09/2026): tài khoản của một gian hàng
+   * tuyến gói đăng nhập vào app XePrime (khách).
+   *
+   * Hai app chia đôi hoàn toàn — xem `canUseCustomerApp`. Mã riêng chứ không dùng chung một mã
+   * "sai app": hai nhóm người nhận hai lời khuyên NGƯỢC nhau ("hãy mở XePrime Partner" với
+   * "hãy mở XePrime"), và giao diện chọn câu nào là chọn theo MÃ.
+   */
+  CUSTOMER_APP_NOT_AVAILABLE: 'CUSTOMER_APP_NOT_AVAILABLE',
+  /**
+   * App XePrime Partner gọi một đường TẠO TÀI KHOẢN (`/auth/mobile/register`, hoặc OTP với
+   * một số chưa có tài khoản).
+   *
+   * Mã RIÊNG, không dùng `PARTNER_ACCESS_REQUIRED`, vì nó phải chặn ở một thời điểm KHÁC: mã
+   * kia phát sau khi đã xác thực xong một tài khoản CÓ THẬT, còn mã này phát TRƯỚC khi bất cứ
+   * hàng nào được ghi. Tài khoản mới tinh không thể có gian hàng tuyến gói, nên để nó tạo user
+   * rồi mới trả 403 là ghi rác vào DB và CHIẾM luôn số điện thoại đó — lần sau người dùng đăng
+   * ký ở app XePrime sẽ nhận `PHONE_TAKEN` cho một tài khoản họ chưa từng dùng được.
+   *
+   * Đường đúng của người muốn mở gian hàng: đăng ký tài khoản ở app XePrime rồi mở hồ sơ gian
+   * hàng, sau đó handoff sang XePrime Partner (ADR 0040).
+   */
+  PARTNER_REGISTRATION_NOT_SUPPORTED: 'PARTNER_REGISTRATION_NOT_SUPPORTED',
+  /**
    * Hồ sơ GIAN HÀNG TUYẾN GÓI chưa đủ để gửi xe lên chợ (ADR 0040 điều 7).
    * `details.missing[]` mang khoá `PACKAGE_SHOP_LISTING_REQUIREMENT`.
    *

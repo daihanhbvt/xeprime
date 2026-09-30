@@ -1,7 +1,77 @@
 packages:
   - apps/*
+  # Hai app mobile phát hành riêng + package shared (tách 25/09/2026). `apps/*` không còn khớp
+  # `apps/mobile` vì thư mục đó thôi mang package.json — nó chỉ là cái vỏ chứa ba package con.
+  - apps/mobile/*
   - packages/*
   - prisma
+
+# MỘT chỗ ghim version cho bộ dependency mobile dùng chung ba package (customer · manage ·
+# shared): nâng Expo/RN/Tamagui là sửa Ở ĐÂY, ba package.json chỉ ghi `catalog:`. Hai app lệch
+# version React Native là hai native binary khác nhau cùng đọc một `shared/src` — lỗi chỉ lộ
+# lúc chạy.
+catalog:
+  '@expo/metro-runtime': ~6.1.2
+  '@expo/vector-icons': ^15.0.3
+  '@formatjs/intl-datetimeformat': 7.6.0
+  '@formatjs/intl-getcanonicallocales': 3.2.11
+  '@formatjs/intl-locale': 5.3.10
+  '@formatjs/intl-numberformat': 9.4.0
+  '@formatjs/intl-pluralrules': 6.3.13
+  '@hookform/resolvers': 5.4.0
+  '@react-native-firebase/app': ^26.4.0
+  '@react-native-firebase/messaging': ^26.4.0
+  '@reduxjs/toolkit': 2.12.0
+  '@tamagui/animations-react-native': 2.7.7
+  '@tamagui/babel-plugin': 2.7.7
+  '@tamagui/core': 2.7.7
+  '@tamagui/toast': 2.7.7
+  '@tanstack/react-query': 5.101.4
+  '@testing-library/react-native': 14.0.1
+  '@types/jest': 29.5.14
+  '@types/react': ~19.1.0
+  dayjs: 1.11.21
+  expo: 54.0.37
+  expo-build-properties: ~1.0.10
+  expo-camera: ~17.0.10
+  expo-clipboard: 8.0.8
+  expo-constants: ~18.0.14
+  expo-crypto: ~15.0.9
+  expo-document-picker: 14.0.8
+  expo-font: ~14.0.12
+  expo-image: ~3.0.11
+  expo-image-manipulator: 14.0.8
+  expo-image-picker: 17.0.11
+  expo-linear-gradient: ~15.0.8
+  expo-linking: ~8.0.12
+  expo-localization: ~17.0.9
+  expo-location: ~19.0.8
+  expo-router: ~6.0.24
+  expo-secure-store: ~15.0.8
+  expo-splash-screen: 31.0.13
+  expo-web-browser: ~15.0.11
+  firebase: 12.17.1
+  jest: 29.7.0
+  jest-expo: ~54.0.18
+  react: 19.1.0
+  react-dom: 19.1.0
+  react-hook-form: 7.82.0
+  react-native: 0.81.5
+  react-native-calendars: 1.1314.0
+  react-native-gifted-charts: 1.4.78
+  react-native-reanimated: ~4.1.1
+  react-native-safe-area-context: ~5.6.0
+  react-native-screens: ~4.16.0
+  react-native-svg: 15.12.1
+  react-native-web: ~0.21.0
+  react-native-webview: 13.15.0
+  react-native-worklets: 0.5.1
+  react-redux: 9.3.0
+  tamagui: 2.7.7
+  test-renderer: 1.2.0
+  typescript: 5.9.3
+  use-intl: 4.13.7
+  yup: 1.7.1
 
 # Tắt kiểm tra deps trước mỗi `pnpm run/exec`. Mặc định pnpm 11 chạy lại `pnpm install`
 # ngầm trước mỗi lệnh; ở đây nó fail vì vài build script bị chặn (không sinh binary cần

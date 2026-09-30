@@ -1,5 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { PUSH_PLATFORM_VALUES, PUSH_PROVIDER, PUSH_PROVIDER_VALUES } from '@xeprime/types';
+import {
+  MOBILE_CLIENT_APP_VALUES,
+  PUSH_PLATFORM_VALUES,
+  PUSH_PROVIDER,
+  PUSH_PROVIDER_VALUES,
+  type MobileClientApp,
+} from '@xeprime/types';
 import { IsIn, IsOptional, IsString, Length, MaxLength } from 'class-validator';
 
 /**
@@ -50,6 +56,16 @@ export class RegisterPushDeviceDto {
   @IsString()
   @MaxLength(120)
   deviceName?: string;
+
+  @ApiPropertyOptional({
+    enum: MOBILE_CLIENT_APP_VALUES,
+    description:
+      'App đã cài token này: `customer` (XePrime) hay `partner` (XePrime Partner). Bỏ trống = ' +
+      'app hợp nhất cũ — thiết bị nhận MỌI audience. Chỉ lọc thông báo, không mở quyền gì.',
+  })
+  @IsOptional()
+  @IsIn(MOBILE_CLIENT_APP_VALUES)
+  clientApp?: MobileClientApp;
 }
 
 /**

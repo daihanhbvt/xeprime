@@ -1,0 +1,71 @@
+{
+  "expo": {
+    "name": "XePrime",
+    "slug": "xeprime-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "xeprime",
+    "userInterfaceStyle": "light",
+    "icon": "../shared/assets/images/xeprime-icon.png",
+    "ios": {
+      "bundleIdentifier": "vn.xeprime.mobile",
+      "buildNumber": "1",
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "vn.xeprime.mobile",
+      "versionCode": 3,
+      "softwareKeyboardLayoutMode": "resize",
+      "adaptiveIcon": {
+        "foregroundImage": "../shared/assets/images/xeprime-icon-foreground.png",
+        "backgroundColor": "#FFFFFF"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "../shared/assets/images/xeprime-mark.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#faf9f7"
+        }
+      ],
+      "expo-localization",
+      "expo-web-browser",
+      "expo-font",
+      "expo-document-picker",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "XePrime cần quyền truy cập thư viện ảnh để bạn chọn ảnh từ máy (ảnh đại diện, hồ sơ, xe, giấy tờ và các nội dung khác trong ứng dụng)."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "XePrime dùng vị trí của bạn để mở sẵn danh sách xe ở tỉnh/thành bạn đang đứng. Bạn có thể đổi địa điểm bất cứ lúc nào.",
+          "locationWhenInUsePermission": "XePrime dùng vị trí của bạn để mở sẵn danh sách xe ở tỉnh/thành bạn đang đứng. Bạn có thể đổi địa điểm bất cứ lúc nào.",
+          "isAndroidBackgroundLocationEnabled": false,
+          "isIosBackgroundLocationEnabled": false
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "XePrime cần quyền máy ảnh để bạn chụp ảnh ngay trong ứng dụng (ảnh đại diện, hồ sơ, xe, giấy tờ và các nội dung khác).",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

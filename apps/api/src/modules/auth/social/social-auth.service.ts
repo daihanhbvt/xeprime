@@ -5,8 +5,10 @@ import {
   API_ERROR_CODE,
   AUTH_PROVIDER,
   DEFAULT_LOCALE,
+  clientAppForRedirectUri,
   resolveAppLocale,
   type AuthProvider,
+  type MobileClientApp,
 } from '@xeprime/types';
 import { AuthService } from '../auth.service';
 import { FacebookSocialProvider } from './facebook.provider';
@@ -50,6 +52,12 @@ export type SocialCallbackResult =
 export interface NativeCallbackTarget {
   redirectUri: string;
   codeChallenge: string;
+  /**
+   * App đã khởi tạo luồng — suy TẤT ĐỊNH từ scheme của `redirectUri` (đã qua allowlist), không
+   * phải một trường client tự khai. One-time code phát ra mang giá trị này và bước exchange
+   * đối chiếu lại (`NativeAuthCodeService.consume`).
+   */
+  clientApp: MobileClientApp;
 }
 
 /**
@@ -143,7 +151,13 @@ export class SocialAuthService {
     const { redirectNext } = stored;
     const native: NativeCallbackTarget | null =
       stored.client === SOCIAL_CLIENT.NATIVE && stored.appRedirectUri && stored.appCodeChallenge
-        ? { redirectUri: stored.appRedirectUri, codeChallenge: stored.appCodeChallenge }
+        ? {
+            redirectUri: stored.appRedirectUri,
+            codeChallenge: stored.appCodeChallenge,
+            // Suy lại từ cùng redirect_uri đã lưu lúc begin — tất định, không cần cột mới
+            // trong `oauth_states`.
+            clientApp: clientAppForRedirectUri(stored.appRedirectUri),
+          }
         : null;
 
     try {
@@ -207,7 +221,11 @@ export class SocialAuthService {
       );
     }
 
-    return { redirectUri: params.redirectUri, codeChallenge: params.codeChallenge };
+    return {
+      redirectUri: params.redirectUri,
+      codeChallenge: params.codeChallenge,
+      clientApp: clientAppForRedirectUri(params.redirectUri),
+    };
   }
 
   /**

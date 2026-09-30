@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import type { ConfigService } from '@nestjs/config';
 import { createPrismaClient, newId } from '@xeprime/prisma';
-import { API_ERROR_CODE, AUTH_PROVIDER, USER_STATUS } from '@xeprime/types';
+import { API_ERROR_CODE, AUTH_PROVIDER, MOBILE_CLIENT_APP, USER_STATUS } from '@xeprime/types';
 import type { AuthService } from '../src/modules/auth/auth.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { NativeAuthCodeService } from '../src/modules/auth/social/native-auth-code.service';
@@ -27,13 +27,14 @@ let dbAvailable = false;
 
 const DEEP_LINK = 'xeprime://auth/callback';
 const EXPO_DEV_LINK = 'exp://192.168.1.210:8081/--/auth/callback';
+const PARTNER_DEEP_LINK = 'xeprimepartner://auth/callback';
 
 const CONFIG: Record<string, unknown> = {
   APP_WEB_URL: 'https://xeprime.vn',
   API_PUBLIC_URL: 'https://api.xeprime.vn',
   GOOGLE_OAUTH_CLIENT_ID: 'client-id.apps.googleusercontent.com',
   GOOGLE_OAUTH_CLIENT_SECRET: 'google-secret',
-  MOBILE_AUTH_REDIRECT_URIS: [DEEP_LINK, EXPO_DEV_LINK],
+  MOBILE_AUTH_REDIRECT_URIS: [DEEP_LINK, EXPO_DEV_LINK, PARTNER_DEEP_LINK],
 };
 
 const config = {
@@ -119,8 +120,22 @@ describe('resolveNativeContext — allowlist deep link', () => {
           codeChallenge: challenge,
           redirectUri: uri,
         }),
-      ).toEqual({ redirectUri: uri, codeChallenge: challenge });
+        // `clientApp` suy từ SCHEME của redirect_uri (tách app 25/09/2026): scheme `xeprime`
+        // và URI dev `exp://` đều là app Customer; `xeprimepartner://` mới là Partner.
+      ).toEqual({ redirectUri: uri, codeChallenge: challenge, clientApp: MOBILE_CLIENT_APP.CUSTOMER });
     }
+
+    expect(
+      social.resolveNativeContext({
+        client: 'native',
+        codeChallenge: challenge,
+        redirectUri: PARTNER_DEEP_LINK,
+      }),
+    ).toEqual({
+      redirectUri: PARTNER_DEEP_LINK,
+      codeChallenge: challenge,
+      clientApp: MOBILE_CLIENT_APP.PARTNER,
+    });
   });
 
   it('TỪ CHỐI deep link lạ — đây là chỗ one-time code bị giao cho app của kẻ tấn công', () => {
@@ -159,7 +174,7 @@ describe('resolveNativeContext — allowlist deep link', () => {
 describe('nativeRedirect — URL trả về app', () => {
   it('ghép code vào custom scheme mà không phá scheme', () => {
     const url = social.nativeRedirect(
-      { redirectUri: DEEP_LINK, codeChallenge: 'x' },
+      { redirectUri: DEEP_LINK, codeChallenge: 'x', clientApp: MOBILE_CLIENT_APP.CUSTOMER },
       { code: 'abc' },
     );
     expect(url.startsWith('xeprime://auth/callback?')).toBe(true);
@@ -168,7 +183,7 @@ describe('nativeRedirect — URL trả về app', () => {
 
   it('lỗi cũng về deep link — app phải biết luồng đã hỏng, không treo ở trình duyệt', () => {
     const url = social.nativeRedirect(
-      { redirectUri: DEEP_LINK, codeChallenge: 'x' },
+      { redirectUri: DEEP_LINK, codeChallenge: 'x', clientApp: MOBILE_CLIENT_APP.CUSTOMER },
       { error: API_ERROR_CODE.SOCIAL_CANCELLED },
     );
     expect(new URL(url).searchParams.get('error')).toBe(API_ERROR_CODE.SOCIAL_CANCELLED);
@@ -184,7 +199,7 @@ describe('oauth_states — mang được ngữ cảnh native qua hai chặng', (
       provider: AUTH_PROVIDER.GOOGLE,
       next: null,
       locale: 'vi',
-      native: { redirectUri: DEEP_LINK, codeChallenge: challenge },
+      native: { redirectUri: DEEP_LINK, codeChallenge: challenge, clientApp: MOBILE_CLIENT_APP.CUSTOMER },
     });
     const state = new URL(url).searchParams.get('state') as string;
 
@@ -212,10 +227,10 @@ describe('NativeAuthCodeService — one-time code + PKCE', () => {
     const userId = await makeUser();
     const { verifier, challenge } = pkce();
 
-    const code = await codes.issue({ userId, codeChallenge: challenge });
+    const code = await codes.issue({ userId, codeChallenge: challenge, clientApp: MOBILE_CLIENT_APP.CUSTOMER });
 
-    await expect(codes.consume(code, verifier)).resolves.toEqual({ userId });
-    await expect(codes.consume(code, verifier)).rejects.toMatchObject({
+    await expect(codes.consume(code, verifier, undefined)).resolves.toEqual({ userId });
+    await expect(codes.consume(code, verifier, undefined)).rejects.toMatchObject({
       code: API_ERROR_CODE.SOCIAL_STATE_INVALID,
     });
   });
@@ -223,11 +238,11 @@ describe('NativeAuthCodeService — one-time code + PKCE', () => {
   maybe('code bị CƯỚP ở deep link mà không có verifier ⇒ vô dụng', async () => {
     const userId = await makeUser();
     const { challenge } = pkce();
-    const code = await codes.issue({ userId, codeChallenge: challenge });
+    const code = await codes.issue({ userId, codeChallenge: challenge, clientApp: MOBILE_CLIENT_APP.CUSTOMER });
 
     // Kẻ tấn công có `code` (đăng ký cùng custom scheme trên Android) nhưng verifier là của nó.
     const attacker = pkce();
-    await expect(codes.consume(code, attacker.verifier)).rejects.toMatchObject({
+    await expect(codes.consume(code, attacker.verifier, undefined)).rejects.toMatchObject({
       code: API_ERROR_CODE.SOCIAL_STATE_INVALID,
     });
   });
@@ -235,13 +250,13 @@ describe('NativeAuthCodeService — one-time code + PKCE', () => {
   maybe('đoán sai verifier ĐỐT LUÔN mã — không cho thử lần hai', async () => {
     const userId = await makeUser();
     const { verifier, challenge } = pkce();
-    const code = await codes.issue({ userId, codeChallenge: challenge });
+    const code = await codes.issue({ userId, codeChallenge: challenge, clientApp: MOBILE_CLIENT_APP.CUSTOMER });
 
-    await expect(codes.consume(code, pkce().verifier)).rejects.toMatchObject({
+    await expect(codes.consume(code, pkce().verifier, undefined)).rejects.toMatchObject({
       code: API_ERROR_CODE.SOCIAL_STATE_INVALID,
     });
     // Ngay cả app thật, với verifier ĐÚNG, cũng không dùng lại được mã đó nữa.
-    await expect(codes.consume(code, verifier)).rejects.toMatchObject({
+    await expect(codes.consume(code, verifier, undefined)).rejects.toMatchObject({
       code: API_ERROR_CODE.SOCIAL_STATE_INVALID,
     });
   });
@@ -249,11 +264,11 @@ describe('NativeAuthCodeService — one-time code + PKCE', () => {
   maybe('hai lần đổi CHẠY SONG SONG: đúng một cái thắng', async () => {
     const userId = await makeUser();
     const { verifier, challenge } = pkce();
-    const code = await codes.issue({ userId, codeChallenge: challenge });
+    const code = await codes.issue({ userId, codeChallenge: challenge, clientApp: MOBILE_CLIENT_APP.CUSTOMER });
 
     const results = await Promise.allSettled([
-      codes.consume(code, verifier),
-      codes.consume(code, verifier),
+      codes.consume(code, verifier, undefined),
+      codes.consume(code, verifier, undefined),
     ]);
 
     expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
@@ -262,7 +277,7 @@ describe('NativeAuthCodeService — one-time code + PKCE', () => {
   maybe('code hết hạn bị từ chối', async () => {
     const userId = await makeUser();
     const { verifier, challenge } = pkce();
-    const code = await codes.issue({ userId, codeChallenge: challenge });
+    const code = await codes.issue({ userId, codeChallenge: challenge, clientApp: MOBILE_CLIENT_APP.CUSTOMER });
 
     const codeHash = createHash('sha256').update(code, 'utf8').digest('hex');
     await prisma.nativeAuthCode.update({
@@ -270,7 +285,40 @@ describe('NativeAuthCodeService — one-time code + PKCE', () => {
       data: { expiresAt: new Date(Date.now() - 1000) },
     });
 
-    await expect(codes.consume(code, verifier)).rejects.toMatchObject({
+    await expect(codes.consume(code, verifier, undefined)).rejects.toMatchObject({
+      code: API_ERROR_CODE.SOCIAL_STATE_INVALID,
+    });
+  });
+
+  maybe('code buộc vào APP đã khởi tạo: khai đúng thì đổi được', async () => {
+    const userId = await makeUser();
+    const { verifier, challenge } = pkce();
+    const code = await codes.issue({
+      userId,
+      codeChallenge: challenge,
+      clientApp: MOBILE_CLIENT_APP.PARTNER,
+    });
+
+    await expect(codes.consume(code, verifier, MOBILE_CLIENT_APP.PARTNER)).resolves.toEqual({
+      userId,
+    });
+  });
+
+  maybe('code của app này không đổi được phiên cho app kia — và bị ĐỐT luôn', async () => {
+    const userId = await makeUser();
+    const { verifier, challenge } = pkce();
+    const code = await codes.issue({
+      userId,
+      codeChallenge: challenge,
+      clientApp: MOBILE_CLIENT_APP.PARTNER,
+    });
+
+    // App customer — hoặc app cũ không khai (`undefined` = customer) — cầm code của Partner.
+    await expect(codes.consume(code, verifier, undefined)).rejects.toMatchObject({
+      code: API_ERROR_CODE.SOCIAL_STATE_INVALID,
+    });
+    // Mã đã bị tiêu thụ ở lần thử sai — khai đúng app cũng không cứu lại được.
+    await expect(codes.consume(code, verifier, MOBILE_CLIENT_APP.PARTNER)).rejects.toMatchObject({
       code: API_ERROR_CODE.SOCIAL_STATE_INVALID,
     });
   });
@@ -278,7 +326,7 @@ describe('NativeAuthCodeService — one-time code + PKCE', () => {
   maybe('code TRẦN không bao giờ nằm trong DB — chỉ hash của nó', async () => {
     const userId = await makeUser();
     const { challenge } = pkce();
-    const code = await codes.issue({ userId, codeChallenge: challenge });
+    const code = await codes.issue({ userId, codeChallenge: challenge, clientApp: MOBILE_CLIENT_APP.CUSTOMER });
 
     const rows = await prisma.$queryRaw<{ n: bigint }[]>`
       SELECT count(*)::bigint AS n FROM native_auth_codes WHERE code_hash = ${code}

@@ -1,6 +1,11 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { API_ERROR_CODE, USER_STATUS } from '@xeprime/types';
+import {
+  API_ERROR_CODE,
+  MOBILE_CLIENT_APP,
+  USER_STATUS,
+  type MobileClientApp,
+} from '@xeprime/types';
 import { createHash, randomBytes } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import { ulid } from 'ulid';
@@ -90,8 +95,18 @@ export class NativeSessionService {
     return this.config.getOrThrow<number>('MOBILE_REFRESH_TTL_DAYS');
   }
 
-  /** Tạo phiên MỚI cho một thiết bị — dùng sau khi đã xác thực xong (Firebase hoặc mật khẩu). */
-  async issueSession(userId: string, device: NativeDeviceInfo = {}): Promise<NativeTokenPair> {
+  /**
+   * Tạo phiên MỚI cho một thiết bị — dùng sau khi đã xác thực xong (Firebase hoặc mật khẩu).
+   *
+   * `clientApp` ghi vào phiên là toàn bộ cơ chế "token không dùng chéo app": refresh token
+   * buộc vào phiên, phiên buộc vào app — `rotate` vì thế không cần kiểm gì thêm, cặp token
+   * mới sinh ra vẫn thuộc phiên (và app) cũ.
+   */
+  async issueSession(
+    userId: string,
+    device: NativeDeviceInfo = {},
+    clientApp: MobileClientApp = MOBILE_CLIENT_APP.CUSTOMER,
+  ): Promise<NativeTokenPair> {
     const sessionId = ulid();
     const now = Date.now();
     const expiresAt = new Date(now + this.refreshTtlDays * 24 * 60 * 60 * 1000);
@@ -101,6 +116,7 @@ export class NativeSessionService {
         id: sessionId,
         userId,
         clientType: 'mobile',
+        clientApp,
         deviceName: device.deviceName ?? null,
         devicePlatform: device.devicePlatform ?? null,
         appVersion: device.appVersion ?? null,

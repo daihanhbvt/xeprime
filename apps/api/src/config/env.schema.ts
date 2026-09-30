@@ -93,9 +93,12 @@ export const envSchema = z
      * Nhiều giá trị vì môi trường dev khác production: Expo dev build trả `exp://192.168.x.x:8081/--/…`
      * chứ không phải scheme của app đã cài. Thêm URI dev vào đây, đừng nới lỏng luật.
      */
+    // Hai URI mặc định = hai app phát hành riêng (25/09/2026): scheme `xeprime` (XePrime —
+    // customer) và `xeprimepartner` (XePrime Partner). Scheme là hợp đồng với
+    // `MOBILE_APP_SCHEME` ở @xeprime/types — luồng social suy app đích từ chính scheme này.
     MOBILE_AUTH_REDIRECT_URIS: z
       .string()
-      .default('xeprime://auth/callback')
+      .default('xeprime://auth/callback,xeprimepartner://auth/callback')
       .transform((v) =>
         v
           .split(',')

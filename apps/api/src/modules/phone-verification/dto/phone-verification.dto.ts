@@ -1,5 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { PHONE_VERIFICATION_PURPOSE_VALUES } from '@xeprime/types';
+import {
+  MOBILE_CLIENT_APP_VALUES,
+  PHONE_VERIFICATION_PURPOSE_VALUES,
+  type MobileClientApp,
+} from '@xeprime/types';
 import { IsIn, IsOptional, IsString, Length, Matches } from 'class-validator';
 import { Type } from 'class-transformer';
 import { MobileDeviceDto } from '../../auth/dto/mobile-auth.dto';
@@ -75,4 +79,13 @@ export class MobilePhoneLoginDto extends PhoneLoginDto {
   @IsOptional()
   @Type(() => MobileDeviceDto)
   device?: MobileDeviceDto;
+
+  @ApiPropertyOptional({
+    enum: MOBILE_CLIENT_APP_VALUES,
+    description:
+      'App đang gọi: `customer` (XePrime) hay `partner` (XePrime Partner). Thiếu = `customer` (app hợp nhất cũ).',
+  })
+  @IsOptional()
+  @IsIn(MOBILE_CLIENT_APP_VALUES)
+  clientApp?: MobileClientApp;
 }
