@@ -115,6 +115,13 @@ nhau giữa hai môi trường, do biến `APP_ENV` (§2.3):
 
 ### 2.1 Bản đồ tên miền và URL
 
+> ⚠️ **Đích đã đổi — [ADR 0051](decisions/0051-product-surfaces-web-zones-and-mobile-variants.md)
+> (30/09/2026).** Ba giao diện sẽ đứng trên ba host `xeprime.vn` · `partner.xeprime.vn` ·
+> `admin.xeprime.vn` (staging: `partner-stg.` · `admin-stg.`), vẫn là MỘT Next app và vẫn giữ
+> `/manage` trong URL. Phần dưới mô tả HIỆN TRẠNG đang deploy và lập luận cũ; nó được thay khi pha 2
+> của ADR 0051 lên staging. Bốn lý do ở dưới đã được trả lời ở ADR đó (một app, host chỉ là cổng
+> điều hướng, cookie `.xeprime.vn` dùng chung sẵn, `CORS_ORIGINS` thêm hai origin).
+
 Nguyên tắc: **tách theo MÔI TRƯỜNG bằng tên miền con, tách theo VAI bằng đường dẫn.**
 
 | Tên miền | Phục vụ |
