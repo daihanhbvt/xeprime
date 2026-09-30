@@ -216,8 +216,16 @@ export const API_ERROR_CODE = {
    */
   PLAN_NOT_SELF_SERVE: 'PLAN_NOT_SELF_SERVE',
   /**
-   * Thao tác sẽ làm HỎNG bậc gói mặc định của tuyến hoa hồng (archive nó, hoặc đổi nó sang
-   * `package`).
+   * Bậc gói đã được DÙNG — có thuê bao hoặc hoá đơn trỏ tới nó — nên không XOÁ được.
+   *
+   * `details` mang `{ planCode, subscriptions, invoices }`. Xoá chỉ dành cho bậc chưa từng được
+   * gán hay mua (một bản nháp tạo nhầm). Bậc đã dùng thì TẮT (archive): thuê bao cũ giữ nguyên
+   * snapshot, còn hoá đơn — kể cả hoá đơn chưa trả — vẫn cần đọc lại được bậc gốc lúc tiền về.
+   */
+  PLAN_IN_USE: 'PLAN_IN_USE',
+  /**
+   * Thao tác sẽ làm HỎNG bậc gói mặc định của tuyến hoa hồng (archive nó, xoá nó, hoặc đổi nó
+   * sang `package`).
    *
    * `details` mang `{ planCode, operation }`. Không phải `FORBIDDEN`: người gọi có thừa quyền,
    * chính THAO TÁC mới là thứ bị cấm — gỡ bậc đó đi là gỡ luôn tuyến vào cửa của toàn sàn, và

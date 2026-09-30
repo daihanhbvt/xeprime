@@ -23,6 +23,7 @@ import {
   FREE_TRIP_ALLOWANCE,
   NOTIFICATION_TYPE,
   PLAN_STATUS,
+  type PlanStatus,
   SUBSCRIPTION_INVOICE_STATUS,
   SUBSCRIPTION_INVOICE_TTL_HOURS,
   SUBSCRIPTION_STATUS,
@@ -174,7 +175,7 @@ export class BillingService {
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
       select: PLAN_SELECT,
     });
-    return rows.map(toPlanDto);
+    return this.toPlanDtos(rows);
   }
 
   async createPlan(actorUserId: string, dto: CreatePlanDto): Promise<PlanDto> {
@@ -229,7 +230,8 @@ export class BillingService {
       );
       return plan;
     });
-    return toPlanDto(row);
+    // Bậc vừa tạo chưa thể có hoá đơn nào trỏ tới — không cần hỏi.
+    return toPlanDto(row, 0);
   }
 
   async updatePlan(actorUserId: string, id: string, dto: UpdatePlanDto): Promise<PlanDto> {
@@ -312,7 +314,7 @@ export class BillingService {
       );
       return plan;
     });
-    return toPlanDto(row);
+    return this.toPlanDtoOne(row);
   }
 
   /**
@@ -331,12 +333,6 @@ export class BillingService {
    */
   async archivePlan(actorUserId: string, id: string): Promise<PlanDto> {
     const current = await this.loadPlan(id);
-    if (current.status === PLAN_STATUS.ARCHIVED) {
-      throw new ConflictException({
-        code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
-        message: 'Gói đã ngừng bán',
-      });
-    }
     if (current.billingMode === BILLING_MODE.COMMISSION) {
       throw new ConflictException({
         code: API_ERROR_CODE.DEFAULT_PLAN_PROTECTED,
@@ -346,27 +342,175 @@ export class BillingService {
         details: { planCode: current.code, operation: 'archive' },
       });
     }
+    return this.transitionPlanStatus(actorUserId, current, PLAN_STATUS.ARCHIVED);
+  }
+
+  /**
+   * MỞ BÁN LẠI một bậc gói đã ngừng bán — chiều ngược của `archivePlan`.
+   *
+   * Cũng là chuyện của DANH MỤC: bậc hiện lại trên bảng giá gian hàng (`listPlansForTenant`) và
+   * admin gán được nó cho tenant khác. Không đụng một thuê bao nào — thuê bao chạy trên bậc này
+   * trong lúc nó ngừng bán vẫn mang đúng snapshot của chính nó (ADR 0024). Lượt mua MỚI sau khi
+   * mở lại chụp bảng giá và hạn mức của bậc TẠI THỜI ĐIỂM MUA, như mọi lượt mua khác.
+   *
+   * Bậc tuyến hoa hồng không bao giờ bị archive qua API (`archivePlan` chặn), nhưng dữ liệu tay
+   * thì có thể. Mở lại một bậc `commission` khi danh mục đã có bậc hoa hồng khác là sinh ra bậc
+   * thứ hai — cùng cổng singleton với `createPlan`/`updatePlan`.
+   */
+  async activatePlan(actorUserId: string, id: string): Promise<PlanDto> {
+    const current = await this.loadPlan(id);
+    await this.assertCommissionTrackStaysSingle(current.billingMode, current.id);
+    return this.transitionPlanStatus(actorUserId, current, PLAN_STATUS.ACTIVE);
+  }
+
+  /**
+   * Lật `plans.status` giữa `active` ↔ `archived` — đường ghi chung của ngừng bán/mở bán lại.
+   *
+   * Compare-and-set bằng `updateMany … WHERE status = <nguồn>` thay cho đọc-rồi-ghi: hai admin
+   * bấm công tắc cùng lúc thì đúng một lượt đổi được, lượt kia nhận
+   * `INVALID_STATUS_TRANSITION` — không phải hai dòng audit cho một lần đổi, và không có lượt nào
+   * "thành công" trên một trạng thái nó chưa từng nhìn thấy.
+   */
+  private async transitionPlanStatus(
+    actorUserId: string,
+    current: PlanRow,
+    to: PlanStatus,
+  ): Promise<PlanDto> {
+    const from = to === PLAN_STATUS.ACTIVE ? PLAN_STATUS.ARCHIVED : PLAN_STATUS.ACTIVE;
     const row = await this.prisma.$transaction(async (tx) => {
-      const plan = await tx.plan.update({
-        where: { id },
-        data: { status: PLAN_STATUS.ARCHIVED },
-        select: PLAN_SELECT,
+      const { count } = await tx.plan.updateMany({
+        where: { id: current.id, status: from },
+        data: { status: to },
       });
+      if (count === 0) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
+          message: to === PLAN_STATUS.ACTIVE ? 'Gói đang được bán' : 'Gói đã ngừng bán',
+          details: { planCode: current.code, status: to },
+        });
+      }
       await this.audit.record(
         {
           actorUserId,
           actorScope: 'platform',
-          action: 'plan.archive',
+          action: to === PLAN_STATUS.ACTIVE ? 'plan.activate' : 'plan.archive',
           targetType: 'plan',
-          targetId: id,
-          before: { status: PLAN_STATUS.ACTIVE },
-          after: { status: PLAN_STATUS.ARCHIVED },
+          targetId: current.id,
+          before: { status: from },
+          after: { status: to },
         },
         tx,
       );
-      return plan;
+      return tx.plan.findUniqueOrThrow({ where: { id: current.id }, select: PLAN_SELECT });
     });
-    return toPlanDto(row);
+    return this.toPlanDtoOne(row);
+  }
+
+  /**
+   * XOÁ HẲN một bậc gói — chỉ cho bậc CHƯA TỪNG được dùng (bản nháp tạo nhầm).
+   *
+   * "Dùng" nghĩa là có dòng `tenant_subscriptions` HOẶC có hoá đơn gói trỏ tới nó, ở BẤT KỲ trạng
+   * thái nào. Hoá đơn là vế dễ bỏ sót: nó trỏ tới bậc qua `lines_json.planId`, không có FK, nên
+   * DB không tự chặn — và một hoá đơn CHƯA TRẢ của bậc đã xoá là một vụ mất tiền chờ sẵn: tiền về,
+   * `activateFromInvoiceWithinTx` không tìm thấy bậc, transaction đổ, SePay gửi lại mãi mà gian
+   * hàng không bao giờ có gói. Bậc đã dùng thì TẮT (archive), không xoá.
+   *
+   * Thứ tự khoá đóng cửa sổ đua với một lượt mua đang chạy:
+   *  - ở đây khoá hàng `plans` bằng `FOR UPDATE` TRƯỚC khi đếm;
+   *  - `purchase` giữ `FOR KEY SHARE` trên cùng hàng tới hết transaction tạo hoá đơn;
+   *  - gán tay (`assign`) chèn `tenant_subscriptions` — FK `RESTRICT` tự lấy khoá tương đương.
+   * Nên hoặc lượt mua commit trước và phép đếm ở đây thấy hoá đơn của nó, hoặc lượt xoá commit
+   * trước và lượt mua không còn hàng nào để khoá. FK vẫn là lưới cuối nếu có đường ghi nào khác.
+   */
+  async deletePlan(actorUserId: string, id: string): Promise<void> {
+    const current = await this.loadPlan(id);
+    if (current.billingMode === BILLING_MODE.COMMISSION) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.DEFAULT_PLAN_PROTECTED,
+        message: 'Không xoá được bậc mặc định của TUYẾN HOA HỒNG — mọi chủ xe cá nhân vào cửa bằng nó.',
+        details: { planCode: current.code, operation: 'delete' },
+      });
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      const locked = await tx.$queryRaw<{ id: string }[]>`
+        SELECT id FROM plans WHERE id = ${id} FOR UPDATE`;
+      if (locked.length === 0) {
+        throw new NotFoundException({
+          code: API_ERROR_CODE.NOT_FOUND,
+          message: 'Không tìm thấy gói dịch vụ',
+        });
+      }
+      const subscriptions = await tx.tenantSubscription.count({ where: { planId: id } });
+      const invoices = (await this.planInvoiceCounts([id], tx)).get(id) ?? 0;
+      if (subscriptions > 0 || invoices > 0) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.PLAN_IN_USE,
+          message: 'Gói đã có thuê bao hoặc hoá đơn nên không xoá được — hãy ngừng bán thay vì xoá',
+          details: { planCode: current.code, subscriptions, invoices },
+        });
+      }
+      await tx.plan.delete({ where: { id } });
+      await this.audit.record(
+        {
+          actorUserId,
+          actorScope: 'platform',
+          action: 'plan.delete',
+          targetType: 'plan',
+          targetId: id,
+          // Bản chụp đủ để dựng lại bậc nếu xoá nhầm — hàng `plans` không còn nữa.
+          before: {
+            code: current.code,
+            name: current.name,
+            description: current.description,
+            status: current.status,
+            billingMode: current.billingMode,
+            sortOrder: current.sortOrder,
+            ...planAuditKnobs(parsePlanLimits(current.limitsJson)),
+          },
+        },
+        tx,
+      );
+    });
+  }
+
+  /** Như `toPlanDtos` cho đúng một hàng. */
+  private async toPlanDtoOne(row: PlanRow): Promise<PlanDto> {
+    const [dto] = await this.toPlanDtos([row]);
+    return dto as PlanDto;
+  }
+
+  /**
+   * Gắn cờ `deletable` cho một loạt bậc gói — MỘT truy vấn hoá đơn cho cả loạt, không N+1.
+   *
+   * Chỉ hỏi hoá đơn cho bậc CHƯA có thuê bao nào (và không phải tuyến hoa hồng): bậc đã có thuê
+   * bao thì đằng nào cũng không xoá được, và một hoá đơn đã trả luôn sinh ra một thuê bao — nên
+   * tập cần quét thường chỉ là vài bản nháp, thường là rỗng.
+   */
+  private async toPlanDtos(rows: PlanRow[]): Promise<PlanDto[]> {
+    const candidates = rows
+      .filter((row) => row.billingMode !== BILLING_MODE.COMMISSION && row._count.subscriptions === 0)
+      .map((row) => row.id);
+    const invoices = await this.planInvoiceCounts(candidates);
+    return rows.map((row) => toPlanDto(row, invoices.get(row.id) ?? 0));
+  }
+
+  /**
+   * Số hoá đơn gói trỏ tới từng bậc qua `lines_json.planId` (mọi trạng thái). Không có FK cho
+   * quan hệ này — hoá đơn là SNAPSHOT lượt mua (ADR 0041 điều 3) — nên nó được đếm bằng SQL.
+   */
+  private async planInvoiceCounts(
+    planIds: string[],
+    tx?: Prisma.TransactionClient,
+  ): Promise<Map<string, number>> {
+    if (planIds.length === 0) return new Map();
+    const client = tx ?? this.prisma;
+    const rows = await client.$queryRaw<{ plan_id: string; n: bigint }[]>`
+      SELECT lines_json->>'planId' AS plan_id, count(*) AS n
+        FROM subscription_invoices
+       WHERE lines_json->>'planId' = ANY(${planIds}::text[])
+       GROUP BY 1`;
+    return new Map(rows.map((row) => [row.plan_id, Number(row.n)]));
   }
 
   // -------------------------------------------------------------------------
@@ -905,10 +1049,7 @@ export class BillingService {
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
       select: PLAN_SELECT,
     });
-    return rows.map((row) => {
-      const { subscriptionCount: _count, ...rest } = toPlanDto(row);
-      return rest;
-    });
+    return rows.map(toTenantPlanDto);
   }
 
   /** Lịch sử hoá đơn gói của gian hàng (mới nhất trước). */
@@ -1068,6 +1209,22 @@ export class BillingService {
        * (chưa có hoá đơn nào), mà khoá hàng thì không khoá được hàng chưa tồn tại.
        */
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${tenantId}))`;
+
+      /*
+       * GIỮ hàng `plans` tới hết transaction (`FOR KEY SHARE`) — hoá đơn trỏ tới bậc gói qua
+       * `lines_json.planId`, không có FK nào khiến DB tự chặn `deletePlan` chạy song song. Không
+       * khoá thì lượt xoá có thể lọt giữa lúc đọc bậc gói ở trên và lúc chèn hoá đơn dưới đây,
+       * để lại một hoá đơn mà lúc tiền về không kích hoạt được. Khoá này không chặn sửa hay
+       * archive (chỉ xung đột với DELETE và đổi khoá).
+       */
+      const planRow = await tx.$queryRaw<{ id: string }[]>`
+        SELECT id FROM plans WHERE id = ${plan.id} FOR KEY SHARE`;
+      if (planRow.length === 0) {
+        throw new NotFoundException({
+          code: API_ERROR_CODE.NOT_FOUND,
+          message: 'Không tìm thấy gói dịch vụ',
+        });
+      }
 
       /*
        * Hoá đơn ĐÃ NHẬN MỘT PHẦN TIỀN chặn đường mua tiếp — và phải chặn, không phải void.
@@ -1898,7 +2055,25 @@ function toInvoiceDto(row: InvoiceRow): SubscriptionInvoiceDto {
   };
 }
 
-function toPlanDto(p: PlanRow): PlanDto {
+/**
+ * Bản ADMIN của một bậc gói: phần công khai + số thuê bao + cờ XOÁ ĐƯỢC.
+ *
+ * `deletable` là quy tắc của SERVER (`deletePlan` là lớp chặn thật) — màn quản trị chỉ đọc cờ này
+ * để quyết định có vẽ nút "Xoá gói" hay không, thay vì tự suy từ `subscriptionCount` và bỏ sót vế
+ * hoá đơn mà DTO không mang.
+ */
+function toPlanDto(p: PlanRow, invoiceCount: number): PlanDto {
+  const subscriptionCount = p._count.subscriptions;
+  return {
+    ...toTenantPlanDto(p),
+    subscriptionCount,
+    deletable:
+      p.billingMode !== BILLING_MODE.COMMISSION && subscriptionCount === 0 && invoiceCount === 0,
+  };
+}
+
+/** Phần công khai của một bậc gói — thứ bảng giá gian hàng nhìn thấy. */
+function toTenantPlanDto(p: PlanRow): TenantPlanDto {
   return {
     id: p.id,
     code: p.code,
@@ -1911,7 +2086,6 @@ function toPlanDto(p: PlanRow): PlanDto {
     currency: p.currency,
     status: p.status,
     sortOrder: p.sortOrder,
-    subscriptionCount: p._count.subscriptions,
     createdAt: (p.createdAt as Date).toISOString(),
   };
 }

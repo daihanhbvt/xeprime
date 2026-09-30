@@ -1,43 +1,310 @@
-.actions {
+/* ── Tiêu đề hộp: ô icon + tên hộp + dòng mô tả kèm dấu "i" ───────────────────────────── */
+
+.heading {
   display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 16px;
+  align-items: center;
+  gap: 14px;
+  /* Chừa chỗ cho nút đóng của Modal ở góc phải. */
+  padding-inline-end: var(--xp-space-lg);
 }
 
-/* Dải giải thích đầu form — cách phần nhập bên dưới đúng một nhịp của AntD. */
-.intro {
-  margin-bottom: 16px;
+.headingIcon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--xp-gold-wash);
+  color: var(--xp-gold-deep);
+  font-size: 24px;
+}
+
+.headingText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.headingTitle {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-bold);
+  line-height: var(--xp-line-height-h3);
+}
+
+.headingSubtitle {
+  color: var(--xp-color-text-secondary);
+  font-size: 13px;
+  font-weight: var(--xp-font-weight-regular);
+  line-height: 1.45;
+}
+
+/* ── Thân form ────────────────────────────────────────────────────────────────────────── */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  padding-top: var(--xp-space-sm);
+}
+
+/* Lưới hai cột; ô nào cần cả hàng thì mang `.full`. `minmax(0, 1fr)` để ô nhập co được. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--xp-space-md);
+}
+
+.full {
+  grid-column: 1 / -1;
+}
+
+/* Nhãn có icon: cùng cỡ chữ cho mọi ô, bất kể ô đó dựng nhãn theo đường nào. */
+.fieldLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--xp-color-text);
+  font-size: 13.5px;
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.fieldLabel > span[aria-hidden] {
+  color: var(--xp-gold-deep);
 }
 
 /*
- * Khối THÔNG TIN, không phải ô nhập: trần của tuyến hoa hồng là quy tắc trong code
- * (`OWNER_LITE_VEHICLE_LIMIT`). Nền chìm + không viền input để nó không trông như một ô bị khoá
- * — "bị khoá" gợi ý rằng có cách nào đó mở ra được.
+ * Ô có dấu "i" ở MÉP PHẢI hàng nhãn (vị trí của thiết kế). Dấu "i" nằm ngoài `<label>` nên
+ * không lọt vào tên khả truy cập của ô nhập, và không đụng tới dấu bắt buộc.
  */
-.readonlyBox {
-  margin-bottom: 16px;
-  padding: 12px 16px;
-  border-radius: var(--xp-radius-md, 8px);
-  background: var(--xp-color-fill-quaternary, rgb(0 0 0 / 3%));
+.hinted {
+  position: relative;
+  min-width: 0;
 }
 
-.readonlyTitle {
-  margin-bottom: 8px;
-  font-weight: 600;
-  color: var(--xp-color-text-secondary, rgb(0 0 0 / 65%));
+.hinted :global(.ant-form-item-label) {
+  padding-inline-end: 24px;
 }
 
-.readonlyRow {
+.hintCorner {
+  position: absolute;
+  top: 3px;
+  right: 0;
+  font-size: 15px;
+}
+
+/* ── Khối công tắc ────────────────────────────────────────────────────────────────────── */
+
+.options {
   display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 4px 0;
+  flex-direction: column;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
 }
 
-/* Câu nhắc mốc so sánh của % tiết kiệm — phụ, nên nhỏ và chìm hơn nhãn ô nhập. */
-.pricingNote {
-  margin: 0 0 16px;
-  color: var(--xp-color-text-tertiary, rgb(0 0 0 / 45%));
-  font-size: 13px;
+.optionRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+}
+
+.optionRow + .optionRow {
+  border-top: 1px solid var(--xp-color-border-subtle);
+}
+
+.optionIcon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--xp-gold-wash);
+  color: var(--xp-gold-deep);
+  font-size: 16px;
+}
+
+.optionBody {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Khối có tiêu đề (bảng giá, hạn mức tuyến hoa hồng) ─────────────────────────────── */
+
+.section {
+  padding: 16px 18px;
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius);
+  background: color-mix(in srgb, var(--xp-color-primary-light) 45%, var(--xp-color-bg-container));
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.sectionIcon {
+  color: var(--xp-gold-deep);
+  font-size: 18px;
+}
+
+.sectionTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h4);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h4);
+}
+
+/* Bảng giá: [nhãn | ô giá] · nhãn tag · nút xoá — mỗi kỳ một hàng. */
+.terms {
+  display: flex;
+  flex-direction: column;
+}
+
+.termRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px 32px;
+  align-items: start;
+  column-gap: 12px;
+}
+
+.termRow + .termRow {
+  padding-top: 12px;
+  border-top: 1px dashed var(--xp-color-border);
+}
+
+.termRow :global(.ant-form-item-row) {
+  flex-flow: row nowrap;
+}
+
+.termRow :global(.ant-form-item-label) {
+  flex: 0 0 132px;
+  max-width: 132px;
+  text-align: start;
+}
+
+.termRow :global(.ant-form-item-control) {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Tag và nút xoá canh giữa theo Ô NHẬP (cao 32px), không theo cả khối có dòng lỗi. */
+.termTag {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+}
+
+.termClear.termClear {
+  color: var(--xp-color-text-tertiary);
+}
+
+/* Icon trang trí được bọc `span[aria-hidden]` nên mất lề mặc định AntD dành cho `.anticon` con
+   trực tiếp — khoảng cách icon ↔ chữ do `gap` lo. */
+.pill.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-inline-end: 0;
+  border-radius: var(--xp-border-radius-pill);
+}
+
+/* Bộ đếm ký tự của ô mô tả nằm TUYỆT ĐỐI dưới ô nhập — chừa chỗ để nó không sát hàng kế tiếp. */
+.descriptionCell {
+  margin-bottom: var(--xp-space-sm);
+}
+
+/* Tám cờ tính năng xếp hai cột — một cột dài đẩy nút Lưu xuống quá xa. */
+.featuresCell :global(.ant-checkbox-group) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--xp-space-sm) var(--xp-space-md);
+}
+
+.readonlyGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--xp-space-md);
+  margin: 0;
+}
+
+.readonlyGrid dt {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.readonlyGrid dd {
+  margin: 2px 0 0;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* ── Cài đặt nâng cao ─────────────────────────────────────────────────────────────────── */
+
+.advanced.advanced {
+  border-color: var(--xp-color-border);
+  background: var(--xp-color-bg-container);
+}
+
+.advancedLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+@media (max-width: 640px) {
+  .heading {
+    gap: 10px;
+    padding-inline-end: 0;
+  }
+
+  .headingIcon {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+  }
+
+  .grid,
+  .readonlyGrid,
+  .featuresCell :global(.ant-checkbox-group) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Bảng giá ở điện thoại: nhãn lên trên ô giá, tag + nút xoá xuống cạnh ô. */
+  .termRow {
+    grid-template-columns: minmax(0, 1fr) auto 32px;
+  }
+
+  .termRow :global(.ant-form-item-row) {
+    flex-direction: column;
+  }
+
+  .termRow :global(.ant-form-item-label) {
+    flex: none;
+    max-width: 100%;
+    padding-bottom: var(--xp-space-xs);
+  }
+
+  .termTag {
+    align-self: end;
+    margin-bottom: var(--xp-space-md);
+  }
+
+  .termClear.termClear {
+    align-self: end;
+    margin-bottom: var(--xp-space-md);
+  }
+}
+
+/* "Xoá gói" đứng riêng ở mép TRÁI chân hộp — xa nút Lưu, để không bấm nhầm một thao tác không
+   hoàn tác được thay cho thao tác hay dùng nhất. */
+.deleteButton.deleteButton {
+  margin-inline-end: auto;
 }

@@ -1,12 +1,27 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
+import { ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PERMISSION } from '@xeprime/types';
 import { CurrentUser, PlatformOnly, RequirePermissions } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import { BillingService } from './billing.service';
 import { CreatePlanDto, PlanDto, PlanListQueryDto, UpdatePlanDto } from './dto/billing.dto';
 
-/** Danh mục gói dịch vụ (Phase 7, ADR 0010). Plan chỉ archive, không xoá. */
+/**
+ * Danh mục gói dịch vụ (Phase 7, ADR 0010). Gói ĐÃ DÙNG không xoá — chỉ ngừng bán (archive) và
+ * mở bán lại (activate); cả hai chỉ đổi DANH MỤC, không huỷ hay sửa thuê bao nào. Chỉ bản nháp
+ * chưa từng có thuê bao hay hoá đơn mới xoá hẳn được.
+ */
 @ApiTags('platform-plans')
 @Controller('platform/plans')
 @PlatformOnly()
@@ -45,5 +60,24 @@ export class PlansController {
   @ApiOkResponse({ type: PlanDto })
   archive(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<PlanDto> {
     return this.billing.archivePlan(user.id, id);
+  }
+
+  @Post(':id/activate')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Mở bán lại gói đã ngừng bán (chỉ đổi danh mục, không đụng thuê bao)' })
+  @ApiOkResponse({ type: PlanDto })
+  activate(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<PlanDto> {
+    return this.billing.activatePlan(user.id, id);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary:
+      'Xoá HẲN gói chưa từng được dùng (bản nháp) — gói đã có thuê bao/hoá đơn trả PLAN_IN_USE, hãy ngừng bán',
+  })
+  @ApiNoContentResponse()
+  remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<void> {
+    return this.billing.deletePlan(user.id, id);
   }
 }

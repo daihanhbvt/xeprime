@@ -1,0 +1,20 @@
+/*
+ * Bốn thẻ trên một hàng ở desktop, tự xuống dòng khi hẹp. `minmax(0, 1fr)` để một nhãn dài
+ * không đẩy lưới rộng hơn khung (cùng lý do với dải KPI của sổ khách).
+ */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: var(--xp-space-md);
+}
+
+.grid > * {
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--xp-space-sm);
+  }
+}
