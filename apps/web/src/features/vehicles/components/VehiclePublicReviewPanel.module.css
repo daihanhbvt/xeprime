@@ -18,10 +18,23 @@
   gap: var(--xp-space-sm);
 }
 
-/* Nhãn điều kiện đẩy trạng thái về mép phải mà không cần thêm phần tử bọc. */
-.checklist li > span:first-of-type {
+/*
+ * Nhãn điều kiện đẩy trạng thái về mép phải.
+ *
+ * Nhắm bằng CLASS, không bằng `span:first-of-type`: icon đi qua `decorativeIcon()` và nó trả
+ * về một `<span aria-hidden>`, nên thẻ span ĐẦU TIÊN trong mỗi dòng là icon chứ không phải
+ * nhãn. Selector cũ vì thế cho icon `flex: 1` — icon nuốt hết chỗ trống và đẩy cả nhãn lẫn
+ * trạng thái sang mép phải, để lại một khoảng trắng dài giữa dòng (thấy trên máy 30/09/2026).
+ */
+.checklist li > .label {
   flex: 1;
   min-width: 0;
+}
+
+/* Icon chỉ chiếm đúng phần của nó, không co giãn theo chỗ trống. */
+.checklist li > span[aria-hidden='true'] {
+  display: inline-flex;
+  flex: none;
 }
 
 .state {

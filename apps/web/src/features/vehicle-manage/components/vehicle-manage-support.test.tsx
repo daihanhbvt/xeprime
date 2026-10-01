@@ -61,6 +61,7 @@ vi.mock('@/features/vehicles/hooks/use-vehicle-summary', () => ({
 }));
 vi.mock('@/features/vehicles/hooks/use-vehicle-mutations', () => ({
   useUpdateVehicle: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useSetVehicleMarketplaceVisibility: () => ({ mutate: () => undefined, isPending: false }),
 }));
 
 const vehicle = {
@@ -114,7 +115,11 @@ describe('Không gian "Quản lý xe" (Owner Lite) trong phiên hỗ trợ', () 
     const sectionLinks = links.filter((href) => href.includes('/vehicles/v1/manage/'));
     expect(sectionLinks.sort()).toEqual(
       [
-        adminTenantSupportPath.vehicleManageSection(CONTEXT_A, 'v1', VEHICLE_MANAGE_SECTION.INFORMATION),
+        adminTenantSupportPath.vehicleManageSection(
+          CONTEXT_A,
+          'v1',
+          VEHICLE_MANAGE_SECTION.INFORMATION,
+        ),
         adminTenantSupportPath.vehicleManageSection(CONTEXT_A, 'v1', VEHICLE_MANAGE_SECTION.IMAGES),
       ].sort(),
     );
@@ -127,10 +132,19 @@ describe('Không gian "Quản lý xe" (Owner Lite) trong phiên hỗ trợ', () 
     expect(screen.queryAllByRole('switch')).toHaveLength(0);
   });
 
-  it('thẻ người dùng ở chân menu là NHÂN SỰ NỀN TẢNG, không phải chủ xe (9)', () => {
-    renderInSession(supportContextFixture());
-    expect(screen.getByText('Hỗ trợ viên Lan')).toBeTruthy();
-  });
+  /*
+   * KHẲNG ĐỊNH "thẻ người dùng ở chân menu là nhân sự nền tảng" đã GỠ ngày 29/09/2026 — cùng lúc
+   * với việc gỡ chính thẻ đó khỏi menu.
+   *
+   * Không gian này chiếm trọn bề ngang nhưng vẫn nằm trong một vỏ đã có danh tính người đăng
+   * nhập; dựng lại thẻ người dùng ở đây là nói "bạn là ai" hai lần trên cùng một màn.
+   *
+   * Mối lo mà test này canh — *"đang thao tác hộ một gian hàng thì màn hình phải nói rõ ĐANG LÀ
+   * NHÂN SỰ NỀN TẢNG, không phải chủ xe"* — KHÔNG mất: nó chuyển lên `Topbar` của `AppShell`,
+   * nơi phiên hỗ trợ thực sự chạy (`/manage/admin/tenant-support/...`) và câu
+   * `ManageCommon.shell.signedInAs` hiện tên người đăng nhập ở mọi trang, không chỉ trang xe.
+   * Bộ test của lớp đó là `components/layout/AppShell.test.tsx`.
+   */
 
   it('phiên chế độ xem: nội dung chỉ-xem', () => {
     renderInSession(

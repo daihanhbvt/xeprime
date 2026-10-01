@@ -9,7 +9,7 @@ import { API_ERROR_CODE, PERMISSION } from '@xeprime/types';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { PermissionState } from '@/components/feedback/PermissionState';
-import { ROUTES, vehiclePath } from '@/constants/routes';
+import { ROUTES } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
 import { vehicleSchedulePath } from '../calendar-link';
@@ -40,15 +40,19 @@ interface Props {
  */
 export function VehicleDetailContent({ vehicleId, notFoundAction, onDeleted }: Props) {
   const router = useRouter();
-  const { paths } = useWorkspace();
+  const { paths, vehicles: vehiclePaths } = useWorkspace();
   const { message } = App.useApp();
   const { has } = usePermissions();
   const t = useTranslations('Vehicles');
 
   const canView = has(PERMISSION.VEHICLE_VIEW);
-  const { data: vehicle, isLoading, isError, error, refetch } = useVehicle(
-    canView ? vehicleId : undefined,
-  );
+  const {
+    data: vehicle,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useVehicle(canView ? vehicleId : undefined);
   // Tổng hợp (chỉ số + đơn thuê) tách query riêng: chậm hay hỏng cũng không kéo sập hồ sơ.
   const summary = useVehicleSummary(canView ? vehicleId : undefined);
   const deleteVehicle = useDeleteVehicle();
@@ -110,7 +114,8 @@ export function VehicleDetailContent({ vehicleId, notFoundAction, onDeleted }: P
       canEdit={has(PERMISSION.VEHICLE_UPDATE)}
       canDelete={has(PERMISSION.VEHICLE_DELETE)}
       deletePending={deleteVehicle.isPending}
-      onEdit={() => router.push(vehiclePath.edit(vehicleId))}
+      // Theo KHU: cổng quản lý mở màn sửa nhiều tab, khu tài khoản mở không gian "Quản lý xe".
+      onEdit={() => router.push(vehiclePaths.profile(vehicleId))}
       onSchedule={() => router.push(vehicleSchedulePath(vehicle, { basePath: paths.calendar }))}
       onDelete={handleDelete}
     />

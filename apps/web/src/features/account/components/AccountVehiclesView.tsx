@@ -2,9 +2,11 @@
 
 import { BookOutlined, FileProtectOutlined, PlusOutlined, RightOutlined } from '@ant-design/icons';
 import { Button, Select } from 'antd';
+import { FilterBar, type FilterField } from '@/components/filter/FilterBar';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { useMemo } from 'react';
 import { PERMISSION } from '@xeprime/types';
 
 import type { RowAction } from '@/components/data-display/RowActions';
@@ -15,13 +17,15 @@ import {
   accountVehiclePath,
   listYourVehicleRegisterPath,
 } from '@/constants/routes';
+import { FleetSummaryBar } from '@/features/vehicles/components/FleetSummaryBar';
 import { VehicleCardGrid } from '@/features/vehicles/components/VehicleCardGrid';
 import { VehicleStatusChips } from '@/features/vehicles/components/VehicleStatusChips';
 import { VEHICLES_DEFAULT_LIMIT } from '@/features/vehicles/api';
 import { useVehicleFilters } from '@/features/vehicles/hooks/use-vehicle-filters';
 import { useVehicleOptions } from '@/features/vehicles/hooks/use-vehicle-options';
 import { useVehicles } from '@/features/vehicles/hooks/use-vehicles';
-import type { VehicleListItem } from '@/features/vehicles/types';
+import type { VehicleFilters, VehicleListItem } from '@/features/vehicles/types';
+import { useIsMobile } from '@/hooks/use-media-query';
 import { usePermissions } from '@/hooks/use-permissions';
 import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 
@@ -43,14 +47,41 @@ import styles from './AccountVehiclesView.module.css';
  */
 export function AccountVehiclesView() {
   const t = useTranslations('Account.vehicles');
+  const tSort = useTranslations('Vehicles.list.sort');
   // Cẩm nang + chứng từ mẫu là tài liệu CÁ NHÂN của chủ xe ở khu tài khoản — phiên hỗ trợ gian hàng
   // không mở khu đó (ADR 0050 §12), nên hai thẻ dẫn đường không dựng.
   const inSupport = useSupportHides(SUPPORT_HIDDEN_AREA.OWNER_GUIDES);
   const tManage = useTranslations('ManageCommon.permission');
   const router = useRouter();
   const { has } = usePermissions();
+  const isMobile = useIsMobile();
   const { filters, setFilters } = useVehicleFilters();
   const options = useVehicleOptions();
+  /**
+   * HAI trường lọc, không phải năm.
+   *
+   * Đây là toàn bộ khác biệt giữa thanh lọc của chủ xe cá nhân và của gian hàng: cùng một
+   * `FilterBar`, cùng một `useVehicleFilters` đọc URL, chỉ khác danh sách khai ở đây. Loại xe và
+   * trạng thái kiểm duyệt là bộ lọc của người quản một ĐỘI xe; với một tới ba chiếc, chúng chỉ
+   * là hai ô luôn để trống.
+   */
+  const accountVehicleFilterFields: FilterField[] = useMemo(
+    () => [
+      {
+        kind: 'search',
+        key: 'q',
+        label: t('searchLabel'),
+        placeholder: t('searchPlaceholder'),
+      },
+      {
+        kind: 'select',
+        key: 'operationStatus',
+        label: t('statusFilterLabel'),
+        options: options.operationStatus,
+      },
+    ],
+    [options.operationStatus, t],
+  );
   const { data, isError, refetch, isFetching } = useVehicles(filters);
 
   const canView = has(PERMISSION.VEHICLE_VIEW);
@@ -154,23 +185,65 @@ export function AccountVehiclesView() {
         </div>
       )}
 
-      <div className={styles.filters}>
-        <VehicleStatusChips
-          value={filters.serviceType}
-          onChange={(serviceType) => setFilters({ serviceType })}
-          options={options.serviceType}
-          ariaLabel={t('serviceFilterLabel')}
-        />
-        <Select
-          className={styles.statusSelect}
-          aria-label={t('statusFilterLabel')}
-          placeholder={t('statusAll')}
-          allowClear
-          options={options.operationStatus}
-          value={filters.operationStatus}
-          onChange={(operationStatus) => setFilters({ operationStatus })}
-        />
-      </div>
+      {/*
+        Dải chỉ số đội xe ở mobile — parity với `/manage/vehicles` (29/09/2026).
+
+        `GET /vehicles/fleet-summary` chỉ đòi `vehicles.view`, không có cờ gói nào gác, nên nó
+        vốn đã dùng được ở tuyến hoa hồng; chỉ là khu tài khoản chưa bao giờ dựng nó. Ba con số
+        (tổng · sẵn sàng · đang thuê) nói về CẢ đội xe, không theo trang hay bộ lọc — với người
+        có ba chiếc xe thì đó đúng là câu hỏi đầu tiên khi mở máy.
+      */}
+      {isMobile ? <FleetSummaryBar enabled /> : null}
+
+      {/*
+        Dải chip DỊCH VỤ — lối tắt một-chạm, giữ ngoài `FilterBar` có chủ đích.
+
+        Ở `/manage` dải chip tương ứng lọc theo TRẠNG THÁI VẬN HÀNH; ở đây là DỊCH VỤ, vì đó là
+        câu hỏi đầu tiên của một người có vài chiếc xe ("xe tự lái của tôi đâu"), còn trạng thái
+        vận hành đã có ô chọn trong thanh lọc ngay dưới.
+      */}
+      <VehicleStatusChips
+        value={filters.serviceType}
+        onChange={(serviceType) => setFilters({ serviceType })}
+        options={options.serviceType}
+        ariaLabel={t('serviceFilterLabel')}
+      />
+
+      {/*
+        CÙNG `FilterBar` với `/manage/vehicles` (29/09/2026) — một cơ chế lọc cho cả hai khu.
+
+        Khác biệt giữa hai khu nằm ở SỐ TRƯỜNG, không ở cơ chế: chủ xe cá nhân không có lọc loại
+        xe và lọc trạng thái kiểm duyệt (một người có một tới ba chiếc xe không cần bốn ô lọc),
+        nhưng vẫn được nguyên bottom-sheet ở mobile, chip gỡ từng bộ lọc và huy hiệu đếm mà
+        trước đây chỉ `/manage` có.
+
+        Thu được thêm hai thứ mà hàng lọc tự dựng trước đó không có:
+         - `showActiveChips` hiện CẢ bộ lọc đến từ URL mà màn này không vẽ ô riêng
+           (`?vehicleType=`, `?publicStatus=`) — trước đây chúng thu hẹp danh sách một cách vô
+           hình, và lối thoát duy nhất nằm trong màn rỗng;
+         - `sort` nằm ở slot `actions`, KHÔNG phải một `field` — nó không lọc dữ liệu, gộp vào sẽ
+           làm huy hiệu đếm luôn sai và nút "Xoá bộ lọc" hiện vĩnh viễn (xem `VehicleFiltersBar`).
+      */}
+      <FilterBar
+        fields={accountVehicleFilterFields}
+        values={{ q: filters.q, operationStatus: filters.operationStatus }}
+        onChange={(patch) => setFilters(patch as Partial<VehicleFilters>)}
+        onClear={clearFilters}
+        showActiveChips
+        compactFields
+        actions={
+          <Select
+            className={styles.sortSelect}
+            aria-label={tSort('label')}
+            placeholder={tSort('label')}
+            // Cùng hình thái "Nhãn: Giá trị" với `/manage` — một quy ước, hai khu.
+            labelRender={(item) => tSort('value', { label: String(item.label) })}
+            options={options.sort}
+            value={filters.sort ?? 'newest'}
+            onChange={(sort) => setFilters({ sort })}
+          />
+        }
+      />
 
       <VehicleCardGrid
         items={items}

@@ -20,6 +20,17 @@ const nav = vi.hoisted(() => ({
   replace: vi.fn(),
   params: new URLSearchParams(),
 }));
+/**
+ * Trục NĂNG LỰC theo gói — hộp thư yêu cầu mở MODAL hồ sơ xe (`VehicleDetailDialog`), và hồ sơ
+ * 360 bên trong hỏi cờ gói qua `useFeature` → `/auth/me`. Test này mock `use-permissions` nên
+ * không dựng `QueryClientProvider`; thiếu mock ở đây thì modal chết vì hạ tầng.
+ */
+vi.mock('@/hooks/use-feature', () => ({
+  useFeature: () => ({ state: 'enabled', canWrite: true, isVisible: true, planEndsAt: null }),
+  useFeatureStates: () => ({}),
+  usePlanEndsAt: () => null,
+}));
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: nav.push, replace: nav.replace }),
   usePathname: () => '/manage/booking-requests',

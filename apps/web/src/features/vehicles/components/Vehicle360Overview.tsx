@@ -1,11 +1,15 @@
 'use client';
 
 import {
+  CalendarOutlined,
   CarOutlined,
   CheckCircleFilled,
   ClockCircleOutlined,
   CloseCircleOutlined,
+  DeleteOutlined,
+  EditOutlined,
   MoreOutlined,
+  ToolOutlined,
 } from '@ant-design/icons';
 import {
   Alert,
@@ -17,6 +21,7 @@ import {
   Dropdown,
   Popconfirm,
   Skeleton,
+  Tabs,
   Tag,
 } from 'antd';
 import type { DescriptionsProps } from 'antd';
@@ -42,18 +47,7 @@ import { PreviewImage, PreviewImageGroup } from '@/components/data-display/Previ
 import { DiscountTag } from '@/components/data-display/DiscountTag';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { FinanceEntityPanel } from '@/features/finance/components/FinanceEntityPanel';
-import { VehicleMaintenanceCard } from '@/features/vehicle-maintenance/components/VehicleMaintenanceCard';
-import {
-  ROUTES,
-  VEHICLE_EDIT_TAB,
-  VEHICLE_MANAGE_SECTION,
-  accountVehicleManagePath,
-  receiptsPath,
-  vehiclePath,
-  vehicleTabPath,
-  type VehicleEditTab,
-  type VehicleManageSection,
-} from '@/constants/routes';
+import { ROUTES, VEHICLE_EDIT_TAB, VEHICLE_MANAGE_SECTION, receiptsPath } from '@/constants/routes';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { decorativeIcon } from '@/lib/decorative-icon';
 import { toAppTz } from '@/lib/datetime';
@@ -62,17 +56,20 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { vehicleSchedulePath } from '../calendar-link';
 import { usePublicationLabels } from '../hooks/use-publication-labels';
+import { useVehicleAlertView } from '../hooks/use-vehicle-alert-view';
+import { useVehicleCapabilities } from '../hooks/use-vehicle-capabilities';
 import { useVehicleSource } from '../hooks/use-vehicle-source';
 import { discountedPriceVnd } from '../pricing';
 import { vehiclePublicationTask } from '../publication';
 import type { Vehicle360Summary, VehicleBookingBrief, VehicleDetail } from '../types';
 import { VehicleAlertList } from './VehicleAlerts';
 import { MarketplaceVisibilitySwitch } from './MarketplaceVisibilitySwitch';
+import { VehicleThumbStrip } from './VehicleThumbStrip';
 import {
   MARKETPLACE_SWITCH_ANCHOR,
   VehiclePublicationTaskItem,
 } from './VehiclePublicationTaskItem';
-import { VehiclePublicReviewPanel } from './VehiclePublicReviewPanel';
+import { VehicleMaintenanceWorkspace } from '@/features/vehicle-maintenance/components/VehicleMaintenanceWorkspace';
 import styles from './Vehicle360Overview.module.css';
 import { useAvailableHref, useSupportSession } from '@/features/tenant-support/support-session';
 import { useErrorMessage } from '@/i18n/use-error-message';
@@ -97,6 +94,15 @@ function useShortRange(): (from: string, to: string) => string {
       to: toAppTz(to).format(pattern.dayMonth),
     });
 }
+
+/** Tab của Hồ sơ 360 — Tổng quan · Tài chính (theo năng lực) · Hình ảnh · Xét duyệt. */
+const OVERVIEW_VIEW = {
+  SPECS: 'specs',
+  MAINTENANCE: 'maintenance',
+  OVERVIEW: 'overview',
+  FINANCE: 'finance',
+} as const;
+type OverviewView = (typeof OVERVIEW_VIEW)[keyof typeof OVERVIEW_VIEW];
 
 export interface Vehicle360OverviewProps {
   vehicle: VehicleDetail;
@@ -141,7 +147,9 @@ export function Vehicle360Overview({
   onDelete,
 }: Vehicle360OverviewProps) {
   const t = useTranslations('Vehicles.overview');
-  const { has } = usePermissions();
+  const can = useVehicleCapabilities();
+  const { isManage } = useWorkspace();
+  const [view, setView] = useState<OverviewView>(OVERVIEW_VIEW.OVERVIEW);
 
   return (
     <div className={styles.stack}>
@@ -156,62 +164,126 @@ export function Vehicle360Overview({
         onDelete={onDelete}
       />
 
-      <div className={styles.quickRow}>
-        <TodoCard
-          vehicle={vehicle}
-          summary={summary}
-          loading={summaryLoading}
-          failed={summaryFailed}
-        />
-        {summary?.upcomingBookings !== undefined || summaryLoading || summaryFailed ? (
-          <ScheduleCard
-            bookings={summary?.upcomingBookings}
-            loading={summaryLoading}
-            failed={summaryFailed}
-          />
-        ) : null}
-        <PerformanceCard summary={summary} loading={summaryLoading} failed={summaryFailed} />
-      </div>
-
-      <ModuleLinks vehicleId={vehicle.id} vehicle={vehicle} canEdit={canEdit} />
-
       {/*
-        Tiền của riêng chiếc xe này, THEO KỲ. Trước đây hồ sơ xe chỉ có một con số luỹ kế và một
-        đường dẫn ra sổ — không trả lời được "tháng này xe có nuôi nổi nó không".
-
-        Gác `finance.view` ở đây là gác HIỂN THỊ; chặn thật vẫn là guard backend, và khi thiếu
-        quyền thì truy vấn cũng không được bắn đi (cùng luật với `VehiclesService.stats`).
+        Bố cục TAB + BA CỘT (30/09/2026) — cùng các khối như trước, chỉ đổi chỗ bày:
+        - Tổng quan: cột 1 hồ sơ xe (thông số · giấy tờ), cột 2 kinh doanh (giá · nhận chuyến ·
+          bảo dưỡng · nguồn xe), cột 3 vận hành (việc cần làm · hiệu suất · lịch sắp tới · thao
+          tác nhanh); dưới cùng ảnh, hoạt động gần đây, đánh giá.
+        - Tài chính: chỉ có khi `can.money` (quyền ∧ cờ gói) — chủ xe tuyến hoa hồng không thấy tab.
+        - Hình ảnh: thư viện ảnh trọn bề ngang.
+        Mọi khối vẫn tự gác quyền/cờ gói như cũ; ẩn tab không mở hay khoá thêm gì.
       */}
-      {has(PERMISSION.FINANCE_VIEW) ? (
-        <FinanceEntityPanel
-          scope={{ vehicleId: vehicle.id }}
-          kind="vehicle"
-          canCreateReceipt={has(PERMISSION.RECEIPT_CREATE)}
-        />
-      ) : null}
-
-      <div className={styles.columns}>
-        <div className={styles.column}>
-          <PricingCard vehicle={vehicle} canEdit={canEdit} />
-          <AutomationCard vehicle={vehicle} canEdit={canEdit} />
-          <DocumentsCard vehicleId={vehicle.id} summary={summary} />
-          <SpecsCard vehicle={vehicle} />
-          <MediaCard vehicle={vehicle} />
-        </div>
-        <div className={styles.column}>
-          <SourceCard vehicle={vehicle} />
-          <VehicleMaintenanceCard vehicleId={vehicle.id} />
-          <VehiclePublicReviewPanel vehicle={vehicle} />
-        </div>
-      </div>
-
-      {summary?.recentBookings !== undefined || summaryLoading || summaryFailed ? (
-        <ActivityCard
-          bookings={summary?.recentBookings}
-          loading={summaryLoading}
-          failed={summaryFailed}
-        />
-      ) : null}
+      <Tabs
+        className={styles.viewTabs}
+        activeKey={view}
+        onChange={(key) => setView(key as OverviewView)}
+        items={[
+          {
+            key: OVERVIEW_VIEW.OVERVIEW,
+            label: t('tabs.overview'),
+            children: (
+              <div className={`${styles.stack} ${styles.overviewPane}`}>
+                {/*
+                  "Việc cần làm" chỉ ở cổng quản lý (30/09/2026). Chủ xe tuyến hoa hồng tạo xe qua
+                  wizard đã bắt buộc đủ điều kiện lên chợ, nên với họ khối này không còn việc gì.
+                */}
+                {isManage ? (
+                  <TodoCard
+                    vehicle={vehicle}
+                    summary={summary}
+                    loading={summaryLoading}
+                    failed={summaryFailed}
+                  />
+                ) : null}
+                <div className={isManage ? styles.grid3 : styles.columns}>
+                  <div className={styles.column}>
+                    <DocumentsCard vehicleId={vehicle.id} summary={summary} />
+                    <MediaCard vehicle={vehicle} />
+                  </div>
+                  <div className={styles.column}>
+                    <PricingCard vehicle={vehicle} canEdit={canEdit} />
+                    <AutomationCard vehicle={vehicle} canEdit={canEdit} />
+                    {/* Nguồn xe & tài chính là của gian hàng — chủ xe tuyến hoa hồng không có. */}
+                    {isManage ? <SourceCard vehicle={vehicle} /> : null}
+                  </div>
+                  {/*
+                    Hiệu suất + lịch sắp tới chỉ ở cổng quản lý (30/09/2026): chủ xe xem chuyến ở
+                    "Lịch sử chuyến" của không gian quản lý xe.
+                  */}
+                  {isManage ? (
+                    <div className={styles.column}>
+                      <PerformanceCard
+                        summary={summary}
+                        loading={summaryLoading}
+                        failed={summaryFailed}
+                      />
+                      {summary?.upcomingBookings !== undefined ||
+                      summaryLoading ||
+                      summaryFailed ? (
+                        <ScheduleCard
+                          bookings={summary?.upcomingBookings}
+                          loading={summaryLoading}
+                          failed={summaryFailed}
+                        />
+                      ) : null}
+                      <ModuleLinks vehicleId={vehicle.id} vehicle={vehicle} canEdit={canEdit} />
+                    </div>
+                  ) : null}
+                </div>
+                {!isManage ? (
+                  <ModuleLinks vehicleId={vehicle.id} vehicle={vehicle} canEdit={canEdit} />
+                ) : null}
+                {summary?.recentBookings !== undefined || summaryLoading || summaryFailed ? (
+                  <ActivityCard
+                    bookings={summary?.recentBookings}
+                    loading={summaryLoading}
+                    failed={summaryFailed}
+                  />
+                ) : null}
+              </div>
+            ),
+          },
+          {
+            // Thông số kỹ thuật là một tab riêng (30/09/2026) — bảng dài, không đè lên tổng quan.
+            key: OVERVIEW_VIEW.SPECS,
+            label: t('tabs.specs'),
+            children: <SpecsCard vehicle={vehicle} />,
+          },
+          ...(can.money
+            ? [
+                {
+                  key: OVERVIEW_VIEW.FINANCE,
+                  label: t('tabs.finance'),
+                  /*
+                   * Tiền của riêng chiếc xe này, THEO KỲ. Gác bằng `can.money` (quyền ∧ cờ gói)
+                   * — `finance/*` ở backend gác `@SubscriptionTrackOnly` + `@RequiresFeature`.
+                   */
+                  children: (
+                    <FinanceEntityPanel
+                      scope={{ vehicleId: vehicle.id }}
+                      kind="vehicle"
+                      canCreateReceipt={can.createReceipt}
+                    />
+                  ),
+                },
+              ]
+            : []),
+          /*
+           * Bảo dưỡng & số KM — tab riêng (30/09/2026), thay hai tab Hình ảnh + Xét duyệt. Tuyến
+           * GÓI: `vehicles/:id/maintenance/*` gác `@SubscriptionTrackOnly` + `@RequiresFeature`,
+           * nên tab chỉ có khi `can.maintenance` (quyền ∧ cờ gói).
+           */
+          ...(can.maintenance
+            ? [
+                {
+                  key: OVERVIEW_VIEW.MAINTENANCE,
+                  label: t('tabs.maintenance'),
+                  children: <VehicleMaintenanceWorkspace vehicle={vehicle} />,
+                },
+              ]
+            : []),
+        ]}
+      />
 
       {/* CTA cố định đáy màn ở mobile (Figma `236:4890`) — desktop dùng nút trong thẻ hồ sơ. */}
       {canEdit ? (
@@ -283,26 +355,58 @@ function ProfileHeader({
   const repairListing = useRepairVehicleListing(vehicle.id);
   const { message } = App.useApp();
   const errorMessage = useErrorMessage();
+  /*
+   * MỘT nút ⋮ cho toàn bộ thao tác của xe (30/09/2026) — trước đó là ba nút rời trong cột phải.
+   *
+   * Cột thao tác nằm cạnh khối thông tin dài, nên ba nút rời đẩy nhau xuống dòng ở mọi bề rộng
+   * hẹp và cái nút chỉ-icon ở cuối đọc thành một thanh trống. Một điểm bấm duy nhất thì không
+   * có gì để xuống dòng, và thứ tự thao tác đọc thành danh sách chứ không thành hình.
+   *
+   * "Xem lịch" không gác quyền: nó chỉ điều hướng sang màn lịch, nơi tự gác quyền của nó.
+   */
   const menuItems = [
-    ...(canRepairListing ? [{ key: 'repair-listing', label: t('repairListing.action') }] : []),
-    ...(canDelete ? [{ key: 'delete', danger: true, label: t('delete') }] : []),
+    ...(canEdit ? [{ key: 'edit', icon: decorativeIcon(<EditOutlined />), label: t('edit') }] : []),
+    { key: 'schedule', icon: decorativeIcon(<CalendarOutlined />), label: t('schedule') },
+    ...(canRepairListing || canDelete ? [{ type: 'divider' as const, key: 'sep' }] : []),
+    ...(canRepairListing
+      ? [
+          {
+            key: 'repair-listing',
+            icon: decorativeIcon(<ToolOutlined />),
+            label: t('repairListing.action'),
+          },
+        ]
+      : []),
+    ...(canDelete
+      ? [
+          {
+            key: 'delete',
+            danger: true,
+            icon: decorativeIcon(<DeleteOutlined />),
+            label: t('delete'),
+          },
+        ]
+      : []),
   ];
 
   return (
     <section className={styles.profile} aria-label={t('profileLabel')}>
       <div className={styles.profileMain}>
-        <div className={styles.profileMedia}>
-          {vehicle.mainImageUrl ? (
-            <PreviewImage
-              className={styles.profileImage}
-              src={vehicle.mainImageUrl}
-              alt={vehicle.name}
-            />
-          ) : (
-            <span className={styles.profileMediaFallback} aria-hidden="true">
-              <CarOutlined />
-            </span>
-          )}
+        <div className={styles.profileMediaCol}>
+          <div className={styles.profileMedia}>
+            {vehicle.mainImageUrl ? (
+              <PreviewImage
+                className={styles.profileImage}
+                src={vehicle.mainImageUrl}
+                alt={vehicle.name}
+              />
+            ) : (
+              <span className={styles.profileMediaFallback} aria-hidden="true">
+                <CarOutlined />
+              </span>
+            )}
+          </div>
+          <VehicleThumbStrip vehicle={vehicle} />
         </div>
 
         <div className={styles.profileInfo}>
@@ -370,62 +474,59 @@ function ProfileHeader({
           */}
           <MarketplaceVisibilitySwitch vehicle={vehicle} />
           {/*
-            Nhóm nút tách riêng khỏi hàng công tắc vì chúng biến mất ở hai nhịp khác nhau: ở
-            mobile các nút chuyển xuống thanh CTA đáy màn (`mobileActions`), còn "Trên chợ" thì
+            Nút ⋮ tách riêng khỏi hàng công tắc vì hai thứ biến mất ở hai nhịp khác nhau: ở
+            mobile thao tác chuyển xuống thanh CTA đáy màn (`mobileActions`), còn "Trên chợ" thì
             KHÔNG có chỗ nào khác để đi và phải ở lại đầu trang.
           */}
           <div className={styles.profileButtons}>
-            {canEdit ? (
-              <Button type="primary" block onClick={onEdit}>
-                {t('edit')}
-              </Button>
-            ) : null}
-            <Button block onClick={onSchedule}>
-              {t('schedule')}
-            </Button>
-            {menuItems.length > 0 ? (
-            // Xác nhận điều khiển bằng state và neo vào nút ⋮ — mục menu đã biến mất khi menu
-            // đóng, không còn chỗ khác để neo (cùng pattern với `RowActions`).
-              <Popconfirm
-                open={confirmingDelete}
-                trigger={[]}
-                title={t('deleteConfirmTitle', { name: vehicle.name })}
-                description={t('deleteConfirmBody')}
-                okText={tActions('delete')}
-                okButtonProps={{ danger: true, loading: deletePending }}
-                cancelText={tActions('cancel')}
-                onConfirm={() => {
-                  setConfirmingDelete(false);
-                  onDelete();
+            {/*
+              Xác nhận xoá điều khiển bằng state và neo vào nút ⋮ — mục menu đã biến mất khi menu
+              đóng, không còn chỗ khác để neo (cùng pattern với `RowActions`).
+            */}
+            <Popconfirm
+              open={confirmingDelete}
+              trigger={[]}
+              title={t('deleteConfirmTitle', { name: vehicle.name })}
+              description={t('deleteConfirmBody')}
+              okText={tActions('delete')}
+              okButtonProps={{ danger: true, loading: deletePending }}
+              cancelText={tActions('cancel')}
+              onConfirm={() => {
+                setConfirmingDelete(false);
+                onDelete();
+              }}
+              onCancel={() => setConfirmingDelete(false)}
+            >
+              <Dropdown
+                menu={{
+                  items: menuItems,
+                  onClick: ({ key }) => {
+                    if (key === 'edit') onEdit();
+                    if (key === 'schedule') onSchedule();
+                    if (key === 'delete') setConfirmingDelete(true);
+                    if (key === 'repair-listing') {
+                      repairListing.mutate(undefined, {
+                        onSuccess: (result) =>
+                          message.success(
+                            result.changed
+                              ? t('repairListing.fixed')
+                              : t('repairListing.unchanged'),
+                          ),
+                        onError: (err) => message.error(errorMessage(err)),
+                      });
+                    }
+                  },
                 }}
-                onCancel={() => setConfirmingDelete(false)}
+                trigger={['click']}
               >
-                <Dropdown
-                  menu={{
-                    items: menuItems,
-                    onClick: ({ key }) => {
-                      if (key === 'delete') setConfirmingDelete(true);
-                      if (key === 'repair-listing') {
-                        repairListing.mutate(undefined, {
-                          onSuccess: (result) =>
-                            message.success(
-                              result.changed ? t('repairListing.fixed') : t('repairListing.unchanged'),
-                            ),
-                          onError: (err) => message.error(errorMessage(err)),
-                        });
-                      }
-                    },
-                  }}
-                  trigger={['click']}
-                >
-                  <Button
-                    icon={decorativeIcon(<MoreOutlined />)}
-                    aria-label={t('moreActions', { name: vehicle.name })}
-                    loading={deletePending || repairListing.isPending}
-                  />
-                </Dropdown>
-              </Popconfirm>
-            ) : null}
+                <Button
+                  className={styles.actionsTrigger}
+                  icon={decorativeIcon(<MoreOutlined />)}
+                  aria-label={t('moreActions', { name: vehicle.name })}
+                  loading={deletePending || repairListing.isPending}
+                />
+              </Dropdown>
+            </Popconfirm>
           </div>
         </div>
       </div>
@@ -485,8 +586,11 @@ function TodoCard({
   failed: boolean;
 }) {
   const t = useTranslations('Vehicles.overview');
+  const alertView = useVehicleAlertView();
   const task = vehiclePublicationTask(vehicle);
-  const alerts = (summary?.alerts ?? []).filter(
+  // Lọc theo năng lực + đổi đích về đúng khu TRƯỚC, rồi mới bỏ hai cảnh báo nói trùng với việc
+  // "đưa xe lên chợ" dựng tại chỗ — hai phép lọc độc lập, thứ tự không đổi kết quả.
+  const alerts = alertView(vehicle.id, summary?.alerts ?? []).filter(
     (alert) => !task || !PUBLICATION_ALERT_KINDS.includes(alert.kind),
   );
   // Gợi ý không phải "việc cần làm" nên không vào số đếm — badge là số việc thật.
@@ -619,6 +723,9 @@ function PerformanceCard({
  */
 function AutomationCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: boolean }) {
   const t = useTranslations('Vehicles.overview');
+  const { vehicles: vehiclePaths } = useWorkspace();
+  // Phiên hỗ trợ không mở thiết lập nhận chuyến — link không có đích thì không dựng (ADR 0050).
+  const href = useAvailableHref()(vehiclePaths.optimization(vehicle.id));
   const hasConfigurableService = VEHICLE_SERVICE_SETTING_SERVICES.some((service) =>
     vehicle.serviceTypes.includes(service),
   );
@@ -628,8 +735,8 @@ function AutomationCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit:
     <Card
       title={t('automation.title')}
       extra={
-        canEdit ? (
-          <Link href={vehiclePath.optimization(vehicle.id)} className={styles.cardLink}>
+        canEdit && href ? (
+          <Link href={href} className={styles.cardLink}>
             {t('automation.editLink')}
           </Link>
         ) : null
@@ -643,8 +750,9 @@ function AutomationCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit:
 
 function PricingCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: boolean }) {
   const t = useTranslations('Vehicles.overview');
+  const { vehicles: vehiclePaths } = useWorkspace();
   // Phiên hỗ trợ không mở giá & chính sách của xe (ADR 0050) — link không có đích thì không dựng.
-  const pricingHref = useAvailableHref()(vehiclePath.pricing(vehicle.id));
+  const pricingHref = useAvailableHref()(vehiclePaths.pricing(vehicle.id));
   const tLabels = useTranslations('Common.labels');
   const fmt = useAppFormat();
 
@@ -725,56 +833,53 @@ function ModuleLinks({
 }) {
   const t = useTranslations('Vehicles.overview.links');
   const { has } = usePermissions();
-  const { paths, isManage } = useWorkspace();
+  const { paths, vehicles: vehiclePaths, isManage } = useWorkspace();
+  const can = useVehicleCapabilities();
   const available = useAvailableHref();
   const links: { href: string; label: string }[] = [];
 
   /*
    * Hồ sơ 360 hiện ở CẢ HAI khu, nhưng cùng một mục dẫn tới hai nơi khác nhau: ở cổng quản lý là
-   * tab của `/manage/vehicles/:id/edit`, ở khu tài khoản là mục trong không gian "Quản lý xe"
-   * `/account/vehicles/:id/manage/:section`. Trước đây dải này trỏ cứng vào `/manage`, nên chủ xe
-   * tuyến hoa hồng bấm "Thông tin" là bị đá ra khỏi khu của chính mình.
+   * tab của `/manage/vehicles/:id/edit`, ở khu tài khoản là mục trong không gian "Quản lý xe".
+   * `vehicles.part` giữ phép ánh xạ đó ở MỘT chỗ — cùng bảng mà nút "Chỉnh sửa", thẻ Giấy tờ và
+   * CTA "Hoàn tất hồ sơ" dùng, nên bốn lối vào không thể trôi khỏi nhau.
    */
-  const editPath = (tab: VehicleEditTab, section: VehicleManageSection): string =>
-    isManage ? vehicleTabPath(vehicleId, tab) : accountVehicleManagePath.section(vehicleId, section);
+  const push = (label: string, href: string | null) => {
+    if (href) links.push({ href, label });
+  };
 
   if (canEdit) {
-    links.push(
-      {
-        href: editPath(VEHICLE_EDIT_TAB.INFORMATION, VEHICLE_MANAGE_SECTION.INFORMATION),
-        label: t('information'),
-      },
-      {
-        href: editPath(VEHICLE_EDIT_TAB.MEDIA, VEHICLE_MANAGE_SECTION.IMAGES),
-        label: t('media'),
-      },
-      {
-        href: isManage
-          ? vehiclePath.pricing(vehicleId)
-          : accountVehicleManagePath.section(vehicleId, VEHICLE_MANAGE_SECTION.SELF_DRIVE_PRICING),
-        label: t('pricing'),
-      },
+    push(
+      t('information'),
+      vehiclePaths.part(
+        vehicleId,
+        VEHICLE_EDIT_TAB.INFORMATION,
+        VEHICLE_MANAGE_SECTION.INFORMATION,
+      ),
     );
+    push(
+      t('media'),
+      vehiclePaths.part(vehicleId, VEHICLE_EDIT_TAB.MEDIA, VEHICLE_MANAGE_SECTION.IMAGES),
+    );
+    push(t('pricing'), vehiclePaths.pricing(vehicleId));
     /*
-     * Nguồn xe (ký gửi/hợp tác) là sổ sách của gian hàng — thuộc nhóm `finance` và không có bản
-     * `/account`. Ẩn hẳn ở khu tài khoản thay vì hiện một mục dẫn ra ngoài khu.
+     * Nguồn xe (ký gửi/hợp tác) là sổ sách của gian hàng — thuộc năng lực `finance` và không có
+     * bản `/account`, nên `part(..., null)` tự trả `null` ở khu tài khoản.
      */
-    if (isManage && has(PERMISSION.FINANCE_VIEW)) {
-      links.push({ href: vehicleTabPath(vehicleId, VEHICLE_EDIT_TAB.SOURCE), label: t('source') });
+    if (can.source) {
+      push(t('source'), vehiclePaths.part(vehicleId, VEHICLE_EDIT_TAB.SOURCE, null));
     }
   }
-  if (has(PERMISSION.VEHICLE_DOCUMENT_VIEW)) {
-    links.push({
-      href: editPath(VEHICLE_EDIT_TAB.DOCUMENTS, VEHICLE_MANAGE_SECTION.DOCUMENTS),
-      label: t('documents'),
-    });
-  }
-  // Bảo dưỡng là tính năng của GÓI (ADR 0027 điều 1) — không có ở bộ cơ bản, nên không có mục.
-  if (isManage && has(PERMISSION.VEHICLE_MAINTENANCE_VIEW)) {
-    links.push(
-      { href: vehicleTabPath(vehicleId, VEHICLE_EDIT_TAB.MAINTENANCE), label: t('maintenance') },
-      { href: ROUTES.MANAGE.MAINTENANCE, label: t('maintenanceCenter') },
+  if (can.documents) {
+    push(
+      t('documents'),
+      vehiclePaths.part(vehicleId, VEHICLE_EDIT_TAB.DOCUMENTS, VEHICLE_MANAGE_SECTION.DOCUMENTS),
     );
+  }
+  // Bảo dưỡng là tính năng của GÓI (ADR 0027 điều 1) — `can.maintenance` kiểm cả quyền lẫn cờ.
+  if (can.maintenance) {
+    push(t('maintenance'), vehiclePaths.part(vehicleId, VEHICLE_EDIT_TAB.MAINTENANCE, null));
+    if (isManage) links.push({ href: ROUTES.MANAGE.MAINTENANCE, label: t('maintenanceCenter') });
   }
   if (has(PERMISSION.CALENDAR_VIEW)) {
     // Cùng helper với nút "Xem lịch" và thẻ ở danh sách — một đường dẫn lịch duy nhất.
@@ -794,7 +899,7 @@ function ModuleLinks({
       label: t('bookings'),
     });
   }
-  if (isManage && has(PERMISSION.FINANCE_VIEW)) {
+  if (isManage && can.money) {
     // Doanh thu và chi phí của riêng xe này. Từ epic nối tiền, chi phí bảo dưỡng đã tự lên sổ
     // nên đây mới là chỗ trả lời được "xe này lãi thật bao nhiêu".
     links.push({ href: receiptsPath.filtered({ vehicleId }), label: t('receipts') });
@@ -806,14 +911,28 @@ function ModuleLinks({
   });
   if (shown.length === 0) return null;
 
+  /*
+   * DẢI có nhãn, không phải một hàng chip trôi ngang (29/09/2026 — theo định hướng thị giác của
+   * `docs/design/mockups/vehicle-management-redesign-v1`).
+   *
+   * Bản trước là một hàng chip cuộn ngang không nhãn, đứng lọt giữa ba thẻ tóm tắt và khối tiền:
+   * nhìn như một bộ lọc chứ không như mục lục, và ở màn rộng nó trôi lệch sang trái một khoảng
+   * trống lớn. Dải nền kem có tiêu đề nói đúng vai của nó — "đây là các khu vực của chiếc xe
+   * này" — và giữ nguyên TỪNG mục, từng điều kiện quyền đã tính ở trên.
+   */
   return (
-    <nav className={styles.moduleLinks} aria-label={t('ariaLabel')}>
-      {shown.map((link) => (
-        <Link key={link.href} href={link.href} className={styles.moduleLink}>
-          {link.label}
-        </Link>
-      ))}
-    </nav>
+    <section className={styles.moduleBand} aria-labelledby="vehicle-module-links">
+      <h2 id="vehicle-module-links" className={styles.bandTitle}>
+        {t('title')}
+      </h2>
+      <nav className={styles.moduleLinks} aria-label={t('ariaLabel')}>
+        {shown.map((link) => (
+          <Link key={link.href} href={link.href} className={styles.moduleLink}>
+            {link.label}
+          </Link>
+        ))}
+      </nav>
+    </section>
   );
 }
 
@@ -832,8 +951,13 @@ function DocumentsCard({
   summary: Vehicle360Summary | undefined;
 }) {
   const t = useTranslations('Vehicles.overview');
-  const { has } = usePermissions();
-  if (!has(PERMISSION.VEHICLE_DOCUMENT_VIEW)) return null;
+  const { vehicles: vehiclePaths } = useWorkspace();
+  const can = useVehicleCapabilities();
+  // Giấy tờ CÓ ở cả hai khu (backend không gác cờ gói) — chỉ đích của link là khác nhau.
+  const manageHref = useAvailableHref()(
+    vehiclePaths.part(vehicleId, VEHICLE_EDIT_TAB.DOCUMENTS, VEHICLE_MANAGE_SECTION.DOCUMENTS),
+  );
+  if (!can.documents) return null;
 
   const alerts = summary?.alerts ?? [];
   const expired = alerts.find((a) => a.kind === VEHICLE_ALERT_KIND.DOCUMENT_EXPIRED);
@@ -843,12 +967,11 @@ function DocumentsCard({
     <Card
       title={t('documents.title')}
       extra={
-        <Link
-          href={vehicleTabPath(vehicleId, VEHICLE_EDIT_TAB.DOCUMENTS)}
-          className={styles.cardLink}
-        >
-          {t('documents.manageLink')}
-        </Link>
+        manageHref ? (
+          <Link href={manageHref} className={styles.cardLink}>
+            {t('documents.manageLink')}
+          </Link>
+        ) : null
       }
       className={styles.sectionCard}
     >
@@ -896,9 +1019,7 @@ function SpecsCard({ vehicle }: { vehicle: VehicleDetail }) {
    * Đơn vị (mm/kg/cc/HP/L per 100km) là KÝ HIỆU, không dịch.
    */
   const metric = (value: number | string | null | undefined, unit: string): string =>
-    value == null || value === ''
-      ? empty
-      : t('metric', { value: fmt.count(Number(value)), unit });
+    value == null || value === '' ? empty : t('metric', { value: fmt.count(Number(value)), unit });
 
   const specs: DescriptionsProps['items'] = [
     { key: 'brand', label: t('specs.brand'), children: brandLabel(vehicle.brand) || empty },
@@ -956,7 +1077,14 @@ function SpecsCard({ vehicle }: { vehicle: VehicleDetail }) {
 
   return (
     <Card title={t('specs.title')} className={styles.sectionCard}>
-      <Descriptions bordered size="small" column={{ xs: 1, sm: 2 }} items={specs} />
+      {/* `specsTable`: xem docblock ở CSS — antd cho ô nội dung bẻ giữa từ, phải chặn lại. */}
+      <Descriptions
+        bordered
+        size="small"
+        column={{ xs: 1, sm: 2 }}
+        items={specs}
+        className={styles.specsTable}
+      />
 
       {vehicle.features.length > 0 ? (
         <div className={styles.chips}>
@@ -972,17 +1100,28 @@ function SpecsCard({ vehicle }: { vehicle: VehicleDetail }) {
 }
 
 /**
- * Tóm tắt nguồn xe (Wave 4). Chi tiết tài chính chỉ tải khi người xem có `finance.view` —
- * người không có quyền chỉ thấy hình thức (đã nằm sẵn trên vehicle), không thấy con số.
+ * Tóm tắt nguồn xe (Wave 4).
+ *
+ * HAI mức, và ranh giới giữa chúng là ranh giới hai tuyến:
+ *  - **Hình thức** (Sở hữu · Thuê lại · Trả góp · Hợp tác) nằm sẵn trên bản ghi xe, hiện ở thẻ
+ *    xe ngoài danh sách của CẢ HAI khu, và không có cờ gói nào gác — nên nó luôn hiện.
+ *  - **Con số và hồ sơ tài chính** (ngân hàng, tiền thuê tháng, %, ngày thanh toán) là sổ sách
+ *    của gian hàng, thuộc năng lực `finance`. Thiếu nó thì KHÔNG tải, và cũng không dựng đường
+ *    dẫn sang màn nguồn xe — màn đó chỉ có ở cổng quản lý, nên ở khu tài khoản một link như vậy
+ *    chỉ dẫn người dùng ra ngoài khu rồi bị đá về.
  */
 function SourceCard({ vehicle }: { vehicle: VehicleDetail }) {
   const t = useTranslations('Vehicles.overview');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
+  const { vehicles: vehiclePaths } = useWorkspace();
 
   const sourceType = (vehicle.sourceType ?? VEHICLE_SOURCE_TYPE.OWNED) as VehicleSourceType;
-  const permissions = usePermissions();
-  const canViewFinance = permissions.has(PERMISSION.FINANCE_VIEW);
+  const can = useVehicleCapabilities();
+  const sourceHref = useAvailableHref()(
+    vehiclePaths.part(vehicle.id, VEHICLE_EDIT_TAB.SOURCE, null),
+  );
+  const canViewFinance = can.source && sourceHref !== null;
   const source = useVehicleSource(vehicle.id, canViewFinance);
   const detail = source.data?.detail ?? null;
 
@@ -1021,17 +1160,14 @@ function SourceCard({ vehicle }: { vehicle: VehicleDetail }) {
           </div>
         ) : null}
       </dl>
-      {canViewFinance ? (
+      {canViewFinance && sourceHref ? (
         source.isLoading ? null : detail ? (
-          <Link href={vehicleTabPath(vehicle.id, VEHICLE_EDIT_TAB.SOURCE)} className={styles.muted}>
+          <Link href={sourceHref} className={styles.muted}>
             {t('source.detailLink')}
           </Link>
         ) : (
           <p className={styles.muted}>
-            {t('source.missing')}{' '}
-            <Link href={vehicleTabPath(vehicle.id, VEHICLE_EDIT_TAB.SOURCE)}>
-              {t('source.missingLink')}
-            </Link>
+            {t('source.missing')} <Link href={sourceHref}>{t('source.missingLink')}</Link>
           </p>
         )
       ) : null}

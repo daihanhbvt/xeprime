@@ -6,6 +6,7 @@
  * lớp chặn thật. Bỏ lớp backend vì "frontend đã validate rồi" là lỗ bảo mật.
  */
 import * as yup from 'yup';
+import { VEHICLE_IMAGE_TYPE_VALUES } from '@xeprime/types';
 import {
   ADDRESS_LINE_MAX_LENGTH,
   ASSIGNABLE_TENANT_ROLES,
@@ -360,6 +361,19 @@ export const vehicleFormSchema = yup.object({
   images: yup
     .array()
     .of(yup.string().trim().url('imageUrlInvalid').max(2000).required())
+    .max(20, 'imagesMax')
+    .default([]),
+  /** Gallery có phân loại vị trí; `images` vẫn giữ để tương thích payload cũ. */
+  media: yup
+    .array()
+    .of(
+      yup
+        .object({
+          url: yup.string().trim().url('imageUrlInvalid').max(2000).required(),
+          type: yup.string().oneOf(VEHICLE_IMAGE_TYPE_VALUES).required(),
+        })
+        .required(),
+    )
     .max(20, 'imagesMax')
     .default([]),
   features: yup.array().of(yup.string().oneOf(VEHICLE_FEATURE_KEYS).required()).default([]),

@@ -20,6 +20,20 @@
 }
 
 /*
+ * Thanh bước là một DẢI PILL nền kem, không phải một thẻ trắng như nội dung bên dưới
+ * (29/09/2026 — định hướng thị giác từ `docs/design/mockups/vehicle-management-redesign-v1`).
+ *
+ * Lý do: thẻ trắng viền mảnh là bề mặt của NỘI DUNG. Thanh bước không mang nội dung — nó nói
+ * "bạn đang ở đâu trong luồng" — và cho nó cùng bề mặt khiến hai thứ khác vai trông như hai
+ * khối ngang hàng. Nền `primary-light` + bo tròn mạnh tách nó ra mà không cần thêm đường kẻ.
+ */
+.stepperCard.stepperCard {
+  border-color: transparent;
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-primary-light);
+}
+
+/*
  * Thiết kế lại thanh bước trên đúng "khớp" của AntD 6: Steps v6 vẽ mọi thứ qua CSS var
  * `--ant-cmp-steps-*` (kích thước icon, cỡ chữ, đường nối rail, màu theo trạng thái).
  * Ghi đè VAR thay vì ghi đè thuộc tính: căn giữa số, vị trí rail, chiều cao hàng đều do
@@ -104,6 +118,10 @@
   align-items: start;
 }
 
+.contentRow > * {
+  min-width: 0;
+}
+
 .aside {
   display: flex;
   flex-direction: column;
@@ -118,6 +136,9 @@
 
 .contentCard {
   padding: 8px;
+  border-color: var(--xp-color-border);
+  border-radius: var(--xp-border-radius-lg);
+  box-shadow: var(--xp-shadow-card);
 }
 
 .heading {
@@ -150,6 +171,7 @@
   border-top: 1px solid var(--xp-color-border-secondary);
   margin-top: var(--xp-space-lg);
   gap: var(--xp-space-sm);
+  background: var(--xp-color-bg-container);
 }
 
 /*

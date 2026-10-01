@@ -3,11 +3,17 @@ import {
   missingPublishRequirements as missingRequirements,
   PUBLISH_REQUIREMENT,
   VEHICLE_PUBLIC_STATUS,
+  vehicleFieldPolicy,
   type PublishRequirement,
   type VehiclePublicationInput,
   type VehiclePublicStatus,
 } from '@xeprime/types';
-import { VEHICLE_EDIT_TAB, vehicleTabPath, type VehicleEditTab } from '@/constants/routes';
+import {
+  VEHICLE_EDIT_TAB,
+  VEHICLE_MANAGE_SECTION,
+  type VehicleEditTab,
+  type VehicleManageSection,
+} from '@/constants/routes';
 import type { VehicleDetail } from './types';
 
 /**
@@ -81,6 +87,100 @@ export function publishChecklist(
   }));
 }
 
+/**
+ * Điều kiện lên chợ còn thiếu của một xe CHƯA TẠO — đọc thẳng từ giá trị form của wizard thêm xe
+ * (30/09/2026). CÙNG bảng luật với cổng gửi duyệt ở backend, nên wizard không thể cho tạo một chiếc
+ * xe mà lát sau backend từ chối đưa lên chợ.
+ *
+ * Bỏ qua `BRANCH_LOCATION`: tỉnh của chi nhánh nằm ở quan hệ phía server (và wizard nhanh còn mở
+ * gian hàng ngay lúc lưu); ô chi nhánh đã có luật bắt buộc riêng của form.
+ */
+export function missingPublishRequirementsForForm(values: {
+  vehicleType: string;
+  serviceTypes?: readonly string[] | null;
+  weekdayPrice?: unknown;
+  monthlyPrice?: unknown;
+  withDriverDailyPrice?: unknown;
+  mainImageUrl?: string | null;
+  images?: readonly string[] | null;
+  media?: readonly { url: string }[] | null;
+  plateNumber?: string | null;
+  brand?: string | null;
+  model?: string | null;
+  vehicleCatalogModelId?: string | null;
+  manufactureYear?: number | null;
+  fuelType?: string | null;
+  transmission?: string | null;
+  seatCount?: number | null;
+  motorbikeCategory?: string | null;
+  fuelConsumptionCombined?: unknown;
+  engineDisplacementCc?: number | null;
+  electricRangeKm?: number | null;
+}): PublishRequirement[] {
+  const urls = new Set<string>([
+    ...(values.images ?? []),
+    ...(values.media ?? []).map((item) => item.url),
+  ]);
+  if (values.mainImageUrl) urls.add(values.mainImageUrl);
+  /*
+   * Form chọn DÒNG XE bằng id danh mục; chữ \`model\` do backend chép từ danh mục lúc lưu. Đã chọn
+   * mẫu trong danh mục nghĩa là đã có dòng xe — không được báo thiếu chỉ vì ô chữ còn trống.
+   */
+  const model = values.model || (values.vehicleCatalogModelId ? values.vehicleCatalogModelId : null);
+  return missingRequirements({ ...values, model }, urls.size).filter(
+    (key) => key !== PUBLISH_REQUIREMENT.BRANCH_LOCATION,
+  );
+}
+
+/**
+ * Ô CỤ THỂ còn thiếu của hai điều kiện gộp nhiều trường (danh tính · thông số năng lượng) —
+ * để thông báo nêu đúng "Phân khúc xe" thay vì cả nhóm "Hãng, mẫu, năm sản xuất và số chỗ" khi
+ * hãng/mẫu/năm đã điền. Cùng điều kiện với `identityReady`/`energySpecReady` của `@xeprime/types`.
+ */
+export type PublishGapField =
+  | 'brand'
+  | 'model'
+  | 'manufactureYear'
+  | 'seatCount'
+  | 'motorbikeCategory'
+  | 'fuelType'
+  | 'fuelConsumptionCombined'
+  | 'engineDisplacementCc'
+  | 'electricRangeKm'
+  | 'transmission';
+
+export function publishGapFields(
+  requirement: PublishRequirement,
+  values: Parameters<typeof missingPublishRequirementsForForm>[0],
+): PublishGapField[] {
+  const filled = (v?: string | null) => typeof v === 'string' && v.trim() !== '';
+  const policy = vehicleFieldPolicy(values.vehicleType, values.fuelType);
+  const gaps: PublishGapField[] = [];
+  if (requirement === PUBLISH_REQUIREMENT.IDENTITY) {
+    if (!filled(values.brand)) gaps.push('brand');
+    if (!filled(values.model) && !filled(values.vehicleCatalogModelId)) gaps.push('model');
+    if (values.manufactureYear == null) gaps.push('manufactureYear');
+    if (policy.seatCount === 'required' && values.seatCount == null) gaps.push('seatCount');
+    if (policy.motorbikeCategory === 'required' && !filled(values.motorbikeCategory)) {
+      gaps.push('motorbikeCategory');
+    }
+  } else if (requirement === PUBLISH_REQUIREMENT.ENERGY_SPEC) {
+    if (!filled(values.fuelType)) return ['fuelType'];
+    const empty = (v: unknown) => v == null || v === '';
+    if (policy.fuelConsumption === 'required' && empty(values.fuelConsumptionCombined)) {
+      gaps.push('fuelConsumptionCombined');
+    }
+    if (policy.engineDisplacementCc === 'required' && values.engineDisplacementCc == null) {
+      gaps.push('engineDisplacementCc');
+    }
+    if (policy.electricRangeKm === 'required' && values.electricRangeKm == null) {
+      gaps.push('electricRangeKm');
+    }
+    if (policy.transmission === 'required' && !filled(values.transmission)) gaps.push('transmission');
+  }
+  return gaps;
+}
+
 /** Khoá các điều kiện còn thiếu — rỗng nghĩa là đủ điều kiện gửi duyệt. */
 export function missingPublishRequirements(vehicle: VehicleDetail): PublishRequirement[] {
   return missingRequirements(toInput(vehicle), distinctImageCount(vehicle));
@@ -150,11 +250,7 @@ export type VehiclePublicationTaskKey =
  * biên dịch, thay vì phải ép kiểu để TypeScript thôi kêu.
  */
 export type VehiclePublicationActionKind =
-  | 'edit'
-  | 'submit'
-  | 'enableMarketplace'
-  | 'viewStatus'
-  | 'contactSupport';
+  'edit' | 'submit' | 'enableMarketplace' | 'viewStatus' | 'contactSupport';
 
 export type VehiclePublicationCta =
   | 'completeProfile'
@@ -230,10 +326,24 @@ export function vehiclePublicationTask(vehicle: VehicleDetail): VehiclePublicati
       return task('underReview', 'info', EDIT_TO_UPDATE, VIEW_STATUS, [], null);
 
     case VEHICLE_PUBLIC_STATUS.NEEDS_REVISION:
-      return task('needsRevision', 'warning', EDIT_TO_UPDATE, complete ? RESUBMIT : null, missing, reason);
+      return task(
+        'needsRevision',
+        'warning',
+        EDIT_TO_UPDATE,
+        complete ? RESUBMIT : null,
+        missing,
+        reason,
+      );
 
     case VEHICLE_PUBLIC_STATUS.REJECTED:
-      return task('rejected', 'critical', EDIT_TO_UPDATE, complete ? RESUBMIT : null, missing, reason);
+      return task(
+        'rejected',
+        'critical',
+        EDIT_TO_UPDATE,
+        complete ? RESUBMIT : null,
+        missing,
+        reason,
+      );
 
     case VEHICLE_PUBLIC_STATUS.ARCHIVED:
       // Xe đã lưu trữ không còn đường nào ra chợ, và không có việc gì để giục.
@@ -265,6 +375,8 @@ function task(
  * không biết màn sửa xe chia tab thế nào.
  */
 const REQUIREMENT_TAB: Readonly<Record<PublishRequirement, VehicleEditTab>> = {
+  // Mỗi loại giá thiếu mở ĐÚNG mục giá của dịch vụ đó (30/09/2026) — trước đây cả ba cùng về một
+  // tab chung, nên chủ xe thiếu giá có tài xế phải tự tìm nhóm giá đó trong một màn dài.
   [PUBLISH_REQUIREMENT.SELF_DRIVE_PRICE]: VEHICLE_EDIT_TAB.PRICING,
   [PUBLISH_REQUIREMENT.LONG_TERM_PRICE]: VEHICLE_EDIT_TAB.PRICING,
   [PUBLISH_REQUIREMENT.WITH_DRIVER_PRICE]: VEHICLE_EDIT_TAB.PRICING,
@@ -276,7 +388,39 @@ const REQUIREMENT_TAB: Readonly<Record<PublishRequirement, VehicleEditTab>> = {
   [PUBLISH_REQUIREMENT.BRANCH_LOCATION]: VEHICLE_EDIT_TAB.INFORMATION,
 };
 
-export function publicationEditPath(vehicleId: string, missing: PublishRequirement[]): string {
+/**
+ * CÙNG bản đồ trên, khai bằng hệ toạ độ của khu tài khoản — mục của không gian "Quản lý xe".
+ *
+ * Hai khu dùng hai hệ toạ độ (tab `?tab=` vs đường dẫn mục), nên khai riêng thay vì tra một
+ * bảng `tab → section`. Từ 30/09/2026 cả hai khu đều gom mọi loại giá vào MỘT mục "Giá & chính
+ * sách", nên ba điều kiện giá cùng trỏ về đó.
+ */
+const REQUIREMENT_SECTION: Readonly<Record<PublishRequirement, VehicleManageSection>> = {
+  [PUBLISH_REQUIREMENT.SELF_DRIVE_PRICE]: VEHICLE_MANAGE_SECTION.PRICING,
+  [PUBLISH_REQUIREMENT.LONG_TERM_PRICE]: VEHICLE_MANAGE_SECTION.PRICING,
+  [PUBLISH_REQUIREMENT.WITH_DRIVER_PRICE]: VEHICLE_MANAGE_SECTION.PRICING,
+  [PUBLISH_REQUIREMENT.MAIN_IMAGE]: VEHICLE_MANAGE_SECTION.IMAGES,
+  [PUBLISH_REQUIREMENT.PHOTOS]: VEHICLE_MANAGE_SECTION.IMAGES,
+  [PUBLISH_REQUIREMENT.PLATE_NUMBER]: VEHICLE_MANAGE_SECTION.INFORMATION,
+  [PUBLISH_REQUIREMENT.IDENTITY]: VEHICLE_MANAGE_SECTION.INFORMATION,
+  [PUBLISH_REQUIREMENT.ENERGY_SPEC]: VEHICLE_MANAGE_SECTION.INFORMATION,
+  [PUBLISH_REQUIREMENT.BRANCH_LOCATION]: VEHICLE_MANAGE_SECTION.INFORMATION,
+};
+
+/**
+ * Nơi cần sửa để đi tiếp, trong CẢ HAI hệ toạ độ — nơi gọi đưa nó qua
+ * `useWorkspace().vehicles.part()` để ra đường dẫn của khu mình đang đứng.
+ *
+ * Trước 29/09/2026 hàm này trả thẳng một chuỗi `/manage/...`, nên nút "Hoàn tất hồ sơ" — thứ
+ * chủ xe tuyến hoa hồng cần nhất để đưa chiếc xe đầu tiên lên chợ — dẫn họ vào cổng quản lý và
+ * bị `AppShell` đá ngược về `/account`.
+ */
+export function publicationEditTarget(missing: PublishRequirement[]): {
+  tab: VehicleEditTab;
+  section: VehicleManageSection;
+} {
   const first = missing[0];
-  return vehicleTabPath(vehicleId, first ? REQUIREMENT_TAB[first] : VEHICLE_EDIT_TAB.INFORMATION);
+  return first
+    ? { tab: REQUIREMENT_TAB[first], section: REQUIREMENT_SECTION[first] }
+    : { tab: VEHICLE_EDIT_TAB.INFORMATION, section: VEHICLE_MANAGE_SECTION.INFORMATION };
 }

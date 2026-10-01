@@ -149,7 +149,8 @@
       }
     },
     "errors": {
-      "energyRequired": "Please fill in the specs required for the selected energy source."
+      "energyRequired": "Please fill in the specs required for the selected energy source.",
+      "publishRequired": "Complete these so the vehicle can go on the marketplace: {items}."
     }
   },
   "info": {
@@ -168,9 +169,9 @@
     "featuresTitle": "Amenities"
   },
   "rental": {
-    "priceTitle": "Daily price",
-    "priceHint": "This price applies to every day. You can set day-specific prices on the vehicle calendar later.",
-    "priceLabel": "Price per day (đ)",
+    "priceTitle": "Daily price · Self-drive",
+    "priceHint": "Quick listing rents the vehicle as Self-drive — turn on Long-term or With driver later in vehicle management. This price applies to every day. You can set day-specific prices on the vehicle calendar later.",
+    "priceLabel": "Self-drive price per day (đ)",
     "pricePreview": "Renters see: {price}",
     "discountTitle": "Discount",
     "discountHint": "A percentage off the daily price.",
@@ -263,6 +264,15 @@
     "excessFeeInteger": "The excess fee must be a whole number",
     "excessFeeMin": "The excess fee cannot be negative",
     "excessFeeMax": "The excess fee is too high",
-    "termsTooLong": "The terms are too long"
+    "termsTooLong": "The terms are too long",
+    "plateNumberRequired": "Enter the plate number",
+    "brandRequired": "Choose a brand",
+    "modelRequired": "Choose a model",
+    "manufactureYearRequired": "Enter the manufacture year",
+    "seatCountRequired": "Enter the number of seats",
+    "mainImageRequired": "Upload the main photo",
+    "photosMin": "At least {min} photos (including the main one) are needed to go on the marketplace",
+    "motorbikeCategoryRequired": "Choose the motorbike segment",
+    "engineDisplacementCcRequired": "Enter the engine displacement"
   }
 }

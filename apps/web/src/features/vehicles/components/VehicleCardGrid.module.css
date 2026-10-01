@@ -9,11 +9,13 @@
   border: 1px solid var(--xp-color-border);
   border-radius: var(--xp-border-radius);
   background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-card);
 }
 
 /* Padding 20px của `grid-inner` (`186:1671`). */
 .inner {
   padding: var(--xp-space-lg);
+  background: var(--xp-color-bg-container);
 }
 
 /*

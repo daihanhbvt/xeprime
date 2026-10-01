@@ -44,6 +44,11 @@ vi.mock('@/features/vehicles/hooks/use-vehicle-mutations', () => ({
 }));
 
 const submitPublic = vi.hoisted(() => vi.fn());
+/** Cổng 'đủ điều kiện lên chợ' của wizard — mặc định đủ; bộ này kiểm luồng lưu, không kiểm luật. */
+vi.mock('@/features/vehicles/publication', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  missingPublishRequirementsForForm: () => [],
+}));
 vi.mock('@/features/vehicles/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/features/vehicles/api')>()),
   submitVehiclePublic: submitPublic,

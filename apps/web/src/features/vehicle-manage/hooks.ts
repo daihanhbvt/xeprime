@@ -104,7 +104,10 @@ export function useVehicleTripHistoryFilters() {
   }));
 }
 
-export function useVehicleTripHistory(vehicleId: string | undefined, filters: VehicleTripHistoryFilters) {
+export function useVehicleTripHistory(
+  vehicleId: string | undefined,
+  filters: VehicleTripHistoryFilters,
+) {
   return useQuery({
     queryKey: queryKeys.vehicles.tripHistory(vehicleId ?? '', tripHistoryFiltersToParams(filters)),
     queryFn: () => fetchVehicleTripHistory(vehicleId!, filters),

@@ -356,21 +356,27 @@ export const accountVehiclePath = {
  *
  * Nhóm "có tài xế" KHÔNG có mục "Tiện ích bổ sung": mockup có nó nhưng nghiệp vụ không — phụ phí
  * mặc định đã nằm ở `WITH_DRIVER_SURCHARGES`.
+ *
+ * Tám mục (30/09/2026) — CÙNG cấu trúc menu với màn sửa xe ở cổng quản lý, bỏ phần nâng cao.
+ * Sáu đường dẫn cũ vẫn sống dưới dạng trang CHUYỂN HƯỚNG (bookmark, thông báo cũ, link trong
+ * email): `self-drive/pricing`, `with-driver/pricing`, `self-drive/delivery` → `pricing`;
+ * `self-drive/handover-time` → `handover-time`; `self-drive/terms`, `with-driver/terms` → mục
+ * `optimization` cùng dịch vụ, neo `#rental-terms`.
  */
 export const VEHICLE_MANAGE_SECTION = {
   INFORMATION: 'information',
   IMAGES: 'images',
   DOCUMENTS: 'documents',
   TRIP_HISTORY: 'trip-history',
-  SELF_DRIVE_PRICING: 'self-drive/pricing',
+  /** Giá & chính sách — giá mọi dịch vụ + cọc · giao xe · km, một nút Lưu. */
+  PRICING: 'pricing',
+  /** Thời gian giao nhận — áp cho CẢ chiếc xe, không thuộc dịch vụ nào. */
+  HANDOVER_TIME: 'handover-time',
+  /** "Nhận chuyến & thủ tục" của tự lái (tối ưu nhận chuyến + thủ tục cho thuê). */
   SELF_DRIVE_OPTIMIZATION: 'self-drive/optimization',
-  SELF_DRIVE_DELIVERY: 'self-drive/delivery',
-  SELF_DRIVE_HANDOVER_TIME: 'self-drive/handover-time',
-  SELF_DRIVE_TERMS: 'self-drive/terms',
-  WITH_DRIVER_PRICING: 'with-driver/pricing',
+  /** "Nhận chuyến & thủ tục" của có tài xế. */
   WITH_DRIVER_OPTIMIZATION: 'with-driver/optimization',
   WITH_DRIVER_SURCHARGES: 'with-driver/surcharges',
-  WITH_DRIVER_TERMS: 'with-driver/terms',
 } as const;
 
 export type VehicleManageSection =
@@ -378,6 +384,13 @@ export type VehicleManageSection =
 export const VEHICLE_MANAGE_SECTION_VALUES = Object.values(
   VEHICLE_MANAGE_SECTION,
 ) as VehicleManageSection[];
+
+/**
+ * Neo của card "Thủ tục cho thuê" trong mục "Nhận chuyến & thủ tục" — dùng chung cho hai khu. Nằm
+ * ở đây (không ở component) để trang server chuyển hướng đọc được: một hằng export từ file
+ * `'use client'` chỉ là tham chiếu client khi import vào server component.
+ */
+export const RENTAL_TERMS_ANCHOR = 'rental-terms';
 
 /** Mục mở mặc định khi vào gốc `/manage` của một xe. */
 export const VEHICLE_MANAGE_DEFAULT_SECTION: VehicleManageSection =
@@ -394,6 +407,20 @@ export const accountVehicleManagePath = {
  */
 export function isAccountVehicleManagePath(pathname: string): boolean {
   return /^\/account\/vehicles\/[^/]+\/manage(\/|$)/.test(pathname);
+}
+
+/**
+ * Hồ sơ 360 của một xe ở khu tài khoản — `AccountShell` nới bề ngang cho nó.
+ *
+ * Màn này là một BẢNG ĐIỀU KHIỂN nhiều cột (thông số · giá · việc cần làm · lịch sắp tới), khác
+ * hẳn các màn còn lại của khu tài khoản vốn là biểu mẫu một cột và hưởng lợi từ trần 1220px. Ở
+ * màn 1920, trần đó để trống hơn 350px bên phải trong khi bảng thông số bị ép xuống ~290px.
+ *
+ * Chỉ khớp ĐÚNG `/account/vehicles/<id>`: gốc `/account/vehicles` là danh sách, còn `…/manage`
+ * đã đi đường trọn bề ngang riêng.
+ */
+export function isAccountVehicleDetailPath(pathname: string): boolean {
+  return /^\/account\/vehicles\/[^/]+\/?$/.test(pathname);
 }
 
 /**
@@ -542,17 +569,76 @@ export type WorkspacePaths = ReturnType<typeof workspacePaths>;
 export interface WorkspaceVehiclePaths {
   /** Trang chính của một xe khi bấm vào nó từ danh sách. */
   detail: (id: string) => string;
+  /**
+   * HỒ SƠ 360 của xe — trang TỔNG QUAN (việc cần làm · trạng thái chợ · lịch sắp tới · hiệu suất).
+   *
+   * Khác `detail`: ở khu tài khoản, bấm vào một chiếc xe từ danh sách mở thẳng không gian
+   * "Quản lý xe" (`detail` → `…/manage`), nhưng Hồ sơ 360 vẫn là một trang RIÊNG và có thật ở
+   * `/account/vehicles/:id`. Thiếu đường dẫn này thì không gian quản lý xe là ngõ cụt một chiều:
+   * vào được, không có lối quay về trang tổng quan của chính chiếc xe đó.
+   */
+  overview: (id: string) => string;
   /** Một mục của không gian "Quản lý xe" (Owner Lite). */
   manageSection: (id: string, section: VehicleManageSection) => string;
-  /** Màn sửa xe nhiều tab (Full Manage). */
+  /**
+   * Màn sửa xe nhiều tab — CHỈ có ở cổng quản lý.
+   *
+   * Cố ý trả `/manage/...` ở cả hai khu: nó là đường dẫn NỘI BỘ của chính màn đó
+   * (`VehicleEditWorkspace` ghi lại `?tab=` khi đổi tab), và màn đó không được dựng ở khu tài
+   * khoản. Link ĐI TỚI một phần hồ sơ xe phải đi qua `part`, không qua hàm này.
+   */
   edit: (id: string) => string;
+  /**
+   * Một PHẦN của hồ sơ xe, khai bằng CẢ HAI hệ toạ độ: `tab` của màn sửa ở cổng quản lý và
+   * `section` của không gian "Quản lý xe" ở khu tài khoản.
+   *
+   * Vì sao bắt khai cả hai thay vì tra một bảng `tab → section`: vài phần **không có bản ở khu
+   * tài khoản** (nguồn xe, bảo dưỡng — cả hai thuộc tuyến gói), và một bảng tra sẽ âm thầm rơi
+   * về tab mặc định thay vì nói ra điều đó. `section: null` = phần chỉ có ở cổng quản lý, và ở
+   * khu tài khoản nó trả `null` để nơi gọi **ẩn hẳn lối vào** thay vì dẫn người dùng ra ngoài khu
+   * của họ — nơi `AppShell` sẽ đá họ ngược lại.
+   */
+  part: (id: string, tab: VehicleEditTab, section: VehicleManageSection | null) => string | null;
+  /**
+   * "Nơi chủ xe sửa hồ sơ chiếc xe này" — đích của nút **Chỉnh sửa** trên Hồ sơ 360.
+   *
+   * Khác `edit`: `edit` là một ROUTE cụ thể của cổng quản lý, còn đây là một Ý ĐỊNH, và hai khu
+   * thực hiện nó bằng hai màn khác nhau (màn sửa nhiều tab · không gian "Quản lý xe").
+   */
+  profile: (id: string) => string;
+  /** Giá & chính sách của xe — hai khu hai màn, cùng `PUT /vehicles/:id/pricing`. */
+  pricing: (id: string) => string;
+  /** Tối ưu nhận chuyến (tự động nhận, khoảng đặt trước) — có ở cả hai khu. */
+  optimization: (id: string) => string;
 }
 
 export function workspaceVehiclePaths(workspace: Workspace): WorkspaceVehiclePaths {
+  const isManage = workspace === WORKSPACE.MANAGE;
   return {
-    detail: workspace === WORKSPACE.MANAGE ? vehiclePath.detail : accountVehiclePath.manage,
+    detail: isManage ? vehiclePath.detail : accountVehiclePath.manage,
+    overview: isManage ? vehiclePath.detail : accountVehiclePath.detail,
     manageSection: accountVehicleManagePath.section,
     edit: (id) => vehiclePath.edit(id),
+    part: (id, tab, section) =>
+      isManage
+        ? vehicleTabPath(id, tab)
+        : section
+          ? accountVehicleManagePath.section(id, section)
+          : null,
+    profile: (id) =>
+      isManage
+        ? vehiclePath.edit(id)
+        : accountVehicleManagePath.section(id, VEHICLE_MANAGE_DEFAULT_SECTION),
+    // Cổng quản lý: MỤC trong màn sửa xe, không phải route `/pricing` cũ — route đó nay chỉ
+    // còn là một lần chuyển hướng tới đúng mục này, và bắt link mới đi qua nó là một nhịp thừa.
+    pricing: (id) =>
+      isManage
+        ? vehicleTabPath(id, VEHICLE_EDIT_TAB.PRICING)
+        : accountVehicleManagePath.section(id, VEHICLE_MANAGE_SECTION.PRICING),
+    optimization: (id) =>
+      isManage
+        ? vehicleTabPath(id, VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION)
+        : accountVehicleManagePath.section(id, VEHICLE_MANAGE_SECTION.SELF_DRIVE_OPTIMIZATION),
   };
 }
 
@@ -632,8 +718,27 @@ export const VEHICLE_EDIT_TAB = {
   SOURCE: 'source',
   DOCUMENTS: 'documents',
   MAINTENANCE: 'maintenance',
-  /** Vận hành & điều kiện thuê (08/09/2026) — cùng các khối với không gian quản lý xe ở /account. */
+  /**
+   * Vận hành & điều kiện thuê — tab của develop, nay là BÍ DANH: mở "Thời gian giao nhận" (khối
+   * đầu tiên của tab cũ). Link cũ, bookmark và cảnh báo mang `?tab=operations` vẫn mở được.
+   */
   OPERATIONS: 'operations',
+
+  /*
+   * ── Mục bổ ra từ tab "Vận hành & điều kiện thuê" (29/09/2026) ────────────
+   *
+   * Bốn giá trị là MỤC MENU (giao nhận · nhận chuyến & thủ tục × 2 · phụ phí). Hai giá trị
+   * `*-terms` là BÍ DANH trỏ về "Nhận chuyến & thủ tục" của dịch vụ đó — xem `resolveEditTab`.
+   *
+   * Giá trị TRÙNG TÊN với mục của `VEHICLE_MANAGE_SECTION` (dấu `-` thay cho `/`) để
+   * `vehicles.part()` ánh xạ được một-một giữa hai khu.
+   */
+  HANDOVER_TIME: 'handover-time',
+  SELF_DRIVE_OPTIMIZATION: 'self-drive-optimization',
+  SELF_DRIVE_TERMS: 'self-drive-terms',
+  WITH_DRIVER_OPTIMIZATION: 'with-driver-optimization',
+  WITH_DRIVER_SURCHARGES: 'with-driver-surcharges',
+  WITH_DRIVER_TERMS: 'with-driver-terms',
 } as const;
 
 export type VehicleEditTab = (typeof VEHICLE_EDIT_TAB)[keyof typeof VEHICLE_EDIT_TAB];

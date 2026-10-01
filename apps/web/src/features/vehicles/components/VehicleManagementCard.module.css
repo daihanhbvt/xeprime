@@ -10,11 +10,21 @@
   border: 1px solid var(--xp-color-border);
   border-radius: var(--xp-border-radius);
   background: var(--xp-color-bg-container);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
 }
 
 .card:hover {
   border-color: var(--xp-color-border-strong);
   box-shadow: var(--xp-shadow-card);
+  transform: translateY(-1px);
+}
+
+.card:focus-within {
+  border-color: var(--xp-color-border-focus);
+  box-shadow: 0 0 0 3px var(--xp-color-primary-light);
 }
 
 /* ─── Ảnh ─────────────────────────────────────────────────────────────────── */
@@ -73,7 +83,7 @@
   min-width: 0;
   flex: 1;
   flex-direction: column;
-  padding: var(--xp-space-sm);
+  padding: var(--xp-space-md);
   gap: var(--xp-space-sm);
 }
 

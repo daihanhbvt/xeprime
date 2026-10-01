@@ -128,16 +128,20 @@ function VehiclesView() {
              * Hai lối thêm xe (09/09/2026): "đăng nhanh" cho chiếc xe tự lái thông thường, và
              * wizard nâng cao của gian hàng cho xe nhiều dịch vụ / có nguồn xe / nhiều chi
              * nhánh. Không bỏ lối nào — gian hàng vẫn cần đủ trường ở wizard cũ.
+             *
+             * Thứ tự ĐẢO ngày 29/09/2026: nút chính là wizard NÂNG CAO, "đăng nhanh" lùi vào
+             * menu. Đây là cổng của GIAN HÀNG, và chỉ wizard nâng cao mới hỏi hình thức nguồn
+             * xe, nhiều dịch vụ và chi nhánh giữ xe — ba thứ một gian hàng gần như luôn cần và
+             * luồng nhanh cố định cứng (`QUICK_VEHICLE_FIXED`: chỉ tự lái, sở hữu, sẵn sàng).
+             * Đặt luồng thiếu trường làm mặc định nghĩa là để người trực khai lại ở màn sửa.
              */
             <Space.Compact>
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
-                onClick={() =>
-                  router.push(listYourVehicleRegisterPath(VEHICLE_REGISTRATION_SOURCE.MANAGE))
-                }
+                onClick={() => router.push(ROUTES.MANAGE.VEHICLE_NEW)}
               >
-                {t('addVehicleQuick')}
+                {t('addVehicleAdvanced')}
               </Button>
               {/*
                 Tự dựng cặp nút thay vì `Dropdown.Button`: nút mở menu ở đó chỉ có icon và trình
@@ -149,9 +153,12 @@ function VehiclesView() {
                 menu={{
                   items: [
                     {
-                      key: 'advanced',
-                      label: t('addVehicleAdvanced'),
-                      onClick: () => router.push(ROUTES.MANAGE.VEHICLE_NEW),
+                      key: 'quick',
+                      label: t('addVehicleQuick'),
+                      onClick: () =>
+                        router.push(
+                          listYourVehicleRegisterPath(VEHICLE_REGISTRATION_SOURCE.MANAGE),
+                        ),
                     },
                   ],
                 }}

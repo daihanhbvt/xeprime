@@ -149,7 +149,8 @@
       }
     },
     "errors": {
-      "energyRequired": "Vui lòng khai đủ thông số của nguồn năng lượng đã chọn."
+      "energyRequired": "Vui lòng khai đủ thông số của nguồn năng lượng đã chọn.",
+      "publishRequired": "Cần bổ sung để xe đủ điều kiện lên chợ: {items}."
     }
   },
   "info": {
@@ -168,9 +169,9 @@
     "featuresTitle": "Tiện nghi"
   },
   "rental": {
-    "priceTitle": "Đơn giá thuê",
-    "priceHint": "Đơn giá áp dụng cho tất cả các ngày. Bạn chỉnh giá riêng theo ngày ở lịch xe sau khi đăng ký.",
-    "priceLabel": "Giá thuê mỗi ngày (đ)",
+    "priceTitle": "Đơn giá thuê · Tự lái",
+    "priceHint": "Xe đăng nhanh cho thuê theo dịch vụ Tự lái — bật thêm Thuê dài hạn hoặc Có tài xế ở màn quản lý xe. Đơn giá áp dụng cho tất cả các ngày. Bạn chỉnh giá riêng theo ngày ở lịch xe sau khi đăng ký.",
+    "priceLabel": "Giá thuê tự lái mỗi ngày (đ)",
     "pricePreview": "Giá khách thấy sau giảm: {price}",
     "discountTitle": "Giảm giá",
     "discountHint": "Giảm theo phần trăm trên đơn giá ngày.",
@@ -263,6 +264,15 @@
     "excessFeeInteger": "Phí vượt km phải là số nguyên",
     "excessFeeMin": "Phí vượt km không được âm",
     "excessFeeMax": "Phí vượt km quá lớn",
-    "termsTooLong": "Điều khoản quá dài"
+    "termsTooLong": "Điều khoản quá dài",
+    "plateNumberRequired": "Nhập biển số xe",
+    "brandRequired": "Chọn hãng xe",
+    "modelRequired": "Chọn dòng xe",
+    "manufactureYearRequired": "Nhập năm sản xuất",
+    "seatCountRequired": "Nhập số chỗ ngồi",
+    "mainImageRequired": "Tải ảnh đại diện của xe",
+    "photosMin": "Cần tối thiểu {min} ảnh xe (tính cả ảnh đại diện) để lên chợ",
+    "motorbikeCategoryRequired": "Chọn phân khúc xe",
+    "engineDisplacementCcRequired": "Nhập dung tích động cơ"
   }
 }

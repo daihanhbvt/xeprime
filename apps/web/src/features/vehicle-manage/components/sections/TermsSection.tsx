@@ -4,7 +4,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { Alert, App, Button, Form, Radio } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import * as yup from 'yup';
 import {
@@ -37,6 +37,7 @@ import {
 } from '@/features/rental-policies/hooks/use-vehicle-pricing';
 import { policyFormSchema, type PolicyFormValues } from '@/features/rental-policies/schema';
 import type { VehiclePricing } from '@/features/rental-policies/types';
+import { useWorkspace } from '@/hooks/use-workspace';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 
@@ -54,10 +55,16 @@ const DOC_PRESET = {
 
 const settingSchema = yup.object({
   identityDocument: yup.string().oneOf([DOC_PRESET.CITIZEN, DOC_PRESET.PASSPORT]).defined(),
-  identityVerifyMethod: yup.string().oneOf([...IDENTITY_VERIFY_METHOD_VALUES]).defined(),
+  identityVerifyMethod: yup
+    .string()
+    .oneOf([...IDENTITY_VERIFY_METHOD_VALUES])
+    .defined(),
   requireTermsAcceptance: yup.boolean().defined(),
   termsText: yup.string().max(RENTAL_TERMS_MAX_LENGTH).defined().default(''),
-  depositMode: yup.string().oneOf([...DRIVER_DEPOSIT_MODE_VALUES]).defined(),
+  depositMode: yup
+    .string()
+    .oneOf([...DRIVER_DEPOSIT_MODE_VALUES])
+    .defined(),
 });
 type SettingValues = yup.InferType<typeof settingSchema>;
 type FormValues = PolicyFormValues & SettingValues;
@@ -138,8 +145,17 @@ function TermsForm({
    * chính sách sẽ có `collateralMode = cash` với tiền cọc rỗng, và nếu luôn validate thì họ
    * không bao giờ lưu nổi một dòng điều khoản — form đòi số tiền cọc trên một ô họ không định sửa.
    */
-  const [editingCollateral, setEditingCollateral] = useState(overriding);
+  /*
+   * KHU TÀI KHOẢN (30/09/2026): chủ xe KHÔNG có trang chính sách gian hàng, nên không có banner
+   * "đang kế thừa từ chính sách gian hàng" và nút mở khoá — hai khối sửa thẳng, cùng cách với mục
+   * "Giá & chính sách" của họ. Luật ghi GIỮ NGUYÊN: chỉ khi một ô chính sách thật sự đổi mới ghi
+   * bộ chính sách riêng (`policyTouched` bên dưới), và ràng buộc của khối cũng chỉ bật lúc đó.
+   */
+  const { isManage } = useWorkspace();
+  const [editingCollateral, setEditingCollateral] = useState(overriding || !isManage);
   const collateralEditable = !withDriver && editingCollateral;
+  /** Ô chính sách đã đổi chưa — ref vì RHF đọc `context` lúc validate, ngoài render. */
+  const policyTouchedRef = useRef(false);
 
   const values = useMemo<FormValues>(
     () => ({
@@ -157,9 +173,24 @@ function TermsForm({
   const { control, handleSubmit, reset, formState } = useForm<FormValues>({
     resolver: yupResolver(policyFormSchema.concat(settingSchema)),
     // Ràng buộc khối bảo đảm chỉ bật khi chủ xe thật sự mở nó ra sửa (xem chú thích trên).
-    context: { policyEditable: collateralEditable },
+    context: {
+      get policyEditable() {
+        return collateralEditable && (isManage || policyTouchedRef.current);
+      },
+    },
     values,
   });
+  const policyDirty = Boolean(
+    formState.dirtyFields.collateralMode ||
+    formState.dirtyFields.depositAmount ||
+    formState.dirtyFields.collateralAssetTypes ||
+    formState.dirtyFields.mileageLimitEnabled ||
+    formState.dirtyFields.includedDistanceKmPerDay ||
+    formState.dirtyFields.excessDistanceFeePerKm,
+  );
+  useEffect(() => {
+    policyTouchedRef.current = policyDirty;
+  }, [policyDirty]);
   const identityDocument = useWatch({ control, name: 'identityDocument' });
 
   const legalDocs = requiredIdentityDocuments(serviceType);
@@ -190,17 +221,13 @@ function TermsForm({
        * Bảo đảm là CHÍNH SÁCH — chỉ ghi khi chủ xe thật sự đổi nó; đổi thì phải ghi đè cả bộ
        * (server nhận nguyên khối, không merge từng trường — quyết định C-04).
        */
-      const policyTouched =
-        collateralEditable &&
-        (formState.dirtyFields.collateralMode ||
-          formState.dirtyFields.depositAmount ||
-          formState.dirtyFields.collateralAssetTypes ||
-          // Hạn mức km đi cùng bản ghi đè, nên nó cũng chỉ ghi khi chủ xe đã mở khoá tường minh.
-          formState.dirtyFields.mileageLimitEnabled ||
-          formState.dirtyFields.includedDistanceKmPerDay ||
-          formState.dirtyFields.excessDistanceFeePerKm);
+      // Hạn mức km đi cùng bản ghi đè, nên nó cũng chỉ ghi khi khối đang mở sửa.
+      const policyTouched = collateralEditable && policyDirty;
       if (policyTouched) {
-        await savePricing.mutateAsync({ source: POLICY_SOURCE.VEHICLE, policy: formToSaveInput(next) });
+        await savePricing.mutateAsync({
+          source: POLICY_SOURCE.VEHICLE,
+          policy: formToSaveInput(next),
+        });
       }
       message.success(t('saved'));
     } catch (err) {
@@ -288,7 +315,9 @@ function TermsForm({
 
           <fieldset className={styles.fieldset}>
             <legend className={styles.legend}>{t('documentsTitle')}</legend>
-            <p className={styles.hint}>{withDriver ? t('documentsSubtitleDriver') : t('documentsSubtitle')}</p>
+            <p className={styles.hint}>
+              {withDriver ? t('documentsSubtitleDriver') : t('documentsSubtitle')}
+            </p>
             <RadioGroupField
               control={control}
               name="identityDocument"
@@ -320,7 +349,9 @@ function TermsForm({
           </fieldset>
 
           <fieldset className={styles.fieldset}>
-            <legend className={styles.legend}>{withDriver ? t('termsTitleDriver') : t('termsTitle')}</legend>
+            <legend className={styles.legend}>
+              {withDriver ? t('termsTitleDriver') : t('termsTitle')}
+            </legend>
             <p className={styles.hint}>{t('termsSubtitle')}</p>
             <TextAreaField
               control={control}

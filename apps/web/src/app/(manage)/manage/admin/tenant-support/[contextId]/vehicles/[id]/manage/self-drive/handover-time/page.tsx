@@ -1,12 +1,19 @@
-import { SUPPORT_CAPABILITY } from '@xeprime/types';
-import { HandoverTimeSection } from '@/features/vehicle-manage/components/sections/HandoverTimeSection';
-import { SupportRoute } from '@/features/tenant-support/components/SupportWorkspaceGate';
+import { redirect } from 'next/navigation';
 
-/** Khung giờ giao/nhận + thời gian chết — cùng component với khu tài khoản của chủ xe. */
-export default function Page() {
-  return (
-    <SupportRoute requires={SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE}>
-      <HandoverTimeSection />
-    </SupportRoute>
+import { VEHICLE_MANAGE_SECTION, adminTenantSupportPath } from '@/constants/routes';
+
+/** Đường dẫn CŨ (trước 30/09/2026) — thời gian giao nhận nay là mục chung của xe. */
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ contextId: string; id: string }>;
+}) {
+  const { contextId, id } = await params;
+  redirect(
+    adminTenantSupportPath.vehicleManageSection(
+      contextId,
+      id,
+      VEHICLE_MANAGE_SECTION.HANDOVER_TIME,
+    ),
   );
 }

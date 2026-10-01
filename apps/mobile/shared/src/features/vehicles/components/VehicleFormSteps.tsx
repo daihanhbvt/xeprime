@@ -143,7 +143,6 @@ export function BasicStep({
         name="code"
         label={t('basic.code')}
         placeholder={t('basic.codePlaceholder')}
-        hint={t('basic.codeHelp')}
         editable={!codeReadOnly}
       />
       {/*

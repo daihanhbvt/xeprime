@@ -1,8 +1,15 @@
-import { SERVICE_TYPE } from '@xeprime/types';
+import { redirect } from 'next/navigation';
 
-import { TermsSection } from '@/features/vehicle-manage/components/sections/TermsSection';
+import {
+  RENTAL_TERMS_ANCHOR,
+  VEHICLE_MANAGE_SECTION,
+  accountVehicleManagePath,
+} from '@/constants/routes';
 
-/** Mục "Thủ tục cho thuê có tài xế" — nội dung thật nằm ở component dùng chung; trang chỉ là điểm vào theo URL. */
-export default function Page() {
-  return <TermsSection serviceType={SERVICE_TYPE.WITH_DRIVER} />;
+/** Đường dẫn CŨ (trước 30/09/2026) — thủ tục có tài xế nay nằm trong "Nhận chuyến & thủ tục". */
+export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  redirect(
+    `${accountVehicleManagePath.section(id, VEHICLE_MANAGE_SECTION.WITH_DRIVER_OPTIMIZATION)}#${RENTAL_TERMS_ANCHOR}`,
+  );
 }

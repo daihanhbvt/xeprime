@@ -95,10 +95,7 @@ export function VehicleAlertList({
           const severity = alert.severity as VehicleAlertSeverity;
           return (
             <li key={alert.kind} className={styles.item}>
-              <span
-                className={`${styles.dot} ${dotClass(severity)}`}
-                aria-hidden="true"
-              />
+              <span className={`${styles.dot} ${dotClass(severity)}`} aria-hidden="true" />
               <span className={styles.itemBody}>
                 <span className={styles.itemTitle}>
                   {alert.href ? (

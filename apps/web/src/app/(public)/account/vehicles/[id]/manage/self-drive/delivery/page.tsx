@@ -1,6 +1,9 @@
-import { DeliverySection } from '@/features/vehicle-manage/components/sections/DeliverySection';
+import { redirect } from 'next/navigation';
 
-/** Mục "Giao xe tận nơi" — nội dung thật nằm ở component dùng chung; trang chỉ là điểm vào theo URL. */
-export default function Page() {
-  return <DeliverySection />;
+import { VEHICLE_MANAGE_SECTION, accountVehicleManagePath } from '@/constants/routes';
+
+/** Đường dẫn CŨ (trước 30/09/2026) — giao xe tận nơi nay nằm trong mục "Giá & chính sách". */
+export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  redirect(accountVehicleManagePath.section(id, VEHICLE_MANAGE_SECTION.PRICING));
 }

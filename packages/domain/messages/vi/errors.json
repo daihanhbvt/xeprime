@@ -56,6 +56,7 @@
     "HANDOVER_ODOMETER_BELOW_PICKUP": "Số KM trả xe không được nhỏ hơn số KM lúc giao.",
     "HANDOVER_ODOMETER_SUSPICIOUS": "Số KM chênh lệch bất thường. Kiểm tra lại giúp mình nhé.",
     "HANDOVER_NOT_ELIGIBLE": "Đơn thuê chưa ở trạng thái bàn giao được.",
+    "VEHICLE_CODE_DUPLICATE": "Mã xe này đã được dùng trong gian hàng (kể cả xe đã xoá). Đổi mã khác hoặc để trống để hệ thống tự sinh.",
     "CUSTOMER_PHONE_DUPLICATE": "Số điện thoại này đã có trong sổ khách.",
     "CUSTOMER_ARCHIVED": "Khách này đã được lưu trữ.",
     "CUSTOMER_BLOCKED": "Khách này đang trong danh sách từ chối phục vụ.",

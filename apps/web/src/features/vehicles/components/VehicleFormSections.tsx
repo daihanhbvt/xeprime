@@ -1,7 +1,7 @@
 'use client';
 
 import { BankOutlined, HomeOutlined, KeyOutlined, TeamOutlined } from '@ant-design/icons';
-import { Alert, Checkbox, Col, Radio, Row, Skeleton } from 'antd';
+import { Alert, Checkbox, Col, Form, Radio, Row, Skeleton } from 'antd';
 import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import {
@@ -27,15 +27,14 @@ import type { VehicleFormValues } from '@xeprime/validators';
 import { CatalogCardPicker } from '@/features/catalog/components/CatalogCardPicker';
 import { LongTermPriceHint } from '@/features/rental-policies/components/LongTermPriceHint';
 import { useCatalogItems, useCatalogOptions } from '@/features/catalog/use-catalog';
-import { ImageGalleryField } from '@/components/form/ImageGalleryField';
-import { ImageUploadField } from '@/components/form/ImageUploadField';
+import { TypedMediaFields } from './TypedMediaFields';
+import { ServiceTypeChips } from './ServiceTypeChips';
 import { NumberField } from '@/components/form/NumberField';
 import { SelectField } from '@/components/form/SelectField';
 import { SwitchField } from '@/components/form/SwitchField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
 import { useDomainLabel } from '@/i18n/use-domain-label';
-import { presignVehicleImage } from '@/services/upload';
 import { useVehicleOptions } from '../hooks/use-vehicle-options';
 import { PublishRequiredLabel } from './VehicleCompleteness';
 /*
@@ -218,6 +217,12 @@ export interface SectionProps {
    * thấy một giá trị mà server sắp xoá — và tưởng mình vừa lưu nó.
    */
   setValue?: UseFormSetValue<VehicleFormValues>;
+  /**
+   * Ẩn ô "Loại dịch vụ" (30/09/2026) — màn SỬA xe ở cổng quản lý bật/tắt dịch vụ bằng công tắc
+   * trên tiêu đề nhóm của menu trái, cùng hook `useServiceToggle` với khu tài khoản. Giữ cả hai
+   * là hai đường ghi cho cùng một trường. Wizard TẠO xe vẫn cần ô này: chưa có xe nào để bật.
+   */
+  hideServiceTypes?: boolean;
 }
 
 export function BasicSection({
@@ -228,11 +233,13 @@ export function BasicSection({
   branchOptions = [],
   branchLoading = false,
   branchDisabled = false,
+  hideServiceTypes = false,
 }: SectionProps) {
   const t = useTranslations('Vehicles.form.basic');
   const options = useVehicleOptions();
   // Phiên hỗ trợ (ADR 0050 §13): khi SỬA, loại xe luôn khoá; chi nhánh/dịch vụ theo capability riêng.
   const pinned = useSupportPinnedField({ creating });
+  const vehicleType = useWatch({ control, name: 'vehicleType' });
 
   return (
     <Row gutter={24}>
@@ -252,7 +259,6 @@ export function BasicSection({
           name="code"
           label={t('code')}
           placeholder={t('codePlaceholder')}
-          help={t('codeHelp')}
           disabled={codeReadOnly}
         />
       </Col>
@@ -289,25 +295,50 @@ export function BasicSection({
           required
         />
       </Col>
-      <Col xs={24} sm={12}>
-        {/* MẢNG dịch vụ (17/08) — một xe đăng đồng thời tự lái / có tài xế / dài hạn. */}
-        <SelectField
-          control={control}
-          name="serviceTypes"
-          label={t('serviceTypes')}
-          options={options.serviceType}
-          mode="multiple"
-          disabled={pinned('serviceTypes')}
-          required
-          help={t('serviceTypesHelp')}
-        />
-      </Col>
+      {hideServiceTypes ? null : (
+        <Col xs={24}>
+          {/*
+            MẢNG dịch vụ (17/08) — một xe đăng đồng thời tự lái / có tài xế / dài hạn. Nhãn bấm
+            chọn thay ô chọn nhiều (30/09/2026): ba lựa chọn luôn nằm sẵn trên màn.
+          */}
+          <Controller
+            control={control}
+            name="serviceTypes"
+            render={({ field, fieldState }) => (
+              <Form.Item
+                label={t('serviceTypes')}
+                required
+                validateStatus={fieldState.error ? 'error' : undefined}
+                help={fieldState.error?.message ?? t('serviceTypesHelp')}
+              >
+                <ServiceTypeChips
+                  value={field.value ?? []}
+                  vehicleType={vehicleType}
+                  disabled={pinned('serviceTypes')}
+                  ariaLabel={t('serviceTypes')}
+                  onToggle={(service, enabled) => {
+                    const current = field.value ?? [];
+                    field.onChange(
+                      enabled
+                        ? [...new Set([...current, service])]
+                        : current.filter((s) => s !== service),
+                    );
+                  }}
+                />
+              </Form.Item>
+            )}
+          />
+        </Col>
+      )}
       <Col xs={24}>
         <VehicleTypePolicyWarning control={control} />
       </Col>
-      <Col xs={24}>
-        <ServicePriceRemovalWarning control={control} />
-      </Col>
+      {/* Cảnh báo mất giá khi bỏ dịch vụ chỉ có nghĩa khi ô dịch vụ ở ngay đây; công tắc có hộp xác nhận riêng. */}
+      {hideServiceTypes ? null : (
+        <Col xs={24}>
+          <ServicePriceRemovalWarning control={control} />
+        </Col>
+      )}
     </Row>
   );
 }
@@ -466,116 +497,131 @@ export function SourceTypeSection({ control }: Pick<SectionProps, 'control'>) {
   );
 }
 
-/** Thông số mở rộng là tuỳ chọn và chỉ xuất hiện trong vùng thu gọn của workspace chỉnh sửa. */
-export function AdvancedSpecsSection({ control }: Pick<SectionProps, 'control'>) {
-  const t = useTranslations('Vehicles.form.advanced');
-  const tCommon = useTranslations('Common.labels');
+/*
+ * THÔNG SỐ KỸ THUẬT NÂNG CAO — tuỳ chọn, chỉ có ở màn SỬA xe (30/09/2026).
+ *
+ * Trước đây là MỘT `AdvancedSpecsSection` nằm trong vùng thu gọn của mục Thông tin xe. Nay nó là
+ * một tab ngang riêng và ba nhóm dưới đây là ba card của tab đó; tiêu đề nhóm do card mang, nên
+ * section chỉ còn các ô. Trường, ràng buộc và cách lưu giữ nguyên — vẫn chung form Thông tin.
+ */
 
+/** Kích thước & trọng lượng. */
+export function DimensionsSection({ control }: Pick<SectionProps, 'control'>) {
+  const t = useTranslations('Vehicles.form.advanced');
   return (
-    <div className={styles.advancedStack}>
-      <section className={styles.subSection}>
-        <h3 className={styles.subSectionTitle}>{t('dimensionsTitle')}</h3>
-        <p className={styles.fieldHint}>{tCommon('optional')}</p>
-        <Row gutter={16}>
-          <Col xs={24} sm={12}>
-            <NumberField
-              control={control}
-              name="lengthMm"
-              label={t('lengthMm')}
-              placeholder={t('lengthPlaceholder')}
-              min={1}
-            />
-          </Col>
-          <Col xs={24} sm={12}>
-            <NumberField
-              control={control}
-              name="widthMm"
-              label={t('widthMm')}
-              placeholder={t('widthPlaceholder')}
-              min={1}
-            />
-          </Col>
-          <Col xs={24} sm={12}>
-            <NumberField
-              control={control}
-              name="heightMm"
-              label={t('heightMm')}
-              placeholder={t('heightPlaceholder')}
-              min={1}
-            />
-          </Col>
-          <Col xs={24} sm={12}>
-            <NumberField
-              control={control}
-              name="curbWeightKg"
-              label={t('curbWeightKg')}
-              placeholder={t('curbWeightPlaceholder')}
-              min={1}
-            />
-          </Col>
-        </Row>
-      </section>
-      <section className={styles.subSection}>
-        {/*
-          Dung tích động cơ nằm ở khối NĂNG LƯỢNG (chỉ có nghĩa với xe đốt trong) — ở đây chỉ còn
-          công suất, thứ mọi loại xe đều có. Hai ô cùng tên trên một form là hai nguồn cho cùng
-          một giá trị, và người dùng không biết ô nào đang được lưu.
-        */}
-        <h3 className={styles.subSectionTitle}>{t('engineTitle')}</h3>
-        <Row gutter={16}>
-          <Col xs={24} sm={12}>
-            <NumberField
-              control={control}
-              name="horsepowerHp"
-              label={t('horsepowerHp')}
-              placeholder={t('horsepowerPlaceholder')}
-              min={1}
-            />
-          </Col>
-        </Row>
-      </section>
-      <section className={styles.subSection}>
-        <h3 className={styles.subSectionTitle}>{t('consumptionTitle')}</h3>
-        <Row gutter={16}>
-          <Col xs={24} sm={8}>
-            <NumberField
-              control={control}
-              name="fuelConsumptionCity"
-              label={t('consumptionCity')}
-              placeholder={t('consumptionCityPlaceholder')}
-              min={0}
-            />
-          </Col>
-          <Col xs={24} sm={8}>
-            <NumberField
-              control={control}
-              name="fuelConsumptionHighway"
-              label={t('consumptionHighway')}
-              placeholder={t('consumptionHighwayPlaceholder')}
-              min={0}
-            />
-          </Col>
-          <Col xs={24} sm={8}>
-            <NumberField
-              control={control}
-              name="fuelConsumptionCombined"
-              label={t('consumptionCombined')}
-              placeholder={t('consumptionCombinedPlaceholder')}
-              min={0}
-            />
-          </Col>
-        </Row>
-      </section>
-      <Alert type="info" showIcon title={t('hint')} />
-    </div>
+    <Row gutter={16}>
+      <Col xs={24} sm={12}>
+        <NumberField
+          control={control}
+          name="lengthMm"
+          label={t('lengthMm')}
+          placeholder={t('lengthPlaceholder')}
+          min={1}
+        />
+      </Col>
+      <Col xs={24} sm={12}>
+        <NumberField
+          control={control}
+          name="widthMm"
+          label={t('widthMm')}
+          placeholder={t('widthPlaceholder')}
+          min={1}
+        />
+      </Col>
+      <Col xs={24} sm={12}>
+        <NumberField
+          control={control}
+          name="heightMm"
+          label={t('heightMm')}
+          placeholder={t('heightPlaceholder')}
+          min={1}
+        />
+      </Col>
+      <Col xs={24} sm={12}>
+        <NumberField
+          control={control}
+          name="curbWeightKg"
+          label={t('curbWeightKg')}
+          placeholder={t('curbWeightPlaceholder')}
+          min={1}
+        />
+      </Col>
+    </Row>
   );
 }
 
-export function SpecsSection({ control, isCar, lockedNotice, setValue }: SectionProps) {
+/**
+ * Công suất. Dung tích động cơ nằm ở khối NĂNG LƯỢNG (chỉ có nghĩa với xe đốt trong) — ở đây chỉ
+ * còn công suất, thứ mọi loại xe đều có. Hai ô cùng tên trên một form là hai nguồn cho cùng một
+ * giá trị, và người dùng không biết ô nào đang được lưu.
+ */
+export function EngineOutputSection({ control }: Pick<SectionProps, 'control'>) {
+  const t = useTranslations('Vehicles.form.advanced');
+  return (
+    <Row gutter={16}>
+      <Col xs={24} sm={12}>
+        <NumberField
+          control={control}
+          name="horsepowerHp"
+          label={t('horsepowerHp')}
+          placeholder={t('horsepowerPlaceholder')}
+          min={1}
+        />
+      </Col>
+    </Row>
+  );
+}
+
+/**
+ * Mức tiêu thụ nhiên liệu theo điều kiện đường — trong đô thị và cao tốc.
+ *
+ * KHÔNG có ô "kết hợp" (30/09/2026): ô đó sống ở khối năng lượng (`VehicleEnergyFields`), nơi có
+ * luật ẩn theo nguồn năng lượng (xe điện không hỏi lít/100km) và luật bắt buộc để lên chợ. Trước
+ * đây nó có HAI ô cho cùng một giá trị — một ở đây, một ở khối năng lượng.
+ */
+export function ConsumptionSection({ control }: Pick<SectionProps, 'control'>) {
+  const t = useTranslations('Vehicles.form.advanced');
+  return (
+    <Row gutter={16}>
+      <Col xs={24} sm={12}>
+        <NumberField
+          control={control}
+          name="fuelConsumptionCity"
+          label={t('consumptionCity')}
+          placeholder={t('consumptionCityPlaceholder')}
+          min={0}
+        />
+      </Col>
+      <Col xs={24} sm={12}>
+        <NumberField
+          control={control}
+          name="fuelConsumptionHighway"
+          label={t('consumptionHighway')}
+          placeholder={t('consumptionHighwayPlaceholder')}
+          min={0}
+        />
+      </Col>
+    </Row>
+  );
+}
+
+/**
+ * Thông số của xe — wizard TẠO xe vẫn dùng khối gộp này. Màn SỬA bày hai nửa của nó thành hai
+ * card riêng (`VehicleIdentitySection` · `VehicleEnergySection`); trường và luật giữ nguyên.
+ */
+export function SpecsSection(props: SectionProps) {
+  return (
+    <>
+      <VehicleIdentitySection {...props} />
+      <VehicleEnergySection {...props} />
+    </>
+  );
+}
+
+/** Nhận dạng xe: biển số · hãng/mẫu · năm sản xuất · màu · phân loại (số chỗ/kiểu dáng/phân khúc). */
+export function VehicleIdentitySection({ control, isCar, lockedNotice, setValue }: SectionProps) {
   const t = useTranslations('Vehicles.form.specs');
   const vehicleType = isCar ? VEHICLE_TYPE.CAR : VEHICLE_TYPE.MOTORBIKE;
-  const fuelType = useWatch({ control, name: 'fuelType' });
-  const transmissionOptions = useTransmissionOptions(vehicleType, fuelType);
 
   return (
     <Row gutter={16}>
@@ -636,6 +682,18 @@ export function SpecsSection({ control, isCar, lockedNotice, setValue }: Section
           setValue={setValue}
         />
       </Col>
+    </Row>
+  );
+}
+
+/** Động cơ & năng lượng: nhiên liệu · hộp số · thông số theo nguồn năng lượng. */
+export function VehicleEnergySection({ control, isCar, lockedNotice, setValue }: SectionProps) {
+  const vehicleType = isCar ? VEHICLE_TYPE.CAR : VEHICLE_TYPE.MOTORBIKE;
+  const fuelType = useWatch({ control, name: 'fuelType' });
+  const transmissionOptions = useTransmissionOptions(vehicleType, fuelType);
+
+  return (
+    <Row gutter={16}>
       {/*
         Nguồn năng lượng + thông số của nó dùng CHUNG một khối với wizard đăng xe nhanh
         (`VehicleEnergyFields`): xe xăng hỏi lít/100km, xe điện hỏi km mỗi lần sạc, và ma trận
@@ -754,7 +812,10 @@ export function FeaturesSelect({
  * thấy; ảnh minh hoạ làm việc chọn tường minh hơn hẳn danh sách "CUV / SUV / MPV" bằng chữ.
  * Cùng component với bộ lọc marketplace (`CatalogCardPicker`) nên hai màn không thể lệch ảnh.
  */
-function BodyTypePicker({ control }: Pick<SectionProps, 'control'>) {
+export function BodyTypePicker({
+  control,
+  disabled = false,
+}: Pick<SectionProps, 'control'> & { disabled?: boolean }) {
   const t = useTranslations('Vehicles.form.specs');
   const { items, isLoading } = useCatalogItems(CATALOG_TYPE.BODY_TYPE);
 
@@ -776,6 +837,7 @@ function BodyTypePicker({ control }: Pick<SectionProps, 'control'>) {
               items={items}
               value={field.value ? [field.value] : []}
               onChange={(next) => field.onChange(next[0] ?? null)}
+              disabled={disabled}
             />
           )}
         />
@@ -956,25 +1018,8 @@ export function MediaSection({ control, isCar }: SectionProps) {
 }
 
 export function ImagesSection({ control }: SectionProps) {
-  const t = useTranslations('Vehicles.form.media');
-
   return (
-    <>
-      <ImageUploadField
-        control={control}
-        name="mainImageUrl"
-        label={<PublishRequiredLabel label={t('mainImage')} />}
-        presign={presignVehicleImage}
-      />
-
-      <ImageGalleryField
-        control={control}
-        name="images"
-        label={t('gallery')}
-        presign={presignVehicleImage}
-        max={20}
-      />
-    </>
+    <TypedMediaFields control={control} vehicleType={useWatch({ control, name: 'vehicleType' })} />
   );
 }
 

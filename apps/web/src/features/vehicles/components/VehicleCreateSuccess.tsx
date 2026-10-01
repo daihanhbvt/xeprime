@@ -4,10 +4,7 @@ import { CheckOutlined, CarOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import {
-  VEHICLE_OPERATION_STATUS_META,
-  type VehicleOperationStatus,
-} from '@xeprime/types';
+import { VEHICLE_OPERATION_STATUS_META, type VehicleOperationStatus } from '@xeprime/types';
 import { LIST_SEPARATOR } from '@xeprime/domain';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { VEHICLE_EDIT_TAB, vehiclePath, vehicleTabPath } from '@/constants/routes';
@@ -80,7 +77,9 @@ export function VehicleCreateSuccess({
           </li>
           <li>
             <span>{t('checkPricing')}</span>
-            <Link href={vehiclePath.pricing(vehicle.id)}>{t('checkPricingLink')}</Link>
+            <Link href={vehicleTabPath(vehicle.id, VEHICLE_EDIT_TAB.PRICING)}>
+              {t('checkPricingLink')}
+            </Link>
           </li>
           <li>
             <span>{t('checkSource')}</span>

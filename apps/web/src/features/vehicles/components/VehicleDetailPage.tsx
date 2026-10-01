@@ -21,7 +21,7 @@ export function VehicleDetailPage() {
   const backToList = () => router.push(ROUTES.MANAGE.VEHICLES);
 
   return (
-    <PageContainer>
+    <PageContainer width="wide">
       <ManagePageHeader
         title={t('detail.title')}
         subtitle={t('detail.pageSubtitle')}

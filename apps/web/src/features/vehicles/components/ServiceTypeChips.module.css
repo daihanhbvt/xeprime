@@ -1,0 +1,26 @@
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs);
+}
+
+.chip,
+.locked {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-inline-end: 0;
+  padding: 4px var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: 999px;
+  font-size: var(--xp-font-size-body);
+}
+
+.locked {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.check {
+  font-size: 12px;
+}

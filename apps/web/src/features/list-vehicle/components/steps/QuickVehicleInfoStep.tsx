@@ -14,6 +14,7 @@ import { useCatalogOptions } from '@/features/catalog/use-catalog';
 import { CATALOG_TYPE } from '@xeprime/types';
 import { useCatalogModels } from '@/features/catalog/use-catalog-models';
 import { VehicleClassificationFields } from '@/features/vehicles/components/VehicleClassificationFields';
+import { BodyTypePicker } from '@/features/vehicles/components/VehicleFormSections';
 import { VehicleEnergyFields } from '@/features/vehicles/components/VehicleEnergyFields';
 import { VehicleIdentityFields } from '@/features/vehicles/components/VehicleIdentityFields';
 import {
@@ -111,6 +112,7 @@ export function QuickVehicleInfoStep({ control, setValue, vehicleType }: Props) 
           */}
           <Col xs={24}>
             <VehicleIdentityFields
+              required
               control={control as never}
               vehicleType={vehicleType || VEHICLE_TYPE.CAR}
               setValue={setValue as never}
@@ -118,8 +120,10 @@ export function QuickVehicleInfoStep({ control, setValue, vehicleType }: Props) 
           </Col>
           <Col xs={24}>
             <VehicleClassificationFields
+              required
               control={control as never}
               vehicleType={vehicleType || VEHICLE_TYPE.CAR}
+              bodyTypePicker={<BodyTypePicker control={control as never} />}
               setValue={setValue as never}
             />
           </Col>
@@ -127,6 +131,7 @@ export function QuickVehicleInfoStep({ control, setValue, vehicleType }: Props) 
             <NumberField
               control={control}
               name="manufactureYear"
+              required
               label={tForm('specs.manufactureYear')}
               min={1980}
               max={new Date().getFullYear() + 1}

@@ -1,6 +1,9 @@
-import { SelfDrivePricingSection } from '@/features/vehicle-manage/components/sections/SelfDrivePricingSection';
+import { redirect } from 'next/navigation';
 
-/** Mục "Giá cho thuê tự lái" — nội dung thật nằm ở component dùng chung; trang chỉ là điểm vào theo URL. */
-export default function Page() {
-  return <SelfDrivePricingSection />;
+import { VEHICLE_MANAGE_SECTION, accountVehicleManagePath } from '@/constants/routes';
+
+/** Đường dẫn CŨ (trước 30/09/2026) — giá tự lái nay nằm trong mục "Giá & chính sách". */
+export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  redirect(accountVehicleManagePath.section(id, VEHICLE_MANAGE_SECTION.PRICING));
 }
