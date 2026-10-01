@@ -30,9 +30,28 @@ const rows = vi.hoisted(() => ({
   refetch: vi.fn(),
 }));
 
+/** Kỳ mà panel thật sự hỏi — đọc từ URL, không từ state cục bộ. */
+const asked = vi.hoisted(() => ({
+  summary: [] as string[],
+  rows: [] as { period: string; page: number }[],
+}));
+
+const nav = vi.hoisted(() => ({ params: new URLSearchParams(), replace: vi.fn() }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: nav.replace, push: vi.fn() }),
+  usePathname: () => '/manage/admin/money',
+  useSearchParams: () => nav.params,
+}));
+
 vi.mock('../hooks/use-tax', () => ({
-  useTaxPeriodSummary: () => summary,
-  useTaxRows: () => rows,
+  useTaxPeriodSummary: (period: string) => {
+    asked.summary.push(period);
+    return summary;
+  },
+  useTaxRows: (query: { period: string; page: number }) => {
+    asked.rows.push(query);
+    return rows;
+  },
   useMarkPeriodDeclared: () => ({ mutate: vi.fn(), isPending: false }),
   useMarkPeriodRemitted: () => ({ mutate: vi.fn(), isPending: false }),
   useReverseTaxRow: () => ({ mutate: vi.fn(), isPending: false }),
@@ -95,7 +114,8 @@ function makeRow(over: Partial<TaxRow> = {}): TaxRow {
   } as TaxRow;
 }
 
-function renderPanel() {
+function renderPanel(params = '') {
+  nav.params = new URLSearchParams(params);
   return render(
     <App>
       <TaxPeriodPanel />
@@ -104,10 +124,31 @@ function renderPanel() {
 }
 
 beforeEach(() => {
+  asked.summary = [];
+  asked.rows = [];
+  nav.replace.mockReset();
   summary.data = makeSummary();
   summary.isError = false;
   rows.data = { data: [makeRow()], meta: { page: 1, limit: 20, total: 1, hasNext: false } };
   rows.isError = false;
+});
+
+describe('TaxPeriodPanel — kỳ đang xem nằm trên URL', () => {
+  it('`?period=` mở đúng kỳ đó (thẻ "Thuế chưa kê khai" dẫn tới kỳ cũ nhất còn nợ)', () => {
+    renderPanel('queue=tax&period=2001-01&page=2');
+    expect(asked.summary.at(-1)).toBe('2001-01');
+    expect(asked.rows.at(-1)).toEqual({ period: '2001-01', page: 2 });
+  });
+
+  it('kỳ TƯƠNG LAI hay giá trị rác ⇒ về kỳ hiện hành, không hỏi một kỳ chưa có', () => {
+    renderPanel('queue=tax&period=2999-01');
+    const current = asked.summary.at(-1)!;
+    expect(current).not.toBe('2999-01');
+    expect(current).toMatch(/^\d{4}-\d{2}$/);
+
+    renderPanel('queue=tax&period=rac');
+    expect(asked.summary.at(-1)).toBe(current);
+  });
 });
 
 describe('TaxPeriodPanel', () => {
@@ -144,7 +185,15 @@ describe('TaxPeriodPanel', () => {
 
   it('bút toán ĐẢO hiện số âm, và KHÔNG cho đảo lần nữa', () => {
     rows.data = {
-      data: [makeRow({ id: '01REV', amount: '-140000', reversalOfId: '01TAXROW', status: TAX_WITHHOLDING_STATUS.REVERSED, reversalReason: 'Sai tỷ lệ' })],
+      data: [
+        makeRow({
+          id: '01REV',
+          amount: '-140000',
+          reversalOfId: '01TAXROW',
+          status: TAX_WITHHOLDING_STATUS.REVERSED,
+          reversalReason: 'Sai tỷ lệ',
+        }),
+      ],
       meta: { page: 1, limit: 20, total: 1, hasNext: false },
     };
     renderPanel();
@@ -157,7 +206,12 @@ describe('TaxPeriodPanel', () => {
 
   it('dòng ĐÃ NỘP không cho đảo — sửa bằng tờ khai điều chỉnh', () => {
     rows.data = {
-      data: [makeRow({ status: TAX_WITHHOLDING_STATUS.REMITTED, remittedAt: '2026-10-01T00:00:00.000Z' })],
+      data: [
+        makeRow({
+          status: TAX_WITHHOLDING_STATUS.REMITTED,
+          remittedAt: '2026-10-01T00:00:00.000Z',
+        }),
+      ],
       meta: { page: 1, limit: 20, total: 1, hasNext: false },
     };
     renderPanel();

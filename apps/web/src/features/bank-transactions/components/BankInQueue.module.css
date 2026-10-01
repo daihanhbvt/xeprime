@@ -1,0 +1,70 @@
+.amount {
+  font-weight: var(--xp-font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Nội dung chuyển khoản do ngân hàng ghép — dài, viết liền, phải ngắt được trong ô. */
+.content {
+  overflow-wrap: anywhere;
+}
+
+/* Mã rút được hiện như một con chip đọc lại được — ký tự cách đều, nền xám nhạt. */
+.code {
+  display: inline-block;
+  padding: 0 var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+  font-family: var(--xp-font-mono, ui-monospace, monospace);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 22px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--xp-color-text-tertiary);
+}
+
+.chevron {
+  font-size: 12px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+/* ── Thẻ mobile ─────────────────────────────────────────────────────────────── */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.cardContent {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.cardMeta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.cardMeta .chevron {
+  margin-left: auto;
+}

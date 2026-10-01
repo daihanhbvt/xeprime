@@ -315,7 +315,7 @@ export const ROUTES = {
     ADMIN_AUDIT: '/manage/admin/audit',
     ADMIN_STAFF: '/manage/admin/staff',
     ADMIN_PLANS: '/manage/admin/plans',
-    /** Hàng đợi đối soát tiền vào (R2 — ADR 0022 điều 4): khớp tay khoản không rút được mã. */
+    /** URL CŨ của hàng đợi tiền vào — chuyển tiếp về `ADMIN_MONEY?queue=bank-in` (01/10/2026). */
     ADMIN_BANK_TRANSACTIONS: '/manage/admin/bank-transactions',
     ADMIN_CATALOG: '/manage/admin/catalog',
     /** Danh mục hành chính (tỉnh/thành) — dữ liệu dùng chung cho mọi gian hàng. */
@@ -326,7 +326,7 @@ export const ROUTES = {
     /** Quản trị chính sách phí có phiên bản (R3 — ADR 0028 điều 2–3). */
     ADMIN_FEE_POLICIES: '/manage/admin/fee-policies',
     ADMIN_PROMO_CODES: '/manage/admin/promo-codes',
-    /** Money operations: hàng đợi giữ chỗ, chuyển trả, đối chiếu ngày (R3 — ADR 0028 gate 6–7). */
+    /** Màn Tài chính: tiền vào, giữ chỗ, hoàn, rút, bảo hiểm, thuế, đối soát ngày (`?queue=`). */
     ADMIN_MONEY: '/manage/admin/money',
     /** Hàng đợi hỗ trợ/tranh chấp toàn sàn (R3 — ADR 0028 release gate 7). */
     ADMIN_SUPPORT: '/manage/admin/support',

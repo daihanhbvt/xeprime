@@ -7,7 +7,7 @@ import { Drawer } from 'antd';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { FEATURE_STATE, isFeatureVisible } from '@xeprime/types';
-import { matchActiveHref } from '@/constants/nav';
+import { isNavPermissionGranted, matchActiveHref } from '@/constants/nav';
 import { Logo } from '@/components/brand/Logo';
 import { useManageNavTree } from './use-manage-nav-tree';
 import { useFeatureStates } from '@/hooks/use-feature';
@@ -61,7 +61,7 @@ export function MobileNav() {
    */
   const tabs = useManageNavTree().mobileTabs.filter(
     (tab) =>
-      has(tab.permission) &&
+      isNavPermissionGranted(tab.permission, has) &&
       (tab.feature === undefined ||
         isFeatureVisible(featureStates[tab.feature] ?? FEATURE_STATE.ENABLED)),
   );

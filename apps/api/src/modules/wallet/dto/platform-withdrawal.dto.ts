@@ -6,7 +6,17 @@ import {
   type WithdrawalStatus,
 } from '@xeprime/types';
 import { Transform, Type } from 'class-transformer';
-import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
 
 /**
  * Một lệnh rút nhìn từ phía ADMIN — số tài khoản ĐẦY ĐỦ.
@@ -21,7 +31,11 @@ export class PlatformWithdrawalDto {
   @ApiProperty({ enum: WITHDRAWAL_STATUS_VALUES }) status!: WithdrawalStatus;
 
   @ApiProperty({ enum: WALLET_OWNER_TYPE_VALUES }) ownerType!: WalletOwnerType;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Tên chủ ví — người hoặc gian hàng' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Tên chủ ví — người hoặc gian hàng',
+  })
   ownerName!: string | null;
 
   @ApiProperty() bankCode!: string;
@@ -37,6 +51,15 @@ export class PlatformWithdrawalDto {
   @ApiPropertyOptional({ type: String, nullable: true }) paidAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) bankReference!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) rejectReason!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Lúc lệnh ĐÃ CHI bị đảo (chuyển hụt / sai tài khoản) — chỉ ở trạng thái `reversed`',
+  })
+  reversedAt!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Vì sao tiền quay lại' })
+  reverseReason!: string | null;
   @ApiProperty() rowVersion!: number;
   @ApiProperty() createdAt!: string;
 }
@@ -105,9 +128,20 @@ export class RejectWithdrawalDto {
 }
 
 export class ReverseWithdrawalDto {
-  @ApiProperty({ description: 'Vì sao tiền quay lại (chuyển hụt, sai số tài khoản…)' })
+  @ApiProperty({
+    description: 'Vì sao tiền quay lại (chuyển hụt, sai số tài khoản…) — chủ ví đọc được',
+  })
   @IsString()
   @MinLength(3)
   @MaxLength(500)
   reason!: string;
+
+  @ApiProperty({
+    description:
+      'Bản ghi đang cầm — bấm hai lần (hay hai admin cùng bấm) thì lần sau nhận 409, không đảo đôi',
+  })
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  rowVersion!: number;
 }

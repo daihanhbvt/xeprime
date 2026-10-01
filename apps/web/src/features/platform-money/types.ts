@@ -9,6 +9,8 @@ export type SettleHoldInput = Schemas['SettleHoldDto'];
 export type MarkRefundPaidInput = Schemas['MarkRefundPaidDto'];
 export type RejectRefundInput = Schemas['RejectRefundDto'];
 export type SaveBankBalanceInput = Schemas['SaveBankBalanceDto'];
+/** Số đếm các hàng đợi của màn Tài chính. */
+export type PlatformMoneySummary = Schemas['PlatformMoneySummaryDto'];
 
 /** Hợp đồng bảo hiểm nhìn từ ADMIN — Phase 7. */
 export type PlatformInsurancePolicy = Schemas['PlatformInsurancePolicyDto'];

@@ -16,6 +16,9 @@ export function filtersToParams(filters: BankTransactionFilters): QueryParams {
   return {
     matchStatus: filters.matchStatus ?? null,
     q: filters.q ?? null,
+    code: filters.code ?? null,
+    from: filters.from ?? null,
+    to: filters.to ?? null,
     page: filters.page ?? 1,
     limit: filters.limit ?? BANK_TX_DEFAULT_LIMIT,
   };

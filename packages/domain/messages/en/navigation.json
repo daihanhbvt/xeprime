@@ -118,11 +118,10 @@
     "catalog": "Filter catalogue",
     "locations": "Provinces",
     "audit": "System audit log",
-    "bankTransactions": "Payment reconciliation",
     "sellers": "Seller verification",
     "feePolicies": "Fee policies",
     "promoCodes": "Promo codes",
-    "money": "Money operations",
+    "money": "Finance",
     "support": "Support / disputes",
     "billing": "Plans & fees"
   }

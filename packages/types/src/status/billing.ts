@@ -233,8 +233,7 @@ export const SUBSCRIPTION_INVOICE_STATUS_VALUES = Object.values(
 
 export function isSubscriptionInvoiceStatus(value: unknown): value is SubscriptionInvoiceStatus {
   return (
-    typeof value === 'string' &&
-    (SUBSCRIPTION_INVOICE_STATUS_VALUES as string[]).includes(value)
+    typeof value === 'string' && (SUBSCRIPTION_INVOICE_STATUS_VALUES as string[]).includes(value)
   );
 }
 
@@ -322,6 +321,22 @@ export const REFERENCE_CODE_PREFIX = {
    */
   [BANK_MATCH_TARGET_TYPE.WITHDRAWAL_REQUEST]: 'XPW',
 } as const;
+
+/**
+ * Bộ lọc "mã rút được thuộc luồng nào" của hàng đợi tiền vào (màn Tài chính).
+ *
+ * Hai luồng VÀO theo tiền tố mã, cộng `no_code` — khoản mà ngân hàng cắt mất nội dung hoặc khách
+ * quên ghi mã. Nhóm cuối mới là phần lớn việc tay: khoản có mã mà vẫn nằm hàng đợi là khoản đến
+ * muộn hoặc lệch tiền, còn khoản không mã là khoản chưa ai biết thuộc về đâu.
+ */
+export const BANK_TX_CODE_FILTER = {
+  SUBSCRIPTION_INVOICE: BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_INVOICE,
+  BOOKING_HOLD: BANK_MATCH_TARGET_TYPE.BOOKING_HOLD,
+  NO_CODE: 'no_code',
+} as const;
+
+export type BankTxCodeFilter = (typeof BANK_TX_CODE_FILTER)[keyof typeof BANK_TX_CODE_FILTER];
+export const BANK_TX_CODE_FILTER_VALUES = Object.values(BANK_TX_CODE_FILTER) as BankTxCodeFilter[];
 
 /**
  * CHIỀU của một giao dịch ngân hàng.

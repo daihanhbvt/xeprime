@@ -1,20 +1,13 @@
 {
   "page": {
-    "title": "Money operations",
-    "subtitle": "Booking holds, refunds and daily reconciliation of incoming payments.",
+    "title": "Finance",
     "loadError": "Could not load the data.",
     "holdsEmpty": "No booking holds.",
     "holdsTotal": "{count} booking holds",
     "refundsEmpty": "No refunds.",
-    "refundsTotal": "{count} refunds"
-  },
-  "tabs": {
-    "holds": "Booking holds",
-    "refunds": "Refunds",
-    "reconciliation": "Daily reconciliation",
-    "withdrawals": "Withdrawals",
-    "insurance": "Insurance",
-    "tax": "Tax"
+    "refundsTotal": "{count} refunds",
+    "today": "Today ({date})",
+    "dateLabel": "Reconciliation date"
   },
   "filters": {
     "search": "Search",
@@ -37,7 +30,12 @@
     "disputeOpen": "Dispute open",
     "settleAction": "Settle",
     "markPaidAction": "Mark transferred",
-    "rejectAction": "Reject"
+    "rejectAction": "Reject",
+    "booking": "Booking",
+    "parties": "Shop · Customer",
+    "payee": "Customer · Shop",
+    "lines": "Deposit {deposit} · Fee {fee}",
+    "noAccount": "No account on file"
   },
   "settle": {
     "title": "Settle booking hold {code}",
@@ -47,7 +45,31 @@
     "submit": "Settle",
     "success": "Outcome settled.",
     "disputeOpen": "This booking still has an open dispute — resolve it before settling the money.",
-    "auditHint": "This action is written to the audit log and cannot be undone."
+    "auditHint": "This action is written to the audit log and cannot be undone.",
+    "received": "Amount received",
+    "paidTotal": "Total received",
+    "preview": "Who receives what",
+    "drawerTitle": "Settle booking hold",
+    "submitFor": "Settle: {outcome}",
+    "sideLabel": "Choose an outcome",
+    "confirmHint": "The outcome \"{outcome}\" will be settled and the money allocated right away. The reason is written to the audit log under your name.",
+    "notePlaceholder": "e.g. the dispute was resolved in the customer's favour, refund in full",
+    "vehicle": "Vehicle",
+    "paidAt": "Paid at",
+    "chooseHint": "Pick an outcome on the right — preview who receives what before settling.",
+    "previewTotal": "Total allocated",
+    "previewEmpty": "Choose an outcome to see who receives what.",
+    "noAllocation": "Legacy hold — this outcome is recorded only; no money is allocated.",
+    "outcomeHelp": {
+      "settled": "Trip completed: deposit to the owner (after tax), fee to XePrime, insurance to the insurer.",
+      "split_late_cancel": "Late cancellation or no-show: deposit and fee split between owner and XePrime; insurance refunded to the customer.",
+      "refunded": "Refund the customer everything they transferred.",
+      "kept": "Trip ran: the platform keeps the amount; nothing is transferred.",
+      "forfeited": "Late cancellation or no-show: the amount goes to the shop wallet as compensation.",
+      "released_to_shop": "Trip completed: the amount is returned to the shop wallet."
+    },
+    "previous": "Previous hold",
+    "next": "Next hold"
   },
   "refundPaid": {
     "title": "Record refund transfer",
@@ -60,25 +82,20 @@
     "success": "Refund transfer recorded."
   },
   "reject": {
-    "title": "Reject refund — the customer will see this reason",
+    "title": "Reject refund",
     "notePlaceholder": "Reason…",
     "noteLabel": "Reason",
     "noteRequired": "A reason is required (at least 5 characters).",
     "submit": "Reject",
-    "success": "Refund rejected."
+    "success": "Refund rejected.",
+    "audienceHint": "The customer will read this reason."
   },
   "reconciliation": {
-    "date": "Reconciliation date",
     "retry": "Retry",
-    "balanced": "Balanced — the bank balance equals XePrime's own money plus money held for others.",
-    "varianceWarning": "Off by {amount}",
     "varianceHint": "The bank balance does not match the two sides. Check the unmatched incoming queue, manual transfers not yet recorded, and the balance you entered.",
-    "balanceMissing": "End-of-day bank balance not entered",
-    "balanceMissingHint": "Without the balance there is nothing to reconcile against — the two sides below are still correct, but nothing external confirms them. Enter the balance from your banking app.",
     "walletDriftWarning": "Ledger drift in {count, plural, one {# wallet} other {# wallets}} · {amount} total",
     "walletDriftHint": "Wallet ledger entries do not add up to the stored balance. That means something writes balances outside the ledger — stop payouts and investigate before spending further.",
     "bankBalanceEod": "End-of-day bank balance",
-    "notEntered": "not entered",
     "balancePlaceholder": "Enter balance (VND)",
     "saveBalance": "Save balance",
     "balanceSaved": "End-of-day balance saved",
@@ -88,22 +105,32 @@
     "custodiedTitle": "Money held for others — liabilities",
     "holdsUnsettled": "Holds not yet settled",
     "walletTotal": "Balances payable",
-    "walletSplit": "{total} · {available} withdrawable · {pending} in transit",
     "refundsPending": "Refunds awaiting manual transfer",
     "unmatchedIn": "Unmatched incoming",
     "insuranceReserved": "Insurance premiums not yet settled",
     "taxAccrued": "Tax withheld, not yet remitted",
-    "outflowTitle": "Paid out today",
     "withdrawalsPaid": "Withdrawals transferred",
     "refundsPaid": "Refunds transferred",
-    "inflowTitle": "Incoming today",
-    "bankIn": "Into the bank account",
     "matchedSubscriptions": "Matched to subscription invoices",
     "matchedHolds": "Matched to holds",
     "unmatched": "Unmatched",
     "ignored": "Ignored",
     "inflowVariance": "Rows in no group",
-    "amountWithCount": "{amount} · {count} transactions"
+    "loadError": "Could not load the ledger",
+    "equationLabel": "Reconciliation equation",
+    "varianceTitle": "Variance",
+    "notComputable": "Not computable yet",
+    "updateBalance": "Update end-of-day balance",
+    "walletBreakdown": "Withdrawable {available} · In transfer {pending}",
+    "flowTitle": "Cash flow today",
+    "flowIn": "In",
+    "flowOut": "Out",
+    "flowCount": "{count, plural, one {# transaction} other {# transactions}}",
+    "flowDetails": "Show cash-flow details",
+    "varianceMissing": "Enter the balance to compute",
+    "varianceOff": "Needs review",
+    "varianceBalanced": "Balanced",
+    "countChip": "{count, plural, one {# item} other {# items}}"
   },
   "insurance": {
     "title": "Insurance queue",
@@ -139,7 +166,8 @@
       "hint": "Voiding is a money decision and goes into the audit log. If the certificate was already issued, settle it with the partner first — voiding here only closes the XePrime side.",
       "reasonLabel": "Reason for voiding",
       "reasonPlaceholder": "Why this policy is being voided",
-      "done": "Policy voided"
+      "done": "Policy voided",
+      "reasonRequired": "Enter a reason for voiding (at least 5 characters)."
     }
   },
   "tax": {
@@ -189,5 +217,55 @@
       "reasonPlaceholder": "Why this row is wrong",
       "done": "Tax row reversed"
     }
+  },
+  "status": {
+    "titleToday": "Today's reconciliation",
+    "titleDay": "Reconciliation for {date}",
+    "balanced": "Balanced",
+    "variance": "Off by {amount}",
+    "missing": "Balance not entered",
+    "bankBalance": "Bank balance {amount}",
+    "enterBalance": "Enter end-of-day balance",
+    "openLedger": "Open the ledger",
+    "walletDrift": "Ledger drift in {count, plural, one {# wallet} other {# wallets}}",
+    "loadError": "Could not load reconciliation"
+  },
+  "cards": {
+    "label": "Pending work",
+    "bankIn": "Unmatched incoming",
+    "holds": "Holds awaiting settlement",
+    "refunds": "Refunds to transfer",
+    "withdrawals": "Withdrawals to process",
+    "insurance": "Failed insurance",
+    "tax": "Tax not yet declared",
+    "oldest": "Oldest {age}",
+    "disputes": "{count} in dispute",
+    "overdue": "{count} overdue",
+    "period": "Period {period}",
+    "loadError": "Could not load queue counts",
+    "taxFrom": "Since {period}"
+  },
+  "queues": {
+    "railTitle": "Queues",
+    "railLabel": "Choose a queue",
+    "groups": {
+      "moneyIn": "Money in",
+      "held": "Money held",
+      "moneyOut": "Money out",
+      "thirdParty": "Third parties",
+      "ledger": "Ledger"
+    },
+    "bankIn": "Unmatched incoming",
+    "holds": "Holds awaiting settlement",
+    "refunds": "Customer refunds",
+    "withdrawals": "Owner withdrawals",
+    "insurance": "Insurance",
+    "tax": "Tax by period",
+    "ledger": "Daily ledger"
+  },
+  "age": {
+    "minutes": "{count, plural, one {# minute} other {# minutes}}",
+    "hours": "{count, plural, one {# hour} other {# hours}}",
+    "days": "{count, plural, one {# day} other {# days}}"
   }
 }

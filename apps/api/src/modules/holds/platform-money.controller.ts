@@ -1,5 +1,11 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
-import { ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { PERMISSION, type BookingHoldOutcome } from '@xeprime/types';
 import { CurrentUser, PlatformOnly, RequirePermissions } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
@@ -15,7 +21,9 @@ import {
   SaveBankBalanceDto,
   SettleHoldDto,
 } from './dto/hold.dto';
+import { PlatformMoneySummaryDto } from './dto/platform-money-summary.dto';
 import { HoldSettlementService } from './hold-settlement.service';
+import { PlatformMoneySummaryService } from './platform-money-summary.service';
 
 /**
  * MONEY OPERATIONS của nền tảng — Gap Analysis §3.B, ADR 0028 release gate 6–7 (R3).
@@ -35,10 +43,26 @@ export class PlatformMoneyController {
   constructor(
     private readonly holds: BookingHoldsService,
     private readonly settlement: HoldSettlementService,
+    private readonly summaryService: PlatformMoneySummaryService,
   ) {}
 
+  @Get('summary')
+  @ApiOperation({
+    summary: 'Số đếm các hàng đợi tiền — dải thẻ đầu màn Tài chính',
+    description:
+      'Trạng thái HIỆN TẠI của sáu hàng đợi (tiền vào chưa khớp, giữ chỗ chờ chốt, hoàn chờ ' +
+      'chuyển, rút tiền, bảo hiểm lỗi, thuế kỳ này chờ kê khai). Mỗi nhóm đếm đúng tập mà danh ' +
+      'sách tương ứng hiện khi không lọc.',
+  })
+  @ApiOkResponse({ type: PlatformMoneySummaryDto })
+  summary(): Promise<PlatformMoneySummaryDto> {
+    return this.summaryService.summary();
+  }
+
   @Get('holds')
-  @ApiOperation({ summary: 'Hàng đợi khoản giữ chỗ — lọc trạng thái, hoặc chỉ hold chưa chốt kết cục' })
+  @ApiOperation({
+    summary: 'Hàng đợi khoản giữ chỗ — lọc trạng thái, hoặc chỉ hold chưa chốt kết cục',
+  })
   @ApiOkResponse({ type: PlatformHoldPageDto })
   listHolds(@Query() query: PlatformHoldListQueryDto): Promise<PlatformHoldPageDto> {
     return this.holds.listForPlatform(query) as Promise<PlatformHoldPageDto>;
@@ -47,7 +71,8 @@ export class PlatformMoneyController {
   @Post('holds/:id/settle')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
-    summary: 'Chốt tay kết cục một hold đang chờ (thường sau tranh chấp) — bắt buộc lý do, có audit',
+    summary:
+      'Chốt tay kết cục một hold đang chờ (thường sau tranh chấp) — bắt buộc lý do, có audit',
   })
   @ApiNoContentResponse()
   async settle(

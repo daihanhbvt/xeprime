@@ -27,7 +27,7 @@ import {
   SUPPORT_CASE_CATEGORY,
   SUPPORT_CASE_STATUS_OPEN,
   TAX_WITHHOLDING_STATUS_UNPAID,
-  WITHDRAWAL_STATUS,
+  WITHDRAWAL_STATUS_DISBURSED,
   BOOKING_HOLD_STATUS_AWAITING,
   HOLD_MAX_OPEN_PER_CUSTOMER,
   HOLD_MIN_USABLE_WINDOW_MINUTES,
@@ -55,7 +55,7 @@ import { VehicleSettingsService } from '../vehicle-settings/vehicle-settings.ser
 import { NotificationService } from '../notification/notification.service';
 import { InsuranceReadService } from '../insurance/insurance-read.service';
 import { TaxReadService } from '../tax/tax-read.service';
-import { HoldSettlementService } from './hold-settlement.service';
+import { HoldSettlementService, taxFromSnapshot } from './hold-settlement.service';
 import {
   CustomerHoldDto,
   DailyReconciliationDto,
@@ -129,6 +129,13 @@ const PLATFORM_SELECT = {
   paidAt: true,
   releasedAt: true,
   createdAt: true,
+  purpose: true,
+  depositAmount: true,
+  serviceFeeAmount: true,
+  vehicleInsuranceAmount: true,
+  personalInsuranceAmount: true,
+  promoDiscountAmount: true,
+  priceSnapshotJson: true,
   tenant: { select: { name: true } },
   vehicle: { select: { name: true } },
   bookingRequest: { select: { customerName: true } },
@@ -497,10 +504,7 @@ export class BookingHoldsService {
 
     const awaiting: string[] = [BOOKING_HOLD_STATUS.PENDING, BOOKING_HOLD_STATUS.UNDERPAID];
 
-    if (
-      hold.status === BOOKING_HOLD_STATUS.PAID ||
-      hold.status === BOOKING_HOLD_STATUS.RELEASED
-    ) {
+    if (hold.status === BOOKING_HOLD_STATUS.PAID || hold.status === BOOKING_HOLD_STATUS.RELEASED) {
       // Tiền về lần nữa cho hold đã đủ: ghi làm bằng chứng + ghi yêu cầu hoàn phần thừa
       // (ADR 0022 điều 5 — giữ chỗ không có "kỳ sau").
       await tx.bookingHold.update({
@@ -518,7 +522,12 @@ export class BookingHoldsService {
       return { outcome: 'already_paid', holdId: hold.id, tenantId: hold.tenantId };
     }
     if (!awaiting.includes(hold.status) || isHoldPastDue(hold.expiresAt)) {
-      return { outcome: 'hold_closed', holdId: hold.id, tenantId: hold.tenantId, status: hold.status };
+      return {
+        outcome: 'hold_closed',
+        holdId: hold.id,
+        tenantId: hold.tenantId,
+        status: hold.status,
+      };
     }
 
     const credited = await tx.bookingHold.updateMany({
@@ -557,7 +566,12 @@ export class BookingHoldsService {
         });
         return { outcome: 'already_paid', holdId: hold.id, tenantId: hold.tenantId };
       }
-      return { outcome: 'hold_closed', holdId: hold.id, tenantId: hold.tenantId, status: current.status };
+      return {
+        outcome: 'hold_closed',
+        holdId: hold.id,
+        tenantId: hold.tenantId,
+        status: current.status,
+      };
     }
     const updated = await tx.bookingHold.findUniqueOrThrow({
       where: { id: hold.id },
@@ -1176,7 +1190,12 @@ export class BookingHoldsService {
   /** Yêu cầu `awaiting_hold` bị huỷ (khách) — hold `cancelled`, nhả lịch. Không có gì để hoàn. */
   async cancelForRequestWithinTx(
     tx: Prisma.TransactionClient,
-    input: { requestId: string; tenantId: string; actorUserId: string; actorScope: AuditActorScope },
+    input: {
+      requestId: string;
+      tenantId: string;
+      actorUserId: string;
+      actorScope: AuditActorScope;
+    },
   ): Promise<void> {
     const claimed = await tx.bookingHold.updateMany({
       where: {
@@ -1374,6 +1393,13 @@ export class BookingHoldsService {
         disputeOpen: r.bookingId ? disputes.has(r.bookingId) : false,
         refundStatus: r.refund?.status ?? null,
         createdAt: r.createdAt.toISOString(),
+        purpose: r.purpose,
+        depositAmount: r.depositAmount.toFixed(0),
+        serviceFeeAmount: r.serviceFeeAmount.toFixed(0),
+        vehicleInsuranceAmount: r.vehicleInsuranceAmount.toFixed(0),
+        personalInsuranceAmount: r.personalInsuranceAmount.toFixed(0),
+        promoDiscountAmount: r.promoDiscountAmount.toFixed(0),
+        taxAmount: taxFromSnapshot(r.priceSnapshotJson),
       })),
       meta: paginationMeta(paging, total),
     };
@@ -1384,7 +1410,9 @@ export class BookingHoldsService {
   ): Promise<{ data: PlatformHoldRefundDto[]; meta: PaginationMeta }> {
     const paging = resolvePaging(query, HOLD_DEFAULT_LIMIT, HOLD_MAX_LIMIT);
     // Không lọc = VIỆC CẦN LÀM (chờ chuyển), không phải toàn bộ lịch sử.
-    const where: Prisma.HoldRefundWhereInput = { status: query.status ?? HOLD_REFUND_STATUS.PENDING };
+    const where: Prisma.HoldRefundWhereInput = {
+      status: query.status ?? HOLD_REFUND_STATUS.PENDING,
+    };
     const [total, rows] = await this.prisma.$transaction([
       this.prisma.holdRefund.count({ where }),
       this.prisma.holdRefund.findMany({
@@ -1562,9 +1590,13 @@ export class BookingHoldsService {
            AND match_status = ${BANK_MATCH_STATUS.UNMATCHED}
            AND COALESCE(bank_time, created_at) < ${end}
       `,
-      // Chiều RA trong NGÀY — lưu lượng, không phải nghĩa vụ.
+      // Chiều RA trong NGÀY — lưu lượng, không phải nghĩa vụ. Lệnh bị đảo SAU đó vẫn tính: hôm
+      // đó tiền đã rời tài khoản thật, việc nó quay về là sự kiện của ngày khác.
       this.prisma.withdrawalRequest.aggregate({
-        where: { status: WITHDRAWAL_STATUS.PAID, paidAt: { gte: start, lt: end } },
+        where: {
+          status: { in: [...WITHDRAWAL_STATUS_DISBURSED] },
+          paidAt: { gte: start, lt: end },
+        },
         _sum: { amount: true },
         _count: { _all: true },
       }),
@@ -1593,7 +1625,9 @@ export class BookingHoldsService {
                ) d
          WHERE diff <> 0
       `,
-      this.prisma.platformBankBalance.findUnique({ where: { date: new Date(`${date}T00:00:00Z`) } }),
+      this.prisma.platformBankBalance.findUnique({
+        where: { date: new Date(`${date}T00:00:00Z`) },
+      }),
     ]);
 
     const zero = new Prisma.Decimal(0);
@@ -1808,7 +1842,6 @@ export class BookingHoldsService {
 
     return this.dailyReconciliation(input.date);
   }
-
 
   // ── Nội bộ ────────────────────────────────────────────────────────────────
 

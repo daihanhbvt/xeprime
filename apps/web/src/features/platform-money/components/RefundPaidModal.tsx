@@ -2,7 +2,7 @@
 
 import { App, Alert, Descriptions } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import * as yup from 'yup';
@@ -15,12 +15,19 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { useMarkRefundPaid } from '../hooks/use-platform-money';
 import type { PlatformHoldRefund } from '../types';
 
+const BANK_REFERENCE_MAX = 100;
+const NOTE_MAX = 1000;
+
 /**
  * Ghi nhận ĐÃ CHUYỂN TRẢ một khoản hoàn — ADR 0028 điều 6/8 (R3).
  *
  * Chuyển tiền diễn ra ở ngân hàng, ngoài hệ thống; màn này chỉ ghi BẰNG CHỨNG. Mã giao dịch là
  * bắt buộc vì đó là thứ duy nhất đối chiếu được chiều tiền RA — không có nó thì "đã hoàn" chỉ là
  * lời khai.
+ *
+ * Form RESET mỗi khi mở một khoản hoàn KHÁC: modal này sống suốt đời màn hình, và RHF giữ giá trị
+ * qua lần đóng — không reset là khoản B mở ra với mã giao dịch của khoản A điền sẵn, nút bật sẵn,
+ * một cú bấm là ghi bằng chứng của A cho B.
  */
 export function RefundPaidModal({
   refund,
@@ -43,24 +50,38 @@ export function RefundPaidModal({
           .string()
           .trim()
           .min(3, t('refundPaid.referenceRequired'))
-          .max(100)
+          .max(BANK_REFERENCE_MAX, tCommon('validation.maxLength', { max: BANK_REFERENCE_MAX }))
           .required(t('refundPaid.referenceRequired')),
-        note: yup.string().trim().max(1000).default(''),
+        note: yup
+          .string()
+          .trim()
+          .max(NOTE_MAX, tCommon('validation.maxLength', { max: NOTE_MAX }))
+          .default(''),
       }),
-    [t],
+    [t, tCommon],
   );
 
   type FormValues = yup.InferType<typeof schema>;
 
-  const { control, handleSubmit } = useForm<FormValues>({
+  const { control, handleSubmit, reset } = useForm<FormValues>({
     resolver: yupResolver(schema),
     defaultValues: { bankReference: '', note: '' },
   });
 
+  const refundId = refund?.id;
+  useEffect(() => {
+    if (refundId) reset({ bankReference: '', note: '' });
+  }, [refundId, reset]);
+
   const onSubmit = handleSubmit((values) => {
-    if (!refund) return;
+    // Enter trong ô nhập gửi form kể cả khi nút OK đang quay — chặn lượt thứ hai ở đây.
+    if (!refund || markPaid.isPending) return;
     markPaid.mutate(
-      { id: refund.id, bankReference: values.bankReference.trim(), note: values.note?.trim() || null },
+      {
+        id: refund.id,
+        bankReference: values.bankReference.trim(),
+        note: values.note?.trim() || null,
+      },
       {
         onSuccess: () => {
           message.success(t('refundPaid.success'));
@@ -84,7 +105,9 @@ export function RefundPaidModal({
     >
       {refund ? (
         <Descriptions size="small" column={1} bordered>
-          <Descriptions.Item label={t('columns.amount')}>{fmt.money(refund.amount)}</Descriptions.Item>
+          <Descriptions.Item label={t('columns.amount')}>
+            {fmt.money(refund.amount)}
+          </Descriptions.Item>
           <Descriptions.Item label={t('columns.customer')}>{refund.customerName}</Descriptions.Item>
           <Descriptions.Item label={t('refundPaid.account')}>
             {hasAccount
@@ -94,9 +117,7 @@ export function RefundPaidModal({
         </Descriptions>
       ) : null}
 
-      {!hasAccount ? (
-        <Alert type="warning" showIcon title={t('refundPaid.noAccount')} />
-      ) : null}
+      {!hasAccount ? <Alert type="warning" showIcon title={t('refundPaid.noAccount')} /> : null}
 
       <DialogForm onSubmit={onSubmit} labelWidth="lg">
         <TextField control={control} name="bankReference" label={t('refundPaid.bankReference')} />

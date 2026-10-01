@@ -3,7 +3,9 @@ import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   BANK_MATCH_STATUS,
+  BANK_TX_CODE_FILTER,
   BILLING_MODE,
+  type BankTxCodeFilter,
   PLAN_STATUS,
   SUBSCRIPTION_INVOICE_STATUS,
   TENANT_STATUS,
@@ -13,10 +15,7 @@ import { BankTransactionsService } from '../src/modules/sepay/bank-transactions.
 import { SepayService } from '../src/modules/sepay/sepay.service';
 import type { BillingService } from '../src/modules/billing/billing.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import {
-  makeBillingService,
-  makeBookingHoldsService,
-} from './helpers/service-factory';
+import { makeBillingService, makeBookingHoldsService } from './helpers/service-factory';
 
 /**
  * Hàng đợi đối soát + KHỚP TAY của admin (R2 mục 4, ADR 0022 điều 4) — PostgreSQL THẬT.
@@ -75,7 +74,7 @@ function payload(over: Record<string, unknown> = {}): Record<string, unknown> {
 const issueInvoice = () =>
   billing.purchase(tenantId, ownerId, {
     planId,
-    termMonths: 3
+    termMonths: 3,
   });
 
 /** Giao dịch KHÔNG rút được mã — đúng ca mà hàng đợi admin sinh ra để giải. */
@@ -140,7 +139,7 @@ beforeAll(async () => {
       status: PLAN_STATUS.ACTIVE,
       limitsJson: {
         maxVehicles: null,
-                maxMembers: null,
+        maxMembers: null,
         maxBranches: null,
         termPrices: [{ months: 3, price: '300000' }],
         graceDays: 7,
@@ -311,6 +310,63 @@ describe('Khớp tay', () => {
     const still = await prisma.bankTransaction.findUniqueOrThrow({ where: { id: tx.id } });
     expect(still.matchStatus).toBe(BANK_MATCH_STATUS.UNMATCHED);
   });
+
+  it('lọc theo LUỒNG của mã: giữ chỗ `XPH`, hoá đơn `XPG`, hay không rút được mã', async () => {
+    if (!dbAvailable) return;
+    // Mã đúng định dạng nhưng không trỏ vào khoản nào ⇒ vẫn nằm hàng đợi, CÓ `referenceCode`.
+    const holdCode = await sepay
+      .ingest(payload({ content: 'chuyen tien XPH23456789' }))
+      .then(() =>
+        prisma.bankTransaction.findFirstOrThrow({
+          where: { ...ownRows, referenceCode: 'XPH23456789' },
+        }),
+      );
+    const noCode = await unmatchedTx(120_000);
+
+    const ids = async (code: BankTxCodeFilter) =>
+      (await admin.list({ code })).data.map((r) => r.id);
+
+    expect(await ids(BANK_TX_CODE_FILTER.BOOKING_HOLD)).toContain(holdCode.id);
+    expect(await ids(BANK_TX_CODE_FILTER.BOOKING_HOLD)).not.toContain(noCode.id);
+    expect(await ids(BANK_TX_CODE_FILTER.NO_CODE)).toContain(noCode.id);
+    expect(await ids(BANK_TX_CODE_FILTER.NO_CODE)).not.toContain(holdCode.id);
+    expect(await ids(BANK_TX_CODE_FILTER.SUBSCRIPTION_INVOICE)).not.toContain(holdCode.id);
+  });
+
+  it('khoảng ngày tính theo giờ VN của thời điểm ngân hàng, trọn ngày `to`', async () => {
+    if (!dbAvailable) return;
+    // 23:30 giờ VN ngày 04/09 — vẫn là ngày 04/09, dù đã là 16:30 UTC.
+    const late = await sepay
+      .ingest(payload({ transactionDate: '2026-09-04 23:30:00' }))
+      .then(() =>
+        prisma.bankTransaction.findFirstOrThrow({ where: ownRows, orderBy: { createdAt: 'desc' } }),
+      );
+
+    const inRange = (from: string, to: string) =>
+      admin.list({ from, to }).then((page) => page.data.map((r) => r.id));
+
+    expect(await inRange('2026-09-04', '2026-09-04')).toContain(late.id);
+    expect(await inRange('2026-09-05', '2026-09-06')).not.toContain(late.id);
+    expect(await inRange('2026-09-01', '2026-09-03')).not.toContain(late.id);
+  });
+
+  it('chi tiết bóc sẵn ngân hàng / tài khoản nhận / mã tham chiếu từ payload', async () => {
+    if (!dbAvailable) return;
+    const body = payload({
+      gateway: 'Vietcombank',
+      accountNumber: '1903567890',
+      referenceCode: 'FT26247000001',
+    });
+    await sepay.ingest(body);
+    const tx = await prisma.bankTransaction.findFirstOrThrow({
+      where: { providerTxId: String(body['id']) },
+    });
+
+    const detail = await admin.getOne(tx.id);
+    expect(detail.bankGateway).toBe('Vietcombank');
+    expect(detail.bankAccountNumber).toBe('1903567890');
+    expect(detail.bankReferenceNumber).toBe('FT26247000001');
+  });
 });
 
 describe('Bỏ qua', () => {
@@ -334,5 +390,38 @@ describe('Bỏ qua', () => {
       where: { targetType: 'bank_transaction', targetId: tx.id },
     });
     expect(audit.action).toBe('bank_transaction.ignore');
+    // Không có mã chuyển trả ⇒ KHÔNG được ghi là đã trả lại.
+    expect(result.refundReference).toBeNull();
+    expect(result.refundedAt).toBeNull();
+  });
+
+  it('kèm mã chuyển trả: ghi mã + thời điểm trả lại người gửi, audit mang mã đó', async () => {
+    if (!dbAvailable) return;
+    const tx = await unmatchedTx(88_000);
+
+    const result = await admin.ignore(tx.id, adminId, {
+      note: 'Khách chuyển nhầm',
+      refundReference: '  FT26247999  ',
+    });
+    expect(result.matchStatus).toBe(BANK_MATCH_STATUS.IGNORED);
+    expect(result.refundReference).toBe('FT26247999');
+    expect(result.refundedAt).not.toBeNull();
+
+    const audit = await prisma.auditLog.findFirstOrThrow({
+      where: { targetType: 'bank_transaction', targetId: tx.id },
+    });
+    expect(audit.afterJson).toMatchObject({ refundReference: 'FT26247999' });
+  });
+
+  it('DB chặn mã chuyển trả trên dòng KHÔNG phải `ignored`', async () => {
+    if (!dbAvailable) return;
+    const tx = await unmatchedTx(99_000);
+
+    await expect(
+      prisma.bankTransaction.update({
+        where: { id: tx.id },
+        data: { refundReference: 'FT1', refundedAt: new Date() },
+      }),
+    ).rejects.toThrow(/bank_transactions_refund_ignored_only_check/);
   });
 });

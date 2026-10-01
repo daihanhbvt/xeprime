@@ -851,7 +851,8 @@
     "approved": "Approved, transfer pending",
     "paid": "Transferred",
     "rejected": "Rejected",
-    "cancelled": "Cancelled"
+    "cancelled": "Cancelled",
+    "reversed": "Transfer failed"
   },
   "insurancePolicyStatus": {
     "reserved": "Premium collected, awaiting handover",
@@ -1001,5 +1002,12 @@
     "business_license": "Business licence",
     "contract": "Contract",
     "other": "Other document"
+  },
+  "allocationTarget": {
+    "customer_balance": "Refund to customer",
+    "owner_balance": "Owner's wallet",
+    "platform_revenue": "XePrime revenue",
+    "insurer_payable": "Payable to insurer",
+    "tax_ledger": "Tax withheld for remittance"
   }
 }

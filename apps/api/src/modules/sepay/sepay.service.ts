@@ -334,14 +334,21 @@ export class SepayService {
     }
   }
 
-  /** Đóng dấu đã khớp — `updateMany` theo khoá unique để không phải cầm `id` của dòng vừa ghi. */
+  /**
+   * Đóng dấu đã khớp — `updateMany` theo khoá unique để không phải cầm `id` của dòng vừa ghi.
+   *
+   * Chỉ đóng dấu dòng CÒN `unmatched`. Giữa bước 1 (ghi thô) và bước 2 (khớp) có một khe mà
+   * admin có thể đã "bỏ qua" hay khớp tay chính dòng này; ghi đè kết luận đó là cộng tiền vào
+   * một đích trong khi sổ nói một đằng và nhật ký admin nói một nẻo. Thua khe đó ⇒ ném, để cả
+   * transaction khớp (tiền vào hoá đơn/khoản giữ chỗ) cùng rơi — dòng giữ nguyên kết luận của người.
+   */
   private async markMatched(
     db: Prisma.TransactionClient,
     providerTxId: string,
     target: { type: string; refId: string; overpaid: boolean },
   ): Promise<void> {
-    await db.bankTransaction.updateMany({
-      where: { provider: SEPAY_PROVIDER, providerTxId },
+    const claimed = await db.bankTransaction.updateMany({
+      where: { provider: SEPAY_PROVIDER, providerTxId, matchStatus: BANK_MATCH_STATUS.UNMATCHED },
       data: {
         matchStatus: BANK_MATCH_STATUS.MATCHED,
         matchedType: target.type,
@@ -351,6 +358,9 @@ export class SepayService {
         matchNote: target.overpaid ? 'overpaid' : null,
       },
     });
+    if (claimed.count !== 1) {
+      throw new Error(`Giao dịch ${providerTxId} đã có kết luận của admin — huỷ lượt khớp tự động`);
+    }
   }
 }
 

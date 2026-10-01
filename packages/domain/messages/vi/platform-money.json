@@ -1,20 +1,13 @@
 {
   "page": {
-    "title": "Money operations",
-    "subtitle": "Khoản giữ chỗ, chuyển trả và đối chiếu tiền vào theo ngày.",
+    "title": "Tài chính",
     "loadError": "Không tải được dữ liệu.",
     "holdsEmpty": "Không có khoản giữ chỗ nào.",
     "holdsTotal": "{count} khoản giữ chỗ",
     "refundsEmpty": "Không có khoản hoàn nào.",
-    "refundsTotal": "{count} khoản hoàn"
-  },
-  "tabs": {
-    "holds": "Khoản giữ chỗ",
-    "refunds": "Chuyển trả",
-    "reconciliation": "Đối chiếu ngày",
-    "withdrawals": "Yêu cầu rút",
-    "insurance": "Bảo hiểm",
-    "tax": "Thuế"
+    "refundsTotal": "{count} khoản hoàn",
+    "today": "Hôm nay ({date})",
+    "dateLabel": "Ngày đối soát"
   },
   "filters": {
     "search": "Tìm kiếm",
@@ -37,7 +30,12 @@
     "disputeOpen": "Đang tranh chấp",
     "settleAction": "Chốt kết cục",
     "markPaidAction": "Đã chuyển",
-    "rejectAction": "Từ chối"
+    "rejectAction": "Từ chối",
+    "booking": "Đơn thuê",
+    "parties": "Gian hàng · Khách",
+    "payee": "Khách · Gian hàng",
+    "lines": "Cọc {deposit} · Phí {fee}",
+    "noAccount": "Chưa khai tài khoản"
   },
   "settle": {
     "title": "Chốt kết cục khoản giữ chỗ {code}",
@@ -47,7 +45,31 @@
     "submit": "Chốt",
     "success": "Đã chốt kết cục.",
     "disputeOpen": "Đơn này còn tranh chấp mở — kết luận tranh chấp trước khi chốt tiền.",
-    "auditHint": "Thao tác này ghi vào nhật ký hệ thống và không hoàn tác được."
+    "auditHint": "Thao tác này ghi vào nhật ký hệ thống và không hoàn tác được.",
+    "received": "Khoản đã nhận",
+    "paidTotal": "Tổng đã nhận",
+    "preview": "Ai nhận bao nhiêu",
+    "drawerTitle": "Chốt kết cục giữ chỗ",
+    "submitFor": "Chốt: {outcome}",
+    "sideLabel": "Chọn kết cục",
+    "confirmHint": "Kết cục \"{outcome}\" sẽ được chốt và phân bổ tiền ngay. Lý do được ghi vào nhật ký hệ thống cùng tên bạn.",
+    "notePlaceholder": "Ví dụ: tranh chấp đã kết luận khách đúng, hoàn toàn bộ",
+    "vehicle": "Xe",
+    "paidAt": "Khách trả lúc",
+    "chooseHint": "Chọn một kết cục ở cột bên phải — xem trước ai nhận bao nhiêu rồi mới chốt.",
+    "previewTotal": "Tổng phân bổ",
+    "previewEmpty": "Chọn một kết cục để xem ai nhận bao nhiêu.",
+    "noAllocation": "Khoản giữ chỗ đời cũ — kết cục này chỉ ghi nhận, không chia tiền cho ai.",
+    "outcomeHelp": {
+      "settled": "Chuyến hoàn thành: cọc về chủ xe (sau thuế), phí về XePrime, bảo hiểm về hãng bảo hiểm.",
+      "split_late_cancel": "Khách huỷ muộn hoặc không đến: cọc và phí chia đôi chủ xe – XePrime, bảo hiểm hoàn khách.",
+      "refunded": "Hoàn lại khách toàn bộ số đã chuyển.",
+      "kept": "Chuyến đã chạy: nền tảng giữ khoản tiền, không chuyển cho ai.",
+      "forfeited": "Khách huỷ muộn hoặc không đến: khoản tiền về ví gian hàng làm bồi thường.",
+      "released_to_shop": "Chuyến hoàn thành: trả khoản tiền về ví gian hàng."
+    },
+    "previous": "Khoản giữ chỗ trước",
+    "next": "Khoản giữ chỗ sau"
   },
   "refundPaid": {
     "title": "Ghi nhận đã chuyển trả",
@@ -60,25 +82,20 @@
     "success": "Đã ghi nhận chuyển trả."
   },
   "reject": {
-    "title": "Từ chối khoản hoàn — khách sẽ đọc lý do này",
+    "title": "Từ chối khoản hoàn",
     "notePlaceholder": "Lý do…",
     "noteLabel": "Lý do",
     "noteRequired": "Cần nhập lý do (tối thiểu 5 ký tự).",
     "submit": "Từ chối",
-    "success": "Đã từ chối khoản hoàn."
+    "success": "Đã từ chối khoản hoàn.",
+    "audienceHint": "Khách đọc được lý do này."
   },
   "reconciliation": {
-    "date": "Ngày đối soát",
     "retry": "Thử lại",
-    "balanced": "Khớp — số dư ngân hàng đúng bằng tiền của nền tảng cộng tiền giữ hộ.",
-    "varianceWarning": "Lệch {amount}",
     "varianceHint": "Số dư ngân hàng không khớp tổng hai vế. Kiểm tra hàng đợi tiền vào chưa khớp, các lệnh chuyển tay chưa ghi nhận, và số dư vừa nhập.",
-    "balanceMissing": "Chưa nhập số dư ngân hàng cuối ngày",
-    "balanceMissingHint": "Chưa có số dư thì chưa tính được chênh lệch — hai vế bên dưới vẫn đúng, nhưng không có gì bên ngoài để đối chiếu. Nhập số dư đọc từ ứng dụng ngân hàng.",
     "walletDriftWarning": "Lệch sổ ví ở {count, plural, other {# ví}} · tổng {amount}",
     "walletDriftHint": "Tổng bút toán của ví không khớp số dư đang lưu. Đây là dấu hiệu có đường ghi số dư không đi qua sổ — dừng mọi lệnh rút và tra trước khi chi thêm.",
     "bankBalanceEod": "Số dư ngân hàng cuối ngày",
-    "notEntered": "chưa nhập",
     "balancePlaceholder": "Nhập số dư (VND)",
     "saveBalance": "Lưu số dư",
     "balanceSaved": "Đã lưu số dư cuối ngày",
@@ -88,22 +105,32 @@
     "custodiedTitle": "Tiền giữ hộ — nghĩa vụ phải trả",
     "holdsUnsettled": "Giữ chỗ chưa chốt kết cục",
     "walletTotal": "Số dư phải trả",
-    "walletSplit": "{total} · rút được {available} · đang chuyển {pending}",
     "refundsPending": "Hoàn đang chờ chuyển tay",
     "unmatchedIn": "Tiền vào chưa khớp",
     "insuranceReserved": "Phí bảo hiểm chưa quyết toán",
     "taxAccrued": "Thuế đã khấu trừ chưa nộp",
-    "outflowTitle": "Đã chi trong ngày",
     "withdrawalsPaid": "Rút đã chuyển",
     "refundsPaid": "Hoàn đã chuyển",
-    "inflowTitle": "Tiền vào trong ngày",
-    "bankIn": "Tiền vào ngân hàng",
     "matchedSubscriptions": "Đã khớp hoá đơn gói",
     "matchedHolds": "Đã khớp khoản giữ chỗ",
     "unmatched": "Chưa khớp",
     "ignored": "Bỏ qua",
     "inflowVariance": "Dòng chưa xếp nhóm",
-    "amountWithCount": "{amount} · {count} giao dịch"
+    "loadError": "Không tải được sổ đối soát",
+    "equationLabel": "Phương trình đối soát",
+    "varianceTitle": "Chênh lệch",
+    "notComputable": "Chưa tính được",
+    "updateBalance": "Sửa số dư cuối ngày",
+    "walletBreakdown": "Rút được {available} · Đang chuyển {pending}",
+    "flowTitle": "Dòng tiền trong ngày",
+    "flowIn": "Tiền vào",
+    "flowOut": "Tiền ra",
+    "flowCount": "{count, plural, other {# giao dịch}}",
+    "flowDetails": "Xem chi tiết dòng tiền",
+    "varianceMissing": "Nhập số dư để tính",
+    "varianceOff": "Cần kiểm tra",
+    "varianceBalanced": "Khớp",
+    "countChip": "{count, plural, other {# khoản}}"
   },
   "insurance": {
     "title": "Hàng đợi bảo hiểm",
@@ -139,7 +166,8 @@
       "hint": "Thu hồi là quyết định tiền và đi vào audit. Nếu hợp đồng đã được cấp, nhớ làm việc với đối tác trước — thu hồi ở đây chỉ đóng sổ phía XePrime.",
       "reasonLabel": "Lý do thu hồi",
       "reasonPlaceholder": "Vì sao thu hồi hợp đồng này",
-      "done": "Đã thu hồi hợp đồng"
+      "done": "Đã thu hồi hợp đồng",
+      "reasonRequired": "Nhập lý do thu hồi (tối thiểu 5 ký tự)."
     }
   },
   "tax": {
@@ -189,5 +217,55 @@
       "reasonPlaceholder": "Vì sao dòng này sai",
       "done": "Đã đảo dòng thuế"
     }
+  },
+  "status": {
+    "titleToday": "Đối soát hôm nay",
+    "titleDay": "Đối soát ngày {date}",
+    "balanced": "Khớp",
+    "variance": "Lệch {amount}",
+    "missing": "Chưa nhập số dư",
+    "bankBalance": "Số dư ngân hàng {amount}",
+    "enterBalance": "Nhập số dư cuối ngày",
+    "openLedger": "Xem sổ đối soát",
+    "walletDrift": "Lệch sổ ví ở {count, plural, other {# ví}}",
+    "loadError": "Không tải được đối soát"
+  },
+  "cards": {
+    "label": "Việc đang chờ",
+    "bankIn": "Tiền vào chưa khớp",
+    "holds": "Giữ chỗ chờ chốt",
+    "refunds": "Hoàn chờ chuyển",
+    "withdrawals": "Rút tiền chờ xử lý",
+    "insurance": "Bảo hiểm lỗi",
+    "tax": "Thuế chưa kê khai",
+    "oldest": "Cũ nhất {age}",
+    "disputes": "{count} đang tranh chấp",
+    "overdue": "{count} quá hạn",
+    "period": "Kỳ {period}",
+    "loadError": "Không tải được số liệu hàng đợi",
+    "taxFrom": "Từ kỳ {period}"
+  },
+  "queues": {
+    "railTitle": "Hàng đợi",
+    "railLabel": "Chọn hàng đợi",
+    "groups": {
+      "moneyIn": "Tiền vào",
+      "held": "Tiền đang giữ",
+      "moneyOut": "Tiền ra",
+      "thirdParty": "Bên thứ ba",
+      "ledger": "Sổ"
+    },
+    "bankIn": "Tiền vào chưa khớp",
+    "holds": "Giữ chỗ chờ chốt",
+    "refunds": "Hoàn cho khách",
+    "withdrawals": "Rút tiền chủ xe",
+    "insurance": "Bảo hiểm",
+    "tax": "Thuế theo kỳ",
+    "ledger": "Sổ đối soát ngày"
+  },
+  "age": {
+    "minutes": "{count} phút",
+    "hours": "{count} giờ",
+    "days": "{count} ngày"
   }
 }

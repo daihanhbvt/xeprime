@@ -1,0 +1,10 @@
+.age {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--xp-color-text-secondary);
+}
+
+.urgent {
+  color: var(--xp-color-error);
+  font-weight: var(--xp-font-weight-medium);
+}

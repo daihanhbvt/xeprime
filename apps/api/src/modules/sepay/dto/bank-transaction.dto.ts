@@ -1,7 +1,25 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { BANK_MATCH_STATUS_VALUES, BANK_MATCH_TARGET_TYPE_VALUES } from '@xeprime/types';
-import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import {
+  BANK_MATCH_STATUS_VALUES,
+  BANK_MATCH_TARGET_TYPE_VALUES,
+  BANK_TX_CODE_FILTER_VALUES,
+  type BankTxCodeFilter,
+} from '@xeprime/types';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsIn,
+  IsInt,
+  IsISO8601,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
+import { DATE_ONLY_PATTERN } from '../../../common/date-only';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
 
 const DEFAULT_LIMIT = 20;
@@ -23,6 +41,31 @@ export class BankTransactionListQueryDto {
   @IsString()
   @MaxLength(120)
   q?: string;
+
+  @ApiPropertyOptional({
+    enum: BANK_TX_CODE_FILTER_VALUES,
+    description:
+      'Mã rút được thuộc luồng nào: hoá đơn gói (`XPG`), giữ chỗ (`XPH`), hoặc không rút được mã',
+  })
+  @IsOptional()
+  @IsIn(BANK_TX_CODE_FILTER_VALUES)
+  code?: BankTxCodeFilter;
+
+  @ApiPropertyOptional({
+    description: 'Từ ngày — `YYYY-MM-DD`, trọn ngày giờ VN. Lọc theo thời điểm ngân hàng',
+  })
+  @IsOptional()
+  @Matches(DATE_ONLY_PATTERN, { message: 'from phải theo dạng YYYY-MM-DD' })
+  // Đúng dạng chưa đủ: `2026-13-45` khớp mẫu nhưng không là một ngày — để lọt xuống là 500
+  // (Invalid Date) thay vì 400.
+  @IsISO8601({ strict: true }, { message: 'from không phải một ngày có thật' })
+  from?: string;
+
+  @ApiPropertyOptional({ description: 'Đến hết ngày — cùng quy ước với `from`' })
+  @IsOptional()
+  @Matches(DATE_ONLY_PATTERN, { message: 'to phải theo dạng YYYY-MM-DD' })
+  @IsISO8601({ strict: true }, { message: 'to không phải một ngày có thật' })
+  to?: string;
 
   @ApiPropertyOptional({ default: 1, minimum: 1 })
   @IsOptional()
@@ -76,6 +119,14 @@ export class BankTransactionDto {
     description: 'Mã hoá đơn đã khớp (khi `matchedType = subscription_invoice`)',
   })
   matchedInvoiceCode!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Mã giao dịch chuyển TRẢ người gửi — chỉ ở dòng `ignored` đã trả lại tiền',
+  })
+  refundReference!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO-8601 UTC' })
+  refundedAt!: string | null;
 }
 
 export class BankTransactionPageDto {
@@ -112,6 +163,28 @@ export class BankTransactionDetailDto extends BankTransactionDto {
     type: Object,
   })
   rawJson!: unknown;
+  /*
+   * Ba trường bóc sẵn từ payload để người trực khỏi đọc JSON thô. SePay KHÔNG gửi tên hay số
+   * tài khoản người chuyển — đây là phía NHẬN, và nó trả lời câu "tiền về tài khoản nào".
+   */
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Ngân hàng nhận theo nhà cung cấp (SePay `gateway`)',
+  })
+  bankGateway!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Số tài khoản NHẬN của nền tảng (SePay `accountNumber`)',
+  })
+  bankAccountNumber!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Mã tham chiếu phía ngân hàng (SePay `referenceCode`) — khác mã đối soát XePrime',
+  })
+  bankReferenceNumber!: string | null;
   @ApiProperty({
     type: [BankTransactionSuggestionDto],
     description: 'Hoá đơn đang chờ tiền, sắp theo mức khớp số tiền rồi tới mới nhất',
@@ -135,7 +208,23 @@ export class MatchBankTransactionDto {
 
 export class IgnoreBankTransactionDto {
   @ApiProperty({ description: 'Lý do bỏ qua — bắt buộc, để dòng bị loại vẫn truy được' })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
+  @IsNotEmpty()
   @MaxLength(500)
   note!: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Mã giao dịch ngân hàng của lần chuyển TRẢ người gửi. Có mã ⇒ dòng được ghi là đã trả lại; ' +
+      'không có mã thì không ghi "đã trả" — một lần chuyển không có bằng chứng chỉ là lời khai',
+  })
+  // Cắt khoảng trắng TRƯỚC khi kiểm độ dài: `"   "` không được lọt qua `MinLength(3)` rồi bị service
+  // cắt thành rỗng — admin tưởng đã ghi "đã trả lại" mà dòng không có bằng chứng nào.
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsOptional()
+  @IsString()
+  @MinLength(3)
+  @MaxLength(100)
+  refundReference?: string;
 }

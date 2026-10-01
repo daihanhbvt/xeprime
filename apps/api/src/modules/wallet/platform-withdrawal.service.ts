@@ -5,6 +5,7 @@ import {
   AUDIT_ACTOR_SCOPE,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
+  TENANT_ROLE,
   WALLET_ENTRY_KIND,
   WALLET_OWNER_TYPE,
   WITHDRAWAL_STATUS,
@@ -39,6 +40,8 @@ const SELECT = {
   paidAt: true,
   bankReference: true,
   rejectReason: true,
+  reversedAt: true,
+  reverseReason: true,
   rowVersion: true,
   createdAt: true,
   wallet: {
@@ -153,7 +156,14 @@ export class PlatformWithdrawalService {
     await this.prisma.$transaction(async (tx) => {
       const row = await tx.withdrawalRequest.findUnique({
         where: { id },
-        select: { id: true, walletId: true, amount: true, status: true, code: true, wallet: { select: { ownerUserId: true, ownerTenantId: true } } },
+        select: {
+          id: true,
+          walletId: true,
+          amount: true,
+          status: true,
+          code: true,
+          wallet: { select: { ownerUserId: true, ownerTenantId: true } },
+        },
       });
       if (!row) throw notFound();
 
@@ -178,12 +188,18 @@ export class PlatformWithdrawalService {
 
       await this.audit.record(
         {
+          // Ví gian hàng ⇒ dòng audit mang tenant, để hiện cả ở nhật ký của chính gian hàng đó.
+          tenantId: row.wallet.ownerTenantId,
           actorUserId,
           actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
           action: 'withdrawal.paid',
           targetType: 'withdrawal_request',
           targetId: id,
-          after: { code: row.code, amount: row.amount.toString(), bankReference: dto.bankReference.trim() },
+          after: {
+            code: row.code,
+            amount: row.amount.toString(),
+            bankReference: dto.bankReference.trim(),
+          },
         },
         tx,
       );
@@ -248,23 +264,42 @@ export class PlatformWithdrawalService {
   /**
    * Chuyển hụt hoặc sai tài khoản — đảo bút toán đã chi (ADR 0025 điều 7).
    *
-   * Lệnh giữ nguyên trạng thái `paid` và bút toán chi vẫn nằm đó: cả hai sự kiện — đã chuyển,
-   * rồi tiền quay lại — đều là chuyện đã xảy ra. Chủ ví tạo lệnh mới với tài khoản đúng.
+   * Hai sự kiện đều được GIỮ: bút toán chi và bằng chứng chuyển (`paid_*`, `bank_reference`)
+   * không bị sửa, bút toán đảo được ghi THÊM. Nhưng lệnh chuyển sang trạng thái cuối `reversed`:
+   * để nguyên `paid` (cách làm trước 01/10/2026) là để chủ ví đọc "Đã chuyển" cho một khoản đã
+   * quay về ví, và để hàng đợi admin mời đảo thêm lần nữa.
+   *
+   * Chốt bằng `updateMany` có điều kiện `status = paid` + `rowVersion` — bấm hai lần hay hai
+   * admin cùng bấm thì đúng MỘT lần đảo, lần sau nhận `WITHDRAWAL_ALREADY_HANDLED`. Unique
+   * `reversal_of_entry_id` ở sổ ví là lớp chặn thứ hai, ở database.
    */
   async reverse(id: string, actorUserId: string, dto: ReverseWithdrawalDto): Promise<void> {
+    const reason = dto.reason.trim();
     await this.prisma.$transaction(async (tx) => {
       const row = await tx.withdrawalRequest.findUnique({
         where: { id },
-        select: { id: true, walletId: true, status: true },
+        select: {
+          id: true,
+          code: true,
+          amount: true,
+          walletId: true,
+          status: true,
+          wallet: { select: { ownerUserId: true, ownerTenantId: true } },
+        },
       });
       if (!row) throw notFound();
-      if (row.status !== WITHDRAWAL_STATUS.PAID) {
-        throw new ConflictException({
-          code: API_ERROR_CODE.WITHDRAWAL_ALREADY_HANDLED,
-          message: 'Chỉ đảo được lệnh đã chuyển',
-          details: { status: row.status },
-        });
-      }
+
+      const claimed = await tx.withdrawalRequest.updateMany({
+        where: { id, status: WITHDRAWAL_STATUS.PAID, rowVersion: dto.rowVersion },
+        data: {
+          status: WITHDRAWAL_STATUS.REVERSED,
+          reversedAt: new Date(),
+          reversedBy: actorUserId,
+          reverseReason: reason,
+          rowVersion: { increment: 1 },
+        },
+      });
+      if (claimed.count === 0) throw alreadyHandled(row.status);
 
       const entry = await tx.walletEntry.findFirst({
         where: { walletId: row.walletId, sourceRefId: id, kind: WALLET_ENTRY_KIND.WITHDRAWAL },
@@ -272,21 +307,39 @@ export class PlatformWithdrawalService {
       });
       if (!entry) throw notFound();
 
-      await this.wallet.reverseWithinTx(tx, entry.id, {
-        reason: dto.reason.trim(),
-        actorUserId,
-      });
+      await this.wallet.reverseWithinTx(tx, entry.id, { reason, actorUserId });
       await this.audit.record(
         {
+          tenantId: row.wallet.ownerTenantId,
           actorUserId,
           actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
           action: 'withdrawal.reversed',
           targetType: 'withdrawal_request',
           targetId: id,
-          after: { reason: dto.reason.trim() },
+          before: { status: WITHDRAWAL_STATUS.PAID },
+          after: { status: WITHDRAWAL_STATUS.REVERSED, code: row.code, reason },
         },
         tx,
       );
+
+      /*
+       * ADR 0025 điều 7: "báo người dùng nhập lại". Ví gian hàng chỉ chủ gian hàng chạm được
+       * (`@ShopOwnerOnly`), nên thông báo cũng chỉ tới chủ — không tới nhân viên.
+       */
+      const notice = {
+        type: NOTIFICATION_TYPE.HOLD_REFUND_PAID,
+        title: 'Lệnh rút chuyển không thành công — tiền đã về ví',
+        body: `${formatMoneyVndVi(row.amount.toString())} · mã ${row.code} · ${reason}. Kiểm tra tài khoản nhận rồi tạo lệnh rút mới.`,
+        targetType: NOTIFICATION_TARGET_TYPE.TENANT,
+        targetId: row.id,
+      };
+      if (row.wallet.ownerUserId) {
+        await this.notifications.emitToUser(row.wallet.ownerUserId, notice, tx);
+      } else if (row.wallet.ownerTenantId) {
+        await this.notifications.emitToTenantMembers(row.wallet.ownerTenantId, notice, tx, {
+          roleKeys: [TENANT_ROLE.SHOP_OWNER],
+        });
+      }
     });
   }
 }
@@ -327,14 +380,13 @@ function toDto(row: Row, now: Date): PlatformWithdrawalDto {
     bankAccountNumber: row.bankAccountNumber,
     bankAccountName: row.bankAccountName,
     dueBy: row.dueBy?.toISOString() ?? null,
-    overdue:
-      row.dueBy != null &&
-      row.dueBy < now &&
-      (ACTIONABLE as string[]).includes(row.status),
+    overdue: row.dueBy != null && row.dueBy < now && (ACTIONABLE as string[]).includes(row.status),
     ageHours: Math.floor((now.getTime() - row.createdAt.getTime()) / 3_600_000),
     paidAt: row.paidAt?.toISOString() ?? null,
     bankReference: row.bankReference,
     rejectReason: row.rejectReason,
+    reversedAt: row.reversedAt?.toISOString() ?? null,
+    reverseReason: row.reverseReason,
     rowVersion: row.rowVersion,
     createdAt: row.createdAt.toISOString(),
   };

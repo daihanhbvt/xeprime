@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
-import { cx } from '@/lib/cx';
+import { WorkDrawerFacts } from '@/components/overlay/WorkDrawer';
 import type { ReviewRow, ReviewValue } from '../review-rows';
 import styles from './VehicleApprovalDrawer.module.css';
 
@@ -21,29 +21,21 @@ export function ReviewFieldGrid({ rows }: { rows: readonly ReviewRow[] }) {
   const domainLabel = useDomainLabel();
   const format = useReviewValueFormatter();
 
-  if (rows.length === 0) return null;
-
   return (
-    <dl className={styles.grid}>
-      {rows.map((row) => {
+    <WorkDrawerFacts
+      items={rows.map((row) => {
         const label = tFields(row.label);
-        return (
-          <div key={row.id} className={cx(styles.gridItem, row.wide && styles.gridItemWide)}>
-            <dt className={styles.gridLabel}>
-              {row.service
-                ? t('fieldForService', {
-                    label,
-                    service: domainLabel('serviceType', row.service),
-                  })
-                : label}
-            </dt>
-            <dd className={cx(styles.gridValue, row.wide && styles.gridValueText)}>
-              {format(row.value)}
-            </dd>
-          </div>
-        );
+        return {
+          key: row.id,
+          label: row.service
+            ? t('fieldForService', { label, service: domainLabel('serviceType', row.service) })
+            : label,
+          value: format(row.value),
+          wide: row.wide,
+          multiline: row.wide,
+        };
       })}
-    </dl>
+    />
   );
 }
 

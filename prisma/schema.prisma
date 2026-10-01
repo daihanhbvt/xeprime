@@ -3660,6 +3660,10 @@ model BankTransaction {
   /// Admin thao tác tay (NULL với dòng máy tự khớp) — mỗi dòng `manual` là một người chịu trách nhiệm.
   matchedBy     String?   @map("matched_by") @db.Char(26)
   matchedAt     DateTime? @map("matched_at") @db.Timestamptz(3)
+  /// Mã giao dịch ngân hàng của lần CHUYỂN TRẢ người gửi — chỉ ở dòng `ignored` (tiền chuyển nhầm
+  /// đã được trả lại). Đi cặp với `refunded_at`; DB canh CHECK cả hai điều đó.
+  refundReference String?   @map("refund_reference") @db.VarChar(100)
+  refundedAt      DateTime? @map("refunded_at") @db.Timestamptz(3)
   /// Payload webhook nguyên trạng — nằm ở DB làm bằng chứng, KHÔNG bao giờ ghi ra log.
   rawJson       Json      @map("raw_json") @db.JsonB
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -4084,6 +4088,8 @@ model BookingHold {
   /// @xeprime/types → BookingHoldStatus; DB canh CHECK.
   status            String    @default("pending") @db.VarChar(20)
   /// @xeprime/types → BookingHoldOutcome; NULL tới khi chốt. CHECK theo purpose (ADR 0025 điều 4).
+  /// CHECK thứ hai `booking_holds_legacy_outcome_without_lines_check`: kết cục LEGACY (kept/forfeited/
+  /// released_to_shop) chỉ hợp lệ khi bốn dòng tiền đều 0 — chúng không phân bổ gì.
   outcome           String?   @db.VarChar(30)
   amount            Decimal   @db.Decimal(14, 2)
   paidAmount        Decimal   @default(0) @map("paid_amount") @db.Decimal(14, 2)
@@ -4305,6 +4311,9 @@ model TaxWithholding {
   reversedBy    TaxWithholding? @relation("tax_withholding_reversal")
   creator       User?           @relation("tax_withholding_creator", fields: [createdBy], references: [id], onDelete: SetNull)
 
+  /// Thêm partial index `tax_withholdings_accrued_period_idx (period_key) WHERE status = 'accrued'`
+  /// ở migration `20261001110000_finance_review_hardening` — thẻ "Thuế chưa kê khai" (Prisma không
+  /// diễn đạt được mệnh đề WHERE).
   @@index([periodKey, status], map: "tax_withholdings_period_status_idx")
   @@index([tenantId, periodKey], map: "tax_withholdings_tenant_period_idx")
   @@map("tax_withholdings")
@@ -4493,6 +4502,13 @@ model WithdrawalRequest {
 
   /// Hạn cam kết chuyển, tính từ lúc duyệt theo `WITHDRAWAL_TERMS` — hàng đợi admin sắp theo nó.
   dueBy DateTime? @map("due_by") @db.Timestamptz(3)
+
+  /// Lệnh ĐÃ CHI rồi bị đảo (chuyển hụt / sai tài khoản — ADR 0025 điều 7). Bằng chứng lần chi
+  /// (`paid_at`, `bank_reference`) giữ nguyên. Khi `status = reversed`, CHECK đòi hai cột đó cùng
+  /// `reversed_at` + `reverse_reason` — KHÔNG đòi `reversed_by`: dòng backfill đời cũ không biết ai đảo.
+  reversedAt    DateTime? @map("reversed_at") @db.Timestamptz(3)
+  reversedBy    String?   @map("reversed_by") @db.Char(26)
+  reverseReason String?   @map("reverse_reason") @db.Text
 
   /// Optimistic concurrency — hai admin không cùng đánh dấu một lệnh là đã chuyển.
   rowVersion Int @default(0) @map("row_version")

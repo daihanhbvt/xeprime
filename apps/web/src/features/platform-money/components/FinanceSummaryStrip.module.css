@@ -1,0 +1,294 @@
+/*
+ * Dải đầu màn Tài chính — thẻ kết luận đối soát (trái, to) + thẻ đếm việc (phải, lưới tự giãn).
+ * Mọi giá trị từ token; không có màu viết tay.
+ */
+
+.strip {
+  display: grid;
+  grid-template-columns: minmax(208px, 240px) minmax(0, 1fr);
+  gap: var(--xp-space-md);
+  margin-bottom: var(--xp-space-md);
+}
+
+/* ── Thẻ kết luận đối soát ─────────────────────────────────────────────────── */
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-md);
+  min-height: 96px;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-card);
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+.statusButton {
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.statusButton:hover {
+  border-color: var(--xp-color-border-strong);
+}
+
+.statusButton:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.statusIcon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--xp-border-radius-pill);
+  font-size: 24px;
+}
+
+.statusText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.statusTitle {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  color: var(--xp-color-text-secondary);
+}
+
+/* h4, không h3: con số kết luận đã có nền đỏ/xanh + biểu tượng đỡ — chữ to thêm chỉ lấn thẻ. */
+.statusValue {
+  font-size: var(--xp-font-size-h4);
+  line-height: var(--xp-line-height-h4);
+  font-weight: var(--xp-font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.statusHint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.statusChevron {
+  font-size: 10px;
+}
+
+.statusSuccess .statusIcon {
+  color: var(--xp-color-success);
+  background: var(--xp-color-success-bg);
+}
+
+.statusSuccess .statusTitle {
+  color: var(--xp-color-success);
+}
+
+.statusError {
+  border-color: var(--xp-color-error);
+  background: var(--xp-color-error-bg);
+}
+
+.statusError .statusIcon {
+  color: var(--xp-color-error);
+  background: var(--xp-color-bg-container);
+}
+
+.statusError .statusValue,
+.statusError .statusTitle {
+  color: var(--xp-color-error);
+}
+
+.statusPending .statusIcon {
+  color: var(--xp-color-text-tertiary);
+  background: var(--xp-color-bg-muted);
+}
+
+/* ── Thẻ đếm việc ──────────────────────────────────────────────────────────── */
+
+.cards {
+  display: grid;
+  /* 128px: sáu thẻ đứng vừa MỘT hàng ở 1366–1440px — xuống hàng thứ hai là kéo thẻ kết luận cao gấp đôi. */
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  /*
+   * Ba hàng con dùng CHUNG cho mọi thẻ (nhãn · con số · gợi ý — thẻ dùng `subgrid`): nhãn xuống
+   * dòng ở một thẻ thì con số của cả hàng thẻ cùng dịch xuống, không thẻ cao thẻ thấp.
+   * Mẫu ba hàng lặp lại khi thẻ tràn sang hàng lưới thứ hai.
+   */
+  grid-auto-rows: auto auto 1fr;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+  container: finance-cards / inline-size;
+}
+
+.card {
+  position: relative;
+  display: grid;
+  grid-row: span 3;
+  grid-template-rows: subgrid;
+  row-gap: var(--xp-space-xs);
+  min-height: 96px;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  overflow: hidden;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-card);
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+.cardButton {
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.cardButton:hover {
+  border-color: var(--xp-color-border-strong);
+}
+
+.cardButton:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Vạch mức độ ở mép trái — đỏ: khẩn, cam: có việc. */
+.toneUrgent::before,
+.toneAttention::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+}
+
+.toneUrgent::before {
+  background: var(--xp-color-error);
+}
+
+.toneAttention::before {
+  background: var(--xp-color-warning);
+}
+
+.cardActive {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-bg-selected);
+}
+
+.cardLabel {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+/* Số khoản bám trái, số tiền bám phải — hai con số tách hẳn, tiền thẳng mép phải mọi thẻ. */
+.cardValue {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs) var(--xp-space-sm);
+}
+
+.cardCount {
+  font-size: var(--xp-font-size-h3);
+  line-height: var(--xp-line-height-h3);
+  font-weight: var(--xp-font-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.cardAmount {
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  white-space: nowrap;
+  font-weight: var(--xp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  color: var(--xp-color-text);
+}
+
+.cardHint {
+  align-self: end;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.toneUrgent .cardHint {
+  color: var(--xp-color-error);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.cardsError {
+  grid-column: 1 / -1;
+  margin: 0;
+  align-self: center;
+  color: var(--xp-color-text-secondary);
+}
+
+/*
+ * Hàng thẻ hẹp (dưới ~140px mỗi thẻ — màn 1366px): số tiền xuống dưới số khoản ở MỌI thẻ cùng
+ * lúc. Để `flex-wrap` tự quyết thì thẻ có số tiền dài xuống dòng, thẻ số tiền ngắn không — cả hàng
+ * lệch nhau. Đo theo bề rộng HÀNG THẺ (container), không theo màn hình: thẻ kết luận bên trái đã
+ * chiếm một phần không cố định. Điện thoại (≤640px) giữ một dòng — thẻ ở đó rộng cố định 148px+.
+ */
+@media (min-width: 641px) {
+  @container finance-cards (max-width: 899px) {
+    .cardValue {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0;
+    }
+
+    /* Xuống dòng vẫn bám mép phải — tiền ở cùng một phía như khi đứng chung dòng. */
+    .cardAmount {
+      align-self: flex-end;
+    }
+  }
+}
+
+/* 1024px = `--xp-bp-tablet`; CSS var không dùng được trong `@media`. */
+@media (max-width: 1024px) {
+  .strip {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .status {
+    min-height: 0;
+  }
+}
+
+/* 640px = `--xp-bp-mobile`: thẻ đếm thành một hàng cuộn ngang, không dựng lưới 2×3 dài cả màn. */
+@media (max-width: 640px) {
+  .cards {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(148px, 46%);
+    grid-template-columns: none;
+    /* Xếp theo CỘT: ba hàng phải khai tường minh để mỗi thẻ (span 3) nằm gọn một cột. */
+    grid-template-rows: auto auto 1fr;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    padding-bottom: var(--xp-space-xs);
+  }
+
+  .card {
+    min-height: 96px;
+    scroll-snap-align: start;
+  }
+}

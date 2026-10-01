@@ -280,5 +280,8 @@
     "retake": "Chụp lại",
     "usePhoto": "Dùng ảnh này",
     "permissionBlocked": "Chưa có quyền dùng máy ảnh. Vào Cài đặt → XePrime để bật quyền Máy ảnh."
+  },
+  "validation": {
+    "maxLength": "Tối đa {max, number} ký tự."
   }
 }

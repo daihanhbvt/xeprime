@@ -98,6 +98,18 @@ export class WithdrawalRequestDto {
   dueBy!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) paidAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) rejectReason!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Lệnh ĐÃ CHI rồi bị đảo (chuyển hụt / sai tài khoản) — tiền đã về lại số dư',
+  })
+  reversedAt!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Vì sao chuyển không thành công',
+  })
+  reverseReason!: string | null;
   @ApiProperty() createdAt!: string;
 }
 
@@ -163,7 +175,8 @@ export class WalletStatementStatsDto {
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
-    description: 'Điểm trung bình các đánh giá NHẬN ĐƯỢC trong kỳ. `null` = kỳ này chưa ai đánh giá.',
+    description:
+      'Điểm trung bình các đánh giá NHẬN ĐƯỢC trong kỳ. `null` = kỳ này chưa ai đánh giá.',
   })
   ratingAvg!: number | null;
   @ApiProperty({ description: 'Số đánh giá nhận được trong kỳ' }) ratingCount!: number;
@@ -250,7 +263,11 @@ export class WalletStatementQueryDto {
   @Min(1)
   page?: number;
 
-  @ApiPropertyOptional({ minimum: 1, maximum: STATEMENT_MAX_LIMIT, default: STATEMENT_DEFAULT_LIMIT })
+  @ApiPropertyOptional({
+    minimum: 1,
+    maximum: STATEMENT_MAX_LIMIT,
+    default: STATEMENT_DEFAULT_LIMIT,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()

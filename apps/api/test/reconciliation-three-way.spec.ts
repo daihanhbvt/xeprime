@@ -18,6 +18,7 @@ import {
   referenceCodeTarget,
   resolveHoldAllocation,
 } from '@xeprime/types';
+import { PlatformMoneySummaryService } from '../src/modules/holds/platform-money-summary.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { makeBookingHoldsService } from './helpers/service-factory';
 
@@ -248,9 +249,7 @@ async function settle(holdId: string, outcome: 'settled' | 'split_late_cancel') 
         id: newId(),
         walletId,
         kind:
-          outcome === 'settled'
-            ? WALLET_ENTRY_KIND.HOLD_RELEASE
-            : WALLET_ENTRY_KIND.HOLD_FORFEIT,
+          outcome === 'settled' ? WALLET_ENTRY_KIND.HOLD_RELEASE : WALLET_ENTRY_KIND.HOLD_FORFEIT,
         sourceType: WALLET_ENTRY_SOURCE.BOOKING_HOLD,
         sourceRefId: holdId,
         amount: new Prisma.Decimal(toOwner),
@@ -540,11 +539,13 @@ describe('Chiều RA: mã XPW nằm cùng không gian tên với XPG/XPH', () =>
 
     const after = await holds.dailyReconciliation(RECON_DAY);
     // Nghĩa vụ ví giảm đúng 100.000 — tiền đã rời tài khoản nên không còn phải trả ai.
-    expect(Number(before.custodied.walletTotal) - Number(after.custodied.walletTotal)).toBe(100_000);
+    expect(Number(before.custodied.walletTotal) - Number(after.custodied.walletTotal)).toBe(
+      100_000,
+    );
     // Và nó xuất hiện ở vế CHI của ngày.
-    expect(
-      Number(after.outflow.withdrawalsPaid) - Number(before.outflow.withdrawalsPaid),
-    ).toBe(100_000);
+    expect(Number(after.outflow.withdrawalsPaid) - Number(before.outflow.withdrawalsPaid)).toBe(
+      100_000,
+    );
     expect(after.walletDrift.wallets).toBe(0);
   });
 });
@@ -644,7 +645,7 @@ describe('Giữ hộ gồm bảo hiểm + thuế, và KHÔNG cộng đôi phần
     });
   }
 
-  async function taxOn(bookingId: string, amount: number): Promise<void> {
+  async function taxOn(bookingId: string, amount: number, periodKey = '2019-06'): Promise<void> {
     await prisma.taxWithholding.create({
       data: {
         id: newId(),
@@ -657,7 +658,7 @@ describe('Giữ hộ gồm bảo hiểm + thuế, và KHÔNG cộng đôi phần
         feePolicyId: policyId,
         status: 'accrued',
         accruedAt: AT,
-        periodKey: '2019-06',
+        periodKey,
       },
     });
   }
@@ -724,5 +725,22 @@ describe('Giữ hộ gồm bảo hiểm + thuế, và KHÔNG cộng đôi phần
     const running = await holds.dailyReconciliation(RECON_DAY);
     expect(d(running.custodied.taxAccrued, standalone.custodied.taxAccrued)).toBe(0);
     expect(d(running.custodied.total, standalone.custodied.total)).toBe(220_000);
+  });
+
+  /**
+   * Thẻ "Thuế chưa kê khai" của màn Tài chính đếm MỌI kỳ còn dòng `accrued`. Đếm riêng kỳ hiện
+   * hành thì ngày 1 của tháng — đúng lúc kỳ trước đến hạn kê khai — kỳ đó biến khỏi thẻ.
+   */
+  maybe('thẻ thuế: kỳ CŨ chưa kê khai vẫn được đếm, và là kỳ cũ nhất được chỉ ra', async () => {
+    const cards = new PlatformMoneySummaryService(prisma as unknown as PrismaService);
+    const before = (await cards.summary(AT)).tax;
+
+    await taxOn(await bookingFor(null), 30_000, '2001-01');
+
+    const after = (await cards.summary(AT)).tax;
+    expect(after.count - before.count).toBe(1);
+    expect(d(after.amount, before.amount)).toBe(30_000);
+    expect(after.oldestPeriod).toBe('2001-01');
+    expect(after.period).not.toBe('2001-01');
   });
 });

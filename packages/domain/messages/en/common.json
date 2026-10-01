@@ -280,5 +280,8 @@
     "retake": "Retake",
     "usePhoto": "Use this photo",
     "permissionBlocked": "Camera permission is off. Open Settings → XePrime to allow Camera."
+  },
+  "validation": {
+    "maxLength": "At most {max, number} characters."
   }
 }

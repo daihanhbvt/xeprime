@@ -4272,6 +4272,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/platform/money/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Số đếm các hàng đợi tiền — dải thẻ đầu màn Tài chính
+         * @description Trạng thái HIỆN TẠI của sáu hàng đợi (tiền vào chưa khớp, giữ chỗ chờ chốt, hoàn chờ chuyển, rút tiền, bảo hiểm lỗi, thuế kỳ này chờ kê khai). Mỗi nhóm đếm đúng tập mà danh sách tương ứng hiện khi không lọc.
+         *
+         *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *
+         *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        get: operations["PlatformMoneyController_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/platform/money/tax/export": {
         parameters: {
             query?: never;
@@ -9036,6 +9062,13 @@ export interface components {
             verifiedAt?: string | null;
             createdAt: string;
         };
+        BankInQueueSummaryDto: {
+            count: number;
+            /** @description Tổng tiền của các dòng đang đếm, string — ADR 0007 */
+            amount: string;
+            /** @description Lúc khoản CŨ NHẤT còn chưa khớp tới ngân hàng (thiếu mốc ngân hàng thì lúc webhook về) — ISO-8601 UTC */
+            oldestAt?: string | null;
+        };
         BankTransactionDetailDto: {
             id: string;
             provider: string;
@@ -9062,8 +9095,18 @@ export interface components {
             createdAt: string;
             /** @description Mã hoá đơn đã khớp (khi `matchedType = subscription_invoice`) */
             matchedInvoiceCode?: string | null;
+            /** @description Mã giao dịch chuyển TRẢ người gửi — chỉ ở dòng `ignored` đã trả lại tiền */
+            refundReference?: string | null;
+            /** @description ISO-8601 UTC */
+            refundedAt?: string | null;
             /** @description Payload webhook nguyên trạng — BẰNG CHỨNG khi tranh cãi. Chỉ ở màn chi tiết, không ở danh sách. */
             rawJson: Record<string, never>;
+            /** @description Ngân hàng nhận theo nhà cung cấp (SePay `gateway`) */
+            bankGateway?: string | null;
+            /** @description Số tài khoản NHẬN của nền tảng (SePay `accountNumber`) */
+            bankAccountNumber?: string | null;
+            /** @description Mã tham chiếu phía ngân hàng (SePay `referenceCode`) — khác mã đối soát XePrime */
+            bankReferenceNumber?: string | null;
             /** @description Hoá đơn đang chờ tiền, sắp theo mức khớp số tiền rồi tới mới nhất */
             suggestions: components["schemas"]["BankTransactionSuggestionDto"][];
         };
@@ -9093,6 +9136,10 @@ export interface components {
             createdAt: string;
             /** @description Mã hoá đơn đã khớp (khi `matchedType = subscription_invoice`) */
             matchedInvoiceCode?: string | null;
+            /** @description Mã giao dịch chuyển TRẢ người gửi — chỉ ở dòng `ignored` đã trả lại tiền */
+            refundReference?: string | null;
+            /** @description ISO-8601 UTC */
+            refundedAt?: string | null;
         };
         BankTransactionPageDto: {
             data: components["schemas"]["BankTransactionDto"][];
@@ -11471,6 +11518,13 @@ export interface components {
             accountNumber?: string | null;
             accountName?: string | null;
         };
+        HoldQueueSummaryDto: {
+            count: number;
+            /** @description Tổng tiền của các dòng đang đếm, string — ADR 0007 */
+            amount: string;
+            /** @description Trong số đó, bao nhiêu khoản đang bị tạm giữ vì tranh chấp mở */
+            disputeCount: number;
+        };
         HolidayDto: {
             /** @example 01K3V9B0000000000000000000 */
             id: string;
@@ -11520,6 +11574,8 @@ export interface components {
         IgnoreBankTransactionDto: {
             /** @description Lý do bỏ qua — bắt buộc, để dòng bị loại vẫn truy được */
             note: string;
+            /** @description Mã giao dịch ngân hàng của lần chuyển TRẢ người gửi. Có mã ⇒ dòng được ghi là đã trả lại; không có mã thì không ghi "đã trả" — một lần chuyển không có bằng chứng chỉ là lời khai */
+            refundReference?: string;
         };
         InviteAnswerDto: {
             /** @enum {string} */
@@ -11990,6 +12046,11 @@ export interface components {
             refreshToken: string;
             /** @description Hạn của refresh token, ISO 8601 UTC */
             refreshTokenExpiresAt: string;
+        };
+        MoneyQueueCountDto: {
+            count: number;
+            /** @description Tổng tiền của các dòng đang đếm, string — ADR 0007 */
+            amount: string;
         };
         MyPermissionsDto: {
             /** @enum {string|null} */
@@ -12956,6 +13017,20 @@ export interface components {
             /** @enum {string|null} */
             refundStatus?: "pending" | "paid" | "credited" | "rejected" | null;
             createdAt: string;
+            /** @enum {string} */
+            purpose: "commission" | "escrow";
+            /** @description `D` — cọc, phần giá thuê của chủ xe */
+            depositAmount: string;
+            /** @description `S` — phí dịch vụ phía khách */
+            serviceFeeAmount: string;
+            /** @description `IV` — bảo hiểm xe */
+            vehicleInsuranceAmount: string;
+            /** @description `IP` — bảo hiểm người */
+            personalInsuranceAmount: string;
+            /** @description `P` — nền tảng tài trợ qua mã khuyến mãi */
+            promoDiscountAmount: string;
+            /** @description Thuế khấu trừ đã đóng băng trên snapshot — chỉ áp khi chuyến hoàn thành */
+            taxAmount: string;
         };
         PlatformHoldPageDto: {
             data: components["schemas"]["PlatformHoldDto"][];
@@ -13017,6 +13092,20 @@ export interface components {
             /** @description Bằng chứng khách CHỌN bảo hiểm tai nạn người (ADR 0028 điều 5) */
             consentAt?: string | null;
             createdAt: string;
+        };
+        PlatformMoneySummaryDto: {
+            /** @description Tiền vào CHƯA KHỚP */
+            bankIn: components["schemas"]["BankInQueueSummaryDto"];
+            /** @description Giữ chỗ ĐÃ TRẢ, chưa chốt kết cục */
+            holds: components["schemas"]["HoldQueueSummaryDto"];
+            /** @description Khoản hoàn CHỜ CHUYỂN tay */
+            refunds: components["schemas"]["MoneyQueueCountDto"];
+            /** @description Lệnh rút còn việc phải làm (chờ duyệt + đã duyệt chưa chuyển) */
+            withdrawals: components["schemas"]["WithdrawalQueueSummaryDto"];
+            /** @description Hợp đồng bảo hiểm ĐANG LỖI cấp */
+            insurance: components["schemas"]["MoneyQueueCountDto"];
+            /** @description Dòng thuế kỳ hiện hành CHỜ KÊ KHAI */
+            tax: components["schemas"]["TaxQueueSummaryDto"];
         };
         PlatformProvinceDto: {
             /**
@@ -13241,7 +13330,7 @@ export interface components {
             code: string;
             amount: string;
             /** @enum {string} */
-            status: "pending" | "approved" | "paid" | "rejected" | "cancelled";
+            status: "pending" | "approved" | "paid" | "rejected" | "cancelled" | "reversed";
             /** @enum {string} */
             ownerType: "user" | "tenant";
             /** @description Tên chủ ví — người hoặc gian hàng */
@@ -13259,6 +13348,10 @@ export interface components {
             paidAt?: string | null;
             bankReference?: string | null;
             rejectReason?: string | null;
+            /** @description Lúc lệnh ĐÃ CHI bị đảo (chuyển hụt / sai tài khoản) — chỉ ở trạng thái `reversed` */
+            reversedAt?: string | null;
+            /** @description Vì sao tiền quay lại */
+            reverseReason?: string | null;
             rowVersion: number;
             createdAt: string;
         };
@@ -14223,8 +14316,10 @@ export interface components {
             reason: string;
         };
         ReverseWithdrawalDto: {
-            /** @description Vì sao tiền quay lại (chuyển hụt, sai số tài khoản…) */
+            /** @description Vì sao tiền quay lại (chuyển hụt, sai số tài khoản…) — chủ ví đọc được */
             reason: string;
+            /** @description Bản ghi đang cầm — bấm hai lần (hay hai admin cùng bấm) thì lần sau nhận 409, không đảo đôi */
+            rowVersion: number;
         };
         ReviewActionDto: {
             /** @description Lý do / ghi chú gửi cho chủ shop */
@@ -14942,6 +15037,21 @@ export interface components {
             remittedAmount: string;
             byEntityType: components["schemas"]["TaxEntityBreakdownDto"][];
             byTenant: components["schemas"]["TaxTenantBreakdownDto"][];
+        };
+        TaxQueueSummaryDto: {
+            count: number;
+            /** @description Tổng tiền của các dòng đang đếm, string — ADR 0007 */
+            amount: string;
+            /**
+             * @description Kỳ hiện hành theo giờ VN
+             * @example 2026-10
+             */
+            period: string;
+            /**
+             * @description Kỳ CŨ NHẤT còn dòng chưa kê khai — null khi không còn dòng nào
+             * @example 2026-09
+             */
+            oldestPeriod: string | null;
         };
         TaxRowDto: {
             id: string;
@@ -16574,13 +16684,20 @@ export interface components {
             /** @description Tổng số đơn vị của tỉnh (trước khi lọc theo `q`) */
             total: number;
         };
+        WithdrawalQueueSummaryDto: {
+            count: number;
+            /** @description Tổng tiền của các dòng đang đếm, string — ADR 0007 */
+            amount: string;
+            /** @description Lệnh đã quá hạn cam kết chuyển */
+            overdueCount: number;
+        };
         WithdrawalRequestDto: {
             id: string;
             /** @description Mã XPW… — dùng khi hỏi hỗ trợ */
             code: string;
             amount: string;
             /** @enum {string} */
-            status: "pending" | "approved" | "paid" | "rejected" | "cancelled";
+            status: "pending" | "approved" | "paid" | "rejected" | "cancelled" | "reversed";
             bankCode: string;
             /** @description Số tài khoản đã che — PII */
             accountNumberMasked: string;
@@ -16589,6 +16706,10 @@ export interface components {
             dueBy?: string | null;
             paidAt?: string | null;
             rejectReason?: string | null;
+            /** @description Lệnh ĐÃ CHI rồi bị đảo (chuyển hụt / sai tài khoản) — tiền đã về lại số dư */
+            reversedAt?: string | null;
+            /** @description Vì sao chuyển không thành công */
+            reverseReason?: string | null;
             createdAt: string;
         };
         WithDriverAutoAcceptCapabilityDto: {
@@ -39809,6 +39930,12 @@ export interface operations {
                 matchStatus?: "unmatched" | "matched" | "manual" | "ignored";
                 /** @description Tìm theo nội dung chuyển khoản hoặc mã đối soát */
                 q?: string;
+                /** @description Mã rút được thuộc luồng nào: hoá đơn gói (`XPG`), giữ chỗ (`XPH`), hoặc không rút được mã */
+                code?: "subscription_invoice" | "booking_hold" | "no_code";
+                /** @description Từ ngày — `YYYY-MM-DD`, trọn ngày giờ VN. Lọc theo thời điểm ngân hàng */
+                from?: string;
+                /** @description Đến hết ngày — cùng quy ước với `from` */
+                to?: string;
                 page?: number;
                 limit?: number;
             };
@@ -46684,6 +46811,112 @@ export interface operations {
             };
         };
     };
+    PlatformMoneyController_summary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["PlatformMoneySummaryDto"];
+                    };
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     PlatformTaxController_exportCsv: {
         parameters: {
             query: {
@@ -47592,7 +47825,7 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description Bỏ trống = VIỆC CẦN LÀM (pending + approved) */
-                status?: "pending" | "approved" | "paid" | "rejected" | "cancelled";
+                status?: "pending" | "approved" | "paid" | "rejected" | "cancelled" | "reversed";
                 /** @description Chỉ lệnh đã quá hạn cam kết */
                 overdue?: boolean;
                 page?: number;

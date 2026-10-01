@@ -1,7 +1,7 @@
 'use client';
 
-import { MoneyOperationsView } from '@/features/platform-money/components/MoneyOperationsView';
+import { FinanceView } from '@/features/platform-money/components/FinanceView';
 
 export default function AdminMoneyPage() {
-  return <MoneyOperationsView />;
+  return <FinanceView />;
 }
