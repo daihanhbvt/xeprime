@@ -26,6 +26,11 @@
   min-width: 160px;
 }
 
+/* Rộng hơn ô sắp xếp vì nhãn là `Tên chi nhánh · Tỉnh`, dài hơn hẳn "Lịch gần nhất". */
+.branchSelect {
+  min-width: 200px;
+}
+
 .pager {
   display: inline-flex;
   gap: 4px;
@@ -63,6 +68,13 @@
   .sortSelect {
     flex: 1 1 auto;
     min-width: 132px;
+  }
+
+  /* Chi nhánh chiếm trọn một hàng ở mobile: ép nó vào hàng chung với loại xe thì cả hai nhãn
+     đều bị cắt giữa chừng, mà tên chi nhánh cắt dở thì không phân biệt được với nhau. */
+  .branchSelect {
+    flex: 1 1 100%;
+    min-width: 0;
   }
 
   .rangeControls {

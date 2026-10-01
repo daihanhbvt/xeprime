@@ -68,6 +68,46 @@ export const SHOP_OWNER_ONLY_KEY = 'xeprime:shopOwnerOnly';
 export const ShopOwnerOnly = () => SetMetadata(SHOP_OWNER_ONLY_KEY, true);
 
 /**
+ * Loại tài nguyên mà `BranchScopeGuard` biết cách quy về MỘT chi nhánh (ADR 0052).
+ *
+ * `vehicles` là bảng duy nhất mang `branch_id`; mọi loại khác quy về chi nhánh QUA XE của nó —
+ * trừ phiếu thu chi không gắn xe (cột `receipts.branch_id` của chính nó) và chi nhánh (chính nó).
+ */
+export const BRANCH_SCOPED_RESOURCE = {
+  VEHICLE: 'vehicle',
+  BOOKING: 'booking',
+  BOOKING_REQUEST: 'bookingRequest',
+  RECEIPT: 'receipt',
+  BRANCH: 'branch',
+  VEHICLE_BLOCK: 'vehicleBlock',
+  CONTRACT: 'contract',
+  PAYMENT: 'payment',
+} as const;
+
+export type BranchScopedResource =
+  (typeof BRANCH_SCOPED_RESOURCE)[keyof typeof BRANCH_SCOPED_RESOURCE];
+
+export interface BranchScopedMeta {
+  resource: BranchScopedResource;
+  /** Tên route param mang id của tài nguyên. */
+  param: string;
+}
+
+/**
+ * Tài nguyên ở route này thuộc về MỘT chi nhánh — người bị giới hạn ngoài chi nhánh đó nhận 404
+ * (`BranchScopeGuard`, ADR 0052).
+ *
+ * Đặt ở mức CONTROLLER khi mọi route của nó cùng nói về một tài nguyên (kể cả route con như
+ * `bookings/:id/handovers/...` — mọi bản ghi con đều buộc vào cha trong WHERE của service, nên
+ * gác cha là gác hết). Đặt ở mức handler khi controller trộn route danh sách với route theo id.
+ *
+ * Danh sách KHÔNG cần decorator này: chúng đã thu hẹp bằng `resolveBranchScope` trong `where`.
+ */
+export const BRANCH_SCOPED_KEY = 'xeprime:branchScoped';
+export const BranchScoped = (resource: BranchScopedResource, param = 'id') =>
+  SetMetadata(BRANCH_SCOPED_KEY, { resource, param } satisfies BranchScopedMeta);
+
+/**
  * CHỈ GIAN HÀNG TUYẾN GÓI — ranh giới hai tuyến (ADR 0032 điều 6), thi hành bởi
  * `SubscriptionTrackGuard`.
  *

@@ -4,6 +4,8 @@ import type { components } from '@xeprime/types';
 type Schemas = components['schemas'];
 
 export type Receipt = Schemas['ReceiptListItemDto'];
+/** Meta của trang sổ thu chi — kèm số khoản chung bị bỏ khi lọc chi nhánh (ADR 0052). */
+export type ReceiptPageMeta = Schemas['ReceiptPageMetaDto'];
 export type ReceiptDetail = Schemas['ReceiptDetailDto'];
 export type CreateReceiptInput = Schemas['CreateReceiptDto'];
 export type ReceiptSummary = Schemas['ReceiptSummaryDto'];
@@ -16,6 +18,8 @@ export type FinanceSummary = Schemas['FinanceSummaryDto'];
 
 /** Filter công nợ ở URL searchParams (ADR 0004). */
 export interface DebtFilters {
+  /** Chi nhánh của XE — ô "Chi nhánh" của trang, sống trên URL (ADR 0052). */
+  branchId?: string;
   /** Tìm theo mã đơn / tên khách / SĐT / tên xe / biển số — lọc ở SERVER, không cắt ở client. */
   q?: string;
   filter?: string;
@@ -31,6 +35,8 @@ export interface DebtFilters {
  * sống sót qua reload.
  */
 export interface ReceiptFilters {
+  /** Chi nhánh của XE — ô "Chi nhánh" của trang, sống trên URL (ADR 0052). */
+  branchId?: string;
   type?: string;
   status?: string;
   categoryId?: string;
@@ -78,6 +84,8 @@ export type CustomerRevenue = Schemas['CustomerRevenueItemDto'];
  * đọc — gửi link cho đồng nghiệp phải ra đúng biểu đồ đó.
  */
 export interface FinancePeriodFilters {
+  /** Chi nhánh của XE — ô "Chi nhánh" của trang, sống trên URL (ADR 0052). */
+  branchId?: string;
   from?: string;
   to?: string;
   granularity?: string;

@@ -84,11 +84,20 @@ async function mkTenant(tag: string): Promise<string> {
   return id;
 }
 
-function mkReceipt(tenantId: string, source: string) {
+async function mkReceipt(tenantId: string, source: string) {
+  /*
+   * Phiếu NHẬP TAY phải quy về một chi nhánh (ADR 0052) — `mkTenant` đã tạo chi nhánh mặc định,
+   * nên lấy đúng cái đó thay vì né luật bằng một phiếu mà sản phẩm không cho tạo.
+   */
+  const branch =
+    source === RECEIPT_SOURCE.MANUAL
+      ? await prisma.tenantBranch.findFirst({ where: { tenantId }, select: { id: true } })
+      : null;
   return prisma.receipt.create({
     data: {
       id: newId(),
       tenantId,
+      branchId: branch?.id ?? null,
       type: RECEIPT_TYPE.INCOME,
       amount: 100_000,
       paymentMethod: 'cash',

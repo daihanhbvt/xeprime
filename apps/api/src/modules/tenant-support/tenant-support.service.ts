@@ -34,6 +34,7 @@ import {
   type SupportCapability,
   type SupportMode,
   type SupportWorkspace,
+  MEMBERSHIP_BRANCH_SCOPE,
 } from '@xeprime/types';
 import { resolveTenantFeatures } from '../../common/plan/feature-state';
 import {
@@ -291,7 +292,7 @@ export class TenantSupportService {
       });
     }
 
-    const tenant = buildTenantContext(row, now, TENANT_ROLE.SHOP_VIEWER, []);
+    const tenant = buildTenantContext(row, now, TENANT_ROLE.SHOP_VIEWER, [], null);
     const workspace = supportWorkspaceOf(tenant);
     const { capabilities } = deriveSupportCapabilities({
       workspace,
@@ -468,7 +469,7 @@ export class TenantSupportService {
     const mode = row.mode === SUPPORT_MODE.ASSIST ? SUPPORT_MODE.ASSIST : SUPPORT_MODE.VIEW;
     // Dựng tenant hai lần là cố ý: lần đầu để SUY (tuyến, cờ gói, trạng thái khoá đọc MỚI mỗi
     // request), lần hai mang quyền đã giao. Không có bước nào đọc quyền nền tảng vào tenant.
-    const probe = buildTenantContext(tenantRow, now, TENANT_ROLE.SHOP_VIEWER, []);
+    const probe = buildTenantContext(tenantRow, now, TENANT_ROLE.SHOP_VIEWER, [], null);
     // Bộ giao diện suy lại ở mỗi request chứ không đọc bản lưu: gian hàng hết gói giữa phiên thì
     // phiên phải thôi là Full Manage ngay — đúng như chính chủ xe thấy.
     const workspace = supportWorkspaceOf(probe);
@@ -493,6 +494,12 @@ export class TenantSupportService {
       // trợ như người XEM của gian hàng. Chưa có endpoint chỉ-chủ nào khai `@SupportAction`.
       TENANT_ROLE.SHOP_VIEWER,
       supportPermissionsFor(capabilities),
+      /*
+       * Phiên hỗ trợ thấy TOÀN GIAN HÀNG (ADR 0052): nhân sự nền tảng không thuộc chi nhánh nào,
+       * và phạm vi chi nhánh là công cụ phân việc NỘI BỘ gian hàng. Thứ gác phiên là bộ
+       * capability do server cấp (ADR 0050), không phải một phạm vi chi nhánh.
+       */
+      null,
       support,
     );
     return {
@@ -543,6 +550,10 @@ export class TenantSupportService {
         name: resolved.tenantName,
         slug: shop.slug,
         roleKey: tenant.roleKey,
+        branchScope:
+          tenant.allowedBranchIds === null
+            ? MEMBERSHIP_BRANCH_SCOPE.ALL
+            : MEMBERSHIP_BRANCH_SCOPE.LIMITED,
         logoUrl: shop.profile?.logoUrl ?? null,
         serviceFeePercent: feePolicy?.serviceFeePercent ?? null,
         publicVehicleCount,

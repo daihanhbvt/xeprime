@@ -35,8 +35,10 @@ export function useRevokeInvite() {
 export function useUpdateMemberRole() {
   const invalidate = useInvalidateMembers();
   return useMutation({
-    mutationFn: ({ userId, roleKey }: { userId: string } & UpdateMemberRoleInput) =>
-      updateMemberRole(userId, { roleKey }),
+    // Chuyển NGUYÊN body: hook mà tự nhặt field là mỗi lần DTO thêm trường (branchScope,
+    // branchIds — ADR 0052) lại một chỗ âm thầm nuốt mất nó.
+    mutationFn: ({ userId, ...body }: { userId: string } & UpdateMemberRoleInput) =>
+      updateMemberRole(userId, body),
     onSuccess: () => void invalidate(),
   });
 }

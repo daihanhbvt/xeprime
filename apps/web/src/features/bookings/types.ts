@@ -33,7 +33,7 @@ export interface BookingFilters {
    */
   preset?: BookingListPreset;
   vehicleId?: string;
-  /** Chi nhánh của XE trong đơn — ghép từ bộ chọn ở thanh trên. */
+  /** Chi nhánh của XE trong đơn — ô "Chi nhánh" của trang, sống trên URL (ADR 0052). */
   branchId?: string;
   returnFrom?: string;
   returnTo?: string;

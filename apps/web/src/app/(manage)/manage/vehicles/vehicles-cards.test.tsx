@@ -34,6 +34,7 @@ const nav = vi.hoisted(() => ({
  * Query. Test này mock `use-permissions` nên không dựng `QueryClientProvider`; thiếu mock
  * ở đây thì component chết vì hạ tầng, không vì thứ đang kiểm.
  */
+vi.mock('@/features/branches/hooks/use-branch-filter', () => import('@/features/branches/test-utils'));
 vi.mock('@/hooks/use-feature', () => ({
   useFeature: () => ({ state: 'enabled', canWrite: true, isVisible: true, planEndsAt: null }),
   useFeatureStates: () => ({}),

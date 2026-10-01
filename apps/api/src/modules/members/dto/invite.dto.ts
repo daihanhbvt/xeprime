@@ -3,13 +3,14 @@ import { INVITE_STATUS_VALUES, TENANT_ROLE_VALUES } from '@xeprime/types';
 import { Type } from 'class-transformer';
 import { IsEmail, IsIn, IsInt, IsOptional, Max, MaxLength, Min } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
+import { MemberBranchScopeDto } from './member.dto';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 
 export { DEFAULT_LIMIT as INVITE_DEFAULT_LIMIT, MAX_LIMIT as INVITE_MAX_LIMIT };
 
-export class CreateInviteDto {
+export class CreateInviteDto extends MemberBranchScopeDto {
   @ApiProperty({
     example: 'nhanvien@congty.vn',
     description:

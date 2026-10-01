@@ -84,6 +84,8 @@ function tenantCtx(state: FeatureState, used: PlanFeature[] = []): TenantContext
     onboardingState: SHOP_ONBOARDING_STATE.PACKAGE_ACTIVE,
     roleKey: 'shop_owner',
     permissions: [],
+    // `null` = toàn gian hàng — bộ này không kiểm phạm vi chi nhánh (ADR 0052).
+    allowedBranchIds: null,
     features,
     usedFeatures: used,
     planCode: 'standard',

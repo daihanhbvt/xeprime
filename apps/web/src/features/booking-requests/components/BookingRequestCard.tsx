@@ -33,6 +33,7 @@ import { EntityIdentity } from '@/components/data-display/EntityIdentity';
 import { RowActions, type RowAction } from '@/components/data-display/RowActions';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { customerPath, vehiclePath } from '@/constants/routes';
+import { useBranchCrumb } from '@/features/branches/hooks/use-branch-return';
 import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
@@ -112,6 +113,7 @@ export function BookingRequestCard({
   onOpenCustomer,
   backHref,
 }: Props) {
+  const branchCrumb = useBranchCrumb();
   const t = useTranslations('BookingRequests');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -268,7 +270,7 @@ export function BookingRequestCard({
               <Link
                 href={vehicleSchedulePath(
                   { name: request.vehicleName, plateNumber: request.vehiclePlate },
-                  { back: backHref },
+                  { back: backHref, branchId: branchCrumb },
                 )}
                 className={styles.scheduleLink}
                 aria-label={t('vehicle.viewScheduleFor', { vehicle: vehicleLabel })}

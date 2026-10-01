@@ -9,11 +9,16 @@ import { fetchFleetSummary } from '../api';
  *
  * `enabled` do trang quyết (chỉ tải khi dải chỉ số thực sự hiển thị); hỏng thì dải tự ẩn,
  * không chặn danh sách.
+ *
+ * `branchId` là BẮT BUỘC phải truyền đúng cái mà danh sách bên dưới đang lọc: dải này đứng ngay
+ * trên bảng, nên "40 xe" ở trên và 4 dòng ở dưới là hai câu trả lời khác nhau cho cùng một câu
+ * hỏi, trên cùng một màn hình. Trước ADR 0052 nó đếm toàn gian hàng và đó là một lỗi thật.
  */
-export function useFleetSummary(enabled: boolean) {
+export function useFleetSummary(enabled: boolean, branchId?: string) {
+  const params = branchId ? { branchId } : {};
   return useQuery({
-    queryKey: queryKeys.vehicles.fleetSummary(),
-    queryFn: fetchFleetSummary,
+    queryKey: queryKeys.vehicles.fleetSummary(params),
+    queryFn: () => fetchFleetSummary(params),
     enabled,
     staleTime: 60_000,
   });

@@ -28,12 +28,18 @@ export const CALENDAR_BACK_PARAM = 'back';
  * `options.basePath` là màn lịch của KHU đang đứng (`workspacePaths(...).calendar`). Mặc định là
  * lịch của cổng quản lý để mọi nơi gọi cũ giữ nguyên hành vi; màn nào sống ở `/account` phải
  * truyền vào, nếu không nút "Xem lịch" sẽ ném chủ xe tuyến hoa hồng vào cổng quản lý.
+ *
+ * `options.branchId` — chi nhánh người dùng ĐANG lọc lúc bấm "Xem lịch" (ADR 0052). Màn lịch
+ * lọc được theo chi nhánh, nên không mang theo là người đang đứng ở Đà Nẵng bấm sang thấy
+ * "Tất cả chi nhánh" — đúng xe nhưng sai chỗ đứng. Nơi gọi lấy từ `useBranchCrumb()` (màn
+ * chi tiết) hoặc từ bộ lọc của chính danh sách.
  */
 export function vehicleSchedulePath(
   vehicle: { name: string; plateNumber?: string | null },
-  options?: { back?: string | null; basePath?: string },
+  options?: { back?: string | null; basePath?: string; branchId?: string | null },
 ): string {
   const query = new URLSearchParams({ q: vehicle.plateNumber || vehicle.name });
+  if (options?.branchId) query.set('branchId', options.branchId);
   if (isSafeNextPath(options?.back)) query.set(CALENDAR_BACK_PARAM, options.back as string);
   return `${options?.basePath ?? ROUTES.MANAGE.CALENDAR}?${query.toString()}`;
 }

@@ -2,6 +2,8 @@ import { Body, Controller, Delete, Get, Param, Put, Query } from '@nestjs/common
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PERMISSION } from '@xeprime/types';
 import {
+  BRANCH_SCOPED_RESOURCE,
+  BranchScoped,
   CurrentTenant,
   CurrentUser,
   RequirePermissions,
@@ -25,6 +27,7 @@ import {
  * Mọi báo giá (public quote, duyệt yêu cầu) đọc bản ghi đè qua `PricingService`.
  */
 @ApiTags('pricing')
+@BranchScoped(BRANCH_SCOPED_RESOURCE.VEHICLE)
 @Controller('vehicles/:id/daily-prices')
 @TenantScoped()
 export class VehicleDailyPricesController {

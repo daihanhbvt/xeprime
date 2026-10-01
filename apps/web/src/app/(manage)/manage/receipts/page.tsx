@@ -1,13 +1,15 @@
 'use client';
 
 import { PlusOutlined, TagsOutlined } from '@ant-design/icons';
-import { App, Button, Segmented, Space, Spin } from 'antd';
+import { Alert, App, Button, Segmented, Space, Spin } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Suspense, useMemo, useState } from 'react';
 import { PERMISSION, PLAN_FEATURE } from '@xeprime/types';
 import { FeatureWriteTooltip } from '@/components/feedback/FeatureWriteTooltip';
 import { FilterBar, type FilterField, type FilterValues } from '@/components/filter/FilterBar';
+import { ALL_FILTER } from '@/constants/filters';
+import { useBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { PermissionState } from '@/components/feedback/PermissionState';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { ROUTES } from '@/constants/routes';
@@ -64,6 +66,10 @@ function ReceiptsView() {
   const { has } = usePermissions();
   const errorMessage = useErrorMessage();
   const { filters, setFilters } = useReceiptFilters();
+  const branch = useBranchFilter({
+    value: filters.branchId,
+    onChange: (branchId) => setFilters({ branchId }),
+  });
   const { data, isError, refetch, isFetching } = useReceipts(filters);
   const summary = useReceiptSummary(filters);
   const approve = useApproveReceipt();
@@ -115,6 +121,7 @@ function ReceiptsView() {
         label: t('filters.searchLabel'),
         placeholder: t('filters.searchPlaceholder'),
       },
+      ...(branch.field ? [branch.field] : []),
       { kind: 'select', key: 'type', label: t('filters.type'), options: options.receiptType },
       {
         kind: 'select',
@@ -138,7 +145,7 @@ function ReceiptsView() {
       },
       { kind: 'dateRange', fromKey: 'from', toKey: 'to', label: t('filters.dateRange') },
     ],
-    [t, options, categories],
+    [t, options, categories, branch.field],
   );
 
   // Thiếu quyền xem → thay TOÀN BỘ nội dung. Trước đây trang vẫn dựng đủ tiêu đề, bộ lọc và một
@@ -161,6 +168,7 @@ function ReceiptsView() {
 
   const items = data?.items ?? [];
   const meta = data?.meta ?? { page: 1, limit: RECEIPTS_DEFAULT_LIMIT, total: 0, hasNext: false };
+  const unassignedCount = data?.meta?.unassignedCount ?? 0;
   const filtered = hasReceiptFilters(filters);
 
   function onApprove(id: string) {
@@ -212,9 +220,21 @@ function ReceiptsView() {
 
       <FilterBar
         fields={filterFields}
-        values={filters as FilterValues}
-        onChange={(patch) => setFilters(patch as Partial<ReceiptFilters>)}
-        onClear={filtered ? () => setFilters(clearedReceiptFilters()) : undefined}
+        values={{ ...(filters as FilterValues), branchId: filters.branchId ?? ALL_FILTER }}
+        onChange={(patch) =>
+          setFilters(
+            ('branchId' in patch
+              ? { ...patch, branchId: patch.branchId === ALL_FILTER ? undefined : patch.branchId }
+              : patch) as Partial<ReceiptFilters>,
+          )
+        }
+        onClear={
+          filtered
+            ? () => {
+                setFilters(clearedReceiptFilters());
+              }
+            : undefined
+        }
         showActiveChips
         // Bảy điều khiển + hai nút hành động không đứng vừa một hàng ở bất kỳ bề rộng nào: thanh
         // lọc tự xuống dòng và ô chọn ngày rơi lẻ xuống hàng hai. Hình thái gọn + nhóm phụ trong
@@ -243,6 +263,28 @@ function ReceiptsView() {
           </Space>
         }
       />
+
+      {/*
+       * Lọc chi nhánh bỏ lại các khoản chi CHUNG (marketing, văn phòng…) vì chúng không gắn xe
+       * nào — ADR 0052 điều 3. Phải nói ra, nếu không tổng bốn chi nhánh nhỏ hơn tổng gian hàng
+       * và người dùng đi tìm một lỗi không tồn tại.
+       *
+       * Cố ý KHÔNG tự phân bổ các khoản đó theo tỉ lệ: đó là một quyết định kế toán, không phải
+       * việc của một bộ lọc.
+       */}
+      {filters.branchId && unassignedCount > 0 ? (
+        <Alert
+          type="info"
+          showIcon
+          className={styles.unassignedNote}
+          message={t('branchFilter.unassigned', { count: unassignedCount })}
+          action={
+            <Button size="small" type="link" onClick={() => setFilters({ branchId: undefined })}>
+              {t('branchFilter.showAll')}
+            </Button>
+          }
+        />
+      ) : null}
 
       <ReceiptTable
         items={items}

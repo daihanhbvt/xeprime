@@ -1,7 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEmail, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { FEATURE_STATE_VALUES, PLAN_FEATURE_VALUES, VN_PHONE_PATTERN } from '@xeprime/types';
+import {
+  FEATURE_STATE_VALUES,
+  MEMBERSHIP_BRANCH_SCOPE_VALUES,
+  PLAN_FEATURE_VALUES,
+  VN_PHONE_PATTERN,
+} from '@xeprime/types';
 import { IsLoginIdentifier } from '../../../common/login-identifier';
 
 const PASSWORD_MIN = 8;
@@ -120,6 +125,16 @@ export class CurrentTenantSummaryDto {
   onboardingState!: string;
 
   @ApiProperty({ description: 'Xem TenantRole trong @xeprime/types' }) roleKey!: string;
+
+  /**
+   * Phạm vi chi nhánh của người đang đăng nhập — `all` | `limited` (ADR 0052).
+   *
+   * Chỉ để giao diện nói đúng: người bị giới hạn không được thấy lựa chọn "Tất cả chi nhánh" khi
+   * mời hay phân quyền cho người khác, vì backend sẽ từ chối (`BRANCH_SCOPE_EXCEEDED`). Danh
+   * sách chi nhánh cụ thể KHÔNG đi kèm ở đây — `GET /branches` đã trả đúng phần được giao.
+   */
+  @ApiProperty({ enum: MEMBERSHIP_BRANCH_SCOPE_VALUES })
+  branchScope!: string;
 
   /**
    * LOGO gian hàng — hình đại diện DUY NHẤT của cổng quản lý (16/09/2026).

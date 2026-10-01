@@ -21,6 +21,7 @@ import { EntityIdentity } from '@/components/data-display/EntityIdentity';
 import { RowActions, type RowAction } from '@/components/data-display/RowActions';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
+import { useBranchCrumb } from '@/features/branches/hooks/use-branch-return';
 import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
@@ -69,6 +70,7 @@ function DetailBody({
   backHref,
 }: Props & { request: BookingRequestItem }) {
   const t = useTranslations('BookingRequests');
+  const branchCrumb = useBranchCrumb();
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -148,7 +150,7 @@ function DetailBody({
             <Link
               href={vehicleSchedulePath(
                 { name: request.vehicleName, plateNumber: request.vehiclePlate },
-                { back: backHref },
+                { back: backHref, branchId: branchCrumb },
               )}
             >
               <Button size="small">{t('vehicle.viewSchedule')}</Button>

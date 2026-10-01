@@ -1,5 +1,9 @@
 {
   "receipts": {
+    "branchFilter": {
+      "unassigned": "Chưa gồm {count, plural, other {# khoản chung}} không gắn xe nào (chi phí marketing, văn phòng…).",
+      "showAll": "Xem toàn gian hàng"
+    },
     "page": {
       "title": "Thu chi",
       "subtitle": "Mọi khoản tiền của gian hàng — thu tiền đơn, cọc, hoàn cọc và chi phí xe đều tự lên sổ."
@@ -157,7 +161,8 @@
         "method": "Chọn hình thức",
         "bookingRequired": "Chọn đơn thuê để gắn phiếu",
         "vehicleRequired": "Chọn xe để gắn phiếu",
-        "description": "Nhập diễn giải / lý do"
+        "description": "Nhập diễn giải / lý do",
+        "branchRequired": "Chọn chi nhánh phát sinh"
       },
       "link": {
         "label": "Liên kết với",
@@ -167,7 +172,10 @@
         "debt": "Còn nợ"
       },
       "keepOpen": "Tạo và tiếp tục nhập mới",
-      "cancel": "Huỷ"
+      "cancel": "Huỷ",
+      "branchHelp": "Khoản này phát sinh ở chi nhánh nào. Gắn xe hoặc đơn thuê thì chi nhánh tự lấy theo xe.",
+      "branchPlaceholder": "Chọn chi nhánh",
+      "branchEmpty": "Gian hàng chưa có chi nhánh nào. Hãy tạo chi nhánh trước khi ghi khoản không gắn xe."
     },
     "summary": {
       "error": "Không tải được số tổng — danh sách bên dưới vẫn đúng",

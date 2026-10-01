@@ -65,6 +65,11 @@
     "single": "Gian hàng của bạn chỉ có một chi nhánh",
     "label": "Chi nhánh đang xem"
   },
+  "filter": {
+    "label": "Chi nhánh",
+    "empty": "Chi nhánh {branch} chưa có dữ liệu nào ở đây",
+    "emptyHint": "Chọn \"Tất cả chi nhánh\" để xem toàn gian hàng."
+  },
   "toast": {
     "created": "Đã tạo chi nhánh {name}",
     "updated": "Đã cập nhật chi nhánh",

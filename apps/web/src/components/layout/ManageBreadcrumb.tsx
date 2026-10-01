@@ -3,7 +3,9 @@
 import { Breadcrumb } from 'antd';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { withBranchParam } from '@/features/branches/branch-link';
+import { useRememberedBranch } from '@/features/branches/branch-memory';
 import { flattenLeaves, matchSelectedKey } from '@/constants/nav';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useManageNavTree } from './use-manage-nav-tree';
@@ -24,6 +26,11 @@ import styles from './ManageBreadcrumb.module.css';
 export function ManageBreadcrumb() {
   const t = useTranslations('Navigation');
   const pathname = usePathname();
+  // "Trang chủ" cũng mang chi nhánh đang lọc đi theo, y như menu (ADR 0052).
+  // URL đang đứng thắng; màn không có tham số (Khách hàng, Ví…) thì lấy chi nhánh lọc gần nhất
+  // từ bộ nhớ phiên — đi ngang một tab trung lập không làm mất lựa chọn (branch-memory.ts).
+  const remembered = useRememberedBranch();
+  const branchId = useSearchParams().get('branchId') ?? remembered;
   const { sections: nodes } = useManageNavTree();
   // Gốc của khu đang đứng — trong phiên hỗ trợ là trang đầu của PHIÊN, không phải `/manage` của
   // tài khoản nhân sự (ADR 0050 §12).
@@ -35,7 +42,7 @@ export function ManageBreadcrumb() {
   const items = [
     {
       key: 'root',
-      title: pathname === home ? t('manage.home') : <Link href={home}>{t('manage.home')}</Link>,
+      title: pathname === home ? t('manage.home') : <Link href={withBranchParam(home, branchId)}>{t('manage.home')}</Link>,
     },
     ...(current && current.href !== home
       ? [{ key: current.href, title: t(current.labelKey) }]

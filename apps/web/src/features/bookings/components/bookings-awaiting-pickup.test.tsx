@@ -25,6 +25,9 @@ import type { BookingFilters, BookingListItem } from '../types';
  */
 
 const permissions = vi.hoisted(() => ({ granted: new Set<string>() }));
+// Ô lọc chi nhánh đọc server (ADR 0052) — chặn ở tầng hook như mọi hook dữ liệu khác ở bộ này.
+vi.mock('@/features/branches/hooks/use-branch-filter', () => import('@/features/branches/test-utils'));
+
 vi.mock('@/hooks/use-permissions', () => ({
   usePermissions: () => ({
     has: (permission: string) => permissions.granted.has(permission),

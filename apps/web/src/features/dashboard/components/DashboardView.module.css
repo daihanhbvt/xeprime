@@ -4,10 +4,13 @@
   gap: 14px;
 }
 
+/* Tiêu đề bên trái, ô chọn chi nhánh dồn phải; hẹp thì ô xuống dòng (ADR 0051). */
 .header {
   display: flex;
-  flex-direction: column;
-  gap: 1px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
 }
 
 .title {
@@ -47,4 +50,12 @@
   .title {
     font-size: 18px;
   }
+}
+
+/*
+ * Ô chọn chi nhánh trên đầu Tổng quan (ADR 0051). Nằm ở header chứ không trong một thanh lọc
+ * riêng: màn này không có bộ lọc nào khác, dựng cả một `FilterBar` cho đúng một ô là thừa.
+ */
+.branch {
+  min-width: 220px;
 }

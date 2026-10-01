@@ -134,7 +134,7 @@ describe('Huy hiệu — thay đổi thành viên gian hàng', () => {
     await invites.create(tenantId, ownerId, {
       email: staffEmail,
       roleKey: TENANT_ROLE.SHOP_STAFF,
-    });
+    }, null);
     await invites.accept(lastToken(), staffId);
 
     expect(await signalOf(staffId)).not.toBeNull();
@@ -145,7 +145,7 @@ describe('Huy hiệu — thay đổi thành viên gian hàng', () => {
   maybe('bị gỡ khỏi gian hàng: có tín hiệu, và chatShop về 0', async () => {
     await prisma.userBadgeSignal.deleteMany({ where: { userId: staffId } });
 
-    await members.remove(tenantId, ownerId, staffId);
+    await members.remove(tenantId, ownerId, staffId, null);
 
     expect(await signalOf(staffId)).not.toBeNull();
     const badges = await computeUserBadges(prisma, staffId);
@@ -163,7 +163,7 @@ describe('Huy hiệu — thay đổi thành viên gian hàng', () => {
     await invites.create(tenantId, ownerId, {
       email: staffEmail,
       roleKey: TENANT_ROLE.SHOP_STAFF,
-    });
+    }, null);
     const token = lastToken();
     await invites.accept(token, staffId);
 
@@ -175,13 +175,13 @@ describe('Huy hiệu — thay đổi thành viên gian hàng', () => {
   });
 
   maybe('tạo lại membership qua lời mời thứ hai cũng đánh dấu (kích hoạt lại)', async () => {
-    await members.remove(tenantId, ownerId, staffId);
+    await members.remove(tenantId, ownerId, staffId, null);
     await prisma.userBadgeSignal.deleteMany({ where: { userId: staffId } });
 
     await invites.create(tenantId, ownerId, {
       email: staffEmail,
       roleKey: TENANT_ROLE.SHOP_STAFF,
-    });
+    }, null);
     await invites.accept(lastToken(), staffId);
 
     expect(await signalOf(staffId)).not.toBeNull();

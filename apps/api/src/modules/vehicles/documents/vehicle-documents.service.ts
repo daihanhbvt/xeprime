@@ -556,6 +556,8 @@ export class VehicleDocumentsService {
     documentId: string,
     jobId: string,
     dto: ApplyOcrFieldsDto,
+    /** Chi nhánh người gọi được giao — đi thẳng vào `applyUpdate` (ADR 0052). */
+    allowedBranchIds: readonly string[] | null,
   ): Promise<VehicleDocumentDetailDto> {
     await this.requireActiveDocument(tenantId, vehicleId, documentId);
 
@@ -627,7 +629,14 @@ export class VehicleDocumentsService {
       // về chờ duyệt + đồng bộ listing (ADR 0008); fail thì cả giấy tờ + job rollback.
       if (dto.applyPlateToVehicle && selected.includes(VEHICLE_DOCUMENT_OCR_FIELD.PLATE_NUMBER)) {
         const plate = (stored.plateNumber?.value ?? '').trim();
-        await this.vehicles.applyUpdate(tx, tenantId, vehicleId, userId, { plateNumber: plate });
+        await this.vehicles.applyUpdate(
+          tx,
+          tenantId,
+          vehicleId,
+          userId,
+          { plateNumber: plate },
+          allowedBranchIds,
+        );
       }
 
       await this.audit.record(

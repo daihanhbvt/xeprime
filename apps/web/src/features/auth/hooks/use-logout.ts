@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useCallback } from 'react';
 
+import { forgetBranchMemory } from '@/features/branches/branch-memory';
 import { destroySession } from '@/services/auth.service';
 
 import { useAuthCache } from './use-auth-actions';
@@ -35,6 +36,12 @@ export function useLogout(destination: string): () => Promise<void> {
       // người dùng đi. Giữ họ lại trong một phiên mà chính họ vừa xin thoát là tệ hơn.
     }
     clearAfterLogout();
+    /*
+     * Bộ nhớ chi nhánh của menu nằm ở `localStorage`, nên nó SỐNG SÓT qua lượt dọn cache ở trên.
+     * Không xoá là để người đăng nhập sau trên cùng máy — hoặc cùng người ở một gian hàng khác —
+     * thừa hưởng ngữ cảnh làm việc của phiên vừa đóng (xem `branch-memory.ts`).
+     */
+    forgetBranchMemory();
     router.replace(destination);
   }, [router, clearAfterLogout, destination]);
 }

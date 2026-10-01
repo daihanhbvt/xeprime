@@ -19,6 +19,8 @@ export interface MaintenanceBoardFilters {
   filter: string;
   q?: string;
   type: string;
+  /** Chi nhánh giữ xe — ô "Chi nhánh" của trang, áp cho CẢ BỐN tab (ADR 0052). */
+  branchId?: string;
   from?: string;
   to?: string;
   sort: string;

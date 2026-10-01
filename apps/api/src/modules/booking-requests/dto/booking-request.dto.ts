@@ -38,6 +38,7 @@ import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
 import { AddressViewDto, GeoPinDto } from '../../locations/dto/address.dto';
 import { BookingRequestDeliveryQuoteDto } from '../../pricing/dto/pricing.dto';
 import { MobileDeviceDto, MobileSessionDto } from '../../auth/dto/mobile-auth.dto';
+import { BranchIdQuery } from '../../../common/dto/branch-scope';
 
 const trimmedText = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
@@ -499,11 +500,8 @@ export class BookingRequestListQueryDto {
   @Length(26, 26)
   vehicleId?: string;
 
-  /** Lọc theo chi nhánh của XE được yêu cầu — nguồn là bộ chọn chi nhánh ở thanh trên. */
-  @ApiPropertyOptional({ description: 'Lọc theo chi nhánh (qua xe của yêu cầu)' })
-  @IsOptional()
-  @IsString()
-  @Length(26, 26)
+  /** Lọc theo chi nhánh của XE được yêu cầu — áp cho cả trang lẫn `meta.statusCounts` của hàng tab. */
+  @BranchIdQuery()
   branchId?: string;
 
   @ApiPropertyOptional({ default: 1, minimum: 1 })

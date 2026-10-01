@@ -38,6 +38,15 @@ const hooks = vi.hoisted(() => ({
   createMutate: vi.fn(),
 }));
 
+const BRANCH = { id: '01HBRANCH0000000000000001', name: 'Chi nhánh chính', provinceName: 'Hồ Chí Minh' };
+
+// Ô 'Chi nhánh' của khoản không gắn xe (ADR 0052) hỏi danh sách chi nhánh — stub để test form
+// không phải dựng QueryClient.
+vi.mock('@/features/branches/hooks/use-branches', () => ({
+  useActiveBranches: () => ({ data: { items: [BRANCH] }, isLoading: false }),
+  useBranches: () => ({ data: { items: [BRANCH] }, isLoading: false }),
+}));
+
 vi.mock('../hooks/use-finance-categories', () => ({
   useFinanceCategories: () => ({ data: [], isFetching: false }),
 }));

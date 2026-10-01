@@ -27,6 +27,8 @@ import { useFinanceCategories } from '../hooks/use-finance-categories';
 import { useFinanceOptions } from '../hooks/use-finance-options';
 import { useVehicleOptions } from '../hooks/use-vehicle-options';
 import { useCreateReceipt } from '../hooks/use-receipt-mutations';
+import { branchLabel } from '@/features/branches/branch-label';
+import { useActiveBranches } from '@/features/branches/hooks/use-branches';
 import { receiptFormSchema, type ReceiptFormValues } from '../schema';
 import type { CreateReceiptInput } from '../types';
 import { ReceiptAttachmentsField } from './ReceiptAttachmentsField';
@@ -72,6 +74,7 @@ const DEFAULTS = (initialVehicleId?: string | null): ReceiptFormValues => ({
   linkMode: initialVehicleId ? RECEIPT_LINK_MODE.VEHICLE : RECEIPT_LINK_MODE.NONE,
   bookingId: null,
   vehicleId: initialVehicleId ?? null,
+  branchId: null,
   referenceCode: '',
   description: '',
   keepOpen: false,
@@ -94,6 +97,8 @@ export function ReceiptFormDrawer({ open, onClose, initialVehicleId }: ReceiptFo
   const t = useTranslations('Finance.receipts.form');
   const errorMessage = useErrorMessage();
   const options = useFinanceOptions();
+  const tBranches = useTranslations('Branches');
+  const branches = useActiveBranches(open);
   const resolver = useMemo(() => yupResolver(receiptFormSchema(t)), [t]);
   const { control, handleSubmit, reset, setValue, getValues } = useForm<ReceiptFormValues>({
     resolver,
@@ -205,7 +210,9 @@ export function ReceiptFormDrawer({ open, onClose, initialVehicleId }: ReceiptFo
         ? { bookingId: values.bookingId || undefined, vehicleId: values.vehicleId || undefined }
         : values.linkMode === RECEIPT_LINK_MODE.VEHICLE
           ? { vehicleId: values.vehicleId || undefined }
-          : {};
+          // Chỉ khoản KHÔNG gắn mới mang chi nhánh tự khai — gắn xe thì chi nhánh suy TỪ XE,
+          // và server từ chối nếu nhận cả hai (ADR 0052).
+          : { branchId: values.branchId || undefined };
 
     const body: CreateReceiptInput = {
       type: values.type,
@@ -236,6 +243,13 @@ export function ReceiptFormDrawer({ open, onClose, initialVehicleId }: ReceiptFo
             linkMode: values.linkMode,
             bookingId: values.bookingId,
             vehicleId: values.vehicleId,
+            /*
+             * `branchId` phải đi theo, không chỉ vì tiện. Effect tự điền chi nhánh duy nhất chạy
+             * theo `[open, soleBranchId]` — cả hai không đổi khi drawer ở lại mở, nên nó KHÔNG
+             * chạy lần hai. Bỏ `branchId` ở đây là để gian hàng một chi nhánh kẹt hẳn: phiếu thứ
+             * hai thiếu chi nhánh, validate chặn, mà ô chi nhánh thì đang khoá nên không sửa được.
+             */
+            branchId: values.branchId,
             keepOpen: true,
           });
           filledFor.current = values.bookingId ?? null;
@@ -259,6 +273,26 @@ export function ReceiptFormDrawer({ open, onClose, initialVehicleId }: ReceiptFo
     resetAll();
     onClose();
   }
+
+  /*
+   * Chỉ chi nhánh ĐANG HOẠT ĐỘNG: gán một khoản chi mới vào chi nhánh đã ngừng là tạo một dòng
+   * sổ không ai còn mở ra xem.
+   */
+  const branchOptions = (branches.data?.items ?? []).map((b) => ({
+    value: b.id,
+    label: branchLabel(b, tBranches('labels.noProvince')),
+  }));
+
+  /*
+   * Gian hàng một chi nhánh: điền sẵn và ẩn ô. Không có ô nào hiện ra, nhưng phiếu vẫn mang
+   * chi nhánh — bất biến "mọi phiếu nhập tay đều quy được về một chi nhánh" không có ngoại lệ,
+   * kể cả cho gian hàng chưa mở chi nhánh thứ hai (ADR 0052).
+   */
+  const soleBranchId = branchOptions.length === 1 ? branchOptions[0]!.value : null;
+  useEffect(() => {
+    if (!open || !soleBranchId) return;
+    if (!getValues('branchId')) setValue('branchId', soleBranchId);
+  }, [open, soleBranchId, getValues, setValue]);
 
   const linkModeOptions = RECEIPT_LINK_MODE_VALUES.map((value) => ({
     value,
@@ -349,6 +383,39 @@ export function ReceiptFormDrawer({ open, onClose, initialVehicleId }: ReceiptFo
                 {vehicleMissing ? <Alert type="error" showIcon title={t('vehicleGone')} /> : null}
                 {selectedVehicle ? <VehicleLinkCard vehicle={selectedVehicle} /> : null}
               </div>
+            ) : null}
+
+            {/*
+              Chi nhánh CHỈ hỏi ở chế độ "Không gắn", và lúc đó là BẮT BUỘC — ADR 0052.
+
+              Gắn xe hay gắn đơn thì chi nhánh suy TỪ XE, không hỏi lại: hai nguồn cho cùng một
+              câu hỏi là cách chắc chắn để hai báo cáo nói hai số khác nhau.
+
+              Gian hàng chỉ có MỘT chi nhánh thì ẩn ô và tự điền (hiệu ứng bên dưới): hỏi một câu
+              chỉ có một đáp án là bắt người dùng trả giá cho một lựa chọn không tồn tại.
+            */}
+            {!linkingBooking && !linkingVehicle ? (
+              branchOptions.length === 0 && !branches.isLoading ? (
+                // Gian hàng chưa có chi nhánh nào: NÓI RA thay vì để nút Lưu bấm mãi không ăn.
+                // Ô bắt buộc mà bị ẩn là một form chặn người dùng ở chỗ họ không nhìn thấy.
+                <Alert type="warning" showIcon title={t('branchEmpty')} />
+              ) : (
+                <SelectField
+                  control={control}
+                  name="branchId"
+                  label={tBranches('filter.label')}
+                  options={branchOptions}
+                  placeholder={t('branchPlaceholder')}
+                  required
+                  // Đúng MỘT chi nhánh thì điền sẵn và khoá: hỏi một câu chỉ có một đáp án là bắt
+                  // người dùng trả giá cho một lựa chọn không tồn tại — nhưng vẫn hiện để họ thấy
+                  // khoản này đang vào đâu (cùng cách ô lọc chi nhánh làm).
+                  disabled={branchOptions.length === 1}
+                  showSearch={branchOptions.length > 8}
+                  loading={branches.isLoading}
+                  help={t('branchHelp')}
+                />
+              )
             ) : null}
 
             <SelectField

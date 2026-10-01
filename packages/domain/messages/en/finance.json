@@ -1,5 +1,9 @@
 {
   "receipts": {
+    "branchFilter": {
+      "unassigned": "Not counted: {count, plural, one {# shop-wide entry} other {# shop-wide entries}} with no vehicle (marketing, office costs…).",
+      "showAll": "Show the whole shop"
+    },
     "page": {
       "title": "Cash book",
       "subtitle": "Every đồng that moves through your shop — booking payments, deposits, refunds and vehicle costs all land here automatically."
@@ -157,7 +161,8 @@
         "method": "Choose a payment method",
         "bookingRequired": "Choose the booking to link this voucher to",
         "vehicleRequired": "Choose the vehicle to link this voucher to",
-        "description": "Enter a description or reason"
+        "description": "Enter a description or reason",
+        "branchRequired": "Select the branch"
       },
       "link": {
         "label": "Linked to",
@@ -167,7 +172,10 @@
         "debt": "Outstanding"
       },
       "keepOpen": "Save and start another",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "branchHelp": "Which branch this amount belongs to. Linking a vehicle or booking takes the branch from the vehicle.",
+      "branchPlaceholder": "Select a branch",
+      "branchEmpty": "This shop has no branch yet. Create one before recording an amount that is not tied to a vehicle."
     },
     "summary": {
       "error": "Could not load the totals — the list below is still correct",

@@ -2,6 +2,8 @@ import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
+  BRANCH_SCOPED_RESOURCE,
+  BranchScoped,
   CurrentTenant,
   CurrentUser,
   RequirePermissions,
@@ -42,9 +44,10 @@ export class BookingsController {
     @CurrentTenant() tenant: TenantContext,
     @Query() query: BookingListQueryDto,
   ): Promise<BookingPageDto> {
-    return this.bookings.list(tenant.tenantId, query) as Promise<BookingPageDto>;
+    return this.bookings.list(tenant.tenantId, query, tenant.allowedBranchIds) as Promise<BookingPageDto>;
   }
 
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
   @Get(':id')
   @RequirePermissions(PERMISSION.BOOKING_VIEW)
   @SupportAction(SUPPORT_CAPABILITY.BOOKING_VIEW)
@@ -69,6 +72,7 @@ export class BookingsController {
     return this.bookings.create(tenant.tenantId, user.id, dto);
   }
 
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
   @Patch(':id')
   @RequirePermissions(PERMISSION.BOOKING_UPDATE)
   @ApiOperation({ summary: 'Sửa đơn (đổi khung giờ sẽ reschedule lịch)' })
@@ -87,6 +91,7 @@ export class BookingsController {
    * Endpoint riêng thay vì dùng `PATCH :id`: việc này cần vết audit riêng (ai đổi, từ bao nhiêu
    * sang bao nhiêu) và tổng tiền phải do server tính lại. Không có bước khách xác nhận.
    */
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
   @Patch(':id/delivery-fee')
   @RequirePermissions(PERMISSION.BOOKING_UPDATE)
   @ApiOperation({ summary: 'Cập nhật phí giao nhận của đơn (server tính lại tổng, có audit)' })
@@ -101,6 +106,7 @@ export class BookingsController {
   }
 
   /** Gán/bỏ gán tài xế (17/08) — endpoint riêng vì cần vết audit riêng (ai gán, gán ai). */
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
   @Patch(':id/driver')
   @RequirePermissions(PERMISSION.BOOKING_UPDATE)
   @ApiOperation({ summary: 'Gán/bỏ gán tài xế cho đơn (driverId null = bỏ gán, có audit)' })
@@ -114,6 +120,7 @@ export class BookingsController {
     return this.bookings.assignDriver(tenant.tenantId, id, user.id, dto.driverId);
   }
 
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
   @Post(':id/transition')
   @RequirePermissions(PERMISSION.BOOKING_UPDATE)
   @ApiOperation({

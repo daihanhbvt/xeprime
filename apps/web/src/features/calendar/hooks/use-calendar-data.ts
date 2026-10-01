@@ -2,7 +2,6 @@
 
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { useBranchScopeParams } from '@/features/branches/hooks/use-branch-scope';
 import { queryKeys } from '@/services/query-keys';
 import {
   fetchCalendarAvailability,
@@ -30,10 +29,8 @@ export function priceMarkerKey(vehicleId: string, date: string): string {
  */
 export function useCalendarData() {
   const { filters } = useCalendarFilters();
-
   const range = useMemo(() => buildRange(filters.from, filters.days), [filters.from, filters.days]);
 
-  const branchScope = useBranchScopeParams();
   const query = {
     // `buildRange` trả `Date` — mốc TUYỆT ĐỐI dựng từ ranh giới ngày giờ VN, không phải giá trị
     // ô chọn; `.toISOString()` ở đây là phép serialize đúng, không phải chỗ cần `appWallClockToIso`.
@@ -41,9 +38,9 @@ export function useCalendarData() {
     endAt: range.endAt.toISOString(),
     ...(filters.vehicleType ? { vehicleType: filters.vehicleType } : {}),
     ...(filters.q ? { q: filters.q } : {}),
-    // Bộ chọn chi nhánh ở thanh trên thu hẹp danh sách XE trên lịch (và do đó cả event của
-    // chúng). Nằm trong query key nên đổi chi nhánh là lịch tự nạp lại.
-    ...branchScope,
+    // Ô "Chi nhánh" trên thanh công cụ thu hẹp danh sách XE của lịch — và do đó cả event, ô
+    // trống và dấu giá của chúng. Nằm trong query key nên đổi chi nhánh là lịch tự nạp lại.
+    ...(filters.branchId ? { branchId: filters.branchId } : {}),
   };
 
   // `sort` CHỈ vào query của resources: đổi thứ tự hàng không có lý do gì bắt events /

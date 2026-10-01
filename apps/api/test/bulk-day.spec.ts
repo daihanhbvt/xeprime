@@ -145,7 +145,7 @@ describe('preview', () => {
   maybe('nói ra xe nào bận ngày nào, và giá niêm yết của từng xe', async () => {
     await occupyMiddleDay();
 
-    const preview = await bulk.preview(tenantId, { from: FROM, to: TO });
+    const preview = await bulk.preview(tenantId, { from: FROM, to: TO }, null);
 
     expect(preview.dayCount).toBe(3);
     const busy = preview.vehicles.find((v) => v.vehicleId === busyVehicleId);
@@ -158,12 +158,12 @@ describe('preview', () => {
   });
 
   maybe('chưa có lô nào thì công tắc TẮT', async () => {
-    const preview = await bulk.preview(tenantId, { from: FROM, to: TO });
+    const preview = await bulk.preview(tenantId, { from: FROM, to: TO }, null);
     expect(preview.activeBlockBatchId).toBeNull();
   });
 
   maybe('khoảng quá dài → 400 VALIDATION_FAILED', async () => {
-    await expect(bulk.preview(tenantId, { from: '2026-01-01', to: '2026-12-31' })).rejects.toMatchObject({
+    await expect(bulk.preview(tenantId, { from: '2026-01-01', to: '2026-12-31' }, null)).rejects.toMatchObject({
       response: { code: API_ERROR_CODE.VALIDATION_FAILED },
     });
   });
@@ -178,7 +178,7 @@ describe('khoá hàng loạt', () => {
       to: TO,
       reason: VEHICLE_BLOCK_REASON.NOT_FOR_RENT,
       vehicleIds: allVehicles(),
-    });
+    }, null);
 
     // 3 xe × 3 ngày = 9, trừ đúng 1 ngày bận.
     expect(result.blockedDays).toBe(8);
@@ -200,7 +200,7 @@ describe('khoá hàng loạt', () => {
       to: TO,
       reason: VEHICLE_BLOCK_REASON.NOT_FOR_RENT,
       vehicleIds: [freeVehicleId],
-    });
+    }, null);
 
     const rows = await prisma.vehicleBlock.findMany({
       where: { tenantId },
@@ -216,9 +216,9 @@ describe('khoá hàng loạt', () => {
       to: TO,
       reason: VEHICLE_BLOCK_REASON.NOT_FOR_RENT,
       vehicleIds: [freeVehicleId],
-    });
+    }, null);
 
-    const preview = await bulk.preview(tenantId, { from: FROM, to: TO });
+    const preview = await bulk.preview(tenantId, { from: FROM, to: TO }, null);
     expect(preview.activeBlockBatchId).toBe(result.batchId);
   });
 
@@ -228,7 +228,7 @@ describe('khoá hàng loạt', () => {
       to: TO,
       reason: VEHICLE_BLOCK_REASON.NOT_FOR_RENT,
       vehicleIds: [freeVehicleId],
-    });
+    }, null);
 
     const occupancies = await prisma.vehicleOccupancy.count({
       where: { tenantId, vehicleId: freeVehicleId },
@@ -244,9 +244,9 @@ describe('gỡ lô', () => {
       to: TO,
       reason: VEHICLE_BLOCK_REASON.NOT_FOR_RENT,
       vehicleIds: [freeVehicleId],
-    });
+    }, null);
 
-    const released = await bulk.releaseBatch(tenantId, ownerId, result.batchId);
+    const released = await bulk.releaseBatch(tenantId, ownerId, result.batchId, undefined, null);
 
     expect(released.released).toBe(3);
     expect(await prisma.vehicleBlock.count({ where: { tenantId } })).toBe(0);
@@ -283,8 +283,8 @@ describe('gỡ lô', () => {
       to: TO,
       reason: VEHICLE_BLOCK_REASON.NOT_FOR_RENT,
       vehicleIds: [freeVehicleId],
-    });
-    await bulk.releaseBatch(tenantId, ownerId, result.batchId);
+    }, null);
+    await bulk.releaseBatch(tenantId, ownerId, result.batchId, undefined, null);
 
     const survivor = await prisma.vehicleBlock.findUnique({ where: { id: manualId } });
     expect(survivor).not.toBeNull();
@@ -292,7 +292,7 @@ describe('gỡ lô', () => {
   });
 
   maybe('gỡ một lô không tồn tại là no-op, không phải lỗi', async () => {
-    expect(await bulk.releaseBatch(tenantId, ownerId, newId())).toEqual({ released: 0 });
+    expect(await bulk.releaseBatch(tenantId, ownerId, newId(), undefined, null)).toEqual({ released: 0 });
   });
 });
 
@@ -304,7 +304,7 @@ describe('đặt giá hàng loạt', () => {
       mode: BULK_PRICE_MODE.PERCENT,
       percent: 30,
       vehicleIds: allVehicles(),
-    });
+    }, null);
 
     // Xe chưa có giá gốc bị bỏ qua, không bị đặt 0đ.
     expect(result.updatedVehicles).toBe(2);
@@ -329,8 +329,8 @@ describe('đặt giá hàng loạt', () => {
       percent: 30,
       vehicleIds: [freeVehicleId],
     };
-    await bulk.priceAll(tenantId, ownerId, input);
-    await bulk.priceAll(tenantId, ownerId, input);
+    await bulk.priceAll(tenantId, ownerId, input, null);
+    await bulk.priceAll(tenantId, ownerId, input, null);
 
     const rows = await prisma.vehicleDailyPrice.findMany({
       where: { tenantId, vehicleId: freeVehicleId },
@@ -348,7 +348,7 @@ describe('đặt giá hàng loạt', () => {
       mode: BULK_PRICE_MODE.PERCENT,
       percent: 30,
       vehicleIds: [freeVehicleId],
-    });
+    }, null);
 
     const row = await prisma.vehicleDailyPrice.findFirst({
       where: { tenantId, vehicleId: freeVehicleId },
@@ -364,7 +364,7 @@ describe('đặt giá hàng loạt', () => {
       mode: BULK_PRICE_MODE.FIXED,
       fixedPrice: '900000',
       vehicleIds: allVehicles(),
-    });
+    }, null);
 
     expect(result.updatedVehicles).toBe(3);
     const rows = await prisma.vehicleDailyPrice.findMany({
@@ -381,7 +381,7 @@ describe('đặt giá hàng loạt', () => {
         to: FROM,
         mode: BULK_PRICE_MODE.PERCENT,
         vehicleIds: [freeVehicleId],
-      }),
+      }, null),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
   });
 
@@ -392,7 +392,7 @@ describe('đặt giá hàng loạt', () => {
       mode: BULK_PRICE_MODE.PERCENT,
       percent: 30,
       vehicleIds: [freeVehicleId],
-    });
+    }, null);
 
     expect(await prisma.vehicleOccupancy.count({ where: { tenantId } })).toBe(0);
   });
@@ -404,7 +404,7 @@ describe('đặt giá hàng loạt', () => {
       mode: BULK_PRICE_MODE.PERCENT,
       percent: 30,
       vehicleIds: [freeVehicleId],
-    });
+    }, null);
 
     const restored = await bulk.restorePrices(tenantId, ownerId, {
       from: FROM,
@@ -412,7 +412,7 @@ describe('đặt giá hàng loạt', () => {
       mode: BULK_PRICE_MODE.PERCENT,
       percent: 0,
       vehicleIds: [freeVehicleId],
-    });
+    }, null);
 
     expect(restored.updatedDays).toBe(3);
     expect(await prisma.vehicleDailyPrice.count({ where: { tenantId } })).toBe(0);
@@ -427,7 +427,7 @@ describe('ranh giới gian hàng', () => {
         to: FROM,
         reason: VEHICLE_BLOCK_REASON.NOT_FOR_RENT,
         vehicleIds: [newId()],
-      }),
+      }, null),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
   });
 });

@@ -128,7 +128,7 @@ async function createListableVehicle(overrides: Record<string, unknown> = {}) {
     mainImageUrl: img(1),
     images: [img(1), img(2), img(3), img(4)],
     ...overrides,
-  } as never);
+  } as never, null);
 }
 
 beforeAll(async () => {
@@ -197,7 +197,7 @@ describe('Thông số theo nguồn năng lượng', () => {
       fuelType: FUEL_TYPE.ELECTRIC,
       electricRangeKm: 420,
       batteryCapacityKwh: 60,
-    });
+    }, null);
     expect(electric.electricRangeKm).toBe(420);
     expect(Number(electric.batteryCapacityKwh)).toBe(60);
     // Lít/100km và dung tích động cơ không còn nghĩa với xe điện → server tự dọn.
@@ -216,7 +216,7 @@ describe('Thông số theo nguồn năng lượng', () => {
     const gasoline = await vehicles.update(tenantId, created.id, ownerId, {
       fuelType: FUEL_TYPE.GASOLINE,
       fuelConsumptionCombined: 8,
-    });
+    }, null);
     expect(Number(gasoline.fuelConsumptionCombined)).toBe(8);
     expect(gasoline.electricRangeKm).toBeNull();
     expect(gasoline.batteryCapacityKwh).toBeNull();
@@ -229,7 +229,7 @@ describe('Thông số theo nguồn năng lượng', () => {
     const updated = await vehicles.update(tenantId, created.id, ownerId, {
       fuelType: FUEL_TYPE.GASOLINE,
       electricRangeKm: 400,
-    });
+    }, null);
     expect(updated.electricRangeKm).toBeNull();
   });
 
@@ -253,7 +253,7 @@ describe('Thông số theo nguồn năng lượng', () => {
     const bike = await vehicles.update(tenantId, created.id, ownerId, {
       vehicleType: VEHICLE_TYPE.MOTORBIKE,
       fuelType: FUEL_TYPE.GASOLINE,
-    });
+    }, null);
 
     // Hai chiều của Ô TÔ: xe máy không có "5 chỗ" và không có "Sedan".
     expect(bike.seatCount).toBeNull();
@@ -367,7 +367,7 @@ describe('Điều kiện lên chợ', () => {
       weekdayPrice: '700000',
       mainImageUrl: img(1),
       images: [img(1), img(2), img(3), img(4)],
-    } as never);
+    } as never, null);
     await expect(
       vehicles.submitForPublicReview(draftTenantId, created.id, ownerId),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.SHOP_NOT_ACTIVE } });
@@ -383,7 +383,7 @@ describe('Điều kiện lên chợ', () => {
 
     const updated = await vehicles.update(tenantId, created.id, ownerId, {
       description: 'Chủ xe sửa mô tả.',
-    });
+    }, null);
     expect(updated.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC);
 
     // Nhưng nếu chính chủ xe gỡ xuống rồi gửi lại thì luật mới có hiệu lực.
@@ -410,7 +410,7 @@ describe('Phạm vi gian hàng', () => {
         serviceTypes: [SERVICE_TYPE.SELF_DRIVE],
         plateNumber: `51L-${String(600 + seq)}.22`,
         weekdayPrice: '700000',
-      } as never),
+      } as never, null),
     ).rejects.toThrow();
   });
 
@@ -418,7 +418,7 @@ describe('Phạm vi gian hàng', () => {
     const created = await createListableVehicle();
     await expect(vehicles.getOne(otherTenantId, created.id)).rejects.toMatchObject({ status: 404 });
     await expect(
-      vehicles.update(otherTenantId, created.id, otherOwnerId, { name: 'Đổi trộm' }),
+      vehicles.update(otherTenantId, created.id, otherOwnerId, { name: 'Đổi trộm' }, null),
     ).rejects.toMatchObject({ status: 404 });
   });
 });

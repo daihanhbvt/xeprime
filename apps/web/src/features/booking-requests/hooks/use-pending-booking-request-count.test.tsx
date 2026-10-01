@@ -6,10 +6,9 @@ import type { ReactNode } from 'react';
 /**
  * Huy hiệu "Đơn thuê" phải nhảy cùng lúc với chuông, không đợi hết nhịp một phút.
  *
- * Con số này CỐ Ý không nằm trong bản chiếu huy hiệu: nó bị thu hẹp theo chi nhánh đang chọn, một
- * trạng thái chỉ tồn tại ở client (ADR 0034 điều 2), nên một con số toàn tài khoản sẽ nói khác
- * danh sách mà người dùng mở ra. Bản chiếu vì vậy chỉ làm TÍN HIỆU — còn con số vẫn đến từ query
- * đúng scope. Bài test này khoá đúng ranh giới đó.
+ * Con số này đếm TOÀN GIAN HÀNG (ADR 0052): huy hiệu sống ở vỏ trang và hiện ở mọi màn, kể cả
+ * những màn không có ô lọc chi nhánh nào — buộc nó theo một chi nhánh nghĩa là con số trên menu
+ * đổi theo trang người dùng đang đứng, mà không trang nào giải thích vì sao.
  *
  * Việc NGHE tín hiệu đã chuyển lên `BadgeRealtimeProvider` (`notification-refresh.ts`): nhánh
  * `bookingRequests` là một trong những nhánh nó làm mới, nên con số này tự nhảy theo mà không
@@ -27,9 +26,6 @@ const badges = vi.hoisted(() => ({
 
 vi.mock('../api', () => requestsApi);
 vi.mock('@/features/badges/BadgeRealtimeProvider', () => ({ useBadgeRealtime: () => badges }));
-vi.mock('@/features/branches/hooks/use-branch-scope', () => ({
-  useBranchScopeParams: () => ({}),
-}));
 
 import { refreshNotificationAffected } from '@/features/badges/notification-refresh';
 import { usePendingBookingRequestCount } from './use-pending-booking-request-count';

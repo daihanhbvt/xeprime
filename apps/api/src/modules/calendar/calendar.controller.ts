@@ -34,6 +34,7 @@ import {
   CheckConflictDto,
   CheckConflictResultDto,
 } from './dto/calendar.dto';
+import { resolveBranchScope, vehicleBranchWhere } from '../../common/dto/branch-scope';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 /** Asia/Ho_Chi_Minh = UTC+7 cố định (không DST) — đủ để gán nhãn ngày local. */
@@ -47,13 +48,16 @@ function localDayKey(rangeStart: Date, dayIndex: number): string {
 }
 
 /** Điều kiện lọc xe dùng CHUNG cho resources / availability / daily-prices — không được lệch nhau. */
-function vehicleWhere(tenantId: string, query: CalendarRangeQueryDto): Prisma.VehicleWhereInput {
+function vehicleWhere(
+  tenant: TenantContext,
+  query: CalendarRangeQueryDto,
+): Prisma.VehicleWhereInput {
   return {
-    tenantId,
+    tenantId: tenant.tenantId,
     deletedAt: null,
     ...(query.vehicleType ? { vehicleType: query.vehicleType } : {}),
     // Lịch theo chi nhánh: chỉ thu hẹp danh sách xe, `tenantId` vẫn là ranh giới thật.
-    ...(query.branchId ? { branchId: query.branchId } : {}),
+    branchId: resolveBranchScope(query.branchId, tenant.allowedBranchIds),
     ...(query.q
       ? {
           OR: [
@@ -86,7 +90,7 @@ export class CalendarController {
     @Query() query: CalendarRangeQueryDto,
   ): Promise<CalendarResourceDto[]> {
     const vehicles = await this.prisma.vehicle.findMany({
-      where: vehicleWhere(tenant.tenantId, query),
+      where: vehicleWhere(tenant, query),
       // Chỉ những gì cột xe cần — KHÔNG kéo cả hồ sơ xe cho từng hàng lịch.
       select: {
         id: true,
@@ -264,7 +268,7 @@ export class CalendarController {
     );
 
     const vehicles = await this.prisma.vehicle.findMany({
-      where: vehicleWhere(tenant.tenantId, query),
+      where: vehicleWhere(tenant, query),
       select: { id: true },
     });
     const vehicleIds = vehicles.map((v) => v.id);
@@ -335,7 +339,7 @@ export class CalendarController {
         tenantId: tenant.tenantId,
         date: { gte: from, lte: to },
         // Cùng bộ lọc xe với resources — dấu giá không hiện cho hàng không tồn tại.
-        vehicle: vehicleWhere(tenant.tenantId, query),
+        vehicle: vehicleWhere(tenant, query),
       },
       select: { vehicleId: true, date: true, dailyPrice: true, hourlyPrice: true },
     });
@@ -353,6 +357,11 @@ export class CalendarController {
    *
    * ADR 0006: occupancies là nguồn sự thật của "xe bận lúc nào" — nó gộp cả đơn thuê,
    * khoá xe và bảo dưỡng. Đọc từ `bookings` sẽ vẽ thiếu lịch bảo dưỡng lên màn hình.
+   *
+   * Lọc chi nhánh đi qua QUAN HỆ xe (`vehicle.branchId`) vì `vehicle_occupancies` không mang
+   * cột chi nhánh — `vehicles` là bảng DUY NHẤT có nó. Phải có mặt ở đây chứ không chỉ ở
+   * `resources`: lưới chỉ vẽ event của những hàng nó đang hiện, nên thiếu bộ lọc này thì màn
+   * hình trông vẫn đúng trong khi phản hồi mang theo cả lịch — và TÊN KHÁCH — của chi nhánh khác.
    */
   @Get('events')
   @RequirePermissions(PERMISSION.CALENDAR_VIEW)
@@ -371,6 +380,8 @@ export class CalendarController {
         // kéo dài vắt qua biên.
         startAt: { lt: query.endAt },
         endAt: { gt: query.startAt },
+        // Thu hẹp theo chi nhánh; `tenantId` ở trên vẫn là ranh giới thật.
+        ...vehicleBranchWhere(resolveBranchScope(query.branchId, tenant.allowedBranchIds)),
       },
       select: {
         id: true,

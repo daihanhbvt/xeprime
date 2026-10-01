@@ -2,6 +2,8 @@ import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/commo
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PERMISSION } from '@xeprime/types';
 import {
+  BRANCH_SCOPED_RESOURCE,
+  BranchScoped,
   CurrentTenant,
   CurrentUser,
   RequirePermissions,
@@ -29,6 +31,7 @@ import { SettlementService } from './settlement.service';
  * `tenantId`/`userId` luôn từ scope, không nhận từ client (CLAUDE.md mục 5).
  */
 @ApiTags('booking-settlement')
+@BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
 @Controller('bookings/:id')
 @TenantScoped()
 export class BookingSettlementController {

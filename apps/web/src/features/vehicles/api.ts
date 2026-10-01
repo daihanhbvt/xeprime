@@ -104,9 +104,12 @@ export function fetchVehicleAlerts(ids: string[]): Promise<VehicleAlertGroup[]> 
   return apiGet<VehicleAlertGroup[]>('/vehicles/alerts', { ids: ids.join(',') });
 }
 
-/** Đếm đội xe theo trạng thái vận hành — nói về CẢ đội xe, không theo trang/bộ lọc. */
-export const fetchFleetSummary = (): Promise<FleetSummary> =>
-  apiGet<FleetSummary>('/vehicles/fleet-summary');
+/**
+ * Đếm đội xe theo trạng thái vận hành — nói về cả đội xe của phạm vi đang xem, không theo trang
+ * và không theo ô lọc trạng thái. Chỉ nhận `branchId`, xem `useFleetSummary`.
+ */
+export const fetchFleetSummary = (params: QueryParams = {}): Promise<FleetSummary> =>
+  apiGet<FleetSummary>('/vehicles/fleet-summary', params);
 
 /**
  * Tổng hợp Hồ sơ 360 của một xe — MỘT request cho chỉ số + đơn sắp tới + hoạt động gần đây.

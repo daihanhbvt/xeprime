@@ -91,6 +91,8 @@ export const API_ERROR_CODE = {
    */
   /** Token không tồn tại, đã dùng, đã bị thu hồi, hoặc đã bị chính người nhận từ chối. */
   INVITE_INVALID: 'INVITE_INVALID',
+  /** Lời mời giới hạn chi nhánh nhưng mọi chi nhánh trong đó đã bị xoá/ngừng (ADR 0052). */
+  INVITE_SCOPE_STALE: 'INVITE_SCOPE_STALE',
   /** Còn đúng nhưng quá `expires_at`. Việc cần làm là xin gian hàng gửi lại, không phải thử lại. */
   INVITE_EXPIRED: 'INVITE_EXPIRED',
   /**
@@ -644,6 +646,14 @@ export const API_ERROR_CODE = {
    * `details.roleKey` để giao diện nói đúng "bạn đang là quản lý" thay vì một câu 403 chung.
    */
   SHOP_OWNER_ONLY: 'SHOP_OWNER_ONLY',
+
+  /**
+   * Người bị GIỚI HẠN chi nhánh (ADR 0052) đang cấp — hoặc sửa — một phạm vi RỘNG hơn của chính
+   * mình: mời ai đó với "Tất cả chi nhánh", giao một chi nhánh mình không phụ trách, hay chạm
+   * vào một thành viên đang phụ trách chi nhánh nằm ngoài phần của mình. Không có trần này thì
+   * một quản lý chi nhánh A chỉ cần mời email thứ hai của chính họ là có toàn gian hàng.
+   */
+  BRANCH_SCOPE_EXCEEDED: 'BRANCH_SCOPE_EXCEEDED',
 
   /**
    * Tài khoản thuộc gian hàng TUYẾN GÓI không gửi được yêu cầu thuê (15/09/2026).

@@ -17,6 +17,7 @@ import type {
   FinanceCategory,
   FinanceSummary,
   Receipt,
+  ReceiptPageMeta,
   ReceiptDetail,
   ReceiptFilters,
   ReceiptBookingOption,
@@ -30,7 +31,11 @@ import type {
   VehicleProfit,
 } from './types';
 
-export type ReceiptListResult = Paged<Receipt>;
+/**
+ * Trang sổ thu chi mang thêm `unassignedCount` — số khoản chi CHUNG bị bỏ lại khi lọc chi nhánh
+ * (ADR 0052 điều 3). Không khai kiểu ở đây thì giao diện không nói ra được con số đó.
+ */
+export type ReceiptListResult = Paged<Receipt, ReceiptPageMeta>;
 
 export function filtersToParams(filters: ReceiptFilters): QueryParams {
   return {
@@ -43,6 +48,7 @@ export function filtersToParams(filters: ReceiptFilters): QueryParams {
     bookingId: filters.bookingId ?? null,
     vehicleId: filters.vehicleId ?? null,
     tenantCustomerId: filters.tenantCustomerId ?? null,
+    branchId: filters.branchId ?? null,
     q: filters.q ?? null,
     from: filters.from ?? null,
     to: filters.to ?? null,
@@ -63,7 +69,7 @@ export function summaryParams(filters: ReceiptFilters): QueryParams {
 }
 
 export const fetchReceipts = (filters: ReceiptFilters): Promise<ReceiptListResult> =>
-  fetchPage<Receipt>('/receipts', filtersToParams(filters), RECEIPTS_DEFAULT_LIMIT);
+  fetchPage<Receipt, ReceiptPageMeta>('/receipts', filtersToParams(filters), RECEIPTS_DEFAULT_LIMIT);
 
 export const fetchReceipt = (id: string): Promise<ReceiptDetail> =>
   apiGet<ReceiptDetail>(`/receipts/${id}`);
@@ -116,6 +122,7 @@ export function debtFiltersToParams(filters: DebtFilters): QueryParams {
   return {
     q: filters.q ?? null,
     filter: filters.filter ?? null,
+    branchId: filters.branchId ?? null,
     page: filters.page ?? 1,
     limit: filters.limit ?? RECEIPTS_DEFAULT_LIMIT,
   };
@@ -149,6 +156,7 @@ export function overviewRangeParams(
     // một object, nếu không hồ sơ xe A sẽ đọc trúng cache của xe B.
     vehicleId: scope.vehicleId ?? null,
     tenantCustomerId: scope.tenantCustomerId ?? null,
+    branchId: filters.branchId ?? null,
   };
 }
 
@@ -197,6 +205,7 @@ export function customerRevenueParams(filters: FinanceOverviewFilters): QueryPar
   return {
     from: filters.from ?? null,
     to: filters.to ?? null,
+    branchId: filters.branchId ?? null,
     sort: filters.customerSort ?? null,
     page: filters.customerPage ?? 1,
     limit: filters.customerLimit ?? RECEIPTS_DEFAULT_LIMIT,

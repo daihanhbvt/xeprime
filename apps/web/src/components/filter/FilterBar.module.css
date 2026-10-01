@@ -97,6 +97,16 @@
   border-radius: var(--xp-border-radius-sm);
 }
 
+/*
+ * Panel xổ xuống của bộ lọc có nhãn dài (`wideDropdown`).
+ *
+ * `popupMatchSelectWidth={false}` cho nó rộng theo nội dung; trần ở đây để trên màn hình hẹp nó
+ * không chạy ra khỏi mép — hết chỗ thì cắt bằng `…` ở cuối, vẫn hơn hẳn việc cắt mọi mục ở 170px.
+ */
+.widePopup {
+  max-width: min(360px, calc(100vw - 32px));
+}
+
 .range {
   flex: 0 0 auto;
 }

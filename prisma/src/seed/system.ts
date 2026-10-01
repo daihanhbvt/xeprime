@@ -111,6 +111,14 @@ const SYSTEM_FINANCE_CATEGORIES: ReadonlyArray<{
   type: string;
   name: string;
   systemKey?: SystemFinanceCategoryKey;
+  /**
+   * Khoản này luôn thuộc về MỘT CHIẾC XE cụ thể (ADR 0052) — form bắt buộc chọn xe.
+   *
+   * Vì sao cần: đo trên dữ liệu thật, phiếu "Đổ xăng", "Rửa xe", "Phí quá giờ" nhập tay thường
+   * bị bỏ trống ô Xe. Chúng rơi khỏi báo cáo hiệu quả theo xe và trôi vào nhóm "chung" cùng với
+   * tiền thuê mặt bằng — hai thứ khác hẳn nhau nằm chung một rổ thì không ai sửa được nữa.
+   */
+  requiresVehicle?: true;
 }> = [
   { type: FINANCE_CATEGORY_TYPE.INCOME, name: 'Tiền thuê xe' },
   {
@@ -123,9 +131,9 @@ const SYSTEM_FINANCE_CATEGORIES: ReadonlyArray<{
     name: 'Thanh toán đơn',
     systemKey: SYSTEM_FINANCE_CATEGORY.BOOKING_PAYMENT,
   },
-  { type: FINANCE_CATEGORY_TYPE.INCOME, name: 'Phí quá giờ' },
-  { type: FINANCE_CATEGORY_TYPE.INCOME, name: 'Phí đền bù va quẹt' },
-  { type: FINANCE_CATEGORY_TYPE.INCOME, name: 'Phí phạt nguội' },
+  { type: FINANCE_CATEGORY_TYPE.INCOME, name: 'Phí quá giờ', requiresVehicle: true },
+  { type: FINANCE_CATEGORY_TYPE.INCOME, name: 'Phí đền bù va quẹt', requiresVehicle: true },
+  { type: FINANCE_CATEGORY_TYPE.INCOME, name: 'Phí phạt nguội', requiresVehicle: true },
   { type: FINANCE_CATEGORY_TYPE.INCOME, name: 'Thu khác' },
 
   {
@@ -137,16 +145,18 @@ const SYSTEM_FINANCE_CATEGORIES: ReadonlyArray<{
     type: FINANCE_CATEGORY_TYPE.EXPENSE,
     name: 'Bảo dưỡng/Thay nhớt',
     systemKey: SYSTEM_FINANCE_CATEGORY.MAINTENANCE,
+    requiresVehicle: true,
   },
   {
     type: FINANCE_CATEGORY_TYPE.EXPENSE,
     name: 'Sửa chữa sự cố',
     systemKey: SYSTEM_FINANCE_CATEGORY.REPAIR,
+    requiresVehicle: true,
   },
-  { type: FINANCE_CATEGORY_TYPE.EXPENSE, name: 'Mua bảo hiểm' },
-  { type: FINANCE_CATEGORY_TYPE.EXPENSE, name: 'Rửa xe' },
-  { type: FINANCE_CATEGORY_TYPE.EXPENSE, name: 'Giao/nhận xe' },
-  { type: FINANCE_CATEGORY_TYPE.EXPENSE, name: 'Đổ xăng' },
+  { type: FINANCE_CATEGORY_TYPE.EXPENSE, name: 'Mua bảo hiểm', requiresVehicle: true },
+  { type: FINANCE_CATEGORY_TYPE.EXPENSE, name: 'Rửa xe', requiresVehicle: true },
+  { type: FINANCE_CATEGORY_TYPE.EXPENSE, name: 'Giao/nhận xe', requiresVehicle: true },
+  { type: FINANCE_CATEGORY_TYPE.EXPENSE, name: 'Đổ xăng', requiresVehicle: true },
   { type: FINANCE_CATEGORY_TYPE.EXPENSE, name: 'Chi phí vận hành' },
   { type: FINANCE_CATEGORY_TYPE.EXPENSE, name: 'Chi phí marketing' },
   { type: FINANCE_CATEGORY_TYPE.EXPENSE, name: 'Chi phí văn phòng' },
@@ -163,7 +173,7 @@ async function seedFinanceCategories(): Promise<FinanceCategoryIds> {
       where: cat.systemKey
         ? { OR: [{ systemKey: cat.systemKey }, { tenantId: null, type: cat.type, name: cat.name }] }
         : { tenantId: null, type: cat.type, name: cat.name },
-      select: { id: true, systemKey: true },
+      select: { id: true, systemKey: true, requiresVehicle: true },
     });
 
     if (!existing) {
@@ -176,17 +186,21 @@ async function seedFinanceCategories(): Promise<FinanceCategoryIds> {
           name: cat.name,
           isSystem: true,
           systemKey: cat.systemKey ?? null,
+          requiresVehicle: cat.requiresVehicle ?? false,
         },
       });
       byName.set(cat.name, id);
       continue;
     }
 
-    if (cat.systemKey && existing.systemKey !== cat.systemKey) {
-      await prisma.financeCategory.update({
-        where: { id: existing.id },
-        data: { systemKey: cat.systemKey },
-      });
+    // Hội tụ cả hai cờ: hàng đã có từ đợt seed trước chưa biết tới `requiresVehicle`.
+    const wantsVehicle = cat.requiresVehicle ?? false;
+    const patch = {
+      ...(cat.systemKey && existing.systemKey !== cat.systemKey ? { systemKey: cat.systemKey } : {}),
+      ...(existing.requiresVehicle !== wantsVehicle ? { requiresVehicle: wantsVehicle } : {}),
+    };
+    if (Object.keys(patch).length > 0) {
+      await prisma.financeCategory.update({ where: { id: existing.id }, data: patch });
     }
     byName.set(cat.name, existing.id);
   }

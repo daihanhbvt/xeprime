@@ -60,6 +60,8 @@ function tenantCtx(
     onboardingState,
     roleKey,
     permissions: [],
+    // `null` = toàn gian hàng — bộ này không kiểm phạm vi chi nhánh (ADR 0052).
+    allowedBranchIds: null,
     features: features(),
     usedFeatures: [],
     planCode: 'free',

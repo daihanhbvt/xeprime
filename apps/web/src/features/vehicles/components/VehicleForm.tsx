@@ -3,6 +3,7 @@
 import { Alert, Button, Form } from 'antd';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
+import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
   PUBLISH_REQUIREMENT,
@@ -160,14 +161,23 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
   const [confirmCancel, setConfirmCancel] = useState(false);
 
   /**
-   * Chi nhánh: chọn sẵn cái MẶC ĐỊNH để thao tác vẫn một bước như trước, nhưng vẫn là một trường
+   * Chi nhánh: điền sẵn một giá trị để thao tác vẫn một bước như trước, nhưng vẫn là một trường
    * thật trên form — người dùng thấy xe sẽ nằm ở đâu và đổi được ngay tại đây.
    *
+   * Thứ tự ưu tiên, và lý do:
+   *  1. `?branchId=` trên URL — người dùng bấm "Thêm xe" khi đang lọc một chi nhánh, nên đó là
+   *     chi nhánh họ có ý định. Trước ADR 0052 bước này không tồn tại: form luôn nhảy về chi
+   *     nhánh MẶC ĐỊNH, nên lưu xong xe biến mất khỏi đúng danh sách vừa mở.
+   *  2. Chi nhánh mặc định của gian hàng — trường hợp vào thẳng form, không qua bộ lọc nào.
+   *
    * Chỉ điền khi ô còn trống: người dùng đã chọn tay rồi thì dữ liệu tới muộn không được ghi đè.
+   * Giá trị lạ trên URL (chi nhánh của gian hàng khác, chi nhánh đã ngừng) không nằm trong danh
+   * sách chọn được nên rơi về nhánh (2) — không có đường nào để một id bịa lọt vào form.
    */
   const branches = useActiveBranches();
   const branchId = useWatch({ control, name: 'branchId' });
   const noProvince = tBranches('labels.noProvince');
+  const intendedBranchId = useSearchParams().get('branchId');
   const branchOptions = useMemo(
     () =>
       (branches.data?.items ?? []).map((b) => ({ value: b.id, label: branchLabel(b, noProvince) })),
@@ -175,10 +185,12 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
   );
   useEffect(() => {
     if (branchId) return;
+    const items = branches.data?.items;
+    if (!items) return;
     const preferred =
-      branches.data?.items.find((b) => b.isDefault) ?? branches.data?.items[0] ?? null;
+      items.find((b) => b.id === intendedBranchId) ?? items.find((b) => b.isDefault) ?? items[0] ?? null;
     if (preferred) setValue('branchId', preferred.id, { shouldValidate: true });
-  }, [branchId, branches.data, setValue]);
+  }, [branchId, branches.data, intendedBranchId, setValue]);
 
   useEffect(() => {
     const beforeUnload = (event: BeforeUnloadEvent) => {

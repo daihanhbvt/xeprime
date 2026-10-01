@@ -15,7 +15,7 @@ const PANEL_LIMIT = 6;
  * query key không đổi mỗi render — tránh refetch vô hạn. Mỗi ô là một truy vấn `/bookings`
  * có phân trang, không kéo cả bảng.
  */
-export function useDashboardBookings() {
+export function useDashboardBookings(branchId?: string) {
   const bounds = useMemo(() => {
     // "Hết hôm nay" / "3 ngày tới" là ranh giới NGÀY VIỆT NAM, không phải ngày của máy đang
     // mở dashboard — nếu không, cùng một đơn lúc thì nằm trong ô "trả hôm nay" lúc thì không.
@@ -29,8 +29,8 @@ export function useDashboardBookings() {
 
   const useList = (filters: BookingFilters) =>
     useQuery({
-      queryKey: queryKeys.bookings.list(filtersToParams(filters)),
-      queryFn: () => fetchBookings(filters),
+      queryKey: queryKeys.bookings.list(filtersToParams({ ...filters, branchId })),
+      queryFn: () => fetchBookings({ ...filters, branchId }),
       staleTime: 60_000,
     });
 

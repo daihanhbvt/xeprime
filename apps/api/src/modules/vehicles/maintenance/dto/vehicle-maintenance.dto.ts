@@ -23,6 +23,7 @@ import {
   Min,
 } from 'class-validator';
 import { PaginationMetaDto } from '../../../../common/dto/api-response.dto';
+import { BranchIdQuery } from '../../../../common/dto/branch-scope';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
@@ -391,6 +392,19 @@ export class MaintenanceBoardSummaryDto {
   missingReturnKm!: number;
 }
 
+/**
+ * Phạm vi của dải đếm theo nhóm việc.
+ *
+ * Chỉ nhận chi nhánh: con số trên mỗi tab cố ý ĐỘC LẬP với nhóm việc và trang đang mở (đứng ở
+ * "Quá hạn" vẫn phải thấy "Sắp hạn" có bao nhiêu). Nhưng chi nhánh thì không phải một tab — nó
+ * quyết định đội xe nào đang được đếm, nên phải đi cùng bảng bên dưới.
+ */
+export class MaintenanceBoardSummaryQueryDto {
+  /** CÙNG giá trị với `branchId` của `MaintenanceBoardQueryDto` — lệch là tab nói khác bảng. */
+  @BranchIdQuery()
+  branchId?: string;
+}
+
 export class MaintenanceBoardQueryDto {
   @ApiPropertyOptional({ enum: MAINTENANCE_BOARD_FILTER_VALUES })
   @IsOptional()
@@ -407,6 +421,10 @@ export class MaintenanceBoardQueryDto {
   @IsOptional()
   @IsIn(MAINTENANCE_TYPE_VALUES)
   type?: string;
+
+  /** Lọc theo chi nhánh giữ xe — dòng dữ liệu ở đây là XE, nên chi nhánh đọc thẳng `vehicles`. */
+  @BranchIdQuery()
+  branchId?: string;
 
   @ApiPropertyOptional({ description: 'ISO — lịch từ ngày' })
   @IsOptional()

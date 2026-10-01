@@ -3,7 +3,6 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import type { PaginationMeta } from '@xeprime/types';
 import { useMemo } from 'react';
-import { useBranchScopeParams } from '@/features/branches/hooks/use-branch-scope';
 import { fetchPage } from '@/services/api-client';
 import { queryKeys } from '@/services/query-keys';
 import type { VehicleListItem } from '../types';
@@ -26,12 +25,16 @@ interface VehiclesPage {
  *
  * Cùng hình thái với `useInfinitePublicListings` của `/search` (khử trùng id, tách lỗi trang
  * đầu ↔ trang kế, guard chống gọi trùng) — một cách làm cho cả hai bề mặt tải-dần.
+ *
+ * `branchId` là THAM SỐ chứ không phải thứ hook tự đi đọc (ADR 0052). Nơi gọi duy nhất là bộ
+ * chọn xe khi tạo đơn, và ở đó chi nhánh là một GỢI Ý mở được: mặc định lấy chi nhánh màn hình
+ * đang lọc, nhưng nhân viên vẫn phải điều được một chiếc xe từ chi nhánh khác sang cho khách —
+ * khoá cứng chỉ khiến họ đóng hộp thoại, đổi bộ lọc, rồi mở lại.
  */
-export function useInfiniteVehicles(q: string) {
-  const branchScope = useBranchScopeParams();
-  const serialized = JSON.stringify({ q, ...branchScope });
+export function useInfiniteVehicles(q: string, branchId?: string | null) {
+  const serialized = JSON.stringify({ q, branchId: branchId ?? null });
   const baseParams = useMemo(
-    () => ({ q: q || null, ...branchScope, limit: PAGE_SIZE }),
+    () => ({ q: q || null, branchId: branchId ?? null, limit: PAGE_SIZE }),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- serialized đại diện trọn bộ tham số
     [serialized],
   );

@@ -35,21 +35,21 @@ export interface DashboardMoney {
  * vấn KHÔNG chạy, thay vì chạy rồi nuốt 403. `enabled` là chỗ duy nhất quyết định điều đó, nên
  * không có đường nào để một thẻ tiền hiện lên với dữ liệu rỗng mà trông như "chưa có doanh thu".
  */
-export function useDashboardMoney(): DashboardMoney {
+export function useDashboardMoney(branchId?: string): DashboardMoney {
   const finance = useFeature(PLAN_FEATURE.FINANCE);
   const { has } = usePermissions();
   const visible = finance.isVisible && has(PERMISSION.FINANCE_VIEW);
 
   const summary = useQuery({
-    queryKey: queryKeys.finance.summary(dashboardFinanceSummaryParams()),
-    queryFn: fetchDashboardFinanceSummary,
+    queryKey: queryKeys.finance.summary(dashboardFinanceSummaryParams(branchId)),
+    queryFn: () => fetchDashboardFinanceSummary(branchId),
     enabled: visible,
     staleTime: 60_000,
   });
 
   const todayReceipts = useQuery({
-    queryKey: queryKeys.receipts.list(dashboardTodayReceiptParams()),
-    queryFn: fetchDashboardTodayReceipts,
+    queryKey: queryKeys.receipts.list(dashboardTodayReceiptParams(branchId)),
+    queryFn: () => fetchDashboardTodayReceipts(branchId),
     enabled: visible,
     staleTime: 60_000,
   });

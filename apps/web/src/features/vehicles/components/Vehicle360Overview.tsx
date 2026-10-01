@@ -54,6 +54,7 @@ import { toAppTz } from '@/lib/datetime';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useBranchCrumb } from '@/features/branches/hooks/use-branch-return';
 import { vehicleSchedulePath } from '../calendar-link';
 import { usePublicationLabels } from '../hooks/use-publication-labels';
 import { useVehicleAlertView } from '../hooks/use-vehicle-alert-view';
@@ -184,17 +185,30 @@ export function Vehicle360Overview({
             children: (
               <div className={`${styles.stack} ${styles.overviewPane}`}>
                 {/*
-                  "Việc cần làm" chỉ ở cổng quản lý (30/09/2026). Chủ xe tuyến hoa hồng tạo xe qua
-                  wizard đã bắt buộc đủ điều kiện lên chợ, nên với họ khối này không còn việc gì.
+                  "Việc cần làm" hiện ở CẢ HAI khu (01/10/2026).
+
+                  Bản trước chặn khối này bằng `isManage` với lý do "chủ xe tuyến hoa hồng tạo xe
+                  qua wizard đã bắt buộc đủ điều kiện lên chợ, nên không còn việc gì". Lý do đó
+                  sai, và nó khoá chủ xe ra khỏi đường duy nhất để gửi duyệt:
+
+                  - Xe bị trả về `needs_revision`/`rejected` — chủ xe sửa xong thì nút "Gửi duyệt
+                    lại" chỉ sống trong khối này, nên họ sửa rồi ngồi đó, xe không bao giờ quay
+                    lại hàng đợi.
+                  - Xe NHÁP tạo từ app native chưa từng đi qua wizard web, nên chưa từng có lượt
+                    gửi duyệt nào.
+                  - Chính wizard cũng có nhánh gửi duyệt THẤT BẠI (`submitForReview && !partialError`
+                    ở `list-vehicle/hooks.ts`): lưu được xe mà không gửi được phiếu, xe nằm lại ở
+                    nháp — đúng trạng thái mà lập luận trên cho là không tồn tại.
+
+                  `VehiclePublicationTaskItem` đã dựng đường dẫn theo KHU qua `useWorkspace()`, và
+                  danh sách cảnh báo đã lọc theo năng lực, nên khối này an toàn ở cả hai nơi.
                 */}
-                {isManage ? (
-                  <TodoCard
-                    vehicle={vehicle}
-                    summary={summary}
-                    loading={summaryLoading}
-                    failed={summaryFailed}
-                  />
-                ) : null}
+                <TodoCard
+                  vehicle={vehicle}
+                  summary={summary}
+                  loading={summaryLoading}
+                  failed={summaryFailed}
+                />
                 <div className={isManage ? styles.grid3 : styles.columns}>
                   <div className={styles.column}>
                     <DocumentsCard vehicleId={vehicle.id} summary={summary} />
@@ -832,6 +846,8 @@ function ModuleLinks({
   canEdit: boolean;
 }) {
   const t = useTranslations('Vehicles.overview.links');
+  // Link "Xem lịch" giữ chi nhánh đang lọc (ADR 0052).
+  const branchCrumb = useBranchCrumb();
   const { has } = usePermissions();
   const { paths, vehicles: vehiclePaths, isManage } = useWorkspace();
   const can = useVehicleCapabilities();
@@ -884,7 +900,7 @@ function ModuleLinks({
   if (has(PERMISSION.CALENDAR_VIEW)) {
     // Cùng helper với nút "Xem lịch" và thẻ ở danh sách — một đường dẫn lịch duy nhất.
     links.push({
-      href: vehicleSchedulePath(vehicle, { basePath: paths.calendar }),
+      href: vehicleSchedulePath(vehicle, { basePath: paths.calendar, branchId: branchCrumb }),
       label: t('calendar'),
     });
   }

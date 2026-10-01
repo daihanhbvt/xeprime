@@ -35,6 +35,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
+import { BranchIdQuery } from '../../../common/dto/branch-scope';
 import { VehicleAlertDto } from './vehicle-alert.dto';
 
 /** Cách sắp xếp danh sách xe của gian hàng. */
@@ -88,16 +89,8 @@ export class VehicleListQueryDto {
   @IsIn(VEHICLE_PUBLIC_STATUS_VALUES)
   publicStatus?: string;
 
-  /**
-   * Lọc theo chi nhánh — nguồn của bộ chọn "Tất cả chi nhánh" ở thanh trên.
-   *
-   * KHÔNG phải cơ chế phân quyền: `tenantId` vẫn quyết định phạm vi, `branchId` chỉ thu hẹp
-   * thêm. Chi nhánh của gian hàng khác lọt vào đây cũng chỉ ra danh sách rỗng.
-   */
-  @ApiPropertyOptional({ description: 'Id chi nhánh — chỉ thu hẹp trong gian hàng hiện tại' })
-  @IsOptional()
-  @IsString()
-  @Length(26, 26)
+  /** Lọc theo chi nhánh — ô "Chi nhánh" trong thanh bộ lọc của chính màn Danh sách xe. */
+  @BranchIdQuery()
   branchId?: string;
 
   @ApiPropertyOptional({ enum: VEHICLE_SORT, default: 'newest' })
@@ -872,9 +865,27 @@ export class VehicleStatsQueryDto {
 }
 
 /**
+ * Phạm vi của dải chỉ số đội xe.
+ *
+ * CHỈ có chi nhánh, cố ý không nhận `q`/`operationStatus`/`publicStatus`: dải này trả lời "đội xe
+ * đang ở tình trạng nào", nên nó phải ĐỘC LẬP với trang và bộ lọc hiện tại — đếm theo
+ * `operationStatus` rồi lại lọc theo chính nó thì mọi ô khác bằng 0.
+ *
+ * Chi nhánh là ngoại lệ vì nó không phải một bộ lọc trong đội xe, nó ĐỊNH NGHĨA đội xe đang xem:
+ * dải ghi "40 xe" trong khi bảng ngay bên dưới hiện 4 dòng là hai câu trả lời cho cùng một
+ * câu hỏi trên cùng một màn hình.
+ */
+export class FleetSummaryQueryDto {
+  /** Lọc theo chi nhánh — CÙNG giá trị với ô "Chi nhánh" của danh sách xe bên dưới. */
+  @BranchIdQuery()
+  branchId?: string;
+}
+
+/**
  * Tổng quan đội xe theo trạng thái vận hành — dải chỉ số đầu danh sách xe (Figma `236:4648`).
  *
- * Đếm ở DB (`groupBy`), không phụ thuộc trang/bộ lọc hiện tại: con số nói về CẢ đội xe.
+ * Đếm ở DB (`groupBy`), không phụ thuộc trang/bộ lọc hiện tại: con số nói về cả đội xe của
+ * PHẠM VI đang xem (toàn gian hàng, hoặc một chi nhánh — xem `FleetSummaryQueryDto`).
  */
 export class FleetSummaryDto {
   @ApiProperty({ description: 'Tổng số xe của gian hàng (không tính xe đã xoá mềm)' })

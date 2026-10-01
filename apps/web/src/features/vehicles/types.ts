@@ -26,7 +26,7 @@ export interface VehicleFilters {
   serviceType?: string;
   operationStatus?: string;
   publicStatus?: string;
-  /** Chi nhánh giữ xe — ghép từ bộ chọn ở thanh trên, không phải một ô lọc riêng trên trang. */
+  /** Chi nhánh giữ xe — ô "Chi nhánh" trong thanh bộ lọc của trang, sống trên URL (ADR 0052). */
   branchId?: string;
   sort?: VehicleSort;
   page?: number;

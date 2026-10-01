@@ -7,6 +7,8 @@ import { useTranslations } from 'next-intl';
 import { PERMISSION, SERVICE_TYPE_VALUES } from '@xeprime/types';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { FilterBar, type FilterField, type FilterValues } from '@/components/filter/FilterBar';
+import { ALL_FILTER } from '@/constants/filters';
+import { useBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { ROUTES } from '@/constants/routes';
@@ -65,6 +67,10 @@ export function BookingRequestsView() {
 
   const { filters, setFilters, activeTab, selectTab, hasFilters, clearFilters } =
     useBookingRequestFilters();
+  const branch = useBranchFilter({
+    value: filters.branchId,
+    onChange: (branchId) => setFilters({ branchId }),
+  });
   const { data, isError, isFetching, refetch } = useBookingRequests(filters);
 
   /*
@@ -144,6 +150,9 @@ export function BookingRequestsView() {
         label: t('filters.searchLabel'),
         placeholder: t('filters.searchPlaceholder'),
       },
+      // Backend áp chi nhánh cho CẢ `meta.statusCounts`, nên con số trên ba tab đổi theo ô này —
+      // tab và danh sách bên dưới không bao giờ nói hai phạm vi khác nhau.
+      ...(branch.field ? [branch.field] : []),
       {
         kind: 'select',
         key: 'serviceType',
@@ -154,7 +163,7 @@ export function BookingRequestsView() {
         })),
       },
     ],
-    [t, domainLabel],
+    [t, domainLabel, branch.field],
   );
 
   const tabItems = BOOKING_REQUEST_TABS.map((tab) => ({
@@ -170,9 +179,30 @@ export function BookingRequestsView() {
   const filterBar = (
     <FilterBar
       fields={filterFields}
-      values={{ q: filters.q, serviceType: filters.serviceType } satisfies FilterValues}
-      onChange={(patch) => setFilters(patch)}
-      onClear={hasFilters ? clearFilters : undefined}
+      values={
+        {
+          q: filters.q,
+          serviceType: filters.serviceType,
+          branchId: filters.branchId ?? ALL_FILTER,
+        } satisfies FilterValues
+      }
+      onChange={(patch) => {
+        if ('branchId' in patch) {
+          // `setFilters` của inbox cố ý GIỮ `'all'` trên URL (tab "Tất cả" là một giá trị thật),
+          // nên chi nhánh phải tự quy về `undefined` ở đây — nếu không `?branchId=all` sẽ đi
+          // thẳng lên API và trả về danh sách rỗng.
+          setFilters({ ...patch, branchId: patch.branchId === ALL_FILTER ? undefined : patch.branchId });
+          return;
+        }
+        setFilters(patch);
+      }}
+      onClear={
+        hasFilters
+          ? () => {
+              clearFilters();
+            }
+          : undefined
+      }
       compactFields
       className={styles.tabFilters}
     />
