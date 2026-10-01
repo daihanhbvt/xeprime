@@ -1,4 +1,9 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
@@ -10,12 +15,16 @@ import {
   RECEIPT_STATUS,
   RECEIPT_TYPE,
   isAutoReceipt,
-  type PaginationMeta,
   type PaymentMethod,
   type ReceiptSource,
   type ReceiptType,
   type SystemFinanceCategoryKey,
 } from '@xeprime/types';
+import {
+  receiptBranchWhere,
+  resolveBranchScope,
+  vehicleBranchWhere,
+} from '../../common/dto/branch-scope';
 import { dayRangeFilter } from '../../common/day-range';
 import { bookingDebt } from '../../common/money';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -26,6 +35,7 @@ import {
   ReceiptListItemDto,
   ReceiptBookingOptionDto,
   ReceiptListQueryDto,
+  ReceiptPageMetaDto,
   ReceiptVehicleOptionDto,
   ReceiptVehicleOptionQueryDto,
   RECEIPT_DEFAULT_LIMIT,
@@ -108,26 +118,52 @@ export class ReceiptsService {
   async list(
     tenantId: string,
     query: ReceiptListQueryDto,
-  ): Promise<{ data: ReceiptListItemDto[]; meta: PaginationMeta }> {
+  /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
+  allowedBranchIds: readonly string[] | null,
+  ): Promise<{ data: ReceiptListItemDto[]; meta: ReceiptPageMetaDto }> {
     const paging = resolvePaging(query, RECEIPT_DEFAULT_LIMIT, RECEIPT_MAX_LIMIT);
 
-    const where = this.whereOf(tenantId, query);
+    const where = this.whereOf(tenantId, query, allowedBranchIds);
+    /*
+     * Khi lọc chi nhánh, đếm luôn số phiếu bị BỎ RA vì không gắn xe (ADR 0052 — chi phí chung).
+     *
+     * Cùng bộ lọc, chỉ đổi vế chi nhánh thành `vehicleId: null`: nhờ vậy con số nói đúng "trong
+     * khoảng ngày và loại phiếu bạn đang xem, có N khoản chung không thuộc chi nhánh nào" — chứ
+     * không phải tổng chi phí chung của cả lịch sử.
+     *
+     * Không lọc chi nhánh thì không có gì bị bỏ ra — bỏ hẳn truy vấn, không trả về một số 0 tốn
+     * một vòng tới database.
+     */
+    const page = this.prisma.receipt.findMany({
+      where,
+      // `createdAt` là mốc phụ để hai phiếu cùng ngày phát sinh vẫn có thứ tự ổn định.
+      orderBy: [{ occurredAt: 'desc' }, { createdAt: 'desc' }],
+      skip: paging.skip,
+      take: paging.take,
+      select: LIST_SELECT,
+    });
+    const count = this.prisma.receipt.count({ where });
 
-    const [total, rows] = await this.prisma.$transaction([
-      this.prisma.receipt.count({ where }),
-      this.prisma.receipt.findMany({
-        where,
-        // `createdAt` là mốc phụ để hai phiếu cùng ngày phát sinh vẫn có thứ tự ổn định.
-        orderBy: [{ occurredAt: 'desc' }, { createdAt: 'desc' }],
-        skip: paging.skip,
-        take: paging.take,
-        select: LIST_SELECT,
-      }),
-    ]);
+    // Không lọc chi nhánh thì không có gì bị bỏ ra — không chạy truy vấn thứ ba.
+    const [total, rows, unassigned] = query.branchId
+      ? await this.prisma.$transaction([
+          count,
+          page,
+          this.prisma.receipt.count({
+            where: {
+              ...this.whereOf(tenantId, { ...query, branchId: undefined }, allowedBranchIds),
+              // "Chung" = không suy được chi nhánh từ ĐÂU CẢ: không xe và cũng không tự khai.
+              // Phiếu nhập tay đã chọn chi nhánh thì đã nằm trong kết quả lọc, không còn là chung.
+              vehicleId: null,
+              branchId: null,
+            },
+          }),
+        ])
+      : [...(await this.prisma.$transaction([count, page])), 0 as const];
 
     return {
       data: rows.map(toListItem),
-      meta: paginationMeta(paging, total),
+      meta: { ...paginationMeta(paging, total), unassignedCount: unassigned },
     };
   }
 
@@ -136,12 +172,41 @@ export class ReceiptsService {
    * không lệch nhau — một thẻ "Tổng thu" cộng khác tập với bảng bên dưới là lỗi không ai phát
    * hiện ra cho tới lúc đối chiếu sổ.
    */
-  private whereOf(tenantId: string, query: ReceiptListQueryDto): Prisma.ReceiptWhereInput {
+  private whereOf(
+    tenantId: string,
+    query: ReceiptListQueryDto,
+  /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
+  allowedBranchIds: readonly string[] | null,
+  ): Prisma.ReceiptWhereInput {
     const q = query.q?.trim();
     // Lọc theo NGÀY PHÁT SINH, không phải lúc nhập — và qua `dayRangeFilter` để `YYYY-MM-DD` từ
     // FilterBar nghĩa là trọn một ngày Việt Nam, không phải từ 07:00 (xem common/day-range.ts).
     const occurredAt = dayRangeFilter(query.from, query.to);
     const source = sourceFilterOf(query);
+
+    /*
+     * Phạm vi chi nhánh và ô tìm kiếm đều là một `OR` — gom cả hai vào MỘT mảng `AND`. Spread
+     * chúng thẳng vào object thì khoá `OR` sau ghi đè khoá trước, và cái mất là PHẠM VI: người bị
+     * giới hạn chi nhánh chỉ cần gõ một chữ vào ô tìm là thấy phiếu và tổng tiền của mọi chi
+     * nhánh. TypeScript không bắt được, truy vấn vẫn chạy — chỉ dữ liệu là sai.
+     */
+    const and: Prisma.ReceiptWhereInput[] = [];
+    /*
+     * Chi nhánh của phiếu: của XE nếu có gắn xe, nếu không thì của chính phiếu
+     * (`receipts.branch_id`) — xem `receiptBranchWhere` (ADR 0052).
+     */
+    const branchScope = receiptBranchWhere(resolveBranchScope(query.branchId, allowedBranchIds));
+    if (branchScope.OR) and.push(branchScope);
+    if (q) {
+      and.push({
+        OR: [
+          { receiptNo: { contains: q, mode: 'insensitive' } },
+          { referenceCode: { contains: q, mode: 'insensitive' } },
+          { description: { contains: q, mode: 'insensitive' } },
+          { booking: { code: { contains: q, mode: 'insensitive' } } },
+        ],
+      });
+    }
 
     return {
       tenantId,
@@ -155,16 +220,7 @@ export class ReceiptsService {
       ...(query.vehicleId ? { vehicleId: query.vehicleId } : {}),
       ...(query.tenantCustomerId ? { tenantCustomerId: query.tenantCustomerId } : {}),
       ...(occurredAt ? { occurredAt } : {}),
-      ...(q
-        ? {
-            OR: [
-              { receiptNo: { contains: q, mode: 'insensitive' } },
-              { referenceCode: { contains: q, mode: 'insensitive' } },
-              { description: { contains: q, mode: 'insensitive' } },
-              { booking: { code: { contains: q, mode: 'insensitive' } } },
-            ],
-          }
-        : {}),
+      ...(and.length > 0 ? { AND: and } : {}),
     };
   }
 
@@ -185,9 +241,14 @@ export class ReceiptsService {
    * Tổng thu/chi của ĐÚNG bộ lọc đang xem — dùng lại `whereOf` với danh sách nên hai con số không
    * thể lệch nhau. Chỉ cộng phiếu ĐÃ DUYỆT: phiếu chờ duyệt chưa phải tiền thật.
    */
-  async summary(tenantId: string, query: ReceiptListQueryDto): Promise<ReceiptSummaryDto> {
+  async summary(
+    tenantId: string,
+    query: ReceiptListQueryDto,
+  /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
+  allowedBranchIds: readonly string[] | null,
+  ): Promise<ReceiptSummaryDto> {
     const where: Prisma.ReceiptWhereInput = {
-      ...this.whereOf(tenantId, query),
+      ...this.whereOf(tenantId, query, allowedBranchIds),
       status: RECEIPT_STATUS.APPROVED,
     };
 
@@ -411,8 +472,20 @@ export class ReceiptsService {
   }
 
   /** Tạo phiếu ở trạng thái chờ duyệt (workflow). Ảnh minh chứng tạo kèm trong cùng transaction. */
-  async create(tenantId: string, userId: string, dto: CreateReceiptDto): Promise<ReceiptDetailDto> {
+  async create(
+    tenantId: string,
+    userId: string,
+    dto: CreateReceiptDto,
+    /**
+     * Chi nhánh người tạo được giao (ADR 0052). Đơn, xe và chi nhánh tự khai đều phải nằm TRONG
+     * phạm vi đó — không thì một nhân viên chi nhánh A ghi được chi phí vào sổ của chi nhánh B, và
+     * báo cáo của B lệch vì một người B không hề biết. Ngoài phạm vi = KHÔNG TÌM THẤY, đúng như
+     * id của gian hàng khác.
+     */
+    allowedBranchIds: readonly string[] | null,
+  ): Promise<ReceiptDetailDto> {
     const id = newId();
+    const branchScope = resolveBranchScope(undefined, allowedBranchIds);
     const attachments = (dto.attachments ?? []).map((u) => u.trim()).filter(Boolean);
     /*
      * Đơn và xe gắn kèm phải THUỘC GIAN HÀNG NÀY — kiểm ở đây vì DB không kiểm hộ: FK của
@@ -432,7 +505,7 @@ export class ReceiptsService {
 
     if (dto.bookingId) {
       const booking = await this.prisma.booking.findFirst({
-        where: { id: dto.bookingId, tenantId, deletedAt: null },
+        where: { id: dto.bookingId, tenantId, deletedAt: null, ...vehicleBranchWhere(branchScope) },
         select: { tenantCustomerId: true, vehicleId: true },
       });
       if (!booking) throw notFoundBooking();
@@ -456,10 +529,69 @@ export class ReceiptsService {
 
     if (vehicleId) {
       const vehicle = await this.prisma.vehicle.findFirst({
-        where: { id: vehicleId, tenantId, deletedAt: null },
+        where: { id: vehicleId, tenantId, deletedAt: null, branchId: branchScope },
         select: { id: true },
       });
       if (!vehicle) throw notFoundVehicle();
+    }
+
+    /*
+     * Chi nhánh tự khai CHỈ cho phiếu không gắn xe (ADR 0052).
+     *
+     * Có xe thì chi nhánh suy TỪ XE và không bao giờ lệch khi xe chuyển chi nhánh; nhận thêm một
+     * giá trị tự khai ở đây là dựng hai nguồn cho cùng một câu hỏi. CHECK ở database cũng cấm,
+     * nhưng chặn tại đây để người dùng nhận một câu giải thích thay vì một lỗi 500.
+     */
+    if (dto.branchId && vehicleId) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Phiếu đã gắn xe thì chi nhánh lấy theo xe — không chọn riêng',
+      });
+    }
+    /*
+     * Danh mục BẮT BUỘC gắn xe (đổ xăng, rửa xe, bảo dưỡng…) — ADR 0052.
+     *
+     * Không có cổng này thì loại phiếu đó cứ trôi vào nhóm "chung" cùng tiền thuê mặt bằng: nó
+     * rơi khỏi báo cáo hiệu quả theo xe, và vài tháng sau không ai truy được nó thuộc xe nào.
+     */
+    if (dto.categoryId && !vehicleId) {
+      const category = await this.prisma.financeCategory.findFirst({
+        where: { id: dto.categoryId, OR: [{ tenantId }, { tenantId: null }] },
+        select: { requiresVehicle: true, name: true },
+      });
+      if (category?.requiresVehicle) {
+        throw new BadRequestException({
+          code: API_ERROR_CODE.VALIDATION_FAILED,
+          message: `Danh mục "${category.name}" là chi phí của một chiếc xe — hãy chọn xe hoặc đơn thuê`,
+        });
+      }
+    }
+
+    /*
+     * Không gắn xe thì BẮT BUỘC có chi nhánh (ADR 0052) — CHECK ở database cũng cấm, chặn ở đây
+     * để người dùng nhận câu giải thích thay vì một lỗi 500.
+     */
+    if (!vehicleId) {
+      if (!dto.branchId) {
+        throw new BadRequestException({
+          code: API_ERROR_CODE.VALIDATION_FAILED,
+          message: 'Khoản không gắn xe hay đơn thuê phải chọn chi nhánh phát sinh',
+        });
+      }
+      const branch = await this.prisma.tenantBranch.findFirst({
+        where: {
+          tenantId,
+          deletedAt: null,
+          AND: [{ id: dto.branchId }, ...(branchScope === undefined ? [] : [{ id: branchScope }])],
+        },
+        select: { id: true },
+      });
+      if (!branch) {
+        throw new BadRequestException({
+          code: API_ERROR_CODE.VALIDATION_FAILED,
+          message: 'Chi nhánh không thuộc gian hàng này hoặc đã bị xoá',
+        });
+      }
     }
 
     await this.prisma.$transaction(async (tx) => {
@@ -472,6 +604,7 @@ export class ReceiptsService {
           categoryId: dto.categoryId ?? null,
           bookingId: dto.bookingId ?? null,
           vehicleId,
+          branchId: vehicleId ? null : (dto.branchId ?? null),
           tenantCustomerId,
           amount: dto.amount,
           paymentMethod: dto.paymentMethod as PaymentMethod,

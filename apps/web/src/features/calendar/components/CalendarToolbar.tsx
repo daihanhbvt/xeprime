@@ -3,6 +3,7 @@
 import { Button, Segmented, Select, Tooltip } from 'antd';
 import {
   ArrowLeftOutlined,
+  EnvironmentOutlined,
   LeftOutlined,
   RightOutlined,
   SortAscendingOutlined,
@@ -14,6 +15,8 @@ import { VEHICLE_TYPE } from '@xeprime/types';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { AutoSearchInput } from '@/components/filter/AutoSearchInput';
 import { isSafeNextPath } from '@/features/auth/safe-next';
+import { BranchFilterSelect } from '@/features/branches/components/BranchFilterSelect';
+import { useBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { CALENDAR_BACK_PARAM } from '@/features/vehicles/calendar-link';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { APP_TIME_ZONE, dayjs } from '@/lib/datetime';
@@ -25,14 +28,24 @@ import styles from './CalendarToolbar.module.css';
 const ALL = 'all';
 
 /**
- * Thanh công cụ lịch: tìm xe · loại xe · khoảng xem (7/14/30) · điều hướng khoảng ± / hôm nay ·
- * nhãn khoảng đang xem. Chi nhánh KHÔNG ở đây — bộ chọn chi nhánh của shell đã scope toàn cổng.
+ * Thanh công cụ lịch: tìm xe · chi nhánh · loại xe · khoảng xem (7/14/30) · điều hướng khoảng ± /
+ * hôm nay · nhãn khoảng đang xem.
+ *
+ * Chi nhánh nằm Ở ĐÂY từ ADR 0052, thay cho bộ chọn cũ trên thanh trên: nó chỉ thu hẹp được lịch,
+ * danh sách xe, đơn và yêu cầu — chứ không phải ví, sổ thu chi hay hội thoại — nên nó thuộc về
+ * thanh lọc của từng màn, cạnh dữ liệu nó lọc.
  *
  * Mobile bỏ lựa chọn 30 ngày: 30 cột × 52px không đọc nổi trên 390px — 7/14 ngày + cuộn ngang
  * là đủ. Filter sống ở URL (ADR 0004) nên mọi nút chỉ là `setFilters`.
  */
 export function CalendarToolbar() {
   const { filters, setFilters } = useCalendarFilters();
+  const branch = useBranchFilter({
+    value: filters.branchId ?? undefined,
+    // `null` chứ không `undefined`: `useCalendarFilters` XOÁ tham số khi nhận `null`, còn
+    // `undefined` chỉ là "không đụng tới khoá này".
+    onChange: (branchId) => setFilters({ branchId: branchId ?? null }),
+  });
   const isMobile = useIsMobile();
   const searchParams = useSearchParams();
   const tCommon = useTranslations('Common');
@@ -81,6 +94,18 @@ export function CalendarToolbar() {
           onSearch={(value) => setFilters({ q: value || null })}
           className={styles.search}
           aria-label={t('toolbar.searchAriaLabel')}
+        />
+
+        {/*
+          Chi nhánh là `Select` chứ không `Segmented` như loại xe: loại xe có đúng ba lựa chọn cố
+          định, còn chi nhánh thì gian hàng nào có bao nhiêu tuỳ họ — bốn, rồi mười. Tự ẩn khi
+          gian hàng chỉ có một chi nhánh (`branch.visible === false`).
+        */}
+        <BranchFilterSelect
+          branch={branch}
+          value={filters.branchId}
+          className={styles.branchSelect}
+          prefix={<EnvironmentOutlined />}
         />
 
         <Segmented

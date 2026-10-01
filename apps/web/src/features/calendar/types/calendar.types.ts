@@ -79,6 +79,8 @@ export interface CalendarFilters {
   days: number;
   vehicleType: string | null;
   q: string | null;
+  /** Chi nhánh giữ xe — ô "Chi nhánh" trên thanh công cụ, sống trên URL (ADR 0052). */
+  branchId: string | null;
   /** Thứ tự hàng xe — chỉ ảnh hưởng `resources`, các query khác không mang nó. */
   sort: CalendarSort;
 }

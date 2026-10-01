@@ -69,6 +69,7 @@ import {
   UpdateBookingDto,
 } from './dto/booking.dto';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
+import { resolveBranchScope, vehicleBranchWhere } from '../../common/dto/branch-scope';
 
 const LIST_SELECT = {
   id: true,
@@ -216,6 +217,8 @@ export class BookingsService {
   async list(
     tenantId: string,
     query: BookingListQueryDto,
+  /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
+  allowedBranchIds: readonly string[] | null,
   ): Promise<{ data: BookingListItemDto[]; meta: PaginationMeta }> {
     const paging = resolvePaging(query, BOOKING_DEFAULT_LIMIT, BOOKING_MAX_LIMIT);
 
@@ -225,7 +228,7 @@ export class BookingsService {
       ...(query.status ? { status: query.status } : {}),
       ...(query.vehicleId ? { vehicleId: query.vehicleId } : {}),
       // Lọc qua quan hệ xe → chi nhánh; `tenantId` vẫn là ranh giới thật.
-      ...(query.branchId ? { vehicle: { branchId: query.branchId } } : {}),
+      ...vehicleBranchWhere(resolveBranchScope(query.branchId, allowedBranchIds)),
       ...(query.returnFrom || query.returnTo
         ? {
             returnAt: {

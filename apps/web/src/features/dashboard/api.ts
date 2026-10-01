@@ -21,11 +21,12 @@ export interface VehicleStats {
  * Đếm xe theo tình trạng vận hành — mỗi số là `meta.total` của một truy vấn `limit=1`,
  * nên đếm ở server (chuẩn khi có phân trang) mà không kéo cả danh sách về.
  */
-export async function fetchVehicleStats(): Promise<VehicleStats> {
+export async function fetchVehicleStats(branchId?: string): Promise<VehicleStats> {
+  const branch = branchId ? { branchId } : {};
   const [all, available, renting] = await Promise.all([
-    fetchVehicles({ limit: 1 }),
-    fetchVehicles({ operationStatus: VEHICLE_OPERATION_STATUS.AVAILABLE, limit: 1 }),
-    fetchVehicles({ operationStatus: VEHICLE_OPERATION_STATUS.RENTING, limit: 1 }),
+    fetchVehicles({ ...branch, limit: 1 }),
+    fetchVehicles({ ...branch, operationStatus: VEHICLE_OPERATION_STATUS.AVAILABLE, limit: 1 }),
+    fetchVehicles({ ...branch, operationStatus: VEHICLE_OPERATION_STATUS.RENTING, limit: 1 }),
   ]);
   return {
     total: all.meta.total,
@@ -57,18 +58,19 @@ export const dashboardTodayRange = (): { from: string; to: string } => buildPeri
  * cộng cùng một phép tính thì không được có hai đường tính. Thẻ trên dashboard và thẻ trên
  * báo cáo phải nói cùng một con số cho cùng một kỳ.
  */
-export const fetchDashboardFinanceSummary = (): Promise<FinanceSummary> =>
-  fetchFinanceSummary(dashboardMonthRange());
+export const fetchDashboardFinanceSummary = (branchId?: string): Promise<FinanceSummary> =>
+  fetchFinanceSummary({ ...dashboardMonthRange(), branchId });
 
 /** Bộ lọc của panel "Thu Chi hôm nay" — mọi trạng thái, để phiếu chờ duyệt cũng nhìn thấy được. */
-export const dashboardTodayReceiptFilters = (): ReceiptFilters => ({
+export const dashboardTodayReceiptFilters = (branchId?: string): ReceiptFilters => ({
   ...dashboardTodayRange(),
+  branchId,
   page: 1,
   limit: DASHBOARD_RECEIPT_LIMIT,
 });
 
-export const fetchDashboardTodayReceipts = (): Promise<ReceiptListResult> =>
-  fetchReceipts(dashboardTodayReceiptFilters());
+export const fetchDashboardTodayReceipts = (branchId?: string): Promise<ReceiptListResult> =>
+  fetchReceipts(dashboardTodayReceiptFilters(branchId));
 
 /*
  * Khoá cache của hai truy vấn tiền trên dashboard.
@@ -77,8 +79,8 @@ export const fetchDashboardTodayReceipts = (): Promise<ReceiptListResult> =>
  * gõ lại: khoá lệch request một trường là hai bản ghi cache cho cùng một câu hỏi, và một lần
  * `invalidateQueries` chỉ làm mới đúng một nửa.
  */
-export const dashboardFinanceSummaryParams = (): QueryParams =>
-  overviewRangeParams(dashboardMonthRange());
+export const dashboardFinanceSummaryParams = (branchId?: string): QueryParams =>
+  overviewRangeParams({ ...dashboardMonthRange(), branchId });
 
-export const dashboardTodayReceiptParams = (): QueryParams =>
-  filtersToParams(dashboardTodayReceiptFilters());
+export const dashboardTodayReceiptParams = (branchId?: string): QueryParams =>
+  filtersToParams(dashboardTodayReceiptFilters(branchId));

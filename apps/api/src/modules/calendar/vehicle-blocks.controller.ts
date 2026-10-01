@@ -18,6 +18,8 @@ import {
 } from '@nestjs/swagger';
 import { PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
+  BRANCH_SCOPED_RESOURCE,
+  BranchScoped,
   CurrentTenant,
   CurrentUser,
   RequirePermissions,
@@ -45,6 +47,7 @@ import {
 export class VehicleBlocksController {
   constructor(private readonly blocks: VehicleBlocksService) {}
 
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.VEHICLE_BLOCK)
   @Get(':id')
   @RequirePermissions(PERMISSION.CALENDAR_VIEW)
   @SupportAction(SUPPORT_CAPABILITY.CALENDAR_VIEW)
@@ -71,6 +74,7 @@ export class VehicleBlocksController {
     return this.blocks.create(tenant.tenantId, user.id, dto);
   }
 
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.VEHICLE_BLOCK)
   @Patch(':id')
   @RequirePermissions(PERMISSION.VEHICLE_BLOCK_SCHEDULE)
   @SupportAction(SUPPORT_CAPABILITY.VEHICLE_SCHEDULE_BLOCK_MANAGE)
@@ -85,6 +89,7 @@ export class VehicleBlocksController {
     return this.blocks.update(tenant.tenantId, id, user.id, dto);
   }
 
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.VEHICLE_BLOCK)
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @RequirePermissions(PERMISSION.VEHICLE_BLOCK_SCHEDULE)

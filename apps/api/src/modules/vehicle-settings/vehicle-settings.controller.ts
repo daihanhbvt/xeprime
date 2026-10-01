@@ -2,6 +2,8 @@ import { Body, Controller, Get, Param, Patch, Put, Query } from '@nestjs/common'
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
+  BRANCH_SCOPED_RESOURCE,
+  BranchScoped,
   CurrentTenant,
   CurrentUser,
   RequirePermissions,
@@ -32,6 +34,7 @@ import { VehicleTripHistoryService } from './vehicle-trip-history.service';
  * Bậc CƠ BẢN (ADR 0027 điều 1): đây là "đăng xe / nhận yêu cầu / giao nhận" — không gắn cờ gói.
  */
 @ApiTags('vehicles')
+@BranchScoped(BRANCH_SCOPED_RESOURCE.VEHICLE)
 @Controller('vehicles')
 @TenantScoped()
 export class VehicleSettingsController {

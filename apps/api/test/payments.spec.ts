@@ -227,7 +227,7 @@ describe('Payments — thu tiền đơn (S2)', () => {
       method: PAYMENT_METHOD.CASH,
     });
 
-    const res = await overview.debts(tenantId, { limit: 100 });
+    const res = await overview.debts(tenantId, { limit: 100 }, null);
     const ids = res.data.map((d) => d.bookingId);
     expect(ids).toContain(owing.id);
     expect(ids).not.toContain(paid.id);
@@ -243,16 +243,16 @@ describe('Payments — thu tiền đơn (S2)', () => {
     });
 
     // Mã đơn là chuỗi người thu nợ hay cầm nhất — tìm phải ra ĐÚNG một đơn, không phải cả trang.
-    const byCode = await overview.debts(tenantId, { q: target.code, limit: 100 });
+    const byCode = await overview.debts(tenantId, { q: target.code, limit: 100 }, null);
     expect(byCode.data.map((d) => d.bookingId)).toEqual([target.id]);
 
     // Tên xe nằm ở bảng khác: nếu câu đếm quên join `vehicles` thì `total` sẽ to hơn số dòng.
-    const byVehicle = await overview.debts(tenantId, { q: 'Vios', limit: 100 });
+    const byVehicle = await overview.debts(tenantId, { q: 'Vios', limit: 100 }, null);
     expect(byVehicle.data.length).toBeGreaterThan(0);
     expect(byVehicle.meta.total).toBe(byVehicle.data.length);
 
     // Không khớp gì → rỗng THẬT, cả dòng lẫn tổng.
-    const none = await overview.debts(tenantId, { q: 'khong-ton-tai-xyz', limit: 100 });
+    const none = await overview.debts(tenantId, { q: 'khong-ton-tai-xyz', limit: 100 }, null);
     expect(none.data).toHaveLength(0);
     expect(none.meta.total).toBe(0);
   });
@@ -265,12 +265,12 @@ describe('Payments — thu tiền đơn (S2)', () => {
     });
 
     // `tenantId` khác → cùng từ khoá nhưng không được thấy đơn của shop bên kia.
-    const theirs = await overview.debts(newId(), { q: mine.code, limit: 100 });
+    const theirs = await overview.debts(newId(), { q: mine.code, limit: 100 }, null);
     expect(theirs.data).toHaveLength(0);
   });
 
   maybe('dashboard summary: cân đối = tổng thu − tổng chi', async () => {
-    const s = await overview.summary(tenantId, {});
+    const s = await overview.summary(tenantId, {}, null);
     expect(Number(s.balance)).toBe(Number(s.totalIncome) - Number(s.totalExpense));
     expect(Number(s.totalDebt)).toBeGreaterThanOrEqual(0);
     expect(s.debtBookings).toBeGreaterThanOrEqual(0);
@@ -403,7 +403,7 @@ describe('Booking money — phụ phí và phiếu tay vào cùng một con số
       amount: '200000',
       paymentMethod: PAYMENT_METHOD.CASH,
       bookingId: b.id,
-    });
+    }, null);
 
     // Phiếu CHƯA duyệt thì chưa phải tiền thật.
     let after = await bookings.getOne(tenantId, b.id);
@@ -448,7 +448,7 @@ describe('Booking money — phụ phí và phiếu tay vào cùng một con số
     expect(String(after.amountDue)).toBe('650000');
     expect(String(after.debtAmount)).toBe('150000');
 
-    const debts = await overview.debts(tenantId, { limit: 100 });
+    const debts = await overview.debts(tenantId, { limit: 100 }, null);
     const row = debts.data.find((d) => d.bookingId === b.id);
     expect(row?.debtAmount).toBe('150000');
     expect(row?.surchargeTotal).toBe('150000');

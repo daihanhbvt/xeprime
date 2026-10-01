@@ -15,6 +15,7 @@ import { NumberField } from '@/components/form/NumberField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { DateTimeField } from '@/components/form/DateTimeField';
 import { ROUTES } from '@/constants/routes';
+import { useBranchReturnHref } from '@/features/branches/hooks/use-branch-return';
 import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import { usePermissions } from '@/hooks/use-permissions';
 import { getErrorCode } from '@/services/api-client';
@@ -121,6 +122,8 @@ function MaintenanceTab({
 }) {
   const tCommon = useTranslations('Common');
   const t = useTranslations('Maintenance');
+  // Về bảng bảo dưỡng tổng vẫn giữ chi nhánh người dùng đang lọc (ADR 0052).
+  const boardHref = useBranchReturnHref(ROUTES.MANAGE.MAINTENANCE);
   const errorMessage = useErrorMessage();
   const fmt = useAppFormat();
 
@@ -394,7 +397,7 @@ function MaintenanceTab({
             {scheduleHidden ? null : (
               <>
                 {' '}
-                <Link href={ROUTES.MANAGE.MAINTENANCE}>{t('workspace.boardLink')}</Link>
+                <Link href={boardHref}>{t('workspace.boardLink')}</Link>
               </>
             )}
           </p>

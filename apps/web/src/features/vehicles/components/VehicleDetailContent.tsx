@@ -12,6 +12,7 @@ import { PermissionState } from '@/components/feedback/PermissionState';
 import { ROUTES } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
+import { useBranchCrumb } from '@/features/branches/hooks/use-branch-return';
 import { vehicleSchedulePath } from '../calendar-link';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useVehicle } from '../hooks/use-vehicle';
@@ -40,6 +41,8 @@ interface Props {
  */
 export function VehicleDetailContent({ vehicleId, notFoundAction, onDeleted }: Props) {
   const router = useRouter();
+  // "Xem lịch" mang theo chi nhánh đang lọc lúc rời danh sách (ADR 0052).
+  const branchCrumb = useBranchCrumb();
   const { paths, vehicles: vehiclePaths } = useWorkspace();
   const { message } = App.useApp();
   const { has } = usePermissions();
@@ -116,7 +119,9 @@ export function VehicleDetailContent({ vehicleId, notFoundAction, onDeleted }: P
       deletePending={deleteVehicle.isPending}
       // Theo KHU: cổng quản lý mở màn sửa nhiều tab, khu tài khoản mở không gian "Quản lý xe".
       onEdit={() => router.push(vehiclePaths.profile(vehicleId))}
-      onSchedule={() => router.push(vehicleSchedulePath(vehicle, { basePath: paths.calendar }))}
+      onSchedule={() =>
+        router.push(vehicleSchedulePath(vehicle, { basePath: paths.calendar, branchId: branchCrumb }))
+      }
       onDelete={handleDelete}
     />
   );

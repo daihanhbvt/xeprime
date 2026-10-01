@@ -164,7 +164,7 @@ vi.mock('@/hooks/use-feature', () => ({ useFeatureStates: () => ({}) }));
 /**
  * Dải chào mừng sau lần mua gói đầu (ADR 0040) đếm xe để biết nên mời "đăng xe đầu tiên" hay im.
  * Chặn ở tầng hook: bộ này kiểm trang Cửa hàng, không kiểm dải đó — nó có test riêng — và gọi
- * thật thì kéo theo cả `useBranchScope` (redux) lẫn một lượt đọc `/vehicles`.
+ * thật thì kéo theo một lượt đọc `/vehicles`.
  */
 const vehicles = vi.hoisted(() => ({
   data: { items: [] as unknown[] },

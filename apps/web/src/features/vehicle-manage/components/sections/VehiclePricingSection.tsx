@@ -13,6 +13,7 @@ import {
   useSaveVehiclePricing,
   useVehiclePricing,
 } from '@/features/rental-policies/hooks/use-vehicle-pricing';
+import { useBranchCrumb } from '@/features/branches/hooks/use-branch-return';
 import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useErrorMessage } from '@/i18n/use-error-message';
@@ -52,6 +53,8 @@ export function VehiclePricingSection() {
   const tEdit = useTranslations('Vehicles.edit.pricingTab');
   const tActions = useTranslations('Common.actions');
   const errorMessage = useErrorMessage();
+  // Link "Tuỳ chỉnh giá theo lịch" giữ chi nhánh đang lọc (ADR 0052).
+  const branchCrumb = useBranchCrumb();
   const { message } = App.useApp();
   const pricing = useVehiclePricing(vehicle.id);
   const save = useSaveVehiclePricing(vehicle.id);
@@ -86,7 +89,7 @@ export function VehiclePricingSection() {
             policyBlocks={OWNER_POLICY_BLOCKS}
             shopPolicyHref={null}
             policySource="direct"
-            calendarHref={vehicleSchedulePath(vehicle, { basePath: paths.calendar })}
+            calendarHref={vehicleSchedulePath(vehicle, { basePath: paths.calendar, branchId: branchCrumb })}
             onSave={(body) =>
               save.mutate(body, {
                 onSuccess: () => message.success(tEdit('saved')),

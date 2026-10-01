@@ -7,6 +7,8 @@ import { Suspense, useMemo } from 'react';
 import { FINANCE_GRANULARITY_VALUES, PERMISSION, RECEIPT_TYPE } from '@xeprime/types';
 import { RevenueTrendChart } from '@/components/chart/RevenueTrendChart';
 import { FilterBar, type FilterField, type FilterValues } from '@/components/filter/FilterBar';
+import { ALL_FILTER } from '@/constants/filters';
+import { useBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { PermissionState } from '@/components/feedback/PermissionState';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { ROUTES } from '@/constants/routes';
@@ -47,6 +49,10 @@ function FinanceOverviewView() {
   const fmt = useAppFormat();
   const { has } = usePermissions();
   const { filters, setFilters } = useFinanceOverviewFilters();
+  const branch = useBranchFilter({
+    value: filters.branchId,
+    onChange: (branchId) => setFilters({ branchId }),
+  });
 
   const summary = useFinanceSummaryOverview(filters);
   const series = useFinanceSeries(filters);
@@ -65,8 +71,11 @@ function FinanceOverviewView() {
   );
 
   const filterFields = useMemo<readonly FilterField[]>(
-    () => [{ kind: 'dateRange', fromKey: 'from', toKey: 'to', label: t('filters.dateRange') }],
-    [t],
+    () => [
+      ...(branch.field ? [branch.field] : []),
+      { kind: 'dateRange', fromKey: 'from', toKey: 'to', label: t('filters.dateRange') },
+    ],
+    [t, branch.field],
   );
 
   // Thiếu quyền xem tiền → thay TOÀN BỘ nội dung. Chặn thật vẫn là guard backend; ở đây chỉ là
@@ -127,8 +136,14 @@ function FinanceOverviewView() {
 
       <FilterBar
         fields={filterFields}
-        values={filters as FilterValues}
-        onChange={(patch) => setFilters(patch as Partial<FinanceOverviewFilters>)}
+        values={{ ...(filters as FilterValues), branchId: filters.branchId ?? ALL_FILTER }}
+        onChange={(patch) =>
+          setFilters(
+            ('branchId' in patch
+              ? { ...patch, branchId: patch.branchId === ALL_FILTER ? undefined : patch.branchId }
+              : patch) as Partial<FinanceOverviewFilters>,
+          )
+        }
         compactFields
       />
 

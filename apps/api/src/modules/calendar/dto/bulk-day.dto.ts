@@ -17,6 +17,7 @@ import {
   Min,
 } from 'class-validator';
 import { DATE_ONLY_PATTERN } from '../../../common/date-only';
+import { BranchIdQuery } from '../../../common/dto/branch-scope';
 
 const BULK_PRICE_MODES = Object.values(BULK_PRICE_MODE);
 
@@ -47,10 +48,13 @@ export class BulkDayQueryDto {
   @MaxLength(30)
   vehicleType?: string;
 
-  @ApiPropertyOptional({ description: 'Chi nhánh đang chọn ở thanh trên' })
-  @IsOptional()
-  @IsString()
-  @Length(26, 26)
+  /**
+   * Chi nhánh đang lọc trên lưới lịch — ô "Chi nhánh" của thanh công cụ (ADR 0052).
+   *
+   * Phải khớp ĐÚNG bộ lọc của lưới: đây là bản xem trước của một lệnh GHI hàng loạt, nên sót vế
+   * này nghĩa là "khoá toàn bộ xe" chạm cả những chi nhánh người dùng còn không mở ra xem.
+   */
+  @BranchIdQuery()
   branchId?: string;
 
   @ApiPropertyOptional({ description: 'Từ khoá tên/biển số/mã xe' })
@@ -202,4 +206,16 @@ export class BulkDayPriceResultDto {
   @ApiProperty({ description: 'Số xe thực sự được đặt giá' }) updatedVehicles!: number;
   @ApiProperty({ description: 'Số xe bị bỏ qua vì chưa cấu hình giá gốc' })
   skippedVehicles!: number;
+}
+
+/**
+ * Phạm vi của lệnh GỠ một lô khoá hàng loạt (ADR 0052).
+ *
+ * Một lô có thể phủ nhiều chi nhánh (khoá khi đang xem "Tất cả"). Tắt công tắc khi đang lọc chi
+ * nhánh A phải gỡ đúng phần của A — gỡ cả lô là xoá luôn lịch khoá của chi nhánh B mà người dùng
+ * còn không mở ra xem.
+ */
+export class BulkDayReleaseQueryDto {
+  @BranchIdQuery()
+  branchId?: string;
 }

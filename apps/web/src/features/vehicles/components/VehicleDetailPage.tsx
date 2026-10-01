@@ -6,6 +6,7 @@ import { ROUTES } from '@/constants/routes';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { VehicleDetailContent } from '@/features/vehicles/components/VehicleDetailContent';
+import { useBranchReturnHref } from '@/features/branches/hooks/use-branch-return';
 
 /**
  * Hồ sơ 360 của một xe — Figma `236:2222` (desktop) · `236:4783` (mobile).
@@ -18,7 +19,9 @@ export function VehicleDetailPage() {
   const t = useTranslations('Vehicles');
   const router = useRouter();
   const params = useParams<{ id: string }>();
-  const backToList = () => router.push(ROUTES.MANAGE.VEHICLES);
+  // Trả về ĐÚNG chi nhánh đang lọc lúc rời danh sách (ADR 0052), chứ không về danh sách trần.
+  const listHref = useBranchReturnHref(ROUTES.MANAGE.VEHICLES);
+  const backToList = () => router.push(listHref);
 
   return (
     <PageContainer width="wide">
@@ -30,7 +33,7 @@ export function VehicleDetailPage() {
       <VehicleDetailContent
         vehicleId={params.id}
         notFoundAction={{ label: t('detail.backToList'), onClick: backToList }}
-        onDeleted={() => router.replace(ROUTES.MANAGE.VEHICLES)}
+        onDeleted={() => router.replace(listHref)}
       />
     </PageContainer>
   );

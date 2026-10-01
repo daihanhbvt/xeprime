@@ -1444,7 +1444,7 @@ export interface paths {
         post?: never;
         /**
          * Gỡ trọn một lô khoá hàng loạt
-         * @description Gỡ ĐÚNG những dòng lô đó tạo ra. Lịch khoá do người dùng đặt tay không bị đụng tới.
+         * @description Gỡ ĐÚNG những dòng lô đó tạo ra, và chỉ trên xe thuộc chi nhánh đang xem (`branchId`) trong phạm vi được giao. Lịch khoá do người dùng đặt tay không bị đụng tới.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
@@ -2604,7 +2604,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Hàng đợi "Thiếu KM trả" toàn gian hàng (phân trang)
+         * Hàng đợi "Thiếu KM trả" (phân trang, lọc được theo chi nhánh)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
@@ -10251,6 +10251,13 @@ export interface components {
         };
         CreateInviteDto: {
             /**
+             * @description 'all' = toàn gian hàng · 'limited' = chỉ các chi nhánh ở `branchIds` · bỏ trống = giữ nguyên (PATCH) hoặc toàn gian hàng (lời mời)
+             * @enum {string}
+             */
+            branchScope?: "all" | "limited";
+            /** @description Bắt buộc và phải khác rỗng khi `branchScope = 'limited'`; bỏ qua khi 'all' */
+            branchIds?: string[];
+            /**
              * @description Email nhận thư mời. Người nhận KHÔNG cần có sẵn tài khoản — họ đăng ký rồi bấm lại link.
              * @example nhanvien@congty.vn
              */
@@ -10324,6 +10331,8 @@ export interface components {
             bookingId?: string;
             /** @description Xe liên quan (ULID). Gắn được MỘT MÌNH — chi phí của một chiếc xe (rửa, vá lốp, gửi bãi) không thuộc chuyến nào. Gửi kèm `bookingId` thì phải là ĐÚNG xe của đơn đó, nếu không server trả `RECEIPT_BOOKING_VEHICLE_MISMATCH`; bỏ trống mà có `bookingId` thì server tự suy từ đơn. */
             vehicleId?: string;
+            /** @description Chi nhánh phát sinh khoản tiền (ULID) — BẮT BUỘC khi phiếu không gắn xe và không gắn đơn. Danh mục không suy ra được chi nhánh ("Chi phí văn phòng" ở hai chi nhánh là hai khoản mang cùng một tên), nên phải hỏi. Không có "toàn gian hàng": một khoản xếp ngoài mọi chi nhánh thì lọc từng chi nhánh đều ra 0 trong khi tổng vẫn có nó — không ai đối chiếu được nữa. Gửi kèm xe/đơn ⇒ VALIDATION_FAILED: lúc đó chi nhánh SUY TỪ XE. */
+            branchId?: string;
             /** @description Ngày tiền phát sinh (ISO hoặc YYYY-MM-DD); mặc định bây giờ. Nhập bù cho hôm trước thì đặt đúng ngày đó. */
             occurredAt?: string;
             /** @description Mã tra soát/tham chiếu (CK…) */
@@ -10550,6 +10559,8 @@ export interface components {
             onboardingState: string;
             /** @description Xem TenantRole trong @xeprime/types */
             roleKey: string;
+            /** @enum {string} */
+            branchScope: "all" | "limited";
             /** @description Logo gian hàng; null = dùng chữ cái đầu */
             logoUrl: string | null;
             features: components["schemas"]["TenantFeatureStateDto"][];
@@ -11843,6 +11854,10 @@ export interface components {
             roleKey: "shop_owner" | "shop_manager" | "shop_staff" | "shop_viewer";
             /** @enum {string} */
             status: "active" | "invited" | "locked" | "removed";
+            /** @enum {string} */
+            branchScope: "all" | "limited";
+            /** @description Rỗng khi `branchScope = 'all'` — lúc đó thành viên thấy mọi chi nhánh */
+            branchIds: string[];
             /** @description ISO-8601 UTC */
             joinedAt?: string | null;
             /** @description ISO-8601 UTC */
@@ -13939,7 +13954,19 @@ export interface components {
         };
         ReceiptPageDto: {
             data: components["schemas"]["ReceiptListItemDto"][];
-            meta: components["schemas"]["PaginationMetaDto"];
+            meta: components["schemas"]["ReceiptPageMetaDto"];
+        };
+        ReceiptPageMetaDto: {
+            /** @example 1 */
+            page: number;
+            /** @example 20 */
+            limit: number;
+            /** @example 137 */
+            total: number;
+            /** @example true */
+            hasNext: boolean;
+            /** @description Số phiếu KHÔNG gắn xe nên không thuộc chi nhánh nào — chỉ > 0 khi đang lọc */
+            unassignedCount: number;
         };
         ReceiptSummaryDto: {
             /** @description Tổng thu (phiếu đã duyệt trong bộ lọc), string */
@@ -14893,6 +14920,8 @@ export interface components {
             slug: string;
             /** @description Vai của PHIÊN trong gian hàng — luôn `shop_viewer` (không cổng chỉ-chủ nào mở). */
             roleKey: string;
+            /** @enum {string} */
+            branchScope: "all" | "limited";
             logoUrl: string | null;
             /** @description % phí dịch vụ đang hiệu lực — chỉ ở tuyến hoa hồng, như `CurrentTenantSummaryDto`. */
             serviceFeePercent: number | null;
@@ -15292,8 +15321,15 @@ export interface components {
             avatarUrl?: string | null;
         };
         UpdateMemberRoleDto: {
+            /**
+             * @description 'all' = toàn gian hàng · 'limited' = chỉ các chi nhánh ở `branchIds` · bỏ trống = giữ nguyên (PATCH) hoặc toàn gian hàng (lời mời)
+             * @enum {string}
+             */
+            branchScope?: "all" | "limited";
+            /** @description Bắt buộc và phải khác rỗng khi `branchScope = 'limited'`; bỏ qua khi 'all' */
+            branchIds?: string[];
             /** @enum {string} */
-            roleKey: "shop_owner" | "shop_manager" | "shop_staff" | "shop_viewer";
+            roleKey?: "shop_owner" | "shop_manager" | "shop_staff" | "shop_viewer";
         };
         UpdatePaymentSettingsDto: {
             /** @description Gian hàng có muốn XePrime thu cọc của khách hộ mình không. Chỉ tuyến GÓI đổi được; tuyến hoa hồng luôn thu và trả 403 nếu gọi vào đây. */
@@ -20006,7 +20042,7 @@ export interface operations {
                 /** @description Một trạng thái, hoặc nhiều trạng thái nối dấu phẩy */
                 status?: ("pending_host_approval" | "approved_by_host" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_paid" | "hold_expired" | "slot_taken" | "cancelled_by_host")[];
                 vehicleId?: string;
-                /** @description Lọc theo chi nhánh (qua xe của yêu cầu) */
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
                 page?: number;
                 limit?: number;
@@ -20989,7 +21025,7 @@ export interface operations {
                 preset?: "awaiting_pickup";
                 /** @description Lọc theo xe */
                 vehicleId?: string;
-                /** @description Lọc theo chi nhánh (qua xe của đơn) */
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
                 /** @description Trả xe từ (ISO) — lọc cho panel quá hạn/sắp trả */
                 returnFrom?: string;
@@ -26462,7 +26498,7 @@ export interface operations {
                 vehicleType?: "car" | "motorbike";
                 /** @description Tìm theo tên xe hoặc biển số */
                 q?: string;
-                /** @description Chỉ hiện xe của một chi nhánh */
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
                 sort?: "next_booking" | "name" | "price_asc" | "price_desc";
             };
@@ -26744,7 +26780,10 @@ export interface operations {
     };
     BulkDayController_releaseBatch: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                branchId?: string;
+            };
             header?: never;
             path: {
                 batchId: string;
@@ -26922,7 +26961,7 @@ export interface operations {
                 to: string;
                 /** @description Lọc theo loại xe, khớp bộ lọc trên lưới lịch */
                 vehicleType?: string;
-                /** @description Chi nhánh đang chọn ở thanh trên */
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
                 /** @description Từ khoá tên/biển số/mã xe */
                 q?: string;
@@ -27517,7 +27556,7 @@ export interface operations {
                 vehicleType?: "car" | "motorbike";
                 /** @description Tìm theo tên xe hoặc biển số */
                 q?: string;
-                /** @description Chỉ hiện xe của một chi nhánh */
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
                 sort?: "next_booking" | "name" | "price_asc" | "price_desc";
             };
@@ -27655,7 +27694,7 @@ export interface operations {
                 vehicleType?: "car" | "motorbike";
                 /** @description Tìm theo tên xe hoặc biển số */
                 q?: string;
-                /** @description Chỉ hiện xe của một chi nhánh */
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
                 sort?: "next_booking" | "name" | "price_asc" | "price_desc";
             };
@@ -27930,7 +27969,7 @@ export interface operations {
                 vehicleType?: "car" | "motorbike";
                 /** @description Tìm theo tên xe hoặc biển số */
                 q?: string;
-                /** @description Chỉ hiện xe của một chi nhánh */
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
                 sort?: "next_booking" | "name" | "price_asc" | "price_desc";
             };
@@ -32630,6 +32669,8 @@ export interface operations {
                 /** @description Tìm theo mã đơn / tên khách / SĐT / tên xe / biển số */
                 q?: string;
                 filter?: "all" | "overdue" | "upcoming" | "unpaid";
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                branchId?: string;
                 page?: number;
                 limit?: number;
             };
@@ -33520,6 +33561,8 @@ export interface operations {
     FinanceOverviewController_byCategory: {
         parameters: {
             query: {
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                branchId?: string;
                 /** @description Từ ngày — `YYYY-MM-DD` hoặc ISO đầy đủ */
                 from?: string;
                 /** @description Đến ngày */
@@ -33658,6 +33701,8 @@ export interface operations {
     FinanceOverviewController_byCustomer: {
         parameters: {
             query?: {
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                branchId?: string;
                 /** @description Từ ngày — `YYYY-MM-DD` hoặc ISO đầy đủ */
                 from?: string;
                 /** @description Đến ngày */
@@ -33792,6 +33837,8 @@ export interface operations {
     FinanceOverviewController_byVehicle: {
         parameters: {
             query?: {
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                branchId?: string;
                 /** @description Từ ngày — `YYYY-MM-DD` hoặc ISO đầy đủ */
                 from?: string;
                 /** @description Đến ngày */
@@ -34549,6 +34596,8 @@ export interface operations {
     FinanceOverviewController_series: {
         parameters: {
             query?: {
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                branchId?: string;
                 /** @description Từ ngày — `YYYY-MM-DD` (trọn ngày giờ VN) hoặc ISO đầy đủ */
                 from?: string;
                 /** @description Đến ngày — cùng quy ước với `from` */
@@ -34687,6 +34736,8 @@ export interface operations {
     FinanceOverviewController_summary: {
         parameters: {
             query?: {
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                branchId?: string;
                 /** @description Từ ngày (ISO) */
                 from?: string;
                 /** @description Đến ngày (ISO) */
@@ -34825,6 +34876,8 @@ export interface operations {
             query?: {
                 /** @description Tìm theo tên xe, biển số hoặc mã đơn */
                 q?: string;
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                branchId?: string;
                 page?: number;
                 limit?: number;
             };
@@ -35624,6 +35677,8 @@ export interface operations {
                 q?: string;
                 /** @description Loại của phiếu liên quan */
                 type?: "oil_change" | "periodic_service" | "repair" | "tire" | "battery" | "other";
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                branchId?: string;
                 /** @description ISO — lịch từ ngày */
                 from?: string;
                 /** @description ISO — lịch đến ngày */
@@ -35757,7 +35812,10 @@ export interface operations {
     };
     MaintenanceBoardController_summary: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                branchId?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -35773,6 +35831,27 @@ export interface operations {
                     "application/json": {
                         data: components["schemas"]["MaintenanceBoardSummaryDto"];
                     };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
             /**
@@ -60240,6 +60319,8 @@ export interface operations {
     ReceiptsController_list: {
         parameters: {
             query?: {
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                branchId?: string;
                 type?: "income" | "expense";
                 status?: "draft" | "pending_approval" | "approved" | "cancelled";
                 /** @description Lọc theo danh mục */
@@ -61166,6 +61247,8 @@ export interface operations {
     ReceiptsController_summary: {
         parameters: {
             query?: {
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                branchId?: string;
                 type?: "income" | "expense";
                 status?: "draft" | "pending_approval" | "approved" | "cancelled";
                 /** @description Lọc theo danh mục */
@@ -68977,7 +69060,7 @@ export interface operations {
                 serviceType?: "self_drive" | "with_driver" | "long_term";
                 operationStatus?: "available" | "renting" | "maintenance" | "inactive";
                 publicStatus?: "draft" | "pending_public_review" | "approved_public" | "needs_revision" | "rejected" | "hidden" | "archived";
-                /** @description Id chi nhánh — chỉ thu hẹp trong gian hàng hiện tại */
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
                 sort?: "newest" | "name_asc" | "code_asc" | "price_asc" | "price_desc";
                 page?: number;
@@ -77502,7 +77585,10 @@ export interface operations {
     };
     VehiclesController_fleetSummary: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                branchId?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -77518,6 +77604,27 @@ export interface operations {
                     "application/json": {
                         data: components["schemas"]["FleetSummaryDto"];
                     };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
             /**

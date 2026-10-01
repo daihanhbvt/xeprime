@@ -544,6 +544,9 @@ export class AuthService {
         select: {
           roleKey: true,
           roleId: true,
+          // Phạm vi chi nhánh (ADR 0052) — web cần nó để KHÔNG đưa "Tất cả chi nhánh" cho người
+          // bị giới hạn ở modal mời và ô phân quyền. Backend vẫn chặn (`BRANCH_SCOPE_EXCEEDED`).
+          branchScope: true,
           // Trục năng lực (ADR 0027) đi kèm luôn — `select` phải khớp `TenantScopeGuard`, vì cả
           // hai gọi cùng `resolveTenantFeatures`. Menu của web đọc từ đây ở LẦN VẼ ĐẦU, nên tách
           // ra một query riêng là menu nhấp nháy.
@@ -687,6 +690,7 @@ export class AuthService {
 function toTenantSummary(
   membership: {
     roleKey: string;
+    branchScope: string;
     tenant: {
       id: string;
       name: string;
@@ -721,6 +725,7 @@ function toTenantSummary(
      */
     onboardingState: membership.tenant.onboardingState,
     roleKey: membership.roleKey,
+    branchScope: membership.branchScope,
     logoUrl: membership.tenant.profile?.logoUrl ?? null,
     features: Object.entries(plan.features).map(([feature, state]) => ({ feature, state })),
     planCode: plan.planCode,

@@ -36,6 +36,8 @@ let dbAvailable = false;
 let ownerId: string;
 let tenantId: string;
 let vehicleAId: string;
+/** Chi nhánh của tenant test — phiếu tay KHÔNG gắn xe phải quy về một chi nhánh (ADR 0052). */
+let branchId: string;
 let vehicleBId: string;
 
 /** Kỳ thử nằm hẳn trong tương lai để không đụng dữ liệu seed của database dev. */
@@ -54,6 +56,7 @@ beforeAll(async () => {
 
   ownerId = newId();
   tenantId = newId();
+  branchId = newId();
   vehicleAId = newId();
   vehicleBId = newId();
 
@@ -77,6 +80,16 @@ beforeAll(async () => {
       userId: ownerId,
       roleKey: TENANT_ROLE.SHOP_OWNER,
       status: MEMBERSHIP_STATUS.ACTIVE,
+    },
+  });
+  await prisma.tenantBranch.create({
+    data: {
+      id: branchId,
+      tenantId,
+      code: 'CN01',
+      name: 'Chi nhánh chính',
+      isDefault: true,
+      status: 'active',
     },
   });
   for (const [id, name] of [
@@ -154,6 +167,12 @@ async function seedReceipt(seed: ReceiptSeed) {
       sourceRefId: source === RECEIPT_SOURCE.MANUAL ? null : newId(),
       occurredAt: seed.occurredAt,
       vehicleId: seed.vehicleId ?? null,
+      /*
+       * Phiếu NHẬP TAY không gắn xe phải mang chi nhánh (ADR 0052) — CHECK
+       * `receipts_manual_needs_branch_or_vehicle` ở database cấm phiếu vô chủ, và seed của test
+       * phải đi đúng đường sản phẩm đi chứ không luồn qua luật.
+       */
+      branchId: !seed.vehicleId && source === RECEIPT_SOURCE.MANUAL ? branchId : null,
       tenantCustomerId: seed.tenantCustomerId ?? null,
       bookingId: seed.bookingId ?? null,
       categoryId: seed.categoryId ?? null,
@@ -244,7 +263,7 @@ describe('Báo cáo tài chính — /finance/summary', () => {
       occurredAt: new Date(vnAt('2027-03-12', 9)),
     });
 
-    const s = await overview.summary(tenantId, { from: FROM, to: TO });
+    const s = await overview.summary(tenantId, { from: FROM, to: TO }, null);
 
     // Dòng tiền quỹ: mọi đồng có di chuyển thật.
     expect(s.totalIncome).toBe('1500000');
@@ -266,7 +285,7 @@ describe('Báo cáo tài chính — /finance/summary', () => {
       occurredAt: new Date(vnAt('2027-03-10', 9)),
     });
 
-    const s = await overview.summary(tenantId, { from: FROM, to: TO });
+    const s = await overview.summary(tenantId, { from: FROM, to: TO }, null);
     expect(s.totalIncome).toBe('0');
     expect(s.revenue).toBe('0');
   });
@@ -279,7 +298,7 @@ describe('Báo cáo tài chính — /finance/summary', () => {
       occurredAt: new Date(vnAt('2027-03-10', 9)),
     });
 
-    const s = await overview.summary(tenantId, { from: FROM, to: TO });
+    const s = await overview.summary(tenantId, { from: FROM, to: TO }, null);
     expect(s.revenue).toBe('0');
     expect(s.profit).toBe('-300000');
     expect(s.profitMarginPercent).toBeNull();
@@ -334,7 +353,7 @@ describe('Báo cáo tài chính — /finance/summary', () => {
       });
     }
 
-    const s = await overview.summary(tenantId, { from: FROM, to: TO });
+    const s = await overview.summary(tenantId, { from: FROM, to: TO }, null);
     expect(s.depositHeld).toBe('1000000');
     expect(s.depositHeldBookings).toBe(1);
   });
@@ -353,13 +372,13 @@ describe('Báo cáo tài chính — /finance/summary', () => {
       occurredAt: new Date(vnAt('2027-03-14', 9)),
     });
 
-    const card = await overview.summary(tenantId, { from: FROM, to: TO });
+    const card = await overview.summary(tenantId, { from: FROM, to: TO }, null);
     const ledger = await receiptsService.summary(tenantId, {
       type: RECEIPT_TYPE.INCOME,
       sourceGroup: RECEIPT_SOURCE_GROUP.BUSINESS,
       from: FROM,
       to: TO,
-    });
+    }, null);
 
     expect(ledger.totalIncome).toBe(card.revenue);
 
@@ -369,7 +388,7 @@ describe('Báo cáo tài chính — /finance/summary', () => {
       type: RECEIPT_TYPE.INCOME,
       from: FROM,
       to: TO,
-    });
+    }, null);
     expect(unfiltered.totalIncome).toBe('950000');
   });
 });
@@ -388,7 +407,7 @@ describe('Báo cáo tài chính — /finance/series', () => {
       from: '2027-03-09',
       to: '2027-03-11',
       granularity: 'day',
-    });
+    }, null);
 
     const on9 = res.buckets.find((b) => b.bucket === '2027-03-09');
     const on10 = res.buckets.find((b) => b.bucket === '2027-03-10');
@@ -413,7 +432,7 @@ describe('Báo cáo tài chính — /finance/series', () => {
       from: '2027-03-09',
       to: '2027-03-11',
       granularity: 'day',
-    });
+    }, null);
 
     expect(res.buckets.map((b) => b.bucket)).toEqual([
       '2027-03-09',
@@ -430,20 +449,20 @@ describe('Báo cáo tài chính — /finance/series', () => {
       from: '2027-01-01',
       to: '2028-02-04',
       granularity: 'day',
-    });
+    }, null);
     expect(perDay.granularity).toBe('week');
 
     const perWeek = await overview.series(tenantId, {
       from: '2020-01-01',
       to: '2027-01-01',
       granularity: 'day',
-    });
+    }, null);
     expect(perWeek.granularity).toBe('month');
   });
 
   maybe('kỳ rộng tới mức không vẽ được ⇒ 400 có lý do, không âm thầm cắt dữ liệu', async () => {
     await expect(
-      overview.series(tenantId, { from: '1990-01-01', to: '2030-01-01', granularity: 'day' }),
+      overview.series(tenantId, { from: '1990-01-01', to: '2030-01-01', granularity: 'day' }, null),
     ).rejects.toMatchObject({ status: 400 });
   });
 
@@ -465,7 +484,7 @@ describe('Báo cáo tài chính — /finance/series', () => {
       from: '2027-03-15',
       to: '2027-03-15',
       granularity: 'day',
-    });
+    }, null);
     expect(res.buckets).toHaveLength(1);
     expect(res.buckets[0]!.revenue).toBe('400000');
     expect(res.buckets[0]!.cashIn).toBe('1000000');
@@ -501,8 +520,8 @@ describe('Báo cáo tài chính — /finance/by-category', () => {
       from: FROM,
       to: TO,
       type: RECEIPT_TYPE.INCOME,
-    });
-    const summary = await overview.summary(tenantId, { from: FROM, to: TO });
+    }, null);
+    const summary = await overview.summary(tenantId, { from: FROM, to: TO }, null);
 
     expect(res.total).toBe(summary.revenue);
     expect(res.items).toHaveLength(2);
@@ -527,7 +546,7 @@ describe('Báo cáo tài chính — /finance/by-category', () => {
       from: FROM,
       to: TO,
       type: RECEIPT_TYPE.INCOME,
-    });
+    }, null);
     expect(res.items).toHaveLength(0);
     expect(res.total).toBe('0');
   });
@@ -554,7 +573,7 @@ describe('Báo cáo tài chính — /finance/by-vehicle', () => {
       occurredAt: new Date(vnAt('2027-03-22', 9)),
     });
 
-    const res = await overview.byVehicle(tenantId, { from: FROM, to: TO });
+    const res = await overview.byVehicle(tenantId, { from: FROM, to: TO }, null);
     expect(res.data).toHaveLength(1);
     expect(res.data[0]).toMatchObject({
       vehicleId: vehicleAId,
@@ -566,7 +585,7 @@ describe('Báo cáo tài chính — /finance/by-vehicle', () => {
 
     // `unassignedCost` là số của KỲ (không đổi theo trang) nên nó sống ở summary, không ở trang
     // dữ liệu. Khẳng định phép cộng khép kín: chi phí các dòng + chi phí chung = thẻ "Chi phí".
-    const summary = await overview.summary(tenantId, { from: FROM, to: TO });
+    const summary = await overview.summary(tenantId, { from: FROM, to: TO }, null);
     expect(summary.unassignedCost).toBe('300000');
     expect(summary.cost).toBe('800000');
   });
@@ -576,7 +595,7 @@ describe('Báo cáo tài chính — /finance/by-vehicle', () => {
     await seedBooking({ vehicleId: vehicleBId, pickupAt: new Date(vnAt('2027-03-08', 8)) });
     await seedBooking({ vehicleId: vehicleBId, pickupAt: new Date(vnAt('2027-03-09', 8)) });
 
-    const res = await overview.byVehicle(tenantId, { from: FROM, to: TO });
+    const res = await overview.byVehicle(tenantId, { from: FROM, to: TO }, null);
     expect(res.data).toHaveLength(1);
     expect(res.data[0]).toMatchObject({
       vehicleId: vehicleBId,
@@ -602,7 +621,7 @@ describe('Báo cáo tài chính — /finance/by-vehicle', () => {
       occurredAt: new Date(vnAt('2027-03-20', 9)),
     });
 
-    const page = await overview.byVehicle(tenantId, { from: FROM, to: TO, limit: 1 });
+    const page = await overview.byVehicle(tenantId, { from: FROM, to: TO, limit: 1 }, null);
     expect(page.data.map((r) => r.vehicleId)).toEqual([vehicleBId]);
     expect(page.meta).toMatchObject({ total: 2, hasNext: true });
   });
@@ -623,7 +642,7 @@ describe('Báo cáo tài chính — /finance/by-vehicle', () => {
       occurredAt: new Date(vnAt('2027-03-20', 9)),
     });
 
-    const res = await overview.byVehicle(tenantId, { from: FROM, to: TO });
+    const res = await overview.byVehicle(tenantId, { from: FROM, to: TO }, null);
     expect(res.data[0]!.revenue).toBe('300000');
   });
 });
@@ -659,8 +678,8 @@ describe('Báo cáo tài chính — thu hẹp về MỘT xe / MỘT khách', () 
       from: FROM,
       to: TO,
       vehicleId: vehicleAId,
-    });
-    const table = await overview.byVehicle(tenantId, { from: FROM, to: TO });
+    }, null);
+    const table = await overview.byVehicle(tenantId, { from: FROM, to: TO }, null);
     const rowA = table.data.find((r) => r.vehicleId === vehicleAId);
 
     expect(scoped.revenue).toBe(rowA?.revenue);
@@ -686,7 +705,7 @@ describe('Báo cáo tài chính — thu hẹp về MỘT xe / MỘT khách', () 
       occurredAt: new Date(vnAt('2027-03-12', 9)),
     });
 
-    const scoped = await overview.summary(tenantId, { from: FROM, to: TO, vehicleId: vehicleAId });
+    const scoped = await overview.summary(tenantId, { from: FROM, to: TO, vehicleId: vehicleAId }, null);
     expect(scoped.revenue).toBe('1000000');
     // Cọc vẫn nằm ở lớp dòng tiền quỹ của chính xe đó — nó có di chuyển thật.
     expect(scoped.totalIncome).toBe('8000000');
@@ -715,7 +734,7 @@ describe('Báo cáo tài chính — thu hẹp về MỘT xe / MỘT khách', () 
       from: FROM,
       to: TO,
       tenantCustomerId: customerId,
-    });
+    }, null);
     expect(scoped.revenue).toBe('2000000');
     expect(scoped.trips).toBe(1);
   });
@@ -747,7 +766,7 @@ describe('Báo cáo tài chính — thu hẹp về MỘT xe / MỘT khách', () 
       occurredAt: new Date(vnAt('2027-03-11', 10)),
     });
 
-    const scopedA = await overview.summary(tenantId, { from: FROM, to: TO, tenantCustomerId: a });
+    const scopedA = await overview.summary(tenantId, { from: FROM, to: TO, tenantCustomerId: a }, null);
     expect(scopedA.revenue).toBe('3000000');
     expect(scopedA.trips).toBe(1);
   });
@@ -772,7 +791,7 @@ describe('Báo cáo tài chính — thu hẹp về MỘT xe / MỘT khách', () 
       to: '2027-03-16',
       granularity: 'day',
       vehicleId: vehicleAId,
-    });
+    }, null);
     expect(series.buckets[0]!.revenue).toBe('2500000');
 
     const byCategory = await overview.byCategory(tenantId, {
@@ -780,7 +799,7 @@ describe('Báo cáo tài chính — thu hẹp về MỘT xe / MỘT khách', () 
       to: TO,
       type: RECEIPT_TYPE.INCOME,
       vehicleId: vehicleAId,
-    });
+    }, null);
     expect(byCategory.total).toBe('2500000');
   });
 
@@ -793,7 +812,7 @@ describe('Báo cáo tài chính — thu hẹp về MỘT xe / MỘT khách', () 
       occurredAt: new Date(vnAt('2027-03-12', 9)),
     });
 
-    const scoped = await overview.summary(tenantId, { from: FROM, to: TO, vehicleId: newId() });
+    const scoped = await overview.summary(tenantId, { from: FROM, to: TO, vehicleId: newId() }, null);
     expect(scoped.revenue).toBe('0');
     expect(scoped.trips).toBe(0);
   });
@@ -818,7 +837,7 @@ describe('Báo cáo tài chính — /finance/by-customer', () => {
       occurredAt: new Date(vnAt('2027-03-10', 10)),
     });
 
-    const res = await overview.byCustomer(tenantId, { from: FROM, to: TO });
+    const res = await overview.byCustomer(tenantId, { from: FROM, to: TO }, null);
     expect(res.data).toHaveLength(1);
     expect(res.data[0]).toMatchObject({
       tenantCustomerId: customerId,
@@ -844,8 +863,8 @@ describe('Báo cáo tài chính — /finance/by-customer', () => {
       occurredAt: new Date(vnAt('2027-03-13', 9)),
     });
 
-    const res = await overview.byCustomer(tenantId, { from: FROM, to: TO });
-    const summary = await overview.summary(tenantId, { from: FROM, to: TO });
+    const res = await overview.byCustomer(tenantId, { from: FROM, to: TO }, null);
+    const summary = await overview.summary(tenantId, { from: FROM, to: TO }, null);
 
     expect(res.data).toHaveLength(1);
     expect(res.data[0]!.revenue).toBe('6000000');
@@ -871,7 +890,7 @@ describe('Báo cáo tài chính — /finance/by-customer', () => {
       occurredAt: new Date(vnAt('2027-03-12', 9)),
     });
 
-    const res = await overview.byCustomer(tenantId, { from: FROM, to: TO });
+    const res = await overview.byCustomer(tenantId, { from: FROM, to: TO }, null);
     expect(res.data[0]!.revenue).toBe('800000');
   });
 
@@ -884,7 +903,7 @@ describe('Báo cáo tài chính — /finance/by-customer', () => {
       tenantCustomerId: customerId,
     });
 
-    const res = await overview.byCustomer(tenantId, { from: FROM, to: TO });
+    const res = await overview.byCustomer(tenantId, { from: FROM, to: TO }, null);
     expect(res.data).toHaveLength(1);
     expect(res.data[0]).toMatchObject({ trips: 1, revenue: '0' });
   });
@@ -906,8 +925,8 @@ describe('Báo cáo tài chính — /finance/by-customer', () => {
       occurredAt: new Date(vnAt('2027-03-12', 9)),
     });
 
-    const table = await overview.byCustomer(tenantId, { from: FROM, to: TO });
-    const scoped = await overview.summary(tenantId, { from: FROM, to: TO, tenantCustomerId: a });
+    const table = await overview.byCustomer(tenantId, { from: FROM, to: TO }, null);
+    const scoped = await overview.summary(tenantId, { from: FROM, to: TO, tenantCustomerId: a }, null);
 
     expect(table.data.find((r) => r.tenantCustomerId === a)?.revenue).toBe(scoped.revenue);
     // Mặc định sắp theo doanh thu giảm dần.
@@ -937,7 +956,7 @@ describe('Báo cáo tài chính — /finance/by-customer', () => {
       occurredAt: new Date(vnAt('2027-03-06', 10)),
     });
 
-    const page = await overview.byCustomer(tenantId, { from: FROM, to: TO, sort: 'trips', limit: 1 });
+    const page = await overview.byCustomer(tenantId, { from: FROM, to: TO, sort: 'trips', limit: 1 }, null);
     expect(page.data.map((r) => r.tenantCustomerId)).toEqual([a]);
     expect(page.meta).toMatchObject({ total: 2, hasNext: true });
   });
@@ -967,7 +986,7 @@ describe('Báo cáo tài chính — tỷ trọng theo khách', () => {
       occurredAt: new Date(vnAt('2027-03-12', 9)),
     });
 
-    const res = await overview.byCustomer(tenantId, { from: FROM, to: TO });
+    const res = await overview.byCustomer(tenantId, { from: FROM, to: TO }, null);
     expect(res.data.find((r) => r.tenantCustomerId === a)?.sharePercent).toBe(50);
     expect(res.data.find((r) => r.tenantCustomerId === b)?.sharePercent).toBe(30);
   });
@@ -981,7 +1000,7 @@ describe('Báo cáo tài chính — tỷ trọng theo khách', () => {
       tenantCustomerId: customerId,
     });
 
-    const res = await overview.byCustomer(tenantId, { from: FROM, to: TO });
+    const res = await overview.byCustomer(tenantId, { from: FROM, to: TO }, null);
     expect(res.data[0]!.sharePercent).toBeNull();
   });
 });

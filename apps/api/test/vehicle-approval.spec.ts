@@ -270,7 +270,7 @@ describe('Vehicle public approval (WS0)', () => {
    * hiệu lực ngay. Không còn phiếu duyệt lại nào sinh ra từ thao tác sửa xe.
    */
   maybe('sửa giá xe đang công khai → hiệu lực NGAY, không hạ về chờ duyệt', async () => {
-    const updated = await vehicles.update(tenantId, vehicleId, ownerId, { weekdayPrice: '650000' });
+    const updated = await vehicles.update(tenantId, vehicleId, ownerId, { weekdayPrice: '650000' }, null);
     expect(updated.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC);
     // Ở tầng service tiền còn là Decimal — interceptor mới đổi sang chuỗi ở tầng HTTP (ADR 0007).
     expect(String(updated.weekdayPrice)).toBe('650000');
@@ -289,7 +289,7 @@ describe('Vehicle public approval (WS0)', () => {
     const updated = await vehicles.update(tenantId, vehicleId, ownerId, {
       description: 'Mô tả mới.',
       mainImageUrl: 'https://img/main-2.jpg',
-    });
+    }, null);
     expect(updated.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC);
   });
 
@@ -300,7 +300,7 @@ describe('Vehicle public approval (WS0)', () => {
       { fuelType: FUEL_TYPE.DIESEL },
       { manufactureYear: 2019 },
     ]) {
-      await expect(vehicles.update(tenantId, vehicleId, ownerId, patch)).rejects.toMatchObject({
+      await expect(vehicles.update(tenantId, vehicleId, ownerId, patch, null)).rejects.toMatchObject({
         status: 409,
         response: { code: API_ERROR_CODE.VEHICLE_FIELD_LOCKED },
       });
@@ -319,7 +319,7 @@ describe('Vehicle public approval (WS0)', () => {
     const updated = await vehicles.update(tenantId, draft, ownerId, {
       plateNumber: '51A-777.77',
       manufactureYear: 2020,
-    });
+    }, null);
     expect(updated.plateNumber).toBe('51A-777.77');
     expect(updated.manufactureYear).toBe(2020);
   });
@@ -439,7 +439,7 @@ describe('Vehicle public approval (WS0)', () => {
       withDriverDailyPrice: '1500000',
       withDriverInterCityPrice: '1800000',
     });
-    await vehicles.update(tenantId, v, ownerId, { serviceTypes: ['self_drive'] });
+    await vehicles.update(tenantId, v, ownerId, { serviceTypes: ['self_drive'] }, null);
     const after = await prisma.vehicle.findUniqueOrThrow({
       where: { id: v },
       select: {

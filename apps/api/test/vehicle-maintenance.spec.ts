@@ -860,7 +860,7 @@ describe('Quyền & riêng tư (§10)', () => {
     await expect(
       maintenance.listForVehicle(otherTenantId, v.id, FULL_SCOPE),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.NOT_FOUND } });
-    const board = await maintenance.board(otherTenantId, {}, FULL_SCOPE);
+    const board = await maintenance.board(otherTenantId, {}, FULL_SCOPE, null);
     expect(board.data.some((row) => row.vehicleId === v.id)).toBe(false);
   });
 
@@ -947,24 +947,25 @@ describe('Trung tâm bảo dưỡng toàn đội xe (§9.2)', () => {
 
     const missing = await createVehicle('BOARD-MISSING');
 
-    const overdueRows = await maintenance.board(tenantId, { filter: 'overdue' }, FULL_SCOPE);
+    const overdueRows = await maintenance.board(tenantId, { filter: 'overdue' }, FULL_SCOPE, null);
     expect(overdueRows.data.some((row) => row.vehicleId === overdue.id)).toBe(true);
     expect(overdueRows.data.every((row) => row.dueStatus === MAINTENANCE_DUE_STATUS.OVERDUE)).toBe(
       true,
     );
 
-    const dueSoonRows = await maintenance.board(tenantId, { filter: 'due_soon' }, FULL_SCOPE);
+    const dueSoonRows = await maintenance.board(tenantId, { filter: 'due_soon' }, FULL_SCOPE, null);
     expect(dueSoonRows.data.some((row) => row.vehicleId === dueSoon.id)).toBe(true);
 
     const missingRows = await maintenance.board(
       tenantId,
       { filter: 'missing_odometer' },
       FULL_SCOPE,
+    null,
     );
     expect(missingRows.data.some((row) => row.vehicleId === missing.id)).toBe(true);
     expect(missingRows.data.every((row) => row.currentOdometerKm === null)).toBe(true);
 
-    const summary = await maintenance.boardSummary(tenantId);
+    const summary = await maintenance.boardSummary(tenantId, { canViewHandovers: false }, null);
     expect(summary.overdue).toBeGreaterThanOrEqual(1);
     expect(summary.dueSoon).toBeGreaterThanOrEqual(1);
     expect(summary.missingOdometer).toBeGreaterThanOrEqual(1);
@@ -972,12 +973,12 @@ describe('Trung tâm bảo dưỡng toàn đội xe (§9.2)', () => {
 
   maybe('tìm theo tên/mã/biển số + phân trang server-side', async () => {
     const v = await createVehicle('BOARD-SEARCH');
-    const byCode = await maintenance.board(tenantId, { q: 'BOARD-SEARCH' }, FULL_SCOPE);
+    const byCode = await maintenance.board(tenantId, { q: 'BOARD-SEARCH' }, FULL_SCOPE, null);
     expect(byCode.data).toHaveLength(1);
     expect(byCode.data[0]!.vehicleId).toBe(v.id);
     expect(byCode.meta.total).toBe(1);
 
-    const page = await maintenance.board(tenantId, { page: 1, limit: 2 }, FULL_SCOPE);
+    const page = await maintenance.board(tenantId, { page: 1, limit: 2 }, FULL_SCOPE, null);
     expect(page.data.length).toBeLessThanOrEqual(2);
     expect(page.meta.limit).toBe(2);
     expect(page.meta.hasNext).toBe(page.meta.total > 2);
@@ -999,7 +1000,7 @@ describe('Trung tâm bảo dưỡng toàn đội xe (§9.2)', () => {
     );
     await maintenance.startRecord(tenantId, v.id, ownerId, record.id, record.rowVersion, FULL_SCOPE);
 
-    const rows = await maintenance.board(tenantId, { filter: 'in_progress' }, STAFF_SCOPE);
+    const rows = await maintenance.board(tenantId, { filter: 'in_progress' }, STAFF_SCOPE, null);
     const row = rows.data.find((item) => item.vehicleId === v.id)!;
     expect(row.activeRecord?.status).toBe(MAINTENANCE_STATUS.IN_PROGRESS);
     expect(JSON.stringify(row)).not.toContain('1200000');

@@ -588,7 +588,7 @@ describe('OCR (Wave 5) — provider giả trong test, mặc định production l
     // Chọn 2/3 trường — trường thứ ba không được đụng.
     const applied = await documents.applyOcr(tenantId, v.id, ownerId, doc.id, job.id, {
       fields: ['holderName', 'expiresAt'],
-    });
+    }, null);
     expect(applied.holderName).toBe('Nguyễn Văn An');
     expect(applied.expiresAt).toBe('2029-01-15');
     expect(applied.holderAddress).toBeNull();
@@ -599,7 +599,7 @@ describe('OCR (Wave 5) — provider giả trong test, mặc định production l
     fakeOcr.result = { status: 'needs_review', fields: { holderName: { value: 'X' } } };
     const job2 = await documents.requestOcr(tenantId, v.id, ownerId, doc.id);
     await expect(
-      documents.applyOcr(tenantId, v.id, ownerId, doc.id, job2.id, { fields: ['engineNumber'] }),
+      documents.applyOcr(tenantId, v.id, ownerId, doc.id, job2.id, { fields: ['engineNumber'] }, null),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
   });
 
@@ -627,7 +627,7 @@ describe('OCR (Wave 5) — provider giả trong test, mặc định production l
       documents.applyOcr(tenantId, v.id, ownerId, doc.id, job.id, {
         fields: ['plateNumber'],
         applyPlateToVehicle: true,
-      }),
+      }, null),
     ).rejects.toMatchObject({
       status: 409,
       response: { code: API_ERROR_CODE.VEHICLE_FIELD_LOCKED },
@@ -654,7 +654,7 @@ describe('OCR (Wave 5) — provider giả trong test, mặc định production l
     await documents.applyOcr(tenantId, v.id, ownerId, doc.id, job.id, {
       fields: ['plateNumber'],
       applyPlateToVehicle: true,
-    });
+    }, null);
 
     const vehicleRow = await prisma.vehicle.findUnique({
       where: { id: v.id },
@@ -679,7 +679,7 @@ describe('OCR (Wave 5) — provider giả trong test, mặc định production l
     };
     const job2 = await documents.requestOcr(tenantId, v.id, ownerId, doc.id);
     await expect(
-      documents.applyOcr(tenantId, v.id, ownerId, doc.id, job2.id, { fields: ['expiresAt'] }),
+      documents.applyOcr(tenantId, v.id, ownerId, doc.id, job2.id, { fields: ['expiresAt'] }, null),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
   });
 });
@@ -695,7 +695,7 @@ describe('Transaction & concurrency (Wave 5.1)', () => {
     };
     const job = await documents.requestOcr(tenantId, v.id, ownerId, doc.id);
     await expect(
-      documents.applyOcr(tenantId, v.id, ownerId, doc.id, job.id, { fields: ['holderName'] }),
+      documents.applyOcr(tenantId, v.id, ownerId, doc.id, job.id, { fields: ['holderName'] }, null),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
     const jobRow = await prisma.vehicleDocumentOcrJob.findUnique({ where: { id: job.id } });
     expect(jobRow?.status).toBe(VEHICLE_DOCUMENT_OCR_STATUS.NEEDS_REVIEW);
@@ -710,9 +710,9 @@ describe('Transaction & concurrency (Wave 5.1)', () => {
       fields: { holderName: { value: 'Nguyễn Văn An' } },
     };
     const job = await documents.requestOcr(tenantId, v.id, ownerId, doc.id);
-    await documents.applyOcr(tenantId, v.id, ownerId, doc.id, job.id, { fields: ['holderName'] });
+    await documents.applyOcr(tenantId, v.id, ownerId, doc.id, job.id, { fields: ['holderName'] }, null);
     await expect(
-      documents.applyOcr(tenantId, v.id, ownerId, doc.id, job.id, { fields: ['holderName'] }),
+      documents.applyOcr(tenantId, v.id, ownerId, doc.id, job.id, { fields: ['holderName'] }, null),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.CONFLICT } });
   });
 
@@ -738,7 +738,7 @@ describe('Transaction & concurrency (Wave 5.1)', () => {
         documents.applyOcr(tenantId, v.id, ownerId, doc.id, job.id, {
           fields: ['holderName', 'plateNumber'],
           applyPlateToVehicle: true,
-        }),
+        }, null),
       ).rejects.toThrow('listing sync boom');
     } finally {
       sync.mockRestore();
@@ -758,7 +758,7 @@ describe('Transaction & concurrency (Wave 5.1)', () => {
     // Job còn needs_review nên đối soát lại được sau khi lỗi hạ tầng qua đi.
     const retried = await documents.applyOcr(tenantId, v.id, ownerId, doc.id, job.id, {
       fields: ['holderName'],
-    });
+    }, null);
     expect(retried.holderName).toBe('Nguyễn Văn An');
   });
 

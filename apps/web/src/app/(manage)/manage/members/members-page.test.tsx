@@ -43,6 +43,11 @@ vi.mock('@/features/members/hooks/use-member-mutations', () => ({
   useRemoveMember: () => removeMember,
 }));
 
+// Ô chi nhánh phụ trách (ADR 0052) hỏi API chi nhánh — stub để test bảng không cần QueryClient.
+vi.mock('@/features/branches/hooks/use-branches', () => ({
+  useBranches: () => ({ data: { items: [] }, isLoading: false }),
+}));
+
 vi.mock('@/features/members/components/InviteMemberModal', () => ({
   InviteMemberModal: ({ open }: { open: boolean }) =>
     open ? <div data-testid="invite-member" /> : null,
@@ -84,6 +89,8 @@ function member(over: Partial<Member> = {}): Member {
     avatarUrl: null,
     roleKey: 'shop_staff',
     status: 'active',
+    branchScope: 'all',
+    branchIds: [],
     joinedAt: '2026-07-01T00:00:00.000Z',
     ...over,
   } as Member;
@@ -192,7 +199,8 @@ describe('/manage/members — định danh và vai trò', () => {
     grant(PERMISSION.MEMBER_UPDATE_ROLE);
     renderWith([member()]);
 
-    expect(within(bodyRows()[0]!).getByRole('combobox')).toBeTruthy();
+    // HAI ô chọn từ ADR 0052: vai trò + chi nhánh phụ trách — cùng điều kiện hiện/ẩn.
+    expect(within(bodyRows()[0]!).getAllByRole('combobox')).toHaveLength(2);
   });
 
   it('shop_owner KHÔNG bao giờ đổi được vai trò, kể cả khi có quyền', () => {

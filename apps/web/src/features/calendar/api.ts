@@ -128,8 +128,17 @@ export const fetchBulkDayPreview = (query: QueryParams): Promise<BulkDayPreview>
 export const bulkBlockDay = (body: BulkDayBlockInput): Promise<BulkDayBlockResult> =>
   apiPost<BulkDayBlockResult>('/calendar/bulk-day/blocks', body);
 
-export const releaseBulkBlockBatch = (batchId: string): Promise<{ released: number }> =>
-  apiDelete<{ released: number }>(`/calendar/bulk-day/blocks/${batchId}`);
+/**
+ * Gỡ một lô khoá — CHỈ phần thuộc chi nhánh đang xem (ADR 0052). Một lô tạo lúc xem "Tất cả" phủ
+ * mọi chi nhánh; tắt công tắc khi đang lọc chi nhánh A không được gỡ luôn lịch khoá của chi nhánh B.
+ */
+export const releaseBulkBlockBatch = (
+  batchId: string,
+  branchId?: string,
+): Promise<{ released: number }> =>
+  apiDelete<{ released: number }>(
+    `/calendar/bulk-day/blocks/${batchId}${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ''}`,
+  );
 
 export const bulkPriceDay = (body: BulkDayPriceInput): Promise<BulkDayPriceResult> =>
   apiPut<BulkDayPriceResult>('/calendar/bulk-day/prices', body);

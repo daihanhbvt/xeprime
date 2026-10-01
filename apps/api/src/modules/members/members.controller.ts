@@ -53,7 +53,7 @@ export class MembersController {
     @Param('userId') userId: string,
     @Body() dto: UpdateMemberRoleDto,
   ): Promise<MemberDto> {
-    return this.members.updateRole(tenant.tenantId, user.id, userId, dto);
+    return this.members.updateRole(tenant.tenantId, user.id, userId, dto, tenant.allowedBranchIds);
   }
 
   @Delete(':userId')
@@ -65,6 +65,6 @@ export class MembersController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('userId') userId: string,
   ): Promise<{ userId: string }> {
-    return this.members.remove(tenant.tenantId, user.id, userId);
+    return this.members.remove(tenant.tenantId, user.id, userId, tenant.allowedBranchIds);
   }
 }

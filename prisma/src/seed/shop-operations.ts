@@ -737,6 +737,8 @@ interface ReceiptInput {
   description: string;
   bookingId?: string | null;
   vehicleId?: string | null;
+  /** Chi nhánh của khoản KHÔNG gắn xe — ADR 0052; CHECK ở DB cấm gửi kèm `vehicleId`. */
+  branchId?: string | null;
   tenantCustomerId?: string | null;
 }
 
@@ -752,6 +754,7 @@ async function upsertReceipt(
     categoryId: deps.financeCategoryIds.get(input.categoryName) ?? null,
     bookingId: input.bookingId ?? null,
     vehicleId: input.vehicleId ?? null,
+    branchId: input.vehicleId ? null : (input.branchId ?? null),
     tenantCustomerId: input.tenantCustomerId ?? null,
     amount: input.amount,
     paymentMethod: input.paymentMethod,
@@ -974,18 +977,39 @@ export async function buildMoney(
     summary.receipts += 1;
   }
 
-  // ── Vài phiếu NHẬP TAY ───────────────────────────────────────────────────
-  // Sổ thu chi thật không chỉ có phiếu tự động: rửa xe, đổ xăng, tiền quảng cáo đều gõ tay.
+  /*
+   * ── Vài phiếu NHẬP TAY ──────────────────────────────────────────────────
+   *
+   * Sổ thu chi thật không chỉ có phiếu tự động: rửa xe, đổ xăng, tiền quảng cáo đều gõ tay.
+   *
+   * Mỗi phiếu tay phải quy được về một chi nhánh (ADR 0052) — đúng như form bắt người dùng làm.
+   * Khoản của một chiếc XE (`onVehicle`) gắn xe và chi nhánh suy từ xe; khoản của cả chi nhánh
+   * (marketing, văn phòng) gắn thẳng chi nhánh. Seed đi đúng đường đó thay vì luồn qua luật, nếu
+   * không nó sẽ đẻ ra loại dữ liệu mà sản phẩm không cho người dùng tạo.
+   */
+  const anyVehicle = await prisma.vehicle.findFirst({
+    where: { tenantId: deps.tenantId, deletedAt: null },
+    orderBy: { code: 'asc' },
+    select: { id: true },
+  });
+  const defaultBranch = await prisma.tenantBranch.findFirst({
+    where: { tenantId: deps.tenantId, deletedAt: null },
+    orderBy: [{ isDefault: 'desc' }, { code: 'asc' }],
+    select: { id: true },
+  });
   const manual: ReadonlyArray<{
     type: string;
     category: string;
     amount: number;
     desc: string;
     day: number;
+    /** Danh mục `requires_vehicle` — khoản này thuộc một chiếc xe cụ thể. */
+    onVehicle?: true;
   }> = [
     {
       type: RECEIPT_TYPE.EXPENSE,
       category: 'Rửa xe',
+      onVehicle: true,
       amount: 450_000,
       desc: 'Rửa xe cả đội cuối tuần',
       day: -7,
@@ -993,6 +1017,7 @@ export async function buildMoney(
     {
       type: RECEIPT_TYPE.EXPENSE,
       category: 'Đổ xăng',
+      onVehicle: true,
       amount: 2_800_000,
       desc: 'Đổ xăng đội xe',
       day: -5,
@@ -1014,6 +1039,7 @@ export async function buildMoney(
     {
       type: RECEIPT_TYPE.INCOME,
       category: 'Phí quá giờ',
+      onVehicle: true,
       amount: 350_000,
       desc: 'Khách trả xe trễ 3 giờ',
       day: -9,
@@ -1027,6 +1053,13 @@ export async function buildMoney(
     },
   ];
   for (const [i, m] of manual.entries()) {
+    /*
+     * Gian hàng chưa có chi nhánh thì cũng chưa có sổ để ghi: bỏ qua thay vì ghi một phiếu mà
+     * sản phẩm KHÔNG cho người dùng tạo (CHECK `receipts_manual_needs_branch_or_vehicle`).
+     * Gian hàng "0 xe, chưa duyệt" của bộ demo rơi đúng vào đây.
+     */
+    if (!defaultBranch) break;
+    const onVehicle = m.onVehicle ? (anyVehicle?.id ?? null) : null;
     await upsertReceipt(spec, deps, {
       key: `manual:${i}`,
       type: m.type,
@@ -1037,6 +1070,8 @@ export async function buildMoney(
       sourceRefId: null,
       occurredAt: daysFromToday(m.day, 8),
       description: m.desc,
+      vehicleId: onVehicle,
+      branchId: onVehicle ? null : defaultBranch.id,
     });
     summary.receipts += 1;
   }

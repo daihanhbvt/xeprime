@@ -47,7 +47,7 @@ export class FinanceOverviewController {
     @CurrentTenant() tenant: TenantContext,
     @Query() query: DebtListQueryDto,
   ): Promise<DebtPageDto> {
-    return this.overview.debts(tenant.tenantId, query) as Promise<DebtPageDto>;
+    return this.overview.debts(tenant.tenantId, query, tenant.allowedBranchIds) as Promise<DebtPageDto>;
   }
 
   @Get('finance/summary')
@@ -61,7 +61,7 @@ export class FinanceOverviewController {
     @CurrentTenant() tenant: TenantContext,
     @Query() query: FinanceSummaryQueryDto,
   ): Promise<FinanceSummaryDto> {
-    return this.overview.summary(tenant.tenantId, query);
+    return this.overview.summary(tenant.tenantId, query, tenant.allowedBranchIds);
   }
 
   @Get('finance/series')
@@ -75,7 +75,7 @@ export class FinanceOverviewController {
     @CurrentTenant() tenant: TenantContext,
     @Query() query: FinanceSeriesQueryDto,
   ): Promise<FinanceSeriesDto> {
-    return this.overview.series(tenant.tenantId, query);
+    return this.overview.series(tenant.tenantId, query, tenant.allowedBranchIds);
   }
 
   @Get('finance/by-category')
@@ -87,7 +87,7 @@ export class FinanceOverviewController {
     @CurrentTenant() tenant: TenantContext,
     @Query() query: FinanceCategoryBreakdownQueryDto,
   ): Promise<FinanceCategoryBreakdownDto> {
-    return this.overview.byCategory(tenant.tenantId, query);
+    return this.overview.byCategory(tenant.tenantId, query, tenant.allowedBranchIds);
   }
 
   @Get('finance/by-vehicle')
@@ -103,7 +103,7 @@ export class FinanceOverviewController {
     @CurrentTenant() tenant: TenantContext,
     @Query() query: VehicleProfitQueryDto,
   ): Promise<VehicleProfitPageDto> {
-    return this.overview.byVehicle(tenant.tenantId, query) as Promise<VehicleProfitPageDto>;
+    return this.overview.byVehicle(tenant.tenantId, query, tenant.allowedBranchIds) as Promise<VehicleProfitPageDto>;
   }
 
   @Get('finance/by-customer')
@@ -119,6 +119,6 @@ export class FinanceOverviewController {
     @CurrentTenant() tenant: TenantContext,
     @Query() query: CustomerRevenueQueryDto,
   ): Promise<CustomerRevenuePageDto> {
-    return this.overview.byCustomer(tenant.tenantId, query) as Promise<CustomerRevenuePageDto>;
+    return this.overview.byCustomer(tenant.tenantId, query, tenant.allowedBranchIds) as Promise<CustomerRevenuePageDto>;
   }
 }

@@ -12,6 +12,8 @@ import {
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
+  BRANCH_SCOPED_RESOURCE,
+  BranchScoped,
   CurrentTenant,
   CurrentUser,
   RequirePermissions,
@@ -48,6 +50,7 @@ import {
  * ẩn nút ở FE không bảo vệ gì.
  */
 @ApiTags('vehicle-documents')
+@BranchScoped(BRANCH_SCOPED_RESOURCE.VEHICLE)
 @Controller('vehicles/:id/documents')
 @TenantScoped()
 export class VehicleDocumentsController {
@@ -214,6 +217,14 @@ export class VehicleDocumentsController {
     @Param('jobId') jobId: string,
     @Body() dto: ApplyOcrFieldsDto,
   ): Promise<VehicleDocumentDetailDto> {
-    return this.documents.applyOcr(tenant.tenantId, vehicleId, user.id, documentId, jobId, dto);
+    return this.documents.applyOcr(
+      tenant.tenantId,
+      vehicleId,
+      user.id,
+      documentId,
+      jobId,
+      dto,
+      tenant.allowedBranchIds,
+    );
   }
 }

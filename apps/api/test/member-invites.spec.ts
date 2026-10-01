@@ -128,7 +128,7 @@ afterAll(async () => {
 });
 
 const invite = () =>
-  invites.create(tenantId, ownerId, { email: inviteeEmail, roleKey: TENANT_ROLE.SHOP_STAFF });
+  invites.create(tenantId, ownerId, { email: inviteeEmail, roleKey: TENANT_ROLE.SHOP_STAFF }, null);
 
 describe('Thư mời — gửi', () => {
   it('KHÔNG tạo membership nào lúc gửi: người được mời chưa đồng ý', async () => {
@@ -182,7 +182,7 @@ describe('Thư mời — gửi', () => {
       invites.create(tenantId, ownerId, {
         email: inviteeEmail,
         roleKey: TENANT_ROLE.SHOP_OWNER,
-      }),
+      }, null),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
   });
 });
@@ -285,7 +285,7 @@ describe('Thư mời — trả lời', () => {
     if (!dbAvailable) return;
     const created = await invite();
     const token = lastToken();
-    await invites.revoke(tenantId, ownerId, created.id);
+    await invites.revoke(tenantId, ownerId, created.id, null);
 
     await expect(invites.accept(token, inviteeId)).rejects.toMatchObject({
       response: { code: API_ERROR_CODE.INVITE_INVALID },
@@ -335,7 +335,7 @@ describe('Thư mời — danh sách của gian hàng', () => {
   it('mặc định chỉ trả lời mời ĐANG CHỜ, và không kèm token', async () => {
     if (!dbAvailable) return;
     const created = await invite();
-    await invites.revoke(tenantId, ownerId, created.id);
+    await invites.revoke(tenantId, ownerId, created.id, null);
     await invite();
 
     const page = await invites.list(tenantId, {});
@@ -369,7 +369,7 @@ describe('Thư mời — SMTP hỏng', () => {
     const created = await service.create(tenantId, ownerId, {
       email: `smtp-down-${Date.now()}@congty.vn`,
       roleKey: TENANT_ROLE.SHOP_STAFF,
-    });
+    }, null);
 
     expect(created.emailSent).toBe(false);
     expect(created.status).toBe(INVITE_STATUS.PENDING);

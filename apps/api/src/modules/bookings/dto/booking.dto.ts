@@ -34,6 +34,7 @@ import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
 import { AddressViewDto, GeoPinDto } from '../../locations/dto/address.dto';
 import { BookingDriverSummaryDto } from '../../drivers/dto/driver.dto';
 import { BookingPriceSnapshotDto } from '../../pricing/dto/pricing.dto';
+import { BranchIdQuery } from '../../../common/dto/branch-scope';
 
 /** Cách sắp xếp danh sách đơn thuê. */
 export const BOOKING_SORT = ['newest', 'pickup_asc', 'pickup_desc', 'return_asc'] as const;
@@ -83,11 +84,8 @@ export class BookingListQueryDto {
   @Length(26, 26)
   vehicleId?: string;
 
-  /** Lọc theo chi nhánh của XE trong đơn — nguồn là bộ chọn chi nhánh ở thanh trên. */
-  @ApiPropertyOptional({ description: 'Lọc theo chi nhánh (qua xe của đơn)' })
-  @IsOptional()
-  @IsString()
-  @Length(26, 26)
+  /** Lọc theo chi nhánh của XE trong đơn — ô "Chi nhánh" trong thanh bộ lọc của danh sách đơn. */
+  @BranchIdQuery()
   branchId?: string;
 
   @ApiPropertyOptional({ description: 'Trả xe từ (ISO) — lọc cho panel quá hạn/sắp trả' })

@@ -2,6 +2,8 @@ import { Controller, Get, Param, Post } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PERMISSION, PLAN_FEATURE } from '@xeprime/types';
 import {
+  BRANCH_SCOPED_RESOURCE,
+  BranchScoped,
   CurrentTenant,
   CurrentUser,
   RequirePermissions,
@@ -25,6 +27,7 @@ import { ContractsService } from './contracts.service';
 export class ContractsController {
   constructor(private readonly contracts: ContractsService) {}
 
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
   @Post('bookings/:id/contract')
   @RequirePermissions(PERMISSION.CONTRACT_MANAGE)
   @ApiOperation({ summary: 'Tạo (hoặc lấy) hợp đồng từ một đơn thuê — idempotent' })
@@ -37,6 +40,7 @@ export class ContractsController {
     return this.contracts.createFromBooking(tenant.tenantId, user.id, bookingId);
   }
 
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
   @Get('bookings/:id/contract')
   @RequirePermissions(PERMISSION.BOOKING_VIEW)
   @ApiOperation({ summary: 'Hợp đồng của một đơn (nếu đã tạo)' })
@@ -48,6 +52,7 @@ export class ContractsController {
     return this.contracts.getByBooking(tenant.tenantId, bookingId);
   }
 
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.CONTRACT)
   @Get('contracts/:id')
   @RequirePermissions(PERMISSION.BOOKING_VIEW)
   @ApiOperation({ summary: 'Chi tiết một hợp đồng (để xem/in)' })

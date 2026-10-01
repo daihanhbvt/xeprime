@@ -15,6 +15,8 @@ import {
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
+  BRANCH_SCOPED_RESOURCE,
+  BranchScoped,
   CurrentTenant,
   CurrentUser,
   RequirePermissions,
@@ -39,6 +41,7 @@ import { VehicleSourceService } from './vehicle-source.service';
 import {
   CreateVehicleDto,
   FleetSummaryDto,
+  FleetSummaryQueryDto,
   SetMarketplaceVisibilityDto,
   UpdateVehicleDto,
   Vehicle360SummaryDto,
@@ -82,7 +85,7 @@ export class VehiclesController {
     @CurrentTenant() tenant: TenantContext,
     @Query() query: VehicleListQueryDto,
   ): Promise<VehiclePageDto> {
-    return this.vehicles.list(tenant.tenantId, query) as Promise<VehiclePageDto>;
+    return this.vehicles.list(tenant.tenantId, query, tenant.allowedBranchIds) as Promise<VehiclePageDto>;
   }
 
   /**
@@ -140,10 +143,14 @@ export class VehiclesController {
   @SupportAction(SUPPORT_CAPABILITY.VEHICLE_VIEW)
   @ApiOperation({ summary: 'Đếm đội xe theo trạng thái vận hành (dải chỉ số đầu danh sách)' })
   @ApiOkResponse({ type: FleetSummaryDto })
-  fleetSummary(@CurrentTenant() tenant: TenantContext): Promise<FleetSummaryDto> {
-    return this.vehicles.fleetSummary(tenant.tenantId);
+  fleetSummary(
+    @CurrentTenant() tenant: TenantContext,
+    @Query() query: FleetSummaryQueryDto,
+  ): Promise<FleetSummaryDto> {
+    return this.vehicles.fleetSummary(tenant.tenantId, query.branchId, tenant.allowedBranchIds);
   }
 
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.VEHICLE)
   @Get(':id')
   @RequirePermissions(PERMISSION.VEHICLE_VIEW)
   @SupportAction(SUPPORT_CAPABILITY.VEHICLE_VIEW)
@@ -161,6 +168,7 @@ export class VehiclesController {
    * động. Khối đơn thuê/tài chính gate theo quyền BÊN TRONG service: response chỉ chứa phần
    * người gọi được thấy (cùng nguyên tắc với `stats`).
    */
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.VEHICLE)
   @Get(':id/summary')
   @RequirePermissions(PERMISSION.VEHICLE_VIEW)
   @SupportAction(SUPPORT_CAPABILITY.VEHICLE_VIEW)
@@ -184,6 +192,7 @@ export class VehiclesController {
     return { ...summary, ...alerts };
   }
 
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.VEHICLE)
   @Get(':id/pricing')
   @RequirePermissions(PERMISSION.VEHICLE_VIEW)
   @SupportAction(SUPPORT_CAPABILITY.RENTAL_POLICY_VIEW)
@@ -201,6 +210,7 @@ export class VehiclesController {
    * Đổi GIÁ của xe đang công khai sẽ hạ về chờ duyệt lại + tạm ẩn listing (ADR 0008) — FE phải
    * xác nhận trước khi gọi; backend cứ thế thực thi, không hỏi lại.
    */
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.VEHICLE)
   @Put(':id/pricing')
   @RequirePermissions(PERMISSION.VEHICLE_UPDATE)
   @ApiOperation({ summary: 'Lưu giá & chính sách theo xe (ghi đè hoặc đặt lại theo gian hàng)' })
@@ -218,6 +228,7 @@ export class VehiclesController {
    * Hồ sơ nguồn xe chứa dữ liệu tài chính nhạy cảm (ngân hàng, đối tác, tiền) — đọc đòi
    * `finance.view`, không phải chỉ `vehicle.view`: ẩn tab ở FE không ngăn ai gọi thẳng API.
    */
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.VEHICLE)
   @Get(':id/source')
   @RequirePermissions(PERMISSION.FINANCE_VIEW)
   @ApiOperation({ summary: 'Hồ sơ nguồn xe & tài chính (Wave 4)' })
@@ -233,6 +244,7 @@ export class VehiclesController {
    * Replace trọn hồ sơ theo biến thể; đổi hình thức nguồn đồng bộ `vehicles.source_type`
    * trong cùng transaction + audit. FE xác nhận trước khi đổi hình thức; backend cứ thế thực thi.
    */
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.VEHICLE)
   @Put(':id/source')
   @RequirePermissions(PERMISSION.VEHICLE_UPDATE, PERMISSION.FINANCE_VIEW)
   @ApiOperation({ summary: 'Lưu hồ sơ nguồn xe & tài chính (replace theo hình thức nguồn)' })
@@ -251,6 +263,7 @@ export class VehiclesController {
    * kiểm xe thuộc tenant rồi mới sinh id + object key (client không tự chọn được chỗ ghi),
    * PUT nhắm vào bucket riêng tư, KHÔNG có publicUrl.
    */
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.VEHICLE)
   @Post(':id/source/contracts/presign')
   @RequirePermissions(PERMISSION.VEHICLE_UPDATE, PERMISSION.FINANCE_VIEW)
   @ApiOperation({ summary: 'Presign upload hợp đồng nguồn xe vào kho riêng tư' })
@@ -265,6 +278,7 @@ export class VehiclesController {
   }
 
   /** PUT xong chưa phải là xong: server HEAD + soi chữ ký byte đầu rồi mới cho file `ready`. */
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.VEHICLE)
   @Post(':id/source/contracts/:fileId/complete')
   @HttpCode(HttpStatus.OK)
   @RequirePermissions(PERMISSION.VEHICLE_UPDATE, PERMISSION.FINANCE_VIEW)
@@ -283,6 +297,7 @@ export class VehiclesController {
    * Tải hợp đồng: kiểm quyền + đúng tenant/xe/trạng thái rồi mới phát signed URL sống 120s.
    * `no-store`: URL ký không được nằm lại trong cache trung gian nào.
    */
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.VEHICLE)
   @Get(':id/source/contracts/:fileId/download')
   @Header('Cache-Control', 'no-store')
   @RequirePermissions(PERMISSION.FINANCE_VIEW)
@@ -307,9 +322,10 @@ export class VehiclesController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateVehicleDto,
   ): Promise<VehicleDetailDto> {
-    return this.vehicles.create(tenant.tenantId, user.id, dto);
+    return this.vehicles.create(tenant.tenantId, user.id, dto, tenant.allowedBranchIds);
   }
 
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.VEHICLE)
   @Patch(':id')
   @RequirePermissions(PERMISSION.VEHICLE_UPDATE)
   // Phiên hỗ trợ (ADR 0050): capability suy từ TÊN trường — giá/dịch vụ/chi nhánh bị chặn ở guard.
@@ -324,9 +340,10 @@ export class VehiclesController {
     @Param('id') id: string,
     @Body() dto: UpdateVehicleDto,
   ): Promise<VehicleDetailDto> {
-    return this.vehicles.update(tenant.tenantId, id, user.id, dto);
+    return this.vehicles.update(tenant.tenantId, id, user.id, dto, tenant.allowedBranchIds);
   }
 
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.VEHICLE)
   @Post(':id/submit-public')
   @HttpCode(HttpStatus.OK)
   @RequirePermissions(PERMISSION.VEHICLE_SUBMIT_PUBLIC)
@@ -353,6 +370,7 @@ export class VehiclesController {
    * `PATCH` chứ không `POST`: đây là một thuộc tính hai chiều của chiếc xe, không phải một sự
    * kiện chỉ đi một hướng như `submit-public`.
    */
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.VEHICLE)
   @Patch(':id/marketplace-visibility')
   @RequirePermissions(PERMISSION.VEHICLE_SUBMIT_PUBLIC)
   @ApiOperation({ summary: 'Bật/tắt hiển thị xe trên chợ (lựa chọn của chủ xe — ADR 0048)' })
@@ -372,6 +390,7 @@ export class VehiclesController {
    * suy lại từ xe, nên gọi lại bao nhiêu lần cũng cùng kết quả, và không đổi kiểm duyệt hay công tắc
    * lên chợ của chủ xe.
    */
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.VEHICLE)
   @Post(':id/listing/resync')
   @HttpCode(HttpStatus.OK)
   @RequirePermissions(PERMISSION.VEHICLE_VIEW)
@@ -386,6 +405,7 @@ export class VehiclesController {
     return this.vehicles.repairListing(tenant.tenantId, id, user.id);
   }
 
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.VEHICLE)
   @Delete(':id')
   @RequirePermissions(PERMISSION.VEHICLE_DELETE)
   @ApiOperation({ summary: 'Xoá mềm xe (chặn nếu còn lịch hiện tại/tương lai)' })

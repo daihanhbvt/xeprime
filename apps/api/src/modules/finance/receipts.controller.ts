@@ -2,6 +2,8 @@ import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PERMISSION, PLAN_FEATURE } from '@xeprime/types';
 import {
+  BRANCH_SCOPED_RESOURCE,
+  BranchScoped,
   CurrentTenant,
   CurrentUser,
   RequirePermissions,
@@ -44,7 +46,7 @@ export class ReceiptsController {
     @CurrentTenant() tenant: TenantContext,
     @Query() query: ReceiptListQueryDto,
   ): Promise<ReceiptPageDto> {
-    return this.receipts.list(tenant.tenantId, query) as Promise<ReceiptPageDto>;
+    return this.receipts.list(tenant.tenantId, query, tenant.allowedBranchIds) as Promise<ReceiptPageDto>;
   }
 
   /**
@@ -61,7 +63,7 @@ export class ReceiptsController {
     @CurrentTenant() tenant: TenantContext,
     @Query() query: ReceiptListQueryDto,
   ): Promise<ReceiptSummaryDto> {
-    return this.receipts.summary(tenant.tenantId, query);
+    return this.receipts.summary(tenant.tenantId, query, tenant.allowedBranchIds);
   }
 
   /** Nguồn cho ô "Liên kết đơn thuê (auto-fill)" ở form tạo phiếu. Cũng phải trước `:id`. */
@@ -93,6 +95,7 @@ export class ReceiptsController {
     return { data: await this.receipts.vehicleOptions(tenant.tenantId, query) };
   }
 
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.RECEIPT)
   @Get(':id')
   @RequirePermissions(PERMISSION.FINANCE_VIEW)
   @ApiOperation({ summary: 'Chi tiết phiếu' })
@@ -113,9 +116,10 @@ export class ReceiptsController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateReceiptDto,
   ): Promise<ReceiptDetailDto> {
-    return this.receipts.create(tenant.tenantId, user.id, dto);
+    return this.receipts.create(tenant.tenantId, user.id, dto, tenant.allowedBranchIds);
   }
 
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.RECEIPT)
   @Post(':id/approve')
   @RequirePermissions(PERMISSION.RECEIPT_APPROVE)
   @ApiOperation({ summary: 'Duyệt phiếu' })
@@ -128,6 +132,7 @@ export class ReceiptsController {
     return this.receipts.approve(tenant.tenantId, user.id, id);
   }
 
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.RECEIPT)
   @Post(':id/cancel')
   @RequirePermissions(PERMISSION.RECEIPT_APPROVE)
   @ApiOperation({ summary: 'Huỷ phiếu' })

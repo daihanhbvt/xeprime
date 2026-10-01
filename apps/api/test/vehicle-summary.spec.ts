@@ -148,7 +148,7 @@ describe('fleetSummary — đếm đội xe theo trạng thái vận hành', () 
     });
     await vehicles.remove(tenantId, deleted.id, ownerId);
 
-    const summary = await vehicles.fleetSummary(tenantId);
+    const summary = await vehicles.fleetSummary(tenantId, undefined, null);
 
     // SUM-1 (available) + SUM-2 (maintenance); SUM-3 đã xoá mềm và xe shop khác không được tính.
     expect(summary.total).toBe(2);

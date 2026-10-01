@@ -9,3 +9,11 @@
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
+
+/*
+ * Dòng nói ra số khoản chi CHUNG bị bỏ lại khi lọc chi nhánh (ADR 0051 điều 3).
+ * Nằm giữa thanh lọc và bảng vì nó giải thích chính con số của bảng ngay bên dưới.
+ */
+.unassignedNote {
+  margin-bottom: var(--xp-space-sm);
+}

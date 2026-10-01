@@ -12,6 +12,8 @@ import {
 } from '@xeprime/types';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { FilterBar, type FilterField } from '@/components/filter/FilterBar';
+import { ALL_FILTER } from '@/constants/filters';
+import { useBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { MissingReturnKmQueue } from '@/features/handovers/components/MissingReturnKmQueue';
 import { useMissingOdometerQueue } from '@/features/handovers/hooks';
@@ -34,6 +36,7 @@ import { useDomainLabel } from '@/i18n/use-domain-label';
 const CLEARED = {
   filter: 'all',
   q: undefined,
+  branchId: undefined,
   type: 'all',
   from: undefined,
   to: undefined,
@@ -73,6 +76,10 @@ function MaintenanceView() {
   const canViewHandovers = permissions.has(PERMISSION.HANDOVER_VIEW);
 
   const { filters, setFilters } = useMaintenanceBoardFilters();
+  const branch = useBranchFilter({
+    value: filters.branchId,
+    onChange: (branchId) => setFilters({ branchId }),
+  });
   /**
    * Bộ lọc sống trên URL (ADR 0004) nên người dùng gõ tay được `?filter=missing_return_km`.
    * Thiếu `handovers.view` thì chuẩn hoá về nhóm mặc định thay vì mở một bảng rỗng khó hiểu
@@ -88,12 +95,21 @@ function MaintenanceView() {
   const isQueue = isQueueFilter && canViewHandovers;
   const board = useMaintenanceBoard(
     // Filter đã chuẩn hoá mới được gửi xuống API — không để giá trị bị từ chối lọt vào query.
-    { ...filters, filter: activeFilter },
+    { ...filters, filter: activeFilter, branchId: filters.branchId },
     canView && !isQueue,
   );
-  const summary = useMaintenanceBoardSummary(canView);
+  // Dải đếm trên hàng tab đi theo CÙNG chi nhánh với bảng — tab nói "12 quá hạn" trong khi bảng
+  // hiện 2 dòng là hai câu trả lời cho cùng một câu hỏi.
+  const summary = useMaintenanceBoardSummary(canView, filters.branchId);
   const queue = useMissingOdometerQueue(
-    { q: filters.q ?? null, page: filters.page ?? 1, limit: filters.limit ?? MAINTENANCE_DEFAULT_LIMIT },
+    {
+      q: filters.q ?? null,
+      // Tab "Thiếu KM trả" đọc bảng khác nhưng vẫn là MỘT tab của màn này: bỏ chi nhánh ở đây là
+      // ba tab lọc còn tab thứ tư âm thầm hiện cả gian hàng.
+      branchId: filters.branchId ?? null,
+      page: filters.page ?? 1,
+      limit: filters.limit ?? MAINTENANCE_DEFAULT_LIMIT,
+    },
     canViewHandovers && isQueue,
   );
   const invalidateVehicles = useInvalidateVehicleSurfaces();
@@ -124,14 +140,17 @@ function MaintenanceView() {
       label: t('filters.search'),
       placeholder: t('filters.searchPlaceholder'),
     },
+    ...(branch.field ? [branch.field] : []),
     { kind: 'select', key: 'type', label: t('filters.type'), options: typeOptions },
     { kind: 'dateRange', fromKey: 'from', toKey: 'to', label: t('filters.schedule') },
     { kind: 'select', key: 'sort', label: t('filters.sort'), options: sortOptions },
   ];
 
   /**
-   * Hàng đợi "Thiếu KM trả" chỉ có tìm kiếm: hạng mục/lịch dự kiến/sắp xếp theo KM còn lại đều
-   * vô nghĩa với một biên bản bàn giao. Hiện ô lọc không tác dụng là mời người dùng bấm nhầm.
+   * Hàng đợi "Thiếu KM trả" chỉ có tìm kiếm VÀ chi nhánh: hạng mục/lịch dự kiến/sắp xếp theo KM
+   * còn lại đều vô nghĩa với một biên bản bàn giao. Hiện ô lọc không tác dụng là mời người dùng
+   * bấm nhầm — nhưng chi nhánh thì có tác dụng thật ở đây, và giữ nó lại để việc đổi tab không
+   * làm người dùng rơi khỏi chi nhánh họ đang xem.
    */
   const queueFilterFields: FilterField[] = [
     {
@@ -140,6 +159,7 @@ function MaintenanceView() {
       label: t('filters.queueSearch'),
       placeholder: t('filters.queueSearchPlaceholder'),
     },
+    ...(branch.field ? [branch.field] : []),
   ];
 
   const items = board.data?.items ?? [];
@@ -152,6 +172,7 @@ function MaintenanceView() {
   const hasFilters = Boolean(
     (filters.filter && filters.filter !== 'all') ||
       filters.q ||
+      filters.branchId ||
       (filters.type && filters.type !== 'all') ||
       filters.from ||
       filters.to,
@@ -178,17 +199,26 @@ function MaintenanceView() {
         fields={isQueue ? queueFilterFields : filterFields}
         values={
           isQueue
-            ? { q: filters.q }
+            ? { q: filters.q, branchId: filters.branchId ?? ALL_FILTER }
             : {
                 q: filters.q,
+                branchId: filters.branchId ?? ALL_FILTER,
                 type: filters.type,
                 from: filters.from,
                 to: filters.to,
                 sort: filters.sort,
               }
         }
-        onChange={(patch) => setFilters(patch as Partial<typeof filters>)}
-        onClear={hasFilters ? () => setFilters(CLEARED) : undefined}
+        onChange={(patch) => {
+          setFilters(patch as Partial<typeof filters>);
+        }}
+        onClear={
+          hasFilters
+            ? () => {
+                setFilters(CLEARED);
+              }
+            : undefined
+        }
         showActiveChips
         compactFields
       />

@@ -55,6 +55,7 @@ export function useCalendarFilters(): {
           : DEFAULT_DAYS,
       vehicleType: searchParams.get('vehicleType'),
       q: searchParams.get('q'),
+      branchId: searchParams.get('branchId'),
       // Giá trị lạ trên URL rơi về mặc định — backend cũng validate lại (IsIn).
       sort: CALENDAR_SORT_VALUES.some((value) => value === rawSort)
         ? (rawSort as CalendarFilters['sort'])

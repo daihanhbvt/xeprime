@@ -89,7 +89,7 @@ export interface BookingRequestFilters {
   /** Dịch vụ khách yêu cầu (tự lái / có tài xế / dài hạn) — mã thật của `@xeprime/types`. */
   serviceType?: string;
   vehicleId?: string;
-  /** Chi nhánh của XE được yêu cầu — ghép từ bộ chọn ở thanh trên. */
+  /** Chi nhánh của XE được yêu cầu — ô "Chi nhánh" của trang, sống trên URL (ADR 0052). */
   branchId?: string;
   page?: number;
   limit?: number;

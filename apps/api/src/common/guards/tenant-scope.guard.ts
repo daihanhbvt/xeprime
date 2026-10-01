@@ -8,6 +8,7 @@ import {
   type TenantRole,
   SUPPORT_REASON_HEADER,
   supportCapabilityNeedsReason,
+  MEMBERSHIP_BRANCH_SCOPE,
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RbacService } from '../../modules/rbac/rbac.service';
@@ -78,6 +79,14 @@ export class TenantScopeGuard implements CanActivate {
       select: {
         roleKey: true,
         roleId: true,
+        /*
+         * Phạm vi chi nhánh (ADR 0052) đi kèm CHÍNH truy vấn này, cùng lý do với trục năng lực ở
+         * trên: guard chạy cho mọi request tenant-scoped, nên một truy vấn nữa mỗi request sẽ đẻ
+         * ra nhu cầu cache — mà cache một thứ quyết định "ai thấy dữ liệu gì" là cách chắc chắn
+         * để một lần đổi phạm vi mất vài phút mới có hiệu lực.
+         */
+        branchScope: true,
+        branches: { select: { branchId: true } },
         tenant: { select: tenantContextSelect(now) },
       },
       orderBy: { createdAt: 'asc' },
@@ -101,6 +110,7 @@ export class TenantScopeGuard implements CanActivate {
       now,
       membership.roleKey as TenantRole,
       permissions,
+      allowedBranchesOf(membership),
     );
 
     return true;
@@ -189,4 +199,24 @@ export class TenantScopeGuard implements CanActivate {
     );
     return true;
   }
+}
+
+/**
+ * Phạm vi chi nhánh HIỆU LỰC của một membership — ADR 0052.
+ *
+ * `null` = toàn gian hàng. Mảng = chỉ những chi nhánh đó, kể cả khi mảng RỖNG: `limited` mà chưa
+ * được giao chi nhánh nào thì KHÔNG thấy gì. Đó là chiều fail-closed, và nó có chủ đích — một
+ * phạm vi chưa khai xong không được phép mở bằng cả gian hàng.
+ *
+ * Giá trị lạ ở `branch_scope` rơi về `all`: cột là `varchar` nên kiểu Prisma vẫn là `string` dù
+ * DB đã có `CHECK`. Rơi về `all` chứ không `limited` vì một bản ghi hỏng không nên âm thầm khoá
+ * người dùng ra khỏi dữ liệu của chính họ — cùng kỷ luật với `onboardingState` ở `tenant-context`.
+ */
+function allowedBranchesOf(membership: {
+  branchScope: string;
+  branches: readonly { branchId: string }[];
+}): readonly string[] | null {
+  return membership.branchScope === MEMBERSHIP_BRANCH_SCOPE.LIMITED
+    ? membership.branches.map((b) => b.branchId)
+    : null;
 }

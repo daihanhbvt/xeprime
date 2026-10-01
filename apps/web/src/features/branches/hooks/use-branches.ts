@@ -11,7 +11,7 @@ import type { Branch, BranchList, CreateBranchInput, UpdateBranchInput } from '.
 /**
  * Chi nhánh của gian hàng hiện tại. `tenantId` KHÔNG đi trên query — backend lấy từ phiên.
  *
- * Mọi mutation ở đây làm mới CẢ ba nhánh: `branches` (danh sách + bộ chọn ở thanh trên),
+ * Mọi mutation ở đây làm mới CẢ ba nhánh: `branches` (danh sách + ô lọc chi nhánh của các màn),
  * `vehicles` (thẻ xe hiển thị tên chi nhánh) và `shop` (hồ sơ mang tỉnh của chi nhánh mặc định).
  * Bỏ sót một nhánh là màn hình nói một đằng, dữ liệu một nẻo.
  */
@@ -31,7 +31,7 @@ export function useBranches(params: QueryParams = {}, enabled = true) {
   });
 }
 
-/** Chi nhánh ĐANG HOẠT ĐỘNG — dùng cho bộ chọn ở form xe và thanh trên. */
+/** Chi nhánh ĐANG HOẠT ĐỘNG — dùng cho ô chọn ở form xe và ô lọc của các màn (ADR 0052). */
 export function useActiveBranches(enabled = true) {
   return useBranches({ status: 'active' }, enabled);
 }

@@ -30,6 +30,7 @@ export function useBookingRequestFilters() {
       q: searchParams.get('q') ?? undefined,
       serviceType: searchParams.get('serviceType') ?? undefined,
       vehicleId: searchParams.get('vehicleId') ?? undefined,
+      branchId: searchParams.get('branchId') ?? undefined,
       page: numberParam('page'),
       limit: numberParam('limit'),
     };
@@ -58,11 +59,11 @@ export function useBookingRequestFilters() {
    * Trạng thái cố ý không tính: nó luôn có giá trị — mở hộp thư ra đã là "Cần xử lý" — nên đếm
    * nó vào thì hộp thư trống lúc nào cũng đổ tại bộ lọc.
    */
-  const hasFilters = Boolean(filters.q) || Boolean(filters.serviceType);
+  const hasFilters = Boolean(filters.q) || Boolean(filters.serviceType) || Boolean(filters.branchId);
 
   /** Xoá mọi filter ngoài tab. Mọi khoá phải có mặt, nếu không `setFilters` không đụng tới. */
   const clearFilters = useCallback(
-    () => setFilters({ q: undefined, serviceType: undefined }),
+    () => setFilters({ q: undefined, serviceType: undefined, branchId: undefined }),
     [setFilters],
   );
 

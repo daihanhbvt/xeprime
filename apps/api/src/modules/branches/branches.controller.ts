@@ -8,6 +8,8 @@ import {
 } from '@xeprime/types';
 import { supportFieldAllowlist } from '../../common/support/support-field-allowlist';
 import {
+  BRANCH_SCOPED_RESOURCE,
+  BranchScoped,
   CurrentTenant,
   CurrentUser,
   RequirePermissions,
@@ -72,7 +74,7 @@ export class BranchesController {
     @CurrentTenant() tenant: TenantContext,
     @Query() query: BranchListQueryDto,
   ): Promise<BranchListDto> {
-    return this.branches.list(tenant.tenantId, query);
+    return this.branches.list(tenant.tenantId, query, tenant.allowedBranchIds);
   }
 
   @Post()
@@ -91,6 +93,7 @@ export class BranchesController {
     return this.branches.create(tenant.tenantId, user.id, dto);
   }
 
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BRANCH)
   @Get(':id')
   @RequirePermissions(PERMISSION.BRANCH_VIEW)
   @SupportAction(SUPPORT_CAPABILITY.BRANCH_VIEW)
@@ -100,6 +103,7 @@ export class BranchesController {
     return this.branches.get(tenant.tenantId, id);
   }
 
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BRANCH)
   @Patch(':id')
   @RequirePermissions(PERMISSION.BRANCH_MANAGE)
   // Phiên hỗ trợ: sửa tên/liên hệ/địa chỉ; đổi địa chỉ khi còn chuyến mở bị từ chối ở service.
@@ -116,6 +120,7 @@ export class BranchesController {
     return this.branches.update(tenant.tenantId, id, user.id, dto);
   }
 
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BRANCH)
   @Post(':id/set-default')
   @RequiresFeature(PLAN_FEATURE.BRANCHES)
   @SubscriptionTrackOnly()
@@ -130,6 +135,7 @@ export class BranchesController {
     return this.branches.setDefault(tenant.tenantId, id, user.id);
   }
 
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BRANCH)
   @Post(':id/deactivate')
   @RequiresFeature(PLAN_FEATURE.BRANCHES)
   @SubscriptionTrackOnly()
@@ -144,6 +150,7 @@ export class BranchesController {
     return this.branches.deactivate(tenant.tenantId, id, user.id);
   }
 
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BRANCH)
   @Post(':id/activate')
   @RequiresFeature(PLAN_FEATURE.BRANCHES)
   @SubscriptionTrackOnly()

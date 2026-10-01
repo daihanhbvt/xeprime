@@ -28,6 +28,9 @@ const state = vi.hoisted(() => ({
   receiptCalls: 0,
 }));
 
+// Ô lọc chi nhánh đọc server (ADR 0052) — chặn ở tầng hook như mọi hook dữ liệu khác ở bộ này.
+vi.mock('@/features/branches/hooks/use-branch-filter', () => import('@/features/branches/test-utils'));
+
 vi.mock('@/hooks/use-feature', () => ({
   useFeature: () => ({
     state: state.featureState,
@@ -82,7 +85,12 @@ vi.mock('../hooks/use-dashboard-bookings', () => ({
 
 vi.mock('./ShopOnboardingCard', () => ({ ShopOnboardingCard: () => null }));
 
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  // Ô lọc chi nhánh của dashboard sống trên URL (ADR 0052).
+  usePathname: () => '/manage',
+  useSearchParams: () => new URLSearchParams(),
+}));
 
 function makeReceipt(over: Partial<Receipt> = {}): Receipt {
   return {

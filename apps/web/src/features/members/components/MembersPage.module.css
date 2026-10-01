@@ -42,3 +42,8 @@
 .state {
   margin-top: 48px;
 }
+
+.branchSelect {
+  width: 100%;
+  min-width: 180px;
+}

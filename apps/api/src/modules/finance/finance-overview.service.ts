@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { resolveBranchIdList } from '../../common/dto/branch-scope';
 import { Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
@@ -31,6 +32,7 @@ import {
   sqlBookingScope,
   sqlOccurredRange,
   sqlReceiptScope,
+  type FinanceScope,
 } from '../../common/finance-period';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -141,12 +143,15 @@ export class FinanceOverviewService {
   async debts(
     tenantId: string,
     query: DebtListQueryDto,
+    /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
+    allowedBranchIds: readonly string[] | null,
   ): Promise<{ data: DebtItemDto[]; meta: PaginationMeta }> {
     const paging = resolvePaging(query, RECEIPT_DEFAULT_LIMIT, RECEIPT_MAX_LIMIT);
     const now = new Date();
     const soon = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
     const filterSql = debtFilterSql(query.filter, now, soon);
     const searchSql = debtSearchSql(query.q);
+    const branchSql = debtBranchSql(resolveBranchIdList(query.branchId, allowedBranchIds));
 
     // `phải thu` / `đã thu` / `còn nợ` đến từ `common/booking-money.ts` — cùng công thức với
     // chi tiết đơn, sổ khách và hợp đồng. Trước đây câu này tự viết `total - paid`, nên một đơn
@@ -164,6 +169,7 @@ export class FinanceOverviewService {
         AND ${SQL_HAS_DEBT}
         ${filterSql}
         ${searchSql}
+        ${branchSql}
       ORDER BY b.return_at ASC
       LIMIT ${paging.take} OFFSET ${paging.skip}
     `);
@@ -178,6 +184,7 @@ export class FinanceOverviewService {
         AND ${SQL_HAS_DEBT}
         ${filterSql}
         ${searchSql}
+        ${branchSql}
     `);
     const total = Number(countRes[0]?.count ?? 0);
 
@@ -206,7 +213,12 @@ export class FinanceOverviewService {
    * một lần quét `receipts_tenant_occurred_idx`, và quan trọng hơn — bốn con số chắc chắn đến từ
    * cùng một ảnh chụp dữ liệu chứ không phải bốn thời điểm cách nhau vài mili giây.
    */
-  async summary(tenantId: string, query: FinanceSummaryQueryDto): Promise<FinanceSummaryDto> {
+  async summary(
+    tenantId: string,
+    query: FinanceSummaryQueryDto,
+    /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
+    allowedBranchIds: readonly string[] | null,
+  ): Promise<FinanceSummaryDto> {
     // Cùng cột và cùng cách hiểu biên ngày với `/receipts` — trước đây màn này lọc `created_at`
     // với ISO đầy đủ còn sổ lọc `created_at` với `YYYY-MM-DD`, nên hai màn ra hai con số.
     const fromAt = dayStartOf(query.from);
@@ -214,10 +226,10 @@ export class FinanceOverviewService {
     const range = sqlOccurredRange(fromAt, toAt);
     // Phạm vi diễn đạt bằng hai cột khác nhau ở hai bảng: tiền nằm ở `receipts`, còn số chuyến /
     // cọc / công nợ nằm ở `bookings`. Cùng một câu hỏi, hai mệnh đề lọc.
-    const receiptScope = sqlReceiptScope(query);
-    const bookingScope = sqlBookingScope(query);
+    const receiptScope = sqlReceiptScope(scopeOf(query, allowedBranchIds));
+    const bookingScope = sqlBookingScope(scopeOf(query, allowedBranchIds));
 
-    const [moneyRows, debtAgg, deposit, trips] = await Promise.all([
+    const [moneyRows, unassignedRows, debtAgg, deposit, trips] = await Promise.all([
       this.prisma.$queryRaw<MoneyRow[]>(Prisma.sql`
         SELECT
           trim_scale(COALESCE(SUM(r.amount) FILTER (WHERE r.type = ${RECEIPT_TYPE.INCOME}), 0))::text
@@ -241,6 +253,32 @@ export class FinanceOverviewService {
         FROM receipts r
         WHERE r.tenant_id = ${tenantId} AND ${SQL_REAL_MONEY} ${range} ${receiptScope}
       `),
+      /*
+       * Khoản CHUNG khi ĐANG LỌC chi nhánh — tính bằng một câu RIÊNG (ADR 0052).
+       *
+       * "Chung" ở đây nghĩa là không suy được chi nhánh từ đâu cả: không gắn xe VÀ cũng không
+       * tự khai `branch_id`. Khoản nhập tay đã chọn chi nhánh thì đã nằm trong con số chính,
+       * nên nếu không có vế `branch_id IS NULL` dưới đây nó sẽ bị đếm hai lần.
+       *
+       * Vì sao không dùng `receiptScope`: nó thu hẹp theo chi nhánh, mà cái cần đếm lại chính
+       * là phần NẰM NGOÀI mọi chi nhánh. Không lọc chi nhánh thì câu chính đã đủ, nên chỉ chạy
+       * khi có phạm vi.
+       */
+      scopeOf(query, allowedBranchIds).branchIds != null
+        ? this.prisma.$queryRaw<{ unassigned_cost: string; unassigned_revenue: string }[]>(Prisma.sql`
+            SELECT
+              trim_scale(COALESCE(SUM(r.amount)
+                FILTER (WHERE r.type = ${RECEIPT_TYPE.EXPENSE} AND ${SQL_BUSINESS_ONLY}
+                          AND r.vehicle_id IS NULL AND r.branch_id IS NULL), 0))::text
+                AS unassigned_cost,
+              trim_scale(COALESCE(SUM(r.amount)
+                FILTER (WHERE r.type = ${RECEIPT_TYPE.INCOME} AND ${SQL_BUSINESS_ONLY}
+                          AND r.tenant_customer_id IS NULL AND r.vehicle_id IS NULL
+                          AND r.branch_id IS NULL), 0))::text AS unassigned_revenue
+            FROM receipts r
+            WHERE r.tenant_id = ${tenantId} AND ${SQL_REAL_MONEY} ${range}
+          `)
+        : Promise.resolve(null),
       this.prisma.$queryRaw<{ total: string; cnt: bigint }[]>(Prisma.sql`
         SELECT trim_scale(COALESCE(SUM(${SQL_DEBT}), 0))::text AS total, COUNT(*)::bigint AS cnt
         FROM bookings b
@@ -271,8 +309,9 @@ export class FinanceOverviewService {
       balance: cashIn.minus(cashOut).toString(),
       revenue: revenue.toString(),
       cost: cost.toString(),
-      unassignedCost: money?.unassigned_cost ?? '0',
-      unassignedRevenue: money?.unassigned_revenue ?? '0',
+      // Đang lọc chi nhánh thì hai số CHUNG đến từ câu riêng không mang vế chi nhánh (ADR 0052).
+      unassignedCost: unassignedRows?.[0]?.unassigned_cost ?? money?.unassigned_cost ?? '0',
+      unassignedRevenue: unassignedRows?.[0]?.unassigned_revenue ?? money?.unassigned_revenue ?? '0',
       profit: profit.toString(),
       profitMarginPercent: profitMarginPercent(revenue, profit),
       depositHeld: deposit.amount,
@@ -324,7 +363,12 @@ export class FinanceOverviewService {
    *    nhuận nối thẳng qua khoảng trống, tức vẽ ra một xu hướng không tồn tại.
    * 3. **Server chốt độ mịn** rồi trả lại giá trị đã dùng — client hiển thị đúng thứ đã vẽ.
    */
-  async series(tenantId: string, query: FinanceSeriesQueryDto): Promise<FinanceSeriesDto> {
+  async series(
+    tenantId: string,
+    query: FinanceSeriesQueryDto,
+    /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
+    allowedBranchIds: readonly string[] | null,
+  ): Promise<FinanceSeriesDto> {
     const { fromAt, toAt } = resolvePeriodBounds(query.from, query.to);
     const requested = (query.granularity ?? FINANCE_GRANULARITY.DAY) as FinanceGranularity;
     const granularity = resolveGranularity(requested, fromAt, toAt, FINANCE_MAX_BUCKETS);
@@ -355,7 +399,7 @@ export class FinanceOverviewService {
         FROM receipts r
         WHERE r.tenant_id = ${tenantId} AND ${SQL_REAL_MONEY}
           AND r.occurred_at >= ${fromAt} AND r.occurred_at <= ${toAt}
-          ${sqlReceiptScope(query)}
+          ${sqlReceiptScope(scopeOf(query, allowedBranchIds))}
         GROUP BY 1
       )
       SELECT to_char(s.bucket, 'YYYY-MM-DD') AS bucket,
@@ -392,6 +436,8 @@ export class FinanceOverviewService {
   async byCategory(
     tenantId: string,
     query: FinanceCategoryBreakdownQueryDto,
+    /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
+    allowedBranchIds: readonly string[] | null,
   ): Promise<FinanceCategoryBreakdownDto> {
     const range = sqlOccurredRange(dayStartOf(query.from), dayEndOf(query.to));
 
@@ -404,7 +450,7 @@ export class FinanceOverviewService {
       WHERE r.tenant_id = ${tenantId} AND ${SQL_REAL_MONEY} AND ${SQL_BUSINESS_ONLY}
         AND r.type = ${query.type}
         ${range}
-        ${sqlReceiptScope(query)}
+        ${sqlReceiptScope(scopeOf(query, allowedBranchIds))}
       GROUP BY r.category_id, c.name, c.system_key
       ORDER BY SUM(r.amount) DESC
     `);
@@ -441,6 +487,8 @@ export class FinanceOverviewService {
   async byVehicle(
     tenantId: string,
     query: VehicleProfitQueryDto,
+    /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
+    allowedBranchIds: readonly string[] | null,
   ): Promise<{ data: VehicleProfitItemDto[]; meta: PaginationMeta }> {
     const paging = resolvePaging(query, RECEIPT_DEFAULT_LIMIT, RECEIPT_MAX_LIMIT);
     const fromAt = dayStartOf(query.from);
@@ -458,7 +506,7 @@ export class FinanceOverviewService {
                  COALESCE(SUM(r.amount) FILTER (WHERE r.type = ${RECEIPT_TYPE.INCOME}), 0) AS revenue,
                  COALESCE(SUM(r.amount) FILTER (WHERE r.type = ${RECEIPT_TYPE.EXPENSE}), 0) AS cost
           FROM receipts r
-          WHERE r.tenant_id = ${tenantId} AND r.vehicle_id IS NOT NULL
+          WHERE r.tenant_id = ${tenantId} AND r.vehicle_id IS NOT NULL ${sqlReceiptScope(scopeOf(query, allowedBranchIds))}
             AND ${SQL_REAL_MONEY} AND ${SQL_BUSINESS_ONLY}
             ${range}
           GROUP BY r.vehicle_id
@@ -467,6 +515,7 @@ export class FinanceOverviewService {
           SELECT b.vehicle_id, COUNT(*)::bigint AS trips
           FROM bookings b
           WHERE b.tenant_id = ${tenantId} AND ${SQL_DEBT_SCOPE}
+            ${sqlBookingScope(scopeOf(query, allowedBranchIds))}
             ${tripRange}
           GROUP BY b.vehicle_id
         ),
@@ -531,6 +580,8 @@ export class FinanceOverviewService {
   async byCustomer(
     tenantId: string,
     query: CustomerRevenueQueryDto,
+    /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
+    allowedBranchIds: readonly string[] | null,
   ): Promise<{ data: CustomerRevenueItemDto[]; meta: PaginationMeta }> {
     const paging = resolvePaging(query, RECEIPT_DEFAULT_LIMIT, RECEIPT_MAX_LIMIT);
     const fromAt = dayStartOf(query.from);
@@ -545,7 +596,7 @@ export class FinanceOverviewService {
         SELECT r.tenant_customer_id,
                COALESCE(SUM(r.amount) FILTER (WHERE r.type = ${RECEIPT_TYPE.INCOME}), 0) AS revenue
         FROM receipts r
-        WHERE r.tenant_id = ${tenantId} AND r.tenant_customer_id IS NOT NULL
+        WHERE r.tenant_id = ${tenantId} AND r.tenant_customer_id IS NOT NULL ${sqlReceiptScope(scopeOf(query, allowedBranchIds))}
           AND ${SQL_REAL_MONEY} AND ${SQL_BUSINESS_ONLY}
           ${range}
         GROUP BY r.tenant_customer_id
@@ -555,6 +606,7 @@ export class FinanceOverviewService {
         FROM bookings b
         WHERE b.tenant_id = ${tenantId} AND ${SQL_DEBT_SCOPE}
           AND b.tenant_customer_id IS NOT NULL
+          ${sqlBookingScope(scopeOf(query, allowedBranchIds))}
           ${tripRange}
         GROUP BY b.tenant_customer_id
       ),
@@ -564,12 +616,16 @@ export class FinanceOverviewService {
       -- Mẫu số của tỷ trọng là doanh thu CẢ KỲ, kể cả phần chưa gắn khách — tức đúng con số trên
       -- thẻ "Doanh thu". Lấy tổng của các dòng làm mẫu số sẽ cho ra bộ % cộng lại tròn 100% ở mọi
       -- trang: nghe hợp lý và sai hoàn toàn khi có phiếu thu không gắn khách.
+      -- Mẫu số theo CÙNG phạm vi chi nhánh với các dòng (ADR 0052): không lọc thì tỷ trọng sai
+      -- ngay khi đang lọc, và với người bị giới hạn nó còn LỘ tổng doanh thu toàn gian hàng —
+      -- revenue / sharePercent suy ngược ra được.
       period AS (
         SELECT COALESCE(SUM(r.amount), 0) AS revenue
         FROM receipts r
         WHERE r.tenant_id = ${tenantId} AND r.type = ${RECEIPT_TYPE.INCOME}
           AND ${SQL_REAL_MONEY} AND ${SQL_BUSINESS_ONLY}
           ${range}
+          ${sqlReceiptScope(scopeOf(query, allowedBranchIds))}
       ),
       joined AS (
         SELECT c.id AS tenant_customer_id, c.full_name,
@@ -663,6 +719,20 @@ function assertBucketsFit(granularity: FinanceGranularity, from: Date, to: Date)
  * cầm tờ giấy ghi biển số hoặc số điện thoại, không cầm ULID. `ILIKE '%…%'` đi được bằng hai
  * index trigram đã có (`bookings_search_trgm_idx`, `vehicles_search_trgm_idx`).
  */
+/**
+ * Thu hẹp Công nợ theo chi nhánh — ADR 0052.
+ *
+ * Rẻ vì truy vấn ĐÃ `JOIN vehicles v` sẵn (ô tìm kiếm chạm tên xe/biển số), và
+ * `bookings.vehicle_id` là NOT NULL nên **không có dòng nợ nào không thuộc chi nhánh nào**: lọc
+ * ở đây không giấu mất khoản nào, tổng bốn chi nhánh đúng bằng tổng toàn gian hàng.
+ *
+ * Phải có mặt ở CẢ hai câu (trang dữ liệu và câu đếm) — lệch một vế là bảng hiện 3 dòng còn
+ * phân trang nói 40.
+ */
+function debtBranchSql(branchIds: readonly string[] | null): Prisma.Sql {
+  return branchIds ? Prisma.sql`AND v.branch_id = ANY(${branchIds}::char(26)[])` : Prisma.empty;
+}
+
 function debtSearchSql(q: string | undefined): Prisma.Sql {
   const term = q?.trim();
   if (!term) return Prisma.empty;
@@ -690,4 +760,17 @@ function debtFilterSql(filter: string | undefined, now: Date, soon: Date): Prism
     default:
       return Prisma.empty;
   }
+}
+
+/**
+ * Dựng `FinanceScope` từ query + phạm vi chi nhánh người gọi được giao — ADR 0052.
+ *
+ * Mọi báo cáo tài chính đi qua đây, nên phép giao "được giao × đang xin" chỉ viết một lần.
+ * `branchId` trên query là thứ client XIN; `branchIds` là thứ họ THỰC SỰ được đọc.
+ */
+function scopeOf(
+  query: { from?: string; to?: string; branchId?: string; vehicleId?: string; tenantCustomerId?: string },
+  allowedBranchIds: readonly string[] | null,
+): FinanceScope {
+  return { ...query, branchIds: resolveBranchIdList(query.branchId, allowedBranchIds) };
 }

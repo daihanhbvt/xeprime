@@ -940,7 +940,7 @@ describe('6. Xe SỐNG lệch ảnh chụp: cổng phê duyệt đọc xe sẽ l
         async (tx) => {
           await vehicles.applyUpdate(tx, personalTenantId, id, personalOwnerId, {
             plateNumber: '88Z-888.88',
-          });
+          }, null);
           signalLocked();
           await released;
         },
@@ -1036,7 +1036,7 @@ describe('8. Chủ xe sửa xe khi phiếu còn chờ: phiếu mang bản mới 
     await vehicles.update(personalTenantId, id, personalOwnerId, {
       name: `Honda City G ${RUN}`,
       plateNumber: '51A-999.99',
-    });
+    }, null);
 
     const after = await vehicleApprovals.detail(taskId);
     // 1. Thứ người duyệt ĐỌC là bản mới…
@@ -1080,7 +1080,7 @@ describe('8. Chủ xe sửa xe khi phiếu còn chờ: phiếu mang bản mới 
     const taskId = await pendingTaskOf(id);
     const stale = (await vehicleApprovals.detail(taskId)).capturedAt;
 
-    await vehicles.update(personalTenantId, id, personalOwnerId, { plateNumber: '51A-111.11' });
+    await vehicles.update(personalTenantId, id, personalOwnerId, { plateNumber: '51A-111.11' }, null);
     // Tick phải làm LẠI — chúng vừa bị đặt lại cùng lượt sửa.
     await passVehicleReviewChecks(prisma, taskId, reviewerA);
 
@@ -1118,7 +1118,7 @@ describe('8. Chủ xe sửa xe khi phiếu còn chờ: phiếu mang bản mới 
   maybe('sửa xe KHÔNG có phiếu chờ → không tạo phiếu nào', async () => {
     const id = await seedVehicle(personalTenantId, { name: `Suzuki XL7 ${RUN}` });
 
-    await vehicles.update(personalTenantId, id, personalOwnerId, { name: `Suzuki XL7 GLX ${RUN}` });
+    await vehicles.update(personalTenantId, id, personalOwnerId, { name: `Suzuki XL7 GLX ${RUN}` }, null);
 
     const tasks = await prisma.approvalTask.count({
       where: { targetType: APPROVAL_TARGET_TYPE.VEHICLE, targetId: id },

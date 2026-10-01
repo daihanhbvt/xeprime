@@ -24,6 +24,13 @@
   flex: 1 1 260px;
 }
 
+/* Không co lại dưới 200px: nhãn là `Tên chi nhánh · Tỉnh`, cắt ngắn thì hai chi nhánh cùng tỉnh
+   trông giống hệt nhau. */
+.branch {
+  flex: 0 1 220px;
+  min-width: 200px;
+}
+
 .count {
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body-sm);

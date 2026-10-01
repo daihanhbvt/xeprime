@@ -46,6 +46,21 @@ export interface TenantContext {
   readonly roleKey: TenantRole;
   readonly permissions: readonly Permission[];
   /**
+   * Trục thứ BA của phân quyền: CHI NHÁNH người gọi được giao — ADR 0052.
+   *
+   * `null` = toàn gian hàng (`branch_scope = 'all'`, và là trạng thái của mọi thành viên có từ
+   * trước). Mảng = chỉ những chi nhánh đó; mảng RỖNG nghĩa là không được giao chi nhánh nào, tức
+   * KHÔNG thấy gì — chiều fail-closed, không phải fail-open.
+   *
+   * Nó CHỈ thu hẹp dòng dữ liệu bắt nguồn từ một chiếc xe (`vehicles` là bảng duy nhất mang
+   * `branch_id`). Ví điểm, hoá đơn gói, khai thuế, sổ khách, hội thoại là cấp GIAN HÀNG — người
+   * bị giới hạn chi nhánh đơn giản không được cấp các quyền đó, và trục `permissions` đã lo.
+   *
+   * Mọi truy vấn đọc nó qua `resolveBranchScope()`, KHÔNG đọc thẳng: một chỗ quyết định thì sót
+   * một endpoint là chuyện không xảy ra được.
+   */
+  readonly allowedBranchIds: readonly string[] | null;
+  /**
    * Trục NĂNG LỰC theo gói (ADR 0027) — ĐỘC LẬP với `permissions` ở trên và luôn đủ 8 cờ.
    *
    * Đọc từ gói HIỆN HÀNH mỗi request, KHÔNG cache và KHÔNG đóng băng (ADR 0027 điều 5): gia hạn

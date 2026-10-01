@@ -23,6 +23,7 @@ import {
   Min,
 } from 'class-validator';
 import { PaginationMetaDto } from '../../../../common/dto/api-response.dto';
+import { BranchIdQuery } from '../../../../common/dto/branch-scope';
 
 // ── Ảnh hiện trạng ──────────────────────────────────────────────────────────
 
@@ -199,6 +200,10 @@ export class MissingOdometerQueryDto {
   @IsString()
   @MaxLength(120)
   q?: string;
+
+  /** Lọc theo chi nhánh giữ xe — hàng đợi này là một TAB của Trung tâm bảo dưỡng. */
+  @BranchIdQuery()
+  branchId?: string;
 
   @ApiPropertyOptional({ minimum: 1 })
   @IsOptional()

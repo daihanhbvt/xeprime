@@ -255,7 +255,7 @@ describe('public_listings sync (ADR 0008)', () => {
    * giá ngoài chợ phải là giá thật, không phải giá của lần duyệt gần nhất.
    */
   maybe('sửa giá xe approved → listing giữ active và mang giá mới ngay', async () => {
-    await vehicles.update(tenantId, vApprove, ownerId, { weekdayPrice: '999000' });
+    await vehicles.update(tenantId, vApprove, ownerId, { weekdayPrice: '999000' }, null);
 
     const listing = await prisma.publicListing.findUniqueOrThrow({
       where: { vehicleId: vApprove },
@@ -278,7 +278,7 @@ describe('public_listings sync (ADR 0008)', () => {
 
   maybe('sửa CĂN CƯỚC xe approved bị từ chối — listing không đổi', async () => {
     await expect(
-      vehicles.update(tenantId, vApprove, ownerId, { plateNumber: '51A-000.11' }),
+      vehicles.update(tenantId, vApprove, ownerId, { plateNumber: '51A-000.11' }, null),
     ).rejects.toMatchObject({ status: 409 });
     expect(await inSearch(vApprove)).toBe(true);
   });
@@ -289,7 +289,7 @@ describe('public_listings sync (ADR 0008)', () => {
       await vehicles.update(tenantId, vApprove, ownerId, {
         hourlyPrice: '150000',
         discountPercent: 20,
-      });
+      }, null);
       const stillActive = await prisma.publicListing.findUniqueOrThrow({
         where: { vehicleId: vApprove },
         select: { status: true },

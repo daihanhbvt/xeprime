@@ -2,6 +2,8 @@ import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
+  BRANCH_SCOPED_RESOURCE,
+  BranchScoped,
   CurrentTenant,
   CurrentUser,
   RequirePermissions,
@@ -43,9 +45,10 @@ export class BookingRequestsController {
     @CurrentTenant() tenant: TenantContext,
     @Query() query: BookingRequestListQueryDto,
   ): Promise<BookingRequestPageDto> {
-    return this.requests.list(tenant.tenantId, query);
+    return this.requests.list(tenant.tenantId, query, tenant.allowedBranchIds);
   }
 
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING_REQUEST)
   @Get(':id')
   @RequirePermissions(PERMISSION.BOOKING_REQUEST_VIEW)
   @SupportAction(SUPPORT_CAPABILITY.BOOKING_REQUEST_VIEW)
@@ -63,6 +66,7 @@ export class BookingRequestsController {
    * `0đ — Miễn phí`. Chủ xe thống nhất phí với khách ngoài ứng dụng rồi cập nhật bằng
    * `PATCH /bookings/:id/delivery-fee`.
    */
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING_REQUEST)
   @Post(':id/approve')
   @RequirePermissions(PERMISSION.BOOKING_REQUEST_APPROVE)
   @ApiOperation({
@@ -88,6 +92,7 @@ export class BookingRequestsController {
     return this.requests.approve(tenant.tenantId, user.id, id, dto);
   }
 
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING_REQUEST)
   @Post(':id/reject')
   @RequirePermissions(PERMISSION.BOOKING_REQUEST_APPROVE)
   @ApiOperation({ summary: 'Từ chối yêu cầu' })
@@ -111,6 +116,7 @@ export class BookingRequestsController {
    * Cùng quyền với duyệt/từ chối: ai nhận được chuyến thì cũng là người rút lại được nó. Nhân
    * viên được uỷ quyền bấm VẪN tính là phía gian hàng — uỷ quyền là chuyện nội bộ của người bán.
    */
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING_REQUEST)
   @Post(':id/cancel')
   @RequirePermissions(PERMISSION.BOOKING_REQUEST_APPROVE)
   @ApiOperation({
@@ -141,6 +147,7 @@ export class BookingRequestsController {
    * Chỉ cần quyền XEM yêu cầu: liên hệ khách là việc của người trực, không phải việc của người
    * có quyền duyệt.
    */
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING_REQUEST)
   @Post(':id/conversation')
   @RequirePermissions(PERMISSION.BOOKING_REQUEST_VIEW)
   @ApiOperation({

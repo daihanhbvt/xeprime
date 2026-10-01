@@ -30,6 +30,7 @@ import {
   Min,
 } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
+import { BranchIdQuery } from '../../../common/dto/branch-scope';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
@@ -75,6 +76,17 @@ export class FinanceCategoryDto {
 // --- Phiếu thu/chi ---------------------------------------------------------
 
 export class ReceiptListQueryDto {
+  /**
+   * Chi nhánh của XE trên phiếu — ADR 0052.
+   *
+   * Phiếu KHÔNG gắn xe (chi phí chung: marketing, văn phòng…) nằm NGOÀI kết quả khi lọc. Đó là
+   * hành vi đúng, nhưng nó làm tổng bốn chi nhánh nhỏ hơn tổng toàn gian hàng — nên giao diện
+   * BẮT BUỘC nói ra con số đó, xem `unassignedCount` ở `ReceiptPageMetaDto`. Lọc im lặng ở đây
+   * là để người dùng cộng tay ra một tổng khác tổng hệ thống.
+   */
+  @BranchIdQuery()
+  branchId?: string;
+
   @ApiPropertyOptional({ enum: RECEIPT_TYPE_VALUES })
   @IsOptional()
   @IsIn(RECEIPT_TYPE_VALUES)
@@ -206,6 +218,19 @@ export class CreateReceiptDto {
 
   @ApiPropertyOptional({
     description:
+      'Chi nhánh phát sinh khoản tiền (ULID) — BẮT BUỘC khi phiếu không gắn xe và không gắn ' +
+      'đơn. Danh mục không suy ra được chi nhánh ("Chi phí văn phòng" ở hai chi nhánh là hai ' +
+      'khoản mang cùng một tên), nên phải hỏi. Không có "toàn gian hàng": một khoản xếp ngoài ' +
+      'mọi chi nhánh thì lọc từng chi nhánh đều ra 0 trong khi tổng vẫn có nó — không ai đối ' +
+      'chiếu được nữa. Gửi kèm xe/đơn ⇒ VALIDATION_FAILED: lúc đó chi nhánh SUY TỪ XE.',
+  })
+  @IsOptional()
+  @IsString()
+  @Length(26, 26)
+  branchId?: string;
+
+  @ApiPropertyOptional({
+    description:
       'Ngày tiền phát sinh (ISO hoặc YYYY-MM-DD); mặc định bây giờ. Nhập bù cho hôm trước thì đặt đúng ngày đó.',
   })
   @IsOptional()
@@ -282,9 +307,25 @@ export class ReceiptDetailDto extends ReceiptListItemDto {
   @ApiProperty({ description: 'ISO-8601 UTC' }) updatedAt!: string;
 }
 
+/**
+ * Phân trang của sổ thu chi, cộng thêm CON SỐ BỊ BỎ RA khi lọc chi nhánh.
+ *
+ * Vì sao phải có (ADR 0052): `receipts.vehicle_id` nullable. Lọc theo chi nhánh nghĩa là lọc theo
+ * XE của phiếu, nên phiếu chi chung — marketing, văn phòng — rơi ra ngoài. Không nói ra thì tổng
+ * bốn chi nhánh nhỏ hơn tổng toàn gian hàng và người dùng đi tìm một lỗi không tồn tại.
+ *
+ * `0` khi không lọc chi nhánh: lúc đó không có gì bị bỏ ra.
+ */
+export class ReceiptPageMetaDto extends PaginationMetaDto {
+  @ApiProperty({
+    description: 'Số phiếu KHÔNG gắn xe nên không thuộc chi nhánh nào — chỉ > 0 khi đang lọc',
+  })
+  unassignedCount!: number;
+}
+
 export class ReceiptPageDto {
   @ApiProperty({ type: [ReceiptListItemDto] }) data!: ReceiptListItemDto[];
-  @ApiProperty({ type: PaginationMetaDto }) meta!: PaginationMetaDto;
+  @ApiProperty({ type: ReceiptPageMetaDto }) meta!: ReceiptPageMetaDto;
 }
 
 // --- Công nợ + dashboard ---------------------------------------------------
@@ -302,6 +343,10 @@ export class DebtListQueryDto {
   @IsOptional()
   @IsIn(DEBT_FILTER)
   filter?: string;
+
+  /** Chi nhánh của XE trong đơn nợ — ADR 0052. Không dòng nào không thuộc chi nhánh nào. */
+  @BranchIdQuery()
+  branchId?: string;
 
   @ApiPropertyOptional({ default: 1, minimum: 1 })
   @IsOptional()
@@ -354,6 +399,10 @@ export class DebtPageDto {
 }
 
 export class FinanceSummaryQueryDto {
+  /** Chi nhánh của XE trên phiếu — cùng quy ước với danh sách thu chi (ADR 0052). */
+  @BranchIdQuery()
+  branchId?: string;
+
   @ApiPropertyOptional({ description: 'Từ ngày (ISO)' })
   @IsOptional()
   @IsDateString()
@@ -453,6 +502,10 @@ export class FinanceSummaryDto {
 // --- Báo cáo doanh thu -----------------------------------------------------
 
 export class FinanceSeriesQueryDto {
+  /** Chi nhánh của XE trên phiếu — cùng quy ước với danh sách thu chi (ADR 0052). */
+  @BranchIdQuery()
+  branchId?: string;
+
   @ApiPropertyOptional({ description: 'Từ ngày — `YYYY-MM-DD` (trọn ngày giờ VN) hoặc ISO đầy đủ' })
   @IsOptional()
   @IsDateString()
@@ -513,6 +566,10 @@ export class FinanceSeriesDto {
 }
 
 export class FinanceCategoryBreakdownQueryDto {
+  /** Chi nhánh của XE trên phiếu — cùng quy ước với danh sách thu chi (ADR 0052). */
+  @BranchIdQuery()
+  branchId?: string;
+
   @ApiPropertyOptional({ description: 'Từ ngày — `YYYY-MM-DD` hoặc ISO đầy đủ' })
   @IsOptional()
   @IsDateString()
@@ -575,6 +632,10 @@ export class FinanceCategoryBreakdownDto {
 }
 
 export class VehicleProfitQueryDto {
+  /** Chi nhánh giữ xe — báo cáo này vốn theo XE nên lọc sạch, không có dòng chung (ADR 0052). */
+  @BranchIdQuery()
+  branchId?: string;
+
   @ApiPropertyOptional({ description: 'Từ ngày — `YYYY-MM-DD` hoặc ISO đầy đủ' })
   @IsOptional()
   @IsDateString()
@@ -633,6 +694,10 @@ export class VehicleProfitPageDto {
 }
 
 export class CustomerRevenueQueryDto {
+  /** Chi nhánh của XE trong đơn — ADR 0052. */
+  @BranchIdQuery()
+  branchId?: string;
+
   @ApiPropertyOptional({ description: 'Từ ngày — `YYYY-MM-DD` hoặc ISO đầy đủ' })
   @IsOptional()
   @IsDateString()

@@ -13,6 +13,8 @@ import {
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PERMISSION, type HandoverPhotoSlot, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
+  BRANCH_SCOPED_RESOURCE,
+  BranchScoped,
   CurrentTenant,
   CurrentUser,
   RequirePermissions,
@@ -51,6 +53,7 @@ import { HandoversService, type HandoverViewScope } from './handovers.service';
  * giảm số cần thêm `vehicles.odometer.decrease`).
  */
 @ApiTags('booking-handovers')
+@BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
 @Controller('bookings/:id/handovers')
 @TenantScoped()
 export class BookingHandoversController {

@@ -57,6 +57,8 @@ function tenantWith(state: FeatureState, feature: PlanFeature = PLAN_FEATURE.FIN
     onboardingState: SHOP_ONBOARDING_STATE.PACKAGE_ACTIVE,
     roleKey: 'shop_owner',
     permissions: [],
+    // `null` = toàn gian hàng — bộ này không kiểm phạm vi chi nhánh (ADR 0052).
+    allowedBranchIds: null,
     features,
     usedFeatures: state === FEATURE_STATE.READ_ONLY ? [feature] : [],
     planCode: state === FEATURE_STATE.ENABLED ? 'standard' : null,

@@ -75,10 +75,20 @@ export class BranchesService {
     private readonly billing: BillingService,
   ) {}
 
-  async list(tenantId: string, query: BranchListQueryDto): Promise<BranchListDto> {
+  async list(
+    tenantId: string,
+    query: BranchListQueryDto,
+    /*
+     * Người bị giới hạn chi nhánh chỉ thấy chi nhánh CỦA MÌNH — kể cả ở màn cấu hình và ô lọc
+     * (ADR 0052). Không thu hẹp ở đây thì ô lọc mời họ chọn một chi nhánh mà mọi màn sẽ trả
+     * rỗng: an toàn nhưng trông như lỗi.
+     */
+    allowedBranchIds: readonly string[] | null,
+  ): Promise<BranchListDto> {
     const where: Prisma.TenantBranchWhereInput = {
       tenantId,
       deletedAt: null,
+      ...(allowedBranchIds !== null ? { id: { in: [...allowedBranchIds] } } : {}),
       ...(query.status ? { status: query.status } : {}),
       ...(query.provinceCode ? { provinceCode: query.provinceCode } : {}),
       ...(query.wardCode ? { wardCode: query.wardCode } : {}),
@@ -554,12 +564,30 @@ export class BranchesService {
     tx: Prisma.TransactionClient,
     tenantId: string,
     branchId: string,
+    /**
+     * Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052).
+     *
+     * Đây là cổng của ĐƯỜNG GHI, và nó là chỗ dễ sót nhất của cả trục phân quyền: `branchId` của
+     * xe do CLIENT gửi lên (`CreateVehicleDto` / `UpdateVehicleDto`), nên không chặn ở đây thì
+     * một nhân viên chỉ phụ trách Cần Thơ vẫn tạo được xe vào Quận 5, hoặc chuyển xe của mình
+     * sang chi nhánh không thuộc phạm vi — và mọi bộ lọc đọc đều vô nghĩa sau đó.
+     *
+     * Ba nơi gọi (tạo xe · sửa xe · gán chi nhánh) đều đi qua hàm này, nên một phép kiểm ở đây
+     * phủ hết đường ghi chi nhánh của xe.
+     */
+    allowedBranchIds: readonly string[] | null,
   ): Promise<{ id: string; provinceCode: string | null }> {
     const branch = await tx.tenantBranch.findFirst({
       where: { id: branchId, tenantId, deletedAt: null },
       select: { id: true, status: true, provinceCode: true },
     });
     if (!branch) throw branchNotFound();
+    /*
+     * Ngoài phạm vi ⇒ 404 như chi nhánh không tồn tại, KHÔNG phải 403: một thông báo "bạn không
+     * có quyền với chi nhánh này" tự nó xác nhận chi nhánh đó có thật. Cùng kỷ luật với ranh
+     * giới tenant ở khắp nơi trong base này.
+     */
+    if (allowedBranchIds !== null && !allowedBranchIds.includes(branch.id)) throw branchNotFound();
     if (branch.status !== BRANCH_STATUS.ACTIVE) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,

@@ -27,6 +27,13 @@ interface StaffBookingDialogProps {
   /** Prefill khách — lối vào từ hồ sơ khách đã biết người thuê là ai (S-01). */
   customerName?: string | null;
   customerPhone?: string | null;
+  /**
+   * Chi nhánh màn hình gọi đang lọc — bước chọn xe mở sẵn ở đó (ADR 0052).
+   *
+   * Chỉ là GIÁ TRỊ MỞ ĐẦU: người điều phối vẫn đổi được ngay trong bước chọn xe, vì điều xe từ
+   * chi nhánh khác sang cho khách là việc bình thường.
+   */
+  defaultBranchId?: string;
   open: boolean;
   onClose: () => void;
 }
@@ -52,6 +59,7 @@ export function StaffBookingDialog({
   returnAt,
   customerName,
   customerPhone,
+  defaultBranchId,
   open,
   onClose,
 }: StaffBookingDialogProps) {
@@ -99,6 +107,7 @@ export function StaffBookingDialog({
         />
       ) : (
         <StaffVehiclePicker
+          defaultBranchId={defaultBranchId}
           onPick={(item: VehicleListItem) =>
             setPicked({ id: item.id, name: item.name, imageUrl: item.mainImageUrl })
           }

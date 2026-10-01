@@ -10,6 +10,7 @@ import {
   SUPPORT_REASON_LIMITS,
   SUPPORT_WORKSPACE_VALUES,
   TENANT_STATUS_VALUES,
+  MEMBERSHIP_BRANCH_SCOPE_VALUES,
 } from '@xeprime/types';
 import { TenantFeatureStateDto } from '../../auth/dto/auth.dto';
 
@@ -59,6 +60,13 @@ export class SupportContextTenantDto {
     description: 'Vai của PHIÊN trong gian hàng — luôn `shop_viewer` (không cổng chỉ-chủ nào mở).',
   })
   roleKey!: string;
+  /**
+   * Phiên hỗ trợ không bị giới hạn chi nhánh — luôn `all` (`allowedBranchIds = null`), cùng hình
+   * dạng với `CurrentTenantSummaryDto.branchScope` để màn dùng lại không phải biết mình đang ở
+   * trong phiên (ADR 0050 §12 · ADR 0052).
+   */
+  @ApiProperty({ enum: MEMBERSHIP_BRANCH_SCOPE_VALUES })
+  branchScope!: string;
   @ApiProperty({ nullable: true, type: String }) logoUrl!: string | null;
   @ApiProperty({
     nullable: true,

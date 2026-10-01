@@ -44,6 +44,8 @@ export function buildTenantContext(
   now: Date,
   roleKey: TenantRole,
   permissions: readonly Permission[],
+  /** `null` = toàn gian hàng; mảng = chỉ những chi nhánh đó (ADR 0052). */
+  allowedBranchIds: readonly string[] | null,
   support?: SupportScope,
 ): TenantContext {
   const plan = resolveTenantFeatures(tenant.subscriptions[0] ?? null, tenant.usedFeatures, now);
@@ -60,6 +62,7 @@ export function buildTenantContext(
       : SHOP_ONBOARDING_STATE.COMMISSION,
     roleKey,
     permissions,
+    allowedBranchIds,
     features: plan.features,
     // Lọc qua `isPlanFeature`: CHECK ở DB đã canh, nhưng cột là `text[]` nên kiểu Prisma vẫn là
     // `string[]` — lọc ở đây để không có chuỗi lạ nào lọt vào union.

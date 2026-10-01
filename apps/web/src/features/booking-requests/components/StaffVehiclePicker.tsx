@@ -3,10 +3,13 @@
 import { CarOutlined } from '@ant-design/icons';
 import { Button, Empty, Result, Skeleton, Spin } from 'antd';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { VEHICLE_OPERATION_STATUS_META, type VehicleOperationStatus } from '@xeprime/types';
 import { LIST_SEPARATOR } from '@xeprime/domain';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { AutoSearchInput } from '@/components/filter/AutoSearchInput';
+import { BranchFilterSelect } from '@/features/branches/components/BranchFilterSelect';
+import { useBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { useInfiniteVehicles } from '@/features/vehicles/hooks/use-infinite-vehicles';
 import type { VehicleListItem } from '@/features/vehicles/types';
 import { getErrorMessage } from '@/services/api-client';
@@ -26,11 +29,31 @@ const PREFETCH_MARGIN = '400px 0px';
  *
  * Danh sách TẢI DẦN theo cuộn (`useInfiniteVehicles`) thay vì lấy một lượt: gian hàng lớn có
  * hàng trăm xe, và một lần gọi `limit=100` vừa nặng vừa cắt mất xe thứ 101.
+ *
+ * **Chi nhánh là GỢI Ý, không phải rào chắn** (ADR 0052). `defaultBranchId` đến từ màn đang mở
+ * hộp thoại, nên người điều phối đang lọc Ninh Kiều thấy ngay xe của Ninh Kiều. Nhưng ô chọn vẫn
+ * đổi được tại chỗ: điều một chiếc xe từ chi nhánh khác sang cho khách là việc bình thường, và
+ * khoá cứng chỉ khiến họ đóng hộp thoại, đổi bộ lọc của trang, rồi mở lại.
  */
-export function StaffVehiclePicker({ onPick }: { onPick: (vehicle: VehicleListItem) => void }) {
+export function StaffVehiclePicker({
+  onPick,
+  defaultBranchId,
+}: {
+  onPick: (vehicle: VehicleListItem) => void;
+  defaultBranchId?: string;
+}) {
   const fmt = useAppFormat();
-
+  const t = useTranslations('BookingRequests.vehiclePicker');
   const [q, setQ] = useState('');
+  // State cục bộ, KHÔNG lên URL: hộp thoại này không phải một màn hình chia sẻ link được, và ghi
+  // vào URL sẽ đụng chính `?branchId=` của trang đứng sau nó.
+  const [branchId, setBranchId] = useState<string | undefined>(defaultBranchId);
+  /*
+   * Nối state cục bộ vào hook (`local: true`) chứ không để hook chỉ-đọc rồi tự dựng ô: ô này phải
+   * khoá lại cho người chỉ phụ trách một chi nhánh, và phải tự nhả một `defaultBranchId` không
+   * còn dùng được. Cờ `local` giữ đúng một điều: hộp thoại không ghi vào bộ nhớ chi nhánh của menu.
+   */
+  const branch = useBranchFilter({ value: branchId, onChange: setBranchId, local: true });
   const {
     vehicles,
     total,
@@ -42,7 +65,7 @@ export function StaffVehiclePicker({ onPick }: { onPick: (vehicle: VehicleListIt
     fetchNextPage,
     retryInitial,
     retryNextPage,
-  } = useInfiniteVehicles(q);
+  } = useInfiniteVehicles(q, branchId);
 
   // Sentinel tải trang kế — guard trùng/hết trang nằm trong hook, ở đây chỉ việc gọi.
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -67,12 +90,18 @@ export function StaffVehiclePicker({ onPick }: { onPick: (vehicle: VehicleListIt
         <AutoSearchInput
           className={styles.search}
           size="large"
-          placeholder="Tìm theo tên xe, biển số hoặc mã xe"
-          aria-label="Tìm xe để đặt"
+          placeholder={t('searchPlaceholder')}
+          aria-label={t('searchAriaLabel')}
           value={q}
           onSearch={setQ}
         />
-        {total > 0 ? <span className={styles.count}>{total} xe</span> : null}
+        <BranchFilterSelect
+          branch={branch}
+          value={branchId}
+          className={styles.branch}
+          size="large"
+        />
+        {total > 0 ? <span className={styles.count}>{t('count', { count: total })}</span> : null}
       </div>
 
       {isInitialLoading ? (
@@ -85,9 +114,9 @@ export function StaffVehiclePicker({ onPick }: { onPick: (vehicle: VehicleListIt
         <Result
           className={styles.state}
           status="warning"
-          title="Không tải được danh sách xe"
+          title={t('loadFailed')}
           subTitle={getErrorMessage(initialError)}
-          extra={<Button onClick={retryInitial}>Thử lại</Button>}
+          extra={<Button onClick={retryInitial}>{t('retry')}</Button>}
         />
       ) : null}
 
@@ -95,7 +124,14 @@ export function StaffVehiclePicker({ onPick }: { onPick: (vehicle: VehicleListIt
         <Empty
           className={styles.state}
           image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={q ? 'Không có xe nào khớp từ khoá' : 'Gian hàng chưa có xe nào'}
+          /*
+           * Ba câu khác nhau cho ba lý do khác nhau. "Gian hàng chưa có xe nào" nói ra khi thật
+           * ra chỉ là chi nhánh đang lọc chưa có xe sẽ khiến người dùng đi tìm một lỗi không tồn
+           * tại — trong khi việc cần làm chỉ là đổi ô chi nhánh ngay phía trên.
+           */
+          description={
+            q ? t('emptySearch') : branchId ? t('emptyBranch') : t('empty')
+          }
         />
       ) : null}
 
@@ -132,7 +168,7 @@ export function StaffVehiclePicker({ onPick }: { onPick: (vehicle: VehicleListIt
                       />
                       {vehicle.weekdayPrice ? (
                         <span className={styles.price}>
-                          {fmt.money(vehicle.weekdayPrice)}/ngày
+                          {t('perDay', { amount: fmt.money(vehicle.weekdayPrice) })}
                         </span>
                       ) : null}
                     </span>
@@ -146,17 +182,17 @@ export function StaffVehiclePicker({ onPick }: { onPick: (vehicle: VehicleListIt
           <div ref={sentinelRef} className={styles.sentinel}>
             {isFetchingNextPage ? (
               <span className={styles.loadingMore}>
-                <Spin size="small" /> Đang tải thêm xe…
+                <Spin size="small" /> {t('loadingMore')}
               </span>
             ) : appendError ? (
               <span className={styles.loadingMore}>
-                Không tải được thêm xe.{' '}
+                {t('appendFailed')}{' '}
                 <Button type="link" size="small" onClick={retryNextPage}>
-                  Thử lại
+                  {t('retry')}
                 </Button>
               </span>
             ) : !hasNextPage ? (
-              <span className={styles.loadingMore}>Đã hiện hết {total} xe</span>
+              <span className={styles.loadingMore}>{t('allShown', { count: total })}</span>
             ) : null}
           </div>
         </div>

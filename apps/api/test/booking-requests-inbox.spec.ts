@@ -305,7 +305,7 @@ describe('BookingRequestsService.list — DTO của hộp thư', () => {
       tenantCustomerId,
     });
 
-    const page = await requests.list(tenantId, {});
+    const page = await requests.list(tenantId, {}, null);
     const row = page.data.find((r) => r.id === id)!;
 
     expect(row.vehicleCode).toBe('XE-A1');
@@ -326,7 +326,7 @@ describe('BookingRequestsService.list — DTO của hộp thư', () => {
       customerPhone: '0902222222',
       customerUserId: null,
     });
-    const page = await requests.list(tenantId, {});
+    const page = await requests.list(tenantId, {}, null);
     const row = page.data.find((r) => r.id === id)!;
     expect(row.canMessageOnPlatform).toBe(false);
     expect(row.customerAvatarUrl).toBeNull();
@@ -334,7 +334,7 @@ describe('BookingRequestsService.list — DTO của hộp thư', () => {
   });
 
   maybe('KHÔNG bao giờ trả `customerUserId` ra ngoài', async () => {
-    const page = await requests.list(tenantId, {});
+    const page = await requests.list(tenantId, {}, null);
     for (const row of page.data) {
       expect(Object.keys(row)).not.toContain('customerUserId');
     }
@@ -343,7 +343,7 @@ describe('BookingRequestsService.list — DTO của hộp thư', () => {
   maybe('chỉ thấy yêu cầu của gian hàng mình', async () => {
     const foreign = await seedRequest({ tenantId: otherTenantId, vehicleId: otherVehicleId });
 
-    const mine = await requests.list(tenantId, {});
+    const mine = await requests.list(tenantId, {}, null);
     expect(mine.data.some((r) => r.id === foreign)).toBe(false);
 
     // Chi tiết cũng vậy: id của gian hàng khác là 404, không phải 403 (không lộ sự tồn tại).
@@ -364,11 +364,11 @@ describe('BookingRequestsService.list — tìm kiếm và lọc dịch vụ', ()
     });
 
     for (const term of ['Bích Ngọc', '0917775555', 'Carnival', '51A-123.45']) {
-      const page = await requests.list(tenantId, { q: term, status: undefined });
+      const page = await requests.list(tenantId, { q: term, status: undefined }, null);
       expect(page.data.map((r) => r.id)).toContain(id);
     }
 
-    const none = await requests.list(tenantId, { q: 'khong-ton-tai-xyz' });
+    const none = await requests.list(tenantId, { q: 'khong-ton-tai-xyz' }, null);
     expect(none.data).toHaveLength(0);
     expect(none.meta.total).toBe(0);
   });
@@ -376,8 +376,8 @@ describe('BookingRequestsService.list — tìm kiếm và lọc dịch vụ', ()
   maybe('con số trên TAB đi theo ô tìm kiếm, không phải tổng cũ', async () => {
     // Nếu `q` chỉ vào `where` mà không vào `scope`, tab vẫn khoe con số của cả hộp thư trong
     // khi danh sách đã hẹp lại — người trực đọc hai con số mâu thuẫn nhau trên cùng một màn.
-    const all = await requests.list(tenantId, {});
-    const searched = await requests.list(tenantId, { q: 'khong-ton-tai-xyz' });
+    const all = await requests.list(tenantId, {}, null);
+    const searched = await requests.list(tenantId, { q: 'khong-ton-tai-xyz' }, null);
 
     expect(searched.meta.statusCounts.every((entry) => entry.count === 0)).toBe(true);
     expect(all.meta.statusCounts.some((entry) => entry.count > 0)).toBe(true);
@@ -391,12 +391,12 @@ describe('BookingRequestsService.list — tìm kiếm và lọc dịch vụ', ()
       customerPhone: '0918886666',
     });
 
-    const longTerm = await requests.list(tenantId, { serviceType: SERVICE_TYPE.LONG_TERM });
+    const longTerm = await requests.list(tenantId, { serviceType: SERVICE_TYPE.LONG_TERM }, null);
     expect(longTerm.data.map((r) => r.id)).toContain(longTermId);
     expect(longTerm.data.every((r) => r.serviceType === SERVICE_TYPE.LONG_TERM)).toBe(true);
     expect(longTerm.meta.total).toBe(longTerm.data.length);
 
-    const selfDrive = await requests.list(tenantId, { serviceType: SERVICE_TYPE.SELF_DRIVE });
+    const selfDrive = await requests.list(tenantId, { serviceType: SERVICE_TYPE.SELF_DRIVE }, null);
     expect(selfDrive.data.map((r) => r.id)).not.toContain(longTermId);
   });
 
@@ -408,10 +408,10 @@ describe('BookingRequestsService.list — tìm kiếm và lọc dịch vụ', ()
       customerPhone: '0919997777',
     });
 
-    const mine = await requests.list(tenantId, { q: 'Chỉ Của Shop Này' });
+    const mine = await requests.list(tenantId, { q: 'Chỉ Của Shop Này' }, null);
     expect(mine.data.map((r) => r.id)).toContain(id);
 
-    const theirs = await requests.list(otherTenantId, { q: 'Chỉ Của Shop Này' });
+    const theirs = await requests.list(otherTenantId, { q: 'Chỉ Của Shop Này' }, null);
     expect(theirs.data).toHaveLength(0);
   });
 });
@@ -425,10 +425,10 @@ describe('BookingRequestsService.list — đếm theo trạng thái', () => {
       customerPhone: '0903333333',
     });
 
-    const all = await requests.list(tenantId, {});
+    const all = await requests.list(tenantId, {}, null);
     const filtered = await requests.list(tenantId, {
       status: [BOOKING_REQUEST_STATUS.REJECTED_BY_HOST],
-    });
+    }, null);
 
     // Trang dữ liệu hẹp lại theo bộ lọc…
     expect(filtered.data.every((r) => r.status === BOOKING_REQUEST_STATUS.REJECTED_BY_HOST)).toBe(
@@ -440,7 +440,7 @@ describe('BookingRequestsService.list — đếm theo trạng thái', () => {
   });
 
   maybe('liệt kê ĐỦ bộ trạng thái, kể cả trạng thái chưa có yêu cầu nào', async () => {
-    const page = await requests.list(tenantId, {});
+    const page = await requests.list(tenantId, {}, null);
     expect(page.meta.statusCounts.map((entry) => entry.status).sort()).toEqual(
       [...new Set(page.meta.statusCounts.map((e) => e.status))].sort(),
     );
@@ -450,9 +450,9 @@ describe('BookingRequestsService.list — đếm theo trạng thái', () => {
   maybe('scope theo CHI NHÁNH của xe, và không bao giờ ra khỏi gian hàng', async () => {
     await seedRequest({ tenantId, vehicleId: vehicleBId, customerPhone: '0904444444' });
 
-    const branchA = await requests.list(tenantId, { branchId: branchAId });
-    const branchB = await requests.list(tenantId, { branchId: branchBId });
-    const both = await requests.list(tenantId, {});
+    const branchA = await requests.list(tenantId, { branchId: branchAId }, null);
+    const branchB = await requests.list(tenantId, { branchId: branchBId }, null);
+    const both = await requests.list(tenantId, {}, null);
 
     expect(branchA.data.every((r) => r.vehicleId === vehicleAId)).toBe(true);
     expect(branchB.data.every((r) => r.vehicleId === vehicleBId)).toBe(true);
@@ -460,8 +460,8 @@ describe('BookingRequestsService.list — đếm theo trạng thái', () => {
   });
 
   maybe('gian hàng khác đếm bằng dữ liệu của chính nó', async () => {
-    const mine = await requests.list(tenantId, {});
-    const theirs = await requests.list(otherTenantId, {});
+    const mine = await requests.list(tenantId, {}, null);
+    const theirs = await requests.list(otherTenantId, {}, null);
     expect(total(theirs)).toBe(1);
     expect(total(mine)).toBeGreaterThan(total(theirs));
   });

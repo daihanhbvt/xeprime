@@ -19,7 +19,8 @@
   "columns": {
     "member": "Member",
     "role": "Role",
-    "status": "Status"
+    "status": "Status",
+    "branchScope": "Branches"
   },
   "you": "(you)",
   "roleSelectAria": "Role for {name}",
@@ -34,7 +35,8 @@
     "removed": "Member removed",
     "invited": "Invitation sent",
     "revoked": "Invitation revoked",
-    "invitedNoEmail": "Invitation created but the email could not be sent. Check the email configuration, then invite this address again."
+    "invitedNoEmail": "Invitation created but the email could not be sent. Check the email configuration, then invite this address again.",
+    "scopeChanged": "Assigned branches updated"
   },
   "form": {
     "title": "Invite a member",
@@ -45,8 +47,12 @@
     "errors": {
       "emailRequired": "Enter an email",
       "emailInvalid": "That email is not valid",
-      "roleRequired": "Pick a role"
-    }
+      "roleRequired": "Pick a role",
+      "branchRequired": "Select at least one branch"
+    },
+    "branches": "Assigned branches",
+    "branchesHelp": "Defaults to the whole shop. Picking specific branches limits this member to vehicles, bookings and reports of those branches only.",
+    "branchesHelpLimited": "You manage only some branches, so you can assign only within them. The member will see vehicles, bookings and reports of the selected branches only."
   },
   "invites": {
     "title": "Pending invitations",
@@ -87,5 +93,10 @@
     "goHome": "Back to home",
     "closedTitle": "This invitation is no longer valid",
     "closedBody": "It has already been answered, revoked, or expired. Ask the shop to send a new one if you still want to join."
+  },
+  "branchScope": {
+    "all": "All branches",
+    "selectAria": "Assigned branches of {name}",
+    "limitedCount": "{count, plural, one {# branch} other {# branches}}"
   }
 }

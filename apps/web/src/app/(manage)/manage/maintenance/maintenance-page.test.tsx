@@ -16,6 +16,9 @@ const nav = vi.hoisted(() => ({
 // Nút/hành động ghi bọc theo cờ năng lực (ADR 0027), và hook cờ đọc `/auth/me` qua TanStack
 // Query. Màn này không KIỂM cờ — nó chỉ dùng — nên chặn ở đúng ranh giới đó thay vì dựng
 // QueryClient giả. `enabled` = gian hàng đang có gói, tức là hành vi mặc định.
+// Ô lọc chi nhánh đọc server (ADR 0052) — chặn ở tầng hook như mọi hook dữ liệu khác ở bộ này.
+vi.mock('@/features/branches/hooks/use-branch-filter', () => import('@/features/branches/test-utils'));
+
 vi.mock('@/hooks/use-feature', () => ({
   useFeature: () => ({ state: 'enabled', canWrite: true, isVisible: true, planEndsAt: null }),
   useFeatureStates: () => ({}),

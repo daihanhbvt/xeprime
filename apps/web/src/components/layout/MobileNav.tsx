@@ -5,7 +5,9 @@ import { createElement, useRef } from 'react';
 import { EllipsisOutlined } from '@ant-design/icons';
 import { Drawer } from 'antd';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { withBranchParam } from '@/features/branches/branch-link';
+import { useRememberedBranch } from '@/features/branches/branch-memory';
 import { FEATURE_STATE, isFeatureVisible } from '@xeprime/types';
 import { matchActiveHref } from '@/constants/nav';
 import { Logo } from '@/components/brand/Logo';
@@ -39,6 +41,11 @@ export function MobileNav() {
   const t = useTranslations('Navigation');
   const tShell = useTranslations('ManageCommon');
   const pathname = usePathname();
+  // Chi nhánh đang lọc đi theo link, y như thanh bên (ADR 0052) — xem `branch-link.ts`.
+  // URL đang đứng thắng; màn không có tham số (Khách hàng, Ví…) thì lấy chi nhánh lọc gần nhất
+  // từ bộ nhớ phiên — đi ngang một tab trung lập không làm mất lựa chọn (branch-memory.ts).
+  const remembered = useRememberedBranch();
+  const branchId = useSearchParams().get('branchId') ?? remembered;
   const dispatch = useAppDispatch();
   const open = useAppSelector((s) => s.app.mobileNavOpen);
   const { has } = usePermissions();
@@ -84,7 +91,7 @@ export function MobileNav() {
           return (
             <Link
               key={tab.key}
-              href={tab.href}
+              href={withBranchParam(tab.href, branchId)}
               className={cx(styles.tab, active && styles.active)}
               aria-current={active ? 'page' : undefined}
               // Nhãn tab bị rút ngắn cho vừa 5 cột; tên đọc được phải là tên đầy đủ kèm số

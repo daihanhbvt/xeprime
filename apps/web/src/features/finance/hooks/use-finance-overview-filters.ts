@@ -28,6 +28,9 @@ export function parsePeriodParams(sp: URLSearchParams): FinancePeriodFilters {
     from: sp.get('from') ?? fallback.from,
     to: sp.get('to') ?? fallback.to,
     granularity: oneOf(sp.get('granularity'), FINANCE_GRANULARITY_VALUES),
+    // Đọc ở ĐÂY nên cả Tổng quan doanh thu lẫn khối tiền nhúng trong hồ sơ xe/khách đều theo
+    // cùng một chi nhánh — hai chỗ đó dùng chung `parsePeriodParams` (ADR 0052).
+    branchId: sp.get('branchId') ?? undefined,
   };
 }
 

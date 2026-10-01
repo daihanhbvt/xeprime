@@ -29,12 +29,12 @@ export class HandoverQueueController {
   @Get('missing-odometer')
   @RequirePermissions(PERMISSION.HANDOVER_VIEW)
   @SupportAction(SUPPORT_CAPABILITY.HANDOVER_VIEW)
-  @ApiOperation({ summary: 'Hàng đợi "Thiếu KM trả" toàn gian hàng (phân trang)' })
+  @ApiOperation({ summary: 'Hàng đợi "Thiếu KM trả" (phân trang, lọc được theo chi nhánh)' })
   @ApiOkResponse({ type: MissingOdometerQueueDto })
   missingOdometer(
     @CurrentTenant() tenant: TenantContext,
     @Query() query: MissingOdometerQueryDto,
   ): Promise<MissingOdometerQueueDto> {
-    return this.handovers.missingOdometerQueue(tenant.tenantId, query);
+    return this.handovers.missingOdometerQueue(tenant.tenantId, query, tenant.allowedBranchIds);
   }
 }

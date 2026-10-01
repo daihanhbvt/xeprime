@@ -4,6 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { VehicleListItem } from '@/features/vehicles/types';
 import { StaffBookingDialog } from './StaffBookingDialog';
 
+// Ô lọc chi nhánh đọc server (ADR 0052) — chặn ở tầng hook như mọi hook dữ liệu khác ở bộ này.
+vi.mock('@/features/branches/hooks/use-branch-filter', () => import('@/features/branches/test-utils'));
+
 vi.mock('@/hooks/use-media-query', () => ({
   useIsMobile: () => false,
   useIsTablet: () => false,

@@ -14,6 +14,7 @@ export function useBookingFilters() {
     q: sp.get('q') ?? undefined,
     status: sp.get('status') ?? undefined,
     vehicleId: sp.get('vehicleId') ?? undefined,
+    branchId: sp.get('branchId') ?? undefined,
     sort: (sp.get('sort') as BookingSort | null) ?? undefined,
     page: positiveIntParam(sp, 'page'),
     limit: positiveIntParam(sp, 'limit'),

@@ -125,7 +125,7 @@ describe('Vehicle gallery + features (Gap 4)', () => {
     expect(created.lengthMm).toBe(4630);
     expect(Number(created.fuelConsumptionCombined)).toBe(6.5);
 
-    const updated = await vehicles.update(tenantId, created.id, ownerId, { name: 'Altis mới' });
+    const updated = await vehicles.update(tenantId, created.id, ownerId, { name: 'Altis mới' }, null);
     expect(updated.sourceType).toBe(VEHICLE_SOURCE_TYPE.FINANCED);
     expect(updated.lengthMm).toBe(4630);
     expect(updated.transmission).toBe(TRANSMISSION_TYPE.AUTOMATIC);
@@ -144,7 +144,7 @@ describe('Vehicle gallery + features (Gap 4)', () => {
       plateNumber: null,
       mainImageUrl: null,
       description: null,
-    });
+    }, null);
     expect(updated.plateNumber).toBeNull();
     expect(updated.mainImageUrl).toBeNull();
     expect(updated.description).toBeNull();
@@ -161,7 +161,7 @@ describe('Vehicle gallery + features (Gap 4)', () => {
     const updated = await vehicles.update(tenantId, created.id, ownerId, {
       images: ['https://img/x.jpg'],
       features: ['camera_360'],
-    });
+    }, null);
     expect(updated.images).toEqual(['https://img/x.jpg']);
     expect(updated.features).toEqual(['camera_360']);
   });
@@ -170,13 +170,13 @@ describe('Vehicle gallery + features (Gap 4)', () => {
     const created = await createBase('MED-3');
     const updated = await vehicles.update(tenantId, created.id, ownerId, {
       features: ['gps', 'gps', 'usb'],
-    });
+    }, null);
     expect([...updated.features].sort()).toEqual(['gps', 'usb']);
   });
 
   maybe('update không gửi images/features → giữ nguyên', async () => {
     const created = await createBase('MED-4');
-    const updated = await vehicles.update(tenantId, created.id, ownerId, { name: 'Đổi tên' });
+    const updated = await vehicles.update(tenantId, created.id, ownerId, { name: 'Đổi tên' }, null);
     expect(updated.name).toBe('Đổi tên');
     expect(updated.images).toEqual(['https://img/1.jpg', 'https://img/2.jpg']);
     expect([...updated.features].sort()).toEqual(['bluetooth', 'gps']);
@@ -184,7 +184,7 @@ describe('Vehicle gallery + features (Gap 4)', () => {
 
   maybe('update images = [] → xoá hết ảnh', async () => {
     const created = await createBase('MED-5');
-    const updated = await vehicles.update(tenantId, created.id, ownerId, { images: [] });
+    const updated = await vehicles.update(tenantId, created.id, ownerId, { images: [] }, null);
     expect(updated.images).toEqual([]);
   });
 
@@ -215,7 +215,7 @@ describe('Ảnh theo vị trí — tương thích ngược với client cũ', ()
         { url: 'https://img/rear.jpg', type: 'rear' },
         { url: 'https://img/other.jpg' },
       ],
-    });
+    }, null);
 
     // Ảnh chưa gán vị trí đọc ra là "other" — màn thư viện xếp nó vào ô "Ảnh khác" thay vì
     // bắt giao diện tự đoán từ một giá trị rỗng.
@@ -239,12 +239,12 @@ describe('Ảnh theo vị trí — tương thích ngược với client cũ', ()
         { url: 'https://img/front.jpg', type: 'front' },
         { url: 'https://img/left.jpg', type: 'left' },
       ],
-    });
+    }, null);
 
     // Form cũ gửi lại đúng hai URL đó (đảo thứ tự) — vị trí phải được bảo toàn.
     const legacy = await vehicles.update(tenantId, created.id, ownerId, {
       images: ['https://img/left.jpg', 'https://img/front.jpg'],
-    });
+    }, null);
     expect(legacy.media.map((m) => [m.url, m.type])).toEqual([
       ['https://img/left.jpg', 'left'],
       ['https://img/front.jpg', 'front'],
@@ -258,7 +258,7 @@ describe('Ảnh theo vị trí — tương thích ngược với client cũ', ()
         { url: 'https://img/dup.jpg', type: 'front' },
         { url: 'https://img/dup.jpg', type: 'rear' },
       ],
-    });
+    }, null);
     expect(updated.media).toHaveLength(1);
     expect(await prisma.vehicleImage.count({ where: { vehicleId: created.id } })).toBe(1);
   });
@@ -267,8 +267,8 @@ describe('Ảnh theo vị trí — tương thích ngược với client cũ', ()
     const created = await createBase('MED-SLOT-4');
     await vehicles.update(tenantId, created.id, ownerId, {
       media: [{ url: 'https://img/front.jpg', type: 'front' }],
-    });
-    const untouched = await vehicles.update(tenantId, created.id, ownerId, { name: 'Đổi tên' });
+    }, null);
+    const untouched = await vehicles.update(tenantId, created.id, ownerId, { name: 'Đổi tên' }, null);
     expect(untouched.media).toEqual([
       { url: 'https://img/front.jpg', type: 'front', sortOrder: 0 },
     ]);
@@ -287,11 +287,11 @@ describe('Quãng đường mỗi lần sạc của xe điện', () => {
       fuelType: 'electric',
       electricRangeKm: 350,
       fuelConsumptionCombined: null,
-    });
+    }, null);
     expect(updated.electricRangeKm).toBe(350);
     expect(updated.fuelConsumptionCombined).toBeNull();
 
-    const cleared = await vehicles.update(tenantId, created.id, ownerId, { electricRangeKm: null });
+    const cleared = await vehicles.update(tenantId, created.id, ownerId, { electricRangeKm: null }, null);
     expect(cleared.electricRangeKm).toBeNull();
   });
 

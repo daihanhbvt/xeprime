@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl';
 import { LIST_SEPARATOR } from '@xeprime/domain';
 
 import { BackButton } from '@/components/navigation/BackButton';
+import { useBranchReturnHref } from '@/features/branches/hooks/use-branch-return';
 import { VEHICLE_MANAGE_SECTION, listingPath, vehicleManageSectionOf } from '@/constants/routes';
 import { VehicleEditHeader } from '@/features/vehicles/components/VehicleEditHeader';
 import { useAvailableHref } from '@/features/tenant-support/support-session';
@@ -40,6 +41,8 @@ export function VehicleManageHeader({ vehicle, stats, statusEditable = false }: 
   const fmt = useAppFormat();
   const { paths, vehicles: vehiclePaths } = useWorkspace();
   const profileHref = useAvailableHref()(vehiclePaths.overview(vehicle.id));
+  // Quay lại đúng chi nhánh đang lọc lúc rời danh sách, không về danh sách trần (ADR 0052).
+  const backHref = useBranchReturnHref(paths.vehicles);
   const pathname = usePathname();
   const section = vehicleManageSectionOf(pathname);
   const sectionLabelKey = section ? sectionLabelKeyOf(section) : null;
@@ -70,7 +73,7 @@ export function VehicleManageHeader({ vehicle, stats, statusEditable = false }: 
         (phiên hỗ trợ).
       */}
       <div className={styles.trail}>
-        <BackButton href={paths.vehicles} label={tRoot('backToList')} />
+        <BackButton href={backHref} label={tRoot('backToList')} />
         <Breadcrumb
           className={styles.crumbs}
           items={[

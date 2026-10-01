@@ -26,6 +26,30 @@ export type TenantRole = (typeof TENANT_ROLE)[keyof typeof TENANT_ROLE];
 export const TENANT_ROLE_VALUES = Object.values(TENANT_ROLE) as TenantRole[];
 
 /**
+ * Phạm vi CHI NHÁNH của một thành viên gian hàng — trục thứ BA của phân quyền.
+ *
+ * Độc lập với hai trục đã có và kiểm nối tiếp nhau:
+ *   `quyền (permission)` × `năng lực gói (ADR 0027)` × **`phạm vi chi nhánh`**
+ *
+ * Nó CHỈ thu hẹp những dòng dữ liệu bắt nguồn từ một chiếc xe (`vehicles` là bảng duy nhất mang
+ * `branch_id` — ADR 0052). Ví điểm, hoá đơn gói, khai thuế, sổ khách và hội thoại là cấp GIAN
+ * HÀNG, không cắt theo chi nhánh được ở bất kỳ cách nào — người bị giới hạn chi nhánh thì đơn
+ * giản là không được cấp những quyền đó, và trục `permission` đã làm đúng việc ấy.
+ */
+export const MEMBERSHIP_BRANCH_SCOPE = {
+  /** Thấy toàn gian hàng. Mặc định, và là trạng thái của mọi thành viên có từ trước. */
+  ALL: 'all',
+  /** Chỉ thấy các chi nhánh được giao ở `membership_branches`. */
+  LIMITED: 'limited',
+} as const;
+
+export type MembershipBranchScope =
+  (typeof MEMBERSHIP_BRANCH_SCOPE)[keyof typeof MEMBERSHIP_BRANCH_SCOPE];
+export const MEMBERSHIP_BRANCH_SCOPE_VALUES = Object.values(
+  MEMBERSHIP_BRANCH_SCOPE,
+) as MembershipBranchScope[];
+
+/**
  * Vai trò có thể MỜI/ĐỔI VAI qua màn Nhân sự — không gồm `shop_owner`: "một gian hàng một
  * chủ" không đổi được qua đường mời/đổi vai (chuyển chủ sở hữu, nếu có, là một luồng khác).
  * Web và app native từng khai lại danh sách này ở mỗi client; đây là nguồn dùng chung duy nhất.

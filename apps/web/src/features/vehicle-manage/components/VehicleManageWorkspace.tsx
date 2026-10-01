@@ -15,6 +15,7 @@ import {
   useSupportPinnedField,
   useSupportSession,
 } from '@/features/tenant-support/support-session';
+import { useBranchReturnHref } from '@/features/branches/hooks/use-branch-return';
 import { useVehicle } from '@/features/vehicles/hooks/use-vehicle';
 import { useVehicleSummary } from '@/features/vehicles/hooks/use-vehicle-summary';
 import type { VehicleDetail, VehicleStats } from '@/features/vehicles/types';
@@ -52,6 +53,8 @@ export function VehicleManageWorkspace({ vehicleId, children }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const { paths } = useWorkspace();
+  // Về danh sách đúng chi nhánh đang lọc lúc rời đi (ADR 0052).
+  const listHref = useBranchReturnHref(paths.vehicles);
   const { has } = usePermissions();
   const canView = has(PERMISSION.VEHICLE_VIEW);
   const canEdit = has(PERMISSION.VEHICLE_UPDATE);
@@ -67,7 +70,7 @@ export function VehicleManageWorkspace({ vehicleId, children }: Props) {
         description={t('forbiddenBody')}
         missingPermissions={[PERMISSION.VEHICLE_VIEW]}
         action={
-          <Link href={paths.vehicles}>
+          <Link href={listHref}>
             <Button type="primary">{tManage('backHome')}</Button>
           </Link>
         }
@@ -85,7 +88,7 @@ export function VehicleManageWorkspace({ vehicleId, children }: Props) {
         title={notFound ? t('notFoundTitle') : t('loadErrorTitle')}
         description={notFound ? t('notFoundBody') : t('loadErrorBody')}
         onRetry={notFound ? undefined : () => void vehicleQ.refetch()}
-        action={<Button onClick={() => router.push(paths.vehicles)}>{t('backToList')}</Button>}
+        action={<Button onClick={() => router.push(listHref)}>{t('backToList')}</Button>}
       />
     );
   }
