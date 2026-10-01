@@ -41,7 +41,8 @@ export function VehicleEditPage({ vehicleId }: { vehicleId: string }) {
    * lại là về danh sách, và phiên chế độ xem đọc được nó ở dạng chỉ-xem.
    */
   const support = useSupportSession();
-  const canOpen = has(PERMISSION.VEHICLE_UPDATE) || (support !== null && has(PERMISSION.VEHICLE_VIEW));
+  const canOpen =
+    has(PERMISSION.VEHICLE_UPDATE) || (support !== null && has(PERMISSION.VEHICLE_VIEW));
   // Không gọi API khi không mở được trang: tránh một request chắc chắn bị guard backend từ chối.
   const vehicle = useVehicle(canOpen ? vehicleId : undefined);
   const update = useUpdateVehicle(vehicleId);
@@ -82,7 +83,7 @@ export function VehicleEditPage({ vehicleId }: { vehicleId: string }) {
 
   if (vehicle.isLoading) {
     return (
-      <PageContainer>
+      <PageContainer width="wide">
         <ManagePageHeader title={t('edit.page.title')} onBack={goBack} />
         <LoadingState variant="page" label={t('detail.loading')} />
       </PageContainer>
@@ -106,7 +107,7 @@ export function VehicleEditPage({ vehicleId }: { vehicleId: string }) {
   }
 
   return (
-    <PageContainer>
+    <PageContainer width="wide">
       <ManagePageHeader title={t('edit.page.title')} onBack={goBack} />
       <VehicleEditWorkspace
         vehicle={vehicle.data}

@@ -68,25 +68,15 @@
   font-size: 12px;
 }
 
-/* ── Bộ lọc: chip dịch vụ bên trái, ô trạng thái bên phải ─────────────── */
-
-.filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--xp-space-sm);
-}
-
-/* Chip của `VehicleStatusChips` mang `margin-bottom` cho bố cục mobile của nó — ở đây hàng lọc
-   tự canh nên bỏ khoảng đó đi. */
-.filters > :first-child {
-  flex: 1 1 auto;
-  margin-bottom: 0;
-}
-
-.statusSelect {
-  min-width: 200px;
+/* ── Bộ lọc ───────────────────────────────────────────────────────────────
+ *
+ * Hàng lọc tự dựng trước đây đã gỡ (29/09/2026): bố cục, debounce và hình thái bottom-sheet ở
+ * mobile nay thuộc `FilterBar` dùng chung với `/manage/vehicles`. Còn lại đúng một quy tắc —
+ * ô sắp xếp nằm ở slot `actions` của thanh đó và cần bề rộng tối thiểu để nhãn "Sắp xếp: …"
+ * không bị cắt.
+ */
+.sortSelect {
+  min-width: 180px;
 }
 
 @media (max-width: 640px) {
@@ -94,7 +84,7 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .statusSelect {
+  .sortSelect {
     width: 100%;
   }
 }

@@ -56,6 +56,7 @@
     "HANDOVER_ODOMETER_BELOW_PICKUP": "The return reading can't be lower than the pickup reading.",
     "HANDOVER_ODOMETER_SUSPICIOUS": "That mileage difference looks unusual. Please double-check it.",
     "HANDOVER_NOT_ELIGIBLE": "This booking isn't ready for handover.",
+    "VEHICLE_CODE_DUPLICATE": "This vehicle code is already used in your shop (including deleted vehicles). Use another code or leave it blank to auto-generate.",
     "CUSTOMER_PHONE_DUPLICATE": "This phone number is already in your customer book.",
     "CUSTOMER_ARCHIVED": "This customer has been archived.",
     "CUSTOMER_BLOCKED": "This customer is on your refused-service list.",

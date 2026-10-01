@@ -136,11 +136,14 @@ export function useSupportCan(capability: SupportCapability): boolean {
  * phiên, hoặc `null` khi màn đó KHÔNG mở trong phiên (ADR 0050 §12). Component dùng nó để không
  * dựng một link chắc chắn bị chặn — `SupportNavigationScope` vẫn là lưới an toàn cho link sót.
  */
-export function useAvailableHref(): (href: string) => string | null {
+export function useAvailableHref(): (href: string | null) => string | null {
   const session = useSupportSession();
   const contextId = session?.contextId ?? null;
   return useCallback(
-    (href: string) => {
+    (href: string | null) => {
+      // `null` = khu đang đứng không có màn đó (xem `WorkspaceVehiclePaths.part`) — đi thẳng qua,
+      // để nơi gọi chỉ phải kiểm MỘT lần "có đích hay không".
+      if (href === null) return null;
       if (!contextId) return href;
       const route = toTenantSupportRoute(contextId, href);
       return route.kind === 'blocked' ? null : route.href;
@@ -179,7 +182,7 @@ const SUPPORT_VEHICLE_SECTIONS: Readonly<Partial<Record<VehicleManageSection, Su
     [VEHICLE_MANAGE_SECTION.INFORMATION]: SUPPORT_CAPABILITY.VEHICLE_VIEW,
     [VEHICLE_MANAGE_SECTION.IMAGES]: SUPPORT_CAPABILITY.VEHICLE_VIEW,
     [VEHICLE_MANAGE_SECTION.DOCUMENTS]: SUPPORT_CAPABILITY.VEHICLE_DOCUMENT_MANAGE,
-    [VEHICLE_MANAGE_SECTION.SELF_DRIVE_HANDOVER_TIME]: SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
+    [VEHICLE_MANAGE_SECTION.HANDOVER_TIME]: SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
     [VEHICLE_MANAGE_SECTION.SELF_DRIVE_OPTIMIZATION]: SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
     [VEHICLE_MANAGE_SECTION.WITH_DRIVER_OPTIMIZATION]: SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
   };
@@ -190,7 +193,20 @@ const SUPPORT_VEHICLE_TABS: Readonly<Partial<Record<VehicleEditTab, SupportCapab
   [VEHICLE_EDIT_TAB.MEDIA]: SUPPORT_CAPABILITY.VEHICLE_VIEW,
   [VEHICLE_EDIT_TAB.MAINTENANCE]: SUPPORT_CAPABILITY.MAINTENANCE_VIEW,
   [VEHICLE_EDIT_TAB.DOCUMENTS]: SUPPORT_CAPABILITY.VEHICLE_DOCUMENT_MANAGE,
+  /*
+   * Năm mục bổ ra từ tab "Vận hành & điều kiện thuê" (29/09/2026) giữ ĐÚNG capability mà tab đó
+   * đòi — phiên hỗ trợ không được thêm hay bớt gì vì màn đổi hình thái. `OPERATIONS` ở lại làm
+   * bí danh cho link cũ.
+   */
   [VEHICLE_EDIT_TAB.OPERATIONS]: SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
+  [VEHICLE_EDIT_TAB.HANDOVER_TIME]: SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
+  [VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION]: SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
+  [VEHICLE_EDIT_TAB.WITH_DRIVER_OPTIMIZATION]: SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
+  /*
+   * Điều khoản thuê và phụ phí có tài xế KHÔNG có mặt: chúng là khu TIỀN (cọc, phụ phí), thứ
+   * phiên hỗ trợ không mở ở bất kỳ chế độ nào (ADR 0050 §13) — cùng lý do `VehicleOperationsPanel`
+   * cũ đã giấu hai khối đó sau `SUPPORT_HIDDEN_AREA.MONEY_TERMS`.
+   */
 };
 
 const PINNED = new Set(SUPPORT_VEHICLE_PINNED_FIELDS);

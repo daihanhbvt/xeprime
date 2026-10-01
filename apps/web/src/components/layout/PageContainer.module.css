@@ -11,3 +11,8 @@
   max-width: var(--xp-container-max-width);
   margin-inline: auto;
 }
+
+/* Biến thể cho màn nhiều cột — xem chú thích ở `PageContainer.tsx`. */
+.wide {
+  max-width: var(--xp-shell-workspace-max-width);
+}

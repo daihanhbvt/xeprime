@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
-import { PERMISSION } from '@xeprime/types';
+import { PERMISSION, PUBLISH_REQUIREMENT, type PublishRequirement } from '@xeprime/types';
 
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { LoadingState } from '@/components/feedback/LoadingState';
@@ -30,7 +30,14 @@ import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { presignVehicleImage } from '@/services/upload';
 
 import { useQuickVehicleRegistration } from '../hooks';
-import { QUICK_VEHICLE_DEFAULTS, missingEnergyFields, quickVehicleSchema } from '../schema';
+import { usePublicationLabels } from '@/features/vehicles/hooks/use-publication-labels';
+import { missingPublishRequirementsForForm } from '@/features/vehicles/publication';
+import {
+  QUICK_VEHICLE_DEFAULTS,
+  QUICK_VEHICLE_FIXED,
+  missingEnergyFields,
+  quickVehicleSchema,
+} from '../schema';
 import type { QuickVehicleValues } from '../schema';
 import { QuickVehicleInfoStep } from './steps/QuickVehicleInfoStep';
 import { QuickVehicleRentalStep } from './steps/QuickVehicleRentalStep';
@@ -48,7 +55,9 @@ const STEP_FIELDS = {
     'name',
     'brand',
     'model',
+    'vehicleCatalogModelId',
     'seatCount',
+    'bodyType',
     'manufactureYear',
     'color',
     'fuelType',
@@ -76,10 +85,27 @@ const STEP_FIELDS = {
     'excessDistanceFeePerKm',
     'termsText',
   ],
-  images: ['mainImageUrl', 'images'],
+  images: ['mainImageUrl', 'images', 'media'],
 } as const satisfies Record<string, ReadonlyArray<keyof QuickVehicleValues>>;
 
 const STEP_KEYS = ['info', 'rental', 'images'] as const;
+
+/**
+ * Điều kiện lên chợ thuộc BƯỚC nào (30/09/2026) — thiếu thì chặn đúng bước đó và đưa người dùng
+ * về đúng chỗ. Xe tạo qua wizard phải ĐỦ điều kiện lên chợ: không còn "lưu nháp thiếu ảnh" rồi để
+ * lại một danh sách việc cần làm ở hồ sơ xe.
+ */
+const REQUIREMENT_STEP: Record<PublishRequirement, (typeof STEP_KEYS)[number]> = {
+  [PUBLISH_REQUIREMENT.SELF_DRIVE_PRICE]: 'rental',
+  [PUBLISH_REQUIREMENT.LONG_TERM_PRICE]: 'rental',
+  [PUBLISH_REQUIREMENT.WITH_DRIVER_PRICE]: 'rental',
+  [PUBLISH_REQUIREMENT.MAIN_IMAGE]: 'images',
+  [PUBLISH_REQUIREMENT.PHOTOS]: 'images',
+  [PUBLISH_REQUIREMENT.PLATE_NUMBER]: 'info',
+  [PUBLISH_REQUIREMENT.IDENTITY]: 'info',
+  [PUBLISH_REQUIREMENT.ENERGY_SPEC]: 'info',
+  [PUBLISH_REQUIREMENT.BRANCH_LOCATION]: 'rental',
+};
 type StepKey = (typeof STEP_KEYS)[number];
 
 /**
@@ -105,6 +131,7 @@ const OWNER_STEP_KEY = 'owner';
  */
 export function QuickVehicleWizard({ source }: { source: VehicleRegistrationSource }) {
   const t = useTranslations('ListYourVehicle.wizard');
+  const { formGaps } = usePublicationLabels();
   const tOwner = useTranslations('ListYourVehicle.ownerProfile');
   const tCommon = useTranslations('Common.actions');
   const { message } = App.useApp();
@@ -129,7 +156,7 @@ export function QuickVehicleWizard({ source }: { source: VehicleRegistrationSour
     // thuộc namespace của form xe — không có vế này thì chúng lọt ra giao diện ở dạng thô.
     'Vehicles.form.validation',
   );
-  const { control, getValues, setValue, setError, trigger, formState } =
+  const { control, getValues, getFieldState, setValue, setError, trigger, formState } =
     useForm<QuickVehicleValues>({ resolver, defaultValues: QUICK_VEHICLE_DEFAULTS });
 
   const [step, setStep] = useState<StepKey>('info');
@@ -329,18 +356,49 @@ export function QuickVehicleWizard({ source }: { source: VehicleRegistrationSour
     );
   }
 
+  /** Điều kiện lên chợ còn thiếu — CÙNG luật với cổng gửi duyệt ở backend. */
+  function publishGaps(): PublishRequirement[] {
+    return missingPublishRequirementsForForm({
+      ...getValues(),
+      serviceTypes: QUICK_VEHICLE_FIXED.serviceTypes,
+    });
+  }
+
+  function publishError(keys: readonly PublishRequirement[]): string {
+    return t('errors.publishRequired', { items: formGaps(keys, getValues()) });
+  }
+
   /** Lưu — `submitForReview` quyết định có gọi `submit-public` sau khi tạo hay không. */
   async function save(submitForReview: boolean) {
     setStepError(null);
     const valid = await trigger(steps.flatMap((s) => [...s.fields]));
     const energyMissing = missingEnergyFields(getValues());
+    const publishMissing = publishGaps();
+    if (valid && energyMissing.length === 0 && publishMissing.length > 0) {
+      setStep(REQUIREMENT_STEP[publishMissing[0]!]);
+      setStepError(publishError(publishMissing));
+      headingRef.current?.focus();
+      return;
+    }
     if (!valid || energyMissing.length > 0) {
-      // Đưa người dùng về đúng bước chứa lỗi — không để họ đứng ở bước ảnh với một toast chung.
+      /*
+       * Đưa người dùng về đúng bước chứa lỗi. Đọc lỗi bằng `getFieldState` — `formState.errors`
+       * trong closure này là ảnh chụp của lần render TRƯỚC `trigger`, nên lần bấm đầu từng nhảy
+       * nhầm về bước 1 và phải bấm lần hai mới dừng đúng ở bước ảnh.
+       */
       const target = steps.find((s) =>
-        s.fields.some((field) => formState.errors[field] || energyMissing.includes(field as never)),
+        s.fields.some(
+          (field) => getFieldState(field).error || energyMissing.includes(field as never),
+        ),
       );
       if (target) setStep(target.key);
-      if (energyMissing.length > 0) setStepError(t('errors.energyRequired'));
+      if (energyMissing.length > 0) {
+        setStepError(publishError([PUBLISH_REQUIREMENT.ENERGY_SPEC]));
+      } else if (target) {
+        // Thông báo ở đầu bước như bước 1 — vd bước ảnh: "Ảnh đại diện, Tối thiểu 4 ảnh".
+        const targetGaps = publishMissing.filter((key) => REQUIREMENT_STEP[key] === target.key);
+        if (targetGaps.length > 0) setStepError(publishError(targetGaps));
+      }
       headingRef.current?.focus();
       return;
     }
@@ -393,7 +451,12 @@ export function QuickVehicleWizard({ source }: { source: VehicleRegistrationSour
     const valid = await trigger([...(steps[vehicleIndex]?.fields ?? STEP_FIELDS[step])]);
     const energyMissing = step === 'info' ? missingEnergyFields(getValues()) : [];
     if (!valid || energyMissing.length > 0) {
-      if (energyMissing.length > 0) setStepError(t('errors.energyRequired'));
+      if (energyMissing.length > 0) setStepError(publishError([PUBLISH_REQUIREMENT.ENERGY_SPEC]));
+      return;
+    }
+    const stepMissing = publishGaps().filter((key) => REQUIREMENT_STEP[key] === step);
+    if (stepMissing.length > 0) {
+      setStepError(publishError(stepMissing));
       return;
     }
     setStep(STEP_KEYS[vehicleIndex + 1]!);

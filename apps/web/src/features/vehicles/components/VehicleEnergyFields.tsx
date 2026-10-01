@@ -166,6 +166,7 @@ export function VehicleEnergyFields({
             name="engineDisplacementCc"
             label={t('engineDisplacementCc')}
             placeholder={t('enginePlaceholder')}
+            required={policy.engineDisplacementCc === 'required'}
             min={1}
             disabled={disabled}
           />

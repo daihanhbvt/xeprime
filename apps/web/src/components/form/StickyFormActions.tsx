@@ -29,6 +29,8 @@ interface StickyFormActionsProps {
    * nữa sẽ ra hai hàng nút cùng lúc.
    */
   variant?: 'sticky' | 'inline';
+  /** Hook trực tiếp cho form phức tạp có upload bất đồng bộ; không dùng đồng thời submit mặc định. */
+  onSubmitClick?: () => void;
 }
 
 /**
@@ -49,6 +51,7 @@ export function StickyFormActions({
   disabled = false,
   destructive,
   variant = 'sticky',
+  onSubmitClick,
 }: StickyFormActionsProps) {
   const destructiveButton = destructive ? (
     <Button
@@ -90,7 +93,8 @@ export function StickyFormActions({
         <Button
           type="primary"
           size="large"
-          htmlType="submit"
+          htmlType={onSubmitClick ? 'button' : 'submit'}
+          onClick={onSubmitClick}
           loading={submitting}
           disabled={disabled}
         >

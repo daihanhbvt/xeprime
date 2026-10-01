@@ -83,7 +83,7 @@ describe('mục / tab của xe theo capability', () => {
     ]);
     expect(supportAllowsVehicleSection(assist, VEHICLE_MANAGE_SECTION.DOCUMENTS)).toBe(true);
     expect(
-      supportAllowsVehicleSection(assist, VEHICLE_MANAGE_SECTION.SELF_DRIVE_HANDOVER_TIME),
+      supportAllowsVehicleSection(assist, VEHICLE_MANAGE_SECTION.HANDOVER_TIME),
     ).toBe(true);
     expect(supportAllowsVehicleTab(assist, VEHICLE_EDIT_TAB.DOCUMENTS)).toBe(true);
     expect(supportAllowsVehicleTab(assist, VEHICLE_EDIT_TAB.OPERATIONS)).toBe(true);
@@ -97,9 +97,8 @@ describe('mục / tab của xe theo capability', () => {
       SUPPORT_CAPABILITY.VEHICLE_INFO_EDIT,
     ]);
     for (const section of [
-      VEHICLE_MANAGE_SECTION.SELF_DRIVE_PRICING,
-      VEHICLE_MANAGE_SECTION.SELF_DRIVE_DELIVERY,
-      VEHICLE_MANAGE_SECTION.SELF_DRIVE_TERMS,
+      // Giá & chính sách gồm cả giao xe có phí và cọc — khu TIỀN, không mở trong phiên.
+      VEHICLE_MANAGE_SECTION.PRICING,
       VEHICLE_MANAGE_SECTION.WITH_DRIVER_SURCHARGES,
       VEHICLE_MANAGE_SECTION.TRIP_HISTORY,
     ]) {

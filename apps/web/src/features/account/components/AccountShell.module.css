@@ -1,8 +1,30 @@
 .wrap {
-  max-width: 1220px;
+  /* Bề ngang chuẩn của khu tài khoản. Là biến vì `.wrapWide` phải neo mép trái vào đúng nó. */
+  --account-wrap-width: 1220px;
+
+  max-width: var(--account-wrap-width);
   margin: 0 auto;
   padding: var(--xp-space-xl) var(--xp-space-md)
     calc(var(--xp-space-xl) + env(safe-area-inset-bottom));
+}
+
+/*
+ * Màn BẢNG ĐIỀU KHIỂN nhiều cột của khu tài khoản (hồ sơ 360 của xe).
+ *
+ * Trần 1220px hợp với biểu mẫu một cột — phần lớn khu này — nhưng ở đây nó ép cột nội dung
+ * xuống ~900px, tức mỗi cột trong ba cột chỉ còn ~290px, trong khi màn 1920 vẫn trống hơn 350px
+ * bên phải.
+ *
+ * Nới CHỈ VỀ BÊN PHẢI: mép trái đứng yên ở đúng chỗ của bố cục 1220px canh giữa, nên menu trái
+ * không nhảy ngang khi người dùng đi từ "Danh sách xe" sang một xe rồi quay lại. Canh giữa lại
+ * ở bề ngang mới sẽ kéo cả menu sang trái và biến một cú bấm thành một cú giật bố cục.
+ *
+ * `100%` (bề ngang khối cha) chứ không `100vw`: `100vw` tính cả thanh cuộn và sẽ lệch đúng bằng
+ * một nửa bề rộng thanh cuộn.
+ */
+.wrapWide {
+  max-width: var(--xp-shell-workspace-max-width);
+  margin-inline: max(0px, calc((100% - var(--account-wrap-width)) / 2)) auto;
 }
 
 .body {

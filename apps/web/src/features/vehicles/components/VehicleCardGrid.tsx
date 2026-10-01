@@ -8,6 +8,7 @@ import type { RowAction } from '@/components/data-display/RowActions';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { useTranslations } from 'next-intl';
 import { useVehicleAlerts } from '../hooks/use-vehicle-alerts';
+import { useVehicleAlertView } from '../hooks/use-vehicle-alert-view';
 import { useVehicleCardStats } from '../hooks/use-vehicle-card-stats';
 import type { VehicleListItem } from '../types';
 import { VehicleListRow } from './VehicleListRow';
@@ -64,6 +65,8 @@ export function VehicleCardGrid({
   const stats = useVehicleCardStats(ids);
   // Desktop và mobile dùng CÙNG một nguồn dữ liệu nghiệp vụ — khác nhau ở cách vẽ, không ở dữ liệu.
   const alerts = useVehicleAlerts(ids);
+  // Cảnh báo server trả về → bản hiện ra được ở KHU này (lọc việc không làm được, trỏ đúng khu).
+  const alertView = useVehicleAlertView();
 
   const from = (meta.page - 1) * meta.limit + 1;
   const to = Math.min(meta.page * meta.limit, meta.total);
@@ -145,6 +148,11 @@ export function VehicleCardGrid({
       />
     ) : null;
 
+    /** Cảnh báo của MỘT xe, đã lọc và đổi đích — `undefined` khi chưa tải xong hoặc tải hỏng. */
+    const alertsOf = (id: string) => {
+      const group = alerts.byId.get(id);
+      return group ? { ...group, alerts: alertView(id, group.alerts) } : undefined;
+    };
     const cardAlertState = {
       alertsLoading: alerts.isLoading,
       alertsFailed: alerts.isError,
@@ -161,7 +169,7 @@ export function VehicleCardGrid({
                 stats={stats.byId.get(item.id)}
                 statsLoading={stats.isLoading}
                 statsFailed={stats.isError}
-                alerts={alerts.byId.get(item.id)}
+                alerts={alertsOf(item.id)}
                 {...cardAlertState}
                 actions={rowActions(item, 'row')}
                 detailHref={detailHref}
@@ -181,7 +189,7 @@ export function VehicleCardGrid({
                 stats={stats.byId.get(item.id)}
                 statsLoading={stats.isLoading}
                 statsFailed={stats.isError}
-                alerts={alerts.byId.get(item.id)}
+                alerts={alertsOf(item.id)}
                 {...cardAlertState}
                 actions={rowActions(item, 'card')}
                 detailHref={detailHref}
@@ -200,9 +208,7 @@ export function VehicleCardGrid({
       {/* Chân khung chỉ có nghĩa khi đang có dữ liệu — trang rỗng không cần "Hiển thị 0-0". */}
       {items.length > 0 ? (
         <div className={styles.footer}>
-          <p className={styles.summary}>
-            {t('showing', { from, to, total: meta.total })}
-          </p>
+          <p className={styles.summary}>{t('showing', { from, to, total: meta.total })}</p>
           <Pagination
             current={meta.page}
             pageSize={meta.limit}

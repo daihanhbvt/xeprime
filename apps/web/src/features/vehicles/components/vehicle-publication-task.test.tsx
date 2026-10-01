@@ -21,6 +21,19 @@ import { VehiclePublicationTaskItem } from './VehiclePublicationTaskItem';
  * ở đây sẽ dẫn thẳng tới 409 và dạy chủ xe rằng hệ thống hỏng.
  */
 const submit = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
+/**
+ * Trục NĂNG LỰC theo gói — mặc định gian hàng đủ cờ.
+ *
+ * `useVehicleCapabilities` kiểm quyền ∧ cờ gói, và `useFeature` đọc `/auth/me` qua TanStack
+ * Query. Test này mock `use-permissions` nên không dựng `QueryClientProvider`; thiếu mock
+ * ở đây thì component chết vì hạ tầng, không vì thứ đang kiểm.
+ */
+vi.mock('@/hooks/use-feature', () => ({
+  useFeature: () => ({ state: 'enabled', canWrite: true, isVisible: true, planEndsAt: null }),
+  useFeatureStates: () => ({}),
+  usePlanEndsAt: () => null,
+}));
+
 vi.mock('../hooks/use-vehicle-mutations', () => ({
   useSubmitVehiclePublic: () => submit,
 }));
@@ -189,7 +202,8 @@ describe('VehiclePublicationTaskItem — các trạng thái còn lại', () => {
 
     expect(screen.getByText('Hồ sơ đang được xét duyệt')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Cập nhật hồ sơ' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Xem trạng thái' })).toBeTruthy();
+    // Tab Xét duyệt đã bỏ (30/09/2026) — không còn nút dẫn tới một neo không tồn tại.
+    expect(screen.queryByRole('link', { name: 'Xem trạng thái' })).toBeNull();
     // Gửi lại là thao tác của xe BỊ TRẢ VỀ. Ở đây phiếu vẫn đang chờ và đã mang bản mới nhất.
     expect(screen.queryByRole('button', { name: /Gửi duyệt/ })).toBeNull();
     // …và câu mô tả phải NÓI RA điều đó, nếu không chẳng ai biết sửa là đủ.
@@ -279,9 +293,7 @@ describe('VehiclePublicationTaskItem — lỗi khi gửi duyệt', () => {
     renderTask();
     fireEvent.click(screen.getByRole('button', { name: 'Gửi duyệt' }));
 
-    await waitFor(() =>
-      expect(screen.getByRole('link', { name: /Tải logo/ })).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByRole('link', { name: /Tải logo/ })).toBeTruthy());
     expect(messages.error).not.toHaveBeenCalled();
   });
 

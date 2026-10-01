@@ -5,11 +5,13 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import {
+  PUBLISH_REQUIREMENT,
   SERVICE_TYPE,
   VEHICLE_OPERATION_STATUS,
   VEHICLE_SOURCE_TYPE,
   VEHICLE_TYPE,
   isVehicleFuelTypeAllowed,
+  type PublishRequirement,
 } from '@xeprime/types';
 import { vehicleFormSchema, type VehicleFormValues } from '@xeprime/validators';
 import { trailingRequiredMark } from '@/components/form/required-mark';
@@ -29,6 +31,8 @@ import { useActiveBranches } from '@/features/branches/hooks/use-branches';
 import { branchLabel } from '@/features/branches/branch-label';
 import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
 import styles from './VehicleForm.module.css';
+import { usePublicationLabels } from '../hooks/use-publication-labels';
+import { missingPublishRequirementsForForm } from '../publication';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
@@ -79,6 +83,7 @@ const EMPTY_DEFAULTS: VehicleFormValues = {
   description: '',
   mainImageUrl: null,
   images: [],
+  media: [],
   features: [],
 };
 
@@ -106,12 +111,26 @@ interface VehicleFormProps {
  * gọi API **một lần** ở bước cuối. Backend không có endpoint lưu từng phần, nên không chỗ nào ở
  * đây được nói "đã lưu nháp" giữa chừng.
  */
+/** Điều kiện lên chợ thuộc BƯỚC nào của wizard nâng cao — thiếu thì chặn đúng bước đó. */
+const REQUIREMENT_STEP: Record<PublishRequirement, string> = {
+  [PUBLISH_REQUIREMENT.SELF_DRIVE_PRICE]: 'pricing',
+  [PUBLISH_REQUIREMENT.LONG_TERM_PRICE]: 'pricing',
+  [PUBLISH_REQUIREMENT.WITH_DRIVER_PRICE]: 'pricing',
+  [PUBLISH_REQUIREMENT.MAIN_IMAGE]: 'media',
+  [PUBLISH_REQUIREMENT.PHOTOS]: 'media',
+  [PUBLISH_REQUIREMENT.PLATE_NUMBER]: 'basic',
+  [PUBLISH_REQUIREMENT.IDENTITY]: 'basic',
+  [PUBLISH_REQUIREMENT.ENERGY_SPEC]: 'basic',
+  [PUBLISH_REQUIREMENT.BRANCH_LOCATION]: 'basic',
+};
+
 export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: VehicleFormProps) {
   // Phiên hỗ trợ tạo xe NHÁP (ADR 0050 §13): gửi duyệt là thao tác riêng, có lý do + xác nhận hai lần.
   const draftOnly = useSupportHides(SUPPORT_HIDDEN_AREA.CREATE_AND_SUBMIT);
   // Không chọn hình thức nguồn xe (trục tài chính) — xe nháp giữ mặc định "Sở hữu".
   const sourceHidden = useSupportHides(SUPPORT_HIDDEN_AREA.VEHICLE_SOURCE);
   const t = useTranslations('Vehicles.form');
+  const { formGaps } = usePublicationLabels();
   const tCommon = useTranslations('Common.actions');
   const tBranches = useTranslations('Branches');
   const fmt = useAppFormat();
@@ -200,6 +219,18 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
       />
     ) : null;
 
+  /**
+   * Điều kiện lên chợ còn thiếu (30/09/2026) — xe tạo qua wizard phải ĐỦ điều kiện lên chợ, CÙNG
+   * luật với cổng gửi duyệt ở backend. Chặn ở bước chứa nó; phiên hỗ trợ (chỉ lưu nháp, không có
+   * đường gửi duyệt) không bị chặn.
+   */
+  const [publishMissing, setPublishMissing] = useState<PublishRequirement[]>([]);
+  function publishGaps(stepKey?: string): PublishRequirement[] {
+    if (draftOnly) return [];
+    const missing = missingPublishRequirementsForForm(getValues());
+    return stepKey ? missing.filter((key) => REQUIREMENT_STEP[key] === stepKey) : missing;
+  }
+
   /** Lỗi của RIÊNG bước đang mở — dùng cho dải tổng hợp đầu thẻ (Figma `193:2687`). */
   const stepErrors = steps[step]!.fields.filter((field) => errors[field]).length;
 
@@ -214,6 +245,15 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
 
   const values = getValues();
   function submitNow(options: VehicleSubmitOptions) {
+    const missing = publishGaps();
+    setPublishMissing(missing);
+    if (missing.length > 0) {
+      const target = steps.findIndex(
+        (candidate) => candidate.key === REQUIREMENT_STEP[missing[0]!],
+      );
+      if (target >= 0) setStep(target);
+      return;
+    }
     void handleSubmit(
       async (formValues) => {
         try {
@@ -259,7 +299,9 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
       // Chỉ validate trường của BƯỚC ĐANG MỞ — validate cả schema sẽ chặn người dùng bằng lỗi
       // của phần họ còn chưa nhìn thấy.
       const valid = await trigger([...steps[step]!.fields]);
-      if (valid) setStep(step + 1);
+      const missing = valid ? publishGaps(steps[step]!.key) : [];
+      setPublishMissing(missing);
+      if (valid && missing.length === 0) setStep(step + 1);
       return;
     }
 
@@ -378,6 +420,16 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
             <>
               {errorMessage ? (
                 <Alert type="error" showIcon title={errorMessage} className={styles.alert} />
+              ) : null}
+              {publishMissing.length > 0 ? (
+                <Alert
+                  type="error"
+                  showIcon
+                  className={styles.alert}
+                  title={t('wizard.publishRequired', {
+                    items: formGaps(publishMissing, getValues()),
+                  })}
+                />
               ) : null}
               {stepErrors > 0 ? (
                 <Alert

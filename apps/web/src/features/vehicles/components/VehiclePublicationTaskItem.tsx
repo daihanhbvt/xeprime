@@ -16,12 +16,11 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { useSubmitVehiclePublic } from '../hooks/use-vehicle-mutations';
 import { usePublicationLabels } from '../hooks/use-publication-labels';
 import {
-  publicationEditPath,
+  publicationEditTarget,
   type VehiclePublicationAction,
   type VehiclePublicationTask,
 } from '../publication';
 import type { VehicleDetail } from '../types';
-import { REVIEW_PANEL_ANCHOR } from './VehiclePublicReviewPanel';
 import styles from './VehiclePublicationTaskItem.module.css';
 
 /** Số mục còn thiếu nêu THẲNG trong thẻ; phần dư đếm số, chi tiết nằm sau dấu "i". */
@@ -54,7 +53,7 @@ export function VehiclePublicationTaskItem({
   const errorMessage = useErrorMessage();
   const { requirement } = usePublicationLabels();
   const { has } = usePermissions();
-  const { paths } = useWorkspace();
+  const { paths, vehicles: vehiclePaths } = useWorkspace();
   const submit = useSubmitVehiclePublic(vehicle.id);
 
   /**
@@ -103,14 +102,22 @@ export function VehiclePublicationTaskItem({
             {label}
           </Button>
         ) : null;
-      case 'edit':
-        return canEdit ? (
-          <Link href={publicationEditPath(vehicle.id, task.missing)}>
+      case 'edit': {
+        /*
+         * Đích theo KHU đang đứng. Ở khu tài khoản đó là một mục của không gian "Quản lý xe";
+         * trước 29/09/2026 chỗ này trả thẳng `/manage/...`, nên nút mà chủ xe tuyến hoa hồng
+         * cần nhất để đưa chiếc xe đầu tiên lên chợ lại đá họ ra khỏi khu của chính mình.
+         */
+        const target = publicationEditTarget(task.missing);
+        const href = vehiclePaths.part(vehicle.id, target.tab, target.section);
+        return canEdit && href ? (
+          <Link href={href}>
             <Button size="small" type={type}>
               {label}
             </Button>
           </Link>
         ) : null;
+      }
       case 'enableMarketplace':
         /*
          * Neo lên chính công tắc ở đầu trang thay vì bật hộ từ đây: một hành động, một chỗ bấm.
@@ -125,13 +132,11 @@ export function VehiclePublicationTaskItem({
           </Link>
         ) : null;
       case 'viewStatus':
-        return (
-          <Link href={`#${REVIEW_PANEL_ANCHOR}`}>
-            <Button size="small" type={type}>
-              {label}
-            </Button>
-          </Link>
-        );
+        /*
+         * Tab "Xét duyệt" đã bỏ khỏi Hồ sơ 360 (30/09/2026) — không còn neo nào để dẫn tới.
+         * Trạng thái + lý do đã nằm ngay trong dòng việc này, nên không dựng một nút chết.
+         */
+        return null;
       case 'contactSupport':
         // `hidden` không có đường tự phục vụ nào (ADR 0048 điều 4) — lối duy nhất là hỗ trợ,
         // nên dẫn thẳng vào đó thay vì để người dùng đi tìm.

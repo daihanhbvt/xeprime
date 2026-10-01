@@ -324,9 +324,7 @@ function VehicleAddressBlock({
    * để sinh `branch.address`, nên dòng chữ ở đây và dòng chữ sau khi lưu là một.
    */
   if (pendingAddress) {
-    return (
-      <PendingAddressBlock address={pendingAddress} onEdit={onEditPendingAddress} />
-    );
+    return <PendingAddressBlock address={pendingAddress} onEdit={onEditPendingAddress} />;
   }
 
   return (

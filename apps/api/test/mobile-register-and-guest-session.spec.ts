@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
-import { API_ERROR_CODE } from '@xeprime/types';
+import { API_ERROR_CODE, MOBILE_CLIENT_APP } from '@xeprime/types';
 import request from 'supertest';
 import { createValidationPipe } from '../src/bootstrap';
 import { AllExceptionsFilter } from '../src/common/filters/all-exceptions.filter';
@@ -118,10 +118,12 @@ describe('Đăng ký + đặt xe cho app native — luôn trả token, không ba
         .post('/auth/mobile/register')
         .send({ ...BODY, device: { deviceName: 'Pixel 8', devicePlatform: 'android' } });
 
-      expect(nativeSessions.issueSession).toHaveBeenCalledWith(USER.id, {
-        deviceName: 'Pixel 8',
-        devicePlatform: 'android',
-      });
+      // Không khai `clientApp` ⇒ phiên thuộc app khách (mặc định của controller).
+      expect(nativeSessions.issueSession).toHaveBeenCalledWith(
+        USER.id,
+        { deviceName: 'Pixel 8', devicePlatform: 'android' },
+        MOBILE_CLIENT_APP.CUSTOMER,
+      );
     });
   });
 

@@ -289,13 +289,7 @@ function VehicleSourceForm({
             <InfoCircleOutlined className={styles.statusInfo} aria-hidden="true" />
           </div>
 
-          {!canEdit ? (
-            <Alert
-              type="info"
-              showIcon
-              title={t('readOnly')}
-            />
-          ) : null}
+          {!canEdit ? <Alert type="info" showIcon title={t('readOnly')} /> : null}
 
           {errorCount > 0 ? (
             <Alert type="error" showIcon title={t('errors', { count: errorCount })} />
@@ -438,12 +432,7 @@ function OwnedSection({ control, disabled }: SectionProps) {
     <Card title={t('title')} className={styles.card}>
       <Row gutter={16}>
         <Col xs={24} sm={12}>
-          <DateTimeField
-            control={control}
-            name="purchaseDate"
-            label={t('purchaseDate')}
-            dateOnly
-          />
+          <DateTimeField control={control} name="purchaseDate" label={t('purchaseDate')} dateOnly />
         </Col>
         <Col xs={24} sm={12}>
           <NumberField
@@ -563,12 +552,7 @@ function FinancedSection({
           />
         </Col>
         <Col xs={24} sm={12}>
-          <DateTimeField
-            control={control}
-            name="endDate"
-            label={t('endDate')}
-            dateOnly
-          />
+          <DateTimeField control={control} name="endDate" label={t('endDate')} dateOnly />
         </Col>
         <Col xs={24} sm={12}>
           <InterestMethodField control={control} disabled={disabled} />
@@ -680,20 +664,10 @@ function RentedSection({ control, disabled }: SectionProps) {
             />
           </Col>
           <Col xs={24} sm={12}>
-            <DateTimeField
-              control={control}
-              name="startDate"
-              label={t('startDate')}
-              dateOnly
-            />
+            <DateTimeField control={control} name="startDate" label={t('startDate')} dateOnly />
           </Col>
           <Col xs={24} sm={12}>
-            <DateTimeField
-              control={control}
-              name="endDate"
-              label={t('endDate')}
-              dateOnly
-            />
+            <DateTimeField control={control} name="endDate" label={t('endDate')} dateOnly />
           </Col>
         </Row>
       </Card>
@@ -760,28 +734,16 @@ function PartnershipSection({
             <div className={styles.shopShare}>
               {t.rich('shopShare', {
                 percent:
-                  commissionPercent == null
-                    ? tLabels('emptyValue')
-                    : `${100 - commissionPercent}%`,
+                  commissionPercent == null ? tLabels('emptyValue') : `${100 - commissionPercent}%`,
                 b: (chunks) => <strong>{chunks}</strong>,
               })}
             </div>
           </Col>
           <Col xs={24} sm={12}>
-            <DateTimeField
-              control={control}
-              name="startDate"
-              label={t('startDate')}
-              dateOnly
-            />
+            <DateTimeField control={control} name="startDate" label={t('startDate')} dateOnly />
           </Col>
           <Col xs={24} sm={12}>
-            <DateTimeField
-              control={control}
-              name="endDate"
-              label={t('endDate')}
-              dateOnly
-            />
+            <DateTimeField control={control} name="endDate" label={t('endDate')} dateOnly />
           </Col>
         </Row>
         {/*
@@ -789,12 +751,7 @@ function PartnershipSection({
           phí giao nhận, phí quá giờ, phạt/bồi thường đều đứng ngoài — khớp quy tắc giảm giá
           chỉ áp lên tiền thuê cơ bản của rental_policies.
         */}
-        <Alert
-          type="info"
-          showIcon
-          className={styles.totalPreview}
-          title={t('formula')}
-        />
+        <Alert type="info" showIcon className={styles.totalPreview} title={t('formula')} />
       </Card>
     </>
   );

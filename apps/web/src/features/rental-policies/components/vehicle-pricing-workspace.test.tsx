@@ -264,9 +264,9 @@ describe('Đổi giá xe đang công khai (ADR 0030)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
 
     // Tắt "dùng chính sách chung" = chuyển sang GHI ĐÈ, nên hộp xác nhận nói về chính sách riêng.
-    expect(
-      (await screen.findAllByText('Lưu chính sách riêng cho xe này?')).length,
-    ).toBeGreaterThan(0);
+    expect((await screen.findAllByText('Lưu chính sách riêng cho xe này?')).length).toBeGreaterThan(
+      0,
+    );
     // Luật cũ (ẩn khỏi sàn + duyệt lại) đã bỏ — chữ hứa điều đó cũng phải biến mất.
     expect(screen.queryByText(/chờ duyệt lại và tạm ẩn khỏi sàn/)).toBeNull();
 
@@ -297,7 +297,13 @@ describe('Đặt lại theo gian hàng', () => {
 
   it('thiếu quyền sửa: switch nguồn bị khoá', () => {
     renderWorkspace(pricingFixture(), false);
-    expect((screen.getByRole('switch', { name: 'Dùng chính sách chung của gian hàng' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      (
+        screen.getByRole('switch', {
+          name: 'Dùng chính sách chung của gian hàng',
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
   });
 });
 
@@ -315,7 +321,9 @@ type SavedMileage = {
 
 describe('Hạn mức quãng đường', () => {
   const mileageSwitch = () =>
-    screen.getAllByRole('switch').find((el) => el.closest('section')?.getAttribute('aria-label')?.includes('Hạn mức'))!;
+    screen
+      .getAllByRole('switch')
+      .find((el) => el.closest('section')?.getAttribute('aria-label')?.includes('Hạn mức'))!;
 
   async function openOverride(over = {}) {
     renderWorkspace(pricingFixture(over));
@@ -346,7 +354,9 @@ describe('Hạn mức quãng đường', () => {
       shopPolicy: shopPolicy({ includedDistanceKmPerDay: 200, excessDistanceFeePerKm: '3000' }),
     });
 
-    expect((screen.getByLabelText('Số km mỗi ngày trong giá') as HTMLInputElement).value).toBe('200');
+    expect((screen.getByLabelText('Số km mỗi ngày trong giá') as HTMLInputElement).value).toBe(
+      '200',
+    );
     expect((screen.getByLabelText('Phí mỗi km vượt') as HTMLInputElement).value).toBe('3.000');
   });
 

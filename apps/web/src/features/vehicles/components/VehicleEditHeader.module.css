@@ -1,0 +1,227 @@
+.root {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr) auto;
+  gap: var(--xp-space-lg);
+  align-items: start;
+  padding: var(--xp-space-lg);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-card);
+}
+
+.media {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-layout);
+  cursor: default;
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.imageFallback {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: var(--xp-color-text-tertiary);
+  font-size: 40px;
+}
+
+.mediaEdit {
+  position: absolute;
+  right: var(--xp-space-xs);
+  bottom: var(--xp-space-xs);
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-card);
+  border: 0;
+  color: var(--xp-color-text);
+  cursor: pointer;
+}
+
+/*
+ * Slider ảnh (30/09/2026): nhãn vị trí góc dưới trái, bộ đếm góc trên phải, hai mũi tên chỉ hiện
+ * khi rê chuột hoặc khi focus bằng bàn phím — ảnh tĩnh không bị che.
+ */
+.mediaEdit:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: 2px;
+}
+
+/* Cột ảnh: ảnh lớn + dải thumbnail có hai mũi tên ở hai đầu (30/09/2026). */
+.mediaCol {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.nameRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.name {
+  margin: 0;
+  font-size: var(--xp-font-size-h3);
+  line-height: var(--xp-line-height-h3);
+}
+
+.code {
+  padding: 2px var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-layout);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.meta {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+}
+
+.meta b {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.dot {
+  margin: 0 var(--xp-space-xs);
+  color: var(--xp-color-text-tertiary);
+}
+
+.muted {
+  color: var(--xp-color-text-tertiary);
+}
+
+.axes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-md);
+  margin-top: var(--xp-space-xs);
+}
+
+.axis {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+}
+
+.axisLabel {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--xp-space-sm);
+}
+
+.extraActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--xp-space-xs);
+}
+
+@media (max-width: 900px) {
+  .root {
+    grid-template-columns: 120px minmax(0, 1fr);
+    gap: var(--xp-space-md);
+    padding: var(--xp-space-md);
+  }
+
+  .actions {
+    grid-column: 1 / -1;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 575px) {
+  .root {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .media {
+    max-width: 240px;
+  }
+}
+
+/*
+ * Chip "Vận hành" BẤM ĐƯỢC — mở menu đổi trạng thái. Nút trong suốt bọc đúng cái chip cũ + mũi
+ * tên nhỏ; viền nổi lên khi rê chuột để báo đây là chỗ bấm.
+ */
+.statusTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px 2px 2px;
+  border: 1px solid transparent;
+  border-radius: var(--xp-border-radius-sm);
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.statusTrigger :global(.ant-tag) {
+  margin-inline-end: 0;
+}
+
+.statusTrigger:hover,
+.statusTrigger[aria-expanded='true'] {
+  border-color: var(--xp-color-border);
+  background: var(--xp-color-bg-layout);
+}
+
+.statusTrigger:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: 2px;
+}
+
+.statusCaret {
+  color: var(--xp-color-text-tertiary);
+  font-size: 10px;
+}
+
+.statusOption {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  min-width: 150px;
+}
+
+.statusOption :global(.ant-tag) {
+  margin-inline-end: 0;
+}
+
+.statusCheck {
+  color: var(--xp-color-primary);
+}

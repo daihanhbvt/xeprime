@@ -42,12 +42,35 @@ import styles from './PolicySections.module.css';
 
 type LegacyTierView = { minDays: number; percent: number };
 
+/** Năm khối của một bộ chính sách thuê — mã để nơi gọi chọn khối nào hiện. */
+export const POLICY_BLOCK = {
+  COLLATERAL: 'collateral',
+  DELIVERY: 'delivery',
+  MILEAGE: 'mileage',
+  OVERTIME: 'overtime',
+  DISCOUNT: 'discount',
+} as const;
+export type PolicyBlock = (typeof POLICY_BLOCK)[keyof typeof POLICY_BLOCK];
+
+const ALL_BLOCKS: readonly PolicyBlock[] = [
+  POLICY_BLOCK.COLLATERAL,
+  POLICY_BLOCK.DELIVERY,
+  POLICY_BLOCK.MILEAGE,
+  POLICY_BLOCK.OVERTIME,
+  POLICY_BLOCK.DISCOUNT,
+];
+
 interface PolicySectionsProps {
   control: Control<PolicyFormValues>;
   legacyDiscountTiers?: readonly LegacyTierView[];
   depositHint?: ReactNode;
   numbered?: boolean;
   disabled?: boolean;
+  /**
+   * Khối nào HIỆN — mặc định đủ năm. Khối ẩn vẫn nằm trong form (giá trị nạp từ chính sách đang
+   * có) và vẫn được gửi đi: lưu là gửi TOÀN BỘ chính sách, ẩn một khối không làm mất nó.
+   */
+  blocks?: readonly PolicyBlock[];
 }
 
 /**
@@ -63,35 +86,53 @@ export function PolicySections({
   legacyDiscountTiers,
   numbered = true,
   disabled = false,
+  blocks = ALL_BLOCKS,
 }: PolicySectionsProps) {
   const t = useTranslations('Vehicles.pricing');
-  const n = (index: number, title: string) => (numbered ? `${index}. ${title}` : title);
+  // Đánh số theo khối ĐANG HIỆN — ẩn một khối không để lại một con số bị nhảy cóc.
+  const shown = ALL_BLOCKS.filter((block) => blocks.includes(block));
+  const n = (block: PolicyBlock, title: string) =>
+    numbered ? `${shown.indexOf(block) + 1}. ${title}` : title;
 
   return (
     <div className={styles.stack}>
-      <CollateralPolicySection
-        control={control}
-        title={n(1, t('deposit.title'))}
-        hint={depositHint}
-        disabled={disabled}
-      />
-      <DeliveryPolicySection
-        control={control}
-        title={n(2, t('delivery.title'))}
-        disabled={disabled}
-      />
-      <MileagePolicySection
-        control={control}
-        title={n(3, t('mileage.title'))}
-        disabled={disabled}
-      />
-      <OvertimeSection control={control} title={n(4, t('overtime.title'))} disabled={disabled} />
-      <DiscountSection
-        control={control}
-        title={n(5, t('longTermDiscount.title'))}
-        legacyTiers={legacyDiscountTiers}
-        disabled={disabled}
-      />
+      {shown.includes(POLICY_BLOCK.COLLATERAL) ? (
+        <CollateralPolicySection
+          control={control}
+          title={n(POLICY_BLOCK.COLLATERAL, t('deposit.title'))}
+          hint={depositHint}
+          disabled={disabled}
+        />
+      ) : null}
+      {shown.includes(POLICY_BLOCK.DELIVERY) ? (
+        <DeliveryPolicySection
+          control={control}
+          title={n(POLICY_BLOCK.DELIVERY, t('delivery.title'))}
+          disabled={disabled}
+        />
+      ) : null}
+      {shown.includes(POLICY_BLOCK.MILEAGE) ? (
+        <MileagePolicySection
+          control={control}
+          title={n(POLICY_BLOCK.MILEAGE, t('mileage.title'))}
+          disabled={disabled}
+        />
+      ) : null}
+      {shown.includes(POLICY_BLOCK.OVERTIME) ? (
+        <OvertimeSection
+          control={control}
+          title={n(POLICY_BLOCK.OVERTIME, t('overtime.title'))}
+          disabled={disabled}
+        />
+      ) : null}
+      {shown.includes(POLICY_BLOCK.DISCOUNT) ? (
+        <DiscountSection
+          control={control}
+          title={n(POLICY_BLOCK.DISCOUNT, t('longTermDiscount.title'))}
+          legacyTiers={legacyDiscountTiers}
+          disabled={disabled}
+        />
+      ) : null}
     </div>
   );
 }

@@ -11,6 +11,12 @@
   margin-top: 8px;
 }
 
-.moneyInput {
+/*
+ * Kèm `:global(.ant-input-number)` để thắng `width: 90px` mà AntD v6 bơm CSS-in-JS vào <head>
+ * SAU stylesheet CSS Modules — cùng specificity thì bản chèn sau thắng, ô tiền bị bó lại 90px
+ * và số bị cắt còn "1." thay vì "1.350.000". Cùng cách xử lý như `BulkDayDialog.module.css`.
+ */
+.moneyInput,
+.moneyInput:global(.ant-input-number) {
   width: 100%;
 }

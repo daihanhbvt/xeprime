@@ -4,10 +4,9 @@ import { CameraOutlined } from '@ant-design/icons';
 import { Alert, Progress } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useWatch, type Control } from 'react-hook-form';
-import { VEHICLE_GALLERY_MAX_IMAGES, VEHICLE_PUBLIC_MIN_IMAGES } from '@xeprime/types';
+import { VEHICLE_PUBLIC_MIN_IMAGES } from '@xeprime/types';
 
-import { ImageGalleryField } from '@/components/form/ImageGalleryField';
-import { ImageUploadField } from '@/components/form/ImageUploadField';
+import { TypedMediaFields } from '@/features/vehicles/components/TypedMediaFields';
 import { presignVehicleImage } from '@/services/upload';
 import type { UploadPresign } from '@/services/upload';
 
@@ -43,14 +42,17 @@ export function QuickVehicleImagesStep({
   presign?: (file: File) => Promise<UploadPresign>;
 }) {
   const t = useTranslations('ListYourVehicle.images');
-  const tForm = useTranslations('Vehicles.form.media');
-
   const mainImageUrl = useWatch({ control, name: 'mainImageUrl' });
   const images = useWatch({ control, name: 'images' }) ?? [];
+  const media = useWatch({ control, name: 'media' }) ?? [];
 
   // Ảnh đại diện thường nằm luôn trong thư viện — đếm trên tập URL đã khử trùng, đúng cách
   // backend đếm khi xét điều kiện lên chợ.
-  const total = new Set([...(mainImageUrl ? [mainImageUrl] : []), ...images]).size;
+  const total = new Set([
+    ...(mainImageUrl ? [mainImageUrl] : []),
+    ...images,
+    ...media.map((item) => item.url),
+  ]).size;
   const missing = Math.max(0, VEHICLE_PUBLIC_MIN_IMAGES - total);
 
   return (
@@ -59,20 +61,10 @@ export function QuickVehicleImagesStep({
         <h3 className={styles.blockTitle}>{t('title')}</h3>
         <p className={styles.blockHint}>{t('intro')}</p>
 
-        <ImageUploadField
+        <TypedMediaFields
           control={control}
-          name="mainImageUrl"
-          label={tForm('mainImage')}
+          vehicleType={useWatch({ control, name: 'vehicleType' })}
           presign={presign}
-          help={t('mainImageHelp')}
-        />
-
-        <ImageGalleryField
-          control={control}
-          name="images"
-          label={tForm('gallery')}
-          presign={presign}
-          max={VEHICLE_GALLERY_MAX_IMAGES}
         />
       </section>
 

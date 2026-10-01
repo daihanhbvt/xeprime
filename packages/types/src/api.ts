@@ -503,6 +503,8 @@ export const API_ERROR_CODE = {
    * sơ — gộp khách là việc có chủ đích, không phải hệ quả phụ của một lần sửa SĐT.
    */
   CUSTOMER_PHONE_DUPLICATE: 'CUSTOMER_PHONE_DUPLICATE',
+  /** Mã xe đã có trong gian hàng (kể cả xe đã xoá — unique `(tenant_id, code)` không loại trừ chúng). */
+  VEHICLE_CODE_DUPLICATE: 'VEHICLE_CODE_DUPLICATE',
   /** Hồ sơ khách đã lưu trữ — khôi phục trước khi sửa / ghi chú / gắn giấy tờ. */
   CUSTOMER_ARCHIVED: 'CUSTOMER_ARCHIVED',
   /**

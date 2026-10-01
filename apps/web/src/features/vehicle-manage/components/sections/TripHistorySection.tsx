@@ -148,7 +148,11 @@ function TripHistoryCard({ item }: { item: VehicleTripHistoryItem }) {
       <dl className={styles.facts}>
         <div className={styles.fact}>
           <dt>{t('start')}</dt>
-          <dd>{item.pickupAt ? fmt.shortDateTime(item.pickupAt) : fmt.packageLabel(item.longTermPackageMonths) ?? '—'}</dd>
+          <dd>
+            {item.pickupAt
+              ? fmt.shortDateTime(item.pickupAt)
+              : (fmt.packageLabel(item.longTermPackageMonths) ?? '—')}
+          </dd>
         </div>
         <div className={styles.fact}>
           <dt>{t('end')}</dt>

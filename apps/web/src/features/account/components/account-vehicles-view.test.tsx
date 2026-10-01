@@ -23,6 +23,19 @@ import { AccountVehiclesView } from './AccountVehiclesView';
  * hàng): chủ xe Owner Lite không có menu cổng quản lý, đưa họ sang đó là đẩy vào một vỏ khác.
  */
 const nav = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
+/**
+ * Trục NĂNG LỰC theo gói — mặc định gian hàng đủ cờ.
+ *
+ * `useVehicleCapabilities` kiểm quyền ∧ cờ gói, và `useFeature` đọc `/auth/me` qua TanStack
+ * Query. Test này mock `use-permissions` nên không dựng `QueryClientProvider`; thiếu mock
+ * ở đây thì component chết vì hạ tầng, không vì thứ đang kiểm.
+ */
+vi.mock('@/hooks/use-feature', () => ({
+  useFeature: () => ({ state: 'enabled', canWrite: true, isVisible: true, planEndsAt: null }),
+  useFeatureStates: () => ({}),
+  usePlanEndsAt: () => null,
+}));
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: nav.push, replace: nav.replace }),
   usePathname: () => '/account/vehicles',

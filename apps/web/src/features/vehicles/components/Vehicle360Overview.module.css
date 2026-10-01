@@ -19,6 +19,7 @@
   border-radius: var(--xp-border-radius);
   background: var(--xp-color-bg-container);
   gap: var(--xp-space-sm);
+  box-shadow: var(--xp-shadow-card);
 }
 
 .profileMain {
@@ -32,8 +33,8 @@
   position: relative;
   display: flex;
   overflow: hidden;
-  width: 200px;
-  height: 140px;
+  width: 100%;
+  aspect-ratio: 16 / 10;
   flex: none;
   align-items: center;
   justify-content: center;
@@ -116,16 +117,39 @@
 }
 
 /* Dải liên kết sang các module — một hàng cuộn ngang, KHÔNG xuống dòng ở mobile. */
-.moduleLinks {
-  display: flex;
-  overflow-x: auto;
-  flex-wrap: nowrap;
-  gap: var(--xp-space-xs);
-  scrollbar-width: none;
+/*
+ * Dải "Các khu vực quản lý" — nền kem thương hiệu, tách hẳn khỏi các thẻ trắng xung quanh.
+ *
+ * Nền `primary-light` chứ không phải trắng: dải này là MỤC LỤC của chiếc xe, không phải một khối
+ * dữ liệu nữa; cho nó cùng bề mặt với các thẻ số liệu là mời người đọc quét qua nó như một thẻ.
+ */
+.moduleBand {
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-primary-light);
 }
 
-.moduleLinks::-webkit-scrollbar {
-  display: none;
+.bandTitle {
+  margin: 0 0 var(--xp-space-xs);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/*
+ * Chip XUỐNG DÒNG, không cuộn ngang nữa (29/09/2026).
+ *
+ * Cuộn ngang giấu mục: ở 1440px dải này có tới mười mục và bốn mục cuối nằm ngoài khung, không
+ * có dấu hiệu nào cho biết còn nữa. Nó là MỤC LỤC của chiếc xe — thứ phải thấy hết trong một
+ * lần nhìn. Dải có nền riêng nên hai hàng chip vẫn đọc ra là một khối.
+ */
+.moduleLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs);
 }
 
 .moduleLink {
@@ -167,22 +191,47 @@
 /* Cột hành động 160px bên phải (`236:2349`). Mobile dùng CTA cố định đáy màn thay thế. */
 .profileActions {
   display: flex;
-  width: 160px;
   flex: none;
   flex-direction: column;
-  align-items: stretch;
+  align-items: flex-end;
   gap: var(--xp-space-xs);
+}
+
+.profileActions :global(.ant-btn) {
+  min-height: 40px;
+  border-radius: var(--xp-border-radius-md);
+  font-weight: var(--xp-font-weight-semibold);
 }
 
 /*
  * Nhóm nút tách khỏi hàng "Trên chợ" vì hai thứ biến mất ở hai nhịp khác nhau: ở mobile các nút
  * chuyển xuống thanh CTA đáy màn, còn hàng công tắc ở lại đầu trang.
  */
+/* Một điểm bấm duy nhất (⋮), căn phải dưới công tắc "Trên chợ". */
 .profileButtons {
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: var(--xp-space-xs);
+  justify-content: flex-end;
+}
+
+/*
+ * Nút ⋮ là một Ô VUÔNG, khai báo tường minh.
+ *
+ * `.profileActions .ant-btn` đặt `min-height: 40px` cho cả cột, nhưng bề RỘNG thì antd vẫn để
+ * theo mặc định 32px của nút chỉ-icon — ra một hình chữ nhật đứng. Và trong một cột
+ * `align-items: stretch` trước đây nó còn bị kéo rộng hết cột, đọc thành một thanh trống có ba
+ * chấm bé xíu ở giữa. Ghim cả hai chiều thì không còn phụ thuộc vào bố cục bọc ngoài.
+ */
+.actionsTrigger.actionsTrigger {
+  width: 40px;
+  flex: none;
+  padding: 0;
+}
+
+/* Nút chỉ-icon: vuông bằng đúng chiều cao chung, không co giãn theo chỗ trống. */
+.profileButtonRow > :global(.ant-btn-icon-only) {
+  width: 40px;
+  flex: none;
+  padding: 0;
 }
 
 /* ─── Ba thẻ nhanh (`236:2354`) ───────────────────────────────────────────── */
@@ -196,6 +245,8 @@
 
 .quickCard {
   height: 100%;
+  border-color: var(--xp-color-border);
+  box-shadow: var(--xp-shadow-card);
 }
 
 .muted {
@@ -337,6 +388,8 @@
 
 .sectionCard {
   width: 100%;
+  border-color: var(--xp-color-border);
+  box-shadow: var(--xp-shadow-card);
 }
 
 .cardLink {
@@ -563,4 +616,168 @@
   font-size: var(--xp-font-size-sm);
   line-height: var(--xp-line-height);
   color: var(--xp-color-text-secondary);
+}
+
+/* Thanh tab của Hồ sơ 360 — nằm sát trên lưới nội dung, không thêm khung. */
+.viewTabs :global(.ant-tabs-nav) {
+  margin-bottom: var(--xp-space-md);
+}
+
+/*
+ * ─── Lưới nội dung tab Tổng quan ──────────────────────────────────────────
+ *
+ * Ba cột theo ĐÚNG ba nhóm nghĩa, và thứ tự đó giữ nguyên ở mọi bề rộng:
+ *  1. HỒ SƠ XE — thông số, giấy tờ. Đọc nhiều chữ nhất nên nhận cột rộng nhất.
+ *  2. KHAI THÁC — giá, tự động nhận chuyến, bảo dưỡng, nguồn xe.
+ *  3. TÌNH TRẠNG — việc cần làm, hiệu suất, lịch sắp tới, lối tắt sang các khu quản lý.
+ */
+.grid3 {
+  display: grid;
+  align-items: start;
+  gap: var(--xp-space-lg);
+  grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(280px, 0.8fr);
+}
+
+/*
+ * ─── Hai cột: KHAI THÁC và TÌNH TRẠNG chồng lên nhau ở cột phải ───────────
+ *
+ * Bản trước cho nhóm TÌNH TRẠNG trải hết bề ngang thành một lưới LỒNG hai cột. Hai cái hại:
+ * lưới lồng không thừa hưởng `align-items: start` của lưới ngoài nên các thẻ trong cùng một
+ * hàng bị kéo cao bằng nhau — "Việc cần làm" với một dòng chữ thành một thẻ rỗng cao bằng thẻ
+ * "Hiệu suất" bên cạnh; và nhóm quan trọng nhất bị đẩy xuống tận dưới cùng trang.
+ *
+ * Xếp chồng trong CÙNG một cột phải thì thứ tự đọc vẫn là hồ sơ → khai thác → tình trạng, chiều
+ * cao thẻ trở lại theo nội dung, và cột trái (bảng thông số, dài nhất) chạy suốt cả hai hàng.
+ */
+@media (max-width: 1280px) {
+  .grid3 {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.72fr);
+  }
+
+  .grid3 > :first-child {
+    grid-row: 1 / span 2;
+  }
+
+  .grid3 > :nth-child(2) {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .grid3 > :last-child {
+    grid-column: 2;
+    grid-row: 2;
+  }
+}
+
+@media (max-width: 1024px) {
+  .grid3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Một cột: trả mọi thẻ về dòng chảy tự nhiên, nếu không các `grid-row` ở trên còn hiệu lực. */
+  .grid3 > :first-child,
+  .grid3 > :nth-child(2),
+  .grid3 > :last-child {
+    grid-column: auto;
+    grid-row: auto;
+  }
+}
+
+/*
+ * ─── Cùng bố cục đó, nhưng đo BỀ RỘNG THẬT của vùng nội dung ──────────────
+ *
+ * Các `@media` ở trên đo VIEWPORT, và đó là lý do trang vỡ ở khu tài khoản chủ xe: màn 1920px
+ * nhưng khu đó có menu dọc bên trái nên vùng nội dung hẹp hơn nhiều — viewport vẫn "rộng" nên
+ * lưới giữ nguyên 3 cột, cột đầu tụt xuống ~290px và bảng thông số bẻ "Toyota" thành sáu dòng
+ * một chữ cái (thấy trên máy 30/09/2026). Cùng trang đó trong cổng quản lý thì vừa.
+ *
+ * `@container` hỏi đúng câu cần hỏi — "khối này rộng bao nhiêu". `@media` ở trên giữ lại làm
+ * nền cho trình duyệt không có container query; luật dưới đây đè lên khi container hẹp.
+ *
+ * Container đặt trên LỚP VỎ CỦA CHÍNH TA (`.overviewPane`), không trên `.ant-tabs-tabpane`: lớp
+ * của antd là chi tiết nội bộ có thể đổi giữa hai bản, và `container-type` đặt nhầm chỗ thì mọi
+ * `@container` dưới đây im lặng không áp dụng — đúng kiểu hỏng không báo lỗi.
+ *
+ * KHÔNG đặt lên `.stack` gốc: `container-type` kéo theo `contain: layout`, và thanh CTA
+ * `position: fixed` ở mobile sẽ neo vào khối đó thay vì vào khung nhìn.
+ */
+.overviewPane {
+  container-type: inline-size;
+}
+
+@container (max-width: 1280px) {
+  .grid3 {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.72fr);
+  }
+
+  .grid3 > :first-child {
+    grid-row: 1 / span 2;
+  }
+
+  .grid3 > :nth-child(2) {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .grid3 > :last-child {
+    grid-column: 2;
+    grid-row: 2;
+  }
+}
+
+@container (max-width: 900px) {
+  .grid3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .grid3 > :first-child,
+  .grid3 > :nth-child(2),
+  .grid3 > :last-child {
+    grid-column: auto;
+    grid-row: auto;
+  }
+}
+
+/*
+ * ─── Bảng thông số kỹ thuật ───────────────────────────────────────────────
+ *
+ * antd đặt `word-break: break-word` cho ô nội dung của Descriptions. Tên nghe vô hại nhưng đó
+ * là bí danh cũ, hiệu lực thật là `overflow-wrap: anywhere` — nó cho phép bẻ ở GIỮA từ và kéo
+ * bề rộng tối thiểu của ô xuống còn một ký tự. Cộng với `table-layout: auto` mà biến thể
+ * `bordered` đặt riêng, bảng co cột không có sàn nào, nên "Toyota" thành sáu dòng một chữ cái.
+ *
+ * ĐỘ ƯU TIÊN là phần dễ trượt: luật của antd là
+ * `.ant-descriptions.ant-descriptions-bordered > .ant-descriptions-view > table` (0,3,1), nên
+ * một selector hai lớp sẽ THUA mà không có dấu hiệu gì. Các luật dưới đây cố ý ghép đủ lớp để
+ * vượt qua, chứ không dùng `!important`.
+ *
+ * `overflow-wrap: break-word` (không phải `anywhere`) chỉ bẻ khi một từ dài hơn cả dòng — đúng
+ * thứ cần cho biển số hay tên model dài, mà không đụng tới từ bình thường. `table-layout: fixed`
+ * chia cột đều nên nhãn không còn nuốt hết bề rộng của giá trị.
+ */
+.specsTable:global(.ant-descriptions.ant-descriptions-bordered)
+  > :global(.ant-descriptions-view)
+  > table {
+  table-layout: fixed;
+}
+
+.specsTable :global(.ant-descriptions-row) > :global(.ant-descriptions-item-content),
+.specsTable :global(.ant-descriptions-row) > :global(.ant-descriptions-item-label) {
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+/* Cột ảnh của thẻ hồ sơ: ảnh đại diện + dải ảnh nhỏ có nhãn vị trí (30/09/2026). */
+.profileMediaCol {
+  display: flex;
+  width: 300px;
+  flex: none;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+@media (max-width: 640px) {
+  .profileMediaCol {
+    width: 100%;
+  }
 }

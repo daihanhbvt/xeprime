@@ -1700,13 +1700,16 @@ export class VehiclesService {
     db: Prisma.TransactionClient | PrismaService = this.prisma,
   ): Promise<void> {
     const clash = await db.vehicle.findFirst({
-      where: { tenantId, code, deletedAt: null },
+      // KHÔNG lọc `deletedAt`: unique index `(tenant_id, code)` tính cả xe đã xoá mềm — lọc ở đây
+      // là để lọt xuống P2002 và người dùng nhận một câu "dữ liệu thay đổi ở nơi khác" vô nghĩa.
+      where: { tenantId, code },
       select: { id: true },
     });
     if (clash) {
       throw new ConflictException({
-        code: API_ERROR_CODE.CONFLICT,
+        code: API_ERROR_CODE.VEHICLE_CODE_DUPLICATE,
         message: `Mã xe "${code}" đã tồn tại trong gian hàng`,
+        details: { fields: [{ field: 'code', message: 'duplicate' }] },
       });
     }
   }

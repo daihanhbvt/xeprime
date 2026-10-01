@@ -146,7 +146,8 @@
         "ok": "Huỷ và thoát",
         "cancel": "Tiếp tục nhập",
         "body": "Các thay đổi chưa lưu trong wizard sẽ bị mất."
-      }
+      },
+      "publishRequired": "Cần bổ sung để xe đủ điều kiện lên chợ: {items}."
     },
     "basic": {
       "name": "Tên xe",
@@ -616,7 +617,8 @@
       "maintenanceCenter": "Trung tâm bảo dưỡng",
       "calendar": "Lịch xe",
       "bookings": "Đơn thuê",
-      "receipts": "Thu chi của xe"
+      "receipts": "Thu chi của xe",
+      "title": "Các khu vực quản lý"
     },
     "documents": {
       "title": "Hồ sơ & Giấy tờ pháp lý",
@@ -677,18 +679,30 @@
       "action": "Đồng bộ lại hiển thị công khai",
       "fixed": "Đã đồng bộ lại — hiển thị ngoài chợ đã khớp dữ liệu xe",
       "unchanged": "Hiển thị ngoài chợ vốn đã khớp dữ liệu xe — không có gì thay đổi"
+    },
+    "tabs": {
+      "overview": "Tổng quan",
+      "finance": "Tài chính",
+      "media": "Hình ảnh",
+      "review": "Xét duyệt",
+      "specs": "Thông số kỹ thuật",
+      "maintenance": "Bảo dưỡng & số KM"
     }
   },
   "edit": {
     "title": "Sửa hồ sơ xe",
     "tabs": {
-      "information": "Thông tin xe",
-      "media": "Hình ảnh & tiện ích",
+      "information": "Thông tin xe & tiện ích",
+      "media": "Hình ảnh",
       "pricing": "Giá & chính sách",
       "source": "Nguồn xe & tài chính",
       "documents": "Giấy tờ",
       "maintenance": "Bảo dưỡng & KM",
-      "operations": "Vận hành & điều kiện thuê"
+      "operations": "Vận hành & điều kiện thuê",
+      "handoverTime": "Khung giờ giao nhận",
+      "optimization": "Tối ưu nhận chuyến",
+      "terms": "Thủ tục cho thuê",
+      "surcharges": "Phụ phí"
     },
     "errors": "{count, plural, other {# lỗi}} cần sửa trước khi lưu",
     "cards": {
@@ -696,7 +710,10 @@
       "status": "Quản lý trạng thái",
       "specs": "Thông số kỹ thuật xe",
       "images": "Hình ảnh xe",
-      "featuresDescription": "Tiện ích & mô tả"
+      "featuresDescription": "Tiện ích & mô tả",
+      "general": "Thông tin chung",
+      "identity": "Nhận dạng xe",
+      "energy": "Động cơ & nhiên liệu"
     },
     "advanced": {
       "title": "Thông số kỹ thuật nâng cao",
@@ -738,6 +755,42 @@
       "forbiddenTitle": "Không có quyền sửa xe",
       "forbiddenBody": "Bạn cần quyền dưới đây để chỉnh sửa thông tin xe. Liên hệ quản trị viên để được cấp quyền.",
       "viewDetail": "Xem chi tiết xe"
+    },
+    "nav": {
+      "general": "Thông tin chung",
+      "business": "Kinh doanh & tài chính",
+      "menuLabel": "Mục của xe"
+    },
+    "serviceOff": {
+      "title": "Dịch vụ {service} đang tắt",
+      "body": "Xe chưa đăng dịch vụ này nên thiết lập bên dưới không có tác dụng. Thêm {service} vào ô \"Loại dịch vụ\" ở mục Thông tin xe để bật.",
+      "action": "Mở mục Thông tin xe"
+    },
+    "infoTabs": {
+      "basic": "Thông tin xe cơ bản",
+      "advanced": "Thông số kỹ thuật nâng cao"
+    },
+    "aside": {
+      "changeImage": "Đổi ảnh xe",
+      "imagesTitle": "Hình ảnh xe",
+      "editImages": "Chỉnh sửa",
+      "mainBadge": "Ảnh chính",
+      "moreImages": "+{count}",
+      "noImages": "Xe chưa có ảnh nào.",
+      "summaryTitle": "Thông tin tóm tắt",
+      "vehicleType": "Loại xe",
+      "seats": "Số chỗ ngồi",
+      "seatsValue": "{count} chỗ",
+      "status": "Trạng thái",
+      "price": "Giá thuê",
+      "perDay": "{price} / ngày",
+      "perMonth": "{price} / tháng",
+      "odometer": "Số KM",
+      "statusSaved": "Đã cập nhật trạng thái vận hành",
+      "changeStatus": "Trạng thái vận hành: {status} — bấm để đổi",
+      "editImagesLabel": "Chỉnh sửa hình ảnh xe",
+      "prevImage": "Ảnh trước",
+      "nextImage": "Ảnh tiếp theo"
     }
   },
   "source": {
@@ -1090,7 +1143,9 @@
       "inheritTitle": "Lưu giá thuê cho xe này?",
       "inheritBody": "Giá mới chỉ áp dụng cho {vehicle}, tính từ các lượt đặt mới. Xe vẫn kế thừa chính sách chung của gian hàng.",
       "ok": "Lưu thay đổi",
-      "cancel": "Hủy bỏ"
+      "cancel": "Hủy bỏ",
+      "ownerTitle": "Lưu giá & chính sách cho xe này?",
+      "ownerBody": "Thay đổi chỉ áp dụng cho {vehicle}, tính từ các lượt đặt mới — không ảnh hưởng các đơn đã chốt."
     },
     "longTermHint": {
       "suggestion": "Gợi ý {min} – {max}/tháng — thuê theo ngày cả tháng đã là {reference}, giá dài hạn nên thấp hơn để khách có lý do cam kết.",
@@ -1163,7 +1218,12 @@
       "preview": "Bao gồm {km}/ngày. Phụ phí {fee} cho mỗi km vượt giới hạn.",
       "previewIncomplete": "Nhập cả hai ô để khách nhìn thấy hạn mức trên trang xe.",
       "disabledNote": "Không giới hạn quãng đường — không có phụ phí vượt km."
-    }
+    },
+    "backToVehicle": "Về hồ sơ xe",
+    "backToList": "Về danh sách xe",
+    "forbiddenTitle": "Không có quyền truy cập",
+    "notFoundTitle": "Không tìm thấy xe",
+    "notFoundBody": "Xe có thể đã bị xoá hoặc không thuộc gian hàng này."
   },
   "documents": {
     "noPermissionTitle": "Không có quyền xem giấy tờ",
@@ -1460,5 +1520,14 @@
     "forbiddenTitle": "Không có quyền thêm xe",
     "forbiddenBody": "Bạn cần quyền dưới đây để thêm xe vào gian hàng. Liên hệ quản trị viên để được cấp quyền.",
     "backToList": "Về danh sách xe"
+  },
+  "imageSlot": {
+    "front": "Mặt trước",
+    "rear": "Mặt sau",
+    "left": "Bên trái",
+    "right": "Bên phải",
+    "interior": "Nội thất",
+    "dashboard": "Đồng hồ ODO",
+    "other": "Ảnh khác"
   }
 }

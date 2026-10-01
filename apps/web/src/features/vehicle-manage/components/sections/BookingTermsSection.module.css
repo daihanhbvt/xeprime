@@ -1,0 +1,10 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-lg);
+}
+
+/* Cuộn tới neo không để tiêu đề card bị header dính đè lên. */
+.anchor {
+  scroll-margin-top: var(--xp-space-xl);
+}

@@ -16,7 +16,8 @@
     "noRating": "No ratings yet",
     "trips": "{count, plural, =0 {No trips yet} one {# trip} other {# trips}}",
     "viewListing": "View listing",
-    "viewListingDisabled": "This vehicle is not public yet — the listing page exists only after marketplace approval."
+    "viewListingDisabled": "This vehicle is not public yet — the listing page exists only after marketplace approval.",
+    "viewProfile": "View vehicle profile"
   },
   "nav": {
     "menuLabel": "Vehicle management menu",
@@ -135,6 +136,8 @@
     "happenedAgo": "{date}"
   },
   "pricing": {
+    "title": "Prices & policy",
+    "subtitle": "Rental prices for each service of this vehicle, plus deposit, delivery and mileage limit — saved together.",
     "selfDriveTitle": "Default rental price",
     "selfDriveSubtitle": "The default price applies to any day without a custom price.",
     "withDriverTitle": "Chauffeured service price list",
@@ -292,5 +295,28 @@
     "selfDrive": "Self-drive",
     "withDriver": "Chauffeured",
     "serviceOff": "This vehicle does not offer this service."
+  },
+  "menu": {
+    "groups": {
+      "info": "Vehicle",
+      "pricingHandover": "Prices & handover",
+      "selfDrive": "Self-drive rental",
+      "withDriver": "Rental with driver",
+      "longTerm": "Long-term rental",
+      "advanced": "Advanced"
+    },
+    "items": {
+      "information": "Vehicle info & features",
+      "images": "Photos",
+      "documents": "Vehicle documents",
+      "tripHistory": "Trip history",
+      "pricing": "Prices & policy",
+      "handoverTime": "Handover hours",
+      "bookingTerms": "Booking & rental terms",
+      "surcharges": "Surcharges",
+      "source": "Vehicle source & finance",
+      "maintenance": "Maintenance & odometer"
+    },
+    "longTermNote": "Monthly price is under Prices & policy"
   }
 }

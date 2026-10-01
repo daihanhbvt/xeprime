@@ -109,8 +109,17 @@ export function supportWorkspaceValue(context: SupportContext): WorkspaceContext
     paths,
     vehicles: {
       detail: (id) => mapOrKeep(vehicles.detail(id)),
+      overview: (id) => mapOrKeep(vehicles.overview(id)),
       manageSection: (id, section) => mapOrKeep(vehicles.manageSection(id, section)),
       edit: (id) => mapOrKeep(vehicles.edit(id)),
+      // `null` đi thẳng qua: phần không có bản ở khu này thì trong phiên cũng không có.
+      part: (id, tab, section) => {
+        const href = vehicles.part(id, tab, section);
+        return href === null ? null : mapOrKeep(href);
+      },
+      profile: (id) => mapOrKeep(vehicles.profile(id)),
+      pricing: (id) => mapOrKeep(vehicles.pricing(id)),
+      optimization: (id) => mapOrKeep(vehicles.optimization(id)),
     },
     isManage,
   };

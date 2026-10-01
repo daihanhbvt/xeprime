@@ -16,7 +16,8 @@
     "noRating": "Chưa có đánh giá",
     "trips": "{count, plural, =0 {Chưa có chuyến} other {# chuyến}}",
     "viewListing": "Xem trang xe",
-    "viewListingDisabled": "Xe chưa hiển thị công khai — trang xe chỉ có sau khi được duyệt lên chợ."
+    "viewListingDisabled": "Xe chưa hiển thị công khai — trang xe chỉ có sau khi được duyệt lên chợ.",
+    "viewProfile": "Xem hồ sơ xe"
   },
   "nav": {
     "menuLabel": "Menu quản lý xe",
@@ -135,6 +136,8 @@
     "happenedAgo": "{date}"
   },
   "pricing": {
+    "title": "Giá & chính sách",
+    "subtitle": "Giá cho thuê theo từng dịch vụ của xe, cùng cọc, giao xe tận nơi và giới hạn quãng đường — lưu một lần.",
     "selfDriveTitle": "Đơn giá thuê mặc định",
     "selfDriveSubtitle": "Đơn giá thuê mặc định được áp dụng nếu ngày đó không có tuỳ chỉnh khác về giá.",
     "withDriverTitle": "Thiết lập bảng giá dịch vụ có tài xế",
@@ -292,5 +295,28 @@
     "selfDrive": "Tự lái",
     "withDriver": "Có tài xế",
     "serviceOff": "Xe không đăng dịch vụ này."
+  },
+  "menu": {
+    "groups": {
+      "info": "Thông tin xe",
+      "pricingHandover": "Giá & giao nhận",
+      "selfDrive": "Cho thuê tự lái",
+      "withDriver": "Cho thuê có tài xế",
+      "longTerm": "Cho thuê dài hạn",
+      "advanced": "Nâng cao"
+    },
+    "items": {
+      "information": "Thông tin xe & tiện ích",
+      "images": "Hình ảnh",
+      "documents": "Giấy tờ xe",
+      "tripHistory": "Lịch sử chuyến",
+      "pricing": "Giá & chính sách",
+      "handoverTime": "Thời gian giao nhận",
+      "bookingTerms": "Nhận chuyến & thủ tục",
+      "surcharges": "Phụ phí",
+      "source": "Nguồn xe & tài chính",
+      "maintenance": "Bảo dưỡng & KM"
+    },
+    "longTermNote": "Giá thuê tháng nằm ở Giá & chính sách"
   }
 }
