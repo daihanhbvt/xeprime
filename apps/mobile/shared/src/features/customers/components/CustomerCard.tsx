@@ -10,6 +10,7 @@ import {
   type TenantCustomerRiskLevel,
 } from '@xeprime/types';
 import { isZeroMoney } from '@xeprime/domain';
+import { metaColor } from '@/lib/status-meta';
 import { Avatar } from '@/components/ui/Avatar';
 import { BadgeRows, type BadgeRowItem } from '@/components/ui/BadgeRows';
 import { Card } from '@/components/ui/Card';
@@ -95,7 +96,7 @@ function CustomerCardImpl({
           {
             key: 'risk',
             label: domainLabel('tenantCustomerRiskLevel', riskLevel),
-            color: TENANT_CUSTOMER_RISK_LEVEL_META[riskLevel].color,
+            color: metaColor(TENANT_CUSTOMER_RISK_LEVEL_META, riskLevel),
           },
         ]),
     ...(customer.archivedAt

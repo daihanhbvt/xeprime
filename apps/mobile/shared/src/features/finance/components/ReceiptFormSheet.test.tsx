@@ -4,6 +4,7 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import type { ReactElement } from 'react';
 import { PERMISSION, RECEIPT_TYPE } from '@xeprime/types';
 import * as authApi from '@/features/auth/api';
+import { branchesApi, type Branch, type BranchList } from '@/api/branches/api';
 import { withIntl } from '@/i18n/test-utils';
 import { store } from '@/store';
 import { ReceiptFormSheet } from './ReceiptFormSheet';
@@ -57,8 +58,11 @@ const VEHICLE: ReceiptVehicleOption = {
 
 async function renderForm(
   initialVehicleId: string | null = null,
-  options: { vehicles?: ReceiptVehicleOption[] } = {},
+  options: { vehicles?: ReceiptVehicleOption[]; branches?: Branch[] } = {},
 ) {
+  jest
+    .spyOn(branchesApi, 'list')
+    .mockResolvedValue({ items: options.branches ?? [] } as unknown as BranchList);
   jest.spyOn(authApi, 'fetchCurrentUser').mockResolvedValue({
     id: 'u1',
     displayName: 'Kế toán',
@@ -73,6 +77,7 @@ async function renderForm(
       slug: 'g',
       status: 'active',
       onboardingState: 'commission',
+      branchScope: 'all',
       logoUrl: null,
       roleKey: 'shop_staff',
       features: [],
@@ -196,5 +201,35 @@ describe('ReceiptFormSheet — ô bắt buộc', () => {
     await fireEvent.press(await view.findByLabelText('Phiếu thu'));
 
     expect(await view.findByText('Tạo khoản thu')).toBeTruthy();
+  });
+});
+
+const BRANCH_A = { id: 'b1', name: 'Quận 1', provinceName: 'TP HCM' } as Branch;
+const BRANCH_B = { id: 'b2', name: 'Quận 5', provinceName: 'TP HCM' } as Branch;
+
+describe('ReceiptFormSheet — chi nhánh phát sinh (ADR 0052)', () => {
+  it('chưa có chi nhánh nào: nói ra bằng cảnh báo thay vì một ô chặn vô hình', async () => {
+    const view = await renderForm(null, { branches: [] });
+    expect(await view.findByText(/Gian hàng chưa có chi nhánh nào/)).toBeTruthy();
+  });
+
+  it('chế độ "Không gắn" + nhiều chi nhánh: ô bắt buộc, thiếu thì KHÔNG gửi', async () => {
+    const view = await renderForm(null, { branches: [BRANCH_A, BRANCH_B] });
+    expect(await view.findByText('Chọn chi nhánh')).toBeTruthy();
+    await fireEvent.press(await view.findByText('Tạo khoản chi'));
+    expect(await view.findByText('Chọn chi nhánh phát sinh')).toBeTruthy();
+    expect(view.createSpy).not.toHaveBeenCalled();
+  });
+
+  it('một chi nhánh: tự điền sẵn', async () => {
+    const view = await renderForm(null, { branches: [BRANCH_A] });
+    expect(await view.findByText('Quận 1 · TP HCM')).toBeTruthy();
+  });
+
+  it('chế độ gắn xe: KHÔNG hỏi chi nhánh (suy từ xe)', async () => {
+    const view = await renderForm('v1', { branches: [BRANCH_A, BRANCH_B] });
+    await waitFor(() => expect(view.vehicleOptionsSpy).toHaveBeenCalled());
+    expect(view.queryByText('Chọn chi nhánh')).toBeNull();
+    expect(view.queryByText(/Gian hàng chưa có chi nhánh nào/)).toBeNull();
   });
 });

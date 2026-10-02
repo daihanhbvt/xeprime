@@ -125,10 +125,15 @@ export function useMaintenanceBoard(filters: MaintenanceBoardFilters, enabled = 
 }
 
 /** Đếm theo nhóm việc — độc lập với trang/bộ lọc hiện tại nên có query key riêng. */
-export function useMaintenanceBoardSummary(enabled = true) {
+/**
+ * Nhận `branchId` vì dải đếm đứng ngay trên bảng đã lọc (ADR 0052 điều 3) — vẫn độc lập với nhóm
+ * việc và trang đang mở.
+ */
+export function useMaintenanceBoardSummary(enabled = true, branchId?: string) {
+  const params = branchId ? { branchId } : {};
   return useQuery({
-    queryKey: queryKeys.maintenance.summary(),
-    queryFn: () => maintenanceApi.boardSummary(),
+    queryKey: queryKeys.maintenance.summary(params),
+    queryFn: () => maintenanceApi.boardSummary(params),
     enabled,
   });
 }

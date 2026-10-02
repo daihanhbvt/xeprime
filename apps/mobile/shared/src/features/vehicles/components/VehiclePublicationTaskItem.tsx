@@ -11,7 +11,7 @@ import { ShopListingGateAlert } from '@/features/shop/components/ShopListingGate
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
-import { vehicleEditHref } from '../workspace-links';
+import { vehicleEditPartHref } from '../workspace-links';
 import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import { useSubmitVehiclePublic } from '../hooks/use-vehicle';
 import {
@@ -41,8 +41,8 @@ const TONE_COLOR = {
  * hành động thật thì nằm ở cuối màn.
  *
  * Việc ở đây có NÚT THẬT, vì màn chi tiết có trong tay cả bản ghi xe: gửi duyệt gọi thẳng
- * mutation, hoàn tất hồ sơ mở đúng mục còn thiếu, bật hiển thị đưa người dùng tới chính công tắc
- * ở đầu màn. Đổi lại, `TodoCard` phải LỌC hai cảnh báo server nói trùng — xem chỗ gọi.
+ * mutation, hoàn tất hồ sơ mở đúng mục còn thiếu. "Bật hiển thị" KHÔNG có nút ở đây — công tắc
+ * "Trên chợ" ở đầu màn là chỗ bấm duy nhất cho trạng thái đó. Đổi lại, `TodoCard` phải LỌC hai cảnh báo server nói trùng — xem chỗ gọi.
  *
  * Quyền: chỉ NÚT mới gác theo quyền. Câu mô tả tình trạng thì ai đọc được hồ sơ xe đều thấy —
  * "xe này chưa lên chợ" không phải bí mật với người đã vào được màn.
@@ -50,24 +50,10 @@ const TONE_COLOR = {
 export function VehiclePublicationTaskItem({
   vehicle,
   task,
-  onEnableMarketplace,
-  onViewStatus,
   customerScope = false,
 }: {
   vehicle: VehicleDetail;
   task: VehiclePublicationTask;
-  /**
-   * Đưa người dùng tới chính công tắc ở đầu màn (web neo bằng `#anchor`).
-   *
-   * KHÔNG bật hộ từ đây: đó sẽ là chỗ ghi thứ hai cho cùng một trạng thái, và người dùng không
-   * nhìn thấy cái công tắc vừa đổi.
-   */
-  onEnableMarketplace?: () => void;
-  /**
-   * Cuộn tới thẻ xét duyệt trong CÙNG màn — bản native của liên kết `#${REVIEW_PANEL_ANCHOR}` bên
-   * web. Không truyền thì không vẽ nút: một nút không đưa đi đâu tệ hơn không có nút.
-   */
-  onViewStatus?: () => void;
   /**
    * Màn đang mở từ khu TÀI KHOẢN (chủ xe tuyến hoa hồng — `/account/vehicles/[id]`). Web chọn
    * đích hỗ trợ theo khu làm việc (`useWorkspace().paths.support`): `/account/support` ở khu tài
@@ -135,36 +121,27 @@ export function VehiclePublicationTaskItem({
             onPress={onSubmit}
           />
         ) : null;
-      case 'edit':
-        return canEdit ? (
+      case 'edit': {
+        // Mục không có ở khu đang đứng ⇒ ẩn nút (web `part()` trả null), không đổ về mục lục.
+        const href = vehicleEditPartHref(
+          vehicle.id,
+          publicationEditTab(task.missing),
+          customerScope,
+        );
+        return canEdit && href ? (
           <Button
             label={label}
             size="sm"
             variant={variant}
             block={false}
-            onPress={() =>
-              navigateOnce(
-                vehicleEditHref(vehicle.id, publicationEditTab(task.missing), customerScope),
-              )
-            }
+            onPress={() => navigateOnce(href)}
           />
         ) : null;
-      case 'enableMarketplace':
-        // Đưa tới chính công tắc thay vì bật hộ từ đây: một hành động, một chỗ bấm.
-        return canSubmit && onEnableMarketplace ? (
-          <Button
-            label={label}
-            size="sm"
-            variant={variant}
-            block={false}
-            onPress={onEnableMarketplace}
-          />
-        ) : null;
+      }
       case 'viewStatus':
-        // Không gác quyền — đúng như web: đọc tình trạng xét duyệt là việc của mọi người xem hồ sơ.
-        return onViewStatus ? (
-          <Button label={label} size="sm" variant={variant} block={false} onPress={onViewStatus} />
-        ) : null;
+        // Web 30/09/2026: thẻ xét duyệt đã rời Hồ sơ 360 — không còn khối nào để dẫn tới, và trạng
+        // thái + lý do đã nằm ngay trong dòng việc này. Không dựng một nút chết.
+        return null;
       case 'contactSupport':
         // `hidden` không có đường tự phục vụ nào (ADR 0048 điều 4) — lối duy nhất là hỗ trợ.
         return (

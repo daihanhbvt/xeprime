@@ -26,7 +26,7 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { VEHICLE_MANAGE_SECTION } from '@/navigation/vehicle-manage-section';
 import { colors, fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
-import { VehicleManageShell } from './components/VehicleManageShell';
+import { VehicleManageShell, type VehicleSectionWorkspace } from './components/VehicleManageShell';
 import type { VehicleOperationSettings } from './api';
 import {
   useSaveVehicleOperationSettings,
@@ -88,14 +88,22 @@ type FormValues = yup.InferType<typeof schema>;
  * `vehicle_occupancies.buffer_minutes` của lịch giữ MỚI (ADR 0006) — màn hình nói rõ phạm vi đó
  * thay vì để người dùng tưởng nó tính lại cho đơn đang có.
  */
-export function VehicleHandoverTimeScreen({ vehicleId }: { vehicleId: string }) {
+/** Áp cho CẢ chiếc xe (web `HANDOVER_TIME`) — không khoá theo dịch vụ nào. */
+export function VehicleHandoverTimeScreen({
+  vehicleId,
+  workspace,
+}: {
+  vehicleId: string;
+  /** `manage` = mục của màn sửa xe ở app Partner (Lui về hub sửa xe) — xem `VehicleManageShell`. */
+  workspace?: VehicleSectionWorkspace;
+}) {
   const t = useTranslations('VehicleManage');
 
   return (
     <VehicleManageShell
       vehicleId={vehicleId}
-      section={VEHICLE_MANAGE_SECTION.SELF_DRIVE_HANDOVER_TIME}
-      title={t('handover.title')}
+      {...(workspace ? { workspace } : {})}
+      section={VEHICLE_MANAGE_SECTION.HANDOVER_TIME}
       subtitle={t('handover.subtitle')}
     >
       {({ canEdit }) => <HandoverBody vehicleId={vehicleId} canEdit={canEdit} />}
@@ -244,6 +252,7 @@ function HandoverForm({
               control={control}
               name="turnaroundBufferMinutes"
               label={t('handover.bufferCustomLabel')}
+              required
               min={0}
               max={TURNAROUND_BUFFER_MAX_MINUTES}
               editable={canEdit}
@@ -311,6 +320,7 @@ function WindowsEditor({
               control={control}
               name={`${name}.${index}.start`}
               label={t('from')}
+              required
               options={TIME_OPTIONS}
               disabled={disabled}
             />
@@ -320,6 +330,7 @@ function WindowsEditor({
               control={control}
               name={`${name}.${index}.end`}
               label={t('to')}
+              required
               options={TIME_OPTIONS}
               disabled={disabled}
             />
@@ -350,7 +361,10 @@ function WindowsEditor({
       ) : null}
 
       {!disabled && fields.length < HANDOVER_WINDOW_MAX_PER_KIND ? (
-        <InlineAction label={t('addWindow')} onPress={() => append({ start: '06:00', end: '22:00' })} />
+        <InlineAction
+          label={t('addWindow')}
+          onPress={() => append({ start: '06:00', end: '22:00' })}
+        />
       ) : null}
       {fields.length >= HANDOVER_WINDOW_MAX_PER_KIND ? (
         <Text col={colors.placeholder} fos={fontSize.label}>

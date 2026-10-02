@@ -8,7 +8,6 @@ import {
 } from '@/features/booking-requests/api';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
-import { useBranchScopeParams } from '@/features/branches/hooks/use-branch-scope';
 import { useBadgeRealtime } from '@/features/badges/BadgeRealtimeProvider';
 import { useBadges } from '@/features/badges/hooks/use-badges';
 import { useOnBadgeChange } from '@/features/badges/hooks/use-on-badge-change';
@@ -52,10 +51,10 @@ export function useManageNavBadges(): ManageNavBadgeCounts {
   const enabled = isShopScope && permissions.has(PERMISSION.BOOKING_REQUEST_VIEW);
 
   /*
-   * Đếm theo ĐÚNG scope chi nhánh mà hộp thư đang dùng — nếu không thì huy hiệu báo 5 trong khi
-   * danh sách mở ra chỉ có 2, và người dùng đi tìm ba yêu cầu không tồn tại.
+   * Đếm TOÀN GIAN HÀNG, không theo chi nhánh (ADR 0052 điều 7): huy hiệu sống ở vỏ app và hiện ở
+   * mọi màn, kể cả màn không có ô lọc chi nhánh nào. Nợ đã biết (điều 5c): đang lọc một chi nhánh
+   * có thể thấy huy hiệu "2" mà hộp thư mở ra rỗng.
    */
-  const branchScope = useBranchScopeParams();
   const filters = {
     /*
      * PHẢI cùng bộ trạng thái với tab "Cần xử lý" của hộp thư (ADR 0039): trước đây chỉ đếm
@@ -65,7 +64,6 @@ export function useManageNavBadges(): ManageNavBadgeCounts {
     status: BOOKING_REQUEST_NEEDS_ACTION_STATUSES.join(","),
     page: FIRST_PAGE,
     limit: COUNT_ONLY_LIMIT,
-    ...branchScope,
   };
 
   /*
@@ -91,11 +89,6 @@ export function useManageNavBadges(): ManageNavBadgeCounts {
    * Yêu cầu thuê mới LUÔN đi kèm một thông báo cho thành viên gian hàng, nên
    * `notificationsUnread` đổi là tín hiệu đủ tốt để tải lại con số này ngay — thay vì đợi
    * hết nhịp một phút.
-   *
-   * Vì sao không đưa thẳng con số này vào bản chiếu huy hiệu: nó bị THU HẸP theo chi nhánh
-   * đang chọn, một trạng thái chỉ tồn tại ở client (ADR 0034 điều 2). Một con số toàn tài
-   * khoản sẽ nói khác danh sách mà người dùng mở ra. Nên bản chiếu chỉ làm TÍN HIỆU, còn
-   * con số vẫn đến từ query đúng scope.
    *
    * Invalidate cả nhánh `bookingRequests`: hộp thư yêu cầu cũng cần nhảy theo, không
    * riêng huy hiệu.

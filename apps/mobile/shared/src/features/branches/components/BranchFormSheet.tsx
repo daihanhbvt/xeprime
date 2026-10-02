@@ -37,8 +37,8 @@ const ADDRESS_PIN_NAMES = {
  *
  * Địa chỉ đi qua `AddressFields` — tỉnh/thành và xã/phường chọn từ DANH MỤC NHÀ NƯỚC (mô hình
  * hai cấp từ 01/07/2025), số nhà và đường thì gõ kèm gợi ý địa điểm, rồi KIỂM lại cái ghim trên
- * ảnh bản đồ. Cả ba phần đều bắt buộc vì chi nhánh là địa điểm vận hành thật: xe nằm ở đó, khách
- * tới đó nhận xe, và toạ độ của nó là điểm xuất phát của mọi phép tính phí giao xe tận nơi.
+ * ảnh bản đồ. Chỉ tỉnh/thành là BẮT BUỘC (đúng `branchFormSchema` + `CreateBranchDto`); xã/phường và
+ * số nhà tuỳ chọn, nhưng nên khai đủ vì toạ độ chi nhánh là điểm xuất phát của phí giao xe tận nơi.
  */
 export function BranchFormSheet({
   open,
@@ -160,6 +160,8 @@ function BranchForm({ branch, onDone }: { branch: Branch | null; onDone: () => v
         names={ADDRESS_FIELD_NAMES}
         pin={ADDRESS_PIN_NAMES}
         required
+        wardRequired={false}
+        addressLineRequired={false}
         // Chỉ form TẠO MỚI. Ở form SỬA, ô tỉnh trống nghĩa là chi nhánh này có từ trước danh mục
         // hành chính (ADR 0035 điều 7) — điền vào đó tỉnh người dùng vừa tìm xe là dời một địa
         // điểm vận hành có thật sang tỉnh khác, âm thầm, chỉ vì họ bấm Lưu.

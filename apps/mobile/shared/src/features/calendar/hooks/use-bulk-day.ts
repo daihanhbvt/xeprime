@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { queryKeys } from '@xeprime/api-client';
-import { useBranchScopeParams } from '@/features/branches/hooks/use-branch-scope';
 import {
   calendarApi,
   type BulkDayBlockInput,
@@ -12,7 +11,7 @@ import {
 /**
  * Dữ liệu + thao tác cho hai tấm trượt hàng loạt mở từ thẻ ngày trên lịch.
  *
- * Bộ lọc lấy từ CHÍNH bộ lọc của lưới (+ chi nhánh của vỏ). Đó là điểm quan trọng nhất của hook
+ * Bộ lọc lấy từ CHÍNH bộ lọc của lưới — TOÀN BỘ nó, chi nhánh gồm trong đó (ADR 0052 điều 8). Đó là điểm quan trọng nhất của hook
  * này: người dùng vừa lọc còn 12 xe máy rồi bấm "khoá toàn bộ xe" thì "toàn bộ" phải nghĩa là 12
  * chiếc đang nhìn thấy — không phải 40 chiếc của cả gian hàng. Tấm trượt nói rõ điều đó bằng chữ,
  * nhưng hợp đồng thì nằm ở đây.
@@ -23,17 +22,15 @@ export function useBulkDayPreview(
   to: string,
   enabled: boolean,
 ) {
-  const branchScope = useBranchScopeParams();
-
   const query = useMemo(
     () => ({
       from,
       to,
       vehicleType: filters.vehicleType ?? null,
       q: filters.q ?? null,
-      branchId: branchScope.branchId ?? null,
+      branchId: filters.branchId ?? null,
     }),
-    [from, to, filters.vehicleType, filters.q, branchScope.branchId],
+    [from, to, filters.vehicleType, filters.q, filters.branchId],
   );
 
   return useQuery({
@@ -71,7 +68,9 @@ export function useBulkBlockDay() {
 export function useReleaseBulkBlock() {
   const invalidate = useInvalidateCalendar();
   return useMutation({
-    mutationFn: (batchId: string) => calendarApi.releaseBulkBlockBatch(batchId),
+    // Cùng chi nhánh với bảng xem trước đã báo công tắc đang bật — gỡ đúng phần đang nhìn thấy.
+    mutationFn: ({ batchId, branchId }: { batchId: string; branchId?: string | null }) =>
+      calendarApi.releaseBulkBlockBatch(batchId, branchId ?? undefined),
     onSuccess: invalidate,
   });
 }

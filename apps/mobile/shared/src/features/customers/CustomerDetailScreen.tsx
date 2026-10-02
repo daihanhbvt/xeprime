@@ -14,6 +14,7 @@ import {
   type TenantCustomerRiskLevel,
 } from '@xeprime/types';
 import { isZeroMoney } from '@xeprime/domain';
+import { metaColor } from '@/lib/status-meta';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { Avatar } from '@/components/ui/Avatar';
@@ -362,7 +363,7 @@ function CustomerProfile({
     <XStack ai="center" gap={space.xs} flexShrink={0}>
       <StatusBadge
         label={domainLabel('tenantCustomerRiskLevel', riskLevel)}
-        color={TENANT_CUSTOMER_RISK_LEVEL_META[riskLevel].color}
+        color={metaColor(TENANT_CUSTOMER_RISK_LEVEL_META, riskLevel)}
         size="sm"
       />
       {archived ? (
@@ -482,12 +483,7 @@ function CustomerProfile({
       <XStack ai="center" gap={space.sm} bg={colors.primaryLight} p={space.md}>
         <Avatar name={customer.fullName} size={AVATAR_SIZE} />
         <YStack f={1} minWidth={0} gap={2}>
-          <Text
-            col={colors.text}
-            fos={fontSize.body}
-            fow={fontWeight.semibold}
-            numberOfLines={2}
-          >
+          <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold} numberOfLines={2}>
             {customer.fullName}
           </Text>
           <Text col={colors.primaryActive} fos={fontSize.label} numberOfLines={1}>
@@ -650,9 +646,7 @@ function CustomerProfile({
           {blocked || watchlist ? (
             <Callout
               tone={blocked ? 'danger' : 'warning'}
-              title={
-                blocked ? t('detail.blockedBannerTitle') : t('detail.watchlistBannerTitle')
-              }
+              title={blocked ? t('detail.blockedBannerTitle') : t('detail.watchlistBannerTitle')}
             >
               <YStack gap={space.xs}>
                 {customer.riskReason ? (
@@ -875,11 +869,7 @@ function CustomerProfile({
         </YStack>
       </BottomSheet>
 
-      <CustomerFormSheet
-        open={editing}
-        customer={customer}
-        onClose={() => setEditing(false)}
-      />
+      <CustomerFormSheet open={editing} customer={customer} onClose={() => setEditing(false)} />
       <CustomerRiskSheet
         open={changingRisk}
         customer={customer}

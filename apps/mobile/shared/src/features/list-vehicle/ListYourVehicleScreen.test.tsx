@@ -36,6 +36,7 @@ const TENANT = {
   slug: 'viet-car',
   status: 'active',
   onboardingState: 'commission',
+  branchScope: 'all',
   logoUrl: null,
   roleKey: TENANT_ROLE.SHOP_OWNER,
   features: [],

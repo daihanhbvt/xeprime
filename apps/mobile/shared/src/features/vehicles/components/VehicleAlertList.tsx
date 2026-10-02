@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -8,7 +8,10 @@ import {
   type VehicleAlertSeverity,
 } from '@xeprime/types';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { Ionicons } from '@expo/vector-icons';
+import type { Href } from 'expo-router';
+import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import type { VehicleAlertItem } from '../api';
 
 const DOT_SIZE = 8;
@@ -24,14 +27,16 @@ function dotColor(severity: VehicleAlertSeverity): string {
  * "Xem tất cả". Ba việc đó luôn là ba việc ưu tiên cao nhất vì SERVER đã sắp sẵn — component
  * này không sắp xếp lại và không tự suy ra cảnh báo nào.
  *
- * `href` của web KHÔNG dùng ở đây: nó là đường dẫn của web (`/manage/...`), và app có bản đồ
- * route riêng — bấm vào một chuỗi web sinh ra sẽ dẫn tới màn không tồn tại.
+ * `href` của server KHÔNG dùng ở đây: nó là đường dẫn web (`/manage/...`). Đích của app là
+ * `target`, do `vehicleAlertView` dựng theo khu + năng lực — có thì dòng bấm được, `null` thì
+ * vẫn hiện câu cảnh báo nhưng không có lối đi (đúng web).
  */
 export function VehicleAlertList({
   alerts,
   showEmpty = true,
+  leadAction,
 }: {
-  alerts: readonly VehicleAlertItem[];
+  alerts: readonly (VehicleAlertItem & { target?: Href | null })[];
   /**
    * `false` = im lặng khi danh sách rỗng, vì nơi gọi đã dựng một việc khác trong CÙNG thẻ.
    *
@@ -41,10 +46,16 @@ export function VehicleAlertList({
    * Mặc định `true` để thẻ xe ngoài danh sách không đổi hành vi.
    */
   showEmpty?: boolean;
+  /**
+   * Nút hành động của việc ĐẦU BẢNG, dựng ngay TRONG mục đó — không ở cuối danh sách. Nút đứng
+   * cuối thẻ thì đọc như thuộc về mục nằm sát trên nó, mà mục đó có khi là một lời nhắc khác.
+   */
+  leadAction?: ReactNode;
 }) {
   const t = useTranslations('Vehicles.alerts');
   const domainLabel = useDomainLabel();
   const [expanded, setExpanded] = useState(false);
+  const navigateOnce = useNavigateOnce();
 
   if (alerts.length === 0) {
     return showEmpty ? (
@@ -59,33 +70,47 @@ export function VehicleAlertList({
 
   return (
     <YStack gap={space.sm}>
-      {visible.map((alert) => {
+      {visible.map((alert, index) => {
         const severity = alert.severity as VehicleAlertSeverity;
         return (
-          <XStack key={alert.kind} gap={space.xs}>
-            <YStack
-              w={DOT_SIZE}
-              h={DOT_SIZE}
-              br={radius.pill}
-              bg={dotColor(severity)}
-              mt={space.xs}
-            />
-            <YStack f={1} gap={1}>
-              <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
-                {alert.title}
-                {alert.count && alert.count > 1 ? ` (${alert.count})` : ''}
-              </Text>
-              {/* Mức nghiêm trọng nói bằng CHỮ, không chỉ bằng màu chấm. */}
-              <Text col={colors.textMuted} fos={fontSize.label}>
-                {domainLabel('vehicleAlertSeverity', severity)}
-              </Text>
-              {alert.detail ? (
-                <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                  {alert.detail}
+          <Pressable
+            key={alert.kind}
+            disabled={!alert.target}
+            onPress={() => alert.target && navigateOnce(alert.target)}
+            accessibilityRole={alert.target ? 'button' : 'text'}
+            hitSlop={4}
+          >
+            <XStack gap={space.xs}>
+              <YStack
+                w={DOT_SIZE}
+                h={DOT_SIZE}
+                br={radius.pill}
+                bg={dotColor(severity)}
+                mt={space.xs}
+              />
+              <YStack f={1} gap={1}>
+                <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
+                  {alert.title}
+                  {alert.count && alert.count > 1 ? ` (${alert.count})` : ''}
                 </Text>
+                {/* Mức nghiêm trọng nói bằng CHỮ, không chỉ bằng màu chấm. */}
+                <Text col={colors.textMuted} fos={fontSize.label}>
+                  {domainLabel('vehicleAlertSeverity', severity)}
+                </Text>
+                {alert.detail ? (
+                  <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                    {alert.detail}
+                  </Text>
+                ) : null}
+                {index === 0 && leadAction ? <XStack pt={space.xs}>{leadAction}</XStack> : null}
+              </YStack>
+              {alert.target ? (
+                <YStack alignSelf="center">
+                  <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+                </YStack>
               ) : null}
-            </YStack>
-          </XStack>
+            </XStack>
+          </Pressable>
         );
       })}
 

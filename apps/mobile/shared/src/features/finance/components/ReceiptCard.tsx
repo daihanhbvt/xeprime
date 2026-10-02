@@ -8,11 +8,9 @@ import {
   RECEIPT_TYPE,
   RECEIPT_TYPE_META,
   STATUS_COLOR,
-  type ReceiptSource,
-  type ReceiptStatus,
-  type ReceiptType,
 } from '@xeprime/types';
 import { LIST_SEPARATOR, vehicleLabel } from '@xeprime/domain';
+import { metaColor } from '@/lib/status-meta';
 import { Card } from '@/components/ui/Card';
 import { CardAccent } from '@/components/ui/CardAccent';
 import { DetailChevron } from '@/components/ui/DetailArrow';
@@ -75,9 +73,7 @@ function ReceiptCardImpl({
   const open = useCallback(() => onPress?.(receipt.id), [onPress, receipt.id]);
 
   const cancelled = receipt.status === RECEIPT_STATUS.CANCELLED;
-  const accent = cancelled
-    ? STATUS_COLOR.NEUTRAL
-    : RECEIPT_TYPE_META[receipt.type as ReceiptType].color;
+  const accent = cancelled ? STATUS_COLOR.NEUTRAL : metaColor(RECEIPT_TYPE_META, receipt.type);
 
   return (
     <Card
@@ -116,7 +112,7 @@ function ReceiptCardImpl({
             </Text>
             <StatusBadge
               label={domainLabel('receiptStatus', receipt.status)}
-              color={RECEIPT_STATUS_META[receipt.status as ReceiptStatus].color}
+              color={metaColor(RECEIPT_STATUS_META, receipt.status)}
               size="sm"
             />
           </XStack>
@@ -132,12 +128,12 @@ function ReceiptCardImpl({
           <XStack ai="center" gap={space.xs} flexWrap="wrap">
             <StatusBadge
               label={domainLabel('receiptType', receipt.type)}
-              color={RECEIPT_TYPE_META[receipt.type as ReceiptType].color}
+              color={metaColor(RECEIPT_TYPE_META, receipt.type)}
               size="sm"
             />
             <StatusBadge
               label={domainLabel('receiptSource', receipt.source)}
-              color={RECEIPT_SOURCE_META[receipt.source as ReceiptSource].color}
+              color={metaColor(RECEIPT_SOURCE_META, receipt.source)}
               size="sm"
             />
           </XStack>

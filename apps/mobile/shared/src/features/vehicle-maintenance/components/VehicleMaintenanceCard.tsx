@@ -6,6 +6,7 @@ import {
   PERMISSION,
   type MaintenanceDueStatus,
 } from '@xeprime/types';
+import { metaColor, metaLabel } from '@/lib/status-meta';
 import { BlockLink, BlockTitle } from '@/components/ui/BlockTitle';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
@@ -134,9 +135,9 @@ export function VehicleMaintenanceCard({ vehicleId }: { vehicleId: string }) {
             label={domainLabel(
               'maintenanceDueStatus',
               dueStatus,
-              MAINTENANCE_DUE_STATUS_META[dueStatus].label,
+              metaLabel(MAINTENANCE_DUE_STATUS_META, dueStatus),
             )}
-            color={MAINTENANCE_DUE_STATUS_META[dueStatus].color}
+            color={metaColor(MAINTENANCE_DUE_STATUS_META, dueStatus)}
             size="sm"
           />
         </XStack>

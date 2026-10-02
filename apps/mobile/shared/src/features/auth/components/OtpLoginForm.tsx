@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { PHONE_VERIFICATION_PURPOSE } from '@xeprime/types';
+import { API_ERROR_CODE, PHONE_VERIFICATION_PURPOSE } from '@xeprime/types';
 import { buildOtpLoginSchema, type OtpLoginValues } from '@xeprime/validators';
 import { useAuthSchemaLabels } from '../use-auth-schema-labels';
 import { useState, useMemo } from 'react';
@@ -17,6 +17,19 @@ import { usePhoneVerify } from '@/features/phone-verification/hooks/use-phone-ve
 import { maskPhone } from '@/features/phone-verification/mask';
 import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 import { getErrorMessage } from '@/lib/get-error-message';
+import { getErrorCode } from '@/lib/api-client';
+import { useErrorMessage } from '@/i18n/use-error-message';
+
+/**
+ * Mã cổng phạm vi APP — chỉ `/auth/mobile/phone/login` trả, web không bao giờ gặp. Câu của server
+ * là tiếng Việt cố định; dịch theo MÃ để giao diện tiếng Anh không lẫn tiếng Việt đúng lúc người
+ * dùng được bảo chuyển sang app khác.
+ */
+const APP_GATE_CODES: ReadonlySet<string> = new Set([
+  API_ERROR_CODE.CUSTOMER_APP_NOT_AVAILABLE,
+  API_ERROR_CODE.PARTNER_ACCESS_REQUIRED,
+  API_ERROR_CODE.PARTNER_REGISTRATION_NOT_SUPPORTED,
+]);
 
 /**
  * Đăng nhập passwordless bằng SĐT + OTP — cùng nghiệp vụ với `PhoneLoginForm` của web: nhập SĐT →
@@ -30,6 +43,7 @@ import { getErrorMessage } from '@/lib/get-error-message';
 export function OtpLoginForm({ onSuccess }: { onSuccess: (user: CurrentUser) => void }) {
   const t = useTranslations('Auth');
   const toast = useAppToast();
+  const errorMessage = useErrorMessage();
   const [code, setCode] = useState('');
 
   const vp = usePhoneVerify(PHONE_VERIFICATION_PURPOSE.LOGIN);
@@ -73,7 +87,15 @@ export function OtpLoginForm({ onSuccess }: { onSuccess: (user: CurrentUser) => 
     if (next.length !== OTP_LENGTH || login.isPending) return;
     login.mutate(
       { phone, code: next },
-      { onSuccess, onError: (error) => toast.showError(getErrorMessage(error)) },
+      {
+        onSuccess,
+        onError: (error) =>
+          toast.showError(
+            APP_GATE_CODES.has(getErrorCode(error) ?? '')
+              ? errorMessage(error)
+              : getErrorMessage(error),
+          ),
+      },
     );
   }
 

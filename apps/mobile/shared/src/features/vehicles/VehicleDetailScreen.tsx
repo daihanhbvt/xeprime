@@ -1,7 +1,7 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { Pressable, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
+import { Pressable, ScrollView, StyleSheet } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -9,20 +9,23 @@ import {
   API_ERROR_CODE,
   PERMISSION,
   STATUS_COLOR,
-  BOOKING_STATUS,
   BOOKING_STATUS_META,
+  BOOKING_STATUS,
   VEHICLE_ALERT_KIND,
+  VEHICLE_ALERT_SEVERITY,
+  topVehicleAlertSeverity,
+  type VehicleAlertSeverity,
   VEHICLE_OPERATION_STATUS_META,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_META,
   VEHICLE_SERVICE_SETTING_SERVICES,
   VEHICLE_SOURCE_TYPE,
-  type BookingStatus,
   type VehicleOperationStatus,
   type VehiclePublicStatus,
   type VehicleSourceType,
 } from '@xeprime/types';
 import { LIST_SEPARATOR, toAppTz } from '@xeprime/domain';
+import { metaColor, metaLabel } from '@/lib/status-meta';
 import { getErrorCode } from '@/lib/api-client';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
@@ -45,6 +48,8 @@ import { useCatalogLabels } from '@/features/catalog/use-catalog';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useAppFormat, useDatePickerPattern } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
+import { withBranchParam } from '@/features/branches/branch-link';
+import { useBranchReturnParam } from '@/features/branches/hooks/use-branch-filter';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
@@ -53,17 +58,29 @@ import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { FinanceEntityPanel } from '@/features/finance/components/FinanceEntityPanel';
 import { VehicleAlertList } from './components/VehicleAlertList';
-import { publicStatusPresentation, vehiclePublicationTask } from './publication';
+import { publicStatusPresentation, todoLeadAlert, vehiclePublicationTask } from './publication';
 import { Callout, type CalloutTone } from '@/components/ui/Callout';
 import { MarketplaceVisibilityRow } from './components/MarketplaceVisibilityRow';
 import { VehiclePublicationTaskItem } from './components/VehiclePublicationTaskItem';
-import { VehiclePublishCard } from './components/VehiclePublishCard';
-import { VehicleMaintenanceCard } from '@/features/vehicle-maintenance/components/VehicleMaintenanceCard';
+import { VehicleMaintenanceWorkspace } from '@/features/vehicle-maintenance/VehicleMaintenanceScreen';
 import { vehicleSchedulePath } from './calendar-link';
-import { vehicleModuleLinks } from './module-links';
+import { vehicleGalleryItems } from './display-media';
 import {
-  vehicleEditHref,
-  vehicleEditHubHref,
+  useImageSlotLabel,
+  useVehicleSpecItems,
+  type VehicleSpecKey,
+} from './hooks/use-vehicle-spec-items';
+import {
+  OVERVIEW_VIEW,
+  overviewViews,
+  vehicleModuleLinks,
+  vehicleProfileHref,
+  type OverviewView,
+} from './module-links';
+import { useVehicleCapabilities } from './hooks/use-vehicle-capabilities';
+import { useVehicleAlertView } from './hooks/use-vehicle-alert-view';
+import {
+  vehicleEditPartHref,
   vehicleOptimizationHref,
   vehiclePricingHref,
 } from './workspace-links';
@@ -75,20 +92,16 @@ import {
   useVehicleSummary,
 } from './hooks/use-vehicle';
 import type { Vehicle360Summary, VehicleBookingBrief, VehicleDetail } from './api';
-import { getErrorMessage } from '@/lib/get-error-message';
+import { useErrorMessage } from '@/i18n/use-error-message';
 
 const HERO_HEIGHT = 200;
-const GALLERY_THUMB = 96;
+/** Số ô HIỆN trong thẻ thư viện (3 × 2) — web `GALLERY_VISIBLE`. */
+const GALLERY_VISIBLE = 6;
+const GALLERY_COLUMNS = 3;
 
 /* `Image` của React Native cần style phẳng — Tamagui không có primitive ảnh thay thế. */
 const styles = StyleSheet.create({
   hero: { width: '100%', height: HERO_HEIGHT, backgroundColor: colors.surfaceMuted },
-  thumb: {
-    width: GALLERY_THUMB,
-    height: GALLERY_THUMB,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceMuted,
-  },
 });
 
 /**
@@ -131,7 +144,13 @@ export function VehicleDetailScreen({
   const { has, isLoading: permissionsLoading } = usePermissions();
   const canView = has(PERMISSION.VEHICLE_VIEW);
 
-  const listHref = backTo ?? ROUTES.manage.vehicles();
+  /*
+   * Về danh sách GIỮ chi nhánh đang lọc (ADR 0052, `useBranchReturnHref` bên web): danh sách gửi
+   * `branchId` theo link chi tiết; lùi bằng stack thì danh sách vẫn giữ tham số của nó, còn khi mở
+   * thẳng (deep link) thì đường lui dựng lại từ đây.
+   */
+  const returnBranch = useBranchReturnParam();
+  const listHref = backTo ?? withBranchParam(ROUTES.manage.vehicles(), returnBranch);
   const back = () => goBackOr(router, listHref);
   const query = useVehicle(vehicleId, canView);
 
@@ -227,6 +246,8 @@ function VehicleDetailBody({
   const router = useRouter();
   const navigateOnce = useNavigateOnce();
   const toast = useAppToast();
+  // Lỗi dịch theo MÃ (ADR 0012) — không hiện nguyên câu server.
+  const errorMessage = useErrorMessage();
   const { has } = usePermissions();
 
   const summary = useVehicleSummary(vehicle.id);
@@ -234,24 +255,26 @@ function VehicleDetailBody({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   /*
-   * Bản native của hai liên kết `#anchor` bên web (`VehiclePublicationTaskItem`): "Bật hiển thị"
-   * neo lên công tắc ở thẻ hồ sơ đầu màn, "Xem trạng thái" neo xuống thẻ xét duyệt. Vị trí đo
-   * bằng `onLayout` của chính khối đó — tính theo khung cha là cột nội dung của `Screen`.
-   *
-   * Công tắc "Trên chợ" nằm ở ĐÁY thẻ hồ sơ (dưới ảnh bìa), nên neo lên MÉP DƯỚI của thẻ, đặt ở
-   * khoảng 60% chiều cao màn — cuộn tới mép trên sẽ để công tắc lọt dưới nếp gấp ở màn thấp.
+   * "Xem đầy đủ" ở thẻ Thông số chính đổi sang mục Thông số TẠI CHỖ và cuộn lên đầu — web đổi tab
+   * và đưa focus theo; ở app, nút vừa bấm nằm trong khối vừa bị ẩn nên phải đưa người dùng về đầu.
    */
   const scrollRef = useRef<ScrollView>(null);
-  const { height: windowHeight } = useWindowDimensions();
-  const profileBox = useRef({ y: 0, height: 0 });
-  const reviewPanelY = useRef(0);
-  const scrollToY = (y: number) =>
-    scrollRef.current?.scrollTo({ y: Math.max(0, y - space.sm), animated: true });
-  const scrollToMarketplaceSwitch = () =>
-    scrollToY(profileBox.current.y + profileBox.current.height - windowHeight * 0.6);
-
   const canDelete = has(PERMISSION.VEHICLE_DELETE);
   const canEdit = has(PERMISSION.VEHICLE_UPDATE);
+  const can = useVehicleCapabilities();
+  const [view, setView] = useState<OverviewView>(OVERVIEW_VIEW.OVERVIEW);
+  const views = overviewViews(can);
+  const showSpecs = () => {
+    setView(OVERVIEW_VIEW.SPECS);
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  };
+  // Hai danh sách đơn chỉ có khi người xem có `bookings.view` — backend BỎ HẲN trường, không trả
+  // rỗng. Đang tải/tải hỏng thì chưa biết, nên vẫn dựng thẻ để nó tự báo trạng thái (web
+  // `Vehicle360Aside`).
+  const summaryUnknown = summary.isPending || summary.isError;
+  const showSchedule =
+    !customerScope && (summary.data?.upcomingBookings !== undefined || summaryUnknown);
+  const showActivity = summary.data?.recentBookings !== undefined || summaryUnknown;
 
   function onDelete() {
     remove.mutate(vehicle.id, {
@@ -262,7 +285,7 @@ function VehicleDetailBody({
       },
       onError: (error) => {
         setConfirmingDelete(false);
-        toast.showError(getErrorMessage(error));
+        toast.showError(errorMessage(error));
       },
     });
   }
@@ -290,98 +313,104 @@ function VehicleDetailBody({
         scrollRef={scrollRef}
       >
         <YStack gap={layout.section}>
-          <YStack
-            onLayout={(event) => {
-              const { y, height } = event.nativeEvent.layout;
-              profileBox.current = { y, height };
-            }}
-          >
-            <ProfileCard vehicle={vehicle} summary={summary.data} />
-          </YStack>
-
-          <TodoCard
-            vehicle={vehicle}
-            summary={summary.data}
-            loading={summary.isPending}
-            failed={summary.isError}
-            onEnableMarketplace={scrollToMarketplaceSwitch}
-            customerScope={customerScope}
-            onViewStatus={() => scrollToY(reviewPanelY.current)}
-          />
-
-          {has(PERMISSION.BOOKING_VIEW) ? (
-            <ScheduleCard
-              bookings={summary.data?.upcomingBookings}
-              loading={summary.isPending}
-              failed={summary.isError}
-            />
-          ) : null}
-
-          <PerformanceCard
-            summary={summary.data}
-            loading={summary.isPending}
-            failed={summary.isError}
-          />
-
-          <ModuleLinks vehicle={vehicle} canEdit={canEdit} customerScope={customerScope} />
+          <ProfileCard vehicle={vehicle} summary={summary.data} />
 
           {/*
-            Tiền của riêng chiếc xe này, THEO KỲ — đúng vị trí web đặt nó (ngay sau dải liên kết).
-            Trước đây hồ sơ xe chỉ có một con số luỹ kế và không trả lời được "tháng này xe có
-            nuôi nổi nó không".
-
-            Gác `finance.view` ở đây là gác HIỂN THỊ; chặn thật vẫn là guard backend, và khi thiếu
-            quyền thì truy vấn cũng không được bắn đi.
+            Bố cục TAB của web (30/09/2026): Tổng quan · Thông số · Tài chính (`can.money`) · Bảo
+            dưỡng (`can.maintenance`). Ở app là dải viên segmented ngay dưới thẻ hồ sơ.
           */}
-          {has(PERMISSION.FINANCE_VIEW) ? (
+          {views.length > 1 ? (
+            <XStack gap={space.xs} accessibilityRole="tablist">
+              {views.map((key) => (
+                <Chip
+                  key={key}
+                  label={t(`tabs.${key}`)}
+                  selected={view === key}
+                  onPress={() => setView(key)}
+                  variant="segmented"
+                  size="sm"
+                  grow
+                />
+              ))}
+            </XStack>
+          ) : null}
+
+          {view === OVERVIEW_VIEW.SPECS ? <SpecsCard vehicle={vehicle} /> : null}
+
+          {view === OVERVIEW_VIEW.FINANCE && can.money ? (
+            /* Tiền của riêng chiếc xe này, THEO KỲ — gác `can.money` (quyền ∧ cờ gói). */
             <FinanceEntityPanel
               scope={{ vehicleId: vehicle.id }}
               kind="vehicle"
-              canCreateReceipt={has(PERMISSION.RECEIPT_CREATE)}
+              canCreateReceipt={can.createReceipt}
             />
           ) : null}
 
-          <PricingCard vehicle={vehicle} canEdit={canEdit} customerScope={customerScope} />
-
-          <AutomationCard vehicle={vehicle} canEdit={canEdit} customerScope={customerScope} />
-
-          {has(PERMISSION.VEHICLE_DOCUMENT_VIEW) ? (
-            <DocumentsCard
-              vehicleId={vehicle.id}
-              summary={summary.data}
-              customerScope={customerScope}
-            />
+          {view === OVERVIEW_VIEW.MAINTENANCE && can.maintenance ? (
+            /* Đúng web: tab dựng nguyên khu bảo dưỡng của xe (`VehicleMaintenanceWorkspace`). */
+            <VehicleMaintenanceWorkspace vehicleId={vehicle.id} />
           ) : null}
 
-          <SpecsCard vehicle={vehicle} />
+          {view === OVERVIEW_VIEW.OVERVIEW ? (
+            <>
+              {/*
+                Thứ tự ĐÚNG web (02/10/2026) khi xếp một cột: việc cần làm → thông số chính → ảnh →
+                giấy tờ → giá → nhận chuyến → nguồn xe (cổng quản lý) → hiệu suất (cổng quản lý) →
+                lịch sắp tới → hoạt động gần đây → liên kết (cuối, như cột phụ web).
+              */}
+              <TodoCard
+                vehicle={vehicle}
+                summary={summary.data}
+                loading={summary.isPending}
+                failed={summary.isError}
+                customerScope={customerScope}
+              />
 
-          <MediaCard vehicle={vehicle} />
+              <KeySpecsCard vehicle={vehicle} onViewAll={showSpecs} />
 
-          {/*
-            Nguồn xe đứng SAU thư viện ảnh, đúng thứ tự web đọc ra ở khổ một cột: cột trái của
-            web là giá → giấy tờ → thông số → ảnh, rồi mới sang cột phải nguồn xe → bảo dưỡng →
-            gửi duyệt. Ở mobile hai cột đó xếp nối nhau.
-          */}
-          <SourceCard vehicle={vehicle} customerScope={customerScope} />
+              <MediaCard vehicle={vehicle} canEdit={canEdit} customerScope={customerScope} />
 
-          {/*
-            Bảo dưỡng & số KM — đúng vị trí web đặt nó: giữa nguồn xe và thẻ gửi duyệt.
-            KHÔNG ở khu tài khoản: bảo dưỡng là tính năng của GÓI (ADR 0027 điều 1) và không có
-            mục nào ở không gian quản lý xe của khu đó — web ẩn cả hai lối vào bảo dưỡng khi không
-            ở cổng quản lý.
-          */}
-          {customerScope ? null : <VehicleMaintenanceCard vehicleId={vehicle.id} />}
+              {can.documents ? (
+                <DocumentsCard
+                  vehicleId={vehicle.id}
+                  summary={summary.data}
+                  customerScope={customerScope}
+                />
+              ) : null}
 
-          <YStack onLayout={(event) => (reviewPanelY.current = event.nativeEvent.layout.y)}>
-            <VehiclePublishCard vehicle={vehicle} />
-          </YStack>
+              <PricingCard vehicle={vehicle} canEdit={canEdit} customerScope={customerScope} />
 
-          {has(PERMISSION.BOOKING_VIEW) ? (
-            <ActivityCard
-              bookings={summary.data?.recentBookings}
-              loading={summary.isPending}
-              failed={summary.isError}
-            />
+              <AutomationCard vehicle={vehicle} canEdit={canEdit} customerScope={customerScope} />
+
+              {/* Nguồn xe & tài chính là của gian hàng — chủ xe tuyến hoa hồng không có. */}
+              {customerScope ? null : <SourceCard vehicle={vehicle} />}
+
+              {/* Hiệu suất chỉ ở cổng quản lý (web 30/09/2026). */}
+              {customerScope ? null : (
+                <PerformanceCard
+                  summary={summary.data}
+                  loading={summary.isPending}
+                  failed={summary.isError}
+                />
+              )}
+              {showSchedule ? (
+                <ScheduleCard
+                  bookings={summary.data?.upcomingBookings}
+                  loading={summary.isPending}
+                  failed={summary.isError}
+                />
+              ) : null}
+
+              {showActivity ? (
+                <ActivityCard
+                  bookings={summary.data?.recentBookings}
+                  loading={summary.isPending}
+                  failed={summary.isError}
+                />
+              ) : null}
+
+              <ModuleLinks vehicle={vehicle} canEdit={canEdit} customerScope={customerScope} />
+            </>
           ) : null}
 
           {/*
@@ -405,7 +434,8 @@ function VehicleDetailBody({
                   label={t('editMobile')}
                   variant="primary"
                   size="sm"
-                  onPress={() => navigateOnce(vehicleEditHubHref(vehicle.id, customerScope))}
+                  /* Web `vehiclePaths.profile(id)`: cổng quản lý → màn sửa xe; khu tài khoản → mục Thông tin xe. */
+                  onPress={() => navigateOnce(vehicleProfileHref(vehicle.id, customerScope))}
                 />
               </YStack>
             ) : null}
@@ -551,33 +581,24 @@ function ProfileCard({
       )}
 
       <YStack p={space.md} gap={space.sm}>
-        <XStack ai="center" gap={space.xs}>
-          <Text f={1} col={colors.text} fos={fontSize.h3} fow={fontWeight.bold}>
-            {vehicle.name}
-          </Text>
-          <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {vehicle.code}
-          </Text>
-        </XStack>
+        <Text col={colors.text} fos={fontSize.h3} fow={fontWeight.bold}>
+          {vehicle.name}
+        </Text>
 
         {/*
-          `plate` và `odometer` mang thẻ rich `<b>` — phải đi qua `t.rich`. Gọi bằng `t()` thường
-          thì use-intl không dựng nổi và trả về NGUYÊN KHOÁ ra màn hình.
+          Định danh trên MỘT dải, đúng thứ tự web: ID · biển số · KM (+ nguồn). `idLabel`, `plate`
+          và `odometer` mang thẻ rich `<b>` — phải đi qua `t.rich`, gọi `t()` thường thì use-intl
+          trả về NGUYÊN KHOÁ. KM chưa có thì "Chưa có", không dựng "0 km"; nguồn cho biết số đến từ
+          bàn giao, bảo dưỡng hay chỉnh tay.
         */}
         <Text col={colors.textMuted} fos={fontSize.bodySm}>
+          {t.rich('idLabel', { value: vehicle.code, b: (chunks) => <Strong>{chunks}</Strong> })}
+          {' · '}
           {t.rich('plate', {
             value: vehicle.plateNumber || tLabels('notAvailable'),
             b: (chunks) => <Strong>{chunks}</Strong>,
           })}
-          {` • ${domainLabel('vehicleType', vehicle.vehicleType)} / ${fmt.serviceTypes(vehicle.serviceTypes)}`}
-        </Text>
-
-        {/*
-          KM có thẩm quyền + NGUỒN của nó. Chưa có số thì nói "Chưa có" — không dựng "0 km".
-          Nguồn cho biết số đến từ bàn giao, bảo dưỡng hay chỉnh tay, để người đọc biết tin nó
-          tới đâu.
-        */}
-        <Text col={colors.textMuted} fos={fontSize.bodySm}>
+          {' · '}
           {t.rich('odometer', {
             value: fmt.km(summary?.currentOdometerKm ?? null),
             b: (chunks) => <Strong>{chunks}</Strong>,
@@ -585,6 +606,11 @@ function ProfileCard({
           {summary?.currentOdometerSource
             ? ` · ${domainLabel('odometerSource', summary.currentOdometerSource)}`
             : ''}
+        </Text>
+
+        {/* Loại xe / dịch vụ trên dòng RIÊNG — web `typeLine`. */}
+        <Text col={colors.textMuted} fos={fontSize.bodySm}>
+          {`${domainLabel('vehicleType', vehicle.vehicleType)} / ${fmt.serviceTypes(vehicle.serviceTypes)}`}
         </Text>
 
         {/*
@@ -603,9 +629,9 @@ function ProfileCard({
               label={domainLabel(
                 'vehicleOperationStatus',
                 operationStatus,
-                VEHICLE_OPERATION_STATUS_META[operationStatus].label,
+                metaLabel(VEHICLE_OPERATION_STATUS_META, operationStatus),
               )}
-              color={VEHICLE_OPERATION_STATUS_META[operationStatus].color}
+              color={metaColor(VEHICLE_OPERATION_STATUS_META, operationStatus)}
               size="sm"
             />
           </XStack>
@@ -617,9 +643,9 @@ function ProfileCard({
               label={domainLabel(
                 'vehiclePublicStatus',
                 publicStatus,
-                VEHICLE_PUBLIC_STATUS_META[publicStatus].label,
+                metaLabel(VEHICLE_PUBLIC_STATUS_META, publicStatus),
               )}
-              color={VEHICLE_PUBLIC_STATUS_META[publicStatus].color}
+              color={metaColor(VEHICLE_PUBLIC_STATUS_META, publicStatus)}
               size="sm"
             />
           </XStack>
@@ -676,6 +702,18 @@ const PUBLICATION_ALERT_KINDS: readonly string[] = [
   VEHICLE_ALERT_KIND.MISSING_VEHICLE_INFO,
 ];
 
+/** Biểu tượng theo mức nặng nhất — web `TODO_TONE_ICON`. */
+const TODO_TONE_ICON: Readonly<Record<VehicleAlertSeverity, { name: IconName; color: string }>> = {
+  [VEHICLE_ALERT_SEVERITY.CRITICAL]: { name: 'alert-circle', color: colors.danger },
+  [VEHICLE_ALERT_SEVERITY.WARNING]: { name: 'alert-circle', color: colors.warning },
+  [VEHICLE_ALERT_SEVERITY.INFO]: { name: 'information-circle', color: colors.info },
+};
+/** Đã biết chắc không còn việc gì (tải xong và rỗng). Đang tải/hỏng thì KHÔNG có biểu tượng. */
+const TODO_CLEAR_ICON: { name: IconName; color: string } = {
+  name: 'checkmark-circle',
+  color: colors.success,
+};
+
 /**
  * Việc cần làm — cảnh báo vận hành TỪ SERVER (`VehicleAlertsService`, cùng phép tính với thẻ xe
  * ngoài danh sách) cộng MỘT việc "đưa xe lên chợ" dựng tại chỗ từ bản ghi xe (ADR 0048).
@@ -692,57 +730,82 @@ function TodoCard({
   summary,
   loading,
   failed,
-  onEnableMarketplace,
-  onViewStatus,
   customerScope,
 }: {
   vehicle: VehicleDetail;
   summary: Vehicle360Summary | undefined;
   loading: boolean;
   failed: boolean;
-  /** Cuộn lên công tắc "Trên chợ" ở thẻ hồ sơ — web neo `#MARKETPLACE_SWITCH_ANCHOR`. */
-  onEnableMarketplace: () => void;
-  /** Cuộn xuống thẻ xét duyệt — web neo `#REVIEW_PANEL_ANCHOR`. */
-  onViewStatus: () => void;
   /** Mở từ khu tài khoản — đích "Liên hệ hỗ trợ" là hỗ trợ của khu đó. */
   customerScope: boolean;
 }) {
   const t = useTranslations('Vehicles.overview');
+  const navigateOnce = useNavigateOnce();
   const task = vehiclePublicationTask(vehicle);
-  const alerts = (summary?.alerts ?? []).filter(
+  const alertView = useVehicleAlertView(customerScope);
+  // Lọc theo năng lực + đổi đích về đúng khu TRƯỚC, rồi bỏ hai cảnh báo nói trùng với việc lên chợ.
+  const alerts = alertView(vehicle.id, summary?.alerts ?? []).filter(
     (alert) => !task || !PUBLICATION_ALERT_KINDS.includes(alert.kind),
   );
+  const taskLeads = task !== null && task.tone !== VEHICLE_ALERT_SEVERITY.INFO;
   // Gợi ý không phải "việc cần làm" nên không vào số đếm — viên đếm là số việc thật.
-  const count = alerts.length + (task && task.tone !== 'info' ? 1 : 0);
-  /*
-   * Hai nút neo ("Bật hiển thị" · "Xem trạng thái") CUỘN tới khối tương ứng trong cùng màn — đúng
-   * như hai liên kết `#anchor` bên web. Không bật hộ từ đây: ADR 0048 cấm chỗ ghi thứ hai cho cùng
-   * một trạng thái.
-   */
+  const count = alerts.length + (taskLeads ? 1 : 0);
   const taskItem = task ? (
-    <VehiclePublicationTaskItem
-      vehicle={vehicle}
-      task={task}
-      onEnableMarketplace={onEnableMarketplace}
-      onViewStatus={onViewStatus}
-      customerScope={customerScope}
+    <VehiclePublicationTaskItem vehicle={vehicle} task={task} customerScope={customerScope} />
+  ) : null;
+  const listReady = !loading && !failed && summary !== undefined;
+  // Mức nặng nhất của những gì ĐANG hiện — tô biểu tượng tiêu đề (web đổi nền thẻ theo nó).
+  const tone = topVehicleAlertSeverity([
+    ...(listReady ? alerts : []),
+    ...(task ? [{ severity: task.tone }] : []),
+  ]);
+  /*
+   * "Xử lý ngay" dẫn tới việc ĐẦU BẢNG của server (đã sắp theo ưu tiên) và đứng NGAY TRONG chính
+   * việc đó — đúng web 02/10/2026. Chỉ dựng khi việc đầu bảng là việc phải làm (không phải lời
+   * nhắc `info`), có đích, và việc lên chợ không đứng trên nó (việc đó có nút riêng).
+   */
+  const lead = todoLeadAlert({ alerts, listReady, taskLeads });
+  const leadTarget = lead?.target ?? null;
+  const leadAction = leadTarget ? (
+    <Button
+      label={t('todo.handleNow')}
+      size="sm"
+      variant={tone === VEHICLE_ALERT_SEVERITY.CRITICAL ? 'danger' : 'primary'}
+      block={false}
+      onPress={() => navigateOnce(leadTarget)}
     />
   ) : null;
+  const toneIcon = tone ? TODO_TONE_ICON[tone] : listReady ? TODO_CLEAR_ICON : null;
 
   return (
     <Card>
       <YStack gap={space.sm}>
         {/*
-          Viên đếm CHỈ hiện khi có việc — đúng điều kiện của web.
-
-          Hiện "0" thì con số đỏ mất hết sức nặng: nó phải là thứ chỉ xuất hiện khi có chuyện,
-          không phải một ô luôn nằm đó. Đang tải cũng không hiện, vì lúc đó `alerts` rỗng nhưng
-          chưa biết thật sự có việc hay không.
+          Viên đếm CHỈ hiện khi có việc — đúng điều kiện của web. Biểu tượng mức nặng nhất đứng
+          cạnh nó; màu không bao giờ là kênh duy nhất — từng việc vẫn nói mức bằng chữ.
         */}
-        <BlockTitle {...(count > 0 ? { action: <CountBadge count={count} tone="danger" /> } : {})}>
+        <BlockTitle
+          {...(count > 0 || toneIcon
+            ? {
+                action: (
+                  <XStack ai="center" gap={space.xs}>
+                    {toneIcon ? (
+                      <Ionicons
+                        name={toneIcon.name}
+                        size={iconSize.sm}
+                        color={toneIcon.color}
+                        accessible={false}
+                      />
+                    ) : null}
+                    {count > 0 ? <CountBadge count={count} tone="danger" /> : null}
+                  </XStack>
+                ),
+              }
+            : {})}
+        >
           {t('todo.title')}
         </BlockTitle>
-        {task?.tone !== 'info' ? taskItem : null}
+        {taskLeads ? taskItem : null}
         {loading ? (
           <SkeletonText lines={2} />
         ) : failed || !summary ? (
@@ -752,9 +815,9 @@ function TodoCard({
             `showEmpty` tắt khi đã có việc lên chợ: "Không có việc cần làm" ngay dưới một việc
             đang hiện là đúng câu tự mâu thuẫn mà ADR 0048 điều 6 sửa.
           */
-          <VehicleAlertList alerts={alerts} showEmpty={!task} />
+          <VehicleAlertList alerts={alerts} showEmpty={!task} leadAction={leadAction} />
         )}
-        {task?.tone === 'info' ? taskItem : null}
+        {task && !taskLeads ? taskItem : null}
       </YStack>
     </Card>
   );
@@ -803,7 +866,7 @@ function ScheduleCard({
                 <YStack
                   w={3}
                   br={radius.pill}
-                  bg={statusTone(BOOKING_STATUS_META[booking.status as BookingStatus].color).fg}
+                  bg={statusTone(metaColor(BOOKING_STATUS_META, booking.status)).fg}
                 />
                 <YStack f={1} gap={2}>
                   <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
@@ -852,7 +915,8 @@ function ModuleLinks({
   const { has } = usePermissions();
   const navigateOnce = useNavigateOnce();
 
-  const links = vehicleModuleLinks({ vehicle, canEdit, customerScope, has });
+  const can = useVehicleCapabilities();
+  const links = vehicleModuleLinks({ vehicle, canEdit, customerScope, has, can });
   if (links.length === 0) return null;
 
   return (
@@ -868,19 +932,23 @@ function ModuleLinks({
         chọn nói "đây là một lựa chọn đang tắt", trong khi mấy viên này là lối ĐI. Cũng vì thế
         `role="button"`, không phải `tab`.
       */}
-      <XStack flexWrap="wrap" gap={space.xs} accessibilityLabel={t('ariaLabel')}>
-        {links.map((link) => (
-          <Chip
-            key={link.key}
-            label={t(link.key)}
-            icon={link.icon}
-            tone="accent"
-            role="button"
-            size="sm"
-            onPress={() => navigateOnce(link.href)}
-          />
-        ))}
-      </XStack>
+      <YStack gap={space.sm}>
+        {/* Tiêu đề dải — web `bandTitle`: nói đúng vai "đây là các khu vực của chiếc xe này". */}
+        <BlockTitle>{t('title')}</BlockTitle>
+        <XStack flexWrap="wrap" gap={space.xs} accessibilityLabel={t('ariaLabel')}>
+          {links.map((link) => (
+            <Chip
+              key={link.key}
+              label={t(link.key)}
+              icon={link.icon}
+              tone="accent"
+              role="button"
+              size="sm"
+              onPress={() => navigateOnce(link.href)}
+            />
+          ))}
+        </XStack>
+      </YStack>
     </Card>
   );
 }
@@ -920,7 +988,10 @@ function PerformanceCard({
   failed: boolean;
 }) {
   const t = useTranslations('Vehicles.overview');
+  const fmt = useAppFormat();
   const stats = summary?.stats;
+  // Chưa ai chấm thì KHÔNG dựng ô — "0/5" là một lời chê không có thật.
+  const rated = stats && stats.ratingCount > 0 && stats.ratingAvg;
 
   return (
     <Card>
@@ -938,17 +1009,28 @@ function PerformanceCard({
             nửa bề ngang để trưng một con số hai chữ, và cả khối đọc như bảng thông số kỹ thuật.
             Ô số cho chúng đúng trọng lượng: số to, nhãn nhỏ ở trên.
           */
-          <XStack gap={space.xs}>
-            <StatTile
-              label={t('performance.rentals')}
-              value={t('performance.tripCount', { count: stats.completedBookings })}
-            />
-            <StatTile
-              label={t('performance.activeLabel')}
-              value={t('performance.activeCount', { count: stats.activeBookings })}
-              tone={stats.activeBookings > 0 ? colors.info : undefined}
-            />
-          </XStack>
+          <YStack gap={space.xs}>
+            <XStack gap={space.xs}>
+              <StatTile
+                label={t('performance.rentals')}
+                value={t('performance.tripCount', { count: stats.completedBookings })}
+              />
+              <StatTile
+                label={t('performance.active')}
+                value={t('performance.activeCount', { count: stats.activeBookings })}
+                tone={stats.activeBookings > 0 ? colors.info : undefined}
+              />
+            </XStack>
+            {rated ? (
+              <StatTile
+                label={t('performance.rating')}
+                value={t('performance.ratingValue', {
+                  rating: fmt.rating(Number(stats.ratingAvg)),
+                  count: stats.ratingCount,
+                })}
+              />
+            ) : null}
+          </YStack>
         )}
       </YStack>
     </Card>
@@ -1092,17 +1174,20 @@ function DocumentsCard({
   const expired = alerts.find((a) => a.kind === VEHICLE_ALERT_KIND.DOCUMENT_EXPIRED);
   const expiring = alerts.find((a) => a.kind === VEHICLE_ALERT_KIND.DOCUMENT_EXPIRING);
 
+  // Không có mục Giấy tờ ở khu đang đứng ⇒ không bày lối vào (web `part()` trả null).
+  const manageHref = vehicleEditPartHref(vehicleId, VEHICLE_EDIT_TAB.DOCUMENTS, customerScope);
+
   return (
     <Card>
       <YStack gap={space.sm}>
         <BlockTitle
           action={
-            <BlockLink
-              label={t('documents.manageLink')}
-              onPress={() =>
-                navigateOnce(vehicleEditHref(vehicleId, VEHICLE_EDIT_TAB.DOCUMENTS, customerScope))
-              }
-            />
+            manageHref ? (
+              <BlockLink
+                label={t('documents.manageLink')}
+                onPress={() => navigateOnce(manageHref)}
+              />
+            ) : undefined
           }
         >
           {t('documents.title')}
@@ -1130,58 +1215,96 @@ function DocumentsCard({
   );
 }
 
+/**
+ * Lát cắt của thẻ "Thông số chính", theo thứ tự hiện — web `KEY_SPECS`. Ô nào ma trận
+ * `vehicleFieldPolicy` ẩn cho xe này tự vắng — `useVehicleSpecItems` đã bỏ nó.
+ */
+const KEY_SPECS: readonly VehicleSpecKey[] = [
+  'year',
+  'seats',
+  'motorbikeCategory',
+  'fuel',
+  'transmission',
+  'color',
+];
+
+/**
+ * Những thông số khách hỏi đầu tiên — bản ĐẦY ĐỦ ở mục "Thông số", "Xem đầy đủ" đổi mục tại chỗ.
+ * Ô áp dụng mà chưa điền thì nói thiếu (`—`), để chủ xe thấy còn phải điền gì.
+ */
+function KeySpecsCard({ vehicle, onViewAll }: { vehicle: VehicleDetail; onViewAll: () => void }) {
+  const t = useTranslations('Vehicles.overview');
+  const tLabels = useTranslations('Common.labels');
+  const specs = useVehicleSpecItems(vehicle);
+
+  const empty = tLabels('emptyValue');
+  const byKey = new Map(specs.map((item) => [item.key, item]));
+  // Hãng + mẫu gộp một ô: "Toyota Vios" là cách người ta gọi chiếc xe, không phải hai thông số.
+  const brandModel = [byKey.get('brand')?.value, byKey.get('model')?.value]
+    .filter(Boolean)
+    .join(' ');
+  const tiles = [
+    { key: 'brand-model', label: t('keySpecs.brandModel'), value: brandModel || empty },
+    ...KEY_SPECS.flatMap((key) => {
+      const item = byKey.get(key);
+      return item ? [{ key, label: item.label, value: item.value ?? empty }] : [];
+    }),
+  ];
+
+  return (
+    <Card>
+      <YStack gap={space.sm}>
+        <BlockTitle
+          action={
+            <BlockLink
+              label={t('keySpecs.viewAll')}
+              accessibilityLabel={t('keySpecs.viewAllLabel')}
+              onPress={onViewAll}
+            />
+          }
+        >
+          {t('keySpecs.title')}
+        </BlockTitle>
+        {/* Lưới hai cột ô nhỏ — ô "Hãng & mẫu" trải hết hàng vì tên xe thường dài. */}
+        <XStack flexWrap="wrap" gap={space.xs}>
+          {tiles.map((tile, index) => (
+            <YStack
+              key={tile.key}
+              w={index === 0 ? '100%' : '48%'}
+              f={index === 0 ? undefined : 1}
+              minWidth="45%"
+              gap={2}
+              p={space.sm}
+              br={radius.sm}
+              bg={colors.surfaceMuted}
+            >
+              <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
+                {tile.label}
+              </Text>
+              <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+                {tile.value}
+              </Text>
+            </YStack>
+          ))}
+        </XStack>
+      </YStack>
+    </Card>
+  );
+}
+
 function SpecsCard({ vehicle }: { vehicle: VehicleDetail }) {
   const t = useTranslations('Vehicles.overview');
   const tLabels = useTranslations('Common.labels');
   const fmt = useAppFormat();
-  const domainLabel = useDomainLabel();
-  // Xe lưu KEY của danh mục, không lưu nhãn — nhãn tra từ `catalog_items` do admin cấu hình.
-  const { brandLabel, bodyTypeLabel, fuelTypeLabel, featureLabel } = useCatalogLabels();
+  const { featureLabel } = useCatalogLabels();
+  // Danh sách theo ma trận `vehicleFieldPolicy` — ô không áp dụng cho loại xe này VẮNG hẳn.
+  const specs = useVehicleSpecItems(vehicle);
 
   const empty = tLabels('emptyValue');
-  /*
-   * Số đo kèm đơn vị. Con số đi qua `fmt.count` để dấu phân tách nhóm theo ngôn ngữ đang xem
-   * (`4.630` vi · `4,630` en). Đơn vị (mm/kg/cc/HP/L per 100km) là KÝ HIỆU, không dịch.
-   */
-  const metric = (value: number | string | null | undefined, unit: string): string =>
-    value == null || value === '' ? empty : t('metric', { value: fmt.count(Number(value)), unit });
-
-  /**
-   * 17 dòng thông số, dựng thành DỮ LIỆU thay vì 17 khối JSX.
-   *
-   * Khoá message liệt kê tường minh trong hàm này chứ không ghép động: `t('specs.' + name)` lọt
-   * qua typecheck của use-intl rồi vỡ lúc chạy khi một khoá bị đổi tên.
-   */
-  const specRows = (): { label: string; value: string }[] => [
-    { label: t('specs.brand'), value: brandLabel(vehicle.brand) || empty },
-    { label: t('specs.model'), value: vehicle.model || empty },
-    { label: t('specs.bodyType'), value: bodyTypeLabel(vehicle.bodyType) ?? empty },
-    {
-      label: t('specs.manufactureYear'),
-      value: vehicle.manufactureYear ? String(vehicle.manufactureYear) : empty,
-    },
-    { label: t('specs.seatCount'), value: vehicle.seatCount ? String(vehicle.seatCount) : empty },
-    { label: t('specs.fuelType'), value: fuelTypeLabel(vehicle.fuelType) ?? empty },
-    { label: t('specs.color'), value: vehicle.color || empty },
-    { label: t('specs.length'), value: metric(vehicle.lengthMm, 'mm') },
-    { label: t('specs.width'), value: metric(vehicle.widthMm, 'mm') },
-    { label: t('specs.height'), value: metric(vehicle.heightMm, 'mm') },
-    { label: t('specs.curbWeight'), value: metric(vehicle.curbWeightKg, 'kg') },
-    {
-      label: t('specs.engineDisplacement'),
-      value: metric(vehicle.engineDisplacementCc, 'cc'),
-    },
-    { label: t('specs.horsepower'), value: metric(vehicle.horsepowerHp, 'HP') },
-    {
-      label: t('specs.transmission'),
-      value: vehicle.transmission ? domainLabel('transmissionType', vehicle.transmission) : empty,
-    },
-    {
-      label: t('specs.fuelCombined'),
-      value: metric(vehicle.fuelConsumptionCombined, 'L/100km'),
-    },
-    { label: t('specs.createdAt'), value: fmt.dateTime(vehicle.createdAt) },
-    { label: t('specs.updatedAt'), value: fmt.dateTime(vehicle.updatedAt) },
+  const rows = [
+    ...specs.map((item) => ({ key: item.key, label: item.label, value: item.value ?? empty })),
+    { key: 'created', label: t('specs.createdAt'), value: fmt.dateTime(vehicle.createdAt) },
+    { key: 'updated', label: t('specs.updatedAt'), value: fmt.dateTime(vehicle.updatedAt) },
   ];
 
   return (
@@ -1190,15 +1313,11 @@ function SpecsCard({ vehicle }: { vehicle: VehicleDetail }) {
         <BlockTitle>{t('specs.title')}</BlockTitle>
 
         {/*
-          Bảng thông số là chỗ DUY NHẤT trong app có nhãn dài mà giá trị ngắn ("Trọng lượng bản
-          thân" ↔ "—"), nên `labelWide` bật cho CẢ bảng thay vì gõ lại ở từng dòng — tỉ lệ 3:7
-          mặc định làm gần như mọi nhãn ở đây xuống hai dòng.
-
-          Vẫn liệt kê ĐỦ mọi dòng kể cả khi rỗng, y như `Descriptions` của web: một ô "—" nói
-          "chưa nhập", còn giấu hẳn dòng đi thì người dùng không biết trường đó có tồn tại.
+          `labelWide` cho CẢ bảng: nhãn dài, giá trị ngắn. Ô áp dụng mà chưa nhập vẫn có dòng "—"
+          (y như `Descriptions` của web); ô không áp dụng cho loại xe thì không có dòng.
         */}
-        {specRows().map((row) => (
-          <DataRow key={row.label} label={row.label} value={row.value} labelWide />
+        {rows.map((row) => (
+          <DataRow key={row.key} label={row.label} value={row.value} labelWide />
         ))}
 
         {vehicle.features.length > 0 ? (
@@ -1227,20 +1346,13 @@ function SpecsCard({ vehicle }: { vehicle: VehicleDetail }) {
  * Tóm tắt nguồn xe. Chi tiết tài chính chỉ tải khi người xem có `finance.view` — người không có
  * quyền chỉ thấy HÌNH THỨC (đã nằm sẵn trên bản ghi xe), không thấy con số.
  */
-function SourceCard({
-  vehicle,
-  customerScope,
-}: {
-  vehicle: VehicleDetail;
-  /** Khu tài khoản: nguồn xe là sổ sách gian hàng, không có mục nào ở đó — không bày lối vào. */
-  customerScope: boolean;
-}) {
+function SourceCard({ vehicle }: { vehicle: VehicleDetail }) {
   const t = useTranslations('Vehicles.overview');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
-  const { has } = usePermissions();
-
-  const canViewFinance = has(PERMISSION.FINANCE_VIEW);
+  // Web: `can.source` (quyền ∧ cờ gói finance) — chỉ đọc permission thì tuyến không có gói
+  // nhận 403 cho `GET /vehicles/:id/source`.
+  const canViewFinance = useVehicleCapabilities().source;
   const navigateOnce = useNavigateOnce();
   const source = useVehicleSource(vehicle.id, canViewFinance);
   const detail = source.data?.detail ?? null;
@@ -1295,10 +1407,10 @@ function SourceCard({
           Liên kết xuống hồ sơ nguồn xe & tài chính — web có, app thiếu cho tới giờ.
           Chưa khai nguồn xe thì đổi thành lời mời bổ sung, đúng hai nhánh của web.
         */}
-        {canViewFinance && !customerScope && !source.isPending ? (
+        {canViewFinance && !source.isPending ? (
           detail ? (
             <BlockLink
-              label={t('source.detailLink')}
+              label={t('source.viewLink')}
               onPress={() =>
                 navigateOnce(ROUTES.manage.vehicleEditTab(vehicle.id, VEHICLE_EDIT_TAB.SOURCE))
               }
@@ -1320,47 +1432,163 @@ function SourceCard({
   );
 }
 
-function MediaCard({ vehicle }: { vehicle: VehicleDetail }) {
+/**
+ * Thư viện ảnh — bản native của `MediaCard` web (02/10/2026): luôn có mặt (rỗng thì nói rỗng),
+ * ảnh bìa đứng đầu kèm nhãn "Ảnh bìa", mỗi ô mang nhãn vị trí, tối đa 6 ô và ô thứ 6 đếm phần dư.
+ *
+ * Ảnh loại "Ảnh khác" KHÔNG trưng — luật của app, xem `vehicleGalleryItems`.
+ */
+function MediaCard({
+  vehicle,
+  canEdit,
+  customerScope,
+}: {
+  vehicle: VehicleDetail;
+  canEdit: boolean;
+  customerScope: boolean;
+}) {
   const t = useTranslations('Vehicles.overview');
   const tStates = useTranslations('Common.states');
-  /*
-    State đặt TRƯỚC lệnh thoát sớm: hook phải chạy đủ và đúng thứ tự ở mọi lần render, mà số ảnh
-    thì đổi được sau khi tải xong.
-  */
+  const navigateOnce = useNavigateOnce();
+  const slotLabel = useImageSlotLabel();
+  // Bề ngang THẬT của lưới (đo lúc layout) — đệm thẻ đổi theo theme nên không suy từ màn hình được.
+  const [gridWidth, setGridWidth] = useState(0);
   const [preview, setPreview] = useState<string | null>(null);
+  /*
+   * Web giữ ảnh dư trong nhóm xem trước để mũi tên lướt qua đủ mọi ảnh. `PhotoViewer` của app
+   * xem từng ảnh, nên chạm ô "+N" MỞ RỘNG lưới ra đủ ảnh — mọi ảnh vẫn tới được trình xem.
+   */
+  const [expanded, setExpanded] = useState(false);
 
-  if (vehicle.images.length === 0) return null;
+  const items = vehicleGalleryItems(vehicle, slotLabel);
+  const overflow = items.length - GALLERY_VISIBLE;
+  const visible = expanded ? items : items.slice(0, GALLERY_VISIBLE);
+  const manageHref = canEdit
+    ? vehicleEditPartHref(vehicle.id, VEHICLE_EDIT_TAB.MEDIA, customerScope)
+    : null;
+  // Lưới 3 cột phủ kín bề ngang thẻ: chia ba sau hai khe.
+  const tile = Math.floor((gridWidth - space.xs * (GALLERY_COLUMNS - 1)) / GALLERY_COLUMNS);
 
   return (
     <Card>
       <YStack gap={space.sm}>
-        <BlockTitle>{t('media.title')}</BlockTitle>
-        {/* Cuộn ngang: mười ảnh xếp lưới dọc đẩy mọi khối bên dưới ra khỏi tầm với. */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <XStack gap={space.xs}>
-            {vehicle.images.map((url) => (
-              /*
-                Chạm để xem TOÀN MÀN — web bọc lưới trong `PreviewImageGroup` của AntD, và một
-                thư viện ảnh không phóng to được thì chỉ là mấy con tem: ở 72pt không nhìn ra vết
-                xước hay móp, tức không dùng được vào đúng việc người ta mở nó ra để làm.
-              */
-              <Pressable
-                key={url}
-                onPress={() => setPreview(url)}
-                accessibilityRole="imagebutton"
-                accessibilityLabel={t('media.title')}
-              >
-                <Image
-                  source={{ uri: url }}
-                  style={styles.thumb}
-                  cachePolicy="memory-disk"
-                  transition={150}
-                  accessible={false}
-                />
-              </Pressable>
-            ))}
+        <BlockTitle
+          {...(manageHref
+            ? {
+                action: (
+                  <BlockLink
+                    label={t('media.manageLink')}
+                    onPress={() => navigateOnce(manageHref)}
+                  />
+                ),
+              }
+            : {})}
+        >
+          {t('media.title')}
+        </BlockTitle>
+        {items.length === 0 ? (
+          <XStack ai="center" gap={space.sm}>
+            <Ionicons name="image-outline" size={iconSize.md} color={colors.textMuted} />
+            <Muted>{t('media.empty')}</Muted>
           </XStack>
-        </ScrollView>
+        ) : (
+          <XStack
+            flexWrap="wrap"
+            gap={space.xs}
+            accessibilityLabel={t('media.title')}
+            onLayout={(e) => setGridWidth(e.nativeEvent.layout.width)}
+          >
+            {tile > 0 &&
+              visible.map((item, index) => {
+                const isMore = !expanded && index === GALLERY_VISIBLE - 1 && overflow > 0;
+                return (
+                  /*
+                  Chạm để xem TOÀN MÀN — ở cỡ ô nhỏ không nhìn ra vết xước hay móp, tức không dùng
+                  được vào đúng việc người ta mở thư viện ra để làm.
+                */
+                  <Pressable
+                    key={`${index}-${item.url}`}
+                    onPress={() => (isMore ? setExpanded(true) : setPreview(item.url))}
+                    accessibilityRole="imagebutton"
+                    accessibilityLabel={
+                      isMore
+                        ? t('media.more', { count: overflow })
+                        : (item.label ?? t('media.title'))
+                    }
+                  >
+                    <YStack
+                      w={tile}
+                      h={tile}
+                      br={radius.sm}
+                      overflow="hidden"
+                      bg={colors.surfaceMuted}
+                    >
+                      <Image
+                        source={{ uri: item.url }}
+                        style={StyleSheet.absoluteFill}
+                        cachePolicy="memory-disk"
+                        transition={150}
+                        accessible={false}
+                      />
+                      {index === 0 && item.url === vehicle.mainImageUrl ? (
+                        <XStack
+                          pos="absolute"
+                          top={space.xs}
+                          left={space.xs}
+                          ai="center"
+                          gap={2}
+                          px={space.xs}
+                          py={1}
+                          br={radius.pill}
+                          bg={colors.primary}
+                        >
+                          <Ionicons name="star" size={10} color={colors.text} />
+                          <Text col={colors.text} fos={fontSize.label} fow={fontWeight.semibold}>
+                            {t('media.cover')}
+                          </Text>
+                        </XStack>
+                      ) : null}
+                      {item.label ? (
+                        <YStack
+                          pos="absolute"
+                          bottom={0}
+                          left={0}
+                          right={0}
+                          px={space.xs}
+                          py={2}
+                          bg={colors.overlay}
+                        >
+                          <Text col={colors.textInverse} fos={fontSize.label} numberOfLines={1}>
+                            {item.label}
+                          </Text>
+                        </YStack>
+                      ) : null}
+                      {isMore ? (
+                        <YStack
+                          pos="absolute"
+                          top={0}
+                          bottom={0}
+                          left={0}
+                          right={0}
+                          ai="center"
+                          jc="center"
+                          bg={colors.overlay}
+                        >
+                          <Text
+                            col={colors.textInverse}
+                            fos={fontSize.bodyLg}
+                            fow={fontWeight.bold}
+                          >
+                            {t('media.more', { count: overflow })}
+                          </Text>
+                        </YStack>
+                      ) : null}
+                    </YStack>
+                  </Pressable>
+                );
+              })}
+          </XStack>
+        )}
       </YStack>
 
       <PhotoViewer
@@ -1427,22 +1655,30 @@ function ActivityCard({
                     đứng CUỐI: nó là thứ ít được đọc nhất trong ba.
                   */}
                   <YStack f={1} gap={2}>
-                    <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-                      {t('activity.item', {
-                        code: booking.code,
-                        status: domainLabel('bookingStatus', booking.status),
-                      })}
-                    </Text>
+                    <XStack gap={space.sm} ai="flex-start">
+                      <Text f={1} col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+                        {booking.customerName}
+                      </Text>
+                      <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+                        {fmt.money(booking.totalAmount)}
+                      </Text>
+                    </XStack>
                     <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                      {t('activity.sub', {
-                        customer: booking.customerName,
+                      {t('activity.bookingRange', {
+                        code: booking.code,
                         range: shortRange(booking.pickupAt, booking.returnAt),
-                        amount: fmt.money(booking.totalAmount),
                       })}
                     </Text>
-                    <Text col={colors.textMuted} fos={fontSize.label}>
-                      {fmt.dateTime(booking.updatedAt)}
-                    </Text>
+                    <XStack ai="center" jc="space-between" gap={space.sm} flexWrap="wrap">
+                      <Text col={colors.textMuted} fos={fontSize.label}>
+                        {fmt.shortDateTime(booking.updatedAt)}
+                      </Text>
+                      <StatusBadge
+                        label={domainLabel('bookingStatus', booking.status)}
+                        color={metaColor(BOOKING_STATUS_META, booking.status)}
+                        size="sm"
+                      />
+                    </XStack>
                   </YStack>
                 </XStack>
               </YStack>

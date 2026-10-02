@@ -71,6 +71,18 @@ export const receiptFormSchema = yup.object({
       is: RECEIPT_LINK_MODE.VEHICLE,
       then: (schema) => schema.required('errors.vehicleRequired'),
     }),
+  /**
+   * Chi nhánh phát sinh — BẮT BUỘC ở chế độ "Không gắn" (ADR 0052), gương của schema web.
+   * Gắn xe/đơn thì chi nhánh suy TỪ XE, nên `when` chỉ bắt ở chế độ NONE.
+   */
+  branchId: yup
+    .string()
+    .nullable()
+    .default(null)
+    .when('linkMode', {
+      is: RECEIPT_LINK_MODE.NONE,
+      then: (schema) => schema.required('errors.branchRequired'),
+    }),
   referenceCode: yup.string().trim().max(255).default(''),
   /**
    * BẮT BUỘC, và trần 500 chứ không phải 2000 của DTO.

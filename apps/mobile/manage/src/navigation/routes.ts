@@ -24,7 +24,11 @@ export const ROUTES = {
   explore: allNotAvailable(BASE_ROUTES.explore),
   booking: allNotAvailable(BASE_ROUTES.booking),
   chat: allNotAvailable(BASE_ROUTES.chat),
-  listYourVehicle: allNotAvailable(BASE_ROUTES.listYourVehicle),
+  listYourVehicle: {
+    ...allNotAvailable(BASE_ROUTES.listYourVehicle),
+    // Wizard đăng nhanh là route THẬT ở đây — đội xe mở nó như web (`?from=manage`).
+    register: BASE_ROUTES.listYourVehicle.register,
+  },
   content: allNotAvailable(BASE_ROUTES.content),
   account: {
     ...allNotAvailable(BASE_ROUTES.account),

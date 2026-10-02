@@ -5,7 +5,7 @@ import { ROUTES } from '@/navigation/routes';
 import { vehicleSchedulePath } from './calendar-link';
 import {
   vehicleBookingsHref,
-  vehicleEditHref,
+  vehicleEditPartHref,
   vehicleEditHubHref,
   vehicleOptimizationHref,
   vehiclePricingHref,
@@ -23,7 +23,7 @@ const pathOf = (href: unknown) =>
  */
 describe('workspace-links — khu TÀI KHOẢN không có đích nào ở /manage', () => {
   it.each([
-    ['sửa (tab)', vehicleEditHref(ID, VEHICLE_EDIT_TAB.DOCUMENTS, true)],
+    ['sửa (tab)', vehicleEditPartHref(ID, VEHICLE_EDIT_TAB.DOCUMENTS, true)],
     ['hub sửa', vehicleEditHubHref(ID, true)],
     ['giá', vehiclePricingHref(ID, true)],
     ['tối ưu', vehicleOptimizationHref({ id: ID, serviceTypes: [SERVICE_TYPE.SELF_DRIVE] }, true)],
@@ -40,10 +40,10 @@ describe('workspace-links — khu TÀI KHOẢN không có đích nào ở /manag
   });
 
   it('tab sửa → mục tương ứng của không gian quản lý xe', () => {
-    expect(vehicleEditHref(ID, VEHICLE_EDIT_TAB.DOCUMENTS, true)).toEqual(
+    expect(vehicleEditPartHref(ID, VEHICLE_EDIT_TAB.DOCUMENTS, true)).toEqual(
       ROUTES.account.vehicleManageSection(ID, VEHICLE_MANAGE_SECTION.DOCUMENTS),
     );
-    expect(vehicleEditHref(ID, VEHICLE_EDIT_TAB.MEDIA, true)).toEqual(
+    expect(vehicleEditPartHref(ID, VEHICLE_EDIT_TAB.MEDIA, true)).toEqual(
       ROUTES.account.vehicleManageSection(ID, VEHICLE_MANAGE_SECTION.IMAGES),
     );
   });
@@ -73,15 +73,32 @@ describe('workspace-links — khu TÀI KHOẢN không có đích nào ở /manag
   });
 });
 
-describe('workspace-links — cổng QUẢN LÝ giữ nguyên đích cũ', () => {
+describe('vehicleEditPartHref — mục không có ở khu tài khoản thì null (web part)', () => {
+  it('bảo dưỡng / nguồn xe', () => {
+    expect(vehicleEditPartHref(ID, VEHICLE_EDIT_TAB.MAINTENANCE, true)).toBeNull();
+    expect(vehicleEditPartHref(ID, VEHICLE_EDIT_TAB.SOURCE, true)).toBeNull();
+  });
+  it('mục vận hành mới ánh xạ một-một sang mục của không gian quản lý xe', () => {
+    expect(vehicleEditPartHref(ID, VEHICLE_EDIT_TAB.WITH_DRIVER_SURCHARGES, true)).toEqual(
+      ROUTES.account.vehicleManageSection(ID, VEHICLE_MANAGE_SECTION.WITH_DRIVER_SURCHARGES),
+    );
+    expect(vehicleEditPartHref(ID, VEHICLE_EDIT_TAB.OPERATIONS, true)).toEqual(
+      ROUTES.account.vehicleManageSection(ID, VEHICLE_MANAGE_SECTION.HANDOVER_TIME),
+    );
+  });
+});
+
+describe('workspace-links — cổng QUẢN LÝ: mục của màn sửa xe', () => {
   it('đích cổng quản lý', () => {
-    expect(vehicleEditHref(ID, VEHICLE_EDIT_TAB.DOCUMENTS, false)).toEqual(
+    expect(vehicleEditPartHref(ID, VEHICLE_EDIT_TAB.DOCUMENTS, false)).toEqual(
       ROUTES.manage.vehicleEditTab(ID, VEHICLE_EDIT_TAB.DOCUMENTS),
     );
     expect(vehicleEditHubHref(ID, false)).toEqual(ROUTES.manage.vehicleEdit(ID));
-    expect(vehiclePricingHref(ID, false)).toEqual(ROUTES.manage.vehiclePricing(ID));
+    expect(vehiclePricingHref(ID, false)).toEqual(
+      ROUTES.manage.vehicleEditTab(ID, VEHICLE_EDIT_TAB.PRICING),
+    );
     expect(vehicleOptimizationHref({ id: ID, serviceTypes: [] }, false)).toEqual(
-      ROUTES.manage.vehicleOptimization(ID),
+      ROUTES.manage.vehicleEditTab(ID, VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION),
     );
     expect(vehicleBookingsHref(ID, false)).toEqual(ROUTES.manage.bookings({ vehicleId: ID }));
     // Builder thay literal: ở app Customer mọi đích /manage đổ về handoff /partner, còn ở app

@@ -10,13 +10,14 @@ import {
   type CancellationReasonCategory,
 } from '@xeprime/types';
 import { REASON_MAX } from '@/lib/reason';
+import { FieldLabel } from '@/components/ui/Field';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
 import { InfoHint } from '@/components/ui/InfoHint';
 import { TextField } from '@/components/ui/TextField';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { colors, fontSize, radius, space } from '@/theme/tokens';
 import type { BookingRequestDecisionTarget } from '../api';
 
 type CancelValues = { reason: string };
@@ -123,9 +124,7 @@ export function CancelRequestSheet({
       </YStack>
 
       <YStack gap={space.sm} p={space.md} br={radius.md} bg={colors.surfaceMuted}>
-        <Text col={colors.textMuted} fos={fontSize.bodySm} fow={fontWeight.medium}>
-          {t('categoryLabel')}
-        </Text>
+        <FieldLabel label={t('categoryLabel')} required />
         <XStack gap={space.xs} flexWrap="wrap">
           {CANCELLATION_REASON_CATEGORY_VALUES.map((value) => (
             <Chip

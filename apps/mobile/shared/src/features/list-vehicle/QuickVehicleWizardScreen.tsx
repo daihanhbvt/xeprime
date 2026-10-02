@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useRouter } from 'expo-router';
+import { useBranchReturnParam } from '@/features/branches/hooks/use-branch-filter';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { PERMISSION } from '@xeprime/types';
+import { PERMISSION, PUBLISH_REQUIREMENT, type PublishRequirement } from '@xeprime/types';
 import type { OwnerProfileValues } from '@xeprime/validators';
 import { uploadsApi, type UploadMeta } from '@/api/uploads/api';
 import { useAppToast } from '@/components/feedback/use-app-toast';
@@ -19,16 +20,22 @@ import { useActiveBranches } from '@/features/branches/hooks/use-branches';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { VehicleWizardBar } from '@/features/vehicles/components/VehicleWizardBar';
+import { usePublicationLabels } from '@/features/vehicles/hooks/use-publication-labels';
+import { missingPublishRequirementsForForm } from '@/features/vehicles/publication';
 import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { goBackOr } from '@/navigation/go-back-or';
 import { branchLabel } from '@/features/branches/api';
 import { ROUTES, vehicleListPathFor } from '@/navigation/routes';
-import type { VehicleRegistrationSource } from '@/navigation/vehicle-registration-source';
+import {
+  VEHICLE_REGISTRATION_SOURCE,
+  type VehicleRegistrationSource,
+} from '@/navigation/vehicle-registration-source';
 import { colors, fontSize, space } from '@/theme/tokens';
 import {
   QUICK_VEHICLE_DEFAULTS,
+  QUICK_VEHICLE_FIXED,
   missingEnergyFields,
   quickVehicleSchema,
   type QuickVehicleValues,
@@ -48,7 +55,12 @@ const STEP_FIELDS = {
     'name',
     'brand',
     'model',
+    'vehicleCatalogModelId',
     'seatCount',
+    // Phân khúc xe máy — bắt buộc với xe máy (schema). Thiếu nó ở đây thì lỗi của ô nằm ở bước info
+    // nhưng wizard không nhảy về đúng bước (web cũng thiếu — đã ghi đề xuất).
+    'motorbikeCategory',
+    'bodyType',
     'manufactureYear',
     'color',
     'fuelType',
@@ -76,11 +88,27 @@ const STEP_FIELDS = {
     'excessDistanceFeePerKm',
     'termsText',
   ],
-  images: ['mainImageUrl', 'images'],
+  images: ['mainImageUrl', 'images', 'media'],
 } as const satisfies Record<string, ReadonlyArray<keyof QuickVehicleValues>>;
 
 const STEP_KEYS = ['info', 'rental', 'images'] as const;
 type StepKey = (typeof STEP_KEYS)[number];
+
+/**
+ * Điều kiện lên chợ thuộc BƯỚC nào (30/09/2026) — thiếu thì chặn đúng bước đó và đưa người dùng
+ * về đúng chỗ. Xe tạo qua wizard phải ĐỦ điều kiện lên chợ (như web).
+ */
+const REQUIREMENT_STEP: Record<PublishRequirement, StepKey> = {
+  [PUBLISH_REQUIREMENT.SELF_DRIVE_PRICE]: 'rental',
+  [PUBLISH_REQUIREMENT.LONG_TERM_PRICE]: 'rental',
+  [PUBLISH_REQUIREMENT.WITH_DRIVER_PRICE]: 'rental',
+  [PUBLISH_REQUIREMENT.MAIN_IMAGE]: 'images',
+  [PUBLISH_REQUIREMENT.PHOTOS]: 'images',
+  [PUBLISH_REQUIREMENT.PLATE_NUMBER]: 'info',
+  [PUBLISH_REQUIREMENT.IDENTITY]: 'info',
+  [PUBLISH_REQUIREMENT.ENERGY_SPEC]: 'info',
+  [PUBLISH_REQUIREMENT.BRANCH_LOCATION]: 'rental',
+};
 
 /**
  * Wizard ĐĂNG XE NHANH — bản native của `QuickVehicleWizard`.
@@ -101,6 +129,7 @@ type StepKey = (typeof STEP_KEYS)[number];
  */
 export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrationSource }) {
   const t = useTranslations('ListYourVehicle.wizard');
+  const { formGaps } = usePublicationLabels();
   const tOwner = useTranslations('ListYourVehicle.ownerProfile');
   const tCommon = useTranslations('Common.actions');
   const router = useRouter();
@@ -126,7 +155,7 @@ export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrati
     // thuộc namespace của form xe — không có vế này thì chúng lọt ra giao diện ở dạng thô.
     'Vehicles.form.validation',
   );
-  const { control, getValues, setValue, setError, trigger, formState } =
+  const { control, getValues, getFieldState, setValue, setError, trigger } =
     useForm<QuickVehicleValues>({
       resolver,
       defaultValues: QUICK_VEHICLE_DEFAULTS,
@@ -150,11 +179,17 @@ export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrati
 
   /** Chi nhánh mặc định chọn sẵn — chủ xe một chi nhánh không phải chọn, nhưng vẫn thấy nó ở bước 2. */
   const branchItems = branches.data?.items;
+  /* Gợi ý từ danh sách đang lọc chi nhánh (`?branchId=` — ADR 0052 điều 6) thắng chi nhánh mặc định. */
+  const hintedBranchId = useBranchReturnParam();
   useEffect(() => {
     if (getValues('branchId')) return;
-    const preferred = branchItems?.find((b) => b.isDefault) ?? branchItems?.[0] ?? null;
+    const preferred =
+      branchItems?.find((b) => b.id === hintedBranchId) ??
+      branchItems?.find((b) => b.isDefault) ??
+      branchItems?.[0] ??
+      null;
     if (preferred) setValue('branchId', preferred.id, { shouldValidate: false });
-  }, [branchItems, getValues, setValue]);
+  }, [branchItems, getValues, setValue, hintedBranchId]);
 
   /* Nhãn "Tên · Tỉnh" dùng chung với web: chi nhánh thiếu tỉnh nói thẳng ra, vì xe của nó không
      lên chợ được — đó là việc cần xử lý, không phải chi tiết để giấu. */
@@ -349,18 +384,47 @@ export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrati
     );
   }
 
+  /** Điều kiện lên chợ còn thiếu — CÙNG luật với cổng gửi duyệt ở backend. */
+  function publishGaps(): PublishRequirement[] {
+    return missingPublishRequirementsForForm({
+      ...getValues(),
+      serviceTypes: QUICK_VEHICLE_FIXED.serviceTypes,
+    });
+  }
+
+  function publishError(keys: readonly PublishRequirement[]): string {
+    return t('errors.publishRequired', { items: formGaps(keys, getValues()) });
+  }
+
   /** Lưu — `submitForReview` quyết định có gọi `submit-public` sau khi tạo hay không. */
   async function save(submitForReview: boolean) {
     setStepError(null);
     const valid = await trigger(steps.flatMap((s) => [...s.fields]));
     const energyMissing = missingEnergyFields(getValues());
+    const publishMissing = publishGaps();
+    if (valid && energyMissing.length === 0 && publishMissing.length > 0) {
+      setStep(REQUIREMENT_STEP[publishMissing[0]!]);
+      setStepError(publishError(publishMissing));
+      return;
+    }
     if (!valid || energyMissing.length > 0) {
-      // Đưa người dùng về đúng bước chứa lỗi — không để họ đứng ở bước ảnh với một toast chung.
+      /*
+       * Đưa người dùng về đúng bước chứa lỗi. Đọc lỗi bằng `getFieldState` — `formState.errors`
+       * trong closure này là ảnh chụp của lần render TRƯỚC `trigger`, nên lần bấm đầu từng nhảy
+       * nhầm về bước 1.
+       */
       const target = steps.find((s) =>
-        s.fields.some((field) => formState.errors[field] || energyMissing.includes(field as never)),
+        s.fields.some(
+          (field) => getFieldState(field).error || energyMissing.includes(field as never),
+        ),
       );
       if (target) setStep(target.key);
-      if (energyMissing.length > 0) setStepError(t('errors.energyRequired'));
+      if (energyMissing.length > 0) {
+        setStepError(publishError([PUBLISH_REQUIREMENT.ENERGY_SPEC]));
+      } else if (target) {
+        const targetGaps = publishMissing.filter((key) => REQUIREMENT_STEP[key] === target.key);
+        if (targetGaps.length > 0) setStepError(publishError(targetGaps));
+      }
       return;
     }
 
@@ -429,7 +493,12 @@ export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrati
     const okay = await trigger([...(steps[vehicleIndex]?.fields ?? STEP_FIELDS[step])]);
     const energyMissing = step === 'info' ? missingEnergyFields(getValues()) : [];
     if (!okay || energyMissing.length > 0) {
-      if (energyMissing.length > 0) setStepError(t('errors.energyRequired'));
+      if (energyMissing.length > 0) setStepError(publishError([PUBLISH_REQUIREMENT.ENERGY_SPEC]));
+      return;
+    }
+    const stepMissing = publishGaps().filter((key) => REQUIREMENT_STEP[key] === step);
+    if (stepMissing.length > 0) {
+      setStepError(publishError(stepMissing));
       return;
     }
     setStep(STEP_KEYS[vehicleIndex + 1] as StepKey);
@@ -480,7 +549,11 @@ export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrati
                 <InlineAction
                   label={t('manageVehicle')}
                   onPress={() =>
-                    router.push(ROUTES.account.vehicleManage(registration.createdVehicle!.id))
+                    router.push(
+                      source === VEHICLE_REGISTRATION_SOURCE.MANAGE
+                        ? ROUTES.manage.vehicleDetail(registration.createdVehicle!.id)
+                        : ROUTES.account.vehicleManage(registration.createdVehicle!.id),
+                    )
                   }
                 />
               </YStack>

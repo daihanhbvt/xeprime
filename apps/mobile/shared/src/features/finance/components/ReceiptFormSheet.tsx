@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -42,6 +42,8 @@ import {
   useFinanceCategories,
   useReceiptVehicleOptions,
 } from '../hooks/use-finance';
+import { branchLabel } from '@/api/branches/api';
+import { useActiveBranches } from '@/features/branches/hooks/use-branches';
 import { receiptFormSchema, type ReceiptFormValues } from '../schema';
 import { ReceiptAttachmentsField } from './ReceiptAttachmentsField';
 import { BookingLinkCard, VehicleLinkCard } from './ReceiptLinkCard';
@@ -77,6 +79,7 @@ const DEFAULTS = (initialVehicleId: string | null): ReceiptFormValues => ({
   linkMode: initialVehicleId ? RECEIPT_LINK_MODE.VEHICLE : RECEIPT_LINK_MODE.NONE,
   bookingId: null,
   vehicleId: initialVehicleId,
+  branchId: null,
   referenceCode: '',
   description: '',
   keepOpen: false,
@@ -131,6 +134,26 @@ export function ReceiptFormSheet({
   const linkMode = useWatch({ control, name: 'linkMode' });
   const bookingId = useWatch({ control, name: 'bookingId' });
   const vehicleId = useWatch({ control, name: 'vehicleId' });
+
+  /*
+   * Chi nhánh phát sinh (ADR 0052) — CHỈ chi nhánh đang hoạt động, và chỉ hỏi ở chế độ "Không
+   * gắn"; gắn xe/đơn thì chi nhánh suy TỪ XE. Gian hàng một chi nhánh: điền sẵn và khoá ô.
+   */
+  const tBranches = useTranslations('Branches');
+  const branches = useActiveBranches(open);
+  const branchOptions = useMemo(
+    () =>
+      (branches.data?.items ?? []).map((b) => ({
+        value: b.id,
+        label: branchLabel(b, tBranches('labels.noProvince')),
+      })),
+    [branches.data, tBranches],
+  );
+  const soleBranchId = branchOptions.length === 1 ? branchOptions[0]!.value : null;
+  useEffect(() => {
+    if (!open || !soleBranchId) return;
+    if (!getValues('branchId')) setValue('branchId', soleBranchId);
+  }, [open, soleBranchId, getValues, setValue]);
 
   /**
    * Đối tượng đã chọn giữ ở state màn, không đọc lại từ danh sách gợi ý.
@@ -244,7 +267,9 @@ export function ReceiptFormSheet({
         ? { bookingId: values.bookingId || undefined, vehicleId: values.vehicleId || undefined }
         : values.linkMode === RECEIPT_LINK_MODE.VEHICLE
           ? { vehicleId: values.vehicleId || undefined }
-          : {};
+          // Chỉ khoản KHÔNG gắn mới mang chi nhánh tự khai — gắn xe thì chi nhánh suy TỪ XE, và
+          // server từ chối nếu nhận cả hai (ADR 0052).
+          : { branchId: values.branchId || undefined };
 
     const body: CreateReceiptInput = {
       type: values.type as CreateReceiptInput['type'],
@@ -275,7 +300,12 @@ export function ReceiptFormSheet({
          * định của lối vào từ hồ sơ xe — cái đó đến từ NGỮ CẢNH màn hình, không phải từ phiếu cũ.
          */
         if (values.keepOpen) {
-          reset({ ...DEFAULTS(initialVehicleId), keepOpen: true });
+          /*
+           * `branchId` của gian hàng MỘT chi nhánh phải đi theo: effect tự điền chạy theo
+           * `[open, soleBranchId]`, cả hai không đổi khi tấm ở lại mở — bỏ nó là phiếu thứ hai
+           * thiếu chi nhánh trong khi ô đang khoá, không sửa được.
+           */
+          reset({ ...DEFAULTS(initialVehicleId), branchId: soleBranchId, keepOpen: true });
           return;
         }
         close();
@@ -403,6 +433,24 @@ export function ReceiptFormSheet({
           {vehicleMissing ? <Callout tone="danger">{t('vehicleGone')}</Callout> : null}
           {selectedVehicle ? <VehicleLinkCard vehicle={selectedVehicle} /> : null}
         </YStack>
+      ) : null}
+
+      {!linkingBooking && !linkingVehicle ? (
+        branchOptions.length === 0 && !branches.isLoading ? (
+          // Chưa có chi nhánh nào: NÓI RA thay vì để nút Lưu bấm mãi không ăn.
+          <Callout tone="warning">{t('branchEmpty')}</Callout>
+        ) : (
+          <SelectField
+            control={control}
+            name="branchId"
+            label={tBranches('filter.label')}
+            placeholder={t('branchPlaceholder')}
+            hint={t('branchHelp')}
+            options={branchOptions}
+            disabled={branchOptions.length === 1}
+            required
+          />
+        )
       ) : null}
 
       <SelectField

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useMemo } from 'react';
-import type { Href } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -12,6 +12,7 @@ import {
   type Permission,
   type PlanFeature,
 } from '@xeprime/types';
+import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { BlockTitle } from '@/components/ui/BlockTitle';
 import { Button } from '@/components/ui/Button';
@@ -26,6 +27,7 @@ import { LegalDocLinks } from '@/features/legal/components/LegalDocLinks';
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
+import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { colors, fontSize, fontWeight, sizing, space } from '@/theme/tokens';
 import { FaqList } from './components/FaqList';
@@ -127,8 +129,17 @@ const FAQ_KEYS = [
  * (Bản trước báo "đang phát triển" vì app chưa có màn ấy. Nó đã có — một nút báo đang-phát-triển
  * đứng trước một màn đã dựng xong là cách chắc chắn để không ai tìm ra nó.)
  */
-export function SupportCenterScreen() {
+export function SupportCenterScreen({
+  shell = 'manage',
+}: {
+  /**
+   * `stacked` = TRANG CON (`/manage/help`, mở từ dải 'gian hàng bị khoá/hết hạn'): thanh trên có
+   * nút lui về đúng màn vừa bấm thay cho `ManageHeader` của mục menu.
+   */
+  shell?: 'manage' | 'stacked';
+} = {}) {
   const t = useTranslations('ManageCommon');
+  const router = useRouter();
   const { has } = usePermissions();
   const featureStates = useFeatureStates();
   const navigateOnce = useNavigateOnce();
@@ -156,8 +167,18 @@ export function SupportCenterScreen() {
 
   return (
     <>
-      <ManageHeader />
-      <ManagePageTitle title={t('support.title')} subtitle={t('support.subtitle')} />
+      {shell === 'stacked' ? (
+        <AppHeader
+          title={t('support.title')}
+          subtitle={t('support.subtitle')}
+          onBack={() => goBackOr(router, ROUTES.manage.support())}
+        />
+      ) : (
+        <>
+          <ManageHeader />
+          <ManagePageTitle title={t('support.title')} subtitle={t('support.subtitle')} />
+        </>
+      )}
 
       <Screen edges={['left', 'right', 'bottom']}>
         {links.length > 0 ? (

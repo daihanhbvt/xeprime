@@ -34,15 +34,27 @@ type TenantFeature = { feature: PlanFeature; state: FeatureState };
 
 jest.mock('expo-router', () => ({
   useNavigation: () => ({ isFocused: () => true }),
+  useLocalSearchParams: () => ({}),
   /* Chạy callback lúc mount, cleanup lúc unmount — đủ để mô phỏng "màn đang focus". */
   useFocusEffect: (effect: () => void | (() => void)) => {
     const { useEffect } = jest.requireActual<typeof import('react')>('react');
     useEffect(effect, [effect]);
   },
-  useRouter: () => ({ push: mockPush, replace: jest.fn(), back: jest.fn() }),
+  useRouter: () => ({ push: mockPush, replace: jest.fn(), back: jest.fn(), setParams: jest.fn() }),
+  usePathname: () => '/manage',
 }));
 
-jest.mock('@/features/shell/ManageHeader', () => ({ ManageHeader: () => null }));
+/*
+ * Thanh trên thật kéo theo drawer/chat/thông báo — thay bằng ĐÚNG phần dải thường trực của nó, vì
+ * dải trạng thái gian hàng giờ sống trong `ManageHeader` (`ManageShellNotices`), như `AppShell` web.
+ */
+jest.mock('@/features/shell/ManageHeader', () => {
+  const { createElement } = jest.requireActual<typeof import('react')>('react');
+  const { ManageShellNotices } = jest.requireActual<
+    typeof import('@/features/shell/ManageShellNotices')
+  >('@/features/shell/ManageShellNotices');
+  return { ManageHeader: () => createElement(ManageShellNotices) };
+});
 
 function currentUser(
   permissions: Permission[],
@@ -65,6 +77,7 @@ function currentUser(
       slug: 'da-nang',
       status,
       onboardingState: 'package_active',
+      branchScope: 'all',
       roleKey: 'shop_owner',
       logoUrl: null,
       features,
@@ -174,7 +187,7 @@ async function renderScreen(permissions: Permission[], options: Options = {}) {
 
   const receiptsSpy = jest.spyOn(receiptsApi, 'list').mockResolvedValue({
     items: [],
-    meta: { page: 1, limit: 5, total: 0, hasNext: false },
+    meta: { page: 1, limit: 5, total: 0, hasNext: false, unassignedCount: 0 },
   });
 
   const shopSpy = jest.spyOn(tenantsApi, 'myShop');
@@ -374,12 +387,12 @@ describe('ShopDashboardScreen — dải trạng thái và ba bước mở gian h
   it.each([
     [TENANT_STATUS.SUSPENDED, 'Gian hàng đang bị khoá'],
     [TENANT_STATUS.EXPIRED, 'Gói dịch vụ đã hết hạn'],
-  ])('gian hàng %s: nút "Liên hệ hỗ trợ" mở /manage/support', async (status, title) => {
+  ])('gian hàng %s: nút "Liên hệ hỗ trợ" mở trang con /manage/help', async (status, title) => {
     const view = await renderScreen(FULL, { status });
 
     expect(await view.findByText(title)).toBeTruthy();
     await fireEvent.press(view.getByRole('button', { name: 'Liên hệ hỗ trợ' }));
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/manage/support'));
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/manage/help'));
     expect(mockPush).toHaveBeenCalledTimes(1);
   });
 });

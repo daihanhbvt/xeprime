@@ -234,10 +234,16 @@ const MISSING_ODOMETER_LIMIT = 20;
  * theo KM sau đó đều dựa trên một mốc cũ.
  */
 export function useMissingOdometerQueue(
-  { page, q, limit = MISSING_ODOMETER_LIMIT }: { page: number; q?: string; limit?: number },
+  {
+    page,
+    q,
+    branchId,
+    limit = MISSING_ODOMETER_LIMIT,
+  }: { page: number; q?: string; branchId?: string | undefined; limit?: number },
   enabled = true,
 ) {
-  const params = { page, limit, ...(q ? { q } : {}) };
+  // Cùng chi nhánh với ba tab bảo dưỡng của màn (ADR 0052 điều 4).
+  const params = { page, limit, ...(q ? { q } : {}), ...(branchId ? { branchId } : {}) };
   return useQuery({
     queryKey: queryKeys.maintenance.missingReturnKm(params),
     queryFn: () => handoversApi.missingOdometer(params),

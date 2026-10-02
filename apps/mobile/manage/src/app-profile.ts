@@ -1,11 +1,7 @@
 import type { Href } from 'expo-router';
 import { MOBILE_CLIENT_APP, type MobileClientApp } from '@xeprime/types';
 import { APP_SCOPE, type AppScope } from '@/features/shell/app-scope';
-import {
-  exact,
-  listOrDetail,
-  type AllowedDeepLink,
-} from '@/features/notifications/deep-link-kit';
+import { exact, listOrDetail, type AllowedDeepLink } from '@/features/notifications/deep-link-kit';
 import { ROUTES } from '@/navigation/routes';
 
 /**
@@ -28,6 +24,12 @@ export function resolveInitialScope(_params: {
 }): AppScope {
   return APP_SCOPE.MANAGE;
 }
+
+/**
+ * Các khu bảng đổi khu được đưa ra. App này KHÔNG có khu khách (ADR 0051): chọn "Tìm & thuê xe"
+ * chỉ rơi vào `/not-eligible` với một nút Đăng xuất — đưa lựa chọn đó ra là dựng một ngõ cụt.
+ */
+export const SWITCHABLE_SCOPES: readonly AppScope[] = [APP_SCOPE.MANAGE];
 
 /**
  * Khu CUSTOMER không tồn tại ở app này. `ScopeGuard` đá một phiên mất quyền về

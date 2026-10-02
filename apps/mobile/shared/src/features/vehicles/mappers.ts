@@ -3,6 +3,7 @@ import {
   VEHICLE_TYPE,
   VEHICLE_SOURCE_TYPE,
   vehicleFeatureAppliesTo,
+  vehicleImageTypeOf,
   type BodyType,
   type FuelType,
   type ServiceType,
@@ -98,6 +99,9 @@ export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput
     mainImageUrl: values.mainImageUrl ?? undefined,
     // Gửi mảng để backend replace-set; lọc URL rỗng phòng dữ liệu cũ có dòng trống.
     images: (values.images ?? []).map((u) => u.trim()).filter(Boolean),
+    ...(values.media && values.media.length > 0
+      ? { media: values.media.map((item) => ({ url: item.url.trim(), type: item.type })) }
+      : {}),
     features: applicableFeatures(values),
   };
 }
@@ -156,6 +160,12 @@ export function vehicleToFormValues(v: VehicleDetail): VehicleFormValues {
     description: v.description ?? '',
     mainImageUrl: v.mainImageUrl ?? null,
     images: v.images ?? [],
+    media: (v.media ?? []).map((item) => ({
+      url: item.url,
+      // Dữ liệu media cũ có thể thiếu/null imageType; hiển thị và submit về "other"
+      // thay vì để resolver chặn toàn bộ nút Lưu mà không có request.
+      type: vehicleImageTypeOf(item.type),
+    })),
     // Key tiện ích do backend bảo đảm hợp lệ (contract) → ép về union của form là trung thực.
     features: (v.features ?? []) as VehicleFormValues['features'],
   };
@@ -171,8 +181,8 @@ export function informationValuesToInput(values: VehicleFormValues): UpdateVehic
     // (backend bắt đúng 26 ký tự), để lần sửa không liên quan không bị chặn.
     branchId: textOrUndefined(values.branchId),
     vehicleType: values.vehicleType,
-    serviceTypes: values.serviceTypes,
-    operationStatus: values.operationStatus,
+    // KHÔNG gửi serviceTypes/operationStatus (web 30/09/2026): dịch vụ lưu ngay bằng công tắc,
+    // trạng thái vận hành lưu ngay trên thẻ đầu xe — gửi bản chụp form ở đây sẽ ghi đè chúng.
     plateNumber: textOrNull(values.plateNumber),
     brand: textOrNull(values.brand),
     model: textOrNull(values.model),
@@ -198,6 +208,9 @@ export function informationValuesToInput(values: VehicleFormValues): UpdateVehic
     electricRangeKm: values.electricRangeKm,
     batteryCapacityKwh: values.batteryCapacityKwh,
     electricConsumptionKwhPer100Km: values.electricConsumptionKwhPer100Km,
+    // Tiện ích + mô tả đi theo mục NÀY (web 30/09/2026) — mô tả rỗng là thao tác XOÁ có chủ đích.
+    description: textOrNull(values.description),
+    features: applicableFeatures(values),
   };
 }
 
@@ -240,16 +253,5 @@ export function manageInformationValuesToInput(values: VehicleFormValues): Updat
     engineDisplacementCc: values.engineDisplacementCc,
     description: textOrNull(values.description),
     features: applicableFeatures(values),
-  };
-}
-
-/** Payload riêng của tab Hình ảnh — replace-set có chủ đích cho gallery/features. */
-export function mediaValuesToInput(values: VehicleFormValues): UpdateVehicleInput {
-  return {
-    mainImageUrl: values.mainImageUrl,
-    images: (values.images ?? []).map((url) => url.trim()).filter(Boolean),
-    features: applicableFeatures(values),
-    // Chuỗi rỗng là thao tác xoá mô tả có chủ đích; không đổi thành undefined.
-    description: textOrNull(values.description),
   };
 }

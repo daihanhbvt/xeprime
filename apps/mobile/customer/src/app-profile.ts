@@ -31,6 +31,12 @@ export function resolveInitialScope(_params: {
   return APP_SCOPE.CUSTOMER;
 }
 
+/**
+ * Các khu bảng đổi khu được đưa ra. MANAGE vẫn có ở đây vì nó dẫn tới màn handoff `/partner` —
+ * một lối có ích cho chủ gian hàng tuyến gói, không phải ngõ cụt.
+ */
+export const SWITCHABLE_SCOPES: readonly AppScope[] = [APP_SCOPE.MANAGE, APP_SCOPE.CUSTOMER];
+
 /** Màn đầu mỗi khu. Khu MANAGE không tồn tại ở app này ⇒ handoff sang XePrime Partner. */
 export function scopeHome(scope: AppScope, _packageOnboardingPending = false): Href {
   return scope === APP_SCOPE.MANAGE ? '/partner' : ROUTES.explore.home();

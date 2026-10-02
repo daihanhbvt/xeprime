@@ -10,6 +10,7 @@ import {
   type MarketplaceVisibilityReason,
   type VehiclePublicStatus,
 } from '@xeprime/types';
+import { metaColor, metaLabel } from '@/lib/status-meta';
 import { InfoHint } from '@/components/ui/InfoHint';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useAppToast } from '@/components/feedback/use-app-toast';
@@ -85,7 +86,7 @@ export function MarketplaceVisibilityRow({ vehicle }: { vehicle: VehicleDetail }
         </Text>
         <StatusBadge
           label={t(`moderationTag.${status}`)}
-          color={VEHICLE_PUBLIC_STATUS_META[status].color}
+          color={metaColor(VEHICLE_PUBLIC_STATUS_META, status)}
           size="sm"
         />
       </XStack>
@@ -172,9 +173,9 @@ function MarketplaceState({ vehicle }: { vehicle: VehicleDetail }) {
       label={domainLabel(
         'marketplaceVisibility',
         reason,
-        MARKETPLACE_VISIBILITY_REASON_META[reason].label,
+        metaLabel(MARKETPLACE_VISIBILITY_REASON_META, reason),
       )}
-      color={MARKETPLACE_VISIBILITY_REASON_META[reason].color}
+      color={metaColor(MARKETPLACE_VISIBILITY_REASON_META, reason)}
       size="sm"
     />
   );

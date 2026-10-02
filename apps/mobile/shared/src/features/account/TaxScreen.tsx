@@ -10,8 +10,8 @@ import {
   SELLER_ENTITY_TYPE_VALUES,
   SELLER_PROFILE_STATUS,
   SELLER_PROFILE_STATUS_META,
-  type SellerProfileStatus,
 } from '@xeprime/types';
+import { metaColor } from '@/lib/status-meta';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { ScreenError } from '@/components/state/ScreenError';
@@ -127,7 +127,7 @@ export function TaxScreen() {
             badge: (
               <StatusBadge
                 label={domainLabel('sellerProfileStatus', profile.status)}
-                color={SELLER_PROFILE_STATUS_META[profile.status as SellerProfileStatus].color}
+                color={metaColor(SELLER_PROFILE_STATUS_META, profile.status)}
                 size="sm"
               />
             ),

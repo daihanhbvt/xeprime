@@ -4,7 +4,18 @@ import type { IconName } from '@/components/ui/Chip';
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_EDIT_TAB, type VehicleEditTab } from '@/navigation/vehicle-edit-tab';
 import { vehicleSchedulePath } from './calendar-link';
-import { vehicleBookingsHref, vehicleEditHref, vehiclePricingHref } from './workspace-links';
+import type { VehicleCapabilities } from './hooks/use-vehicle-capabilities';
+import { vehicleBookingsHref, vehicleEditPartHref, vehiclePricingHref } from './workspace-links';
+
+/**
+ * Nút "Chỉnh sửa" trên Hồ sơ 360 — bản native của `vehiclePaths.profile(id)` web: cổng quản lý
+ * mở màn sửa xe (hub), khu tài khoản mở thẳng mục "Thông tin xe" của không gian quản lý xe.
+ */
+export function vehicleProfileHref(vehicleId: string, customerScope: boolean): Href {
+  return customerScope
+    ? (vehicleEditPartHref(vehicleId, VEHICLE_EDIT_TAB.INFORMATION, true) as Href)
+    : ROUTES.manage.vehicleEdit(vehicleId);
+}
 
 /** Khoá của một mục — cũng là khoá nhãn dưới `Vehicles.overview.links`. */
 export type VehicleModuleLinkKey =
@@ -28,92 +39,86 @@ export interface VehicleModuleLink {
 /**
  * Dải LIÊN KẾT NHANH của hồ sơ xe — bản native của `ModuleLinks` trong `Vehicle360Overview` web.
  *
- * Cùng danh sách, cùng thứ tự, cùng điều kiện quyền và cùng phép chọn khu (`isManage`):
+ * Cùng danh sách, cùng thứ tự, cùng điều kiện: thông tin · ảnh · giá (cần sửa) → nguồn xe (cần sửa
+ * ∧ `can.source`, chỉ cổng quản lý) → giấy tờ (`can.documents`) → bảo dưỡng (`can.maintenance`,
+ * chỉ cổng quản lý) + trung tâm bảo dưỡng → lịch (`CALENDAR_VIEW`) → đơn thuê (`BOOKING_VIEW`) →
+ * sổ Thu-Chi (cổng quản lý ∧ `can.money`).
  *
- * | Mục | Cổng quản lý | Khu tài khoản (`customerScope`) |
- * | --- | --- | --- |
- * | thông tin · ảnh · giá · giấy tờ | tab form sửa xe | mục không gian quản lý xe |
- * | nguồn xe · sổ Thu-Chi | có (`FINANCE_VIEW`) | KHÔNG — sổ sách gian hàng |
- * | bảo dưỡng · trung tâm bảo dưỡng | có (`VEHICLE_MAINTENANCE_VIEW`) | KHÔNG — tính năng của gói |
- * | lịch | `/manage/calendar?q=` | `/account/calendar?q=` |
- * | đơn thuê | `/manage/bookings?vehicleId=` | `/trips` (Chuyến của tôi) |
+ * `can` là `useVehicleCapabilities()` — quyền ∧ cờ gói (ADR 0027 điều 2). Chỉ đọc permission thì
+ * tuyến hoa hồng (cùng vai `shop_owner`) thấy mục dẫn tới màn họ nhận 403.
  *
- * Hàm THUẦN (không hook) để cả ma trận khu × quyền kiểm được bằng test mà không dựng cả màn.
+ * Hàm THUẦN (không hook) để cả ma trận khu × năng lực kiểm được bằng test.
  */
 export function vehicleModuleLinks({
   vehicle,
   canEdit,
   customerScope,
   has,
+  can,
 }: {
   vehicle: { id: string; name: string; plateNumber?: string | null };
   canEdit: boolean;
   customerScope: boolean;
   has: (permission: Permission) => boolean;
+  can: VehicleCapabilities;
 }): VehicleModuleLink[] {
   const links: VehicleModuleLink[] = [];
-  /* Cùng một mục, hai đích: khu tài khoản đi vào không gian quản lý xe của chính nó. */
-  const tab = (value: VehicleEditTab) => vehicleEditHref(vehicle.id, value, customerScope);
+  const push = (key: VehicleModuleLinkKey, icon: IconName, href: Href | null) => {
+    if (href) links.push({ key, icon, href });
+  };
+  const part = (tab: VehicleEditTab) => vehicleEditPartHref(vehicle.id, tab, customerScope);
 
   if (canEdit) {
-    links.push(
-      { key: 'information', icon: 'car-outline', href: tab(VEHICLE_EDIT_TAB.INFORMATION) },
-      { key: 'media', icon: 'images-outline', href: tab(VEHICLE_EDIT_TAB.MEDIA) },
-      {
-        key: 'pricing',
-        icon: 'pricetag-outline',
-        href: vehiclePricingHref(vehicle.id, customerScope),
-      },
-    );
-    /*
-     * TỐI ƯU NHẬN CHUYẾN KHÔNG nằm ở đây, và đó là chủ đích (24/09/2026): nó là một thẻ riêng
-     * trên hồ sơ — `AutomationCard`, đúng như web. Đặt cả hai nơi là hai lối vào cùng một màn.
-     */
-    if (!customerScope && has(PERMISSION.FINANCE_VIEW)) {
-      links.push({ key: 'source', icon: 'wallet-outline', href: tab(VEHICLE_EDIT_TAB.SOURCE) });
-    }
+    push('information', 'car-outline', part(VEHICLE_EDIT_TAB.INFORMATION));
+    push('media', 'images-outline', part(VEHICLE_EDIT_TAB.MEDIA));
+    push('pricing', 'pricetag-outline', vehiclePricingHref(vehicle.id, customerScope));
+    // Tối ưu nhận chuyến KHÔNG nằm ở đây — nó là thẻ riêng `AutomationCard`, đúng như web.
+    if (can.source) push('source', 'wallet-outline', part(VEHICLE_EDIT_TAB.SOURCE));
   }
-  if (has(PERMISSION.VEHICLE_DOCUMENT_VIEW)) {
-    links.push({
-      key: 'documents',
-      icon: 'document-text-outline',
-      href: tab(VEHICLE_EDIT_TAB.DOCUMENTS),
-    });
+  if (can.documents) {
+    push('documents', 'document-text-outline', part(VEHICLE_EDIT_TAB.DOCUMENTS));
   }
-  // Bảo dưỡng là tính năng của GÓI (ADR 0027 điều 1) — web chỉ bày hai mục này ở cổng quản lý
-  // (`isManage && has(VEHICLE_MAINTENANCE_VIEW)`). Ở khu tài khoản không có mục nào để tới.
-  if (!customerScope && has(PERMISSION.VEHICLE_MAINTENANCE_VIEW)) {
-    links.push(
-      { key: 'maintenance', icon: 'construct-outline', href: tab(VEHICLE_EDIT_TAB.MAINTENANCE) },
-      /* Trung tâm bảo dưỡng là màn TOÀN ĐỘI XE của cổng quản lý — không thuộc một chiếc xe. */
-      { key: 'maintenanceCenter', icon: 'build-outline', href: ROUTES.manage.maintenance() },
-    );
+  if (can.maintenance) {
+    push('maintenance', 'construct-outline', part(VEHICLE_EDIT_TAB.MAINTENANCE));
+    /* Trung tâm bảo dưỡng là màn TOÀN ĐỘI XE của cổng quản lý — không thuộc một chiếc xe. */
+    if (!customerScope) push('maintenanceCenter', 'build-outline', ROUTES.manage.maintenance());
   }
   if (has(PERMISSION.CALENDAR_VIEW)) {
-    // Lịch ĐÃ LỌC SẴN theo chính chiếc xe này (`?q=<biển số || tên>`), ở lịch CỦA KHU đang đứng —
-    // web: `vehicleSchedulePath(vehicle, { basePath: paths.calendar })`.
-    links.push({
-      key: 'calendar',
-      icon: 'calendar-outline',
-      href: vehicleSchedulePath(vehicle, { back: true, customerScope }),
-    });
+    // Lịch ĐÃ LỌC SẴN theo chính chiếc xe này, ở lịch CỦA KHU đang đứng.
+    push(
+      'calendar',
+      'calendar-outline',
+      vehicleSchedulePath(vehicle, { back: true, customerScope }),
+    );
   }
   if (has(PERMISSION.BOOKING_VIEW)) {
-    // Cổng quản lý: đơn CỦA XE NÀY (`?vehicleId=`). Khu tài khoản: `paths.bookings` của web =
-    // "Chuyến của tôi" — danh sách gồm cả hai phía, không lọc theo xe.
-    links.push({
-      key: 'bookings',
-      icon: 'receipt-outline',
-      href: vehicleBookingsHref(vehicle.id, customerScope),
-    });
+    // Cổng quản lý: đơn CỦA XE NÀY. Khu tài khoản: "Chuyến của tôi" — không lọc theo xe.
+    push('bookings', 'receipt-outline', vehicleBookingsHref(vehicle.id, customerScope));
   }
-  if (!customerScope && has(PERMISSION.FINANCE_VIEW)) {
-    // Sổ Thu-Chi ĐÃ LỌC theo chính chiếc xe này — cùng tham số `?vehicleId=` web đặt trên URL.
-    links.push({
-      key: 'receipts',
-      icon: 'cash-outline',
-      href: ROUTES.manage.receipts({ vehicleId: vehicle.id }),
-    });
+  if (!customerScope && can.money) {
+    push('receipts', 'cash-outline', ROUTES.manage.receipts({ vehicleId: vehicle.id }));
   }
   return links;
+}
+
+/** Bốn tab của Hồ sơ 360 — khoá cũng là khoá nhãn dưới `Vehicles.overview.tabs` (web `OVERVIEW_VIEW`). */
+export const OVERVIEW_VIEW = {
+  OVERVIEW: 'overview',
+  SPECS: 'specs',
+  FINANCE: 'finance',
+  MAINTENANCE: 'maintenance',
+} as const;
+export type OverviewView = (typeof OVERVIEW_VIEW)[keyof typeof OVERVIEW_VIEW];
+
+/**
+ * Tab hiện được, ĐÚNG thứ tự web: Tổng quan · Thông số luôn có; Tài chính chỉ khi `can.money`,
+ * Bảo dưỡng chỉ khi `can.maintenance` (quyền ∧ cờ gói — tuyến hoa hồng không thấy hai tab đó).
+ */
+export function overviewViews(can: { money: boolean; maintenance: boolean }): OverviewView[] {
+  return [
+    OVERVIEW_VIEW.OVERVIEW,
+    OVERVIEW_VIEW.SPECS,
+    ...(can.money ? [OVERVIEW_VIEW.FINANCE] : []),
+    ...(can.maintenance ? [OVERVIEW_VIEW.MAINTENANCE] : []),
+  ];
 }

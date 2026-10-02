@@ -20,6 +20,8 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useFeatureStates } from '@/features/auth/hooks/use-feature';
 import { useAuthenticatedUser } from '@/features/auth/hooks/use-authenticated-user';
 import { useTenantScope } from '@/features/auth/hooks/use-tenant-scope';
+import { withBranchParam } from '@/features/branches/branch-link';
+import { useRememberedBranch } from '@/features/branches/branch-memory';
 import { useAccountIdentityLabel } from '@/features/account/use-account-identity-label';
 import { ROUTES } from '@/navigation/routes';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
@@ -179,6 +181,12 @@ export function ManageDrawer() {
     setBranchOverrides((current) => ({ ...current, [key]: !current[key] }));
   }, []);
 
+  /*
+   * Mục menu trỏ tới một màn LỌC ĐƯỢC mang sẵn chi nhánh lọc gần nhất (ADR 0052 điều 5) — màn
+   * đích đúng ngay từ request đầu. `href` của mục giữ nguyên để so mục đang sáng.
+   */
+  const rememberedBranch = useRememberedBranch();
+
   const go = useCallback(
     (leaf: ManageNavLeaf) => {
       if (!leaf.href) {
@@ -187,9 +195,9 @@ export function ManageDrawer() {
       }
       // Đóng TRƯỚC khi đi: tấm menu còn mở trên màn mới đọc như điều hướng chưa chạy.
       drawer.close();
-      navigateOnce(leaf.href);
+      navigateOnce(withBranchParam(leaf.href, rememberedBranch));
     },
-    [drawer, toast, tStates, navigateOnce],
+    [drawer, toast, tStates, navigateOnce, rememberedBranch],
   );
 
   const labelOf = useCallback((node: { labelKey: string }) => t(node.labelKey as never), [t]);

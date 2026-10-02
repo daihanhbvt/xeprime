@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, type ReactNode } from 'react';
 import { AppState } from 'react-native';
 import { router } from 'expo-router';
-import { branchScopeReset } from '@/features/branches/branch-scope.slice';
+import { forgetBranchMemory } from '@/features/branches/branch-memory';
 import { shellScopeReset } from '@/features/shell/shell-scope.slice';
 import { subscribeSessionEnded } from '@/lib/auth-session';
 import { leaveApp } from './leave-app';
@@ -54,7 +54,7 @@ export function SessionBoundary({ children }: { children: ReactNode }) {
       subscribeSessionEnded(() => {
         logger.warn('Phiên kết thúc — dọn dữ liệu của phiên');
         resetSessionScopedCache(queryClient);
-        dispatch(branchScopeReset());
+        forgetBranchMemory();
         dispatch(shellScopeReset());
         leaveApp(router);
       }),

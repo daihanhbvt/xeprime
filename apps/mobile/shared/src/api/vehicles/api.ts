@@ -129,9 +129,12 @@ export const vehiclesApi = {
     return getApiClient().get<VehicleAlertGroup[]>('/vehicles/alerts', { ids: ids.join(',') });
   },
 
-  /** Đếm đội xe theo trạng thái vận hành — nói về CẢ đội xe, không theo trang/bộ lọc. */
-  fleetSummary(): Promise<FleetSummary> {
-    return getApiClient().get<FleetSummary>('/vehicles/fleet-summary');
+  /**
+   * Đếm đội xe theo trạng thái vận hành — cả đội xe của PHẠM VI đang xem, không theo trang và không
+   * theo ô lọc trạng thái. Chỉ nhận `branchId` (ADR 0052 điều 3).
+   */
+  fleetSummary(params: QueryParams = {}): Promise<FleetSummary> {
+    return getApiClient().get<FleetSummary>('/vehicles/fleet-summary', params);
   },
 
   detail(id: string): Promise<VehicleDetail> {

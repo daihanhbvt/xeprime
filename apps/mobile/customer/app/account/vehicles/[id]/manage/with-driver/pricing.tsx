@@ -1,24 +1,11 @@
-import { useLocalSearchParams } from 'expo-router';
-import { SERVICE_TYPE } from '@xeprime/types';
-import { OWNER_STAGE } from '@xeprime/types';
-import { RequireSession } from '@/features/auth/RequireSession';
-import { OwnerGate } from '@/features/account/components/OwnerGate';
-import { VehiclePricingScreen } from '@/features/vehicle-pricing/VehiclePricingScreen';
+import { Redirect, useLocalSearchParams } from 'expo-router';
+import { ROUTES } from '@/navigation/routes';
+import { VEHICLE_MANAGE_SECTION } from '@/navigation/vehicle-manage-section';
 
-/** "Giá cho thuê — Có tài xế": cùng màn, thu hẹp về đúng dịch vụ này. Xem route tự lái. */
-export default function AccountVehicleWithDriverPricingRoute() {
+/** Đường dẫn CŨ (trước 30/09/2026) — giá có tài xế nay nằm trong "Giá & chính sách". Cùng chuyển hướng với trang web. */
+export default function LegacyWithDriverPricingRedirect() {
   const { id } = useLocalSearchParams<{ id: string }>();
   return (
-    <RequireSession>
-      <OwnerGate minStage={OWNER_STAGE.REGISTERING}>
-        <VehiclePricingScreen
-          vehicleId={id}
-          visibleServices={[SERVICE_TYPE.WITH_DRIVER]}
-          sectionService={SERVICE_TYPE.WITH_DRIVER}
-          policyHidden
-          customerScope
-        />
-      </OwnerGate>
-    </RequireSession>
+    <Redirect href={ROUTES.account.vehicleManageSection(id, VEHICLE_MANAGE_SECTION.PRICING)} />
   );
 }
