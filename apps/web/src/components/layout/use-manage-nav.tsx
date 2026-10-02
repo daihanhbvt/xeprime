@@ -11,6 +11,7 @@ import {
   branchKeyOf,
   flattenLeaves,
   isNavBranch,
+  isNavPermissionGranted,
   leavesOfSection,
   matchSelectedKey,
   sectionKeyOf,
@@ -107,7 +108,7 @@ export function useManageNav(options: UseManageNavOptions = {}): ManageNav {
   const isShopOwner = user?.tenant?.roleKey === TENANT_ROLE.SHOP_OWNER;
 
   const canSeeLeaf = (leaf: NavLeaf): boolean =>
-    has(leaf.permission) &&
+    isNavPermissionGranted(leaf.permission, has) &&
     (leaf.ownerOnly !== true || isShopOwner) &&
     (leaf.feature === undefined ||
       isFeatureVisible(featureStates[leaf.feature] ?? FEATURE_STATE.ENABLED));

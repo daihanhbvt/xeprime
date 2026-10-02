@@ -1,0 +1,138 @@
+/*
+ * Phần RIÊNG của panel chốt kết cục. Khung (tiêu đề, hai cột, lưới nhãn–giá trị, chân panel) là
+ * `components/overlay/WorkDrawer` — cùng một khung với màn "Kiểm duyệt xe".
+ */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/*
+ * Danh sách kết cục — mỗi kết cục một THẺ chọn xếp dọc.
+ *
+ * ⚠️ Nhân đôi class (0,2,0) — bẫy D19: AntD tiêm LÚC CHẠY `.ant-radio-group { display:
+ * inline-block }` và `.ant-radio-wrapper { display: inline-flex; margin-inline-end: 8px }`, sau
+ * sheet CSS Module; một class đơn hoà specificity và thua — các nút nằm ngang, xuống dòng lổn nhổn.
+ */
+.options.options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  width: 100%;
+}
+
+.option.option {
+  display: flex;
+  align-items: flex-start;
+  margin: 0;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.option.option:hover {
+  border-color: var(--xp-color-border-strong);
+}
+
+.optionSelected.optionSelected,
+.optionSelected.optionSelected:hover {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-bg-selected);
+}
+
+/* Nút tròn thẳng hàng với DÒNG ĐẦU (tên kết cục, 20px), không trôi giữa hai dòng. */
+.option.option :global(.ant-radio) {
+  align-self: flex-start;
+  margin-top: 2px;
+}
+
+.optionText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.optionLabel {
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+}
+
+.optionHelp {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+/* Chỗ của phần xem trước khi chưa chọn — giữ cột phải có hình, nói rõ bước kế tiếp. */
+.previewEmpty {
+  margin: 0;
+  padding: var(--xp-space-md);
+  border: 1px dashed var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-secondary);
+  text-align: center;
+}
+
+.lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  margin: 0;
+}
+
+.line,
+.totalLine {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.line dt {
+  color: var(--xp-color-text-secondary);
+}
+
+.line dd,
+.totalLine dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.totalLine {
+  margin-top: var(--xp-space-xs);
+  padding-top: var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+}

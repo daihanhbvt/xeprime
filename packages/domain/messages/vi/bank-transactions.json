@@ -1,16 +1,17 @@
 {
   "page": {
-    "title": "Đối soát tiền vào",
-    "subtitle": "Khoản tiền về tài khoản nền tảng chưa khớp được vào hoá đơn nào. Khớp tay hoặc bỏ qua — mọi thao tác đều ghi lại người và lý do.",
     "tableLabel": "Danh sách giao dịch ngân hàng",
     "loadError": "Không tải được danh sách giao dịch",
-    "empty": "Không có giao dịch nào chờ xử lý",
-    "total": "{count, plural, other {# giao dịch}}"
+    "empty": "Không có khoản tiền vào nào chờ khớp",
+    "emptyDescription": "Mọi khoản tiền về đã được khớp vào hoá đơn gói hoặc khoản giữ chỗ.",
+    "total": "Tổng {count, plural, other {# giao dịch}}"
   },
   "filters": {
-    "status": "Trạng thái khớp",
+    "status": "Trạng thái",
     "search": "Tìm giao dịch",
-    "searchPlaceholder": "Nội dung chuyển khoản hoặc mã đối soát"
+    "searchPlaceholder": "Nội dung CK hoặc mã rút được",
+    "bankTime": "Thời điểm ngân hàng",
+    "code": "Đích"
   },
   "columns": {
     "amount": "Số tiền",
@@ -18,42 +19,71 @@
     "code": "Mã rút được",
     "status": "Trạng thái",
     "bankTime": "Thời điểm ngân hàng",
-    "handledBy": "Người xử lý"
+    "handledBy": "Người xử lý",
+    "waited": "Đã chờ",
+    "handledAt": "Xử lý lúc",
+    "auto": "Tự động"
   },
   "detail": {
     "title": "Chi tiết giao dịch",
     "loadError": "Không mở được giao dịch này",
     "providerTx": "Mã giao dịch nhà cung cấp",
     "matchedInvoice": "Đã khớp vào hoá đơn",
-    "note": "Ghi chú xử lý",
-    "rawTitle": "Dữ liệu gốc từ nhà cung cấp",
+    "rawTitle": "Bằng chứng gốc từ ngân hàng",
     "rawHint": "Bằng chứng khi có tranh cãi — không chỉnh sửa được.",
-    "handled": "Giao dịch này đã được xử lý."
+    "bankGateway": "Ngân hàng nhận",
+    "bankAccount": "Tài khoản nhận",
+    "bankReference": "Mã tham chiếu ngân hàng",
+    "receivedAt": "Hệ thống nhận lúc",
+    "resultTitle": "Kết quả xử lý",
+    "handledBy": "{name} · {time}",
+    "refunded": "Đã hoàn lại người gửi · mã {reference} · {time}",
+    "previous": "Giao dịch trước",
+    "next": "Giao dịch sau",
+    "sideLabel": "Xử lý giao dịch"
   },
   "suggestions": {
-    "title": "Hoá đơn đang chờ tiền",
-    "hint": "Hệ thống KHÔNG tự khớp theo số tiền — số trùng nhau chỉ được đưa lên đầu để dễ tìm. Chọn đúng hoá đơn rồi ghi lý do.",
+    "title": "Hoá đơn gói đang chờ tiền",
+    "hint": "Chọn đúng hoá đơn của khoản tiền này — hoá đơn trùng số tiền được đưa lên đầu.",
     "empty": "Không có hoá đơn nào đang chờ tiền",
     "amountMatches": "Khớp đúng số tiền",
-    "remaining": "Còn thiếu {amount}",
-    "choose": "Khớp vào hoá đơn này"
+    "remaining": "Còn thiếu: {amount}",
+    "tenant": "Gian hàng: {name}"
   },
   "match": {
-    "title": "Khớp tay vào hoá đơn {code}",
-    "noteLabel": "Lý do / ghi chú",
-    "notePlaceholder": "Vd: khách quên ghi mã, đã gọi xác nhận",
-    "noteRequired": "Nhập lý do khớp tay",
     "submit": "Xác nhận khớp",
-    "success": "Đã khớp giao dịch vào hoá đơn"
+    "success": "Đã khớp giao dịch vào hoá đơn",
+    "submitFor": "Khớp vào {code}",
+    "dialogTitle": "Khớp tay giao dịch",
+    "dialogSummary": "{amount} sẽ được ghi vào hoá đơn {code} của {tenant}. Thao tác ghi nhật ký và không hoàn tác được."
   },
   "ignore": {
     "action": "Bỏ qua giao dịch",
     "title": "Bỏ qua giao dịch này?",
     "body": "Dòng vẫn được giữ trong sổ làm bằng chứng, chỉ rời khỏi hàng đợi cần xử lý.",
-    "noteLabel": "Lý do bỏ qua",
-    "notePlaceholder": "Vd: tiền chuyển nhầm, đã hoàn tay",
-    "noteRequired": "Nhập lý do bỏ qua",
     "submit": "Bỏ qua",
-    "success": "Đã bỏ qua giao dịch"
+    "success": "Đã bỏ qua giao dịch",
+    "sectionTitle": "Không thuộc hoá đơn nào?",
+    "refunded": "Đã hoàn lại tiền cho người gửi",
+    "refundReference": "Mã giao dịch hoàn",
+    "refundReferencePlaceholder": "Mã GD trên sao kê ngân hàng",
+    "refundReferenceRequired": "Nhập mã giao dịch hoàn (tối thiểu 3 ký tự).",
+    "notePlaceholder": "Ví dụ: khách chuyển nhầm, đã gọi xác nhận"
+  },
+  "code": {
+    "subscription_invoice": "Gói (XPG)",
+    "booking_hold": "Giữ chỗ (XPH)",
+    "no_code": "Không có mã"
+  },
+  "handle": {
+    "reasonLabel": "Lý do xử lý",
+    "reasonPlaceholder": "Ví dụ: nội dung CK đúng tên gian hàng nhưng thiếu mã hoá đơn",
+    "reasonRequired": "Nhập lý do xử lý"
+  },
+  "footer": {
+    "choose": "Chọn một hoá đơn bên phải để khớp — hoặc bỏ qua nếu khoản này không thuộc hoá đơn nào.",
+    "chosen": "Sẽ khớp vào {code} · {tenant}",
+    "noInvoice": "Không có hoá đơn nào đang chờ tiền — khoản này chỉ có thể bỏ qua.",
+    "handled": "Giao dịch này đã được xử lý."
   }
 }

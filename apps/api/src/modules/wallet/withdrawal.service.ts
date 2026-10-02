@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
@@ -27,6 +32,8 @@ const SELECT = {
   dueBy: true,
   paidAt: true,
   rejectReason: true,
+  reversedAt: true,
+  reverseReason: true,
   createdAt: true,
 } satisfies Prisma.WithdrawalRequestSelect;
 
@@ -45,6 +52,8 @@ const SELECT = {
  *   paid      tiền đã rời ngân hàng; bút toán ÂM ghi vào sổ
  *   rejected  nhả khoá, tiền về lại khả dụng, KHÔNG có bút toán nào
  *   cancelled như rejected, do chính chủ ví bấm
+ *   reversed  đã "paid" nhưng ngân hàng trả về / chuyển sai tài khoản — admin đảo: bút toán
+ *             DƯƠNG (đảo của dòng âm) đưa tiền về lại khả dụng; chủ ví tạo lệnh mới
  * ```
  *
  * Không có bước nào tiền "biến mất": mọi nhánh đều trả lời được số dư đang ở đâu.
@@ -214,7 +223,10 @@ export class WithdrawalService {
   private async uniqueCode(tx: Prisma.TransactionClient): Promise<string> {
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const code = newReferenceCode(BANK_MATCH_TARGET_TYPE.WITHDRAWAL_REQUEST);
-      const taken = await tx.withdrawalRequest.findUnique({ where: { code }, select: { id: true } });
+      const taken = await tx.withdrawalRequest.findUnique({
+        where: { code },
+        select: { id: true },
+      });
       if (!taken) return code;
     }
     throw new Error('Không sinh được mã rút tiền duy nhất sau 5 lần thử');
@@ -223,7 +235,9 @@ export class WithdrawalService {
 
 // ── Nội bộ ──────────────────────────────────────────────────────────────────
 
-function toDto(row: Prisma.WithdrawalRequestGetPayload<{ select: typeof SELECT }>): WithdrawalRequestDto {
+function toDto(
+  row: Prisma.WithdrawalRequestGetPayload<{ select: typeof SELECT }>,
+): WithdrawalRequestDto {
   return {
     id: row.id,
     code: row.code,
@@ -236,6 +250,8 @@ function toDto(row: Prisma.WithdrawalRequestGetPayload<{ select: typeof SELECT }
     dueBy: row.dueBy?.toISOString() ?? null,
     paidAt: row.paidAt?.toISOString() ?? null,
     rejectReason: row.rejectReason,
+    reversedAt: row.reversedAt?.toISOString() ?? null,
+    reverseReason: row.reverseReason,
     createdAt: row.createdAt.toISOString(),
   };
 }

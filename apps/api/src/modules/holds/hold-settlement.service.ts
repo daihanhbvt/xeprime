@@ -28,8 +28,9 @@ import {
   resolveRefundWalletOwner,
   ALLOCATION_TARGET,
   allocationTotals,
+  adminSettleOutcomes,
+  holdSettlementKindFor,
   resolveHoldAllocation,
-  type HoldSettlementKind,
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { WalletService, type WalletOwner } from '../wallet/wallet.service';
@@ -113,7 +114,9 @@ export class HoldSettlementService {
 
     if (await this.hasOpenDispute(tx, input.bookingId)) {
       // Tiền chờ tranh chấp — ghi audit để hàng đợi admin nhìn thấy, KHÔNG chặn lượt chuyển.
-      this.logger.warn(`Hold ${hold.id} giữ kết cục vì có tranh chấp mở trên đơn ${input.bookingId}`);
+      this.logger.warn(
+        `Hold ${hold.id} giữ kết cục vì có tranh chấp mở trên đơn ${input.bookingId}`,
+      );
       await this.audit.record(
         {
           tenantId: input.tenantId,
@@ -163,6 +166,10 @@ export class HoldSettlementService {
         outcome: true,
         paidAmount: true,
         customerUserId: true,
+        depositAmount: true,
+        serviceFeeAmount: true,
+        vehicleInsuranceAmount: true,
+        personalInsuranceAmount: true,
       },
     });
     if (!hold) throw notFound('Không tìm thấy khoản giữ chỗ');
@@ -173,13 +180,25 @@ export class HoldSettlementService {
         details: { status: hold.status, outcome: hold.outcome },
       });
     }
-    if (!isOutcomeAllowed(hold.purpose as BookingHoldPurpose, input.outcome)) {
+    /*
+     * Chốt TAY dùng luật chặt hơn `isOutcomeAllowed`: khoản có bốn dòng tiền chỉ nhận kết cục có
+     * PHÂN BỔ. `kept`/`forfeited` trên khoản mới là để nền tảng giữ trọn cọc của chủ xe lẫn phí
+     * bảo hiểm — đường tự động không bao giờ chọn chúng, nên tay người cũng không được.
+     */
+    const allowed = adminSettleOutcomes(hold.purpose as BookingHoldPurpose, {
+      deposit: hold.depositAmount.toFixed(0),
+      serviceFee: hold.serviceFeeAmount.toFixed(0),
+      vehicleInsurance: hold.vehicleInsuranceAmount.toFixed(0),
+      personalInsurance: hold.personalInsuranceAmount.toFixed(0),
+    });
+    if (!allowed.includes(input.outcome)) {
       throw new ConflictException({
         code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
-        message: 'Kết cục không hợp với mục đích của khoản giữ chỗ',
+        message: 'Kết cục này không chốt tay được cho khoản giữ chỗ này',
+        details: { allowed },
       });
     }
-    await this.prisma.$transaction((tx) =>
+    const applied = await this.prisma.$transaction((tx) =>
       this.applyOutcomeWithinTx(tx, {
         holdId: hold.id,
         tenantId: hold.tenantId,
@@ -188,12 +207,26 @@ export class HoldSettlementService {
         customerUserId: hold.customerUserId,
         outcome: input.outcome,
         refundReason:
-          input.outcome === BOOKING_HOLD_OUTCOME.REFUNDED ? HOLD_REFUND_REASON.ADMIN_DECISION : null,
+          input.outcome === BOOKING_HOLD_OUTCOME.REFUNDED
+            ? HOLD_REFUND_REASON.ADMIN_DECISION
+            : null,
         actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
         actorUserId,
         note: input.note,
       }),
     );
+    /*
+     * Hai admin cùng chốt: cả hai qua phép kiểm ở trên, người sau thua ở câu `updateMany` có
+     * điều kiện. Với ĐƯỜNG TỰ ĐỘNG đó là no-op đúng nghĩa; với một người đang bấm nút thì phải
+     * nói thật — "đã chốt" cho một kết cục không hề được áp là báo sai, và không có dòng audit
+     * nào của người đó để đối chiếu.
+     */
+    if (!applied) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.HOLD_NOT_PENDING,
+        message: 'Khoản giữ chỗ này vừa được chốt bởi người khác',
+      });
+    }
   }
 
   /**
@@ -234,7 +267,9 @@ export class HoldSettlementService {
     if (existing) {
       if (existing.status !== HOLD_REFUND_STATUS.PENDING) {
         // Đã chuyển/từ chối rồi — không tự cộng dồn vào một yêu cầu đã đóng; admin xử lý tay.
-        this.logger.warn(`Hold ${input.holdId} đã có yêu cầu hoàn ${existing.status}; bỏ qua cộng dồn`);
+        this.logger.warn(
+          `Hold ${input.holdId} đã có yêu cầu hoàn ${existing.status}; bỏ qua cộng dồn`,
+        );
         return { id: existing.id, created: false };
       }
       await tx.holdRefund.update({
@@ -497,7 +532,7 @@ export class HoldSettlementService {
   ): Promise<ReturnType<typeof resolveHoldAllocation> | null> {
     if (input.paidAmount.lte(0)) return null;
 
-    const kind = settlementKindFor(input.outcome);
+    const kind = holdSettlementKindFor(input.outcome);
     if (!kind) {
       /*
        * `kept` (đơn trước ADR 0032) và `released_to_shop`: giữ nguyên hành vi cũ — nền tảng giữ,
@@ -523,7 +558,9 @@ export class HoldSettlementService {
      * có thuế, kể cả huỷ muộn.
      */
     const taxAmount =
-      input.outcome === BOOKING_HOLD_OUTCOME.SETTLED ? taxFromSnapshot(hold.priceSnapshotJson) : '0';
+      input.outcome === BOOKING_HOLD_OUTCOME.SETTLED
+        ? taxFromSnapshot(hold.priceSnapshotJson)
+        : '0';
 
     return resolveHoldAllocation(
       {
@@ -613,7 +650,7 @@ export class HoldSettlementService {
       actorUserId: string | null;
       note: string | null;
     },
-  ): Promise<void> {
+  ): Promise<boolean> {
     if (!isOutcomeAllowed(input.purpose, input.outcome)) {
       // CHECK ở DB cũng chặn; nói rõ ở đây để lỗi không hiện ra thành một P2xxx khó đọc.
       throw new Error(`Kết cục ${input.outcome} không hợp mục đích ${input.purpose}`);
@@ -651,8 +688,8 @@ export class HoldSettlementService {
           : {}),
       },
     });
-    // Đã có ai chốt xen vào — idempotent, không ghi đè.
-    if (claimed.count === 0) return;
+    // Đã có ai chốt xen vào — không ghi đè; trả `false` để người gọi quyết có báo lỗi hay không.
+    if (claimed.count === 0) return false;
 
     const refundId = allocation ? await this.allocateWithinTx(tx, input, allocation) : null;
 
@@ -673,6 +710,7 @@ export class HoldSettlementService {
       },
       tx,
     );
+    return true;
   }
 
   private async hasOpenDispute(tx: Prisma.TransactionClient, bookingId: string): Promise<boolean> {
@@ -714,7 +752,10 @@ export function decideOutcome(input: {
     case BOOKING_STATUS.CANCELLED:
       if (input.actorScope === AUDIT_ACTOR_SCOPE.CUSTOMER) {
         return isWithinFreeCancel(input.freeCancelUntil, input.now)
-          ? { outcome: BOOKING_HOLD_OUTCOME.REFUNDED, refundReason: HOLD_REFUND_REASON.EARLY_CANCEL }
+          ? {
+              outcome: BOOKING_HOLD_OUTCOME.REFUNDED,
+              refundReason: HOLD_REFUND_REASON.EARLY_CANCEL,
+            }
           : {
               // Huỷ muộn: D + S chia đôi, IV + IP hoàn 100% (bảo hiểm chưa mua).
               outcome: BOOKING_HOLD_OUTCOME.SPLIT_LATE_CANCEL,
@@ -722,18 +763,13 @@ export function decideOutcome(input: {
             };
       }
       // Gian hàng, nền tảng hay hệ thống huỷ — khách không có lỗi.
-      return { outcome: BOOKING_HOLD_OUTCOME.REFUNDED, refundReason: HOLD_REFUND_REASON.OWNER_CANCEL };
+      return {
+        outcome: BOOKING_HOLD_OUTCOME.REFUNDED,
+        refundReason: HOLD_REFUND_REASON.OWNER_CANCEL,
+      };
     default:
       return null;
   }
-}
-
-/** Kết cục nào cần phân bổ, và theo luật nào. `null` = giữ nguyên hành vi cũ, không sinh dòng. */
-function settlementKindFor(outcome: BookingHoldOutcome): HoldSettlementKind | null {
-  if (outcome === BOOKING_HOLD_OUTCOME.REFUNDED) return 'refund_all';
-  if (outcome === BOOKING_HOLD_OUTCOME.SPLIT_LATE_CANCEL) return 'split_late_cancel';
-  if (outcome === BOOKING_HOLD_OUTCOME.SETTLED) return 'settled';
-  return null;
 }
 
 function sumFor(
@@ -749,7 +785,7 @@ function sumFor(
  * Thuế đã đóng băng trên snapshot của hold. `'0'` khi cổng thuế chưa mở — và đó là trạng thái
  * hiện tại, nên nhánh này là đường chạy thật chứ không phải một lối dự phòng.
  */
-function taxFromSnapshot(snapshot: unknown): string {
+export function taxFromSnapshot(snapshot: unknown): string {
   const fees = (snapshot as { fees?: { taxAmount?: unknown } } | null)?.fees;
   const raw = fees?.taxAmount;
   return typeof raw === 'string' && Number.isFinite(Number(raw)) ? raw : '0';

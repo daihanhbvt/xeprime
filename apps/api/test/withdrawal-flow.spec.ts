@@ -1,8 +1,17 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
-import { WALLET_ENTRY_KIND, WALLET_ENTRY_SOURCE, WALLET_OWNER_TYPE, WITHDRAWAL_STATUS, WITHDRAWAL_TERMS } from '@xeprime/types';
+import {
+  API_ERROR_CODE,
+  WALLET_ENTRY_KIND,
+  WALLET_ENTRY_SOURCE,
+  WALLET_OWNER_TYPE,
+  WITHDRAWAL_STATUS,
+  WITHDRAWAL_TERMS,
+} from '@xeprime/types';
 import { BankAccountsService } from '../src/modules/bank-accounts/bank-accounts.service';
 import { WalletService } from '../src/modules/wallet/wallet.service';
 import { WithdrawalService } from '../src/modules/wallet/withdrawal.service';
+import { PlatformWithdrawalService } from '../src/modules/wallet/platform-withdrawal.service';
+import type { NotificationService } from '../src/modules/notification/notification.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { AuditService } from '../src/modules/audit/audit.service';
 
@@ -17,6 +26,14 @@ const wallet = new WalletService(prisma);
 const bankAccounts = new BankAccountsService(prisma);
 const audit = new AuditService(prisma);
 const withdrawals = new WithdrawalService(prisma, wallet, bankAccounts, audit);
+/** Thông báo là tác dụng phụ — chỉ cần biết AI được báo, không cần đẩy push thật. */
+const notifications = { emitToUser: jest.fn(), emitToTenantMembers: jest.fn() };
+const platform = new PlatformWithdrawalService(
+  prisma,
+  wallet,
+  audit,
+  notifications as unknown as NotificationService,
+);
 
 let dbAvailable = false;
 let userId: string;
@@ -98,7 +115,9 @@ describe('Tạo yêu cầu rút', () => {
    */
   maybe('tài khoản nhận KHÔNG thuộc chủ ví ⇒ 404, không tạo lệnh nào', async () => {
     const strangerId = newId();
-    await prisma.user.create({ data: { id: strangerId, displayName: 'Người lạ', status: 'active' } });
+    await prisma.user.create({
+      data: { id: strangerId, displayName: 'Người lạ', status: 'active' },
+    });
     const theirs = await bankAccounts.create(
       { type: WALLET_OWNER_TYPE.USER, userId: strangerId },
       { bankCode: 'ACB', accountNumber: '9999888877', accountName: 'Nguoi La' },
@@ -183,13 +202,134 @@ describe('Huỷ yêu cầu rút', () => {
     const walletId = (await wallet.findWalletId(owner()))!;
     const mine = await prisma.withdrawalRequest.findFirstOrThrow({ where: { walletId } });
     const strangerId = newId();
-    await prisma.user.create({ data: { id: strangerId, displayName: 'Người lạ 2', status: 'active' } });
+    await prisma.user.create({
+      data: { id: strangerId, displayName: 'Người lạ 2', status: 'active' },
+    });
 
     await expect(
       withdrawals.cancel({ type: WALLET_OWNER_TYPE.USER, userId: strangerId }, mine.id, strangerId),
     ).rejects.toMatchObject({ response: { code: 'NOT_FOUND' } });
 
     await prisma.user.delete({ where: { id: strangerId } });
+  });
+});
+
+/** Tạo → duyệt → đã chuyển, qua đúng các service của chủ ví và của admin. Trả bản ghi sau khi chi. */
+async function paidWithdrawal(amount: number, bankReference: string) {
+  const created = await withdrawals.create(owner(), userId, {
+    amount: String(amount),
+    bankAccountId: accountId,
+  });
+  await platform.approve(created.id, userId);
+  const approved = await prisma.withdrawalRequest.findUniqueOrThrow({ where: { id: created.id } });
+  await platform.markPaid(created.id, userId, { bankReference, rowVersion: approved.rowVersion });
+  return prisma.withdrawalRequest.findUniqueOrThrow({ where: { id: created.id } });
+}
+
+/** Mọi bút toán của MỘT lệnh rút — dòng chi trỏ vào lệnh, dòng đảo trỏ vào dòng chi. */
+async function entriesOf(withdrawalId: string) {
+  const paid = await prisma.walletEntry.findMany({ where: { sourceRefId: withdrawalId } });
+  const reversals = await prisma.walletEntry.findMany({
+    where: { reversalOfEntryId: { in: paid.map((e) => e.id) } },
+  });
+  return [...paid, ...reversals];
+}
+
+describe('Đảo lệnh đã chuyển — chuyển hụt / sai tài khoản (ADR 0025 điều 7)', () => {
+  maybe(
+    'đảo: lệnh thành `reversed`, tiền về khả dụng, HAI bút toán đều còn, chủ ví được báo',
+    async () => {
+      const before = await wallet.summaryFor(owner());
+      const paid = await paidWithdrawal(50_000, 'FT-PAID-1');
+      expect((await wallet.summaryFor(owner())).total).toBe(String(Number(before.total) - 50_000));
+      notifications.emitToUser.mockClear();
+
+      await platform.reverse(paid.id, userId, {
+        reason: 'Sai số tài khoản',
+        rowVersion: paid.rowVersion,
+      });
+
+      const reversed = await prisma.withdrawalRequest.findUniqueOrThrow({ where: { id: paid.id } });
+      expect(reversed.status).toBe(WITHDRAWAL_STATUS.REVERSED);
+      expect(reversed.reverseReason).toBe('Sai số tài khoản');
+      expect(reversed.reversedAt).not.toBeNull();
+      // Bằng chứng lần chi KHÔNG bị xoá — cả hai sự kiện đều là chuyện đã xảy ra.
+      expect(reversed.bankReference).toBe('FT-PAID-1');
+      expect(reversed.paidAt).not.toBeNull();
+
+      const after = await wallet.summaryFor(owner());
+      expect(after.available).toBe(before.available);
+      expect(after.total).toBe(before.total);
+
+      const kinds = (await entriesOf(paid.id)).map((e) => e.kind).sort();
+      expect(kinds).toEqual(
+        [WALLET_ENTRY_KIND.WITHDRAWAL, WALLET_ENTRY_KIND.WITHDRAWAL_REVERSAL].sort(),
+      );
+
+      // "Báo người dùng nhập lại" — đúng một thông báo, tới đúng chủ ví.
+      expect(notifications.emitToUser).toHaveBeenCalledTimes(1);
+      expect(notifications.emitToUser.mock.calls[0]![0]).toBe(userId);
+    },
+  );
+
+  maybe('bấm đảo LẦN HAI: 409 WITHDRAWAL_ALREADY_HANDLED, không có bút toán thứ ba', async () => {
+    const paid = await paidWithdrawal(30_000, 'FT-PAID-2');
+    await platform.reverse(paid.id, userId, {
+      reason: 'Ngân hàng trả về',
+      rowVersion: paid.rowVersion,
+    });
+    const totalAfterFirst = (await wallet.summaryFor(owner())).total;
+
+    // Bản ghi cũ trên màn hình (rowVersion cũ) lẫn bản mới đều bị chặn — lệnh không còn `paid`.
+    const fresh = await prisma.withdrawalRequest.findUniqueOrThrow({ where: { id: paid.id } });
+    for (const rowVersion of [paid.rowVersion, fresh.rowVersion]) {
+      await expect(
+        platform.reverse(paid.id, userId, { reason: 'Bấm lại', rowVersion }),
+      ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.WITHDRAWAL_ALREADY_HANDLED } });
+    }
+
+    expect(await entriesOf(paid.id)).toHaveLength(2);
+    expect((await wallet.summaryFor(owner())).total).toBe(totalAfterFirst);
+  });
+
+  maybe('hai admin đảo SONG SONG cùng một lệnh: đúng MỘT lần tiền về ví', async () => {
+    const before = await wallet.summaryFor(owner());
+    const paid = await paidWithdrawal(40_000, 'FT-PAID-3');
+
+    const results = await Promise.allSettled([
+      platform.reverse(paid.id, userId, { reason: 'Admin A: trả về', rowVersion: paid.rowVersion }),
+      platform.reverse(paid.id, userId, { reason: 'Admin B: trả về', rowVersion: paid.rowVersion }),
+    ]);
+
+    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+    const lost = results.find((r): r is PromiseRejectedResult => r.status === 'rejected');
+    expect(lost?.reason).toMatchObject({
+      response: { code: API_ERROR_CODE.WITHDRAWAL_ALREADY_HANDLED },
+    });
+    // Một dòng chi + ĐÚNG một dòng đảo; số dư trở về đúng như trước khi rút.
+    expect(await entriesOf(paid.id)).toHaveLength(2);
+    const after = await wallet.summaryFor(owner());
+    expect(after.available).toBe(before.available);
+    expect(after.total).toBe(before.total);
+  });
+
+  maybe('lệnh CHƯA chi thì không có gì để đảo', async () => {
+    const created = await withdrawals.create(owner(), userId, {
+      amount: '20000',
+      bankAccountId: accountId,
+    });
+    await platform.approve(created.id, userId);
+    const approved = await prisma.withdrawalRequest.findUniqueOrThrow({
+      where: { id: created.id },
+    });
+
+    await expect(
+      platform.reverse(created.id, userId, { reason: 'Thử đảo', rowVersion: approved.rowVersion }),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.WITHDRAWAL_ALREADY_HANDLED } });
+    expect(await entriesOf(created.id)).toHaveLength(0);
+
+    // Trả lại khoá để các ca sau đọc đúng số dư.
+    await platform.reject(created.id, userId, { reason: 'Dọn ca thử' });
   });
 });
 

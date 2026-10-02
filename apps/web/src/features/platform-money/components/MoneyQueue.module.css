@@ -1,0 +1,80 @@
+/*
+ * Kiểu ô bảng dùng chung cho các hàng đợi tiền (giữ chỗ, hoàn, rút, bảo hiểm) — một nơi, để bốn
+ * bảng đứng cạnh nhau trên cùng một màn có cùng nhịp chữ: dòng chính đậm, dòng phụ xám, mã cách
+ * đều, tiền chữ số thẳng cột.
+ */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+
+.stackEnd {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.strong {
+  font-weight: var(--xp-font-weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.secondary {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.tertiary {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+.muted {
+  color: var(--xp-color-text-tertiary);
+}
+
+.mono {
+  font-family: var(--xp-font-mono, ui-monospace, monospace);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.amount {
+  font-weight: var(--xp-font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.overdue {
+  color: var(--xp-color-error);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.tag {
+  margin-inline-end: 0;
+}
+
+.linkButton {
+  height: auto;
+  padding: 0;
+}
+
+.inlineCode {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+}

@@ -40,14 +40,16 @@ export function useBankTransaction(id: string | null) {
 }
 
 /**
- * Khớp tay / bỏ qua đều invalidate CẢ nhánh giao dịch lẫn nhánh subscription: một lần khớp có
- * thể vừa đóng hoá đơn vừa mở gói, nên hai màn đó phải cùng làm mới.
+ * Khớp tay / bỏ qua đều invalidate CẢ nhánh giao dịch, nhánh subscription lẫn nhánh money: một
+ * lần khớp có thể vừa đóng hoá đơn vừa mở gói, và đổi luôn số đếm hàng đợi lẫn vế "tiền vào chưa
+ * khớp" của đối soát ngày trên cùng màn Tài chính.
  */
 function useInvalidateAfterHandling() {
   const queryClient = useQueryClient();
   return () => {
     void queryClient.invalidateQueries({ queryKey: queryKeys.bankTransactions.all });
     void queryClient.invalidateQueries({ queryKey: queryKeys.subscription.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.platformMoney.all });
   };
 }
 

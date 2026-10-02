@@ -1,0 +1,6 @@
+/* Một hàng riêng trên bảng; cuộn ngang khi các lựa chọn dài hơn bề rộng (điện thoại). */
+.bar {
+  max-width: 100%;
+  margin-bottom: var(--xp-space-md);
+  overflow-x: auto;
+}

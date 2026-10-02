@@ -3,9 +3,15 @@ import { Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
+  BANK_DIRECTION,
   BANK_MATCH_STATUS,
   BANK_MATCH_TARGET_TYPE,
+  BANK_TX_CODE_FILTER,
+  REFERENCE_CODE_PREFIX,
   SUBSCRIPTION_INVOICE_STATUS,
+  addDateKeyDays,
+  vnDayStart,
+  type BankTxCodeFilter,
   type PaginationMeta,
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -40,6 +46,8 @@ const SELECT = {
   matchNote: true,
   matchedAt: true,
   matchedBy: true,
+  refundReference: true,
+  refundedAt: true,
   createdAt: true,
 } satisfies Prisma.BankTransactionSelect;
 
@@ -67,18 +75,30 @@ export class BankTransactionsService {
     query: BankTransactionListQueryDto,
   ): Promise<{ data: BankTransactionDto[]; meta: PaginationMeta }> {
     const paging = resolvePaging(query, BANK_TX_DEFAULT_LIMIT, BANK_TX_MAX_LIMIT);
+    // Hai bộ lọc cùng cần `OR` (tìm kiếm, khoảng ngày) — gom vào `AND` để không cái nào ghi đè cái nào.
+    const and: Prisma.BankTransactionWhereInput[] = [];
+    if (query.q) {
+      and.push({
+        OR: [
+          { content: { contains: query.q, mode: 'insensitive' } },
+          { referenceCode: { contains: query.q, mode: 'insensitive' } },
+        ],
+      });
+    }
+    const range = vnDayRange(query.from, query.to);
+    if (range) {
+      // Thời điểm NGÂN HÀNG là thứ người trực đối chiếu với sao kê; dòng thiếu nó (payload cũ) lấy
+      // lúc webhook tới — lệch vài giây, không lệch ngày.
+      and.push({ OR: [{ bankTime: range }, { bankTime: null, createdAt: range }] });
+    }
     const where: Prisma.BankTransactionWhereInput = {
+      // Hàng đợi này là tiền VÀO; dòng chiều ra (khi SePay mở webhook đó) có sổ đối chiếu riêng.
+      direction: BANK_DIRECTION.IN,
       // Không lọc gì = VIỆC CẦN LÀM (chưa khớp), không phải toàn bộ lịch sử. Lịch sử vẫn lấy
       // được bằng `?matchStatus=`, nhưng nó không đáng chiếm màn hình mặc định.
       matchStatus: query.matchStatus ?? BANK_MATCH_STATUS.UNMATCHED,
-      ...(query.q
-        ? {
-            OR: [
-              { content: { contains: query.q, mode: 'insensitive' } },
-              { referenceCode: { contains: query.q, mode: 'insensitive' } },
-            ],
-          }
-        : {}),
+      ...codeFilterWhere(query.code),
+      ...(and.length ? { AND: and } : {}),
     };
 
     const [total, rows] = await this.prisma.$transaction([
@@ -110,9 +130,13 @@ export class BankTransactionsService {
       });
     }
     const [base] = await this.decorate([row]);
+    const raw = isRecord(row.rawJson) ? row.rawJson : {};
     return {
       ...base!,
       rawJson: row.rawJson,
+      bankGateway: rawText(raw, 'gateway'),
+      bankAccountNumber: rawText(raw, 'accountNumber'),
+      bankReferenceNumber: rawText(raw, 'referenceCode'),
       suggestions: await this.suggest(row.amountIn),
     };
   }
@@ -220,6 +244,10 @@ export class BankTransactionsService {
   ): Promise<BankTransactionDetailDto> {
     await this.loadPending(id);
 
+    const now = new Date();
+    // Chỉ ghi "đã trả lại" khi có MÃ giao dịch — CHECK ở DB đòi hai cột đi cặp.
+    const refundReference = dto.refundReference?.trim() || null;
+
     await this.prisma.$transaction(async (db) => {
       const claimed = await db.bankTransaction.updateMany({
         where: { id, matchStatus: BANK_MATCH_STATUS.UNMATCHED },
@@ -227,7 +255,9 @@ export class BankTransactionsService {
           matchStatus: BANK_MATCH_STATUS.IGNORED,
           matchNote: dto.note,
           matchedBy: actorUserId,
-          matchedAt: new Date(),
+          matchedAt: now,
+          refundReference,
+          refundedAt: refundReference ? now : null,
         },
       });
       if (claimed.count === 0) {
@@ -244,7 +274,7 @@ export class BankTransactionsService {
           targetType: 'bank_transaction',
           targetId: id,
           before: { matchStatus: BANK_MATCH_STATUS.UNMATCHED },
-          after: { matchStatus: BANK_MATCH_STATUS.IGNORED, note: dto.note },
+          after: { matchStatus: BANK_MATCH_STATUS.IGNORED, note: dto.note, refundReference },
         },
         db,
       );
@@ -376,6 +406,47 @@ export class BankTransactionsService {
       matchedByName: r.matchedBy ? (actorName.get(r.matchedBy) ?? null) : null,
       createdAt: r.createdAt.toISOString(),
       matchedInvoiceCode: r.matchedRefId ? (invoiceCode.get(r.matchedRefId) ?? null) : null,
+      refundReference: r.refundReference,
+      refundedAt: r.refundedAt?.toISOString() ?? null,
     }));
   }
+}
+
+/**
+ * `YYYY-MM-DD` (giờ VN) → khoảng thời gian tuyệt đối `[đầu ngày from, đầu ngày sau to)`.
+ * Thiếu một đầu thì để hở đầu đó; thiếu cả hai thì không lọc.
+ */
+function vnDayRange(from?: string, to?: string): Prisma.DateTimeFilter | null {
+  if (!from && !to) return null;
+  return {
+    ...(from ? { gte: vnDayStart(from) } : {}),
+    ...(to ? { lt: vnDayStart(addDateKeyDays(to, 1)) } : {}),
+  };
+}
+
+/** Lọc theo LUỒNG của mã rút được — tiền tố quyết định, cùng quy tắc với `referenceCodeTarget`. */
+function codeFilterWhere(code: BankTxCodeFilter | undefined): Prisma.BankTransactionWhereInput {
+  switch (code) {
+    case BANK_TX_CODE_FILTER.NO_CODE:
+      return { referenceCode: null };
+    case BANK_TX_CODE_FILTER.SUBSCRIPTION_INVOICE:
+    case BANK_TX_CODE_FILTER.BOOKING_HOLD:
+      return {
+        referenceCode: { startsWith: REFERENCE_CODE_PREFIX[code], mode: 'insensitive' },
+      };
+    default:
+      return {};
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** Một trường chữ của payload nhà cung cấp — dữ liệu NGOÀI, nên kiểm từng kiểu, rỗng thì `null`. */
+function rawText(raw: Record<string, unknown>, key: string): string | null {
+  const value = raw[key];
+  if (typeof value === 'string') return value.trim() || null;
+  if (typeof value === 'number') return String(value);
+  return null;
 }

@@ -42,7 +42,8 @@
     "rejected": "Bị từ chối: {reason}",
     "cancel": "Huỷ yêu cầu",
     "cancelConfirm": "Huỷ yêu cầu rút này?",
-    "cancelHint": "Tiền quay lại số dư rút được ngay."
+    "cancelHint": "Tiền quay lại số dư rút được ngay.",
+    "reversed": "Chuyển không thành công: {reason}. Tiền đã về lại số dư — kiểm tra tài khoản nhận rồi tạo lệnh mới."
   },
   "admin": {
     "title": "Yêu cầu rút tiền",
@@ -54,9 +55,11 @@
       "owner": "Chủ ví",
       "amount": "Số tiền",
       "account": "Tài khoản nhận",
-      "age": "Chờ {hours} giờ",
+      "age": "Chờ {age}",
       "dueBy": "Hạn chuyển",
-      "status": "Trạng thái"
+      "status": "Trạng thái",
+      "paidReference": "Mã GD {reference}",
+      "dueByValue": "Hạn {date}"
     },
     "ownerType": {
       "user": "Cá nhân",
@@ -74,21 +77,35 @@
       "bankReference": "Mã giao dịch ngân hàng",
       "bankReferenceHint": "Bằng chứng đã chuyển — bắt buộc, dùng để đối chiếu về sau.",
       "submit": "Xác nhận đã chuyển",
-      "done": "Đã ghi nhận chuyển khoản."
+      "done": "Đã ghi nhận chuyển khoản.",
+      "referenceRequired": "Nhập mã giao dịch ngân hàng (tối thiểu 3 ký tự)."
     },
     "reject": {
       "title": "Từ chối yêu cầu rút",
       "reason": "Lý do",
       "reasonHint": "Chủ ví đọc được câu này.",
       "submit": "Từ chối",
-      "done": "Đã từ chối. Tiền quay lại số dư của chủ ví."
+      "done": "Đã từ chối. Tiền quay lại số dư của chủ ví.",
+      "reasonPlaceholder": "Vì sao từ chối yêu cầu này",
+      "reasonRequired": "Nhập lý do (tối thiểu 3 ký tự)."
     },
     "reverse": {
       "title": "Đảo lệnh đã chuyển",
       "reason": "Vì sao tiền quay lại",
-      "reasonHint": "Chuyển hụt, sai số tài khoản, ngân hàng trả về…",
+      "reasonHint": "Chủ ví đọc được câu này — nói rõ vì sao tiền quay lại để họ kiểm tra tài khoản nhận trước khi rút lại.",
       "submit": "Đảo bút toán",
-      "done": "Đã đảo. Tiền quay lại ví chủ ví, cả hai bút toán đều còn trên sổ."
+      "done": "Đã đảo. Tiền quay lại ví chủ ví, cả hai bút toán đều còn trên sổ.",
+      "reasonPlaceholder": "Ví dụ: ngân hàng trả về vì sai số tài khoản",
+      "reasonRequired": "Nhập lý do (tối thiểu 3 ký tự)."
+    },
+    "total": "Tổng {count, plural, other {# yêu cầu}}",
+    "loadError": "Không tải được hàng đợi rút tiền",
+    "emptyView": "Không có yêu cầu nào ở trạng thái này.",
+    "views": {
+      "label": "Hiển thị",
+      "actionable": "Việc cần làm",
+      "overdue": "Quá hạn ({count})",
+      "showOverdue": "Xem lệnh quá hạn"
     }
   },
   "openLedger": "Xem sổ ví",

@@ -7,6 +7,7 @@ import {
   fetchDailyReconciliation,
   fetchHolds,
   fetchInsuranceQueue,
+  fetchMoneySummary,
   insuranceFiltersToParams,
   fetchRefunds,
   fetchWithdrawalQueue,
@@ -52,14 +53,38 @@ export function useRefunds(filters: RefundFilters) {
 }
 
 /**
+ * Số đếm các hàng đợi. Làm mới khi quay lại tab trình duyệt (mặc định của TanStack) và sau MỌI thao
+ * tác tiền (cùng nhánh `platformMoney.all`) — một thẻ "3 khoản chờ" còn hiện sau khi đã xử lý xong
+ * cả ba là thẻ dạy người trực đừng tin nó.
+ */
+/**
+ * Số việc đang chờ của từng hàng đợi. Màn Tài chính là một bàn làm việc để MỞ cả ca — tự làm
+ * mới mỗi phút để thẻ đếm không đứng yên ở con số lúc mở màn (chỉ khi tab đang hiện).
+ *
+ * `enabled`: endpoint gác bằng quyền tiền — người chỉ có quyền gói không gọi, khỏi một thẻ 403.
+ */
+export function useMoneySummary({ enabled = true }: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: queryKeys.platformMoney.summary,
+    queryFn: fetchMoneySummary,
+    enabled,
+    refetchInterval: 60_000,
+  });
+}
+
+/**
  * Đối chiếu MỘT ngày. `staleTime: 0` — con số này là bằng chứng kế toán, và nó đổi mỗi lần một
  * khoản tiền về hoặc một khoản hoàn được chuyển. Cache một bản cũ ở đây là mời admin ký vào một
  * bảng đối chiếu đã lỗi thời.
  */
-export function useDailyReconciliation(date: string) {
+export function useDailyReconciliation(
+  date: string,
+  { enabled = true }: { enabled?: boolean } = {},
+) {
   return useQuery({
     queryKey: queryKeys.platformMoney.reconciliation(date),
     queryFn: () => fetchDailyReconciliation(date),
+    enabled,
     staleTime: 0,
   });
 }
@@ -131,12 +156,16 @@ export function useWithdrawalQueue(filters: WithdrawalFilters) {
 
 /**
  * Mọi hành động đều đổi trạng thái một dòng VÀ số lệnh quá hạn ở đầu màn, nên làm mới cả nhánh
- * thay vì vá một dòng trong cache. Ví của chủ sở hữu cũng đổi (số dư, sổ) — nhưng đó là cache
- * của người khác, admin không giữ nó.
+ * thay vì vá một dòng trong cache. Nhánh money cũng đổi: số đếm hàng đợi và vế "đã chi" của đối
+ * soát ngày. Ví của chủ sở hữu cũng đổi (số dư, sổ) — nhưng đó là cache của người khác, admin
+ * không giữ nó.
  */
 function useInvalidateQueue() {
   const queryClient = useQueryClient();
-  return () => void queryClient.invalidateQueries({ queryKey: queryKeys.platformWithdrawals.all });
+  return () => {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.platformWithdrawals.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.platformMoney.all });
+  };
 }
 
 export function useApproveWithdrawal() {
@@ -165,8 +194,9 @@ export function useRejectWithdrawal() {
 export function useReverseWithdrawal() {
   const invalidate = useInvalidateQueue();
   return useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
-      reverseWithdrawal(id, { reason }),
+    // `rowVersion` của bản ghi đang nhìn: bấm hai lần thì lần sau nhận 409, không đảo đôi.
+    mutationFn: ({ id, reason, rowVersion }: { id: string; reason: string; rowVersion: number }) =>
+      reverseWithdrawal(id, { reason, rowVersion }),
     onSuccess: invalidate,
   });
 }

@@ -1,0 +1,162 @@
+/*
+ * Khung panel làm việc dùng chung (rút từ màn "Kiểm duyệt xe" — 01/10/2026).
+ *
+ * Thang chữ CỐ Ý nhỏ và đều: tiêu đề panel 16px, nội dung 14px, chú thích 12px — đây là một bàn
+ * làm việc để quét, không phải một trang giới thiệu. Khoảng cách chỉ dùng nhịp 8/16/24.
+ */
+
+/* ─── Header ─────────────────────────────────────────────────────────────── */
+
+.headTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+.headLabel {
+  font-size: var(--xp-font-size-h4);
+  line-height: var(--xp-line-height-h4);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+}
+
+.headCode {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  font-weight: var(--xp-font-weight-regular);
+  color: var(--xp-color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.headNav {
+  display: flex;
+  gap: var(--xp-space-xs);
+}
+
+/* ─── Thân + bố cục hai cột ──────────────────────────────────────────────── */
+
+/* Vùng cuộn DUY NHẤT là thân panel (`DetailDrawer` → `.ant-drawer-body`). */
+.body {
+  padding: var(--xp-space-md) var(--xp-space-lg);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--xp-space-lg);
+  align-items: start;
+  /* Mốc cho `scrollIntoView` khi chuyển bản ghi: cách mép trên một khoảng thở. */
+  scroll-margin-top: var(--xp-space-md);
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+/*
+ * Hai cột chỉ khi panel đủ rộng. Panel `xl` rộng tối thiểu ~1000px từ màn 1201px trở lên (token
+ * `drawer-width-xl`), nên đây là ngưỡng mà cột phải không bị ép dưới ~300px.
+ */
+@media (min-width: 1201px) {
+  .layoutSplit {
+    grid-template-columns: minmax(0, 68fr) minmax(300px, 32fr);
+  }
+
+  .layoutSplit .side {
+    position: sticky;
+    top: 0;
+  }
+}
+
+/* ─── Lưới nhãn–giá trị (chỉ đọc) ────────────────────────────────────────── */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  column-gap: var(--xp-space-lg);
+  row-gap: var(--xp-space-sm);
+  margin: 0;
+}
+
+.gridItem {
+  display: grid;
+  grid-template-columns: minmax(120px, 40%) minmax(0, 1fr);
+  gap: var(--xp-space-sm);
+  align-items: baseline;
+  min-width: 0;
+}
+
+.gridItemWide {
+  grid-column: 1 / -1;
+  /* Nhãn giữ CÙNG bề rộng với ô thường (≈ 40% của nửa hàng) — giá trị không bị đẩy ra giữa hàng. */
+  grid-template-columns: minmax(120px, calc(20% - var(--xp-space-sm))) minmax(0, 1fr);
+}
+
+.gridLabel {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body);
+  color: var(--xp-color-text-secondary);
+}
+
+.gridValue {
+  margin: 0;
+  min-width: 0;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  color: var(--xp-color-text);
+  overflow-wrap: anywhere;
+}
+
+.gridValueText {
+  white-space: pre-line;
+}
+
+/* ─── Chân panel (dính đáy) ──────────────────────────────────────────────── */
+
+.footerBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm) var(--xp-space-md);
+  width: 100%;
+}
+
+.footerHint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.footerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+}
+
+/* 640px = `--xp-bp-mobile`: nút xếp dọc, đủ vùng chạm (DetailDrawer lo chiều cao nút). */
+@media (max-width: 640px) {
+  .footerBar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .footerActions {
+    flex-direction: column-reverse;
+  }
+}

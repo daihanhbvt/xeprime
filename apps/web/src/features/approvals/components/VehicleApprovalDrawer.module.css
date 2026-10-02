@@ -1,87 +1,12 @@
 /*
- * Màn "Duyệt xe" — panel chi tiết (ADR 0003: CSS Modules + token).
+ * Màn "Duyệt xe" — phần RIÊNG của panel chi tiết (ADR 0003: CSS Modules + token). Khung chung
+ * (tiêu đề, bố cục hai cột, lưới nhãn–giá trị, chân panel) nằm ở `components/overlay/WorkDrawer`.
  *
  * Thang chữ CỐ Ý nhỏ và đều: tên xe 20px (h3), tiêu đề panel 16px, tiêu đề khối 14px đậm, nội dung 14px, chú thích
  * 12px. Không có chữ nào trên 20px trong panel — đây là một bàn làm việc để quét, không phải một
  * trang giới thiệu. Khoảng cách chỉ dùng nhịp 8/16/24 (`--xp-space-sm/md/lg`) và 12px ở vài chỗ
  * cần gọn hơn 16 nhưng thoáng hơn 8.
  */
-
-/* ─── Header ─────────────────────────────────────────────────────────────── */
-
-.headTitle {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--xp-space-sm);
-  min-width: 0;
-}
-
-.headLabel {
-  font-size: var(--xp-font-size-h4);
-  line-height: var(--xp-line-height-h4);
-  font-weight: var(--xp-font-weight-semibold);
-  color: var(--xp-color-text);
-}
-
-.headCode {
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
-  font-weight: var(--xp-font-weight-regular);
-  color: var(--xp-color-text-secondary);
-  font-variant-numeric: tabular-nums;
-}
-
-.headNav {
-  display: flex;
-  gap: var(--xp-space-xs);
-}
-
-/* ─── Bố cục hai cột ─────────────────────────────────────────────────────── */
-
-/*
- * Vùng cuộn DUY NHẤT là thân panel (`DetailDrawer` → `.ant-drawer-body`). Cột phải dính (`sticky`)
- * trong chính vùng đó — không có thanh cuộn lồng thứ hai.
- */
-.body {
-  padding: var(--xp-space-md) var(--xp-space-lg);
-}
-
-.layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--xp-space-lg);
-  align-items: start;
-  /* Mốc cho `scrollIntoView` khi chuyển phiếu: cách mép trên một khoảng thở. */
-  scroll-margin-top: var(--xp-space-md);
-}
-
-.main {
-  display: flex;
-  flex-direction: column;
-  gap: var(--xp-space-md);
-  min-width: 0;
-}
-
-.side {
-  min-width: 0;
-}
-
-/*
- * Hai cột (68% / 32%) chỉ khi panel đủ rộng. Panel `xl` rộng tối thiểu ~1000px từ màn 1201px trở
- * lên (token `drawer-width-xl`), nên đây là ngưỡng mà cột phải không bị ép dưới ~300px. Dưới đó:
- * một cột, danh mục kiểm tra đứng SAU hồ sơ — đọc hết rồi mới đánh dấu.
- */
-@media (min-width: 1201px) {
-  .layout {
-    grid-template-columns: minmax(0, 68fr) minmax(300px, 32fr);
-  }
-
-  .side {
-    position: sticky;
-    top: 0;
-  }
-}
 
 /* ─── Phần mở đầu ────────────────────────────────────────────────────────── */
 
@@ -173,51 +98,6 @@
   line-height: var(--xp-line-height-body-sm);
   font-weight: var(--xp-font-weight-semibold);
   color: var(--xp-color-text-secondary);
-}
-
-/* ─── Lưới nhãn–giá trị (chỉ đọc) ────────────────────────────────────────── */
-
-/*
- * Tự dàn 2 cột khi đủ chỗ (≥ 2 × 280px), 1 cột khi hẹp — không có nhánh JS. Nhãn màu trung
- * tính, giá trị đậm hơn: mắt quét cột giá trị, nhãn chỉ để định vị.
- */
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  column-gap: var(--xp-space-lg);
-  row-gap: var(--xp-space-sm);
-  margin: 0;
-}
-
-.gridItem {
-  display: grid;
-  grid-template-columns: minmax(120px, 40%) minmax(0, 1fr);
-  gap: var(--xp-space-sm);
-  align-items: baseline;
-  min-width: 0;
-}
-
-.gridItemWide {
-  grid-column: 1 / -1;
-}
-
-.gridLabel {
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body);
-  color: var(--xp-color-text-secondary);
-}
-
-.gridValue {
-  margin: 0;
-  min-width: 0;
-  font-size: var(--xp-font-size-body);
-  line-height: var(--xp-line-height-body);
-  color: var(--xp-color-text);
-  overflow-wrap: anywhere;
-}
-
-.gridValueText {
-  white-space: pre-line;
 }
 
 .blockerList {
@@ -495,24 +375,16 @@
   gap: var(--xp-space-sm);
 }
 
-/* ─── Chân panel (dính đáy) ──────────────────────────────────────────────── */
+/* ─── Dòng gợi ý ở chân panel ──────────────────────────────────────────────
+ * Khung chữ (cỡ, màu mặc định) do `WorkDrawerFooter` lo — ở đây chỉ còn sắc thái của từng trạng
+ * thái, và biểu tượng đứng cạnh chữ.
+ */
 
-.footerBar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--xp-space-sm) var(--xp-space-md);
-  width: 100%;
-}
-
-.footerHint {
+.footerHintTone,
+.footerHintBlocked {
   display: inline-flex;
   align-items: center;
   gap: var(--xp-space-xs);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
-  color: var(--xp-color-text-secondary);
 }
 
 .footerHintReady {
@@ -526,24 +398,6 @@
 
 .footerHintBlocked :global(.anticon) {
   color: var(--xp-color-warning);
-}
-
-.footerActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--xp-space-sm);
-}
-
-/* 640px = `--xp-bp-mobile`: nút xếp dọc, đủ vùng chạm (DetailDrawer lo chiều cao nút). */
-@media (max-width: 640px) {
-  .footerBar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .footerActions {
-    flex-direction: column-reverse;
-  }
 }
 
 /* ─── Hộp thoại ──────────────────────────────────────────────────────────── */

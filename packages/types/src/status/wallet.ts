@@ -115,9 +115,7 @@ export const WALLET_ENTRY_SOURCE = {
 } as const;
 
 export type WalletEntrySource = (typeof WALLET_ENTRY_SOURCE)[keyof typeof WALLET_ENTRY_SOURCE];
-export const WALLET_ENTRY_SOURCE_VALUES = Object.values(
-  WALLET_ENTRY_SOURCE,
-) as WalletEntrySource[];
+export const WALLET_ENTRY_SOURCE_VALUES = Object.values(WALLET_ENTRY_SOURCE) as WalletEntrySource[];
 
 // ── Trạng thái ví ───────────────────────────────────────────────────────────
 
@@ -153,6 +151,12 @@ export const WITHDRAWAL_STATUS = {
   PAID: 'paid',
   REJECTED: 'rejected',
   CANCELLED: 'cancelled',
+  /**
+   * Đã CHI rồi bị ĐẢO — chuyển hụt, sai số tài khoản, ngân hàng trả về (ADR 0025 điều 7). Tiền
+   * quay lại số dư khả dụng bằng một dòng đảo trên sổ; bằng chứng lần chi vẫn giữ nguyên. Trạng
+   * thái cuối: chủ ví tạo lệnh MỚI với tài khoản đúng, không "mở lại" lệnh này.
+   */
+  REVERSED: 'reversed',
 } as const;
 
 export type WithdrawalStatus = (typeof WITHDRAWAL_STATUS)[keyof typeof WITHDRAWAL_STATUS];
@@ -168,7 +172,18 @@ export const WITHDRAWAL_STATUS_META: Readonly<Record<WithdrawalStatus, StatusMet
   [WITHDRAWAL_STATUS.PAID]: { label: 'Đã chuyển', color: STATUS_COLOR.SUCCESS },
   [WITHDRAWAL_STATUS.REJECTED]: { label: 'Bị từ chối', color: STATUS_COLOR.DANGER },
   [WITHDRAWAL_STATUS.CANCELLED]: { label: 'Đã huỷ', color: STATUS_COLOR.NEUTRAL },
+  [WITHDRAWAL_STATUS.REVERSED]: { label: 'Chuyển không thành công', color: STATUS_COLOR.DANGER },
 };
+
+/**
+ * Lệnh mà tiền ĐÃ RỜI tài khoản nền tảng ở một thời điểm — kể cả khi sau đó bị đảo. Đối soát
+ * chiều RA đếm theo `paid_at` trên tập này: ngày hôm đó tiền đã đi thật, việc nó quay về là một
+ * sự kiện của ngày khác.
+ */
+export const WITHDRAWAL_STATUS_DISBURSED: readonly WithdrawalStatus[] = [
+  WITHDRAWAL_STATUS.PAID,
+  WITHDRAWAL_STATUS.REVERSED,
+];
 
 /** Yêu cầu đang khoá tiền trong `pendingWithdrawAmount` — chưa chi nhưng không dùng được nữa. */
 export const WITHDRAWAL_STATUS_HOLDING_FUNDS: readonly WithdrawalStatus[] = [
@@ -191,9 +206,7 @@ export const BANK_ACCOUNT_STATUS = {
 } as const;
 
 export type BankAccountStatus = (typeof BANK_ACCOUNT_STATUS)[keyof typeof BANK_ACCOUNT_STATUS];
-export const BANK_ACCOUNT_STATUS_VALUES = Object.values(
-  BANK_ACCOUNT_STATUS,
-) as BankAccountStatus[];
+export const BANK_ACCOUNT_STATUS_VALUES = Object.values(BANK_ACCOUNT_STATUS) as BankAccountStatus[];
 
 export function isBankAccountStatus(value: unknown): value is BankAccountStatus {
   return typeof value === 'string' && (BANK_ACCOUNT_STATUS_VALUES as string[]).includes(value);

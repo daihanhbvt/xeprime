@@ -1,6 +1,6 @@
 'use client';
 
-import { App, Alert, Button, Input, Modal, Space } from 'antd';
+import { App, Alert, Button, Space } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import {
@@ -10,13 +10,23 @@ import {
 } from '@xeprime/types';
 import { DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
+import { ReasonDialog } from '@/components/overlay/ReasonDialog';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { useInsuranceQueue, useRetryInsurance, useVoidInsurance } from '../hooks/use-platform-money';
+import { positiveIntParam, useUrlFilters } from '@/hooks/use-url-filters';
+import { MONEY_DEFAULT_LIMIT } from '../api';
+import {
+  useInsuranceQueue,
+  useRetryInsurance,
+  useVoidInsurance,
+} from '../hooks/use-platform-money';
 import type { PlatformInsurancePolicy } from '../types';
 
 import styles from './InsuranceQueue.module.css';
+
+/** Cùng sàn với `VoidInsuranceDto.reason` — thu hồi là quyết định tiền, phải có lý do thật. */
+const VOID_REASON_MIN = 5;
 
 const MIN_TABLE_WIDTH = 1040;
 
@@ -39,11 +49,12 @@ export function InsuranceQueue() {
   const { message } = App.useApp();
   const errorMessage = useErrorMessage();
 
-  const [page, setPage] = useState(1);
+  const { filters, setFilters } = useUrlFilters((params) => ({
+    page: positiveIntParam(params, 'page'),
+  }));
   const [voiding, setVoiding] = useState<PlatformInsurancePolicy | null>(null);
-  const [reason, setReason] = useState('');
 
-  const { data, isError, isFetching, refetch } = useInsuranceQueue({ page });
+  const { data, isError, isFetching, refetch } = useInsuranceQueue({ page: filters.page });
   const retry = useRetryInsurance();
   const voidPolicy = useVoidInsurance();
 
@@ -99,9 +110,7 @@ export function InsuranceQueue() {
               meta={INSURANCE_POLICY_STATUS_META}
               group="insurancePolicyStatus"
             />
-            {row.lastErrorMessage ? (
-              <p className={styles.muted}>{row.lastErrorMessage}</p>
-            ) : null}
+            {row.lastErrorMessage ? <p className={styles.muted}>{row.lastErrorMessage}</p> : null}
           </div>
         ),
       },
@@ -130,7 +139,7 @@ export function InsuranceQueue() {
                 ? t('noAutoRetry')
                 : row.nextAttemptAt
                   ? fmt.dateTime(row.nextAttemptAt)
-                  : '—'}
+                  : tCommon('labels.emptyValue')}
             </p>
           </div>
         ),
@@ -159,10 +168,7 @@ export function InsuranceQueue() {
                 row.status !== INSURANCE_POLICY_STATUS.FAILED &&
                 row.status !== INSURANCE_POLICY_STATUS.ISSUED
               }
-              onClick={() => {
-                setReason('');
-                setVoiding(row);
-              }}
+              onClick={() => setVoiding(row)}
             >
               {t('actions.void')}
             </Button>
@@ -195,24 +201,27 @@ export function InsuranceQueue() {
         error={isError && !data ? { title: t('loadError'), onRetry: () => void refetch() } : null}
         empty={{ title: t('empty.title'), description: t('empty.description') }}
         pagination={{
-          meta: data?.meta ?? { page: 1, limit: 20, total: 0, hasNext: false },
-          onChange: (next) => setPage(next),
+          meta: data?.meta ?? { page: 1, limit: MONEY_DEFAULT_LIMIT, total: 0, hasNext: false },
+          onChange: (page) => setFilters({ page }),
           totalLabel: (total) => t('total', { count: total }),
         }}
       />
 
-      <Modal
+      <ReasonDialog
         open={voiding !== null}
         title={t('voidModal.title')}
-        okText={t('actions.void')}
-        okButtonProps={{ danger: true, disabled: reason.trim().length < 5 }}
-        cancelText={tCommon('actions.cancel')}
-        confirmLoading={voidPolicy.isPending}
-        onCancel={() => setVoiding(null)}
-        onOk={() => {
+        audienceHint={t('voidModal.hint')}
+        label={t('voidModal.reasonLabel')}
+        placeholder={t('voidModal.reasonPlaceholder')}
+        requiredMessage={t('voidModal.reasonRequired')}
+        minLength={VOID_REASON_MIN}
+        submitText={t('actions.void')}
+        loading={voidPolicy.isPending}
+        onClose={() => setVoiding(null)}
+        onSubmit={(reason) => {
           if (!voiding) return;
           voidPolicy.mutate(
-            { id: voiding.id, reason: reason.trim() },
+            { id: voiding.id, reason },
             {
               onSuccess: () => {
                 setVoiding(null);
@@ -222,17 +231,7 @@ export function InsuranceQueue() {
             },
           );
         }}
-      >
-        <p>{t('voidModal.hint')}</p>
-        <Input.TextArea
-          value={reason}
-          rows={3}
-          maxLength={500}
-          aria-label={t('voidModal.reasonLabel')}
-          placeholder={t('voidModal.reasonPlaceholder')}
-          onChange={(e) => setReason(e.target.value)}
-        />
-      </Modal>
+      />
     </>
   );
 }

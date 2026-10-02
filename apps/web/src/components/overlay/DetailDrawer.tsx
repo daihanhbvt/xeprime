@@ -6,7 +6,7 @@ import type { ReactNode } from 'react';
 
 import { useIsMobile } from '@/hooks/use-media-query';
 import { cx } from '@/lib/cx';
-import { XP_TOKENS } from '@/styles/theme';
+import { XP_TOKENS, toPx } from '@/styles/theme';
 
 import styles from './DetailDrawer.module.css';
 import { useTranslations } from 'next-intl';
@@ -24,8 +24,10 @@ import { useTranslations } from 'next-intl';
  * này (`--xp-drawer-width-split`), nên hai bên không thể lệch nhau.
  */
 const DRAWER_WIDTH = {
-  md: XP_TOKENS['drawer-width'],
-  lg: XP_TOKENS['drawer-width-lg'],
+  // Hai cỡ cố định đi dạng SỐ: rc-drawer cảnh báo (`Invalid value type of width`) mỗi lần nhận
+  // một chuỗi `'720px'` — nó tự đổi sang số rồi vẫn kêu. Hai cỡ `clamp()` không đổi được nên giữ chuỗi.
+  md: toPx(XP_TOKENS['drawer-width']),
+  lg: toPx(XP_TOKENS['drawer-width-lg']),
   xl: XP_TOKENS['drawer-width-xl'],
   split: XP_TOKENS['drawer-width-split'],
 } as const;

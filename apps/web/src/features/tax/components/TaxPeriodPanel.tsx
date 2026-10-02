@@ -1,14 +1,23 @@
 'use client';
 
-import { App, Alert, Button, DatePicker, Descriptions, Input, Modal, Skeleton, Space, Statistic } from 'antd';
+import {
+  App,
+  Alert,
+  Button,
+  DatePicker,
+  Descriptions,
+  Input,
+  Modal,
+  Skeleton,
+  Space,
+  Statistic,
+} from 'antd';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
-import {
-  TAX_WITHHOLDING_STATUS,
-  TAX_WITHHOLDING_STATUS_META,
-} from '@xeprime/types';
+import { TAX_WITHHOLDING_STATUS, TAX_WITHHOLDING_STATUS_META } from '@xeprime/types';
 import { DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
+import { positiveIntParam, useUrlFilters } from '@/hooks/use-url-filters';
 import { dayjs, nowInAppTz } from '@/lib/datetime';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
@@ -29,6 +38,21 @@ import styles from './TaxPeriodPanel.module.css';
 const PERIOD_FORMAT = 'YYYY-MM';
 const MIN_TABLE_WIDTH = 1100;
 
+interface TaxUrlFilters {
+  /** Kỳ đang xem; vắng = kỳ HIỆN HÀNG. Kỳ tương lai hay giá trị rác bị bỏ qua. */
+  period?: string;
+  page?: number;
+}
+
+function parse(params: URLSearchParams): TaxUrlFilters {
+  const period = params.get('period');
+  const valid =
+    period !== null &&
+    dayjs(period, PERIOD_FORMAT, true).isValid() &&
+    period <= nowInAppTz().format(PERIOD_FORMAT);
+  return { period: valid ? period : undefined, page: positiveIntParam(params, 'page') };
+}
+
 /**
  * SỔ THUẾ theo KỲ — Phase 8 (ADR 0032 điều 3).
  *
@@ -42,6 +66,9 @@ const MIN_TABLE_WIDTH = 1100;
  *    cho bấm từng dòng sẽ sinh ra những kỳ nửa-khai mà không tờ khai nào khớp.
  *  - **Nhóm `unknown` hiện ra**, không gộp vào `individual`. Đó là gian hàng chưa khai hồ sơ
  *    người bán, và gộp là đoán hộ họ một nghĩa vụ pháp lý.
+ *
+ * Kỳ và trang nằm trên URL (ADR 0004): thẻ "Thuế chưa kê khai" mở thẳng KỲ CŨ NHẤT còn nợ khai
+ * (`?period=2026-09`), và gửi link một kỳ cho người làm tờ khai là họ mở đúng kỳ đó.
  */
 export function TaxPeriodPanel() {
   const t = useTranslations('PlatformMoney.tax');
@@ -51,8 +78,9 @@ export function TaxPeriodPanel() {
   const { message } = App.useApp();
   const errorMessage = useErrorMessage();
 
-  const [period, setPeriod] = useState(() => nowInAppTz().format(PERIOD_FORMAT));
-  const [page, setPage] = useState(1);
+  const { filters, setFilters } = useUrlFilters(parse);
+  const period = filters.period ?? nowInAppTz().format(PERIOD_FORMAT);
+  const page = filters.page ?? 1;
   const [reversing, setReversing] = useState<TaxRow | null>(null);
   const [reason, setReason] = useState('');
 
@@ -156,10 +184,12 @@ export function TaxPeriodPanel() {
           value={dayjs(period, PERIOD_FORMAT)}
           allowClear={false}
           aria-label={t('period')}
+          // Kỳ tương lai chưa có dòng nào để khai — và URL cũng bỏ qua nó.
+          disabledDate={(day) => day.isAfter(nowInAppTz(), 'month')}
           onChange={(value) => {
             if (value) {
-              setPeriod(value.format(PERIOD_FORMAT));
-              setPage(1);
+              // Đổi kỳ ⇒ `useUrlFilters` tự về trang 1.
+              setFilters({ period: value.format(PERIOD_FORMAT) });
             }
           }}
         />
@@ -266,7 +296,7 @@ export function TaxPeriodPanel() {
         empty={{ title: t('empty.title'), description: t('empty.description') }}
         pagination={{
           meta: rows.data?.meta ?? { page: 1, limit: 20, total: 0, hasNext: false },
-          onChange: (next) => setPage(next),
+          onChange: (next) => setFilters({ page: next }),
           totalLabel: (total) => t('total', { count: total }),
         }}
       />

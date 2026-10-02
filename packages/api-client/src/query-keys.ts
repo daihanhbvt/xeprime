@@ -545,6 +545,8 @@ export const queryKeys = {
     holds: (params: QueryParams) => ['platform-money', 'holds', params] as const,
     refunds: (params: QueryParams) => ['platform-money', 'refunds', params] as const,
     reconciliation: (date: string) => ['platform-money', 'reconciliation', date] as const,
+    /** Số đếm các hàng đợi — dải thẻ đầu màn Tài chính. Nằm dưới `all` để mọi thao tác tiền làm mới nó. */
+    summary: ['platform-money', 'summary'] as const,
   },
   /** Support case — ba bề mặt (khách/gian hàng/nền tảng) cùng dùng chung nhánh dữ liệu. */
   supportCases: {

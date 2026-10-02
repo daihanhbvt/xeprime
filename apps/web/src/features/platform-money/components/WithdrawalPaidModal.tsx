@@ -1,8 +1,13 @@
 'use client';
 
-import { App, Alert, Descriptions } from 'antd';
-import { useState } from 'react';
+import { App, Descriptions } from 'antd';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { useEffect, useMemo } from 'react';
+import { useForm } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
+import * as yup from 'yup';
+import { DialogForm } from '@/components/form/DialogForm';
+import { TextField } from '@/components/form/TextField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
@@ -10,14 +15,21 @@ import { useMarkWithdrawalPaid } from '../hooks/use-platform-money';
 import type { PlatformWithdrawal } from '../types';
 import styles from './WithdrawalPaidModal.module.css';
 
+/** Cùng sàn/trần với `MarkWithdrawalPaidDto.bankReference`. */
+const BANK_REFERENCE_MIN = 3;
+const BANK_REFERENCE_MAX = 100;
+
 /**
  * Xác nhận đã chuyển khoản cho một lệnh rút — điểm DUY NHẤT số dư thật sự giảm.
  *
  * Mã giao dịch ngân hàng là BẮT BUỘC: nó là đầu duy nhất của đối soát chiều RA, và database cũng
- * chặn một lệnh `paid` không có bằng chứng. Nút chỉ bật khi đã gõ mã.
+ * chặn một lệnh `paid` không có bằng chứng.
  *
  * `rowVersion` gửi kèm từ bản ghi admin đang nhìn: hai người cùng mở hàng đợi và cùng bấm thì
  * người sau nhận 409 thay vì chuyển tiền lần thứ hai.
+ *
+ * Form RESET mỗi khi mở một lệnh KHÁC — kể cả sau khi bấm Huỷ. Modal sống suốt đời màn hình; không
+ * reset là lệnh B mở ra với mã giao dịch của lệnh A điền sẵn, nút bật sẵn.
  */
 export function WithdrawalPaidModal({
   withdrawal,
@@ -30,30 +42,54 @@ export function WithdrawalPaidModal({
 }) {
   const t = useTranslations('Wallet.admin.paid');
   const tCol = useTranslations('Wallet.admin.columns');
+  const tCommon = useTranslations('Common');
   const { message } = App.useApp();
   const fmt = useAppFormat();
   const errorMessage = useErrorMessage();
   const markPaid = useMarkWithdrawalPaid();
 
-  const [reference, setReference] = useState('');
+  const schema = useMemo(
+    () =>
+      yup.object({
+        bankReference: yup
+          .string()
+          .trim()
+          .min(BANK_REFERENCE_MIN, t('referenceRequired'))
+          .max(BANK_REFERENCE_MAX, tCommon('validation.maxLength', { max: BANK_REFERENCE_MAX }))
+          .required(t('referenceRequired')),
+      }),
+    [t, tCommon],
+  );
 
-  const submit = () => {
-    if (!withdrawal || reference.trim().length < 3) return;
+  type FormValues = yup.InferType<typeof schema>;
+
+  const { control, handleSubmit, reset } = useForm<FormValues>({
+    resolver: yupResolver(schema),
+    defaultValues: { bankReference: '' },
+  });
+
+  const openId = open ? withdrawal?.id : undefined;
+  useEffect(() => {
+    if (openId) reset({ bankReference: '' });
+  }, [openId, reset]);
+
+  const onSubmit = handleSubmit((values) => {
+    // Enter trong ô nhập gửi form kể cả khi nút OK đang quay — chặn lượt thứ hai ở đây.
+    if (!withdrawal || markPaid.isPending) return;
     markPaid.mutate(
       {
         id: withdrawal.id,
-        body: { bankReference: reference.trim(), rowVersion: withdrawal.rowVersion },
+        body: { bankReference: values.bankReference.trim(), rowVersion: withdrawal.rowVersion },
       },
       {
         onSuccess: () => {
           message.success(t('done'));
-          setReference('');
           onClose();
         },
         onError: (err: unknown) => message.error(errorMessage(err)),
       },
     );
-  };
+  });
 
   return (
     <ResponsiveDialog
@@ -61,8 +97,7 @@ export function WithdrawalPaidModal({
       open={open}
       onClose={onClose}
       okText={t('submit')}
-      onOk={submit}
-      okDisabled={reference.trim().length < 3}
+      onOk={() => void onSubmit()}
       confirmLoading={markPaid.isPending}
       size="sm"
     >
@@ -80,21 +115,15 @@ export function WithdrawalPaidModal({
         </Descriptions>
       ) : null}
 
-      <label className={styles.field}>
-        <span className={styles.label}>{t('bankReference')}</span>
-        <input
-          className={styles.input}
-          value={reference}
-          onChange={(e) => setReference(e.target.value)}
-          aria-describedby="withdrawal-reference-hint"
+      <DialogForm onSubmit={onSubmit} labelWidth="lg">
+        <TextField
+          control={control}
+          name="bankReference"
+          label={t('bankReference')}
+          required
+          help={t('bankReferenceHint')}
         />
-      </label>
-      <Alert
-        id="withdrawal-reference-hint"
-        type="info"
-        showIcon
-        title={t('bankReferenceHint')}
-      />
+      </DialogForm>
     </ResponsiveDialog>
   );
 }

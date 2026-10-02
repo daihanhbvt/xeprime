@@ -154,6 +154,11 @@ export function WalletView({
                   <p className={styles.muted}>
                     {t('requests.rejected', { reason: request.rejectReason })}
                   </p>
+                ) : request.status === WITHDRAWAL_STATUS.REVERSED ? (
+                  // Tiền đã về ví — nói rõ việc cần làm tiếp, không để chủ ví đoán (ADR 0025 điều 7).
+                  <p className={styles.muted}>
+                    {t('requests.reversed', { reason: request.reverseReason ?? '' })}
+                  </p>
                 ) : request.paidAt ? (
                   <p className={styles.muted}>
                     {t('requests.paidAt', { time: fmt.dateTime(request.paidAt) })}

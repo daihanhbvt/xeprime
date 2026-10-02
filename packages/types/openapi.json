@@ -23530,6 +23530,38 @@
             }
           },
           {
+            "name": "code",
+            "required": false,
+            "in": "query",
+            "description": "Mã rút được thuộc luồng nào: hoá đơn gói (`XPG`), giữ chỗ (`XPH`), hoặc không rút được mã",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "subscription_invoice",
+                "booking_hold",
+                "no_code"
+              ]
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Từ ngày — `YYYY-MM-DD`, trọn ngày giờ VN. Lọc theo thời điểm ngân hàng",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Đến hết ngày — cùng quy ước với `from`",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "page",
             "required": false,
             "in": "query",
@@ -30191,6 +30223,106 @@
         "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.\n\n**Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session)."
       }
     },
+    "/platform/money/summary": {
+      "get": {
+        "description": "Trạng thái HIỆN TẠI của sáu hàng đợi (tiền vào chưa khớp, giữ chỗ chờ chốt, hoàn chờ chuyển, rút tiền, bảo hiểm lỗi, thuế kỳ này chờ kê khai). Mỗi nhóm đếm đúng tập mà danh sách tương ứng hiện khi không lọc.\n\n**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.\n\n**Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).",
+        "operationId": "PlatformMoneyController_summary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PlatformMoneySummaryDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Số đếm các hàng đợi tiền — dải thẻ đầu màn Tài chính",
+        "tags": [
+          "platform-money"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
     "/platform/money/tax/export": {
       "get": {
         "description": "Dựng ở SERVER: một kỳ đông đơn có vài nghìn dòng, và tải hết về trình duyệt chỉ để ghép chuỗi là cách chắc chắn làm treo màn hình. File có BOM UTF-8 vì Excel trên Windows đọc CSV không BOM bằng codepage hệ thống và mọi tên có dấu sẽ thành ký tự lạ.\n\n**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.\n\n**Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).",
@@ -31083,7 +31215,8 @@
                 "approved",
                 "paid",
                 "rejected",
-                "cancelled"
+                "cancelled",
+                "reversed"
               ]
             }
           },
@@ -63103,6 +63236,27 @@
           "createdAt"
         ]
       },
+      "BankInQueueSummaryDto": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "number"
+          },
+          "amount": {
+            "type": "string",
+            "description": "Tổng tiền của các dòng đang đếm, string — ADR 0007"
+          },
+          "oldestAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "Lúc khoản CŨ NHẤT còn chưa khớp tới ngân hàng (thiếu mốc ngân hàng thì lúc webhook về) — ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "count",
+          "amount"
+        ]
+      },
       "BankTransactionDetailDto": {
         "type": "object",
         "properties": {
@@ -63178,9 +63332,34 @@
             "nullable": true,
             "description": "Mã hoá đơn đã khớp (khi `matchedType = subscription_invoice`)"
           },
+          "refundReference": {
+            "type": "string",
+            "nullable": true,
+            "description": "Mã giao dịch chuyển TRẢ người gửi — chỉ ở dòng `ignored` đã trả lại tiền"
+          },
+          "refundedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO-8601 UTC"
+          },
           "rawJson": {
             "type": "object",
             "description": "Payload webhook nguyên trạng — BẰNG CHỨNG khi tranh cãi. Chỉ ở màn chi tiết, không ở danh sách."
+          },
+          "bankGateway": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ngân hàng nhận theo nhà cung cấp (SePay `gateway`)"
+          },
+          "bankAccountNumber": {
+            "type": "string",
+            "nullable": true,
+            "description": "Số tài khoản NHẬN của nền tảng (SePay `accountNumber`)"
+          },
+          "bankReferenceNumber": {
+            "type": "string",
+            "nullable": true,
+            "description": "Mã tham chiếu phía ngân hàng (SePay `referenceCode`) — khác mã đối soát XePrime"
           },
           "suggestions": {
             "description": "Hoá đơn đang chờ tiền, sắp theo mức khớp số tiền rồi tới mới nhất",
@@ -63276,6 +63455,16 @@
             "type": "string",
             "nullable": true,
             "description": "Mã hoá đơn đã khớp (khi `matchedType = subscription_invoice`)"
+          },
+          "refundReference": {
+            "type": "string",
+            "nullable": true,
+            "description": "Mã giao dịch chuyển TRẢ người gửi — chỉ ở dòng `ignored` đã trả lại tiền"
+          },
+          "refundedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO-8601 UTC"
           }
         },
         "required": [
@@ -70602,6 +70791,27 @@
           "configured"
         ]
       },
+      "HoldQueueSummaryDto": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "number"
+          },
+          "amount": {
+            "type": "string",
+            "description": "Tổng tiền của các dòng đang đếm, string — ADR 0007"
+          },
+          "disputeCount": {
+            "type": "number",
+            "description": "Trong số đó, bao nhiêu khoản đang bị tạm giữ vì tranh chấp mở"
+          }
+        },
+        "required": [
+          "count",
+          "amount",
+          "disputeCount"
+        ]
+      },
       "HolidayDto": {
         "type": "object",
         "properties": {
@@ -70727,6 +70937,10 @@
           "note": {
             "type": "string",
             "description": "Lý do bỏ qua — bắt buộc, để dòng bị loại vẫn truy được"
+          },
+          "refundReference": {
+            "type": "string",
+            "description": "Mã giao dịch ngân hàng của lần chuyển TRẢ người gửi. Có mã ⇒ dòng được ghi là đã trả lại; không có mã thì không ghi \"đã trả\" — một lần chuyển không có bằng chứng chỉ là lời khai"
           }
         },
         "required": [
@@ -72280,6 +72494,22 @@
           "accessTokenExpiresIn",
           "refreshToken",
           "refreshTokenExpiresAt"
+        ]
+      },
+      "MoneyQueueCountDto": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "number"
+          },
+          "amount": {
+            "type": "string",
+            "description": "Tổng tiền của các dòng đang đếm, string — ADR 0007"
+          }
+        },
+        "required": [
+          "count",
+          "amount"
         ]
       },
       "MyPermissionsDto": {
@@ -75652,6 +75882,37 @@
           },
           "createdAt": {
             "type": "string"
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "commission",
+              "escrow"
+            ]
+          },
+          "depositAmount": {
+            "type": "string",
+            "description": "`D` — cọc, phần giá thuê của chủ xe"
+          },
+          "serviceFeeAmount": {
+            "type": "string",
+            "description": "`S` — phí dịch vụ phía khách"
+          },
+          "vehicleInsuranceAmount": {
+            "type": "string",
+            "description": "`IV` — bảo hiểm xe"
+          },
+          "personalInsuranceAmount": {
+            "type": "string",
+            "description": "`IP` — bảo hiểm người"
+          },
+          "promoDiscountAmount": {
+            "type": "string",
+            "description": "`P` — nền tảng tài trợ qua mã khuyến mãi"
+          },
+          "taxAmount": {
+            "type": "string",
+            "description": "Thuế khấu trừ đã đóng băng trên snapshot — chỉ áp khi chuyến hoàn thành"
           }
         },
         "required": [
@@ -75668,7 +75929,14 @@
           "expiresAt",
           "freeCancelUntil",
           "disputeOpen",
-          "createdAt"
+          "createdAt",
+          "purpose",
+          "depositAmount",
+          "serviceFeeAmount",
+          "vehicleInsuranceAmount",
+          "personalInsuranceAmount",
+          "promoDiscountAmount",
+          "taxAmount"
         ]
       },
       "PlatformHoldPageDto": {
@@ -75915,6 +76183,67 @@
           "partnerName",
           "issueAttempts",
           "createdAt"
+        ]
+      },
+      "PlatformMoneySummaryDto": {
+        "type": "object",
+        "properties": {
+          "bankIn": {
+            "description": "Tiền vào CHƯA KHỚP",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BankInQueueSummaryDto"
+              }
+            ]
+          },
+          "holds": {
+            "description": "Giữ chỗ ĐÃ TRẢ, chưa chốt kết cục",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HoldQueueSummaryDto"
+              }
+            ]
+          },
+          "refunds": {
+            "description": "Khoản hoàn CHỜ CHUYỂN tay",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MoneyQueueCountDto"
+              }
+            ]
+          },
+          "withdrawals": {
+            "description": "Lệnh rút còn việc phải làm (chờ duyệt + đã duyệt chưa chuyển)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/WithdrawalQueueSummaryDto"
+              }
+            ]
+          },
+          "insurance": {
+            "description": "Hợp đồng bảo hiểm ĐANG LỖI cấp",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MoneyQueueCountDto"
+              }
+            ]
+          },
+          "tax": {
+            "description": "Dòng thuế kỳ hiện hành CHỜ KÊ KHAI",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TaxQueueSummaryDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "bankIn",
+          "holds",
+          "refunds",
+          "withdrawals",
+          "insurance",
+          "tax"
         ]
       },
       "PlatformProvinceDto": {
@@ -76732,7 +77061,8 @@
               "approved",
               "paid",
               "rejected",
-              "cancelled"
+              "cancelled",
+              "reversed"
             ]
           },
           "ownerType": {
@@ -76781,6 +77111,16 @@
           "rejectReason": {
             "type": "string",
             "nullable": true
+          },
+          "reversedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "Lúc lệnh ĐÃ CHI bị đảo (chuyển hụt / sai tài khoản) — chỉ ở trạng thái `reversed`"
+          },
+          "reverseReason": {
+            "type": "string",
+            "nullable": true,
+            "description": "Vì sao tiền quay lại"
           },
           "rowVersion": {
             "type": "number"
@@ -79877,11 +80217,16 @@
         "properties": {
           "reason": {
             "type": "string",
-            "description": "Vì sao tiền quay lại (chuyển hụt, sai số tài khoản…)"
+            "description": "Vì sao tiền quay lại (chuyển hụt, sai số tài khoản…) — chủ ví đọc được"
+          },
+          "rowVersion": {
+            "type": "number",
+            "description": "Bản ghi đang cầm — bấm hai lần (hay hai admin cùng bấm) thì lần sau nhận 409, không đảo đôi"
           }
         },
         "required": [
-          "reason"
+          "reason",
+          "rowVersion"
         ]
       },
       "ReviewActionDto": {
@@ -82318,6 +82663,35 @@
           "remittedAmount",
           "byEntityType",
           "byTenant"
+        ]
+      },
+      "TaxQueueSummaryDto": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "number"
+          },
+          "amount": {
+            "type": "string",
+            "description": "Tổng tiền của các dòng đang đếm, string — ADR 0007"
+          },
+          "period": {
+            "type": "string",
+            "description": "Kỳ hiện hành theo giờ VN",
+            "example": "2026-10"
+          },
+          "oldestPeriod": {
+            "type": "string",
+            "nullable": true,
+            "example": "2026-09",
+            "description": "Kỳ CŨ NHẤT còn dòng chưa kê khai — null khi không còn dòng nào"
+          }
+        },
+        "required": [
+          "count",
+          "amount",
+          "period",
+          "oldestPeriod"
         ]
       },
       "TaxRowDto": {
@@ -87537,6 +87911,27 @@
           "total"
         ]
       },
+      "WithdrawalQueueSummaryDto": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "number"
+          },
+          "amount": {
+            "type": "string",
+            "description": "Tổng tiền của các dòng đang đếm, string — ADR 0007"
+          },
+          "overdueCount": {
+            "type": "number",
+            "description": "Lệnh đã quá hạn cam kết chuyển"
+          }
+        },
+        "required": [
+          "count",
+          "amount",
+          "overdueCount"
+        ]
+      },
       "WithdrawalRequestDto": {
         "type": "object",
         "properties": {
@@ -87557,7 +87952,8 @@
               "approved",
               "paid",
               "rejected",
-              "cancelled"
+              "cancelled",
+              "reversed"
             ]
           },
           "bankCode": {
@@ -87582,6 +87978,16 @@
           "rejectReason": {
             "type": "string",
             "nullable": true
+          },
+          "reversedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "Lệnh ĐÃ CHI rồi bị đảo (chuyển hụt / sai tài khoản) — tiền đã về lại số dư"
+          },
+          "reverseReason": {
+            "type": "string",
+            "nullable": true,
+            "description": "Vì sao chuyển không thành công"
           },
           "createdAt": {
             "type": "string"
