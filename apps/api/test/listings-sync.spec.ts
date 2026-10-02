@@ -15,6 +15,7 @@ import { passVehicleReviewChecks } from './helpers/vehicle-review-fixture';
 import { PlatformApprovalService } from '../src/modules/platform-admin/platform-approval.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { makeNotificationService, makePricingService, makePublicListingsService, makeVehiclesService, seedBranch, seedProvince } from './helpers/service-factory';
+import { TEST_PROVINCE } from './helpers/test-provinces';
 
 /**
  * Gap 3 — 4 test bắt buộc ADR 0008 (§Test), chạy qua các service THẬT trên PostgreSQL:
@@ -36,8 +37,8 @@ const publicListings = makePublicListingsService(asService);
  * Tỉnh riêng của spec này (mã ngoài danh mục chính thức) — cô lập bằng MÃ, vì bộ lọc marketplace
  * giờ khớp mã chính xác chứ không so tên nữa.
  */
-const PROV = 'Z1';
-const PROV_NAME = 'Zone Sync';
+const PROV = TEST_PROVINCE.LISTINGS_SYNC.code;
+const PROV_NAME = TEST_PROVINCE.LISTINGS_SYNC.name;
 
 let dbAvailable = false;
 let ownerId: string;

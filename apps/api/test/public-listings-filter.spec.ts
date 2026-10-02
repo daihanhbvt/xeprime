@@ -10,6 +10,7 @@ import { ListingsService } from '../src/modules/public-listings/listings.service
 import type { PublicListingQueryDto } from '../src/modules/public-listings/dto/public-listing.dto';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { makePublicListingsService, seedBranch, seedProvince } from './helpers/service-factory';
+import { TEST_PROVINCE } from './helpers/test-provinces';
 
 /**
  * Phase 3 Gap 2 — lọc marketplace theo giá + ngày rảnh + tỉnh, chạy trên PostgreSQL THẬT.
@@ -23,10 +24,10 @@ const service = makePublicListingsService(prisma as unknown as PrismaService);
 const listings = new ListingsService(prisma as unknown as PrismaService);
 
 // provinceName duy nhất cho lần chạy này (khỏi đụng xe seed thật).
-const PROV_A = 'Z3';
-const PROV_A_NAME = 'Zone Filter A';
-const PROV_B = 'Z4';
-const PROV_B_NAME = 'Zone Filter B';
+const PROV_A = TEST_PROVINCE.PUBLIC_LISTINGS_FILTER_A.code;
+const PROV_A_NAME = TEST_PROVINCE.PUBLIC_LISTINGS_FILTER_A.name;
+const PROV_B = TEST_PROVINCE.PUBLIC_LISTINGS_FILTER_B.code;
+const PROV_B_NAME = TEST_PROVINCE.PUBLIC_LISTINGS_FILTER_B.name;
 
 // Cửa sổ bận của xe vBusy.
 const BUSY_START = new Date('2027-01-10T00:00:00.000Z');
