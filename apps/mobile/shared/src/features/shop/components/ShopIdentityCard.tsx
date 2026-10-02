@@ -6,6 +6,7 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { TENANT_STATUS, TENANT_STATUS_META, type TenantStatus } from '@xeprime/types';
 import type { ShopProfileValues } from '@xeprime/validators';
+import { metaColor } from '@/lib/status-meta';
 import { Button } from '@/components/ui/Button';
 import { ImageEditBadge } from '@/components/ui/ImageEditBadge';
 import { ShopCover, ShopLogo, SHOP_LOGO } from '@/components/ui/ShopCover';
@@ -119,9 +120,7 @@ export function ShopIdentityCard({
         onPress={coverUpload.open}
         disabled={!editable || coverUpload.busy}
         accessibilityRole="imagebutton"
-        accessibilityLabel={
-          coverUrl ? tImage('changeImage') : t('form.display.cover.label')
-        }
+        accessibilityLabel={coverUrl ? tImage('changeImage') : t('form.display.cover.label')}
       >
         <ShopCover url={coverUrl}>
           {/*
@@ -181,7 +180,7 @@ export function ShopIdentityCard({
           <XStack>
             <StatusBadge
               label={domainLabel('tenantStatus', status)}
-              color={TENANT_STATUS_META[status].color}
+              color={metaColor(TENANT_STATUS_META, status)}
             />
           </XStack>
           <Text col={colors.textMuted} fos={fontSize.bodySm}>

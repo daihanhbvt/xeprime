@@ -74,12 +74,7 @@ export function BlockTitle({
           như CSS. Thiếu nó thì một tiêu đề dài ("CHỈ SỐ KILOMETER HIỆN TẠI (ODO)") giữ nguyên
           bề rộng tự nhiên và đẩy `action` bên phải tràn khỏi thẻ, thay vì tự xuống dòng.
         */}
-        <Text
-          flexShrink={1}
-          col={colors.textMuted}
-          fos={fontSize.label}
-          fow={fontWeight.semibold}
-        >
+        <Text flexShrink={1} col={colors.textMuted} fos={fontSize.label} fow={fontWeight.semibold}>
           {children.toUpperCase()}
         </Text>
         {action || onToggleCollapsed ? (
@@ -144,11 +139,21 @@ export function BlockTitle({
  * `minHeight` thì hàng tiêu đề cao gấp đôi mọi hàng tiêu đề khác và cả trang so le. `hitSlop`
  * nới vùng nhận chạm RA NGOÀI mà không đụng tới bố cục.
  */
-export function BlockLink({ label, onPress }: { label: string; onPress: () => void }) {
+export function BlockLink({
+  label,
+  onPress,
+  accessibilityLabel,
+}: {
+  label: string;
+  onPress: () => void;
+  /** Nhãn đọc màn hình khi chữ hiện quá ngắn để tự đứng một mình ("Xem đầy đủ" — đầy đủ cái gì?). */
+  accessibilityLabel?: string;
+}) {
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="link"
+      accessibilityLabel={accessibilityLabel}
       hitSlop={BLOCK_LINK_HIT_SLOP}
       style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
     >

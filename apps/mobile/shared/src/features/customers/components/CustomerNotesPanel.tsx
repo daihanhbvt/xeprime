@@ -6,8 +6,8 @@ import {
   TENANT_CUSTOMER_NOTE_TYPE,
   TENANT_CUSTOMER_FIELD_MAX,
   TENANT_CUSTOMER_NOTE_TYPE_META,
-  type TenantCustomerNoteType,
 } from '@xeprime/types';
+import { metaColor } from '@/lib/status-meta';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -116,11 +116,13 @@ export function CustomerNotesPanel({
               name="noteType"
               label={t('notes.type')}
               options={typeOptions}
+              required
             />
             <TextField
               control={control}
               name="body"
               label={t('notes.body')}
+              required
               multiline
               rows={3}
               maxLength={TENANT_CUSTOMER_FIELD_MAX.NOTE_BODY}
@@ -153,9 +155,7 @@ export function CustomerNotesPanel({
             <XStack ai="center" gap={space.xs}>
               <StatusBadge
                 label={domainLabel('tenantCustomerNoteType', note.noteType)}
-                color={
-                  TENANT_CUSTOMER_NOTE_TYPE_META[note.noteType as TenantCustomerNoteType].color
-                }
+                color={metaColor(TENANT_CUSTOMER_NOTE_TYPE_META, note.noteType)}
                 size="sm"
               />
               {/* `f={1}` + `minWidth={0}`: tên người ghi dài không được đẩy nút xoá ra khỏi mép. */}

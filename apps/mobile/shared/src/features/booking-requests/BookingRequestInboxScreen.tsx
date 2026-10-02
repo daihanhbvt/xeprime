@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
-import { FlatList, RefreshControl, type ListRenderItem } from 'react-native';
+import { FlatList, RefreshControl, type ListRenderItem, StyleSheet } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -14,6 +14,11 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { getErrorCode } from '@/lib/api-client';
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManageListShell } from '@/features/shell/ManageListShell';
+import {
+  BranchFilterField,
+  useBranchEmptyCopy,
+} from '@/features/branches/components/BranchFilterField';
+import { useScreenBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import type { FilterGroup } from '@/features/shell/ManageFilterSheet';
 import { ManageStateScroll } from '@/features/shell/ManageStateScroll';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
@@ -93,9 +98,16 @@ export function BookingRequestInboxScreen() {
   const [detail, setDetail] = useState<BookingRequestItem | null>(null);
 
   const [page, setPage] = useState(FIRST_PAGE);
+  /*
+   * Ô "Chi nhánh" của hộp thư (ADR 0052) — số trên tab (`meta.statusCounts`) đi cùng chi nhánh.
+   * Huy hiệu menu thì đếm toàn gian hàng (điều 7, nợ 5c).
+   */
+  const { branchId, filter: branchFilter } = useScreenBranchFilter(() => setPage(FIRST_PAGE));
+  const branchEmpty = useBranchEmptyCopy(branchFilter, branchId);
 
   const query = useBookingRequestsPage({
     status,
+    ...(branchId ? { branchId } : {}),
     ...(debouncedSearch.trim() ? { q: debouncedSearch.trim() } : {}),
     ...(serviceType ? { serviceType } : {}),
     page,
@@ -386,6 +398,7 @@ export function BookingRequestInboxScreen() {
         <ManageListShell
           title={t('page.title')}
           {...(meta === undefined ? {} : { total: t('page.totalLabel', { count: meta.total }) })}
+          branch={<BranchFilterField filter={branchFilter} value={branchId} />}
           tabs={<StatusTabs value={status} onChange={changeStatus} counts={statusCounts} />}
           searchValue={search}
           searchLabel={t('filters.searchLabel')}
@@ -455,6 +468,12 @@ export function BookingRequestInboxScreen() {
                     */
                     actionLabel={tActions('clear')}
                     onAction={clearFilters}
+                  />
+                ) : branchEmpty ? (
+                  <ScreenMessage
+                    icon="location-outline"
+                    title={branchEmpty.title}
+                    description={branchEmpty.hint}
                   />
                 ) : status === DEFAULT_REQUEST_TAB ? (
                   <ScreenMessage
@@ -540,9 +559,9 @@ function StatusTabs({
         đầu, còn `removeClippedSubviews` trên danh sách ngang là nguồn lỗi ô trắng.
       */
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{ paddingHorizontal: layout.screenX, gap: space.xs }}
+      contentContainerStyle={styles.tabsContent}
       // `flexGrow: 0`: một FlatList ngang trong cột dọc sẽ nuốt hết chiều cao còn lại.
-      style={{ flexGrow: 0, paddingVertical: space.sm }}
+      style={styles.tabs}
       accessibilityLabel={t('ariaLabel')}
       renderItem={({ item }) => {
         const count = statusCountOf(counts, item.value);
@@ -563,3 +582,8 @@ function StatusTabs({
     />
   );
 }
+
+const styles = StyleSheet.create({
+  tabs: { flexGrow: 0, paddingVertical: space.sm },
+  tabsContent: { paddingHorizontal: layout.screenX, gap: space.xs },
+});

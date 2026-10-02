@@ -35,6 +35,7 @@ import {
 } from '@xeprime/domain';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
+import { FieldLabel } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { DataRow } from '@/components/ui/DataRow';
@@ -69,6 +70,7 @@ import {
   space,
 } from '@/theme/tokens';
 import { VehiclePickerSheet } from './components/VehiclePickerSheet';
+import { useBranchReturnParam } from '@/features/branches/hooks/use-branch-filter';
 import { useListing } from '@/features/marketplace/hooks/use-marketplace-data';
 import { useCheckConflict, useCreateBooking } from './hooks/use-bookings';
 import { bookingsApi } from './api';
@@ -243,6 +245,8 @@ function StaffBookingFlow({
   const domainLabel = useDomainLabel();
   const toast = useAppToast();
   const router = useRouter();
+  /* Chi nhánh danh sách đơn đang lọc (`?branchId=`) — bộ chọn xe mở sẵn ở đó (ADR 0052 điều 6). */
+  const hintedBranchId = useBranchReturnParam();
 
   /*
    * Vào từ một ô lịch thì XE đã được chọn bằng chính cú chạm đó — bắt đầu ở bước THỜI GIAN, y như
@@ -519,6 +523,7 @@ function StaffBookingFlow({
           open={picking}
           onClose={() => setPicking(false)}
           selectedId={vehicle?.id ?? null}
+          initialBranchId={hintedBranchId}
           onSelect={(picked) => {
             setVehicle(picked);
             setPicking(false);
@@ -735,9 +740,7 @@ function StaffBookingFlow({
               */}
               {isLongTerm ? (
                 <YStack gap={space.xs}>
-                  <Text col={colors.textMuted} fos={fieldFontSize.label} fow={fontWeight.medium}>
-                    {t('pickupAtLabel')}
-                  </Text>
+                  <FieldLabel label={t('pickupAtLabel')} required />
                   <Card
                     onPress={() => setPickingPickup(true)}
                     accessibilityLabel={t('pickupAtField')}
@@ -763,9 +766,7 @@ function StaffBookingFlow({
                 </YStack>
               ) : (
                 <YStack gap={space.xs}>
-                  <Text col={colors.textMuted} fos={fieldFontSize.label} fow={fontWeight.medium}>
-                    {t('scheduleLabel')}
-                  </Text>
+                  <FieldLabel label={t('scheduleLabel')} required />
                   <Card
                     onPress={() => setScheduling(true)}
                     accessibilityLabel={tCreate('schedule.pick')}
@@ -1040,6 +1041,7 @@ function StaffBookingFlow({
         open={picking}
         onClose={() => setPicking(false)}
         selectedId={vehicle?.id ?? null}
+        initialBranchId={hintedBranchId}
         onSelect={(picked) => {
           setVehicle(picked);
           setPicking(false);

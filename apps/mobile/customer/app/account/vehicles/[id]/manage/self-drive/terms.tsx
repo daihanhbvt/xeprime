@@ -1,17 +1,17 @@
-import { useLocalSearchParams } from 'expo-router';
-import { OWNER_STAGE } from '@xeprime/types';
-import { RequireSession } from '@/features/auth/RequireSession';
-import { OwnerGate } from '@/features/account/components/OwnerGate';
-import { SERVICE_TYPE } from '@xeprime/types';
-import { VehicleTermsScreen } from '@/features/vehicle-manage/VehicleTermsScreen';
+import { Redirect, useLocalSearchParams } from 'expo-router';
+import { ROUTES } from '@/navigation/routes';
+import { RENTAL_TERMS_ANCHOR, VEHICLE_MANAGE_SECTION } from '@/navigation/vehicle-manage-section';
 
-export default function AccountVehicleSelfDriveTermsRoute() {
+/** Đường dẫn CŨ (trước 30/09/2026) — thủ tục tự lái nay nằm trong "Nhận chuyến & thủ tục". Cùng chuyển hướng với trang web. */
+export default function LegacySelfDriveTermsRedirect() {
   const { id } = useLocalSearchParams<{ id: string }>();
   return (
-    <RequireSession>
-      <OwnerGate minStage={OWNER_STAGE.REGISTERING}>
-        <VehicleTermsScreen vehicleId={id} serviceType={SERVICE_TYPE.SELF_DRIVE} />
-      </OwnerGate>
-    </RequireSession>
+    <Redirect
+      href={ROUTES.account.vehicleManageSection(
+        id,
+        VEHICLE_MANAGE_SECTION.SELF_DRIVE_OPTIMIZATION,
+        { anchor: RENTAL_TERMS_ANCHOR },
+      )}
+    />
   );
 }

@@ -1,6 +1,6 @@
-import { PUBLISH_REQUIREMENT, VEHICLE_PUBLIC_STATUS } from '@xeprime/types';
+import { PUBLISH_REQUIREMENT, VEHICLE_ALERT_SEVERITY, VEHICLE_PUBLIC_STATUS } from '@xeprime/types';
 import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
-import { publicationEditTab, vehiclePublicationTask } from './publication';
+import { publicationEditTab, todoLeadAlert, vehiclePublicationTask } from './publication';
 import type { VehicleDetail } from './api';
 
 /**
@@ -64,12 +64,12 @@ describe('vehiclePublicationTask', () => {
    * Chủ xe tự tắt là một GỢI Ý (`info`), không phải việc cần làm: nó xuống cuối thẻ và không vào
    * số đếm — một lời nhắc không được đẩy một chuyến sắp phải giao ra khỏi ba dòng đầu.
    */
-  it('đã duyệt nhưng chủ xe tắt ⇒ gợi ý bật lại, mức info', () => {
+  it('đã duyệt nhưng chủ xe tắt ⇒ lời nhắc mức info, KHÔNG có nút (công tắc ở đầu màn)', () => {
     const task = vehiclePublicationTask(vehicle({ marketplaceEnabled: false }));
     expect(task).toMatchObject({
       key: 'ownerPaused',
       tone: 'info',
-      primary: { kind: 'enableMarketplace', cta: 'enableMarketplace' },
+      primary: null,
       secondary: null,
     });
   });
@@ -204,5 +204,28 @@ describe('publicationEditTab', () => {
 
   it('không thiếu gì thì về mục thông tin', () => {
     expect(publicationEditTab([])).toBe(VEHICLE_EDIT_TAB.INFORMATION);
+  });
+});
+
+describe('todoLeadAlert — nút "Xử lý ngay" (web TodoCard 02/10/2026)', () => {
+  const critical = { kind: 'a', severity: VEHICLE_ALERT_SEVERITY.CRITICAL, target: '/x' };
+  const info = { kind: 'b', severity: VEHICLE_ALERT_SEVERITY.INFO, target: '/y' };
+
+  it('việc đầu bảng phải làm, có đích ⇒ gắn nút', () => {
+    expect(todoLeadAlert({ alerts: [critical, info], listReady: true, taskLeads: false })).toBe(
+      critical,
+    );
+  });
+
+  it('việc lên chợ đứng đầu, danh sách chưa sẵn, đầu bảng là info, hoặc không đích ⇒ không nút', () => {
+    expect(todoLeadAlert({ alerts: [critical], listReady: true, taskLeads: true })).toBeNull();
+    expect(todoLeadAlert({ alerts: [critical], listReady: false, taskLeads: false })).toBeNull();
+    expect(
+      todoLeadAlert({ alerts: [info, critical], listReady: true, taskLeads: false }),
+    ).toBeNull();
+    expect(
+      todoLeadAlert({ alerts: [{ ...critical, target: null }], listReady: true, taskLeads: false }),
+    ).toBeNull();
+    expect(todoLeadAlert({ alerts: [], listReady: true, taskLeads: false })).toBeNull();
   });
 });

@@ -97,26 +97,32 @@ export function SubscriptionScreen({
    * không có sidebar quản lý nên KHÔNG được dựng `ManageHeader` (nó đòi `ManageDrawerHost` và
    * ném lỗi ngoài đó — màn trắng). Tiêu đề + mô tả theo đúng trang web của khu đó
    * (`page.accountSubtitle`).
+   *
+   * `stacked` = TRANG CON của khu quản lý (`/manage/plan`, mở từ dải "gói hết hạn"): thanh trên có
+   * nút lui về đúng màn vừa bấm, tiêu đề đứng ở thanh nên không lặp `ManagePageTitle`.
    */
-  shell?: 'manage' | 'account';
+  shell?: 'manage' | 'account' | 'stacked';
 } = {}) {
   const t = useTranslations('Subscription');
   const router = useRouter();
   const account = shell === 'account';
+  const stacked = shell === 'stacked';
 
   return (
     <>
       {header ??
-        (account ? (
+        (account || stacked ? (
           <AppHeader
             title={t('page.title')}
-            onBack={() => goBackOr(router, ROUTES.account.home())}
+            onBack={() =>
+              goBackOr(router, stacked ? ROUTES.manage.subscription() : ROUTES.account.home())
+            }
           />
         ) : (
           <ManageHeader />
         ))}
       <Screen edges={['left', 'right', 'bottom']}>
-        {account ? (
+        {stacked ? null : account ? (
           // Khu tài khoản: tiêu đề đã đứng ở thanh trên (như mọi màn của khu này) — dưới đây chỉ còn
           // câu mô tả của trang web `/account/subscription`, không lặp lại tiêu đề lần hai.
           <Text col={colors.textMuted} fos={fontSize.bodySm}>

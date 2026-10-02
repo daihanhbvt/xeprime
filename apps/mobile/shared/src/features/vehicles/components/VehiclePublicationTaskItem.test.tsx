@@ -9,7 +9,7 @@ import { ROUTES } from '@/navigation/routes';
 import { store } from '@/store';
 import type { VehicleDetail } from '../api';
 import { publicationEditTab, vehiclePublicationTask } from '../publication';
-import { vehicleEditHref } from '../workspace-links';
+import { vehicleEditPartHref } from '../workspace-links';
 import { VehiclePublicationTaskItem } from './VehiclePublicationTaskItem';
 
 const mockPush = jest.fn();
@@ -58,8 +58,6 @@ function vehicle(over: Partial<VehicleDetail> = {}): VehicleDetail {
 async function renderItem(
   data: VehicleDetail,
   handlers: {
-    onEnableMarketplace?: () => void;
-    onViewStatus?: () => void;
     customerScope?: boolean;
   },
   permissions: Permission[] = [PERMISSION.VEHICLE_UPDATE, PERMISSION.VEHICLE_SUBMIT_PUBLIC],
@@ -101,38 +99,24 @@ beforeEach(() => {
  * cũ: "Screen không phơi ref cuộn") — nay màn hồ sơ xe truyền hàm cuộn vào.
  */
 describe('VehiclePublicationTaskItem — hai nút neo trong cùng màn', () => {
-  it('đang chờ duyệt: "Cập nhật hồ sơ" mở màn sửa, "Xem trạng thái" gọi hàm cuộn', async () => {
-    const onViewStatus = jest.fn();
+  it('đang chờ duyệt: "Cập nhật hồ sơ" mở màn sửa, KHÔNG vẽ "Xem trạng thái" (web: thẻ xét duyệt đã rời 360)', async () => {
     const view = await renderItem(
       vehicle({ publicStatus: VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW }),
-      { onViewStatus },
+      {},
     );
 
-    await fireEvent.press(await view.findByText(actions.viewStatus));
-    expect(onViewStatus).toHaveBeenCalledTimes(1);
-
+    expect(view.queryByText(actions.viewStatus)).toBeNull();
     await fireEvent.press(await view.findByText(actions.updateProfile));
     expect(mockPush).toHaveBeenCalledWith(
       ROUTES.manage.vehicleEditTab('01JQZX0000000000000000000V', publicationEditTab([])),
     );
   });
 
-  it('không truyền hàm cuộn ⇒ KHÔNG vẽ "Xem trạng thái" (nút không đưa đi đâu)', async () => {
-    const view = await renderItem(
-      vehicle({ publicStatus: VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW }),
-      {},
-    );
+  it('chủ xe đang tạm ẩn: chỉ là lời nhắc, KHÔNG vẽ nút nào (công tắc "Trên chợ" ở đầu màn)', async () => {
+    const view = await renderItem(vehicle({ marketplaceEnabled: false }), {});
 
-    expect(await view.findByText(actions.updateProfile)).toBeTruthy();
-    expect(view.queryByText(actions.viewStatus)).toBeNull();
-  });
-
-  it('chủ xe đang tạm ẩn: "Bật hiển thị" CUỘN tới công tắc, không tự bật', async () => {
-    const onEnableMarketplace = jest.fn();
-    const view = await renderItem(vehicle({ marketplaceEnabled: false }), { onEnableMarketplace });
-
-    await fireEvent.press(await view.findByText(actions.enableMarketplace));
-    expect(onEnableMarketplace).toHaveBeenCalledTimes(1);
+    expect(await view.findByText(viVehicles.publish.task.ownerPaused.title)).toBeTruthy();
+    expect(view.queryByRole('button')).toBeNull();
   });
 });
 
@@ -168,7 +152,7 @@ describe('VehiclePublicationTaskItem — đích theo khu làm việc', () => {
 
     await fireEvent.press(await view.findByText(actions.updateProfile));
     expect(mockPush).toHaveBeenCalledWith(
-      vehicleEditHref('01JQZX0000000000000000000V', publicationEditTab([]), true),
+      vehicleEditPartHref('01JQZX0000000000000000000V', publicationEditTab([]), true),
     );
     // Bất biến "KHÔNG /manage" giữ nguyên ở CẢ HAI app; còn dạng đường dẫn tuỳ app (ở app
     // Partner, đích khu tài khoản là chuỗi fallback /not-available, không phải object).

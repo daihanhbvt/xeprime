@@ -394,6 +394,25 @@ function NotePanel({
   );
 }
 
+/** Năm khối của một bộ chính sách thuê — mã để nơi gọi chọn khối nào hiện (web `POLICY_BLOCK`). */
+export const POLICY_BLOCK = {
+  COLLATERAL: 'collateral',
+  DELIVERY: 'delivery',
+  MILEAGE: 'mileage',
+  OVERTIME: 'overtime',
+  DISCOUNT: 'discount',
+} as const;
+export type PolicyBlock = (typeof POLICY_BLOCK)[keyof typeof POLICY_BLOCK];
+
+/** Thứ tự cố định của năm khối — cũng là vị trí 1..5 mà từng khối con truyền cho `step`. */
+export const ALL_POLICY_BLOCKS: readonly PolicyBlock[] = [
+  POLICY_BLOCK.COLLATERAL,
+  POLICY_BLOCK.DELIVERY,
+  POLICY_BLOCK.MILEAGE,
+  POLICY_BLOCK.OVERTIME,
+  POLICY_BLOCK.DISCOUNT,
+];
+
 /** Mốc ưu đãi CŨ tính theo NGÀY — chỉ để cảnh báo, không còn tham gia tính giá (ADR 0011). */
 export interface LegacyTierView {
   minDays: number;
@@ -422,27 +441,50 @@ export function PolicySections({
   numbered = true,
   depositHint,
   legacyDiscountTiers,
+  blocks = ALL_POLICY_BLOCKS,
 }: {
   control: PolicyControl;
   disabled: boolean;
   numbered?: boolean;
   depositHint?: string;
   legacyDiscountTiers?: readonly LegacyTierView[];
+  /**
+   * Khối nào HIỆN — mặc định đủ năm (web `blocks`). Khối ẩn vẫn nằm trong form (giá trị nạp từ
+   * chính sách đang có) và vẫn được gửi đi: ẩn một khối không làm mất nó.
+   */
+  blocks?: readonly PolicyBlock[];
 }) {
-  const step = (index: number, title: string) => (numbered ? `${index}. ${title}` : title);
+  // Đánh số theo khối ĐANG HIỆN — ẩn một khối không để lại một con số bị nhảy cóc (như web).
+  const shown = ALL_POLICY_BLOCKS.filter((block) => blocks.includes(block));
+  /* Khối con gọi `step(vị trí cố định 1..5, …)`; đổi vị trí đó sang số thứ tự trong `shown`. */
+  const step = (index: number, title: string) => {
+    const block = ALL_POLICY_BLOCKS[index - 1];
+    const position = block ? shown.indexOf(block) + 1 : index;
+    return numbered ? `${position}. ${title}` : title;
+  };
 
   return (
     <YStack gap={space.md}>
-      <DepositSection control={control} disabled={disabled} step={step} hint={depositHint} />
-      <DeliverySection control={control} disabled={disabled} step={step} />
-      <MileageSection control={control} disabled={disabled} step={step} />
-      <OvertimeSection control={control} disabled={disabled} step={step} />
-      <LongTermDiscountSection
-        control={control}
-        disabled={disabled}
-        step={step}
-        legacyTiers={legacyDiscountTiers}
-      />
+      {shown.includes(POLICY_BLOCK.COLLATERAL) ? (
+        <DepositSection control={control} disabled={disabled} step={step} hint={depositHint} />
+      ) : null}
+      {shown.includes(POLICY_BLOCK.DELIVERY) ? (
+        <DeliverySection control={control} disabled={disabled} step={step} />
+      ) : null}
+      {shown.includes(POLICY_BLOCK.MILEAGE) ? (
+        <MileageSection control={control} disabled={disabled} step={step} />
+      ) : null}
+      {shown.includes(POLICY_BLOCK.OVERTIME) ? (
+        <OvertimeSection control={control} disabled={disabled} step={step} />
+      ) : null}
+      {shown.includes(POLICY_BLOCK.DISCOUNT) ? (
+        <LongTermDiscountSection
+          control={control}
+          disabled={disabled}
+          step={step}
+          legacyTiers={legacyDiscountTiers}
+        />
+      ) : null}
     </YStack>
   );
 }
@@ -671,6 +713,7 @@ function DeliverySection({
                       control={control}
                       name={`deliveryTiers.${index}.toKm`}
                       label={t('toKmLabel')}
+                      required
                       suffix={t('unitKm')}
                       min={0}
                       editable={!disabled}
@@ -753,10 +796,13 @@ function MileageSection({
   control,
   disabled,
   step,
+  title,
 }: {
   control: PolicyControl;
   disabled: boolean;
   step: StepTitle;
+  /** Tiêu đề do nơi gọi đặt (web `MileagePolicySection title`). */
+  title?: string;
 }) {
   const t = useTranslations('Vehicles.pricing.mileage');
   const fmt = useAppFormat();
@@ -769,7 +815,7 @@ function MileageSection({
       <YStack gap={space.md}>
         <SectionHead
           tone={TONE.mileage}
-          title={step(3, t('title'))}
+          title={step(3, title ?? t('title'))}
           hint={t('hint')}
           toggle={
             <Controller
@@ -1010,6 +1056,7 @@ function LongTermDiscountSection({
                     name={`discountTiers.${index}.percent`}
                     percent
                     label={t('percentLabel')}
+                    required
                     editable={!disabled}
                   />
                   {/* Ghi chú: chỗ gian hàng nhớ VÌ SAO đặt mốc này — web có, đừng bỏ. */}
@@ -1147,15 +1194,18 @@ export function CollateralPolicySection<T extends PolicyFormValues>({
 export function MileagePolicySection<T extends PolicyFormValues>({
   control,
   disabled,
+  title,
 }: {
   control: PolicyFormSuperset<T>;
   disabled: boolean;
+  title?: string;
 }) {
   return (
     <MileageSection
       control={control as unknown as PolicyControl}
       disabled={disabled}
       step={PLAIN_STEP}
+      {...(title === undefined ? {} : { title })}
     />
   );
 }

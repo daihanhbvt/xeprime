@@ -28,7 +28,7 @@ import { Callout, CalloutBody } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
 import { DatePickerSheet } from '@/components/ui/DatePickerSheet';
-import { FieldMessage } from '@/components/ui/Field';
+import { FieldLabel, FieldMessage } from '@/components/ui/Field';
 import { FieldBox } from '@/components/ui/FieldBox';
 import { RangeFieldBox } from '@/components/ui/RangeFieldBox';
 import { FormSection } from '@/components/ui/FormSection';
@@ -727,9 +727,7 @@ function LongTermFields({
         thêm thẻ là mất luôn mốc ưu đãi.
       */}
       <FormSection title={t('longTerm.chooseTitle')} icon="pricetags-outline" boxed={false}>
-        <Text col={colors.textMuted} fos={fontSize.bodySm} fow={fontWeight.medium}>
-          {t('longTerm.chooseLabel')}
-        </Text>
+        <FieldLabel label={t('longTerm.chooseLabel')} required />
         <Controller
           control={form.control}
           name="longTermPackageMonths"
@@ -765,6 +763,7 @@ function LongTermFields({
           name="pickupPreference"
           render={({ field, fieldState }) => (
             <YStack gap={space.xs}>
+              <FieldLabel label={t('longTerm.wishGroupLabel')} required />
               <XStack gap={space.xs}>
                 {PICKUP_PREFERENCE_VALUES.map((value) => (
                   <PreferenceChip

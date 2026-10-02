@@ -12,7 +12,6 @@ import {
 } from '@xeprime/types';
 import * as authApi from '@/features/auth/api';
 import { branchesApi } from '@/features/branches/api';
-import { branchScopeReset, branchSelected } from '@/features/branches/branch-scope.slice';
 import { withIntl } from '@/i18n/test-utils';
 import { store } from '@/store';
 import { CalendarScreen } from './CalendarScreen';
@@ -24,7 +23,7 @@ let mockRouteParams: Record<string, string> = {};
 
 jest.mock('expo-router', () => ({
   useNavigation: () => ({ isFocused: () => true }),
-  useRouter: () => ({ push: mockPush, replace: jest.fn(), back: jest.fn() }),
+  useRouter: () => ({ push: mockPush, replace: jest.fn(), back: jest.fn(), setParams: jest.fn() }),
   usePathname: () => '/manage/calendar',
   useLocalSearchParams: () => mockRouteParams,
   /* Màn dùng nó để QUÊN chữ ký route lúc rời đi — ở test thì cứ chạy như một effect thường. */
@@ -65,6 +64,7 @@ function currentUser(permissions: Permission[]): authApi.CurrentUser {
       slug: 'da-nang',
       status: 'active',
       onboardingState: 'commission',
+      branchScope: 'all',
       logoUrl: null,
       roleKey: 'shop_owner',
       features: [],
@@ -189,8 +189,6 @@ beforeEach(() => {
   jest.restoreAllMocks();
   mockPush.mockClear();
   mockRouteParams = {};
-  // Store là SINGLETON — scope chi nhánh của test trước sống sang test sau nếu không dọn.
-  store.dispatch(branchScopeReset());
   jest.spyOn(branchesApi, 'list').mockResolvedValue({
     items: [],
     total: 0,
@@ -291,7 +289,7 @@ describe('CalendarScreen — tham số truy vấn', () => {
     );
   });
 
-  it('mang `branchId` của bộ chọn chi nhánh vào MỌI query của lưới', async () => {
+  it('mang `branchId` của ô Chi nhánh (tham số route — ADR 0052) vào MỌI query của lưới', async () => {
     jest.spyOn(branchesApi, 'list').mockResolvedValue({
       items: [
         {
@@ -312,12 +310,30 @@ describe('CalendarScreen — tham số truy vấn', () => {
           createdAt: '2026-01-01T00:00:00.000Z',
           updatedAt: '2026-01-01T00:00:00.000Z',
         },
+        {
+          id: '01JQZX0000000000000000000C',
+          code: 'CN02',
+          name: 'Chi nhánh Sơn Trà',
+          provinceCode: '48',
+          provinceName: 'Đà Nẵng',
+          address: '1 Võ Nguyên Giáp',
+          phone: '0901234568',
+          latitude: null,
+          longitude: null,
+          isDefault: false,
+          status: 'active',
+          vehicleCount: 2,
+          needsLocationReview: false,
+          legacyProvinceValue: null,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
       ],
-      total: 1,
-      activeCount: 1,
+      total: 2,
+      activeCount: 2,
       needsReviewCount: 0,
     });
-    store.dispatch(branchSelected(BRANCH_ID));
+    mockRouteParams = { branchId: BRANCH_ID };
 
     const spies = mockCalendar();
     await renderScreen();

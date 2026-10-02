@@ -17,6 +17,8 @@ import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { ManageHeader } from '@/features/shell/ManageHeader';
+import { BranchFilterField } from '@/features/branches/components/BranchFilterField';
+import { useScreenBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { FIRST_PAGE } from '@/queries/use-clamped-page';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
@@ -69,7 +71,20 @@ export function FinanceOverviewScreen() {
   const [customerSort, setCustomerSort] = useState<string | undefined>(undefined);
   const [customerPage, setCustomerPage] = useState(FIRST_PAGE);
 
-  const period = useMemo(() => ({ ...range, granularity }), [range, granularity]);
+  /*
+   * Ô "Chi nhánh" (ADR 0052) — mọi khối của màn theo CÙNG chi nhánh. Phần chung không gắn xe được
+   * nói ra ở thẻ chi phí và dưới hai dải xếp hạng (`unassignedCost`/`unassignedRevenue`).
+   */
+  const { branchId, filter: branchFilter } = useScreenBranchFilter(() => {
+    setVehiclePage(FIRST_PAGE);
+    setCustomerPage(FIRST_PAGE);
+  });
+  const branchScope = useMemo(() => (branchId ? { branchId } : {}), [branchId]);
+
+  const period = useMemo(
+    () => ({ ...range, ...branchScope, granularity }),
+    [range, branchScope, granularity],
+  );
 
   /**
    * Bộ lọc của hai dải xếp hạng.
@@ -81,6 +96,7 @@ export function FinanceOverviewScreen() {
   const rankingFilters = useMemo(
     () => ({
       ...range,
+      ...branchScope,
       ...(vehicleSort ? { sort: vehicleSort } : {}),
       page: vehiclePage,
       limit: VEHICLE_PROFIT_PAGE_SIZE,
@@ -88,7 +104,7 @@ export function FinanceOverviewScreen() {
       customerPage,
       customerLimit: VEHICLE_PROFIT_PAGE_SIZE,
     }),
-    [range, vehicleSort, vehiclePage, customerSort, customerPage],
+    [range, branchScope, vehicleSort, vehiclePage, customerSort, customerPage],
   );
 
   const summary = useFinanceSummary(period, undefined, canViewFinance);
@@ -178,6 +194,8 @@ export function FinanceOverviewScreen() {
               {t('page.subtitle')}
             </Text>
           </YStack>
+
+          <BranchFilterField filter={branchFilter} value={branchId} />
 
           <FinancePeriodBar
             periods={FINANCE_OVERVIEW_PERIOD_VALUES}

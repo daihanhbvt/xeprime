@@ -12,7 +12,10 @@ import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import type { IconName } from '@/components/ui/Chip';
+import { Chip, type IconName } from '@/components/ui/Chip';
+import { SearchInput } from '@/components/ui/SearchInput';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { FleetSummaryBar } from '@/features/vehicles/components/FleetSummaryBar';
 import { FleetVehicleCardSkeleton } from '@/components/ui/Skeleton';
 import { SelectControl } from '@/components/ui/SelectControl';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
@@ -24,7 +27,7 @@ import {
   useVehicleAlerts,
   useVehicleStats,
 } from '@/features/vehicles/hooks/use-vehicles';
-import type { VehicleListItem } from '@/features/vehicles/api';
+import type { VehicleListItem, VehicleSort } from '@/features/vehicles/api';
 import { useDomainLabel } from '@/i18n/domain';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
@@ -32,6 +35,11 @@ import { VEHICLE_REGISTRATION_SOURCE } from '@/navigation/vehicle-registration-s
 import { layout } from '@/theme/layout';
 import { MEDIA_LIST_TUNING } from '@/theme/list-tuning';
 import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import {
+  DEFAULT_VEHICLE_SORT,
+  VEHICLE_SORT_VALUES,
+  useVehicleSortLabel,
+} from '@/features/vehicles/vehicle-sort';
 
 /** Sentinel "mọi giá trị" của giao diện — không endpoint nào nhận `operationStatus=all`. */
 const ALL = FILTER_ALL;
@@ -50,6 +58,8 @@ const styles = StyleSheet.create({
 });
 
 const SKELETON_ROWS = 3;
+const SEARCH_DEBOUNCE_MS = 350;
+
 
 function vehicleKeyExtractor(vehicle: VehicleListItem): string {
   return vehicle.id;
@@ -60,8 +70,9 @@ function vehicleKeyExtractor(vehicle: VehicleListItem): string {
  *
  * Cùng API, cùng hook và cùng thẻ xe với đội xe ở cổng quản lý (`VehicleListScreen`); khác đúng
  * những gì web khác:
- *  - **bộ lọc ít hơn** — dịch vụ + trạng thái vận hành, không có loại xe / trạng thái công khai /
- *    sắp xếp / tìm kiếm;
+ *  - **bộ lọc ít hơn** — tìm kiếm + trạng thái vận hành (thanh lọc), dịch vụ (dải chip riêng),
+ *    sắp xếp (mặc định "Mới nhất"); chip bộ lọc đang bật + "Xoá bộ lọc"; dải chỉ số đội xe
+ *    (`GET /vehicles/fleet-summary`) — đúng `AccountVehiclesView` (29/09/2026);
  *  - **hai thẻ dẫn đường** tới Cẩm nang và Hợp đồng & Chứng từ, ngay trên bộ lọc;
  *  - **vỏ của khu TÀI KHOẢN** — thanh trên có nút lui về menu tài khoản, không phải `ManageHeader`
  *    với nút mở drawer quản lý.
@@ -79,16 +90,24 @@ export function AccountVehiclesScreen() {
   const tLabels = useTranslations('Common.labels');
   const tActions = useTranslations('Common.actions');
   const tPermission = useTranslations('ManageCommon.permission');
+  const tSort = useTranslations('Vehicles.list.sort');
+  const sortLabel = useVehicleSortLabel();
   const router = useRouter();
   const domainLabel = useDomainLabel();
   const permissions = usePermissions();
 
   const [serviceType, setServiceType] = useState<string>(ALL);
   const [operationStatus, setOperationStatus] = useState<string>(ALL);
+  const [search, setSearch] = useState('');
+  const [sort, setSort] = useState<VehicleSort>(DEFAULT_VEHICLE_SORT);
+  const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
+  const q = debouncedSearch.trim();
 
   const query = useInfiniteVehicles({
     ...(serviceType === ALL ? {} : { serviceType }),
     ...(operationStatus === ALL ? {} : { operationStatus }),
+    ...(q ? { q } : {}),
+    sort,
   });
 
   const { items } = query;
@@ -97,7 +116,8 @@ export function AccountVehiclesScreen() {
   const alerts = useVehicleAlerts(ids);
 
   const canCreate = permissions.has(PERMISSION.VEHICLE_CREATE);
-  const filtered = serviceType !== ALL || operationStatus !== ALL;
+  /* Sắp xếp KHÔNG phải bộ lọc — web để nó ở slot `actions`, ngoài phép đếm bộ lọc. */
+  const filtered = serviceType !== ALL || operationStatus !== ALL || search.trim() !== '';
 
   const openVehicle = useCallback(
     (vehicle: VehicleListItem) => router.push(ROUTES.account.vehicleDetail(vehicle.id)),
@@ -113,6 +133,7 @@ export function AccountVehiclesScreen() {
   const clearFilters = useCallback(() => {
     setServiceType(ALL);
     setOperationStatus(ALL);
+    setSearch('');
   }, []);
 
   /**
@@ -193,6 +214,36 @@ export function AccountVehiclesScreen() {
     [t, domainLabel],
   );
 
+  const sortOptions = useMemo(
+    () => VEHICLE_SORT_VALUES.map((value) => ({ value, label: sortLabel(value) })),
+    [sortLabel],
+  );
+
+  /** Chip của từng bộ lọc đang bật — chạm để gỡ riêng nó (web `FilterBar showActiveChips`). */
+  const activeChips: { key: string; label: string; clear: () => void }[] = [
+    ...(search.trim()
+      ? [{ key: 'q', label: `${t('searchLabel')}: ${search.trim()}`, clear: () => setSearch('') }]
+      : []),
+    ...(serviceType !== ALL
+      ? [
+          {
+            key: 'serviceType',
+            label: domainLabel('serviceType', serviceType),
+            clear: () => setServiceType(ALL),
+          },
+        ]
+      : []),
+    ...(operationStatus !== ALL
+      ? [
+          {
+            key: 'operationStatus',
+            label: domainLabel('vehicleOperationStatus', operationStatus),
+            clear: () => setOperationStatus(ALL),
+          },
+        ]
+      : []),
+  ];
+
   const header = (
     <AppHeader
       onBack={() => goBackOr(router, ROUTES.account.home())}
@@ -257,7 +308,17 @@ export function AccountVehiclesScreen() {
         />
       </YStack>
 
+      {/* Ba con số của CẢ đội xe (tổng · sẵn sàng · đang thuê) — không theo trang hay bộ lọc. */}
+      <FleetSummaryBar enabled />
+
       <YStack gap={space.sm}>
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          label={t('searchLabel')}
+          placeholder={t('searchPlaceholder')}
+          variant="boxed"
+        />
         <SelectControl
           label={t('serviceFilterLabel')}
           value={serviceType}
@@ -270,7 +331,31 @@ export function AccountVehiclesScreen() {
           options={statusOptions}
           onChange={setOperationStatus}
         />
+        <SelectControl
+          label={tSort('label')}
+          value={sort}
+          options={sortOptions}
+          onChange={(value) => setSort(value as VehicleSort)}
+        />
       </YStack>
+
+      {activeChips.length > 0 ? (
+        <XStack gap={space.xs} flexWrap="wrap" ai="center">
+          {activeChips.map((chip) => (
+            <Chip
+              key={chip.key}
+              label={chip.label}
+              icon="close"
+              size="sm"
+              selected
+              role="button"
+              accessibilityLabel={`${tActions('clear')} ${chip.label}`}
+              onPress={chip.clear}
+            />
+          ))}
+          <Chip label={tActions('clear')} size="sm" role="button" onPress={clearFilters} />
+        </XStack>
+      ) : null}
 
       {/*
         Cảnh báo/KM tải hỏng là hỏng MỘT PHẦN, và web nói ra nó ở đầu lưới thay vì để mỗi thẻ tự

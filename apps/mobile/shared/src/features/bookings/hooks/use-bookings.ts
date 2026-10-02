@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useBranchScopeParams } from '@/features/branches/hooks/use-branch-scope';
 import { keepPageData } from '@/queries/keep-page-data';
 import { queryKeys } from '@/queries/query-keys';
 import {
@@ -28,12 +27,8 @@ import {
  * mới có nội dung, và chiều cao nhảy theo. Nhưng KHÔNG giữ khi đổi bộ lọc: xem `keepPageData`.
  */
 export function useBookingsPage(filters: BookingFilters) {
-  /*
-   * Scope chi nhánh ở thanh trên ghép vào đây, đúng chỗ web ghép (`useBookings`): `branchId` vào
-   * query key nên đổi chi nhánh là tự tải lại, và màn hình không phải nhớ gửi tham số.
-   */
-  const branchScope = useBranchScopeParams();
-  const scoped = { ...filters, ...branchScope };
+  // `branchId` là ô lọc của CHÍNH màn (ADR 0052), đi trong `filters` như mọi chiều khác.
+  const scoped = filters;
   const params = bookingFiltersToParams(scoped);
 
   return useQuery({
@@ -166,8 +161,12 @@ const VEHICLE_PICKER_LIMIT = 30;
  * Tìm ở SERVER (`q`); không kéo cả kho về rồi lọc tại chỗ — seed demo đã có gian hàng 40 xe,
  * và một gian hàng thật có thể vài trăm.
  */
-export function useVehiclePicker(search: string, enabled: boolean) {
-  const filters = { ...(search ? { q: search } : {}), limit: VEHICLE_PICKER_LIMIT };
+export function useVehiclePicker(search: string, enabled: boolean, branchId?: string) {
+  const filters = {
+    ...(search ? { q: search } : {}),
+    ...(branchId ? { branchId } : {}),
+    limit: VEHICLE_PICKER_LIMIT,
+  };
 
   return useQuery({
     queryKey: queryKeys.vehicles.list(vehicleFiltersToParams(filters)),

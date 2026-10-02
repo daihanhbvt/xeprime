@@ -129,6 +129,7 @@ describe('ShopOnboardingScreen (SHP-01)', () => {
       slug: 'da-nang',
       status: 'active',
       onboardingState: 'commission',
+      branchScope: 'all',
       logoUrl: null,
       roleKey: 'shop_owner',
       features: [],

@@ -3,19 +3,23 @@ import { useRouter } from 'expo-router';
 import { useForm, useWatch } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { useBranchReturnParam } from '@/features/branches/hooks/use-branch-filter';
 import {
   PERMISSION,
+  PUBLISH_REQUIREMENT,
   SERVICE_TYPE,
   VEHICLE_OPERATION_STATUS,
   VEHICLE_SOURCE_TYPE,
   VEHICLE_TYPE,
   isVehicleFuelTypeAllowed,
+  type PublishRequirement,
 } from '@xeprime/types';
 import { vehicleFormSchema, type VehicleFormValues } from '@xeprime/validators';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Button } from '@/components/ui/Button';
+import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { DataRow } from '@/components/ui/DataRow';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
@@ -41,9 +45,11 @@ import { CreateVehiclePricingStep } from './components/CreateVehiclePricingStep'
 import { VehicleWizardBar, type WizardStep } from './components/VehicleWizardBar';
 import { VehicleCreateSuccess } from './components/VehicleCreateSuccess';
 import { formValuesToInput } from './mappers';
+import { missingPublishRequirementsForForm } from './publication';
+import { usePublicationLabels } from './hooks/use-publication-labels';
 import { useCreateVehicle } from './hooks/use-vehicle';
 import { branchLabel, vehiclesApi, type VehicleDetail } from './api';
-import { getErrorMessage } from '@/lib/get-error-message';
+import { useErrorMessage } from '@/i18n/use-error-message';
 
 /** Mặc định khi tạo mới: chọn sẵn giá trị hợp lệ để các ô bắt buộc không rỗng. */
 const EMPTY_DEFAULTS: VehicleFormValues = {
@@ -90,6 +96,7 @@ const EMPTY_DEFAULTS: VehicleFormValues = {
   description: '',
   mainImageUrl: null,
   images: [],
+  media: [],
   features: [],
 };
 
@@ -126,7 +133,7 @@ const STEP_FIELDS: Record<string, ReadonlyArray<keyof VehicleFormValues>> = {
     'discountPercent',
     'deliveryEnabled',
   ],
-  media: ['mainImageUrl', 'images', 'features', 'description'],
+  media: ['mainImageUrl', 'images', 'media', 'features', 'description'],
   review: [],
 };
 
@@ -136,6 +143,19 @@ const STEP_FIELDS: Record<string, ReadonlyArray<keyof VehicleFormValues>> = {
  * Dựng từ chính `STEP_FIELDS` chứ không chép tay danh sách thứ hai: thêm một ô vào một bước là
  * tập này tự rộng ra theo, không có chỗ nào để hai bên trôi khỏi nhau.
  */
+/** Điều kiện lên chợ thuộc BƯỚC nào của wizard — thiếu thì chặn đúng bước đó (như web). */
+const REQUIREMENT_STEP: Record<PublishRequirement, string> = {
+  [PUBLISH_REQUIREMENT.SELF_DRIVE_PRICE]: 'pricing',
+  [PUBLISH_REQUIREMENT.LONG_TERM_PRICE]: 'pricing',
+  [PUBLISH_REQUIREMENT.WITH_DRIVER_PRICE]: 'pricing',
+  [PUBLISH_REQUIREMENT.MAIN_IMAGE]: 'media',
+  [PUBLISH_REQUIREMENT.PHOTOS]: 'media',
+  [PUBLISH_REQUIREMENT.PLATE_NUMBER]: 'basic',
+  [PUBLISH_REQUIREMENT.IDENTITY]: 'basic',
+  [PUBLISH_REQUIREMENT.ENERGY_SPEC]: 'basic',
+  [PUBLISH_REQUIREMENT.BRANCH_LOCATION]: 'basic',
+};
+
 const WIZARD_FIELDS: ReadonlyArray<keyof VehicleFormValues> = Object.values(STEP_FIELDS).flat();
 
 /**
@@ -154,11 +174,14 @@ export function CreateVehicleScreen() {
   const t = useTranslations('Vehicles.form');
   const tCommon = useTranslations('Common.actions');
   const tBranches = useTranslations('Branches');
-  const tPage = useTranslations('Vehicles.list.page');
   const tPermission = useTranslations('ManageCommon.permission');
   const router = useRouter();
   const toast = useAppToast();
+  // Đúng `CreateVehiclePage` bên web: toast + câu lỗi dịch theo MÃ (`useErrorMessage`).
+  const tCreate = useTranslations('Vehicles.create');
+  const errorMessage = useErrorMessage();
   const { has, isLoading: permissionsLoading } = usePermissions();
+  const { formGaps } = usePublicationLabels();
 
   const create = useCreateVehicle();
   const [step, setStep] = useState(0);
@@ -214,12 +237,20 @@ export function CreateVehicleScreen() {
     [branches.data, noProvince],
   );
 
+  /*
+   * Chi nhánh danh sách đang lọc (`?branchId=` từ nút "Thêm xe") là GỢI Ý đầu tiên — ADR 0052 điều
+   * 6: trước đây form luôn nhảy về chi nhánh MẶC ĐỊNH, nên lưu xong xe biến khỏi đúng danh sách vừa
+   * mở. Gợi ý không còn hoạt động thì rơi về mặc định như cũ.
+   */
+  const hintedBranchId = useBranchReturnParam();
   useEffect(() => {
     // Chỉ điền khi ô còn TRỐNG: người dùng đã chọn tay thì dữ liệu tới muộn không được ghi đè.
     if (branchId) return;
-    const preferred = branches.data?.items.find((b) => b.isDefault) ?? branches.data?.items[0];
+    const items = branches.data?.items;
+    const preferred =
+      items?.find((b) => b.id === hintedBranchId) ?? items?.find((b) => b.isDefault) ?? items?.[0];
     if (preferred) setValue('branchId', preferred.id, { shouldValidate: true });
-  }, [branchId, branches.data, setValue]);
+  }, [branchId, branches.data, setValue, hintedBranchId]);
 
   /*
    * Kiểu dáng thân xe chỉ có nghĩa với ô tô; nguồn năng lượng cũng phụ thuộc loại phương tiện —
@@ -235,23 +266,42 @@ export function CreateVehicleScreen() {
     }
   }, [fuelType, isCar, setValue, vehicleType]);
 
+  /**
+   * Điều kiện lên chợ còn thiếu (30/09/2026) — xe tạo qua wizard phải ĐỦ điều kiện lên chợ, CÙNG
+   * luật với cổng gửi duyệt ở backend. Chặn ở bước chứa nó, như `VehicleForm` bên web.
+   */
+  const [publishMissing, setPublishMissing] = useState<PublishRequirement[]>([]);
+  function publishGaps(stepKey?: string): PublishRequirement[] {
+    const missing = missingPublishRequirementsForForm(getValues());
+    return stepKey ? missing.filter((key) => REQUIREMENT_STEP[key] === stepKey) : missing;
+  }
+
   const back = () => goBackOr(router, ROUTES.manage.vehicles());
 
   function submitNow(submitForReview: boolean) {
+    const missing = publishGaps();
+    setPublishMissing(missing);
+    if (missing.length > 0) {
+      const target = steps.findIndex((candidate) => candidate.key === REQUIREMENT_STEP[missing[0]!]);
+      if (target >= 0) setStep(target);
+      return;
+    }
     void handleSubmit(
       (values) => {
         create.mutate(formValuesToInput(values), {
           onSuccess: async (vehicle) => {
             if (!submitForReview) {
+              toast.showSuccess(tCreate('savedDraft'));
               setCreated({ vehicle, submittedForReview: false });
               return;
             }
             try {
               const submitted = await vehiclesApi.submitPublic(vehicle.id);
+              toast.showSuccess(tCreate('createdAndSubmitted'));
               setCreated({ vehicle: submitted, submittedForReview: true });
             } catch (error) {
               // Xe ĐÃ tạo — nói đúng điều đó, đừng để người dùng bấm lại và tạo xe thứ hai.
-              toast.showError(t('success.submitFailed', { reason: getErrorMessage(error) }));
+              toast.showError(tCreate('createdNotSubmitted', { error: errorMessage(error) }));
               setCreated({ vehicle, submittedForReview: false });
             }
           },
@@ -262,11 +312,11 @@ export function CreateVehicleScreen() {
              * đứng ở bước xác nhận với một dòng "Dữ liệu gửi lên không hợp lệ" không chỉ được chỗ
              * nào. Cùng cách xử lý với lỗi schema ở nhánh ngay dưới.
              */
+            // Như `CreateVehiclePage` bên web: LUÔN báo câu dịch theo MÃ (vd `VEHICLE_CODE_DUPLICATE`),
+            // rồi mới gắn lỗi cấp trường vào ô.
+            toast.showError(errorMessage(error));
             const applied = applyApiFieldErrors(error, setError, { fields: WIZARD_FIELDS });
-            if (applied.length === 0) {
-              toast.showError(getErrorMessage(error));
-              return;
-            }
+            if (applied.length === 0) return;
             const bad = new Set<string>(applied);
             const target = steps.findIndex((candidate) =>
               (STEP_FIELDS[candidate.key] ?? []).some((f) => bad.has(f)),
@@ -292,7 +342,9 @@ export function CreateVehicleScreen() {
     if (create.isPending) return;
     // Chỉ validate trường của BƯỚC ĐANG MỞ — xem docblock của `STEP_FIELDS`.
     const valid = await trigger([...(STEP_FIELDS[steps[step]!.key] ?? [])]);
-    if (valid) setStep(step + 1);
+    const missing = valid ? publishGaps(steps[step]!.key) : [];
+    setPublishMissing(missing);
+    if (valid && missing.length === 0) setStep(step + 1);
   }
 
   /*
@@ -301,19 +353,18 @@ export function CreateVehicleScreen() {
    *
    * Tiêu đề là tên của MÀN ("Thêm xe"), không phải tên bước đang mở: bước 1 tên "Cơ bản", và
    * một màn báo thiếu quyền mang tiêu đề "Cơ bản" không nói cho ai biết họ vừa bị chặn khỏi cái
-   * gì. Câu và tên quyền dùng chung với mọi màn manage khác (`ManageCommon.permission`), giống
-   * hệt `AccountVehiclesScreen`.
+   * gì. Tiêu đề/câu/nút dùng đúng khoá `Vehicles.create.*` của `CreateVehiclePage` bên web.
    */
   if (!permissionsLoading && !has(PERMISSION.VEHICLE_CREATE)) {
     return (
       <>
-        <AppHeader title={tPage('addVehicle')} onBack={back} />
+        <AppHeader title={tCreate('title')} onBack={back} />
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenMessage
             icon="lock-closed-outline"
-            title={tPermission('deniedTitle')}
-            description={`${tPermission('deniedBody')}\n${tPermission('requires')} ${PERMISSION.VEHICLE_CREATE}`}
-            actionLabel={tPage('backToList')}
+            title={tCreate('forbiddenTitle')}
+            description={`${tCreate('forbiddenBody')}\n${tPermission('requires')} ${PERMISSION.VEHICLE_CREATE}`}
+            actionLabel={tCreate('backToList')}
             onAction={back}
           />
         </Screen>
@@ -406,6 +457,14 @@ export function CreateVehicleScreen() {
       >
         <YStack gap={layout.section}>
           <VehicleWizardBar steps={steps} current={step} onStepChange={setStep} />
+
+          {create.isError ? <Callout tone="danger">{errorMessage(create.error)}</Callout> : null}
+
+          {publishMissing.length > 0 ? (
+            <Callout tone="danger">
+              {t('wizard.publishRequired', { items: formGaps(publishMissing, getValues()) })}
+            </Callout>
+          ) : null}
 
           {stepErrors > 0 ? (
             <Text col={colors.danger} fos={fontSize.bodySm} fow={fontWeight.medium}>

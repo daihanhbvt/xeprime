@@ -29,6 +29,7 @@ function tenant(status: string) {
     slug: 'gian-hang',
     status,
     onboardingState: SHOP_ONBOARDING_STATE.PACKAGE_ACTIVE,
+    branchScope: 'all' as const,
     logoUrl: null,
     roleKey: 'shop_owner',
     features: [],

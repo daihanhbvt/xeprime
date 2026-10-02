@@ -15,7 +15,6 @@ import { locationsApi } from '@/features/locations/api';
 import { withIntl } from '@/i18n/test-utils';
 import { store } from '@/store';
 import { branchesApi, BRANCH_ACTION, type Branch, type BranchList } from './api';
-import { branchScopeReset } from './branch-scope.slice';
 import { BranchListScreen } from './BranchListScreen';
 
 /** Cờ NĂNG LỰC THEO GÓI đi kèm phiên — union, không phải chuỗi trần (ADR 0005). */
@@ -46,6 +45,7 @@ function currentUser(
       slug: 'da-nang',
       status: 'active',
       onboardingState: 'commission',
+      branchScope: 'all',
       logoUrl: null,
       roleKey: 'shop_owner',
       features,
@@ -151,7 +151,6 @@ async function renderScreen(
 
 beforeEach(() => {
   jest.restoreAllMocks();
-  store.dispatch(branchScopeReset());
 });
 
 describe('BranchListScreen — quyền', () => {

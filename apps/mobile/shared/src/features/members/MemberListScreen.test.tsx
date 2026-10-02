@@ -5,6 +5,8 @@ import {
   API_ERROR_CODE,
   FEATURE_STATE,
   type FeatureState,
+  MEMBERSHIP_BRANCH_SCOPE,
+  type MembershipBranchScope,
   MEMBERSHIP_STATUS,
   PERMISSION,
   PLAN_FEATURE,
@@ -14,6 +16,7 @@ import {
 } from '@xeprime/types';
 import { ApiClientError } from '@xeprime/api-client';
 import * as authApi from '@/features/auth/api';
+import { branchesApi, type Branch, type BranchList } from '@/api/branches/api';
 import { queryKeys } from '@/queries/query-keys';
 import { withIntl } from '@/i18n/test-utils';
 import { store } from '@/store';
@@ -40,6 +43,7 @@ const ME = '01JQZX0000000000000000000U';
 function currentUser(
   permissions: Permission[],
   features: TenantFeature[] = [],
+  branchScope: MembershipBranchScope = MEMBERSHIP_BRANCH_SCOPE.ALL,
 ): authApi.CurrentUser {
   return {
     id: ME,
@@ -55,6 +59,7 @@ function currentUser(
       slug: 'da-nang',
       status: 'active',
       onboardingState: 'commission',
+      branchScope,
       logoUrl: null,
       roleKey: TENANT_ROLE.SHOP_OWNER,
       features,
@@ -83,6 +88,8 @@ function member(overrides: Partial<Member> = {}): Member {
     status: MEMBERSHIP_STATUS.ACTIVE,
     joinedAt: '2026-02-01T00:00:00.000Z',
     createdAt: '2026-02-01T00:00:00.000Z',
+    branchScope: MEMBERSHIP_BRANCH_SCOPE.ALL,
+    branchIds: [],
     ...overrides,
   };
 }
@@ -105,8 +112,14 @@ async function renderScreen(
   members: Member[] = [OWNER, member()],
   invites: Invite[] = [],
   features: TenantFeature[] = [],
+  opts: { branches?: Branch[]; myScope?: MembershipBranchScope } = {},
 ) {
-  jest.spyOn(authApi, 'fetchCurrentUser').mockResolvedValue(currentUser(permissions, features));
+  jest
+    .spyOn(authApi, 'fetchCurrentUser')
+    .mockResolvedValue(currentUser(permissions, features, opts.myScope));
+  jest
+    .spyOn(branchesApi, 'list')
+    .mockResolvedValue({ items: opts.branches ?? [] } as unknown as BranchList);
   const listSpy = jest.spyOn(membersApi, 'list').mockResolvedValue({
     items: members,
     meta: { page: 1, limit: 10, total: members.length, hasNext: false },
@@ -336,5 +349,137 @@ describe('MemberListScreen — invalidation', () => {
     await waitFor(() => expect(view.removeSpy).toHaveBeenCalled());
     await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.auth.all }));
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.members.all });
+  });
+});
+
+const BRANCH_A = { id: '01JQZX00000000000000000BRA', name: 'Quận 1', provinceName: 'TP HCM' } as Branch;
+const BRANCH_B = { id: '01JQZX00000000000000000BRB', name: 'Quận 5', provinceName: 'TP HCM' } as Branch;
+
+describe('MemberListScreen — chi nhánh phụ trách (ADR 0052)', () => {
+  const all: Permission[] = [
+    PERMISSION.MEMBER_VIEW,
+    PERMISSION.MEMBER_INVITE,
+    PERMISSION.MEMBER_UPDATE_ROLE,
+    PERMISSION.MEMBER_REMOVE,
+  ];
+
+  it('thẻ hiện phạm vi: "Tất cả chi nhánh" hoặc "N chi nhánh"', async () => {
+    const limited = member({
+      userId: '01JQZX0000000000000000000L',
+      displayName: 'Nhân viên Q1',
+      branchScope: MEMBERSHIP_BRANCH_SCOPE.LIMITED,
+      branchIds: [BRANCH_A.id, BRANCH_B.id],
+    });
+    const view = await renderScreen(all, [member(), limited], [], [], {
+      branches: [BRANCH_A, BRANCH_B],
+    });
+
+    await view.findByText('Nhân viên Q1');
+    expect(view.getAllByText('Tất cả chi nhánh').length).toBeGreaterThan(0);
+    expect(view.getByText('2 chi nhánh')).toBeTruthy();
+  });
+
+  it('lưu phạm vi: PATCH CHỈ mang branchScope/branchIds, KHÔNG roleKey', async () => {
+    const view = await renderScreen(all, [OWNER, member()], [], [], {
+      branches: [BRANCH_A, BRANCH_B],
+    });
+
+    await view.findByText('Trần Thị B');
+    await fireEvent.press(view.getByText('Chi nhánh'));
+    await fireEvent.press(await view.findByLabelText('Quận 1 · TP HCM'));
+    await fireEvent.press(view.getByRole('button', { name: 'Lưu' }));
+
+    await waitFor(() =>
+      expect(view.roleSpy).toHaveBeenCalledWith('01JQZX0000000000000000000S', {
+        branchScope: MEMBERSHIP_BRANCH_SCOPE.LIMITED,
+        branchIds: [BRANCH_A.id],
+      }),
+    );
+    expect(await view.findByText('Đã cập nhật chi nhánh phụ trách')).toBeTruthy();
+  });
+
+  it('đổi vai: PATCH CHỈ mang roleKey', async () => {
+    const view = await renderScreen(all, [OWNER, member()], [], [], { branches: [BRANCH_A] });
+
+    await view.findByText('Trần Thị B');
+    await fireEvent.press(view.getByText('Đổi vai trò'));
+    await fireEvent.press(await view.findByRole('radio', { name: 'Quản lý gian hàng' }));
+    await fireEvent.press(view.getByRole('button', { name: 'Lưu' }));
+
+    await waitFor(() =>
+      expect(view.roleSpy).toHaveBeenCalledWith('01JQZX0000000000000000000S', {
+        roleKey: TENANT_ROLE.SHOP_MANAGER,
+      }),
+    );
+  });
+
+  it('người bị GIỚI HẠN: thành viên rộng hơn mình KHÔNG đổi vai/chi nhánh/gỡ được', async () => {
+    const outside = member({ displayName: 'Toàn gian hàng' });
+    const view = await renderScreen(all, [outside], [], [], {
+      branches: [BRANCH_A],
+      myScope: MEMBERSHIP_BRANCH_SCOPE.LIMITED,
+    });
+    await view.findByText('Toàn gian hàng');
+    await waitFor(() => expect(view.queryByText('Đổi vai trò')).toBeNull());
+    expect(view.queryByText('Gỡ thành viên')).toBeNull();
+  });
+
+  it('người bị GIỚI HẠN: thành viên nằm gọn trong phạm vi thì vẫn thao tác được', async () => {
+    const inside = member({
+      displayName: 'Trong phạm vi',
+      branchScope: MEMBERSHIP_BRANCH_SCOPE.LIMITED,
+      branchIds: [BRANCH_A.id],
+    });
+    const view = await renderScreen(all, [inside], [], [], {
+      branches: [BRANCH_A],
+      myScope: MEMBERSHIP_BRANCH_SCOPE.LIMITED,
+    });
+    await view.findByText('Trong phạm vi');
+    expect(await view.findByText('Đổi vai trò')).toBeTruthy();
+    expect(view.getByText('Gỡ thành viên')).toBeTruthy();
+  });
+
+  it('mời: mặc định "Tất cả chi nhánh" ⇒ gửi branchScope all', async () => {
+    const view = await renderScreen(all, [OWNER], [], [], { branches: [BRANCH_A, BRANCH_B] });
+    view.createInviteSpy.mockResolvedValue({ emailSent: true } as never);
+
+    await fireEvent.press(await view.findByLabelText('Mời thành viên'));
+    await fireEvent.changeText(await view.findByLabelText('Email'), 'nv@congty.vn');
+    expect(await view.findByText(/Chi nhánh phụ trách/)).toBeTruthy();
+    await fireEvent.press(view.getByRole('button', { name: 'Gửi' }));
+
+    await waitFor(() =>
+      expect(view.createInviteSpy).toHaveBeenCalledWith({
+        email: 'nv@congty.vn',
+        roleKey: TENANT_ROLE.SHOP_STAFF,
+        branchScope: MEMBERSHIP_BRANCH_SCOPE.ALL,
+      }),
+    );
+  });
+
+  it('mời: chọn một chi nhánh ⇒ gửi limited + branchIds', async () => {
+    const view = await renderScreen(all, [OWNER], [], [], { branches: [BRANCH_A, BRANCH_B] });
+    view.createInviteSpy.mockResolvedValue({ emailSent: true } as never);
+
+    await fireEvent.press(await view.findByLabelText('Mời thành viên'));
+    await fireEvent.changeText(await view.findByLabelText('Email'), 'nv@congty.vn');
+    await fireEvent.press(await view.findByLabelText('Quận 5 · TP HCM'));
+    await fireEvent.press(view.getByRole('button', { name: 'Gửi' }));
+
+    await waitFor(() =>
+      expect(view.createInviteSpy).toHaveBeenCalledWith({
+        email: 'nv@congty.vn',
+        roleKey: TENANT_ROLE.SHOP_STAFF,
+        branchScope: MEMBERSHIP_BRANCH_SCOPE.LIMITED,
+        branchIds: [BRANCH_B.id],
+      }),
+    );
+  });
+
+  it('mời khi gian hàng chưa có chi nhánh: ẩn ô chi nhánh', async () => {
+    const view = await renderScreen(all, [OWNER]);
+    await fireEvent.press(await view.findByLabelText('Mời thành viên'));
+    await view.findByLabelText('Email');
+    expect(view.queryByText(/Chi nhánh phụ trách/)).toBeNull();
   });
 });

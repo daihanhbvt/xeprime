@@ -5,9 +5,9 @@ import { VEHICLE_PUBLIC_MIN_IMAGES } from '@xeprime/types';
 import { BlockTitle } from '@/components/ui/BlockTitle';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
-import { ImageUploadField } from '@/components/ui/ImageUploadField';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import type { UploadMeta, UploadPresign } from '@/api/uploads/api';
+import { TypedMediaFields } from '@/features/vehicles/components/TypedMediaFields';
 import { colors, fontSize, space } from '@/theme/tokens';
 import type { QuickVehicleValues } from '../quick-schema';
 
@@ -17,12 +17,15 @@ const ANGLES = ['front', 'rear', 'side', 'interior'] as const;
 /**
  * Bước HÌNH ẢNH của wizard đăng xe nhanh — bản native của `QuickVehicleImagesStep`.
  *
+ * Ảnh gán theo GÓC CHỤP qua `TypedMediaFields` (ảnh đại diện + `media[{url,type}]`), cùng bảng
+ * ảnh với wizard nâng cao — đúng như web.
+ *
  * Bộ đếm là thứ quan trọng nhất của màn này: xe muốn LÊN CHỢ phải đủ `VEHICLE_PUBLIC_MIN_IMAGES`
  * ảnh, và người dùng phải biết còn thiếu mấy tấm TRƯỚC khi bấm gửi duyệt — chứ không phải đọc
  * một lỗi từ server sau đó. Đếm theo `Set` vì ảnh đại diện cũng tính, và nó có thể trùng một tấm
  * đã nằm trong thư viện.
  *
- * Thiếu ảnh KHÔNG chặn lưu: xe vẫn lưu nháp được, chỉ là chưa gửi duyệt được.
+ * Thiếu ảnh CHẶN lưu (30/09/2026, như web): xe tạo qua wizard phải đủ điều kiện lên chợ.
  */
 export function QuickVehicleImagesStep({
   control,
@@ -38,12 +41,18 @@ export function QuickVehicleImagesStep({
   presign: (meta: UploadMeta) => Promise<UploadPresign>;
 }) {
   const t = useTranslations('ListYourVehicle.images');
-  const tForm = useTranslations('Vehicles.form.media');
 
   const mainImageUrl = useWatch({ control, name: 'mainImageUrl' });
-  const images = useWatch({ control, name: 'images' });
+  const images = useWatch({ control, name: 'images' }) ?? [];
+  const media = useWatch({ control, name: 'media' }) ?? [];
+  const vehicleType = useWatch({ control, name: 'vehicleType' });
 
-  const total = new Set([...(mainImageUrl ? [mainImageUrl] : []), ...(images ?? [])]).size;
+  // Đếm trên tập URL đã khử trùng (đại diện ∪ thư viện ∪ media) — đúng cách backend đếm.
+  const total = new Set([
+    ...(mainImageUrl ? [mainImageUrl] : []),
+    ...images,
+    ...media.map((item) => item.url),
+  ]).size;
   const missing = Math.max(0, VEHICLE_PUBLIC_MIN_IMAGES - total);
 
   return (
@@ -55,21 +64,7 @@ export function QuickVehicleImagesStep({
             {t('intro')}
           </Text>
 
-          <ImageUploadField
-            control={control}
-            name="mainImageUrl"
-            label={tForm('mainImage')}
-            emptyLabel={tForm('addMainImage')}
-            hint={t('mainImageHelp')}
-            presign={presign}
-          />
-          <ImageUploadField
-            control={control}
-            name="images"
-            label={tForm('gallery')}
-            presign={presign}
-            multiple
-          />
+          <TypedMediaFields control={control} vehicleType={vehicleType} presign={presign} mainImageRequired />
 
           {/*
             Thanh tiến độ ĐI KÈM con số, đúng `<Progress>` của web: "2/4" là một phép tính, còn

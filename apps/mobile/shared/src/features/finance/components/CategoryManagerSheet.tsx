@@ -8,8 +8,8 @@ import {
   RECEIPT_TYPE,
   RECEIPT_TYPE_VALUES,
   STATUS_COLOR,
-  type FinanceCategoryType,
 } from '@xeprime/types';
+import { metaColor } from '@/lib/status-meta';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
@@ -197,7 +197,7 @@ export function CategoryManagerSheet({ open, onClose }: { open: boolean; onClose
                 <XStack w={TYPE_COL_WIDTH} ai="center" jc="center">
                   <StatusBadge
                     label={domainLabel('financeCategoryType', category.type)}
-                    color={FINANCE_CATEGORY_TYPE_META[category.type as FinanceCategoryType].color}
+                    color={metaColor(FINANCE_CATEGORY_TYPE_META, category.type)}
                     size="sm"
                   />
                 </XStack>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, XStack, YStack } from 'tamagui';
+import { Text, XStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { LocaleSwitcher } from '@/components/i18n/LocaleSwitcher';
 import { Screen } from '@/components/layout/Screen';
@@ -53,11 +53,6 @@ export default function ManageMoreRoute() {
           </XStack>
         </Card>
 
-        <YStack px={space.xs}>
-          <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {t('comingSoon')}
-          </Text>
-        </YStack>
       </Screen>
 
       <ScopeSwitcherSheet open={switching} onClose={() => setSwitching(false)} />

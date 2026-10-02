@@ -130,6 +130,7 @@ function DriverForm({ driver, onDone }: { driver: Driver | null; onDone: () => v
         control={control}
         name="driverType"
         label={tForm('type')}
+        required
         options={typeOptions}
       />
       <TextField control={control} name="licenseNo" label={tForm('licenseNo')} />

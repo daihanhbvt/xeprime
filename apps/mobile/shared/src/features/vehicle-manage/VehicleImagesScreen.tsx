@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import { Pressable, Switch } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -22,12 +23,36 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { VEHICLE_MANAGE_SECTION } from '@/navigation/vehicle-manage-section';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import type { VehicleDetail } from '@/features/vehicles/api';
-import { VehicleManageShell } from './components/VehicleManageShell';
+import { VehicleManageShell, type VehicleSectionWorkspace } from './components/VehicleManageShell';
 
 /** Một tấm ảnh đã gán vị trí. */
-interface SlotItem {
+export interface SlotItem {
   url: string;
   type: VehicleImageType;
+}
+
+/** Màu rãnh công tắc — cùng bảng với `MarketplaceVisibilityRow`. */
+const SWITCH_TRACK = { false: colors.borderInput, true: colors.primary };
+
+/**
+ * Chuyển một ảnh sang ô khác — đúng `handleDragEnd` của `VehicleImageBoard` bên web khi thả vào
+ * một Ô: ô đích là ô ĐƠN đang có ảnh thì hai ảnh đổi chỗ; cùng ô thì không đổi gì.
+ */
+export function moveImageToSlot(
+  current: readonly SlotItem[],
+  url: string,
+  targetSlot: VehicleImageType,
+): SlotItem[] {
+  const dragged = current.find((i) => i.url === url);
+  if (!dragged || dragged.type === targetSlot) return [...current];
+  const displaced = isSingleVehicleImageSlot(targetSlot)
+    ? current.find((i) => i.type === targetSlot)
+    : undefined;
+  return current.map((i) => {
+    if (i.url === dragged.url) return { ...i, type: targetSlot };
+    if (displaced && i.url === displaced.url) return { ...i, type: dragged.type };
+    return i;
+  });
 }
 
 /** Tỉ lệ ô ảnh — 4:3, đủ để nhận ra góc chụp mà không ăn hết chiều cao màn. */
@@ -50,14 +75,19 @@ const TILE_RATIO = 4 / 3;
  * trước KHÔNG kéo theo ảnh đại diện, và xoá một tấm trong thư viện cũng không đụng tới nó. Muốn
  * đổi hay gỡ ảnh đại diện thì thao tác ngay trên ô của nó.
  */
-export function VehicleImagesScreen({ vehicleId }: { vehicleId: string }) {
-  const tNav = useTranslations('VehicleManage.nav');
-
+export function VehicleImagesScreen({
+  vehicleId,
+  workspace,
+}: {
+  vehicleId: string;
+  /** `manage` = mục của màn sửa xe ở app Partner (Lui về hub sửa xe) — xem `VehicleManageShell`. */
+  workspace?: VehicleSectionWorkspace;
+}) {
   return (
     <VehicleManageShell
       vehicleId={vehicleId}
+      {...(workspace ? { workspace } : {})}
       section={VEHICLE_MANAGE_SECTION.IMAGES}
-      title={tNav('images')}
     >
       {({ vehicle, canEdit }) => (
         <ImagesForm vehicle={vehicle} canEdit={canEdit} vehicleId={vehicleId} />
@@ -92,6 +122,12 @@ function ImagesForm({
   );
   const [items, setItems] = useState<SlotItem[]>(initial.items);
   const [mainImageUrl, setMainImageUrl] = useState<string | null>(initial.main);
+  /*
+   * Chế độ sắp xếp — bản native của công tắc "kéo thả" bên web. Trên màn cảm ứng kéo qua cả trang
+   * cuộn rất dễ trượt, nên cử chỉ là CHẠM ảnh để nhấc lên rồi CHẠM ô đích; kết quả y hệt thả.
+   */
+  const [reorder, setReorder] = useState(false);
+  const [picked, setPicked] = useState<string | null>(null);
 
   /*
    * "Đã đổi gì chưa" tính bằng SO SÁNH với giá trị gốc, không phải một cờ bật-một-chiều: tải lên
@@ -100,8 +136,15 @@ function ImagesForm({
   const dirty =
     mainImageUrl !== initial.main || JSON.stringify(items) !== JSON.stringify(initial.items);
 
+  /*
+   * Ô HIỆN — đúng `visibleSlots` của web (30/09/2026): KHÔNG có ô "Ảnh khác", mỗi tấm ảnh phải có
+   * vị trí. Ảnh CŨ loại "khác" vẫn nằm nguyên trong `items` và được gửi lại y như cũ khi lưu.
+   */
   const slots = useMemo(
-    () => vehicleImageSlotsFor(vehicle.vehicleType ?? ''),
+    () =>
+      vehicleImageSlotsFor(vehicle.vehicleType ?? '').filter(
+        (slot) => slot !== VEHICLE_IMAGE_TYPE.OTHER,
+      ),
     [vehicle.vehicleType],
   );
 
@@ -112,7 +155,11 @@ function ImagesForm({
    * đó; ai có ảnh thư viện cũng bị báo là dữ liệu cũ chưa phân loại. Và câu chữ bảo người dùng
    * "kéo sang ô phù hợp" trong khi màn này không có kéo thả — hướng dẫn một cử chỉ không tồn tại.
    */
-  const galleryCount = items.filter((i) => i.type === VEHICLE_IMAGE_TYPE.OTHER).length;
+  /*
+   * Trần ảnh tính trên TOÀN BỘ danh sách (web `items.length + pending.length`), không riêng một ô —
+   * ô đơn vẫn thay được ảnh của nó khi đã chạm trần.
+   */
+  const remaining = Math.max(0, VEHICLE_GALLERY_MAX_IMAGES - items.length);
 
   /** Đặt một ảnh vào ô — ô đơn thì THAY, ô "khác" thì thêm. */
   function place(slot: VehicleImageType, url: string) {
@@ -154,6 +201,24 @@ function ImagesForm({
 
   return (
     <YStack gap={space.md}>
+      <XStack ai="center" gap={space.sm}>
+        <Switch
+          value={reorder}
+          onValueChange={(next) => {
+            setReorder(next);
+            setPicked(null);
+          }}
+          disabled={!canEdit}
+          accessibilityLabel={t('reorderLabel')}
+          trackColor={SWITCH_TRACK}
+          thumbColor={colors.surface}
+          ios_backgroundColor={colors.borderInput}
+        />
+        <Text f={1} col={colors.text} fos={fontSize.bodySm}>
+          {t('reorderToggle')}
+        </Text>
+      </XStack>
+
       <MainImageCard
         url={mainImageUrl}
         vehicleName={vehicle.name}
@@ -171,10 +236,22 @@ function ImagesForm({
           helper={t(`helper.${slot}` as never)}
           items={items.filter((i) => i.type === slot)}
           canEdit={canEdit}
-          full={!isSingleVehicleImageSlot(slot) && galleryCount >= VEHICLE_GALLERY_MAX_IMAGES}
+          full={!isSingleVehicleImageSlot(slot) && remaining === 0}
+          remaining={remaining}
           onUploaded={(url) => place(slot, url)}
           onRemove={removeUrl}
           onBusyChange={trackUpload}
+          reorder={reorder && canEdit}
+          picked={picked}
+          onPick={(url) => setPicked((cur) => (cur === url ? null : url))}
+          onDropHere={
+            picked && items.find((i) => i.url === picked)?.type !== slot
+              ? () => {
+                  setItems((prev) => moveImageToSlot(prev, picked, slot));
+                  setPicked(null);
+                }
+              : undefined
+          }
         />
       ))}
 
@@ -316,10 +393,24 @@ function SlotCard({
   items,
   canEdit,
   full,
+  remaining,
   onUploaded,
   onRemove,
   onBusyChange,
+  reorder,
+  picked,
+  onPick,
+  onDropHere,
 }: {
+  /** Đang ở chế độ sắp xếp: chạm ảnh để nhấc, chạm ô để đặt. */
+  reorder: boolean;
+  /** URL ảnh đang được nhấc lên (nếu có). */
+  picked: string | null;
+  onPick: (url: string) => void;
+  /** Có mặt khi ô này là đích hợp lệ cho ảnh đang nhấc. */
+  onDropHere: (() => void) | undefined;
+  /** Số ảnh còn thêm được cho cả bảng — ô nhiều ảnh không chọn quá con số này một lượt. */
+  remaining: number;
   slot: VehicleImageType;
   label: string;
   vehicleName: string;
@@ -340,7 +431,7 @@ function SlotCard({
     title: label,
     hint: helper,
     presign: uploadsApi.vehicleImage,
-    remaining: single ? 1 : VEHICLE_GALLERY_MAX_IMAGES,
+    remaining: single ? 1 : remaining,
     /* Người dùng chọn được NHIỀU tấm một lượt — ô đơn chỉ giữ tấm cuối, ô "khác" nhận hết. */
     onUploaded: (urls: readonly string[]) => urls.forEach(onUploaded),
   });
@@ -365,9 +456,12 @@ function SlotCard({
           <Text f={1} col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
             {label}
           </Text>
-          <Text col={items.length > 0 ? colors.success : colors.placeholder} fos={fontSize.label}>
-            {items.length > 0 ? t('uploaded') : t('missing')}
-          </Text>
+          {/* Web: thẻ "Đã tải lên" khi ô có ảnh; chưa có thì chỉ dòng hướng dẫn bên dưới. */}
+          {items.length > 0 ? (
+            <Text col={colors.success} fos={fontSize.label}>
+              {t('uploaded')}
+            </Text>
+          ) : null}
         </XStack>
 
         <Text col={colors.textMuted} fos={fontSize.label}>
@@ -378,26 +472,39 @@ function SlotCard({
           <XStack flexWrap="wrap" gap={space.xs}>
             {items.map((item) => (
               <YStack key={item.url} w={single ? '100%' : '48%'} gap={space.xs}>
-                <YStack aspectRatio={TILE_RATIO} br={radius.md} ov="hidden">
-                  {/*
+                <Pressable
+                  disabled={!reorder}
+                  onPress={() => onPick(item.url)}
+                  accessibilityRole={reorder ? 'button' : undefined}
+                  accessibilityState={reorder ? { selected: picked === item.url } : undefined}
+                >
+                  <YStack
+                    aspectRatio={TILE_RATIO}
+                    br={radius.md}
+                    ov="hidden"
+                    borderWidth={picked === item.url ? 3 : 0}
+                    borderColor={colors.primary}
+                  >
+                    {/*
                     Ảnh KHÔNG câm với trình đọc màn hình — `alt` của web ("Ảnh mặt trước của
                     Honda Vision"). Thiếu nó, `RemoteImage` đặt `accessible: false` và cả lưới ảnh
                     biến mất hoàn toàn khỏi cây khả truy cập.
                   */}
-                  <RemoteImage
-                    uri={item.url}
-                    fallback={null}
-                    contentFit="cover"
-                    accessibilityLabel={t('alt', { slot: label, vehicle: vehicleName })}
-                  />
-                </YStack>
+                    <RemoteImage
+                      uri={item.url}
+                      fallback={null}
+                      contentFit="cover"
+                      accessibilityLabel={t('alt', { slot: label, vehicle: vehicleName })}
+                    />
+                  </YStack>
+                </Pressable>
                 {/*
                   Nhãn nhìn thấy là "Xoá" trống trơn, KHÔNG phải "Xoá ảnh Mặt trước": ở ô thư
                   viện mỗi tấm chỉ rộng 48% bề ngang thẻ, và câu đầy đủ ở cỡ `sm` bị cắt thành
                   "Xoá ảnh Ảnh…". Nút đứng ngay dưới tấm nó xoá nên mắt không cần nhắc lại;
                   trình đọc màn hình thì vẫn nghe đủ câu.
                 */}
-                {canEdit ? (
+                {canEdit && !reorder ? (
                   <Button
                     label={tActions('delete')}
                     accessibilityLabel={t('remove', { slot: label })}
@@ -422,7 +529,17 @@ function SlotCard({
           </YStack>
         )}
 
-        {canEdit && !full && (!single || items.length === 0) ? (
+        {onDropHere ? (
+          <Button
+            label={label}
+            variant="primary"
+            size="sm"
+            icon="swap-horizontal-outline"
+            onPress={onDropHere}
+          />
+        ) : null}
+
+        {canEdit && !reorder && !full && (!single || items.length === 0) ? (
           <Button
             label={t('choose')}
             variant="secondary"

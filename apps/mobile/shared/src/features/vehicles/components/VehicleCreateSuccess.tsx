@@ -4,11 +4,9 @@ import { Pressable, StyleSheet } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import {
-  VEHICLE_OPERATION_STATUS_META,
-  type VehicleOperationStatus,
-} from '@xeprime/types';
+import { VEHICLE_OPERATION_STATUS_META, type VehicleOperationStatus } from '@xeprime/types';
 import { LIST_SEPARATOR } from '@xeprime/domain';
+import { metaColor, metaLabel } from '@/lib/status-meta';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
@@ -45,7 +43,7 @@ const CHECKLIST = [
   {
     key: 'checkPricing',
     link: 'checkPricingLink',
-    href: (id: string): Href => ROUTES.manage.vehiclePricing(id),
+    href: (id: string): Href => ROUTES.manage.vehicleEditTab(id, VEHICLE_EDIT_TAB.PRICING),
   },
   {
     key: 'checkSource',
@@ -86,7 +84,11 @@ export function VehicleCreateSuccess({
   const domainLabel = useDomainLabel();
 
   const operationStatus = vehicle.operationStatus as VehicleOperationStatus;
-  const identity = [vehicle.plateNumber, vehicle.code, domainLabel('vehicleSourceType', vehicle.sourceType)]
+  const identity = [
+    vehicle.plateNumber,
+    vehicle.code,
+    domainLabel('vehicleSourceType', vehicle.sourceType),
+  ]
     .filter(Boolean)
     .join(LIST_SEPARATOR);
 
@@ -143,7 +145,7 @@ export function VehicleCreateSuccess({
                 domainLabel(
                   'vehicleOperationStatus',
                   operationStatus,
-                  VEHICLE_OPERATION_STATUS_META[operationStatus].label,
+                  metaLabel(VEHICLE_OPERATION_STATUS_META, operationStatus),
                 ),
               ]
                 .filter(Boolean)
@@ -173,9 +175,9 @@ export function VehicleCreateSuccess({
                 label={domainLabel(
                   'vehicleOperationStatus',
                   operationStatus,
-                  VEHICLE_OPERATION_STATUS_META[operationStatus].label,
+                  metaLabel(VEHICLE_OPERATION_STATUS_META, operationStatus),
                 )}
-                color={VEHICLE_OPERATION_STATUS_META[operationStatus].color}
+                color={metaColor(VEHICLE_OPERATION_STATUS_META, operationStatus)}
                 size="sm"
               />
             </XStack>
@@ -204,11 +206,7 @@ export function VehicleCreateSuccess({
                   style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
                 >
                   <XStack ai="center" gap={space.xs} minHeight={sizing.touchTarget}>
-                    <Ionicons
-                      name="ellipse-outline"
-                      size={iconSize.xs}
-                      color={colors.textMuted}
-                    />
+                    <Ionicons name="ellipse-outline" size={iconSize.xs} color={colors.textMuted} />
                     <YStack f={1} gap={2}>
                       <Text col={colors.text} fos={fontSize.bodySm}>
                         {t(item.key)}

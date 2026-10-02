@@ -1,16 +1,13 @@
-import { useLocalSearchParams } from 'expo-router';
-import { OWNER_STAGE } from '@xeprime/types';
-import { RequireSession } from '@/features/auth/RequireSession';
-import { OwnerGate } from '@/features/account/components/OwnerGate';
-import { VehicleHandoverTimeScreen } from '@/features/vehicle-manage/VehicleHandoverTimeScreen';
+import { Redirect, useLocalSearchParams } from 'expo-router';
+import { ROUTES } from '@/navigation/routes';
+import { VEHICLE_MANAGE_SECTION } from '@/navigation/vehicle-manage-section';
 
-export default function AccountVehicleSelfDriveHandoverTimeRoute() {
+/** Đường dẫn CŨ (trước 30/09/2026) — thời gian giao nhận nay áp cho cả xe. Cùng chuyển hướng với trang web. */
+export default function LegacySelfDriveHandoverTimeRedirect() {
   const { id } = useLocalSearchParams<{ id: string }>();
   return (
-    <RequireSession>
-      <OwnerGate minStage={OWNER_STAGE.REGISTERING}>
-        <VehicleHandoverTimeScreen vehicleId={id} />
-      </OwnerGate>
-    </RequireSession>
+    <Redirect
+      href={ROUTES.account.vehicleManageSection(id, VEHICLE_MANAGE_SECTION.HANDOVER_TIME)}
+    />
   );
 }

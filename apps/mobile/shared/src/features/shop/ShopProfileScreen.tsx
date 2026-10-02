@@ -527,6 +527,8 @@ function ProfileForm({
               names={ADDRESS_FIELD_NAMES}
               pin={ADDRESS_PIN_NAMES}
               required
+              wardRequired={false}
+              addressLineRequired={false}
               disabled={!editable}
             />
             {/*

@@ -80,6 +80,7 @@ export function ManageListShell({
   title,
   total,
   action,
+  branch,
   summary,
   tabs,
   searchValue,
@@ -96,6 +97,12 @@ export function ManageListShell({
   title: string;
   total?: string;
   action?: ReactNode;
+  /**
+   * Ô "Chi nhánh" của màn (`BranchFilterField`) — ADR 0052. Nằm NGOÀI tấm lọc, ngay dưới tiêu
+   * đề: chi nhánh định nghĩa đội xe đang xem, giấu nó sau một lần mở tấm là để người dùng nhìn
+   * một danh sách ngắn bất thường mà không biết vì sao.
+   */
+  branch?: ReactNode;
   /**
    * Dải CHỈ SỐ tóm tắt, nằm giữa tiêu đề và dải tab.
    *
@@ -354,6 +361,12 @@ export function ManageListShell({
               </Pressable>
             </XStack>
           </XStack>
+
+          {branch ? (
+            <XStack px={layout.screenX} pb={space.xs}>
+              {branch}
+            </XStack>
+          ) : null}
 
           {summary}
 

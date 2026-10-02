@@ -30,6 +30,7 @@ describe('receiptFiltersToParams', () => {
       bookingId: null,
       vehicleId: null,
       tenantCustomerId: null,
+      branchId: null,
       q: null,
       from: null,
       to: null,
@@ -123,6 +124,7 @@ describe('financeRangeParams · financeSeriesParams · financeByCategoryParams',
       to: '2026-09-30',
       vehicleId: null,
       tenantCustomerId: null,
+      branchId: null,
     });
   });
 
@@ -182,6 +184,7 @@ describe('debtFiltersToParams', () => {
     expect(debtFiltersToParams({})).toEqual({
       q: null,
       filter: null,
+      branchId: null,
       page: 1,
       limit: RECEIPTS_DEFAULT_LIMIT,
     });

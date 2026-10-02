@@ -43,7 +43,6 @@ import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { VehicleEditTabs } from '@/features/vehicles/components/VehicleEditTabs';
 import { DateField } from '@/components/ui/DateField';
 import { useVehicle } from '@/features/vehicles/hooks/use-vehicle';
 import { ApiClientError, getErrorCode } from '@/lib/api-client';
@@ -61,7 +60,6 @@ import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { useImageErrorMessage } from '@/lib/image-permission-message';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
-import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import {
@@ -410,9 +408,6 @@ export function VehicleDocumentsScreen({
           : {})}
         onBack={back}
       />
-      {customerScope ? null : (
-        <VehicleEditTabs vehicleId={vehicleId} active={VEHICLE_EDIT_TAB.DOCUMENTS} />
-      )}
       <Screen
         edges={['left', 'right', 'bottom']}
         refreshing={documents.isRefetching}

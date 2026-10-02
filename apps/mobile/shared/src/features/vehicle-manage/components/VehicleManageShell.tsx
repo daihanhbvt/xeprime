@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import type { ReactNode, RefObject } from 'react';
+import type { ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -14,18 +15,35 @@ import { useVehicle } from '@/features/vehicles/hooks/use-vehicle';
 import type { VehicleDetail } from '@/features/vehicles/api';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
-import { sectionServiceType, type VehicleManageSection } from '@/navigation/vehicle-manage-section';
+import {
+  sectionLabelKeyOf,
+  sectionServiceType,
+  type VehicleManageSection,
+} from '@/navigation/vehicle-manage-section';
 import { space } from '@/theme/tokens';
 import { isServiceOff, VehicleSectionDisabled } from './VehicleSectionDisabled';
 
 interface Props {
   vehicleId: string;
   section: VehicleManageSection;
-  /** Tiêu đề của mục — thanh trên mang nó, tên xe xuống dòng phụ. */
-  title: string;
+  /**
+   * Tiêu đề của mục. Bỏ trống = nhãn MENU của mục (`VehicleManage.menu.items.*`) — đúng chữ ở
+   * breadcrumb bên web, để một mục mang một tên ở mục lục và ở đầu màn.
+   */
+  title?: string;
   subtitle?: string;
   children: (ctx: { vehicle: VehicleDetail; canEdit: boolean }) => ReactNode;
+  /** Ref tới ScrollView của màn — cho mục cần cuộn tới một khối của chính nó (neo thủ tục). */
+  scrollRef?: RefObject<ScrollView | null>;
+  /**
+   * Khu đang đứng. `account` (mặc định) = không gian "Quản lý xe" của khu tài khoản; `manage` =
+   * mục của màn SỬA XE ở app Partner — Lui về hub sửa xe, danh sách là đội xe của gian hàng, và
+   * lời mời bật dịch vụ theo đúng nhánh của `VehicleEditWorkspace` web.
+   */
+  workspace?: VehicleSectionWorkspace;
 }
+
+export type VehicleSectionWorkspace = 'account' | 'manage';
 
 /**
  * Vỏ chung của MỘT mục trong không gian "Quản lý xe" — bản native của `VehicleManageWorkspace`.
@@ -40,15 +58,32 @@ interface Props {
  * Đây là lớp trải nghiệm; chặn thật vẫn là `TenantScopeGuard` + permission ở backend, và id xe
  * của gian hàng khác trả 404 (CLAUDE.md §3).
  */
-export function VehicleManageShell({ vehicleId, section, title, subtitle, children }: Props) {
+export function VehicleManageShell({
+  vehicleId,
+  section,
+  title: titleOverride,
+  subtitle,
+  children,
+  scrollRef,
+  workspace = 'account',
+}: Props) {
   const t = useTranslations('VehicleManage');
+  const tMenu = useTranslations('VehicleManage.menu');
+  const labelKey = sectionLabelKeyOf(section);
+  const title = titleOverride ?? (labelKey ? tMenu(labelKey) : t('title'));
   const router = useRouter();
   const { has } = usePermissions();
   const canView = has(PERMISSION.VEHICLE_VIEW);
   const canEdit = has(PERMISSION.VEHICLE_UPDATE);
   const query = useVehicle(vehicleId, canView);
 
-  const back = () => goBackOr(router, ROUTES.account.vehicleManage(vehicleId));
+  const isManage = workspace === 'manage';
+  const back = () =>
+    goBackOr(
+      router,
+      isManage ? ROUTES.manage.vehicleEdit(vehicleId) : ROUTES.account.vehicleManage(vehicleId),
+    );
+  const listHref = isManage ? ROUTES.manage.vehicles() : ROUTES.account.vehicles();
   const header = <AppHeader onBack={back} title={title} {...(subtitle ? { subtitle } : {})} />;
 
   if (!canView) {
@@ -61,7 +96,7 @@ export function VehicleManageShell({ vehicleId, section, title, subtitle, childr
             title={t('forbiddenTitle')}
             description={t('forbiddenBody')}
             actionLabel={t('backToList')}
-            onAction={() => router.replace(ROUTES.account.vehicles())}
+            onAction={() => router.replace(listHref)}
           />
         </Screen>
       </>
@@ -90,7 +125,7 @@ export function VehicleManageShell({ vehicleId, section, title, subtitle, childr
             title={notFound ? t('notFoundTitle') : t('loadErrorTitle')}
             description={notFound ? t('notFoundBody') : t('loadErrorBody')}
             actionLabel={notFound ? t('backToList') : undefined}
-            onAction={notFound ? () => router.replace(ROUTES.account.vehicles()) : undefined}
+            onAction={notFound ? () => router.replace(listHref) : undefined}
           />
         </Screen>
       </>
@@ -114,6 +149,7 @@ export function VehicleManageShell({ vehicleId, section, title, subtitle, childr
         canEdit={canEdit}
         service={service}
         header={header}
+        workspace={workspace}
       />
     );
   }
@@ -121,7 +157,7 @@ export function VehicleManageShell({ vehicleId, section, title, subtitle, childr
   return (
     <>
       {header}
-      <Screen edges={['left', 'right', 'bottom']}>
+      <Screen edges={['left', 'right', 'bottom']} {...(scrollRef ? { scrollRef } : {})}>
         <YStack gap={space.md}>
           {!canEdit ? <Callout tone="info">{t('readOnlyNotice')}</Callout> : null}
           {children({ vehicle, canEdit })}

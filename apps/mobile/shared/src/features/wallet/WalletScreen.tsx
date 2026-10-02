@@ -71,7 +71,20 @@ const STATEMENT_PERIOD_FORMAT = 'YYYY-MM';
  * ADR 0033: đây là SỔ CÔNG NỢ XePrime phải trả, KHÔNG phải ví điện tử — không nạp, không chuyển
  * ngang, không thanh toán nội bộ. Ba thao tác duy nhất: xem, rút, huỷ lệnh rút.
  */
-export function WalletScreen({ scope = WALLET_SCOPE.ACCOUNT }: { scope?: WalletScope }) {
+/**
+ * VỎ của màn — tách khỏi `scope`: sổ của tenant hiện ở HAI nơi. Đội xe trong XePrime Partner có
+ * thanh quản lý (`ManageHeader`, cần `ManageDrawerHost`); Owner Lite trong app XePrime
+ * (`/account/earnings`) là khu TÀI KHOẢN, không có drawer — dựng `ManageHeader` ở đó là sập màn.
+ */
+export type WalletShell = 'manage' | 'account';
+
+export function WalletScreen({
+  scope = WALLET_SCOPE.ACCOUNT,
+  shell = scope === WALLET_SCOPE.SHOP ? 'manage' : 'account',
+}: {
+  scope?: WalletScope;
+  shell?: WalletShell;
+}) {
   const t = useTranslations('Wallet');
   const router = useRouter();
   const [page, setPage] = useState(1);
@@ -111,7 +124,8 @@ export function WalletScreen({ scope = WALLET_SCOPE.ACCOUNT }: { scope?: WalletS
    * Hai VỎ cho cùng một màn: khu gian hàng có thanh quản lý + tiêu đề trang, khu tài khoản có nút
    * lui về menu. Cùng khuôn mà `CalendarScreen` đang dùng — thân màn không biết mình đang ở đâu.
    */
-  const header = isShop ? (
+  const manageShell = shell === 'manage';
+  const header = manageShell ? (
     <ManageHeader />
   ) : (
     <AppHeader onBack={() => goBackOr(router, ROUTES.account.home())} title={title} />
@@ -120,13 +134,13 @@ export function WalletScreen({ scope = WALLET_SCOPE.ACCOUNT }: { scope?: WalletS
   return (
     <>
       {header}
-      <Screen edges={['left', 'right', 'bottom']} padded={!isShop}>
+      <Screen edges={['left', 'right', 'bottom']} padded={!manageShell}>
         {/*
           Câu mô tả trang nói ĐÂY LÀ KHOẢN PHẢI TRẢ, không phải ví điện tử (ADR 0033 điều 1) — cùng
           khe `subtitle` mà `/manage/balance` bên web dùng. Nó thay cho dòng "1 điểm = 1đ" đã bị gỡ
           khi ví đổi tên từ "Ví điểm" sang "Số dư".
         */}
-        {isShop ? (
+        {manageShell ? (
           <YStack pb={space.sm}>
             <ManagePageTitle
               title={title}
@@ -154,13 +168,13 @@ export function WalletScreen({ scope = WALLET_SCOPE.ACCOUNT }: { scope?: WalletS
 
         <YStack
           gap={layout.section}
-          px={isShop ? layout.screenX : 0}
-          pb={isShop ? layout.section : 0}
+          px={manageShell ? layout.screenX : 0}
+          pb={manageShell ? layout.section : 0}
         >
           <WalletSummaryCard
             scope={scope}
             onWithdraw={() => setWithdrawOpen(true)}
-            pageVariant={isShop}
+            pageVariant={manageShell}
           />
 
           {/*
@@ -278,18 +292,27 @@ function WithdrawalRow({ request, scope }: { request: WithdrawalRequest; scope: 
           icon: 'close-circle-outline',
           tone: colors.danger,
         }
-      : request.paidAt
+      : request.status === WITHDRAWAL_STATUS.REVERSED
         ? {
-            text: t('requests.paidAt', { time: fmt.dateTime(request.paidAt) }),
-            icon: 'checkmark-circle-outline',
-            tone: colors.success,
+            // Đúng `WalletView` bên web (PR #142): tiền đã về ví — nói rõ việc cần làm tiếp
+            // (ADR 0025 điều 7). Một khoá, một tham số `{reason}`; nhánh này đứng TRƯỚC `paidAt`
+            // vì lệnh bị đảo vẫn mang `paidAt`.
+            text: t('requests.reversed', { reason: request.reverseReason ?? '' }),
+            icon: 'alert-circle-outline',
+            tone: colors.danger,
           }
-        : request.dueBy
+        : request.paidAt
           ? {
-              text: t('requests.dueBy', { time: fmt.dateTime(request.dueBy) }),
-              icon: 'time-outline',
+              text: t('requests.paidAt', { time: fmt.dateTime(request.paidAt) }),
+              icon: 'checkmark-circle-outline',
+              tone: colors.success,
             }
-          : null;
+          : request.dueBy
+            ? {
+                text: t('requests.dueBy', { time: fmt.dateTime(request.dueBy) }),
+                icon: 'time-outline',
+              }
+            : null;
 
   const actions: CardAction[] =
     request.status === WITHDRAWAL_STATUS.PENDING

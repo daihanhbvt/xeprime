@@ -12,6 +12,8 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { RecordPaymentSheet } from '@/features/settlement/components/RecordPaymentSheet';
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManageListShell } from '@/features/shell/ManageListShell';
+import { BranchFilterField, useBranchEmptyCopy } from '@/features/branches/components/BranchFilterField';
+import { useScreenBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { ManageStateScroll } from '@/features/shell/ManageStateScroll';
 import type { FilterGroup } from '@/features/shell/ManageFilterSheet';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
@@ -65,9 +67,13 @@ export function DebtListScreen() {
   const [collecting, setCollecting] = useState<DebtItem | null>(null);
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
   const trimmedSearch = debouncedSearch.trim();
+  /* Ô "Chi nhánh" (ADR 0052) — công nợ gắn với đơn, đơn gắn với xe, xe thuộc một chi nhánh. */
+  const { branchId, filter: branchFilter } = useScreenBranchFilter(() => setPage(FIRST_PAGE));
+  const branchEmpty = useBranchEmptyCopy(branchFilter, branchId);
 
   const query = useDebts(
     {
+      ...(branchId ? { branchId } : {}),
       // `all` là sentinel của giao diện — web cũng gửi `filter=all` xuống, giữ nguyên hợp đồng đó.
       filter: group,
       ...(trimmedSearch ? { q: trimmedSearch } : {}),
@@ -155,6 +161,7 @@ export function DebtListScreen() {
           searchLabel={t('filters.searchLabel')}
           searchPlaceholder={t('filters.searchPlaceholder')}
           onSearchChange={changeSearch}
+          branch={<BranchFilterField filter={branchFilter} value={branchId} />}
           hasRows={items.length > 0}
           groups={groups}
           onFilterChange={changeFilter}
@@ -196,7 +203,13 @@ export function DebtListScreen() {
                 cái này là gỡ bộ lọc, của cái kia thì không có gì phải làm cả.
               */
               inStateScroll(
-                filtered ? (
+                branchEmpty && !filtered ? (
+                  <ScreenMessage
+                    icon="location-outline"
+                    title={branchEmpty.title}
+                    description={branchEmpty.hint}
+                  />
+                ) : filtered ? (
                   <ScreenMessage
                     icon="search-outline"
                     title={t('table.noResults.title')}

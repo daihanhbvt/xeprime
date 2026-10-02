@@ -28,7 +28,7 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { VEHICLE_MANAGE_SECTION } from '@/navigation/vehicle-manage-section';
 import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
-import { VehicleManageShell } from './components/VehicleManageShell';
+import { VehicleManageShell, type VehicleSectionWorkspace } from './components/VehicleManageShell';
 import type { DriverSurchargeRule } from './api';
 import { useDriverSurchargeRules, useSaveDriverSurchargeRules } from './hooks/use-vehicle-settings';
 
@@ -80,14 +80,21 @@ const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => ({
  * quyết toán (`booking_surcharges`) với số tiền gợi ý từ chính quy tắc này — màn hình nói rõ điều
  * đó, nếu không chủ xe tưởng tiền tự cộng vào giá ban đầu.
  */
-export function VehicleSurchargesScreen({ vehicleId }: { vehicleId: string }) {
+export function VehicleSurchargesScreen({
+  vehicleId,
+  workspace,
+}: {
+  vehicleId: string;
+  /** `manage` = mục của màn sửa xe ở app Partner (Lui về hub sửa xe) — xem `VehicleManageShell`. */
+  workspace?: VehicleSectionWorkspace;
+}) {
   const t = useTranslations('VehicleManage');
 
   return (
     <VehicleManageShell
       vehicleId={vehicleId}
+      {...(workspace ? { workspace } : {})}
       section={VEHICLE_MANAGE_SECTION.WITH_DRIVER_SURCHARGES}
-      title={t('surcharges.title')}
       subtitle={t('surcharges.subtitle')}
     >
       {({ canEdit }) => <SurchargesBody vehicleId={vehicleId} canEdit={canEdit} />}
@@ -225,6 +232,7 @@ function RuleCard({
   const fmt = useAppFormat();
   const spec = DRIVER_SURCHARGE_KIND_SPEC[kind];
   const threshold = useWatch({ control, name: `${kind}.thresholdValue` });
+  const enabled = useWatch({ control, name: `${kind}.enabled` });
   const kindLabel = domainLabel('driverSurchargeKind', kind);
 
   // Ô "ngoài giờ" giữ chuỗi (xem `overtimeRuleSchema`), ba loại còn lại giữ số.
@@ -273,6 +281,7 @@ function RuleCard({
           control={control}
           name={`${kind}.amount`}
           label={t('amount')}
+          required={Boolean(enabled)}
           // Đơn vị (đ/giờ, đ/km…) đi vào dòng gợi ý: `MoneyField` đã chiếm hậu tố cho "đ".
           hint={domainLabel('driverSurchargeUnit', spec.unit)}
           editable={canEdit}

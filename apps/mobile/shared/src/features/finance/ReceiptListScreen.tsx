@@ -24,6 +24,12 @@ import { useFeature } from '@/features/auth/hooks/use-feature';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManageListShell } from '@/features/shell/ManageListShell';
+import { InlineAction } from '@/components/ui/InlineAction';
+import {
+  BranchFilterField,
+  useBranchEmptyCopy,
+} from '@/features/branches/components/BranchFilterField';
+import { useScreenBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { ManageStateScroll } from '@/features/shell/ManageStateScroll';
 import type { FilterGroup } from '@/features/shell/ManageFilterSheet';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
@@ -83,7 +89,6 @@ export function ReceiptListScreen() {
   const t = useTranslations('Finance.receipts');
   const tActions = useTranslations('Common.actions');
   const tLabels = useTranslations('Common.labels');
-  const tFeature = useTranslations('ManageCommon.feature');
   const domainLabel = useDomainLabel();
   const permissions = usePermissions();
   const finance = useFeature(PLAN_FEATURE.FINANCE);
@@ -116,6 +121,12 @@ export function ReceiptListScreen() {
   const [to, setTo] = useState(params.to ?? '');
   const [search, setSearch] = useState(params.q ?? '');
   const [page, setPage] = useState(FIRST_PAGE);
+  /*
+   * Ô "Chi nhánh" (ADR 0052) — chi nhánh của XE gắn với phiếu. Khoản chi CHUNG không gắn xe bị bỏ
+   * ra khi lọc, và màn NÓI RA số đó (`meta.unassignedCount`) thay vì âm thầm giấu bớt dòng.
+   */
+  const { branchId, filter: branchFilter } = useScreenBranchFilter(() => setPage(FIRST_PAGE));
+  const branchEmpty = useBranchEmptyCopy(branchFilter, branchId);
 
   const [detailId, setDetailId] = useState<string | null>(null);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
@@ -203,6 +214,7 @@ export function ReceiptListScreen() {
   const filters = useMemo<ReceiptFilters>(
     () => ({
       ...scope,
+      ...(branchId ? { branchId } : {}),
       ...(type === FILTER_ALL ? {} : { type }),
       ...(status === FILTER_ALL ? {} : { status }),
       ...(categoryId === FILTER_ALL ? {} : { categoryId }),
@@ -213,7 +225,19 @@ export function ReceiptListScreen() {
       ...(trimmedSearch ? { q: trimmedSearch } : {}),
       page,
     }),
-    [scope, type, status, categoryId, source, paymentMethod, from, to, trimmedSearch, page],
+    [
+      scope,
+      branchId,
+      type,
+      status,
+      categoryId,
+      source,
+      paymentMethod,
+      from,
+      to,
+      trimmedSearch,
+      page,
+    ],
   );
 
   const query = useReceipts(filters, canViewFinance);
@@ -227,6 +251,8 @@ export function ReceiptListScreen() {
    */
   const items = useMemo(() => query.data?.items ?? [], [query.data]);
   const meta = query.data?.meta;
+  /* Số khoản chung bị bỏ khi lọc chi nhánh — chỉ > 0 khi đang lọc (ADR 0052 điều 3). */
+  const unassignedCount = meta?.unassignedCount ?? 0;
 
   /* Duyệt / huỷ làm danh sách ngắn đi — trang đang đứng có thể biến mất theo. */
   useClampedPage(meta, setPage);
@@ -491,16 +517,28 @@ export function ReceiptListScreen() {
           customRange={false}
         />
 
-
-        {/* Gói hết hạn: nói RÕ là chế độ chỉ xem, không để nút tắt trông như thiếu quyền. */}
-        {canCreate && !finance.canWrite ? (
-          <Callout tone="warning">{tFeature('readOnlyTooltip')}</Callout>
+        {branchId && unassignedCount > 0 ? (
+          <Callout tone="info">
+            <YStack gap={space.xs} ai="flex-start">
+              <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                {t('branchFilter.unassigned', { count: unassignedCount })}
+              </Text>
+              <InlineAction
+                label={t('branchFilter.showAll')}
+                onPress={() => branchFilter.select(undefined)}
+              />
+            </YStack>
+          </Callout>
         ) : null}
+
+        {/*
+          Gói hết hạn: lý do 'chỉ xem' nằm ở dải `ManageShellNotices` trong `ManageHeader` (như
+          `AppShell` web) — lặp lại ở đây là hai dòng cùng một ý trên cùng một màn.
+        */}
       </YStack>
     ),
     [
       t,
-      tFeature,
       scopeChips,
       clearScope,
       summary.data,
@@ -510,8 +548,9 @@ export function ReceiptListScreen() {
       from,
       to,
       changeRange,
-      canCreate,
-      finance.canWrite,
+      branchId,
+      unassignedCount,
+      branchFilter,
     ],
   );
 
@@ -545,7 +584,7 @@ export function ReceiptListScreen() {
             làm khối đó cao thêm một hàng.
           */
           action={
-            <XStack ai="center" gap={space.xs}>
+            <XStack ai="center" gap={space.xs} flexWrap="wrap">
               {/*
                 `accent` — nền gold nhạt, viền và hình gold đậm.
 
@@ -577,6 +616,7 @@ export function ReceiptListScreen() {
           searchLabel={t('filters.searchLabel')}
           searchPlaceholder={t('filters.searchPlaceholder')}
           onSearchChange={changeSearch}
+          branch={<BranchFilterField filter={branchFilter} value={branchId} />}
           hasRows={items.length > 0}
           groups={groups}
           onFilterChange={changeFilter}
@@ -617,7 +657,13 @@ export function ReceiptListScreen() {
                 cái này là gỡ bộ lọc, của cái kia là ghi phiếu đầu tiên.
               */
               inStateScroll(
-                filtered ? (
+                branchEmpty && !filtered ? (
+                  <ScreenMessage
+                    icon="location-outline"
+                    title={branchEmpty.title}
+                    description={branchEmpty.hint}
+                  />
+                ) : filtered ? (
                   <ScreenMessage
                     icon="search-outline"
                     title={t('table.noResults.title')}

@@ -11,6 +11,7 @@ import {
   type CancellationReasonCategory,
 } from '@xeprime/types';
 import { isZeroMoney } from '@xeprime/domain';
+import { FieldLabel } from '@/components/ui/Field';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -186,9 +187,7 @@ export function BookingStatusSheet({
       */}
       {cancelling ? (
         <YStack gap={space.sm} p={space.md} br={radius.md} bg={colors.surfaceMuted}>
-          <Text col={colors.textMuted} fos={fontSize.bodySm} fow={fontWeight.medium}>
-            {t('categoryLabel')}
-          </Text>
+          <FieldLabel label={t('categoryLabel')} required />
           <XStack gap={space.xs} flexWrap="wrap">
             {CANCELLATION_REASON_CATEGORY_VALUES.map((value) => (
               <Chip

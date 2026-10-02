@@ -72,6 +72,7 @@ export function AddressFields<T extends FieldValues>({
   required,
   provinceRequired = required,
   wardRequired = required,
+  addressLineRequired = required,
   disabled,
   prefillRememberedProvince = false,
 }: {
@@ -90,6 +91,8 @@ export function AddressFields<T extends FieldValues>({
   provinceRequired?: boolean;
   /** Xã/phường có bắt buộc riêng không. Bỏ trống = theo `required`. */
   wardRequired?: boolean;
+  /** Số nhà/đường có bắt buộc riêng không. Bỏ trống = theo `required`. */
+  addressLineRequired?: boolean;
   disabled?: boolean;
   /**
    * Điền sẵn tỉnh/thành mà người dùng đã CHỌN gần nhất ở nơi khác (thanh tìm xe, một form địa chỉ
@@ -263,7 +266,7 @@ export function AddressFields<T extends FieldValues>({
             // Chưa chọn tỉnh thì chưa hỏi bản đồ: gợi ý lúc đó rải khắp cả nước và chẳng giúp
             // được ai, trong khi mỗi lượt hỏi là một request có tính tiền.
             searchEnabled={Boolean(provinceCode)}
-            required={required ?? false}
+            required={addressLineRequired ?? false}
             disabled={disabled ?? false}
             onPlaceResolved={(place) =>
               setProvinceMismatch(
@@ -279,7 +282,7 @@ export function AddressFields<T extends FieldValues>({
           name={names.addressLine}
           label={t('addressLineLabel')}
           placeholder={t('addressLinePlaceholder')}
-          required={required ?? false}
+          required={addressLineRequired ?? false}
           editable={!disabled}
         />
       )}
@@ -592,9 +595,7 @@ export function ConfirmedPlaceField<T extends FieldValues>({
   const onAddressChangeText = (text: string) => {
     touchedRef.current = true;
     if (detailFailed) setDetailFailed(false);
-    setSuggestionsOpen(
-      !disabled && searchEnabled && text.trim().length >= PLACE_SEARCH_MIN_LENGTH,
-    );
+    setSuggestionsOpen(!disabled && searchEnabled && text.trim().length >= PLACE_SEARCH_MIN_LENGTH);
   };
 
   /*
@@ -640,8 +641,7 @@ export function ConfirmedPlaceField<T extends FieldValues>({
   // gì tới người đang gõ chỉ là nhiễu. Không biết gì thì giữ nguyên chỗ trống như trước.
   const preview = pinned ?? (area.source === 'fallback' ? null : mapAreaUrl(area.center));
   const items = suggestions.data?.items ?? [];
-  const queryReady =
-    !disabled && searchEnabled && line.trim().length >= PLACE_SEARCH_MIN_LENGTH;
+  const queryReady = !disabled && searchEnabled && line.trim().length >= PLACE_SEARCH_MIN_LENGTH;
   const showSuggestions = suggestionsOpen && queryReady;
 
   const suggestionMenu = showSuggestions ? (
@@ -677,9 +677,7 @@ export function ConfirmedPlaceField<T extends FieldValues>({
           <Pressable
             key={item.placeId}
             accessibilityRole="menuitem"
-            accessibilityLabel={
-              [item.primaryText, item.secondaryText].filter(Boolean).join(', ')
-            }
+            accessibilityLabel={[item.primaryText, item.secondaryText].filter(Boolean).join(', ')}
             onPressIn={() => {
               pressingSuggestionRef.current = true;
             }}

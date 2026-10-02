@@ -61,6 +61,7 @@ function user(
       slug: 'da-nang',
       status: 'active',
       onboardingState: 'commission',
+      branchScope: 'all',
       logoUrl: null,
       roleKey: 'shop_staff',
       features,
@@ -139,7 +140,7 @@ async function renderScreen(
 
   const listSpy = jest.spyOn(receiptsApi, 'list').mockResolvedValue({
     items,
-    meta: { page: 1, limit: 20, total, hasNext: total > 20 },
+    meta: { page: 1, limit: 20, total, hasNext: total > 20, unassignedCount: 0 },
   });
   const summarySpy = jest.spyOn(receiptsApi, 'summary').mockResolvedValue(SUMMARY);
   const categoriesSpy = jest.spyOn(financeCategoriesApi, 'list').mockResolvedValue(CATEGORIES);
@@ -205,8 +206,8 @@ describe('ReceiptListScreen — quyền', () => {
 });
 
 describe('ReceiptListScreen — gói hết hạn (read_only)', () => {
-  it('vẫn ĐỌC được sổ, nhưng nút tạo bị khoá và nói rõ lý do', async () => {
-    const { findByText, findByLabelText } = await renderScreen(
+  it('vẫn ĐỌC được sổ, nút tạo bị khoá; lý do nằm ở dải shell, không lặp ở màn', async () => {
+    const { findByText, findByLabelText, queryByText } = await renderScreen(
       [PERMISSION.FINANCE_VIEW, PERMISSION.RECEIPT_CREATE],
       {
         features: [{ feature: PLAN_FEATURE.FINANCE, state: FEATURE_STATE.READ_ONLY }],
@@ -215,9 +216,10 @@ describe('ReceiptListScreen — gói hết hạn (read_only)', () => {
 
     // Dữ liệu cũ vẫn nguyên — "không ai mất quyền xem sổ sách của chính mình" (ADR 0027).
     expect(await findByText(/PT-0001/)).toBeTruthy();
+    // Lý do 'chỉ xem' do dải `ManageShellNotices` (trong `ManageHeader`) nói — không lặp ở màn.
     expect(
-      await findByText('Gói đã hết hạn nên tính năng này chỉ xem được. Gia hạn để thao tác tiếp.'),
-    ).toBeTruthy();
+      queryByText('Gói đã hết hạn nên tính năng này chỉ xem được. Gia hạn để thao tác tiếp.'),
+    ).toBeNull();
 
     const create = await findByLabelText('Tạo phiếu');
     expect(create.props.accessibilityState?.disabled).toBe(true);

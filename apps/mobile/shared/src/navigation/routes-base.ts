@@ -6,7 +6,11 @@ import {
   VEHICLE_REGISTRATION_SOURCE,
   type VehicleRegistrationSource,
 } from './vehicle-registration-source';
-import { VEHICLE_MANAGE_SECTION, type VehicleManageSection } from './vehicle-manage-section';
+import {
+  RENTAL_TERMS_ANCHOR,
+  VEHICLE_MANAGE_SECTION,
+  type VehicleManageSection,
+} from './vehicle-manage-section';
 
 /**
  * `Href` NỚI LỎNG — chỉ dùng trong BẢN ĐỒ GỐC này (tách app 25/09/2026).
@@ -58,19 +62,14 @@ const VEHICLE_MANAGE_SECTION_PATHNAME = {
   [VEHICLE_MANAGE_SECTION.IMAGES]: '/account/vehicles/[id]/manage/images',
   [VEHICLE_MANAGE_SECTION.DOCUMENTS]: '/account/vehicles/[id]/manage/documents',
   [VEHICLE_MANAGE_SECTION.TRIP_HISTORY]: '/account/vehicles/[id]/manage/trip-history',
-  [VEHICLE_MANAGE_SECTION.SELF_DRIVE_PRICING]: '/account/vehicles/[id]/manage/self-drive/pricing',
+  [VEHICLE_MANAGE_SECTION.PRICING]: '/account/vehicles/[id]/manage/pricing',
+  [VEHICLE_MANAGE_SECTION.HANDOVER_TIME]: '/account/vehicles/[id]/manage/handover-time',
   [VEHICLE_MANAGE_SECTION.SELF_DRIVE_OPTIMIZATION]:
     '/account/vehicles/[id]/manage/self-drive/optimization',
-  [VEHICLE_MANAGE_SECTION.SELF_DRIVE_DELIVERY]: '/account/vehicles/[id]/manage/self-drive/delivery',
-  [VEHICLE_MANAGE_SECTION.SELF_DRIVE_HANDOVER_TIME]:
-    '/account/vehicles/[id]/manage/self-drive/handover-time',
-  [VEHICLE_MANAGE_SECTION.SELF_DRIVE_TERMS]: '/account/vehicles/[id]/manage/self-drive/terms',
-  [VEHICLE_MANAGE_SECTION.WITH_DRIVER_PRICING]: '/account/vehicles/[id]/manage/with-driver/pricing',
   [VEHICLE_MANAGE_SECTION.WITH_DRIVER_OPTIMIZATION]:
     '/account/vehicles/[id]/manage/with-driver/optimization',
   [VEHICLE_MANAGE_SECTION.WITH_DRIVER_SURCHARGES]:
     '/account/vehicles/[id]/manage/with-driver/surcharges',
-  [VEHICLE_MANAGE_SECTION.WITH_DRIVER_TERMS]: '/account/vehicles/[id]/manage/with-driver/terms',
 } as const satisfies Record<VehicleManageSection, string>;
 
 /**
@@ -240,10 +239,15 @@ export const ROUTES = {
      * Một mục của không gian quản lý xe. `section` là `VEHICLE_MANAGE_SECTION.*` — cùng bộ giá
      * trị web đặt trên URL, nên một liên kết sâu ánh xạ 1-1 giữa hai client.
      */
-    vehicleManageSection: (vehicleId: string, section: VehicleManageSection): Href =>
+    vehicleManageSection: (
+      vehicleId: string,
+      section: VehicleManageSection,
+      /** `anchor` = bản native của `#rental-terms` bên web — màn đích cuộn tới khối đó. */
+      options?: { anchor?: string },
+    ): Href =>
       ({
         pathname: VEHICLE_MANAGE_SECTION_PATHNAME[section],
-        params: { id: vehicleId },
+        params: options?.anchor ? { id: vehicleId, anchor: options.anchor } : { id: vehicleId },
       }) as Href,
     hostGuide: (): Href => '/account/host-guide',
     contractsDocuments: (): Href => '/account/contracts-documents',
@@ -409,7 +413,7 @@ export const ROUTES = {
       pathname: '/manage/vehicles/[id]',
       params: { id: vehicleId },
     }),
-    /** Hub sửa xe — sáu mục, mỗi mục một màn riêng (xem `vehicleEditTab`). */
+    /** Hub sửa xe — menu sáu nhóm của web `editNavGroups`, mỗi mục một màn riêng. */
     vehicleEdit: (vehicleId: string): Href => ({
       pathname: '/manage/vehicles/[id]/edit',
       params: { id: vehicleId },
@@ -418,20 +422,38 @@ export const ROUTES = {
      * Một mục của hub sửa xe. `tab` là `VEHICLE_EDIT_TAB.*` — cùng bộ giá trị web đặt trong
      * `?tab=`, nên một đường dẫn sâu do web hay thông báo đẩy sinh ra vẫn tới đúng chỗ.
      *
-     * "Giá & chính sách" KHÔNG có màn con: nó là route riêng `vehiclePricing`, y như web
-     * (`/manage/vehicles/[id]/pricing`).
+     * Bí danh đi thẳng tới mục thật (web `resolveEditTab`): `operations` → giao nhận, `*-terms`
+     * → "Nhận chuyến & thủ tục" của dịch vụ đó, kèm `anchor` để cuộn tới khối thủ tục.
      */
     vehicleEditTab: (vehicleId: string, tab: VehicleEditTab): Href => {
       const params = { id: vehicleId };
+      const anchored = { id: vehicleId, anchor: RENTAL_TERMS_ANCHOR };
       switch (tab) {
         case VEHICLE_EDIT_TAB.PRICING:
-          return { pathname: '/manage/vehicles/[id]/pricing', params };
+          return { pathname: '/manage/vehicles/[id]/edit/pricing', params };
         case VEHICLE_EDIT_TAB.MEDIA:
           return { pathname: '/manage/vehicles/[id]/edit/media', params };
         case VEHICLE_EDIT_TAB.SOURCE:
           return { pathname: '/manage/vehicles/[id]/edit/source', params };
         case VEHICLE_EDIT_TAB.OPERATIONS:
-          return { pathname: '/manage/vehicles/[id]/edit/operations', params };
+        case VEHICLE_EDIT_TAB.HANDOVER_TIME:
+          return { pathname: '/manage/vehicles/[id]/edit/handover-time', params };
+        case VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION:
+          return { pathname: '/manage/vehicles/[id]/edit/self-drive-optimization', params };
+        case VEHICLE_EDIT_TAB.SELF_DRIVE_TERMS:
+          return {
+            pathname: '/manage/vehicles/[id]/edit/self-drive-optimization',
+            params: anchored,
+          };
+        case VEHICLE_EDIT_TAB.WITH_DRIVER_OPTIMIZATION:
+          return { pathname: '/manage/vehicles/[id]/edit/with-driver-optimization', params };
+        case VEHICLE_EDIT_TAB.WITH_DRIVER_TERMS:
+          return {
+            pathname: '/manage/vehicles/[id]/edit/with-driver-optimization',
+            params: anchored,
+          };
+        case VEHICLE_EDIT_TAB.WITH_DRIVER_SURCHARGES:
+          return { pathname: '/manage/vehicles/[id]/edit/with-driver-surcharges', params };
         case VEHICLE_EDIT_TAB.DOCUMENTS:
           return { pathname: '/manage/vehicles/[id]/edit/documents', params };
         case VEHICLE_EDIT_TAB.MAINTENANCE:
@@ -568,6 +590,11 @@ export const ROUTES = {
     /** Ví điểm của GIAN HÀNG — khoản XePrime phải trả sau mỗi chuyến (ADR 0033 điều 2). */
     /** Gói thuê bao của gian hàng — mua/gia hạn, hoá đơn, mức dùng chỗ (ADR 0015/0026). */
     subscription: (): Href => '/manage/subscription',
+    /**
+     * Cùng màn Gói & hoá đơn nhưng là TRANG CON (stack ngoài bộ tab, có nút lui) — đích của nút trong
+     * NỘI DUNG (dải 'gói hết hạn'). Mục menu vẫn đi `subscription` (tab, thay màn).
+     */
+    subscriptionPage: (): Href => '/manage/plan',
     balance: (): Href => '/manage/balance',
     finance: (): Href => '/manage/finance',
 
@@ -592,22 +619,10 @@ export const ROUTES = {
         ? { pathname: '/manage/receipts', params }
         : '/manage/receipts';
     },
-    vehiclePricing: (vehicleId: string): Href => ({
-      pathname: '/manage/vehicles/[id]/pricing',
-      params: { id: vehicleId },
-    }),
-    /**
-     * Tối ưu nhận chuyến của xe GIAN HÀNG — cùng địa chỉ với web
-     * (`/manage/vehicles/{id}/optimization`).
-     *
-     * Khu tài khoản có mục này từ lâu dưới `/account/vehicles/[id]/manage/.../optimization`; cổng
-     * quản lý thì không, nên xe gian hàng không có đường nào bật "Đặt ngay" dù server vẫn đọc
-     * đúng cờ đó. Một màn, nhiều tab dịch vụ — xem `VehicleOptimizationScreen`.
+    /*
+     * `/manage/vehicles/[id]/pricing` và `/optimization` chỉ còn là route CHUYỂN HƯỚNG vào mục
+     * của màn sửa xe (như trang redirect bên web) — không có hàm dựng nào trỏ tới chúng nữa.
      */
-    vehicleOptimization: (vehicleId: string): Href => ({
-      pathname: '/manage/vehicles/[id]/optimization',
-      params: { id: vehicleId },
-    }),
 
     /**
      * Trung tâm hỗ trợ của cổng quản lý (SYS-05) — cùng địa chỉ với web (`/manage/support`).
@@ -617,6 +632,8 @@ export const ROUTES = {
      * văn bản pháp lý.
      */
     support: (): Href => '/manage/support',
+    /** Trung tâm hỗ trợ dạng TRANG CON (có nút lui) — đích của dải 'gian hàng bị khoá/hết hạn'. */
+    supportPage: (): Href => '/manage/help',
     /** Yêu cầu hỗ trợ của GIAN HÀNG — tranh chấp, sự cố. Bề mặt khác hẳn khu khách. */
     supportCases: (): Href => '/manage/support/cases',
     supportCase: (id: string): Href => ({ pathname: '/manage/support/cases/[id]', params: { id } }),

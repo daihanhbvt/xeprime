@@ -50,6 +50,7 @@ export function VehicleEnergyFields({
   transmissionOptions,
   lockedNotice,
   disabled,
+  fuelTypeRequired = false,
   setValue,
 }: {
   control: Control<VehicleFormValues>;
@@ -59,6 +60,11 @@ export function VehicleEnergyFields({
   /** Lý do ô bị khoá (xe đang trên chợ) — nơi gọi truyền chữ. */
   lockedNotice?: string;
   disabled?: boolean;
+  /**
+   * Nhiên liệu là điều kiện lên chợ (`ENERGY_SPEC`) và hai luồng TẠO xe chặn khi trống — nơi gọi
+   * bật (*) ở đó. Form SỬA không chặn nên không truyền.
+   */
+  fuelTypeRequired?: boolean;
   /**
    * Dọn ô không còn nghĩa khi đổi nguồn năng lượng. Không có nó, form giữ lại một con số vô hình
    * mà server sẽ xoá — người dùng phải thấy đúng thứ sắp được lưu.
@@ -114,6 +120,7 @@ export function VehicleEnergyFields({
             : tSpecs('fuelPlaceholderMotorbike')
         }
         disabled={disabled}
+        required={fuelTypeRequired}
         {...(lockedNotice ? { hint: lockedNotice } : {})}
       />
 
@@ -189,6 +196,7 @@ export function VehicleEnergyFields({
           control={control}
           name="engineDisplacementCc"
           label={t('engineDisplacementCc')}
+          required={policy.engineDisplacementCc === 'required'}
           placeholder={t('enginePlaceholder')}
           suffix="cc"
           integer

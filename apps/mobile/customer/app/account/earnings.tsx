@@ -17,7 +17,7 @@ export default function AccountEarningsRoute() {
   return (
     <RequireSession>
       <OwnerGate minStage={OWNER_STAGE.REGISTERING}>
-        <WalletScreen scope={WALLET_SCOPE.SHOP} />
+        <WalletScreen scope={WALLET_SCOPE.SHOP} shell="account" />
       </OwnerGate>
     </RequireSession>
   );

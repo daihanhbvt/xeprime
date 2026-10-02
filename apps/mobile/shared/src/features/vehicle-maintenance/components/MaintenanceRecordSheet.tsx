@@ -4,7 +4,12 @@ import { Pressable } from 'react-native';
 import { useController, useForm, useWatch, type Control } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { API_ERROR_CODE, MAINTENANCE_TYPE, MAINTENANCE_TYPE_VALUES } from '@xeprime/types';
+import {
+  API_ERROR_CODE,
+  MAINTENANCE_TYPE,
+  MAINTENANCE_TYPE_VALUES,
+  PERMISSION,
+} from '@xeprime/types';
 import { appWallClockToIso, nowInAppTz, toAppTz, type Dayjs } from '@xeprime/domain';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
@@ -16,6 +21,7 @@ import { NumberField } from '@/components/ui/NumberField';
 import { SelectField } from '@/components/ui/SelectField';
 import { TextField } from '@/components/ui/TextField';
 import { useAppToast } from '@/components/feedback/use-app-toast';
+import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
@@ -85,6 +91,12 @@ export function MaintenanceRecordSheet({
 
   const record = state.mode === 'create' ? null : state.record;
   const completing = state.mode === 'complete';
+  /*
+   * Chi phí + mã phiếu chi đi theo `vehicles.maintenance.view_cost` — đúng `MaintenanceRecordDialog`
+   * bên web: thiếu quyền thì hai ô không có mặt và KHÔNG có trong lệnh gửi (gửi `null` là xoá chi
+   * phí đang lưu, và backend từ chối lệnh mang hai trường này từ người không thấy chúng).
+   */
+  const canViewCost = usePermissions().has(PERMISSION.VEHICLE_MAINTENANCE_COST_VIEW);
 
   const defaults = useMemo<MaintenanceRecordFormValues>(
     () => ({
@@ -139,8 +151,12 @@ export function MaintenanceRecordSheet({
             recordId: record.id,
             body: {
               odometerKm: values.odometerKm,
-              cost: values.cost != null ? String(values.cost) : null,
-              receiptCode: text(values.receiptCode),
+              ...(canViewCost
+                ? {
+                    cost: values.cost != null ? String(values.cost) : null,
+                    receiptCode: text(values.receiptCode),
+                  }
+                : {}),
               notes: text(values.notes),
               expectedRowVersion: record.rowVersion,
             },
@@ -165,8 +181,12 @@ export function MaintenanceRecordSheet({
         plannedEndAt: values.plannedEndAt ? appWallClockToIso(values.plannedEndAt) : null,
         odometerKm: values.odometerKm,
         providerName: text(values.providerName),
-        cost: values.cost != null ? String(values.cost) : null,
-        receiptCode: text(values.receiptCode),
+        ...(canViewCost
+          ? {
+              cost: values.cost != null ? String(values.cost) : null,
+              receiptCode: text(values.receiptCode),
+            }
+          : {}),
         notes: text(values.notes),
       };
 
@@ -276,13 +296,17 @@ export function MaintenanceRecordSheet({
           integer
           {...(completing ? { hint: t('form.odometerCompleteHint') } : {})}
         />
-        <MoneyField control={control} name="cost" label={t('form.cost')} />
-        <TextField
-          control={control}
-          name="receiptCode"
-          label={t('form.receiptCode')}
-          placeholder={t('form.receiptPlaceholder')}
-        />
+        {canViewCost ? (
+          <>
+            <MoneyField control={control} name="cost" label={t('form.cost')} />
+            <TextField
+              control={control}
+              name="receiptCode"
+              label={t('form.receiptCode')}
+              placeholder={t('form.receiptPlaceholder')}
+            />
+          </>
+        ) : null}
         <TextField
           control={control}
           name="notes"

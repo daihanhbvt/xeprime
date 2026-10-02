@@ -14,11 +14,9 @@ import {
   RECEIPT_TYPE,
   RECEIPT_TYPE_META,
   isAutoReceipt,
-  type ReceiptSource,
-  type ReceiptStatus,
-  type ReceiptType,
 } from '@xeprime/types';
 import { moneyToVietnameseWords, vehicleLabel } from '@xeprime/domain';
+import { metaColor } from '@/lib/status-meta';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { BlockTitle } from '@/components/ui/BlockTitle';
 import { BottomSheet } from '@/components/ui/BottomSheet';
@@ -250,7 +248,7 @@ export function ReceiptDetailSheet({
               </Text>
               <StatusBadge
                 label={domainLabel('receiptStatus', data.status)}
-                color={RECEIPT_STATUS_META[data.status as ReceiptStatus].color}
+                color={metaColor(RECEIPT_STATUS_META, data.status)}
               />
             </XStack>
             {/*
@@ -266,12 +264,12 @@ export function ReceiptDetailSheet({
             <XStack gap={space.xs} flexWrap="wrap">
               <StatusBadge
                 label={domainLabel('receiptType', data.type)}
-                color={RECEIPT_TYPE_META[data.type as ReceiptType].color}
+                color={metaColor(RECEIPT_TYPE_META, data.type)}
                 size="sm"
               />
               <StatusBadge
                 label={domainLabel('receiptSource', data.source)}
-                color={RECEIPT_SOURCE_META[data.source as ReceiptSource].color}
+                color={metaColor(RECEIPT_SOURCE_META, data.source)}
                 size="sm"
               />
             </XStack>

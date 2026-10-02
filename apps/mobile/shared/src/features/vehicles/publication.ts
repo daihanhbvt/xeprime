@@ -1,8 +1,10 @@
 import {
   PUBLISH_REQUIREMENT,
+  VEHICLE_ALERT_SEVERITY,
   VEHICLE_PUBLIC_STATUS,
   applicablePublishRequirements as applicableRequirements,
   missingPublishRequirements as missingRequirements,
+  vehicleFieldPolicy,
   type PublishRequirement,
   type VehiclePublicStatus,
   type VehiclePublicationInput,
@@ -64,6 +66,102 @@ export function publishChecklist(
     key: item.key,
     met: item.present(input, imageCount),
   }));
+}
+
+/**
+ * Điều kiện lên chợ còn thiếu của một xe CHƯA TẠO — đọc thẳng từ giá trị form của wizard thêm xe
+ * (30/09/2026). CÙNG bảng luật với cổng gửi duyệt ở backend, nên wizard không thể cho tạo một chiếc
+ * xe mà lát sau backend từ chối đưa lên chợ.
+ *
+ * Bỏ qua `BRANCH_LOCATION`: tỉnh của chi nhánh nằm ở quan hệ phía server (và wizard nhanh còn mở
+ * gian hàng ngay lúc lưu); ô chi nhánh đã có luật bắt buộc riêng của form.
+ */
+export function missingPublishRequirementsForForm(values: {
+  vehicleType: string;
+  serviceTypes?: readonly string[] | null;
+  weekdayPrice?: unknown;
+  monthlyPrice?: unknown;
+  withDriverDailyPrice?: unknown;
+  mainImageUrl?: string | null;
+  images?: readonly string[] | null;
+  media?: readonly { url: string }[] | null;
+  plateNumber?: string | null;
+  brand?: string | null;
+  model?: string | null;
+  vehicleCatalogModelId?: string | null;
+  manufactureYear?: number | null;
+  fuelType?: string | null;
+  transmission?: string | null;
+  seatCount?: number | null;
+  motorbikeCategory?: string | null;
+  fuelConsumptionCombined?: unknown;
+  engineDisplacementCc?: number | null;
+  electricRangeKm?: number | null;
+}): PublishRequirement[] {
+  const urls = new Set<string>([
+    ...(values.images ?? []),
+    ...(values.media ?? []).map((item) => item.url),
+  ]);
+  if (values.mainImageUrl) urls.add(values.mainImageUrl);
+  /*
+   * Form chọn DÒNG XE bằng id danh mục; chữ \`model\` do backend chép từ danh mục lúc lưu. Đã chọn
+   * mẫu trong danh mục nghĩa là đã có dòng xe — không được báo thiếu chỉ vì ô chữ còn trống.
+   */
+  const model =
+    values.model || (values.vehicleCatalogModelId ? values.vehicleCatalogModelId : null);
+  return missingRequirements({ ...values, model }, urls.size).filter(
+    (key) => key !== PUBLISH_REQUIREMENT.BRANCH_LOCATION,
+  );
+}
+
+/**
+ * Ô CỤ THỂ còn thiếu của hai điều kiện gộp nhiều trường (danh tính · thông số năng lượng) —
+ * để thông báo nêu đúng "Phân khúc xe" thay vì cả nhóm "Hãng, mẫu, năm sản xuất và số chỗ" khi
+ * hãng/mẫu/năm đã điền. Cùng điều kiện với `identityReady`/`energySpecReady` của `@xeprime/types`.
+ */
+export type PublishGapField =
+  | 'brand'
+  | 'model'
+  | 'manufactureYear'
+  | 'seatCount'
+  | 'motorbikeCategory'
+  | 'fuelType'
+  | 'fuelConsumptionCombined'
+  | 'engineDisplacementCc'
+  | 'electricRangeKm'
+  | 'transmission';
+
+export function publishGapFields(
+  requirement: PublishRequirement,
+  values: Parameters<typeof missingPublishRequirementsForForm>[0],
+): PublishGapField[] {
+  const filled = (v?: string | null) => typeof v === 'string' && v.trim() !== '';
+  const policy = vehicleFieldPolicy(values.vehicleType, values.fuelType);
+  const gaps: PublishGapField[] = [];
+  if (requirement === PUBLISH_REQUIREMENT.IDENTITY) {
+    if (!filled(values.brand)) gaps.push('brand');
+    if (!filled(values.model) && !filled(values.vehicleCatalogModelId)) gaps.push('model');
+    if (values.manufactureYear == null) gaps.push('manufactureYear');
+    if (policy.seatCount === 'required' && values.seatCount == null) gaps.push('seatCount');
+    if (policy.motorbikeCategory === 'required' && !filled(values.motorbikeCategory)) {
+      gaps.push('motorbikeCategory');
+    }
+  } else if (requirement === PUBLISH_REQUIREMENT.ENERGY_SPEC) {
+    if (!filled(values.fuelType)) return ['fuelType'];
+    const empty = (v: unknown) => v == null || v === '';
+    if (policy.fuelConsumption === 'required' && empty(values.fuelConsumptionCombined)) {
+      gaps.push('fuelConsumptionCombined');
+    }
+    if (policy.engineDisplacementCc === 'required' && values.engineDisplacementCc == null) {
+      gaps.push('engineDisplacementCc');
+    }
+    if (policy.electricRangeKm === 'required' && values.electricRangeKm == null) {
+      gaps.push('electricRangeKm');
+    }
+    if (policy.transmission === 'required' && !filled(values.transmission))
+      gaps.push('transmission');
+  }
+  return gaps;
 }
 
 /** Khoá các điều kiện còn thiếu — rỗng nghĩa là đủ điều kiện gửi duyệt. */
@@ -137,17 +235,10 @@ export type VehiclePublicationTaskKey =
  * `cta` là một union ĐÓNG chứ không phải chuỗi ghép từ `key` — nhờ vậy `t()` kiểm được khoá lúc
  * biên dịch, thay vì phải ép kiểu để TypeScript thôi kêu.
  */
-export type VehiclePublicationActionKind =
-  'edit' | 'submit' | 'enableMarketplace' | 'viewStatus' | 'contactSupport';
+export type VehiclePublicationActionKind = 'edit' | 'submit' | 'viewStatus' | 'contactSupport';
 
 export type VehiclePublicationCta =
-  | 'completeProfile'
-  | 'updateProfile'
-  | 'submit'
-  | 'resubmit'
-  | 'enableMarketplace'
-  | 'viewStatus'
-  | 'contactSupport';
+  'completeProfile' | 'updateProfile' | 'submit' | 'resubmit' | 'viewStatus' | 'contactSupport';
 
 export interface VehiclePublicationAction {
   kind: VehiclePublicationActionKind;
@@ -173,7 +264,6 @@ const EDIT_TO_COMPLETE: VehiclePublicationAction = { kind: 'edit', cta: 'complet
 const EDIT_TO_UPDATE: VehiclePublicationAction = { kind: 'edit', cta: 'updateProfile' };
 const SUBMIT: VehiclePublicationAction = { kind: 'submit', cta: 'submit' };
 const RESUBMIT: VehiclePublicationAction = { kind: 'submit', cta: 'resubmit' };
-const ENABLE: VehiclePublicationAction = { kind: 'enableMarketplace', cta: 'enableMarketplace' };
 const VIEW_STATUS: VehiclePublicationAction = { kind: 'viewStatus', cta: 'viewStatus' };
 const CONTACT_SUPPORT: VehiclePublicationAction = { kind: 'contactSupport', cta: 'contactSupport' };
 
@@ -193,7 +283,11 @@ export function vehiclePublicationTask(vehicle: VehicleDetail): VehiclePublicati
       // Đã duyệt thì KHÔNG còn việc xét duyệt nào. Chỉ còn một gợi ý, và chỉ khi chính chủ xe
       // đang tắt công tắc — cái họ có thể đã quên bật lại.
       if (vehicle.marketplaceEnabled) return null;
-      return task('ownerPaused', 'info', ENABLE, null, [], null);
+      /*
+       * KHÔNG có nút (web 02/10/2026): công tắc "Trên chợ" đứng ngay ở đầu màn. Nút "Bật hiển
+       * thị" ở đây chỉ là chỗ bấm thứ hai cho cùng một trạng thái — lời nhắc là đủ.
+       */
+      return task('ownerPaused', 'info', null, null, [], null);
 
     case VEHICLE_PUBLIC_STATUS.HIDDEN:
       // KHÔNG có đường tự phục vụ nào: `hidden` là quyết định kiểm duyệt và
@@ -279,4 +373,23 @@ const REQUIREMENT_TAB: Readonly<Record<PublishRequirement, VehicleEditTab>> = {
 export function publicationEditTab(missing: readonly PublishRequirement[]): VehicleEditTab {
   const first = missing[0];
   return first ? REQUIREMENT_TAB[first] : VEHICLE_EDIT_TAB.INFORMATION;
+}
+
+/**
+ * Việc ĐẦU BẢNG được gắn nút "Xử lý ngay" ở thẻ Việc cần làm — đúng điều kiện của web
+ * `TodoCard` (02/10/2026): danh sách đã tải xong, việc lên chợ không đứng trên nó (việc đó có nút
+ * riêng), việc đầu bảng không phải lời nhắc `info`, và có đích để đi. Không thoả ⇒ `null`.
+ */
+export function todoLeadAlert<T extends { severity: string; target?: unknown }>({
+  alerts,
+  listReady,
+  taskLeads,
+}: {
+  alerts: readonly T[];
+  listReady: boolean;
+  taskLeads: boolean;
+}): T | null {
+  const lead = listReady && !taskLeads ? alerts[0] : undefined;
+  if (!lead || lead.severity === VEHICLE_ALERT_SEVERITY.INFO || !lead.target) return null;
+  return lead;
 }
