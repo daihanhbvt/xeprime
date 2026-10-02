@@ -17,6 +17,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useSetVehicleMarketplaceVisibility } from '../hooks/use-vehicle-mutations';
 import type { VehicleDetail } from '../types';
+import { cx } from '@/lib/cx';
 import styles from './MarketplaceVisibilitySwitch.module.css';
 import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 
@@ -45,7 +46,18 @@ import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/
  * trả mã lỗi kèm câu giải thích ĐÚNG LÚC người dùng cần nó, thay vì một dòng luật nội bộ đứng
  * sẵn trong header. Và TẮT thì luôn được — một ô mờ ở đó sẽ khoá luôn quyền rút xe về.
  */
-export function MarketplaceVisibilitySwitch({ vehicle }: { vehicle: VehicleDetail }) {
+export function MarketplaceVisibilitySwitch({
+  vehicle,
+  bare = false,
+}: {
+  vehicle: VehicleDetail;
+  /**
+   * `true` = bỏ vạch kẻ và khoảng đệm dưới hàng. Vạch đó chỉ có nghĩa khi hàng đứng TRÊN một nhóm
+   * nút trong cột thao tác (màn sửa xe); ở hồ sơ xe hàng này nằm trong khung trạng thái riêng.
+   */
+  bare?: boolean;
+}) {
+  const rowClass = cx(styles.row, bare && styles.bare);
   const t = useTranslations('Vehicles.publish.visibility');
   const { message } = App.useApp();
   const errorMessage = useErrorMessage();
@@ -66,7 +78,7 @@ export function MarketplaceVisibilitySwitch({ vehicle }: { vehicle: VehicleDetai
    */
   if (!approved) {
     return (
-      <div className={styles.row}>
+      <div className={rowClass}>
         <span className={styles.label}>{t('label')}</span>
         {/*
           `Tag` trần chứ không `StatusTag`: MÀU vẫn lấy từ bảng meta dùng chung, nhưng NHÃN ở đây
@@ -91,7 +103,7 @@ export function MarketplaceVisibilitySwitch({ vehicle }: { vehicle: VehicleDetai
   }
 
   return (
-    <div className={styles.row}>
+    <div className={rowClass}>
       <span className={styles.label} id={`${vehicle.id}-marketplace-label`}>
         {t('label')}
         <InfoHint label={t('hintLabel')} content={t('hint')} />

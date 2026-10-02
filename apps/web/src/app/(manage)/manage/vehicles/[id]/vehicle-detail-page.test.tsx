@@ -483,8 +483,33 @@ describe('/manage/vehicles/[id] — hồ sơ hiển thị', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Thông số kỹ thuật' }));
 
     expect(screen.getByText('51B-802.46')).toBeTruthy();
-    expect(screen.getByText('Ford')).toBeTruthy();
-    expect(screen.getByText('16')).toBeTruthy();
+    const specs = screen.getByRole('tabpanel', { name: 'Thông số kỹ thuật' });
+    expect(within(specs).getByText('Ford')).toBeTruthy();
+    expect(within(specs).getByText('16')).toBeTruthy();
+    // Số đo có phần lẻ KHÔNG bị làm tròn — 9,5 L/100km từng hiện thành "10".
+    expect(within(specs).getByText('9,5 L/100km')).toBeTruthy();
+  });
+
+  it('thông số theo loại xe: xe máy KHÔNG có "Số chỗ ngồi", CÓ "Phân khúc xe"', () => {
+    detail.data = vehicle({
+      vehicleType: 'motorbike',
+      motorbikeCategory: 'scooter',
+      seatCount: null,
+      bodyType: null,
+      fuelType: 'gasoline',
+      engineDisplacementCc: 125,
+    } as Partial<VehicleDetail>);
+    renderPage();
+
+    const card = screen.getByText('Thông số chính').closest('.ant-card') as HTMLElement;
+    expect(within(card).getByText('Phân khúc xe')).toBeTruthy();
+    expect(within(card).queryByText('Số chỗ ngồi')).toBeNull();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Thông số kỹ thuật' }));
+    const specs = screen.getByRole('tabpanel', { name: 'Thông số kỹ thuật' });
+    expect(within(specs).queryByText('Số chỗ ngồi')).toBeNull();
+    expect(within(specs).queryByText('Kiểu dáng thân xe')).toBeNull();
+    expect(within(specs).getByText('125 cc')).toBeTruthy();
   });
 
   it('tiền hiển thị qua bộ format, không phải số thô', () => {
@@ -658,7 +683,33 @@ describe('/manage/vehicles/[id] — khối tổng hợp (summary)', () => {
 
     expect(screen.getByText(/Anh Tuấn • 25\/10 – 27\/10/)).toBeTruthy();
     expect(screen.getByText(/1\.700\.000 ₫ • Đã xác nhận/)).toBeTruthy();
-    expect(screen.getByText('Đơn DH0002 · Hoàn thành')).toBeTruthy();
+    // Dòng thời gian (02/10/2026): tên khách là tiêu đề, mã đơn + khoảng ngày ở dòng phụ.
+    const activity = screen.getByText('Hoạt động gần đây').closest('.ant-card') as HTMLElement;
+    expect(within(activity).getByText('Chị Thảo')).toBeTruthy();
+    expect(within(activity).getByText('Đơn DH0002 • 20/10 – 22/10')).toBeTruthy();
+    expect(within(activity).getByText('Hoàn thành')).toBeTruthy();
+    expect(within(activity).getByText('2.550.000 ₫')).toBeTruthy();
+  });
+
+  it('đánh giá chỉ hiện khi xe đã có lượt đánh giá — không dựng "0/5"', () => {
+    summary.data = summaryOf({
+      stats: {
+        vehicleId: 'v1',
+        activeBookings: 0,
+        completedBookings: 3,
+        ratingAvg: '4.67',
+        ratingCount: 3,
+      },
+    });
+    renderPage();
+
+    const card = screen.getByText('Hiệu suất luỹ kế').closest('.ant-card') as HTMLElement;
+    expect(within(card).getByText(/4,7\/5 · 3 lượt/)).toBeTruthy();
+
+    cleanup();
+    summary.data = summaryOf();
+    renderPage();
+    expect(screen.queryByText('Đánh giá')).toBeNull();
   });
 
   /**
@@ -795,6 +846,213 @@ describe('/manage/vehicles/[id] — khu vực chưa có dữ liệu', () => {
   it('thiếu quyền bảo dưỡng: thẻ Bảo dưỡng & Số KM vắng mặt hẳn, không hiện khung rỗng', () => {
     renderPage(); // chỉ có VEHICLE_VIEW
     expect(screen.queryByText('Bảo dưỡng & Số KM')).toBeNull();
+  });
+});
+
+/* ------------------------------------------------------------------ thẻ tổng quan (02/10/2026) */
+
+describe('/manage/vehicles/[id] — thẻ tổng quan', () => {
+  function galleryCard(): HTMLElement {
+    return screen.getByText('Thư viện ảnh').closest('.ant-card') as HTMLElement;
+  }
+
+  it('thư viện ảnh: ảnh bìa đứng đầu và mang nhãn "Ảnh bìa"', () => {
+    detail.data = vehicle({
+      mainImageUrl: 'https://cdn.test/2.jpg',
+      images: ['https://cdn.test/1.jpg', 'https://cdn.test/2.jpg'],
+    });
+    renderPage();
+
+    const items = within(galleryCard()).getAllByRole('listitem');
+    expect(items).toHaveLength(2);
+    expect(within(items[0]!).getByText('Ảnh bìa')).toBeTruthy();
+    expect(items[0]!.querySelector('img')?.getAttribute('src')).toBe('https://cdn.test/2.jpg');
+  });
+
+  it('thư viện ảnh: ảnh bìa nằm ngoài danh sách ảnh (dữ liệu cũ) vẫn đứng đầu thư viện', () => {
+    detail.data = vehicle({
+      mainImageUrl: 'https://cdn.test/cover.jpg',
+      images: ['https://cdn.test/1.jpg'],
+    });
+    renderPage();
+
+    const items = within(galleryCard()).getAllByRole('listitem');
+    expect(items).toHaveLength(2);
+    expect(within(items[0]!).getByText('Ảnh bìa')).toBeTruthy();
+    expect(items[0]!.querySelector('img')?.getAttribute('src')).toBe('https://cdn.test/cover.jpg');
+  });
+
+  it('thư viện ảnh: quá 6 ảnh thì ô thứ 6 báo "+N", ảnh dư vẫn trong nhóm xem trước', () => {
+    const images = Array.from({ length: 11 }, (_, i) => `https://cdn.test/${i}.jpg`);
+    detail.data = vehicle({ mainImageUrl: images[0], images });
+    renderPage();
+
+    expect(within(galleryCard()).getByText('+5')).toBeTruthy();
+    // Ảnh dư không bị cắt khỏi DOM — trình xem toàn màn hình phải lướt được tới chúng.
+    expect(galleryCard().querySelectorAll('img')).toHaveLength(11);
+  });
+
+  it('thư viện ảnh: chưa có ảnh thì nói rõ, và chỉ người sửa được mới thấy lối thêm ảnh', () => {
+    detail.data = vehicle({ mainImageUrl: null, images: [] });
+    renderPage();
+
+    expect(within(galleryCard()).getByText('Chưa có ảnh nào cho xe này.')).toBeTruthy();
+    expect(within(galleryCard()).queryByRole('link', { name: /Thêm\/Sắp xếp ảnh/ })).toBeNull();
+
+    cleanup();
+    grant(PERMISSION.VEHICLE_UPDATE);
+    renderPage();
+    expect(
+      within(galleryCard())
+        .getByRole('link', { name: /Thêm\/Sắp xếp ảnh/ })
+        .getAttribute('href'),
+    ).toBe('/manage/vehicles/v1/edit?tab=media');
+  });
+
+  it('thông số chính: hiện tóm tắt, "Xem đầy đủ" chuyển tab tại chỗ và đưa focus theo', async () => {
+    renderPage();
+
+    const card = screen.getByText('Thông số chính').closest('.ant-card') as HTMLElement;
+    expect(within(card).getByText('Ford Transit')).toBeTruthy();
+    expect(within(card).getByText('16')).toBeTruthy();
+
+    fireEvent.click(
+      within(card).getByRole('button', { name: 'Xem đầy đủ thông số kỹ thuật' }),
+    );
+    const specsTab = screen.getByRole('tab', { name: 'Thông số kỹ thuật' });
+    expect(specsTab.getAttribute('aria-selected')).toBe('true');
+    // Nút vừa bấm nằm trong ô vừa bị ẩn — focus phải sang tab, không lạc lại trong ô ẩn.
+    await waitFor(() => expect(document.activeElement).toBe(specsTab));
+    expect(nav.push).not.toHaveBeenCalled();
+  });
+
+  it('việc cần làm: đang tải thì KHÔNG hiện dấu "xong hết" — chỉ khi đã biết chắc', () => {
+    detail.data = vehicle({ publicStatus: 'approved_public', isMarketplaceVisible: true });
+    summary.data = undefined;
+    summary.isLoading = true;
+    renderPage();
+
+    const todo = screen.getByText('Việc cần làm').closest('.ant-card') as HTMLElement;
+    expect(todo.querySelector('.anticon-check-circle')).toBeNull();
+
+    cleanup();
+    summary.isLoading = false;
+    summary.data = emptyAlertSummary();
+    renderPage();
+    const settled = screen.getByText('Việc cần làm').closest('.ant-card') as HTMLElement;
+    expect(settled.querySelector('.anticon-check-circle')).not.toBeNull();
+  });
+
+  it('"Xử lý ngay" KHÔNG dựng cho một lời nhắc mức thông tin', () => {
+    detail.data = vehicle({ publicStatus: 'approved_public', isMarketplaceVisible: true });
+    summary.data = {
+      ...emptyAlertSummary(),
+      alerts: [
+        {
+          kind: 'source_obligation_due',
+          severity: 'info',
+          title: 'Sắp tới kỳ thanh toán nguồn xe',
+          count: 1,
+          href: '/manage/vehicles/v1/edit?tab=source',
+        },
+      ],
+    } as unknown as typeof summary.data;
+    renderPage();
+
+    expect(screen.getByText('Sắp tới kỳ thanh toán nguồn xe')).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Xử lý ngay' })).toBeNull();
+  });
+
+  it('"Xử lý ngay" dẫn tới việc ĐẦU BẢNG của server, đúng đích theo khu', () => {
+    detail.data = vehicle({ publicStatus: 'approved_public', isMarketplaceVisible: true });
+    summary.data = {
+      ...emptyAlertSummary(),
+      alerts: [
+        {
+          kind: 'document_expired',
+          severity: 'critical',
+          title: 'Có giấy tờ đã hết hạn',
+          count: 1,
+          href: '/manage/vehicles/v1/edit?tab=documents',
+        },
+      ],
+    } as unknown as typeof summary.data;
+    grant(PERMISSION.VEHICLE_DOCUMENT_VIEW);
+    renderPage();
+
+    const cta = screen.getByRole('link', { name: 'Xử lý ngay' });
+    expect(cta.getAttribute('href')).toBe('/manage/vehicles/v1/edit?tab=documents');
+    // Nút nằm TRONG chính việc nó xử lý, không trôi xuống cuối thẻ.
+    expect(cta.closest('li')?.textContent).toContain('Có giấy tờ đã hết hạn');
+  });
+
+  it('xe tạm ẩn + có việc vận hành: "Xử lý ngay" đứng dưới việc đó, lời nhắc tạm ẩn xuống cuối và KHÔNG có nút', () => {
+    detail.data = vehicle({
+      publicStatus: 'approved_public',
+      marketplaceEnabled: false,
+      isMarketplaceVisible: false,
+      marketplaceVisibilityReason: 'owner_paused',
+    });
+    summary.data = {
+      ...emptyAlertSummary(),
+      alerts: [
+        {
+          kind: 'document_expired',
+          severity: 'critical',
+          title: 'Có giấy tờ đã hết hạn',
+          count: 1,
+          href: '/manage/vehicles/v1/edit?tab=documents',
+        },
+      ],
+    } as unknown as typeof summary.data;
+    grant(PERMISSION.VEHICLE_SUBMIT_PUBLIC);
+    renderPage();
+
+    const cta = screen.getByRole('link', { name: 'Xử lý ngay' });
+    const note = screen.getByText('Xe đang tạm ẩn khỏi chợ');
+    expect(cta.closest('li')?.textContent).toContain('Có giấy tờ đã hết hạn');
+    // Thứ tự trong DOM: nút của việc phải làm đứng TRƯỚC lời nhắc.
+    expect(cta.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // Công tắc "Trên chợ" ở đầu trang là chỗ bấm duy nhất — không có nút thứ hai trong thẻ.
+    expect(screen.queryByRole('link', { name: 'Bật hiển thị' })).toBeNull();
+    expect(screen.getAllByRole('switch')).toHaveLength(1);
+  });
+
+  it('thứ tự thẻ tổng quan: Thông số chính đứng ngay sau Việc cần làm, Giấy tờ xuống hàng dưới', () => {
+    grant(PERMISSION.VEHICLE_DOCUMENT_VIEW);
+    renderPage();
+
+    const titles = Array.from(
+      screen
+        .getByRole('tabpanel', { name: 'Tổng quan' })
+        .querySelectorAll('.ant-card-head-title'),
+    ).map((node) => node.textContent);
+    expect(titles.slice(0, 4)).toEqual([
+      'Việc cần làm',
+      'Thông số chính',
+      'Thư viện ảnh',
+      'Hồ sơ & Giấy tờ pháp lý',
+    ]);
+  });
+
+  it('việc lên chợ đứng đầu thì KHÔNG dựng thêm "Xử lý ngay" — việc đó có nút riêng', () => {
+    grant(PERMISSION.VEHICLE_SUBMIT_PUBLIC);
+    summary.data = {
+      ...emptyAlertSummary(),
+      alerts: [
+        {
+          kind: 'document_expiring',
+          severity: 'warning',
+          title: 'Có giấy tờ sắp hết hạn',
+          count: 1,
+          href: '/manage/vehicles/v1/edit?tab=documents',
+        },
+      ],
+    } as unknown as typeof summary.data;
+    renderPage();
+
+    expect(screen.getByText('Xe đã sẵn sàng để xét duyệt')).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Xử lý ngay' })).toBeNull();
   });
 });
 

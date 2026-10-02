@@ -5,12 +5,17 @@
  * hơn hẳn một dòng cảnh báo, và một chấm ở đầu dòng đầu tiên sẽ trôi khỏi phần còn lại.
  * Màu KHÔNG bao giờ là kênh thông tin duy nhất — tiêu đề đã nói đủ nghĩa (ADR 0012/WCAG).
  */
+/*
+ * Nền TRẮNG có viền mảnh (02/10/2026): thẻ "Việc cần làm" nay đổi nền theo mức nghiêm trọng, và
+ * một khối nền xám đặt trên nền đỏ/cam nhạt đọc thành vết bẩn chứ không thành một mục.
+ */
 .task {
   padding: var(--xp-space-sm) var(--xp-space-sm) var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-subtle);
   border-left: 3px solid var(--xp-color-border-strong);
   border-radius: var(--xp-border-radius-sm);
   margin-bottom: var(--xp-space-sm);
-  background: var(--xp-color-bg-muted);
+  background: var(--xp-color-bg-container);
 }
 
 .critical {

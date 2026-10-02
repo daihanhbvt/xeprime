@@ -264,7 +264,7 @@ describe('VehiclePublicationTaskItem — các trạng thái còn lại', () => {
     expect(screen.getByRole('link', { name: 'Liên hệ hỗ trợ' })).toBeTruthy();
   });
 
-  it('chủ xe tạm ẩn: CTA neo lên chính công tắc ở đầu trang, không bật hộ từ đây', () => {
+  it('chủ xe tạm ẩn: chỉ NHẮC, không có nút — công tắc "Trên chợ" ở đầu trang là chỗ bấm duy nhất', () => {
     renderTask({
       publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
       marketplaceEnabled: false,
@@ -272,9 +272,8 @@ describe('VehiclePublicationTaskItem — các trạng thái còn lại', () => {
     });
 
     expect(screen.getByText('Xe đang tạm ẩn khỏi chợ')).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Bật hiển thị' }).getAttribute('href')).toBe(
-      '#vehicle-marketplace-switch',
-    );
+    expect(screen.queryByRole('link', { name: 'Bật hiển thị' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Bật hiển thị' })).toBeNull();
   });
 });
 
