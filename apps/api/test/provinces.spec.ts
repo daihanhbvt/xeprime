@@ -8,6 +8,7 @@ import {
 } from '@xeprime/types';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { makeProvincesService } from './helpers/service-factory';
+import { TEST_PROVINCE } from './helpers/test-provinces';
 
 /**
  * Danh mục hành chính TRONG DATABASE — kiểm chính thứ migration đã nạp, không kiểm lại hằng số
@@ -20,6 +21,7 @@ import { makeProvincesService } from './helpers/service-factory';
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 const provinces = makeProvincesService(asService);
+const RESTRICT = TEST_PROVINCE.PROVINCES_RESTRICT;
 
 let dbAvailable = false;
 
@@ -126,23 +128,23 @@ describe('Tỉnh đang được tham chiếu thì không xoá cứng được', 
       },
     });
     await prisma.province.upsert({
-      where: { code: 'Z9' },
+      where: { code: RESTRICT.code },
       update: {},
       create: {
-        code: 'Z9',
-        name: 'Zone Restrict',
+        code: RESTRICT.code,
+        name: RESTRICT.name,
         administrativeType: 'province',
         slug: 'zone-restrict',
       },
     });
     await prisma.tenantBranch.create({
-      data: { id: branchId, tenantId, code: 'CN01', name: 'CN', provinceCode: 'Z9' },
+      data: { id: branchId, tenantId, code: 'CN01', name: 'CN', provinceCode: RESTRICT.code },
     });
 
-    await expect(prisma.province.delete({ where: { code: 'Z9' } })).rejects.toThrow();
+    await expect(prisma.province.delete({ where: { code: RESTRICT.code } })).rejects.toThrow();
 
     await prisma.tenantBranch.delete({ where: { id: branchId } });
-    await prisma.province.delete({ where: { code: 'Z9' } });
+    await prisma.province.delete({ where: { code: RESTRICT.code } });
     await prisma.tenant.delete({ where: { id: tenantId } });
     await prisma.user.delete({ where: { id: ownerId } });
   });

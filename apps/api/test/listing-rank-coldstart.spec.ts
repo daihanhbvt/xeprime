@@ -17,6 +17,7 @@ import { ListingsService } from '../src/modules/public-listings/listings.service
 import type { PublicListingQueryDto } from '../src/modules/public-listings/dto/public-listing.dto';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { makePublicListingsService, seedBranch, seedProvince } from './helpers/service-factory';
+import { TEST_PROVINCE } from './helpers/test-provinces';
 
 /**
  * KHỞI ĐỘNG NGUỘI và UY TÍN CHỦ XE trong xếp hạng chợ — ADR 0045 điều 4/5, PostgreSQL THẬT.
@@ -47,8 +48,8 @@ const asService = prisma as unknown as PrismaService;
 const service = makePublicListingsService(asService);
 const listings = new ListingsService(asService);
 
-const PROV = 'Z4';
-const PROV_NAME = 'Zone ColdStart';
+const PROV = TEST_PROVINCE.LISTING_RANK_COLDSTART.code;
+const PROV_NAME = TEST_PROVINCE.LISTING_RANK_COLDSTART.name;
 const DAY = 24 * 3600_000;
 
 let dbAvailable = false;

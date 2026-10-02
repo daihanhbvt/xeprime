@@ -9,6 +9,7 @@ import {
 import { ListingsService } from '../src/modules/public-listings/listings.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { makePublicListingsService, seedBranch, seedProvince } from './helpers/service-factory';
+import { TEST_PROVINCE } from './helpers/test-provinces';
 
 /**
  * Dữ liệu trang chủ marketplace — "Địa điểm nổi bật", "Gian hàng nổi bật" và điểm đánh giá trên
@@ -19,15 +20,15 @@ const asService = prisma as unknown as PrismaService;
 const service = makePublicListingsService(asService);
 const listings = new ListingsService(asService);
 
-const PROV_BIG = 'Z5';
-const PROV_BIG_NAME = 'Zone Home Big';
-const PROV_SMALL = 'Z6';
-const PROV_SMALL_NAME = 'Zone Home Small';
-const PROV_LOCKED = 'Z7';
-const PROV_LOCKED_NAME = 'Zone Home Locked';
+const PROV_BIG = TEST_PROVINCE.PUBLIC_HOME_BIG.code;
+const PROV_BIG_NAME = TEST_PROVINCE.PUBLIC_HOME_BIG.name;
+const PROV_SMALL = TEST_PROVINCE.PUBLIC_HOME_SMALL.code;
+const PROV_SMALL_NAME = TEST_PROVINCE.PUBLIC_HOME_SMALL.name;
+const PROV_LOCKED = TEST_PROVINCE.PUBLIC_HOME_LOCKED.code;
+const PROV_LOCKED_NAME = TEST_PROVINCE.PUBLIC_HOME_LOCKED.name;
 /** Tỉnh có gian hàng nhưng KHÔNG có xe — phải vắng mặt ở danh sách điểm đến. */
-const PROV_EMPTY = 'Z8';
-const PROV_EMPTY_NAME = 'Zone Home Empty';
+const PROV_EMPTY = TEST_PROVINCE.PUBLIC_HOME_EMPTY.code;
+const PROV_EMPTY_NAME = TEST_PROVINCE.PUBLIC_HOME_EMPTY.name;
 const ALL_PROV = [PROV_BIG, PROV_SMALL, PROV_LOCKED, PROV_EMPTY];
 
 let dbAvailable = false;
