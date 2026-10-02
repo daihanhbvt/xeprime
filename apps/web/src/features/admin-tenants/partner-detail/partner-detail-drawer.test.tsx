@@ -1,12 +1,24 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { App } from 'antd';
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PERMISSION, PLATFORM_PARTNER_KIND } from '@xeprime/types';
+import {
+  BILLING_MODE,
+  BILLING_PHASE,
+  FEATURE_STATE,
+  PARTNER_DETAIL_TAB,
+  PARTNER_DETAIL_TABS,
+  PERMISSION,
+  PLAN_FEATURE,
+  PLATFORM_PARTNER_KIND,
+  SUBSCRIPTION_INVOICE_STATUS,
+  SUBSCRIPTION_STATUS,
+  type PartnerDetailTab,
+} from '@xeprime/types';
 
 import { renderWithIntl } from '@/i18n/test-utils';
 import { ApiClientError } from '@/services/api-client';
-import type { PartnerCommission, PartnerOverview } from './api';
+import type { PartnerBilling, PartnerCommission, PartnerOverview } from './api';
 import { PartnerDetailDrawer } from './PartnerDetailDrawer';
 
 /**
@@ -148,6 +160,54 @@ const COMMISSION: PartnerCommission = {
   ],
 };
 
+/** Có một kỳ gói và một hoá đơn còn nợ — đủ để bảng lịch sử dựng hàng thật. */
+const BILLING: PartnerBilling = {
+  plan: {
+    planName: 'Business',
+    planCode: 'business',
+    phase: BILLING_PHASE.CURRENT,
+    billingMode: BILLING_MODE.PACKAGE,
+    endsAt: '2099-08-12T00:00:00.000Z',
+    graceEndsAt: null,
+    vehicleQuota: { used: 24, kind: 'total', limit: 30, reason: 'plan' },
+  },
+  termStartsAt: '2025-08-12T00:00:00.000Z',
+  quota: {
+    vehicles: { used: 24, kind: 'total', limit: 30, reason: 'plan' },
+    branches: { used: 1, kind: 'total', limit: 3 },
+    members: { used: 2, kind: 'unlimited' },
+  },
+  features: [{ feature: PLAN_FEATURE.FINANCE, state: FEATURE_STATE.ENABLED }],
+  feePolicy: null,
+  invoiceStatus: { unpaid: 1, dueSoon: 1, overdue: 0, nextDueAt: '2099-08-05T00:00:00.000Z' },
+  subscriptions: [
+    {
+      id: 'sub-1',
+      planName: 'Business',
+      planCode: 'business',
+      billingMode: BILLING_MODE.PACKAGE,
+      price: '3000000.00',
+      termMonths: 12,
+      status: SUBSCRIPTION_STATUS.ACTIVE,
+      startsAt: '2025-08-12T00:00:00.000Z',
+      endsAt: '2099-08-12T00:00:00.000Z',
+    },
+  ],
+  invoices: [
+    {
+      id: 'inv-1',
+      code: 'HD-0001',
+      periodFrom: '2025-08-12T00:00:00.000Z',
+      periodTo: '2099-08-12T00:00:00.000Z',
+      totalAmount: '3000000.00',
+      paidAmount: '0.00',
+      status: SUBSCRIPTION_INVOICE_STATUS.ISSUED,
+      paidAt: null,
+      expiresAt: '2099-08-05T00:00:00.000Z',
+    },
+  ],
+};
+
 const PAGE = { items: [], meta: { page: 1, limit: 10, total: 0, hasNext: false } };
 
 let overviews: Record<string, PartnerOverview>;
@@ -162,6 +222,7 @@ function routeGet(path: string): Promise<unknown> {
     return data ? Promise.resolve(data) : new Promise(() => {}); // chưa có ⇒ đang tải mãi
   }
   if (path.endsWith('/commission')) return Promise.resolve(COMMISSION);
+  if (path.endsWith('/billing')) return Promise.resolve(BILLING);
   if (path.endsWith('/bookings/summary')) {
     return Promise.resolve({
       upcoming: 3,
@@ -292,30 +353,59 @@ describe('Drawer chi tiết đối tác — biến thể', () => {
 const MUTATION_LABEL =
   /Chỉnh sửa|^Sửa|Lưu|Xác minh$|Từ chối|Duyệt|Khoá gian hàng|Mở khoá|Gia hạn|Thanh toán|Huỷ|Công khai|Ẩn xe|Gửi kiểm duyệt|Rút tiền|Chi trả/;
 
+const TAB_LABEL: Record<PartnerDetailTab, string> = {
+  [PARTNER_DETAIL_TAB.OVERVIEW]: 'Tổng quan',
+  [PARTNER_DETAIL_TAB.VEHICLES]: 'Xe',
+  [PARTNER_DETAIL_TAB.BOOKINGS]: 'Đơn thuê',
+  [PARTNER_DETAIL_TAB.PROFILE]: 'Hồ sơ',
+  [PARTNER_DETAIL_TAB.BILLING]: 'Gói & phí',
+  [PARTNER_DETAIL_TAB.COMMISSION]: 'Hoa hồng & đối soát',
+  [PARTNER_DETAIL_TAB.ACTIVITY]: 'Nhật ký',
+};
+
+/**
+ * Mọi tab của cả hai biến thể, MỖI TAB MỘT CASE.
+ *
+ * Tab đi qua prop `tab` (deep-link) — đúng đường trang thật đi, vì tab sống trên URL. Bấm tab
+ * trong test KHÔNG đổi được nội dung: drawer là controlled, `onTabChange` giả không ghi lại
+ * `tab`, nên một vòng bấm qua sáu tab chỉ kiểm đi kiểm lại Tổng quan. Tách case cũng cho mỗi
+ * lần dựng tab một đồng hồ riêng thay vì dồn mười hai lần dựng vào một `testTimeout`.
+ */
+const READ_ONLY_CASES = (
+  [
+    ['t-shop', PLATFORM_PARTNER_KIND.PACKAGE_SHOP],
+    ['t-lite', PLATFORM_PARTNER_KIND.INDIVIDUAL_OWNER],
+  ] as const
+).flatMap(([tenantId, kind]) => PARTNER_DETAIL_TABS[kind].map((tab) => ({ tenantId, tab })));
+
 describe('Drawer chi tiết đối tác — chỉ đọc', () => {
-  it('đi qua mọi tab: không nút mutation nào, không lời gọi ghi nào', async () => {
-    permissions.granted.add(PERMISSION.PLATFORM_BILLING_MANAGE);
-    for (const tenantId of ['t-shop', 't-lite']) {
-      const { unmount } = renderDrawer({ tenantId });
-      await screen.findAllByRole('tab');
-      for (const label of tabLabels()) {
-        fireEvent.click(screen.getByRole('tab', { name: label }));
-        const drawer = screen.getByTestId('partner-detail-drawer');
-        await act(async () => {});
-        for (const button of within(drawer).queryAllByRole('button')) {
-          expect({ tab: label, button: button.textContent }).not.toEqual({
-            tab: label,
-            button: expect.stringMatching(MUTATION_LABEL),
-          });
-        }
-      }
-      unmount();
-    }
-    expect(http.apiPost).not.toHaveBeenCalled();
-    expect(http.apiPatch).not.toHaveBeenCalled();
-    expect(http.apiPut).not.toHaveBeenCalled();
-    expect(http.apiDelete).not.toHaveBeenCalled();
-  });
+  it.each(READ_ONLY_CASES)(
+    '$tenantId · tab $tab: không nút mutation nào, không lời gọi ghi nào',
+    async ({ tenantId, tab }) => {
+      permissions.granted.add(PERMISSION.PLATFORM_BILLING_MANAGE);
+      renderDrawer({ tenantId, tab });
+      await screen.findByRole('tab', { name: TAB_LABEL[tab], selected: true });
+      const drawer = screen.getByTestId('partner-detail-drawer');
+      // Chờ tab tải xong — nút hành động (nếu có) chỉ hiện cùng dữ liệu. Một tab rơi vào trạng
+      // thái lỗi (GET chưa giả lập) thì chẳng còn gì để kiểm: phải dựng được dữ liệu thật.
+      await waitFor(() => expect(drawer.querySelector('[aria-busy="true"]')).toBeNull());
+      expect(drawer.textContent).not.toContain('Không tải được dữ liệu');
+
+      // `querySelectorAll` thay vì `queryAllByRole`: phép sau tính khả kiến qua
+      // `getComputedStyle` cho từng nút trên cả cây AntD — chính nó làm test chạm timeout trên
+      // CI. Chỉ tab đang mở được dựng, nên không có nút ẩn nào của tab khác lọt vào đây.
+      const mutations = Array.from(
+        drawer.querySelectorAll('button, [role="button"]'),
+        (button) => button.textContent ?? '',
+      ).filter((label) => MUTATION_LABEL.test(label));
+      expect(mutations).toEqual([]);
+
+      expect(http.apiPost).not.toHaveBeenCalled();
+      expect(http.apiPatch).not.toHaveBeenCalled();
+      expect(http.apiPut).not.toHaveBeenCalled();
+      expect(http.apiDelete).not.toHaveBeenCalled();
+    },
+  );
 
   it('không có quyền quản trị nền tảng: không có menu "…"', async () => {
     renderDrawer({ tenantId: 't-shop' });
