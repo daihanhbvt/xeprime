@@ -2,7 +2,7 @@
 
 Ngày: 28/08/2026 · Trạng thái: **Partially superseded bởi [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md)** · Giữ hai tuyến doanh thu; quy tắc xếp hạng và breakdown phí đã đổi.
 
-> ⚠️ **[ADR 0026](0026-first-trips-free-then-commission.md) thêm một bậc TRƯỚC hai tuyến
+> ⚠️ **ADR 0026 thêm một bậc TRƯỚC hai tuyến
 > (29/08/2026):** hai đơn đầu của một tenant là **0% hoa hồng, không thu giữ chỗ**; từ đơn thứ ba
 > mới rơi vào tuyến hoa hồng. Điều đó **thay** gói miễn phí theo hạn ngày của
 > [ADR 0015 điều 9](0015-vehicle-slot-billing.md).
@@ -26,7 +26,7 @@ Ngày: 28/08/2026 · Trạng thái: **Partially superseded bởi [ADR 0028](0028
 
 Đồng thời [ADR 0015](0015-vehicle-slot-billing.md) tự ghi ở mục hoãn: *"Hoa hồng theo đơn: bị
 chặn bởi ADR 0013 — không cầm tiền của khách thì không cắt được %. Muốn mở phải mở ADR 0013
-trước."* Và [ADR 0013](0013-no-online-payment-mvp.md) tự ghi ở mục xem lại: *"khi XePrime đổi
+trước."* Và ADR 0013 tự ghi ở mục xem lại: *"khi XePrime đổi
 mô hình sang thu phí nền tảng trên mỗi đơn"*. Cả hai đều chừa sẵn chỗ cho quyết định này.
 
 ## Quyết định
@@ -39,7 +39,7 @@ mô hình sang thu phí nền tảng trên mỗi đơn"*. Cả hai đều chừa
    | --- | --- | --- |
    | Ai | Tenant chưa mua gói | Tenant đã mua gói theo chỗ |
    | Nền tảng thu | % trên mỗi chuyến, **chỉ trừ phía chủ xe** | Cước theo chỗ, trả trước ([ADR 0015](0015-vehicle-slot-billing.md)) |
-   | Trên chuyến | Thu qua khoản giữ chỗ ([ADR 0021](0021-booking-hold-is-the-commission.md)) | **Không một đồng nào** |
+   | Trên chuyến | Thu qua khoản giữ chỗ (ADR 0021) | **Không một đồng nào** |
    | Nút đặt | "Đặt & giữ chỗ ngay" | "Gửi yêu cầu" (giữ nguyên) |
    | Cọc xe | Hai bên tự thoả thuận, ngoài sàn | Hai bên tự thoả thuận, ngoài sàn |
 
@@ -48,7 +48,7 @@ mô hình sang thu phí nền tảng trên mỗi đơn"*. Cả hai đều chừa
    xe**, không phải khoản cộng phía khách.
 
    Đây là điều khoản dễ bị xói mòn nhất trong ADR này. Nó là toàn bộ lời hứa của sản phẩm, và
-   nó có một cái neo kỹ thuật ở [ADR 0021](0021-booking-hold-is-the-commission.md): hoa hồng
+   nó có một cái neo kỹ thuật ở ADR 0021: hoa hồng
    **không được phép** là một dòng trong bảng kê giá của khách.
 
 3. **Không có dòng phí bảo hiểm.** Rủi ro gộp trong tỉ lệ hoa hồng. Bán bảo hiểm là bán một sản
@@ -150,8 +150,8 @@ nay là một **phần trăm doanh thu**, không phải giá theo chỗ. Cách p
 - Job vòng đời gói đổi hành vi (điều 5) — **không** còn ẩn xe khi hết hạn.
 - Kiểm điểm giao của [ADR 0015](0015-vehicle-slot-billing.md) được phát biểu lại và **chuyển từ
   quy trình sang code**.
-- Kéo theo bốn ADR: [0021](0021-booking-hold-is-the-commission.md) (cơ chế thu),
-  [0022](0022-sepay-customer-money.md) (đối soát), [0023](0023-wallet-refund-and-compensation.md)
+- Kéo theo bốn ADR: 0021 (cơ chế thu),
+  [0022](0022-sepay-customer-money.md) (đối soát), 0023
   (ví), [0024](0024-billing-mode-from-plan-frozen-on-booking.md) (chế độ quyết định lúc nào).
 
 ## Cần xem lại khi nào

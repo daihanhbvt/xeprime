@@ -1,6 +1,6 @@
 # ADR 0043 — Xếp hạng "phù hợp" cho chợ xe: điểm denormalize + ưu tiên địa lý ở trang chủ
 
-Ngày: 22/09/2026 · Trạng thái: **Accepted** · Mở rộng [ADR 0008](0008-public-listing-snapshot.md)
+Ngày: 22/09/2026 · Trạng thái: **Accepted** · Mở rộng [ADR 0008](0008-public-listings-sync.md)
 (thêm một cột dẫn xuất trên `public_listings`), không ghi đè ADR nào
 
 > ⚠️ **Cập nhật 22/09/2026 — [ADR 0045](0045-host-cancellation-and-reputation.md) điều 5** thêm

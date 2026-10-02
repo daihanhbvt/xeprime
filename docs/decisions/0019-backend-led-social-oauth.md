@@ -2,6 +2,11 @@
 
 Ngày: 26/08/2026 · Trạng thái: Accepted
 
+> ⚠️ **[ADR 0053](0053-separate-account-realms.md) (02/10/2026):** `user_identities` unique theo
+> `(realm, provider, provider_user_id)` — cùng một tài khoản Google tạo được tài khoản riêng ở mỗi
+> realm. Callback web chuyển xuống `/api` của từng site và quay về đúng site đó; realm ghi trong
+> `oauth_states`. Luồng native (§8) giữ nguyên.
+
 Liên quan: [ADR 0002](0002-auth-session-cookie.md) (session cookie httpOnly — **ADR này ghi đè
 phần "Firebase là provider"**), [ADR 0009](0009-chat-firestore-projection.md) (Firestore là
 projection của chat), [ADR 0012](0012-i18n-shared-url-cookie-locale.md) (giao diện đọc MÃ lỗi,

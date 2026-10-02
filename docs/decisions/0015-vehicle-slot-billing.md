@@ -19,11 +19,11 @@ Ngày: 21/08/2026 · Trạng thái: **Partially superseded bởi [ADR 0020](0020
 >   **phần trăm doanh thu**, không phải giá theo chỗ; và nó chuyển từ quy trình thành **code**.
 >
 > Mục *"Hoãn có chủ đích → Hoa hồng theo đơn"* đã được mở, đúng như nó dự liệu:
-> [ADR 0021](0021-booking-hold-is-the-commission.md).
+> ADR 0021.
 > **Điều 1–4 và 7–10 giữ nguyên hiệu lực.**
 >
 > ⚠️ **Điều 9 (gói miễn phí có ngày hết hạn) bị THAY (29/08/2026)** bởi
-> [ADR 0026](0026-first-trips-free-then-commission.md): ưu đãi khởi đầu nay đếm theo **SỐ CHUYẾN**
+> ADR 0026: ưu đãi khởi đầu nay đếm theo **SỐ CHUYẾN**
 > (hai đơn đầu miễn phí), không theo ngày. Phần còn lại của điều 9 — `registerShop` tự gán gói,
 > backfill tenant cũ — giữ nguyên.
 
@@ -106,7 +106,7 @@ sẵn `addCalendarMonthsVn` trong `@xeprime/types`.
 ## Hoãn có chủ đích
 
 - **Tự phục vụ thanh toán online** — xem [ADR 0016](0016-sepay-bank-reconciliation.md).
-- **Hoa hồng theo đơn**: bị chặn bởi [ADR 0013](0013-no-online-payment-mvp.md) — không cầm tiền của
+- **Hoa hồng theo đơn**: bị chặn bởi ADR 0013 — không cầm tiền của
   khách thì không cắt được %, phải đi đòi từng đơn. Muốn mở phải mở ADR 0013 trước.
 - **Chống gian lận gỡ-xe-rồi-đăng-lại**: mô hình theo chỗ làm câu hỏi này biến mất; nếu sau này
   đổi sang đếm cuối kỳ thì nó quay lại.

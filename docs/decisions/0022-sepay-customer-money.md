@@ -5,8 +5,8 @@ Ngày: 28/08/2026 · Trạng thái: Accepted · **Mở rộng [ADR 0016](0016-se
 ## Bối cảnh
 
 [ADR 0016](0016-sepay-bank-reconciliation.md) mở một khe hẹp của
-[ADR 0013](0013-no-online-payment-mvp.md): SePay đối soát **chỉ tiền gói, chỉ chiều gian hàng →
-nền tảng**. [ADR 0021](0021-booking-hold-is-the-commission.md) nay cần đúng cơ chế đó cho một
+ADR 0013: SePay đối soát **chỉ tiền gói, chỉ chiều gian hàng →
+nền tảng**. ADR 0021 nay cần đúng cơ chế đó cho một
 nguồn tiền thứ hai: **khách → nền tảng**.
 
 Cả hai đều là **tiền vào một tài khoản ngân hàng duy nhất của nền tảng**. Câu hỏi thiết kế thật
@@ -63,7 +63,7 @@ sự không phải "có mở rộng không" mà là **một sổ hay hai sổ**.
      nguyên mã để khách chuyển bù, báo admin. Giao dịch thứ hai khớp vào cùng đích và cộng dồn.
    - Thừa với **hoá đơn gói** → ghi có kỳ sau, như cũ.
    - Thừa với **khoản giữ chỗ** → **không có "kỳ sau"** để ghi có. Xử lý là: coi như đã trả đủ,
-     đánh dấu phần dư để hoàn qua ví khách ([ADR 0023](0023-wallet-refund-and-compensation.md)).
+     đánh dấu phần dư để hoàn qua ví khách (ADR 0023).
      Đây là chỗ duy nhất quy tắc của 0016 không chuyển sang được.
 
 6. **HUỶ [ADR 0015 điều 5 câu cuối](0015-vehicle-slot-billing.md)** — *"`payments.subscription_id`

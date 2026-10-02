@@ -2,6 +2,10 @@
 
 Ngày: 24/08/2026 · Trạng thái: Accepted
 
+> ⚠️ **[ADR 0053](0053-separate-account-realms.md) (02/10/2026):** phiên native mang realm theo app
+> đăng nhập (`clientApp` `customer` ⇒ realm `customer`, `partner` ⇒ realm `partner`). Phần còn lại giữ
+> nguyên.
+
 Liên quan: [ADR 0002](0002-auth-session-cookie.md) (session cookie của web — **không bị thay đổi**) và
 [`apps/mobile/README.md`](../../apps/mobile/README.md) (kiến trúc/trạng thái client native hiện hành).
 
