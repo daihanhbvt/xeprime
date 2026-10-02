@@ -2,8 +2,21 @@
   "extends": "../../packages/config/tsconfig/nextjs.json",
   "compilerOptions": {
     "baseUrl": ".",
+    /*
+     * `react`/`react-dom` ghim về `@types` CỦA WEB. antd, rc-*, @ant-design/icons, recharts,
+     * react-hook-form, next… import kiểu React mà không khai `@types/react`, nên TypeScript leo
+     * lên `.pnpm/node_modules/@types/react` — trên một lần cài sạch đó là bản 19.1.x của mobile.
+     * Hai bản trong cùng một chương trình là hai `React.Ref` không gán được cho nhau (mỗi bản một
+     * `unique symbol`): lỗi chỉ hiện trên CI, máy dev cài từ trước vẫn xanh. Directive
+     * `/// <reference types>` không đi qua `paths` — phần đó do `packageExtensions.next` ở
+     * `pnpm-workspace.yaml` lo.
+     */
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "react": ["./node_modules/@types/react"],
+      "react/*": ["./node_modules/@types/react/*"],
+      "react-dom": ["./node_modules/@types/react-dom"],
+      "react-dom/*": ["./node_modules/@types/react-dom/*"]
     },
     /* App Next không phát ra .d.ts — tắt để `noEmit` không phải gánh cấu hình thừa từ base. */
     "declaration": false,

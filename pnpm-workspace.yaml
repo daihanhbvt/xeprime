@@ -105,6 +105,24 @@ packageExtensions:
     peerDependencies:
       react: '*'
       react-native: '*'
+  # KHAI PEER TUỲ CHỌN `@types/react`/`@types/react-dom` cho next — cùng một bệnh, ở tầng KIỂU.
+  #
+  # `next/dist/types.d.ts` có `/// <reference types="react/experimental" />` mà next không khai
+  # `@types/react`, nên TypeScript leo lên `.pnpm/node_modules/@types/react` — bản pnpm chọn để
+  # treo ở đó. Từ khi mobile tách ba package (ba importer `@types/react@19.1.x` so với một của
+  # web), bản đó thành 19.1.x trên mọi lần cài sạch: CI web đỏ vì hai `React.Ref` mang hai
+  # `unique symbol` khác nhau, còn máy dev cài từ trước thì vẫn xanh. Directive KHÔNG đi qua
+  # `paths` của tsconfig, nên phần này phải sửa ở đây; phần import `react` của antd/rc-*/
+  # recharts… do `paths` trong `apps/web/tsconfig.json` lo.
+  next:
+    peerDependencies:
+      '@types/react': '*'
+      '@types/react-dom': '*'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      '@types/react-dom':
+        optional: true
 
 # Giữ lại cho pnpm 10; pnpm 11 bỏ qua khóa này và đọc `allowBuilds` ở cuối file.
 onlyBuiltDependencies:
