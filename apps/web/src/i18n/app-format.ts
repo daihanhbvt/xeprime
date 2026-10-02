@@ -130,6 +130,11 @@ export interface AppFormat {
 
   /** Số nguyên có phân tách nhóm. */
   count: (value: number) => string;
+  /**
+   * Số đo có thể lẻ — tối đa một chữ số thập phân, không ép số 0 thừa: `6,8` · `4.630` · `42`.
+   * Cho thông số kỹ thuật (L/100km, kWh, mm…), nơi `count` làm tròn 6,8 L/100km thành "7".
+   */
+  measure: (value: number) => string;
   /** Điểm đánh giá một chữ số thập phân: `4,8` · `4.8`. */
   rating: (value: number) => string;
 }
@@ -358,6 +363,8 @@ export function createAppFormat(
     },
 
     count: (value) => format.number(value, 'integer'),
+    // Cùng preset với quãng đường giao xe: tối đa một chữ số lẻ, không ép `,0`.
+    measure: (value) => format.number(value, 'distance'),
     rating: (value) => format.number(value, 'rating'),
   };
 }

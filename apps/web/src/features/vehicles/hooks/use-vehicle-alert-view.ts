@@ -110,7 +110,9 @@ export function useVehicleAlertView(): (
            * nào hợp lệ → `href: null`. Thà không có lối đi còn hơn một link 403"*.
            */
           if (!isManage && alert.href?.startsWith('/manage')) return { ...alert, href: null };
-          return alert;
+          // Phiên hỗ trợ: đích ngoài bảng cũng phải đi qua cổng — viết lại vào phiên, hoặc bỏ link
+          // nếu màn đó không mở trong phiên (ADR 0050).
+          return { ...alert, href: available(alert.href ?? null) };
         }),
     [available, can.maintenance, isManage, vehiclePaths],
   );

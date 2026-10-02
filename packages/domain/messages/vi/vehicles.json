@@ -579,7 +579,8 @@
     "loadFailed": "Không tải được dữ liệu.",
     "metric": "{value} {unit}",
     "todo": {
-      "title": "Việc cần làm"
+      "title": "Việc cần làm",
+      "handleNow": "Xử lý ngay"
     },
     "schedules": {
       "title": "Lịch thuê sắp tới",
@@ -592,7 +593,10 @@
       "rentals": "Lượt thuê",
       "tripCount": "{count, plural, other {# chuyến}}",
       "activeLabel": "Đơn đang chạy:",
-      "activeCount": "{count, plural, other {# đơn}}"
+      "activeCount": "{count, plural, other {# đơn}}",
+      "active": "Đơn đang chạy",
+      "rating": "Đánh giá",
+      "ratingValue": "{rating}/5 · {count, plural, other {# lượt}}"
     },
     "pricing": {
       "title": "Giá thuê & Chính sách",
@@ -658,16 +662,22 @@
       "paymentDay": "đến hạn ngày {day}",
       "detailLink": "Xem hồ sơ nguồn xe & tài chính →",
       "missing": "Chưa khai báo hồ sơ nguồn chi tiết.",
-      "missingLink": "Bổ sung ngay →"
+      "missingLink": "Bổ sung ngay →",
+      "viewLink": "Xem hồ sơ"
     },
     "media": {
-      "title": "Thư viện ảnh"
+      "title": "Thư viện ảnh",
+      "manageLink": "Thêm/Sắp xếp ảnh",
+      "cover": "Ảnh bìa",
+      "more": "+{count}",
+      "empty": "Chưa có ảnh nào cho xe này."
     },
     "activity": {
       "title": "Hoạt động gần đây",
       "empty": "Chưa có hoạt động nào cho xe này.",
       "item": "Đơn {code} · {status}",
-      "sub": "{customer} • {range} • {amount}"
+      "sub": "{customer} • {range} • {amount}",
+      "bookingRange": "Đơn {code} • {range}"
     },
     "dateRange": "{from} – {to}",
     "automation": {
@@ -687,6 +697,14 @@
       "review": "Xét duyệt",
       "specs": "Thông số kỹ thuật",
       "maintenance": "Bảo dưỡng & số KM"
+    },
+    "idLabel": "ID: <b>{value}</b>",
+    "asideLabel": "Tóm tắt hoạt động của xe",
+    "keySpecs": {
+      "title": "Thông số chính",
+      "viewAll": "Xem đầy đủ",
+      "brandModel": "Hãng & mẫu xe",
+      "viewAllLabel": "Xem đầy đủ thông số kỹ thuật"
     }
   },
   "edit": {

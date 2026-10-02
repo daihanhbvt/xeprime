@@ -82,6 +82,12 @@
   font-size: var(--xp-font-size-body-sm);
 }
 
+/* Nút của việc đầu bảng — dưới chi tiết của chính việc đó. */
+.leadAction {
+  display: flex;
+  margin-top: var(--xp-space-sm);
+}
+
 .empty {
   margin: 0;
   color: var(--xp-color-text-secondary);

@@ -9,6 +9,7 @@ import { PreviewImage, PreviewImageGroup } from '@/components/data-display/Previ
 import { decorativeIcon } from '@/lib/decorative-icon';
 
 import { useImageSlotLabel } from '../hooks/use-image-slot-label';
+import { vehicleGalleryItems } from '../media';
 import type { VehicleDetail } from '../types';
 import styles from './VehicleThumbStrip.module.css';
 
@@ -16,8 +17,9 @@ import styles from './VehicleThumbStrip.module.css';
 const THUMB_WINDOW = 4;
 
 /**
- * DẢI ẢNH theo vị trí dưới ảnh đại diện (30/09/2026) — dùng chung cho thẻ đầu màn sửa xe và thẻ
- * hồ sơ của màn chi tiết xe, để hai nơi bày ảnh giống hệt nhau.
+ * DẢI ẢNH theo vị trí dưới ảnh đại diện ở thẻ đầu màn sửa xe (30/09/2026). Thứ tự và nhãn lấy
+ * từ `vehicleGalleryItems` — cùng nguồn với thư viện ảnh của Hồ sơ 360, nên hai nơi bày ảnh như
+ * nhau.
  *
  * Mỗi ảnh mang nhãn vị trí ngay trên ảnh (Mặt trước, Bên trái…), bấm để phóng to; hai mũi tên ở
  * hai đầu dải chỉ có khi nhiều ảnh hơn chỗ, mỗi lần lướt một ảnh. Ảnh đại diện không nằm trong
@@ -26,9 +28,9 @@ const THUMB_WINDOW = 4;
 export function VehicleThumbStrip({ vehicle }: { vehicle: VehicleDetail }) {
   const t = useTranslations('Vehicles.edit.aside');
   const imageSlotLabel = useImageSlotLabel();
-  const thumbs = (vehicle.media ?? [])
-    .filter((item) => item.url !== vehicle.mainImageUrl)
-    .map((item) => ({ url: item.url, label: imageSlotLabel(item.type) }));
+  const thumbs = vehicleGalleryItems(vehicle, imageSlotLabel).filter(
+    (item) => item.url !== vehicle.mainImageUrl,
+  );
   const [windowStart, setWindowStart] = useState(0);
 
   if (thumbs.length === 0) return null;
@@ -58,8 +60,8 @@ export function VehicleThumbStrip({ vehicle }: { vehicle: VehicleDetail }) {
         <ul className={styles.thumbs}>
           {visible.map((item) => (
             <li key={item.url} className={styles.thumb}>
-              <PreviewImage src={item.url} alt={item.label} className={styles.img} />
-              <span className={styles.label}>{item.label}</span>
+              <PreviewImage src={item.url} alt={item.label ?? ''} className={styles.img} />
+              {item.label ? <span className={styles.label}>{item.label}</span> : null}
             </li>
           ))}
         </ul>

@@ -2,7 +2,7 @@
 
 import { Tag } from 'antd';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   VEHICLE_ALERT_PRIMARY_LIMIT,
@@ -65,8 +65,14 @@ export function VehicleAlertChips({ alerts }: { alerts: VehicleAlertItem[] }) {
 export function VehicleAlertList({
   alerts,
   showEmpty = true,
+  leadAction,
 }: {
   alerts: VehicleAlertItem[];
+  /**
+   * Nút hành động của việc ĐẦU BẢNG, dựng ngay TRONG mục đó — không ở cuối danh sách. Nút đứng
+   * cuối thẻ thì đọc như thuộc về mục nằm sát trên nó, mà mục đó có khi là một lời nhắc khác.
+   */
+  leadAction?: ReactNode;
   /**
    * `false` = im lặng khi danh sách rỗng, vì nơi gọi đã dựng một việc khác trong CÙNG thẻ.
    *
@@ -91,7 +97,7 @@ export function VehicleAlertList({
   return (
     <>
       <ul className={styles.list}>
-        {visible.map((alert) => {
+        {visible.map((alert, index) => {
           const severity = alert.severity as VehicleAlertSeverity;
           return (
             <li key={alert.kind} className={styles.item}>
@@ -114,6 +120,9 @@ export function VehicleAlertList({
                   {domainLabel('vehicleAlertSeverity', severity)}
                 </span>
                 {alert.detail ? <span className={styles.detail}>{alert.detail}</span> : null}
+                {index === 0 && leadAction ? (
+                  <span className={styles.leadAction}>{leadAction}</span>
+                ) : null}
               </span>
             </li>
           );

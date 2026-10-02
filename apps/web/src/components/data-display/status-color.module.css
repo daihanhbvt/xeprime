@@ -1,0 +1,29 @@
+/* Màu chữ theo `STATUS_COLOR` — xem `status-color.ts`. Token XePrime (ADR 0003). */
+
+.success {
+  color: var(--xp-color-success);
+}
+
+.danger {
+  color: var(--xp-color-error);
+}
+
+.warning {
+  color: var(--xp-color-warning);
+}
+
+.waiting {
+  color: var(--xp-color-primary);
+}
+
+.info {
+  color: var(--xp-color-info);
+}
+
+.processing {
+  color: var(--xp-color-processing);
+}
+
+.neutral {
+  color: var(--xp-color-text-tertiary);
+}

@@ -35,8 +35,8 @@ const MISSING_PREVIEW = 2;
  * hành động thật thì nằm ở cuối trang.
  *
  * Việc ở đây có NÚT THẬT, vì trang chi tiết có trong tay cả bản ghi xe: gửi duyệt gọi thẳng
- * mutation, hoàn tất hồ sơ mở đúng tab còn thiếu, bật hiển thị neo lên công tắc ở đầu trang.
- * Đổi lại, `TodoCard` phải LỌC hai cảnh báo server nói trùng — xem chỗ gọi.
+ * mutation, hoàn tất hồ sơ mở đúng tab còn thiếu. "Bật hiển thị" KHÔNG có nút ở đây — công tắc
+ * "Trên chợ" ở đầu trang là chỗ bấm duy nhất cho trạng thái đó. Đổi lại, `TodoCard` phải LỌC hai cảnh báo server nói trùng — xem chỗ gọi.
  *
  * Quyền: chỉ nút mới gác theo quyền. Câu mô tả tình trạng thì ai đọc được hồ sơ xe đều thấy —
  * "xe của gian hàng này chưa lên chợ" không phải bí mật với người đã vào được trang.
@@ -118,19 +118,6 @@ export function VehiclePublicationTaskItem({
           </Link>
         ) : null;
       }
-      case 'enableMarketplace':
-        /*
-         * Neo lên chính công tắc ở đầu trang thay vì bật hộ từ đây: một hành động, một chỗ bấm.
-         * Bật hộ sẽ là chỗ ghi thứ hai cho cùng một trạng thái, và người dùng không thấy cái
-         * công tắc vừa đổi.
-         */
-        return canSubmit ? (
-          <Link href={`#${MARKETPLACE_SWITCH_ANCHOR}`}>
-            <Button size="small" type={type}>
-              {label}
-            </Button>
-          </Link>
-        ) : null;
       case 'viewStatus':
         /*
          * Tab "Xét duyệt" đã bỏ khỏi Hồ sơ 360 (30/09/2026) — không còn neo nào để dẫn tới.
@@ -197,6 +184,3 @@ export function VehiclePublicationTaskItem({
     </div>
   );
 }
-
-/** Neo của hàng công tắc ở đầu trang — dùng cho CTA "Bật hiển thị". */
-export const MARKETPLACE_SWITCH_ANCHOR = 'vehicle-marketplace-switch';

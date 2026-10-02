@@ -579,7 +579,8 @@
     "loadFailed": "Could not load the data.",
     "metric": "{value} {unit}",
     "todo": {
-      "title": "To do"
+      "title": "To do",
+      "handleNow": "Handle now"
     },
     "schedules": {
       "title": "Upcoming rentals",
@@ -592,7 +593,10 @@
       "rentals": "Rentals",
       "tripCount": "{count, plural, one {# trip} other {# trips}}",
       "activeLabel": "Bookings in progress:",
-      "activeCount": "{count, plural, one {# booking} other {# bookings}}"
+      "activeCount": "{count, plural, one {# booking} other {# bookings}}",
+      "active": "In progress",
+      "rating": "Rating",
+      "ratingValue": "{rating}/5 · {count, plural, one {# review} other {# reviews}}"
     },
     "pricing": {
       "title": "Pricing & policies",
@@ -658,16 +662,22 @@
       "paymentDay": "due on day {day}",
       "detailLink": "View the ownership & finance record →",
       "missing": "No detailed ownership record yet.",
-      "missingLink": "Add it now →"
+      "missingLink": "Add it now →",
+      "viewLink": "View record"
     },
     "media": {
-      "title": "Photo gallery"
+      "title": "Photo gallery",
+      "manageLink": "Add/arrange photos",
+      "cover": "Cover",
+      "more": "+{count}",
+      "empty": "No photos for this vehicle yet."
     },
     "activity": {
       "title": "Recent activity",
       "empty": "No activity for this vehicle yet.",
       "item": "Booking {code} · {status}",
-      "sub": "{customer} • {range} • {amount}"
+      "sub": "{customer} • {range} • {amount}",
+      "bookingRange": "Booking {code} • {range}"
     },
     "dateRange": "{from} – {to}",
     "automation": {
@@ -687,6 +697,14 @@
       "review": "Review",
       "specs": "Specifications",
       "maintenance": "Maintenance & odometer"
+    },
+    "idLabel": "ID: <b>{value}</b>",
+    "asideLabel": "Vehicle activity summary",
+    "keySpecs": {
+      "title": "Key specs",
+      "viewAll": "View all",
+      "brandModel": "Make & model",
+      "viewAllLabel": "View all specifications"
     }
   },
   "edit": {

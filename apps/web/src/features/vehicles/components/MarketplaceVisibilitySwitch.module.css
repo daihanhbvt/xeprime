@@ -24,6 +24,13 @@
   line-height: var(--xp-line-height-body-sm);
 }
 
+/* Biến thể không vạch kẻ — hồ sơ xe đặt hàng này trong khung trạng thái của chính nó. */
+.row.bare {
+  padding-bottom: 0;
+  border-bottom: 0;
+  margin-bottom: 0;
+}
+
 /* Công tắc về sát mép phải; trạng thái bằng chữ bám ngay trước nó. */
 .row > :last-child {
   margin-left: auto;
