@@ -18,6 +18,7 @@ import type {
 } from '../src/modules/public-listings/dto/public-listing.dto';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { makePublicListingsService, seedBranch, seedProvince } from './helpers/service-factory';
+import { TEST_PROVINCE } from './helpers/test-provinces';
 
 /**
  * Bộ lọc facet marketplace trên PostgreSQL THẬT: đếm theo chiều với semantics chuẩn (mỗi chiều
@@ -31,8 +32,8 @@ const prisma = createPrismaClient();
 const service = makePublicListingsService(prisma as unknown as PrismaService);
 const listings = new ListingsService(prisma as unknown as PrismaService);
 
-const PROV = 'Z2';
-const PROV_NAME = 'Zone Facet';
+const PROV = TEST_PROVINCE.LISTINGS_FACETS.code;
+const PROV_NAME = TEST_PROVINCE.LISTINGS_FACETS.name;
 
 let dbAvailable = false;
 let ownerId: string;

@@ -26,6 +26,7 @@ import {
   seedBranch,
   seedProvince,
 } from './helpers/service-factory';
+import { TEST_PROVINCE } from './helpers/test-provinces';
 
 /**
  * ADR 0048 — công tắc HIỂN THỊ TRÊN CHỢ của chủ xe, tách khỏi trạng thái kiểm duyệt.
@@ -46,8 +47,8 @@ const approvals = new PlatformApprovalService(asService, audit, notifications, l
 const platformVehicles = new PlatformVehiclesService(asService, audit, listings);
 const publicListings = makePublicListingsService(asService);
 
-const PROV = 'Z4';
-const PROV_NAME = 'Zone Visibility';
+const PROV = TEST_PROVINCE.VEHICLE_MARKETPLACE_VISIBILITY.code;
+const PROV_NAME = TEST_PROVINCE.VEHICLE_MARKETPLACE_VISIBILITY.name;
 
 let dbAvailable = false;
 let ownerId: string;

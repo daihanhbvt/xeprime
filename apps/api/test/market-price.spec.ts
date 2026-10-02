@@ -13,6 +13,7 @@ import { MarketPriceService } from '../src/modules/public-listings/market-price.
 import type { MarketPriceQueryDto } from '../src/modules/public-listings/dto/market-price.dto';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { seedBranch, seedProvince } from './helpers/service-factory';
+import { TEST_PROVINCE } from './helpers/test-provinces';
 
 /**
  * Gợi ý giá thuê trên PostgreSQL THẬT.
@@ -31,10 +32,10 @@ import { seedBranch, seedProvince } from './helpers/service-factory';
 const prisma = createPrismaClient();
 const listings = new ListingsService(prisma as unknown as PrismaService);
 
-const PROV = 'Z7';
-const PROV_NAME = 'Zone Price';
-const OTHER_PROV = 'Z8';
-const OTHER_PROV_NAME = 'Zone Price Khac';
+const PROV = TEST_PROVINCE.MARKET_PRICE.code;
+const PROV_NAME = TEST_PROVINCE.MARKET_PRICE.name;
+const OTHER_PROV = TEST_PROVINCE.MARKET_PRICE_OTHER.code;
+const OTHER_PROV_NAME = TEST_PROVINCE.MARKET_PRICE_OTHER.name;
 
 let dbAvailable = false;
 let ownerId: string;

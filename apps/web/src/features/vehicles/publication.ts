@@ -249,15 +249,13 @@ export type VehiclePublicationTaskKey =
  * `cta` là một union ĐÓNG chứ không phải chuỗi ghép từ `key` — nhờ vậy `t()` kiểm được khoá lúc
  * biên dịch, thay vì phải ép kiểu để TypeScript thôi kêu.
  */
-export type VehiclePublicationActionKind =
-  'edit' | 'submit' | 'enableMarketplace' | 'viewStatus' | 'contactSupport';
+export type VehiclePublicationActionKind = 'edit' | 'submit' | 'viewStatus' | 'contactSupport';
 
 export type VehiclePublicationCta =
   | 'completeProfile'
   | 'updateProfile'
   | 'submit'
   | 'resubmit'
-  | 'enableMarketplace'
   | 'viewStatus'
   | 'contactSupport';
 
@@ -285,7 +283,6 @@ const EDIT_TO_COMPLETE: VehiclePublicationAction = { kind: 'edit', cta: 'complet
 const EDIT_TO_UPDATE: VehiclePublicationAction = { kind: 'edit', cta: 'updateProfile' };
 const SUBMIT: VehiclePublicationAction = { kind: 'submit', cta: 'submit' };
 const RESUBMIT: VehiclePublicationAction = { kind: 'submit', cta: 'resubmit' };
-const ENABLE: VehiclePublicationAction = { kind: 'enableMarketplace', cta: 'enableMarketplace' };
 const VIEW_STATUS: VehiclePublicationAction = { kind: 'viewStatus', cta: 'viewStatus' };
 const CONTACT_SUPPORT: VehiclePublicationAction = { kind: 'contactSupport', cta: 'contactSupport' };
 
@@ -305,7 +302,11 @@ export function vehiclePublicationTask(vehicle: VehicleDetail): VehiclePublicati
       // Đã duyệt thì KHÔNG còn việc xét duyệt nào. Chỉ còn một gợi ý, và chỉ khi chính chủ xe
       // đang tắt công tắc — cái họ có thể đã quên bật lại.
       if (vehicle.marketplaceEnabled) return null;
-      return task('ownerPaused', 'info', ENABLE, null, [], null);
+      /*
+       * KHÔNG có nút (02/10/2026): công tắc "Trên chợ" đứng ngay ở đầu cùng trang. Nút "Bật hiển
+       * thị" ở đây chỉ là chỗ bấm thứ hai cho cùng một trạng thái — lời nhắc là đủ.
+       */
+      return task('ownerPaused', 'info', null, null, [], null);
 
     case VEHICLE_PUBLIC_STATUS.HIDDEN:
       // KHÔNG có đường tự phục vụ nào: `hidden` là quyết định kiểm duyệt và

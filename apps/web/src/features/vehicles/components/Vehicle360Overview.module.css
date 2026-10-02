@@ -1,15 +1,68 @@
 /*
- * Hồ sơ 360 của xe — hình học từ Figma `236:2222` (desktop 1440) và `236:4783` (mobile 390).
- * Mọi màu/khoảng cách/bo góc qua token XePrime (ADR 0003).
+ * Hồ sơ 360 của xe — bố cục 02/10/2026: cột chính (thẻ hồ sơ + tab) và cột phụ (hiệu suất, lịch,
+ * hoạt động, khu vực quản lý). Mọi màu/khoảng cách/bo góc qua token XePrime (ADR 0003).
  */
 
-.stack {
+.root {
   display: flex;
   flex-direction: column;
   gap: var(--xp-space-lg);
 }
 
-/* ─── Thẻ hồ sơ đầu trang (Figma `236:2322`) ──────────────────────────────── */
+/*
+ * ─── Hai vùng: cột chính · cột phụ ────────────────────────────────────────
+ *
+ * Bố cục đo BỀ RỘNG THẬT của vùng nội dung (`@container`), không đo viewport: cùng component chạy
+ * trong cổng quản lý, khu tài khoản (có menu dọc bên trái — viewport "rộng" mà vùng nội dung hẹp)
+ * và modal hồ sơ xe. Đo viewport thì một trong ba nơi đó luôn vỡ.
+ *
+ * Container đặt trên LỚP VỎ RIÊNG (`.shell`), không trên `.root`: `container-type` kéo theo
+ * `contain: layout`, và thanh CTA bám đáy ở mobile phải nằm ngoài khối đó.
+ */
+.shell {
+  container: vehicle-profile / inline-size;
+}
+
+.layout {
+  display: grid;
+  align-items: start;
+  gap: var(--xp-space-lg);
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
+}
+
+/* Cột phụ có thể rỗng (khu tài khoản, thiếu quyền đơn, không có lối đi nào) — trả lại bề ngang. */
+.layout:has(> .aside:empty) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.aside:empty {
+  display: none;
+}
+
+/* Cột chính cũng là một container: lưới tổng quan và thẻ hồ sơ co theo đúng bề rộng của nó. */
+.main {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  container: vehicle-main / inline-size;
+}
+
+.aside {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+/* Hẹp: cột phụ xuống dưới cột chính — cách nó trải ra ở cuối file, sau các luật gốc của nó. */
+@container vehicle-profile (max-width: 1080px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ─── Thẻ hồ sơ đầu trang ─────────────────────────────────────────────────── */
 
 .profile {
   display: flex;
@@ -18,27 +71,27 @@
   border: 1px solid var(--xp-color-border);
   border-radius: var(--xp-border-radius);
   background: var(--xp-color-bg-container);
-  gap: var(--xp-space-sm);
+  gap: var(--xp-space-md);
   box-shadow: var(--xp-shadow-card);
 }
 
 .profileMain {
-  display: flex;
-  align-items: center;
+  display: grid;
+  align-items: start;
   gap: var(--xp-space-lg);
+  grid-template-columns: 200px minmax(0, 1fr);
 }
 
-/* Ảnh 200×140 (`236:2323`) — khung cố định, ảnh cover, không kéo lệch bố cục theo tỉ lệ nguồn. */
+/* Khung ảnh cố định, ảnh cover — không kéo lệch bố cục theo tỉ lệ ảnh nguồn. */
 .profileMedia {
   position: relative;
   display: flex;
   overflow: hidden;
   width: 100%;
-  aspect-ratio: 16 / 10;
-  flex: none;
   align-items: center;
   justify-content: center;
   border-radius: var(--xp-border-radius-sm);
+  aspect-ratio: 4 / 3;
   background: var(--xp-color-bg-muted);
 }
 
@@ -58,195 +111,235 @@
 .profileInfo {
   display: flex;
   min-width: 0;
-  flex: 1;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.profileHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.profileTitle {
+  display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: var(--xp-space-xs);
 }
 
-.nameRow {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: var(--xp-space-xs);
-}
-
+/* Tên dài XUỐNG DÒNG chứ không cắt — tên xe là định danh, "Toyota Innova Cross…" là mất nghĩa. */
 .vehicleName {
-  overflow: hidden;
   margin: 0;
   color: var(--xp-color-text);
   font-size: var(--xp-font-size-h2);
   font-weight: var(--xp-font-weight-bold);
-  line-height: var(--xp-line-height-heading);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: var(--xp-line-height-h2);
+  overflow-wrap: anywhere;
 }
 
-.codeChip {
-  flex: none;
-  padding: 2px var(--xp-space-xs);
-  border-radius: var(--xp-border-radius-sm);
-  background: var(--xp-color-bg-muted);
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-body-sm);
-  font-weight: var(--xp-font-weight-semibold);
-}
-
-.plateRow {
-  overflow: hidden;
+.metaList {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  padding: 0;
   margin: 0;
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  gap: var(--xp-space-xs) 0;
+  list-style: none;
 }
 
-.dot {
-  margin: 0 var(--xp-space-xs);
+/*
+ * Chấm ngăn cách thuần trang trí — bản `/ ''` giấu nó khỏi trình đọc màn hình. Đặt ở CUỐI mỗi
+ * mục (trừ mục cuối) chứ không ở đầu: khi dải xuống dòng, chấm treo ở cuối dòng trên đọc tự nhiên,
+ * còn chấm mở đầu dòng dưới trông như một gạch đầu dòng lạc.
+ */
+.metaList > li:not(:last-child)::after {
+  margin: 0 var(--xp-space-sm);
   color: var(--xp-color-text-tertiary);
+  content: '•' / '';
 }
 
-/* KM có thẩm quyền ở header (Wave 8). */
-.odometerRow {
-  margin: 0 0 var(--xp-space-xs);
-  color: var(--xp-color-text-secondary);
+.typeLine {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
   font-size: var(--xp-font-size-body-sm);
+}
+
+.metaList b {
+  color: var(--xp-color-text);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-semibold);
 }
 
 .odometerSource {
   color: var(--xp-color-text-tertiary);
-}
-
-/* Dải liên kết sang các module — một hàng cuộn ngang, KHÔNG xuống dòng ở mobile. */
-/*
- * Dải "Các khu vực quản lý" — nền kem thương hiệu, tách hẳn khỏi các thẻ trắng xung quanh.
- *
- * Nền `primary-light` chứ không phải trắng: dải này là MỤC LỤC của chiếc xe, không phải một khối
- * dữ liệu nữa; cho nó cùng bề mặt với các thẻ số liệu là mời người đọc quét qua nó như một thẻ.
- */
-.moduleBand {
-  padding: var(--xp-space-sm) var(--xp-space-md);
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius);
-  background: var(--xp-color-primary-light);
-}
-
-.bandTitle {
-  margin: 0 0 var(--xp-space-xs);
-  color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body-sm);
-  font-weight: var(--xp-font-weight-medium);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
-/*
- * Chip XUỐNG DÒNG, không cuộn ngang nữa (29/09/2026).
- *
- * Cuộn ngang giấu mục: ở 1440px dải này có tới mười mục và bốn mục cuối nằm ngoài khung, không
- * có dấu hiệu nào cho biết còn nữa. Nó là MỤC LỤC của chiếc xe — thứ phải thấy hết trong một
- * lần nhìn. Dải có nền riêng nên hai hàng chip vẫn đọc ra là một khối.
- */
-.moduleLinks {
+/* Một điểm bấm duy nhất (⋮) ở góc phải trên. */
+.profileButtons {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--xp-space-xs);
-}
-
-.moduleLink {
-  display: inline-flex;
   flex: none;
-  align-items: center;
-  padding: var(--xp-space-xs) var(--xp-space-sm);
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius);
-  background: var(--xp-color-bg-container);
-  color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body-sm);
-  white-space: nowrap;
 }
 
-.moduleLink:hover {
-  border-color: var(--xp-color-primary);
-  color: var(--xp-color-primary);
+/* Nút ⋮ là một Ô VUÔNG khai báo tường minh — không phụ thuộc bố cục bọc ngoài. */
+.actionsTrigger.actionsTrigger {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  padding: 0;
 }
 
-.statusRow {
+/*
+ * Khung trạng thái: hai trục (vận hành · kiểm duyệt) bên trái, "Trên chợ" bên phải — đáy thẳng
+ * hàng, như một dải bảng điều khiển chứ không như ba dòng chữ rời.
+ */
+.statusPanel {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: var(--xp-space-md);
+  align-items: flex-end;
+  justify-content: space-between;
+  padding-top: var(--xp-space-md);
+  border-top: 1px solid var(--xp-color-border-subtle);
+  gap: var(--xp-space-sm) var(--xp-space-lg);
+}
+
+.axes {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  gap: var(--xp-space-xs);
 }
 
 .axis {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--xp-space-xs);
-}
-
-.axisLabel {
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-body-sm);
-}
-
-/* Cột hành động 160px bên phải (`236:2349`). Mobile dùng CTA cố định đáy màn thay thế. */
-.profileActions {
   display: flex;
-  flex: none;
-  flex-direction: column;
-  align-items: flex-end;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.axis dt {
+  display: inline-flex;
+  min-width: 112px;
+  align-items: center;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
   gap: var(--xp-space-xs);
 }
 
-.profileActions :global(.ant-btn) {
-  min-height: 40px;
-  border-radius: var(--xp-border-radius-md);
+.axisIcon {
+  display: inline-flex;
+}
+
+.axis dd {
+  margin: 0;
+}
+
+.axis dd :global(.ant-tag) {
+  margin-inline-end: 0;
+}
+
+.marketplace {
+  min-width: 0;
+  padding: var(--xp-space-xs) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-muted);
+}
+
+/* Cột chính hẹp: ảnh lên trên trải hết bề ngang, "Trên chợ" thành một hàng cài đặt trọn chiều ngang. */
+@container vehicle-main (max-width: 560px) {
+  .profileMain {
+    gap: var(--xp-space-md);
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .profileMedia {
+    aspect-ratio: 16 / 9;
+  }
+
+  .statusPanel {
+    align-items: stretch;
+  }
+
+  .marketplace {
+    width: 100%;
+  }
+}
+
+/* ─── Tab + lưới tổng quan ────────────────────────────────────────────────── */
+
+.viewTabs :global(.ant-tabs-nav) {
+  margin-bottom: var(--xp-space-md);
+}
+
+/*
+ * Hai cột, thẻ cùng hàng CAO BẰNG NHAU (`stretch`) — lưới đọc thành từng cặp ngay ngắn. Thẻ nào
+ * vắng (thiếu quyền, xe không có dịch vụ cần cấu hình) thì thẻ sau tự dồn lên; chỉ khi số thẻ nửa
+ * bề ngang là số lẻ thì còn một ô trống ngay trước thẻ "Nguồn xe" (thẻ đó luôn trải hết hàng).
+ */
+.overviewGrid {
+  display: grid;
+  align-items: stretch;
+  gap: var(--xp-space-md);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.spanFull {
+  grid-column: 1 / -1;
+}
+
+@container vehicle-main (max-width: 720px) {
+  .overviewGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ─── Thẻ dùng chung ──────────────────────────────────────────────────────── */
+
+/*
+ * `.card.card` = (0,2,0) cộng lớp antd = (0,3,0), thắng `.ant-card .ant-card-head` (0,2,0) mà
+ * không cần `!important` (cùng cách `VehicleWizard.module.css` làm).
+ *
+ * Đầu thẻ KHÔNG kẻ vạch: tiêu đề và nội dung là một khối, như các thẻ trong thiết kế.
+ */
+.card.card {
+  border-color: var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  box-shadow: var(--xp-shadow-card);
+}
+
+.card.card :global(.ant-card-head) {
+  min-height: 0;
+  padding: var(--xp-space-md) var(--xp-space-lg) 0;
+  border-bottom: 0;
+}
+
+.card.card :global(.ant-card-head-title) {
+  font-size: var(--xp-font-size-body-lg);
   font-weight: var(--xp-font-weight-semibold);
 }
 
-/*
- * Nhóm nút tách khỏi hàng "Trên chợ" vì hai thứ biến mất ở hai nhịp khác nhau: ở mobile các nút
- * chuyển xuống thanh CTA đáy màn, còn hàng công tắc ở lại đầu trang.
- */
-/* Một điểm bấm duy nhất (⋮), căn phải dưới công tắc "Trên chợ". */
-.profileButtons {
-  display: flex;
-  justify-content: flex-end;
+.card.card :global(.ant-card-body) {
+  padding: var(--xp-space-md) var(--xp-space-lg) var(--xp-space-lg);
 }
 
-/*
- * Nút ⋮ là một Ô VUÔNG, khai báo tường minh.
- *
- * `.profileActions .ant-btn` đặt `min-height: 40px` cho cả cột, nhưng bề RỘNG thì antd vẫn để
- * theo mặc định 32px của nút chỉ-icon — ra một hình chữ nhật đứng. Và trong một cột
- * `align-items: stretch` trước đây nó còn bị kéo rộng hết cột, đọc thành một thanh trống có ba
- * chấm bé xíu ở giữa. Ghim cả hai chiều thì không còn phụ thuộc vào bố cục bọc ngoài.
- */
-.actionsTrigger.actionsTrigger {
-  width: 40px;
-  flex: none;
+.cardLink {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  gap: var(--xp-space-xs);
+  white-space: nowrap;
+}
+
+.cardLinkButton.cardLinkButton {
+  height: auto;
   padding: 0;
-}
-
-/* Nút chỉ-icon: vuông bằng đúng chiều cao chung, không co giãn theo chỗ trống. */
-.profileButtonRow > :global(.ant-btn-icon-only) {
-  width: 40px;
-  flex: none;
-  padding: 0;
-}
-
-/* ─── Ba thẻ nhanh (`236:2354`) ───────────────────────────────────────────── */
-
-.quickRow {
-  display: grid;
-  align-items: start;
-  gap: var(--xp-space-md);
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.quickCard {
-  height: 100%;
-  border-color: var(--xp-color-border);
-  box-shadow: var(--xp-shadow-card);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
 }
 
 .muted {
@@ -255,11 +348,122 @@
   font-size: var(--xp-font-size-body-sm);
 }
 
+/* Ô icon vuông bo góc + một đoạn chữ — mẫu chung của các thẻ chỉ có một câu tình trạng. */
+.iconRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-md);
+}
+
+.iconTile {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: var(--xp-border-radius);
+  font-size: var(--xp-font-size-h4);
+  place-items: center;
+}
+
+.iconRowText {
+  margin: 0;
+  align-self: center;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.toneSuccess {
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+}
+
+.toneWarning {
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning);
+}
+
+.toneError {
+  background: var(--xp-color-error-bg);
+  color: var(--xp-color-error);
+}
+
+.toneMuted {
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-tertiary);
+}
+
+.toneBrand {
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-active);
+}
+
+/* ─── Việc cần làm ────────────────────────────────────────────────────────── */
+
+/*
+ * Nền thẻ theo mức nặng nhất, kèm một vạch màu ở mép trái (bóng `inset` — đi theo bo góc của thẻ,
+ * không cần thêm phần tử). Các tông đứng SAU `.card.card` trong file nên thắng cùng độ ưu tiên.
+ */
+.todoCard.todoCritical {
+  border-color: color-mix(in srgb, var(--xp-color-error) 30%, var(--xp-color-border));
+  background: var(--xp-color-error-bg);
+  box-shadow:
+    inset 4px 0 0 var(--xp-color-error),
+    var(--xp-shadow-card);
+}
+
+.todoCard.todoWarning {
+  border-color: color-mix(in srgb, var(--xp-color-warning) 30%, var(--xp-color-border));
+  background: var(--xp-color-warning-bg);
+  box-shadow:
+    inset 4px 0 0 var(--xp-color-warning),
+    var(--xp-shadow-card);
+}
+
+.todoCard.todoInfo {
+  box-shadow:
+    inset 4px 0 0 var(--xp-color-info),
+    var(--xp-shadow-card);
+}
+
+.todoTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.todoIcon {
+  display: inline-flex;
+  font-size: var(--xp-font-size-h4);
+}
+
+.todoCritical .todoIcon {
+  color: var(--xp-color-error);
+}
+
+.todoWarning .todoIcon {
+  color: var(--xp-color-warning);
+}
+
+.todoInfo .todoIcon {
+  color: var(--xp-color-info);
+}
+
+.todoClear .todoIcon {
+  color: var(--xp-color-success);
+}
+
+/* Lời nhắc `info` ở cuối thẻ — tách khỏi danh sách việc phải làm bên trên. */
+.todoNote {
+  margin-top: var(--xp-space-md);
+}
+
 .todoList {
   display: flex;
   flex-direction: column;
   padding: 0;
   margin: 0;
+  align-self: center;
   gap: var(--xp-space-xs);
   list-style: none;
 }
@@ -278,7 +482,6 @@
   line-height: 1;
 }
 
-/* Màu chấm theo mức độ — trùng bộ màu ngữ nghĩa của Alert. */
 .error {
   color: var(--xp-color-error);
 }
@@ -287,127 +490,168 @@
   color: var(--xp-color-warning);
 }
 
-.info {
-  color: var(--xp-color-info);
-}
+/* ─── Thư viện ảnh ────────────────────────────────────────────────────────── */
 
-.scheduleList {
-  display: flex;
-  flex-direction: column;
+/* 3 × 2 ô = `GALLERY_VISIBLE`. Ảnh dư nằm trong DOM (để trình xem lướt được) nhưng ẩn. */
+.gallery {
+  display: grid;
   padding: 0;
   margin: 0;
-  gap: var(--xp-space-xs);
+  gap: var(--xp-space-sm);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   list-style: none;
 }
 
-.scheduleItem {
-  padding-bottom: var(--xp-space-xs);
-  border-bottom: 1px solid var(--xp-color-border-secondary);
+.galleryItem {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--xp-border-radius-sm);
+  aspect-ratio: 4 / 3;
+  background: var(--xp-color-bg-muted);
 }
 
-.scheduleItem:last-child {
-  padding-bottom: 0;
-  border-bottom: none;
+.galleryHidden {
+  display: none;
 }
 
-.scheduleTitle {
-  margin: 0;
+/* PreviewImage cho <img> KẾ THỪA hình học + object-fit từ vỏ — khai báo ở vỏ. */
+.galleryThumb {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.coverBadge {
+  position: absolute;
+  top: var(--xp-space-xs);
+  left: var(--xp-space-xs);
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--xp-space-xs);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-card);
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body-sm);
-  font-weight: var(--xp-font-weight-semibold);
-}
-
-.scheduleSub {
-  margin: 2px 0 0;
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-body-sm);
-}
-
-.perf {
-  display: flex;
-  flex-direction: column;
-  gap: var(--xp-space-sm);
-}
-
-.perfRow {
-  display: flex;
-  justify-content: space-between;
-  margin: 0;
-  gap: var(--xp-space-sm);
-}
-
-.perfRow dt {
-  color: var(--xp-color-text-tertiary);
   font-size: var(--xp-font-size-overline);
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  font-weight: var(--xp-font-weight-semibold);
+  gap: 2px;
+  line-height: 18px;
+  pointer-events: none;
 }
 
-.perfRow dd {
+.coverBadge :global(.anticon) {
+  color: var(--xp-color-primary);
+}
+
+/* Nhãn vị trí nằm ĐÈ trên ảnh, dải tối ở đáy để chữ luôn đọc được (cùng kiểu dải ảnh nhỏ). */
+.galleryLabel {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  overflow: hidden;
+  padding: 1px 4px;
+  background: var(--xp-color-bg-overlay);
+  color: var(--xp-color-text-inverse);
+  font-size: var(--xp-font-size-overline);
+  line-height: 1.4;
+  pointer-events: none;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* "+N" phủ ô cuối — bấm vẫn xuyên xuống ảnh, mở trình xem tại đó để lướt tiếp. */
+.galleryMore {
+  position: absolute;
+  display: grid;
+  background: var(--xp-color-bg-overlay);
+  color: var(--xp-color-text-inverse);
+  font-size: var(--xp-font-size-h4);
+  font-weight: var(--xp-font-weight-bold);
+  inset: 0;
+  place-items: center;
+  pointer-events: none;
+}
+
+/* ─── Thông số chính ──────────────────────────────────────────────────────── */
+
+.specGrid {
+  display: grid;
+  margin: 0;
+  gap: var(--xp-space-sm);
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+}
+
+.specTile {
+  min-width: 0;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+}
+
+.specTile dt {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.specTile dd {
   margin: 2px 0 0;
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body-lg);
-  font-variant-numeric: tabular-nums;
-  font-weight: var(--xp-font-weight-bold);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  overflow-wrap: anywhere;
 }
 
-.alignEnd {
-  text-align: end;
-}
+/* ─── Giá & chính sách ────────────────────────────────────────────────────── */
 
-.perfFoot {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  padding-top: var(--xp-space-xs);
-  border-top: 1px solid var(--xp-color-border-secondary);
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  gap: var(--xp-space-xs);
-}
-
-.income {
-  color: var(--xp-color-success);
-}
-
-/* ─── Lưới hai cột (`236:2393`) ───────────────────────────────────────────── */
-
-.columns {
+.priceTiles {
   display: grid;
-  align-items: start;
-  gap: var(--xp-space-lg);
+  margin: 0 0 var(--xp-space-md);
+  gap: var(--xp-space-sm);
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.column {
-  display: flex;
+.priceTile {
   min-width: 0;
-  flex-direction: column;
-  gap: var(--xp-space-lg);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-gold-soft);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-primary-light);
 }
 
-.sectionCard {
-  width: 100%;
-  border-color: var(--xp-color-border);
-  box-shadow: var(--xp-shadow-card);
+.priceTile dt {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
 }
 
-.cardLink {
-  padding: 0;
+.priceTile dd {
+  margin: 2px 0 0;
+  color: var(--xp-color-price);
+  font-size: var(--xp-font-size-body-lg);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-bold);
+  overflow-wrap: anywhere;
 }
 
 .kvList {
   display: flex;
   flex-direction: column;
   margin: 0;
-  gap: var(--xp-space-sm);
 }
 
 .kvRow {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
+  padding: var(--xp-space-xs) 0;
+  border-bottom: 1px dashed var(--xp-color-border);
   gap: var(--xp-space-sm);
+}
+
+.kvRow:last-child {
+  border-bottom: 0;
 }
 
 .kvRow dt {
@@ -424,6 +668,45 @@
   text-align: end;
 }
 
+/* ─── Nguồn xe ────────────────────────────────────────────────────────────── */
+
+.sourceBody {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  align-self: center;
+  gap: var(--xp-space-xs);
+}
+
+.sourceFacts {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  gap: var(--xp-space-xs) var(--xp-space-lg);
+}
+
+.sourceFacts > div {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: var(--xp-space-sm);
+}
+
+.sourceFacts dt {
+  flex: none;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.sourceFacts dd {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+}
+
+/* ─── Tab thông số kỹ thuật ───────────────────────────────────────────────── */
+
 .chips {
   display: flex;
   flex-wrap: wrap;
@@ -438,86 +721,160 @@
   white-space: pre-wrap;
 }
 
-.gallery {
+/*
+ * antd đặt `word-break: break-word` cho ô nội dung của Descriptions — hiệu lực thật là
+ * `overflow-wrap: anywhere`, cho phép bẻ GIỮA từ và kéo bề rộng tối thiểu của ô xuống một ký tự.
+ * Cộng với `table-layout: auto` của biến thể `bordered`, "Toyota" thành sáu dòng một chữ cái.
+ *
+ * Luật của antd là `.ant-descriptions.ant-descriptions-bordered > .ant-descriptions-view > table`
+ * (0,3,1), nên các luật dưới đây ghép đủ lớp để vượt qua, chứ không dùng `!important`.
+ * `overflow-wrap: break-word` chỉ bẻ khi một từ dài hơn cả dòng; `table-layout: fixed` chia cột đều.
+ */
+.specsTable:global(.ant-descriptions.ant-descriptions-bordered)
+  > :global(.ant-descriptions-view)
+  > table {
+  table-layout: fixed;
+}
+
+.specsTable :global(.ant-descriptions-row) > :global(.ant-descriptions-item-content),
+.specsTable :global(.ant-descriptions-row) > :global(.ant-descriptions-item-label) {
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+/* ─── Cột phụ: hiệu suất ──────────────────────────────────────────────────── */
+
+.statGrid {
   display: grid;
-  padding: 0;
   margin: 0;
-  gap: var(--xp-space-xs);
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-  list-style: none;
+  gap: var(--xp-space-sm);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.galleryThumb {
-  display: block;
-  width: 100%;
+.stat {
+  min-width: 0;
+  padding: var(--xp-space-sm) var(--xp-space-md);
   border-radius: var(--xp-border-radius-sm);
-  aspect-ratio: 4 / 3;
-  object-fit: cover;
+  background: var(--xp-color-bg-muted);
 }
 
-/* ─── Hoạt động gần đây (`236:2488`) ──────────────────────────────────────── */
+.statWide {
+  grid-column: 1 / -1;
+}
 
-.activityList {
+.stat dt {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.stat dd {
+  display: flex;
+  align-items: center;
+  margin: 2px 0 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-bold);
+  gap: var(--xp-space-xs);
+}
+
+.star {
+  display: inline-flex;
+  color: var(--xp-color-primary);
+}
+
+/* ─── Cột phụ: lịch thuê sắp tới ──────────────────────────────────────────── */
+
+.emptyNote {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.scheduleList {
   display: flex;
   flex-direction: column;
   padding: 0;
   margin: 0;
-  gap: var(--xp-space-md);
+  gap: var(--xp-space-sm);
   list-style: none;
 }
 
-.activityItem {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--xp-space-sm);
+.scheduleItem {
+  padding: 2px 0 2px var(--xp-space-sm);
+  border-left: 3px solid var(--xp-color-primary);
 }
 
-.activityIcon {
-  display: flex;
-  width: 32px;
-  height: 32px;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--xp-border-radius-pill);
-  background: var(--xp-color-bg-muted);
+.scheduleTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
 }
 
-.iconSuccess {
-  color: var(--xp-color-success);
-}
-
-.iconInfo {
-  color: var(--xp-color-info);
-}
-
-/* "Đang thuê" là bậc PROCESSING trong BOOKING_STATUS_META — không phải info (đã xác nhận). */
-.iconProcessing {
-  color: var(--xp-color-processing);
-}
-
-.iconError {
-  color: var(--xp-color-error);
-}
-
-.iconMuted {
+.scheduleSub {
+  margin: 2px 0 0;
   color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
 }
 
-.activityBody {
-  min-width: 0;
-  flex: 1;
+/* ─── Cột phụ: hoạt động gần đây (dòng thời gian) ─────────────────────────── */
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  list-style: none;
 }
 
-.activityHead {
+/* Đường nối giữa các mốc — vẽ bằng `::before` của từng mục, mục cuối không có. */
+.timelineItem {
+  position: relative;
+  padding: 0 0 var(--xp-space-md) 22px;
+}
+
+.timelineItem::before {
+  position: absolute;
+  top: 16px;
+  bottom: 0;
+  left: 5px;
+  width: 2px;
+  background: var(--xp-color-border);
+  content: '';
+}
+
+.timelineItem:last-child {
+  padding-bottom: 0;
+}
+
+.timelineItem:last-child::before {
+  display: none;
+}
+
+.timelineDot {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--xp-color-bg-container);
+  border-radius: var(--xp-border-radius-pill);
+  /* Màu lấy từ `statusColorClass` (đặt `color`) — cùng nguồn với thẻ trạng thái bên dưới. */
+  background: currentColor;
+  box-shadow: 0 0 0 1px var(--xp-color-border);
+}
+
+.timelineHead {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: var(--xp-space-sm);
 }
 
-.activityTitle {
+.timelineTitle {
   overflow: hidden;
+  min-width: 0;
   margin: 0;
   color: var(--xp-color-text);
   font-size: var(--xp-font-size-body);
@@ -526,19 +883,135 @@
   white-space: nowrap;
 }
 
-.activityTime {
+.timelineAmount {
   flex: none;
-  color: var(--xp-color-text-tertiary);
+  color: var(--xp-color-price);
   font-size: var(--xp-font-size-body-sm);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-semibold);
 }
 
-.activitySub {
-  overflow: hidden;
+.timelineSub {
   margin: 2px 0 0;
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body-sm);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.timelineFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--xp-space-xs);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  gap: var(--xp-space-sm);
+}
+
+.timelineFoot :global(.ant-tag) {
+  margin-inline-end: 0;
+}
+
+/* ─── Cột phụ: các khu vực quản lý ────────────────────────────────────────── */
+
+.linksPanel {
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-card);
+}
+
+.bandTitle {
+  margin: 0 0 var(--xp-space-sm);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.linkList {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  gap: var(--xp-space-xs);
+  list-style: none;
+}
+
+.linkItem {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  padding: var(--xp-space-xs) var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+  gap: var(--xp-space-sm);
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.linkItem:hover {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-text);
+}
+
+.linkItem:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: 2px;
+}
+
+.linkIcon {
+  display: inline-flex;
+  color: var(--xp-color-primary-active);
+  font-size: var(--xp-font-size-body-lg);
+}
+
+.linkLabel {
+  min-width: 0;
+  flex: 1;
+}
+
+.linkChevron {
+  display: inline-flex;
+  color: var(--xp-color-text-tertiary);
+  font-size: 10px;
+}
+
+/*
+ * Cột phụ khi đã xuống dưới cột chính. Đặt SAU các luật gốc vì cùng độ ưu tiên — đặt trước thì
+ * `.linkList { display: flex }` ở trên đè mất lưới.
+ *
+ * FLEX-WRAP chứ không lưới `auto-fit`: thẻ nào đứng một mình trên hàng (khu tài khoản chỉ có
+ * "Hoạt động gần đây") thì giãn hết bề ngang, ba thẻ thì chia ba. Lưới thì không làm được thế khi
+ * mục lục bên dưới trải hết các cột — cột trống không còn bị gộp lại.
+ */
+@container vehicle-profile (max-width: 1080px) {
+  .aside {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .aside > * {
+    min-width: 0;
+    flex: 1 1 260px;
+  }
+
+  /* Mục lục trải trọn hàng cuối, mục xếp lưới — một cột hẹp mười hàng để trống cả nửa màn. */
+  .aside > .linksPanel {
+    flex-basis: 100%;
+  }
+
+  .linkList {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
 }
 
 /* ─── CTA cố định đáy màn (mobile — Figma `236:4890`) ─────────────────────── */
@@ -547,48 +1020,14 @@
   display: none;
 }
 
-/* ─── Responsive ──────────────────────────────────────────────────────────── */
-
-@media (max-width: 1024px) {
-  /* Tablet: ba thẻ nhanh còn vừa; lưới nội dung xếp một cột (Figma `242:1940`). */
-  .columns {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
 @media (max-width: 640px) {
-  /* Mobile `236:4783`: hồ sơ thành thẻ dọc có ảnh bìa; hành động chuyển xuống CTA đáy màn. */
-  .profileMain {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--xp-space-sm);
-  }
-
-  .profileMedia {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 2 / 1;
-  }
-
-  /*
-   * Các NÚT chuyển xuống thanh CTA đáy màn (xem `.mobileActions`), nhưng CỘT vẫn còn: hàng
-   * "Trên chợ" không có chỗ nào khác để đi, và nó là câu trả lời đầu tiên chủ xe tìm khi mở
-   * hồ sơ xe. Nó trải hết chiều ngang, nằm trên nhóm nút, công tắc vẫn ở mép phải.
-   */
-  .profileActions {
-    width: 100%;
-  }
-
+  /* Thao tác chuyển xuống thanh CTA đáy màn; "Trên chợ" vẫn ở lại thẻ hồ sơ. */
   .profileButtons {
     display: none;
   }
 
-  .quickRow {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  /* Vùng chạm 44px cho dải liên kết module trên mobile (docs §12.7). */
-  .moduleLink {
+  /* Vùng chạm 44px (docs §12.7). */
+  .linkItem {
     min-height: 44px;
   }
 
@@ -607,177 +1046,5 @@
     background: var(--xp-color-bg-container);
     box-shadow: var(--xp-shadow-card);
     gap: var(--xp-space-sm);
-  }
-}
-
-/* Câu mô tả ngắn trong một thẻ chỉ có link — không có bảng khoá/giá trị nào để căn theo. */
-.cardHint {
-  margin: 0;
-  font-size: var(--xp-font-size-sm);
-  line-height: var(--xp-line-height);
-  color: var(--xp-color-text-secondary);
-}
-
-/* Thanh tab của Hồ sơ 360 — nằm sát trên lưới nội dung, không thêm khung. */
-.viewTabs :global(.ant-tabs-nav) {
-  margin-bottom: var(--xp-space-md);
-}
-
-/*
- * ─── Lưới nội dung tab Tổng quan ──────────────────────────────────────────
- *
- * Ba cột theo ĐÚNG ba nhóm nghĩa, và thứ tự đó giữ nguyên ở mọi bề rộng:
- *  1. HỒ SƠ XE — thông số, giấy tờ. Đọc nhiều chữ nhất nên nhận cột rộng nhất.
- *  2. KHAI THÁC — giá, tự động nhận chuyến, bảo dưỡng, nguồn xe.
- *  3. TÌNH TRẠNG — việc cần làm, hiệu suất, lịch sắp tới, lối tắt sang các khu quản lý.
- */
-.grid3 {
-  display: grid;
-  align-items: start;
-  gap: var(--xp-space-lg);
-  grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(280px, 0.8fr);
-}
-
-/*
- * ─── Hai cột: KHAI THÁC và TÌNH TRẠNG chồng lên nhau ở cột phải ───────────
- *
- * Bản trước cho nhóm TÌNH TRẠNG trải hết bề ngang thành một lưới LỒNG hai cột. Hai cái hại:
- * lưới lồng không thừa hưởng `align-items: start` của lưới ngoài nên các thẻ trong cùng một
- * hàng bị kéo cao bằng nhau — "Việc cần làm" với một dòng chữ thành một thẻ rỗng cao bằng thẻ
- * "Hiệu suất" bên cạnh; và nhóm quan trọng nhất bị đẩy xuống tận dưới cùng trang.
- *
- * Xếp chồng trong CÙNG một cột phải thì thứ tự đọc vẫn là hồ sơ → khai thác → tình trạng, chiều
- * cao thẻ trở lại theo nội dung, và cột trái (bảng thông số, dài nhất) chạy suốt cả hai hàng.
- */
-@media (max-width: 1280px) {
-  .grid3 {
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.72fr);
-  }
-
-  .grid3 > :first-child {
-    grid-row: 1 / span 2;
-  }
-
-  .grid3 > :nth-child(2) {
-    grid-column: 2;
-    grid-row: 1;
-  }
-
-  .grid3 > :last-child {
-    grid-column: 2;
-    grid-row: 2;
-  }
-}
-
-@media (max-width: 1024px) {
-  .grid3 {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  /* Một cột: trả mọi thẻ về dòng chảy tự nhiên, nếu không các `grid-row` ở trên còn hiệu lực. */
-  .grid3 > :first-child,
-  .grid3 > :nth-child(2),
-  .grid3 > :last-child {
-    grid-column: auto;
-    grid-row: auto;
-  }
-}
-
-/*
- * ─── Cùng bố cục đó, nhưng đo BỀ RỘNG THẬT của vùng nội dung ──────────────
- *
- * Các `@media` ở trên đo VIEWPORT, và đó là lý do trang vỡ ở khu tài khoản chủ xe: màn 1920px
- * nhưng khu đó có menu dọc bên trái nên vùng nội dung hẹp hơn nhiều — viewport vẫn "rộng" nên
- * lưới giữ nguyên 3 cột, cột đầu tụt xuống ~290px và bảng thông số bẻ "Toyota" thành sáu dòng
- * một chữ cái (thấy trên máy 30/09/2026). Cùng trang đó trong cổng quản lý thì vừa.
- *
- * `@container` hỏi đúng câu cần hỏi — "khối này rộng bao nhiêu". `@media` ở trên giữ lại làm
- * nền cho trình duyệt không có container query; luật dưới đây đè lên khi container hẹp.
- *
- * Container đặt trên LỚP VỎ CỦA CHÍNH TA (`.overviewPane`), không trên `.ant-tabs-tabpane`: lớp
- * của antd là chi tiết nội bộ có thể đổi giữa hai bản, và `container-type` đặt nhầm chỗ thì mọi
- * `@container` dưới đây im lặng không áp dụng — đúng kiểu hỏng không báo lỗi.
- *
- * KHÔNG đặt lên `.stack` gốc: `container-type` kéo theo `contain: layout`, và thanh CTA
- * `position: fixed` ở mobile sẽ neo vào khối đó thay vì vào khung nhìn.
- */
-.overviewPane {
-  container-type: inline-size;
-}
-
-@container (max-width: 1280px) {
-  .grid3 {
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.72fr);
-  }
-
-  .grid3 > :first-child {
-    grid-row: 1 / span 2;
-  }
-
-  .grid3 > :nth-child(2) {
-    grid-column: 2;
-    grid-row: 1;
-  }
-
-  .grid3 > :last-child {
-    grid-column: 2;
-    grid-row: 2;
-  }
-}
-
-@container (max-width: 900px) {
-  .grid3 {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .grid3 > :first-child,
-  .grid3 > :nth-child(2),
-  .grid3 > :last-child {
-    grid-column: auto;
-    grid-row: auto;
-  }
-}
-
-/*
- * ─── Bảng thông số kỹ thuật ───────────────────────────────────────────────
- *
- * antd đặt `word-break: break-word` cho ô nội dung của Descriptions. Tên nghe vô hại nhưng đó
- * là bí danh cũ, hiệu lực thật là `overflow-wrap: anywhere` — nó cho phép bẻ ở GIỮA từ và kéo
- * bề rộng tối thiểu của ô xuống còn một ký tự. Cộng với `table-layout: auto` mà biến thể
- * `bordered` đặt riêng, bảng co cột không có sàn nào, nên "Toyota" thành sáu dòng một chữ cái.
- *
- * ĐỘ ƯU TIÊN là phần dễ trượt: luật của antd là
- * `.ant-descriptions.ant-descriptions-bordered > .ant-descriptions-view > table` (0,3,1), nên
- * một selector hai lớp sẽ THUA mà không có dấu hiệu gì. Các luật dưới đây cố ý ghép đủ lớp để
- * vượt qua, chứ không dùng `!important`.
- *
- * `overflow-wrap: break-word` (không phải `anywhere`) chỉ bẻ khi một từ dài hơn cả dòng — đúng
- * thứ cần cho biển số hay tên model dài, mà không đụng tới từ bình thường. `table-layout: fixed`
- * chia cột đều nên nhãn không còn nuốt hết bề rộng của giá trị.
- */
-.specsTable:global(.ant-descriptions.ant-descriptions-bordered)
-  > :global(.ant-descriptions-view)
-  > table {
-  table-layout: fixed;
-}
-
-.specsTable :global(.ant-descriptions-row) > :global(.ant-descriptions-item-content),
-.specsTable :global(.ant-descriptions-row) > :global(.ant-descriptions-item-label) {
-  word-break: normal;
-  overflow-wrap: break-word;
-}
-
-/* Cột ảnh của thẻ hồ sơ: ảnh đại diện + dải ảnh nhỏ có nhãn vị trí (30/09/2026). */
-.profileMediaCol {
-  display: flex;
-  width: 300px;
-  flex: none;
-  flex-direction: column;
-  gap: var(--xp-space-xs);
-}
-
-@media (max-width: 640px) {
-  .profileMediaCol {
-    width: 100%;
   }
 }

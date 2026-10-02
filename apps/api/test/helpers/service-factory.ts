@@ -405,8 +405,9 @@ export function vehicleCreator(
  *
  * Trước wave chi nhánh, các spec cô lập nhau bằng cách bịa một TÊN tỉnh độc nhất rồi lọc theo
  * tên. Giờ lọc chạy bằng MÃ, nên cách cô lập cũng phải là mã: mỗi spec dùng một mã ngoài danh
- * mục chính thức (`Z1`, `Z2`…) — không đụng 34 mã thật, và `upsert` nên chạy lại sau một lần
- * test bị ngắt vẫn sạch.
+ * mục chính thức — không đụng 34 mã thật, và `upsert` nên chạy lại sau một lần test bị ngắt vẫn
+ * sạch. Mã lấy từ `TEST_PROVINCE` (`./test-provinces`), KHÔNG viết tay: hai spec chạy song song
+ * cùng một mã là spec này xoá tỉnh dưới chân spec kia.
  */
 export async function seedProvince(
   prisma: PrismaService,
