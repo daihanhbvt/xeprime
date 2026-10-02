@@ -45,10 +45,11 @@ coverage
 *.log
 **/*.log
 
-# App native không tham gia deploy web/api.
-apps/mobile/android
-apps/mobile/ios
-apps/mobile/.expo
+# App native không tham gia deploy web/api. Mỗi package mobile (customer · manage · shared) có
+# thư mục native/cache của riêng nó, nên mẫu đi qua `*/`.
+apps/mobile/*/android
+apps/mobile/*/ios
+apps/mobile/*/.expo
 
 XePrime_Project_Tracking.xlsx
 ~$*
