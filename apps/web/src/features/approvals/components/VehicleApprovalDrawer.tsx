@@ -8,9 +8,7 @@ import {
   ExclamationCircleOutlined,
   HistoryOutlined,
   InfoCircleOutlined,
-  LeftOutlined,
   PictureOutlined,
-  RightOutlined,
   ShopOutlined,
   UnorderedListOutlined,
   UserOutlined,
@@ -31,6 +29,13 @@ import {
 } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { DetailDrawer } from '@/components/overlay/DetailDrawer';
+import {
+  WORK_DRAWER_BODY_CLASS,
+  WorkDrawerFooter,
+  WorkDrawerLayout,
+  WorkDrawerPager,
+  WorkDrawerTitle,
+} from '@/components/overlay/WorkDrawer';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
@@ -188,78 +193,71 @@ export function VehicleApprovalDrawer({
           detail ? t('drawer.ariaLabel', { name: detail.vehicle.name }) : t('drawer.title')
         }
         title={
-          <div className={styles.headTitle}>
-            <span className={styles.headLabel}>{t('drawer.title')}</span>
-            {detail ? <span className={styles.headCode}>{detail.vehicle.code}</span> : null}
-            {detail ? (
-              <StatusTag
-                value={detail.approvalStatus as ApprovalStatus}
-                meta={APPROVAL_STATUS_META}
-                group="approvalStatus"
-              />
-            ) : null}
-          </div>
+          <WorkDrawerTitle
+            label={t('drawer.title')}
+            code={detail?.vehicle.code}
+            status={
+              detail ? (
+                <StatusTag
+                  value={detail.approvalStatus as ApprovalStatus}
+                  meta={APPROVAL_STATUS_META}
+                  group="approvalStatus"
+                />
+              ) : null
+            }
+          />
         }
         extra={
-          <div className={styles.headNav}>
-            <Button
-              size="small"
-              icon={<LeftOutlined />}
-              aria-label={t('drawer.previous')}
-              title={t('drawer.previous')}
-              disabled={!previousId}
-              onClick={() => previousId && leave(() => onNavigate(previousId))}
-            />
-            <Button
-              size="small"
-              icon={<RightOutlined />}
-              aria-label={t('drawer.next')}
-              title={t('drawer.next')}
-              disabled={!nextId}
-              onClick={() => nextId && leave(() => onNavigate(nextId))}
-            />
-          </div>
+          <WorkDrawerPager
+            previousId={previousId}
+            nextId={nextId}
+            onNavigate={(id) => leave(() => onNavigate(id))}
+            previousLabel={t('drawer.previous')}
+            nextLabel={t('drawer.next')}
+          />
         }
         loading={isLoading}
         error={isError && !detail}
         errorTitle={t('drawer.loadError')}
         onRetry={() => void refetch()}
-        bodyClassName={styles.body}
+        bodyClassName={WORK_DRAWER_BODY_CLASS}
         footer={
           detail ? (
             pending ? (
-              <div className={styles.footerBar}>
-                <FooterHint blocked={blocked} ready={manualComplete} />
-                <div className={styles.footerActions}>
-                  <Button
-                    onClick={() => openDialog(APPROVAL_DECISION.REQUEST_REVISION)}
-                    disabled={deciding}
-                  >
-                    {t('actions.requestRevision')}
-                  </Button>
-                  <Button
-                    danger
-                    onClick={() => openDialog(APPROVAL_DECISION.REJECT)}
-                    disabled={deciding}
-                  >
-                    {t('actions.reject')}
-                  </Button>
-                  <Button
-                    type="primary"
-                    disabled={
-                      blocked ||
-                      !manualComplete ||
-                      (deciding && busyKind !== APPROVAL_DECISION.APPROVE)
-                    }
-                    loading={busyKind === APPROVAL_DECISION.APPROVE}
-                    onClick={() => openDialog(APPROVAL_DECISION.APPROVE)}
-                  >
-                    {t('actions.approve')}
-                  </Button>
-                </div>
-              </div>
+              <WorkDrawerFooter
+                hint={<FooterHint blocked={blocked} ready={manualComplete} />}
+                actions={
+                  <>
+                    <Button
+                      onClick={() => openDialog(APPROVAL_DECISION.REQUEST_REVISION)}
+                      disabled={deciding}
+                    >
+                      {t('actions.requestRevision')}
+                    </Button>
+                    <Button
+                      danger
+                      onClick={() => openDialog(APPROVAL_DECISION.REJECT)}
+                      disabled={deciding}
+                    >
+                      {t('actions.reject')}
+                    </Button>
+                    <Button
+                      type="primary"
+                      disabled={
+                        blocked ||
+                        !manualComplete ||
+                        (deciding && busyKind !== APPROVAL_DECISION.APPROVE)
+                      }
+                      loading={busyKind === APPROVAL_DECISION.APPROVE}
+                      onClick={() => openDialog(APPROVAL_DECISION.APPROVE)}
+                    >
+                      {t('actions.approve')}
+                    </Button>
+                  </>
+                }
+              />
             ) : (
-              <span className={styles.footerHint}>{t('footer.decided')}</span>
+              <WorkDrawerFooter hint={t('footer.decided')} />
             )
           ) : null
         }
@@ -270,19 +268,22 @@ export function VehicleApprovalDrawer({
            * báo xung đột — thuộc về một xe. Sang xe khác là dựng lại từ đầu, không bao giờ mang
            * chữ của xe A sang lưu vào phiếu xe B.
            */
-          <div key={detail.approvalTaskId} ref={topRef} className={styles.layout}>
-            <div className={styles.main}>
-              <ReviewIntro detail={detail} blocked={blocked} />
-              <Collapse
-                className={styles.collapse}
-                defaultActiveKey={DEFAULT_OPEN_SECTIONS}
-                items={sectionItems(detail, t)}
-              />
-            </div>
-            <aside className={styles.side} aria-label={t('checklist.title')}>
-              <ReviewChecklist detail={detail} onNoteDirtyChange={handleNoteDirty} />
-            </aside>
-          </div>
+          <WorkDrawerLayout
+            key={detail.approvalTaskId}
+            ref={topRef}
+            sideLabel={t('checklist.title')}
+            main={
+              <>
+                <ReviewIntro detail={detail} blocked={blocked} />
+                <Collapse
+                  className={styles.collapse}
+                  defaultActiveKey={DEFAULT_OPEN_SECTIONS}
+                  items={sectionItems(detail, t)}
+                />
+              </>
+            }
+            side={<ReviewChecklist detail={detail} onNoteDirtyChange={handleNoteDirty} />}
+          />
         ) : null}
       </DetailDrawer>
 
@@ -310,14 +311,14 @@ function FooterHint({ blocked, ready }: { blocked: boolean; ready: boolean }) {
   const t = useTranslations('Approvals.footer');
   if (blocked) {
     return (
-      <span className={cx(styles.footerHint, styles.footerHintBlocked)}>
+      <span className={styles.footerHintBlocked}>
         <ExclamationCircleOutlined aria-hidden />
         {t('blocked')}
       </span>
     );
   }
   return (
-    <span className={cx(styles.footerHint, ready && styles.footerHintReady)}>
+    <span className={cx(styles.footerHintTone, ready && styles.footerHintReady)}>
       {ready ? <CheckCircleOutlined aria-hidden /> : <InfoCircleOutlined aria-hidden />}
       {ready ? t('ready') : t('hint')}
     </span>

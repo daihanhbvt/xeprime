@@ -396,7 +396,7 @@ export function vehicleCreator(
       branchId = existing?.id ?? (await seedBranch(prisma, { tenantId }));
       byTenant.set(tenantId, branchId);
     }
-    return vehicles.create(tenantId, userId, { ...dto, branchId });
+    return vehicles.create(tenantId, userId, { ...dto, branchId }, null);
   };
 }
 

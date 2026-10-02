@@ -22,6 +22,8 @@ const logout = vi.hoisted(() => vi.fn(async () => undefined));
 const nav = vi.hoisted(() => ({ pathname: '/manage/vehicles' }));
 
 vi.mock('next/navigation', () => ({
+  // Link menu mang chi nhánh theo URL (ADR 0052) — test không lọc gì nên URL sạch tham số.
+  useSearchParams: () => new URLSearchParams(),
   useRouter: () => ({ push, replace: vi.fn(), refresh: vi.fn() }),
   usePathname: () => nav.pathname,
 }));
@@ -55,26 +57,6 @@ const currentUser = vi.hoisted(() => ({ value: null as unknown }));
 
 vi.mock('@/hooks/use-current-user', () => ({
   useCurrentUser: () => ({ data: currentUser.value, isLoading: false }),
-}));
-
-/**
- * Chi nhánh: mock ở tầng HOOK SCOPE (không mock `useBranches`) để test nói đúng thứ nó quan tâm —
- * "thanh trên hiện gì với N chi nhánh", chứ không phải cách hook gọi API.
- */
-const branchScope = vi.hoisted(() => ({
-  value: {
-    branchId: null as string | null,
-    branch: null as unknown,
-    options: [] as { id: string; name: string; provinceName: string | null; isDefault: boolean }[],
-    canSelect: false,
-    isLoading: false,
-    select: vi.fn(),
-  },
-}));
-
-vi.mock('@/features/branches/hooks/use-branch-scope', () => ({
-  useBranchScope: () => branchScope.value,
-  useBranchScopeParams: () => ({}),
 }));
 
 const OWNER = {
@@ -116,14 +98,6 @@ beforeEach(() => {
   logout.mockReset();
   nav.pathname = '/manage/vehicles';
   perms.granted = new Set<string>(['tenant.view', 'vehicles.view']);
-  branchScope.value = {
-    branchId: null,
-    branch: null,
-    options: [],
-    canSelect: false,
-    isLoading: false,
-    select: vi.fn(),
-  };
 });
 
 afterEach(cleanup);
@@ -139,38 +113,22 @@ describe('Topbar — dựng', () => {
     renderTopbar();
 
     expect(screen.getByText('Thuê Xe Minh Anh')).toBeTruthy();
-    // Không có chi nhánh nào chọn được → KHÔNG dựng dropdown (điều khiển chết đã gỡ ở 1D-B).
-    expect(screen.queryByText('Tất cả chi nhánh')).toBeNull();
   });
 
-  it('gian hàng MỘT chi nhánh: hiện ngữ cảnh, không dựng dropdown một mục', () => {
-    branchScope.value = {
-      ...branchScope.value,
-      options: [{ id: 'B1', name: 'Chi nhánh Đà Nẵng', provinceName: 'Đà Nẵng', isDefault: true }],
-      canSelect: false,
-    };
+  /**
+   * ADR 0052: bộ chọn chi nhánh KHÔNG còn ở thanh trên.
+   *
+   * Nó từng hiện trên mọi trang nên đọc như một bộ lọc toàn hệ thống, trong khi chỉ sáu màn vận
+   * hành tuân theo — ví điểm, sổ thu chi, khách hàng và hội thoại thì không có gì để lọc. Test
+   * này khoá lại điều đó: một lần "tiện tay" đưa ô chọn trở lên đây là tái lập đúng cái hiểu lầm
+   * cũ, và nó sẽ lại không có cách nào sống sót qua một lần F5.
+   */
+  it('KHÔNG dựng bộ chọn chi nhánh — nó thuộc thanh lọc của từng màn (ADR 0052)', () => {
     renderTopbar();
 
-    expect(screen.getByText('Chi nhánh Đà Nẵng · Đà Nẵng')).toBeTruthy();
     expect(screen.queryByLabelText('Chi nhánh đang xem')).toBeNull();
-  });
-
-  it('gian hàng NHIỀU chi nhánh: bộ chọn là điều khiển thật, đổi được scope', () => {
-    const select = vi.fn();
-    branchScope.value = {
-      ...branchScope.value,
-      options: [
-        { id: 'B1', name: 'Chi nhánh HCM', provinceName: 'Hồ Chí Minh', isDefault: true },
-        { id: 'B2', name: 'Chi nhánh Đà Nẵng', provinceName: 'Đà Nẵng', isDefault: false },
-      ],
-      canSelect: true,
-      select,
-    };
-    renderTopbar();
-
-    // Đang ở "Tất cả chi nhánh" và ô chọn có tên truy cập được.
-    expect(screen.getByLabelText('Chi nhánh đang xem')).toBeTruthy();
-    expect(screen.getByTitle('Tất cả chi nhánh')).toBeTruthy();
+    expect(screen.queryByLabelText('Chi nhánh')).toBeNull();
+    expect(screen.queryByText('Tất cả chi nhánh')).toBeNull();
   });
 
   it('nhân sự nền tảng không thuộc gian hàng nào → không dựng khối gian hàng rỗng', () => {

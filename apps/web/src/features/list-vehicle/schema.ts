@@ -3,6 +3,7 @@ import {
   MILEAGE_LIMIT,
   SERVICE_TYPE,
   VEHICLE_OPERATION_STATUS,
+  VEHICLE_PUBLIC_MIN_IMAGES,
   VEHICLE_SOURCE_TYPE,
   VEHICLE_TYPE,
   vehicleEnergySpecPolicy,
@@ -35,6 +36,8 @@ const VEHICLE_FIELDS = [
   'vehicleCatalogModelId',
   'manufactureYear',
   'seatCount',
+  // Kiểu dáng xe (30/09/2026) — chiều 'Loại xe' khách lọc ngoài chợ; wizard nâng cao đã có.
+  'bodyType',
   'motorbikeCategory',
   'color',
   'fuelType',
@@ -48,6 +51,7 @@ const VEHICLE_FIELDS = [
   'features',
   'mainImageUrl',
   'images',
+  'media',
   'weekdayPrice',
   'discountPercent',
 ] as const satisfies ReadonlyArray<keyof VehicleFormValues>;
@@ -62,7 +66,57 @@ const money = (code: string) =>
     .nullable()
     .default(null);
 
+/** Chuỗi có chữ thật — rỗng/chỉ khoảng trắng là "chưa có". */
+const filledText = (value: unknown) => typeof value === 'string' && value.trim() !== '';
+
+/**
+ * Trường của xe mà điều kiện LÊN CHỢ đòi (30/09/2026) — bắt buộc ngay ở từng ô, báo lỗi dưới đúng
+ * ô như mọi trường khác. Cùng danh sách với `PUBLISH_REQUIREMENTS` của `@xeprime/types` (biển số,
+ * hãng + dòng xe + năm + số chỗ, ảnh đại diện, tối thiểu `VEHICLE_PUBLIC_MIN_IMAGES` ảnh).
+ * Giữ NGUYÊN luật gốc của `vehicleFormSchema` và chỉ cộng thêm phép "bắt buộc".
+ */
+const base = vehicleFormSchema.fields;
+const PUBLISH_REQUIRED_FIELDS = {
+  plateNumber: (base.plateNumber as yup.StringSchema<string | null | undefined>).test(
+    'required',
+    'plateNumberRequired',
+    filledText,
+  ),
+  brand: (base.brand as yup.StringSchema<string | null | undefined>).test(
+    'required',
+    'brandRequired',
+    filledText,
+  ),
+  // Dòng xe chọn từ danh mục (id); chữ `model` do backend chép từ danh mục lúc lưu.
+  vehicleCatalogModelId: (
+    base.vehicleCatalogModelId as yup.StringSchema<string | null | undefined>
+  ).test('required', 'modelRequired', filledText),
+  manufactureYear: (base.manufactureYear as yup.NumberSchema<number | null | undefined>).test(
+    'required',
+    'manufactureYearRequired',
+    (value) => value != null,
+  ),
+  seatCount: (base.seatCount as yup.NumberSchema<number | null | undefined>).when('vehicleType', {
+    is: VEHICLE_TYPE.CAR,
+    then: (schema) => schema.test('required', 'seatCountRequired', (value) => value != null),
+  }),
+  // Phân khúc xe máy — `vehicleFieldPolicy` đòi nó ở điều kiện danh tính của xe máy.
+  motorbikeCategory: (base.motorbikeCategory as yup.StringSchema<string | null | undefined>).when(
+    'vehicleType',
+    {
+      is: VEHICLE_TYPE.MOTORBIKE,
+      then: (schema) => schema.test('required', 'motorbikeCategoryRequired', filledText),
+    },
+  ),
+  mainImageUrl: (base.mainImageUrl as yup.StringSchema<string | null | undefined>).test(
+    'required',
+    'mainImageRequired',
+    filledText,
+  ),
+};
+
 export const quickVehicleSchema = vehicleFormSchema.pick(VEHICLE_FIELDS).shape({
+  ...PUBLISH_REQUIRED_FIELDS,
   /*
    * Giá ngày thường là thứ DUY NHẤT bắt buộc ở bước cho thuê: xe không có giá thì không lên chợ
    * được, còn mọi cấu hình khác đều có mặc định an toàn (tắt).
@@ -123,7 +177,27 @@ export const quickVehicleSchema = vehicleFormSchema.pick(VEHICLE_FIELDS).shape({
 
   /** Điều khoản riêng của chủ xe — snapshot vào yêu cầu/đơn qua `VehicleServiceSetting`. */
   termsText: yup.string().trim().max(4000, 'termsTooLong').defined().default(''),
-});
+}).test(
+  'photos-min',
+  /*
+   * Tối thiểu `VEHICLE_PUBLIC_MIN_IMAGES` ảnh — đếm như backend: ảnh đại diện ∪ thư viện, khử
+   * trùng theo URL. Kiểm ở mức object (cần cả ba trường) nhưng gắn lỗi vào `media` để hiện dưới
+   * đúng bảng ảnh.
+   */
+  function photosMin(values) {
+    const urls = new Set<string>([
+      ...(values.images ?? []),
+      ...(values.media ?? []).map((item) => item.url),
+    ]);
+    if (values.mainImageUrl) urls.add(values.mainImageUrl);
+    return urls.size >= VEHICLE_PUBLIC_MIN_IMAGES
+      ? true
+      : this.createError({
+          path: 'media',
+          message: `photosMin::${JSON.stringify({ min: VEHICLE_PUBLIC_MIN_IMAGES })}`,
+        });
+  },
+);
 
 export type QuickVehicleValues = yup.InferType<typeof quickVehicleSchema>;
 
@@ -144,6 +218,10 @@ export function missingEnergyFields(values: QuickVehicleValues): Array<keyof Qui
     missing.push('electricRangeKm');
   }
   if (policy.transmission === 'required' && !values.transmission) missing.push('transmission');
+  // Xe đốt trong cần dung tích động cơ để lên chợ — cùng ma trận `energySpecReady` của backend.
+  if (policy.engineDisplacementCc === 'required' && values.engineDisplacementCc == null) {
+    missing.push('engineDisplacementCc');
+  }
   return missing;
 }
 
@@ -158,6 +236,7 @@ export const QUICK_VEHICLE_DEFAULTS: QuickVehicleValues = {
   vehicleCatalogModelId: null,
   manufactureYear: null,
   seatCount: null,
+  bodyType: null,
   motorbikeCategory: null,
   color: '',
   fuelType: null,
@@ -171,6 +250,7 @@ export const QUICK_VEHICLE_DEFAULTS: QuickVehicleValues = {
   features: [],
   mainImageUrl: null,
   images: [],
+  media: [],
   weekdayPrice: null,
   discountPercent: null,
   discountEnabled: false,

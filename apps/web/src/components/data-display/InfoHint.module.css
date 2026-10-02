@@ -8,7 +8,9 @@
   display: inline-flex;
   padding: 0;
   border: 0;
-  margin: 0 0 0 var(--xp-space-xxs);
+  /* `--xp-space-xxs` từng được dùng ở đây nhưng không token nào khai nó ⇒ lề rơi về 0, dấu "i" dính
+     sát chữ. Thang khoảng cách thật bắt đầu từ `xs` (4px). */
+  margin: 0 0 0 var(--xp-space-xs);
   background: none;
   color: var(--xp-color-text-tertiary);
   cursor: help;

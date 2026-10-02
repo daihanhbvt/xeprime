@@ -16,6 +16,8 @@ interface VehicleClassificationFieldsProps {
   vehicleType: string;
   /** Ô kiểu dáng ô tô dùng thẻ có ảnh, nên nơi gọi tự dựng và truyền vào đây. */
   bodyTypePicker?: ReactNode;
+  /** Hiện dấu * ở số chỗ (khi loại xe cần) — wizard thêm xe nhanh bắt buộc đủ điều kiện lên chợ. */
+  required?: boolean;
   disabled?: boolean;
   /** Dọn ô không còn nghĩa khi đổi loại xe — form phải hiện đúng thứ sắp được lưu. */
   setValue?: UseFormSetValue<VehicleFormValues>;
@@ -38,6 +40,7 @@ export function VehicleClassificationFields({
   bodyTypePicker,
   disabled,
   setValue,
+  required = false,
 }: VehicleClassificationFieldsProps) {
   const t = useTranslations('Vehicles.form.specs');
   const domainLabel = useDomainLabel();
@@ -72,6 +75,7 @@ export function VehicleClassificationFields({
             control={control}
             name="seatCount"
             label={t('seatCount')}
+            required={required && policy.seatCount === 'required'}
             placeholder={t('seatPlaceholder')}
             min={1}
             max={64}
@@ -86,6 +90,7 @@ export function VehicleClassificationFields({
             control={control}
             name="motorbikeCategory"
             label={t('motorbikeCategory')}
+            required={required && policy.motorbikeCategory === 'required'}
             options={categoryOptions}
             placeholder={t('motorbikeCategoryPlaceholder')}
             help={t('motorbikeCategoryHelp')}

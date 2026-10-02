@@ -1,5 +1,5 @@
 import { ALL_FILTER, DEFAULT_PAGE_SIZE } from '@/constants/filters';
-import { apiGet, apiPatch, apiPost, fetchPage, type Paged } from '@/services/api-client';
+import { apiDelete, apiGet, apiPatch, apiPost, fetchPage, type Paged } from '@/services/api-client';
 import type {
   AssignSubscriptionInput,
   CreatePlanInput,
@@ -21,6 +21,12 @@ export const updatePlan = (id: string, body: UpdatePlanInput): Promise<Plan> =>
 
 export const archivePlan = (id: string): Promise<Plan> =>
   apiPost<Plan>(`/platform/plans/${id}/archive`);
+
+export const activatePlan = (id: string): Promise<Plan> =>
+  apiPost<Plan>(`/platform/plans/${id}/activate`);
+
+/** Xoá HẲN — chỉ gói chưa từng được dùng (`Plan.deletable`); đã dùng thì server trả PLAN_IN_USE. */
+export const deletePlan = (id: string): Promise<void> => apiDelete<void>(`/platform/plans/${id}`);
 
 export type SubscriptionListResult = Paged<Subscription>;
 

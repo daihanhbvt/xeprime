@@ -366,8 +366,8 @@
     "escrow_hold": "Thu giữ chỗ qua sàn"
   },
   "planStatus": {
-    "active": "Đang bán",
-    "archived": "Ngừng bán"
+    "active": "Đang hoạt động",
+    "archived": "Ngừng hoạt động"
   },
   "platformRole": {
     "platform_admin": "Super Admin",
@@ -851,7 +851,8 @@
     "approved": "Đã duyệt, chờ chuyển",
     "paid": "Đã chuyển",
     "rejected": "Bị từ chối",
-    "cancelled": "Đã huỷ"
+    "cancelled": "Đã huỷ",
+    "reversed": "Chuyển không thành công"
   },
   "insurancePolicyStatus": {
     "reserved": "Đã thu phí, chờ bàn giao",
@@ -1001,5 +1002,12 @@
     "business_license": "Giấy phép kinh doanh",
     "contract": "Hợp đồng",
     "other": "Giấy tờ khác"
+  },
+  "allocationTarget": {
+    "customer_balance": "Hoàn cho khách",
+    "owner_balance": "Ví chủ xe",
+    "platform_revenue": "Doanh thu XePrime",
+    "insurer_payable": "Phải trả hãng bảo hiểm",
+    "tax_ledger": "Thuế giữ để nộp thay"
   }
 }

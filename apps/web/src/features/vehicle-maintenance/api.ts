@@ -138,6 +138,7 @@ export function boardFiltersToParams(filters: MaintenanceBoardFilters): QueryPar
     ...(filters.filter && filters.filter !== 'all' ? { filter: filters.filter } : {}),
     ...(filters.q ? { q: filters.q } : {}),
     ...(filters.type && filters.type !== 'all' ? { type: filters.type } : {}),
+    ...(filters.branchId ? { branchId: filters.branchId } : {}),
     ...(filters.from ? { from: filters.from } : {}),
     ...(filters.to ? { to: filters.to } : {}),
     ...(filters.sort ? { sort: filters.sort } : {}),
@@ -151,5 +152,7 @@ export const fetchMaintenanceBoard = (
 ): Promise<Paged<MaintenanceBoardItem>> =>
   fetchPage<MaintenanceBoardItem>('/maintenance', params, MAINTENANCE_DEFAULT_LIMIT);
 
-export const fetchMaintenanceBoardSummary = (): Promise<MaintenanceBoardSummary> =>
-  apiGet<MaintenanceBoardSummary>('/maintenance/summary');
+export const fetchMaintenanceBoardSummary = (
+  params: QueryParams = {},
+): Promise<MaintenanceBoardSummary> =>
+  apiGet<MaintenanceBoardSummary>('/maintenance/summary', params);

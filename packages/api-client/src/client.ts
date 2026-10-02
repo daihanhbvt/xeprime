@@ -18,9 +18,16 @@ export interface ApiRequestOptions {
  * Tên `items` (không phải `data`) là cố ý: chỗ gọi thường destructure cạnh các giá trị khác
  * (`const { items, meta } = ...`), và `data` ở đó không nói được nó là danh sách gì.
  */
-export interface Paged<T> {
+/**
+ * Một TRANG dữ liệu.
+ *
+ * `TMeta` mở rộng được vì vài endpoint trả thêm số liệu đi kèm trang — ví dụ sổ thu chi kèm số
+ * khoản chung bị bỏ ra khi lọc chi nhánh (ADR 0052). Mặc định vẫn là `PaginationMeta` nên mọi
+ * nơi gọi cũ không phải đổi gì.
+ */
+export interface Paged<T, TMeta extends PaginationMeta = PaginationMeta> {
   items: T[];
-  meta: PaginationMeta;
+  meta: TMeta;
 }
 
 export interface ApiClientOptions {
@@ -326,11 +333,13 @@ export function apiDelete<TData>(path: string, body?: unknown): Promise<TData> {
   return getApiClient().delete<TData>(path, body);
 }
 
-export function fetchPage<T>(
+export function fetchPage<T, TMeta extends PaginationMeta = PaginationMeta>(
   path: string,
   query: QueryParams,
   fallbackLimit: number,
   options?: { signal?: AbortSignalLike },
-): Promise<Paged<T>> {
-  return getApiClient().fetchPage<T>(path, query, fallbackLimit, options);
+): Promise<Paged<T, TMeta>> {
+  return getApiClient().fetchPage<T>(path, query, fallbackLimit, options) as Promise<
+    Paged<T, TMeta>
+  >;
 }

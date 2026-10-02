@@ -4,20 +4,6 @@
   gap: var(--xp-space-md);
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: var(--xp-space-md);
-  align-items: start;
-}
-
-.column {
-  display: flex;
-  flex-direction: column;
-  gap: var(--xp-space-md);
-  min-width: 0;
-}
-
 .address {
   margin: 0;
   color: var(--xp-color-text);
@@ -36,8 +22,16 @@
   font-size: var(--xp-font-size-body-sm);
 }
 
-@media (max-width: 900px) {
-  .grid {
+/* Form + cột xem nhanh — cùng bố cục với màn sửa xe ở cổng quản lý. */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  align-items: start;
+  gap: var(--xp-space-md);
+}
+
+@media (max-width: 1200px) {
+  .layout {
     grid-template-columns: minmax(0, 1fr);
   }
 }

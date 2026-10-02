@@ -118,7 +118,7 @@ const maybe = (name: string, fn: () => Promise<void>) =>
 
 describe('Tạo & bất biến mặc định', () => {
   maybe('chi nhánh đầu tiên tự thành mặc định, mã sinh ở server', async () => {
-    const list = await branches.list(tenantId, {});
+    const list = await branches.list(tenantId, {}, null);
     const root = list.items.find((b) => b.id === defaultBranchId);
     expect(root?.isDefault).toBe(true);
     expect(root?.code).toBe('CN01');
@@ -186,14 +186,14 @@ describe('Cô lập giữa các gian hàng', () => {
         name: 'Xe lậu',
         vehicleType: VEHICLE_TYPE.CAR,
         branchId: foreign.id,
-      }),
+      }, null),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.NOT_FOUND } });
     await prisma.tenantBranch.delete({ where: { id: foreign.id } });
   });
 
   maybe('danh sách chỉ trả chi nhánh của gian hàng hiện tại', async () => {
-    const mine = await branches.list(tenantId, {});
-    const theirs = await branches.list(otherTenantId, {});
+    const mine = await branches.list(tenantId, {}, null);
+    const theirs = await branches.list(otherTenantId, {}, null);
     expect(mine.items.some((b) => b.id === defaultBranchId)).toBe(true);
     expect(theirs.items.some((b) => b.id === defaultBranchId)).toBe(false);
   });
@@ -212,7 +212,7 @@ describe('Vòng đời chi nhánh', () => {
         name: 'Xe mới',
         vehicleType: VEHICLE_TYPE.CAR,
         branchId: b.id,
-      }),
+      }, null),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
 
     await branches.activate(tenantId, b.id, ownerId);
@@ -234,7 +234,7 @@ describe('Vòng đời chi nhánh', () => {
       name: 'Xe ở chi nhánh',
       vehicleType: VEHICLE_TYPE.CAR,
       branchId: b.id,
-    });
+    }, null);
 
     await expect(branches.deactivate(tenantId, b.id, ownerId)).rejects.toMatchObject({
       response: {
@@ -280,7 +280,7 @@ describe('Vòng đời chi nhánh', () => {
       name: 'Xe giữ chi nhánh',
       vehicleType: VEHICLE_TYPE.CAR,
       branchId: b.id,
-    });
+    }, null);
 
     await expect(prisma.tenantBranch.delete({ where: { id: b.id } })).rejects.toThrow();
 
@@ -323,7 +323,7 @@ describe('Vị trí công khai bám theo chi nhánh', () => {
       name: 'Xe Đà Nẵng',
       vehicleType: VEHICLE_TYPE.CAR,
     });
-    await vehicles.update(tenantId, v.id, ownerId, { branchId: danang.id });
+    await vehicles.update(tenantId, v.id, ownerId, { branchId: danang.id }, null);
     // Snapshot chỉ tồn tại khi xe đã công khai — đặt trạng thái rồi sync như đường duyệt thật.
     await prisma.vehicle.update({
       where: { id: v.id },
@@ -362,7 +362,7 @@ describe('Vị trí công khai bám theo chi nhánh', () => {
       name: 'Xe audit',
       vehicleType: VEHICLE_TYPE.CAR,
     });
-    await vehicles.update(tenantId, v.id, ownerId, { branchId: b.id });
+    await vehicles.update(tenantId, v.id, ownerId, { branchId: b.id }, null);
 
     const log = await prisma.auditLog.findFirst({
       where: { tenantId, action: 'vehicle.branch.reassign', targetId: v.id },
@@ -478,13 +478,13 @@ describe('Bộ lọc chi nhánh ở danh sách xe', () => {
       name: 'Xe trong chi nhánh',
       vehicleType: VEHICLE_TYPE.CAR,
       branchId: b.id,
-    });
+    }, null);
     const inDefault = await createVehicle(tenantId, ownerId, {
       name: 'Xe chi nhánh mặc định',
       vehicleType: VEHICLE_TYPE.CAR,
     });
 
-    const filtered = await vehicles.list(tenantId, { branchId: b.id, limit: 50 });
+    const filtered = await vehicles.list(tenantId, { branchId: b.id, limit: 50 }, null);
     const ids = filtered.data.map((v) => v.id);
     expect(ids).toContain(inBranch.id);
     expect(ids).not.toContain(inDefault.id);
@@ -495,10 +495,10 @@ describe('Bộ lọc chi nhánh ở danh sách xe', () => {
       name: 'Chi nhánh ngoài',
       provinceCode: HCM,
     });
-    const leaked = await vehicles.list(tenantId, { branchId: foreign.id, limit: 50 });
+    const leaked = await vehicles.list(tenantId, { branchId: foreign.id, limit: 50 }, null);
     expect(leaked.data).toHaveLength(0);
 
-    const counts = await branches.list(tenantId, {});
+    const counts = await branches.list(tenantId, {}, null);
     expect(counts.items.find((x) => x.id === b.id)?.vehicleCount).toBe(1);
 
     await prisma.publicListing.deleteMany({
@@ -547,7 +547,7 @@ describe('Chi nhánh phải có tỉnh mới lên chợ được', () => {
         'https://img.example/branch-2.jpg',
         'https://img.example/branch-3.jpg',
       ],
-    });
+    }, null);
 
     /*
      * ADR 0036: "chi nhánh chưa có tỉnh" là MỘT MỤC trong danh sách điều kiện lên chợ, không

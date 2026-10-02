@@ -1,0 +1,825 @@
+import { Ionicons } from '@expo/vector-icons';
+import { Text, XStack, YStack } from 'tamagui';
+import { useTranslations } from 'use-intl';
+import { Controller, useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
+import {
+  CATALOG_TYPE,
+  SERVICE_TYPE,
+  SERVICE_TYPE_VALUES,
+  vehicleFeatureAppliesTo,
+  VEHICLE_OPERATION_STATUS_VALUES,
+  VEHICLE_SOURCE_TYPE_VALUES,
+  VEHICLE_TYPE,
+  VEHICLE_TYPE_VALUES,
+  type VehicleSourceType,
+} from '@xeprime/types';
+import type { VehicleFormValues } from '@xeprime/validators';
+import { BlockTitle } from '@/components/ui/BlockTitle';
+import { Card } from '@/components/ui/Card';
+import { Chip } from '@/components/ui/Chip';
+import { FieldLabel } from '@/components/ui/Field';
+import { ImageUploadField } from '@/components/ui/ImageUploadField';
+import { MoneyField } from '@/components/ui/MoneyField';
+import { NumberField } from '@/components/ui/NumberField';
+import { RadioOption } from '@/components/ui/RadioOption';
+import { SelectField } from '@/components/ui/SelectField';
+import { TextField } from '@/components/ui/TextField';
+import { LongTermPriceHint } from '@/features/rental-policies/components/LongTermPriceHint';
+import { ToggleRow } from '@/features/rental-policies/components/PolicySections';
+import { CatalogCardPicker } from '@/features/catalog/components/CatalogCardPicker';
+import { useCatalog } from '@/features/catalog/use-catalog';
+import { VehicleClassificationFields } from './VehicleClassificationFields';
+import { VehicleEnergyFields, useTransmissionOptions } from './VehicleEnergyFields';
+import { VehicleIdentityFields } from './VehicleIdentityFields';
+import { useDomainLabel } from '@/i18n/domain';
+import { useAppFormat } from '@/i18n/use-app-format';
+import { layout } from '@/theme/layout';
+import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { uploadsApi } from '../api';
+import { discountedPriceVnd } from '../pricing';
+
+interface StepProps {
+  control: Control<VehicleFormValues>;
+  isCar: boolean;
+}
+
+/** Nhãn nhóm bên trong một bước — nhỏ, viết hoa, mờ. */
+function GroupTitle({ children }: { children: string }) {
+  return (
+    <Text col={colors.textMuted} fos={fontSize.label} fow={fontWeight.semibold}>
+      {children.toUpperCase()}
+    </Text>
+  );
+}
+
+/**
+ * Cảnh báo/gợi ý một dòng — thay `<Alert>` của AntD.
+ *
+ * CÓ biểu tượng, đúng `showIcon` mà mọi `<Alert>` của web đều bật. Không có nó, một khối màu
+ * vàng nhạt kèm chữ đậm đọc ra hệt như một tiêu đề khác của form; hình tam giác cảnh báo là thứ
+ * duy nhất phân biệt "đọc đi" với "đây là mục tiếp theo".
+ */
+export function Notice({
+  tone,
+  title,
+  body,
+}: {
+  tone: 'info' | 'warning';
+  title: string;
+  body?: string;
+}) {
+  const skin =
+    tone === 'warning'
+      ? { fg: colors.warning, bg: colors.warningSurface, icon: 'warning-outline' as const }
+      : { fg: colors.info, bg: colors.infoSurface, icon: 'information-circle-outline' as const };
+
+  return (
+    <XStack bg={skin.bg} br={radius.sm} p={space.sm} gap={space.xs} ai="center">
+      <Ionicons name={skin.icon} size={iconSize.sm} color={skin.fg} />
+      <YStack f={1} gap={2}>
+        <Text col={skin.fg} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+          {title}
+        </Text>
+        {body ? (
+          <Text col={colors.textMuted} fos={fontSize.bodySm}>
+            {body}
+          </Text>
+        ) : null}
+      </YStack>
+    </XStack>
+  );
+}
+
+/**
+ * Bước 1 — thông tin cơ bản + thông số vận hành + hình thức nguồn xe.
+ *
+ * Trạng thái vận hành KHÔNG hỏi lúc tạo (xe mới mặc định "Sẵn sàng") — đúng như web: hỏi ngay
+ * lúc onboarding là một câu thừa.
+ */
+export function BasicStep({
+  control,
+  branchOptions,
+  branchLoading,
+  codeReadOnly = false,
+  lockedNotice,
+}: Pick<StepProps, 'control'> & {
+  branchOptions: readonly { value: string; label: string }[];
+  branchLoading: boolean;
+  /**
+   * Mã xe chỉ ĐỌC — màn sửa bật, wizard tạo thì không, đúng `codeReadOnly` của web.
+   *
+   * Mã là định danh nội bộ đã đi vào phiếu thu chi, đơn thuê và hợp đồng của xe; đổi nó ở một
+   * form thông tin là đổi thứ mà mọi chứng từ cũ đang trỏ tới.
+   */
+  codeReadOnly?: boolean;
+  /**
+   * Xe đang CÔNG KHAI: backend từ chối đổi `vehicleType`/`plateNumber`/`transmission`/
+   * `fuelType`/`manufactureYear` (409 `VEHICLE_FIELD_LOCKED` — `assertNoLockedFieldChange`).
+   * Có giá trị = khoá ô, đúng `lockedNotice` của `VehicleEditWorkspace` bên web: khoá field
+   * bằng `disabled` + đổi hẳn dòng gợi ý, không phải ẩn đi hay chặn lúc lưu.
+   */
+  lockedNotice?: string;
+}) {
+  const t = useTranslations('Vehicles.form');
+  const domainLabel = useDomainLabel();
+  const vehicleTypeOptions = VEHICLE_TYPE_VALUES.map((value) => ({
+    value,
+    label: domainLabel('vehicleType', value),
+  }));
+
+  return (
+    <YStack gap={space.md}>
+      <GroupTitle>{t('sections.basic')}</GroupTitle>
+
+      <TextField
+        control={control}
+        name="name"
+        label={t('basic.name')}
+        placeholder={t('basic.namePlaceholder')}
+        required
+      />
+      <TextField
+        control={control}
+        name="code"
+        label={t('basic.code')}
+        placeholder={t('basic.codePlaceholder')}
+        editable={!codeReadOnly}
+      />
+      {/*
+        Chi nhánh = VỊ TRÍ CÔNG KHAI của xe. Ngay cả khi gian hàng chỉ có một chi nhánh, ô này vẫn
+        hiện (đã chọn sẵn) để người dùng biết xe sẽ hiển thị ở tỉnh nào — một trường bị ẩn là một
+        quyết định không ai nhìn thấy.
+      */}
+      <SelectField
+        control={control}
+        name="branchId"
+        label={t('basic.branch')}
+        options={branchOptions}
+        hint={branchLoading ? undefined : t('basic.branchHelp')}
+        required
+      />
+      <SelectField
+        control={control}
+        name="vehicleType"
+        label={t('basic.vehicleType')}
+        options={vehicleTypeOptions}
+        disabled={Boolean(lockedNotice)}
+        {...(lockedNotice ? { hint: lockedNotice } : {})}
+        required
+      />
+
+      {/* MẢNG dịch vụ — một xe đăng đồng thời tự lái / có tài xế / dài hạn. */}
+      <ServiceTypesField control={control} />
+      <ServicePriceRemovalWarning control={control} />
+    </YStack>
+  );
+}
+
+/**
+ * Thông số vận hành — biển số, hãng, đời, chỗ ngồi, nhiên liệu, màu, kiểu dáng.
+ *
+ * Khối RIÊNG chứ không nằm trong `BasicStep`, vì hai nơi gọi xếp nó khác nhau và web cũng vậy:
+ * wizard tạo xe nối thẳng sau khối cơ bản dưới một tiêu đề phụ, còn màn sửa cho nó hẳn một thẻ
+ * "Thông số kỹ thuật" đứng sau thẻ "Quản lý trạng thái".
+ */
+export function SpecsSection({
+  control,
+  isCar,
+  lockedNotice,
+  setValue,
+}: StepProps & {
+  /** Xem docblock của `BasicStep` — cùng cơ chế khoá `plateNumber`/`manufactureYear`/`fuelType`. */
+  lockedNotice?: string;
+  /**
+   * Dọn ô không còn nghĩa khi đổi loại xe / hãng / nguồn năng lượng — ba khối dùng chung bên
+   * dưới tự làm việc đó. Thiếu nó thì form giữ lại một mẫu xe hoặc một con số mà server sẽ xoá.
+   */
+  setValue?: UseFormSetValue<VehicleFormValues>;
+}) {
+  const t = useTranslations('Vehicles.form');
+  const vehicleType = isCar ? VEHICLE_TYPE.CAR : VEHICLE_TYPE.MOTORBIKE;
+  const fuelType = useWatch({ control, name: 'fuelType' });
+  const transmissionOptions = useTransmissionOptions(vehicleType, fuelType);
+
+  return (
+    <YStack gap={space.md}>
+      <TextField
+        control={control}
+        name="plateNumber"
+        label={t('specs.plateNumber')}
+        publishRequired
+        placeholder={t('specs.platePlaceholder')}
+        hint={lockedNotice ?? t('specs.plateHelp')}
+        autoCapitalize="characters"
+        editable={!lockedNotice}
+      />
+
+      {/*
+        Hãng → Mẫu xe: cặp chọn phụ thuộc dùng chung với wizard đăng nhanh. Client gửi
+        `vehicleCatalogModelId`, backend chép nhãn hãng/mẫu xuống — nên không có đường nào lưu
+        được một chiếc xe máy hiệu Toyota.
+      */}
+      <VehicleIdentityFields
+        control={control}
+        vehicleType={vehicleType}
+        disabled={Boolean(lockedNotice)}
+        {...(lockedNotice ? { lockedNotice } : {})}
+        {...(setValue ? { setValue } : {})}
+      />
+
+      <NumberField
+        control={control}
+        name="manufactureYear"
+        grouped={false}
+        integer
+        label={t('specs.manufactureYear')}
+        placeholder={String(new Date().getFullYear())}
+        min={1980}
+        max={new Date().getFullYear() + 1}
+        {...(lockedNotice ? { hint: lockedNotice } : {})}
+        editable={!lockedNotice}
+      />
+      <TextField
+        control={control}
+        name="color"
+        label={t('specs.color')}
+        placeholder={t('specs.colorPlaceholder')}
+      />
+
+      {/*
+        Phân loại: ô tô có số chỗ + kiểu dáng thân xe, xe máy có phân khúc. Hai chiều đối xứng và
+        loại trừ nhau — ma trận `vehicleFieldPolicy` quyết định, không phải cờ `isCar` rải rác.
+      */}
+      <VehicleClassificationFields
+        control={control}
+        vehicleType={vehicleType}
+        bodyTypePicker={<BodyTypePicker control={control} />}
+        disabled={Boolean(lockedNotice)}
+        {...(setValue ? { setValue } : {})}
+      />
+
+      {/*
+        Nguồn năng lượng + thông số của nó: xe xăng hỏi lít/100km, xe điện hỏi km mỗi lần sạc.
+        Cùng khối với wizard đăng xe nhanh, cùng ma trận `vehicleEnergySpecPolicy` mà backend dùng.
+      */}
+      <VehicleEnergyFields
+        control={control}
+        vehicleType={vehicleType}
+        transmissionOptions={transmissionOptions}
+        disabled={Boolean(lockedNotice)}
+        {...(lockedNotice ? { lockedNotice } : {})}
+        {...(setValue ? { setValue } : {})}
+      />
+    </YStack>
+  );
+}
+
+/**
+ * Kiểu dáng xe — thẻ có ảnh thay vì danh sách chữ.
+ *
+ * Đây chính là chiều "Loại xe" khách dùng để lọc ngoài chợ, nên chọn sai là xe không ai tìm
+ * thấy; ảnh minh hoạ làm việc chọn tường minh hơn hẳn một danh sách "CUV / SUV / MPV" bằng chữ.
+ * Cùng component với bộ lọc chợ xe (`CatalogCardPicker`) nên hai màn không thể lệch ảnh.
+ */
+function BodyTypePicker({ control }: { control: Control<VehicleFormValues> }) {
+  const t = useTranslations('Vehicles.form.specs');
+  const { catalog } = useCatalog();
+  const items = catalog[CATALOG_TYPE.BODY_TYPE] ?? [];
+
+  return (
+    <YStack gap={space.xs}>
+      <FieldLabel label={t('bodyType')} />
+      <Text col={colors.textMuted} fos={fontSize.label}>
+        {t('bodyTypeHint')}
+      </Text>
+      <Controller
+        control={control}
+        name="bodyType"
+        render={({ field }) => (
+          <CatalogCardPicker
+            ariaLabel={t('bodyType')}
+            items={items}
+            value={field.value ? [field.value] : []}
+            /* MỘT kiểu dáng cho một chiếc xe — bộ chọn là đa trị, ở đây chỉ lấy mục cuối. */
+            onChange={(next) => field.onChange(next[next.length - 1] ?? null)}
+          />
+        )}
+      />
+    </YStack>
+  );
+}
+
+/**
+ * Hình thức nguồn xe — sở hữu / trả góp / thuê lại / hợp tác.
+ *
+ * CHỈ có ở wizard TẠO xe, đúng như web: `VehicleForm` dựng `SourceTypeSection` ở bước 1, còn
+ * `VehicleEditWorkspace` thì không — hồ sơ nguồn xe của một xe đã tồn tại sống ở tab "Nguồn xe
+ * & tài chính" với đầy đủ hợp đồng và kỳ thanh toán, và hỏi lại mỗi hình thức ở form thông tin
+ * là mở một đường sửa thứ hai cho cùng một dữ liệu.
+ */
+export function SourceTypeSection({ control }: { control: Control<VehicleFormValues> }) {
+  const t = useTranslations('Vehicles.form');
+
+  return (
+    <YStack gap={space.md}>
+      <GroupTitle>{t('source.legend')}</GroupTitle>
+      <Text col={colors.textMuted} fos={fontSize.bodySm}>
+        {t('source.description')}
+      </Text>
+      <SourceTypeField control={control} />
+      <Notice tone="info" title={t('source.hint')} />
+    </YStack>
+  );
+}
+
+/**
+ * Dịch vụ xe phục vụ được — nhiều lựa chọn, nên là hàng chip bật/tắt chứ không phải menu:
+ * một menu không cho thấy tổ hợp nào đang bật.
+ */
+function ServiceTypesField({ control }: { control: Control<VehicleFormValues> }) {
+  const t = useTranslations('Vehicles.form.basic');
+  const domainLabel = useDomainLabel();
+
+  return (
+    <Controller
+      control={control}
+      name="serviceTypes"
+      render={({ field, fieldState }) => {
+        const selected = field.value ?? [];
+        return (
+          <YStack gap={space.xs}>
+            <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
+              {t('serviceTypes')}
+            </Text>
+            <XStack flexWrap="wrap" gap={space.xs}>
+              {SERVICE_TYPE_VALUES.map((value) => {
+                const active = selected.includes(value);
+                return (
+                  <Chip
+                    key={value}
+                    label={domainLabel('serviceType', value)}
+                    selected={active}
+                    onPress={() =>
+                      field.onChange(
+                        active ? selected.filter((item) => item !== value) : [...selected, value],
+                      )
+                    }
+                  />
+                );
+              })}
+            </XStack>
+            <Text col={fieldState.error ? colors.danger : colors.textMuted} fos={fontSize.label}>
+              {fieldState.error?.message ?? t('serviceTypesHelp')}
+            </Text>
+          </YStack>
+        );
+      }}
+    />
+  );
+}
+
+/** Bốn hình thức nguồn xe — mỗi lựa chọn kèm một câu mô tả, nên là radio chứ không phải menu. */
+function SourceTypeField({ control }: { control: Control<VehicleFormValues> }) {
+  const t = useTranslations('Vehicles.form.source');
+  const domainLabel = useDomainLabel();
+
+  /*
+   * Liệt kê tường minh cả bốn nhánh (thay cho một chuỗi ba ngôi) nên thêm một hình thức nguồn xe
+   * mới là lỗi biên dịch ngay tại đây, không phải một ô mô tả trống lúc chạy.
+   */
+  const description: Record<VehicleSourceType, string> = {
+    owned: t('owned'),
+    financed: t('financed'),
+    rented: t('rented'),
+    partnership: t('partnership'),
+  };
+
+  return (
+    <Controller
+      control={control}
+      name="sourceType"
+      render={({ field, fieldState }) => (
+        <YStack gap={space.xs}>
+          {VEHICLE_SOURCE_TYPE_VALUES.map((value) => (
+            <RadioOption
+              key={value}
+              label={domainLabel('vehicleSourceType', value)}
+              hint={description[value]}
+              checked={field.value === value}
+              onPress={() => field.onChange(value)}
+            />
+          ))}
+          {fieldState.error?.message ? (
+            <Text col={colors.danger} fos={fontSize.label}>
+              {fieldState.error.message}
+            </Text>
+          ) : null}
+        </YStack>
+      )}
+    />
+  );
+}
+
+/**
+ * Cảnh báo NGAY khi bỏ một dịch vụ mà xe đang có giá chuyên biệt: lưu là giá đó bị xoá theo
+ * (server `orphanPriceClears`), thêm lại dịch vụ thì phải nhập giá lại. Đây là lời báo trước;
+ * nút Lưu bấm sau khi đã thấy cảnh báo chính là xác nhận.
+ */
+function ServicePriceRemovalWarning({ control }: { control: Control<VehicleFormValues> }) {
+  const t = useTranslations('Vehicles.form.warnings');
+  const serviceTypes = useWatch({ control, name: 'serviceTypes' }) ?? [];
+  const monthlyPrice = useWatch({ control, name: 'monthlyPrice' });
+  const withDriverDailyPrice = useWatch({ control, name: 'withDriverDailyPrice' });
+  const withDriverInterCityPrice = useWatch({ control, name: 'withDriverInterCityPrice' });
+  const withDriverOneWayPrice = useWatch({ control, name: 'withDriverOneWayPrice' });
+
+  const losses: string[] = [];
+  if (!serviceTypes.includes(SERVICE_TYPE.LONG_TERM) && monthlyPrice != null) {
+    losses.push(t('lossMonthly'));
+  }
+  if (
+    !serviceTypes.includes(SERVICE_TYPE.WITH_DRIVER) &&
+    (withDriverDailyPrice != null ||
+      withDriverInterCityPrice != null ||
+      withDriverOneWayPrice != null)
+  ) {
+    losses.push(t('lossWithDriver'));
+  }
+  if (losses.length === 0) return null;
+
+  /*
+   * Nối bằng MESSAGE, không bằng `losses.join(' và ')`: liên từ là chữ, và tiếng Anh dùng "and"
+   * ở đúng chỗ này. Chỉ có tối đa hai mục nên không cần `Intl.ListFormat`.
+   */
+  const summary =
+    losses.length === 1 ? losses[0]! : t('lossJoin', { first: losses[0]!, second: losses[1]! });
+
+  return (
+    <Notice
+      tone="warning"
+      title={t('priceRemovalTitle', { losses: summary })}
+      body={t('priceRemovalBody')}
+    />
+  );
+}
+
+/**
+ * Bước 2 — giá thuê & chính sách.
+ *
+ * Ô giá dài hạn / có tài xế CHỈ hiện khi xe đăng dịch vụ đó ở bước 1 — không bắt chủ xe nhìn hai
+ * ô giá vô nghĩa với một chiếc xe chỉ cho thuê tự lái.
+ */
+export function PricingStep({ control }: StepProps) {
+  const t = useTranslations('Vehicles.form.prices');
+  const tPolicies = useTranslations('Vehicles.form.policies');
+  const tWizard = useTranslations('Vehicles.form.wizard');
+  const fmt = useAppFormat();
+  const serviceTypes = useWatch({ control, name: 'serviceTypes' }) ?? [];
+  const offersLongTerm = serviceTypes.includes(SERVICE_TYPE.LONG_TERM);
+  const offersWithDriver = serviceTypes.includes(SERVICE_TYPE.WITH_DRIVER);
+  /*
+   * Đọc vô điều kiện (rules of hooks) — gợi ý giá tháng chỉ RENDER khi xe có dịch vụ dài hạn.
+   * Cùng component với tab Giá & chính sách: hai bề mặt không được khuyên khác nhau.
+   */
+  const weekdayPrice = useWatch({ control, name: 'weekdayPrice' });
+  const monthlyPrice = useWatch({ control, name: 'monthlyPrice' });
+  /*
+   * GIÁ HIỂN THỊ TRÊN SÀN sau khi trừ khuyến mãi trực tiếp — chỉ để XEM, không gửi lên API:
+   * backend tự tính lại khi dựng `public_listings` (ADR 0008).
+   *
+   * Đặt ở cuối khối giá, trước công tắc giao xe — đúng chỗ web đặt nó (`PricesSection`). Người
+   * đang gõ hai con số rời nhau (giá ngày + % giảm) cần thấy TÍCH của chúng ngay tại đây; để họ
+   * tự nhân nhẩm là cách một chiếc xe lên chợ với mức giá chủ xe không định đưa ra.
+   */
+  const discountPercent = useWatch({ control, name: 'discountPercent' });
+  const discounted = discountedPriceVnd(
+    weekdayPrice == null ? null : String(weekdayPrice),
+    discountPercent,
+  );
+
+  return (
+    <YStack gap={space.md}>
+      <MoneyField
+        control={control}
+        name="weekdayPrice"
+        label={t('weekday')}
+        publishRequired
+        placeholder={t('weekdayPlaceholder')}
+        hint={t('weekdayHelp')}
+      />
+      <MoneyField
+        control={control}
+        name="weekendPrice"
+        label={t('weekend')}
+        placeholder={t('weekendPlaceholder')}
+        hint={t('weekendHelp')}
+      />
+      <MoneyField
+        control={control}
+        name="hourlyPrice"
+        label={t('hourly')}
+        placeholder={t('hourlyPlaceholder')}
+      />
+      <NumberField
+        control={control}
+        name="discountPercent"
+        percent
+        label={t('discountPercent')}
+        placeholder={t('discountPlaceholder')}
+        hint={t('discountHelp')}
+      />
+
+      {offersLongTerm ? (
+        <>
+          <MoneyField
+            control={control}
+            name="monthlyPrice"
+            label={t('monthly')}
+            publishRequired
+            placeholder={t('monthlyPlaceholder')}
+            hint={t('monthlyHelp')}
+          />
+          <LongTermPriceHint weekdayPrice={weekdayPrice} monthlyPrice={monthlyPrice} />
+        </>
+      ) : null}
+
+      {offersWithDriver ? (
+        <>
+          <MoneyField
+            control={control}
+            name="withDriverDailyPrice"
+            label={t('withDriverDaily')}
+            publishRequired
+            placeholder={t('withDriverDailyPlaceholder')}
+            hint={t('withDriverDailyHelp')}
+          />
+          <MoneyField
+            control={control}
+            name="withDriverInterCityPrice"
+            label={t('withDriverInterCity')}
+            placeholder={t('withDriverInterCityPlaceholder')}
+            hint={t('withDriverInterCityHelp')}
+          />
+          <MoneyField
+            control={control}
+            name="withDriverOneWayPrice"
+            label={t('withDriverOneWay')}
+            placeholder={t('withDriverOneWayPlaceholder')}
+            hint={t('withDriverOneWayHelp')}
+          />
+        </>
+      ) : null}
+
+      {discounted != null ? (
+        <Notice tone="info" title={tWizard('pricePreview', { price: fmt.money(discounted) })} />
+      ) : null}
+
+      <Controller
+        control={control}
+        name="deliveryEnabled"
+        render={({ field }) => (
+          <ToggleRow
+            label={tPolicies('delivery')}
+            hint={tPolicies('deliveryDescription')}
+            checked={field.value === true}
+            onToggle={() => field.onChange(!field.value)}
+          />
+        )}
+      />
+    </YStack>
+  );
+}
+
+/** Bước 3 — ảnh, tiện ích, mô tả. */
+export function MediaStep({ control }: StepProps) {
+  const t = useTranslations('Vehicles.form.media');
+  const tCards = useTranslations('Vehicles.edit.cards');
+  const { catalog } = useCatalog();
+  const vehicleType = useWatch({ control, name: 'vehicleType' });
+
+  /*
+   * LỌC theo loại xe. Bộ tiện ích nghiêng hẳn về ô tô (camera 360, túi khí, ghế trẻ em) và trước
+   * bản này hiện nguyên vẹn cho cả xe máy. Tiện ích là một chiều LỌC ngoài chợ, nên một chiếc
+   * Wave gắn "cửa sổ trời" không chỉ vô lý mà còn làm sai kết quả tìm kiếm của khách.
+   */
+  const features = (catalog[CATALOG_TYPE.VEHICLE_FEATURE] ?? []).filter((item) =>
+    vehicleFeatureAppliesTo(item.key, vehicleType),
+  );
+
+  return (
+    /*
+      HAI THẺ, đúng hai `<Card>` của web: "Hình ảnh xe" (`ImagesSection`) và "Tiện ích & mô tả"
+      (`FeaturesDescriptionSection`) — tiện ích và mô tả đi CHUNG một thẻ, không tách ba.
+
+      Thẻ chứ không phải tiêu đề trần: hai nhóm này là hai loại việc khác hẳn nhau (tải ảnh và
+      nhập chữ), và một mặt phẳng riêng cho mỗi nhóm nói điều đó rõ hơn mọi dòng tiêu đề.
+
+      Tiêu đề lấy thẳng `Vehicles.edit.cards.*` — đúng chuỗi web dùng; khai khoá mới cho cùng
+      một chữ là mở đường cho hai bên lệch nhau.
+    */
+    <YStack gap={layout.section}>
+      <Card>
+        <YStack gap={space.md}>
+          <BlockTitle>{tCards('images')}</BlockTitle>
+          {/* Ảnh xe đi qua endpoint riêng của xe — quyền `vehicles.update`, không phải quyền gian hàng. */}
+          <ImageUploadField
+            control={control}
+            name="mainImageUrl"
+            label={t('mainImage')}
+            emptyLabel={t('addMainImage')}
+            presign={uploadsApi.vehicleImage}
+            publishRequired
+          />
+          <ImageUploadField
+            control={control}
+            name="images"
+            label={t('gallery')}
+            presign={uploadsApi.vehicleImage}
+            multiple
+          />
+        </YStack>
+      </Card>
+
+      <Card>
+        <YStack gap={space.md}>
+          <BlockTitle>{tCards('featuresDescription')}</BlockTitle>
+          <FeaturesField control={control} features={features} />
+          <TextField
+            control={control}
+            name="description"
+            label={t('description')}
+            placeholder={t('descriptionPlaceholder')}
+            required
+            multiline
+            rows={5}
+            maxLength={DESCRIPTION_MAX}
+          />
+        </YStack>
+      </Card>
+    </YStack>
+  );
+}
+
+/** Trần mô tả — khớp `vehicleFormSchema.description` và `maxLength={4000}` của web. */
+const DESCRIPTION_MAX = 4000;
+
+/**
+ * Tiện ích trên xe — dải CHIP bật/tắt.
+ *
+ * Web dùng `<Checkbox.Group>`, nhưng lưới ô tick trên màn hẹp ăn gấp đôi chiều cao cho cùng
+ * lượng lựa chọn và mép phải luôn so le vì nhãn dài ngắn khác nhau. Chip là hình thái native cho
+ * "chọn nhiều trong một tập ngắn", và app đã dùng đúng nó ở dịch vụ xe ngay màn trước — đổi kiểu
+ * giữa hai màn của cùng một form là thứ người dùng phải học lại.
+ */
+function FeaturesField({
+  control,
+  features,
+}: {
+  control: Control<VehicleFormValues>;
+  features: readonly { key: string; label: string }[];
+}) {
+  const t = useTranslations('Vehicles.form.media');
+
+  return (
+    <Controller
+      control={control}
+      name="features"
+      render={({ field }) => {
+        const selected = (field.value ?? []) as string[];
+        return (
+          <YStack gap={space.xs}>
+            <FieldLabel label={t('features')} />
+            <XStack flexWrap="wrap" gap={space.xs}>
+              {features.map((item) => {
+                const active = selected.includes(item.key);
+                return (
+                  <Chip
+                    key={item.key}
+                    label={item.label}
+                    selected={active}
+                    onPress={() =>
+                      field.onChange(
+                        active ? selected.filter((k) => k !== item.key) : [...selected, item.key],
+                      )
+                    }
+                  />
+                );
+              })}
+            </XStack>
+          </YStack>
+        );
+      }}
+    />
+  );
+}
+
+/** Thông số kỹ thuật nâng cao — chỉ có ở màn SỬA, luồng tạo không hỏi (đúng như web). */
+export function AdvancedSpecsSection({ control }: { control: Control<VehicleFormValues> }) {
+  /*
+   * KHÔNG nhận `lockedNotice` nữa: khối này chỉ còn kích thước, dung tích và công suất — không
+   * trường nào bị khoá khi xe lên chợ. Căn cước bị khoá (biển số, nhiên liệu, hộp số, năm SX)
+   * nằm ở khối trên và tự nhận cảnh báo của nó.
+   */
+  const t = useTranslations('Vehicles.form.advanced');
+
+  return (
+    <YStack gap={space.md}>
+      <GroupTitle>{t('dimensionsTitle')}</GroupTitle>
+      <NumberField
+        control={control}
+        name="lengthMm"
+        label={t('lengthMm')}
+        suffix="mm"
+        placeholder={t('lengthPlaceholder')}
+      />
+      <NumberField
+        control={control}
+        name="widthMm"
+        label={t('widthMm')}
+        suffix="mm"
+        placeholder={t('widthPlaceholder')}
+      />
+      <NumberField
+        control={control}
+        name="heightMm"
+        label={t('heightMm')}
+        suffix="mm"
+        placeholder={t('heightPlaceholder')}
+      />
+      <NumberField
+        control={control}
+        name="curbWeightKg"
+        label={t('curbWeightKg')}
+        suffix="kg"
+        placeholder={t('curbWeightPlaceholder')}
+      />
+
+      <GroupTitle>{t('engineTitle')}</GroupTitle>
+      <NumberField
+        control={control}
+        name="engineDisplacementCc"
+        label={t('engineDisplacementCc')}
+        placeholder={t('enginePlaceholder')}
+        suffix="cc"
+      />
+      <NumberField
+        control={control}
+        name="horsepowerHp"
+        label={t('horsepowerHp')}
+        suffix="HP"
+        placeholder={t('horsepowerPlaceholder')}
+      />
+      {/*
+        KHÔNG có ô hộp số ở đây — nó sống trong `VehicleEnergyFields` phía trên, đúng như web.
+
+        Bản trước dựng ô thứ hai cho CÙNG một trường `transmission`, và liệt kê thẳng cả 8 giá
+        trị của union thay vì hỏi `vehicleTransmissionTypesFor`. Hệ quả: một chiếc xe máy được
+        mời chọn "CVT" và "DCT", còn hai ô cùng trường thì ô nào ghi đè ô nào là chuyện may rủi.
+      */}
+
+      <GroupTitle>{t('consumptionTitle')}</GroupTitle>
+      <NumberField
+        control={control}
+        name="fuelConsumptionCity"
+        label={t('consumptionCity')}
+        placeholder={t('consumptionCityPlaceholder')}
+        suffix="L/100km"
+      />
+      <NumberField
+        control={control}
+        name="fuelConsumptionHighway"
+        label={t('consumptionHighway')}
+        placeholder={t('consumptionHighwayPlaceholder')}
+        suffix="L/100km"
+      />
+      <NumberField
+        control={control}
+        name="fuelConsumptionCombined"
+        label={t('consumptionCombined')}
+        placeholder={t('consumptionCombinedPlaceholder')}
+        suffix="L/100km"
+      />
+
+      <Notice tone="info" title={t('hint')} />
+    </YStack>
+  );
+}
+
+/** Trạng thái vận hành — chỉ có ở màn SỬA (thẻ "Quản lý trạng thái" của web). */
+export function StatusSection({ control }: { control: Control<VehicleFormValues> }) {
+  const t = useTranslations('Vehicles.form.status');
+  const domainLabel = useDomainLabel();
+
+  return (
+    <SelectField
+      control={control}
+      name="operationStatus"
+      label={t('operationStatus')}
+      options={VEHICLE_OPERATION_STATUS_VALUES.map((value) => ({
+        value,
+        label: domainLabel('vehicleOperationStatus', value),
+      }))}
+      required
+    />
+  );
+}

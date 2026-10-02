@@ -12,12 +12,20 @@ import { markBadgesDirty, newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   INVITE_STATUS,
+  MEMBERSHIP_BRANCH_SCOPE,
   MEMBERSHIP_STATUS,
   TENANT_ROLE,
   type PaginationMeta,
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import {
+  FULL_BRANCH_SCOPE,
+  assertWithinActorScope,
+  resolveMemberBranchScope,
+  writeMembershipBranches,
+  type ResolvedBranchScope,
+} from './member-branch-scope';
 import { EmailService } from '../email/email.service';
 import { maskEmail } from '../../common/mask';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
@@ -116,6 +124,11 @@ export class InvitesService {
     tenantId: string,
     actorUserId: string,
     dto: CreateInviteDto,
+    /**
+     * Phạm vi chi nhánh của NGƯỜI MỜI — trần của lời mời (ADR 0052). Không có nó, một quản lý
+     * chi nhánh A mời email thứ hai của chính họ với "Tất cả chi nhánh" là có toàn gian hàng.
+     */
+    actorAllowed: readonly string[] | null,
   ): Promise<CreateInviteResultDto> {
     if (dto.roleKey === TENANT_ROLE.SHOP_OWNER) {
       throw new BadRequestException({
@@ -165,12 +178,17 @@ export class InvitesService {
         data: { status: INVITE_STATUS.REVOKED },
       });
 
+      // Phạm vi được kiểm NGAY LÚC MỜI, không đợi tới lúc nhận: người mời phải biết mình vừa
+      // gõ sai một chi nhánh, chứ không để lỗi nổ ra ở màn của người được mời (ADR 0052).
+      const scope = await resolveMemberBranchScope(tx, tenantId, dto.roleKey, dto, actorAllowed);
       const created = await tx.tenantInvite.create({
         data: {
           id: newId(),
           tenantId,
           email,
           roleKey: dto.roleKey,
+          branchScope: scope.branchScope,
+          branchIds: scope.branchIds,
           tokenHash: hashToken(token),
           status: INVITE_STATUS.PENDING,
           expiresAt,
@@ -189,7 +207,7 @@ export class InvitesService {
           targetId: created.id,
           // Email là định danh của lời mời nên phải ghi; token thì KHÔNG bao giờ (ADR 0017 —
           // audit là nơi nhiều người đọc được hơn database).
-          after: { email, roleKey: dto.roleKey },
+          after: { email, roleKey: dto.roleKey, ...scope },
         },
         tx,
       );
@@ -230,10 +248,16 @@ export class InvitesService {
     return { ...toDto(row), emailSent };
   }
 
-  async revoke(tenantId: string, actorUserId: string, inviteId: string): Promise<InviteDto> {
+  async revoke(
+    tenantId: string,
+    actorUserId: string,
+    inviteId: string,
+    /** Lời mời rộng hơn phần của người thao tác thì không phải của họ để huỷ — ADR 0052. */
+    actorAllowed: readonly string[] | null,
+  ): Promise<InviteDto> {
     const current = await this.prisma.tenantInvite.findFirst({
       where: { id: inviteId, tenantId },
-      select: { id: true, status: true, email: true },
+      select: { id: true, status: true, email: true, branchScope: true, branchIds: true },
     });
     if (!current) {
       throw new NotFoundException({
@@ -247,6 +271,10 @@ export class InvitesService {
         message: 'Lời mời này không còn ở trạng thái chờ',
       });
     }
+    assertWithinActorScope(actorAllowed, {
+      branchScope: current.branchScope,
+      branchIds: current.branchIds.map((id) => id.trim()),
+    });
 
     return this.prisma.$transaction(async (tx) => {
       const updated = await tx.tenantInvite.update({
@@ -320,18 +348,50 @@ export class InvitesService {
         });
       }
 
+      /*
+       * Chi nhánh trên lời mời có thể đã bị xoá trong lúc thư nằm trong hộp mail — lời mời không
+       * có khoá ngoại (xem header migration 20260929120000). Lọc lại theo những chi nhánh CÒN
+       * SỐNG; không còn chi nhánh nào thì phạm vi hẹp là một tài khoản không mở được gì, nên hạ
+       * về toàn gian hàng và để chủ shop siết lại ở màn Nhân sự.
+       */
+      const limited =
+        invite.branchScope === MEMBERSHIP_BRANCH_SCOPE.LIMITED && invite.branchIds.length > 0;
+      const alive = limited
+        ? await tx.tenantBranch.findMany({
+            where: { tenantId: invite.tenantId, id: { in: invite.branchIds }, deletedAt: null },
+            select: { id: true },
+          })
+        : [];
+      /*
+       * FAIL-CLOSED (ADR 0052): lời mời giới hạn mà mọi chi nhánh trong đó đã bị xoá thì KHÔNG
+       * âm thầm hạ về toàn gian hàng — đó là chiều mở quyền, ngược mọi chốt khác của trục này.
+       * Từ chối lượt nhận với mã riêng; chủ shop gửi lại lời mời với phạm vi còn sống.
+       */
+      if (limited && alive.length === 0) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.INVITE_SCOPE_STALE,
+          message: 'Chi nhánh trong lời mời không còn tồn tại — hãy nhờ gian hàng gửi lời mời mới',
+        });
+      }
+      const scope: ResolvedBranchScope = limited
+        ? { branchScope: MEMBERSHIP_BRANCH_SCOPE.LIMITED, branchIds: alive.map((b) => b.id) }
+        : FULL_BRANCH_SCOPE;
+
       const data = {
         roleKey: invite.roleKey,
         status: MEMBERSHIP_STATUS.ACTIVE,
+        branchScope: scope.branchScope,
         invitedBy: invite.createdBy,
         joinedAt: new Date(),
       };
       // Người từng bị gỡ thì kích hoạt lại bản ghi cũ — unique (tenant, user) chỉ cho một hàng.
-      await tx.tenantMembership.upsert({
+      const membershipRow = await tx.tenantMembership.upsert({
         where: { tenantId_userId: { tenantId: invite.tenantId, userId } },
         create: { id: newId(), tenantId: invite.tenantId, userId, ...data },
         update: data,
+        select: { id: true },
       });
+      await writeMembershipBranches(tx, invite.tenantId, membershipRow.id, scope.branchIds);
 
       /*
        * Vào gian hàng là ĐỔI PHẠM VI hộp thư công việc của người này: mọi hội thoại chưa đọc sẵn
@@ -348,7 +408,7 @@ export class InvitesService {
           action: 'member.invite_accept',
           targetType: 'tenant_membership',
           targetId: userId,
-          after: { roleKey: invite.roleKey, inviteId: invite.id },
+          after: { roleKey: invite.roleKey, inviteId: invite.id, ...scope },
         },
         tx,
       );
@@ -398,6 +458,8 @@ export class InvitesService {
         tenantId: true,
         email: true,
         roleKey: true,
+        branchScope: true,
+        branchIds: true,
         status: true,
         expiresAt: true,
         createdBy: true,

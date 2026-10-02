@@ -2,6 +2,7 @@ import {
   DEFAULT_PLATFORM_ROLE_PERMISSIONS,
   DEFAULT_TENANT_ROLE_PERMISSIONS,
   FEATURE_STATE,
+  PERMISSION,
   PLATFORM_ROLE,
   SUPPORT_WORKSPACE,
   TENANT_ROLE,
@@ -19,6 +20,7 @@ import {
   branchKeyOf,
   flattenLeaves,
   isNavBranch,
+  isNavPermissionGranted,
   leavesOfSection,
   matchSelectedKey,
   mobileTabsForScope,
@@ -26,6 +28,7 @@ import {
   sectionKeyOf,
   supportMobileTabs,
   supportNavSections,
+  type NavLeaf,
 } from './nav';
 import enNavigation from '@xeprime/domain/messages/en/navigation.json';
 import viNavigation from '@xeprime/domain/messages/vi/navigation.json';
@@ -81,7 +84,7 @@ function visibleLabels(
   return flattenLeaves(navForScope(isPlatform))
     .filter(
       (leaf) =>
-        set.has(leaf.permission) &&
+        isNavPermissionGranted(leaf.permission, (permission) => set.has(permission)) &&
         (leaf.ownerOnly !== true || isShopOwner) &&
         (leaf.feature === undefined ||
           isFeatureVisible(context.features?.[leaf.feature] ?? FEATURE_STATE.ENABLED)),
@@ -155,7 +158,8 @@ describe('nav — cấu trúc khối', () => {
         ROUTES.MANAGE.ADMIN_VEHICLES,
         ROUTES.MANAGE.ADMIN_BOOKINGS,
         ROUTES.MANAGE.ADMIN_CUSTOMERS,
-        ROUTES.MANAGE.ADMIN_BANK_TRANSACTIONS,
+        // `ADMIN_BANK_TRANSACTIONS` không mất mà được GỘP (01/10/2026): hàng đợi tiền vào sống
+        // trong màn Tài chính, URL cũ chuyển tiếp về `ADMIN_MONEY?queue=bank-in`.
         ROUTES.MANAGE.ADMIN_MONEY,
         ROUTES.MANAGE.ADMIN_SUPPORT,
         ROUTES.MANAGE.ADMIN_PLANS,
@@ -356,12 +360,24 @@ describe('nav — ranh giới gian hàng ↔ nền tảng', () => {
   });
 
   it('mục gian hàng không đòi quyền `platform.*` và ngược lại', () => {
-    expect(flattenLeaves(SHOP_NAV).every((leaf) => !leaf.permission.startsWith('platform.'))).toBe(
-      true,
-    );
+    const permissionsOf = (leaf: NavLeaf): readonly string[] =>
+      typeof leaf.permission === 'string' ? [leaf.permission] : leaf.permission;
     expect(
-      flattenLeaves(PLATFORM_NAV).every((leaf) => leaf.permission.startsWith('platform.')),
+      flattenLeaves(SHOP_NAV).every((leaf) =>
+        permissionsOf(leaf).every((permission) => !permission.startsWith('platform.')),
+      ),
     ).toBe(true);
+    expect(
+      flattenLeaves(PLATFORM_NAV).every((leaf) =>
+        permissionsOf(leaf).every((permission) => permission.startsWith('platform.')),
+      ),
+    ).toBe(true);
+  });
+
+  it('"Tài chính" hiện với người CHỈ có quyền gói — khớp hàng đợi tiền vào trong màn', () => {
+    expect(visibleLabels([PERMISSION.PLATFORM_BILLING_MANAGE], true)).toContain('platform.money');
+    expect(visibleLabels([PERMISSION.PLATFORM_MONEY_MANAGE], true)).toContain('platform.money');
+    expect(visibleLabels([PERMISSION.PLATFORM_AUDIT_VIEW], true)).not.toContain('platform.money');
   });
 });
 

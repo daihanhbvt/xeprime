@@ -146,7 +146,8 @@
         "ok": "Discard and leave",
         "cancel": "Keep entering",
         "body": "Unsaved changes in the wizard will be lost."
-      }
+      },
+      "publishRequired": "Complete these so the vehicle can go on the marketplace: {items}."
     },
     "basic": {
       "name": "Vehicle name",
@@ -616,7 +617,8 @@
       "maintenanceCenter": "Maintenance centre",
       "calendar": "Vehicle calendar",
       "bookings": "Bookings",
-      "receipts": "Vehicle receipts"
+      "receipts": "Vehicle receipts",
+      "title": "Vehicle sections"
     },
     "documents": {
       "title": "Legal documents",
@@ -677,18 +679,30 @@
       "action": "Resync public listing",
       "fixed": "Resynced — the marketplace listing now matches the vehicle data",
       "unchanged": "The marketplace listing already matched the vehicle data — nothing changed"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "finance": "Finance",
+      "media": "Photos",
+      "review": "Review",
+      "specs": "Specifications",
+      "maintenance": "Maintenance & odometer"
     }
   },
   "edit": {
     "title": "Edit vehicle",
     "tabs": {
-      "information": "Vehicle information",
-      "media": "Photos & features",
+      "information": "Vehicle info & features",
+      "media": "Photos",
       "pricing": "Pricing & policies",
       "source": "Ownership & finance",
       "documents": "Documents",
       "maintenance": "Maintenance & odometer",
-      "operations": "Operations & rental terms"
+      "operations": "Operations & rental terms",
+      "handoverTime": "Handover window",
+      "optimization": "Booking optimisation",
+      "terms": "Rental terms",
+      "surcharges": "Surcharges"
     },
     "errors": "{count, plural, one {# error} other {# errors}} to fix before saving",
     "cards": {
@@ -696,7 +710,10 @@
       "status": "Status management",
       "specs": "Vehicle specifications",
       "images": "Vehicle photos",
-      "featuresDescription": "Features & description"
+      "featuresDescription": "Features & description",
+      "general": "General",
+      "identity": "Vehicle identity",
+      "energy": "Engine & fuel"
     },
     "advanced": {
       "title": "Advanced specifications",
@@ -738,6 +755,42 @@
       "forbiddenTitle": "No permission to edit vehicles",
       "forbiddenBody": "You need the permission below to edit vehicle information. Contact an administrator to request it.",
       "viewDetail": "View vehicle details"
+    },
+    "nav": {
+      "general": "General",
+      "business": "Business & finance",
+      "menuLabel": "Vehicle sections"
+    },
+    "serviceOff": {
+      "title": "{service} is turned off",
+      "body": "This vehicle is not listed for {service}, so the settings below have no effect. Add {service} to the \"Service type\" field under Vehicle information to enable it.",
+      "action": "Open Vehicle information"
+    },
+    "infoTabs": {
+      "basic": "Basic vehicle info",
+      "advanced": "Advanced specifications"
+    },
+    "aside": {
+      "changeImage": "Change vehicle photo",
+      "imagesTitle": "Vehicle photos",
+      "editImages": "Edit",
+      "mainBadge": "Main photo",
+      "moreImages": "+{count}",
+      "noImages": "This vehicle has no photos yet.",
+      "summaryTitle": "Summary",
+      "vehicleType": "Vehicle type",
+      "seats": "Seats",
+      "seatsValue": "{count} seats",
+      "status": "Status",
+      "price": "Rental price",
+      "perDay": "{price} / day",
+      "perMonth": "{price} / month",
+      "odometer": "Odometer",
+      "statusSaved": "Operating status updated",
+      "changeStatus": "Operating status: {status} — click to change",
+      "editImagesLabel": "Edit vehicle photos",
+      "prevImage": "Previous photo",
+      "nextImage": "Next photo"
     }
   },
   "source": {
@@ -1090,7 +1143,9 @@
       "inheritTitle": "Save pricing for this vehicle?",
       "inheritBody": "The new price applies to {vehicle} only, from new bookings onward. The vehicle still inherits the shop-wide policy.",
       "ok": "Save changes",
-      "cancel": "Discard"
+      "cancel": "Discard",
+      "ownerTitle": "Save prices & policy for this vehicle?",
+      "ownerBody": "Changes apply only to {vehicle}, from new bookings onwards — confirmed bookings are not affected."
     },
     "longTermHint": {
       "suggestion": "Suggested {min} – {max}/month — a full month of daily rentals already costs {reference}, so the long-term price should sit below that to give renters a reason to commit.",
@@ -1163,7 +1218,12 @@
       "preview": "Includes {km}/day. {fee} for each kilometre over the limit.",
       "previewIncomplete": "Fill in both fields for the allowance to show on the vehicle page.",
       "disabledNote": "Unlimited mileage — no excess mileage surcharge."
-    }
+    },
+    "backToVehicle": "Back to vehicle profile",
+    "backToList": "Back to vehicle list",
+    "forbiddenTitle": "No access",
+    "notFoundTitle": "Vehicle not found",
+    "notFoundBody": "The vehicle may have been deleted, or it does not belong to this shop."
   },
   "documents": {
     "noPermissionTitle": "No permission to view documents",
@@ -1460,5 +1520,14 @@
     "forbiddenTitle": "You cannot add vehicles",
     "forbiddenBody": "You need the permission below to add vehicles to the shop. Ask an administrator to grant it.",
     "backToList": "Back to vehicles"
+  },
+  "imageSlot": {
+    "front": "Front",
+    "rear": "Rear",
+    "left": "Left side",
+    "right": "Right side",
+    "interior": "Interior",
+    "dashboard": "Odometer",
+    "other": "Other"
   }
 }

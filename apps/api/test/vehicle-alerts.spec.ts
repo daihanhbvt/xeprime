@@ -709,7 +709,7 @@ describe('Hàng đợi Thiếu KM trả', () => {
     const first = await makeMissingReturnKm(vehicle.id, 1);
     const second = await makeMissingReturnKm(vehicle.id, 20);
 
-    const queue = await handovers.missingOdometerQueue(tenantId, {});
+    const queue = await handovers.missingOdometerQueue(tenantId, {}, null);
     const codes = queue.data.map((row) => row.bookingCode);
     expect(codes).toContain(first.code);
     expect(codes).toContain(second.code);
@@ -731,7 +731,7 @@ describe('Hàng đợi Thiếu KM trả', () => {
     const booking = await makeMissingReturnKm(vehicle.id, 40);
 
     expect(await alertKinds(vehicle.id)).toContain(VEHICLE_ALERT_KIND.MISSING_RETURN_ODOMETER);
-    const before = await handovers.missingOdometerQueue(tenantId, {});
+    const before = await handovers.missingOdometerQueue(tenantId, {}, null);
     const item = before.data.find((row) => row.bookingId === booking.id);
     expect(item).toBeTruthy();
 
@@ -750,7 +750,7 @@ describe('Hàng đợi Thiếu KM trả', () => {
       FULL_HANDOVER_SCOPE,
     );
 
-    const after = await handovers.missingOdometerQueue(tenantId, {});
+    const after = await handovers.missingOdometerQueue(tenantId, {}, null);
     expect(after.data.some((row) => row.bookingId === booking.id)).toBe(false);
 
     const row = await alerts.forVehicle(tenantId, vehicle.id, OPERATIONS_SCOPE);
@@ -759,8 +759,8 @@ describe('Hàng đợi Thiếu KM trả', () => {
   });
 
   maybe('đếm ở dải nhóm việc khớp số dòng thật của hàng đợi', async () => {
-    const summary = await maintenance.boardSummary(tenantId, { canViewHandovers: true });
-    const queue = await handovers.missingOdometerQueue(tenantId, { limit: 100 });
+    const summary = await maintenance.boardSummary(tenantId, { canViewHandovers: true }, null);
+    const queue = await handovers.missingOdometerQueue(tenantId, { limit: 100 }, null);
     expect(summary.missingReturnKm).toBe(queue.meta.total);
   });
 
@@ -769,18 +769,18 @@ describe('Hàng đợi Thiếu KM trả', () => {
     await setKm(vehicle.id, 70_000);
     const booking = await makeMissingReturnKm(vehicle.id, 60);
 
-    const found = await handovers.missingOdometerQueue(tenantId, { q: booking.code });
+    const found = await handovers.missingOdometerQueue(tenantId, { q: booking.code }, null);
     expect(found.data).toHaveLength(1);
     expect(found.data[0]?.bookingCode).toBe(booking.code);
 
-    const paged = await handovers.missingOdometerQueue(tenantId, { limit: 1, page: 1 });
+    const paged = await handovers.missingOdometerQueue(tenantId, { limit: 1, page: 1 }, null);
     expect(paged.data).toHaveLength(1);
     expect(paged.meta).toMatchObject({ page: 1, limit: 1 });
     expect(paged.meta.total).toBeGreaterThan(0);
   });
 
   maybe('hàng đợi của gian hàng khác rỗng — không rò việc xuyên tenant', async () => {
-    const queue = await handovers.missingOdometerQueue(otherTenantId, {});
+    const queue = await handovers.missingOdometerQueue(otherTenantId, {}, null);
     expect(queue.data).toHaveLength(0);
     expect(queue.meta.total).toBe(0);
   });
@@ -790,8 +790,8 @@ describe('Hàng đợi Thiếu KM trả', () => {
     await setKm(vehicle.id, 90_000);
     const booking = await makeMissingReturnKm(vehicle.id, 120);
 
-    const before = await handovers.missingOdometerQueue(tenantId, { limit: 100 });
-    const beforeSummary = await maintenance.boardSummary(tenantId, { canViewHandovers: true });
+    const before = await handovers.missingOdometerQueue(tenantId, { limit: 100 }, null);
+    const beforeSummary = await maintenance.boardSummary(tenantId, { canViewHandovers: true }, null);
     expect(before.data.some((row) => row.bookingId === booking.id)).toBe(true);
     expect(beforeSummary.missingReturnKm).toBe(before.meta.total);
 
@@ -800,8 +800,8 @@ describe('Hàng đợi Thiếu KM trả', () => {
       data: { deletedAt: new Date() },
     });
 
-    const after = await handovers.missingOdometerQueue(tenantId, { limit: 100 });
-    const afterSummary = await maintenance.boardSummary(tenantId, { canViewHandovers: true });
+    const after = await handovers.missingOdometerQueue(tenantId, { limit: 100 }, null);
+    const afterSummary = await maintenance.boardSummary(tenantId, { canViewHandovers: true }, null);
     expect(after.data.some((row) => row.bookingId === booking.id)).toBe(false);
     expect(afterSummary.missingReturnKm).toBe(after.meta.total);
     expect(after.meta.total).toBe(before.meta.total - 1);
@@ -812,25 +812,25 @@ describe('Hàng đợi Thiếu KM trả', () => {
     await setKm(vehicle.id, 95_000);
     const booking = await makeMissingReturnKm(vehicle.id, 140);
 
-    const before = await handovers.missingOdometerQueue(tenantId, { limit: 100 });
+    const before = await handovers.missingOdometerQueue(tenantId, { limit: 100 }, null);
     await prisma.booking.update({
       where: { id: booking.id },
       data: { deletedAt: new Date() },
     });
 
-    const after = await handovers.missingOdometerQueue(tenantId, { limit: 100 });
-    const afterSummary = await maintenance.boardSummary(tenantId, { canViewHandovers: true });
+    const after = await handovers.missingOdometerQueue(tenantId, { limit: 100 }, null);
+    const afterSummary = await maintenance.boardSummary(tenantId, { canViewHandovers: true }, null);
     expect(after.data.some((row) => row.bookingId === booking.id)).toBe(false);
     expect(after.meta.total).toBe(before.meta.total - 1);
     expect(afterSummary.missingReturnKm).toBe(after.meta.total);
   });
 
   maybe('thiếu handovers.view: số đếm là 0 và KHÔNG chạy truy vấn bàn giao', async () => {
-    const permitted = await maintenance.boardSummary(tenantId, { canViewHandovers: true });
+    const permitted = await maintenance.boardSummary(tenantId, { canViewHandovers: true }, null);
     expect(permitted.missingReturnKm).toBeGreaterThan(0);
 
     // Vai trò chỉ có bảo dưỡng: các nhóm việc bảo dưỡng vẫn đúng, riêng số bàn giao là 0.
-    const restricted = await maintenance.boardSummary(tenantId, { canViewHandovers: false });
+    const restricted = await maintenance.boardSummary(tenantId, { canViewHandovers: false }, null);
     expect(restricted.missingReturnKm).toBe(0);
     expect(restricted.total).toBe(permitted.total);
     expect(restricted.overdue).toBe(permitted.overdue);

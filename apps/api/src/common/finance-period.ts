@@ -177,6 +177,33 @@ export function resolvePeriodBounds(
 export interface FinanceScope {
   vehicleId?: string;
   tenantCustomerId?: string;
+  /**
+   * Chi nhánh giữ XE — ADR 0052.
+   *
+   * Khác hai trường trên ở một điểm quan trọng: `receipts` và `bookings` đều KHÔNG có cột chi
+   * nhánh (chỉ `vehicles` có), nên vế này luôn là một phép `EXISTS` sang bảng xe.
+   *
+   * Hệ quả phải nhớ: phiếu `vehicle_id IS NULL` — chi phí chung như marketing, văn phòng — rơi
+   * RA NGOÀI khi lọc. Đó là chủ đích, nhưng nó làm tổng các chi nhánh nhỏ hơn tổng gian hàng,
+   * nên bề mặt nào lọc theo chi nhánh cũng phải nói ra con số bị bỏ lại.
+   */
+  /**
+   * Danh sách chi nhánh HIỆU LỰC (đã giao × đang xin) — `null` = không thu hẹp, `[]` = chặn hết.
+   * Do tầng gọi dựng bằng `resolveBranchIdList()`; `branchId` ở trên chỉ là thứ client XIN.
+   */
+  branchIds?: readonly string[] | null;
+}
+
+/** `EXISTS` sang `vehicles` — dùng chung cho cả hai bản SQL bên dưới, một cách viết duy nhất. */
+function sqlBranchExists(
+  branchIds: readonly string[] | null | undefined,
+  vehicleIdColumn: Prisma.Sql,
+): Prisma.Sql {
+  return branchIds
+    ? Prisma.sql`AND EXISTS (
+        SELECT 1 FROM vehicles bv WHERE bv.id = ${vehicleIdColumn} AND bv.branch_id = ANY(${branchIds}::char(26)[])
+      )`
+    : Prisma.empty;
 }
 
 /** Phần thu hẹp cho `receipts` (Prisma). Rỗng khi không thu hẹp — báo cáo giữ nguyên tầm gian hàng. */
@@ -184,6 +211,18 @@ export function scopeWhere(scope: FinanceScope): Prisma.ReceiptWhereInput {
   return {
     ...(scope.vehicleId ? { vehicleId: scope.vehicleId } : {}),
     ...(scope.tenantCustomerId ? { tenantCustomerId: scope.tenantCustomerId } : {}),
+    /*
+     * Chi nhánh của phiếu: của XE nếu có, nếu không thì cột `receipts.branch_id` của chính nó
+     * (ADR 0052). CHECK ở database cấm một phiếu mang cả hai nên hai nhánh không chồng nhau.
+     */
+    ...(scope.branchIds
+      ? {
+          OR: [
+            { vehicle: { branchId: { in: [...scope.branchIds] } } },
+            { vehicleId: null, branchId: { in: [...scope.branchIds] } },
+          ],
+        }
+      : {}),
   };
 }
 
@@ -194,6 +233,17 @@ export function sqlReceiptScope(scope: FinanceScope): Prisma.Sql {
     ${
       scope.tenantCustomerId
         ? Prisma.sql`AND r.tenant_customer_id = ${scope.tenantCustomerId}`
+        : Prisma.empty
+    }
+    ${
+      scope.branchIds
+        ? Prisma.sql`AND (
+            EXISTS (
+              SELECT 1 FROM vehicles bv
+              WHERE bv.id = r.vehicle_id AND bv.branch_id = ANY(${scope.branchIds}::char(26)[])
+            )
+            OR (r.vehicle_id IS NULL AND r.branch_id = ANY(${scope.branchIds}::char(26)[]))
+          )`
         : Prisma.empty
     }`;
 }
@@ -212,5 +262,6 @@ export function sqlBookingScope(scope: FinanceScope): Prisma.Sql {
       scope.tenantCustomerId
         ? Prisma.sql`AND b.tenant_customer_id = ${scope.tenantCustomerId}`
         : Prisma.empty
-    }`;
+    }
+    ${sqlBranchExists(scope.branchIds, Prisma.sql`b.vehicle_id`)}`;
 }

@@ -5,8 +5,8 @@ import { InfoCircleOutlined, ThunderboltFilled } from '@ant-design/icons';
 import { Alert, App, Button, Form, Popover } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useMemo, type MouseEvent } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import * as yup from 'yup';
 import {
   MIN_RENTAL_MINUTES_RANGE,
@@ -19,7 +19,7 @@ import {
 import { CheckboxGroupField } from '@/components/form/CheckboxGroupField';
 import { SelectField } from '@/components/form/SelectField';
 import { StickyFormActions } from '@/components/form/StickyFormActions';
-import { SwitchField } from '@/components/form/SwitchField';
+import { SwitchRow } from '@/components/form/SwitchRow';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { ROUTES } from '@/constants/routes';
@@ -35,8 +35,13 @@ import styles from './AutoAcceptSection.module.css';
 
 const HOUR = 60;
 
+/*
+ * Form chỉ còn hai ô riêng của CÓ TÀI XẾ. Công tắc tự nhận không thuộc form (30/09/2026): nó LƯU
+ * NGAY khi bấm, cùng endpoint `PATCH /vehicles/:id/service-settings/:service`, chỉ gửi đúng
+ * `autoAcceptEnabled` — server gộp từng trường (`undefined` = giữ nguyên), nên hai ô bên dưới
+ * không bị ghi đè.
+ */
 const schema = yup.object({
-  autoAcceptEnabled: yup.boolean().defined(),
   minRentalMinutes: yup.string().nullable().defined(),
   preferredRouteTypes: yup.array().of(yup.string().defined()).defined(),
 });
@@ -72,7 +77,6 @@ export function AutoAcceptSection({ serviceType }: { serviceType: ServiceType })
   }
   return (
     <AutoAcceptForm
-      key={setting.updatedAt ?? 'new'}
       setting={setting}
       serviceType={serviceType}
       vehicleId={vehicle.id}
@@ -139,19 +143,47 @@ function AutoAcceptForm({
    * phiên chỉ thấy trạng thái. Điều kiện vận hành (thời lượng tối thiểu, tuyến) vẫn sửa được.
    */
   const autoAcceptLocked = useSupportHides(SUPPORT_HIDDEN_AREA.AUTO_ACCEPT);
-  // Tự lái chỉ có đúng công tắc đó — khoá nó thì form không còn gì để lưu.
-  const nothingEditable = !canEdit || (autoAcceptLocked && !withDriver);
 
   const values = useMemo<FormValues>(
     () => ({
-      autoAcceptEnabled: setting.autoAcceptEnabled,
       minRentalMinutes: setting.minRentalMinutes == null ? null : String(setting.minRentalMinutes),
       preferredRouteTypes: setting.preferredRouteTypes,
     }),
     [setting],
   );
-  const { control, handleSubmit, reset, formState } = useForm<FormValues>({ resolver, values });
-  const enabled = useWatch({ control, name: 'autoAcceptEnabled' });
+  /*
+   * `keepDirtyValues`: bật/tắt công tắc làm thiết lập tải lại; ô đang sửa dở của có tài xế
+   * không được bị ghi đè bởi bản vừa tải về.
+   */
+  const { control, handleSubmit, reset, formState } = useForm<FormValues>({
+    resolver,
+    values,
+    resetOptions: { keepDirtyValues: true },
+  });
+
+  /*
+   * Công tắc LƯU NGAY. Giá trị lạc quan gắn với `updatedAt` của bản đang hiển thị: khi bản mới
+   * (đã lưu) về, nó tự nhường chỗ cho dữ liệu server; lỗi thì bỏ và trả công tắc về như cũ.
+   */
+  const toggleAuto = usePatchVehicleServiceSetting(vehicleId, serviceType);
+  const [optimistic, setOptimistic] = useState<{ value: boolean; basis: string | null } | null>(
+    null,
+  );
+  const enabled =
+    optimistic && optimistic.basis === (setting.updatedAt ?? null)
+      ? optimistic.value
+      : setting.autoAcceptEnabled;
+
+  async function changeAutoAccept(next: boolean) {
+    setOptimistic({ value: next, basis: setting.updatedAt ?? null });
+    try {
+      await toggleAuto.mutateAsync({ autoAcceptEnabled: next });
+      message.success(t('autoAccept.saved'));
+    } catch (err) {
+      setOptimistic(null);
+      message.error(errorMessage(err));
+    }
+  }
 
   const minRentalOptions = Array.from(
     { length: MIN_RENTAL_MINUTES_RANGE.max / HOUR },
@@ -164,16 +196,11 @@ function AutoAcceptForm({
 
   const submit = handleSubmit(async (next) => {
     try {
+      // Chỉ có tài xế còn nút Lưu — tự lái không còn trường nào ngoài công tắc lưu ngay.
       await patch.mutateAsync({
-        autoAcceptEnabled: next.autoAcceptEnabled,
-        ...(withDriver
-          ? {
-              minRentalMinutes:
-                next.minRentalMinutes == null ? null : Number(next.minRentalMinutes),
-              // Lọc qua `isRouteType` — form giữ string, dây chỉ nhận mã lộ trình thật.
-              preferredRouteTypes: next.preferredRouteTypes.filter(isRouteType),
-            }
-          : {}),
+        minRentalMinutes: next.minRentalMinutes == null ? null : Number(next.minRentalMinutes),
+        // Lọc qua `isRouteType` — form giữ string, dây chỉ nhận mã lộ trình thật.
+        preferredRouteTypes: next.preferredRouteTypes.filter(isRouteType),
       });
       message.success(t('autoAccept.saved'));
     } catch (err) {
@@ -218,9 +245,10 @@ function AutoAcceptForm({
             />
           ) : null}
 
-          <SwitchField
-            control={control}
-            name="autoAcceptEnabled"
+          <SwitchRow
+            checked={enabled}
+            onChange={(next) => void changeAutoAccept(next)}
+            loading={toggleAuto.isPending}
             label={t(withDriver ? 'autoAccept.instantTitle' : 'autoAccept.toggleTitle')}
             description={t(withDriver ? 'autoAccept.instantBody' : 'autoAccept.toggleBody')}
             labelExtra={
@@ -231,22 +259,24 @@ function AutoAcceptForm({
                 placement="topLeft"
               >
                 {/*
-                  `preventDefault` vì cả hàng là một `<label>`: thiếu nó thì chạm vào icon để đọc
-                  điều kiện cũng lật luôn công tắc — đúng thứ người dùng chưa quyết định.
+                  Cả hàng là một `<label>` — `SwitchRow` tự chặn cú bấm trong `labelExtra`, nên
+                  chạm vào icon để đọc điều kiện không lật công tắc.
                 */}
                 <span
                   role="button"
                   tabIndex={0}
                   aria-label={t('autoAccept.rulesTitle')}
                   className={styles.infoTrigger}
-                  onClick={(event: MouseEvent<HTMLSpanElement>) => event.preventDefault()}
                 >
                   <InfoCircleOutlined aria-hidden="true" />
                 </span>
               </Popover>
             }
             disabled={
-              !canEdit || autoAcceptLocked || (capabilityBlocked && !setting.autoAcceptEnabled)
+              !canEdit ||
+              autoAcceptLocked ||
+              toggleAuto.isPending ||
+              (capabilityBlocked && !setting.autoAcceptEnabled)
             }
           />
         </SectionCard>
@@ -277,14 +307,14 @@ function AutoAcceptForm({
           </SectionCard>
         ) : null}
 
-        {nothingEditable && autoAcceptLocked ? null : (
+        {withDriver ? (
           <StickyFormActions
             submitLabel={tActions('saveChanges')}
             onCancel={formState.isDirty ? () => reset(values) : undefined}
             submitting={patch.isPending}
             disabled={!canEdit || !formState.isDirty}
           />
-        )}
+        ) : null}
       </form>
     </Form>
   );

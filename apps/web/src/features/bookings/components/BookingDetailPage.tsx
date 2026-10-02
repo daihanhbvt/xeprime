@@ -6,6 +6,7 @@ import { BOOKING_STATUS_META, PERMISSION, type BookingStatus } from '@xeprime/ty
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { ROUTES } from '@/constants/routes';
+import { useBranchReturnHref } from '@/features/branches/hooks/use-branch-return';
 import { BookingDetailContent } from '@/features/bookings/components/BookingDetailContent';
 import { useBooking } from '@/features/bookings/hooks/use-booking';
 import { usePermissions } from '@/hooks/use-permissions';
@@ -26,6 +27,8 @@ export function BookingDetailPage() {
   const router = useRouter();
   const { has } = usePermissions();
   const t = useTranslations('Bookings.detail');
+  // Quay lại danh sách với đúng chi nhánh đang lọc lúc mở đơn (ADR 0052).
+  const listHref = useBranchReturnHref(ROUTES.MANAGE.BOOKINGS);
 
   // Header cần mã đơn + trạng thái; cùng query key với content nên không thêm request nào.
   const { data } = useBooking(has(PERMISSION.BOOKING_VIEW) ? bookingId : null);
@@ -35,7 +38,7 @@ export function BookingDetailPage() {
       <ManagePageHeader
         title={data ? t('titleWithCode', { code: data.code }) : t('title')}
         subtitle={t('pageSubtitle')}
-        onBack={() => router.push(ROUTES.MANAGE.BOOKINGS)}
+        onBack={() => router.push(listHref)}
         extra={
           data ? <StatusTag value={data.status as BookingStatus} meta={BOOKING_STATUS_META} group="bookingStatus" /> : null
         }
@@ -44,7 +47,7 @@ export function BookingDetailPage() {
         bookingId={bookingId}
         onNotFoundAction={{
           label: t('backToList'),
-          onClick: () => router.push(ROUTES.MANAGE.BOOKINGS),
+          onClick: () => router.push(listHref),
         }}
       />
     </div>

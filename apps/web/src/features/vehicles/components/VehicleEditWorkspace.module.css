@@ -1,45 +1,51 @@
+/*
+ * Bề rộng do `PageContainer width="wide"` của trang quyết định — khung này KHÔNG tự đặt trần
+ * nữa (30/09/2026).
+ *
+ * Bản trước đọc `--xp-shell-page-max-width`, một biến không tồn tại ở `tokens.css`, nên luôn
+ * rơi về 1220px: cộng với trần 1280px của `PageContainer` là hai lớp khống chế chồng nhau, và
+ * ở màn 1920 ba cột (menu mục + nội dung + cột xem nhanh) bị bóp lại giữa hơn 300px trống mỗi
+ * bên.
+ */
 .workspace {
-  max-width: var(--xp-shell-form-max-width);
-  margin-inline: auto;
+  width: 100%;
 }
 
-.vehicleHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--xp-space-md) 0;
+/*
+ * Hai cột: menu mục bên trái, nội dung bên phải (29/09/2026 — thay thanh tab ngang).
+ *
+ * `minmax(0, 1fr)` cho cột nội dung là bắt buộc: bên trong có bảng giá và bảng bảo dưỡng cuộn
+ * ngang được, và một cột `1fr` trần sẽ để chúng đẩy rộng cả lưới thay vì tự cuộn.
+ *
+ * Dưới 1024px menu chuyển thành dải cuộn NGANG nằm trên nội dung — cùng cách bày mà khu tài
+ * khoản dùng, nên một người đi qua cả hai khu không phải học hai thao tác.
+ */
+.body {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+  align-items: start;
   gap: var(--xp-space-md);
+  margin-top: var(--xp-space-md);
 }
 
-.vehicleHeader h1 {
-  margin: 0;
-  font-size: var(--xp-font-size-h3);
-  line-height: var(--xp-line-height-h3);
+.nav {
+  position: sticky;
+  top: var(--xp-space-md);
+  min-width: 0;
 }
 
-.vehicleHeader p {
-  margin: var(--xp-space-xs) 0 0;
-  color: var(--xp-color-text-secondary);
+.main {
+  min-width: 0;
 }
 
-.statuses {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: var(--xp-space-xs);
-}
+@media (max-width: 1024px) {
+  .body {
+    grid-template-columns: minmax(0, 1fr);
+  }
 
-.tabs :global(.ant-tabs-nav) {
-  margin-bottom: var(--xp-space-lg);
-}
-
-.tabs :global(.ant-tabs-nav-wrap) {
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.tabs :global(.ant-tabs-nav-list) {
-  min-width: max-content;
+  .nav {
+    position: static;
+  }
 }
 
 .sectionStack {
@@ -50,27 +56,18 @@
 
 .formCard {
   border-color: var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  box-shadow: var(--xp-shadow-card);
 }
 
-.advancedCollapse {
-  border-color: var(--xp-color-border);
-  background: var(--xp-color-bg-container);
+.formCard :global(.ant-card-head) {
+  min-height: 52px;
+  border-bottom-color: var(--xp-color-border-subtle);
 }
 
-.advancedCollapse :global(.ant-collapse-header-text) > span {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.advancedCollapse :global(.ant-collapse-header-text) small {
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  font-weight: var(--xp-font-weight-regular);
-}
-
-.advancedCollapse :global(.ant-collapse-content-box) {
-  padding-top: 0;
+.formCard :global(.ant-card-head-title) {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
 }
 
 .formAlert {
@@ -84,7 +81,7 @@
 @media (max-width: 640px) {
   .vehicleHeader {
     align-items: flex-start;
-    padding: var(--xp-space-sm) 0;
+    padding: var(--xp-space-md);
   }
 
   .vehicleHeader h1 {
@@ -96,13 +93,54 @@
     max-width: 45%;
   }
 
-  .tabs :global(.ant-tabs-tab) {
-    padding-block: var(--xp-space-sm);
-    font-size: var(--xp-font-size-body-sm);
-  }
-
   .formCard :global(.ant-card-head),
   .formCard :global(.ant-card-body) {
     padding-inline: var(--xp-space-md);
+  }
+}
+
+/* Lời nhắc dưới nhóm "Cho thuê dài hạn" — nhóm không có mục, chỉ có công tắc. Bấm để tới giá. */
+.groupNote {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--xp-color-text-tertiary);
+  font: inherit;
+  font-size: var(--xp-font-size-body-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.groupNote:hover,
+.groupNote:focus-visible {
+  color: var(--xp-color-primary);
+  text-decoration: underline;
+}
+
+/* Hai tab ngang của mục Thông tin xe — thanh tab nằm sát trên các card, không thêm khung. */
+.infoTabs :global(.ant-tabs-nav) {
+  margin-bottom: var(--xp-space-md);
+}
+
+.paneHint {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+/*
+ * Mục "Thông tin xe & tiện ích": form + cột xem nhanh bên phải (30/09/2026). Dưới 1200px cột
+ * phải xuống dưới form — ở bề ngang đó menu trái đã chiếm chỗ, ba cột sẽ bóp form quá hẹp.
+ */
+.infoLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  align-items: start;
+  gap: var(--xp-space-md);
+}
+
+@media (max-width: 1200px) {
+  .infoLayout {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

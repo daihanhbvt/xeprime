@@ -11,7 +11,11 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { PermissionState } from '@/components/feedback/PermissionState';
 import { vehicleManageSectionOf } from '@/constants/routes';
-import { useSupportSession } from '@/features/tenant-support/support-session';
+import {
+  useSupportPinnedField,
+  useSupportSession,
+} from '@/features/tenant-support/support-session';
+import { useBranchReturnHref } from '@/features/branches/hooks/use-branch-return';
 import { useVehicle } from '@/features/vehicles/hooks/use-vehicle';
 import { useVehicleSummary } from '@/features/vehicles/hooks/use-vehicle-summary';
 import type { VehicleDetail, VehicleStats } from '@/features/vehicles/types';
@@ -49,6 +53,8 @@ export function VehicleManageWorkspace({ vehicleId, children }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const { paths } = useWorkspace();
+  // Về danh sách đúng chi nhánh đang lọc lúc rời đi (ADR 0052).
+  const listHref = useBranchReturnHref(paths.vehicles);
   const { has } = usePermissions();
   const canView = has(PERMISSION.VEHICLE_VIEW);
   const canEdit = has(PERMISSION.VEHICLE_UPDATE);
@@ -64,7 +70,7 @@ export function VehicleManageWorkspace({ vehicleId, children }: Props) {
         description={t('forbiddenBody')}
         missingPermissions={[PERMISSION.VEHICLE_VIEW]}
         action={
-          <Link href={paths.vehicles}>
+          <Link href={listHref}>
             <Button type="primary">{tManage('backHome')}</Button>
           </Link>
         }
@@ -82,9 +88,7 @@ export function VehicleManageWorkspace({ vehicleId, children }: Props) {
         title={notFound ? t('notFoundTitle') : t('loadErrorTitle')}
         description={notFound ? t('notFoundBody') : t('loadErrorBody')}
         onRetry={notFound ? undefined : () => void vehicleQ.refetch()}
-        action={
-          <Button onClick={() => router.push(paths.vehicles)}>{t('backToList')}</Button>
-        }
+        action={<Button onClick={() => router.push(listHref)}>{t('backToList')}</Button>}
       />
     );
   }
@@ -122,6 +126,7 @@ function WorkspaceBody({
   // Bật/tắt dịch vụ nằm ngoài phiên hỗ trợ (ADR 0050) — backend cũng chặn `serviceTypes`.
   const support = useSupportSession();
   const toggle = useServiceToggle(vehicle, canEdit && !support);
+  const supportPinned = useSupportPinnedField();
 
   const section = vehicleManageSectionOf(pathname);
   const service = section ? sectionServiceType(section) : null;
@@ -133,7 +138,11 @@ function WorkspaceBody({
         <VehicleManageSidebar vehicle={vehicle} toggle={toggle} />
       </aside>
       <div className={styles.main}>
-        <VehicleManageHeader vehicle={vehicle} stats={stats} />
+        <VehicleManageHeader
+          vehicle={vehicle}
+          stats={stats}
+          statusEditable={canEdit && !supportPinned('operationStatus')}
+        />
         {!canEdit ? <Alert type="info" showIcon title={t('readOnlyNotice')} /> : null}
         <VehicleManageProvider value={{ vehicle, canEdit }}>
           {serviceOff && service ? (

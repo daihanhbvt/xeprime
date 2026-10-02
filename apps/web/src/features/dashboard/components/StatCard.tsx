@@ -14,6 +14,14 @@ const TONE_CLASS: Record<StatTone, string | undefined> = {
   red: styles.red,
 };
 
+/** Nền cả thẻ theo tông — chỉ dùng ở biến thể `tinted`. */
+const TINT_CLASS: Record<StatTone, string | undefined> = {
+  green: styles.tintGreen,
+  blue: styles.tintBlue,
+  gold: styles.tintGold,
+  red: styles.tintRed,
+};
+
 /** Thẻ số liệu ở đầu dashboard: ô icon màu pastel + nhãn + giá trị lớn. */
 export function StatCard({
   label,
@@ -24,6 +32,7 @@ export function StatCard({
   danger,
   loading,
   onClick,
+  variant = 'default',
 }: {
   label: string;
   value: ReactNode;
@@ -39,7 +48,15 @@ export function StatCard({
   loading?: boolean;
   /** Có đích để đi tiếp thì thẻ thành `<button>`; không có thì vẫn là một khối tĩnh. */
   onClick?: () => void;
+  /**
+   * `'default'` — thẻ trắng gọn của dashboard.
+   * `'tinted'` — cả thẻ nhuộm theo tông, icon tròn và số lớn hơn: dải số liệu đầu trang danh mục
+   * quản trị (trang "Gói dịch vụ"), nơi bốn con số là thứ đầu tiên người xem đọc.
+   */
+  variant?: 'default' | 'tinted';
 }) {
+  const tinted = variant === 'tinted';
+  const cardClass = cx(styles.card, tinted && styles.tinted, tinted && TINT_CLASS[tone]);
   const body = (
     <>
       <span className={cx(styles.iconTile, TONE_CLASS[tone])}>
@@ -57,11 +74,11 @@ export function StatCard({
   // hình chỉ thấy được cái thứ nhất.
   if (onClick) {
     return (
-      <button type="button" className={cx(styles.card, styles.clickable)} onClick={onClick}>
+      <button type="button" className={cx(cardClass, styles.clickable)} onClick={onClick}>
         {body}
       </button>
     );
   }
 
-  return <div className={styles.card}>{body}</div>;
+  return <div className={cardClass}>{body}</div>;
 }

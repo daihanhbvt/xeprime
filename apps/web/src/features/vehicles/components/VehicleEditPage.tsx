@@ -2,7 +2,7 @@
 
 import { App, Button } from 'antd';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { API_ERROR_CODE, PERMISSION } from '@xeprime/types';
 import { EmptyState } from '@/components/feedback/EmptyState';
@@ -10,6 +10,8 @@ import { LoadingState } from '@/components/feedback/LoadingState';
 import { PermissionState } from '@/components/feedback/PermissionState';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { PageContainer } from '@/components/layout/PageContainer';
+import { useBranchReturnHref } from '@/features/branches/hooks/use-branch-return';
+import { withBranchReturn } from '@/features/branches/branch-link';
 import { useSupportSession } from '@/features/tenant-support/support-session';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useWorkspace } from '@/hooks/use-workspace';
@@ -41,11 +43,15 @@ export function VehicleEditPage({ vehicleId }: { vehicleId: string }) {
    * lại là về danh sách, và phiên chế độ xem đọc được nó ở dạng chỉ-xem.
    */
   const support = useSupportSession();
-  const canOpen = has(PERMISSION.VEHICLE_UPDATE) || (support !== null && has(PERMISSION.VEHICLE_VIEW));
+  const canOpen =
+    has(PERMISSION.VEHICLE_UPDATE) || (support !== null && has(PERMISSION.VEHICLE_VIEW));
   // Không gọi API khi không mở được trang: tránh một request chắc chắn bị guard backend từ chối.
   const vehicle = useVehicle(canOpen ? vehicleId : undefined);
   const update = useUpdateVehicle(vehicleId);
-  const backHref = support ? paths.vehicles : vehiclePaths.detail(vehicleId);
+  // Mẩu đường về đi tiếp một chặng nữa: sửa → hồ sơ → danh sách vẫn giữ nguyên chi nhánh.
+  const listHref = useBranchReturnHref(paths.vehicles);
+  const branchId = useSearchParams().get('branchId');
+  const backHref = support ? listHref : withBranchReturn(vehiclePaths.detail(vehicleId), branchId);
   const goBack = () => router.push(backHref);
 
   async function handleSubmit(body: UpdateVehicleInput) {
@@ -82,7 +88,7 @@ export function VehicleEditPage({ vehicleId }: { vehicleId: string }) {
 
   if (vehicle.isLoading) {
     return (
-      <PageContainer>
+      <PageContainer width="wide">
         <ManagePageHeader title={t('edit.page.title')} onBack={goBack} />
         <LoadingState variant="page" label={t('detail.loading')} />
       </PageContainer>
@@ -99,14 +105,14 @@ export function VehicleEditPage({ vehicleId }: { vehicleId: string }) {
         // Không retry cho 404 (EmptyState R10) — thử lại một bản ghi không tồn tại là ngõ cụt.
         onRetry={notFound ? undefined : () => void vehicle.refetch()}
         action={
-          <Button onClick={() => router.push(paths.vehicles)}>{t('detail.backToList')}</Button>
+          <Button onClick={() => router.push(listHref)}>{t('detail.backToList')}</Button>
         }
       />
     );
   }
 
   return (
-    <PageContainer>
+    <PageContainer width="wide">
       <ManagePageHeader title={t('edit.page.title')} onBack={goBack} />
       <VehicleEditWorkspace
         vehicle={vehicle.data}

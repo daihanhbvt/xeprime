@@ -19,6 +19,29 @@ import VehicleDetailPage from './page';
 
 const nav = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
 
+/**
+ * Trục NĂNG LỰC theo gói — mặc định gian hàng đủ cờ (tuyến GÓI).
+ *
+ * Hai lý do phải có ở đây:
+ *  1. `useVehicleCapabilities` gọi `useFeature`, thứ đọc `/auth/me` qua TanStack Query. Test này
+ *     mock `use-permissions` nên không dựng `QueryClientProvider` — thiếu mock này thì component
+ *     chết vì hạ tầng, không vì thứ đang kiểm.
+ *  2. Từ 29/09/2026 khối TIỀN và thẻ BẢO DƯỠNG gác bằng quyền **và** cờ gói, nên bộ test phải
+ *     nói rõ gian hàng đang ở tuyến nào — xem `describe('tuyến hoa hồng …')` ở cuối file.
+ */
+const plan = vi.hoisted(() => ({ hasFullManage: true }));
+
+vi.mock('@/hooks/use-feature', () => ({
+  useFeature: () => ({
+    state: plan.hasFullManage ? 'enabled' : 'hidden',
+    canWrite: plan.hasFullManage,
+    isVisible: plan.hasFullManage,
+    planEndsAt: null,
+  }),
+  useFeatureStates: () => ({}),
+  usePlanEndsAt: () => null,
+}));
+
 // Danh mục lọc (hãng/kiểu dáng/nhiên liệu/tiện ích) tới từ API — test dùng bản cố định.
 vi.mock('@/features/catalog/use-catalog', async () =>
   (await import('@/features/catalog/test-catalog')).catalogModuleMock(),
@@ -264,15 +287,13 @@ function renderPage() {
 }
 
 /**
- * Thẻ xét duyệt phía dưới — để câu hỏi 'Chưa có' không dính các khối khác.
+ * Mở menu ⋮ ở cột thao tác đầu trang.
  *
- * Hai tiêu đề vì thẻ đổi vai theo trạng thái (bố cục 23/09/2026): xe chưa duyệt thì nó là
- * "Tiến trình xét duyệt", xe đã duyệt thì nó thu gọn thành "Thông tin xét duyệt".
+ * Từ 30/09/2026 toàn bộ thao tác của xe (Chỉnh sửa · Xem lịch · Xoá) nằm trong MỘT menu chứ
+ * không còn là ba nút rời, nên test phải mở menu trước khi tìm mục.
  */
-function reviewPanel(): HTMLElement {
-  const title =
-    screen.queryByText('Tiến trình xét duyệt') ?? screen.getByText('Thông tin xét duyệt');
-  return title.closest('.ant-card') as HTMLElement;
+function openActionsMenu(): void {
+  fireEvent.click(screen.getByRole('button', { name: /Thao tác khác cho Ford Transit 2021/ }));
 }
 
 beforeEach(() => {
@@ -292,6 +313,7 @@ beforeEach(() => {
   summary.isLoading = false;
   summary.isError = false;
   summary.requestedId = undefined;
+  plan.hasFullManage = true;
   grant();
 });
 
@@ -317,27 +339,29 @@ describe('/manage/vehicles/[id] — quyền', () => {
     expect(screen.queryByText('51B-802.46')).toBeNull();
   });
 
-  it('chỉ có quyền xem: không có nút sửa, không có menu thao tác khác', () => {
+  it('chỉ có quyền xem: menu thao tác chỉ còn "Xem lịch", không có sửa/xoá', () => {
     renderPage();
+    openActionsMenu();
 
-    expect(screen.queryByRole('button', { name: 'Chỉnh sửa' })).toBeNull();
-    expect(
-      screen.queryByRole('button', { name: /Thao tác khác cho Ford Transit 2021/ }),
-    ).toBeNull();
+    expect(screen.getByRole('menuitem', { name: 'Xem lịch' })).toBeTruthy();
+    expect(screen.queryByRole('menuitem', { name: 'Chỉnh sửa' })).toBeNull();
+    expect(screen.queryByRole('menuitem', { name: 'Xoá xe' })).toBeNull();
   });
 
-  it('có quyền sửa: nút "Chỉnh sửa" dẫn tới đúng route sửa', () => {
+  it('có quyền sửa: mục "Chỉnh sửa" dẫn tới đúng route sửa', () => {
     grant(PERMISSION.VEHICLE_UPDATE);
     renderPage();
+    openActionsMenu();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Chỉnh sửa' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Chỉnh sửa' }));
     expect(nav.push).toHaveBeenCalledWith('/manage/vehicles/v1/edit');
   });
 
-  it('nút "Xem lịch" mở màn lịch đã lọc sẵn về đúng xe', () => {
+  it('mục "Xem lịch" mở màn lịch đã lọc sẵn về đúng xe', () => {
     renderPage();
+    openActionsMenu();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Xem lịch' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Xem lịch' }));
     expect(nav.push).toHaveBeenCalledWith('/manage/calendar?q=51B-802.46');
   });
 
@@ -453,8 +477,10 @@ describe('/manage/vehicles/[id] — hồ sơ hiển thị', () => {
     expect(screen.getByText('Chưa hiển thị')).toBeTruthy();
   });
 
-  it('thông số kỹ thuật hiện đúng giá trị đang lưu', () => {
+  it('thông số kỹ thuật hiện đúng giá trị đang lưu — ở tab riêng', () => {
     renderPage();
+    // Thông số kỹ thuật là một tab riêng (30/09/2026).
+    fireEvent.click(screen.getByRole('tab', { name: 'Thông số kỹ thuật' }));
 
     expect(screen.getByText('51B-802.46')).toBeTruthy();
     expect(screen.getByText('Ford')).toBeTruthy();
@@ -579,6 +605,14 @@ describe('/manage/vehicles/[id] — hồ sơ hiển thị', () => {
   });
 
   it('chỉ hiện 3 việc quan trọng nhất, phần còn lại sau "Xem tất cả"', () => {
+    /*
+     * Bộ cảnh báo dưới đây có một việc BẢO DƯỠNG, nên người xem phải có quyền đọc bảo dưỡng —
+     * đúng như server làm: `VehicleAlertsService` chỉ đẩy nhóm cảnh báo đó cho scope có
+     * `vehicles.maintenance.view`. Thiếu dòng này, dữ liệu mẫu mô tả một tình huống KHÔNG tồn
+     * tại (server gửi cảnh báo bảo dưỡng cho người không đọc được bảo dưỡng), và từ 29/09/2026
+     * `useVehicleAlertView` lọc nó đi — làm hỏng chính phép đếm "3 việc đầu" mà test này khoá.
+     */
+    grant(PERMISSION.VEHICLE_MAINTENANCE_VIEW);
     summary.data = {
       stats: { vehicleId: 'vehicle-1', activeBookings: 0, completedBookings: 0 },
       currentOdometerKm: null,
@@ -668,7 +702,39 @@ describe('/manage/vehicles/[id] — khối tổng hợp (summary)', () => {
     grant(PERMISSION.FINANCE_VIEW);
     renderPage();
 
+    // Tiền của xe nằm ở tab "Tài chính" (30/09/2026) — tab chỉ có khi đủ quyền ∧ gói.
+    fireEvent.click(screen.getByRole('tab', { name: 'Tài chính' }));
     expect(screen.getByTestId('vehicle-finance-panel').textContent).toBe('v1');
+  });
+
+  /**
+   * TUYẾN HOA HỒNG: có quyền, KHÔNG có gói — và đó là hai chuyện khác nhau.
+   *
+   * Chủ xe cá nhân dùng CHUNG vai `shop_owner` với chủ gian hàng (ADR 0014), nên `finance.view`
+   * và `vehicles.maintenance.view` của họ đều `true` — đã đối chiếu trên dữ liệu thật: hai tài
+   * khoản trả về đúng 55 permission GIỐNG HỆT NHAU, chỉ khác `tenant.features`.
+   *
+   * Backend gác hai khu đó bằng trục khác (`@SubscriptionTrackOnly` + `@RequiresFeature`) và trả
+   * `SUBSCRIPTION_TRACK_ONLY`. Trước 29/09/2026 hồ sơ xe ở `/account` dựng cả hai khối rồi để
+   * chúng tự báo "Không tải được số liệu" — một câu nói rằng hệ thống đang hỏng, cho một tính
+   * năng người dùng chưa từng mua.
+   */
+  it('tuyến hoa hồng: có `finance.view` nhưng KHÔNG có cờ gói ⇒ không dựng khối tiền', () => {
+    grant(PERMISSION.FINANCE_VIEW);
+    plan.hasFullManage = false;
+    renderPage();
+
+    expect(screen.queryByTestId('vehicle-finance-panel')).toBeNull();
+  });
+
+  it('tuyến hoa hồng: có quyền bảo dưỡng nhưng KHÔNG có cờ gói ⇒ không dựng thẻ bảo dưỡng', () => {
+    grant(PERMISSION.VEHICLE_MAINTENANCE_VIEW);
+    plan.hasFullManage = false;
+    renderPage();
+
+    expect(screen.queryByText('Bảo dưỡng & Số KM')).toBeNull();
+    // Hồ sơ xe vẫn nguyên vẹn — mất một thẻ của gói không được kéo theo phần cơ bản.
+    expect(screen.getByText('Thông số kỹ thuật')).toBeTruthy();
   });
 
   it('tổng hợp hỏng: hồ sơ vẫn hiển thị, từng khối báo "Không tải được"', () => {
@@ -701,12 +767,10 @@ describe('/manage/vehicles/[id] — khu vực chưa có dữ liệu', () => {
 
     expect(screen.getByText('Hồ sơ & Giấy tờ pháp lý')).toBeTruthy();
     expect(screen.getByText('Nguồn xe & Tài chính')).toBeTruthy();
-    expect(screen.getByText('Bảo dưỡng & Số KM')).toBeTruthy();
+    // Bảo dưỡng & số KM là một TAB riêng (30/09/2026) — chỉ có khi đủ quyền ∧ cờ gói.
+    expect(screen.getByRole('tab', { name: 'Bảo dưỡng & số KM' })).toBeTruthy();
     expect(screen.getByText('Hình thức nguồn xe')).toBeTruthy();
     expect(screen.getByText('Sở hữu')).toBeTruthy();
-    expect(screen.getByText(/Chưa có dữ liệu KM/)).toBeTruthy();
-    // Mốc bảo dưỡng chưa tính được thì nói thẳng, KHÔNG dựng "0 km" giả (docs §9).
-    expect(screen.getAllByText('Chưa đủ dữ liệu').length).toBeGreaterThan(0);
 
     // Lối đi dùng ĐÚNG giá trị `?tab=` chuẩn của màn sửa xe.
     const links = screen.getAllByRole('link');
@@ -723,9 +787,9 @@ describe('/manage/vehicles/[id] — khu vực chưa có dữ liệu', () => {
     grant(PERMISSION.VEHICLE_MAINTENANCE_VIEW);
     renderPage(); // không có VEHICLE_DOCUMENT_VIEW
     expect(screen.queryByText('Hồ sơ & Giấy tờ pháp lý')).toBeNull();
-    expect(
-      screen.queryAllByRole('link').map((link) => link.getAttribute('href')),
-    ).not.toContain('/manage/vehicles/v1/edit?tab=documents');
+    expect(screen.queryAllByRole('link').map((link) => link.getAttribute('href'))).not.toContain(
+      '/manage/vehicles/v1/edit?tab=documents',
+    );
   });
 
   it('thiếu quyền bảo dưỡng: thẻ Bảo dưỡng & Số KM vắng mặt hẳn, không hiện khung rỗng', () => {
@@ -734,72 +798,11 @@ describe('/manage/vehicles/[id] — khu vực chưa có dữ liệu', () => {
   });
 });
 
-/* ------------------------------------------------------------------ gửi duyệt công khai */
-
-describe('/manage/vehicles/[id] — thẻ xét duyệt phía dưới', () => {
-  /*
-   * Bố cục 23/09/2026: thẻ này KHÔNG còn là nơi hành động.
-   *
-   * Nút gửi duyệt dời lên "Việc cần làm", công tắc hiển thị lên cột thao tác. Thẻ còn lại phần
-   * TRA CỨU — checklist đánh dấu từng mục, mốc gửi/duyệt. Các test dưới khoá lại chuyện "hai CTA
-   * cho cùng một việc" không quay về.
-   */
-  it('checklist chạy CÙNG luật với backend — bảy mục, đủ hết thì "Đã có" cả bảy', () => {
-    grant(PERMISSION.VEHICLE_SUBMIT_PUBLIC);
-    renderPage();
-
-    expect(within(reviewPanel()).getAllByText('Đã có')).toHaveLength(7);
-    expect(within(reviewPanel()).queryByText('Chưa có')).toBeNull();
-  });
-
-  it('thiếu điều kiện: đánh dấu đúng mục còn thiếu', () => {
-    grant(PERMISSION.VEHICLE_SUBMIT_PUBLIC);
-    // Thiếu MÔ TẢ không còn chặn gửi duyệt (ADR 0030); thiếu biển số và thiếu ảnh thì có.
-    detail.data = vehicle({ description: null, plateNumber: null, images: [] });
-    renderPage();
-
-    expect(within(reviewPanel()).getAllByText('Chưa có')).toHaveLength(2);
-    expect(within(reviewPanel()).getAllByText('Đã có')).toHaveLength(5);
-  });
-
-  it('KHÔNG lặp lại CTA hay công tắc đã có ở đầu trang', () => {
-    grant(PERMISSION.VEHICLE_SUBMIT_PUBLIC);
-    summary.data = emptyAlertSummary();
-    renderPage();
-
-    // Đúng MỘT nút gửi duyệt trên cả trang, và nó nằm ở thẻ Việc cần làm.
-    expect(screen.getAllByRole('button', { name: /Gửi duyệt/ })).toHaveLength(1);
-    expect(within(reviewPanel()).queryByRole('button', { name: /Gửi duyệt/ })).toBeNull();
-    expect(within(reviewPanel()).queryByRole('switch')).toBeNull();
-  });
-
-  it('xe đã duyệt: thẻ đổi tên thành "Thông tin xét duyệt" và thu gọn sẵn', () => {
-    grant(PERMISSION.VEHICLE_SUBMIT_PUBLIC);
-    detail.data = vehicle({ publicStatus: 'approved_public', isMarketplaceVisible: true });
-    renderPage();
-
-    expect(screen.getByText('Thông tin xét duyệt')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Gửi duyệt/ })).toBeNull();
-    // Thu gọn: nội dung checklist chưa dựng ra cho tới khi người dùng mở.
-    expect(screen.queryByText('Ảnh đại diện')).toBeNull();
-  });
-
-  it('có mốc gửi/duyệt thì kể ra', () => {
-    detail.data = vehicle({
-      publicStatus: 'needs_revision',
-      latestPublicReview: {
-        status: 'needs_revision',
-        reason: 'Ảnh mờ.',
-        submittedAt: '2026-09-20T02:00:00.000Z',
-        reviewedAt: '2026-09-21T02:00:00.000Z',
-      },
-    });
-    renderPage();
-
-    expect(within(reviewPanel()).getByText('Đã gửi')).toBeTruthy();
-    expect(within(reviewPanel()).getByText('Đã duyệt')).toBeTruthy();
-  });
-});
+/*
+ * Thẻ xét duyệt (checklist điều kiện lên chợ) KHÔNG còn trên Hồ sơ 360 (30/09/2026): tab "Xét
+ * duyệt" đã bỏ; việc còn thiếu nằm ở "Việc cần làm", và xe tạo qua wizard đã đủ điều kiện. Panel
+ * vẫn có bộ test riêng ở `vehicle-public-review-panel.test.tsx`.
+ */
 
 /* ------------------------------------------------------------------ xoá + điều hướng */
 

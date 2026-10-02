@@ -63,8 +63,8 @@ export function useServiceToggle(vehicle: VehicleDetail, canEdit: boolean): Serv
     if (service === SERVICE_TYPE.WITH_DRIVER) {
       return Boolean(
         vehicle.withDriverDailyPrice ||
-          vehicle.withDriverInterCityPrice ||
-          vehicle.withDriverOneWayPrice,
+        vehicle.withDriverInterCityPrice ||
+        vehicle.withDriverOneWayPrice,
       );
     }
     if (service === SERVICE_TYPE.LONG_TERM) return Boolean(vehicle.monthlyPrice);
@@ -112,7 +112,8 @@ export function useServiceToggle(vehicle: VehicleDetail, canEdit: boolean): Serv
       confirmLoading={update.isPending}
       onClose={() => setPendingChange(null)}
       onOk={() =>
-        pendingChange && void commit(pendingChange.service, pendingChange.enabled, pendingChange.next)
+        pendingChange &&
+        void commit(pendingChange.service, pendingChange.enabled, pendingChange.next)
       }
       okText={t('serviceToggle.confirmOk')}
       destructive={Boolean(pendingChange && !pendingChange.enabled)}

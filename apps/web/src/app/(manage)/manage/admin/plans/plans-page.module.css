@@ -1,32 +1,58 @@
-.state {
-  display: block;
-  margin: 64px auto;
-  text-align: center;
-}
-
-.name {
-  font-weight: 600;
-  color: var(--xp-color-text);
-}
-
-.meta {
-  font-size: 12px;
-  color: var(--xp-color-text-secondary);
+/*
+ * Khối trắng bo góc ôm cả thẻ số liệu, thanh lọc và bảng — một bề mặt làm việc, tách khỏi nền
+ * trang, theo bố cục thiết kế của màn "Gói dịch vụ".
+ */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  padding: 20px;
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: 16px;
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-card);
 }
 
 /*
- * Tên gói + nhãn "Tuyến mặc định" trên một dòng. `flex-wrap` vì cột rộng 240px và một tên gói
- * dài cộng nhãn sẽ tràn — xuống dòng đọc được, cắt chữ thì không.
+ * Thanh lọc tự có lề dưới cho bố cục trang thường; trong khối này khoảng cách do `gap` lo.
+ * Nhân đôi class để thắng `.wrapper`/`.mobileRoot` của FilterBar (cùng specificity, thứ tự nạp
+ * CSS module không bảo đảm).
  */
-.planName {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  font-weight: 600;
-  color: var(--xp-color-text);
+.filters.filters {
+  margin-bottom: 0;
 }
 
-.intro {
-  margin-bottom: 12px;
+/* Tiêu đề cột kèm dấu "i": giữ chữ và dấu trên một dòng. */
+.headerWithHint {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.footer {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+/* Thẻ mobile (≤640px) — cùng bộ ô với bảng desktop, xếp dọc. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.cardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+@media (max-width: 640px) {
+  .panel {
+    padding: var(--xp-space-sm);
+    border-radius: var(--xp-border-radius);
+  }
 }

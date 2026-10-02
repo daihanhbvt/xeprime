@@ -5,6 +5,8 @@ import { useTranslations } from 'next-intl';
 import { Suspense, useMemo, useState } from 'react';
 import { PERMISSION } from '@xeprime/types';
 import { FilterBar, type FilterField, type FilterValues } from '@/components/filter/FilterBar';
+import { ALL_FILTER } from '@/constants/filters';
+import { useBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { usePermissions } from '@/hooks/use-permissions';
 import { RECEIPTS_DEFAULT_LIMIT } from '@/features/finance/constants';
@@ -33,6 +35,10 @@ function DebtsView() {
   const tCommon = useTranslations('Common');
   const { has } = usePermissions();
   const { filters, setFilters } = useDebtFilters();
+  const branch = useBranchFilter({
+    value: filters.branchId,
+    onChange: (branchId) => setFilters({ branchId }),
+  });
   const { data, isError, refetch, isFetching } = useDebts(filters);
   const [collect, setCollect] = useState<DebtItem | null>(null);
   const [detailBookingId, setDetailBookingId] = useState<string | null>(null);
@@ -58,6 +64,7 @@ function DebtsView() {
         label: t('filters.searchLabel'),
         placeholder: t('filters.searchPlaceholder'),
       },
+      ...(branch.field ? [branch.field] : []),
       {
         kind: 'segmented',
         key: 'filter',
@@ -70,7 +77,7 @@ function DebtsView() {
         ],
       },
     ],
-    [t, tCommon],
+    [t, tCommon, branch.field],
   );
 
   const items = data?.items ?? [];
@@ -83,9 +90,27 @@ function DebtsView() {
 
       <FilterBar
         fields={fields}
-        values={{ q: filters.q, filter: filters.filter ?? 'all' } satisfies FilterValues}
-        onChange={(patch) => setFilters(patch as Partial<DebtFilters>)}
-        onClear={filtered ? () => setFilters(clearedDebtFilters()) : undefined}
+        values={
+          {
+            q: filters.q,
+            filter: filters.filter ?? 'all',
+            branchId: filters.branchId ?? ALL_FILTER,
+          } satisfies FilterValues
+        }
+        onChange={(patch) =>
+          setFilters(
+            ('branchId' in patch
+              ? { ...patch, branchId: patch.branchId === ALL_FILTER ? undefined : patch.branchId }
+              : patch) as Partial<DebtFilters>,
+          )
+        }
+        onClear={
+          filtered
+            ? () => {
+                setFilters(clearedDebtFilters());
+              }
+            : undefined
+        }
         // Hình thái gọn: ô tìm kiếm 240px đứng cạnh nhóm hạn thay vì đẩy nhóm sang mép phải.
         compactFields
       />

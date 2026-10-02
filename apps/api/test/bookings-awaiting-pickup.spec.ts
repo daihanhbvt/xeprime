@@ -138,7 +138,7 @@ async function createViaHoldPayment(vehicleIndex: number, dayOffset = 5): Promis
 }
 
 const idsOf = async (query: Parameters<typeof bookings.list>[1]) =>
-  (await bookings.list(tenantId, query)).data.map((b) => b.id);
+  (await bookings.list(tenantId, query, null)).data.map((b) => b.id);
 
 /**
  * Đưa thẳng một đơn sang `active` — dựng bằng Prisma, KHÔNG qua luồng bàn giao thật.
@@ -265,7 +265,7 @@ describe('Chờ giao xe — đơn nào có mặt', () => {
   maybe('đơn sinh ra từ lượt đối soát ĐỦ TIỀN giữ chỗ có mặt', async () => {
     const bookingId = await createViaHoldPayment(0);
 
-    const list = await bookings.list(tenantId, AWAITING);
+    const list = await bookings.list(tenantId, AWAITING, null);
     expect(list.data.map((b) => b.id)).toEqual([bookingId]);
     expect(list.meta.total).toBe(1);
     expect(list.data[0]!.status).toBe(BOOKING_STATUS.RESERVED);
@@ -312,7 +312,7 @@ describe('Chờ giao xe — đơn nào có mặt', () => {
     );
     expect(statuses.every((r) => r.bookingId === null)).toBe(true);
 
-    const list = await bookings.list(tenantId, AWAITING);
+    const list = await bookings.list(tenantId, AWAITING, null);
     expect(list.data).toEqual([]);
     expect(list.meta.total).toBe(0);
   });
@@ -391,7 +391,7 @@ describe('Chờ giao xe — đơn nào biến mất', () => {
       },
     });
 
-    const list = await bookings.list(tenantId, AWAITING);
+    const list = await bookings.list(tenantId, AWAITING, null);
     expect(list.data.map((b) => b.id)).toEqual([booking.id]);
     expect(list.data[0]!.pickupHandoverStatus).toBe(HANDOVER_STATUS.READY);
   });
@@ -410,7 +410,7 @@ describe('Chờ giao xe — đơn nào biến mất', () => {
       },
     });
 
-    const list = await bookings.list(tenantId, AWAITING);
+    const list = await bookings.list(tenantId, AWAITING, null);
     expect(list.data.map((b) => b.id)).toEqual([booking.id]);
     expect(list.data[0]!.pickupHandoverStatus).toBeNull();
   });
@@ -446,7 +446,7 @@ describe('Chờ giao xe — lọc, tìm, phân trang vẫn của server', () => 
     const handed = await createDirect(2, { dayOffset: 4, customerName: 'Lê Thị Mai' });
     await markActive(handed.id);
 
-    const list = await bookings.list(tenantId, { ...AWAITING, q: 'Lê Thị Mai' });
+    const list = await bookings.list(tenantId, { ...AWAITING, q: 'Lê Thị Mai' }, null);
     expect(list.data.map((b) => b.id)).toEqual([target.id]);
     expect(list.meta.total).toBe(1);
   });
@@ -481,12 +481,12 @@ describe('Chờ giao xe — lọc, tìm, phân trang vẫn của server', () => 
     const handed = await createDirect(3, { dayOffset: 5 });
     await markActive(handed.id);
 
-    const page1 = await bookings.list(tenantId, { ...AWAITING, page: 1, limit: 2 });
+    const page1 = await bookings.list(tenantId, { ...AWAITING, page: 1, limit: 2 }, null);
     expect(page1.meta.total).toBe(3);
     expect(page1.meta.hasNext).toBe(true);
     expect(page1.data).toHaveLength(2);
 
-    const page2 = await bookings.list(tenantId, { ...AWAITING, page: 2, limit: 2 });
+    const page2 = await bookings.list(tenantId, { ...AWAITING, page: 2, limit: 2 }, null);
     expect(page2.meta.hasNext).toBe(false);
     expect(page2.data).toHaveLength(1);
 
@@ -501,7 +501,7 @@ describe('Chờ giao xe — lọc, tìm, phân trang vẫn của server', () => 
     const handed = await createDirect(1, { dayOffset: 3 });
     await markActive(handed.id);
 
-    const all = await bookings.list(tenantId, {});
+    const all = await bookings.list(tenantId, {}, null);
     expect(all.meta.total).toBe(2);
     // Mặc định cũ là "mới tạo trước" — nhóm việc không được đổi thứ tự của danh sách chung.
     expect(all.data.map((b) => b.id)).toEqual([handed.id, stays.id]);
@@ -512,7 +512,7 @@ describe('Chờ giao xe — nơi xe đổi tay', () => {
   maybe('khách tự tới lấy ⇒ `branch` kèm tên chi nhánh giữ xe', async () => {
     await createDirect(vehicleIds.length - 1, { dayOffset: 2 });
 
-    const [row] = (await bookings.list(tenantId, AWAITING)).data;
+    const [row] = (await bookings.list(tenantId, AWAITING, null)).data;
     expect(row!.handoverPlaceKind).toBe(BOOKING_HANDOVER_PLACE.BRANCH);
     expect(row!.handoverPlace).toBe('Chi nhánh Thủ Đức');
   });
@@ -529,7 +529,7 @@ describe('Chờ giao xe — nơi xe đổi tay', () => {
       data: { deliveryRequested: true, deliveryAddress: '12 Nguyễn Huệ, Quận 1, TP.HCM' },
     });
 
-    const [row] = (await bookings.list(tenantId, AWAITING)).data;
+    const [row] = (await bookings.list(tenantId, AWAITING, null)).data;
     expect(row!.id).toBe(bookingId);
     expect(row!.handoverPlaceKind).toBe(BOOKING_HANDOVER_PLACE.DELIVERY);
     expect(row!.handoverPlace).toBe('12 Nguyễn Huệ, Quận 1, TP.HCM');
@@ -538,7 +538,7 @@ describe('Chờ giao xe — nơi xe đổi tay', () => {
   maybe('server trả MÃ + chuỗi thô, không trả một câu đã dịch sẵn', async () => {
     await createDirect(0, { dayOffset: 2 });
 
-    const [row] = (await bookings.list(tenantId, AWAITING)).data;
+    const [row] = (await bookings.list(tenantId, AWAITING, null)).data;
     // Nhãn ("Khách tự tới lấy tại…") là việc của client — ADR 0012. Server chỉ nói xe ở đâu.
     expect(row!.handoverPlaceKind).toBe(BOOKING_HANDOVER_PLACE.BRANCH);
     expect(row!.handoverPlace).toBe('Chi nhánh Quận 1');

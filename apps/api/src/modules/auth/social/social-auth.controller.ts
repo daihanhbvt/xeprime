@@ -216,6 +216,7 @@ export class SocialAuthController {
         const oneTimeCode = await this.nativeCodes.issue({
           userId: result.userId,
           codeChallenge: result.native.codeChallenge,
+          clientApp: result.native.clientApp,
         });
         res.redirect(this.social.nativeRedirect(result.native, { code: oneTimeCode }));
         return;

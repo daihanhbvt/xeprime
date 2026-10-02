@@ -2,7 +2,6 @@ import {
   ApartmentOutlined,
   AppstoreOutlined,
   AuditOutlined,
-  BankOutlined,
   CalendarOutlined,
   CarOutlined,
   CreditCardOutlined,
@@ -73,6 +72,20 @@ export const NAV_BADGE = {
 export type NavBadgeKey = (typeof NAV_BADGE)[keyof typeof NAV_BADGE];
 
 /**
+ * Quyền để THẤY một mục menu: một quyền, hoặc một DANH SÁCH mà có BẤT KỲ quyền nào trong đó là
+ * thấy — cho màn gộp nhiều hàng đợi, mỗi hàng đợi gác bằng quyền riêng ("Tài chính": tiền vào
+ * gác bằng quyền gói, phần còn lại bằng quyền tiền). Chỉ là lớp ẩn/hiện; guard backend chặn thật.
+ */
+export type NavPermission = Permission | readonly Permission[];
+
+export function isNavPermissionGranted(
+  permission: NavPermission,
+  has: (permission: Permission) => boolean,
+): boolean {
+  return typeof permission === 'string' ? has(permission) : permission.some(has);
+}
+
+/**
  * Mục menu dẫn tới một trang.
  *
  * `permission` chỉ dùng để ẩn/hiện — guard backend mới chặn thật (CLAUDE.md mục 6).
@@ -83,7 +96,7 @@ export interface NavLeaf {
   /** Khoá trong namespace `Navigation` — nhãn dựng lúc render theo ngôn ngữ. */
   readonly labelKey: NavLabelKey;
   readonly href: string;
-  readonly permission: Permission;
+  readonly permission: NavPermission;
   readonly icon: ComponentType<{ className?: string }>;
   readonly badge?: NavBadgeKey;
   /**
@@ -555,23 +568,18 @@ export const PLATFORM_NAV: readonly NavSection[] = [
     children: [
       {
         /*
-         * Tiền VÀO đứng trước tiền RA: một khoản chưa khớp ở đây là một gian hàng chưa được
-         * kích hoạt hoặc một chuyến chưa thành đơn (ADR 0022 · ADR 0044).
-         *
-         * Cùng quyền với quản trị gói: cả hai đều là việc TIỀN của nền tảng, và `finance_admin`
-         * có sẵn quyền đó.
+         * "Tài chính" (01/10/2026) gộp hai mục cũ — "Đối soát tiền vào" và "Vận hành tiền" — vào
+         * MỘT màn: cùng một người trực, cùng một tài khoản ngân hàng, và bảng đối soát ngày vốn
+         * đã đếm tiền vào chưa khớp mà không cho xử lý tại chỗ. Hàng đợi tiền vào vẫn gác bằng
+         * `platform.billing.manage` NGAY TRONG màn (thiếu quyền ⇒ hàng đợi đó ẩn hẳn); URL cũ
+         * `/manage/admin/bank-transactions` chuyển tiếp về đúng hàng đợi.
          */
-        key: 'admin-bank-transactions',
-        labelKey: 'platform.bankTransactions',
-        href: ROUTES.MANAGE.ADMIN_BANK_TRANSACTIONS,
-        permission: PERMISSION.PLATFORM_BILLING_MANAGE,
-        icon: BankOutlined,
-      },
-      {
         key: 'admin-money',
         labelKey: 'platform.money',
         href: ROUTES.MANAGE.ADMIN_MONEY,
-        permission: PERMISSION.PLATFORM_MONEY_MANAGE,
+        // Cùng bộ quyền với các hàng đợi trong màn (`FINANCE_QUEUE_PERMISSION`): người chỉ có quyền
+        // gói vẫn thấy mục này — và trong màn chỉ thấy hàng đợi tiền vào.
+        permission: [PERMISSION.PLATFORM_MONEY_MANAGE, PERMISSION.PLATFORM_BILLING_MANAGE],
         icon: WalletOutlined,
       },
       {
@@ -705,7 +713,7 @@ export interface MobileTab {
   readonly key: string;
   readonly labelKey: NavLabelKey;
   readonly href: string;
-  readonly permission: Permission;
+  readonly permission: NavPermission;
   readonly icon: ComponentType<{ className?: string }>;
   readonly badge?: NavBadgeKey;
   /**
@@ -767,11 +775,11 @@ const PLATFORM_MOBILE_TABS: readonly MobileTab[] = [
     exact: true,
   },
   {
-    // Tab 3: Money Ops — tiền, đối soát, hỗ trợ
+    // Tab 3: Tài chính — tiền vào, giữ chỗ, chi trả, đối soát ngày
     key: 'admin-money',
     labelKey: 'platform.money',
     href: ROUTES.MANAGE.ADMIN_MONEY,
-    permission: PERMISSION.PLATFORM_MONEY_MANAGE,
+    permission: [PERMISSION.PLATFORM_MONEY_MANAGE, PERMISSION.PLATFORM_BILLING_MANAGE],
     icon: WalletOutlined,
   },
   {

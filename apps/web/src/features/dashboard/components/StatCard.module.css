@@ -97,3 +97,89 @@
   border-color: var(--xp-color-border);
   box-shadow: var(--xp-shadow-md);
 }
+
+/*
+ * Biến thể `tinted` — cả thẻ nhuộm theo tông, icon tròn và con số lớn hơn.
+ *
+ * Nền ô icon trộn từ CHÍNH màu chữ của nó (`currentColor` = màu tông mà `.green`/`.gold`… đặt):
+ * nền pastel mặc định của ô icon gần trùng nền thẻ đã nhuộm, để nguyên thì ô icon chìm mất.
+ * Selector hai class (0,2,0) để thắng nền của `.green`/`.gold`… (0,1,0).
+ */
+.tinted {
+  gap: 14px;
+  padding: 16px 18px;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.tinted .iconTile {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: color-mix(in srgb, currentColor 14%, var(--xp-color-bg-container));
+}
+
+.tinted .icon {
+  font-size: 22px;
+}
+
+.tinted .label {
+  font-size: 13px;
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.tinted .value {
+  margin-top: 2px;
+  font-size: 22px;
+  line-height: 1.3;
+}
+
+.tinted .hint {
+  font-size: 12px;
+}
+
+.tintGreen {
+  background: var(--xp-color-success-bg);
+}
+
+.tintBlue {
+  background: var(--xp-color-info-bg);
+}
+
+.tintGold {
+  background: var(--xp-color-primary-light);
+}
+
+.tintRed {
+  background: var(--xp-color-error-bg);
+}
+
+/*
+ * Thẻ `tinted` có nhãn/gợi ý dài hơn ("Tổng lượt đăng ký", "lượt gán và mua gói") và thường xếp
+ * hai cột ở điện thoại: cho XUỐNG DÒNG thay vì cắt "Tổng lượt…" — nhãn bị cắt là con số không
+ * còn biết đang đếm cái gì.
+ */
+.tinted .label,
+.tinted .hint {
+  white-space: normal;
+}
+
+@media (max-width: 640px) {
+  .tinted {
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .tinted .iconTile {
+    width: 36px;
+    height: 36px;
+  }
+
+  .tinted .icon {
+    font-size: 18px;
+  }
+
+  .tinted .value {
+    font-size: 20px;
+  }
+}

@@ -23,6 +23,8 @@ const perms = vi.hoisted(() => ({ granted: new Set<string>() }));
 const features = vi.hoisted(() => ({ states: {} as Record<string, string> }));
 
 vi.mock('next/navigation', () => ({
+  // Link menu mang chi nhánh theo URL (ADR 0052) — test không lọc gì nên URL sạch tham số.
+  useSearchParams: () => new URLSearchParams(),
   usePathname: () => nav.pathname,
 }));
 
@@ -138,7 +140,7 @@ describe('MobileNav — thanh tab dưới đáy', () => {
     const labels = within(bottomBar(container))
       .getAllByRole('link')
       .map((a) => a.textContent);
-    expect(labels).toEqual(['Tổng quan', 'Kiểm duyệt', 'Vận hành tiền', 'Đơn thuê']);
+    expect(labels).toEqual(['Tổng quan', 'Kiểm duyệt', 'Tài chính', 'Đơn thuê']);
     expect(labels).not.toContain('Lịch xe');
   });
 
@@ -247,7 +249,7 @@ describe('MobileNav — tab đang sáng', () => {
     ['/manage/admin', 'Kiểm duyệt'],
     ['/manage/admin/bookings', 'Đơn thuê'],
     ['/manage/admin/bookings/01H', 'Đơn thuê'],
-    ['/manage/admin/money', 'Vận hành tiền'],
+    ['/manage/admin/money', 'Tài chính'],
     ['/manage/admin/partners/shops', null],
     ['/manage/admin/partners/owners', null],
   ])('nền tảng %s → chỉ %s sáng', (pathname, expected) => {

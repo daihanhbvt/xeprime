@@ -12,7 +12,6 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useLocaleMenuGroup } from '@/components/i18n/locale-menu';
 import { ROUTES } from '@/constants/routes';
-import { BranchScopeSelector } from '@/features/branches/components/BranchScopeSelector';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
 import { CHAT_SIDE } from '@xeprime/types';
 import { ChatMenu } from '@/features/chat/components/ChatMenu';
@@ -74,20 +73,17 @@ export function Topbar({ user }: { user: CurrentUser }) {
         <ChatMenu side={CHAT_SIDE.SHOP} />
         <NotificationBell context="manage" />
 
-        {tenantName ? (
-          <>
-            <span className={styles.divider} aria-hidden />
-            {/*
-              Bộ chọn CHI NHÁNH: từ wave chi nhánh nó có hành vi thật (thu hẹp danh sách xe/đơn/
-              yêu cầu thuê/lịch theo chi nhánh), nên không còn là điều khiển chết. Tự ẩn khi gian
-              hàng chỉ có một chi nhánh hoặc người dùng không có `branches.view`.
+        {/*
+          KHÔNG có bộ chọn chi nhánh ở đây nữa (ADR 0052).
 
-              Chỉ hiện trong ngữ cảnh GIAN HÀNG: admin nền tảng không đứng trong tenant nào thì
-              `tenantName` rỗng và cả khối này không render.
-            */}
-            <BranchScopeSelector />
-          </>
-        ) : null}
+          Nó từng đứng ở thanh trên và hiện trên MỌI trang, nên đọc như một bộ lọc toàn hệ thống —
+          trong khi chỉ sáu màn vận hành tuân theo, còn Tổng quan, ví điểm, sổ thu chi, khách hàng
+          và hội thoại thì không (chúng không có dữ liệu gắn với một chiếc xe để mà lọc). Chọn
+          "Hải Châu" rồi mở Tổng quan vẫn thấy 40 xe là hệ quả trực tiếp.
+
+          Nay ô "Chi nhánh" nằm trong thanh bộ lọc của chính màn nào lọc được, và giá trị sống trên
+          URL. Trang không có ô đó thì hiển nhiên là toàn gian hàng — không cần chú thích nào.
+        */}
 
         {/*
           Đổi ngôn ngữ nằm trong menu tài khoản, giống hệt header khu khách — thanh trên cùng chỉ

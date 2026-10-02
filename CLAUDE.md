@@ -59,6 +59,7 @@ Skill tự kích hoạt theo mô tả; nếu quên thì gọi tay. `navigator` �
 | --- | --- |
 | Repo | Monorepo pnpm workspace: `apps/web`, `apps/api`, `apps/worker`, `packages/{types,validators,api-client,domain,config,ui}`, `prisma`, `docs` |
 | Frontend | Next.js App Router + TS strict, route groups `(public)` `(auth)` `(manage)`, Server Components mặc định |
+| Bề mặt sản phẩm | **ADR 0051** — web: MỘT Next app, ba zone theo host (`xeprime.vn` khách + Owner Lite · `partner.xeprime.vn` `/manage/**` · `admin.xeprime.vn` `/manage/admin/**`), giữ `/manage` trong URL. Mobile: MỘT Expo project, hai variant (XePrime `vn.xeprime.mobile` · XePrime Partner `vn.xeprime.partner`). Host/variant chỉ là trình bày — quyền và tuyến vẫn do server quyết. KHÔNG tách thêm Next app/Expo project/BFF khi chưa chạm điều kiện "Cần xem lại" của ADR |
 | UI | Ant Design + `@ant-design/nextjs-registry`. Style riêng dùng **CSS Modules + AntD token** — ADR 0003. Design token (`XP_TOKENS` + `tokens.css`) sống ở `@xeprime/ui` — dùng chung web + app native, export gốc platform-free |
 | Form | React Hook Form + Yup + `@hookform/resolvers` |
 | State | Redux Toolkit = UI/client state · TanStack Query = server data/cache · **URL searchParams = filter/paging** — ADR 0004 |

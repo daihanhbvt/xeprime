@@ -2,7 +2,6 @@
 
 import { Empty, Tag, Timeline } from 'antd';
 import { useTranslations } from 'next-intl';
-import type { ReactNode } from 'react';
 import { APPROVAL_ACTION, type ApprovalAction } from '@xeprime/types';
 import { PreviewImage, PreviewImageGroup } from '@/components/data-display/PreviewImage';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
@@ -10,6 +9,7 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { pickupAddress } from '../review-rows';
 import type { VehicleApprovalDetail } from '../types';
+import { WorkDrawerFacts } from '@/components/overlay/WorkDrawer';
 import styles from './VehicleApprovalDrawer.module.css';
 
 /**
@@ -76,37 +76,47 @@ export function ReviewPickupSource({ detail }: { detail: VehicleApprovalDetail }
 
   return (
     <div className={styles.split}>
-      <dl className={styles.grid}>
-        {pickup ? (
-          <>
-            <Field label={t('pickup.branch')}>{pickup.branchName}</Field>
-            {address ? <Field label={t('pickup.address')}>{address}</Field> : null}
-          </>
-        ) : (
-          <Field label={t('pickup.branch')}>
-            <span className={styles.muted}>{t('pickup.none')}</span>
-          </Field>
-        )}
-      </dl>
+      <WorkDrawerFacts
+        items={
+          pickup
+            ? [
+                { key: 'branch', label: t('pickup.branch'), value: pickup.branchName },
+                ...(address
+                  ? [{ key: 'address', label: t('pickup.address'), value: address }]
+                  : []),
+              ]
+            : [
+                {
+                  key: 'branch',
+                  label: t('pickup.branch'),
+                  value: <span className={styles.muted}>{t('pickup.none')}</span>,
+                },
+              ]
+        }
+      />
 
-      <dl className={styles.grid}>
-        <Field label={t('people.sourceKind')}>
-          {domainLabel('storefrontKind', source.storefrontKind)}
-        </Field>
-        <Field label={t('people.sourceName')}>{source.name}</Field>
-        {owner ? (
-          <Field label={t('people.owner')}>
-            <Person person={owner} />
-          </Field>
-        ) : null}
-        <Field label={t('people.submitter')}>
-          {submittedByOwner ? (
-            <span className={styles.muted}>{t('people.sameAsOwner')}</span>
-          ) : (
-            <Person person={submitter} />
-          )}
-        </Field>
-      </dl>
+      <WorkDrawerFacts
+        items={[
+          {
+            key: 'sourceKind',
+            label: t('people.sourceKind'),
+            value: domainLabel('storefrontKind', source.storefrontKind),
+          },
+          { key: 'sourceName', label: t('people.sourceName'), value: source.name },
+          ...(owner
+            ? [{ key: 'owner', label: t('people.owner'), value: <Person person={owner} /> }]
+            : []),
+          {
+            key: 'submitter',
+            label: t('people.submitter'),
+            value: submittedByOwner ? (
+              <span className={styles.muted}>{t('people.sameAsOwner')}</span>
+            ) : (
+              <Person person={submitter} />
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }
@@ -127,15 +137,6 @@ function Person({ person }: { person: NonNullable<VehicleApprovalDetail['owner']
         </span>
       ) : null}
     </span>
-  );
-}
-
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className={styles.gridItem}>
-      <dt className={styles.gridLabel}>{label}</dt>
-      <dd className={styles.gridValue}>{children}</dd>
-    </div>
   );
 }
 

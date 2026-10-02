@@ -14,6 +14,7 @@ export function useVehicleFilters() {
   return useUrlFilters<VehicleFilters>((sp) => ({
     q: sp.get('q') ?? undefined,
     vehicleType: sp.get('vehicleType') ?? undefined,
+    branchId: sp.get('branchId') ?? undefined,
     serviceType: sp.get('serviceType') ?? undefined,
     operationStatus: sp.get('operationStatus') ?? undefined,
     publicStatus: sp.get('publicStatus') ?? undefined,

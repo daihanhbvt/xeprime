@@ -1,0 +1,358 @@
+/*
+ * Sổ đối soát ngày — phương trình ở trên, hai cột chi tiết bên dưới. Ít chữ, số thẳng cột: mỗi
+ * dòng đúng một nhãn và một số tiền; số khoản là chip nhỏ, dòng bằng 0 nhạt đi.
+ */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-lg);
+}
+
+/* ── Phương trình ───────────────────────────────────────────────────────────── */
+
+.equation {
+  display: flex;
+  align-items: stretch;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+}
+
+.term {
+  display: flex;
+  flex: 1 1 160px;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+  min-height: 96px;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+.termBank {
+  flex-basis: 220px;
+  background: var(--xp-color-bg-muted);
+}
+
+.termSuccess {
+  border-color: var(--xp-color-success);
+  background: var(--xp-color-success-bg);
+}
+
+.termSuccess .termCaption {
+  color: var(--xp-color-success);
+}
+
+.termError {
+  border-color: var(--xp-color-error);
+  background: var(--xp-color-error-bg);
+}
+
+.termError .termValue,
+.termError .termCaption {
+  color: var(--xp-color-error);
+}
+
+.termLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.termInfo {
+  cursor: help;
+}
+
+.termValueRow {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+}
+
+.termValue {
+  font-size: var(--xp-font-size-h4);
+  line-height: var(--xp-line-height-h4);
+  font-weight: var(--xp-font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.termCaption {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.notEntered {
+  font-style: normal;
+  font-weight: var(--xp-font-weight-medium);
+  color: var(--xp-color-text-tertiary);
+}
+
+.operator {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 20px;
+  font-size: var(--xp-font-size-h4);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text-tertiary);
+}
+
+.balanceEdit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+/*
+ * Ô số dư rộng hết ô phương trình. ⚠️ Nhân đôi class (0,2,0) — bẫy D19: AntD tiêm
+ * `.ant-input-number { width: 90px }` LÚC CHẠY, sau sheet CSS Module, nên một class đơn hoà
+ * specificity và thua (ô co còn 90px, cắt số "11.264.0…"). Cùng cách `field.module.css` làm.
+ */
+.balanceInput.balanceInput,
+.balanceInput.balanceInput :global(.ant-input-number) {
+  width: 100%;
+}
+
+.balanceActions {
+  display: flex;
+  gap: var(--xp-space-xs);
+}
+
+/* ── Chi tiết ───────────────────────────────────────────────────────────────── */
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--xp-space-md);
+  align-items: start;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  padding-bottom: var(--xp-space-sm);
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.cardTotal {
+  font-weight: var(--xp-font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row + .row {
+  border-top: 1px solid var(--xp-color-border-subtle);
+}
+
+.rowButton,
+.rowStatic {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  width: 100%;
+  min-height: 40px;
+  padding: var(--xp-space-xs) var(--xp-space-xs);
+  border: 0;
+  border-radius: var(--xp-border-radius-sm);
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+
+.rowButton {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.rowButton:hover {
+  background: var(--xp-color-bg-hover);
+}
+
+.rowButton:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-focus-ring);
+  outline-offset: -2px;
+}
+
+.rowMain {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.rowLabel {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.rowNote {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+.countChip {
+  padding: 0 var(--xp-space-xs);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-muted);
+  font-size: var(--xp-font-size-label);
+  line-height: 18px;
+  font-variant-numeric: tabular-nums;
+  color: var(--xp-color-text-secondary);
+}
+
+.rowAmount {
+  flex: none;
+  font-weight: var(--xp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.rowChevron {
+  flex: none;
+  font-size: 10px;
+  color: var(--xp-color-text-tertiary);
+}
+
+/* Dòng bằng 0: vẫn có mặt (biết là đã xét), nhưng không tranh mắt với dòng có tiền. */
+.rowZero .rowLabel,
+.rowZero .rowAmount {
+  color: var(--xp-color-text-tertiary);
+  font-weight: var(--xp-font-weight-regular);
+}
+
+/* ── Dòng tiền trong ngày ───────────────────────────────────────────────────── */
+
+.flow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--xp-space-sm);
+  padding-top: var(--xp-space-xs);
+}
+
+.flowItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.flowLabel,
+.flowCount {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.flowValue {
+  font-size: var(--xp-font-size-h4);
+  line-height: var(--xp-line-height-h4);
+  font-weight: var(--xp-font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.flowIn {
+  color: var(--xp-color-success);
+}
+
+.flowOut {
+  color: var(--xp-color-text);
+}
+
+.flowDetails :global(.ant-collapse-header) {
+  padding-inline: 0 !important;
+}
+
+.flowDetails :global(.ant-collapse-content-box) {
+  padding-inline: 0 !important;
+}
+
+.flowLists {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.subTitle {
+  margin: var(--xp-space-xs) 0 0;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text-secondary);
+}
+
+/* 1024px = `--xp-bp-tablet`: chi tiết thành một cột. */
+@media (max-width: 1024px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* 640px = `--xp-bp-mobile`: phương trình xếp dọc, toán tử thành một dòng nhỏ giữa hai vế. */
+@media (max-width: 640px) {
+  .equation {
+    flex-direction: column;
+  }
+
+  /* Xếp dọc thì `flex-basis` thành CHIỀU CAO — bỏ nó, ô chỉ cao đúng bằng nội dung. */
+  .term,
+  .termBank {
+    flex: none;
+    min-height: 0;
+  }
+
+  .operator {
+    width: auto;
+    height: 16px;
+    font-size: var(--xp-font-size-body);
+  }
+}

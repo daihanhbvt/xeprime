@@ -23,6 +23,7 @@ import {
   BulkDayQueryDto,
   BulkDayReleaseResultDto,
 } from './dto/bulk-day.dto';
+import { resolveBranchScope } from '../../common/dto/branch-scope';
 
 /** Khoảng xem lớn nhất của lưới lịch — thao tác hàng loạt không cần rộng hơn thứ nhìn thấy. */
 const MAX_RANGE_DAYS = 62;
@@ -101,7 +102,12 @@ export class BulkDayService {
    * mỗi chiếc đang thế nào". Tách đôi chỉ tạo ra hai câu query gần giống nhau và hai cơ hội để
    * chúng lệch nhau.
    */
-  async preview(tenantId: string, query: BulkDayQueryDto): Promise<BulkDayPreviewDto> {
+  async preview(
+    tenantId: string,
+    query: BulkDayQueryDto,
+  /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
+  allowedBranchIds: readonly string[] | null,
+  ): Promise<BulkDayPreviewDto> {
     const keys = this.dateKeys(query.from, query.to);
     const startAt = vnDayStart(query.from);
     const endAt = vnDayStart(keys[keys.length - 1]!);
@@ -112,7 +118,7 @@ export class BulkDayService {
         tenantId,
         deletedAt: null,
         ...(query.vehicleType ? { vehicleType: query.vehicleType } : {}),
-        ...(query.branchId ? { branchId: query.branchId } : {}),
+        branchId: resolveBranchScope(query.branchId, allowedBranchIds),
         ...(query.q
           ? {
               OR: [
@@ -145,6 +151,9 @@ export class BulkDayService {
     const batch = await this.prisma.vehicleBlock.findFirst({
       where: {
         tenantId,
+        // Chỉ lô phủ CHÍNH tập xe đang xem (ADR 0052): đang lọc chi nhánh A thì một lô khoá của
+        // chi nhánh B không được làm công tắc sáng lên — tắt nó là gỡ lịch của B.
+        vehicleId: { in: ids },
         bulkBatchId: { not: null },
         startAt: { gte: startAt, lt: endAt },
       },
@@ -173,11 +182,21 @@ export class BulkDayService {
   private async ownedVehicles(
     tenantId: string,
     vehicleIds: readonly string[],
+    /**
+     * Chi nhánh người gọi được giao — xe ngoài phạm vi bị loại như id của gian hàng khác. Thiếu
+     * nó thì một nhân viên chi nhánh A gửi id xe chi nhánh B lên là khoá/đặt giá được xe đó.
+     */
+    allowedBranchIds: readonly string[] | null,
   ): Promise<
     Array<{ id: string; weekdayPrice: Prisma.Decimal | null; weekendPrice: Prisma.Decimal | null }>
   > {
     const rows = await this.prisma.vehicle.findMany({
-      where: { tenantId, deletedAt: null, id: { in: [...vehicleIds] } },
+      where: {
+        tenantId,
+        deletedAt: null,
+        id: { in: [...vehicleIds] },
+        branchId: resolveBranchScope(undefined, allowedBranchIds),
+      },
       select: { id: true, weekdayPrice: true, weekendPrice: true },
     });
     if (rows.length === 0)
@@ -196,9 +215,10 @@ export class BulkDayService {
     tenantId: string,
     userId: string,
     dto: BulkDayBlockDto,
+    allowedBranchIds: readonly string[] | null,
   ): Promise<BulkDayBlockResultDto> {
     const keys = this.dateKeys(dto.from, dto.to);
-    const vehicles = await this.ownedVehicles(tenantId, dto.vehicleIds);
+    const vehicles = await this.ownedVehicles(tenantId, dto.vehicleIds, allowedBranchIds);
 
     const startAt = vnDayStart(dto.from);
     const endAt = new Date(vnDayStart(keys[keys.length - 1]!).getTime() + 24 * 60 * 60 * 1_000);
@@ -315,9 +335,23 @@ export class BulkDayService {
     tenantId: string,
     userId: string,
     batchId: string,
+    /** Chi nhánh đang xem — `undefined` = tất cả (trong phạm vi được giao). */
+    branchId: string | undefined,
+    allowedBranchIds: readonly string[] | null,
   ): Promise<BulkDayReleaseResultDto> {
+    /*
+     * Gỡ ĐÚNG phần lô nằm trong phạm vi đang xem (ADR 0052). Một lô khoá tạo lúc xem "Tất cả" phủ
+     * mọi chi nhánh; tắt công tắc khi đang lọc chi nhánh A mà xoá theo `bulkBatchId` thôi là gỡ
+     * luôn lịch khoá của chi nhánh B — kể cả với chủ shop, và với người bị giới hạn thì đó là
+     * đường thao tác lên xe ngoài phần được giao.
+     */
+    const inScope: Prisma.VehicleBlockWhereInput = {
+      tenantId,
+      bulkBatchId: batchId,
+      vehicle: { branchId: resolveBranchScope(branchId, allowedBranchIds) },
+    };
     const blocks = await this.prisma.vehicleBlock.findMany({
-      where: { tenantId, bulkBatchId: batchId },
+      where: inScope,
       select: { id: true },
     });
     if (blocks.length === 0) return { released: 0 };
@@ -326,7 +360,7 @@ export class BulkDayService {
       for (const block of blocks) {
         await this.occupancy.release(tx, OCCUPANCY_SOURCE_TYPE.BLOCKED_RANGE, block.id);
       }
-      await tx.vehicleBlock.deleteMany({ where: { tenantId, bulkBatchId: batchId } });
+      await tx.vehicleBlock.deleteMany({ where: { id: { in: blocks.map((b) => b.id) } } });
 
       await this.audit.record(
         {
@@ -336,7 +370,7 @@ export class BulkDayService {
           action: 'vehicle.block.bulk_release',
           targetType: 'vehicle_block_batch',
           targetId: batchId,
-          before: { blockedDays: blocks.length },
+          before: { blockedDays: blocks.length, branchId: branchId ?? null },
         },
         tx,
       );
@@ -356,6 +390,7 @@ export class BulkDayService {
     tenantId: string,
     userId: string,
     dto: BulkDayPriceDto,
+    allowedBranchIds: readonly string[] | null,
   ): Promise<BulkDayPriceResultDto> {
     const keys = this.dateKeys(dto.from, dto.to);
     const mode = dto.mode as BulkPriceMode;
@@ -372,7 +407,7 @@ export class BulkDayService {
       throw validationError('Thiếu số tiền cho chế độ đồng giá', 'fixedPrice');
     }
 
-    const vehicles = await this.ownedVehicles(tenantId, dto.vehicleIds);
+    const vehicles = await this.ownedVehicles(tenantId, dto.vehicleIds, allowedBranchIds);
     const inputs = vehicles.map((v) => ({
       vehicleId: v.id,
       weekdayPrice: v.weekdayPrice?.toFixed(0) ?? null,
@@ -457,9 +492,10 @@ export class BulkDayService {
     tenantId: string,
     userId: string,
     dto: BulkDayPriceDto,
+    allowedBranchIds: readonly string[] | null,
   ): Promise<BulkDayPriceResultDto> {
     const keys = this.dateKeys(dto.from, dto.to);
-    const vehicles = await this.ownedVehicles(tenantId, dto.vehicleIds);
+    const vehicles = await this.ownedVehicles(tenantId, dto.vehicleIds, allowedBranchIds);
 
     const deleted = await this.prisma.$transaction(async (tx) => {
       const result = await tx.vehicleDailyPrice.deleteMany({

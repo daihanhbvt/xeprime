@@ -14,6 +14,8 @@ import {
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PERMISSION, PLAN_FEATURE, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
+  BRANCH_SCOPED_RESOURCE,
+  BranchScoped,
   CurrentTenant,
   CurrentUser,
   RequirePermissions,
@@ -53,6 +55,7 @@ import { OdometerService } from './odometer.service';
  * Không mức nào bao hàm mức khác.
  */
 @ApiTags('vehicle-maintenance')
+@BranchScoped(BRANCH_SCOPED_RESOURCE.VEHICLE)
 @Controller('vehicles/:id/maintenance')
 @TenantScoped()
 @SubscriptionTrackOnly()

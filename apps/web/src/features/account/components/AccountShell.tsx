@@ -7,12 +7,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useEffect, type ReactNode } from 'react';
 
-import {
-  accountNavOwner,
-  flattenAccountNav,
-  resolveAccountNav,
-} from '@/constants/account-nav';
-import { ROUTES, isAccountVehicleManagePath } from '@/constants/routes';
+import { accountNavOwner, flattenAccountNav, resolveAccountNav } from '@/constants/account-nav';
+import { ROUTES, isAccountVehicleDetailPath, isAccountVehicleManagePath } from '@/constants/routes';
 import { useAuthModal, useNextFromCurrentPath } from '@/features/auth/components/AuthModalProvider';
 import { AUTH_MODE } from '@/features/auth/post-auth-destination';
 import { useCurrentUser, type CurrentUser } from '@/hooks/use-current-user';
@@ -64,6 +60,11 @@ export function AccountShell({ children }: { children: ReactNode }) {
    * gốc tự chuyển hướng) — không thể liệt kê từng đường như lịch xe vì id xe nằm trong URL.
    */
   const fullWidth = FULL_WIDTH_PATHS.includes(pathname) || isAccountVehicleManagePath(pathname);
+  /*
+   * Bề ngang NỚI: vẫn có menu trái và vẫn canh giữa, chỉ bỏ trần 1220px vốn dành cho biểu mẫu
+   * một cột. Khác `fullWidth` (lịch xe) — ở đó menu biến mất hẳn.
+   */
+  const wide = isAccountVehicleDetailPath(pathname);
 
   if (isLoading) {
     return (
@@ -78,7 +79,10 @@ export function AccountShell({ children }: { children: ReactNode }) {
     return (
       <div className={styles.center}>
         <Alert type="info" showIcon title={t('signInRequired')} />
-        <Button type="primary" onClick={() => open({ mode: AUTH_MODE.LOGIN, next: nextFromHere() })}>
+        <Button
+          type="primary"
+          onClick={() => open({ mode: AUTH_MODE.LOGIN, next: nextFromHere() })}
+        >
           {t('signIn')}
         </Button>
       </div>
@@ -111,7 +115,7 @@ export function AccountShell({ children }: { children: ReactNode }) {
   if (fullWidth) return <div className={styles.fullWidth}>{children}</div>;
 
   return (
-    <div className={styles.wrap}>
+    <div className={wide ? `${styles.wrap} ${styles.wrapWide}` : styles.wrap}>
       <div className={styles.body}>
         <aside className={styles.aside}>
           <AccountSidebar user={user} />
@@ -139,13 +143,7 @@ export function AccountShell({ children }: { children: ReactNode }) {
  *
  * Không render gì khi màn hiện tại tự có mục menu — ở đó chính mục đang sáng đã là chỗ đứng.
  */
-function AccountSubPageBack({
-  user,
-  pathname,
-}: {
-  user: CurrentUser;
-  pathname: string | null;
-}) {
+function AccountSubPageBack({ user, pathname }: { user: CurrentUser; pathname: string | null }) {
   const t = useTranslations('Account.ownerGate');
   const owner = pathname
     ? accountNavOwner(pathname, flattenAccountNav(resolveAccountNav(user)))

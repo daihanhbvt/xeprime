@@ -3,6 +3,7 @@ import {
   VEHICLE_TYPE,
   VEHICLE_SOURCE_TYPE,
   vehicleFeatureAppliesTo,
+  vehicleImageTypeOf,
   type BodyType,
   type FuelType,
   type ServiceType,
@@ -97,6 +98,9 @@ export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput
     mainImageUrl: values.mainImageUrl ?? undefined,
     // Gửi mảng để backend replace-set; lọc URL rỗng phòng dữ liệu cũ có dòng trống.
     images: (values.images ?? []).map((u) => u.trim()).filter(Boolean),
+    ...(values.media && values.media.length > 0
+      ? { media: values.media.map((item) => ({ url: item.url.trim(), type: item.type })) }
+      : {}),
     features: applicableFeatures(values),
   };
 }
@@ -155,6 +159,12 @@ export function vehicleToFormValues(v: VehicleDetail): VehicleFormValues {
     description: v.description ?? '',
     mainImageUrl: v.mainImageUrl ?? null,
     images: v.images ?? [],
+    media: (v.media ?? []).map((item) => ({
+      url: item.url,
+      // Dữ liệu media cũ có thể thiếu/null imageType; hiển thị và submit về "other"
+      // thay vì để resolver chặn toàn bộ nút Lưu mà không có request.
+      type: vehicleImageTypeOf(item.type),
+    })),
     // Key tiện ích do backend bảo đảm hợp lệ (contract) → ép về union của form là trung thực.
     features: (v.features ?? []) as VehicleFormValues['features'],
   };
@@ -170,8 +180,13 @@ export function informationValuesToInput(values: VehicleFormValues): UpdateVehic
     // (backend bắt đúng 26 ký tự), để lần sửa không liên quan không bị chặn.
     branchId: textOrUndefined(values.branchId),
     vehicleType: values.vehicleType,
-    serviceTypes: values.serviceTypes,
-    operationStatus: values.operationStatus,
+    /*
+     * KHÔNG gửi `serviceTypes` (30/09/2026): ô đó rời form này, công tắc dịch vụ trên menu trái
+     * là đường ghi duy nhất. Gửi giá trị form ở đây sẽ ghi đè lại một lần bật/tắt vừa làm bằng
+     * công tắc — form giữ bản chụp lúc mở màn, không tự cập nhật theo.
+     *
+     * Cùng lý do, KHÔNG gửi `operationStatus`: nó sửa tại chỗ trên thẻ đầu xe (lưu ngay).
+     */
     plateNumber: textOrNull(values.plateNumber),
     brand: textOrNull(values.brand),
     model: textOrNull(values.model),
@@ -197,19 +212,27 @@ export function informationValuesToInput(values: VehicleFormValues): UpdateVehic
     electricRangeKm: values.electricRangeKm,
     batteryCapacityKwh: values.batteryCapacityKwh,
     electricConsumptionKwhPer100Km: values.electricConsumptionKwhPer100Km,
+    /*
+     * Tiện ích + mô tả đi theo mục NÀY từ 30/09/2026 — chúng dời sang "Thông tin xe & tiện ích",
+     * cùng chỗ khu tài khoản vẫn đặt chúng (`manageInformationValuesToInput`).
+     *
+     * Thiếu hai dòng này thì hai ô đó vẫn HIỆN và sửa được trên mục, nhưng bấm Lưu là thay đổi
+     * bị bỏ im lặng — form báo lưu thành công, dữ liệu không đổi. Cùng phép biến đổi với bản
+     * của khu tài khoản: mô tả rỗng là thao tác XOÁ có chủ đích (`textOrNull`), và tiện ích lọc
+     * theo loại xe (`applicableFeatures`).
+     */
+    description: textOrNull(values.description),
+    features: applicableFeatures(values),
   };
 }
 
-/** Payload riêng của tab Hình ảnh — replace-set có chủ đích cho gallery/features. */
-export function mediaValuesToInput(values: VehicleFormValues): UpdateVehicleInput {
-  return {
-    mainImageUrl: values.mainImageUrl,
-    images: (values.images ?? []).map((url) => url.trim()).filter(Boolean),
-    features: applicableFeatures(values),
-    // Chuỗi rỗng là thao tác xoá mô tả có chủ đích; không đổi thành undefined.
-    description: textOrNull(values.description),
-  };
-}
+/*
+ * `mediaValuesToInput` (payload của tab "Hình ảnh & tiện ích") đã GỠ ngày 30/09/2026.
+ *
+ * Ảnh ở màn sửa xe nay do `vehicle-manage/components/sections/ImagesSection` tự lưu bằng mutation
+ * của chính nó; tiện ích + mô tả dời sang `informationValuesToInput`. Không còn nơi nào dựng một
+ * payload ảnh qua form RHF của màn sửa.
+ */
 
 /**
  * Payload của mục "Thông tin xe" trong không gian quản lý xe (08/09/2026) — CHỈ những trường

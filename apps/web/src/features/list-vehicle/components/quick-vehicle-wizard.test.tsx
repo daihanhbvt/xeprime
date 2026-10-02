@@ -160,33 +160,34 @@ vi.mock('@/features/branches/hooks/use-branches', () => ({
 vi.mock('@/features/catalog/use-catalog-models', async () =>
   (await import('@/features/catalog/test-catalog')).catalogModelsModuleMock(),
 );
-vi.mock('@/features/catalog/use-catalog', () => ({
-  useCatalog: () => ({ catalog: {}, isLoading: false }),
-  useCatalogItems: () => ({ items: [], isLoading: false }),
-  useCatalogLabels: () => ({ brand: () => '', feature: () => '' }),
-  useCatalogOptions: (type: string) =>
-    type === 'fuel_type'
-      ? [
-          { value: 'gasoline', label: 'Xăng' },
-          { value: 'diesel', label: 'Dầu (Diesel)' },
-          { value: 'electric', label: 'Điện' },
-          { value: 'hybrid', label: 'Hybrid' },
-        ]
-      : [{ value: 'toyota', label: 'Toyota' }],
-}));
+vi.mock('@/features/catalog/use-catalog', async () =>
+  (await import('@/features/catalog/test-catalog')).catalogModuleMock(),
+);
 
 /*
  * Tải ảnh: `uploadImage` thật sẽ PUT lên R2. Bản giả ở đây GỌI ĐÚNG `presign` được truyền vào —
  * đó chính là chỗ wizard chèn bước mở gian hàng cho người chưa có, nên không được đi vòng qua nó.
  */
-const upload = vi.hoisted(() => ({ presign: vi.fn() }));
+const upload = vi.hoisted(() => ({ presign: vi.fn(), count: 0 }));
 vi.mock('@/services/upload', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   presignVehicleImage: (...args: unknown[]) => upload.presign(...args),
   uploadImage: async (file: File, presign: (f: File) => Promise<unknown>) => {
     await presign(file);
-    return 'https://cdn.xeprime.test/anh-xe.jpg';
+    upload.count += 1;
+    return `https://cdn.xeprime.test/anh-xe-${upload.count}.jpg`;
   },
+}));
+
+/**
+ * Cổng "đủ điều kiện lên chợ" của wizard (30/09/2026). Mặc định ĐỦ: các ca trong file này kiểm
+ * luồng lưu, mở gian hàng, retry… chứ không kiểm luật lên chợ — luật đó có bộ test riêng ở
+ * `@xeprime/types` và có ca riêng bên dưới (`publishGate.missing` do từng ca đặt).
+ */
+const publishGate = vi.hoisted(() => ({ missing: [] as string[] }));
+vi.mock('@/features/vehicles/publication', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  missingPublishRequirementsForForm: () => publishGate.missing,
 }));
 
 /** API biên: đếm số lần gọi để chứng minh retry không tạo xe thứ hai. */
@@ -263,6 +264,29 @@ async function fillOwnerStep() {
   await screen.findByText('1. Thông tin xe');
 }
 
+/**
+ * Hãng · dòng xe · năm · số chỗ — điều kiện lên chợ mà wizard bắt buộc từ 30/09/2026.
+ */
+async function fillIdentity() {
+  fireEvent.mouseDown(screen.getByLabelText(/Hãng xe/));
+  fireEvent.click(await screen.findByTitle('Toyota'));
+  fireEvent.mouseDown(screen.getByLabelText(/Dòng xe/));
+  fireEvent.click(await screen.findByTitle('Innova Cross'));
+  fireEvent.change(screen.getByLabelText(/Năm sản xuất/), { target: { value: '2023' } });
+  fireEvent.change(screen.getByLabelText(/Số chỗ ngồi/), { target: { value: '5' } });
+}
+
+/** Ảnh đại diện + 3 ảnh vị trí = 4 ảnh khác nhau — đủ mức tối thiểu để lên chợ. */
+async function uploadPhotos() {
+  const inputs = [...document.querySelectorAll('input[type="file"]')].slice(0, 4);
+  for (const [index, input] of inputs.entries()) {
+    fireEvent.change(input, {
+      target: { files: [new File(['x'], `anh-${index}.jpg`, { type: 'image/jpeg' })] },
+    });
+    await waitFor(() => expect(upload.count).toBeGreaterThanOrEqual(index + 1));
+  }
+}
+
 async function gotoRentalStep() {
   fireEvent.change(screen.getByLabelText(/Biển số xe/), { target: { value: '51H-123.45' } });
   fireEvent.change(screen.getByLabelText(/Tên hiển thị/), {
@@ -275,12 +299,13 @@ async function gotoRentalStep() {
   });
   fireEvent.mouseDown(screen.getByLabelText(/Hộp số/));
   fireEvent.click(await screen.findByText('Số tự động (AT)'));
+  await fillIdentity();
 
   fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
   await screen.findByText('2. Thiết lập cho thuê');
 }
 
-async function fillToLastStep() {
+async function fillToLastStep({ photos = true }: { photos?: boolean } = {}) {
   fireEvent.change(screen.getByLabelText(/Biển số xe/), { target: { value: '51H-123.45' } });
   fireEvent.change(screen.getByLabelText(/Tên hiển thị/), {
     target: { value: 'Toyota Vios 2023' },
@@ -294,15 +319,19 @@ async function fillToLastStep() {
   // Nhãn hộp số nói rõ ký hiệu từ 09/09/2026 — 'Tự động' một mình không phân biệt nổi AT với
   // CVT hay tay ga của xe máy.
   fireEvent.click(await screen.findByText('Số tự động (AT)'));
+  await fillIdentity();
 
   fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
-  const price = await screen.findByLabelText(/Giá thuê mỗi ngày/);
+  const price = await screen.findByLabelText(/Giá thuê tự lái mỗi ngày/);
   fireEvent.change(price, { target: { value: '700000' } });
   fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
   await screen.findByText('3. Hình ảnh xe');
+  if (photos) await uploadPhotos();
 }
 
 beforeEach(() => {
+  publishGate.missing = [];
+  upload.count = 0;
   sessionStorage.clear();
   permissions.granted = new Set([PERMISSION.VEHICLE_CREATE]);
   branches.data = { items: [BRANCH_1] };
@@ -314,7 +343,10 @@ beforeEach(() => {
   shopApi.updateShopProfile.mockReset();
   shopApi.updateShopProfile.mockResolvedValue(SHOP);
   upload.presign.mockReset();
-  upload.presign.mockResolvedValue({ uploadUrl: 'https://r2.test/put', publicUrl: 'https://cdn.xeprime.test/anh-xe.jpg' });
+  upload.presign.mockResolvedValue({
+    uploadUrl: 'https://r2.test/put',
+    publicUrl: 'https://cdn.xeprime.test/anh-xe.jpg',
+  });
   currentUser.data = {
     id: 'u1',
     displayName: 'Chủ xe',
@@ -408,16 +440,52 @@ describe('Ba bước — đúng ba, và nút cuối nói đúng việc', () => {
     expect(screen.getByRole('button', { name: 'Lưu & gửi duyệt' })).toBeTruthy();
   });
 
-  it('lưu nháp được khi CHƯA đủ ảnh — không chặn người dùng ở bước cuối', async () => {
+  it('lưu nháp KHÔNG gửi duyệt', async () => {
     render();
     await fillToLastStep();
-    expect(screen.getByText(/Cần thêm .* ảnh/)).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
     await waitFor(() => expect(api.createVehicle).toHaveBeenCalledTimes(1));
-    // Lưu nháp KHÔNG gửi duyệt.
     expect(api.submitVehiclePublic).not.toHaveBeenCalled();
     expect(await screen.findByRole('heading', { name: 'Đã lưu xe ở dạng nháp' })).toBeTruthy();
+  });
+
+  /**
+   * Xe tạo qua wizard phải ĐỦ điều kiện lên chợ (30/09/2026) — CÙNG luật với cổng gửi duyệt ở
+   * backend. Thiếu ảnh thì KHÔNG tạo xe, kể cả "Lưu nháp", và nói rõ còn thiếu gì.
+   */
+  it('chưa đủ ảnh: KHÔNG tạo xe, nói rõ còn thiếu gì', async () => {
+    render();
+    await fillToLastStep();
+    publishGate.missing = ['photos'];
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
+    expect(
+      await screen.findByText(/Cần bổ sung để xe đủ điều kiện lên chợ: Tối thiểu 4 ảnh xe/),
+    ).toBeTruthy();
+    expect(api.createVehicle).not.toHaveBeenCalled();
+  });
+
+  it('thiếu hãng/mẫu/năm ở bước 1: báo lỗi dưới TỪNG ô, KHÔNG cho đi tiếp', async () => {
+    render();
+    fireEvent.change(screen.getByLabelText(/Biển số xe/), { target: { value: '51H-123.45' } });
+    fireEvent.change(screen.getByLabelText(/Tên hiển thị/), {
+      target: { value: 'Toyota Vios 2023' },
+    });
+    fireEvent.mouseDown(screen.getByLabelText(/Nguồn năng lượng|Nhiên liệu/));
+    fireEvent.click(await screen.findByText('Xăng'));
+    fireEvent.change(await screen.findByLabelText(/Mức tiêu thụ nhiên liệu/), {
+      target: { value: '7.5' },
+    });
+    fireEvent.mouseDown(screen.getByLabelText(/Hộp số/));
+    fireEvent.click(await screen.findByText('Số tự động (AT)'));
+    fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+
+    // Lỗi của schema nằm dưới đúng ô, như mọi trường bắt buộc khác.
+    expect(await screen.findByText('Chọn hãng xe')).toBeTruthy();
+    expect(screen.getByText('Chọn dòng xe')).toBeTruthy();
+    expect(screen.getByText('Nhập năm sản xuất')).toBeTruthy();
+    expect(screen.queryByText('2. Thiết lập cho thuê')).toBeNull();
   });
 });
 
@@ -739,7 +807,7 @@ describe('Gian hàng chỉ mở cùng chiếc xe', () => {
   it('chọn ảnh đầu tiên: mở gian hàng ngay trước khi presign', async () => {
     render();
     await fillOwnerStep();
-    await fillToLastStep();
+    await fillToLastStep({ photos: false });
     expect(shopApi.registerShop).not.toHaveBeenCalled();
 
     const input = document.querySelector('input[type="file"]');

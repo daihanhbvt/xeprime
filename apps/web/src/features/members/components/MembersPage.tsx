@@ -5,6 +5,7 @@ import { App, Button, Select, Tag } from 'antd';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
+  MEMBERSHIP_BRANCH_SCOPE,
   PERMISSION,
   PLAN_FEATURE,
   TENANT_ROLE,
@@ -23,6 +24,12 @@ import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { MEMBERS_DEFAULT_LIMIT } from '@/features/members/api';
 import { InviteMemberModal } from '@/features/members/components/InviteMemberModal';
+import {
+  MemberBranchScopeSelect,
+  canManageMemberScope,
+  toBranchScopeInput,
+  useBranchScopeOptions,
+} from '@/features/members/components/MemberBranchScopeSelect';
 import { PendingInvitesPanel } from '@/features/members/components/PendingInvitesPanel';
 import { ALL_ROLES, ASSIGNABLE_ROLES, MEMBERSHIP_STATUS_META } from '@/features/members/constants';
 import { useMembers } from '@/features/members/hooks/use-members';
@@ -33,8 +40,8 @@ import {
 import type { Member, MemberFilters, UpdateMemberRoleInput } from '@/features/members/types';
 import styles from './MembersPage.module.css';
 
-/** Suy từ tổng bề rộng cột (P25). Figma `127:1725` ghi 580px cho 5 cột; code có 4. */
-const MIN_TABLE_WIDTH = 720;
+/** Suy từ tổng bề rộng cột (P25). Figma `127:1725` ghi 580px cho 5 cột; code có 5 sau ADR 0052. */
+const MIN_TABLE_WIDTH = 920;
 
 export function MembersPage() {
   const t = useTranslations('Members');
@@ -57,6 +64,14 @@ export function MembersPage() {
   const canInvite = has(PERMISSION.MEMBER_INVITE);
   const canUpdate = has(PERMISSION.MEMBER_UPDATE_ROLE);
   const canRemove = has(PERMISSION.MEMBER_REMOVE);
+  /*
+   * Người bị giới hạn chi nhánh chỉ chạm được thành viên NẰM GỌN trong phần của mình (ADR 0052) —
+   * gương của `assertWithinActorScope`. Không khoá ở đây thì ô vẫn cho chọn rồi backend mới báo
+   * `BRANCH_SCOPE_EXCEEDED`.
+   */
+  const scopeOptions = useBranchScopeOptions();
+  const withinMyScope = (row: Member) =>
+    canManageMemberScope(scopeOptions.allowAll, scopeOptions.branchIds, row);
 
   const items = data?.items ?? [];
   const meta = data?.meta ?? { page: 1, limit: MEMBERS_DEFAULT_LIMIT, total: 0, hasNext: false };
@@ -90,6 +105,22 @@ export function MembersPage() {
       { userId, roleKey: roleKey as UpdateMemberRoleInput['roleKey'] },
       {
         onSuccess: () => message.success(t('toast.roleChanged')),
+        onError: (err) => message.error(errorMessage(err)),
+      },
+    );
+  }
+
+  function handleScopeChange(row: Member, branchIds: string[]) {
+    /*
+     * KHÔNG gửi `roleKey`: cú PATCH này chỉ có ý đổi chi nhánh, và giá trị duy nhất nó có để gửi
+     * là vai trò đang nằm trong cache. Một lượt hạ vai vừa gửi đi mà chưa refetch xong sẽ bị
+     * lượt này ghi đè về vai CŨ (cao hơn) — lệch âm thầm theo chiều mở quyền. Backend hiểu
+     * `roleKey` vắng mặt là "giữ nguyên vai", hệt như nó đã hiểu `branchScope` vắng mặt.
+     */
+    updateRole.mutate(
+      { userId: row.userId, ...toBranchScopeInput(branchIds) },
+      {
+        onSuccess: () => message.success(t('toast.scopeChanged')),
         onError: (err) => message.error(errorMessage(err)),
       },
     );
@@ -147,7 +178,7 @@ export function MembersPage() {
       render: (_, row) => {
         // Chủ gian hàng không đổi vai trò được từ đây, và không ai tự đổi vai trò của mình.
         const isOwner = row.roleKey === TENANT_ROLE.SHOP_OWNER;
-        const editable = canUpdate && !isOwner && row.userId !== me?.id;
+        const editable = canUpdate && !isOwner && row.userId !== me?.id && withinMyScope(row);
         return editable ? (
           <Select
             size="small"
@@ -168,6 +199,31 @@ export function MembersPage() {
       },
     },
     {
+      title: t('columns.branchScope'),
+      key: 'branchScope',
+      width: 220,
+      render: (_, row) => {
+        // Chủ gian hàng luôn thấy tất cả — server cũng ép như vậy (member-branch-scope.ts).
+        const isOwner = row.roleKey === TENANT_ROLE.SHOP_OWNER;
+        const editable = canUpdate && !isOwner && row.userId !== me?.id && withinMyScope(row);
+        if (!editable) {
+          return row.branchScope === MEMBERSHIP_BRANCH_SCOPE.LIMITED ? (
+            <span className={styles.meta}>{t('branchScope.limitedCount', { count: row.branchIds.length })}</span>
+          ) : (
+            <span className={styles.meta}>{t('branchScope.all')}</span>
+          );
+        }
+        return (
+          <MemberBranchScopeSelect
+            member={row}
+            className={styles.branchSelect}
+            loading={updateRole.isPending && updateRole.variables?.userId === row.userId}
+            onCommit={(branchIds) => handleScopeChange(row, branchIds)}
+          />
+        );
+      },
+    },
+    {
       title: t('columns.status'),
       key: 'status',
       width: 130,
@@ -182,7 +238,11 @@ export function MembersPage() {
         icon: <DeleteOutlined />,
         danger: true,
         // Ba điều kiện y hệt trước migrate: có quyền, không phải chủ shop, không phải chính mình.
-        hidden: !canRemove || row.roleKey === TENANT_ROLE.SHOP_OWNER || row.userId === me?.id,
+        hidden:
+          !canRemove ||
+          row.roleKey === TENANT_ROLE.SHOP_OWNER ||
+          row.userId === me?.id ||
+          !withinMyScope(row),
         loading: removeMember.isPending && removeMember.variables === row.userId,
         confirm: {
           title: t('actions.removeConfirm'),

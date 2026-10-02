@@ -237,6 +237,9 @@
   --xp-shell-bottom-nav-height: 64px;
   --xp-shell-drawer-width: 280px;
   --xp-shell-form-max-width: 1216px;
+  /* Màn quản trị NHIỀU CỘT (menu mục + nội dung + cột xem nhanh). Rộng hơn trang form một cột:
+     ở 1280px ba cột đó bóp lẫn nhau, còn màn 1920 bỏ trống hơn 300px mỗi bên. */
+  --xp-shell-workspace-max-width: 1680px;
 
   /* ─── Lịch resource timeline ──────────────────────────────────────────── */
   --xp-calendar-resource-col-width: 220px;

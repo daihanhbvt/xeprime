@@ -1,8 +1,8 @@
 import { SERVICE_TYPE } from '@xeprime/types';
 
-import { AutoAcceptSection } from '@/features/vehicle-manage/components/sections/AutoAcceptSection';
+import { BookingTermsSection } from '@/features/vehicle-manage/components/sections/BookingTermsSection';
 
-/** Mục "Tối ưu chuyến có tài xế" — nội dung thật nằm ở component dùng chung; trang chỉ là điểm vào theo URL. */
+/** Mục "Nhận chuyến & thủ tục" của có tài xế — tối ưu nhận chuyến + thủ tục cho thuê. */
 export default function Page() {
-  return <AutoAcceptSection serviceType={SERVICE_TYPE.WITH_DRIVER} />;
+  return <BookingTermsSection serviceType={SERVICE_TYPE.WITH_DRIVER} />;
 }

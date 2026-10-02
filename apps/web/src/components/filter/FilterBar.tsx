@@ -33,6 +33,20 @@ export type FilterField =
       allowClear?: boolean;
       /** Danh sách dài thì cho gõ để lọc (nhật ký hệ thống có ~28 loại hành động). */
       searchable?: boolean;
+      /**
+       * Cho danh sách xổ xuống RỘNG THEO NỘI DUNG thay vì bám bề rộng ô.
+       *
+       * Mặc định AntD ép panel bằng đúng ô lọc (160–230px). Với các bộ lọc có nhãn ngắn ("Ô tô",
+       * "Đang thuê") thì vừa; nhưng nhãn chi nhánh là `Tên · Tỉnh` — "Chi nhánh Quận 5 · Hồ Chí
+       * Minh (mặc định)" — nên mọi mục đều bị cắt thành "Chi nhánh Quận 5 · …" và hai chi nhánh
+       * cùng tỉnh trông giống hệt nhau. Bật cờ này ở đúng những bộ lọc có nhãn dài.
+       */
+      wideDropdown?: boolean;
+      /**
+       * Ô hiện để NÓI chứ không để chọn — người bị giới hạn một chi nhánh vẫn cần biết mình
+       * đang đứng ở đâu (ADR 0052), nhưng không có gì khác để chuyển sang.
+       */
+      disabled?: boolean;
     }
   | {
       /**
@@ -245,8 +259,12 @@ function FieldControl({
         className={compact ? `${styles.select} ${styles.compact}` : styles.select}
         size={compact ? 'middle' : 'large'}
         allowClear={field.allowClear ?? true}
+        disabled={field.disabled}
         showSearch={field.searchable}
         optionFilterProp="label"
+        // `false` = panel rộng theo nội dung; CSS chặn trần để nó không tràn ra ngoài màn hình hẹp.
+        popupMatchSelectWidth={field.wideDropdown ? false : undefined}
+        classNames={field.wideDropdown ? { popup: { root: styles.widePopup } } : undefined}
         aria-label={field.label}
         // Figma `186:1645` giữ nhãn ngay cả khi đã chọn: "Loại xe: Ô tô". Chọn xong mà chỉ còn
         // "Ô tô" thì bốn dropdown cạnh nhau không còn phân biệt được cái nào lọc cái gì.

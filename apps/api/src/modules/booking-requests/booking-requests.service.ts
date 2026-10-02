@@ -98,6 +98,7 @@ import {
   VehicleBusyPeriodDto,
 } from './dto/booking-request.dto';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
+import { resolveBranchScope, vehicleBranchWhere } from '../../common/dto/branch-scope';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -1431,6 +1432,8 @@ export class BookingRequestsService {
   async list(
     tenantId: string,
     query: BookingRequestListQueryDto,
+  /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
+  allowedBranchIds: readonly string[] | null,
   ): Promise<{ data: BookingRequestDto[]; meta: BookingRequestPageMetaDto }> {
     const paging = resolvePaging(query, BOOKING_REQUEST_DEFAULT_LIMIT, BOOKING_REQUEST_MAX_LIMIT);
 
@@ -1444,7 +1447,7 @@ export class BookingRequestsService {
       ...(query.vehicleId ? { vehicleId: query.vehicleId } : {}),
       // Lọc qua quan hệ xe → chi nhánh. Đứng SAU `tenantId` và không thay thế nó: bộ chọn chi
       // nhánh chỉ thu hẹp phạm vi, không bao giờ là đường ra khỏi gian hàng của mình.
-      ...(query.branchId ? { vehicle: { branchId: query.branchId } } : {}),
+      ...vehicleBranchWhere(resolveBranchScope(query.branchId, allowedBranchIds)),
       ...(query.serviceType ? { serviceType: query.serviceType } : {}),
       ...searchWhere(query.q),
     };

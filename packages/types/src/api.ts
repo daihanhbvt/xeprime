@@ -91,6 +91,8 @@ export const API_ERROR_CODE = {
    */
   /** Token không tồn tại, đã dùng, đã bị thu hồi, hoặc đã bị chính người nhận từ chối. */
   INVITE_INVALID: 'INVITE_INVALID',
+  /** Lời mời giới hạn chi nhánh nhưng mọi chi nhánh trong đó đã bị xoá/ngừng (ADR 0052). */
+  INVITE_SCOPE_STALE: 'INVITE_SCOPE_STALE',
   /** Còn đúng nhưng quá `expires_at`. Việc cần làm là xin gian hàng gửi lại, không phải thử lại. */
   INVITE_EXPIRED: 'INVITE_EXPIRED',
   /**
@@ -216,8 +218,16 @@ export const API_ERROR_CODE = {
    */
   PLAN_NOT_SELF_SERVE: 'PLAN_NOT_SELF_SERVE',
   /**
-   * Thao tác sẽ làm HỎNG bậc gói mặc định của tuyến hoa hồng (archive nó, hoặc đổi nó sang
-   * `package`).
+   * Bậc gói đã được DÙNG — có thuê bao hoặc hoá đơn trỏ tới nó — nên không XOÁ được.
+   *
+   * `details` mang `{ planCode, subscriptions, invoices }`. Xoá chỉ dành cho bậc chưa từng được
+   * gán hay mua (một bản nháp tạo nhầm). Bậc đã dùng thì TẮT (archive): thuê bao cũ giữ nguyên
+   * snapshot, còn hoá đơn — kể cả hoá đơn chưa trả — vẫn cần đọc lại được bậc gốc lúc tiền về.
+   */
+  PLAN_IN_USE: 'PLAN_IN_USE',
+  /**
+   * Thao tác sẽ làm HỎNG bậc gói mặc định của tuyến hoa hồng (archive nó, xoá nó, hoặc đổi nó
+   * sang `package`).
    *
    * `details` mang `{ planCode, operation }`. Không phải `FORBIDDEN`: người gọi có thừa quyền,
    * chính THAO TÁC mới là thứ bị cấm — gỡ bậc đó đi là gỡ luôn tuyến vào cửa của toàn sàn, và
@@ -495,6 +505,8 @@ export const API_ERROR_CODE = {
    * sơ — gộp khách là việc có chủ đích, không phải hệ quả phụ của một lần sửa SĐT.
    */
   CUSTOMER_PHONE_DUPLICATE: 'CUSTOMER_PHONE_DUPLICATE',
+  /** Mã xe đã có trong gian hàng (kể cả xe đã xoá — unique `(tenant_id, code)` không loại trừ chúng). */
+  VEHICLE_CODE_DUPLICATE: 'VEHICLE_CODE_DUPLICATE',
   /** Hồ sơ khách đã lưu trữ — khôi phục trước khi sửa / ghi chú / gắn giấy tờ. */
   CUSTOMER_ARCHIVED: 'CUSTOMER_ARCHIVED',
   /**
@@ -558,6 +570,39 @@ export const API_ERROR_CODE = {
    */
   PACKAGE_ONBOARDING_INCOMPLETE: 'PACKAGE_ONBOARDING_INCOMPLETE',
   /**
+   * Tài khoản xác thực THÀNH CÔNG nhưng không thuộc phạm vi app XePrime Partner (403, không
+   * phải 401): không có gian hàng tuyến gói hiệu lực và cũng không đang nợ bước thanh toán
+   * gói (`canUsePartnerApp` ở `mobile-client-app.ts`).
+   *
+   * Chỉ phát ra ở CỔNG PHÁT HÀNH PHIÊN native khi `clientApp = 'partner'` — và luôn SAU khi
+   * credentials đã xác minh, để thông báo eligibility không thành máy dò email/SĐT tồn tại.
+   * Sai mật khẩu/refresh hỏng vẫn là 401; mã này nói "đúng người, sai app".
+   */
+  PARTNER_ACCESS_REQUIRED: 'PARTNER_ACCESS_REQUIRED',
+  /**
+   * Chiều NGƯỢC LẠI của `PARTNER_ACCESS_REQUIRED` (28/09/2026): tài khoản của một gian hàng
+   * tuyến gói đăng nhập vào app XePrime (khách).
+   *
+   * Hai app chia đôi hoàn toàn — xem `canUseCustomerApp`. Mã riêng chứ không dùng chung một mã
+   * "sai app": hai nhóm người nhận hai lời khuyên NGƯỢC nhau ("hãy mở XePrime Partner" với
+   * "hãy mở XePrime"), và giao diện chọn câu nào là chọn theo MÃ.
+   */
+  CUSTOMER_APP_NOT_AVAILABLE: 'CUSTOMER_APP_NOT_AVAILABLE',
+  /**
+   * App XePrime Partner gọi một đường TẠO TÀI KHOẢN (`/auth/mobile/register`, hoặc OTP với
+   * một số chưa có tài khoản).
+   *
+   * Mã RIÊNG, không dùng `PARTNER_ACCESS_REQUIRED`, vì nó phải chặn ở một thời điểm KHÁC: mã
+   * kia phát sau khi đã xác thực xong một tài khoản CÓ THẬT, còn mã này phát TRƯỚC khi bất cứ
+   * hàng nào được ghi. Tài khoản mới tinh không thể có gian hàng tuyến gói, nên để nó tạo user
+   * rồi mới trả 403 là ghi rác vào DB và CHIẾM luôn số điện thoại đó — lần sau người dùng đăng
+   * ký ở app XePrime sẽ nhận `PHONE_TAKEN` cho một tài khoản họ chưa từng dùng được.
+   *
+   * Đường đúng của người muốn mở gian hàng: đăng ký tài khoản ở app XePrime rồi mở hồ sơ gian
+   * hàng, sau đó handoff sang XePrime Partner (ADR 0040).
+   */
+  PARTNER_REGISTRATION_NOT_SUPPORTED: 'PARTNER_REGISTRATION_NOT_SUPPORTED',
+  /**
    * Hồ sơ GIAN HÀNG TUYẾN GÓI chưa đủ để gửi xe lên chợ (ADR 0040 điều 7).
    * `details.missing[]` mang khoá `PACKAGE_SHOP_LISTING_REQUIREMENT`.
    *
@@ -601,6 +646,14 @@ export const API_ERROR_CODE = {
    * `details.roleKey` để giao diện nói đúng "bạn đang là quản lý" thay vì một câu 403 chung.
    */
   SHOP_OWNER_ONLY: 'SHOP_OWNER_ONLY',
+
+  /**
+   * Người bị GIỚI HẠN chi nhánh (ADR 0052) đang cấp — hoặc sửa — một phạm vi RỘNG hơn của chính
+   * mình: mời ai đó với "Tất cả chi nhánh", giao một chi nhánh mình không phụ trách, hay chạm
+   * vào một thành viên đang phụ trách chi nhánh nằm ngoài phần của mình. Không có trần này thì
+   * một quản lý chi nhánh A chỉ cần mời email thứ hai của chính họ là có toàn gian hàng.
+   */
+  BRANCH_SCOPE_EXCEEDED: 'BRANCH_SCOPE_EXCEEDED',
 
   /**
    * Tài khoản thuộc gian hàng TUYẾN GÓI không gửi được yêu cầu thuê (15/09/2026).

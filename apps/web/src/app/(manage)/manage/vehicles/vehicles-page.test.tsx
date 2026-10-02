@@ -32,6 +32,20 @@ const nav = vi.hoisted(() => ({
   params: new URLSearchParams(),
 }));
 
+/**
+ * Trục NĂNG LỰC theo gói — mặc định gian hàng đủ cờ.
+ *
+ * `useVehicleCapabilities` kiểm quyền ∧ cờ gói, và `useFeature` đọc `/auth/me` qua TanStack
+ * Query. Test này mock `use-permissions` nên không dựng `QueryClientProvider`; thiếu mock
+ * ở đây thì component chết vì hạ tầng, không vì thứ đang kiểm.
+ */
+vi.mock('@/features/branches/hooks/use-branch-filter', () => import('@/features/branches/test-utils'));
+vi.mock('@/hooks/use-feature', () => ({
+  useFeature: () => ({ state: 'enabled', canWrite: true, isVisible: true, planEndsAt: null }),
+  useFeatureStates: () => ({}),
+  usePlanEndsAt: () => null,
+}));
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: nav.push, replace: nav.replace }),
   usePathname: () => '/manage/vehicles',
@@ -357,27 +371,30 @@ describe('/manage/vehicles — dữ liệu và quyền', () => {
   });
 
   /*
-   * Hai lối thêm xe (09/09/2026): nút chính là "đăng nhanh" cho chiếc xe tự lái thông thường,
-   * menu phụ giữ wizard NÂNG CAO của gian hàng (nhiều dịch vụ, nguồn xe, nhiều chi nhánh).
-   * Bỏ lối nâng cao là lấy mất những trường chỉ gian hàng mới cần.
+   * Hai lối thêm xe — THỨ TỰ ĐẢO ngày 29/09/2026.
+   *
+   * Nút chính nay là wizard NÂNG CAO, "đăng nhanh" lùi vào menu phụ. Đây là cổng của GIAN HÀNG,
+   * và chỉ wizard nâng cao mới hỏi hình thức nguồn xe, nhiều dịch vụ và chi nhánh giữ xe — ba
+   * thứ luồng nhanh cố định cứng (`QUICK_VEHICLE_FIXED`: chỉ tự lái, sở hữu, sẵn sàng). Cả hai
+   * lối vẫn còn nguyên; bỏ lối nào cũng là lấy mất một nhóm người dùng.
    */
-  it('quyền tạo mở nút đăng nhanh, mang theo ngữ cảnh "manage"', () => {
+  it('quyền tạo mở nút wizard NÂNG CAO của gian hàng', () => {
     grant(PERMISSION.VEHICLE_CREATE);
     setQuery({ data: { items: [vehicle()], meta: META } });
     renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: /Đăng nhanh xe tự lái/ }));
-    expect(nav.push).toHaveBeenCalledWith('/list-your-vehicle/register?from=manage');
+    fireEvent.click(screen.getByRole('button', { name: /Thiết lập nâng cao/ }));
+    expect(nav.push).toHaveBeenCalledWith('/manage/vehicles/new');
   });
 
-  it('wizard NÂNG CAO của gian hàng vẫn mở được từ menu phụ', async () => {
+  it('đăng nhanh vẫn mở được từ menu phụ, mang theo ngữ cảnh "manage"', async () => {
     grant(PERMISSION.VEHICLE_CREATE);
     setQuery({ data: { items: [vehicle()], meta: META } });
     renderPage();
 
     fireEvent.click(screen.getByRole('button', { name: 'Cách thêm xe khác' }));
-    fireEvent.click(await screen.findByText('Thiết lập nâng cao'));
-    expect(nav.push).toHaveBeenCalledWith('/manage/vehicles/new');
+    fireEvent.click(await screen.findByText('Đăng nhanh xe tự lái'));
+    expect(nav.push).toHaveBeenCalledWith('/list-your-vehicle/register?from=manage');
   });
 
   it('mọi nút hành động trên thẻ ĐỀU có tên khả truy cập', () => {

@@ -26,6 +26,27 @@ Using a library against its grain "works" right up until it doesn't. The seam is
 
 Design tokens through Ant Design's `ConfigProvider`, and CSS Modules for everything else (ADR 0003). No styled-components, no inline style — the single allowed exception is a CSS custom property carrying a value only known at runtime (an event bar's position on the calendar). Colours, spacing, and radii come from tokens, never a hardcoded hex.
 
+## Detail panels have one shape
+
+A panel where someone reads a record and then *decides* something — approve a vehicle, match an incoming payment, settle a booking hold — uses the **work-drawer** shape from `components/overlay/WorkDrawer`, the same one the "Kiểm duyệt xe" screen uses. Do not hand-roll a drawer width, a header, or a button row per feature; that is how two screens of the same product end up looking unrelated.
+
+- `DetailDrawer size="xl" closeAtEnd` with `bodyClassName={WORK_DRAWER_BODY_CLASS}` — wide (~75% of the screen), full-screen on tablet/mobile.
+- `title` = `WorkDrawerTitle` (label · code · `StatusTag`); `extra` = `WorkDrawerPager` (previous/next in the list as it is currently filtered) whenever the panel opens from a list.
+- Body = `WorkDrawerLayout`: the record on the left, the thing being chosen on the right (it sticks while the record scrolls). Read-only label/value pairs go through `WorkDrawerFacts`.
+- `footer` = `WorkDrawerFooter`: a short status hint on the left, decision buttons on the right. A decision that needs a reason opens `components/overlay/ReasonDialog` from the footer (optional `summary` line saying where the money goes) — reasons do not live as textareas in the panel body, and no feature writes its own reason modal.
+- The open record lives in the URL (`?open=<id>`), and after a decision succeeds the panel moves to the next record (captured *before* the mutation — the decided record leaves the list and prev/next lose their anchor).
+- Selection and dialog state are bound to the record id, so moving to the next record never carries a choice across. Money decisions are never pre-selected. **Every form that stays mounted resets when a different record opens** — a modal that keeps RHF state across close will submit record A's bank reference for record B. And every submit handler returns early while its mutation is pending: Enter submits the form even while the OK button spins.
+
+## Filters are patches; views are not filters
+
+`FilterBar.onChange` sends only the field that changed — write it straight into `setFilters(patch)`; rebuilding the whole filter object from the patch silently clears every other filter. `useUrlFilters` deletes the value `'all'`, so never use `'all'` as a real option value. A "to-do ↔ history" switch (pending / all, unmatched / matched…) is a *view*, not a filter: render it with `QueueViewSwitch` outside the `FilterBar`, so the default view doesn't light up "Lọc 1" or hide inside the mobile filter sheet.
+
+Short confirmations and single-field forms stay `ResponsiveDialog`. A panel that sits beside a list for browsing (not deciding) is the `modeless`/`split` variant of `DetailDrawer`.
+
+## Money inputs format themselves
+
+Every amount the user types goes through `components/form/MoneyInput` (thousands separators, `₫` suffix, integer VND) — never a plain `Input` with `inputMode="numeric"`. Send the parsed number to the API as a string of digits; the display formatting never reaches the wire.
+
 ## Build the complete feature, at real scale — not the happy path
 
 A feature is not done when it renders correct data in the demo. It is done when it behaves like a product under real use. Before writing a list, page, or form, picture the actual data: a rental-history or bookings view will hold tens, then thousands, then tens of thousands of rows — so it is paginated (or virtualized) from the first commit, with server-side paging, filtering, and sorting wired to the URL, never a client that fetches everything and slices it. A senior does not ship an unbounded list and wait for it to fall over in production; the scale is a given, so design for it up front. If the base lacks a capability the correct solution needs — a pagination primitive, a data-table, a virtualizer — add the dependency; do not hand-roll a worse version or quietly cap the data to dodge the problem.

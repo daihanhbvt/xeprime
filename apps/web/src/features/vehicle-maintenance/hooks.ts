@@ -71,6 +71,7 @@ export function useMaintenanceBoardFilters() {
     filter: sp.get('filter') ?? 'all',
     q: sp.get('q') ?? undefined,
     type: sp.get('type') ?? 'all',
+    branchId: sp.get('branchId') ?? undefined,
     from: sp.get('from') ?? undefined,
     to: sp.get('to') ?? undefined,
     sort: sp.get('sort') ?? 'remaining_asc',
@@ -90,10 +91,18 @@ export function useMaintenanceBoard(filters: MaintenanceBoardFilters, enabled = 
 }
 
 /** Đếm theo nhóm việc — độc lập với trang/bộ lọc hiện tại nên có query key riêng. */
-export function useMaintenanceBoardSummary(enabled = true) {
+/**
+ * Đếm theo nhóm việc cho hàng tab.
+ *
+ * Nhận `branchId` vì dải này đứng ngay trên bảng đã lọc: tab ghi "12 quá hạn" trong khi bảng
+ * hiện 2 dòng là hai câu trả lời khác nhau cho cùng một câu hỏi. Con số vẫn ĐỘC LẬP với nhóm
+ * việc và trang đang mở — chỉ phạm vi chi nhánh là đi chung.
+ */
+export function useMaintenanceBoardSummary(enabled = true, branchId?: string) {
+  const params = branchId ? { branchId } : {};
   return useQuery({
-    queryKey: queryKeys.maintenance.summary(),
-    queryFn: fetchMaintenanceBoardSummary,
+    queryKey: queryKeys.maintenance.summary(params),
+    queryFn: () => fetchMaintenanceBoardSummary(params),
     enabled,
   });
 }

@@ -66,6 +66,23 @@ export function receiptFormSchema(t: FormTranslate) {
         is: RECEIPT_LINK_MODE.VEHICLE,
         then: (schema) => schema.required(t('errors.vehicleRequired')),
       }),
+    /**
+     * Chi nhánh phát sinh — BẮT BUỘC ở chế độ "Không gắn" (ADR 0052).
+     *
+     * Danh mục không suy ra được chi nhánh: "Chi phí văn phòng" ở Quận 5 và ở Cầu Giấy là hai
+     * khoản khác nhau mang đúng một cái tên. Và không có lựa chọn "toàn gian hàng": một khoản
+     * nằm ngoài mọi chi nhánh thì lọc từng chi nhánh đều ra 0 trong khi tổng vẫn có nó.
+     *
+     * Gắn xe/đơn thì ô này không hỏi — chi nhánh suy TỪ XE, nên `when` chỉ bắt ở chế độ NONE.
+     */
+    branchId: yup
+      .string()
+      .nullable()
+      .default(null)
+      .when('linkMode', {
+        is: RECEIPT_LINK_MODE.NONE,
+        then: (schema) => schema.required(t('errors.branchRequired')),
+      }),
     referenceCode: yup.string().trim().max(255).default(''),
     /**
      * BẮT BUỘC, và trần 500 chứ không phải 2000 của DTO.

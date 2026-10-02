@@ -1,12 +1,23 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   BOOKING_HOLD_OUTCOME_VALUES,
+  BOOKING_HOLD_PURPOSE_VALUES,
   BOOKING_HOLD_STATUS_VALUES,
   HOLD_REFUND_REASON_VALUES,
   HOLD_REFUND_STATUS_VALUES,
 } from '@xeprime/types';
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
+import {
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
 
 export const HOLD_DEFAULT_LIMIT = 20;
@@ -55,9 +66,12 @@ export class CustomerHoldDto {
   outcome!: string | null;
   @ApiProperty({ description: 'Số phải chuyển (VND string)' }) amount!: string;
   @ApiProperty({ description: 'Đã nhận (VND string)' }) paidAmount!: string;
-  @ApiProperty({ description: 'Còn thiếu = amount − paidAmount, kẹp sàn 0' }) remainingAmount!: string;
-  @ApiProperty({ description: 'ISO — quá mốc này mà chưa đủ tiền thì chỗ được nhả' }) expiresAt!: string;
-  @ApiProperty({ description: 'ISO — huỷ trước mốc này được hoàn toàn bộ' }) freeCancelUntil!: string;
+  @ApiProperty({ description: 'Còn thiếu = amount − paidAmount, kẹp sàn 0' })
+  remainingAmount!: string;
+  @ApiProperty({ description: 'ISO — quá mốc này mà chưa đủ tiền thì chỗ được nhả' })
+  expiresAt!: string;
+  @ApiProperty({ description: 'ISO — huỷ trước mốc này được hoàn toàn bộ' })
+  freeCancelUntil!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) paidAt!: string | null;
   @ApiProperty({ type: [HoldAllocationLineDto] }) allocation!: HoldAllocationLineDto[];
   @ApiPropertyOptional({ type: CustomerHoldRefundDto, nullable: true })
@@ -72,7 +86,6 @@ export class CustomerHoldDto {
    */
   @ApiProperty({ type: HoldPaymentInfoDto }) paymentInfo!: HoldPaymentInfoDto;
 }
-
 
 /** Tài khoản nhận hoàn — khách khai sau khi huỷ sớm hoặc chuyển thừa. */
 export class RefundAccountDto {
@@ -96,7 +109,10 @@ export class RefundAccountDto {
 // ── Phía ADMIN (money operations) ───────────────────────────────────────────
 
 export class PlatformHoldListQueryDto {
-  @ApiPropertyOptional({ enum: BOOKING_HOLD_STATUS_VALUES, description: 'Bỏ trống = mọi trạng thái' })
+  @ApiPropertyOptional({
+    enum: BOOKING_HOLD_STATUS_VALUES,
+    description: 'Bỏ trống = mọi trạng thái',
+  })
   @IsOptional()
   @IsIn(BOOKING_HOLD_STATUS_VALUES)
   status?: string;
@@ -152,6 +168,22 @@ export class PlatformHoldDto {
   @ApiPropertyOptional({ type: String, nullable: true, enum: HOLD_REFUND_STATUS_VALUES })
   refundStatus!: string | null;
   @ApiProperty() createdAt!: string;
+  /*
+   * Mục đích + bốn dòng tiền + tài trợ + thuế: đủ để màn chốt kết cục chỉ mời những kết cục hợp
+   * lệ (`isOutcomeAllowed`) và XEM TRƯỚC ai nhận bao nhiêu bằng đúng `resolveHoldAllocation` mà
+   * server dùng lúc chốt — không phải một phép tính thứ hai ở client.
+   */
+  @ApiProperty({ enum: BOOKING_HOLD_PURPOSE_VALUES }) purpose!: string;
+  @ApiProperty({ description: '`D` — cọc, phần giá thuê của chủ xe' }) depositAmount!: string;
+  @ApiProperty({ description: '`S` — phí dịch vụ phía khách' }) serviceFeeAmount!: string;
+  @ApiProperty({ description: '`IV` — bảo hiểm xe' }) vehicleInsuranceAmount!: string;
+  @ApiProperty({ description: '`IP` — bảo hiểm người' }) personalInsuranceAmount!: string;
+  @ApiProperty({ description: '`P` — nền tảng tài trợ qua mã khuyến mãi' })
+  promoDiscountAmount!: string;
+  @ApiProperty({
+    description: 'Thuế khấu trừ đã đóng băng trên snapshot — chỉ áp khi chuyến hoàn thành',
+  })
+  taxAmount!: string;
 }
 
 export class PlatformHoldPageDto {
@@ -290,7 +322,8 @@ export class ReconciliationCustodiedDto {
   unmatchedIn!: string;
   @ApiProperty() unmatchedInCount!: number;
   @ApiProperty({
-    description: 'Phí bảo hiểm đã thu chưa quyết toán với hãng. 0 khi cổng bảo hiểm chưa mở (Phase 7).',
+    description:
+      'Phí bảo hiểm đã thu chưa quyết toán với hãng. 0 khi cổng bảo hiểm chưa mở (Phase 7).',
   })
   insuranceReserved!: string;
   @ApiProperty({

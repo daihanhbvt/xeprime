@@ -1,3 +1,30 @@
+/* Breadcrumb + thanh hồ sơ xe là MỘT khối đầu trang — xếp dọc, sát nhau. */
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+/*
+ * Hàng lối đi: [← Về danh sách xe] [Tên xe / Mục đang mở].
+ *
+ * `wrap` để ở màn hẹp breadcrumb xuống dòng dưới nút thay vì đẩy tràn bề ngang; `align-items`
+ * căn giữa để chữ breadcrumb nằm đúng giữa chiều cao viên nút.
+ */
+.trail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+/* Tên xe có thể rất dài; cho phép xuống dòng thay vì đẩy tràn bề ngang ở màn hẹp. */
+.crumbs {
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
 .header {
   display: flex;
   align-items: center;

@@ -27,6 +27,21 @@
     "viewSchedule": "Vehicle schedule",
     "viewScheduleFor": "View the rental schedule for {vehicle}"
   },
+  "vehiclePicker": {
+    "searchPlaceholder": "Search by name, plate or vehicle code",
+    "searchAriaLabel": "Search for a vehicle to book",
+    "count": "{count, plural, one {# vehicle} other {# vehicles}}",
+    "branchHint": "Showing vehicles at {branch}. Switch branches if you are moving a vehicle in from elsewhere.",
+    "loadFailed": "Could not load the vehicle list",
+    "retry": "Try again",
+    "emptySearch": "No vehicle matches that search",
+    "emptyBranch": "This branch has no vehicles yet",
+    "empty": "This shop has no vehicles yet",
+    "perDay": "{amount}/day",
+    "loadingMore": "Loading more vehicles…",
+    "appendFailed": "Could not load more vehicles.",
+    "allShown": "All {count, plural, one {# vehicle} other {# vehicles}} shown"
+  },
   "customer": {
     "heading": "Customer",
     "noProfile": "Not in your customer book yet",

@@ -14,7 +14,10 @@ import {
 } from '@xeprime/types';
 import { FilterBar, type FilterField, type FilterValues } from '@/components/filter/FilterBar';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
+import { ALL_FILTER } from '@/constants/filters';
 import { bookingPath, ROUTES } from '@/constants/routes';
+import { withBranchReturn } from '@/features/branches/branch-link';
+import { useBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { BOOKINGS_DEFAULT_LIMIT } from '@/features/bookings/api';
@@ -45,6 +48,10 @@ export function BookingsListView({ preset }: BookingsListViewProps) {
   const t = useTranslations('Bookings');
   const label = useDomainLabel();
   const { filters, setFilters } = useBookingFilters();
+  const branch = useBranchFilter({
+    value: filters.branchId,
+    onChange: (branchId) => setFilters({ branchId }),
+  });
 
   const awaitingPickup = preset === BOOKING_LIST_PRESET.AWAITING_PICKUP;
   /*
@@ -55,7 +62,11 @@ export function BookingsListView({ preset }: BookingsListViewProps) {
   const defaultSort: BookingSort = awaitingPickup ? 'pickup_asc' : 'newest';
   const sort = filters.sort ?? defaultSort;
 
-  const query: BookingFilters = { ...filters, sort, ...(preset ? { preset } : {}) };
+  const query: BookingFilters = {
+    ...filters,
+        sort,
+    ...(preset ? { preset } : {}),
+  };
   const { data, isError, refetch, isFetching } = useBookings(query);
 
   // Danh sách chỉ còn TẠO đơn; sửa nằm ở trang chi tiết, nơi có đủ ngữ cảnh của chuyến.
@@ -86,7 +97,7 @@ export function BookingsListView({ preset }: BookingsListViewProps) {
   const canCreate = has(PERMISSION.BOOKING_CREATE);
   const items = data?.items ?? [];
   const meta = data?.meta ?? { page: 1, limit: BOOKINGS_DEFAULT_LIMIT, total: 0, hasNext: false };
-  const hasFilters = Boolean(filters.q || filters.status);
+  const hasFilters = Boolean(filters.q || filters.status || filters.branchId);
 
   /*
    * ADR 0047: "Chờ giao xe" đã LÀ một nhóm việc lọc sẵn — ô lọc trạng thái ở đây là thừa, và
@@ -105,6 +116,9 @@ export function BookingsListView({ preset }: BookingsListViewProps) {
       label: t('list.searchLabel'),
       placeholder: t('list.searchPlaceholder'),
     },
+    // Chi nhánh của XE trong đơn — có mặt ở CẢ hai nhóm việc: ca trực của một chi nhánh cần
+    // "chờ giao xe hôm nay" của riêng họ, đúng như họ cần danh sách đơn của riêng họ.
+    ...(branch.field ? [branch.field] : []),
     ...(awaitingPickup
       ? []
       : [
@@ -140,6 +154,7 @@ export function BookingsListView({ preset }: BookingsListViewProps) {
     if ('q' in patch) next.q = patch.q;
     if ('status' in patch) next.status = patch.status === 'all' ? undefined : patch.status;
     if ('sort' in patch) next.sort = patch.sort as BookingSort | undefined;
+    if ('branchId' in patch) next.branchId = patch.branchId === ALL_FILTER ? undefined : patch.branchId;
     setFilters(next);
   }
 
@@ -163,7 +178,12 @@ export function BookingsListView({ preset }: BookingsListViewProps) {
 
       <FilterBar
         fields={fields}
-        values={{ q: filters.q, status: filters.status ?? 'all', sort }}
+        values={{
+          q: filters.q,
+          status: filters.status ?? ALL_FILTER,
+          branchId: filters.branchId ?? ALL_FILTER,
+          sort,
+        }}
         onChange={changeFilters}
         searchDebounceMs={300}
       />
@@ -175,7 +195,9 @@ export function BookingsListView({ preset }: BookingsListViewProps) {
         loading={isFetching}
         error={isError && !data ? { onRetry: () => void refetch() } : null}
         filtered={hasFilters}
-        onClearFilters={() => setFilters({ q: undefined, status: undefined })}
+        onClearFilters={() => {
+          setFilters({ q: undefined, status: undefined, branchId: undefined });
+        }}
         emptyAction={
           awaitingPickup ? (
             <Link href={ROUTES.MANAGE.BOOKINGS}>
@@ -192,7 +214,7 @@ export function BookingsListView({ preset }: BookingsListViewProps) {
          * kéo dài nhiều ngày, nhiều người cùng nhìn và người ta gửi link cho nhau — một drawer
          * không có URL không phục vụ được việc đó. Chỉ còn MỘT bản chi tiết đơn.
          */
-        onView={(id) => router.push(bookingPath.detail(id))}
+        onView={(id) => router.push(withBranchReturn(bookingPath.detail(id), filters.branchId))}
         onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
       />
 
@@ -205,6 +227,8 @@ export function BookingsListView({ preset }: BookingsListViewProps) {
         open={formOpen || createIntent}
         customerName={intentCustomerName}
         customerPhone={intentCustomerPhone}
+        // Đang lọc một chi nhánh thì bước chọn xe mở sẵn ở đó — vẫn đổi được trong hộp thoại.
+        defaultBranchId={filters.branchId}
         onClose={closeForm}
       />
     </div>

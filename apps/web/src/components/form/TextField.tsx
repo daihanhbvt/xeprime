@@ -1,7 +1,7 @@
 'use client';
 
 import { Form, Input } from 'antd';
-import { useId, type ReactNode } from 'react';
+import { useId, type ChangeEvent, type ReactNode } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 import styles from './field.module.css';
 
@@ -23,6 +23,11 @@ interface TextFieldProps<T extends FieldValues> {
   required?: boolean;
   /** Gợi ý dưới ô nhập khi KHÔNG có lỗi. Lỗi luôn thắng — không hiện cả hai cùng lúc. */
   help?: ReactNode;
+  /**
+   * Chuẩn hoá giá trị NGAY KHI GÕ — cho ô định danh (mã gói: chữ hoa → thường, dấu cách → "-").
+   * Người dùng thấy đúng thứ sẽ được lưu, thay vì gõ xong mới bị báo sai định dạng.
+   */
+  normalize?: (value: string) => string;
 }
 
 /**
@@ -43,6 +48,7 @@ export function TextField<T extends FieldValues>({
   disabled,
   required,
   help,
+  normalize,
 }: TextFieldProps<T>) {
   const { field, fieldState } = useController({ control, name });
   // `Form.Item` chỉ tự nối label ↔ input khi nằm trong `<Form>` của AntD. Các form ở đây dùng
@@ -53,6 +59,9 @@ export function TextField<T extends FieldValues>({
   const helpText = fieldState.error?.message ?? help;
   const shared = {
     ...field,
+    onChange: normalize
+      ? (event: ChangeEvent<HTMLInputElement>) => field.onChange(normalize(event.target.value))
+      : field.onChange,
     id: inputId,
     placeholder,
     autoComplete,

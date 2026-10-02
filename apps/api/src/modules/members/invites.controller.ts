@@ -64,7 +64,7 @@ export class InvitesController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateInviteDto,
   ): Promise<CreateInviteResultDto> {
-    return this.invites.create(tenant.tenantId, user.id, dto);
+    return this.invites.create(tenant.tenantId, user.id, dto, tenant.allowedBranchIds);
   }
 
   @Post(':id/revoke')
@@ -76,6 +76,6 @@ export class InvitesController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ): Promise<InviteDto> {
-    return this.invites.revoke(tenant.tenantId, user.id, id);
+    return this.invites.revoke(tenant.tenantId, user.id, id, tenant.allowedBranchIds);
   }
 }

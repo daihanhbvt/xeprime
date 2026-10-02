@@ -2,7 +2,13 @@
 
 import { Alert } from 'antd';
 import {
-  LONG_TERM_PACKAGE_MONTHS, LONG_TERM_PRICE_HINT_DAYS_PER_MONTH, LONG_TERM_SUGGEST_RATIO, longTermPackageAmounts, longTermPackageLabel, type DiscountTier, } from '@xeprime/types';
+  LONG_TERM_PACKAGE_MONTHS,
+  LONG_TERM_PRICE_HINT_DAYS_PER_MONTH,
+  LONG_TERM_SUGGEST_RATIO,
+  longTermPackageAmounts,
+  longTermPackageLabel,
+  type DiscountTier,
+} from '@xeprime/types';
 import { useTranslations } from 'next-intl';
 import styles from './LongTermPriceHint.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';

@@ -355,7 +355,7 @@ describe('Platform tenants — tách hai loại đối tác', () => {
         where: { id: ids[key]! },
         select: tenantContextSelect(now),
       });
-      return supportWorkspaceOf(buildTenantContext(row, now, TENANT_ROLE.SHOP_VIEWER, []));
+      return supportWorkspaceOf(buildTenantContext(row, now, TENANT_ROLE.SHOP_VIEWER, [], null));
     };
 
     expect(await workspaceOf('a_pending')).toBe(SUPPORT_WORKSPACE.ONBOARDING);

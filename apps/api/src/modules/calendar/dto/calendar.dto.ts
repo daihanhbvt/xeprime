@@ -10,6 +10,7 @@ import {
 } from '@xeprime/types';
 import { Type } from 'class-transformer';
 import { IsDate, IsIn, IsInt, IsOptional, IsString, Length, ValidateIf } from 'class-validator';
+import { BranchIdQuery } from '../../../common/dto/branch-scope';
 
 /**
  * Thứ tự hàng xe trên lịch. `next_booking` (mặc định): xe có lịch ĐANG chạy/sắp tới gần nhất
@@ -39,11 +40,8 @@ export class CalendarRangeQueryDto {
   @IsString()
   q?: string;
 
-  /** Lọc theo chi nhánh giữ xe — nguồn là bộ chọn chi nhánh ở thanh trên. */
-  @ApiPropertyOptional({ description: 'Chỉ hiện xe của một chi nhánh' })
-  @IsOptional()
-  @IsString()
-  @Length(26, 26)
+  /** Lọc theo chi nhánh giữ xe — ô "Chi nhánh" trên thanh công cụ của lịch. */
+  @BranchIdQuery()
   branchId?: string;
 
   /** Chỉ endpoint `resources` dùng; các endpoint khác nhận nhưng bỏ qua (query dùng chung). */

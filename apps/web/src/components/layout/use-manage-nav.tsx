@@ -1,14 +1,17 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { withBranchParam } from '@/features/branches/branch-link';
+import { useRememberedBranch } from '@/features/branches/branch-memory';
 import { createElement, useState } from 'react';
 import type { MenuProps } from 'antd';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import {
   branchKeyOf,
   flattenLeaves,
   isNavBranch,
+  isNavPermissionGranted,
   leavesOfSection,
   matchSelectedKey,
   sectionKeyOf,
@@ -71,6 +74,14 @@ export function useManageNav(options: UseManageNavOptions = {}): ManageNav {
   const t = useTranslations('Navigation');
   const tShell = useTranslations('ManageCommon');
   const pathname = usePathname();
+  /*
+   * Chi nhánh đang lọc đi THEO LINK sang màn kế tiếp (ADR 0052) — xem `branch-link.ts`.
+   * Đọc từ URL chứ không từ một bộ nhớ ở client: nhờ vậy đường dẫn đích đã đúng ngay từ request
+   * đầu, không có lượt hỏi "tất cả chi nhánh" thừa và không có nhấp nháy.
+   */
+  // URL đang đứng thắng; màn trung lập lấy chi nhánh lọc gần nhất từ bộ nhớ phiên (branch-memory.ts).
+  const remembered = useRememberedBranch();
+  const branchId = useSearchParams().get('branchId') ?? remembered;
   const dispatch = useAppDispatch();
   const collapsedSections = useAppSelector((s) => s.app.navSectionsCollapsed);
   const { data: user } = useCurrentUser();
@@ -97,7 +108,7 @@ export function useManageNav(options: UseManageNavOptions = {}): ManageNav {
   const isShopOwner = user?.tenant?.roleKey === TENANT_ROLE.SHOP_OWNER;
 
   const canSeeLeaf = (leaf: NavLeaf): boolean =>
-    has(leaf.permission) &&
+    isNavPermissionGranted(leaf.permission, has) &&
     (leaf.ownerOnly !== true || isShopOwner) &&
     (leaf.feature === undefined ||
       isFeatureVisible(featureStates[leaf.feature] ?? FEATURE_STATE.ENABLED));
@@ -155,7 +166,7 @@ export function useManageNav(options: UseManageNavOptions = {}): ManageNav {
       title: label,
       label: (
         <Link
-          href={leaf.href}
+          href={withBranchParam(leaf.href, branchId)}
           onClick={onNavigate}
           className={styles.link}
           // Mục đang mở phải nói ra bằng ngữ nghĩa, không chỉ bằng màu.

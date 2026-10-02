@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  /* Không extends packages/config/tsconfig/*: Expo cần `moduleResolution: bundler` +
+     `customConditions: ["react-native"]`, và preset dùng chung không resolve được
+     `expo/tsconfig.base`. Cờ strict của repo lặp lại tường minh ở dưới. */
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+
+    /* OVERLAY hai tầng (tách app 25/09/2026): `@/x` thử `./src/x` (bản riêng của app — routes,
+       app-profile) rồi rơi về `../shared/src/x` (phần dùng chung). Metro làm đúng phép này qua
+       `resolveRequest` trong metro.config.js; jest-expo đọc lại paths ở đây. */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*", "../shared/src/*"]
+    }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts",
+    "../shared/global.d.ts",
+    "../shared/src/**/*.ts",
+    "../shared/src/**/*.tsx"
+  ],
+  "exclude": ["node_modules"]
+}

@@ -37,6 +37,22 @@ const IS_PRODUCTION_DATA = (process.env.APP_ENV ?? 'production') === 'production
 
 export const BCRYPT_ROUNDS = 12;
 
+/**
+ * Cổng của script CHỈ dành cho máy dev (dữ liệu demo đi qua API thật — `demo-finance`…).
+ *
+ * Chặt hơn `assertSeedTargetIsSafe`: không phụ thuộc `SEED_MODE`. Lệnh chạy ở production đặt
+ * `SEED_MODE=system`, và script nằm sẵn trong image migrate — một script tạo đơn, chuyển tiền,
+ * rút tiền demo không được phép có đường nào chạy được trên một máy đã triển khai.
+ */
+export function assertDevOnly(script: string): void {
+  if (IS_DEPLOYED || IS_PRODUCTION_DATA) {
+    throw new Error(
+      `${script}: chỉ chạy trên máy dev (NODE_ENV khác production VÀ APP_ENV=development). ` +
+        'Máy dev: `APP_ENV=development pnpm --filter @xeprime/prisma ...`.',
+    );
+  }
+}
+
 /** Mật khẩu mẫu cho máy dev. Production BẮT BUỘC truyền env — xem `assertSeedTargetIsSafe`. */
 export const DEFAULT_DEV_PASSWORD = 'Abcd1234';
 export const PLATFORM_ADMIN_EMAIL = (process.env.PLATFORM_ADMIN_EMAIL ?? 'admin@xeprime.vn')

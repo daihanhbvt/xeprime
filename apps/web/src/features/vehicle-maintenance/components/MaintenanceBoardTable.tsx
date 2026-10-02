@@ -28,6 +28,8 @@ import { EntityIdentity } from '@/components/data-display/EntityIdentity';
 import { RowActions, type RowAction } from '@/components/data-display/RowActions';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { VEHICLE_EDIT_TAB, vehicleTabPath } from '@/constants/routes';
+import { withBranchReturn } from '@/features/branches/branch-link';
+import { useBranchCrumb } from '@/features/branches/hooks/use-branch-return';
 import type { MaintenanceBoardItem } from '../types';
 import styles from './MaintenanceBoard.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -48,9 +50,14 @@ interface BoardActions {
   onCorrectOdometer: (row: MaintenanceBoardItem) => void;
 }
 
-/** Link tới đúng tab bảo dưỡng của xe — không dựng chuỗi query rải rác trong component. */
-export function maintenanceTabHref(vehicleId: string): string {
-  return vehicleTabPath(vehicleId, VEHICLE_EDIT_TAB.MAINTENANCE);
+/**
+ * Link tới đúng tab bảo dưỡng của xe — không dựng chuỗi query rải rác trong component.
+ *
+ * `branchId` là mẩu đường về của ADR 0052 (xem `withBranchReturn`): tab bảo dưỡng không lọc theo
+ * chi nhánh, nó chỉ giữ hộ để nút quay lại trả người dùng đúng chỗ đang đứng.
+ */
+export function maintenanceTabHref(vehicleId: string, branchId?: string | null): string {
+  return withBranchReturn(vehicleTabPath(vehicleId, VEHICLE_EDIT_TAB.MAINTENANCE), branchId);
 }
 
 /**
@@ -126,13 +133,14 @@ export function MaintenanceBoardTable({
     : { disabled: true, disabledReason: tCommonShell('feature.readOnlyTooltip') };
 
   const router = useRouter();
+  const branchCrumb = useBranchCrumb();
   const rowActions = (row: MaintenanceBoardItem): RowAction[] => [
     {
       key: 'detail',
       label: t('actions.detail'),
       icon: <EyeOutlined />,
       primary: true,
-      onClick: () => router.push(maintenanceTabHref(row.vehicleId)),
+      onClick: () => router.push(maintenanceTabHref(row.vehicleId, branchCrumb)),
     },
     {
       key: 'odometer',
@@ -178,7 +186,7 @@ export function MaintenanceBoardTable({
       title: t('table.columns.vehicle'),
       width: 260,
       render: (_, row) => (
-        <Link href={maintenanceTabHref(row.vehicleId)} className={styles.vehicleLink}>
+        <Link href={maintenanceTabHref(row.vehicleId, branchCrumb)} className={styles.vehicleLink}>
           <EntityIdentity
             kind="vehicle"
             name={row.vehicleName}
@@ -272,7 +280,7 @@ export function MaintenanceBoardTable({
       columns={columns}
       items={items}
       rowKey={(row) => row.vehicleId}
-      onRowClick={(row) => router.push(maintenanceTabHref(row.vehicleId))}
+      onRowClick={(row) => router.push(maintenanceTabHref(row.vehicleId, branchCrumb))}
       minWidth={MIN_TABLE_WIDTH}
       loading={loading}
       error={error ? { title: t('table.loadError'), onRetry: error.onRetry } : null}
@@ -319,6 +327,7 @@ function MaintenanceBoardCard({
 }) {
   const fmt = useAppFormat();
   const t = useTranslations('Maintenance');
+  const branchCrumb = useBranchCrumb();
 
   const status = row.dueStatus as MaintenanceDueStatus;
 
@@ -327,7 +336,7 @@ function MaintenanceBoardCard({
       className={`${styles.card} ${status === MAINTENANCE_DUE_STATUS.OVERDUE ? styles.cardOverdue : ''}`}
     >
       <header className={styles.cardHead}>
-        <Link href={maintenanceTabHref(row.vehicleId)} className={styles.cardTitle}>
+        <Link href={maintenanceTabHref(row.vehicleId, branchCrumb)} className={styles.cardTitle}>
           {row.vehicleName}
         </Link>
         <StatusTag value={status} meta={MAINTENANCE_DUE_STATUS_META} group="maintenanceDueStatus" />

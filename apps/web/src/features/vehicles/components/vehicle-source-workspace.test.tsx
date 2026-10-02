@@ -89,7 +89,13 @@ const financedSource: VehicleSource = {
     startDate: '2024-01-15',
     endDate: null,
     contractFiles: [
-      { id: '01JEXAMPLEFILEID0000000000', name: 'Hop_dong.pdf', mimeType: 'application/pdf', size: 100, status: 'ready' },
+      {
+        id: '01JEXAMPLEFILEID0000000000',
+        name: 'Hop_dong.pdf',
+        mimeType: 'application/pdf',
+        size: 100,
+        status: 'ready',
+      },
       { id: null, name: 'old-public.pdf', mimeType: null, size: 50, status: 'legacy' },
     ],
     notes: null,

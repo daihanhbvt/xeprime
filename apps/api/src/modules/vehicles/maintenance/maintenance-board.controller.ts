@@ -14,6 +14,7 @@ import {
   MaintenanceBoardListDto,
   MaintenanceBoardQueryDto,
   MaintenanceBoardSummaryDto,
+  MaintenanceBoardSummaryQueryDto,
 } from './dto/vehicle-maintenance.dto';
 import { MaintenanceService } from './maintenance.service';
 import { scopeOf } from './vehicle-maintenance.controller';
@@ -42,7 +43,7 @@ export class MaintenanceBoardController {
     @CurrentTenant() tenant: TenantContext,
     @Query() query: MaintenanceBoardQueryDto,
   ): Promise<MaintenanceBoardListDto> {
-    return this.maintenance.board(tenant.tenantId, query, scopeOf(tenant));
+    return this.maintenance.board(tenant.tenantId, query, scopeOf(tenant), tenant.allowedBranchIds);
   }
 
   @Get('summary')
@@ -50,11 +51,15 @@ export class MaintenanceBoardController {
   @SupportAction(SUPPORT_CAPABILITY.MAINTENANCE_VIEW)
   @ApiOperation({ summary: 'Đếm theo từng nhóm việc — độc lập với trang/bộ lọc hiện tại' })
   @ApiOkResponse({ type: MaintenanceBoardSummaryDto })
-  summary(@CurrentTenant() tenant: TenantContext): Promise<MaintenanceBoardSummaryDto> {
+  summary(
+    @CurrentTenant() tenant: TenantContext,
+    @Query() query: MaintenanceBoardSummaryQueryDto,
+  ): Promise<MaintenanceBoardSummaryDto> {
     // Nhóm việc "Thiếu KM trả" thuộc miền bàn giao — chỉ đếm khi người gọi có `handovers.view`
     // (Wave 8.1). Không có quyền thì trả 0 chứ không lộ số việc đang hở.
     return this.maintenance.boardSummary(tenant.tenantId, {
       canViewHandovers: tenant.permissions.includes(PERMISSION.HANDOVER_VIEW),
-    });
+      branchId: query.branchId,
+    }, tenant.allowedBranchIds);
   }
 }

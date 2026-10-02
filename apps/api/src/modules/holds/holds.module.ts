@@ -8,6 +8,7 @@ import { InsuranceModule } from '../insurance/insurance.module';
 import { TaxModule } from '../tax/tax.module';
 import { VehicleSettingsModule } from '../vehicle-settings/vehicle-settings.module';
 import { PlatformMoneyController } from './platform-money.controller';
+import { PlatformMoneySummaryService } from './platform-money-summary.service';
 
 /**
  * Khoản giữ chỗ (R3). `BookingHoldsService` là writer duy nhất của `booking_holds`; tạo đơn
@@ -30,7 +31,7 @@ import { PlatformMoneyController } from './platform-money.controller';
     VehicleSettingsModule,
   ],
   controllers: [PlatformMoneyController],
-  providers: [BookingHoldsService],
+  providers: [BookingHoldsService, PlatformMoneySummaryService],
   // Re-export MODULE, không phải service: `HoldSettlementService` thuộc `HoldSettlementModule`,
   // và Nest không cho một module export provider mà nó không sở hữu.
   exports: [BookingHoldsService, HoldSettlementModule],

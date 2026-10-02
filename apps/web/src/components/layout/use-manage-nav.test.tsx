@@ -36,6 +36,8 @@ const badges = vi.hoisted(() => ({ bookingRequestsPending: 0, chatUnread: 0 }));
 const features = vi.hoisted(() => ({ states: {} as Record<string, string> }));
 
 vi.mock('next/navigation', () => ({
+  // Link menu mang chi nhánh theo URL (ADR 0052) — test không lọc gì nên URL sạch tham số.
+  useSearchParams: () => new URLSearchParams(),
   usePathname: () => nav.pathname,
 }));
 

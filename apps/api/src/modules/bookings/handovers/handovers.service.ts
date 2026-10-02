@@ -50,6 +50,7 @@ import {
   SaveHandoverDto,
 } from './dto/handover.dto';
 import { paginationMeta, resolvePaging } from '../../../common/pagination';
+import { resolveBranchScope } from '../../../common/dto/branch-scope';
 
 /** Người gọi thấy được gì — controller kiểm quyền rồi truyền xuống, service không tự đọc. */
 export interface HandoverViewScope {
@@ -641,7 +642,9 @@ export class HandoversService {
    */
   async missingOdometerQueue(
     tenantId: string,
-    query: { q?: string; page?: number; limit?: number },
+    query: { q?: string; branchId?: string; page?: number; limit?: number },
+  /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
+  allowedBranchIds: readonly string[] | null,
   ): Promise<MissingOdometerQueueDto> {
     const paging = resolvePaging(query, 20, 100);
     const search = query.q?.trim();
@@ -653,8 +656,9 @@ export class HandoversService {
       odometerMissing: true,
       // Xe hoặc đơn đã xoá mềm thì không còn là việc phải làm. Điều kiện này phải TRÙNG với
       // phép đếm ở `MaintenanceService.boardSummary` (Wave 8.1 §6) — lệch một vế là tab hiện
-      // một số còn bảng hiện số khác.
-      vehicle: { deletedAt: null },
+      // một số còn bảng hiện số khác. Bộ lọc chi nhánh đi cùng nó vì hàng đợi này là MỘT TAB
+      // của Trung tâm bảo dưỡng: ô "Chi nhánh" ở trên phải áp cho cả bốn tab, không chỉ ba.
+      vehicle: { deletedAt: null, branchId: resolveBranchScope(query.branchId, allowedBranchIds) },
       booking: { deletedAt: null },
       ...(search
         ? {

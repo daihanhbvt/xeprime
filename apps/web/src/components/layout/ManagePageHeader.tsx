@@ -29,17 +29,28 @@ export interface ManagePageHeaderProps {
    * `extra` để thứ tự đọc là: tiêu đề → mô tả → hành động.
    */
   subtitle?: ReactNode;
+  /**
+   * Ô icon tròn đứng trước tiêu đề — nhận diện trang ở màn quản trị có thẻ số liệu (trang "Gói
+   * dịch vụ"). Thuần TRANG TRÍ: tên trang đã là `<h1>`, nên icon bị ẩn khỏi cây khả truy cập —
+   * để nguyên thì `aria-label` tiếng Anh của icon ("appstore") bị đọc trước tiêu đề.
+   */
+  icon?: ReactNode;
   onBack?: () => void;
   extra?: ReactNode;
 }
 
-export function ManagePageHeader({ title, subtitle, onBack, extra }: ManagePageHeaderProps) {
+export function ManagePageHeader({ title, subtitle, icon, onBack, extra }: ManagePageHeaderProps) {
   const t = useTranslations('ManageCommon');
   return (
     <div className={styles.header}>
       <div className={styles.left}>
         {onBack ? (
           <Button type="text" icon={<ArrowLeftOutlined />} onClick={onBack} aria-label={t('shell.back')} />
+        ) : null}
+        {icon ? (
+          <span className={styles.icon} aria-hidden="true">
+            {icon}
+          </span>
         ) : null}
         <div className={styles.heading}>
           <Typography.Title level={1} className={styles.title}>

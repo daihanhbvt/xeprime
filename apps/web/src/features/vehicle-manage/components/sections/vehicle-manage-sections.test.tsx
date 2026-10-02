@@ -91,8 +91,12 @@ const updateVehicle = vi.hoisted(() => ({
   mutateAsync: vi.fn(async () => undefined),
   isPending: false,
 }));
+vi.mock('@/features/vehicles/hooks/use-vehicle-summary', () => ({
+  useVehicleSummary: () => ({ data: undefined, isLoading: false, isError: false }),
+}));
 vi.mock('@/features/vehicles/hooks/use-vehicle-mutations', () => ({
   useUpdateVehicle: () => updateVehicle,
+  useSetVehicleMarketplaceVisibility: () => ({ mutate: () => undefined, isPending: false }),
 }));
 
 const branches = vi.hoisted(() => ({
@@ -201,29 +205,34 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('Tối ưu nhận chuyến — lưu một màn không xoá thiết lập màn khác', () => {
-  it('chỉ gửi các trường của chính nó, KHÔNG gửi điều khoản/giấy tờ đang có', async () => {
+  /**
+   * Công tắc LƯU NGAY (30/09/2026) — bấm là gọi API, không còn nút Lưu cho tự lái. Payload chỉ
+   * mang đúng `autoAcceptEnabled`: server gộp từng trường, nên điều khoản/giấy tờ/thời lượng
+   * tối thiểu/lộ trình đang có không bị đụng tới.
+   */
+  it('bấm công tắc là lưu ngay, chỉ gửi autoAcceptEnabled', async () => {
     renderSection(<AutoAcceptSection serviceType={SERVICE_TYPE.SELF_DRIVE} />);
 
     fireEvent.click(screen.getByRole('switch'));
-    fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
 
-    await waitFor(() => expect(patch.mutateAsync).toHaveBeenCalled());
-    const sent = patch.mutateAsync.mock.calls[0]![0]!;
-    expect(sent.autoAcceptEnabled).toBe(true);
-    expect(Object.keys(sent)).not.toContain('termsText');
-    expect(Object.keys(sent)).not.toContain('requiredDocuments');
-    expect(Object.keys(sent)).not.toContain('requireTermsAcceptance');
+    await waitFor(() => expect(patch.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(patch.mutateAsync.mock.calls[0]![0]).toEqual({ autoAcceptEnabled: true });
+    // Tự lái chỉ có đúng công tắc đó — không còn thanh Lưu trơ trọi.
+    expect(screen.queryByRole('button', { name: 'Lưu thay đổi' })).toBeNull();
   });
 
-  it('tự lái KHÔNG gửi trường riêng của có tài xế', async () => {
-    renderSection(<AutoAcceptSection serviceType={SERVICE_TYPE.SELF_DRIVE} />);
-    fireEvent.click(screen.getByRole('switch'));
-    fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
+  it('có tài xế: công tắc lưu ngay; nút Lưu chỉ mang thời lượng tối thiểu và lộ trình', async () => {
+    renderSection(<AutoAcceptSection serviceType={SERVICE_TYPE.WITH_DRIVER} />);
 
-    await waitFor(() => expect(patch.mutateAsync).toHaveBeenCalled());
-    const sent = patch.mutateAsync.mock.calls[0]![0]!;
-    expect(Object.keys(sent)).not.toContain('minRentalMinutes');
-    expect(Object.keys(sent)).not.toContain('preferredRouteTypes');
+    fireEvent.click(screen.getByRole('switch'));
+    await waitFor(() => expect(patch.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(patch.mutateAsync.mock.calls[0]![0]).toEqual({ autoAcceptEnabled: true });
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Nội thành' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
+    await waitFor(() => expect(patch.mutateAsync).toHaveBeenCalledTimes(2));
+    const sent = patch.mutateAsync.mock.calls[1]![0]!;
+    expect(Object.keys(sent).sort()).toEqual(['minRentalMinutes', 'preferredRouteTypes']);
   });
 
   /**
@@ -240,7 +249,6 @@ describe('Tối ưu nhận chuyến — lưu một màn không xoá thiết lậ
     expect(screen.queryByRole('combobox')).toBeNull();
 
     fireEvent.click(screen.getByRole('switch'));
-    fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
 
     await waitFor(() => expect(patch.mutateAsync).toHaveBeenCalled());
     const sent = patch.mutateAsync.mock.calls[0]![0]!;
@@ -301,10 +309,12 @@ describe('Tối ưu nhận chuyến — lưu một màn không xoá thiết lậ
     expect(screen.queryByRole('switch')).toBeNull();
   });
 
-  it('chỉ có quyền xem: nút lưu bị khoá', () => {
+  it('chỉ có quyền xem: công tắc bị khoá, bấm không gọi API', () => {
     renderSection(<AutoAcceptSection serviceType={SERVICE_TYPE.SELF_DRIVE} />, false);
-    const save = screen.getByRole('button', { name: 'Lưu thay đổi' });
-    expect(save.getAttribute('disabled')).not.toBeNull();
+    const toggle = screen.getByRole('switch') as HTMLButtonElement;
+    expect(toggle.disabled).toBe(true);
+    fireEvent.click(toggle);
+    expect(patch.mutateAsync).not.toHaveBeenCalled();
   });
 });
 

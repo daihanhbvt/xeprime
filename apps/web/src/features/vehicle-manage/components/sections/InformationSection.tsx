@@ -14,12 +14,18 @@ import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
 import { BranchFormDialog } from '@/features/branches/components/BranchFormDialog';
 import { useBranches } from '@/features/branches/hooks/use-branches';
-import { useSupportSession } from '@/features/tenant-support/support-session';
+import { useRouter } from 'next/navigation';
+import { VEHICLE_MANAGE_SECTION } from '@/constants/routes';
+import { useAvailableHref, useSupportSession } from '@/features/tenant-support/support-session';
+import { VehicleInfoAside } from '@/features/vehicles/components/VehicleInfoAside';
+import { VehicleServiceChips } from '../VehicleServiceChips';
+import { useWorkspace } from '@/hooks/use-workspace';
 import { PublishRequiredLabel } from '@/features/vehicles/components/VehicleCompleteness';
 import { VehicleClassificationFields } from '@/features/vehicles/components/VehicleClassificationFields';
 import { VehicleEnergyFields } from '@/features/vehicles/components/VehicleEnergyFields';
 import { VehicleIdentityFields } from '@/features/vehicles/components/VehicleIdentityFields';
 import {
+  BodyTypePicker,
   FeaturesSelect,
   useTransmissionOptions,
 } from '@/features/vehicles/components/VehicleFormSections';
@@ -42,6 +48,7 @@ const FIELDS: ReadonlyArray<keyof VehicleFormValues> = [
   'model',
   'manufactureYear',
   'seatCount',
+  'bodyType',
   'fuelType',
   'color',
   'transmission',
@@ -75,7 +82,10 @@ export function InformationSection() {
   const update = useUpdateVehicle(vehicle.id);
 
   const initialValues = useMemo(() => vehicleToFormValues(vehicle), [vehicle]);
-  const resolver = useValidationResolver<VehicleFormValues>(vehicleFormSchema, 'Vehicles.form.validation');
+  const resolver = useValidationResolver<VehicleFormValues>(
+    vehicleFormSchema,
+    'Vehicles.form.validation',
+  );
   const { control, getValues, handleSubmit, reset, setError, setValue, trigger, formState } =
     useForm<VehicleFormValues>({ resolver, values: initialValues });
   // Nguồn năng lượng quyết định bộ truyền động hợp lệ — theo dõi để ô chọn đổi ngay khi
@@ -108,76 +118,57 @@ export function InformationSection() {
    * ra một lựa chọn mà server sẽ chặn.
    */
   const transmissionOptions = useTransmissionOptions(vehicle.vehicleType, fuelType);
+  const router = useRouter();
+  const { vehicles: vehiclePaths } = useWorkspace();
+  const imagesHref = useAvailableHref()(
+    vehiclePaths.manageSection(vehicle.id, VEHICLE_MANAGE_SECTION.IMAGES),
+  );
 
+  /*
+   * Hai cột, CÙNG bố cục với mục "Thông tin xe & tiện ích" ở cổng quản lý (30/09/2026): form bên
+   * trái, cột xem nhanh bên phải (ảnh + tóm tắt + thông báo khoá trường khi xe đang trên chợ).
+   * Cột phải chỉ đọc; nút "Chỉnh sửa" ảnh dẫn sang mục Hình ảnh.
+   */
   return (
-    <Form component={false} layout="vertical" colon={false}>
-      <form
-        noValidate
-        onSubmit={(event) => {
-          event.preventDefault();
-          void handleSubmit(() => save())();
-        }}
-        className={styles.form}
-      >
-        {/*
-          Xe đang trên chợ: căn cước của nó bị khoá, phần còn lại sửa là hiệu lực ngay. Nói rõ
-          ở đầu màn để chủ xe không phải thử từng ô mới biết ô nào không bấm được.
+    <div className={styles.layout}>
+      <Form component={false} layout="vertical" colon={false}>
+        <form
+          noValidate
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleSubmit(() => save())();
+          }}
+          className={styles.form}
+        >
+          {/*
+          Cùng bốn nhóm card với mục "Thông tin xe & tiện ích" ở cổng quản lý (30/09/2026) — một
+          chiếc xe được mô tả theo cùng một thứ tự ở hai khu. Trường, luật khoá và cách lưu giữ
+          nguyên; "Địa chỉ xe" là card riêng của khu này (chủ xe không có module Chi nhánh).
         */}
-        {isApproved ? (
-          <Alert type="info" showIcon title={t('information.lockedNotice')} />
-        ) : null}
-
-        <div className={styles.grid}>
-          <div className={styles.column}>
-            <SectionCard title={t('information.plateTitle')} headingLevel={1}>
-              <TextField
-                control={control}
-                name="plateNumber"
-                label={<PublishRequiredLabel label={tForm('specs.plateNumber')} />}
-                placeholder={tForm('specs.platePlaceholder')}
-                help={isApproved ? t('information.lockedField') : t('information.plateHelp')}
-                disabled={!canEdit || isApproved}
-              />
-            </SectionCard>
-            {/* Địa chỉ xe = chi nhánh (vị trí công khai, điểm nhận xe) — ngoài phiên hỗ trợ (ADR 0050). */}
-            <AddressCard canEdit={canEdit && !support} />
-          </div>
-
-          <SectionCard title={t('information.basicTitle')}>
+          <SectionCard title={tEdit('cards.identity')} headingLevel={1}>
+            {/* Loại dịch vụ: nhãn bấm là lưu ngay — cùng đường ghi với công tắc trên menu trái. */}
+            <VehicleServiceChips vehicle={vehicle} canEdit={canEdit && !support} />
             <Row gutter={16}>
+              <Col xs={24} sm={12}>
+                <TextField
+                  control={control}
+                  name="plateNumber"
+                  label={<PublishRequiredLabel label={tForm('specs.plateNumber')} />}
+                  placeholder={tForm('specs.platePlaceholder')}
+                  help={isApproved ? t('information.lockedField') : t('information.plateHelp')}
+                  disabled={!canEdit || isApproved}
+                />
+              </Col>
               {/*
-                Hãng → Mẫu xe, rồi phân loại theo loại xe. Cùng component với wizard đăng nhanh
-                và form đầy đủ ở `/manage` — ba màn không thể hỏi khác nhau.
-              */}
+              Hãng → Mẫu xe, rồi phân loại theo loại xe. Cùng component với wizard đăng nhanh
+              và form đầy đủ ở `/manage` — ba màn không thể hỏi khác nhau.
+            */}
               <Col xs={24}>
                 <VehicleIdentityFields
                   control={control}
                   vehicleType={vehicle.vehicleType}
                   lockedNotice={isApproved ? t('information.lockedField') : undefined}
                   disabled={!canEdit}
-                  setValue={setValue}
-                />
-              </Col>
-              <Col xs={24}>
-                <VehicleClassificationFields
-                  control={control}
-                  vehicleType={vehicle.vehicleType}
-                  disabled={!canEdit}
-                  setValue={setValue}
-                />
-              </Col>
-              <Col xs={24}>
-                {/*
-                  Nguồn năng lượng và thông số của nó dùng CHUNG khối với hai wizard đăng xe —
-                  cùng ma trận `vehicleEnergySpecPolicy`, nên ba màn không bao giờ hỏi khác nhau.
-                  Nhiên liệu và hộp số bị khoá khi xe đang trên chợ (ADR 0030).
-                */}
-                <VehicleEnergyFields
-                  control={control}
-                  vehicleType={vehicle.vehicleType}
-                  transmissionOptions={transmissionOptions}
-                  lockedNotice={isApproved ? t('information.lockedField') : undefined}
-                  disabled={!canEdit || isApproved}
                   setValue={setValue}
                 />
               </Col>
@@ -200,40 +191,74 @@ export function InformationSection() {
                   placeholder={tForm('specs.colorPlaceholder')}
                 />
               </Col>
+              <Col xs={24}>
+                {/*
+                Kiểu dáng xe (30/09/2026) — CÙNG thẻ chọn có ảnh với form ở cổng quản lý. Đây là
+                chiều "Loại xe" khách lọc ngoài chợ; trước đây chủ xe tuyến hoa hồng không có ô
+                này nên xe của họ không bao giờ lọt vào bộ lọc kiểu dáng. `bodyType` vốn đã đi
+                trong payload của màn này — chỉ thiếu ô.
+              */}
+                <VehicleClassificationFields
+                  control={control}
+                  vehicleType={vehicle.vehicleType}
+                  bodyTypePicker={<BodyTypePicker control={control} disabled={!canEdit} />}
+                  disabled={!canEdit}
+                  setValue={setValue}
+                />
+              </Col>
             </Row>
           </SectionCard>
-        </div>
 
-        <SectionCard title={t('information.descriptionTitle')}>
-          <TextAreaField
-            control={control}
-            name="description"
-            label={tForm('media.description')}
-            placeholder={tForm('media.descriptionPlaceholder')}
-            maxLength={4000}
-            rows={5}
-          />
-        </SectionCard>
+          {/* Địa chỉ xe = chi nhánh (vị trí công khai, điểm nhận xe) — ngoài phiên hỗ trợ (ADR 0050). */}
+          <AddressCard canEdit={canEdit && !support} />
 
-        <SectionCard title={t('information.featuresTitle')}>
-          <div className={formStyles.galleryBlock}>
-            <div className={formStyles.fieldLabel} id="vehicle-features-label">
-              {tForm('media.features')}
+          <SectionCard title={tEdit('cards.energy')}>
+            {/*
+            Nguồn năng lượng và thông số của nó dùng CHUNG khối với hai wizard đăng xe — cùng ma
+            trận `vehicleEnergySpecPolicy`, nên ba màn không bao giờ hỏi khác nhau. Nhiên liệu
+            và hộp số bị khoá khi xe đang trên chợ (ADR 0030).
+          */}
+            <VehicleEnergyFields
+              control={control}
+              vehicleType={vehicle.vehicleType}
+              transmissionOptions={transmissionOptions}
+              lockedNotice={isApproved ? t('information.lockedField') : undefined}
+              disabled={!canEdit || isApproved}
+              setValue={setValue}
+            />
+          </SectionCard>
+
+          <SectionCard title={tEdit('cards.featuresDescription')}>
+            <div className={formStyles.galleryBlock}>
+              <div className={formStyles.fieldLabel} id="vehicle-features-label">
+                {tForm('media.features')}
+              </div>
+              <FeaturesSelect control={control} vehicleType={vehicle.vehicleType} />
             </div>
-            <FeaturesSelect control={control} vehicleType={vehicle.vehicleType} />
-          </div>
-        </SectionCard>
+            <TextAreaField
+              control={control}
+              name="description"
+              label={tForm('media.description')}
+              placeholder={tForm('media.descriptionPlaceholder')}
+              maxLength={4000}
+              rows={5}
+            />
+          </SectionCard>
 
-        <StickyFormActions
-          submitLabel={tActions('saveChanges')}
-          cancelLabel={tEdit('revert')}
-          onCancel={formState.isDirty ? () => reset(initialValues) : undefined}
-          submitting={update.isPending}
-          disabled={!canEdit || !formState.isDirty}
-        />
-      </form>
-
-    </Form>
+          <StickyFormActions
+            submitLabel={tActions('saveChanges')}
+            cancelLabel={tEdit('revert')}
+            onCancel={formState.isDirty ? () => reset(initialValues) : undefined}
+            submitting={update.isPending}
+            disabled={!canEdit || !formState.isDirty}
+          />
+        </form>
+      </Form>
+      <VehicleInfoAside
+        vehicle={vehicle}
+        onEditImages={imagesHref ? () => router.push(imagesHref) : undefined}
+      />
+    </div>
   );
 }
 
@@ -275,9 +300,7 @@ function AddressCard({ canEdit }: { canEdit: boolean }) {
         <Alert type="warning" showIcon title={t('addressMissing')} />
       ) : (
         <>
-          <p className={styles.address}>
-            {addressLine || t('addressNoStreet')}
-          </p>
+          <p className={styles.address}>{addressLine || t('addressNoStreet')}</p>
           {branch?.name ? <p className={styles.branchName}>{branch.name}</p> : null}
           {mapUrl ? (
             <StaticMap src={mapUrl} title={t('addressMapTitle')} height={220} />

@@ -3,7 +3,7 @@
 import { Alert, App, Button, Switch } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useForm, useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
 import {
   COLLATERAL_MODE,
@@ -26,7 +26,7 @@ import { vehiclePricingFormSchema, type VehiclePricingFormValues } from '../sche
 import type { RentalPolicyValues, SaveVehiclePricingInput, VehiclePricing } from '../types';
 import { LongTermPriceHint } from './LongTermPriceHint';
 import { PolicyInfoTip } from './PolicyInfoTip';
-import { PolicySections } from './PolicySections';
+import { POLICY_BLOCK, PolicySections, type PolicyBlock } from './PolicySections';
 
 import styles from './VehiclePricingWorkspace.module.css';
 
@@ -50,7 +50,37 @@ interface VehiclePricingWorkspaceProps {
   policyMode?: 'full' | 'hidden';
   /** Link "Tuỳ chỉnh giá theo lịch" — giá riêng theo ngày sống trên lịch xe, không có bảng mùa vụ. */
   calendarHref?: string;
+  /**
+   * Khối chính sách nào hiện (chế độ `full`) — mặc định đủ năm. Khu tài khoản của chủ xe tuyến
+   * hoa hồng không có phí quá giờ và ưu đãi (như develop); khối ẩn vẫn được gửi nguyên giá trị.
+   */
+  policyBlocks?: readonly PolicyBlock[];
+  /**
+   * Trang chính sách chung của gian hàng. `null` = người dùng KHÔNG có trang đó (chủ xe ở khu
+   * tài khoản) — không dựng một link chắc chắn dẫn vào màn bị chặn.
+   */
+  shopPolicyHref?: string | null;
+  /**
+   * `switch` (mặc định, cổng quản lý) — công tắc "Dùng chính sách chung của gian hàng", thẻ tóm
+   * tắt chính sách đang kế thừa và nút đặt lại.
+   * `direct` (khu tài khoản) — chủ xe KHÔNG có trang chính sách gian hàng, nên không có công tắc,
+   * không có thẻ tóm tắt chính sách gian hàng: các khối chính sách sửa trực tiếp (như màn "Giao xe
+   * tận nơi" của develop). Chỉ khi một ô chính sách THẬT SỰ đổi mới ghi bộ chính sách riêng.
+   */
+  policySource?: 'switch' | 'direct';
 }
+
+/** Ô GIÁ của form — mọi ô còn lại thuộc khối chính sách. */
+const PRICE_FIELDS = new Set<string>([
+  'weekdayPrice',
+  'weekendPrice',
+  'hourlyPrice',
+  'discountPercent',
+  'monthlyPrice',
+  'withDriverDailyPrice',
+  'withDriverInterCityPrice',
+  'withDriverOneWayPrice',
+]);
 
 const toNumber = (v: string | null | undefined): number | null => (v == null ? null : Number(v));
 
@@ -97,6 +127,9 @@ export function VehiclePricingWorkspace({
   visibleServices,
   policyMode = 'full',
   calendarHref,
+  policyBlocks,
+  shopPolicyHref = ROUTES.MANAGE.SHOP_POLICIES,
+  policySource = 'switch',
 }: VehiclePricingWorkspaceProps) {
   const t = useTranslations('Vehicles.pricing');
   const tActions = useTranslations('Common.actions');
@@ -107,6 +140,12 @@ export function VehiclePricingWorkspace({
   const [editingOverride, setEditingOverride] = useState(false);
   const editMode = overriding || editingOverride;
   const showPolicy = policyMode === 'full';
+  const direct = policySource === 'direct';
+  /*
+   * Chế độ `direct`: khối chính sách có ô bị đổi hay chưa — đọc ở lúc VALIDATE (qua getter của
+   * `context`) và lúc lưu. Ref vì context được RHF đọc ngoài render; đồng bộ trong effect.
+   */
+  const policyDirtyRef = useRef(false);
 
   /** Tên xe kèm biển số — tham số `{vehicle}` của mọi hộp xác nhận trên màn này. */
   const vehicleLabel = `${vehicleName}${vehiclePlate ? ` (${vehiclePlate})` : ''}`;
@@ -136,7 +175,16 @@ export function VehiclePricingWorkspace({
      * CHƯA cấu hình chính sách sẽ không bao giờ đặt nổi giá cho xe — form đòi "Nhập số tiền cọc
      * mặc định" trên một ô vô hình.
      */
-    context: { serviceTypes: services, policyEditable: editMode && showPolicy },
+    context: {
+      serviceTypes: services,
+      /*
+       * Chế độ `direct` không có công tắc mở khoá, nên ràng buộc chính sách bật khi chủ xe
+       * THẬT SỰ sửa một ô chính sách — sửa mỗi giá không bị chặn bởi ô họ không đụng tới.
+       */
+      get policyEditable() {
+        return showPolicy && (editMode || (direct && policyDirtyRef.current));
+      },
+    },
     values: {
       ...policyToForm(pricing.policy ?? pricing.shopPolicy),
       weekdayPrice: toNumber(pricing.weekdayPrice),
@@ -149,6 +197,11 @@ export function VehiclePricingWorkspace({
       withDriverOneWayPrice: toNumber(pricing.withDriverOneWayPrice),
     },
   });
+
+  const policyDirty = Object.keys(formState.dirtyFields).some((field) => !PRICE_FIELDS.has(field));
+  useEffect(() => {
+    policyDirtyRef.current = policyDirty;
+  }, [policyDirty]);
 
   function confirmReset() {
     modal.confirm({
@@ -176,7 +229,12 @@ export function VehiclePricingWorkspace({
      * (`policyMode="hidden"`) nguồn hiện có được giữ nguyên: đang ghi đè thì gửi lại đúng bộ
      * chính sách đang có (form đã nạp nó), đang kế thừa thì không đụng.
      */
-    const sendPolicy = overriding || (showPolicy && editMode);
+    /*
+     * Chế độ `direct`: chỉ ghi bộ chính sách riêng khi một ô chính sách THẬT SỰ đổi — cùng luật
+     * "đã chạm mới ghi" của màn Thủ tục cho thuê. Sửa mỗi giá không đóng băng một bản sao chính
+     * sách mà chủ xe không hề yêu cầu.
+     */
+    const sendPolicy = overriding || (showPolicy && (direct ? policyDirty : editMode));
     const body: SaveVehiclePricingInput = {
       source: sendPolicy ? POLICY_SOURCE.VEHICLE : POLICY_SOURCE.SHOP,
       ...(hasSelfDrive || values.weekdayPrice != null
@@ -212,9 +270,15 @@ export function VehiclePricingWorkspace({
      * hộp thoại không được hứa điều đó (giá và chính sách đã là hai trục tách rời từ 20/08).
      */
     modal.confirm({
-      title: sendPolicy && showPolicy ? t('confirm.overrideTitle') : t('confirm.inheritTitle'),
-      content:
-        sendPolicy && showPolicy
+      // Chế độ `direct` không nói về "chính sách gian hàng" — chủ xe không có trang đó.
+      title: direct
+        ? t('confirm.ownerTitle')
+        : sendPolicy && showPolicy
+          ? t('confirm.overrideTitle')
+          : t('confirm.inheritTitle'),
+      content: direct
+        ? t('confirm.ownerBody', { vehicle: vehicleName })
+        : sendPolicy && showPolicy
           ? t('confirm.overrideBody', { vehicle: vehicleName })
           : t('confirm.inheritBody', { vehicle: vehicleName }),
       okText: t('confirm.ok'),
@@ -225,7 +289,7 @@ export function VehiclePricingWorkspace({
 
   return (
     <div className={styles.stack}>
-      {showPolicy ? (
+      {showPolicy && !direct ? (
         /* Nguồn chính sách — Figma `policy-toggle-card`. */
         <section className={styles.card} aria-label={t('source.title')}>
           <PricingTitle infoLabel={t('source.tipLabel')} info={t('source.info')}>
@@ -263,9 +327,11 @@ export function VehiclePricingWorkspace({
           ) : (
             <div className={styles.inheritBanner}>
               <span>{t('source.inheritBanner')}</span>
-              <Link href={ROUTES.MANAGE.SHOP_POLICIES} className={styles.inheritLink}>
-                {t('source.viewShopPolicy')}
-              </Link>
+              {shopPolicyHref ? (
+                <Link href={shopPolicyHref} className={styles.inheritLink}>
+                  {t('source.viewShopPolicy')}
+                </Link>
+              ) : null}
             </div>
           )}
         </section>
@@ -278,7 +344,7 @@ export function VehiclePricingWorkspace({
       */}
       <form onSubmit={submit} noValidate>
         <div className={styles.stack}>
-          {showPolicy && overriding && canEdit ? (
+          {showPolicy && !direct && overriding && canEdit ? (
             <div className={styles.resetRow}>
               <Button danger type="link" onClick={confirmReset} disabled={submitting}>
                 {t('source.reset')}
@@ -435,19 +501,23 @@ export function VehiclePricingWorkspace({
           ) : null}
 
           {showPolicy ? (
-            editMode ? (
+            // `direct`: khối chính sách luôn sửa được — không có thẻ tóm tắt chính sách gian hàng.
+            editMode || direct ? (
               /* Form giá xe là SUPERSET của PolicyFormValues — cấu trúc tương thích, TS không
                  thu hẹp generic của RHF nên cần một cast tường minh tại biên. */
               <PolicySections
                 control={control as unknown as Parameters<typeof PolicySections>[0]['control']}
                 numbered={false}
                 legacyDiscountTiers={(pricing.policy ?? pricing.shopPolicy)?.legacyDiscountTiers}
+                blocks={policyBlocks}
               />
             ) : (
               <InheritedPolicyCard
                 policy={pricing.shopPolicy ?? null}
                 canEdit={canEdit}
                 onEdit={() => setEditingOverride(true)}
+                blocks={policyBlocks}
+                shopPolicyHref={shopPolicyHref}
               />
             )
           ) : null}
@@ -633,11 +703,17 @@ function InheritedPolicyCard({
   policy,
   canEdit,
   onEdit,
+  blocks,
+  shopPolicyHref,
 }: {
   policy: RentalPolicyValues | null;
   canEdit: boolean;
   onEdit: () => void;
+  /** Cùng bộ khối với form — dòng tóm tắt của khối ẩn không hiện. `undefined` = đủ năm. */
+  blocks?: readonly PolicyBlock[];
+  shopPolicyHref: string | null;
 }) {
+  const shows = (block: PolicyBlock) => !blocks || blocks.includes(block);
   const t = useTranslations('Vehicles.pricing.inherited');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -692,24 +768,28 @@ function InheritedPolicyCard({
                 : t('mileageOff')}
             </dd>
           </div>
-          <div className={styles.summaryRow}>
-            <dt>{t('overtime')}</dt>
-            <dd>
-              {policy.overtimeFeePerHour
-                ? t('overtimeValue', { fee: fmt.money(policy.overtimeFeePerHour) })
-                : t('overtimeMissing')}
-            </dd>
-          </div>
-          <div className={styles.summaryRow}>
-            <dt>{t('discount')}</dt>
-            <dd>
-              {policy.discountEnabled && policy.discountTiers.length > 0
-                ? t('discountMax', {
-                    percent: Math.max(...policy.discountTiers.map((tier) => tier.percent)),
-                  })
-                : t('discountOff')}
-            </dd>
-          </div>
+          {shows(POLICY_BLOCK.OVERTIME) ? (
+            <div className={styles.summaryRow}>
+              <dt>{t('overtime')}</dt>
+              <dd>
+                {policy.overtimeFeePerHour
+                  ? t('overtimeValue', { fee: fmt.money(policy.overtimeFeePerHour) })
+                  : t('overtimeMissing')}
+              </dd>
+            </div>
+          ) : null}
+          {shows(POLICY_BLOCK.DISCOUNT) ? (
+            <div className={styles.summaryRow}>
+              <dt>{t('discount')}</dt>
+              <dd>
+                {policy.discountEnabled && policy.discountTiers.length > 0
+                  ? t('discountMax', {
+                      percent: Math.max(...policy.discountTiers.map((tier) => tier.percent)),
+                    })
+                  : t('discountOff')}
+              </dd>
+            </div>
+          ) : null}
         </dl>
       ) : (
         <Alert
@@ -717,7 +797,8 @@ function InheritedPolicyCard({
           showIcon
           title={t('empty')}
           description={t.rich('emptyBody', {
-            policies: (chunks) => <Link href={ROUTES.MANAGE.SHOP_POLICIES}>{chunks}</Link>,
+            policies: (chunks) =>
+              shopPolicyHref ? <Link href={shopPolicyHref}>{chunks}</Link> : chunks,
           })}
         />
       )}

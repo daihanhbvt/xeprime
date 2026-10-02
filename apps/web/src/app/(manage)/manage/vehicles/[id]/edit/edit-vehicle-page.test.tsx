@@ -1,5 +1,6 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { App } from 'antd';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { API_ERROR_CODE, PERMISSION, SUPPORT_WORKSPACE } from '@xeprime/types';
 import { adminTenantSupportPath } from '@/constants/routes';
@@ -10,11 +11,26 @@ import { WorkspaceScope } from '@/hooks/use-workspace';
 import EditVehiclePage from './page';
 
 const nav = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
+/** `?…` của URL hiện tại — test bí danh tab ghi vào đây trước khi render. */
+const url = vi.hoisted(() => ({ search: '' }));
+/**
+ * Trục NĂNG LỰC theo gói — mặc định gian hàng đủ cờ.
+ *
+ * `useVehicleCapabilities` kiểm quyền ∧ cờ gói, và `useFeature` đọc `/auth/me` qua TanStack
+ * Query. Test này mock `use-permissions` nên không dựng `QueryClientProvider`; thiếu mock
+ * ở đây thì component chết vì hạ tầng, không vì thứ đang kiểm.
+ */
+vi.mock('@/hooks/use-feature', () => ({
+  useFeature: () => ({ state: 'enabled', canWrite: true, isVisible: true, planEndsAt: null }),
+  useFeatureStates: () => ({}),
+  usePlanEndsAt: () => null,
+}));
+
 vi.mock('next/navigation', () => ({
   useRouter: () => nav,
   useParams: () => ({ id: 'vehicle-1' }),
   usePathname: () => '/manage/vehicles/vehicle-1/edit',
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => new URLSearchParams(url.search),
 }));
 vi.mock('@/features/catalog/use-catalog-models', async () =>
   (await import('@/features/catalog/test-catalog')).catalogModelsModuleMock(),
@@ -63,12 +79,26 @@ vi.mock('@/features/vehicles/hooks/use-vehicle-source', () => ({
   useSaveVehicleSource: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
+/**
+ * Quyền của một CHỦ GIAN HÀNG — bộ đủ, đúng như dữ liệu thật.
+ *
+ * Danh sách này nới ra ngày 29/09/2026 cùng lúc với việc gác tab theo năng lực. Trước đó nó chỉ
+ * có `vehicles.update` + `finance.view`, và các tab Giấy tờ / Bảo dưỡng vẫn dựng — vì chúng
+ * chưa gác quyền gì cả. Giữ bộ hẹp đó bây giờ nghĩa là khoá lại một tình huống KHÔNG tồn tại:
+ * đối chiếu trên DB, cả chủ xe cá nhân lẫn chủ gian hàng đều có đủ `vehicles.documents.view` và
+ * `vehicles.maintenance.view` (cùng vai `shop_owner` — ADR 0014). Thứ tách hai tuyến là cờ gói,
+ * và đó là thứ `plan.hasFullManage` ở trên mô tả.
+ */
 const permissions = vi.hoisted(() => ({ allow: true }));
+const OWNER_PERMISSIONS: readonly string[] = [
+  PERMISSION.VEHICLE_UPDATE,
+  PERMISSION.FINANCE_VIEW,
+  PERMISSION.VEHICLE_DOCUMENT_VIEW,
+  PERMISSION.VEHICLE_MAINTENANCE_VIEW,
+];
 vi.mock('@/hooks/use-permissions', () => ({
   usePermissions: () => ({
-    has: (permission: string) =>
-      permissions.allow &&
-      (permission === PERMISSION.VEHICLE_UPDATE || permission === PERMISSION.FINANCE_VIEW),
+    has: (permission: string) => permissions.allow && OWNER_PERMISSIONS.includes(permission),
     hasAny: () => permissions.allow,
     isLoading: false,
   }),
@@ -162,6 +192,12 @@ const update = vi.hoisted(() => ({
 }));
 vi.mock('@/features/vehicles/hooks/use-vehicle-mutations', () => ({
   useUpdateVehicle: () => update,
+  // Công tắc "Trên chợ" trên thẻ đầu xe (30/09/2026) — không bấm trong bộ này.
+  useSetVehicleMarketplaceVisibility: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+/** Số KM ở thẻ đầu xe + cột tóm tắt đọc tổng hợp 360 — test này không dựng QueryClient. */
+vi.mock('@/features/vehicles/hooks/use-vehicle-summary', () => ({
+  useVehicleSummary: () => ({ data: undefined, isLoading: false, isError: false }),
 }));
 
 vi.mock('@/services/api-client', async (importOriginal) => ({
@@ -175,6 +211,22 @@ function renderPage() {
     <App>
       <EditVehiclePage />
     </App>,
+  );
+}
+
+/**
+ * Mục vận hành dựng section của khu tài khoản, và chúng tự gọi TanStack Query (thiết lập dịch
+ * vụ, khung giờ). Ca nào mở thẳng các mục đó thì dựng provider — không gọi mạng nào vì `retry`
+ * tắt và `fetch` không có máy chủ, section chỉ đứng ở trạng thái đang tải.
+ */
+function renderPageWithQuery() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <App>
+        <EditVehiclePage />
+      </App>
+    </QueryClientProvider>,
   );
 }
 
@@ -192,6 +244,7 @@ beforeEach(() => {
   update.error = undefined;
   nav.push.mockReset();
   nav.replace.mockReset();
+  url.search = '';
 });
 afterEach(cleanup);
 
@@ -216,49 +269,195 @@ describe('/manage/vehicles/[id]/edit — Wave 3 tab workspace', () => {
     expect(screen.getByText('Không tìm thấy xe')).toBeTruthy();
   });
 
-  it('nạp đúng header, trạng thái và sáu tab; Nguồn xe (Wave 4) + Giấy tờ (Wave 5) + Bảo dưỡng (Wave 6) đều mở', () => {
+  /**
+   * MENU TRÁI 10 mục (30/09/2026) — mục là NÚT, không còn `role=tab`.
+   *
+   * Khoá lại rằng không khối nào của develop BIẾN MẤT: bảy tab cũ + năm khối trong `Collapse`
+   * của tab "Vận hành & điều kiện thuê" đều còn đường tới — thủ tục cho thuê nằm chung mục
+   * "Nhận chuyến & thủ tục" với tối ưu nhận chuyến của cùng dịch vụ.
+   */
+  it('menu trái có đủ 10 mục, xếp theo nhóm dịch vụ', () => {
     renderPage();
     expect(screen.getByRole('heading', { name: vehicle.name })).toBeTruthy();
     expect(screen.getByDisplayValue(vehicle.name)).toBeTruthy();
     expect((screen.getByDisplayValue(vehicle.code) as HTMLInputElement).disabled).toBe(true);
-    expect(screen.getByRole('tab', { name: 'Thông tin xe' }).getAttribute('aria-selected')).toBe(
-      'true',
-    );
+
+    const menu = screen.getByRole('navigation', { name: 'Mục của xe' });
+    // Mục đang mở nói ra bằng `aria-current`, không phải `aria-selected` của tab.
     expect(
-      screen.getByRole('tab', { name: 'Nguồn xe & tài chính' }).getAttribute('aria-disabled'),
-    ).not.toBe('true');
-    expect(screen.getByRole('tab', { name: 'Giấy tờ' }).getAttribute('aria-disabled')).not.toBe(
-      'true',
-    );
+      within(menu)
+        .getByRole('button', { name: 'Thông tin xe & tiện ích' })
+        .getAttribute('aria-current'),
+    ).toBe('page');
     expect(
-      screen.getByRole('tab', { name: 'Bảo dưỡng & KM' }).getAttribute('aria-disabled'),
-    ).not.toBe('true');
+      within(menu)
+        .getAllByRole('button')
+        .map((button) => button.textContent),
+    ).toEqual([
+      'Thông tin xe & tiện ích',
+      'Hình ảnh',
+      'Giấy tờ xe',
+      'Giá & chính sách',
+      'Thời gian giao nhận',
+      'Nhận chuyến & thủ tục',
+      'Nhận chuyến & thủ tục',
+      'Phụ phí',
+      // Nhóm dài hạn không có mục — chỉ công tắc và lời nhắc dẫn về Giá & chính sách.
+      'Giá thuê tháng nằm ở Giá & chính sách',
+      'Nguồn xe & tài chính',
+      'Bảo dưỡng & KM',
+    ]);
+  });
+
+  it('công tắc dịch vụ trên tiêu đề nhóm phản ánh dịch vụ của xe và ghi đủ mảng serviceTypes', async () => {
+    renderPage();
+    const selfDrive = screen.getByRole('switch', { name: 'Bật hoặc tắt dịch vụ Tự lái' });
+    const withDriver = screen.getByRole('switch', { name: 'Bật hoặc tắt dịch vụ Có tài xế' });
+    const longTerm = screen.getByRole('switch', { name: 'Bật hoặc tắt dịch vụ Thuê dài hạn' });
+    expect(selfDrive.getAttribute('aria-checked')).toBe('true');
+    // Dịch vụ cuối cùng của xe không tắt được — xe phải giữ ít nhất một dịch vụ.
+    expect((selfDrive as HTMLButtonElement).disabled).toBe(true);
+    expect(withDriver.getAttribute('aria-checked')).toBe('false');
+    expect(longTerm.getAttribute('aria-checked')).toBe('false');
+
+    fireEvent.click(withDriver);
+    await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(update.mutateAsync.mock.calls[0]![0]).toEqual({
+      serviceTypes: ['self_drive', 'with_driver'],
+    });
+  });
+
+  it('Loại dịch vụ là nhãn LƯU NGAY — lưu form Thông tin KHÔNG gửi serviceTypes', async () => {
+    renderPage();
+    expect(screen.getByRole('group', { name: 'Loại dịch vụ' })).toBeTruthy();
+    fireEvent.change(screen.getByLabelText(/Tên xe/), { target: { value: 'Toyota Vios mới' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
+    await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(update.mutateAsync.mock.calls[0]![0]).not.toHaveProperty('serviceTypes');
+  });
+
+  it('mục của dịch vụ đang tắt: nói ra và mời bật qua CÙNG công tắc', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Phụ phí' }));
+    expect(await screen.findByText('Dịch vụ Có tài xế đang tắt')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Bật Có tài xế' }));
+    await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(update.mutateAsync.mock.calls[0]![0]).toEqual({
+      serviceTypes: ['self_drive', 'with_driver'],
+    });
+  });
+
+  it.each([
+    // Tab `operations` của develop mở khối đầu tiên của nó.
+    ['operations', 'Thời gian giao nhận', 0],
+    // Thủ tục tự lái nằm chung mục với tối ưu nhận chuyến tự lái (mục đầu trong hai mục cùng tên).
+    ['self-drive-terms', 'Nhận chuyến & thủ tục', 0],
+    ['with-driver-terms', 'Nhận chuyến & thủ tục', 1],
+  ])('link cũ ?tab=%s mở đúng mục "%s"', (tab, label, index) => {
+    url.search = `tab=${tab}`;
+    renderPageWithQuery();
+    const menu = screen.getByRole('navigation', { name: 'Mục của xe' });
+    expect(
+      within(menu).getAllByRole('button', { name: label })[index]!.getAttribute('aria-current'),
+    ).toBe('page');
+  });
+
+  it('?tab=pricing vẫn mở màn Giá & chính sách (một màn, một nút Lưu như develop)', async () => {
+    url.search = 'tab=pricing';
+    renderPage();
+    expect(await screen.findByText('Không tải được giá & chính sách')).toBeTruthy();
   });
 
   it('Giá & chính sách được nhúng trực tiếp trong tab, không qua màn trung gian', async () => {
     renderPage();
-    fireEvent.click(screen.getByRole('tab', { name: 'Giá & chính sách' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Giá & chính sách' }));
     expect(await screen.findByText('Không tải được giá & chính sách')).toBeTruthy();
     expect(screen.queryByText('Mở Giá & chính sách')).toBeNull();
   });
 
-  it('thông số nâng cao mặc định đóng và tự đóng lại sau khi lưu', async () => {
+  /**
+   * Mục Thông tin xe có HAI tab ngang (30/09/2026): "Thông tin xe cơ bản" gom các ô theo nhóm
+   * card, "Thông số kỹ thuật nâng cao" thay vùng thu gọn cũ. Cùng một form, một nút Lưu.
+   */
+  it('tab cơ bản gom ô theo nhóm card; tab nâng cao là tab ngang riêng', () => {
     renderPage();
+    const basic = screen.getByRole('tab', { name: /Thông tin xe cơ bản/ });
+    expect(basic.getAttribute('aria-selected')).toBe('true');
+    for (const title of [
+      'Thông tin chung',
+      'Nhận dạng xe',
+      'Động cơ & nhiên liệu',
+      'Tiện ích & mô tả',
+    ]) {
+      expect(screen.getByText(title)).toBeTruthy();
+    }
+    // Trạng thái vận hành đổi trên chip thẻ đầu xe — không còn card/ô trong form.
+    expect(screen.queryByText('Quản lý trạng thái')).toBeNull();
     expect(screen.queryByLabelText('Chiều dài (mm)')).toBeNull();
-    const advanced = screen.getByRole('tab', { name: /Thông số kỹ thuật nâng cao/ });
-    expect(advanced.getAttribute('aria-expanded')).toBe('false');
-    fireEvent.click(advanced);
-    expect(await screen.findByLabelText('Chiều dài (mm)')).toBeTruthy();
+  });
+
+  /**
+   * Thẻ đầu xe + cột xem nhanh (30/09/2026): chỉ đọc. Nút "Chỉnh sửa" ảnh dẫn tới mục Hình
+   * ảnh — không có lối ghi ảnh thứ hai ở đây.
+   */
+  it('thẻ đầu xe + cột tóm tắt; "Chỉnh sửa" ảnh mở mục Hình ảnh', async () => {
+    renderPage();
+    expect(screen.getByRole('heading', { level: 1, name: vehicle.name })).toBeTruthy();
+    expect(screen.getByText('Thông tin tóm tắt')).toBeTruthy();
+    expect(screen.getByText('5 chỗ')).toBeTruthy();
+    // Xe đã duyệt: thông báo khoá trường nằm ở cột tóm tắt.
+    expect(screen.getByText(/^Xe đang hiển thị trên chợ: biển số/)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Chỉnh sửa hình ảnh xe' }));
+    await waitFor(() => expect(nav.replace).toHaveBeenCalled());
+    expect(String(nav.replace.mock.calls[0]?.[0])).toContain('tab=media');
+  });
+
+  /**
+   * Trạng thái vận hành đổi TẠI CHỖ trên chip của thẻ đầu xe (30/09/2026) — lưu ngay, chỉ gửi
+   * `operationStatus`. Form Thông tin không còn ô đó và không gửi nó (không ghi đè lần đổi này).
+   */
+  it('bấm chip "Vận hành" đổi trạng thái — lưu ngay, form không gửi operationStatus', async () => {
+    renderPage();
+    expect(screen.queryByLabelText('Trạng thái vận hành')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /Trạng thái vận hành: Sẵn sàng/ }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: /Bảo dưỡng/ }));
+    await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(update.mutateAsync.mock.calls[0]![0]).toEqual({ operationStatus: 'maintenance' });
+
+    fireEvent.change(screen.getByLabelText(/Tên xe/), { target: { value: 'Toyota Vios mới' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
+    await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(2));
+    expect(update.mutateAsync.mock.calls[1]![0]).not.toHaveProperty('operationStatus');
+  });
+
+  it('sửa thông số nâng cao rồi lưu: cùng MỘT lần lưu với form Thông tin', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('tab', { name: /Thông số kỹ thuật nâng cao/ }));
+    expect(await screen.findByText('Kích thước & Trọng lượng')).toBeTruthy();
     fireEvent.change(screen.getByLabelText('Chiều dài (mm)'), { target: { value: '4500' } });
     fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
     await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(update.mutateAsync.mock.calls[0]![0].lengthMm).toBe(4500);
+  });
+
+  it('lỗi ở tab nâng cao khi đang đứng tab cơ bản: tự mở đúng tab có lỗi', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('tab', { name: /Thông số kỹ thuật nâng cao/ }));
+    fireEvent.change(await screen.findByLabelText('Trong đô thị'), { target: { value: '1.233' } });
+    fireEvent.click(screen.getByRole('tab', { name: /Thông tin xe cơ bản/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
+
     await waitFor(() =>
       expect(
         screen
           .getByRole('tab', { name: /Thông số kỹ thuật nâng cao/ })
-          .getAttribute('aria-expanded'),
-      ).toBe('false'),
+          .getAttribute('aria-selected'),
+      ).toBe('true'),
     );
+    expect(await screen.findByText(/2 chữ số thập phân/)).toBeTruthy();
+    expect(update.mutateAsync).not.toHaveBeenCalled();
   });
 
   it('tab Thông tin chỉ gửi field thuộc tab, không ghi đè media hay giá', async () => {
@@ -283,45 +482,55 @@ describe('/manage/vehicles/[id]/edit — Wave 3 tab workspace', () => {
     expect(update.mutateAsync.mock.calls[0]![0].branchId).toBe('branch-2');
   });
 
-  it('tab Hình ảnh chỉ gửi replace-set media có chủ đích', async () => {
+  /**
+   * Tiện ích + mô tả dời sang mục "Thông tin xe & tiện ích" (30/09/2026) — và PHẢI vào payload.
+   *
+   * Đây là ca khoá lỗi mất dữ liệu có thật trong đợt đổi cấu trúc: hai ô đã dời sang mục này
+   * nhưng hàm lưu của mục (`informationValuesToInput`) chưa mang chúng theo, nên form báo lưu
+   * thành công trong khi mô tả không đổi.
+   */
+  it('mô tả sửa ở mục Thông tin xe & tiện ích THỰC SỰ đi vào payload', async () => {
     renderPage();
-    fireEvent.click(screen.getByRole('tab', { name: 'Hình ảnh & tiện ích' }));
     fireEvent.change(screen.getByLabelText(/Mô tả/), { target: { value: 'Mô tả mới' } });
     fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
     await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));
-    expect(update.mutateAsync.mock.calls[0]![0]).toEqual({
-      mainImageUrl: vehicle.mainImageUrl,
-      images: vehicle.images,
-      features: vehicle.features,
-      description: 'Mô tả mới',
-    });
+    const payload = update.mutateAsync.mock.calls[0]![0];
+    expect(payload.description).toBe('Mô tả mới');
+    expect(payload.features).toEqual(vehicle.features);
+    // Vẫn KHÔNG mang ảnh: ảnh có mục và đường lưu riêng.
+    expect(payload).not.toHaveProperty('mainImageUrl');
+    expect(payload).not.toHaveProperty('media');
   });
 
-  it('xoá ảnh đại diện gửi null có chủ đích, lưu thẳng không hỏi lại (ADR 0030)', async () => {
+  /**
+   * Mục ảnh dùng NGUYÊN `ImagesSection` của khu tài khoản (30/09/2026), không còn là một phần
+   * form RHF. Hành vi xoá/thay/lưu ảnh (gồm ADR 0030 — xoá ảnh đại diện gửi `null`) được khoá
+   * ở bộ test của chính section đó (`vehicle-manage-sections.test.tsx`), nơi nó sống.
+   *
+   * Ở đây khoá ranh giới: mở mục ảnh thì form "Thông tin xe" biến mất — hai đường lưu không bao
+   * giờ cùng hiện trên một màn.
+   */
+  it('mục Hình ảnh dùng section ảnh dùng chung, không dựng form thông tin', async () => {
     renderPage();
-    fireEvent.click(screen.getByRole('tab', { name: 'Hình ảnh & tiện ích' }));
-    fireEvent.click(screen.getAllByRole('button', { name: /Xoá ảnh/ })[0]!);
-    fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
-
-    await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));
-    expect(update.mutateAsync.mock.calls[0]![0].mainImageUrl).toBeNull();
-    expect(screen.queryByText('Xác nhận thay đổi nhạy cảm')).toBeNull();
+    expect(screen.getByLabelText(/Tên xe/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Hình ảnh' }));
+    await waitFor(() => expect(screen.queryByLabelText(/Tên xe/)).toBeNull());
   });
 
   it('tab Nguồn xe (Wave 4): sửa dở rồi chuyển tab phải qua xác nhận bỏ thay đổi', async () => {
     renderPage();
-    fireEvent.click(screen.getByRole('tab', { name: 'Nguồn xe & tài chính' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nguồn xe & tài chính' }));
     fireEvent.change(await screen.findByLabelText(/Nơi mua/), {
       target: { value: 'Toyota Đông Sài Gòn' },
     });
-    fireEvent.click(screen.getByRole('tab', { name: 'Thông tin xe' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Thông tin xe & tiện ích' }));
     expect(await screen.findByText('Bỏ các thay đổi chưa lưu?')).toBeTruthy();
   });
 
   it('không cho đổi tab làm mất dữ liệu chưa lưu', async () => {
     renderPage();
     fireEvent.change(screen.getByLabelText(/Tên xe/), { target: { value: 'Chưa lưu' } });
-    fireEvent.click(screen.getByRole('tab', { name: 'Hình ảnh & tiện ích' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Hình ảnh' }));
     expect(await screen.findByText('Bỏ các thay đổi chưa lưu?')).toBeTruthy();
     expect(screen.getByDisplayValue('Chưa lưu')).toBeTruthy();
   });
@@ -369,7 +578,7 @@ describe('/manage/vehicles/[id]/edit — Wave 3 tab workspace', () => {
     await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));
   });
 
-  it('server trả lỗi cấp trường: gắn vào ĐÚNG ô và mở vùng thu gọn đang che nó', async () => {
+  it('server trả lỗi cấp trường: gắn vào ĐÚNG ô, ở đúng tab đang chứa nó', async () => {
     const { ApiClientError } = await import('@/services/api-client');
     update.mutateAsync.mockRejectedValue(
       new ApiClientError({
@@ -384,10 +593,12 @@ describe('/manage/vehicles/[id]/edit — Wave 3 tab workspace', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
     await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));
 
-    // Vùng "Thông số kỹ thuật nâng cao" đang đóng phải TỰ MỞ — lỗi khuất sau nó là lỗi vô hình.
+    // Dung tích động cơ ở khối năng lượng của tab cơ bản — lỗi phải hiện ngay tại ô đó.
     const field = await screen.findByLabelText('Dung tích động cơ (cc)');
     expect(field.getAttribute('aria-invalid')).toBe('true');
-    expect(await screen.findByText('Giá trị này chưa hợp lệ. Kiểm tra lại giúp bạn nhé.')).toBeTruthy();
+    expect(
+      await screen.findByText('Giá trị này chưa hợp lệ. Kiểm tra lại giúp bạn nhé.'),
+    ).toBeTruthy();
   });
 });
 
@@ -410,29 +621,50 @@ describe('/manage/vehicles/[id]/edit — trong phiên hỗ trợ của nhân s�
   }
 
   function fieldDisabled(label: string): boolean {
-    const item = screen.getByText(label).closest('.ant-form-item');
+    // Chỉ tìm NHÃN Ô form — cột tóm tắt bên phải cũng có dòng "Loại xe" (chỉ đọc).
+    const item = screen
+      .getAllByText(label)
+      .map((node) => node.closest('.ant-form-item'))
+      .find(Boolean);
     return Boolean(item?.querySelector('.ant-select-disabled'));
   }
 
-  it('chỉ còn ba tab của Đợt 1 — giá, nguồn xe, giấy tờ, vận hành không có mặt', () => {
+  it('chỉ còn ba mục của Đợt 1 — giá, nguồn xe, giấy tờ, vận hành không có mặt', () => {
     renderInSupport();
-    // Chỉ tab của workspace — vùng thu gọn "thông số nâng cao" cũng mang role=tab.
-    const tabs = [...document.querySelectorAll('.ant-tabs-tab-btn')].map((tab) => tab.textContent);
-    expect(tabs).toEqual(['Thông tin xe', 'Hình ảnh & tiện ích', 'Bảo dưỡng & KM']);
+    /*
+     * Đọc trong CHÍNH thanh menu, không quét cả trang: vùng thu gọn "thông số nâng cao" và các
+     * nút hành động cũng là `button`, và một phép đếm toàn trang sẽ gộp chúng vào.
+     *
+     * Ba mục này suy ra từ capability của phiên (`supportContextFixture` bộ MANAGE cấp
+     * `VEHICLE_VIEW` + `MAINTENANCE_VIEW`), KHÔNG phải từ hình thái menu — nên đổi tab ngang
+     * thành menu trái không được làm danh sách này dài hay ngắn đi một mục nào.
+     */
+    const menu = screen.getByRole('navigation', { name: 'Mục của xe' });
+    const items = within(menu)
+      .getAllByRole('button')
+      .map((button) => button.textContent);
+    expect(items).toEqual(['Thông tin xe & tiện ích', 'Hình ảnh', 'Bảo dưỡng & KM']);
   });
 
-  it('chi nhánh, loại xe, dịch vụ, trạng thái vận hành bị khoá; tên xe vẫn sửa được', () => {
+  it('chi nhánh, loại xe, trạng thái vận hành bị khoá; không có công tắc dịch vụ; tên xe vẫn sửa được', () => {
     renderInSupport();
     expect(fieldDisabled('Chi nhánh giữ xe')).toBe(true);
     expect(fieldDisabled('Loại xe')).toBe(true);
-    expect(fieldDisabled('Loại dịch vụ')).toBe(true);
-    expect(fieldDisabled('Trạng thái vận hành')).toBe(true);
+    // Dịch vụ không còn là ô của form, và phiên hỗ trợ không có công tắc dịch vụ nào.
+    // Phiên hỗ trợ không bật/tắt dịch vụ thay chủ xe — nhãn có mặt nhưng bấm không ghi gì.
+    fireEvent.click(
+      within(screen.getByRole('group', { name: 'Loại dịch vụ' })).getByText('Có tài xế'),
+    );
+    expect(update.mutateAsync).not.toHaveBeenCalled();
+    expect(screen.queryAllByRole('switch', { name: /Bật hoặc tắt dịch vụ/ })).toHaveLength(0);
+    // Trạng thái vận hành: phiên thiếu capability riêng → chip TĨNH, không có nút đổi.
+    expect(screen.queryByRole('button', { name: /Trạng thái vận hành: .* bấm để đổi/ })).toBeNull();
     expect((screen.getByDisplayValue(vehicle.name) as HTMLInputElement).disabled).toBe(false);
   });
 
   it('đổi tab ghi URL của PHIÊN, không nhảy sang /manage/vehicles', async () => {
     renderInSupport();
-    fireEvent.click(screen.getByRole('tab', { name: 'Hình ảnh & tiện ích' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Hình ảnh' }));
     await waitFor(() => expect(nav.replace).toHaveBeenCalled());
     expect(nav.replace.mock.calls[0]?.[0]).toBe(
       `${adminTenantSupportPath.vehicleEdit(CONTEXT_A, 'vehicle-1')}?tab=media`,

@@ -22,6 +22,9 @@ import type { CalendarEvent, CalendarResource } from '../types/calendar.types';
 /* ------------------------------------------------------------------ hạ tầng mock */
 
 const nav = vi.hoisted(() => ({ replace: vi.fn(), params: new URLSearchParams() }));
+// Ô lọc chi nhánh đọc server (ADR 0052) — chặn ở tầng hook như mọi hook dữ liệu khác ở bộ này.
+vi.mock('@/features/branches/hooks/use-branch-filter', () => import('@/features/branches/test-utils'));
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: nav.replace }),
   usePathname: () => '/manage/calendar',

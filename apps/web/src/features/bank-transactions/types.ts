@@ -12,6 +12,11 @@ export type IgnoreBankTransactionInput = Schemas['IgnoreBankTransactionDto'];
 export interface BankTransactionFilters {
   matchStatus?: string;
   q?: string;
+  /** `BankTxCodeFilter` — luồng của mã rút được, hoặc `no_code`. */
+  code?: string;
+  /** `YYYY-MM-DD` giờ VN, theo thời điểm ngân hàng. */
+  from?: string;
+  to?: string;
   page?: number;
   limit?: number;
 }

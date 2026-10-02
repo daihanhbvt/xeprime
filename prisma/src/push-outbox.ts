@@ -1,4 +1,4 @@
-import { PUSH_DELIVERY_STATUS } from '@xeprime/types';
+import { PUSH_DELIVERY_STATUS, pushClientAppForUrl } from '@xeprime/types';
 import type { Prisma, PrismaClient } from '../generated/client';
 import { newId } from './id';
 
@@ -21,6 +21,12 @@ import { newId } from './id';
 export interface PushRecipientNotification {
   notificationId: string;
   userId: string;
+  /**
+   * Deep link đã đóng băng vào `data_json` của dòng thông báo (nếu có). Nó quyết định APP nhận
+   * đẩy: `/manage/**` → XePrime Partner, còn lại → XePrime. Thiết bị của app hợp nhất cũ
+   * (`client_app IS NULL`) nhận mọi audience nên không phụ thuộc trường này.
+   */
+  url?: string | null;
 }
 
 export interface EnqueuePushOptions {
@@ -50,24 +56,28 @@ export async function enqueuePushDeliveries(
   const userIds = [...new Set(recipients.map((r) => r.userId))];
   const devices = await db.pushDevice.findMany({
     where: { userId: { in: userIds }, enabled: true },
-    select: { id: true, userId: true },
+    select: { id: true, userId: true, clientApp: true },
   });
   if (devices.length === 0) return 0;
 
-  const byUser = new Map<string, string[]>();
+  const byUser = new Map<string, { id: string; clientApp: string | null }[]>();
   for (const device of devices) {
     const list = byUser.get(device.userId);
-    if (list) list.push(device.id);
-    else byUser.set(device.userId, [device.id]);
+    if (list) list.push(device);
+    else byUser.set(device.userId, [device]);
   }
 
   const rows: Prisma.PushDeliveryCreateManyInput[] = [];
   for (const recipient of recipients) {
-    for (const pushDeviceId of byUser.get(recipient.userId) ?? []) {
+    // App đích theo deep link của CHÍNH thông báo này. Thiết bị `client_app` NULL là bản cài
+    // app hợp nhất cũ — nó vẫn đăng ký cả hai bề mặt nên nhận mọi audience.
+    const targetApp = pushClientAppForUrl(recipient.url);
+    for (const device of byUser.get(recipient.userId) ?? []) {
+      if (device.clientApp !== null && device.clientApp !== targetApp) continue;
       rows.push({
         id: newId(),
         notificationId: recipient.notificationId,
-        pushDeviceId,
+        pushDeviceId: device.id,
         status: PUSH_DELIVERY_STATUS.PENDING,
         expiresAt: options.expiresAt ?? null,
       });

@@ -13,6 +13,10 @@ import {
 } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { withBranchParam } from '@/features/branches/branch-link';
+import { BranchFilterSelect } from '@/features/branches/components/BranchFilterSelect';
+import { useBranchFilter } from '@/features/branches/hooks/use-branch-filter';
+import { useUrlFilters } from '@/hooks/use-url-filters';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { RECEIPT_SOURCE_GROUP, RECEIPT_STATUS, RECEIPT_TYPE } from '@xeprime/types';
 import { ROUTES, receiptsPath } from '@/constants/routes';
@@ -46,12 +50,32 @@ export function DashboardView() {
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
   const router = useRouter();
-  const { data: stats, isLoading } = useVehicleStats();
-  const { recent, dueToday, upcoming, activeCount, overdueCount } = useDashboardBookings();
-  const money = useDashboardMoney();
+  /*
+   * Ô "Chi nhánh" của Tổng quan — ADR 0052.
+   *
+   * Làm TRỌN hoặc không làm: bốn thẻ xe/đơn và cả hai khối tiền đều đi theo cùng một chi nhánh.
+   * Lọc nửa vời ở đây là tái lập đúng cái hiểu lầm mà ADR này gỡ đi — một con số của chi nhánh
+   * đứng cạnh một con số của cả gian hàng, không gì phân biệt.
+   */
+  const { filters, setFilters } = useUrlFilters<{ branchId?: string }>((sp) => ({
+    branchId: sp.get('branchId') ?? undefined,
+  }));
+  const branch = useBranchFilter({
+    value: filters.branchId,
+    onChange: (branchId) => setFilters({ branchId }),
+  });
+  const { data: stats, isLoading } = useVehicleStats(filters.branchId);
+  const { recent, dueToday, upcoming, activeCount, overdueCount } = useDashboardBookings(filters.branchId);
+  const money = useDashboardMoney(filters.branchId);
 
-  const goBookings = () => router.push(ROUTES.MANAGE.BOOKINGS);
-  const goTodayReceipts = () => router.push(receiptsPath.filtered(dashboardTodayRange()));
+  /*
+   * MỌI đích rời Tổng quan mang theo chi nhánh đang lọc (ADR 0052): thẻ "trả xe 3 ngày tới"
+   * đếm theo Đà Nẵng mà bấm vào ra danh sách toàn gian hàng là hai con số cãi nhau.
+   * `withBranchParam` tự bỏ qua khi không lọc gì.
+   */
+  const withBranch = (href: string) => withBranchParam(href, filters.branchId ?? null);
+  const goBookings = () => router.push(withBranch(ROUTES.MANAGE.BOOKINGS));
+  const goTodayReceipts = () => router.push(withBranch(receiptsPath.filtered(dashboardTodayRange())));
 
   /*
    * Đích của hai thẻ tiền phải LỌC ĐÚNG bộ mà con số trên thẻ được cộng ra — cùng bộ tham số
@@ -66,20 +90,20 @@ export function DashboardView() {
    */
   const goRevenueReceipts = () =>
     router.push(
-      receiptsPath.filtered({
+      withBranch(receiptsPath.filtered({
         ...dashboardMonthRange(),
         status: RECEIPT_STATUS.APPROVED,
         type: RECEIPT_TYPE.INCOME,
         sourceGroup: RECEIPT_SOURCE_GROUP.BUSINESS,
-      }),
+      })),
     );
 
   const goDepositReceipts = () =>
     router.push(
-      receiptsPath.filtered({
+      withBranch(receiptsPath.filtered({
         status: RECEIPT_STATUS.APPROVED,
         sourceGroup: RECEIPT_SOURCE_GROUP.HELD_FUNDS,
-      }),
+      })),
     );
 
   /**
@@ -96,8 +120,11 @@ export function DashboardView() {
   return (
     <div className={styles.wrap}>
       <header className={styles.header}>
-        <h1 className={styles.title}>{t('title')}</h1>
-        <p className={styles.date}>{todayLabel(fmt)}</p>
+        <div>
+          <h1 className={styles.title}>{t('title')}</h1>
+          <p className={styles.date}>{todayLabel(fmt)}</p>
+        </div>
+        <BranchFilterSelect branch={branch} value={filters.branchId} className={styles.branch} />
       </header>
 
       {/*

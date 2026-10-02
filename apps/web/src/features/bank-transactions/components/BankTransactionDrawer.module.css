@@ -1,125 +1,188 @@
-.body {
+/*
+ * Phần RIÊNG của panel giao dịch tiền vào. Khung (tiêu đề, hai cột, lưới nhãn–giá trị, chân
+ * panel) là `components/overlay/WorkDrawer` — cùng một khung với màn "Kiểm duyệt xe".
+ */
+
+/* ── Hồ sơ giao dịch ────────────────────────────────────────────────────────── */
+
+.amountBlock {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 2px;
+}
+
+.amountLabel {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-secondary);
 }
 
 .amount {
-  font-size: 16px;
-  color: var(--xp-color-price);
+  font-size: var(--xp-font-size-h3);
+  line-height: var(--xp-line-height-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
 }
 
-/* Nội dung chuyển khoản là chuỗi ngân hàng ghép, dài và không có dấu cách — phải ngắt được. */
-.content {
-  overflow-wrap: anywhere;
+.mono {
+  font-family: var(--xp-font-mono, ui-monospace, monospace);
+  letter-spacing: 0.03em;
 }
 
-.sectionTitle {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--xp-color-text);
-  margin-bottom: 8px;
+.copyable {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
 }
 
-.empty {
-  padding: 14px;
-  text-align: center;
-  font-size: 13px;
+.muted {
   color: var(--xp-color-text-tertiary);
 }
 
-.suggestions {
-  margin-top: 10px;
+.rawHint {
+  margin: 0 0 var(--xp-space-sm);
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.raw {
+  max-height: 320px;
+  margin: 0;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  overflow: auto;
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+  font-family: var(--xp-font-mono, ui-monospace, monospace);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* ── Cột phải ──────────────────────────────────────────────────────────────── */
+
+.side {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+.sideTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.sideHint {
+  margin: var(--xp-space-xs) 0 0;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  width: 100%;
 }
 
 .suggestion,
 .suggestionOn {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 12px;
-  border: 1px solid var(--xp-color-border-secondary);
-  border-radius: 10px;
+  align-items: flex-start;
+  width: 100%;
+  margin: 0;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-container);
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.suggestion:hover {
+  border-color: var(--xp-color-border-strong);
 }
 
 .suggestionOn {
   border-color: var(--xp-color-primary);
-  background: var(--xp-color-bg-layout);
+  background: var(--xp-color-bg-selected);
 }
 
-.suggestionInfo {
+.suggestion :global(.ant-radio-label),
+.suggestionOn :global(.ant-radio-label) {
+  flex: 1 1 auto;
   min-width: 0;
+}
+
+.suggestionBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .suggestionHead {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+  font-weight: var(--xp-font-weight-semibold);
 }
 
-.code {
-  font-family: var(--xp-font-mono, monospace);
-  font-weight: 600;
-  letter-spacing: 0.06em;
+.matchTag {
+  margin-inline-end: 0;
 }
 
 .suggestionMeta {
-  margin-top: 2px;
-  font-size: 12.5px;
-  color: var(--xp-color-text-tertiary);
-  overflow-wrap: anywhere;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-secondary);
 }
 
-.matchForm {
-  margin-top: 14px;
-  padding: 14px;
-  border: 1px solid var(--xp-color-primary);
-  border-radius: 12px;
-  background: var(--xp-color-bg-container);
+.empty {
+  padding: var(--xp-space-md);
+  border: 1px dashed var(--xp-color-border);
+  border-radius: var(--xp-border-radius-sm);
+  color: var(--xp-color-text-secondary);
+  text-align: center;
 }
 
-.fieldError {
-  margin-top: 6px;
-  font-size: 12.5px;
-  color: var(--xp-color-error);
+.resultLine,
+.resultNote,
+.resultMeta {
+  margin: 0;
 }
 
-.actions {
-  margin-top: 12px;
-  display: flex;
-  gap: 10px;
-}
-
-.ignoreRow {
-  margin-top: 16px;
-}
-
-.confirmBody {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.rawHint {
-  margin-bottom: 8px;
-  font-size: 12.5px;
-  color: var(--xp-color-text-tertiary);
-}
-
-/* Payload gốc có thể dài — cuộn trong khối của nó, không đẩy cả dialog rộng ra. */
-.raw {
-  max-height: 240px;
-  overflow: auto;
-  padding: 12px;
-  border-radius: 10px;
-  background: var(--xp-color-bg-layout);
-  font-family: var(--xp-font-mono, monospace);
-  font-size: 12px;
-  line-height: 1.6;
+.resultNote {
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.resultMeta {
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+/* ── Gợi ý ở chân panel (khung chữ do WorkDrawerFooter lo) ─────────────────── */
+
+.hintTone,
+.hintReady {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+}
+
+.hintReady {
+  color: var(--xp-color-success);
 }

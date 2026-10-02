@@ -42,7 +42,8 @@
     "rejected": "Rejected: {reason}",
     "cancel": "Cancel request",
     "cancelConfirm": "Cancel this withdrawal request?",
-    "cancelHint": "The money returns to your available balance."
+    "cancelHint": "The money returns to your available balance.",
+    "reversed": "Transfer failed: {reason}. The money is back in your balance — check the payout account and create a new request."
   },
   "admin": {
     "title": "Withdrawal requests",
@@ -54,9 +55,11 @@
       "owner": "Wallet owner",
       "amount": "Amount",
       "account": "Destination account",
-      "age": "Waiting {hours}h",
+      "age": "Waiting {age}",
       "dueBy": "Due by",
-      "status": "Status"
+      "status": "Status",
+      "paidReference": "Ref {reference}",
+      "dueByValue": "Due {date}"
     },
     "ownerType": {
       "user": "Individual",
@@ -74,21 +77,35 @@
       "bankReference": "Bank transaction reference",
       "bankReferenceHint": "Proof of transfer — required, used for reconciliation later.",
       "submit": "Confirm transfer",
-      "done": "Transfer recorded."
+      "done": "Transfer recorded.",
+      "referenceRequired": "Enter the bank transaction reference (at least 3 characters)."
     },
     "reject": {
       "title": "Reject withdrawal request",
       "reason": "Reason",
       "reasonHint": "The wallet owner will read this.",
       "submit": "Reject",
-      "done": "Rejected. The money returns to the owner's available balance."
+      "done": "Rejected. The money returns to the owner's available balance.",
+      "reasonPlaceholder": "Why this request is rejected",
+      "reasonRequired": "Enter a reason (at least 3 characters)."
     },
     "reverse": {
       "title": "Reverse a completed transfer",
       "reason": "Why the money came back",
-      "reasonHint": "Transfer failed, wrong account number, bank returned it…",
+      "reasonHint": "The wallet owner reads this — say why the money came back so they can check their account before withdrawing again.",
       "submit": "Reverse entry",
-      "done": "Reversed. The money is back in the owner's balance, and both entries stay on the ledger."
+      "done": "Reversed. The money is back in the owner's balance, and both entries stay on the ledger.",
+      "reasonPlaceholder": "e.g. the bank returned it — wrong account number",
+      "reasonRequired": "Enter a reason (at least 3 characters)."
+    },
+    "total": "{count, plural, one {# request} other {# requests}} in total",
+    "loadError": "Could not load the withdrawal queue",
+    "emptyView": "No requests in this state.",
+    "views": {
+      "label": "Show",
+      "actionable": "To do",
+      "overdue": "Overdue ({count})",
+      "showOverdue": "Show overdue"
     }
   },
   "openLedger": "View ledger",

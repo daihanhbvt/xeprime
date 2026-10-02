@@ -19,7 +19,8 @@
   "columns": {
     "member": "Thành viên",
     "role": "Vai trò",
-    "status": "Trạng thái"
+    "status": "Trạng thái",
+    "branchScope": "Chi nhánh"
   },
   "you": "(bạn)",
   "roleSelectAria": "Vai trò của {name}",
@@ -34,7 +35,8 @@
     "removed": "Đã gỡ thành viên",
     "invited": "Đã gửi lời mời",
     "revoked": "Đã thu hồi lời mời",
-    "invitedNoEmail": "Đã tạo lời mời nhưng CHƯA gửi được thư. Kiểm tra cấu hình email, rồi mời lại địa chỉ này."
+    "invitedNoEmail": "Đã tạo lời mời nhưng CHƯA gửi được thư. Kiểm tra cấu hình email, rồi mời lại địa chỉ này.",
+    "scopeChanged": "Đã cập nhật chi nhánh phụ trách"
   },
   "form": {
     "title": "Mời thành viên",
@@ -45,8 +47,12 @@
     "errors": {
       "emailRequired": "Nhập email",
       "emailInvalid": "Email không hợp lệ",
-      "roleRequired": "Chọn vai trò"
-    }
+      "roleRequired": "Chọn vai trò",
+      "branchRequired": "Chọn ít nhất một chi nhánh"
+    },
+    "branches": "Chi nhánh phụ trách",
+    "branchesHelp": "Mặc định thấy toàn bộ gian hàng. Chọn chi nhánh cụ thể thì thành viên chỉ thấy xe, đơn và số liệu của các chi nhánh đó.",
+    "branchesHelpLimited": "Bạn chỉ phụ trách một số chi nhánh nên chỉ giao được trong phạm vi đó. Thành viên chỉ thấy xe, đơn và số liệu của các chi nhánh được chọn."
   },
   "invites": {
     "title": "Lời mời đang chờ",
@@ -87,5 +93,10 @@
     "goHome": "Về trang chủ",
     "closedTitle": "Lời mời này không còn hiệu lực",
     "closedBody": "Lời mời đã được trả lời, đã bị thu hồi hoặc đã hết hạn. Hãy nhờ gian hàng gửi lại nếu bạn vẫn muốn tham gia."
+  },
+  "branchScope": {
+    "all": "Tất cả chi nhánh",
+    "selectAria": "Chi nhánh phụ trách của {name}",
+    "limitedCount": "{count} chi nhánh"
   }
 }

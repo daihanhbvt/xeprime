@@ -1444,7 +1444,7 @@ export interface paths {
         post?: never;
         /**
          * Gỡ trọn một lô khoá hàng loạt
-         * @description Gỡ ĐÚNG những dòng lô đó tạo ra. Lịch khoá do người dùng đặt tay không bị đụng tới.
+         * @description Gỡ ĐÚNG những dòng lô đó tạo ra, và chỉ trên xe thuộc chi nhánh đang xem (`branchId`) trong phạm vi được giao. Lịch khoá do người dùng đặt tay không bị đụng tới.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
@@ -2604,7 +2604,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Hàng đợi "Thiếu KM trả" toàn gian hàng (phân trang)
+         * Hàng đợi "Thiếu KM trả" (phân trang, lọc được theo chi nhánh)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
@@ -4272,6 +4272,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/platform/money/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Số đếm các hàng đợi tiền — dải thẻ đầu màn Tài chính
+         * @description Trạng thái HIỆN TẠI của sáu hàng đợi (tiền vào chưa khớp, giữ chỗ chờ chốt, hoàn chờ chuyển, rút tiền, bảo hiểm lỗi, thuế kỳ này chờ kê khai). Mỗi nhóm đếm đúng tập mà danh sách tương ứng hiện khi không lọc.
+         *
+         *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *
+         *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        get: operations["PlatformMoneyController_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/platform/money/tax/export": {
         parameters: {
             query?: never;
@@ -4840,7 +4866,15 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Xoá HẲN gói chưa từng được dùng (bản nháp) — gói đã có thuê bao/hoá đơn trả PLAN_IN_USE, hãy ngừng bán
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *
+         *     **Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        delete: operations["PlansController_remove"];
         options?: never;
         head?: never;
         /**
@@ -4852,6 +4886,30 @@ export interface paths {
          *     **Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
         patch: operations["PlansController_update"];
+        trace?: never;
+    };
+    "/platform/plans/{id}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mở bán lại gói đã ngừng bán (chỉ đổi danh mục, không đụng thuê bao)
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *
+         *     **Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        post: operations["PlansController_activate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/platform/plans/{id}/archive": {
@@ -9004,6 +9062,13 @@ export interface components {
             verifiedAt?: string | null;
             createdAt: string;
         };
+        BankInQueueSummaryDto: {
+            count: number;
+            /** @description Tổng tiền của các dòng đang đếm, string — ADR 0007 */
+            amount: string;
+            /** @description Lúc khoản CŨ NHẤT còn chưa khớp tới ngân hàng (thiếu mốc ngân hàng thì lúc webhook về) — ISO-8601 UTC */
+            oldestAt?: string | null;
+        };
         BankTransactionDetailDto: {
             id: string;
             provider: string;
@@ -9030,8 +9095,18 @@ export interface components {
             createdAt: string;
             /** @description Mã hoá đơn đã khớp (khi `matchedType = subscription_invoice`) */
             matchedInvoiceCode?: string | null;
+            /** @description Mã giao dịch chuyển TRẢ người gửi — chỉ ở dòng `ignored` đã trả lại tiền */
+            refundReference?: string | null;
+            /** @description ISO-8601 UTC */
+            refundedAt?: string | null;
             /** @description Payload webhook nguyên trạng — BẰNG CHỨNG khi tranh cãi. Chỉ ở màn chi tiết, không ở danh sách. */
             rawJson: Record<string, never>;
+            /** @description Ngân hàng nhận theo nhà cung cấp (SePay `gateway`) */
+            bankGateway?: string | null;
+            /** @description Số tài khoản NHẬN của nền tảng (SePay `accountNumber`) */
+            bankAccountNumber?: string | null;
+            /** @description Mã tham chiếu phía ngân hàng (SePay `referenceCode`) — khác mã đối soát XePrime */
+            bankReferenceNumber?: string | null;
             /** @description Hoá đơn đang chờ tiền, sắp theo mức khớp số tiền rồi tới mới nhất */
             suggestions: components["schemas"]["BankTransactionSuggestionDto"][];
         };
@@ -9061,6 +9136,10 @@ export interface components {
             createdAt: string;
             /** @description Mã hoá đơn đã khớp (khi `matchedType = subscription_invoice`) */
             matchedInvoiceCode?: string | null;
+            /** @description Mã giao dịch chuyển TRẢ người gửi — chỉ ở dòng `ignored` đã trả lại tiền */
+            refundReference?: string | null;
+            /** @description ISO-8601 UTC */
+            refundedAt?: string | null;
         };
         BankTransactionPageDto: {
             data: components["schemas"]["BankTransactionDto"][];
@@ -10219,6 +10298,13 @@ export interface components {
         };
         CreateInviteDto: {
             /**
+             * @description 'all' = toàn gian hàng · 'limited' = chỉ các chi nhánh ở `branchIds` · bỏ trống = giữ nguyên (PATCH) hoặc toàn gian hàng (lời mời)
+             * @enum {string}
+             */
+            branchScope?: "all" | "limited";
+            /** @description Bắt buộc và phải khác rỗng khi `branchScope = 'limited'`; bỏ qua khi 'all' */
+            branchIds?: string[];
+            /**
              * @description Email nhận thư mời. Người nhận KHÔNG cần có sẵn tài khoản — họ đăng ký rồi bấm lại link.
              * @example nhanvien@congty.vn
              */
@@ -10247,7 +10333,7 @@ export interface components {
         };
         CreatePlanDto: {
             /**
-             * @description Mã gói — unique, không đổi sau khi tạo
+             * @description Mã gói — unique, không đổi sau khi tạo. Chữ hoa được nhận và chuẩn hoá về chữ thường, để "BASIC" và "basic" không thành hai gói khác nhau (unique ở DB phân biệt hoa/thường).
              * @example basic
              */
             code: string;
@@ -10292,6 +10378,8 @@ export interface components {
             bookingId?: string;
             /** @description Xe liên quan (ULID). Gắn được MỘT MÌNH — chi phí của một chiếc xe (rửa, vá lốp, gửi bãi) không thuộc chuyến nào. Gửi kèm `bookingId` thì phải là ĐÚNG xe của đơn đó, nếu không server trả `RECEIPT_BOOKING_VEHICLE_MISMATCH`; bỏ trống mà có `bookingId` thì server tự suy từ đơn. */
             vehicleId?: string;
+            /** @description Chi nhánh phát sinh khoản tiền (ULID) — BẮT BUỘC khi phiếu không gắn xe và không gắn đơn. Danh mục không suy ra được chi nhánh ("Chi phí văn phòng" ở hai chi nhánh là hai khoản mang cùng một tên), nên phải hỏi. Không có "toàn gian hàng": một khoản xếp ngoài mọi chi nhánh thì lọc từng chi nhánh đều ra 0 trong khi tổng vẫn có nó — không ai đối chiếu được nữa. Gửi kèm xe/đơn ⇒ VALIDATION_FAILED: lúc đó chi nhánh SUY TỪ XE. */
+            branchId?: string;
             /** @description Ngày tiền phát sinh (ISO hoặc YYYY-MM-DD); mặc định bây giờ. Nhập bù cho hôm trước thì đặt đúng ngày đó. */
             occurredAt?: string;
             /** @description Mã tra soát/tham chiếu (CK…) */
@@ -10518,6 +10606,8 @@ export interface components {
             onboardingState: string;
             /** @description Xem TenantRole trong @xeprime/types */
             roleKey: string;
+            /** @enum {string} */
+            branchScope: "all" | "limited";
             /** @description Logo gian hàng; null = dùng chữ cái đầu */
             logoUrl: string | null;
             features: components["schemas"]["TenantFeatureStateDto"][];
@@ -11439,6 +11529,13 @@ export interface components {
             accountNumber?: string | null;
             accountName?: string | null;
         };
+        HoldQueueSummaryDto: {
+            count: number;
+            /** @description Tổng tiền của các dòng đang đếm, string — ADR 0007 */
+            amount: string;
+            /** @description Trong số đó, bao nhiêu khoản đang bị tạm giữ vì tranh chấp mở */
+            disputeCount: number;
+        };
         HolidayDto: {
             /** @example 01K3V9B0000000000000000000 */
             id: string;
@@ -11488,6 +11585,8 @@ export interface components {
         IgnoreBankTransactionDto: {
             /** @description Lý do bỏ qua — bắt buộc, để dòng bị loại vẫn truy được */
             note: string;
+            /** @description Mã giao dịch ngân hàng của lần chuyển TRẢ người gửi. Có mã ⇒ dòng được ghi là đã trả lại; không có mã thì không ghi "đã trả" — một lần chuyển không có bằng chứng chỉ là lời khai */
+            refundReference?: string;
         };
         InviteAnswerDto: {
             /** @enum {string} */
@@ -11811,6 +11910,10 @@ export interface components {
             roleKey: "shop_owner" | "shop_manager" | "shop_staff" | "shop_viewer";
             /** @enum {string} */
             status: "active" | "invited" | "locked" | "removed";
+            /** @enum {string} */
+            branchScope: "all" | "limited";
+            /** @description Rỗng khi `branchScope = 'all'` — lúc đó thành viên thấy mọi chi nhánh */
+            branchIds: string[];
             /** @description ISO-8601 UTC */
             joinedAt?: string | null;
             /** @description ISO-8601 UTC */
@@ -11890,6 +11993,11 @@ export interface components {
             identifier: string;
             password: string;
             device?: components["schemas"]["MobileDeviceDto"];
+            /**
+             * @description App đang gọi: `customer` (XePrime) hay `partner` (XePrime Partner). Thiếu = `customer` (app hợp nhất cũ).
+             * @enum {string}
+             */
+            clientApp?: "customer" | "partner";
         };
         MobileLogoutDto: {
             /** @description Refresh token của thiết bị này — dùng để xác định phiên cần thu hồi */
@@ -11901,6 +12009,11 @@ export interface components {
             /** @example 123456 */
             code: string;
             device?: components["schemas"]["MobileDeviceDto"];
+            /**
+             * @description App đang gọi: `customer` (XePrime) hay `partner` (XePrime Partner). Thiếu = `customer` (app hợp nhất cũ).
+             * @enum {string}
+             */
+            clientApp?: "customer" | "partner";
         };
         MobileRefreshDto: {
             /** @description Refresh token opaque nhận được từ lần đăng nhập/refresh trước */
@@ -11914,6 +12027,11 @@ export interface components {
             /** @example 0901234567 */
             phone: string;
             device?: components["schemas"]["MobileDeviceDto"];
+            /**
+             * @description App đang gọi: `customer` (XePrime) hay `partner` (XePrime Partner). Thiếu = `customer` (app hợp nhất cũ).
+             * @enum {string}
+             */
+            clientApp?: "customer" | "partner";
         };
         MobileSessionDto: {
             tokens: components["schemas"]["MobileTokenPairDto"];
@@ -11925,6 +12043,11 @@ export interface components {
             /** @description PKCE code_verifier mà app đã sinh trước khi mở trình duyệt. Phải khớp `code_challenge` đã gửi ở bước bắt đầu. */
             codeVerifier: string;
             device?: components["schemas"]["MobileDeviceDto"];
+            /**
+             * @description App đang gọi: `customer` (XePrime) hay `partner` (XePrime Partner). Thiếu = `customer` (app hợp nhất cũ).
+             * @enum {string}
+             */
+            clientApp?: "customer" | "partner";
         };
         MobileTokenPairDto: {
             /** @description JWT ngắn hạn. Gửi ở header `Authorization: Bearer <accessToken>` */
@@ -11938,6 +12061,11 @@ export interface components {
             refreshToken: string;
             /** @description Hạn của refresh token, ISO 8601 UTC */
             refreshTokenExpiresAt: string;
+        };
+        MoneyQueueCountDto: {
+            count: number;
+            /** @description Tổng tiền của các dòng đang đếm, string — ADR 0007 */
+            amount: string;
         };
         MyPermissionsDto: {
             /** @enum {string|null} */
@@ -12636,6 +12764,8 @@ export interface components {
             sortOrder: number;
             /** @description Số thuê bao đã gán từ gói này (mọi trạng thái) */
             subscriptionCount: number;
+            /** @description Xoá hẳn được không: chưa từng có thuê bao hay hoá đơn nào trỏ tới, và không phải tuyến hoa hồng. `DELETE /platform/plans/:id` là lớp chặn thật (`PLAN_IN_USE`). */
+            deletable: boolean;
             /** @description ISO-8601 UTC */
             createdAt: string;
         };
@@ -12902,6 +13032,20 @@ export interface components {
             /** @enum {string|null} */
             refundStatus?: "pending" | "paid" | "credited" | "rejected" | null;
             createdAt: string;
+            /** @enum {string} */
+            purpose: "commission" | "escrow";
+            /** @description `D` — cọc, phần giá thuê của chủ xe */
+            depositAmount: string;
+            /** @description `S` — phí dịch vụ phía khách */
+            serviceFeeAmount: string;
+            /** @description `IV` — bảo hiểm xe */
+            vehicleInsuranceAmount: string;
+            /** @description `IP` — bảo hiểm người */
+            personalInsuranceAmount: string;
+            /** @description `P` — nền tảng tài trợ qua mã khuyến mãi */
+            promoDiscountAmount: string;
+            /** @description Thuế khấu trừ đã đóng băng trên snapshot — chỉ áp khi chuyến hoàn thành */
+            taxAmount: string;
         };
         PlatformHoldPageDto: {
             data: components["schemas"]["PlatformHoldDto"][];
@@ -12963,6 +13107,20 @@ export interface components {
             /** @description Bằng chứng khách CHỌN bảo hiểm tai nạn người (ADR 0028 điều 5) */
             consentAt?: string | null;
             createdAt: string;
+        };
+        PlatformMoneySummaryDto: {
+            /** @description Tiền vào CHƯA KHỚP */
+            bankIn: components["schemas"]["BankInQueueSummaryDto"];
+            /** @description Giữ chỗ ĐÃ TRẢ, chưa chốt kết cục */
+            holds: components["schemas"]["HoldQueueSummaryDto"];
+            /** @description Khoản hoàn CHỜ CHUYỂN tay */
+            refunds: components["schemas"]["MoneyQueueCountDto"];
+            /** @description Lệnh rút còn việc phải làm (chờ duyệt + đã duyệt chưa chuyển) */
+            withdrawals: components["schemas"]["WithdrawalQueueSummaryDto"];
+            /** @description Hợp đồng bảo hiểm ĐANG LỖI cấp */
+            insurance: components["schemas"]["MoneyQueueCountDto"];
+            /** @description Dòng thuế kỳ hiện hành CHỜ KÊ KHAI */
+            tax: components["schemas"]["TaxQueueSummaryDto"];
         };
         PlatformProvinceDto: {
             /**
@@ -13187,7 +13345,7 @@ export interface components {
             code: string;
             amount: string;
             /** @enum {string} */
-            status: "pending" | "approved" | "paid" | "rejected" | "cancelled";
+            status: "pending" | "approved" | "paid" | "rejected" | "cancelled" | "reversed";
             /** @enum {string} */
             ownerType: "user" | "tenant";
             /** @description Tên chủ ví — người hoặc gian hàng */
@@ -13205,6 +13363,10 @@ export interface components {
             paidAt?: string | null;
             bankReference?: string | null;
             rejectReason?: string | null;
+            /** @description Lúc lệnh ĐÃ CHI bị đảo (chuyển hụt / sai tài khoản) — chỉ ở trạng thái `reversed` */
+            reversedAt?: string | null;
+            /** @description Vì sao tiền quay lại */
+            reverseReason?: string | null;
             rowVersion: number;
             createdAt: string;
         };
@@ -13885,7 +14047,19 @@ export interface components {
         };
         ReceiptPageDto: {
             data: components["schemas"]["ReceiptListItemDto"][];
-            meta: components["schemas"]["PaginationMetaDto"];
+            meta: components["schemas"]["ReceiptPageMetaDto"];
+        };
+        ReceiptPageMetaDto: {
+            /** @example 1 */
+            page: number;
+            /** @example 20 */
+            limit: number;
+            /** @example 137 */
+            total: number;
+            /** @example true */
+            hasNext: boolean;
+            /** @description Số phiếu KHÔNG gắn xe nên không thuộc chi nhánh nào — chỉ > 0 khi đang lọc */
+            unassignedCount: number;
         };
         ReceiptSummaryDto: {
             /** @description Tổng thu (phiếu đã duyệt trong bộ lọc), string */
@@ -14045,6 +14219,11 @@ export interface components {
             appVersion?: string;
             /** @description Tên máy do client tự khai — chỉ để người dùng nhận ra thiết bị. */
             deviceName?: string;
+            /**
+             * @description App đã cài token này: `customer` (XePrime) hay `partner` (XePrime Partner). Bỏ trống = app hợp nhất cũ — thiết bị nhận MỌI audience. Chỉ lọc thông báo, không mở quyền gì.
+             * @enum {string}
+             */
+            clientApp?: "customer" | "partner";
         };
         RegisterShopDto: {
             /** @example Cho thuê xe Bình Minh */
@@ -14164,8 +14343,10 @@ export interface components {
             reason: string;
         };
         ReverseWithdrawalDto: {
-            /** @description Vì sao tiền quay lại (chuyển hụt, sai số tài khoản…) */
+            /** @description Vì sao tiền quay lại (chuyển hụt, sai số tài khoản…) — chủ ví đọc được */
             reason: string;
+            /** @description Bản ghi đang cầm — bấm hai lần (hay hai admin cùng bấm) thì lần sau nhận 409, không đảo đôi */
+            rowVersion: number;
         };
         ReviewActionDto: {
             /** @description Lý do / ghi chú gửi cho chủ shop */
@@ -14834,6 +15015,8 @@ export interface components {
             slug: string;
             /** @description Vai của PHIÊN trong gian hàng — luôn `shop_viewer` (không cổng chỉ-chủ nào mở). */
             roleKey: string;
+            /** @enum {string} */
+            branchScope: "all" | "limited";
             logoUrl: string | null;
             /** @description % phí dịch vụ đang hiệu lực — chỉ ở tuyến hoa hồng, như `CurrentTenantSummaryDto`. */
             serviceFeePercent: number | null;
@@ -14883,6 +15066,21 @@ export interface components {
             remittedAmount: string;
             byEntityType: components["schemas"]["TaxEntityBreakdownDto"][];
             byTenant: components["schemas"]["TaxTenantBreakdownDto"][];
+        };
+        TaxQueueSummaryDto: {
+            count: number;
+            /** @description Tổng tiền của các dòng đang đếm, string — ADR 0007 */
+            amount: string;
+            /**
+             * @description Kỳ hiện hành theo giờ VN
+             * @example 2026-10
+             */
+            period: string;
+            /**
+             * @description Kỳ CŨ NHẤT còn dòng chưa kê khai — null khi không còn dòng nào
+             * @example 2026-09
+             */
+            oldestPeriod: string | null;
         };
         TaxRowDto: {
             id: string;
@@ -15233,8 +15431,15 @@ export interface components {
             avatarUrl?: string | null;
         };
         UpdateMemberRoleDto: {
+            /**
+             * @description 'all' = toàn gian hàng · 'limited' = chỉ các chi nhánh ở `branchIds` · bỏ trống = giữ nguyên (PATCH) hoặc toàn gian hàng (lời mời)
+             * @enum {string}
+             */
+            branchScope?: "all" | "limited";
+            /** @description Bắt buộc và phải khác rỗng khi `branchScope = 'limited'`; bỏ qua khi 'all' */
+            branchIds?: string[];
             /** @enum {string} */
-            roleKey: "shop_owner" | "shop_manager" | "shop_staff" | "shop_viewer";
+            roleKey?: "shop_owner" | "shop_manager" | "shop_staff" | "shop_viewer";
         };
         UpdatePaymentSettingsDto: {
             /** @description Gian hàng có muốn XePrime thu cọc của khách hộ mình không. Chỉ tuyến GÓI đổi được; tuyến hoa hồng luôn thu và trả 403 nếu gọi vào đây. */
@@ -16515,13 +16720,20 @@ export interface components {
             /** @description Tổng số đơn vị của tỉnh (trước khi lọc theo `q`) */
             total: number;
         };
+        WithdrawalQueueSummaryDto: {
+            count: number;
+            /** @description Tổng tiền của các dòng đang đếm, string — ADR 0007 */
+            amount: string;
+            /** @description Lệnh đã quá hạn cam kết chuyển */
+            overdueCount: number;
+        };
         WithdrawalRequestDto: {
             id: string;
             /** @description Mã XPW… — dùng khi hỏi hỗ trợ */
             code: string;
             amount: string;
             /** @enum {string} */
-            status: "pending" | "approved" | "paid" | "rejected" | "cancelled";
+            status: "pending" | "approved" | "paid" | "rejected" | "cancelled" | "reversed";
             bankCode: string;
             /** @description Số tài khoản đã che — PII */
             accountNumberMasked: string;
@@ -16530,6 +16742,10 @@ export interface components {
             dueBy?: string | null;
             paidAt?: string | null;
             rejectReason?: string | null;
+            /** @description Lệnh ĐÃ CHI rồi bị đảo (chuyển hụt / sai tài khoản) — tiền đã về lại số dư */
+            reversedAt?: string | null;
+            /** @description Vì sao chuyển không thành công */
+            reverseReason?: string | null;
             createdAt: string;
         };
         WithDriverAutoAcceptCapabilityDto: {
@@ -19947,7 +20163,7 @@ export interface operations {
                 /** @description Một trạng thái, hoặc nhiều trạng thái nối dấu phẩy */
                 status?: ("pending_host_approval" | "approved_by_host" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_paid" | "hold_expired" | "slot_taken" | "cancelled_by_host")[];
                 vehicleId?: string;
-                /** @description Lọc theo chi nhánh (qua xe của yêu cầu) */
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
                 page?: number;
                 limit?: number;
@@ -20930,7 +21146,7 @@ export interface operations {
                 preset?: "awaiting_pickup";
                 /** @description Lọc theo xe */
                 vehicleId?: string;
-                /** @description Lọc theo chi nhánh (qua xe của đơn) */
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
                 /** @description Trả xe từ (ISO) — lọc cho panel quá hạn/sắp trả */
                 returnFrom?: string;
@@ -26403,7 +26619,7 @@ export interface operations {
                 vehicleType?: "car" | "motorbike";
                 /** @description Tìm theo tên xe hoặc biển số */
                 q?: string;
-                /** @description Chỉ hiện xe của một chi nhánh */
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
                 sort?: "next_booking" | "name" | "price_asc" | "price_desc";
             };
@@ -26685,7 +26901,10 @@ export interface operations {
     };
     BulkDayController_releaseBatch: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                branchId?: string;
+            };
             header?: never;
             path: {
                 batchId: string;
@@ -26863,7 +27082,7 @@ export interface operations {
                 to: string;
                 /** @description Lọc theo loại xe, khớp bộ lọc trên lưới lịch */
                 vehicleType?: string;
-                /** @description Chi nhánh đang chọn ở thanh trên */
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
                 /** @description Từ khoá tên/biển số/mã xe */
                 q?: string;
@@ -27458,7 +27677,7 @@ export interface operations {
                 vehicleType?: "car" | "motorbike";
                 /** @description Tìm theo tên xe hoặc biển số */
                 q?: string;
-                /** @description Chỉ hiện xe của một chi nhánh */
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
                 sort?: "next_booking" | "name" | "price_asc" | "price_desc";
             };
@@ -27596,7 +27815,7 @@ export interface operations {
                 vehicleType?: "car" | "motorbike";
                 /** @description Tìm theo tên xe hoặc biển số */
                 q?: string;
-                /** @description Chỉ hiện xe của một chi nhánh */
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
                 sort?: "next_booking" | "name" | "price_asc" | "price_desc";
             };
@@ -27871,7 +28090,7 @@ export interface operations {
                 vehicleType?: "car" | "motorbike";
                 /** @description Tìm theo tên xe hoặc biển số */
                 q?: string;
-                /** @description Chỉ hiện xe của một chi nhánh */
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
                 sort?: "next_booking" | "name" | "price_asc" | "price_desc";
             };
@@ -32571,6 +32790,8 @@ export interface operations {
                 /** @description Tìm theo mã đơn / tên khách / SĐT / tên xe / biển số */
                 q?: string;
                 filter?: "all" | "overdue" | "upcoming" | "unpaid";
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                branchId?: string;
                 page?: number;
                 limit?: number;
             };
@@ -33461,6 +33682,8 @@ export interface operations {
     FinanceOverviewController_byCategory: {
         parameters: {
             query: {
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                branchId?: string;
                 /** @description Từ ngày — `YYYY-MM-DD` hoặc ISO đầy đủ */
                 from?: string;
                 /** @description Đến ngày */
@@ -33599,6 +33822,8 @@ export interface operations {
     FinanceOverviewController_byCustomer: {
         parameters: {
             query?: {
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                branchId?: string;
                 /** @description Từ ngày — `YYYY-MM-DD` hoặc ISO đầy đủ */
                 from?: string;
                 /** @description Đến ngày */
@@ -33733,6 +33958,8 @@ export interface operations {
     FinanceOverviewController_byVehicle: {
         parameters: {
             query?: {
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                branchId?: string;
                 /** @description Từ ngày — `YYYY-MM-DD` hoặc ISO đầy đủ */
                 from?: string;
                 /** @description Đến ngày */
@@ -34490,6 +34717,8 @@ export interface operations {
     FinanceOverviewController_series: {
         parameters: {
             query?: {
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                branchId?: string;
                 /** @description Từ ngày — `YYYY-MM-DD` (trọn ngày giờ VN) hoặc ISO đầy đủ */
                 from?: string;
                 /** @description Đến ngày — cùng quy ước với `from` */
@@ -34628,6 +34857,8 @@ export interface operations {
     FinanceOverviewController_summary: {
         parameters: {
             query?: {
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                branchId?: string;
                 /** @description Từ ngày (ISO) */
                 from?: string;
                 /** @description Đến ngày (ISO) */
@@ -34766,6 +34997,8 @@ export interface operations {
             query?: {
                 /** @description Tìm theo tên xe, biển số hoặc mã đơn */
                 q?: string;
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                branchId?: string;
                 page?: number;
                 limit?: number;
             };
@@ -35565,6 +35798,8 @@ export interface operations {
                 q?: string;
                 /** @description Loại của phiếu liên quan */
                 type?: "oil_change" | "periodic_service" | "repair" | "tire" | "battery" | "other";
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                branchId?: string;
                 /** @description ISO — lịch từ ngày */
                 from?: string;
                 /** @description ISO — lịch đến ngày */
@@ -35698,7 +35933,10 @@ export interface operations {
     };
     MaintenanceBoardController_summary: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                branchId?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -35714,6 +35952,27 @@ export interface operations {
                     "application/json": {
                         data: components["schemas"]["MaintenanceBoardSummaryDto"];
                     };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
             /**
@@ -39750,6 +40009,12 @@ export interface operations {
                 matchStatus?: "unmatched" | "matched" | "manual" | "ignored";
                 /** @description Tìm theo nội dung chuyển khoản hoặc mã đối soát */
                 q?: string;
+                /** @description Mã rút được thuộc luồng nào: hoá đơn gói (`XPG`), giữ chỗ (`XPH`), hoặc không rút được mã */
+                code?: "subscription_invoice" | "booking_hold" | "no_code";
+                /** @description Từ ngày — `YYYY-MM-DD`, trọn ngày giờ VN. Lọc theo thời điểm ngân hàng */
+                from?: string;
+                /** @description Đến hết ngày — cùng quy ước với `from` */
+                to?: string;
                 page?: number;
                 limit?: number;
             };
@@ -46625,6 +46890,112 @@ export interface operations {
             };
         };
     };
+    PlatformMoneyController_summary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["PlatformMoneySummaryDto"];
+                    };
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     PlatformTaxController_exportCsv: {
         parameters: {
             query: {
@@ -47533,7 +47904,7 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description Bỏ trống = VIỆC CẦN LÀM (pending + approved) */
-                status?: "pending" | "approved" | "paid" | "rejected" | "cancelled";
+                status?: "pending" | "approved" | "paid" | "rejected" | "cancelled" | "reversed";
                 /** @description Chỉ lệnh đã quá hạn cam kết */
                 overdue?: boolean;
                 page?: number;
@@ -50160,6 +50531,173 @@ export interface operations {
             };
         };
     };
+    PlansController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công, không có nội dung trả về */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Không tìm thấy bản ghi tương ứng.
+             *
+             *     Mã lỗi: `NOT_FOUND`
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Không tìm thấy dữ liệu"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             *
+             *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "CONFLICT",
+                     *         "message": "Dữ liệu đã tồn tại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     PlansController_update: {
         parameters: {
             query?: never;
@@ -50174,6 +50712,177 @@ export interface operations {
                 "application/json": components["schemas"]["UpdatePlanDto"];
             };
         };
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["PlanDto"];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Không tìm thấy bản ghi tương ứng.
+             *
+             *     Mã lỗi: `NOT_FOUND`
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Không tìm thấy dữ liệu"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             *
+             *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "CONFLICT",
+                     *         "message": "Dữ liệu đã tồn tại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PlansController_activate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Thành công */
             200: {
@@ -59843,6 +60552,8 @@ export interface operations {
     ReceiptsController_list: {
         parameters: {
             query?: {
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                branchId?: string;
                 type?: "income" | "expense";
                 status?: "draft" | "pending_approval" | "approved" | "cancelled";
                 /** @description Lọc theo danh mục */
@@ -60769,6 +61480,8 @@ export interface operations {
     ReceiptsController_summary: {
         parameters: {
             query?: {
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                branchId?: string;
                 type?: "income" | "expense";
                 status?: "draft" | "pending_approval" | "approved" | "cancelled";
                 /** @description Lọc theo danh mục */
@@ -68580,7 +69293,7 @@ export interface operations {
                 serviceType?: "self_drive" | "with_driver" | "long_term";
                 operationStatus?: "available" | "renting" | "maintenance" | "inactive";
                 publicStatus?: "draft" | "pending_public_review" | "approved_public" | "needs_revision" | "rejected" | "hidden" | "archived";
-                /** @description Id chi nhánh — chỉ thu hẹp trong gian hàng hiện tại */
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
                 sort?: "newest" | "name_asc" | "code_asc" | "price_asc" | "price_desc";
                 page?: number;
@@ -77105,7 +77818,10 @@ export interface operations {
     };
     VehiclesController_fleetSummary: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                branchId?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -77121,6 +77837,27 @@ export interface operations {
                     "application/json": {
                         data: components["schemas"]["FleetSummaryDto"];
                     };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
             /**

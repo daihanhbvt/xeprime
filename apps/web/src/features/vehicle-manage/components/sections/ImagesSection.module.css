@@ -103,7 +103,9 @@
   border: 1px solid var(--xp-color-border);
   border-radius: var(--xp-border-radius);
   background: var(--xp-color-bg-container);
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
 }
 
 .slotDroppable {
@@ -296,4 +298,10 @@
     flex-direction: column;
     align-items: flex-start;
   }
+}
+
+/* Lỗi validate của ảnh chính (wizard thêm xe) — ngay dưới ô, cùng màu lỗi của form. */
+.mainError {
+  color: var(--xp-color-error);
+  font-size: var(--xp-font-size-body-sm);
 }

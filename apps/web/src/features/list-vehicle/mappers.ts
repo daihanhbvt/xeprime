@@ -30,7 +30,7 @@ export function quickVehicleToCreateInput(values: QuickVehicleValues): CreateVeh
     serviceTypes: [...QUICK_VEHICLE_FIXED.serviceTypes],
     operationStatus: QUICK_VEHICLE_FIXED.operationStatus,
     sourceType: QUICK_VEHICLE_FIXED.sourceType,
-    plateNumber: values.plateNumber.trim().toUpperCase(),
+    plateNumber: (values.plateNumber ?? '').trim().toUpperCase(),
     brand: textOrUndefined(values.brand),
     model: textOrUndefined(values.model),
     color: textOrUndefined(values.color),
@@ -40,6 +40,7 @@ export function quickVehicleToCreateInput(values: QuickVehicleValues): CreateVeh
     // xe đang khai, thay vì để server phải dọn hộ.
     seatCount:
       values.vehicleType === VEHICLE_TYPE.CAR ? (values.seatCount ?? undefined) : undefined,
+    bodyType: values.vehicleType === VEHICLE_TYPE.CAR ? (values.bodyType ?? null) : null,
     motorbikeCategory:
       values.vehicleType === VEHICLE_TYPE.MOTORBIKE ? (values.motorbikeCategory ?? null) : null,
     vehicleCatalogModelId: values.vehicleCatalogModelId ?? null,
@@ -53,6 +54,7 @@ export function quickVehicleToCreateInput(values: QuickVehicleValues): CreateVeh
     features: values.features ?? [],
     mainImageUrl: values.mainImageUrl ?? undefined,
     images: values.images ?? [],
+    media: (values.media ?? []).map((item) => ({ url: item.url.trim(), type: item.type })),
     weekdayPrice: money(values.weekdayPrice),
     discountPercent: values.discountEnabled ? (values.discountPercent ?? undefined) : undefined,
   } as CreateVehicleInput;

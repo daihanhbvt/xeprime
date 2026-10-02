@@ -77,6 +77,7 @@ import { paginationMeta, resolvePaging } from '../../common/pagination';
 import { buildVehicleReviewSnapshot } from './vehicle-review-snapshot';
 import { refreshPendingApprovalSnapshot } from './refresh-pending-approval-snapshot';
 import { lockVehicleRow } from './vehicle-row-lock';
+import { resolveBranchScope } from '../../common/dto/branch-scope';
 
 /** Cột dùng cho một dòng bảng — không kéo `description` dài. */
 const LIST_SELECT = {
@@ -280,10 +281,16 @@ export class VehiclesService {
    * `groupBy` (một truy vấn, vài dòng kết quả) thay vì để FE cộng từ trang hiện tại (sai ngay
    * khi có trang 2).
    */
-  async fleetSummary(tenantId: string): Promise<FleetSummaryDto> {
+  async fleetSummary(
+    tenantId: string,
+    branchId: string | undefined,
+  /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
+  allowedBranchIds: readonly string[] | null,
+  ): Promise<FleetSummaryDto> {
     const groups = await this.prisma.vehicle.groupBy({
       by: ['operationStatus'],
-      where: { tenantId, deletedAt: null },
+      // Cùng phạm vi với danh sách xe ngay bên dưới dải này — `tenantId` vẫn là ranh giới thật.
+      where: { tenantId, deletedAt: null, branchId: resolveBranchScope(branchId, allowedBranchIds) },
       _count: { _all: true },
     });
 
@@ -389,6 +396,8 @@ export class VehiclesService {
   async list(
     tenantId: string,
     query: VehicleListQueryDto,
+  /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
+  allowedBranchIds: readonly string[] | null,
   ): Promise<{ data: VehicleListItemDto[]; meta: PaginationMeta }> {
     const paging = resolvePaging(query, VEHICLE_DEFAULT_LIMIT, VEHICLE_MAX_LIMIT);
 
@@ -402,7 +411,7 @@ export class VehiclesService {
       ...(query.publicStatus ? { publicStatus: query.publicStatus } : {}),
       // `branchId` đứng SAU `tenantId` và không thay thế nó: bộ chọn chi nhánh chỉ thu hẹp phạm
       // vi, không bao giờ là đường vòng ra khỏi gian hàng của mình.
-      ...(query.branchId ? { branchId: query.branchId } : {}),
+      branchId: resolveBranchScope(query.branchId, allowedBranchIds),
       ...(query.q ? { OR: searchOr(query.q) } : {}),
     };
 
@@ -515,7 +524,13 @@ export class VehiclesService {
     return tenant?.status === TENANT_STATUS.ACTIVE && tenant.deletedAt == null;
   }
 
-  async create(tenantId: string, userId: string, dto: CreateVehicleDto): Promise<VehicleDetailDto> {
+  async create(
+    tenantId: string,
+    userId: string,
+    dto: CreateVehicleDto,
+    /** Chi nhánh người gọi được giao — chặn ghi ra ngoài phạm vi (ADR 0052). */
+    allowedBranchIds: readonly string[] | null,
+  ): Promise<VehicleDetailDto> {
     /*
      * Phiên hỗ trợ (ADR 0050 §13): tạo xe NHÁP. Guard đã chặn trường giá/nguồn xe/trạng thái vận
      * hành mang giá trị; ở đây bỏ nốt các ô rỗng của chúng để không cái gì ngoài danh sách chạm DB.
@@ -548,7 +563,7 @@ export class VehiclesService {
     await this.prisma.$transaction(async (tx) => {
       // Chi nhánh kiểm TRONG transaction: nó phải thuộc đúng gian hàng và đang hoạt động ngay
       // tại thời điểm ghi. FK composite `(branch_id, tenant_id)` là chốt chặn cuối ở DB.
-      const branch = await this.branches.assertAssignable(tx, tenantId, dto.branchId);
+      const branch = await this.branches.assertAssignable(tx, tenantId, dto.branchId, allowedBranchIds);
       if (support) {
         // Kiểm TRƯỚC khi ghi xe — ảnh đại diện nằm trên chính hàng xe, ghi rồi thì nó thành "đã biết".
         // Xe mới chưa có ảnh nào: mọi URL phải nằm trong kho ảnh của CHÍNH gian hàng, không gắn ảnh
@@ -611,9 +626,11 @@ export class VehiclesService {
     id: string,
     userId: string,
     dto: UpdateVehicleDto,
+    /** Chi nhánh người gọi được giao — chặn ghi ra ngoài phạm vi (ADR 0052). */
+    allowedBranchIds: readonly string[] | null,
   ): Promise<VehicleDetailDto> {
     await this.prisma.$transaction(async (tx) => {
-      await this.applyUpdate(tx, tenantId, id, userId, dto);
+      await this.applyUpdate(tx, tenantId, id, userId, dto, allowedBranchIds);
     });
     return this.getOne(tenantId, id);
   }
@@ -630,6 +647,8 @@ export class VehiclesService {
     id: string,
     userId: string,
     dto: UpdateVehicleDto,
+    /** Chi nhánh người gọi được giao — chặn CHUYỂN xe ra ngoài phạm vi (ADR 0052). */
+    allowedBranchIds: readonly string[] | null,
   ): Promise<void> {
     // Khoá xe TRƯỚC khi đọc bản hiện tại — cùng khoá lượt Phê duyệt giữ (ADR 0049 điều 7), để
     // "trường nào còn sửa được" được quyết trên trạng thái duyệt đã commit, không phải bản cũ.
@@ -688,7 +707,7 @@ export class VehiclesService {
       if (changes.branchId) {
         // Đổi nơi giao xe của một chuyến đang sống là âm thầm đổi cam kết với khách — từ chối.
         await assertNoOpenTrips(tx, { tenantId, vehicleId: current.id });
-        const target = await this.branches.assertAssignable(tx, tenantId, changes.branchId);
+        const target = await this.branches.assertAssignable(tx, tenantId, changes.branchId, allowedBranchIds);
         if (!target.provinceCode) {
           throw new ConflictException({
             code: API_ERROR_CODE.BRANCH_LOCATION_REQUIRED,
@@ -739,7 +758,7 @@ export class VehiclesService {
     // đối soát, không suy được từ bản ghi sửa xe chung.
     const branchChanged = dto.branchId !== undefined && dto.branchId !== current.branchId;
     if (branchChanged) {
-      await this.branches.assertAssignable(tx, tenantId, dto.branchId!);
+      await this.branches.assertAssignable(tx, tenantId, dto.branchId!, allowedBranchIds);
     }
 
     /*
@@ -1700,13 +1719,16 @@ export class VehiclesService {
     db: Prisma.TransactionClient | PrismaService = this.prisma,
   ): Promise<void> {
     const clash = await db.vehicle.findFirst({
-      where: { tenantId, code, deletedAt: null },
+      // KHÔNG lọc `deletedAt`: unique index `(tenant_id, code)` tính cả xe đã xoá mềm — lọc ở đây
+      // là để lọt xuống P2002 và người dùng nhận một câu "dữ liệu thay đổi ở nơi khác" vô nghĩa.
+      where: { tenantId, code },
       select: { id: true },
     });
     if (clash) {
       throw new ConflictException({
-        code: API_ERROR_CODE.CONFLICT,
+        code: API_ERROR_CODE.VEHICLE_CODE_DUPLICATE,
         message: `Mã xe "${code}" đã tồn tại trong gian hàng`,
+        details: { fields: [{ field: 'code', message: 'duplicate' }] },
       });
     }
   }

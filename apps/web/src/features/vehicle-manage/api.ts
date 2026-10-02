@@ -43,10 +43,7 @@ export const patchVehicleServiceSetting = (
   serviceType: string,
   body: PatchVehicleServiceSettingInput,
 ): Promise<VehicleServiceSetting> =>
-  apiPatch<VehicleServiceSetting>(
-    `/vehicles/${vehicleId}/service-settings/${serviceType}`,
-    body,
-  );
+  apiPatch<VehicleServiceSetting>(`/vehicles/${vehicleId}/service-settings/${serviceType}`, body);
 
 export const fetchDriverSurchargeRules = async (
   vehicleId: string,

@@ -6,6 +6,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
+import { resolveBranchIdList } from '../../../common/dto/branch-scope';
 import {
   API_ERROR_CODE,
   MAINTENANCE_DUE_SOON_KM_DEFAULT,
@@ -743,10 +744,23 @@ export class MaintenanceService {
     tenantId: string,
     query: MaintenanceBoardQueryDto,
     scope: MaintenanceViewScope,
+  /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
+  allowedBranchIds: readonly string[] | null,
   ): Promise<{ data: MaintenanceBoardItemDto[]; meta: PaginationMeta }> {
     const paging = resolvePaging(query, DEFAULT_LIMIT, 100);
     const dueSoonKm = await this.dueSoonKm(tenantId);
     const today = startOfUtcDay(new Date());
+    /*
+     * `null` chứ không `undefined`: `$queryRaw` gửi tham số này xuống hai lần trong một biểu thức
+     * `(… IS NULL OR v.branch_id = …)`, và `undefined` không phải một giá trị Postgres.
+     *
+     * Cố ý KHÔNG đi qua `resolveBranchScope()` như các danh sách khác: hàm đó trả về hình dạng
+     * `where` của Prisma (`string | { in: [...] }`), còn hai truy vấn ở đây là SQL thô. Khi phạm
+     * vi chi nhánh thành một TẬP HỢP (bước phân quyền), chỗ này đổi sang `v.branch_id = ANY($n)`
+     * — đổi ở `board()` và `boardSummary()`, và phải đổi CÙNG LÚC với `HandoversService`, nếu
+     * không tab "Thiếu KM trả" lại nói khác ba tab kia.
+     */
+    const branchIds = resolveBranchIdList(query.branchId, allowedBranchIds);
 
     const rows = await this.prisma.$queryRaw<BoardRow[]>`
       WITH scored AS (
@@ -787,6 +801,7 @@ export class MaintenanceService {
             AND d.expires_at IS NOT NULL AND d.expires_at <= ${today}::date
         ) doc ON true
         WHERE v.tenant_id = ${tenantId}::char(26) AND v.deleted_at IS NULL
+          AND (${branchIds}::char(26)[] IS NULL OR v.branch_id = ANY(${branchIds}::char(26)[]))
       ),
       classified AS (
         SELECT *, CASE
@@ -854,10 +869,15 @@ export class MaintenanceService {
    */
   async boardSummary(
     tenantId: string,
-    scope: { canViewHandovers: boolean } = { canViewHandovers: false },
+    scope: { canViewHandovers: boolean; branchId?: string },
+    /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
+    allowedBranchIds: readonly string[] | null,
   ): Promise<MaintenanceBoardSummaryDto> {
     const dueSoonKm = await this.dueSoonKm(tenantId);
     const today = startOfUtcDay(new Date());
+    // `null` chứ không `undefined`: tham số này đi xuống `$queryRaw` hai lần trong một biểu thức
+    // `(… IS NULL OR v.branch_id = …)`, và `undefined` không phải một giá trị Postgres.
+    const branchIds = resolveBranchIdList(scope.branchId, allowedBranchIds);
     const [row] = await this.prisma.$queryRaw<
       {
         total: number;
@@ -892,6 +912,7 @@ export class MaintenanceService {
             AND d.expires_at IS NOT NULL AND d.expires_at <= ${today}::date
         ) doc ON true
         WHERE v.tenant_id = ${tenantId}::char(26) AND v.deleted_at IS NULL
+          AND (${branchIds}::char(26)[] IS NULL OR v.branch_id = ANY(${branchIds}::char(26)[]))
       )
       SELECT
         count(*)::int AS total,
@@ -912,8 +933,8 @@ export class MaintenanceService {
      * đếm `vehicle_documents`. Mọi thao tác GHI vẫn thuộc `HandoversService`.
      *
      * Điều kiện lọc phải TRÙNG KHỚP với `HandoversService.missingOdometerQueue` (Wave 8.1 §6):
-     * cùng tenant, biên bản TRẢ đã xác nhận, thiếu KM, xe và đơn chưa xoá mềm. Lệch một vế là
-     * tab hiện "3" trong khi bảng chỉ có 2 dòng.
+     * cùng tenant, cùng chi nhánh, biên bản TRẢ đã xác nhận, thiếu KM, xe và đơn chưa xoá mềm.
+     * Lệch một vế là tab hiện "3" trong khi bảng chỉ có 2 dòng.
      */
     const [queue] = scope.canViewHandovers
       ? await this.prisma.$queryRaw<{ missing_return_km: number }[]>`
@@ -922,7 +943,8 @@ export class MaintenanceService {
           JOIN vehicles v ON v.id = h.vehicle_id AND v.deleted_at IS NULL
           JOIN bookings b ON b.id = h.booking_id AND b.deleted_at IS NULL
           WHERE h.tenant_id = ${tenantId}::char(26)
-            AND h.type = 'return' AND h.status = 'confirmed' AND h.odometer_missing = true`
+            AND h.type = 'return' AND h.status = 'confirmed' AND h.odometer_missing = true
+            AND (${branchIds}::char(26)[] IS NULL OR v.branch_id = ANY(${branchIds}::char(26)[]))`
       : // Thiếu quyền: KHÔNG chạy truy vấn, trả 0 để giữ nguyên hình dạng response.
         [{ missing_return_km: 0 }];
 

@@ -373,7 +373,7 @@ describe('2. Gửi duyệt xe: một cổng, một phiếu', () => {
   });
 
   maybe('xe đã duyệt vẫn nằm trong "Xe của tôi"', async () => {
-    const page = await vehicles.list(tenantId, {});
+    const page = await vehicles.list(tenantId, {}, null);
     expect(page.data.some((v) => v.id === vehicleId)).toBe(true);
   });
 });
@@ -415,13 +415,13 @@ describe('3. Xe thiếu điều kiện: vẫn là nháp, nói rõ thiếu gì', 
   });
 
   maybe('xe nháp VẪN nằm trong danh sách của chủ xe — không biến mất', async () => {
-    const page = await vehicles.list(tenantId, { publicStatus: VEHICLE_PUBLIC_STATUS.DRAFT });
+    const page = await vehicles.list(tenantId, { publicStatus: VEHICLE_PUBLIC_STATUS.DRAFT }, null);
     expect(page.data.length).toBeGreaterThan(0);
   });
 
   maybe('bổ sung rồi gửi lại → đi qua', async () => {
     const fixable = await seedVehicle({ weekdayPrice: null });
-    await vehicles.update(tenantId, fixable, ownerId, { weekdayPrice: '650000' });
+    await vehicles.update(tenantId, fixable, ownerId, { weekdayPrice: '650000' }, null);
 
     const submitted = await vehicles.submitForPublicReview(tenantId, fixable, ownerId);
     expect(submitted.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW);
@@ -457,7 +457,7 @@ describe('4. Từ chối / yêu cầu bổ sung: chủ xe thấy lý do và gử
     // Lý do đi kèm ngay trong DANH SÁCH xe, không bắt chủ xe mở từng chiếc để đi tìm.
     const page = await vehicles.list(tenantId, {
       publicStatus: VEHICLE_PUBLIC_STATUS.NEEDS_REVISION,
-    });
+    }, null);
     const listed = page.data.find((v) => v.id === vehicleId);
     expect(listed?.latestPublicReview?.reason).toBe('Ảnh nội thất bị mờ.');
 

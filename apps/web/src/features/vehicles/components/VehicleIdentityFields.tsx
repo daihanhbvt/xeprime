@@ -23,6 +23,8 @@ interface VehicleIdentityFieldsProps {
    * `vehicleCatalogModelId` của chiếc Vios vừa chọn nhầm, và server mới là nơi phát hiện ra.
    */
   setValue?: UseFormSetValue<VehicleFormValues>;
+  /** Hiện dấu * ở hãng + dòng xe — wizard thêm xe nhanh bắt buộc đủ điều kiện lên chợ. */
+  required?: boolean;
 }
 
 /**
@@ -48,6 +50,7 @@ export function VehicleIdentityFields({
   lockedNotice,
   disabled,
   setValue,
+  required = false,
 }: VehicleIdentityFieldsProps) {
   const t = useTranslations('Vehicles.form.specs');
   const domainLabel = useDomainLabel();
@@ -96,6 +99,7 @@ export function VehicleIdentityFields({
           control={control}
           name="brand"
           label={t('brand')}
+          required={required}
           options={brandOptions}
           placeholder={t('brandPlaceholder')}
           help={lockedNotice}
@@ -109,6 +113,7 @@ export function VehicleIdentityFields({
           control={control}
           name="vehicleCatalogModelId"
           label={t('model')}
+          required={required}
           options={[]}
           optionGroups={optionGroups}
           placeholder={t('modelPlaceholder')}

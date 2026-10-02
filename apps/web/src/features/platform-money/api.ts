@@ -6,6 +6,7 @@ import type {
   MarkRefundPaidInput,
   PlatformHold,
   PlatformHoldRefund,
+  PlatformMoneySummary,
   RefundFilters,
   RejectRefundInput,
   SaveBankBalanceInput,
@@ -39,7 +40,11 @@ export function refundFiltersToParams(filters: RefundFilters): QueryParams {
 }
 
 export const fetchHolds = (filters: HoldFilters): Promise<Paged<PlatformHold>> =>
-  fetchPage<PlatformHold>('/platform/money/holds', holdFiltersToParams(filters), MONEY_DEFAULT_LIMIT);
+  fetchPage<PlatformHold>(
+    '/platform/money/holds',
+    holdFiltersToParams(filters),
+    MONEY_DEFAULT_LIMIT,
+  );
 
 export const settleHold = (id: string, body: SettleHoldInput): Promise<void> =>
   apiPost<void>(`/platform/money/holds/${id}/settle`, body);
@@ -56,6 +61,9 @@ export const markRefundPaid = (id: string, body: MarkRefundPaidInput): Promise<v
 
 export const rejectRefund = (id: string, body: RejectRefundInput): Promise<void> =>
   apiPost<void>(`/platform/money/refunds/${id}/reject`, body);
+
+export const fetchMoneySummary = (): Promise<PlatformMoneySummary> =>
+  apiGet<PlatformMoneySummary>('/platform/money/summary');
 
 export const fetchDailyReconciliation = (date: string): Promise<DailyReconciliation> =>
   apiGet<DailyReconciliation>(`/platform/money/reconciliation/daily?date=${date}`);
@@ -76,9 +84,7 @@ export function withdrawalFiltersToParams(filters: WithdrawalFilters): QueryPara
   };
 }
 
-export function fetchWithdrawalQueue(
-  params: QueryParams,
-): Promise<PlatformWithdrawalPage> {
+export function fetchWithdrawalQueue(params: QueryParams): Promise<PlatformWithdrawalPage> {
   return apiGet<PlatformWithdrawalPage>('/platform/money/withdrawals', params);
 }
 
@@ -91,8 +97,10 @@ export const markWithdrawalPaid = (id: string, body: MarkWithdrawalPaidInput): P
 export const rejectWithdrawal = (id: string, body: { reason: string }): Promise<void> =>
   apiPost<void>(`/platform/money/withdrawals/${id}/reject`, body);
 
-export const reverseWithdrawal = (id: string, body: { reason: string }): Promise<void> =>
-  apiPost<void>(`/platform/money/withdrawals/${id}/reverse`, body);
+export const reverseWithdrawal = (
+  id: string,
+  body: { reason: string; rowVersion: number },
+): Promise<void> => apiPost<void>(`/platform/money/withdrawals/${id}/reverse`, body);
 
 // ── Hàng đợi bảo hiểm (ADR 0032 điều 4 — Phase 7) ───────────────────────────
 

@@ -13,11 +13,7 @@ import {
 import { ApiClientError } from '@xeprime/api-client';
 import { API_ERROR_CODE } from '@xeprime/types';
 
-import {
-  VEHICLE_MANAGE_SECTION,
-  accountVehicleManagePath,
-  listingPath,
-} from '@/constants/routes';
+import { VEHICLE_MANAGE_SECTION, accountVehicleManagePath, listingPath } from '@/constants/routes';
 import type { VehicleDetail } from '@/features/vehicles/types';
 import { renderWithIntl } from '@/i18n/test-utils';
 
@@ -91,6 +87,7 @@ const update = vi.hoisted(() => ({
 }));
 vi.mock('@/features/vehicles/hooks/use-vehicle-mutations', () => ({
   useUpdateVehicle: () => update,
+  useSetVehicleMarketplaceVisibility: () => ({ mutate: () => undefined, isPending: false }),
 }));
 
 function vehicle(overrides: Partial<VehicleDetail> = {}): VehicleDetail {
@@ -221,8 +218,8 @@ describe('Menu của XE, không phải menu khu tài khoản', () => {
     for (const section of [
       VEHICLE_MANAGE_SECTION.IMAGES,
       VEHICLE_MANAGE_SECTION.TRIP_HISTORY,
-      VEHICLE_MANAGE_SECTION.SELF_DRIVE_PRICING,
-      VEHICLE_MANAGE_SECTION.SELF_DRIVE_HANDOVER_TIME,
+      VEHICLE_MANAGE_SECTION.PRICING,
+      VEHICLE_MANAGE_SECTION.HANDOVER_TIME,
     ]) {
       cleanup();
       nav.pathname = accountVehicleManagePath.section('v1', section);
@@ -297,7 +294,8 @@ describe('Đầu trang — không bịa dữ liệu', () => {
     renderWorkspace();
 
     expect(screen.queryByRole('link', { name: /xem trang xe/i })).toBeNull();
-    expect(screen.getByText('Chủ xe tạm ẩn')).toBeTruthy();
+    // Công tắc "Trên chợ" của thẻ đầu xe nói trạng thái này (30/09/2026).
+    expect(screen.getByText('Tạm ẩn')).toBeTruthy();
   });
 
   it('xe đã duyệt: link sang trang xe công khai đúng địa chỉ', () => {
@@ -380,7 +378,7 @@ describe('Mục của dịch vụ đang tắt', () => {
   it('nói rõ lý do và cho bật lại thay vì hiện form chết', () => {
     nav.pathname = accountVehicleManagePath.section(
       'v1',
-      VEHICLE_MANAGE_SECTION.WITH_DRIVER_PRICING,
+      VEHICLE_MANAGE_SECTION.WITH_DRIVER_SURCHARGES,
     );
     queries.vehicle = {
       ...queries.vehicle,
@@ -399,7 +397,7 @@ describe('Mục của dịch vụ đang tắt', () => {
   it('dịch vụ đang bật: nội dung mục hiện bình thường', () => {
     nav.pathname = accountVehicleManagePath.section(
       'v1',
-      VEHICLE_MANAGE_SECTION.SELF_DRIVE_PRICING,
+      VEHICLE_MANAGE_SECTION.SELF_DRIVE_OPTIMIZATION,
     );
     renderWorkspace();
     expect(screen.getByTestId('section-content')).toBeTruthy();

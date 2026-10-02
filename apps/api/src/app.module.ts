@@ -7,6 +7,7 @@ import { validateEnv } from './config/env.schema';
 import { AuthGuard } from './common/guards/auth.guard';
 import { PermissionGuard } from './common/guards/permission.guard';
 import { PlanFeatureGuard } from './common/guards/plan-feature.guard';
+import { BranchScopeGuard } from './common/guards/branch-scope.guard';
 import { ShopOwnerGuard } from './common/guards/shop-owner.guard';
 import { SubscriptionTrackGuard } from './common/guards/subscription-track.guard';
 import { TenantScopeGuard } from './common/guards/tenant-scope.guard';
@@ -173,6 +174,12 @@ import { HolidaysModule } from './modules/holidays/holidays.module';
     { provide: APP_GUARD, useClass: TenantScopeGuard },
     { provide: APP_GUARD, useClass: PlatformScopeGuard },
     { provide: APP_GUARD, useClass: PermissionGuard },
+    /*
+     * Phạm vi chi nhánh cho route THEO ID (ADR 0052) — sau PermissionGuard để người không có quyền
+     * nhận MISSING_PERMISSION trước, và để phép tra chi nhánh không chạy cho request đằng nào cũng
+     * bị từ chối. Ngoài phạm vi trả 404, không phải 403 — xem docblock của guard.
+     */
+    { provide: APP_GUARD, useClass: BranchScopeGuard },
     /*
      * ShopOwnerGuard đứng SAU PermissionGuard, cùng một lý do về THÔNG TIN: người không có quyền
      * vào khu đó phải nhận MISSING_PERMISSION trước — "gian hàng này có bao nhiêu tiền" không

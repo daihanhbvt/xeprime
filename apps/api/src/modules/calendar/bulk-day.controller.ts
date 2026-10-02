@@ -17,6 +17,7 @@ import {
   BulkDayPriceDto,
   BulkDayPriceResultDto,
   BulkDayQueryDto,
+  BulkDayReleaseQueryDto,
   BulkDayReleaseResultDto,
 } from './dto/bulk-day.dto';
 
@@ -49,7 +50,7 @@ export class BulkDayController {
     @CurrentTenant() tenant: TenantContext,
     @Query() query: BulkDayQueryDto,
   ): Promise<BulkDayPreviewDto> {
-    return this.bulk.preview(tenant.tenantId, query);
+    return this.bulk.preview(tenant.tenantId, query, tenant.allowedBranchIds);
   }
 
   @Post('blocks')
@@ -67,7 +68,7 @@ export class BulkDayController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: BulkDayBlockDto,
   ): Promise<BulkDayBlockResultDto> {
-    return this.bulk.blockAll(tenant.tenantId, user.id, dto);
+    return this.bulk.blockAll(tenant.tenantId, user.id, dto, tenant.allowedBranchIds);
   }
 
   @Delete('blocks/:batchId')
@@ -75,15 +76,23 @@ export class BulkDayController {
   @ApiOperation({
     summary: 'Gỡ trọn một lô khoá hàng loạt',
     description:
-      'Gỡ ĐÚNG những dòng lô đó tạo ra. Lịch khoá do người dùng đặt tay không bị đụng tới.',
+      'Gỡ ĐÚNG những dòng lô đó tạo ra, và chỉ trên xe thuộc chi nhánh đang xem (`branchId`) ' +
+      'trong phạm vi được giao. Lịch khoá do người dùng đặt tay không bị đụng tới.',
   })
   @ApiOkResponse({ type: BulkDayReleaseResultDto })
   async releaseBatch(
     @CurrentTenant() tenant: TenantContext,
     @CurrentUser() user: AuthenticatedUser,
     @Param('batchId') batchId: string,
+    @Query() query: BulkDayReleaseQueryDto,
   ): Promise<BulkDayReleaseResultDto> {
-    return this.bulk.releaseBatch(tenant.tenantId, user.id, batchId);
+    return this.bulk.releaseBatch(
+      tenant.tenantId,
+      user.id,
+      batchId,
+      query.branchId,
+      tenant.allowedBranchIds,
+    );
   }
 
   @Put('prices')
@@ -101,7 +110,7 @@ export class BulkDayController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: BulkDayPriceDto,
   ): Promise<BulkDayPriceResultDto> {
-    return this.bulk.priceAll(tenant.tenantId, user.id, dto);
+    return this.bulk.priceAll(tenant.tenantId, user.id, dto, tenant.allowedBranchIds);
   }
 
   @Post('prices/restore')
@@ -116,6 +125,6 @@ export class BulkDayController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: BulkDayPriceDto,
   ): Promise<BulkDayPriceResultDto> {
-    return this.bulk.restorePrices(tenant.tenantId, user.id, dto);
+    return this.bulk.restorePrices(tenant.tenantId, user.id, dto, tenant.allowedBranchIds);
   }
 }

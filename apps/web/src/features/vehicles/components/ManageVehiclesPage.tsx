@@ -19,6 +19,9 @@ import { LoadingState } from '@/components/feedback/LoadingState';
 import { PermissionState } from '@/components/feedback/PermissionState';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { FleetSummaryBar } from '@/features/vehicles/components/FleetSummaryBar';
+import { ALL_FILTER } from '@/constants/filters';
+import { withBranchReturn } from '@/features/branches/branch-link';
+import { useBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { VehicleFiltersBar } from '@/features/vehicles/components/VehicleFilters';
 import { VehicleCardGrid } from '@/features/vehicles/components/VehicleCardGrid';
 import { VehicleStatusChips } from '@/features/vehicles/components/VehicleStatusChips';
@@ -48,6 +51,10 @@ function VehiclesView() {
   const { has } = usePermissions();
   const isMobile = useIsMobile();
   const { filters, setFilters } = useVehicleFilters();
+  const branch = useBranchFilter({
+    value: filters.branchId,
+    onChange: (branchId) => setFilters({ branchId }),
+  });
   const { data, isError, refetch, isFetching } = useVehicles(filters);
 
   const canView = has(PERMISSION.VEHICLE_VIEW);
@@ -66,7 +73,8 @@ function VehiclesView() {
     filters.vehicleType ||
     filters.serviceType ||
     filters.operationStatus ||
-    filters.publicStatus,
+    filters.publicStatus ||
+    filters.branchId,
   );
 
   function clearFilters() {
@@ -76,6 +84,7 @@ function VehiclesView() {
       serviceType: undefined,
       operationStatus: undefined,
       publicStatus: undefined,
+      branchId: undefined,
     });
   }
 
@@ -91,7 +100,7 @@ function VehiclesView() {
 
   /** "Xem lịch" của một xe — cùng một đích với nút ở Hồ sơ 360 (`vehicleSchedulePath`). */
   function openSchedule(row: { name: string; plateNumber?: string | null }) {
-    router.push(vehicleSchedulePath(row));
+    router.push(vehicleSchedulePath(row, { branchId: filters.branchId }));
   }
 
   // Thiếu quyền xem → thay TOÀN BỘ nội dung, không dựng tiêu đề và bộ lọc cho một trang không
@@ -128,16 +137,20 @@ function VehiclesView() {
              * Hai lối thêm xe (09/09/2026): "đăng nhanh" cho chiếc xe tự lái thông thường, và
              * wizard nâng cao của gian hàng cho xe nhiều dịch vụ / có nguồn xe / nhiều chi
              * nhánh. Không bỏ lối nào — gian hàng vẫn cần đủ trường ở wizard cũ.
+             *
+             * Thứ tự ĐẢO ngày 29/09/2026: nút chính là wizard NÂNG CAO, "đăng nhanh" lùi vào
+             * menu. Đây là cổng của GIAN HÀNG, và chỉ wizard nâng cao mới hỏi hình thức nguồn
+             * xe, nhiều dịch vụ và chi nhánh giữ xe — ba thứ một gian hàng gần như luôn cần và
+             * luồng nhanh cố định cứng (`QUICK_VEHICLE_FIXED`: chỉ tự lái, sở hữu, sẵn sàng).
+             * Đặt luồng thiếu trường làm mặc định nghĩa là để người trực khai lại ở màn sửa.
              */
             <Space.Compact>
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
-                onClick={() =>
-                  router.push(listYourVehicleRegisterPath(VEHICLE_REGISTRATION_SOURCE.MANAGE))
-                }
+                onClick={() => router.push(ROUTES.MANAGE.VEHICLE_NEW)}
               >
-                {t('addVehicleQuick')}
+                {t('addVehicleAdvanced')}
               </Button>
               {/*
                 Tự dựng cặp nút thay vì `Dropdown.Button`: nút mở menu ở đó chỉ có icon và trình
@@ -149,9 +162,12 @@ function VehiclesView() {
                 menu={{
                   items: [
                     {
-                      key: 'advanced',
-                      label: t('addVehicleAdvanced'),
-                      onClick: () => router.push(ROUTES.MANAGE.VEHICLE_NEW),
+                      key: 'quick',
+                      label: t('addVehicleQuick'),
+                      onClick: () =>
+                        router.push(
+                          listYourVehicleRegisterPath(VEHICLE_REGISTRATION_SOURCE.MANAGE),
+                        ),
                     },
                   ],
                 }}
@@ -174,7 +190,23 @@ function VehiclesView() {
         </>
       ) : null}
 
-      <VehicleFiltersBar filters={filters} onChange={setFilters} onClear={clearFilters} />
+      <VehicleFiltersBar
+        filters={filters}
+        branchField={branch.field}
+        onChange={(patch) => {
+          /*
+           * `remember` chứ không `select`: `select` tự ghi URL, nên gọi nó rồi gọi `setFilters`
+           * là hai lượt `router.replace` trong cùng một tick — cả hai đọc `searchParams` của lần
+           * render trước và lượt sau ghi đè lượt trước. URL do MỘT lượt `setFilters` lo (ADR 0052).
+           */
+          setFilters(
+            'branchId' in patch
+              ? { ...patch, branchId: patch.branchId === ALL_FILTER ? undefined : patch.branchId }
+              : patch,
+          );
+        }}
+        onClear={clearFilters}
+      />
 
       <VehicleCardGrid
         items={items}
@@ -190,8 +222,9 @@ function VehiclesView() {
             row,
             canEdit,
             compact: shape === 'row',
-            onView: (id) => router.push(vehiclePath.detail(id)),
-            onEdit: (id) => router.push(vehiclePath.edit(id)),
+            // Mang chi nhánh đang lọc sang màn chi tiết làm MẨU ĐƯỜNG VỀ (ADR 0052).
+            onView: (id) => router.push(withBranchReturn(vehiclePath.detail(id), filters.branchId)),
+            onEdit: (id) => router.push(withBranchReturn(vehiclePath.edit(id), filters.branchId)),
             onSchedule: openSchedule,
           })
         }

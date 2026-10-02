@@ -54,12 +54,16 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc ./
 # Liệt kê TỪNG manifest thay vì `COPY . .`: mục đích của stage này là cache. Copy cả source
 # vào đây thì mỗi lần sửa một dòng TSX là cài lại toàn bộ dependency (~5–8 phút trên E5 v4).
 #
-# `apps/mobile/package.json` phải có mặt dù app native KHÔNG được cài (xem --filter bên dưới):
+# Ba manifest `apps/mobile/*` phải có mặt dù app native KHÔNG được cài (xem --filter bên dưới):
 # `--frozen-lockfile` đối chiếu lockfile với TOÀN BỘ importer, thiếu một manifest là fail.
+# Từ 25/09/2026 `apps/mobile` chỉ là cái vỏ chứa ba package (customer · manage · shared) và
+# KHÔNG còn package.json của riêng nó — thêm/bớt một package mobile là sửa danh sách này.
 COPY apps/api/package.json ./apps/api/
 COPY apps/web/package.json ./apps/web/
 COPY apps/worker/package.json ./apps/worker/
-COPY apps/mobile/package.json ./apps/mobile/
+COPY apps/mobile/customer/package.json ./apps/mobile/customer/
+COPY apps/mobile/manage/package.json ./apps/mobile/manage/
+COPY apps/mobile/shared/package.json ./apps/mobile/shared/
 COPY packages/api-client/package.json ./packages/api-client/
 COPY packages/config/package.json ./packages/config/
 COPY packages/domain/package.json ./packages/domain/
@@ -69,7 +73,8 @@ COPY packages/validators/package.json ./packages/validators/
 COPY prisma/package.json ./prisma/
 
 # `--filter "<pkg>..."` = package đó + mọi thứ nó phụ thuộc. Bốn filter này phủ hết cây build
-# và CỐ Ý bỏ `@xeprime/mobile`: Expo + React Native là ~1GB không có việc gì trên server web.
+# và CỐ Ý bỏ ba package `@xeprime/mobile-*`: Expo + React Native là ~1GB không có việc gì trên
+# server web.
 #
 # `.npmrc` của repo đặt `network-concurrency=4` cho mạng dev chậm; VPS thì không, nên ghi đè.
 RUN --mount=type=cache,id=xeprime-pnpm-store,target=/pnpm/store \

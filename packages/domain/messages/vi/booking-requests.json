@@ -27,6 +27,21 @@
     "viewSchedule": "Xem lịch xe",
     "viewScheduleFor": "Xem lịch thuê của {vehicle}"
   },
+  "vehiclePicker": {
+    "searchPlaceholder": "Tìm theo tên xe, biển số hoặc mã xe",
+    "searchAriaLabel": "Tìm xe để đặt",
+    "count": "{count, plural, other {# xe}}",
+    "branchHint": "Đang hiện xe của {branch}. Đổi sang chi nhánh khác nếu bạn điều xe từ nơi khác sang.",
+    "loadFailed": "Không tải được danh sách xe",
+    "retry": "Thử lại",
+    "emptySearch": "Không có xe nào khớp từ khoá",
+    "emptyBranch": "Chi nhánh này chưa có xe nào",
+    "empty": "Gian hàng chưa có xe nào",
+    "perDay": "{amount}/ngày",
+    "loadingMore": "Đang tải thêm xe…",
+    "appendFailed": "Không tải được thêm xe.",
+    "allShown": "Đã hiện hết {count, plural, other {# xe}}"
+  },
   "customer": {
     "heading": "Khách hàng",
     "noProfile": "Chưa có hồ sơ trong sổ khách",

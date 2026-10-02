@@ -41,6 +41,13 @@ export class PushDeviceService {
       platform: dto.platform,
       appVersion: dto.appVersion ?? null,
       deviceName: dto.deviceName ?? null,
+      /*
+       * Tự khai và điều đó ỔN: cột này chỉ LỌC thông báo app nhận, không mở quyền gì. KHÔNG suy
+       * từ `native_auth_sessions.client_app`: phiên của app hợp nhất CŨ cũng mang `customer`,
+       * trong khi bản cài cũ phải tiếp tục nhận CẢ audience manage — chỉ DTO phân biệt được
+       * "app customer mới" (gửi `customer`) với "app cũ" (không gửi gì ⇒ NULL ⇒ nhận tất).
+       */
+      clientApp: dto.clientApp ?? null,
       lastSeenAt: now,
     };
 

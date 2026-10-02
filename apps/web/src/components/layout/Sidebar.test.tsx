@@ -33,6 +33,8 @@ const user = vi.hoisted(() => ({
 const perms = vi.hoisted(() => ({ granted: new Set<string>() }));
 
 vi.mock('next/navigation', () => ({
+  // Link menu mang chi nhánh theo URL (ADR 0052) — test không lọc gì nên URL sạch tham số.
+  useSearchParams: () => new URLSearchParams(),
   usePathname: () => nav.pathname,
   useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
 }));

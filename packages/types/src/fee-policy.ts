@@ -24,6 +24,13 @@
 import { HOLD_MIN_USABLE_WINDOW_MINUTES } from './holds';
 import { STATUS_COLOR, type StatusMeta } from './status/meta';
 import { BILLING_MODE, type BillingMode } from './status/billing';
+import {
+  BOOKING_HOLD_OUTCOME,
+  BOOKING_HOLD_OUTCOME_VALUES,
+  isOutcomeAllowed,
+  type BookingHoldOutcome,
+  type BookingHoldPurpose,
+} from './status/hold';
 import type { PromoCodeSnapshot } from './promo-code';
 
 // ── Vòng đời một phiên bản chính sách ───────────────────────────────────────
@@ -614,6 +621,47 @@ export type HoldSettlementKind =
   | 'settled';
 
 /**
+ * Kết cục nào cần phân bổ, và theo luật nào — `null` = kết cục LEGACY (`kept`, `forfeited`,
+ * `released_to_shop`): giữ nguyên hành vi cũ, không sinh dòng phân bổ nào.
+ *
+ * Dùng chung cho service chốt kết cục và màn xem trước của admin: hai nơi mà đọc hai bảng ánh xạ
+ * khác nhau thì màn xem trước sẽ hứa một con số mà lúc chốt không bao giờ ra.
+ */
+export function holdSettlementKindFor(outcome: BookingHoldOutcome): HoldSettlementKind | null {
+  if (outcome === BOOKING_HOLD_OUTCOME.REFUNDED) return 'refund_all';
+  if (outcome === BOOKING_HOLD_OUTCOME.SPLIT_LATE_CANCEL) return 'split_late_cancel';
+  if (outcome === BOOKING_HOLD_OUTCOME.SETTLED) return 'settled';
+  return null;
+}
+
+/**
+ * Kết cục admin được phép CHỐT TAY cho một khoản giữ chỗ — dùng chung cho màn chốt và
+ * `HoldSettlementService.adminSettle`.
+ *
+ * Khoản mang BỐN DÒNG TIỀN (ADR 0032 trở đi) chứa tiền của nhiều người: chỉ những kết cục có
+ * PHÂN BỔ (`holdSettlementKindFor` ≠ null — quyết toán, huỷ muộn chia đôi, hoàn khách) mới chia
+ * đúng phần của từng người. Ba kết cục LEGACY (`kept`, `forfeited`, `released_to_shop`) không
+ * phân bổ gì — chốt chúng trên khoản mới là để nền tảng giữ trọn cả cọc của chủ xe lẫn phí bảo
+ * hiểm của hãng. Khoản đời cũ (bốn dòng đều 0) vẫn theo luật cũ `isOutcomeAllowed`.
+ */
+export function adminSettleOutcomes(
+  purpose: BookingHoldPurpose,
+  lines: Pick<HoldMoneyLines, 'deposit' | 'serviceFee' | 'vehicleInsurance' | 'personalInsurance'>,
+): BookingHoldOutcome[] {
+  const hasMoneyLines = [
+    lines.deposit,
+    lines.serviceFee,
+    lines.vehicleInsurance,
+    lines.personalInsurance,
+  ].some((value) => Number(value) > 0);
+  return BOOKING_HOLD_OUTCOME_VALUES.filter(
+    (outcome) =>
+      isOutcomeAllowed(purpose, outcome) &&
+      (!hasMoneyLines || holdSettlementKindFor(outcome) !== null),
+  );
+}
+
+/**
  * Chia một khoản giữ chỗ thành các bút toán — hàm THUẦN, dùng chung api/worker/preview admin.
  *
  * Vì sao là hàm chứ không phải bảng tra: nhánh `split_late_cancel` cần một phép chia đôi có
@@ -650,7 +698,8 @@ export function resolveHoldAllocation(
   };
   /** Dòng nền tảng — dòng DUY NHẤT được phép âm, vì nó là dòng gánh tài trợ. */
   const pushPlatform = (key: FeeLineKey, amount: number) => {
-    if (amount !== 0) out.push({ key, target: ALLOCATION_TARGET.PLATFORM_REVENUE, amount: String(amount) });
+    if (amount !== 0)
+      out.push({ key, target: ALLOCATION_TARGET.PLATFORM_REVENUE, amount: String(amount) });
   };
 
   if (kind === 'refund_all') {
@@ -711,9 +760,7 @@ export function resolveHoldAllocation(
  * có đường nào cho một đồng biến mất
  * giữa chừng, và đó là điều khiến phép đối soát có nghĩa.
  */
-export function allocationTotals(
-  allocation: AllocationEntry[],
-): Record<AllocationTarget, string> {
+export function allocationTotals(allocation: AllocationEntry[]): Record<AllocationTarget, string> {
   const totals: Record<AllocationTarget, number> = {
     [ALLOCATION_TARGET.CUSTOMER_BALANCE]: 0,
     [ALLOCATION_TARGET.OWNER_BALANCE]: 0,

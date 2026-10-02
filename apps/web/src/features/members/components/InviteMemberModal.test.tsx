@@ -22,6 +22,16 @@ vi.mock('../hooks/use-member-mutations', () => ({
   useCreateInvite: () => mutation,
 }));
 
+// Ô chi nhánh phụ trách (ADR 0052) hỏi danh sách chi nhánh — trả rỗng để modal ẩn ô đó,
+// các test sẵn có không phải biết gì về nó.
+vi.mock('@/features/branches/hooks/use-branches', () => ({
+  useBranches: () => ({ data: { items: [] }, isLoading: false }),
+}));
+
+// Người mời mặc định ở phạm vi `all` (chủ shop) — ca bị giới hạn có test riêng ở MemberBranchScopeSelect.
+vi.mock('@/hooks/use-current-user', () => ({
+  useCurrentUser: () => ({ data: { tenant: { branchScope: 'all' } } }),
+}));
 vi.mock('@/hooks/use-media-query', () => ({
   useIsMobile: () => false,
   useMediaQuery: () => false,
@@ -90,6 +100,8 @@ describe('InviteMemberModal — hành vi hiện tại', () => {
     expect(mutation.mutate.mock.calls[0]![0]).toEqual({
       email: 'nhanvien@congty.vn',
       roleKey: 'shop_staff',
+      // Không chọn chi nhánh nào = mời vào TOÀN gian hàng (ADR 0052).
+      branchScope: 'all',
     });
   });
 

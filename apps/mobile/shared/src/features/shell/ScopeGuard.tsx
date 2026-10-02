@@ -1,0 +1,168 @@
+import { useEffect, useRef, type ReactNode } from 'react';
+import { usePathname, useRouter } from 'expo-router';
+import { isPackageOnboardingPending, tenantUsesManagePortal } from '@xeprime/types';
+import { APP_SCOPE } from './app-scope';
+import { useTranslations } from 'use-intl';
+import { Screen } from '@/components/layout/Screen';
+import { ScreenError } from '@/components/state/ScreenError';
+import { ScreenLoading } from '@/components/state/ScreenLoading';
+import { ScreenMessage } from '@/components/state/ScreenMessage';
+import { useAppToast } from '@/components/feedback/use-app-toast';
+import { SESSION_STATUS, useSessionGate } from '@/features/auth/hooks/use-session-gate';
+import { useTenantScope } from '@/features/auth/hooks/use-tenant-scope';
+import { MANAGE_ONBOARDING_PATHNAME, ROUTES } from '@/navigation/routes';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
+import { fireAndForget } from '@/lib/fire-and-forget';
+import { useAppDispatch } from '@/store/hooks';
+import { forgetScope, scopeHome } from './use-shell-scope';
+import { scopeChanged } from './shell-scope.slice';
+
+/**
+ * Cổng của KHU QUẢN LÝ — người có membership gian hàng HOẶC nhân sự nền tảng đi qua.
+ *
+ * Hai loại vai, một khu: menu bên trong đã rẽ nhánh sẵn theo `platformRole` (`manageNavForScope`
+ * → `PLATFORM_NAV` / `SHOP_NAV`), nên gác bằng riêng `tenant` sẽ đá nhân sự nền tảng ra khỏi
+ * đúng khu được dựng cho họ. Đối xứng với web: `resolvePortalDestination` đưa người chỉ có
+ * platform role vào `/manage`, còn 403 thật do guard backend quyết định.
+ *
+ * Hai điều nó cố ý KHÔNG làm:
+ *
+ * 1. **Không đăng xuất.** Mất quyền gian hàng ≠ mất phiên. Người dùng bị đưa về khu khách kèm
+ *    một câu giải thích, và vẫn đăng nhập nguyên vẹn — đối xứng với `AdminLayout` bên web, nơi
+ *    403 không bao giờ dẫn về màn đăng nhập.
+ * 2. **Không gánh 403 của từng màn.** Màn nào bị API từ chối thì tự hiện trạng thái lỗi của
+ *    chính nó; cổng này dọn ở nhịp refetch `/auth/me` kế tiếp. Để mỗi màn tự điều hướng khi
+ *    gặp 403 là dựng một máy trạng thái thứ hai chạy song song với cổng này.
+ *
+ * Đá về khu khách chạy trong `useEffect` chứ không phải `<Redirect>` giữa lúc render: điều
+ * hướng trong thân render của một layout đang mount là nguồn của cảnh báo "update during render"
+ * và của những cú nháy không lần ra được.
+ */
+export function ScopeGuard({ children }: { children: ReactNode }) {
+  const t = useTranslations('MobileShell.scope');
+  const router = useRouter();
+  const navigateOnce = useNavigateOnce();
+  const dispatch = useAppDispatch();
+  const toast = useAppToast();
+  const { status, error, retry } = useSessionGate();
+  const { tenant } = useTenantScope();
+  const pathname = usePathname();
+
+  /**
+   * ĐĂNG KÝ GIAN HÀNG là ngoại lệ có chủ đích của cổng này.
+   *
+   * `/manage/onboarding` nằm dưới `manage/` để deep link ánh xạ 1-1 với web, nhưng nó là màn của
+   * người CHƯA có gian hàng — đá họ về khu khách ngay khi mở chính là đóng cửa duy nhất dẫn tới
+   * việc mở gian hàng. Web giải cùng bài này bằng cách liệt kê route đó là "bare" trong `AppShell`.
+   *
+   * So với HẰNG PHẦN ĐƯỜNG DẪN của `routes.ts`, không `String(ROUTES.manage.onboarding())`: từ
+   * ADR 0040 builder đó nhận `track` và trả về một object `Href`, nên `String()` sẽ cho
+   * `"[object Object]"` ngay khi ai đó thêm một tham số — phép so vẫn chạy và chỉ sai âm thầm.
+   */
+  const onOnboarding = pathname === MANAGE_ONBOARDING_PATHNAME;
+
+  /**
+   * Còn ĐANG ĐỨNG trong khu quản lý hay không.
+   *
+   * `pathname` đổi TRƯỚC khi layout này unmount, nên ngay khi người dùng rời `/manage/onboarding`
+   * về chợ xe, vẫn còn một khung hình mà layout quản lý chưa tháo nhưng đường dẫn đã là
+   * `/explore`. Thiếu chốt này thì ở đúng khung đó `onOnboarding` hoá `false`, cổng tưởng người
+   * chưa có gian hàng đang cố mở khu quản lý, và bắn "Bạn không còn quyền truy cập gian hàng
+   * này" cho một người vừa bấm Quay lại — họ chưa từng mất gì cả.
+   *
+   * Đã rời khu thì cổng không còn gì để gác: để lượt điều hướng đang chạy đi tới nơi.
+   */
+  const insideManage = (pathname ?? '').startsWith(String(ROUTES.manage.home()));
+
+  const ready = status === SESSION_STATUS.READY;
+  /*
+   * "Không còn gì để quản lý" = mất CẢ hai lối: không gian hàng TUYẾN GÓI, và không vai nền tảng.
+   *
+   * Hỏi `tenantUsesManagePortal` chứ không `tenant === null` (ADR 0038 điều 4): chủ xe tuyến hoa
+   * hồng vẫn có `tenant`, nhưng `SubscriptionTrackGuard` ở server từ chối cả bộ quản lý gian hàng.
+   * Thiếu chốt này thì họ vào được khu quản lý rồi nhận 403 ở từng màn — một app trông như hỏng
+   * thay vì một lời giải thích.
+   *
+   * Cổng này cũng bắt ca gian hàng HẾT ÂN HẠN: `billingMode` rơi về `commission`, và chủ, quản
+   * lý, nhân viên, người xem rời khu quản lý cùng lúc — vì câu hỏi hỏi TENANT, không hỏi vai.
+   *
+   * KHÔNG còn nhánh `platformRole` (tách app 25/09/2026): admin nền tảng không được phục vụ
+   * trên hai app mobile — cùng luật với `canUsePartnerApp` mà server dùng ở cổng đăng nhập
+   * Partner (403 `PARTNER_ACCESS_REQUIRED`).
+   */
+  const outsideManagePortal =
+    ready && !tenantUsesManagePortal(tenant) && insideManage && !onOnboarding;
+
+  /**
+   * Gian hàng trả phí CHƯA chuyển khoản, đang đứng ở một màn quản lý khác (ADR 0040).
+   *
+   * Họ không "mất quyền" — họ còn nợ một bước, và bước đó nằm ngay trong khu này. Đá họ về chợ xe
+   * kèm câu "Bạn không còn quyền truy cập gian hàng này" là nói sai với người vừa mở gian hàng và
+   * xoá luôn lối duy nhất dẫn tới màn thanh toán. Web giải cùng bài bằng `WrongWorkspaceRedirect`
+   * tới `resolveWorkspaceHref`, và với họ hàm đó trả về chính màn onboarding.
+   */
+  const needsOnboarding = outsideManagePortal && isPackageOnboardingPending(tenant);
+  const evicted = outsideManagePortal && !needsOnboarding;
+
+  // Toast chỉ bắn MỘT lần cho mỗi lần bị đá: effect chạy lại theo nhịp refetch, và bốn bản sao
+  // của cùng một câu đọc như app đang hỏng chứ không như một lời giải thích.
+  const announced = useRef(false);
+
+  useEffect(() => {
+    if (needsOnboarding) {
+      router.replace(ROUTES.manage.onboarding());
+      return;
+    }
+    if (!evicted) {
+      announced.current = false;
+      return;
+    }
+    if (announced.current) return;
+    announced.current = true;
+
+    dispatch(scopeChanged(APP_SCOPE.CUSTOMER));
+    fireAndForget(forgetScope, 'ScopeGuard.forgetScope');
+    toast.showInfo(t('lostAccess'));
+    // `dismissTo`: lùi về `(tabs)` đã có dưới ngăn xếp thay vì dựng bản thứ hai — xem `switchTo`.
+    router.dismissTo(scopeHome(APP_SCOPE.CUSTOMER));
+  }, [dispatch, evicted, needsOnboarding, router, t, toast]);
+
+  switch (status) {
+    case SESSION_STATUS.LOADING:
+      return (
+        <Screen scroll={false}>
+          <ScreenLoading />
+        </Screen>
+      );
+
+    case SESSION_STATUS.UNAUTHENTICATED:
+      return (
+        <Screen scroll={false}>
+          <ScreenMessage
+            icon="lock-closed-outline"
+            title={t('signInRequired')}
+            actionLabel={t('signIn')}
+            onAction={() => navigateOnce(ROUTES.account.login())}
+          />
+        </Screen>
+      );
+
+    case SESSION_STATUS.UNREACHABLE:
+      return (
+        <Screen scroll={false}>
+          <ScreenError error={error} onRetry={retry} />
+        </Screen>
+      );
+
+    case SESSION_STATUS.READY:
+      // Khung hình giữa lúc effect ở trên chưa kịp chạy: hiện màn chờ thay vì nội dung quản lý
+      // của một người chưa được đọc nó. (`READY` đã bảo đảm có `user` — xem `useSessionGate`.)
+      return evicted || needsOnboarding ? (
+        <Screen scroll={false}>
+          <ScreenLoading />
+        </Screen>
+      ) : (
+        children
+      );
+  }
+}

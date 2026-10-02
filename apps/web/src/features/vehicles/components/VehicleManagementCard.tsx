@@ -114,11 +114,7 @@ export function VehicleManagementCard({
       <div className={styles.body}>
         <div className={styles.identity}>
           <div className={styles.identityHead}>
-            <Link
-              href={detailHref(vehicle.id)}
-              className={styles.name}
-              title={vehicle.name}
-            >
+            <Link href={detailHref(vehicle.id)} className={styles.name} title={vehicle.name}>
               {vehicle.name}
             </Link>
             <span className={styles.sourceBadge}>
@@ -246,9 +242,7 @@ export function VehicleManagementCard({
                   {/* Số mang dấu — Figma `236:2060` hiện "-500.000 đ" đỏ, nhãn giữ nguyên. */}
                   <dl className={styles.profitRow}>
                     <dt>{t('card.profit')}</dt>
-                    <dd className={atLoss ? styles.expense : styles.income}>
-                      {fmt.money(profit)}
-                    </dd>
+                    <dd className={atLoss ? styles.expense : styles.income}>{fmt.money(profit)}</dd>
                   </dl>
                 </>
               ) : null}

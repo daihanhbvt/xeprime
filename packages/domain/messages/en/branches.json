@@ -65,6 +65,11 @@
     "single": "Your shop has only one branch",
     "label": "Branch in view"
   },
+  "filter": {
+    "label": "Branch",
+    "empty": "Nothing here yet for {branch}",
+    "emptyHint": "Pick \"All branches\" to see the whole shop."
+  },
   "toast": {
     "created": "Branch {name} created",
     "updated": "Branch updated",

@@ -36,7 +36,17 @@ export const REVIEW_PANEL_ANCHOR = 'vehicle-review-panel';
  *
  * Xe ĐÃ DUYỆT thì thẻ tự thu gọn: hồ sơ xét duyệt lúc đó là lịch sử, không phải việc đang làm.
  */
-export function VehiclePublicReviewPanel({ vehicle }: { vehicle: VehicleDetail }) {
+export function VehiclePublicReviewPanel({
+  vehicle,
+  collapsible = true,
+}: {
+  vehicle: VehicleDetail;
+  /**
+   * `false` khi panel đã nằm trong tab "Xét duyệt" riêng (30/09/2026): người dùng bấm vào tab
+   * là để đọc nó — thu gọn thêm một lần nữa chỉ bắt họ bấm hai lần.
+   */
+  collapsible?: boolean;
+}) {
   const t = useTranslations('Vehicles.publish.panel');
   const fmt = useAppFormat();
   const { requirement, statusCopy } = usePublicationLabels();
@@ -63,8 +73,10 @@ export function VehiclePublicReviewPanel({ vehicle }: { vehicle: VehicleDetail }
       <ul className={styles.checklist}>
         {checklist.map((item) => (
           <li key={item.key} className={item.met ? styles.met : styles.unmet}>
-            {item.met ? decorativeIcon(<CheckCircleFilled />) : decorativeIcon(<CloseCircleOutlined />)}
-            <span>{item.label}</span>
+            {item.met
+              ? decorativeIcon(<CheckCircleFilled />)
+              : decorativeIcon(<CloseCircleOutlined />)}
+            <span className={styles.label}>{item.label}</span>
             {/* Chữ mang nghĩa, không phải icon — icon là trang trí nên trình đọc bỏ qua. */}
             <span className={styles.state}>{item.met ? t('met') : t('unmet')}</span>
           </li>
@@ -91,19 +103,20 @@ export function VehiclePublicReviewPanel({ vehicle }: { vehicle: VehicleDetail }
    * Xe đã duyệt: thu gọn mặc định. `Collapse` chứ không một nút tự dựng — nó đã lo `aria-expanded`,
    * `aria-controls` và điều hướng bàn phím, ba thứ mà một `<div onClick>` không bao giờ có.
    */
-  if (approved) {
+  if (approved && collapsible) {
     return (
       <Card id={REVIEW_PANEL_ANCHOR} className={styles.panel} styles={{ body: { padding: 0 } }}>
-        <Collapse
-          ghost
-          items={[{ key: 'review', label: t('titleApproved'), children: body }]}
-        />
+        <Collapse ghost items={[{ key: 'review', label: t('titleApproved'), children: body }]} />
       </Card>
     );
   }
 
   return (
-    <Card id={REVIEW_PANEL_ANCHOR} title={t('title')} className={styles.panel}>
+    <Card
+      id={REVIEW_PANEL_ANCHOR}
+      title={approved ? t('titleApproved') : t('title')}
+      className={styles.panel}
+    >
       {body}
     </Card>
   );

@@ -257,6 +257,14 @@ model TenantMembership {
   roleId              String?   @map("role_id") @db.Char(26)
   /// @xeprime/types → MembershipStatus
   status              String    @default("active") @db.VarChar(50)
+  /// @xeprime/types → MembershipBranchScope (`all` | `limited`) — ADR 0051.
+  ///
+  /// `all` (mặc định) = thấy toàn gian hàng. `limited` = chỉ các chi nhánh ở `membership_branches`.
+  ///
+  /// Mặc định `all` là CHỦ ĐÍCH, không phải cho tiện: migration đặt mọi thành viên có sẵn về `all`
+  /// nên deploy xong không ai đổi hành vi. Chiều fail-closed nằm ở phía kia — `limited` mà không
+  /// có dòng nào thì KHÔNG thấy gì, chứ không phải thấy tất cả.
+  branchScope         String    @default("all") @map("branch_scope") @db.VarChar(20)
   displayNameInTenant String?   @map("display_name_in_tenant") @db.VarChar(255)
   invitedBy           String?   @map("invited_by") @db.Char(26)
   joinedAt            DateTime? @map("joined_at") @db.Timestamptz(3)
@@ -267,11 +275,43 @@ model TenantMembership {
   user    User   @relation("membership_user", fields: [userId], references: [id], onDelete: Cascade)
   inviter User?  @relation("membership_inviter", fields: [invitedBy], references: [id])
   role    Role?  @relation(fields: [roleId], references: [id])
+  branches MembershipBranch[]
 
   @@unique([tenantId, userId])
+  /// Mục tiêu cho FK tổ hợp `(membership_id, tenant_id)` của `membership_branches` — DB tự chặn
+  /// việc giao một chi nhánh của gian hàng khác, thay vì trông vào service nhớ kiểm.
+  @@unique([id, tenantId])
   @@index([userId])
   @@index([tenantId, roleKey])
   @@map("tenant_memberships")
+}
+
+/// Chi nhánh mà một thành viên được giao phụ trách — ADR 0051.
+///
+/// Bảng NỐI chứ không phải một cột `branch_id` trên `tenant_memberships`: một quản lý vùng phụ
+/// trách hai ba chi nhánh là ca có thật ở gian hàng nhiều tỉnh. Đổi từ một cột sang bảng nối sau
+/// khi đã rải guard nghĩa là viết lại toàn bộ guard, nên nó là bảng ngay từ đầu.
+///
+/// Bảng này CHỈ có nghĩa khi `tenant_memberships.branch_scope = 'limited'`. Ở `all` thì các dòng
+/// ở đây bị bỏ qua — giữ lại để bật/tắt giới hạn không làm mất phạm vi đã giao.
+model MembershipBranch {
+  membershipId String   @map("membership_id") @db.Char(26)
+  branchId     String   @map("branch_id") @db.Char(26)
+  /// Lặp lại để hai FK TỔ HỢP bên dưới có cột mà bám vào — đây là cách DB tự cấm giao chéo tenant.
+  tenantId     String   @map("tenant_id") @db.Char(26)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  /// FK COMPOSITE `(membership_id, tenant_id)` và `(branch_id, tenant_id)`: DB bác bỏ mọi dòng
+  /// ghép một thành viên với chi nhánh của gian hàng KHÁC. Không service nào có thể quên kiểm.
+  membership TenantMembership @relation(fields: [membershipId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: NoAction, map: "membership_branches_membership_fkey")
+  branch     TenantBranch     @relation(fields: [branchId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: NoAction, map: "membership_branches_branch_fkey")
+
+  /// PK mở đầu bằng `membership_id`, nên đường đọc nóng "chi nhánh nào của thành viên này"
+  /// (chạy MỖI request đi qua `TenantScopeGuard`) dùng luôn PK — không cần index riêng cho nó.
+  @@id([membershipId, branchId])
+  /// Đường đọc ngược: "ai đang phụ trách chi nhánh này" — dùng khi ngừng một chi nhánh.
+  @@index([branchId])
+  @@map("membership_branches")
 }
 
 // ---------------------------------------------------------------------------
@@ -507,6 +547,12 @@ model NativeAuthCode {
   /// PKCE S256 challenge do app gửi lúc bắt đầu. Đổi code phải kèm `code_verifier` khớp nó.
   codeChallenge String @map("code_challenge") @db.VarChar(128)
 
+  /// App đã KHỞI TẠO lượt social login — suy từ `redirect_uri` đã allowlist lúc begin
+  /// (`customer` | `partner`, @xeprime/types → MobileClientApp). `consume()` đối chiếu nó với
+  /// `clientApp` của lời gọi exchange: một code xin cho XePrime không đổi được phiên
+  /// XePrime Partner. CHECK `native_auth_codes_client_app_check`.
+  clientApp String @default("customer") @map("client_app") @db.VarChar(20)
+
   expiresAt  DateTime  @map("expires_at") @db.Timestamptz(3)
   consumedAt DateTime? @map("consumed_at") @db.Timestamptz(3)
   createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -529,6 +575,12 @@ model NativeAuthSession {
   /// Luôn `mobile` hôm nay. Có cột để ngày thêm client khác (CLI, thiết bị POS) không phải sửa
   /// schema, và để log/audit đọc được phiên này thuộc loại nào.
   clientType String @default("mobile") @map("client_type") @db.VarChar(30)
+
+  /// App mobile đã mở phiên này (`customer` | `partner` — @xeprime/types → MobileClientApp).
+  /// Default `customer` vì app hợp nhất CŨ không gửi trường này. Refresh token buộc vào phiên,
+  /// phiên buộc vào app ⇒ token của app này không tái tạo được phiên cho app kia.
+  /// CHECK `native_auth_sessions_client_app_check`.
+  clientApp String @default("customer") @map("client_app") @db.VarChar(20)
 
   /// Metadata thiết bị — CHỈ để người dùng nhận ra máy nào trong màn "thiết bị đang đăng nhập".
   /// Không dùng cho quyết định bảo mật nào: client tự khai, nên nó không chứng minh được gì.
@@ -738,6 +790,8 @@ model TenantBranch {
   creator        User?           @relation("branch_creator", fields: [createdBy], references: [id])
   vehicles       Vehicle[]
   publicListings PublicListing[]
+  memberships    MembershipBranch[]
+  receipts       Receipt[]
 
   @@unique([tenantId, code])
   /// Mục tiêu cho FK composite của `vehicles`/`public_listings`: xe chỉ gắn được chi nhánh
@@ -850,6 +904,10 @@ model TenantInvite {
   phone      String?  @db.VarChar(30)
   /// @xeprime/types → TenantRole
   roleKey    String   @map("role_key") @db.VarChar(50)
+  /// @xeprime/types → MembershipBranchScope. Chép sang membership khi lời mời được nhận (ADR 0051).
+  branchScope String   @default("all") @map("branch_scope") @db.VarChar(20)
+  /// Mảng chứ không bảng nối: lời mời là bản ghi tạm — xem header migration 20260929120000.
+  branchIds   String[] @default([]) @map("branch_ids") @db.Char(26)
   tokenHash  String   @map("token_hash") @db.VarChar(255)
   /// @xeprime/types → InviteStatus
   status     String   @default("pending") @db.VarChar(50)
@@ -1184,6 +1242,8 @@ model Vehicle {
   /// Mục tiêu cho composite FK (vehicle_id, tenant_id) của các bảng con nhạy cảm — DB tự chặn
   /// bản ghi trỏ "tenant A + xe của tenant B" (Wave 4.1), không dựa vào kỷ luật service.
   @@unique([id, tenantId])
+  /// Bộ lọc chi nhánh (ADR 0052) quy mọi màn về "xe nào thuộc các chi nhánh này".
+  @@index([tenantId, branchId], map: "vehicles_tenant_branch_idx")
   @@index([tenantId, publicStatus])
   @@index([tenantId, operationStatus])
   @@index([tenantId, sourceType])
@@ -2990,6 +3050,12 @@ model PushDevice {
   /// Tên máy do client tự khai — chỉ để người dùng nhận ra thiết bị, không dùng cho bảo mật.
   deviceName String? @map("device_name") @db.VarChar(120)
 
+  /// App đã đăng ký token này (`customer` | `partner`). NULL = app hợp nhất CŨ, nhận MỌI
+  /// audience — worker lọc `client_app IS NULL OR client_app = <app đích của thông báo>`.
+  /// Hai app cài cùng máy là hai BẢN CÀI FCM khác nhau ⇒ hai token ⇒ hai hàng độc lập; tắt
+  /// hàng của app này không đụng hàng của app kia. CHECK `push_devices_client_app_check`.
+  clientApp String? @map("client_app") @db.VarChar(20)
+
   /// Tắt thay vì xoá: `push_deliveries` còn trỏ tới đây, và lịch sử "vì sao tin này không tới"
   /// là thứ duy nhất trả lời được khiếu nại của người dùng.
   enabled    Boolean   @default(true)
@@ -3293,6 +3359,9 @@ model FinanceCategory {
   /// @xeprime/types → FinanceCategoryType (income | expense)
   type      String   @db.VarChar(20)
   name      String   @db.VarChar(255)
+  /// Danh mục BẮT BUỘC gắn xe (đổ xăng, rửa xe, bảo dưỡng…) — ADR 0051. Không có cờ này thì
+  /// phiếu kiểu đó cứ trôi vào nhóm "chung" và rơi khỏi báo cáo hiệu quả theo xe.
+  requiresVehicle Boolean @default(false) @map("requires_vehicle")
   isSystem  Boolean  @default(false) @map("is_system")
   /// @xeprime/types → SystemFinanceCategoryKey. Khoá ỔN ĐỊNH để phiếu tự động tra danh mục mà
   /// KHÔNG phải khớp tên tiếng Việt (đổi một dấu cách là mọi phiếu tự động mất danh mục). Chỉ
@@ -3319,6 +3388,9 @@ model Receipt {
   categoryId       String?   @map("category_id") @db.Char(26)
   bookingId        String?   @map("booking_id") @db.Char(26)
   vehicleId        String?   @map("vehicle_id") @db.Char(26)
+  /// CHỈ có nghĩa khi `vehicleId` là NULL — có xe thì chi nhánh suy TỪ XE (CHECK ở migration
+  /// 20261001090000 chặn gán cả hai). Chi nhánh của phiếu = COALESCE(vehicle.branchId, branchId).
+  branchId         String?   @map("branch_id") @db.Char(26)
   tenantCustomerId String?   @map("tenant_customer_id") @db.Char(26)
   amount           Decimal   @db.Decimal(14, 2)
   /// @xeprime/types → PaymentMethod
@@ -3352,6 +3424,9 @@ model Receipt {
   category       FinanceCategory?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   booking        Booking?            @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   vehicle        Vehicle?            @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  /// FK TỔ HỢP (branch_id, tenant_id) — DB tự cấm gán phiếu vào chi nhánh của gian hàng KHÁC.
+  /// `NoAction` chứ không `SetNull`: SET NULL trên FK tổ hợp sẽ xoá luôn `tenant_id` (NOT NULL).
+  branch         TenantBranch?       @relation(fields: [branchId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: NoAction, map: "receipts_branch_id_tenant_id_fkey")
   /// Composite FK (tenant_customer_id, tenant_id) — cột có từ Phase 6 nhưng tới S-01 mới có
   /// bảng để trỏ tới; từ đây phiếu thu/chi gắn được vào đúng khách của đúng gian hàng.
   tenantCustomer TenantCustomer?     @relation(fields: [tenantCustomerId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: NoAction, map: "receipts_tenant_customer_fkey")
@@ -3365,6 +3440,7 @@ model Receipt {
   @@index([bookingId])
   @@index([categoryId])
   @@index([tenantId, tenantCustomerId])
+  @@index([tenantId, branchId], map: "receipts_tenant_branch_idx")
   /// Ô tìm kiếm dùng `ILIKE '%q%'`. Cả HAI cột phải có trong cùng một index GIN — Postgres chỉ
   /// BitmapOr khi mọi nhánh của vị từ OR có index; thiếu một cột là cả vị từ rơi về seq scan.
   @@index([receiptNo(ops: raw("gin_trgm_ops")), referenceCode(ops: raw("gin_trgm_ops"))], map: "receipts_search_trgm_idx", type: Gin)
@@ -3642,6 +3718,10 @@ model BankTransaction {
   /// Admin thao tác tay (NULL với dòng máy tự khớp) — mỗi dòng `manual` là một người chịu trách nhiệm.
   matchedBy     String?   @map("matched_by") @db.Char(26)
   matchedAt     DateTime? @map("matched_at") @db.Timestamptz(3)
+  /// Mã giao dịch ngân hàng của lần CHUYỂN TRẢ người gửi — chỉ ở dòng `ignored` (tiền chuyển nhầm
+  /// đã được trả lại). Đi cặp với `refunded_at`; DB canh CHECK cả hai điều đó.
+  refundReference String?   @map("refund_reference") @db.VarChar(100)
+  refundedAt      DateTime? @map("refunded_at") @db.Timestamptz(3)
   /// Payload webhook nguyên trạng — nằm ở DB làm bằng chứng, KHÔNG bao giờ ghi ra log.
   rawJson       Json      @map("raw_json") @db.JsonB
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -3889,10 +3969,9 @@ model FeePolicy {
   activator User?         @relation("fee_policy_activator", fields: [activatedBy], references: [id], onDelete: SetNull)
   bookings  Booking[]
   holds     BookingHold[]
-
-  @@index([status])
   taxWithholdings TaxWithholding[]
 
+  @@index([status])
   @@map("fee_policies")
 }
 
@@ -4066,6 +4145,8 @@ model BookingHold {
   /// @xeprime/types → BookingHoldStatus; DB canh CHECK.
   status            String    @default("pending") @db.VarChar(20)
   /// @xeprime/types → BookingHoldOutcome; NULL tới khi chốt. CHECK theo purpose (ADR 0025 điều 4).
+  /// CHECK thứ hai `booking_holds_legacy_outcome_without_lines_check`: kết cục LEGACY (kept/forfeited/
+  /// released_to_shop) chỉ hợp lệ khi bốn dòng tiền đều 0 — chúng không phân bổ gì.
   outcome           String?   @db.VarChar(30)
   amount            Decimal   @db.Decimal(14, 2)
   paidAmount        Decimal   @default(0) @map("paid_amount") @db.Decimal(14, 2)
@@ -4287,6 +4368,9 @@ model TaxWithholding {
   reversedBy    TaxWithholding? @relation("tax_withholding_reversal")
   creator       User?           @relation("tax_withholding_creator", fields: [createdBy], references: [id], onDelete: SetNull)
 
+  /// Thêm partial index `tax_withholdings_accrued_period_idx (period_key) WHERE status = 'accrued'`
+  /// ở migration `20261001110000_finance_review_hardening` — thẻ "Thuế chưa kê khai" (Prisma không
+  /// diễn đạt được mệnh đề WHERE).
   @@index([periodKey, status], map: "tax_withholdings_period_status_idx")
   @@index([tenantId, periodKey], map: "tax_withholdings_tenant_period_idx")
   @@map("tax_withholdings")
@@ -4475,6 +4559,13 @@ model WithdrawalRequest {
 
   /// Hạn cam kết chuyển, tính từ lúc duyệt theo `WITHDRAWAL_TERMS` — hàng đợi admin sắp theo nó.
   dueBy DateTime? @map("due_by") @db.Timestamptz(3)
+
+  /// Lệnh ĐÃ CHI rồi bị đảo (chuyển hụt / sai tài khoản — ADR 0025 điều 7). Bằng chứng lần chi
+  /// (`paid_at`, `bank_reference`) giữ nguyên. Khi `status = reversed`, CHECK đòi hai cột đó cùng
+  /// `reversed_at` + `reverse_reason` — KHÔNG đòi `reversed_by`: dòng backfill đời cũ không biết ai đảo.
+  reversedAt    DateTime? @map("reversed_at") @db.Timestamptz(3)
+  reversedBy    String?   @map("reversed_by") @db.Char(26)
+  reverseReason String?   @map("reverse_reason") @db.Text
 
   /// Optimistic concurrency — hai admin không cùng đánh dấu một lệnh là đã chuyển.
   rowVersion Int @default(0) @map("row_version")

@@ -38,6 +38,8 @@ let otherTenantId: string;
 let ownedSystemCategoryId: string | null = null;
 /** Hai xe + một đơn của tenant chính, và một xe của tenant KHÁC — bộ tối thiểu để kiểm cặp đơn↔xe. */
 let vehicleId: string;
+/** Chi nhánh của tenant chính — phiếu KHÔNG gắn xe phải quy về một chi nhánh (ADR 0052). */
+let branchId: string;
 let otherVehicleId: string;
 let foreignVehicleId: string;
 let bookingId: string;
@@ -84,6 +86,18 @@ beforeAll(async () => {
   // Xe + đơn thuê: cặp `bookingId`/`vehicleId` của phiếu tay là thứ spec này kiểm, nên nó phải
   // có xe thật của CẢ HAI gian hàng — kiểm "xe của tenant khác bị từ chối" bằng một id bịa ra chỉ
   // chứng minh được rằng id bịa không tồn tại.
+  branchId = newId();
+  await prisma.tenantBranch.create({
+    data: {
+      id: branchId,
+      tenantId,
+      code: 'CN01',
+      name: 'Chi nhánh chính',
+      isDefault: true,
+      status: 'active',
+    },
+  });
+
   const vehicles: [string, string, string][] = [];
   vehicleId = newId();
   otherVehicleId = newId();
@@ -178,8 +192,10 @@ async function createExpense() {
     type: RECEIPT_TYPE.EXPENSE,
     amount: '500000',
     paymentMethod: PAYMENT_METHOD.CASH,
-    description: 'Rửa xe',
-  });
+    description: 'Chi phí văn phòng',
+    // Không gắn xe ⇒ phải nêu chi nhánh phát sinh (ADR 0052).
+    branchId,
+  }, null);
 }
 
 describe('Thu/Chi — receipts + categories (Slice D)', () => {
@@ -218,8 +234,9 @@ describe('Thu/Chi — receipts + categories (Slice D)', () => {
       amount: '1000000.50',
       paymentMethod: PAYMENT_METHOD.BANK_TRANSFER,
       referenceCode: 'FT123',
+      branchId,
       attachments: ['https://img/bill1.jpg', 'https://img/bill2.jpg'],
-    });
+    }, null);
     expect(r.receiptNo).toMatch(/^PT-/);
     expect(r.amount).toBe('1000000.5');
     expect(r.attachments).toEqual(['https://img/bill1.jpg', 'https://img/bill2.jpg']);
@@ -245,7 +262,7 @@ describe('Thu/Chi — receipts + categories (Slice D)', () => {
       paymentMethod: PAYMENT_METHOD.CASH,
       vehicleId,
       description: 'Vá lốp',
-    });
+    }, null);
     expect(r.vehicleId).toBe(vehicleId);
     expect(r.bookingId).toBeNull();
     expect(r.vehicleName).toBe('Vios');
@@ -265,7 +282,7 @@ describe('Thu/Chi — receipts + categories (Slice D)', () => {
       amount: '500000',
       paymentMethod: PAYMENT_METHOD.CASH,
       bookingId,
-    });
+    }, null);
     expect(r.bookingId).toBe(bookingId);
     expect(r.vehicleId).toBe(vehicleId);
   });
@@ -277,7 +294,7 @@ describe('Thu/Chi — receipts + categories (Slice D)', () => {
       paymentMethod: PAYMENT_METHOD.CASH,
       bookingId,
       vehicleId,
-    });
+    }, null);
     expect(r.bookingId).toBe(bookingId);
     expect(r.vehicleId).toBe(vehicleId);
   });
@@ -290,7 +307,7 @@ describe('Thu/Chi — receipts + categories (Slice D)', () => {
         paymentMethod: PAYMENT_METHOD.CASH,
         bookingId,
         vehicleId: otherVehicleId,
-      }),
+      }, null),
     ).rejects.toMatchObject({
       response: { code: API_ERROR_CODE.RECEIPT_BOOKING_VEHICLE_MISMATCH },
     });
@@ -303,7 +320,7 @@ describe('Thu/Chi — receipts + categories (Slice D)', () => {
         amount: '100000',
         paymentMethod: PAYMENT_METHOD.CASH,
         bookingId: foreignBookingId,
-      }),
+      }, null),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.NOT_FOUND } });
   });
 
@@ -314,7 +331,7 @@ describe('Thu/Chi — receipts + categories (Slice D)', () => {
         amount: '100000',
         paymentMethod: PAYMENT_METHOD.CASH,
         vehicleId: foreignVehicleId,
-      }),
+      }, null),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.NOT_FOUND } });
   });
 
@@ -326,7 +343,7 @@ describe('Thu/Chi — receipts + categories (Slice D)', () => {
         paymentMethod: PAYMENT_METHOD.CASH,
         bookingId: foreignBookingId,
         vehicleId,
-      }),
+      }, null),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.NOT_FOUND } });
   });
 

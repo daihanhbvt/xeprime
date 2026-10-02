@@ -3,13 +3,16 @@
 import { Alert, Button, Form } from 'antd';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
+import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
+  PUBLISH_REQUIREMENT,
   SERVICE_TYPE,
   VEHICLE_OPERATION_STATUS,
   VEHICLE_SOURCE_TYPE,
   VEHICLE_TYPE,
   isVehicleFuelTypeAllowed,
+  type PublishRequirement,
 } from '@xeprime/types';
 import { vehicleFormSchema, type VehicleFormValues } from '@xeprime/validators';
 import { trailingRequiredMark } from '@/components/form/required-mark';
@@ -29,6 +32,8 @@ import { useActiveBranches } from '@/features/branches/hooks/use-branches';
 import { branchLabel } from '@/features/branches/branch-label';
 import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
 import styles from './VehicleForm.module.css';
+import { usePublicationLabels } from '../hooks/use-publication-labels';
+import { missingPublishRequirementsForForm } from '../publication';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
@@ -79,6 +84,7 @@ const EMPTY_DEFAULTS: VehicleFormValues = {
   description: '',
   mainImageUrl: null,
   images: [],
+  media: [],
   features: [],
 };
 
@@ -106,12 +112,26 @@ interface VehicleFormProps {
  * gọi API **một lần** ở bước cuối. Backend không có endpoint lưu từng phần, nên không chỗ nào ở
  * đây được nói "đã lưu nháp" giữa chừng.
  */
+/** Điều kiện lên chợ thuộc BƯỚC nào của wizard nâng cao — thiếu thì chặn đúng bước đó. */
+const REQUIREMENT_STEP: Record<PublishRequirement, string> = {
+  [PUBLISH_REQUIREMENT.SELF_DRIVE_PRICE]: 'pricing',
+  [PUBLISH_REQUIREMENT.LONG_TERM_PRICE]: 'pricing',
+  [PUBLISH_REQUIREMENT.WITH_DRIVER_PRICE]: 'pricing',
+  [PUBLISH_REQUIREMENT.MAIN_IMAGE]: 'media',
+  [PUBLISH_REQUIREMENT.PHOTOS]: 'media',
+  [PUBLISH_REQUIREMENT.PLATE_NUMBER]: 'basic',
+  [PUBLISH_REQUIREMENT.IDENTITY]: 'basic',
+  [PUBLISH_REQUIREMENT.ENERGY_SPEC]: 'basic',
+  [PUBLISH_REQUIREMENT.BRANCH_LOCATION]: 'basic',
+};
+
 export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: VehicleFormProps) {
   // Phiên hỗ trợ tạo xe NHÁP (ADR 0050 §13): gửi duyệt là thao tác riêng, có lý do + xác nhận hai lần.
   const draftOnly = useSupportHides(SUPPORT_HIDDEN_AREA.CREATE_AND_SUBMIT);
   // Không chọn hình thức nguồn xe (trục tài chính) — xe nháp giữ mặc định "Sở hữu".
   const sourceHidden = useSupportHides(SUPPORT_HIDDEN_AREA.VEHICLE_SOURCE);
   const t = useTranslations('Vehicles.form');
+  const { formGaps } = usePublicationLabels();
   const tCommon = useTranslations('Common.actions');
   const tBranches = useTranslations('Branches');
   const fmt = useAppFormat();
@@ -141,14 +161,23 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
   const [confirmCancel, setConfirmCancel] = useState(false);
 
   /**
-   * Chi nhánh: chọn sẵn cái MẶC ĐỊNH để thao tác vẫn một bước như trước, nhưng vẫn là một trường
+   * Chi nhánh: điền sẵn một giá trị để thao tác vẫn một bước như trước, nhưng vẫn là một trường
    * thật trên form — người dùng thấy xe sẽ nằm ở đâu và đổi được ngay tại đây.
    *
+   * Thứ tự ưu tiên, và lý do:
+   *  1. `?branchId=` trên URL — người dùng bấm "Thêm xe" khi đang lọc một chi nhánh, nên đó là
+   *     chi nhánh họ có ý định. Trước ADR 0052 bước này không tồn tại: form luôn nhảy về chi
+   *     nhánh MẶC ĐỊNH, nên lưu xong xe biến mất khỏi đúng danh sách vừa mở.
+   *  2. Chi nhánh mặc định của gian hàng — trường hợp vào thẳng form, không qua bộ lọc nào.
+   *
    * Chỉ điền khi ô còn trống: người dùng đã chọn tay rồi thì dữ liệu tới muộn không được ghi đè.
+   * Giá trị lạ trên URL (chi nhánh của gian hàng khác, chi nhánh đã ngừng) không nằm trong danh
+   * sách chọn được nên rơi về nhánh (2) — không có đường nào để một id bịa lọt vào form.
    */
   const branches = useActiveBranches();
   const branchId = useWatch({ control, name: 'branchId' });
   const noProvince = tBranches('labels.noProvince');
+  const intendedBranchId = useSearchParams().get('branchId');
   const branchOptions = useMemo(
     () =>
       (branches.data?.items ?? []).map((b) => ({ value: b.id, label: branchLabel(b, noProvince) })),
@@ -156,10 +185,12 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
   );
   useEffect(() => {
     if (branchId) return;
+    const items = branches.data?.items;
+    if (!items) return;
     const preferred =
-      branches.data?.items.find((b) => b.isDefault) ?? branches.data?.items[0] ?? null;
+      items.find((b) => b.id === intendedBranchId) ?? items.find((b) => b.isDefault) ?? items[0] ?? null;
     if (preferred) setValue('branchId', preferred.id, { shouldValidate: true });
-  }, [branchId, branches.data, setValue]);
+  }, [branchId, branches.data, intendedBranchId, setValue]);
 
   useEffect(() => {
     const beforeUnload = (event: BeforeUnloadEvent) => {
@@ -200,6 +231,18 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
       />
     ) : null;
 
+  /**
+   * Điều kiện lên chợ còn thiếu (30/09/2026) — xe tạo qua wizard phải ĐỦ điều kiện lên chợ, CÙNG
+   * luật với cổng gửi duyệt ở backend. Chặn ở bước chứa nó; phiên hỗ trợ (chỉ lưu nháp, không có
+   * đường gửi duyệt) không bị chặn.
+   */
+  const [publishMissing, setPublishMissing] = useState<PublishRequirement[]>([]);
+  function publishGaps(stepKey?: string): PublishRequirement[] {
+    if (draftOnly) return [];
+    const missing = missingPublishRequirementsForForm(getValues());
+    return stepKey ? missing.filter((key) => REQUIREMENT_STEP[key] === stepKey) : missing;
+  }
+
   /** Lỗi của RIÊNG bước đang mở — dùng cho dải tổng hợp đầu thẻ (Figma `193:2687`). */
   const stepErrors = steps[step]!.fields.filter((field) => errors[field]).length;
 
@@ -214,6 +257,15 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
 
   const values = getValues();
   function submitNow(options: VehicleSubmitOptions) {
+    const missing = publishGaps();
+    setPublishMissing(missing);
+    if (missing.length > 0) {
+      const target = steps.findIndex(
+        (candidate) => candidate.key === REQUIREMENT_STEP[missing[0]!],
+      );
+      if (target >= 0) setStep(target);
+      return;
+    }
     void handleSubmit(
       async (formValues) => {
         try {
@@ -259,7 +311,9 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
       // Chỉ validate trường của BƯỚC ĐANG MỞ — validate cả schema sẽ chặn người dùng bằng lỗi
       // của phần họ còn chưa nhìn thấy.
       const valid = await trigger([...steps[step]!.fields]);
-      if (valid) setStep(step + 1);
+      const missing = valid ? publishGaps(steps[step]!.key) : [];
+      setPublishMissing(missing);
+      if (valid && missing.length === 0) setStep(step + 1);
       return;
     }
 
@@ -378,6 +432,16 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
             <>
               {errorMessage ? (
                 <Alert type="error" showIcon title={errorMessage} className={styles.alert} />
+              ) : null}
+              {publishMissing.length > 0 ? (
+                <Alert
+                  type="error"
+                  showIcon
+                  className={styles.alert}
+                  title={t('wizard.publishRequired', {
+                    items: formGaps(publishMissing, getValues()),
+                  })}
+                />
               ) : null}
               {stepErrors > 0 ? (
                 <Alert

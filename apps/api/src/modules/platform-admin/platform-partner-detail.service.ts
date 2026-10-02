@@ -592,7 +592,7 @@ export class PlatformPartnerDetailService {
   /* ───────────────────────────── helpers ───────────────────────────── */
 
   private async branchesOf(tenantId: string) {
-    const list = await this.branches.list(tenantId, {});
+    const list = await this.branches.list(tenantId, {}, null); // admin nền tảng xem trọn gian hàng
     return list.items;
   }
 

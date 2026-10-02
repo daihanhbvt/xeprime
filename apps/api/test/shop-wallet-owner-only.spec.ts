@@ -55,6 +55,8 @@ function tenantCtx(roleKey: TenantRole, permissions: Permission[] = []): TenantC
     onboardingState: SHOP_ONBOARDING_STATE.PACKAGE_ACTIVE,
     roleKey,
     permissions,
+    // `null` = toàn gian hàng — ví điểm là cấp GIAN HÀNG, không cắt theo chi nhánh (ADR 0052).
+    allowedBranchIds: null,
     features: features(),
     usedFeatures: [],
     planCode: 'per-vehicle',
