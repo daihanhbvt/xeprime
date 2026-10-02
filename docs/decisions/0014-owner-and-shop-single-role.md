@@ -2,6 +2,10 @@
 
 Ngày: 21/08/2026 · Trạng thái: **Partially superseded bởi [ADR 0020](0020-two-revenue-tracks-one-marketplace.md), [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md) và [ADR 0036](0036-single-approval-gate-for-commission-owners.md)**. Nguyên tắc một role/capability từ gói vẫn còn hiệu lực; phạm vi XePrime đứng giữa giao dịch đã đổi.
 
+> ⚠️ **[ADR 0053](0053-separate-account-realms.md) (02/10/2026):** một người không còn là một tài
+> khoản mang cả vai khách lẫn vai chủ xe — khách và chủ xe/gian hàng là hai tài khoản ở hai realm.
+> Điều 1 (chủ xe cá nhân cũng là `shop_owner` của một tenant) giữ nguyên.
+
 > ⚠️ **Hai điều khoản đã được sửa (28/08/2026):**
 >
 > - **Điều 3** — [ADR 0024](0024-billing-mode-from-plan-frozen-on-booking.md) mở rộng: `plans`

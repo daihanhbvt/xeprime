@@ -1,6 +1,6 @@
 # ADR 0033 — Sổ công nợ "Ví điểm", phân bổ cọc nhiều dòng và định tuyến kết cục
 
-Ngày: 10/09/2026 · Trạng thái: **Accepted; điều 2 (cột chủ ví) bị [ADR 0038](0038-owner-track-split-and-unified-wallet.md) ghi đè** · Ghi đè một phần: [0023](0023-wallet-refund-and-compensation.md) (ràng buộc 1, điều 5), [0025](0025-shop-escrow-hold-and-payout.md) (điều 1–4), [0028](0028-marketplace-subscription-fees-and-custodied-funds.md) (điều 6, điều 8 phần tên gọi) · Liên quan: 0016, 0022, 0024, 0027, 0032
+Ngày: 10/09/2026 · Trạng thái: **Accepted; điều 2 (cột chủ ví) bị [ADR 0038](0038-owner-track-split-and-unified-wallet.md) rồi [ADR 0053](0053-separate-account-realms.md) ghi đè — chủ ví nay theo TÀI KHOẢN** · Ghi đè một phần: 0023 (ràng buộc 1, điều 5 — ADR 0023 đã gỡ, điều còn hiệu lực chép ở điều 6), [0025](0025-shop-escrow-hold-and-payout.md) (điều 1–4), [0028](0028-marketplace-subscription-fees-and-custodied-funds.md) (điều 6, điều 8 phần tên gọi) · Liên quan: 0016, 0022, 0024, 0027, 0032
 
 > ⚠️ **Cột "Chủ ví" của điều 2 bị [ADR 0038](0038-owner-track-split-and-unified-wallet.md) ghi đè
 > (15/09/2026).**
@@ -42,7 +42,7 @@ tả xong toàn bộ từ vựng ví nhưng **chưa có model, module hay endpoi
 Chủ sản phẩm chọn gọi sổ công nợ này là **"Ví điểm"**, đơn vị **"điểm"**, tỉ lệ cố định
 **1 điểm = 1 VND**.
 
-Điều này **ghi đè [ADR 0023 ràng buộc 1](0023-wallet-refund-and-compensation.md)** (*"đừng gọi là
+Điều này **ghi đè ADR 0023 ràng buộc 1** (*"đừng gọi là
 ví tiền"*) và **phần tên gọi của [ADR 0028 điều 8](0028-marketplace-subscription-fees-and-custodied-funds.md)**
 (*"Số dư chủ xe" / "Khoản XePrime phải trả"*).
 
@@ -57,7 +57,7 @@ thể bị thu hồi, có thể chỉ tiêu trong hệ thống**. Sổ này khô
 | Chuyển ngang giữa người dùng | Như trên |
 | Thanh toán hàng hoá/dịch vụ bằng điểm | Như trên |
 | Trả lãi | Như trên |
-| **Cho điểm hết hạn** | Nó là **nghĩa vụ phải trả**, không phải khuyến mãi ([ADR 0023 ràng buộc 2](0023-wallet-refund-and-compensation.md) giữ nguyên) |
+| **Cho điểm hết hạn** | Nó là **nghĩa vụ phải trả**, không phải khuyến mãi (ADR 0023 ràng buộc 2 giữ nguyên) |
 | **Thu hồi điểm** | Như trên. Sửa sai chỉ bằng **dòng đảo** có lý do và người thực hiện |
 | Tặng điểm khuyến mãi vào `wallets.balance` | Xem điều 2 |
 
@@ -160,7 +160,7 @@ khoản, nên luôn tồn tại người được hoàn tiền mà không có v�
 
 ### 6. Chống cộng đôi: khoá bốn cột, không phải ba
 
-[ADR 0023 điều 5](0023-wallet-refund-and-compensation.md) đặt
+ADR 0023 điều 5 đặt
 `@@unique([wallet_id, source_type, source_ref_id])`. **Khoá này chặn nhầm hai ca đúng** và được
 thay bằng `@@unique([wallet_id, kind, source_type, source_ref_id])`:
 
@@ -171,10 +171,21 @@ thay bằng `@@unique([wallet_id, kind, source_type, source_ref_id])`:
 Bảo đảm gốc không đổi: **một sự kiện nguồn sinh đúng một dòng ghi có.** Worker chạy lại, webhook
 gửi lại, admin bấm hai lần đều ra cùng một kết quả.
 
-Giữ nguyên toàn bộ phần còn lại của [ADR 0023](0023-wallet-refund-and-compensation.md):
-append-only (điều 4), `balance` lưu sẵn để có phép ghi có điều kiện nguyên tử (điều 6), một bộ bảng
-cho cả hai loại chủ ví (điều 7), snapshot thông tin ngân hàng lúc tạo yêu cầu rút (điều 8),
-`WalletService` là writer duy nhất (ràng buộc 3).
+**Điều khoản kế thừa từ ADR 0023** — ADR đó đã gỡ khỏi repo ngày 02/10/2026 (bản gốc còn trong
+lịch sử git). Những điều dưới đây VẪN HIỆU LỰC và được chép nguyên ý vào đây để ADR này tự đứng được:
+
+1. **Ví là SỔ GHI CÓ, không phải nơi giữ tiền.** Số dư là nghĩa vụ của nền tảng với chủ ví; tiền
+   vật lý nằm trong tài khoản ngân hàng của nền tảng.
+2. **Sổ cái CHỈ GHI THÊM.** Sửa sai bằng dòng đảo — không `update`, không `delete`.
+3. **`balance` lưu sẵn trên `wallets`, không tính bằng `SUM()`**, để phép rút là một lệnh ghi có
+   điều kiện nguyên tử (`updateMany({ where: { id, balance: { gte: amount } } })`). Writer cập nhật
+   `balance` và chèn dòng sổ trong cùng một transaction; màn admin hiện chênh lệch đối chiếu.
+4. **Một bộ bảng cho mọi chủ ví**, phân biệt bằng `owner_type` (`user` | `tenant`) — một sổ, một
+   service. Ai là chủ ví của ai: [ADR 0053](0053-separate-account-realms.md) điều 8.
+5. **Yêu cầu rút chụp lại thông tin ngân hàng lúc tạo**, có `row_version` để hai admin không cùng
+   đánh dấu đã chuyển.
+6. **`WalletService` là writer duy nhất** của `wallets`, `wallet_entries`, `withdrawal_requests`;
+   module khác gọi `creditWithinTx(...)` trong transaction của chính mình.
 
 **`balance` mang nghĩa KHẢ DỤNG**, không phải tổng nghĩa vụ; phần đang bị khoá bởi yêu cầu rút nằm
 ở `pending_withdraw_amount`. Tổng nghĩa vụ = `balance + pending_withdraw_amount`, tính lúc đọc.
@@ -200,7 +211,7 @@ thu cọc, không tắt được ([ADR 0032 điều 2](0032-booking-deposit-insu
 
 1. **Không hàm nào đọc `purpose` để quyết định phần giữ hộ** — có test khoá bất biến này.
 2. Ràng buộc unique của `wallet_entries` nằm **cùng migration với bảng**
-   ([ADR 0023 điều 5](0023-wallet-refund-and-compensation.md)) — thêm sau là chấp nhận một cửa sổ
+   (ADR 0023 điều 5) — thêm sau là chấp nhận một cửa sổ
    thời gian tiền tự nhân đôi.
 3. Backfill khi cắt `hold_refunds` sang ví phải nằm **trong chính migration tạo ràng buộc**, dùng
    `ON CONFLICT DO NOTHING`, và **không đụng** dòng đã `paid`/`rejected`.
@@ -216,7 +227,7 @@ và quy tắc phân bổ, không tuyên bố gate đã qua.
 
 Điểm cần chú ý khi xin ý kiến pháp lý: với ADR 0032, **cả hai tuyến** đều khiến XePrime giữ tiền của
 người khác (`D` là tiền chủ xe, `IV + IP` là tiền của hãng bảo hiểm). Cái lách của
-[ADR 0021](0021-booking-hold-is-the-commission.md) — *"hold đúng bằng hoa hồng nên không bao giờ
+ADR 0021 — *"hold đúng bằng hoa hồng nên không bao giờ
 phải trả ai"* — không còn nữa ở bất kỳ tuyến nào.
 
 ## Điểm còn để mở
