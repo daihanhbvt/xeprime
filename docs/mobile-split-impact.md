@@ -5,6 +5,14 @@ Ngày: 25/09/2026 · Nền: `dbcc18cb` (`origin/develop`) · Branch: `feat/split
 Tài liệu impact + thiết kế cho việc tách app mobile hợp nhất thành HAI app Expo phát hành riêng,
 cài song song trên cùng thiết bị, dùng chung backend/DB.
 
+> ⚠️ **Phạm vi app đã đổi theo ADR 0053 (05/10/2026).** App XePrime chỉ dành cho KHÁCH; app XePrime
+> Partner dành cho MỌI chủ xe — cá nhân tuyến hoa hồng lẫn gian hàng tuyến gói. Realm của tài khoản
+> quyết app (`realmForClientApp` / `clientAppForRealm`), nên backend đã gỡ cổng phạm vi app: không
+> còn phát `PARTNER_ACCESS_REQUIRED`, `CUSTOMER_APP_NOT_AVAILABLE`, `PARTNER_REGISTRATION_NOT_SUPPORTED`
+> (mã vẫn giữ trong `API_ERROR_CODE` cho bản app đang phát hành); app Partner đăng ký được tài khoản
+> đối tác mới; thông báo đẩy chọn app theo realm người nhận. Bảng eligibility và quy tắc
+> `canUsePartnerApp` dưới đây là thiết kế CŨ — phía app căn lại ở nhánh mobile riêng.
+
 ## 1. Bản đồ route hiện tại → app đích
 
 ### XePrime (Customer) — giữ nguyên identity đã phát hành (`vn.xeprime.mobile`, scheme `xeprime`)

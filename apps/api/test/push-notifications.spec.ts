@@ -83,7 +83,12 @@ beforeAll(async () => {
         displayName: 'Nhân viên',
         email: `stf-${staffId}@xeprime.test`,
       },
-      { id: customerId, displayName: 'Khách', email: `cus-${customerId}@xeprime.test` },
+      {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: customerId,
+        displayName: 'Khách',
+        email: `cus-${customerId}@xeprime.test`,
+      },
     ],
   });
   await prisma.tenant.create({
@@ -319,7 +324,12 @@ describe('NotificationService — hàng đợi đẩy', () => {
   maybe('người không có thiết bị nào vẫn nhận thông báo in-app', async () => {
     const loner = newId();
     await prisma.user.create({
-      data: { id: loner, displayName: 'Không máy', email: `lon-${loner}@xeprime.test` },
+      data: {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: loner,
+        displayName: 'Không máy',
+        email: `lon-${loner}@xeprime.test`,
+      },
     });
     try {
       await pushOn.emitToUser(loner, {
@@ -336,7 +346,12 @@ describe('NotificationService — hàng đợi đẩy', () => {
   maybe('một người ba máy → ba delivery cho MỘT thông báo', async () => {
     const multi = newId();
     await prisma.user.create({
-      data: { id: multi, displayName: 'Ba máy', email: `mul-${multi}@xeprime.test` },
+      data: {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: multi,
+        displayName: 'Ba máy',
+        email: `mul-${multi}@xeprime.test`,
+      },
     });
     try {
       for (const label of ['a', 'b', 'c']) {
@@ -446,7 +461,12 @@ describe('NotificationService — hàng đợi đẩy', () => {
   maybe('nghiệp vụ thử lại không rung máy hai lần — unique (notification, device)', async () => {
     const dupUser = newId();
     await prisma.user.create({
-      data: { id: dupUser, displayName: 'Trùng', email: `dup-${dupUser}@xeprime.test` },
+      data: {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: dupUser,
+        displayName: 'Trùng',
+        email: `dup-${dupUser}@xeprime.test`,
+      },
     });
     try {
       const device = await devices.register(dupUser, newId(), {

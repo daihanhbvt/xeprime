@@ -269,6 +269,7 @@ describe('Passwordless phone account (resolveOrCreateUserByPhone)', () => {
     const norm = normalizePhone(phone);
     await prisma.user.create({
       data: {
+        realm: ACCOUNT_REALM.CUSTOMER,
         id: newId(),
         phone: norm,
         displayName: 'Khoá',

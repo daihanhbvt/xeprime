@@ -12,7 +12,9 @@ import { Public, Realms, SupportAction } from '../src/common/decorators';
 import { OriginGuard } from '../src/common/guards/origin.guard';
 import { RealmGuard } from '../src/common/guards/realm.guard';
 import type { RequestContext } from '../src/common/types/request-context';
+import { ConversationsController } from '../src/modules/chat/conversations.controller';
 import { RequestRealmService } from '../src/modules/auth/request-realm.service';
+import type { SessionService } from '../src/modules/auth/session.service';
 
 /**
  * Hai guard ranh giới của ADR 0053 — unit thuần, không DB.
@@ -114,6 +116,18 @@ describe('RealmGuard', () => {
     expect(guard.canActivate(ctxFor(CustomerController, 'publicPreview', {}))).toBe(true);
   });
 
+  it('chat: chỉ tài khoản KHÁCH mở hội thoại và hỏi quyền nhắn — hộp thư vẫn mở cho cả hai', () => {
+    const chat = ConversationsController as unknown as new () => object;
+    for (const handler of ['create', 'eligibility']) {
+      expect(guard.canActivate(ctxFor(chat, handler, { user: user(C) }))).toBe(true);
+      expectForbidden(
+        () => guard.canActivate(ctxFor(chat, handler, { user: user(P) })),
+        API_ERROR_CODE.REALM_NOT_ALLOWED,
+      );
+    }
+    expect(guard.canActivate(ctxFor(chat, 'list', { user: user(P) }))).toBe(true);
+  });
+
   describe('phiên hỗ trợ gian hàng (ADR 0050)', () => {
     const supportHeaders = { [SUPPORT_CONTEXT_HEADER]: '01J0000000000000000000CTX' };
 
@@ -174,8 +188,10 @@ describe('OriginGuard', () => {
   }
   function guardWith(values: Record<string, unknown> = {}): OriginGuard {
     const config = configWith(values);
-    return new OriginGuard(new RequestRealmService(config), config);
+    return new OriginGuard(new RequestRealmService(config), sessions, config);
   }
+  // Chỉ `cookieName` được guard dùng — cùng dạng `<tên gốc>_<realm>` với SessionService thật.
+  const sessions = { cookieName: (realm: AccountRealm) => `xp_session_${realm}` } as SessionService;
   const post = (realm: AccountRealm, headers: Record<string, string>, transport?: 'bearer') =>
     ctxFor(PartnerController, 'list', {
       method: 'POST',
@@ -231,5 +247,27 @@ describe('OriginGuard', () => {
       () => dev.canActivate(post(P, { origin: 'http://evil.test' })),
       API_ERROR_CODE.ORIGIN_NOT_ALLOWED,
     );
+  });
+
+  describe('route công khai (AuthGuard không gắn req.user)', () => {
+    // vd `POST /auth/phone/verify`: công khai, nhưng ghi SĐT đã xác minh vào tài khoản đang đăng nhập.
+    const publicPost = (headers: Record<string, string>, cookies: Record<string, string>) =>
+      ctxFor(CustomerController, 'publicPreview', { method: 'POST', realm: C, headers, cookies });
+
+    it('mang cookie phiên của realm ⇒ vẫn phải đến từ đúng site', () => {
+      const cookies = { xp_session_customer: 'token' };
+      expect(guardWith().canActivate(publicPost({ origin: 'https://xeprime.vn' }, cookies))).toBe(
+        true,
+      );
+      expectForbidden(
+        () => guardWith().canActivate(publicPost({ origin: 'https://evil.xeprime.vn' }, cookies)),
+        API_ERROR_CODE.ORIGIN_NOT_ALLOWED,
+      );
+    });
+
+    it('khách vãng lai (không cookie phiên, hoặc chỉ cookie của realm khác) ⇒ không chặn', () => {
+      expect(guardWith().canActivate(publicPost({}, {}))).toBe(true);
+      expect(guardWith().canActivate(publicPost({}, { xp_session_partner: 'token' }))).toBe(true);
+    });
   });
 });

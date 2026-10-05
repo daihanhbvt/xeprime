@@ -187,6 +187,7 @@ async function createBookingWithCustomer(
   const customerUserId = newId();
   await prisma.user.create({
     data: {
+      realm: ACCOUNT_REALM.CUSTOMER,
       id: customerUserId,
       displayName: 'Khách W11',
       email: `cus-${customerUserId}@xeprime.test`,

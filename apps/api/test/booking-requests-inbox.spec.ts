@@ -138,6 +138,7 @@ beforeAll(async () => {
         email: `own2-${otherOwnerId}@xeprime.test`,
       },
       {
+        realm: ACCOUNT_REALM.CUSTOMER,
         id: customerUserId,
         displayName: 'Khách có tài khoản',
         email: `cus-${customerUserId}@xeprime.test`,

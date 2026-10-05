@@ -42,6 +42,8 @@ export const NATIVE_REVOKE_REASON = {
   LOGOUT: 'logout',
   REFRESH_REUSE: 'refresh_reuse',
   USER_DISABLED: 'user_disabled',
+  /** Chỉ migration ADR 0053 ghi: phiên app thuộc tài khoản đã đổi realm khi tách dữ liệu cũ. */
+  REALM_SPLIT: 'realm_split',
 } as const;
 
 export type NativeRevokeReason = (typeof NATIVE_REVOKE_REASON)[keyof typeof NATIVE_REVOKE_REASON];

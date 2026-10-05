@@ -74,7 +74,12 @@ const createdUserIds: string[] = [];
 async function makeUser(): Promise<string> {
   const id = newId();
   await prisma.user.create({
-    data: { id, displayName: 'Khách native', status: USER_STATUS.ACTIVE },
+    data: {
+      realm: ACCOUNT_REALM.CUSTOMER,
+      id,
+      displayName: 'Khách native',
+      status: USER_STATUS.ACTIVE,
+    },
   });
   createdUserIds.push(id);
   return id;

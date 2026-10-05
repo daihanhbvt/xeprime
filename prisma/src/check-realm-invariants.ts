@@ -52,6 +52,9 @@ const REQUIRED_TRIGGERS = [
 ];
 const REQUIRED_INDEXES = ['tenant_memberships_one_active_per_user'];
 
+/** Migration dựng ba realm — mốc phân biệt dữ liệu cũ (trộn vai được phép) với dữ liệu mới. */
+const REALM_MIGRATION = '20261002120000_account_realms';
+
 /** Bảng có cột `customer_user_id` — mọi hàng phải trỏ vào tài khoản realm khách. */
 const CUSTOMER_ROLE_TABLES = [
   'booking_requests',
@@ -137,19 +140,26 @@ const DATA_CHECKS: Check[] = [
           WHERE b.owner_type = '${WALLET_OWNER_TYPE.USER}' AND u.realm <> '${C}'`,
   },
   {
-    name: 'Phiên native khớp realm của app (Partner ↔ partner, XePrime ↔ customer)',
+    // Phiên đã thu hồi là phiên chết — migration tách realm thu hồi (không xoá) phiên lệch app.
+    name: 'Phiên native còn sống khớp realm của app (Partner ↔ partner, XePrime ↔ customer)',
     sql: `SELECT s.id AS ref FROM native_auth_sessions s JOIN users u ON u.id = s.user_id
-          WHERE u.realm <> CASE WHEN s.client_app = '${MOBILE_CLIENT_APP.PARTNER}'
+          WHERE s.revoked_at IS NULL AND u.realm <> CASE WHEN s.client_app = '${MOBILE_CLIENT_APP.PARTNER}'
                                 THEN '${P}' ELSE '${C}' END`,
   },
   {
-    name: 'Không chuyến nào chủ xe/nhân viên tự đặt bằng cùng SĐT',
+    // Chỉ đơn tạo SAU khi có realm: trước đó cùng một tài khoản được làm cả hai vai và luật chặn tự
+    // đặt chưa tồn tại — migration tách những đơn cũ đó sang tài khoản khách song sinh cùng SĐT.
+    name: 'Không chuyến nào chủ xe/nhân viên tự đặt bằng cùng SĐT (từ khi có realm)',
     sql: `SELECT r.id AS ref FROM booking_requests r
           JOIN users cu ON cu.id = r.customer_user_id
           JOIN tenant_memberships m ON m.tenant_id = r.tenant_id AND m.status = '${ACTIVE}'
           JOIN users mu ON mu.id = m.user_id
           WHERE r.status = '${BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING}'
-            AND cu.phone IS NOT NULL AND cu.phone = mu.phone`,
+            AND cu.phone IS NOT NULL AND cu.phone = mu.phone
+            AND r.created_at > COALESCE((SELECT max(finished_at) FROM _prisma_migrations
+                                         WHERE migration_name = '${REALM_MIGRATION}'
+                                           AND rolled_back_at IS NULL),
+                                        '-infinity')`,
   },
 ];
 

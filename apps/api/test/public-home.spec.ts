@@ -110,7 +110,12 @@ beforeAll(async () => {
     },
   });
   await prisma.user.create({
-    data: { id: customerId, displayName: 'Khách', email: `cus-${customerId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.CUSTOMER,
+      id: customerId,
+      displayName: 'Khách',
+      email: `cus-${customerId}@xeprime.test`,
+    },
   });
 
   for (const [code, name] of [

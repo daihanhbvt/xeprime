@@ -156,8 +156,18 @@ beforeAll(async () => {
         displayName: 'Chủ shop',
         email: `own-${ownerId}@xeprime.test`,
       },
-      { id: reviewerId, displayName: 'Reviewer', email: `rev-${reviewerId}@xeprime.test` },
-      { id: customerId, displayName: 'Khách', email: `cus-${customerId}@xeprime.test` },
+      {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: reviewerId,
+        displayName: 'Reviewer',
+        email: `rev-${reviewerId}@xeprime.test`,
+      },
+      {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: customerId,
+        displayName: 'Khách',
+        email: `cus-${customerId}@xeprime.test`,
+      },
       {
         realm: ACCOUNT_REALM.PARTNER,
         id: otherOwnerId,

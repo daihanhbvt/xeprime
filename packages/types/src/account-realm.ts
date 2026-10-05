@@ -44,6 +44,17 @@ export function realmForClientApp(clientApp: MobileClientApp | null | undefined)
   return clientApp === MOBILE_CLIENT_APP.PARTNER ? ACCOUNT_REALM.PARTNER : ACCOUNT_REALM.CUSTOMER;
 }
 
+/**
+ * App mobile của một realm — chiều ngược của `realmForClientApp`. Một tài khoản thuộc đúng một
+ * realm nên thuộc đúng một app: khách ⇒ XePrime, đối tác (chủ xe cá nhân + gian hàng) ⇒ XePrime
+ * Partner. `platform` không có app mobile nào ⇒ `null`.
+ */
+export function clientAppForRealm(realm: AccountRealm): MobileClientApp | null {
+  if (realm === ACCOUNT_REALM.CUSTOMER) return MOBILE_CLIENT_APP.CUSTOMER;
+  if (realm === ACCOUNT_REALM.PARTNER) return MOBILE_CLIENT_APP.PARTNER;
+  return null;
+}
+
 /** Realm nào được TỰ đăng ký. `platform` chỉ do admin nền tảng tạo (ADR 0053 điều 3). */
 export function realmAllowsSelfRegistration(realm: AccountRealm): boolean {
   return realm !== ACCOUNT_REALM.PLATFORM;

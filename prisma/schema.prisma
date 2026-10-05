@@ -37,7 +37,7 @@ model User {
   /// Email/SĐT/định danh social chỉ unique TRONG một realm: cùng một số điện thoại có thể là
   /// một tài khoản khách và một tài khoản chủ xe khác hẳn nhau, mật khẩu độc lập.
   /// BẤT BIẾN sau khi tạo — trigger `users_realm_immutable` chặn mọi UPDATE đổi realm.
-  realm           String    @default("customer") @db.VarChar(20)
+  realm           String    @db.VarChar(20)
   firebaseUid     String?   @unique @map("firebase_uid") @db.VarChar(128)
   email           String?   @db.VarChar(255)
   emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamptz(3)
@@ -442,7 +442,10 @@ model PhoneVerification {
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  @@index([realm, phone], map: "phone_verifications_realm_phone_idx")
+  /// Theo SĐT trước, KHÔNG theo realm: cooldown và trần gửi/giờ đếm theo số điện thoại trên mọi
+  /// realm (một người một chiếc máy), và route gửi mã là công khai — thiếu index này mỗi lượt gửi
+  /// là một lần quét cả bảng. Lượt xác minh lọc thêm realm/purpose trên cùng index.
+  @@index([phone, createdAt], map: "phone_verifications_phone_created_at_idx")
   @@index([userId])
   @@index([status, expiresAt])
   @@map("phone_verifications")
@@ -476,7 +479,8 @@ model EmailVerification {
   /// tranh chấp chiếm tài khoản.
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  @@index([realm, email], map: "email_verifications_realm_email_idx")
+  /// Theo email trước, KHÔNG theo realm — cùng lý do với `phone_verifications`.
+  @@index([email, createdAt], map: "email_verifications_email_created_at_idx")
   @@index([userId], map: "email_verifications_user_id_idx")
   @@index([status, expiresAt], map: "email_verifications_status_expires_at_idx")
   @@map("email_verifications")
@@ -626,7 +630,7 @@ model NativeAuthSession {
   expiresAt     DateTime  @map("expires_at") @db.Timestamptz(3)
   /// Khác null = phiên đã bị thu hồi. Access token còn hạn cũng bị AuthGuard từ chối ngay.
   revokedAt     DateTime? @map("revoked_at") @db.Timestamptz(3)
-  /// `logout` | `refresh_reuse` | `user_disabled` — để đọc lịch sử biết vì sao phiên chết.
+  /// `logout` | `refresh_reuse` | `user_disabled` | `realm_split` — để đọc lịch sử biết vì sao phiên chết.
   revokedReason String?   @map("revoked_reason") @db.VarChar(50)
 
   user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)

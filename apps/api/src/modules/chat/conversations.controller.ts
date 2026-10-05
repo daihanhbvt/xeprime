@@ -52,7 +52,13 @@ export class ConversationsController {
     return this.chat.listConversations(user.id, query) as Promise<ConversationPageDto>;
   }
 
+  /**
+   * CHỈ tài khoản khách (ADR 0053): người gọi luôn đứng vai KHÁCH của hội thoại. Để mở cho realm
+   * partner là cho nhân viên gian hàng nhắn vào gian hàng khác — hay chính gian hàng mình — bằng
+   * tài khoản công việc, đúng thứ hai tài khoản tách ra để chặn.
+   */
   @Post()
+  @Realms(ACCOUNT_REALM.CUSTOMER)
   @ApiOperation({ summary: 'Mở/lấy hội thoại với shop về một xe (khách)' })
   @ApiCreatedResponse({ type: ConversationSummaryDto })
   create(
@@ -67,6 +73,7 @@ export class ConversationsController {
    * `eligibility` bị nuốt thành một id hội thoại.
    */
   @Get('eligibility')
+  @Realms(ACCOUNT_REALM.CUSTOMER)
   @ApiOperation({ summary: 'Khách có nhắn được cho gian hàng này không (để ẩn/hiện nút)' })
   @ApiOkResponse({ type: ChatEligibilityDto })
   async eligibility(

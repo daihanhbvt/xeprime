@@ -254,7 +254,12 @@ beforeAll(async () => {
         displayName: 'Chủ shop',
         email: `cs-own-${ownerId}@xeprime.test`,
       },
-      { id: customerId, displayName: 'Khách', email: `cs-cus-${customerId}@xeprime.test` },
+      {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: customerId,
+        displayName: 'Khách',
+        email: `cs-cus-${customerId}@xeprime.test`,
+      },
     ],
   });
   await seedProvince(asService, PROV, PROV_NAME);

@@ -1,7 +1,8 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { API_ERROR_CODE } from '@xeprime/types';
+import { API_ERROR_CODE, type AccountRealm } from '@xeprime/types';
 import { RequestRealmService } from '../../modules/auth/request-realm.service';
+import { SessionService } from '../../modules/auth/session.service';
 import type { RequestContext } from '../types/request-context';
 
 /** Phương thức không đổi trạng thái — không cần chặn CSRF. */
@@ -20,10 +21,15 @@ const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
  * POST mà trang ở `xeprime.vn` bắn sang `partner.xeprime.vn`. CORS chỉ chặn ĐỌC kết quả, không chặn
  * tác dụng phụ — chỉ phép so origin này chặn được nó.
  *
+ * Route `@Public()` cũng tính khi request MANG cookie phiên của realm đang gọi: vài route công khai
+ * vẫn gắn hành động vào tài khoản đang đăng nhập (`resolveOptionalUser` — vd `POST
+ * /auth/phone/verify` ghi SĐT đã xác minh vào chính tài khoản đó), nên cookie ở đó cũng là thứ
+ * có thể bị mượn. AuthGuard không gắn `req.user` cho route công khai, vì vậy guard này tự nhìn cookie.
+ *
  * KHÔNG áp cho:
  *  - Bearer (app native) — không có cookie để mượn, nên không có CSRF;
- *  - request không có phiên (webhook SePay, đăng nhập/đăng ký công khai) — không có quyền nào để
- *    bị mượn.
+ *  - request không mang cookie phiên (webhook SePay, khách vãng lai đăng nhập/đăng ký) — không có
+ *    quyền nào để bị mượn.
  *
  * Thiếu cả `Origin` lẫn `Referer` trên một request ghi bằng cookie ⇒ từ chối: trình duyệt hiện đại
  * luôn gửi `Origin` cho POST/PUT/PATCH/DELETE, nên "không có" là dấu hiệu của một client không
@@ -39,6 +45,7 @@ export class OriginGuard implements CanActivate {
 
   constructor(
     private readonly realms: RequestRealmService,
+    private readonly sessions: SessionService,
     config: ConfigService,
   ) {
     const deployed = config.get<string>('NODE_ENV') === 'production';
@@ -51,10 +58,11 @@ export class OriginGuard implements CanActivate {
   canActivate(ctx: ExecutionContext): boolean {
     if (ctx.getType() !== 'http') return true;
     const req = ctx.switchToHttp().getRequest<RequestContext>();
-    if (!req.user || req.user.transport !== 'cookie') return true;
     if (SAFE_METHODS.has(req.method.toUpperCase())) return true;
+    const realm = this.cookieRealm(req);
+    if (!realm) return true;
 
-    const expected = this.realms.siteOrigin(req.user.realm);
+    const expected = this.realms.siteOrigin(realm);
     const actual = originOf(req.headers.origin) ?? originOf(req.headers.referer);
     if (actual !== null && (actual === expected || this.devOrigins.has(actual))) return true;
 
@@ -62,6 +70,15 @@ export class OriginGuard implements CanActivate {
       code: API_ERROR_CODE.ORIGIN_NOT_ALLOWED,
       message: 'Yêu cầu không đến từ đúng trang của XePrime',
     });
+  }
+
+  /** Realm của cookie phiên mà request đang mang, hoặc `null` khi request không đi bằng cookie. */
+  private cookieRealm(req: RequestContext): AccountRealm | null {
+    if (req.user) return req.user.transport === 'cookie' ? req.user.realm : null;
+    // Route công khai: AuthGuard đã gắn `req.realm` (realm của site do proxy quyết) nhưng không đọc phiên.
+    if (!req.realm) return null;
+    const cookies = req.cookies as Record<string, string> | undefined;
+    return cookies?.[this.sessions.cookieName(req.realm)] ? req.realm : null;
   }
 }
 

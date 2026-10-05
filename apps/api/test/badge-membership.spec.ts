@@ -99,7 +99,12 @@ beforeAll(async () => {
         email: `own-${ownerId}@xeprime.test`,
       },
       { id: staffId, realm: ACCOUNT_REALM.PARTNER, displayName: 'Nhân viên', email: staffEmail },
-      { id: customerId, displayName: 'Khách', email: `cus-${customerId}@xeprime.test` },
+      {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: customerId,
+        displayName: 'Khách',
+        email: `cus-${customerId}@xeprime.test`,
+      },
     ],
   });
 

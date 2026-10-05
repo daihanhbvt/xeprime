@@ -225,6 +225,7 @@ beforeAll(async () => {
   customerUserId = newId();
   await prisma.user.create({
     data: {
+      realm: ACCOUNT_REALM.CUSTOMER,
       id: customerUserId,
       displayName: 'Khách đánh giá',
       email: `stmt-c-${RUN}@xeprime.test`,

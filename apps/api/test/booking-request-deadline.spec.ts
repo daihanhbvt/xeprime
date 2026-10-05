@@ -166,6 +166,7 @@ async function submitPendingApproval(vehicleId: string): Promise<string> {
   const customerId = newId();
   await prisma.user.create({
     data: {
+      realm: ACCOUNT_REALM.CUSTOMER,
       id: customerId,
       displayName: 'Khách hạn',
       email: `dl-${customerId}@xeprime.test`,
@@ -220,7 +221,12 @@ beforeAll(async () => {
         displayName: 'Chủ shop',
         email: `owner-${ownerId}@xeprime.test`,
       },
-      { id: guestUserId, displayName: 'Khách vãng lai', email: `g-${guestUserId}@xeprime.test` },
+      {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: guestUserId,
+        displayName: 'Khách vãng lai',
+        email: `g-${guestUserId}@xeprime.test`,
+      },
     ],
   });
   await prisma.tenant.create({

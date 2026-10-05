@@ -133,7 +133,12 @@ beforeAll(async () => {
         displayName: 'Chủ shop',
         email: `own-${ownerId}@xeprime.test`,
       },
-      { id: reviewerId, displayName: 'Reviewer', email: `rev-${reviewerId}@xeprime.test` },
+      {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: reviewerId,
+        displayName: 'Reviewer',
+        email: `rev-${reviewerId}@xeprime.test`,
+      },
     ],
   });
   await prisma.tenant.createMany({

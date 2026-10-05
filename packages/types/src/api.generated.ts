@@ -1947,7 +1947,7 @@ export interface paths {
          * Mở/lấy hội thoại với shop về một xe (khách)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
          */
         post: operations["ConversationsController_create"];
         delete?: never;
@@ -2039,7 +2039,7 @@ export interface paths {
          * Khách có nhắn được cho gian hàng này không (để ẩn/hiện nút)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
          */
         get: operations["ConversationsController_eligibility"];
         put?: never;
@@ -17472,6 +17472,11 @@ export interface components {
             purpose: "booking" | "login" | "shop_register" | "vehicle_public" | "password_reset" | "profile";
             /** @example 123456 */
             code: string;
+            /**
+             * @description Chỉ app native gửi, và phải trùng giá trị đã dùng ở send-otp. Web bỏ trống.
+             * @enum {string}
+             */
+            clientApp?: "customer" | "partner";
         };
         VerifyOtpResultDto: {
             verified: boolean;

@@ -213,8 +213,18 @@ beforeAll(async () => {
         displayName: 'Chủ shop',
         email: `owner-${ownerId}@xeprime.test`,
       },
-      { id: customerId, displayName: 'Khách A', email: `cus-${customerId}@xeprime.test` },
-      { id: strangerId, displayName: 'Khách B', email: `other-${strangerId}@xeprime.test` },
+      {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: customerId,
+        displayName: 'Khách A',
+        email: `cus-${customerId}@xeprime.test`,
+      },
+      {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: strangerId,
+        displayName: 'Khách B',
+        email: `other-${strangerId}@xeprime.test`,
+      },
     ],
   });
   await prisma.tenant.create({

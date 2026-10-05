@@ -477,3 +477,14 @@ describe('SessionService: cookie gắn và xoá phải cùng thuộc tính', () 
     expect(cleared.options).not.toHaveProperty('maxAge');
   });
 });
+
+describe('env: APP_ENV=development — nhãn của máy dev (seed demo đòi giá trị này)', () => {
+  it('máy dev (NODE_ENV khác production) boot được với APP_ENV=development', () => {
+    const env = validateEnv(baseEnv({ APP_ENV: 'development' }));
+    expect(env.APP_ENV).toBe('development');
+  });
+
+  it('môi trường đã triển khai (NODE_ENV=production) khai development bị chặn', () => {
+    expect(validationError(productionEnv({ APP_ENV: 'development' }))).toContain('APP_ENV');
+  });
+});

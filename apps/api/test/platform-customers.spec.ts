@@ -82,7 +82,9 @@ beforeAll(async () => {
   fullEmail = `khach.${tag.toLowerCase()}@xeprime.test`;
 
   const mkUser = (id: string, name: string, extra: Record<string, unknown> = {}) =>
-    prisma.user.create({ data: { id, displayName: name, ...extra } });
+    prisma.user.create({
+      data: { realm: ACCOUNT_REALM.CUSTOMER, id, displayName: name, ...extra },
+    });
 
   await mkUser(customerId, `KhachA-${tag}`, {
     phone: storedPhone,

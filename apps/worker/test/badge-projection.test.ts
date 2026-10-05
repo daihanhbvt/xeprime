@@ -1,12 +1,8 @@
 import { after, before, beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
+import { backfillBadgeSignals, createPrismaClient, markBadgesDirty, newId } from '@xeprime/prisma';
 import {
-  backfillBadgeSignals,
-  createPrismaClient,
-  markBadgesDirty,
-  newId,
-} from '@xeprime/prisma';
-import {
+  ACCOUNT_REALM,
   MEMBERSHIP_STATUS,
   NOTIFICATION_CHANNEL,
   NOTIFICATION_TYPE,
@@ -122,8 +118,18 @@ before(async () => {
 
   await prisma.user.createMany({
     data: [
-      { id: customerId, displayName: 'Khách', email: `cus-${customerId}@xeprime.test` },
-      { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
+      {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: customerId,
+        displayName: 'Khách',
+        email: `cus-${customerId}@xeprime.test`,
+      },
+      {
+        id: ownerId,
+        realm: ACCOUNT_REALM.PARTNER,
+        displayName: 'Chủ shop',
+        email: `own-${ownerId}@xeprime.test`,
+      },
     ],
   });
   await prisma.tenant.create({

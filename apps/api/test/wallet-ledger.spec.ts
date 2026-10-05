@@ -1,5 +1,10 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
-import { WALLET_ENTRY_KIND, WALLET_ENTRY_SOURCE, WALLET_OWNER_TYPE } from '@xeprime/types';
+import {
+  ACCOUNT_REALM,
+  WALLET_ENTRY_KIND,
+  WALLET_ENTRY_SOURCE,
+  WALLET_OWNER_TYPE,
+} from '@xeprime/types';
 import { WalletService } from '../src/modules/wallet/wallet.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 
@@ -31,7 +36,9 @@ beforeAll(async () => {
   }
   userId = newId();
   holdId = newId();
-  await prisma.user.create({ data: { id: userId, displayName: 'Khách ví', status: 'active' } });
+  await prisma.user.create({
+    data: { realm: ACCOUNT_REALM.CUSTOMER, id: userId, displayName: 'Khách ví', status: 'active' },
+  });
 });
 
 afterAll(async () => {
@@ -94,34 +101,40 @@ describe('Ghi có — idempotent theo nguồn', () => {
    * Khoá ba cột của ADR 0023 điều 5 sẽ chặn nhầm dòng thứ hai; ADR 0033 điều 6 thêm `kind` đúng
    * vì ca này.
    */
-  maybe('cùng hold nhưng KHÁC loại (chuyển thừa) vẫn ghi được — khoá có `kind` là vì ca này', async () => {
-    const overpay = await prisma.$transaction((tx) =>
-      wallet.creditWithinTx(tx, {
-        owner: owner(),
-        kind: WALLET_ENTRY_KIND.HOLD_OVERPAY,
-        sourceType: WALLET_ENTRY_SOURCE.BOOKING_HOLD,
-        sourceRefId: holdId,
-        amount: dec(30_000),
-        holdId,
-      }),
-    );
-    expect(overpay).not.toBeNull();
-    expect((await wallet.summaryFor(owner())).available).toBe('240000');
-  });
-
-  maybe('ghi có số 0 hoặc âm bị từ chối — một bút toán không nói gì chỉ làm sổ dài thêm', async () => {
-    await expect(
-      prisma.$transaction((tx) =>
+  maybe(
+    'cùng hold nhưng KHÁC loại (chuyển thừa) vẫn ghi được — khoá có `kind` là vì ca này',
+    async () => {
+      const overpay = await prisma.$transaction((tx) =>
         wallet.creditWithinTx(tx, {
           owner: owner(),
-          kind: WALLET_ENTRY_KIND.ADJUSTMENT,
-          sourceType: WALLET_ENTRY_SOURCE.MANUAL,
-          sourceRefId: newId(),
-          amount: dec(0),
+          kind: WALLET_ENTRY_KIND.HOLD_OVERPAY,
+          sourceType: WALLET_ENTRY_SOURCE.BOOKING_HOLD,
+          sourceRefId: holdId,
+          amount: dec(30_000),
+          holdId,
         }),
-      ),
-    ).rejects.toThrow();
-  });
+      );
+      expect(overpay).not.toBeNull();
+      expect((await wallet.summaryFor(owner())).available).toBe('240000');
+    },
+  );
+
+  maybe(
+    'ghi có số 0 hoặc âm bị từ chối — một bút toán không nói gì chỉ làm sổ dài thêm',
+    async () => {
+      await expect(
+        prisma.$transaction((tx) =>
+          wallet.creditWithinTx(tx, {
+            owner: owner(),
+            kind: WALLET_ENTRY_KIND.ADJUSTMENT,
+            sourceType: WALLET_ENTRY_SOURCE.MANUAL,
+            sourceRefId: newId(),
+            amount: dec(0),
+          }),
+        ),
+      ).rejects.toThrow();
+    },
+  );
 });
 
 describe('Rút tiền — khoá tiền bằng MỘT câu lệnh có điều kiện', () => {
@@ -162,19 +175,22 @@ describe('Rút tiền — khoá tiền bằng MỘT câu lệnh có điều ki�
     expect((await wallet.summaryFor(owner())).available).toBe('0');
   });
 
-  maybe('từ chối lệnh rút: tiền về lại khả dụng, KHÔNG sinh bút toán (tiền chưa rời ví)', async () => {
-    const walletId = (await wallet.findWalletId(owner()))!;
-    const before = await prisma.walletEntry.count({ where: { walletId } });
+  maybe(
+    'từ chối lệnh rút: tiền về lại khả dụng, KHÔNG sinh bút toán (tiền chưa rời ví)',
+    async () => {
+      const walletId = (await wallet.findWalletId(owner()))!;
+      const before = await prisma.walletEntry.count({ where: { walletId } });
 
-    await prisma.$transaction((tx) =>
-      wallet.releaseWithdrawalHoldWithinTx(tx, walletId, dec(140_000)),
-    );
+      await prisma.$transaction((tx) =>
+        wallet.releaseWithdrawalHoldWithinTx(tx, walletId, dec(140_000)),
+      );
 
-    const summary = await wallet.summaryFor(owner());
-    expect(summary.available).toBe('140000');
-    expect(summary.pending).toBe('100000');
-    expect(await prisma.walletEntry.count({ where: { walletId } })).toBe(before);
-  });
+      const summary = await wallet.summaryFor(owner());
+      expect(summary.available).toBe('140000');
+      expect(summary.pending).toBe('100000');
+      expect(await prisma.walletEntry.count({ where: { walletId } })).toBe(before);
+    },
+  );
 
   maybe('đã chuyển tiền: sinh bút toán ÂM và xoá khoản treo', async () => {
     const walletId = (await wallet.findWalletId(owner()))!;
@@ -225,17 +241,20 @@ describe('Sửa sai — bằng dòng ĐẢO, không bao giờ sửa dòng cũ', 
     expect(reversal.amount.toFixed(0)).toBe('100000');
   });
 
-  maybe('đảo LẦN HAI cùng một dòng bị chặn — không có đường cộng tiền bằng cách đảo mãi', async () => {
-    const walletId = (await wallet.findWalletId(owner()))!;
-    const paid = await prisma.walletEntry.findFirstOrThrow({
-      where: { walletId, kind: WALLET_ENTRY_KIND.WITHDRAWAL },
-    });
-    await expect(
-      prisma.$transaction((tx) =>
-        wallet.reverseWithinTx(tx, paid.id, { reason: 'lặp', actorUserId: userId }),
-      ),
-    ).rejects.toMatchObject({ response: { code: 'CONFLICT' } });
-  });
+  maybe(
+    'đảo LẦN HAI cùng một dòng bị chặn — không có đường cộng tiền bằng cách đảo mãi',
+    async () => {
+      const walletId = (await wallet.findWalletId(owner()))!;
+      const paid = await prisma.walletEntry.findFirstOrThrow({
+        where: { walletId, kind: WALLET_ENTRY_KIND.WITHDRAWAL },
+      });
+      await expect(
+        prisma.$transaction((tx) =>
+          wallet.reverseWithinTx(tx, paid.id, { reason: 'lặp', actorUserId: userId }),
+        ),
+      ).rejects.toMatchObject({ response: { code: 'CONFLICT' } });
+    },
+  );
 });
 
 describe('Đối chiếu — sổ phải giải thích được số dư', () => {

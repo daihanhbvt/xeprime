@@ -71,7 +71,12 @@ beforeAll(async () => {
 
   await prisma.user.createMany({
     data: [
-      { id: customerId, displayName: 'Khách', email: `cus-${customerId}@xeprime.test` },
+      {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: customerId,
+        displayName: 'Khách',
+        email: `cus-${customerId}@xeprime.test`,
+      },
       {
         realm: ACCOUNT_REALM.PARTNER,
         id: ownerId,

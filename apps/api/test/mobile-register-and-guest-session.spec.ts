@@ -1,7 +1,12 @@
 import 'reflect-metadata';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
-import { ACCOUNT_REALM, API_ERROR_CODE, MOBILE_CLIENT_APP } from '@xeprime/types';
+import {
+  ACCOUNT_REALM,
+  API_ERROR_CODE,
+  MOBILE_CLIENT_APP,
+  SHOP_ONBOARDING_STATE,
+} from '@xeprime/types';
 import request from 'supertest';
 import { createValidationPipe } from '../src/bootstrap';
 import { AllExceptionsFilter } from '../src/common/filters/all-exceptions.filter';
@@ -139,6 +144,70 @@ describe('Đăng ký + đặt xe cho app native — luôn trả token, không ba
         { deviceName: 'Pixel 8', devicePlatform: 'android' },
         MOBILE_CLIENT_APP.CUSTOMER,
       );
+    });
+  });
+
+  /**
+   * App XePrime Partner là app của MỌI chủ xe (ADR 0053): realm của tài khoản theo app, nên không
+   * còn cổng "tài khoản này được vào app nào" — chủ xe tuyến hoa hồng vào được, và tài khoản đối
+   * tác mới đăng ký thẳng từ app rồi chọn tuyến ở bước onboarding.
+   */
+  describe('app XePrime Partner — mọi chủ xe', () => {
+    it('đăng ký từ app Partner tạo tài khoản ĐỐI TÁC và phiên của app Partner', async () => {
+      const res = await request(app.getHttpServer()).post('/auth/mobile/register').send({
+        displayName: 'Chủ xe mới',
+        phone: '0901234567',
+        password: 'matkhau123',
+        clientApp: MOBILE_CLIENT_APP.PARTNER,
+      });
+
+      expect(res.status).toBe(201);
+      expect(auth.register).toHaveBeenCalledWith(expect.anything(), ACCOUNT_REALM.PARTNER);
+      expect(nativeSessions.issueSession).toHaveBeenCalledWith(
+        USER.id,
+        {},
+        MOBILE_CLIENT_APP.PARTNER,
+      );
+    });
+
+    it('chủ xe tuyến HOA HỒNG đăng nhập được app Partner', async () => {
+      auth.loginWithPassword.mockResolvedValue({ userId: USER.id });
+      auth.me.mockResolvedValue({
+        ...USER,
+        realm: ACCOUNT_REALM.PARTNER,
+        tenant: { id: 'T1', onboardingState: SHOP_ONBOARDING_STATE.COMMISSION },
+      });
+
+      const res = await request(app.getHttpServer()).post('/auth/mobile/login').send({
+        identifier: '0901234567',
+        password: 'matkhau123',
+        clientApp: MOBILE_CLIENT_APP.PARTNER,
+      });
+
+      expect(res.status).toBe(200);
+      expect(auth.loginWithPassword).toHaveBeenCalledWith(
+        '0901234567',
+        'matkhau123',
+        ACCOUNT_REALM.PARTNER,
+      );
+      expect(nativeSessions.issueSession).toHaveBeenCalledWith(
+        USER.id,
+        {},
+        MOBILE_CLIENT_APP.PARTNER,
+      );
+    });
+
+    it('tài khoản đối tác CHƯA có gian hàng cũng đăng nhập được — để đi tiếp bước onboarding', async () => {
+      auth.loginWithPassword.mockResolvedValue({ userId: USER.id });
+      auth.me.mockResolvedValue({ ...USER, realm: ACCOUNT_REALM.PARTNER, tenant: null });
+
+      const res = await request(app.getHttpServer()).post('/auth/mobile/login').send({
+        identifier: '0901234567',
+        password: 'matkhau123',
+        clientApp: MOBILE_CLIENT_APP.PARTNER,
+      });
+
+      expect(res.status).toBe(200);
     });
   });
 

@@ -12643,7 +12643,7 @@
             "cookie": []
           }
         ],
-        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối."
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối."
       }
     },
     "/conversations/{id}": {
@@ -13408,7 +13408,7 @@
             "cookie": []
           }
         ],
-        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối."
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối."
       }
     },
     "/conversations/unread-count": {
@@ -88495,6 +88495,14 @@
             "example": "123456",
             "minLength": 6,
             "maxLength": 6
+          },
+          "clientApp": {
+            "type": "string",
+            "enum": [
+              "customer",
+              "partner"
+            ],
+            "description": "Chỉ app native gửi, và phải trùng giá trị đã dùng ở send-otp. Web bỏ trống."
           }
         },
         "required": [

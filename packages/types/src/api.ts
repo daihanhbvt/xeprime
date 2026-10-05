@@ -570,6 +570,9 @@ export const API_ERROR_CODE = {
    */
   PACKAGE_ONBOARDING_INCOMPLETE: 'PACKAGE_ONBOARDING_INCOMPLETE',
   /**
+   * ⚠️ Server KHÔNG còn phát từ ADR 0053 (05/10/2026): app Partner nhận mọi tài khoản đối tác. Giữ
+   * mã để bản app đang phát hành còn biên dịch và hiểu được phản hồi cũ.
+   *
    * Tài khoản xác thực THÀNH CÔNG nhưng không thuộc phạm vi app XePrime Partner (403, không
    * phải 401): không có gian hàng tuyến gói hiệu lực và cũng không đang nợ bước thanh toán
    * gói (`canUsePartnerApp` ở `mobile-client-app.ts`).
@@ -580,6 +583,9 @@ export const API_ERROR_CODE = {
    */
   PARTNER_ACCESS_REQUIRED: 'PARTNER_ACCESS_REQUIRED',
   /**
+   * ⚠️ Server KHÔNG còn phát từ ADR 0053 (05/10/2026): tài khoản đối tác không đăng nhập được app
+   * khách vì nó không tồn tại trong realm khách. Giữ mã cho bản app đang phát hành.
+   *
    * Chiều NGƯỢC LẠI của `PARTNER_ACCESS_REQUIRED` (28/09/2026): tài khoản của một gian hàng
    * tuyến gói đăng nhập vào app XePrime (khách).
    *
@@ -589,6 +595,9 @@ export const API_ERROR_CODE = {
    */
   CUSTOMER_APP_NOT_AVAILABLE: 'CUSTOMER_APP_NOT_AVAILABLE',
   /**
+   * ⚠️ Server KHÔNG còn phát từ ADR 0053 (05/10/2026): app Partner tạo tài khoản đối tác như site
+   * partner. Giữ mã cho bản app đang phát hành.
+   *
    * App XePrime Partner gọi một đường TẠO TÀI KHOẢN (`/auth/mobile/register`, hoặc OTP với
    * một số chưa có tài khoản).
    *

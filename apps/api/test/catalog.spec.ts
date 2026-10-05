@@ -47,7 +47,12 @@ beforeAll(async () => {
   tenantId = newId();
   await prisma.user.createMany({
     data: [
-      { id: adminId, displayName: 'Platform admin', email: `adm-${adminId}@xeprime.test` },
+      {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: adminId,
+        displayName: 'Platform admin',
+        email: `adm-${adminId}@xeprime.test`,
+      },
       {
         realm: ACCOUNT_REALM.PARTNER,
         id: ownerId,

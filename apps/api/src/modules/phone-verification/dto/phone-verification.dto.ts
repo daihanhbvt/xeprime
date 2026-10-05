@@ -49,6 +49,15 @@ export class VerifyOtpDto {
   @IsString()
   @Length(6, 6)
   code!: string;
+
+  /** Cùng nghĩa với `SendOtpDto.clientApp` — app gửi mã bằng giá trị nào thì xác minh bằng giá trị đó. */
+  @ApiPropertyOptional({
+    enum: MOBILE_CLIENT_APP_VALUES,
+    description: 'Chỉ app native gửi, và phải trùng giá trị đã dùng ở send-otp. Web bỏ trống.',
+  })
+  @IsOptional()
+  @IsIn(MOBILE_CLIENT_APP_VALUES)
+  clientApp?: MobileClientApp;
 }
 
 /** Đăng nhập passwordless bằng SĐT + OTP (purpose=login). Server tự chuẩn hoá SĐT. */

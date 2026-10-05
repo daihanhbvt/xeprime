@@ -2,6 +2,7 @@ import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
   PUSH_DELIVERY_STATUS,
@@ -87,7 +88,12 @@ before(async () => {
   userId = newId();
   deviceId = newId();
   await prisma.user.create({
-    data: { id: userId, displayName: 'Người nhận', email: `push-${userId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.CUSTOMER,
+      id: userId,
+      displayName: 'Người nhận',
+      email: `push-${userId}@xeprime.test`,
+    },
   });
   await prisma.pushDevice.create({
     data: {
@@ -110,25 +116,28 @@ const maybe = (name: string, fn: () => Promise<void>) =>
     await fn();
   });
 
-maybe('gửi thành công → sent + providerMessageId, và payload mang đúng url/kênh/ưu tiên', async () => {
-  const { deliveryId, notificationId } = await seedDelivery({});
-  const { sender, sent } = fakeSender();
+maybe(
+  'gửi thành công → sent + providerMessageId, và payload mang đúng url/kênh/ưu tiên',
+  async () => {
+    const { deliveryId, notificationId } = await seedDelivery({});
+    const { sender, sent } = fakeSender();
 
-  const result = await dispatchPushDeliveries(prisma, sender);
+    const result = await dispatchPushDeliveries(prisma, sender);
 
-  assert.equal(result.sent, 1);
-  assert.equal(sent.length, 1);
-  assert.equal(sent[0]?.data.url, '/manage/bookings/BK1');
-  assert.equal(sent[0]?.data.notificationId, notificationId);
-  // Token đi trong payload nhưng KHÔNG được nằm trong data — data đi qua log của OS.
-  assert.equal(Object.values(sent[0]?.data ?? {}).includes(sent[0]!.token), false);
+    assert.equal(result.sent, 1);
+    assert.equal(sent.length, 1);
+    assert.equal(sent[0]?.data.url, '/manage/bookings/BK1');
+    assert.equal(sent[0]?.data.notificationId, notificationId);
+    // Token đi trong payload nhưng KHÔNG được nằm trong data — data đi qua log của OS.
+    assert.equal(Object.values(sent[0]?.data ?? {}).includes(sent[0]!.token), false);
 
-  const row = await prisma.pushDelivery.findUniqueOrThrow({ where: { id: deliveryId } });
-  assert.equal(row.status, PUSH_DELIVERY_STATUS.SENT);
-  assert.ok(row.sentAt);
-  assert.ok(row.providerMessageId);
-  assert.equal(row.attempts, 1);
-});
+    const row = await prisma.pushDelivery.findUniqueOrThrow({ where: { id: deliveryId } });
+    assert.equal(row.status, PUSH_DELIVERY_STATUS.SENT);
+    assert.ok(row.sentAt);
+    assert.ok(row.providerMessageId);
+    assert.equal(row.attempts, 1);
+  },
+);
 
 maybe('tin nhắn chat: ưu tiên cao, kênh riêng, gộp theo hội thoại', async () => {
   const { targetId } = await seedDelivery({

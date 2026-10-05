@@ -108,7 +108,12 @@ beforeAll(async () => {
         displayName: 'Nhân viên',
         email: `staff-${staffId}@xeprime.test`,
       },
-      { id: customerId, displayName: 'Nguyễn Văn An', email: `cus-${customerId}@xeprime.test` },
+      {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: customerId,
+        displayName: 'Nguyễn Văn An',
+        email: `cus-${customerId}@xeprime.test`,
+      },
     ],
   });
   tenantSlug = `test-${tenantId.toLowerCase().slice(-8)}`;

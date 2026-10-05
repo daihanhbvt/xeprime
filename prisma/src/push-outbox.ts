@@ -1,4 +1,4 @@
-import { PUSH_DELIVERY_STATUS, pushClientAppForUrl } from '@xeprime/types';
+import { PUSH_DELIVERY_STATUS, clientAppForRealm, isAccountRealm } from '@xeprime/types';
 import type { Prisma, PrismaClient } from '../generated/client';
 import { newId } from './id';
 
@@ -21,12 +21,6 @@ import { newId } from './id';
 export interface PushRecipientNotification {
   notificationId: string;
   userId: string;
-  /**
-   * Deep link đã đóng băng vào `data_json` của dòng thông báo (nếu có). Nó quyết định APP nhận
-   * đẩy: `/manage/**` → XePrime Partner, còn lại → XePrime. Thiết bị của app hợp nhất cũ
-   * (`client_app IS NULL`) nhận mọi audience nên không phụ thuộc trường này.
-   */
-  url?: string | null;
 }
 
 export interface EnqueuePushOptions {
@@ -56,12 +50,13 @@ export async function enqueuePushDeliveries(
   const userIds = [...new Set(recipients.map((r) => r.userId))];
   const devices = await db.pushDevice.findMany({
     where: { userId: { in: userIds }, enabled: true },
-    select: { id: true, userId: true, clientApp: true },
+    select: { id: true, userId: true, clientApp: true, user: { select: { realm: true } } },
   });
   if (devices.length === 0) return 0;
 
-  const byUser = new Map<string, { id: string; clientApp: string | null }[]>();
-  for (const device of devices) {
+  const byUser = new Map<string, { id: string; clientApp: string | null; realm: string }[]>();
+  for (const { user, ...rest } of devices) {
+    const device = { ...rest, realm: user.realm };
     const list = byUser.get(device.userId);
     if (list) list.push(device);
     else byUser.set(device.userId, [device]);
@@ -69,10 +64,12 @@ export async function enqueuePushDeliveries(
 
   const rows: Prisma.PushDeliveryCreateManyInput[] = [];
   for (const recipient of recipients) {
-    // App đích theo deep link của CHÍNH thông báo này. Thiết bị `client_app` NULL là bản cài
-    // app hợp nhất cũ — nó vẫn đăng ký cả hai bề mặt nên nhận mọi audience.
-    const targetApp = pushClientAppForUrl(recipient.url);
     for (const device of byUser.get(recipient.userId) ?? []) {
+      // App đích theo REALM của người nhận (ADR 0053): thông báo thuộc về một tài khoản, tài khoản
+      // thuộc về một app — chủ xe tuyến hoa hồng nhận ở XePrime Partner như gian hàng. Máy còn
+      // đăng ký từ app kia (trước khi tách realm) không được rung. Thiết bị `client_app` NULL là
+      // bản cài app hợp nhất cũ — nó phục vụ mọi bề mặt nên vẫn nhận.
+      const targetApp = isAccountRealm(device.realm) ? clientAppForRealm(device.realm) : null;
       if (device.clientApp !== null && device.clientApp !== targetApp) continue;
       rows.push({
         id: newId(),

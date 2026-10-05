@@ -113,7 +113,12 @@ beforeAll(async () => {
     },
   });
   await prisma.user.create({
-    data: { id: adminId, displayName: 'Nhân viên tài chính', email: `fin-${adminId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.CUSTOMER,
+      id: adminId,
+      displayName: 'Nhân viên tài chính',
+      email: `fin-${adminId}@xeprime.test`,
+    },
   });
   await prisma.tenant.create({
     data: {

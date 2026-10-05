@@ -35,7 +35,13 @@ export const envSchema = z
      * Mặc định là `production` — giá trị NGHIÊM NGẶT nhất. Nới lỏng phải là một hành động tường
      * minh trong file env, không phải thứ rơi vào vì quên khai.
      */
-    APP_ENV: z.enum(['production', 'staging']).default('production'),
+    /*
+     * `development` = máy dev: CÙNG giá trị mà seed đòi để đổ dữ liệu demo (`prisma/src/seed/context.ts`,
+     * `.env.example` hướng dẫn đặt nó vào `.env`). Trước đây schema chỉ nhận production|staging nên
+     * làm theo hướng dẫn của seed là API không boot. Chỉ hợp lệ khi `NODE_ENV` KHÁC production —
+     * môi trường đã triển khai khai `development` bị chặn ở `superRefine`.
+     */
+    APP_ENV: z.enum(['production', 'staging', 'development']).default('production'),
     API_PORT: z.coerce.number().int().positive().default(4000),
 
     DATABASE_URL: z.string().min(1, 'DATABASE_URL là bắt buộc'),
@@ -465,6 +471,17 @@ export const envSchema = z
     // log, hay gửi `redirect_uri` OAuth trỏ localhost, là sự cố an ninh chứ không phải cấu hình
     // sai vặt.
     if (env.NODE_ENV !== 'production') return;
+
+    // `APP_ENV=development` là nhãn của MÁY DEV (seed demo được phép). Môi trường đã triển khai khai
+    // nó là nhầm file env — và nó còn mở devCode OTP như staging.
+    if (env.APP_ENV === 'development') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['APP_ENV'],
+        message:
+          'APP_ENV=development chỉ dành cho máy dev (NODE_ENV khác production) — môi trường đã triển khai dùng staging hoặc production',
+      });
+    }
 
     // ADR 0053 điều 4: realm của request web do PROXY quyết. Cờ dev mà lọt lên môi trường thật là
     // để bất kỳ ai tự khai `x-xp-realm: platform`.

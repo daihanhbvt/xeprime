@@ -198,7 +198,12 @@ describe('Quản trị danh mục (nền tảng)', () => {
   maybe('đổi tên hiển thị: ghi audit, thêm bí danh, KHÔNG đụng chi nhánh/xe', async () => {
     const adminId = newId();
     await prisma.user.create({
-      data: { id: adminId, displayName: 'Admin', email: `adm-${adminId}@xeprime.test` },
+      data: {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: adminId,
+        displayName: 'Admin',
+        email: `adm-${adminId}@xeprime.test`,
+      },
     });
     const before = await prisma.province.findUniqueOrThrow({ where: { code: '96' } });
     const branchesBefore = await prisma.tenantBranch.count({ where: { provinceCode: '96' } });

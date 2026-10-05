@@ -136,7 +136,12 @@ function vnAt(offsetDays: number, hourVn: number): Date {
 async function makeCustomer(label: string): Promise<string> {
   const id = newId();
   await prisma.user.create({
-    data: { id, displayName: `Khách ${label}`, email: `promo-${label}-${RUN}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.CUSTOMER,
+      id,
+      displayName: `Khách ${label}`,
+      email: `promo-${label}-${RUN}@xeprime.test`,
+    },
   });
   customerIds.push(id);
   return id;
