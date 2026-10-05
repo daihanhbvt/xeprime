@@ -272,9 +272,9 @@ Base Phase 0 (đã commit `0a76adf`): 11 bảng lõi + `vehicle_occupancies` (sc
 | --- | --- |
 | Migration | **Một baseline duy nhất** `prisma/migrations/20260821000000_init/` — gộp 44 migration cũ, đã đối chiếu `pg_dump` với chuỗi cũ. Đọc header của file đó trước khi chạy `migrate dev`: nó cảnh báo các FK tổ hợp `(id, tenant_id)` mà `schema.prisma` không mô tả được và Prisma sẽ sinh lệnh DROP chúng |
 | Seed | `prisma/src/seed.ts` + `prisma/src/seed/` — idempotent trên toàn bộ 63 bảng (id tất định từ `seedId`, không xoá-tạo-lại) |
-| `SEED_MODE=system` | Chỉ dữ liệu nền: quyền, role hệ thống, danh mục thu/chi, gói dịch vụ, banner. Chạy được ở production |
-| `SEED_MODE=demo` (mặc định) | Thêm **27 gian hàng**: 5 gian hàng khác quy mô (40 xe/4 chi nhánh · 10/2 · 3 · 1 · 0 chưa duyệt) + 2 tài khoản QA hai tuyến + **20 chủ xe cá nhân tuyến hoa hồng** (1–3 xe, 15 tỉnh — `prisma/src/seed/commission-owners.ts`). Tổng: 41 tài khoản, 106 xe, 194 đơn, 579 phiếu thu chi |
-| Tài khoản demo | nền tảng đủ 5 vai trò (`admin@xeprime.vn`, `staff@`/`reviewer@`/`support@`/`finance@xeprime.test`) · 5 chủ shop `owner.<tỉnh>@xeprime.test` · 4 nhân viên shop · 5 khách `khach.<tên>@xeprime.test` · 2 QA `qa.owner@`/`qa.shop@` · 20 chủ xe cá nhân `chuxe.<tên>@xeprime.test`. Mật khẩu từ env, không in ra stdout |
+| `SEED_MODE=system` | Dữ liệu nền: quyền, role hệ thống, danh mục thu/chi, gói dịch vụ, banner, danh mục xe + tài khoản `platform_admin`. Tỉnh/xã do migration nạp. Chạy được ở production |
+| `SEED_MODE=demo` (mặc định) | Bộ gọn (05/10/2026), mỗi loại ~3 tài khoản: **3 gian hàng tuyến gói** (12 xe · 5 xe · 2 xe — mỗi bậc một gian hàng) + **3 chủ xe cá nhân tuyến hoa hồng** (1 · 2 · 3 xe — `commission-owners.ts`). Tổng: 18 tài khoản (gồm 3 song sinh), 25 xe, 55 đơn |
+| Tài khoản demo | nền tảng `admin@xeprime.vn` · `reviewer@`/`finance@xeprime.test` · chủ shop `owner.saigon@`/`owner.hanoi@`/`owner.danang@` · 3 nhân viên `*.saigon@` · chủ xe cá nhân `chuxe.huong@`/`chuxe.tuan@`/`chuxe.son@` · khách `khach.an@`/`khach.binh@`/`khach.cuong@xeprime.test`. Bảng tra: `docs/qa-accounts.md`. Mật khẩu từ env, không in ra stdout |
 | Danh tính seed sở hữu | `prisma/src/seed/identities.ts` — `cleanup-test-data.ts` import chính danh sách này làm bộ loại trừ, không chép tay |
 
 > `prisma migrate reset` bị Prisma chặn khi phát hiện agent chạy — người dùng phải tự gõ lệnh đó.

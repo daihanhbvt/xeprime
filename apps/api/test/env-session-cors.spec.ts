@@ -410,7 +410,6 @@ describe('SessionService: cookie gắn và xoá phải cùng thuộc tính', () 
 
   const PROD_VALUES = {
     SESSION_JWT_SECRET: 'p'.repeat(48),
-    SESSION_TTL_DAYS: 7,
     SESSION_COOKIE_NAME: SESSION_COOKIE_NAME_DEFAULT,
     SESSION_COOKIE_SECURE: true,
   };

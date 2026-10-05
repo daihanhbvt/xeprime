@@ -14,10 +14,12 @@ import {
   SERVICE_TYPE,
   VEHICLE_BLOCK_REASON,
   VEHICLE_DOCUMENT_TYPE,
+  VEHICLE_IMAGE_TYPE,
   VEHICLE_OPERATION_STATUS,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_SOURCE_TYPE,
   VEHICLE_TYPE,
+  vehicleImageSlotsFor,
 } from '@xeprime/types';
 import {
   PLATE_PREFIX,
@@ -25,6 +27,8 @@ import {
   VEHICLE_MODEL_BY_KEY,
   driverPricesOf,
   monthlyPriceOf,
+  vehiclePhotoSet,
+  type SeedPhoto,
   type VehicleModelSpec,
 } from './catalog';
 import { dateOnlyFromToday, daysFromToday, photo, pick, prisma, seedId } from './context';
@@ -115,10 +119,7 @@ function buildPublicStatus(spec: ShopSpec, index: number): string {
  * `vsd_*_fields_scoped` ở DB từ chối bản ghi lai, và đó là điều đúng: một chiếc xe không thể
  * vừa "mua đứt" vừa có khoản vay ngân hàng.
  */
-function buildSourceDetail(
-  sourceType: string,
-  index: number,
-): Record<string, unknown> {
+function buildSourceDetail(sourceType: string, index: number): Record<string, unknown> {
   switch (sourceType) {
     case VEHICLE_SOURCE_TYPE.FINANCED:
       return {
@@ -160,7 +161,10 @@ function buildSourceDetail(
       return {
         purchaseDate: dateOnlyFromToday(-700 - index * 11),
         purchasePrice: 480_000_000 + index * 5_000_000,
-        purchasePlace: pick(['Đại lý Toyota Đông Sài Gòn', 'Hyundai Ngọc An', 'Kia Bình Triệu'], index),
+        purchasePlace: pick(
+          ['Đại lý Toyota Đông Sài Gòn', 'Hyundai Ngọc An', 'Kia Bình Triệu'],
+          index,
+        ),
         notes: null,
       };
   }
@@ -215,6 +219,7 @@ export async function buildFleet(spec: ShopSpec, deps: FleetDeps): Promise<Vehic
     const color = pick(VEHICLE_COLORS, index);
     const serviceTypes = buildServiceTypes(model, index);
     const publicStatus = buildPublicStatus(spec, index);
+    const photos = vehiclePhotoSet(model, index);
     const brandLabel = deps.brandLabels.get(model.brand) ?? model.brand;
     const driverPrices = serviceTypes.includes(SERVICE_TYPE.WITH_DRIVER)
       ? driverPricesOf(model)
@@ -255,7 +260,7 @@ export async function buildFleet(spec: ShopSpec, deps: FleetDeps): Promise<Vehic
       fuelConsumptionHighway: model.consumption?.[1] ?? null,
       fuelConsumptionCombined: model.consumption?.[2] ?? null,
       description: model.description,
-      mainImageUrl: photo(model.photos[0]!),
+      mainImageUrl: photo(photos.front.id),
       weekdayPrice: model.weekday,
       weekendPrice: model.weekend,
       hourlyPrice: model.hourly,
@@ -286,14 +291,31 @@ export async function buildFleet(spec: ShopSpec, deps: FleetDeps): Promise<Vehic
     // Ảnh và tiện ích ghi theo kiểu THAY TẬP (giống `VehiclesService.replaceMedia`) — chạy lại
     // seed không nhân bản gallery.
     await prisma.vehicleImage.deleteMany({ where: { vehicleId } });
+    // Đủ năm ô ảnh theo vị trí như chủ xe đăng thật (`vehicleImageSlotsFor`) — ảnh đại diện là ảnh
+    // mặt trước, cùng URL với ô `front`.
+    const slots = vehicleImageSlotsFor(model.vehicleType).filter(
+      (slot) => slot !== VEHICLE_IMAGE_TYPE.OTHER,
+    );
+    const bySlot: Readonly<Record<string, SeedPhoto>> = {
+      [VEHICLE_IMAGE_TYPE.FRONT]: photos.front,
+      [VEHICLE_IMAGE_TYPE.REAR]: photos.rear,
+      [VEHICLE_IMAGE_TYPE.LEFT]: photos.left,
+      [VEHICLE_IMAGE_TYPE.RIGHT]: photos.right,
+      [VEHICLE_IMAGE_TYPE.INTERIOR]: photos.fifth,
+      [VEHICLE_IMAGE_TYPE.DASHBOARD]: photos.fifth,
+    };
     await prisma.vehicleImage.createMany({
-      data: model.photos.slice(1).map((id, i) => ({
-        id: seedId(`${spec.key}:image:${code}:${i}`),
-        vehicleId,
-        tenantId: deps.tenantId,
-        imageUrl: photo(id),
-        sortOrder: i,
-      })),
+      data: slots.map((slot, i) => {
+        const shot = bySlot[slot]!;
+        return {
+          id: seedId(`${spec.key}:image:${code}:${i}`),
+          vehicleId,
+          tenantId: deps.tenantId,
+          imageUrl: photo(shot.id, { flip: shot.flip ?? false }),
+          imageType: slot,
+          sortOrder: i,
+        };
+      }),
     });
     await prisma.vehicleFeature.deleteMany({ where: { vehicleId } });
     await prisma.vehicleFeature.createMany({
@@ -505,7 +527,10 @@ async function buildMaintenance(
       status: MAINTENANCE_STATUS.COMPLETED,
       completedAt: daysFromToday(-60 - (unit.index % 20), 4),
       odometerKm: profileFields.lastServiceKm,
-      providerName: pick(['Garage Thành Đạt', 'Toyota Đông Sài Gòn', 'Head Honda Quận 5'], unit.index),
+      providerName: pick(
+        ['Garage Thành Đạt', 'Toyota Đông Sài Gòn', 'Head Honda Quận 5'],
+        unit.index,
+      ),
       cost: unit.spec.vehicleType === VEHICLE_TYPE.MOTORBIKE ? 180_000 : 1_250_000,
       notes: null,
     };

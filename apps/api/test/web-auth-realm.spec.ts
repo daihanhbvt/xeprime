@@ -42,7 +42,6 @@ const CONFIG: Record<string, unknown> = {
   WEB_ADMIN_URL: 'https://admin.xeprime.vn',
   REALM_PROXY_SECRET: PROXY_SECRET,
   SESSION_JWT_SECRET: 'test-secret-at-least-32-characters-long-xxxx',
-  SESSION_TTL_DAYS: 7,
   SESSION_COOKIE_NAME: 'xp_session',
   SESSION_COOKIE_SECURE: true,
 };

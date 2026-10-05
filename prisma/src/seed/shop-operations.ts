@@ -118,8 +118,8 @@ export async function buildCustomers(
     const userId = fromAccount ? fromAccount[1].userId : null;
     const normalizedPhone = normalizeVnPhone(phone);
 
-    // Khách `duc` bị chặn — chỉ ở gian hàng lớn, nơi có đủ lịch sử để lý do đó có nghĩa.
-    const blocked = spec.key === 'saigon' && fromAccount?.[0] === 'duc';
+    // Khách `cuong` bị chặn — chỉ ở gian hàng lớn, nơi có đủ lịch sử để lý do đó có nghĩa.
+    const blocked = spec.key === 'saigon' && fromAccount?.[0] === 'cuong';
     const watchlist = !blocked && i === 2;
     const riskLevel = blocked
       ? TENANT_CUSTOMER_RISK_LEVEL.BLOCKED

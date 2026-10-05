@@ -1,6 +1,11 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { API_ERROR_CODE, resolveSessionCookieName, type AccountRealm } from '@xeprime/types';
+import {
+  API_ERROR_CODE,
+  SESSION_TTL_DAYS,
+  resolveSessionCookieName,
+  type AccountRealm,
+} from '@xeprime/types';
 import jwt from 'jsonwebtoken';
 import type { CookieOptions, Response } from 'express';
 import { ulid } from 'ulid';
@@ -27,10 +32,6 @@ export class SessionService {
     return this.config.getOrThrow<string>('SESSION_JWT_SECRET');
   }
 
-  private get ttlDays(): number {
-    return this.config.getOrThrow<number>('SESSION_TTL_DAYS');
-  }
-
   /**
    * Tên cookie phiên của MỘT realm — ADR 0053 điều 4. Cùng công thức với web proxy
    * (`resolveSessionCookieName` ở @xeprime/types), không gõ tên ở đâu khác.
@@ -45,7 +46,7 @@ export class SessionService {
   issue(userId: string): { token: string; sessionId: string } {
     const sessionId = ulid();
     const token = jwt.sign({ sub: userId, sid: sessionId } satisfies SessionPayload, this.secret, {
-      expiresIn: `${this.ttlDays}d`,
+      expiresIn: `${SESSION_TTL_DAYS}d`,
       issuer: 'xeprime-api',
     });
     return { token, sessionId };
@@ -100,7 +101,7 @@ export class SessionService {
       secure: this.config.getOrThrow<boolean>('SESSION_COOKIE_SECURE'),
       sameSite: 'lax',
       path: '/',
-      maxAge: this.ttlDays * 24 * 60 * 60 * 1000,
+      maxAge: SESSION_TTL_DAYS * 24 * 60 * 60 * 1000,
     };
   }
 

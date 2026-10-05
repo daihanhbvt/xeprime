@@ -196,7 +196,9 @@ async function seedFinanceCategories(): Promise<FinanceCategoryIds> {
     // Hội tụ cả hai cờ: hàng đã có từ đợt seed trước chưa biết tới `requiresVehicle`.
     const wantsVehicle = cat.requiresVehicle ?? false;
     const patch = {
-      ...(cat.systemKey && existing.systemKey !== cat.systemKey ? { systemKey: cat.systemKey } : {}),
+      ...(cat.systemKey && existing.systemKey !== cat.systemKey
+        ? { systemKey: cat.systemKey }
+        : {}),
       ...(existing.requiresVehicle !== wantsVehicle ? { requiresVehicle: wantsVehicle } : {}),
     };
     if (Object.keys(patch).length > 0) {
@@ -228,7 +230,6 @@ const FEATURES_BY_TIER = {
   /** Tuyến gói = gian hàng thuê bao. */
   fullManage: [...FULL_MANAGE_FEATURES],
 };
-
 
 /**
  * Gói dịch vụ nền tảng (ADR 0041). Không phải dữ liệu demo: màn quản trị gói và màn chọn gói
@@ -701,9 +702,7 @@ async function seedPromoCodes(): Promise<void> {
           'maxDiscountAmount' in promo && promo.maxDiscountAmount != null
             ? new Prisma.Decimal(promo.maxDiscountAmount)
             : null,
-        minOrderAmount: new Prisma.Decimal(
-          'minOrderAmount' in promo ? promo.minOrderAmount : '0',
-        ),
+        minOrderAmount: new Prisma.Decimal('minOrderAmount' in promo ? promo.minOrderAmount : '0'),
         audience: 'audience' in promo ? promo.audience : PROMO_AUDIENCE.ALL,
         vehicleScope: 'vehicleScope' in promo ? promo.vehicleScope : PROMO_VEHICLE_SCOPE.ALL,
         serviceScope: 'serviceScope' in promo ? [...promo.serviceScope] : [],

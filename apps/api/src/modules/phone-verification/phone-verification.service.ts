@@ -17,6 +17,7 @@ import {
   PHONE_VERIFICATION_STATUS,
   type AccountRealm,
   type PhoneVerificationPurpose,
+  OTP_POLICY,
 } from '@xeprime/types';
 import { normalizePhone } from '../../common/phone';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -52,7 +53,7 @@ export class PhoneVerificationService {
     const phone = normalizePhone(rawPhone);
     const now = Date.now();
 
-    const cooldownSec = this.config.get<number>('OTP_RESEND_COOLDOWN_SECONDS') ?? 60;
+    const cooldownSec = OTP_POLICY.RESEND_COOLDOWN_SECONDS;
     const last = await this.prisma.phoneVerification.findFirst({
       where: { phone },
       orderBy: { createdAt: 'desc' },
@@ -69,7 +70,7 @@ export class PhoneVerificationService {
       );
     }
 
-    const maxPerHour = this.config.get<number>('OTP_MAX_SENDS_PER_HOUR') ?? 5;
+    const maxPerHour = OTP_POLICY.MAX_SENDS_PER_HOUR;
     const sentLastHour = await this.prisma.phoneVerification.count({
       where: { phone, createdAt: { gte: new Date(now - 60 * 60 * 1000) } },
     });
@@ -90,7 +91,7 @@ export class PhoneVerificationService {
     });
 
     const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
-    const ttlMin = this.config.get<number>('OTP_TTL_MINUTES') ?? 5;
+    const ttlMin = OTP_POLICY.TTL_MINUTES;
     const expiresAt = new Date(now + ttlMin * 60 * 1000);
 
     await this.prisma.phoneVerification.create({
@@ -184,7 +185,7 @@ export class PhoneVerificationService {
     }
 
     if (row.otpHash !== this.hash(code, phone)) {
-      const maxAttempts = this.config.get<number>('OTP_MAX_ATTEMPTS') ?? 5;
+      const maxAttempts = OTP_POLICY.MAX_ATTEMPTS;
       const attemptCount = row.attemptCount + 1;
       if (attemptCount >= maxAttempts) {
         // Khoá mã: không cho thử tiếp mã này (updateMany với điều kiện PENDING để idempotent

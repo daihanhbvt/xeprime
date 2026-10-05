@@ -1,4 +1,4 @@
-import { GOOGLE_HOLIDAY_CALENDAR_ID_DEFAULT, SESSION_COOKIE_NAME_DEFAULT } from '@xeprime/types';
+import { SESSION_COOKIE_NAME_DEFAULT } from '@xeprime/types';
 import { z } from 'zod';
 
 /**
@@ -72,7 +72,6 @@ export const envSchema = z
 
     // --- Session (ADR 0002) ---
     SESSION_JWT_SECRET: z.string().min(32, 'SESSION_JWT_SECRET phải ít nhất 32 ký tự'),
-    SESSION_TTL_DAYS: z.coerce.number().int().positive().default(7),
     // Default lấy từ `@xeprime/types` — web proxy đọc cùng hằng số này (ADR 0002).
     SESSION_COOKIE_NAME: z.string().min(1).default(SESSION_COOKIE_NAME_DEFAULT),
     SESSION_COOKIE_SECURE: booleanish.default(false),
@@ -100,6 +99,9 @@ export const envSchema = z
      * khu của trang. Bật ở môi trường đã triển khai là API TỪ CHỐI khởi động.
      */
     REALM_HEADER_FROM_CLIENT: booleanish.default(false),
+
+    // Thời hạn phiên web và chính sách OTP là HẰNG SỐ ở `@xeprime/types` (`SESSION_TTL_DAYS`,
+    // `OTP_POLICY`) — giống nhau ở mọi môi trường nên không phải biến env.
 
     // --- Phiên app native (ADR 0017) ---
     // Access token JWT ngắn hạn. Khoảng 10–15 phút là RÀNG BUỘC của ADR, không phải gợi ý: nó là
@@ -195,12 +197,6 @@ export const envSchema = z
     ESMS_API_KEY: z.string().optional(),
     ESMS_SECRET_KEY: z.string().optional(),
     ESMS_BRANDNAME: z.string().optional(),
-    OTP_TTL_MINUTES: z.coerce.number().int().positive().default(5),
-    OTP_RESEND_COOLDOWN_SECONDS: z.coerce.number().int().positive().default(60),
-    OTP_MAX_SENDS_PER_HOUR: z.coerce.number().int().positive().default(5),
-    // Số lần nhập SAI mã tối đa cho một OTP trước khi khoá mã (phải gửi lại). Chống brute-force
-    // ngoài @Throttle controller + TTL ngắn.
-    OTP_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
     // Pepper để hash mã OTP (schema phone_verifications không có cột salt). Có default dev để
     // không phá `.env` sẵn có; production bắt buộc đổi (kiểm ở superRefine dưới).
     OTP_PEPPER: z.string().min(16).default('xeprime-dev-otp-pepper-change-me'),
@@ -256,9 +252,6 @@ export const envSchema = z
      * đáng chặn boot — vì vậy KHÔNG có điều kiện nào cho chúng ở `superRefine` bên dưới.
      */
     GOOGLE_HOLIDAY_API_KEY: z.string().optional(),
-    // Lịch nghỉ lễ VN công khai của Google. Mặc định lấy từ `@xeprime/types` để API và worker
-    // không thể mô tả hai lịch khác nhau.
-    GOOGLE_HOLIDAY_CALENDAR_ID: z.string().min(1).default(GOOGLE_HOLIDAY_CALENDAR_ID_DEFAULT),
 
     /*
      * Chế độ THI HÀNH của trục năng lực theo gói (ADR 0027) — `PlanFeatureGuard` đọc biến này.

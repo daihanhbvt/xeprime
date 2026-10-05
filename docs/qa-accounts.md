@@ -1,42 +1,38 @@
-# Tài khoản QA hai tuyến chủ xe
+# Tài khoản demo và QA
 
-> Cập nhật: 15/09/2026 · Phạm vi: **dev và staging**. Không tồn tại ở production.
-> Nguồn: `prisma/src/seed/shops.ts` (nhóm QA) — sửa ở đó, không sửa tay trong database.
+> Cập nhật: 05/10/2026 · Phạm vi: **dev và staging**. Không tồn tại ở production.
+> Nguồn: `prisma/src/seed/shops.ts`, `prisma/src/seed/commission-owners.ts`,
+> `prisma/src/seed/identities.ts` — sửa ở đó, không sửa tay trong database.
 
-Hai tài khoản này tồn tại để kiểm chứng **ranh giới hai tuyến chủ xe** của
-[ADR 0038](decisions/0038-owner-track-split-and-unified-wallet.md): ai vào `/account`, ai vào
-`/manage`, ai đặt xe được, và hạn mức xe của mỗi tuyến là bao nhiêu.
+Bộ demo gọn: mỗi loại tài khoản khoảng **ba** bản. Đủ để mở mọi màn hình với dữ liệu thật và kiểm
+các ranh giới quan trọng (ba site, hai tuyến chủ xe, bậc gói, trần Owner Lite), mà không chìm trong
+dữ liệu mẫu.
 
-Chúng **tách hẳn** khỏi năm gian hàng demo (40 xe / 10 xe / 3 xe / 1 xe / chưa xác minh). Năm gian
-hàng kia có đơn, sổ khách, thu chi và đánh giá — hữu ích để xem giao diện đông dữ liệu, nhưng vô
-dụng khi câu hỏi là *"chiếc xe thứ 4 có bị từ chối không"*: mọi phép đếm trên màn hình đều phải
-trừ đi phần demo trước khi tin được. Hai tài khoản QA cố ý **có xe, không có đơn**.
-
-Cùng lẽ đó, chúng cũng tách khỏi **20 chủ xe cá nhân tuyến hoa hồng** (`chuxe.*@xeprime.test`,
-khai ở `prisma/src/seed/commission-owners.ts`): hai mươi tài khoản kia có đơn, đánh giá và số xe
-khác nhau — chúng phục vụ câu hỏi "chợ xe và mặt tiền cá nhân trông thế nào khi đông người",
-không phải câu hỏi về HẠN MỨC ở trang này.
+Mỗi site là một không gian tài khoản riêng (ADR 0053): cùng email/SĐT ở site khác là tài khoản
+KHÁC. Đăng nhập ở đúng site của tài khoản.
 
 ## Bảng tra
 
-| | Chủ xe cá nhân | Chủ gian hàng |
+| Site | Tài khoản | Là gì |
 | --- | --- | --- |
-| **Email đăng nhập** | `qa.owner@xeprime.test` | `qa.shop@xeprime.test` |
-| **Số điện thoại** | `0908000001` | `0908000002` |
-| **Gian hàng** | QA · Chủ xe cá nhân (`qa-chu-xe-hoa-hong`) | QA · Gian hàng gói (`qa-gian-hang-goi`) |
-| **Vai** | `shop_owner` | `shop_owner` |
-| **Tuyến** (`billingMode`) | `commission` | `package` |
-| **Gói** | `free` — “Tuyến hoa hồng mặc định” | `per-vehicle` — “Gian hàng theo chỗ xe” |
-| **Kỳ thuê bao** | 12 tháng, 0đ (dòng kỹ thuật, tự nối) | 3 tháng, trả theo chỗ |
-| **Chỗ đã mua** | — (tuyến này không bán chỗ) | **8 ô tô + 2 xe máy** |
-| **Đội xe** | **3 xe** = 2 ô tô + 1 xe máy | **10 xe** = 8 ô tô + 2 xe máy |
-| **Xe trên chợ** | 3 (duyệt hết) | 10 (duyệt hết) |
-| **Ví** | 1 ví, thuộc TENANT, số dư 0, không bút toán | 1 ví, thuộc TENANT, số dư 0, không bút toán |
-| **Khu làm việc** | `/account` — Owner Lite | `/manage` — bộ quản lý đầy đủ |
-| **Nhãn tài khoản** | “Chủ xe cá nhân · Hoa hồng 10%” | “Chủ gian hàng · Gói Gian hàng theo chỗ xe” |
-| **Cờ tính năng bật** | 0 / 8 | 8 / 8 |
-| **Đặt thuê xe của người khác** | ✅ được (ADR 0032 điều 1) | ❌ `SHOP_ACCOUNT_CANNOT_BOOK` |
-| **Xe tiếp theo** | ❌ `PLAN_LIMIT_REACHED`, trần **3 xe TỔNG** | ❌ `PLAN_LIMIT_REACHED`, trần **theo LOẠI** (8 / 2) |
+| Quản trị | `admin@xeprime.vn` (env `PLATFORM_ADMIN_EMAIL`) | `platform_admin` — có ở CẢ `SEED_MODE=system` |
+| Quản trị | `reviewer@xeprime.test` | duyệt hồ sơ gian hàng / xe |
+| Quản trị | `finance@xeprime.test` | đối soát tiền vào, duyệt rút tiền |
+| Đối tác | `owner.saigon@xeprime.test` | gian hàng **12 xe · 2 chi nhánh · bậc Chuyên nghiệp**, đủ dữ liệu vận hành (tài xế, giấy tờ, bảo dưỡng, bàn giao, thu chi, đánh giá); 1 xe nháp + 1 xe chờ duyệt |
+| Đối tác | `manager.saigon@` · `staff.saigon@` · `ketoan.saigon@xeprime.test` | nhân viên của gian hàng trên: quản lý · nhân viên · người xem |
+| Đối tác | `owner.hanoi@xeprime.test` | gian hàng **5 xe · 2 chi nhánh · bậc Nâng cao** |
+| Đối tác | `owner.danang@xeprime.test` | gian hàng **2 xe · 1 chi nhánh · bậc Cơ bản** |
+| Đối tác | `chuxe.huong@xeprime.test` | chủ xe cá nhân tuyến hoa hồng, **1 xe** |
+| Đối tác | `chuxe.tuan@xeprime.test` | chủ xe cá nhân tuyến hoa hồng, **2 xe** |
+| Đối tác | `chuxe.son@xeprime.test` | chủ xe cá nhân tuyến hoa hồng, **3 xe** = 2 ô tô + 1 xe máy (chạm trần Owner Lite); 1 xe nháp |
+| Khách | `khach.an@xeprime.test` | khách quen, nhiều chuyến đã xong, có đánh giá |
+| Khách | `khach.binh@xeprime.test` | đang thuê dài hạn theo gói tháng |
+| Khách | `khach.cuong@xeprime.test` | thuê có tài xế; bị gian hàng Sài Gòn đưa vào danh sách chặn (chỉ ở gian hàng đó) |
+
+**Tài khoản song sinh** (cùng email + SĐT, khác site, mật khẩu như nhau ở seed):
+`owner.saigon@` và `chuxe.son@` có thêm tài khoản **khách** — chủ xe đi thuê xe bằng tài khoản
+khách và bị chặn đặt xe của chính mình; `khach.an@` có thêm tài khoản **đối tác** chưa có gian hàng
+— ca "đăng ký đối tác xong ⇒ chọn tuyến".
 
 ## Mật khẩu
 
@@ -44,60 +40,38 @@ Mật khẩu **không nằm trong tài liệu này và không nằm trong repo**
 
 | Biến | Dùng cho | Khi không khai |
 | --- | --- | --- |
-| `DEMO_PASSWORD` | cả hai tài khoản QA, và mọi tài khoản demo khác | rơi về mật khẩu mẫu chỉ dùng được ở máy dev (`prisma/src/seed/context.ts`) |
-| `PLATFORM_ADMIN_PASSWORD` | `admin@xeprime.vn` | như trên |
+| `PLATFORM_ADMIN_PASSWORD` | `admin@xeprime.vn` | máy dev: mật khẩu mẫu (`prisma/src/seed/context.ts`) |
+| `DEMO_PASSWORD` | mọi tài khoản demo còn lại | như trên |
 
-Trên MỌI máy đã triển khai (staging cũng như production, cả hai chạy `NODE_ENV=production`), seed
-**từ chối chạy** nếu hai biến này còn là mật khẩu mẫu — mật khẩu in sẵn trong repo trên một máy
-công khai là một lối vào, không phải một tiện ích.
+Trên MỌI máy đã triển khai (`NODE_ENV=production`), seed **từ chối chạy** nếu các biến này còn là
+mật khẩu mẫu.
 
 ## Dựng lại
 
 ```bash
-# Máy dev. `APP_ENV` mặc định là `production` (chốt chặt), nên seed demo phải nói rõ môi trường.
-APP_ENV=development pnpm --filter @xeprime/prisma seed
+# Máy dev — `APP_ENV=development` trong `.env` (seed demo từ chối chạy khi APP_ENV=production).
+pnpm db:seed
+# Kiểm bất biến realm + độ phủ tài khoản song sinh:
+pnpm --filter @xeprime/prisma realm:check -- --expect-demo
 ```
 
-Seed **idempotent**: chạy lần thứ hai, thứ ba không thêm một user, tenant, xe, ví, thuê bao hay
-bút toán nào. Nó cũng **hội tụ**: nếu dòng thuê bao trong database lệch bản khai (ví dụ còn trỏ
-tới một bậc gói đã gỡ), seed sửa lại đúng — và xoá mọi dòng thuê bao lạc của gian hàng demo, vì
-bất biến “MỘT dòng hiệu lực tại một thời điểm” là thứ `resolveEffectiveBilling` dựa vào.
+Seed **idempotent**: chạy lại không thêm user, gian hàng, xe hay đơn nào. Seed KHÔNG xoá dữ liệu
+demo của bộ seed cũ (27 gian hàng) — DB đã chạy bộ cũ thì dựng lại (`prisma migrate reset`, người
+dùng tự gõ) để có đúng bộ gọn này.
 
-Staging: xem [`deployment.md` §3.6](deployment.md) — `SEED_MODE=demo` chạy trong container
-`migrate`, kèm `DEMO_PASSWORD` và `PLATFORM_ADMIN_PASSWORD` thật.
+Staging: [`deployment.md` §3.6](deployment.md) — `SEED_MODE=demo` chạy trong container `migrate`,
+kèm `DEMO_PASSWORD` và `PLATFORM_ADMIN_PASSWORD` thật.
 
-## Những phép kiểm mà hai tài khoản này phục vụ
+## Những phép kiểm các tài khoản này phục vụ
 
-1. **Trần Owner Lite là TỔNG, không phải mỗi loại.** `qa.owner` có 2 ô tô + 1 xe máy — đã chạm
-   trần. Tạo thêm MỘT chiếc bất kỳ loại nào phải bị từ chối. Một fixture 3 ô tô sẽ pass cả cách
-   hiểu sai (“3 mỗi loại”), nên đội xe cố ý trộn hai loại.
-2. **Hạn mức tuyến gói là SỐ CHỖ ĐÃ MUA, theo loại.** `qa.shop` mua đúng 8 + 2 chứ không mua một
-   gói “không giới hạn” — một trần vô hạn không kiểm chứng được gì. Chiếc ô tô thứ 9 và chiếc xe
-   máy thứ 3 đều phải bị từ chối, với `details` nêu đúng loại.
-3. **Cổng `/manage` chặn ở SERVER.** `qa.owner` gọi một endpoint quản lý nâng cao phải nhận
-   `403 SUBSCRIPTION_TRACK_ONLY`, không phải chỉ bị ẩn menu.
-4. **Cổng đặt xe nằm SAU cửa OTP.** Đăng xuất rồi đặt bằng OTP với **cùng số điện thoại**
-   `0908000002` vẫn phải bị `SHOP_ACCOUNT_CANNOT_BOOK` — `users.phone` là unique nên OTP tìm lại
-   đúng tài khoản gian hàng. Thông điệp phải nói rõ **“số điện thoại KHÁC”**.
-5. **Một người một ví.** Mỗi tenant QA có đúng một hàng `wallets`, `owner_type = tenant`. Không
-   tài khoản nào có ví thứ hai thuộc `user`.
-6. **Nhãn tài khoản đọc số THẬT.** “Hoa hồng 10%” lấy từ `fee_policies.service_fee_percent` bản
-   `active`, không phải hằng trong mã và không phải ảnh chụp % trên dòng thuê bao — hai số đó
-   không có ràng buộc nào giữ cho khớp nhau.
-
-## Các tài khoản demo khác
-
-Vẫn còn nguyên và vẫn cần cho những câu hỏi khác (phân trang danh sách dài, nhiều chi nhánh, gian
-hàng chưa xác minh, màn trạng thái rỗng):
-
-| Email | Gian hàng | Quy mô | Tuyến |
-| --- | --- | --- | --- |
-| `owner.saigon@xeprime.test` | XePrime Sài Gòn | 40 xe · 4 chi nhánh · 79 đơn | gói |
-| `owner.hanoi@xeprime.test` | Việt Car Hà Nội | 10 xe · 2 chi nhánh · 21 đơn | gói |
-| `owner.danang@xeprime.test` | Đà Nẵng Mini Rental | 3 xe · 7 đơn | gói |
-| `owner.cantho@xeprime.test` | Xe Nhà Cần Thơ | 1 xe · 0 đơn · hồ sơ thiếu | hoa hồng |
-| `owner.hue@xeprime.test` | Huế Rental | 0 xe · **chưa xác minh** | hoa hồng |
-
-⚠️ Đừng dùng `owner.danang@` làm “fixture 3 xe tuyến hoa hồng”: nó đúng 3 xe nhưng ở **tuyến gói**
-và đã có đơn lẫn phiếu thu chi. Kéo nó về hoa hồng để lấy con số 3 là đổi tuyến của một tenant đã
-có tiền chạy qua — hỏng đúng thứ dữ liệu demo đó tồn tại để kiểm.
+1. **Trần Owner Lite là TỔNG, không phải mỗi loại.** `chuxe.son` có 2 ô tô + 1 xe máy — đã chạm
+   trần 3 xe. Tạo thêm MỘT chiếc bất kỳ loại nào phải bị từ chối (`PLAN_LIMIT_REACHED`).
+2. **Trần bậc gói là TỔNG số xe (ADR 0041).** `owner.danang` (Cơ bản, trần 3) thêm được đúng 1 xe
+   nữa; `owner.hanoi` (Nâng cao, trần 10) còn 5 chỗ; `owner.saigon` (Chuyên nghiệp) không giới hạn.
+3. **Khu quản lý nâng cao chặn ở SERVER.** Chủ xe tuyến hoa hồng gọi một endpoint quản lý nâng cao
+   phải nhận `403 SUBSCRIPTION_TRACK_ONLY`, không chỉ bị ẩn menu.
+4. **Tự đặt xe bị chặn ở backend.** Tài khoản khách song sinh của `owner.saigon` đặt xe của chính
+   gian hàng Sài Gòn phải bị từ chối — phép so SĐT đã xác minh giữa tài khoản khách và chủ/thành
+   viên gian hàng (ADR 0053 điều 7).
+5. **Hai tài khoản, hai ví.** Ví của chủ xe thuộc TENANT; tiền hoàn chuyến đi thuê vào ví của TÀI
+   KHOẢN KHÁCH đã đặt — không bao giờ gộp.

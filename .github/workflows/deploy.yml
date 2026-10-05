@@ -240,7 +240,6 @@ jobs:
           V_APP_WEB_URL: ${{ vars.APP_WEB_URL }}
           V_WEB_PARTNER_URL: ${{ vars.WEB_PARTNER_URL }}
           V_WEB_ADMIN_URL: ${{ vars.WEB_ADMIN_URL }}
-          V_SESSION_TTL_DAYS: ${{ vars.SESSION_TTL_DAYS }}
           V_SESSION_COOKIE_NAME: ${{ vars.SESSION_COOKIE_NAME }}
           V_SESSION_COOKIE_SECURE: ${{ vars.SESSION_COOKIE_SECURE }}
           V_SESSION_COOKIE_DOMAIN: ${{ vars.SESSION_COOKIE_DOMAIN }}
@@ -252,10 +251,6 @@ jobs:
           V_FACEBOOK_APP_ID: ${{ vars.FACEBOOK_APP_ID }}
           V_OTP_MODE: ${{ vars.OTP_MODE }}
           V_PLAN_FEATURE_ENFORCEMENT: ${{ vars.PLAN_FEATURE_ENFORCEMENT }}
-          V_OTP_TTL_MINUTES: ${{ vars.OTP_TTL_MINUTES }}
-          V_OTP_RESEND_COOLDOWN_SECONDS: ${{ vars.OTP_RESEND_COOLDOWN_SECONDS }}
-          V_OTP_MAX_SENDS_PER_HOUR: ${{ vars.OTP_MAX_SENDS_PER_HOUR }}
-          V_OTP_MAX_ATTEMPTS: ${{ vars.OTP_MAX_ATTEMPTS }}
           V_SMTP_HOST: ${{ vars.SMTP_HOST }}
           V_SMTP_PORT: ${{ vars.SMTP_PORT }}
           V_SMTP_USER: ${{ vars.SMTP_USER }}
@@ -270,7 +265,6 @@ jobs:
           V_PUSH_ENABLED: ${{ vars.PUSH_ENABLED }}
           V_FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
           V_FIREBASE_CLIENT_EMAIL: ${{ vars.FIREBASE_CLIENT_EMAIL }}
-          V_GOOGLE_HOLIDAY_CALENDAR_ID: ${{ vars.GOOGLE_HOLIDAY_CALENDAR_ID }}
           V_R2_ACCOUNT_ID: ${{ vars.R2_ACCOUNT_ID }}
           V_R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
           V_R2_BUCKET: ${{ vars.R2_BUCKET }}
@@ -455,7 +449,6 @@ jobs:
           kv REALM_PROXY_SECRET "${S_REALM_PROXY_SECRET:-}"
 
           kv SESSION_JWT_SECRET "${S_SESSION_JWT_SECRET:-}"
-          kv SESSION_TTL_DAYS "${V_SESSION_TTL_DAYS:-7}"
           kv SESSION_COOKIE_NAME "${V_SESSION_COOKIE_NAME:-}"
           kv SESSION_COOKIE_SECURE "${V_SESSION_COOKIE_SECURE:-true}"
           kv MOBILE_ACCESS_TTL_MINUTES "${V_MOBILE_ACCESS_TTL_MINUTES:-15}"
@@ -476,10 +469,6 @@ jobs:
           kv ESMS_API_KEY "${S_ESMS_API_KEY:-}"
           kv ESMS_SECRET_KEY "${S_ESMS_SECRET_KEY:-}"
           kv ESMS_BRANDNAME "${S_ESMS_BRANDNAME:-}"
-          kv OTP_TTL_MINUTES "${V_OTP_TTL_MINUTES:-5}"
-          kv OTP_RESEND_COOLDOWN_SECONDS "${V_OTP_RESEND_COOLDOWN_SECONDS:-60}"
-          kv OTP_MAX_SENDS_PER_HOUR "${V_OTP_MAX_SENDS_PER_HOUR:-5}"
-          kv OTP_MAX_ATTEMPTS "${V_OTP_MAX_ATTEMPTS:-5}"
           kv OTP_PEPPER "${S_OTP_PEPPER:-}"
 
           kv SMTP_HOST "${V_SMTP_HOST:-}"
@@ -511,7 +500,6 @@ jobs:
           kv FIREBASE_PRIVATE_KEY "${S_FIREBASE_PRIVATE_KEY:-}"
           kv GEOAPIFY_API_KEY "${S_GEOAPIFY_API_KEY:-}"
           kv GOOGLE_HOLIDAY_API_KEY "${S_GOOGLE_HOLIDAY_API_KEY:-}"
-          kv GOOGLE_HOLIDAY_CALENDAR_ID "${V_GOOGLE_HOLIDAY_CALENDAR_ID:-}"
 
           # Nhóm NEXT_PUBLIC_* đã nhúng cứng vào image lúc build. Ghi vào file env chỉ để
           # `docker compose build` còn dùng được nếu có ngày phải build tay ngay trên máy.

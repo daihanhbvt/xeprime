@@ -2,10 +2,12 @@
  * Seed dữ liệu XePrime.
  *
  * Hai chế độ, tách bằng `SEED_MODE`:
- *   • `system` — chỉ dữ liệu NỀN (quyền, role hệ thống, danh mục thu/chi, gói dịch vụ, banner).
- *                Chạy được ở mọi môi trường, kể cả production.
- *   • `demo`   — mặc định: 5 gian hàng DEMO (nhiều quy mô) + 2 gian hàng QA hai tuyến + 20 chủ
- *                xe cá nhân tuyến hoa hồng, kèm tài khoản và dữ liệu vận hành mẫu.
+ *   • `system` — chỉ dữ liệu NỀN (quyền, role hệ thống, danh mục thu/chi, gói dịch vụ, banner,
+ *                danh mục xe) + tài khoản `platform_admin`. Chạy được ở mọi môi trường, kể cả
+ *                production. Tỉnh/xã không ở đây: migration nạp sẵn.
+ *   • `demo`   — mặc định: thêm 3 gian hàng tuyến gói (12 / 5 / 2 xe — mỗi bậc một gian hàng),
+ *                3 chủ xe cá nhân tuyến hoa hồng (1 / 2 / 3 xe), 3 khách, 3 nhân viên gian hàng,
+ *                2 tài khoản nền tảng demo, kèm dữ liệu vận hành mẫu và tài khoản song sinh.
  *
  * Idempotent: chạy nhiều lần không nhân bản. Mọi bản ghi có khoá tự nhiên thì `upsert` theo
  * khoá đó; phần còn lại dùng ID TẤT ĐỊNH suy từ khoá nghiệp vụ (`seedId`), nên chạy lại là cập
@@ -14,7 +16,12 @@
  * Chi tiết từng phần: `src/seed/*.ts`. Chạy: `pnpm db:seed`.
  */
 import { refreshListingRankScore } from './listing-rank';
-import { seedCrossRealmTwins, seedCustomerAccounts, seedPlatformAccounts } from './seed/accounts';
+import {
+  seedCrossRealmTwins,
+  seedCustomerAccounts,
+  seedPlatformAccounts,
+  seedPlatformAdmin,
+} from './seed/accounts';
 import {
   PLATFORM_ADMIN_EMAIL,
   SEED_MODE,
@@ -23,7 +30,7 @@ import {
   prisma,
 } from './seed/context';
 import { COMMISSION_OWNER_SPECS } from './seed/commission-owners';
-import { CROSS_REALM_TWINS } from './seed/identities';
+import { CROSS_REALM_TWINS, CUSTOMER_ACCOUNTS, PLATFORM_ACCOUNTS } from './seed/identities';
 import { buildShop } from './seed/shop';
 import { SHOP_SPECS } from './seed/shops';
 import { seedVehicleCatalog } from './seed/catalog-sync';
@@ -92,6 +99,7 @@ async function main(): Promise<void> {
   // Danh mục hãng/mẫu xe: dữ liệu nền như quyền và gói dịch vụ — chủ xe không đăng nổi một
   // chiếc xe nếu ô "Mẫu xe" rỗng.
   await seedVehicleCatalog();
+  const adminUserId = await seedPlatformAdmin();
 
   if (SEED_MODE === 'system') {
     log('\nXong: dữ liệu nền đã sẵn sàng. Không đổ dữ liệu demo ở chế độ này.');
@@ -100,7 +108,7 @@ async function main(): Promise<void> {
 
   log('\nTài khoản:');
   await cleanupLegacySeedData();
-  const platform = await seedPlatformAccounts();
+  const platform = await seedPlatformAccounts(adminUserId);
   const customers = await seedCustomerAccounts();
 
   log('\nGian hàng:');
@@ -157,21 +165,31 @@ Xếp hạng chợ: ${ranked} tin đăng đã có điểm gợi ý`);
   // CỐ Ý không in mật khẩu: chúng đến từ env, và stdout đi thẳng vào log terminal/CI. Người
   // chạy seed là người đã đặt các biến đó.
   // Mỗi realm đăng nhập ở site của nó (ADR 0053) — cùng email ở site khác là tài khoản KHÁC.
-  log('\nĐăng nhập (mật khẩu: $PLATFORM_ADMIN_PASSWORD cho quản trị, $DEMO_PASSWORD cho phần còn lại):');
-  log('  ── site QUẢN TRỊ (admin) · /login');
-  log(`  nền tảng   : ${PLATFORM_ADMIN_EMAIL} · staff@ · reviewer@ · support@ · finance@xeprime.test`);
-  log('  ── site ĐỐI TÁC (partner) · /login');
-  log('  chủ shop   : owner.saigon@ · owner.hanoi@ · owner.danang@ · owner.cantho@ · owner.hue@xeprime.test');
-  log('  QA hai tuyến: qa.owner@xeprime.test (hoa hồng · 3 xe) · qa.shop@xeprime.test (gói · 10 xe)');
   log(
-    `  chủ xe cá nhân: ${COMMISSION_OWNER_SPECS.length} tài khoản tuyến hoa hồng — ` +
-      `${COMMISSION_OWNER_SPECS.slice(0, 3)
-        .map((s) => s.owner.email.replace('@xeprime.test', '@'))
-        .join(' · ')} … (chuxe.*@xeprime.test)`,
+    '\nĐăng nhập (mật khẩu: $PLATFORM_ADMIN_PASSWORD cho quản trị, $DEMO_PASSWORD cho phần còn lại):',
   );
-  log('  nhân viên  : manager.saigon@ · staff.saigon@ · ketoan.saigon@ · staff.hanoi@xeprime.test');
+  const short = (email: string) => email.replace('@xeprime.test', '@');
+  const shops = SHOP_SPECS.filter((s) => !COMMISSION_OWNER_SPECS.includes(s));
+  log('  ── site QUẢN TRỊ (admin) · /login');
+  log(
+    `  nền tảng   : ${PLATFORM_ADMIN_EMAIL} · ${PLATFORM_ACCOUNTS.map((a) => a.email).join(' · ')}`,
+  );
+  log('  ── site ĐỐI TÁC (partner) · /login');
+  log(
+    '  gian hàng  : ' +
+      shops
+        .map((s) => `${short(s.owner.email)} (${s.fleet.reduce((n, f) => n + f.count, 0)} xe)`)
+        .join(' · '),
+  );
+  log(
+    '  chủ xe cá nhân: ' +
+      COMMISSION_OWNER_SPECS.map((s) => `${short(s.owner.email)} (${s.fleet.length} xe)`).join(
+        ' · ',
+      ),
+  );
+  log('  nhân viên  : ' + shops.flatMap((s) => s.staff.map((st) => short(st.email))).join(' · '));
   log('  ── site KHÁCH (xeprime.vn) · /login');
-  log('  khách      : khach.an@ · khach.binh@ · khach.cuong@ · khach.dung@ · khach.duc@xeprime.test');
+  log('  khách      : ' + CUSTOMER_ACCOUNTS.map((c) => short(c.email)).join(' · '));
   log(
     '  song sinh  : ' +
       CROSS_REALM_TWINS.map((t) => `${t.email.replace('@xeprime.test', '@')} (${t.realm})`).join(

@@ -30,3 +30,24 @@ export function resolveSessionCookieName(
   const base = raw && raw.length > 0 ? raw : SESSION_COOKIE_NAME_DEFAULT;
   return `${base}_${realm}`;
 }
+
+/*
+ * Thời hạn phiên web và OTP — CHÍNH SÁCH sản phẩm/bảo mật, giống nhau ở mọi môi trường, nên là
+ * hằng số chứ không phải biến env (dọn env 05/10/2026). Đổi là đổi code qua review — không phải
+ * sửa một biến ở một môi trường rồi quên môi trường kia.
+ */
+
+/** Phiên web (cookie httpOnly — ADR 0002): sống 7 ngày kể từ lúc đăng nhập. */
+export const SESSION_TTL_DAYS = 7;
+
+/**
+ * Mã OTP (SĐT và email dùng chung một chính sách). Cooldown và trần gửi/giờ đếm theo SĐT/email
+ * trên mọi realm; trần nhập sai khoá mã để chống dò mã 6 số. Web dùng `RESEND_COOLDOWN_SECONDS`
+ * cho đồng hồ "Gửi lại" — gửi sớm hơn là chắc chắn bị server từ chối.
+ */
+export const OTP_POLICY = {
+  TTL_MINUTES: 5,
+  RESEND_COOLDOWN_SECONDS: 60,
+  MAX_SENDS_PER_HOUR: 5,
+  MAX_ATTEMPTS: 5,
+} as const;

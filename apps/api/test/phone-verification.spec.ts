@@ -21,10 +21,6 @@ const ENV: Record<string, unknown> = {
   OTP_MODE: 'mock',
   NODE_ENV: 'test',
   OTP_PEPPER: 'test-pepper-abcdef123456',
-  OTP_TTL_MINUTES: 5,
-  OTP_RESEND_COOLDOWN_SECONDS: 60,
-  OTP_MAX_SENDS_PER_HOUR: 5,
-  OTP_MAX_ATTEMPTS: 5,
 };
 const config = {
   get: (k: string) => ENV[k],
@@ -105,7 +101,7 @@ describe('Phone verification OTP (Phase 4)', () => {
     const phone = mkPhone();
     const { devCode } = await service.sendOtp(phone, BOOKING, C);
     const wrong = devCode === '000000' ? '111111' : '000000';
-    // OTP_MAX_ATTEMPTS=5: 4 lần đầu OTP_INVALID, lần thứ 5 khoá → OTP_LOCKED.
+    // OTP_POLICY.MAX_ATTEMPTS=5: 4 lần đầu OTP_INVALID, lần thứ 5 khoá → OTP_LOCKED.
     for (let i = 0; i < 4; i++) {
       await expect(service.verifyOtp(phone, BOOKING, wrong, C)).rejects.toMatchObject({
         response: { code: API_ERROR_CODE.OTP_INVALID },

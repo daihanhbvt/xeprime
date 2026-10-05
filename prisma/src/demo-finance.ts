@@ -1,5 +1,5 @@
 /**
- * Dữ liệu DEMO cho màn Tài chính (`/manage/admin/money`) — chạy QUA API THẬT, không ghi thẳng DB.
+ * Dữ liệu DEMO cho màn Tài chính của site quản trị (`<WEB_ADMIN_URL>/money`) — chạy QUA API THẬT, không ghi thẳng DB.
  *
  * Vì sao không nằm trong `seed.ts`: một khoản giữ chỗ chỉ đúng khi nó sinh ra từ cả chuỗi
  * yêu cầu → duyệt → tiền về → đơn thuê, và mỗi bước có writer riêng (`BookingHoldsService`,
@@ -414,18 +414,16 @@ const CUSTOMERS = [
   'khach.an@xeprime.test',
   'khach.binh@xeprime.test',
   'khach.cuong@xeprime.test',
-  'khach.dung@xeprime.test',
-  'khach.duc@xeprime.test',
 ] as const;
 
+/**
+ * Ba chủ xe cá nhân của seed (1 / 2 / 3 xe). Mỗi chuyến dưới đây lệch nhau ít nhất một ngày
+ * (`base + n`) nên dùng lại cùng một chiếc xe không tranh lịch của nhau.
+ */
 const OWNERS = [
-  'chuxe.phuc@xeprime.test',
-  'chuxe.quyen@xeprime.test',
   'chuxe.tuan@xeprime.test',
-  'chuxe.khai@xeprime.test',
+  'chuxe.huong@xeprime.test',
   'chuxe.son@xeprime.test',
-  'chuxe.long@xeprime.test',
-  'chuxe.khoa@xeprime.test',
 ] as const;
 
 async function main(): Promise<void> {
@@ -445,8 +443,8 @@ async function main(): Promise<void> {
   }
 
   log(`Dữ liệu demo màn Tài chính → ${API}\n`);
-  const [an, binh, cuong, dung, duc] = await Promise.all(CUSTOMERS.map(loadCustomer));
-  const [phuc, quyen, tuan, khai, son, long, khoa] = await Promise.all(OWNERS.map(loadOwner));
+  const [an, binh, cuong] = await Promise.all(CUSTOMERS.map(loadCustomer));
+  const [tuan, huong, son] = await Promise.all(OWNERS.map(loadOwner));
   // Lượt `--again` lùi khung giờ đi xa hơn để không tranh lịch với lượt trước.
   const base = 6 + existing;
 
@@ -463,10 +461,10 @@ async function main(): Promise<void> {
 
   log('Giữ chỗ chờ chốt:');
   await step('chuyến đã trả, đang chờ tới ngày nhận xe', async () => {
-    await paidTrip(an!, phuc!, phuc!.vehicleIds[0]!, base, 'Đi công tác Đà Lạt 2 ngày');
+    await paidTrip(an!, tuan!, tuan!.vehicleIds[0]!, base, 'Đi công tác Đà Lạt 2 ngày');
   });
   await step('chuyến đang TRANH CHẤP (mới mở)', async () => {
-    const trip = await paidTrip(binh!, quyen!, quyen!.vehicleIds[0]!, base + 1, 'Về quê cuối tuần');
+    const trip = await paidTrip(binh!, son!, son!.vehicleIds[0]!, base + 1, 'Về quê cuối tuần');
     await openDispute(
       binh!,
       trip,
@@ -477,8 +475,8 @@ async function main(): Promise<void> {
   await step('chuyến đang TRANH CHẤP (admin đang xử lý)', async () => {
     const trip = await paidTrip(
       cuong!,
-      tuan!,
-      tuan!.vehicleIds[0]!,
+      huong!,
+      huong!.vehicleIds[0]!,
       base + 2,
       'Đưa gia đình đi biển',
     );
@@ -495,16 +493,16 @@ async function main(): Promise<void> {
   });
 
   log('\nChốt tiền sau tranh chấp + rút tiền chủ xe:');
-  await step('khai: kết luận → quyết toán → yêu cầu rút CHỜ DUYỆT', async () => {
+  await step('tuan: kết luận → quyết toán → yêu cầu rút CHỜ DUYỆT', async () => {
     const trip = await paidTrip(
-      dung!,
-      khai!,
-      khai!.vehicleIds[0]!,
+      an!,
+      tuan!,
+      tuan!.vehicleIds[1] ?? tuan!.vehicleIds[0]!,
       base + 3,
       'Thuê xe đi Vũng Tàu',
     );
     const dispute = await openDispute(
-      dung!,
+      an!,
       trip,
       'Khiếu nại thời gian giao xe',
       'Chủ xe báo giao trễ 2 tiếng so với lịch hẹn, mình muốn được giảm giá.',
@@ -518,18 +516,18 @@ async function main(): Promise<void> {
       BOOKING_HOLD_OUTCOME.SETTLED,
       'Tranh chấp đã kết luận — quyết toán theo chuyến.',
     );
-    await requestWithdrawal(khai!, portion(await walletBalance(khai!.tenantId), 0.8));
+    await requestWithdrawal(tuan!, portion(await walletBalance(tuan!.tenantId), 0.8));
   });
   await step('son: kết luận → quyết toán → yêu cầu rút ĐÃ DUYỆT', async () => {
     const trip = await paidTrip(
-      duc!,
+      binh!,
       son!,
-      son!.vehicleIds[0]!,
+      son!.vehicleIds[1] ?? son!.vehicleIds[0]!,
       base + 4,
       'Thuê xe đón người thân',
     );
     const dispute = await openDispute(
-      duc!,
+      binh!,
       trip,
       'Xe có vết xước trước khi nhận',
       'Mình phát hiện vết xước cửa sau, lo bị bắt đền khi trả xe.',
@@ -546,16 +544,16 @@ async function main(): Promise<void> {
     const w = await requestWithdrawal(son!, portion(await walletBalance(son!.tenantId), 0.7));
     await (await admin()).call('POST', `/platform/money/withdrawals/${w.id}/approve`);
   });
-  await step('long: quyết toán → một lệnh ĐÃ CHUYỂN + một lệnh BỊ TỪ CHỐI', async () => {
+  await step('huong: quyết toán → một lệnh ĐÃ CHUYỂN + một lệnh BỊ TỪ CHỐI', async () => {
     const trip = await paidTrip(
-      an!,
-      long!,
-      long!.vehicleIds[0]!,
+      cuong!,
+      huong!,
+      huong!.vehicleIds[0]!,
       base + 5,
       'Thuê xe đi Phan Thiết',
     );
     const dispute = await openDispute(
-      an!,
+      cuong!,
       trip,
       'Hỏi lại điều kiện hoàn cọc',
       'Mình muốn xác nhận lại cọc thế chấp sẽ được trả trong bao lâu sau khi trả xe.',
@@ -572,8 +570,8 @@ async function main(): Promise<void> {
 
     const a = await admin();
     const paidOut = await requestWithdrawal(
-      long!,
-      portion(await walletBalance(long!.tenantId), 0.5),
+      huong!,
+      portion(await walletBalance(huong!.tenantId), 0.5),
     );
     await a.call('POST', `/platform/money/withdrawals/${paidOut.id}/approve`);
     const version = await prisma.withdrawalRequest.findUniqueOrThrow({
@@ -586,8 +584,8 @@ async function main(): Promise<void> {
     });
 
     const rejected = await requestWithdrawal(
-      long!,
-      portion(await walletBalance(long!.tenantId), 0.5),
+      huong!,
+      portion(await walletBalance(huong!.tenantId), 0.5),
     );
     await a.call('POST', `/platform/money/withdrawals/${rejected.id}/reject`, {
       reason:
@@ -597,8 +595,14 @@ async function main(): Promise<void> {
 
   log('\nHoàn tiền cho khách:');
   await step('chủ xe huỷ chuyến → hoàn khách vào ví điểm', async () => {
-    const trip = await paidTrip(binh!, khoa!, khoa!.vehicleIds[0]!, base + 6, 'Thuê xe đi Mũi Né');
-    const host = await asOwner(khoa!.email);
+    const trip = await paidTrip(
+      binh!,
+      son!,
+      son!.vehicleIds[2] ?? son!.vehicleIds[0]!,
+      base + 6,
+      'Thuê xe đi Mũi Né',
+    );
+    const host = await asOwner(son!.email);
     await host.call('POST', `/bookings/${trip.bookingId}/transition`, {
       status: BOOKING_STATUS.CANCELLED,
       reason: 'Xe phát hiện lỗi phanh khi kiểm tra định kỳ, phải đưa đi sửa.',
@@ -606,8 +610,8 @@ async function main(): Promise<void> {
     });
   });
   await step('admin quyết định hoàn → hoàn khách vào ví điểm', async () => {
-    const vehicle = phuc!.vehicleIds[1] ?? phuc!.vehicleIds[0]!;
-    const trip = await paidTrip(cuong!, phuc!, vehicle, base + 9, 'Thuê xe cho chuyến đi Huế');
+    const vehicle = tuan!.vehicleIds[1] ?? tuan!.vehicleIds[0]!;
+    const trip = await paidTrip(cuong!, tuan!, vehicle, base + 9, 'Thuê xe cho chuyến đi Huế');
     await settle(
       trip,
       BOOKING_HOLD_OUTCOME.REFUNDED,
@@ -680,7 +684,7 @@ async function main(): Promise<void> {
     for (const failure of failures) log(`  - ${failure}`);
     process.exitCode = 1;
   } else {
-    log('\nXong. Mở /manage/admin/money để xem.');
+    log(`\nXong. Mở ${SITE_URL[ACCOUNT_REALM.PLATFORM]}/money để xem.`);
   }
 }
 

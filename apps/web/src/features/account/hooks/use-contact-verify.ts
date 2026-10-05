@@ -1,18 +1,14 @@
 'use client';
 
+import { OTP_POLICY } from '@xeprime/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 import { queryKeys } from '@/services/query-keys';
-import {
-  sendMyEmailOtp,
-  sendMyPhoneOtp,
-  verifyMyEmail,
-  verifyMyPhone,
-} from '../api';
+import { sendMyEmailOtp, sendMyPhoneOtp, verifyMyEmail, verifyMyPhone } from '../api';
 import { CONTACT_CHANNEL, type ContactChannel, type UserProfile } from '../types';
 
-/** Khớp `OTP_RESEND_COOLDOWN_SECONDS` mặc định của backend — gửi sớm hơn là chắc chắn bị từ chối. */
-const RESEND_COOLDOWN_SEC = 60;
+/** Cùng chính sách với server — gửi sớm hơn là chắc chắn bị từ chối. */
+const RESEND_COOLDOWN_SEC = OTP_POLICY.RESEND_COOLDOWN_SECONDS;
 
 export type ContactVerifyStep = 'identifier' | 'code';
 

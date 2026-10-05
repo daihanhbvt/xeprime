@@ -425,19 +425,17 @@ unset PLATFORM_ADMIN_PASSWORD
 
 > `PLATFORM_ADMIN_PASSWORD` là **bắt buộc** khi `NODE_ENV=production` (tức là ở cả hai môi
 > trường): `prisma/src/seed/context.ts` từ chối tạo tài khoản quản trị bằng mật khẩu mẫu. Seed
-> dựng `admin@xeprime.vn` với mật khẩu bạn nhập — đổi email bằng `PLATFORM_ADMIN_EMAIL`.
+> dựng `admin@xeprime.vn` với mật khẩu bạn nhập — đổi email bằng `PLATFORM_ADMIN_EMAIL`. Tài khoản
+> này được tạo ở CHÍNH chế độ `system` (`seedPlatformAdmin`), không cần dữ liệu demo.
 >
 > `--profile tools` cũng bắt buộc: `migrate` nằm sau profile đó trong compose.
 
 #### Dữ liệu DEMO — chỉ trên staging
 
-`SEED_MODE=demo` dựng **27 gian hàng**: 5 gian hàng DEMO khác quy mô (40 / 10 / 3 / 1 / 0 xe) đủ
-để test toàn bộ luồng nghiệp vụ mà không phải bấm tay, **2 gian hàng QA** cho ranh giới hai
-tuyến chủ xe — `qa.owner@xeprime.test` (hoa hồng, đúng 3 xe, làm việc ở `/account`) và
-`qa.shop@xeprime.test` (gói, đúng 10 xe với 8 + 2 chỗ đã mua, làm việc ở `/manage`) — và **20 chủ
-xe cá nhân tuyến hoa hồng** (`chuxe.*@xeprime.test`, mỗi người 1–3 xe, rải trên 15 tỉnh) để chợ xe
-có mật độ thật ngoài bốn thành phố lớn. Chi tiết và các phép kiểm hai tài khoản QA phục vụ:
-[`qa-accounts.md`](qa-accounts.md).
+`SEED_MODE=demo` dựng bộ demo gọn, mỗi loại tài khoản khoảng ba bản: **3 gian hàng tuyến gói**
+(12 / 5 / 2 xe — mỗi bậc gói một gian hàng, gian hàng lớn có 3 nhân viên), **3 chủ xe cá nhân tuyến
+hoa hồng** (1 / 2 / 3 xe), 3 khách, 2 tài khoản nền tảng ngoài admin, và 3 tài khoản song sinh xuyên
+site. Bảng tra và các phép kiểm chúng phục vụ: [`qa-accounts.md`](qa-accounts.md).
 
 Seed cũng **HỘI TỤ danh mục gói**: nó gỡ các bậc phí-nền cũ không còn dùng khỏi danh mục — xoá
 khi không còn thuê bao nào trỏ tới, archive kèm cảnh báo khi còn. Sau khi chạy (kể cả
@@ -477,14 +475,14 @@ docker compose -p xeprime-staging -f docker-compose.prod.yml --profile tools \
 unset PW_ADMIN PW_DEMO
 ```
 
-> `DEMO_PASSWORD` bắt buộc vì mật khẩu mẫu nằm **công khai trong repo**: 41 tài khoản demo dùng
-> nó trên một máy có mặt trên Internet là 41 lối vào. Seed idempotent trên toàn bộ 63 bảng nên
+> `DEMO_PASSWORD` bắt buộc vì mật khẩu mẫu nằm **công khai trong repo**: mọi tài khoản demo dùng
+> nó trên một máy có mặt trên Internet là bấy nhiêu lối vào. Seed idempotent trên toàn bộ 63 bảng nên
 > chạy lại nhiều lần không nhân đôi dữ liệu.
 >
 > ⚠️ **Đừng đưa dữ liệu khách hàng thật lên staging** — `APP_ENV=staging` khiến endpoint gửi OTP
 > trả kèm `devCode` (§2.3).
 
-> ❌ **Không bao giờ chạy `SEED_MODE=demo` trên production** — nó tạo 41 tài khoản và 27 gian hàng
+> ❌ **Không bao giờ chạy `SEED_MODE=demo` trên production** — nó tạo tài khoản và gian hàng
 > giả ngay trong database thật. `prisma/src/seed/context.ts` đã chặn sẵn (`NODE_ENV=production`
 > + `SEED_MODE=demo` ⇒ từ chối chạy), nhưng đừng đi tìm cách vòng qua nó.
 
@@ -748,7 +746,6 @@ Settings; Secret bị che và không đọc lại được sau khi lưu.
 | `TRUST_PROXY_HOPS` | `1` | `2` nếu bật proxy Cloudflare (§2.2) |
 | `API_PUBLIC_URL` · `APP_WEB_URL` | `https://api-stg.xeprime.vn` · `https://stg.xeprime.vn` | |
 | `WEB_PARTNER_URL` · `WEB_ADMIN_URL` | `https://partner-stg.xeprime.vn` · `https://admin-stg.xeprime.vn` | tuỳ chọn — bỏ trống thì suy từ `PARTNER_DOMAIN`/`ADMIN_DOMAIN`. Link email + callback OAuth web của từng realm, và cũng là `NEXT_PUBLIC_WEB_*_URL` lúc build |
-| `SESSION_TTL_DAYS` | `7` | |
 | `SESSION_COOKIE_NAME` | **`xp_session_stg`** | BẮT BUỘC khác production — §2.3 |
 | `SESSION_COOKIE_SECURE` | `true` | |
 | ~~`SESSION_COOKIE_DOMAIN`~~ | **XOÁ** | đã bỏ (ADR 0053 — cookie host-only). Workflow không ghi nó nữa và cảnh báo nếu còn; API từ chối boot nếu thấy |
@@ -756,7 +753,7 @@ Settings; Secret bị che và không đọc lại được sau khi lưu.
 | `MOBILE_JWT_AUDIENCE` · `MOBILE_AUTH_REDIRECT_URIS` | `xeprime-mobile` · `xeprime://auth/callback` | |
 | `OTP_MODE` | `mock` | mã in ra log và trả trong response |
 | `PLAN_FEATURE_ENFORCEMENT` | `warn` | trục năng lực theo gói (ADR 0027). Xem §9.4 trước khi đổi sang `on` |
-| `OTP_TTL_MINUTES` · `OTP_RESEND_COOLDOWN_SECONDS` · `OTP_MAX_SENDS_PER_HOUR` · `OTP_MAX_ATTEMPTS` | `5` · `60` · `5` · `5` | |
+| ~~`SESSION_TTL_DAYS` · `OTP_TTL_MINUTES` · `OTP_RESEND_COOLDOWN_SECONDS` · `OTP_MAX_SENDS_PER_HOUR` · `OTP_MAX_ATTEMPTS` · `GOOGLE_HOLIDAY_CALENDAR_ID`~~ | **XOÁ** | chính sách giống mọi môi trường ⇒ hằng số ở `@xeprime/types` (`SESSION_TTL_DAYS`, `OTP_POLICY`, `GOOGLE_HOLIDAY_CALENDAR_ID_DEFAULT`); workflow không còn đọc |
 | `SMTP_HOST` · `SMTP_PORT` · `SMTP_USER` | `smtp.resend.com` · `587` · `resend` | staging gửi thư THẬT (quyết định 04/09/2026) — `third-party-keys.md` §7.2. Để trống thì email rơi về in ra log |
 | `SMTP_FROM` | `XePrime STG <no-reply@stg.xeprime.vn>` | tên miền **con**, không phải `xeprime.vn` — uy tín gửi thư tính theo tên miền, test hỏng không được kéo thư của khách vào Junk |
 | `SEPAY_BANK_CODE` · `SEPAY_ACCOUNT_NUMBER` · `SEPAY_ACCOUNT_NAME` | trống | in vào mã VietQR ⇒ công khai theo bản chất. Đi cùng `SEPAY_API_KEY` (Secret) — bốn cái khai cùng nhau hoặc cùng để trống, khai lẻ thì API từ chối boot |
@@ -765,7 +762,6 @@ Settings; Secret bị che và không đọc lại được sau khi lưu.
 | `FIREBASE_PROJECT_ID` · `FIREBASE_CLIENT_EMAIL` | trống | là ĐỊNH DANH, không phải bí mật |
 | `GOOGLE_OAUTH_CLIENT_ID` · `FACEBOOK_APP_ID` | trống hoặc thật | client id đi trong URL authorize ⇒ công khai theo thiết kế |
 | `R2_ACCOUNT_ID` · `R2_ENDPOINT` · `R2_BUCKET` · `R2_PRIVATE_BUCKET` · `R2_PUBLIC_BASE_URL` | bucket RIÊNG cho staging | URL `r2.dev` là đủ |
-| `GOOGLE_HOLIDAY_CALENDAR_ID` | `vi.vietnamese#holiday@group.v.calendar.google.com` | |
 | `BACKUP_KEEP_DAYS` | `14` | |
 | ~~`NEXT_PUBLIC_API_URL`~~ | **XOÁ** | workflow build cố định `/api` (cùng origin — ADR 0051 điều 4); biến cũ không còn được đọc |
 | `NEXT_PUBLIC_APP_NAME` | `XePrime STG` | nhãn khác giúp không nhầm tab |

@@ -60,7 +60,6 @@ const config = {
       WEB_PARTNER_URL: 'https://partner.xeprime.vn',
       WEB_ADMIN_URL: 'https://admin.xeprime.vn',
       SESSION_JWT_SECRET: SECRET,
-      SESSION_TTL_DAYS: 7,
       SESSION_COOKIE_NAME: COOKIE_BASE,
       SESSION_COOKIE_SECURE: false,
       MOBILE_ACCESS_TTL_MINUTES: 15,

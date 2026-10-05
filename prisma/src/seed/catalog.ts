@@ -45,8 +45,6 @@ export interface VehicleModelSpec {
   /** Dòng xe có phục vụ kèm tài xế (xe từ 5 chỗ trở lên, không phải xe máy/bán tải nhỏ). */
   withDriver: boolean;
   features: readonly string[];
-  /** Ảnh Unsplash ghim theo id — phần tử đầu là ảnh đại diện, còn lại là gallery. */
-  photos: readonly string[];
   description: string;
 }
 
@@ -85,36 +83,116 @@ export function driverPricesOf(
   };
 }
 
-// Ảnh: 27 photo id Unsplash đã dùng và kiểm chứng ở seed trước — không bịa id mới, vì id sai
-// cho ra thẻ xe vỡ ảnh mà không ai để ý cho tới lúc mở marketplace.
-const P = {
-  sedanA: '1550355291-bbee04a92027',
-  sedanB: '1502877338535-766e1452684a',
-  sedanC: '1549317661-bd32c8ce0db2',
-  sedanD: '1553440569-bcc63803a83d',
-  suvA: '1533473359331-0135ef1b58bf',
-  suvB: '1568605117036-5fe5e7bab0b7',
-  suvC: '1519641471654-76ce0107ad1b',
-  cuvA: '1568772585407-9361f9bf3a87',
-  cuvB: '1570125909232-eb263c188f7e',
-  cuvC: '1617788138017-80ad40651399',
-  miniA: '1494976388531-d1058494cdd8',
-  miniB: '1503376780353-7e6692767b70',
-  mpvA: '1558980664-10ea292d6d12',
-  mpvB: '1558981359-219d6364c9c8',
-  mpvC: '1558981403-c5f9899a28bc',
-  pickupA: '1558981806-ec527fa84c39',
-  pickupB: '1504215680853-026ed2a45def',
-  vanA: '1536700503339-1e4b06520771',
-  vanB: '1542362567-b07e54358753',
-  evA: '1571068316344-75bc76f77890',
-  evB: '1599819811279-d5ad9cccf838',
-  evC: '1609630875171-b1321377ee65',
-  bikeA: '1511919884226-fd3cad34687c',
-  bikeB: '1549399542-7e3f8b79c341',
-  bikeC: '1492144534655-ae79c964c9d7',
-  scene: '1469854523086-cc02fe5d8800',
-} as const;
+// ── Ảnh xe ──────────────────────────────────────────────────────────────────
+
+/** Một tấm ảnh Unsplash ghim theo id; `flip` lật ngang (tham số `flip=h` của CDN). */
+export interface SeedPhoto {
+  id: string;
+  flip?: boolean;
+}
+
+/**
+ * Bộ ảnh của MỘT chiếc xe — đủ năm ô ảnh theo vị trí mà màn đăng xe dùng
+ * (`vehicleImageSlotsFor`): trước · sau · trái · phải · nội thất (ô tô) hoặc đồng hồ (xe máy).
+ * Ảnh đại diện là ảnh mặt trước. Năm URL khác nhau nên vượt `VEHICLE_PUBLIC_MIN_IMAGES`.
+ */
+export interface VehiclePhotoSet {
+  front: SeedPhoto;
+  rear: SeedPhoto;
+  left: SeedPhoto;
+  right: SeedPhoto;
+  /** Nội thất (ô tô) hoặc mặt đồng hồ (xe máy). */
+  fifth: SeedPhoto;
+}
+
+/**
+ * Ảnh MINH HOẠ theo LOẠI xe — không phải ảnh đúng từng mẫu xe (seed không có ảnh thật của từng
+ * dòng). Mỗi id đã được XEM bằng mắt (đúng loại xe, đúng góc chụp) và kiểm HTTP 200 ngày
+ * 05/10/2026. Bộ cũ gắn nhãn theo kiểu dáng nhưng ảnh không khớp: "xe máy" là ô tô thể thao, "MPV"
+ * là mô tô, một tấm 404 — thẻ xe vỡ ảnh hoặc hiện mô tô cho một chiếc SUV.
+ *
+ * Hai ô hông là CÙNG một tấm ảnh, ô kia lật ngang: một chiếc xe nhìn từ hai bên vẫn là một chiếc.
+ * Ảnh xe nhìn ngang mà đầu xe quay sang PHẢI khung hình là hông PHẢI của xe (và ngược lại) — đã
+ * xem tận mắt hướng đầu xe của từng tấm.
+ *
+ * Thêm/đổi ảnh: lấy id từ og:image của trang ảnh Unsplash, xem tận mắt, chạy lại seed.
+ */
+const PHOTO_SETS = {
+  /** Hạng A, sedan, hatchback. */
+  car: [
+    {
+      front: { id: '1756664825178-8309acda57eb' }, // Mazda nhìn thẳng đầu xe
+      rear: { id: '1655940645026-ac7dbe67eabe' }, // sedan BMW nhìn đuôi
+      right: { id: '1502877338535-766e1452684a' }, // coupe xanh, đầu xe quay phải
+      left: { id: '1502877338535-766e1452684a', flip: true },
+      fifth: { id: '1710866380940-7e0c7aa925b0' }, // khoang lái, vô lăng + táp-lô
+    },
+    {
+      front: { id: '1550355291-bbee04a92027' }, // hatchback đỏ, cận đầu xe
+      rear: { id: '1657394926601-90c47b66e88a' }, // đuôi xe, đèn hậu tròn
+      left: { id: '1549317661-bd32c8ce0db2' }, // xe nhỏ xanh, đầu xe quay trái
+      right: { id: '1549317661-bd32c8ce0db2', flip: true },
+      fifth: { id: '1750210505994-bcd0e8ca394e' }, // khoang lái, màn hình giữa
+    },
+  ],
+  /** SUV, CUV, MPV, bán tải, van. */
+  suv: [
+    {
+      front: { id: '1728535530283-27eb9a380ce6' }, // SUV 7 chỗ nhìn đầu xe
+      rear: { id: '1547559418-8d7437f53b5b' }, // SUV trắng nhìn đuôi xe
+      left: { id: '1642274727246-b16d384df55a' }, // SUV xám, đầu xe quay trái
+      right: { id: '1642274727246-b16d384df55a', flip: true },
+      fifth: { id: '1758228664396-9010f6657f41' }, // khoang lái SUV, đồng hồ số
+    },
+    {
+      front: { id: '1677517859847-0e750bfd13a9' }, // SUV trắng nhìn đầu xe
+      rear: { id: '1547559418-8d7437f53b5b' },
+      left: { id: '1751026747480-1bc3a40b8816' }, // SUV trắng, đầu xe quay trái
+      right: { id: '1751026747480-1bc3a40b8816', flip: true },
+      fifth: { id: '1644091067090-4fde9574ffb0' }, // cần số + bệ tì tay
+    },
+  ],
+  /** Xe máy (tay ga, xe số). */
+  motorbike: [
+    {
+      front: { id: '1674891683584-467b6e23f81b' }, // xe tay ga Honda nhìn đầu xe
+      rear: { id: '1693826775276-53d4b1d758a3' }, // tay ga đỗ lề, nhìn chéo đuôi
+      left: { id: '1636492679399-0aff4f2e1171' }, // tay ga, đầu xe quay trái
+      right: { id: '1636492679399-0aff4f2e1171', flip: true },
+      fifth: { id: '1724963723054-d65f7a94d14a' }, // cụm đồng hồ
+    },
+    {
+      front: { id: '1633446256076-7e02748c4758' }, // tay ga cổ điển nhìn đầu xe
+      rear: { id: '1693826775276-53d4b1d758a3' },
+      left: { id: '1636492679399-0aff4f2e1171' },
+      right: { id: '1636492679399-0aff4f2e1171', flip: true },
+      fifth: { id: '1574068136499-9a23673966e6' }, // đồng hồ tốc độ
+    },
+  ],
+} as const satisfies Record<string, readonly VehiclePhotoSet[]>;
+
+/** Kiểu dáng chở người cỡ lớn — dùng bộ ảnh SUV. */
+const LARGE_BODY_TYPES: readonly string[] = [
+  BODY_TYPE.SUV,
+  BODY_TYPE.CUV,
+  BODY_TYPE.MPV,
+  BODY_TYPE.PICKUP,
+  BODY_TYPE.VAN,
+];
+
+/**
+ * Bộ ảnh cho chiếc thứ `index` của một mẫu xe — xoay vòng các biến thể của loại xe để hai chiếc
+ * cạnh nhau trên chợ không trùng hệt ảnh.
+ */
+export function vehiclePhotoSet(spec: VehicleModelSpec, index: number): VehiclePhotoSet {
+  const sets =
+    spec.vehicleType === VEHICLE_TYPE.MOTORBIKE
+      ? PHOTO_SETS.motorbike
+      : spec.bodyType && LARGE_BODY_TYPES.includes(spec.bodyType)
+        ? PHOTO_SETS.suv
+        : PHOTO_SETS.car;
+  return sets[index % sets.length]!;
+}
 
 /**
  * 30 dòng xe phủ đủ MỌI chiều của bộ lọc marketplace: 9 kiểu dáng, 4 loại nhiên liệu, 5 kiểu
@@ -142,7 +220,6 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: true,
     withDriver: false,
     features: ['bluetooth', 'usb', 'airbag', 'reverse_sensor'],
-    photos: [P.miniA, P.miniB],
     description:
       'Xe cỡ nhỏ dễ luồn phố, chỗ đậu nào cũng vừa. Phù hợp đi lại trong thành phố và người mới lái.',
   },
@@ -165,7 +242,6 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: true,
     withDriver: false,
     features: ['bluetooth', 'usb', 'airbag', 'backup_camera'],
-    photos: [P.miniB, P.miniA],
     description: 'Hạng A tiết kiệm xăng, máy lạnh mát, bảo dưỡng đúng hạn tại hãng.',
   },
   {
@@ -187,7 +263,6 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: true,
     withDriver: false,
     features: ['bluetooth', 'usb', 'airbag', 'backup_camera', 'screen'],
-    photos: [P.miniA, P.scene],
     description: 'Hạng A gầm hơi cao, chạy phố và đường tỉnh đều êm.',
   },
 
@@ -211,7 +286,6 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: true,
     withDriver: true,
     features: ['bluetooth', 'backup_camera', 'usb', 'map', 'airbag'],
-    photos: [P.sedanA, P.sedanB, P.sedanC],
     description:
       'Sedan quốc dân tiết kiệm xăng, phù hợp đi phố lẫn về quê. Xe bảo dưỡng định kỳ tại hãng.',
   },
@@ -234,7 +308,6 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: true,
     withDriver: true,
     features: ['bluetooth', 'backup_camera', 'usb', 'screen', 'airbag', 'reverse_sensor'],
-    photos: [P.sedanB, P.sedanD],
     description: 'Sedan hạng B rộng rãi, cách âm tốt, ghế sau đủ chỗ cho ba người lớn.',
   },
   {
@@ -256,7 +329,6 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: true,
     withDriver: true,
     features: ['bluetooth', 'backup_camera', 'usb', 'airbag'],
-    photos: [P.sedanC, P.sedanA],
     description: 'Sedan hạng B quen thuộc với tài xế dịch vụ, chi phí vận hành thấp.',
   },
   {
@@ -278,7 +350,6 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: true,
     withDriver: true,
     features: ['bluetooth', 'backup_camera', 'usb', 'screen', 'airbag', 'sunroof'],
-    photos: [P.sedanD, P.sedanB],
     description: 'Sedan hạng C nhiều trang bị, cửa sổ trời, ghế da — hợp đi công tác.',
   },
   {
@@ -300,7 +371,6 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: true,
     withDriver: true,
     features: ['bluetooth', 'backup_camera', 'usb', 'screen', 'airbag', 'gps'],
-    photos: [P.sedanA, P.sedanD],
     description: 'Sedan hạng C nội thất đẹp, vô-lăng nhẹ, cách âm khá — lái đường dài đỡ mệt.',
   },
   {
@@ -322,7 +392,6 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: true,
     withDriver: true,
     features: ['bluetooth', 'backup_camera', 'camera_360', 'usb', 'screen', 'airbag', 'gps', 'etc'],
-    photos: [P.sedanD, P.sedanC],
     description: 'Sedan hạng D dùng đón khách, đi sự kiện. Nội thất da, ghế sau chỉnh điện.',
   },
   {
@@ -354,7 +423,6 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
       'sunroof',
       'etc',
     ],
-    photos: [P.sedanC, P.sedanD],
     description: 'Xe sang cho đám cưới, đón đối tác. Giao xe kèm tài xế mặc vest theo yêu cầu.',
   },
 
@@ -377,9 +445,17 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     hourly: 110_000,
     longTerm: true,
     withDriver: true,
-    features: ['bluetooth', 'backup_camera', 'usb', 'screen', 'airbag', 'sunroof', 'reverse_sensor'],
-    photos: [P.cuvA, P.cuvB],
-    description: 'Crossover gầm cao, cốp rộng, đi phượt cuối tuần vừa đủ chỗ cho 4 người và hành lý.',
+    features: [
+      'bluetooth',
+      'backup_camera',
+      'usb',
+      'screen',
+      'airbag',
+      'sunroof',
+      'reverse_sensor',
+    ],
+    description:
+      'Crossover gầm cao, cốp rộng, đi phượt cuối tuần vừa đủ chỗ cho 4 người và hành lý.',
   },
   {
     key: 'hyundai-creta',
@@ -400,7 +476,6 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: true,
     withDriver: true,
     features: ['bluetooth', 'backup_camera', 'usb', 'screen', 'airbag', 'reverse_sensor'],
-    photos: [P.cuvB, P.cuvC],
     description: 'Crossover cỡ B gầm cao, dễ lái, phù hợp gia đình nhỏ đi chơi xa.',
   },
   {
@@ -422,7 +497,6 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: true,
     withDriver: true,
     features: ['bluetooth', 'backup_camera', 'camera_360', 'usb', 'screen', 'airbag'],
-    photos: [P.cuvC, P.cuvA],
     description: 'Crossover mới, khoảng sáng gầm cao, camera 360 — chạy đường xấu yên tâm.',
   },
   {
@@ -444,7 +518,6 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: true,
     withDriver: true,
     features: ['bluetooth', 'backup_camera', 'usb', 'screen', 'airbag', 'gps', 'etc'],
-    photos: [P.cuvA, P.cuvC],
     description: 'Bản hybrid cực tiết kiệm — chạy phố khoảng 4,4 L/100km, không cần cắm sạc.',
   },
   {
@@ -466,8 +539,8 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: true,
     withDriver: false,
     features: ['bluetooth', 'backup_camera', 'usb', 'screen', 'airbag'],
-    photos: [P.evA, P.evB],
-    description: 'Xe điện cỡ nhỏ, không tốn tiền xăng. Giao xe pin đầy, trạm sạc phủ khắp thành phố.',
+    description:
+      'Xe điện cỡ nhỏ, không tốn tiền xăng. Giao xe pin đầy, trạm sạc phủ khắp thành phố.',
   },
   {
     key: 'vinfast-vf8',
@@ -488,7 +561,6 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: true,
     withDriver: true,
     features: ['bluetooth', 'camera_360', 'usb', 'screen', 'airbag', 'gps', 'sunroof'],
-    photos: [P.evB, P.evC],
     description: 'SUV điện cỡ D, khoang rộng, tăng tốc nhanh và cực êm — hợp đi đường dài.',
   },
   {
@@ -510,7 +582,6 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: true,
     withDriver: true,
     features: ['bluetooth', 'backup_camera', 'usb', 'screen', 'airbag', 'spare_tire', 'gps'],
-    photos: [P.suvA, P.suvB],
     description: 'SUV 7 chỗ máy dầu, gầm cao, chở cả nhà đi đường đèo hay đường xấu đều chắc.',
   },
   {
@@ -532,7 +603,6 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: true,
     withDriver: true,
     features: ['bluetooth', 'camera_360', 'usb', 'screen', 'airbag', 'spare_tire', 'gps', 'etc'],
-    photos: [P.suvB, P.suvC],
     description: 'SUV 7 chỗ nhiều công nghệ hỗ trợ lái, khoang lái yên tĩnh, kéo được rơ-moóc nhẹ.',
   },
   {
@@ -554,7 +624,6 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: true,
     withDriver: true,
     features: ['bluetooth', 'camera_360', 'usb', 'screen', 'airbag', 'gps', 'sunroof'],
-    photos: [P.suvC, P.suvA],
     description: 'SUV 7 chỗ máy dầu hộp số ly hợp kép, hàng ghế ba gập phẳng cho cốp rất rộng.',
   },
 
@@ -578,7 +647,6 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: true,
     withDriver: true,
     features: ['bluetooth', 'backup_camera', 'usb', 'screen', 'airbag', 'child_seat'],
-    photos: [P.mpvA, P.mpvB],
     description: 'MPV 7 chỗ bán chạy nhất phân khúc — gầm cao, tiết kiệm xăng, hợp gia đình.',
   },
   {
@@ -600,7 +668,6 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: true,
     withDriver: true,
     features: ['bluetooth', 'backup_camera', 'usb', 'airbag', 'spare_tire'],
-    photos: [P.mpvB, P.mpvC],
     description: 'MPV 8 chỗ bền bỉ, khoang rộng, lựa chọn quen thuộc cho tour và đưa đón sân bay.',
   },
   {
@@ -622,7 +689,6 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: true,
     withDriver: true,
     features: ['bluetooth', 'backup_camera', 'usb', 'screen', 'airbag', 'child_seat'],
-    photos: [P.mpvC, P.mpvA],
     description: 'MPV 7 chỗ đời mới, nhiều trang bị an toàn, ghế hàng hai trượt được.',
   },
   {
@@ -644,7 +710,6 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: true,
     withDriver: true,
     features: ['bluetooth', 'camera_360', 'usb', 'screen', 'airbag', 'gps', 'sunroof', 'etc'],
-    photos: [P.mpvA, P.mpvC],
     description: 'MPV cao cấp, cửa trượt điện, ghế thương gia — hợp đón đoàn khách và đi công tác.',
   },
 
@@ -668,7 +733,6 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: true,
     withDriver: false,
     features: ['bluetooth', 'backup_camera', 'usb', 'screen', 'airbag', 'spare_tire'],
-    photos: [P.pickupA, P.pickupB],
     description: 'Bán tải chở được hàng cồng kềnh, thùng sau phủ composite, đi công trình tốt.',
   },
   {
@@ -690,7 +754,6 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: true,
     withDriver: false,
     features: ['bluetooth', 'backup_camera', 'usb', 'airbag', 'spare_tire'],
-    photos: [P.pickupB, P.pickupA],
     description: 'Bán tải máy dầu khoẻ, bán kính quay đầu nhỏ nhất phân khúc — chạy phố dễ hơn.',
   },
   {
@@ -712,7 +775,6 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: false,
     withDriver: true,
     features: ['bluetooth', 'usb', 'airbag', 'spare_tire'],
-    photos: [P.vanA, P.vanB],
     description: 'Xe 16 chỗ cho đoàn đông, hành lý nhiều. Thuê kèm tài xế theo quy định.',
   },
   {
@@ -734,7 +796,6 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: false,
     withDriver: true,
     features: ['bluetooth', 'usb', 'airbag', 'spare_tire', 'screen'],
-    photos: [P.vanB, P.vanA],
     description: 'Xe 16 chỗ trần cao, đứng thẳng người trong khoang — đi tour dài đỡ mỏi.',
   },
   {
@@ -756,7 +817,6 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: true,
     withDriver: false,
     features: ['bluetooth', 'usb', 'spare_tire'],
-    photos: [P.vanA, P.scene],
     description: 'Xe van 2 chỗ, được vào phố giờ cấm tải — chở hàng nhẹ, chuyển nhà nhỏ.',
   },
   {
@@ -778,7 +838,6 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: true,
     withDriver: false,
     features: ['spare_tire', 'bluetooth'],
-    photos: [P.pickupB, P.vanA],
     description: 'Xe tải nhẹ 810kg thùng bạt — chuyển nhà, chở hàng chợ đầu mối.',
   },
 
@@ -802,7 +861,6 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: true,
     withDriver: false,
     features: ['spare_tire'],
-    photos: [P.bikeA, P.bikeB],
     description: 'Xe tay ga nhỏ gọn, tiết kiệm xăng nhất phân khúc. Giao kèm 2 nón bảo hiểm.',
   },
   {
@@ -824,7 +882,6 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: true,
     withDriver: false,
     features: ['spare_tire'],
-    photos: [P.bikeB, P.bikeC],
     description: 'Tay ga 160cc bốc, cốp rộng để vừa nón fullface. Phanh ABS bánh trước.',
   },
   {
@@ -846,7 +903,6 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: true,
     withDriver: false,
     features: ['spare_tire'],
-    photos: [P.bikeC, P.bikeA],
     description: 'Tay ga cao cấp bánh lớn, chạy đường xóc êm. Có khoá smartkey.',
   },
   {
@@ -868,8 +924,8 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: true,
     withDriver: false,
     features: ['spare_tire'],
-    photos: [P.bikeA, P.bikeC],
-    description: 'Xe côn tay 155cc, hợp phượt đường đèo. Yêu cầu người thuê có kinh nghiệm côn tay.',
+    description:
+      'Xe côn tay 155cc, hợp phượt đường đèo. Yêu cầu người thuê có kinh nghiệm côn tay.',
   },
   {
     key: 'vinfast-klara',
@@ -890,7 +946,6 @@ export const VEHICLE_MODELS: readonly VehicleModelSpec[] = [
     longTerm: true,
     withDriver: false,
     features: ['spare_tire'],
-    photos: [P.bikeB, P.evA],
     description: 'Xe máy điện chạy êm, không tốn xăng. Quãng đường khoảng 90 km mỗi lần sạc đầy.',
   },
 ];
@@ -903,7 +958,9 @@ export const VEHICLE_MODEL_BY_KEY: ReadonlyMap<string, VehicleModelSpec> = new M
  * Đầu số biển theo tỉnh — biển thật của địa phương, để dữ liệu nhìn vào là đúng vùng.
  * Nguồn: Thông tư 24/2023/TT-BCA (ký hiệu tỉnh giữ nguyên sau sáp nhập 2025).
  */
-export const PLATE_PREFIX: Readonly<Record<string, { car: readonly string[]; bike: readonly string[] }>> = {
+export const PLATE_PREFIX: Readonly<
+  Record<string, { car: readonly string[]; bike: readonly string[] }>
+> = {
   '01': { car: ['29A', '30A', '30E', '30F'], bike: ['29B1', '29H1'] }, // Hà Nội
   '22': { car: ['14A', '14C'], bike: ['14B1'] }, // Quảng Ninh
   '24': { car: ['99A', '98A'], bike: ['99B1'] }, // Bắc Ninh (gồm Bắc Giang cũ — đầu số 98)

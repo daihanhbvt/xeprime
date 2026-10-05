@@ -325,7 +325,7 @@ Key **thứ ba**, tách khỏi hai key trên (khác API, khác hạn mức, và 
 | Loại | Tên | Giá trị |
 | --- | --- | --- |
 | **Secret** | `GOOGLE_HOLIDAY_API_KEY` | key vừa tạo |
-| Variable | `GOOGLE_HOLIDAY_CALENDAR_ID` | `vi.vietnamese#holiday@group.v.calendar.google.com` |
+| Hằng số (không phải env) | `GOOGLE_HOLIDAY_CALENDAR_ID_DEFAULT` ở `@xeprime/types` | `vi.vietnamese#holiday@group.v.calendar.google.com` |
 
 Chỉ cần **API key**, không cần OAuth hay service account — lịch ngày lễ của Google là công khai.
 Worker đồng bộ mỗi ngày một lần và tự che key khỏi log lỗi.

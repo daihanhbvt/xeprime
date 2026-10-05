@@ -112,24 +112,52 @@ export async function upsertPasswordUser(input: PasswordUserInput): Promise<stri
 // Đội ngũ nền tảng — mỗi vai trò một tài khoản
 // ---------------------------------------------------------------------------
 
-/**
- * Tài khoản `platform_admin` lấy email từ env nên phải ghép ở đây; bốn vai trò còn lại là dữ
- * liệu thuần, khai ở `identities.ts` để `cleanup-test-data.ts` dùng chung.
- */
-const ALL_PLATFORM_ACCOUNTS: ReadonlyArray<{
+/** Một tài khoản nền tảng + membership của vai trò đó — dùng chung cho admin và tài khoản demo. */
+async function upsertPlatformAccount(account: {
   roleKey: string;
   email: string;
   displayName: string;
   phone: string;
-}> = [
-  {
+  password: string;
+}): Promise<string> {
+  const userId = await upsertPasswordUser({
+    realm: ACCOUNT_REALM.PLATFORM,
+    email: account.email,
+    password: account.password,
+    displayName: account.displayName,
+    phone: account.phone,
+    phoneVerified: true,
+  });
+
+  await prisma.platformMembership.upsert({
+    where: { userId_roleKey: { userId, roleKey: account.roleKey } },
+    update: { status: MEMBERSHIP_STATUS.ACTIVE },
+    create: {
+      id: seedId(`platform-membership:${account.email}`),
+      userId,
+      roleKey: account.roleKey,
+      status: MEMBERSHIP_STATUS.ACTIVE,
+    },
+  });
+  return userId;
+}
+
+/**
+ * Tài khoản `platform_admin` — dữ liệu NỀN, chạy ở CẢ chế độ `system`: môi trường mới deploy phải
+ * có một người đăng nhập được site quản trị để tạo những người còn lại. Email từ
+ * `PLATFORM_ADMIN_EMAIL`, mật khẩu từ `PLATFORM_ADMIN_PASSWORD` (bắt buộc ở môi trường đã triển khai).
+ */
+export async function seedPlatformAdmin(): Promise<string> {
+  const userId = await upsertPlatformAccount({
     roleKey: PLATFORM_ROLE.PLATFORM_ADMIN,
     email: PLATFORM_ADMIN_EMAIL,
     displayName: 'Quản trị nền tảng',
     phone: '0900000001',
-  },
-  ...PLATFORM_ACCOUNTS,
-];
+    password: PLATFORM_ADMIN_PASSWORD,
+  });
+  log(`  tài khoản quản trị nền tảng: ${PLATFORM_ADMIN_EMAIL}`);
+  return userId;
+}
 
 export interface PlatformAccounts {
   /** Người duyệt hồ sơ/xe trong dữ liệu demo — dùng làm `reviewedBy` của approval task. */
@@ -138,38 +166,22 @@ export interface PlatformAccounts {
   byRole: Map<string, string>;
 }
 
-export async function seedPlatformAccounts(): Promise<PlatformAccounts> {
-  const byRole = new Map<string, string>();
-
-  for (const account of ALL_PLATFORM_ACCOUNTS) {
-    const password =
-      account.roleKey === PLATFORM_ROLE.PLATFORM_ADMIN ? PLATFORM_ADMIN_PASSWORD : DEMO_PASSWORD;
-    const userId = await upsertPasswordUser({
-      realm: ACCOUNT_REALM.PLATFORM,
-      email: account.email,
-      password,
-      displayName: account.displayName,
-      phone: account.phone,
-      phoneVerified: true,
-    });
-
-    await prisma.platformMembership.upsert({
-      where: { userId_roleKey: { userId, roleKey: account.roleKey } },
-      update: { status: MEMBERSHIP_STATUS.ACTIVE },
-      create: {
-        id: seedId(`platform-membership:${account.email}`),
-        userId,
-        roleKey: account.roleKey,
-        status: MEMBERSHIP_STATUS.ACTIVE,
-      },
-    });
-    byRole.set(account.roleKey, userId);
+/** Tài khoản nền tảng của dữ liệu DEMO (ngoài admin) — xem `PLATFORM_ACCOUNTS`. */
+export async function seedPlatformAccounts(adminUserId: string): Promise<PlatformAccounts> {
+  const byRole = new Map<string, string>([[PLATFORM_ROLE.PLATFORM_ADMIN, adminUserId]]);
+  for (const account of PLATFORM_ACCOUNTS) {
+    byRole.set(
+      account.roleKey,
+      await upsertPlatformAccount({ ...account, password: DEMO_PASSWORD }),
+    );
   }
 
-  log(`  tài khoản nền tảng: ${ALL_PLATFORM_ACCOUNTS.length} (đủ 5 vai trò)`);
+  log(
+    `  tài khoản nền tảng demo: ${PLATFORM_ACCOUNTS.length} (${PLATFORM_ACCOUNTS.map((a) => a.roleKey).join(' · ')})`,
+  );
 
   return {
-    adminUserId: byRole.get(PLATFORM_ROLE.PLATFORM_ADMIN)!,
+    adminUserId,
     reviewerUserId: byRole.get(PLATFORM_ROLE.REVIEWER)!,
     byRole,
   };
