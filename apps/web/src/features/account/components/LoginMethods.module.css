@@ -1,0 +1,125 @@
+/*
+ * "Phương thức đăng nhập" — danh sách dòng cài đặt, nằm trong một `SectionCard`.
+ *
+ * Mỗi dòng: ô biểu tượng · nhãn + giá trị · tình trạng · nút. Desktop là một hàng; màn hẹp thì
+ * tình trạng và nút xuống dòng dưới giá trị, nút vẫn bám phải để ngón cái với tới.
+ */
+.rows {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: grid;
+  min-width: 0;
+  align-items: center;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  padding: var(--xp-space-md) 0;
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+  gap: var(--xp-space-sm) var(--xp-space-md);
+}
+
+.row:first-child {
+  padding-top: 0;
+}
+
+.row:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.icon {
+  display: inline-grid;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-layout);
+  color: var(--xp-color-text-secondary);
+  font-size: 18px;
+  place-items: center;
+}
+
+.body {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.label {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+/* Giá trị là thứ người dùng quét mắt tìm — nó đậm hơn nhãn. */
+.value {
+  min-width: 0;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.empty {
+  color: var(--xp-color-text-tertiary);
+  font-style: italic;
+}
+
+/*
+ * Viên trạng thái: màu nằm ở `background` + chữ, không chỉ ở biểu tượng — `color` của biểu tượng
+ * AntD kế thừa từ hàng, chỉ cần một quy tắc khác trúng cha là dấu tích lặng lẽ đen trở lại.
+ */
+.status {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-pill);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  gap: var(--xp-space-xs);
+  white-space: nowrap;
+}
+
+.verified {
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+}
+
+.unverified {
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning);
+}
+
+.action {
+  justify-self: end;
+}
+
+@media (max-width: 640px) {
+  .row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'icon body action'
+      'icon status status';
+  }
+
+  .icon {
+    grid-area: icon;
+    align-self: start;
+  }
+
+  .body {
+    grid-area: body;
+  }
+
+  .status {
+    grid-area: status;
+    justify-self: start;
+  }
+
+  .action {
+    grid-area: action;
+  }
+}

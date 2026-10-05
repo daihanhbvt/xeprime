@@ -173,11 +173,15 @@ export const ROUTES = {
      * chọn bằng `?section=` (xem `SHOP_SECTION`).
      */
     SHOP: partner('/shop'),
-    /** BẢO MẬT TÀI KHOẢN của NGƯỜI đang đăng nhập — phương thức đăng nhập, mật khẩu, xoá tài khoản. */
+    /**
+     * ALIAS CHUYỂN TIẾP (05/10/2026) — "Bảo mật tài khoản" đã gộp vào `ACCOUNT`; route cũ redirect
+     * tới section "Thông tin đăng nhập". Không mục menu nào còn trỏ tới đây.
+     */
     SECURITY: partner('/security'),
     /**
-     * HỒ SƠ CÁ NHÂN của tài khoản đối tác — tên, ảnh, SĐT, email (ADR 0053: tài khoản partner tách
-     * khỏi tài khoản khách, nên nó có hồ sơ riêng ở site của nó).
+     * TÀI KHOẢN & BẢO MẬT của tài khoản đối tác — tên, ảnh, email/SĐT đăng nhập, mật khẩu, xoá tài
+     * khoản (ADR 0053: tài khoản partner là tài khoản riêng của site partner). Section chọn bằng
+     * `?section=` (xem `ACCOUNT_SECTION`).
      */
     ACCOUNT: partner('/account'),
     /**
@@ -889,6 +893,46 @@ export function shopSectionDomId(section: ShopSection): string {
  * ở ba nơi — gõ sai một ký tự là nút cuộn về hư không, và không có gì đỏ lên để báo.
  */
 export const SHOP_LOGO_TRIGGER_ID = 'shop-logo-upload';
+
+/**
+ * ── TÀI KHOẢN & BẢO MẬT (site partner, 05/10/2026) ───────────────────────────────────────────
+ *
+ * MỘT trang cho mọi thứ của CON NGƯỜI đang đăng nhập — gộp "Hồ sơ cá nhân" và "Bảo mật tài
+ * khoản" vốn là hai trang lặp nhau (cả hai đều hiện email/SĐT). Cùng khuôn với trang Cửa hàng:
+ * section xếp dọc, mục lục dính, `?section=` ở URL để link/F5/Quay lại đúng chỗ.
+ *
+ * Không có gì của GIAN HÀNG ở đây — tên, logo, SĐT liên hệ của gian hàng sống ở `SHOP`.
+ */
+export const ACCOUNT_SECTION = {
+  /** Tên và ảnh đại diện của tài khoản. */
+  PROFILE: 'profile',
+  /** Email và SĐT đăng nhập — đổi qua OTP. */
+  LOGIN: 'login',
+  /** Đổi (hoặc đặt lần đầu) mật khẩu. */
+  PASSWORD: 'password',
+  /** Yêu cầu xoá tài khoản — một support case, không phải nút xoá. */
+  DELETE: 'delete',
+} as const;
+
+export type AccountSection = (typeof ACCOUNT_SECTION)[keyof typeof ACCOUNT_SECTION];
+export const ACCOUNT_SECTION_VALUES = Object.values(ACCOUNT_SECTION) as AccountSection[];
+
+/** `?section=` → section hợp lệ; giá trị lạ rơi về `profile` (cùng luật với `shopSectionOf`). */
+export function accountSectionOf(value: string | null | undefined): AccountSection {
+  return (ACCOUNT_SECTION_VALUES as string[]).includes(value ?? '')
+    ? (value as AccountSection)
+    : ACCOUNT_SECTION.PROFILE;
+}
+
+/** Đường dẫn tới một section của trang tài khoản partner. */
+export function accountSectionPath(section: AccountSection): string {
+  return `${ROUTES.MANAGE.ACCOUNT}?section=${section}`;
+}
+
+/** Id của phần tử section trong DOM — đích của anchor và của cuộn. */
+export function accountSectionDomId(section: AccountSection): string {
+  return `account-section-${section}`;
+}
 
 /**
  * ── ONBOARDING GIAN HÀNG (ADR 0040) ──────────────────────────────────────────────────────────

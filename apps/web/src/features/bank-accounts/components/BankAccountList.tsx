@@ -62,7 +62,7 @@ export function BankAccountList({
       className={cx(styles.panel, className)}
       aria-labelledby={headingId}
       aria-label={headingId ? undefined : t('title')}
-      // Đích của `?section=` khi panel này được nhúng — xem `ShopSectionCard`.
+      // Đích của `?section=` khi panel này được nhúng — xem `SectionCard`.
       tabIndex={id ? -1 : undefined}
     >
       <header className={styles.head}>

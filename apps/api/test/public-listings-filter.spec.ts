@@ -65,7 +65,7 @@ async function seedActiveTenant(provinceCode: string, provinceName: string): Pro
     },
   });
   await prisma.tenantProfile.create({
-    data: { tenantId: id, displayName: `Shop ${provinceName}`, provinceCode, provinceName },
+    data: { tenantId: id, provinceCode, provinceName },
   });
   branchByTenant.set(id, await seedBranch(asService, { tenantId: id, provinceCode }));
   return id;

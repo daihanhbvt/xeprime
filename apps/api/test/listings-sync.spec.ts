@@ -163,7 +163,7 @@ beforeAll(async () => {
   });
   await seedProvince(asService, PROV, PROV_NAME);
   await prisma.tenantProfile.create({
-    data: { tenantId, displayName: 'Shop Sync', provinceCode: PROV, provinceName: PROV_NAME },
+    data: { tenantId, provinceCode: PROV, provinceName: PROV_NAME },
   });
   branchId = await seedBranch(asService, { tenantId, provinceCode: PROV });
   await prisma.tenantMembership.create({

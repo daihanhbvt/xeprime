@@ -61,7 +61,6 @@ async function seedTenant(status: string): Promise<{ id: string; slug: string }>
   await prisma.tenantProfile.create({
     data: {
       tenantId: id,
-      displayName: `Shop ${status}`,
       provinceCode: PROV,
       provinceName: PROV_NAME,
     },

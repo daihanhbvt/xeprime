@@ -6,6 +6,7 @@ import {
   LogoutOutlined,
   MenuOutlined,
   ShopOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
 import { Avatar, Button, Dropdown } from 'antd';
 import Link from 'next/link';
@@ -113,23 +114,24 @@ export function Topbar({ user }: { user: CurrentUser }) {
                 disabled: true,
               },
               { type: 'divider' },
-              {
-                key: 'security',
-                icon: <LockOutlined aria-hidden />,
-                label: (
-                  <Link href={isAdmin ? ROUTES.ADMIN.SECURITY : ROUTES.MANAGE.SECURITY}>
-                    {tManage('shell.security')}
-                  </Link>
-                ),
-              },
+              // Cùng quy ước với `ManageUserCard`: partner → "Tài khoản & bảo mật", admin → bảo mật.
+              isAdmin
+                ? {
+                    key: 'security',
+                    icon: <LockOutlined aria-hidden />,
+                    label: <Link href={ROUTES.ADMIN.SECURITY}>{tManage('shell.security')}</Link>,
+                  }
+                : {
+                    key: 'account',
+                    icon: <UserOutlined aria-hidden />,
+                    label: <Link href={ROUTES.MANAGE.ACCOUNT}>{tManage('shell.account')}</Link>,
+                  },
               ...(tenantName && !isAdmin && !isCommission
                 ? [
                     {
                       key: 'shop',
                       icon: <ShopOutlined aria-hidden />,
-                      label: (
-                        <Link href={ROUTES.MANAGE.SHOP}>{tManage('shell.shopSettings')}</Link>
-                      ),
+                      label: <Link href={ROUTES.MANAGE.SHOP}>{tManage('shell.shopSettings')}</Link>,
                     },
                   ]
                 : []),

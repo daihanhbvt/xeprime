@@ -1,20 +1,18 @@
 'use client';
 
 import { Select } from 'antd';
-import { useTranslations } from 'next-intl';
 
-import { shopSectionDomId, type ShopSection } from '@/constants/routes';
 import { cx } from '@/lib/cx';
 
-import styles from './ShopSectionNav.module.css';
+import styles from './SectionNav.module.css';
 
-export interface ShopSectionItem {
-  key: ShopSection;
+export interface SectionNavItem<K extends string> {
+  key: K;
   label: string;
 }
 
 /**
- * Điều hướng giữa năm section của trang Cửa hàng.
+ * Mục lục của một trang NHIỀU SECTION xếp dọc — trang Cửa hàng, trang Tài khoản & bảo mật.
  *
  * ## Một cây, hai hình dạng
  *
@@ -24,39 +22,48 @@ export interface ShopSectionItem {
  *
  * ## Vì sao là ANCHOR chứ không phải tab
  *
- * Cả năm section được dựng cùng lúc và xếp dọc ở cột phải; mục đang chọn chỉ quyết định *cuộn
- * tới đâu* và *mục nào sáng*. Nếu đây là tab thật (mỗi lần chọn thì unmount khối cũ), form hồ sơ
- * sẽ bị tháo ra và người dùng mất thay đổi chưa lưu chỉ vì bấm sang "Gói & hạn mức" để xem hạn.
+ * Mọi section được dựng cùng lúc và xếp dọc ở cột phải; mục đang chọn chỉ quyết định *cuộn tới
+ * đâu* và *mục nào sáng*. Nếu đây là tab thật (mỗi lần chọn thì unmount khối cũ), một form đang
+ * sửa dở sẽ bị tháo ra và người dùng mất thay đổi chưa lưu chỉ vì bấm sang mục khác để xem.
  *
  * Mỗi mục là `<a href="#id">` chứ không phải `<button>`: đó là hành vi đúng của một mục lục
  * trong trang — mở tab mới được, copy link được, và bàn phím đi qua nó như mọi liên kết khác.
  * `onSelect` chỉ thêm việc ghi `?section=` vào URL để reload và nút Quay lại còn đúng chỗ.
+ *
+ * Generic theo khoá section; chữ (`title`, `ariaLabel`) do trang truyền vào từ namespace của nó.
  */
-export function ShopSectionNav({
+export function SectionNav<K extends string>({
   items,
   active,
   onSelect,
+  domIdOf,
+  title,
+  ariaLabel,
 }: {
-  items: readonly ShopSectionItem[];
-  active: ShopSection;
-  onSelect: (section: ShopSection) => void;
+  items: readonly SectionNavItem<K>[];
+  active: K;
+  onSelect: (section: K) => void;
+  /** Id của khối section trong DOM — đích của anchor. */
+  domIdOf: (section: K) => string;
+  /** Dòng nhỏ viết hoa trên danh sách (desktop). */
+  title: string;
+  ariaLabel: string;
 }) {
-  const t = useTranslations('Shop.sections');
-
   return (
     <>
-      <nav className={styles.rail} aria-label={t('navLabel')}>
-        <p className={styles.railTitle}>{t('navTitle')}</p>
+      <nav className={styles.rail} aria-label={ariaLabel}>
+        <p className={styles.railTitle}>{title}</p>
         <ul className={styles.list}>
           {items.map((item) => (
             <li key={item.key}>
               <a
-                href={`#${shopSectionDomId(item.key)}`}
+                href={`#${domIdOf(item.key)}`}
                 className={cx(styles.link, item.key === active && styles.linkActive)}
                 aria-current={item.key === active ? 'true' : undefined}
                 onClick={(event) => {
                   // Giữ phím tắt mở tab mới của trình duyệt — chỉ chặn cú bấm thường.
-                  if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+                  if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0)
+                    return;
                   event.preventDefault();
                   onSelect(item.key);
                 }}
@@ -69,9 +76,9 @@ export function ShopSectionNav({
       </nav>
 
       <div className={styles.mobile}>
-        <Select<ShopSection>
+        <Select<K>
           className={styles.select}
-          aria-label={t('navLabel')}
+          aria-label={ariaLabel}
           value={active}
           onChange={onSelect}
           options={items.map((item) => ({ value: item.key, label: item.label }))}

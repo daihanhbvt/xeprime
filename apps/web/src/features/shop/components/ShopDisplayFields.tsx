@@ -1,9 +1,10 @@
 'use client';
 
+import { MailOutlined, PhoneOutlined } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import type { Control, FieldValues, Path } from 'react-hook-form';
-import type { ShopProfileValues } from '@xeprime/validators';
+import type { ShopProfileWithContactValues } from '@xeprime/validators';
 
 import { SHOP_LOGO_TRIGGER_ID } from '@/constants/routes';
 import { ImageUploadField } from '@/components/form/ImageUploadField';
@@ -14,7 +15,11 @@ import { presignShopMedia } from '@/services/upload';
 import styles from './ShopFields.module.css';
 
 /**
- * THÔNG TIN HIỂN THỊ — bốn thứ khách nhìn thấy trên marketplace: tên, giới thiệu, logo, ảnh bìa.
+ * THÔNG TIN HIỂN THỊ — thứ khách nhìn thấy: tên, SĐT/email liên hệ, giới thiệu, logo, ảnh bìa.
+ *
+ * Tên + SĐT + email là của GIAN HÀNG (`tenants.name/phone/email`), KHÔNG phải của tài khoản chủ:
+ * SĐT/email đăng nhập đổi qua OTP ở trang tài khoản, và đổi bên nào cũng không chạm bên kia
+ * (ADR 0053). Lúc đăng ký, liên hệ của gian hàng được điền sẵn từ tài khoản — sau đó là hai bộ.
  *
  * Dùng chung bởi trang Cửa hàng (`/manage/shop`) và tiến trình đăng ký chủ xe
  * (`/account/registration`): cùng endpoint, cùng schema, nên cùng một bộ ô. Chỉ nhận `control` —
@@ -29,7 +34,7 @@ export function ShopDisplayFields({
   control,
   readOnly = false,
 }: {
-  control: Control<ShopProfileValues>;
+  control: Control<ShopProfileWithContactValues>;
   /** Chỉ xem ảnh — không ô tải/đổi/xoá (xem `ImageUploadField.readOnly`). */
   readOnly?: boolean;
 }) {
@@ -38,6 +43,27 @@ export function ShopDisplayFields({
   return (
     <>
       <ShopDisplayNameField control={control} />
+      <div className={styles.pairRow}>
+        <TextField
+          control={control}
+          name="phone"
+          type="tel"
+          label={t('form.display.phone.label')}
+          placeholder={t('form.display.phone.placeholder')}
+          prefix={<PhoneOutlined aria-hidden />}
+          autoComplete="tel"
+        />
+        <TextField
+          control={control}
+          name="email"
+          type="email"
+          label={t('form.display.email.label')}
+          placeholder={t('form.display.email.placeholder')}
+          prefix={<MailOutlined aria-hidden />}
+          autoComplete="email"
+        />
+      </div>
+      <p className={styles.contactNotice}>{t('form.display.contactHint')}</p>
       <TextAreaField
         control={control}
         name="bio"

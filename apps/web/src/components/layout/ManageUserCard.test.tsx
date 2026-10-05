@@ -216,13 +216,13 @@ describe('ManageUserCard — menu tài khoản', () => {
     expect(screen.getByText('Đăng nhập: Nguyễn Văn A')).toBeTruthy();
   });
 
-  it('menu chứa bảo mật tài khoản, cài đặt gian hàng và đăng xuất', async () => {
+  it('menu chứa tài khoản & bảo mật, cài đặt gian hàng và đăng xuất', async () => {
     await openMenu();
 
-    // Bảo mật của người đang ở trong cổng quản lý nằm TRONG cổng đó, không phải ở khu khách:
-    // `/account` đã đóng với thành viên gian hàng tuyến gói.
-    expect(screen.getByRole('link', { name: 'Bảo mật tài khoản' }).getAttribute('href')).toBe(
-      '/manage/security',
+    // Tài khoản của người đang ở trong cổng quản lý nằm TRONG cổng đó — MỘT trang gộp hồ sơ cá
+    // nhân và bảo mật (05/10/2026), không phải hai mục cùng hiện email/SĐT.
+    expect(screen.getByRole('link', { name: 'Tài khoản & bảo mật' }).getAttribute('href')).toBe(
+      '/manage/account',
     );
     expect(screen.getByRole('link', { name: 'Cài đặt gian hàng' }).getAttribute('href')).toBe(
       '/manage/shop',
@@ -247,12 +247,15 @@ describe('ManageUserCard — menu tài khoản', () => {
     expect(screen.queryByText('Chuyến tôi đi thuê')).toBeNull();
   });
 
-  it('có mục Hồ sơ cá nhân của tài khoản đối tác', async () => {
+  /*
+   * Hai mục cũ "Hồ sơ cá nhân" và "Bảo mật tài khoản" trỏ tới hai trang cùng hiện email/SĐT —
+   * người dùng phải đoán đổi số ở cửa nào. Nay chỉ còn MỘT lối vào.
+   */
+  it('KHÔNG còn hai mục rời "Hồ sơ cá nhân" và "Bảo mật tài khoản"', async () => {
     await openMenu();
 
-    expect(screen.getByRole('link', { name: 'Hồ sơ cá nhân' }).getAttribute('href')).toBe(
-      '/manage/account',
-    );
+    expect(screen.queryByRole('link', { name: 'Hồ sơ cá nhân' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Bảo mật tài khoản' })).toBeNull();
   });
 
   it('đăng xuất gọi ĐÚNG luồng dùng chung, không tự dựng lại ba bước', async () => {

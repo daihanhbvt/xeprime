@@ -75,7 +75,7 @@ export function PlanSummaryPanel({
    * Tự vẽ thẻ trắng quanh khối.
    *
    * Trang `/account/subscription` dùng khối này như một thẻ độc lập; trang Cửa hàng nhúng nó vào
-   * trong `ShopSectionCard` và khi đó khung thứ hai là hai lớp viền cho cùng một nội dung.
+   * trong `SectionCard` và khi đó khung thứ hai là hai lớp viền cho cùng một nội dung.
    */
   framed?: boolean;
   onPurchase: () => void;
@@ -102,7 +102,9 @@ export function PlanSummaryPanel({
         <div className={styles.headText}>
           <h2 className={styles.planName}>
             {currentPlan ? currentPlan.planName : t('current.none')}
-            {currentPlan ? <span className={styles.activeTag}>{t('current.activeTag')}</span> : null}
+            {currentPlan ? (
+              <span className={styles.activeTag}>{t('current.activeTag')}</span>
+            ) : null}
           </h2>
           <p className={styles.planMeta}>
             {currentPlan
@@ -202,7 +204,8 @@ function TermPill({ endsAt, phase }: { endsAt: string; phase: BillingPhase | nul
 function QuotaTile({ used, limit }: { used: number; limit: number | null }) {
   const t = useTranslations('Subscription');
   const ratio = limit && limit > 0 ? used / limit : 0;
-  const tone = limit == null ? 'ok' : ratio >= 1 ? 'full' : ratio >= NEAR_LIMIT_RATIO ? 'near' : 'ok';
+  const tone =
+    limit == null ? 'ok' : ratio >= 1 ? 'full' : ratio >= NEAR_LIMIT_RATIO ? 'near' : 'ok';
 
   return (
     <div className={cx(styles.tile, styles.tileQuota)} data-tone={tone}>

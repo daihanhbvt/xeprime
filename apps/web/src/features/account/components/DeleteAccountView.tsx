@@ -3,7 +3,7 @@
 import { CloseCircleOutlined, WarningFilled } from '@ant-design/icons';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { Alert, App, Button, Popconfirm, Skeleton } from 'antd';
-import { useMemo } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import * as yup from 'yup';
@@ -46,7 +46,22 @@ const ITEMS = ['profile', 'vehicles', 'trips', 'billing'] as const;
  * Sau khi gửi KHÔNG đăng xuất, KHÔNG đánh dấu tài khoản đã xoá — tài khoản dùng bình thường
  * tới khi XePrime hoàn tất, và người dùng rút yêu cầu được trong lúc chờ.
  */
-export function DeleteAccountView({ headingLevel = 'h1' }: { headingLevel?: 'h1' | 'h2' } = {}) {
+export function DeleteAccountView({
+  headingLevel = 'h1',
+  embedded = false,
+  impact,
+}: {
+  headingLevel?: 'h1' | 'h2';
+  /**
+   * Nằm TRONG một section đã có tiêu đề (trang Tài khoản & bảo mật của site partner). Khi đó form
+   * KHÔNG mở sẵn: thao tác khó lùi lại này không được nằm phơi giữa trang cạnh ô đổi mật khẩu.
+   * Một dòng giới thiệu + nút; bấm mới hiện ảnh hưởng và form xác nhận. Yêu cầu đang chờ thì
+   * vẫn hiện thẳng — đó là trạng thái người dùng cần thấy, không phải một thao tác.
+   */
+  embedded?: boolean;
+  /** Khối "ảnh hưởng của việc đóng tài khoản" — chỉ hiện khi đã mở form (chế độ nhúng). */
+  impact?: ReactNode;
+} = {}) {
   const t = useTranslations('Account.deleteAccount');
   const tCommon = useTranslations('Common');
   const { message } = App.useApp();
@@ -59,6 +74,8 @@ export function DeleteAccountView({ headingLevel = 'h1' }: { headingLevel?: 'h1'
   });
   const openCase = useOpenSupportCase(SUPPORT_SURFACE.CUSTOMER);
   const withdraw = useWithdrawAccountDeletion();
+  /** Chế độ nhúng: form xác nhận đã được mở chưa. */
+  const [expanded, setExpanded] = useState(false);
 
   const schema = useMemo(
     () =>
@@ -80,6 +97,7 @@ export function DeleteAccountView({ headingLevel = 'h1' }: { headingLevel?: 'h1'
   });
 
   const onSubmit = handleSubmit(() => {
+    if (openCase.isPending) return;
     openCase.mutate(
       {
         category: SUPPORT_CASE_CATEGORY.ACCOUNT_DELETION,
@@ -90,6 +108,7 @@ export function DeleteAccountView({ headingLevel = 'h1' }: { headingLevel?: 'h1'
         onSuccess: () => {
           message.success(t('submitted'));
           reset();
+          setExpanded(false);
         },
         onError: (err) => message.error(errorMessage(err)),
       },
@@ -97,26 +116,34 @@ export function DeleteAccountView({ headingLevel = 'h1' }: { headingLevel?: 'h1'
   });
 
   const pending = pendingQuery.data?.items[0];
+  // Nhúng: section đã giữ `h2` và khung — tiêu đề con xuống `h3`, khối con không vẽ viền thứ hai.
+  const SubHeading = embedded ? 'h3' : 'h2';
+  const box = embedded ? styles.inset : styles.card;
+
+  const warning = (
+    <Alert
+      type="error"
+      showIcon
+      icon={<WarningFilled />}
+      className={styles.warning}
+      title={t('warningTitle')}
+      description={t('warningBody')}
+    />
+  );
 
   return (
     <div className={styles.page}>
-      <AccountPageHeader title={t('title')} subtitle={t('subtitle')} as={headingLevel} />
-
-      <Alert
-        type="error"
-        showIcon
-        icon={<WarningFilled />}
-        className={styles.warning}
-        title={t('warningTitle')}
-        description={t('warningBody')}
-      />
+      {embedded ? null : (
+        <AccountPageHeader title={t('title')} subtitle={t('subtitle')} as={headingLevel} />
+      )}
+      {embedded ? null : warning}
 
       {pendingQuery.isLoading ? (
-        <div className={styles.card}>
+        <div className={box}>
           <Skeleton active paragraph={{ rows: 4 }} />
         </div>
       ) : pendingQuery.isError ? (
-        <div className={styles.card}>
+        <div className={box}>
           <EmptyState
             variant="error"
             title={t('loadError')}
@@ -125,9 +152,9 @@ export function DeleteAccountView({ headingLevel = 'h1' }: { headingLevel?: 'h1'
           />
         </div>
       ) : pending ? (
-        <section className={styles.card} aria-live="polite">
+        <section className={box} aria-live="polite">
           <div className={styles.pendingHead}>
-            <h2 className={styles.cardTitle}>{t('pendingTitle')}</h2>
+            <SubHeading className={styles.cardTitle}>{t('pendingTitle')}</SubHeading>
             <StatusTag
               value={pending.status as SupportCaseStatus}
               meta={SUPPORT_CASE_STATUS_META}
@@ -152,41 +179,64 @@ export function DeleteAccountView({ headingLevel = 'h1' }: { headingLevel?: 'h1'
             </Popconfirm>
           </div>
         </section>
+      ) : embedded && !expanded ? (
+        <div className={styles.intro}>
+          <p className={styles.cardBody}>{t('embeddedIntro')}</p>
+          <Button danger onClick={() => setExpanded(true)}>
+            {t('start')}
+          </Button>
+        </div>
       ) : (
-        <form onSubmit={onSubmit} noValidate className={styles.card}>
-          <h2 className={styles.cardTitle}>{t('confirmTitle')}</h2>
-          <p className={styles.cardBody}>{t('confirmBody')}</p>
-          <ul className={styles.items}>
-            {ITEMS.map((item) => (
-              <li key={item} className={styles.item}>
-                <CloseCircleOutlined className={styles.itemIcon} aria-hidden="true" />
-                <span>{t(`items.${item}`)}</span>
-              </li>
-            ))}
-          </ul>
-          <p className={styles.meta}>{t('retentionNote')}</p>
+        <div className={styles.flow}>
+          {embedded ? impact : null}
+          {embedded ? warning : null}
+          <form onSubmit={onSubmit} noValidate className={box}>
+            <SubHeading className={styles.cardTitle}>{t('confirmTitle')}</SubHeading>
+            <p className={styles.cardBody}>{t('confirmBody')}</p>
+            <ul className={styles.items}>
+              {ITEMS.map((item) => (
+                <li key={item} className={styles.item}>
+                  <CloseCircleOutlined className={styles.itemIcon} aria-hidden="true" />
+                  <span>{t(`items.${item}`)}</span>
+                </li>
+              ))}
+            </ul>
+            <p className={styles.meta}>{t('retentionNote')}</p>
 
-          <div className={styles.fields}>
-            <CheckboxField control={control} name="acknowledged" disabled={openCase.isPending}>
-              {t('acknowledge')}
-            </CheckboxField>
-          </div>
+            <div className={styles.fields}>
+              <CheckboxField control={control} name="acknowledged" disabled={openCase.isPending}>
+                {t('acknowledge')}
+              </CheckboxField>
+            </div>
 
-          <div className={styles.actions}>
-            <Button
-              type="primary"
-              danger
-              htmlType="submit"
-              loading={openCase.isPending}
-              disabled={!formState.isValid || openCase.isPending}
-            >
-              {t('submit')}
-            </Button>
-            <Button onClick={() => reset()} disabled={!formState.isDirty || openCase.isPending}>
-              {t('reset')}
-            </Button>
-          </div>
-        </form>
+            <div className={styles.actions}>
+              <Button
+                type="primary"
+                danger
+                htmlType="submit"
+                loading={openCase.isPending}
+                disabled={!formState.isValid || openCase.isPending}
+              >
+                {t('submit')}
+              </Button>
+              {embedded ? (
+                <Button
+                  onClick={() => {
+                    reset();
+                    setExpanded(false);
+                  }}
+                  disabled={openCase.isPending}
+                >
+                  {t('collapse')}
+                </Button>
+              ) : (
+                <Button onClick={() => reset()} disabled={!formState.isDirty || openCase.isPending}>
+                  {t('reset')}
+                </Button>
+              )}
+            </div>
+          </form>
+        </div>
       )}
     </div>
   );

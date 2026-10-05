@@ -15,6 +15,42 @@
   background: var(--xp-color-bg-container);
 }
 
+/*
+ * Chế độ NHÚNG (trong một `SectionCard`): khối con là một mảng nền dịu, không phải thẻ có viền
+ * thứ hai — section bên ngoài đã là khung.
+ */
+.inset {
+  padding: var(--xp-space-md);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-layout);
+}
+
+/* Nhúng, chưa mở: một dòng giới thiệu bên trái, nút bên phải; xuống dòng khi hẹp. */
+.intro {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm) var(--xp-space-lg);
+}
+
+.intro .cardBody {
+  flex: 1 1 320px;
+  margin: 0;
+}
+
+/* Nhúng, đã mở: ảnh hưởng → cảnh báo → form, cách đều. */
+.flow {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.flow .warning {
+  margin-bottom: 0;
+}
+
 .pendingHead {
   display: flex;
   flex-wrap: wrap;
@@ -82,6 +118,11 @@
   flex-wrap: wrap;
   gap: var(--xp-space-sm);
   margin-top: var(--xp-space-md);
+}
+
+/* Tiêu đề con khi nhúng (`h3`) nhỏ hơn tiêu đề section bao ngoài. */
+.inset .cardTitle {
+  font-size: var(--xp-font-size-body);
 }
 
 @media (max-width: 640px) {

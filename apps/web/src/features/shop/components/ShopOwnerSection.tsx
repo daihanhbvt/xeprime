@@ -1,16 +1,26 @@
 'use client';
 
-import { CheckOutlined, ExclamationCircleFilled, MailOutlined, PhoneOutlined } from '@ant-design/icons';
+import {
+  CheckOutlined,
+  ExclamationCircleFilled,
+  MailOutlined,
+  PhoneOutlined,
+} from '@ant-design/icons';
 import { Button, Tag, Tooltip } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { TENANT_ROLE, STATUS_COLOR, toLocalVnPhone } from '@xeprime/types';
 
-import { ROUTES, SHOP_SECTION, shopSectionDomId } from '@/constants/routes';
+import { SectionCard } from '@/components/layout/SectionCard';
+import {
+  ACCOUNT_SECTION,
+  accountSectionPath,
+  SHOP_SECTION,
+  shopSectionDomId,
+} from '@/constants/routes';
 import { useCurrentUser } from '@/hooks/use-current-user';
 
 import type { MyShop } from '../types';
-import { ShopSectionCard } from './ShopSectionCard';
 import styles from './ShopOwnerSection.module.css';
 
 /**
@@ -22,9 +32,9 @@ import styles from './ShopOwnerSection.module.css';
  * không ai xác minh, đứng ngay cạnh một tài khoản đã qua OTP nói khác đi. Ba cột đó đã drop.
  *
  * Nguồn duy nhất giờ là `tenants.owner_user_id → users`, và nó đổi qua đúng luồng của nó:
- * tên ở hồ sơ cá nhân, email/SĐT qua xác minh OTP ở `/manage/security`. Đặt một ô "Họ tên chủ
- * gian hàng" ở đây nghĩa là cho bất kỳ ai có `tenant.update` — gồm cả `shop_manager` — viết lại
- * danh tính của người CHỦ, đúng lằn ranh mà ADR 0038 điều 3 tách ra.
+ * tên và email/SĐT (qua xác minh OTP) đều ở trang Tài khoản & bảo mật (`/manage/account`). Đặt
+ * một ô "Họ tên chủ gian hàng" ở đây nghĩa là cho bất kỳ ai có `tenant.update` — gồm cả
+ * `shop_manager` — viết lại danh tính của người CHỦ, đúng lằn ranh mà ADR 0038 điều 3 tách ra.
  *
  * ## Vì sao hiện cờ "đã xác minh"
  *
@@ -47,15 +57,10 @@ export function ShopOwnerSection({ shop }: { shop: MyShop }) {
    * nhưng nút ở đây nằm dưới thông tin của NGƯỜI KHÁC — bấm vào nó sẽ mở tài khoản của chính
    * mình, tức là một nút nói dối về việc nó làm gì.
    */
-  const isOwner =
-    user?.tenant?.roleKey === TENANT_ROLE.SHOP_OWNER && user.id === owner.userId;
+  const isOwner = user?.tenant?.roleKey === TENANT_ROLE.SHOP_OWNER && user.id === owner.userId;
 
   return (
-    <ShopSectionCard
-      id={shopSectionDomId(SHOP_SECTION.OWNER)}
-      title={t('title')}
-      hint={t('hint')}
-    >
+    <SectionCard id={shopSectionDomId(SHOP_SECTION.OWNER)} title={t('title')} hint={t('hint')}>
       <div className={styles.identity}>
         <p className={styles.name}>{owner.displayName}</p>
       </div>
@@ -80,12 +85,12 @@ export function ShopOwnerSection({ shop }: { shop: MyShop }) {
 
       {isOwner ? (
         <div className={styles.actions}>
-          <Link href={ROUTES.MANAGE.SECURITY}>
+          <Link href={accountSectionPath(ACCOUNT_SECTION.LOGIN)}>
             <Button>{t('manageLogin')}</Button>
           </Link>
         </div>
       ) : null}
-    </ShopSectionCard>
+    </SectionCard>
   );
 }
 

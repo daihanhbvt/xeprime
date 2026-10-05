@@ -57,6 +57,14 @@ describe('Route cũ của cổng quản lý vẫn tới nơi', () => {
       '/manage/shop/policies#deposit-collection',
     );
   });
+
+  /*
+   * 05/10/2026: "Bảo mật tài khoản" gộp vào trang Tài khoản & bảo mật. Bookmark cũ rơi thẳng vào
+   * section "Thông tin đăng nhập" — phần gần nhất với điều người bấm "Bảo mật" đi tìm.
+   */
+  it('/manage/security → section "Thông tin đăng nhập" của trang Tài khoản & bảo mật', async () => {
+    expect(await targetOf(() => import('./security/page'))).toBe('/manage/account?section=login');
+  });
 });
 
 /**
@@ -64,7 +72,7 @@ describe('Route cũ của cổng quản lý vẫn tới nơi', () => {
  * ra một lệnh `redirect()` server là dựng lại đúng IA cũ (hồ sơ nằm ở site khác, gói chỉ của một tuyến).
  */
 describe('Route của site partner là trang thật, không phải redirect', () => {
-  it('/manage/account là hồ sơ cá nhân của tài khoản đối tác', async () => {
+  it('/manage/account là trang Tài khoản & bảo mật của tài khoản đối tác', async () => {
     const mod = await import('./account/page');
     expect(typeof mod.default).toBe('function');
     expect(redirect).not.toHaveBeenCalled();

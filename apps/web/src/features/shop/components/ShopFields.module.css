@@ -26,6 +26,16 @@
   font-size: var(--xp-font-size-sm);
 }
 
+/*
+ * Ghi chú dưới cặp ô liên hệ — nói rõ đây là liên hệ của GIAN HÀNG, không phải SĐT/email đăng
+ * nhập. Kéo lên sát hàng ô vì Form.Item phía trên đã chừa sẵn khoảng trống cho dòng lỗi.
+ */
+.contactNotice {
+  margin: calc(var(--xp-space-sm) * -1) 0 var(--xp-space-md);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+}
+
 .helpLink {
   color: var(--xp-color-link);
   white-space: nowrap;

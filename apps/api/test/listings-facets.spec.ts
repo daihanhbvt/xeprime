@@ -184,7 +184,7 @@ beforeAll(async () => {
   });
   await seedProvince(prisma as unknown as PrismaService, PROV, PROV_NAME);
   await prisma.tenantProfile.create({
-    data: { tenantId, displayName: `Shop ${PROV}`, provinceCode: PROV, provinceName: PROV_NAME },
+    data: { tenantId, provinceCode: PROV, provinceName: PROV_NAME },
   });
   branchId = await seedBranch(prisma as unknown as PrismaService, { tenantId, provinceCode: PROV });
 

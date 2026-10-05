@@ -155,7 +155,12 @@ model UserIdentity {
 model Tenant {
   id                 String    @id @db.Char(26)
   code               String    @unique @db.VarChar(50)
+  /// KHÔNG đổi theo `name`: đổi tên gian hàng không được làm chết link trang gian hàng đã chia sẻ.
   slug               String    @unique @db.VarChar(120)
+  /// Tên HIỂN THỊ của gian hàng — nguồn DUY NHẤT (05/10/2026). Mọi nơi khách nhìn thấy (thẻ xe,
+  /// trang gian hàng, chat, chuyến, hợp đồng) đọc cột này; `PATCH /tenants/current/profile` ghi nó.
+  /// Bản sao `tenant_profiles.display_name` đã bị gỡ: form sửa ghi vào bản sao, khách đọc bản gốc,
+  /// nên đổi tên ở hồ sơ không bao giờ tới được người thuê.
   name               String    @db.VarChar(255)
   /// individual | business
   tenantType         String    @default("individual") @map("tenant_type") @db.VarChar(50)
@@ -177,6 +182,9 @@ model Tenant {
   /// Giá trị canh bằng CHECK `tenants_onboarding_state_check` ở migration.
   onboardingState    String    @default("commission") @map("onboarding_state") @db.VarChar(20)
   ownerUserId        String    @map("owner_user_id") @db.Char(26)
+  /// SĐT/email LIÊN HỆ của gian hàng — thứ khách thấy ở chuyến đi và hợp đồng. KHÔNG phải định
+  /// danh đăng nhập: đó là `users.phone`/`users.email` của từng tài khoản (ADR 0053). Hai bên độc
+  /// lập — điền sẵn từ tài khoản lúc đăng ký, sau đó đổi bên này không chạm bên kia.
   phone              String?   @db.VarChar(30)
   email              String?   @db.VarChar(255)
   ratingAvg          Decimal   @default(0) @map("rating_avg") @db.Decimal(3, 2)
@@ -846,9 +854,10 @@ model TenantBranch {
 
 /// Hồ sơ public + cấu hình gian hàng. 1-1 với tenant (PK = tenant_id).
 /// Tách khỏi `tenants` vì đây là dữ liệu ít query, nhiều field, đổi thường xuyên hơn.
+/// ⚠️ KHÔNG có cột tên (05/10/2026): tên hiển thị là `tenants.name`, nguồn duy nhất. API vẫn trả
+/// `profile.displayName` cho tương thích client, đọc từ `tenants.name`.
 model TenantProfile {
   tenantId          String   @id @map("tenant_id") @db.Char(26)
-  displayName       String?  @map("display_name") @db.VarChar(255)
   bio               String?  @db.Text
   logoUrl           String?  @map("logo_url") @db.Text
   coverUrl          String?  @map("cover_url") @db.Text

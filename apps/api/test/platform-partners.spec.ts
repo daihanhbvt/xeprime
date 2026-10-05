@@ -248,7 +248,7 @@ beforeAll(async () => {
   await tenant(ids.other, ids.otherOwner, SHOP_ONBOARDING_STATE.COMMISSION, 'Tenant Khác');
 
   await prisma.tenantProfile.create({
-    data: { tenantId: ids.shop, displayName: 'Gian Hàng Test', taxCode: RAW.taxId },
+    data: { tenantId: ids.shop, taxCode: RAW.taxId },
   });
   await prisma.sellerProfile.create({
     data: {

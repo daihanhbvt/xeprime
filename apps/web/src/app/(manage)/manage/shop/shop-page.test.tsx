@@ -399,13 +399,13 @@ describe('Trang Cửa hàng — chủ gian hàng', () => {
     expect(section.querySelectorAll('input')).toHaveLength(0);
   });
 
-  it('chủ gian hàng có lối vào màn bảo mật để tự đổi email/SĐT', () => {
+  it('chủ gian hàng có lối vào phần Thông tin đăng nhập để tự đổi email/SĐT', () => {
     renderPage();
 
     const section = within(document.querySelector('#shop-section-owner') as HTMLElement);
     expect(
       section.getByRole('link', { name: 'Quản lý thông tin đăng nhập' }).getAttribute('href'),
-    ).toBe('/manage/security');
+    ).toBe('/manage/account?section=login');
   });
 
   it('quản lý gian hàng KHÔNG thấy nút đó — nó sẽ mở tài khoản của chính họ, không phải của chủ', () => {

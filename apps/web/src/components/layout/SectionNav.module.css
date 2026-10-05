@@ -1,5 +1,5 @@
 /*
- * Cột điều hướng của trang Cửa hàng.
+ * Cột mục lục của trang nhiều section (`SectionNav`).
  *
  * Hai hình dạng loại trừ nhau, chuyển bằng CSS chứ không bằng một nhánh JS theo bề rộng: nhánh
  * JS cần biết bề rộng trước khi render, và trên server thì nó không biết — kết quả là một nhịp

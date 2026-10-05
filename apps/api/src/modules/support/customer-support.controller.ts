@@ -1,7 +1,19 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   ACCOUNT_REALM,
+  API_ERROR_CODE,
+  SUPPORT_CASE_CATEGORY,
   SUPPORT_PARTY,
 } from '@xeprime/types';
 import { CurrentUser, Realms } from '../../common/decorators';
@@ -21,10 +33,22 @@ import { SupportService } from './support.service';
  * KHÔNG `@TenantScoped` và KHÔNG permission tenant: khách không thuộc gian hàng nào. Phạm vi đọc
  * là "case do chính tôi mở" (`SupportService.scopeWhere`), nằm TRONG truy vấn chứ không phải một
  * câu `if` sau khi đọc — cùng kỷ luật với `CustomerTripsService`.
+ *
+ * ## Tài khoản ĐỐI TÁC dùng được — nhưng chỉ cho yêu cầu xoá tài khoản (05/10/2026)
+ *
+ * Xoá tài khoản là việc của một CON NGƯỜI trên chính tài khoản của họ, ở realm nào cũng vậy. Từ
+ * ADR 0053 tài khoản partner là một tài khoản riêng — và trước bản sửa này nó KHÔNG có đường nào
+ * gửi yêu cầu đóng tài khoản của mình: trang tài khoản của site partner gọi đúng endpoint này và
+ * nhận 403 lệch realm.
+ *
+ * Mở realm partner cho cả controller nhưng `open` chặn mọi loại khác `account_deletion`: hỗ trợ
+ * vận hành của đối tác đi qua `/support/cases` (phạm vi GIAN HÀNG), không phải hộp thư cá nhân —
+ * hai nơi nhận cùng một loại yêu cầu là hai hàng đợi mà nền tảng phải đối chiếu. Đọc/rút/nhắn thêm
+ * vẫn chỉ trong phạm vi "case do chính tôi mở", nên với đối tác chúng chỉ chạm được yêu cầu xoá.
  */
 @ApiTags('customer-support')
 @Controller('me/support/cases')
-@Realms(ACCOUNT_REALM.CUSTOMER)
+@Realms(ACCOUNT_REALM.CUSTOMER, ACCOUNT_REALM.PARTNER)
 export class CustomerSupportController {
   constructor(private readonly support: SupportService) {}
 
@@ -62,6 +86,16 @@ export class CustomerSupportController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: OpenSupportCaseDto,
   ): Promise<SupportCaseDetailDto> {
+    // Đối tác: hộp thư cá nhân chỉ nhận yêu cầu xoá tài khoản — xem docblock của controller.
+    if (
+      user.realm === ACCOUNT_REALM.PARTNER &&
+      dto.category !== SUPPORT_CASE_CATEGORY.ACCOUNT_DELETION
+    ) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.SUPPORT_CASE_CATEGORY_NOT_ALLOWED,
+        message: 'Tài khoản đối tác gửi yêu cầu hỗ trợ ở mục Hỗ trợ của gian hàng',
+      });
+    }
     return this.support.open(this.actor(user), dto);
   }
 

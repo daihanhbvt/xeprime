@@ -1,5 +1,5 @@
 /*
- * Khung chung của một section trong trang Cửa hàng.
+ * Khung chung của một section (`SectionCard`).
  *
  * Padding 20–24px ở desktop, 16px ở mobile. Không bóng đậm, không viền màu: năm khối xếp dọc mà
  * mỗi khối tự nổi lên thì trang trở thành một chồng thẻ tranh nhau sự chú ý, và mắt không còn
@@ -57,6 +57,15 @@
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body-sm);
   line-height: var(--xp-line-height-body-sm);
+}
+
+/* Khối có thao tác khó lùi lại — viền và tiêu đề đỏ, nền giữ nguyên. */
+.danger {
+  border-color: color-mix(in srgb, var(--xp-color-error) 35%, var(--xp-color-border));
+}
+
+.danger .title {
+  color: var(--xp-color-error);
 }
 
 .extra {

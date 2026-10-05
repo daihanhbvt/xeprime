@@ -1506,8 +1506,9 @@ export class VehiclesService {
     const tenant = await this.prisma.tenant.findUniqueOrThrow({
       where: { id: tenantId },
       select: {
+        name: true,
         onboardingState: true,
-        profile: { select: { displayName: true, logoUrl: true } },
+        profile: { select: { logoUrl: true } },
         branches: {
           where: { isDefault: true, deletedAt: null },
           select: { phone: true, provinceCode: true, wardCode: true, addressLine: true },
@@ -1533,7 +1534,7 @@ export class VehiclesService {
 
     const branch = tenant.branches[0];
     const missing = missingPackageShopListingRequirements({
-      displayName: tenant.profile?.displayName,
+      displayName: tenant.name,
       contactPhone: branch?.phone,
       provinceCode: branch?.provinceCode,
       addressLine: branch?.addressLine,
