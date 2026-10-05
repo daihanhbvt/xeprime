@@ -243,7 +243,7 @@ export function SupportDataScope({ children }: { children: ReactNode }) {
         description={t(`${kind}.body`)}
         onRetry={kind === 'error' ? () => void status.query.refetch() : undefined}
         action={
-          <Link href={ROUTES.MANAGE.ADMIN_PARTNER_SHOPS}>
+          <Link href={ROUTES.ADMIN.PARTNER_SHOPS}>
             <Button type="primary">{t('backToTenants')}</Button>
           </Link>
         }

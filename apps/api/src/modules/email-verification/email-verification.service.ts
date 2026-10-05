@@ -5,6 +5,7 @@ import { newId } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   PHONE_VERIFICATION_STATUS,
+  type AccountRealm,
   type EmailVerificationPurpose,
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -43,6 +44,11 @@ export class EmailVerificationService {
     rawEmail: string,
     purpose: EmailVerificationPurpose,
     displayName: string,
+    /**
+     * Realm của tài khoản đang xác minh (ADR 0053) — mã chỉ đối chiếu được trong realm đó. Cooldown
+     * và trần mỗi giờ CỐ Ý vẫn đếm theo ĐỊA CHỈ NHẬN trên mọi realm: thứ cần bảo vệ là hộp thư.
+     */
+    realm: AccountRealm,
   ): Promise<{ expiresAt: Date; devCode: string | null }> {
     const email = normalizeEmail(rawEmail);
     const now = Date.now();
@@ -78,9 +84,9 @@ export class EmailVerificationService {
       );
     }
 
-    // Huỷ các mã pending cũ cùng (email, mục đích) — chỉ mã mới nhất còn hiệu lực.
+    // Huỷ các mã pending cũ cùng (realm, email, mục đích) — chỉ mã mới nhất còn hiệu lực.
     await this.prisma.emailVerification.updateMany({
-      where: { email, purpose, status: PHONE_VERIFICATION_STATUS.PENDING },
+      where: { realm, email, purpose, status: PHONE_VERIFICATION_STATUS.PENDING },
       data: { status: PHONE_VERIFICATION_STATUS.EXPIRED },
     });
 
@@ -91,6 +97,7 @@ export class EmailVerificationService {
     await this.prisma.emailVerification.create({
       data: {
         id: newId(),
+        realm,
         email,
         purpose,
         otpHash: this.hash(code, email),
@@ -121,10 +128,11 @@ export class EmailVerificationService {
     purpose: EmailVerificationPurpose,
     code: string,
     userId: string,
+    realm: AccountRealm,
   ): Promise<string> {
     const email = normalizeEmail(rawEmail);
     const row = await this.prisma.emailVerification.findFirst({
-      where: { email, purpose, status: PHONE_VERIFICATION_STATUS.PENDING },
+      where: { realm, email, purpose, status: PHONE_VERIFICATION_STATUS.PENDING },
       orderBy: { createdAt: 'desc' },
       select: { id: true, otpHash: true, expiresAt: true, attemptCount: true },
     });

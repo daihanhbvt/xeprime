@@ -14,6 +14,8 @@ export interface paths {
         /**
          * Tài khoản nhận tiền của tôi — mặc định lên đầu, số đã che
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
          */
         get: operations["AccountBankAccountsController_list"];
         put?: never;
@@ -22,6 +24,8 @@ export interface paths {
          * @description Tài khoản ĐẦU TIÊN tự thành mặc định. Trùng số tài khoản trong danh sách đang dùng thì 409 `BANK_ACCOUNT_DUPLICATE` — ràng buộc nằm ở database, không phải ở một phép kiểm trước.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
          */
         post: operations["AccountBankAccountsController_create"];
         delete?: never;
@@ -45,6 +49,8 @@ export interface paths {
          * @description LƯU TRỮ chứ không xoá: lệnh chuyển tiền cũ còn trỏ về nó. Bỏ tài khoản mặc định thì tài khoản còn lại gần nhất lên thay.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
          */
         delete: operations["AccountBankAccountsController_archive"];
         options?: never;
@@ -68,6 +74,8 @@ export interface paths {
         /**
          * Đặt làm tài khoản nhận tiền mặc định
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
          */
         patch: operations["AccountBankAccountsController_setDefault"];
         trace?: never;
@@ -84,6 +92,8 @@ export interface paths {
          * @description Đọc từ `payments`: tiền khách trả cho GIAN HÀNG. KHÔNG phải ví điểm (`/account/balance`) và không phải khoản giữ chỗ chuyển cho XePrime (`/trips/:id`) — ba bảng, ba chủ nợ, ba màn hình. `totals` chỉ cộng khoản `succeeded`.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
          */
         get: operations["AccountPaymentsController_list"];
         put?: never;
@@ -106,6 +116,8 @@ export interface paths {
          * @description Ba con số: rút được ngay, đang chờ chuyển, và tổng XePrime phải trả. Kèm cam kết thời gian để màn hình nói được điều đó TRƯỚC khi người dùng bấm rút.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
          */
         get: operations["AccountWalletController_summary"];
         put?: never;
@@ -126,6 +138,8 @@ export interface paths {
         /**
          * Sổ ví — phân trang server-side, mới nhất trước
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
          */
         get: operations["AccountWalletController_entries"];
         put?: never;
@@ -146,6 +160,8 @@ export interface paths {
         /**
          * Các yêu cầu rút của tôi
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
          */
         get: operations["AccountWalletController_listWithdrawals"];
         put?: never;
@@ -154,6 +170,8 @@ export interface paths {
          * @description Đích chuyển phải là một tài khoản ĐÃ LƯU của chính chủ ví — không gõ số tài khoản ngay tại bước chi tiền. Tiền bị khoá khỏi số dư khả dụng ngay khi tạo.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
          */
         post: operations["AccountWalletController_createWithdrawal"];
         delete?: never;
@@ -176,6 +194,8 @@ export interface paths {
          * @description Chỉ khi còn chờ duyệt. Đã duyệt rồi thì admin có thể đang cầm lệnh chuyển.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
          */
         post: operations["AccountWalletController_cancelWithdrawal"];
         delete?: never;
@@ -196,6 +216,8 @@ export interface paths {
         /**
          * Đăng nhập bằng email hoặc số điện thoại + mật khẩu
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         post: operations["AuthController_login"];
         delete?: never;
@@ -214,6 +236,8 @@ export interface paths {
         /**
          * Thông tin user hiện tại kèm tenant scope và quyền
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["AuthController_me"];
         put?: never;
@@ -236,6 +260,8 @@ export interface paths {
         /**
          * Native: đăng nhập bằng email/SĐT + mật khẩu
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         post: operations["MobileAuthController_login"];
         delete?: never;
@@ -256,6 +282,8 @@ export interface paths {
         /**
          * Native: thu hồi phiên của thiết bị hiện tại
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         post: operations["MobileAuthController_logout"];
         delete?: never;
@@ -276,6 +304,8 @@ export interface paths {
         /**
          * Native: đăng nhập bằng SĐT + OTP (tự tạo tài khoản nếu chưa có)
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         post: operations["MobilePhoneAuthController_login"];
         delete?: never;
@@ -296,6 +326,8 @@ export interface paths {
         /**
          * Native: xoay refresh token, nhận cặp token mới
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         post: operations["MobileAuthController_refresh"];
         delete?: never;
@@ -316,6 +348,8 @@ export interface paths {
         /**
          * Native: đăng ký bằng số điện thoại + mật khẩu
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         post: operations["MobileAuthController_register"];
         delete?: never;
@@ -336,6 +370,8 @@ export interface paths {
         /**
          * Native: đổi one-time code của social login lấy access + refresh token
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         post: operations["MobileAuthController_exchangeSocialCode"];
         delete?: never;
@@ -356,6 +392,8 @@ export interface paths {
         /**
          * Đổi mật khẩu — cần mật khẩu hiện tại; tài khoản chưa có thì dùng password/set
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         post: operations["AuthController_changePassword"];
         delete?: never;
@@ -374,8 +412,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Quên mật khẩu: gửi link đặt lại qua email
+         * Quên mật khẩu: gửi link đặt lại qua email (về site của tài khoản)
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         post: operations["AuthController_forgotPassword"];
         delete?: never;
@@ -396,6 +436,8 @@ export interface paths {
         /**
          * Đặt lại mật khẩu từ token trong email
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         post: operations["AuthController_resetPassword"];
         delete?: never;
@@ -416,6 +458,8 @@ export interface paths {
         /**
          * Đặt mật khẩu lần đầu cho tài khoản chưa có (vd tạo bằng SĐT/OTP)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         post: operations["AuthController_setPassword"];
         delete?: never;
@@ -436,6 +480,8 @@ export interface paths {
         /**
          * Đăng nhập passwordless bằng SĐT + OTP (tự tạo tài khoản nếu chưa có)
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         post: operations["PhoneVerificationController_login"];
         delete?: never;
@@ -456,6 +502,8 @@ export interface paths {
         /**
          * Gửi mã OTP tới số điện thoại
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         post: operations["PhoneVerificationController_sendOtp"];
         delete?: never;
@@ -476,6 +524,8 @@ export interface paths {
         /**
          * Xác nhận mã OTP
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         post: operations["PhoneVerificationController_verifyOtp"];
         delete?: never;
@@ -494,8 +544,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Đăng ký bằng số điện thoại + mật khẩu
+         * Đăng ký bằng số điện thoại + mật khẩu — tài khoản thuộc realm của site đang gọi
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         post: operations["AuthController_register"];
         delete?: never;
@@ -515,8 +567,10 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * Đăng xuất: xoá session cookie
+         * Đăng xuất: xoá session cookie của site đang gọi
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         delete: operations["AuthController_logout"];
         options?: never;
@@ -536,6 +590,8 @@ export interface paths {
          * @description Trình duyệt điều hướng thẳng tới đây (không phải XHR). Luôn trả 302: sang provider nếu cấu hình đủ, hoặc về web kèm `?authError=SOCIAL_NOT_CONFIGURED`.
          *
          *     **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["SocialAuthController_begin"];
         put?: never;
@@ -555,9 +611,11 @@ export interface paths {
         };
         /**
          * Provider gọi về sau khi người dùng đồng ý — phát session cookie rồi về web
-         * @description Chỉ provider điều hướng tới đây, và nó tự gắn thêm tham số riêng (`iss`, `scope`, `authuser`, `prompt`…) — endpoint cố ý bỏ qua mọi tham số ngoài ba cái dưới đây. Luôn trả 302 về `APP_WEB_URL`; hỏng thì kèm `?authError=<mã>` (`SOCIAL_STATE_INVALID` · `SOCIAL_CANCELLED` · `SOCIAL_EXCHANGE_FAILED` · `CONFLICT` · `ACCOUNT_LOCKED`).
+         * @description Chỉ provider điều hướng tới đây, và nó tự gắn thêm tham số riêng (`iss`, `scope`, `authuser`, `prompt`…) — endpoint cố ý bỏ qua mọi tham số ngoài ba cái dưới đây. Luôn trả 302 về site của realm đã mở luồng; hỏng thì kèm `?authError=<mã>` (`SOCIAL_STATE_INVALID` · `SOCIAL_CANCELLED` · `SOCIAL_EXCHANGE_FAILED` · `CONFLICT` · `ACCOUNT_LOCKED`).
          *
          *     **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["SocialAuthController_callback"];
         put?: never;
@@ -578,6 +636,8 @@ export interface paths {
         /**
          * Danh sách yêu cầu đặt xe (phân trang, filter trạng thái)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -602,6 +662,8 @@ export interface paths {
         /**
          * Chi tiết một yêu cầu
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -631,6 +693,8 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `booking_requests.approve` (đọc từ DB mỗi request, không nằm trong session).
@@ -656,6 +720,8 @@ export interface paths {
          * @description Chỉ áp dụng cho awaiting_hold và hold_paid (LEGACY). Đóng hold, nhả lịch, hoàn phần đã chuyển và ghi một dòng booking_cancellations tính vào chỉ số uy tín. Yêu cầu chưa được nhận thì dùng /reject; đơn đã tạo thì dùng POST /bookings/:id/transition.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -683,6 +749,8 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `booking_requests.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -707,6 +775,8 @@ export interface paths {
          * Từ chối yêu cầu
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `booking_requests.approve` (đọc từ DB mỗi request, không nằm trong session).
@@ -729,6 +799,8 @@ export interface paths {
          * Danh sách đơn thuê (phân trang, filter, sort)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -738,6 +810,8 @@ export interface paths {
         /**
          * Tạo đơn thuê (giữ chỗ lịch, chặn trùng bằng constraint DB)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -761,6 +835,8 @@ export interface paths {
          * Chi tiết một đơn thuê
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -774,6 +850,8 @@ export interface paths {
         /**
          * Sửa đơn (đổi khung giờ sẽ reschedule lịch)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -793,6 +871,8 @@ export interface paths {
          * Hợp đồng của một đơn (nếu đã tạo)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -802,6 +882,8 @@ export interface paths {
         /**
          * Tạo (hoặc lấy) hợp đồng từ một đơn thuê — idempotent
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -831,6 +913,8 @@ export interface paths {
          * Cập nhật phí giao nhận của đơn (server tính lại tổng, có audit)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.update` (đọc từ DB mỗi request, không nằm trong session).
@@ -855,6 +939,8 @@ export interface paths {
          * Gán/bỏ gán tài xế cho đơn (driverId null = bỏ gán, có audit)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.update` (đọc từ DB mỗi request, không nằm trong session).
@@ -872,6 +958,8 @@ export interface paths {
         /**
          * Ngữ cảnh bàn giao của đơn: biên bản giao + trả + số liệu suy ra
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -898,6 +986,8 @@ export interface paths {
          * Tạo hoặc lưu bản nháp bàn giao (không có hệ quả nghiệp vụ)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `handovers.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -923,6 +1013,8 @@ export interface paths {
          * Hủy bản nháp (biên bản đã xác nhận không hủy được)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `handovers.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -946,6 +1038,8 @@ export interface paths {
         /**
          * Xác nhận bàn giao — ghi KM + chuyển trạng thái đơn + lịch + audit, một transaction
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -971,6 +1065,8 @@ export interface paths {
          * Bổ sung/sửa KM của biên bản đã xác nhận (bắt buộc lý do + audit)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.odometer.correct` (đọc từ DB mỗi request, không nằm trong session).
@@ -995,6 +1091,8 @@ export interface paths {
          * Xác minh object rồi gắn ảnh vào đúng góc chụp
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `handovers.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -1016,6 +1114,8 @@ export interface paths {
         /**
          * Phát signed URL ngắn hạn xem một ảnh hiện trạng
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -1044,6 +1144,8 @@ export interface paths {
          * Gỡ ảnh khỏi một góc chụp của bản nháp
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `handovers.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -1067,6 +1169,8 @@ export interface paths {
          * Presign upload ảnh hiện trạng vào kho riêng tư (Wave 4.1)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `handovers.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -1089,6 +1193,8 @@ export interface paths {
          * Lịch sử thu tiền của một đơn
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -1098,6 +1204,8 @@ export interface paths {
         /**
          * Ghi nhận một lần thu tiền cho đơn (cập nhật đã trả/còn nợ)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -1120,6 +1228,8 @@ export interface paths {
         /**
          * Quyết toán đơn: phát sinh, cọc đã thu, đề xuất hoàn
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -1147,6 +1257,8 @@ export interface paths {
          * Đánh dấu đã hoàn cọc (ghi nhận thủ công, không chuyển tiền)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `payments.record` (đọc từ DB mỗi request, không nằm trong session).
@@ -1158,6 +1270,8 @@ export interface paths {
         /**
          * Điều chỉnh bản ghi hoàn cọc (quyền cao, bắt buộc lý do)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -1178,6 +1292,8 @@ export interface paths {
         /**
          * Thêm một khoản phát sinh (không sinh giao dịch)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -1204,6 +1320,8 @@ export interface paths {
          * Gỡ một khoản phát sinh (huỷ mềm, có lý do + audit)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `payments.record` (đọc từ DB mỗi request, không nằm trong session).
@@ -1214,6 +1332,8 @@ export interface paths {
         /**
          * Sửa một khoản phát sinh (audit before/after)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -1234,6 +1354,8 @@ export interface paths {
         /**
          * Chuyển trạng thái đơn (validate canTransitionBooking; huỷ/no_show bắt buộc có lý do, ghi vào audit)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -1257,6 +1379,8 @@ export interface paths {
          * Danh sách chi nhánh của gian hàng (kèm số xe mỗi chi nhánh)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `branches.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -1266,6 +1390,8 @@ export interface paths {
         /**
          * Tạo chi nhánh mới (mã CNxx sinh ở server)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -1289,6 +1415,8 @@ export interface paths {
          * Chi tiết một chi nhánh
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `branches.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -1302,6 +1430,8 @@ export interface paths {
         /**
          * Sửa chi nhánh (đổi tỉnh sẽ đồng bộ lại vị trí công khai của xe)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -1322,6 +1452,8 @@ export interface paths {
         /**
          * Bật lại chi nhánh đã ngừng hoạt động
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -1347,6 +1479,8 @@ export interface paths {
          * Ngừng hoạt động (chặn nếu còn xe hoặc đơn đang chạy/sắp tới)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `branches.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -1371,6 +1505,8 @@ export interface paths {
          * Đặt làm chi nhánh mặc định của gian hàng
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `branches.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -1392,6 +1528,8 @@ export interface paths {
         /**
          * Số xe còn trống theo từng ngày của khoảng đang xem
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -1421,6 +1559,8 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.block_schedule` (đọc từ DB mỗi request, không nằm trong session).
@@ -1448,6 +1588,8 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.block_schedule` (đọc từ DB mỗi request, không nằm trong session).
@@ -1470,6 +1612,8 @@ export interface paths {
          * @description Trả giá NIÊM YẾT của từng xe và những ngày xe đang bận. Phép tính giá mới nằm ở hàm thuần `planBulkDayPrices` của @xeprime/domain — client và server dùng chung, nên bảng xem trước và dòng ghi xuống DB không thể lệch nhau.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -1498,6 +1642,8 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.update` (đọc từ DB mỗi request, không nằm trong session).
@@ -1525,6 +1671,8 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.update` (đọc từ DB mỗi request, không nằm trong session).
@@ -1549,6 +1697,8 @@ export interface paths {
          * Xem trước trùng lịch (preview, không phải lớp bảo vệ)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `calendar.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -1570,6 +1720,8 @@ export interface paths {
         /**
          * Bản ghi đè giá theo ngày của các xe đang lọc, trong khoảng xem
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -1595,6 +1747,8 @@ export interface paths {
          * Sự kiện chiếm lịch trong khoảng thời gian
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `calendar.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -1618,6 +1772,8 @@ export interface paths {
         /**
          * Báo giá nội bộ cho một xe của gian hàng (kèm giá riêng theo ngày)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -1643,6 +1799,8 @@ export interface paths {
          * Danh sách xe làm hàng của resource timeline
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `calendar.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -1666,6 +1824,8 @@ export interface paths {
         /**
          * Danh mục lọc đang bật (hãng xe / kiểu dáng / nhiên liệu / tiện ích)
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["CatalogController_list"];
         put?: never;
@@ -1686,6 +1846,8 @@ export interface paths {
         /**
          * Mẫu xe theo loại phương tiện và hãng
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["CatalogController_listModels"];
         put?: never;
@@ -1708,6 +1870,8 @@ export interface paths {
         /**
          * Xin presigned URL để upload đính kèm chat lên R2
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         post: operations["ChatController_presign"];
         delete?: never;
@@ -1728,6 +1892,8 @@ export interface paths {
         /**
          * Custom token để signInWithCustomToken (uid = user id)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         post: operations["ChatController_firebaseToken"];
         delete?: never;
@@ -1746,6 +1912,8 @@ export interface paths {
         /**
          * Chi tiết một hợp đồng (để xem/in)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -1770,12 +1938,16 @@ export interface paths {
         /**
          * Hộp thư của một bề mặt (khách hoặc gian hàng), phân trang
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         get: operations["ConversationsController_list"];
         put?: never;
         /**
          * Mở/lấy hội thoại với shop về một xe (khách)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         post: operations["ConversationsController_create"];
         delete?: never;
@@ -1794,6 +1966,8 @@ export interface paths {
         /**
          * Một hội thoại theo id — mở deep link không nằm ở trang đầu
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         get: operations["ConversationsController_detail"];
         put?: never;
@@ -1814,12 +1988,16 @@ export interface paths {
         /**
          * Lịch sử tin nhắn (cursor keyset, mới nhất trước)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         get: operations["ConversationsController_messages"];
         put?: never;
         /**
          * Gửi một tin nhắn (idempotent theo clientMessageId)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         post: operations["ConversationsController_send"];
         delete?: never;
@@ -1840,6 +2018,8 @@ export interface paths {
         /**
          * Đánh dấu đã đọc hội thoại
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         post: operations["ConversationsController_read"];
         delete?: never;
@@ -1858,6 +2038,8 @@ export interface paths {
         /**
          * Khách có nhắn được cho gian hàng này không (để ẩn/hiện nút)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         get: operations["ConversationsController_eligibility"];
         put?: never;
@@ -1878,6 +2060,8 @@ export interface paths {
         /**
          * Tổng tin chưa đọc của một bề mặt (cho badge icon chat)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         get: operations["ConversationsController_unreadCount"];
         put?: never;
@@ -1898,6 +2082,8 @@ export interface paths {
         /**
          * Chưa đọc của cả hai vai — cho badge biểu tượng chat ở mọi trang
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         get: operations["ConversationsController_unreadSummary"];
         put?: never;
@@ -1921,6 +2107,8 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `customers.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -1932,6 +2120,8 @@ export interface paths {
          * @description SĐT bắt buộc và là định danh — trùng với khách khác trả 409 CUSTOMER_PHONE_DUPLICATE.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -1955,6 +2145,8 @@ export interface paths {
          * Hồ sơ khách + số liệu tổng hợp + hoạt động gần đây
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `customers.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -1970,6 +2162,8 @@ export interface paths {
          * @description Không đụng tới snapshot tên/SĐT trên đơn thuê và yêu cầu cũ — đó là sự thật của giao dịch.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -1990,6 +2184,8 @@ export interface paths {
         /**
          * Lưu trữ hồ sơ khách (soft — lịch sử đơn giữ nguyên)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -2012,6 +2208,8 @@ export interface paths {
         /**
          * Lịch sử thuê của khách (phân trang)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -2036,6 +2234,8 @@ export interface paths {
         /**
          * Giấy tờ của khách (metadata — không có đường dẫn file)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -2064,6 +2264,8 @@ export interface paths {
          * Gỡ giấy tờ (soft-delete + audit)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `customers.documents.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -2087,6 +2289,8 @@ export interface paths {
          * Bước 2 — xác minh tệp đã tải lên (HEAD + chữ ký byte đầu) rồi chuyển `ready`
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `customers.documents.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -2108,6 +2312,8 @@ export interface paths {
         /**
          * Signed GET ngắn hạn để mở giấy tờ — ghi audit từng lần
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -2135,6 +2341,8 @@ export interface paths {
          * Ghi nhận đã đối chiếu giấy tờ (thủ công — VNeID/bản gốc), có audit
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `customers.documents.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -2159,6 +2367,8 @@ export interface paths {
          * Bước 1 — xin URL PUT lên bucket riêng tư (tạo bản ghi `pending`)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `customers.documents.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -2181,6 +2391,8 @@ export interface paths {
          * Ghi chú nội bộ về khách (phân trang)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `customers.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -2190,6 +2402,8 @@ export interface paths {
         /**
          * Thêm ghi chú nội bộ (bản ghi bất biến, có tác giả + thời điểm)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -2216,6 +2430,8 @@ export interface paths {
          * Gỡ ghi chú nội bộ (soft-delete)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `customers.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -2238,6 +2454,8 @@ export interface paths {
         /**
          * Khôi phục hồ sơ khách đã lưu trữ
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -2265,6 +2483,8 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `customers.manage_risk` (đọc từ DB mỗi request, không nằm trong session).
@@ -2286,6 +2506,8 @@ export interface paths {
         /**
          * Dải chỉ số đầu trang sổ khách
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -2311,6 +2533,8 @@ export interface paths {
          * Danh sách đơn còn công nợ (lọc quá hạn/sắp đến/chưa thu)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `finance.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -2335,6 +2559,8 @@ export interface paths {
          * Danh sách tài xế (tìm kiếm/lọc trạng thái, phân trang)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `drivers.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -2344,6 +2570,8 @@ export interface paths {
         /**
          * Thêm tài xế
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -2370,6 +2598,8 @@ export interface paths {
          * Xoá tài xế (soft-delete; chặn khi còn đơn chưa hoàn tất)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `drivers.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -2380,6 +2610,8 @@ export interface paths {
         /**
          * Sửa hồ sơ / đổi trạng thái tài xế
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -2398,6 +2630,8 @@ export interface paths {
         /**
          * Tài xế cho bộ chọn gán đơn — kèm cờ bận khung giờ / GPLX hết hạn (17/08)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -2423,6 +2657,8 @@ export interface paths {
          * Cơ cấu doanh thu hoặc chi phí theo danh mục thu/chi
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `finance.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -2446,6 +2682,8 @@ export interface paths {
         /**
          * Doanh thu theo từng khách trong kỳ — tiền THẬT đã thu. Phần không gắn khách nào nằm ở `/finance/summary` (`unassignedRevenue`)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -2471,6 +2709,8 @@ export interface paths {
          * Lãi/lỗ theo từng xe trong kỳ. Chi phí chung chưa gắn xe nằm ở `/finance/summary` (`unassignedCost`) — nó là số của KỲ, không đổi theo trang
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `finance.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -2495,6 +2735,8 @@ export interface paths {
          * Danh mục thu/chi (hệ thống + của tenant)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `finance.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -2504,6 +2746,8 @@ export interface paths {
         /**
          * Tạo danh mục riêng của tenant
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -2530,6 +2774,8 @@ export interface paths {
          * Xoá danh mục (chỉ danh mục riêng)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `receipts.create` (đọc từ DB mỗi request, không nằm trong session).
@@ -2540,6 +2786,8 @@ export interface paths {
         /**
          * Đổi tên danh mục (chỉ danh mục riêng)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -2558,6 +2806,8 @@ export interface paths {
         /**
          * Chuỗi thu-chi theo ngày/tuần/tháng — đã điền bucket rỗng, gộp theo giờ VN
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -2583,6 +2833,8 @@ export interface paths {
          * Ba lớp tiền của một kỳ: kết quả kinh doanh, dòng tiền quỹ, cọc đang giữ + công nợ
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `finance.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -2606,6 +2858,8 @@ export interface paths {
         /**
          * Hàng đợi "Thiếu KM trả" (phân trang, lọc được theo chi nhánh)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -2632,6 +2886,8 @@ export interface paths {
          * @description Khác mọi endpoint còn lại: response KHÔNG có lớp bọc `{ data }` — trả thẳng kết quả Terminus để uptime monitor đọc `status` mà không phải bóc lớp.
          *
          *     **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["HealthController_check"];
         put?: never;
@@ -2654,6 +2910,8 @@ export interface paths {
          * @description Lọc theo OVERLAP: một kỳ nghỉ nhiều ngày vắt qua biên khoảng vẫn được trả về. `endDate` là ngày CUỐI CÙNG (inclusive). Chưa cấu hình đồng bộ thì `items` rỗng, không phải lỗi.
          *
          *     **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["HolidaysController_list"];
         put?: never;
@@ -2674,6 +2932,8 @@ export interface paths {
         /**
          * Xem trước một lời mời (không cần đăng nhập)
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          */
         get: operations["InviteAnswersController_preview"];
         put?: never;
@@ -2696,6 +2956,8 @@ export interface paths {
         /**
          * Đồng ý tham gia gian hàng — cần đăng nhập đúng email được mời
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          */
         post: operations["InviteAnswersController_accept"];
         delete?: never;
@@ -2716,6 +2978,8 @@ export interface paths {
         /**
          * Từ chối lời mời — cần đăng nhập đúng email được mời
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          */
         post: operations["InviteAnswersController_decline"];
         delete?: never;
@@ -2734,6 +2998,8 @@ export interface paths {
         /**
          * Danh sách xe theo việc cần làm (quá hạn / sắp hạn / thiếu KM…)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -2759,6 +3025,8 @@ export interface paths {
          * Đếm theo từng nhóm việc — độc lập với trang/bộ lọc hiện tại
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.maintenance.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -2782,6 +3050,8 @@ export interface paths {
         /**
          * Huy hiệu của tôi: chưa đọc ở chuông và hai hộp thư chat
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["BadgesController_mine"];
         put?: never;
@@ -2802,12 +3072,16 @@ export interface paths {
         /**
          * Yêu cầu hỗ trợ của tôi — mặc định chỉ case còn mở
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
          */
         get: operations["CustomerSupportController_list"];
         put?: never;
         /**
          * Mở yêu cầu hỗ trợ. Tranh chấp phải gắn một chuyến CỦA CHÍNH BẠN và sẽ tạm giữ tiền
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
          */
         post: operations["CustomerSupportController_open"];
         delete?: never;
@@ -2826,6 +3100,8 @@ export interface paths {
         /**
          * Chi tiết + dòng thời gian
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
          */
         get: operations["CustomerSupportController_detail"];
         put?: never;
@@ -2848,6 +3124,8 @@ export interface paths {
         /**
          * Gửi thêm thông tin / bằng chứng dạng văn bản
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
          */
         post: operations["CustomerSupportController_message"];
         delete?: never;
@@ -2868,6 +3146,8 @@ export interface paths {
         /**
          * Rút yêu cầu xoá tài khoản (chỉ case account_deletion còn mở do chính bạn mở)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
          */
         post: operations["CustomerSupportController_withdraw"];
         delete?: never;
@@ -2886,6 +3166,8 @@ export interface paths {
         /**
          * Danh sách thành viên gian hàng (phân trang, filter)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -2914,6 +3196,8 @@ export interface paths {
          * Gỡ thành viên khỏi gian hàng
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `members.remove` (đọc từ DB mỗi request, không nằm trong session).
@@ -2924,6 +3208,8 @@ export interface paths {
         /**
          * Đổi vai trò thành viên
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -2943,6 +3229,8 @@ export interface paths {
          * Lời mời của gian hàng — mặc định chỉ những lời đang chờ
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `members.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -2952,6 +3240,8 @@ export interface paths {
         /**
          * Gửi thư mời tham gia gian hàng (email + vai trò)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -2977,6 +3267,8 @@ export interface paths {
          * Thu hồi một lời mời đang chờ — link trong email hết giá trị ngay
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `members.invite` (đọc từ DB mỗi request, không nằm trong session).
@@ -2998,6 +3290,8 @@ export interface paths {
         /**
          * Danh sách thông báo của tôi (phân trang, lọc chưa đọc)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["NotificationController_list"];
         put?: never;
@@ -3024,6 +3318,8 @@ export interface paths {
         /**
          * Đánh dấu một thông báo đã đọc
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         patch: operations["NotificationController_markRead"];
         trace?: never;
@@ -3040,11 +3336,15 @@ export interface paths {
         /**
          * Đăng ký thiết bị nhận thông báo đẩy (idempotent)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         post: operations["NotificationController_registerDevice"];
         /**
          * Ngừng nhận thông báo đẩy trên thiết bị này
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         delete: operations["NotificationController_unregisterDevice"];
         options?: never;
@@ -3064,6 +3364,8 @@ export interface paths {
         /**
          * Đánh dấu tất cả đã đọc
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         post: operations["NotificationController_markAllRead"];
         delete?: never;
@@ -3082,6 +3384,8 @@ export interface paths {
         /**
          * Số thông báo chưa đọc (cho badge chuông)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["NotificationController_unreadCount"];
         put?: never;
@@ -3105,6 +3409,8 @@ export interface paths {
          * Huỷ/hoàn một lần thu (trừ lại đã trả)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `payments.void` (đọc từ DB mỗi request, không nằm trong session).
@@ -3126,6 +3432,8 @@ export interface paths {
         /**
          * Chi tiết một địa điểm đã chọn (toạ độ, địa chỉ, tỉnh gợi ý)
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["PlacesController_detail"];
         put?: never;
@@ -3146,6 +3454,8 @@ export interface paths {
         /**
          * Tra địa chỉ chữ từ toạ độ ghim
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["PlacesController_reverse"];
         put?: never;
@@ -3166,8 +3476,36 @@ export interface paths {
         /**
          * Gợi ý địa điểm theo chữ đang gõ (giới hạn trong Việt Nam)
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["PlacesController_search"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/accounts/lookup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tra cứu xuyên realm: mọi tài khoản trùng một SĐT/email, mỗi dòng ghi rõ realm
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
+         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *
+         *     **Quyền yêu cầu:** `platform.customers.view` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        get: operations["PlatformAccountsController_find"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3186,6 +3524,8 @@ export interface paths {
         /**
          * Hàng đợi phiếu duyệt (phân trang, lọc theo trạng thái/loại)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -3210,6 +3550,8 @@ export interface paths {
         /**
          * Chi tiết phiếu duyệt (hồ sơ snapshot + lịch sử)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -3237,6 +3579,8 @@ export interface paths {
          * Duyệt phiếu (gian hàng → hoạt động)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.approvals.review` (đọc từ DB mỗi request, không nằm trong session).
@@ -3260,6 +3604,8 @@ export interface paths {
         /**
          * Từ chối phiếu (cần lý do)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -3285,6 +3631,8 @@ export interface paths {
          * Yêu cầu bổ sung (cần lý do)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.approvals.review` (đọc từ DB mỗi request, không nằm trong session).
@@ -3306,6 +3654,8 @@ export interface paths {
         /**
          * Danh sách nhật ký (phân trang, lọc scope/action/đối tượng/thời gian)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -3331,6 +3681,8 @@ export interface paths {
          * Chi tiết một dòng nhật ký (kèm snapshot before/after)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.audit.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -3355,6 +3707,8 @@ export interface paths {
          * Hàng đợi giao dịch tiền vào — mặc định chỉ những khoản CHƯA KHỚP
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -3378,6 +3732,8 @@ export interface paths {
         /**
          * Chi tiết một giao dịch: payload gốc + hoá đơn gợi ý để khớp tay
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -3405,6 +3761,8 @@ export interface paths {
          * Bỏ qua một giao dịch không thuộc luồng nào — giữ dòng, ghi lý do
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -3429,6 +3787,8 @@ export interface paths {
          * Khớp TAY vào một hoá đơn gói — cùng đường tiền với webhook, kèm audit và ghi chú
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -3451,6 +3811,8 @@ export interface paths {
          * Toàn bộ banner (kèm cờ đang-hiển-thị theo lịch)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.banners.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -3460,6 +3822,8 @@ export interface paths {
         /**
          * Tạo banner
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -3486,6 +3850,8 @@ export interface paths {
          * Xoá banner (ảnh vẫn còn trên R2 — tạo lại được từ URL cũ)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.banners.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -3496,6 +3862,8 @@ export interface paths {
         /**
          * Sửa banner (ảnh/lịch/thứ tự/bật-tắt)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -3516,6 +3884,8 @@ export interface paths {
         /**
          * Presign upload ảnh banner lên R2 (prefix banners/ dựng server-side)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -3541,6 +3911,8 @@ export interface paths {
          * Sắp lại thứ tự hiển thị (gửi trọn danh sách id)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.banners.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -3562,6 +3934,8 @@ export interface paths {
         /**
          * Danh sách đơn thuê toàn hệ thống (phân trang, lọc, tìm kiếm)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -3586,6 +3960,8 @@ export interface paths {
         /**
          * Chi tiết một đơn thuê (SĐT khách ở dạng đã che)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -3613,6 +3989,8 @@ export interface paths {
          * Xem SĐT khách đầy đủ (ghi audit từng lần xem)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.bookings.view`, `platform.customers.view_pii` (đọc từ DB mỗi request, không nằm trong session).
@@ -3635,6 +4013,8 @@ export interface paths {
          * Danh mục đầy đủ, kèm mục đã tắt và số xe đang dùng
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.catalog.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -3644,6 +4024,8 @@ export interface paths {
         /**
          * Thêm mục danh mục
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -3670,6 +4052,8 @@ export interface paths {
          * Xoá mục chưa có xe nào dùng (đã có xe thì tắt, không xoá)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.catalog.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -3680,6 +4064,8 @@ export interface paths {
         /**
          * Sửa nhãn / mô tả / ảnh / thứ tự / bật-tắt (không đổi mã)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -3699,6 +4085,8 @@ export interface paths {
          * Mẫu xe của một loại phương tiện, kèm mẫu đã tắt và số xe đang gắn
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.catalog.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -3708,6 +4096,8 @@ export interface paths {
         /**
          * Thêm mẫu xe vào danh mục
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -3734,6 +4124,8 @@ export interface paths {
          * Xoá mẫu xe chưa có xe nào gắn (đã có xe thì tắt, không xoá)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.catalog.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -3744,6 +4136,8 @@ export interface paths {
         /**
          * Sửa mẫu xe (không đổi hãng và loại phương tiện)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -3764,6 +4158,8 @@ export interface paths {
         /**
          * Sắp lại thứ tự hiển thị của một chiều danh mục
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -3786,6 +4182,8 @@ export interface paths {
         /**
          * Danh sách khách thuê (phân trang, tra theo tên/SĐT/email)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -3810,6 +4208,8 @@ export interface paths {
         /**
          * Chi tiết một khách (kèm 10 yêu cầu thuê gần nhất, PII đã che)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -3837,6 +4237,8 @@ export interface paths {
          * Xem SĐT/email khách đầy đủ (ghi audit từng lần xem)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.customers.view`, `platform.customers.view_pii` (đọc từ DB mỗi request, không nằm trong session).
@@ -3858,6 +4260,8 @@ export interface paths {
         /**
          * Tổng quan nền tảng: gian hàng / listing / đơn thuê / chờ duyệt
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -3883,6 +4287,8 @@ export interface paths {
          * Mọi phiên bản chính sách phí — mới nhất trước
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.fee_policies.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -3892,6 +4298,8 @@ export interface paths {
         /**
          * Tạo bản NHÁP mới (số phiên bản kế tiếp)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -3915,6 +4323,8 @@ export interface paths {
          * Một phiên bản
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.fee_policies.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -3926,6 +4336,8 @@ export interface paths {
          * Bỏ bản nháp
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.fee_policies.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -3936,6 +4348,8 @@ export interface paths {
         /**
          * Sửa bản nháp — bản đã hiệu lực là bất biến
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -3956,6 +4370,8 @@ export interface paths {
         /**
          * Kích hoạt bản nháp — lưu trữ bản đang hiệu lực trong cùng transaction, không hồi tố
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -3979,6 +4395,8 @@ export interface paths {
          * Toàn bộ danh mục tỉnh/thành kèm số chi nhánh, số xe và số xe đang công khai
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.locations.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -3988,6 +4406,8 @@ export interface paths {
         /**
          * Thêm đơn vị hành chính cấp tỉnh mới (mã bất biến sau khi tạo)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -4017,6 +4437,8 @@ export interface paths {
          * Đổi metadata hiển thị / bật-tắt chọn mới / ẩn-hiện công khai
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.locations.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -4034,6 +4456,8 @@ export interface paths {
         /**
          * Hàng đợi khoản giữ chỗ — lọc trạng thái, hoặc chỉ hold chưa chốt kết cục
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -4061,6 +4485,8 @@ export interface paths {
          * Chốt tay kết cục một hold đang chờ (thường sau tranh chấp) — bắt buộc lý do, có audit
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -4084,6 +4510,8 @@ export interface paths {
          * @description Phí của hợp đồng chưa quyết toán nằm ở vế GIỮ HỘ của đối soát ba vế: mỗi dòng ở đây là một khoản tiền khách đã trả mà chưa có chứng nhận nào được cấp.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -4113,6 +4541,8 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -4136,6 +4566,8 @@ export interface paths {
         /**
          * Thu hồi hợp đồng — bắt buộc lý do, có audit
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -4163,6 +4595,8 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -4187,6 +4621,8 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -4210,6 +4646,8 @@ export interface paths {
         /**
          * Hàng đợi chuyển trả khoản giữ chỗ — mặc định chỉ CHỜ CHUYỂN
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -4237,6 +4675,8 @@ export interface paths {
          * Đã chuyển trả — ghi mã giao dịch ngân hàng, báo khách
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -4261,6 +4701,8 @@ export interface paths {
          * Từ chối hoàn — bắt buộc lý do, có audit
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -4284,6 +4726,8 @@ export interface paths {
          * @description Trạng thái HIỆN TẠI của sáu hàng đợi (tiền vào chưa khớp, giữ chỗ chờ chốt, hoàn chờ chuyển, rút tiền, bảo hiểm lỗi, thuế kỳ này chờ kê khai). Mỗi nhóm đếm đúng tập mà danh sách tương ứng hiện khi không lọc.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -4310,6 +4754,8 @@ export interface paths {
          * @description Dựng ở SERVER: một kỳ đông đơn có vài nghìn dòng, và tải hết về trình duyệt chỉ để ghép chuỗi là cách chắc chắn làm treo màn hình. File có BOM UTF-8 vì Excel trên Windows đọc CSV không BOM bằng codepage hệ thống và mọi tên có dấu sẽ thành ký tự lạ.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -4339,6 +4785,8 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -4365,6 +4813,8 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -4388,6 +4838,8 @@ export interface paths {
          * @description `amount` ÂM là bút toán ĐẢO; nó nằm cùng kỳ với dòng gốc.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -4417,6 +4869,8 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -4440,6 +4894,8 @@ export interface paths {
          * @description Chia theo `entityType` vì cá nhân / hộ kinh doanh / doanh nghiệp có nghĩa vụ khác nhau. Nhóm `unknown` là gian hàng CHƯA khai hồ sơ người bán — nó hiện ra thay vì bị gộp vào `individual`, vì gộp là đoán hộ họ một nghĩa vụ pháp lý.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -4466,6 +4922,8 @@ export interface paths {
          * @description Không lọc thì chỉ hiện `pending` + `approved` (những lệnh còn phải làm gì đó). `overdue=true` lọc riêng các lệnh đã quá hạn cam kết.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -4495,6 +4953,8 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -4520,6 +4980,8 @@ export interface paths {
          * @description Bắt buộc có mã giao dịch ngân hàng: đây là đầu duy nhất của đối soát chiều RA, và DB cũng chặn một lệnh `paid` không có bằng chứng. `rowVersion` chặn hai admin cùng bấm.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -4547,6 +5009,8 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -4573,6 +5037,8 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.money.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -4594,6 +5060,8 @@ export interface paths {
         /**
          * Nhật ký hoạt động của đối tác — không kèm IP/thiết bị (chỉ đọc)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -4619,6 +5087,8 @@ export interface paths {
          * Gói & phí của gian hàng gói — gói, hạn mức, hoá đơn (chỉ đọc)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.tenants.view`, `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -4642,6 +5112,8 @@ export interface paths {
         /**
          * Yêu cầu thuê của đối tác — khách đã che (chỉ đọc)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -4667,6 +5139,8 @@ export interface paths {
          * Đơn thuê của đối tác — khách đã che; tổng tiền chỉ khi có platform.money.manage
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.tenants.view`, `platform.bookings.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -4690,6 +5164,8 @@ export interface paths {
         /**
          * Số đơn theo nhóm trạng thái + đơn sắp nhận xe + yêu cầu chờ duyệt
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -4715,6 +5191,8 @@ export interface paths {
          * Phí dịch vụ & số liệu theo tháng của chủ xe cá nhân — số tiền theo platform.money.manage
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.tenants.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -4738,6 +5216,8 @@ export interface paths {
         /**
          * Chi tiết đối tác — đầu drawer + tab Tổng quan (chỉ đọc)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -4763,6 +5243,8 @@ export interface paths {
          * Hồ sơ đối tác — PII đã che; giấy tờ pháp lý chỉ khi có platform.sellers.verify
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.tenants.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -4786,6 +5268,8 @@ export interface paths {
         /**
          * Các phiên hỗ trợ đã mở cho đối tác (chỉ đọc)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -4811,6 +5295,8 @@ export interface paths {
          * Xe của đối tác — phân trang, lọc, sắp xếp, kèm cảnh báo (chỉ đọc)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.tenants.view`, `platform.vehicles.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -4835,6 +5321,8 @@ export interface paths {
          * Danh sách gói (mặc định chỉ gói đang bán; status=all để xem hết)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -4844,6 +5332,8 @@ export interface paths {
         /**
          * Tạo gói mới
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -4870,6 +5360,8 @@ export interface paths {
          * Xoá HẲN gói chưa từng được dùng (bản nháp) — gói đã có thuê bao/hoá đơn trả PLAN_IN_USE, hãy ngừng bán
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -4880,6 +5372,8 @@ export interface paths {
         /**
          * Sửa gói (giá mới chỉ áp cho lượt gán sau — price snapshot)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -4900,6 +5394,8 @@ export interface paths {
         /**
          * Mở bán lại gói đã ngừng bán (chỉ đổi danh mục, không đụng thuê bao)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -4925,6 +5421,8 @@ export interface paths {
          * Ngừng bán gói (thuê bao đã gán giữ nguyên hiệu lực)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -4947,6 +5445,8 @@ export interface paths {
          * Danh sách mã khuyến mãi — lọc/tìm/sắp/phân trang ở SERVER, kèm thẻ thống kê
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.promo_codes.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -4956,6 +5456,8 @@ export interface paths {
         /**
          * Tạo mã khuyến mãi
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -4979,6 +5481,8 @@ export interface paths {
          * Chi tiết một mã
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.promo_codes.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -4990,6 +5494,8 @@ export interface paths {
          * Xoá MỀM — mã đã dùng vẫn giải thích được giá của đơn cũ (RESTRICT ở DB)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.promo_codes.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -5000,6 +5506,8 @@ export interface paths {
         /**
          * Sửa mã — mã đã phát sinh lượt thì mức giảm/điều kiện/phạm vi bị khoá (PROMO_CODE_LOCKED)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -5020,6 +5528,8 @@ export interface paths {
         /**
          * Nhân bản — mã mới TẮT sẵn để soát lại số trước khi chạy
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -5042,6 +5552,8 @@ export interface paths {
         /**
          * Lượt sử dụng của một mã (tên khách đã che)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -5069,6 +5581,8 @@ export interface paths {
          * Bật/tắt — thao tác duy nhất còn dùng được khi mã đã có lượt dùng
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.promo_codes.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -5090,6 +5604,8 @@ export interface paths {
         /**
          * Hàng đợi hồ sơ — mặc định CHỜ XÁC MINH, cũ nhất trước. PII đã che.
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -5114,6 +5630,8 @@ export interface paths {
         /**
          * Chi tiết một hồ sơ — PII đầy đủ để đối chiếu giấy tờ
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -5141,6 +5659,8 @@ export interface paths {
          * Từ chối hồ sơ
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.sellers.verify` (đọc từ DB mỗi request, không nằm trong session).
@@ -5164,6 +5684,8 @@ export interface paths {
         /**
          * Yêu cầu bổ sung — người bán sửa rồi gửi lại
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -5189,6 +5711,8 @@ export interface paths {
          * Xác minh đạt
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.sellers.verify` (đọc từ DB mỗi request, không nằm trong session).
@@ -5211,6 +5735,8 @@ export interface paths {
          * Danh sách nhân sự nền tảng (phân trang, lọc vai trò, tìm kiếm)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.staff.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -5220,6 +5746,8 @@ export interface paths {
         /**
          * Thêm nhân sự theo email tài khoản đã có
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -5246,6 +5774,8 @@ export interface paths {
          * Gỡ nhân sự khỏi nền tảng (status → removed)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.staff.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -5256,6 +5786,8 @@ export interface paths {
         /**
          * Đổi vai trò nhân sự
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -5274,6 +5806,8 @@ export interface paths {
         /**
          * Hàng đợi toàn sàn — ưu tiên cao trước, rồi cũ nhất trước
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -5298,6 +5832,8 @@ export interface paths {
         /**
          * Chi tiết + dòng thời gian ĐẦY ĐỦ (gồm ghi chú nội bộ)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -5325,6 +5861,8 @@ export interface paths {
          * Phân công + đặt mức ưu tiên (nhận việc thì case sang đang xử lý)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.support.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -5348,6 +5886,8 @@ export interface paths {
         /**
          * Trả lời; `internal=true` là ghi chú nội bộ hai bên KHÔNG thấy
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -5373,6 +5913,8 @@ export interface paths {
          * Kết luận. Với tranh chấp: sau bước này mới chốt được kết cục khoản giữ chỗ
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.support.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -5396,6 +5938,8 @@ export interface paths {
         /**
          * Đổi trạng thái theo máy trạng thái của case
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -5421,6 +5965,8 @@ export interface paths {
          * Mở phiên hỗ trợ cho một gian hàng (có lý do, hết hạn sau 45 phút)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.tenant_support.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -5442,6 +5988,8 @@ export interface paths {
         /**
          * Đọc phiên hỗ trợ đang mở của chính mình (403 khi hết hạn/đã thoát)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -5469,6 +6017,8 @@ export interface paths {
          * Thoát phiên hỗ trợ (idempotent)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.tenant_support.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -5490,6 +6040,8 @@ export interface paths {
         /**
          * Danh sách đối tác theo loại (gian hàng gói / chủ xe cá nhân) — phân trang, lọc, sắp xếp
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -5514,6 +6066,8 @@ export interface paths {
         /**
          * Chi tiết một gian hàng
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -5541,6 +6095,8 @@ export interface paths {
          * Khoá gian hàng (đang hoạt động → bị khoá)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.tenants.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -5565,6 +6121,8 @@ export interface paths {
          * Mở khoá gian hàng (bị khoá → hoạt động)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.tenants.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -5587,6 +6145,8 @@ export interface paths {
          * Lịch sử thuê bao của gian hàng (mới nhất trước)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -5596,6 +6156,8 @@ export interface paths {
         /**
          * Gán / gia hạn gói (chu kỳ mới nối đuôi gói còn hạn). `price` bỏ trống = giá niêm yết của kỳ hạn; BẮT BUỘC với bậc salesOnly (ADR 0041 điều 5)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -5621,6 +6183,8 @@ export interface paths {
          * Huỷ sớm một thuê bao đang hiệu lực
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -5642,6 +6206,8 @@ export interface paths {
         /**
          * Hàng đợi duyệt xe (lọc loại xe/nguồn đăng/trạng thái/tìm/ngày gửi, kèm số theo tab)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -5666,6 +6232,8 @@ export interface paths {
         /**
          * Chi tiết phiếu duyệt xe (ảnh chụp lúc gửi, danh mục kiểm tra, lịch sử)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -5693,6 +6261,8 @@ export interface paths {
          * Phê duyệt xe lên chợ (đủ danh mục kiểm tra thủ công)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.approvals.review` (đọc từ DB mỗi request, không nằm trong session).
@@ -5715,6 +6285,8 @@ export interface paths {
         /**
          * Đánh dấu / bỏ đánh dấu một mục kiểm tra thủ công (phiếu đang chờ)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -5739,6 +6311,8 @@ export interface paths {
         /**
          * Lưu ghi chú nội bộ (không gửi chủ xe; khoá lạc quan theo updatedAt)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -5765,6 +6339,8 @@ export interface paths {
          * Từ chối xe (lý do gửi chủ xe là bắt buộc)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.approvals.review` (đọc từ DB mỗi request, không nằm trong session).
@@ -5789,6 +6365,8 @@ export interface paths {
          * Yêu cầu chủ xe bổ sung (lý do là bắt buộc)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.approvals.review` (đọc từ DB mỗi request, không nằm trong session).
@@ -5810,6 +6388,8 @@ export interface paths {
         /**
          * Danh sách xe toàn hệ thống (phân trang, lọc, tìm kiếm)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -5834,6 +6414,8 @@ export interface paths {
         /**
          * Chi tiết một xe (kèm gian hàng chủ quản, số đơn, số đánh giá)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
@@ -5861,6 +6443,8 @@ export interface paths {
          * Ẩn xe vi phạm khỏi Marketplace (đang hiển thị → đã ẩn)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.vehicles.view`, `platform.vehicles.moderate` (đọc từ DB mỗi request, không nằm trong session).
@@ -5885,6 +6469,8 @@ export interface paths {
          * Bỏ ẩn xe (đã ẩn → hiển thị lại trên Marketplace)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
          *
          *     **Quyền yêu cầu:** `platform.vehicles.view`, `platform.vehicles.moderate` (đọc từ DB mỗi request, không nằm trong session).
@@ -5906,6 +6492,8 @@ export interface paths {
         /**
          * Danh mục tỉnh/thành đang mở cho đăng ký & tạo chi nhánh
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["ProvincesController_list"];
         put?: never;
@@ -5926,6 +6514,8 @@ export interface paths {
         /**
          * Xã/phường/đặc khu của một tỉnh (có tìm kiếm bỏ dấu)
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["WardsController_list"];
         put?: never;
@@ -5946,6 +6536,8 @@ export interface paths {
         /**
          * Toàn bộ banner đang hiển thị cho hero trang chủ
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["PublicBannersController_list"];
         put?: never;
@@ -5968,6 +6560,8 @@ export interface paths {
         /**
          * Khách gửi yêu cầu thuê một xe trên Marketplace
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
          */
         post: operations["PublicBookingRequestsController_submit"];
         delete?: never;
@@ -5986,6 +6580,8 @@ export interface paths {
         /**
          * Ngày/giờ xe đã bận trong một cửa sổ, để tô lịch chọn thời gian thuê
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["PublicBookingRequestsController_busyDays"];
         put?: never;
@@ -6008,6 +6604,8 @@ export interface paths {
         /**
          * Khách kiểm tra nhanh khung giờ của một xe có trống không (preview)
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         post: operations["PublicBookingRequestsController_checkAvailability"];
         delete?: never;
@@ -6026,6 +6624,8 @@ export interface paths {
         /**
          * Tỉnh/thành đang có xe cho thuê, kèm số xe và ảnh đại diện
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["PublicDestinationsController_list"];
         put?: never;
@@ -6046,6 +6646,8 @@ export interface paths {
         /**
          * Tìm xe trên Marketplace (phân trang, filter, sort)
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["PublicListingsController_search"];
         put?: never;
@@ -6066,6 +6668,8 @@ export interface paths {
         /**
          * Chi tiết một xe trên Marketplace
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["PublicListingsController_getById"];
         put?: never;
@@ -6086,6 +6690,8 @@ export interface paths {
         /**
          * Khoảng cách giao xe tận nơi + phí dự kiến theo bậc của gian hàng
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["PublicQuoteController_deliveryDistance"];
         put?: never;
@@ -6106,6 +6712,8 @@ export interface paths {
         /**
          * Báo giá thuê — theo khoảng ngày, hoặc theo GÓI tháng lịch với thuê dài hạn
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["PublicQuoteController_quote"];
         put?: never;
@@ -6126,6 +6734,8 @@ export interface paths {
         /**
          * Đánh giá công khai của một xe (phân trang)
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["PublicReviewController_list"];
         put?: never;
@@ -6146,6 +6756,8 @@ export interface paths {
         /**
          * Facet counts cho panel Bộ lọc (đếm theo từng chiều filter)
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["PublicListingsController_facets"];
         put?: never;
@@ -6166,6 +6778,8 @@ export interface paths {
         /**
          * Khoảng giá thuê/ngày tham khảo theo phân khúc xe và tỉnh
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["PublicListingsController_priceSuggestion"];
         put?: never;
@@ -6186,6 +6800,8 @@ export interface paths {
         /**
          * Xe phù hợp với bạn — gợi ý trang chủ, ưu tiên theo tỉnh của khách
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["PublicListingsController_recommended"];
         put?: never;
@@ -6206,6 +6822,8 @@ export interface paths {
         /**
          * Mã khuyến mãi khả dụng cho chuyến đang chọn (kèm lý do nếu không áp được)
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
          */
         get: operations["PublicPromoCodesController_available"];
         put?: never;
@@ -6228,6 +6846,8 @@ export interface paths {
         /**
          * Xem trước một mã khuyến mãi cho chuyến đang chọn — KHÔNG giữ lượt sử dụng
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
          */
         post: operations["PublicPromoCodesController_preview"];
         delete?: never;
@@ -6246,6 +6866,8 @@ export interface paths {
         /**
          * Danh sách gian hàng công khai (phân trang, sắp theo đánh giá)
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["PublicShopsController_listShops"];
         put?: never;
@@ -6266,6 +6888,8 @@ export interface paths {
         /**
          * Hồ sơ công khai của một gian hàng theo slug
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["PublicShopsController_getShop"];
         put?: never;
@@ -6286,6 +6910,8 @@ export interface paths {
         /**
          * Danh sách xe công khai của một gian hàng (phân trang)
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["PublicShopsController_getShopListings"];
         put?: never;
@@ -6306,6 +6932,8 @@ export interface paths {
         /**
          * Đánh giá công khai của một gian hàng (mọi xe, phân trang)
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["PublicShopReviewController_list"];
         put?: never;
@@ -6328,6 +6956,8 @@ export interface paths {
          * @description Frontend dùng để ẩn/hiện menu. KHÔNG phải nguồn bảo vệ — backend guard mới là nguồn.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["RbacController_myPermissions"];
         put?: never;
@@ -6349,6 +6979,8 @@ export interface paths {
          * Danh sách phiếu thu/chi (phân trang, filter)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `finance.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -6358,6 +6990,8 @@ export interface paths {
         /**
          * Tạo phiếu thu/chi (chờ duyệt)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -6380,6 +7014,8 @@ export interface paths {
         /**
          * Chi tiết phiếu
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -6407,6 +7043,8 @@ export interface paths {
          * Duyệt phiếu
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `receipts.approve` (đọc từ DB mỗi request, không nằm trong session).
@@ -6431,6 +7069,8 @@ export interface paths {
          * Huỷ phiếu
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `receipts.approve` (đọc từ DB mỗi request, không nằm trong session).
@@ -6452,6 +7092,8 @@ export interface paths {
         /**
          * Đơn thuê gợi ý để gắn phiếu — ưu tiên đơn còn nợ
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -6477,6 +7119,8 @@ export interface paths {
          * Tổng thu/chi của ĐÚNG bộ lọc đang xem — thẻ tổng phải khớp danh sách bên dưới
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `finance.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -6500,6 +7144,8 @@ export interface paths {
         /**
          * Xe gợi ý để gắn phiếu (tìm theo mã xe / tên / biển số)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -6526,6 +7172,8 @@ export interface paths {
         /**
          * Đánh giá một chuyến thuê đã hoàn thành
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
          */
         post: operations["ReviewController_create"];
         delete?: never;
@@ -6545,6 +7193,8 @@ export interface paths {
          * Hồ sơ người bán của gian hàng (tự tạo bản nháp nếu chưa có)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `seller_profile.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -6553,6 +7203,8 @@ export interface paths {
         /**
          * Lưu hồ sơ. Đổi TÀI KHOẢN NHẬN TIỀN trên hồ sơ đã xác minh sẽ phải xác minh lại
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -6579,6 +7231,8 @@ export interface paths {
          * Gửi xác minh — vào hàng đợi duyệt của nền tảng
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `seller_profile.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -6602,6 +7256,8 @@ export interface paths {
         /**
          * Webhook SePay — ghi giao dịch tiền vào và khớp hoá đơn gói
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         post: operations["SepayController_webhook"];
         delete?: never;
@@ -6621,6 +7277,8 @@ export interface paths {
          * Tài khoản nhận tiền của gian hàng — số đã che
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          */
         get: operations["ShopBankAccountsController_list"];
@@ -6628,6 +7286,8 @@ export interface paths {
         /**
          * Thêm tài khoản nhận tiền cho gian hàng
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          */
@@ -6651,6 +7311,8 @@ export interface paths {
         /**
          * Bỏ dùng một tài khoản của gian hàng (lưu trữ, không xoá)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          */
@@ -6677,6 +7339,8 @@ export interface paths {
          * Đặt làm tài khoản nhận tiền mặc định của gian hàng
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          */
         patch: operations["ShopBankAccountsController_setDefault"];
@@ -6695,6 +7359,8 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `seller_profile.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -6710,6 +7376,8 @@ export interface paths {
          * @description Tuyến hoa hồng → 403 `DEPOSIT_ALWAYS_REQUIRED`. Gói thiếu `escrow_hold` → 403 `FEATURE_NOT_IN_PLAN`. Đổi công tắc KHÔNG đụng đơn đã tạo — `deposit_collection_mode` đóng băng lúc tạo đơn (ADR 0025 ràng buộc 4).
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -6729,6 +7397,8 @@ export interface paths {
          * Chính sách thuê mặc định (theo loại xe) + số xe kế thừa/ghi đè
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `tenant.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -6737,6 +7407,8 @@ export interface paths {
         /**
          * Lưu chính sách thuê mặc định theo loại xe (upsert, audit)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -6763,6 +7435,8 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `finance.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -6787,6 +7461,8 @@ export interface paths {
          * Số dư ví điểm của gian hàng
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          */
         get: operations["ShopWalletController_summary"];
@@ -6808,6 +7484,8 @@ export interface paths {
         /**
          * Sổ ví của gian hàng
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          */
@@ -6833,6 +7511,8 @@ export interface paths {
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          */
         get: operations["ShopWalletController_tenantStatement"];
@@ -6855,6 +7535,8 @@ export interface paths {
          * Các yêu cầu rút của gian hàng
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          */
         get: operations["ShopWalletController_listWithdrawals"];
@@ -6862,6 +7544,8 @@ export interface paths {
         /**
          * Gian hàng tạo yêu cầu rút
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          */
@@ -6885,6 +7569,8 @@ export interface paths {
          * Gian hàng tự huỷ yêu cầu rút
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          */
         post: operations["ShopWalletController_cancelWithdrawal"];
@@ -6904,6 +7590,8 @@ export interface paths {
         /**
          * Gói hiện hành + mức dùng chỗ theo loại xe + lượt miễn phí (ADR 0026)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -6929,6 +7617,8 @@ export interface paths {
          * Lịch sử hoá đơn gói (mới nhất trước)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `subscription.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -6952,6 +7642,8 @@ export interface paths {
         /**
          * Hoá đơn gói đang chờ tiền (issued | partially_paid); `invoice: null` nếu không có
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -6977,6 +7669,8 @@ export interface paths {
          * Thông tin nhận chuyển khoản của nền tảng — web dựng VietQR từ đây (ADR 0016 điều 5)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `subscription.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -7000,6 +7694,8 @@ export interface paths {
         /**
          * Danh sách gói đang bán để gian hàng chọn mua
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -7027,6 +7723,8 @@ export interface paths {
          * Mua / gia hạn gói — sinh hoá đơn + mã đối soát, gói bật khi tiền về (ADR 0026 điều 4)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `subscription.purchase` (đọc từ DB mỗi request, không nằm trong session).
@@ -7049,6 +7747,8 @@ export interface paths {
          * Case của gian hàng — mặc định chỉ case còn MỞ
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `support.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -7058,6 +7758,8 @@ export interface paths {
         /**
          * Mở case mới (tranh chấp bắt buộc gắn đơn thuê của gian hàng)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -7080,6 +7782,8 @@ export interface paths {
         /**
          * Chi tiết + dòng thời gian (ghi chú nội bộ của XePrime KHÔNG hiện)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -7107,6 +7811,8 @@ export interface paths {
          * Trả lời trong case
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `support.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -7131,6 +7837,8 @@ export interface paths {
          * Đóng case do chính gian hàng mở (kết luận là việc của XePrime)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `support.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -7154,6 +7862,8 @@ export interface paths {
         /**
          * Đăng ký gian hàng mới (tạo ở trạng thái nháp)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          */
         post: operations["TenantsController_register"];
         delete?: never;
@@ -7172,6 +7882,8 @@ export interface paths {
         /**
          * Gian hàng của user hiện tại (scope lấy từ membership)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -7203,6 +7915,8 @@ export interface paths {
          * Cập nhật hồ sơ gian hàng
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `tenant.update` (đọc từ DB mỗi request, không nằm trong session).
@@ -7220,6 +7934,8 @@ export interface paths {
         /**
          * Hồ sơ gian hàng của tôi + trạng thái duyệt
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -7247,6 +7963,8 @@ export interface paths {
          * Gửi hồ sơ gian hàng cho nền tảng duyệt
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `tenant.submit_review` (đọc từ DB mỗi request, không nằm trong session).
@@ -7268,6 +7986,8 @@ export interface paths {
         /**
          * Danh sách chuyến của tôi (lọc theo tab, phân trang ở DB)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         get: operations["CustomerTripsController_list"];
         put?: never;
@@ -7290,6 +8010,8 @@ export interface paths {
          * @description Nhận id YÊU CẦU thuê hoặc id ĐƠN thuê — thông báo trỏ vào cả hai loại. Không phải chuyến của mình thì trả 404 (không tiết lộ id có tồn tại hay không).
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         get: operations["CustomerTripsController_detail"];
         put?: never;
@@ -7314,6 +8036,8 @@ export interface paths {
          * @description Huỷ được khi yêu cầu còn chờ gian hàng trả lời, hoặc khi đơn đã duyệt nhưng CHƯA giao xe. Đã giao xe rồi thì 409 `TRIP_CANCEL_NOT_ALLOWED` — việc cần làm lúc đó là liên hệ chủ xe. Trả về chính chuyến đó sau khi huỷ để giao diện không phải gọi thêm một lượt.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         post: operations["CustomerTripsController_cancel"];
         delete?: never;
@@ -7334,6 +8058,8 @@ export interface paths {
          * @description Chỉ biên bản ĐÃ XÁC NHẬN (nháp / chờ xác nhận / đã huỷ không bao giờ ra tới đây). Trả tối đa hai bản theo thứ tự giao xe → nhận lại; chuyến chưa được duyệt thì mảng rỗng. Ảnh mở qua endpoint download theo GÓC CHỤP — không có `fileId` nào trong payload này.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         get: operations["CustomerTripsController_handoverEvidence"];
         put?: never;
@@ -7356,6 +8082,8 @@ export interface paths {
          * @description Khoá là (chuyến của tôi, chiều bàn giao, góc chụp) — không phải id file, nên không có định danh nào cầm đi thử ở chuyến khác được.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         get: operations["CustomerTripsController_handoverEvidencePhoto"];
         put?: never;
@@ -7380,6 +8108,8 @@ export interface paths {
          * @description Bắt buộc trước khi admin chuyển được: `markRefundPaid` từ chối một lệnh chuyển không có đích. Chọn một tài khoản đã lưu bằng `bankAccountId`, hoặc khai ba ô — khai mới thì tài khoản được LƯU LẠI để lần sau không phải gõ. Trả về chính chuyến đó sau khi khai.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         post: operations["CustomerTripsController_provideRefundAccount"];
         delete?: never;
@@ -7400,6 +8130,8 @@ export interface paths {
         /**
          * Presign upload ảnh đại diện của chính mình lên R2
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         post: operations["AvatarUploadController_presignAvatar"];
         delete?: never;
@@ -7420,6 +8152,8 @@ export interface paths {
         /**
          * Presign upload chứng từ phiếu thu/chi (ảnh hoặc PDF) lên R2
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -7445,6 +8179,8 @@ export interface paths {
          * Presign upload logo/ảnh bìa gian hàng lên R2
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `tenant.update` (đọc từ DB mỗi request, không nằm trong session).
@@ -7469,6 +8205,8 @@ export interface paths {
          * Presign upload ảnh xe (đại diện/gallery) lên R2
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.update` (đọc từ DB mỗi request, không nằm trong session).
@@ -7490,6 +8228,8 @@ export interface paths {
         /**
          * Hồ sơ của user hiện tại
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["UsersController_me"];
         put?: never;
@@ -7500,6 +8240,8 @@ export interface paths {
         /**
          * Cập nhật tên hiển thị và ảnh đại diện của chính mình
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         patch: operations["UsersController_updateMe"];
         trace?: never;
@@ -7516,6 +8258,8 @@ export interface paths {
         /**
          * Gửi mã xác thực tới email mới của chính mình
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         post: operations["UsersController_sendEmailOtp"];
         delete?: never;
@@ -7536,6 +8280,8 @@ export interface paths {
         /**
          * Xác nhận mã và đổi email của chính mình
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         post: operations["UsersController_verifyEmail"];
         delete?: never;
@@ -7556,6 +8302,8 @@ export interface paths {
         /**
          * Gửi mã xác thực tới số điện thoại mới của chính mình
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         post: operations["UsersController_sendPhoneOtp"];
         delete?: never;
@@ -7576,6 +8324,8 @@ export interface paths {
         /**
          * Xác nhận mã và đổi số điện thoại của chính mình
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         post: operations["UsersController_verifyPhone"];
         delete?: never;
@@ -7596,6 +8346,8 @@ export interface paths {
         /**
          * Khoá xe một khoảng thời gian (giữ chỗ lịch trong cùng transaction)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -7619,6 +8371,8 @@ export interface paths {
          * Chi tiết một lịch khoá xe
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `calendar.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -7630,6 +8384,8 @@ export interface paths {
          * Gỡ khoá — NHẢ chỗ trên lịch xe trong cùng transaction
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.block_schedule` (đọc từ DB mỗi request, không nằm trong session).
@@ -7640,6 +8396,8 @@ export interface paths {
         /**
          * Sửa lịch khoá (optimistic concurrency, đồng bộ lịch xe)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -7659,6 +8417,8 @@ export interface paths {
          * Danh sách xe của gian hàng (phân trang, filter, sort)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -7668,6 +8428,8 @@ export interface paths {
         /**
          * Thêm xe mới (mặc định trạng thái public = nháp)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -7691,6 +8453,8 @@ export interface paths {
          * Chi tiết một xe
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -7702,6 +8466,8 @@ export interface paths {
          * Xoá mềm xe (chặn nếu còn lịch hiện tại/tương lai)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.delete` (đọc từ DB mỗi request, không nằm trong session).
@@ -7712,6 +8478,8 @@ export interface paths {
         /**
          * Sửa thông tin xe (sửa trường nhạy cảm khi đang công khai → chờ duyệt lại)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -7731,6 +8499,8 @@ export interface paths {
          * Bản ghi đè giá theo ngày trong [from, to] (ngày local VN)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `calendar.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -7739,6 +8509,8 @@ export interface paths {
         /**
          * Đặt giá riêng cho các ngày (upsert tất định theo (xe, ngày))
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -7749,6 +8521,8 @@ export interface paths {
         /**
          * Khôi phục giá mặc định cho [from, to] — xoá bản ghi đè
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -7771,6 +8545,8 @@ export interface paths {
          * Danh sách TRẠNG THÁI giấy tờ của một xe (summary — không PII)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.documents.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -7780,6 +8556,8 @@ export interface paths {
         /**
          * Tạo hồ sơ giấy tờ (metadata — file gắn sau)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -7803,6 +8581,8 @@ export interface paths {
          * Chi tiết metadata một giấy tờ (không kèm lịch sử file/OCR)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.documents.view_details` (đọc từ DB mỗi request, không nằm trong session).
@@ -7816,6 +8596,8 @@ export interface paths {
         /**
          * Cập nhật metadata giấy tờ (optimistic concurrency)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -7836,6 +8618,8 @@ export interface paths {
         /**
          * Lưu trữ giấy tờ (không xoá lịch sử/file)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -7861,6 +8645,8 @@ export interface paths {
          * Yêu cầu trích xuất OCR (chưa cấu hình provider → 503 kiểm soát)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.documents.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -7885,6 +8671,8 @@ export interface paths {
          * Áp các trường OCR đã chọn (fields rỗng = bỏ qua/đã đối soát)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.documents.manage`, `vehicles.update` (đọc từ DB mỗi request, không nằm trong session).
@@ -7907,6 +8695,8 @@ export interface paths {
          * Lịch sử phiên bản file của một giấy tờ
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.documents.view_files` (đọc từ DB mỗi request, không nằm trong session).
@@ -7916,6 +8706,8 @@ export interface paths {
         /**
          * Xác minh object rồi gắn thành phiên bản mới (bản cũ vào lịch sử)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -7938,6 +8730,8 @@ export interface paths {
         /**
          * Phát signed URL ngắn hạn xem/tải một phiên bản giấy tờ
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -7965,6 +8759,8 @@ export interface paths {
          * Presign upload file giấy tờ vào kho riêng tư (Wave 4.1)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.documents.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -7987,6 +8783,8 @@ export interface paths {
          * Mức phụ phí mặc định của dịch vụ có tài xế (công bố trước với khách)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -7995,6 +8793,8 @@ export interface paths {
         /**
          * Lưu mức phụ phí mặc định có tài xế (đủ bốn loại)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -8021,6 +8821,8 @@ export interface paths {
          * Đồng bộ lại snapshot công khai của xe (phiên hỗ trợ — ADR 0050)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -8045,6 +8847,8 @@ export interface paths {
          * Điều chỉnh KM hiện tại (bắt buộc lý do; giảm cần quyền cao hơn)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.odometer.correct` (đọc từ DB mỗi request, không nằm trong session).
@@ -8066,6 +8870,8 @@ export interface paths {
         /**
          * Lịch sử KM (chỉ-thêm), mới nhất trước
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -8091,6 +8897,8 @@ export interface paths {
          * KM hiện tại + chu kỳ + mốc bảo dưỡng suy ra
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.maintenance.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -8099,6 +8907,8 @@ export interface paths {
         /**
          * Lưu cấu hình chu kỳ (KM hiện tại sửa ở endpoint riêng có lý do)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -8123,6 +8933,8 @@ export interface paths {
          * Lịch sắp tới + lịch sử bảo dưỡng của xe
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.maintenance.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -8132,6 +8944,8 @@ export interface paths {
         /**
          * Tạo phiếu/lịch bảo dưỡng (có khoảng thời gian → giữ chỗ lịch xe)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -8155,6 +8969,8 @@ export interface paths {
         /**
          * Sửa phiếu bảo dưỡng (optimistic concurrency, đồng bộ lịch xe)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -8181,6 +8997,8 @@ export interface paths {
          * Xác minh object rồi đính chứng từ vào phiếu
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.maintenance.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -8202,6 +9020,8 @@ export interface paths {
         /**
          * Phát signed URL ngắn hạn xem/tải một chứng từ
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -8229,6 +9049,8 @@ export interface paths {
          * Presign upload chứng từ vào kho riêng tư (Wave 4.1)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.maintenance.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -8253,6 +9075,8 @@ export interface paths {
          * Hủy lịch — NHẢ chỗ trên lịch xe trong cùng transaction
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.maintenance.manage` (đọc từ DB mỗi request, không nằm trong session).
@@ -8276,6 +9100,8 @@ export interface paths {
         /**
          * Hoàn tất: nhả lịch + ghi KM + (thay nhớt) dời mốc — một transaction
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -8305,6 +9131,8 @@ export interface paths {
          * Sửa chi phí phiếu ĐÃ hoàn tất — phiếu chi trong sổ đổi theo
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.maintenance.manage`, `vehicles.maintenance.view_cost` (đọc từ DB mỗi request, không nằm trong session).
@@ -8324,6 +9152,8 @@ export interface paths {
         /**
          * Bắt đầu thực hiện (giữ nguyên chỗ đã đặt trên lịch)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -8353,6 +9183,8 @@ export interface paths {
          * Bật/tắt hiển thị xe trên chợ (lựa chọn của chủ xe — ADR 0048)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.submit_public` (đọc từ DB mỗi request, không nằm trong session).
@@ -8371,6 +9203,8 @@ export interface paths {
          * Khung giờ giao/nhận và thời gian chết giữa hai chuyến của xe
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -8379,6 +9213,8 @@ export interface paths {
         /**
          * Lưu khung giờ giao/nhận + thời gian chết (áp cho lịch giữ mới, không sửa lịch cũ)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -8403,6 +9239,8 @@ export interface paths {
          * Giá & chính sách của một xe (nguồn kế thừa/ghi đè + bản gian hàng)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -8411,6 +9249,8 @@ export interface paths {
         /**
          * Lưu giá & chính sách theo xe (ghi đè hoặc đặt lại theo gian hàng)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -8434,6 +9274,8 @@ export interface paths {
         /**
          * Thiết lập tự động nhận / giấy tờ / điều khoản theo dịch vụ của xe
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -8465,6 +9307,8 @@ export interface paths {
          * Sửa một phần thiết lập của một dịch vụ (trường không gửi giữ nguyên)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.update` (đọc từ DB mỗi request, không nằm trong session).
@@ -8483,6 +9327,8 @@ export interface paths {
          * Hồ sơ nguồn xe & tài chính (Wave 4)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `finance.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -8491,6 +9337,8 @@ export interface paths {
         /**
          * Lưu hồ sơ nguồn xe & tài chính (replace theo hình thức nguồn)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -8517,6 +9365,8 @@ export interface paths {
          * Hoàn tất upload hợp đồng (xác minh object rồi mới cho đính)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.update`, `finance.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -8538,6 +9388,8 @@ export interface paths {
         /**
          * Phát signed URL ngắn hạn tải hợp đồng nguồn xe
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -8565,6 +9417,8 @@ export interface paths {
          * Presign upload hợp đồng nguồn xe vào kho riêng tư
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.update`, `finance.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -8589,6 +9443,8 @@ export interface paths {
          * Gửi xe đi duyệt công khai (đi qua luồng duyệt nền tảng — ADR 0008)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.submit_public` (đọc từ DB mỗi request, không nằm trong session).
@@ -8610,6 +9466,8 @@ export interface paths {
         /**
          * Tổng hợp Hồ sơ 360 của một xe (chỉ số + đơn thuê theo quyền)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -8635,6 +9493,8 @@ export interface paths {
          * Lịch sử chuyến của một xe — đơn thuê + yêu cầu chưa thành đơn, trộn và phân trang ở DB
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `bookings.view`, `booking_requests.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -8658,6 +9518,8 @@ export interface paths {
         /**
          * Việc cần làm + KM hiện tại theo lô xe (thẻ xe ở danh sách)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
@@ -8683,6 +9545,8 @@ export interface paths {
          * Đếm đội xe theo trạng thái vận hành (dải chỉ số đầu danh sách)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -8707,6 +9571,8 @@ export interface paths {
          * Chỉ số vận hành/tài chính luỹ kế theo xe
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
          *
          *     **Quyền yêu cầu:** `vehicles.view` (đọc từ DB mỗi request, không nằm trong session).
@@ -8730,6 +9596,8 @@ export interface paths {
         /**
          * Tra tên xã/phường theo danh sách mã (tối đa 50)
          * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
          */
         get: operations["WardsController_lookup"];
         put?: never;
@@ -8744,6 +9612,29 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AccountLookupItemDto: {
+            id: string;
+            /**
+             * @description Không gian tài khoản (ADR 0053)
+             * @enum {string}
+             */
+            realm: "customer" | "partner" | "platform";
+            displayName: string;
+            /** @description ĐÃ che, vd 091****678 */
+            phoneMasked?: string | null;
+            /** @description ĐÃ che, vd ng****@gmail.com */
+            emailMasked?: string | null;
+            /** @enum {string} */
+            status: "active" | "locked" | "deleted";
+            /** @description Realm partner: gian hàng đang thuộc (membership `active`), nếu có */
+            tenantName?: string | null;
+            /** @description Realm partner: vai trong gian hàng đó */
+            tenantRoleKey?: string | null;
+            /** @description Realm platform: vai nền tảng đang có hiệu lực */
+            platformRoleKey?: string | null;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+        };
         AccountPaymentDto: {
             id: string;
             /** @description Chuyến mà khoản này thuộc về */
@@ -8814,6 +9705,11 @@ export interface components {
         AddStaffDto: {
             /** @example nhanvien@xeprime.vn */
             email: string;
+            /**
+             * @description Tên hiển thị cho tài khoản quản trị MỚI. Bỏ qua khi kích hoạt lại tài khoản cũ.
+             * @example Nguyễn Văn A
+             */
+            displayName: string;
             /** @enum {string} */
             roleKey: "platform_admin" | "platform_staff" | "reviewer" | "support" | "finance_admin";
         };
@@ -11884,6 +12780,11 @@ export interface components {
         };
         MeDto: {
             id: string;
+            /**
+             * @description Không gian tài khoản (ADR 0053) — customer · partner · platform. Luôn bằng site/app đang dùng; server luôn gửi.
+             * @enum {string}
+             */
+            realm?: "customer" | "partner" | "platform";
             displayName: string;
             email: string | null;
             avatarUrl: string | null;
@@ -14691,6 +15592,11 @@ export interface components {
              * @enum {string}
              */
             purpose: "booking" | "login" | "shop_register" | "vehicle_public" | "password_reset" | "profile";
+            /**
+             * @description Chỉ app native gửi: realm của mã OTP theo app (customer ↔ XePrime, partner ↔ XePrime Partner). Web bỏ trống.
+             * @enum {string}
+             */
+            clientApp?: "customer" | "partner";
         };
         SendOtpResultDto: {
             /** @description ISO-8601 UTC — thời điểm mã hết hạn */
@@ -16807,6 +17713,27 @@ export interface operations {
                 };
             };
             /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
              * @description Vượt giới hạn 120 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
@@ -16910,6 +17837,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "UNAUTHENTICATED",
                      *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
                      *       }
                      *     }
                      */
@@ -17035,6 +17983,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "UNAUTHENTICATED",
                      *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
                      *       }
                      *     }
                      */
@@ -17185,6 +18154,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "UNAUTHENTICATED",
                      *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
                      *       }
                      *     }
                      */
@@ -17343,6 +18333,27 @@ export interface operations {
                 };
             };
             /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
              * @description Vượt giới hạn 120 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
@@ -17421,6 +18432,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "UNAUTHENTICATED",
                      *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
                      *       }
                      *     }
                      */
@@ -17537,6 +18569,27 @@ export interface operations {
                 };
             };
             /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
              * @description Vượt giới hạn 120 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
@@ -17615,6 +18668,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "UNAUTHENTICATED",
                      *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
                      *       }
                      *     }
                      */
@@ -17725,6 +18799,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "UNAUTHENTICATED",
                      *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
                      *       }
                      *     }
                      */
@@ -17850,6 +18945,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "UNAUTHENTICATED",
                      *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
                      *       }
                      *     }
                      */
@@ -18225,6 +19341,27 @@ export interface operations {
                 };
             };
             /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
              * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
@@ -18324,6 +19461,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "VALIDATION_FAILED",
                      *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
                      *       }
                      *     }
                      */
@@ -18462,6 +19620,27 @@ export interface operations {
                 };
             };
             /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
              * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
@@ -18586,6 +19765,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "INVALID_CREDENTIALS",
                      *         "message": "Email/số điện thoại hoặc mật khẩu không đúng"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
                      *       }
                      *     }
                      */
@@ -18724,6 +19924,27 @@ export interface operations {
                 };
             };
             /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
              * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
@@ -18848,6 +20069,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "INVALID_CREDENTIALS",
                      *         "message": "Email/số điện thoại hoặc mật khẩu không đúng"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
                      *       }
                      *     }
                      */
@@ -19452,6 +20694,27 @@ export interface operations {
                 };
             };
             /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
              * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
@@ -19562,6 +20825,27 @@ export interface operations {
                 };
             };
             /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
              * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
@@ -19665,6 +20949,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "VALIDATION_FAILED",
                      *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
                      *       }
                      *     }
                      */
@@ -20228,7 +21533,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -20357,7 +21662,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -20511,7 +21816,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -20686,7 +21991,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -20857,7 +22162,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -21032,7 +22337,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -21216,7 +22521,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -21347,7 +22652,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -21497,7 +22802,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -21651,7 +22956,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -21822,7 +23127,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -21972,7 +23277,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -22147,7 +23452,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -22322,7 +23627,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -22493,7 +23798,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -22648,7 +23953,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -22824,7 +24129,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -23000,7 +24305,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -23176,7 +24481,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -23352,7 +24657,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -23525,7 +24830,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -23677,7 +24982,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -23853,7 +25158,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -24024,7 +25329,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -24178,7 +25483,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -24349,7 +25654,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -24503,7 +25808,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -24678,7 +25983,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -24853,7 +26158,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -25029,7 +26334,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -25205,7 +26510,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -25380,7 +26685,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -25557,7 +26862,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -25688,7 +26993,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -25838,7 +27143,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -25992,7 +27297,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -26163,7 +27468,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -26334,7 +27639,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -26505,7 +27810,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -26685,7 +27990,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -26816,7 +28121,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -26969,7 +28274,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -27149,7 +28454,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -27280,7 +28585,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -27432,7 +28737,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -27584,7 +28889,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -27743,7 +29048,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -27881,7 +29186,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -28018,7 +29323,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -28156,7 +29461,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -28469,6 +29774,27 @@ export interface operations {
                 };
             };
             /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
              * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
@@ -28568,6 +29894,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "UNAUTHENTICATED",
                      *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
                      *       }
                      *     }
                      */
@@ -28706,7 +30053,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -28859,6 +30206,27 @@ export interface operations {
                 };
             };
             /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
              * @description Vượt giới hạn 120 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
@@ -28962,6 +30330,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "UNAUTHENTICATED",
                      *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
                      *       }
                      *     }
                      */
@@ -29094,6 +30483,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "UNAUTHENTICATED",
                      *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
                      *       }
                      *     }
                      */
@@ -29234,6 +30644,27 @@ export interface operations {
                 };
             };
             /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
              * @description Không tìm thấy bản ghi tương ứng.
              *
              *     Mã lỗi: `NOT_FOUND`
@@ -29360,6 +30791,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "UNAUTHENTICATED",
                      *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
                      *       }
                      *     }
                      */
@@ -29510,6 +30962,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "UNAUTHENTICATED",
                      *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
                      *       }
                      *     }
                      */
@@ -29668,6 +31141,27 @@ export interface operations {
                 };
             };
             /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
              * @description Vượt giới hạn 120 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
@@ -29777,6 +31271,27 @@ export interface operations {
                 };
             };
             /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
              * @description Vượt giới hạn 120 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
@@ -29855,6 +31370,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "UNAUTHENTICATED",
                      *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
                      *       }
                      *     }
                      */
@@ -29977,7 +31513,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -30108,7 +31644,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -30258,7 +31794,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -30412,7 +31948,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -30583,7 +32119,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -30755,7 +32291,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -30905,7 +32441,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -31056,7 +32592,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -31228,7 +32764,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -31400,7 +32936,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -31555,7 +33091,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -31730,7 +33266,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -31902,7 +33438,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -32056,7 +33592,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -32228,7 +33764,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -32399,7 +33935,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -32574,7 +34110,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -32722,7 +34258,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -32855,7 +34391,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -32987,7 +34523,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -33118,7 +34654,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -33268,7 +34804,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -33443,7 +34979,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -33617,7 +35153,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -33757,7 +35293,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -33893,7 +35429,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -34029,7 +35565,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -34158,7 +35694,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -34289,7 +35825,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -34435,7 +35971,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -34610,7 +36146,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -34792,7 +36328,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -34930,7 +36466,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -35062,7 +36598,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -35426,6 +36962,27 @@ export interface operations {
                 };
             };
             /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
              * @description Không tìm thấy bản ghi tương ứng.
              *
              *     Mã lỗi: `NOT_FOUND`
@@ -35548,6 +37105,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "UNAUTHENTICATED",
                      *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
                      *       }
                      *     }
                      */
@@ -35698,6 +37276,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "UNAUTHENTICATED",
                      *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
                      *       }
                      *     }
                      */
@@ -35869,7 +37468,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -35999,7 +37598,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -36215,6 +37814,27 @@ export interface operations {
                 };
             };
             /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
              * @description Vượt giới hạn 120 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
@@ -36318,6 +37938,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "UNAUTHENTICATED",
                      *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
                      *       }
                      *     }
                      */
@@ -36454,6 +38095,27 @@ export interface operations {
                 };
             };
             /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
              * @description Không tìm thấy bản ghi tương ứng.
              *
              *     Mã lỗi: `NOT_FOUND`
@@ -36580,6 +38242,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "UNAUTHENTICATED",
                      *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
                      *       }
                      *     }
                      */
@@ -36730,6 +38413,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "UNAUTHENTICATED",
                      *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
                      *       }
                      *     }
                      */
@@ -36891,7 +38595,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -37022,7 +38726,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -37197,7 +38901,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -37369,7 +39073,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -37500,7 +39204,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -37650,7 +39354,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -38533,7 +40237,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -38904,6 +40608,138 @@ export interface operations {
             };
         };
     };
+    PlatformAccountsController_find: {
+        parameters: {
+            query?: {
+                /** @description SĐT tra CHÍNH XÁC (nhận `09…`, `84…`, `+84…`) */
+                phone?: string;
+                /** @description Email tra CHÍNH XÁC */
+                email?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AccountLookupItemDto"][];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     PlatformAdminController_list: {
         parameters: {
             query?: {
@@ -38972,7 +40808,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -39101,7 +40937,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -39255,7 +41091,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -39430,7 +41266,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -39605,7 +41441,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -39790,7 +41626,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -39919,7 +41755,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -40078,7 +41914,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -40207,7 +42043,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -40361,7 +42197,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -40536,7 +42372,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -40684,7 +42520,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -40815,7 +42651,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -40961,7 +42797,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -41136,7 +42972,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -41309,7 +43145,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -41461,7 +43297,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -41625,7 +43461,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -41754,7 +43590,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -41904,7 +43740,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -42080,7 +43916,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -42211,7 +44047,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -42357,7 +44193,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -42532,7 +44368,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -42712,7 +44548,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -42843,7 +44679,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -42989,7 +44825,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -43164,7 +45000,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -43337,7 +45173,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -43495,7 +45331,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -43624,7 +45460,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -43774,7 +45610,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -43922,7 +45758,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -44028,7 +45864,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -44159,7 +45995,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -44309,7 +46145,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -44455,7 +46291,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -44630,7 +46466,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -44801,7 +46637,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -44973,7 +46809,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -45104,7 +46940,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -45258,7 +47094,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -45434,7 +47270,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -45563,7 +47399,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -45736,7 +47572,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -45861,7 +47697,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -46032,7 +47868,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -46205,7 +48041,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -46356,7 +48192,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -46486,7 +48322,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -46615,7 +48451,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -46786,7 +48622,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -46934,7 +48770,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -47062,7 +48898,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -47191,7 +49027,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -47362,7 +49198,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -47537,7 +49373,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -47666,7 +49502,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -47838,7 +49674,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -47972,7 +49808,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -48097,7 +49933,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -48268,7 +50104,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -48439,7 +50275,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -48610,7 +50446,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -48790,7 +50626,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -48940,7 +50776,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -49092,7 +50928,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -49251,7 +51087,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -49406,7 +51242,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -49556,7 +51392,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -49706,7 +51542,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -49856,7 +51692,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -50007,7 +51843,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -50166,7 +52002,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -50317,7 +52153,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -50448,7 +52284,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -50594,7 +52430,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -50769,7 +52605,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -50940,7 +52776,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -51111,7 +52947,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -51293,7 +53129,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -51424,7 +53260,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -51574,7 +53410,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -51720,7 +53556,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -51895,7 +53731,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -52066,7 +53902,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -52239,7 +54075,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -52393,7 +54229,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -52567,7 +54403,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -52696,7 +54532,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -52850,7 +54686,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -53025,7 +54861,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -53196,7 +55032,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -53369,7 +55205,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -53500,7 +55336,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -53650,7 +55486,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -53825,7 +55661,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -54000,7 +55836,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -54129,7 +55965,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -54283,7 +56119,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -54458,7 +56294,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -54633,7 +56469,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -54808,7 +56644,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -54981,7 +56817,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -55131,7 +56967,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -55281,7 +57117,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -55457,7 +57293,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -55586,7 +57422,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -55740,7 +57576,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -55911,7 +57747,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -56083,7 +57919,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -56237,7 +58073,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -56409,7 +58245,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -56589,7 +58425,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -56718,7 +58554,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -56872,7 +58708,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -57048,7 +58884,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -57223,7 +59059,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -57398,7 +59234,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -57573,7 +59409,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -57754,7 +59590,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -57883,7 +59719,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -58037,7 +59873,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -58208,7 +60044,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -58593,6 +60429,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "VALIDATION_FAILED",
                      *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
                      *       }
                      *     }
                      */
@@ -59898,6 +61755,27 @@ export interface operations {
                 };
             };
             /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
              * @description Vượt giới hạn 30 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
@@ -59980,6 +61858,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "VALIDATION_FAILED",
                      *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
                      *       }
                      *     }
                      */
@@ -60506,6 +62405,27 @@ export interface operations {
                 };
             };
             /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
              * @description Vượt giới hạn 120 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
@@ -60639,7 +62559,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -60770,7 +62690,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -60920,7 +62840,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -61070,7 +62990,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -61245,7 +63165,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -61415,7 +63335,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -61569,7 +63489,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -61699,7 +63619,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -61828,6 +63748,27 @@ export interface operations {
                 };
             };
             /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
              * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
@@ -61936,7 +63877,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -62067,7 +64008,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -62194,7 +64135,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -62383,7 +64324,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `NO_TENANT_SCOPE`
+             *     Mã lỗi: `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED`
              */
             403: {
                 headers: {
@@ -62514,7 +64455,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `NO_TENANT_SCOPE`
+             *     Mã lỗi: `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED`
              */
             403: {
                 headers: {
@@ -62660,7 +64601,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `NO_TENANT_SCOPE`
+             *     Mã lỗi: `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED`
              */
             403: {
                 headers: {
@@ -62831,7 +64772,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `NO_TENANT_SCOPE`
+             *     Mã lỗi: `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED`
              */
             403: {
                 headers: {
@@ -62979,7 +64920,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -63110,7 +65051,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -63260,7 +65201,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -63393,7 +65334,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -63544,7 +65485,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -63650,7 +65591,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `NO_TENANT_SCOPE`
+             *     Mã lỗi: `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED`
              */
             403: {
                 headers: {
@@ -63780,7 +65721,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `NO_TENANT_SCOPE`
+             *     Mã lỗi: `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED`
              */
             403: {
                 headers: {
@@ -63912,7 +65853,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `NO_TENANT_SCOPE`
+             *     Mã lỗi: `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED`
              */
             403: {
                 headers: {
@@ -64018,7 +65959,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `NO_TENANT_SCOPE`
+             *     Mã lỗi: `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED`
              */
             403: {
                 headers: {
@@ -64149,7 +66090,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `NO_TENANT_SCOPE`
+             *     Mã lỗi: `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED`
              */
             403: {
                 headers: {
@@ -64295,7 +66236,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `NO_TENANT_SCOPE`
+             *     Mã lỗi: `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED`
              */
             403: {
                 headers: {
@@ -64443,7 +66384,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -64571,7 +66512,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -64677,7 +66618,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -64783,7 +66724,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -64889,7 +66830,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -65020,7 +66961,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -65174,7 +67115,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -65305,7 +67246,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -65455,7 +67396,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -65609,7 +67550,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -65784,7 +67725,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -65955,6 +67896,27 @@ export interface operations {
                 };
             };
             /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
              * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
              *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
@@ -66063,7 +68025,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -66194,7 +68156,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -66321,7 +68283,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -66427,7 +68389,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -66577,6 +68539,27 @@ export interface operations {
                 };
             };
             /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
              * @description Vượt giới hạn 120 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
@@ -66678,6 +68661,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "UNAUTHENTICATED",
                      *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
                      *       }
                      *     }
                      */
@@ -66807,6 +68811,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "UNAUTHENTICATED",
                      *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
                      *       }
                      *     }
                      */
@@ -66964,6 +68989,27 @@ export interface operations {
                 };
             };
             /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
              * @description Không tìm thấy bản ghi tương ứng.
              *
              *     Mã lỗi: `NOT_FOUND`
@@ -67088,6 +69134,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "UNAUTHENTICATED",
                      *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
                      *       }
                      *     }
                      */
@@ -67221,6 +69288,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "UNAUTHENTICATED",
                      *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
                      *       }
                      *     }
                      */
@@ -67513,7 +69601,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -67665,7 +69753,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -67817,7 +69905,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -68709,7 +70797,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -68859,7 +70947,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -69005,7 +71093,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -69180,7 +71268,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -69359,7 +71447,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -69490,7 +71578,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -69640,7 +71728,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -69790,7 +71878,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -69965,7 +72053,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -70141,7 +72229,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -70295,7 +72383,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -70471,7 +72559,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -70640,7 +72728,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -70794,7 +72882,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -70966,7 +73054,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -71121,7 +73209,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -71293,7 +73381,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -71465,7 +73553,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -71642,7 +73730,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -71812,7 +73900,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -71967,7 +74055,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -72140,7 +74228,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -72295,7 +74383,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -72466,7 +74554,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -72620,7 +74708,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -72791,7 +74879,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -72966,7 +75054,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -73138,7 +75226,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -73288,7 +75376,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -73442,7 +75530,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -73611,7 +75699,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -73765,7 +75853,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -73941,7 +76029,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -74113,7 +76201,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -74286,7 +76374,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -74441,7 +76529,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -74613,7 +76701,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -74789,7 +76877,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -74965,7 +77053,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -75137,7 +77225,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
              */
             403: {
                 headers: {
@@ -75312,7 +77400,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -75483,7 +77571,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -75637,7 +77725,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -75808,7 +77896,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -75962,7 +78050,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -76133,7 +78221,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -76288,7 +78376,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -76459,7 +78547,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -76613,7 +78701,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -76785,7 +78873,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -76957,7 +79045,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -77111,7 +79199,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -77282,7 +79370,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -77453,7 +79541,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -77605,7 +79693,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -77754,7 +79842,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -77884,7 +79972,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {
@@ -78012,7 +80100,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
              */
             403: {
                 headers: {

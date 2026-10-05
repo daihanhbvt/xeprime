@@ -1,7 +1,10 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PUBLIC_CACHE_SECONDS } from '@xeprime/types';
-import { Public } from '../../common/decorators';
+import {
+  ACCOUNT_REALM_VALUES,
+  PUBLIC_CACHE_SECONDS,
+} from '@xeprime/types';
+import { Public, Realms } from '../../common/decorators';
 import { PublicCache } from '../../common/http-cache';
 import { ReviewListQueryDto, ShopReviewPageDto } from './dto/review.dto';
 import { ReviewService } from './review.service';
@@ -19,6 +22,7 @@ import { ReviewService } from './review.service';
  */
 @ApiTags('public-reviews')
 @Controller('public/shops')
+@Realms(...ACCOUNT_REALM_VALUES)
 export class PublicShopReviewController {
   constructor(private readonly reviews: ReviewService) {}
 

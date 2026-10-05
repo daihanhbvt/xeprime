@@ -1,5 +1,6 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   INVITE_STATUS,
   MEMBERSHIP_STATUS,
@@ -8,6 +9,7 @@ import {
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { InvitesService } from '../src/modules/members/invites.service';
+import { RequestRealmService } from '../src/modules/auth/request-realm.service';
 import type { EmailService } from '../src/modules/email/email.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 
@@ -34,14 +36,23 @@ const email = {
   },
 } as unknown as EmailService;
 
+const SITE_URLS: Record<string, string> = {
+  APP_WEB_URL: 'https://web.test',
+  WEB_PARTNER_URL: 'https://partner.web.test',
+  WEB_ADMIN_URL: 'https://admin.web.test',
+};
 const config = {
+  get: () => undefined,
   getOrThrow: (key: string) => {
-    if (key === 'APP_WEB_URL') return 'https://web.test';
+    const value = SITE_URLS[key];
+    if (value) return value;
     throw new Error(`Spec không mong đợi key ${key}`);
   },
 } as never;
+// Link mời trỏ về site PARTNER (ADR 0053) — URL dựng từ `WEB_PARTNER_URL`.
+const realms = new RequestRealmService(config);
 
-const invites = new InvitesService(asService, new AuditService(asService), email, config);
+const invites = new InvitesService(asService, new AuditService(asService), email, config, realms);
 
 let dbAvailable = false;
 let ownerId: string;
@@ -74,14 +85,29 @@ beforeAll(async () => {
   inviteeEmail = `invitee-${inviteeId.toLowerCase()}@xeprime.test`;
 
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Chủ shop',
+      email: `own-${ownerId}@xeprime.test`,
+    },
   });
   await prisma.user.create({
     // Chữ HOA có chủ đích: email trong thư mời và email lúc đăng ký phải khớp sau chuẩn hoá.
-    data: { id: inviteeId, displayName: 'Nhân viên', email: inviteeEmail.toUpperCase() },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: inviteeId,
+      displayName: 'Nhân viên',
+      email: inviteeEmail.toUpperCase(),
+    },
   });
   await prisma.user.create({
-    data: { id: strangerId, displayName: 'Người lạ', email: `str-${strangerId}@xeprime.test` },
+    data: {
+      id: strangerId,
+      realm: ACCOUNT_REALM.PARTNER,
+      displayName: 'Người lạ',
+      email: `str-${strangerId}@xeprime.test`,
+    },
   });
 
   await prisma.tenant.create({
@@ -179,10 +205,15 @@ describe('Thư mời — gửi', () => {
   it('không mời được ai làm chủ gian hàng', async () => {
     if (!dbAvailable) return;
     await expect(
-      invites.create(tenantId, ownerId, {
-        email: inviteeEmail,
-        roleKey: TENANT_ROLE.SHOP_OWNER,
-      }, null),
+      invites.create(
+        tenantId,
+        ownerId,
+        {
+          email: inviteeEmail,
+          roleKey: TENANT_ROLE.SHOP_OWNER,
+        },
+        null,
+      ),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
   });
 });
@@ -364,12 +395,23 @@ describe('Thư mời — SMTP hỏng', () => {
     const failing = {
       sendTenantInvite: () => Promise.reject(new Error('ECONNREFUSED smtp.resend.com:587')),
     } as unknown as EmailService;
-    const service = new InvitesService(asService, new AuditService(asService), failing, config);
+    const service = new InvitesService(
+      asService,
+      new AuditService(asService),
+      failing,
+      config,
+      realms,
+    );
 
-    const created = await service.create(tenantId, ownerId, {
-      email: `smtp-down-${Date.now()}@congty.vn`,
-      roleKey: TENANT_ROLE.SHOP_STAFF,
-    }, null);
+    const created = await service.create(
+      tenantId,
+      ownerId,
+      {
+        email: `smtp-down-${Date.now()}@congty.vn`,
+        roleKey: TENANT_ROLE.SHOP_STAFF,
+      },
+      null,
+    );
 
     expect(created.emailSent).toBe(false);
     expect(created.status).toBe(INVITE_STATUS.PENDING);

@@ -9,6 +9,7 @@
  *   • xe phải có trước khi tạo bản ghi đè chính sách theo xe.
  */
 import {
+  ACCOUNT_REALM,
   APPROVAL_STATUS,
   APPROVAL_TARGET_TYPE,
   BANK_ACCOUNT_STATUS,
@@ -113,7 +114,9 @@ export async function buildShop(spec: ShopSpec, deps: ShopBuildDeps): Promise<Sh
   const isVerified = !spec.verificationPending;
 
   // ── Tài khoản chủ và nhân viên ──────────────────────────────────────────
+  // Chủ và nhân viên gian hàng là tài khoản realm partner (ADR 0053).
   const ownerUserId = await upsertPasswordUser({
+    realm: ACCOUNT_REALM.PARTNER,
     email: spec.owner.email,
     password: DEMO_PASSWORD,
     displayName: spec.owner.displayName,
@@ -171,6 +174,7 @@ export async function buildShop(spec: ShopSpec, deps: ShopBuildDeps): Promise<Sh
   let staffUserId = ownerUserId;
   for (const staff of spec.staff) {
     const userId = await upsertPasswordUser({
+      realm: ACCOUNT_REALM.PARTNER,
       email: staff.email,
       password: DEMO_PASSWORD,
       displayName: staff.displayName,

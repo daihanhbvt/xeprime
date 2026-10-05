@@ -2,48 +2,40 @@ import {
   WORKSPACE_TARGET,
   isPackageOnboardingPending,
   resolveWorkspaceTarget,
+  tenantUsesManagePortal,
   type WorkspaceTarget,
 } from '@xeprime/types';
 
-import { ROUTES } from '@/constants/routes';
+import { ROUTES, SHOP_SECTION, shopSectionPath } from '@/constants/routes';
+import { ZONE, isPathInZone, siteHref, zoneRelativePath } from '@/zones';
 import { isSafeNextPath, safeNextPath } from './safe-next';
 
 /**
- * "Sau khi đăng nhập thì đi đâu" — hàm THUẦN, tách khỏi component để test được và để hai
- * presentation (modal khách / trang portal) không trôi khỏi nhau.
+ * "Sau khi đăng nhập thì đi đâu" — hàm THUẦN, theo từng SITE (ADR 0051 · ADR 0053).
  *
- * Đây chính là chỗ bug gốc từng nằm: mọi đường đăng nhập đều mặc định về `/manage`, nên khách
- * thuê xe bị đẩy vào khu quản lý rồi bị hỏi tạo gian hàng. Quy tắc bây giờ: **đích phụ thuộc
- * ngữ cảnh mở auth, không phụ thuộc việc user có tài khoản hay không.**
+ * Mỗi site là một không gian tài khoản riêng, nên mỗi site trả lời câu này một kiểu:
+ *
+ *  - **site khách** (`xeprime.vn`): đăng nhập là modal ngay trên trang đang xem — mặc định ở
+ *    nguyên chỗ (`resolveCustomerDestination`). Tài khoản khách không có gian hàng nào.
+ *  - **site partner**: đích theo TUYẾN hiệu lực do server trả (`resolvePartnerTrack`, bảng B1);
+ *  - **site quản trị**: khu quản trị, hoặc `next` an toàn trong khu đó.
+ *
+ * Web chỉ ĐIỀU HƯỚNG theo dữ liệu server trả; chặn thật là guard backend (`@SubscriptionTrackOnly`,
+ * `@PlatformOnly`, RealmGuard).
  */
 
 /**
  * Người dùng như `/auth/me` trả về — chỉ lấy phần quyết định điều hướng.
- * Nhận cả `undefined` để dùng được với mọi shape gọi tới (kể cả response cũ thiếu field).
  */
 export interface AuthScope {
-  /**
-   * Đủ để chọn KHU, không chỉ để biết "có gian hàng hay không".
-   *
-   * Bốn trường sau `id` là thứ phân biệt hai tuyến của ADR 0028: chủ xe tuyến hoa hồng làm việc
-   * ở `/account`, gian hàng có gói làm việc ở `/manage`. Trước đây chỉ có `id`, nên MỌI người có
-   * tenant đều bị đẩy vào cổng quản lý — kể cả người vừa đăng ký xong một chiếc xe.
-   */
   tenant?: {
     id: string;
     roleKey?: string | null;
     status?: string | null;
     billingMode?: string | null;
     /**
-     * Trục ĐĂNG KÝ (ADR 0040) — `commission` · `package_pending` · `package_active`.
-     *
-     * Bắt buộc phải ở đây vì `billingMode` một mình KHÔNG phân biệt được ba tình huống mà
-     * `resolveWorkspaceHref` phải rẽ ba đường khác nhau:
-     *
-     *  - gian hàng trả phí chưa chuyển khoản (`billingMode` rỗng) → màn thanh toán;
-     *  - danh mục gói hỏng (`billingMode` rỗng) → Owner Lite, và log lỗi ở server;
-     *  - gian hàng đã trả tiền mà hết gói (`billingMode = commission`) → danh sách xe, KHÔNG
-     *    phải wizard "đăng ký chủ xe lần đầu".
+     * Trục ĐĂNG KÝ (ADR 0040) — `commission` · `package_pending` · `package_active`. Phân biệt
+     * "gian hàng trả phí chưa chuyển khoản" với "gian hàng đã trả rồi hết gói".
      */
     onboardingState?: string | null;
     publicVehicleCount?: number | null;
@@ -51,55 +43,250 @@ export interface AuthScope {
   platformRole?: string | null;
 }
 
+// ── Site partner: tuyến hiệu lực ─────────────────────────────────────────────────────────────
+
 /**
- * Khoá khu làm việc → đích của WEB.
+ * Tuyến của một tài khoản partner, theo đúng thứ tự B1 (ADR 0040 · 0038):
  *
- * Phép suy nằm ở `resolveWorkspaceTarget` (`@xeprime/types`), dùng chung với app native; ở đây
- * chỉ còn bảng địa chỉ, vì hai app đi tới hai nơi khác nhau cho cùng một câu trả lời. `Record`
- * đầy đủ nên thêm một khoá vào `WORKSPACE_TARGET` mà quên đường dẫn sẽ đỏ ngay ở đây, thay vì
- * âm thầm rơi vào một nhánh mặc định.
+ * | Tuyến | Trạng thái server trả | Vào đâu sau đăng nhập | Menu |
+ * | --- | --- | --- | --- |
+ * | `none` | chưa có gian hàng | `/register` (trang chọn cách cho thuê) | — |
+ * | `package_pending` | `onboardingState = package_pending`, chưa có gói | `/onboarding` (bare) | — |
+ * | `package` | `billingMode = package` (`current`/`grace`) | Dashboard Manage | tuyến gói |
+ * | `commission` | còn lại — kể cả `lapsed` và `unconfigured` | Trang chủ Owner Lite | tuyến hoa hồng |
+ *
+ * `unconfigured` (danh mục gói hỏng) rơi vào `commission` CÓ CHỦ ĐÍCH: đường đọc hiển thị chưa xác
+ * định (cảnh báo không chặn — `AccountTrackNotice`), đường ghi tiền do server từ chối (ADR 0038
+ * điều 1/11). Đây là phép chọn MENU, không phải phép chọn tuyến tiền.
+ */
+export const PARTNER_TRACK = {
+  NONE: 'none',
+  PACKAGE_PENDING: 'package_pending',
+  PACKAGE: 'package',
+  COMMISSION: 'commission',
+} as const;
+
+export type PartnerTrack = (typeof PARTNER_TRACK)[keyof typeof PARTNER_TRACK];
+
+export function resolvePartnerTrack(user: AuthScope | null | undefined): PartnerTrack {
+  const tenant = user?.tenant ?? null;
+  if (!tenant) return PARTNER_TRACK.NONE;
+  if (isPackageOnboardingPending(tenant)) return PARTNER_TRACK.PACKAGE_PENDING;
+  if (tenantUsesManagePortal(tenant)) return PARTNER_TRACK.PACKAGE;
+  return PARTNER_TRACK.COMMISSION;
+}
+
+/** Trang chủ của một tài khoản partner theo tuyến (cột "Vào đâu sau đăng nhập" của B1). */
+export function partnerHomeHref(user: AuthScope | null | undefined): string {
+  switch (resolvePartnerTrack(user)) {
+    case PARTNER_TRACK.NONE:
+      return ROUTES.MANAGE.REGISTER;
+    case PARTNER_TRACK.PACKAGE_PENDING:
+      return ROUTES.MANAGE.ONBOARDING;
+    default:
+      // Một URL, nội dung theo tuyến: dashboard Manage hoặc trang chủ Owner Lite.
+      return ROUTES.MANAGE.ROOT;
+  }
+}
+
+/**
+ * Trang của site partner mà tuyến HOA HỒNG dùng được — mọi trang khác của site là của tuyến gói,
+ * server chặn bằng `@SubscriptionTrackOnly` và web đưa về trang chủ Owner Lite.
+ *
+ * DANH SÁCH TRẮNG chứ không phải đen: một trang tuyến gói thêm tháng sau mặc định bị chặn với tuyến
+ * hoa hồng, thay vì mặc định mở cho tới khi ai đó nhớ thêm nó vào danh sách đen.
+ *
+ * `exact` = chỉ khớp đúng đường dẫn (gốc site là tiền tố của mọi thứ; `/vehicles/new` là form đầy
+ * đủ của tuyến gói, còn chủ xe hoa hồng đăng xe qua wizard `/vehicles/register`).
+ */
+const COMMISSION_PAGES: ReadonlyArray<{ readonly href: string; readonly exact?: true }> = [
+  { href: ROUTES.MANAGE.ROOT, exact: true },
+  { href: ROUTES.MANAGE.REGISTRATION },
+  { href: ROUTES.MANAGE.VEHICLES, exact: true },
+  { href: ROUTES.MANAGE.VEHICLE_REGISTER },
+  { href: ROUTES.MANAGE.CALENDAR },
+  { href: ROUTES.MANAGE.BOOKING_REQUESTS },
+  { href: ROUTES.MANAGE.BOOKINGS },
+  { href: ROUTES.MANAGE.CHAT },
+  { href: ROUTES.MANAGE.BALANCE },
+  { href: ROUTES.MANAGE.SUBSCRIPTION },
+  { href: ROUTES.MANAGE.TAX },
+  { href: ROUTES.MANAGE.BANK_ACCOUNTS },
+  { href: ROUTES.MANAGE.HOST_GUIDE },
+  { href: ROUTES.MANAGE.CONTRACTS_DOCUMENTS },
+  { href: ROUTES.MANAGE.DATA_PROTECTION },
+  { href: ROUTES.MANAGE.SUPPORT },
+  { href: ROUTES.MANAGE.SECURITY },
+  { href: ROUTES.MANAGE.ACCOUNT },
+];
+
+function pathOnly(path: string): string {
+  return path.split(/[?#]/)[0] ?? path;
+}
+
+function matchesPage(pathname: string, page: { href: string; exact?: true }): boolean {
+  if (pathname === page.href) return true;
+  return page.exact !== true && pathname.startsWith(`${page.href}/`);
+}
+
+/** Đường này mở được với tuyến hoa hồng không. Xe: danh sách, chi tiết và không gian quản lý xe. */
+export function isCommissionPage(path: string): boolean {
+  const pathname = pathOnly(path);
+  if (COMMISSION_PAGES.some((page) => matchesPage(pathname, page))) return true;
+  // `/vehicles/<id>` (chi tiết, MỘT URL hai tuyến) và `/vehicles/<id>/manage/...` (Owner Lite) —
+  // KHÔNG `/vehicles/<id>/edit` (màn sửa đầy đủ của tuyến gói) hay `/vehicles/new`.
+  const vehicles = `${ROUTES.MANAGE.VEHICLES}/`;
+  if (!pathname.startsWith(vehicles)) return false;
+  const rest = pathname.slice(vehicles.length);
+  if (/^[^/]+$/.test(rest)) return rest !== 'new';
+  return /^[^/]+\/manage(\/.*)?$/.test(rest);
+}
+
+/**
+ * Trang công khai của site partner — không cần phiên, không có khung. Proxy và `AppShell` cùng đọc.
+ */
+export const PARTNER_PUBLIC_PAGES: readonly string[] = [
+  ROUTES.MANAGE.LOGIN,
+  ROUTES.MANAGE.REGISTER,
+  ROUTES.MANAGE.FORGOT_PASSWORD,
+  ROUTES.MANAGE.RESET_PASSWORD,
+];
+
+export function isPartnerPublicPage(path: string): boolean {
+  const pathname = pathOnly(path);
+  return PARTNER_PUBLIC_PAGES.includes(pathname) || isPartnerInvitePage(pathname);
+}
+
+/**
+ * Trang LỜI MỜI vào gian hàng (`/invites/<token>`) — công khai nhưng KHÁC bốn trang xác thực: nó là
+ * một ĐÍCH hợp lệ của `next`. Người được mời bấm "Đăng nhập"/"Tạo tài khoản đối tác" từ thư mời phải
+ * quay về đúng lời mời, kể cả khi tài khoản chưa có gian hàng nào (B1 sẽ đưa họ về `/register`).
+ */
+export function isPartnerInvitePage(path: string | null | undefined): path is string {
+  if (!isSafeNextPath(path)) return false;
+  return pathOnly(path).startsWith(`${ROUTES.MANAGE.INVITES}/`);
+}
+
+/** Trang công khai của site quản trị — chỉ đăng nhập và đặt lại mật khẩu (không tự đăng ký). */
+export const ADMIN_PUBLIC_PAGES: readonly string[] = [
+  ROUTES.ADMIN.LOGIN,
+  ROUTES.ADMIN.FORGOT_PASSWORD,
+  ROUTES.ADMIN.RESET_PASSWORD,
+];
+
+export function isAdminPublicPage(path: string): boolean {
+  return ADMIN_PUBLIC_PAGES.includes(pathOnly(path));
+}
+
+/** Trang mà tài khoản CHƯA có gian hàng được ở: hai bước đầu của hai tuyến. */
+const NO_SHOP_PAGES: readonly string[] = [ROUTES.MANAGE.ONBOARDING, ROUTES.MANAGE.VEHICLE_REGISTER];
+
+/**
+ * Tuyến gói mở một trang CHỈ của tuyến hoa hồng → bản tương đương của tuyến gói (`null` = ở lại).
+ * Ba trang có bản một-đối-một trong trang Cửa hàng; còn lại (cẩm nang, mẫu chứng từ…) dùng chung.
+ */
+function packageEquivalent(pathname: string): string | null {
+  if (matchesPage(pathname, { href: ROUTES.MANAGE.REGISTRATION })) return ROUTES.MANAGE.SHOP;
+  if (pathname === ROUTES.MANAGE.TAX) return shopSectionPath(SHOP_SECTION.LEGAL);
+  if (pathname === ROUTES.MANAGE.BANK_ACCOUNTS) return shopSectionPath(SHOP_SECTION.PAYOUT);
+  return null;
+}
+
+/**
+ * Người này có được ở lại trang `path` của site partner không — trả đích cần chuyển tới, hoặc
+ * `null`. MỘT hàm cho `AppShell` (gõ thẳng URL) và cho đích sau đăng nhập (`next`).
+ */
+export function partnerPageRedirect(
+  user: AuthScope | null | undefined,
+  path: string,
+): string | null {
+  const pathname = pathOnly(path);
+  if (isPartnerPublicPage(pathname)) return null;
+
+  switch (resolvePartnerTrack(user)) {
+    case PARTNER_TRACK.NONE:
+      // Chưa có gian hàng: chọn cách cho thuê ở `/register`, rồi vào bước đầu của tuyến — wizard
+      // đăng xe nhanh (hoa hồng, tự mở gian hàng ở bước lưu) hoặc onboarding (gói).
+      return NO_SHOP_PAGES.includes(pathname) ? null : ROUTES.MANAGE.REGISTER;
+    case PARTNER_TRACK.PACKAGE_PENDING:
+      // Cổng quản lý chưa mở: màn thanh toán là nơi DUY NHẤT (ADR 0040 điều 3).
+      return pathname === ROUTES.MANAGE.ONBOARDING ? null : ROUTES.MANAGE.ONBOARDING;
+    case PARTNER_TRACK.COMMISSION:
+      // Onboarding tự đưa gian hàng hoa hồng về tiến trình đăng ký của nó.
+      if (pathname === ROUTES.MANAGE.ONBOARDING) return null;
+      return isCommissionPage(pathname) ? null : ROUTES.MANAGE.ROOT;
+    case PARTNER_TRACK.PACKAGE:
+      return packageEquivalent(pathname);
+  }
+}
+
+/**
+ * Đích sau khi đăng nhập ở SITE PARTNER.
+ *
+ *  1. `next` an toàn VÀ thuộc site partner → đi tới đó, trừ khi tuyến không được ở đó
+ *     (`partnerPageRedirect` quyết — một luật cho cả gõ URL lẫn `next`);
+ *  2. không thì trang chủ theo tuyến (`partnerHomeHref`).
+ *
+ * `next` trỏ sang site khác bị bỏ qua: đăng nhập ở partner thì phiên chỉ sống ở partner.
+ */
+export function resolvePartnerDestination(params: {
+  user: AuthScope;
+  next?: string | null;
+}): string {
+  const { user, next } = params;
+  // Lời mời: về đúng lời mời, bất kể tuyến — trả lời lời mời chính là cách CÓ gian hàng.
+  if (isPartnerInvitePage(next)) return next;
+  if (isSafeNextPath(next) && isPathInZone(ZONE.PARTNER, next) && !isPartnerPublicPage(next)) {
+    return partnerPageRedirect(user, next) ?? next;
+  }
+  return partnerHomeHref(user);
+}
+
+/** Đích sau khi đăng nhập ở SITE QUẢN TRỊ: `next` an toàn trong khu quản trị, hoặc trang đầu. */
+export function resolveAdminDestination(params: { next?: string | null }): string {
+  const { next } = params;
+  if (isSafeNextPath(next) && isPathInZone(ZONE.ADMIN, next) && !isAdminPublicPage(next)) {
+    return next;
+  }
+  return ROUTES.ADMIN.ROOT;
+}
+
+// ── Khoá khu làm việc dùng chung với app native ──────────────────────────────────────────────
+
+/**
+ * Khoá khu làm việc (`resolveWorkspaceTarget` — `@xeprime/types`, dùng chung với app native) →
+ * đích ở SITE PARTNER. `Record` đầy đủ nên thêm một khoá mà quên đường dẫn sẽ đỏ ngay ở đây.
  */
 const TARGET_HREF: Readonly<Record<WorkspaceTarget, string>> = {
   [WORKSPACE_TARGET.ONBOARDING]: ROUTES.MANAGE.ONBOARDING,
   [WORKSPACE_TARGET.MANAGE]: ROUTES.MANAGE.ROOT,
-  [WORKSPACE_TARGET.ACCOUNT]: ROUTES.ACCOUNT.ROOT,
-  [WORKSPACE_TARGET.VEHICLES]: ROUTES.ACCOUNT.VEHICLES,
-  [WORKSPACE_TARGET.REGISTRATION]: ROUTES.ACCOUNT.REGISTRATION,
+  [WORKSPACE_TARGET.ACCOUNT]: ROUTES.MANAGE.ROOT,
+  [WORKSPACE_TARGET.VEHICLES]: ROUTES.MANAGE.VEHICLES,
+  [WORKSPACE_TARGET.REGISTRATION]: ROUTES.MANAGE.REGISTRATION,
 };
 
 /**
- * "Khu làm việc của người này ở đâu" — `/manage` hay `/account`.
- *
- * MỘT nơi trả lời, vì câu hỏi này xuất hiện ở rất nhiều chỗ: sau đăng nhập, CTA chủ xe, thẻ gian
- * hàng ở trang tài khoản, menu marketplace, màn kết thúc wizard đăng xe, và cổng chặn của
- * `AppShell`. Mỗi nơi tự quyết định là mỗi nơi một luật.
- *
- * Thứ tự quyết định và lý do của TỪNG nhánh nằm ở `resolveWorkspaceTarget` (`@xeprime/types`) —
- * dùng chung với app native, nên hai client không thể trả lời khác nhau. Ở đây chỉ còn phép ánh
- * xạ khoá → đường dẫn của web.
+ * "Chỗ làm việc của người này" ở site partner — `null` khi chưa có gian hàng.
+ * Đường dẫn TRONG site partner.
  */
 export function resolveWorkspaceHref(user: AuthScope | null | undefined): string | null {
   const target = resolveWorkspaceTarget(user?.tenant);
   return target ? TARGET_HREF[target] : null;
 }
 
-/** Khu làm việc là `/manage` — tức người này ĐƯỢC vào cổng quản lý. */
+/** Người này làm việc bằng Full Manage (gian hàng có gói, hoặc nhân viên của một gian hàng gói). */
 export function canUseManagePortal(user: AuthScope | null | undefined): boolean {
-  return resolveWorkspaceHref(user) === ROUTES.MANAGE.ROOT;
+  return resolvePartnerTrack(user) === PARTNER_TRACK.PACKAGE;
 }
 
-/**
- * Người này đang ở giữa luồng mở gian hàng trả phí — màn onboarding là nơi DUY NHẤT họ vào được.
- *
- * Tách thành hàm riêng thay vì để mỗi nơi tự so `resolveWorkspaceHref(user) === ONBOARDING`:
- * `AppShell`, `WorkspaceProvider` và chính trang onboarding đều hỏi nó, và ba phép so chuỗi là
- * ba chỗ để một lần đổi route làm hỏng cổng chặn mà không ai thấy.
- */
+/** Người này đang nợ bước thanh toán gói — màn onboarding là nơi DUY NHẤT họ vào được. */
 export function isPackageOnboarding(user: AuthScope | null | undefined): boolean {
   return isPackageOnboardingPending(user?.tenant);
 }
 
-/** Ý định mở cổng quản lý, đi trong URL (`?intent=owner`). */
+// ── Modal đăng nhập của site khách ───────────────────────────────────────────────────────────
+
+/** Ý định mở cửa chủ xe, đi trong URL (`?intent=owner`). */
 export const AUTH_INTENT = {
   OWNER: 'owner',
 } as const;
@@ -119,111 +306,40 @@ export function isAuthMode(value: string | null | undefined): value is AuthMode 
 }
 
 /**
- * Đích sau khi KHÁCH đăng nhập/đăng ký từ marketplace.
- *
- * `null` = không điều hướng: đóng modal và ở nguyên trang đang xem. Đây là mặc định, KHÔNG
- * phải `/manage` — khách đăng nhập từ header trang chủ thì phải vẫn ở trang chủ.
+ * Đích sau khi KHÁCH đăng nhập/đăng ký từ marketplace. `null` = đóng modal, ở nguyên trang đang xem.
  */
 export function resolveCustomerDestination(next: string | null | undefined): string | null {
-  return isSafeNextPath(next) ? next : null;
+  return isSafeNextPath(next) && isPathInZone(ZONE.MARKET, next) ? next : null;
 }
 
 /**
- * Đích sau khi đăng nhập ở CỔNG QUẢN LÝ, theo scope thật lấy từ `/auth/me`.
- *
- * Thứ tự quyết định:
- *  1. `next` an toàn → tôn trọng ý định ban đầu (proxy đặt `next` khi chặn route).
- *     Riêng route nền tảng: user không có `platformRole` KHÔNG được đưa tới đó — trả về
- *     `/manage` để họ gặp màn hợp lệ, còn 403 thật do layout admin + guard backend quyết định.
- *  2. `intent=owner` và chưa có gian hàng → onboarding (owner intent tường minh).
- *  3. Có gian hàng → khu làm việc của họ (`resolveWorkspaceHref`): `/manage` với gian hàng có
- *     gói và nhân viên, `/account` với chủ xe tuyến hoa hồng.
- *  4. Chỉ có platform role → `/manage/admin`.
- *  5. Không tenant, không platform, không owner intent → `/manage` (ở đó hiện màn "Bạn chưa có
- *     gian hàng", KHÔNG tự bật form tạo shop).
+ * Đích của CTA chủ xe trên SITE KHÁCH ("Đăng xe cho thuê", "Trở thành chủ xe") — LUÔN là trang đăng
+ * ký của site partner (ADR 0051 điều 3: đăng ký cả hai tuyến diễn ra ở đó). Link KHÁC site, nên
+ * tuyệt đối ở chế độ `host`. Tài khoản khách không có gian hàng (ADR 0053), nên không còn nhánh
+ * "về khu làm việc của bạn".
  */
-export function resolvePortalDestination(params: {
-  user: AuthScope;
-  next?: string | null;
-  intent?: string | null;
-}): string {
-  const { user, next, intent } = params;
-  const hasTenant = user.tenant != null;
-  const isPlatform = Boolean(user.platformRole);
-  const workspace = resolveWorkspaceHref(user);
-
-  if (isSafeNextPath(next)) {
-    if (isPlatformRoute(next) && !isPlatform) return workspace ?? ROUTES.MANAGE.ROOT;
-    /*
-     * Chủ xe tuyến hoa hồng gõ (hoặc được `next` dẫn) tới một trang `/manage` thì không đi tới
-     * đó, kể cả khi họ có gian hàng: khu đó không dành cho họ (ADR 0027/0028). Đưa về đúng khu
-     * của mình thay vì để `AppShell` nhận rồi đá ra — một cú nhảy, không phải hai.
-     */
-    if (isManageRoute(next) && !isPlatform && workspace !== ROUTES.MANAGE.ROOT) {
-      /*
-       * `isOnboardingRoute`, KHÔNG so chuỗi bằng nhau (sửa 16/09/2026).
-       *
-       * Từ ADR 0040, đường vào onboarding mang `?track=package` — nên phép so `next ===
-       * ROUTES.MANAGE.ONBOARDING` trả `false` và người vừa bấm "Đăng ký gian hàng" rồi đăng nhập
-       * bị đẩy về `/manage` (màn "bạn chưa có gian hàng"), mất luôn cửa họ đã chọn.
-       */
-      if (isOnboardingRoute(next) && !hasTenant) return next;
-      return workspace ?? ROUTES.MANAGE.ROOT;
-    }
-    // Đừng ném người chưa có gian hàng vào một trang quản lý gian hàng cụ thể — họ sẽ thấy
-    // dashboard rỗng/lỗi. Cho về `/manage` để gặp màn lựa chọn.
-    if (!hasTenant && !isPlatform && !isOnboardingRoute(next)) {
-      return intent === AUTH_INTENT.OWNER ? ROUTES.MANAGE.ONBOARDING : ROUTES.MANAGE.ROOT;
-    }
-    return next;
-  }
-
-  if (intent === AUTH_INTENT.OWNER && !hasTenant) return ROUTES.MANAGE.ONBOARDING;
-  if (workspace) return workspace;
-  if (isPlatform) return ROUTES.MANAGE.ADMIN;
-  return ROUTES.MANAGE.ROOT;
+export function resolveOwnerCtaHref(): string {
+  return siteHref(ZONE.PARTNER, zoneRelativePath(ZONE.PARTNER, ROUTES.MANAGE.REGISTER));
 }
 
-/** `/manage` và mọi route con. */
-export function isManageRoute(pathname: string): boolean {
-  return pathname === ROUTES.MANAGE.ROOT || pathname.startsWith(`${ROUTES.MANAGE.ROOT}/`);
-}
-
-/**
- * Đường này có phải màn ONBOARDING không — so PHẦN ĐƯỜNG DẪN, bỏ qua query.
- *
- * Từ ADR 0040 route đó mang `?track=`, nên mọi phép so bằng chuỗi trần đều hỏng âm thầm: nó vẫn
- * biên dịch, vẫn chạy, và chỉ sai đúng ở nhánh người dùng bấm CTA gian hàng rồi mới đăng nhập.
- */
-export function isOnboardingRoute(path: string | null | undefined): boolean {
-  if (!path) return false;
-  const [pathname] = path.split('?');
-  return pathname === ROUTES.MANAGE.ONBOARDING;
-}
-
-/** `/manage/admin` và mọi route con. */
-export function isPlatformRoute(pathname: string): boolean {
-  return pathname === ROUTES.MANAGE.ADMIN || pathname.startsWith(`${ROUTES.MANAGE.ADMIN}/`);
-}
-
-/**
- * Đích khi bấm CTA chủ xe ("Đăng xe cho thuê", "Trở thành chủ xe").
- * Chưa đăng nhập → portal login kèm owner intent; đã có gian hàng → thẳng vào portal.
- */
-export function resolveOwnerCtaHref(user: AuthScope | null | undefined): string {
-  /*
-   * 09/09/2026: mọi CTA chủ xe đi qua LANDING "Đăng xe cho thuê" trước.
-   *
-   * Trước đây nút này ném thẳng người chưa đăng nhập vào form tạo gian hàng — hỏi tên gian hàng
-   * và mã số thuế trước khi họ kịp biết mình được gì. Landing là trang công khai, đọc xong mới
-   * quyết định, và chính nó rẽ tiếp theo trạng thái thật (đăng nhập → onboarding → wizard).
-   */
-  return resolveWorkspaceHref(user) ?? ROUTES.LIST_YOUR_VEHICLE.ROOT;
-}
-
-/** Đích khi phiên hỏng/hết hạn ở khu quản lý: quay lại portal login, giữ đường đang mở. */
+/** Đích khi phiên hỏng/hết hạn ở site partner: về trang đăng nhập, giữ đường đang mở. */
 export function portalLoginWithNext(pathname: string): string {
   return `${ROUTES.MANAGE.LOGIN}?next=${encodeURIComponent(
     safeNextPath(pathname, ROUTES.MANAGE.ROOT),
   )}`;
+}
+
+/** Đích khi phiên hỏng/hết hạn ở site quản trị. */
+export function adminLoginWithNext(pathname: string): string {
+  return `${ROUTES.ADMIN.LOGIN}?next=${encodeURIComponent(
+    safeNextPath(pathname, ROUTES.ADMIN.ROOT),
+  )}`;
+}
+
+/**
+ * Đường này có phải màn ONBOARDING không — so PHẦN ĐƯỜNG DẪN, bỏ qua query (route mang `?track=`).
+ */
+export function isOnboardingRoute(path: string | null | undefined): boolean {
+  if (!path) return false;
+  return pathOnly(path) === ROUTES.MANAGE.ONBOARDING;
 }

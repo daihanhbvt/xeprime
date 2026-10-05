@@ -8,8 +8,9 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHash, randomBytes } from 'node:crypto';
-import { markBadgesDirty, newId, Prisma } from '@xeprime/prisma';
+import { isUniqueViolation, markBadgesDirty, newId, Prisma } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   INVITE_STATUS,
   MEMBERSHIP_BRANCH_SCOPE,
@@ -27,6 +28,7 @@ import {
   type ResolvedBranchScope,
 } from './member-branch-scope';
 import { EmailService } from '../email/email.service';
+import { RequestRealmService } from '../auth/request-realm.service';
 import { maskEmail } from '../../common/mask';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
 import {
@@ -82,6 +84,8 @@ export class InvitesService {
     private readonly audit: AuditService,
     private readonly email: EmailService,
     private readonly config: ConfigService,
+    /** Link mời trỏ về SITE PARTNER — nơi duy nhất nhận lời mời được (ADR 0053 điều 6). */
+    private readonly realms: RequestRealmService,
   ) {}
 
   // ── Phía gian hàng ────────────────────────────────────────────────────────
@@ -149,7 +153,9 @@ export class InvitesService {
         // phải là chữ thường (đăng ký đi bằng SĐT; email đến từ social login hoặc nhập tay).
         // So khớp phân biệt hoa/thường ở đây sẽ bỏ sót một thành viên đang có và sinh ra một
         // lời mời không bao giờ nhận được — `accept` sẽ chặn, nhưng sau khi đã tốn một email.
-        user: { email: { equals: email, mode: 'insensitive' } },
+        // Thành viên gian hàng luôn là tài khoản partner (ADR 0053) — tài khoản khách cùng email
+        // là một người lạ với gian hàng, không phải "đã là thành viên".
+        user: { realm: ACCOUNT_REALM.PARTNER, email: { equals: email, mode: 'insensitive' } },
       },
       select: { userId: true },
     });
@@ -328,6 +334,38 @@ export class InvitesService {
       });
     }
 
+    /*
+     * Một nhân viên chỉ thuộc MỘT gian hàng (ADR 0053 điều 6). Kiểm ở đây để trả lời đọc được TRƯỚC
+     * khi tiêu thụ lời mời; unique index một phần ở DB vẫn là chốt thật cho hai lượt nhận song song
+     * (bắt P2002 ở dưới).
+     */
+    await this.assertNoOtherActiveTenant(userId, invite.tenantId);
+
+    try {
+      await this.acceptWithinTransaction(invite, userId);
+    } catch (error) {
+      // Hai lời mời của hai gian hàng được nhận song song: index một phần là chốt thật.
+      if (isUniqueViolation(error, 'tenant_memberships_one_active_per_user')) {
+        throw memberInOtherTenant();
+      }
+      throw error;
+    }
+
+    return { status: INVITE_STATUS.ACCEPTED, tenantSlug: invite.tenant.slug };
+  }
+
+  private async assertNoOtherActiveTenant(userId: string, tenantId: string): Promise<void> {
+    const other = await this.prisma.tenantMembership.findFirst({
+      where: { userId, status: MEMBERSHIP_STATUS.ACTIVE, tenantId: { not: tenantId } },
+      select: { id: true },
+    });
+    if (other) throw memberInOtherTenant();
+  }
+
+  private async acceptWithinTransaction(
+    invite: Awaited<ReturnType<InvitesService['loadAnswerable']>>,
+    userId: string,
+  ): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       /*
        * Đóng lời mời bằng một `updateMany` CÓ ĐIỀU KIỆN `status = pending`, không phải `update`
@@ -413,8 +451,6 @@ export class InvitesService {
         tx,
       );
     });
-
-    return { status: INVITE_STATUS.ACCEPTED, tenantSlug: invite.tenant.slug };
   }
 
   async decline(token: string, userId: string): Promise<InviteAnswerDto> {
@@ -495,8 +531,17 @@ export class InvitesService {
 
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { email: true },
+      select: { email: true, realm: true },
     });
+    // Chỉ tài khoản ĐỐI TÁC vào được gian hàng (ADR 0053 điều 6). Route đã chỉ mở cho realm
+    // partner; kiểm lại ở đây để một lời gọi nội bộ sai realm nhận 403 rõ ràng thay vì để trigger
+    // DB nổ thành 500 giữa transaction.
+    if (user && user.realm !== ACCOUNT_REALM.PARTNER) {
+      throw new ForbiddenException({
+        code: API_ERROR_CODE.REALM_NOT_ALLOWED,
+        message: 'Chỉ tài khoản đối tác mới nhận được lời mời vào gian hàng',
+      });
+    }
     // So khớp email đã CHUẨN HOÁ: `Nhan.Vien@Cty.VN` trong thư mời và `nhan.vien@cty.vn` lúc
     // đăng ký là cùng một người, và bắt họ chịu thua vì chữ hoa là một lỗi sản phẩm.
     if (!user?.email || normalizeEmail(user.email) !== invite.email) {
@@ -525,9 +570,15 @@ export class InvitesService {
   }
 
   private inviteUrl(token: string): string {
-    const base = this.config.getOrThrow<string>('APP_WEB_URL').replace(/\/+$/, '');
-    return `${base}/invites/${token}`;
+    return `${this.realms.webUrlFor(ACCOUNT_REALM.PARTNER)}/invites/${token}`;
   }
+}
+
+function memberInOtherTenant(): ConflictException {
+  return new ConflictException({
+    code: API_ERROR_CODE.MEMBER_ALREADY_IN_OTHER_TENANT,
+    message: 'Tài khoản này đang thuộc một gian hàng khác — mỗi tài khoản chỉ thuộc một gian hàng',
+  });
 }
 
 function hashToken(token: string): string {

@@ -1,18 +1,19 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
-  BILLING_MODE,
+  ACCOUNT_REALM,
   API_ERROR_CODE,
+  BILLING_MODE,
   MAINTENANCE_DUE_STATUS,
   MAINTENANCE_STATUS,
   MAINTENANCE_TYPE,
-  RECEIPT_SOURCE,
-  RECEIPT_STATUS,
-  RECEIPT_TYPE,
-  SYSTEM_FINANCE_CATEGORY,
   MEMBERSHIP_STATUS,
   OCCUPANCY_SOURCE_TYPE,
   ODOMETER_SOURCE,
   PERMISSION,
+  RECEIPT_SOURCE,
+  RECEIPT_STATUS,
+  RECEIPT_TYPE,
+  SYSTEM_FINANCE_CATEGORY,
   TENANT_ROLE,
   TENANT_STATUS,
   VEHICLE_TYPE,
@@ -67,7 +68,14 @@ const vehicles = makeVehiclesService(asService);
 const createVehicleWithBranch = vehicleCreator(vehicles, asService);
 const files = new VehicleContractsService(asService, fakeR2 as unknown as R2Service, audit);
 const odometer = new OdometerService(asService, audit);
-const maintenance = new MaintenanceService(asService, occupancy, odometer, files, audit, new ReceiptsService(asService, audit));
+const maintenance = new MaintenanceService(
+  asService,
+  occupancy,
+  odometer,
+  files,
+  audit,
+  new ReceiptsService(asService, audit),
+);
 
 /** Vai trò đủ quyền (chủ gian hàng) vs vai trò vận hành (không tiền, không file). */
 const FULL_SCOPE = { canViewCost: true, canViewFiles: true };
@@ -75,6 +83,7 @@ const STAFF_SCOPE = { canViewCost: false, canViewFiles: false };
 
 let dbAvailable = false;
 let ownerId: string;
+let otherOwnerId: string;
 let tenantId: string;
 let otherTenantId: string;
 
@@ -95,12 +104,28 @@ beforeAll(async () => {
   tenantId = newId();
   otherTenantId = newId();
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Chủ shop',
+      email: `own-${ownerId}@xeprime.test`,
+    },
+  });
+  // Mỗi gian hàng một chủ — ADR 0053: một tài khoản chỉ thuộc một gian hàng.
+  otherOwnerId = newId();
+  await prisma.user.create({
+    data: {
+      id: otherOwnerId,
+      realm: ACCOUNT_REALM.PARTNER,
+      displayName: 'Chủ shop khác',
+      email: `own-${otherOwnerId}@xeprime.test`,
+    },
   });
   for (const [id, name] of [
     [tenantId, 'Shop Bảo Dưỡng'],
     [otherTenantId, 'Shop Khác'],
   ] as const) {
+    const owner = id === tenantId ? ownerId : otherOwnerId;
     await prisma.tenant.create({
       data: {
         id,
@@ -108,7 +133,7 @@ beforeAll(async () => {
         slug: `t-${id.toLowerCase().slice(-10)}`,
         name,
         status: TENANT_STATUS.ACTIVE,
-        ownerUserId: ownerId,
+        ownerUserId: owner,
       },
     });
     /*
@@ -123,7 +148,7 @@ beforeAll(async () => {
       data: {
         id: newId(),
         tenantId: id,
-        userId: ownerId,
+        userId: owner,
         roleKey: TENANT_ROLE.SHOP_OWNER,
         status: MEMBERSHIP_STATUS.ACTIVE,
       },
@@ -139,7 +164,7 @@ afterAll(async () => {
       await prisma.tenantMembership.deleteMany({ where: { tenantId: id } });
       await prisma.tenant.deleteMany({ where: { id } });
     }
-    await prisma.user.deleteMany({ where: { id: ownerId } });
+    await prisma.user.deleteMany({ where: { id: { in: [ownerId, otherOwnerId] } } });
   }
   await prisma.$disconnect();
 });
@@ -314,7 +339,10 @@ describe('KM có thẩm quyền (§9.1)', () => {
         { canDecrease: false },
       ),
     ).rejects.toMatchObject({
-      response: { code: API_ERROR_CODE.ODOMETER_DECREASE_FORBIDDEN, details: { currentKm: 45_230 } },
+      response: {
+        code: API_ERROR_CODE.ODOMETER_DECREASE_FORBIDDEN,
+        details: { currentKm: 45_230 },
+      },
     });
 
     expect((await maintenance.getProfile(tenantId, v.id)).currentOdometerKm).toBe(45_230);
@@ -765,7 +793,14 @@ describe('Lịch bảo dưỡng CHẶN THẬT availability (ADR 0006 · §9.2)',
       },
       FULL_SCOPE,
     );
-    await maintenance.cancelRecord(tenantId, v.id, ownerId, record.id, record.rowVersion, FULL_SCOPE);
+    await maintenance.cancelRecord(
+      tenantId,
+      v.id,
+      ownerId,
+      record.id,
+      record.rowVersion,
+      FULL_SCOPE,
+    );
 
     expect(
       await prisma.vehicleOccupancy.count({
@@ -857,9 +892,9 @@ describe('Quyền & riêng tư (§10)', () => {
       { type: MAINTENANCE_TYPE.REPAIR },
       FULL_SCOPE,
     );
-    await expect(
-      maintenance.listForVehicle(otherTenantId, v.id, FULL_SCOPE),
-    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.NOT_FOUND } });
+    await expect(maintenance.listForVehicle(otherTenantId, v.id, FULL_SCOPE)).rejects.toMatchObject(
+      { response: { code: API_ERROR_CODE.NOT_FOUND } },
+    );
     const board = await maintenance.board(otherTenantId, {}, FULL_SCOPE, null);
     expect(board.data.some((row) => row.vehicleId === v.id)).toBe(false);
   });
@@ -960,7 +995,7 @@ describe('Trung tâm bảo dưỡng toàn đội xe (§9.2)', () => {
       tenantId,
       { filter: 'missing_odometer' },
       FULL_SCOPE,
-    null,
+      null,
     );
     expect(missingRows.data.some((row) => row.vehicleId === missing.id)).toBe(true);
     expect(missingRows.data.every((row) => row.currentOdometerKm === null)).toBe(true);
@@ -998,7 +1033,14 @@ describe('Trung tâm bảo dưỡng toàn đội xe (§9.2)', () => {
       },
       FULL_SCOPE,
     );
-    await maintenance.startRecord(tenantId, v.id, ownerId, record.id, record.rowVersion, FULL_SCOPE);
+    await maintenance.startRecord(
+      tenantId,
+      v.id,
+      ownerId,
+      record.id,
+      record.rowVersion,
+      FULL_SCOPE,
+    );
 
     const rows = await maintenance.board(tenantId, { filter: 'in_progress' }, STAFF_SCOPE, null);
     const row = rows.data.find((item) => item.vehicleId === v.id)!;
@@ -1017,19 +1059,30 @@ describe('Bảo dưỡng → phiếu chi trong sổ', () => {
   const costReceipts = (vehicleId: string) =>
     prisma.receipt.findMany({
       where: { tenantId, vehicleId, source: RECEIPT_SOURCE.MAINTENANCE },
-      select: { id: true, type: true, status: true, amount: true, receiptNo: true,
-                category: { select: { systemKey: true } } },
+      select: {
+        id: true,
+        type: true,
+        status: true,
+        amount: true,
+        receiptNo: true,
+        category: { select: { systemKey: true } },
+      },
     });
 
   maybe('hoàn tất có chi phí → một phiếu chi, danh mục "Bảo dưỡng/Thay nhớt"', async () => {
     const v = await createVehicle('MT-LEDGER-1');
     const record = await maintenance.createRecord(
-      tenantId, v.id, ownerId,
+      tenantId,
+      v.id,
+      ownerId,
       { type: MAINTENANCE_TYPE.OIL_CHANGE, title: 'Thay nhớt định kỳ' },
       FULL_SCOPE,
     );
     const done = await maintenance.completeRecord(
-      tenantId, v.id, ownerId, record.id,
+      tenantId,
+      v.id,
+      ownerId,
+      record.id,
       { cost: '950000', expectedRowVersion: record.rowVersion },
       FULL_SCOPE,
     );
@@ -1047,12 +1100,17 @@ describe('Bảo dưỡng → phiếu chi trong sổ', () => {
   maybe('sửa chữa đi vào danh mục RIÊNG — không gộp với bảo dưỡng định kỳ', async () => {
     const v = await createVehicle('MT-LEDGER-2');
     const record = await maintenance.createRecord(
-      tenantId, v.id, ownerId,
+      tenantId,
+      v.id,
+      ownerId,
       { type: MAINTENANCE_TYPE.REPAIR, title: 'Thay má phanh' },
       FULL_SCOPE,
     );
     await maintenance.completeRecord(
-      tenantId, v.id, ownerId, record.id,
+      tenantId,
+      v.id,
+      ownerId,
+      record.id,
       { cost: '1200000', expectedRowVersion: record.rowVersion },
       FULL_SCOPE,
     );
@@ -1065,12 +1123,17 @@ describe('Bảo dưỡng → phiếu chi trong sổ', () => {
   maybe('hoàn tất KHÔNG có chi phí thì không sinh phiếu nào', async () => {
     const v = await createVehicle('MT-LEDGER-3');
     const record = await maintenance.createRecord(
-      tenantId, v.id, ownerId,
+      tenantId,
+      v.id,
+      ownerId,
       { type: MAINTENANCE_TYPE.TIRE, title: 'Đảo lốp' },
       FULL_SCOPE,
     );
     await maintenance.completeRecord(
-      tenantId, v.id, ownerId, record.id,
+      tenantId,
+      v.id,
+      ownerId,
+      record.id,
       { expectedRowVersion: record.rowVersion },
       FULL_SCOPE,
     );
@@ -1080,18 +1143,26 @@ describe('Bảo dưỡng → phiếu chi trong sổ', () => {
   maybe('correctCost: phiếu đổi số TẠI CHỖ, không đẻ phiếu thứ hai', async () => {
     const v = await createVehicle('MT-LEDGER-4');
     const record = await maintenance.createRecord(
-      tenantId, v.id, ownerId,
+      tenantId,
+      v.id,
+      ownerId,
       { type: MAINTENANCE_TYPE.PERIODIC_SERVICE, title: 'Bảo dưỡng 10.000km' },
       FULL_SCOPE,
     );
     const done = await maintenance.completeRecord(
-      tenantId, v.id, ownerId, record.id,
+      tenantId,
+      v.id,
+      ownerId,
+      record.id,
       { cost: '800000', expectedRowVersion: record.rowVersion },
       FULL_SCOPE,
     );
 
     const corrected = await maintenance.correctCost(
-      tenantId, v.id, ownerId, record.id,
+      tenantId,
+      v.id,
+      ownerId,
+      record.id,
       { cost: '1500000', correctionReason: 'Gõ nhầm số 0', expectedRowVersion: done.rowVersion },
       FULL_SCOPE,
     );
@@ -1113,20 +1184,31 @@ describe('Bảo dưỡng → phiếu chi trong sổ', () => {
   maybe('correctCost xoá chi phí → phiếu chi bị HUỶ, sổ không giữ khoản đã rút lại', async () => {
     const v = await createVehicle('MT-LEDGER-5');
     const record = await maintenance.createRecord(
-      tenantId, v.id, ownerId,
+      tenantId,
+      v.id,
+      ownerId,
       { type: MAINTENANCE_TYPE.BATTERY, title: 'Thay ắc quy' },
       FULL_SCOPE,
     );
     const done = await maintenance.completeRecord(
-      tenantId, v.id, ownerId, record.id,
+      tenantId,
+      v.id,
+      ownerId,
+      record.id,
       { cost: '600000', expectedRowVersion: record.rowVersion },
       FULL_SCOPE,
     );
 
     await maintenance.correctCost(
-      tenantId, v.id, ownerId, record.id,
-      { cost: null, correctionReason: 'Bên bảo hành lo, shop không trả đồng nào',
-        expectedRowVersion: done.rowVersion },
+      tenantId,
+      v.id,
+      ownerId,
+      record.id,
+      {
+        cost: null,
+        correctionReason: 'Bên bảo hành lo, shop không trả đồng nào',
+        expectedRowVersion: done.rowVersion,
+      },
       FULL_SCOPE,
     );
 
@@ -1138,13 +1220,18 @@ describe('Bảo dưỡng → phiếu chi trong sổ', () => {
   maybe('correctCost từ chối phiếu CHƯA hoàn tất — phiếu đang mở thì sửa như thường', async () => {
     const v = await createVehicle('MT-LEDGER-6');
     const record = await maintenance.createRecord(
-      tenantId, v.id, ownerId,
+      tenantId,
+      v.id,
+      ownerId,
       { type: MAINTENANCE_TYPE.OTHER, customTypeName: 'Dán phim', title: 'Dán phim cách nhiệt' },
       FULL_SCOPE,
     );
     await expect(
       maintenance.correctCost(
-        tenantId, v.id, ownerId, record.id,
+        tenantId,
+        v.id,
+        ownerId,
+        record.id,
         { cost: '100000', correctionReason: 'x', expectedRowVersion: record.rowVersion },
         FULL_SCOPE,
       ),
@@ -1157,22 +1244,33 @@ describe('Bảo dưỡng → xoá chi phí rồi nhập lại', () => {
   maybe('phiếu chi sống lại, vẫn đúng MỘT dòng', async () => {
     const v = await createVehicle('MT-REVIVE');
     const record = await maintenance.createRecord(
-      tenantId, v.id, ownerId,
+      tenantId,
+      v.id,
+      ownerId,
       { type: MAINTENANCE_TYPE.OIL_CHANGE, title: 'Thay nhớt' },
       FULL_SCOPE,
     );
     const done = await maintenance.completeRecord(
-      tenantId, v.id, ownerId, record.id,
+      tenantId,
+      v.id,
+      ownerId,
+      record.id,
       { cost: '700000', expectedRowVersion: record.rowVersion },
       FULL_SCOPE,
     );
     const cleared = await maintenance.correctCost(
-      tenantId, v.id, ownerId, record.id,
+      tenantId,
+      v.id,
+      ownerId,
+      record.id,
       { cost: null, correctionReason: 'Chưa thanh toán', expectedRowVersion: done.rowVersion },
       FULL_SCOPE,
     );
     await maintenance.correctCost(
-      tenantId, v.id, ownerId, record.id,
+      tenantId,
+      v.id,
+      ownerId,
+      record.id,
       { cost: '850000', correctionReason: 'Đã trả tiền', expectedRowVersion: cleared.rowVersion },
       FULL_SCOPE,
     );
@@ -1190,20 +1288,31 @@ describe('Bảo dưỡng → xoá chi phí rồi nhập lại', () => {
   maybe('correctCost chỉ đổi mã chứng từ KHÔNG được xoá chi phí', async () => {
     const v = await createVehicle('MT-PATCH');
     const record = await maintenance.createRecord(
-      tenantId, v.id, ownerId,
+      tenantId,
+      v.id,
+      ownerId,
       { type: MAINTENANCE_TYPE.TIRE, title: 'Thay lốp' },
       FULL_SCOPE,
     );
     const done = await maintenance.completeRecord(
-      tenantId, v.id, ownerId, record.id,
+      tenantId,
+      v.id,
+      ownerId,
+      record.id,
       { cost: '2000000', expectedRowVersion: record.rowVersion },
       FULL_SCOPE,
     );
 
     const patched = await maintenance.correctCost(
-      tenantId, v.id, ownerId, record.id,
-      { receiptCode: 'HD-9911', correctionReason: 'Bổ sung số hoá đơn',
-        expectedRowVersion: done.rowVersion },
+      tenantId,
+      v.id,
+      ownerId,
+      record.id,
+      {
+        receiptCode: 'HD-9911',
+        correctionReason: 'Bổ sung số hoá đơn',
+        expectedRowVersion: done.rowVersion,
+      },
       FULL_SCOPE,
     );
 

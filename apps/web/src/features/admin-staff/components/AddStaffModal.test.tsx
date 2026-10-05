@@ -2,6 +2,8 @@ import { App } from 'antd';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { ApiClientError } from '@/services/api-client';
+
 import { AddStaffModal } from './AddStaffModal';
 
 /**
@@ -34,8 +36,9 @@ function renderModal(props: Partial<{ open: boolean; onClose: () => void }> = {}
   return { ...utils, onClose };
 }
 
-function fillForm(email = 'nhanvien@xeprime.vn') {
+function fillForm(email = 'nhanvien@xeprime.vn', displayName = 'Nguyễn Văn A') {
   fireEvent.change(screen.getByLabelText('Email'), { target: { value: email } });
+  fireEvent.change(screen.getByLabelText('Tên hiển thị'), { target: { value: displayName } });
 }
 
 beforeEach(() => {
@@ -72,14 +75,23 @@ describe('AddStaffModal — hành vi hiện tại', () => {
     expect(mutation.mutate).not.toHaveBeenCalled();
   });
 
-  it('gửi email đã trim kèm roleKey', async () => {
+  it('tên hiển thị rỗng thì không gọi mutation — API bắt buộc nó để tạo tài khoản mới', async () => {
     renderModal();
-    fillForm('  nhanvien@xeprime.vn  ');
+    fillForm('nhanvien@xeprime.vn', '');
+    fireEvent.click(screen.getByRole('button', { name: 'Thêm' }));
+    await waitFor(() => expect(screen.getByText('Nhập tên hiển thị')).toBeTruthy());
+    expect(mutation.mutate).not.toHaveBeenCalled();
+  });
+
+  it('gửi email + tên đã trim kèm roleKey', async () => {
+    renderModal();
+    fillForm('  nhanvien@xeprime.vn  ', '  Nguyễn Văn A  ');
     fireEvent.click(screen.getByRole('button', { name: 'Thêm' }));
 
     await waitFor(() => expect(mutation.mutate).toHaveBeenCalledTimes(1));
     expect(mutation.mutate.mock.calls[0]![0]).toEqual({
       email: 'nhanvien@xeprime.vn',
+      displayName: 'Nguyễn Văn A',
       roleKey: 'platform_staff',
     });
   });
@@ -96,15 +108,20 @@ describe('AddStaffModal — hành vi hiện tại', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('lỗi: hiện thông báo lỗi và KHÔNG đóng', async () => {
+  it('lỗi: hiện câu dịch theo MÃ lỗi và KHÔNG đóng', async () => {
     const { onClose } = renderModal();
     fillForm();
     fireEvent.click(screen.getByRole('button', { name: 'Thêm' }));
 
     await waitFor(() => expect(mutation.mutate).toHaveBeenCalled());
-    mutation.mutate.mock.calls[0]![1].onError(new Error('Email đã là nhân sự'));
+    mutation.mutate.mock.calls[0]![1].onError(
+      new ApiClientError({ code: 'CONFLICT', message: 'Email đã là nhân sự', status: 409 }),
+    );
 
-    expect(await screen.findByText('Email đã là nhân sự')).toBeTruthy();
+    // Chữ hiện ra đi từ MÃ (namespace `Errors`), không phải `message` tiếng Việt của backend.
+    expect(
+      await screen.findByText('Dữ liệu vừa thay đổi ở nơi khác. Tải lại rồi thử lại.'),
+    ).toBeTruthy();
     expect(onClose).not.toHaveBeenCalled();
   });
 

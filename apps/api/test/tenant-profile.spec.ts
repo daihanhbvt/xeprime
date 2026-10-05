@@ -1,5 +1,6 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   MEMBERSHIP_STATUS,
   SHOP_PROFILE_REQUIREMENT,
@@ -58,6 +59,7 @@ beforeAll(async () => {
 
   await prisma.user.create({
     data: {
+      realm: ACCOUNT_REALM.PARTNER,
       id: ownerId,
       displayName: 'Chủ shop',
       email: `own-${ownerId}@xeprime.test`,
@@ -207,7 +209,10 @@ describe('Thông tin chủ gian hàng', () => {
       select: { snapshot: true },
     });
 
-    await prisma.user.update({ where: { id: ownerId }, data: { displayName: 'Tên mới sau khi gửi' } });
+    await prisma.user.update({
+      where: { id: ownerId },
+      data: { displayName: 'Tên mới sau khi gửi' },
+    });
 
     const after = await prisma.approvalTask.findFirstOrThrow({
       where: { tenantId },
@@ -246,9 +251,7 @@ describe('Thông tin chủ gian hàng', () => {
     await expect(tenants.submitForReview(tenantId, ownerId)).rejects.toMatchObject({
       response: { code: API_ERROR_CODE.SHOP_VERIFICATION_PENDING },
     });
-    expect(
-      await prisma.approvalTask.count({ where: { tenantId, status: 'pending' } }),
-    ).toBe(1);
+    expect(await prisma.approvalTask.count({ where: { tenantId, status: 'pending' } })).toBe(1);
 
     // Người duyệt trả về để các test sau chạy trên hồ sơ sửa được.
     await prisma.approvalTask.updateMany({
@@ -275,7 +278,10 @@ describe('Tỉnh/thành đi qua chi nhánh mặc định', () => {
 
   maybe('mã tỉnh không hợp lệ bị từ chối, hồ sơ không đổi gì', async () => {
     await expect(
-      tenants.updateProfile(tenantId, ownerId, { provinceCode: 'ZZ', displayName: 'Không được lưu' }),
+      tenants.updateProfile(tenantId, ownerId, {
+        provinceCode: 'ZZ',
+        displayName: 'Không được lưu',
+      }),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
 
     const row = await prisma.tenantProfile.findUniqueOrThrow({
@@ -295,26 +301,29 @@ describe('Tỉnh/thành đi qua chi nhánh mặc định', () => {
  * chặn thì phải nói ĐÚNG mục nào thiếu, vì đó là thứ web dùng để nhảy tới ô còn trống.
  */
 describe('Gửi duyệt đòi hồ sơ đủ thông tin bắt buộc', () => {
-  maybe('thiếu SĐT chủ gian hàng → từ chối kèm danh sách mục thiếu, không tạo hồ sơ duyệt', async () => {
-    // Thiếu SĐT nghĩa là TÀI KHOẢN CHỦ chưa có số — cổng đọc `users`, không đọc hồ sơ.
-    await prisma.user.update({ where: { id: ownerId }, data: { phone: null } });
-    const tasksBefore = await prisma.approvalTask.count({ where: { tenantId } });
+  maybe(
+    'thiếu SĐT chủ gian hàng → từ chối kèm danh sách mục thiếu, không tạo hồ sơ duyệt',
+    async () => {
+      // Thiếu SĐT nghĩa là TÀI KHOẢN CHỦ chưa có số — cổng đọc `users`, không đọc hồ sơ.
+      await prisma.user.update({ where: { id: ownerId }, data: { phone: null } });
+      const tasksBefore = await prisma.approvalTask.count({ where: { tenantId } });
 
-    await expect(tenants.submitForReview(tenantId, ownerId)).rejects.toMatchObject({
-      response: {
-        code: API_ERROR_CODE.PROFILE_INCOMPLETE,
-        details: { missing: [SHOP_PROFILE_REQUIREMENT.OWNER_PHONE] },
-      },
-    });
+      await expect(tenants.submitForReview(tenantId, ownerId)).rejects.toMatchObject({
+        response: {
+          code: API_ERROR_CODE.PROFILE_INCOMPLETE,
+          details: { missing: [SHOP_PROFILE_REQUIREMENT.OWNER_PHONE] },
+        },
+      });
 
-    // Không nửa vời: gian hàng vẫn hoạt động và hàng đợi duyệt không có gì mới.
-    const row = await prisma.tenant.findUniqueOrThrow({
-      where: { id: tenantId },
-      select: { status: true },
-    });
-    expect(row.status).toBe(TENANT_STATUS.ACTIVE);
-    expect(await prisma.approvalTask.count({ where: { tenantId } })).toBe(tasksBefore);
-  });
+      // Không nửa vời: gian hàng vẫn hoạt động và hàng đợi duyệt không có gì mới.
+      const row = await prisma.tenant.findUniqueOrThrow({
+        where: { id: tenantId },
+        select: { status: true },
+      });
+      expect(row.status).toBe(TENANT_STATUS.ACTIVE);
+      expect(await prisma.approvalTask.count({ where: { tenantId } })).toBe(tasksBefore);
+    },
+  );
 
   maybe('điền lại đủ → gửi xác minh đi qua', async () => {
     await prisma.user.update({ where: { id: ownerId }, data: { phone: OWNER_PHONE } });

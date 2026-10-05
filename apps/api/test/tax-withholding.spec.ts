@@ -1,11 +1,12 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   BOOKING_STATUS,
+  type BookingPriceSnapshot,
   SELLER_ENTITY_TYPE,
   TAX_WITHHOLDING_STATUS,
-  TENANT_STATUS,
   taxPeriodKeyVn,
-  type BookingPriceSnapshot,
+  TENANT_STATUS,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { TaxReadService } from '../src/modules/tax/tax-read.service';
@@ -62,7 +63,15 @@ function snapshot(taxAmount = TAX_AMOUNT): BookingPriceSnapshot {
       policy: { policyId, taxPercent: TAX_PERCENT, taxLabel: 'VAT 5% + TNCN 5%' },
       lines:
         Number(taxAmount) > 0
-          ? [{ key: 'tax', beneficiary: 'tax_authority', bearer: 'owner', percent: TAX_PERCENT, amount: taxAmount }]
+          ? [
+              {
+                key: 'tax',
+                beneficiary: 'tax_authority',
+                bearer: 'owner',
+                percent: TAX_PERCENT,
+                amount: taxAmount,
+              },
+            ]
           : [],
     },
   } as unknown as BookingPriceSnapshot;
@@ -95,7 +104,12 @@ async function makeBooking(snap: BookingPriceSnapshot = snapshot()): Promise<str
 
 const accrue = (bookingId: string, now?: Date) =>
   prisma.$transaction((tx) =>
-    tax.accrueForBookingWithinTx(tx, { bookingId, tenantId, actorUserId: ownerId, ...(now ? { now } : {}) }),
+    tax.accrueForBookingWithinTx(tx, {
+      bookingId,
+      tenantId,
+      actorUserId: ownerId,
+      ...(now ? { now } : {}),
+    }),
   );
 
 beforeAll(async () => {
@@ -114,7 +128,12 @@ beforeAll(async () => {
   policyId = newId();
 
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Chủ thuế', email: `tax-${RUN}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Chủ thuế',
+      email: `tax-${RUN}@xeprime.test`,
+    },
   });
   await prisma.tenant.create({
     data: {
@@ -398,9 +417,9 @@ describe('Chuyển trạng thái theo KỲ', () => {
     // Bấm lại: không còn dòng `accrued` nào của kỳ này ⇒ 0 dòng đổi, KHÔNG đẩy sang `remitted`.
     const again = await tax.advancePeriod(period, TAX_WITHHOLDING_STATUS.DECLARED, ownerId);
     expect(again.updated).toBe(0);
-    expect(
-      (await prisma.taxWithholding.findUniqueOrThrow({ where: { id: row.id } })).status,
-    ).toBe(TAX_WITHHOLDING_STATUS.DECLARED);
+    expect((await prisma.taxWithholding.findUniqueOrThrow({ where: { id: row.id } })).status).toBe(
+      TAX_WITHHOLDING_STATUS.DECLARED,
+    );
 
     await tax.advancePeriod(period, TAX_WITHHOLDING_STATUS.REMITTED, ownerId);
     const final = await prisma.taxWithholding.findUniqueOrThrow({ where: { id: row.id } });
@@ -414,11 +433,15 @@ describe('Chuyển trạng thái theo KỲ', () => {
     await accrue(bookingId);
     const row = await prisma.taxWithholding.findFirstOrThrow({ where: { bookingId } });
 
-    const skipped = await tax.advancePeriod(row.periodKey, TAX_WITHHOLDING_STATUS.REMITTED, ownerId);
+    const skipped = await tax.advancePeriod(
+      row.periodKey,
+      TAX_WITHHOLDING_STATUS.REMITTED,
+      ownerId,
+    );
     expect(skipped.updated).toBe(0);
-    expect(
-      (await prisma.taxWithholding.findUniqueOrThrow({ where: { id: row.id } })).status,
-    ).toBe(TAX_WITHHOLDING_STATUS.ACCRUED);
+    expect((await prisma.taxWithholding.findUniqueOrThrow({ where: { id: row.id } })).status).toBe(
+      TAX_WITHHOLDING_STATUS.ACCRUED,
+    );
   });
 
   maybe('kỳ sai dạng bị từ chối', async () => {

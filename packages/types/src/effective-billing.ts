@@ -186,34 +186,22 @@ export function isSubscriptionTrack(billing: EffectiveBilling): boolean {
 }
 
 /**
- * Khoản HOÀN của một người chảy vào ví nào — `tenant` nếu họ là chủ xe, `user` nếu không.
+ * Khoản HOÀN của một chuyến chảy vào ví nào — LUÔN ví của TÀI KHOẢN KHÁCH đã đặt chuyến đó
+ * (ADR 0053 điều 8, bỏ ADR 0038 điều 2).
  *
- * Từ 15/09/2026 một chủ xe có ĐÚNG MỘT ví, và nó thuộc tenant: tiền hoàn khi chính họ đi thuê và
- * khoản XePrime phải trả cho chuyến họ cho thuê nằm chung một sổ. Trước đó là hai ví không bao
- * giờ gặp nhau — hai số dư, hai ngưỡng rút tối thiểu, hai lệnh chuyển tay cho cùng một người.
+ * Người đặt xe luôn là tài khoản realm `customer`, và tài khoản khách KHÔNG BAO GIỜ sở hữu tenant
+ * (trigger `tenant_memberships_user_realm_check` ở DB). Chủ xe đi thuê xe dùng một tài khoản khách
+ * riêng, nên tiền hoàn của họ vào ví của tài khoản khách ấy — không vào ví gian hàng. Hai tài
+ * khoản, hai ví, không trộn: đó là ý nghĩa của "tách biệt về tiền" (ADR 0053).
  *
- * ⚠️ Câu hỏi là "người này có SỞ HỮU một tenant không", KHÔNG phải "tenant đó thuộc tuyến nào".
- * Quyền sở hữu ví không phụ thuộc tuyến: chủ xe hoa hồng nâng lên gói thì vẫn đúng cái ví đó, và
- * đó chính là lý do nâng cấp không phải chuyển một đồng nào.
- *
- * Tra ở thời điểm CHỐT (không đóng băng lên hold) là an toàn, vì sau khi đổi chủ ví thì người đó
- * KHÔNG CÒN ví `user` nào: nếu nơi gọi hỏi sai, `ensureWalletWithinTx` sẽ tạo một ví thứ hai —
- * và đó là cách duy nhất mô hình này hỏng. Hàm này và bước đổi chủ dùng chung một câu hỏi, nên
- * hai bên luôn cho cùng một đáp án.
- *
- * `ownedTenantId` do nơi gọi tra: membership `active` với `roleKey = shop_owner`. Nhiều tenant
- * thì lấy membership CŨ NHẤT — cùng thứ tự mà `/auth/me` và `TenantScopeGuard` dùng, nếu không
- * tiền sẽ nằm ở một tenant mà phiên của họ không bao giờ scope tới.
+ * Giữ thành một hàm (thay vì gõ `{ type: 'user' }` tại chỗ) để ví và sổ tài khoản ngân hàng của
+ * khoản hoàn vẫn đi qua CÙNG một câu trả lời — hai nơi tự quyết là hai nơi có thể lệch nhau.
  */
-export function resolveRefundWalletOwner(
-  customerUserId: string,
-  ownedTenantId: string | null | undefined,
-):
-  | { type: 'tenant'; tenantId: string }
-  | { type: 'user'; userId: string } {
-  return ownedTenantId
-    ? { type: 'tenant', tenantId: ownedTenantId }
-    : { type: 'user', userId: customerUserId };
+export function resolveRefundWalletOwner(customerUserId: string): {
+  type: 'user';
+  userId: string;
+} {
+  return { type: 'user', userId: customerUserId };
 }
 
 /**

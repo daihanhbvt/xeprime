@@ -16,7 +16,7 @@ import {
 } from '@xeprime/types';
 
 import { StatusTag } from '@/components/data-display/StatusTag';
-import { accountVehiclePath } from '@/constants/routes';
+import { ownerVehiclePath } from '@/constants/routes';
 import { ShopProfileWorkspace } from '@/features/shop/components/ShopProfileWorkspace';
 import { useMyShop, useUpdateShopProfile } from '@/features/shop/hooks/use-shop';
 import { useVehicles } from '@/features/vehicles/hooks/use-vehicles';
@@ -231,7 +231,7 @@ export function OwnerRegistrationView() {
           <ul className={styles.queueList}>
             {inFlight.map((vehicle) => (
               <li key={vehicle.id} className={styles.queueItem}>
-                <Link href={accountVehiclePath.detail(vehicle.id)} className={styles.queueName}>
+                <Link href={ownerVehiclePath.detail(vehicle.id)} className={styles.queueName}>
                   {vehicle.name}
                 </Link>
                 <StatusTag

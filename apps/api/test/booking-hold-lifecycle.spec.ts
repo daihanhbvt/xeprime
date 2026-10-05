@@ -1,6 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
   BANK_MATCH_STATUS,
@@ -10,12 +11,13 @@ import {
   BOOKING_HOLD_STATUS,
   BOOKING_REQUEST_STATUS,
   BOOKING_STATUS,
+  type BookingPriceSnapshot,
   DEPOSIT_COLLECTION_MODE,
   FEE_POLICY_STATUS,
-  NOTIFICATION_TYPE,
   HOLD_PAYMENT_WINDOW_MINUTES,
   HOLD_REFUND_REASON,
   HOLD_REFUND_STATUS,
+  NOTIFICATION_TYPE,
   OCCUPANCY_SOURCE_TYPE,
   PLAN_STATUS,
   SUBSCRIPTION_STATUS,
@@ -24,7 +26,6 @@ import {
   SUPPORT_PARTY,
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
-  type BookingPriceSnapshot,
 } from '@xeprime/types';
 import { sweepBookingHoldExpiry } from '../../worker/src/jobs/booking-hold-expiry';
 import { sweepBookingRequestDeadlines } from '../../worker/src/jobs/booking-request-deadlines';
@@ -256,7 +257,12 @@ beforeAll(async () => {
 
   await prisma.user.createMany({
     data: [
-      { id: ownerId, displayName: 'Chủ xe', email: `hold-own-${RUN}@xeprime.test` },
+      {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: ownerId,
+        displayName: 'Chủ xe',
+        email: `hold-own-${RUN}@xeprime.test`,
+      },
       { id: customerId, displayName: 'Khách', email: `hold-cus-${RUN}@xeprime.test` },
     ],
   });

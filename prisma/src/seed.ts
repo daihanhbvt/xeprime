@@ -14,7 +14,7 @@
  * Chi tiết từng phần: `src/seed/*.ts`. Chạy: `pnpm db:seed`.
  */
 import { refreshListingRankScore } from './listing-rank';
-import { seedCustomerAccounts, seedPlatformAccounts } from './seed/accounts';
+import { seedCrossRealmTwins, seedCustomerAccounts, seedPlatformAccounts } from './seed/accounts';
 import {
   PLATFORM_ADMIN_EMAIL,
   SEED_MODE,
@@ -23,6 +23,7 @@ import {
   prisma,
 } from './seed/context';
 import { COMMISSION_OWNER_SPECS } from './seed/commission-owners';
+import { CROSS_REALM_TWINS } from './seed/identities';
 import { buildShop } from './seed/shop';
 import { SHOP_SPECS } from './seed/shops';
 import { seedVehicleCatalog } from './seed/catalog-sync';
@@ -127,6 +128,10 @@ async function main(): Promise<void> {
    * Đặt ở CUỐI có chủ đích: điểm đọc số chuyến đã hoàn thành và số đánh giá, hai thứ chỉ tồn
    * tại sau khi `buildShop` chạy xong.
    */
+  // Sau gian hàng: song sinh là bản sao ở realm thứ hai của chủ shop/khách vừa tạo.
+  log('\nTài khoản song sinh (ADR 0053):');
+  await seedCrossRealmTwins();
+
   const ranked = await refreshListingRankScore(prisma);
   log(`
 Xếp hạng chợ: ${ranked} tin đăng đã có điểm gợi ý`);
@@ -151,10 +156,13 @@ Xếp hạng chợ: ${ranked} tin đăng đã có điểm gợi ý`);
 
   // CỐ Ý không in mật khẩu: chúng đến từ env, và stdout đi thẳng vào log terminal/CI. Người
   // chạy seed là người đã đặt các biến đó.
-  log('\nĐăng nhập tại /login (mật khẩu: $PLATFORM_ADMIN_PASSWORD / $DEMO_PASSWORD):');
+  // Mỗi realm đăng nhập ở site của nó (ADR 0053) — cùng email ở site khác là tài khoản KHÁC.
+  log('\nĐăng nhập (mật khẩu: $PLATFORM_ADMIN_PASSWORD cho quản trị, $DEMO_PASSWORD cho phần còn lại):');
+  log('  ── site QUẢN TRỊ (admin) · /login');
   log(`  nền tảng   : ${PLATFORM_ADMIN_EMAIL} · staff@ · reviewer@ · support@ · finance@xeprime.test`);
+  log('  ── site ĐỐI TÁC (partner) · /login');
   log('  chủ shop   : owner.saigon@ · owner.hanoi@ · owner.danang@ · owner.cantho@ · owner.hue@xeprime.test');
-  log('  QA hai tuyến: qa.owner@xeprime.test (hoa hồng · 3 xe · /account) · qa.shop@xeprime.test (gói · 10 xe · /manage)');
+  log('  QA hai tuyến: qa.owner@xeprime.test (hoa hồng · 3 xe) · qa.shop@xeprime.test (gói · 10 xe)');
   log(
     `  chủ xe cá nhân: ${COMMISSION_OWNER_SPECS.length} tài khoản tuyến hoa hồng — ` +
       `${COMMISSION_OWNER_SPECS.slice(0, 3)
@@ -162,7 +170,14 @@ Xếp hạng chợ: ${ranked} tin đăng đã có điểm gợi ý`);
         .join(' · ')} … (chuxe.*@xeprime.test)`,
   );
   log('  nhân viên  : manager.saigon@ · staff.saigon@ · ketoan.saigon@ · staff.hanoi@xeprime.test');
+  log('  ── site KHÁCH (xeprime.vn) · /login');
   log('  khách      : khach.an@ · khach.binh@ · khach.cuong@ · khach.dung@ · khach.duc@xeprime.test');
+  log(
+    '  song sinh  : ' +
+      CROSS_REALM_TWINS.map((t) => `${t.email.replace('@xeprime.test', '@')} (${t.realm})`).join(
+        ' · ',
+      ),
+  );
 }
 
 main()

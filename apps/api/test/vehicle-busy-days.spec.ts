@@ -1,5 +1,6 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   OCCUPANCY_SOURCE_TYPE,
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
@@ -11,7 +12,13 @@ import { AuditService } from '../src/modules/audit/audit.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeBookingRequestsService, makeBookingsService, makeCustomersService, makeNotificationService, makePricingService } from './helpers/service-factory';
+import {
+  makeBookingRequestsService,
+  makeBookingsService,
+  makeCustomersService,
+  makeNotificationService,
+  makePricingService,
+} from './helpers/service-factory';
 
 /**
  * `GET /public/booking-requests/busy-days` — lịch bận mà hộp chọn thời gian thuê dùng để KHOÁ
@@ -75,7 +82,12 @@ beforeAll(async () => {
   draftVehicleId = newId();
 
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Busy days owner', email: `busy-${ownerId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Busy days owner',
+      email: `busy-${ownerId}@xeprime.test`,
+    },
   });
   await prisma.tenant.create({
     data: {

@@ -2,8 +2,9 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
-  BILLING_MODE,
+  ACCOUNT_REALM,
   API_ERROR_CODE,
+  BILLING_MODE,
   MEMBERSHIP_STATUS,
   PRIVATE_FILE_STATUS,
   TENANT_ROLE,
@@ -59,6 +60,7 @@ const source = new VehicleSourceService(asService, audit, contracts);
 
 let dbAvailable = false;
 let ownerId: string;
+let otherOwnerId: string;
 let tenantId: string;
 let otherTenantId: string;
 
@@ -76,12 +78,28 @@ beforeAll(async () => {
   tenantId = newId();
   otherTenantId = newId();
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Chủ shop',
+      email: `own-${ownerId}@xeprime.test`,
+    },
+  });
+  // Mỗi gian hàng một chủ — ADR 0053: một tài khoản chỉ thuộc một gian hàng.
+  otherOwnerId = newId();
+  await prisma.user.create({
+    data: {
+      id: otherOwnerId,
+      realm: ACCOUNT_REALM.PARTNER,
+      displayName: 'Chủ shop khác',
+      email: `own-${otherOwnerId}@xeprime.test`,
+    },
   });
   for (const [id, name] of [
     [tenantId, 'Shop Nguồn Xe'],
     [otherTenantId, 'Shop Khác'],
   ] as const) {
+    const owner = id === tenantId ? ownerId : otherOwnerId;
     await prisma.tenant.create({
       data: {
         id,
@@ -89,7 +107,7 @@ beforeAll(async () => {
         slug: `t-${id.toLowerCase().slice(-10)}`,
         name,
         status: TENANT_STATUS.ACTIVE,
-        ownerUserId: ownerId,
+        ownerUserId: owner,
       },
     });
     /*
@@ -104,7 +122,7 @@ beforeAll(async () => {
       data: {
         id: newId(),
         tenantId: id,
-        userId: ownerId,
+        userId: owner,
         roleKey: TENANT_ROLE.SHOP_OWNER,
         status: MEMBERSHIP_STATUS.ACTIVE,
       },
@@ -120,7 +138,7 @@ afterAll(async () => {
       await prisma.tenantMembership.deleteMany({ where: { tenantId: id } });
       await prisma.tenant.deleteMany({ where: { id } });
     }
-    await prisma.user.deleteMany({ where: { id: ownerId } });
+    await prisma.user.deleteMany({ where: { id: { in: [ownerId, otherOwnerId] } } });
   }
   await prisma.$disconnect();
 });
@@ -303,18 +321,21 @@ describe('Vehicle source & finance (Wave 4)', () => {
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.NOT_FOUND } });
   });
 
-  maybe('ngày kết thúc trước ngày bắt đầu → 400 có kiểm soát (không rơi vào CHECK 500)', async () => {
-    const v = await createVehicle('SRC-DATE-REV');
-    await expect(
-      source.saveSource(tenantId, v.id, ownerId, {
-        sourceType: VEHICLE_SOURCE_TYPE.RENTED,
-        ownerName: 'Nguyễn Văn A',
-        monthlyRent: '9000000',
-        startDate: '2025-03-15',
-        endDate: '2024-03-15',
-      }),
-    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
-  });
+  maybe(
+    'ngày kết thúc trước ngày bắt đầu → 400 có kiểm soát (không rơi vào CHECK 500)',
+    async () => {
+      const v = await createVehicle('SRC-DATE-REV');
+      await expect(
+        source.saveSource(tenantId, v.id, ownerId, {
+          sourceType: VEHICLE_SOURCE_TYPE.RENTED,
+          ownerName: 'Nguyễn Văn A',
+          monthlyRent: '9000000',
+          startDate: '2025-03-15',
+          endDate: '2024-03-15',
+        }),
+      ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
+    },
+  );
 
   maybe('lưu tab nguồn không đụng thông tin/media/giá của xe', async () => {
     const v = await createVehicleWithBranch(tenantId, ownerId, {
@@ -365,7 +386,9 @@ describe('Hợp đồng riêng tư (Wave 4.1) — upload/hoàn tất/tải/đín
     const { presigned, objectKey } = await presignAndPut(v.id);
     // Key hoàn toàn từ dữ liệu server: tenant/xe/fileId + đuôi suy từ MIME — tên file gốc
     // (có dấu, có khoảng trắng) KHÔNG tham gia định danh.
-    expect(objectKey).toBe(`tenants/${tenantId}/vehicles/${v.id}/contracts/${presigned.fileId}.pdf`);
+    expect(objectKey).toBe(
+      `tenants/${tenantId}/vehicles/${v.id}/contracts/${presigned.fileId}.pdf`,
+    );
     expect(presigned).not.toHaveProperty('publicUrl');
   });
 
@@ -389,9 +412,9 @@ describe('Hợp đồng riêng tư (Wave 4.1) — upload/hoàn tất/tải/đín
       contentType: 'application/pdf',
       fileSize: 100,
     });
-    await expect(contracts.complete(tenantId, v.id, ownerId, presigned.fileId)).rejects.toMatchObject(
-      { response: { code: API_ERROR_CODE.VALIDATION_FAILED } },
-    );
+    await expect(
+      contracts.complete(tenantId, v.id, ownerId, presigned.fileId),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
     const row = await prisma.vehiclePrivateFile.findUnique({ where: { id: presigned.fileId } });
     expect(row?.status).toBe(PRIVATE_FILE_STATUS.PENDING);
   });
@@ -399,9 +422,9 @@ describe('Hợp đồng riêng tư (Wave 4.1) — upload/hoàn tất/tải/đín
   maybe('complete: size thật khác khai báo → 400', async () => {
     const v = await createVehicle('CT-SIZE');
     const { presigned } = await presignAndPut(v.id, { size: 100, headSize: 999999 });
-    await expect(contracts.complete(tenantId, v.id, ownerId, presigned.fileId)).rejects.toMatchObject(
-      { response: { code: API_ERROR_CODE.VALIDATION_FAILED } },
-    );
+    await expect(
+      contracts.complete(tenantId, v.id, ownerId, presigned.fileId),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
   });
 
   maybe('complete: chữ ký byte đầu không khớp MIME (đội lốt PDF) → 400', async () => {
@@ -409,9 +432,9 @@ describe('Hợp đồng riêng tư (Wave 4.1) — upload/hoàn tất/tải/đín
     const { presigned } = await presignAndPut(v.id, {
       prefix: new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0, 0, 0, 0, 0]), // JPEG
     });
-    await expect(contracts.complete(tenantId, v.id, ownerId, presigned.fileId)).rejects.toMatchObject(
-      { response: { code: API_ERROR_CODE.VALIDATION_FAILED } },
-    );
+    await expect(
+      contracts.complete(tenantId, v.id, ownerId, presigned.fileId),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
   });
 
   maybe('đính file ready vào hồ sơ → metadata an toàn; id pending bị 400', async () => {
@@ -514,43 +537,42 @@ describe('Hợp đồng riêng tư (Wave 4.1) — upload/hoàn tất/tải/đín
     });
   });
 
-  maybe('bản ghi legacy Wave 4 ({url,...}): API trả trạng thái legacy, KHÔNG BAO GIỜ trả url', async () => {
-    const v = await createVehicle('CT-LEGACY');
-    await source.saveSource(tenantId, v.id, ownerId, { sourceType: VEHICLE_SOURCE_TYPE.OWNED });
-    // Giả lập dữ liệu Wave 4 cũ còn nằm trong JSON.
-    await prisma.vehicleSourceDetail.update({
-      where: { vehicleId: v.id },
-      data: {
-        contractFiles: [
-          { url: 'https://public.r2.dev/tenants/x/old.pdf', name: 'old.pdf', size: 111 },
-        ],
-      },
-    });
+  maybe(
+    'bản ghi legacy Wave 4 ({url,...}): API trả trạng thái legacy, KHÔNG BAO GIỜ trả url',
+    async () => {
+      const v = await createVehicle('CT-LEGACY');
+      await source.saveSource(tenantId, v.id, ownerId, { sourceType: VEHICLE_SOURCE_TYPE.OWNED });
+      // Giả lập dữ liệu Wave 4 cũ còn nằm trong JSON.
+      await prisma.vehicleSourceDetail.update({
+        where: { vehicleId: v.id },
+        data: {
+          contractFiles: [
+            { url: 'https://public.r2.dev/tenants/x/old.pdf', name: 'old.pdf', size: 111 },
+          ],
+        },
+      });
 
-    const state = await source.getSource(tenantId, v.id);
-    expect(state.detail?.contractFiles).toEqual([
-      { id: null, name: 'old.pdf', mimeType: null, size: 111, status: 'legacy' },
-    ]);
-    expect(JSON.stringify(state)).not.toContain('public.r2.dev');
+      const state = await source.getSource(tenantId, v.id);
+      expect(state.detail?.contractFiles).toEqual([
+        { id: null, name: 'old.pdf', mimeType: null, size: 111, status: 'legacy' },
+      ]);
+      expect(JSON.stringify(state)).not.toContain('public.r2.dev');
 
-    // Lưu lại hồ sơ: mục legacy được GIỮ trong DB (chờ di trú), vẫn không lộ url ra API.
-    const saved = await source.saveSource(tenantId, v.id, ownerId, {
-      sourceType: VEHICLE_SOURCE_TYPE.OWNED,
-      notes: 'đổi ghi chú',
-    });
-    expect(saved.detail?.contractFiles?.[0]?.status).toBe('legacy');
-    const row = await prisma.vehicleSourceDetail.findUnique({ where: { vehicleId: v.id } });
-    expect(JSON.stringify(row?.contractFiles)).toContain('public.r2.dev');
-  });
+      // Lưu lại hồ sơ: mục legacy được GIỮ trong DB (chờ di trú), vẫn không lộ url ra API.
+      const saved = await source.saveSource(tenantId, v.id, ownerId, {
+        sourceType: VEHICLE_SOURCE_TYPE.OWNED,
+        notes: 'đổi ghi chú',
+      });
+      expect(saved.detail?.contractFiles?.[0]?.status).toBe('legacy');
+      const row = await prisma.vehicleSourceDetail.findUnique({ where: { vehicleId: v.id } });
+      expect(JSON.stringify(row?.contractFiles)).toContain('public.r2.dev');
+    },
+  );
 
   maybe('thiếu R2_PRIVATE_BUCKET → 503 fail-closed, không rơi về bucket public', async () => {
     const v = await createVehicle('CT-503');
     const closedR2 = { ...fakeR2, privateEnabled: false };
-    const closed = new VehicleContractsService(
-      asService,
-      closedR2 as unknown as R2Service,
-      audit,
-    );
+    const closed = new VehicleContractsService(asService, closedR2 as unknown as R2Service, audit);
     await expect(
       closed.presign(tenantId, v.id, ownerId, {
         fileName: 'x.pdf',

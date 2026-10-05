@@ -1,9 +1,10 @@
 import type { ConfigService } from '@nestjs/config';
 import { computeUserBadges, createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
-  bookingRequestRespondBy,
   BILLING_MODE,
+  bookingRequestRespondBy,
   CHAT_SIDE,
   MEMBERSHIP_STATUS,
   NOTIFICATION_TARGET_TYPE,
@@ -71,9 +72,24 @@ beforeAll(async () => {
   await prisma.user.createMany({
     data: [
       { id: customerId, displayName: 'Khách', email: `cus-${customerId}@xeprime.test` },
-      { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
-      { id: staffId, displayName: 'Nhân viên', email: `stf-${staffId}@xeprime.test` },
-      { id: strangerId, displayName: 'Người lạ', email: `str-${strangerId}@xeprime.test` },
+      {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: ownerId,
+        displayName: 'Chủ shop',
+        email: `own-${ownerId}@xeprime.test`,
+      },
+      {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: staffId,
+        displayName: 'Nhân viên',
+        email: `stf-${staffId}@xeprime.test`,
+      },
+      {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: strangerId,
+        displayName: 'Người lạ',
+        email: `str-${strangerId}@xeprime.test`,
+      },
     ],
   });
 
@@ -290,9 +306,7 @@ describe('ChatService — hội thoại', () => {
     ).rejects.toMatchObject({
       response: { code: API_ERROR_CODE.CHAT_REQUIRES_BOOKING },
     });
-    expect(
-      await prisma.conversation.count({ where: { tenantId: gated.id } }),
-    ).toBe(0);
+    expect(await prisma.conversation.count({ where: { tenantId: gated.id } })).toBe(0);
   });
 
   maybe('tuyến hoa hồng + khách ĐÃ gửi yêu cầu → mở được hội thoại', async () => {
@@ -335,7 +349,9 @@ describe('ChatService — hội thoại', () => {
 
     expect(await chat.chatEligibilityForShop(strangerId, gated.slug)).toBe(true);
     // Và nút hiện ra thì bấm vào phải CHẠY — cùng một phép suy ở cả hai đầu.
-    expect((await chat.getOrCreateConversation(strangerId, { shopSlug: gated.slug })).id).toBeTruthy();
+    expect(
+      (await chat.getOrCreateConversation(strangerId, { shopSlug: gated.slug })).id,
+    ).toBeTruthy();
   });
 
   /*
@@ -395,9 +411,9 @@ describe('ChatService — hội thoại', () => {
     expect(asShop.partyName).toBe('Khách');
 
     // Dán id của hộp thư khách vào khu quản lý: cùng người, sai bề mặt → chặn.
-    await expect(
-      chat.getConversation(customerId, conversationId, CHAT_SIDE.SHOP),
-    ).rejects.toThrow(/quyền/);
+    await expect(chat.getConversation(customerId, conversationId, CHAT_SIDE.SHOP)).rejects.toThrow(
+      /quyền/,
+    );
     await expect(chat.getConversation(strangerId, conversationId, CHAT_SIDE.SHOP)).rejects.toThrow(
       /quyền/,
     );

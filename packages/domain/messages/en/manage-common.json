@@ -12,7 +12,9 @@
     "logout": "Log out",
     "signedInAs": "Signed in as {name}",
     "security": "Account security",
-    "renterTrips": "Trips I rented"
+    "renterTrips": "Trips I rented",
+    "profile": "Personal profile",
+    "partnerHome": "Go to XePrime Partner home"
   },
   "permission": {
     "deniedTitle": "You don't have access",
@@ -100,5 +102,10 @@
       "title": "Legal documents",
       "body": "The marketplace operating rules bind your shop: listing requirements, ranking, service fees and how disputes are handled. They open in a new tab so you don't lose what you are working on."
     }
+  },
+  "adminGate": {
+    "title": "Access denied",
+    "description": "This account no longer has a role on the XePrime team. Contact an administrator if you think this is a mistake.",
+    "logout": "Sign out"
   }
 }

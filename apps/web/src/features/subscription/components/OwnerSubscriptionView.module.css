@@ -1,0 +1,35 @@
+/*
+ * Khối đầu trang: tiêu đề + hình minh hoạ.
+ *
+ * Hai lần ghi đè ở đây, cả hai chỉ đúng với TRANG NÀY nên chúng sống ở CSS của trang chứ không đi
+ * vào `AccountPageHeader` dùng chung.
+ */
+.header {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+/*
+ * 1. Bỏ `margin-bottom: lg` mà tiêu đề tự mang cho những trang đặt nó đứng một mình. Ở đây nó
+ *    nằm trong một khung có `gap` riêng, nên hai khoảng cách cộng vào thành một dải trắng gần
+ *    50px giữa tiêu đề và thẻ đầu tiên.
+ */
+.header header {
+  margin-bottom: 0;
+}
+
+/*
+ * 2. Hình minh hoạ ở LẠI bên phải tiêu đề.
+ *
+ * Hàng của `AccountPageHeader` bật `flex-wrap: wrap`, mà bề rộng cơ sở của cụm chữ là chiều dài
+ * TỐI ĐA của dòng phụ đề — cộng với hình là vượt khung, nên trình duyệt xuống dòng trước khi nghĩ
+ * tới việc co cụm chữ lại. Tắt wrap ở đúng dải màn hình mà hình có mặt (dưới 1024px nó tự ẩn)
+ * buộc cụm chữ co lại, và hàng giữ nguyên một dòng.
+ */
+@media (min-width: 1024px) {
+  .header header > div {
+    flex-wrap: nowrap;
+  }
+}

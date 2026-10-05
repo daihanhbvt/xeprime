@@ -1,5 +1,6 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   COLLATERAL_ASSET_TYPE,
   COLLATERAL_MODE,
   LISTING_STATUS,
@@ -68,7 +69,12 @@ beforeAll(async () => {
 
   ownerId = newId();
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Chủ shop',
+      email: `own-${ownerId}@xeprime.test`,
+    },
   });
   tenantId = newId();
   await prisma.tenant.create({

@@ -1,10 +1,11 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
-  PUBLISH_REQUIREMENT,
   BOOKING_STATUS,
   BRANCH_STATUS,
   MEMBERSHIP_STATUS,
+  PUBLISH_REQUIREMENT,
   SERVICE_TYPE,
   TENANT_ROLE,
   TENANT_STATUS,
@@ -39,6 +40,7 @@ const tenants = makeTenantsService(asService);
 
 let dbAvailable = false;
 let ownerId: string;
+let otherOwnerId: string;
 let tenantId: string;
 let otherTenantId: string;
 let defaultBranchId: string;
@@ -62,9 +64,25 @@ beforeAll(async () => {
   otherTenantId = newId();
 
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Chủ shop',
+      email: `own-${ownerId}@xeprime.test`,
+    },
+  });
+  // Mỗi gian hàng một chủ — ADR 0053: một tài khoản chỉ thuộc một gian hàng.
+  otherOwnerId = newId();
+  await prisma.user.create({
+    data: {
+      id: otherOwnerId,
+      realm: ACCOUNT_REALM.PARTNER,
+      displayName: 'Chủ shop khác',
+      email: `own-${otherOwnerId}@xeprime.test`,
+    },
   });
   for (const id of [tenantId, otherTenantId]) {
+    const owner = id === tenantId ? ownerId : otherOwnerId;
     await prisma.tenant.create({
       data: {
         id,
@@ -72,7 +90,7 @@ beforeAll(async () => {
         slug: `t-${id.toLowerCase().slice(-10)}`,
         name: 'Shop Branch',
         status: TENANT_STATUS.ACTIVE,
-        ownerUserId: ownerId,
+        ownerUserId: owner,
       },
     });
     await prisma.tenantProfile.create({ data: { tenantId: id, displayName: 'Shop Branch' } });
@@ -80,7 +98,7 @@ beforeAll(async () => {
       data: {
         id: newId(),
         tenantId: id,
-        userId: ownerId,
+        userId: owner,
         roleKey: TENANT_ROLE.SHOP_OWNER,
         status: MEMBERSHIP_STATUS.ACTIVE,
       },
@@ -105,7 +123,7 @@ afterAll(async () => {
     await prisma.tenantMembership.deleteMany({ where: { tenantId: { in: ids } } });
     await prisma.tenantBranch.deleteMany({ where: { tenantId: { in: ids } } });
     await prisma.tenant.deleteMany({ where: { id: { in: ids } } });
-    await prisma.user.deleteMany({ where: { id: ownerId } });
+    await prisma.user.deleteMany({ where: { id: { in: [ownerId, otherOwnerId] } } });
   }
   await prisma.$disconnect();
 });
@@ -171,9 +189,9 @@ describe('Cô lập giữa các gian hàng', () => {
     await expect(
       branches.update(otherTenantId, defaultBranchId, ownerId, { name: 'Đổi trộm' }),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.NOT_FOUND } });
-    await expect(branches.setDefault(otherTenantId, defaultBranchId, ownerId)).rejects.toMatchObject(
-      { response: { code: API_ERROR_CODE.NOT_FOUND } },
-    );
+    await expect(
+      branches.setDefault(otherTenantId, defaultBranchId, ownerId),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.NOT_FOUND } });
   });
 
   maybe('không gắn được xe vào chi nhánh của gian hàng khác', async () => {
@@ -182,11 +200,16 @@ describe('Cô lập giữa các gian hàng', () => {
       provinceCode: HCM,
     });
     await expect(
-      vehicles.create(tenantId, ownerId, {
-        name: 'Xe lậu',
-        vehicleType: VEHICLE_TYPE.CAR,
-        branchId: foreign.id,
-      }, null),
+      vehicles.create(
+        tenantId,
+        ownerId,
+        {
+          name: 'Xe lậu',
+          vehicleType: VEHICLE_TYPE.CAR,
+          branchId: foreign.id,
+        },
+        null,
+      ),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.NOT_FOUND } });
     await prisma.tenantBranch.delete({ where: { id: foreign.id } });
   });
@@ -208,11 +231,16 @@ describe('Vòng đời chi nhánh', () => {
     await branches.deactivate(tenantId, b.id, ownerId);
 
     await expect(
-      vehicles.create(tenantId, ownerId, {
-        name: 'Xe mới',
-        vehicleType: VEHICLE_TYPE.CAR,
-        branchId: b.id,
-      }, null),
+      vehicles.create(
+        tenantId,
+        ownerId,
+        {
+          name: 'Xe mới',
+          vehicleType: VEHICLE_TYPE.CAR,
+          branchId: b.id,
+        },
+        null,
+      ),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
 
     await branches.activate(tenantId, b.id, ownerId);
@@ -230,11 +258,16 @@ describe('Vòng đời chi nhánh', () => {
       name: 'Chi nhánh có xe',
       provinceCode: DANANG,
     });
-    const v = await vehicles.create(tenantId, ownerId, {
-      name: 'Xe ở chi nhánh',
-      vehicleType: VEHICLE_TYPE.CAR,
-      branchId: b.id,
-    }, null);
+    const v = await vehicles.create(
+      tenantId,
+      ownerId,
+      {
+        name: 'Xe ở chi nhánh',
+        vehicleType: VEHICLE_TYPE.CAR,
+        branchId: b.id,
+      },
+      null,
+    );
 
     await expect(branches.deactivate(tenantId, b.id, ownerId)).rejects.toMatchObject({
       response: {
@@ -276,11 +309,16 @@ describe('Vòng đời chi nhánh', () => {
       name: 'Chi nhánh khoá FK',
       provinceCode: DANANG,
     });
-    const v = await vehicles.create(tenantId, ownerId, {
-      name: 'Xe giữ chi nhánh',
-      vehicleType: VEHICLE_TYPE.CAR,
-      branchId: b.id,
-    }, null);
+    const v = await vehicles.create(
+      tenantId,
+      ownerId,
+      {
+        name: 'Xe giữ chi nhánh',
+        vehicleType: VEHICLE_TYPE.CAR,
+        branchId: b.id,
+      },
+      null,
+    );
 
     await expect(prisma.tenantBranch.delete({ where: { id: b.id } })).rejects.toThrow();
 
@@ -381,15 +419,28 @@ describe('Đăng ký gian hàng tạo chi nhánh mặc định', () => {
     async () => {
       const userId = newId();
       await prisma.user.create({
-        data: { id: userId, displayName: 'Chủ có gói', email: `plan-${userId}@xeprime.test` },
+        data: {
+          id: userId,
+          realm: ACCOUNT_REALM.PARTNER,
+          displayName: 'Chủ có gói',
+          email: `plan-${userId}@xeprime.test`,
+        },
       });
 
-      const shop = await tenants.registerShop(userId, { name: 'Gian hàng có gói', provinceCode: DANANG });
+      const shop = await tenants.registerShop(userId, {
+        name: 'Gian hàng có gói',
+        provinceCode: DANANG,
+      });
 
       const now = new Date();
       const sub = await prisma.tenantSubscription.findFirst({
         where: { tenantId: shop.id, status: 'active', startsAt: { lte: now }, endsAt: { gt: now } },
-        select: { billingMode: true, price: true, termMonths: true, plan: { select: { limitsJson: true } } },
+        select: {
+          billingMode: true,
+          price: true,
+          termMonths: true,
+          plan: { select: { limitsJson: true } },
+        },
       });
       // Điều kiện an toàn của ADR 0027: gói hiện hành PHẢI có. "Không có gói" là trạng thái tệ
       // nhất — nó cho tập cờ RỖNG y như bậc cơ bản, nhưng KHÔNG phân biệt được với nó, nên ngày
@@ -419,7 +470,12 @@ describe('Đăng ký gian hàng tạo chi nhánh mặc định', () => {
   maybe('một transaction: tenant + membership + hồ sơ + chi nhánh mặc định', async () => {
     const userId = newId();
     await prisma.user.create({
-      data: { id: userId, displayName: 'Chủ mới', email: `new-${userId}@xeprime.test` },
+      data: {
+        id: userId,
+        realm: ACCOUNT_REALM.PARTNER,
+        displayName: 'Chủ mới',
+        email: `new-${userId}@xeprime.test`,
+      },
     });
 
     const shop = await tenants.registerShop(userId, {
@@ -454,7 +510,12 @@ describe('Đăng ký gian hàng tạo chi nhánh mặc định', () => {
   maybe('tỉnh không hợp lệ → KHÔNG tạo gian hàng nào (rollback sạch)', async () => {
     const userId = newId();
     await prisma.user.create({
-      data: { id: userId, displayName: 'Chủ lỗi', email: `bad-${userId}@xeprime.test` },
+      data: {
+        id: userId,
+        realm: ACCOUNT_REALM.PARTNER,
+        displayName: 'Chủ lỗi',
+        email: `bad-${userId}@xeprime.test`,
+      },
     });
 
     await expect(
@@ -474,11 +535,16 @@ describe('Bộ lọc chi nhánh ở danh sách xe', () => {
       name: 'Chi nhánh lọc',
       provinceCode: DANANG,
     });
-    const inBranch = await vehicles.create(tenantId, ownerId, {
-      name: 'Xe trong chi nhánh',
-      vehicleType: VEHICLE_TYPE.CAR,
-      branchId: b.id,
-    }, null);
+    const inBranch = await vehicles.create(
+      tenantId,
+      ownerId,
+      {
+        name: 'Xe trong chi nhánh',
+        vehicleType: VEHICLE_TYPE.CAR,
+        branchId: b.id,
+      },
+      null,
+    );
     const inDefault = await createVehicle(tenantId, ownerId, {
       name: 'Xe chi nhánh mặc định',
       vehicleType: VEHICLE_TYPE.CAR,
@@ -525,29 +591,34 @@ describe('Chi nhánh phải có tỉnh mới lên chợ được', () => {
         status: BRANCH_STATUS.ACTIVE,
       },
     });
-    const v = await vehicles.create(tenantId, ownerId, {
-      name: 'Xe chưa có tỉnh',
-      vehicleType: VEHICLE_TYPE.CAR,
-      branchId: legacyId,
-      plateNumber: '51A-999.99',
-      weekdayPrice: '500000',
-      mainImageUrl: 'https://img.example/x.jpg',
-      description: 'Xe 5 chỗ máy xăng, đầy đủ giấy tờ.',
-      // Đủ điều kiện lên chợ theo luật 09/09/2026 — spec này kiểm TỈNH của chi nhánh, nên phần
-      // còn lại của hồ sơ phải hợp lệ để không lẫn hai lý do từ chối.
-      brand: 'toyota',
-      model: 'Vios',
-      manufactureYear: 2022,
-      seatCount: 5,
-      fuelType: 'gasoline',
-      transmission: 'automatic',
-      fuelConsumptionCombined: 7.5,
-      images: [
-        'https://img.example/branch-1.jpg',
-        'https://img.example/branch-2.jpg',
-        'https://img.example/branch-3.jpg',
-      ],
-    }, null);
+    const v = await vehicles.create(
+      tenantId,
+      ownerId,
+      {
+        name: 'Xe chưa có tỉnh',
+        vehicleType: VEHICLE_TYPE.CAR,
+        branchId: legacyId,
+        plateNumber: '51A-999.99',
+        weekdayPrice: '500000',
+        mainImageUrl: 'https://img.example/x.jpg',
+        description: 'Xe 5 chỗ máy xăng, đầy đủ giấy tờ.',
+        // Đủ điều kiện lên chợ theo luật 09/09/2026 — spec này kiểm TỈNH của chi nhánh, nên phần
+        // còn lại của hồ sơ phải hợp lệ để không lẫn hai lý do từ chối.
+        brand: 'toyota',
+        model: 'Vios',
+        manufactureYear: 2022,
+        seatCount: 5,
+        fuelType: 'gasoline',
+        transmission: 'automatic',
+        fuelConsumptionCombined: 7.5,
+        images: [
+          'https://img.example/branch-1.jpg',
+          'https://img.example/branch-2.jpg',
+          'https://img.example/branch-3.jpg',
+        ],
+      },
+      null,
+    );
 
     /*
      * ADR 0036: "chi nhánh chưa có tỉnh" là MỘT MỤC trong danh sách điều kiện lên chợ, không

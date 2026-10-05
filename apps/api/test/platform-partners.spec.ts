@@ -11,6 +11,7 @@ import { APP_GUARD, Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   AUDIT_ACTION_CATEGORY,
   AUDIT_ACTOR_SCOPE,
@@ -28,6 +29,7 @@ import {
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_TYPE,
+  type AccountRealm,
 } from '@xeprime/types';
 import request from 'supertest';
 import { createValidationPipe } from '../src/bootstrap';
@@ -62,12 +64,20 @@ const asService = prisma as unknown as PrismaService;
 
 @Injectable()
 class HeaderAuthGuard implements CanActivate {
-  canActivate(ctx: ExecutionContext): boolean {
+  async canActivate(ctx: ExecutionContext): Promise<boolean> {
     const req = ctx.switchToHttp().getRequest<RequestContext>();
     const userId = req.headers['x-test-user'];
     if (typeof userId === 'string') {
+      // Realm đọc từ DB như AuthGuard thật (ADR 0053) — fixture tạo đúng realm cho từng vai.
+      const { realm } = await prisma.user.findUniqueOrThrow({
+        where: { id: userId },
+        select: { realm: true },
+      });
+      req.realm = realm as AccountRealm;
       req.user = {
         id: userId,
+        realm: realm as AccountRealm,
+        transport: 'cookie',
         displayName: 'test',
         email: null,
         phoneVerified: true,
@@ -132,6 +142,22 @@ beforeAll(async () => {
   const now = Date.now();
   const DAY = 86_400_000;
 
+  // Realm của từng người (ADR 0053): đội ngũ nền tảng ở realm platform, chủ xe ở partner, còn lại
+  // là khách. Trigger DB từ chối membership lệch realm, nên fixture phải nói đúng ngay từ đầu.
+  const PLATFORM_USERS: string[] = [
+    ids.superAdmin,
+    ids.support,
+    ids.finance,
+    ids.staff,
+    ids.auditor,
+  ];
+  const PARTNER_USERS: string[] = [ids.shopOwner, ids.liteOwner, ids.otherOwner];
+  const realmOf = (id: string): AccountRealm =>
+    PLATFORM_USERS.includes(id)
+      ? ACCOUNT_REALM.PLATFORM
+      : PARTNER_USERS.includes(id)
+        ? ACCOUNT_REALM.PARTNER
+        : ACCOUNT_REALM.CUSTOMER;
   for (const [id, name, phone, email] of [
     [ids.superAdmin, 'Quản trị nền tảng', null, `pp-${ids.superAdmin}@xeprime.test`],
     [ids.support, 'Hỗ trợ viên', null, `pp-${ids.support}@xeprime.test`],
@@ -144,7 +170,7 @@ beforeAll(async () => {
     [ids.liteOwner, 'Chủ Xe Lẻ', null, `pp-${ids.liteOwner}@xeprime.test`],
     [ids.otherOwner, 'Chủ Khác', null, `pp-${ids.otherOwner}@xeprime.test`],
   ] as const) {
-    await prisma.user.create({ data: { id, displayName: name, phone, email } });
+    await prisma.user.create({ data: { id, realm: realmOf(id), displayName: name, phone, email } });
   }
 
   for (const [userId, roleKey] of [

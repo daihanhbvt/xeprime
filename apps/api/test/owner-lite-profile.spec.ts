@@ -4,6 +4,7 @@ import { Reflector } from '@nestjs/core';
 import type { ExecutionContext } from '@nestjs/common';
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   BILLING_MODE,
   FEATURE_STATE,
@@ -11,8 +12,8 @@ import {
   OWNER_LITE_FEATURES,
   PLAN_FEATURE,
   PLAN_STATUS,
-  SUBSCRIPTION_STATUS,
   type PlanFeature,
+  SUBSCRIPTION_STATUS,
 } from '@xeprime/types';
 import { PLAN_FEATURE_KEY } from '../src/common/decorators';
 import { PlanFeatureGuard } from '../src/common/guards/plan-feature.guard';
@@ -114,7 +115,12 @@ beforeAll(async () => {
   packagePlanId = newId();
 
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Chủ xe', email: `ol-${RUN}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Chủ xe',
+      email: `ol-${RUN}@xeprime.test`,
+    },
   });
 
   // Hai bậc gói dựng từ CHÍNH hai hằng mà seed dùng.
@@ -289,35 +295,38 @@ describe('gate — gọi thẳng endpoint nâng cao', () => {
    * `read_only` vẫn sống, chỉ đổi chỗ: tenant VẪN ở tuyến gói mà bậc mới thiếu cờ. Test này giữ
    * ADR 0027 điều 3 khỏi bị xoá nhầm cùng với thay đổi ở trên.
    */
-  maybe('tuyến GÓI hạ bậc: ĐỌC qua, GHI chặn bằng FEATURE_READ_ONLY (ADR 0027 điều 3 còn nguyên)', async () => {
-    const tenantId = await mkTenant('downgrade', [PLAN_FEATURE.FINANCE]);
-    const leanPlanId = newId();
-    await prisma.plan.create({
-      data: {
-        id: leanPlanId,
-        code: `ol-lean-${RUN}`,
-        name: 'Gói theo xe (bậc gọn)',
-        status: PLAN_STATUS.ACTIVE,
-        billingMode: BILLING_MODE.PACKAGE,
-        basePriceMonthly: 0,
-        limitsJson: { features: [PLAN_FEATURE.BRANCHES] },
-      },
-    });
-    await subscribe(tenantId, leanPlanId, BILLING_MODE.PACKAGE);
+  maybe(
+    'tuyến GÓI hạ bậc: ĐỌC qua, GHI chặn bằng FEATURE_READ_ONLY (ADR 0027 điều 3 còn nguyên)',
+    async () => {
+      const tenantId = await mkTenant('downgrade', [PLAN_FEATURE.FINANCE]);
+      const leanPlanId = newId();
+      await prisma.plan.create({
+        data: {
+          id: leanPlanId,
+          code: `ol-lean-${RUN}`,
+          name: 'Gói theo xe (bậc gọn)',
+          status: PLAN_STATUS.ACTIVE,
+          billingMode: BILLING_MODE.PACKAGE,
+          basePriceMonthly: 0,
+          limitsJson: { features: [PLAN_FEATURE.BRANCHES] },
+        },
+      });
+      await subscribe(tenantId, leanPlanId, BILLING_MODE.PACKAGE);
 
-    const { features } = await profileOf(tenantId);
-    expect(features[PLAN_FEATURE.FINANCE]).toBe(FEATURE_STATE.READ_ONLY);
-    expect(guardWith('on').canActivate(ctx(features, 'GET'))).toBe(true);
-    expect(() => guardWith('on').canActivate(ctx(features, 'POST'))).toThrow(
-      expect.objectContaining({
-        response: expect.objectContaining({ code: API_ERROR_CODE.FEATURE_READ_ONLY }),
-      }),
-    );
+      const { features } = await profileOf(tenantId);
+      expect(features[PLAN_FEATURE.FINANCE]).toBe(FEATURE_STATE.READ_ONLY);
+      expect(guardWith('on').canActivate(ctx(features, 'GET'))).toBe(true);
+      expect(() => guardWith('on').canActivate(ctx(features, 'POST'))).toThrow(
+        expect.objectContaining({
+          response: expect.objectContaining({ code: API_ERROR_CODE.FEATURE_READ_ONLY }),
+        }),
+      );
 
-    await prisma.tenantSubscription.deleteMany({ where: { tenantId } });
-    await prisma.tenant.deleteMany({ where: { id: tenantId } });
-    await prisma.plan.deleteMany({ where: { id: leanPlanId } });
-  });
+      await prisma.tenantSubscription.deleteMany({ where: { tenantId } });
+      await prisma.tenant.deleteMany({ where: { id: tenantId } });
+      await prisma.plan.deleteMany({ where: { id: leanPlanId } });
+    },
+  );
 
   maybe('gói còn hiệu lực: đọc lẫn ghi đều qua', async () => {
     const { features } = await profileOf(packagedId);

@@ -1,12 +1,13 @@
 import type { INestApplication } from '@nestjs/common';
 import { ModulesContainer } from '@nestjs/core';
-import type { Permission, PlanFeature } from '@xeprime/types';
+import type { AccountRealm, Permission, PlanFeature } from '@xeprime/types';
 import {
   FEATURE_READ_SAFE_KEY,
   IS_PUBLIC_KEY,
   PERMISSIONS_KEY,
   PLAN_FEATURE_KEY,
   PLATFORM_ONLY_KEY,
+  REALMS_KEY,
   SUBSCRIPTION_TRACK_ONLY_KEY,
   TENANT_SCOPED_KEY,
   VERIFIES_CREDENTIALS_KEY,
@@ -22,6 +23,11 @@ export interface RouteAccess {
   readonly permissions: readonly Permission[];
   readonly tenantScoped: boolean;
   readonly platformOnly: boolean;
+  /**
+   * Không gian tài khoản route phục vụ (ADR 0053 điều 5) — đọc đúng như `RealmGuard`: handler thắng
+   * class. Mảng RỖNG = chưa khai ⇒ guard chặn mọi request, và `openapi-contract.spec.ts` đỏ.
+   */
+  readonly realms: readonly AccountRealm[];
   /**
    * Tính năng nâng cao gác route này (ADR 0027) — `null` = bậc cơ bản, không gói nào chặn.
    *
@@ -94,6 +100,7 @@ export function collectRouteAccess(app: INestApplication): Map<string, RouteAcce
           permissions: readPermissions(handler, controller),
           tenantScoped: readFlag(TENANT_SCOPED_KEY, handler, controller),
           platformOnly: readFlag(PLATFORM_ONLY_KEY, handler, controller),
+          realms: readRealms(handler, controller),
           feature: readFeature(handler, controller),
           featureReadSafe: readFlag(FEATURE_READ_SAFE_KEY, handler, controller),
           trackOnly: readFlag(SUBSCRIPTION_TRACK_ONLY_KEY, handler, controller),
@@ -153,6 +160,18 @@ function readFeature(handler: unknown, controller: unknown): PlanFeature | null 
     | undefined;
   if (fromHandler) return fromHandler;
   return (Reflect.getMetadata(PLAN_FEATURE_KEY, controller as object) as PlanFeature) ?? null;
+}
+
+/** Handler thắng class — đúng `getAllAndOverride` của `RealmGuard`. */
+function readRealms(handler: unknown, controller: unknown): readonly AccountRealm[] {
+  const fromHandler = Reflect.getMetadata(REALMS_KEY, handler as object) as
+    | AccountRealm[]
+    | undefined;
+  if (fromHandler?.length) return fromHandler;
+  const fromController = Reflect.getMetadata(REALMS_KEY, controller as object) as
+    | AccountRealm[]
+    | undefined;
+  return fromController ?? [];
 }
 
 function readPermissions(handler: unknown, controller: unknown): readonly Permission[] {

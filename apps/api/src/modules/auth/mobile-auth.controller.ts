@@ -7,8 +7,13 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { MOBILE_CLIENT_APP, type MobileClientApp } from '@xeprime/types';
-import { Public, VerifiesCredentials } from '../../common/decorators';
+import {
+  ACCOUNT_REALM,
+  MOBILE_CLIENT_APP,
+  realmForClientApp,
+  type MobileClientApp,
+} from '@xeprime/types';
+import { Public, Realms, VerifiesCredentials } from '../../common/decorators';
 import { AuthService } from './auth.service';
 import { assertMobileAppAccess, assertMobileAppCanCreateAccount } from './mobile-app-access';
 import { NativeAuthCodeService } from './social/native-auth-code.service';
@@ -41,6 +46,9 @@ import {
  */
 @ApiTags('auth')
 @Controller('auth/mobile')
+// Hai app mobile ↔ hai realm (ADR 0053): app XePrime ↔ customer, app Partner ↔ partner. Không app
+// nào phục vụ realm platform.
+@Realms(ACCOUNT_REALM.CUSTOMER, ACCOUNT_REALM.PARTNER)
 export class MobileAuthController {
   constructor(
     private readonly auth: AuthService,
@@ -62,7 +70,11 @@ export class MobileAuthController {
   @ApiOperation({ summary: 'Native: đăng nhập bằng email/SĐT + mật khẩu' })
   @ApiOkResponse({ type: MobileSessionDto })
   async login(@Body() dto: MobileLoginDto): Promise<MobileSessionDto> {
-    const { userId } = await this.auth.loginWithPassword(dto.identifier, dto.password);
+    const { userId } = await this.auth.loginWithPassword(
+      dto.identifier,
+      dto.password,
+      realmForClientApp(dto.clientApp),
+    );
     return this.buildSession(userId, dto.device, dto.clientApp);
   }
 
@@ -93,7 +105,7 @@ export class MobileAuthController {
     // dùng đó. XePrime Partner không có màn đăng ký; hồ sơ gian hàng mở từ app XePrime.
     assertMobileAppCanCreateAccount(dto.clientApp);
 
-    const { userId } = await this.auth.register(dto);
+    const { userId } = await this.auth.register(dto, realmForClientApp(dto.clientApp));
     return this.buildSession(userId, dto.device, dto.clientApp);
   }
 

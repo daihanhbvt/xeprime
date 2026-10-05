@@ -5,6 +5,8 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import { validateEnv } from './config/env.schema';
 import { AuthGuard } from './common/guards/auth.guard';
+import { OriginGuard } from './common/guards/origin.guard';
+import { RealmGuard } from './common/guards/realm.guard';
 import { PermissionGuard } from './common/guards/permission.guard';
 import { PlanFeatureGuard } from './common/guards/plan-feature.guard';
 import { BranchScopeGuard } from './common/guards/branch-scope.guard';
@@ -171,6 +173,10 @@ import { HolidaysModule } from './modules/holidays/holidays.module';
     // nạp scope kịp cho PermissionGuard.
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: AuthGuard },
+    // Ranh giới REALM (ADR 0053 điều 5) ngay sau xác thực, trước mọi scope/quyền và trước khi
+    // chạm DB; rồi chặn CSRF theo Origin cho request ghi bằng cookie (ADR 0051 điều 6).
+    { provide: APP_GUARD, useClass: RealmGuard },
+    { provide: APP_GUARD, useClass: OriginGuard },
     { provide: APP_GUARD, useClass: TenantScopeGuard },
     { provide: APP_GUARD, useClass: PlatformScopeGuard },
     { provide: APP_GUARD, useClass: PermissionGuard },

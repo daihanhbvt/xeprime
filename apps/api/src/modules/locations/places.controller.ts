@@ -1,8 +1,9 @@
 import { Controller, Get, Query } from '@nestjs/common';
+import { ACCOUNT_REALM_VALUES } from '@xeprime/types';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { guessAddressLine } from '@xeprime/domain';
-import { Public } from '../../common/decorators';
+import { Public, Realms } from '../../common/decorators';
 import { GeoService } from '../geo/geo.service';
 import {
   PlaceDetailQueryDto,
@@ -31,6 +32,7 @@ import { ProvincesService } from './provinces.service';
  */
 @ApiTags('places')
 @Controller('places')
+@Realms(...ACCOUNT_REALM_VALUES)
 export class PlacesController {
   constructor(
     private readonly geo: GeoService,

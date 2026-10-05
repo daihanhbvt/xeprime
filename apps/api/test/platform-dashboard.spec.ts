@@ -1,5 +1,6 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   APPROVAL_STATUS,
   APPROVAL_TARGET_TYPE,
   LISTING_STATUS,
@@ -67,7 +68,12 @@ const maybe = (name: string, fn: () => Promise<void>) =>
 describe('Platform dashboard (Phase 7)', () => {
   maybe('summary: cận dưới theo fixture + bất biến nội tại', async () => {
     await prisma.user.create({
-      data: { id: ownerId, displayName: 'Owner', email: `own-${ownerId}@xeprime.test` },
+      data: {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: ownerId,
+        displayName: 'Owner',
+        email: `own-${ownerId}@xeprime.test`,
+      },
     });
     const mkTenant = (id: string, status: string) =>
       prisma.tenant.create({

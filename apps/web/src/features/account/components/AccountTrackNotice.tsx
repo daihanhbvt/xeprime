@@ -77,7 +77,7 @@ export function AccountTrackNotice() {
       description={t('unconfiguredBody')}
       action={
         <Button size="small">
-          <Link href={ROUTES.ACCOUNT.SUPPORT}>{t('contactSupport')}</Link>
+          <Link href={ROUTES.MANAGE.SUPPORT_CASES}>{t('contactSupport')}</Link>
         </Button>
       }
     />

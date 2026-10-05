@@ -12,6 +12,7 @@ import { useTranslations } from 'next-intl';
 import { canUpgradeToPackageTrack } from '@xeprime/types';
 
 import { ROUTES } from '@/constants/routes';
+import { ZONE, siteHref } from '@/zones';
 import { canUseManagePortal, resolveOwnerCtaHref } from '@/features/auth/post-auth-destination';
 import { useCurrentUser } from '@/hooks/use-current-user';
 
@@ -77,24 +78,21 @@ export function ShopEntryCard() {
   const config = {
     platform: {
       icon: <SafetyCertificateOutlined aria-hidden />,
-      href: ROUTES.MANAGE.ADMIN,
+      href: siteHref(ZONE.ADMIN, '/'),
     },
-    /*
-     * "Gian hàng của tôi" dẫn tới KHU LÀM VIỆC của người này, không phải `/manage` cứng: chủ xe
-     * tuyến hoa hồng làm việc ở `/account` (ADR 0027/0028). Đây là đường vào nhầm khu rõ nhất
-     * của bản cũ — thẻ nằm ngay đầu trang tài khoản của chính họ.
-     */
+    // Trang chủ site partner — MỘT URL, nội dung theo tuyến (ADR 0051 điều 3).
     hasShop: {
       icon: <ShopOutlined aria-hidden />,
-      href: resolveOwnerCtaHref(user),
+      href: ROUTES.MANAGE.ROOT,
     },
     upgrade: {
       icon: <RiseOutlined aria-hidden />,
-      href: ROUTES.ACCOUNT.SUBSCRIPTION,
+      href: ROUTES.MANAGE.SUBSCRIPTION,
     },
     noShop: {
       icon: <ShopOutlined aria-hidden />,
-      href: ROUTES.LIST_YOUR_VEHICLE.ROOT,
+      // Tài khoản khách (site khách) — lối sang trang đăng ký của site partner (ADR 0051 điều 3).
+      href: resolveOwnerCtaHref(),
     },
   }[variant];
 

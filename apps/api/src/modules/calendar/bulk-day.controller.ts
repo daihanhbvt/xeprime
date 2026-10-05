@@ -1,12 +1,10 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
 import {
-  CurrentTenant,
-  CurrentUser,
-  RequirePermissions,
-  TenantScoped,
-} from '../../common/decorators';
+  ACCOUNT_REALM,
+  PERMISSION,
+} from '@xeprime/types';
+import { CurrentTenant, CurrentUser, Realms, RequirePermissions, TenantScoped } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import type { TenantContext } from '../../common/types/request-context';
 import { BulkDayService } from './bulk-day.service';
@@ -33,6 +31,7 @@ import {
 @ApiTags('calendar')
 @Controller('calendar/bulk-day')
 @TenantScoped()
+@Realms(ACCOUNT_REALM.PARTNER)
 export class BulkDayController {
   constructor(private readonly bulk: BulkDayService) {}
 

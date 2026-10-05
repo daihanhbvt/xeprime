@@ -1,21 +1,19 @@
-import { redirect } from 'next/navigation';
+'use client';
 
 import { SHOP_SECTION, shopSectionPath } from '@/constants/routes';
+import { ClientRedirect } from '@/features/partner/components/ClientRedirect';
+import { PartnerTrackView } from '@/features/partner/components/PartnerTrackView';
+import { OwnerSubscriptionView } from '@/features/subscription/components/OwnerSubscriptionView';
 
 /**
- * ALIAS CHUYỂN TIẾP (16/09/2026) — "Gói & hoá đơn" thôi làm trang độc lập.
- *
- * Nó về làm section "Gói & hạn mức" của trang Cửa hàng, nơi gian hàng vốn đã tới để khai mọi
- * thứ khác về chính mình. Không mất nội dung nào: hạn mức chỗ theo loại xe, hạn gói, nút
- * mua/gia hạn, hoá đơn đang chờ kèm QR và lịch sử thanh toán đều dựng từ chính
- * `SubscriptionWorkspace` — cùng component, cùng hook, cùng quyền.
- *
- * Route cũ giữ lại kèm `?section=plan` để ai đã bookmark rơi thẳng vào đúng phần đó, không
- * phải đầu trang rồi tự đi tìm.
- *
- * ⚠️ KHÔNG áp dụng cho `/account/subscription`: đó vẫn là trang thật. Chủ xe tuyến hoa hồng
- * không vào `/manage` được, và màn đó là phễu nâng cấp lên tuyến gói (ADR 0028 điều 1).
+ * Gói dịch vụ — MỘT URL hai tuyến (ADR 0051 điều 3). Tuyến gói quản lý gói trong section "Gói & hạn
+ * mức" của trang Cửa hàng (16/09/2026), nên URL này chuyển tới đó; tuyến hoa hồng thấy phễu nâng cấp.
  */
-export default function ManageSubscriptionRedirectPage(): never {
-  redirect(shopSectionPath(SHOP_SECTION.PLAN));
+export default function SubscriptionPage() {
+  return (
+    <PartnerTrackView
+      packageView={<ClientRedirect href={shopSectionPath(SHOP_SECTION.PLAN)} />}
+      commissionView={<OwnerSubscriptionView />}
+    />
+  );
 }

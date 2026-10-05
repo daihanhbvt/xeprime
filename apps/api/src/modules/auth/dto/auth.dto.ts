@@ -2,10 +2,12 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsEmail, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { Transform } from 'class-transformer';
 import {
+  ACCOUNT_REALM_VALUES,
   FEATURE_STATE_VALUES,
   MEMBERSHIP_BRANCH_SCOPE_VALUES,
   PLAN_FEATURE_VALUES,
   VN_PHONE_PATTERN,
+  type AccountRealm,
 } from '@xeprime/types';
 import { IsLoginIdentifier } from '../../../common/login-identifier';
 
@@ -247,6 +249,18 @@ export class CurrentTenantSummaryDto {
 
 export class MeDto {
   @ApiProperty() id!: string;
+  /*
+   * Server LUÔN gửi trường này. Khai `required: false` trong hợp đồng là có chủ ý: app native (nhánh
+   * mobile riêng, chưa cập nhật theo ADR 0053) dựng `CurrentUser` từ kiểu sinh ra, và một trường bắt
+   * buộc mới làm gãy mọi fixture của nó. Client đọc phải coi vắng mặt như "chưa biết" — không suy realm.
+   */
+  @ApiProperty({
+    enum: ACCOUNT_REALM_VALUES,
+    required: false,
+    description:
+      'Không gian tài khoản (ADR 0053) — customer · partner · platform. Luôn bằng site/app đang dùng; server luôn gửi.',
+  })
+  realm!: AccountRealm;
   @ApiProperty() displayName!: string;
   // Các field dưới LUÔN có mặt trong response, chỉ có thể mang giá trị null → `@ApiProperty`
   // + `nullable`, KHÔNG phải `@ApiPropertyOptional` (optional nghĩa là "có thể vắng mặt", và

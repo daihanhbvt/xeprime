@@ -49,9 +49,11 @@ export function AccountDeletionImpact() {
   const fmt = useAppFormat();
   const { data: user } = useCurrentUser();
 
+  // Nhân viên gian hàng không có ví (`null`) — không hỏi, khối số dư tự ẩn.
   const scope = walletScopeFor(user);
-  const wallet = useWalletSummary(scope);
-  const withdrawals = useWithdrawals(scope);
+  const hasWallet = Boolean(user) && scope !== null;
+  const wallet = useWalletSummary(scope ?? 'account', { enabled: hasWallet });
+  const withdrawals = useWithdrawals(scope ?? 'account', { enabled: hasWallet });
   /*
    * Chuyến ĐI THUÊ, không phải chuyến cho thuê: đơn khách đặt xe của gian hàng thuộc về pháp
    * nhân và không đi theo tài khoản cá nhân này. Trang 1 là đủ — chỉ cần `counts`, không cần

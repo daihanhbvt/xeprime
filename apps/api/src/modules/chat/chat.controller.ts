@@ -6,8 +6,12 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { API_ERROR_CODE, CHAT_ATTACHMENT_MAX_BYTES } from '@xeprime/types';
-import { CurrentUser } from '../../common/decorators';
+import {
+  ACCOUNT_REALM,
+  API_ERROR_CODE,
+  CHAT_ATTACHMENT_MAX_BYTES,
+} from '@xeprime/types';
+import { CurrentUser, Realms } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import { FirebaseAppService } from '../firebase/firebase-app.service';
 import { R2Service } from '../storage/r2.service';
@@ -19,6 +23,7 @@ import { FirebaseTokenDto, PresignAttachmentDto, PresignResultDto } from './dto/
  */
 @ApiTags('chat')
 @Controller('chat')
+@Realms(ACCOUNT_REALM.CUSTOMER, ACCOUNT_REALM.PARTNER)
 export class ChatController {
   constructor(
     private readonly firebase: FirebaseAppService,

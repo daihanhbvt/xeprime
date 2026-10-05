@@ -1,23 +1,14 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
+  ACCOUNT_REALM,
   PERMISSION,
   PLAN_FEATURE,
   SUPPORT_BRANCH_FIELDS,
   SUPPORT_CAPABILITY,
 } from '@xeprime/types';
 import { supportFieldAllowlist } from '../../common/support/support-field-allowlist';
-import {
-  BRANCH_SCOPED_RESOURCE,
-  BranchScoped,
-  CurrentTenant,
-  CurrentUser,
-  RequirePermissions,
-  RequiresFeature,
-  SubscriptionTrackOnly,
-  TenantScoped,
-  SupportAction,
-} from '../../common/decorators';
+import { BRANCH_SCOPED_RESOURCE, BranchScoped, CurrentTenant, CurrentUser, Realms, RequirePermissions, RequiresFeature, SubscriptionTrackOnly, SupportAction, TenantScoped } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { BranchesService } from './branches.service';
 import {
@@ -61,6 +52,7 @@ import {
 @ApiTags('branches')
 @Controller('branches')
 @TenantScoped()
+@Realms(ACCOUNT_REALM.PARTNER)
 export class BranchesController {
   constructor(private readonly branches: BranchesService) {}
 

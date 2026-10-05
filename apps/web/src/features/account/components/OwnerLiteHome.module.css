@@ -1,0 +1,7 @@
+/* Cảnh báo tuyến + nội dung chính xếp dọc — khoảng cách do LAYOUT đặt, không do margin từng khối. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-lg);
+  min-width: 0;
+}

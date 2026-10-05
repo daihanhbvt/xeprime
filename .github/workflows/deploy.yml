@@ -174,9 +174,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # ⚠️ Image mang nhãn MÔI TRƯỜNG chứ không chỉ SHA, và đó không phải để cho gọn:
-      # `NEXT_PUBLIC_API_URL` bị Next nhúng cứng vào bundle lúc build, nên image build cho
-      # staging trỏ vĩnh viễn vào `api-stg`. Đem nó chạy production là cả site gọi sang staging.
+      # ⚠️ Image mang nhãn MÔI TRƯỜNG chứ không chỉ SHA, và đó không phải để cho gọn: URL của
+      # ba site (`NEXT_PUBLIC_WEB_*_URL`) bị Next nhúng cứng vào bundle lúc build, nên image build
+      # cho staging dựng link khác site trỏ vĩnh viễn vào `*-stg`. Đem nó chạy production là mọi
+      # lối "Đăng xe cho thuê", "Về trang thuê xe"… dẫn sang staging.
+      #
+      # `NEXT_PUBLIC_API_URL` cố định `/api` — cùng origin với site đang mở (ADR 0051 điều 4), Caddy
+      # của từng site chuyển nó về API. Biến cùng tên ở GitHub Environment KHÔNG còn được đọc.
       - name: Build & push image
         if: needs.resolve.outputs.rollback != 'true'
         uses: docker/build-push-action@v6
@@ -190,7 +194,11 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_API_URL=/api
+            NEXT_PUBLIC_XP_ZONE_MODE=host
+            NEXT_PUBLIC_WEB_MARKET_URL=${{ vars.APP_WEB_URL || format('https://{0}', vars.WEB_DOMAIN) }}
+            NEXT_PUBLIC_WEB_PARTNER_URL=${{ vars.WEB_PARTNER_URL || format('https://{0}', vars.PARTNER_DOMAIN) }}
+            NEXT_PUBLIC_WEB_ADMIN_URL=${{ vars.WEB_ADMIN_URL || format('https://{0}', vars.ADMIN_DOMAIN) }}
             NEXT_PUBLIC_APP_NAME=${{ vars.NEXT_PUBLIC_APP_NAME }}
             NEXT_PUBLIC_GEOAPIFY_MAP_KEY=${{ vars.NEXT_PUBLIC_GEOAPIFY_MAP_KEY }}
             NEXT_PUBLIC_FIREBASE_API_KEY=${{ vars.NEXT_PUBLIC_FIREBASE_API_KEY }}
@@ -218,6 +226,8 @@ jobs:
         env:
           XP_ENV: ${{ needs.resolve.outputs.environment }}
           V_WEB_DOMAIN: ${{ vars.WEB_DOMAIN }}
+          V_PARTNER_DOMAIN: ${{ vars.PARTNER_DOMAIN }}
+          V_ADMIN_DOMAIN: ${{ vars.ADMIN_DOMAIN }}
           V_API_DOMAIN: ${{ vars.API_DOMAIN }}
           V_ACME_EMAIL: ${{ vars.ACME_EMAIL }}
           V_POSTGRES_USER: ${{ vars.POSTGRES_USER }}
@@ -228,6 +238,8 @@ jobs:
           V_TRUST_PROXY_HOPS: ${{ vars.TRUST_PROXY_HOPS }}
           V_API_PUBLIC_URL: ${{ vars.API_PUBLIC_URL }}
           V_APP_WEB_URL: ${{ vars.APP_WEB_URL }}
+          V_WEB_PARTNER_URL: ${{ vars.WEB_PARTNER_URL }}
+          V_WEB_ADMIN_URL: ${{ vars.WEB_ADMIN_URL }}
           V_SESSION_TTL_DAYS: ${{ vars.SESSION_TTL_DAYS }}
           V_SESSION_COOKIE_NAME: ${{ vars.SESSION_COOKIE_NAME }}
           V_SESSION_COOKIE_SECURE: ${{ vars.SESSION_COOKIE_SECURE }}
@@ -265,7 +277,6 @@ jobs:
           V_R2_PRIVATE_BUCKET: ${{ vars.R2_PRIVATE_BUCKET }}
           V_R2_PUBLIC_BASE_URL: ${{ vars.R2_PUBLIC_BASE_URL }}
           V_BACKUP_KEEP_DAYS: ${{ vars.BACKUP_KEEP_DAYS }}
-          V_NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
           V_NEXT_PUBLIC_APP_NAME: ${{ vars.NEXT_PUBLIC_APP_NAME }}
           V_NEXT_PUBLIC_GEOAPIFY_MAP_KEY: ${{ vars.NEXT_PUBLIC_GEOAPIFY_MAP_KEY }}
           V_NEXT_PUBLIC_FIREBASE_API_KEY: ${{ vars.NEXT_PUBLIC_FIREBASE_API_KEY }}
@@ -274,6 +285,9 @@ jobs:
           V_NEXT_PUBLIC_FIREBASE_APP_ID: ${{ vars.NEXT_PUBLIC_FIREBASE_APP_ID }}
           S_POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           S_SESSION_JWT_SECRET: ${{ secrets.SESSION_JWT_SECRET }}
+          # Khoá Caddy gắn kèm header realm của `/api` (ADR 0053 điều 4). ≥ 32 ký tự; Caddy và API đọc
+          # CÙNG một giá trị từ file env này.
+          S_REALM_PROXY_SECRET: ${{ secrets.REALM_PROXY_SECRET }}
           S_OTP_PEPPER: ${{ secrets.OTP_PEPPER }}
           S_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
           S_FACEBOOK_APP_SECRET: ${{ secrets.FACEBOOK_APP_SECRET }}
@@ -304,24 +318,33 @@ jobs:
             fi
           }
           req WEB_DOMAIN          "${V_WEB_DOMAIN:-}"
+          # Ba site của ADR 0051 — Caddy xin chứng chỉ cho cả ba, thiếu một là site đó không lên.
+          req PARTNER_DOMAIN      "${V_PARTNER_DOMAIN:-}"
+          req ADMIN_DOMAIN        "${V_ADMIN_DOMAIN:-}"
           req API_DOMAIN          "${V_API_DOMAIN:-}"
           req ACME_EMAIL          "${V_ACME_EMAIL:-}"
           req APP_ENV             "${V_APP_ENV:-}"
           req CORS_ORIGINS        "${V_CORS_ORIGINS:-}"
           req API_PUBLIC_URL      "${V_API_PUBLIC_URL:-}"
           req APP_WEB_URL         "${V_APP_WEB_URL:-}"
-          req NEXT_PUBLIC_API_URL "${V_NEXT_PUBLIC_API_URL:-}"
           req POSTGRES_PASSWORD   "${S_POSTGRES_PASSWORD:-}"
           req SESSION_JWT_SECRET  "${S_SESSION_JWT_SECRET:-}"
+          # API từ chối boot ở môi trường đã triển khai khi thiếu khoá này (env.schema.ts) — bắt ở
+          # đây là bắt TRƯỚC khi migrate chạm vào database.
+          req REALM_PROXY_SECRET  "${S_REALM_PROXY_SECRET:-}"
           # OTP_PEPPER có `.default()` trong schema, nhưng default đó chứa `change-me` và bị
           # chặn khi NODE_ENV=production. Quên nó = API crash-loop SAU khi migrate đã chạy;
           # bắt ở đây là bắt trước khi có gì chạm vào database.
           req OTP_PEPPER          "${S_OTP_PEPPER:-}"
-          # KHÔNG để mặc định `xp_session` cho staging. `SESSION_COOKIE_DOMAIN=.xeprime.vn` gửi
-          # cookie tới MỌI subdomain, nên staging mang tên cookie của production sẽ GHI ĐÈ phiên
-          # production của chính bạn và đẩy token staging sang đó. Một biến bị quên không được
-          # phép âm thầm rơi vào đúng trạng thái đó.
+          # Tên GỐC của cookie phiên; API phát `<tên>_<realm>` host-only cho từng site (ADR 0053).
+          # Vẫn bắt buộc và nên khác nhau giữa hai môi trường: host-only đã tách chúng theo host,
+          # nhưng hai tên khác nhau làm `document.cookie`/devtools đọc được ngay đang ở môi trường nào.
           req SESSION_COOKIE_NAME "${V_SESSION_COOKIE_NAME:-}"
+          # `SESSION_COOKIE_DOMAIN` đã bỏ (cookie host-only) — API từ chối boot nếu còn thấy nó.
+          # Không ghi vào file env; nhắc xoá biến ở GitHub Environment.
+          if [ -n "${V_SESSION_COOKIE_DOMAIN:-}" ]; then
+            echo "::warning::SESSION_COOKIE_DOMAIN không còn được dùng (ADR 0053). Xoá biến này ở Settings → Environments → $XP_ENV."
+          fi
 
           # --- Firestore: bật thì phải bật ĐỦ -------------------------------------------------
           #
@@ -405,6 +428,8 @@ jobs:
           printf '# Nguồn sự thật: Settings -> Environments -> %s\n\n' "$XP_ENV" >> "$F"
 
           kv WEB_DOMAIN "${V_WEB_DOMAIN:-}"
+          kv PARTNER_DOMAIN "${V_PARTNER_DOMAIN:-}"
+          kv ADMIN_DOMAIN "${V_ADMIN_DOMAIN:-}"
           kv API_DOMAIN "${V_API_DOMAIN:-}"
           kv ACME_EMAIL "${V_ACME_EMAIL:-}"
 
@@ -423,12 +448,16 @@ jobs:
           kv TRUST_PROXY_HOPS "${V_TRUST_PROXY_HOPS:-1}"
           kv API_PUBLIC_URL "${V_API_PUBLIC_URL:-}"
           kv APP_WEB_URL "${V_APP_WEB_URL:-}"
+          # URL gốc của site partner/admin — đích link trong email (đặt lại mật khẩu, lời mời) và
+          # callback OAuth web của từng realm. Mặc định suy từ tên miền.
+          kv WEB_PARTNER_URL "${V_WEB_PARTNER_URL:-https://${V_PARTNER_DOMAIN}}"
+          kv WEB_ADMIN_URL "${V_WEB_ADMIN_URL:-https://${V_ADMIN_DOMAIN}}"
+          kv REALM_PROXY_SECRET "${S_REALM_PROXY_SECRET:-}"
 
           kv SESSION_JWT_SECRET "${S_SESSION_JWT_SECRET:-}"
           kv SESSION_TTL_DAYS "${V_SESSION_TTL_DAYS:-7}"
           kv SESSION_COOKIE_NAME "${V_SESSION_COOKIE_NAME:-}"
           kv SESSION_COOKIE_SECURE "${V_SESSION_COOKIE_SECURE:-true}"
-          kv SESSION_COOKIE_DOMAIN "${V_SESSION_COOKIE_DOMAIN:-}"
           kv MOBILE_ACCESS_TTL_MINUTES "${V_MOBILE_ACCESS_TTL_MINUTES:-15}"
           kv MOBILE_REFRESH_TTL_DAYS "${V_MOBILE_REFRESH_TTL_DAYS:-60}"
           kv MOBILE_JWT_AUDIENCE "${V_MOBILE_JWT_AUDIENCE:-xeprime-mobile}"
@@ -486,7 +515,11 @@ jobs:
 
           # Nhóm NEXT_PUBLIC_* đã nhúng cứng vào image lúc build. Ghi vào file env chỉ để
           # `docker compose build` còn dùng được nếu có ngày phải build tay ngay trên máy.
-          kv NEXT_PUBLIC_API_URL "${V_NEXT_PUBLIC_API_URL:-}"
+          kv NEXT_PUBLIC_API_URL /api
+          kv NEXT_PUBLIC_XP_ZONE_MODE host
+          kv NEXT_PUBLIC_WEB_MARKET_URL "${V_APP_WEB_URL:-https://${V_WEB_DOMAIN}}"
+          kv NEXT_PUBLIC_WEB_PARTNER_URL "${V_WEB_PARTNER_URL:-https://${V_PARTNER_DOMAIN}}"
+          kv NEXT_PUBLIC_WEB_ADMIN_URL "${V_WEB_ADMIN_URL:-https://${V_ADMIN_DOMAIN}}"
           kv NEXT_PUBLIC_APP_NAME "${V_NEXT_PUBLIC_APP_NAME:-XePrime}"
           kv NEXT_PUBLIC_GEOAPIFY_MAP_KEY "${V_NEXT_PUBLIC_GEOAPIFY_MAP_KEY:-}"
           kv NEXT_PUBLIC_FIREBASE_API_KEY "${V_NEXT_PUBLIC_FIREBASE_API_KEY:-}"
@@ -644,16 +677,25 @@ jobs:
         env:
           API_DOMAIN: ${{ vars.API_DOMAIN }}
           WEB_DOMAIN: ${{ vars.WEB_DOMAIN }}
+          PARTNER_DOMAIN: ${{ vars.PARTNER_DOMAIN }}
+          ADMIN_DOMAIN: ${{ vars.ADMIN_DOMAIN }}
         run: |
           set -euo pipefail
           echo "GET https://$API_DOMAIN/health"
           curl -fsS --retry 5 --retry-delay 6 --retry-all-errors --max-time 20 \
             "https://$API_DOMAIN/health" | tee /dev/stderr | grep -q '"status":"ok"'
           echo
-          CODE="$(curl -sS --retry 5 --retry-delay 6 --retry-all-errors --max-time 20 \
-            -o /dev/null -w '%{http_code}' "https://$WEB_DOMAIN/")"
-          echo "GET https://$WEB_DOMAIN/ -> $CODE"
-          case "$CODE" in 2*|3*) ;; *) echo "::error::Web trả $CODE"; exit 1 ;; esac
+          # Ba site + `/api` cùng origin của từng site (Caddy → API kèm realm theo host).
+          for HOST in "$WEB_DOMAIN" "$PARTNER_DOMAIN" "$ADMIN_DOMAIN"; do
+            CODE="$(curl -sS --retry 5 --retry-delay 6 --retry-all-errors --max-time 20 \
+              -o /dev/null -w '%{http_code}' "https://$HOST/")"
+            echo "GET https://$HOST/ -> $CODE"
+            case "$CODE" in 2*|3*) ;; *) echo "::error::$HOST trả $CODE"; exit 1 ;; esac
+            curl -fsS --retry 5 --retry-delay 6 --retry-all-errors --max-time 20 \
+              "https://$HOST/api/health" | grep -q '"status":"ok"' \
+              || { echo "::error::https://$HOST/api/health không về tới API"; exit 1; }
+            echo "GET https://$HOST/api/health -> ok"
+          done
 
       - name: Dọn file env trên runner
         if: always()
@@ -669,7 +711,9 @@ jobs:
             echo "| Môi trường | \`${{ needs.resolve.outputs.environment }}\` |"
             echo "| Image | \`${{ steps.img.outputs.image }}\` |"
             echo "| Commit | \`${{ steps.img.outputs.sha }}\` |"
-            echo "| Web | https://${{ vars.WEB_DOMAIN }} |"
+            echo "| Web (khách) | https://${{ vars.WEB_DOMAIN }} |"
+            echo "| Web (đối tác) | https://${{ vars.PARTNER_DOMAIN }} |"
+            echo "| Web (quản trị) | https://${{ vars.ADMIN_DOMAIN }} |"
             echo "| API | https://${{ vars.API_DOMAIN }}/health |"
             echo ""
             echo "Rollback: Run workflow → environment \`${{ needs.resolve.outputs.environment }}\`, image_tag = tag của lần deploy trước."

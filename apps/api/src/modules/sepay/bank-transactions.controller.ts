@@ -1,7 +1,10 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
-import { CurrentUser, PlatformOnly, RequirePermissions } from '../../common/decorators';
+import {
+  ACCOUNT_REALM,
+  PERMISSION,
+} from '@xeprime/types';
+import { CurrentUser, PlatformOnly, Realms, RequirePermissions } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import { BankTransactionsService } from './bank-transactions.service';
 import {
@@ -26,6 +29,7 @@ import {
 @Controller('platform/bank-transactions')
 @PlatformOnly()
 @RequirePermissions(PERMISSION.PLATFORM_BILLING_MANAGE)
+@Realms(ACCOUNT_REALM.PLATFORM)
 export class BankTransactionsController {
   constructor(private readonly transactions: BankTransactionsService) {}
 

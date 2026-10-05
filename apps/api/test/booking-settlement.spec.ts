@@ -1,7 +1,8 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
-  bookingRequestRespondBy,
+  ACCOUNT_REALM,
   BOOKING_STATUS,
+  bookingRequestRespondBy,
   DEPOSIT_STATUS,
   MEMBERSHIP_STATUS,
   PAYMENT_KIND,
@@ -12,8 +13,8 @@ import {
   RECEIPT_STATUS,
   RECEIPT_TYPE,
   REFUND_METHOD,
-  SYSTEM_FINANCE_CATEGORY,
   SURCHARGE_CATEGORY,
+  SYSTEM_FINANCE_CATEGORY,
   TENANT_ROLE,
   TENANT_STATUS,
   VEHICLE_TYPE,
@@ -47,6 +48,7 @@ const settlement = new SettlementService(asService, audit, pricing, notification
 
 let dbAvailable = false;
 let ownerId: string;
+let otherOwnerId: string;
 let tenantId: string;
 let otherTenantId: string;
 let vehicleId: string;
@@ -70,12 +72,28 @@ beforeAll(async () => {
   tenantId = newId();
   otherTenantId = newId();
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Chủ shop W10', email: `own-${ownerId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Chủ shop W10',
+      email: `own-${ownerId}@xeprime.test`,
+    },
+  });
+  // Mỗi gian hàng một chủ — ADR 0053: một tài khoản chỉ thuộc một gian hàng.
+  otherOwnerId = newId();
+  await prisma.user.create({
+    data: {
+      id: otherOwnerId,
+      realm: ACCOUNT_REALM.PARTNER,
+      displayName: 'Chủ shop khác',
+      email: `own-${otherOwnerId}@xeprime.test`,
+    },
   });
   for (const [id, name] of [
     [tenantId, 'Shop Wave 10'],
     [otherTenantId, 'Shop Khác'],
   ] as const) {
+    const owner = id === tenantId ? ownerId : otherOwnerId;
     await prisma.tenant.create({
       data: {
         id,
@@ -83,14 +101,14 @@ beforeAll(async () => {
         slug: `t-${id.toLowerCase().slice(-10)}`,
         name,
         status: TENANT_STATUS.ACTIVE,
-        ownerUserId: ownerId,
+        ownerUserId: owner,
       },
     });
     await prisma.tenantMembership.create({
       data: {
         id: newId(),
         tenantId: id,
-        userId: ownerId,
+        userId: owner,
         roleKey: TENANT_ROLE.SHOP_OWNER,
         status: MEMBERSHIP_STATUS.ACTIVE,
       },
@@ -122,7 +140,9 @@ afterAll(async () => {
       await prisma.tenantMembership.deleteMany({ where: { tenantId: id } });
       await prisma.tenant.deleteMany({ where: { id } });
     }
-    await prisma.user.deleteMany({ where: { id: { in: [ownerId, ...customerIds] } } });
+    await prisma.user.deleteMany({
+      where: { id: { in: [ownerId, otherOwnerId, ...customerIds] } },
+    });
   }
   await prisma.$disconnect();
 });

@@ -1,5 +1,6 @@
 import { computeUserBadges, createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   MEMBERSHIP_STATUS,
   TENANT_ROLE,
   TENANT_STATUS,
@@ -7,6 +8,7 @@ import {
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { InvitesService } from '../src/modules/members/invites.service';
+import { RequestRealmService } from '../src/modules/auth/request-realm.service';
 import { MembersService } from '../src/modules/members/members.service';
 import type { EmailService } from '../src/modules/email/email.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
@@ -34,15 +36,24 @@ const email = {
   },
 } as unknown as EmailService;
 
+const SITE_URLS: Record<string, string> = {
+  APP_WEB_URL: 'https://web.test',
+  WEB_PARTNER_URL: 'https://partner.web.test',
+  WEB_ADMIN_URL: 'https://admin.web.test',
+};
 const config = {
+  get: () => undefined,
   getOrThrow: (key: string) => {
-    if (key === 'APP_WEB_URL') return 'https://web.test';
+    const value = SITE_URLS[key];
+    if (value) return value;
     throw new Error(`Spec không mong đợi key ${key}`);
   },
 } as never;
+// Link mời trỏ về site PARTNER (ADR 0053) — URL dựng từ `WEB_PARTNER_URL`.
+const realms = new RequestRealmService(config);
 
 const audit = new AuditService(asService);
-const invites = new InvitesService(asService, audit, email, config);
+const invites = new InvitesService(asService, audit, email, config, realms);
 const members = new MembersService(asService, audit);
 
 let dbAvailable = false;
@@ -81,8 +92,13 @@ beforeAll(async () => {
 
   await prisma.user.createMany({
     data: [
-      { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
-      { id: staffId, displayName: 'Nhân viên', email: staffEmail },
+      {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: ownerId,
+        displayName: 'Chủ shop',
+        email: `own-${ownerId}@xeprime.test`,
+      },
+      { id: staffId, realm: ACCOUNT_REALM.PARTNER, displayName: 'Nhân viên', email: staffEmail },
       { id: customerId, displayName: 'Khách', email: `cus-${customerId}@xeprime.test` },
     ],
   });
@@ -131,10 +147,15 @@ describe('Huy hiệu — thay đổi thành viên gian hàng', () => {
   maybe('nhận lời mời: có tín hiệu, và chatShop nhận ngay số chưa đọc sẵn có', async () => {
     await prisma.userBadgeSignal.deleteMany({ where: { userId: staffId } });
 
-    await invites.create(tenantId, ownerId, {
-      email: staffEmail,
-      roleKey: TENANT_ROLE.SHOP_STAFF,
-    }, null);
+    await invites.create(
+      tenantId,
+      ownerId,
+      {
+        email: staffEmail,
+        roleKey: TENANT_ROLE.SHOP_STAFF,
+      },
+      null,
+    );
     await invites.accept(lastToken(), staffId);
 
     expect(await signalOf(staffId)).not.toBeNull();
@@ -160,10 +181,15 @@ describe('Huy hiệu — thay đổi thành viên gian hàng', () => {
    * điều kiện — thì số hiệu sẽ nhích lên dù không có thay đổi nào xảy ra, và test này đỏ.
    */
   maybe('accept thất bại thì KHÔNG để lại tín hiệu nào', async () => {
-    await invites.create(tenantId, ownerId, {
-      email: staffEmail,
-      roleKey: TENANT_ROLE.SHOP_STAFF,
-    }, null);
+    await invites.create(
+      tenantId,
+      ownerId,
+      {
+        email: staffEmail,
+        roleKey: TENANT_ROLE.SHOP_STAFF,
+      },
+      null,
+    );
     const token = lastToken();
     await invites.accept(token, staffId);
 
@@ -178,10 +204,15 @@ describe('Huy hiệu — thay đổi thành viên gian hàng', () => {
     await members.remove(tenantId, ownerId, staffId, null);
     await prisma.userBadgeSignal.deleteMany({ where: { userId: staffId } });
 
-    await invites.create(tenantId, ownerId, {
-      email: staffEmail,
-      roleKey: TENANT_ROLE.SHOP_STAFF,
-    }, null);
+    await invites.create(
+      tenantId,
+      ownerId,
+      {
+        email: staffEmail,
+        roleKey: TENANT_ROLE.SHOP_STAFF,
+      },
+      null,
+    );
     await invites.accept(lastToken(), staffId);
 
     expect(await signalOf(staffId)).not.toBeNull();

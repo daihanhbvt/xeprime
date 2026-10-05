@@ -1,6 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   BANK_MATCH_STATUS,
   BILLING_MODE,
@@ -83,7 +84,7 @@ function payload(over: Partial<Record<string, unknown>> = {}): Record<string, un
 async function issueInvoice(termMonths = 3) {
   return billing.purchase(tenantId, ownerId, {
     planId,
-    termMonths
+    termMonths,
   });
 }
 
@@ -102,7 +103,12 @@ beforeAll(async () => {
   planId = newId();
 
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Chủ shop',
+      email: `own-${ownerId}@xeprime.test`,
+    },
   });
   await prisma.tenant.create({
     data: {
@@ -136,7 +142,7 @@ beforeAll(async () => {
       status: PLAN_STATUS.ACTIVE,
       limitsJson: {
         maxVehicles: null,
-                maxMembers: null,
+        maxMembers: null,
         maxBranches: null,
         termPrices: [{ months: 3, price: '300000' }],
         graceDays: 7,
@@ -337,7 +343,10 @@ describe('Thiếu / đủ / thừa tiền (ADR 0016 điều 6)', () => {
     const extra = await sepay.ingest(payload({ content: invoice.code, transferAmount: 30_000 }));
     expect(extra).toMatchObject({ matched: true, note: 'already_paid' });
 
-    const rows = await prisma.bankTransaction.findMany({ where: ownRows, orderBy: { createdAt: 'asc' } });
+    const rows = await prisma.bankTransaction.findMany({
+      where: ownRows,
+      orderBy: { createdAt: 'asc' },
+    });
     expect(rows[1]!.matchNote).toBe('overpaid');
     expect(await prisma.tenantSubscription.count({ where: { tenantId } })).toBe(1);
   });

@@ -1,25 +1,32 @@
+import type { AccountRealm } from './account-realm';
+
 /**
- * Tên cookie phiên — ADR 0002.
+ * Tên cookie phiên — ADR 0002, tách theo realm ở ADR 0053.
  *
- * Vì sao hằng số này phải NẰM CHUNG: API phát cookie theo `SESSION_COOKIE_NAME` (env), còn
- * `apps/web/src/proxy.ts` phải đọc ĐÚNG cookie đó để chặn `/manage/*`. Trước đây web gõ thẳng
- * `'xp_session'` trong khi API đọc env — đổi tên cookie ở env là proxy im lặng ngừng thấy phiên,
- * tức mọi người dùng đã đăng nhập bị đá về trang login mà không có lỗi nào để lần.
+ * Vì sao công thức này phải NẰM CHUNG: API phát cookie, còn `apps/web/src/proxy.ts` phải đọc ĐÚNG
+ * cookie đó để chặn khu cần đăng nhập. Trước đây web gõ thẳng `'xp_session'` trong khi API đọc
+ * env — đổi tên ở env là proxy im lặng ngừng thấy phiên, mọi người dùng bị đá về trang login mà
+ * không có lỗi nào để lần.
  *
- * Luật: KHÔNG gõ tên cookie ở bất kỳ đâu khác. Cả hai phía lấy giá trị theo cùng một công thức
- * `process.env.SESSION_COOKIE_NAME ?? SESSION_COOKIE_NAME_DEFAULT` (xem `resolveSessionCookieName`).
+ * Luật: KHÔNG gõ tên cookie ở bất kỳ đâu khác. Cả hai phía dùng `resolveSessionCookieName`.
  */
 export const SESSION_COOKIE_NAME_DEFAULT = 'xp_session';
 
 /**
- * Giải tên cookie phiên từ env, có default dùng chung.
+ * Tên cookie phiên của MỘT realm: `<gốc>_<realm>` — vd `xp_session_partner`, staging
+ * `xp_session_stg_partner`. Mỗi realm một tên (ADR 0053 điều 4): cookie host-only đã không đi chéo
+ * site ở production, còn tên riêng là thứ giữ ba phiên tách nhau ở máy dev, nơi cả ba khu chung
+ * một host `localhost`.
  *
  * Ở `apps/web` hàm này chạy trong proxy, và ở đó `process.env.SESSION_COOKIE_NAME` được đọc lúc
- * CHẠY chứ không bị nhúng cứng lúc build — Next chỉ nhúng `NEXT_PUBLIC_*` (đo trực tiếp trên Next
- * 16 + Turbopack, 27/08/2026). Nghĩa là tiến trình `next start` phải có biến này trong môi trường
- * của nó, không phải chỉ máy build có là đủ.
+ * CHẠY chứ không bị nhúng cứng lúc build — Next chỉ nhúng `NEXT_PUBLIC_*` (đo trên Next 16 +
+ * Turbopack, 27/08/2026). Tiến trình `next start` phải có biến này trong môi trường của nó.
  */
-export function resolveSessionCookieName(env: { SESSION_COOKIE_NAME?: string } = {}): string {
+export function resolveSessionCookieName(
+  env: { SESSION_COOKIE_NAME?: string },
+  realm: AccountRealm,
+): string {
   const raw = env.SESSION_COOKIE_NAME?.trim();
-  return raw && raw.length > 0 ? raw : SESSION_COOKIE_NAME_DEFAULT;
+  const base = raw && raw.length > 0 ? raw : SESSION_COOKIE_NAME_DEFAULT;
+  return `${base}_${realm}`;
 }

@@ -3,7 +3,14 @@ import { Reflector } from '@nestjs/core';
 import { UnauthorizedException } from '@nestjs/common';
 import type { ExecutionContext } from '@nestjs/common';
 import { createPrismaClient, newId } from '@xeprime/prisma';
-import { API_ERROR_CODE, USER_STATUS } from '@xeprime/types';
+import {
+  ACCOUNT_REALM,
+  ACCOUNT_REALM_HEADER,
+  API_ERROR_CODE,
+  MOBILE_CLIENT_APP,
+  USER_STATUS,
+  type AccountRealm,
+} from '@xeprime/types';
 import jwt from 'jsonwebtoken';
 import { AuthGuard } from '../src/common/guards/auth.guard';
 import { resolveOptionalUserId } from '../src/common/optional-user';
@@ -12,6 +19,10 @@ import {
   NativeSessionService,
 } from '../src/modules/auth/native-session.service';
 import { SessionService } from '../src/modules/auth/session.service';
+import {
+  REALM_PROXY_SECRET_HEADER,
+  RequestRealmService,
+} from '../src/modules/auth/request-realm.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import type { RequestContext } from '../src/common/types/request-context';
 
@@ -26,7 +37,9 @@ import type { RequestContext } from '../src/common/types/request-context';
  *  - refresh xoay được, và token cũ chết ngay;
  *  - dùng lại refresh token cũ ⇒ thu hồi CẢ phiên (token family);
  *  - logout ⇒ access token còn hạn mất hiệu lực ngay;
- *  - user bị khoá ⇒ chặn dù access token chưa hết hạn.
+ *  - user bị khoá ⇒ chặn dù access token chưa hết hạn;
+ *  - (ADR 0053) phiên không bao giờ đi chéo realm: cookie đọc theo realm do proxy quyết, Bearer lấy
+ *    realm của app đã đăng nhập, tài khoản lệch realm ⇒ 401 như người lạ.
  *
  * Không có DB thì tự skip, giống các spec khác trong repo.
  */
@@ -35,16 +48,20 @@ const asService = prisma as unknown as PrismaService;
 
 const SECRET = 'test-secret-at-least-32-characters-long-xxxx';
 const AUDIENCE = 'xeprime-mobile';
-const COOKIE_NAME = 'xp_session_test';
+const COOKIE_BASE = 'xp_session_test';
+const PROXY_SECRET = 'proxy-secret-at-least-32-characters-xxxxxx';
 
 /** ConfigService tối thiểu: chỉ những khoá hai service thật sự đọc. */
 const config = {
-  get: (key: string) => (key === 'SESSION_COOKIE_DOMAIN' ? undefined : undefined),
+  get: (key: string) => (key === 'REALM_PROXY_SECRET' ? PROXY_SECRET : undefined),
   getOrThrow: (key: string) => {
     const values: Record<string, string | number | boolean> = {
+      APP_WEB_URL: 'https://xeprime.vn',
+      WEB_PARTNER_URL: 'https://partner.xeprime.vn',
+      WEB_ADMIN_URL: 'https://admin.xeprime.vn',
       SESSION_JWT_SECRET: SECRET,
       SESSION_TTL_DAYS: 7,
-      SESSION_COOKIE_NAME: COOKIE_NAME,
+      SESSION_COOKIE_NAME: COOKIE_BASE,
       SESSION_COOKIE_SECURE: false,
       MOBILE_ACCESS_TTL_MINUTES: 15,
       MOBILE_REFRESH_TTL_DAYS: 60,
@@ -58,18 +75,41 @@ const config = {
 
 const sessions = new SessionService(config);
 const native = new NativeSessionService(config, asService);
-const guard = new AuthGuard(new Reflector(), sessions, native, asService);
+const realms = new RequestRealmService(config);
+const guard = new AuthGuard(new Reflector(), sessions, native, realms, asService);
+
+/** Cookie của site khách — đường web mặc định của các test cũ. */
+const COOKIE_NAME = sessions.cookieName(ACCOUNT_REALM.CUSTOMER);
+
+/**
+ * Header Caddy gắn cho một request web: realm theo host + khoá proxy. Request native không có.
+ * `secret: null` mô phỏng ai đó tự gửi header realm mà không biết khoá.
+ */
+function realmHeaders(realm: AccountRealm, secret: string | null = PROXY_SECRET) {
+  return {
+    [ACCOUNT_REALM_HEADER]: realm,
+    ...(secret === null ? {} : { [REALM_PROXY_SECRET_HEADER]: secret }),
+  };
+}
 
 /** Request giả — trả về ĐÚNG object mà guard sẽ ghi `req.user` vào. */
 function mkRequest(
   init: {
     cookies?: Record<string, string>;
     authorization?: string;
+    /** Realm của site web; mặc định `customer` khi request mang cookie (đường web). */
+    realm?: AccountRealm | null;
+    proxySecret?: string | null;
   } = {},
 ): RequestContext {
+  const realm =
+    init.realm === undefined ? (init.cookies ? ACCOUNT_REALM.CUSTOMER : null) : init.realm;
   return {
     cookies: init.cookies ?? {},
-    headers: init.authorization === undefined ? {} : { authorization: init.authorization },
+    headers: {
+      ...(realm ? realmHeaders(realm, init.proxySecret) : {}),
+      ...(init.authorization === undefined ? {} : { authorization: init.authorization }),
+    },
   } as unknown as RequestContext;
 }
 
@@ -94,10 +134,13 @@ function contextFor(request: RequestContext): ExecutionContext {
 let dbAvailable = false;
 const createdUserIds: string[] = [];
 
-async function mkUser(status: string = USER_STATUS.ACTIVE): Promise<string> {
+async function mkUser(
+  status: string = USER_STATUS.ACTIVE,
+  realm: AccountRealm = ACCOUNT_REALM.CUSTOMER,
+): Promise<string> {
   const id = newId();
   await prisma.user.create({
-    data: { id, displayName: 'Khách Native Test', status },
+    data: { id, realm, displayName: 'Khách Native Test', status },
   });
   createdUserIds.push(id);
   return id;
@@ -493,22 +536,15 @@ describe('NativeSessionService — đăng xuất và thu hồi', () => {
 
 describe('resolveOptionalUserId — nhận cả cookie lẫn Bearer', () => {
   const reqOf = (init: { cookies?: Record<string, string>; authorization?: string }) =>
-    ({
-      cookies: init.cookies ?? {},
-      headers: init.authorization === undefined ? {} : { authorization: init.authorization },
-    }) as unknown as Parameters<typeof resolveOptionalUserId>[0];
+    mkRequest(init) as unknown as Parameters<typeof resolveOptionalUserId>[0];
+  const deps = { sessions, prisma: asService, realms, nativeSessions: native };
 
   maybe('Bearer hợp lệ ⇒ trả userId', async () => {
     const userId = await mkUser();
     const pair = await native.issueSession(userId);
 
     await expect(
-      resolveOptionalUserId(
-        reqOf({ authorization: `Bearer ${pair.accessToken}` }),
-        sessions,
-        asService,
-        native,
-      ),
+      resolveOptionalUserId(reqOf({ authorization: `Bearer ${pair.accessToken}` }), deps),
     ).resolves.toBe(userId);
   });
 
@@ -517,7 +553,11 @@ describe('resolveOptionalUserId — nhận cả cookie lẫn Bearer', () => {
     const { token } = sessions.issue(userId);
 
     await expect(
-      resolveOptionalUserId(reqOf({ cookies: { [COOKIE_NAME]: token } }), sessions, asService),
+      resolveOptionalUserId(reqOf({ cookies: { [COOKIE_NAME]: token } }), {
+        sessions,
+        prisma: asService,
+        realms,
+      }),
     ).resolves.toBe(userId);
   });
 
@@ -527,12 +567,7 @@ describe('resolveOptionalUserId — nhận cả cookie lẫn Bearer', () => {
     await native.revokeByRefreshToken(pair.refreshToken);
 
     await expect(
-      resolveOptionalUserId(
-        reqOf({ authorization: `Bearer ${pair.accessToken}` }),
-        sessions,
-        asService,
-        native,
-      ),
+      resolveOptionalUserId(reqOf({ authorization: `Bearer ${pair.accessToken}` }), deps),
     ).resolves.toBeNull();
   });
 
@@ -550,7 +585,120 @@ describe('resolveOptionalUserId — nhận cả cookie lẫn Bearer', () => {
     ];
 
     for (const req of cases) {
-      await expect(resolveOptionalUserId(req, sessions, asService, native)).resolves.toBeNull();
+      await expect(resolveOptionalUserId(req, deps)).resolves.toBeNull();
     }
+  });
+
+  maybe(
+    'endpoint của khách yêu cầu realm customer: phiên partner coi như khách vãng lai',
+    async () => {
+      const partnerId = await mkUser(USER_STATUS.ACTIVE, ACCOUNT_REALM.PARTNER);
+      const pair = await native.issueSession(partnerId, {}, MOBILE_CLIENT_APP.PARTNER);
+
+      const req = reqOf({ authorization: `Bearer ${pair.accessToken}` });
+      await expect(resolveOptionalUserId(req, deps)).resolves.toBe(partnerId);
+      await expect(resolveOptionalUserId(req, deps, ACCOUNT_REALM.CUSTOMER)).resolves.toBeNull();
+    },
+  );
+});
+
+/* ───────────────────────── Ranh giới realm (ADR 0053) ───────────────────────── */
+
+describe('AuthGuard — phiên không đi chéo realm', () => {
+  maybe('cookie site partner của tài khoản partner ⇒ vào được, req.realm = partner', async () => {
+    const userId = await mkUser(USER_STATUS.ACTIVE, ACCOUNT_REALM.PARTNER);
+    const { token } = sessions.issue(userId);
+    const request = mkRequest({
+      cookies: { [sessions.cookieName(ACCOUNT_REALM.PARTNER)]: token },
+      realm: ACCOUNT_REALM.PARTNER,
+    });
+
+    await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
+    expect(request.realm).toBe(ACCOUNT_REALM.PARTNER);
+    expect(request.user).toMatchObject({
+      id: userId,
+      realm: ACCOUNT_REALM.PARTNER,
+      transport: 'cookie',
+    });
+  });
+
+  maybe('cookie của site khách KHÔNG được đọc ở site partner (khác tên cookie)', async () => {
+    const userId = await mkUser();
+    const { token } = sessions.issue(userId);
+
+    await expectUnauthorized(() =>
+      guard.canActivate(
+        contextFor(mkRequest({ cookies: { [COOKIE_NAME]: token }, realm: ACCOUNT_REALM.PARTNER })),
+      ),
+    );
+  });
+
+  maybe(
+    'token của tài khoản khách đặt dưới tên cookie partner ⇒ 401 (tài khoản lệch realm)',
+    async () => {
+      const customerId = await mkUser();
+      const { token } = sessions.issue(customerId);
+
+      await expectUnauthorized(() =>
+        guard.canActivate(
+          contextFor(
+            mkRequest({
+              cookies: { [sessions.cookieName(ACCOUNT_REALM.PARTNER)]: token },
+              realm: ACCOUNT_REALM.PARTNER,
+            }),
+          ),
+        ),
+      );
+    },
+  );
+
+  maybe('header realm tự khai KHÔNG có khoá proxy ⇒ không đọc cookie nào', async () => {
+    const userId = await mkUser(USER_STATUS.ACTIVE, ACCOUNT_REALM.PLATFORM);
+    const { token } = sessions.issue(userId);
+
+    await expectUnauthorized(() =>
+      guard.canActivate(
+        contextFor(
+          mkRequest({
+            cookies: { [sessions.cookieName(ACCOUNT_REALM.PLATFORM)]: token },
+            realm: ACCOUNT_REALM.PLATFORM,
+            proxySecret: null,
+          }),
+        ),
+      ),
+    );
+    await expectUnauthorized(() =>
+      guard.canActivate(
+        contextFor(
+          mkRequest({
+            cookies: { [sessions.cookieName(ACCOUNT_REALM.PLATFORM)]: token },
+            realm: ACCOUNT_REALM.PLATFORM,
+            // Sai khoá nhưng CÙNG độ dài — đi tới phép so thời gian hằng chứ không dừng ở độ dài.
+            proxySecret: 'x'.repeat(PROXY_SECRET.length),
+          }),
+        ),
+      ),
+    );
+  });
+
+  maybe(
+    'Bearer: realm là app đã đăng nhập — tài khoản khách qua phiên app Partner ⇒ 401',
+    async () => {
+      const customerId = await mkUser();
+      const pair = await native.issueSession(customerId, {}, MOBILE_CLIENT_APP.PARTNER);
+
+      await expectUnauthorized(() =>
+        guard.canActivate(contextFor(mkRequest({ authorization: `Bearer ${pair.accessToken}` }))),
+      );
+    },
+  );
+
+  maybe('Bearer của app Partner cho tài khoản partner ⇒ vào được, realm = partner', async () => {
+    const partnerId = await mkUser(USER_STATUS.ACTIVE, ACCOUNT_REALM.PARTNER);
+    const pair = await native.issueSession(partnerId, {}, MOBILE_CLIENT_APP.PARTNER);
+    const request = mkRequest({ authorization: `Bearer ${pair.accessToken}` });
+
+    await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
+    expect(request.user).toMatchObject({ realm: ACCOUNT_REALM.PARTNER, transport: 'bearer' });
   });
 });

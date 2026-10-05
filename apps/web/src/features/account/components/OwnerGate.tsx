@@ -9,13 +9,12 @@ import { OWNER_STAGE } from '@xeprime/types';
 
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { ROUTES } from '@/constants/routes';
-import { resolveOwnerCtaHref } from '@/features/auth/post-auth-destination';
 
 import { useOwnerAccess } from '../hooks/use-owner-access';
 import styles from './OwnerGate.module.css';
 
 /**
- * Cổng của các màn CHỦ XE trong `/account`.
+ * Cổng của các màn CHỦ XE (Owner Lite) ở site partner.
  *
  * Hai mức, đúng hai bậc của `resolveOwnerStage`:
  *
@@ -53,6 +52,12 @@ export function OwnerGate({
    */
   const registering = stage === OWNER_STAGE.REGISTERING;
   const shopName = user?.tenant?.name;
+  /*
+   * THÀNH VIÊN (không phải chủ) của một gian hàng tuyến hoa hồng — bộ công cụ chủ xe là của chủ.
+   * Site partner không có "cổng quản lý" nào khác để dẫn họ sang (cùng site, cùng URL), nên không
+   * có nút chính: nói đúng tình trạng và để họ về hồ sơ của mình.
+   */
+  const member = !registering && Boolean(shopName);
 
   return (
     <section className={styles.root} role="status">
@@ -63,21 +68,19 @@ export function OwnerGate({
       <p className={styles.body}>
         {registering
           ? t('registeringBody')
-          : shopName
-            ? t('bodyMember', { shop: shopName })
+          : member
+            ? t('bodyMemberPartner', { shop: shopName ?? '' })
             : t('body')}
       </p>
       <div className={styles.actions}>
-        <Link href={registering ? ROUTES.ACCOUNT.REGISTRATION : resolveOwnerCtaHref(user)}>
-          <Button type="primary">
-            {registering
-              ? t('openRegistration')
-              : shopName
-                ? t('openManage')
-                : t('becomeOwner')}
-          </Button>
-        </Link>
-        <Link href={ROUTES.ACCOUNT.ROOT}>
+        {member ? null : (
+          <Link href={registering ? ROUTES.MANAGE.REGISTRATION : ROUTES.MANAGE.REGISTER}>
+            <Button type="primary">
+              {registering ? t('openRegistration') : t('becomeOwner')}
+            </Button>
+          </Link>
+        )}
+        <Link href={ROUTES.MANAGE.ACCOUNT}>
           <Button>{t('backToAccount')}</Button>
         </Link>
       </div>

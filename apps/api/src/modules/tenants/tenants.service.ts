@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { markBadgesDirty, newId, Prisma } from '@xeprime/prisma';
+import { isUniqueViolation, markBadgesDirty, newId, Prisma } from '@xeprime/prisma';
 import {
   APPROVAL_ACTION,
   APPROVAL_STATUS,
@@ -27,7 +27,6 @@ import { AuditService } from '../audit/audit.service';
 import type { BranchUpdatePlan } from '../branches/branches.service';
 import { BillingService } from '../billing/billing.service';
 import { BranchesService } from '../branches/branches.service';
-import { WalletService } from '../wallet/wallet.service';
 import { AddressService } from '../locations/address.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -92,8 +91,6 @@ export class TenantsService {
     private readonly address: AddressService,
     private readonly branches: BranchesService,
     private readonly billing: BillingService,
-    /** Writer duy nhất của ví (ADR 0023 ràng buộc 3) — dùng để đổi chủ ví lúc mở gian hàng. */
-    private readonly wallet: WalletService,
   ) {}
 
   /**
@@ -133,7 +130,10 @@ export class TenantsService {
    * | Trường bắt buộc | tỉnh | tỉnh + **xã** + **địa chỉ chi tiết** + **SĐT** |
    * | Gói gán lúc tạo | gói hoa hồng mặc định | **KHÔNG gán gì** |
    * | `onboarding_state` | `commission` | `package_pending` |
-   * | Đi đâu sau khi tạo | Owner Lite ở `/account` | bước 2 của onboarding (chọn gói → chuyển khoản) |
+   * | Đi đâu sau khi tạo | Owner Lite ở site partner | bước 2 của onboarding (chọn gói → chuyển khoản) |
+   *
+   * Người gọi luôn là tài khoản realm `partner` (route chỉ khai `partner` — ADR 0053), và trigger
+   * `tenants_owner_realm_check` / `tenant_memberships_user_realm_check` giữ điều đó ở DB.
    *
    * Vì sao tuyến gói KHÔNG nhận một gói hoa hồng tạm: dòng thuê bao là thứ `/auth/me` đọc để
    * chọn KHU làm việc, nên gán nó nghĩa là người vừa bấm "Đăng ký gian hàng" trở thành chủ xe
@@ -150,12 +150,7 @@ export class TenantsService {
       where: { userId, status: MEMBERSHIP_STATUS.ACTIVE },
       select: { tenantId: true },
     });
-    if (existing) {
-      throw new ConflictException({
-        code: API_ERROR_CODE.CONFLICT,
-        message: 'Tài khoản đã thuộc một gian hàng. Hãy đăng nhập vào gian hàng đó.',
-      });
-    }
+    if (existing) throw alreadyInTenant();
 
     const track = registrationTrackOf(dto.registrationTrack);
     const isPackageTrack = track === REGISTRATION_TRACK.PACKAGE;
@@ -211,7 +206,8 @@ export class TenantsService {
 
     const tenantType = dto.tenantType ?? TENANT_TYPE.INDIVIDUAL;
     const id = newId();
-    const tenantId = await this.prisma.$transaction(async (tx) => {
+    const tenantId = await this.prisma
+      .$transaction(async (tx) => {
       await tx.tenant.create({
         data: {
           id,
@@ -284,19 +280,19 @@ export class TenantsService {
       if (!isPackageTrack) await this.billing.assignDefaultPlanWithinTx(tx, id);
 
       /*
-       * VÍ THEO NGƯỜI CHỦ (15/09/2026) — trong CHÍNH transaction này, cùng lý do với dòng gói ở
-       * trên: không được có khoảnh khắc nào tenant đã tồn tại mà ví còn đứng tên cá nhân.
-       *
-       * Người đăng ký thường đã là KHÁCH THUÊ trước đó, nên họ có thể đang có số dư từ tiền hoàn
-       * khoản giữ chỗ, có tài khoản ngân hàng đã khai, thậm chí một lệnh rút đang chờ admin
-       * chuyển. Tất cả đi theo — không chuyển tiền, chỉ đổi chủ của hàng ví (`wallets.id` không
-       * đổi nên lệnh rút và mọi tham chiếu vẫn trỏ đúng).
-       *
-       * Ghi qua `WalletService` vì nó là writer DUY NHẤT của ba bảng ví (ADR 0023 ràng buộc 3).
+       * KHÔNG còn bước "nhận ví cá nhân về tenant" (ADR 0053 điều 8 — bỏ ADR 0038 điều 2). Ví cá
+       * nhân thuộc TÀI KHOẢN KHÁCH, một tài khoản khác hẳn với tài khoản partner đang mở gian hàng
+       * này; tiền hoàn của khách không bao giờ đổi chủ sang ví gian hàng. Ví của tenant được tạo
+       * khi có khoản ghi có đầu tiên, như mọi tenant khác.
        */
-      await this.wallet.adoptUserWalletWithinTx(tx, userId, id);
-      return id;
-    });
+        return id;
+      })
+      .catch((error: unknown) => {
+        // Hai lượt mở gian hàng song song của cùng một tài khoản: unique index một phần
+        // `tenant_memberships_one_active_per_user` là chốt thật (ADR 0053 điều 6).
+        if (isUniqueViolation(error, ONE_ACTIVE_MEMBERSHIP_INDEX)) throw alreadyInTenant();
+        throw error;
+      });
 
     return this.getMyShop(tenantId);
   }
@@ -706,5 +702,16 @@ function notFound(): NotFoundException {
   return new NotFoundException({
     code: API_ERROR_CODE.NOT_FOUND,
     message: 'Không tìm thấy gian hàng',
+  });
+}
+
+/** Một tài khoản partner thuộc tối đa MỘT gian hàng (ADR 0053 điều 6). */
+/** Unique index một phần của migration `account_realms` — một membership active cho mỗi tài khoản. */
+const ONE_ACTIVE_MEMBERSHIP_INDEX = 'tenant_memberships_one_active_per_user';
+
+function alreadyInTenant(): ConflictException {
+  return new ConflictException({
+    code: API_ERROR_CODE.MEMBER_ALREADY_IN_OTHER_TENANT,
+    message: 'Tài khoản đã thuộc một gian hàng — mỗi tài khoản chỉ thuộc một gian hàng.',
   });
 }

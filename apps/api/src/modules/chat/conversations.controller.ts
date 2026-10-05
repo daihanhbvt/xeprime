@@ -1,7 +1,8 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { ACCOUNT_REALM } from '@xeprime/types';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { ChatInbox } from '@xeprime/types';
-import { CurrentUser } from '../../common/decorators';
+import { CurrentUser, Realms } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import {
   ChatEligibilityDto,
@@ -37,6 +38,7 @@ import { ChatService } from './chat.service';
  */
 @ApiTags('conversations')
 @Controller('conversations')
+@Realms(ACCOUNT_REALM.CUSTOMER, ACCOUNT_REALM.PARTNER)
 export class ConversationsController {
   constructor(private readonly chat: ChatService) {}
 

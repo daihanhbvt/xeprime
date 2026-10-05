@@ -2,6 +2,7 @@ import type { ConfigService } from '@nestjs/config';
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import type { GeoPoint } from '@xeprime/domain';
 import {
+  ACCOUNT_REALM,
   DELIVERY_DISTANCE_STATUS,
   DELIVERY_MANUAL_REASON,
   MEMBERSHIP_STATUS,
@@ -163,7 +164,12 @@ beforeAll(async () => {
 
   ownerId = newId();
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Chủ shop Geo', email: `geo-${ownerId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Chủ shop Geo',
+      email: `geo-${ownerId}@xeprime.test`,
+    },
   });
   tenantId = newId();
   await prisma.tenant.create({
@@ -576,42 +582,48 @@ describe('cắm nhà cung cấp thật vào — chuỗi đầy đủ, chỉ máy
     global.fetch = realFetch;
   });
 
-  maybe('địa chỉ khách → toạ độ → km đường bộ → đúng bậc phí, và ghi cả hai bảng cache', async () => {
-    await clearGeoCache();
-    stubGeoapify();
+  maybe(
+    'địa chỉ khách → toạ độ → km đường bộ → đúng bậc phí, và ghi cả hai bảng cache',
+    async () => {
+      await clearGeoCache();
+      stubGeoapify();
 
-    const config = { get: () => FAKE_KEY, getOrThrow: () => FAKE_KEY } as unknown as ConfigService;
-    const liveGeo = new GeoService(asService, new GeoapifyGeoProvider(config));
-    const liveDistance = new DeliveryDistanceService(asService, pricing, liveGeo);
+      const config = {
+        get: () => FAKE_KEY,
+        getOrThrow: () => FAKE_KEY,
+      } as unknown as ConfigService;
+      const liveGeo = new GeoService(asService, new GeoapifyGeoProvider(config));
+      const liveDistance = new DeliveryDistanceService(asService, pricing, liveGeo);
 
-    const res = await liveDistance.forListing(vehicleId, NEAR_ADDRESS);
+      const res = await liveDistance.forListing(vehicleId, NEAR_ADDRESS);
 
-    expect(res.status).toBe(DELIVERY_DISTANCE_STATUS.AUTO);
-    expect(res.distanceKm).toBe(3.42);
-    // 3,42 km nằm trong bậc >3–5 km. Con số này đi ra từ `PricingService.deliveryFeeFor` đọc
-    // chính sách THẬT trong DB — không phải một hằng số viết trong test.
-    expect(res.fee).toBe('30000');
-    expect(res.origin).toEqual(BRANCH_POINT);
-    expect(res.destination).toEqual(NEAR_POINT);
-    expect(res.formattedAddress).toContain('Bến Nghé');
+      expect(res.status).toBe(DELIVERY_DISTANCE_STATUS.AUTO);
+      expect(res.distanceKm).toBe(3.42);
+      // 3,42 km nằm trong bậc >3–5 km. Con số này đi ra từ `PricingService.deliveryFeeFor` đọc
+      // chính sách THẬT trong DB — không phải một hằng số viết trong test.
+      expect(res.fee).toBe('30000');
+      expect(res.origin).toEqual(BRANCH_POINT);
+      expect(res.destination).toEqual(NEAR_POINT);
+      expect(res.formattedAddress).toContain('Bến Nghé');
 
-    // Đúng hai lượt gọi ra ngoài cho một lần tra: 1 geocode + 1 routes.
-    expect(fetchCalls).toBe(2);
+      // Đúng hai lượt gọi ra ngoài cho một lần tra: 1 geocode + 1 routes.
+      expect(fetchCalls).toBe(2);
 
-    const geocodeRow = await prisma.geocodeCache.findFirst({ where: { provider: 'geoapify' } });
-    // Mã địa điểm là TOẠ ĐỘ (xem `placeToken`), không phải `place_id` thô của Geoapify.
-    expect(geocodeRow?.placeId).toBe('gp1:10.7743,106.7038');
-    const routeRow = await prisma.geoRouteCache.findFirst({ where: { provider: 'geoapify' } });
-    expect(Number(routeRow?.distanceKm)).toBe(3.42);
+      const geocodeRow = await prisma.geocodeCache.findFirst({ where: { provider: 'geoapify' } });
+      // Mã địa điểm là TOẠ ĐỘ (xem `placeToken`), không phải `place_id` thô của Geoapify.
+      expect(geocodeRow?.placeId).toBe('gp1:10.7743,106.7038');
+      const routeRow = await prisma.geoRouteCache.findFirst({ where: { provider: 'geoapify' } });
+      expect(Number(routeRow?.distanceKm)).toBe(3.42);
 
-    // Lần thứ hai đọc sạch từ cache — KHÔNG một request nào nữa. Đây là thứ quyết định hạn mức
-    // 3.000 credit/ngày có đủ dùng hay không, nên nó phải đúng với provider thật chứ không chỉ provider giả.
-    const again = await liveDistance.forListing(vehicleId, NEAR_ADDRESS);
-    expect(again.status).toBe(DELIVERY_DISTANCE_STATUS.AUTO);
-    expect(again.fee).toBe('30000');
-    expect(fetchCalls).toBe(2);
+      // Lần thứ hai đọc sạch từ cache — KHÔNG một request nào nữa. Đây là thứ quyết định hạn mức
+      // 3.000 credit/ngày có đủ dùng hay không, nên nó phải đúng với provider thật chứ không chỉ provider giả.
+      const again = await liveDistance.forListing(vehicleId, NEAR_ADDRESS);
+      expect(again.status).toBe(DELIVERY_DISTANCE_STATUS.AUTO);
+      expect(again.fee).toBe('30000');
+      expect(fetchCalls).toBe(2);
 
-    await prisma.geocodeCache.deleteMany({ where: { provider: 'geoapify' } });
-    await prisma.geoRouteCache.deleteMany({ where: { provider: 'geoapify' } });
-  });
+      await prisma.geocodeCache.deleteMany({ where: { provider: 'geoapify' } });
+      await prisma.geoRouteCache.deleteMany({ where: { provider: 'geoapify' } });
+    },
+  );
 });

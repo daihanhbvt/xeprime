@@ -1,0 +1,53 @@
+{
+  "page": {
+    "title": "Nhân sự nền tảng",
+    "tableLabel": "Danh sách nhân sự nền tảng",
+    "total": "{total} nhân sự",
+    "you": "(bạn)"
+  },
+  "filters": {
+    "search": "Tìm nhân sự",
+    "searchPlaceholder": "Tìm theo tên hoặc email",
+    "role": "Vai trò",
+    "allRoles": "Tất cả vai trò"
+  },
+  "columns": {
+    "staff": "Nhân sự",
+    "role": "Vai trò",
+    "status": "Trạng thái"
+  },
+  "roleOf": "Vai trò của {name}",
+  "actions": {
+    "add": "Thêm nhân sự",
+    "remove": "Gỡ nhân sự",
+    "removeConfirm": "Gỡ nhân sự này khỏi nền tảng?",
+    "removeOk": "Gỡ"
+  },
+  "toast": {
+    "roleChanged": "Đã đổi vai trò",
+    "removed": "Đã gỡ nhân sự",
+    "added": "Đã thêm nhân sự"
+  },
+  "states": {
+    "loadError": "Không tải được danh sách nhân sự",
+    "empty": "Chưa có nhân sự nào"
+  },
+  "add": {
+    "title": "Thêm nhân sự nền tảng",
+    "submit": "Thêm",
+    "email": "Email",
+    "emailPlaceholder": "nhanvien@xeprime.vn",
+    "displayName": "Tên hiển thị",
+    "displayNamePlaceholder": "Nguyễn Văn A",
+    "role": "Vai trò",
+    "hint": "Email chưa có tài khoản quản trị sẽ được tạo tài khoản mới và nhận link đặt mật khẩu qua email. Tài khoản khách hay đối tác dùng cùng email không được nâng quyền.",
+    "errors": {
+      "emailRequired": "Nhập email",
+      "emailInvalid": "Email không hợp lệ",
+      "nameRequired": "Nhập tên hiển thị",
+      "nameMin": "Tên hiển thị ít nhất {min} ký tự",
+      "nameMax": "Tên hiển thị tối đa {max} ký tự",
+      "roleRequired": "Chọn vai trò"
+    }
+  }
+}

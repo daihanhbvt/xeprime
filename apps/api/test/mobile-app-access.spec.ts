@@ -1,4 +1,5 @@
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   BILLING_MODE,
   MOBILE_CLIENT_APP,
@@ -21,6 +22,12 @@ import type { MeDto } from '../src/modules/auth/dto/auth.dto';
 function me(tenant: MeDto['tenant'], platformRole: string | null = null): MeDto {
   return {
     id: '01J000000000000000000000',
+    // Realm suy như dữ liệu thật (ADR 0053): có vai nền tảng ⇒ platform, có gian hàng ⇒ partner.
+    realm: platformRole
+      ? ACCOUNT_REALM.PLATFORM
+      : tenant
+        ? ACCOUNT_REALM.PARTNER
+        : ACCOUNT_REALM.CUSTOMER,
     displayName: 'Người dùng',
     email: null,
     avatarUrl: null,
@@ -68,9 +75,7 @@ const PACKAGE_PENDING = tenant({
 
 describe('app XePrime Partner — chỉ tài khoản gian hàng tuyến gói', () => {
   it('chủ gian hàng tuyến gói vào được', () => {
-    expect(() =>
-      assertMobileAppAccess(me(PACKAGE_SHOP), MOBILE_CLIENT_APP.PARTNER),
-    ).not.toThrow();
+    expect(() => assertMobileAppAccess(me(PACKAGE_SHOP), MOBILE_CLIENT_APP.PARTNER)).not.toThrow();
   });
 
   it('nhân viên của gian hàng gói cũng vào được — câu hỏi hỏi TENANT, không hỏi vai', () => {

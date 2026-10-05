@@ -1,5 +1,6 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   BOOKING_STATUS,
   FINANCE_CATEGORY_TYPE,
@@ -59,7 +60,12 @@ beforeAll(async () => {
   tenantId = newId();
   otherTenantId = newId();
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Chủ shop',
+      email: `own-${ownerId}@xeprime.test`,
+    },
   });
   for (const id of [tenantId, otherTenantId]) {
     await prisma.tenant.create({
@@ -188,14 +194,19 @@ const maybe = (name: string, fn: () => Promise<void>) =>
   });
 
 async function createExpense() {
-  return receipts.create(tenantId, ownerId, {
-    type: RECEIPT_TYPE.EXPENSE,
-    amount: '500000',
-    paymentMethod: PAYMENT_METHOD.CASH,
-    description: 'Chi phí văn phòng',
-    // Không gắn xe ⇒ phải nêu chi nhánh phát sinh (ADR 0052).
-    branchId,
-  }, null);
+  return receipts.create(
+    tenantId,
+    ownerId,
+    {
+      type: RECEIPT_TYPE.EXPENSE,
+      amount: '500000',
+      paymentMethod: PAYMENT_METHOD.CASH,
+      description: 'Chi phí văn phòng',
+      // Không gắn xe ⇒ phải nêu chi nhánh phát sinh (ADR 0052).
+      branchId,
+    },
+    null,
+  );
 }
 
 describe('Thu/Chi — receipts + categories (Slice D)', () => {
@@ -229,14 +240,19 @@ describe('Thu/Chi — receipts + categories (Slice D)', () => {
   });
 
   maybe('phiếu có đính kèm ảnh minh chứng', async () => {
-    const r = await receipts.create(tenantId, ownerId, {
-      type: RECEIPT_TYPE.INCOME,
-      amount: '1000000.50',
-      paymentMethod: PAYMENT_METHOD.BANK_TRANSFER,
-      referenceCode: 'FT123',
-      branchId,
-      attachments: ['https://img/bill1.jpg', 'https://img/bill2.jpg'],
-    }, null);
+    const r = await receipts.create(
+      tenantId,
+      ownerId,
+      {
+        type: RECEIPT_TYPE.INCOME,
+        amount: '1000000.50',
+        paymentMethod: PAYMENT_METHOD.BANK_TRANSFER,
+        referenceCode: 'FT123',
+        branchId,
+        attachments: ['https://img/bill1.jpg', 'https://img/bill2.jpg'],
+      },
+      null,
+    );
     expect(r.receiptNo).toMatch(/^PT-/);
     expect(r.amount).toBe('1000000.5');
     expect(r.attachments).toEqual(['https://img/bill1.jpg', 'https://img/bill2.jpg']);
@@ -256,13 +272,18 @@ describe('Thu/Chi — receipts + categories (Slice D)', () => {
   // toàn bộ nó phải được kiểm ở đây.
 
   maybe('gắn THẲNG vào xe, không cần đơn — chi phí của xe không thuộc chuyến nào', async () => {
-    const r = await receipts.create(tenantId, ownerId, {
-      type: RECEIPT_TYPE.EXPENSE,
-      amount: '250000',
-      paymentMethod: PAYMENT_METHOD.CASH,
-      vehicleId,
-      description: 'Vá lốp',
-    }, null);
+    const r = await receipts.create(
+      tenantId,
+      ownerId,
+      {
+        type: RECEIPT_TYPE.EXPENSE,
+        amount: '250000',
+        paymentMethod: PAYMENT_METHOD.CASH,
+        vehicleId,
+        description: 'Vá lốp',
+      },
+      null,
+    );
     expect(r.vehicleId).toBe(vehicleId);
     expect(r.bookingId).toBeNull();
     expect(r.vehicleName).toBe('Vios');
@@ -277,37 +298,52 @@ describe('Thu/Chi — receipts + categories (Slice D)', () => {
   });
 
   maybe('gắn đơn mà bỏ trống xe → server SUY xe từ đơn, không để null', async () => {
-    const r = await receipts.create(tenantId, ownerId, {
-      type: RECEIPT_TYPE.INCOME,
-      amount: '500000',
-      paymentMethod: PAYMENT_METHOD.CASH,
-      bookingId,
-    }, null);
+    const r = await receipts.create(
+      tenantId,
+      ownerId,
+      {
+        type: RECEIPT_TYPE.INCOME,
+        amount: '500000',
+        paymentMethod: PAYMENT_METHOD.CASH,
+        bookingId,
+      },
+      null,
+    );
     expect(r.bookingId).toBe(bookingId);
     expect(r.vehicleId).toBe(vehicleId);
   });
 
   maybe('gắn đơn + đúng xe của đơn → nhận', async () => {
-    const r = await receipts.create(tenantId, ownerId, {
-      type: RECEIPT_TYPE.INCOME,
-      amount: '500000',
-      paymentMethod: PAYMENT_METHOD.CASH,
-      bookingId,
-      vehicleId,
-    }, null);
+    const r = await receipts.create(
+      tenantId,
+      ownerId,
+      {
+        type: RECEIPT_TYPE.INCOME,
+        amount: '500000',
+        paymentMethod: PAYMENT_METHOD.CASH,
+        bookingId,
+        vehicleId,
+      },
+      null,
+    );
     expect(r.bookingId).toBe(bookingId);
     expect(r.vehicleId).toBe(vehicleId);
   });
 
   maybe('gắn đơn + xe KHÁC xe của đơn → 409 RECEIPT_BOOKING_VEHICLE_MISMATCH', async () => {
     await expect(
-      receipts.create(tenantId, ownerId, {
-        type: RECEIPT_TYPE.EXPENSE,
-        amount: '100000',
-        paymentMethod: PAYMENT_METHOD.CASH,
-        bookingId,
-        vehicleId: otherVehicleId,
-      }, null),
+      receipts.create(
+        tenantId,
+        ownerId,
+        {
+          type: RECEIPT_TYPE.EXPENSE,
+          amount: '100000',
+          paymentMethod: PAYMENT_METHOD.CASH,
+          bookingId,
+          vehicleId: otherVehicleId,
+        },
+        null,
+      ),
     ).rejects.toMatchObject({
       response: { code: API_ERROR_CODE.RECEIPT_BOOKING_VEHICLE_MISMATCH },
     });
@@ -315,35 +351,50 @@ describe('Thu/Chi — receipts + categories (Slice D)', () => {
 
   maybe('đơn của gian hàng KHÁC → 404, không lộ là đơn có tồn tại', async () => {
     await expect(
-      receipts.create(tenantId, ownerId, {
-        type: RECEIPT_TYPE.INCOME,
-        amount: '100000',
-        paymentMethod: PAYMENT_METHOD.CASH,
-        bookingId: foreignBookingId,
-      }, null),
+      receipts.create(
+        tenantId,
+        ownerId,
+        {
+          type: RECEIPT_TYPE.INCOME,
+          amount: '100000',
+          paymentMethod: PAYMENT_METHOD.CASH,
+          bookingId: foreignBookingId,
+        },
+        null,
+      ),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.NOT_FOUND } });
   });
 
   maybe('xe của gian hàng KHÁC → 404', async () => {
     await expect(
-      receipts.create(tenantId, ownerId, {
-        type: RECEIPT_TYPE.EXPENSE,
-        amount: '100000',
-        paymentMethod: PAYMENT_METHOD.CASH,
-        vehicleId: foreignVehicleId,
-      }, null),
+      receipts.create(
+        tenantId,
+        ownerId,
+        {
+          type: RECEIPT_TYPE.EXPENSE,
+          amount: '100000',
+          paymentMethod: PAYMENT_METHOD.CASH,
+          vehicleId: foreignVehicleId,
+        },
+        null,
+      ),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.NOT_FOUND } });
   });
 
   maybe('đơn + xe mỗi cái một gian hàng → chặn ở vế đơn trước, vẫn 404', async () => {
     await expect(
-      receipts.create(tenantId, ownerId, {
-        type: RECEIPT_TYPE.INCOME,
-        amount: '100000',
-        paymentMethod: PAYMENT_METHOD.CASH,
-        bookingId: foreignBookingId,
-        vehicleId,
-      }, null),
+      receipts.create(
+        tenantId,
+        ownerId,
+        {
+          type: RECEIPT_TYPE.INCOME,
+          amount: '100000',
+          paymentMethod: PAYMENT_METHOD.CASH,
+          bookingId: foreignBookingId,
+          vehicleId,
+        },
+        null,
+      ),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.NOT_FOUND } });
   });
 
@@ -377,7 +428,10 @@ describe('Thu/Chi — receipts + categories (Slice D)', () => {
     const list = await receipts.vehicleOptions(tenantId, { q: 'xpand', includeId: vehicleId });
     expect(list[0]?.id).toBe(vehicleId);
     // Không nhân đôi khi xe đang chọn vốn đã nằm trong kết quả tìm.
-    const dedup = await receipts.vehicleOptions(tenantId, { q: 'xpand', includeId: otherVehicleId });
+    const dedup = await receipts.vehicleOptions(tenantId, {
+      q: 'xpand',
+      includeId: otherVehicleId,
+    });
     expect(dedup.filter((v) => v.id === otherVehicleId)).toHaveLength(1);
   });
 

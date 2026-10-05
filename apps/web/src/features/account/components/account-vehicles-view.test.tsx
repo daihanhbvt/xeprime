@@ -9,7 +9,7 @@ import {
   VEHICLE_TYPE,
 } from '@xeprime/types';
 
-import { accountVehiclePath } from '@/constants/routes';
+import { ownerVehiclePath } from '@/constants/routes';
 import type { VehicleListItem } from '@/features/vehicles/types';
 import { renderWithIntl } from '@/i18n/test-utils';
 
@@ -114,7 +114,7 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('AccountVehiclesView', () => {
-  it('"Quản lý xe" dẫn vào không gian quản lý của khu tài khoản', () => {
+  it('"Quản lý xe" dẫn vào không gian quản lý xe của Owner Lite, KHÔNG vào màn sửa của tuyến gói', () => {
     renderWithIntl(
       <App>
         <AccountVehiclesView />
@@ -122,8 +122,8 @@ describe('AccountVehiclesView', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Quản lý xe' }));
-    expect(nav.push).toHaveBeenCalledWith(accountVehiclePath.manage('v1'));
-    expect(nav.push).not.toHaveBeenCalledWith(expect.stringContaining('/manage/vehicles/'));
+    expect(nav.push).toHaveBeenCalledWith(ownerVehiclePath.manage('v1'));
+    expect(nav.push).not.toHaveBeenCalledWith(expect.stringContaining('/edit'));
   });
 
   it('thiếu quyền xem xe: chặn ở màn này, không dẫn tiếp vào không gian quản lý', () => {

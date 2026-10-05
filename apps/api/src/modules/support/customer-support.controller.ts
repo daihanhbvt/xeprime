@@ -1,7 +1,10 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { SUPPORT_PARTY } from '@xeprime/types';
-import { CurrentUser } from '../../common/decorators';
+import {
+  ACCOUNT_REALM,
+  SUPPORT_PARTY,
+} from '@xeprime/types';
+import { CurrentUser, Realms } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import {
   OpenSupportCaseDto,
@@ -21,6 +24,7 @@ import { SupportService } from './support.service';
  */
 @ApiTags('customer-support')
 @Controller('me/support/cases')
+@Realms(ACCOUNT_REALM.CUSTOMER)
 export class CustomerSupportController {
   constructor(private readonly support: SupportService) {}
 

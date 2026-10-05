@@ -1,5 +1,6 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   APPROVAL_ACTION,
   APPROVAL_DECISION,
@@ -21,6 +22,7 @@ import {
   VEHICLE_REVIEW_CHECK,
   VEHICLE_REVIEW_CHECK_VALUES,
   VEHICLE_TYPE,
+  type AccountRealm,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { PlatformApprovalService } from '../src/modules/platform-admin/platform-approval.service';
@@ -138,10 +140,10 @@ async function pendingTaskOf(vehicleId: string): Promise<string> {
   return task.id;
 }
 
-async function makeUser(name: string): Promise<string> {
+async function makeUser(name: string, realm: AccountRealm): Promise<string> {
   const id = newId();
   await prisma.user.create({
-    data: { id, displayName: name, email: `${id.toLowerCase()}@xeprime.test` },
+    data: { id, realm, displayName: name, email: `${id.toLowerCase()}@xeprime.test` },
   });
   return id;
 }
@@ -171,11 +173,11 @@ beforeAll(async () => {
     return;
   }
 
-  shopOwnerId = await makeUser('Chủ Huế Rental');
-  shopStaffId = await makeUser('Nguyễn Văn Minh');
-  personalOwnerId = await makeUser('Trần Văn Nam');
-  reviewerA = await makeUser('Reviewer A');
-  reviewerB = await makeUser('Reviewer B');
+  shopOwnerId = await makeUser('Chủ Huế Rental', ACCOUNT_REALM.PARTNER);
+  shopStaffId = await makeUser('Nguyễn Văn Minh', ACCOUNT_REALM.PARTNER);
+  personalOwnerId = await makeUser('Trần Văn Nam', ACCOUNT_REALM.PARTNER);
+  reviewerA = await makeUser('Reviewer A', ACCOUNT_REALM.PLATFORM);
+  reviewerB = await makeUser('Reviewer B', ACCOUNT_REALM.PLATFORM);
 
   shopTenantId = await makeTenant(`Huế Rental ${RUN}`, shopOwnerId);
   personalTenantId = await makeTenant(`Trần Văn Nam ${RUN}`, personalOwnerId);
@@ -938,9 +940,16 @@ describe('6. Xe SỐNG lệch ảnh chụp: cổng phê duyệt đọc xe sẽ l
       const released = new Promise<void>((resolve) => (release = resolve));
       const ownerEdit = prisma.$transaction(
         async (tx) => {
-          await vehicles.applyUpdate(tx, personalTenantId, id, personalOwnerId, {
-            plateNumber: '88Z-888.88',
-          }, null);
+          await vehicles.applyUpdate(
+            tx,
+            personalTenantId,
+            id,
+            personalOwnerId,
+            {
+              plateNumber: '88Z-888.88',
+            },
+            null,
+          );
           signalLocked();
           await released;
         },
@@ -1033,10 +1042,16 @@ describe('8. Chủ xe sửa xe khi phiếu còn chờ: phiếu mang bản mới 
       VEHICLE_REVIEW_CHECK_VALUES.length,
     );
 
-    await vehicles.update(personalTenantId, id, personalOwnerId, {
-      name: `Honda City G ${RUN}`,
-      plateNumber: '51A-999.99',
-    }, null);
+    await vehicles.update(
+      personalTenantId,
+      id,
+      personalOwnerId,
+      {
+        name: `Honda City G ${RUN}`,
+        plateNumber: '51A-999.99',
+      },
+      null,
+    );
 
     const after = await vehicleApprovals.detail(taskId);
     // 1. Thứ người duyệt ĐỌC là bản mới…
@@ -1080,7 +1095,13 @@ describe('8. Chủ xe sửa xe khi phiếu còn chờ: phiếu mang bản mới 
     const taskId = await pendingTaskOf(id);
     const stale = (await vehicleApprovals.detail(taskId)).capturedAt;
 
-    await vehicles.update(personalTenantId, id, personalOwnerId, { plateNumber: '51A-111.11' }, null);
+    await vehicles.update(
+      personalTenantId,
+      id,
+      personalOwnerId,
+      { plateNumber: '51A-111.11' },
+      null,
+    );
     // Tick phải làm LẠI — chúng vừa bị đặt lại cùng lượt sửa.
     await passVehicleReviewChecks(prisma, taskId, reviewerA);
 
@@ -1118,7 +1139,13 @@ describe('8. Chủ xe sửa xe khi phiếu còn chờ: phiếu mang bản mới 
   maybe('sửa xe KHÔNG có phiếu chờ → không tạo phiếu nào', async () => {
     const id = await seedVehicle(personalTenantId, { name: `Suzuki XL7 ${RUN}` });
 
-    await vehicles.update(personalTenantId, id, personalOwnerId, { name: `Suzuki XL7 GLX ${RUN}` }, null);
+    await vehicles.update(
+      personalTenantId,
+      id,
+      personalOwnerId,
+      { name: `Suzuki XL7 GLX ${RUN}` },
+      null,
+    );
 
     const tasks = await prisma.approvalTask.count({
       where: { targetType: APPROVAL_TARGET_TYPE.VEHICLE, targetId: id },

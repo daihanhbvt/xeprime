@@ -1,14 +1,12 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION, PLAN_FEATURE, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
-  CurrentTenant,
-  RequirePermissions,
-  RequiresFeature,
-  SubscriptionTrackOnly,
-  TenantScoped,
-  SupportAction,
-} from '../../../common/decorators';
+  ACCOUNT_REALM,
+  PERMISSION,
+  PLAN_FEATURE,
+  SUPPORT_CAPABILITY,
+} from '@xeprime/types';
+import { CurrentTenant, Realms, RequirePermissions, RequiresFeature, SubscriptionTrackOnly, SupportAction, TenantScoped } from '../../../common/decorators';
 import type { TenantContext } from '../../../common/types/request-context';
 import {
   MaintenanceBoardListDto,
@@ -31,6 +29,7 @@ import { scopeOf } from './vehicle-maintenance.controller';
 @TenantScoped()
 @SubscriptionTrackOnly()
 @RequiresFeature(PLAN_FEATURE.MAINTENANCE)
+@Realms(ACCOUNT_REALM.PARTNER)
 export class MaintenanceBoardController {
   constructor(private readonly maintenance: MaintenanceService) {}
 

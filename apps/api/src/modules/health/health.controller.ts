@@ -1,4 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
+import { ACCOUNT_REALM_VALUES } from '@xeprime/types';
 import {
   ApiExtraModels,
   ApiOkResponse,
@@ -7,7 +8,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { HealthCheck, HealthCheckService, PrismaHealthIndicator } from '@nestjs/terminus';
-import { Public } from '../../common/decorators';
+import { Public, Realms } from '../../common/decorators';
 import { PrismaService } from '../../prisma/prisma.service';
 import { HealthCheckResultDto, HealthIndicatorDto } from './dto/health.dto';
 
@@ -16,6 +17,8 @@ import { HealthCheckResultDto, HealthIndicatorDto } from './dto/health.dto';
 // không tự thấy nên phải khai báo tay, nếu không spec sinh ra sẽ có ref treo.
 @ApiExtraModels(HealthIndicatorDto)
 @Controller('health')
+// Health check của hạ tầng — không có phiên, không có realm.
+@Realms(...ACCOUNT_REALM_VALUES)
 export class HealthController {
   constructor(
     private readonly health: HealthCheckService,

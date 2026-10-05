@@ -124,7 +124,8 @@
     "backToAccount": "Về tài khoản của tôi",
     "registeringTitle": "Hồ sơ chủ xe đang trong quá trình duyệt",
     "registeringBody": "Mục này mở khi bạn có ít nhất một xe đã được duyệt lên chợ. Xem tiến trình hồ sơ và xe của bạn ở màn Hồ sơ đăng ký.",
-    "openRegistration": "Xem tiến trình đăng ký"
+    "openRegistration": "Xem tiến trình đăng ký",
+    "bodyMemberPartner": "Bạn đang là thành viên của gian hàng {shop}. Gian hàng này dùng bộ công cụ chủ xe — các màn quản lý xe, lịch và tiền chỉ mở cho chủ gian hàng. Liên hệ chủ gian hàng nếu bạn cần quyền."
   },
   "vehicles": {
     "title": "Danh sách xe",

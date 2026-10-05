@@ -1,0 +1,53 @@
+{
+  "page": {
+    "title": "Platform staff",
+    "tableLabel": "Platform staff list",
+    "total": "{total} staff",
+    "you": "(you)"
+  },
+  "filters": {
+    "search": "Search staff",
+    "searchPlaceholder": "Search by name or email",
+    "role": "Role",
+    "allRoles": "All roles"
+  },
+  "columns": {
+    "staff": "Staff",
+    "role": "Role",
+    "status": "Status"
+  },
+  "roleOf": "Role of {name}",
+  "actions": {
+    "add": "Add staff",
+    "remove": "Remove staff",
+    "removeConfirm": "Remove this person from the platform team?",
+    "removeOk": "Remove"
+  },
+  "toast": {
+    "roleChanged": "Role updated",
+    "removed": "Staff removed",
+    "added": "Staff added"
+  },
+  "states": {
+    "loadError": "Could not load the staff list",
+    "empty": "No staff yet"
+  },
+  "add": {
+    "title": "Add platform staff",
+    "submit": "Add",
+    "email": "Email",
+    "emailPlaceholder": "staff@xeprime.vn",
+    "displayName": "Display name",
+    "displayNamePlaceholder": "Jane Nguyen",
+    "role": "Role",
+    "hint": "An email without an admin account gets a new account and a set-password link by email. Renter or partner accounts with the same email are never promoted.",
+    "errors": {
+      "emailRequired": "Enter an email",
+      "emailInvalid": "Invalid email",
+      "nameRequired": "Enter a display name",
+      "nameMin": "Display name must be at least {min} characters",
+      "nameMax": "Display name must be at most {max} characters",
+      "roleRequired": "Choose a role"
+    }
+  }
+}

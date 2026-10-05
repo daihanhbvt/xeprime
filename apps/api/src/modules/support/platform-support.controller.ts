@@ -1,7 +1,12 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION, SUPPORT_PARTY, type SupportCaseStatus } from '@xeprime/types';
-import { CurrentUser, PlatformOnly, RequirePermissions } from '../../common/decorators';
+import {
+  ACCOUNT_REALM,
+  PERMISSION,
+  SUPPORT_PARTY,
+  type SupportCaseStatus,
+} from '@xeprime/types';
+import { CurrentUser, PlatformOnly, Realms, RequirePermissions } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import {
   AssignSupportCaseDto,
@@ -26,6 +31,7 @@ import { SupportService } from './support.service';
 @Controller('platform/support/cases')
 @PlatformOnly()
 @RequirePermissions(PERMISSION.PLATFORM_SUPPORT_MANAGE)
+@Realms(ACCOUNT_REALM.PLATFORM)
 export class PlatformSupportController {
   constructor(private readonly support: SupportService) {}
 

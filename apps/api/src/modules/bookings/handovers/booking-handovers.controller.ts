@@ -11,16 +11,13 @@ import {
   Put,
 } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION, type HandoverPhotoSlot, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
-  BRANCH_SCOPED_RESOURCE,
-  BranchScoped,
-  CurrentTenant,
-  CurrentUser,
-  RequirePermissions,
-  TenantScoped,
-  SupportAction,
-} from '../../../common/decorators';
+  ACCOUNT_REALM,
+  PERMISSION,
+  type HandoverPhotoSlot,
+  SUPPORT_CAPABILITY,
+} from '@xeprime/types';
+import { BRANCH_SCOPED_RESOURCE, BranchScoped, CurrentTenant, CurrentUser, Realms, RequirePermissions, SupportAction, TenantScoped } from '../../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../../common/types/request-context';
 import {
   SourceContractDownloadDto,
@@ -56,6 +53,7 @@ import { HandoversService, type HandoverViewScope } from './handovers.service';
 @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
 @Controller('bookings/:id/handovers')
 @TenantScoped()
+@Realms(ACCOUNT_REALM.PARTNER)
 export class BookingHandoversController {
   constructor(private readonly handovers: HandoversService) {}
 

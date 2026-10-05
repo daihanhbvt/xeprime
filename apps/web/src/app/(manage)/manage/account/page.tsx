@@ -1,22 +1,20 @@
-import { redirect } from 'next/navigation';
+import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 
-import { ROUTES } from '@/constants/routes';
+import { AccountView } from '@/features/account/components/AccountView';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Navigation.account');
+  return { title: t('personalProfile'), robots: { index: false, follow: false } };
+}
 
 /**
- * ALIAS CHUYỂN TIẾP (16/09/2026) — "Tài khoản & bảo mật" tách làm hai nửa đúng nghĩa.
+ * HỒ SƠ CÁ NHÂN của tài khoản đối tác — tên, ảnh, SĐT, email.
  *
- * Trang cũ trộn ba thứ khác loại: hồ sơ CON NGƯỜI (tên, ảnh đại diện), BẢO MẬT (mật khẩu, xoá
- * tài khoản) và một thẻ lối vào gian hàng. Nay:
- *
- *   - Bảo mật → `/manage/security` (đích của redirect này): phương thức đăng nhập, đổi mật
- *     khẩu, vùng nguy hiểm. Đây là thứ người ta thật sự vào `/manage/account` để làm.
- *   - Tên và ảnh đại diện cá nhân → `/account` ở khu marketplace. Trong Manage, hình đại diện
- *     nổi bật là LOGO GIAN HÀNG (xem `ManageUserCard`), nên một ô sửa avatar cá nhân ở đây chỉ
- *     dựng ra một tấm ảnh thứ hai không màn nào trong cổng hiển thị.
- *   - Lối tới chuyến ĐI THUÊ cũ → menu tài khoản, hiện đúng khi còn chuyến chưa khép.
- *
- * `/manage/account/trips` KHÔNG bị redirect: nó là route con và Next khớp nó trước route này.
+ * Trước ADR 0053 trang này chỉ là lối chuyển sang `/manage/security`, vì tên/ảnh "thuộc tài khoản
+ * marketplace". Nay tài khoản partner là một tài khoản RIÊNG (realm `partner`), nên nó có hồ sơ của
+ * nó ngay trên site của nó — cùng `AccountView` với khu khách, khác dữ liệu vì khác tài khoản.
  */
-export default function ManageAccountRedirectPage(): never {
-  redirect(ROUTES.MANAGE.SECURITY);
+export default function PartnerAccountPage() {
+  return <AccountView />;
 }

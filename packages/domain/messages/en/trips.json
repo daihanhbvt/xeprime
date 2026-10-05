@@ -292,8 +292,5 @@
     "noteHost": "Trip fees sit on the guest side and are not deducted from your payout. The final amount is confirmed when you approve.",
     "badgeSettled": "Final",
     "noteSettled": "These figures were locked when you paid the reservation and will not change."
-  },
-  "transitional": {
-    "title": "Trips I rented"
   }
 }

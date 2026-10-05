@@ -65,6 +65,8 @@ import feePolicies from '@xeprime/domain/messages/vi/fee-policies.json';
 import promoCodes from '@xeprime/domain/messages/vi/promo-codes.json';
 import platformMoney from '@xeprime/domain/messages/vi/platform-money.json';
 import platformSellers from '@xeprime/domain/messages/vi/platform-sellers.json';
+import adminStaff from '@xeprime/domain/messages/vi/admin-staff.json';
+import adminAccounts from '@xeprime/domain/messages/vi/admin-accounts.json';
 
 const messages = {
   Common: common,
@@ -120,6 +122,8 @@ const messages = {
   PromoCodes: promoCodes,
   PlatformMoney: platformMoney,
   PlatformSellers: platformSellers,
+  AdminStaff: adminStaff,
+  AdminAccounts: adminAccounts,
 };
 
 export default messages;

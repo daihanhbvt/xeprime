@@ -1,14 +1,10 @@
 import { Body, Controller, Delete, Get, Param, Put, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
 import {
-  BRANCH_SCOPED_RESOURCE,
-  BranchScoped,
-  CurrentTenant,
-  CurrentUser,
-  RequirePermissions,
-  TenantScoped,
-} from '../../common/decorators';
+  ACCOUNT_REALM,
+  PERMISSION,
+} from '@xeprime/types';
+import { BRANCH_SCOPED_RESOURCE, BranchScoped, CurrentTenant, CurrentUser, Realms, RequirePermissions, TenantScoped } from '../../common/decorators';
 import { DeletedCountDto } from '../../common/dto/api-response.dto';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { PricingService } from './pricing.service';
@@ -30,6 +26,7 @@ import {
 @BranchScoped(BRANCH_SCOPED_RESOURCE.VEHICLE)
 @Controller('vehicles/:id/daily-prices')
 @TenantScoped()
+@Realms(ACCOUNT_REALM.PARTNER)
 export class VehicleDailyPricesController {
   constructor(private readonly pricing: PricingService) {}
 

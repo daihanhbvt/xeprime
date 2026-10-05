@@ -103,6 +103,14 @@ ARG NEXT_PUBLIC_FIREBASE_API_KEY=
 ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID=
 ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
 ARG NEXT_PUBLIC_FIREBASE_APP_ID=
+# BA SITE trong một Next app (ADR 0051): URL gốc của từng site + chế độ định tuyến. `host` ở
+# staging/production (mỗi khu một host, `proxy.ts` rewrite theo host); thiếu biến thì app rơi về
+# `path` (máy dev) — một image build thiếu ba URL này sẽ dựng link khác site thành đường dẫn tương
+# đối trên sai host, nên bước kiểm dưới chặn ngay.
+ARG NEXT_PUBLIC_XP_ZONE_MODE=host
+ARG NEXT_PUBLIC_WEB_MARKET_URL=
+ARG NEXT_PUBLIC_WEB_PARTNER_URL=
+ARG NEXT_PUBLIC_WEB_ADMIN_URL=
 # Đai an toàn, KHÔNG phải thứ quyết định hành vi: `proxy.ts` đọc `SESSION_COOKIE_NAME` lúc CHẠY
 # (đo trực tiếp — Next 16 chỉ nhúng cứng `NEXT_PUBLIC_*`), nên giá trị thật đến từ
 # `environment:` của service `web` trong docker-compose.prod.yml. Giữ ARG ở đây để `.env` trong
@@ -112,6 +120,10 @@ ARG SESSION_COOKIE_NAME=xp_session
 
 RUN test -n "$NEXT_PUBLIC_API_URL" \
     || (echo 'NEXT_PUBLIC_API_URL là bắt buộc: trình duyệt gọi API bằng chính giá trị này.' && exit 1)
+RUN if [ "$NEXT_PUBLIC_XP_ZONE_MODE" = "host" ]; then \
+      test -n "$NEXT_PUBLIC_WEB_MARKET_URL" -a -n "$NEXT_PUBLIC_WEB_PARTNER_URL" -a -n "$NEXT_PUBLIC_WEB_ADMIN_URL" \
+      || (echo 'Chế độ host cần đủ NEXT_PUBLIC_WEB_MARKET_URL / _PARTNER_URL / _ADMIN_URL (ADR 0051).' && exit 1); \
+    fi
 
 COPY . .
 
@@ -128,6 +140,10 @@ RUN printf '%s\n' \
       "NEXT_PUBLIC_FIREBASE_PROJECT_ID=$NEXT_PUBLIC_FIREBASE_PROJECT_ID" \
       "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN" \
       "NEXT_PUBLIC_FIREBASE_APP_ID=$NEXT_PUBLIC_FIREBASE_APP_ID" \
+      "NEXT_PUBLIC_XP_ZONE_MODE=$NEXT_PUBLIC_XP_ZONE_MODE" \
+      "NEXT_PUBLIC_WEB_MARKET_URL=$NEXT_PUBLIC_WEB_MARKET_URL" \
+      "NEXT_PUBLIC_WEB_PARTNER_URL=$NEXT_PUBLIC_WEB_PARTNER_URL" \
+      "NEXT_PUBLIC_WEB_ADMIN_URL=$NEXT_PUBLIC_WEB_ADMIN_URL" \
       "SESSION_COOKIE_NAME=$SESSION_COOKIE_NAME" \
       > .env
 

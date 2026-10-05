@@ -1,8 +1,9 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
-  bookingRequestRespondBy,
+  ACCOUNT_REALM,
   BOOKING_REQUEST_STATUS,
   BOOKING_STATUS,
+  bookingRequestRespondBy,
   MEMBERSHIP_STATUS,
   NOTIFICATION_TYPE,
   REVIEW_STATUS,
@@ -95,8 +96,18 @@ beforeAll(async () => {
 
   await prisma.user.createMany({
     data: [
-      { id: ownerId, displayName: 'Chủ shop', email: `owner-${ownerId}@xeprime.test` },
-      { id: staffId, displayName: 'Nhân viên', email: `staff-${staffId}@xeprime.test` },
+      {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: ownerId,
+        displayName: 'Chủ shop',
+        email: `owner-${ownerId}@xeprime.test`,
+      },
+      {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: staffId,
+        displayName: 'Nhân viên',
+        email: `staff-${staffId}@xeprime.test`,
+      },
       { id: customerId, displayName: 'Nguyễn Văn An', email: `cus-${customerId}@xeprime.test` },
     ],
   });

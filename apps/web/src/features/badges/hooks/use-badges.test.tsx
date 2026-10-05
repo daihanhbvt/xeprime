@@ -99,8 +99,8 @@ describe('useBadges', () => {
   it('ba nơi đọc badge chỉ tạo ĐÚNG MỘT request', async () => {
     const { container } = render(wrapper(<AllThreeConsumers />));
 
-    // Biểu tượng chat cố ý đếm TỔNG cả hai vai (2+3) — xem docblock của useChatBadge.
-    await waitFor(() => expect(container.textContent).toBe('4/5/3'));
+    // Biểu tượng chat ở site khách đếm hộp thư KHÁCH (2) — mỗi site một tài khoản (ADR 0053).
+    await waitFor(() => expect(container.textContent).toBe('4/2/3'));
     expect(badgesApi.fetchBadges).toHaveBeenCalledTimes(1);
   });
 

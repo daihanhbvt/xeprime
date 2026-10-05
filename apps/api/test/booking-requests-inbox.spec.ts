@@ -2,6 +2,7 @@ import type { ConfigService } from '@nestjs/config';
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import { giveTenantPlan } from './helpers/billing-fixture';
 import {
+  ACCOUNT_REALM,
   bookingRequestRespondBy,
   API_ERROR_CODE,
   BILLING_MODE,
@@ -124,9 +125,15 @@ beforeAll(async () => {
 
   await prisma.user.createMany({
     data: [
-      { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
+      {
+        id: ownerId,
+        realm: ACCOUNT_REALM.PARTNER,
+        displayName: 'Chủ shop',
+        email: `own-${ownerId}@xeprime.test`,
+      },
       {
         id: otherOwnerId,
+        realm: ACCOUNT_REALM.PARTNER,
         displayName: 'Chủ shop khác',
         email: `own2-${otherOwnerId}@xeprime.test`,
       },
@@ -426,9 +433,13 @@ describe('BookingRequestsService.list — đếm theo trạng thái', () => {
     });
 
     const all = await requests.list(tenantId, {}, null);
-    const filtered = await requests.list(tenantId, {
-      status: [BOOKING_REQUEST_STATUS.REJECTED_BY_HOST],
-    }, null);
+    const filtered = await requests.list(
+      tenantId,
+      {
+        status: [BOOKING_REQUEST_STATUS.REJECTED_BY_HOST],
+      },
+      null,
+    );
 
     // Trang dữ liệu hẹp lại theo bộ lọc…
     expect(filtered.data.every((r) => r.status === BOOKING_REQUEST_STATUS.REJECTED_BY_HOST)).toBe(

@@ -1,12 +1,10 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Put } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
 import {
-  CurrentTenant,
-  CurrentUser,
-  RequirePermissions,
-  TenantScoped,
-} from '../../common/decorators';
+  ACCOUNT_REALM,
+  PERMISSION,
+} from '@xeprime/types';
+import { CurrentTenant, CurrentUser, Realms, RequirePermissions, TenantScoped } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { SaveSellerProfileDto, SellerProfileDto } from './dto/seller-profile.dto';
 import { SellerProfileService } from './seller-profile.service';
@@ -22,6 +20,7 @@ import { SellerProfileService } from './seller-profile.service';
 @ApiTags('seller-profile')
 @Controller('seller-profile')
 @TenantScoped()
+@Realms(ACCOUNT_REALM.PARTNER)
 export class SellerProfileController {
   constructor(private readonly profiles: SellerProfileService) {}
 

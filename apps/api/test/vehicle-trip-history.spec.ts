@@ -1,5 +1,6 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   BOOKING_REQUEST_STATUS,
   BOOKING_STATUS,
   MEMBERSHIP_STATUS,
@@ -50,7 +51,12 @@ async function seedTenant(label: string) {
   const owner = newId();
   const tenant = newId();
   await prisma.user.create({
-    data: { id: owner, displayName: `Chủ ${label}`, email: `hist-${label}-${RUN}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: owner,
+      displayName: `Chủ ${label}`,
+      email: `hist-${label}-${RUN}@xeprime.test`,
+    },
   });
   await prisma.tenant.create({
     data: {
@@ -340,8 +346,9 @@ describe('Bộ lọc — đúng nghĩa vận hành', () => {
     });
     expect(page.meta.total).toBe(4);
     // Yêu cầu đang chờ KHÔNG phải một chuyến đã huỷ.
-    expect(page.data.some((r) => r.requestStatus === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL))
-      .toBe(false);
+    expect(
+      page.data.some((r) => r.requestStatus === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL),
+    ).toBe(false);
   });
 
   maybe('tất cả: đếm đủ mọi trạng thái', async () => {

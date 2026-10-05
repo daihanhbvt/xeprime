@@ -1,13 +1,21 @@
 import { Body, Controller, HttpCode, HttpStatus, Post, Req, Res } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { PHONE_VERIFICATION_PURPOSE, type PhoneVerificationPurpose } from '@xeprime/types';
-import type { Request, Response } from 'express';
-import { Public, VerifiesCredentials } from '../../common/decorators';
-import { resolveOptionalUserId } from '../../common/optional-user';
+import {
+  ACCOUNT_REALM,
+  PHONE_VERIFICATION_PURPOSE,
+  realmForClientApp,
+  type AccountRealm,
+  type PhoneVerificationPurpose,
+} from '@xeprime/types';
+import type { Response } from 'express';
+import { Public, Realms, VerifiesCredentials, WebRealm } from '../../common/decorators';
+import { resolveOptionalUser } from '../../common/optional-user';
+import type { RequestContext } from '../../common/types/request-context';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
 import { NativeSessionService } from '../auth/native-session.service';
+import { RequestRealmService } from '../auth/request-realm.service';
 import { SessionService } from '../auth/session.service';
 import { MeDto } from '../auth/dto/auth.dto';
 import {
@@ -26,15 +34,21 @@ import { PhoneVerificationService } from './phone-verification.service';
  *
  * `POST login` là passwordless (ADR 0002): OTP purpose=login vừa xác thực SĐT vừa cấp session
  * httpOnly — tái dùng `SessionService` như mọi luồng đăng nhập khác, không nhét quyền vào token.
+ *
+ * Mỗi mã thuộc MỘT realm (ADR 0053): site web gọi thì realm của site; app native gọi thẳng (không
+ * qua site) thì realm theo `clientApp`. Realm `platform` không có OTP — tài khoản quản trị chỉ đăng
+ * nhập bằng mật khẩu.
  */
 @ApiTags('phone-verification')
 @Controller('auth/phone')
+@Realms(ACCOUNT_REALM.CUSTOMER, ACCOUNT_REALM.PARTNER)
 export class PhoneVerificationController {
   constructor(
     private readonly service: PhoneVerificationService,
     private readonly auth: AuthService,
     private readonly sessions: SessionService,
     private readonly nativeSessions: NativeSessionService,
+    private readonly realms: RequestRealmService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -44,10 +58,11 @@ export class PhoneVerificationController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Gửi mã OTP tới số điện thoại' })
   @ApiOkResponse({ type: SendOtpResultDto })
-  async sendOtp(@Body() dto: SendOtpDto): Promise<SendOtpResultDto> {
+  async sendOtp(@Body() dto: SendOtpDto, @Req() req: RequestContext): Promise<SendOtpResultDto> {
     const { expiresAt, devCode } = await this.service.sendOtp(
       dto.phone,
       dto.purpose as PhoneVerificationPurpose,
+      req.realm ?? realmForClientApp(dto.clientApp),
     );
     return { expiresAt: expiresAt.toISOString(), devCode };
   }
@@ -58,18 +73,25 @@ export class PhoneVerificationController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Xác nhận mã OTP' })
   @ApiOkResponse({ type: VerifyOtpResultDto })
-  async verifyOtp(@Body() dto: VerifyOtpDto, @Req() req: Request): Promise<VerifyOtpResultDto> {
-    const userId = await resolveOptionalUserId(
-      req,
-      this.sessions,
-      this.prisma,
-      this.nativeSessions,
-    );
+  async verifyOtp(
+    @Body() dto: VerifyOtpDto,
+    @Req() req: RequestContext,
+  ): Promise<VerifyOtpResultDto> {
+    const current = await resolveOptionalUser(req, {
+      sessions: this.sessions,
+      prisma: this.prisma,
+      realms: this.realms,
+      nativeSessions: this.nativeSessions,
+    });
+    // Có phiên ⇒ realm của phiên (mã gắn vào chính tài khoản đó). Không phiên ⇒ site đang gọi, rồi
+    // tới app khách — đúng realm mà `send-otp` đã ghi cho cùng một client.
+    const realm: AccountRealm = current?.realm ?? req.realm ?? ACCOUNT_REALM.CUSTOMER;
     await this.service.verifyOtp(
       dto.phone,
       dto.purpose as PhoneVerificationPurpose,
       dto.code,
-      userId,
+      realm,
+      current?.userId ?? null,
     );
     return { verified: true };
   }
@@ -83,14 +105,16 @@ export class PhoneVerificationController {
   @ApiOkResponse({ type: MeDto })
   async login(
     @Body() dto: PhoneLoginDto,
+    @WebRealm() realm: AccountRealm,
     @Res({ passthrough: true }) res: Response,
   ): Promise<MeDto> {
-    // Verify OTP purpose=login (đúng mục đích, không dùng chéo) → tìm/tạo tài khoản theo SĐT →
-    // cấp session cookie. Tất cả sau khi khách đã chứng minh sở hữu SĐT bằng mã đúng.
-    await this.service.verifyOtp(dto.phone, PHONE_VERIFICATION_PURPOSE.LOGIN, dto.code, null);
-    const { userId } = await this.auth.resolveOrCreateUserByPhone(dto.phone);
+    // Verify OTP purpose=login (đúng mục đích, không dùng chéo) → tìm/tạo tài khoản theo SĐT TRONG
+    // realm của site → cấp session cookie của realm đó. Tất cả sau khi khách đã chứng minh sở hữu
+    // SĐT bằng mã đúng.
+    await this.service.verifyOtp(dto.phone, PHONE_VERIFICATION_PURPOSE.LOGIN, dto.code, realm, null);
+    const { userId } = await this.auth.resolveOrCreateUserByPhone(dto.phone, realm);
     const { token } = this.sessions.issue(userId);
-    this.sessions.attach(res, token);
+    this.sessions.attach(res, token, realm);
     return this.auth.me(userId);
   }
 }

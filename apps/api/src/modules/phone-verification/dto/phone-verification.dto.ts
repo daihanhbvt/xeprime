@@ -20,6 +20,19 @@ export class SendOtpDto {
   @ApiProperty({ enum: PHONE_VERIFICATION_PURPOSE_VALUES, example: 'booking' })
   @IsIn(PHONE_VERIFICATION_PURPOSE_VALUES)
   purpose!: string;
+
+  /**
+   * App native đang gửi mã — xác định realm của mã khi request KHÔNG đi qua site web (ADR 0053).
+   * Web bỏ trống: realm đến từ site đang gọi. App cũ không gửi ⇒ coi là app khách.
+   */
+  @ApiPropertyOptional({
+    enum: MOBILE_CLIENT_APP_VALUES,
+    description:
+      'Chỉ app native gửi: realm của mã OTP theo app (customer ↔ XePrime, partner ↔ XePrime Partner). Web bỏ trống.',
+  })
+  @IsOptional()
+  @IsIn(MOBILE_CLIENT_APP_VALUES)
+  clientApp?: MobileClientApp;
 }
 
 export class VerifyOtpDto {

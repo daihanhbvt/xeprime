@@ -11,7 +11,7 @@
  * Module này THUẦN DỮ LIỆU: không tạo PrismaClient, không đọc env, nên `cleanup-test-data.ts`
  * import được mà không kéo theo tác dụng phụ nào.
  */
-import { PLATFORM_ROLE } from '@xeprime/types';
+import { ACCOUNT_REALM, PLATFORM_ROLE, type AccountRealm } from '@xeprime/types';
 import { SHOP_SPECS } from './shops';
 
 /**
@@ -95,6 +95,51 @@ export const CUSTOMER_ACCOUNTS = [
 ] as const;
 
 export type CustomerKey = (typeof CUSTOMER_ACCOUNTS)[number]['key'];
+
+/** Gian hàng / khách có tài khoản SONG SINH ở realm thứ hai — xem `CROSS_REALM_TWINS`. */
+const TWIN_SHOP_OWNER_EMAILS = ['owner.saigon@xeprime.test', 'qa.owner@xeprime.test'] as const;
+const TWIN_CUSTOMER_KEYS: readonly CustomerKey[] = ['an'];
+
+export interface CrossRealmTwin {
+  realm: AccountRealm;
+  email: string;
+  displayName: string;
+  phone: string;
+}
+
+/**
+ * Tài khoản SONG SINH xuyên realm (ADR 0053): cùng người, cùng SĐT + email, nhưng là tài khoản KHÁC
+ * ở realm thứ hai — mật khẩu riêng, phiên riêng, ví riêng.
+ *
+ *   • chủ gian hàng tuyến gói `owner.saigon@` và chủ xe tuyến hoa hồng `qa.owner@` có thêm một tài
+ *     khoản KHÁCH (chủ xe đi thuê xe bằng tài khoản khách — và bị chặn đặt xe của chính mình);
+ *   • khách `khach.an@` có thêm một tài khoản PARTNER chưa mở gian hàng nào (ca "chưa có gian hàng
+ *     ⇒ /register" của site partner).
+ *
+ * Suy từ bản khai gian hàng/khách, không chép tay số điện thoại: hai bản chép là hai chỗ lệch nhau.
+ */
+export const CROSS_REALM_TWINS: readonly CrossRealmTwin[] = [
+  ...TWIN_SHOP_OWNER_EMAILS.map((email) => {
+    const owner = SHOP_SPECS.find((spec) => spec.owner.email === email)?.owner;
+    if (!owner) throw new Error(`Seed: không tìm thấy chủ gian hàng ${email} để dựng song sinh`);
+    return {
+      realm: ACCOUNT_REALM.CUSTOMER,
+      email: owner.email,
+      displayName: owner.displayName,
+      phone: owner.phone,
+    };
+  }),
+  ...TWIN_CUSTOMER_KEYS.map((key) => {
+    const customer = CUSTOMER_ACCOUNTS.find((c) => c.key === key);
+    if (!customer) throw new Error(`Seed: không tìm thấy khách ${key} để dựng song sinh`);
+    return {
+      realm: ACCOUNT_REALM.PARTNER,
+      email: customer.email,
+      displayName: customer.displayName,
+      phone: customer.phone,
+    };
+  }),
+];
 
 /**
  * Mọi email đăng nhập do seed tạo ra. `cleanup-test-data.ts` dùng làm danh sách loại trừ:

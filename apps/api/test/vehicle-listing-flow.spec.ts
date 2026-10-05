@@ -1,7 +1,9 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   BOOKING_STATUS,
+  type BookingPriceSnapshot,
   COLLATERAL_MODE,
   FUEL_TYPE,
   HANDOVER_STATUS,
@@ -17,7 +19,6 @@ import {
   VEHICLE_PUBLIC_MIN_IMAGES,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_TYPE,
-  type BookingPriceSnapshot,
 } from '@xeprime/types';
 import { SettlementService } from '../src/modules/bookings/settlement/settlement.service';
 import { AuditService } from '../src/modules/audit/audit.service';
@@ -82,7 +83,12 @@ async function seedTenant(label: string, status: string) {
   const owner = newId();
   const tenant = newId();
   await prisma.user.create({
-    data: { id: owner, displayName: `Chủ ${label}`, email: `flow-${label}-${RUN}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: owner,
+      displayName: `Chủ ${label}`,
+      email: `flow-${label}-${RUN}@xeprime.test`,
+    },
   });
   await prisma.tenant.create({
     data: {
@@ -111,24 +117,29 @@ async function seedTenant(label: string, status: string) {
 /** Hồ sơ xe TỐI THIỂU đủ điều kiện lên chợ — từng test chỉ đổi đúng thứ nó kiểm. */
 async function createListableVehicle(overrides: Record<string, unknown> = {}) {
   seq += 1;
-  return vehicles.create(tenantId, ownerId, {
-    name: `Xe flow ${seq}`,
-    branchId,
-    vehicleType: VEHICLE_TYPE.CAR,
-    serviceTypes: [SERVICE_TYPE.SELF_DRIVE],
-    plateNumber: `51H-${String(100 + seq)}.45`,
-    brand: 'toyota',
-    model: 'Vios',
-    manufactureYear: 2022,
-    seatCount: 5,
-    fuelType: FUEL_TYPE.GASOLINE,
-    transmission: TRANSMISSION_TYPE.AUTOMATIC,
-    fuelConsumptionCombined: 7.5,
-    weekdayPrice: '700000',
-    mainImageUrl: img(1),
-    images: [img(1), img(2), img(3), img(4)],
-    ...overrides,
-  } as never, null);
+  return vehicles.create(
+    tenantId,
+    ownerId,
+    {
+      name: `Xe flow ${seq}`,
+      branchId,
+      vehicleType: VEHICLE_TYPE.CAR,
+      serviceTypes: [SERVICE_TYPE.SELF_DRIVE],
+      plateNumber: `51H-${String(100 + seq)}.45`,
+      brand: 'toyota',
+      model: 'Vios',
+      manufactureYear: 2022,
+      seatCount: 5,
+      fuelType: FUEL_TYPE.GASOLINE,
+      transmission: TRANSMISSION_TYPE.AUTOMATIC,
+      fuelConsumptionCombined: 7.5,
+      weekdayPrice: '700000',
+      mainImageUrl: img(1),
+      images: [img(1), img(2), img(3), img(4)],
+      ...overrides,
+    } as never,
+    null,
+  );
 }
 
 beforeAll(async () => {
@@ -193,11 +204,17 @@ describe('Thông số theo nguồn năng lượng', () => {
     const created = await createListableVehicle();
     expect(Number(created.fuelConsumptionCombined)).toBe(7.5);
 
-    const electric = await vehicles.update(tenantId, created.id, ownerId, {
-      fuelType: FUEL_TYPE.ELECTRIC,
-      electricRangeKm: 420,
-      batteryCapacityKwh: 60,
-    }, null);
+    const electric = await vehicles.update(
+      tenantId,
+      created.id,
+      ownerId,
+      {
+        fuelType: FUEL_TYPE.ELECTRIC,
+        electricRangeKm: 420,
+        batteryCapacityKwh: 60,
+      },
+      null,
+    );
     expect(electric.electricRangeKm).toBe(420);
     expect(Number(electric.batteryCapacityKwh)).toBe(60);
     // Lít/100km và dung tích động cơ không còn nghĩa với xe điện → server tự dọn.
@@ -213,10 +230,16 @@ describe('Thông số theo nguồn năng lượng', () => {
       batteryCapacityKwh: 55,
       electricConsumptionKwhPer100Km: 15,
     });
-    const gasoline = await vehicles.update(tenantId, created.id, ownerId, {
-      fuelType: FUEL_TYPE.GASOLINE,
-      fuelConsumptionCombined: 8,
-    }, null);
+    const gasoline = await vehicles.update(
+      tenantId,
+      created.id,
+      ownerId,
+      {
+        fuelType: FUEL_TYPE.GASOLINE,
+        fuelConsumptionCombined: 8,
+      },
+      null,
+    );
     expect(Number(gasoline.fuelConsumptionCombined)).toBe(8);
     expect(gasoline.electricRangeKm).toBeNull();
     expect(gasoline.batteryCapacityKwh).toBeNull();
@@ -226,10 +249,16 @@ describe('Thông số theo nguồn năng lượng', () => {
   maybe('client gửi metric SAI LOẠI: server dọn, không lưu số vô nghĩa', async () => {
     // Xe xăng mà gửi kèm quãng đường sạc — một client cũ vẫn làm được điều này.
     const created = await createListableVehicle({ electricRangeKm: 400 });
-    const updated = await vehicles.update(tenantId, created.id, ownerId, {
-      fuelType: FUEL_TYPE.GASOLINE,
-      electricRangeKm: 400,
-    }, null);
+    const updated = await vehicles.update(
+      tenantId,
+      created.id,
+      ownerId,
+      {
+        fuelType: FUEL_TYPE.GASOLINE,
+        electricRangeKm: 400,
+      },
+      null,
+    );
     expect(updated.electricRangeKm).toBeNull();
   });
 
@@ -250,10 +279,16 @@ describe('Thông số theo nguồn năng lượng', () => {
     });
     expect(created.seatCount).toBe(5);
 
-    const bike = await vehicles.update(tenantId, created.id, ownerId, {
-      vehicleType: VEHICLE_TYPE.MOTORBIKE,
-      fuelType: FUEL_TYPE.GASOLINE,
-    }, null);
+    const bike = await vehicles.update(
+      tenantId,
+      created.id,
+      ownerId,
+      {
+        vehicleType: VEHICLE_TYPE.MOTORBIKE,
+        fuelType: FUEL_TYPE.GASOLINE,
+      },
+      null,
+    );
 
     // Hai chiều của Ô TÔ: xe máy không có "5 chỗ" và không có "Sedan".
     expect(bike.seatCount).toBeNull();
@@ -351,23 +386,28 @@ describe('Điều kiện lên chợ', () => {
    */
   maybe('gian hàng bị khoá: chặn gửi xe lên chợ', async () => {
     seq += 1;
-    const created = await vehicles.create(draftTenantId, ownerId, {
-      name: 'Xe của gian hàng nháp',
-      branchId: draftBranchId,
-      vehicleType: VEHICLE_TYPE.CAR,
-      serviceTypes: [SERVICE_TYPE.SELF_DRIVE],
-      plateNumber: `51K-${String(500 + seq)}.11`,
-      brand: 'toyota',
-      model: 'Vios',
-      manufactureYear: 2022,
-      seatCount: 5,
-      fuelType: FUEL_TYPE.GASOLINE,
-      transmission: TRANSMISSION_TYPE.AUTOMATIC,
-      fuelConsumptionCombined: 7.5,
-      weekdayPrice: '700000',
-      mainImageUrl: img(1),
-      images: [img(1), img(2), img(3), img(4)],
-    } as never, null);
+    const created = await vehicles.create(
+      draftTenantId,
+      ownerId,
+      {
+        name: 'Xe của gian hàng nháp',
+        branchId: draftBranchId,
+        vehicleType: VEHICLE_TYPE.CAR,
+        serviceTypes: [SERVICE_TYPE.SELF_DRIVE],
+        plateNumber: `51K-${String(500 + seq)}.11`,
+        brand: 'toyota',
+        model: 'Vios',
+        manufactureYear: 2022,
+        seatCount: 5,
+        fuelType: FUEL_TYPE.GASOLINE,
+        transmission: TRANSMISSION_TYPE.AUTOMATIC,
+        fuelConsumptionCombined: 7.5,
+        weekdayPrice: '700000',
+        mainImageUrl: img(1),
+        images: [img(1), img(2), img(3), img(4)],
+      } as never,
+      null,
+    );
     await expect(
       vehicles.submitForPublicReview(draftTenantId, created.id, ownerId),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.SHOP_NOT_ACTIVE } });
@@ -381,9 +421,15 @@ describe('Điều kiện lên chợ', () => {
       data: { publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC },
     });
 
-    const updated = await vehicles.update(tenantId, created.id, ownerId, {
-      description: 'Chủ xe sửa mô tả.',
-    }, null);
+    const updated = await vehicles.update(
+      tenantId,
+      created.id,
+      ownerId,
+      {
+        description: 'Chủ xe sửa mô tả.',
+      },
+      null,
+    );
     expect(updated.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC);
 
     // Nhưng nếu chính chủ xe gỡ xuống rồi gửi lại thì luật mới có hiệu lực.
@@ -403,14 +449,19 @@ describe('Phạm vi gian hàng', () => {
   maybe('không gắn xe vào chi nhánh của gian hàng khác', async () => {
     seq += 1;
     await expect(
-      vehicles.create(tenantId, ownerId, {
-        name: 'Xe chi nhánh lạ',
-        branchId: otherBranchId,
-        vehicleType: VEHICLE_TYPE.CAR,
-        serviceTypes: [SERVICE_TYPE.SELF_DRIVE],
-        plateNumber: `51L-${String(600 + seq)}.22`,
-        weekdayPrice: '700000',
-      } as never, null),
+      vehicles.create(
+        tenantId,
+        ownerId,
+        {
+          name: 'Xe chi nhánh lạ',
+          branchId: otherBranchId,
+          vehicleType: VEHICLE_TYPE.CAR,
+          serviceTypes: [SERVICE_TYPE.SELF_DRIVE],
+          plateNumber: `51L-${String(600 + seq)}.22`,
+          weekdayPrice: '700000',
+        } as never,
+        null,
+      ),
     ).rejects.toThrow();
   });
 

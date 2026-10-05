@@ -1,5 +1,6 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   BOOKING_STATUS,
   PAYMENT_KIND,
   PAYMENT_METHOD,
@@ -117,7 +118,12 @@ beforeAll(async () => {
 
   await prisma.user.createMany({
     data: [
-      { id: ownerId, displayName: 'Chủ xe', email: `ap-own-${RUN}@xeprime.test` },
+      {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: ownerId,
+        displayName: 'Chủ xe',
+        email: `ap-own-${RUN}@xeprime.test`,
+      },
       { id: meId, displayName: 'Tôi', email: `ap-me-${RUN}@xeprime.test` },
       { id: otherId, displayName: 'Người khác', email: `ap-other-${RUN}@xeprime.test` },
     ],
@@ -201,15 +207,18 @@ describe('Ranh giới đọc — chỉ chuyến của CHÍNH mình', () => {
    * Cách chặn ở đây là khoá đúng điều kiện đã bị vi phạm: service KHÔNG được trả khoá nào ngoài
    * `data` và `meta`. Mọi thứ kèm theo đi trong `meta` (như `BookingRequestPageMetaDto` đã làm).
    */
-  maybe('BẤT BIẾN: chỉ có `data` và `meta` ở tầng ngoài — mọi thứ khác đi trong `meta`', async () => {
-    const res = await payments.list(meId, {});
+  maybe(
+    'BẤT BIẾN: chỉ có `data` và `meta` ở tầng ngoài — mọi thứ khác đi trong `meta`',
+    async () => {
+      const res = await payments.list(meId, {});
 
-    expect(Object.keys(res).sort()).toEqual(['data', 'meta']);
-    // Và `totals` phải thật sự ở trong `meta`, không phải chỉ "không ở ngoài".
-    expect(res.meta.totals).toBeDefined();
-    expect(res.meta.totals.paidTotal).toBeDefined();
-    expect(res.meta).toMatchObject({ page: 1, limit: expect.any(Number) });
-  });
+      expect(Object.keys(res).sort()).toEqual(['data', 'meta']);
+      // Và `totals` phải thật sự ở trong `meta`, không phải chỉ "không ở ngoài".
+      expect(res.meta.totals).toBeDefined();
+      expect(res.meta.totals.paidTotal).toBeDefined();
+      expect(res.meta).toMatchObject({ page: 1, limit: expect.any(Number) });
+    },
+  );
 
   maybe('người chưa thuê gì thấy danh sách rỗng và tổng 0, không phải lỗi', async () => {
     const empty = await payments.list(ownerId, {});
@@ -254,19 +263,22 @@ describe('Ranh giới đọc — chỉ chuyến của CHÍNH mình', () => {
 });
 
 describe('Tổng chỉ cộng khoản ĐÃ TRẢ', () => {
-  maybe('`pending` / `failed` / `refunded` không vào `paidTotal` nhưng VẪN hiện trong danh sách', async () => {
-    await pay(myBookingId, 100_000, { status: PAYMENT_STATUS.SUCCEEDED });
-    await pay(myBookingId, 200_000, { status: PAYMENT_STATUS.PENDING, paidAt: null });
-    await pay(myBookingId, 400_000, { status: PAYMENT_STATUS.FAILED, paidAt: null });
-    await pay(myBookingId, 800_000, { status: PAYMENT_STATUS.REFUNDED });
+  maybe(
+    '`pending` / `failed` / `refunded` không vào `paidTotal` nhưng VẪN hiện trong danh sách',
+    async () => {
+      await pay(myBookingId, 100_000, { status: PAYMENT_STATUS.SUCCEEDED });
+      await pay(myBookingId, 200_000, { status: PAYMENT_STATUS.PENDING, paidAt: null });
+      await pay(myBookingId, 400_000, { status: PAYMENT_STATUS.FAILED, paidAt: null });
+      await pay(myBookingId, 800_000, { status: PAYMENT_STATUS.REFUNDED });
 
-    const res = await payments.list(meId, {});
-    // Bốn dòng đều hiện: khách phải thấy khoản đang xử lý và khoản hỏng, nếu không họ không biết
-    // vì sao số tiền không khớp.
-    expect(res.data).toHaveLength(4);
-    // Nhưng chỉ `succeeded` là tiền đã trả.
-    expect(res.meta.totals.paidTotal).toBe('100000');
-  });
+      const res = await payments.list(meId, {});
+      // Bốn dòng đều hiện: khách phải thấy khoản đang xử lý và khoản hỏng, nếu không họ không biết
+      // vì sao số tiền không khớp.
+      expect(res.data).toHaveLength(4);
+      // Nhưng chỉ `succeeded` là tiền đã trả.
+      expect(res.meta.totals.paidTotal).toBe('100000');
+    },
+  );
 
   maybe('tách tiền thuê và tiền cọc — hai loại tiền có số phận khác nhau', async () => {
     await pay(myBookingId, 700_000, { kind: PAYMENT_KIND.RENTAL });

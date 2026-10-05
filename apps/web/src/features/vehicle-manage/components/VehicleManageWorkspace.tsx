@@ -37,7 +37,7 @@ interface Props {
 }
 
 /**
- * Vỏ của không gian "Quản lý xe" (`/account/vehicles/[id]/manage/*`, 08/09/2026).
+ * Vỏ của không gian "Quản lý xe" (`/vehicles/[id]/manage/*` của site partner — 08/09/2026, chuyển từ khu khách theo ADR 0051).
  *
  * Tải hồ sơ xe MỘT lần cho mọi mục con, gác đủ trạng thái (quyền · tải · không tìm thấy · lỗi)
  * rồi mới render trang con qua context. Layout của Next giữ vỏ này qua các lần chuyển mục nên

@@ -1,8 +1,15 @@
 import { Body, Controller, ForbiddenException, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { API_ERROR_CODE, MOBILE_CLIENT_APP, PHONE_VERIFICATION_PURPOSE } from '@xeprime/types';
-import { Public, VerifiesCredentials } from '../../common/decorators';
+import {
+  ACCOUNT_REALM,
+  API_ERROR_CODE,
+  MOBILE_CLIENT_APP,
+  PHONE_VERIFICATION_PURPOSE,
+  realmForClientApp,
+  type AccountRealm,
+} from '@xeprime/types';
+import { Public, Realms, VerifiesCredentials } from '../../common/decorators';
 import { AuthService } from '../auth/auth.service';
 import { assertMobileAppAccess } from '../auth/mobile-app-access';
 import { NativeSessionService } from '../auth/native-session.service';
@@ -28,6 +35,7 @@ import { PhoneVerificationService } from './phone-verification.service';
  */
 @ApiTags('phone-verification')
 @Controller('auth/mobile/phone')
+@Realms(ACCOUNT_REALM.CUSTOMER, ACCOUNT_REALM.PARTNER)
 export class MobilePhoneAuthController {
   constructor(
     private readonly service: PhoneVerificationService,
@@ -52,7 +60,14 @@ export class MobilePhoneAuthController {
   @ApiOkResponse({ type: MobileSessionDto })
   async login(@Body() dto: MobilePhoneLoginDto): Promise<MobileSessionDto> {
     // Đúng thứ tự của bản web: verify OTP đúng mục đích → tìm/tạo tài khoản → mới phát phiên.
-    await this.service.verifyOtp(dto.phone, PHONE_VERIFICATION_PURPOSE.LOGIN, dto.code, null);
+    const realm = realmForClientApp(dto.clientApp);
+    await this.service.verifyOtp(
+      dto.phone,
+      PHONE_VERIFICATION_PURPOSE.LOGIN,
+      dto.code,
+      acceptedOtpRealms(realm),
+      null,
+    );
     /*
      * XePrime Partner KHÔNG tạo tài khoản: ở app đó, một số chưa đăng ký phải dừng lại bằng
      * `PARTNER_REGISTRATION_NOT_SUPPORTED` chứ không được âm thầm thành tài khoản mới — tài
@@ -64,8 +79,8 @@ export class MobilePhoneAuthController {
      */
     const userId =
       dto.clientApp === MOBILE_CLIENT_APP.PARTNER
-        ? (await this.auth.resolveExistingUserByPhone(dto.phone))?.userId
-        : (await this.auth.resolveOrCreateUserByPhone(dto.phone)).userId;
+        ? (await this.auth.resolveExistingUserByPhone(dto.phone, realm))?.userId
+        : (await this.auth.resolveOrCreateUserByPhone(dto.phone, realm)).userId;
 
     if (!userId) {
       throw new ForbiddenException({
@@ -101,6 +116,21 @@ export class MobilePhoneAuthController {
  * `exactOptionalPropertyTypes` bật: `{ deviceName: undefined }` KHÔNG gán được vào
  * `{ deviceName?: string }`. Chuyển tường minh thay vì spread để trường vắng mặt là vắng mặt thật.
  */
+/**
+ * Realm của mã OTP được nhận cho một lượt đăng nhập native.
+ *
+ * App khách: đúng realm `customer`. App Partner: `partner` HOẶC `customer` — CẦU TƯƠNG THÍCH có hạn,
+ * không phải luật: bản app hiện có gọi `POST /auth/phone/send-otp` mà KHÔNG gửi `clientApp`, nên
+ * mã của nó được ghi realm `customer` (mặc định của app cũ). Siết cứng ở đây là gãy đăng nhập OTP
+ * của app Partner trong đợt mà mobile không được sửa (ADR 0053, mục mobile). Mã OTP chứng minh sở
+ * hữu SỐ ĐIỆN THOẠI — tài khoản nào được đăng nhập vẫn chỉ tra trong realm `partner`.
+ *
+ * Gỡ vế `customer` khi app Partner gửi `clientApp: 'partner'` ở `send-otp`.
+ */
+function acceptedOtpRealms(realm: AccountRealm): readonly AccountRealm[] {
+  return realm === ACCOUNT_REALM.PARTNER ? [ACCOUNT_REALM.PARTNER, ACCOUNT_REALM.CUSTOMER] : [realm];
+}
+
 function toDeviceInfo(device: MobileDeviceDto | undefined) {
   if (!device) return {};
   return {

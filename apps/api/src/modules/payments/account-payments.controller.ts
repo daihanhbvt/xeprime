@@ -1,6 +1,7 @@
 import { Controller, Get, Query } from '@nestjs/common';
+import { ACCOUNT_REALM } from '@xeprime/types';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { CurrentUser } from '../../common/decorators';
+import { CurrentUser, Realms } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import { AccountPaymentsService } from './account-payments.service';
 import {
@@ -19,6 +20,7 @@ import {
  */
 @ApiTags('account-payments')
 @Controller('account/payments')
+@Realms(ACCOUNT_REALM.CUSTOMER)
 export class AccountPaymentsController {
   constructor(private readonly payments: AccountPaymentsService) {}
 

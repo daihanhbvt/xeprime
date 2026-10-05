@@ -1,6 +1,7 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import { giveTenantPlan } from './helpers/billing-fixture';
 import {
+  ACCOUNT_REALM,
   BILLING_MODE,
   BOOKING_REQUEST_STATUS,
   MEMBERSHIP_STATUS,
@@ -18,7 +19,13 @@ import { ContractsService } from '../src/modules/contracts/contracts.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeBookingRequestsService, makeBookingsService, makeCustomersService, makeNotificationService, makePricingService } from './helpers/service-factory';
+import {
+  makeBookingRequestsService,
+  makeBookingsService,
+  makeCustomersService,
+  makeNotificationService,
+  makePricingService,
+} from './helpers/service-factory';
 
 /**
  * Hành trình chuyến CÓ TÀI XẾ đi trọn vòng đời (đợt hoàn thiện 17/08), trên PostgreSQL THẬT:
@@ -88,7 +95,12 @@ beforeAll(async () => {
 
   await prisma.user.createMany({
     data: [
-      { id: ownerId, displayName: 'Chủ shop', email: `owner-${ownerId}@xeprime.test` },
+      {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: ownerId,
+        displayName: 'Chủ shop',
+        email: `owner-${ownerId}@xeprime.test`,
+      },
       { id: guestUserId, displayName: 'Khách vãng lai', email: `g-${guestUserId}@xeprime.test` },
     ],
   });

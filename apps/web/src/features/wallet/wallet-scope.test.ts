@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BILLING_MODE, BILLING_PHASE, TENANT_ROLE } from '@xeprime/types';
+import { ACCOUNT_REALM, BILLING_MODE, BILLING_PHASE, TENANT_ROLE } from '@xeprime/types';
 
 import { ROUTES } from '@/constants/routes';
 import type { CurrentUser } from '@/hooks/use-current-user';
@@ -7,7 +7,7 @@ import type { CurrentUser } from '@/hooks/use-current-user';
 import { walletHrefFor, walletScopeFor } from './wallet-scope';
 
 /**
- * MỘT người, MỘT ví (ADR 0038 điều 2) — và một nơi duy nhất quyết định ví đó thuộc về ai.
+ * MỘT TÀI KHOẢN, MỘT ví (ADR 0053 điều 8) — và một nơi duy nhất quyết định ví đó thuộc về ai.
  *
  * Luật này từng nằm rải ở bốn chỗ. Bốn bản sao của một câu `if` về tiền là bốn cơ hội để một màn
  * chỉ vào sổ RỖNG trong khi tiền nằm ở sổ kia — và với người đang đi tìm tiền của mình, "0 điểm"
@@ -16,8 +16,9 @@ import { walletHrefFor, walletScopeFor } from './wallet-scope';
 
 type Tenant = NonNullable<CurrentUser['tenant']>;
 
-function withTenant(over: Partial<Tenant> = {}): Pick<CurrentUser, 'tenant'> {
+function withTenant(over: Partial<Tenant> = {}): Pick<CurrentUser, 'tenant' | 'realm'> {
   return {
+    realm: ACCOUNT_REALM.PARTNER,
     tenant: {
       id: 'T1',
       name: 'Gara Minh',
@@ -42,38 +43,30 @@ describe('walletScopeFor', () => {
   });
 
   /*
-   * Thành viên KHÔNG phải chủ đọc ví của chính họ (`user`). Ví tenant là nghĩa vụ XePrime nợ CHỦ
-   * gian hàng, không nợ nhân viên — API cũng gác bằng `@ShopOwnerOnly()`, nên trỏ họ sang scope
-   * `shop` chỉ đổi một màn rỗng thành một lỗi 403.
+   * Thành viên KHÔNG phải chủ KHÔNG có ví nào: ví tenant là nghĩa vụ XePrime nợ CHỦ gian hàng (API
+   * gác bằng `@ShopOwnerOnly()`), và tài khoản partner không có ví `user` — tiền hoàn của chuyến đi
+   * thuê chảy vào ví của tài khoản KHÁCH, một tài khoản khác (ADR 0053).
    */
-  it('nhân viên gian hàng đọc ví cá nhân của chính họ', () => {
+  it('nhân viên gian hàng: không có ví (null), không gọi API ví', () => {
     for (const roleKey of [
       TENANT_ROLE.SHOP_MANAGER,
       TENANT_ROLE.SHOP_STAFF,
       TENANT_ROLE.SHOP_VIEWER,
     ]) {
-      expect(walletScopeFor(withTenant({ roleKey }))).toBe('account');
+      expect(walletScopeFor(withTenant({ roleKey }))).toBeNull();
     }
+    expect(walletScopeFor({ realm: ACCOUNT_REALM.PARTNER, tenant: null })).toBeNull();
   });
 
-  it('khách thuê thuần đọc ví cá nhân', () => {
-    expect(walletScopeFor({ tenant: null })).toBe('account');
+  it('tài khoản khách đọc ví của chính tài khoản đó', () => {
+    expect(walletScopeFor({ realm: ACCOUNT_REALM.CUSTOMER, tenant: null })).toBe('account');
     expect(walletScopeFor(undefined)).toBe('account');
   });
 });
 
 describe('walletHrefFor', () => {
-  it('chủ xe đi tới sổ ví tenant, người khác đi tới sổ cá nhân', () => {
-    expect(walletHrefFor(withTenant())).toBe(ROUTES.ACCOUNT.EARNINGS);
-    expect(walletHrefFor({ tenant: null })).toBe(ROUTES.ACCOUNT.BALANCE);
-  });
-
-  /* Hai đích luôn đi cùng cặp với scope — lệch nhau là một liên kết dẫn tới sổ của người khác. */
-  it('đích luôn khớp scope', () => {
-    for (const user of [withTenant(), withTenant({ roleKey: TENANT_ROLE.SHOP_STAFF }), { tenant: null }]) {
-      const expected =
-        walletScopeFor(user) === 'shop' ? ROUTES.ACCOUNT.EARNINGS : ROUTES.ACCOUNT.BALANCE;
-      expect(walletHrefFor(user)).toBe(expected);
-    }
+  it('ví gian hàng ở site partner, ví cá nhân ở site khách', () => {
+    expect(walletHrefFor('shop')).toBe(ROUTES.MANAGE.BALANCE);
+    expect(walletHrefFor('account')).toBe(ROUTES.ACCOUNT.BALANCE);
   });
 });

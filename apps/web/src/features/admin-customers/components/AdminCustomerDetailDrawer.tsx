@@ -174,7 +174,7 @@ const requestColumns = (fmt: AppFormat): DataTableColumn<AdminCustomerRequest>[]
     width: 150,
     render: (_, r) =>
       r.bookingCode ? (
-        <Link href={`${ROUTES.MANAGE.ADMIN_BOOKINGS}?q=${encodeURIComponent(r.bookingCode)}`}>
+        <Link href={`${ROUTES.ADMIN.BOOKINGS}?q=${encodeURIComponent(r.bookingCode)}`}>
           Đơn {r.bookingCode}
         </Link>
       ) : null,

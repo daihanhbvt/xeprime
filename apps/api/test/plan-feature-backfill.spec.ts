@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   MEMBERSHIP_STATUS,
   PLAN_FEATURE,
   RECEIPT_SOURCE,
@@ -29,7 +30,8 @@ const prisma = createPrismaClient();
 const RUN = newId().slice(-8).toLowerCase();
 
 let dbAvailable = false;
-let ownerId: string;
+/** Chủ của từng tenant — ADR 0053: một tài khoản chỉ thuộc một gian hàng, nên mỗi tenant một chủ. */
+const ownerIds: string[] = [];
 const tenantIds: string[] = [];
 
 /** Các câu `UPDATE … used_features …` trích từ chính migration, giữ nguyên thứ tự. */
@@ -49,6 +51,16 @@ function backfillStatements(): string[] {
 
 async function mkTenant(tag: string): Promise<string> {
   const id = newId();
+  const ownerId = newId();
+  await prisma.user.create({
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Backfill Owner',
+      email: `bf-${tag}-${ownerId.slice(-6).toLowerCase()}-${RUN}@xeprime.test`,
+    },
+  });
+  ownerIds.push(ownerId);
   await prisma.tenant.create({
     data: {
       id,
@@ -119,10 +131,6 @@ beforeAll(async () => {
     console.warn('\n[skip] Không kết nối được PostgreSQL. Chạy `pnpm db:up` trước.\n');
     return;
   }
-  ownerId = newId();
-  await prisma.user.create({
-    data: { id: ownerId, displayName: 'Backfill Owner', email: `bf-${RUN}@xeprime.test` },
-  });
 });
 
 afterAll(async () => {
@@ -132,7 +140,7 @@ afterAll(async () => {
     await prisma.tenantBranch.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.tenantMembership.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.tenant.deleteMany({ where: { id: { in: tenantIds } } });
-    await prisma.user.deleteMany({ where: { id: ownerId } });
+    await prisma.user.deleteMany({ where: { id: { in: ownerIds } } });
   }
   await prisma.$disconnect();
 });
@@ -174,10 +182,13 @@ describe('backfill used_features — vị từ quyết định read_only vs hidd
     },
   );
 
-  maybe('⚠️ tenant MỚI TINH không được đánh dấu branches/members (registerShop tạo sẵn 1+1)', async () => {
-    const id = await mkTenant('fresh');
-    expect(await runBackfill(id)).toEqual([]);
-  });
+  maybe(
+    '⚠️ tenant MỚI TINH không được đánh dấu branches/members (registerShop tạo sẵn 1+1)',
+    async () => {
+      const id = await mkTenant('fresh');
+      expect(await runBackfill(id)).toEqual([]);
+    },
+  );
 
   maybe('phiếu thu NHẬP TAY ⇒ finance + debts (chiều ngược lại phải đúng)', async () => {
     const id = await mkTenant('manual-receipt');
@@ -199,7 +210,12 @@ describe('backfill used_features — vị từ quyết định read_only vs hidd
     const id = await mkTenant('grown');
     const staffId = newId();
     await prisma.user.create({
-      data: { id: staffId, displayName: 'Staff', email: `bf-staff-${RUN}@xeprime.test` },
+      data: {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: staffId,
+        displayName: 'Staff',
+        email: `bf-staff-${RUN}@xeprime.test`,
+      },
     });
     await prisma.tenantMembership.create({
       data: {

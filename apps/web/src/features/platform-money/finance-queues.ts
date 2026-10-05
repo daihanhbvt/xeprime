@@ -65,7 +65,7 @@ export const FINANCE_PARAM = {
 /** Đường dẫn tới một hàng đợi — cho lối tắt từ màn khác (tranh chấp → giữ chỗ, URL cũ…). */
 export function financeQueueHref(queue: FinanceQueue, params?: Record<string, string>): string {
   const query = new URLSearchParams({ [FINANCE_PARAM.QUEUE]: queue, ...params });
-  return `${ROUTES.MANAGE.ADMIN_MONEY}?${query.toString()}`;
+  return `${ROUTES.ADMIN.MONEY}?${query.toString()}`;
 }
 
 /**

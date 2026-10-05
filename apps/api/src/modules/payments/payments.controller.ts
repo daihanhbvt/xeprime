@@ -1,7 +1,10 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
-import { BRANCH_SCOPED_RESOURCE, BranchScoped, CurrentTenant, CurrentUser, RequirePermissions, TenantScoped } from '../../common/decorators';
+import {
+  ACCOUNT_REALM,
+  PERMISSION,
+} from '@xeprime/types';
+import { BRANCH_SCOPED_RESOURCE, BranchScoped, CurrentTenant, CurrentUser, Realms, RequirePermissions, TenantScoped } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { BookingDetailDto } from '../bookings/dto/booking.dto';
 import { PaymentDto, RecordPaymentDto } from './dto/payment.dto';
@@ -14,6 +17,7 @@ import { PaymentsService } from './payments.service';
 @ApiTags('payments')
 @Controller()
 @TenantScoped()
+@Realms(ACCOUNT_REALM.PARTNER)
 export class PaymentsController {
   constructor(private readonly payments: PaymentsService) {}
 

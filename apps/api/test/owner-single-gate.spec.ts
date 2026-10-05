@@ -1,5 +1,6 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   APPROVAL_STATUS,
   APPROVAL_TARGET_TYPE,
@@ -143,11 +144,17 @@ beforeAll(async () => {
     data: [
       {
         id: ownerId,
+        realm: ACCOUNT_REALM.PARTNER,
         displayName: 'Chủ xe cá nhân',
         email: `own-${ownerId}@xeprime.test`,
         phone: OWNER_PHONE,
       },
-      { id: reviewerId, displayName: 'Reviewer', email: `rev-${reviewerId}@xeprime.test` },
+      {
+        id: reviewerId,
+        realm: ACCOUNT_REALM.PLATFORM,
+        displayName: 'Reviewer',
+        email: `rev-${reviewerId}@xeprime.test`,
+      },
     ],
   });
 
@@ -455,9 +462,13 @@ describe('4. Từ chối / yêu cầu bổ sung: chủ xe thấy lý do và gử
     expect(notif.body).toContain('Ảnh nội thất bị mờ.');
 
     // Lý do đi kèm ngay trong DANH SÁCH xe, không bắt chủ xe mở từng chiếc để đi tìm.
-    const page = await vehicles.list(tenantId, {
-      publicStatus: VEHICLE_PUBLIC_STATUS.NEEDS_REVISION,
-    }, null);
+    const page = await vehicles.list(
+      tenantId,
+      {
+        publicStatus: VEHICLE_PUBLIC_STATUS.NEEDS_REVISION,
+      },
+      null,
+    );
     const listed = page.data.find((v) => v.id === vehicleId);
     expect(listed?.latestPublicReview?.reason).toBe('Ảnh nội thất bị mờ.');
 
@@ -525,7 +536,7 @@ describe('5. Cổng VẬN HÀNH không được biến mất; cổng XÁC MINH k
 
       const invoice = await billing.purchase(tenantId, ownerId, {
         planId: packagePlanId,
-        termMonths: 3
+        termMonths: 3,
       });
       expect(invoice.code).toMatch(/^XPG/);
 
@@ -558,7 +569,7 @@ describe('5. Cổng VẬN HÀNH không được biến mất; cổng XÁC MINH k
 
     const invoice = await billing.purchase(tenantId, ownerId, {
       planId: packagePlanId,
-      termMonths: 3
+      termMonths: 3,
     });
     expect(invoice.code).toMatch(/^XPG/);
   });

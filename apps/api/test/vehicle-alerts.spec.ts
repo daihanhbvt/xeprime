@@ -1,10 +1,12 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   BILLING_MODE,
   HANDOVER_PHOTO_SLOT,
   HANDOVER_TYPE,
   MEMBERSHIP_STATUS,
   PERMISSION,
+  sortVehicleAlerts,
   TENANT_ROLE,
   TENANT_STATUS,
   VEHICLE_ALERT_KIND,
@@ -13,7 +15,6 @@ import {
   VEHICLE_DOCUMENT_TYPE,
   VEHICLE_SOURCE_TYPE,
   VEHICLE_TYPE,
-  sortVehicleAlerts,
   type VehicleAlertKind,
 } from '@xeprime/types';
 import 'reflect-metadata';
@@ -30,7 +31,13 @@ import {
 } from '../src/modules/vehicles/vehicle-alerts.service';
 import { VehicleContractsService } from '../src/modules/vehicles/vehicle-contracts.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeBookingsService, makeCustomersService, makeNotificationService, makeVehiclesService, vehicleCreator } from './helpers/service-factory';
+import {
+  makeBookingsService,
+  makeCustomersService,
+  makeNotificationService,
+  makeVehiclesService,
+  vehicleCreator,
+} from './helpers/service-factory';
 import { giveTenantPlan } from './helpers/billing-fixture';
 
 /**
@@ -116,6 +123,7 @@ const FULL_HANDOVER_SCOPE = { canViewFiles: true };
 
 let dbAvailable = false;
 let ownerId: string;
+let otherOwnerId: string;
 let tenantId: string;
 let otherTenantId: string;
 
@@ -136,12 +144,28 @@ beforeAll(async () => {
   tenantId = newId();
   otherTenantId = newId();
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Chủ shop',
+      email: `own-${ownerId}@xeprime.test`,
+    },
+  });
+  // Mỗi gian hàng một chủ — ADR 0053: một tài khoản chỉ thuộc một gian hàng.
+  otherOwnerId = newId();
+  await prisma.user.create({
+    data: {
+      id: otherOwnerId,
+      realm: ACCOUNT_REALM.PARTNER,
+      displayName: 'Chủ shop khác',
+      email: `own-${otherOwnerId}@xeprime.test`,
+    },
   });
   for (const [id, name] of [
     [tenantId, 'Shop Wave 8'],
     [otherTenantId, 'Shop Khác'],
   ] as const) {
+    const owner = id === tenantId ? ownerId : otherOwnerId;
     await prisma.tenant.create({
       data: {
         id,
@@ -149,7 +173,7 @@ beforeAll(async () => {
         slug: `t-${id.toLowerCase().slice(-10)}`,
         name,
         status: TENANT_STATUS.ACTIVE,
-        ownerUserId: ownerId,
+        ownerUserId: owner,
       },
     });
     /*
@@ -164,7 +188,7 @@ beforeAll(async () => {
       data: {
         id: newId(),
         tenantId: id,
-        userId: ownerId,
+        userId: owner,
         roleKey: TENANT_ROLE.SHOP_OWNER,
         status: MEMBERSHIP_STATUS.ACTIVE,
       },
@@ -183,7 +207,7 @@ afterAll(async () => {
       await prisma.tenantMembership.deleteMany({ where: { tenantId: id } });
       await prisma.tenant.deleteMany({ where: { id } });
     }
-    await prisma.user.deleteMany({ where: { id: ownerId } });
+    await prisma.user.deleteMany({ where: { id: { in: [ownerId, otherOwnerId] } } });
   }
   await prisma.$disconnect();
 });
@@ -791,7 +815,11 @@ describe('Hàng đợi Thiếu KM trả', () => {
     const booking = await makeMissingReturnKm(vehicle.id, 120);
 
     const before = await handovers.missingOdometerQueue(tenantId, { limit: 100 }, null);
-    const beforeSummary = await maintenance.boardSummary(tenantId, { canViewHandovers: true }, null);
+    const beforeSummary = await maintenance.boardSummary(
+      tenantId,
+      { canViewHandovers: true },
+      null,
+    );
     expect(before.data.some((row) => row.bookingId === booking.id)).toBe(true);
     expect(beforeSummary.missingReturnKm).toBe(before.meta.total);
 

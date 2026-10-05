@@ -1,6 +1,7 @@
 import { ConflictException } from '@nestjs/common';
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   BILLING_MODE,
   BOOKING_REQUEST_STATUS,
@@ -70,6 +71,8 @@ const phoneVerification = {
 
 /** Danh tính khách — đường công khai LUÔN quy SĐT đã qua OTP về một tài khoản (ADR 0046 điều 5). */
 let currentCustomer: string;
+/** SĐT của chủ gian hàng — tài khoản khách SONG SINH dùng lại nó để kiểm luật chặn tự đặt. */
+const OWNER_PHONE = `8493${String(Date.now()).slice(-7)}`;
 const auth = {
   resolveOrCreateUserByPhone: async () => ({ userId: currentCustomer }),
 } as unknown as AuthService;
@@ -270,8 +273,19 @@ beforeAll(async () => {
 
   await prisma.user.createMany({
     data: [
-      { id: ownerId, displayName: 'Chủ Promo', email: `promo-owner-${RUN}@xeprime.test` },
-      { id: adminUserId, displayName: 'Admin Promo', email: `promo-admin-${RUN}@xeprime.test` },
+      {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: ownerId,
+        displayName: 'Chủ Promo',
+        email: `promo-owner-${RUN}@xeprime.test`,
+        phone: OWNER_PHONE,
+      },
+      {
+        realm: ACCOUNT_REALM.PLATFORM,
+        id: adminUserId,
+        displayName: 'Admin Promo',
+        email: `promo-admin-${RUN}@xeprime.test`,
+      },
     ],
   });
   await prisma.tenant.create({
@@ -408,10 +422,7 @@ const maybe = (name: string, fn: () => Promise<void>) =>
 describe('Xem trước mã — ĐỌC THUẦN, không giữ lượt', () => {
   maybe('mã hợp lệ trả số giảm + tổng khách trả SAU giảm, do SERVER tính', async () => {
     await seedPromo({ code: `XT1${RUN.slice(0, 4)}`.toUpperCase(), discountAmount: '100000' });
-    const r = await promoQuote.preview(
-      previewInput(`xt1${RUN.slice(0, 4)}`),
-      currentCustomer,
-    );
+    const r = await promoQuote.preview(previewInput(`xt1${RUN.slice(0, 4)}`), currentCustomer);
 
     expect(r.applicable).toBe(true);
     expect(r.discountAmount).toBe('100000');
@@ -502,21 +513,24 @@ describe('Xem trước mã — ĐỌC THUẦN, không giữ lượt', () => {
     expect(r.reason).toBe(PROMO_INELIGIBLE_REASON.EXHAUSTED);
   });
 
-  maybe('khách CHƯA đăng nhập + mã theo đối tượng ⇒ REQUIRES_IDENTITY, không lộ gì về ai', async () => {
-    /*
-     * Endpoint công khai không được trả lời câu "số này đã từng thuê xe chưa" cho một người chưa
-     * chứng minh mình là ai (ADR 0046 điều 9). Trả một lý do TRUNG TÍNH và để bước gửi (đã qua
-     * OTP) kiểm thật.
-     */
-    const code = `NEW${RUN.slice(0, 3)}`.toUpperCase();
-    await seedPromo({ code, audience: PROMO_AUDIENCE.NEW_CUSTOMER });
+  maybe(
+    'khách CHƯA đăng nhập + mã theo đối tượng ⇒ REQUIRES_IDENTITY, không lộ gì về ai',
+    async () => {
+      /*
+       * Endpoint công khai không được trả lời câu "số này đã từng thuê xe chưa" cho một người chưa
+       * chứng minh mình là ai (ADR 0046 điều 9). Trả một lý do TRUNG TÍNH và để bước gửi (đã qua
+       * OTP) kiểm thật.
+       */
+      const code = `NEW${RUN.slice(0, 3)}`.toUpperCase();
+      await seedPromo({ code, audience: PROMO_AUDIENCE.NEW_CUSTOMER });
 
-    const anon = await promoQuote.preview(previewInput(code), null);
-    expect(anon.reason).toBe(PROMO_INELIGIBLE_REASON.REQUIRES_IDENTITY);
+      const anon = await promoQuote.preview(previewInput(code), null);
+      expect(anon.reason).toBe(PROMO_INELIGIBLE_REASON.REQUIRES_IDENTITY);
 
-    const signed = await promoQuote.preview(previewInput(code), currentCustomer);
-    expect(signed.applicable).toBe(true);
-  });
+      const signed = await promoQuote.preview(previewInput(code), currentCustomer);
+      expect(signed.applicable).toBe(true);
+    },
+  );
 
   maybe('"khách hàng mới" đo bằng ĐƠN ĐÃ HÌNH THÀNH, không bằng số lượt gửi yêu cầu', async () => {
     const code = `NEW2${RUN.slice(0, 3)}`.toUpperCase();
@@ -866,59 +880,65 @@ describe('Chốt giá lúc duyệt — dòng tiền khép kín', () => {
     expect(await prisma.promoRedemption.count()).toBe(0);
   });
 
-  maybe('mã hết đủ điều kiện lúc chốt giá ⇒ NHẢ lượt, BÁO KHÁCH, lượt duyệt vẫn đi tiếp', async () => {
-    /*
-     * Gian hàng hạ giá xe giữa lúc khách chờ duyệt, làm chuyến tụt xuống dưới đơn tối thiểu của
-     * mã. Chặn lượt duyệt là phạt gian hàng cho một chi tiết marketing; im lặng bỏ mã là tăng
-     * tiền khách phải trả mà không nói. Đường đúng: nhả lượt + thông báo (ADR 0046 điều 7).
-     */
-    const code = `DRP${RUN.slice(0, 3)}`.toUpperCase();
-    const promoId = await seedPromo({ code, minOrderAmount: '1300000' });
-    const { receipt } = await submit({ promoCode: code });
+  maybe(
+    'mã hết đủ điều kiện lúc chốt giá ⇒ NHẢ lượt, BÁO KHÁCH, lượt duyệt vẫn đi tiếp',
+    async () => {
+      /*
+       * Gian hàng hạ giá xe giữa lúc khách chờ duyệt, làm chuyến tụt xuống dưới đơn tối thiểu của
+       * mã. Chặn lượt duyệt là phạt gian hàng cho một chi tiết marketing; im lặng bỏ mã là tăng
+       * tiền khách phải trả mà không nói. Đường đúng: nhả lượt + thông báo (ADR 0046 điều 7).
+       */
+      const code = `DRP${RUN.slice(0, 3)}`.toUpperCase();
+      const promoId = await seedPromo({ code, minOrderAmount: '1300000' });
+      const { receipt } = await submit({ promoCode: code });
 
-    await prisma.vehicle.update({
-      where: { id: vehicleId },
-      data: { weekdayPrice: new Prisma.Decimal('300000'), weekendPrice: new Prisma.Decimal('300000') },
-    });
-    try {
-      await requests.approve(tenantId, ownerId, receipt.id);
-    } finally {
       await prisma.vehicle.update({
         where: { id: vehicleId },
         data: {
-          weekdayPrice: new Prisma.Decimal('700000'),
-          weekendPrice: new Prisma.Decimal('700000'),
+          weekdayPrice: new Prisma.Decimal('300000'),
+          weekendPrice: new Prisma.Decimal('300000'),
         },
       });
-    }
+      try {
+        await requests.approve(tenantId, ownerId, receipt.id);
+      } finally {
+        await prisma.vehicle.update({
+          where: { id: vehicleId },
+          data: {
+            weekdayPrice: new Prisma.Decimal('700000'),
+            weekendPrice: new Prisma.Decimal('700000'),
+          },
+        });
+      }
 
-    const redemption = await prisma.promoRedemption.findUniqueOrThrow({
-      where: { bookingRequestId: receipt.id },
-    });
-    expect(redemption.status).toBe(PROMO_REDEMPTION_STATUS.RELEASED);
-    expect(redemption.releaseReason).toBe(PROMO_RELEASE_REASON.NO_LONGER_ELIGIBLE);
+      const redemption = await prisma.promoRedemption.findUniqueOrThrow({
+        where: { bookingRequestId: receipt.id },
+      });
+      expect(redemption.status).toBe(PROMO_REDEMPTION_STATUS.RELEASED);
+      expect(redemption.releaseReason).toBe(PROMO_RELEASE_REASON.NO_LONGER_ELIGIBLE);
 
-    const req = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: receipt.id } });
-    // Dấu mã bị xoá khỏi yêu cầu: giữ lại một mã không giảm đồng nào là nói dối mọi bề mặt đọc lại.
-    expect(req.promoCodeId).toBeNull();
-    expect(req.promoSnapshot).toBeNull();
-    expect(req.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
+      const req = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: receipt.id } });
+      // Dấu mã bị xoá khỏi yêu cầu: giữ lại một mã không giảm đồng nào là nói dối mọi bề mặt đọc lại.
+      expect(req.promoCodeId).toBeNull();
+      expect(req.promoSnapshot).toBeNull();
+      expect(req.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
 
-    const hold = await prisma.bookingHold.findUniqueOrThrow({
-      where: { bookingRequestId: receipt.id },
-    });
-    expect(hold.promoDiscountAmount.toFixed(0)).toBe('0');
+      const hold = await prisma.bookingHold.findUniqueOrThrow({
+        where: { bookingRequestId: receipt.id },
+      });
+      expect(hold.promoDiscountAmount.toFixed(0)).toBe('0');
 
-    // Khách PHẢI được báo — đây là phần khiến việc bỏ mã không còn âm thầm.
-    const notified = await prisma.notification.count({
-      where: { userId: currentCustomer, type: 'promo_code_dropped' },
-    });
-    expect(notified).toBe(1);
+      // Khách PHẢI được báo — đây là phần khiến việc bỏ mã không còn âm thầm.
+      const notified = await prisma.notification.count({
+        where: { userId: currentCustomer, type: 'promo_code_dropped' },
+      });
+      expect(notified).toBe(1);
 
-    // Lượt về kho.
-    const row = await prisma.promoCode.findUniqueOrThrow({ where: { id: promoId } });
-    expect(row.reservedCount).toBe(0);
-  });
+      // Lượt về kho.
+      const row = await prisma.promoCode.findUniqueOrThrow({ where: { id: promoId } });
+      expect(row.reservedCount).toBe(0);
+    },
+  );
 
   maybe('SNAPSHOT: admin sửa mức giảm sau khi khách áp mã KHÔNG viết lại giá của họ', async () => {
     const code = `SNP${RUN.slice(0, 3)}`.toUpperCase();
@@ -1259,14 +1279,41 @@ describe('Quản trị mã — quyền và trường bị khoá', () => {
 
 /** Guard nghiệp vụ cũ vẫn phải giữ nguyên khi có mã — mã không mở cửa nào. */
 describe('Mã khuyến mãi không nới một luật nào khác', () => {
-  maybe('gian hàng đặt xe của CHÍNH MÌNH vẫn bị chặn dù có mã', async () => {
+  maybe('tài khoản partner đặt xe vẫn bị chặn dù có mã', async () => {
     const code = `OWN${RUN.slice(0, 3)}`.toUpperCase();
     await seedPromo({ code });
     currentCustomer = ownerId;
     await expect(submit({ promoCode: code, customerUserId: ownerId })).rejects.toMatchObject({
-      response: { code: API_ERROR_CODE.CANNOT_BOOK_OWN_VEHICLE },
+      response: { code: API_ERROR_CODE.SHOP_ACCOUNT_CANNOT_BOOK },
     });
   });
+
+  maybe(
+    'tài khoản KHÁCH cùng SĐT với chủ đặt xe của chính gian hàng vẫn bị chặn dù có mã',
+    async () => {
+      const code = `OWC${RUN.slice(0, 3)}`.toUpperCase();
+      await seedPromo({ code });
+      const twinId = newId();
+      await prisma.user.create({
+        data: {
+          id: twinId,
+          realm: ACCOUNT_REALM.CUSTOMER,
+          displayName: 'Chủ Promo (khách)',
+          phone: OWNER_PHONE,
+          phoneVerifiedAt: new Date(),
+        },
+      });
+      customerIds.push(twinId);
+      currentCustomer = twinId;
+      try {
+        await expect(submit({ promoCode: code, customerUserId: twinId })).rejects.toMatchObject({
+          response: { code: API_ERROR_CODE.CANNOT_BOOK_OWN_VEHICLE },
+        });
+      } finally {
+        currentCustomer = mainCustomer;
+      }
+    },
+  );
 });
 
 /*

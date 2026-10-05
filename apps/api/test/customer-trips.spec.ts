@@ -1,19 +1,20 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
-  bookingRequestRespondBy,
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
   BOOKING_REQUEST_STATUS,
   BOOKING_STATUS,
+  bookingRequestRespondBy,
   CUSTOMER_TRIP_FILTER,
   CUSTOMER_TRIP_STAGE,
-  isCustomerTripClosed,
   type CustomerTripStage,
   DEPOSIT_STATUS,
   HANDOVER_CONDITION,
   HANDOVER_PHOTO_SLOT,
   HANDOVER_STATUS,
   HANDOVER_TYPE,
+  isCustomerTripClosed,
   MEMBERSHIP_STATUS,
   NOTIFICATION_TYPE,
   OCCUPANCY_SOURCE_TYPE,
@@ -206,7 +207,12 @@ beforeAll(async () => {
 
   await prisma.user.createMany({
     data: [
-      { id: ownerId, displayName: 'Chủ shop', email: `owner-${ownerId}@xeprime.test` },
+      {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: ownerId,
+        displayName: 'Chủ shop',
+        email: `owner-${ownerId}@xeprime.test`,
+      },
       { id: customerId, displayName: 'Khách A', email: `cus-${customerId}@xeprime.test` },
       { id: strangerId, displayName: 'Khách B', email: `other-${strangerId}@xeprime.test` },
     ],

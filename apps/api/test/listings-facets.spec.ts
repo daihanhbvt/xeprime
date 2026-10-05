@@ -1,5 +1,6 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   BODY_TYPE,
   COLLATERAL_MODE,
   FUEL_TYPE,
@@ -155,7 +156,12 @@ beforeAll(async () => {
   customerId = newId();
   await prisma.user.createMany({
     data: [
-      { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
+      {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: ownerId,
+        displayName: 'Chủ shop',
+        email: `own-${ownerId}@xeprime.test`,
+      },
       { id: customerId, displayName: 'Khách', email: `cus-${customerId}@xeprime.test` },
     ],
   });
@@ -178,20 +184,46 @@ beforeAll(async () => {
   branchId = await seedBranch(prisma as unknown as PrismaService, { tenantId, provinceCode: PROV });
 
   vSedan = await seedFacetVehicle({
-    brand: 'Toyota', body: BODY_TYPE.SEDAN, seats: 5, fuel: FUEL_TYPE.GASOLINE, price: '600000',
-    features: ['bluetooth', 'gps'], hourly: '90000', discount: 10, ratings: [5],
+    brand: 'Toyota',
+    body: BODY_TYPE.SEDAN,
+    seats: 5,
+    fuel: FUEL_TYPE.GASOLINE,
+    price: '600000',
+    features: ['bluetooth', 'gps'],
+    hourly: '90000',
+    discount: 10,
+    ratings: [5],
   });
   vSuv = await seedFacetVehicle({
-    brand: 'Mazda', body: BODY_TYPE.SUV, seats: 7, fuel: FUEL_TYPE.DIESEL, price: '1200000',
-    features: ['bluetooth', 'camera_360', 'sunroof'], delivery: true, ratings: [4],
+    brand: 'Mazda',
+    body: BODY_TYPE.SUV,
+    seats: 7,
+    fuel: FUEL_TYPE.DIESEL,
+    price: '1200000',
+    features: ['bluetooth', 'camera_360', 'sunroof'],
+    delivery: true,
+    ratings: [4],
   });
   vMini = await seedFacetVehicle({
-    brand: 'Kia', body: BODY_TYPE.MINI, seats: 4, fuel: FUEL_TYPE.GASOLINE, price: '400000',
-    hourly: '60000', noCollateral: true,
+    brand: 'Kia',
+    body: BODY_TYPE.MINI,
+    seats: 4,
+    fuel: FUEL_TYPE.GASOLINE,
+    price: '400000',
+    hourly: '60000',
+    noCollateral: true,
   });
   vCuv = await seedFacetVehicle({
-    brand: 'VinFast', body: BODY_TYPE.CUV, seats: 5, fuel: FUEL_TYPE.ELECTRIC, price: '900000',
-    features: ['gps', 'screen'], delivery: true, noCollateral: true, discount: 5, ratings: [5, 5],
+    brand: 'VinFast',
+    body: BODY_TYPE.CUV,
+    seats: 5,
+    fuel: FUEL_TYPE.ELECTRIC,
+    price: '900000',
+    features: ['gps', 'screen'],
+    delivery: true,
+    noCollateral: true,
+    discount: 5,
+    ratings: [5, 5],
   });
 });
 
@@ -437,7 +469,10 @@ describe('buildListingWhereSql khớp buildListingWhere (chống lệch hai bả
   });
 
   maybe('gian hàng bị tạm ngưng thì cả hai bản cùng loại xe khỏi chợ', async () => {
-    await prisma.tenant.update({ where: { id: tenantId }, data: { status: TENANT_STATUS.SUSPENDED } });
+    await prisma.tenant.update({
+      where: { id: tenantId },
+      data: { status: TENANT_STATUS.SUSPENDED },
+    });
     try {
       const [viaSql, viaPrisma] = await Promise.all([idsViaSql(sq()), idsViaPrisma(sq())]);
       expect(viaPrisma).toEqual([]);

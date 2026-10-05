@@ -1,7 +1,10 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
-import { PUBLIC_CACHE_SECONDS } from '@xeprime/types';
-import { Public } from '../../common/decorators';
+import {
+  ACCOUNT_REALM_VALUES,
+  PUBLIC_CACHE_SECONDS,
+} from '@xeprime/types';
+import { Public, Realms } from '../../common/decorators';
 import { PublicCache } from '../../common/http-cache';
 import { WardListDto, WardListQueryDto, WardLookupQueryDto } from './dto/ward.dto';
 import { WardsService } from './wards.service';
@@ -19,6 +22,7 @@ import { WardsService } from './wards.service';
  */
 @ApiTags('locations')
 @Controller()
+@Realms(...ACCOUNT_REALM_VALUES)
 export class WardsController {
   constructor(private readonly wards: WardsService) {}
 

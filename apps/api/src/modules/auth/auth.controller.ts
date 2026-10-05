@@ -1,9 +1,16 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Post, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Post, Req, Res } from '@nestjs/common';
 import { ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import { ACCOUNT_REALM_VALUES, type AccountRealm } from '@xeprime/types';
 import type { Response } from 'express';
-import { CurrentUser, Public, VerifiesCredentials } from '../../common/decorators';
-import type { AuthenticatedUser } from '../../common/types/request-context';
+import {
+  CurrentUser,
+  Public,
+  Realms,
+  VerifiesCredentials,
+  WebRealm,
+} from '../../common/decorators';
+import type { AuthenticatedUser, RequestContext } from '../../common/types/request-context';
 import { AuthService } from './auth.service';
 import { SessionService } from './session.service';
 import {
@@ -17,7 +24,11 @@ import {
 } from './dto/auth.dto';
 
 /**
- * Xác thực cho WEB — phiên bằng httpOnly cookie (ADR 0002).
+ * Xác thực cho WEB — phiên bằng httpOnly cookie (ADR 0002), tách theo realm (ADR 0053).
+ *
+ * Mọi route ở đây phục vụ cả ba site, và realm của tài khoản đến từ SITE đang gọi (`@WebRealm()` —
+ * header proxy đã qua khoá), không bao giờ từ body. Cùng một số điện thoại đăng ký ở site khách và
+ * site partner là hai tài khoản, hai mật khẩu, hai cookie khác tên.
  *
  * `@Throttle` trên bốn route công khai dưới đây siết chặt hơn hẳn mức chung 120 req/phút của app
  * (`app.module.ts`), và đặt **bằng đúng** mức của cặp song sinh native ở `MobileAuthController`:
@@ -36,6 +47,7 @@ import {
  */
 @ApiTags('auth')
 @Controller('auth')
+@Realms(...ACCOUNT_REALM_VALUES)
 export class AuthController {
   constructor(
     private readonly auth: AuthService,
@@ -48,14 +60,17 @@ export class AuthController {
   // 5/phút — bằng `POST /auth/mobile/register`. Gửi liên tiếp nhiều SĐT để xem số nào trả
   // `PHONE_TAKEN` là cách dò danh bạ người dùng; đây là chỗ duy nhất hãm được nó.
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
-  @ApiOperation({ summary: 'Đăng ký bằng số điện thoại + mật khẩu' })
+  @ApiOperation({
+    summary: 'Đăng ký bằng số điện thoại + mật khẩu — tài khoản thuộc realm của site đang gọi',
+  })
   @ApiOkResponse({ type: MeDto })
   async register(
     @Body() dto: RegisterDto,
+    @WebRealm() realm: AccountRealm,
     @Res({ passthrough: true }) res: Response,
   ): Promise<MeDto> {
-    const { userId } = await this.auth.register(dto);
-    this.issueSession(res, userId);
+    const { userId } = await this.auth.register(dto, realm);
+    this.issueSession(res, userId, realm);
     return this.auth.me(userId);
   }
 
@@ -68,9 +83,13 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @ApiOperation({ summary: 'Đăng nhập bằng email hoặc số điện thoại + mật khẩu' })
   @ApiOkResponse({ type: MeDto })
-  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response): Promise<MeDto> {
-    const { userId } = await this.auth.loginWithPassword(dto.identifier, dto.password);
-    this.issueSession(res, userId);
+  async login(
+    @Body() dto: LoginDto,
+    @WebRealm() realm: AccountRealm,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<MeDto> {
+    const { userId } = await this.auth.loginWithPassword(dto.identifier, dto.password, realm);
+    this.issueSession(res, userId, realm);
     return this.auth.me(userId);
   }
 
@@ -105,11 +124,14 @@ export class AuthController {
   @HttpCode(HttpStatus.NO_CONTENT)
   // 5/phút — mỗi request gửi một email tới địa chỉ do người gọi nhập.
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
-  @ApiOperation({ summary: 'Quên mật khẩu: gửi link đặt lại qua email' })
+  @ApiOperation({ summary: 'Quên mật khẩu: gửi link đặt lại qua email (về site của tài khoản)' })
   @ApiNoContentResponse()
-  async forgotPassword(@Body() dto: ForgotPasswordDto): Promise<void> {
+  async forgotPassword(
+    @Body() dto: ForgotPasswordDto,
+    @WebRealm() realm: AccountRealm,
+  ): Promise<void> {
     // Luôn 204 dù email có tồn tại hay không (không rò rỉ email đã đăng ký).
-    await this.auth.requestPasswordReset(dto.email);
+    await this.auth.requestPasswordReset(dto.email, realm);
   }
 
   @Public()
@@ -120,21 +142,26 @@ export class AuthController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ summary: 'Đặt lại mật khẩu từ token trong email' })
   @ApiNoContentResponse()
-  async resetPassword(@Body() dto: ResetPasswordDto): Promise<void> {
-    await this.auth.resetPassword(dto.token, dto.password);
+  async resetPassword(
+    @Body() dto: ResetPasswordDto,
+    @WebRealm() realm: AccountRealm,
+  ): Promise<void> {
+    await this.auth.resetPassword(dto.token, dto.password, realm);
   }
 
   @Public()
   @Delete('session')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Đăng xuất: xoá session cookie' })
-  logout(@Res({ passthrough: true }) res: Response): void {
-    this.sessions.clear(res);
+  @ApiOperation({ summary: 'Đăng xuất: xoá session cookie của site đang gọi' })
+  logout(@Req() req: RequestContext, @Res({ passthrough: true }) res: Response): void {
+    // Đăng xuất là của MỘT realm (ADR 0053 điều 4) — không có "đăng xuất mọi nơi". Không xác định
+    // được site thì không có cookie nào của mình để xoá.
+    if (req.realm) this.sessions.clear(res, req.realm);
   }
 
-  private issueSession(res: Response, userId: string): void {
+  private issueSession(res: Response, userId: string, realm: AccountRealm): void {
     const { token } = this.sessions.issue(userId);
-    this.sessions.attach(res, token);
+    this.sessions.attach(res, token, realm);
   }
 
   @Get('me')

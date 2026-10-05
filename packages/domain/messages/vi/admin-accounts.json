@@ -1,0 +1,30 @@
+{
+  "page": {
+    "title": "Tra cứu tài khoản",
+    "subtitle": "Một số điện thoại hoặc email có thể là nhiều tài khoản — khách thuê, đối tác, nhân sự nền tảng. Mỗi dòng là một tài khoản riêng, mật khẩu riêng.",
+    "tableLabel": "Tài khoản trùng định danh"
+  },
+  "form": {
+    "mode": "Tra theo",
+    "byPhone": "Số điện thoại",
+    "byEmail": "Email",
+    "phonePlaceholder": "0901234567",
+    "emailPlaceholder": "ten@vidu.com",
+    "submit": "Tra cứu",
+    "required": "Nhập số điện thoại hoặc email cần tra"
+  },
+  "columns": {
+    "account": "Tài khoản",
+    "realm": "Không gian",
+    "contact": "Liên hệ (đã che)",
+    "role": "Vai trò",
+    "status": "Trạng thái",
+    "createdAt": "Ngày tạo"
+  },
+  "roleInTenant": "{role} · {tenant}",
+  "states": {
+    "idle": "Nhập số điện thoại hoặc email để xem mọi tài khoản dùng định danh đó.",
+    "empty": "Không có tài khoản nào khớp.",
+    "error": "Không tra cứu được"
+  }
+}

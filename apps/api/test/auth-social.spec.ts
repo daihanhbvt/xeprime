@@ -1,9 +1,10 @@
 import { ConfigService } from '@nestjs/config';
-import { API_ERROR_CODE, AUTH_PROVIDER, USER_STATUS } from '@xeprime/types';
+import { ACCOUNT_REALM, API_ERROR_CODE, AUTH_PROVIDER, USER_STATUS } from '@xeprime/types';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { RbacService } from '../src/modules/rbac/rbac.service';
 import { AuthService } from '../src/modules/auth/auth.service';
 import { EmailService } from '../src/modules/email/email.service';
+import type { RequestRealmService } from '../src/modules/auth/request-realm.service';
 import type { VerifiedIdentity } from '../src/modules/auth/social/identity';
 import type { FeePoliciesService } from '../src/modules/fee-policies/fee-policies.service';
 
@@ -17,7 +18,11 @@ import type { FeePoliciesService } from '../src/modules/fee-policies/fee-policie
  * Khác biệt duy nhất so với bản cũ: gọi thẳng `upsertUserFromIdentity` thay vì đi qua một
  * verifier giả. Danh tính đã được xác minh TRƯỚC khi vào hàm này — đó chính là ranh giới mà
  * `VerifiedIdentity` đặt ra.
+ *
+ * ADR 0053 thêm MỘT chiều: mọi tra cứu nằm TRONG realm. Cùng một tài khoản Google là hai tài khoản
+ * XePrime ở site khách và site partner; site quản trị không nhận đăng nhập mạng xã hội.
  */
+const C = ACCOUNT_REALM.CUSTOMER;
 const GOOGLE_IDENTITY: VerifiedIdentity = {
   providerUserId: 'google-sub-1',
   provider: AUTH_PROVIDER.GOOGLE,
@@ -53,8 +58,8 @@ describe('AuthService — nối tài khoản từ danh tính mạng xã hội', 
 
   beforeEach(() => {
     jest.clearAllMocks();
-    prisma.$transaction.mockImplementation(
-      (work: (tx: typeof prisma) => Promise<unknown>) => work(prisma),
+    prisma.$transaction.mockImplementation((work: (tx: typeof prisma) => Promise<unknown>) =>
+      work(prisma),
     );
     service = new AuthService(
       prisma as unknown as PrismaService,
@@ -63,6 +68,7 @@ describe('AuthService — nối tài khoản từ danh tính mạng xã hội', 
       {} as ConfigService,
       // Spec này không gọi `me()`, nên chính sách phí không bao giờ được đọc tới.
       {} as FeePoliciesService,
+      {} as RequestRealmService,
     );
   });
 
@@ -72,7 +78,7 @@ describe('AuthService — nối tài khoản từ danh tính mạng xã hội', 
       user: { status: USER_STATUS.ACTIVE },
     });
 
-    await expect(service.upsertUserFromIdentity(GOOGLE_IDENTITY)).resolves.toEqual({
+    await expect(service.upsertUserFromIdentity(GOOGLE_IDENTITY, C)).resolves.toEqual({
       userId: 'USER_1',
     });
 
@@ -83,18 +89,19 @@ describe('AuthService — nối tài khoản từ danh tính mạng xã hội', 
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
-  it('tra cứu theo (provider, providerUserId) chứ không theo email', async () => {
+  it('tra cứu theo (realm, provider, providerUserId) chứ không theo email', async () => {
     prisma.userIdentity.findUnique.mockResolvedValue({
       userId: 'USER_1',
       user: { status: USER_STATUS.ACTIVE },
     });
 
-    await service.upsertUserFromIdentity(GOOGLE_IDENTITY);
+    await service.upsertUserFromIdentity(GOOGLE_IDENTITY, C);
 
     // Email đổi được; `sub` thì không. Tra theo email là cách hai người khác nhau bị gộp làm một.
     expect(prisma.userIdentity.findUnique).toHaveBeenCalledWith({
       where: {
-        provider_providerUserId: {
+        realm_provider_providerUserId: {
+          realm: C,
           provider: AUTH_PROVIDER.GOOGLE,
           providerUserId: 'google-sub-1',
         },
@@ -109,7 +116,7 @@ describe('AuthService — nối tài khoản từ danh tính mạng xã hội', 
       user: { status: USER_STATUS.LOCKED },
     });
 
-    await expect(service.upsertUserFromIdentity(GOOGLE_IDENTITY)).rejects.toMatchObject({
+    await expect(service.upsertUserFromIdentity(GOOGLE_IDENTITY, C)).rejects.toMatchObject({
       response: { code: API_ERROR_CODE.ACCOUNT_LOCKED },
     });
     expect(prisma.user.update).not.toHaveBeenCalled();
@@ -119,17 +126,18 @@ describe('AuthService — nối tài khoản từ danh tính mạng xã hội', 
     prisma.userIdentity.findUnique.mockResolvedValue(null);
     prisma.user.findFirst.mockResolvedValue({ id: 'USER_EMAIL', status: USER_STATUS.ACTIVE });
 
-    await expect(service.upsertUserFromIdentity(GOOGLE_IDENTITY)).resolves.toEqual({
+    await expect(service.upsertUserFromIdentity(GOOGLE_IDENTITY, C)).resolves.toEqual({
       userId: 'USER_EMAIL',
     });
     expect(prisma.user.findFirst).toHaveBeenCalledWith({
-      where: { email: 'customer@example.com', deletedAt: null },
+      where: { realm: C, email: 'customer@example.com', deletedAt: null },
       select: { id: true, status: true },
     });
     expect(prisma.user.create).not.toHaveBeenCalled();
     expect(prisma.userIdentity.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         userId: 'USER_EMAIL',
+        realm: C,
         provider: AUTH_PROVIDER.GOOGLE,
         providerEmail: 'customer@example.com',
       }),
@@ -140,7 +148,7 @@ describe('AuthService — nối tài khoản từ danh tính mạng xã hội', 
     prisma.userIdentity.findUnique.mockResolvedValue(null);
     prisma.user.findFirst.mockResolvedValue({ id: 'USER_EMAIL', status: USER_STATUS.ACTIVE });
 
-    await expect(service.upsertUserFromIdentity(FACEBOOK_IDENTITY)).rejects.toMatchObject({
+    await expect(service.upsertUserFromIdentity(FACEBOOK_IDENTITY, C)).rejects.toMatchObject({
       response: { code: API_ERROR_CODE.CONFLICT },
     });
     expect(prisma.$transaction).not.toHaveBeenCalled();
@@ -150,12 +158,13 @@ describe('AuthService — nối tài khoản từ danh tính mạng xã hội', 
     prisma.userIdentity.findUnique.mockResolvedValue(null);
     prisma.user.findFirst.mockResolvedValue(null);
 
-    const result = await service.upsertUserFromIdentity(FACEBOOK_IDENTITY);
+    const result = await service.upsertUserFromIdentity(FACEBOOK_IDENTITY, C);
 
     expect(result.userId).toHaveLength(26);
     expect(prisma.user.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         id: result.userId,
+        realm: C,
         email: 'customer@example.com',
         // Chưa xác minh ⇒ KHÔNG đóng dấu `emailVerifiedAt`, kể cả khi tạo mới.
         emailVerifiedAt: null,
@@ -168,5 +177,34 @@ describe('AuthService — nối tài khoản từ danh tính mạng xã hội', 
         provider: AUTH_PROVIDER.FACEBOOK,
       }),
     });
+  });
+
+  it('cùng danh tính Google ở site partner tra bằng khoá partner và tạo tài khoản KHÁC', async () => {
+    prisma.userIdentity.findUnique.mockResolvedValue(null);
+    prisma.user.findFirst.mockResolvedValue(null);
+
+    const result = await service.upsertUserFromIdentity(GOOGLE_IDENTITY, ACCOUNT_REALM.PARTNER);
+
+    expect(prisma.userIdentity.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          realm_provider_providerUserId: expect.objectContaining({ realm: ACCOUNT_REALM.PARTNER }),
+        },
+      }),
+    );
+    // Không nối vào tài khoản khách cùng email — tra email cũng giới hạn trong realm partner.
+    expect(prisma.user.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ realm: ACCOUNT_REALM.PARTNER }) }),
+    );
+    expect(prisma.user.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ id: result.userId, realm: ACCOUNT_REALM.PARTNER }),
+    });
+  });
+
+  it('site quản trị không nhận đăng nhập mạng xã hội — chặn trước mọi truy vấn', async () => {
+    await expect(
+      service.upsertUserFromIdentity(GOOGLE_IDENTITY, ACCOUNT_REALM.PLATFORM),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.REALM_LOGIN_METHOD_NOT_ALLOWED } });
+    expect(prisma.userIdentity.findUnique).not.toHaveBeenCalled();
   });
 });

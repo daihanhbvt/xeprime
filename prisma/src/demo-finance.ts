@@ -23,6 +23,8 @@
  * thêm một lượt). Chỉ cho máy dev: từ chối khi API không phải localhost hoặc DB là production.
  */
 import {
+  ACCOUNT_REALM,
+  ACCOUNT_REALM_HEADER,
   BOOKING_HOLD_OUTCOME,
   BOOKING_HOLD_STATUS,
   BOOKING_REQUEST_STATUS,
@@ -31,6 +33,7 @@ import {
   SERVICE_TYPE,
   SUPPORT_CASE_CATEGORY,
   SUPPORT_CASE_STATUS,
+  type AccountRealm,
 } from '@xeprime/types';
 import {
   DEMO_PASSWORD,
@@ -60,18 +63,37 @@ class ApiError extends Error {
   }
 }
 
-/** Một phiên đăng nhập bằng cookie — đúng như trình duyệt của người dùng đó. */
+/**
+ * Origin của site từng realm — request GHI bằng cookie phải mang đúng `Origin` (chặn CSRF, ADR 0051
+ * điều 6). Đọc cùng biến env với API để script không lệch khỏi cấu hình đang chạy.
+ */
+const SITE_URL: Record<AccountRealm, string> = {
+  [ACCOUNT_REALM.CUSTOMER]: process.env.APP_WEB_URL ?? 'http://localhost:3000',
+  [ACCOUNT_REALM.PARTNER]: process.env.WEB_PARTNER_URL ?? 'http://localhost:3000/manage',
+  [ACCOUNT_REALM.PLATFORM]: process.env.WEB_ADMIN_URL ?? 'http://localhost:3000/admin',
+};
+
+/**
+ * Header của một request web vào realm cho trước (ADR 0053). Script chạy với API dev bật
+ * `REALM_HEADER_FROM_CLIENT` — đúng vai web app ở chế độ `path`.
+ */
+function realmHeaders(realm: AccountRealm): Record<string, string> {
+  return { [ACCOUNT_REALM_HEADER]: realm, Origin: new URL(SITE_URL[realm]).origin };
+}
+
+/** Một phiên đăng nhập bằng cookie — đúng như trình duyệt của người dùng đó, ở đúng site. */
 class Session {
   private constructor(
     readonly label: string,
+    private readonly realm: AccountRealm,
     private readonly cookie: string,
   ) {}
 
-  static async login(identifier: string, password: string): Promise<Session> {
+  static async login(identifier: string, password: string, realm: AccountRealm): Promise<Session> {
     for (let attempt = 0; attempt < 4; attempt += 1) {
       const res = await fetch(`${API}/auth/login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...realmHeaders(realm) },
         body: JSON.stringify({ identifier, password }),
       });
       // Đăng nhập bị hãm 5 lượt/phút/IP — đợi qua cửa sổ rồi thử lại, không coi là lỗi.
@@ -85,7 +107,7 @@ class Session {
         .getSetCookie()
         .map((c) => c.split(';')[0])
         .join('; ');
-      return new Session(identifier, cookie);
+      return new Session(identifier, realm, cookie);
     }
     throw new Error(`đăng nhập ${identifier}: vẫn bị hãm sau nhiều lần đợi`);
   }
@@ -93,7 +115,11 @@ class Session {
   async call<T = unknown>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<T> {
     const res = await fetch(`${API}${path}`, {
       method,
-      headers: { 'Content-Type': 'application/json', Cookie: this.cookie },
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: this.cookie,
+        ...realmHeaders(this.realm),
+      },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
     const text = await res.text();
@@ -106,15 +132,23 @@ class Session {
 
 const sessions = new Map<string, Session>();
 
-async function as(identifier: string, password = DEMO_PASSWORD): Promise<Session> {
-  const cached = sessions.get(identifier);
+/** Phiên của một tài khoản ở MỘT realm — cùng email ở realm khác là tài khoản khác (ADR 0053). */
+async function as(
+  identifier: string,
+  realm: AccountRealm,
+  password = DEMO_PASSWORD,
+): Promise<Session> {
+  const key = `${realm}:${identifier}`;
+  const cached = sessions.get(key);
   if (cached) return cached;
-  const session = await Session.login(identifier, password);
-  sessions.set(identifier, session);
+  const session = await Session.login(identifier, password, realm);
+  sessions.set(key, session);
   return session;
 }
 
-const admin = () => as(PLATFORM_ADMIN_EMAIL, PLATFORM_ADMIN_PASSWORD);
+const asCustomer = (email: string) => as(email, ACCOUNT_REALM.CUSTOMER);
+const asOwner = (email: string) => as(email, ACCOUNT_REALM.PARTNER);
+const admin = () => as(PLATFORM_ADMIN_EMAIL, ACCOUNT_REALM.PLATFORM, PLATFORM_ADMIN_PASSWORD);
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -176,8 +210,9 @@ interface OwnerCar {
 }
 
 async function loadCustomer(email: string): Promise<Customer> {
+  // Khách là tài khoản realm customer (ADR 0053) — cùng email có thể là một tài khoản partner khác.
   const user = await prisma.user.findUnique({
-    where: { email },
+    where: { realm_email: { realm: ACCOUNT_REALM.CUSTOMER, email } },
     select: { displayName: true, phone: true, phoneVerifiedAt: true },
   });
   if (!user?.phone || !user.phoneVerifiedAt) {
@@ -190,7 +225,10 @@ async function loadCustomer(email: string): Promise<Customer> {
 
 /** Xe ĐANG CÔNG KHAI, có dịch vụ tự lái, của một chủ xe tuyến hoa hồng. */
 async function loadOwner(email: string): Promise<OwnerCar> {
-  const user = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+  const user = await prisma.user.findUnique({
+    where: { realm_email: { realm: ACCOUNT_REALM.PARTNER, email } },
+    select: { id: true },
+  });
   const tenant = user
     ? await prisma.tenant.findFirst({ where: { ownerUserId: user.id }, select: { id: true } })
     : null;
@@ -262,7 +300,7 @@ async function paidTrip(
   note: string,
 ): Promise<PaidTrip> {
   const slot = await freeSlot(vehicleId, fromOffset);
-  const guest = await as(customer.email);
+  const guest = await asCustomer(customer.email);
   const receipt = await guest.call<{ id: string; status: string }>(
     'POST',
     '/public/booking-requests',
@@ -278,7 +316,7 @@ async function paidTrip(
   );
 
   if (receipt.status === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL) {
-    const host = await as(owner.email);
+    const host = await asOwner(owner.email);
     await host.call('POST', `/booking-requests/${receipt.id}/approve`, {});
   }
 
@@ -320,7 +358,7 @@ async function openDispute(
   subject: string,
   description: string,
 ) {
-  const session = await as(customer.email);
+  const session = await asCustomer(customer.email);
   return session.call<{ id: string }>('POST', '/me/support/cases', {
     category: SUPPORT_CASE_CATEGORY.DISPUTE,
     subject,
@@ -363,7 +401,7 @@ async function requestWithdrawal(owner: OwnerCar, amount: number) {
     select: { id: true },
   });
   if (!account) throw new Error(`Chủ xe ${owner.email} chưa có tài khoản nhận tiền.`);
-  const host = await as(owner.email);
+  const host = await asOwner(owner.email);
   return host.call<{ id: string; code: string }>('POST', '/shop/wallet/withdrawals', {
     amount: String(amount),
     bankAccountId: account.id,
@@ -560,7 +598,7 @@ async function main(): Promise<void> {
   log('\nHoàn tiền cho khách:');
   await step('chủ xe huỷ chuyến → hoàn khách vào ví điểm', async () => {
     const trip = await paidTrip(binh!, khoa!, khoa!.vehicleIds[0]!, base + 6, 'Thuê xe đi Mũi Né');
-    const host = await as(khoa!.email);
+    const host = await asOwner(khoa!.email);
     await host.call('POST', `/bookings/${trip.bookingId}/transition`, {
       status: BOOKING_STATUS.CANCELLED,
       reason: 'Xe phát hiện lỗi phanh khi kiểm tra định kỳ, phải đưa đi sửa.',

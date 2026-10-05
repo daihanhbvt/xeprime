@@ -1,5 +1,6 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   OCCUPANCY_SOURCE_TYPE,
   TENANT_STATUS,
@@ -51,7 +52,12 @@ beforeAll(async () => {
   vehicleId = newId();
 
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Block owner', email: `blk-${ownerId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Block owner',
+      email: `blk-${ownerId}@xeprime.test`,
+    },
   });
   for (const [id, code] of [
     [tenantId, 'BLK1'],

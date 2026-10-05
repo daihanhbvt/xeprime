@@ -1009,5 +1009,10 @@
     "platform_revenue": "Doanh thu XePrime",
     "insurer_payable": "Phải trả hãng bảo hiểm",
     "tax_ledger": "Thuế giữ để nộp thay"
+  },
+  "accountRealm": {
+    "customer": "Khách thuê",
+    "partner": "Đối tác",
+    "platform": "Nhân sự nền tảng"
   }
 }

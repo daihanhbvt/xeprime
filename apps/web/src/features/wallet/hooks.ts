@@ -14,10 +14,15 @@ import {
 } from './api';
 import type { CreateWithdrawalInput, WalletScope, WalletStatementFilters } from './types';
 
-export function useWalletSummary(scope: WalletScope) {
+/**
+ * `enabled: false` khi tài khoản này KHÔNG có ví (nhân viên gian hàng — `walletScopeFor` trả
+ * `null`): gọi thử rồi nhận 403 là một lỗi đỏ trên màn của người không làm gì sai.
+ */
+export function useWalletSummary(scope: WalletScope, options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: queryKeys.wallet.summary(scope),
     queryFn: () => fetchWalletSummary(scope),
+    enabled: options.enabled ?? true,
   });
 }
 
@@ -31,10 +36,11 @@ export function useWalletEntries(scope: WalletScope, page: number) {
   });
 }
 
-export function useWithdrawals(scope: WalletScope) {
+export function useWithdrawals(scope: WalletScope, options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: queryKeys.wallet.withdrawals(scope),
     queryFn: () => fetchWithdrawals(scope),
+    enabled: options.enabled ?? true,
   });
 }
 

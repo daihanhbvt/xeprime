@@ -22,8 +22,6 @@ import {
   REFUND_SETTLEMENT_MODE,
   WALLET_ENTRY_KIND,
   WALLET_ENTRY_SOURCE,
-  MEMBERSHIP_STATUS,
-  TENANT_ROLE,
   WALLET_OWNER_TYPE,
   resolveRefundWalletOwner,
   ALLOCATION_TARGET,
@@ -285,14 +283,8 @@ export class HoldSettlementService {
      */
     const credited = input.customerUserId
       ? await this.wallet.creditWithinTx(tx, {
-          /*
-           * VÍ HỢP NHẤT (15/09/2026): khách là chủ xe ⇒ tiền hoàn về ví TENANT của họ.
-           *
-           * Không phải một ngoại lệ mà là chính mô hình: một người có đúng một ví. Ghi thẳng vào
-           * `{USER, customerUserId}` như trước sẽ TẠO một ví thứ hai cho người đã đổi chủ ví —
-           * và từ đó họ có hai số dư, hai hàng đợi rút, đúng thứ đợt này xoá bỏ.
-           */
-          owner: await this.refundWalletOwner(tx, input.customerUserId),
+          // Ví của TÀI KHOẢN KHÁCH đã đặt chuyến (ADR 0053 điều 8).
+          owner: this.refundWalletOwner(input.customerUserId),
           kind:
             input.reason === HOLD_REFUND_REASON.OVERPAID
               ? WALLET_ENTRY_KIND.HOLD_OVERPAY
@@ -326,30 +318,11 @@ export class HoldSettlementService {
   }
 
   /**
-   * Ví nhận khoản hoàn của một người — ví TENANT nếu họ là chủ xe, ví USER nếu không.
-   *
-   * Tra trong CHÍNH transaction đang chốt hold, để không có khoảng nào giữa việc đọc vai và việc
-   * ghi tiền. Membership cũ nhất khi một người sở hữu nhiều tenant — cùng thứ tự với `/auth/me`
-   * và `TenantScopeGuard`, nếu không tiền rơi vào một tenant mà phiên của họ không scope tới.
+   * Ví nhận khoản hoàn — ví của TÀI KHOẢN KHÁCH đã đặt chuyến (ADR 0053 điều 8). Tài khoản khách
+   * không bao giờ sở hữu tenant, nên không còn nhánh "ví gian hàng" nào ở đây.
    */
-  private async refundWalletOwner(
-    tx: Prisma.TransactionClient,
-    customerUserId: string,
-  ): Promise<WalletOwner> {
-    const membership = await tx.tenantMembership.findFirst({
-      where: {
-        userId: customerUserId,
-        status: MEMBERSHIP_STATUS.ACTIVE,
-        roleKey: TENANT_ROLE.SHOP_OWNER,
-        tenant: { deletedAt: null },
-      },
-      orderBy: { createdAt: 'asc' },
-      select: { tenantId: true },
-    });
-    const owner = resolveRefundWalletOwner(customerUserId, membership?.tenantId ?? null);
-    return owner.type === 'tenant'
-      ? { type: WALLET_OWNER_TYPE.TENANT, tenantId: owner.tenantId }
-      : { type: WALLET_OWNER_TYPE.USER, userId: owner.userId };
+  private refundWalletOwner(customerUserId: string): WalletOwner {
+    return { type: WALLET_OWNER_TYPE.USER, userId: resolveRefundWalletOwner(customerUserId).userId };
   }
 
   /** Khách khai tài khoản nhận hoàn — điều kiện để admin chuyển được. */

@@ -1,6 +1,7 @@
 import type { ConfigService } from '@nestjs/config';
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   BILLING_MODE,
   CHAT_INBOX,
   CHAT_SIDE,
@@ -79,9 +80,24 @@ beforeAll(async () => {
 
   await prisma.user.createMany({
     data: [
-      { id: ownerId, displayName: 'Chủ xe hoa hồng', email: `own-${ownerId}@xeprime.test` },
-      { id: staffId, displayName: 'Nhân viên', email: `stf-${staffId}@xeprime.test` },
-      { id: outsiderId, displayName: 'Khách lạ', email: `out-${outsiderId}@xeprime.test` },
+      {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: ownerId,
+        displayName: 'Chủ xe hoa hồng',
+        email: `own-${ownerId}@xeprime.test`,
+      },
+      {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: staffId,
+        displayName: 'Nhân viên',
+        email: `stf-${staffId}@xeprime.test`,
+      },
+      {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: outsiderId,
+        displayName: 'Khách lạ',
+        email: `out-${outsiderId}@xeprime.test`,
+      },
     ],
   });
 
@@ -346,9 +362,7 @@ describe('Hộp thư hợp nhất — deep link', () => {
     await prisma.user.create({
       data: { id: stranger, displayName: 'Vô can', email: `x-${stranger}@xeprime.test` },
     });
-    await expect(
-      chat.getConversation(stranger, foreign.id, CHAT_INBOX.UNIFIED),
-    ).rejects.toThrow();
+    await expect(chat.getConversation(stranger, foreign.id, CHAT_INBOX.UNIFIED)).rejects.toThrow();
     await prisma.user.delete({ where: { id: stranger } });
   });
 });

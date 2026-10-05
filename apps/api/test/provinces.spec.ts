@@ -1,10 +1,11 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
-  PROVINCE_CATALOG,
-  PROVINCE_CODES,
   buildProvinceAliasSeeds,
   normalizeProvinceAlias,
+  PROVINCE_CATALOG,
+  PROVINCE_CODES,
 } from '@xeprime/types';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { makeProvincesService } from './helpers/service-factory';
@@ -115,7 +116,12 @@ describe('Tỉnh đang được tham chiếu thì không xoá cứng được', 
     const tenantId = newId();
     const branchId = newId();
     await prisma.user.create({
-      data: { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
+      data: {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: ownerId,
+        displayName: 'Chủ shop',
+        email: `own-${ownerId}@xeprime.test`,
+      },
     });
     await prisma.tenant.create({
       data: {

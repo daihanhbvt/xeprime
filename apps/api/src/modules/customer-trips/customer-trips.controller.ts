@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Header, Param, Post, Query } from '@nestjs/common';
+import { ACCOUNT_REALM } from '@xeprime/types';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { CurrentUser } from '../../common/decorators';
+import { CurrentUser, Realms } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import { handoverPhotoSlotParam, handoverTypeParam } from '../bookings/handovers/handover-params';
 import { SourceContractDownloadDto } from '../vehicles/dto/vehicle-source.dto';
@@ -25,6 +26,8 @@ import {
  */
 @ApiTags('customer-trips')
 @Controller('trips')
+// Khách thấy chuyến ĐI THUÊ, chủ xe thấy chuyến CHO THUÊ — phạm vi lọc theo realm của phiên (ADR 0053).
+@Realms(ACCOUNT_REALM.CUSTOMER, ACCOUNT_REALM.PARTNER)
 export class CustomerTripsController {
   constructor(private readonly trips: CustomerTripsService) {}
 

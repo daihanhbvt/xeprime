@@ -9,12 +9,10 @@ import {
 import { newId, Prisma } from '@xeprime/prisma';
 import { subtractMoney } from '@xeprime/domain';
 import {
+  ACCOUNT_REALM,
   addDateKeyDays,
   API_ERROR_CODE,
-  BOOKING_BLOCK_REASON,
   MEMBERSHIP_STATUS,
-  resolveBookingBlock,
-  resolveEffectiveBilling,
   AUDIT_ACTOR_SCOPE,
   AUTO_ACCEPT_BLOCKER,
   BOOKING_REQUEST_DECISION_SOURCE,
@@ -52,10 +50,6 @@ import {
   type RentalTermsSnapshot,
   type ServiceType,
 } from '@xeprime/types';
-import {
-  EFFECTIVE_SUBSCRIPTION_ARGS,
-  effectiveSubscriptionWhere,
-} from '../../common/plan/feature-state';
 import { fromDateOnly, toDateOnly } from '../../common/date-only';
 import { normalizePhone, phoneLookupVariants } from '../../common/phone';
 import { piiSearch } from '../../common/support/support-search';
@@ -571,12 +565,15 @@ export class BookingRequestsService {
      */
     await this.customers.assertNotBlocked(vehicle.tenantId, dto.customerPhone, 'public');
 
-    // Khách vãng lai đã verify SĐT → tạo/đăng nhập tài khoản theo SĐT, gắn yêu cầu vào đó.
+    // Khách vãng lai đã verify SĐT → tạo/đăng nhập tài khoản KHÁCH theo SĐT, gắn yêu cầu vào đó.
+    // Luôn realm `customer` (ADR 0053): người đặt xe là khách, kể cả khi cùng số đó có một tài
+    // khoản partner — đó là một tài khoản khác, không được kéo vào đơn này.
     let effectiveUserId = customerUserId ?? null;
     let loginUserId: string | null = null;
     if (!effectiveUserId) {
       const { userId } = await this.auth.resolveOrCreateUserByPhone(
         dto.customerPhone,
+        ACCOUNT_REALM.CUSTOMER,
         dto.customerName,
       );
       effectiveUserId = userId;
@@ -584,20 +581,21 @@ export class BookingRequestsService {
     }
 
     /*
-     * CỔNG TÀI KHOẢN (15/09/2026) — đặt ở ĐÚNG đây, không sớm hơn và không muộn hơn.
+     * CỔNG TÀI KHOẢN — đặt ở ĐÚNG đây, không sớm hơn và không muộn hơn.
      *
      * Muộn hơn thì đã có `booking_requests` hoặc đã cấp phiên. Sớm hơn thì chưa biết người đặt
      * là ai: khách vãng lai chỉ khai SĐT, và danh tính chỉ xuất hiện SAU
      * `resolveOrCreateUserByPhone` ngay trên. Vì `effectiveUserId` là điểm HỘI TỤ của cả hai
-     * đường (đang đăng nhập / vừa khớp lại tài khoản bằng OTP), một cổng ở đây phủ cả hai —
-     * gồm cả ca chủ gian hàng đăng xuất rồi đặt lại bằng chính số điện thoại của mình
-     * (`users.phone` là unique nên OTP tìm lại đúng tài khoản đó).
+     * đường (đang đăng nhập / vừa khớp lại tài khoản bằng OTP), một cổng ở đây phủ cả hai.
+     *
+     * ADR 0053 điều 7: cổng này so SĐT ĐÃ XÁC MINH của tài khoản khách với SĐT của mọi thành viên
+     * gian hàng sở hữu xe — chủ xe dùng tài khoản khách cùng số để đặt xe của chính mình bị chặn.
      *
      * Nằm SAU cửa OTP cũng là chủ đích, cùng lý do với `assertNotBlocked` ở trên: người gửi phải
      * chứng minh sở hữu SĐT trước khi biết kết quả, nếu không đây thành một cách dò "số nào là
      * tài khoản gian hàng".
      */
-    await this.assertCanBook(effectiveUserId, vehicle.tenantId);
+    await this.assertCanBook(effectiveUserId, vehicle.tenantId, dto.customerPhone);
 
     await this.assertNoPendingDuplicate(
       vehicle.id,
@@ -1231,83 +1229,66 @@ export class BookingRequestsService {
    * đem đi đối chiếu.
    */
   /**
-   * Chặn gửi trùng khi SĐT được gõ ở ĐỊNH DẠNG KHÁC.
+   * Tài khoản này gửi được yêu cầu thuê cho chiếc xe này không — ADR 0053 điều 2 và 7.
    *
-   * `booking_requests_pending_dedupe_idx` là unique một phần trên `(xe, customer_phone, giờ
-   * nhận, giờ trả)` — so khớp CHUỖI THÔ. Nhưng cột đó cố ý giữ nguyên như người dùng gõ, và DTO
-   * nhận cả `0901234567` lẫn `+84901234567`, nên cùng một người gửi hai lần bằng hai định dạng
-   * sẽ lọt qua index và shop nhận hai yêu cầu y hệt.
+   *   • Chỉ tài khoản realm `customer` đặt được xe. Tài khoản partner/platform là ranh giới
+   *     realm (route đặt xe chỉ khai `customer`); kiểm lại ở đây vì đây là chỗ cuối cùng trước khi
+   *     một `customer_user_id` được ghi xuống. Mã cũ `SHOP_ACCOUNT_CANNOT_BOOK` giữ cho tương thích.
+   *   • KHÔNG ai đặt được xe của gian hàng gắn với SỐ ĐIỆN THOẠI của chính mình — kể cả bằng một
+   *     tài khoản khách riêng cùng số. So SĐT ĐÃ XÁC MINH của người đặt (SĐT tài khoản đã xác minh,
+   *     và SĐT đặt xe vừa qua OTP) với SĐT của MỌI thành viên `active` của gian hàng sở hữu xe.
    *
-   * Kiểm ở đây phủ mọi biến thể lưu được của cùng một số. Index vẫn giữ nguyên vai trò chốt
-   * chặn cuối cho hai request chạy song song — kiểm trước là để báo lỗi đúng, không phải để
-   * thay thế ràng buộc DB.
+   * Lý do của luật thứ hai: chuyến tự đặt thổi phồng chỉ số uy tín và điểm xếp hạng (ADR 0045),
+   * mở đường tự đánh giá, và đặt một người vào hai vai trên một đơn (lỗi kế toán ADR 0038 điều 6).
+   * Giới hạn đã chấp nhận: hai SĐT khác nhau thì không phát hiện được.
+   *
+   * Không đòi SĐT của THÀNH VIÊN phải đã xác minh: chủ xe đăng ký bằng mật khẩu (số chưa qua OTP)
+   * vẫn phải bị chặn khi họ xác minh chính số đó ở phía khách. Cái giá là một người lạ trùng số
+   * mà thành viên gõ nhầm không đặt được xe của MỘT gian hàng đó — hẹp và có lối ra (đổi số).
    */
-  /**
-   * Tài khoản này gửi được yêu cầu thuê cho chiếc xe này không (ADR 0032 điều 1).
-   *
-   * Hai luật, giải bằng hàm thuần `resolveBookingBlock` để web/app nói cùng một câu:
-   *
-   *   • thành viên hoạt động của một gian hàng TUYẾN GÓI ⇒ không đặt xe (bên bán không mua)
-   *   • bất kỳ ai ⇒ không đặt xe của CHÍNH gian hàng mình (hai vai trên một booking)
-   *
-   * Chủ xe tuyến HOA HỒNG không bị chặn: họ là cá nhân dùng Owner Lite và vẫn thuê xe của người
-   * khác như mọi người dùng.
-   *
-   * Tuyến của từng tenant giải bằng `resolveEffectiveBilling` — KHÔNG đọc `tenants.tenant_type`
-   * (ADR 0014 điều 2) và không suy từ `planCode`. Một truy vấn duy nhất lấy cả membership lẫn
-   * dòng thuê bao hiệu lực, cùng khuôn với `TenantScopeGuard`.
-   */
-  private async assertCanBook(userId: string | null, vehicleTenantId: string): Promise<void> {
+  private async assertCanBook(
+    userId: string | null,
+    vehicleTenantId: string,
+    customerPhone: string,
+  ): Promise<void> {
     if (!userId) return;
 
-    const now = new Date();
-    const memberships = await this.prisma.tenantMembership.findMany({
-      where: {
-        userId,
-        status: MEMBERSHIP_STATUS.ACTIVE,
-        tenant: { deletedAt: null },
-      },
-      orderBy: { createdAt: 'asc' },
-      select: {
-        tenantId: true,
-        tenant: {
-          select: {
-            name: true,
-            subscriptions: {
-              where: effectiveSubscriptionWhere(now),
-              ...EFFECTIVE_SUBSCRIPTION_ARGS,
-            },
-          },
-        },
-      },
+    const account = await this.prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
+      select: { realm: true, phone: true, phoneVerifiedAt: true },
     });
-    if (memberships.length === 0) return;
-
-    const block = resolveBookingBlock({
-      vehicleTenantId,
-      memberships: memberships.map((m) => ({
-        tenantId: m.tenantId,
-        tenantName: m.tenant.name,
-        billingMode: resolveEffectiveBilling(m.tenant.subscriptions[0] ?? null, now).billingMode,
-      })),
-    });
-    if (!block) return;
-
-    if (block.reason === BOOKING_BLOCK_REASON.OWN_TENANT_VEHICLE) {
-      throw new ConflictException({
-        code: API_ERROR_CODE.CANNOT_BOOK_OWN_VEHICLE,
-        message: 'Đây là xe của chính gian hàng bạn — không đặt thuê được.',
-        details: { tenantId: block.tenantId },
+    if (!account || account.realm !== ACCOUNT_REALM.CUSTOMER) {
+      throw new ForbiddenException({
+        code: API_ERROR_CODE.SHOP_ACCOUNT_CANNOT_BOOK,
+        message: 'Tài khoản này không đặt thuê xe được — hãy dùng tài khoản khách thuê.',
       });
     }
 
-    throw new ForbiddenException({
-      code: API_ERROR_CODE.SHOP_ACCOUNT_CANNOT_BOOK,
-      message:
-        `Bạn đang dùng tài khoản của gian hàng ${block.tenantName ?? ''}`.trim() +
-        '. Để thuê xe, hãy đăng nhập bằng một tài khoản khách thuê với số điện thoại khác.',
-      details: { tenantId: block.tenantId, tenantName: block.tenantName },
+    // Mọi biến thể lưu được của cùng một số — cột `users.phone` lưu dạng `84…` nhưng không phải
+    // mọi đường ghi xưa đều chuẩn hoá, nên tra theo biến thể chứ không so một chuỗi.
+    const verifiedPhones = new Set<string>(phoneLookupVariants(normalizePhone(customerPhone)));
+    if (account.phone && account.phoneVerifiedAt) {
+      for (const variant of phoneLookupVariants(normalizePhone(account.phone))) {
+        verifiedPhones.add(variant);
+      }
+    }
+
+    const ownMember = await this.prisma.tenantMembership.findFirst({
+      where: {
+        tenantId: vehicleTenantId,
+        status: MEMBERSHIP_STATUS.ACTIVE,
+        user: { deletedAt: null, phone: { in: [...verifiedPhones] } },
+      },
+      select: { tenantId: true },
     });
+    if (ownMember) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.CANNOT_BOOK_OWN_VEHICLE,
+        message:
+          'Xe này thuộc gian hàng gắn với số điện thoại của bạn — không đặt thuê xe của chính mình được.',
+        details: { tenantId: ownMember.tenantId },
+      });
+    }
   }
 
   /**
@@ -1325,6 +1306,18 @@ export class BookingRequestsService {
     });
   }
 
+  /**
+   * Chặn gửi trùng khi SĐT được gõ ở ĐỊNH DẠNG KHÁC.
+   *
+   * `booking_requests_pending_dedupe_idx` là unique một phần trên `(xe, customer_phone, giờ
+   * nhận, giờ trả)` — so khớp CHUỖI THÔ. Nhưng cột đó cố ý giữ nguyên như người dùng gõ, và DTO
+   * nhận cả `0901234567` lẫn `+84901234567`, nên cùng một người gửi hai lần bằng hai định dạng
+   * sẽ lọt qua index và shop nhận hai yêu cầu y hệt.
+   *
+   * Kiểm ở đây phủ mọi biến thể lưu được của cùng một số. Index vẫn giữ nguyên vai trò chốt
+   * chặn cuối cho hai request chạy song song — kiểm trước là để báo lỗi đúng, không phải để
+   * thay thế ràng buộc DB.
+   */
   private async assertNoPendingDuplicate(
     vehicleId: string,
     rawPhone: string,

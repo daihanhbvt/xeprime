@@ -80,7 +80,7 @@ describe('ShopEntryCard', () => {
     render(<ShopEntryCard />);
 
     expect(screen.getByText('Nâng cấp lên gian hàng')).toBeTruthy();
-    expect(screen.getByRole('link').getAttribute('href')).toBe('/account/subscription');
+    expect(screen.getByRole('link').getAttribute('href')).toBe('/manage/subscription');
     // Tên gian hàng KHÔNG thay tiêu đề ở biến thể này: thứ đang mời là một HÀNH ĐỘNG, không phải
     // một nơi chốn quen thuộc.
     expect(screen.queryByText('Xe của Minh')).toBeNull();
@@ -99,7 +99,7 @@ describe('ShopEntryCard', () => {
     };
     render(<ShopEntryCard />);
 
-    expect(screen.getByRole('link').getAttribute('href')).toBe('/account/subscription');
+    expect(screen.getByRole('link').getAttribute('href')).toBe('/manage/subscription');
   });
 
   /**
@@ -169,14 +169,14 @@ describe('ShopEntryCard', () => {
     expect(screen.queryByRole('link')).toBeNull();
   });
 
-  it('chưa có gian hàng → mời đăng xe, dẫn tới LANDING công khai', () => {
+  it('chưa có gian hàng → mời đăng xe, dẫn tới trang ĐĂNG KÝ của site partner', () => {
     user.value = { platformRole: null, tenant: null };
     render(<ShopEntryCard />);
 
     expect(screen.getByText('Đăng xe cho thuê')).toBeTruthy();
-    // 09/09/2026: mọi CTA chủ xe dừng ở trang giới thiệu công khai, không ném thẳng vào form
-    // tạo gian hàng nằm trong cổng quản lý.
-    expect(screen.getByRole('link').getAttribute('href')).toBe('/list-your-vehicle');
+    // Đăng ký chủ xe diễn ra ở site partner bằng tài khoản đối tác riêng (ADR 0051 · 0053), không
+    // ném thẳng vào form tạo gian hàng.
+    expect(screen.getByRole('link').getAttribute('href')).toBe('/manage/register');
   });
 
   it('nhân sự nền tảng → dẫn tới trang quản trị', () => {
@@ -184,7 +184,7 @@ describe('ShopEntryCard', () => {
     render(<ShopEntryCard />);
 
     expect(screen.getByText('Quản trị nền tảng')).toBeTruthy();
-    expect(screen.getByRole('link').getAttribute('href')).toBe('/manage/admin');
+    expect(screen.getByRole('link').getAttribute('href')).toBe('/admin');
   });
 
   it('chưa đăng nhập → không hiện gì', () => {

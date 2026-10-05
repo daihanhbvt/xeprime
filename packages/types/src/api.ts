@@ -603,6 +603,32 @@ export const API_ERROR_CODE = {
    */
   PARTNER_REGISTRATION_NOT_SUPPORTED: 'PARTNER_REGISTRATION_NOT_SUPPORTED',
   /**
+   * Không xác định được site (realm) đang gọi — ADR 0053 điều 4. Request web tới endpoint cần
+   * realm mà không qua proxy của site (header realm thiếu hoặc khoá proxy sai). Không đoán một
+   * realm mặc định: đoán sai là tạo tài khoản ở nhầm không gian.
+   */
+  REALM_UNRESOLVED: 'REALM_UNRESOLVED',
+  /**
+   * Route không phục vụ realm của người gọi — ADR 0053 điều 5 (vd tài khoản partner gọi endpoint
+   * đặt xe của khách, hoặc route chưa khai realm nào: mặc định từ chối).
+   */
+  REALM_NOT_ALLOWED: 'REALM_NOT_ALLOWED',
+  /**
+   * Realm `platform` không tự đăng ký và không đăng nhập bằng OTP/Google/Facebook — tài khoản do
+   * admin nền tảng tạo, đăng nhập bằng mật khẩu (ADR 0053 điều 3).
+   */
+  REALM_LOGIN_METHOD_NOT_ALLOWED: 'REALM_LOGIN_METHOD_NOT_ALLOWED',
+  /**
+   * Request GHI đi bằng cookie phiên mà `Origin` không phải site của realm đó — chặn CSRF
+   * (ADR 0002 ràng buộc 3, ADR 0051 điều 6). Bearer (app native) không bị áp.
+   */
+  ORIGIN_NOT_ALLOWED: 'ORIGIN_NOT_ALLOWED',
+  /**
+   * Tài khoản partner đã thuộc một gian hàng khác — một nhân viên chỉ thuộc MỘT gian hàng
+   * (ADR 0053 điều 6). DB giữ luật bằng unique index một phần; mã này là câu trả lời đọc được.
+   */
+  MEMBER_ALREADY_IN_OTHER_TENANT: 'MEMBER_ALREADY_IN_OTHER_TENANT',
+  /**
    * Hồ sơ GIAN HÀNG TUYẾN GÓI chưa đủ để gửi xe lên chợ (ADR 0040 điều 7).
    * `details.missing[]` mang khoá `PACKAGE_SHOP_LISTING_REQUIREMENT`.
    *

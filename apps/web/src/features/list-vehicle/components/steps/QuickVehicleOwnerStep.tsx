@@ -380,7 +380,7 @@ function OwnerAside() {
             <span className={styles.asideItemDesc}>{t('support.desc')}</span>
           </span>
         </div>
-        <Link href={ROUTES.ACCOUNT.SUPPORT} className={styles.asideCta}>
+        <Link href={ROUTES.MANAGE.SUPPORT_CASES} className={styles.asideCta}>
           <Button block>{t('support.cta')}</Button>
         </Link>
       </section>

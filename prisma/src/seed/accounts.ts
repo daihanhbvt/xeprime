@@ -9,7 +9,13 @@
  * Mật khẩu lấy từ env, không hard-code (xem `context.ts`); mọi tài khoản dùng cùng một mật khẩu
  * dev để đăng nhập thử cho nhanh.
  */
-import { MEMBERSHIP_STATUS, PLATFORM_ROLE, USER_STATUS } from '@xeprime/types';
+import {
+  ACCOUNT_REALM,
+  MEMBERSHIP_STATUS,
+  PLATFORM_ROLE,
+  USER_STATUS,
+  type AccountRealm,
+} from '@xeprime/types';
 import bcrypt from 'bcryptjs';
 import {
   BCRYPT_ROUNDS,
@@ -20,9 +26,19 @@ import {
   prisma,
   seedId,
 } from './context';
-import { CUSTOMER_ACCOUNTS, PLATFORM_ACCOUNTS, type CustomerKey } from './identities';
+import {
+  CROSS_REALM_TWINS,
+  CUSTOMER_ACCOUNTS,
+  PLATFORM_ACCOUNTS,
+  type CustomerKey,
+} from './identities';
 
 export interface PasswordUserInput {
+  /**
+   * Không gian tài khoản (ADR 0053). BẮT BUỘC: cùng một email/SĐT là một tài khoản KHÁC ở mỗi
+   * realm, nên seed không được đoán realm thay nơi gọi.
+   */
+  realm: AccountRealm;
   email: string;
   password: string;
   displayName: string;
@@ -37,7 +53,8 @@ export interface PasswordUserInput {
 }
 
 /**
- * Tạo/cập nhật user đăng nhập bằng email + mật khẩu (bcrypt). Idempotent theo email.
+ * Tạo/cập nhật user đăng nhập bằng email + mật khẩu (bcrypt). Idempotent theo (realm, email) — khoá
+ * `seedId` mang realm nên cùng email ở hai realm là hai hàng tất định khác nhau.
  *
  * Đặt cả `passwordHash` (đường `loginWithPassword` đọc field này) lẫn identity
  * `provider='password'` cho khớp `AuthService.register()` — seed phải dựng ra đúng hình thù
@@ -47,8 +64,12 @@ export async function upsertPasswordUser(input: PasswordUserInput): Promise<stri
   const email = input.email.trim().toLowerCase();
   const passwordHash = await bcrypt.hash(input.password, BCRYPT_ROUNDS);
 
-  const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } });
-  const userId = existing?.id ?? seedId(`user:${email}`);
+  const realm = input.realm;
+  const existing = await prisma.user.findUnique({
+    where: { realm_email: { realm, email } },
+    select: { id: true },
+  });
+  const userId = existing?.id ?? seedId(`user:${realm}:${email}`);
 
   await prisma.$transaction(async (tx) => {
     const common = {
@@ -65,15 +86,18 @@ export async function upsertPasswordUser(input: PasswordUserInput): Promise<stri
       await tx.user.update({ where: { id: userId }, data: common });
     } else {
       await tx.user.create({
-        data: { id: userId, email, emailVerifiedAt: new Date(), ...common },
+        data: { id: userId, realm, email, emailVerifiedAt: new Date(), ...common },
       });
     }
     await tx.userIdentity.upsert({
-      where: { provider_providerUserId: { provider: 'password', providerUserId: email } },
+      where: {
+        realm_provider_providerUserId: { realm, provider: 'password', providerUserId: email },
+      },
       update: {},
       create: {
-        id: seedId(`identity:password:${email}`),
+        id: seedId(`identity:${realm}:password:${email}`),
         userId,
+        realm,
         provider: 'password',
         providerUserId: email,
         providerEmail: email,
@@ -121,6 +145,7 @@ export async function seedPlatformAccounts(): Promise<PlatformAccounts> {
     const password =
       account.roleKey === PLATFORM_ROLE.PLATFORM_ADMIN ? PLATFORM_ADMIN_PASSWORD : DEMO_PASSWORD;
     const userId = await upsertPasswordUser({
+      realm: ACCOUNT_REALM.PLATFORM,
       email: account.email,
       password,
       displayName: account.displayName,
@@ -161,6 +186,7 @@ export async function seedCustomerAccounts(): Promise<CustomerAccounts> {
 
   for (const customer of CUSTOMER_ACCOUNTS) {
     const userId = await upsertPasswordUser({
+      realm: ACCOUNT_REALM.CUSTOMER,
       email: customer.email,
       password: DEMO_PASSWORD,
       displayName: customer.displayName,
@@ -176,4 +202,31 @@ export async function seedCustomerAccounts(): Promise<CustomerAccounts> {
 
   log(`  tài khoản khách: ${CUSTOMER_ACCOUNTS.length}`);
   return accounts;
+}
+
+// ---------------------------------------------------------------------------
+// Tài khoản SONG SINH xuyên realm (ADR 0053)
+// ---------------------------------------------------------------------------
+
+/**
+ * Cùng một người, cùng SĐT + email, nhưng là tài khoản KHÁC ở realm thứ hai — để đăng nhập thử
+ * đúng điều ADR 0053 hứa: hai site, hai mật khẩu, hai phiên không dính nhau.
+ *
+ * Song sinh KHÔNG có đơn, không có membership: tài khoản khách của một chủ xe không được đặt xe
+ * của chính gian hàng mình (ADR 0053 điều 7), và tài khoản partner của một khách chưa mở gian hàng
+ * nào — đó chính là ca "chưa có gian hàng ⇒ /register" của site partner.
+ */
+export async function seedCrossRealmTwins(): Promise<number> {
+  for (const twin of CROSS_REALM_TWINS) {
+    await upsertPasswordUser({
+      realm: twin.realm,
+      email: twin.email,
+      password: DEMO_PASSWORD,
+      displayName: twin.displayName,
+      phone: twin.phone,
+      phoneVerified: true,
+    });
+  }
+  log(`  tài khoản song sinh xuyên realm: ${CROSS_REALM_TWINS.length}`);
+  return CROSS_REALM_TWINS.length;
 }

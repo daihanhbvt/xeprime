@@ -1,5 +1,6 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   BILLING_MODE,
   BOOKING_REQUEST_STATUS,
   HOLD_REFUND_REASON,
@@ -33,33 +34,24 @@ import { releaseWalletObligations } from './helpers/wallet-cleanup';
 import { giveTenantPlan } from './helpers/billing-fixture';
 
 /**
- * SỔ TÀI KHOẢN NGÂN HÀNG ĐI THEO CHỦ VÍ — lỗi tiền, sửa 16/09/2026.
+ * SỔ TÀI KHOẢN NHẬN HOÀN THUỘC TÀI KHOẢN KHÁCH ĐÃ ĐẶT — ADR 0053 (thay luật "đi theo chủ ví" của
+ * ADR 0038 điều 2).
  *
- * ## Ca thật mà spec này dựng lại
+ * ## Ca thật
  *
- * Một người đi thuê xe của người khác TRƯỚC khi họ mở gian hàng. Chuyến đó huỷ, sinh một khoản
- * hoàn đang chờ họ khai số tài khoản. Trong lúc đó họ mở gian hàng — và migration hợp nhất ví
- * (`20260915120000_wallet_owner_unification`) chuyển ví CÙNG VỚI mọi tài khoản ngân hàng đang
- * dùng của họ sang tenant.
- *
- * Bản trước của `provideRefundAccount` đóng đinh `{ type: USER, userId }`. Sau khi đổi chủ, sổ
- * scope `user` của họ RỖNG, nên:
- *
- *   · `resolveForPayout` không thấy tài khoản nào ⇒ màn khai hiện danh sách trống;
- *   · mỗi lần khai lại đẻ thêm một bản ghi `user` mới — tách đôi đúng cái sổ vừa hợp nhất;
- *   · và không bản nào trong số đó hiện ở `/manage/balance` hay ở màn rút tiền của họ.
- *
- * Khoản hoàn vẫn tới được đích (họ gõ tay số tài khoản), nên đây không phải mất tiền — nhưng nó
- * là hai sổ cho một người, đúng thứ ADR 0038 điều 2 xoá bỏ.
+ * Minh có HAI tài khoản cùng số điện thoại: tài khoản đối tác ở site partner (chủ "Gara của Minh")
+ * và tài khoản khách ở xeprime.vn — tài khoản khách đi thuê xe của gara khác. Chuyến đó huỷ, sinh
+ * một khoản hoàn đang chờ khai số tài khoản.
  *
  * ## Điều được khoá
  *
- * Chủ sở hữu sổ đi qua `resolveRefundWalletOwner` — CÙNG hàm mà ví dùng, và cùng luật chọn tenant
- * với migration (membership `active` + `shop_owner`, cũ nhất trước). Hai bên không thể chỉ vào hai
- * sổ khác nhau.
+ *   · khoản hoàn của tài khoản KHÁCH đọc và ghi SỔ USER của chính tài khoản đó;
+ *   · sổ của gian hàng Minh (tài khoản khác, realm khác) KHÔNG dùng được ở đây — tiền và vận hành
+ *     hai realm tách biệt;
+ *   · khách thuê thuần giữ nguyên đường cũ.
  *
- * Nửa còn lại cũng phải đúng: KHÁCH THUÊ THUẦN giữ nguyên sổ `user`. Nếu không, mọi khách của
- * sàn mất đường khai tài khoản nhận hoàn.
+ * Chủ sở hữu sổ đi qua `resolveRefundWalletOwner` — CÙNG hàm mà ví dùng, nên ví và sổ ngân hàng
+ * không thể chỉ vào hai nơi khác nhau.
  */
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
@@ -96,10 +88,14 @@ const trips = new CustomerTripsService(
 );
 
 let dbAvailable = false;
-/** Chủ xe: sở hữu `ownTenantId`, và cũng là KHÁCH của một chuyến ở gara khác. */
-let ownerId: string;
+/** Minh — tài khoản ĐỐI TÁC, chủ `ownTenantId`. */
+let partnerId: string;
+/** Minh — tài khoản KHÁCH cùng số điện thoại, đi thuê ở gara khác. */
+let minhCustomerId: string;
 /** Khách thuê thuần — nửa đối chứng. */
 let renterId: string;
+/** Chủ gara cho thuê — tài khoản đối tác khác. */
+let hostOwnerId: string;
 let ownTenantId: string;
 let hostTenantId: string;
 let vehicleId: string;
@@ -116,25 +112,50 @@ beforeAll(async () => {
     return;
   }
 
-  ownerId = newId();
+  partnerId = newId();
+  minhCustomerId = newId();
   renterId = newId();
+  hostOwnerId = newId();
   ownTenantId = newId();
   hostTenantId = newId();
   vehicleId = newId();
   feePolicyId = (
-    await prisma.feePolicy.findFirstOrThrow({ orderBy: { createdAt: 'desc' }, select: { id: true } })
+    await prisma.feePolicy.findFirstOrThrow({
+      orderBy: { createdAt: 'desc' },
+      select: { id: true },
+    })
   ).id;
 
+  const minhPhone = `8497${String(Date.now()).slice(-7)}`;
   await prisma.user.createMany({
     data: [
-      { id: ownerId, displayName: 'Chủ xe Minh', email: `own-${ownerId}@xeprime.test` },
+      {
+        id: partnerId,
+        realm: ACCOUNT_REALM.PARTNER,
+        phone: minhPhone,
+        displayName: 'Chủ xe Minh',
+        email: `own-${partnerId}@xeprime.test`,
+      },
+      {
+        id: minhCustomerId,
+        realm: ACCOUNT_REALM.CUSTOMER,
+        phone: minhPhone,
+        displayName: 'Minh đi thuê',
+        email: `own-${partnerId}@xeprime.test`,
+      },
       { id: renterId, displayName: 'Khách Lan', email: `ren-${renterId}@xeprime.test` },
+      {
+        id: hostOwnerId,
+        realm: ACCOUNT_REALM.PARTNER,
+        displayName: 'Chủ gara',
+        email: `host-${hostOwnerId}@xeprime.test`,
+      },
     ],
   });
 
   for (const [id, name, owner] of [
-    [ownTenantId, 'Gara của Minh', ownerId],
-    [hostTenantId, 'Gara cho thuê', renterId],
+    [ownTenantId, 'Gara của Minh', partnerId],
+    [hostTenantId, 'Gara cho thuê', hostOwnerId],
   ] as const) {
     await prisma.tenant.create({
       data: {
@@ -146,26 +167,17 @@ beforeAll(async () => {
         ownerUserId: owner,
       },
     });
-    /*
-     * Gian hàng test = gian hàng TUYẾN GÓI. Không phải trang trí: từ 15/09/2026 một tenant
-     * không có thuê bao hiệu lực bị coi là Owner Lite và chỉ đăng được
-     * `OWNER_LITE_VEHICLE_LIMIT` xe (ADR 0038). Fixture nào dựng đội xe lớn bằng
-     * `prisma.tenant.create` trần đang mô tả một trạng thái sản phẩm không cho phép tồn tại —
-     * `registerShop` luôn gán gói trong cùng transaction.
-     */
+    await prisma.tenantMembership.create({
+      data: {
+        id: newId(),
+        tenantId: id,
+        userId: owner,
+        roleKey: TENANT_ROLE.SHOP_OWNER,
+        status: MEMBERSHIP_STATUS.ACTIVE,
+      },
+    });
     await giveTenantPlan(prisma, id, { billingMode: BILLING_MODE.PACKAGE });
   }
-
-  // Minh là CHỦ gian hàng của mình — điều kiện duy nhất khiến ví (và sổ ngân hàng) thuộc tenant.
-  await prisma.tenantMembership.create({
-    data: {
-      id: newId(),
-      tenantId: ownTenantId,
-      userId: ownerId,
-      roleKey: TENANT_ROLE.SHOP_OWNER,
-      status: MEMBERSHIP_STATUS.ACTIVE,
-    },
-  });
 
   await prisma.vehicle.create({
     data: {
@@ -181,12 +193,13 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (dbAvailable) {
+    const userIds = [partnerId, minhCustomerId, renterId, hostOwnerId];
     await releaseWalletObligations(prisma, {
       tenantIds: [ownTenantId, hostTenantId],
-      userIds: [ownerId, renterId],
+      userIds,
     });
     await prisma.tenant.deleteMany({ where: { id: { in: [ownTenantId, hostTenantId] } } });
-    await prisma.user.deleteMany({ where: { id: { in: [ownerId, renterId] } } });
+    await prisma.user.deleteMany({ where: { id: { in: userIds } } });
   }
   await prisma.$disconnect();
 });
@@ -269,15 +282,15 @@ function refundOf(requestId: string) {
   });
 }
 
-describe('Chủ xe khai tài khoản nhận hoàn — đọc sổ TENANT', () => {
-  maybe('chọn tài khoản ĐÃ LƯU của gian hàng thì khai được', async () => {
+describe('Tài khoản KHÁCH của một chủ xe khai tài khoản nhận hoàn — sổ USER của chính nó', () => {
+  maybe('chọn tài khoản đã lưu ở sổ USER của tài khoản khách thì khai được', async () => {
     const saved = await bankAccounts.create(
-      { type: WALLET_OWNER_TYPE.TENANT, tenantId: ownTenantId },
+      { type: WALLET_OWNER_TYPE.USER, userId: minhCustomerId },
       { bankCode: 'VCB', accountNumber: '0011000123456', accountName: 'NGUYEN VAN MINH' },
     );
-    const { requestId } = await seedPendingRefund(ownerId);
+    const { requestId } = await seedPendingRefund(minhCustomerId);
 
-    await trips.provideRefundAccount(ownerId, requestId, { bankAccountId: saved.id });
+    await trips.provideRefundAccount(minhCustomerId, requestId, { bankAccountId: saved.id });
 
     expect(await refundOf(requestId)).toEqual({
       bankCode: 'VCB',
@@ -287,42 +300,41 @@ describe('Chủ xe khai tài khoản nhận hoàn — đọc sổ TENANT', () =>
   });
 
   /*
-   * Đây là chính lỗi cũ, nhìn từ phía ngược lại: một bản ghi scope `user` của cùng người đó KHÔNG
-   * được coi là sổ của họ nữa. Nếu nó được chấp nhận thì hai sổ song song lại sống tiếp.
+   * Ranh giới realm của TIỀN: sổ ngân hàng của gian hàng Minh thuộc tài khoản đối tác — một tài
+   * khoản khác. Nhận nó ở đây là để tiền hoàn của khách chảy vào sổ của một realm khác.
    */
-  maybe('tài khoản scope USER của CHÍNH họ bị từ chối — sổ đó không còn là sổ của họ', async () => {
-    const stray = await bankAccounts.create(
-      { type: WALLET_OWNER_TYPE.USER, userId: ownerId },
+  maybe('tài khoản đã lưu của GIAN HÀNG cùng người bị từ chối', async () => {
+    const shopAccount = await bankAccounts.create(
+      { type: WALLET_OWNER_TYPE.TENANT, tenantId: ownTenantId },
       { bankCode: 'TCB', accountNumber: '19001234567', accountName: 'NGUYEN VAN MINH' },
     );
-    const { requestId } = await seedPendingRefund(ownerId);
+    const { requestId } = await seedPendingRefund(minhCustomerId);
 
     await expect(
-      trips.provideRefundAccount(ownerId, requestId, { bankAccountId: stray.id }),
+      trips.provideRefundAccount(minhCustomerId, requestId, { bankAccountId: shopAccount.id }),
     ).rejects.toThrow();
   });
 
-  /*
-   * Khai MỚI phải rơi vào sổ TENANT. Đây là nửa làm cho lần sau không phải gõ lại — và là nửa mà
-   * bản cũ làm sai âm thầm: nó lưu vào sổ `user`, nơi không màn nào của họ đọc tới.
-   */
-  maybe('khai MỚI thì lưu vào sổ TENANT, không đẻ bản ghi USER', async () => {
-    const { requestId } = await seedPendingRefund(ownerId);
+  maybe('khai MỚI lưu vào sổ USER của tài khoản khách, không chạm sổ gian hàng', async () => {
+    const { requestId } = await seedPendingRefund(minhCustomerId);
 
-    await trips.provideRefundAccount(ownerId, requestId, {
+    await trips.provideRefundAccount(minhCustomerId, requestId, {
       bankCode: 'ACB',
       accountNumber: '  9704 0011 2233  ',
       accountName: 'Nguyen Van Minh',
     });
 
+    const userBook = await bankAccounts.list({
+      type: WALLET_OWNER_TYPE.USER,
+      userId: minhCustomerId,
+    });
+    expect(userBook.some((a) => a.bankCode === 'ACB')).toBe(true);
+
     const tenantBook = await bankAccounts.list({
       type: WALLET_OWNER_TYPE.TENANT,
       tenantId: ownTenantId,
     });
-    expect(tenantBook.some((a) => a.bankCode === 'ACB')).toBe(true);
-
-    const userBook = await bankAccounts.list({ type: WALLET_OWNER_TYPE.USER, userId: ownerId });
-    expect(userBook.some((a) => a.bankCode === 'ACB')).toBe(false);
+    expect(tenantBook.some((a) => a.bankCode === 'ACB')).toBe(false);
 
     // …và khoản hoàn vẫn nhận đúng đích, với số đã chuẩn hoá (bỏ khoảng trắng).
     expect((await refundOf(requestId)).bankAccountNumber).toBe('970400112233');
@@ -330,11 +342,6 @@ describe('Chủ xe khai tài khoản nhận hoàn — đọc sổ TENANT', () =>
 });
 
 describe('BẢO TOÀN — khách thuê thuần vẫn dùng sổ USER', () => {
-  /*
-   * Nửa này quan trọng ngang nửa trên: `resolveRefundWalletOwner` chỉ đổi sổ cho người SỞ HỮU một
-   * tenant. Nếu nó đổi cho tất cả thì mọi khách của sàn mất đường khai tài khoản nhận hoàn — và
-   * đó chính là chỗ luồng hoàn tiền từng tắc.
-   */
   maybe('chọn tài khoản đã lưu scope USER thì khai được', async () => {
     const saved = await bankAccounts.create(
       { type: WALLET_OWNER_TYPE.USER, userId: renterId },

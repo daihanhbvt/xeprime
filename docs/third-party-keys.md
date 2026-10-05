@@ -159,18 +159,26 @@ Không dùng lại project cũ — tạo mới theo yêu cầu của bạn.
 - **Authorized redirect URIs** — chép chính xác:
 
 ```
+https://stg.xeprime.vn/api/auth/social/google/callback
+https://partner-stg.xeprime.vn/api/auth/social/google/callback
 https://api-stg.xeprime.vn/auth/social/google/callback
 ```
+
+Ba dòng vì ba lối vào (ADR 0051 · 0053): site khách và site đối tác mỗi site một callback CÙNG ORIGIN
+(cookie phiên là host-only của site đó), app native một callback trên host API. Site quản trị chỉ
+đăng nhập bằng mật khẩu — không khai.
 
 Không cần khai "Authorized JavaScript origins": vòng OAuth chạy **hoàn toàn ở server** (ADR
 0019), trình duyệt không bao giờ cầm token của Google.
 
-> URI này do `API_PUBLIC_URL` + `/auth/social/google/callback` ghép ra, và code **không bao giờ**
-> suy nó từ header của request — nên nó ổn định từng ký tự. Lệch một dấu `/` là
+> URI web do URL gốc của site realm (`APP_WEB_URL` · `WEB_PARTNER_URL`) + `/api/auth/social/google/callback`
+> ghép ra, URI native do `API_PUBLIC_URL` + `/auth/social/google/callback` — code **không bao giờ**
+> suy chúng từ header của request, nên chúng ổn định từng ký tự. Lệch một dấu `/` là
 > `redirect_uri_mismatch`.
 >
-> Đây là danh sách: khi dựng production, **thêm** `https://api.xeprime.vn/auth/social/google/callback`
-> vào cùng client, hoặc tạo client riêng.
+> Đây là danh sách: khi dựng production, **thêm** `https://xeprime.vn/api/auth/social/google/callback`,
+> `https://partner.xeprime.vn/api/auth/social/google/callback` và
+> `https://api.xeprime.vn/auth/social/google/callback` vào cùng client, hoặc tạo client riêng.
 
 ### 2.3 Khai vào GitHub
 
@@ -192,6 +200,8 @@ Không cần khai "Authorized JavaScript origins": vòng OAuth chạy **hoàn to
    - **Valid OAuth Redirect URIs**:
 
 ```
+https://stg.xeprime.vn/api/auth/social/facebook/callback
+https://partner-stg.xeprime.vn/api/auth/social/facebook/callback
 https://api-stg.xeprime.vn/auth/social/facebook/callback
 ```
 
@@ -622,7 +632,7 @@ nhanh hơn đi bấm thử trên giao diện.
 
 | Triệu chứng | Nguyên nhân gần như chắc chắn |
 | --- | --- |
-| `redirect_uri_mismatch` | URI trong console lệch từng ký tự với `https://api-stg.xeprime.vn/auth/social/<provider>/callback` |
+| `redirect_uri_mismatch` | Thiếu URI của ĐÚNG lối vào trong console, hoặc lệch từng ký tự: `https://<site>/api/auth/social/<provider>/callback` (web) · `https://api-stg.xeprime.vn/auth/social/<provider>/callback` (app native) |
 | Upload im lặng hỏng, Console báo CORS | Chưa đặt CORS policy trên bucket, hoặc thiếu `content-type` trong `AllowedHeaders` |
 | Ảnh tải lên xong nhưng không hiện | `R2_PUBLIC_BASE_URL` sai, hoặc bucket công khai chưa bật r2.dev |
 | Ảnh chat bị từ chối `VALIDATION_FAILED` | `R2_PUBLIC_BASE_URL` có dấu `/` thừa ở cuối |

@@ -4,6 +4,9 @@ import {
   API_ERROR_CODE,
   MOBILE_CLIENT_APP,
   USER_STATUS,
+  isMobileClientApp,
+  realmForClientApp,
+  type AccountRealm,
   type MobileClientApp,
 } from '@xeprime/types';
 import { createHash, randomBytes } from 'node:crypto';
@@ -319,11 +322,22 @@ export class NativeSessionService {
    * request tiếp theo bị chặn ngay dù token chưa hết hạn.
    */
   async isSessionUsable(sessionId: string, userId: string): Promise<boolean> {
+    return (await this.usableSessionRealm(sessionId, userId)) !== null;
+  }
+
+  /**
+   * Realm của một phiên native CÒN SỐNG, hoặc `null` nếu phiên đã chết — ADR 0053 điều 4.
+   *
+   * Realm suy từ `client_app` của chính phiên (app nào đăng nhập thì realm đó), không có cột trùng
+   * nghĩa. Cùng MỘT lượt tra với kiểm "phiên còn sống", nên đường Bearer không tốn thêm truy vấn.
+   */
+  async usableSessionRealm(sessionId: string, userId: string): Promise<AccountRealm | null> {
     const session = await this.prisma.nativeAuthSession.findFirst({
       where: { id: sessionId, userId, revokedAt: null, expiresAt: { gt: new Date() } },
-      select: { id: true },
+      select: { clientApp: true },
     });
-    return session !== null;
+    if (!session) return null;
+    return realmForClientApp(isMobileClientApp(session.clientApp) ? session.clientApp : null);
   }
 
   /**
