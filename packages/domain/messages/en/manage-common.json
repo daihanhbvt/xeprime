@@ -12,8 +12,8 @@
     "logout": "Log out",
     "signedInAs": "Signed in as {name}",
     "security": "Account security",
+    "account": "Account & security",
     "renterTrips": "Trips I rented",
-    "profile": "Personal profile",
     "partnerHome": "Go to XePrime Partner home"
   },
   "permission": {

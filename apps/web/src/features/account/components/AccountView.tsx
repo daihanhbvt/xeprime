@@ -10,18 +10,17 @@ import {
   SafetyCertificateOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { Alert, App, Avatar, Button, Card, Spin, Tag, Tooltip } from 'antd';
-import { useEffect, useState, type ReactNode } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { Alert, Avatar, Button, Card, Spin, Tag, Tooltip } from 'antd';
+import { useState, type ReactNode } from 'react';
+import { useWatch } from 'react-hook-form';
 import { STATUS_COLOR } from '@xeprime/types';
-import { accountProfileSchema, type AccountProfileValues } from '@xeprime/validators';
 import { ImageUploadField } from '@/components/form/ImageUploadField';
 import { TextField } from '@/components/form/TextField';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { WalletBalancePill } from '@/features/wallet/components/WalletBalancePill';
-import { getErrorMessage } from '@/services/api-client';
 import { presignAvatar } from '@/services/upload';
-import { useMyProfile, useUpdateMyProfile } from '../hooks/use-account';
+import { useMyProfile } from '../hooks/use-account';
+import { useAccountProfileForm } from '../hooks/use-account-profile-form';
 import { CONTACT_CHANNEL, type ContactChannel, type UserProfile } from '../types';
 import { ContactVerifyModal } from './ContactVerifyModal';
 import { AccountTrackBadge } from './AccountTrackBadge';
@@ -29,7 +28,6 @@ import { ShopEntryCard } from './ShopEntryCard';
 import styles from './AccountView.module.css';
 import { useTranslations } from 'next-intl';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { useValidationResolver } from '@/i18n/use-validation-resolver';
 
 /**
  * Trang gốc của khu tài khoản — hồ sơ của CON NGƯỜI đang đăng nhập.
@@ -70,8 +68,6 @@ export function AccountView() {
 function ProfileForm({ profile }: { profile: UserProfile }) {
   const t = useTranslations('Account');
   const tCommon = useTranslations('Common');
-  const { message } = App.useApp();
-  const update = useUpdateMyProfile();
   // `/auth/me` đã nằm sẵn trong cache (vỏ khu tài khoản gọi nó trước khi render) — đọc lại ở
   // đây không thêm request nào, và nó là nguồn DUY NHẤT của tuyến (ADR 0038 điều 1).
   const { data: user } = useCurrentUser();
@@ -79,46 +75,18 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
   /** Kênh liên lạc đang được đổi — `null` là không có modal nào mở. */
   const [editingContact, setEditingContact] = useState<ContactChannel | null>(null);
 
-  const resolver = useValidationResolver<AccountProfileValues>(
-    accountProfileSchema,
-    'Account.validation',
-  );
-  const { control, handleSubmit, reset, formState } = useForm<AccountProfileValues>({
-    resolver,
-    defaultValues: {
-      displayName: profile.displayName,
-      avatarUrl: profile.avatarUrl ?? null,
-    },
+  const { form, submit, revert, saving } = useAccountProfileForm(profile, {
+    onSaved: () => setIsEditing(false),
   });
-
-  // Hồ sơ được refetch (đổi ở tab khác, invalidate sau khi lưu) → nạp lại giá trị vào form,
-  // nếu không người dùng sẽ nhìn thấy dữ liệu cũ trong ô nhập.
-  useEffect(() => {
-    reset({ displayName: profile.displayName, avatarUrl: profile.avatarUrl ?? null });
-  }, [profile.displayName, profile.avatarUrl, reset]);
+  const { control, formState } = form;
 
   // `useWatch` thay cho `watch()`: chỉ component này render lại khi hai field đó đổi, và nó là
   // API React Compiler memo hoá được (`watch()` trả hàm mới mỗi render nên bị bỏ qua).
   const avatarUrl = useWatch({ control, name: 'avatarUrl' });
   const displayName = useWatch({ control, name: 'displayName' });
 
-  const onSubmit = handleSubmit((values) => {
-    update.mutate(
-      // `null` (không phải `undefined`) khi người dùng gỡ ảnh: `undefined` nghĩa là "không đụng
-      // tới", nên gửi nó đi thì nút Xoá ảnh im lặng không làm gì.
-      { displayName: values.displayName, avatarUrl: values.avatarUrl ?? null },
-      {
-        onSuccess: () => {
-          message.success(t('saved'));
-          setIsEditing(false);
-        },
-        onError: (err) => message.error(getErrorMessage(err)),
-      },
-    );
-  });
-
   function cancelEditing() {
-    reset({ displayName: profile.displayName, avatarUrl: profile.avatarUrl ?? null });
+    revert();
     setIsEditing(false);
   }
 
@@ -145,7 +113,7 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
             <Button
               icon={<EditOutlined />}
               onClick={() => setIsEditing(true)}
-              disabled={isEditing || update.isPending}
+              disabled={isEditing || saving}
             >
               {t('profile.edit')}
             </Button>
@@ -190,7 +158,7 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
         </div>
 
         {isEditing ? (
-          <form onSubmit={onSubmit} noValidate className={styles.form}>
+          <form onSubmit={submit} noValidate className={styles.form}>
             <div className={styles.fields}>
               <TextField
                 control={control}
@@ -199,7 +167,7 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
                 placeholder={t('displayNamePlaceholder')}
                 autoComplete="name"
                 prefix={<UserOutlined />}
-                disabled={update.isPending}
+                disabled={saving}
               />
               {/*
                 Ảnh đại diện đi ĐÚNG đường của mọi ảnh khác trong sản phẩm: chọn file → presign →
@@ -216,14 +184,14 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
               />
             </div>
             <div className={styles.formActions}>
-              <Button onClick={cancelEditing} disabled={update.isPending}>
+              <Button onClick={cancelEditing} disabled={saving}>
                 {tCommon('actions.cancel')}
               </Button>
               <Button
                 type="primary"
                 htmlType="submit"
-                loading={update.isPending}
-                disabled={!formState.isDirty && !update.isPending}
+                loading={saving}
+                disabled={!formState.isDirty && !saving}
               >
                 {tCommon('actions.saveChanges')}
               </Button>
@@ -318,7 +286,11 @@ function ContactRow({
           type="link"
           icon={value ? <EditOutlined /> : <PlusOutlined />}
           onClick={onEdit}
-          aria-label={value ? t('contact.changeAria', { field: label }) : t('contact.addAria', { field: label })}
+          aria-label={
+            value
+              ? t('contact.changeAria', { field: label })
+              : t('contact.addAria', { field: label })
+          }
         >
           {value ? t('contact.change') : t('contact.add')}
         </Button>

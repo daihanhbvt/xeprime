@@ -911,7 +911,17 @@ const profileText = (max: number) => yup.string().trim().max(max).default('');
 
 /** Message là MÃ — `useValidationResolver` tra `Shop.validation.*` (chỉ web có màn hồ sơ gian hàng). */
 export const shopProfileSchema = yup.object({
-  displayName: yup.string().trim().required('displayNameRequired').max(255).default(''),
+  /*
+   * Tên HIỂN THỊ = `tenants.name` (05/10/2026) — thứ khách thấy ở thẻ xe, trang gian hàng, chat.
+   * Cùng luật 2–255 ký tự với `registerShopSchema.name` và `UpdateTenantProfileDto.displayName`.
+   */
+  displayName: yup
+    .string()
+    .trim()
+    .required('displayNameRequired')
+    .min(2, 'displayNameMin')
+    .max(255, 'displayNameMax')
+    .default(''),
   bio: profileText(2000),
   /**
    * Địa chỉ ở đây là địa chỉ của CHI NHÁNH MẶC ĐỊNH (backend chuyển tiếp cho `BranchesService`),
@@ -955,6 +965,24 @@ export const shopProfileSchema = yup.object({
 });
 
 export type ShopProfileValues = yup.InferType<typeof shopProfileSchema>;
+
+/**
+ * Hồ sơ gian hàng KÈM liên hệ của gian hàng — form hồ sơ ở web.
+ *
+ * `phone`/`email` là SĐT/email LIÊN HỆ của gian hàng (`tenants.phone/email`) mà khách thấy ở
+ * chuyến đi và hợp đồng. KHÔNG phải SĐT/email đăng nhập của tài khoản chủ (đổi qua OTP ở trang
+ * tài khoản): hai bên độc lập (ADR 0053). Bỏ trống = gỡ.
+ *
+ * Là một schema MỞ RỘNG chứ không nằm thẳng trong `shopProfileSchema`: app native dựng
+ * `ShopProfileValues` bằng object literal, nên thêm trường vào schema gốc là làm đỏ typecheck
+ * của một app không thuộc đợt này. Native chưa gửi hai trường thì server giữ nguyên giá trị cũ.
+ */
+export const shopProfileWithContactSchema = shopProfileSchema.shape({
+  phone: contactPhoneRule,
+  email: yup.string().trim().default('').email('emailInvalid').max(255, 'emailMax'),
+});
+
+export type ShopProfileWithContactValues = yup.InferType<typeof shopProfileWithContactSchema>;
 
 /**
  * BƯỚC "thông tin gian hàng" của luồng NÂNG CẤP chủ xe hoa hồng → tuyến gói (ADR 0028 điều 1).

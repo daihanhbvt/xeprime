@@ -201,8 +201,8 @@ export async function buildShop(spec: ShopSpec, deps: ShopBuildDeps): Promise<Sh
 
   // ── Hồ sơ gian hàng ─────────────────────────────────────────────────────
   const defaultBranch = spec.branches.find((b) => b.isDefault) ?? spec.branches[0]!;
+  // Tên hiển thị KHÔNG ở đây: nó là `tenants.name` (`spec.name`), nguồn duy nhất từ 05/10/2026.
   const profileFields = {
-    displayName: spec.name,
     bio: spec.profile.bio,
     address: spec.profile.address,
     coverUrl: spec.profile.coverUrl ?? null,

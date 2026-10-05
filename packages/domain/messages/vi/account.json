@@ -3,7 +3,7 @@
     "commissionOwner": "Chủ xe cá nhân",
     "commissionOwnerWithFee": "Chủ xe cá nhân · Hoa hồng {percent, number}%",
     "shopOwner": "Chủ gian hàng",
-    "shopOwnerWithPlan": "Chủ gian hàng · Gói {plan}",
+    "shopOwnerWithPlan": "Chủ gian hàng · {plan}",
     "shopManager": "Quản lý gian hàng",
     "shopStaff": "Nhân viên gian hàng",
     "shopViewer": "Người xem gian hàng",
@@ -282,7 +282,10 @@
     "withdraw": "Rút yêu cầu xoá tài khoản",
     "withdrawConfirm": "Rút yêu cầu này? Tài khoản của bạn giữ nguyên.",
     "withdrawn": "Đã rút yêu cầu xoá tài khoản.",
-    "loadError": "Không kiểm tra được yêu cầu hiện có."
+    "loadError": "Không kiểm tra được yêu cầu hiện có.",
+    "embeddedIntro": "Bạn sẽ xem trước những gì bị ảnh hưởng trước khi gửi. Sau khi gửi, tài khoản vẫn dùng bình thường cho tới khi XePrime xử lý xong, và bạn có thể rút yêu cầu.",
+    "start": "Yêu cầu xoá tài khoản",
+    "collapse": "Để sau"
   },
   "publicDeletion": {
     "eyebrow": "Tài khoản XePrime",
@@ -361,11 +364,29 @@
   },
   "security": {
     "title": "Bảo mật tài khoản",
-    "subtitle": "Phương thức đăng nhập, mật khẩu và các thao tác với tài khoản của bạn.",
-    "dangerZone": "Vùng nguy hiểm"
+    "subtitle": "Phương thức đăng nhập, mật khẩu và các thao tác với tài khoản của bạn."
   },
-  "loginMethods": {
-    "title": "Phương thức đăng nhập",
-    "subtitle": "Email và số điện thoại dùng để đăng nhập. Đổi chúng cần xác minh bằng mã OTP."
+  "hub": {
+    "title": "Tài khoản & bảo mật",
+    "subtitle": "Hồ sơ cá nhân, thông tin đăng nhập và mật khẩu của tài khoản bạn đang dùng.",
+    "navTitle": "Trên trang này",
+    "navLabel": "Các phần của trang tài khoản",
+    "loadError": "Không tải được thông tin tài khoản",
+    "sections": {
+      "profile": "Hồ sơ cá nhân",
+      "profileHint": "Tên và ảnh đại diện của bạn trong cổng đối tác.",
+      "login": "Thông tin đăng nhập",
+      "loginHint": "Email và số điện thoại dùng để đăng nhập. Mỗi lần đổi cần một mã 6 số gửi tới địa chỉ hoặc số mới.",
+      "password": "Mật khẩu",
+      "passwordHint": "Dùng mật khẩu mạnh và không dùng lại mật khẩu của nơi khác.",
+      "delete": "Xoá tài khoản",
+      "deleteHint": "Gửi yêu cầu để XePrime đóng tài khoản này. Đây là thao tác khó hoàn tác."
+    },
+    "profile": {
+      "previewLabel": "Xem trước hồ sơ",
+      "notShop": "Tên và ảnh này là của riêng tài khoản bạn. Tên, logo và số điện thoại liên hệ mà khách thấy thuộc về gian hàng.",
+      "storefrontFallback": "Khi trang chủ xe của bạn chưa có logo, khách sẽ thấy ảnh đại diện này.",
+      "shopSettingsLink": "Mở Cài đặt gian hàng"
+    }
   }
 }

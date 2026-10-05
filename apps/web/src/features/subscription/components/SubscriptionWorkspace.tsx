@@ -60,7 +60,7 @@ export function SubscriptionWorkspace({
    * Khối "gói hiện hành" tự vẽ thẻ trắng của nó.
    *
    * Bật ở `/account/subscription`, nơi màn này là cả một TRANG; tắt ở trang Cửa hàng, nơi nó
-   * được nhúng vào trong `ShopSectionCard` và khung thứ hai là hai lớp viền cho một nội dung.
+   * được nhúng vào trong `SectionCard` và khung thứ hai là hai lớp viền cho một nội dung.
    */
   framed?: boolean;
 }) {

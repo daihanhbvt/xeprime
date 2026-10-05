@@ -70,11 +70,13 @@ function makeShop(
   overrides: Partial<MyShop['profile']> = {},
   owner: Partial<MyShop['ownerAccount']> = {},
 ): MyShop {
+  // `profile.displayName` LÀ `tenants.name` trên dây (05/10/2026) — hai giá trị luôn bằng nhau.
+  const name = overrides.displayName ?? 'Demo XePrime';
   return {
     id: '01HSHOP00000000000000000A',
     code: 'SHOP-1',
     slug: 'demo-xeprime',
-    name: 'Demo XePrime',
+    name,
     tenantType: 'individual',
     status: TENANT_STATUS.ACTIVE,
     onboardingState: SHOP_ONBOARDING_STATE.COMMISSION,
@@ -92,7 +94,7 @@ function makeShop(
       needsLocationReview: false,
     },
     profile: {
-      displayName: 'Demo XePrime',
+      displayName: name,
       bio: 'Gian hàng demo',
       logoUrl: null,
       coverUrl: null,
@@ -249,6 +251,40 @@ describe('Nội dung gửi lên', () => {
     expect(body.provinceCode).toBe('79');
     expect(body).not.toHaveProperty('provinceName');
     expect(body.displayName).toBe('Demo XePrime đổi tên');
+  });
+
+  /*
+   * Liên hệ của GIAN HÀNG (`tenants.phone/email`) ≠ SĐT/email ĐĂNG NHẬP của chủ (`ownerAccount`).
+   * Ô nhập phải điền từ gian hàng, và thân request mang đúng giá trị đó — không bao giờ lấy số
+   * của tài khoản chủ (ADR 0053).
+   */
+  it('ô liên hệ điền từ gian hàng, không từ tài khoản chủ — và đi vào thân request', async () => {
+    const { onSave } = renderWorkspace({
+      ...makeShop(),
+      phone: '84912345678',
+      email: 'lienhe@shop.vn',
+    });
+
+    expect(screen.getByLabelText(/SĐT liên hệ của gian hàng/)).toHaveProperty(
+      'value',
+      '0912345678',
+    );
+    expect(screen.getByLabelText(/Email liên hệ của gian hàng/)).toHaveProperty(
+      'value',
+      'lienhe@shop.vn',
+    );
+
+    fireEvent.change(screen.getByLabelText(/SĐT liên hệ của gian hàng/), {
+      target: { value: '0987654321' },
+    });
+    await waitFor(() => expect(saveButton()).toHaveProperty('disabled', false));
+    fireEvent.click(saveButton());
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    const body = onSave.mock.calls[0]![0];
+    expect(body.phone).toBe('0987654321');
+    expect(body.email).toBe('lienhe@shop.vn');
+    expect(body.phone).not.toBe(OWNER.phone);
   });
 
   /*

@@ -1,4 +1,6 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import {
   ACCOUNT_REALM,
   API_ERROR_CODE,
@@ -78,7 +80,7 @@ beforeAll(async () => {
       ownerUserId: ownerId,
     },
   });
-  await prisma.tenantProfile.create({ data: { tenantId, displayName: 'Shop hồ sơ' } });
+  await prisma.tenantProfile.create({ data: { tenantId } });
   await prisma.tenantMembership.create({
     data: {
       id: newId(),
@@ -232,9 +234,9 @@ describe('Thông tin chủ gian hàng', () => {
    * hồ sơ vĩnh viễn mà người dùng không có đường tự gỡ.
    */
   maybe('đang chờ xác minh: hồ sơ VẪN sửa được (không còn khoá vĩnh viễn)', async () => {
-    const before = await prisma.tenantProfile.findUniqueOrThrow({
-      where: { tenantId },
-      select: { displayName: true },
+    const before = await prisma.tenant.findUniqueOrThrow({
+      where: { id: tenantId },
+      select: { name: true },
     });
 
     const shop = await tenants.updateProfile(tenantId, ownerId, {
@@ -243,7 +245,7 @@ describe('Thông tin chủ gian hàng', () => {
     expect(shop.profile.displayName).toBe('Sửa khi đang chờ');
 
     await tenants.updateProfile(tenantId, ownerId, {
-      displayName: before.displayName ?? undefined,
+      displayName: before.name,
     });
   });
 
@@ -258,6 +260,80 @@ describe('Thông tin chủ gian hàng', () => {
       where: { tenantId, status: 'pending' },
       data: { status: 'needs_revision', reviewedAt: new Date(), reason: 'Bổ sung giấy tờ.' },
     });
+  });
+});
+
+/**
+ * MẶT TIỀN GIAN HÀNG ≠ TÀI KHOẢN CHỦ (05/10/2026).
+ *
+ * Tên, SĐT, email mà khách thấy là của GIAN HÀNG (`tenants.name/phone/email`); SĐT/email đăng
+ * nhập là của TÀI KHOẢN (`users`). Hai bên độc lập: đổi một bên không chạm bên kia. Và tên sửa ở
+ * hồ sơ phải tới đúng cột khách đọc — trước đây nó vào bản sao `tenant_profiles.display_name`.
+ */
+describe('Mặt tiền gian hàng độc lập với tài khoản chủ', () => {
+  maybe('đổi tên ở hồ sơ ghi tenants.name — slug giữ nguyên, tên chủ không đổi', async () => {
+    const before = await prisma.tenant.findUniqueOrThrow({
+      where: { id: tenantId },
+      select: { name: true, slug: true },
+    });
+
+    const shop = await tenants.updateProfile(tenantId, ownerId, { displayName: 'Tên mới của shop' });
+    expect(shop.name).toBe('Tên mới của shop');
+    expect(shop.profile.displayName).toBe('Tên mới của shop');
+    expect(shop.slug).toBe(before.slug);
+    expect(shop.ownerAccount.displayName).toBe('Chủ shop');
+
+    await tenants.updateProfile(tenantId, ownerId, { displayName: before.name });
+  });
+
+  maybe('SĐT/email liên hệ ghi vào tenants, không chạm SĐT/email đăng nhập', async () => {
+    const shop = await tenants.updateProfile(tenantId, ownerId, {
+      phone: '0912345678',
+      email: 'lienhe@shop.test',
+    });
+    expect(shop.phone).toBe('0912345678');
+    expect(shop.email).toBe('lienhe@shop.test');
+    expect(shop.ownerAccount.phone).toBe(OWNER_PHONE);
+    expect(shop.ownerAccount.email).toBe(`own-${ownerId}@xeprime.test`);
+
+    // Ô trống = gỡ liên hệ của gian hàng.
+    const cleared = await tenants.updateProfile(tenantId, ownerId, { phone: '', email: '' });
+    expect(cleared.phone).toBeNull();
+    expect(cleared.email).toBeNull();
+  });
+
+  maybe('đổi SĐT/email của tài khoản chủ không làm đổi liên hệ của gian hàng', async () => {
+    await tenants.updateProfile(tenantId, ownerId, {
+      phone: '0912345678',
+      email: 'lienhe@shop.test',
+    });
+    const newOwnerPhone = `848${String(Date.now()).slice(-8)}`;
+    await prisma.user.update({
+      where: { id: ownerId },
+      data: { phone: newOwnerPhone, email: `doi-${ownerId}@xeprime.test` },
+    });
+
+    const shop = await tenants.getMyShop(tenantId);
+    expect(shop.ownerAccount.phone).toBe(newOwnerPhone);
+    expect(shop.phone).toBe('0912345678');
+    expect(shop.email).toBe('lienhe@shop.test');
+
+    await prisma.user.update({
+      where: { id: ownerId },
+      data: { phone: OWNER_PHONE, email: `own-${ownerId}@xeprime.test` },
+    });
+    await tenants.updateProfile(tenantId, ownerId, { phone: '', email: '' });
+  });
+
+  maybe('DTO: tên không gỡ được; SĐT/email trống hợp lệ, sai định dạng bị chặn', async () => {
+    const errorsOf = async (body: Record<string, unknown>) =>
+      (await validate(plainToInstance(UpdateTenantProfileDto, body))).map((e) => e.property);
+
+    expect(await errorsOf({ displayName: '' })).toContain('displayName');
+    expect(await errorsOf({ displayName: ' a ' })).toContain('displayName');
+    expect(await errorsOf({ phone: '', email: '' })).toEqual([]);
+    expect(await errorsOf({ phone: '12345' })).toContain('phone');
+    expect(await errorsOf({ email: 'khong-phai-email' })).toContain('email');
   });
 });
 
@@ -284,11 +360,14 @@ describe('Tỉnh/thành đi qua chi nhánh mặc định', () => {
       }),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
 
-    const row = await prisma.tenantProfile.findUniqueOrThrow({
-      where: { tenantId },
-      select: { displayName: true, provinceCode: true },
-    });
-    expect(row.displayName).not.toBe('Không được lưu');
+    const [tenant, row] = await Promise.all([
+      prisma.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { name: true } }),
+      prisma.tenantProfile.findUniqueOrThrow({
+        where: { tenantId },
+        select: { provinceCode: true },
+      }),
+    ]);
+    expect(tenant.name).not.toBe('Không được lưu');
     expect(row.provinceCode).toBe(DANANG);
   });
 });

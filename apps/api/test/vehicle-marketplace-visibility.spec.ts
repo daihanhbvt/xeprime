@@ -199,10 +199,9 @@ beforeAll(async () => {
   await seedProvince(asService, PROV, PROV_NAME);
   await prisma.tenantProfile.createMany({
     data: [
-      { tenantId, displayName: 'Shop Visibility', provinceCode: PROV, provinceName: PROV_NAME },
+      { tenantId, provinceCode: PROV, provinceName: PROV_NAME },
       {
         tenantId: otherTenantId,
-        displayName: 'Shop Khác',
         provinceCode: PROV,
         provinceName: PROV_NAME,
       },

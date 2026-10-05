@@ -1,0 +1,113 @@
+/*
+ * Section "Hồ sơ cá nhân": thẻ danh tính trái (xem trước), form phải. Màn hẹp: thẻ lên trên,
+ * nằm ngang (ảnh cạnh tên) để không chiếm nửa màn hình chỉ cho một tấm ảnh.
+ */
+.layout {
+  display: grid;
+  min-width: 0;
+  align-items: start;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: var(--xp-space-xl);
+}
+
+.identity {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--xp-space-lg) var(--xp-space-md);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-layout);
+  gap: var(--xp-space-xs);
+  text-align: center;
+}
+
+.avatar {
+  flex: none;
+  margin-bottom: var(--xp-space-sm);
+  background: var(--xp-color-primary);
+  font-size: var(--xp-font-size-h2);
+}
+
+.name {
+  max-width: 100%;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h4);
+  font-weight: var(--xp-font-weight-bold);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.role,
+.workspace {
+  max-width: 100%;
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  overflow-wrap: anywhere;
+}
+
+.workspace {
+  margin-bottom: var(--xp-space-xs);
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.form {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.note {
+  display: flex;
+  align-items: flex-start;
+  margin: var(--xp-space-sm) 0 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  gap: var(--xp-space-xs);
+}
+
+.noteIcon {
+  flex: none;
+  margin-top: 3px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-top: var(--xp-space-md);
+  padding-top: var(--xp-space-md);
+  border-top: 1px solid var(--xp-color-border-subtle);
+  gap: var(--xp-space-sm);
+}
+
+@media (max-width: 720px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--xp-space-md);
+  }
+
+  .identity {
+    display: grid;
+    align-items: center;
+    padding: var(--xp-space-md);
+    column-gap: var(--xp-space-md);
+    grid-template-columns: auto minmax(0, 1fr);
+    text-align: left;
+  }
+
+  .avatar {
+    margin: 0;
+    grid-row: span 4;
+  }
+}
+
+@media (max-width: 640px) {
+  .actions > :global(.ant-btn) {
+    flex: 1 1 0;
+  }
+}

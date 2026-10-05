@@ -1176,13 +1176,19 @@ describe('Hồ sơ gian hàng — chỉ đọc trong phiên', () => {
   const MODES = [SUPPORT_MODE.VIEW, SUPPORT_MODE.ASSIST];
   const presignBody = { fileName: 'logo.png', contentType: 'image/png', fileSize: 1000 };
 
+  // Tên hiển thị là `tenants.name` (nguồn duy nhất từ 05/10/2026), phần còn lại ở hồ sơ.
   async function resetProfile(tenantId: string, displayName: string) {
+    await prisma.tenant.update({ where: { id: tenantId }, data: { name: displayName } });
     await prisma.tenantProfile.upsert({
       where: { tenantId },
-      create: { tenantId, displayName, bio: 'Giới thiệu gốc', logoUrl: null },
-      update: { displayName, bio: 'Giới thiệu gốc', logoUrl: null },
+      create: { tenantId, bio: 'Giới thiệu gốc', logoUrl: null },
+      update: { bio: 'Giới thiệu gốc', logoUrl: null },
     });
   }
+
+  const shopNameOf = async (tenantId: string) =>
+    (await prisma.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { name: true } }))
+      .name;
 
   maybe(
     'Full Manage và Owner Lite, cả hai chế độ: không capability sửa hồ sơ, không `tenant.update`',
@@ -1250,7 +1256,7 @@ describe('Hồ sơ gian hàng — chỉ đọc trong phiên', () => {
           const row = await prisma.tenantProfile.findUniqueOrThrow({
             where: { tenantId: tenant() },
           });
-          expect(row.displayName).toBe('Tên gốc');
+          expect(await shopNameOf(tenant())).toBe('Tên gốc');
           expect(row.bio).toBe('Giới thiệu gốc');
           expect(row.logoUrl).toBeNull();
         },
@@ -1286,7 +1292,7 @@ describe('Hồ sơ gian hàng — chỉ đọc trong phiên', () => {
       });
       expect(res.status).toBe(200);
       const row = await prisma.tenantProfile.findUniqueOrThrow({ where: { tenantId } });
-      expect(row.displayName).toBe('Tên chủ tự đặt');
+      expect(await shopNameOf(tenantId)).toBe('Tên chủ tự đặt');
       expect(row.bio).toBe('Chủ tự viết');
       expect(row.logoUrl).toBe(presign.body.publicUrl);
     }
@@ -1302,20 +1308,14 @@ describe('Hồ sơ gian hàng — chỉ đọc trong phiên', () => {
         .set(inContext(id, REASON))
         .send({ displayName: 'Không được ghi' });
       expect(blocked.status).toBe(403);
-      expect(
-        (await prisma.tenantProfile.findUniqueOrThrow({ where: { tenantId: ids.otherTenant } }))
-          .displayName,
-      ).toBe('Gian hàng khác');
+      expect(await shopNameOf(ids.otherTenant)).toBe('Gian hàng khác');
 
       const own = await request(server())
         .patch('/tenants/current/profile')
         .set(as(ids.otherOwner))
         .send({ displayName: 'Gian hàng khác — đã đổi' });
       expect(own.status).toBe(200);
-      expect(
-        (await prisma.tenantProfile.findUniqueOrThrow({ where: { tenantId: ids.otherTenant } }))
-          .displayName,
-      ).toBe('Gian hàng khác — đã đổi');
+      expect(await shopNameOf(ids.otherTenant)).toBe('Gian hàng khác — đã đổi');
     },
   );
 });

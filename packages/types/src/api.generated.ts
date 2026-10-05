@@ -3073,7 +3073,7 @@ export interface paths {
          * Yêu cầu hỗ trợ của tôi — mặc định chỉ case còn mở
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         get: operations["CustomerSupportController_list"];
         put?: never;
@@ -3081,7 +3081,7 @@ export interface paths {
          * Mở yêu cầu hỗ trợ. Tranh chấp phải gắn một chuyến CỦA CHÍNH BẠN và sẽ tạm giữ tiền
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         post: operations["CustomerSupportController_open"];
         delete?: never;
@@ -3101,7 +3101,7 @@ export interface paths {
          * Chi tiết + dòng thời gian
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         get: operations["CustomerSupportController_detail"];
         put?: never;
@@ -3125,7 +3125,7 @@ export interface paths {
          * Gửi thêm thông tin / bằng chứng dạng văn bản
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         post: operations["CustomerSupportController_message"];
         delete?: never;
@@ -3147,7 +3147,7 @@ export interface paths {
          * Rút yêu cầu xoá tài khoản (chỉ case account_deletion còn mở do chính bạn mở)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
-         *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
          */
         post: operations["CustomerSupportController_withdraw"];
         delete?: never;
@@ -12988,7 +12988,9 @@ export interface components {
             verification: "unverified" | "pending" | "verified" | "needs_revision" | "rejected";
             /** @enum {string} */
             onboardingState: "commission" | "package_pending" | "package_active";
+            /** @description SĐT liên hệ của GIAN HÀNG (hiện cho khách) — khác SĐT đăng nhập ở `ownerAccount` */
             phone?: string | null;
+            /** @description Email liên hệ của GIAN HÀNG (hiện cho khách) — khác email đăng nhập ở `ownerAccount` */
             email?: string | null;
             profile: components["schemas"]["TenantProfileDto"];
             ownerAccount: components["schemas"]["ShopOwnerAccountDto"];
@@ -16149,6 +16151,7 @@ export interface components {
             createdAt: string;
         };
         TenantProfileDto: {
+            /** @description Tên hiển thị — chính là `tenants.name` (= `MyShopDto.name`), giữ cho tương thích */
             displayName?: string | null;
             bio?: string | null;
             logoUrl?: string | null;
@@ -16391,7 +16394,15 @@ export interface components {
             addressLine?: string;
         };
         UpdateTenantProfileDto: {
+            /** @description Tên hiển thị của gian hàng (`tenants.name`) */
             displayName?: string;
+            /**
+             * @description SĐT liên hệ hiển thị cho khách. Chuỗi rỗng = gỡ.
+             * @example 0901234567
+             */
+            phone?: string;
+            /** @description Email liên hệ hiển thị cho khách. Chuỗi rỗng = gỡ. */
+            email?: string;
             bio?: string;
             logoUrl?: string;
             coverUrl?: string;

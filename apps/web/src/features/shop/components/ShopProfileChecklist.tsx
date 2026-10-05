@@ -13,7 +13,7 @@ import {
   type ShopProfileRequirement,
   type ShopProfileSuggestion,
 } from '@xeprime/types';
-import type { ShopProfileValues } from '@xeprime/validators';
+import type { ShopProfileWithContactValues } from '@xeprime/validators';
 import type { ShopOwnerAccount } from '../types';
 import styles from './ShopProfileChecklist.module.css';
 
@@ -45,7 +45,7 @@ export function ShopProfileChecklist({
   ownerAccount,
   logoRequired = false,
 }: {
-  control: Control<ShopProfileValues>;
+  control: Control<ShopProfileWithContactValues>;
   /**
    * Logo là mục CHẶN, không phải gợi ý — đúng với gian hàng TUYẾN GÓI (ADR 0040 điều 7).
    *
@@ -73,7 +73,7 @@ export function ShopProfileChecklist({
   ownerAccount: ShopOwnerAccount;
 }) {
   const t = useTranslations('Shop.checklist');
-  const values = useWatch({ control }) as Partial<ShopProfileValues>;
+  const values = useWatch({ control }) as Partial<ShopProfileWithContactValues>;
   // Bản ĐÃ LƯU: form `reset` về nó sau mỗi lần lưu, nên `defaultValues` là hồ sơ trên server.
   const { defaultValues } = useFormState({ control });
   /*
@@ -95,7 +95,7 @@ export function ShopProfileChecklist({
    * ngay giữa lúc gõ ô cuối; nó rời đi sau lần Lưu làm hồ sơ đủ.
    */
   const saved = missingItems(
-    (defaultValues ?? {}) as Partial<ShopProfileValues>,
+    (defaultValues ?? {}) as Partial<ShopProfileWithContactValues>,
     ownerAccount,
     logoRequired,
   );
@@ -145,7 +145,7 @@ export function ShopProfileChecklist({
 
 /** Mục còn thiếu, chia theo HỆ QUẢ: nhóm bắt buộc (kể cả logo với gian hàng tuyến gói) và nhóm nên có. */
 function missingItems(
-  values: Partial<ShopProfileValues>,
+  values: Partial<ShopProfileWithContactValues>,
   ownerAccount: ShopOwnerAccount,
   logoRequired: boolean,
 ): { missingRequired: ReadonlySet<string>; missingSuggested: ReadonlySet<string> } {

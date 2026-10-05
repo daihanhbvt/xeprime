@@ -84,6 +84,15 @@
         "label": "Display name",
         "placeholder": "The name shown on the marketplace"
       },
+      "phone": {
+        "label": "Shop contact phone",
+        "placeholder": "e.g. 0901234567"
+      },
+      "email": {
+        "label": "Shop contact email",
+        "placeholder": "contact@yourshop.vn"
+      },
+      "contactHint": "Renters see this phone and email when they book. They are separate from the phone/email you sign in with — changing one does not change the other.",
       "bio": {
         "label": "About the shop",
         "placeholder": "A short description of your shop…"
@@ -145,7 +154,12 @@
     "provinceRequired": "Select the shop's province",
     "provinceInvalid": "Invalid province code",
     "logoUrlInvalid": "Invalid logo URL",
-    "coverUrlInvalid": "Invalid cover image URL"
+    "coverUrlInvalid": "Invalid cover image URL",
+    "displayNameMin": "Display name must be at least 2 characters",
+    "displayNameMax": "Display name can be at most 255 characters",
+    "phoneInvalid": "Invalid phone number",
+    "emailInvalid": "Invalid email",
+    "emailMax": "Email can be at most 255 characters"
   },
   "policies": {
     "title": "Default rental policy",

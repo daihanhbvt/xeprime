@@ -10,9 +10,7 @@ import {
 import { Avatar, Dropdown, Tooltip } from 'antd';
 import type { MenuProps } from 'antd';
 import Link from 'next/link';
-import { PERMISSION } from '@xeprime/types';
 import { ROUTES } from '@/constants/routes';
-import { PARTNER_TRACK, resolvePartnerTrack } from '@/features/auth/post-auth-destination';
 import { ZONE } from '@/zones';
 import { useZone } from '@/zones/ZoneProvider';
 import { AccountTrackBadge } from '@/features/account/components/AccountTrackBadge';
@@ -20,7 +18,7 @@ import { useAccountIdentityLabel } from '@/features/account/hooks/use-account-id
 import { cx } from '@/lib/cx';
 import { usePortalLogout } from '@/features/auth/hooks/use-portal-logout';
 import { useCurrentUser } from '@/hooks/use-current-user';
-import { usePermissions } from '@/hooks/use-permissions';
+import { useShopSettingsAccess } from '@/features/shop/hooks/use-shop-settings-access';
 import { initialOf } from '@/lib/initials';
 import styles from './ManageUserCard.module.css';
 import { useTranslations } from 'next-intl';
@@ -58,7 +56,7 @@ export interface ManageUserCardProps {
 export function ManageUserCard({ collapsed = false, tone = 'light' }: ManageUserCardProps) {
   const t = useTranslations('ManageCommon');
   const { data: user } = useCurrentUser();
-  const { has } = usePermissions();
+  const canOpenShopSettings = useShopSettingsAccess();
   const logout = usePortalLogout();
   const identityLabel = useAccountIdentityLabel();
   const zone = useZone();
@@ -102,37 +100,27 @@ export function ManageUserCard({ collapsed = false, tone = 'light' }: ManageUser
       disabled: true,
     },
     { type: 'divider' as const },
-    {
-      /*
-       * BẢO MẬT TÀI KHOẢN — mật khẩu, phương thức đăng nhập, yêu cầu xoá tài khoản.
-       *
-       * Đích là `/manage/security`, không phải `/account`: đẩy người dùng sang khu khách để đổi
-       * mật khẩu là bắt họ rời nơi làm việc, và với gian hàng tuyến gói thì khu đó đã đóng —
-       * `AccountShell` chuyển họ ngược về đây, nên mục menu cũ là một vòng tròn.
-       */
-      key: 'security',
-      icon: <LockOutlined aria-hidden />,
-      label: (
-        <Link href={isAdmin ? ROUTES.ADMIN.SECURITY : ROUTES.MANAGE.SECURITY}>
-          {t('shell.security')}
-        </Link>
-      ),
-    },
-    // Hồ sơ cá nhân của tài khoản đối tác (ADR 0053 — tài khoản riêng của site partner).
-    ...(isAdmin
-      ? []
-      : [
-          {
-            key: 'profile',
-            icon: <UserOutlined aria-hidden />,
-            label: <Link href={ROUTES.MANAGE.ACCOUNT}>{t('shell.profile')}</Link>,
-          },
-        ]),
-    // Cài đặt gian hàng chỉ có nghĩa khi người dùng ĐANG đứng trong một gian hàng — nhân sự
-    // nền tảng không có gian hàng nào để cài đặt.
-    ...(user.tenant &&
-    has(PERMISSION.TENANT_VIEW) &&
-    resolvePartnerTrack(user) === PARTNER_TRACK.PACKAGE
+    /*
+     * TÀI KHOẢN của người đang đăng nhập — MỘT mục.
+     *
+     * Site partner: "Tài khoản & bảo mật" (05/10/2026) gộp hai mục "Hồ sơ cá nhân" và "Bảo mật tài
+     * khoản" từng trỏ tới hai trang cùng hiện email/SĐT — người dùng phải đoán đổi số ở cửa nào.
+     * Site quản trị: chỉ có trang bảo mật (đổi mật khẩu) — nhân sự nền tảng không có hồ sơ công khai.
+     */
+    isAdmin
+      ? {
+          key: 'security',
+          icon: <LockOutlined aria-hidden />,
+          label: <Link href={ROUTES.ADMIN.SECURITY}>{t('shell.security')}</Link>,
+        }
+      : {
+          key: 'account',
+          icon: <UserOutlined aria-hidden />,
+          label: <Link href={ROUTES.MANAGE.ACCOUNT}>{t('shell.account')}</Link>,
+        },
+    // Cài đặt gian hàng chỉ có nghĩa khi người dùng ĐANG đứng trong một gian hàng tuyến gói —
+    // điều kiện dùng chung với mọi lối vào khác của trang đó (`useShopSettingsAccess`).
+    ...(canOpenShopSettings
       ? [
           {
             key: 'shop',

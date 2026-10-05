@@ -283,7 +283,7 @@ beforeAll(async () => {
       },
     });
     await prisma.tenantProfile.create({
-      data: { tenantId: id, displayName: name, provinceCode: PROV, provinceName: PROV_NAME },
+      data: { tenantId: id, provinceCode: PROV, provinceName: PROV_NAME },
     });
   }
 

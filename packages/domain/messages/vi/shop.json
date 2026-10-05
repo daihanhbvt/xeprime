@@ -84,6 +84,15 @@
         "label": "Tên hiển thị",
         "placeholder": "Tên hiện trên marketplace"
       },
+      "phone": {
+        "label": "SĐT liên hệ của gian hàng",
+        "placeholder": "VD: 0901234567"
+      },
+      "email": {
+        "label": "Email liên hệ của gian hàng",
+        "placeholder": "lienhe@tencuahang.vn"
+      },
+      "contactHint": "Khách thấy số và email này khi đặt xe. Chúng khác với SĐT/email bạn dùng để đăng nhập — đổi một bên không làm đổi bên kia.",
       "bio": {
         "label": "Giới thiệu",
         "placeholder": "Mô tả ngắn về gian hàng…"
@@ -145,7 +154,12 @@
     "provinceRequired": "Chọn tỉnh/thành của gian hàng",
     "provinceInvalid": "Mã tỉnh không hợp lệ",
     "logoUrlInvalid": "Đường dẫn logo không hợp lệ",
-    "coverUrlInvalid": "Đường dẫn ảnh bìa không hợp lệ"
+    "coverUrlInvalid": "Đường dẫn ảnh bìa không hợp lệ",
+    "displayNameMin": "Tên hiển thị cần ít nhất 2 ký tự",
+    "displayNameMax": "Tên hiển thị tối đa 255 ký tự",
+    "phoneInvalid": "Số điện thoại không hợp lệ",
+    "emailInvalid": "Email không hợp lệ",
+    "emailMax": "Email tối đa 255 ký tự"
   },
   "policies": {
     "title": "Chính sách thuê mặc định",

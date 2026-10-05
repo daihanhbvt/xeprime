@@ -12,8 +12,8 @@
     "logout": "Đăng xuất",
     "signedInAs": "Đăng nhập: {name}",
     "security": "Bảo mật tài khoản",
+    "account": "Tài khoản & bảo mật",
     "renterTrips": "Chuyến tôi đi thuê",
-    "profile": "Hồ sơ cá nhân",
     "partnerHome": "Về trang chủ XePrime Partner"
   },
   "permission": {

@@ -4,44 +4,50 @@ import type { ReactNode } from 'react';
 
 import { cx } from '@/lib/cx';
 
-import styles from './ShopSectionCard.module.css';
+import styles from './SectionCard.module.css';
 
-export interface ShopSectionCardProps {
-  /** `id` trong DOM — cũng là đích của `?section=` và của `aria-controls` ở cột điều hướng. */
+export interface SectionCardProps {
+  /** `id` trong DOM — cũng là đích của `?section=` và của anchor ở cột mục lục. */
   id?: string;
   title: string;
   /** Một dòng giải thích. Bỏ trống khi tiêu đề đã đủ — chữ thừa làm trang dài ra mà không thêm gì. */
   hint?: string;
   /** Hành động ở góc phải tiêu đề ("Thêm tài khoản", "Gia hạn / đổi gói"). */
   extra?: ReactNode;
+  /**
+   * `danger`: khối chứa thao tác khó lùi lại (yêu cầu xoá tài khoản). Chỉ đổi màu viền và tiêu
+   * đề — đủ để mắt dừng lại trước khi bấm, không đủ để cả trang trông như đang báo lỗi.
+   */
+  tone?: 'default' | 'danger';
   className?: string;
   children: ReactNode;
 }
 
 /**
- * Khung của MỘT section trong trang Cửa hàng — tiêu đề, dòng giải thích tuỳ chọn, hành động.
+ * Khung của MỘT section trong trang nhiều section — tiêu đề, dòng giải thích tuỳ chọn, hành động.
  *
- * Tồn tại để năm section có cùng một nhịp: cùng padding, cùng cỡ tiêu đề, cùng chỗ đặt nút. Năm
- * khối tự vẽ khung của riêng mình là năm lần lệch nhau vài pixel — thứ người dùng không gọi tên
+ * Tồn tại để mọi section có cùng một nhịp: cùng padding, cùng cỡ tiêu đề, cùng chỗ đặt nút. Mỗi
+ * khối tự vẽ khung của riêng mình là mỗi khối lệch nhau vài pixel — thứ người dùng không gọi tên
  * được nhưng đọc ra ngay là "trang này ghép từ nhiều chỗ".
  *
  * Tiêu đề là `h2` và KHÔNG lồng thêm `Card` của AntD: trang đã có `h1` ở tiêu đề trang, và một
  * `Card` bọc ngoài một `section` đã có viền chỉ tạo ra hai khung lồng nhau.
  */
-export function ShopSectionCard({
+export function SectionCard({
   id,
   title,
   hint,
   extra,
+  tone = 'default',
   className,
   children,
-}: ShopSectionCardProps) {
+}: SectionCardProps) {
   const headingId = id ? `${id}-title` : undefined;
 
   return (
     <section
       id={id}
-      className={cx(styles.card, className)}
+      className={cx(styles.card, tone === 'danger' && styles.danger, className)}
       aria-labelledby={headingId}
       // Đích của `?section=`: cuộn tới rồi đưa tiêu điểm vào chính khối, để người dùng bàn phím
       // đứng đúng chỗ vừa nhảy tới thay vì phải Tab lại từ đầu trang.

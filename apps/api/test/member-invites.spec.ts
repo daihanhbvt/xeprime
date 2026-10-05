@@ -120,7 +120,7 @@ beforeAll(async () => {
       ownerUserId: ownerId,
     },
   });
-  await prisma.tenantProfile.create({ data: { tenantId, displayName: 'Shop Mời' } });
+  await prisma.tenantProfile.create({ data: { tenantId } });
   await prisma.tenantMembership.create({
     data: {
       id: newId(),

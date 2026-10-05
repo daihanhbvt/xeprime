@@ -20277,7 +20277,7 @@
             "cookie": []
           }
         ],
-        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối."
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối."
       },
       "post": {
         "operationId": "CustomerSupportController_open",
@@ -20417,7 +20417,7 @@
             "cookie": []
           }
         ],
-        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối."
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối."
       }
     },
     "/me/support/cases/{id}": {
@@ -20558,7 +20558,7 @@
             "cookie": []
           }
         ],
-        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối."
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối."
       }
     },
     "/me/support/cases/{id}/messages": {
@@ -20725,7 +20725,7 @@
             "cookie": []
           }
         ],
-        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối."
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối."
       }
     },
     "/me/support/cases/{id}/withdraw": {
@@ -20882,7 +20882,7 @@
             "cookie": []
           }
         ],
-        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối."
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối."
       }
     },
     "/members": {
@@ -73698,11 +73698,13 @@
           },
           "phone": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "SĐT liên hệ của GIAN HÀNG (hiện cho khách) — khác SĐT đăng nhập ở `ownerAccount`"
           },
           "email": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "Email liên hệ của GIAN HÀNG (hiện cho khách) — khác email đăng nhập ở `ownerAccount`"
           },
           "profile": {
             "$ref": "#/components/schemas/TenantProfileDto"
@@ -84254,7 +84256,8 @@
         "properties": {
           "displayName": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "Tên hiển thị — chính là `tenants.name` (= `MyShopDto.name`), giữ cho tương thích"
           },
           "bio": {
             "type": "string",
@@ -84970,7 +84973,17 @@
         "type": "object",
         "properties": {
           "displayName": {
-            "type": "string"
+            "type": "string",
+            "description": "Tên hiển thị của gian hàng (`tenants.name`)"
+          },
+          "phone": {
+            "type": "string",
+            "example": "0901234567",
+            "description": "SĐT liên hệ hiển thị cho khách. Chuỗi rỗng = gỡ."
+          },
+          "email": {
+            "type": "string",
+            "description": "Email liên hệ hiển thị cho khách. Chuỗi rỗng = gỡ."
           },
           "bio": {
             "type": "string"

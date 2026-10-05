@@ -38,8 +38,11 @@ import {
   UpdateTenantProfileDto,
 } from './dto/tenant-onboarding.dto';
 
+/*
+ * KHÔNG có `displayName` (05/10/2026): tên hiển thị là `tenants.name`, nguồn duy nhất. Nơi trả
+ * `TenantProfileDto` ghép nó vào qua `emptyProfileIfNull(profile, tenant.name)`.
+ */
 const PROFILE_SELECT = {
-  displayName: true,
   bio: true,
   logoUrl: true,
   coverUrl: true,
@@ -238,7 +241,7 @@ export class TenantsService {
       await tx.tenantProfile.create({
         data: {
           tenantId: id,
-          displayName: dto.name,
+          // Tên hiển thị KHÔNG ở đây — nó là `tenants.name` vừa ghi ở trên (nguồn duy nhất).
           // Bốn cột dưới là bản SAO tương thích ngược của chi nhánh mặc định; nguồn sự thật vận
           // hành là `tenant_branches`. Đồng bộ về sau đi qua `syncProfileFromDefaultBranch`.
           address: address.displayAddress,
@@ -359,7 +362,7 @@ export class TenantsService {
        * gian hàng; chủ xe hoa hồng vừa mua gói thì chưa từng đi qua cửa gian hàng).
        */
       onboardingState: tenant.onboardingState,
-      profile: emptyProfileIfNull(tenant.profile),
+      profile: emptyProfileIfNull(tenant.profile, tenant.name),
       /*
        * Chủ gian hàng đọc từ TÀI KHOẢN, không từ hồ sơ (16/09/2026). Đây là lý do khối này là
        * một object riêng chứ không phải ba trường nữa nằm trong `profile`: `profile` là thứ
@@ -405,6 +408,10 @@ export class TenantsService {
    *    mặc định (xem `syncProfileFromDefaultBranch`); ghi thẳng vào chúng sẽ đúng cho tới lần
    *    chạm chi nhánh kế tiếp rồi âm thầm bị ghi đè, và trong lúc đó xe vẫn hiển thị ở tỉnh cũ
    *    trên marketplace vì `public_listings` không hề biết có thay đổi.
+   * 3. **Tên, SĐT, email liên hệ đi vào `tenants` (05/10/2026).** Đó là ba cột khách đọc (thẻ xe,
+   *    trang gian hàng, chat, chuyến, hợp đồng). Tên từng ghi vào bản sao `tenant_profiles.
+   *    display_name` mà không màn khách nào đọc, còn SĐT/email liên hệ thì không sửa được sau
+   *    đăng ký. Chúng là của GIAN HÀNG, độc lập với SĐT/email đăng nhập của tài khoản chủ.
    */
   async updateProfile(
     tenantId: string,
@@ -423,7 +430,17 @@ export class TenantsService {
      * sẽ đúng cho tới lần chạm chi nhánh kế tiếp rồi âm thầm bị ghi đè, trong khi xe vẫn hiển
      * thị ở địa chỉ cũ trên marketplace vì `public_listings` không hề biết có thay đổi.
      */
-    const { provinceCode, wardCode, addressLine, address, ...profile } = dto;
+    const { provinceCode, wardCode, addressLine, address, displayName, phone, email, ...profile } =
+      dto;
+
+    // Ô trống ở SĐT/email liên hệ nghĩa là GỠ (→ NULL). Tên thì không gỡ được: DTO đòi 2–255 ký
+    // tự, vì `tenants.name` NOT NULL và là thứ khách nhìn thấy đầu tiên.
+    const contact = normalizeProfileWrite({ phone, email });
+    const tenantData: Prisma.TenantUpdateInput = {
+      ...(displayName === undefined ? {} : { name: displayName }),
+      ...(contact.phone === undefined ? {} : { phone: contact.phone }),
+      ...(contact.email === undefined ? {} : { email: contact.email }),
+    };
 
     // Tra địa chỉ (có gọi mạng) TRƯỚC transaction — rồi dời chi nhánh mặc định và lưu hồ sơ trong
     // MỘT transaction: không còn trạng thái "chi nhánh đã dời mà hồ sơ chưa lưu".
@@ -442,6 +459,9 @@ export class TenantsService {
     const data = normalizeProfileWrite(profile);
     await this.prisma.$transaction(async (tx) => {
       if (branchPlan) await this.branches.applyUpdate(tx, tenantId, userId, branchPlan);
+      if (Object.keys(tenantData).length > 0) {
+        await tx.tenant.update({ where: { id: tenantId }, data: tenantData });
+      }
       // upsert: tenant tạo qua đường khác có thể chưa có hồ sơ.
       await tx.tenantProfile.upsert({
         where: { tenantId },
@@ -504,6 +524,7 @@ export class TenantsService {
       where: { id: tenantId, deletedAt: null },
       select: {
         id: true,
+        name: true,
         status: true,
         profile: { select: PROFILE_SELECT },
         owner: { select: OWNER_SELECT },
@@ -554,7 +575,7 @@ export class TenantsService {
      * ĐÃ QUA xác minh OTP.
      */
     const missing = missingShopProfileRequirements({
-      displayName: tenant.profile?.displayName,
+      displayName: tenant.name,
       provinceCode: tenant.branches[0]?.provinceCode ?? tenant.profile?.provinceCode,
       ownerFullName: tenant.owner.displayName,
       ownerPhone: tenant.owner.phone,
@@ -597,6 +618,8 @@ export class TenantsService {
            */
           snapshot: {
             ...(tenant.profile ?? {}),
+            // Khoá `displayName` giữ nguyên trong snapshot như phiếu cũ — chỉ đổi nguồn đọc.
+            displayName: tenant.name,
             ownerFullName: tenant.owner.displayName,
             ownerPhone: tenant.owner.phone,
             ownerEmail: tenant.owner.email,
@@ -680,11 +703,16 @@ function normalizeProfileWrite<T extends Record<string, string | undefined>>(
   return out;
 }
 
+/**
+ * `displayName` của DTO là `tenants.name` — giữ trên dây để client cũ (web, app native) đọc
+ * `profile.displayName` không vỡ, nhưng không còn cột nào trên `tenant_profiles` mang nó.
+ */
 function emptyProfileIfNull(
   profile: Prisma.TenantProfileGetPayload<{ select: typeof PROFILE_SELECT }> | null,
+  tenantName: string,
 ): TenantProfileDto {
   return {
-    displayName: profile?.displayName ?? null,
+    displayName: tenantName,
     bio: profile?.bio ?? null,
     logoUrl: profile?.logoUrl ?? null,
     coverUrl: profile?.coverUrl ?? null,

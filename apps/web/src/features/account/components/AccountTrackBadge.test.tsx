@@ -57,17 +57,21 @@ describe('AccountTrackBadge', () => {
     expect(screen.getByText('Chủ xe cá nhân · Hoa hồng 12,5%')).toBeTruthy();
   });
 
-  it('chủ gian hàng tuyến gói: nhãn kèm TÊN gói', () => {
+  /*
+   * Tên gói là DỮ LIỆU admin đặt và đã mang chữ "Gói" ("Gói nâng cao") — nhãn chèn nguyên tên,
+   * không tự thêm "Gói" phía trước (từng hiện "Gói Gói nâng cao").
+   */
+  it('chủ gian hàng tuyến gói: nhãn kèm TÊN gói, không lặp chữ "Gói"', () => {
     render(
       <AccountTrackBadge
         tenant={tenant({
           billingMode: BILLING_MODE.PACKAGE,
-          planName: 'Gian hàng theo chỗ xe',
+          planName: 'Gói nâng cao',
           serviceFeePercent: null,
         })}
       />,
     );
-    expect(screen.getByText('Chủ gian hàng · Gói Gian hàng theo chỗ xe')).toBeTruthy();
+    expect(screen.getByText('Chủ gian hàng · Gói nâng cao')).toBeTruthy();
   });
 
   it('ÂN HẠN vẫn là gian hàng — backend giữ `package` suốt pha `grace`', () => {

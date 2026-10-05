@@ -132,7 +132,6 @@ beforeAll(async () => {
     await prisma.tenantProfile.create({
       data: {
         tenantId: id,
-        displayName: `Shop ${id.slice(-4)}`,
         provinceCode: PROV,
         provinceName: PROV_NAME,
       },

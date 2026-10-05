@@ -4,7 +4,6 @@ import { ExportOutlined, SaveOutlined } from '@ant-design/icons';
 import { Alert, Avatar, Button, Form } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useEffect, useRef } from 'react';
 import {
   isPackageShopTrack,
   PERMISSION,
@@ -16,11 +15,14 @@ import {
 
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { trailingRequiredMark } from '@/components/form/required-mark';
+import { SectionCard } from '@/components/layout/SectionCard';
+import { SectionNav, type SectionNavItem } from '@/components/layout/SectionNav';
 import { BankAccountList } from '@/features/bank-accounts/components/BankAccountList';
 import { SubscriptionWorkspace } from '@/features/subscription/components/SubscriptionWorkspace';
 import { shopPath, shopSectionDomId, SHOP_SECTION, type ShopSection } from '@/constants/routes';
 import { useTenantScope } from '@/hooks/use-tenant-scope';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useScrollToSection } from '@/hooks/use-scroll-to-section';
 import { initialOf } from '@/lib/initials';
 
 import { toShopProfileBody, useShopProfileForm } from '../shop-profile-form';
@@ -29,8 +31,6 @@ import { ShopDisplayFields } from './ShopDisplayFields';
 import { ShopLegalFields } from './ShopLegalFields';
 import { ShopOwnerSection } from './ShopOwnerSection';
 import { ShopProfileChecklist } from './ShopProfileChecklist';
-import { ShopSectionCard } from './ShopSectionCard';
-import { ShopSectionNav, type ShopSectionItem } from './ShopSectionNav';
 import { ShopStatusBanner } from './ShopStatusBanner';
 import { ShopWelcomeBanner } from './ShopWelcomeBanner';
 import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
@@ -146,7 +146,7 @@ export function ShopWorkspace({
   const isOwner = tenant?.roleKey === TENANT_ROLE.SHOP_OWNER;
   const canSeePlan = has(PERMISSION.SUBSCRIPTION_VIEW);
 
-  const items: ShopSectionItem[] = [
+  const items: SectionNavItem<ShopSection>[] = [
     { key: SHOP_SECTION.PROFILE, label: tSections('profile') },
     { key: SHOP_SECTION.OWNER, label: tSections('owner') },
     { key: SHOP_SECTION.LEGAL, label: tSections('legal') },
@@ -154,7 +154,7 @@ export function ShopWorkspace({
     ...(canSeePlan ? [{ key: SHOP_SECTION.PLAN, label: tSections('plan') }] : []),
   ];
 
-  useScrollToSection(section, sectionInUrl);
+  useScrollToSection(shopSectionDomId(section), sectionInUrl);
 
   const submit = handleSubmit((v) => onSave(toShopProfileBody(v)));
 
@@ -239,7 +239,14 @@ export function ShopWorkspace({
       ) : null}
 
       <div className={styles.layout}>
-        <ShopSectionNav items={items} active={section} onSelect={onSectionChange} />
+        <SectionNav
+          items={items}
+          active={section}
+          onSelect={onSectionChange}
+          domIdOf={shopSectionDomId}
+          title={tSections('navTitle')}
+          ariaLabel={tSections('navLabel')}
+        />
 
         <div className={styles.content}>
           <Form
@@ -259,19 +266,19 @@ export function ShopWorkspace({
                 quyền riêng, và khoá chúng theo trạng thái duyệt hồ sơ là khoá nhầm thứ.
               */}
               <fieldset disabled={readOnly || saving} className={styles.fieldset}>
-                <ShopSectionCard
+                <SectionCard
                   id={shopSectionDomId(SHOP_SECTION.PROFILE)}
                   title={tSections('profile')}
                   hint={tSections('profileHint')}
                 >
                   <ShopDisplayFields control={control} readOnly={readOnly && hidesDenied} />
-                </ShopSectionCard>
+                </SectionCard>
               </fieldset>
 
               <ShopOwnerSection shop={shop} />
 
               <fieldset disabled={readOnly || saving} className={styles.fieldset}>
-                <ShopSectionCard
+                <SectionCard
                   id={shopSectionDomId(SHOP_SECTION.LEGAL)}
                   title={tSections('legal')}
                   hint={tSections('legalHint')}
@@ -294,7 +301,7 @@ export function ShopWorkspace({
                     />
                   ) : null}
                   <ShopLegalFields control={control} readOnly={readOnly} />
-                </ShopSectionCard>
+                </SectionCard>
               </fieldset>
 
               {isOwner ? (
@@ -308,9 +315,9 @@ export function ShopWorkspace({
               ) : null}
 
               {canSeePlan ? (
-                <ShopSectionCard id={shopSectionDomId(SHOP_SECTION.PLAN)} title={tSections('plan')}>
+                <SectionCard id={shopSectionDomId(SHOP_SECTION.PLAN)} title={tSections('plan')}>
                   <SubscriptionWorkspace header={null} />
-                </ShopSectionCard>
+                </SectionCard>
               ) : null}
             </form>
           </Form>
@@ -318,36 +325,4 @@ export function ShopWorkspace({
       </div>
     </>
   );
-}
-
-/**
- * Cuộn tới section đang chọn và đưa TIÊU ĐIỂM vào nó.
- *
- * Tiêu điểm là nửa thường bị quên: cuộn không thôi thì người dùng bàn phím vẫn đứng ở cột điều
- * hướng, và phím Tab tiếp theo đưa họ sang mục kế của mục lục chứ không vào nội dung vừa mở.
- *
- * Lần vẽ ĐẦU chỉ cuộn khi `?section=` thật sự có trong URL. Đó là đường của ba redirect cũ và
- * của một link chia sẻ — cả hai đều hứa "mở ra ở đúng phần này". Người vào `/manage/shop` trần thì
- * không: một cú nhảy ngay khi trang vừa hiện là trang tự ý đưa họ đi đâu đó.
- *
- * Kiểu cuộn khác nhau theo lần: lần đầu nhảy thẳng, vì cuộn mượt từ đầu trang xuống cuối là một
- * đoạn hoạt hình dài không ai xin. Đổi section trong lúc đọc thì mượt — để người dùng thấy mình
- * vừa đi từ đâu tới đâu.
- */
-function useScrollToSection(section: ShopSection, scrollOnMount: boolean): void {
-  const first = useRef(true);
-
-  useEffect(() => {
-    const isFirst = first.current;
-    first.current = false;
-    if (isFirst && !scrollOnMount) return;
-
-    const el = document.getElementById(shopSectionDomId(section));
-    if (!el) return;
-    el.scrollIntoView({ behavior: isFirst ? 'auto' : 'smooth', block: 'start' });
-    el.focus({ preventScroll: true });
-    // `scrollOnMount` cố ý KHÔNG nằm trong deps: nó chỉ có nghĩa ở lần vẽ đầu, và đưa vào đây
-    // sẽ khiến effect chạy lại đúng lúc người dùng bấm mục lục lần đầu (query từ vắng thành có).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [section]);
 }

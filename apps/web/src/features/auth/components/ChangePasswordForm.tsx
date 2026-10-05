@@ -47,8 +47,14 @@ interface ChangePasswordValues {
  *
  * Sau khi thành công: reset form và invalidate `auth.me` để `hasPassword` đảo sang `true` — form
  * tự chuyển từ "đặt lần đầu" sang "đổi" mà không cần tải lại trang.
+ *
+ * `embedded`: nằm TRONG một section đã có tiêu đề và khung (trang Tài khoản & bảo mật của site
+ * partner) — bỏ tiêu đề trang và hai khung thẻ, chỉ giữ form + bảng yêu cầu.
  */
-export function ChangePasswordForm({ headingLevel = 'h1' }: { headingLevel?: 'h1' | 'h2' } = {}) {
+export function ChangePasswordForm({
+  headingLevel = 'h1',
+  embedded = false,
+}: { headingLevel?: 'h1' | 'h2'; embedded?: boolean } = {}) {
   const t = useTranslations('Account.changePassword');
   const { message } = App.useApp();
   const errorMessage = useErrorMessage();
@@ -87,6 +93,7 @@ export function ChangePasswordForm({ headingLevel = 'h1' }: { headingLevel?: 'h1
     defaultValues: { currentPassword: '', newPassword: '', confirmPassword: '' },
   });
   const newPassword = useWatch({ control, name: 'newPassword' }) ?? '';
+  const RequirementsHeading = embedded ? 'h3' : 'h2';
 
   const save = useMutation({
     mutationFn: (values: ChangePasswordValues) =>
@@ -108,16 +115,20 @@ export function ChangePasswordForm({ headingLevel = 'h1' }: { headingLevel?: 'h1
   });
 
   const onSubmit = handleSubmit((values) => {
+    // Enter vẫn submit form khi nút đang quay — chặn lượt thứ hai ở đây.
+    if (save.isPending) return;
     setFormError(null);
     save.mutate(values);
   });
 
   return (
     <div className={styles.page}>
-      <AccountPageHeader title={t('title')} subtitle={t('subtitle')} as={headingLevel} />
+      {embedded ? null : (
+        <AccountPageHeader title={t('title')} subtitle={t('subtitle')} as={headingLevel} />
+      )}
 
       <div className={styles.grid}>
-        <form onSubmit={onSubmit} noValidate className={styles.card}>
+        <form onSubmit={onSubmit} noValidate className={cx(!embedded && styles.card)}>
           {!hasPassword ? (
             <Alert
               type="info"
@@ -171,8 +182,14 @@ export function ChangePasswordForm({ headingLevel = 'h1' }: { headingLevel?: 'h1
           </Button>
         </form>
 
-        <aside className={styles.card} aria-label={t('requirementsTitle')}>
-          <h2 className={styles.requirementsTitle}>{t('requirementsTitle')}</h2>
+        <aside
+          className={embedded ? styles.panel : styles.card}
+          aria-label={t('requirementsTitle')}
+        >
+          {/* Nhúng thì section đã giữ `h2` — bảng phụ này xuống `h3`. */}
+          <RequirementsHeading className={styles.requirementsTitle}>
+            {t('requirementsTitle')}
+          </RequirementsHeading>
           <ul className={styles.requirements}>
             {PASSWORD_RULES.map((rule) => {
               const met = rule.test(newPassword);
