@@ -5,7 +5,8 @@ import { PERMISSION, type Permission } from '@xeprime/types';
 
 import type { VehicleListItem } from '@/features/vehicles/types';
 
-import VehiclesPage from './page';
+// Màn đội xe của tuyến GÓI — trang `/vehicles` chọn nó theo tuyến (`PartnerTrackView`, ADR 0051).
+import { ManageVehiclesPage as VehiclesPage } from '@/features/vehicles/components/ManageVehiclesPage';
 
 /**
  * Test ĐẶC TẢ (characterization) cho `/manage/vehicles` — viết TRƯỚC Wave 1C.
@@ -394,7 +395,7 @@ describe('/manage/vehicles — dữ liệu và quyền', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Cách thêm xe khác' }));
     fireEvent.click(await screen.findByText('Đăng nhanh xe tự lái'));
-    expect(nav.push).toHaveBeenCalledWith('/list-your-vehicle/register?from=manage');
+    expect(nav.push).toHaveBeenCalledWith('/manage/vehicles/register?from=manage');
   });
 
   it('mọi nút hành động trên thẻ ĐỀU có tên khả truy cập', () => {

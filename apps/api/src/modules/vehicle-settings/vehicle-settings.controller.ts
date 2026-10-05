@@ -1,15 +1,11 @@
 import { Body, Controller, Get, Param, Patch, Put, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
-  BRANCH_SCOPED_RESOURCE,
-  BranchScoped,
-  CurrentTenant,
-  CurrentUser,
-  RequirePermissions,
-  TenantScoped,
-  SupportAction,
-} from '../../common/decorators';
+  ACCOUNT_REALM,
+  PERMISSION,
+  SUPPORT_CAPABILITY,
+} from '@xeprime/types';
+import { BRANCH_SCOPED_RESOURCE, BranchScoped, CurrentTenant, CurrentUser, Realms, RequirePermissions, SupportAction, TenantScoped } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import {
   DriverSurchargeRulesDto,
@@ -37,6 +33,7 @@ import { VehicleTripHistoryService } from './vehicle-trip-history.service';
 @BranchScoped(BRANCH_SCOPED_RESOURCE.VEHICLE)
 @Controller('vehicles')
 @TenantScoped()
+@Realms(ACCOUNT_REALM.PARTNER)
 export class VehicleSettingsController {
   constructor(
     private readonly settings: VehicleSettingsService,

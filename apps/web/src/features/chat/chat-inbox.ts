@@ -1,44 +1,19 @@
-import { CHAT_INBOX, CHAT_SIDE, TENANT_ROLE, isCommissionTrack, type ChatInbox, type ChatSide } from '@xeprime/types';
-
-import type { CurrentUser } from '@/hooks/use-current-user';
+import { CHAT_INBOX, CHAT_SIDE, type ChatInbox, type ChatSide } from '@xeprime/types';
 
 /**
- * HỘP THƯ mà một người mở khi đứng trên một bề mặt — nơi DUY NHẤT quyết định điều đó.
+ * HỘP THƯ mà một bề mặt mở — nơi DUY NHẤT quyết định điều đó.
  *
- * ## Vấn đề nó giải
+ * Từ ADR 0053 mỗi site là một TÀI KHOẢN riêng, nên hộp thư chỉ còn phụ thuộc bề mặt:
  *
- * Chủ xe tuyến hoa hồng không vào `/manage` được (ADR 0027/0028), nên hộp thư công việc của họ
- * không có chỗ đứng riêng. Trước đợt này, biểu tượng chat trên header NHẢY giữa `/chat` và
- * `/manage/chat` tuỳ xem bên nào đang có tin chưa đọc — nghĩa là cùng một cái bấm dẫn tới hai
- * nơi khác nhau vào hai thời điểm khác nhau, và một trong hai nơi đó họ không được vào.
+ *  - site khách (`/chat`) → hộp thư KHÁCH của tài khoản khách — tài khoản khách không có gian hàng
+ *    nào, nên không có gì để hợp nhất;
+ *  - site partner (`/chat` của site partner) → hộp thư GIAN HÀNG — cả chủ xe tuyến hoa hồng lẫn
+ *    gian hàng tuyến gói. Hội thoại họ ĐI THUÊ (nếu họ cũng là khách) thuộc tài khoản khách của họ,
+ *    một tài khoản khác.
  *
- * Với họ, "tin nhắn" là MỘT khái niệm: khách hỏi xe của họ và chủ xe mà họ đang thuê nằm trong
- * cùng một dòng thời gian. Nên họ nhận hộp thư HỢP NHẤT — hợp ở SERVER, trong một truy vấn
- * (`chatInboxScope`), không phải hai danh sách ghép ở client.
- *
- * ## Vì sao CHỈ chủ, và chỉ ở bề mặt khách
- *
- * `shop_owner` — không phải mọi thành viên. Nhân viên/quản lý/người xem của một gian hàng tuyến
- * hoa hồng hôm nay KHÔNG có hộp thư gian hàng nào trong giao diện (`/account/messages` gác bằng
- * `OwnerGate`, `/manage` đóng với tuyến này). Cho họ hộp thư hợp nhất sẽ là cách lặng lẽ mở một
- * bề mặt mới bằng một thay đổi điều hướng — đúng thứ không được làm.
- *
- * Tuyến GÓI không đổi gì: hộp thư khách và hộp thư vận hành là hai màn với hai tập thông tin và
- * hai nhịp làm việc, và họ có `/manage/chat` để đặt cái thứ hai.
- *
- * Bề mặt `shop` không bao giờ hợp nhất: `/manage/chat` là bàn làm việc của cả gian hàng, nơi
- * nhiều người cùng đọc. Trộn hội thoại RIÊNG của người đang đăng nhập vào đó là lộ việc riêng
- * của họ cho đồng nghiệp.
- *
- * Hàm THUẦN, nhận đúng phần dữ liệu nó cần — test được mà không dựng React.
+ * Hộp thư hợp nhất (`CHAT_INBOX.UNIFIED`) của bản trước — chủ xe hoa hồng đọc cả hai vai ở khu khách
+ * — không còn đường tới ở web. Giá trị vẫn nằm trong `@xeprime/types` vì app native còn dùng.
  */
-export function resolveChatInbox(
-  surface: ChatSide,
-  user: Pick<CurrentUser, 'tenant'> | null | undefined,
-): ChatInbox {
-  if (surface !== CHAT_SIDE.CUSTOMER) return CHAT_INBOX.SHOP;
-
-  const tenant = user?.tenant ?? null;
-  const isOwner = tenant?.roleKey === TENANT_ROLE.SHOP_OWNER;
-  return isOwner && isCommissionTrack(tenant) ? CHAT_INBOX.UNIFIED : CHAT_INBOX.CUSTOMER;
+export function resolveChatInbox(surface: ChatSide): ChatInbox {
+  return surface === CHAT_SIDE.CUSTOMER ? CHAT_INBOX.CUSTOMER : CHAT_INBOX.SHOP;
 }

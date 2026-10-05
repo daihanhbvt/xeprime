@@ -1,16 +1,11 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION, PLAN_FEATURE } from '@xeprime/types';
 import {
-  BRANCH_SCOPED_RESOURCE,
-  BranchScoped,
-  CurrentTenant,
-  CurrentUser,
-  RequirePermissions,
-  RequiresFeature,
-  SubscriptionTrackOnly,
-  TenantScoped,
-} from '../../common/decorators';
+  ACCOUNT_REALM,
+  PERMISSION,
+  PLAN_FEATURE,
+} from '@xeprime/types';
+import { BRANCH_SCOPED_RESOURCE, BranchScoped, CurrentTenant, CurrentUser, Realms, RequirePermissions, RequiresFeature, SubscriptionTrackOnly, TenantScoped } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import {
   CancelReceiptDto,
@@ -35,6 +30,7 @@ import { ReceiptsService } from './receipts.service';
 @TenantScoped()
 @SubscriptionTrackOnly()
 @RequiresFeature(PLAN_FEATURE.FINANCE)
+@Realms(ACCOUNT_REALM.PARTNER)
 export class ReceiptsController {
   constructor(private readonly receipts: ReceiptsService) {}
 

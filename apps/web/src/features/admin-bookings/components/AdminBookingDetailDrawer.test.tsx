@@ -177,12 +177,12 @@ describe('AdminBookingDetailDrawer — Thông tin đơn', () => {
     expect(screen.getByRole('link', { name: 'Gian hàng ABC' }).getAttribute('href')).toBe(
       // Mở ĐÚNG gian hàng theo id (không tìm theo tên — tên trùng được); danh sách đối tác nào
       // thì server nói, qua URL cũ đang làm bộ tra loại.
-      '/manage/admin/tenants?tenant=T-ABC',
+      '/admin/tenants?tenant=T-ABC',
     );
     expect(screen.getByText('Đang hoạt động')).toBeTruthy();
     // Link xe tra theo BIỂN SỐ — tên xe trùng nhau giữa nhiều gian hàng.
     expect(screen.getByRole('link', { name: 'Toyota Vios · 51A-12345' }).getAttribute('href')).toBe(
-      '/manage/admin/vehicles?q=51A-12345',
+      '/admin/vehicles?q=51A-12345',
     );
     expect(screen.getByText('Tự lái')).toBeTruthy();
   });
@@ -197,7 +197,7 @@ describe('AdminBookingDetailDrawer — Thông tin đơn', () => {
     };
     renderDrawer();
     expect(screen.getByRole('link', { name: 'Toyota Vios' }).getAttribute('href')).toBe(
-      '/manage/admin/vehicles?q=Toyota%20Vios',
+      '/admin/vehicles?q=Toyota%20Vios',
     );
     expect(screen.queryByText('Ghi chú')).toBeNull();
     expect(screen.getByText('Người tạo: —')).toBeTruthy();
@@ -398,7 +398,7 @@ describe('AdminBookingDetailDrawer — Hồ sơ & điều hướng', () => {
     renderDrawer();
     const footer = document.querySelector('.ant-drawer-footer') as HTMLElement;
     const link = within(footer).getByRole('link');
-    expect(link.getAttribute('href')).toBe('/manage/admin/audit?targetType=booking&targetId=B1');
+    expect(link.getAttribute('href')).toBe('/admin/audit?targetType=booking&targetId=B1');
     expect(within(link).getByRole('button', { name: /Xem lịch sử/ })).toBeTruthy();
   });
 

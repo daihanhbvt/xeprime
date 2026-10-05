@@ -1,5 +1,6 @@
 import { createPrismaClient, newId, RANK_SCORE_WEIGHTS } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   BOOKING_STATUS,
   REVIEW_STATUS,
   TENANT_STATUS,
@@ -166,8 +167,18 @@ beforeAll(async () => {
   customerId = newId();
   await prisma.user.createMany({
     data: [
-      { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
-      { id: customerId, displayName: 'Khách', email: `cus-${customerId}@xeprime.test` },
+      {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: ownerId,
+        displayName: 'Chủ shop',
+        email: `own-${ownerId}@xeprime.test`,
+      },
+      {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: customerId,
+        displayName: 'Khách',
+        email: `cus-${customerId}@xeprime.test`,
+      },
     ],
   });
 

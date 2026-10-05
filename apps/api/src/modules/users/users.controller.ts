@@ -13,6 +13,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { Prisma } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM_VALUES,
   API_ERROR_CODE,
   EMAIL_VERIFICATION_PURPOSE,
   PHONE_VERIFICATION_PURPOSE,
@@ -26,7 +27,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { CurrentUser } from '../../common/decorators';
+import { CurrentUser, Realms } from '../../common/decorators';
 import { normalizePhone } from '../../common/phone';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -132,6 +133,9 @@ function toProfile(row: ProfileRow): UserProfileDto {
 
 @ApiTags('users')
 @Controller('users')
+// Hồ sơ của CHÍNH người đăng nhập — có ở cả ba site, và mọi phép "đã có người dùng chưa" tính TRONG
+// realm của tài khoản (ADR 0053): số đó ở site khác là một tài khoản khác của cùng một người.
+@Realms(...ACCOUNT_REALM_VALUES)
 export class UsersController {
   constructor(
     private readonly prisma: PrismaService,
@@ -193,10 +197,11 @@ export class UsersController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: SendPhoneOtpDto,
   ): Promise<SendOtpResultDto> {
-    await this.assertPhoneFree(normalizePhone(dto.phone), user.id);
+    await this.assertPhoneFree(normalizePhone(dto.phone), user);
     const { expiresAt, devCode } = await this.phoneVerification.sendOtp(
       dto.phone,
       PHONE_VERIFICATION_PURPOSE.PROFILE,
+      user.realm,
     );
     return { expiresAt: expiresAt.toISOString(), devCode };
   }
@@ -215,13 +220,14 @@ export class UsersController {
     @Body() dto: VerifyPhoneDto,
   ): Promise<UserProfileDto> {
     const phone = normalizePhone(dto.phone);
-    await this.assertPhoneFree(phone, user.id);
+    await this.assertPhoneFree(phone, user);
 
     try {
       await this.phoneVerification.verifyOtp(
         dto.phone,
         PHONE_VERIFICATION_PURPOSE.PROFILE,
         dto.code,
+        user.realm,
         user.id,
       );
     } catch (err) {
@@ -244,7 +250,7 @@ export class UsersController {
     @Body() dto: SendEmailOtpDto,
   ): Promise<SendOtpResultDto> {
     const email = normalizeEmail(dto.email);
-    await this.assertEmailFree(email, user.id);
+    await this.assertEmailFree(email, user);
 
     const me = await this.prisma.user.findFirstOrThrow({
       where: { id: user.id, deletedAt: null },
@@ -254,6 +260,7 @@ export class UsersController {
       email,
       EMAIL_VERIFICATION_PURPOSE.PROFILE,
       me.displayName,
+      user.realm,
     );
     return { expiresAt: expiresAt.toISOString(), devCode };
   }
@@ -279,7 +286,7 @@ export class UsersController {
     @Body() dto: VerifyEmailDto,
   ): Promise<UserProfileDto> {
     const email = normalizeEmail(dto.email);
-    await this.assertEmailFree(email, user.id);
+    await this.assertEmailFree(email, user);
 
     const before = await this.prisma.user.findFirstOrThrow({
       where: { id: user.id, deletedAt: null },
@@ -291,6 +298,7 @@ export class UsersController {
       EMAIL_VERIFICATION_PURPOSE.PROFILE,
       dto.code,
       user.id,
+      user.realm,
     );
 
     // Unique index là chốt thật: hai tài khoản cùng xác thực một địa chỉ gần như đồng thời đều
@@ -314,10 +322,13 @@ export class UsersController {
     return toProfile(row);
   }
 
-  /** SĐT đã thuộc về một tài khoản KHÁC (còn sống) thì không ai đổi sang được. */
-  private async assertPhoneFree(phone: string, userId: string): Promise<void> {
+  /**
+   * SĐT đã thuộc về một tài khoản KHÁC (còn sống) CÙNG realm thì không ai đổi sang được. Cùng số ở
+   * realm khác không chặn — đó là tài khoản khác của chính người này (ADR 0053 điều 1).
+   */
+  private async assertPhoneFree(phone: string, user: AuthenticatedUser): Promise<void> {
     const taken = await this.prisma.user.findFirst({
-      where: { phone, deletedAt: null, id: { not: userId } },
+      where: { realm: user.realm, phone, deletedAt: null, id: { not: user.id } },
       select: { id: true },
     });
     if (taken) {
@@ -328,9 +339,9 @@ export class UsersController {
     }
   }
 
-  private async assertEmailFree(email: string, userId: string): Promise<void> {
+  private async assertEmailFree(email: string, user: AuthenticatedUser): Promise<void> {
     const taken = await this.prisma.user.findFirst({
-      where: { email, deletedAt: null, id: { not: userId } },
+      where: { realm: user.realm, email, deletedAt: null, id: { not: user.id } },
       select: { id: true },
     });
     if (taken) {

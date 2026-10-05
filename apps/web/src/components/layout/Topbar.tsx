@@ -12,6 +12,9 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useLocaleMenuGroup } from '@/components/i18n/locale-menu';
 import { ROUTES } from '@/constants/routes';
+import { PARTNER_TRACK, resolvePartnerTrack } from '@/features/auth/post-auth-destination';
+import { ZONE } from '@/zones';
+import { useZone } from '@/zones/ZoneProvider';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
 import { CHAT_SIDE } from '@xeprime/types';
 import { ChatMenu } from '@/features/chat/components/ChatMenu';
@@ -51,6 +54,9 @@ export function Topbar({ user }: { user: CurrentUser }) {
   const dispatch = useAppDispatch();
   const logout = usePortalLogout();
   const localeGroup = useLocaleMenuGroup();
+  const zone = useZone();
+  const isAdmin = zone === ZONE.ADMIN;
+  const isCommission = resolvePartnerTrack(user) === PARTNER_TRACK.COMMISSION;
 
   const tenantName = user.tenant?.name;
   /** Nhân sự nền tảng không đứng trong gian hàng nào — khi đó danh tính khu làm việc là họ. */
@@ -70,8 +76,9 @@ export function Topbar({ user }: { user: CurrentUser }) {
       </div>
 
       <div className={styles.right}>
-        <ChatMenu side={CHAT_SIDE.SHOP} />
-        <NotificationBell context="manage" />
+        {/* Khu quản trị không có hộp thư với khách — chat là việc của gian hàng. */}
+        {isAdmin ? null : <ChatMenu side={CHAT_SIDE.SHOP} />}
+        <NotificationBell context={!isAdmin && isCommission ? 'owner' : 'manage'} />
 
         {/*
           KHÔNG có bộ chọn chi nhánh ở đây nữa (ADR 0052).
@@ -109,9 +116,13 @@ export function Topbar({ user }: { user: CurrentUser }) {
               {
                 key: 'security',
                 icon: <LockOutlined aria-hidden />,
-                label: <Link href={ROUTES.MANAGE.SECURITY}>{tManage('shell.security')}</Link>,
+                label: (
+                  <Link href={isAdmin ? ROUTES.ADMIN.SECURITY : ROUTES.MANAGE.SECURITY}>
+                    {tManage('shell.security')}
+                  </Link>
+                ),
               },
-              ...(tenantName
+              ...(tenantName && !isAdmin && !isCommission
                 ? [
                     {
                       key: 'shop',

@@ -1,6 +1,12 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { Provider } from 'react-redux';
-import { FEATURE_STATE, PERMISSION, TENANT_ROLE, type Permission } from '@xeprime/types';
+import {
+  BILLING_MODE,
+  FEATURE_STATE,
+  PERMISSION,
+  TENANT_ROLE,
+  type Permission,
+} from '@xeprime/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { NAV_BADGE } from '@/constants/nav';
@@ -27,8 +33,18 @@ import { useManageNav } from './use-manage-nav';
 const nav = vi.hoisted(() => ({ pathname: '/manage' }));
 const user = vi.hoisted(() => ({
   platformRole: null as string | null,
-  // Trục SỞ HỮU (ADR 0038 điều 3) — `roleKey` quyết định mục gác bằng `ownerOnly`.
-  tenant: null as { roleKey: string } | null,
+  // Trục SỞ HỮU (ADR 0038 điều 3) — `roleKey` quyết định mục gác bằng `ownerOnly`. `billingMode`
+  // quyết định TUYẾN của site partner (ADR 0051 điều 3): `package` ⇒ menu Full Manage.
+  tenant: null as { roleKey: string; billingMode?: string } | null,
+}));
+/**
+ * Khu đang render (ADR 0051): menu chọn theo KHU + tuyến, không theo `platformRole`. Bộ test đặt khu
+ * theo đúng nơi menu đó sống — nhân sự nền tảng ở site quản trị, gian hàng ở site partner.
+ */
+const zone = vi.hoisted(() => ({ value: 'partner' as 'partner' | 'admin' }));
+
+vi.mock('@/zones/ZoneProvider', () => ({
+  useZone: () => zone.value,
 }));
 const perms = vi.hoisted(() => ({ granted: new Set<string>() }));
 const badges = vi.hoisted(() => ({ bookingRequestsPending: 0, chatUnread: 0 }));
@@ -86,6 +102,7 @@ function Menu({ collapsed = false }: { collapsed?: boolean }) {
 }
 
 function renderMenu(collapsed = false) {
+  zone.value = user.platformRole ? 'admin' : 'partner';
   store = makeStore();
   return render(
     <Provider store={store}>
@@ -113,7 +130,7 @@ function selectedLabel(container: HTMLElement): string | null {
 beforeEach(() => {
   nav.pathname = '/manage';
   user.platformRole = null;
-  user.tenant = { roleKey: TENANT_ROLE.SHOP_OWNER };
+  user.tenant = { roleKey: TENANT_ROLE.SHOP_OWNER, billingMode: BILLING_MODE.PACKAGE };
   badges.bookingRequestsPending = 0;
   badges.chatUnread = 0;
   // Mặc định RỖNG = chưa biết cờ nào ⇒ mọi mục hiện. Đó chính là hành vi phải giữ cho cache
@@ -155,7 +172,7 @@ describe('useManageNav — hiển thị theo quyền (gian hàng)', () => {
      * vì ví của chính họ vẫn ở đó — đúng, và đó là lý do ca "mọi mục con bị lọc" phải dựng bằng
      * một người KHÔNG phải chủ.
      */
-    user.tenant = { roleKey: TENANT_ROLE.SHOP_STAFF };
+    user.tenant = { roleKey: TENANT_ROLE.SHOP_STAFF, billingMode: BILLING_MODE.PACKAGE };
     renderMenu();
 
     // Không có `finance.view`, cũng không phải chủ ⇒ không còn mục cha "Tài chính" nào để bấm.
@@ -414,6 +431,7 @@ describe('useManageNav — hiển thị theo quyền (nền tảng)', () => {
       'Chủ xe cá nhân',
       'Đơn thuê toàn hệ thống',
       'Khách thuê',
+      'Tra cứu tài khoản',
     ]);
     for (const group of ['Chợ xe', 'Đối tác', 'Đơn & khách hàng']) {
       expect(screen.getByText(group)).toBeTruthy();
@@ -455,7 +473,13 @@ describe('useManageNav — hiển thị theo quyền (nền tảng)', () => {
     renderMenu();
 
     const labels = itemLabels();
-    expect(labels).toEqual(['Tổng quan', 'Tất cả xe', 'Đơn thuê toàn hệ thống', 'Khách thuê']);
+    expect(labels).toEqual([
+      'Tổng quan',
+      'Tất cả xe',
+      'Đơn thuê toàn hệ thống',
+      'Khách thuê',
+      'Tra cứu tài khoản',
+    ]);
     // Không có `PLATFORM_TENANT_VIEW` ⇒ không danh sách đối tác nào.
     expect(labels).not.toContain('Gian hàng gói');
     expect(labels).not.toContain('Chủ xe cá nhân');
@@ -580,12 +604,12 @@ describe('useManageNav — mục đang sáng (nền tảng)', () => {
   }
 
   it.each([
-    ['/manage/admin', 'Kiểm duyệt xe'],
-    ['/manage/admin/vehicles', 'Tất cả xe'],
-    ['/manage/admin/partners/shops', 'Gian hàng gói'],
-    ['/manage/admin/partners/owners', 'Chủ xe cá nhân'],
-    ['/manage/admin/bookings', 'Đơn thuê toàn hệ thống'],
-    ['/manage/admin/customers', 'Khách thuê'],
+    ['/admin', 'Kiểm duyệt xe'],
+    ['/admin/vehicles', 'Tất cả xe'],
+    ['/admin/partners/shops', 'Gian hàng gói'],
+    ['/admin/partners/owners', 'Chủ xe cá nhân'],
+    ['/admin/bookings', 'Đơn thuê toàn hệ thống'],
+    ['/admin/customers', 'Khách thuê'],
   ])('%s → CHỈ "%s" sáng', (pathname, label) => {
     nav.pathname = pathname;
     const { container } = renderMenu();
@@ -596,7 +620,7 @@ describe('useManageNav — mục đang sáng (nền tảng)', () => {
   });
 
   it('trang admin không có mục riêng (URL cũ /manage/admin/tenants) KHÔNG làm "Kiểm duyệt xe" sáng', () => {
-    nav.pathname = '/manage/admin/tenants';
+    nav.pathname = '/admin/tenants';
     const { container } = renderMenu();
 
     expect(selectedLabel(container)).toBeNull();
@@ -730,7 +754,7 @@ describe('useManageNav — ví gian hàng chỉ dành cho CHỦ', () => {
 
   it('chủ gian hàng thấy mục Số dư', () => {
     grantEverything();
-    user.tenant = { roleKey: TENANT_ROLE.SHOP_OWNER };
+    user.tenant = { roleKey: TENANT_ROLE.SHOP_OWNER, billingMode: BILLING_MODE.PACKAGE };
     renderMenu();
 
     fireEvent.click(screen.getByText('Tài chính'));
@@ -746,7 +770,7 @@ describe('useManageNav — ví gian hàng chỉ dành cho CHỦ', () => {
       TENANT_ROLE.SHOP_VIEWER,
     ]) {
       grantEverything();
-      user.tenant = { roleKey };
+      user.tenant = { roleKey, billingMode: BILLING_MODE.PACKAGE };
       const { unmount } = renderMenu();
 
       fireEvent.click(screen.getByText('Tài chính'));
@@ -761,7 +785,7 @@ describe('useManageNav — ví gian hàng chỉ dành cho CHỦ', () => {
    */
   it('không kéo theo các mục tài chính khác', () => {
     grantEverything();
-    user.tenant = { roleKey: TENANT_ROLE.SHOP_MANAGER };
+    user.tenant = { roleKey: TENANT_ROLE.SHOP_MANAGER, billingMode: BILLING_MODE.PACKAGE };
     renderMenu();
 
     fireEvent.click(screen.getByText('Tài chính'));
@@ -779,5 +803,30 @@ describe('useManageNav — ví gian hàng chỉ dành cho CHỦ', () => {
     renderMenu();
 
     expect(screen.queryByRole('link', { name: /^Số dư & rút tiền$/ })).toBeNull();
+  });
+});
+
+/**
+ * HAI menu ở site partner (ADR 0051 điều 3): tuyến hoa hồng thấy Owner Lite — kể cả khi có đủ mọi
+ * quyền, vì ranh giới tuyến KHÔNG đi qua trục quyền (ADR 0038 điều 4).
+ */
+describe('useManageNav — menu theo tuyến ở site partner', () => {
+  it('chủ xe tuyến hoa hồng: menu Owner Lite, không có sổ sách của tuyến gói', () => {
+    grant(...(Object.values(PERMISSION) as Permission[]));
+    user.tenant = { roleKey: TENANT_ROLE.SHOP_OWNER, billingMode: BILLING_MODE.COMMISSION };
+    renderMenu();
+
+    const labels = itemLabels();
+    expect(labels).toEqual(expect.arrayContaining(['Tổng quan', 'Lịch xe']));
+    expect(labels).not.toContain('Khách hàng');
+    expect(screen.queryByText('Tài chính')).toBeNull();
+  });
+
+  it('chưa có gian hàng: không menu nào', () => {
+    grant(...(Object.values(PERMISSION) as Permission[]));
+    user.tenant = null;
+    renderMenu();
+
+    expect(itemLabels()).toEqual([]);
   });
 });

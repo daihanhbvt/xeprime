@@ -1,6 +1,7 @@
 import { Controller, Get, Query } from '@nestjs/common';
+import { ACCOUNT_REALM_VALUES } from '@xeprime/types';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Public } from '../../common/decorators';
+import { Public, Realms } from '../../common/decorators';
 import { HolidayListDto, HolidayRangeQueryDto } from './dto/holiday.dto';
 import { HolidaysService } from './holidays.service';
 
@@ -20,6 +21,7 @@ import { HolidaysService } from './holidays.service';
  */
 @ApiTags('holidays')
 @Controller('holidays')
+@Realms(...ACCOUNT_REALM_VALUES)
 export class HolidaysController {
   constructor(private readonly holidays: HolidaysService) {}
 

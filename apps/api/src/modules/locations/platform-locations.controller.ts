@@ -1,7 +1,10 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
-import { CurrentUser, PlatformOnly, RequirePermissions } from '../../common/decorators';
+import {
+  ACCOUNT_REALM,
+  PERMISSION,
+} from '@xeprime/types';
+import { CurrentUser, PlatformOnly, Realms, RequirePermissions } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import {
   CreateProvinceDto,
@@ -23,6 +26,7 @@ import { ProvincesService } from './provinces.service';
 @ApiTags('platform-admin')
 @Controller('platform/locations')
 @PlatformOnly()
+@Realms(ACCOUNT_REALM.PLATFORM)
 export class PlatformLocationsController {
   constructor(private readonly provinces: ProvincesService) {}
 

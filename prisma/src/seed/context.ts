@@ -168,8 +168,9 @@ export function dateOnlyFromToday(days: number): Date {
 // ---------------------------------------------------------------------------
 
 /** Ảnh Unsplash ghim theo photo id — card/gallery có ảnh thật và ổn định giữa các lần seed. */
-export function photo(id: string): string {
-  return `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=1200&q=70`;
+export function photo(id: string, options: { flip?: boolean } = {}): string {
+  const flip = options.flip ? '&flip=h' : '';
+  return `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=1200&q=70${flip}`;
 }
 
 /**

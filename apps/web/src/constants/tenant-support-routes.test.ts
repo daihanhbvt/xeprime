@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ROUTES, adminTenantSupportPath, bookingPath, customerPath, vehiclePath } from './routes';
 import { tenantSupportHref, toTenantSupportRoute } from './tenant-support-routes';
@@ -24,11 +24,9 @@ describe('toTenantSupportRoute', () => {
     [bookingPath.detail('b1'), `${base}/bookings/b1`],
     [customerPath.detail('c1'), `${base}/customers/c1`],
     [ROUTES.MANAGE.SHOP, `${base}/shop`],
-    // Owner Lite
-    [ROUTES.ACCOUNT.VEHICLES, `${base}/vehicles`],
-    [`${ROUTES.ACCOUNT.VEHICLES}/v1/manage/images`, `${base}/vehicles/v1/manage/images`],
-    [ROUTES.ACCOUNT.CALENDAR, `${base}/calendar`],
-    [ROUTES.ACCOUNT.SUPPORT, `${base}/support/cases`],
+    // Owner Lite — từ ADR 0051 cùng cây URL với Full Manage ở site partner.
+    [`${ROUTES.MANAGE.VEHICLES}/v1/manage/images`, `${base}/vehicles/v1/manage/images`],
+    [ROUTES.MANAGE.SUPPORT_CASES, `${base}/support/cases`],
   ])('%s → trang của phiên', (href, expected) => {
     expect(toTenantSupportRoute(CTX, href)).toEqual({ kind: 'mapped', href: expected });
   });
@@ -47,6 +45,11 @@ describe('toTenantSupportRoute', () => {
     ['/manage/contracts/x1'],
     ['/manage/billing'],
     ['/manage/vehicles/v1/pricing'],
+    // Trang của TÀI KHOẢN partner (bảo mật, hồ sơ, ví…) — trong phiên chúng sẽ đọc tài khoản nhân sự.
+    [ROUTES.MANAGE.SECURITY],
+    [ROUTES.MANAGE.ACCOUNT],
+    [ROUTES.MANAGE.BALANCE],
+    [ROUTES.MANAGE.CHAT],
     [ROUTES.ACCOUNT.ROOT],
     ['/account/wallet'],
     ['/account/security'],
@@ -73,11 +76,10 @@ describe('toTenantSupportRoute', () => {
   });
 
   it.each([
-    [ROUTES.MANAGE.ADMIN_TENANTS],
-    [ROUTES.MANAGE.ADMIN],
-    // Tài khoản của CHÍNH nhân sự đang đăng nhập (thẻ người dùng ở menu).
-    [ROUTES.MANAGE.SECURITY],
-    [ROUTES.MANAGE.ACCOUNT_TRIPS],
+    [ROUTES.ADMIN.TENANTS],
+    [ROUTES.ADMIN.ROOT],
+    // Tài khoản của CHÍNH nhân sự đang đăng nhập (thẻ người dùng ở menu) — ở site quản trị.
+    [ROUTES.ADMIN.SECURITY],
     ['/'],
     ['/listings/l1'],
     ['https://example.com/x'],
@@ -90,5 +92,39 @@ describe('toTenantSupportRoute', () => {
   it('tenantSupportHref trả null cho route bị chặn', () => {
     expect(tenantSupportHref(CTX, '/manage/finance')).toBeNull();
     expect(tenantSupportHref(CTX, ROUTES.MANAGE.VEHICLES)).toBe(`${base}/vehicles`);
+  });
+});
+
+/**
+ * Chế độ `host` (ADR 0051): hai site không còn tiền tố phân biệt — `/vehicles` vừa là danh sách xe
+ * của gian hàng vừa là danh sách xe toàn sàn. Trong phiên, link do VIEW PARTNER dựng thắng.
+ */
+describe('toTenantSupportRoute — chế độ host', () => {
+  async function loadHostMode() {
+    vi.resetModules();
+    vi.stubEnv('NEXT_PUBLIC_XP_ZONE_MODE', 'host');
+    const routes = await import('./routes');
+    const mod = await import('./tenant-support-routes');
+    return { ...routes, ...mod };
+  }
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it('trang của phiên thắng route quản trị trùng tên', async () => {
+    const { toTenantSupportRoute: map, adminTenantSupportPath: paths, ROUTES: R } = await loadHostMode();
+    const root = paths.root(CTX);
+    expect(R.MANAGE.VEHICLES).toBe('/vehicles');
+    expect(map(CTX, '/vehicles')).toEqual({ kind: 'mapped', href: `${root}/vehicles` });
+    expect(map(CTX, '/')).toEqual({ kind: 'mapped', href: `${root}/dashboard` });
+  });
+
+  it('route quản trị không có trong phiên → rời phiên; trang partner khác → chặn', async () => {
+    const { toTenantSupportRoute: map, ROUTES: R } = await loadHostMode();
+    expect(map(CTX, R.ADMIN.TENANTS)).toEqual({ kind: 'outside', href: R.ADMIN.TENANTS });
+    expect(map(CTX, R.ADMIN.SECURITY)).toEqual({ kind: 'outside', href: R.ADMIN.SECURITY });
+    expect(map(CTX, R.MANAGE.FINANCE)).toEqual({ kind: 'blocked' });
   });
 });

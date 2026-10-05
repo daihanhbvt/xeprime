@@ -241,8 +241,15 @@ jobs:
           #
           # Không có gì bí mật ở đây theo đúng nghĩa đen: mọi giá trị này nằm lộ thiên trong
           # file JS mà trình duyệt tải về.
+          #
+          # Ba site của ADR 0051: cùng phép dựng URL với deploy.yml (biến site → hoặc suy từ tên
+          # miền), mặc định là ba host staging. `NEXT_PUBLIC_API_URL` cố định `/api` cùng origin.
           build-args: |
-            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || 'https://api-stg.xeprime.vn' }}
+            NEXT_PUBLIC_API_URL=/api
+            NEXT_PUBLIC_XP_ZONE_MODE=host
+            NEXT_PUBLIC_WEB_MARKET_URL=${{ vars.APP_WEB_URL || format('https://{0}', vars.WEB_DOMAIN || 'stg.xeprime.vn') }}
+            NEXT_PUBLIC_WEB_PARTNER_URL=${{ vars.WEB_PARTNER_URL || format('https://{0}', vars.PARTNER_DOMAIN || 'partner-stg.xeprime.vn') }}
+            NEXT_PUBLIC_WEB_ADMIN_URL=${{ vars.WEB_ADMIN_URL || format('https://{0}', vars.ADMIN_DOMAIN || 'admin-stg.xeprime.vn') }}
             NEXT_PUBLIC_APP_NAME=${{ vars.NEXT_PUBLIC_APP_NAME || 'XePrime' }}
             NEXT_PUBLIC_GEOAPIFY_MAP_KEY=${{ vars.NEXT_PUBLIC_GEOAPIFY_MAP_KEY }}
             NEXT_PUBLIC_FIREBASE_API_KEY=${{ vars.NEXT_PUBLIC_FIREBASE_API_KEY }}

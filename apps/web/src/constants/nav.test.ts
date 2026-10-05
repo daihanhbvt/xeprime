@@ -15,6 +15,7 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import {
+  OWNER_LITE_NAV,
   PLATFORM_NAV,
   SHOP_NAV,
   branchKeyOf,
@@ -23,8 +24,8 @@ import {
   isNavPermissionGranted,
   leavesOfSection,
   matchSelectedKey,
-  mobileTabsForScope,
-  navForScope,
+  mobileTabsForZone,
+  navForZone,
   sectionKeyOf,
   supportMobileTabs,
   supportNavSections,
@@ -32,7 +33,22 @@ import {
 } from './nav';
 import enNavigation from '@xeprime/domain/messages/en/navigation.json';
 import viNavigation from '@xeprime/domain/messages/vi/navigation.json';
+import { PARTNER_TRACK, isCommissionPage } from '@/features/auth/post-auth-destination';
+import { ZONE } from '@/zones';
 import { ROUTES, adminTenantSupportPath } from './routes';
+
+/** Cây menu của một khu: site quản trị, hoặc site partner theo tuyến (gói · hoa hồng). */
+function navFor(isPlatform: boolean) {
+  return isPlatform
+    ? navForZone(ZONE.ADMIN, PARTNER_TRACK.NONE)
+    : navForZone(ZONE.PARTNER, PARTNER_TRACK.PACKAGE);
+}
+
+function tabsFor(isPlatform: boolean) {
+  return isPlatform
+    ? mobileTabsForZone(ZONE.ADMIN, PARTNER_TRACK.NONE)
+    : mobileTabsForZone(ZONE.PARTNER, PARTNER_TRACK.PACKAGE);
+}
 
 /**
  * Test ĐẶC TẢ cho cây điều hướng theo mô hình khối (Tổng quan · Quản lý · Kinh doanh · Gian
@@ -42,7 +58,7 @@ import { ROUTES, adminTenantSupportPath } from './routes';
  *  1. **Những lối vào PHẢI còn** — theo route cụ thể, không theo tổng số mục;
  *  2. **Vai trò nào thấy gì** — trên BA trục runtime thật (quyền · sở hữu · cờ năng lực);
  *  3. **Quy tắc chọn mục đang mở** (`matchSelectedKey`) — gom nhóm không được làm sáng nhầm;
- *  4. **Ranh giới gian hàng ↔ nền tảng** — `navForScope` chọn MỘT cây, không trộn.
+ *  4. **Ranh giới site/tuyến** — `navForZone` chọn MỘT cây theo khu + tuyến, không trộn.
  *
  * ⚠️ KHÔNG khoá tổng số mục lá (bản trước khoá cứng "23"). Con số đó không phải một bất biến
  * nghiệp vụ: nó chỉ đếm những gì đang có, nên mỗi lần thêm mục là một lần sửa số cho test xanh
@@ -81,7 +97,7 @@ function visibleLabels(
 ): string[] {
   const set = new Set<string>(granted);
   const isShopOwner = context.roleKey === TENANT_ROLE.SHOP_OWNER;
-  return flattenLeaves(navForScope(isPlatform))
+  return flattenLeaves(navFor(isPlatform))
     .filter(
       (leaf) =>
         isNavPermissionGranted(leaf.permission, (permission) => set.has(permission)) &&
@@ -151,26 +167,29 @@ describe('nav — cấu trúc khối', () => {
 
     expect([...hrefs].sort()).toEqual(
       [
-        ROUTES.MANAGE.ROOT,
-        ROUTES.MANAGE.ADMIN,
-        ROUTES.MANAGE.ADMIN_PARTNER_SHOPS,
-        ROUTES.MANAGE.ADMIN_PARTNER_OWNERS,
-        ROUTES.MANAGE.ADMIN_VEHICLES,
-        ROUTES.MANAGE.ADMIN_BOOKINGS,
-        ROUTES.MANAGE.ADMIN_CUSTOMERS,
+        // Tổng quan nền tảng rời trang gốc `/manage` sang `/dashboard` của site quản trị (ADR 0051).
+        ROUTES.ADMIN.DASHBOARD,
+        ROUTES.ADMIN.ROOT,
+        ROUTES.ADMIN.PARTNER_SHOPS,
+        ROUTES.ADMIN.PARTNER_OWNERS,
+        ROUTES.ADMIN.VEHICLES,
+        ROUTES.ADMIN.BOOKINGS,
+        ROUTES.ADMIN.CUSTOMERS,
+        // Tra cứu xuyên realm (ADR 0053 điều 9).
+        ROUTES.ADMIN.ACCOUNT_LOOKUP,
         // `ADMIN_BANK_TRANSACTIONS` không mất mà được GỘP (01/10/2026): hàng đợi tiền vào sống
         // trong màn Tài chính, URL cũ chuyển tiếp về `ADMIN_MONEY?queue=bank-in`.
-        ROUTES.MANAGE.ADMIN_MONEY,
-        ROUTES.MANAGE.ADMIN_SUPPORT,
-        ROUTES.MANAGE.ADMIN_PLANS,
-        ROUTES.MANAGE.ADMIN_FEE_POLICIES,
-        ROUTES.MANAGE.ADMIN_PROMO_CODES,
-        ROUTES.MANAGE.ADMIN_SELLERS,
-        ROUTES.MANAGE.ADMIN_STAFF,
-        ROUTES.MANAGE.ADMIN_CATALOG,
-        ROUTES.MANAGE.ADMIN_LOCATIONS,
-        ROUTES.MANAGE.ADMIN_BANNERS,
-        ROUTES.MANAGE.ADMIN_AUDIT,
+        ROUTES.ADMIN.MONEY,
+        ROUTES.ADMIN.SUPPORT,
+        ROUTES.ADMIN.PLANS,
+        ROUTES.ADMIN.FEE_POLICIES,
+        ROUTES.ADMIN.PROMO_CODES,
+        ROUTES.ADMIN.SELLERS,
+        ROUTES.ADMIN.STAFF,
+        ROUTES.ADMIN.CATALOG,
+        ROUTES.ADMIN.LOCATIONS,
+        ROUTES.ADMIN.BANNERS,
+        ROUTES.ADMIN.AUDIT,
       ].sort(),
     );
     // …và không mục nào bị khai hai lần khi chuyển sang mô hình khối.
@@ -307,16 +326,20 @@ describe('nav — cấu trúc khối', () => {
   });
 
   it('mọi mục lá có href riêng — không hai mục cùng đích', () => {
-    for (const sections of [SHOP_NAV, PLATFORM_NAV]) {
+    for (const sections of [SHOP_NAV, PLATFORM_NAV, OWNER_LITE_NAV]) {
       const hrefs = hrefsOf(sections);
       expect(new Set(hrefs).size).toBe(hrefs.length);
     }
   });
 
   it('mọi href đến từ ROUTES, không có chuỗi gõ tay', () => {
-    const known = new Set<string>(Object.values(ROUTES.MANAGE));
-    for (const leaf of [...flattenLeaves(SHOP_NAV), ...flattenLeaves(PLATFORM_NAV)]) {
-      expect(known.has(leaf.href)).toBe(true);
+    const known = new Set<string>([...Object.values(ROUTES.MANAGE), ...Object.values(ROUTES.ADMIN)]);
+    for (const leaf of [
+      ...flattenLeaves(SHOP_NAV),
+      ...flattenLeaves(PLATFORM_NAV),
+      ...flattenLeaves(OWNER_LITE_NAV),
+    ]) {
+      expect(known.has(leaf.href), leaf.href).toBe(true);
     }
   });
 
@@ -344,16 +367,18 @@ describe('nav — cấu trúc khối', () => {
   });
 });
 
-describe('nav — ranh giới gian hàng ↔ nền tảng', () => {
-  it('có platformRole → CHỈ cây nền tảng, không trộn mục gian hàng', () => {
-    expect(navForScope(true)).toBe(PLATFORM_NAV);
+describe('nav — ranh giới site quản trị ↔ site partner', () => {
+  it('site quản trị → CHỈ cây nền tảng, bất kể tuyến', () => {
+    for (const track of Object.values(PARTNER_TRACK)) {
+      expect(navForZone(ZONE.ADMIN, track)).toBe(PLATFORM_NAV);
+    }
     const labels = flattenLeaves(PLATFORM_NAV).map((leaf) => leaf.labelKey);
     expect(labels).not.toContain('manage.calendar');
     expect(labels).not.toContain('manage.debts');
   });
 
-  it('không có platformRole → CHỈ cây gian hàng', () => {
-    expect(navForScope(false)).toBe(SHOP_NAV);
+  it('site partner tuyến gói → CHỈ cây gian hàng', () => {
+    expect(navForZone(ZONE.PARTNER, PARTNER_TRACK.PACKAGE)).toBe(SHOP_NAV);
     const labels = flattenLeaves(SHOP_NAV).map((leaf) => leaf.labelKey);
     expect(labels).not.toContain('platform.audit');
     expect(labels).not.toContain('platform.staff');
@@ -478,7 +503,7 @@ describe('nav — vai trò nền tảng nhìn thấy gì', () => {
     ).toEqual(flattenLeaves(PLATFORM_NAV).map((leaf) => leaf.labelKey));
   });
 
-  it('platform_staff chỉ thấy 5 mục đọc, KHÔNG thấy mục quản trị của super admin', () => {
+  it('platform_staff chỉ thấy 6 mục đọc, KHÔNG thấy mục quản trị của super admin', () => {
     const labels = visibleLabels(
       DEFAULT_PLATFORM_ROLE_PERMISSIONS[PLATFORM_ROLE.PLATFORM_STAFF],
       true,
@@ -491,6 +516,8 @@ describe('nav — vai trò nền tảng nhìn thấy gì', () => {
       'platform.vehicles',
       'platform.bookings',
       'platform.customers',
+      // Tra cứu xuyên realm: CHỈ ĐỌC, liên hệ đã che — cùng quyền với "Khách thuê".
+      'platform.accountLookup',
       'platform.locations',
     ]);
     for (const adminOnly of [
@@ -555,8 +582,8 @@ describe('matchSelectedKey — quy tắc mục đang mở', () => {
     const session = adminTenantSupportPath.vehicleEdit('A1B2C3D4E5F6G7H8J9K0M1N2P3', 'v1');
     expect(matchSelectedKey(session, platformLeaves)).toBeUndefined();
     // Hàng đợi hỗ trợ/tranh chấp của chính nó vẫn sáng đúng mục.
-    expect(matchSelectedKey(ROUTES.MANAGE.ADMIN_SUPPORT, platformLeaves)).toBe(
-      ROUTES.MANAGE.ADMIN_SUPPORT,
+    expect(matchSelectedKey(ROUTES.ADMIN.SUPPORT, platformLeaves)).toBe(
+      ROUTES.ADMIN.SUPPORT,
     );
   });
 
@@ -600,11 +627,11 @@ describe('matchSelectedKey — quy tắc mục đang mở', () => {
   });
 
   it('hai danh sách đối tác sáng riêng, không kéo theo nhau', () => {
-    expect(matchSelectedKey(ROUTES.MANAGE.ADMIN_PARTNER_SHOPS, platformLeaves)).toBe(
-      ROUTES.MANAGE.ADMIN_PARTNER_SHOPS,
+    expect(matchSelectedKey(ROUTES.ADMIN.PARTNER_SHOPS, platformLeaves)).toBe(
+      ROUTES.ADMIN.PARTNER_SHOPS,
     );
-    expect(matchSelectedKey(ROUTES.MANAGE.ADMIN_PARTNER_OWNERS, platformLeaves)).toBe(
-      ROUTES.MANAGE.ADMIN_PARTNER_OWNERS,
+    expect(matchSelectedKey(ROUTES.ADMIN.PARTNER_OWNERS, platformLeaves)).toBe(
+      ROUTES.ADMIN.PARTNER_OWNERS,
     );
   });
 
@@ -614,18 +641,18 @@ describe('matchSelectedKey — quy tắc mục đang mở', () => {
    * được sáng nhầm nó.
    */
   it('"Kiểm duyệt xe" chỉ khớp tuyệt đối — không nhận route con nào', () => {
-    expect(matchSelectedKey(ROUTES.MANAGE.ADMIN, platformLeaves)).toBe(ROUTES.MANAGE.ADMIN);
-    expect(matchSelectedKey(ROUTES.MANAGE.ADMIN_TENANTS, platformLeaves)).toBeUndefined();
-    expect(matchSelectedKey(ROUTES.MANAGE.ADMIN_PARTNERS, platformLeaves)).toBeUndefined();
+    expect(matchSelectedKey(ROUTES.ADMIN.ROOT, platformLeaves)).toBe(ROUTES.ADMIN.ROOT);
+    expect(matchSelectedKey(ROUTES.ADMIN.TENANTS, platformLeaves)).toBeUndefined();
+    expect(matchSelectedKey(ROUTES.ADMIN.PARTNERS, platformLeaves)).toBeUndefined();
     expect(matchSelectedKey('/manage/admin/khong-ton-tai', platformLeaves)).toBeUndefined();
   });
 
   it('"Tất cả xe" và "Kiểm duyệt xe" là hai mục độc lập, route con của xe sáng "Tất cả xe"', () => {
-    expect(matchSelectedKey(ROUTES.MANAGE.ADMIN_VEHICLES, platformLeaves)).toBe(
-      ROUTES.MANAGE.ADMIN_VEHICLES,
+    expect(matchSelectedKey(ROUTES.ADMIN.VEHICLES, platformLeaves)).toBe(
+      ROUTES.ADMIN.VEHICLES,
     );
-    expect(matchSelectedKey(`${ROUTES.MANAGE.ADMIN_VEHICLES}/01H`, platformLeaves)).toBe(
-      ROUTES.MANAGE.ADMIN_VEHICLES,
+    expect(matchSelectedKey(`${ROUTES.ADMIN.VEHICLES}/01H`, platformLeaves)).toBe(
+      ROUTES.ADMIN.VEHICLES,
     );
   });
 
@@ -673,31 +700,112 @@ describe('sectionKeyOf / branchKeyOf — bung đúng khối và đúng mục cha
   });
 });
 
-describe('mobileTabsForScope — 4 tab dưới đáy', () => {
-  it('gian hàng và nền tảng đều đúng 4 tab, tab đầu luôn là /manage', () => {
-    for (const isPlatform of [false, true]) {
-      const tabs = mobileTabsForScope(isPlatform);
-      expect(tabs).toHaveLength(4);
-      expect(tabs[0]!.href).toBe(ROUTES.MANAGE.ROOT);
+describe('mobileTabsForZone — 4 tab dưới đáy', () => {
+  it('mỗi cây đúng 4 tab, tab đầu là trang chủ của site', () => {
+    expect(tabsFor(false)).toHaveLength(4);
+    expect(tabsFor(false)[0]!.href).toBe(ROUTES.MANAGE.ROOT);
+    expect(tabsFor(true)).toHaveLength(4);
+    expect(tabsFor(true)[0]!.href).toBe(ROUTES.ADMIN.DASHBOARD);
+    const ownerLite = mobileTabsForZone(ZONE.PARTNER, PARTNER_TRACK.COMMISSION);
+    expect(ownerLite).toHaveLength(4);
+    expect(ownerLite[0]!.href).toBe(ROUTES.MANAGE.ROOT);
+  });
+
+  it('tab mobile là TẬP CON của cây menu cùng khu + tuyến', () => {
+    const pairs = [
+      [navFor(false), tabsFor(false)],
+      [navFor(true), tabsFor(true)],
+      [
+        navForZone(ZONE.PARTNER, PARTNER_TRACK.COMMISSION),
+        mobileTabsForZone(ZONE.PARTNER, PARTNER_TRACK.COMMISSION),
+      ],
+    ] as const;
+    for (const [sections, tabs] of pairs) {
+      const hrefs = new Set(flattenLeaves(sections).map((leaf) => leaf.href));
+      for (const tab of tabs) expect(hrefs.has(tab.href), tab.href).toBe(true);
     }
   });
 
-  it('tab mobile là TẬP CON của cây menu cùng scope', () => {
-    for (const isPlatform of [false, true]) {
-      const hrefs = new Set(flattenLeaves(navForScope(isPlatform)).map((leaf) => leaf.href));
-      for (const tab of mobileTabsForScope(isPlatform)) {
-        expect(hrefs.has(tab.href)).toBe(true);
-      }
-    }
+  it('chưa có tuyến (chưa có gian hàng / đang chờ thanh toán gói) → không tab nào', () => {
+    expect(mobileTabsForZone(ZONE.PARTNER, PARTNER_TRACK.NONE)).toEqual([]);
+    expect(mobileTabsForZone(ZONE.PARTNER, PARTNER_TRACK.PACKAGE_PENDING)).toEqual([]);
   });
 
   it('bốn đích chính của gian hàng giữ nguyên sau khi sắp lại menu', () => {
-    expect(mobileTabsForScope(false).map((tab) => tab.key)).toEqual([
+    expect(tabsFor(false).map((tab) => tab.key)).toEqual([
       'dashboard',
       'calendar',
       'booking-requests',
       'bookings',
     ]);
+  });
+});
+
+/**
+ * Site partner có HAI menu theo tuyến (ADR 0051 điều 3 · ADR 0053): tuyến gói thấy Full Manage, tuyến
+ * hoa hồng thấy Owner Lite. Trang chỉ của tuyến gói KHÔNG được xuất hiện trong menu hoa hồng — bấm
+ * vào là bị `partnerPageRedirect` đá về trang chủ, tức là một mục menu chết.
+ */
+describe('navForZone — menu theo tuyến ở site partner', () => {
+  const commissionNav = navForZone(ZONE.PARTNER, PARTNER_TRACK.COMMISSION);
+
+  it('tuyến hoa hồng → cây Owner Lite; chưa có tuyến → không menu', () => {
+    expect(commissionNav).toBe(OWNER_LITE_NAV);
+    expect(navForZone(ZONE.PARTNER, PARTNER_TRACK.NONE)).toEqual([]);
+    expect(navForZone(ZONE.PARTNER, PARTNER_TRACK.PACKAGE_PENDING)).toEqual([]);
+  });
+
+  it('mọi mục của menu hoa hồng là trang tuyến hoa hồng được ở', () => {
+    for (const leaf of flattenLeaves(commissionNav)) {
+      expect(isCommissionPage(leaf.href), leaf.href).toBe(true);
+    }
+  });
+
+  it('menu hoa hồng KHÔNG có trang chỉ của tuyến gói', () => {
+    const hrefs = new Set(hrefsOf(commissionNav));
+    for (const href of [
+      ROUTES.MANAGE.CUSTOMERS,
+      ROUTES.MANAGE.FINANCE,
+      ROUTES.MANAGE.RECEIPTS,
+      ROUTES.MANAGE.DEBTS,
+      ROUTES.MANAGE.MEMBERS,
+      ROUTES.MANAGE.SHOP,
+      ROUTES.MANAGE.DRIVERS,
+      ROUTES.MANAGE.MAINTENANCE,
+      ROUTES.MANAGE.VEHICLE_NEW,
+    ]) {
+      expect(hrefs.has(href), href).toBe(false);
+    }
+  });
+
+  it('menu hoa hồng có đủ việc cho thuê + tiền + hồ sơ chủ xe', () => {
+    const hrefs = new Set(hrefsOf(commissionNav));
+    for (const href of [
+      ROUTES.MANAGE.ROOT,
+      ROUTES.MANAGE.VEHICLES,
+      ROUTES.MANAGE.CALENDAR,
+      ROUTES.MANAGE.BOOKING_REQUESTS,
+      ROUTES.MANAGE.BOOKINGS,
+      ROUTES.MANAGE.CHAT,
+      ROUTES.MANAGE.BALANCE,
+      ROUTES.MANAGE.REGISTRATION,
+    ]) {
+      expect(hrefs.has(href), href).toBe(true);
+    }
+  });
+
+  it('menu tuyến gói KHÔNG có trang chỉ của tuyến hoa hồng (đã có bản trong Cửa hàng)', () => {
+    const hrefs = new Set(hrefsOf(SHOP_NAV));
+    for (const href of [ROUTES.MANAGE.REGISTRATION, ROUTES.MANAGE.TAX, ROUTES.MANAGE.BANK_ACCOUNTS]) {
+      expect(hrefs.has(href), href).toBe(false);
+    }
+  });
+
+  it('không cây nào của site partner trỏ sang site quản trị và ngược lại', () => {
+    for (const sections of [SHOP_NAV, commissionNav]) {
+      for (const href of hrefsOf(sections)) expect(href.startsWith('/admin'), href).toBe(false);
+    }
+    for (const href of hrefsOf(PLATFORM_NAV)) expect(href.startsWith('/manage'), href).toBe(false);
   });
 });
 
@@ -712,15 +820,16 @@ describe('nav — mọi khoá nhãn đều có bản dịch ở cả hai ngôn n
       .split('.')
       .reduce<unknown>((node, part) => (node as Record<string, unknown>)?.[part], bundle);
 
-  const allSections = [...SHOP_NAV, ...PLATFORM_NAV];
+  const allSections = [...SHOP_NAV, ...PLATFORM_NAV, ...OWNER_LITE_NAV];
   const allKeys = [
     ...allSections.map((section) => section.labelKey),
     ...allSections
       .flatMap((section) => section.children.filter(isNavBranch))
       .map((b) => b.labelKey),
     ...flattenLeaves(allSections).map((leaf) => leaf.labelKey),
-    ...mobileTabsForScope(false).map((tab) => tab.labelKey),
-    ...mobileTabsForScope(true).map((tab) => tab.labelKey),
+    ...tabsFor(false).map((tab) => tab.labelKey),
+    ...tabsFor(true).map((tab) => tab.labelKey),
+    ...mobileTabsForZone(ZONE.PARTNER, PARTNER_TRACK.COMMISSION).map((tab) => tab.labelKey),
     ...flattenLeaves(supportNavSections('X', SUPPORT_WORKSPACE.OWNER_LITE)).map(
       (leaf) => leaf.labelKey,
     ),

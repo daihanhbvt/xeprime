@@ -39,7 +39,7 @@ import {
 const nav = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
 vi.mock('next/navigation', () => ({
   useRouter: () => nav,
-  usePathname: () => '/manage/admin/tenants',
+  usePathname: () => '/admin/tenants',
   useSearchParams: () => new URLSearchParams(),
 }));
 
@@ -157,10 +157,10 @@ describe('SupportSessionBoundary + SupportDataScope', () => {
     renderProvider(CONTEXT_A);
     await screen.findByText('xe-cua-gian-hang-A');
     expect(screen.getByTestId('home').textContent).toContain(
-      `/manage/admin/tenant-support/${CONTEXT_A}`,
+      `/admin/tenant-support/${CONTEXT_A}`,
     );
     expect(screen.getByTestId('detail').textContent).toContain(
-      `/manage/admin/tenant-support/${CONTEXT_A}/vehicles/v1/manage`,
+      `/admin/tenant-support/${CONTEXT_A}/vehicles/v1/manage`,
     );
   });
 
@@ -246,8 +246,8 @@ describe('supportWorkspaceValue — bảng đường dẫn của phiên', () => 
     const value = supportWorkspaceValue(
       supportContextFixture({ workspace: SUPPORT_WORKSPACE.MANAGE }),
     );
-    expect(value.paths.vehicles).toBe(`/manage/admin/tenant-support/${CONTEXT_A}/vehicles`);
-    expect(value.paths.home).toBe(`/manage/admin/tenant-support/${CONTEXT_A}/dashboard`);
+    expect(value.paths.vehicles).toBe(`/admin/tenant-support/${CONTEXT_A}/vehicles`);
+    expect(value.paths.home).toBe(`/admin/tenant-support/${CONTEXT_A}/dashboard`);
     // Chat không mở trong phiên: link "Tin nhắn" giữ đích thật (bị chặn kèm thông báo), không
     // biến thành một link dẫn vào Tổng quan.
     expect(value.paths.chat).toBe(ROUTES.MANAGE.CHAT);
@@ -257,6 +257,6 @@ describe('supportWorkspaceValue — bảng đường dẫn của phiên', () => 
     const value = supportWorkspaceValue(
       supportContextFixture({ workspace: SUPPORT_WORKSPACE.ONBOARDING, capabilities: [] }),
     );
-    expect(value.paths.home).toBe(`/manage/admin/tenant-support/${CONTEXT_A}`);
+    expect(value.paths.home).toBe(`/admin/tenant-support/${CONTEXT_A}`);
   });
 });

@@ -1,13 +1,14 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import { giveTenantPlan } from './helpers/billing-fixture';
 import {
-  bookingRequestRespondBy,
+  ACCOUNT_REALM,
   BILLING_MODE,
   BOOKING_REQUEST_STATUS,
+  bookingRequestRespondBy,
+  LONG_TERM_PACKAGE_MONTHS,
   MEMBERSHIP_STATUS,
   POLICY_SOURCE,
   PRICE_ROW,
-  LONG_TERM_PACKAGE_MONTHS,
   ROUTE_TYPE,
   SERVICE_TYPE,
   TENANT_ROLE,
@@ -110,7 +111,12 @@ beforeAll(async () => {
 
   ownerId = newId();
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Chủ shop',
+      email: `own-${ownerId}@xeprime.test`,
+    },
   });
   tenantId = newId();
   await prisma.tenant.create({

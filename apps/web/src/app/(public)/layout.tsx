@@ -4,6 +4,8 @@ import { AuthModalProvider, AuthUrlSync } from '@/features/auth/components/AuthM
 import { MarketHeader } from '@/features/marketplace/components/MarketHeader';
 import { MarketFooterSlot } from '@/features/marketplace/components/MarketFooterSlot';
 import { MobileTabBar } from '@/features/marketplace/components/MobileTabBar';
+import { ZONE } from '@/zones';
+import { ZoneProvider } from '@/zones/ZoneProvider';
 import styles from './public-layout.module.css';
 
 /**
@@ -19,18 +21,21 @@ import styles from './public-layout.module.css';
  * render tĩnh bình thường; phần đọc URL là `AuthUrlSync`, một leaf được bọc Suspense riêng.
  */
 export default function PublicLayout({ children }: { children: ReactNode }) {
+  // Gốc SITE KHÁCH (`xeprime.vn`, realm `customer` — ADR 0051 điều 2).
   return (
-    <AuthModalProvider>
-      <Suspense fallback={null}>
-        <AuthUrlSync />
-      </Suspense>
-      <div className={styles.wrapper}>
-        <MarketHeader />
-        <main className={styles.main}>{children}</main>
-        <MarketFooterSlot />
-        <MobileTabBar />
-      </div>
-      <AuthModal />
-    </AuthModalProvider>
+    <ZoneProvider zone={ZONE.MARKET}>
+      <AuthModalProvider>
+        <Suspense fallback={null}>
+          <AuthUrlSync />
+        </Suspense>
+        <div className={styles.wrapper}>
+          <MarketHeader />
+          <main className={styles.main}>{children}</main>
+          <MarketFooterSlot />
+          <MobileTabBar />
+        </div>
+        <AuthModal />
+      </AuthModalProvider>
+    </ZoneProvider>
   );
 }

@@ -1,12 +1,18 @@
 import 'reflect-metadata';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
-import { API_ERROR_CODE, MOBILE_CLIENT_APP } from '@xeprime/types';
+import {
+  ACCOUNT_REALM,
+  API_ERROR_CODE,
+  MOBILE_CLIENT_APP,
+  SHOP_ONBOARDING_STATE,
+} from '@xeprime/types';
 import request from 'supertest';
 import { createValidationPipe } from '../src/bootstrap';
 import { AllExceptionsFilter } from '../src/common/filters/all-exceptions.filter';
 import { AuthService } from '../src/modules/auth/auth.service';
 import { NativeSessionService } from '../src/modules/auth/native-session.service';
+import { RequestRealmService } from '../src/modules/auth/request-realm.service';
 import { SessionService } from '../src/modules/auth/session.service';
 import { NativeAuthCodeService } from '../src/modules/auth/social/native-auth-code.service';
 import { MobileAuthController } from '../src/modules/auth/mobile-auth.controller';
@@ -40,7 +46,16 @@ describe('Đăng ký + đặt xe cho app native — luôn trả token, không ba
 
   const auth = { register: jest.fn(), me: jest.fn(), loginWithPassword: jest.fn() };
   const nativeSessions = { issueSession: jest.fn() };
-  const sessions = { issue: jest.fn(), attach: jest.fn(), cookieName: 'xp_session' };
+  const sessions = {
+    issue: jest.fn(),
+    attach: jest.fn(),
+    cookieName: (realm: string) => `xp_session_${realm}`,
+  };
+  /**
+   * Không có Caddy ở đây ⇒ request web không mang realm đã qua khoá. Đường đặt xe công khai vẫn
+   * chạy (khách vãng lai), và phiên cấp ra là phiên realm KHÁCH — route này chỉ phục vụ khách.
+   */
+  const realms = { webRealmOf: () => null };
   const requests = { submitPublic: jest.fn() };
 
   beforeAll(async () => {
@@ -50,6 +65,7 @@ describe('Đăng ký + đặt xe cho app native — luôn trả token, không ba
         { provide: AuthService, useValue: auth },
         { provide: NativeSessionService, useValue: nativeSessions },
         { provide: SessionService, useValue: sessions },
+        { provide: RequestRealmService, useValue: realms },
         { provide: NativeAuthCodeService, useValue: { issue: jest.fn(), consume: jest.fn() } },
         { provide: BookingRequestsService, useValue: requests },
         { provide: PrismaService, useValue: { user: { findFirst: jest.fn() } } },
@@ -91,7 +107,11 @@ describe('Đăng ký + đặt xe cho app native — luôn trả token, không ba
 
     it('dùng CHUNG `AuthService.register` với web — luật mật khẩu chỉ có một bản', async () => {
       await request(app.getHttpServer()).post('/auth/mobile/register').send(BODY);
-      expect(auth.register).toHaveBeenCalledWith(expect.objectContaining(BODY));
+      // App XePrime (không khai `clientApp`) ⇒ tài khoản realm khách (ADR 0053 điều 4).
+      expect(auth.register).toHaveBeenCalledWith(
+        expect.objectContaining(BODY),
+        ACCOUNT_REALM.CUSTOMER,
+      );
     });
 
     it('mật khẩu yếu bị từ chối y như web (kế thừa RegisterDto)', async () => {
@@ -124,6 +144,70 @@ describe('Đăng ký + đặt xe cho app native — luôn trả token, không ba
         { deviceName: 'Pixel 8', devicePlatform: 'android' },
         MOBILE_CLIENT_APP.CUSTOMER,
       );
+    });
+  });
+
+  /**
+   * App XePrime Partner là app của MỌI chủ xe (ADR 0053): realm của tài khoản theo app, nên không
+   * còn cổng "tài khoản này được vào app nào" — chủ xe tuyến hoa hồng vào được, và tài khoản đối
+   * tác mới đăng ký thẳng từ app rồi chọn tuyến ở bước onboarding.
+   */
+  describe('app XePrime Partner — mọi chủ xe', () => {
+    it('đăng ký từ app Partner tạo tài khoản ĐỐI TÁC và phiên của app Partner', async () => {
+      const res = await request(app.getHttpServer()).post('/auth/mobile/register').send({
+        displayName: 'Chủ xe mới',
+        phone: '0901234567',
+        password: 'matkhau123',
+        clientApp: MOBILE_CLIENT_APP.PARTNER,
+      });
+
+      expect(res.status).toBe(201);
+      expect(auth.register).toHaveBeenCalledWith(expect.anything(), ACCOUNT_REALM.PARTNER);
+      expect(nativeSessions.issueSession).toHaveBeenCalledWith(
+        USER.id,
+        {},
+        MOBILE_CLIENT_APP.PARTNER,
+      );
+    });
+
+    it('chủ xe tuyến HOA HỒNG đăng nhập được app Partner', async () => {
+      auth.loginWithPassword.mockResolvedValue({ userId: USER.id });
+      auth.me.mockResolvedValue({
+        ...USER,
+        realm: ACCOUNT_REALM.PARTNER,
+        tenant: { id: 'T1', onboardingState: SHOP_ONBOARDING_STATE.COMMISSION },
+      });
+
+      const res = await request(app.getHttpServer()).post('/auth/mobile/login').send({
+        identifier: '0901234567',
+        password: 'matkhau123',
+        clientApp: MOBILE_CLIENT_APP.PARTNER,
+      });
+
+      expect(res.status).toBe(200);
+      expect(auth.loginWithPassword).toHaveBeenCalledWith(
+        '0901234567',
+        'matkhau123',
+        ACCOUNT_REALM.PARTNER,
+      );
+      expect(nativeSessions.issueSession).toHaveBeenCalledWith(
+        USER.id,
+        {},
+        MOBILE_CLIENT_APP.PARTNER,
+      );
+    });
+
+    it('tài khoản đối tác CHƯA có gian hàng cũng đăng nhập được — để đi tiếp bước onboarding', async () => {
+      auth.loginWithPassword.mockResolvedValue({ userId: USER.id });
+      auth.me.mockResolvedValue({ ...USER, realm: ACCOUNT_REALM.PARTNER, tenant: null });
+
+      const res = await request(app.getHttpServer()).post('/auth/mobile/login').send({
+        identifier: '0901234567',
+        password: 'matkhau123',
+        clientApp: MOBILE_CLIENT_APP.PARTNER,
+      });
+
+      expect(res.status).toBe(200);
     });
   });
 
@@ -169,6 +253,12 @@ describe('Đăng ký + đặt xe cho app native — luôn trả token, không ba
       expect(res.status).toBe(201);
       expect(res.body.session).toBeUndefined();
       expect(sessions.attach).toHaveBeenCalledTimes(1);
+      // Cookie phát ra là cookie của site KHÁCH — đặt xe chỉ có ở realm khách.
+      expect(sessions.attach).toHaveBeenCalledWith(
+        expect.anything(),
+        'jwt',
+        ACCOUNT_REALM.CUSTOMER,
+      );
       expect(nativeSessions.issueSession).not.toHaveBeenCalled();
     });
 

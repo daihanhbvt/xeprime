@@ -575,19 +575,13 @@ export class CustomerTripsService {
    * ở mỗi lần hoàn là cách chắc chắn nhất để có một chữ số sai trong một lệnh chuyển tiền. Lưu
    * hỏng (trùng số) KHÔNG được làm hỏng việc khai — khoản hoàn vẫn phải nhận được đích của nó.
    *
-   * ## Sổ tài khoản nào (15/09/2026 — sửa lỗi tiền)
+   * ## Sổ tài khoản nào
    *
-   * Chủ sổ ĐI THEO chủ ví, qua `resolveRefundWalletOwner` — CÙNG hàm mà ví dùng (ADR 0038 điều
-   * 2). Bản trước đóng đinh `{ USER, customerUserId }`, và điều đó hỏng với chính người mà luồng
-   * này phục vụ: khi một người trở thành chủ gian hàng, migration hợp nhất ví chuyển luôn tài
-   * khoản ngân hàng ĐANG DÙNG của họ sang tenant. Sau đó sổ scope `user` RỖNG, nên `resolveFor
-   * Payout` không thấy gì, màn khai hiện danh sách trống, và mỗi lần hoàn lại đẻ thêm một bản
-   * ghi `user` mới — tách đôi đúng cái sổ vừa hợp nhất, và không bản nào trong đó hiện ở
-   * `/manage/balance`.
+   * Chủ sổ ĐI THEO chủ ví, qua `resolveRefundWalletOwner` — CÙNG hàm mà ví dùng. Từ ADR 0053 điều 8
+   * đó luôn là TÀI KHOẢN KHÁCH đã đặt chuyến: chủ xe đi thuê bằng một tài khoản khách riêng, nên
+   * không còn ca "tài khoản ngân hàng đã chuyển sang tenant".
    *
-   * Đây KHÔNG phải nới quyền: `resolveForPayout`/`create` vẫn bị buộc vào chủ sở hữu, và tenant
-   * ở đây là tenant mà CHÍNH người gọi là `shop_owner` (`resolveScope`) — cùng một luật chọn
-   * tenant với migration, nên hai bên không thể chỉ vào hai sổ khác nhau.
+   * Đây KHÔNG phải nới quyền: `resolveForPayout`/`create` vẫn bị buộc vào chủ sở hữu.
    */
   async provideRefundAccount(
     customerUserId: string,
@@ -605,8 +599,7 @@ export class CustomerTripsService {
     });
     if (!row?.hold) throw tripNotFound();
 
-    const scope = await this.resolveScope(customerUserId);
-    const ownerRef = refundBankOwner(customerUserId, scope.hostTenantId);
+    const ownerRef = refundBankOwner(customerUserId);
     const saved = dto.bankAccountId
       ? await this.bankAccounts.resolveForPayout(ownerRef, dto.bankAccountId)
       : null;
@@ -1192,16 +1185,12 @@ function toEstimate(estimate: TripEstimate | undefined): CustomerTripEstimateDto
 /**
  * Chủ SỔ TÀI KHOẢN NGÂN HÀNG cho một khoản hoàn — cùng chủ với ví của người đó.
  *
- * Chỉ là lớp đổi kiểu quanh `resolveRefundWalletOwner` của `@xeprime/types`: hàm dùng chung nói
- * bằng chuỗi (`'tenant'`/`'user'`) để package không phải phụ thuộc vào hằng của API, còn
- * `BankAccountsService` nhận `WALLET_OWNER_TYPE`. Viết lại phép chọn tenant ở đây thay vì gọi hàm
- * chung là mở đường cho ví và sổ tài khoản trỏ vào hai chủ khác nhau.
+ * Lớp đổi kiểu quanh `resolveRefundWalletOwner` của `@xeprime/types` (hàm dùng chung nói bằng chuỗi
+ * để package không phụ thuộc hằng của API; `BankAccountsService` nhận `WALLET_OWNER_TYPE`). Đi qua
+ * hàm chung thay vì gõ tại chỗ để ví và sổ tài khoản không bao giờ trỏ vào hai chủ khác nhau.
  */
-function refundBankOwner(userId: string, ownedTenantId: string | null): BankAccountOwner {
-  const owner = resolveRefundWalletOwner(userId, ownedTenantId);
-  return owner.type === 'tenant'
-    ? { type: WALLET_OWNER_TYPE.TENANT, tenantId: owner.tenantId }
-    : { type: WALLET_OWNER_TYPE.USER, userId: owner.userId };
+function refundBankOwner(userId: string): BankAccountOwner {
+  return { type: WALLET_OWNER_TYPE.USER, userId: resolveRefundWalletOwner(userId).userId };
 }
 function scopeWhere(scope: TripViewerScope, role?: TripRole): Prisma.BookingRequestWhereInput {
   const mine: Prisma.BookingRequestWhereInput = { customerUserId: scope.userId };

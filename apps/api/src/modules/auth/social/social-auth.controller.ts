@@ -1,14 +1,18 @@
-import { Controller, Get, Param, Query, Res } from '@nestjs/common';
+import { Controller, Get, Param, Query, Req, Res } from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import {
+  ACCOUNT_REALM,
+  ACCOUNT_REALM_VALUES,
   API_ERROR_CODE,
   AUTH_PROVIDER_VALUES,
   SUPPORTED_LOCALES,
   isAuthProvider,
+  type AccountRealm,
 } from '@xeprime/types';
 import type { Response } from 'express';
-import { Public } from '../../../common/decorators';
+import { Public, Realms } from '../../../common/decorators';
+import type { RequestContext } from '../../../common/types/request-context';
 import { SessionService } from '../session.service';
 import { NativeAuthCodeService } from './native-auth-code.service';
 import { socialErrorCode } from './social-auth.error';
@@ -44,6 +48,9 @@ import { SocialAuthService } from './social-auth.service';
  */
 @ApiTags('auth')
 @Controller('auth/social')
+// Realm platform bị từ chối ngay ở `SocialAuthService.begin` (REALM_LOGIN_METHOD_NOT_ALLOWED), nhưng route
+// vẫn khai đủ ba realm để lỗi đó QUAY VỀ đúng site admin dưới dạng `?authError=`, không thành 403 JSON.
+@Realms(...ACCOUNT_REALM_VALUES)
 export class SocialAuthController {
   constructor(
     private readonly social: SocialAuthService,
@@ -107,12 +114,16 @@ export class SocialAuthController {
     @Query('client') client: string | undefined,
     @Query('code_challenge') codeChallenge: string | undefined,
     @Query('redirect_uri') redirectUri: string | undefined,
+    @Req() req: RequestContext,
     @Res() res: Response,
   ): Promise<void> {
     const safeNext = next ?? null;
+    const errorRealm = fallbackRealm(req);
 
     if (!isAuthProvider(providerKey)) {
-      res.redirect(this.social.webRedirect(safeNext, API_ERROR_CODE.SOCIAL_NOT_CONFIGURED));
+      res.redirect(
+        this.social.webRedirect(errorRealm, safeNext, API_ERROR_CODE.SOCIAL_NOT_CONFIGURED),
+      );
       return;
     }
 
@@ -123,6 +134,7 @@ export class SocialAuthController {
           provider: providerKey,
           next: safeNext,
           locale: locale ?? null,
+          webRealm: req.realm ?? null,
           ...(native ? { native } : {}),
         }),
       );
@@ -135,7 +147,7 @@ export class SocialAuthController {
        * tự mở đúng lỗ hổng vừa chặn.
        */
       this.social.logFailure(providerKey, error);
-      res.redirect(this.social.webRedirect(safeNext, socialErrorCode(error)));
+      res.redirect(this.social.webRedirect(errorRealm, safeNext, socialErrorCode(error)));
     }
   }
 
@@ -151,7 +163,7 @@ export class SocialAuthController {
   @ApiOperation({
     summary: 'Provider gọi về sau khi người dùng đồng ý — phát session cookie rồi về web',
     description:
-      'Chỉ provider điều hướng tới đây, và nó tự gắn thêm tham số riêng (`iss`, `scope`, `authuser`, `prompt`…) — endpoint cố ý bỏ qua mọi tham số ngoài ba cái dưới đây. Luôn trả 302 về `APP_WEB_URL`; hỏng thì kèm `?authError=<mã>` (`SOCIAL_STATE_INVALID` · `SOCIAL_CANCELLED` · `SOCIAL_EXCHANGE_FAILED` · `CONFLICT` · `ACCOUNT_LOCKED`).',
+      'Chỉ provider điều hướng tới đây, và nó tự gắn thêm tham số riêng (`iss`, `scope`, `authuser`, `prompt`…) — endpoint cố ý bỏ qua mọi tham số ngoài ba cái dưới đây. Luôn trả 302 về site của realm đã mở luồng; hỏng thì kèm `?authError=<mã>` (`SOCIAL_STATE_INVALID` · `SOCIAL_CANCELLED` · `SOCIAL_EXCHANGE_FAILED` · `CONFLICT` · `ACCOUNT_LOCKED`).',
   })
   @ApiParam({ name: 'provider', enum: AUTH_PROVIDER_VALUES })
   @ApiQuery({ name: 'code', required: false, description: 'Authorization code khi người dùng đã đồng ý.' })
@@ -168,14 +180,19 @@ export class SocialAuthController {
     @Query('code') code: string | undefined,
     @Query('state') state: string | undefined,
     @Query('error') providerError: string | undefined,
+    @Req() req: RequestContext,
     @Res() res: Response,
   ): Promise<void> {
+    // Trước khi tiêu thụ `state` chỉ biết site qua header proxy — callback web về `/api` của chính
+    // site đó nên có; callback native (trên `api.xeprime.vn`) thì không, rơi về site khách.
+    const errorRealm = fallbackRealm(req);
     // Người dùng bấm huỷ ở màn đồng ý. Không phải sự cố — đừng ghi log lỗi, và đừng nói với họ
     // rằng có gì đó hỏng.
     if (providerError) {
       const cancelled = providerError === 'access_denied';
       res.redirect(
         this.social.webRedirect(
+          errorRealm,
           null,
           cancelled ? API_ERROR_CODE.SOCIAL_CANCELLED : API_ERROR_CODE.SOCIAL_EXCHANGE_FAILED,
         ),
@@ -184,7 +201,7 @@ export class SocialAuthController {
     }
 
     if (!isAuthProvider(providerKey) || !code || !state) {
-      res.redirect(this.social.webRedirect(null, API_ERROR_CODE.SOCIAL_STATE_INVALID));
+      res.redirect(this.social.webRedirect(errorRealm, null, API_ERROR_CODE.SOCIAL_STATE_INVALID));
       return;
     }
 
@@ -198,7 +215,7 @@ export class SocialAuthController {
         res.redirect(
           result.native
             ? this.social.nativeRedirect(result.native, { error: result.errorCode })
-            : this.social.webRedirect(result.redirectNext, result.errorCode),
+            : this.social.webRedirect(result.realm, result.redirectNext, result.errorCode),
         );
         return;
       }
@@ -224,14 +241,20 @@ export class SocialAuthController {
 
       // Cùng `SessionService` với `/auth/login` và `/auth/phone/login`: một luồng đăng nhập mới
       // không được đẻ ra một loại phiên mới (ADR 0002).
+      // Cookie của ĐÚNG realm đã ghi lúc bắt đầu luồng (ADR 0053), phát bởi chính site đó.
       const { token } = this.sessions.issue(result.userId);
-      this.sessions.attach(res, token);
-      res.redirect(this.social.webRedirect(result.redirectNext));
+      this.sessions.attach(res, token, result.realm);
+      res.redirect(this.social.webRedirect(result.realm, result.redirectNext));
     } catch (error) {
       // Lưới an toàn: `complete()` đã tự xử lý mọi lỗi sau khi tiêu thụ `state`, nên tới đây chỉ
       // còn lỗi TRƯỚC đó (provider chưa cấu hình, `state` không hợp lệ) — lúc chưa biết `next`.
       this.social.logFailure(providerKey, error);
-      res.redirect(this.social.webRedirect(null, socialErrorCode(error)));
+      res.redirect(this.social.webRedirect(errorRealm, null, socialErrorCode(error)));
     }
   }
+}
+
+/** Site để báo lỗi khi chưa đọc được `state`: site đang gọi nếu biết, không thì site khách. */
+function fallbackRealm(req: RequestContext): AccountRealm {
+  return req.realm ?? ACCOUNT_REALM.CUSTOMER;
 }

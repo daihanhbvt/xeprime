@@ -570,6 +570,9 @@ export const API_ERROR_CODE = {
    */
   PACKAGE_ONBOARDING_INCOMPLETE: 'PACKAGE_ONBOARDING_INCOMPLETE',
   /**
+   * ⚠️ Server KHÔNG còn phát từ ADR 0053 (05/10/2026): app Partner nhận mọi tài khoản đối tác. Giữ
+   * mã để bản app đang phát hành còn biên dịch và hiểu được phản hồi cũ.
+   *
    * Tài khoản xác thực THÀNH CÔNG nhưng không thuộc phạm vi app XePrime Partner (403, không
    * phải 401): không có gian hàng tuyến gói hiệu lực và cũng không đang nợ bước thanh toán
    * gói (`canUsePartnerApp` ở `mobile-client-app.ts`).
@@ -580,6 +583,9 @@ export const API_ERROR_CODE = {
    */
   PARTNER_ACCESS_REQUIRED: 'PARTNER_ACCESS_REQUIRED',
   /**
+   * ⚠️ Server KHÔNG còn phát từ ADR 0053 (05/10/2026): tài khoản đối tác không đăng nhập được app
+   * khách vì nó không tồn tại trong realm khách. Giữ mã cho bản app đang phát hành.
+   *
    * Chiều NGƯỢC LẠI của `PARTNER_ACCESS_REQUIRED` (28/09/2026): tài khoản của một gian hàng
    * tuyến gói đăng nhập vào app XePrime (khách).
    *
@@ -589,6 +595,9 @@ export const API_ERROR_CODE = {
    */
   CUSTOMER_APP_NOT_AVAILABLE: 'CUSTOMER_APP_NOT_AVAILABLE',
   /**
+   * ⚠️ Server KHÔNG còn phát từ ADR 0053 (05/10/2026): app Partner tạo tài khoản đối tác như site
+   * partner. Giữ mã cho bản app đang phát hành.
+   *
    * App XePrime Partner gọi một đường TẠO TÀI KHOẢN (`/auth/mobile/register`, hoặc OTP với
    * một số chưa có tài khoản).
    *
@@ -602,6 +611,32 @@ export const API_ERROR_CODE = {
    * hàng, sau đó handoff sang XePrime Partner (ADR 0040).
    */
   PARTNER_REGISTRATION_NOT_SUPPORTED: 'PARTNER_REGISTRATION_NOT_SUPPORTED',
+  /**
+   * Không xác định được site (realm) đang gọi — ADR 0053 điều 4. Request web tới endpoint cần
+   * realm mà không qua proxy của site (header realm thiếu hoặc khoá proxy sai). Không đoán một
+   * realm mặc định: đoán sai là tạo tài khoản ở nhầm không gian.
+   */
+  REALM_UNRESOLVED: 'REALM_UNRESOLVED',
+  /**
+   * Route không phục vụ realm của người gọi — ADR 0053 điều 5 (vd tài khoản partner gọi endpoint
+   * đặt xe của khách, hoặc route chưa khai realm nào: mặc định từ chối).
+   */
+  REALM_NOT_ALLOWED: 'REALM_NOT_ALLOWED',
+  /**
+   * Realm `platform` không tự đăng ký và không đăng nhập bằng OTP/Google/Facebook — tài khoản do
+   * admin nền tảng tạo, đăng nhập bằng mật khẩu (ADR 0053 điều 3).
+   */
+  REALM_LOGIN_METHOD_NOT_ALLOWED: 'REALM_LOGIN_METHOD_NOT_ALLOWED',
+  /**
+   * Request GHI đi bằng cookie phiên mà `Origin` không phải site của realm đó — chặn CSRF
+   * (ADR 0002 ràng buộc 3, ADR 0051 điều 6). Bearer (app native) không bị áp.
+   */
+  ORIGIN_NOT_ALLOWED: 'ORIGIN_NOT_ALLOWED',
+  /**
+   * Tài khoản partner đã thuộc một gian hàng khác — một nhân viên chỉ thuộc MỘT gian hàng
+   * (ADR 0053 điều 6). DB giữ luật bằng unique index một phần; mã này là câu trả lời đọc được.
+   */
+  MEMBER_ALREADY_IN_OTHER_TENANT: 'MEMBER_ALREADY_IN_OTHER_TENANT',
   /**
    * Hồ sơ GIAN HÀNG TUYẾN GÓI chưa đủ để gửi xe lên chợ (ADR 0040 điều 7).
    * `details.missing[]` mang khoá `PACKAGE_SHOP_LISTING_REQUIREMENT`.

@@ -25,6 +25,7 @@
     "seed": "dotenv -e ../.env -- tsx ./src/seed.ts",
     "demo:finance": "dotenv -e ../.env -- tsx ./src/demo-finance.ts",
     "cleanup:test-data": "dotenv -e ../.env -- tsx ./src/cleanup-test-data.ts",
+    "realm:check": "dotenv -e ../.env -- tsx ./src/check-realm-invariants.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },

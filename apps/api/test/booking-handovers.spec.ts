@@ -1,14 +1,18 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
-  BILLING_MODE,
+  ACCOUNT_REALM,
   API_ERROR_CODE,
+  BILLING_MODE,
   BOOKING_STATUS,
   FUEL_LEVEL,
   FUEL_TYPE,
+  fuelLevelDropQuarters,
   HANDOVER_PHOTO_SLOT,
   HANDOVER_STATUS,
   HANDOVER_SUSPICIOUS_KM_PER_DAY_SETTING,
   HANDOVER_TYPE,
+  handoverEnergyKind,
+  handoverOdometerSuspicion,
   MAINTENANCE_STATUS,
   MEMBERSHIP_STATUS,
   OCCUPANCY_SOURCE_TYPE,
@@ -17,9 +21,6 @@ import {
   TENANT_ROLE,
   TENANT_STATUS,
   VEHICLE_TYPE,
-  fuelLevelDropQuarters,
-  handoverEnergyKind,
-  handoverOdometerSuspicion,
 } from '@xeprime/types';
 import { ValidationPipe } from '@nestjs/common';
 import 'reflect-metadata';
@@ -35,7 +36,13 @@ import { MaintenanceService } from '../src/modules/vehicles/maintenance/maintena
 import { OdometerService } from '../src/modules/vehicles/maintenance/odometer.service';
 import { VehicleContractsService } from '../src/modules/vehicles/vehicle-contracts.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeBookingsService, makeCustomersService, makeNotificationService, makeVehiclesService, vehicleCreator } from './helpers/service-factory';
+import {
+  makeBookingsService,
+  makeCustomersService,
+  makeNotificationService,
+  makeVehiclesService,
+  vehicleCreator,
+} from './helpers/service-factory';
 import { giveTenantPlan } from './helpers/billing-fixture';
 
 /**
@@ -80,7 +87,14 @@ const vehicles = makeVehiclesService(asService);
 const createVehicleWithBranch = vehicleCreator(vehicles, asService);
 const files = new VehicleContractsService(asService, fakeR2 as unknown as R2Service, audit);
 const odometer = new OdometerService(asService, audit);
-const maintenance = new MaintenanceService(asService, occupancy, odometer, files, audit, new ReceiptsService(asService, audit));
+const maintenance = new MaintenanceService(
+  asService,
+  occupancy,
+  odometer,
+  files,
+  audit,
+  new ReceiptsService(asService, audit),
+);
 const bookings = makeBookingsService(asService, {
   occupancy: occupancy,
   audit: audit,
@@ -95,6 +109,7 @@ const STAFF_SCOPE = { canViewFiles: false };
 
 let dbAvailable = false;
 let ownerId: string;
+let otherOwnerId: string;
 let tenantId: string;
 let otherTenantId: string;
 
@@ -115,12 +130,28 @@ beforeAll(async () => {
   tenantId = newId();
   otherTenantId = newId();
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Trần Văn C', email: `own-${ownerId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Trần Văn C',
+      email: `own-${ownerId}@xeprime.test`,
+    },
+  });
+  // Mỗi gian hàng một chủ — ADR 0053: một tài khoản chỉ thuộc một gian hàng.
+  otherOwnerId = newId();
+  await prisma.user.create({
+    data: {
+      id: otherOwnerId,
+      realm: ACCOUNT_REALM.PARTNER,
+      displayName: 'Chủ shop khác',
+      email: `own-${otherOwnerId}@xeprime.test`,
+    },
   });
   for (const [id, name] of [
     [tenantId, 'Shop Bàn Giao'],
     [otherTenantId, 'Shop Khác'],
   ] as const) {
+    const owner = id === tenantId ? ownerId : otherOwnerId;
     await prisma.tenant.create({
       data: {
         id,
@@ -128,7 +159,7 @@ beforeAll(async () => {
         slug: `t-${id.toLowerCase().slice(-10)}`,
         name,
         status: TENANT_STATUS.ACTIVE,
-        ownerUserId: ownerId,
+        ownerUserId: owner,
       },
     });
     /*
@@ -143,7 +174,7 @@ beforeAll(async () => {
       data: {
         id: newId(),
         tenantId: id,
-        userId: ownerId,
+        userId: owner,
         roleKey: TENANT_ROLE.SHOP_OWNER,
         status: MEMBERSHIP_STATUS.ACTIVE,
       },
@@ -162,7 +193,7 @@ afterAll(async () => {
       await prisma.tenantMembership.deleteMany({ where: { tenantId: id } });
       await prisma.tenant.deleteMany({ where: { id } });
     }
-    await prisma.user.deleteMany({ where: { id: ownerId } });
+    await prisma.user.deleteMany({ where: { id: { in: [ownerId, otherOwnerId] } } });
   }
   await prisma.$disconnect();
 });
@@ -890,38 +921,41 @@ describe('Odo và ảnh là tuỳ chọn (Wave 10)', () => {
    * không còn đường vòng qua `confirmed`. Đơn shop tự lập nằm ở `reserved`, và giao xe không
    * bắt bấm "xác nhận đơn" nào trước cả (không có nút đó — duyệt yêu cầu chính là xác nhận).
    */
-  maybe('giao xe từ đơn `reserved`: chuyển thẳng sang `active`, không qua `confirmed`', async () => {
-    const vehicle = await createVehicle();
-    const booking = await bookings.create(tenantId, ownerId, {
-      vehicleId: vehicle.id,
-      customerName: 'Nguyễn Văn C',
-      pickupAt: days(0).toISOString(),
-      returnAt: days(2).toISOString(),
-      baseAmount: '1300000',
-    });
-    expect(booking.status).toBe(BOOKING_STATUS.RESERVED);
+  maybe(
+    'giao xe từ đơn `reserved`: chuyển thẳng sang `active`, không qua `confirmed`',
+    async () => {
+      const vehicle = await createVehicle();
+      const booking = await bookings.create(tenantId, ownerId, {
+        vehicleId: vehicle.id,
+        customerName: 'Nguyễn Văn C',
+        pickupAt: days(0).toISOString(),
+        returnAt: days(2).toISOString(),
+        baseAmount: '1300000',
+      });
+      expect(booking.status).toBe(BOOKING_STATUS.RESERVED);
 
-    const after = await handovers.confirm(
-      tenantId,
-      booking.id,
-      HANDOVER_TYPE.PICKUP,
-      ownerId,
-      {},
-      FULL_SCOPE,
-    );
+      const after = await handovers.confirm(
+        tenantId,
+        booking.id,
+        HANDOVER_TYPE.PICKUP,
+        ownerId,
+        {},
+        FULL_SCOPE,
+      );
 
-    expect(after.bookingStatus).toBe(BOOKING_STATUS.ACTIVE);
+      expect(after.bookingStatus).toBe(BOOKING_STATUS.ACTIVE);
 
-    // MỘT dòng audit duy nhất — không còn chặng `confirmed` thoáng qua để ghi hai dòng.
-    const trail = await prisma.auditLog.findMany({
-      where: { targetType: 'booking', targetId: booking.id, action: 'booking.transition' },
-      orderBy: { createdAt: 'asc' },
-      select: { afterJson: true },
-    });
-    expect(trail.map((row) => (row.afterJson as { status: string }).status)).toEqual([
-      BOOKING_STATUS.ACTIVE,
-    ]);
-  });
+      // MỘT dòng audit duy nhất — không còn chặng `confirmed` thoáng qua để ghi hai dòng.
+      const trail = await prisma.auditLog.findMany({
+        where: { targetType: 'booking', targetId: booking.id, action: 'booking.transition' },
+        orderBy: { createdAt: 'asc' },
+        select: { afterJson: true },
+      });
+      expect(trail.map((row) => (row.afterJson as { status: string }).status)).toEqual([
+        BOOKING_STATUS.ACTIVE,
+      ]);
+    },
+  );
 
   maybe('giao xe kèm Odo tuỳ chọn: ghi thẳng trong một lần gọi', async () => {
     const vehicle = await createVehicle();

@@ -1,7 +1,10 @@
 import { Body, Controller, Post, ServiceUnavailableException } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { API_ERROR_CODE } from '@xeprime/types';
-import { CurrentUser } from '../../common/decorators';
+import {
+  ACCOUNT_REALM_VALUES,
+  API_ERROR_CODE,
+} from '@xeprime/types';
+import { CurrentUser, Realms } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import { PresignImageDto, UploadPresignDto } from './dto/storage.dto';
 import { R2Service } from './r2.service';
@@ -19,6 +22,7 @@ import { R2Service } from './r2.service';
  */
 @ApiTags('uploads')
 @Controller('uploads')
+@Realms(...ACCOUNT_REALM_VALUES)
 export class AvatarUploadController {
   constructor(private readonly r2: R2Service) {}
 

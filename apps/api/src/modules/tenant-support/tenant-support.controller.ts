@@ -10,9 +10,13 @@ import {
   Req,
 } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { API_ERROR_CODE, PERMISSION } from '@xeprime/types';
+import {
+  ACCOUNT_REALM,
+  API_ERROR_CODE,
+  PERMISSION,
+} from '@xeprime/types';
 import { OkResultDto } from '../../common/dto/api-response.dto';
-import { CurrentUser, PlatformOnly, RequirePermissions } from '../../common/decorators';
+import { CurrentUser, PlatformOnly, Realms, RequirePermissions } from '../../common/decorators';
 import type { AuthenticatedUser, RequestContext } from '../../common/types/request-context';
 import { OpenSupportContextDto, SupportContextDto } from './dto/tenant-support.dto';
 import { TenantSupportService } from './tenant-support.service';
@@ -28,6 +32,7 @@ import { TenantSupportService } from './tenant-support.service';
 @Controller('platform/tenant-support/contexts')
 @PlatformOnly()
 @RequirePermissions(PERMISSION.PLATFORM_TENANT_SUPPORT_VIEW)
+@Realms(ACCOUNT_REALM.PLATFORM)
 export class TenantSupportController {
   constructor(private readonly support: TenantSupportService) {}
 

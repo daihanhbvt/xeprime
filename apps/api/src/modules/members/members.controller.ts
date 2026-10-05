@@ -1,15 +1,12 @@
 import { Body, Controller, Delete, Get, Param, Patch, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION, PLAN_FEATURE, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
-  CurrentTenant,
-  CurrentUser,
-  RequirePermissions,
-  RequiresFeature,
-  SubscriptionTrackOnly,
-  TenantScoped,
-  SupportAction,
-} from '../../common/decorators';
+  ACCOUNT_REALM,
+  PERMISSION,
+  PLAN_FEATURE,
+  SUPPORT_CAPABILITY,
+} from '@xeprime/types';
+import { CurrentTenant, CurrentUser, Realms, RequirePermissions, RequiresFeature, SubscriptionTrackOnly, SupportAction, TenantScoped } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import {
   MemberDto,
@@ -28,6 +25,7 @@ import { MembersService } from './members.service';
 @TenantScoped()
 @SubscriptionTrackOnly()
 @RequiresFeature(PLAN_FEATURE.MEMBERS)
+@Realms(ACCOUNT_REALM.PARTNER)
 export class MembersController {
   constructor(private readonly members: MembersService) {}
 

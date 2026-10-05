@@ -104,7 +104,7 @@ export function SellerTaxCompactForm() {
         description={tSeller('page.noPermission')}
         missingPermissions={[PERMISSION.SELLER_PROFILE_VIEW]}
         action={
-          <Link href={ROUTES.ACCOUNT.ROOT}>
+          <Link href={ROUTES.MANAGE.ROOT}>
             <Button type="primary">{tSeller('page.backHome')}</Button>
           </Link>
         }

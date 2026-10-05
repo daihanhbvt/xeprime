@@ -78,7 +78,7 @@ export function BookingInformation({ booking }: { booking: AdminBookingDetail })
           <dd>
             {/* Biển số trúng đúng một xe; tên xe thì nhiều gian hàng trùng nhau. */}
             <Link
-              href={`${ROUTES.MANAGE.ADMIN_VEHICLES}?q=${encodeURIComponent(
+              href={`${ROUTES.ADMIN.VEHICLES}?q=${encodeURIComponent(
                 booking.vehiclePlateNumber ?? booking.vehicleName,
               )}`}
             >

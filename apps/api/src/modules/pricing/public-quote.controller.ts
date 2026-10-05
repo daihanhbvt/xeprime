@@ -1,7 +1,7 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { Public } from '../../common/decorators';
+import { Public, Realms } from '../../common/decorators';
 import { DeliveryDistanceService } from './delivery-distance.service';
 import {
   DeliveryDistanceDto,
@@ -11,7 +11,10 @@ import {
 } from './dto/pricing.dto';
 import { PricingService } from './pricing.service';
 import { VehicleSettingsService } from '../vehicle-settings/vehicle-settings.service';
-import { SERVICE_TYPE } from '@xeprime/types';
+import {
+  ACCOUNT_REALM_VALUES,
+  SERVICE_TYPE,
+} from '@xeprime/types';
 
 /**
  * Báo giá công khai cho khách trước khi gửi yêu cầu thuê — CÙNG PricingService với luồng duyệt
@@ -21,6 +24,7 @@ import { SERVICE_TYPE } from '@xeprime/types';
  */
 @ApiTags('public-listings')
 @Controller('public/listings')
+@Realms(...ACCOUNT_REALM_VALUES)
 export class PublicQuoteController {
   constructor(
     private readonly pricing: PricingService,

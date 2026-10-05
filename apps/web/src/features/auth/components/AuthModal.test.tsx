@@ -175,15 +175,16 @@ describe('AuthModal — sau khi đăng ký', () => {
     expect(nav.push).not.toHaveBeenCalledWith('/manage/shop');
   });
 
-  it('"Trở thành chủ xe" mở landing đăng xe, KHÔNG tự tạo gian hàng', async () => {
+  it('"Trở thành chủ xe" mở trang ĐĂNG KÝ của site partner, KHÔNG tự tạo gian hàng', async () => {
     renderModal('auth=register');
     await waitFor(() => expect(visibleTitle('Tạo tài khoản XePrime')).toBeTruthy());
     await submitRegister();
     await waitFor(() => expect(screen.getByText('Tạo tài khoản thành công')).toBeTruthy());
 
     fireEvent.click(screen.getByRole('button', { name: /Trở thành chủ xe/ }));
-    // 09/09/2026: landing công khai trước; form tạo gian hàng chỉ mở khi người dùng bấm tiếp ở đó.
-    expect(nav.push).toHaveBeenCalledWith('/list-your-vehicle');
+    // Đăng ký chủ xe là một tài khoản ĐỐI TÁC riêng ở site partner (ADR 0051 · 0053) — chế độ
+    // `path` của vitest nên đích là đường dẫn tương đối của khu partner.
+    expect(nav.push).toHaveBeenCalledWith('/manage/register');
     expect(nav.push).not.toHaveBeenCalledWith('/manage/onboarding');
   });
 

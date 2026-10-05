@@ -343,7 +343,7 @@ function TermsForm({
             />
             {withDriver ? (
               <p className={styles.hint}>
-                <Link href={ROUTES.ACCOUNT.CONTRACTS_DOCUMENTS}>{t('contractTemplate')}</Link>
+                <Link href={ROUTES.MANAGE.CONTRACTS_DOCUMENTS}>{t('contractTemplate')}</Link>
               </p>
             ) : null}
           </fieldset>

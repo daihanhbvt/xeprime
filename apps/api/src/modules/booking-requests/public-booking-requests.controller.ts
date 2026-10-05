@@ -1,12 +1,14 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query, Req, Res } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ACCOUNT_REALM, ACCOUNT_REALM_VALUES } from '@xeprime/types';
 import type { Request, Response } from 'express';
-import { Public } from '../../common/decorators';
+import { Public, Realms } from '../../common/decorators';
 import { resolveOptionalUserId } from '../../common/optional-user';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
 import type { MobileDeviceDto } from '../auth/dto/mobile-auth.dto';
 import { NativeSessionService, type NativeDeviceInfo } from '../auth/native-session.service';
+import { RequestRealmService } from '../auth/request-realm.service';
 import { SessionService } from '../auth/session.service';
 import {
   BookingRequestReceiptDto,
@@ -35,12 +37,16 @@ import { BookingRequestsService } from './booking-requests.service';
  */
 @ApiTags('public-booking-requests')
 @Controller('public/booking-requests')
+// Đặt xe là việc của KHÁCH (ADR 0053): site partner/admin gọi tới là 403 `REALM_NOT_ALLOWED`. Hai route
+// XEM lịch trống ở dưới mở cho mọi site — chúng chỉ nói xe bận hay rảnh.
+@Realms(ACCOUNT_REALM.CUSTOMER)
 export class PublicBookingRequestsController {
   constructor(
     private readonly requests: BookingRequestsService,
     private readonly sessions: SessionService,
     private readonly nativeSessions: NativeSessionService,
     private readonly auth: AuthService,
+    private readonly realms: RequestRealmService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -53,11 +59,17 @@ export class PublicBookingRequestsController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<BookingRequestReceiptDto> {
+    // Chỉ phiên KHÁCH tính là người đặt. Phiên partner (app Partner gọi nhầm) đi tiếp như khách vãng
+    // lai: OTP tìm đúng tài khoản KHÁCH của số đó — và luật chặn tự đặt xe vẫn áp (ADR 0053 điều 7).
     const customerUserId = await resolveOptionalUserId(
       req,
-      this.sessions,
-      this.prisma,
-      this.nativeSessions,
+      {
+        sessions: this.sessions,
+        prisma: this.prisma,
+        realms: this.realms,
+        nativeSessions: this.nativeSessions,
+      },
+      ACCOUNT_REALM.CUSTOMER,
     );
     const { receipt, loginUserId } = await this.requests.submitPublic(dto, customerUserId);
     if (!loginUserId) return receipt;
@@ -90,11 +102,12 @@ export class PublicBookingRequestsController {
     }
 
     const { token } = this.sessions.issue(loginUserId);
-    this.sessions.attach(res, token);
+    this.sessions.attach(res, token, ACCOUNT_REALM.CUSTOMER);
     return receipt;
   }
 
   @Public()
+  @Realms(...ACCOUNT_REALM_VALUES)
   @Post('check-availability')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Khách kiểm tra nhanh khung giờ của một xe có trống không (preview)' })
@@ -110,6 +123,7 @@ export class PublicBookingRequestsController {
    * và nó không phải bí mật: chỉ nói xe bận hay rảnh, không nói bận vì đơn của ai.
    */
   @Public()
+  @Realms(...ACCOUNT_REALM_VALUES)
   @Get('busy-days')
   @ApiOperation({ summary: 'Ngày/giờ xe đã bận trong một cửa sổ, để tô lịch chọn thời gian thuê' })
   @ApiOkResponse({ type: VehicleBusyDaysDto })

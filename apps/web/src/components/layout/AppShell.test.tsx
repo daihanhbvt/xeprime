@@ -129,28 +129,45 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('AppShell — user không có gian hàng', () => {
-  it('KHÔNG tự hiện form tạo gian hàng, mà hiện màn lựa chọn', () => {
+describe('AppShell — tài khoản đối tác chưa có gian hàng', () => {
+  /*
+   * B1 dòng 1: chưa có gian hàng → `/register` chọn tuyến. KHÔNG tự hiện form tạo gian hàng (form
+   * chỉ sống ở `/onboarding` SAU khi chọn tuyến), và không dựng khung với tenant null.
+   */
+  it('đưa về trang chọn tuyến, không dựng khung, không form tạo gian hàng', async () => {
     state.user = CUSTOMER;
     renderShell();
 
-    expect(screen.getByText('Bạn chưa có gian hàng')).toBeTruthy();
-    expect(screen.getByText('Đăng ký trở thành chủ xe')).toBeTruthy();
-    expect(screen.getByText('Quay lại tìm xe')).toBeTruthy();
-    // Form tạo gian hàng chỉ sống ở /manage/onboarding.
-    expect(screen.queryByText('Tạo gian hàng')).toBeNull();
-    expect(screen.queryByText('Tên gian hàng')).toBeNull();
-    // Và không render dashboard gian hàng với tenant null.
     expect(screen.queryByTestId('sidebar')).toBeNull();
+    expect(screen.queryByTestId('page')).toBeNull();
+    expect(screen.queryByText('Tên gian hàng')).toBeNull();
+    await waitFor(() => expect(nav.replace).toHaveBeenCalledWith('/manage/register'));
   });
 
-  it('nhân sự nền tảng không có gian hàng vẫn vào được portal', () => {
+  /*
+   * Bước đầu của tuyến hoa hồng: wizard đăng xe nhanh mở được khi CHƯA có gian hàng, và tự dựng khung
+   * tập trung của nó — không sidebar, để sidebar không bật lên giữa chừng khi gian hàng vừa mở.
+   */
+  it('wizard đăng xe nhanh: vào được khi chưa có gian hàng, không dựng sidebar', () => {
+    state.user = CUSTOMER;
+    nav.pathname = '/manage/vehicles/register';
+    renderShell();
+
+    expect(screen.getByTestId('page')).toBeTruthy();
+    expect(screen.queryByTestId('sidebar')).toBeNull();
+    expect(nav.replace).not.toHaveBeenCalled();
+  });
+
+  /*
+   * Site partner không có nhánh nhân sự nền tảng (ADR 0053): `platformRole` không mở trang nào ở
+   * đây — khu quản trị là site khác với khung riêng (`AdminShell`).
+   */
+  it('platformRole không phải vé vào site partner', async () => {
     state.user = ADMIN;
     renderShell();
 
-    expect(screen.queryByText('Bạn chưa có gian hàng')).toBeNull();
-    expect(screen.getByTestId('sidebar')).toBeTruthy();
-    expect(screen.getByTestId('page')).toBeTruthy();
+    expect(screen.queryByTestId('sidebar')).toBeNull();
+    await waitFor(() => expect(nav.replace).toHaveBeenCalledWith('/manage/register'));
   });
 
   it('có gian hàng → khung portal đầy đủ', () => {
@@ -459,6 +476,12 @@ describe('AppShell — không bọc nhầm khu công khai', () => {
     expect(wrapsAppShell(sourceOf('../../app/(manage)/layout.tsx'))).toBe(true);
   });
 
+  it('site quản trị có khung RIÊNG (AdminShell), không dùng AppShell của site partner', () => {
+    const source = sourceOf('../../app/(admin)/layout.tsx');
+    expect(wrapsAppShell(source)).toBe(false);
+    expect(source).toContain('<AdminShell');
+  });
+
   it('marketplace công khai KHÔNG bọc AppShell (cần SEO, có header/footer riêng)', () => {
     const source = sourceOf('../../app/(public)/layout.tsx');
 
@@ -546,23 +569,34 @@ describe('AppShell — cổng tuyến', () => {
     platformRole: null,
   };
 
-  it('chủ xe tuyến hoa hồng KHÔNG render khung portal, mà bị đưa về khu tài khoản', async () => {
+  /* ADR 0051 điều 3: Owner Lite ở CÙNG site partner — một URL, nội dung và menu theo tuyến. */
+  it('chủ xe tuyến hoa hồng VÀO khung ở trang chủ (menu Owner Lite)', () => {
     state.user = COMMISSION_OWNER;
     renderShell();
 
-    expect(screen.queryByTestId('sidebar')).toBeNull();
-    expect(screen.queryByTestId('page')).toBeNull();
-    await waitFor(() => expect(nav.replace).toHaveBeenCalledWith('/account/vehicles'));
+    expect(screen.getByTestId('sidebar')).toBeTruthy();
+    expect(screen.getByTestId('page')).toBeTruthy();
+    expect(nav.replace).not.toHaveBeenCalled();
   });
 
-  it('đang đăng ký → về màn tiến trình, không phải danh sách xe rỗng', async () => {
+  it('trang chỉ của tuyến gói gõ thẳng ở tuyến hoa hồng → trang chủ Owner Lite', async () => {
+    state.user = COMMISSION_OWNER;
+    nav.pathname = '/manage/customers';
+    renderShell();
+
+    expect(screen.queryByTestId('page')).toBeNull();
+    await waitFor(() => expect(nav.replace).toHaveBeenCalledWith('/manage'));
+  });
+
+  it('chủ xe đang đăng ký vẫn ở trang chủ — trang chủ tự hiện tiến trình đăng ký', () => {
     state.user = {
       ...COMMISSION_OWNER,
       tenant: { ...COMMISSION_OWNER.tenant, status: 'draft', publicVehicleCount: 0 },
     };
     renderShell();
 
-    await waitFor(() => expect(nav.replace).toHaveBeenCalledWith('/account/registration'));
+    expect(screen.getByTestId('page')).toBeTruthy();
+    expect(nav.replace).not.toHaveBeenCalled();
   });
 
   it('gian hàng có gói vẫn vào bình thường', () => {
@@ -573,16 +607,23 @@ describe('AppShell — cổng tuyến', () => {
     expect(nav.replace).not.toHaveBeenCalled();
   });
 
-  /**
-   * Một người vừa là chủ xe hoa hồng vừa là nhân sự nền tảng: khu quản trị vẫn phải mở. Chặn họ
-   * khỏi `/manage/admin` vì chiếc xe cá nhân của họ là cắt mất công cụ làm việc thật.
-   */
-  it('nhân sự nền tảng đi lối riêng — khu quản trị không bị cổng tuyến chặn', () => {
-    state.user = { ...COMMISSION_OWNER, platformRole: 'platform_admin' };
-    nav.pathname = '/manage/admin';
-    renderShell();
+  /* B1 dòng 2: gian hàng gói chưa thanh toán chỉ vào được `/onboarding`, và màn đó không có khung. */
+  it('gói chưa thanh toán: mọi trang → /onboarding; /onboarding không có khung', async () => {
+    const pending = {
+      ...OWNER,
+      tenant: { ...OWNER.tenant, billingMode: null, onboardingState: 'package_pending' },
+    };
+    state.user = pending;
+    nav.pathname = '/manage/vehicles';
+    const { unmount } = renderShell();
+    await waitFor(() => expect(nav.replace).toHaveBeenCalledWith('/manage/onboarding'));
+    unmount();
 
-    expect(screen.getByTestId('sidebar')).toBeTruthy();
+    nav.replace.mockReset();
+    nav.pathname = '/manage/onboarding';
+    renderShell();
+    expect(screen.getByTestId('page')).toBeTruthy();
+    expect(screen.queryByTestId('sidebar')).toBeNull();
     expect(nav.replace).not.toHaveBeenCalled();
   });
 });

@@ -76,7 +76,7 @@ function ReviewNote() {
       <InfoCircleOutlined className={styles.bannerIcon} />
       <span className={styles.stack}>{t('note')}</span>
       {has(PERMISSION.PLATFORM_SELLER_VERIFY) ? (
-        <Link href={ROUTES.MANAGE.ADMIN_SELLERS}>
+        <Link href={ROUTES.ADMIN.SELLERS}>
           <Button size="small">{t('goToSellers')}</Button>
         </Link>
       ) : null}

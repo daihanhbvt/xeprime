@@ -1,5 +1,11 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
-import { API_ERROR_CODE, BOOKING_STATUS, TENANT_STATUS, VEHICLE_TYPE } from '@xeprime/types';
+import {
+  ACCOUNT_REALM,
+  API_ERROR_CODE,
+  BOOKING_STATUS,
+  TENANT_STATUS,
+  VEHICLE_TYPE,
+} from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { PlatformBookingsService } from '../src/modules/platform-admin/platform-bookings.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
@@ -41,7 +47,12 @@ beforeAll(async () => {
   tag = tenantId.slice(-6);
 
   await prisma.user.create({
-    data: { id: adminId, displayName: 'Admin', email: `pb-${adminId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: adminId,
+      displayName: 'Admin',
+      email: `pb-${adminId}@xeprime.test`,
+    },
   });
   await prisma.tenant.create({
     data: {
@@ -88,8 +99,24 @@ beforeAll(async () => {
       },
     });
 
-  await mkBooking(paidBooking, `DP-${tag}`, BOOKING_STATUS.COMPLETED, '2000000', '2000000', `An-${tag}`, 0);
-  await mkBooking(debtBooking, `DN-${tag}`, BOOKING_STATUS.ACTIVE, '3000000', '1000000', `Binh-${tag}`, 5);
+  await mkBooking(
+    paidBooking,
+    `DP-${tag}`,
+    BOOKING_STATUS.COMPLETED,
+    '2000000',
+    '2000000',
+    `An-${tag}`,
+    0,
+  );
+  await mkBooking(
+    debtBooking,
+    `DN-${tag}`,
+    BOOKING_STATUS.ACTIVE,
+    '3000000',
+    '1000000',
+    `Binh-${tag}`,
+    5,
+  );
 });
 
 afterAll(async () => {
@@ -186,9 +213,11 @@ describe('Platform bookings (Phase 7)', () => {
       where: { action: 'booking.contact_reveal', targetId: debtBooking },
       orderBy: { createdAt: 'desc' },
     });
-    expect(await prisma.auditLog.count({
-      where: { action: 'booking.contact_reveal', targetId: debtBooking },
-    })).toBe(before + 1);
+    expect(
+      await prisma.auditLog.count({
+        where: { action: 'booking.contact_reveal', targetId: debtBooking },
+      }),
+    ).toBe(before + 1);
     expect(log?.actorScope).toBe('platform');
     expect(log?.actorUserId).toBe(adminId);
     // Log KHÔNG được chép lại chính giá trị PII vừa xem.

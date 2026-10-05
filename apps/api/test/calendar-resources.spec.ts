@@ -1,5 +1,11 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
-import { API_ERROR_CODE, OCCUPANCY_SOURCE_TYPE, TENANT_STATUS, VEHICLE_TYPE } from '@xeprime/types';
+import {
+  ACCOUNT_REALM,
+  API_ERROR_CODE,
+  OCCUPANCY_SOURCE_TYPE,
+  TENANT_STATUS,
+  VEHICLE_TYPE,
+} from '@xeprime/types';
 import 'reflect-metadata';
 import { CalendarController } from '../src/modules/calendar/calendar.controller';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
@@ -47,7 +53,12 @@ beforeAll(async () => {
   tenantId = newId();
   otherTenantId = newId();
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Chủ lịch', email: `cal-${ownerId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Chủ lịch',
+      email: `cal-${ownerId}@xeprime.test`,
+    },
   });
   for (const id of [tenantId, otherTenantId]) {
     await prisma.tenant.create({

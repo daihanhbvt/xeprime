@@ -82,7 +82,7 @@ export default function OwnerOnboardingPage() {
    * Tuyến GÓI thì bỏ qua `next` hoàn toàn: sau bước 1 của họ luôn là bước 2 ngay trên trang này,
    * và tôn trọng một `?next=` ở đó sẽ đưa người vừa tạo gian hàng đi khỏi màn thanh toán.
    */
-  const commissionNext = safeNextPath(params.get('next'), ROUTES.ACCOUNT.REGISTRATION);
+  const commissionNext = safeNextPath(params.get('next'), ROUTES.MANAGE.REGISTRATION);
   /** Đến từ luồng đăng xe → dùng chữ dành cho chủ xe cá nhân, không phải chữ "mở gian hàng". */
   const personalWording = commissionNext.startsWith(ROUTES.LIST_YOUR_VEHICLE.ROOT);
 
@@ -100,7 +100,7 @@ export default function OwnerOnboardingPage() {
      * onboarding đã xong việc rồi bị đẩy ra lần nữa.
      */
     router.replace(
-      packageReady ? shopWelcomePath() : (resolveWorkspaceHref(user) ?? ROUTES.ACCOUNT.ROOT),
+      packageReady ? shopWelcomePath() : (resolveWorkspaceHref(user) ?? ROUTES.MANAGE.REGISTER),
     );
   }, [hasTenant, packagePending, packageReady, router, user]);
 

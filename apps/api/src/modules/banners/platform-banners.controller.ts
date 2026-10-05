@@ -17,8 +17,12 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { API_ERROR_CODE, PERMISSION } from '@xeprime/types';
-import { CurrentUser, PlatformOnly, RequirePermissions } from '../../common/decorators';
+import {
+  ACCOUNT_REALM,
+  API_ERROR_CODE,
+  PERMISSION,
+} from '@xeprime/types';
+import { CurrentUser, PlatformOnly, Realms, RequirePermissions } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import { PresignImageDto, UploadPresignDto } from '../storage/dto/storage.dto';
 import { R2Service } from '../storage/r2.service';
@@ -41,6 +45,7 @@ import {
 @Controller('platform/banners')
 @PlatformOnly()
 @RequirePermissions(PERMISSION.PLATFORM_BANNER_MANAGE)
+@Realms(ACCOUNT_REALM.PLATFORM)
 export class PlatformBannersController {
   constructor(
     private readonly banners: BannersService,

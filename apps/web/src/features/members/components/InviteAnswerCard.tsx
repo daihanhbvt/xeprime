@@ -5,8 +5,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { INVITE_STATUS } from '@xeprime/types';
-import { ROUTES } from '@/constants/routes';
-import { useAuthModal, useNextFromCurrentPath } from '@/features/auth/components/AuthModalProvider';
+import { ROUTES, invitePath } from '@/constants/routes';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
@@ -20,8 +19,9 @@ import styles from './InviteAnswerCard.module.css';
  * Ba trạng thái người dùng có thể rơi vào, và cả ba đều phải có lối đi tiếp:
  *
  *  1. **Chưa đăng nhập** — xem được nội dung lời mời (ai mời, vai gì, hạn bao giờ) nhưng chưa
- *     trả lời được. Nút mở thẳng modal đăng nhập với `next` trỏ về chính trang này, nên đăng
- *     nhập xong họ quay lại đúng chỗ thay vì rơi về trang chủ và mất luôn lời mời.
+ *     trả lời được. Trang sống ở SITE PARTNER (ADR 0051) và lời mời dành cho tài khoản ĐỐI TÁC
+ *     (ADR 0053), nên hai nút dẫn tới đăng nhập / tạo tài khoản đối tác với `next` trỏ về chính
+ *     lời mời — xong là quay lại đúng chỗ thay vì mất luôn lời mời.
  *  2. **Đăng nhập nhầm tài khoản** — server trả `INVITE_EMAIL_MISMATCH`; câu lỗi nói rõ phải
  *     dùng hộp thư nào (đã che bớt).
  *  3. **Lời mời đã đóng** (đã trả lời / thu hồi / hết hạn) — không hiện nút nào, chỉ nói thật
@@ -34,8 +34,7 @@ export function InviteAnswerCard({ token }: { token: string }) {
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const errorMessage = useErrorMessage();
-  const auth = useAuthModal();
-  const nextFromHere = useNextFromCurrentPath();
+  const nextParam = `next=${encodeURIComponent(invitePath(token))}`;
 
   const { data: me, isLoading: userLoading } = useCurrentUser();
   const preview = useInvitePreview(token);
@@ -59,7 +58,7 @@ export function InviteAnswerCard({ token }: { token: string }) {
         title={t('loadError')}
         subTitle={preview.error ? errorMessage(preview.error) : undefined}
         extra={
-          <Link href={ROUTES.HOME}>
+          <Link href={ROUTES.MANAGE.ROOT}>
             <Button>{t('goHome')}</Button>
           </Link>
         }
@@ -80,7 +79,7 @@ export function InviteAnswerCard({ token }: { token: string }) {
               <Button type="primary">{t('goManage')}</Button>
             </Link>
           ) : (
-            <Link href={ROUTES.HOME}>
+            <Link href={ROUTES.MANAGE.ROOT}>
               <Button>{t('goHome')}</Button>
             </Link>
           )
@@ -96,7 +95,7 @@ export function InviteAnswerCard({ token }: { token: string }) {
         title={t('closedTitle')}
         subTitle={t('closedBody')}
         extra={
-          <Link href={ROUTES.HOME}>
+          <Link href={ROUTES.MANAGE.ROOT}>
             <Button>{t('goHome')}</Button>
           </Link>
         }
@@ -171,11 +170,16 @@ export function InviteAnswerCard({ token }: { token: string }) {
         </div>
       ) : (
         <>
-          <Alert type="info" showIcon title={t('signInPrompt')} className={styles.prompt} />
+          <Alert type="info" showIcon title={t('signInPartnerPrompt')} className={styles.prompt} />
           <div className={styles.actions}>
-            <Button type="primary" size="large" onClick={() => auth.open({ next: nextFromHere() })}>
-              {t('signIn')}
-            </Button>
+            <Link href={`${ROUTES.MANAGE.LOGIN}?${nextParam}`}>
+              <Button type="primary" size="large">
+                {t('signIn')}
+              </Button>
+            </Link>
+            <Link href={`${ROUTES.MANAGE.REGISTER}?${nextParam}`}>
+              <Button size="large">{t('createPartnerAccount')}</Button>
+            </Link>
           </div>
         </>
       )}

@@ -10,16 +10,12 @@ import {
   Post,
 } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
-  BRANCH_SCOPED_RESOURCE,
-  BranchScoped,
-  CurrentTenant,
-  CurrentUser,
-  RequirePermissions,
-  SupportAction,
-  TenantScoped,
-} from '../../../common/decorators';
+  ACCOUNT_REALM,
+  PERMISSION,
+  SUPPORT_CAPABILITY,
+} from '@xeprime/types';
+import { BRANCH_SCOPED_RESOURCE, BranchScoped, CurrentTenant, CurrentUser, Realms, RequirePermissions, SupportAction, TenantScoped } from '../../../common/decorators';
 import { IdResultDto } from '../../../common/dto/api-response.dto';
 import type { AuthenticatedUser, TenantContext } from '../../../common/types/request-context';
 import { SourceContractDownloadDto, SourceContractPresignDto } from '../dto/vehicle-source.dto';
@@ -53,6 +49,7 @@ import {
 @BranchScoped(BRANCH_SCOPED_RESOURCE.VEHICLE)
 @Controller('vehicles/:id/documents')
 @TenantScoped()
+@Realms(ACCOUNT_REALM.PARTNER)
 export class VehicleDocumentsController {
   constructor(private readonly documents: VehicleDocumentsService) {}
 

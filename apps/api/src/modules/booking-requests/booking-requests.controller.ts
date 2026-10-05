@@ -1,15 +1,11 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
-  BRANCH_SCOPED_RESOURCE,
-  BranchScoped,
-  CurrentTenant,
-  CurrentUser,
-  RequirePermissions,
-  TenantScoped,
-  SupportAction,
-} from '../../common/decorators';
+  ACCOUNT_REALM,
+  PERMISSION,
+  SUPPORT_CAPABILITY,
+} from '@xeprime/types';
+import { BRANCH_SCOPED_RESOURCE, BranchScoped, CurrentTenant, CurrentUser, Realms, RequirePermissions, SupportAction, TenantScoped } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { ChatService } from '../chat/chat.service';
 import { ConversationSummaryDto } from '../chat/dto/chat.dto';
@@ -30,6 +26,7 @@ import { BookingRequestsService } from './booking-requests.service';
 @ApiTags('booking-requests')
 @Controller('booking-requests')
 @TenantScoped()
+@Realms(ACCOUNT_REALM.PARTNER)
 export class BookingRequestsController {
   constructor(
     private readonly requests: BookingRequestsService,

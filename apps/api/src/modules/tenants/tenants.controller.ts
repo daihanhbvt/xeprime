@@ -1,13 +1,11 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
-  CurrentTenant,
-  CurrentUser,
-  RequirePermissions,
-  TenantScoped,
-  SupportAction,
-} from '../../common/decorators';
+  ACCOUNT_REALM,
+  PERMISSION,
+  SUPPORT_CAPABILITY,
+} from '@xeprime/types';
+import { CurrentTenant, CurrentUser, Realms, RequirePermissions, SupportAction, TenantScoped } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CurrentTenantDto } from './dto/current-tenant.dto';
@@ -20,6 +18,8 @@ import { TenantsService } from './tenants.service';
 
 @ApiTags('tenants')
 @Controller('tenants')
+// Mở/sửa gian hàng là việc của tài khoản partner (ADR 0053 điều 2 · ADR 0040).
+@Realms(ACCOUNT_REALM.PARTNER)
 export class TenantsController {
   constructor(
     private readonly prisma: PrismaService,

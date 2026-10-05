@@ -1,5 +1,6 @@
 import type { Request } from 'express';
 import type {
+  AccountRealm,
   BillingMode,
   BillingPhase,
   FeatureState,
@@ -21,11 +22,18 @@ import type {
  */
 export interface AuthenticatedUser {
   readonly id: string;
+  /**
+   * Không gian tài khoản — ADR 0053. Luôn BẰNG realm của request: `AuthGuard` từ chối phiên của
+   * realm này khi request thuộc realm kia, nên mọi code sau guard đọc được giá trị này như sự thật.
+   */
+  readonly realm: AccountRealm;
   readonly displayName: string;
   readonly email: string | null;
   readonly phoneVerified: boolean;
   /** ID phiên, để revoke được từng thiết bị (ADR 0002). */
   readonly sessionId: string;
+  /** `cookie` = web (ADR 0002), `bearer` = app native (ADR 0017). */
+  readonly transport: 'cookie' | 'bearer';
 }
 
 export interface TenantContext {
@@ -114,6 +122,12 @@ export interface PlatformContext {
 }
 
 export interface RequestContext extends Request {
+  /**
+   * Realm của REQUEST — ADR 0053 điều 4. Web: header proxy đã qua khoá (`RequestRealmService`).
+   * Native: app của phiên. Có mặt cả ở endpoint `@Public()` khi xác định được (đăng nhập/đăng ký
+   * công khai cần nó để biết tài khoản thuộc realm nào); `undefined` khi không xác định được.
+   */
+  realm?: AccountRealm;
   user?: AuthenticatedUser;
   tenant?: TenantContext;
   platform?: PlatformContext;

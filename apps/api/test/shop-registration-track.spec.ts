@@ -1,6 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   APPROVAL_TARGET_TYPE,
   BILLING_MODE,
@@ -100,6 +101,8 @@ async function mkUser(tag: string): Promise<string> {
   await prisma.user.create({
     data: {
       id,
+      // Mở gian hàng là việc của tài khoản ĐỐI TÁC ở site partner (ADR 0053) — cả hai tuyến.
+      realm: ACCOUNT_REALM.PARTNER,
       displayName: `Chủ ${tag}`,
       email: `${tag}-${RUN}@xeprime.test`,
       // `users.phone` là UNIQUE — mốc thời gian + bộ đếm cho một số khác nhau mỗi lần chạy.
@@ -193,7 +196,7 @@ beforeAll(async () => {
       status: PLAN_STATUS.ACTIVE,
       limitsJson: {
         maxVehicles: null,
-                maxMembers: null,
+        maxMembers: null,
         maxBranches: null,
         termPrices: [{ months: 3, price: '300000' }],
         graceDays: 7,
@@ -433,7 +436,7 @@ describe('2. Tuyến GÓI — ý định lưu bền vững, KHÔNG thành Owner 
 
     const invoice = await billing.purchase(tenantId, packageOwnerId, {
       planId: packagePlanId,
-      termMonths: 3
+      termMonths: 3,
     });
     expect(invoice.code).toMatch(/^XPG/);
     expect(invoice.status).toBe(SUBSCRIPTION_INVOICE_STATUS.ISSUED);

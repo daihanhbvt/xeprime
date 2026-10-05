@@ -1,19 +1,36 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
-import { API_ERROR_CODE, MEMBERSHIP_STATUS, PLATFORM_ROLE } from '@xeprime/types';
+import {
+  ACCOUNT_REALM,
+  API_ERROR_CODE,
+  MEMBERSHIP_STATUS,
+  PLATFORM_ROLE,
+  type AccountRealm,
+} from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
+import type { AuthService } from '../src/modules/auth/auth.service';
 import { PlatformStaffService } from '../src/modules/platform-admin/platform-staff.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 
 /**
  * Phase 7 — Nhân sự nền tảng, chạy trên PostgreSQL THẬT. Kiểm chứng: add theo email (+audit),
- * email lạ → NOT_FOUND, trùng → CONFLICT, đổi vai trò (+audit before/after), tự thao tác mình
+ * email chưa có tài khoản quản trị → TẠO tài khoản realm platform riêng + gửi link đặt mật khẩu
+ * (ADR 0053 điều 3 — kể cả khi email đó đã có tài khoản khách/đối tác), trùng → CONFLICT, đổi vai
+ * trò (+audit before/after), tự thao tác mình
  * → VALIDATION_FAILED, remove → khỏi danh sách, re-add kích hoạt lại, chặn Super Admin cuối
  * cùng (per-fixture: các user của suite này, DB chung có thể có admin seed khác — test last-admin
  * dùng đếm THỰC nên chỉ assert khi suite kiểm soát được; xem từng case).
  */
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
-const service = new PlatformStaffService(asService, new AuditService(asService));
+/** `AuthService` giả: chỉ ghi lại link đặt mật khẩu đã "gửi" — thư thật không phải thứ đang kiểm. */
+const resetRequests: { email: string; realm: AccountRealm }[] = [];
+const auth = {
+  requestPasswordReset: (email: string, realm: AccountRealm) => {
+    resetRequests.push({ email, realm });
+    return Promise.resolve();
+  },
+} as unknown as AuthService;
+const service = new PlatformStaffService(asService, new AuditService(asService), auth);
 
 const RUN = newId().slice(-8).toLowerCase();
 
@@ -23,13 +40,23 @@ let staffAId: string;
 let staffBId: string;
 const userIds: string[] = [];
 
-async function mkUser(tag: string): Promise<string> {
+async function mkUser(tag: string, realm: AccountRealm = ACCOUNT_REALM.PLATFORM): Promise<string> {
   const id = newId();
   await prisma.user.create({
-    data: { id, displayName: `Staff ${tag}`, email: `staff-${tag}-${RUN}@xeprime.test` },
+    data: { id, realm, displayName: `Staff ${tag}`, email: `staff-${tag}-${RUN}@xeprime.test` },
   });
   userIds.push(id);
   return id;
+}
+
+/** Tài khoản do chính service tạo — dọn theo email vì id không biết trước. */
+async function adoptCreated(email: string): Promise<string> {
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { realm_email: { realm: ACCOUNT_REALM.PLATFORM, email } },
+    select: { id: true },
+  });
+  userIds.push(user.id);
+  return user.id;
 }
 
 const emailOf = (tag: string) => `staff-${tag}-${RUN}@xeprime.test`;
@@ -73,9 +100,10 @@ const maybe = (name: string, fn: () => Promise<void>) =>
   });
 
 describe('Platform staff (Phase 7)', () => {
-  maybe('add theo email → active + audit; email lạ → NOT_FOUND; trùng → CONFLICT', async () => {
+  maybe('add theo email tài khoản quản trị có sẵn → active + audit; trùng → CONFLICT', async () => {
     const added = await service.add(actorId, {
       email: emailOf('a'),
+      displayName: 'Staff a',
       roleKey: PLATFORM_ROLE.REVIEWER,
     });
     expect(added.userId).toBe(staffAId);
@@ -86,16 +114,63 @@ describe('Platform staff (Phase 7)', () => {
       where: { targetId: staffAId, action: 'platform_staff.add' },
     });
     expect(audit?.actorScope).toBe('platform');
-    expect(audit?.afterJson).toEqual({ roleKey: PLATFORM_ROLE.REVIEWER });
+    expect(audit?.afterJson).toEqual({ roleKey: PLATFORM_ROLE.REVIEWER, accountCreated: false });
+    // Tài khoản đã có mật khẩu của nó — không gửi link đặt mật khẩu.
+    expect(resetRequests.map((r) => r.email)).not.toContain(emailOf('a'));
 
     await expect(
-      service.add(actorId, { email: `khong-ton-tai-${RUN}@xeprime.test`, roleKey: PLATFORM_ROLE.SUPPORT }),
-    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.NOT_FOUND } });
-
-    await expect(
-      service.add(actorId, { email: emailOf('a'), roleKey: PLATFORM_ROLE.SUPPORT }),
+      service.add(actorId, {
+        email: emailOf('a'),
+        displayName: 'Staff a',
+        roleKey: PLATFORM_ROLE.SUPPORT,
+      }),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.CONFLICT } });
   });
+
+  maybe(
+    'email chưa có tài khoản quản trị → TẠO tài khoản platform + gửi link đặt mật khẩu',
+    async () => {
+      const email = `moi-${RUN}@xeprime.test`;
+      const added = await service.add(actorId, {
+        email,
+        displayName: 'Nhân sự mới',
+        roleKey: PLATFORM_ROLE.SUPPORT,
+      });
+      const createdId = await adoptCreated(email);
+      expect(added.userId).toBe(createdId);
+      expect(added.status).toBe(MEMBERSHIP_STATUS.ACTIVE);
+
+      const user = await prisma.user.findUniqueOrThrow({ where: { id: createdId } });
+      expect(user.realm).toBe(ACCOUNT_REALM.PLATFORM);
+      expect(user.displayName).toBe('Nhân sự mới');
+      // Không có mật khẩu do người thêm đặt hộ — người được thêm tự đặt qua link.
+      expect(user.passwordHash).toBeNull();
+      expect(resetRequests).toContainEqual({ email, realm: ACCOUNT_REALM.PLATFORM });
+
+      const audit = await prisma.auditLog.findFirst({
+        where: { targetId: createdId, action: 'platform_staff.add' },
+      });
+      expect(audit?.afterJson).toEqual({ roleKey: PLATFORM_ROLE.SUPPORT, accountCreated: true });
+    },
+  );
+
+  maybe(
+    'email đã có tài khoản KHÁCH/ĐỐI TÁC → vẫn tạo tài khoản quản trị RIÊNG (ADR 0053)',
+    async () => {
+      const customerId = await mkUser('khach', ACCOUNT_REALM.CUSTOMER);
+      const added = await service.add(actorId, {
+        email: emailOf('khach'),
+        displayName: 'Khách kiêm nhân sự',
+        // Vai khác REVIEWER: case "list" bên dưới lọc REVIEWER và chỉ chờ đúng staffA.
+        roleKey: PLATFORM_ROLE.FINANCE_ADMIN,
+      });
+      const platformId = await adoptCreated(emailOf('khach'));
+      expect(added.userId).toBe(platformId);
+      expect(platformId).not.toBe(customerId);
+      // Tài khoản khách KHÔNG được nhận vai nền tảng.
+      expect(await prisma.platformMembership.count({ where: { userId: customerId } })).toBe(0);
+    },
+  );
 
   maybe('list: thấy nhân sự vừa thêm, lọc theo vai trò, tìm theo email', async () => {
     const all = await service.list({ q: `-${RUN}` });
@@ -125,37 +200,49 @@ describe('Platform staff (Phase 7)', () => {
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
   });
 
-  maybe('remove → biến khỏi list + audit; tự gỡ mình → reject; re-add kích hoạt lại row cũ', async () => {
-    await expect(service.remove(actorId, actorId)).rejects.toMatchObject({
-      response: { code: API_ERROR_CODE.VALIDATION_FAILED },
-    });
+  maybe(
+    'remove → biến khỏi list + audit; tự gỡ mình → reject; re-add kích hoạt lại row cũ',
+    async () => {
+      await expect(service.remove(actorId, actorId)).rejects.toMatchObject({
+        response: { code: API_ERROR_CODE.VALIDATION_FAILED },
+      });
 
-    const res = await service.remove(actorId, staffAId);
-    expect(res.userId).toBe(staffAId);
-    const after = await service.list({ q: `-${RUN}` });
-    expect(after.data.map((s) => s.userId)).not.toContain(staffAId);
-    const audit = await prisma.auditLog.findFirst({
-      where: { targetId: staffAId, action: 'platform_staff.remove' },
-    });
-    expect(audit?.beforeJson).toEqual({ roleKey: PLATFORM_ROLE.SUPPORT });
+      const res = await service.remove(actorId, staffAId);
+      expect(res.userId).toBe(staffAId);
+      const after = await service.list({ q: `-${RUN}` });
+      expect(after.data.map((s) => s.userId)).not.toContain(staffAId);
+      const audit = await prisma.auditLog.findFirst({
+        where: { targetId: staffAId, action: 'platform_staff.remove' },
+      });
+      expect(audit?.beforeJson).toEqual({ roleKey: PLATFORM_ROLE.SUPPORT });
 
-    // Re-add cùng vai trò cũ → kích hoạt lại row (không thêm row mới cho [user, role] đó).
-    const readded = await service.add(actorId, {
-      email: emailOf('a'),
-      roleKey: PLATFORM_ROLE.SUPPORT,
-    });
-    expect(readded.status).toBe(MEMBERSHIP_STATUS.ACTIVE);
-    const rows = await prisma.platformMembership.count({
-      where: { userId: staffAId, roleKey: PLATFORM_ROLE.SUPPORT },
-    });
-    expect(rows).toBe(1);
-  });
+      // Re-add cùng vai trò cũ → kích hoạt lại row (không thêm row mới cho [user, role] đó).
+      const readded = await service.add(actorId, {
+        email: emailOf('a'),
+        displayName: 'Staff a',
+        roleKey: PLATFORM_ROLE.SUPPORT,
+      });
+      expect(readded.status).toBe(MEMBERSHIP_STATUS.ACTIVE);
+      const rows = await prisma.platformMembership.count({
+        where: { userId: staffAId, roleKey: PLATFORM_ROLE.SUPPORT },
+      });
+      expect(rows).toBe(1);
+    },
+  );
 
   maybe('đổi vai trò sang role có row removed cũ → dọn row rác, không nổ unique', async () => {
     // staffB: add reviewer → remove → add support → đổi về reviewer (row removed reviewer tồn tại).
-    await service.add(actorId, { email: emailOf('b'), roleKey: PLATFORM_ROLE.REVIEWER });
+    await service.add(actorId, {
+      email: emailOf('b'),
+      displayName: 'Staff b',
+      roleKey: PLATFORM_ROLE.REVIEWER,
+    });
     await service.remove(actorId, staffBId);
-    await service.add(actorId, { email: emailOf('b'), roleKey: PLATFORM_ROLE.SUPPORT });
+    await service.add(actorId, {
+      email: emailOf('b'),
+      displayName: 'Staff b',
+      roleKey: PLATFORM_ROLE.SUPPORT,
+    });
     const updated = await service.updateRole(actorId, staffBId, {
       roleKey: PLATFORM_ROLE.REVIEWER,
     });

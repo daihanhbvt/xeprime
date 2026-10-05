@@ -1,6 +1,7 @@
 import type { ConfigService } from '@nestjs/config';
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   MEMBERSHIP_STATUS,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
@@ -70,9 +71,24 @@ beforeAll(async () => {
 
   await prisma.user.createMany({
     data: [
-      { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
-      { id: staffId, displayName: 'Nhân viên', email: `stf-${staffId}@xeprime.test` },
-      { id: customerId, displayName: 'Khách', email: `cus-${customerId}@xeprime.test` },
+      {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: ownerId,
+        displayName: 'Chủ shop',
+        email: `own-${ownerId}@xeprime.test`,
+      },
+      {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: staffId,
+        displayName: 'Nhân viên',
+        email: `stf-${staffId}@xeprime.test`,
+      },
+      {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: customerId,
+        displayName: 'Khách',
+        email: `cus-${customerId}@xeprime.test`,
+      },
     ],
   });
   await prisma.tenant.create({
@@ -143,7 +159,9 @@ describe('PushDeviceService — đăng ký thiết bị', () => {
 
     expect(second.id).toBe(first.id);
     expect(
-      await prisma.pushDevice.count({ where: { provider: PUSH_PROVIDER.FCM, providerToken: token } }),
+      await prisma.pushDevice.count({
+        where: { provider: PUSH_PROVIDER.FCM, providerToken: token },
+      }),
     ).toBe(1);
     expect(new Date(second.lastSeenAt).getTime()).toBeGreaterThanOrEqual(
       new Date(first.lastSeenAt).getTime(),
@@ -159,42 +177,48 @@ describe('PushDeviceService — đăng ký thiết bị', () => {
     expect(JSON.stringify(result)).not.toContain(token);
   });
 
-  maybe('FCM xoay token: máy cũ đăng ký token mới → hai hàng, cả hai thuộc đúng người', async () => {
-    const oldToken = tokenOf('rotate-old');
-    const newToken = tokenOf('rotate-new');
-    await devices.register(ownerId, sessionId, { token: oldToken, platform: PUSH_PLATFORM.IOS });
-    await devices.register(ownerId, sessionId, { token: newToken, platform: PUSH_PLATFORM.IOS });
+  maybe(
+    'FCM xoay token: máy cũ đăng ký token mới → hai hàng, cả hai thuộc đúng người',
+    async () => {
+      const oldToken = tokenOf('rotate-old');
+      const newToken = tokenOf('rotate-new');
+      await devices.register(ownerId, sessionId, { token: oldToken, platform: PUSH_PLATFORM.IOS });
+      await devices.register(ownerId, sessionId, { token: newToken, platform: PUSH_PLATFORM.IOS });
 
-    const rows = await prisma.pushDevice.findMany({
-      where: { providerToken: { in: [oldToken, newToken] } },
-      select: { userId: true, enabled: true },
-    });
-    expect(rows).toHaveLength(2);
-    expect(rows.every((r) => r.userId === ownerId && r.enabled)).toBe(true);
-  });
+      const rows = await prisma.pushDevice.findMany({
+        where: { providerToken: { in: [oldToken, newToken] } },
+        select: { userId: true, enabled: true },
+      });
+      expect(rows).toHaveLength(2);
+      expect(rows.every((r) => r.userId === ownerId && r.enabled)).toBe(true);
+    },
+  );
 
   /**
    * Bất biến quan trọng nhất của bảng này. FCM cấp token cho một BẢN CÀI, nên máy đó đăng nhập
    * tài khoản khác sẽ mang lại đúng token cũ. Nếu gán lại chủ không nguyên tử (hai hàng cùng
    * token), người dùng TRƯỚC tiếp tục nhận thông báo trên máy của người SAU.
    */
-  maybe('cùng một máy đổi tài khoản: token chuyển hẳn sang chủ mới, không còn hàng của chủ cũ', async () => {
-    const token = tokenOf('reassign');
-    await devices.register(ownerId, sessionId, { token, platform: PUSH_PLATFORM.ANDROID });
-    await devices.register(customerId, newId(), { token, platform: PUSH_PLATFORM.ANDROID });
+  maybe(
+    'cùng một máy đổi tài khoản: token chuyển hẳn sang chủ mới, không còn hàng của chủ cũ',
+    async () => {
+      const token = tokenOf('reassign');
+      await devices.register(ownerId, sessionId, { token, platform: PUSH_PLATFORM.ANDROID });
+      await devices.register(customerId, newId(), { token, platform: PUSH_PLATFORM.ANDROID });
 
-    const rows = await prisma.pushDevice.findMany({ where: { providerToken: token } });
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.userId).toBe(customerId);
+      const rows = await prisma.pushDevice.findMany({ where: { providerToken: token } });
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.userId).toBe(customerId);
 
-    // Chủ cũ phát một thông báo: không có delivery nào tới máy đó nữa.
-    await pushOn.emitToUser(ownerId, {
-      type: NOTIFICATION_TYPE.BOOKING_CREATED,
-      title: 'Không được tới máy cũ',
-    });
-    const leaked = await prisma.pushDelivery.count({ where: { pushDeviceId: rows[0]!.id } });
-    expect(leaked).toBe(0);
-  });
+      // Chủ cũ phát một thông báo: không có delivery nào tới máy đó nữa.
+      await pushOn.emitToUser(ownerId, {
+        type: NOTIFICATION_TYPE.BOOKING_CREATED,
+        title: 'Không được tới máy cũ',
+      });
+      const leaked = await prisma.pushDelivery.count({ where: { pushDeviceId: rows[0]!.id } });
+      expect(leaked).toBe(0);
+    },
+  );
 
   maybe('phiên WEB vẫn đăng ký được, chỉ là không gắn phiên native', async () => {
     // `sessionId` của web là ULID ký trong JWT, không có hàng nào ở `native_auth_sessions` —
@@ -261,7 +285,8 @@ describe('Thu hồi phiên native → tắt thiết bị', () => {
     await sessions.revokeSession(sessionId, NATIVE_REVOKE_REASON.LOGOUT);
 
     expect(
-      (await prisma.pushDevice.findFirstOrThrow({ where: { providerToken: revokedToken } })).enabled,
+      (await prisma.pushDevice.findFirstOrThrow({ where: { providerToken: revokedToken } }))
+        .enabled,
     ).toBe(false);
     expect(
       (await prisma.pushDevice.findFirstOrThrow({ where: { providerToken: keptToken } })).enabled,
@@ -299,7 +324,12 @@ describe('NotificationService — hàng đợi đẩy', () => {
   maybe('người không có thiết bị nào vẫn nhận thông báo in-app', async () => {
     const loner = newId();
     await prisma.user.create({
-      data: { id: loner, displayName: 'Không máy', email: `lon-${loner}@xeprime.test` },
+      data: {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: loner,
+        displayName: 'Không máy',
+        email: `lon-${loner}@xeprime.test`,
+      },
     });
     try {
       await pushOn.emitToUser(loner, {
@@ -316,7 +346,12 @@ describe('NotificationService — hàng đợi đẩy', () => {
   maybe('một người ba máy → ba delivery cho MỘT thông báo', async () => {
     const multi = newId();
     await prisma.user.create({
-      data: { id: multi, displayName: 'Ba máy', email: `mul-${multi}@xeprime.test` },
+      data: {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: multi,
+        displayName: 'Ba máy',
+        email: `mul-${multi}@xeprime.test`,
+      },
     });
     try {
       for (const label of ['a', 'b', 'c']) {
@@ -426,7 +461,12 @@ describe('NotificationService — hàng đợi đẩy', () => {
   maybe('nghiệp vụ thử lại không rung máy hai lần — unique (notification, device)', async () => {
     const dupUser = newId();
     await prisma.user.create({
-      data: { id: dupUser, displayName: 'Trùng', email: `dup-${dupUser}@xeprime.test` },
+      data: {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: dupUser,
+        displayName: 'Trùng',
+        email: `dup-${dupUser}@xeprime.test`,
+      },
     });
     try {
       const device = await devices.register(dupUser, newId(), {

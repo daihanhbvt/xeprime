@@ -1,7 +1,10 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
-import { CurrentUser, PlatformOnly, RequirePermissions } from '../../common/decorators';
+import {
+  ACCOUNT_REALM,
+  PERMISSION,
+} from '@xeprime/types';
+import { CurrentUser, PlatformOnly, Realms, RequirePermissions } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import { BillingService } from './billing.service';
 import {
@@ -19,6 +22,7 @@ import {
 @Controller('platform/tenants/:tenantId/subscriptions')
 @PlatformOnly()
 @RequirePermissions(PERMISSION.PLATFORM_BILLING_MANAGE)
+@Realms(ACCOUNT_REALM.PLATFORM)
 export class SubscriptionsController {
   constructor(private readonly billing: BillingService) {}
 

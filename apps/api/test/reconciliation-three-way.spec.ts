@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   BANK_DIRECTION,
   BANK_MATCH_STATUS,
   BANK_MATCH_TARGET_TYPE,
@@ -9,14 +10,14 @@ import {
   BOOKING_HOLD_PURPOSE,
   BOOKING_HOLD_STATUS,
   REFERENCE_CODE_PREFIX,
+  referenceCodeTarget,
+  resolveHoldAllocation,
   SUBSCRIPTION_INVOICE_STATUS,
   TENANT_STATUS,
   WALLET_ENTRY_KIND,
   WALLET_ENTRY_SOURCE,
   WALLET_OWNER_TYPE,
   WITHDRAWAL_STATUS,
-  referenceCodeTarget,
-  resolveHoldAllocation,
 } from '@xeprime/types';
 import { PlatformMoneySummaryService } from '../src/modules/holds/platform-money-summary.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
@@ -100,7 +101,12 @@ beforeAll(async () => {
   walletId = newId();
 
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Chủ đối soát', email: `recon-${RUN}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Chủ đối soát',
+      email: `recon-${RUN}@xeprime.test`,
+    },
   });
   await prisma.tenant.create({
     data: {

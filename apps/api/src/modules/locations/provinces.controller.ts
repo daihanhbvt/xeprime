@@ -1,7 +1,10 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PUBLIC_CACHE_SECONDS } from '@xeprime/types';
-import { Public } from '../../common/decorators';
+import {
+  ACCOUNT_REALM_VALUES,
+  PUBLIC_CACHE_SECONDS,
+} from '@xeprime/types';
+import { Public, Realms } from '../../common/decorators';
 import { PublicCache } from '../../common/http-cache';
 import { ProvinceListDto } from './dto/province.dto';
 import { ProvincesService } from './provinces.service';
@@ -18,6 +21,7 @@ import { ProvincesService } from './provinces.service';
  */
 @ApiTags('locations')
 @Controller('provinces')
+@Realms(...ACCOUNT_REALM_VALUES)
 export class ProvincesController {
   constructor(private readonly provinces: ProvincesService) {}
 

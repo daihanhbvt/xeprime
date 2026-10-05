@@ -1,5 +1,6 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   BOOKING_REQUEST_DECISION_SOURCE,
   BOOKING_REQUEST_STATUS,
   BOOKING_STATUS,
@@ -38,11 +39,7 @@ import type { PrismaService } from '../src/prisma/prisma.service';
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 const wallet = new WalletService(asService);
-const statement = new WalletStatementService(
-  asService,
-  wallet,
-  new HostMetricsService(asService),
-);
+const statement = new WalletStatementService(asService, wallet, new HostMetricsService(asService));
 
 const RUN = newId().slice(-8).toLowerCase();
 const PERIOD = '2026-10';
@@ -64,12 +61,19 @@ let seq = 0;
 const dec = (n: number | string) => new Prisma.Decimal(n);
 const owner = () => ({ type: WALLET_OWNER_TYPE.TENANT, tenantId }) as const;
 
-async function seedTenant(label: string): Promise<{ tenant: string; user: string; vehicle: string }> {
+async function seedTenant(
+  label: string,
+): Promise<{ tenant: string; user: string; vehicle: string }> {
   const user = newId();
   const tenant = newId();
   const vehicle = newId();
   await prisma.user.create({
-    data: { id: user, displayName: `Chủ ${label}`, email: `stmt-${label}-${RUN}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: user,
+      displayName: `Chủ ${label}`,
+      email: `stmt-${label}-${RUN}@xeprime.test`,
+    },
   });
   await prisma.tenant.create({
     data: {
@@ -220,7 +224,12 @@ beforeAll(async () => {
 
   customerUserId = newId();
   await prisma.user.create({
-    data: { id: customerUserId, displayName: 'Khách đánh giá', email: `stmt-c-${RUN}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.CUSTOMER,
+      id: customerUserId,
+      displayName: 'Khách đánh giá',
+      email: `stmt-c-${RUN}@xeprime.test`,
+    },
   });
 });
 

@@ -1,7 +1,10 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
-import { PlatformOnly, RequirePermissions } from '../../common/decorators';
+import {
+  ACCOUNT_REALM,
+  PERMISSION,
+} from '@xeprime/types';
+import { PlatformOnly, Realms, RequirePermissions } from '../../common/decorators';
 import { AuditLogDetailDto, AuditLogListQueryDto, AuditLogPageDto } from './dto/audit-log.dto';
 import { PlatformAuditService } from './platform-audit.service';
 
@@ -10,6 +13,7 @@ import { PlatformAuditService } from './platform-audit.service';
 @Controller('platform/audit-logs')
 @PlatformOnly()
 @RequirePermissions(PERMISSION.PLATFORM_AUDIT_VIEW)
+@Realms(ACCOUNT_REALM.PLATFORM)
 export class PlatformAuditController {
   constructor(private readonly audit: PlatformAuditService) {}
 

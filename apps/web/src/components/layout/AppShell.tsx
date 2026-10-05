@@ -5,69 +5,57 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, type ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
 import { FEATURE_STATE } from '@xeprime/types';
-import { flattenLeaves, matchSelectedKey, navForScope } from '@/constants/nav';
-import { ROUTES, tenantSupportContextIdFromPath } from '@/constants/routes';
-import { tenantSupportHref } from '@/constants/tenant-support-routes';
-import { SupportNavigationScope } from '@/features/tenant-support/components/SupportNavigationScope';
-import { SupportSessionBoundary } from '@/features/tenant-support/components/SupportWorkspaceProvider';
+import { flattenLeaves, matchSelectedKey } from '@/constants/nav';
+import { ROUTES } from '@/constants/routes';
 import { FeatureExpiredNotice } from '@/components/feedback/FeatureExpiredNotice';
 import {
-  canUseManagePortal,
-  isPlatformRoute,
+  PARTNER_TRACK,
+  isPartnerPublicPage,
+  partnerPageRedirect,
   portalLoginWithNext,
-  resolveWorkspaceHref,
+  resolvePartnerTrack,
 } from '@/features/auth/post-auth-destination';
-import { NoTenantState } from '@/features/shop/components/NoTenantState';
 import { shopStatusNotice } from '@/features/shop/status-notice';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useFeatureStates, usePlanEndsAt } from '@/hooks/use-feature';
 import { useTenantScope } from '@/hooks/use-tenant-scope';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { destroySession } from '@/services/auth.service';
-import { Sidebar } from './Sidebar';
-import { Topbar } from './Topbar';
-import { MobileNav } from './MobileNav';
+import { ShellFrame } from './ShellFrame';
+import { useManageNavTree } from './use-manage-nav-tree';
 import { useNavPreferencesSync } from './use-nav-preferences-sync';
 import styles from './AppShell.module.css';
-import { useTranslations } from 'next-intl';
 
 /**
- * Các route NẰM TRONG `/manage` nhưng không dùng khung portal.
- *
- * `/manage/login` phải công khai, nếu không thì chưa đăng nhập sẽ bị chính shell đá về
- * `/manage/login` → vòng lặp. `/manage/onboarding` đã đăng nhập nhưng chưa có gian hàng, tức là
- * đúng nhóm mà shell chặn — nên nó tự render lấy, không có sidebar (chưa có gì để điều hướng).
- *
- * Từ ADR 0040, `/manage/onboarding` còn phục vụ một nhóm thứ hai: gian hàng trả phí ĐÃ tạo hồ sơ
- * nhưng chưa thanh toán. Với họ, "bare" là chính điểm mấu chốt — cổng quản lý chưa mở, nên không
- * được dựng sidebar của nó rồi để mọi mục bên trong trả 403. Họ vẫn đi qua nhánh "bare" dưới
- * đây, và mọi route `/manage/*` khác đá họ về đúng đây (`resolveWorkspaceHref`).
- *
- * Next.js không cho một route con "thoát" layout cha, nên danh sách này là cách khai báo điều
- * đó ở đúng nơi quyết định — chính shell.
+ * Route CHIẾM TRỌN VIEWPORT: vùng cuộn dọc là của chính màn đó (lịch xe cuộn TRONG lưới; hộp thư
+ * tự quản hai cột cuộn), không phải của body. Shell khoá chiều cao = 100dvh và ẩn thanh tab dưới đáy
+ * CHỈ ở các route này.
  */
-const PUBLIC_PORTAL_PATHS: readonly string[] = [ROUTES.MANAGE.LOGIN];
-const BARE_PORTAL_PATHS: readonly string[] = [ROUTES.MANAGE.LOGIN, ROUTES.MANAGE.ONBOARDING];
+const VIEWPORT_PATHS: readonly string[] = [ROUTES.MANAGE.CALENDAR, ROUTES.MANAGE.CHAT];
 
 /**
- * Route CHIẾM TRỌN VIEWPORT: vùng cuộn dọc là của chính màn đó (lịch xe cuộn TRONG lưới),
- * không phải của body. Shell khoá chiều cao = 100dvh và tắt cuộn ở `.content`; đồng thời ẨN
- * thanh bottom-nav mobile CHỈ ở các route này — lịch cần đáy màn hình cho hàng "Xe còn trống",
- * các trang khác vẫn giữ điều hướng như cũ.
- *
- * Tin nhắn thuộc cùng nhóm này và vì đúng cái lý do đó: khung chat tự quản vùng cuộn của nó
- * (danh sách hội thoại một bên, dòng tin nhắn một bên). Để body cuộn thêm một lớp nữa nghĩa là
- * ô soạn tin có thể nằm dưới mép màn hình — và khi ô đang có con trỏ nằm ngoài khung nhìn thì
- * TRÌNH DUYỆT tự cuộn trang để kéo nó vào, đúng cú nhảy mà khu khách đã phải sửa.
+ * Route TỰ DỰNG khung của mình, không sidebar: onboarding (thanh trên cùng + hero riêng) và wizard
+ * đăng xe nhanh (`PartnerFocusLayout`). Cả hai là màn một việc, và cả hai có thể chạy khi CHƯA có
+ * gian hàng — dựng sidebar rồi để mọi mục bên trong trả 403 là lừa người dùng. Wizard còn tự mở gian
+ * hàng ở bước lưu: nằm trong khung đầy đủ thì sidebar bật lên giữa chừng.
  */
-const VIEWPORT_PORTAL_PATHS: readonly string[] = [ROUTES.MANAGE.CALENDAR, ROUTES.MANAGE.CHAT];
+const BARE_PATHS: readonly string[] = [ROUTES.MANAGE.ONBOARDING, ROUTES.MANAGE.VEHICLE_REGISTER];
 
 /**
- * Khung của Management Portal.
+ * Khung của SITE PARTNER (`partner.xeprime.vn`, realm `partner` — ADR 0051 điều 3 · ADR 0053).
  *
- * Portal dùng chung cho gian hàng và nền tảng, khác nhau ở scope (screen_spec §5) — nên
- * shell không phân biệt host/admin, chỉ Sidebar lọc menu theo quyền.
+ * Phục vụ HAI tuyến trên một cây URL: gian hàng tuyến gói (Full Manage) và chủ xe tuyến hoa hồng
+ * (Owner Lite). Menu chọn theo tuyến (`useManageNavTree`); trang nào tuyến nào được ở lại do
+ * `partnerPageRedirect` quyết — cùng một luật với đích sau đăng nhập (bảng B1):
+ *
+ *  - chưa có gian hàng → `/register` (chọn tuyến);
+ *  - gian hàng gói chưa thanh toán → `/onboarding` (bare, không khung);
+ *  - tuyến hoa hồng mở trang chỉ của tuyến gói → trang chủ Owner Lite.
+ *
+ * Đây là lớp TRẢI NGHIỆM. Chặn thật nằm ở backend: RealmGuard (chỉ tài khoản partner), guard quyền,
+ * `@SubscriptionTrackOnly` và cờ gói (ADR 0027 điều 4 · ADR 0038 điều 4).
  */
 export function AppShell({ children }: { children: ReactNode }) {
   const tShop = useTranslations('Shop');
@@ -75,21 +63,21 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const queryClient = useQueryClient();
   const { data: user, isLoading, isError } = useCurrentUser();
-  const { hasNoTenant, tenant } = useTenantScope();
+  const { tenant } = useTenantScope();
   const featureStates = useFeatureStates();
   const planEndsAt = usePlanEndsAt();
   const workspace = useWorkspace();
+  const { sections } = useManageNavTree();
   // Một chỗ ghi duy nhất cho tuỳ chọn sidebar/khối menu — sidebar desktop và Drawer mobile
   // cùng sửa một state, nên việc lưu không thuộc về riêng cái nào.
   useNavPreferencesSync();
 
-  const isPublicPortalPath = PUBLIC_PORTAL_PATHS.includes(pathname);
-  const isBarePortalPath = BARE_PORTAL_PATHS.includes(pathname);
-  const notAuthenticated = !isPublicPortalPath && !isLoading && (isError || !user);
+  const isPublicPage = isPartnerPublicPage(pathname);
+  const notAuthenticated = !isPublicPage && !isLoading && (isError || !user);
 
-  // Cookie phiên hỏng/hết hạn: proxy chỉ kiểm tra CÓ cookie chứ không verify, nên vẫn cho vào
-  // /manage rồi /auth/me trả 401. Ở đây xoá cookie hỏng (DELETE /auth/session) rồi ra
-  // /manage/login — không xoá thì proxy cứ đá login ngược lại /manage (loop).
+  // Cookie phiên hỏng/hết hạn: proxy chỉ kiểm tra CÓ cookie chứ không verify, nên vẫn cho vào rồi
+  // `/auth/me` trả 401. Ở đây xoá cookie hỏng (DELETE /auth/session) rồi ra trang đăng nhập — không
+  // xoá thì proxy cứ đá trang đăng nhập ngược lại (loop).
   useEffect(() => {
     if (!notAuthenticated) return;
     let cancelled = false;
@@ -97,7 +85,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       try {
         await destroySession();
       } catch {
-        // Lỗi mạng khi xoá phiên vẫn không cản việc điều hướng ra login.
+        // Lỗi mạng khi xoá phiên vẫn không cản việc điều hướng ra trang đăng nhập.
       }
       if (cancelled) return;
       queryClient.clear();
@@ -108,11 +96,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     };
   }, [notAuthenticated, pathname, router, queryClient]);
 
-  // Trang đăng nhập cổng quản lý tự render lấy — không cần user, không có shell.
-  if (isPublicPortalPath) return <>{children}</>;
+  // Đăng nhập, đăng ký, đặt lại mật khẩu, nhận lời mời: tự render lấy — không cần phiên, không khung.
+  if (isPublicPage) return <>{children}</>;
 
   if (isLoading || isError || !user) {
-    // Hoặc đang nạp /auth/me, hoặc đang dọn phiên hỏng để ra login (effect ở trên).
+    // Hoặc đang nạp /auth/me, hoặc đang dọn phiên hỏng để ra trang đăng nhập (effect ở trên).
     return (
       <div className={styles.centered}>
         <Spin size="large" />
@@ -120,156 +108,76 @@ export function AppShell({ children }: { children: ReactNode }) {
     );
   }
 
-  // User đăng nhập nhưng chưa thuộc gian hàng nào và không phải nhân sự nền tảng.
-  // KHÔNG tự bật form tạo gian hàng ở đây (hành vi cũ): "chưa có shop" là trạng thái hợp lệ của
-  // một khách thuê xe. Form tạo shop chỉ sống ở `/manage/onboarding`, nơi người dùng chủ động vào.
-  if (hasNoTenant && !user.platformRole) {
-    if (isBarePortalPath) return <>{children}</>;
-    return <NoTenantState />;
-  }
+  const redirect = partnerPageRedirect(user, pathname);
+  if (redirect) return <WrongPageRedirect href={redirect} />;
 
-  if (isBarePortalPath) return <>{children}</>;
+  if (BARE_PATHS.includes(pathname)) return <>{children}</>;
 
-  /*
-   * CỔNG TUYẾN (ADR 0027 · ADR 0028 điều 1): chủ xe tuyến hoa hồng không vào cổng quản lý.
-   *
-   * Bộ tính năng của họ là Owner Lite ở `/account` — cùng source, khác vỏ — và cổng quản lý bày
-   * ra chi nhánh, nhân viên, tài xế, sổ thu chi, hợp đồng: sáu thứ họ không có và không cần.
-   * Trước đây chỉ cần CÓ tenant là vào được, nên người vừa đăng ký một chiếc xe đã đứng giữa
-   * bảng điều khiển của một đội xe.
-   *
-   * Nhân sự nền tảng đi lối khác: `platformRole` vẫn vào được (họ dùng `/manage/admin`), và
-   * `isPlatformRoute` chừa đường đó ra cho một người vừa là chủ xe vừa là reviewer.
-   *
-   * Đây là lớp TRẢI NGHIỆM. Lớp chặn thật là guard quyền + cờ gói ở backend (ADR 0027 điều 4);
-   * `@RequiresFeature` đã gác đủ nhóm endpoint nâng cao, redirect ở đây không thay cho nó.
-   */
-  if (!canUseManagePortal(user) && !user.platformRole && !isPlatformRoute(pathname)) {
-    return <WrongWorkspaceRedirect href={resolveWorkspaceHref(user) ?? ROUTES.ACCOUNT.ROOT} />;
-  }
-
-  /*
-   * Phiên hỗ trợ gian hàng (ADR 0050 §12): khung trang dựng MENU CỦA GIAN HÀNG, không phải menu nền
-   * tảng — ranh giới phiên bọc cả sidebar, breadcrumb và menu dưới đáy. Trang lịch của phiên cũng
-   * khoá chiều cao như lịch của chính gian hàng.
-   */
-  const supportContextId = tenantSupportContextIdFromPath(pathname);
-  const isViewportPath =
-    VIEWPORT_PORTAL_PATHS.includes(pathname) ||
-    (supportContextId !== null &&
-      pathname === tenantSupportHref(supportContextId, ROUTES.MANAGE.CALENDAR));
+  const track = resolvePartnerTrack(user);
 
   /**
-   * Dải trạng thái gian hàng, đầu vùng nội dung của MỌI trang quản lý.
-   *
-   * Ba điều đã sửa so với bản trước:
-   *
-   * 1. **Nói đúng trạng thái.** Trước đây một cờ gộp `draft | pending_review | needs_revision`
-   *    in chung câu "Gian hàng đang chờ duyệt" — với shop `draft` thì đó là chuyện chưa xảy ra.
-   *    Nội dung giờ lấy từ `shopStatusNotice`, cùng bảng mà dải ở trang hồ sơ dùng.
-   * 2. **Có lối đi tiếp.** Dải cũ chỉ phát biểu một tình trạng rồi thôi; giờ nó luôn kèm nút dẫn
-   *    tới nơi sửa được tình trạng đó — và ba trạng thái xấu (`rejected`/`suspended`/`expired`)
-   *    trước đây không có dải nào cả, gian hàng bị khoá chỉ biết qua việc xe biến mất.
-   * 3. **Không lặp ở `/manage/shop`.** Trang đó đã có bản đầy đủ (kèm lý do đội duyệt viết và
-   *    nút Gửi duyệt), nên dải này ở đó chỉ là câu thứ hai nói cùng một chuyện — mà trước đây
-   *    hai câu đó còn mâu thuẫn nhau.
-   *
-   * Dùng `Alert` chứ không phải `Result`: `Result` là trạng thái TOÀN TRANG (icon lớn, canh
-   * giữa, padding dày) và nó đẩy nội dung thật của mọi màn hình xuống dưới nếp gấp.
+   * Dải trạng thái gian hàng tuyến gói, đầu vùng nội dung — nói đúng trạng thái và luôn kèm lối đi
+   * tiếp; không lặp ở trang Cửa hàng (trang đó có bản đầy đủ). Tuyến hoa hồng theo dõi trạng thái ở
+   * màn tiến trình đăng ký, không cần dải này.
    */
   const shopNotice = (() => {
-    if (!tenant || pathname === ROUTES.MANAGE.SHOP) return null;
+    if (track !== PARTNER_TRACK.PACKAGE || !tenant || pathname === ROUTES.MANAGE.SHOP) return null;
     const notice = shopStatusNotice(tenant.status);
     return notice.showInShell ? notice : null;
   })();
 
   /**
-   * Băng "gói hết hạn, tính năng chỉ-xem" (ADR 0027 điều 3) — cùng chỗ và cùng lý do với dải
-   * trạng thái gian hàng ở trên: một chỗ sửa phủ cả bảy khu bị gác.
-   *
-   * Bản đồ `pathname → feature` lấy từ CHÍNH cây nav (`leaf.feature`), không đẻ bản đồ thứ hai —
-   * thêm một trang bị gác chỉ phải khai một chỗ. `matchSelectedKey` chạy trên cây CHƯA lọc, nên
-   * băng vẫn tra được ngay cả khi mục đó đã bị ẩn khỏi menu.
+   * Băng "gói hết hạn, tính năng chỉ-xem" (ADR 0027 điều 3). Bản đồ `pathname → feature` lấy từ
+   * CHÍNH cây menu đang dùng (`leaf.feature`), không đẻ bản đồ thứ hai.
    */
   const expiredFeature = (() => {
     if (!tenant) return null;
-    const leaves = flattenLeaves(navForScope(Boolean(user.platformRole)));
+    const leaves = flattenLeaves(sections);
     const href = matchSelectedKey(pathname, leaves);
     const feature = leaves.find((leaf) => leaf.href === href)?.feature;
     if (!feature) return null;
     return featureStates[feature] === FEATURE_STATE.READ_ONLY ? feature : null;
   })();
 
-  const shell = (
-    <div
-      className={[styles.shell, isViewportPath ? styles.shellViewport : '']
-        .filter(Boolean)
-        .join(' ')}
-    >
-      <SupportNavigationScope>
-        <Sidebar />
-      </SupportNavigationScope>
-      <div className={styles.main}>
-        <Topbar user={user} />
-        <main
-          className={[styles.content, isViewportPath ? styles.contentViewport : '']
-            .filter(Boolean)
-            .join(' ')}
-        >
-          <SupportNavigationScope>
-            {shopNotice ? (
-              <Alert
-                className={styles.statusNotice}
-                type={shopNotice.tone}
-                showIcon
-                title={tShop(`status.${shopNotice.key}.title`)}
-                description={tShop(`status.${shopNotice.key}.shell`)}
-                action={
-                  shopNotice.action ? (
-                    <Link href={workspace.paths[shopNotice.action.target]}>
-                      <Button size="small">
-                        {tShop(`status.action.${shopNotice.action.key}`)}
-                      </Button>
-                    </Link>
-                  ) : null
-                }
-              />
-            ) : null}
-            {expiredFeature ? (
-              <FeatureExpiredNotice feature={expiredFeature} planEndsAt={planEndsAt} />
-            ) : null}
-            {children}
-          </SupportNavigationScope>
-        </main>
-        {isViewportPath ? null : (
-          <SupportNavigationScope>
-            <MobileNav />
-          </SupportNavigationScope>
-        )}
-      </div>
-    </div>
+  const notices = (
+    <>
+      {shopNotice ? (
+        <Alert
+          className={styles.statusNotice}
+          type={shopNotice.tone}
+          showIcon
+          title={tShop(`status.${shopNotice.key}.title`)}
+          description={tShop(`status.${shopNotice.key}.shell`)}
+          action={
+            shopNotice.action ? (
+              <Link href={workspace.paths[shopNotice.action.target]}>
+                <Button size="small">{tShop(`status.action.${shopNotice.action.key}`)}</Button>
+              </Link>
+            ) : null
+          }
+        />
+      ) : null}
+      {expiredFeature ? (
+        <FeatureExpiredNotice feature={expiredFeature} planEndsAt={planEndsAt} />
+      ) : null}
+    </>
   );
 
-  return supportContextId ? (
-    <SupportSessionBoundary key={supportContextId} contextId={supportContextId}>
-      {shell}
-    </SupportSessionBoundary>
-  ) : (
-    shell
+  return (
+    <ShellFrame user={user} viewport={VIEWPORT_PATHS.includes(pathname)} notices={notices}>
+      {children}
+    </ShellFrame>
   );
 }
 
 /**
- * Người vào nhầm khu: đưa về khu làm việc đúng của họ, không render gì của cổng quản lý.
+ * Người mở trang không thuộc tuyến/bước của mình: đưa về đúng chỗ, không render gì của trang đó.
  *
  * Là một component RIÊNG vì `AppShell` đã trả về sớm ở nhiều nhánh phía trên — gọi `useEffect`
- * sau một `return` có điều kiện là vi phạm quy tắc hook. Tách ra cũng giữ cho đường chuyển
- * hướng chỉ chạy ĐÚNG một lần cho mỗi đích, thay vì mỗi lần `AppShell` render lại.
- *
- * `replace` chứ không `push`: người dùng bấm Quay lại phải về trang trước đó, không phải quay
- * lại đúng cái URL vừa bị đẩy ra rồi bị đẩy ra lần nữa.
+ * sau một `return` có điều kiện là vi phạm quy tắc hook. `replace` chứ không `push`: bấm Quay lại
+ * phải về trang trước, không phải về đúng URL vừa bị đẩy ra.
  */
-function WrongWorkspaceRedirect({ href }: { href: string }) {
+function WrongPageRedirect({ href }: { href: string }) {
   const router = useRouter();
 
   useEffect(() => {

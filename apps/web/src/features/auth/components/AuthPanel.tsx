@@ -19,7 +19,7 @@ import {
   type RegisterValues,
 } from '@xeprime/validators';
 import { TextField } from '@/components/form/TextField';
-import { ROUTES } from '@/constants/routes';
+import { zoneAuthRoutes } from '@/constants/routes';
 import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
 import { PhoneLoginForm } from '@/features/phone-verification/components/PhoneLoginForm';
 import {
@@ -40,6 +40,7 @@ import { usePathname } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { resolveAppLocale } from '@/i18n/config';
 import { useErrorCodeMessage, useErrorMessage } from '@/i18n/use-error-message';
+import { useZone } from '@/zones/ZoneProvider';
 
 export interface AuthPanelProps {
   mode: AuthMode;
@@ -47,8 +48,14 @@ export interface AuthPanelProps {
   onModeChange?: (mode: AuthMode) => void;
   /** Gọi khi phiên đã được cấp. `justRegistered` để chỗ gọi hiện success state riêng. */
   onAuthenticated: (user: CurrentUser, ctx: { justRegistered: boolean }) => void | Promise<void>;
-  /** Ẩn tab OTP + social (portal muốn gọn hơn thì tắt được). Mặc định hiện đủ. */
+  /** Ẩn khối đăng nhập Google/Facebook. Mặc định hiện. */
   showSocial?: boolean;
+  /**
+   * CHỈ email/SĐT + mật khẩu — không tab OTP, không mạng xã hội, không đăng ký. Dành cho site quản
+   * trị: tài khoản realm `platform` chỉ đăng nhập bằng mật khẩu (ADR 0053 điều 3), và API cũng từ
+   * chối OTP/social cho realm đó — hiện nút ra là hứa một đường chắc chắn hỏng.
+   */
+  passwordOnly?: boolean;
   /** Tự focus ô đầu tiên — modal bật, trang portal để trình duyệt quyết. */
   autoFocus?: boolean;
   /**
@@ -74,6 +81,7 @@ export function AuthPanel({
   onModeChange,
   onAuthenticated,
   showSocial = true,
+  passwordOnly = false,
   autoFocus = false,
   initialErrorCode = null,
 }: AuthPanelProps) {
@@ -143,7 +151,16 @@ export function AuthPanel({
     <div className={styles.panel}>
       {error ? <Alert type="error" showIcon title={error} className={styles.alert} /> : null}
 
-      {mode === AUTH_MODE.REGISTER ? (
+      {passwordOnly ? (
+        <PasswordForm
+          busy={busy}
+          pending={pending === 'password'}
+          autoFocus={autoFocus}
+          onSubmit={(values) =>
+            run('password', () => loginWithPassword(values.identifier, values.password))
+          }
+        />
+      ) : mode === AUTH_MODE.REGISTER ? (
         <RegisterForm
           busy={busy}
           pending={pending === 'register'}
@@ -194,7 +211,7 @@ export function AuthPanel({
         />
       )}
 
-      {showSocial ? (
+      {showSocial && !passwordOnly ? (
         <>
           <Divider className={styles.divider} plain>
             {t('social.divider')}
@@ -288,6 +305,8 @@ function PasswordForm({
   onSubmit: (values: LoginValues) => void;
 }) {
   const t = useTranslations('Auth');
+  // 'Quên mật khẩu' của site đang mở — mỗi site một không gian tài khoản (ADR 0053).
+  const forgotHref = zoneAuthRoutes(useZone()).forgotPassword;
   const labels = useAuthSchemaLabels();
   // Schema phải dựng lại khi đổi ngôn ngữ — câu lỗi nằm TRONG schema, không phải trong component.
   const schema = useMemo(() => buildLoginSchema(labels), [labels]);
@@ -317,7 +336,7 @@ function PasswordForm({
         prefix={<LockOutlined />}
       />
       <div className={styles.rowEnd}>
-        <Link href={ROUTES.FORGOT_PASSWORD} className={styles.link}>
+        <Link href={forgotHref} className={styles.link}>
           {t('login.forgot')}
         </Link>
       </div>

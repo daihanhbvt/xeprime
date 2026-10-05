@@ -1,6 +1,7 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import { BULK_PRICE_MODE } from '@xeprime/domain';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   OCCUPANCY_SOURCE_TYPE,
   TENANT_STATUS,
@@ -61,7 +62,12 @@ beforeAll(async () => {
   pricelessVehicleId = newId();
 
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Bulk owner', email: `bulk-${ownerId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Bulk owner',
+      email: `bulk-${ownerId}@xeprime.test`,
+    },
   });
   await prisma.tenant.create({
     data: {
@@ -163,7 +169,9 @@ describe('preview', () => {
   });
 
   maybe('khoảng quá dài → 400 VALIDATION_FAILED', async () => {
-    await expect(bulk.preview(tenantId, { from: '2026-01-01', to: '2026-12-31' }, null)).rejects.toMatchObject({
+    await expect(
+      bulk.preview(tenantId, { from: '2026-01-01', to: '2026-12-31' }, null),
+    ).rejects.toMatchObject({
       response: { code: API_ERROR_CODE.VALIDATION_FAILED },
     });
   });
@@ -173,12 +181,17 @@ describe('khoá hàng loạt', () => {
   maybe('xe bận một ngày vẫn được khoá HAI ngày còn lại', async () => {
     await occupyMiddleDay();
 
-    const result = await bulk.blockAll(tenantId, ownerId, {
-      from: FROM,
-      to: TO,
-      reason: VEHICLE_BLOCK_REASON.NOT_FOR_RENT,
-      vehicleIds: allVehicles(),
-    }, null);
+    const result = await bulk.blockAll(
+      tenantId,
+      ownerId,
+      {
+        from: FROM,
+        to: TO,
+        reason: VEHICLE_BLOCK_REASON.NOT_FOR_RENT,
+        vehicleIds: allVehicles(),
+      },
+      null,
+    );
 
     // 3 xe × 3 ngày = 9, trừ đúng 1 ngày bận.
     expect(result.blockedDays).toBe(8);
@@ -195,12 +208,17 @@ describe('khoá hàng loạt', () => {
   });
 
   maybe('mọi dòng của một lượt mang CHUNG một batchId', async () => {
-    const result = await bulk.blockAll(tenantId, ownerId, {
-      from: FROM,
-      to: TO,
-      reason: VEHICLE_BLOCK_REASON.NOT_FOR_RENT,
-      vehicleIds: [freeVehicleId],
-    }, null);
+    const result = await bulk.blockAll(
+      tenantId,
+      ownerId,
+      {
+        from: FROM,
+        to: TO,
+        reason: VEHICLE_BLOCK_REASON.NOT_FOR_RENT,
+        vehicleIds: [freeVehicleId],
+      },
+      null,
+    );
 
     const rows = await prisma.vehicleBlock.findMany({
       where: { tenantId },
@@ -211,24 +229,34 @@ describe('khoá hàng loạt', () => {
   });
 
   maybe('khoá xong thì công tắc BẬT — preview trả về đúng batchId', async () => {
-    const result = await bulk.blockAll(tenantId, ownerId, {
-      from: FROM,
-      to: TO,
-      reason: VEHICLE_BLOCK_REASON.NOT_FOR_RENT,
-      vehicleIds: [freeVehicleId],
-    }, null);
+    const result = await bulk.blockAll(
+      tenantId,
+      ownerId,
+      {
+        from: FROM,
+        to: TO,
+        reason: VEHICLE_BLOCK_REASON.NOT_FOR_RENT,
+        vehicleIds: [freeVehicleId],
+      },
+      null,
+    );
 
     const preview = await bulk.preview(tenantId, { from: FROM, to: TO }, null);
     expect(preview.activeBlockBatchId).toBe(result.batchId);
   });
 
   maybe('khoá hàng loạt GIỮ CHỖ thật — xe đó không đặt thêm được nữa', async () => {
-    await bulk.blockAll(tenantId, ownerId, {
-      from: FROM,
-      to: TO,
-      reason: VEHICLE_BLOCK_REASON.NOT_FOR_RENT,
-      vehicleIds: [freeVehicleId],
-    }, null);
+    await bulk.blockAll(
+      tenantId,
+      ownerId,
+      {
+        from: FROM,
+        to: TO,
+        reason: VEHICLE_BLOCK_REASON.NOT_FOR_RENT,
+        vehicleIds: [freeVehicleId],
+      },
+      null,
+    );
 
     const occupancies = await prisma.vehicleOccupancy.count({
       where: { tenantId, vehicleId: freeVehicleId },
@@ -239,12 +267,17 @@ describe('khoá hàng loạt', () => {
 
 describe('gỡ lô', () => {
   maybe('gỡ đúng lô đó và NHẢ chỗ trên vehicle_occupancies', async () => {
-    const result = await bulk.blockAll(tenantId, ownerId, {
-      from: FROM,
-      to: TO,
-      reason: VEHICLE_BLOCK_REASON.NOT_FOR_RENT,
-      vehicleIds: [freeVehicleId],
-    }, null);
+    const result = await bulk.blockAll(
+      tenantId,
+      ownerId,
+      {
+        from: FROM,
+        to: TO,
+        reason: VEHICLE_BLOCK_REASON.NOT_FOR_RENT,
+        vehicleIds: [freeVehicleId],
+      },
+      null,
+    );
 
     const released = await bulk.releaseBatch(tenantId, ownerId, result.batchId, undefined, null);
 
@@ -278,12 +311,17 @@ describe('gỡ lô', () => {
       });
     });
 
-    const result = await bulk.blockAll(tenantId, ownerId, {
-      from: FROM,
-      to: TO,
-      reason: VEHICLE_BLOCK_REASON.NOT_FOR_RENT,
-      vehicleIds: [freeVehicleId],
-    }, null);
+    const result = await bulk.blockAll(
+      tenantId,
+      ownerId,
+      {
+        from: FROM,
+        to: TO,
+        reason: VEHICLE_BLOCK_REASON.NOT_FOR_RENT,
+        vehicleIds: [freeVehicleId],
+      },
+      null,
+    );
     await bulk.releaseBatch(tenantId, ownerId, result.batchId, undefined, null);
 
     const survivor = await prisma.vehicleBlock.findUnique({ where: { id: manualId } });
@@ -292,19 +330,26 @@ describe('gỡ lô', () => {
   });
 
   maybe('gỡ một lô không tồn tại là no-op, không phải lỗi', async () => {
-    expect(await bulk.releaseBatch(tenantId, ownerId, newId(), undefined, null)).toEqual({ released: 0 });
+    expect(await bulk.releaseBatch(tenantId, ownerId, newId(), undefined, null)).toEqual({
+      released: 0,
+    });
   });
 });
 
 describe('đặt giá hàng loạt', () => {
   maybe('theo % tính trên giá niêm yết của TỪNG xe', async () => {
-    const result = await bulk.priceAll(tenantId, ownerId, {
-      from: FROM,
-      to: FROM,
-      mode: BULK_PRICE_MODE.PERCENT,
-      percent: 30,
-      vehicleIds: allVehicles(),
-    }, null);
+    const result = await bulk.priceAll(
+      tenantId,
+      ownerId,
+      {
+        from: FROM,
+        to: FROM,
+        mode: BULK_PRICE_MODE.PERCENT,
+        percent: 30,
+        vehicleIds: allVehicles(),
+      },
+      null,
+    );
 
     // Xe chưa có giá gốc bị bỏ qua, không bị đặt 0đ.
     expect(result.updatedVehicles).toBe(2);
@@ -342,13 +387,18 @@ describe('đặt giá hàng loạt', () => {
 
   maybe('ngày CUỐI TUẦN lấy giá cuối tuần làm gốc', async () => {
     // 29/08/2026 là Thứ Bảy: 600.000 × 1,3 = 780.000.
-    await bulk.priceAll(tenantId, ownerId, {
-      from: '2026-08-29',
-      to: '2026-08-29',
-      mode: BULK_PRICE_MODE.PERCENT,
-      percent: 30,
-      vehicleIds: [freeVehicleId],
-    }, null);
+    await bulk.priceAll(
+      tenantId,
+      ownerId,
+      {
+        from: '2026-08-29',
+        to: '2026-08-29',
+        mode: BULK_PRICE_MODE.PERCENT,
+        percent: 30,
+        vehicleIds: [freeVehicleId],
+      },
+      null,
+    );
 
     const row = await prisma.vehicleDailyPrice.findFirst({
       where: { tenantId, vehicleId: freeVehicleId },
@@ -358,13 +408,18 @@ describe('đặt giá hàng loạt', () => {
   });
 
   maybe('đồng giá đặt cùng một số cho mọi xe, kể cả xe chưa có giá gốc', async () => {
-    const result = await bulk.priceAll(tenantId, ownerId, {
-      from: FROM,
-      to: FROM,
-      mode: BULK_PRICE_MODE.FIXED,
-      fixedPrice: '900000',
-      vehicleIds: allVehicles(),
-    }, null);
+    const result = await bulk.priceAll(
+      tenantId,
+      ownerId,
+      {
+        from: FROM,
+        to: FROM,
+        mode: BULK_PRICE_MODE.FIXED,
+        fixedPrice: '900000',
+        vehicleIds: allVehicles(),
+      },
+      null,
+    );
 
     expect(result.updatedVehicles).toBe(3);
     const rows = await prisma.vehicleDailyPrice.findMany({
@@ -376,43 +431,63 @@ describe('đặt giá hàng loạt', () => {
 
   maybe('thiếu percent ở chế độ % → 400', async () => {
     await expect(
-      bulk.priceAll(tenantId, ownerId, {
-        from: FROM,
-        to: FROM,
-        mode: BULK_PRICE_MODE.PERCENT,
-        vehicleIds: [freeVehicleId],
-      }, null),
+      bulk.priceAll(
+        tenantId,
+        ownerId,
+        {
+          from: FROM,
+          to: FROM,
+          mode: BULK_PRICE_MODE.PERCENT,
+          vehicleIds: [freeVehicleId],
+        },
+        null,
+      ),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
   });
 
   maybe('đặt giá KHÔNG đụng lịch trống của xe', async () => {
-    await bulk.priceAll(tenantId, ownerId, {
-      from: FROM,
-      to: TO,
-      mode: BULK_PRICE_MODE.PERCENT,
-      percent: 30,
-      vehicleIds: [freeVehicleId],
-    }, null);
+    await bulk.priceAll(
+      tenantId,
+      ownerId,
+      {
+        from: FROM,
+        to: TO,
+        mode: BULK_PRICE_MODE.PERCENT,
+        percent: 30,
+        vehicleIds: [freeVehicleId],
+      },
+      null,
+    );
 
     expect(await prisma.vehicleOccupancy.count({ where: { tenantId } })).toBe(0);
   });
 
   maybe('khôi phục giá mặc định xoá bản ghi đè trong khoảng', async () => {
-    await bulk.priceAll(tenantId, ownerId, {
-      from: FROM,
-      to: TO,
-      mode: BULK_PRICE_MODE.PERCENT,
-      percent: 30,
-      vehicleIds: [freeVehicleId],
-    }, null);
+    await bulk.priceAll(
+      tenantId,
+      ownerId,
+      {
+        from: FROM,
+        to: TO,
+        mode: BULK_PRICE_MODE.PERCENT,
+        percent: 30,
+        vehicleIds: [freeVehicleId],
+      },
+      null,
+    );
 
-    const restored = await bulk.restorePrices(tenantId, ownerId, {
-      from: FROM,
-      to: TO,
-      mode: BULK_PRICE_MODE.PERCENT,
-      percent: 0,
-      vehicleIds: [freeVehicleId],
-    }, null);
+    const restored = await bulk.restorePrices(
+      tenantId,
+      ownerId,
+      {
+        from: FROM,
+        to: TO,
+        mode: BULK_PRICE_MODE.PERCENT,
+        percent: 0,
+        vehicleIds: [freeVehicleId],
+      },
+      null,
+    );
 
     expect(restored.updatedDays).toBe(3);
     expect(await prisma.vehicleDailyPrice.count({ where: { tenantId } })).toBe(0);
@@ -422,12 +497,17 @@ describe('đặt giá hàng loạt', () => {
 describe('ranh giới gian hàng', () => {
   maybe('id xe của gian hàng khác bị loại, không ghi gì cho nó', async () => {
     await expect(
-      bulk.blockAll(tenantId, ownerId, {
-        from: FROM,
-        to: FROM,
-        reason: VEHICLE_BLOCK_REASON.NOT_FOR_RENT,
-        vehicleIds: [newId()],
-      }, null),
+      bulk.blockAll(
+        tenantId,
+        ownerId,
+        {
+          from: FROM,
+          to: FROM,
+          reason: VEHICLE_BLOCK_REASON.NOT_FOR_RENT,
+          vehicleIds: [newId()],
+        },
+        null,
+      ),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
   });
 });

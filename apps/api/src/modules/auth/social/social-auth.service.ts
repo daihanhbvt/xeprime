@@ -6,11 +6,15 @@ import {
   AUTH_PROVIDER,
   DEFAULT_LOCALE,
   clientAppForRedirectUri,
+  realmAllowsPasswordlessLogin,
+  realmForClientApp,
   resolveAppLocale,
+  type AccountRealm,
   type AuthProvider,
   type MobileClientApp,
 } from '@xeprime/types';
 import { AuthService } from '../auth.service';
+import { RequestRealmService } from '../request-realm.service';
 import { FacebookSocialProvider } from './facebook.provider';
 import { GoogleSocialProvider } from './google.provider';
 import { OauthStateService } from './oauth-state.service';
@@ -37,6 +41,8 @@ export type SocialCallbackResult =
   | {
       ok: true;
       userId: string;
+      /** Realm của luồng (ADR 0053) — controller phát cookie của ĐÚNG realm này. */
+      realm: AccountRealm;
       redirectNext: string | null;
       /** Khác null ⇒ client là APP NATIVE: đừng phát cookie, hãy redirect về deep link này. */
       native: NativeCallbackTarget | null;
@@ -44,6 +50,7 @@ export type SocialCallbackResult =
   | {
       ok: false;
       errorCode: string;
+      realm: AccountRealm;
       redirectNext: string | null;
       native: NativeCallbackTarget | null;
     };
@@ -84,6 +91,7 @@ export class SocialAuthService {
     private readonly config: ConfigService,
     private readonly states: OauthStateService,
     private readonly auth: AuthService,
+    private readonly realms: RequestRealmService,
   ) {
     this.providers = buildProviders(config);
   }
@@ -103,12 +111,33 @@ export class SocialAuthService {
     provider: AuthProvider;
     next: string | null;
     locale: string | null;
+    /**
+     * Realm của SITE đang mở luồng web (header proxy đã qua khoá). Bỏ qua với luồng native: realm
+     * của app suy từ scheme `redirect_uri` đã qua allowlist — ADR 0053 điều 4.
+     */
+    webRealm: AccountRealm | null;
     /** Có ⇒ luồng của APP NATIVE. Đã kiểm allowlist ở `resolveNativeContext`. */
     native?: NativeCallbackTarget | undefined;
   }): Promise<string> {
     const provider = this.requireProvider(params.provider);
+    const realm = params.native ? realmForClientApp(params.native.clientApp) : params.webRealm;
+    if (!realm) {
+      throw new SocialAuthFailure(
+        API_ERROR_CODE.REALM_UNRESOLVED,
+        'luồng web không xác định được site đang gọi',
+      );
+    }
+    // Tài khoản quản trị chỉ có mật khẩu (ADR 0053 điều 3) — chặn TRƯỚC khi đẩy người dùng sang
+    // màn đồng ý của Google, không để họ đồng ý xong mới biết là vô ích.
+    if (!realmAllowsPasswordlessLogin(realm)) {
+      throw new SocialAuthFailure(
+        API_ERROR_CODE.REALM_LOGIN_METHOD_NOT_ALLOWED,
+        'realm platform không đăng nhập bằng mạng xã hội',
+      );
+    }
     const { state, codeChallenge, nonce } = await this.states.issue({
       provider: params.provider,
+      realm,
       redirectNext: isSafeNextPath(params.next) ? params.next : null,
       client: params.native ? SOCIAL_CLIENT.NATIVE : SOCIAL_CLIENT.WEB,
       ...(params.native
@@ -125,7 +154,7 @@ export class SocialAuthService {
       state,
       codeChallenge,
       nonce,
-      redirectUri: this.redirectUri(params.provider),
+      redirectUri: this.redirectUri(params.provider, realm, Boolean(params.native)),
       locale: resolveAppLocale(params.locale ?? DEFAULT_LOCALE),
     });
   }
@@ -148,7 +177,7 @@ export class SocialAuthService {
     // web. App native gặp ca này sẽ thấy trình duyệt dừng ở một trang web — không đẹp, nhưng đó
     // là hệ quả không tránh được của việc `state` hỏng: ta không biết app nào đã mở nó.
     const stored = await this.states.consume(params.state);
-    const { redirectNext } = stored;
+    const { redirectNext, realm } = stored;
     const native: NativeCallbackTarget | null =
       stored.client === SOCIAL_CLIENT.NATIVE && stored.appRedirectUri && stored.appCodeChallenge
         ? {
@@ -174,15 +203,15 @@ export class SocialAuthService {
         code: params.code,
         codeVerifier: stored.codeVerifier,
         nonce: stored.nonce,
-        redirectUri: this.redirectUri(params.provider),
+        redirectUri: this.redirectUri(params.provider, realm, native !== null),
       });
 
-      const { userId } = await this.auth.upsertUserFromIdentity(identity);
-      return { ok: true, userId, redirectNext, native };
+      const { userId } = await this.auth.upsertUserFromIdentity(identity, realm);
+      return { ok: true, userId, realm, redirectNext, native };
     } catch (error) {
       // Bắt ở ĐÂY chứ không ở controller: đây là chỗ cuối cùng còn cầm `redirectNext` + deep link.
       this.logFailure(params.provider, error);
-      return { ok: false, errorCode: socialErrorCode(error), redirectNext, native };
+      return { ok: false, errorCode: socialErrorCode(error), realm, redirectNext, native };
     }
   }
 
@@ -242,15 +271,19 @@ export class SocialAuthService {
   }
 
   /**
-   * URL cuối cùng để đưa người dùng về web.
+   * URL cuối cùng để đưa người dùng về web — về đúng SITE của realm (ADR 0053).
    *
-   * Dựng từ `APP_WEB_URL` chứ không từ header `Referer` hay `Origin` của request: cả hai đều do
-   * client gửi, và một `Location` dựng từ dữ liệu client là định nghĩa của open redirect.
+   * Dựng từ cấu hình (`siteOrigin`/`webUrlFor`) chứ không từ header `Referer` hay `Origin` của
+   * request: cả hai đều do client gửi, và một `Location` dựng từ dữ liệu client là định nghĩa của
+   * open redirect.
+   *
+   * `next` là path HIỂN THỊ trên site đó (đã gồm tiền tố khu ở chế độ `path` của ADR 0051), nên
+   * ghép với ORIGIN. Không có `next` an toàn ⇒ trang chủ của site.
    */
-  webRedirect(next: string | null, errorCode?: string): string {
-    const base = this.config.getOrThrow<string>('APP_WEB_URL').replace(/\/+$/, '');
-    const path = isSafeNextPath(next) ? next : '/';
-    const url = new URL(`${base}${path}`);
+  webRedirect(realm: AccountRealm, next: string | null, errorCode?: string): string {
+    const url = isSafeNextPath(next)
+      ? new URL(`${this.realms.siteOrigin(realm)}${next}`)
+      : new URL(`${this.realms.webUrlFor(realm)}/`);
     if (errorCode) {
       url.searchParams.set('authError', errorCode);
       // Mở lại hộp đăng nhập ở đúng chế độ để người dùng thử tiếp ngay, không phải tự đi tìm nút.
@@ -269,9 +302,15 @@ export class SocialAuthService {
    * `redirect_uri` phải TRÙNG TỪNG KÝ TỰ với giá trị đã khai trong Google/Facebook console, và
    * phải giống nhau ở cả hai chặng (authorize và token) — provider đối chiếu chúng với nhau.
    * Vì thế nó được tính ở đúng một hàm, không ghép tay ở hai chỗ.
+   *
+   * ADR 0053: callback của WEB nằm dưới `/api` của chính site đó, để cookie phiên do site đó phát
+   * (host-only). Luồng NATIVE giữ callback trên `API_PUBLIC_URL` — nó không phát cookie mà phát
+   * one-time code về deep link. Mỗi site + native là một URI phải khai trong console provider.
    */
-  private redirectUri(provider: AuthProvider): string {
-    const base = this.config.getOrThrow<string>('API_PUBLIC_URL').replace(/\/+$/, '');
+  private redirectUri(provider: AuthProvider, realm: AccountRealm, native: boolean): string {
+    const base = native
+      ? this.config.getOrThrow<string>('API_PUBLIC_URL').replace(/\/+$/, '')
+      : `${this.realms.siteOrigin(realm)}/api`;
     return `${base}/auth/social/${provider}/callback`;
   }
 

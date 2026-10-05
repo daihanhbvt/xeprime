@@ -14,7 +14,7 @@ import { PermissionState } from '@/components/feedback/PermissionState';
 import {
   ROUTES,
   VEHICLE_REGISTRATION_SOURCE,
-  accountVehiclePath,
+  ownerVehiclePath,
   listYourVehicleRegisterPath,
 } from '@/constants/routes';
 import { FleetSummaryBar } from '@/features/vehicles/components/FleetSummaryBar';
@@ -119,7 +119,7 @@ export function AccountVehiclesView() {
         kind="forbidden"
         missingPermissions={[PERMISSION.VEHICLE_VIEW]}
         action={
-          <Link href={ROUTES.ACCOUNT.ROOT}>
+          <Link href={ROUTES.MANAGE.ROOT}>
             <Button type="primary">{tManage('backHome')}</Button>
           </Link>
         }
@@ -144,13 +144,13 @@ export function AccountVehiclesView() {
         label: t('manage'),
         showLabel: true,
         primary: true,
-        onClick: () => router.push(accountVehiclePath.manage(row.id)),
+        onClick: () => router.push(ownerVehiclePath.manage(row.id)),
       },
       {
         key: 'view',
         label: t('viewDetail'),
         showLabel: true,
-        onClick: () => router.push(accountVehiclePath.detail(row.id)),
+        onClick: () => router.push(ownerVehiclePath.detail(row.id)),
       },
     ];
   }
@@ -162,7 +162,7 @@ export function AccountVehiclesView() {
       {/* Hai thẻ dẫn đường — trỏ tới tài liệu THẬT trong khu này, không nhắc nghị định/tỷ lệ. */}
       {inSupport ? null : (
         <div className={styles.tips}>
-          <Link href={ROUTES.ACCOUNT.HOST_GUIDE} className={styles.tip}>
+          <Link href={ROUTES.MANAGE.HOST_GUIDE} className={styles.tip}>
             <span className={styles.tipIcon} aria-hidden="true">
               <BookOutlined />
             </span>
@@ -172,7 +172,7 @@ export function AccountVehiclesView() {
             </span>
             <RightOutlined className={styles.tipChevron} aria-hidden="true" />
           </Link>
-          <Link href={ROUTES.ACCOUNT.CONTRACTS_DOCUMENTS} className={styles.tip}>
+          <Link href={ROUTES.MANAGE.CONTRACTS_DOCUMENTS} className={styles.tip}>
             <span className={styles.tipIcon} aria-hidden="true">
               <FileProtectOutlined />
             </span>
@@ -255,7 +255,7 @@ export function AccountVehiclesView() {
         onClearFilters={clearFilters}
         emptyAction={addButton ?? undefined}
         rowActions={rowActions}
-        detailHref={accountVehiclePath.detail}
+        detailHref={ownerVehiclePath.detail}
         onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
       />
     </div>

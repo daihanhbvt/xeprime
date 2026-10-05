@@ -1,5 +1,6 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   APPROVAL_STATUS,
   APPROVAL_TARGET_TYPE,
@@ -123,7 +124,11 @@ const inSearch = async (vehicleId: string): Promise<boolean> => {
 
 const visibilityAudits = (vehicleId: string): Promise<number> =>
   prisma.auditLog.count({
-    where: { targetType: 'vehicle', targetId: vehicleId, action: 'vehicle.marketplace_visibility.update' },
+    where: {
+      targetType: 'vehicle',
+      targetId: vehicleId,
+      action: 'vehicle.marketplace_visibility.update',
+    },
   });
 
 beforeAll(async () => {
@@ -145,10 +150,30 @@ beforeAll(async () => {
 
   await prisma.user.createMany({
     data: [
-      { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
-      { id: reviewerId, displayName: 'Reviewer', email: `rev-${reviewerId}@xeprime.test` },
-      { id: customerId, displayName: 'Khách', email: `cus-${customerId}@xeprime.test` },
-      { id: otherOwnerId, displayName: 'Chủ shop 2', email: `own2-${otherOwnerId}@xeprime.test` },
+      {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: ownerId,
+        displayName: 'Chủ shop',
+        email: `own-${ownerId}@xeprime.test`,
+      },
+      {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: reviewerId,
+        displayName: 'Reviewer',
+        email: `rev-${reviewerId}@xeprime.test`,
+      },
+      {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: customerId,
+        displayName: 'Khách',
+        email: `cus-${customerId}@xeprime.test`,
+      },
+      {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: otherOwnerId,
+        displayName: 'Chủ shop 2',
+        email: `own2-${otherOwnerId}@xeprime.test`,
+      },
     ],
   });
   await prisma.tenant.createMany({
@@ -236,33 +261,39 @@ const maybe = (name: string, fn: () => Promise<void>) =>
 /* ─── Hai trục nhân với nhau ─────────────────────────────────────────────── */
 
 describe('ADR 0048 — trạng thái hiệu lực của listing', () => {
-  maybe('approved_public + marketplaceEnabled=true → listing active và ra được search', async () => {
-    const v = await seedVehicle();
-    await approve(v);
+  maybe(
+    'approved_public + marketplaceEnabled=true → listing active và ra được search',
+    async () => {
+      const v = await seedVehicle();
+      await approve(v);
 
-    expect(await listingStatus(v)).toBe(LISTING_STATUS.ACTIVE);
-    expect(await inSearch(v)).toBe(true);
+      expect(await listingStatus(v)).toBe(LISTING_STATUS.ACTIVE);
+      expect(await inSearch(v)).toBe(true);
 
-    const detail = await vehicles.getOne(tenantId, v);
-    expect(detail.marketplaceEnabled).toBe(true);
-    expect(detail.isMarketplaceVisible).toBe(true);
-    expect(detail.marketplaceVisibilityReason).toBe(MARKETPLACE_VISIBILITY_REASON.VISIBLE);
-  });
+      const detail = await vehicles.getOne(tenantId, v);
+      expect(detail.marketplaceEnabled).toBe(true);
+      expect(detail.isMarketplaceVisible).toBe(true);
+      expect(detail.marketplaceVisibilityReason).toBe(MARKETPLACE_VISIBILITY_REASON.VISIBLE);
+    },
+  );
 
-  maybe('approved_public + marketplaceEnabled=false → listing hidden, KHÔNG đổi publicStatus', async () => {
-    const v = await seedVehicle();
-    await approve(v);
+  maybe(
+    'approved_public + marketplaceEnabled=false → listing hidden, KHÔNG đổi publicStatus',
+    async () => {
+      const v = await seedVehicle();
+      await approve(v);
 
-    const after = await vehicles.setMarketplaceVisibility(tenantId, v, ownerId, false);
+      const after = await vehicles.setMarketplaceVisibility(tenantId, v, ownerId, false);
 
-    expect(await listingStatus(v)).toBe(LISTING_STATUS.HIDDEN);
-    expect(await inSearch(v)).toBe(false);
-    // Trục kiểm duyệt KHÔNG bị đụng tới — đó là toàn bộ điểm của ADR 0048.
-    expect(after.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC);
-    expect(after.marketplaceEnabled).toBe(false);
-    expect(after.isMarketplaceVisible).toBe(false);
-    expect(after.marketplaceVisibilityReason).toBe(MARKETPLACE_VISIBILITY_REASON.OWNER_PAUSED);
-  });
+      expect(await listingStatus(v)).toBe(LISTING_STATUS.HIDDEN);
+      expect(await inSearch(v)).toBe(false);
+      // Trục kiểm duyệt KHÔNG bị đụng tới — đó là toàn bộ điểm của ADR 0048.
+      expect(after.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC);
+      expect(after.marketplaceEnabled).toBe(false);
+      expect(after.isMarketplaceVisible).toBe(false);
+      expect(after.marketplaceVisibilityReason).toBe(MARKETPLACE_VISIBILITY_REASON.OWNER_PAUSED);
+    },
+  );
 
   maybe('bật lại xe approved → active ngay, KHÔNG sinh phiếu duyệt mới', async () => {
     const v = await seedVehicle();
@@ -350,8 +381,12 @@ describe('ADR 0048 điều 2 — tắt hiển thị không đụng nghiệp vụ
     expect(request.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
     expect(await prisma.vehicleOccupancy.count({ where: { id: occupancyId } })).toBe(1);
     expect(
-      (await prisma.vehicle.findUniqueOrThrow({ where: { id: v }, select: { operationStatus: true } }))
-        .operationStatus,
+      (
+        await prisma.vehicle.findUniqueOrThrow({
+          where: { id: v },
+          select: { operationStatus: true },
+        })
+      ).operationStatus,
     ).toBe(before.operationStatus);
   });
 });
@@ -363,9 +398,9 @@ describe('ADR 0048 điều 3 — chỉ xe đã duyệt mới bật lên được
     const v = await seedVehicle();
     await prisma.vehicle.update({ where: { id: v }, data: { marketplaceEnabled: false } });
 
-    await expect(vehicles.setMarketplaceVisibility(tenantId, v, ownerId, true)).rejects.toMatchObject(
-      { response: { code: API_ERROR_CODE.VEHICLE_NOT_APPROVED_PUBLIC } },
-    );
+    await expect(
+      vehicles.setMarketplaceVisibility(tenantId, v, ownerId, true),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VEHICLE_NOT_APPROVED_PUBLIC } });
     const row = await prisma.vehicle.findUniqueOrThrow({
       where: { id: v },
       select: { marketplaceEnabled: true, publicStatus: true },
@@ -398,9 +433,9 @@ describe('ADR 0048 điều 3 — chỉ xe đã duyệt mới bật lên được
     await platformVehicles.hide(v, reviewerId, { reason: 'Ảnh sai xe' } as never);
     await prisma.vehicle.update({ where: { id: v }, data: { marketplaceEnabled: false } });
 
-    await expect(vehicles.setMarketplaceVisibility(tenantId, v, ownerId, true)).rejects.toMatchObject(
-      { response: { code: API_ERROR_CODE.VEHICLE_PLATFORM_HIDDEN } },
-    );
+    await expect(
+      vehicles.setMarketplaceVisibility(tenantId, v, ownerId, true),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VEHICLE_PLATFORM_HIDDEN } });
     expect(await listingStatus(v)).toBe(LISTING_STATUS.HIDDEN);
   });
 
@@ -413,9 +448,9 @@ describe('ADR 0048 điều 3 — chỉ xe đã duyệt mới bật lên được
       data: { status: TENANT_STATUS.SUSPENDED },
     });
 
-    await expect(vehicles.setMarketplaceVisibility(tenantId, v, ownerId, true)).rejects.toMatchObject(
-      { response: { code: API_ERROR_CODE.SHOP_NOT_ACTIVE } },
-    );
+    await expect(
+      vehicles.setMarketplaceVisibility(tenantId, v, ownerId, true),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.SHOP_NOT_ACTIVE } });
 
     // Tắt LUÔN được — kể cả khi gian hàng đang khoá (ADR 0048 điều 3).
     await prisma.vehicle.update({ where: { id: v }, data: { marketplaceEnabled: true } });
@@ -429,28 +464,31 @@ describe('ADR 0048 điều 3 — chỉ xe đã duyệt mới bật lên được
 /* ─── Kiểm duyệt của nền tảng và lựa chọn của chủ xe không ghi đè nhau ───── */
 
 describe('ADR 0048 điều 4 — admin bỏ ẩn vẫn tôn trọng lựa chọn của chủ xe', () => {
-  maybe('unhide một xe đang bị chủ xe tắt: publicStatus về approved nhưng listing vẫn hidden', async () => {
-    const v = await seedVehicle();
-    await approve(v);
-    await vehicles.setMarketplaceVisibility(tenantId, v, ownerId, false);
-    await platformVehicles.hide(v, reviewerId, { reason: 'Kiểm tra' } as never);
+  maybe(
+    'unhide một xe đang bị chủ xe tắt: publicStatus về approved nhưng listing vẫn hidden',
+    async () => {
+      const v = await seedVehicle();
+      await approve(v);
+      await vehicles.setMarketplaceVisibility(tenantId, v, ownerId, false);
+      await platformVehicles.hide(v, reviewerId, { reason: 'Kiểm tra' } as never);
 
-    await platformVehicles.unhide(v, reviewerId);
+      await platformVehicles.unhide(v, reviewerId);
 
-    const row = await prisma.vehicle.findUniqueOrThrow({
-      where: { id: v },
-      select: { publicStatus: true, marketplaceEnabled: true },
-    });
-    expect(row.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC);
-    // Admin KHÔNG được bật hộ công tắc của chủ xe.
-    expect(row.marketplaceEnabled).toBe(false);
-    expect(await listingStatus(v)).toBe(LISTING_STATUS.HIDDEN);
-    expect(await inSearch(v)).toBe(false);
+      const row = await prisma.vehicle.findUniqueOrThrow({
+        where: { id: v },
+        select: { publicStatus: true, marketplaceEnabled: true },
+      });
+      expect(row.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC);
+      // Admin KHÔNG được bật hộ công tắc của chủ xe.
+      expect(row.marketplaceEnabled).toBe(false);
+      expect(await listingStatus(v)).toBe(LISTING_STATUS.HIDDEN);
+      expect(await inSearch(v)).toBe(false);
 
-    // …và chủ xe bật lại thì xe hiện ngay, không cần duyệt lần nữa.
-    await vehicles.setMarketplaceVisibility(tenantId, v, ownerId, true);
-    expect(await listingStatus(v)).toBe(LISTING_STATUS.ACTIVE);
-  });
+      // …và chủ xe bật lại thì xe hiện ngay, không cần duyệt lần nữa.
+      await vehicles.setMarketplaceVisibility(tenantId, v, ownerId, true);
+      expect(await listingStatus(v)).toBe(LISTING_STATUS.ACTIVE);
+    },
+  );
 
   maybe('xe bị nền tảng ẩn KHÔNG còn nằm trong bộ trạng thái gửi duyệt lại', async () => {
     const v = await seedVehicle();
@@ -542,7 +580,11 @@ describe('ADR 0048 — bảng xe toàn hệ thống của nền tảng', () => {
     await vehicles.setMarketplaceVisibility(tenantId, paused, ownerId, false);
 
     const idsOf = async (marketplaceVisible: boolean | undefined): Promise<string[]> => {
-      const res = await platformVehicles.list({ tenantId, limit: 100, marketplaceVisible } as never);
+      const res = await platformVehicles.list({
+        tenantId,
+        limit: 100,
+        marketplaceVisible,
+      } as never);
       return res.data.map((row) => row.id);
     };
 

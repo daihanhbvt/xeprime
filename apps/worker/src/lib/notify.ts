@@ -95,11 +95,6 @@ async function enqueue(
             {
               notificationId: r.id as string,
               userId: r.userId,
-              // Deep link đã đóng băng ở `row()` — nó chọn APP nhận đẩy (customer/partner).
-              url:
-                r.dataJson && typeof r.dataJson === 'object' && 'url' in r.dataJson
-                  ? ((r.dataJson as { url?: unknown }).url as string | null)
-                  : null,
             },
           ]
         : [],

@@ -1,13 +1,14 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   BILLING_MODE,
   BILLING_PHASE,
   FEATURE_STATE,
+  isSubscriptionTrack,
   PLAN_FEATURE,
   PLAN_FEATURE_VALUES,
   PLAN_STATUS,
   SUBSCRIPTION_STATUS,
-  isSubscriptionTrack,
 } from '@xeprime/types';
 import {
   EFFECTIVE_SUBSCRIPTION_ARGS,
@@ -54,7 +55,12 @@ beforeAll(async () => {
   tenantId = newId();
   planId = newId();
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Feature Owner', email: `feat-${RUN}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Feature Owner',
+      email: `feat-${RUN}@xeprime.test`,
+    },
   });
   await prisma.tenant.create({
     data: {
@@ -99,7 +105,15 @@ const maybe = (name: string, fn: () => Promise<void>) =>
 
 describe('planFeatureFlags — parser phòng thủ (ADR 0027 điều 4)', () => {
   it('NULL / kiểu lạ / features rác → tập RỖNG, KHÔNG ném', () => {
-    for (const bad of [null, undefined, 'chuỗi', 42, [], { features: 'finance' }, { features: 7 }]) {
+    for (const bad of [
+      null,
+      undefined,
+      'chuỗi',
+      42,
+      [],
+      { features: 'finance' },
+      { features: 7 },
+    ]) {
       expect(() => planFeatureFlags(bad)).not.toThrow();
       expect(planFeatureFlags(bad).size).toBe(0);
     }
@@ -164,7 +178,6 @@ describe('featureStatesFrom — ba trạng thái, có gác bằng featuresActive
   });
 });
 
-
 /*
  * ═══════════════════════════════════════════════════════════════════════════
  * NĂM MỐC của vòng đời gói, trên PostgreSQL thật.
@@ -190,7 +203,9 @@ describe('năm mốc vòng đời gói trên PostgreSQL thật (F1)', () => {
     await prisma.tenantSubscription.deleteMany({ where: { tenantId } });
     await prisma.plan.update({
       where: { id: planId },
-      data: { limitsJson: { features: [PLAN_FEATURE.FINANCE, PLAN_FEATURE.BRANCHES], graceDays: 7 } },
+      data: {
+        limitsJson: { features: [PLAN_FEATURE.FINANCE, PLAN_FEATURE.BRANCHES], graceDays: 7 },
+      },
     });
     await prisma.tenantSubscription.create({
       data: {
@@ -237,64 +252,70 @@ describe('năm mốc vòng đời gói trên PostgreSQL thật (F1)', () => {
    * Mốc 4 là chỗ quyết định 6 ghi đè ADR 0027 điều 3: KHÔNG còn `read_only` sau khi hết ân hạn.
    * Tenant này có `usedFeatures = [finance]`, tức là đúng điều kiện sinh `read_only` ở bản cũ.
    */
-  maybe('4 · SAU ân hạn, TRƯỚC khi worker chạy — hoa hồng NGAY, và HIDDEN chứ không read_only', async () => {
-    const plan = await atMilestone(new Date(Date.now() - 8 * DAY));
-    expect(plan.phase).toBe(BILLING_PHASE.LAPSED);
-    expect(plan.billingMode).toBe(BILLING_MODE.COMMISSION);
-    expect(isSubscriptionTrack(plan.billing)).toBe(false);
-    expect(plan.features[PLAN_FEATURE.FINANCE]).toBe(FEATURE_STATE.HIDDEN);
-    expect(plan.features[PLAN_FEATURE.BRANCHES]).toBe(FEATURE_STATE.HIDDEN);
-  });
+  maybe(
+    '4 · SAU ân hạn, TRƯỚC khi worker chạy — hoa hồng NGAY, và HIDDEN chứ không read_only',
+    async () => {
+      const plan = await atMilestone(new Date(Date.now() - 8 * DAY));
+      expect(plan.phase).toBe(BILLING_PHASE.LAPSED);
+      expect(plan.billingMode).toBe(BILLING_MODE.COMMISSION);
+      expect(isSubscriptionTrack(plan.billing)).toBe(false);
+      expect(plan.features[PLAN_FEATURE.FINANCE]).toBe(FEATURE_STATE.HIDDEN);
+      expect(plan.features[PLAN_FEATURE.BRANCHES]).toBe(FEATURE_STATE.HIDDEN);
+    },
+  );
 
-  maybe('5 · SAU khi worker nối dòng hoa hồng — cùng một câu trả lời, không có bước nhảy', async () => {
-    await atMilestone(new Date(Date.now() - 8 * DAY));
-    const lapsedEndsAt = new Date(Date.now() - 8 * DAY);
-    const graceEndsAt = new Date(lapsedEndsAt.getTime() + 7 * DAY);
-    // Đúng dòng mà `lapseToCommission` ghi: nối liền từ mốc hết ân hạn, không từ `now`.
-    const commissionPlanId = newId();
-    await prisma.plan.create({
-      data: {
-        id: commissionPlanId,
-        code: `feat-comm-${RUN}`,
-        name: 'Hoa hồng',
-        status: PLAN_STATUS.ACTIVE,
-        billingMode: BILLING_MODE.COMMISSION,
-        commissionPercent: 10,
-        basePriceMonthly: 0,
-        limitsJson: { features: [], graceDays: 7 },
-      },
-    });
-    await prisma.tenantSubscription.create({
-      data: {
-        id: newId(),
-        tenantId,
-        planId: commissionPlanId,
-        status: SUBSCRIPTION_STATUS.ACTIVE,
-        price: 0,
-        termMonths: 12,
-        billingMode: BILLING_MODE.COMMISSION,
-        commissionPercent: 10,
-        startsAt: graceEndsAt,
-        endsAt: new Date(graceEndsAt.getTime() + 365 * DAY),
-      },
-    });
+  maybe(
+    '5 · SAU khi worker nối dòng hoa hồng — cùng một câu trả lời, không có bước nhảy',
+    async () => {
+      await atMilestone(new Date(Date.now() - 8 * DAY));
+      const lapsedEndsAt = new Date(Date.now() - 8 * DAY);
+      const graceEndsAt = new Date(lapsedEndsAt.getTime() + 7 * DAY);
+      // Đúng dòng mà `lapseToCommission` ghi: nối liền từ mốc hết ân hạn, không từ `now`.
+      const commissionPlanId = newId();
+      await prisma.plan.create({
+        data: {
+          id: commissionPlanId,
+          code: `feat-comm-${RUN}`,
+          name: 'Hoa hồng',
+          status: PLAN_STATUS.ACTIVE,
+          billingMode: BILLING_MODE.COMMISSION,
+          commissionPercent: 10,
+          basePriceMonthly: 0,
+          limitsJson: { features: [], graceDays: 7 },
+        },
+      });
+      await prisma.tenantSubscription.create({
+        data: {
+          id: newId(),
+          tenantId,
+          planId: commissionPlanId,
+          status: SUBSCRIPTION_STATUS.ACTIVE,
+          price: 0,
+          termMonths: 12,
+          billingMode: BILLING_MODE.COMMISSION,
+          commissionPercent: 10,
+          startsAt: graceEndsAt,
+          endsAt: new Date(graceEndsAt.getTime() + 365 * DAY),
+        },
+      });
 
-    const row = await asService.tenantSubscription.findFirst({
-      where: { tenantId, ...effectiveSubscriptionWhere(new Date()) },
-      ...EFFECTIVE_SUBSCRIPTION_ARGS,
-    });
-    const plan = resolveTenantFeatures(row, [PLAN_FEATURE.FINANCE]);
+      const row = await asService.tenantSubscription.findFirst({
+        where: { tenantId, ...effectiveSubscriptionWhere(new Date()) },
+        ...EFFECTIVE_SUBSCRIPTION_ARGS,
+      });
+      const plan = resolveTenantFeatures(row, [PLAN_FEATURE.FINANCE]);
 
-    // Worker chạy KHÔNG làm đổi câu trả lời — mốc 4 và mốc 5 phải giống hệt nhau về tuyến và
-    // năng lực. Nếu khác, nghĩa là có một cửa sổ mà hành vi phụ thuộc việc job đã chạy hay chưa.
-    expect(plan.phase).toBe(BILLING_PHASE.CURRENT);
-    expect(plan.billingMode).toBe(BILLING_MODE.COMMISSION);
-    expect(isSubscriptionTrack(plan.billing)).toBe(false);
-    expect(Object.values(plan.features).every((s) => s === FEATURE_STATE.HIDDEN)).toBe(true);
+      // Worker chạy KHÔNG làm đổi câu trả lời — mốc 4 và mốc 5 phải giống hệt nhau về tuyến và
+      // năng lực. Nếu khác, nghĩa là có một cửa sổ mà hành vi phụ thuộc việc job đã chạy hay chưa.
+      expect(plan.phase).toBe(BILLING_PHASE.CURRENT);
+      expect(plan.billingMode).toBe(BILLING_MODE.COMMISSION);
+      expect(isSubscriptionTrack(plan.billing)).toBe(false);
+      expect(Object.values(plan.features).every((s) => s === FEATURE_STATE.HIDDEN)).toBe(true);
 
-    await prisma.tenantSubscription.deleteMany({ where: { planId: commissionPlanId } });
-    await prisma.plan.deleteMany({ where: { id: commissionPlanId } });
-  });
+      await prisma.tenantSubscription.deleteMany({ where: { planId: commissionPlanId } });
+      await prisma.plan.deleteMany({ where: { id: commissionPlanId } });
+    },
+  );
 
   maybe('limits_json HỎNG trong DB không làm sập đường đọc', async () => {
     await prisma.plan.update({ where: { id: planId }, data: { limitsJson: 'không phải object' } });
@@ -308,7 +329,10 @@ describe('năm mốc vòng đời gói trên PostgreSQL thật (F1)', () => {
   });
 
   maybe('dòng thuê bao thiếu billing_mode ⇒ unconfigured, KHÔNG đoán thành tuyến gói', async () => {
-    await prisma.tenantSubscription.updateMany({ where: { tenantId }, data: { billingMode: null } });
+    await prisma.tenantSubscription.updateMany({
+      where: { tenantId },
+      data: { billingMode: null },
+    });
     const plan = await atMilestone(new Date(Date.now() + DAY));
     expect(plan.phase).toBe(BILLING_PHASE.UNCONFIGURED);
     expect(plan.billingMode).toBeNull();

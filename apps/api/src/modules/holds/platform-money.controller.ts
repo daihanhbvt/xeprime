@@ -6,8 +6,12 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
-import { PERMISSION, type BookingHoldOutcome } from '@xeprime/types';
-import { CurrentUser, PlatformOnly, RequirePermissions } from '../../common/decorators';
+import {
+  ACCOUNT_REALM,
+  PERMISSION,
+  type BookingHoldOutcome,
+} from '@xeprime/types';
+import { CurrentUser, PlatformOnly, Realms, RequirePermissions } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import { BookingHoldsService } from './booking-holds.service';
 import {
@@ -39,6 +43,7 @@ import { PlatformMoneySummaryService } from './platform-money-summary.service';
 @Controller('platform/money')
 @PlatformOnly()
 @RequirePermissions(PERMISSION.PLATFORM_MONEY_MANAGE)
+@Realms(ACCOUNT_REALM.PLATFORM)
 export class PlatformMoneyController {
   constructor(
     private readonly holds: BookingHoldsService,

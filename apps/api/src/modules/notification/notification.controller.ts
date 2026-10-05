@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { ACCOUNT_REALM_VALUES } from '@xeprime/types';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { CurrentUser } from '../../common/decorators';
+import { CurrentUser, Realms } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import {
   NotificationListQueryDto,
@@ -24,6 +25,7 @@ import { PushDeviceService } from './push-device.service';
  */
 @ApiTags('notifications')
 @Controller('notifications')
+@Realms(...ACCOUNT_REALM_VALUES)
 export class NotificationController {
   constructor(
     private readonly notifications: NotificationService,

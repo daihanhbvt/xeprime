@@ -1,13 +1,11 @@
 import { Body, Controller, Get, Put, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
-  CurrentTenant,
-  CurrentUser,
-  RequirePermissions,
-  TenantScoped,
-  SupportAction,
-} from '../../common/decorators';
+  ACCOUNT_REALM,
+  PERMISSION,
+  SUPPORT_CAPABILITY,
+} from '@xeprime/types';
+import { CurrentTenant, CurrentUser, Realms, RequirePermissions, SupportAction, TenantScoped } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import {
   SaveRentalPolicyDto,
@@ -26,6 +24,7 @@ import { PricingService } from './pricing.service';
 @ApiTags('rental-policies')
 @Controller('shop/rental-policies')
 @TenantScoped()
+@Realms(ACCOUNT_REALM.PARTNER)
 export class ShopPoliciesController {
   constructor(private readonly pricing: PricingService) {}
 

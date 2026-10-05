@@ -5,6 +5,8 @@ import type { ReactNode } from 'react';
 
 import { queryKeys } from '@/services/query-keys';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import { ZONE, type Zone } from '@/zones';
+import { ZoneProvider } from '@/zones/ZoneProvider';
 import { useMarketLogout } from './use-market-logout';
 import { usePortalLogout } from './use-portal-logout';
 
@@ -51,8 +53,17 @@ function MarketProbe() {
   return <Probe onLogout={useMarketLogout()} />;
 }
 
-function PortalProbe() {
+function PortalProbeInner() {
   return <Probe onLogout={usePortalLogout()} />;
+}
+
+/** Đăng xuất về trang đăng nhập CỦA site đang đứng (ADR 0053) — khu do layout cung cấp. */
+function PortalProbe({ zone = ZONE.PARTNER }: { zone?: Zone }) {
+  return (
+    <ZoneProvider zone={zone}>
+      <PortalProbeInner />
+    </ZoneProvider>
+  );
 }
 
 function renderLoggedIn(ui: ReactNode) {
@@ -93,6 +104,14 @@ describe('Đăng xuất cổng quản lý', () => {
 
     await waitFor(() => expect(screen.getByTestId('who').textContent).toBe('chưa đăng nhập'));
     expect(nav.replace).toHaveBeenCalledWith('/manage/login');
+  });
+
+  it('ở site quản trị thì về trang đăng nhập của site quản trị', async () => {
+    renderLoggedIn(<PortalProbe zone={ZONE.ADMIN} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Đăng xuất' }));
+
+    await waitFor(() => expect(nav.replace).toHaveBeenCalledWith('/admin/login'));
   });
 
   /**

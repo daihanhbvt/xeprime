@@ -1,7 +1,10 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
-import { PlatformOnly, RequirePermissions } from '../../common/decorators';
+import {
+  ACCOUNT_REALM,
+  PERMISSION,
+} from '@xeprime/types';
+import { PlatformOnly, Realms, RequirePermissions } from '../../common/decorators';
 import { PlatformDashboardSummaryDto } from './dto/platform-dashboard.dto';
 import { PlatformDashboardService } from './platform-dashboard.service';
 
@@ -10,6 +13,7 @@ import { PlatformDashboardService } from './platform-dashboard.service';
 @Controller('platform/dashboard')
 @PlatformOnly()
 @RequirePermissions(PERMISSION.PLATFORM_DASHBOARD_VIEW)
+@Realms(ACCOUNT_REALM.PLATFORM)
 export class PlatformDashboardController {
   constructor(private readonly dashboard: PlatformDashboardService) {}
 

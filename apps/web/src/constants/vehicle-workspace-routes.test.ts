@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { isCommissionPage } from '@/features/auth/post-auth-destination';
+
 import {
   VEHICLE_EDIT_TAB,
   VEHICLE_MANAGE_SECTION,
@@ -10,11 +12,11 @@ import {
 /**
  * ĐƯỜNG DẪN TỚI MỘT CHIẾC XE PHẢI Ở LẠI TRONG KHU CỦA NGƯỜI DÙNG.
  *
- * Vì sao bộ test này tồn tại: chủ xe cá nhân tuyến hoa hồng KHÔNG vào được `/manage` —
- * `AppShell` đá họ về `/account` (ADR 0027 · ADR 0028 điều 1). Trước 29/09/2026, nút "Chỉnh
- * sửa" trên Hồ sơ 360, link "Chỉnh sửa giá", "Tối ưu nhận chuyến", thẻ Giấy tờ và CTA "Hoàn
- * tất hồ sơ" đều ghép cứng chuỗi `/manage/vehicles/...`, nên **năm lối đi quan trọng nhất của
- * một chiếc xe đều là ngõ cụt** với đúng nhóm người dùng mà khu `/account` sinh ra để phục vụ.
+ * Vì sao bộ test này tồn tại: chủ xe cá nhân tuyến hoa hồng KHÔNG dùng được màn sửa xe đầy đủ của
+ * tuyến gói (`/vehicles/<id>/edit`) — `AppShell` đá họ về trang chủ Owner Lite (ADR 0027 · ADR
+ * 0028 điều 1). Từ ADR 0051 Owner Lite ở CÙNG site partner với Full Manage, nên khu "tài khoản"
+ * (`WORKSPACE.ACCOUNT`) giờ là không gian quản lý xe `/vehicles/<id>/manage/...` của site partner.
+ * Một link tới màn sửa đầy đủ ở đây là **một ngõ cụt** với đúng nhóm người dùng của Owner Lite.
  *
  * Đây là phép kiểm THUẦN — không render, không mock — vì luật nằm trọn trong bảng đường dẫn.
  */
@@ -23,7 +25,7 @@ describe('workspaceVehiclePaths — mỗi khu dẫn về chính nó', () => {
   const account = workspaceVehiclePaths(WORKSPACE.ACCOUNT);
   const ID = '01M0GSW2002RRX9QAAPZ4WM9VB';
 
-  it('khu tài khoản KHÔNG sinh ra đường dẫn /manage nào', () => {
+  it('Owner Lite KHÔNG sinh ra đường dẫn nào vào màn sửa của tuyến gói', () => {
     const hrefs = [
       account.detail(ID),
       account.profile(ID),
@@ -37,7 +39,10 @@ describe('workspaceVehiclePaths — mỗi khu dẫn về chính nó', () => {
 
     for (const href of hrefs) {
       expect(href).not.toBeNull();
-      expect(href).toMatch(/^\/account\/vehicles\//);
+      expect(href).toMatch(new RegExp(`^/manage/vehicles/${ID}(/manage(/|$)|$)`));
+      expect(href).not.toContain('/edit');
+      // Mọi đích đều là trang tuyến hoa hồng được ở — không có link nào dẫn tới cú đá ngược.
+      expect(isCommissionPage(href as string), href as string).toBe(true);
     }
   });
 
@@ -73,10 +78,10 @@ describe('workspaceVehiclePaths — mỗi khu dẫn về chính nó', () => {
 
   it('giá và tối ưu nhận chuyến có ở CẢ HAI khu — không khu nào mất tính năng', () => {
     expect(account.pricing(ID)).toBe(
-      `/account/vehicles/${ID}/manage/${VEHICLE_MANAGE_SECTION.PRICING}`,
+      `/manage/vehicles/${ID}/manage/${VEHICLE_MANAGE_SECTION.PRICING}`,
     );
     expect(account.optimization(ID)).toBe(
-      `/account/vehicles/${ID}/manage/${VEHICLE_MANAGE_SECTION.SELF_DRIVE_OPTIMIZATION}`,
+      `/manage/vehicles/${ID}/manage/${VEHICLE_MANAGE_SECTION.SELF_DRIVE_OPTIMIZATION}`,
     );
   });
 });

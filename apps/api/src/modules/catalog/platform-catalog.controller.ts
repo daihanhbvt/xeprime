@@ -11,8 +11,11 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
-import { CurrentUser, PlatformOnly, RequirePermissions } from '../../common/decorators';
+import {
+  ACCOUNT_REALM,
+  PERMISSION,
+} from '@xeprime/types';
+import { CurrentUser, PlatformOnly, Realms, RequirePermissions } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import { CatalogModelService } from './catalog-model.service';
 import { CatalogService } from './catalog.service';
@@ -40,6 +43,7 @@ import {
 @Controller('platform/catalog')
 @PlatformOnly()
 @RequirePermissions(PERMISSION.PLATFORM_CATALOG_MANAGE)
+@Realms(ACCOUNT_REALM.PLATFORM)
 export class PlatformCatalogController {
   constructor(
     private readonly catalog: CatalogService,

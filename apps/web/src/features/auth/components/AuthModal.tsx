@@ -76,7 +76,9 @@ export function AuthModal() {
   function goTo(path: string) {
     setRegistered(null);
     close();
-    router.push(path);
+    // Lối "Đăng xe cho thuê" dẫn sang SITE PARTNER (ADR 0051) — host khác thì tải trang thật.
+    if (/^https?:\/\//.test(path)) window.location.assign(path);
+    else router.push(path);
   }
 
   const body = registered ? (
@@ -85,7 +87,7 @@ export function AuthModal() {
       closeLabel={next ? t('continueLabel') : tCommon('actions.close')}
       onClose={handleClose}
       onOpenAccount={() => goTo(ROUTES.ACCOUNT.ROOT)}
-      onBecomeOwner={() => goTo(resolveOwnerCtaHref(registered))}
+      onBecomeOwner={() => goTo(resolveOwnerCtaHref())}
     />
   ) : (
     <>

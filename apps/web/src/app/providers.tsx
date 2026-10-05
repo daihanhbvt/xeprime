@@ -1,8 +1,7 @@
 'use client';
 
 import { AntdRegistry } from '@ant-design/nextjs-registry';
-import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { API_ERROR_CODE } from '@xeprime/types';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { App as AntdApp, ConfigProvider } from 'antd';
 import enUS from 'antd/locale/en_US';
 import viVN from 'antd/locale/vi_VN';
@@ -15,12 +14,12 @@ import { Provider as ReduxProvider } from 'react-redux';
 import { ChatRealtimeProvider } from '@/features/chat/context/ChatRealtimeContext';
 import { BadgeRealtimeProvider } from '@/features/badges/BadgeRealtimeProvider';
 import type { AppLocale } from '@/i18n/config';
+import { useZoneQueryClient } from '@/lib/query-client';
 import type { NavPreferences } from '@/lib/ui-preferences';
-import { getErrorCode } from '@/services/api-client';
-import { queryKeys } from '@/services/query-keys';
 import { WorkspaceProvider } from '@/hooks/use-workspace';
 import { makeStore } from '@/store/make-store';
 import { antdTheme } from '@/styles/theme';
+import type { Zone } from '@/zones';
 
 /**
  * Chỉ NẠP ĐỊNH NGHĨA locale của Day.js, KHÔNG gọi `dayjs.locale(...)`.
@@ -60,56 +59,21 @@ export interface ProvidersProps {
    * sau khi hydrate sẽ làm sidebar nhấp nháy ở mọi lần tải trang.
    */
   navPreferences?: NavPreferences;
+  /**
+   * Khu theo HOST của request (root layout đọc header) — chế độ `host` dùng nó để chọn QueryClient
+   * của khu (`useZoneQueryClient`); chế độ `path` đọc khu từ đường dẫn.
+   */
+  hostZone: Zone;
 }
 
-export function Providers({ children, navPreferences }: ProvidersProps) {
+export function Providers({ children, navPreferences, hostZone }: ProvidersProps) {
   const locale = useLocale();
 
-  // makeStore/QueryClient tạo trong state chứ không phải module scope: module scope là
-  // singleton dùng chung giữa các request trên server, tức là rò dữ liệu giữa người dùng.
+  // makeStore tạo trong state chứ không phải module scope: module scope là singleton dùng chung
+  // giữa các request trên server, tức là rò dữ liệu giữa người dùng.
   const [store] = useState(() => makeStore(navPreferences));
-  const [queryClient] = useState(() => {
-    /*
-     * Tự chữa chiều lệch NGUY HIỂM của cache năng lực (ADR 0027): client tin là còn quyền, server
-     * nói đã hết. Hai mã này chỉ xuất hiện khi cờ tính năng của gian hàng đã đổi mà `/auth/me`
-     * trong cache còn nói khác — làm mới nó ngay là menu và nút bấm khớp lại trong một nhịp.
-     *
-     * KHÔNG hạ `staleTime` toàn cục để chữa việc này: khoá `auth.me` dùng chung với danh tính và
-     * quyền, hạ xuống là gấp ba lưu lượng `/auth/me` của MỌI người dùng để chữa một độ trễ 60
-     * giây thuần hiển thị. Chiều ngược lại (server mở lại quyền TRƯỚC client) đã có nút "Tôi đã
-     * gia hạn" ở `FeatureExpiredNotice`.
-     *
-     * Không có vòng lặp: `/auth/me` không mang `@RequiresFeature` nên nó không bao giờ là nguồn
-     * của hai mã này.
-     */
-    const refreshMeOnFeatureChange = (error: unknown): void => {
-      const code = getErrorCode(error);
-      if (
-        code === API_ERROR_CODE.FEATURE_READ_ONLY ||
-        code === API_ERROR_CODE.FEATURE_NOT_IN_PLAN
-      ) {
-        void client.invalidateQueries({ queryKey: queryKeys.auth.me() });
-      }
-    };
-
-    const client = new QueryClient({
-      queryCache: new QueryCache({ onError: refreshMeOnFeatureChange }),
-      mutationCache: new MutationCache({ onError: refreshMeOnFeatureChange }),
-      defaultOptions: {
-        queries: {
-          staleTime: 30_000,
-          retry: (failureCount, error) => {
-            // 401/403 retry là vô nghĩa và làm chậm việc hiện màn đăng nhập.
-            const status = (error as { status?: number }).status;
-            if (status === 401 || status === 403) return false;
-            return failureCount < 2;
-          },
-          refetchOnWindowFocus: false,
-        },
-      },
-    });
-    return client;
-  });
+  // MỘT QueryClient cho MỖI khu — mỗi site là một tài khoản riêng (ADR 0053), xem `useZoneQueryClient`.
+  const queryClient = useZoneQueryClient(hostZone);
 
   return (
     <AntdRegistry>

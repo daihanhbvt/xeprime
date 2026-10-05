@@ -1,7 +1,10 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
 import { ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { WALLET_OWNER_TYPE } from '@xeprime/types';
-import { CurrentTenant, ShopOwnerOnly, TenantScoped } from '../../common/decorators';
+import {
+  ACCOUNT_REALM,
+  WALLET_OWNER_TYPE,
+} from '@xeprime/types';
+import { CurrentTenant, Realms, ShopOwnerOnly, TenantScoped } from '../../common/decorators';
 import type { TenantContext } from '../../common/types/request-context';
 import { BankAccountsService } from './bank-accounts.service';
 import { BankAccountDto, SaveBankAccountDto } from './dto/bank-account.dto';
@@ -24,6 +27,7 @@ import { BankAccountDto, SaveBankAccountDto } from './dto/bank-account.dto';
 @Controller('shop/bank-accounts')
 @TenantScoped()
 @ShopOwnerOnly()
+@Realms(ACCOUNT_REALM.PARTNER)
 export class ShopBankAccountsController {
   constructor(private readonly accounts: BankAccountsService) {}
 

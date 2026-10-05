@@ -25,10 +25,16 @@ const user = vi.hoisted(() => ({
   email: 'a@congty.vn',
   avatarUrl: null as string | null,
   platformRole: null as string | null,
-  tenant: { name: 'Thuê Xe Minh Anh', roleKey: 'shop_owner' } as {
+  // Tuyến gói (ADR 0051 điều 3) ⇒ menu Full Manage của site partner.
+  tenant: { name: 'Thuê Xe Minh Anh', roleKey: 'shop_owner', billingMode: 'package' } as {
     name: string;
     roleKey: string;
+    billingMode: string;
   } | null,
+}));
+
+vi.mock('@/zones/ZoneProvider', () => ({
+  useZone: () => (user.platformRole ? 'admin' : 'partner'),
 }));
 const perms = vi.hoisted(() => ({ granted: new Set<string>() }));
 
@@ -52,15 +58,6 @@ vi.mock('@/hooks/use-permissions', () => ({
 }));
 
 vi.mock('./use-nav-badges', () => ({ useNavBadges: () => ({}) }));
-
-/*
- * Thẻ tài khoản ở chân sidebar đếm chuyến ĐI THUÊ còn dở để quyết định mục "Chuyến tôi đi thuê"
- * (16/09/2026). Bộ này kiểm khung sidebar, không kiểm thẻ đó — nó có test riêng — nên chặn ở
- * đúng ranh giới hook thay vì dựng một QueryClient giả.
- */
-vi.mock('@/features/trips/hooks', () => ({
-  useTrips: () => ({ data: { counts: { current: 0 } } }),
-}));
 
 vi.mock('@/features/auth/hooks/use-portal-logout', () => ({
   usePortalLogout: () => vi.fn(async () => undefined),
@@ -95,7 +92,7 @@ beforeEach(() => {
   nav.pathname = '/manage';
   user.platformRole = null;
   user.displayName = 'Nguyễn Văn A';
-  user.tenant = { name: 'Thuê Xe Minh Anh', roleKey: 'shop_owner' };
+  user.tenant = { name: 'Thuê Xe Minh Anh', roleKey: 'shop_owner', billingMode: 'package' };
   grant(PERMISSION.TENANT_VIEW, PERMISSION.VEHICLE_VIEW, PERMISSION.CALENDAR_VIEW);
 });
 

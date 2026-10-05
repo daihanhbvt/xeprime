@@ -1,31 +1,32 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import { giveTenantPlan } from './helpers/billing-fixture';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
   AUTO_ACCEPT_BLOCKER,
   BILLING_MODE,
-  BOOKING_REQUEST_DECISION_SOURCE,
   BOOKING_HOLD_STATUS,
+  BOOKING_REQUEST_DECISION_SOURCE,
   BOOKING_REQUEST_STATUS,
-  DEPOSIT_COLLECTION_MODE,
-  OCCUPANCY_SOURCE_TYPE,
   BOOKING_STATUS,
+  DEPOSIT_COLLECTION_MODE,
   FEATURE_STATE,
+  type FeatureState,
   FEE_POLICY_STATUS,
   MEMBERSHIP_STATUS,
   NOTIFICATION_TYPE,
+  OCCUPANCY_SOURCE_TYPE,
   PLAN_FEATURE,
   PLAN_FEATURE_VALUES,
   PLAN_STATUS,
+  type PlanFeature,
   SERVICE_TYPE,
   SUBSCRIPTION_STATUS,
   TENANT_ROLE,
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_TYPE,
-  type FeatureState,
-  type PlanFeature,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import type { AuthService } from '../src/modules/auth/auth.service';
@@ -119,7 +120,12 @@ async function seedShop(label: string, commission: boolean) {
   const tenant = newId();
   const vehicle = newId();
   await prisma.user.create({
-    data: { id: owner, displayName: `Chủ ${label}`, email: `auto-${label}-${RUN}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: owner,
+      displayName: `Chủ ${label}`,
+      email: `auto-${label}-${RUN}@xeprime.test`,
+    },
   });
   await prisma.tenant.create({
     data: {
@@ -375,34 +381,37 @@ describe('Đủ điều kiện — hệ thống nhận ngay lúc khách gửi', 
     expect(receipt.autoAccepted).toBe(true);
   });
 
-  maybe('tiền về: đơn ra đời, nguồn quyết định là SYSTEM, không ai đứng tên người tạo', async () => {
-    await enableAutoAccept(tenantId, vehicleId, ownerId, SERVICE_TYPE.SELF_DRIVE);
-    const { paid, row } = await submitAndPay();
+  maybe(
+    'tiền về: đơn ra đời, nguồn quyết định là SYSTEM, không ai đứng tên người tạo',
+    async () => {
+      await enableAutoAccept(tenantId, vehicleId, ownerId, SERVICE_TYPE.SELF_DRIVE);
+      const { paid, row } = await submitAndPay();
 
-    expect(paid.outcome).toBe('activated');
-    expect(row.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
-    expect(row.decisionSource).toBe(BOOKING_REQUEST_DECISION_SOURCE.SYSTEM);
-    expect(row.decidedBy).toBeNull();
+      expect(paid.outcome).toBe('activated');
+      expect(row.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
+      expect(row.decisionSource).toBe(BOOKING_REQUEST_DECISION_SOURCE.SYSTEM);
+      expect(row.decidedBy).toBeNull();
 
-    const booking = await prisma.booking.findUniqueOrThrow({ where: { id: row.bookingId! } });
-    expect(booking.status).toBe(BOOKING_STATUS.RESERVED);
-    expect(booking.createdBy).toBeNull();
+      const booking = await prisma.booking.findUniqueOrThrow({ where: { id: row.bookingId! } });
+      expect(booking.status).toBe(BOOKING_STATUS.RESERVED);
+      expect(booking.createdBy).toBeNull();
 
-    // Lịch CHUYỂN từ yêu cầu sang đơn — không nhân đôi, không hở.
-    expect(await prisma.vehicleOccupancy.count({ where: { sourceId: booking.id } })).toBe(1);
-    expect(
-      await prisma.vehicleOccupancy.count({
-        where: { tenantId, sourceType: OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST },
-      }),
-    ).toBe(0);
+      // Lịch CHUYỂN từ yêu cầu sang đơn — không nhân đôi, không hở.
+      expect(await prisma.vehicleOccupancy.count({ where: { sourceId: booking.id } })).toBe(1);
+      expect(
+        await prisma.vehicleOccupancy.count({
+          where: { tenantId, sourceType: OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST },
+        }),
+      ).toBe(0);
 
-    // Audit ghi hệ thống là người ký, không mượn tên chủ xe.
-    const log = await prisma.auditLog.findFirst({
-      where: { tenantId, action: 'booking_request.accept_paid' },
-    });
-    expect(log?.actorScope).toBe(AUDIT_ACTOR_SCOPE.SYSTEM);
-    expect(log?.actorUserId).toBeNull();
-  });
+      // Audit ghi hệ thống là người ký, không mượn tên chủ xe.
+      const log = await prisma.auditLog.findFirst({
+        where: { tenantId, action: 'booking_request.accept_paid' },
+      });
+      expect(log?.actorScope).toBe(AUDIT_ACTOR_SCOPE.SYSTEM);
+      expect(log?.actorUserId).toBeNull();
+    },
+  );
 
   /**
    * Gian hàng KHÔNG bị gọi lúc khách mới bấm đặt (ADR 0039 hệ quả 1).
@@ -624,29 +633,38 @@ describe('Khung giờ và điều khoản — chặn ngay lúc gửi, ở SERVER
  * với thứ tự ấy. Dấu vết `HOLD_REQUIRED_WITH_DRIVER` là thứ nói cho chủ xe biết vì sao.
  */
 describe('Có tài xế — không tự nhận khi chuyến có thu tiền giữ chỗ', () => {
-  maybe('có tài xế rảnh vẫn KHÔNG tự nhận: về hàng chờ với lý do HOLD_REQUIRED_WITH_DRIVER', async () => {
-    const driverId = newId();
-    await prisma.driver.create({
-      data: { id: driverId, tenantId, name: 'Tài xế rảnh', phone: '0900000003', status: 'active' },
-    });
-    await enableAutoAccept(tenantId, vehicleId, ownerId, SERVICE_TYPE.WITH_DRIVER, withDrivers);
+  maybe(
+    'có tài xế rảnh vẫn KHÔNG tự nhận: về hàng chờ với lý do HOLD_REQUIRED_WITH_DRIVER',
+    async () => {
+      const driverId = newId();
+      await prisma.driver.create({
+        data: {
+          id: driverId,
+          tenantId,
+          name: 'Tài xế rảnh',
+          phone: '0900000003',
+          status: 'active',
+        },
+      });
+      await enableAutoAccept(tenantId, vehicleId, ownerId, SERVICE_TYPE.WITH_DRIVER, withDrivers);
 
-    const { receipt } = await submit({
-      serviceType: SERVICE_TYPE.WITH_DRIVER,
-      routeType: 'in_city',
-      pickupAddress: '12 Lê Lợi, Q.1',
-    });
-    const row = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: receipt.id } });
-    expect(row.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
-    expect(await prisma.bookingHold.count({ where: { tenantId } })).toBe(0);
+      const { receipt } = await submit({
+        serviceType: SERVICE_TYPE.WITH_DRIVER,
+        routeType: 'in_city',
+        pickupAddress: '12 Lê Lợi, Q.1',
+      });
+      const row = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: receipt.id } });
+      expect(row.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
+      expect(await prisma.bookingHold.count({ where: { tenantId } })).toBe(0);
 
-    const skip = await prisma.auditLog.findFirstOrThrow({
-      where: { tenantId, action: 'booking_request.auto_accept_skipped' },
-    });
-    expect((skip.afterJson as { blocker?: string } | null)?.blocker).toBe(
-      AUTO_ACCEPT_BLOCKER.HOLD_REQUIRED_WITH_DRIVER,
-    );
-  });
+      const skip = await prisma.auditLog.findFirstOrThrow({
+        where: { tenantId, action: 'booking_request.auto_accept_skipped' },
+      });
+      expect((skip.afterJson as { blocker?: string } | null)?.blocker).toBe(
+        AUTO_ACCEPT_BLOCKER.HOLD_REQUIRED_WITH_DRIVER,
+      );
+    },
+  );
 
   /**
    * Chủ xe bấm duyệt TAY thì chuyến có tài xế vẫn đi được hết đường — chỉ là tài xế được gán ở
@@ -703,9 +721,7 @@ describe('Đua nhau — constraint DB là trọng tài', () => {
     const window = { pickupAt: vnAt(8, 9).toISOString(), returnAt: vnAt(10, 9).toISOString() };
 
     const results = await Promise.all([submit(window), submit(window)]);
-    const held = results.filter(
-      (r) => r.receipt.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD,
-    );
+    const held = results.filter((r) => r.receipt.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD);
     expect(held).toHaveLength(1);
 
     // Đúng MỘT khoản giữ chỗ và đúng MỘT ô lịch — constraint DB là trọng tài (ADR 0006).
@@ -719,9 +735,7 @@ describe('Đua nhau — constraint DB là trọng tài', () => {
      * TRƯỚC khi người thắng kịp đóng nó (`pending_host_approval`), hoặc sau (`slot_taken`).
      * Thứ KHÔNG hợp lệ là một kết cục lai — một yêu cầu thứ hai cũng giữ được chỗ.
      */
-    const loser = results.find(
-      (r) => r.receipt.status !== BOOKING_REQUEST_STATUS.AWAITING_HOLD,
-    )!;
+    const loser = results.find((r) => r.receipt.status !== BOOKING_REQUEST_STATUS.AWAITING_HOLD)!;
     const row = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: loser.receipt.id } });
     expect([
       BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
@@ -814,9 +828,7 @@ describe('Tuyến hoa hồng — phí dịch vụ nằm trong khoản giữ ch�
 
     const row = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: receipt.id } });
     expect(row.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
-    expect(
-      await prisma.bookingHold.count({ where: { bookingRequestId: receipt.id } }),
-    ).toBe(0);
+    expect(await prisma.bookingHold.count({ where: { bookingRequestId: receipt.id } })).toBe(0);
   });
 });
 
@@ -901,5 +913,4 @@ describe('Duyệt tay: nhận chuyến trước, tiền về sau', () => {
     expect(await prisma.vehicleOccupancy.count({ where: { tenantId } })).toBe(0);
     expect(await prisma.booking.count({ where: { tenantId } })).toBe(0);
   });
-
 });

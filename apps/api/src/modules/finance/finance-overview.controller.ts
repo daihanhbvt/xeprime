@@ -1,13 +1,11 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION, PLAN_FEATURE } from '@xeprime/types';
 import {
-  CurrentTenant,
-  RequirePermissions,
-  RequiresFeature,
-  SubscriptionTrackOnly,
-  TenantScoped,
-} from '../../common/decorators';
+  ACCOUNT_REALM,
+  PERMISSION,
+  PLAN_FEATURE,
+} from '@xeprime/types';
+import { CurrentTenant, Realms, RequirePermissions, RequiresFeature, SubscriptionTrackOnly, TenantScoped } from '../../common/decorators';
 import type { TenantContext } from '../../common/types/request-context';
 import {
   CustomerRevenuePageDto,
@@ -35,6 +33,7 @@ import { FinanceOverviewService } from './finance-overview.service';
 @Controller()
 @TenantScoped()
 @SubscriptionTrackOnly()
+@Realms(ACCOUNT_REALM.PARTNER)
 export class FinanceOverviewController {
   constructor(private readonly overview: FinanceOverviewService) {}
 

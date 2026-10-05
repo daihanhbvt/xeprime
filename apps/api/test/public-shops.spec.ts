@@ -1,5 +1,6 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   BILLING_MODE,
   PLAN_STATUS,
   STOREFRONT_KIND,
@@ -100,6 +101,7 @@ beforeAll(async () => {
   ownerId = newId();
   await prisma.user.create({
     data: {
+      realm: ACCOUNT_REALM.PARTNER,
       id: ownerId,
       displayName: 'Chủ shop',
       email: `own-${ownerId}@xeprime.test`,
@@ -287,9 +289,7 @@ describe('Public shop page (/shops/[slug])', () => {
   });
 
   maybe('listShopVehicles: tenant tuyến gói → thẻ xe CÓ dấu xác thực', async () => {
-    const [card, ...rest] = await service
-      .listShopVehicles(otherSlug, {})
-      .then((res) => res.data);
+    const [card, ...rest] = await service.listShopVehicles(otherSlug, {}).then((res) => res.data);
     expect(rest).toHaveLength(0);
     expect(card?.shopVerified).toBe(true);
   });

@@ -1,6 +1,6 @@
 # XePrime — Completion Roadmap
 
-> Cập nhật: 15/09/2026
+> Cập nhật: 02/10/2026 (T7 — ADR 0051 · 0053)
 > Trạng thái: **Canonical — tiến độ và thứ tự thực hiện**
 > Tầm nhìn: [`design/02_PRODUCT_VISION.md`](design/02_PRODUCT_VISION.md)
 > Khoảng trống chi tiết: [`design/03_PRODUCT_GAP_ANALYSIS.md`](design/03_PRODUCT_GAP_ANALYSIS.md)
@@ -339,7 +339,7 @@ Hệ quả cần nói thẳng: **không có H1 thì không một gate nào từ 
 | T4 | **Mobile chưa có luồng tiền** (payment/hold) | Gate R6 |
 | T5 | **i18n audit: 1.077 chuỗi thô trong 24 khu vực** (đo 14/09/2026, khu nặng nhất là platform dashboard/ops; các màn của luồng tiền đã i18n hoá xong) | Không chặn gate nào, nhưng chặn bản tiếng Anh dùng được |
 | T6 | Dọn lệch tên index + `brand_catalog_type` ở mục 6 | Nhỏ, nhưng để lâu sẽ đẻ migration rác |
-| T7 | **Tách bề mặt theo ADR 0051** (30/09/2026): pha 1 rào chắn → pha 2 web ba host + API (CSRF/`Origin`, URL theo zone) → pha 3 mobile hai variant → pha 4 tenant đang làm việc. Chưa bắt đầu | Pha 2 nên xong trước người dùng thật; deploy chờ H1 |
+| T7 | **Ba site web + ba không gian tài khoản — ADR 0051 · ADR 0053** (cập nhật 02/10/2026). **Web + API + DB: XONG trên nhánh, chưa merge.** Đã có: realm `customer`/`partner`/`platform` ở DB (unique theo realm, trigger bất biến, FK `(user_id, realm)`, kiểm bất biến `realm:check`) · RealmGuard + realm của request (header proxy kèm `REALM_PROXY_SECRET` / `client_app` native) · cookie host-only theo realm · OAuth web theo site · một tài khoản một gian hàng · chặn tự đặt xe cùng SĐT · tra cứu xuyên realm + nhân sự nền tảng là tài khoản mới · web ba khu (`zones/`, `proxy.ts` path/host, `AppShell` partner theo tuyến B1, `AdminShell`, Owner Lite sang site partner, 307 URL cũ) · Caddy ba site + `/api` cùng origin · workflow deploy. **Còn lại:** (a) khai GitHub Environment (`PARTNER_DOMAIN`, `ADMIN_DOMAIN`, secret `REALM_PROXY_SECRET`; xoá `SESSION_COOKIE_DOMAIN`, `NEXT_PUBLIC_API_URL`) + 4 bản ghi DNS + redirect URI OAuth từng site; (b) mobile theo ADR 0053 — backend ĐÃ sẵn (app Partner nhận mọi tài khoản đối tác và đăng ký được, push theo realm người nhận); phía app (nhận chủ xe tuyến hoa hồng ở app Partner, gỡ Owner Lite khỏi app XePrime) làm ở nhánh mobile riêng; (c) pha 4 "tenant đang làm việc" của ADR 0051 vẫn chưa mở (một tài khoản một gian hàng — ADR 0053) | Phải merge trước người dùng thật. Migration tự tách dữ liệu trộn vai cũ (dev, staging) sang tài khoản song sinh — không dừng deploy, không xoá dòng nào; DB dev đã chạy bản migration cũ phải dựng lại (`migrate reset` rồi seed). Deploy chờ H1 |
 
 ### 8.5 Điều KHÔNG được kết luận từ tài liệu này
 

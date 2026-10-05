@@ -51,7 +51,15 @@ const OWNER = {
   tenant: { id: 'T1', roleKey: TENANT_ROLE.SHOP_OWNER, billingMode: BILLING_MODE.PACKAGE },
   platformRole: null,
 };
-const PLATFORM = { id: 'U2', displayName: 'Admin', tenant: null, platformRole: 'platform_admin' };
+/** Tài khoản đối tác vừa tạo, chưa chọn tuyến (B1 dòng 1). */
+const NO_SHOP = { id: 'U2', displayName: 'Đối tác mới', tenant: null, platformRole: null };
+/** Chủ xe tuyến hoa hồng (B1 dòng cuối) — cùng URL gốc, nội dung Owner Lite. */
+const COMMISSION = {
+  id: 'U3',
+  displayName: 'Chủ xe',
+  tenant: { id: 'T3', roleKey: TENANT_ROLE.SHOP_OWNER, billingMode: BILLING_MODE.COMMISSION },
+  platformRole: null,
+};
 
 beforeEach(() => {
   nav.replace.mockReset();
@@ -77,11 +85,19 @@ describe('/manage/login', () => {
     expect(screen.queryByTestId('auth-panel')).toBeNull();
   });
 
-  it('nhân sự nền tảng đang đăng nhập → đá về /manage/admin', async () => {
-    state.user = PLATFORM;
+  it('tài khoản đối tác chưa có gian hàng → trang chọn tuyến', async () => {
+    state.user = NO_SHOP;
     render(<PortalLoginPage />);
 
-    await waitFor(() => expect(nav.replace).toHaveBeenCalledWith('/manage/admin'));
+    await waitFor(() => expect(nav.replace).toHaveBeenCalledWith('/manage/register'));
+  });
+
+  it('chủ xe tuyến hoa hồng → trang chủ Owner Lite; next chỉ của tuyến gói bị bỏ', async () => {
+    state.user = COMMISSION;
+    state.search = 'next=%2Fmanage%2Fcustomers';
+    render(<PortalLoginPage />);
+
+    await waitFor(() => expect(nav.replace).toHaveBeenCalledWith('/manage'));
   });
 
   /** Vào bằng URL cũng phải tôn trọng `?next=` như khi đăng nhập qua form. */

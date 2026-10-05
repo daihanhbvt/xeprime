@@ -1,22 +1,16 @@
 import type { ReactNode } from 'react';
-import { LocaleSwitcher } from '@/components/i18n/LocaleSwitcher';
-import styles from './auth-layout.module.css';
+import { AuthPageFrame } from '@/features/auth/components/AuthPageFrame';
+import { ZONE } from '@/zones';
+import { ZoneProvider } from '@/zones/ZoneProvider';
 
 /**
- * Vỏ của các trang xác thực ĐỘC LẬP (quên/đặt lại mật khẩu) — không có header marketplace,
- * không có topbar cổng quản lý.
- *
- * Vì thế bộ đổi ngôn ngữ phải có mặt NGAY TẠI ĐÂY, ở góc trên bên phải: đây là những trang mà
- * người dùng tới từ một liên kết trong email, thường là chưa đăng nhập, và không có bề mặt nào
- * khác để đổi ngôn ngữ.
+ * Quên/đặt lại mật khẩu của tài khoản KHÁCH — trang của site khách (ADR 0053: mỗi site một không gian
+ * tài khoản; site partner và site quản trị có trang riêng của mình).
  */
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
-    <div className={styles.wrapper}>
-      <div className={styles.localeCorner}>
-        <LocaleSwitcher />
-      </div>
-      {children}
-    </div>
+    <ZoneProvider zone={ZONE.MARKET}>
+      <AuthPageFrame>{children}</AuthPageFrame>
+    </ZoneProvider>
   );
 }

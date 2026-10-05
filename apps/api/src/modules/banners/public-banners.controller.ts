@@ -1,7 +1,10 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PUBLIC_CACHE_SECONDS } from '@xeprime/types';
-import { Public } from '../../common/decorators';
+import {
+  ACCOUNT_REALM_VALUES,
+  PUBLIC_CACHE_SECONDS,
+} from '@xeprime/types';
+import { Public, Realms } from '../../common/decorators';
 import { PublicCache } from '../../common/http-cache';
 import { BannersService } from './banners.service';
 import { PublicBannerDto } from './dto/banner.dto';
@@ -14,6 +17,7 @@ import { PublicBannerDto } from './dto/banner.dto';
  */
 @ApiTags('public-banners')
 @Controller('public/banners')
+@Realms(...ACCOUNT_REALM_VALUES)
 export class PublicBannersController {
   constructor(private readonly banners: BannersService) {}
 

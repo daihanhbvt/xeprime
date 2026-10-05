@@ -1,11 +1,12 @@
 import {
+  BadRequestException,
   createParamDecorator,
   InternalServerErrorException,
   SetMetadata,
   UnauthorizedException,
   type ExecutionContext,
 } from '@nestjs/common';
-import type { Permission, PlanFeature, SupportCapability } from '@xeprime/types';
+import type { AccountRealm, Permission, PlanFeature, SupportCapability } from '@xeprime/types';
 import { API_ERROR_CODE } from '@xeprime/types';
 import type {
   AuthenticatedUser,
@@ -175,6 +176,36 @@ export type SupportActionResolver = (
 
 export const SupportAction = (capability: SupportCapability | SupportActionResolver) =>
   SetMetadata(SUPPORT_ACTION_KEY, capability);
+
+/**
+ * Realm route này phục vụ — ADR 0053 điều 5. MỌI route phải khai (class hoặc handler; handler thắng
+ * class): `RealmGuard` chặn route không khai TRƯỚC khi chạm DB, và `openapi-contract.spec.ts` đỏ
+ * khi có route quên khai. Default-deny là chủ đích — một controller mới quên khai thì không ai
+ * dùng được, chứ không phải mọi realm dùng được.
+ *
+ * Phiên đã đăng nhập phải thuộc một trong các realm khai báo. Route `@Public()` chỉ bị chặn khi
+ * realm của request XÁC ĐỊNH được mà không nằm trong danh sách.
+ */
+export const REALMS_KEY = 'xeprime:realms';
+export const Realms = (...realms: AccountRealm[]) => SetMetadata(REALMS_KEY, realms);
+
+/**
+ * Realm của request WEB — bắt buộc. Dùng ở endpoint đăng nhập/đăng ký/quên mật khẩu công khai của
+ * web: tài khoản thuộc realm nào đến từ site đang gọi (header proxy đã qua khoá — ADR 0053 điều 4),
+ * không bao giờ từ body. Không xác định được ⇒ 400, không đoán một realm mặc định.
+ */
+export const WebRealm = createParamDecorator(
+  (_data: unknown, ctx: ExecutionContext): AccountRealm => {
+    const req = ctx.switchToHttp().getRequest<RequestContext>();
+    if (!req.realm) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.REALM_UNRESOLVED,
+        message: 'Không xác định được site đang gọi',
+      });
+    }
+    return req.realm;
+  },
+);
 
 export const CurrentUser = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): AuthenticatedUser => {

@@ -1,14 +1,19 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PrismaService } from '../../prisma/prisma.service';
-import { MEMBERSHIP_STATUS, type Permission } from '@xeprime/types';
-import { CurrentUser } from '../../common/decorators';
+import {
+  ACCOUNT_REALM,
+  MEMBERSHIP_STATUS,
+  type Permission,
+} from '@xeprime/types';
+import { CurrentUser, Realms } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import { RbacService } from './rbac.service';
 import { MyPermissionsDto } from './dto/my-permissions.dto';
 
 @ApiTags('rbac')
 @Controller('rbac')
+@Realms(ACCOUNT_REALM.PARTNER, ACCOUNT_REALM.PLATFORM)
 export class RbacController {
   constructor(
     private readonly rbac: RbacService,

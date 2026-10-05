@@ -1,6 +1,7 @@
 import { createHash, randomInt } from 'node:crypto';
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   HttpException,
   HttpStatus,
@@ -8,12 +9,15 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { newId } from '@xeprime/prisma';
+import { newId, Prisma } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   PHONE_VERIFICATION_PURPOSE,
   PHONE_VERIFICATION_STATUS,
+  type AccountRealm,
   type PhoneVerificationPurpose,
+  OTP_POLICY,
 } from '@xeprime/types';
 import { normalizePhone } from '../../common/phone';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -39,11 +43,17 @@ export class PhoneVerificationService {
   async sendOtp(
     rawPhone: string,
     purpose: PhoneVerificationPurpose,
+    /**
+     * Realm của luồng (ADR 0053): mã gửi ở site khách chỉ xác thực được ở site khách. Cooldown và
+     * trần số lần/giờ ở dưới CỐ Ý vẫn tính theo SỐ ĐIỆN THOẠI trên mọi realm — chúng chống spam vào
+     * chiếc máy của người đó, và người đó chỉ có một chiếc máy dù có mấy tài khoản.
+     */
+    realm: AccountRealm,
   ): Promise<{ expiresAt: Date; devCode: string | null }> {
     const phone = normalizePhone(rawPhone);
     const now = Date.now();
 
-    const cooldownSec = this.config.get<number>('OTP_RESEND_COOLDOWN_SECONDS') ?? 60;
+    const cooldownSec = OTP_POLICY.RESEND_COOLDOWN_SECONDS;
     const last = await this.prisma.phoneVerification.findFirst({
       where: { phone },
       orderBy: { createdAt: 'desc' },
@@ -60,7 +70,7 @@ export class PhoneVerificationService {
       );
     }
 
-    const maxPerHour = this.config.get<number>('OTP_MAX_SENDS_PER_HOUR') ?? 5;
+    const maxPerHour = OTP_POLICY.MAX_SENDS_PER_HOUR;
     const sentLastHour = await this.prisma.phoneVerification.count({
       where: { phone, createdAt: { gte: new Date(now - 60 * 60 * 1000) } },
     });
@@ -74,19 +84,20 @@ export class PhoneVerificationService {
       );
     }
 
-    // Huỷ các mã pending cũ cùng (SĐT, mục đích) — chỉ mã mới nhất còn hiệu lực.
+    // Huỷ các mã pending cũ cùng (realm, SĐT, mục đích) — chỉ mã mới nhất còn hiệu lực.
     await this.prisma.phoneVerification.updateMany({
-      where: { phone, purpose, status: PHONE_VERIFICATION_STATUS.PENDING },
+      where: { realm, phone, purpose, status: PHONE_VERIFICATION_STATUS.PENDING },
       data: { status: PHONE_VERIFICATION_STATUS.EXPIRED },
     });
 
     const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
-    const ttlMin = this.config.get<number>('OTP_TTL_MINUTES') ?? 5;
+    const ttlMin = OTP_POLICY.TTL_MINUTES;
     const expiresAt = new Date(now + ttlMin * 60 * 1000);
 
     await this.prisma.phoneVerification.create({
       data: {
         id: newId(),
+        realm,
         phone,
         purpose,
         provider: this.config.get<string>('OTP_MODE') ?? 'mock',
@@ -132,11 +143,25 @@ export class PhoneVerificationService {
     rawPhone: string,
     purpose: PhoneVerificationPurpose,
     code: string,
+    /**
+     * Realm của luồng — chỉ mã gửi ở CÙNG realm mới đối chiếu được (ADR 0053). Nhận một DANH SÁCH
+     * chỉ để làm cầu tương thích cho app XePrime Partner (xem `MobilePhoneAuthController.login`);
+     * mọi nơi khác truyền đúng một realm. Có `userId` thì phải là đúng realm của tài khoản đó.
+     */
+    realms: AccountRealm | readonly AccountRealm[],
     userId?: string | null,
   ): Promise<void> {
+    const accepted: readonly AccountRealm[] = typeof realms === 'string' ? [realms] : realms;
+    const realm = accepted[0];
+    if (!realm) throw new Error('verifyOtp cần ít nhất một realm');
     const phone = normalizePhone(rawPhone);
     const row = await this.prisma.phoneVerification.findFirst({
-      where: { phone, purpose, status: PHONE_VERIFICATION_STATUS.PENDING },
+      where: {
+        realm: { in: [...accepted] },
+        phone,
+        purpose,
+        status: PHONE_VERIFICATION_STATUS.PENDING,
+      },
       orderBy: { createdAt: 'desc' },
       select: { id: true, otpHash: true, expiresAt: true, attemptCount: true },
     });
@@ -160,7 +185,7 @@ export class PhoneVerificationService {
     }
 
     if (row.otpHash !== this.hash(code, phone)) {
-      const maxAttempts = this.config.get<number>('OTP_MAX_ATTEMPTS') ?? 5;
+      const maxAttempts = OTP_POLICY.MAX_ATTEMPTS;
       const attemptCount = row.attemptCount + 1;
       if (attemptCount >= maxAttempts) {
         // Khoá mã: không cho thử tiếp mã này (updateMany với điều kiện PENDING để idempotent
@@ -185,23 +210,41 @@ export class PhoneVerificationService {
     }
 
     const now = new Date();
-    await this.prisma.$transaction(async (tx) => {
-      await tx.phoneVerification.update({
-        where: { id: row.id },
-        data: {
-          status: PHONE_VERIFICATION_STATUS.VERIFIED,
-          verifiedAt: now,
-          userId: userId ?? null,
-        },
-      });
-
-      if (userId) {
-        await tx.user.update({
-          where: { id: userId },
-          data: { phone, phoneVerifiedAt: now },
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.phoneVerification.update({
+          where: { id: row.id },
+          data: {
+            status: PHONE_VERIFICATION_STATUS.VERIFIED,
+            verifiedAt: now,
+            userId: userId ?? null,
+          },
         });
+
+        if (userId) {
+          /*
+           * SĐT unique TRONG realm (ADR 0053). Số này đã là của một tài khoản KHÁC cùng realm thì
+           * không gắn được — nói rõ `PHONE_TAKEN` thay vì để unique ở DB nổ thành 500. Số đó ở
+           * realm khác thì không liên quan: đó là một tài khoản khác của cùng một người.
+           */
+          const owner = await tx.user.findFirst({
+            where: { realm, phone, deletedAt: null, id: { not: userId } },
+            select: { id: true },
+          });
+          if (owner) throw phoneTaken();
+          await tx.user.update({
+            where: { id: userId },
+            data: { phone, phoneVerifiedAt: now },
+          });
+        }
+      });
+    } catch (error) {
+      // Hai request gắn cùng số cùng lúc đều qua được phép kiểm ở trên — unique là chốt thật.
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw phoneTaken();
       }
-    });
+      throw error;
+    }
   }
 
   /**
@@ -214,6 +257,8 @@ export class PhoneVerificationService {
     const since = new Date(Date.now() - VERIFIED_WINDOW_MINUTES * 60 * 1000);
     const ok = await this.prisma.phoneVerification.findFirst({
       where: {
+        // Đặt xe là việc của KHÁCH (ADR 0053): chỉ mã xác thực ở site/app khách mới mở cửa này.
+        realm: ACCOUNT_REALM.CUSTOMER,
         phone,
         purpose: PHONE_VERIFICATION_PURPOSE.BOOKING,
         status: PHONE_VERIFICATION_STATUS.VERIFIED,
@@ -230,7 +275,16 @@ export class PhoneVerificationService {
   }
 
   private hash(code: string, phone: string): string {
+    // Không trộn realm vào băm: realm đã nằm trong điều kiện tra (`where: { realm, ... }`), và một
+    // mã chỉ được đối chiếu với đúng hàng của realm đó.
     const pepper = this.config.getOrThrow<string>('OTP_PEPPER');
     return createHash('sha256').update(`${code}:${phone}:${pepper}`).digest('hex');
   }
+}
+
+function phoneTaken(): ConflictException {
+  return new ConflictException({
+    code: API_ERROR_CODE.PHONE_TAKEN,
+    message: 'Số điện thoại này đã thuộc một tài khoản khác',
+  });
 }

@@ -92,7 +92,9 @@
     "goManage": "Vào cổng quản lý",
     "goHome": "Về trang chủ",
     "closedTitle": "Lời mời này không còn hiệu lực",
-    "closedBody": "Lời mời đã được trả lời, đã bị thu hồi hoặc đã hết hạn. Hãy nhờ gian hàng gửi lại nếu bạn vẫn muốn tham gia."
+    "closedBody": "Lời mời đã được trả lời, đã bị thu hồi hoặc đã hết hạn. Hãy nhờ gian hàng gửi lại nếu bạn vẫn muốn tham gia.",
+    "signInPartnerPrompt": "Lời mời này dành cho tài khoản ĐỐI TÁC — tách riêng với tài khoản thuê xe. Đăng nhập hoặc tạo tài khoản đối tác bằng đúng email đã nhận thư mời để trả lời.",
+    "createPartnerAccount": "Tạo tài khoản đối tác"
   },
   "branchScope": {
     "all": "Tất cả chi nhánh",

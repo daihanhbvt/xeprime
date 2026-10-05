@@ -1,14 +1,15 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   BILLING_MODE,
   PLATFORM_PARTNER_KIND,
+  type PlatformPartnerKind,
   SHOP_ONBOARDING_STATE,
   SUPPORT_WORKSPACE,
   TENANT_ROLE,
   TENANT_STATUS,
   VEHICLE_TYPE,
-  type PlatformPartnerKind,
 } from '@xeprime/types';
 import { buildTenantContext, tenantContextSelect } from '../src/common/plan/tenant-context';
 import { supportWorkspaceOf } from '../src/modules/tenant-support/tenant-support.service';
@@ -51,7 +52,12 @@ beforeAll(async () => {
   t2 = newId();
   vehicleId = newId();
   await prisma.user.create({
-    data: { id: adminId, displayName: 'Admin', email: `adm-${adminId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: adminId,
+      displayName: 'Admin',
+      email: `adm-${adminId}@xeprime.test`,
+    },
   });
   const mk = (id: string, name: string, status: string) =>
     prisma.tenant.create({

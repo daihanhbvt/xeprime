@@ -4,6 +4,7 @@ import { MobileAuthController } from './mobile-auth.controller';
 import { AuthService } from './auth.service';
 import { NativeSessionService } from './native-session.service';
 import { SessionService } from './session.service';
+import { RequestRealmService } from './request-realm.service';
 import { NativeAuthCodeService } from './social/native-auth-code.service';
 import { OauthStateService } from './social/oauth-state.service';
 import { SocialAuthController } from './social/social-auth.controller';
@@ -35,11 +36,19 @@ import { FeePoliciesModule } from '../fee-policies/fee-policies.module';
   providers: [
     AuthService,
     SessionService,
+    RequestRealmService,
     NativeSessionService,
     OauthStateService,
     NativeAuthCodeService,
     SocialAuthService,
   ],
-  exports: [SessionService, NativeSessionService, AuthService, OauthStateService, NativeAuthCodeService],
+  exports: [
+    SessionService,
+    RequestRealmService,
+    NativeSessionService,
+    AuthService,
+    OauthStateService,
+    NativeAuthCodeService,
+  ],
 })
 export class AuthModule {}

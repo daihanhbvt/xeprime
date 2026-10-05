@@ -33,8 +33,6 @@ const user = vi.hoisted(() => ({
     } | null;
   },
 }));
-/** Số chuyến ĐI THUÊ chưa khép — quyết định mục "Chuyến tôi đi thuê" có mặt hay không. */
-const trips = vi.hoisted(() => ({ current: 0 }));
 
 vi.mock('@/hooks/use-current-user', () => ({
   useCurrentUser: () => ({ data: user.value, isLoading: false }),
@@ -46,10 +44,6 @@ vi.mock('@/hooks/use-permissions', () => ({
 
 vi.mock('@/features/auth/hooks/use-portal-logout', () => ({
   usePortalLogout: () => logout,
-}));
-
-vi.mock('@/features/trips/hooks', () => ({
-  useTrips: () => ({ data: { counts: { current: trips.current } } }),
 }));
 
 function setUser(over: Partial<NonNullable<typeof user.value>> = {}) {
@@ -71,7 +65,6 @@ function setUser(over: Partial<NonNullable<typeof user.value>> = {}) {
 
 beforeEach(() => {
   logout.mockReset();
-  trips.current = 0;
   setUser();
 });
 
@@ -245,22 +238,20 @@ describe('ManageUserCard — menu tài khoản', () => {
   });
 
   /*
-   * "Chuyến tôi đi thuê" là dấu vết của một lần CHUYỂN TUYẾN, không phải chức năng thường trực:
-   * gian hàng chưa bao giờ đi thuê thì không bao giờ thấy nó, và nó biến mất khi chuyến cuối
-   * khép lại. Một mục rỗng vĩnh viễn dựng lại đúng thứ việc tách tuyến vừa gỡ bỏ.
+   * Tài khoản đối tác là tài khoản RIÊNG (ADR 0053), không bao giờ đứng tên một chuyến đi thuê —
+   * không còn mục "Chuyến tôi đi thuê" nào ở site partner.
    */
-  it('KHÔNG có mục chuyến đi thuê khi không còn chuyến nào', async () => {
+  it('KHÔNG có mục chuyến đi thuê', async () => {
     await openMenu();
 
-    expect(screen.queryByRole('link', { name: 'Chuyến tôi đi thuê' })).toBeNull();
+    expect(screen.queryByText('Chuyến tôi đi thuê')).toBeNull();
   });
 
-  it('còn chuyến đi thuê chưa khép → mục đó xuất hiện, trỏ đúng lối chuyển tiếp', async () => {
-    trips.current = 2;
+  it('có mục Hồ sơ cá nhân của tài khoản đối tác', async () => {
     await openMenu();
 
-    expect(screen.getByRole('link', { name: 'Chuyến tôi đi thuê' }).getAttribute('href')).toBe(
-      '/manage/account/trips',
+    expect(screen.getByRole('link', { name: 'Hồ sơ cá nhân' }).getAttribute('href')).toBe(
+      '/manage/account',
     );
   });
 

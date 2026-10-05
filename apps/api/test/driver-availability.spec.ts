@@ -1,5 +1,6 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   BOOKING_STATUS,
   DRIVER_STATUS,
   MEMBERSHIP_STATUS,
@@ -113,7 +114,12 @@ beforeAll(async () => {
   vehicle2Id = newId();
 
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Chủ shop', email: `drv-${ownerId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Chủ shop',
+      email: `drv-${ownerId}@xeprime.test`,
+    },
   });
   for (const [tid, name] of [
     [tenantId, 'Shop Driver'],
@@ -220,18 +226,21 @@ describe('Một tài xế không nhận hai đơn giao nhau', () => {
     expect(assigned.driver?.id).toBe(driverId);
   });
 
-  maybe('INSERT thô lách qua service vẫn bị exclusion constraint từ chối (chốt chặn cuối)', async () => {
-    const driverId = await seedDriver({ name: 'Tài xế C' });
-    await seedBooking({ pickupAt: hours(200), returnAt: hours(224), driverId });
-    await expect(
-      seedBooking({
-        pickupAt: hours(210),
-        returnAt: hours(230),
-        vehicle: vehicle2Id,
-        driverId,
-      }),
-    ).rejects.toThrow(/driver_schedule_excl|exclusion/i);
-  });
+  maybe(
+    'INSERT thô lách qua service vẫn bị exclusion constraint từ chối (chốt chặn cuối)',
+    async () => {
+      const driverId = await seedDriver({ name: 'Tài xế C' });
+      await seedBooking({ pickupAt: hours(200), returnAt: hours(224), driverId });
+      await expect(
+        seedBooking({
+          pickupAt: hours(210),
+          returnAt: hours(230),
+          vehicle: vehicle2Id,
+          driverId,
+        }),
+      ).rejects.toThrow(/driver_schedule_excl|exclusion/i);
+    },
+  );
 
   maybe('assignable: người bận/GPLX hết hạn vẫn được trả về kèm CỜ lý do', async () => {
     const busyId = await seedDriver({ name: 'Tài xế Bận' });

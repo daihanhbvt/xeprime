@@ -1,12 +1,13 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
+  type BookingPriceSnapshot,
   INSURANCE_CONSENT_SOURCE,
   INSURANCE_ISSUE_ERROR,
   INSURANCE_POLICY_STATUS,
   INSURANCE_PRODUCT_KIND,
   insuranceRetryDelayMinutes,
   TENANT_STATUS,
-  type BookingPriceSnapshot,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { InsuranceService } from '../src/modules/insurance/insurance.service';
@@ -127,7 +128,12 @@ beforeAll(async () => {
   vehicleId = newId();
 
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Chủ BH', email: `ins-${RUN}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Chủ BH',
+      email: `ins-${RUN}@xeprime.test`,
+    },
   });
   await prisma.tenant.create({
     data: {

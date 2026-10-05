@@ -91,78 +91,70 @@ nhau giữa hai môi trường, do biến `APP_ENV` (§2.3):
 ## 2. Kiến trúc triển khai
 
 ```
-                Internet
-                    │  :443
-              ┌─────▼─────┐
-              │   Caddy   │   TLS tự động (Let's Encrypt)
-              └──┬─────┬──┘
-     xeprime.vn  │     │  api.xeprime.vn
-              ┌──▼──┐ ┌▼────┐   ┌────────┐
-              │ web │ │ api │   │ worker │
-              └─────┘ └──┬──┘   └───┬────┘
-                         └─────┬────┘
-                          ┌────▼─────┐
-                          │ Postgres │  không publish cổng ra host
-                          └──────────┘
+                               Internet
+                                   │  :443
+                             ┌─────▼─────┐
+                             │   Caddy   │   TLS tự động (Let's Encrypt)
+                             └─┬──┬──┬──┬┘
+        xeprime.vn ────────────┘  │  │  └──────────── api.xeprime.vn (CHỈ app native)
+        partner.xeprime.vn ───────┘  │
+        admin.xeprime.vn ────────────┘
+             │ /*            │ /api/*  (bỏ tiền tố, gắn realm theo HOST + khoá proxy)
+          ┌──▼──┐         ┌──▼──┐   ┌────────┐
+          │ web │         │ api │   │ worker │
+          └──┬──┘         └──┬──┘   └───┬────┘
+             └─ fetch SEO ──►│          │
+                (nội bộ)     └────┬─────┘
+                             ┌────▼─────┐
+                             │ Postgres │  không publish cổng ra host
+                             └──────────┘
 ```
 
 - **Một image** `xeprime-app:latest` chạy cả bốn tiến trình — lý do ghi ở đầu `deploy/Dockerfile`.
-- **Hai tên miền** thay vì `/api` trên cùng host: `redirect_uri` của OAuth (ADR 0019) phải ổn
-  định từng ký tự. Cookie phiên vẫn dùng chung nhờ `SESSION_COOKIE_DOMAIN=.xeprime.vn` và
-  `sameSite: lax` coi hai subdomain là cùng site (ADR 0002).
-- **Web không gọi API phía server.** Toàn bộ màn hình fetch ở client, nên `NEXT_PUBLIC_API_URL`
-  là URL CÔNG KHAI — và tiến trình `web` không cần thấy `api` qua mạng nội bộ.
+- **Ba site web, MỘT Next app** ([ADR 0051](decisions/0051-product-surfaces-web-zones-and-mobile-variants.md)):
+  `xeprime.vn` (khách) · `partner.xeprime.vn` (gian hàng gói + chủ xe tuyến hoa hồng) ·
+  `admin.xeprime.vn` (nhân sự nền tảng). `proxy.ts` rewrite theo host (`NEXT_PUBLIC_XP_ZONE_MODE=host`);
+  URL hiển thị không mang tiền tố thư mục (`partner.xeprime.vn/vehicles`, không phải `/manage/vehicles`).
+- **Ba không gian tài khoản** ([ADR 0053](decisions/0053-separate-account-realms.md)): mỗi
+  site là một realm (`customer` · `partner` · `platform`). Cùng số điện thoại/email là các tài khoản
+  RIÊNG, mật khẩu riêng, phiên riêng.
+- **`/api` cùng origin trên mỗi site.** Caddy chuyển `<site>/api/*` về NestJS, **ghi đè** header realm
+  theo host và gắn `REALM_PROXY_SECRET`; API chỉ tin header realm khi khoá khớp. Cookie phiên là
+  **host-only** của đúng site (`<SESSION_COOKIE_NAME>_<realm>`) — không còn `SESSION_COOKIE_DOMAIN`,
+  không còn CORS cho web.
+- **`api.xeprime.vn` chỉ cho app native** (Bearer token — ADR 0017). Realm của phiên native suy từ
+  app đã đăng nhập; Caddy **xoá** header realm/khoá client gửi tới host này.
+- **Web có gọi API phía server — nhưng chỉ endpoint CÔNG KHAI** cho các trang cần SEO (chi tiết xe,
+  gian hàng, banner, danh mục), qua mạng nội bộ `API_INTERNAL_URL=http://api:4000`; không cookie,
+  không phiên. Mọi màn hình làm việc fetch ở client qua `/api`.
 
 ### 2.1 Bản đồ tên miền và URL
 
-> ⚠️ **Đích đã đổi — [ADR 0051](decisions/0051-product-surfaces-web-zones-and-mobile-variants.md)
-> (30/09/2026).** Ba giao diện sẽ đứng trên ba host `xeprime.vn` · `partner.xeprime.vn` ·
-> `admin.xeprime.vn` (staging: `partner-stg.` · `admin-stg.`), vẫn là MỘT Next app và vẫn giữ
-> `/manage` trong URL. Phần dưới mô tả HIỆN TRẠNG đang deploy và lập luận cũ; nó được thay khi pha 2
-> của ADR 0051 lên staging. Bốn lý do ở dưới đã được trả lời ở ADR đó (một app, host chỉ là cổng
-> điều hướng, cookie `.xeprime.vn` dùng chung sẵn, `CORS_ORIGINS` thêm hai origin).
+Nguyên tắc: **tách theo MÔI TRƯỜNG bằng tên miền con, tách theo KHÔNG GIAN TÀI KHOẢN bằng host.**
 
-Nguyên tắc: **tách theo MÔI TRƯỜNG bằng tên miền con, tách theo VAI bằng đường dẫn.**
+| Tên miền | Phục vụ | Realm |
+| --- | --- | --- |
+| `xeprime.vn` | Site khách: chợ xe, đặt xe, chuyến, tài khoản khách, `/list-your-vehicle` (giới thiệu) | `customer` |
+| `partner.xeprime.vn` | Site đối tác: đăng ký hai tuyến (`/register`), Full Manage (tuyến gói) + Owner Lite (tuyến hoa hồng) trên MỘT cây URL | `partner` |
+| `admin.xeprime.vn` | Site quản trị nền tảng — chỉ đăng nhập bằng mật khẩu, không tự đăng ký | `platform` |
+| `www.xeprime.vn` | 301 về `xeprime.vn` (khối đã có sẵn dạng comment trong `deploy/Caddyfile`) | — |
+| `api.xeprime.vn` | NestJS cho app native + callback OAuth của app | theo app |
+| `cdn.xeprime.vn` | Bucket R2 công khai (`R2_PUBLIC_BASE_URL`) — ảnh xe/gian hàng | — |
+| `stg.` · `partner-stg.` · `admin-stg.` · `api-stg.xeprime.vn` | Staging — máy riêng, xem §2.3 | |
 
-| Tên miền | Phục vụ |
-| --- | --- |
-| `xeprime.vn` | Cả ba giao diện: chợ xe `/` · cổng gian hàng `/manage` · quản trị nền tảng `/manage/admin` |
-| `www.xeprime.vn` | 301 về `xeprime.vn` (khối đã có sẵn dạng comment trong `deploy/Caddyfile`) |
-| `api.xeprime.vn` | NestJS — cũng là nơi app native gọi tới |
-| `cdn.xeprime.vn` | Bucket R2 công khai (`R2_PUBLIC_BASE_URL`) — ảnh xe/gian hàng |
-| `stg.xeprime.vn` + `api-stg.xeprime.vn` | Staging — máy riêng, xem §2.3 |
+**URL cũ không chết.** `proxy.ts` chuyển 307 (giữ query): `/manage/*` → `partner.xeprime.vn/*`,
+`/manage/admin/*` → `admin.xeprime.vn/*`, các trang chủ xe cũ trên site khách (`/account/vehicles`,
+`/account/earnings`, `/list-your-vehicle/register`, `/invites/<token>`…) → trang tương ứng ở site
+partner. Bảng ánh xạ duy nhất: `apps/web/src/zones/legacy-redirects.ts`. Tiền tố thư mục gõ thẳng
+trên host không sở hữu nó (`xeprime.vn/admin/…`, `partner.xeprime.vn/admin/…`) trả 404.
 
-**Vì sao ba giao diện dùng CHUNG một tên miền, không phải `manage.` và `admin.`:**
-
-1. Chúng là **một app Next duy nhất**, phân vai bằng route group `(public)` / `(manage)` và
-   tiền tố đường dẫn. Tách tên miền nghĩa là hoặc build ba lần, hoặc thêm một tầng rewrite
-   theo hostname trong `proxy.ts` — một tầng ánh xạ URL nữa để sai.
-2. `apps/web/src/constants/routes.ts` giữ toàn bộ đường dẫn ở dạng **tương đối**. Đứng ở
-   `manage.xeprime.vn` thì `ROUTES.HOME` (`/`) trỏ về `manage.xeprime.vn/` chứ không phải chợ
-   xe. Phải đổi hàng loạt link sang URL tuyệt đối.
-3. ADR 0014: chủ xe, chủ gian hàng và khách thuê là **một con người mang nhiều vai**, và họ đi
-   qua lại giữa `/account` (khu công khai) và `/manage` liên tục. Đặt hai khu trên hai tên miền
-   là tự tạo cảm giác "hai hệ thống" cho thứ cố ý là một tài khoản.
-4. Mỗi tên miền thêm vào là một origin phải khai trong `CORS_ORIGINS`, một chứng chỉ phải gia
-   hạn, và một chỗ nữa để cookie phiên đi lệch.
-
-**Lý do chính đáng DUY NHẤT để tách `admin.`** là giới hạn truy cập theo IP cho khu quản trị.
-Nhưng việc đó làm được theo đường dẫn, không cần tên miền — thêm vào khối `{$WEB_DOMAIN}` của
-`deploy/Caddyfile`:
+**Giới hạn truy cập khu quản trị theo IP** giờ làm theo HOST — thêm vào khối `{$ADMIN_DOMAIN}` của
+`deploy/Caddyfile`, TRƯỚC `import site_api platform`:
 
 ```caddyfile
-# THAY dòng `reverse_proxy web:3000` hiện có bằng cả khối này. Thiếu `handle` thứ hai thì
-# mọi đường dẫn ngoài /manage/admin không còn handler nào và cả site trả 404.
-@admin path /manage/admin*
-handle @admin {
-	# Chỉ IP văn phòng vào được khu quản trị nền tảng.
-	@blocked not client_ip 1.2.3.4 5.6.7.0/24
-	respond @blocked 403
-	reverse_proxy web:3000
-}
-handle {
-	reverse_proxy web:3000
-}
+# Chỉ IP văn phòng vào được site quản trị (cả trang lẫn /api của nó).
+@blocked not client_ip 1.2.3.4 5.6.7.0/24
+respond @blocked 403
 ```
 
 > `client_ip` chứ không phải `remote_ip`: sau proxy Cloudflare, `remote_ip` là IP biên của
@@ -170,8 +162,8 @@ handle {
 > `client_ip` thì còn phải khai `trusted_proxies` cho Caddy (khối `servers` trong global
 > options); không có proxy nào phía trước thì hai matcher này cho cùng kết quả.
 >
-> Và đây chỉ là lớp phụ. Chặn thật vẫn là `@PlatformOnly()` + `@RequirePermissions` ở backend
-> (CLAUDE.md §6) — ẩn một đường dẫn không bảo vệ được gì.
+> Và đây chỉ là lớp phụ. Chặn thật vẫn là RealmGuard (chỉ realm `platform`) + `@PlatformOnly()` +
+> `@RequirePermissions` ở backend (CLAUDE.md §6) — chặn một host không thay được guard.
 
 ### 2.2 DNS đặt ở đâu: Mắt Bão hay Cloudflare
 
@@ -203,8 +195,10 @@ gian bỏ ra cho việc đó, và staging sập cũng không kéo theo productio
 
 | | Production | Staging |
 | --- | --- | --- |
-| Web | `xeprime.vn` | `stg.xeprime.vn` |
-| API | `api.xeprime.vn` | `api-stg.xeprime.vn` |
+| Web — khách | `xeprime.vn` | `stg.xeprime.vn` |
+| Web — đối tác | `partner.xeprime.vn` | `partner-stg.xeprime.vn` |
+| Web — quản trị | `admin.xeprime.vn` | `admin-stg.xeprime.vn` |
+| API (app native) | `api.xeprime.vn` | `api-stg.xeprime.vn` |
 | Ảnh (R2) | `cdn.xeprime.vn` | URL `r2.dev` của bucket staging là đủ |
 | File cấu hình | `.env.production` | `.env.staging` |
 | Project Docker | `xeprime-production` | `xeprime-staging` |
@@ -215,7 +209,8 @@ gian bỏ ra cho việc đó, và staging sập cũng không kéo theo productio
 định tên volume), và biến `XP_ENV_FILE` mà `env_file:` trong compose đọc. Lệch một trong ba là
 stack tách đôi trong im lặng — volume mới, database rỗng, không ai báo lỗi.
 
-> `api-stg` chứ không phải `api.stg`: xem §2.2 — Universal SSL chỉ phủ một cấp subdomain.
+> `api-stg`/`partner-stg`/`admin-stg` chứ không phải `api.stg`…: xem §2.2 — Universal SSL chỉ phủ
+> một cấp subdomain.
 
 #### `APP_ENV` — thứ tách "môi trường" khỏi "kiểu build"
 
@@ -244,13 +239,14 @@ là thứ phát hiện việc chép nhầm file env sang máy production ngay t�
 
 | Biến | Production | Staging | Hỏng thế nào nếu để giống |
 | --- | --- | --- | --- |
-| `SESSION_COOKIE_NAME` | `xp_session` | **`xp_session_stg`** | `SESSION_COOKIE_DOMAIN=.xeprime.vn` gửi cookie tới MỌI subdomain. Cùng tên ⇒ đăng nhập staging **ghi đè phiên production** của chính bạn, và token staging đi kèm mọi request tới production |
+| `SESSION_COOKIE_NAME` | `xp_session` | **`xp_session_stg`** | Cookie giờ là host-only theo từng site (ADR 0053) nên hai môi trường không còn ghi đè nhau; vẫn giữ khác tên để nhìn devtools là biết đang ở môi trường nào, và để một file env chép nhầm không âm thầm trùng |
 | `R2_BUCKET` / `R2_PRIVATE_BUCKET` | bucket thật | bucket riêng | Ảnh test và tài liệu test nằm lẫn trong kho của khách hàng thật |
 | `APP_ENV` | `production` | **`staging`** | Để `production` trên máy staging ⇒ API từ chối boot vì thiếu eSMS/SMTP/R2. Để `staging` trên máy production ⇒ mã OTP của khách bị trả thẳng trong response |
 
-`SESSION_COOKIE_NAME` được đọc lúc **chạy** ở cả hai phía (API phát cookie, `proxy.ts` chặn
-`/manage/*`), nên đổi nó chỉ cần `deploy.sh` khởi động lại container — không phải build lại.
-Compose truyền nó vào service `web` qua `environment:`; đó là biến runtime DUY NHẤT mà web nhận.
+`SESSION_COOKIE_NAME` là tên GỐC: API phát `<tên>_customer` · `<tên>_partner` · `<tên>_platform`,
+mỗi cái host-only của đúng site. Nó được đọc lúc **chạy** ở cả hai phía (API phát cookie, `proxy.ts`
+gác cổng từng site), nên đổi nó chỉ cần `deploy.sh` khởi động lại container — không phải build lại.
+Compose truyền nó vào service `web` qua `environment:` (cùng `API_INTERNAL_URL` cho fetch SEO).
 
 #### Dựng staging
 
@@ -268,17 +264,39 @@ Trong `.env.staging`, các giá trị suy từ tên miền phải đổi theo �
 ```dotenv
 APP_ENV=staging
 WEB_DOMAIN=stg.xeprime.vn
+PARTNER_DOMAIN=partner-stg.xeprime.vn
+ADMIN_DOMAIN=admin-stg.xeprime.vn
 API_DOMAIN=api-stg.xeprime.vn
-CORS_ORIGINS="https://stg.xeprime.vn"
+CORS_ORIGINS="https://stg.xeprime.vn,https://partner-stg.xeprime.vn,https://admin-stg.xeprime.vn"
 API_PUBLIC_URL="https://api-stg.xeprime.vn"
 APP_WEB_URL="https://stg.xeprime.vn"
-NEXT_PUBLIC_API_URL="https://api-stg.xeprime.vn"
+WEB_PARTNER_URL="https://partner-stg.xeprime.vn"
+WEB_ADMIN_URL="https://admin-stg.xeprime.vn"
+REALM_PROXY_SECRET="<khoá riêng của staging, ≥ 32 ký tự>"
+NEXT_PUBLIC_API_URL="/api"
+NEXT_PUBLIC_XP_ZONE_MODE=host
+NEXT_PUBLIC_WEB_MARKET_URL="https://stg.xeprime.vn"
+NEXT_PUBLIC_WEB_PARTNER_URL="https://partner-stg.xeprime.vn"
+NEXT_PUBLIC_WEB_ADMIN_URL="https://admin-stg.xeprime.vn"
 SESSION_COOKIE_NAME=xp_session_stg
 ```
 
-> Google/Facebook OAuth cần khai **thêm** redirect URI của staging trong console của provider
-> (`https://api-stg.xeprime.vn/auth/social/google/callback`) — chúng là danh sách, không phải
-> một giá trị.
+#### Redirect URI của Google/Facebook — một cho MỖI site web + một cho app native
+
+Callback OAuth web quay về CHÍNH site đã mở luồng (cookie host-only của site đó), nên mỗi site có
+redirect URI riêng; site quản trị chỉ đăng nhập bằng mật khẩu nên không khai. Khai đủ trong console
+của provider (chúng là danh sách, không phải một giá trị):
+
+| Môi trường | Redirect URI |
+| --- | --- |
+| production — site khách | `https://xeprime.vn/api/auth/social/google/callback` |
+| production — site đối tác | `https://partner.xeprime.vn/api/auth/social/google/callback` |
+| production — app native | `https://api.xeprime.vn/auth/social/google/callback` |
+| staging — site khách | `https://stg.xeprime.vn/api/auth/social/google/callback` |
+| staging — site đối tác | `https://partner-stg.xeprime.vn/api/auth/social/google/callback` |
+| staging — app native | `https://api-stg.xeprime.vn/auth/social/google/callback` |
+
+Facebook: cùng bảng, thay `google` bằng `facebook`.
 
 ---
 
@@ -290,11 +308,15 @@ Bản đồ tên miền và lý do chọn nó ở §2.1; đây là phần bấm 
 
 | Bản ghi | Trỏ về | Ghi chú |
 | --- | --- | --- |
-| `A  xeprime.vn` | IP VPS | chợ xe + `/manage` + `/manage/admin` |
-| `A  api.xeprime.vn` | IP VPS | |
+| `A  xeprime.vn` | IP VPS | site khách |
+| `A  partner.xeprime.vn` | IP VPS | site đối tác — **mới** (ADR 0051) |
+| `A  admin.xeprime.vn` | IP VPS | site quản trị — **mới** (ADR 0051) |
+| `A  api.xeprime.vn` | IP VPS | app native |
 | `A  www.xeprime.vn` | IP VPS | tuỳ chọn — nhớ bỏ comment khối `www` trong `deploy/Caddyfile` |
 | `CNAME  cdn.xeprime.vn` | bucket R2 công khai | tạo từ giao diện R2, không tự gõ tay (§2.2) |
 | `A  stg.xeprime.vn` | IP VPS **staging** | máy khác, IP khác |
+| `A  partner-stg.xeprime.vn` | IP VPS **staging** | **mới** |
+| `A  admin-stg.xeprime.vn` | IP VPS **staging** | **mới** |
 | `A  api-stg.xeprime.vn` | IP VPS **staging** | |
 
 > Dùng Cloudflare thì **tắt proxy (mây xám)** cho tới khi Caddy lấy được chứng chỉ — mây cam
@@ -403,19 +425,17 @@ unset PLATFORM_ADMIN_PASSWORD
 
 > `PLATFORM_ADMIN_PASSWORD` là **bắt buộc** khi `NODE_ENV=production` (tức là ở cả hai môi
 > trường): `prisma/src/seed/context.ts` từ chối tạo tài khoản quản trị bằng mật khẩu mẫu. Seed
-> dựng `admin@xeprime.vn` với mật khẩu bạn nhập — đổi email bằng `PLATFORM_ADMIN_EMAIL`.
+> dựng `admin@xeprime.vn` với mật khẩu bạn nhập — đổi email bằng `PLATFORM_ADMIN_EMAIL`. Tài khoản
+> này được tạo ở CHÍNH chế độ `system` (`seedPlatformAdmin`), không cần dữ liệu demo.
 >
 > `--profile tools` cũng bắt buộc: `migrate` nằm sau profile đó trong compose.
 
 #### Dữ liệu DEMO — chỉ trên staging
 
-`SEED_MODE=demo` dựng **27 gian hàng**: 5 gian hàng DEMO khác quy mô (40 / 10 / 3 / 1 / 0 xe) đủ
-để test toàn bộ luồng nghiệp vụ mà không phải bấm tay, **2 gian hàng QA** cho ranh giới hai
-tuyến chủ xe — `qa.owner@xeprime.test` (hoa hồng, đúng 3 xe, làm việc ở `/account`) và
-`qa.shop@xeprime.test` (gói, đúng 10 xe với 8 + 2 chỗ đã mua, làm việc ở `/manage`) — và **20 chủ
-xe cá nhân tuyến hoa hồng** (`chuxe.*@xeprime.test`, mỗi người 1–3 xe, rải trên 15 tỉnh) để chợ xe
-có mật độ thật ngoài bốn thành phố lớn. Chi tiết và các phép kiểm hai tài khoản QA phục vụ:
-[`qa-accounts.md`](qa-accounts.md).
+`SEED_MODE=demo` dựng bộ demo gọn, mỗi loại tài khoản khoảng ba bản: **3 gian hàng tuyến gói**
+(12 / 5 / 2 xe — mỗi bậc gói một gian hàng, gian hàng lớn có 3 nhân viên), **3 chủ xe cá nhân tuyến
+hoa hồng** (1 / 2 / 3 xe), 3 khách, 2 tài khoản nền tảng ngoài admin, và 3 tài khoản song sinh xuyên
+site. Bảng tra và các phép kiểm chúng phục vụ: [`qa-accounts.md`](qa-accounts.md).
 
 Seed cũng **HỘI TỤ danh mục gói**: nó gỡ các bậc phí-nền cũ không còn dùng khỏi danh mục — xoá
 khi không còn thuê bao nào trỏ tới, archive kèm cảnh báo khi còn. Sau khi chạy (kể cả
@@ -455,14 +475,14 @@ docker compose -p xeprime-staging -f docker-compose.prod.yml --profile tools \
 unset PW_ADMIN PW_DEMO
 ```
 
-> `DEMO_PASSWORD` bắt buộc vì mật khẩu mẫu nằm **công khai trong repo**: 41 tài khoản demo dùng
-> nó trên một máy có mặt trên Internet là 41 lối vào. Seed idempotent trên toàn bộ 63 bảng nên
+> `DEMO_PASSWORD` bắt buộc vì mật khẩu mẫu nằm **công khai trong repo**: mọi tài khoản demo dùng
+> nó trên một máy có mặt trên Internet là bấy nhiêu lối vào. Seed idempotent trên toàn bộ 63 bảng nên
 > chạy lại nhiều lần không nhân đôi dữ liệu.
 >
 > ⚠️ **Đừng đưa dữ liệu khách hàng thật lên staging** — `APP_ENV=staging` khiến endpoint gửi OTP
 > trả kèm `devCode` (§2.3).
 
-> ❌ **Không bao giờ chạy `SEED_MODE=demo` trên production** — nó tạo 41 tài khoản và 27 gian hàng
+> ❌ **Không bao giờ chạy `SEED_MODE=demo` trên production** — nó tạo tài khoản và gian hàng
 > giả ngay trong database thật. `prisma/src/seed/context.ts` đã chặn sẵn (`NODE_ENV=production`
 > + `SEED_MODE=demo` ⇒ từ chối chạy), nhưng đừng đi tìm cách vòng qua nó.
 
@@ -637,16 +657,16 @@ Phía Windows: **`tools/backup-pull/README.md`**.
 | API không boot, log liệt kê tên biến env | `env.schema.ts` chặn ở production — mỗi dòng nó in ra là một biến thiếu hoặc sai |
 | `next build` bị giết giữa chừng (exit 137) | Hết RAM. Kiểm `swapon --show`; chạy lại `vps-bootstrap.sh` nếu chưa có swap |
 | Caddy không lấy được chứng chỉ | DNS chưa trỏ đúng, Cloudflare còn bật proxy (mây cam), hoặc cổng 80 bị chặn |
-| Trình duyệt báo lỗi CORS | `CORS_ORIGINS` thiếu đúng origin đang mở — kể cả `https://www.` |
-| Đăng nhập xong vẫn bị đá về trang login (vòng lặp) | `SESSION_COOKIE_DOMAIN` thiếu dấu chấm đầu, hoặc container `web` không nhận được `SESSION_COOKIE_NAME` nên `proxy.ts` tìm tên mặc định trong khi API phát tên khác |
+| Trình duyệt báo lỗi CORS | Web đang gọi thẳng `api.xeprime.vn` thay vì `/api` cùng origin — image build với `NEXT_PUBLIC_API_URL` cũ. Build lại (§9.3) |
+| Đăng nhập xong vẫn bị đá về trang login (vòng lặp) | Container `web` không nhận được `SESSION_COOKIE_NAME` nên `proxy.ts` tìm tên mặc định trong khi API phát tên khác — hoặc đăng nhập ở site này rồi mở site kia: mỗi site một tài khoản, một cookie (ADR 0053) |
+| API trả `REALM_NOT_ALLOWED` cho mọi request của một site | Caddy không gắn được realm: `REALM_PROXY_SECRET` của Caddy và API lệch nhau, hoặc khối site đó thiếu `import site_api <realm>` |
 | Rate limit chặn nhầm cả hệ thống | `TRUST_PROXY_HOPS` chưa đặt = 1 ⇒ mọi request mang cùng một IP |
-| Google/Facebook trả `redirect_uri_mismatch` | `API_PUBLIC_URL` không trùng TỪNG KÝ TỰ với giá trị khai trong console provider |
+| Google/Facebook trả `redirect_uri_mismatch` | Thiếu redirect URI của ĐÚNG site trong console provider (mỗi site web một URI + một cho app native — §2.3) |
 | Đĩa đầy dần | Log container (đã giới hạn ở `vps-bootstrap.sh`) hoặc image cũ — `docker image prune -a` |
 | `docker compose ps` trả về rỗng dù stack đang chạy | Thiếu `-p xeprime-<môi trường>` — compose đang nhìn vào một project khác (§5) |
-| Đăng nhập staging xong thì production đăng xuất | `SESSION_COOKIE_NAME` giống nhau giữa hai môi trường (§2.3) |
 | Deploy xong nhưng database trống trơn | `--env` lệch với `.env.<tên>` ⇒ project khác ⇒ volume khác. Kiểm `docker volume ls` |
 | Job deploy đỏ ở bước "Thiếu giá trị bắt buộc" | Chưa khai Variable/Secret đó ở Environment tương ứng (§9.2) |
-| Deploy xanh nhưng web hiện dữ liệu của môi trường kia | Image bị dùng chéo. `NEXT_PUBLIC_API_URL` nhúng cứng lúc build, nên tag `staging-*` **không** chạy được ở production (§9.3) |
+| Deploy xanh nhưng link khác site dẫn sang môi trường kia | Image bị dùng chéo. URL ba site (`NEXT_PUBLIC_WEB_*_URL`) nhúng cứng lúc build, nên tag `staging-*` **không** chạy được ở production (§9.3) |
 | `./deploy/scripts/deploy.sh: Permission denied` | Bit thực thi chưa có trong index git. `git update-index --chmod=+x deploy/scripts/*.sh` rồi commit |
 
 ---
@@ -717,21 +737,23 @@ Settings; Secret bị che và không đọc lại được sau khi lưu.
 | Biến | staging | Ghi chú |
 | --- | --- | --- |
 | `WEB_DOMAIN` · `API_DOMAIN` | `stg.xeprime.vn` · `api-stg.xeprime.vn` | |
+| `PARTNER_DOMAIN` · `ADMIN_DOMAIN` | `partner-stg.xeprime.vn` · `admin-stg.xeprime.vn` | **mới, bắt buộc** (ADR 0051) — Caddy xin chứng chỉ cho cả hai |
 | `ACME_EMAIL` | email của bạn | nhận cảnh báo chứng chỉ |
 | `POSTGRES_USER` · `POSTGRES_DB` | `xeprime` · `xeprime` | |
 | `APP_ENV` | **`staging`** | §2.3 — `NODE_ENV` KHÔNG khai, workflow luôn ghi `production` |
 | `API_PORT` | `4000` | |
-| `CORS_ORIGINS` | `https://stg.xeprime.vn` | |
+| `CORS_ORIGINS` | `https://stg.xeprime.vn,https://partner-stg.xeprime.vn,https://admin-stg.xeprime.vn` | web gọi `/api` cùng origin nên không cần CORS; đủ ba origin là đai an toàn |
 | `TRUST_PROXY_HOPS` | `1` | `2` nếu bật proxy Cloudflare (§2.2) |
 | `API_PUBLIC_URL` · `APP_WEB_URL` | `https://api-stg.xeprime.vn` · `https://stg.xeprime.vn` | |
-| `SESSION_TTL_DAYS` | `7` | |
+| `WEB_PARTNER_URL` · `WEB_ADMIN_URL` | `https://partner-stg.xeprime.vn` · `https://admin-stg.xeprime.vn` | tuỳ chọn — bỏ trống thì suy từ `PARTNER_DOMAIN`/`ADMIN_DOMAIN`. Link email + callback OAuth web của từng realm, và cũng là `NEXT_PUBLIC_WEB_*_URL` lúc build |
 | `SESSION_COOKIE_NAME` | **`xp_session_stg`** | BẮT BUỘC khác production — §2.3 |
-| `SESSION_COOKIE_SECURE` · `SESSION_COOKIE_DOMAIN` | `true` · `.xeprime.vn` | giữ dấu chấm đầu |
+| `SESSION_COOKIE_SECURE` | `true` | |
+| ~~`SESSION_COOKIE_DOMAIN`~~ | **XOÁ** | đã bỏ (ADR 0053 — cookie host-only). Workflow không ghi nó nữa và cảnh báo nếu còn; API từ chối boot nếu thấy |
 | `MOBILE_ACCESS_TTL_MINUTES` · `MOBILE_REFRESH_TTL_DAYS` | `15` · `60` | |
 | `MOBILE_JWT_AUDIENCE` · `MOBILE_AUTH_REDIRECT_URIS` | `xeprime-mobile` · `xeprime://auth/callback` | |
 | `OTP_MODE` | `mock` | mã in ra log và trả trong response |
 | `PLAN_FEATURE_ENFORCEMENT` | `warn` | trục năng lực theo gói (ADR 0027). Xem §9.4 trước khi đổi sang `on` |
-| `OTP_TTL_MINUTES` · `OTP_RESEND_COOLDOWN_SECONDS` · `OTP_MAX_SENDS_PER_HOUR` · `OTP_MAX_ATTEMPTS` | `5` · `60` · `5` · `5` | |
+| ~~`SESSION_TTL_DAYS` · `OTP_TTL_MINUTES` · `OTP_RESEND_COOLDOWN_SECONDS` · `OTP_MAX_SENDS_PER_HOUR` · `OTP_MAX_ATTEMPTS` · `GOOGLE_HOLIDAY_CALENDAR_ID`~~ | **XOÁ** | chính sách giống mọi môi trường ⇒ hằng số ở `@xeprime/types` (`SESSION_TTL_DAYS`, `OTP_POLICY`, `GOOGLE_HOLIDAY_CALENDAR_ID_DEFAULT`); workflow không còn đọc |
 | `SMTP_HOST` · `SMTP_PORT` · `SMTP_USER` | `smtp.resend.com` · `587` · `resend` | staging gửi thư THẬT (quyết định 04/09/2026) — `third-party-keys.md` §7.2. Để trống thì email rơi về in ra log |
 | `SMTP_FROM` | `XePrime STG <no-reply@stg.xeprime.vn>` | tên miền **con**, không phải `xeprime.vn` — uy tín gửi thư tính theo tên miền, test hỏng không được kéo thư của khách vào Junk |
 | `SEPAY_BANK_CODE` · `SEPAY_ACCOUNT_NUMBER` · `SEPAY_ACCOUNT_NAME` | trống | in vào mã VietQR ⇒ công khai theo bản chất. Đi cùng `SEPAY_API_KEY` (Secret) — bốn cái khai cùng nhau hoặc cùng để trống, khai lẻ thì API từ chối boot |
@@ -740,9 +762,8 @@ Settings; Secret bị che và không đọc lại được sau khi lưu.
 | `FIREBASE_PROJECT_ID` · `FIREBASE_CLIENT_EMAIL` | trống | là ĐỊNH DANH, không phải bí mật |
 | `GOOGLE_OAUTH_CLIENT_ID` · `FACEBOOK_APP_ID` | trống hoặc thật | client id đi trong URL authorize ⇒ công khai theo thiết kế |
 | `R2_ACCOUNT_ID` · `R2_ENDPOINT` · `R2_BUCKET` · `R2_PRIVATE_BUCKET` · `R2_PUBLIC_BASE_URL` | bucket RIÊNG cho staging | URL `r2.dev` là đủ |
-| `GOOGLE_HOLIDAY_CALENDAR_ID` | `vi.vietnamese#holiday@group.v.calendar.google.com` | |
 | `BACKUP_KEEP_DAYS` | `14` | |
-| `NEXT_PUBLIC_API_URL` | `https://api-stg.xeprime.vn` | |
+| ~~`NEXT_PUBLIC_API_URL`~~ | **XOÁ** | workflow build cố định `/api` (cùng origin — ADR 0051 điều 4); biến cũ không còn được đọc |
 | `NEXT_PUBLIC_APP_NAME` | `XePrime STG` | nhãn khác giúp không nhầm tab |
 | `NEXT_PUBLIC_GEOAPIFY_MAP_KEY` · `NEXT_PUBLIC_FIREBASE_*` (4) | | nằm lộ thiên trong bundle JS ⇒ **không bao giờ** là Secret |
 | `VPS_USER` · `VPS_PATH` · `VPS_SSH_PORT` | `xeprime` · `/opt/xeprime` · `22` | |
@@ -753,6 +774,7 @@ Settings; Secret bị che và không đọc lại được sau khi lưu.
 | --- | --- |
 | `POSTGRES_PASSWORD` | `openssl rand -hex 32` |
 | `SESSION_JWT_SECRET` | `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"` — schema từ chối giá trị mẫu |
+| `REALM_PROXY_SECRET` | **mới, bắt buộc** (ADR 0053). Cùng lệnh như trên, giá trị KHÁC `SESSION_JWT_SECRET` và khác giữa staging/production. Caddy gắn nó kèm header realm của `/api`; thiếu nó API từ chối boot |
 | `OTP_PEPPER` | `openssl rand -base64 32` |
 | `GOOGLE_OAUTH_CLIENT_SECRET` · `FACEBOOK_APP_SECRET` | console provider; trống ⇒ nút social trả `SOCIAL_NOT_CONFIGURED` |
 | `ESMS_API_KEY` · `ESMS_SECRET_KEY` · `ESMS_BRANDNAME` | trống ở staging |
@@ -771,6 +793,9 @@ Settings; Secret bị che và không đọc lại được sau khi lưu.
 rõ vì sao: mật khẩu nằm hai chỗ thì sớm muộn lệch nhau, và triệu chứng không hề chỉ về nguyên
 nhân. `openssl rand -hex` ở bảng trên (thay cho `-base64`) cũng vì lý do đó — `base64` sinh ra
 `/` và `+`, những ký tự phải encode trong phần userinfo của URL.
+
+Ba URL site lúc build (`NEXT_PUBLIC_WEB_MARKET_URL` · `_PARTNER_URL` · `_ADMIN_URL`) và
+`NEXT_PUBLIC_XP_ZONE_MODE=host` do workflow tự dựng từ các biến trên — không khai riêng.
 
 Ngoài ra khai **thêm một bản `NEXT_PUBLIC_*` ở cấp repository** (Settings → Secrets and
 variables → Actions → Variables). Job `build` của `ci.yml` chạy trên PR, nơi không có
@@ -804,9 +829,11 @@ release là nguồn duy nhất, nên một lần rollback không để lại rul
 
 `ghcr.io/daihanhbvt/xeprime:staging-<sha>` và `:production-<sha>`.
 
-**Không phải để cho gọn.** Next **nhúng cứng `NEXT_PUBLIC_API_URL` vào bundle lúc build**, nên
-image build cho staging trỏ vĩnh viễn vào `api-stg`. Đem nó chạy production là cả site gọi sang
-staging — mà nhìn bên ngoài thì mọi thứ vẫn "chạy".
+**Không phải để cho gọn.** Next **nhúng cứng URL của ba site (`NEXT_PUBLIC_WEB_*_URL`) vào bundle
+lúc build**, nên image build cho staging dựng mọi link khác site ("Đăng xe cho thuê", "Về trang thuê
+xe", link quản trị) trỏ vĩnh viễn vào `*-stg`. Đem nó chạy production là người dùng bị đưa sang
+staging — mà nhìn bên ngoài thì mọi thứ vẫn "chạy". (`NEXT_PUBLIC_API_URL` giờ là `/api` cùng
+origin nên không còn là nguồn lệch.)
 
 Hệ quả khi rollback: chỉ chọn tag mang đúng tiền tố môi trường đang deploy.
 

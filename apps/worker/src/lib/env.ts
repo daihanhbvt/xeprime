@@ -29,11 +29,10 @@ export const CHAT_FIRESTORE_KEEP = parsePositiveInt(process.env.CHAT_FIRESTORE_K
 export const GOOGLE_HOLIDAY_API_KEY = process.env.GOOGLE_HOLIDAY_API_KEY?.trim() ?? '';
 
 /**
- * Lịch nguồn. Mặc định là lịch nghỉ lễ VN CÔNG KHAI của Google — công khai nên chỉ cần API
- * key, không OAuth, không service account.
+ * Lịch nguồn: lịch nghỉ lễ VN CÔNG KHAI của Google — công khai nên chỉ cần API key, không OAuth,
+ * không service account. Hằng số, không phải biến env: mọi môi trường đồng bộ cùng một lịch.
  */
-export const GOOGLE_HOLIDAY_CALENDAR_ID =
-  process.env.GOOGLE_HOLIDAY_CALENDAR_ID?.trim() || GOOGLE_HOLIDAY_CALENDAR_ID_DEFAULT;
+export const GOOGLE_HOLIDAY_CALENDAR_ID = GOOGLE_HOLIDAY_CALENDAR_ID_DEFAULT;
 
 /**
  * Thiếu key ⇒ tính năng VẮNG MẶT, không phải hỏng.

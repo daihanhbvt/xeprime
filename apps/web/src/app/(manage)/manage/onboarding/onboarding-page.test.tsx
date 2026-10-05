@@ -314,7 +314,7 @@ describe('Tuyến hoa hồng đã có gian hàng: không thuộc màn này', () 
     renderPage();
 
     await waitFor(() => expect(router.replace).toHaveBeenCalledTimes(1));
-    expect(router.replace.mock.calls[0]![0]).toBe('/account/registration');
+    expect(router.replace.mock.calls[0]![0]).toBe('/manage/registration');
     expect(screen.queryByTestId('shop-registration')).toBeNull();
   });
 
@@ -327,14 +327,14 @@ describe('Tuyến hoa hồng đã có gian hàng: không thuộc màn này', () 
     renderPage();
 
     await waitFor(() => expect(router.replace).toHaveBeenCalledTimes(1));
-    expect(router.replace.mock.calls[0]![0]).toBe('/account/vehicles');
+    expect(router.replace.mock.calls[0]![0]).toBe('/manage/vehicles');
   });
 
   /*
-   * NHÂN VIÊN không có Owner Lite — đó là bộ công cụ của CHỦ XE. Thả họ vào `/account/registration`
+   * NHÂN VIÊN không có Owner Lite — đó là bộ công cụ của CHỦ XE. Thả họ vào màn đăng ký
    * là mời họ điền hồ sơ chủ xe của một gian hàng không phải của họ.
    */
-  it('nhân viên của gian hàng hết gói ⇒ khu tài khoản cá nhân', async () => {
+  it('nhân viên của gian hàng hết gói ⇒ trang chủ site partner (cổng chủ xe giải thích, không form)', async () => {
     signedIn({
       onboardingState: SHOP_ONBOARDING_STATE.PACKAGE_ACTIVE,
       billingMode: BILLING_MODE.COMMISSION,
@@ -343,6 +343,6 @@ describe('Tuyến hoa hồng đã có gian hàng: không thuộc màn này', () 
     renderPage();
 
     await waitFor(() => expect(router.replace).toHaveBeenCalledTimes(1));
-    expect(router.replace.mock.calls[0]![0]).toBe('/account');
+    expect(router.replace.mock.calls[0]![0]).toBe('/manage');
   });
 });

@@ -124,7 +124,8 @@
     "backToAccount": "Back to my account",
     "registeringTitle": "Your host profile is still under review",
     "registeringBody": "This section opens once you have at least one vehicle approved for the marketplace. Track your profile and vehicles on the registration screen.",
-    "openRegistration": "View registration status"
+    "openRegistration": "View registration status",
+    "bodyMemberPartner": "You are a member of {shop}. This shop uses the host toolkit — vehicle, calendar and money screens are open to the shop owner only. Contact the owner if you need access."
   },
   "vehicles": {
     "title": "My vehicles",

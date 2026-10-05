@@ -133,7 +133,13 @@ services:
       context: .
       dockerfile: deploy/Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL chưa đặt}
+        # `/api` cùng origin với site đang mở (ADR 0051 điều 4) — Caddy của từng site chuyển nó về API.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api}
+        # Ba site trong một Next app: chế độ `host` + URL gốc của từng site (ADR 0051 điều 2).
+        NEXT_PUBLIC_XP_ZONE_MODE: ${NEXT_PUBLIC_XP_ZONE_MODE:-host}
+        NEXT_PUBLIC_WEB_MARKET_URL: ${NEXT_PUBLIC_WEB_MARKET_URL:?NEXT_PUBLIC_WEB_MARKET_URL chưa đặt}
+        NEXT_PUBLIC_WEB_PARTNER_URL: ${NEXT_PUBLIC_WEB_PARTNER_URL:?NEXT_PUBLIC_WEB_PARTNER_URL chưa đặt}
+        NEXT_PUBLIC_WEB_ADMIN_URL: ${NEXT_PUBLIC_WEB_ADMIN_URL:?NEXT_PUBLIC_WEB_ADMIN_URL chưa đặt}
         NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-XePrime}
         NEXT_PUBLIC_GEOAPIFY_MAP_KEY: ${NEXT_PUBLIC_GEOAPIFY_MAP_KEY:-}
         NEXT_PUBLIC_FIREBASE_API_KEY: ${NEXT_PUBLIC_FIREBASE_API_KEY:-}
@@ -159,8 +165,9 @@ services:
     networks: [internal]
 
   # -------------------------------------------------------------------------
-  # Web — Next.js. Mọi màn hình fetch dữ liệu ở CLIENT, nên tiến trình này chỉ render vỏ:
-  # nó không gọi API server-side và không cần thấy `api` qua mạng nội bộ.
+  # Web — Next.js, BA SITE theo host (ADR 0051). Màn hình làm việc fetch ở CLIENT qua `/api` cùng
+  # origin; riêng các trang công khai cần SEO (chi tiết xe, gian hàng, banner, danh mục) fetch
+  # endpoint CÔNG KHAI phía server qua mạng nội bộ (`API_INTERNAL_URL`) — không cookie, không phiên.
   # -------------------------------------------------------------------------
   web:
     image: *app_image
@@ -175,6 +182,8 @@ services:
       # khác — mọi người đã đăng nhập bị đá về `/manage/login` thành vòng lặp, không có lỗi nào
       # trong log để lần. Đo trực tiếp 27/08/2026 khi dựng môi trường staging.
       SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-xp_session}
+      # Fetch phía server của trang công khai (SEO): `/api` không có origin trên server.
+      API_INTERNAL_URL: http://api:4000
     working_dir: /app/apps/web
     command: ['node_modules/.bin/next', 'start', '--port', '3000']
     healthcheck:
@@ -230,8 +239,12 @@ services:
       - '443:443/udp' # HTTP/3
     environment:
       WEB_DOMAIN: ${WEB_DOMAIN:?WEB_DOMAIN chưa đặt}
+      PARTNER_DOMAIN: ${PARTNER_DOMAIN:?PARTNER_DOMAIN chưa đặt}
+      ADMIN_DOMAIN: ${ADMIN_DOMAIN:?ADMIN_DOMAIN chưa đặt}
       API_DOMAIN: ${API_DOMAIN:?API_DOMAIN chưa đặt}
       ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL chưa đặt}
+      # Khoá Caddy gắn kèm header realm của `/api` (ADR 0053 điều 4) — CÙNG giá trị với API.
+      REALM_PROXY_SECRET: ${REALM_PROXY_SECRET:?REALM_PROXY_SECRET chưa đặt}
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data # chứng chỉ — MẤT volume này là phải xin lại chứng chỉ

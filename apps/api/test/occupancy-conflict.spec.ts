@@ -1,5 +1,5 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
-import { OCCUPANCY_SOURCE_TYPE, TENANT_STATUS, VEHICLE_TYPE } from '@xeprime/types';
+import { ACCOUNT_REALM, OCCUPANCY_SOURCE_TYPE, TENANT_STATUS, VEHICLE_TYPE } from '@xeprime/types';
 
 /**
  * ADR 0006 — test bắt buộc, không phải "nên có".
@@ -38,7 +38,12 @@ beforeAll(async () => {
   otherVehicleId = newId();
 
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Test owner', email: `test-${ownerId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Test owner',
+      email: `test-${ownerId}@xeprime.test`,
+    },
   });
   await prisma.tenant.create({
     data: {
@@ -73,7 +78,11 @@ beforeEach(async () => {
   if (dbAvailable) await prisma.vehicleOccupancy.deleteMany({ where: { tenantId } });
 });
 
-function occupancy(start: Date, end: Date, overrides: Partial<{ vehicleId: string; sourceType: string; bufferMinutes: number }> = {}) {
+function occupancy(
+  start: Date,
+  end: Date,
+  overrides: Partial<{ vehicleId: string; sourceType: string; bufferMinutes: number }> = {},
+) {
   return {
     id: newId(),
     tenantId,

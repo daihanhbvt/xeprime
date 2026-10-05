@@ -1,7 +1,12 @@
 import { Body, Controller, Post, ServiceUnavailableException } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { API_ERROR_CODE, PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
-import { CurrentTenant, RequirePermissions, SupportAction, TenantScoped } from '../../common/decorators';
+import {
+  ACCOUNT_REALM,
+  API_ERROR_CODE,
+  PERMISSION,
+  SUPPORT_CAPABILITY,
+} from '@xeprime/types';
+import { CurrentTenant, Realms, RequirePermissions, SupportAction, TenantScoped } from '../../common/decorators';
 import type { TenantContext } from '../../common/types/request-context';
 import { vehicleImageObjectPrefix } from './object-keys';
 import { PresignDocumentDto, PresignImageDto, UploadPresignDto } from './dto/storage.dto';
@@ -18,6 +23,7 @@ import { R2Service } from './r2.service';
 @ApiTags('uploads')
 @Controller('uploads')
 @TenantScoped()
+@Realms(ACCOUNT_REALM.PARTNER)
 export class StorageController {
   constructor(private readonly r2: R2Service) {}
 

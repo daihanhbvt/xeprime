@@ -1,16 +1,24 @@
 'use client';
 
-import { CarOutlined, LockOutlined, LogoutOutlined, ShopOutlined, UpOutlined } from '@ant-design/icons';
+import {
+  LockOutlined,
+  LogoutOutlined,
+  ShopOutlined,
+  UpOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
 import { Avatar, Dropdown, Tooltip } from 'antd';
 import type { MenuProps } from 'antd';
 import Link from 'next/link';
-import { CUSTOMER_TRIP_FILTER, PERMISSION, TRIP_ROLE } from '@xeprime/types';
+import { PERMISSION } from '@xeprime/types';
 import { ROUTES } from '@/constants/routes';
+import { PARTNER_TRACK, resolvePartnerTrack } from '@/features/auth/post-auth-destination';
+import { ZONE } from '@/zones';
+import { useZone } from '@/zones/ZoneProvider';
 import { AccountTrackBadge } from '@/features/account/components/AccountTrackBadge';
 import { useAccountIdentityLabel } from '@/features/account/hooks/use-account-identity-label';
 import { cx } from '@/lib/cx';
 import { usePortalLogout } from '@/features/auth/hooks/use-portal-logout';
-import { useTrips } from '@/features/trips/hooks';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { usePermissions } from '@/hooks/use-permissions';
 import { initialOf } from '@/lib/initials';
@@ -53,24 +61,13 @@ export function ManageUserCard({ collapsed = false, tone = 'light' }: ManageUser
   const { has } = usePermissions();
   const logout = usePortalLogout();
   const identityLabel = useAccountIdentityLabel();
+  const zone = useZone();
+  const isAdmin = zone === ZONE.ADMIN;
   /*
-   * Chuyến ĐI THUÊ chưa khép của chính người này — quyết định mục "Chuyến tôi đi thuê" có mặt
-   * hay không. Trang 1, vai `renter`: chỉ cần `counts.current`, không cần danh sách.
-   *
-   * Mục này là dấu vết của một lần CHUYỂN TUYẾN, không phải một chức năng thường trực: người
-   * nâng từ tuyến hoa hồng lên gói có thể còn chuyến chưa xong, tiền hoàn chưa nhận. Với gian
-   * hàng chưa bao giờ đi thuê thì nó không bao giờ xuất hiện.
-   *
-   * CHỈ hỏi khi người dùng đứng trong một gian hàng: thẻ này nằm trên vỏ của MỌI trang quản lý,
-   * và nhân sự nền tảng không bao giờ có chuyến đi thuê để đếm — một lượt đọc `/trips` cho họ
-   * trên mỗi lần mở trang là một request không bao giờ đổi kết quả.
+   * Không còn mục "Chuyến tôi đi thuê" (ADR 0053): tài khoản partner và nhân sự nền tảng là tài
+   * khoản RIÊNG, không bao giờ đứng tên một chuyến đi thuê — chuyến đi thuê thuộc tài khoản khách ở
+   * `xeprime.vn`. Lối chuyển tiếp `/manage/account/trips` cũ đã gỡ cùng lúc.
    */
-  const trips = useTrips(
-    CUSTOMER_TRIP_FILTER.CURRENT,
-    1,
-    TRIP_ROLE.RENTER,
-    Boolean(user?.tenant),
-  );
 
   if (!user) return null;
 
@@ -84,7 +81,6 @@ export function ManageUserCard({ collapsed = false, tone = 'light' }: ManageUser
    */
   const role = identityLabel(user);
   const dark = tone === 'dark';
-  const hasOpenRenterTrips = (trips.data?.counts.current ?? 0) > 0;
 
   const menuItems: MenuProps['items'] = [
     {
@@ -116,26 +112,32 @@ export function ManageUserCard({ collapsed = false, tone = 'light' }: ManageUser
        */
       key: 'security',
       icon: <LockOutlined aria-hidden />,
-      label: <Link href={ROUTES.MANAGE.SECURITY}>{t('shell.security')}</Link>,
+      label: (
+        <Link href={isAdmin ? ROUTES.ADMIN.SECURITY : ROUTES.MANAGE.SECURITY}>
+          {t('shell.security')}
+        </Link>
+      ),
     },
+    // Hồ sơ cá nhân của tài khoản đối tác (ADR 0053 — tài khoản riêng của site partner).
+    ...(isAdmin
+      ? []
+      : [
+          {
+            key: 'profile',
+            icon: <UserOutlined aria-hidden />,
+            label: <Link href={ROUTES.MANAGE.ACCOUNT}>{t('shell.profile')}</Link>,
+          },
+        ]),
     // Cài đặt gian hàng chỉ có nghĩa khi người dùng ĐANG đứng trong một gian hàng — nhân sự
     // nền tảng không có gian hàng nào để cài đặt.
-    ...(user.tenant && has(PERMISSION.TENANT_VIEW)
+    ...(user.tenant &&
+    has(PERMISSION.TENANT_VIEW) &&
+    resolvePartnerTrack(user) === PARTNER_TRACK.PACKAGE
       ? [
           {
             key: 'shop',
             icon: <ShopOutlined aria-hidden />,
             label: <Link href={ROUTES.MANAGE.SHOP}>{t('shell.shopSettings')}</Link>,
-          },
-        ]
-      : []),
-    // Chỉ khi CÒN chuyến — xem docblock của `trips` ở trên.
-    ...(hasOpenRenterTrips
-      ? [
-          {
-            key: 'renter-trips',
-            icon: <CarOutlined aria-hidden />,
-            label: <Link href={ROUTES.MANAGE.ACCOUNT_TRIPS}>{t('shell.renterTrips')}</Link>,
           },
         ]
       : []),

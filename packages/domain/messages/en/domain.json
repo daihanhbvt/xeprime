@@ -1009,5 +1009,10 @@
     "platform_revenue": "XePrime revenue",
     "insurer_payable": "Payable to insurer",
     "tax_ledger": "Tax withheld for remittance"
+  },
+  "accountRealm": {
+    "customer": "Renter",
+    "partner": "Partner",
+    "platform": "Platform staff"
   }
 }

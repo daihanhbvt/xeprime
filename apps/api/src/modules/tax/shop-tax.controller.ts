@@ -1,7 +1,10 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
-import { CurrentTenant, RequirePermissions, TenantScoped } from '../../common/decorators';
+import {
+  ACCOUNT_REALM,
+  PERMISSION,
+} from '@xeprime/types';
+import { CurrentTenant, Realms, RequirePermissions, TenantScoped } from '../../common/decorators';
 import type { TenantContext } from '../../common/types/request-context';
 import { TenantTaxSummaryDto } from './dto/tax.dto';
 import { TaxReadService } from './tax-read.service';
@@ -21,6 +24,7 @@ import { TaxReadService } from './tax-read.service';
 @ApiTags('shop-tax')
 @Controller('shop/tax')
 @TenantScoped()
+@Realms(ACCOUNT_REALM.PARTNER)
 export class ShopTaxController {
   constructor(private readonly read: TaxReadService) {}
 

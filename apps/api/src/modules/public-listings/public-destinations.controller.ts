@@ -1,7 +1,10 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PUBLIC_CACHE_SECONDS } from '@xeprime/types';
-import { Public } from '../../common/decorators';
+import {
+  ACCOUNT_REALM_VALUES,
+  PUBLIC_CACHE_SECONDS,
+} from '@xeprime/types';
+import { Public, Realms } from '../../common/decorators';
 import { PublicCache } from '../../common/http-cache';
 import { PublicListingsService } from './public-listings.service';
 import { PublicDestinationDto, PublicDestinationQueryDto } from './dto/public-listing.dto';
@@ -14,6 +17,7 @@ import { PublicDestinationDto, PublicDestinationQueryDto } from './dto/public-li
  */
 @ApiTags('public-listings')
 @Controller('public/destinations')
+@Realms(...ACCOUNT_REALM_VALUES)
 export class PublicDestinationsController {
   constructor(private readonly listings: PublicListingsService) {}
 

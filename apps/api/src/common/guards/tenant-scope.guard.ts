@@ -36,8 +36,10 @@ import type { RequestContext } from '../types/request-context';
  * kiểm người mở + phiên đăng nhập + hạn + quyền nền tảng còn hiệu lực. Và endpoint phải TỰ khai
  * `@SupportAction(...)` — không khai là từ chối, trước khi chạm DB.
  *
- * Phase 0 mỗi user chỉ thuộc tối đa 1 tenant. Khi hỗ trợ nhiều tenant, cách đúng là đọc
- * tenant đang chọn từ **session** (server-side), vẫn không phải từ request body.
+ * Một tài khoản partner thuộc TỐI ĐA MỘT gian hàng `active` (ADR 0053 điều 6) — DB giữ luật đó
+ * bằng unique index một phần `tenant_memberships_one_active_per_user`, nên ở đây không còn phép
+ * "chọn membership cũ nhất" và không cần bộ chọn gian hàng. Chỉ tài khoản realm `partner` có
+ * membership (trigger `tenant_memberships_user_realm_check`).
  */
 @Injectable()
 export class TenantScopeGuard implements CanActivate {
@@ -89,7 +91,6 @@ export class TenantScopeGuard implements CanActivate {
         branches: { select: { branchId: true } },
         tenant: { select: tenantContextSelect(now) },
       },
-      orderBy: { createdAt: 'asc' },
     });
 
     if (!membership || membership.tenant.deletedAt !== null) {
