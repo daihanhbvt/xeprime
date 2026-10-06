@@ -1,7 +1,7 @@
 # Module Vehicle trên app native — đã làm gì, còn nợ gì
 
 > Ngày viết: 03/09/2026 · Nhánh `feature/mobile-vehicle-module` (đã ff tới `551b392`)
-> Kế hoạch gốc: `docs/plans/2026-09-03-mobile-vehicle-module.md` — đọc §7 để biết BẢY quyết định
+> Kế hoạch gốc (đã gỡ 06/10/2026, còn trong lịch sử git): `docs/plans/2026-09-03-mobile-vehicle-module.md` — đọc §7 để biết BẢY quyết định
 > đã chốt và vì sao.
 >
 > Tài liệu này viết cho **người làm module tiếp theo**. Nó trả lời hai câu: *cái gì đã chạy được*

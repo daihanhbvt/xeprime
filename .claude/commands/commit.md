@@ -95,7 +95,8 @@ Kết quả `A<TAB>B`: A = commit chỉ có ở local, B = commit chỉ có ở 
 | A / B | Lệnh 2 |
 | --- | --- |
 | B = 0 (develop đã mới nhất) | `git switch -c <branch>` — thay đổi đi theo branch mới, không mất gì |
-| B > 0, A = 0 | `git stash push -u -m xp-commit && git merge --ff-only origin/develop && git switch -c <branch> && git stash pop` |
+| B > 0, A = 0, cây **riêng** | `git stash push -u -m xp-commit && git merge --ff-only origin/develop && git switch -c <branch> && git stash pop` |
+| B > 0, A = 0, cây **DÙNG CHUNG** (đánh giá như 7a) | `git switch -c <branch> origin/develop` — KHÔNG stash. Thay đổi chưa commit đi theo sang branch mới; nếu git từ chối (`would be overwritten`) thì DỪNG, báo danh sách file, hỏi người dùng (tạo branch từ develop local hay tự xử lý). `develop` local giữ nguyên, ghi chú 1 dòng |
 | A > 0 **và** B > 0 (diverged) | DỪNG. Không rebase, không merge. Báo: develop local đã rẽ nhánh khỏi origin/develop, cần xử lý tay |
 | A > 0, B = 0 | Tạo branch bình thường (`git switch -c`), ghi chú 1 dòng: develop có commit chưa push |
 | `fetch` fail (offline / không remote) | Bỏ qua bước cập nhật, ghi chú 1 dòng, tiếp tục `git switch -c` |

@@ -1,6 +1,6 @@
 # ADR 0029 — Giá gói phẳng theo chỗ xe; phụ phí chuyến cộng vào giá KHÁCH trả
 
-Ngày: 04/09/2026 · Trạng thái: **Accepted** · Ghi đè [ADR 0020](0020-two-revenue-tracks-one-marketplace.md) điều 2 và phép kiểm điểm giao · Cụ thể hoá giá pilot của [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md) điều 2
+Ngày: 04/09/2026 · Trạng thái: **Partially superseded — điều 3 (giá phẳng theo chỗ) bị [ADR 0041](0041-plan-tiers-by-vehicle-count.md) ghi đè**; điều 2 được [ADR 0032](0032-booking-deposit-insurance-and-owner-lite.md) làm rõ (thuế `T` khấu trừ phía chủ xe, không cộng vào tổng khách; bảo hiểm do khách trả); điều 1, 4 còn hiệu lực · Ghi đè ADR 0020 (đã gỡ) điều 2 và phép kiểm điểm giao · Cụ thể hoá giá pilot của [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md) điều 2
 
 ## Bối cảnh
 
@@ -78,8 +78,11 @@ không endpoint nào còn ném). `assumedMonthlyGmvJson` thành dữ liệu tham
   là ba chỗ để giá trôi khỏi nhau. Màn mua dựng ba thẻ từ `limits.terms`; `purchase()` vẫn là lớp
   chặn thật.
 - Purchase (tenant tự mua) kiểm kỳ hạn theo `limits.terms`; admin gán tay vẫn linh hoạt (có audit).
-- Hoá đơn CHÀO gói khi hết lượt miễn phí (worker) phải dựng theo giá chỗ × đội xe hiện có và
-  kỳ hạn nhỏ nhất được bán — bản cũ chỉ nhân phí nền × 1 tháng, ra hoá đơn 0đ vô nghĩa.
+- ~~Hoá đơn CHÀO gói khi hết lượt miễn phí (worker) phải dựng theo giá chỗ × đội xe hiện có và
+  kỳ hạn nhỏ nhất được bán — bản cũ chỉ nhân phí nền × 1 tháng, ra hoá đơn 0đ vô nghĩa.~~
+  *Lỗi thời:* "lượt miễn phí" là khái niệm của ADR 0026 (đã gỡ — ADR 0028 bỏ hai chuyến miễn phí
+  khỏi mặc định), và giá chỗ × đội xe đã bị [ADR 0041](0041-plan-tiers-by-vehicle-count.md) thay
+  bằng giá tuyệt đối từng kỳ của bậc.
 - R3 phải dựng: policy phụ phí có phiên bản + ngày hiệu lực, snapshot vào booking, breakdown
   cho khách và net-earning cho chủ xe.
 

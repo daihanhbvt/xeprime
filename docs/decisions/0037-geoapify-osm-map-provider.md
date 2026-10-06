@@ -148,7 +148,7 @@ tốt hơn OSM, thanh toán bằng VND không cần thẻ quốc tế. Đổi sa
 implement `GeoProvider` cộng một dòng ở `geo.module.ts`; khớp nối này vừa chứng minh là nó hoạt
 động.
 
-**Đã hoàn tất (16/09/2026):** `apps/mobile` đã chuyển theo. `apps/mobile/src/lib/map-static.ts`
+**Đã hoàn tất (16/09/2026):** `apps/mobile` đã chuyển theo. `apps/mobile/shared/src/lib/map-static.ts`
 dùng Geoapify Static Maps với `EXPO_PUBLIC_GEOAPIFY_MAP_KEY`. Không còn bề mặt bản đồ Google nào
 trong sản phẩm — mọi dữ liệu bản đồ XePrime tự vẽ đều là Geoapify/OSM.
 

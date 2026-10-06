@@ -1,6 +1,6 @@
 # ADR 0044 — Duyệt trước, thu tiền giữ chỗ sau
 
-Ngày: 22/09/2026 · Trạng thái: Accepted · Ghi đè: **0039 (toàn bộ)** · Khôi phục: 0032 điều 2 · Liên quan: 0005, 0006, 0011, 0021, 0022, 0024, 0027, 0033
+Ngày: 22/09/2026 · Trạng thái: Accepted · Ghi đè: **0039 (toàn bộ)** · Khôi phục: 0032 điều 2 · Liên quan: 0005, 0006, 0011, 0021 (đã gỡ, thay bởi 0028/0032/0033), 0022, 0024, 0027, 0033
 
 ## Bối cảnh
 

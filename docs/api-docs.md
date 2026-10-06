@@ -1,6 +1,6 @@
 # Tài liệu API (Swagger / OpenAPI)
 
-Ngày viết: 21/08/2026
+Ngày viết: 21/08/2026 · Cập nhật: 06/10/2026
 
 Dev mới vào dự án muốn biết API có gì, gọi thế nào, trả về gì → đọc file này trước.
 
@@ -45,27 +45,63 @@ Vẫn không vào được sau hai bước trên thì nghi router bật **AP/cli
 
 API có **hai đường xác thực**, và Swagger UI chỉ tiện cho đường thứ nhất.
 
-### 2.1 Web — httpOnly session cookie (ADR 0002)
+### 2.1 Web — httpOnly session cookie (ADR 0002 · ADR 0053)
 
 **Không có nút "Authorize" nào để dán token vào** — cookie không phải thứ dán tay được.
 
-1. Mở `auth` → `POST /auth/login` → **Try it out** → gửi email/SĐT + mật khẩu.
-2. Trình duyệt tự giữ cookie. Mọi endpoint sau đó dùng lại cookie đó, không cần thao tác gì thêm.
+**Mọi request web phải mang REALM** (không gian tài khoản `customer` · `partner` · `platform` —
+ADR 0053). Realm quyết ba thứ: đăng nhập/đăng ký tra và tạo tài khoản trong realm nào, cookie nào
+được đọc, và route nào mở. Realm đi trong header `x-xp-realm` (`ACCOUNT_REALM_HEADER` ở
+`@xeprime/types`) và API chỉ tin nó khi
+[`RequestRealmService`](../apps/api/src/modules/auth/request-realm.service.ts) cho phép:
 
-Cấu hình `withCredentials` đã bật sẵn ở [main.ts](../apps/api/src/main.ts) — không bật thì mọi
-lần "Try it out" đều trả 401 dù đã đăng nhập.
+| Môi trường | Ai gắn `x-xp-realm` | API tin khi nào |
+| --- | --- | --- |
+| staging / production | Caddy, theo HOST của site (`xeprime.vn` · `partner.` · `admin.`) ở `/api` | kèm `x-xp-proxy-secret` khớp `REALM_PROXY_SECRET` (so thời gian hằng) |
+| máy dev | proxy của web (`apps/web/src/proxy.ts`) theo khu của trang gọi (Referer), hoặc chính bạn khi gọi thẳng `:4000` | `REALM_HEADER_FROM_CLIENT=true` (đã bật trong `.env.example`; env schema CHẶN cờ này ở môi trường đã triển khai) |
 
-Gọi bằng curl thì phải giữ cookie jar:
+Hệ quả khi gọi thẳng `http://localhost:4000`:
+
+- **Không gửi `x-xp-realm`** ⇒ `POST /auth/login` (và `register`, `password/forgot`, `password/reset`)
+  trả **400 `REALM_UNRESOLVED`** — server không đoán realm mặc định. Endpoint cần đăng nhập thì trả
+  401 vì không biết đọc cookie nào.
+- **Swagger UI không gửi được header này**, nên "Try it out" chỉ dùng được cho endpoint CÔNG KHAI
+  không cần realm. Endpoint cần đăng nhập: dùng curl như dưới, hoặc đường Bearer ở §2.2.
+
+Hai cách gọi ở máy dev:
 
 ```bash
+# Cách 1 — thẳng API, tự khai realm (cần REALM_HEADER_FROM_CLIENT=true ở .env)
 curl -c jar.txt -b jar.txt -X POST http://localhost:4000/auth/login \
-  -H 'Content-Type: application/json' -d '{"identifier":"owner@xeprime.test","password":"Abcd1234"}'
-curl -b jar.txt http://localhost:4000/bookings?page=1
+  -H 'Content-Type: application/json' -H 'x-xp-realm: partner' \
+  -d "{\"identifier\":\"owner.saigon@xeprime.test\",\"password\":\"$DEMO_PASSWORD\"}"
+curl -b jar.txt -H 'x-xp-realm: partner' 'http://localhost:4000/bookings?page=1'
+
+# Cách 2 — qua web dev (localhost:3000/api), y như trình duyệt: proxy gắn realm theo Referer
+#   (không Referer ⇒ customer; trang dưới /manage ⇒ partner; dưới /admin ⇒ platform)
+curl -c jar.txt -b jar.txt -X POST http://localhost:3000/api/auth/login \
+  -H 'Content-Type: application/json' -H 'Referer: http://localhost:3000/manage' \
+  -d "{\"identifier\":\"owner.saigon@xeprime.test\",\"password\":\"$DEMO_PASSWORD\"}"
 ```
+
+Tài khoản demo do seed tạo (bảng tra đầy đủ ở [`qa-accounts.md`](qa-accounts.md)); mật khẩu là
+biến env `DEMO_PASSWORD` (tài khoản nền tảng `admin@xeprime.vn` dùng `PLATFORM_ADMIN_PASSWORD`) —
+**không ghi mật khẩu vào tài liệu, script hay log**. Tài khoản thuộc ĐÚNG MỘT realm: `owner.saigon@…`
+là `partner`, `khach.an@…` là `customer`; gửi sai realm thì đăng nhập báo sai thông tin như một
+tài khoản không tồn tại.
+
+Cookie phiên tên `<SESSION_COOKIE_NAME>_<realm>` (mặc định `xp_session_customer` ·
+`xp_session_partner` · `xp_session_platform`), **host-only** — không có `Domain`, nên cookie của
+site này không bao giờ đi sang site kia. Swagger vẫn hiện scheme `xp_session` (tên gốc) vì spec là
+artifact tĩnh; tên thật luôn có hậu tố realm.
 
 **Google/Facebook không thử được trong Swagger** — `GET /auth/social/{provider}` và
 `/callback` là hai chặng của một lần ĐIỀU HƯỚNG TRÌNH DUYỆT và trả `302`, không trả JSON
-(ADR 0019). Mở thẳng `http://localhost:4000/auth/social/google?next=/` trên thanh địa chỉ để thử.
+(ADR 0019). Callback của WEB nằm dưới `/api` của CHÍNH site đó
+(`<site>/api/auth/social/{provider}/callback`) để cookie host-only do đúng site phát. Thử ở máy dev
+bằng cách mở `http://localhost:3000/api/auth/social/google?next=/` trên thanh địa chỉ (proxy dev
+gắn realm). **Site quản trị (`platform`) không có đăng nhập mạng xã hội** — `begin` trả
+`REALM_LOGIN_METHOD_NOT_ALLOWED`; realm đó cũng không tự đăng ký và không đăng nhập OTP.
 
 ### 2.2 App native — `Authorization: Bearer` (ADR 0017)
 
@@ -83,6 +119,21 @@ Sáu endpoint dưới nhóm `auth`, tiền tố `/auth/mobile`:
 **Bốn cửa vào, một loại phiên.** Mọi endpoint trên đều trả cùng `MobileSessionDto` — app không
 cần biết người dùng đã vào bằng cách nào.
 
+**`clientApp` quyết REALM của phiên native (ADR 0053).** Request native không đi qua header
+`x-xp-realm`. Mọi endpoint PHÁT HÀNH phiên (`login`, `register`, `phone/login`, `social/exchange`)
+nhận trường tuỳ chọn `clientApp` = `customer` (app XePrime) | `partner` (app XePrime Partner) —
+xem [mobile-auth.dto.ts](../apps/api/src/modules/auth/dto/mobile-auth.dto.ts). Thiếu ⇒ `customer`
+(tương thích app hợp nhất cũ). Đăng nhập/đăng ký chỉ tra và tạo tài khoản TRONG realm đó, và giá
+trị được ghi vào `native_auth_sessions.client_app` để refresh token không tái tạo được phiên cho app
+kia. Với `social/exchange`, server đối chiếu `clientApp` với app suy từ scheme `redirect_uri` lúc
+khởi tạo luồng (§2.3).
+
+`clientApp` **không có giá trị `platform`**: tài khoản quản trị nền tảng không có app mobile, và
+controller `/auth/mobile/*` chỉ khai realm `customer` · `partner`. Ở web, realm `platform` bị chặn
+tự đăng ký và đăng nhập OTP/mạng xã hội bằng `REALM_LOGIN_METHOD_NOT_ALLOWED` — nó chỉ đăng nhập
+bằng mật khẩu (`assertSelfRegistration` / `assertPasswordlessLogin` ở
+[auth.service.ts](../apps/api/src/modules/auth/auth.service.ts)).
+
 **Cửa thứ năm nằm ngoài nhóm `auth`:** `POST /public/booking-requests` gửi kèm `client: "native"`
 trả `receipt.session` (cùng `MobileSessionDto`) khi khách vãng lai được tự tạo tài khoản từ SĐT đã
 xác thực OTP. Bỏ `client` đi thì nó phát cookie như web và app **không nhận được gì**.
@@ -97,7 +148,8 @@ xác thực OTP. Bỏ `client` đi thì nó phát cookie như web và app **khô
 # Đăng nhập → lấy access token
 ACCESS=$(curl -s -X POST http://localhost:4000/auth/mobile/login \
   -H 'Content-Type: application/json' \
-  -d '{"identifier":"owner@xeprime.test","password":"..."}' | jq -r .data.tokens.accessToken)
+  -d "{\"identifier\":\"owner.saigon@xeprime.test\",\"password\":\"$DEMO_PASSWORD\",\"clientApp\":\"partner\"}" \
+  | jq -r .data.tokens.accessToken)
 
 # Gọi endpoint cần đăng nhập bằng Bearer — KHÔNG cần cookie jar
 curl -H "Authorization: Bearer $ACCESS" 'http://localhost:4000/bookings?page=1'
@@ -106,8 +158,8 @@ curl -H "Authorization: Bearer $ACCESS" 'http://localhost:4000/bookings?page=1'
 Ba điều dễ vấp:
 
 - **Đừng gửi cả cookie lẫn Bearer.** Guard trả 401 thay vì đoán bên nào thắng — cố ý (ADR 0017 §5).
-  Trong Swagger UI, sau khi đã đăng nhập bằng cookie ở §2.1 thì mọi "Try it out" kèm header
-  `Authorization` sẽ 401; mở tab ẩn danh hoặc dùng curl.
+  Một request curl vừa mang cookie jar + `x-xp-realm` của §2.1 vừa mang header `Authorization` sẽ
+  401; tách hai cách thử ra hai lệnh.
 - **Access token sống 15 phút.** Hết hạn trả `SESSION_EXPIRED`; gọi `/auth/mobile/refresh`, đừng
   đăng nhập lại.
 - **Refresh token dùng một lần.** Gửi lại token đã dùng ⇒ coi là bị đánh cắp ⇒ **thu hồi cả phiên**.
@@ -147,11 +199,17 @@ const session = await mobileAuthApi.exchangeSocialCode(authClient, {
 
 Bốn điều dễ vấp:
 
-- **`redirect_uri` phải nằm trong `MOBILE_AUTH_REDIRECT_URIS`** (env của API). Không khớp ⇒ trình
+- **`redirect_uri` phải nằm trong `MOBILE_AUTH_REDIRECT_URIS`** (env của API — mặc định
+  `xeprime://auth/callback,xeprimepartner://auth/callback`, hai scheme của hai app phát hành riêng,
+  xem [env.schema.ts](../apps/api/src/config/env.schema.ts)). Scheme còn quyết app đích: luồng mở
+  bằng `xeprimepartner://…` là luồng của app Partner (realm `partner`), và `social/exchange` phải
+  gửi `clientApp: "partner"` khớp với nó. Không khớp allowlist ⇒ trình
   duyệt dừng ở trang web kèm `?authError=SOCIAL_STATE_INVALID`, không phải ở deep link — vì một
   `redirect_uri` chưa qua allowlist thì không đáng tin để redirect tới.
 - **Expo dev build dùng scheme khác.** `exp://192.168.x.x:8081/--/auth/callback` phải được thêm
-  vào allowlist của API dev; nó không tự động được chấp nhận.
+  vào allowlist của API dev; nó không tự động được chấp nhận. Mọi scheme khác `xeprimepartner`
+  (gồm `exp://`) đều được suy là app khách (`clientAppForRedirectUri` ở `@xeprime/types`) — thử
+  social của app Partner trên Expo Go sẽ không ra phiên partner.
 - **Mã sống 60 giây, dùng một lần.** Hỏng thì làm lại từ bước 1 — đừng retry cùng một mã. Gửi sai
   `codeVerifier` cũng **đốt luôn mã**.
 - **Lỗi cũng về deep link**: `xeprime://auth/callback?error=<mã>`. App phải đọc cả `code` lẫn

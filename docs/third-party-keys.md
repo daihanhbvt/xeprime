@@ -7,9 +7,10 @@
 > Bản này viết cho **staging** (`stg.xeprime.vn` / `api-stg.xeprime.vn`). Production lặp lại đúng
 > các bước với bộ key **riêng** — §9.
 >
-> **Cập nhật 03/09/2026:** tài liệu này chỉ ghi dịch vụ đã có biến/đường gọi trong code. SePay,
-> đối tác thu hộ/chi hộ và bảo hiểm chuyến đi nằm trong roadmap nhưng chưa có cấu hình thật;
-> không tạo key hay viết tên biến đoán trước khi implementation và hợp đồng đối tác được chốt.
+> **Cập nhật 06/10/2026:** tài liệu này chỉ ghi dịch vụ đã có biến/đường gọi trong code. SePay đã
+> có cấu hình thật trong code — §8b. Đối tác thu hộ/chi hộ và bảo hiểm chuyến đi vẫn nằm trong
+> roadmap, chưa có cấu hình; không tạo key hay viết tên biến đoán trước khi implementation và hợp
+> đồng đối tác được chốt.
 
 ## 0. Cần cái nào trước
 
@@ -26,6 +27,7 @@ thiếu thì phần đó suy giảm có kiểm soát chứ không làm sập app
 | 6 | **Firebase** | Chat **realtime** | Chat vẫn chạy trên PostgreSQL, chỉ không đẩy tức thì | Miễn phí ở mức này |
 | 7 | **SMTP** | Thư mời thành viên + đặt lại mật khẩu gửi thật | Email **in ra log** container — chạy được nhưng KHÔNG đi qua nodemailer, nên lỗi SMTP/TLS/`From` chỉ lộ ở production. Staging nay gửi thật (§7.2); máy dev dùng Mailpit (§7.1) | Miễn phí ở mức pilot |
 | 8 | **Telegram bot** | Cảnh báo sao lưu thất bại | Không ai biết khi backup hỏng | Miễn phí |
+| 9 | **SePay** | Đối soát chuyển khoản tự động: kích hoạt gói, tạo đơn thuê khi tiền giữ chỗ về đủ, VietQR trên màn thanh toán | Webhook trả 503 `SEPAY_NOT_CONFIGURED`; màn thanh toán chỉ còn mã + số tiền, không tiền nào được ghi nhận tự động | Tuỳ gói dịch vụ SePay |
 
 **eSMS.vn KHÔNG cần cho staging.** `OTP_MODE=mock` in mã ra log và trả kèm `devCode` trong
 response — đủ để test mọi luồng OTP. Chỉ production mới bắt buộc eSMS.
@@ -302,10 +304,12 @@ Giấy phép ODbL của OpenStreetMap và điều khoản gói miễn phí của
 
 ### 4.5 App native
 
-`apps/mobile` dùng Geoapify Static Maps qua `EXPO_PUBLIC_GEOAPIFY_MAP_KEY` (16/09/2026 — không
-còn Google). Đây là key RIÊNG của app, không dùng chung với `NEXT_PUBLIC_GEOAPIFY_MAP_KEY` của
-web: hai client hai key thì hạn mức tách được, và một key bị moi ra khỏi bundle app không kéo
-theo web.
+Hai app native — `apps/mobile/customer` (XePrime) và `apps/mobile/manage` (XePrime Partner),
+ADR 0051 §5 — dùng Geoapify Static Maps qua `EXPO_PUBLIC_GEOAPIFY_MAP_KEY` (16/09/2026 — không
+còn Google), khai trong `.env` của TỪNG app (mẫu ở `.env.example` cùng thư mục). Đây là key RIÊNG
+của app, không dùng chung với `NEXT_PUBLIC_GEOAPIFY_MAP_KEY` của web: hai client hai key thì hạn
+mức tách được, và một key bị moi ra khỏi bundle app không kéo theo web. Hai app mobile dùng chung
+một key cũng được (cùng là bundle app); tách riêng nếu muốn đo hạn mức theo app.
 
 App native không có bản đồ tương tác nên không tiêu thụ Map Tiles — chỉ Static Maps, mỗi lần mở
 khối "Vị trí trên bản đồ" là một lượt. Thiếu key thì khối đó lùi về nút "Mở bản đồ"; luồng không
@@ -439,11 +443,18 @@ Ba việc, chi tiết ở `docs/push-notifications.md` §2:
 
 1. bật **Firebase Cloud Messaging API** trên Google Cloud Console;
 2. cấp cho service account vai trò **Firebase Cloud Messaging API Admin**;
-3. tải `google-services.json` (Android) + `GoogleService-Info.plist` (iOS) cho app native, và
-   upload **khoá APNs `.p8`** vào Firebase Console. Package/bundle id phải trùng từng ký tự với
-   `apps/mobile/app.json` (`vn.xeprime.mobile`).
+3. đăng ký **hai app Android + hai app iOS** trong mỗi Firebase project — một cặp cho mỗi app
+   native — rồi tải `google-services.json` (Android) + `GoogleService-Info.plist` (iOS) vào
+   `credentials/` của đúng app, và upload **khoá APNs `.p8`** vào Firebase Console. Package/bundle
+   id phải trùng từng ký tự với `app.json` của app đó:
 
-> ⚠️ Hai file credential của app native **không nằm trong repo** và không được commit. Private key
+   | App | `app.json` | Package / Bundle ID |
+   | --- | --- | --- |
+   | XePrime (khách) | `apps/mobile/customer/app.json` | `vn.xeprime.mobile` |
+   | XePrime Partner | `apps/mobile/manage/app.json` | `vn.xeprime.partner` |
+
+> ⚠️ File credential của app native **không nằm trong repo** và không được commit
+> (`/credentials/` nằm trong `.gitignore` của từng app). Private key
 > của service account (`FIREBASE_PRIVATE_KEY`) chỉ ở backend/worker — không bao giờ vào app.
 
 ---
@@ -584,14 +595,53 @@ Cổng 587 dùng STARTTLS — đúng mặc định của nodemailer, không cầ
 
 ---
 
+## 8b. SePay — đối soát chuyển khoản (tiền gói + tiền giữ chỗ)
+
+SePay theo dõi tài khoản ngân hàng nhận tiền của nền tảng và bắn **webhook** cho mỗi giao dịch vào.
+API ghi mọi khoản vào MỘT bảng `bank_transactions` và phân loại đích bằng tiền tố mã trong nội dung
+chuyển khoản: `XPG…` = hoá đơn gói, `XPH…` = tiền giữ chỗ của khách (ADR 0022 · 0028 · 0044). Writer
+duy nhất là `SepayService` (`apps/api/src/modules/sepay/`).
+
+**Bốn biến là MỘT nhóm** — khai đủ cả bốn, hoặc để trống cả bốn. Khai lẻ thì API **từ chối boot**
+(`superRefine` ở [env.schema.ts](../apps/api/src/config/env.schema.ts)):
+
+| Loại | Tên | Giá trị | Ghi chú |
+| --- | --- | --- | --- |
+| **Secret** | `SEPAY_API_KEY` | khoá **webhook** đặt trong bảng điều khiển SePay | **≥ 16 ký tự** (`z.string().min(16)`). SePay gửi kèm `Authorization: Apikey <key>`, API so time-safe. KHÔNG phải khoá gọi API của SePay |
+| Variable | `SEPAY_BANK_CODE` | mã ngân hàng chuẩn VietQR, vd `VCB`, `TCB` | dựng ảnh QR quicklink |
+| Variable | `SEPAY_ACCOUNT_NUMBER` | số tài khoản nhận | in vào QR ⇒ công khai theo bản chất |
+| Variable | `SEPAY_ACCOUNT_NAME` | tên chủ tài khoản | in trên QR để người chuyển đối chiếu |
+
+Trống cả bốn (mặc định, kể cả staging): `POST /sepay/webhook` trả **503 `SEPAY_NOT_CONFIGURED`** —
+fail closed, không bao giờ giả vờ đã nhận tiền — và màn thanh toán chỉ còn mã + số tiền, không có
+VietQR. Nhóm này **chưa** nằm trong nhóm bắt buộc của `APP_ENV=production`; khi tài khoản thật đã
+ký, chuyển nó xuống nhóm bắt buộc trong một PR riêng.
+
+Cấu hình webhook trong bảng điều khiển SePay:
+
+| Môi trường | URL webhook | Xác thực |
+| --- | --- | --- |
+| staging | `https://api-stg.xeprime.vn/sepay/webhook` | API Key = đúng giá trị `SEPAY_API_KEY` của staging |
+| production | `https://api.xeprime.vn/sepay/webhook` | API Key = `SEPAY_API_KEY` của production (khoá KHÁC staging) |
+
+Webhook gọi thẳng **host API** (`API_DOMAIN` trong `deploy/Caddyfile`), không qua `/api` của một site
+web — route này `@Public()` và không cần realm. Nó trả đúng `{"success": true}` sau khi giao dịch đã
+được xử lý, kể cả khi SePay gửi lại cùng giao dịch (idempotent bằng unique `provider_tx_id` ở DB).
+
+Khai ở GitHub Environment như mọi biến khác (`.github/workflows/deploy.yml` đọc `vars.SEPAY_*` +
+`secrets.SEPAY_API_KEY`); bảng tóm tắt ở `docs/deployment.md` §9.2.
+
+---
+
 ## 9. Sang production thì khác gì
 
-Lặp lại đúng các bước trên với bộ **riêng**. Ba thứ **bắt buộc phải khác**, còn lại nên khác:
+Lặp lại đúng các bước trên với bộ **riêng**. Bốn thứ **phải khác**, còn lại nên khác:
 
 | Thứ | Vì sao bắt buộc khác |
 | --- | --- |
 | `R2_BUCKET` / `R2_PRIVATE_BUCKET` | Ảnh test và giấy tờ test lẫn vào kho khách hàng thật |
-| `SESSION_COOKIE_NAME` | Cookie gửi tới mọi subdomain — trùng tên là đăng nhập staging ghi đè phiên production |
+| `SEPAY_API_KEY` | Một khoá dùng chung thì ai cầm khoá staging cũng giả được webhook "tiền đã về" cho production (§8b) |
+| `SESSION_COOKIE_NAME` | Từ ADR 0053 cookie là **host-only** theo từng site (`<tên>_<realm>`, không có `Domain`) nên hai môi trường không còn ghi đè phiên nhau. Vẫn giữ khác tên (`xp_session` ↔ `xp_session_stg`) để nhìn devtools là biết đang ở môi trường nào, và để một file env chép nhầm không âm thầm trùng — `docs/deployment.md` §2.3 |
 | `APP_ENV` | `staging` trên máy production ⇒ mã OTP của khách bị trả thẳng trong response |
 
 Và production **bắt buộc** ba thứ mà staging được miễn: **eSMS** (`OTP_MODE=esms`), **SMTP**, và

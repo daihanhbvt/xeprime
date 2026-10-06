@@ -2,7 +2,9 @@
 
 Ngày: 25/09/2026 · Trạng thái: Accepted · Mở rộng: 0002 (scope đọc từ DB mỗi request), 0027/0038
 (ranh giới tuyến + cờ gói giữ nguyên trong phiên), 0040 (`package_pending` không mở bộ quản lý) ·
-Liên quan: 0006, 0008, 0012, 0017, 0031 · Không ghi đè ADR nào
+Liên quan: 0006, 0008, 0012, 0017, 0031 · Thay gạch đầu dòng *"Admin được vào Manage của bất kỳ
+gian hàng nào với quyền như chủ gian hàng"* ở [ADR 0032](0032-booking-deposit-insurance-and-owner-lite.md)
+điều 6; ngoài ra không ghi đè ADR nào
 
 ## Bối cảnh
 

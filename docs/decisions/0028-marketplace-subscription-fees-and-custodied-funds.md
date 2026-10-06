@@ -1,6 +1,6 @@
 # ADR 0028 — Marketplace hai mô hình, phí minh bạch và tiền thu hộ có điều kiện
 
-Ngày: 03/09/2026 · Trạng thái: **Accepted về định hướng sản phẩm; tiền thật bị chặn bởi release gate pháp lý/thanh toán**
+Ngày: 03/09/2026 · Trạng thái: **Partially superseded** — điều 1 (cột thuê bao theo số chỗ) và điều 2 (giá pilot theo chỗ) bị [ADR 0029](0029-per-vehicle-flat-pricing-and-customer-side-fees.md) rồi [ADR 0041](0041-plan-tiers-by-vehicle-count.md) thay; điều 6 và tên gọi ở điều 8 bị [ADR 0033](0033-money-ledger-and-deposit-allocation.md) ghi đè ("Ví điểm"); điều 7 (phương án B — XePrime thu hộ phần còn lại) và dòng giữ chỗ của điều 1 bị [ADR 0032](0032-booking-deposit-insurance-and-owner-lite.md) điều 2 thay. **Điều 3, 4, 5, 9, 10 và release gate còn hiệu lực**; tiền thật bị chặn bởi release gate pháp lý/thanh toán.
 
 ## Bối cảnh
 

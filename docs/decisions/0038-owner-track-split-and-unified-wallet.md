@@ -1,16 +1,23 @@
 # ADR 0038 — Tách hai tuyến chủ xe: một ví cho một người, và ranh giới Manage chặn ở server
 
-Ngày: 15/09/2026 · Trạng thái: **Accepted** · **Ghi đè một phần**
+Ngày: 15/09/2026 · Trạng thái: **Partially superseded bởi [ADR 0053](0053-separate-account-realms.md) (điều 2, 6–10); điều 12 phần CÁCH ĐẾM tuyến gói bị [ADR 0041](0041-plan-tiers-by-vehicle-count.md) ghi đè** · **Ghi đè một phần**
+[ADR 0024](0024-billing-mode-from-plan-frozen-on-booking.md) (điều 3 — thiếu gói không còn coi là `package`),
 [ADR 0027](0027-feature-tiers-basic-owner-vs-shop.md) (điều 3 trong phạm vi HẾT GÓI),
 [ADR 0033](0033-money-ledger-and-deposit-allocation.md) (điều 2, cột chủ ví) ·
-Liên quan: 0002, 0014, 0023, 0024, 0028, 0031, 0032
+Liên quan: 0002, 0014, 0028, 0031, 0032, 0033
 
 > ⚠️ **[ADR 0053](0053-separate-account-realms.md) (02/10/2026) ghi đè điều 2, 6, 7, 8, 9, 10.** Khách
 > và chủ xe/gian hàng là hai tài khoản ở hai realm: một TÀI KHOẢN một ví (tenant vẫn một ví); tài
 > khoản `partner` không gọi được endpoint đặt xe; bỏ khu `/account` của tài khoản gian hàng, `/trips`
 > hai vai và hộp thư hợp nhất; Owner Lite là menu tuyến hoa hồng của site partner. **Điều 1, 3, 4, 5,
-> 11–14 giữ nguyên** (bốn pha tuyến hiệu lực, `@ShopOwnerOnly`, `@SubscriptionTrackOnly`, hết ân hạn,
-> hạn mức xe, danh mục gói).
+> 11, 13, 14 giữ nguyên** (bốn pha tuyến hiệu lực, `@ShopOwnerOnly`, `@SubscriptionTrackOnly`, hết ân
+> hạn, `unconfigured` phải nói ra, danh mục gói).
+>
+> ⚠️ **Điều 12 bị [ADR 0041](0041-plan-tiers-by-vehicle-count.md) ghi đè ở phần CÁCH ĐẾM tuyến gói**
+> (17/09/2026): không còn "chỗ đã mua theo LOẠI xe" — trần là TỔNG ô tô + xe máy ở cả hai tuyến, và
+> trần đã trả tiền (`quota.maxVehicles`) gác cả tạo xe lẫn gửi lên chợ (0041 điều 1, 4). Phần còn
+> lại của điều 12 giữ nguyên: trần Owner Lite = 3 xe TỔNG chỉ gác điểm tạo, `unconfigured` dùng mã
+> lỗi riêng, và *chuyển tuyến không gỡ hàng*.
 
 ## Bối cảnh
 
@@ -71,7 +78,7 @@ không có phép cộng để cộng đôi, không dòng lịch sử nào bị v
 đổi** nên dòng sổ, lệnh rút và `hold_refunds.wallet_entry_id` vẫn trỏ đúng mà không phải sửa gì.
 
 Hệ quả: **không cần chặn đăng ký khi người dùng đang có lệnh rút chờ xử lý.** Thông tin ngân hàng
-trên lệnh đã là snapshot (ADR 0023 điều 8) nên admin vẫn chuyển đúng tài khoản họ đã khai.
+trên lệnh đã là snapshot ([ADR 0033](0033-money-ledger-and-deposit-allocation.md) điều 6 — điều khoản kế thừa từ ADR 0023) nên admin vẫn chuyển đúng tài khoản họ đã khai.
 
 Nâng từ hoa hồng lên gói **không đụng ví**: nó đã là ví tenant từ trước.
 
@@ -109,7 +116,10 @@ lý, nhân viên và người xem ra khỏi Manage cùng lúc. Bản trước h�
 gộp vai với tuyến — nên nó trả `false` cho mọi vai khác `shop_owner` và `!false` mở cổng cho họ ở
 **mọi** gian hàng.
 
-Ngoại lệ duy nhất: `req.platform` (ADR 0032 điều 6).
+Ngoại lệ duy nhất trong guard: `req.platform` (lúc viết dựa trên ADR 0032 điều 6 — gạch đầu dòng
+"admin vào Manage với quyền như chủ gian hàng", nay bị thay). Nhân sự nền tảng vào khu gian hàng
+CHỈ qua phiên hỗ trợ của [ADR 0050](0050-platform-tenant-support-context.md), và trong phiên
+`SubscriptionTrackGuard` chạy như với chính gian hàng — phiên không vượt cổng tuyến (0050 điều 5).
 
 ### 5. Hết ân hạn thì KHÔNG còn màn Manage chỉ-xem
 
@@ -290,8 +300,8 @@ xe" với một tenant chưa có gói là nói sai nguyên nhân, và đẩy h�
 **Chuyển tuyến không gỡ hàng.** Hạn mức của Owner Lite **chặn TẠO MỚI, không gỡ thứ đang có**. Gian
 hàng bị chuyển tuyến mà đang có nhiều xe hơn hạn mức thì xe ở nguyên trên chợ, chuyến chạy tiếp, tiền về ví bình thường; cái bị
 khoá là đăng thêm xe. Hạ cấp là hệ quả của việc *không trả tiền*, và phản ứng đúng là ngừng bán
-thêm, không phải gỡ hàng đang bán xuống — cùng nguyên tắc mà [ADR 0020 điều 5] đã chốt cho xe khi
-hết gói.
+thêm, không phải gỡ hàng đang bán xuống — cùng nguyên tắc mà ADR 0020 điều 5 (đã gỡ; nay chép ở
+[ADR 0024](0024-billing-mode-from-plan-frozen-on-booking.md) điều 6) đã chốt cho xe khi hết gói.
 
 ### 13. Danh mục gói: MỘT tuyến hoa hồng được bảo vệ, và nó không phải một SKU
 

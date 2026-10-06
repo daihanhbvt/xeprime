@@ -1,13 +1,35 @@
 # ADR 0024 — Chế độ thu phí do GÓI quyết định và ĐÓNG BĂNG vào đơn lúc tạo
 
-Ngày: 28/08/2026 · Trạng thái: Accepted · **Mở rộng [ADR 0014](0014-owner-and-shop-single-role.md) điều 3 và [ADR 0015](0015-vehicle-slot-billing.md) điều 4**
+Ngày: 28/08/2026 · Trạng thái: **Partially superseded — điều 3 bị [ADR 0038](0038-owner-track-split-and-unified-wallet.md) điều 1 ghi đè**; nguồn ở điều 1 nay là `resolveEffectiveBilling`; breakdown mở rộng bởi [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md) · **Mở rộng [ADR 0014](0014-owner-and-shop-single-role.md) điều 3 và ADR 0015 điều 4** (ADR 0015 đã gỡ — ranh giới dữ liệu/quy tắc chép ở [ADR 0041](0041-plan-tiers-by-vehicle-count.md) điều 9)
 
-> ⚠️ **ADR 0026 thêm một bậc vào điều 1 (29/08/2026):**
-> đường quyết định chế độ thu phí hỏi **lượt miễn phí trước**, hết lượt mới hỏi gói hiện hành.
+> ⚠️ **Đọc cùng các ADR sau — phần dưới viết trước chúng:**
+>
+> - **Điều 3 bị [ADR 0038](0038-owner-track-split-and-unified-wallet.md) điều 1 GHI ĐÈ.** Không
+>   có gói hiện hành **không** còn được coi là `package`. Tuyến hiệu lực có bốn pha (`current` ·
+>   `grace` · `lapsed` · `unconfigured`), giải ở MỘT chỗ là `resolveEffectiveBilling`
+>   (`@xeprime/types`). `unconfigured` không phải một tuyến: đường đọc trả `null`, đường ghi tiền
+>   từ chối (`TENANT_BILLING_NOT_CONFIGURED`). **Cấm `?? BILLING_MODE.PACKAGE`** — fallback đó biến
+>   một lỗi vận hành thành một chuỗi booking không thu phí mà không ai thấy.
+> - **Điều 1:** nguồn của chế độ thu phí không còn là `BillingService.findCurrent` (vị từ
+>   `ends_at > now` trả rỗng suốt ân hạn) mà là `resolveEffectiveBilling` — pha `grace` giữ
+>   `billing_mode` của dòng vừa hết hạn, `lapsed` về `commission` ngay. Nguyên tắc "gói quyết định,
+>   không bao giờ hỏi `tenant_type`" giữ nguyên.
+> - **[ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md) mở rộng điều 4:** đơn
+>   đóng băng breakdown có chủ sở hữu từng dòng tiền (phí dịch vụ, thuế, bảo hiểm, tiền phải trả
+>   chủ xe), không chỉ `commission_*`. Ở bảng điều 8, các quy tắc *"khoản giữ chỗ **là** hoa
+>   hồng"*, *"hoa hồng trừ phía chủ xe, không cộng phía khách"* và *"không là một dòng trong bảng kê
+>   giá khách"* bị [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md) điều 6 và
+>   [ADR 0029](0029-per-vehicle-flat-pricing-and-customer-side-fees.md) điều 1 thay; các núm
+>   `base_price_monthly`, `perVehiclePrice`, `terms[].discountPercent`, `assumed_monthly_gmv_json`
+>   đã gỡ ở [ADR 0041](0041-plan-tiers-by-vehicle-count.md).
+> - ADR 0026 (hai chuyến đầu miễn phí — từng thêm bậc "lượt miễn phí" trước điều 1) **đã gỡ**,
+>   thay bởi ADR 0028.
+>
+> Điều 2, 4, 6, 7 và các ràng buộc denormalize/1-writer **giữ nguyên**.
 
 ## Bối cảnh
 
-[ADR 0020](0020-two-revenue-tracks-one-marketplace.md) tạo ra hai chế độ thu phí. Câu hỏi kế
+ADR 0020 (đã gỡ, xem [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md)) tạo ra hai chế độ thu phí. Câu hỏi kế
 tiếp nghe có vẻ nhỏ nhưng quyết định độ phức tạp của cả hệ thống: **một chuyến cụ thể chịu chế
 độ nào, và hỏi ai để biết?**
 
@@ -40,10 +62,12 @@ Và câu hỏi khó hơn: **tenant nâng cấp lên gói giữa lúc một chuy�
    bậc đó giữa kỳ. Kèm lợi ích phụ: câu hỏi "tenant này đang ở tuyến nào" trả lời bằng **một
    cột trên dòng `findCurrent` vốn đã select**, không join, không lệch.
 
-3. **Không có gói hiện hành ⇒ coi là `package` (0%), không phải `commission`.**
+3. ~~**Không có gói hiện hành ⇒ coi là `package` (0%), không phải `commission`.**~~ — **Bị
+   [ADR 0038](0038-owner-track-split-and-unified-wallet.md) điều 1 ghi đè:** thiếu gói là pha
+   `unconfigured`, đường ghi tiền từ chối. Đoạn dưới giữ để hiểu lịch sử.
 
    An toàn khi hỏng nghĩa là **đừng lấy tiền mà không giải thích được**. Sau backfill của
-   [ADR 0015 điều 9](0015-vehicle-slot-billing.md) trạng thái này lẽ ra không xảy ra — nên khi
+   ADR 0015 điều 9 (đã gỡ) trạng thái này lẽ ra không xảy ra — nên khi
    xảy ra thì ghi log, vì nó là dấu hiệu backfill sót chứ không phải một trạng thái hợp lệ.
 
 4. **ĐÓNG BĂNG vào đơn lúc tạo.** `bookings` mang `billing_mode`, `commission_percent`,
@@ -61,9 +85,9 @@ Và câu hỏi khó hơn: **tenant nâng cấp lên gói giữa lúc một chuy�
    miễn hoa hồng. Không prorate, không hồi tố, không có "chế độ hỗn hợp".
 
 6. **Hạ cấp (gói hết hạn → tuyến A) đối xứng.** Đơn đang chạy không đổi; đơn mới rơi về hoa
-   hồng. Xe **không bị gỡ khỏi chợ** —
-   [ADR 0020 điều 5](0020-two-revenue-tracks-one-marketplace.md) đã sửa
-   [ADR 0015 điều 6](0015-vehicle-slot-billing.md).
+   hồng. Xe **không bị gỡ khỏi chợ** — ADR 0020 điều 5 đã sửa ADR 0015 điều 6 (cả hai đã gỡ;
+   quy tắc nay sống ở điều này và ở [ADR 0038](0038-owner-track-split-and-unified-wallet.md)
+   điều 12 *"chuyển tuyến không gỡ hàng"*).
 
    Hạn mức số chỗ **không** rơi theo. Tenant hết gói vẫn giữ số xe đang có; họ chỉ chuyển sang
    trả theo chuyến. Thu hồi xe khi hết hạn là phạt người đã ngừng trả tiền bằng cách khiến họ
@@ -73,7 +97,7 @@ Và câu hỏi khó hơn: **tenant nâng cấp lên gói giữa lúc một chuy�
    kích hoạt lúc 10:10, tiền về lúc 10:15 → **vẫn thu hoa hồng**. Tiền có thể đang trên đường
    và VietQR khách đang cầm ghi số đó. Một dòng quy tắc, không có ngoại lệ nào.
 
-8. **Ranh giới dữ liệu / quy tắc — mở rộng [ADR 0015 điều 4](0015-vehicle-slot-billing.md).**
+8. **Ranh giới dữ liệu / quy tắc — mở rộng ADR 0015 điều 4** (đã gỡ; chép ở [ADR 0041](0041-plan-tiers-by-vehicle-count.md) điều 9).
 
    | Là DỮ LIỆU (admin sửa được) | Là QUY TẮC (nằm trong code) |
    | --- | --- |
@@ -84,7 +108,7 @@ Và câu hỏi khó hơn: **tenant nâng cấp lên gói giữa lúc một chuy�
    | `assumed_monthly_gmv_json` | Đơn không bao giờ được tính lại giá |
 
    **Không có núm nào bật/tắt được cột bên phải.** Núm vặn được quy tắc tạo ra trạng thái không
-   ai debug nổi — nguyên văn tinh thần [ADR 0015](0015-vehicle-slot-billing.md).
+   ai debug nổi — nguyên văn tinh thần ADR 0015 (đã gỡ; xem [ADR 0041](0041-plan-tiers-by-vehicle-count.md) điều 9).
 
 ## Ràng buộc bắt buộc
 
@@ -94,7 +118,7 @@ Và câu hỏi khó hơn: **tenant nâng cấp lên gói giữa lúc một chuy�
 2. **Writer vẫn là `ListingsService.syncFromVehicle`** — [ADR 0008](0008-public-listings-sync.md)
    không có ngoại lệ. `BillingService` **gọi** `ListingsService` khi gán/huỷ gói và khi job vòng
    đời chạy; nó **không tự ghi** `public_listings`. Cùng chiều phụ thuộc mà
-   [ADR 0015 điều 6](0015-vehicle-slot-billing.md) đã đặt.
+   ADR 0015 điều 6 (đã gỡ) đã đặt.
 3. **Đồng bộ listing là hệ quả bắt buộc của mọi thay đổi gói**, không phải việc tuỳ chọn. Quên
    nó nghĩa là card chợ hiện nhãn sai và nút đặt sai — khách bấm "đặt & giữ chỗ ngay" trên một
    xe đã chuyển sang tuyến B.
@@ -106,8 +130,9 @@ Và câu hỏi khó hơn: **tenant nâng cấp lên gói giữa lúc một chuy�
 
 - **Chế độ thu phí theo từng xe** thay vì theo tenant (ví dụ tenant mua gói cho 5 xe, xe thứ 6
   chạy hoa hồng). Nghe hợp lý, nhưng làm cho câu hỏi "chuyến này chế độ nào" phải hỏi tới cấp
-  xe và số chỗ đang dùng — và mở ra bài toán chọn xe nào ăn chỗ. Hiện tại: **hết chỗ thì không
-  đưa xe lên chợ được**, đúng như [ADR 0015 điều 7](0015-vehicle-slot-billing.md).
+  xe và số chỗ đang dùng — và mở ra bài toán chọn xe nào ăn chỗ. Hiện tại: **hết trần đã trả
+  tiền thì không đưa thêm xe lên chợ được** — nay là [ADR 0041](0041-plan-tiers-by-vehicle-count.md)
+  điều 4 (lúc viết: ADR 0015 điều 7, đã gỡ).
 - **Prorate khi nâng cấp giữa kỳ.** Điều 5 làm nó không cần thiết.
 - **Tỉ lệ hoa hồng riêng cho từng tenant** (thương lượng). Cột nằm trên `plans` nên phải tạo bậc
   gói riêng — chấp nhận được ở quy mô hiện tại.

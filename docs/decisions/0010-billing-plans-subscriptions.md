@@ -2,10 +2,20 @@
 
 Ngày: 31/07/2026 · Trạng thái: Accepted · Áp dụng ở Phase 7 (Billing/plans)
 
-> ⚠️ **Đã bị [ADR 0015](0015-vehicle-slot-billing.md) sửa (21/08/2026).** Ba điều không còn đúng:
-> `duration_days` đổi sang `duration_months` (tháng lịch) · `plans` tách năng lực khỏi kỳ hạn ·
-> "không gói = không giới hạn" bị đảo (nay `registerShop` tự gán gói). Phần *append-only*,
-> *"hết hạn" suy ra từ `ends_at`* và *1-writer `BillingService`* vẫn giữ nguyên.
+> ⚠️ **Hình dạng `plans` và cách định giá đã đổi.** Ba điều không còn đúng:
+>
+> - **Kỳ hạn tính bằng THÁNG LỊCH**, lưu ở `tenant_subscriptions.term_months` và tính
+>   `ends_at` bằng `addCalendarMonthsVn` — không còn `duration_days` (ADR 0015, 21/08/2026 — đã gỡ;
+>   điều còn hiệu lực chép ở [ADR 0041](0041-plan-tiers-by-vehicle-count.md) điều 9).
+> - **Giá là policy của hai tuyến** ([ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md)),
+>   và bậc gói bán theo trần SỐ XE + giá tuyệt đối từng kỳ `limits_json.termPrices`
+>   ([ADR 0041](0041-plan-tiers-by-vehicle-count.md)). Đợt contract của 0041 **gỡ hẳn**
+>   `plans.price`, `plans.duration_days`, `plans.max_vehicles`; hạn mức đọc từ
+>   `tenant_subscriptions.quota_json` trước, rồi mới tới `limits_json`.
+> - **"Không gói = không giới hạn" bị đảo**: `registerShop` tự gán gói, và tenant thiếu gói là pha
+>   `unconfigured` với trần 3 xe ([ADR 0038](0038-owner-track-split-and-unified-wallet.md) điều 1, 12).
+>
+> Phần *append-only*, *"hết hạn" suy ra từ `ends_at`* và *1-writer `BillingService`* vẫn giữ nguyên.
 
 ## Bối cảnh
 

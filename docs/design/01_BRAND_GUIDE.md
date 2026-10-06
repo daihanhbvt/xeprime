@@ -1,7 +1,10 @@
 # 01 — Brand Guide
 
-> Ngày: 04/08/2026 · Cập nhật định vị: 03/09/2026 · Chủ sở hữu: Creative Director
-> Nguồn sự thật kỹ thuật của token: `apps/web/src/styles/theme.ts` ↔ `tokens.css` (ADR 0003).
+> Ngày: 04/08/2026 · Cập nhật: 06/10/2026 · Chủ sở hữu: Creative Director
+> Nguồn sự thật kỹ thuật của token: `packages/ui/src/tokens/index.ts` (`XP_TOKENS`) ↔
+> `packages/ui/src/styles/tokens.css` (`@xeprime/ui`, dùng chung web + app native — ADR 0003).
+> `apps/web/src/styles/theme.ts` chỉ ánh xạ token sang AntD; `theme.test.ts` giữ ba nơi khớp nhau.
+> Bảng token đầy đủ: [`docs/design-token-map.md`](../design-token-map.md).
 > **Tài liệu này định nghĩa thương hiệu. Khi nó mâu thuẫn với một màu ai đó gõ tay trong CSS, tài liệu này thắng và CSS phải sửa.**
 
 ---
@@ -24,7 +27,43 @@ Mọi quyết định thị giác phải phục vụ cảm giác đó. Đây là
 > **Nâng tầm giá trị mỗi hành trình**
 
 Dùng ở: splash, trang giới thiệu, chân email, ảnh chia sẻ (OG image).
-**Không** dùng làm tiêu đề trang trong portal vận hành — ở đó tiêu đề là công việc ("Lịch thuê xe"), không phải khẩu hiệu.
+**Không** dùng làm tiêu đề trang trong khu vận hành (site partner, site quản trị) — ở đó tiêu đề là công việc ("Lịch thuê xe"), không phải khẩu hiệu.
+
+### Insight
+
+> Trong ngành này, **niềm tin không được tuyên bố — nó được chứng minh bằng độ chính xác của thông tin nhỏ**.
+
+Khách tin vì đúng chiếc xe trong ảnh, đúng giá cuối, đúng khung giờ còn trống — không vì thấy chữ
+"uy tín". Chủ xe tin phần mềm vì tháng này con số khớp với tiền thật, không vì màn hình đẹp. ⇒ Ngân
+sách thiết kế đổ vào chỗ thông tin được trình bày, không vào trang trí.
+
+### Ý tưởng lớn: "Bảng điều khiển của một tài sản đang chạy"
+
+XePrime có cảm giác của **buồng lái**, không phải tờ rơi. Gold không dùng để làm sang — nó **chỉ chỗ
+cần nhìn**.
+
+1. **Câu trả lời trước, chi tiết sau** — đầu mỗi màn là câu trả lời ("Hôm nay: giao 3, nhận 2, 4 đơn quá hạn thu"), không phải bộ lọc.
+2. **Màu là thông tin** — một màn chỉ một điểm gold; ba điểm thì không cái nào còn nghĩa.
+3. **Yên tĩnh khi mọi thứ ổn** — giao diện chỉ lên tiếng khi có việc cần người xử lý.
+
+### Tông
+
+| Là | Không phải |
+| --- | --- |
+| Điềm tĩnh, chắc chắn | Buồn tẻ, vô hồn |
+| Sang trọng có kiềm chế | Phô trương, gradient vàng khắp nơi |
+| Dày dữ liệu nhưng có thứ bậc | Chật chội, mọi thứ cùng cỡ |
+| Thân thiện đúng chỗ (site khách) | Cợt nhả, emoji trong màn tiền |
+| Nghiêm túc đúng chỗ (khu vận hành) | Lạnh lùng, thuật ngữ kỹ thuật |
+
+**Hai nhịp, một thương hiệu**: site khách ấm và mời gọi (ảnh lớn, khoảng thở, Playfair ở hero); site
+partner và quản trị điềm tĩnh, hiệu quả (mật độ cao, gold tiết chế, không font trang trí). Cùng token,
+cùng giọng, khác nhịp.
+
+Tham chiếu: **mượn nguyên lý, không mượn hình ảnh** — tốc độ và danh sách dày của Linear, cách trình
+bày tiền và lỗi của Stripe, trạng thái rỗng dạy việc của Notion, mẫu quyền hạn nhiều vai của
+Atlassian, niềm tin qua ảnh/giá từng dòng/lịch trống của Airbnb. Không màn nào được trông như bản sao
+đổi màu của sản phẩm khác.
 
 ---
 
@@ -52,7 +91,12 @@ Kéo méo tỉ lệ · xoay · đổ bóng/viền lên mark · đổi màu ngoà
 
 ### Sub-brand
 
-Chỉ có **một** thương hiệu. Portal và marketplace là hai *cánh cửa* của cùng sản phẩm. Được phép thêm eyebrow chữ nhỏ dưới lockup trong portal: `QUẢN LÝ & CHO THUÊ XE` — đúng như UI hiện tại. Không tạo logo riêng cho portal.
+Chỉ có **một** thương hiệu. Ba site (`xeprime.vn` · `partner.xeprime.vn` · `admin.xeprime.vn`) và hai app là các *cánh cửa* của cùng sản phẩm.
+
+**"XePrime Partner"** là TÊN GỌI của site partner và app dành cho chủ xe/gian hàng (ADR 0051 · 0053) —
+không phải thương hiệu thứ hai: cùng mark, cùng lockup, chữ "Partner" chỉ là nhãn chữ đi kèm (tiêu đề
+trang đăng nhập, tên app trên store, eyebrow chữ nhỏ dưới lockup). Không vẽ logo/mark riêng cho
+Partner hay cho site quản trị, không đổi màu thương hiệu theo site.
 
 ---
 
@@ -90,7 +134,7 @@ Gold là màu thương hiệu, nên nó **không được mang nghĩa trạng th
 ### 3.3 Ba khoảng trống phải lấp (nợ thiết kế)
 
 1. **Thang màu thay vì màu đơn.** Mỗi màu ngữ nghĩa cần ≥ 3 bậc: `-bg` (nền chip/alert), `-border`, `-text`. Hiện code tự pha `rgba()` tại chỗ — đó là cách bảng màu trôi.
-2. **Dark theme cho portal.** Chủ shop làm việc buổi tối; UI Firebase cũ vốn là dark. `tokens.css` đã ghi "dark thêm ở increment sau" — kiến trúc sẵn sàng, thiếu bộ giá trị. Marketplace giữ light-only.
+2. **Dark theme cho khu vận hành (site partner, site quản trị).** Chủ xe làm việc buổi tối; UI Firebase cũ vốn là dark. `tokens.css` đã ghi "dark thêm ở increment sau" — kiến trúc sẵn sàng, thiếu bộ giá trị. Site khách giữ light-only.
 3. **Màu dữ liệu (data-viz).** Dashboard tài chính cần dải 6 màu phân biệt được, **không** lấy từ màu ngữ nghĩa — nếu không, cột "chi phí" màu đỏ sẽ bị đọc thành "lỗi".
 
 ### 3.4 Tương phản
@@ -105,7 +149,7 @@ Cụ thể: **gold `#d6a02c` không đạt 4.5:1 với chữ trắng** → chữ
 | Vai trò | Font | Vì sao |
 | --- | --- | --- |
 | Toàn hệ thống | **Be Vietnam Pro** (300–700, self-host qua `next/font`) | Font hình học thiết kế cho tiếng Việt — dấu không đè, không lệch baseline |
-| Nhấn cảm xúc | **Playfair Display Italic** | **CHỈ** hero marketplace + trang thương hiệu. Không vào portal, không vào bảng, không vào nút |
+| Nhấn cảm xúc | **Playfair Display Italic** | **CHỈ** hero marketplace + trang thương hiệu. Không vào khu vận hành, không vào bảng, không vào nút |
 | Số liệu / tiền | Be Vietnam Pro + `font-variant-numeric: tabular-nums` | Cột tiền phải thẳng hàng — đây là lỗi hiện có ở các bảng tài chính |
 
 ### Thang chữ
@@ -147,7 +191,7 @@ Cụ thể: **gold `#d6a02c` không đạt 4.5:1 với chữ trắng** → chữ
 | Ánh sáng | Đủ sáng; cấm ảnh tối/nhoè/ngược sáng |
 | Cấm | Ảnh chụp màn hình, watermark bên khác, ảnh không có xe, ảnh người, ảnh giấy tờ |
 
-**Cơ chế thực thi** (thuộc sản phẩm, không phải lời nhắc — xem `03_PRODUCT_GAP_ANALYSIS.md` G-04): chặn ngay lúc upload theo tỉ lệ/kích thước · thêm mục "chất lượng ảnh" vào phiếu duyệt xe public · có placeholder có thương hiệu cho xe chưa ảnh — placeholder đẹp còn hơn ảnh sai.
+**Cơ chế thực thi** (thuộc sản phẩm, không phải lời nhắc): màn "Kiểm duyệt xe" có mục kiểm tra thủ công "ảnh là ảnh thật của chính chiếc xe" và phê duyệt bị backend chặn khi mục đó chưa đạt (ADR 0049) · nên chặn ngay lúc upload theo tỉ lệ/kích thước · có placeholder có thương hiệu cho xe chưa ảnh — placeholder đẹp còn hơn ảnh sai.
 
 ### Ảnh thương hiệu
 
@@ -196,15 +240,20 @@ Bắt buộc tôn trọng `prefers-reduced-motion`.
 | Khái niệm | Từ dùng | Không dùng |
 | --- | --- | --- |
 | `tenant` | **gian hàng** | shop, cửa hàng, chi nhánh, tenant |
-| `booking_request` | **yêu cầu thuê** | đơn đặt xe, booking request |
-| `booking` | **đơn thuê** | booking, hợp đồng thuê |
+| `booking_request` | **yêu cầu đặt xe** (menu, ADR 0047) · "yêu cầu thuê" trong câu văn | đơn đặt xe, booking request |
+| `booking` | **đơn thuê** — chỉ ra đời khi tiền giữ chỗ đã đối soát đủ (ADR 0044) | booking, hợp đồng thuê |
+| `booking.status = reserved` | **Chờ giao xe** (nhãn `Domain.bookingStatus.reserved`, ADR 0047) | Đã giữ xe, Đặt trước, Đã xác nhận |
+| khoản khách chuyển qua QR (`booking_holds`) | **tiền giữ chỗ** (gồm cọc, phí dịch vụ phía khách, bảo hiểm) | cọc, đặt cọc (ADR 0044 điều 9) |
+| khoản thế chấp giao lúc nhận xe (`rental-policies`) | **cọc thế chấp khi nhận xe** | tiền giữ chỗ — hai khoản khác hẳn nhau |
+| `wallets` | **Ví điểm** (khái niệm, 1 điểm = 1đ, ADR 0033); nhãn màn: "Số dư của tôi" (khách) · "Số dư & rút tiền" (đối tác) | ví điện tử, nạp tiền, chuyển tiền, điểm thưởng |
+| site `partner.xeprime.vn` (realm `partner`) | **XePrime Partner** · "site đối tác" | portal, cổng quản lý, /manage |
 | `vehicle` | **xe** | phương tiện |
 | `customer` | **khách thuê** | user, khách hàng (ở ngữ cảnh nền tảng) |
 | `platform_admin` | **quản trị nền tảng** | admin, super admin |
 | `receipt` | **phiếu thu/chi** | biên lai |
 | `debt` | **công nợ** | nợ, phải thu |
 
-> UI hiện tại dùng lẫn "Cửa hàng" (menu), "gian hàng" (nội dung), "shop" (code) cho **cùng một thứ**. Chốt: nhãn hiển thị là **gian hàng**; menu `Cửa hàng` → `Gian hàng`.
+> UI dùng lẫn "Cửa hàng" (menu site partner, kiểm lại 06/10/2026), "gian hàng" (nội dung), "shop" (code) cho **cùng một thứ**. Chốt: nhãn hiển thị là **gian hàng**; menu `Cửa hàng` → `Gian hàng`.
 
 ---
 
@@ -213,8 +262,8 @@ Bắt buộc tôn trọng `prefers-reduced-motion`.
 | Bề mặt | Quy tắc |
 | --- | --- |
 | App icon / favicon | Mark trắng trên gold đặc, bo góc theo nền tảng |
-| Marketplace | Nền kem/trắng ấm, gold ở CTA, Playfair chỉ ở hero |
-| Portal quản lý | Trung tính hơn: nền `--xp-color-bg-layout`, gold **chỉ** ở mục menu đang chọn + nút hành động chính. Portal là chỗ làm việc, không phải trang bán hàng |
+| Site khách (chợ xe) | Nền kem/trắng ấm, gold ở CTA, Playfair chỉ ở hero |
+| Site partner · site quản trị | Trung tính hơn: nền `--xp-color-bg-layout`, gold **chỉ** ở mục menu đang chọn + nút hành động chính. Đây là chỗ làm việc, không phải trang bán hàng |
 | Hợp đồng in | Đen trắng + lockup ngang; print CSS đã có ở `[data-print-root]`. Không in nền màu |
 | Email / thông báo | Lockup ngang trên nền trắng, một CTA gold duy nhất |
 | Ảnh OG | Lockup dọc + tagline trên nền cát, hoặc ảnh xe với lớp phủ tối |
@@ -231,4 +280,4 @@ Bắt buộc tôn trọng `prefers-reduced-motion`.
 - [ ] Tương phản AA ở mặc định, hover và disabled
 - [ ] `prefers-reduced-motion` được tôn trọng
 
-Liên quan: `06_DESIGN_PRINCIPLES.md` (vì sao) · `10_IMPLEMENTATION_CONSTRAINTS.md` (giới hạn kỹ thuật) · ADR 0003.
+Liên quan: [`08_UX_GUIDELINES.md`](08_UX_GUIDELINES.md) (nguyên tắc, mẫu tương tác, ràng buộc kỹ thuật) · [`docs/design-token-map.md`](../design-token-map.md) · ADR 0003.

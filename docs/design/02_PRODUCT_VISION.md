@@ -1,183 +1,219 @@
 # 02 — Product Vision
 
-> Cập nhật: 09/09/2026
+> Cập nhật: 06/10/2026
 > Trạng thái: **Canonical — định hướng sản phẩm hiện hành**
-> Quyết định chi tiết mới nhất về hai tuyến, cọc, thuế, bảo hiểm và hủy: [ADR 0032](../decisions/0032-booking-deposit-insurance-and-owner-lite.md).
+> Dựa trên ADR đến **0053** — trọng tâm: [0028](../decisions/0028-marketplace-subscription-fees-and-custodied-funds.md) (hai tuyến) · [0032](../decisions/0032-booking-deposit-insurance-and-owner-lite.md) · [0033](../decisions/0033-money-ledger-and-deposit-allocation.md) · [0038](../decisions/0038-owner-track-split-and-unified-wallet.md) · [0040](../decisions/0040-registration-track-split.md) · [0041](../decisions/0041-plan-tiers-by-vehicle-count.md) · [0043](../decisions/0043-marketplace-relevance-ranking.md)–[0053](../decisions/0053-separate-account-realms.md). Chỉ mục và quan hệ ghi đè: [`decisions/README.md`](../decisions/README.md).
+> Tài liệu này TÓM TẮT cho người đọc sản phẩm. Khi lệch với ADR, **ADR thắng** — sửa tài liệu này, không sửa theo nó.
 
 ## 1. XePrime là gì
 
 XePrime là **chợ đăng và thuê xe** đồng thời là **giải pháp quản lý hoạt động cho thuê xe**.
 
-- Người thuê tìm xe phù hợp, xem giá/lịch/chính sách, đặt xe, thanh toán khoản giữ chỗ và theo dõi chuyến đi.
-- Chủ có một hoặc vài xe có thể bắt đầu bằng bộ công cụ đơn giản, không trả thuê bao và chia sẻ doanh thu theo chuyến.
-- Chủ xe chuyên nghiệp hoặc đơn vị cho thuê có thể nâng cấp thành gian hàng, trả thuê bao cố định để dùng toàn bộ công cụ quản lý và không chịu hoa hồng nền tảng theo chuyến.
-- Xe của mọi nhóm cùng xuất hiện trên một marketplace; không tách thành hai chợ.
+- Người thuê tìm xe, xem giá/lịch/chính sách, gửi yêu cầu, trả **tiền giữ chỗ** sau khi được nhận chuyến và theo dõi chuyến đi.
+- Chủ có ít xe bắt đầu bằng bộ công cụ rút gọn (Owner Lite), không trả thuê bao; nền tảng thu phí dịch vụ theo chuyến ở phía khách.
+- Chủ xe chuyên nghiệp/đơn vị cho thuê mua gói gian hàng (ba bậc theo số xe) để dùng toàn bộ công cụ quản lý, 0% phí dịch vụ XePrime theo chuyến.
+- Xe của mọi nhóm cùng nằm trên **một** marketplace; không tách hai chợ.
 
 Giá trị cốt lõi là một vòng kín: **nguồn xe thật → lịch thật → đặt xe thật → giao nhận phù hợp từng mô hình → tiền và trách nhiệm giải thích được**.
 
 ## 2. Những người XePrime phục vụ
 
-### 2.1 Người thuê xe
+### 2.1 Ba site, ba không gian tài khoản
 
-Mục tiêu của họ là tìm được xe đúng nhu cầu, biết tổng tiền và điều kiện trước khi đặt, giữ được lịch, nhận đúng xe và có đường xử lý khi phát sinh sự cố.
+| Site / app | Realm | Ai |
+| --- | --- | --- |
+| `xeprime.vn` · app **XePrime** | `customer` | Người thuê |
+| `partner.xeprime.vn` · app **XePrime Partner** | `partner` | Chủ xe cá nhân tuyến hoa hồng (Owner Lite), chủ gian hàng tuyến gói, nhân viên gian hàng |
+| `admin.xeprime.vn` | `platform` | Nhân sự nền tảng |
 
-### 2.2 Chủ xe cơ bản
+- Mỗi tài khoản thuộc đúng một realm. Cùng SĐT/email/Google ở hai site là **hai tài khoản riêng**, mật khẩu riêng, phiên riêng; hệ thống không liên kết chúng ([ADR 0053](../decisions/0053-separate-account-realms.md) điều 1–4).
+- Chủ xe muốn đi thuê xe thì dùng tài khoản khách. Không ai đặt được xe của chính gian hàng mình: server so SĐT đã xác minh của tài khoản khách với thành viên gian hàng (`CANNOT_BOOK_OWN_VEHICLE` — điều 7).
+- Một tài khoản đối tác thuộc tối đa **một** gian hàng (điều 6).
+- Bề mặt sản phẩm: một Next app, ba site theo host; hai app mobile mỏng dùng chung `shared` ([ADR 0051](../decisions/0051-product-surfaces-web-zones-and-mobile-variants.md)).
 
-Thường có 1–3 xe, chưa cần một hệ thống vận hành dày. Họ cần:
+### 2.2 Người thuê xe
 
-- Đăng và quản lý xe.
-- Mở/khóa lịch.
-- Nhận và xử lý yêu cầu/đơn thuê.
-- Theo dõi chuyến; trạng thái có thể tự chuyển theo lịch và chủ xe chỉ điều chỉnh khi thực tế thay đổi.
-- Biết từng khoản khấu trừ, số tiền thực nhận và trạng thái chuyển tiền.
-- Chat và xử lý hỗ trợ/tranh chấp.
+Tìm được xe đúng nhu cầu, biết tổng tiền và điều kiện trước khi gửi yêu cầu, biết khi nào chuyến chắc chắn thuộc về mình, nhận đúng xe và có đường xử lý khi phát sinh sự cố. Tiền hoàn của chuyến đi thuê vào **ví điểm của tài khoản khách** đã đặt chuyến.
 
-Đây là **một trải nghiệm quản lý rút gọn**, không phải một bản source được clone. Cùng module, API và dữ liệu với portal gian hàng; UI chỉ hiện đúng năng lực của gói cơ bản.
+### 2.3 Chủ xe cá nhân — tuyến hoa hồng (Owner Lite)
 
-### 2.3 Gian hàng thuê bao
+Thường có 1–3 xe. Làm việc ở **site partner**, cùng cây URL với gian hàng; menu chỉ hiện năng lực của tuyến ([ADR 0051](../decisions/0051-product-surfaces-web-zones-and-mobile-variants.md) điều 3). Họ cần:
 
-Có thể là một cá nhân muốn vận hành chuyên nghiệp hoặc doanh nghiệp có nhiều xe/nhân viên/chi nhánh. Họ trả thuê bao để nhận:
+- Đăng và quản lý xe (tối đa **3 xe, tính TỔNG ô tô + xe máy** — [ADR 0041](../decisions/0041-plan-tiers-by-vehicle-count.md) điều 4); chỉ có một cổng duyệt là duyệt XE ([ADR 0036](../decisions/0036-single-approval-gate-for-commission-owners.md)).
+- Mở/khóa lịch, nhận và xử lý yêu cầu/đơn thuê, chat.
+- Biết từng khoản khấu trừ, số thực nhận, ví điểm và rút tiền; khai thuế, chứng từ.
+- Hỗ trợ/tranh chấp.
 
-- Toàn bộ bộ cơ bản.
-- Thu chi, công nợ và báo cáo.
-- Bảo dưỡng và chi phí vòng đời xe.
-- Nhân viên/phân quyền, chi nhánh và tài xế.
-- Hợp đồng và công cụ vận hành nâng cao.
-- Quyền lợi hiển thị/nhận diện gian hàng theo chính sách xếp hạng minh bạch.
-- Không chịu hoa hồng nền tảng theo từng chuyến trong thời gian gói còn hiệu lực.
+Đây là **trải nghiệm quản lý rút gọn**, không phải bản source được clone: cùng module, API và dữ liệu với gian hàng; ranh giới tuyến chặn ở server (`resolveEffectiveBilling`, `@SubscriptionTrackOnly` — [ADR 0038](../decisions/0038-owner-track-split-and-unified-wallet.md) điều 1, 4).
 
-Một chủ xe có thể nâng cấp mà không đổi tài khoản, role hay tạo lại dữ liệu. Booking đã tạo giữ nguyên snapshot thương mại cũ; quy tắc hạ cấp chưa được chốt.
+### 2.4 Gian hàng — tuyến gói
 
-### 2.4 Nhân sự nền tảng
+Cá nhân muốn vận hành chuyên nghiệp hoặc doanh nghiệp nhiều xe/nhân viên/chi nhánh. Ngoài bộ cơ bản, gói mở: thu chi, công nợ, báo cáo; bảo trì; nhân viên/phân quyền, chi nhánh, tài xế; hợp đồng; 0% phí dịch vụ XePrime theo chuyến khi gói còn hiệu lực.
 
-- `platform_admin`: cấu hình và kiểm soát toàn hệ thống.
-- `reviewer`: xác minh chủ xe/gian hàng và kiểm duyệt xe/listing.
-- `support`: xử lý ticket, sự cố chuyến và tranh chấp.
-- `finance_admin`: đối soát tiền vào, số dư phải trả, hoàn tiền và rút tiền.
-- `platform_staff`: phạm vi vận hành được cấp cụ thể.
+- **Nâng cấp**: chủ xe tuyến hoa hồng mua gói ngay trên tài khoản đối tác hiện có, không tạo lại xe. Đơn đã tạo giữ snapshot thương mại cũ ([ADR 0024](../decisions/0024-billing-mode-from-plan-frozen-on-booking.md)). Đăng ký tuyến gói ngay từ đầu chỉ vào được Manage khi hoá đơn đã `paid` — kích hoạt là việc của webhook SePay ([ADR 0040](../decisions/0040-registration-track-split.md) điều 1–3).
+- **Hạ cấp khi hết gói** (đã chốt): hết hạn + hết ân hạn ⇒ tenant về tuyến hoa hồng, dùng Owner Lite; không có Manage chỉ-xem. Xe ở nguyên trên chợ, chuyến đang chạy khép bình thường; ví, chứng từ, bàn giao, khai thuế không nằm sau cờ tính năng nào. Trần chặn TẠO mới, không gỡ xe đang bán ([ADR 0038](../decisions/0038-owner-track-split-and-unified-wallet.md) điều 5 · [ADR 0041](../decisions/0041-plan-tiers-by-vehicle-count.md) điều 4). `onboarding_state = package_active` không lùi — họ là khách cũ cần gia hạn ([ADR 0040](../decisions/0040-registration-track-split.md) điều 4).
+
+### 2.5 Nhân sự nền tảng
+
+`platform_admin` · `reviewer` (duyệt xe/hồ sơ) · `support` (ticket, sự cố, tranh chấp) · `finance_admin` (đối soát, hoàn tiền, rút tiền) · `platform_staff`. Tài khoản do admin tạo, không tự đăng ký; đăng nhập mật khẩu.
+
+Làm hộ gian hàng đi qua **phiên hỗ trợ** có lý do, hạn 45 phút, capability do server cấp và audit phía nền tảng — không giả danh, không membership tạm ([ADR 0050](../decisions/0050-platform-tenant-support-context.md)). Tiền, thành viên, gói, giá và trạng thái đơn nằm ngoài phiên hỗ trợ.
 
 ## 3. Hai lựa chọn cho chủ xe
 
-| Nội dung | Chủ xe cơ bản — theo chuyến | Gian hàng — thuê bao |
+| Nội dung | Tuyến hoa hồng (Owner Lite) | Tuyến gói (gian hàng) |
 | --- | --- | --- |
-| Phí cố định | 0đ; tối đa 3 xe | Theo gói gian hàng; giới hạn cụ thể theo policy |
-| Giá pilot | Không áp dụng | 100.000đ/ô tô/tháng; 40.000đ/xe máy/tháng; tối thiểu 3 tháng; **chưa phải giá production** |
-| Phí nền tảng/chuyến | 10% giá thuê gốc, cộng thêm vào tổng tiền khách trả | 0% trong thời gian gói hiệu lực |
-| Thuế | Khấu trừ từ tiền chủ xe nhận khi chuyến bắt đầu; working example 7% giá thuê gốc | Khấu trừ từ tiền gian hàng nhận khi chuyến bắt đầu; không được gộp vào phí gói |
-| Bảo hiểm theo chuyến | Bảo hiểm xe/chuyến bắt buộc và bảo hiểm thân thể tùy chọn đều do khách trả thêm | Tương tự; gói thuê bao không làm bảo hiểm biến mất |
-| Cọc đặt chuyến | Bắt buộc qua QR Pay XePrime | Bắt buộc qua QR Pay XePrime trong giai đoạn đầu |
-| Tiền thuê còn lại | Khách trả trực tiếp chủ xe khi nhận xe | Khách trả trực tiếp gian hàng; XePrime không thu hộ phần còn lại |
-| Công cụ quản lý | Rút gọn | Đầy đủ |
-| Hiển thị | Theo chất lượng, giá, lịch trống và độ phù hợp | Có quyền lợi ưu tiên hợp lý; mọi vị trí trả phí/tài trợ phải có nhãn rõ |
+| Phí cố định | 0đ | Theo bậc gói và kỳ hạn |
+| Trần xe | 3 xe (tổng hai loại) | Theo bậc: 3 · 10 · không giới hạn |
+| Phí dịch vụ XePrime/chuyến | `S` = `fee_policies.service_fee_percent` × giá thuê (pilot 10%), **cộng vào phía khách**, không trừ tiền chủ xe | 0% khi gói hiệu lực |
+| Thuế `T` | Khấu trừ khỏi khoản XePrime phải trả chủ xe khi chuyến bắt đầu; không cộng vào tổng khách | Như bên trái |
+| Bảo hiểm | Xe/chuyến (`IV`) bắt buộc + tai nạn con người (`IP`) tùy chọn — **khách trả** | Như bên trái |
+| Tiền giữ chỗ (QR) | Bắt buộc thu cọc | Gian hàng có **công tắc bật/tắt thu cọc**; mức cọc do nền tảng đặt ([ADR 0033](../decisions/0033-money-ledger-and-deposit-allocation.md) điều 7) |
+| Tiền thuê còn lại `B − D` | Khách trả trực tiếp chủ xe khi nhận xe; XePrime không thu hộ | Như bên trái |
+| Công cụ | Rút gọn | Đầy đủ (Manage) |
+| Hiển thị | Theo độ phù hợp/chất lượng/uy tín (§6) | Như bên trái — **chưa có ưu tiên gói** (§6) |
 
-Tỷ lệ phí nền tảng 10%, working tax rate 7% và giá gói theo loại xe là **policy pilot**, không được hard-code thành sự thật pháp lý hoặc mức giá vĩnh viễn. Admin phải cấu hình chính sách theo loại xe/loại chủ thể, ngày hiệu lực và booking phải lưu snapshot chính sách lúc tạo.
+### Bậc gói ([ADR 0041](../decisions/0041-plan-tiers-by-vehicle-count.md))
+
+Bán theo **trần TỔNG số xe** và **kỳ hạn**; giá mỗi kỳ là **số tuyệt đối** admin nhập ở `limits.termPrices`, phần trăm "tiết kiệm" chỉ là phép so hiển thị. Cả ba bậc mở cùng bộ tính năng — khác nhau ở quy mô.
+
+| Bậc | Trần xe | Trần chi nhánh | Giá seed (1 · 3 · 6 · 12 tháng) |
+| --- | --- | --- | --- |
+| Cơ bản | 3 | 1 | 100.000 · 250.000 · 450.000 · 800.000đ |
+| Nâng cao | 10 | 3 | 250.000 · 650.000 · 1.200.000 · 2.000.000đ |
+| Chuyên nghiệp | Không giới hạn | Không giới hạn | Không niêm yết — `salesOnly`, bán qua tư vấn, admin gán với giá đàm phán |
+
+Giá seed là **policy pilot** cấu hình được ở admin, chưa phải giá production. Tỷ lệ phí dịch vụ, thuế và bảo hiểm cũng là tham số có phiên bản ở `fee_policies`; đơn lưu snapshot lúc tạo, không tính lại.
 
 ## 4. Nguyên tắc giá, thuế và bảo hiểm
 
 ### 4.1 Không che nguồn thu của nền tảng
 
-Không đổi tên hoa hồng của XePrime thành “thuế” hoặc “bảo hiểm” nếu tiền không được nộp cho cơ quan thuế hoặc doanh nghiệp bảo hiểm. Cách trình bày đề xuất:
+Không gọi phí của XePrime là "thuế" hay "bảo hiểm" nếu tiền không nộp cho cơ quan thuế/doanh nghiệp bảo hiểm. Ba dòng tách bạch:
 
-- **Phí dịch vụ chuyến đi**: khoản XePrime hưởng để vận hành marketplace, thanh toán, hỗ trợ và chống gian lận.
+- **Phí dịch vụ chuyến đi**: khoản XePrime hưởng để vận hành marketplace, thanh toán, hỗ trợ, chống gian lận.
 - **Thuế khấu trừ/nộp thay**: đúng số thực tế theo loại người bán và loại dịch vụ.
-- **Phí bảo hiểm chuyến đi**: đúng phí của sản phẩm bảo hiểm thật, kèm nhà bảo hiểm, quyền lợi và điều kiện loại trừ.
+- **Phí bảo hiểm chuyến đi**: đúng phí sản phẩm bảo hiểm thật, kèm nhà bảo hiểm, quyền lợi, loại trừ.
 
-UI có thể gom thành “Các khoản đảm bảo và nghĩa vụ chuyến đi” ở phần tóm tắt, nhưng trước khi xác nhận phải cho người dùng mở breakdown và biết tiền đi đâu.
+UI có thể gom ở phần tóm tắt nhưng trước khi xác nhận phải cho mở breakdown và biết tiền đi đâu.
 
-### 4.2 Cách hiểu thuế ở giai đoạn thiết kế
+### 4.2 Thuế
 
-Theo Nghị định 117/2025/NĐ-CP, nền tảng có chức năng thanh toán thuộc diện có thể phải khấu trừ/nộp thay thuế cho hộ/cá nhân theo từng giao dịch. Tài liệu hướng dẫn của Chính phủ nêu tỷ lệ tham khảo cho **dịch vụ** của cá nhân cư trú là 5% VAT và 2% PIT; việc cho thuê xe của XePrime được phân loại thế nào phải do tư vấn thuế xác nhận trước khi cấu hình production.
+Theo Nghị định 117/2025/NĐ-CP, nền tảng có chức năng thanh toán có thể phải khấu trừ/nộp thay thuế cho hộ/cá nhân theo từng giao dịch. Việc cho thuê xe được phân loại thế nào phải do tư vấn thuế xác nhận. Không dùng một tỷ lệ chung cho mọi chủ thể. Tỷ lệ hiện cấu hình ở dev là **số tham khảo thị trường**, chưa qua tư vấn thuế — xem [`completion-roadmap.md`](../completion-roadmap.md) §5.
 
-Không dùng một tỷ lệ chung cho mọi chủ thể. Doanh nghiệp, hộ kinh doanh, cá nhân cư trú và không cư trú có thể có cách xử lý khác nhau.
+### 4.3 Bảo hiểm
 
-### 4.3 Điều kiện để được gọi là bảo hiểm
+Định hướng đối tác đầu tiên là **PVI**, chưa có hợp đồng. Mô hình: `IV` bắt buộc, `IP` tùy chọn (khách bỏ chọn dễ dàng), cả hai do khách trả; tiền giữ chỗ thu `IV`/`IP` dự kiến nhưng **chỉ mua/phát hành ở mốc bàn giao**; hủy trước mốc đó hoàn 100% `IV + IP` ([ADR 0032](../decisions/0032-booking-deposit-insurance-and-owner-lite.md) điều 4). Adapter đối tác hiện là `noop` — từ chối phát hành, phần đã thu nằm trong quỹ giữ hộ.
 
-Định hướng đối tác đầu tiên là **PVI**, nhưng đây chưa phải tuyên bố rằng XePrime và PVI đã ký hợp đồng hay phát hành sản phẩm. Mô hình sản phẩm mong muốn gồm:
+Chỉ được gọi là "bảo hiểm" ở production khi có: hợp đồng với đối tác hợp pháp; quy tắc, biểu phí, phạm vi; cách cấp chứng nhận; quy trình bồi thường; chứng từ phí thực tế.
 
-- **Bảo hiểm xe/chuyến:** bắt buộc với mọi booking ở cả hai tuyến và do người thuê trả thêm ngoài giá thuê gốc.
-- **Bảo hiểm tai nạn con người:** tùy chọn, do người thuê trả nếu chọn; phải hiển thị riêng giá/quyền lợi và cho khách bỏ chọn dễ dàng trước khi thanh toán.
-- QR Pay thu/giữ khoản phí dự kiến lúc đặt xe nhưng chỉ chính thức mua/phát hành bảo hiểm khi bàn giao hoặc bắt đầu chuyến. Mọi booking hủy trước mốc đó được hoàn 100% phí bảo hiểm bắt buộc và tùy chọn.
+## 5. Quy tắc nghiệp vụ
 
-Chỉ bật dòng “bảo hiểm” sau khi có tối thiểu:
+Tóm tắt để đọc nhanh — chi tiết, công thức và ràng buộc nằm ở ADR được dẫn. Không chép thêm công thức tiền vào tài liệu khác; dẫn link ADR.
 
-- Hợp đồng với PVI hoặc một doanh nghiệp/đối tác bảo hiểm hợp pháp khác.
-- Quy tắc, biểu phí và phạm vi bảo vệ.
-- Cách cấp chứng nhận/hợp đồng cho từng chuyến hoặc từng xe.
-- Quy trình yêu cầu bồi thường và xử lý từ chối.
-- Chứng từ xác nhận khoản phí thực tế.
-
-Nếu chưa có các điều kiện trên, khoản 5–8% không được gọi là bảo hiểm. Có thể thử nghiệm một **phí dịch vụ chuyến đi** minh bạch, nhưng phải tách khỏi thuế và bảo hiểm.
-
-## 5. Luồng tiền mục tiêu
-
-### 5.1 Chủ xe cơ bản
+### 5.1 Thứ tự đặt xe — [ADR 0044](../decisions/0044-approve-before-hold.md)
 
 ```text
-Khách xác nhận booking
-→ thanh toán QR Pay: cọc đặt chuyến + phí nền tảng + khoản bảo hiểm dự kiến
-→ booking được xác nhận; phần còn lại khách sẽ trả trực tiếp chủ xe
-→ đến mốc bàn giao/bắt đầu chuyến: mua/phát hành bảo hiểm và ghi nhận thuế
-→ chuyến hoàn thành hoặc bị hủy
-→ quyết toán, hoàn tiền hoặc ghi số dư phải trả
-→ chủ xe yêu cầu rút về tài khoản ngân hàng
+Khách gửi yêu cầu (không thu tiền, không chiếm lịch)
+→ chủ xe DUYỆT tay, hoặc xe bật "Đặt ngay" tự nhận (cùng một đường commitDecision)
+   = chốt lịch, chốt giá, giữ xe, phát QR tiền giữ chỗ   [awaiting_hold]
+→ khách chuyển khoản trong 120 phút (đồng hồ hai chặng 60′; nhắc khi còn 60′ và 15′; KHÔNG gia hạn)
+→ đối soát SePay xác nhận ĐỦ tiền ⇒ ĐƠN THUÊ ra đời        ["Đặt xe thành công"]
+→ bàn giao → chuyến đang chạy → trả xe → hoàn thành
 ```
 
-### 5.2 Gian hàng thuê bao
+- **Đơn thuê ra đời DUY NHẤT trong transaction đối soát đủ tiền** — không vì một cú bấm hay một lượt quét QR. `acceptedAt` là mốc "đã được nhận · chờ thanh toán", không phải "đặt xe thành công" (điều 2, 9).
+- Không có khoản nào phải thu online (gian hàng tắt thu cọc, báo giá còn tạm tính, dài hạn chưa chốt lịch) ⇒ đơn tạo ngay lúc duyệt, **không có QR giả** (điều 4).
+- Giờ nhận quá gần (cửa sổ còn < 15′) ⇒ không phát QR, trả `HOLD_WINDOW_TOO_SHORT`; chuyến thỏa thuận trực tiếp (điều 5).
+- Một khung giờ một người thắng: khi một yêu cầu được nhận, các yêu cầu chồng lấn còn chờ đóng bằng `slot_taken` và khách được báo ngay (điều 6).
+- Gian hàng có hạn phản hồi yêu cầu (hiện 60 phút). Chuyến **có tài xế** không tự nhận khi có thu tiền giữ chỗ (điều 8).
 
-```text
-Gian hàng trả phí thuê bao theo số chỗ xe
-→ được mở toàn bộ công cụ và 0% hoa hồng nền tảng/chuyến
-→ khách có thể trao đổi trước với gian hàng
-→ booking chính thức vẫn thanh toán cọc và khoản bảo hiểm dự kiến qua QR Pay XePrime
-→ tiền thuê còn lại trả trực tiếp gian hàng; thuế và bảo hiểm xử lý theo cùng chuẩn booking
-```
+### 5.2 Tiền giữ chỗ và phân bổ — [ADR 0032](../decisions/0032-booking-deposit-insurance-and-owner-lite.md) điều 2 · [ADR 0029](../decisions/0029-per-vehicle-flat-pricing-and-customer-side-fees.md) điều 1–2 · [ADR 0033](../decisions/0033-money-ledger-and-deposit-allocation.md)
 
-Thông tin liên hệ gian hàng có thể công khai để tăng cơ hội chốt xe, nhưng giao dịch không tạo booking trên XePrime không được nhận bảo hiểm/chính sách hủy của nền tảng.
+| Khoản | Ai trả / chịu | Đi đâu |
+| --- | --- | --- |
+| `D` cọc — một phần giá thuê `B`; tỷ lệ do nền tảng đặt | Khách, online | Khoản XePrime phải trả chủ xe (sau khi trừ thuế) |
+| `S` phí dịch vụ (chỉ tuyến hoa hồng) | Khách, online | Doanh thu XePrime khi chuyến hoàn thành |
+| `IV`, `IP` bảo hiểm | Khách, online | Giữ hộ cho hãng bảo hiểm |
+| `B − D` | Khách, trực tiếp chủ xe lúc nhận xe | XePrime không thu hộ |
+| `T` thuế | Chủ xe chịu | Khấu trừ khỏi khoản phải trả khi chuyến bắt đầu; không cộng vào tổng khách |
 
-### 5.3 Giữ lịch, hủy và hoàn tiền trước chuyến
+- **Tiền giữ chỗ** = `D + S + IV + IP` (trừ mã khuyến mãi nếu có, §5.3). Ở giao diện luôn gọi "tiền giữ chỗ" — khác hẳn **cọc thế chấp khi nhận xe** (`rental-policies`), khoản chủ xe tự giữ và trả lại khi trả xe ([ADR 0044](../decisions/0044-approve-before-hold.md) điều 9).
+- Kết cục của tiền giữ chỗ là một **phân bổ nhiều dòng**, tổng luôn bằng số đã thu; tách quỹ đọc từ bốn cột số tiền, không đọc `purpose` ([ADR 0033](../decisions/0033-money-ledger-and-deposit-allocation.md) điều 3–4).
 
-- Sau khi chủ xe chấp nhận hoặc hệ thống tự động nhận chuyến (`acceptedAt`), booking được coi là “đặt xe thành công”; khách có tối đa 2 giờ để thanh toán QR Pay, hiển thị bằng hai countdown 60 phút. Hết thời gian, booking tự hủy và mở lại lịch.
-- Cửa sổ hủy miễn phí 4 giờ cũng bắt đầu từ `acceptedAt`, không khởi động lại khi QR Pay thành công. Nếu đã thanh toán rồi hủy trong cửa sổ này, khách được hoàn toàn bộ tiền online: cọc, phí nền tảng và các khoản bảo hiểm dự kiến.
-- Khách hủy sau cửa sổ miễn phí nhưng trước bàn giao: hoàn 100% bảo hiểm; phần `cọc đặt chuyến + phí nền tảng` được chia 50% cho chủ xe/gian hàng và 50% cho XePrime.
-- Chủ xe/gian hàng hủy trước chuyến: khách được hoàn toàn bộ tiền đã thanh toán online; chưa phạt tiền, nhưng hệ thống cần tracking tần suất hủy.
-- Không tính thuế và không mua/phát hành bảo hiểm cho booking hủy trước khi chuyến bắt đầu.
+### 5.3 Mã khuyến mãi nền tảng — [ADR 0046](../decisions/0046-platform-funded-promo-codes.md)
 
-### 5.4 “Số dư chủ xe”, không phải ví điện tử
+- Chỉ admin nền tảng phát hành; gian hàng không có đường nào. Mã do XePrime tài trợ.
+- Chỉ trừ vào khoản khách chuyển online; **không bớt tiền gian hàng** — `B`, `S`, `T`, `IV`, `IP`, `D` giữ nguyên. Trần tài trợ `D + S`, sàn `holdMinAmount`. Cộng dồn được với khuyến mãi trực tiếp của chủ xe.
+- Lượt dùng: GIỮ lúc gửi yêu cầu → CHỐT khi có đơn → NHẢ khi yêu cầu chết. Hoàn khi huỷ không vượt số khách đã chuyển. Mã áp đọc từ snapshot; mã hết điều kiện lúc duyệt thì nhả và báo khách, lượt duyệt đi tiếp.
+- Chuyến không thu trước thì không áp được mã. "Khách mới" đo bằng tài khoản và số yêu cầu đã thành đơn.
 
-Tên hiển thị là **Số dư chủ xe** hoặc **Khoản XePrime phải trả**. Đây là sổ cái nội bộ:
+### 5.4 Huỷ và hoàn
 
-- Không cho nạp tiền.
-- Không chuyển giữa người dùng.
-- Không dùng để mua hàng/dịch vụ khác.
-- Không quảng bá như tài khoản tiền gửi hay ví điện tử.
-- Mỗi bút toán chỉ thêm mới; sửa sai bằng bút toán đảo.
-- Yêu cầu rút được admin xử lý thủ công, mục tiêu nội bộ dưới 10 phút khi có người trực và cam kết khách hàng tối đa 2 ngày làm việc.
+**Khách** ([ADR 0032](../decisions/0032-booking-deposit-insurance-and-owner-lite.md) điều 5 · [ADR 0044](../decisions/0044-approve-before-hold.md) điều 7):
 
-Việc nền tảng giữ/thu hộ tiền thật chỉ được mở sau khi đã có ý kiến pháp lý và mô hình với ngân hàng/đơn vị thanh toán phù hợp.
+| Tình huống | Kết quả |
+| --- | --- |
+| Huỷ trước khi trả / hết 120′ chưa đủ tiền | Nhả lịch; phần đã chuyển dở được hoàn; không phí huỷ |
+| Huỷ trong **4 giờ kể từ `acceptedAt`** | Hoàn 100% số đã chuyển online |
+| Huỷ sau cửa sổ miễn phí, trước bàn giao | Hoàn 100% `IV + IP`; `D + S` chia 50/50 chủ xe ↔ XePrime; không tính thuế |
+| Tiền về sau khi hold đã chết | Không tạo đơn; giao dịch nằm lại cho admin đối soát |
 
-## 6. Xếp hạng marketplace
+Cả hai mốc (hạn thanh toán, hủy miễn phí) tính XUÔI từ `acceptedAt`, snapshot ở server. Đơn sát giờ (nhận xe cách < 4 giờ) phải cảnh báo trước khi khách trả tiền. Tiền hoàn vào **ví điểm** của tài khoản khách; khách không có tài khoản thì chuyển khoản tay ([ADR 0033](../decisions/0033-money-ledger-and-deposit-allocation.md) điều 5).
 
-Gói thuê bao có thể nhận ưu tiên hiển thị, nhưng không được làm mất chất lượng tìm kiếm.
+**Chủ xe/gian hàng** — theo chặng ([ADR 0045](../decisions/0045-host-cancellation-and-reputation.md) điều 1–2):
 
-Thứ tự đề xuất:
+| Chặng | Hành động | Tiền |
+| --- | --- | --- |
+| Chờ duyệt | **Từ chối** | Không có gì |
+| Đã nhận · chờ khách trả | **Huỷ chuyến** | Đóng hold, nhả lịch, hoàn phần đã chuyển |
+| Đơn chờ giao xe | **Huỷ đơn** (kèm lý do) | Hoàn 100% cho khách, kể cả quá cửa sổ miễn phí |
+| Đơn đang thuê | **Không huỷ** | Kết thúc sớm = bàn giao trả xe rồi quyết toán |
 
-1. Xe khớp địa điểm, thời gian, loại xe và điều kiện khách tìm.
-2. Xe còn lịch, giá cạnh tranh, hồ sơ/ảnh đầy đủ, phản hồi tốt và tỷ lệ hủy thấp.
-3. Trong nhóm tương đương, gian hàng thuê bao được hệ số ưu tiên.
-4. Vị trí quảng bá/đề xuất trả phí phải có nhãn để người thuê không hiểu nhầm là kết quả hoàn toàn tự nhiên.
+Trách nhiệm do server suy từ người thao tác; nhân viên huỷ tính như chủ xe huỷ. Chưa phạt tiền chủ xe, nhưng mỗi lượt huỷ trừ vào chỉ số uy tín (§6).
 
-Không bảo đảm “lên đầu” cho một xe không phù hợp hoặc chất lượng thấp.
+### 5.5 Trạng thái đơn, bàn giao, tài xế — [ADR 0047](../decisions/0047-booking-status-simplification.md) · [ADR 0032](../decisions/0032-booking-deposit-insurance-and-owner-lite.md) điều 6
+
+- Đơn thuê có **5 trạng thái**: chờ giao xe (`reserved`) · đang thuê · hoàn thành · đã huỷ · khách không đến. Trạng thái "chờ thanh toán" sống ở yêu cầu/hold, không ở đơn.
+- Đơn chỉ sang đang thuê/hoàn thành qua lượt xác nhận bàn giao; thao tác chuyển trạng thái bằng tay chỉ còn **huỷ** và **khách không đến**.
+- Bằng chứng bàn giao (ảnh, km, nhiên liệu/pin) là **tùy chọn**. Trả muộn, vượt km, hư hỏng là công cụ ghi nhận của gian hàng; XePrime không thu hộ các khoản đó.
+- Tài xế là **bản ghi nội bộ** của gian hàng, không có tài khoản/app; chủ xe tuyến hoa hồng mặc định là tài xế.
+
+### 5.6 Thuê dài hạn — [ADR 0011](../decisions/0011-long-term-fixed-packages.md)
+
+Gói cố định 1/2/3/6/9/12 tháng; ngày trả = ngày nhận + N **tháng lịch** (server tính). Khách nêu nguyện vọng ngày nhận, gian hàng chốt lịch khi duyệt — chỉ khi đó mới có giá để in lên QR ([ADR 0044](../decisions/0044-approve-before-hold.md) điều 4). Ưu đãi cam kết thời hạn tính theo tháng, không cộng dồn; không trưng chênh lệch giá dài hạn ↔ giá ngày như khuyến mãi.
+
+### 5.7 Hiển thị xe trên chợ — [ADR 0048](../decisions/0048-owner-marketplace-visibility.md) · [ADR 0049](../decisions/0049-vehicle-review-workbench.md)
+
+Ba trục độc lập: **vận hành** (gian hàng), **kiểm duyệt** (nền tảng — duyệt trên ảnh chụp lúc gửi; "bị ẩn" là quyết định của nền tảng) và **công tắc hiển thị của chủ xe** (`marketplace_enabled`: tắt luôn được, bật có cổng). Lý do một xe không lên chợ do server suy và trả về một chỗ.
+
+### 5.8 Ví điểm, không phải ví điện tử — [ADR 0033](../decisions/0033-money-ledger-and-deposit-allocation.md) · [ADR 0053](../decisions/0053-separate-account-realms.md) điều 8
+
+- Tên hiển thị **"Ví điểm"**, 1 điểm = 1đ. Bản chất là **sổ công nợ phải trả**: không nạp, không chuyển ngang, không thanh toán nội bộ, **không hết hạn, không thu hồi**; ledger chỉ ghi thêm, sửa bằng dòng đảo. Mọi màn số dư hiện câu "1 điểm = 1đ · rút về tài khoản ngân hàng · không hết hạn".
+- **Một ví cho một TÀI KHOẢN**: tài khoản khách có ví nhận tiền hoàn; gian hàng (tenant) có ví nhận khoản XePrime phải trả, chỉ chủ gian hàng thao tác; nhân viên không có ví. Hai tài khoản của cùng một người là hai ví, không gộp.
+- Rút về tài khoản ngân hàng: người dùng gửi lệnh, admin duyệt, chuyển tay và xác nhận; cam kết chuyển tối đa 2 ngày làm việc kể từ khi duyệt (`WITHDRAWAL_TERMS`).
+
+Nền tảng giữ/thu hộ tiền thật chỉ mở sau ý kiến pháp lý và mô hình với ngân hàng/đơn vị thanh toán phù hợp ([ADR 0028](../decisions/0028-marketplace-subscription-fees-and-custodied-funds.md) release gate).
+
+## 6. Xếp hạng và uy tín
+
+Đã triển khai ([ADR 0043](../decisions/0043-marketplace-relevance-ranking.md) · [ADR 0045](../decisions/0045-host-cancellation-and-reputation.md) điều 3–5):
+
+- Sort **mặc định** của chợ theo `rank_score` — cột dẫn xuất trên `public_listings`, sáu vế: chất lượng (Bayes), số chuyến, độ đầy hồ sơ, độ mới, **uy tín chủ xe** và **khám phá** cho xe mới khai đủ hồ sơ (phai trong 30 ngày). Sort do khách chọn (giá, mới nhất) giữ nguyên tuyệt đối.
+- Trang chủ ưu tiên tỉnh của khách nhưng không loại xe; mỗi gian hàng tối đa 2 xe ở đầu khối, phần dư đẩy xuống cuối.
+- **Ba chỉ số uy tín công khai** (tỉ lệ phản hồi · thời gian phản hồi · tỉ lệ nhận và giữ chuyến), cửa sổ 90 ngày, một nguồn tính `HostMetricsService`. Chưa đủ mẫu thì hiện "chưa có", không quy về 0. Không gắn vào thẻ kết quả tìm kiếm.
+- **Chưa có ưu tiên cho gói thuê bao**: ADR 0028 cho phép trong nhóm kết quả tương đương nhưng chỉ khi giao diện có nhãn vị trí tài trợ — vế đó vắng mặt có chủ đích ([ADR 0043](../decisions/0043-marketplace-relevance-ranking.md) điều 6). Không bảo đảm "lên đầu" cho xe không phù hợp hoặc chất lượng thấp.
 
 ## 7. Nguyên tắc sản phẩm
 
-1. Một marketplace, một hồ sơ xe, một lịch và một booking engine.
-2. Gói quyết định năng lực; role quyết định người nào được thao tác trong năng lực đó.
+1. Một marketplace, một hồ sơ xe, một lịch, một booking engine.
+2. Gói quyết định năng lực; role quyết định ai được thao tác trong năng lực đó; realm quyết định site. Cả ba do server quyết.
 3. Bản cơ bản phải đủ hoàn thành một chuyến, không phải bản demo bị khóa ngẫu nhiên.
-4. Không clone source giữa Owner và Manage; tái sử dụng theo capability.
-5. Mọi số tiền đã thỏa thuận phải đóng băng vào booking, không tính lại theo cấu hình mới.
-6. Phí, thuế, bảo hiểm, cọc và tiền phải trả chủ xe là các loại tiền khác nhau.
+4. Không clone source giữa Owner Lite và Manage; một cây URL, menu chọn theo tuyến.
+5. Mọi số tiền đã thỏa thuận đóng băng vào đơn, không tính lại theo cấu hình mới.
+6. Phí dịch vụ, thuế, bảo hiểm, tiền giữ chỗ, cọc thế chấp và tiền phải trả chủ xe là các loại tiền khác nhau.
 7. Mọi thao tác admin làm thay đổi tiền hoặc quyền truy cập phải có audit.
-8. Web responsive là bề mặt vận hành chính; mobile native ưu tiên người thuê trước.
+8. Web responsive là bề mặt vận hành chính. Mobile: app **XePrime** cho khách và app **XePrime Partner** cho đối tác — hai Expo project mỏng + `shared`. Lệch đã biết: app Partner hiện chỉ phục vụ tuyến gói, Owner Lite vẫn nằm trong app XePrime; phải căn lại theo ADR 0053 khi mở lại việc mobile ([ADR 0051](../decisions/0051-product-surfaces-web-zones-and-mobile-variants.md) điều 5).
 
 ## 8. Chỉ số thành công
 
@@ -185,20 +221,22 @@ Không bảo đảm “lên đầu” cho một xe không phù hợp hoặc ch�
 
 | Nhóm | Chỉ số |
 | --- | --- |
-| Marketplace | Tìm kiếm → xem xe → bắt đầu đặt → đặt thành công |
+| Marketplace | Tìm kiếm → xem xe → gửi yêu cầu → được nhận → trả tiền giữ chỗ → đơn thuê |
 | Chủ xe mới | Thời gian từ đăng ký đến xe đầu tiên được duyệt; chuyến đầu tiên |
-| Chủ xe cơ bản | Tỷ lệ booking hoàn thành; thu nhập ròng; thời gian nhận tiền |
-| Gian hàng | Tỷ lệ nâng cấp/gia hạn; số xe active; thời gian xử lý booking |
-| Chất lượng | Tỷ lệ hủy, tranh chấp, hoàn tiền và listing bị ẩn |
-| Vận hành tiền | Tỷ lệ đối soát tự động; yêu cầu rút quá SLA; chênh lệch quỹ |
+| Chủ xe tuyến hoa hồng | Tỷ lệ đơn hoàn thành; thu nhập ròng; thời gian nhận tiền |
+| Gian hàng | Tỷ lệ nâng cấp/gia hạn; số xe active; thời gian xử lý yêu cầu |
+| Chất lượng | Ba chỉ số uy tín; tỷ lệ hủy, tranh chấp, hoàn tiền, listing bị ẩn; tỷ lệ hold hết hạn |
+| Vận hành tiền | Tỷ lệ đối soát tự động; lệnh rút quá SLA; chênh lệch quỹ; ngân sách mã khuyến mãi đã dùng |
 
 ## 9. Những gì chưa cam kết
 
-- Tỷ lệ thuế chính xác cho hoạt động cho thuê xe và từng loại chủ xe.
-- Hợp đồng/sản phẩm chính thức với PVI, mức phí và phạm vi bảo hiểm của hai lớp bảo vệ.
-- Giá production của gói và chính sách giảm giá theo kỳ hạn sau pilot.
-- Tự động chi tiền về ngân hàng.
-- XePrime tự làm ví điện tử, bảo hiểm hoặc dịch vụ trung gian thanh toán.
-- Cam kết XePrime bảo vệ giao dịch được hai bên thực hiện hoàn toàn ngoài nền tảng.
+- Tỷ lệ thuế chính xác cho hoạt động cho thuê xe và từng loại chủ thể.
+- Hợp đồng/sản phẩm chính thức với PVI; mức phí, phạm vi hai lớp bảo hiểm; hành vi khi phát hành thất bại đúng lúc bàn giao.
+- Giá production của gói sau pilot.
+- Quy tắc no-show, kéo dài chuyến và tranh chấp sau khi chuyến đã bắt đầu ở mức chính sách công khai.
+- Thời điểm mở liên hệ trực tiếp ở tuyến hoa hồng (working rule: sau khi tiền giữ chỗ được xác nhận — [ADR 0032](../decisions/0032-booking-deposit-insurance-and-owner-lite.md)).
+- Ưu tiên hiển thị/vị trí tài trợ cho gói (§6).
+- Tự động chi tiền về ngân hàng; XePrime tự làm ví điện tử, bảo hiểm hoặc trung gian thanh toán.
+- Cam kết bảo vệ giao dịch hai bên thực hiện hoàn toàn ngoài nền tảng.
 
-Các mục này là release gate hoặc giả thuyết cần thử nghiệm, không phải phần đã hoàn thành.
+Các mục này là release gate hoặc giả thuyết cần thử nghiệm, không phải phần đã hoàn thành. Tiến độ và gate: [`completion-roadmap.md`](../completion-roadmap.md).

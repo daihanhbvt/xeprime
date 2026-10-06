@@ -1,41 +1,37 @@
 # Thiết kế và định hướng sản phẩm XePrime
 
-> Cập nhật: 09/09/2026
+> Cập nhật: 06/10/2026
 
 ## Nguồn canonical
 
 | Tài liệu | Vai trò |
 | --- | --- |
 | [`02_PRODUCT_VISION.md`](02_PRODUCT_VISION.md) | Tầm nhìn, persona, mô hình doanh thu và nguyên tắc giá/phí |
-| [`03_PRODUCT_GAP_ANALYSIS.md`](03_PRODUCT_GAP_ANALYSIS.md) | Khoảng trống hiện tại và backlog User/Admin/Manage |
-| [`07_INFORMATION_ARCHITECTURE.md`](07_INFORMATION_ARCHITECTURE.md) | Cấu trúc trải nghiệm Customer/Owner/Shop/Platform |
-| [`09_PRODUCT_FLOWS_AND_BUSINESS_RULES.md`](09_PRODUCT_FLOWS_AND_BUSINESS_RULES.md) | Quy tắc nghiệp vụ mới nhất cho sitemap, user flow, tiền/cọc, hủy và giao nhận |
-| [`11_FIGJAM_MASTER_PROMPT.md`](11_FIGJAM_MASTER_PROMPT.md) | Prompt tự chứa toàn bộ sitemap, role, flow, state, tiền và gap để dán vào FigJam AI |
-| [`XePrime_Design_Handoff_2026-09-09.xlsx`](XePrime_Design_Handoff_2026-09-09.xlsx) | Workbook có thể lọc: route/màn hình, flow, permission, trạng thái, tiền, vehicle matrix và gap |
-| [`12_DESIGNER_STAGING_ACCESS.md`](12_DESIGNER_STAGING_ACCESS.md) | Giới thiệu ngắn, đường dẫn và tài khoản staging theo từng vai trò dành cho designer |
+| [`03_PRODUCT_GAP_ANALYSIS.md`](03_PRODUCT_GAP_ANALYSIS.md) | Khoảng trống hiện tại và backlog theo từng site |
+| [`07_INFORMATION_ARCHITECTURE.md`](07_INFORMATION_ARCHITECTURE.md) | Ba site · ba không gian tài khoản, vai trò, menu và lối vào (đăng ký hai tuyến, hỗ trợ gian hàng, mobile) |
 
-## Chuyên đề còn dùng
+## Chuyên đề
 
 | Tài liệu | Khi đọc |
 | --- | --- |
-| [`01_BRAND_GUIDE.md`](01_BRAND_GUIDE.md) | Từ vựng và nhận diện thương hiệu |
-| [`04_CREATIVE_BRIEF.md`](04_CREATIVE_BRIEF.md) | Định hướng hình ảnh tổng thể |
-| [`05_MOBILE_FIRST_GUIDELINES.md`](05_MOBILE_FIRST_GUIDELINES.md) | Thiết kế web responsive |
-| [`06_DESIGN_PRINCIPLES.md`](06_DESIGN_PRINCIPLES.md) | Nguyên tắc ra quyết định UX |
-| [`08_UX_GUIDELINES.md`](08_UX_GUIDELINES.md) | Mẫu tương tác, lỗi, bảng và form |
-| [`10_IMPLEMENTATION_CONSTRAINTS.md`](10_IMPLEMENTATION_CONSTRAINTS.md) | Ràng buộc khi chuyển thiết kế thành code |
+| [`01_BRAND_GUIDE.md`](01_BRAND_GUIDE.md) | Thương hiệu: insight, tông, logo, màu, chữ, ảnh, giọng nói và từ vựng chốt |
+| [`08_UX_GUIDELINES.md`](08_UX_GUIDELINES.md) | **Guideline UX/UI duy nhất**: tám nguyên tắc, khuôn trang, năm trạng thái, responsive/mobile, lỗi, form, định dạng, quyền, a11y, ràng buộc kỹ thuật và checklist duyệt màn |
 
-Tài liệu chuyên đề không tự mở rộng scope. Nếu nó mâu thuẫn với Product Vision, Roadmap hoặc ADR mới hơn thì nguồn canonical thắng. Tài liệu `09` ghi lại các quyết định product owner cho đợt redesign; [ADR 0032](../decisions/0032-booking-deposit-insurance-and-owner-lite.md) đã hợp nhất các xung đột trong mục 13. Release gate pháp lý/thanh toán/bảo hiểm vẫn phải hoàn tất trước khi bật logic tiền thật.
+Liên quan ngoài thư mục này:
 
-## Bộ bàn giao designer
+- [`../decisions/`](../decisions/README.md) — ADR; ADR Accepted mới hơn thắng trong đúng phạm vi ghi đè.
+- [`../completion-roadmap.md`](../completion-roadmap.md) — đang ở đâu, release gate, việc tiếp theo.
+- [`../design-token-map.md`](../design-token-map.md) — bảng token và ánh xạ AntD.
+- [`../qa-accounts.md`](../qa-accounts.md) — giới thiệu nhanh, đường dẫn staging từng site và tài khoản demo (không chứa mật khẩu).
+- Kỹ sư frontend: skill `.claude/skills/frontend-feature` và `.claude/skills/i18n`.
 
-1. Đọc `02`, `07` và `09` để hiểu sản phẩm, IA và quy tắc.
-2. Mở workbook Excel để lọc theo surface, actor, status và priority.
-3. Dán prompt `11` vào FigJam AI để dựng board sitemap + user flow.
-4. Dùng `01`, `05`, `06`, `08` và `10` khi chuyển flow thành UI và handoff kỹ thuật.
+Tài liệu chuyên đề không tự mở rộng scope. Mâu thuẫn với Product Vision, roadmap hoặc ADR mới hơn thì
+nguồn đó thắng. Release gate pháp lý/thanh toán/bảo hiểm vẫn phải hoàn tất trước khi bật logic tiền thật.
 
-Workbook được sinh lại trên Windows có Microsoft Excel bằng lệnh:
+## Bắt đầu cho designer
 
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\design-handoff\generate-xeprime-design-handoff.ps1
-```
+1. Đọc `02` để hiểu sản phẩm và hai tuyến người bán, rồi `07` để biết ai ở site nào, thấy menu gì.
+2. Mở staging theo [`../qa-accounts.md`](../qa-accounts.md) và đi thử từng site bằng đúng loại tài khoản.
+3. Thiết kế theo `01` (thương hiệu) và `08` (nguyên tắc, mẫu, ràng buộc); chạy checklist `08` §14
+   trước khi giao cho kỹ sư.
+4. Cần trạng thái, quyền, token hay mục menu mới: theo `08` §13.7 — không tự đặt trong mockup.
