@@ -72,6 +72,40 @@ describe('vehicleFormSchema.transmission', () => {
     ).toBe('transmissionIncompatible');
   });
 
+  /*
+   * Ma trận hộp số × nguồn năng lượng của Ô TÔ (06/10/2026). Mỗi dòng là một tổ hợp form có thể
+   * gửi; "invalid" nghĩa là form chặn tại chỗ bằng mã dịch được, và backend từ chối bằng
+   * `VEHICLE_TRANSMISSION_INCOMPATIBLE`.
+   */
+  it.each([
+    ['gasoline', 'manual', true],
+    ['gasoline', 'automatic', true],
+    ['gasoline', 'cvt', true],
+    ['gasoline', 'dct', true],
+    ['gasoline', 'amt', true],
+    ['diesel', 'automatic', true],
+    ['diesel', 'manual', true],
+    ['electric', 'direct_drive', true],
+    ['electric', 'automatic', false],
+    ['electric', 'manual', false],
+    ['electric', 'cvt', false],
+    ['electric', 'other', false],
+    ['hybrid', 'e_cvt', true],
+    ['hybrid', 'automatic', true],
+    ['hybrid', 'dct', true],
+    ['hybrid', 'cvt', false],
+    ['hybrid', 'manual', false],
+    ['plug_in_hybrid', 'e_cvt', true],
+    ['plug_in_hybrid', 'automatic', true],
+    ['plug_in_hybrid', 'direct_drive', false],
+    ['gasoline', 'direct_drive', false],
+    ['gasoline', 'e_cvt', false],
+  ])('ô tô %s + %s → hợp lệ: %s', async (fuelType, transmission, valid) => {
+    expect(await transmissionError({ vehicleType: 'car', fuelType, transmission })).toBe(
+      valid ? undefined : 'transmissionIncompatible',
+    );
+  });
+
   it('bỏ trống vẫn hợp lệ — bắt buộc hay không là việc của checklist lên chợ', async () => {
     expect(
       await transmissionError({ vehicleType: 'car', fuelType: 'gasoline', transmission: null }),

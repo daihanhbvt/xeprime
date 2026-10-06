@@ -2,14 +2,16 @@
 
 import { MOTORBIKE_CATEGORY_VALUES, vehicleFieldPolicy } from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
-import { Col, Row } from 'antd';
+import { Col, Form, Radio, Row } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, type ReactNode } from 'react';
-import { useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
+import { useController, useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
 
 import { NumberField } from '@/components/form/NumberField';
 import { SelectField } from '@/components/form/SelectField';
 import { useDomainLabel } from '@/i18n/use-domain-label';
+
+import { useCatalogModelSpec } from '../hooks/use-catalog-model-spec';
 
 interface VehicleClassificationFieldsProps {
   control: Control<VehicleFormValues>;
@@ -43,9 +45,16 @@ export function VehicleClassificationFields({
   required = false,
 }: VehicleClassificationFieldsProps) {
   const t = useTranslations('Vehicles.form.specs');
+  const tCommon = useTranslations('Common');
   const domainLabel = useDomainLabel();
   const fuelType = useWatch({ control, name: 'fuelType' });
   const policy = vehicleFieldPolicy(vehicleType, fuelType);
+  const spec = useCatalogModelSpec(control, vehicleType);
+  const seatRequired = required && policy.seatCount === 'required';
+  const seatCount = useWatch({ control, name: 'seatCount' });
+  // Khoá CHỈ khi giá trị đã khớp mẫu: xe cũ lưu lệch (VF 5 mà ghi 4 chỗ) vẫn phải sửa lại được.
+  const seatLocked =
+    Boolean(spec.model) && spec.seats.kind === 'fixed' && seatCount === spec.seats.value;
 
   const categoryOptions = useMemo(
     () =>
@@ -71,16 +80,39 @@ export function VehicleClassificationFields({
     <Row gutter={16}>
       {policy.seatCount !== 'hidden' ? (
         <Col xs={24} sm={12}>
-          <NumberField
-            control={control}
-            name="seatCount"
-            label={t('seatCount')}
-            required={required && policy.seatCount === 'required'}
-            placeholder={t('seatPlaceholder')}
-            min={1}
-            max={64}
-            disabled={disabled}
-          />
+          {/*
+            Số chỗ theo MẪU XE đang chọn (`catalogSpecRule`): một cấu hình ⇒ điền sẵn và khoá;
+            nhiều cấu hình ⇒ chỉ chọn trong đó; mẫu chưa khai ⇒ nhập tự do như trước.
+          */}
+          {spec.model && spec.seats.kind === 'choice' ? (
+            <SeatChoiceField
+              control={control}
+              label={t('seatCount')}
+              required={seatRequired}
+              values={spec.seats.values}
+              disabled={disabled}
+              help={t('specChoiceFromModel', {
+                model: spec.model.label,
+                values: spec.seats.values.map((count) => tCommon('units.seat', { count })).join(', '),
+              })}
+            />
+          ) : (
+            <NumberField
+              control={control}
+              name="seatCount"
+              label={t('seatCount')}
+              required={seatRequired}
+              placeholder={t('seatPlaceholder')}
+              min={1}
+              max={64}
+              disabled={disabled || seatLocked}
+              help={
+                seatLocked && spec.model
+                  ? t('specFromModel', { model: spec.model.label })
+                  : undefined
+              }
+            />
+          )}
         </Col>
       ) : null}
 
@@ -102,5 +134,51 @@ export function VehicleClassificationFields({
 
       {policy.bodyType !== 'hidden' && bodyTypePicker ? <Col xs={24}>{bodyTypePicker}</Col> : null}
     </Row>
+  );
+}
+
+/**
+ * Số chỗ khi mẫu xe có NHIỀU cấu hình (VF 9: 6 hoặc 7 chỗ) — nút chọn thay cho ô nhập số, để chủ
+ * xe không gõ được một con số mà dòng xe đó không có. Giá trị lưu vẫn là SỐ như ô nhập thường.
+ */
+function SeatChoiceField({
+  control,
+  label,
+  values,
+  required,
+  disabled,
+  help,
+}: {
+  control: Control<VehicleFormValues>;
+  label: string;
+  values: readonly number[];
+  required?: boolean;
+  disabled?: boolean;
+  help?: ReactNode;
+}) {
+  const tCommon = useTranslations('Common');
+  const { field, fieldState } = useController({ control, name: 'seatCount' });
+  const helpText = fieldState.error?.message ?? help;
+  // Giá trị ĐANG LƯU nằm ngoài các bản của mẫu (VF 9 ghi 4 chỗ) vẫn hiện thành một nút đã chọn —
+  // ô chọn không được giấu đúng con số nó sắp gửi đi (cùng luật với `FuelTypeSelect`).
+  const current = typeof field.value === 'number' ? field.value : null;
+  const shown = current != null && !values.includes(current) ? [...values, current] : values;
+
+  return (
+    <Form.Item
+      label={label}
+      required={required}
+      validateStatus={fieldState.error ? 'error' : ''}
+      help={helpText}
+    >
+      <Radio.Group
+        optionType="button"
+        value={field.value ?? undefined}
+        onChange={(e) => field.onChange(e.target.value as number)}
+        disabled={disabled}
+        aria-label={label}
+        options={shown.map((count) => ({ value: count, label: tCommon('units.seat', { count }) }))}
+      />
+    </Form.Item>
   );
 }

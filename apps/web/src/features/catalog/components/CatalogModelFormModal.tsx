@@ -3,45 +3,73 @@
 import {
   CATALOG_MARKET_STATUS,
   CATALOG_MARKET_STATUS_VALUES,
+  CATALOG_SEAT_COUNT_MAX,
+  CATALOG_SEAT_COUNT_MIN,
   FUEL_TYPE_VALUES,
   MOTORBIKE_CATEGORY_VALUES,
   TRANSMISSION_TYPE_EXT_VALUES,
   VEHICLE_TYPE,
+  catalogSpecRule,
   vehicleFuelTypesFor,
-  vehicleTransmissionTypesFor,
+  vehicleTransmissionTypesForFuels,
 } from '@xeprime/types';
 import { App } from 'antd';
 import { useTranslations } from 'next-intl';
-import { useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useEffect, useMemo, type ReactNode } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
 import * as yup from 'yup';
 
+import { CheckboxGroupField } from '@/components/form/CheckboxGroupField';
 import { DialogForm } from '@/components/form/DialogForm';
 import { NumberField } from '@/components/form/NumberField';
+import { RadioGroupField } from '@/components/form/RadioGroupField';
 import { SelectField } from '@/components/form/SelectField';
 import { SwitchField } from '@/components/form/SwitchField';
 import { TextField } from '@/components/form/TextField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
+import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
-import { getErrorMessage } from '@/services/api-client';
+import { useErrorMessage } from '@/i18n/use-error-message';
 
 import {
   useCreateCatalogModel,
   useUpdateCatalogModel,
   type CatalogModelAdmin,
 } from '../use-admin-catalog-models';
+import styles from './CatalogModelFormModal.module.css';
+
+/**
+ * Cấu hình chỗ ngồi đưa ra dạng ô tick — đủ cho xe du lịch, bán tải, MPV, xe khách cho thuê.
+ * Giá trị đang lưu mà không có trong danh sách (dữ liệu cũ, 34 chỗ…) vẫn được thêm vào lúc mở form.
+ */
+const COMMON_SEAT_COUNTS = [2, 4, 5, 6, 7, 8, 9, 12, 16, 29, 45] as const;
+
+/** Mảng rỗng ỔN ĐỊNH cho `useWatch` chưa có giá trị — `?? []` đổi identity mỗi render và kéo theo memo. */
+const NO_VALUES: never[] = [];
+
+const yearField = yup
+  .number()
+  .nullable()
+  .integer()
+  .min(1950, 'yearRange')
+  .max(2100, 'yearRange')
+  .default(null);
 
 const schema = yup.object({
   label: yup.string().trim().required('labelRequired').max(120),
-  marketStatus: yup.string().oneOf(CATALOG_MARKET_STATUS_VALUES).default('current'),
+  marketStatus: yup.string().oneOf(CATALOG_MARKET_STATUS_VALUES).default(CATALOG_MARKET_STATUS.CURRENT),
   motorbikeCategory: yup.string().oneOf(MOTORBIKE_CATEGORY_VALUES).nullable().default(null),
+  // Ô tick trả chuỗi; đổi sang số lúc gửi.
+  seatCounts: yup.array(yup.string().required()).default([]),
   fuelTypes: yup.array(yup.string().oneOf(FUEL_TYPE_VALUES).required()).default([]),
   transmissions: yup.array(yup.string().oneOf(TRANSMISSION_TYPE_EXT_VALUES).required()).default([]),
-  engineDisplacementCc: yup.number().nullable().min(1).default(null),
-  seatCount: yup.number().nullable().min(2).max(64).default(null),
-  yearFrom: yup.number().nullable().min(1950).max(2100).default(null),
-  yearTo: yup.number().nullable().min(1950).max(2100).default(null),
+  engineDisplacementCc: yup.number().nullable().integer().min(1).default(null),
+  yearFrom: yearField,
+  yearTo: yearField.test('yearOrder', 'yearOrder', function check(value) {
+    const from = this.parent.yearFrom as number | null;
+    return value == null || from == null || value >= from;
+  }),
   sourceUrl: yup.string().trim().max(2000).default(''),
   active: yup.boolean().default(true),
 });
@@ -51,12 +79,16 @@ type FormValues = yup.InferType<typeof schema>;
 /**
  * Thêm/sửa một MẪU XE của danh mục.
  *
- * Hai trường KHÔNG có trong form: hãng và loại phương tiện. Chúng là định danh nhóm của mẫu —
- * đổi hãng của một mẫu là biến chiếc xe của người khác thành xe hãng khác, nên cách đúng là tắt
- * mẫu cũ và tạo mẫu mới. Lúc TẠO, hai giá trị đó đến từ bộ lọc đang mở trên màn hình.
+ * Ba nhóm, theo đúng câu hỏi người quản trị đang trả lời:
+ *  1. Nhận dạng — tên, nhóm thị trường, năm bán.
+ *  2. Thông số ĐIỀN SẴN cho chủ xe — số chỗ (hoặc phân khúc), nguồn năng lượng, hộp số. Mỗi ô là
+ *     một mảng theo luật `catalogSpecRule`: một giá trị thì form đăng xe điền sẵn và khoá, nhiều
+ *     giá trị thì chủ xe chọn trong đó, trống thì chủ xe tự khai. Dòng "Chủ xe sẽ thấy" đọc ra
+ *     đúng luật đó để admin không phải đoán hệ quả của một ô tick.
+ *  3. Nguồn đối chiếu.
  *
- * Các ô hỏi đúng thứ có nghĩa với loại xe đang chọn: phân khúc chỉ hiện với xe máy, số chỗ chỉ
- * hiện với ô tô — cùng luật mà DB giữ bằng CHECK và backend kiểm bằng `assertShape`.
+ * Hãng và loại xe KHÔNG sửa được — chúng hiện thành dòng thông tin ở đầu form (bản cũ đặt câu
+ * "không đổi được" ngay dưới ô Tên mẫu, đọc lên như thể tên mẫu bị khoá).
  */
 export function CatalogModelFormModal({
   open,
@@ -68,7 +100,6 @@ export function CatalogModelFormModal({
 }: {
   open: boolean;
   vehicleType: string;
-  /** Hãng của mẫu sắp tạo — bắt buộc khi thêm mới (màn hình chặn nút nếu chưa chọn hãng). */
   brandKey: string;
   brandLabel: string;
   /** null = thêm mới. */
@@ -77,9 +108,12 @@ export function CatalogModelFormModal({
 }) {
   const t = useTranslations('AdminCatalog.models');
   const tForm = useTranslations('AdminCatalog.form');
+  const tCommon = useTranslations('Common');
   const resolver = useValidationResolver<FormValues>(schema, 'AdminCatalog.models');
   const domainLabel = useDomainLabel();
+  const fmt = useAppFormat();
   const { message } = App.useApp();
+  const errorMessage = useErrorMessage();
 
   const create = useCreateCatalogModel();
   const update = useUpdateCatalogModel();
@@ -87,17 +121,17 @@ export function CatalogModelFormModal({
   const pending = create.isPending || update.isPending;
   const isMotorbike = vehicleType === VEHICLE_TYPE.MOTORBIKE;
 
-  const { control, handleSubmit } = useForm<FormValues>({
+  const { control, handleSubmit, setValue, getValues } = useForm<FormValues>({
     resolver,
     defaultValues: model
       ? {
           label: model.label,
           marketStatus: model.marketStatus as FormValues['marketStatus'],
           motorbikeCategory: model.motorbikeCategory as FormValues['motorbikeCategory'],
+          seatCounts: model.seatCounts.map(String),
           fuelTypes: model.fuelTypes as FormValues['fuelTypes'],
           transmissions: model.transmissions as FormValues['transmissions'],
           engineDisplacementCc: model.engineDisplacementCc,
-          seatCount: model.seatCount,
           yearFrom: model.yearFrom,
           yearTo: model.yearTo,
           sourceUrl: model.sourceUrl ?? '',
@@ -107,10 +141,10 @@ export function CatalogModelFormModal({
           label: '',
           marketStatus: CATALOG_MARKET_STATUS.CURRENT,
           motorbikeCategory: null,
+          seatCounts: [],
           fuelTypes: [],
           transmissions: [],
           engineDisplacementCc: null,
-          seatCount: null,
           yearFrom: null,
           yearTo: null,
           sourceUrl: '',
@@ -118,6 +152,42 @@ export function CatalogModelFormModal({
         },
   });
 
+  const fuelTypes = useWatch({ control, name: 'fuelTypes' }) ?? NO_VALUES;
+  const transmissions = useWatch({ control, name: 'transmissions' }) ?? NO_VALUES;
+  const seatCounts = useWatch({ control, name: 'seatCounts' }) ?? NO_VALUES;
+  const motorbikeCategory = useWatch({ control, name: 'motorbikeCategory' });
+
+  // Hộp số lọc theo nguồn năng lượng đã tick — cùng hàm backend dùng để TỪ CHỐI tổ hợp sai.
+  const allowedTransmissions = useMemo(
+    () => vehicleTransmissionTypesForFuels(vehicleType, fuelTypes),
+    [vehicleType, fuelTypes],
+  );
+  const allowedKey = allowedTransmissions.join(',');
+
+  /*
+   * Đổi nguồn năng lượng ⇒ bỏ các hộp số không còn hợp lệ; còn đúng MỘT lựa chọn (xe điện ⇒
+   * 1 cấp) thì chọn luôn. Chạy theo danh sách cho phép, không theo từng lần tick hộp số, nên admin
+   * vẫn bỏ tick được lựa chọn duy nhất nếu muốn để trống.
+   */
+  useEffect(() => {
+    const current = getValues('transmissions') ?? [];
+    const kept = current.filter((v) => (allowedTransmissions as readonly string[]).includes(v));
+    const fuels = getValues('fuelTypes') ?? [];
+    const next =
+      fuels.length > 0 && allowedTransmissions.length === 1 ? [...allowedTransmissions] : kept;
+    if (next.length !== current.length || next.some((v, i) => v !== current[i])) {
+      setValue('transmissions', next as FormValues['transmissions'], { shouldDirty: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ phản ứng khi tập cho phép đổi
+  }, [allowedKey]);
+
+  const seatOptions = useMemo(() => {
+    const values = new Set<number>([...COMMON_SEAT_COUNTS, ...(model?.seatCounts ?? [])]);
+    return [...values]
+      .filter((n) => n >= CATALOG_SEAT_COUNT_MIN && n <= CATALOG_SEAT_COUNT_MAX)
+      .sort((a, b) => a - b)
+      .map((n) => ({ value: String(n), label: String(n) }));
+  }, [model?.seatCounts]);
   const marketStatusOptions = useMemo(
     () =>
       CATALOG_MARKET_STATUS_VALUES.map((value) => ({
@@ -134,8 +204,6 @@ export function CatalogModelFormModal({
       })),
     [domainLabel],
   );
-  // Nguồn năng lượng và truyền động lọc theo LOẠI XE — cùng hàm mà form đăng xe dùng, nên admin
-  // không tạo được một mẫu mang tổ hợp mà chính form đăng xe sẽ không bao giờ đưa ra.
   const fuelOptions = useMemo(
     () =>
       vehicleFuelTypesFor(vehicleType).map((value) => ({
@@ -146,22 +214,57 @@ export function CatalogModelFormModal({
   );
   const transmissionOptions = useMemo(
     () =>
-      vehicleTransmissionTypesFor(vehicleType, null).map((value) => ({
+      allowedTransmissions.map((value) => ({
         value,
         label: domainLabel('transmissionType', value),
       })),
-    [domainLabel, vehicleType],
+    [domainLabel, allowedTransmissions],
   );
 
+  const preview = [
+    isMotorbike
+      ? {
+          key: 'category',
+          label: t('motorbikeCategory'),
+          values: motorbikeCategory ? [domainLabel('motorbikeCategory', motorbikeCategory)] : [],
+        }
+      : {
+          key: 'seats',
+          label: t('seatCounts'),
+          values: [...seatCounts]
+            .map(Number)
+            .sort((a, b) => a - b)
+            .map((count) => tCommon('units.seat', { count })),
+        },
+    {
+      key: 'fuel',
+      label: t('fuelTypes'),
+      values: fuelTypes.map((v) => domainLabel('fuelType', v)),
+    },
+    {
+      key: 'transmission',
+      label: t('transmissions'),
+      values: transmissions.map((v) => domainLabel('transmissionType', v)),
+    },
+  ];
+
+  function describeRule(values: string[]): string {
+    const rule = catalogSpecRule(values);
+    if (rule.kind === 'fixed') return t('preview.fixed', { value: rule.value });
+    if (rule.kind === 'choice') return t('preview.choice', { values: rule.values.join(', ') });
+    return t('preview.free');
+  }
+
   const onSubmit = handleSubmit((values) => {
+    if (pending) return;
     const shared = {
       label: values.label.trim(),
       marketStatus: values.marketStatus,
       motorbikeCategory: isMotorbike ? (values.motorbikeCategory ?? null) : null,
+      seatCounts: isMotorbike ? [] : (values.seatCounts ?? []).map(Number),
       fuelTypes: values.fuelTypes ?? [],
       transmissions: values.transmissions ?? [],
       engineDisplacementCc: values.engineDisplacementCc,
-      seatCount: isMotorbike ? null : values.seatCount,
       yearFrom: values.yearFrom,
       yearTo: values.yearTo,
       sourceUrl: values.sourceUrl?.trim() || null,
@@ -172,7 +275,7 @@ export function CatalogModelFormModal({
         message.success(isEdit ? t('updated') : t('created'));
         onClose();
       },
-      onError: (err: unknown) => message.error(getErrorMessage(err)),
+      onError: (err: unknown) => message.error(errorMessage(err)),
     };
     if (model) update.mutate({ id: model.id, ...shared }, done);
     else create.mutate({ brandKey, vehicleType, ...shared }, done);
@@ -180,28 +283,62 @@ export function CatalogModelFormModal({
 
   return (
     <ResponsiveDialog
-      title={isEdit ? t('editTitle', { label: model?.label ?? '' }) : t('createTitle')}
+      title={isEdit ? t('editTitle', { label: model?.label ?? '' }) : t('createTitle', { brand: brandLabel })}
       open={open}
       onClose={onClose}
+      size="lg"
       okText={isEdit ? tForm('save') : tForm('add')}
       onOk={() => void onSubmit()}
       confirmLoading={pending}
     >
+      <div className={styles.context}>
+        <dl className={styles.facts}>
+          <Fact label={t('context.brand')}>{brandLabel}</Fact>
+          <Fact label={t('context.vehicleType')}>{domainLabel('vehicleType', vehicleType)}</Fact>
+          {model ? (
+            <Fact label={t('context.key')}>
+              <code className={styles.code}>{model.key}</code>
+            </Fact>
+          ) : null}
+        </dl>
+        <p className={styles.contextHelp}>{t('context.help')}</p>
+      </div>
+
       <DialogForm onSubmit={onSubmit} labelWidth="md">
+        <h3 className={styles.sectionTitle}>{t('sections.identity')}</h3>
         <TextField
           control={control}
           name="label"
           label={t('label')}
           placeholder={t('labelPlaceholder')}
-          help={isEdit ? t('brandHelp') : `${brandLabel} · ${t('labelHelp')}`}
+          help={t('labelHelp')}
+          required
         />
-        <SelectField
+        <RadioGroupField
           control={control}
           name="marketStatus"
           label={t('marketStatus')}
           options={marketStatusOptions}
           help={t('marketStatusHelp')}
         />
+        <NumberField
+          control={control}
+          name="yearFrom"
+          label={t('yearFrom')}
+          min={1950}
+          max={2100}
+        />
+        <NumberField
+          control={control}
+          name="yearTo"
+          label={t('yearTo')}
+          min={1950}
+          max={2100}
+          help={t('yearsHelp')}
+        />
+
+        <h3 className={styles.sectionTitle}>{t('sections.specs')}</h3>
+        <p className={styles.sectionHint}>{t('sections.specsHint')}</p>
         {isMotorbike ? (
           <SelectField
             control={control}
@@ -212,29 +349,28 @@ export function CatalogModelFormModal({
             allowClear
           />
         ) : (
-          <NumberField
+          <CheckboxGroupField
             control={control}
-            name="seatCount"
-            label={t('seatCount')}
-            help={t('seatCountHelp')}
-            min={2}
-            max={64}
+            name="seatCounts"
+            label={t('seatCounts')}
+            options={seatOptions}
+            vertical={false}
           />
         )}
-        <SelectField
+        <CheckboxGroupField
           control={control}
           name="fuelTypes"
           label={t('fuelTypes')}
           options={fuelOptions}
-          help={t('fuelTypesHelp')}
-          mode="multiple"
+          vertical={false}
         />
-        <SelectField
+        <CheckboxGroupField
           control={control}
           name="transmissions"
           label={t('transmissions')}
           options={transmissionOptions}
-          mode="multiple"
+          help={t('transmissionsHelp')}
+          vertical={false}
         />
         <NumberField
           control={control}
@@ -243,14 +379,29 @@ export function CatalogModelFormModal({
           help={t('engineDisplacementHelp')}
           min={1}
         />
-        <NumberField control={control} name="yearFrom" label={t('yearFrom')} min={1950} max={2100} />
-        <NumberField control={control} name="yearTo" label={t('yearTo')} min={1950} max={2100} />
+
+        <div className={styles.preview} aria-live="polite">
+          <span className={styles.previewTitle}>{t('preview.title')}</span>
+          <ul className={styles.previewList}>
+            {preview.map((row) => (
+              <li key={row.key}>
+                <span className={styles.previewLabel}>{row.label}:</span> {describeRule(row.values)}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <h3 className={styles.sectionTitle}>{t('sections.source')}</h3>
         <TextField
           control={control}
           name="sourceUrl"
           label={t('sourceUrl')}
           placeholder={t('sourceUrlPlaceholder')}
-          help={t('sourceUrlHelp')}
+          help={
+            model?.verifiedAt
+              ? `${t('verifiedAt', { date: fmt.date(model.verifiedAt) })}. ${t('sourceUrlHelp')}`
+              : t('sourceUrlHelp')
+          }
         />
         <SwitchField
           control={control}
@@ -260,5 +411,14 @@ export function CatalogModelFormModal({
         />
       </DialogForm>
     </ResponsiveDialog>
+  );
+}
+
+function Fact({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className={styles.fact}>
+      <dt>{label}</dt>
+      <dd>{children}</dd>
+    </div>
   );
 }

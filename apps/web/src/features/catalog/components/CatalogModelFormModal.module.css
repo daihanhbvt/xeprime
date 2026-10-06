@@ -1,0 +1,88 @@
+/* Dòng thông tin cố định của mẫu: hãng · loại xe · mã — đọc được, không sửa được. */
+.context {
+  margin-bottom: var(--xp-space-md);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-muted);
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  gap: var(--xp-space-xs) var(--xp-space-lg);
+}
+
+.fact {
+  display: flex;
+  align-items: baseline;
+  gap: var(--xp-space-xs);
+}
+
+.fact dt {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.fact dd {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.code {
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.contextHelp {
+  margin: var(--xp-space-xs) 0 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.sectionTitle {
+  margin: var(--xp-space-md) 0 var(--xp-space-sm);
+  padding-top: var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border-secondary);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.sectionTitle:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.sectionHint {
+  margin: calc(-1 * var(--xp-space-xs)) 0 var(--xp-space-md);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+/* "Chủ xe sẽ thấy" — hệ quả của các ô tick, đọc ra bằng lời. */
+.preview {
+  margin-bottom: var(--xp-space-md);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px dashed var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-info-bg);
+}
+
+.previewTitle {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.previewList {
+  margin: var(--xp-space-xs) 0 0;
+  padding-left: var(--xp-space-md);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.previewLabel {
+  color: var(--xp-color-text);
+}

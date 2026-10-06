@@ -6,17 +6,22 @@ import {
 } from '@nestjs/common';
 import { newId } from '@xeprime/prisma';
 import {
+  API_ERROR_CODE,
   CATALOG_MARKET_STATUS,
   VEHICLE_TYPE,
   catalogModelKey,
+  catalogModelMissingSpecs,
   isMotorbikeCategory,
   normalizeCatalogSearch,
+  vehicleFuelTypesFor,
+  vehicleTransmissionTypesForFuels,
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import type {
   CatalogModelAdminDto,
   CatalogModelAdminQueryDto,
+  CatalogModelBrandSummaryDto,
   CatalogModelDto,
   CatalogModelQueryDto,
   CreateCatalogModelDto,
@@ -34,7 +39,7 @@ const SELECT = {
   fuelTypes: true,
   transmissions: true,
   engineDisplacementCc: true,
-  seatCount: true,
+  seatCounts: true,
   yearFrom: true,
   yearTo: true,
   active: true,
@@ -42,11 +47,33 @@ const SELECT = {
 
 const ADMIN_SELECT = { ...SELECT, sourceUrl: true, verifiedAt: true } as const;
 
+/** Mẫu chưa bị xoá mềm — mọi đường đọc đều đi qua điều kiện này. */
+const NOT_DELETED = { deletedAt: null } as const;
+
 /**
  * Trần số mẫu trả về một lượt. Một hãng đông mẫu nhất hiện có ~36 dòng, nên 200 là thoải mái cho
  * cả trường hợp "mọi hãng của một loại xe"; ô tìm kiếm thu hẹp phần còn lại.
  */
 const MAX_MODELS = 200;
+
+/** Thông số mà một lượt ghi có thể đổi — gom lại để create/update/restore dùng chung một phép kiểm. */
+interface SpecInput {
+  motorbikeCategory: string | null;
+  seatCounts: number[];
+  fuelTypes: string[];
+  transmissions: string[];
+  yearFrom: number | null;
+  yearTo: number | null;
+}
+
+/** Bỏ trùng và sắp tăng dần — "7, 5, 7" và "5, 7" là cùng một mẫu, phải lưu cùng một mảng. */
+function uniqueSortedNumbers(values: readonly number[] | undefined): number[] {
+  return [...new Set(values ?? [])].sort((a, b) => a - b);
+}
+
+function uniqueStrings(values: readonly string[] | undefined): string[] {
+  return [...new Set(values ?? [])];
+}
 
 /**
  * MẪU XE của danh mục — đường ghi DUY NHẤT của `vehicle_catalog_models`.
@@ -92,58 +119,131 @@ export class CatalogModelService {
     }));
   }
 
+  /**
+   * Số mẫu theo HÃNG của một loại xe — cột trái của màn quản trị.
+   *
+   * Đọc đúng các cột cần để đếm rồi gộp ở tầng app: "thiếu thông số" là một luật trên bốn cột mảng
+   * (`catalogModelMissingSpecs`) mà viết lại bằng SQL là tạo bản thứ hai của cùng một luật. Bảng
+   * chỉ vài trăm dòng mỗi loại xe, nên một lượt quét là đủ rẻ.
+   */
+  async brandSummary(vehicleType: string): Promise<CatalogModelBrandSummaryDto[]> {
+    const rows = await this.prisma.vehicleCatalogModel.findMany({
+      where: { vehicleType, ...NOT_DELETED },
+      select: {
+        brandKey: true,
+        vehicleType: true,
+        active: true,
+        seatCounts: true,
+        motorbikeCategory: true,
+        fuelTypes: true,
+        transmissions: true,
+      },
+    });
+
+    const byBrand = new Map<string, CatalogModelBrandSummaryDto>();
+    for (const row of rows) {
+      const entry = byBrand.get(row.brandKey) ?? {
+        brandKey: row.brandKey,
+        total: 0,
+        active: 0,
+        missingSpecs: 0,
+      };
+      entry.total += 1;
+      if (row.active) entry.active += 1;
+      if (catalogModelMissingSpecs(row).length > 0) entry.missingSpecs += 1;
+      byBrand.set(row.brandKey, entry);
+    }
+    return [...byBrand.values()];
+  }
+
+  /**
+   * Thêm mẫu. Nếu đúng mẫu đó (cùng khoá hoặc cùng tên trong hãng) từng bị XOÁ MỀM, khôi phục
+   * dòng cũ với dữ liệu mới thay vì báo trùng: với admin, "thêm lại một mẫu đã xoá" là thêm mẫu.
+   */
   async create(actorUserId: string, dto: CreateCatalogModelDto): Promise<CatalogModelDto> {
     await this.assertBrandExists(dto.brandKey, dto.vehicleType);
-    this.assertShape(dto.vehicleType, dto.motorbikeCategory ?? null, dto.seatCount ?? null);
-
-    const key = catalogModelKey(dto.brandKey, dto.label);
-    const duplicate = await this.prisma.vehicleCatalogModel.findFirst({
-      where: {
-        OR: [{ key }, { brandKey: dto.brandKey, vehicleType: dto.vehicleType, label: dto.label.trim() }],
-      },
-      select: { id: true },
+    const label = dto.label.trim();
+    const spec = this.validateSpec(dto.vehicleType, {
+      motorbikeCategory: dto.motorbikeCategory ?? null,
+      seatCounts: uniqueSortedNumbers(dto.seatCounts),
+      fuelTypes: uniqueStrings(dto.fuelTypes),
+      transmissions: uniqueStrings(dto.transmissions),
+      yearFrom: dto.yearFrom ?? null,
+      yearTo: dto.yearTo ?? null,
     });
-    if (duplicate) {
-      throw new ConflictException(`Mẫu xe "${dto.label}" của hãng này đã có trong danh mục`);
-    }
+
+    const key = catalogModelKey(dto.brandKey, label);
+    // Có thể khớp HAI dòng (một theo `key`, một theo tên) — dòng nào còn sống thì là trùng thật;
+    // chỉ khi mọi dòng khớp đều đã xoá mới khôi phục.
+    const matches = await this.prisma.vehicleCatalogModel.findMany({
+      where: {
+        OR: [{ key }, { brandKey: dto.brandKey, vehicleType: dto.vehicleType, label }],
+      },
+      select: { id: true, deletedAt: true },
+    });
+    if (matches.some((m) => !m.deletedAt)) throw this.duplicate(label);
+    if (matches.length > 1) throw this.duplicate(label);
+    const existing = matches[0] ?? null;
+
+    const sourceUrl = dto.sourceUrl?.trim() || null;
+    const data = {
+      label,
+      marketStatus: dto.marketStatus ?? CATALOG_MARKET_STATUS.CURRENT,
+      ...spec,
+      engineDisplacementCc: dto.engineDisplacementCc ?? null,
+      sourceUrl,
+      // Người thêm tay là người đang nhìn nguồn — ngày xác minh là hôm nay, không phải một
+      // ô để trống rồi không ai biết dữ liệu cũ tới đâu.
+      verifiedAt: sourceUrl ? new Date() : null,
+      active: dto.active ?? true,
+      adminEditedAt: new Date(),
+    };
 
     const row = await this.prisma.$transaction(async (tx) => {
-      const created = await tx.vehicleCatalogModel.create({
-        data: {
-          id: newId(),
-          key,
-          label: dto.label.trim(),
-          brandKey: dto.brandKey,
-          vehicleType: dto.vehicleType,
-          marketStatus: dto.marketStatus ?? CATALOG_MARKET_STATUS.CURRENT,
-          motorbikeCategory: dto.motorbikeCategory ?? null,
-          fuelTypes: dto.fuelTypes ?? [],
-          transmissions: dto.transmissions ?? [],
-          engineDisplacementCc: dto.engineDisplacementCc ?? null,
-          seatCount: dto.seatCount ?? null,
-          yearFrom: dto.yearFrom ?? null,
-          yearTo: dto.yearTo ?? null,
-          sourceUrl: dto.sourceUrl?.trim() || null,
-          // Người thêm tay là người đang nhìn nguồn — ngày xác minh là hôm nay, không phải một
-          // ô để trống rồi không ai biết dữ liệu cũ tới đâu.
-          verifiedAt: dto.sourceUrl?.trim() ? new Date() : null,
-          sortOrder: await this.nextSortOrder(dto.brandKey, dto.vehicleType),
-          active: dto.active ?? true,
-        },
-        select: SELECT,
-      });
+      const saved = existing
+        ? await tx.vehicleCatalogModel.update({
+            where: { id: existing.id },
+            // `key` không mang loại xe, nên dòng đã xoá có thể là mẫu xe máy cùng tên mà nay admin
+            // thêm cho ô tô. Ghi lại hãng + loại xe để CHECK và danh sách cùng nói một điều; dòng đã
+            // xoá không có xe nào gắn (xoá bị chặn khi còn xe), nên đổi loại không động tới ai.
+            data: {
+              ...data,
+              brandKey: dto.brandKey,
+              vehicleType: dto.vehicleType,
+              deletedAt: null,
+              sortOrder: await this.nextSortOrder(dto.brandKey, dto.vehicleType),
+            },
+            select: SELECT,
+          })
+        : await tx.vehicleCatalogModel.create({
+            data: {
+              id: newId(),
+              key,
+              brandKey: dto.brandKey,
+              vehicleType: dto.vehicleType,
+              ...data,
+              sortOrder: await this.nextSortOrder(dto.brandKey, dto.vehicleType),
+            },
+            select: SELECT,
+          });
       await this.audit.record(
         {
           actorUserId,
           actorScope: 'platform',
-          action: 'catalog.model.create',
+          action: existing ? 'catalog.model.restore' : 'catalog.model.create',
           targetType: 'vehicle_catalog_model',
-          targetId: created.id,
-          after: { key, label: created.label, brandKey: dto.brandKey, vehicleType: dto.vehicleType },
+          targetId: saved.id,
+          after: {
+            key: saved.key,
+            label: saved.label,
+            brandKey: dto.brandKey,
+            vehicleType: dto.vehicleType,
+            ...spec,
+          },
         },
         tx,
       );
-      return created;
+      return saved;
     });
     return row as CatalogModelDto;
   }
@@ -154,34 +254,47 @@ export class CatalogModelService {
     dto: UpdateCatalogModelDto,
   ): Promise<CatalogModelDto> {
     const current = await this.load(id);
-    this.assertShape(
-      current.vehicleType,
-      'motorbikeCategory' in dto ? (dto.motorbikeCategory ?? null) : current.motorbikeCategory,
-      'seatCount' in dto ? (dto.seatCount ?? null) : current.seatCount,
-    );
+    // Kiểm trên trạng thái SAU khi gộp: đổi nguồn năng lượng mà giữ hộp số cũ phải bị bắt, dù
+    // request không gửi lại `transmissions`.
+    const spec = this.validateSpec(current.vehicleType, {
+      motorbikeCategory:
+        'motorbikeCategory' in dto ? (dto.motorbikeCategory ?? null) : current.motorbikeCategory,
+      seatCounts:
+        dto.seatCounts !== undefined ? uniqueSortedNumbers(dto.seatCounts) : current.seatCounts,
+      fuelTypes: dto.fuelTypes !== undefined ? uniqueStrings(dto.fuelTypes) : current.fuelTypes,
+      transmissions:
+        dto.transmissions !== undefined ? uniqueStrings(dto.transmissions) : current.transmissions,
+      yearFrom: 'yearFrom' in dto ? (dto.yearFrom ?? null) : current.yearFrom,
+      yearTo: 'yearTo' in dto ? (dto.yearTo ?? null) : current.yearTo,
+    });
+
+    const label = dto.label?.trim();
+    if (label && label !== current.label) await this.assertLabelFree(current, label);
+
+    /*
+     * Ngày đối chiếu chỉ đổi khi NGUỒN đổi. Form luôn gửi kèm `sourceUrl`, nên đóng dấu "hôm nay"
+     * mỗi lần lưu thì bật/tắt một mẫu cũng biến nó thành "vừa kiểm tra" — xoá mất thứ duy nhất
+     * nói được dữ liệu này cũ tới đâu.
+     */
+    const nextSourceUrl = 'sourceUrl' in dto ? dto.sourceUrl?.trim() || null : current.sourceUrl;
+    const sourceChanged = nextSourceUrl !== current.sourceUrl;
 
     const row = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.vehicleCatalogModel.update({
         where: { id },
         data: {
-          ...(dto.label !== undefined ? { label: dto.label.trim() } : {}),
+          ...(label ? { label } : {}),
           ...(dto.marketStatus !== undefined ? { marketStatus: dto.marketStatus } : {}),
-          ...('motorbikeCategory' in dto
-            ? { motorbikeCategory: dto.motorbikeCategory ?? null }
-            : {}),
-          ...(dto.fuelTypes !== undefined ? { fuelTypes: dto.fuelTypes } : {}),
-          ...(dto.transmissions !== undefined ? { transmissions: dto.transmissions } : {}),
+          ...spec,
           ...('engineDisplacementCc' in dto
             ? { engineDisplacementCc: dto.engineDisplacementCc ?? null }
             : {}),
-          ...('seatCount' in dto ? { seatCount: dto.seatCount ?? null } : {}),
-          ...('yearFrom' in dto ? { yearFrom: dto.yearFrom ?? null } : {}),
-          ...('yearTo' in dto ? { yearTo: dto.yearTo ?? null } : {}),
-          ...('sourceUrl' in dto
-            ? { sourceUrl: dto.sourceUrl?.trim() || null, verifiedAt: dto.sourceUrl?.trim() ? new Date() : null }
+          ...(sourceChanged
+            ? { sourceUrl: nextSourceUrl, verifiedAt: nextSourceUrl ? new Date() : null }
             : {}),
           ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
           ...(dto.active !== undefined ? { active: dto.active } : {}),
+          adminEditedAt: new Date(),
         },
         select: SELECT,
       });
@@ -192,8 +305,8 @@ export class CatalogModelService {
           action: 'catalog.model.update',
           targetType: 'vehicle_catalog_model',
           targetId: id,
-          before: { label: current.label, active: current.active, marketStatus: current.marketStatus },
-          after: { label: updated.label, active: updated.active, marketStatus: updated.marketStatus },
+          before: this.auditShape(current),
+          after: this.auditShape({ ...updated, sourceUrl: nextSourceUrl }),
         },
         tx,
       );
@@ -203,22 +316,32 @@ export class CatalogModelService {
   }
 
   /**
-   * Xoá hẳn — chỉ khi chưa xe nào gắn. Đã có xe thì TẮT: xoá sẽ gỡ liên kết của xe người khác
-   * (FK `ON DELETE SET NULL`), và họ không hề biết mẫu xe của mình vừa biến mất khỏi danh mục.
+   * Xoá MỀM — chỉ khi chưa xe nào gắn. Đã có xe thì TẮT: gỡ mẫu khỏi danh mục khi xe của người
+   * khác còn trỏ vào là để họ mở form và thấy ô "Mẫu xe" của mình biến mất.
+   *
+   * Mềm chứ không cứng vì seed đồng bộ danh mục theo `key`: dòng biến mất thì lần chạy seed sau
+   * tạo lại đúng mẫu admin vừa gỡ.
    */
   async remove(actorUserId: string, id: string): Promise<void> {
     const current = await this.load(id);
-    const used = await this.prisma.vehicle.count({
-      where: { vehicleCatalogModelId: id, deletedAt: null },
-    });
-    if (used > 0) {
-      throw new ConflictException(
-        `Đang có ${used} xe gắn mẫu này — hãy tắt thay vì xoá để xe cũ vẫn giữ liên kết`,
-      );
-    }
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.vehicleCatalogModel.delete({ where: { id } });
+      // Khoá dòng mẫu rồi mới ĐẾM, trong cùng transaction: đếm ngoài thì một chiếc xe gắn vào giữa
+      // lúc đếm và lúc xoá sẽ trỏ vào một mẫu đã biến mất khỏi danh mục.
+      await tx.$queryRaw`SELECT id FROM vehicle_catalog_models WHERE id = ${id} FOR UPDATE`;
+      const used = await tx.vehicle.count({
+        where: { vehicleCatalogModelId: id, deletedAt: null },
+      });
+      if (used > 0) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.CATALOG_MODEL_IN_USE,
+          message: `Đang có ${used} xe gắn mẫu này — hãy tắt thay vì xoá để xe cũ vẫn giữ liên kết`,
+        });
+      }
+      await tx.vehicleCatalogModel.update({
+        where: { id },
+        data: { deletedAt: new Date(), active: false, adminEditedAt: new Date() },
+      });
       await this.audit.record(
         {
           actorUserId,
@@ -254,8 +377,8 @@ export class CatalogModelService {
   } | null> {
     if (!modelId) return null;
 
-    const model = await this.prisma.vehicleCatalogModel.findUnique({
-      where: { id: modelId },
+    const model = await this.prisma.vehicleCatalogModel.findFirst({
+      where: { id: modelId, ...NOT_DELETED },
       select: { id: true, label: true, brandKey: true, vehicleType: true, motorbikeCategory: true },
     });
     if (!model) {
@@ -288,6 +411,7 @@ export class CatalogModelService {
     const rows = await this.prisma.vehicleCatalogModel.findMany({
       where: {
         vehicleType: query.vehicleType,
+        ...NOT_DELETED,
         ...(query.brandKey ? { brandKey: query.brandKey } : {}),
         ...(opts.activeOnly ? { active: true } : {}),
       },
@@ -305,8 +429,8 @@ export class CatalogModelService {
 
     if (!query.includeId || filtered.some((r) => r.id === query.includeId)) return filtered;
 
-    const attached = await this.prisma.vehicleCatalogModel.findUnique({
-      where: { id: query.includeId },
+    const attached = await this.prisma.vehicleCatalogModel.findFirst({
+      where: { id: query.includeId, ...NOT_DELETED },
       select: ADMIN_SELECT,
     });
     // Mẫu đang gắn nhưng thuộc loại xe khác thì KHÔNG chèn vào: nó không phải lựa chọn hợp lệ
@@ -316,9 +440,29 @@ export class CatalogModelService {
   }
 
   private async load(id: string) {
-    const row = await this.prisma.vehicleCatalogModel.findUnique({ where: { id }, select: SELECT });
+    const row = await this.prisma.vehicleCatalogModel.findFirst({
+      where: { id, ...NOT_DELETED },
+      select: { ...SELECT, sourceUrl: true },
+    });
     if (!row) throw new NotFoundException('Không tìm thấy mẫu xe');
     return row;
+  }
+
+  /** Đổi tên không được đụng một mẫu khác của cùng hãng — kể cả mẫu đã xoá mềm (giữ unique). */
+  private async assertLabelFree(
+    current: { id: string; brandKey: string; vehicleType: string },
+    label: string,
+  ): Promise<void> {
+    const clash = await this.prisma.vehicleCatalogModel.findFirst({
+      where: {
+        brandKey: current.brandKey,
+        vehicleType: current.vehicleType,
+        label,
+        id: { not: current.id },
+      },
+      select: { id: true },
+    });
+    if (clash) throw this.duplicate(label);
   }
 
   /**
@@ -340,22 +484,78 @@ export class CatalogModelService {
     }
   }
 
-  /** Cùng hai luật mà DB đang giữ bằng CHECK — báo lỗi có nghĩa thay vì để Postgres ném 500. */
-  private assertShape(
-    vehicleType: string,
-    motorbikeCategory: string | null,
-    seatCount: number | null,
-  ): void {
+  /**
+   * Luật hình dạng của một mẫu — trả lại chính bộ thông số đã kiểm để nơi gọi ghi đúng thứ vừa kiểm.
+   *
+   * Các luật DB đang giữ bằng CHECK được kiểm lại ở đây để báo lỗi có nghĩa thay vì để Postgres ném
+   * 500. Hai luật còn lại (nguồn năng lượng theo loại xe, hộp số theo nguồn năng lượng) dùng CHÍNH
+   * các hàm mà form đăng xe dùng, nên danh mục không chứa được một tổ hợp form sẽ từ chối.
+   */
+  private validateSpec(vehicleType: string, spec: SpecInput): SpecInput {
     const isMotorbike = vehicleType === VEHICLE_TYPE.MOTORBIKE;
-    if (motorbikeCategory && !isMotorbike) {
-      throw new BadRequestException('Phân khúc xe máy chỉ áp dụng cho mẫu xe máy');
+    if (spec.motorbikeCategory && !isMotorbike) {
+      throw this.invalidSpec('Phân khúc xe máy chỉ áp dụng cho mẫu xe máy');
     }
-    if (motorbikeCategory && !isMotorbikeCategory(motorbikeCategory)) {
-      throw new BadRequestException(`Phân khúc xe máy không hợp lệ: ${motorbikeCategory}`);
+    if (spec.motorbikeCategory && !isMotorbikeCategory(spec.motorbikeCategory)) {
+      throw this.invalidSpec(`Phân khúc xe máy không hợp lệ: ${spec.motorbikeCategory}`);
     }
-    if (seatCount != null && isMotorbike) {
-      throw new BadRequestException('Số chỗ ngồi chỉ áp dụng cho mẫu ô tô');
+    if (spec.seatCounts.length > 0 && isMotorbike) {
+      throw this.invalidSpec('Số chỗ ngồi chỉ áp dụng cho mẫu ô tô');
     }
+
+    const allowedFuels = vehicleFuelTypesFor(vehicleType) as readonly string[];
+    const badFuel = spec.fuelTypes.find((fuel) => !allowedFuels.includes(fuel));
+    if (badFuel) {
+      throw this.invalidSpec(`Nguồn năng lượng "${badFuel}" không dùng cho loại xe này`);
+    }
+    const allowedTransmissions = vehicleTransmissionTypesForFuels(
+      vehicleType,
+      spec.fuelTypes,
+    ) as readonly string[];
+    const badTransmission = spec.transmissions.find((t) => !allowedTransmissions.includes(t));
+    if (badTransmission) {
+      throw this.invalidSpec(
+        `Hộp số "${badTransmission}" không khớp nguồn năng lượng đã chọn của mẫu xe`,
+      );
+    }
+
+    if (spec.yearFrom != null && spec.yearTo != null && spec.yearTo < spec.yearFrom) {
+      throw this.invalidSpec('Năm kết thúc bán phải sau năm bắt đầu bán');
+    }
+    return spec;
+  }
+
+  private duplicate(label: string): ConflictException {
+    return new ConflictException({
+      code: API_ERROR_CODE.CATALOG_MODEL_DUPLICATE,
+      message: `Mẫu xe "${label}" của hãng này đã có trong danh mục`,
+    });
+  }
+
+  private invalidSpec(message: string): BadRequestException {
+    return new BadRequestException({ code: API_ERROR_CODE.CATALOG_MODEL_SPEC_INVALID, message });
+  }
+
+  private auditShape(row: {
+    label: string;
+    active: boolean;
+    marketStatus: string;
+    seatCounts: number[];
+    fuelTypes: string[];
+    transmissions: string[];
+    motorbikeCategory: string | null;
+    sourceUrl: string | null;
+  }) {
+    return {
+      label: row.label,
+      active: row.active,
+      marketStatus: row.marketStatus,
+      seatCounts: row.seatCounts,
+      fuelTypes: row.fuelTypes,
+      transmissions: row.transmissions,
+      motorbikeCategory: row.motorbikeCategory,
+      sourceUrl: row.sourceUrl,
+    };
   }
 
   private async nextSortOrder(brandKey: string, vehicleType: string): Promise<number> {

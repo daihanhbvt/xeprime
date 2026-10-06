@@ -17,16 +17,22 @@
  *    không phải dung tích thực (SH350i là 330cc). Điền số từ tên xe là bịa một thông số kỹ thuật
  *    rồi đem gợi ý cho chủ xe. Để trống — chủ xe đọc đúng con số trên đăng ký xe, và admin bổ
  *    sung sau khi có bảng thông số chính hãng.
- *  - `seatCount` của ô tô: cùng lý do — cùng một dòng xe có bản 7 và bản 8 chỗ.
- *  - `fuelTypes` / `transmissions`: chỉ điền khi cả DÒNG xe chỉ có một lựa chọn (xe điện, xe
- *    hybrid). Xe xăng phổ thông có nhiều phiên bản số sàn/tự động nên để rỗng = "chưa xác minh",
- *    và form KHÔNG lọc theo nó (xem `vehicle_catalog_models.fuel_types` trong schema).
+ *  - `seatCounts` / `fuelTypes` / `transmissions` của ô tô: khai ở bảng riêng
+ *    `vehicle-catalog-specs.ts` (06/10/2026), dưới dạng HỢP mọi bản đã bán — một giá trị thì
+ *    form đăng xe điền sẵn và khoá, nhiều giá trị thì chủ xe chọn trong đó, không chắc thì bỏ trống.
  *
  * Hãng nào chưa đối chiếu được mẫu nào thì khai ở `UNVERIFIED_BRANDS` bên dưới: hãng vẫn có trong
  * danh mục để chủ xe chọn, nhưng danh sách mẫu để trống cho tới khi có người mở trang và đối
  * chiếu tay. Sau đợt rà 14/09/2026 thì danh sách đó rỗng.
  */
-import { CATALOG_MARKET_STATUS, MOTORBIKE_CATEGORY, VEHICLE_TYPE } from '@xeprime/types';
+import {
+  CATALOG_MARKET_STATUS,
+  MOTORBIKE_CATEGORY,
+  TRANSMISSION_TYPE_EXT,
+  VEHICLE_TYPE,
+} from '@xeprime/types';
+
+import { carSpecFor, catalogSpecKey, unmatchedCarSpecKeys } from './vehicle-catalog-specs';
 
 /**
  * Ngày đối chiếu MẶC ĐỊNH — đợt rà đầu tiên (Toyota, Honda, Hyundai, Mitsubishi, Yamaha).
@@ -150,6 +156,7 @@ export interface CatalogModelSeed {
   label: string;
   marketStatus?: string;
   motorbikeCategory?: string;
+  seatCounts?: readonly number[];
   fuelTypes?: readonly string[];
   transmissions?: readonly string[];
   sourceUrl: string;
@@ -419,6 +426,13 @@ const MOTORBIKE_MODELS: readonly CatalogModelSeed[] = [
  * Nguồn là chính trang sản phẩm hiện tại của hãng — nơi các dòng này đã BIẾN MẤT so với bản
  * trước đó; đó là bằng chứng "ngừng phân phối", không phải trí nhớ.
  */
+/** Xe máy đời trước của đợt 1 chỉ có tay ga hoặc côn tay — hộp số suy thẳng từ phân khúc hãng xếp. */
+function legacyBikeTransmission(category: string): string {
+  return category === M.SCOOTER
+    ? TRANSMISSION_TYPE_EXT.AUTOMATIC_CVT
+    : TRANSMISSION_TYPE_EXT.MANUAL_CLUTCH;
+}
+
 const LEGACY_MODELS: readonly CatalogModelSeed[] = [
   // Toyota: các dòng đã rời trang sản phẩm hiện tại (Innova Cross thay Innova, Avanza Premio thay
   // Avanza, Yaris Cross thay Yaris). Nhãn giữ nguyên tên thương mại — `marketStatus` đã nói nó
@@ -443,6 +457,7 @@ const LEGACY_MODELS: readonly CatalogModelSeed[] = [
     marketStatus: CATALOG_MARKET_STATUS.LEGACY,
     motorbikeCategory: category,
     fuelTypes: ['gasoline'],
+    transmissions: [legacyBikeTransmission(category)],
     sourceUrl: SOURCE.HONDA_BIKE,
   })),
   // Yamaha: Exciter 150 đã được thay bằng bản 155 VVA; Nouvo và Acruzo không còn trên trang xe.
@@ -457,6 +472,7 @@ const LEGACY_MODELS: readonly CatalogModelSeed[] = [
     marketStatus: CATALOG_MARKET_STATUS.LEGACY,
     motorbikeCategory: category,
     fuelTypes: ['gasoline'],
+    transmissions: [legacyBikeTransmission(category)],
     sourceUrl: SOURCE.YAMAHA,
   })),
 ];
@@ -830,8 +846,26 @@ const ROUND_2_LEGACY_MODELS: readonly CatalogModelSeed[] = [
   ),
 ];
 
-/** Toàn bộ mẫu xe của danh mục nền. */
-export const CATALOG_MODELS: readonly CatalogModelSeed[] = [
+/**
+ * Ghép thông số ô tô (`vehicle-catalog-specs.ts`) vào mẫu. Giá trị khai NGAY ở mẫu thắng — đó là
+ * thông tin của cả dòng (xe điện, "Kicks e-POWER") mà bảng thông số không cần nhắc lại.
+ */
+function withCarSpecs(model: CatalogModelSeed): CatalogModelSeed {
+  if (model.vehicleType !== VEHICLE_TYPE.CAR) return model;
+  const extra = carSpecFor(model.brandKey, model.label);
+  if (!extra) return model;
+  const seatCounts = model.seatCounts ?? extra.seatCounts;
+  const fuelTypes = model.fuelTypes ?? extra.fuelTypes;
+  const transmissions = model.transmissions ?? extra.transmissions;
+  return {
+    ...model,
+    ...(seatCounts ? { seatCounts } : {}),
+    ...(fuelTypes ? { fuelTypes } : {}),
+    ...(transmissions ? { transmissions } : {}),
+  };
+}
+
+const RAW_CATALOG_MODELS: readonly CatalogModelSeed[] = [
   ...CAR_MODELS,
   ...MOTORBIKE_MODELS,
   ...LEGACY_MODELS,
@@ -839,3 +873,11 @@ export const CATALOG_MODELS: readonly CatalogModelSeed[] = [
   ...ROUND_2_MOTORBIKE_MODELS,
   ...ROUND_2_LEGACY_MODELS,
 ];
+
+/** Toàn bộ mẫu xe của danh mục nền. */
+export const CATALOG_MODELS: readonly CatalogModelSeed[] = RAW_CATALOG_MODELS.map(withCarSpecs);
+
+/** Khoá thông số không khớp mẫu nào (gõ lệch tên) — `catalog-sync` in ra thay vì im lặng bỏ qua. */
+export const UNMATCHED_CAR_SPEC_KEYS: readonly string[] = unmatchedCarSpecKeys(
+  new Set(RAW_CATALOG_MODELS.map((m) => catalogSpecKey(m.brandKey, m.label))),
+);

@@ -15,7 +15,7 @@
  * xe có lên chợ được không. Bốn bản sao của câu trả lời là bốn cơ hội để giao diện nói "đủ rồi"
  * trong khi server nói "còn thiếu".
  */
-import { FUEL_TYPE, VEHICLE_TYPE, type VehicleType } from './vehicle';
+import { FUEL_TYPE, VEHICLE_TYPE, type VehicleType, vehicleFuelTypesFor } from './vehicle';
 
 // ── Phân khúc xe máy ─────────────────────────────────────────────────────────
 
@@ -111,10 +111,10 @@ export const TRANSMISSION_TYPE_EXT_LABEL: Readonly<Record<TransmissionTypeExt, s
   [TRANSMISSION_TYPE_EXT.AUTOMATIC]: 'Số tự động (AT)',
   [TRANSMISSION_TYPE_EXT.MANUAL]: 'Số sàn (MT)',
   [TRANSMISSION_TYPE_EXT.CVT]: 'CVT',
-  [TRANSMISSION_TYPE_EXT.E_CVT]: 'E-CVT (hybrid)',
+  [TRANSMISSION_TYPE_EXT.E_CVT]: 'e-CVT',
   [TRANSMISSION_TYPE_EXT.DCT]: 'Ly hợp kép (DCT)',
   [TRANSMISSION_TYPE_EXT.AMT]: 'Số sàn tự động (AMT)',
-  [TRANSMISSION_TYPE_EXT.DIRECT_DRIVE]: 'Truyền động một cấp (xe điện)',
+  [TRANSMISSION_TYPE_EXT.DIRECT_DRIVE]: '1 cấp (EV)',
   [TRANSMISSION_TYPE_EXT.AUTOMATIC_CVT]: 'Tay ga (CVT)',
   [TRANSMISSION_TYPE_EXT.SEMI_AUTOMATIC]: 'Xe số (bán tự động)',
   [TRANSMISSION_TYPE_EXT.MANUAL_CLUTCH]: 'Côn tay',
@@ -141,16 +141,31 @@ const MOTORBIKE_COMBUSTION_TRANSMISSIONS: readonly TransmissionTypeExt[] = [
   TRANSMISSION_TYPE_EXT.OTHER,
 ];
 
-const ELECTRIC_TRANSMISSIONS: readonly TransmissionTypeExt[] = [
-  TRANSMISSION_TYPE_EXT.DIRECT_DRIVE,
+/**
+ * Xe điện thuần: CHỈ truyền động một cấp — không có "Khác", vì không có lựa chọn nào khác để
+ * khai. Xe điện không có hộp số nhiều cấp; cho chọn "Số tự động" là mời chủ xe mô tả sai chiếc xe.
+ */
+const ELECTRIC_TRANSMISSIONS: readonly TransmissionTypeExt[] = [TRANSMISSION_TYPE_EXT.DIRECT_DRIVE];
+
+/**
+ * Ô tô hybrid và plug-in hybrid (06/10/2026): AT · e-CVT · DCT · Khác.
+ *
+ * Không chốt một kiểu duy nhất vì hệ truyền động hybrid rất khác nhau: Toyota/Lexus dùng e-CVT,
+ * Kia/Hyundai HEV dùng AT 6 cấp, vài hãng châu Âu dùng DCT. Không có CVT thường và số sàn — xe
+ * hybrid số sàn (mild hybrid như Suzuki Ertiga) khai "Khác".
+ */
+const CAR_HYBRID_TRANSMISSIONS: readonly TransmissionTypeExt[] = [
+  TRANSMISSION_TYPE_EXT.AUTOMATIC,
+  TRANSMISSION_TYPE_EXT.E_CVT,
+  TRANSMISSION_TYPE_EXT.DCT,
   TRANSMISSION_TYPE_EXT.OTHER,
 ];
 
 /**
  * Lựa chọn truyền động HỢP LỆ của một chiếc xe cụ thể.
  *
- * Chưa chọn nguồn năng lượng thì trả bộ đầy đủ của loại xe đó: danh sách rộng rồi thu hẹp khi
- * biết thêm là cách ít gây bực nhất — ẩn sạch cũng sai, mà hỏi sai cũng sai.
+ * Chưa chọn nguồn năng lượng thì trả bộ của xe xăng — loại phổ biến nhất; danh sách thu hẹp hay
+ * đổi khi biết thêm nguồn năng lượng, và form dọn giá trị đã chọn nếu nó không còn hợp lệ.
  */
 export function vehicleTransmissionTypesFor(
   vehicleType: string,
@@ -159,16 +174,59 @@ export function vehicleTransmissionTypesFor(
   const isMotorbike = vehicleType === VEHICLE_TYPE.MOTORBIKE;
   if (fuelType === FUEL_TYPE.ELECTRIC) return ELECTRIC_TRANSMISSIONS;
   if (isMotorbike) return MOTORBIKE_COMBUSTION_TRANSMISSIONS;
-  if (fuelType === FUEL_TYPE.HYBRID) {
-    return [
-      TRANSMISSION_TYPE_EXT.E_CVT,
-      TRANSMISSION_TYPE_EXT.CVT,
-      TRANSMISSION_TYPE_EXT.AUTOMATIC,
-      TRANSMISSION_TYPE_EXT.DCT,
-      TRANSMISSION_TYPE_EXT.OTHER,
-    ];
+  if (fuelType === FUEL_TYPE.HYBRID || fuelType === FUEL_TYPE.PLUG_IN_HYBRID) {
+    return CAR_HYBRID_TRANSMISSIONS;
   }
   return CAR_COMBUSTION_TRANSMISSIONS;
+}
+
+/**
+ * Hộp số CỐ ĐỊNH theo nguồn năng lượng — `null` khi người dùng phải tự chọn.
+ *
+ * Xe điện chỉ có một đáp án (`direct_drive`), nên không ai phải chọn: form khoá ô và điền sẵn,
+ * backend tự điền khi request để trống. Một nguồn cho cả hai phía để "tự điền" không thể lệch nhau.
+ */
+export function fixedTransmissionFor(
+  vehicleType: string,
+  fuelType: string | null | undefined,
+): TransmissionTypeExt | null {
+  const options = fuelType ? vehicleTransmissionTypesFor(vehicleType, fuelType) : [];
+  return options.length === 1 ? options[0]! : null;
+}
+
+/**
+ * Hộp số ĐÚNG sau khi biết (loại xe, nguồn năng lượng) — luật duy nhất mà form (web + native) và
+ * backend cùng áp khi nguồn năng lượng đổi, hay khi gặp một giá trị cũ đã lưu sai:
+ *  - có đáp án cố định (xe điện) ⇒ đáp án đó;
+ *  - giá trị hiện tại còn hợp lệ ⇒ giữ nguyên;
+ *  - không còn hợp lệ ⇒ `null`, để người dùng chọn lại (không đoán hộ).
+ */
+export function normalizeTransmissionFor(
+  vehicleType: string,
+  fuelType: string | null | undefined,
+  transmission: string | null | undefined,
+): TransmissionTypeExt | null {
+  const fixed = fixedTransmissionFor(vehicleType, fuelType);
+  if (fixed) return fixed;
+  if (!transmission) return null;
+  // Hợp lệ theo ma trận ⇒ chắc chắn là một mã của `TRANSMISSION_TYPE_EXT`.
+  return isTransmissionAllowedFor(vehicleType, fuelType, transmission)
+    ? (transmission as TransmissionTypeExt)
+    : null;
+}
+
+/**
+ * Hợp các kiểu truyền động của NHIỀU nguồn năng lượng — dùng cho mẫu xe trong danh mục, nơi một
+ * dòng xe có thể có cả bản xăng lẫn bản hybrid. Rỗng = chưa khai nguồn năng lượng ⇒ mọi kiểu của
+ * loại xe đó. Thứ tự theo `TRANSMISSION_TYPE_EXT_VALUES` để ô chọn không nhảy lung tung.
+ */
+export function vehicleTransmissionTypesForFuels(
+  vehicleType: string,
+  fuelTypes: readonly string[],
+): readonly TransmissionTypeExt[] {
+  const fuels = fuelTypes.length > 0 ? fuelTypes : vehicleFuelTypesFor(vehicleType);
+  const allowed = new Set(fuels.flatMap((fuel) => vehicleTransmissionTypesFor(vehicleType, fuel)));
+  return TRANSMISSION_TYPE_EXT_VALUES.filter((value) => allowed.has(value));
 }
 
 export function isTransmissionAllowedFor(
@@ -273,8 +331,10 @@ const HIDDEN_POLICY: VehicleFieldPolicy = {
  * Ô tô — luôn có số chỗ (bắt buộc) và kiểu dáng thân xe (tuỳ chọn):
  *  - xăng/dầu: lít/100km bắt buộc, hộp số bắt buộc, dung tích động cơ tuỳ chọn;
  *  - điện: quãng đường mỗi lần sạc bắt buộc; pin và kWh/100km tuỳ chọn; không hỏi lít/100km lẫn cc;
- *  - hybrid: khai phần xăng như trên; phần điện tuỳ chọn — enum chưa tách HEV với PHEV nên bắt
- *    mọi xe hybrid khai quãng đường chạy điện là ép người dùng bịa một con số nửa xe không có.
+ *  - hybrid / plug-in hybrid: khai phần xăng như trên; phần điện tuỳ chọn — hybrid không cắm sạc
+ *    không có quãng đường chạy thuần điện để khai, còn PHEV có nhưng không chặn lên chợ vì nó.
+ *  - hộp số của xe điện "tuỳ chọn" vì nó CỐ ĐỊNH (`fixedTransmissionFor`): form điền sẵn và
+ *    backend tự điền, không ai bị chặn vì một ô không có gì để chọn.
  *
  * Xe máy — không có số chỗ và kiểu dáng của ô tô, có phân khúc riêng (bắt buộc, vì đây là chiều
  * khách lọc ngoài chợ):
@@ -309,6 +369,7 @@ export function vehicleFieldPolicy(
         electricConsumption: 'optional',
       };
     case FUEL_TYPE.HYBRID:
+    case FUEL_TYPE.PLUG_IN_HYBRID:
       return {
         ...base,
         transmission: isMotorbike ? 'optional' : 'required',

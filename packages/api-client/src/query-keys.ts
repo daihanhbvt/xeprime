@@ -137,6 +137,8 @@ export const queryKeys = {
     /** Mẫu xe: khoá theo (loại xe, hãng) — đổi hãng là một cache khác, không hiện nhầm. */
     models: (vehicleType: string, brandKey: string, includeId: string) =>
       ['catalog', 'models', vehicleType, brandKey, includeId] as const,
+    /** Số mẫu xe theo hãng — cột hãng của màn quản trị mẫu xe. */
+    modelBrands: (vehicleType: string) => ['catalog', 'model-brands', vehicleType] as const,
   },
   vehicles: {
     all: ['vehicles'] as const,

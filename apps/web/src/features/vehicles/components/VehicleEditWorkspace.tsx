@@ -630,6 +630,7 @@ export function VehicleEditWorkspace({
                                   control={control}
                                   isCar={vehicleType === VEHICLE_TYPE.CAR}
                                   lockedNotice={lockedNotice}
+                                  setValue={setValue}
                                 />
                               </Card>
                               <Card title={t('cards.energy')} className={styles.formCard}>
@@ -637,6 +638,7 @@ export function VehicleEditWorkspace({
                                   control={control}
                                   isCar={vehicleType === VEHICLE_TYPE.CAR}
                                   lockedNotice={lockedNotice}
+                                  setValue={setValue}
                                 />
                               </Card>
                               {/*

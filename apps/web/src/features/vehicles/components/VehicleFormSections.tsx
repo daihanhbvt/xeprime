@@ -609,7 +609,14 @@ export function ConsumptionSection({ control }: Pick<SectionProps, 'control'>) {
  * Thông số của xe — wizard TẠO xe vẫn dùng khối gộp này. Màn SỬA bày hai nửa của nó thành hai
  * card riêng (`VehicleIdentitySection` · `VehicleEnergySection`); trường và luật giữ nguyên.
  */
-export function SpecsSection(props: SectionProps) {
+/**
+ * Khối phụ thuộc lẫn nhau (mẫu theo hãng, hộp số theo nguồn năng lượng…) phải DỌN ô không còn
+ * nghĩa ngay tại form — nên `setValue` là BẮT BUỘC ở đây, không tuỳ chọn: thiếu nó thì ô hộp số
+ * của xe điện bị khoá mà vẫn giữ "số tự động", người dùng không lưu được và không sửa được.
+ */
+type DependentSectionProps = SectionProps & Required<Pick<SectionProps, 'setValue'>>;
+
+export function SpecsSection(props: DependentSectionProps) {
   return (
     <>
       <VehicleIdentitySection {...props} />
@@ -619,7 +626,12 @@ export function SpecsSection(props: SectionProps) {
 }
 
 /** Nhận dạng xe: biển số · hãng/mẫu · năm sản xuất · màu · phân loại (số chỗ/kiểu dáng/phân khúc). */
-export function VehicleIdentitySection({ control, isCar, lockedNotice, setValue }: SectionProps) {
+export function VehicleIdentitySection({
+  control,
+  isCar,
+  lockedNotice,
+  setValue,
+}: DependentSectionProps) {
   const t = useTranslations('Vehicles.form.specs');
   const vehicleType = isCar ? VEHICLE_TYPE.CAR : VEHICLE_TYPE.MOTORBIKE;
 
@@ -687,7 +699,12 @@ export function VehicleIdentitySection({ control, isCar, lockedNotice, setValue 
 }
 
 /** Động cơ & năng lượng: nhiên liệu · hộp số · thông số theo nguồn năng lượng. */
-export function VehicleEnergySection({ control, isCar, lockedNotice, setValue }: SectionProps) {
+export function VehicleEnergySection({
+  control,
+  isCar,
+  lockedNotice,
+  setValue,
+}: DependentSectionProps) {
   const vehicleType = isCar ? VEHICLE_TYPE.CAR : VEHICLE_TYPE.MOTORBIKE;
   const fuelType = useWatch({ control, name: 'fuelType' });
   const transmissionOptions = useTransmissionOptions(vehicleType, fuelType);
@@ -737,17 +754,27 @@ export function FuelTypeSelect({
   vehicleType,
   help,
   disabled,
+  allowedValues,
 }: Pick<SectionProps, 'control'> & {
   vehicleType: string;
   /** Lý do ô bị khoá (xe đang trên chợ) — nơi gọi truyền chữ, component không tự đoán. */
   help?: ReactNode;
   disabled?: boolean;
+  /**
+   * Thu hẹp thêm theo MẪU XE đang chọn (Fortuner ⇒ Xăng/Dầu). Giá trị đang lưu vẫn giữ trong danh
+   * sách dù không thuộc mẫu — ô chọn không được tự xoá dữ liệu cũ chỉ vì mở form.
+   */
+  allowedValues?: readonly string[];
 }) {
   const t = useTranslations('Vehicles.form.specs');
   const current = useWatch({ control, name: 'fuelType' });
   const allOptions = useCatalogOptions(CATALOG_TYPE.FUEL_TYPE, current);
   const allowed = vehicleFuelTypesFor(vehicleType);
-  const options = allOptions.filter((option) => allowed.some((value) => value === option.value));
+  const options = allOptions.filter(
+    (option) =>
+      allowed.some((value) => value === option.value) &&
+      (!allowedValues || allowedValues.includes(option.value) || option.value === current),
+  );
   return (
     <SelectField
       control={control}

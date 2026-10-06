@@ -1,6 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   CATALOG_ITEM_TYPES,
+  CATALOG_SEAT_COUNT_MAX,
+  CATALOG_SEAT_COUNT_MIN,
+  CATALOG_SEAT_OPTIONS_MAX,
   CATALOG_KEY_PATTERN,
   CATALOG_MARKET_STATUS_VALUES,
   FUEL_TYPE_VALUES,
@@ -10,6 +13,7 @@ import {
 } from '@xeprime/types';
 import { Transform, Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   IsArray,
   IsBoolean,
   IsIn,
@@ -17,6 +21,7 @@ import {
   IsOptional,
   IsString,
   Matches,
+  Max,
   MaxLength,
   Min,
 } from 'class-validator';
@@ -241,8 +246,12 @@ export class CatalogModelDto {
   @ApiProperty({ type: Number, nullable: true })
   engineDisplacementCc!: number | null;
 
-  @ApiProperty({ type: Number, nullable: true })
-  seatCount!: number | null;
+  @ApiProperty({
+    type: [Number],
+    description:
+      'Cấu hình số chỗ của dòng xe (chỉ ô tô). Một giá trị = điền sẵn và khoá; nhiều = chủ xe chọn trong đó; rỗng = chưa xác minh',
+  })
+  seatCounts!: number[];
 
   @ApiProperty({ type: Number, nullable: true })
   yearFrom!: number | null;
@@ -347,12 +356,14 @@ export class CreateCatalogModelDto {
   @Min(1)
   engineDisplacementCc?: number | null;
 
-  @ApiPropertyOptional({ type: Number, nullable: true })
+  @ApiPropertyOptional({ type: [Number], description: 'Chỉ ô tô. Rỗng = chưa xác minh' })
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(2)
-  seatCount?: number | null;
+  @IsArray()
+  @ArrayMaxSize(CATALOG_SEAT_OPTIONS_MAX)
+  @IsInt({ each: true })
+  @Min(CATALOG_SEAT_COUNT_MIN, { each: true })
+  @Max(CATALOG_SEAT_COUNT_MAX, { each: true })
+  seatCounts?: number[];
 
   @ApiPropertyOptional({ type: Number, nullable: true })
   @IsOptional()
@@ -425,12 +436,14 @@ export class UpdateCatalogModelDto {
   @Min(1)
   engineDisplacementCc?: number | null;
 
-  @ApiPropertyOptional({ type: Number, nullable: true })
+  @ApiPropertyOptional({ type: [Number], description: 'Chỉ ô tô. Rỗng = chưa xác minh' })
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(2)
-  seatCount?: number | null;
+  @IsArray()
+  @ArrayMaxSize(CATALOG_SEAT_OPTIONS_MAX)
+  @IsInt({ each: true })
+  @Min(CATALOG_SEAT_COUNT_MIN, { each: true })
+  @Max(CATALOG_SEAT_COUNT_MAX, { each: true })
+  seatCounts?: number[];
 
   @ApiPropertyOptional({ type: Number, nullable: true })
   @IsOptional()
@@ -462,4 +475,30 @@ export class UpdateCatalogModelDto {
   @IsOptional()
   @IsBoolean()
   active?: boolean;
+}
+
+export class CatalogModelBrandSummaryQueryDto {
+  @ApiProperty({ enum: VEHICLE_TYPE_VALUES })
+  @IsIn(VEHICLE_TYPE_VALUES)
+  vehicleType!: string;
+}
+
+/**
+ * Số mẫu của MỘT hãng trong một loại xe — cột trái của màn quản trị mẫu xe.
+ *
+ * Trả kèm `missingSpecs` để người rà danh mục thấy ngay hãng nào còn mẫu thiếu thông số mà không
+ * phải mở từng hãng. Hãng chưa có mẫu nào KHÔNG có dòng ở đây — màn hình ghép với danh sách hãng.
+ */
+export class CatalogModelBrandSummaryDto {
+  @ApiProperty({ example: 'toyota' })
+  brandKey!: string;
+
+  @ApiProperty({ description: 'Tổng số mẫu (kể cả đã tắt, không gồm đã xoá)' })
+  total!: number;
+
+  @ApiProperty({ description: 'Số mẫu đang bật' })
+  active!: number;
+
+  @ApiProperty({ description: 'Số mẫu còn thiếu thông số điền sẵn (`catalogModelMissingSpecs`)' })
+  missingSpecs!: number;
 }

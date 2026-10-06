@@ -414,7 +414,14 @@ export const FUEL_TYPE = {
   GASOLINE: 'gasoline',
   DIESEL: 'diesel',
   ELECTRIC: 'electric',
+  /** Hybrid KHÔNG cắm sạc (HEV, mild hybrid, e-POWER) — pin chỉ nạp từ máy xăng và phanh. */
   HYBRID: 'hybrid',
+  /**
+   * Plug-in hybrid (PHEV) — có cổng sạc và chạy thuần điện được một quãng. Tách khỏi `hybrid` vì
+   * với người thuê đó là hai chiếc xe khác nhau: một chiếc cần trạm sạc mới phát huy, chiếc kia không.
+   * Chỉ có ở ô tô (thị trường VN chưa có xe máy PHEV).
+   */
+  PLUG_IN_HYBRID: 'plug_in_hybrid',
 } as const;
 
 export type FuelType = (typeof FUEL_TYPE)[keyof typeof FUEL_TYPE];
@@ -425,6 +432,7 @@ export const FUEL_TYPE_LABEL: Readonly<Record<FuelType, string>> = {
   [FUEL_TYPE.DIESEL]: 'Dầu (Diesel)',
   [FUEL_TYPE.ELECTRIC]: 'Điện',
   [FUEL_TYPE.HYBRID]: 'Hybrid',
+  [FUEL_TYPE.PLUG_IN_HYBRID]: 'Plug-in Hybrid (PHEV)',
 };
 
 /**
@@ -434,7 +442,13 @@ export const FUEL_TYPE_LABEL: Readonly<Record<FuelType, string>> = {
  * độc lập để bộ lọc, báo cáo và danh mục xe không tăng số tổ hợp khi bổ sung nguồn năng lượng mới.
  */
 export const VEHICLE_FUEL_TYPES: Readonly<Record<VehicleType, readonly FuelType[]>> = {
-  [VEHICLE_TYPE.CAR]: [FUEL_TYPE.GASOLINE, FUEL_TYPE.DIESEL, FUEL_TYPE.ELECTRIC, FUEL_TYPE.HYBRID],
+  [VEHICLE_TYPE.CAR]: [
+    FUEL_TYPE.GASOLINE,
+    FUEL_TYPE.DIESEL,
+    FUEL_TYPE.ELECTRIC,
+    FUEL_TYPE.HYBRID,
+    FUEL_TYPE.PLUG_IN_HYBRID,
+  ],
   // Xe máy hybrid đã bán tại VN (Yamaha GEAR 125 Hybrid, Janus/Grande bản hybrid) — ma trận cũ
   // chỉ có xăng/điện nên những xe đó không khai đúng được nguồn năng lượng của chính nó.
   [VEHICLE_TYPE.MOTORBIKE]: [FUEL_TYPE.GASOLINE, FUEL_TYPE.ELECTRIC, FUEL_TYPE.HYBRID],
