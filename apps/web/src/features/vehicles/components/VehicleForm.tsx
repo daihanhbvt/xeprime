@@ -322,7 +322,7 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
   }
 
   function renderStep() {
-    const props = { control, isCar };
+    const props = { control, isCar, setValue };
     switch (steps[step]!.key) {
       case 'basic':
         // Ba nhóm có tiêu đề riêng theo thiết kế: Thông tin cơ bản → Thông số vận hành →

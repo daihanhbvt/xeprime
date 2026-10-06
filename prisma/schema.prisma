@@ -1528,8 +1528,10 @@ model VehicleCatalogModel {
   transmissions        String[]  @default([]) @map("transmissions") @db.VarChar(30)
   /// Dung tích xi-lanh công bố (cc) — dùng để GỢI Ý khi chủ xe chọn mẫu, không ghi đè.
   engineDisplacementCc Int?      @map("engine_displacement_cc")
-  /// Số chỗ công bố — chỉ ô tô, dùng để gợi ý.
-  seatCount            Int?      @map("seat_count")
+  /// Các cấu hình số chỗ dòng xe có — chỉ ô tô (CHECK chặn xe máy mang giá trị). Cùng luật với
+  /// `fuelTypes` (`catalogSpecRule`): MỘT giá trị ⇒ form đăng xe điền sẵn và khoá; NHIỀU giá trị
+  /// ⇒ chủ xe chọn trong đó; RỖNG ⇒ chưa xác minh, chủ xe khai tự do.
+  seatCounts           Int[]     @default([]) @map("seat_counts")
   /// URL trang sản phẩm CHÍNH HÃNG đã đối chiếu. Bắt buộc với dữ liệu seed: không có nguồn thì
   /// không đưa mẫu vào danh mục.
   sourceUrl            String?   @map("source_url") @db.Text
@@ -1540,6 +1542,12 @@ model VehicleCatalogModel {
   active               Boolean   @default(true)
   createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  /// Xoá MỀM: dòng vẫn giữ `key` để seed nhận ra "admin đã xoá mẫu này" và không tạo lại nó.
+  /// Thêm lại đúng tên đó ở màn quản trị thì khôi phục dòng cũ thay vì vướng unique.
+  deletedAt            DateTime? @map("deleted_at") @db.Timestamptz(3)
+  /// Lần cuối admin thêm/sửa/khôi phục mẫu ở màn quản trị. Có mốc ⇒ seed KHÔNG điền lại thông số
+  /// (ô trống có thể là admin cố ý xoá một giá trị sai, không phải "chưa ai khai").
+  adminEditedAt        DateTime? @map("admin_edited_at") @db.Timestamptz(3)
 
   vehicles Vehicle[]
 

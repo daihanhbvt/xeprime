@@ -174,7 +174,8 @@
     "gasoline": "Xăng",
     "diesel": "Dầu (Diesel)",
     "electric": "Điện",
-    "hybrid": "Hybrid"
+    "hybrid": "Hybrid",
+    "plug_in_hybrid": "Plug-in Hybrid (PHEV)"
   },
   "handoverCondition": {
     "normal": "Bình thường",
@@ -510,10 +511,10 @@
     "automatic": "Số tự động (AT)",
     "manual": "Số sàn (MT)",
     "cvt": "CVT",
-    "e_cvt": "E-CVT (hybrid)",
+    "e_cvt": "e-CVT",
     "dct": "Ly hợp kép (DCT)",
     "amt": "Số sàn tự động (AMT)",
-    "direct_drive": "Truyền động một cấp",
+    "direct_drive": "1 cấp (EV)",
     "automatic_cvt": "Tay ga",
     "semi_automatic": "Xe số",
     "manual_clutch": "Côn tay",

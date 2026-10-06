@@ -174,7 +174,8 @@
     "gasoline": "Petrol",
     "diesel": "Diesel",
     "electric": "Electric",
-    "hybrid": "Hybrid"
+    "hybrid": "Hybrid",
+    "plug_in_hybrid": "Plug-in hybrid (PHEV)"
   },
   "handoverCondition": {
     "normal": "Normal",
@@ -510,10 +511,10 @@
     "automatic": "Automatic (AT)",
     "manual": "Manual (MT)",
     "cvt": "CVT",
-    "e_cvt": "e-CVT (hybrid)",
+    "e_cvt": "e-CVT",
     "dct": "Dual-clutch (DCT)",
     "amt": "Automated manual (AMT)",
-    "direct_drive": "Single-speed",
+    "direct_drive": "Single-speed (EV)",
     "automatic_cvt": "Twist-and-go",
     "semi_automatic": "Semi-automatic",
     "manual_clutch": "Manual clutch",

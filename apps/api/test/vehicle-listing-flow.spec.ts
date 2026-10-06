@@ -16,6 +16,7 @@ import {
   TENANT_ROLE,
   TENANT_STATUS,
   TRANSMISSION_TYPE,
+  TRANSMISSION_TYPE_EXT,
   VEHICLE_PUBLIC_MIN_IMAGES,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_TYPE,
@@ -225,6 +226,7 @@ describe('Thông số theo nguồn năng lượng', () => {
   maybe('đổi từ ĐIỆN về xăng thì thông số điện bị xoá', async () => {
     const created = await createListableVehicle({
       fuelType: FUEL_TYPE.ELECTRIC,
+      transmission: undefined,
       fuelConsumptionCombined: undefined,
       electricRangeKm: 380,
       batteryCapacityKwh: 55,
@@ -245,7 +247,6 @@ describe('Thông số theo nguồn năng lượng', () => {
     expect(gasoline.batteryCapacityKwh).toBeNull();
     expect(gasoline.electricConsumptionKwhPer100Km).toBeNull();
   });
-
   maybe('client gửi metric SAI LOẠI: server dọn, không lưu số vô nghĩa', async () => {
     // Xe xăng mà gửi kèm quãng đường sạc — một client cũ vẫn làm được điều này.
     const created = await createListableVehicle({ electricRangeKm: 400 });
@@ -300,6 +301,145 @@ describe('Thông số theo nguồn năng lượng', () => {
   });
 });
 
+/**
+ * Hộp số theo nguồn năng lượng (06/10/2026) — `vehicleTransmissionTypesFor`.
+ *
+ * Gửi lên một tổ hợp sai thì TỪ CHỐI bằng mã riêng (không âm thầm xoá); xe điện thì server tự điền
+ * "1 cấp" vì không có lựa chọn nào khác; giá trị GIỮ LẠI không còn hợp lệ sau khi đổi nguồn năng
+ * lượng thì server dọn, để lệnh "chỉ đổi nguồn năng lượng" của client cũ vẫn chạy.
+ */
+describe('Hộp số theo nguồn năng lượng', () => {
+  maybe('tạo xe ĐIỆN kèm số tự động/số sàn/CVT: từ chối bằng mã riêng', async () => {
+    for (const transmission of [
+      TRANSMISSION_TYPE.AUTOMATIC,
+      TRANSMISSION_TYPE.MANUAL,
+      TRANSMISSION_TYPE.CVT,
+    ]) {
+      await expect(
+        createListableVehicle({
+          fuelType: FUEL_TYPE.ELECTRIC,
+          transmission,
+          fuelConsumptionCombined: undefined,
+          electricRangeKm: 300,
+        }),
+      ).rejects.toMatchObject({
+        response: { code: API_ERROR_CODE.VEHICLE_TRANSMISSION_INCOMPATIBLE },
+      });
+    }
+  });
+
+  maybe('tạo xe ĐIỆN không khai hộp số: server điền 1 cấp (EV)', async () => {
+    const created = await createListableVehicle({
+      fuelType: FUEL_TYPE.ELECTRIC,
+      transmission: undefined,
+      fuelConsumptionCombined: undefined,
+      electricRangeKm: 300,
+    });
+    expect(created.transmission).toBe(TRANSMISSION_TYPE_EXT.DIRECT_DRIVE);
+
+    const explicit = await createListableVehicle({
+      fuelType: FUEL_TYPE.ELECTRIC,
+      transmission: TRANSMISSION_TYPE_EXT.DIRECT_DRIVE,
+      fuelConsumptionCombined: undefined,
+      electricRangeKm: 300,
+    });
+    expect(explicit.transmission).toBe(TRANSMISSION_TYPE_EXT.DIRECT_DRIVE);
+  });
+
+  maybe('Xăng (AT) → Điện chỉ gửi nguồn năng lượng: số tự động thành 1 cấp', async () => {
+    const created = await createListableVehicle();
+    expect(created.transmission).toBe(TRANSMISSION_TYPE.AUTOMATIC);
+    const electric = await vehicles.update(
+      tenantId,
+      created.id,
+      ownerId,
+      { fuelType: FUEL_TYPE.ELECTRIC, electricRangeKm: 300 },
+      null,
+    );
+    expect(electric.transmission).toBe(TRANSMISSION_TYPE_EXT.DIRECT_DRIVE);
+  });
+
+  maybe('Điện → Xăng: 1 cấp không còn nghĩa, về trống để chủ xe chọn lại', async () => {
+    const created = await createListableVehicle({
+      fuelType: FUEL_TYPE.ELECTRIC,
+      transmission: undefined,
+      fuelConsumptionCombined: undefined,
+      electricRangeKm: 300,
+    });
+    const gasoline = await vehicles.update(
+      tenantId,
+      created.id,
+      ownerId,
+      { fuelType: FUEL_TYPE.GASOLINE, fuelConsumptionCombined: 7 },
+      null,
+    );
+    expect(gasoline.transmission).toBeNull();
+  });
+
+  maybe('sửa xe điện sang số tự động: từ chối, hộp số giữ nguyên', async () => {
+    const created = await createListableVehicle({
+      fuelType: FUEL_TYPE.ELECTRIC,
+      transmission: undefined,
+      fuelConsumptionCombined: undefined,
+      electricRangeKm: 300,
+    });
+    await expect(
+      vehicles.update(
+        tenantId,
+        created.id,
+        ownerId,
+        { transmission: TRANSMISSION_TYPE.AUTOMATIC },
+        null,
+      ),
+    ).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.VEHICLE_TRANSMISSION_INCOMPATIBLE },
+    });
+    const row = await prisma.vehicle.findUniqueOrThrow({ where: { id: created.id } });
+    expect(row.transmission).toBe(TRANSMISSION_TYPE_EXT.DIRECT_DRIVE);
+  });
+
+  maybe('hybrid và PHEV: nhận AT/e-CVT, từ chối CVT thường', async () => {
+    // Một xe cho mỗi nguồn năng lượng — gian hàng test chỉ giữ được 3 xe.
+    for (const fuelType of [FUEL_TYPE.HYBRID, FUEL_TYPE.PLUG_IN_HYBRID]) {
+      const created = await createListableVehicle({
+        fuelType,
+        transmission: TRANSMISSION_TYPE.AUTOMATIC,
+      });
+      expect(created).toMatchObject({ fuelType, transmission: TRANSMISSION_TYPE.AUTOMATIC });
+
+      const eCvt = await vehicles.update(
+        tenantId,
+        created.id,
+        ownerId,
+        { transmission: TRANSMISSION_TYPE_EXT.E_CVT },
+        null,
+      );
+      expect(eCvt.transmission).toBe(TRANSMISSION_TYPE_EXT.E_CVT);
+
+      await expect(
+        vehicles.update(tenantId, created.id, ownerId, { transmission: TRANSMISSION_TYPE.CVT }, null),
+      ).rejects.toMatchObject({
+        response: { code: API_ERROR_CODE.VEHICLE_TRANSMISSION_INCOMPATIBLE },
+      });
+    }
+  });
+
+  maybe('DB chặn xe điện mang số tự động dù đi vòng qua service', async () => {
+    const created = await createListableVehicle({
+      fuelType: FUEL_TYPE.ELECTRIC,
+      transmission: undefined,
+      fuelConsumptionCombined: undefined,
+      electricRangeKm: 300,
+    });
+    await expect(
+      prisma.vehicle.update({
+        where: { id: created.id },
+        data: { transmission: TRANSMISSION_TYPE.AUTOMATIC },
+      }),
+    ).rejects.toThrow(/vehicles_electric_transmission_check/);
+  });
+});
+
 describe('Điều kiện lên chợ', () => {
   maybe('đủ điều kiện: gửi duyệt được và sinh phiếu duyệt', async () => {
     const created = await createListableVehicle();
@@ -331,6 +471,7 @@ describe('Điều kiện lên chợ', () => {
   maybe('xe điện thiếu quãng đường mỗi lần sạc: chặn gửi duyệt', async () => {
     const created = await createListableVehicle({
       fuelType: FUEL_TYPE.ELECTRIC,
+      transmission: undefined,
       fuelConsumptionCombined: undefined,
     });
     await expect(

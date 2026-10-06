@@ -4094,7 +4094,7 @@ export interface paths {
         get: operations["PlatformCatalogController_listModels"];
         put?: never;
         /**
-         * Thêm mẫu xe vào danh mục
+         * Thêm mẫu xe vào danh mục (khôi phục nếu đúng mẫu đó từng bị xoá)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
          *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
@@ -4144,6 +4144,32 @@ export interface paths {
          *     **Quyền yêu cầu:** `platform.catalog.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
         patch: operations["PlatformCatalogController_updateModel"];
+        trace?: never;
+    };
+    "/platform/catalog/models/brands": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Số mẫu xe theo hãng của một loại phương tiện (kèm số mẫu thiếu thông số)
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
+         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *
+         *     **Quyền yêu cầu:** `platform.catalog.manage` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        get: operations["PlatformCatalogController_modelBrandSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/platform/catalog/reorder": {
@@ -10634,7 +10660,8 @@ export interface components {
             /** @description Rỗng = chưa xác minh */
             transmissions: string[];
             engineDisplacementCc: number | null;
-            seatCount: number | null;
+            /** @description Cấu hình số chỗ của dòng xe (chỉ ô tô). Một giá trị = điền sẵn và khoá; nhiều = chủ xe chọn trong đó; rỗng = chưa xác minh */
+            seatCounts: number[];
             yearFrom: number | null;
             yearTo: number | null;
             active: boolean;
@@ -10644,6 +10671,16 @@ export interface components {
             verifiedAt: string | null;
             /** @description Số xe đang gắn mẫu này */
             usageCount: number;
+        };
+        CatalogModelBrandSummaryDto: {
+            /** @example toyota */
+            brandKey: string;
+            /** @description Tổng số mẫu (kể cả đã tắt, không gồm đã xoá) */
+            total: number;
+            /** @description Số mẫu đang bật */
+            active: number;
+            /** @description Số mẫu còn thiếu thông số điền sẵn (`catalogModelMissingSpecs`) */
+            missingSpecs: number;
         };
         CatalogModelDto: {
             id: string;
@@ -10670,7 +10707,8 @@ export interface components {
             /** @description Rỗng = chưa xác minh */
             transmissions: string[];
             engineDisplacementCc: number | null;
-            seatCount: number | null;
+            /** @description Cấu hình số chỗ của dòng xe (chỉ ô tô). Một giá trị = điền sẵn và khoá; nhiều = chủ xe chọn trong đó; rỗng = chưa xác minh */
+            seatCounts: number[];
             yearFrom: number | null;
             yearTo: number | null;
             active: boolean;
@@ -11142,10 +11180,11 @@ export interface components {
             marketStatus: "current" | "legacy";
             /** @enum {string|null} */
             motorbikeCategory?: "scooter" | "underbone" | "naked" | "sport" | "cruiser" | "adventure" | "touring" | "offroad" | "other" | null;
-            fuelTypes?: ("gasoline" | "diesel" | "electric" | "hybrid")[];
+            fuelTypes?: ("gasoline" | "diesel" | "electric" | "hybrid" | "plug_in_hybrid")[];
             transmissions?: ("automatic" | "manual" | "cvt" | "e_cvt" | "dct" | "amt" | "direct_drive" | "automatic_cvt" | "semi_automatic" | "manual_clutch" | "other")[];
             engineDisplacementCc?: number | null;
-            seatCount?: number | null;
+            /** @description Chỉ ô tô. Rỗng = chưa xác minh */
+            seatCounts?: number[];
             yearFrom?: number | null;
             yearTo?: number | null;
             /** @description Trang sản phẩm chính hãng — nguồn của dữ liệu này */
@@ -16302,10 +16341,11 @@ export interface components {
             marketStatus?: "current" | "legacy";
             /** @enum {string|null} */
             motorbikeCategory?: "scooter" | "underbone" | "naked" | "sport" | "cruiser" | "adventure" | "touring" | "offroad" | "other" | null;
-            fuelTypes?: ("gasoline" | "diesel" | "electric" | "hybrid")[];
+            fuelTypes?: ("gasoline" | "diesel" | "electric" | "hybrid" | "plug_in_hybrid")[];
             transmissions?: ("automatic" | "manual" | "cvt" | "e_cvt" | "dct" | "amt" | "direct_drive" | "automatic_cvt" | "semi_automatic" | "manual_clutch" | "other")[];
             engineDisplacementCc?: number | null;
-            seatCount?: number | null;
+            /** @description Chỉ ô tô. Rỗng = chưa xác minh */
+            seatCounts?: number[];
             yearFrom?: number | null;
             yearTo?: number | null;
             sourceUrl?: string | null;
@@ -45070,6 +45110,135 @@ export interface operations {
                      *       "error": {
                      *         "code": "CONFLICT",
                      *         "message": "Dữ liệu đã tồn tại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PlatformCatalogController_modelBrandSummary: {
+        parameters: {
+            query: {
+                vehicleType: "car" | "motorbike";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["CatalogModelBrandSummaryDto"][];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
                      *       }
                      *     }
                      */

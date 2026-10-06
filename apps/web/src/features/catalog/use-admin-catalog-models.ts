@@ -8,6 +8,8 @@ import { queryKeys } from '@/services/query-keys';
 /** Shape từ OpenAPI (ADR 0007) — không viết tay lại DTO. */
 export type CatalogModelAdmin = components['schemas']['CatalogModelAdminDto'];
 
+export type CatalogModelBrandSummary = components['schemas']['CatalogModelBrandSummaryDto'];
+
 export interface CatalogModelInput {
   label: string;
   marketStatus?: string;
@@ -15,7 +17,7 @@ export interface CatalogModelInput {
   fuelTypes?: string[];
   transmissions?: string[];
   engineDisplacementCc?: number | null;
-  seatCount?: number | null;
+  seatCounts?: number[];
   yearFrom?: number | null;
   yearTo?: number | null;
   sourceUrl?: string | null;
@@ -36,6 +38,20 @@ export function useAdminCatalogModels(vehicleType: string, brandKey?: string) {
         vehicleType,
         ...(brandKey ? { brandKey } : {}),
       }),
+  });
+}
+
+/**
+ * Số mẫu theo hãng của một loại xe — cột hãng ở màn quản trị.
+ *
+ * Nằm dưới nhánh `catalog` như danh sách mẫu, nên mọi mutation mẫu xe làm mới luôn bộ đếm: thêm
+ * một mẫu thì số bên cạnh tên hãng tăng ngay, không phải tải lại trang.
+ */
+export function useCatalogModelBrandSummary(vehicleType: string) {
+  return useQuery({
+    queryKey: queryKeys.catalog.modelBrands(vehicleType),
+    queryFn: () =>
+      apiGet<CatalogModelBrandSummary[]>('/platform/catalog/models/brands', { vehicleType }),
   });
 }
 

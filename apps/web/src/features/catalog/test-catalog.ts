@@ -123,7 +123,7 @@ function model(
     fuelTypes: [],
     transmissions: [],
     engineDisplacementCc: null,
-    seatCount: null,
+    seatCounts: [],
     yearFrom: null,
     yearTo: null,
     active: true,
