@@ -1,5 +1,6 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   BRANCH_STATUS,
   HANDOVER_STATUS,
@@ -139,7 +140,12 @@ beforeAll(async () => {
   tenantId = newId();
   otherTenantId = newId();
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Chủ chi nhánh', email: `br-${ownerId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Chủ chi nhánh',
+      email: `br-${ownerId}@xeprime.test`,
+    },
   });
   for (const id of [tenantId, otherTenantId]) {
     await prisma.tenant.create({
@@ -159,7 +165,14 @@ beforeAll(async () => {
   foreignBranchId = newId();
   await prisma.tenantBranch.createMany({
     data: [
-      { id: q5Id, tenantId, code: 'CN-Q5', name: 'Quận 5', status: BRANCH_STATUS.ACTIVE, isDefault: true },
+      {
+        id: q5Id,
+        tenantId,
+        code: 'CN-Q5',
+        name: 'Quận 5',
+        status: BRANCH_STATUS.ACTIVE,
+        isDefault: true,
+      },
       { id: ninhKieuId, tenantId, code: 'CN-NK', name: 'Ninh Kiều', status: BRANCH_STATUS.ACTIVE },
       {
         id: foreignBranchId,
@@ -177,9 +190,30 @@ beforeAll(async () => {
   nkCarId = newId();
   await prisma.vehicle.createMany({
     data: [
-      { id: q5CarId, tenantId, branchId: q5Id, code: 'BR-Q5-1', name: 'Vios Quận 5', vehicleType: VEHICLE_TYPE.CAR },
-      { id: q5BikeId, tenantId, branchId: q5Id, code: 'BR-Q5-2', name: 'Vision Quận 5', vehicleType: VEHICLE_TYPE.MOTORBIKE },
-      { id: nkCarId, tenantId, branchId: ninhKieuId, code: 'BR-NK-1', name: 'Innova Ninh Kiều', vehicleType: VEHICLE_TYPE.CAR },
+      {
+        id: q5CarId,
+        tenantId,
+        branchId: q5Id,
+        code: 'BR-Q5-1',
+        name: 'Vios Quận 5',
+        vehicleType: VEHICLE_TYPE.CAR,
+      },
+      {
+        id: q5BikeId,
+        tenantId,
+        branchId: q5Id,
+        code: 'BR-Q5-2',
+        name: 'Vision Quận 5',
+        vehicleType: VEHICLE_TYPE.MOTORBIKE,
+      },
+      {
+        id: nkCarId,
+        tenantId,
+        branchId: ninhKieuId,
+        code: 'BR-NK-1',
+        name: 'Innova Ninh Kiều',
+        vehicleType: VEHICLE_TYPE.CAR,
+      },
     ],
   });
 
@@ -237,7 +271,9 @@ afterAll(async () => {
     await prisma.booking.deleteMany({ where: { tenantId } });
     await prisma.tenantCustomer.deleteMany({ where: { tenantId } });
     await prisma.vehicle.deleteMany({ where: { tenantId } });
-    await prisma.tenantBranch.deleteMany({ where: { tenantId: { in: [tenantId, otherTenantId] } } });
+    await prisma.tenantBranch.deleteMany({
+      where: { tenantId: { in: [tenantId, otherTenantId] } },
+    });
     await prisma.tenant.deleteMany({ where: { id: { in: [tenantId, otherTenantId] } } });
     await prisma.user.deleteMany({ where: { id: ownerId } });
   }
@@ -271,9 +307,14 @@ describe('branchId chỉ THU HẸP — không bao giờ là đường ra khỏi 
   });
 
   maybe('/maintenance: chi nhánh gian hàng khác → rỗng', async () => {
-    const board = await maintenance.board(tenantId, { branchId: foreignBranchId } as never, {
-      canViewFinance: true,
-    } as never, null);
+    const board = await maintenance.board(
+      tenantId,
+      { branchId: foreignBranchId } as never,
+      {
+        canViewFinance: true,
+      } as never,
+      null,
+    );
 
     expect(board.data).toEqual([]);
   });
@@ -320,9 +361,7 @@ describe('/calendar — events lọc theo chi nhánh của XE (điều 3 phần 
   maybe('không lọc: sự kiện của cả ba xe', async () => {
     const events = await calendar.events(tenant(), range());
 
-    expect(new Set(events.map((e) => e.resourceId))).toEqual(
-      new Set([q5CarId, q5BikeId, nkCarId]),
-    );
+    expect(new Set(events.map((e) => e.resourceId))).toEqual(new Set([q5CarId, q5BikeId, nkCarId]));
   });
 
   /**
@@ -354,10 +393,14 @@ describe('/maintenance — bảng, dải đếm và tab thứ tư cùng một ph
 
   maybe('lọc Quận 5: bảng hai dòng, và summary.total nói đúng hai', async () => {
     const board = await maintenance.board(tenantId, { branchId: q5Id } as never, scope, null);
-    const summary = await maintenance.boardSummary(tenantId, {
-      canViewHandovers: false,
-      branchId: q5Id,
-    }, null);
+    const summary = await maintenance.boardSummary(
+      tenantId,
+      {
+        canViewHandovers: false,
+        branchId: q5Id,
+      },
+      null,
+    );
 
     expect(board.meta.total).toBe(2);
     expect(summary.total).toBe(board.meta.total);
@@ -365,10 +408,14 @@ describe('/maintenance — bảng, dải đếm và tab thứ tư cùng một ph
 
   maybe('lọc Ninh Kiều: một dòng, summary khớp', async () => {
     const board = await maintenance.board(tenantId, { branchId: ninhKieuId } as never, scope, null);
-    const summary = await maintenance.boardSummary(tenantId, {
-      canViewHandovers: false,
-      branchId: ninhKieuId,
-    }, null);
+    const summary = await maintenance.boardSummary(
+      tenantId,
+      {
+        canViewHandovers: false,
+        branchId: ninhKieuId,
+      },
+      null,
+    );
 
     expect(board.data.map((r) => r.vehicleId)).toEqual([nkCarId]);
     expect(summary.total).toBe(1);
@@ -429,16 +476,24 @@ describe('/maintenance — bảng, dải đếm và tab thứ tư cùng một ph
     expect(q5.meta.total).toBe(0);
 
     // Và phép đếm ở dải tab phải nói đúng điều đó, cùng một con số.
-    const summary = await maintenance.boardSummary(tenantId, {
-      canViewHandovers: true,
-      branchId: ninhKieuId,
-    }, null);
+    const summary = await maintenance.boardSummary(
+      tenantId,
+      {
+        canViewHandovers: true,
+        branchId: ninhKieuId,
+      },
+      null,
+    );
     expect(summary.missingReturnKm).toBe(1);
 
-    const q5Summary = await maintenance.boardSummary(tenantId, {
-      canViewHandovers: true,
-      branchId: q5Id,
-    }, null);
+    const q5Summary = await maintenance.boardSummary(
+      tenantId,
+      {
+        canViewHandovers: true,
+        branchId: q5Id,
+      },
+      null,
+    );
     expect(q5Summary.missingReturnKm).toBe(0);
 
     await prisma.vehicleHandover.deleteMany({ where: { bookingId } });
@@ -493,16 +548,19 @@ describe('Tiền — công nợ và sổ thu chi đều khép kín theo chi nhá
     expect(q5.meta.total + nk.meta.total).toBe(all.meta.total);
   });
 
-  maybe('Sổ thu chi: chi nhánh gian hàng khác → rỗng, nhưng vẫn báo đúng số khoản chung', async () => {
-    const res = await receipts.list(tenantId, receiptQuery(foreignBranchId), null);
+  maybe(
+    'Sổ thu chi: chi nhánh gian hàng khác → rỗng, nhưng vẫn báo đúng số khoản chung',
+    async () => {
+      const res = await receipts.list(tenantId, receiptQuery(foreignBranchId), null);
 
-    expect(res.meta.total).toBe(0);
-    // Lọc vào hư không vẫn phải nói ra phần chung — nếu không, màn hình trống trơn trông như
-    // gian hàng không có giao dịch nào.
-    // Số khoản chung là CON SỐ THẬT của gian hàng — không phụ thuộc chi nhánh xin vào đâu.
-    const mine = await receipts.list(tenantId, receiptQuery(q5Id), null);
-    expect(res.meta.unassignedCount).toBe(mine.meta.unassignedCount);
-  });
+      expect(res.meta.total).toBe(0);
+      // Lọc vào hư không vẫn phải nói ra phần chung — nếu không, màn hình trống trơn trông như
+      // gian hàng không có giao dịch nào.
+      // Số khoản chung là CON SỐ THẬT của gian hàng — không phụ thuộc chi nhánh xin vào đâu.
+      const mine = await receipts.list(tenantId, receiptQuery(q5Id), null);
+      expect(res.meta.unassignedCount).toBe(mine.meta.unassignedCount);
+    },
+  );
 });
 
 /** Gợi nhớ: quyền xem chi nhánh là một trục KHÁC, không phải thứ `branchId` thay thế. */
@@ -535,7 +593,13 @@ describe('Sổ thu chi — lọc chi nhánh và ô tìm kiếm phải CÙNG áp 
       receipts.list(tenantId, search(q5Id, 'PT-BF-'), null),
     ]);
 
-    expect(numbersOf(byQuery)).toEqual(['PT-BF-NKA', 'PT-BF-NKB', 'PT-BF-Q5A', 'PT-BF-Q5B', 'PT-BF-Q5C']);
+    expect(numbersOf(byQuery)).toEqual([
+      'PT-BF-NKA',
+      'PT-BF-NKB',
+      'PT-BF-Q5A',
+      'PT-BF-Q5B',
+      'PT-BF-Q5C',
+    ]);
     expect(numbersOf(byBranch)).toEqual(['PT-BF-Q5A', 'PT-BF-Q5B', 'PT-BF-Q5C']);
     // Giao = đúng vế chi nhánh, KHÔNG phải cả 5 dòng mà ô tìm kiếm khớp.
     expect(numbersOf(both)).toEqual(['PT-BF-Q5A', 'PT-BF-Q5B', 'PT-BF-Q5C']);
@@ -599,9 +663,15 @@ describe('BranchScopeGuard — tài nguyên ngoài phạm vi là KHÔNG TỒN T�
   maybe('phiếu thu chi: gắn xe lấy chi nhánh của XE, không gắn xe lấy cột của phiếu', async () => {
     const byNo = async (no: string) =>
       (await prisma.receipt.findFirstOrThrow({ where: { tenantId, receiptNo: no } })).id;
-    expect(await outcome(ctxFor(BRANCH_SCOPED_RESOURCE.RECEIPT, await byNo('PT-BF-NKA'), [q5Id]))).toBe('404');
-    expect(await outcome(ctxFor(BRANCH_SCOPED_RESOURCE.RECEIPT, await byNo('PT-BF-NKB'), [q5Id]))).toBe('404');
-    expect(await outcome(ctxFor(BRANCH_SCOPED_RESOURCE.RECEIPT, await byNo('PT-BF-Q5C'), [q5Id]))).toBe('pass');
+    expect(
+      await outcome(ctxFor(BRANCH_SCOPED_RESOURCE.RECEIPT, await byNo('PT-BF-NKA'), [q5Id])),
+    ).toBe('404');
+    expect(
+      await outcome(ctxFor(BRANCH_SCOPED_RESOURCE.RECEIPT, await byNo('PT-BF-NKB'), [q5Id])),
+    ).toBe('404');
+    expect(
+      await outcome(ctxFor(BRANCH_SCOPED_RESOURCE.RECEIPT, await byNo('PT-BF-Q5C'), [q5Id])),
+    ).toBe('pass');
   });
 
   maybe('chi nhánh ngoài phạm vi ⇒ 404 (PATCH /branches/:id)', async () => {
@@ -615,20 +685,27 @@ describe('BranchScopeGuard — tài nguyên ngoài phạm vi là KHÔNG TỒN T�
   });
 
   maybe('id của gian hàng KHÁC không bị guard nhận nhầm là "tồn tại"', async () => {
-    expect(await outcome(ctxFor(BRANCH_SCOPED_RESOURCE.BRANCH, foreignBranchId, [q5Id]))).toBe('pass');
+    expect(await outcome(ctxFor(BRANCH_SCOPED_RESOURCE.BRANCH, foreignBranchId, [q5Id]))).toBe(
+      'pass',
+    );
   });
 });
 
 describe('Trần giao quyền — không ai cấp được phạm vi rộng hơn của mình (ADR 0052)', () => {
   const all = { branchScope: MEMBERSHIP_BRANCH_SCOPE.ALL, branchIds: [] };
-  const limited = (...ids: string[]) => ({ branchScope: MEMBERSHIP_BRANCH_SCOPE.LIMITED, branchIds: ids });
+  const limited = (...ids: string[]) => ({
+    branchScope: MEMBERSHIP_BRANCH_SCOPE.LIMITED,
+    branchIds: ids,
+  });
   const code = (fn: () => void) => {
     try {
       fn();
       return 'ok';
     } catch (e) {
-      return (e as ForbiddenException).getResponse?.() &&
-        ((e as ForbiddenException).getResponse() as { code: string }).code;
+      return (
+        (e as ForbiddenException).getResponse?.() &&
+        ((e as ForbiddenException).getResponse() as { code: string }).code
+      );
     }
   };
 
@@ -637,7 +714,9 @@ describe('Trần giao quyền — không ai cấp được phạm vi rộng hơn
   });
 
   it('người bị giới hạn KHÔNG cấp được "Tất cả chi nhánh"', () => {
-    expect(code(() => assertWithinActorScope(['A'], all))).toBe(API_ERROR_CODE.BRANCH_SCOPE_EXCEEDED);
+    expect(code(() => assertWithinActorScope(['A'], all))).toBe(
+      API_ERROR_CODE.BRANCH_SCOPE_EXCEEDED,
+    );
   });
 
   it('chỉ cấp được tập con của phần mình', () => {
@@ -663,7 +742,12 @@ describe('Khoá hàng loạt trên Lịch — chỉ chạm xe trong phạm vi đ
     const { batchId } = await bulk.blockAll(
       tenantId,
       ownerId,
-      { from: DAY, to: DAY, reason: VEHICLE_BLOCK_REASON.NOT_FOR_RENT, vehicleIds: [q5CarId, nkCarId] },
+      {
+        from: DAY,
+        to: DAY,
+        reason: VEHICLE_BLOCK_REASON.NOT_FOR_RENT,
+        vehicleIds: [q5CarId, nkCarId],
+      },
       null,
     );
     try {
@@ -712,7 +796,12 @@ describe('Khoá hàng loạt trên Lịch — chỉ chạm xe trong phạm vi đ
     const { batchId } = await bulk.blockAll(
       tenantId,
       ownerId,
-      { from: DAY, to: DAY, reason: VEHICLE_BLOCK_REASON.NOT_FOR_RENT, vehicleIds: [q5CarId, nkCarId] },
+      {
+        from: DAY,
+        to: DAY,
+        reason: VEHICLE_BLOCK_REASON.NOT_FOR_RENT,
+        vehicleIds: [q5CarId, nkCarId],
+      },
       null,
     );
     try {
@@ -733,17 +822,22 @@ describe('Tạo phiếu thu chi — chỉ ghi được vào phần được giao
     occurredAt: inHours(-1).toISOString(),
   };
 
-  maybe('người bị giới hạn ở Q5 không ghi được chi phí cho chi nhánh/xe của Ninh Kiều', async () => {
-    await expect(
-      receipts.create(tenantId, ownerId, { ...base, branchId: ninhKieuId } as never, [q5Id]),
-    ).rejects.toThrow();
-    await expect(
-      receipts.create(tenantId, ownerId, { ...base, vehicleId: nkCarId } as never, [q5Id]),
-    ).rejects.toThrow();
-  });
+  maybe(
+    'người bị giới hạn ở Q5 không ghi được chi phí cho chi nhánh/xe của Ninh Kiều',
+    async () => {
+      await expect(
+        receipts.create(tenantId, ownerId, { ...base, branchId: ninhKieuId } as never, [q5Id]),
+      ).rejects.toThrow();
+      await expect(
+        receipts.create(tenantId, ownerId, { ...base, vehicleId: nkCarId } as never, [q5Id]),
+      ).rejects.toThrow();
+    },
+  );
 
   maybe('trong phạm vi thì ghi được bình thường', async () => {
-    const created = await receipts.create(tenantId, ownerId, { ...base, branchId: q5Id } as never, [q5Id]);
+    const created = await receipts.create(tenantId, ownerId, { ...base, branchId: q5Id } as never, [
+      q5Id,
+    ]);
     expect(created.id).toBeTruthy();
     await prisma.receipt.delete({ where: { id: created.id } });
   });

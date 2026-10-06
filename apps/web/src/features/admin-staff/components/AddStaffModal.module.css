@@ -1,0 +1,4 @@
+/* Ghi chú quyền đứng đầu form — đọc trước khi gõ email. */
+.hint {
+  margin-bottom: var(--xp-space-md);
+}

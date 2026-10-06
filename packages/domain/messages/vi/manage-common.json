@@ -12,7 +12,9 @@
     "logout": "Đăng xuất",
     "signedInAs": "Đăng nhập: {name}",
     "security": "Bảo mật tài khoản",
-    "renterTrips": "Chuyến tôi đi thuê"
+    "account": "Tài khoản & bảo mật",
+    "renterTrips": "Chuyến tôi đi thuê",
+    "partnerHome": "Về trang chủ XePrime Partner"
   },
   "permission": {
     "deniedTitle": "Bạn không có quyền truy cập",
@@ -100,5 +102,10 @@
       "title": "Văn bản pháp lý",
       "body": "Quy chế hoạt động sàn ràng buộc gian hàng của bạn: điều kiện đăng tin, thứ tự hiển thị, phí dịch vụ và cách xử lý tranh chấp. Mở trong tab mới để không mất việc đang làm."
     }
+  },
+  "adminGate": {
+    "title": "Không có quyền truy cập",
+    "description": "Tài khoản này không còn vai trò trong đội ngũ XePrime. Liên hệ quản trị viên nếu bạn cho rằng đây là nhầm lẫn.",
+    "logout": "Đăng xuất"
   }
 }

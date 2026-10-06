@@ -45,10 +45,10 @@ export function WalletBalancePill() {
   const hidden = useBalanceHidden();
 
   const scope = walletScopeFor(user);
-  // `enabled` gián tiếp: chưa biết người dùng là ai thì chưa đoán sổ — đoán sai là hiện nhầm ví.
-  const { data } = useWalletSummary(scope);
+  // Chưa biết người dùng là ai, hoặc tài khoản không có ví (nhân viên gian hàng) → không gọi.
+  const { data } = useWalletSummary(scope ?? 'account', { enabled: Boolean(user) && scope !== null });
 
-  if (!user || !data) return null;
+  if (!user || !scope || !data) return null;
 
   return (
     <div className={styles.pill}>
@@ -61,7 +61,7 @@ export function WalletBalancePill() {
       >
         {hidden ? <EyeInvisibleOutlined aria-hidden="true" /> : <EyeOutlined aria-hidden="true" />}
       </button>
-      <Link href={walletHrefFor(user)} className={styles.link}>
+      <Link href={walletHrefFor(scope)} className={styles.link}>
         <span className={styles.label}>{t('pill.label')}</span>
         <span className={styles.amount}>{hidden ? MASK : fmt.money(data.available)}</span>
         <RightOutlined aria-hidden="true" className={styles.chevron} />

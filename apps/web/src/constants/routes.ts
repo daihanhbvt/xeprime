@@ -11,6 +11,11 @@ import {
   type PlatformPartnerKind,
   type RegistrationTrack,
 } from '@xeprime/types';
+import { ZONE, siteHref, zonePath, type Zone } from '@/zones';
+
+/** Đường dẫn trong khu partner/admin — xem `zones/zone-config.ts` (chế độ `host` | `path`). */
+const partner = (path: string): string => zonePath(ZONE.PARTNER, path);
+const admin = (path: string): string => zonePath(ZONE.ADMIN, path);
 
 export const ROUTES = {
   HOME: '/',
@@ -59,59 +64,17 @@ export const ROUTES = {
    */
   SUPPORT: '/support',
   /**
-   * Khu TÀI KHOẢN của một CON NGƯỜI — khác hoàn toàn hồ sơ gian hàng (`/manage/shop`).
+   * Khu TÀI KHOẢN của KHÁCH THUÊ trên `xeprime.vn` (ADR 0053: một tài khoản realm `customer`).
    *
-   * ADR 0014: chủ xe, chủ gian hàng và khách thuê là cùng một con người có thể mang nhiều vai,
-   * nên tất cả vào CHUNG khu này. Không có `/manage/account` — cổng quản lý chỉ link sang đây
-   * (`ManageUserCard`), vì hai trang cùng ghi vào một hàng `users` là bug chờ sẵn.
+   * Từ ADR 0051/0053 khu này chỉ còn phần của khách: hồ sơ, chuyến (ở `TRIPS`), tiền đã trả, ví
+   * điểm (tiền hoàn), tài khoản nhận tiền, giấy tờ tuỳ thân. Owner Lite đã sang site partner
+   * (`ROUTES.MANAGE`) — URL cũ của nó chuyển hướng qua `zones/legacy-redirects.ts`.
    *
-   * Mục "Chuyến của tôi" và "Tin nhắn" KHÔNG nằm dưới `/account`: chúng đã có route riêng từ
-   * trước (`TRIPS`, `CHAT`) và đang được thông báo trỏ tới — menu tài khoản chỉ dẫn sang.
+   * Mục "Chuyến của tôi" và "Tin nhắn" KHÔNG nằm dưới `/account`: chúng có route riêng (`TRIPS`,
+   * `CHAT`) và đang được thông báo trỏ tới — menu tài khoản chỉ dẫn sang.
    */
   ACCOUNT: {
     ROOT: '/account',
-    /*
-     * Khu CHỦ XE trong /account (08/09/2026): bản rút gọn cho người có ít xe — cùng feature, cùng
-     * API với `/manage`, chỉ khác vỏ điều hướng (ADR 0027/0028: Owner Lite dùng chung source).
-     * Chỉ hiện với `tenant.roleKey === shop_owner`; nhân viên gian hàng dùng `/manage`.
-     */
-    /**
-     * Tiến trình ĐĂNG KÝ chủ xe — hồ sơ và chiếc xe đầu tiên đang đi qua vòng duyệt nền tảng.
-     *
-     * Đây là toàn bộ khu chủ xe của bậc `registering` (`resolveOwnerStage`): một màn nói rõ đang
-     * chờ gì, thiếu gì, bị từ chối vì sao, và sửa được ngay tại chỗ. Nó thay cho đường vòng cũ
-     * — bắt chủ xe mới vào `/manage/shop` bấm "Gửi duyệt", tức là kéo tuyến hoa hồng vào đúng
-     * cổng quản lý mà họ không thuộc về (ADR 0027/0028).
-     */
-    REGISTRATION: '/account/registration',
-    /** Danh sách xe của chủ xe — cùng `features/vehicles` với `/manage/vehicles`. */
-    VEHICLES: '/account/vehicles',
-    /**
-     * Hộp thư phía CHỦ XE (`side=shop`) — khác `/chat` là hộp thư phía khách thuê.
-     *
-     * Một con người có cả hai vai (ADR 0014) nên có cả hai hộp thư; chủ xe tuyến hoa hồng không
-     * vào `/manage/chat` được nên hộp thư gian hàng của họ sống ở đây, dựng lại từ CÙNG
-     * `ChatView` chứ không phải một khung chat thứ hai.
-     */
-    MESSAGES: '/account/messages',
-    /**
-     * Gói dịch vụ của chủ xe — bản `/account` của `/manage/subscription`.
-     *
-     * Đây là phễu nâng cấp từ tuyến hoa hồng lên tuyến gian hàng (ADR 0028 điều 1). Chặn
-     * `/manage` mà không dời màn này sang đây nghĩa là cắt đứt chính đường mà người dùng đi để
-     * trả tiền.
-     */
-    SUBSCRIPTION: '/account/subscription',
-    /** Lịch xe — import thẳng `CalendarScheduler`, không có lịch thứ hai. */
-    CALENDAR: '/account/calendar',
-    /** Cẩm nang cho thuê xe — tài liệu PDF ở `public/owner-resources/` (xem `owner-resources.ts`). */
-    HOST_GUIDE: '/account/host-guide',
-    /** Thông tin khai thuế — bản compact của hồ sơ người bán (`/seller-profile`). */
-    TAX: '/account/tax',
-    /** Hợp đồng & chứng từ MẪU (thư viện PDF) — không phải hợp đồng theo đơn thuê. */
-    CONTRACTS_DOCUMENTS: '/account/contracts-documents',
-    /** Chính sách bảo vệ dữ liệu — dẫn tới văn bản thật ở `/legal/privacy`. */
-    DATA_PROTECTION: '/account/data-protection',
     /** Đổi mật khẩu (có mật khẩu hiện tại) hoặc đặt lần đầu (tài khoản OTP/social). */
     CHANGE_PASSWORD: '/account/change-password',
     /** YÊU CẦU xoá tài khoản — mở support case `account_deletion`, nền tảng xử lý tay. */
@@ -122,18 +85,6 @@ export const ROUTES = {
     BANK_ACCOUNTS: '/account/bank-accounts',
     /** Ví điểm — sổ công nợ XePrime phải trả, KHÔNG phải ví điện tử (ADR 0033 điều 1). */
     BALANCE: '/account/balance',
-    /**
-     * Tiền cho thuê xe — ví điểm của GIAN HÀNG, bản `/account` của `/manage/balance`.
-     *
-     * Vì sao phải có hai đường vào cùng một sổ: chủ xe tuyến hoa hồng KHÔNG vào được `/manage`
-     * (`canUseManagePortal` = false), mà ADR 0032 khiến mỗi chuyến hoàn thành của họ đều sinh
-     * khoản XePrime phải trả `D − T`. Không có route này thì tiền vào sổ rồi nằm đó, chủ xe
-     * không thấy và không rút được — đúng thứ ADR 0033 điều 1 nói là không được phép.
-     *
-     * KHÁC `BALANCE`: `BALANCE` là ví của MỘT CON NGƯỜI (tiền hoàn khoản giữ chỗ khi họ đi
-     * thuê), đây là ví của gian hàng họ sở hữu. Hai loại tiền, hai sổ, không trộn.
-     */
-    EARNINGS: '/account/earnings',
     FAVORITES: '/account/favorites',
     ADDRESSES: '/account/addresses',
     /** Kho giấy tờ tuỳ thân của khách (GPLX/CCCD) — ADR 0014: gian hàng đối chiếu tay. */
@@ -143,215 +94,248 @@ export const ROUTES = {
     SETTINGS: '/account/settings',
   },
   /**
-   * Đăng xe cho thuê — CỬA VÀO công khai của chủ xe mới (09/09/2026).
+   * Đăng xe cho thuê — LANDING công khai trên `xeprime.vn`.
    *
-   * Nằm ngoài `/manage` có chủ đích: người chưa có gian hàng không nên gặp cổng quản lý trước
-   * khi biết mình sẽ được gì. Landing xem không cần đăng nhập; bấm CTA mới đi qua auth →
-   * onboarding → wizard.
+   * Từ ADR 0051 điều 3, đăng ký cả hai tuyến diễn ra ở site partner; landing này chỉ còn là lối dẫn
+   * sang `partner.xeprime.vn/register`. Wizard đăng xe nhanh đã sang `ROUTES.MANAGE.VEHICLE_REGISTER`.
    */
   LIST_YOUR_VEHICLE: {
     ROOT: '/list-your-vehicle',
-    /** Wizard đăng xe nhanh 3 bước — cần đăng nhập + có gian hàng (guard ở trang). */
-    REGISTER: '/list-your-vehicle/register',
   },
 
+  /**
+   * SITE PARTNER (`partner.xeprime.vn`, realm `partner`) — ADR 0051 điều 2–3.
+   *
+   * Phục vụ HAI tuyến trên MỘT cây URL: gian hàng tuyến gói (Full Manage) và chủ xe cá nhân tuyến
+   * hoa hồng (Owner Lite). Trang cùng ý nghĩa ở hai tuyến dùng MỘT URL và chọn nội dung theo tuyến
+   * hiệu lực do server trả; trang chỉ của tuyến gói do server chặn (`@SubscriptionTrackOnly`) và ẩn
+   * khỏi menu tuyến hoa hồng.
+   *
+   * Mọi đường dẫn dựng qua `partner()` = `zonePath('partner', …)`: `/manage/vehicles` ở chế độ
+   * `path` (máy dev), `/vehicles` trên host partner ở chế độ `host`.
+   */
   MANAGE: {
-    ROOT: '/manage',
-    /** Đăng nhập cổng quản lý (chủ xe / nhân viên / quản trị nền tảng). Route CÔNG KHAI. */
-    LOGIN: '/manage/login',
+    ROOT: partner('/'),
+    /** Đăng nhập site partner. Route CÔNG KHAI. */
+    LOGIN: partner('/login'),
+    /**
+     * Đăng ký tài khoản đối tác + chọn tuyến (ADR 0040). Chưa đăng nhập: form đăng ký; đã đăng nhập
+     * mà chưa có gian hàng: hai cửa tuyến hoa hồng / tuyến gói. Route CÔNG KHAI.
+     */
+    REGISTER: partner('/register'),
+    FORGOT_PASSWORD: partner('/forgot-password'),
+    /** Đích của link trong email đặt lại mật khẩu (API: `${WEB_PARTNER_URL}/reset-password`). */
+    RESET_PASSWORD: partner('/reset-password'),
+    /** Gốc trang nhận lời mời — `invitePath(token)`. Route CÔNG KHAI (xem trước rồi mới đăng nhập). */
+    INVITES: partner('/invites'),
     /**
      * ONBOARDING — hai bước, hai tuyến, một route (ADR 0040).
-     *
-     * Chỉ mở khi user có ý định tường minh (CTA chủ xe / CTA gian hàng), không tự bật. Nội dung
-     * suy từ SERVER, không từ `?track=`:
      *
      * | Trạng thái thật | Màn hiện ra |
      * | --- | --- |
      * | chưa có gian hàng, `?track=commission` (mặc định) | form hồ sơ chủ xe |
      * | chưa có gian hàng, `?track=package` | bước 1: tạo gian hàng trả phí |
      * | `package_pending` | bước 2: chọn gói → QR chuyển khoản |
-     * | gói đã hiệu lực | chuyển tới `/manage/shop?welcome=1` |
-     * | tuyến hoa hồng | chuyển tới `/account/registration` |
+     * | gói đã hiệu lực | chuyển tới `SHOP?welcome=1` |
+     * | tuyến hoa hồng | chuyển tới `REGISTRATION` |
      *
-     * `?track=` CHỈ có nghĩa khi chưa có gian hàng — sau đó `tenants.onboarding_state` là nguồn,
-     * nên F5 / đóng trình duyệt / đăng nhập lại đều rơi đúng bước còn nợ.
+     * `?track=` CHỈ có nghĩa khi chưa có gian hàng — sau đó `tenants.onboarding_state` là nguồn.
      */
-    ONBOARDING: '/manage/onboarding',
+    ONBOARDING: partner('/onboarding'),
 
-    // Quản lý gian hàng
-    CALENDAR: '/manage/calendar',
-    VEHICLES: '/manage/vehicles',
-    VEHICLE_NEW: '/manage/vehicles/new',
+    // ── Vận hành (cả hai tuyến) ───────────────────────────────────────────────────────────────
+    CALENDAR: partner('/calendar'),
+    VEHICLES: partner('/vehicles'),
+    VEHICLE_NEW: partner('/vehicles/new'),
+    /**
+     * Wizard đăng xe nhanh 3 bước — bản trước ở `/list-your-vehicle/register` của khu khách. Đứng
+     * cạnh `/vehicles/[id]` là an toàn: Next ưu tiên đoạn TĨNH, id xe là ULID 26 ký tự.
+     */
+    VEHICLE_REGISTER: partner('/vehicles/register'),
     /** Trung tâm bảo dưỡng toàn đội xe (Wave 6 — docs/design/12 §9.2). */
-    MAINTENANCE: '/manage/maintenance',
-    BOOKINGS: '/manage/bookings',
+    MAINTENANCE: partner('/maintenance'),
+    BOOKINGS: partner('/bookings'),
     /**
-     * Lối tắt "Chờ giao xe" — CÙNG danh sách, cùng endpoint, chỉ khác một nhóm việc dựng sẵn
-     * (`preset=awaiting_pickup` gửi lên server).
-     *
-     * Vì sao là một ĐƯỜNG DẪN chứ không phải `/manage/bookings?preset=…`: mục menu đang mở được
-     * quyết bằng `matchSelectedKey(pathname, …)`, và `usePathname()` không mang query. Một mục
-     * menu gắn query sẽ hoặc không bao giờ sáng, hoặc làm sáng luôn cả "Tất cả đơn thuê". Sửa
-     * bằng cách cho khung ứng dụng đọc `useSearchParams()` thì đắt hơn nhiều: `AppShell` không
-     * nằm trong `Suspense` nào, nên cả cổng quản lý sẽ rơi xuống render phía client.
-     *
-     * Đứng cạnh `/manage/bookings/[id]` là an toàn: Next ưu tiên đoạn TĨNH, và id đơn là ULID
-     * 26 ký tự nên không có đơn nào mang tên này.
+     * Lối tắt "Chờ giao xe" — CÙNG danh sách, cùng endpoint, chỉ khác một nhóm việc dựng sẵn. Là
+     * một ĐƯỜNG DẪN (không phải `?preset=`) vì mục menu đang mở quyết bằng `usePathname()`.
      */
-    BOOKINGS_AWAITING_PICKUP: '/manage/bookings/awaiting-pickup',
-    BOOKING_REQUESTS: '/manage/booking-requests',
-    CUSTOMERS: '/manage/customers',
-    FINANCE: '/manage/finance',
-    /** Ví điểm gian hàng — khoản XePrime phải trả (ADR 0033). KHÔNG gác bằng gói. */
-    BALANCE: '/manage/balance',
-    RECEIPTS: '/manage/receipts',
-    DEBTS: '/manage/debts',
+    BOOKINGS_AWAITING_PICKUP: partner('/bookings/awaiting-pickup'),
+    BOOKING_REQUESTS: partner('/booking-requests'),
+    CUSTOMERS: partner('/customers'),
+    FINANCE: partner('/finance'),
+    /** Ví điểm gian hàng — khoản XePrime phải trả (ADR 0033). Cả hai tuyến; KHÔNG gác bằng gói. */
+    BALANCE: partner('/balance'),
+    RECEIPTS: partner('/receipts'),
+    DEBTS: partner('/debts'),
 
     /**
-     * CỬA HÀNG — một trang cho toàn bộ thiết lập của gian hàng (16/09/2026).
-     *
-     * Năm section, chọn bằng `?section=` (xem `SHOP_SECTION`): thông tin hiển thị · chủ gian
-     * hàng · địa chỉ & pháp lý · tài khoản nhận tiền · gói & hạn mức (kèm hoá đơn).
-     *
-     * Trước đợt này chúng nằm rải ở bốn mục sidebar — "Cửa hàng", "Gói & hoá đơn", "Tài khoản &
-     * bảo mật", "Hồ sơ người bán" — và ba trong bốn mục đó hỏi cùng một loại câu hỏi ("gian
-     * hàng của tôi khai gì"). Gộp ở tầng TRANG, không gộp dữ liệu: mỗi section vẫn gọi đúng API
-     * của nó, và section "Gói & hạn mức" dựng lại chính `SubscriptionWorkspace` chứ không clone.
+     * CỬA HÀNG — một trang cho toàn bộ thiết lập của gian hàng tuyến gói (16/09/2026), năm section
+     * chọn bằng `?section=` (xem `SHOP_SECTION`).
      */
-    SHOP: '/manage/shop',
+    SHOP: partner('/shop'),
     /**
-     * BẢO MẬT TÀI KHOẢN của NGƯỜI đang đăng nhập — phương thức đăng nhập, mật khẩu, xoá tài khoản.
-     *
-     * KHÔNG có mục sidebar (16/09/2026): đây là việc của một CON NGƯỜI, không phải một bước vận
-     * hành, nên nó vào menu tài khoản ở thẻ người dùng — đúng chỗ người ta đi tìm nó. Một dòng
-     * thường trực trong sidebar gian hàng đứng cạnh "Đơn thuê" và "Chi nhánh" là một dòng nói về
-     * chủ đề khác hẳn các dòng còn lại.
+     * ALIAS CHUYỂN TIẾP (05/10/2026) — "Bảo mật tài khoản" đã gộp vào `ACCOUNT`; route cũ redirect
+     * tới section "Thông tin đăng nhập". Không mục menu nào còn trỏ tới đây.
      */
-    SECURITY: '/manage/security',
+    SECURITY: partner('/security'),
     /**
-     * ALIAS CHUYỂN TIẾP (16/09/2026) — đích thật: `SECURITY`.
-     *
-     * Trang cũ gộp hồ sơ CON NGƯỜI (tên, ảnh) với bảo mật (mật khẩu, xoá tài khoản) và một thẻ
-     * lối vào gian hàng. Hai nửa đầu tách ra: tên/ảnh thuộc tài khoản marketplace và sửa ở
-     * `/account`, còn bảo mật ở `SECURITY`. Hằng số này chỉ còn cho trang redirect.
+     * TÀI KHOẢN & BẢO MẬT của tài khoản đối tác — tên, ảnh, email/SĐT đăng nhập, mật khẩu, xoá tài
+     * khoản (ADR 0053: tài khoản partner là tài khoản riêng của site partner). Section chọn bằng
+     * `?section=` (xem `ACCOUNT_SECTION`).
      */
-    ACCOUNT: '/manage/account',
+    ACCOUNT: partner('/account'),
     /**
-     * LỐI ĐI CHUYỂN TIẾP tới chuyến ĐI THUÊ cũ của người đang đăng nhập (15/09/2026).
-     *
-     * Chỉ dành cho người từng là chủ xe tuyến hoa hồng rồi nâng lên gian hàng tuyến gói: họ có
-     * thể còn chuyến đi thuê chưa khép, kênh liên hệ với chủ xe kia, và khoản hoàn chưa nhận.
-     * Ẩn `/trips` mà không để lại đường nào là GIẤU MẤT tiền và nghĩa vụ của chính họ.
-     *
-     * KHÔNG có mục menu nào dẫn tới đây — nó là lối THEO NGỮ CẢNH, hiện trong "Tài khoản & bảo
-     * mật" đúng khi còn chuyến. Một mục "Chuyến của tôi" thường trực trong Manage sẽ dựng lại
-     * đúng thứ tuyến gói vừa gỡ bỏ.
-     *
-     * Dữ liệu ở đây LUÔN khoá vai `renter`. Chuyến họ CHO THUÊ sống ở `/manage/bookings`.
+     * LỐI ĐI CHUYỂN TIẾP tới chuyến ĐI THUÊ cũ của tài khoản này (15/09/2026) — từ ADR 0053 tài khoản
+     * đối tác không đặt xe nữa; trang chỉ còn cho dữ liệu có trước đợt tách realm.
      */
-    ACCOUNT_TRIPS: '/manage/account/trips',
     /** Chi nhánh gian hàng — nơi xe thực sự nằm, và là vị trí công khai của xe. */
-    SHOP_BRANCHES: '/manage/shop/branches',
+    SHOP_BRANCHES: partner('/shop/branches'),
     /** Chính sách thuê mặc định của gian hàng (Wave 2 — cọc/giao nhận/quá giờ/ưu đãi). */
-    SHOP_POLICIES: '/manage/shop/policies',
+    SHOP_POLICIES: partner('/shop/policies'),
+    /** ALIAS CHUYỂN TIẾP (16/09/2026) — đích thật: `SHOP_POLICIES#deposit-collection`. */
+    SHOP_PAYMENT_SETTINGS: partner('/shop/payment-settings'),
+    /** ALIAS CHUYỂN TIẾP (16/09/2026) — đích thật: `SHOP?section=legal`. */
+    SELLER_PROFILE: partner('/shop/seller-profile'),
+    MEMBERS: partner('/members'),
     /**
-     * ALIAS CHUYỂN TIẾP (16/09/2026) — không còn là trang thật, không còn mục nav nào dẫn tới.
-     * Đích thật: `SHOP_POLICIES` + `#${SHOP_POLICIES_DEPOSIT_ANCHOR}`.
-     *
-     * Công tắc thu cọc qua XePrime (Phase 6 — ADR 0032 điều 2) đã gộp vào `SHOP_POLICIES` làm
-     * một section riêng (khái niệm tiền vẫn khác `SHOP_POLICIES` — cọc/thế chấp tại quầy vs
-     * khoản `D` XePrime thu hộ — chỉ không còn cần HAI route cho hai khái niệm đó). Hằng số
-     * này chỉ còn để trang redirect giữ đường dẫn cũ sống cho ai đã bookmark.
+     * GÓI DỊCH VỤ — MỘT URL, nội dung theo tuyến: tuyến gói chuyển tới `SHOP?section=plan`; tuyến hoa
+     * hồng là phễu nâng cấp (ADR 0028 điều 1).
      */
-    SHOP_PAYMENT_SETTINGS: '/manage/shop/payment-settings',
-    /**
-     * ALIAS CHUYỂN TIẾP (16/09/2026) — đích thật: `SHOP` + `?section=legal`.
-     *
-     * Hồ sơ người bán THÔI làm một màn của chủ gian hàng: bốn thứ nó hỏi (loại chủ thể, tên pháp
-     * lý, MST, số giấy tờ) đã có chỗ trong "Địa chỉ & pháp lý", còn tài khoản nhận tiền — thứ
-     * chiếm nửa màn cũ — đã về `bank_accounts`. Backend GIỮ NGUYÊN (`seller_profiles`, hàng đợi
-     * xác minh `/manage/admin/sellers`, quan hệ khấu trừ thuế): nó vẫn là hồ sơ mà nền tảng
-     * duyệt và module thuế đọc, chỉ không còn là một mục trong menu của chủ shop.
-     */
-    SELLER_PROFILE: '/manage/shop/seller-profile',
-    MEMBERS: '/manage/members',
-    /**
-     * ALIAS CHUYỂN TIẾP (16/09/2026) — đích thật: `SHOP` + `?section=plan`.
-     *
-     * Gói và hạn mức là MỘT PHẦN của "gian hàng của tôi khai gì", không phải một khu riêng. Nội
-     * dung không mất gì: hạn mức chỗ, hạn gói, mua/gia hạn và hoá đơn (kèm QR) đều sống tiếp
-     * trong section đó, dựng từ chính `SubscriptionWorkspace`.
-     *
-     * `/account/subscription` thì GIỮ NGUYÊN là trang thật — chủ xe tuyến hoa hồng không vào
-     * `/manage` được, và đó là phễu nâng cấp của họ (ADR 0028 điều 1).
-     */
-    SUBSCRIPTION: '/manage/subscription',
-    DRIVERS: '/manage/drivers',
-    CHAT: '/manage/chat',
-    /** Trung tâm hỗ trợ của cổng quản lý — hướng dẫn nhanh + câu hỏi thường gặp. */
-    SUPPORT: '/manage/support',
+    SUBSCRIPTION: partner('/subscription'),
+    DRIVERS: partner('/drivers'),
+    /** Hộp thư phía gian hàng — CẢ hai tuyến (chủ xe hoa hồng nhắn với khách ở đây). */
+    CHAT: partner('/chat'),
+    /** Trung tâm hỗ trợ — hướng dẫn nhanh + câu hỏi thường gặp. */
+    SUPPORT: partner('/support'),
     /** Case hỗ trợ / tranh chấp của gian hàng (R3 — ADR 0028 release gate 7). */
-    SUPPORT_CASES: '/manage/support/cases',
+    SUPPORT_CASES: partner('/support/cases'),
 
-    // Quản trị nền tảng
+    // ── Owner Lite — trang của tuyến hoa hồng (ADR 0051 điều 3) ─────────────────────────────────
+    /**
+     * Tiến trình ĐĂNG KÝ chủ xe — hồ sơ và chiếc xe đầu tiên đi qua vòng duyệt nền tảng. Toàn bộ
+     * khu chủ xe của bậc `registering` (`resolveOwnerStage`).
+     */
+    REGISTRATION: partner('/registration'),
+    /** Thông tin khai thuế — bản compact của hồ sơ người bán. */
+    TAX: partner('/tax'),
+    /** Tài khoản ngân hàng nhận tiền của gian hàng (sổ tenant). */
+    BANK_ACCOUNTS: partner('/bank-accounts'),
+    /** Cẩm nang cho thuê xe — tài liệu PDF ở `public/owner-resources/`. */
+    HOST_GUIDE: partner('/host-guide'),
+    /** Hợp đồng & chứng từ MẪU (thư viện PDF) — không phải hợp đồng theo đơn thuê. */
+    CONTRACTS_DOCUMENTS: partner('/contracts-documents'),
+    /** Chính sách bảo vệ dữ liệu — dẫn tới văn bản thật ở `/legal/privacy`. */
+    DATA_PROTECTION: partner('/data-protection'),
+  },
+
+  /**
+   * SITE QUẢN TRỊ (`admin.xeprime.vn`, realm `platform`) — ADR 0051 điều 2.
+   *
+   * Thư mục nội bộ `app/(admin)/admin`; mọi đường dẫn dựng qua `admin()` = `zonePath('admin', …)`.
+   * Đăng nhập chỉ bằng mật khẩu, không tự đăng ký (ADR 0053 điều 3).
+   */
+  ADMIN: {
     /** "Kiểm duyệt xe" — hàng đợi duyệt xe lên chợ. Chỉ khớp TUYỆT ĐỐI trên menu (`NavLeaf.exact`). */
-    ADMIN: '/manage/admin',
+    ROOT: admin('/'),
+    /** Tổng quan nền tảng (`PlatformDashboardView`) — trước ADR 0051 nằm ở gốc `/manage`. */
+    DASHBOARD: admin('/dashboard'),
+    LOGIN: admin('/login'),
+    FORGOT_PASSWORD: admin('/forgot-password'),
+    /** Đích của link đặt lại mật khẩu — cũng là trang đặt mật khẩu LẦN ĐẦU của nhân sự mới (B4). */
+    RESET_PASSWORD: admin('/reset-password'),
+    /** Bảo mật tài khoản của nhân sự đang đăng nhập (đổi mật khẩu). */
+    SECURITY: admin('/security'),
     /**
      * BỘ TRA LOẠI ĐỐI TÁC — và là URL cũ của danh sách gian hàng chung (trước 28/09/2026).
      *
      * ⚠️ KHÔNG xoá như một route "legacy": `adminPartnerPath.resolveTenant` dựa vào nó cho chi tiết
-     * đơn thuê, lối thoát phiên hỗ trợ và dashboard nền tảng. `?tenant=<id>` tra loại của gian
-     * hàng đó ở server rồi mở đúng danh sách với chi tiết mở sẵn; không có `tenant` thì về "Gian
-     * hàng gói" kèm nguyên bộ lọc.
+     * đơn thuê, lối thoát phiên hỗ trợ và dashboard nền tảng.
      */
-    ADMIN_TENANTS: '/manage/admin/tenants',
+    TENANTS: admin('/tenants'),
     /** Gốc hai danh sách đối tác — chuyển tiếp về "Gian hàng gói". */
-    ADMIN_PARTNERS: '/manage/admin/partners',
-    ADMIN_PARTNER_SHOPS: '/manage/admin/partners/shops',
-    ADMIN_PARTNER_OWNERS: '/manage/admin/partners/owners',
-    ADMIN_VEHICLES: '/manage/admin/vehicles',
-    ADMIN_BOOKINGS: '/manage/admin/bookings',
-    ADMIN_CUSTOMERS: '/manage/admin/customers',
-    ADMIN_AUDIT: '/manage/admin/audit',
-    ADMIN_STAFF: '/manage/admin/staff',
-    ADMIN_PLANS: '/manage/admin/plans',
-    /** URL CŨ của hàng đợi tiền vào — chuyển tiếp về `ADMIN_MONEY?queue=bank-in` (01/10/2026). */
-    ADMIN_BANK_TRANSACTIONS: '/manage/admin/bank-transactions',
-    ADMIN_CATALOG: '/manage/admin/catalog',
+    PARTNERS: admin('/partners'),
+    PARTNER_SHOPS: admin('/partners/shops'),
+    PARTNER_OWNERS: admin('/partners/owners'),
+    VEHICLES: admin('/vehicles'),
+    BOOKINGS: admin('/bookings'),
+    CUSTOMERS: admin('/customers'),
+    /** Tra cứu XUYÊN REALM — mọi tài khoản trùng một SĐT/email (ADR 0053 điều 9, B4). */
+    ACCOUNT_LOOKUP: admin('/accounts'),
+    AUDIT: admin('/audit'),
+    STAFF: admin('/staff'),
+    PLANS: admin('/plans'),
+    /** URL CŨ của hàng đợi tiền vào — chuyển tiếp về `MONEY?queue=bank-in` (01/10/2026). */
+    BANK_TRANSACTIONS: admin('/bank-transactions'),
+    CATALOG: admin('/catalog'),
     /** Danh mục hành chính (tỉnh/thành) — dữ liệu dùng chung cho mọi gian hàng. */
-    ADMIN_LOCATIONS: '/manage/admin/locations',
-    ADMIN_BANNERS: '/manage/admin/marketplace-banners',
+    LOCATIONS: admin('/locations'),
+    BANNERS: admin('/marketplace-banners'),
     /** Hàng đợi xác minh người bán (R3 — ADR 0028 release gate 1). */
-    ADMIN_SELLERS: '/manage/admin/sellers',
+    SELLERS: admin('/sellers'),
     /** Quản trị chính sách phí có phiên bản (R3 — ADR 0028 điều 2–3). */
-    ADMIN_FEE_POLICIES: '/manage/admin/fee-policies',
-    ADMIN_PROMO_CODES: '/manage/admin/promo-codes',
+    FEE_POLICIES: admin('/fee-policies'),
+    PROMO_CODES: admin('/promo-codes'),
     /** Màn Tài chính: tiền vào, giữ chỗ, hoàn, rút, bảo hiểm, thuế, đối soát ngày (`?queue=`). */
-    ADMIN_MONEY: '/manage/admin/money',
+    MONEY: admin('/money'),
     /** Hàng đợi hỗ trợ/tranh chấp toàn sàn (R3 — ADR 0028 release gate 7). */
-    ADMIN_SUPPORT: '/manage/admin/support',
+    SUPPORT: admin('/support'),
     /**
      * Không gian hỗ trợ gian hàng (ADR 0050) — gốc của các phiên `/…/<id phiên>/…`. Tách hẳn khỏi
-     * `ADMIN_SUPPORT` (hàng đợi hỗ trợ/tranh chấp): hai tính năng khác nhau, không chung tiền tố.
+     * `SUPPORT` (hàng đợi hỗ trợ/tranh chấp): hai tính năng khác nhau, không chung tiền tố.
      */
-    ADMIN_TENANT_SUPPORT: '/manage/admin/tenant-support',
+    TENANT_SUPPORT: admin('/tenant-support'),
   },
 } as const;
 
 export type ManageRoute = (typeof ROUTES.MANAGE)[keyof typeof ROUTES.MANAGE];
 
 /**
- * Chi tiết một xe nhìn từ KHU TÀI KHOẢN của chủ xe — cùng `VehicleDetailContent` với
- * `/manage/vehicles/[id]`, chỉ khác vỏ và đường quay lại.
+ * Ba trang TÀI KHOẢN của từng site — đăng nhập, quên mật khẩu, đặt lại mật khẩu (ADR 0053: mỗi site
+ * một không gian tài khoản, nên mỗi site có bộ trang của mình). Form dùng chung đọc khu đang render
+ * (`useZone()`) rồi lấy đường dẫn ở đây, không tự ghép.
+ *
+ * Site khách đăng nhập bằng MODAL: `ROUTES.LOGIN` là route cũ mà proxy chuyển thành `/?auth=login`.
  */
-export const accountVehiclePath = {
-  detail: (id: string): string => `${ROUTES.ACCOUNT.VEHICLES}/${id}`,
+export function zoneAuthRoutes(zone: Zone): {
+  login: string;
+  forgotPassword: string;
+  resetPassword: string;
+} {
+  switch (zone) {
+    case ZONE.PARTNER:
+      return {
+        login: ROUTES.MANAGE.LOGIN,
+        forgotPassword: ROUTES.MANAGE.FORGOT_PASSWORD,
+        resetPassword: ROUTES.MANAGE.RESET_PASSWORD,
+      };
+    case ZONE.ADMIN:
+      return {
+        login: ROUTES.ADMIN.LOGIN,
+        forgotPassword: ROUTES.ADMIN.FORGOT_PASSWORD,
+        resetPassword: ROUTES.ADMIN.RESET_PASSWORD,
+      };
+    default:
+      return {
+        login: ROUTES.LOGIN,
+        forgotPassword: ROUTES.FORGOT_PASSWORD,
+        resetPassword: ROUTES.RESET_PASSWORD,
+      };
+  }
+}
+
+/**
+ * Xe của chủ xe TUYẾN HOA HỒNG ở site partner. Chi tiết dùng CHUNG URL với tuyến gói
+ * (`/vehicles/[id]` — một URL, nội dung theo tuyến); riêng không gian "Quản lý xe" rút gọn của
+ * Owner Lite sống ở `/vehicles/[id]/manage/<mục>` (tuyến gói sửa xe ở `/vehicles/[id]/edit`).
+ */
+export const ownerVehiclePath = {
+  detail: (id: string): string => `${ROUTES.MANAGE.VEHICLES}/${id}`,
   /** Không gian "Quản lý xe" của chủ xe (08/09/2026) — gốc tự chuyển tới mục đầu tiên. */
-  manage: (id: string): string => `${ROUTES.ACCOUNT.VEHICLES}/${id}/manage`,
+  manage: (id: string): string => `${ROUTES.MANAGE.VEHICLES}/${id}/manage`,
 };
 
 /**
- * Các mục của không gian "Quản lý xe" (`/account/vehicles/[id]/manage/<mục>`) — GIÁ TRỊ đường
+ * Các mục của không gian "Quản lý xe" (`/vehicles/[id]/manage/<mục>`) — GIÁ TRỊ đường
  * dẫn, không phải nhãn. Menu trái, trang con và `VehicleEditWorkspace` ở `/manage` cùng đọc.
  *
  * Nhóm "có tài xế" KHÔNG có mục "Tiện ích bổ sung": mockup có nó nhưng nghiệp vụ không — phụ phí
@@ -392,35 +376,23 @@ export const VEHICLE_MANAGE_SECTION_VALUES = Object.values(
  */
 export const RENTAL_TERMS_ANCHOR = 'rental-terms';
 
-/** Mục mở mặc định khi vào gốc `/manage` của một xe. */
+/** Mục mở mặc định khi vào gốc không gian quản lý của một xe. */
 export const VEHICLE_MANAGE_DEFAULT_SECTION: VehicleManageSection =
   VEHICLE_MANAGE_SECTION.INFORMATION;
 
-export const accountVehicleManagePath = {
+export const ownerVehicleManagePath = {
   section: (id: string, section: VehicleManageSection): string =>
-    `${accountVehiclePath.manage(id)}/${section}`,
+    `${ownerVehiclePath.manage(id)}/${section}`,
 };
 
 /**
- * Đường dẫn có thuộc không gian quản lý xe không — `AccountShell` dùng để chuyển sang bố cục
- * trọn bề ngang cho CẢ tiền tố (mọi mục con), khác lịch xe chỉ khớp tuyệt đối.
+ * Đường dẫn có thuộc không gian quản lý xe của Owner Lite không (mọi mục con) — khung partner
+ * dùng để mở bố cục trọn bề ngang cho CẢ tiền tố.
  */
-export function isAccountVehicleManagePath(pathname: string): boolean {
-  return /^\/account\/vehicles\/[^/]+\/manage(\/|$)/.test(pathname);
-}
-
-/**
- * Hồ sơ 360 của một xe ở khu tài khoản — `AccountShell` nới bề ngang cho nó.
- *
- * Màn này là một BẢNG ĐIỀU KHIỂN nhiều cột (thông số · giá · việc cần làm · lịch sắp tới), khác
- * hẳn các màn còn lại của khu tài khoản vốn là biểu mẫu một cột và hưởng lợi từ trần 1220px. Ở
- * màn 1920, trần đó để trống hơn 350px bên phải trong khi bảng thông số bị ép xuống ~290px.
- *
- * Chỉ khớp ĐÚNG `/account/vehicles/<id>`: gốc `/account/vehicles` là danh sách, còn `…/manage`
- * đã đi đường trọn bề ngang riêng.
- */
-export function isAccountVehicleDetailPath(pathname: string): boolean {
-  return /^\/account\/vehicles\/[^/]+\/?$/.test(pathname);
+export function isOwnerVehicleManagePath(pathname: string): boolean {
+  const base = ROUTES.MANAGE.VEHICLES;
+  if (!pathname.startsWith(`${base}/`)) return false;
+  return /^[^/]+\/manage(\/|$)/.test(pathname.slice(base.length + 1));
 }
 
 /**
@@ -445,9 +417,9 @@ export function vehicleManageSectionOf(pathname: string): VehicleManageSection |
  * cách tự mở một lỗ open-redirect trên chính luồng đăng xe.
  */
 export const VEHICLE_REGISTRATION_SOURCE = {
-  /** Từ chợ / landing công khai. */
+  /** Từ trang chọn cách cho thuê (`/register` của site partner, hoặc landing công khai của site khách). */
   MARKETPLACE: 'marketplace',
-  /** Từ khu tài khoản của chủ xe (`/account/vehicles`). */
+  /** Từ danh sách xe của chủ xe tuyến hoa hồng (Owner Lite — `/vehicles` của site partner). */
   ACCOUNT: 'account',
   /** Từ cổng gian hàng (`/manage/vehicles`). */
   MANAGE: 'manage',
@@ -469,17 +441,25 @@ export function isVehicleRegistrationSource(
 export function vehicleListPathFor(source: VehicleRegistrationSource): string {
   switch (source) {
     case VEHICLE_REGISTRATION_SOURCE.MANAGE:
-      return ROUTES.MANAGE.VEHICLES;
     case VEHICLE_REGISTRATION_SOURCE.ACCOUNT:
-      return ROUTES.ACCOUNT.VEHICLES;
+      return ROUTES.MANAGE.VEHICLES;
     default:
-      return ROUTES.LIST_YOUR_VEHICLE.ROOT;
+      /*
+       * Trang chọn cách cho thuê của site partner — chỗ người dùng vừa bấm "Đăng xe đầu tiên" (cùng
+       * site, cùng tài khoản đối tác). Đã có gian hàng thì trang đó tự đưa về trang chủ theo tuyến.
+       */
+      return ROUTES.MANAGE.REGISTER;
   }
 }
 
 /** Wizard đăng xe nhanh, mang theo ngữ cảnh mở. */
 export function listYourVehicleRegisterPath(source: VehicleRegistrationSource): string {
-  return `${ROUTES.LIST_YOUR_VEHICLE.REGISTER}?from=${source}`;
+  return `${ROUTES.MANAGE.VEHICLE_REGISTER}?from=${source}`;
+}
+
+/** Trang nhận lời mời vào gian hàng — đích của link trong email (`${WEB_PARTNER_URL}/invites/<token>`). */
+export function invitePath(token: string): string {
+  return `${ROUTES.MANAGE.INVITES}/${encodeURIComponent(token)}`;
 }
 
 /**
@@ -542,19 +522,24 @@ export function workspacePaths(workspace: Workspace): {
       support: ROUTES.MANAGE.SUPPORT,
     };
   }
+  /*
+   * Owner Lite ở site partner (ADR 0051 điều 3): trang cùng ý nghĩa dùng CHUNG URL với tuyến gói
+   * (xe, lịch, hộp thư, đơn, yêu cầu, gói, hỗ trợ) — chỉ những mục không có bản tuyến gói một-đối-
+   * một mới trỏ sang trang riêng của tuyến hoa hồng.
+   */
   return {
-    home: ROUTES.ACCOUNT.ROOT,
-    vehicles: ROUTES.ACCOUNT.VEHICLES,
+    home: ROUTES.MANAGE.ROOT,
+    vehicles: ROUTES.MANAGE.VEHICLES,
     vehicleNew: listYourVehicleRegisterPath(VEHICLE_REGISTRATION_SOURCE.ACCOUNT),
-    calendar: ROUTES.ACCOUNT.CALENDAR,
-    chat: ROUTES.ACCOUNT.MESSAGES,
-    bookings: ROUTES.TRIPS,
-    bookingRequests: ROUTES.TRIPS,
-    ownerProfile: ROUTES.ACCOUNT.REGISTRATION,
-    branches: ROUTES.ACCOUNT.REGISTRATION,
-    subscription: ROUTES.ACCOUNT.SUBSCRIPTION,
-    sellerProfile: ROUTES.ACCOUNT.TAX,
-    support: ROUTES.ACCOUNT.SUPPORT,
+    calendar: ROUTES.MANAGE.CALENDAR,
+    chat: ROUTES.MANAGE.CHAT,
+    bookings: ROUTES.MANAGE.BOOKINGS,
+    bookingRequests: ROUTES.MANAGE.BOOKING_REQUESTS,
+    ownerProfile: ROUTES.MANAGE.REGISTRATION,
+    branches: ROUTES.MANAGE.REGISTRATION,
+    subscription: ROUTES.MANAGE.SUBSCRIPTION,
+    sellerProfile: ROUTES.MANAGE.TAX,
+    support: ROUTES.MANAGE.SUPPORT_CASES,
   };
 }
 
@@ -615,30 +600,30 @@ export interface WorkspaceVehiclePaths {
 export function workspaceVehiclePaths(workspace: Workspace): WorkspaceVehiclePaths {
   const isManage = workspace === WORKSPACE.MANAGE;
   return {
-    detail: isManage ? vehiclePath.detail : accountVehiclePath.manage,
-    overview: isManage ? vehiclePath.detail : accountVehiclePath.detail,
-    manageSection: accountVehicleManagePath.section,
+    detail: isManage ? vehiclePath.detail : ownerVehiclePath.manage,
+    overview: isManage ? vehiclePath.detail : ownerVehiclePath.detail,
+    manageSection: ownerVehicleManagePath.section,
     edit: (id) => vehiclePath.edit(id),
     part: (id, tab, section) =>
       isManage
         ? vehicleTabPath(id, tab)
         : section
-          ? accountVehicleManagePath.section(id, section)
+          ? ownerVehicleManagePath.section(id, section)
           : null,
     profile: (id) =>
       isManage
         ? vehiclePath.edit(id)
-        : accountVehicleManagePath.section(id, VEHICLE_MANAGE_DEFAULT_SECTION),
+        : ownerVehicleManagePath.section(id, VEHICLE_MANAGE_DEFAULT_SECTION),
     // Cổng quản lý: MỤC trong màn sửa xe, không phải route `/pricing` cũ — route đó nay chỉ
     // còn là một lần chuyển hướng tới đúng mục này, và bắt link mới đi qua nó là một nhịp thừa.
     pricing: (id) =>
       isManage
         ? vehicleTabPath(id, VEHICLE_EDIT_TAB.PRICING)
-        : accountVehicleManagePath.section(id, VEHICLE_MANAGE_SECTION.PRICING),
+        : ownerVehicleManagePath.section(id, VEHICLE_MANAGE_SECTION.PRICING),
     optimization: (id) =>
       isManage
         ? vehicleTabPath(id, VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION)
-        : accountVehicleManagePath.section(id, VEHICLE_MANAGE_SECTION.SELF_DRIVE_OPTIMIZATION),
+        : ownerVehicleManagePath.section(id, VEHICLE_MANAGE_SECTION.SELF_DRIVE_OPTIMIZATION),
   };
 }
 
@@ -649,11 +634,11 @@ export function workspaceVehiclePaths(workspace: Workspace): WorkspaceVehiclePat
  * `tenantSupportContextIdFromPath` phải đổi. Không component nào tự ghép chuỗi `/manage/admin/tenant-support/`.
  */
 export const adminTenantSupportPath = {
-  root: (contextId: string): string => `${ROUTES.MANAGE.ADMIN_TENANT_SUPPORT}/${contextId}`,
+  root: (contextId: string): string => `${ROUTES.ADMIN.TENANT_SUPPORT}/${contextId}`,
   vehicleEdit: (contextId: string, id: string): string =>
-    `${ROUTES.MANAGE.ADMIN_TENANT_SUPPORT}/${contextId}/vehicles/${id}/edit`,
+    `${ROUTES.ADMIN.TENANT_SUPPORT}/${contextId}/vehicles/${id}/edit`,
   vehicleManageSection: (contextId: string, id: string, section: VehicleManageSection): string =>
-    `${ROUTES.MANAGE.ADMIN_TENANT_SUPPORT}/${contextId}/vehicles/${id}/manage/${section}`,
+    `${ROUTES.ADMIN.TENANT_SUPPORT}/${contextId}/vehicles/${id}/manage/${section}`,
 };
 
 /** Tham số URL mở sẵn chi tiết một gian hàng trên danh sách đối tác (ADR 0004 — sống qua F5). */
@@ -663,8 +648,8 @@ export const ADMIN_PARTNER_TENANT_PARAM = 'tenant';
 export const ADMIN_PARTNER_TAB_PARAM = 'tab';
 
 const ADMIN_PARTNER_LIST_ROUTE: Readonly<Record<PlatformPartnerKind, string>> = {
-  [PLATFORM_PARTNER_KIND.PACKAGE_SHOP]: ROUTES.MANAGE.ADMIN_PARTNER_SHOPS,
-  [PLATFORM_PARTNER_KIND.INDIVIDUAL_OWNER]: ROUTES.MANAGE.ADMIN_PARTNER_OWNERS,
+  [PLATFORM_PARTNER_KIND.PACKAGE_SHOP]: ROUTES.ADMIN.PARTNER_SHOPS,
+  [PLATFORM_PARTNER_KIND.INDIVIDUAL_OWNER]: ROUTES.ADMIN.PARTNER_OWNERS,
 };
 
 /**
@@ -679,28 +664,28 @@ export const adminPartnerPath = {
   tenant: (kind: PlatformPartnerKind, tenantId: string): string =>
     `${ADMIN_PARTNER_LIST_ROUTE[kind]}?${new URLSearchParams({ [ADMIN_PARTNER_TENANT_PARAM]: tenantId })}`,
   resolveTenant: (tenantId: string): string =>
-    `${ROUTES.MANAGE.ADMIN_TENANTS}?${new URLSearchParams({ [ADMIN_PARTNER_TENANT_PARAM]: tenantId })}`,
+    `${ROUTES.ADMIN.TENANTS}?${new URLSearchParams({ [ADMIN_PARTNER_TENANT_PARAM]: tenantId })}`,
 };
 
 export function tenantSupportContextIdFromPath(pathname: string): string | null {
-  const prefix = `${ROUTES.MANAGE.ADMIN_TENANT_SUPPORT}/`;
+  const prefix = `${ROUTES.ADMIN.TENANT_SUPPORT}/`;
   if (!pathname.startsWith(prefix)) return null;
   const segment = pathname.slice(prefix.length).split('/')[0];
   return isSupportContextId(segment) ? segment : null;
 }
 
 export const vehiclePath = {
-  detail: (id: string): string => `/manage/vehicles/${id}`,
-  edit: (id: string): string => `/manage/vehicles/${id}/edit`,
+  detail: (id: string): string => `${ROUTES.MANAGE.VEHICLES}/${id}`,
+  edit: (id: string): string => `${ROUTES.MANAGE.VEHICLES}/${id}/edit`,
   /** Giá & chính sách theo xe (Wave 2): kế thừa gian hàng hoặc ghi đè riêng. */
-  pricing: (id: string): string => `/manage/vehicles/${id}/pricing`,
+  pricing: (id: string): string => `${ROUTES.MANAGE.VEHICLES}/${id}/pricing`,
   /**
    * Tối ưu nhận chuyến — tự động nhận, khoảng đặt trước, lộ trình ưu tiên (17/09/2026).
    *
    * Bề mặt chủ xe tuyến hoa hồng có mục này từ lâu ở `/account/vehicles/...`; gian hàng thì
    * không, nên xe gian hàng không có đường nào bật "Đặt ngay" dù server vẫn đọc đúng cờ đó.
    */
-  optimization: (id: string): string => `/manage/vehicles/${id}/optimization`,
+  optimization: (id: string): string => `${ROUTES.MANAGE.VEHICLES}/${id}/optimization`,
 };
 
 /**
@@ -756,7 +741,7 @@ export function vehicleTabPath(id: string, tab: VehicleEditTab): string {
  * danh sách vẫn giữ cho thao tác nhanh.
  */
 export const bookingPath = {
-  detail: (id: string): string => `/manage/bookings/${id}`,
+  detail: (id: string): string => `${ROUTES.MANAGE.BOOKINGS}/${id}`,
 };
 
 /**
@@ -766,12 +751,12 @@ export const bookingPath = {
  * này"), mở lại nhiều lần trong ngày, và F5 không được mất chỗ đang đọc.
  */
 export const customerPath = {
-  detail: (id: string): string => `/manage/customers/${id}`,
+  detail: (id: string): string => `${ROUTES.MANAGE.CUSTOMERS}/${id}`,
 };
 
 /** Trang xem/in hợp đồng thuê. */
 export const contractPath = {
-  detail: (id: string): string => `/manage/contracts/${id}`,
+  detail: (id: string): string => `${partner('/contracts')}/${id}`,
 };
 
 /**
@@ -783,7 +768,7 @@ export const contractPath = {
  */
 export const adminAuditPath = {
   forTarget: (targetType: string, targetId: string): string =>
-    `${ROUTES.MANAGE.ADMIN_AUDIT}?${new URLSearchParams({ targetType, targetId }).toString()}`,
+    `${ROUTES.ADMIN.AUDIT}?${new URLSearchParams({ targetType, targetId }).toString()}`,
 };
 
 /**
@@ -910,6 +895,46 @@ export function shopSectionDomId(section: ShopSection): string {
 export const SHOP_LOGO_TRIGGER_ID = 'shop-logo-upload';
 
 /**
+ * ── TÀI KHOẢN & BẢO MẬT (site partner, 05/10/2026) ───────────────────────────────────────────
+ *
+ * MỘT trang cho mọi thứ của CON NGƯỜI đang đăng nhập — gộp "Hồ sơ cá nhân" và "Bảo mật tài
+ * khoản" vốn là hai trang lặp nhau (cả hai đều hiện email/SĐT). Cùng khuôn với trang Cửa hàng:
+ * section xếp dọc, mục lục dính, `?section=` ở URL để link/F5/Quay lại đúng chỗ.
+ *
+ * Không có gì của GIAN HÀNG ở đây — tên, logo, SĐT liên hệ của gian hàng sống ở `SHOP`.
+ */
+export const ACCOUNT_SECTION = {
+  /** Tên và ảnh đại diện của tài khoản. */
+  PROFILE: 'profile',
+  /** Email và SĐT đăng nhập — đổi qua OTP. */
+  LOGIN: 'login',
+  /** Đổi (hoặc đặt lần đầu) mật khẩu. */
+  PASSWORD: 'password',
+  /** Yêu cầu xoá tài khoản — một support case, không phải nút xoá. */
+  DELETE: 'delete',
+} as const;
+
+export type AccountSection = (typeof ACCOUNT_SECTION)[keyof typeof ACCOUNT_SECTION];
+export const ACCOUNT_SECTION_VALUES = Object.values(ACCOUNT_SECTION) as AccountSection[];
+
+/** `?section=` → section hợp lệ; giá trị lạ rơi về `profile` (cùng luật với `shopSectionOf`). */
+export function accountSectionOf(value: string | null | undefined): AccountSection {
+  return (ACCOUNT_SECTION_VALUES as string[]).includes(value ?? '')
+    ? (value as AccountSection)
+    : ACCOUNT_SECTION.PROFILE;
+}
+
+/** Đường dẫn tới một section của trang tài khoản partner. */
+export function accountSectionPath(section: AccountSection): string {
+  return `${ROUTES.MANAGE.ACCOUNT}?section=${section}`;
+}
+
+/** Id của phần tử section trong DOM — đích của anchor và của cuộn. */
+export function accountSectionDomId(section: AccountSection): string {
+  return `account-section-${section}`;
+}
+
+/**
  * ── ONBOARDING GIAN HÀNG (ADR 0040) ──────────────────────────────────────────────────────────
  *
  * Hai tham số URL, hai vai trò khác nhau, và cả hai chỉ là GỢI Ý cho lần vẽ đầu — trạng thái
@@ -933,6 +958,30 @@ export function manageOnboardingPath(track: RegistrationTrack): string {
   return track === REGISTRATION_TRACK.COMMISSION
     ? ROUTES.MANAGE.ONBOARDING
     : `${ROUTES.MANAGE.ONBOARDING}?${REGISTRATION_TRACK_PARAM}=${track}`;
+}
+
+/**
+ * Trang ĐĂNG KÝ của site partner, mang sẵn tuyến đã chọn (ADR 0040 điều 1 · ADR 0051 điều 3) — dùng
+ * TỪ SITE KHÁCH ("Đăng xe cho thuê", "Mở gian hàng"), nên là link KHÁC site: tuyệt đối ở chế độ
+ * `host`. `?track=` chỉ là gợi ý cho bước chọn tuyến; tuyến thật lưu ở `tenants.onboarding_state`
+ * khi tạo gian hàng.
+ */
+export function partnerRegisterHref(track?: RegistrationTrack): string {
+  const path = track ? `/register?${REGISTRATION_TRACK_PARAM}=${track}` : '/register';
+  return siteHref(ZONE.PARTNER, path);
+}
+
+/**
+ * Bước ĐẦU của một tuyến, cho tài khoản đối tác CHƯA có gian hàng — đích của hai nút trên trang chọn
+ * cách cho thuê, và của `/register?track=…` sau khi tạo tài khoản:
+ *
+ *  - hoa hồng → wizard đăng xe nhanh: khai hồ sơ chủ xe + chiếc xe đầu tiên, gian hàng mở ở bước lưu;
+ *  - gói → onboarding gói: tạo gian hàng trả phí rồi thanh toán (ADR 0040).
+ */
+export function partnerTrackStartHref(track: RegistrationTrack): string {
+  return track === REGISTRATION_TRACK.COMMISSION
+    ? listYourVehicleRegisterPath(VEHICLE_REGISTRATION_SOURCE.MARKETPLACE)
+    : manageOnboardingPath(REGISTRATION_TRACK.PACKAGE);
 }
 
 /**

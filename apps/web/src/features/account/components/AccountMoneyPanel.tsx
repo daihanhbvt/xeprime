@@ -41,10 +41,12 @@ export function AccountMoneyPanel() {
   if (!user) return null;
 
   const scope = walletScopeFor(user);
+  // Nhân viên gian hàng: không ví, không sổ ngân hàng — tiền gian hàng là việc của chủ.
+  if (!scope) return null;
 
   return (
     <div className={styles.stack}>
-      <WalletSummaryCard scope={scope} href={walletHrefFor(user)} />
+      <WalletSummaryCard scope={scope} href={walletHrefFor(scope)} />
       <BankAccountList scope={scope} />
     </div>
   );

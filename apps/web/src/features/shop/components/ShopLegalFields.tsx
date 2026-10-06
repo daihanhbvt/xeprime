@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { Control } from 'react-hook-form';
-import type { ShopProfileValues } from '@xeprime/validators';
+import type { ShopProfileWithContactValues } from '@xeprime/validators';
 
 import { AddressField } from '@/components/form/AddressField';
 import { TextField } from '@/components/form/TextField';
@@ -28,7 +28,7 @@ export function ShopLegalFields({
   control,
   readOnly,
 }: {
-  control: Control<ShopProfileValues>;
+  control: Control<ShopProfileWithContactValues>;
   /** Truyền xuống các ô CHỌN — `fieldset[disabled]` không với tới combobox dựng bằng div. */
   readOnly: boolean;
 }) {
@@ -68,20 +68,20 @@ export function ShopLegalFields({
         }
       />
       {legalHidden ? null : (
-      <div className={styles.pairRow}>
-        <TextField
-          control={control}
-          name="taxCode"
-          label={t('form.address.taxCode.label')}
-          placeholder={t('form.address.taxCode.placeholder')}
-        />
-        <TextField
-          control={control}
-          name="businessLicenseNo"
-          label={t('form.address.businessLicenseNo.label')}
-          placeholder={t('form.address.businessLicenseNo.placeholder')}
-        />
-      </div>
+        <div className={styles.pairRow}>
+          <TextField
+            control={control}
+            name="taxCode"
+            label={t('form.address.taxCode.label')}
+            placeholder={t('form.address.taxCode.placeholder')}
+          />
+          <TextField
+            control={control}
+            name="businessLicenseNo"
+            label={t('form.address.businessLicenseNo.label')}
+            placeholder={t('form.address.businessLicenseNo.placeholder')}
+          />
+        </div>
       )}
     </>
   );

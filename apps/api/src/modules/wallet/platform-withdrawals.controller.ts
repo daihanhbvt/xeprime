@@ -1,7 +1,10 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
 import { ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
-import { CurrentUser, PlatformOnly, RequirePermissions } from '../../common/decorators';
+import {
+  ACCOUNT_REALM,
+  PERMISSION,
+} from '@xeprime/types';
+import { CurrentUser, PlatformOnly, Realms, RequirePermissions } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import {
   MarkWithdrawalPaidDto,
@@ -30,6 +33,7 @@ import { PlatformWithdrawalService } from './platform-withdrawal.service';
 @Controller('platform/money/withdrawals')
 @PlatformOnly()
 @RequirePermissions(PERMISSION.PLATFORM_MONEY_MANAGE)
+@Realms(ACCOUNT_REALM.PLATFORM)
 export class PlatformWithdrawalsController {
   constructor(private readonly withdrawals: PlatformWithdrawalService) {}
 

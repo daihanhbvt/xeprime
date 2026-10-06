@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
-import { API_ERROR_CODE } from '@xeprime/types';
+import { ACCOUNT_REALM, API_ERROR_CODE } from '@xeprime/types';
 import request from 'supertest';
 import { createValidationPipe } from '../src/bootstrap';
 import { AllExceptionsFilter } from '../src/common/filters/all-exceptions.filter';
@@ -77,17 +77,15 @@ describe('GET /auth/social/:provider/callback — sống sót qua ValidationPipe
       native: null,
     });
 
-    const res = await request(app.getHttpServer())
-      .get('/auth/social/google/callback')
-      .query({
-        state: 'st',
-        code: 'c',
-        // Bốn tham số dưới đây do GOOGLE tự gắn, không phải XePrime.
-        iss: 'https://accounts.google.com',
-        scope: 'email profile openid',
-        authuser: '0',
-        prompt: 'consent',
-      });
+    const res = await request(app.getHttpServer()).get('/auth/social/google/callback').query({
+      state: 'st',
+      code: 'c',
+      // Bốn tham số dưới đây do GOOGLE tự gắn, không phải XePrime.
+      iss: 'https://accounts.google.com',
+      scope: 'email profile openid',
+      authuser: '0',
+      prompt: 'consent',
+    });
 
     expect(res.status).toBe(302);
     expect(social.complete).toHaveBeenCalledWith({
@@ -98,17 +96,19 @@ describe('GET /auth/social/:provider/callback — sống sót qua ValidationPipe
   });
 
   it('KHÔNG 400 khi Facebook gắn thêm error_reason/error_description lúc người dùng huỷ', async () => {
-    const res = await request(app.getHttpServer())
-      .get('/auth/social/facebook/callback')
-      .query({
-        error: 'access_denied',
-        error_code: '200',
-        error_reason: 'user_denied',
-        error_description: 'Permissions error.',
-      });
+    const res = await request(app.getHttpServer()).get('/auth/social/facebook/callback').query({
+      error: 'access_denied',
+      error_code: '200',
+      error_reason: 'user_denied',
+      error_description: 'Permissions error.',
+    });
 
     expect(res.status).toBe(302);
-    expect(social.webRedirect).toHaveBeenCalledWith(null, API_ERROR_CODE.SOCIAL_CANCELLED);
+    expect(social.webRedirect).toHaveBeenCalledWith(
+      ACCOUNT_REALM.CUSTOMER,
+      null,
+      API_ERROR_CODE.SOCIAL_CANCELLED,
+    );
     expect(social.complete).not.toHaveBeenCalled();
   });
 
@@ -124,6 +124,8 @@ describe('GET /auth/social/:provider/callback — sống sót qua ValidationPipe
       provider: 'google',
       next: '/trips',
       locale: 'en',
+      // Không có AuthGuard ở đây nên request không mang realm của site — controller chuyển `null`.
+      webRealm: null,
     });
   });
 
@@ -132,7 +134,11 @@ describe('GET /auth/social/:provider/callback — sống sót qua ValidationPipe
 
     expect(res.status).toBe(302);
     expect(res.headers['content-type']).not.toMatch(/json/);
-    expect(social.webRedirect).toHaveBeenCalledWith(null, API_ERROR_CODE.SOCIAL_STATE_INVALID);
+    expect(social.webRedirect).toHaveBeenCalledWith(
+      ACCOUNT_REALM.CUSTOMER,
+      null,
+      API_ERROR_CODE.SOCIAL_STATE_INVALID,
+    );
   });
 
   it('provider lạ trong đường dẫn cũng ra 302, không phải 404/500', async () => {
@@ -141,7 +147,11 @@ describe('GET /auth/social/:provider/callback — sống sót qua ValidationPipe
       .query({ code: 'c', state: 'st' });
 
     expect(res.status).toBe(302);
-    expect(social.webRedirect).toHaveBeenCalledWith(null, API_ERROR_CODE.SOCIAL_STATE_INVALID);
+    expect(social.webRedirect).toHaveBeenCalledWith(
+      ACCOUNT_REALM.CUSTOMER,
+      null,
+      API_ERROR_CODE.SOCIAL_STATE_INVALID,
+    );
   });
 });
 
@@ -261,6 +271,7 @@ describe('GET /auth/social/:provider/callback — nhánh app native', () => {
       provider: 'google',
       next: null,
       locale: null,
+      webRealm: null,
       native: NATIVE,
     });
   });

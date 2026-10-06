@@ -6,13 +6,16 @@ import {
 } from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   MEMBERSHIP_STATUS,
   PLATFORM_ROLE,
+  USER_STATUS,
   type PaginationMeta,
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { AuthService } from '../auth/auth.service';
 import {
   AddStaffDto,
   STAFF_DEFAULT_LIMIT,
@@ -46,6 +49,8 @@ export class PlatformStaffService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    /** Gửi email đặt mật khẩu cho tài khoản quản trị vừa tạo — cùng luồng "quên mật khẩu". */
+    private readonly auth: AuthService,
   ) {}
 
   async list(query: StaffListQueryDto): Promise<{ data: StaffDto[]; meta: PaginationMeta }> {
@@ -83,29 +88,53 @@ export class PlatformStaffService {
     };
   }
 
-  /** Thêm nhân sự theo email. User phải đã có tài khoản; từng bị gỡ thì kích hoạt lại row cũ. */
+  /**
+   * Thêm nhân sự nền tảng — ADR 0053 điều 3.
+   *
+   * Tra/tạo tài khoản CHỈ trong realm `platform`: một tài khoản khách hay chủ xe cùng email là một
+   * tài khoản KHÁC, và nâng quyền cho nó là trộn lại đúng hai không gian ADR 0053 tách ra. Chưa có
+   * tài khoản `platform` với email đó ⇒ TẠO mới (không mật khẩu) rồi gửi email đặt mật khẩu tới
+   * site admin. Từng là nhân sự rồi bị gỡ ⇒ kích hoạt lại đúng tài khoản cũ.
+   *
+   * Tạo tài khoản + membership + audit trong MỘT transaction; email gửi SAU khi commit (lỗi gửi
+   * thư không được làm mất một tài khoản đã tạo — admin bấm "Quên mật khẩu" ở site admin là xong).
+   */
   async add(actorUserId: string, dto: AddStaffDto): Promise<StaffDto> {
     const email = dto.email.trim().toLowerCase();
-    const user = await this.prisma.user.findFirst({ where: { email }, select: { id: true } });
-    if (!user) {
-      throw new NotFoundException({
-        code: API_ERROR_CODE.NOT_FOUND,
-        message: 'Chưa có tài khoản với email này. Người dùng cần đăng ký trước.',
-      });
-    }
-
-    const active = await this.prisma.platformMembership.findFirst({
-      where: { userId: user.id, status: { not: MEMBERSHIP_STATUS.REMOVED } },
-      select: { userId: true },
+    const found = await this.prisma.user.findFirst({
+      where: { realm: ACCOUNT_REALM.PLATFORM, email, deletedAt: null },
+      select: { id: true },
     });
-    if (active) {
-      throw new ConflictException({
-        code: API_ERROR_CODE.CONFLICT,
-        message: 'Người dùng đã là nhân sự nền tảng',
+
+    if (found) {
+      const active = await this.prisma.platformMembership.findFirst({
+        where: { userId: found.id, status: { not: MEMBERSHIP_STATUS.REMOVED } },
+        select: { userId: true },
       });
+      if (active) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.CONFLICT,
+          message: 'Người dùng đã là nhân sự nền tảng',
+        });
+      }
     }
 
+    const createdAccount = !found;
     const row = await this.prisma.$transaction(async (tx) => {
+      const userId = found?.id ?? newId();
+      if (!found) {
+        await tx.user.create({
+          data: {
+            id: userId,
+            realm: ACCOUNT_REALM.PLATFORM,
+            email,
+            displayName: dto.displayName.trim(),
+            status: USER_STATUS.ACTIVE,
+          },
+        });
+      }
+      const user = { id: userId };
+
       // Unique [userId, roleKey]: nếu từng có row (removed) đúng vai trò này thì kích hoạt lại,
       // chưa có thì tạo mới. Row removed vai trò khác cứ để đó — guard chỉ đọc ACTIVE.
       const existing = await tx.platformMembership.findUnique({
@@ -136,13 +165,17 @@ export class PlatformStaffService {
           action: 'platform_staff.add',
           targetType: 'platform_membership',
           targetId: user.id,
-          after: { roleKey: dto.roleKey },
+          after: { roleKey: dto.roleKey, accountCreated: createdAccount },
         },
         tx,
       );
 
       return membership;
     });
+
+    // Tài khoản MỚI chưa có mật khẩu — gửi link đặt mật khẩu tới site admin. Hàm này nuốt lỗi gửi
+    // thư (xem `AuthService.requestPasswordReset`), nên không có nhánh lỗi nào lọt ra đây.
+    if (createdAccount) await this.auth.requestPasswordReset(email, ACCOUNT_REALM.PLATFORM);
 
     return toDto(row);
   }

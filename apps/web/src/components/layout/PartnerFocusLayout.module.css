@@ -1,0 +1,59 @@
+/* Khung tập trung của site partner: thanh trên cùng mỏng + nội dung chiếm phần còn lại. */
+.page {
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  background: var(--xp-color-bg);
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  height: 64px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  padding-inline: var(--xp-space-lg);
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+  background: var(--xp-color-bg-container);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+}
+
+.account {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+/* Tên dài (email) không được đẩy nút đăng xuất ra khỏi màn hẹp. */
+.signedInAs {
+  overflow: hidden;
+  max-width: 280px;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 575px) {
+  .topbar {
+    padding-inline: var(--xp-space-md);
+  }
+
+  .signedInAs {
+    display: none;
+  }
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+}

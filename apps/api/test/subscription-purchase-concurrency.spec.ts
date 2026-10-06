@@ -1,5 +1,6 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   BILLING_MODE,
   SUBSCRIPTION_INVOICE_STATUS,
@@ -51,7 +52,12 @@ beforeAll(async () => {
   actorId = newId();
   tenantId = newId();
   await prisma.user.create({
-    data: { id: actorId, displayName: 'Purchase Spec', email: `purchase-${RUN}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: actorId,
+      displayName: 'Purchase Spec',
+      email: `purchase-${RUN}@xeprime.test`,
+    },
   });
   await prisma.tenant.create({
     data: {
@@ -139,74 +145,80 @@ describe('purchase — mỗi tenant chỉ giữ MỘT hoá đơn trả được'
     expect(old.status).toBe(SUBSCRIPTION_INVOICE_STATUS.VOID);
   });
 
-  maybe('hoá đơn ĐÃ nhận một phần tiền: chặn mua mới, KHÔNG void tiền khách đã chuyển', async () => {
-    await resetInvoices();
-    const invoice = await purchase();
-    await prisma.subscriptionInvoice.update({
-      where: { id: invoice.id },
-      data: {
-        status: SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID,
-        paidAmount: '50000',
-        // `applyBankPaymentWithinTx` xoá hạn khi đã có tiền vào — giữ fixture giống production.
-        expiresAt: null,
-      },
-    });
+  maybe(
+    'hoá đơn ĐÃ nhận một phần tiền: chặn mua mới, KHÔNG void tiền khách đã chuyển',
+    async () => {
+      await resetInvoices();
+      const invoice = await purchase();
+      await prisma.subscriptionInvoice.update({
+        where: { id: invoice.id },
+        data: {
+          status: SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID,
+          paidAmount: '50000',
+          // `applyBankPaymentWithinTx` xoá hạn khi đã có tiền vào — giữ fixture giống production.
+          expiresAt: null,
+        },
+      });
 
-    await expect(purchase()).rejects.toMatchObject({
-      response: {
-        code: API_ERROR_CODE.SUBSCRIPTION_INVOICE_PARTIALLY_PAID,
-        details: { code: invoice.code },
-      },
-    });
+      await expect(purchase()).rejects.toMatchObject({
+        response: {
+          code: API_ERROR_CODE.SUBSCRIPTION_INVOICE_PARTIALLY_PAID,
+          details: { code: invoice.code },
+        },
+      });
 
-    // Hoá đơn dang dở còn nguyên: cả trạng thái lẫn số tiền đã nhận.
-    const after = await prisma.subscriptionInvoice.findUniqueOrThrow({
-      where: { id: invoice.id },
-      select: { status: true, paidAmount: true },
-    });
-    expect(after.status).toBe(SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID);
-    expect(after.paidAmount.toString()).toBe('50000');
-    expect(await payableInvoices()).toHaveLength(1);
-  });
+      // Hoá đơn dang dở còn nguyên: cả trạng thái lẫn số tiền đã nhận.
+      const after = await prisma.subscriptionInvoice.findUniqueOrThrow({
+        where: { id: invoice.id },
+        select: { status: true, paidAmount: true },
+      });
+      expect(after.status).toBe(SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID);
+      expect(after.paidAmount.toString()).toBe('50000');
+      expect(await payableInvoices()).toHaveLength(1);
+    },
+  );
 
   /*
    * Bằng chứng bất biến sống ở DATABASE, không chỉ ở service: ghi THẲNG qua Prisma, bỏ qua mọi
    * guard của `BillingService`. Đây là ca mà một writer thứ ba (job mới, script vá tay, một
    * service tương lai) sẽ gặp — và phải gặp.
    */
-  maybe('DB tự từ chối hoá đơn payable thứ hai, kể cả khi ghi thẳng không qua service', async () => {
-    await resetInvoices();
-    const first = await purchase();
+  maybe(
+    'DB tự từ chối hoá đơn payable thứ hai, kể cả khi ghi thẳng không qua service',
+    async () => {
+      await resetInvoices();
+      const first = await purchase();
 
-    await expect(
-      prisma.subscriptionInvoice.create({
-        data: {
-          id: newId(),
-          tenantId,
-          code: `XPG${newId().slice(-8).toUpperCase()}`,
-          periodFrom: new Date(),
-          periodTo: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          linesJson: {},
-          subtotal: '100000',
-          discountAmount: '0',
-          totalAmount: '100000',
-          paidAmount: '0',
-          status: SUBSCRIPTION_INVOICE_STATUS.ISSUED,
-        },
-      }),
-    ).rejects.toMatchObject({ code: 'P2002' });
+      await expect(
+        prisma.subscriptionInvoice.create({
+          data: {
+            id: newId(),
+            tenantId,
+            code: `XPG${newId().slice(-8).toUpperCase()}`,
+            periodFrom: new Date(),
+            periodTo: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            linesJson: {},
+            subtotal: '100000',
+            discountAmount: '0',
+            totalAmount: '100000',
+            paidAmount: '0',
+            status: SUBSCRIPTION_INVOICE_STATUS.ISSUED,
+          },
+        }),
+      ).rejects.toMatchObject({ code: 'P2002' });
 
-    expect(await payableInvoices()).toHaveLength(1);
+      expect(await payableInvoices()).toHaveLength(1);
 
-    // Hoá đơn đã `void` KHÔNG chiếm chỗ: mua lại sau khi void phải chạy được.
-    await prisma.subscriptionInvoice.update({
-      where: { id: first.id },
-      data: { status: SUBSCRIPTION_INVOICE_STATUS.VOID },
-    });
-    const replacement = await purchase();
-    expect(replacement.code).not.toBe(first.code);
-    expect(await payableInvoices()).toHaveLength(1);
-  });
+      // Hoá đơn đã `void` KHÔNG chiếm chỗ: mua lại sau khi void phải chạy được.
+      await prisma.subscriptionInvoice.update({
+        where: { id: first.id },
+        data: { status: SUBSCRIPTION_INVOICE_STATUS.VOID },
+      });
+      const replacement = await purchase();
+      expect(replacement.code).not.toBe(first.code);
+      expect(await payableInvoices()).toHaveLength(1);
+    },
+  );
 
   maybe('hai lượt mua ĐỒNG THỜI chỉ để lại một hoá đơn trả được', async () => {
     await resetInvoices();

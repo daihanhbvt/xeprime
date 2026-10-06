@@ -1,6 +1,11 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { API_ERROR_CODE } from '@xeprime/types';
+import {
+  API_ERROR_CODE,
+  SESSION_TTL_DAYS,
+  resolveSessionCookieName,
+  type AccountRealm,
+} from '@xeprime/types';
 import jwt from 'jsonwebtoken';
 import type { CookieOptions, Response } from 'express';
 import { ulid } from 'ulid';
@@ -27,18 +32,21 @@ export class SessionService {
     return this.config.getOrThrow<string>('SESSION_JWT_SECRET');
   }
 
-  private get ttlDays(): number {
-    return this.config.getOrThrow<number>('SESSION_TTL_DAYS');
-  }
-
-  get cookieName(): string {
-    return this.config.getOrThrow<string>('SESSION_COOKIE_NAME');
+  /**
+   * Tên cookie phiên của MỘT realm — ADR 0053 điều 4. Cùng công thức với web proxy
+   * (`resolveSessionCookieName` ở @xeprime/types), không gõ tên ở đâu khác.
+   */
+  cookieName(realm: AccountRealm): string {
+    return resolveSessionCookieName(
+      { SESSION_COOKIE_NAME: this.config.getOrThrow<string>('SESSION_COOKIE_NAME') },
+      realm,
+    );
   }
 
   issue(userId: string): { token: string; sessionId: string } {
     const sessionId = ulid();
     const token = jwt.sign({ sub: userId, sid: sessionId } satisfies SessionPayload, this.secret, {
-      expiresIn: `${this.ttlDays}d`,
+      expiresIn: `${SESSION_TTL_DAYS}d`,
       issuer: 'xeprime-api',
     });
     return { token, sessionId };
@@ -78,27 +86,31 @@ export class SessionService {
 
   /**
    * `httpOnly` là điểm mấu chốt: XSS không đọc được cookie này.
-   * `sameSite: lax` chặn CSRF cho request điều hướng; request ghi cross-site vẫn cần
-   * CSRF token khi web và API khác origin (ADR 0002 ràng buộc 3).
+   *
+   * HOST-ONLY (không đặt `domain`) — ADR 0053 điều 4. API phục vụ cùng origin dưới `/api` của từng
+   * site, nên cookie do `partner.xeprime.vn/api` phát chỉ quay lại `partner.xeprime.vn`: trình duyệt
+   * không bao giờ gửi nó sang site khách hay site admin. Đặt `domain` là mở lại đúng cái cửa ADR
+   * 0053 đóng — vì vậy `SESSION_COOKIE_DOMAIN` bị env schema từ chối.
+   *
+   * `sameSite: lax` + cùng origin + phép chặn `Origin` cho request ghi (`OriginGuard`) là ba lớp
+   * chống CSRF (ADR 0002 ràng buộc 3 — nhánh "cùng domain").
    */
   private cookieOptions(): CookieOptions {
-    const domain = this.config.get<string>('SESSION_COOKIE_DOMAIN');
     return {
       httpOnly: true,
       secure: this.config.getOrThrow<boolean>('SESSION_COOKIE_SECURE'),
       sameSite: 'lax',
       path: '/',
-      maxAge: this.ttlDays * 24 * 60 * 60 * 1000,
-      ...(domain ? { domain } : {}),
+      maxAge: SESSION_TTL_DAYS * 24 * 60 * 60 * 1000,
     };
   }
 
-  attach(res: Response, token: string): void {
-    res.cookie(this.cookieName, token, this.cookieOptions());
+  attach(res: Response, token: string, realm: AccountRealm): void {
+    res.cookie(this.cookieName(realm), token, this.cookieOptions());
   }
 
-  clear(res: Response): void {
+  clear(res: Response, realm: AccountRealm): void {
     const { maxAge: _maxAge, ...rest } = this.cookieOptions();
-    res.clearCookie(this.cookieName, rest);
+    res.clearCookie(this.cookieName(realm), rest);
   }
 }

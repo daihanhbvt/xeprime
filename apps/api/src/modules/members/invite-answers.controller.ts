@@ -1,7 +1,8 @@
 import { Controller, Get, Param, Post } from '@nestjs/common';
+import { ACCOUNT_REALM } from '@xeprime/types';
 import { Throttle } from '@nestjs/throttler';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { CurrentUser, Public } from '../../common/decorators';
+import { CurrentUser, Public, Realms } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import { InviteAnswerDto, InvitePreviewDto } from './dto/invite.dto';
 import { InvitesService } from './invites.service';
@@ -19,6 +20,8 @@ import { InvitesService } from './invites.service';
  */
 @ApiTags('members')
 @Controller('invites')
+// Nhận lời mời tạo membership gian hàng ⇒ chỉ tài khoản partner (ADR 0053 điều 6).
+@Realms(ACCOUNT_REALM.PARTNER)
 export class InviteAnswersController {
   constructor(private readonly invites: InvitesService) {}
 

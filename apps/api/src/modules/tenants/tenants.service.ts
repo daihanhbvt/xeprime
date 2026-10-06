@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { markBadgesDirty, newId, Prisma } from '@xeprime/prisma';
+import { isUniqueViolation, markBadgesDirty, newId, Prisma } from '@xeprime/prisma';
 import {
   APPROVAL_ACTION,
   APPROVAL_STATUS,
@@ -27,7 +27,6 @@ import { AuditService } from '../audit/audit.service';
 import type { BranchUpdatePlan } from '../branches/branches.service';
 import { BillingService } from '../billing/billing.service';
 import { BranchesService } from '../branches/branches.service';
-import { WalletService } from '../wallet/wallet.service';
 import { AddressService } from '../locations/address.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -39,8 +38,11 @@ import {
   UpdateTenantProfileDto,
 } from './dto/tenant-onboarding.dto';
 
+/*
+ * KHÔNG có `displayName` (05/10/2026): tên hiển thị là `tenants.name`, nguồn duy nhất. Nơi trả
+ * `TenantProfileDto` ghép nó vào qua `emptyProfileIfNull(profile, tenant.name)`.
+ */
 const PROFILE_SELECT = {
-  displayName: true,
   bio: true,
   logoUrl: true,
   coverUrl: true,
@@ -92,8 +94,6 @@ export class TenantsService {
     private readonly address: AddressService,
     private readonly branches: BranchesService,
     private readonly billing: BillingService,
-    /** Writer duy nhất của ví (ADR 0023 ràng buộc 3) — dùng để đổi chủ ví lúc mở gian hàng. */
-    private readonly wallet: WalletService,
   ) {}
 
   /**
@@ -133,7 +133,10 @@ export class TenantsService {
    * | Trường bắt buộc | tỉnh | tỉnh + **xã** + **địa chỉ chi tiết** + **SĐT** |
    * | Gói gán lúc tạo | gói hoa hồng mặc định | **KHÔNG gán gì** |
    * | `onboarding_state` | `commission` | `package_pending` |
-   * | Đi đâu sau khi tạo | Owner Lite ở `/account` | bước 2 của onboarding (chọn gói → chuyển khoản) |
+   * | Đi đâu sau khi tạo | Owner Lite ở site partner | bước 2 của onboarding (chọn gói → chuyển khoản) |
+   *
+   * Người gọi luôn là tài khoản realm `partner` (route chỉ khai `partner` — ADR 0053), và trigger
+   * `tenants_owner_realm_check` / `tenant_memberships_user_realm_check` giữ điều đó ở DB.
    *
    * Vì sao tuyến gói KHÔNG nhận một gói hoa hồng tạm: dòng thuê bao là thứ `/auth/me` đọc để
    * chọn KHU làm việc, nên gán nó nghĩa là người vừa bấm "Đăng ký gian hàng" trở thành chủ xe
@@ -150,12 +153,7 @@ export class TenantsService {
       where: { userId, status: MEMBERSHIP_STATUS.ACTIVE },
       select: { tenantId: true },
     });
-    if (existing) {
-      throw new ConflictException({
-        code: API_ERROR_CODE.CONFLICT,
-        message: 'Tài khoản đã thuộc một gian hàng. Hãy đăng nhập vào gian hàng đó.',
-      });
-    }
+    if (existing) throw alreadyInTenant();
 
     const track = registrationTrackOf(dto.registrationTrack);
     const isPackageTrack = track === REGISTRATION_TRACK.PACKAGE;
@@ -211,7 +209,8 @@ export class TenantsService {
 
     const tenantType = dto.tenantType ?? TENANT_TYPE.INDIVIDUAL;
     const id = newId();
-    const tenantId = await this.prisma.$transaction(async (tx) => {
+    const tenantId = await this.prisma
+      .$transaction(async (tx) => {
       await tx.tenant.create({
         data: {
           id,
@@ -242,7 +241,7 @@ export class TenantsService {
       await tx.tenantProfile.create({
         data: {
           tenantId: id,
-          displayName: dto.name,
+          // Tên hiển thị KHÔNG ở đây — nó là `tenants.name` vừa ghi ở trên (nguồn duy nhất).
           // Bốn cột dưới là bản SAO tương thích ngược của chi nhánh mặc định; nguồn sự thật vận
           // hành là `tenant_branches`. Đồng bộ về sau đi qua `syncProfileFromDefaultBranch`.
           address: address.displayAddress,
@@ -284,19 +283,19 @@ export class TenantsService {
       if (!isPackageTrack) await this.billing.assignDefaultPlanWithinTx(tx, id);
 
       /*
-       * VÍ THEO NGƯỜI CHỦ (15/09/2026) — trong CHÍNH transaction này, cùng lý do với dòng gói ở
-       * trên: không được có khoảnh khắc nào tenant đã tồn tại mà ví còn đứng tên cá nhân.
-       *
-       * Người đăng ký thường đã là KHÁCH THUÊ trước đó, nên họ có thể đang có số dư từ tiền hoàn
-       * khoản giữ chỗ, có tài khoản ngân hàng đã khai, thậm chí một lệnh rút đang chờ admin
-       * chuyển. Tất cả đi theo — không chuyển tiền, chỉ đổi chủ của hàng ví (`wallets.id` không
-       * đổi nên lệnh rút và mọi tham chiếu vẫn trỏ đúng).
-       *
-       * Ghi qua `WalletService` vì nó là writer DUY NHẤT của ba bảng ví (ADR 0023 ràng buộc 3).
+       * KHÔNG còn bước "nhận ví cá nhân về tenant" (ADR 0053 điều 8 — bỏ ADR 0038 điều 2). Ví cá
+       * nhân thuộc TÀI KHOẢN KHÁCH, một tài khoản khác hẳn với tài khoản partner đang mở gian hàng
+       * này; tiền hoàn của khách không bao giờ đổi chủ sang ví gian hàng. Ví của tenant được tạo
+       * khi có khoản ghi có đầu tiên, như mọi tenant khác.
        */
-      await this.wallet.adoptUserWalletWithinTx(tx, userId, id);
-      return id;
-    });
+        return id;
+      })
+      .catch((error: unknown) => {
+        // Hai lượt mở gian hàng song song của cùng một tài khoản: unique index một phần
+        // `tenant_memberships_one_active_per_user` là chốt thật (ADR 0053 điều 6).
+        if (isUniqueViolation(error, ONE_ACTIVE_MEMBERSHIP_INDEX)) throw alreadyInTenant();
+        throw error;
+      });
 
     return this.getMyShop(tenantId);
   }
@@ -363,7 +362,7 @@ export class TenantsService {
        * gian hàng; chủ xe hoa hồng vừa mua gói thì chưa từng đi qua cửa gian hàng).
        */
       onboardingState: tenant.onboardingState,
-      profile: emptyProfileIfNull(tenant.profile),
+      profile: emptyProfileIfNull(tenant.profile, tenant.name),
       /*
        * Chủ gian hàng đọc từ TÀI KHOẢN, không từ hồ sơ (16/09/2026). Đây là lý do khối này là
        * một object riêng chứ không phải ba trường nữa nằm trong `profile`: `profile` là thứ
@@ -409,6 +408,10 @@ export class TenantsService {
    *    mặc định (xem `syncProfileFromDefaultBranch`); ghi thẳng vào chúng sẽ đúng cho tới lần
    *    chạm chi nhánh kế tiếp rồi âm thầm bị ghi đè, và trong lúc đó xe vẫn hiển thị ở tỉnh cũ
    *    trên marketplace vì `public_listings` không hề biết có thay đổi.
+   * 3. **Tên, SĐT, email liên hệ đi vào `tenants` (05/10/2026).** Đó là ba cột khách đọc (thẻ xe,
+   *    trang gian hàng, chat, chuyến, hợp đồng). Tên từng ghi vào bản sao `tenant_profiles.
+   *    display_name` mà không màn khách nào đọc, còn SĐT/email liên hệ thì không sửa được sau
+   *    đăng ký. Chúng là của GIAN HÀNG, độc lập với SĐT/email đăng nhập của tài khoản chủ.
    */
   async updateProfile(
     tenantId: string,
@@ -427,7 +430,17 @@ export class TenantsService {
      * sẽ đúng cho tới lần chạm chi nhánh kế tiếp rồi âm thầm bị ghi đè, trong khi xe vẫn hiển
      * thị ở địa chỉ cũ trên marketplace vì `public_listings` không hề biết có thay đổi.
      */
-    const { provinceCode, wardCode, addressLine, address, ...profile } = dto;
+    const { provinceCode, wardCode, addressLine, address, displayName, phone, email, ...profile } =
+      dto;
+
+    // Ô trống ở SĐT/email liên hệ nghĩa là GỠ (→ NULL). Tên thì không gỡ được: DTO đòi 2–255 ký
+    // tự, vì `tenants.name` NOT NULL và là thứ khách nhìn thấy đầu tiên.
+    const contact = normalizeProfileWrite({ phone, email });
+    const tenantData: Prisma.TenantUpdateInput = {
+      ...(displayName === undefined ? {} : { name: displayName }),
+      ...(contact.phone === undefined ? {} : { phone: contact.phone }),
+      ...(contact.email === undefined ? {} : { email: contact.email }),
+    };
 
     // Tra địa chỉ (có gọi mạng) TRƯỚC transaction — rồi dời chi nhánh mặc định và lưu hồ sơ trong
     // MỘT transaction: không còn trạng thái "chi nhánh đã dời mà hồ sơ chưa lưu".
@@ -446,6 +459,9 @@ export class TenantsService {
     const data = normalizeProfileWrite(profile);
     await this.prisma.$transaction(async (tx) => {
       if (branchPlan) await this.branches.applyUpdate(tx, tenantId, userId, branchPlan);
+      if (Object.keys(tenantData).length > 0) {
+        await tx.tenant.update({ where: { id: tenantId }, data: tenantData });
+      }
       // upsert: tenant tạo qua đường khác có thể chưa có hồ sơ.
       await tx.tenantProfile.upsert({
         where: { tenantId },
@@ -508,6 +524,7 @@ export class TenantsService {
       where: { id: tenantId, deletedAt: null },
       select: {
         id: true,
+        name: true,
         status: true,
         profile: { select: PROFILE_SELECT },
         owner: { select: OWNER_SELECT },
@@ -558,7 +575,7 @@ export class TenantsService {
      * ĐÃ QUA xác minh OTP.
      */
     const missing = missingShopProfileRequirements({
-      displayName: tenant.profile?.displayName,
+      displayName: tenant.name,
       provinceCode: tenant.branches[0]?.provinceCode ?? tenant.profile?.provinceCode,
       ownerFullName: tenant.owner.displayName,
       ownerPhone: tenant.owner.phone,
@@ -601,6 +618,8 @@ export class TenantsService {
            */
           snapshot: {
             ...(tenant.profile ?? {}),
+            // Khoá `displayName` giữ nguyên trong snapshot như phiếu cũ — chỉ đổi nguồn đọc.
+            displayName: tenant.name,
             ownerFullName: tenant.owner.displayName,
             ownerPhone: tenant.owner.phone,
             ownerEmail: tenant.owner.email,
@@ -684,11 +703,16 @@ function normalizeProfileWrite<T extends Record<string, string | undefined>>(
   return out;
 }
 
+/**
+ * `displayName` của DTO là `tenants.name` — giữ trên dây để client cũ (web, app native) đọc
+ * `profile.displayName` không vỡ, nhưng không còn cột nào trên `tenant_profiles` mang nó.
+ */
 function emptyProfileIfNull(
   profile: Prisma.TenantProfileGetPayload<{ select: typeof PROFILE_SELECT }> | null,
+  tenantName: string,
 ): TenantProfileDto {
   return {
-    displayName: profile?.displayName ?? null,
+    displayName: tenantName,
     bio: profile?.bio ?? null,
     logoUrl: profile?.logoUrl ?? null,
     coverUrl: profile?.coverUrl ?? null,
@@ -706,5 +730,16 @@ function notFound(): NotFoundException {
   return new NotFoundException({
     code: API_ERROR_CODE.NOT_FOUND,
     message: 'Không tìm thấy gian hàng',
+  });
+}
+
+/** Một tài khoản partner thuộc tối đa MỘT gian hàng (ADR 0053 điều 6). */
+/** Unique index một phần của migration `account_realms` — một membership active cho mỗi tài khoản. */
+const ONE_ACTIVE_MEMBERSHIP_INDEX = 'tenant_memberships_one_active_per_user';
+
+function alreadyInTenant(): ConflictException {
+  return new ConflictException({
+    code: API_ERROR_CODE.MEMBER_ALREADY_IN_OTHER_TENANT,
+    message: 'Tài khoản đã thuộc một gian hàng — mỗi tài khoản chỉ thuộc một gian hàng.',
   });
 }

@@ -10,6 +10,7 @@ import {
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Prisma } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   OCCUPANCY_SOURCE_TYPE,
   OCCUPANCY_SOURCE_TYPE_META,
@@ -18,7 +19,7 @@ import {
   type OccupancySourceType,
   SUPPORT_CAPABILITY,
 } from '@xeprime/types';
-import { CurrentTenant, RequirePermissions, TenantScoped, SupportAction } from '../../common/decorators';
+import { CurrentTenant, Realms, RequirePermissions, SupportAction, TenantScoped } from '../../common/decorators';
 import type { TenantContext } from '../../common/types/request-context';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PricingService } from '../pricing/pricing.service';
@@ -73,6 +74,7 @@ function vehicleWhere(
 @ApiTags('calendar')
 @Controller('calendar')
 @TenantScoped()
+@Realms(ACCOUNT_REALM.PARTNER)
 export class CalendarController {
   constructor(
     private readonly prisma: PrismaService,

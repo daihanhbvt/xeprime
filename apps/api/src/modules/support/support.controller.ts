@@ -1,13 +1,13 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION, SUPPORT_PARTY, type SupportCaseStatus, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
-  CurrentTenant,
-  CurrentUser,
-  RequirePermissions,
-  TenantScoped,
-  SupportAction,
-} from '../../common/decorators';
+  ACCOUNT_REALM,
+  PERMISSION,
+  SUPPORT_PARTY,
+  type SupportCaseStatus,
+  SUPPORT_CAPABILITY,
+} from '@xeprime/types';
+import { CurrentTenant, CurrentUser, Realms, RequirePermissions, SupportAction, TenantScoped } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import {
   OpenSupportCaseDto,
@@ -28,6 +28,7 @@ import { SupportService } from './support.service';
 @ApiTags('support')
 @Controller('support/cases')
 @TenantScoped()
+@Realms(ACCOUNT_REALM.PARTNER)
 export class SupportController {
   constructor(private readonly support: SupportService) {}
 

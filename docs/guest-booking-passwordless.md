@@ -82,7 +82,7 @@ người kế tiếp trên cùng máy).
 ## 7. Chống spam / bảo mật
 
 - OTP 6 số, TTL 5 phút, cooldown 60s, ≤5 lần gửi/giờ (theo SĐT) + `@Throttle` theo IP ở controller.
-- **Đếm số lần nhập sai** (`phone_verifications.attempt_count`): chạm `OTP_MAX_ATTEMPTS` (mặc định 5)
+- **Đếm số lần nhập sai** (`phone_verifications.attempt_count`): chạm `OTP_POLICY.MAX_ATTEMPTS` (5)
   → khoá mã (`status = failed`, `OTP_LOCKED`), phải gửi mã mới.
 - Mã hash SHA-256 + pepper (không lưu plaintext). devCode chỉ trả ở dev/mock, không ở production.
 - **Chống double-submit ở tầng DB:** partial unique index `booking_requests(vehicle_id,
@@ -99,8 +99,8 @@ người kế tiếp trên cùng máy).
 
 ## 9. Biến môi trường
 
-Chỉ thêm **`OTP_MAX_ATTEMPTS`** (mặc định 5). Các biến OTP còn lại giữ nguyên (`OTP_MODE`,
-`ESMS_*`, `OTP_TTL_MINUTES`, `OTP_RESEND_COOLDOWN_SECONDS`, `OTP_MAX_SENDS_PER_HOUR`, `OTP_PEPPER`).
+Ngưỡng OTP (hạn mã, cooldown, trần gửi/giờ, trần nhập sai) là hằng số `OTP_POLICY` ở `@xeprime/types`
+(dọn env 05/10/2026). Biến env OTP còn lại: `OTP_MODE`, `ESMS_*`, `OTP_PEPPER`.
 Dev: `OTP_MODE=mock` (log mã + devCode). Thật: `OTP_MODE=esms` + 3 `ESMS_*`.
 
 ## 10. Kiểm thử local

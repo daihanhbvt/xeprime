@@ -18,7 +18,20 @@ import { MobileNav } from './MobileNav';
  */
 
 const nav = vi.hoisted(() => ({ pathname: '/manage' }));
-const user = vi.hoisted(() => ({ platformRole: null as string | null }));
+const user = vi.hoisted(() => ({
+  platformRole: null as string | null,
+  // Tuyến của site partner (ADR 0051 điều 3): `package` ⇒ menu Full Manage.
+  tenant: { roleKey: 'shop_owner', billingMode: 'package' } as {
+    roleKey: string;
+    billingMode: string;
+  } | null,
+}));
+/** Khu đang render — nhân sự nền tảng ở site quản trị, gian hàng ở site partner (ADR 0051). */
+const zone = vi.hoisted(() => ({ value: 'partner' as 'partner' | 'admin' }));
+
+vi.mock('@/zones/ZoneProvider', () => ({
+  useZone: () => zone.value,
+}));
 const perms = vi.hoisted(() => ({ granted: new Set<string>() }));
 const features = vi.hoisted(() => ({ states: {} as Record<string, string> }));
 
@@ -61,6 +74,7 @@ function grant(...permissions: Permission[]) {
 }
 
 function renderNav() {
+  zone.value = user.platformRole ? 'admin' : 'partner';
   store = makeStore();
   return render(
     <Provider store={store}>
@@ -101,6 +115,7 @@ function openDrawer() {
 beforeEach(() => {
   nav.pathname = '/manage';
   user.platformRole = null;
+  user.tenant = { roleKey: 'shop_owner', billingMode: 'package' };
   grant(...SHOP_TAB_PERMISSIONS, PERMISSION.VEHICLE_VIEW);
   features.states = {};
 });
@@ -242,16 +257,16 @@ describe('MobileNav — tab đang sáng', () => {
   });
 
   /*
-   * Tab "Kiểm duyệt" sống ở `/manage/admin` — tiền tố của mọi trang quản trị. Nó chỉ sáng khi đứng
+   * Tab "Kiểm duyệt" sống ở `/admin` — tiền tố của mọi trang quản trị. Nó chỉ sáng khi đứng
    * đúng ở đó; ở trang khác, đúng MỘT tab (hoặc "Thêm") sáng — cùng luật với sidebar.
    */
   it.each([
-    ['/manage/admin', 'Kiểm duyệt'],
-    ['/manage/admin/bookings', 'Đơn thuê'],
-    ['/manage/admin/bookings/01H', 'Đơn thuê'],
-    ['/manage/admin/money', 'Tài chính'],
-    ['/manage/admin/partners/shops', null],
-    ['/manage/admin/partners/owners', null],
+    ['/admin', 'Kiểm duyệt'],
+    ['/admin/bookings', 'Đơn thuê'],
+    ['/admin/bookings/01H', 'Đơn thuê'],
+    ['/admin/money', 'Tài chính'],
+    ['/admin/partners/shops', null],
+    ['/admin/partners/owners', null],
   ])('nền tảng %s → chỉ %s sáng', (pathname, expected) => {
     user.platformRole = 'platform_admin';
     grant(
@@ -415,8 +430,8 @@ describe('MobileNav — lọc theo cờ tính năng (ADR 0027)', () => {
       const actual = await importOriginal<typeof import('@/constants/nav')>();
       return {
         ...actual,
-        mobileTabsForScope: (isPlatform: boolean) => [
-          ...actual.mobileTabsForScope(isPlatform),
+        mobileTabsForZone: (...args: Parameters<typeof actual.mobileTabsForZone>) => [
+          ...actual.mobileTabsForZone(...args),
           {
             key: 'finance',
             labelKey: 'manage.finance',
@@ -438,6 +453,7 @@ describe('MobileNav — lọc theo cờ tính năng (ADR 0027)', () => {
 
   async function renderWithGatedTab() {
     const { MobileNav: Patched } = await withGatedTab();
+    zone.value = user.platformRole ? 'admin' : 'partner';
     store = makeStore();
     return render(
       <Provider store={store}>

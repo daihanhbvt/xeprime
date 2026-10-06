@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { resolveOwnerCtaHref } from '@/features/auth/post-auth-destination';
-import { useCurrentUser } from '@/hooks/use-current-user';
 import styles from './OwnerCta.module.css';
 import { useTranslations } from 'next-intl';
 
@@ -14,7 +13,6 @@ import { useTranslations } from 'next-intl';
  */
 export function OwnerCta() {
   const t = useTranslations('Marketplace.ownerCta');
-  const { data: user } = useCurrentUser();
 
   return (
     <section className={styles.cta} aria-labelledby="owner-cta-title">
@@ -26,7 +24,7 @@ export function OwnerCta() {
           {t('desc')}
         </p>
       </div>
-      <Link href={resolveOwnerCtaHref(user ?? null)} className={styles.button}>
+      <Link href={resolveOwnerCtaHref()} className={styles.button}>
         {t('action')}
       </Link>
     </section>

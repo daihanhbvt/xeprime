@@ -3,16 +3,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { renderWithIntl } from '@/i18n/test-utils';
 
+import ListYourVehiclePage from '@/app/(public)/list-your-vehicle/page';
+
 import { ListYourVehicleLanding } from './ListYourVehicleLanding';
 
 /**
- * Landing "Đăng xe cho thuê" — cửa vào công khai của chủ xe, HAI tuyến doanh thu (ADR 0028).
+ * "Bắt đầu cho thuê xe theo cách phù hợp với bạn" — HAI tuyến doanh thu (ADR 0028), một nội dung cho
+ * hai nơi: landing công khai của site khách, và trang chọn cách cho thuê của site partner ngay sau khi
+ * tạo tài khoản đối tác (`PartnerRegisterView`, có test riêng).
  *
- * Hai bất biến quan trọng nhất:
- *  1. **Không ai bị tạo gian hàng vì đi ngang qua đây.** Nút tuyến cá nhân luôn trỏ wizard
- *     đăng xe, không bao giờ biến thành form tạo gian hàng.
- *  2. Chưa đăng nhập thì mở auth modal mang theo ĐÚNG đích vừa chọn — mọi đích đều là đường
- *     dẫn NỘI BỘ dựng từ hằng số, không lấy từ query, nên không có bề mặt open-redirect.
+ * Bất biến: **không ai bị tạo gian hàng vì đi ngang qua đây** — mỗi nút chỉ là một đường dẫn tới
+ * bước tiếp theo của ĐÚNG tuyến của nó; và trang KHÔNG mở modal đăng nhập khách (ADR 0053).
  */
 const nav = vi.hoisted(() => ({ back: vi.fn() }));
 vi.mock('next/navigation', () => ({
@@ -21,23 +22,15 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-const currentUser = vi.hoisted(() => ({ data: undefined as unknown, isLoading: false }));
-vi.mock('@/hooks/use-current-user', () => ({ useCurrentUser: () => currentUser }));
-
-const authModal = vi.hoisted(() => ({ open: vi.fn() }));
-vi.mock('@/features/auth/components/AuthModalProvider', () => ({
-  useAuthModal: () => authModal,
-}));
-
-const PERSONAL_HREF = '/list-your-vehicle/register?from=marketplace';
 /**
- * Cửa GIAN HÀNG mang theo TUYẾN (ADR 0040) — `?track=package`.
+ * Hai cửa mang theo TUYẾN (ADR 0040) — chế độ `path` của vitest nên là đường dẫn tương đối.
  *
- * Chuỗi viết TAY chứ không gọi `manageOnboardingPath()`: đây chính là hợp đồng mà test này khoá.
- * Dùng lại hàm dựng đường dẫn nghĩa là một lần đổi mặc định sẽ làm cả hai nút trỏ về tuyến hoa
- * hồng mà test vẫn xanh — đúng bug ADR 0040 sửa, chỉ là không ai thấy nữa.
+ * Chuỗi viết TAY chứ không gọi `partnerRegisterHref()`: đây chính là hợp đồng mà test này khoá.
+ * Dùng lại hàm dựng đường dẫn nghĩa là một lần đổi mặc định sẽ làm cả hai nút trỏ về một tuyến mà
+ * test vẫn xanh — đúng bug ADR 0040 sửa, chỉ là không ai thấy nữa.
  */
-const SHOP_HREF = '/manage/onboarding?track=package';
+const PERSONAL_HREF = '/manage/register?track=commission';
+const SHOP_HREF = '/manage/register?track=package';
 
 function personalCta(): HTMLElement {
   return screen.getByRole('link', { name: /Đăng xe đầu tiên/ });
@@ -48,70 +41,61 @@ function shopCta(): HTMLElement {
 }
 
 beforeEach(() => {
-  currentUser.data = undefined;
-  currentUser.isLoading = false;
   nav.back.mockReset();
-  authModal.open.mockReset();
 });
 
 afterEach(cleanup);
 
-describe('Hai tuyến là hai lựa chọn độc lập', () => {
-  it.each([
-    ['chưa đăng nhập', undefined],
-    ['đã đăng nhập, chưa có gian hàng', { id: 'u1', tenant: null }],
-    ['đã có gian hàng', { id: 'u1', tenant: { id: 't1' } }],
-  ])('%s: mỗi nút giữ nguyên đích của tuyến mình', (_label, user) => {
-    currentUser.data = user;
-    renderWithIntl(<ListYourVehicleLanding />);
+/** Landing dùng chung, với hai đích bất kỳ — phần nội dung không phụ thuộc nơi dùng. */
+function renderLanding(props: Partial<Parameters<typeof ListYourVehicleLanding>[0]> = {}) {
+  return renderWithIntl(
+    <ListYourVehicleLanding personalHref="/p" shopHref="/s" {...props} />,
+  );
+}
+
+describe('Site khách — /list-your-vehicle', () => {
+  it('mỗi nút dẫn sang trang đăng ký của site partner, mang đúng tuyến của mình', () => {
+    renderWithIntl(<ListYourVehiclePage />);
 
     expect(personalCta().getAttribute('href')).toBe(PERSONAL_HREF);
     expect(shopCta().getAttribute('href')).toBe(SHOP_HREF);
   });
 
-  it('mọi đích đều là đường dẫn nội bộ — không có URL tuyệt đối nào', () => {
-    renderWithIntl(<ListYourVehicleLanding />);
+  it('chế độ path: mọi đích đều là đường dẫn nội bộ của khu partner', () => {
+    renderWithIntl(<ListYourVehiclePage />);
 
     for (const href of [personalCta().getAttribute('href'), shopCta().getAttribute('href')]) {
       expect(href?.startsWith('/')).toBe(true);
       expect(href).not.toMatch(/^https?:|^\/\//);
     }
   });
+
+  it('có nút Quay lại (người ta tới từ chợ xe)', () => {
+    renderWithIntl(<ListYourVehiclePage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Quay lại/ }));
+    expect(nav.back).toHaveBeenCalledTimes(1);
+  });
 });
 
-describe('Chưa đăng nhập: đăng nhập tại chỗ rồi quay lại đúng đích', () => {
-  it('tuyến cá nhân mở auth modal với next là WIZARD, không phải tạo gian hàng', () => {
-    renderWithIntl(<ListYourVehicleLanding />);
+describe('Hai nút là hai lựa chọn độc lập', () => {
+  it('mỗi nút đi đúng đích được truyền vào, không đổi chéo', () => {
+    renderLanding({ personalHref: '/vehicles/register?from=marketplace', shopHref: '/onboarding?track=package' });
 
-    fireEvent.click(personalCta());
-
-    expect(authModal.open).toHaveBeenCalledTimes(1);
-    expect(authModal.open.mock.calls[0]![0]).toMatchObject({ next: PERSONAL_HREF });
+    expect(personalCta().getAttribute('href')).toBe('/vehicles/register?from=marketplace');
+    expect(shopCta().getAttribute('href')).toBe('/onboarding?track=package');
   });
 
-  it('tuyến gian hàng mở auth modal với next là onboarding KÈM tuyến gói', () => {
-    renderWithIntl(<ListYourVehicleLanding />);
+  it('showBack={false} (site partner): không có nút Quay lại', () => {
+    renderLanding({ showBack: false });
 
-    fireEvent.click(shopCta());
-
-    expect(authModal.open).toHaveBeenCalledTimes(1);
-    expect(authModal.open.mock.calls[0]![0]).toMatchObject({ next: SHOP_HREF });
-  });
-
-  it('đã đăng nhập thì không chặn — để link đi thẳng tới đích', () => {
-    currentUser.data = { id: 'u1', tenant: null };
-    renderWithIntl(<ListYourVehicleLanding />);
-
-    fireEvent.click(personalCta());
-    fireEvent.click(shopCta());
-
-    expect(authModal.open).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: /Quay lại/ })).toBeNull();
   });
 });
 
 describe('Nội dung landing', () => {
   it('nói rõ hai tuyến, mức phí thí điểm và khả năng nâng cấp sau', () => {
-    renderWithIntl(<ListYourVehicleLanding />);
+    renderLanding();
 
     expect(screen.getByRole('heading', { name: 'Đăng xe cá nhân' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Mở gian hàng cho thuê' })).toBeTruthy();
@@ -121,7 +105,7 @@ describe('Nội dung landing', () => {
   });
 
   it('mỗi thẻ có hình minh hoạ RIÊNG — không dùng chung một file', () => {
-    const { container } = renderWithIntl(<ListYourVehicleLanding />);
+    const { container } = renderLanding();
 
     const sources = [...container.querySelectorAll('img')].map((img) => img.getAttribute('src'));
     expect(sources.some((src) => src?.includes('owner-personal-car'))).toBe(true);
@@ -129,7 +113,7 @@ describe('Nội dung landing', () => {
   });
 
   it('dẫn tới văn bản pháp lý CÓ THẬT và không hứa con số thu nhập', () => {
-    renderWithIntl(<ListYourVehicleLanding />);
+    renderLanding();
 
     const policy = screen.getByRole('link', { name: /Quy định sử dụng chợ xe/ });
     expect(policy.getAttribute('href')).toBe('/legal/marketplace-rules');

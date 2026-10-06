@@ -2,7 +2,11 @@
 
 import { useForm, type UseFormReturn } from 'react-hook-form';
 import { guessAddressLine } from '@xeprime/domain';
-import { shopProfileSchema, type ShopProfileValues } from '@xeprime/validators';
+import { toLocalVnPhone } from '@xeprime/types';
+import {
+  shopProfileWithContactSchema,
+  type ShopProfileWithContactValues,
+} from '@xeprime/validators';
 
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 
@@ -44,10 +48,14 @@ export const SHOP_ADDRESS_PIN_NAMES = {
  * liệu cũ (xem `syncProfileFromDefaultBranch` ở backend) — đọc ngược lại sẽ hiện tỉnh cũ sau khi
  * chủ shop vừa đổi chi nhánh.
  */
-export function toShopProfileValues(shop: MyShop): ShopProfileValues {
+export function toShopProfileValues(shop: MyShop): ShopProfileWithContactValues {
   const p = shop.profile;
   return {
-    displayName: p.displayName ?? '',
+    // Tên, SĐT, email của GIAN HÀNG nằm trên `tenants` — thứ khách đọc. SĐT/email đăng nhập của
+    // chủ là `ownerAccount`, một bộ khác hẳn và không sửa ở form này (ADR 0053).
+    displayName: shop.name,
+    phone: shop.phone ? toLocalVnPhone(shop.phone) : '',
+    email: shop.email ?? '',
     bio: p.bio ?? '',
     provinceCode: shop.defaultBranch?.provinceCode ?? p.provinceCode ?? '',
     wardCode: shop.defaultBranch?.wardCode ?? p.wardCode ?? '',
@@ -68,9 +76,12 @@ export function toShopProfileValues(shop: MyShop): ShopProfileValues {
 }
 
 /** Giá trị form → thân request. Dùng cho CẢ hai đường ra: lưu, và lưu-rồi-gửi-duyệt. */
-export function toShopProfileBody(v: ShopProfileValues): UpdateProfileInput {
+export function toShopProfileBody(v: ShopProfileWithContactValues): UpdateProfileInput {
   return {
     displayName: v.displayName,
+    // Chuỗi rỗng là GỠ liên hệ của gian hàng — server lưu NULL.
+    phone: v.phone,
+    email: v.email,
     bio: v.bio,
     // Chỉ gửi MÃ + phần chi tiết — tên tỉnh/xã và chuỗi hiển thị do server ghép. Backend
     // chuyển tiếp cả cụm cho chi nhánh mặc định (writer duy nhất của địa chỉ vận hành).
@@ -95,7 +106,10 @@ export function toShopProfileBody(v: ShopProfileValues): UpdateProfileInput {
  * `values` (không phải `defaultValues`): sau khi lưu, query trả hồ sơ mới và form phải theo —
  * nếu không, "Huỷ bỏ" mời người dùng hoàn tác thứ đã lưu xong rồi.
  */
-export function useShopProfileForm(shop: MyShop): UseFormReturn<ShopProfileValues> {
-  const resolver = useValidationResolver<ShopProfileValues>(shopProfileSchema, 'Shop.validation');
-  return useForm<ShopProfileValues>({ resolver, values: toShopProfileValues(shop) });
+export function useShopProfileForm(shop: MyShop): UseFormReturn<ShopProfileWithContactValues> {
+  const resolver = useValidationResolver<ShopProfileWithContactValues>(
+    shopProfileWithContactSchema,
+    'Shop.validation',
+  );
+  return useForm<ShopProfileWithContactValues>({ resolver, values: toShopProfileValues(shop) });
 }

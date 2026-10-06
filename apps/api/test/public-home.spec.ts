@@ -1,5 +1,6 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   BOOKING_STATUS,
   REVIEW_STATUS,
   TENANT_STATUS,
@@ -63,7 +64,7 @@ async function seedTenant(
     },
   });
   await prisma.tenantProfile.create({
-    data: { tenantId: id, displayName: `Shop ${provinceName}`, provinceCode, provinceName },
+    data: { tenantId: id, provinceCode, provinceName },
   });
   branchByTenant.set(id, await seedBranch(asService, { tenantId: id, provinceCode }));
   return id;
@@ -101,10 +102,20 @@ beforeAll(async () => {
   ownerId = newId();
   customerId = newId();
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Chủ shop',
+      email: `own-${ownerId}@xeprime.test`,
+    },
   });
   await prisma.user.create({
-    data: { id: customerId, displayName: 'Khách', email: `cus-${customerId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.CUSTOMER,
+      id: customerId,
+      displayName: 'Khách',
+      email: `cus-${customerId}@xeprime.test`,
+    },
   });
 
   for (const [code, name] of [

@@ -3,7 +3,7 @@
     "commissionOwner": "Individual host",
     "commissionOwnerWithFee": "Individual host · {percent, number}% commission",
     "shopOwner": "Shop owner",
-    "shopOwnerWithPlan": "Shop owner · {plan} plan",
+    "shopOwnerWithPlan": "Shop owner · {plan}",
     "shopManager": "Shop manager",
     "shopStaff": "Shop staff",
     "shopViewer": "Shop viewer",
@@ -124,7 +124,8 @@
     "backToAccount": "Back to my account",
     "registeringTitle": "Your host profile is still under review",
     "registeringBody": "This section opens once you have at least one vehicle approved for the marketplace. Track your profile and vehicles on the registration screen.",
-    "openRegistration": "View registration status"
+    "openRegistration": "View registration status",
+    "bodyMemberPartner": "You are a member of {shop}. This shop uses the host toolkit — vehicle, calendar and money screens are open to the shop owner only. Contact the owner if you need access."
   },
   "vehicles": {
     "title": "My vehicles",
@@ -281,7 +282,10 @@
     "withdraw": "Withdraw deletion request",
     "withdrawConfirm": "Withdraw this request? Your account stays as it is.",
     "withdrawn": "Deletion request withdrawn.",
-    "loadError": "Couldn't check for an existing request."
+    "loadError": "Couldn't check for an existing request.",
+    "embeddedIntro": "You will see what is affected before you send it. After sending, the account keeps working until XePrime finishes, and you can withdraw the request.",
+    "start": "Request account deletion",
+    "collapse": "Not now"
   },
   "publicDeletion": {
     "eyebrow": "XePrime account",
@@ -360,11 +364,29 @@
   },
   "security": {
     "title": "Account security",
-    "subtitle": "Sign-in methods, password, and actions on your account.",
-    "dangerZone": "Danger zone"
+    "subtitle": "Sign-in methods, password, and actions on your account."
   },
-  "loginMethods": {
-    "title": "Sign-in methods",
-    "subtitle": "The email and phone number you sign in with. Changing them requires an OTP."
+  "hub": {
+    "title": "Account & security",
+    "subtitle": "Your personal profile, sign-in details and password for the account you are using.",
+    "navTitle": "On this page",
+    "navLabel": "Account page sections",
+    "loadError": "Could not load your account",
+    "sections": {
+      "profile": "Personal profile",
+      "profileHint": "Your name and profile photo in the partner portal.",
+      "login": "Sign-in details",
+      "loginHint": "The email and phone number you sign in with. Each change needs a 6-digit code sent to the new address or number.",
+      "password": "Password",
+      "passwordHint": "Use a strong password that you do not reuse elsewhere.",
+      "delete": "Delete account",
+      "deleteHint": "Ask XePrime to close this account. This is hard to undo."
+    },
+    "profile": {
+      "previewLabel": "Profile preview",
+      "notShop": "This name and photo belong to your account only. The name, logo and contact phone renters see belong to the shop.",
+      "storefrontFallback": "Until your owner page has a logo, renters will see this profile photo.",
+      "shopSettingsLink": "Open shop settings"
+    }
   }
 }

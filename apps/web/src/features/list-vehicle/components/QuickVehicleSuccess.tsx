@@ -8,7 +8,7 @@ import { useTranslations } from 'next-intl';
 import {
   ROUTES,
   VEHICLE_REGISTRATION_SOURCE,
-  accountVehiclePath,
+  ownerVehiclePath,
   vehicleListPathFor,
   type VehicleRegistrationSource,
 } from '@/constants/routes';
@@ -48,7 +48,7 @@ export function QuickVehicleSuccess({
   const manageHref =
     source === VEHICLE_REGISTRATION_SOURCE.MANAGE
       ? ROUTES.MANAGE.VEHICLES
-      : accountVehiclePath.manage(result.vehicle.id);
+      : ownerVehiclePath.manage(result.vehicle.id);
 
   const title = result.partialError
     ? t('partialTitle')

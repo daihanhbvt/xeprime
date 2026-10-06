@@ -33,10 +33,15 @@ datasource db {
 
 model User {
   id              String    @id @db.Char(26)
+  /// Không gian tài khoản — ADR 0053. `@xeprime/types` → AccountRealm; CHECK `users_realm_check`.
+  /// Email/SĐT/định danh social chỉ unique TRONG một realm: cùng một số điện thoại có thể là
+  /// một tài khoản khách và một tài khoản chủ xe khác hẳn nhau, mật khẩu độc lập.
+  /// BẤT BIẾN sau khi tạo — trigger `users_realm_immutable` chặn mọi UPDATE đổi realm.
+  realm           String    @db.VarChar(20)
   firebaseUid     String?   @unique @map("firebase_uid") @db.VarChar(128)
-  email           String?   @unique @db.VarChar(255)
+  email           String?   @db.VarChar(255)
   emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamptz(3)
-  phone           String?   @unique @db.VarChar(30)
+  phone           String?   @db.VarChar(30)
   phoneVerifiedAt DateTime? @map("phone_verified_at") @db.Timestamptz(3)
   displayName     String    @map("display_name") @db.VarChar(255)
   avatarUrl       String?   @map("avatar_url") @db.Text
@@ -104,6 +109,12 @@ model User {
   supportContextsOpened      TenantSupportContext[]    @relation("tenant_support_context_actor")
   supportContextsRevoked     TenantSupportContext[]    @relation("tenant_support_context_revoker")
 
+  /// ADR 0053: định danh đăng nhập unique TRONG realm, không unique toàn hệ thống.
+  @@unique([realm, email], map: "users_realm_email_key")
+  @@unique([realm, phone], map: "users_realm_phone_key")
+  /// Đích của FK tổ hợp `(user_id, realm)` từ `user_identities` — giữ định danh social cùng realm
+  /// với tài khoản của nó.
+  @@unique([id, realm], map: "users_id_realm_key")
   @@index([status])
   @@index([createdAt])
   /// Tìm khách theo tên ở màn giám sát nền tảng (ILIKE '%q%' — btree không dùng được).
@@ -114,6 +125,10 @@ model User {
 model UserIdentity {
   id             String   @id @db.Char(26)
   userId         String   @map("user_id") @db.Char(26)
+  /// Realm của tài khoản sở hữu định danh này — ADR 0053. Phải BẰNG `users.realm`: FK tổ hợp
+  /// `(user_id, realm) → users(id, realm)` giữ điều đó ở DB. Nằm trên bảng này (không chỉ suy
+  /// qua user) vì unique `(realm, provider, provider_user_id)` cần nó trong cùng một bảng.
+  realm          String   @db.VarChar(20)
   /// @xeprime/types → AuthProvider (`google` | `facebook`), hoặc `password` (định danh + mật khẩu).
   /// Dạng NGẮN, không phải `google.com` — ADR 0019 chuẩn hoá sau khi bỏ Firebase khỏi luồng login.
   provider       String   @db.VarChar(50)
@@ -125,9 +140,10 @@ model UserIdentity {
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId, realm], references: [id, realm], onDelete: Cascade, onUpdate: Restrict, map: "user_identities_user_realm_fkey")
 
-  @@unique([provider, providerUserId])
+  /// Cùng một tài khoản Google tạo được tài khoản riêng ở mỗi realm (ADR 0053 điều 1).
+  @@unique([realm, provider, providerUserId], map: "user_identities_realm_provider_key")
   @@index([userId])
   @@map("user_identities")
 }
@@ -139,7 +155,12 @@ model UserIdentity {
 model Tenant {
   id                 String    @id @db.Char(26)
   code               String    @unique @db.VarChar(50)
+  /// KHÔNG đổi theo `name`: đổi tên gian hàng không được làm chết link trang gian hàng đã chia sẻ.
   slug               String    @unique @db.VarChar(120)
+  /// Tên HIỂN THỊ của gian hàng — nguồn DUY NHẤT (05/10/2026). Mọi nơi khách nhìn thấy (thẻ xe,
+  /// trang gian hàng, chat, chuyến, hợp đồng) đọc cột này; `PATCH /tenants/current/profile` ghi nó.
+  /// Bản sao `tenant_profiles.display_name` đã bị gỡ: form sửa ghi vào bản sao, khách đọc bản gốc,
+  /// nên đổi tên ở hồ sơ không bao giờ tới được người thuê.
   name               String    @db.VarChar(255)
   /// individual | business
   tenantType         String    @default("individual") @map("tenant_type") @db.VarChar(50)
@@ -161,6 +182,9 @@ model Tenant {
   /// Giá trị canh bằng CHECK `tenants_onboarding_state_check` ở migration.
   onboardingState    String    @default("commission") @map("onboarding_state") @db.VarChar(20)
   ownerUserId        String    @map("owner_user_id") @db.Char(26)
+  /// SĐT/email LIÊN HỆ của gian hàng — thứ khách thấy ở chuyến đi và hợp đồng. KHÔNG phải định
+  /// danh đăng nhập: đó là `users.phone`/`users.email` của từng tài khoản (ADR 0053). Hai bên độc
+  /// lập — điền sẵn từ tài khoản lúc đăng ký, sau đó đổi bên này không chạm bên kia.
   phone              String?   @db.VarChar(30)
   email              String?   @db.VarChar(255)
   ratingAvg          Decimal   @default(0) @map("rating_avg") @db.Decimal(3, 2)
@@ -247,6 +271,11 @@ model Tenant {
   @@map("tenants")
 }
 
+/// ADR 0053: chỉ tài khoản realm `partner` có membership gian hàng — trigger
+/// `tenant_memberships_user_realm_check` chặn ở DB. Một tài khoản partner có TỐI ĐA MỘT membership
+/// `active` (một nhân viên một gian hàng) — unique index một phần
+/// `tenant_memberships_one_active_per_user` (`WHERE status = active`), viết tay trong migration vì
+/// Prisma không mô tả được index có điều kiện.
 model TenantMembership {
   id                  String    @id @db.Char(26)
   tenantId            String    @map("tenant_id") @db.Char(26)
@@ -370,6 +399,8 @@ model RolePermission {
   @@map("role_permissions")
 }
 
+/// ADR 0053: chỉ tài khoản realm `platform` có membership nền tảng — trigger
+/// `platform_memberships_user_realm_check` chặn ở DB.
 model PlatformMembership {
   id        String   @id @db.Char(26)
   userId    String   @map("user_id") @db.Char(26)
@@ -399,6 +430,9 @@ model PlatformMembership {
 model PhoneVerification {
   id           String    @id @db.Char(26)
   userId       String?   @map("user_id") @db.Char(26)
+  /// Realm của luồng OTP — ADR 0053. Mã gửi cho SĐT ở site khách không xác thực được tài khoản
+  /// cùng số ở site partner. `@xeprime/types` → AccountRealm.
+  realm        String    @db.VarChar(20)
   phone        String    @db.VarChar(30)
   /// @xeprime/types → PhoneVerificationPurpose
   purpose      String    @db.VarChar(50)
@@ -416,7 +450,10 @@ model PhoneVerification {
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  @@index([phone])
+  /// Theo SĐT trước, KHÔNG theo realm: cooldown và trần gửi/giờ đếm theo số điện thoại trên mọi
+  /// realm (một người một chiếc máy), và route gửi mã là công khai — thiếu index này mỗi lượt gửi
+  /// là một lần quét cả bảng. Lượt xác minh lọc thêm realm/purpose trên cùng index.
+  @@index([phone, createdAt], map: "phone_verifications_phone_created_at_idx")
   @@index([userId])
   @@index([status, expiresAt])
   @@map("phone_verifications")
@@ -431,6 +468,8 @@ model PhoneVerification {
 model EmailVerification {
   id           String    @id @db.Char(26)
   userId       String?   @map("user_id") @db.Char(26)
+  /// Realm của luồng xác minh — ADR 0053. `@xeprime/types` → AccountRealm.
+  realm        String    @db.VarChar(20)
   email        String    @db.VarChar(255)
   /// @xeprime/types → PhoneVerificationPurpose (dùng chung bộ mục đích với SĐT)
   purpose      String    @db.VarChar(50)
@@ -448,7 +487,8 @@ model EmailVerification {
   /// tranh chấp chiếm tài khoản.
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  @@index([email], map: "email_verifications_email_idx")
+  /// Theo email trước, KHÔNG theo realm — cùng lý do với `phone_verifications`.
+  @@index([email, createdAt], map: "email_verifications_email_created_at_idx")
   @@index([userId], map: "email_verifications_user_id_idx")
   @@index([status, expiresAt], map: "email_verifications_status_expires_at_idx")
   @@map("email_verifications")
@@ -486,6 +526,10 @@ model PasswordResetToken {
 /// callback này thuộc về đúng lần bấm nút đã phát ra `state`.
 model OauthState {
   id String @id @db.Char(26)
+
+  /// Realm của luồng — ADR 0053. Ghi lúc BẮT ĐẦU (từ site/app khởi tạo), đọc lại ở callback: chặng
+  /// callback do provider điều hướng tới nên không mang header realm nào đáng tin.
+  realm String @db.VarChar(20)
 
   /// @xeprime/types → AuthProvider (`google` | `facebook`)
   provider String @db.VarChar(20)
@@ -594,7 +638,7 @@ model NativeAuthSession {
   expiresAt     DateTime  @map("expires_at") @db.Timestamptz(3)
   /// Khác null = phiên đã bị thu hồi. Access token còn hạn cũng bị AuthGuard từ chối ngay.
   revokedAt     DateTime? @map("revoked_at") @db.Timestamptz(3)
-  /// `logout` | `refresh_reuse` | `user_disabled` — để đọc lịch sử biết vì sao phiên chết.
+  /// `logout` | `refresh_reuse` | `user_disabled` | `realm_split` — để đọc lịch sử biết vì sao phiên chết.
   revokedReason String?   @map("revoked_reason") @db.VarChar(50)
 
   user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -810,9 +854,10 @@ model TenantBranch {
 
 /// Hồ sơ public + cấu hình gian hàng. 1-1 với tenant (PK = tenant_id).
 /// Tách khỏi `tenants` vì đây là dữ liệu ít query, nhiều field, đổi thường xuyên hơn.
+/// ⚠️ KHÔNG có cột tên (05/10/2026): tên hiển thị là `tenants.name`, nguồn duy nhất. API vẫn trả
+/// `profile.displayName` cho tương thích client, đọc từ `tenants.name`.
 model TenantProfile {
   tenantId          String   @id @map("tenant_id") @db.Char(26)
-  displayName       String?  @map("display_name") @db.VarChar(255)
   bio               String?  @db.Text
   logoUrl           String?  @map("logo_url") @db.Text
   coverUrl          String?  @map("cover_url") @db.Text

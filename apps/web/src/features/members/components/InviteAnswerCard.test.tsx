@@ -38,13 +38,6 @@ vi.mock('@/hooks/use-current-user', () => ({
   useCurrentUser: () => ({ data: user.data, isLoading: false }),
 }));
 
-const authOpen = vi.hoisted(() => vi.fn());
-
-vi.mock('@/features/auth/components/AuthModalProvider', () => ({
-  useAuthModal: () => ({ open: authOpen }),
-  useNextFromCurrentPath: () => () => '/invites/tok-1',
-}));
-
 vi.mock('@/hooks/use-media-query', () => ({
   useIsMobile: () => false,
   useIsTablet: () => false,
@@ -81,7 +74,6 @@ beforeEach(() => {
   accept.isPending = false;
   decline.mutate.mockReset();
   decline.isPending = false;
-  authOpen.mockReset();
   user.data = { id: 'u1' };
 });
 
@@ -96,15 +88,24 @@ describe('Lời mời — người được mời xem', () => {
     expect(screen.getByText('nh****@congty.vn')).toBeTruthy();
   });
 
-  it('chưa đăng nhập: không có nút trả lời, chỉ có lối đăng nhập quay lại đúng trang', () => {
+  /*
+   * Trang sống ở SITE PARTNER và lời mời dành cho tài khoản ĐỐI TÁC (ADR 0051 · 0053): hai lối là
+   * đăng nhập / tạo tài khoản ĐỐI TÁC, cả hai mang `next` về chính lời mời — không có modal khách.
+   */
+  it('chưa đăng nhập: không có nút trả lời, chỉ có lối đăng nhập/tạo tài khoản đối tác quay lại đúng trang', () => {
     user.data = undefined;
     renderCard();
 
     expect(screen.queryByRole('button', { name: 'Đồng ý tham gia' })).toBeNull();
-    expect(screen.getByText(/Đăng nhập bằng địa chỉ email đã nhận thư mời/)).toBeTruthy();
+    expect(screen.getByText(/tài khoản ĐỐI TÁC/)).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Đăng nhập' }));
-    expect(authOpen).toHaveBeenCalledWith({ next: '/invites/tok-1' });
+    const next = encodeURIComponent('/manage/invites/tok-1');
+    expect(screen.getByRole('link', { name: 'Đăng nhập' }).getAttribute('href')).toBe(
+      `/manage/login?next=${next}`,
+    );
+    expect(screen.getByRole('link', { name: 'Tạo tài khoản đối tác' }).getAttribute('href')).toBe(
+      `/manage/register?next=${next}`,
+    );
   });
 
   it('đã đăng nhập: đồng ý gọi mutation ngay', async () => {

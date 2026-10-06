@@ -1,13 +1,14 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   MEMBERSHIP_STATUS,
   PAYMENT_KIND,
   PAYMENT_METHOD,
   PAYMENT_STATUS,
   RECEIPT_SOURCE,
-  RECEIPT_TYPE,
   RECEIPT_STATUS,
+  RECEIPT_TYPE,
   SYSTEM_FINANCE_CATEGORY,
   TENANT_ROLE,
   TENANT_STATUS,
@@ -19,7 +20,11 @@ import { ReceiptsService } from '../src/modules/finance/receipts.service';
 import { FinanceOverviewService } from '../src/modules/finance/finance-overview.service';
 import { PaymentsService } from '../src/modules/payments/payments.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeBookingsService, makeCustomersService, makeNotificationService } from './helpers/service-factory';
+import {
+  makeBookingsService,
+  makeCustomersService,
+  makeNotificationService,
+} from './helpers/service-factory';
 
 /**
  * S2 — Ghi nhận thanh toán (writer duy nhất của paid_amount), chạy trên PostgreSQL THẬT. Kiểm
@@ -62,7 +67,12 @@ beforeAll(async () => {
   tenantId = newId();
   vehicleId = newId();
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Chủ shop',
+      email: `own-${ownerId}@xeprime.test`,
+    },
   });
   await prisma.tenant.create({
     data: {
@@ -398,12 +408,17 @@ describe('Booking money — phụ phí và phiếu tay vào cùng một con số
     });
 
     const receipts = new ReceiptsService(asService, audit);
-    await receipts.create(tenantId, ownerId, {
-      type: RECEIPT_TYPE.INCOME,
-      amount: '200000',
-      paymentMethod: PAYMENT_METHOD.CASH,
-      bookingId: b.id,
-    }, null);
+    await receipts.create(
+      tenantId,
+      ownerId,
+      {
+        type: RECEIPT_TYPE.INCOME,
+        amount: '200000',
+        paymentMethod: PAYMENT_METHOD.CASH,
+        bookingId: b.id,
+      },
+      null,
+    );
 
     // Phiếu CHƯA duyệt thì chưa phải tiền thật.
     let after = await bookings.getOne(tenantId, b.id);

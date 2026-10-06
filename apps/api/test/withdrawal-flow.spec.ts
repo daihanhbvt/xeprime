@@ -1,5 +1,6 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   WALLET_ENTRY_KIND,
   WALLET_ENTRY_SOURCE,
@@ -52,7 +53,9 @@ beforeAll(async () => {
     return;
   }
   userId = newId();
-  await prisma.user.create({ data: { id: userId, displayName: 'Chủ ví', status: 'active' } });
+  await prisma.user.create({
+    data: { realm: ACCOUNT_REALM.CUSTOMER, id: userId, displayName: 'Chủ ví', status: 'active' },
+  });
 
   const account = await bankAccounts.create(owner(), {
     bankCode: 'VCB',
@@ -116,7 +119,12 @@ describe('Tạo yêu cầu rút', () => {
   maybe('tài khoản nhận KHÔNG thuộc chủ ví ⇒ 404, không tạo lệnh nào', async () => {
     const strangerId = newId();
     await prisma.user.create({
-      data: { id: strangerId, displayName: 'Người lạ', status: 'active' },
+      data: {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: strangerId,
+        displayName: 'Người lạ',
+        status: 'active',
+      },
     });
     const theirs = await bankAccounts.create(
       { type: WALLET_OWNER_TYPE.USER, userId: strangerId },
@@ -203,7 +211,12 @@ describe('Huỷ yêu cầu rút', () => {
     const mine = await prisma.withdrawalRequest.findFirstOrThrow({ where: { walletId } });
     const strangerId = newId();
     await prisma.user.create({
-      data: { id: strangerId, displayName: 'Người lạ 2', status: 'active' },
+      data: {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: strangerId,
+        displayName: 'Người lạ 2',
+        status: 'active',
+      },
     });
 
     await expect(

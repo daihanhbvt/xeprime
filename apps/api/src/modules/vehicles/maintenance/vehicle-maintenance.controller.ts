@@ -12,18 +12,13 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION, PLAN_FEATURE, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
-  BRANCH_SCOPED_RESOURCE,
-  BranchScoped,
-  CurrentTenant,
-  CurrentUser,
-  RequirePermissions,
-  TenantScoped,
-  RequiresFeature,
-  SubscriptionTrackOnly,
-  SupportAction,
-} from '../../../common/decorators';
+  ACCOUNT_REALM,
+  PERMISSION,
+  PLAN_FEATURE,
+  SUPPORT_CAPABILITY,
+} from '@xeprime/types';
+import { BRANCH_SCOPED_RESOURCE, BranchScoped, CurrentTenant, CurrentUser, Realms, RequirePermissions, RequiresFeature, SubscriptionTrackOnly, SupportAction, TenantScoped } from '../../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../../common/types/request-context';
 import { SourceContractDownloadDto, SourceContractPresignDto } from '../dto/vehicle-source.dto';
 import {
@@ -60,6 +55,7 @@ import { OdometerService } from './odometer.service';
 @TenantScoped()
 @SubscriptionTrackOnly()
 @RequiresFeature(PLAN_FEATURE.MAINTENANCE)
+@Realms(ACCOUNT_REALM.PARTNER)
 export class VehicleMaintenanceController {
   constructor(
     private readonly maintenance: MaintenanceService,

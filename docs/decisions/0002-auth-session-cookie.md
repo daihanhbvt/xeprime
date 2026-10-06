@@ -2,6 +2,11 @@
 
 Ngày: 22/07/2026 · Trạng thái: Accepted (phần "Firebase là provider" đã bị **[ADR 0019](0019-backend-led-social-oauth.md)** ghi đè — 26/08/2026)
 
+> ⚠️ **[ADR 0053](0053-separate-account-realms.md) (02/10/2026):** cookie phiên nay **host-only**,
+> mỗi realm (`customer` · `partner` · `platform`) một tên cookie, API phục vụ cùng origin dưới `/api`
+> của từng site. Không còn `Domain=.xeprime.vn` dùng chung. Nguyên tắc httpOnly + quyền đọc từ DB mỗi
+> request giữ nguyên.
+
 > ⚠️ **Phần còn đúng nguyên vẹn:** session là httpOnly cookie do NestJS phát, quyền không nằm
 > trong token, và Firebase chỉ được phép xuất hiện sau một interface.
 >

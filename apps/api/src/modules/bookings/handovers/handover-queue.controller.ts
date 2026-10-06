@@ -1,7 +1,11 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
-import { CurrentTenant, RequirePermissions, TenantScoped, SupportAction } from '../../../common/decorators';
+import {
+  ACCOUNT_REALM,
+  PERMISSION,
+  SUPPORT_CAPABILITY,
+} from '@xeprime/types';
+import { CurrentTenant, Realms, RequirePermissions, SupportAction, TenantScoped } from '../../../common/decorators';
 import type { TenantContext } from '../../../common/types/request-context';
 import { MissingOdometerQueryDto, MissingOdometerQueueDto } from './dto/handover.dto';
 import { HandoversService } from './handovers.service';
@@ -16,6 +20,7 @@ import { HandoversService } from './handovers.service';
 @ApiTags('handover-queue')
 @Controller('handovers')
 @TenantScoped()
+@Realms(ACCOUNT_REALM.PARTNER)
 export class HandoverQueueController {
   constructor(private readonly handovers: HandoversService) {}
 

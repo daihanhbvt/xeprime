@@ -1,6 +1,6 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
-  BANK_ACCOUNT_STATUS,
+  ACCOUNT_REALM,
   MEMBERSHIP_STATUS,
   TENANT_ROLE,
   TENANT_STATUS,
@@ -9,6 +9,7 @@ import {
   WALLET_OWNER_TYPE,
   WITHDRAWAL_STATUS,
   resolveRefundWalletOwner,
+  type AccountRealm,
 } from '@xeprime/types';
 
 import { WalletService } from '../src/modules/wallet/wallet.service';
@@ -16,17 +17,17 @@ import type { PrismaService } from '../src/prisma/prisma.service';
 import { releaseWalletObligations } from './helpers/wallet-cleanup';
 
 /**
- * VÍ HỢP NHẤT — đường CHẠY THẬT (không phải migration dữ liệu cũ), trên PostgreSQL thật.
+ * CHỦ VÍ theo không gian tài khoản (ADR 0053) — đường chạy thật, trên PostgreSQL thật.
  *
- * Migration một lần được chứng minh bằng chính nó (đối soát tổng nghĩa vụ trước/sau, nằm trong
- * `20260915120000_wallet_owner_unification`). Spec này khoá đường mà sản phẩm đi MỖI NGÀY về
- * sau: một khách thuê đã có số dư trở thành chủ xe.
+ * Trước ADR 0053, một khách thuê mở gian hàng thì ví người dùng của họ được "nhận về" tenant. Giờ
+ * tài khoản khách và tài khoản đối tác là HAI tài khoản (cùng số điện thoại cũng vậy), nên không còn
+ * phép đổi chủ nào: tiền của tài khoản khách ở ví người dùng của nó, tiền của gian hàng ở ví tenant,
+ * và hai bên không bao giờ chạm nhau.
  *
  * Bất biến được kiểm:
  *
- *  I1  tổng nghĩa vụ (`balance + pending_withdraw_amount`) KHÔNG đổi qua phép đổi chủ
- *  I2  `wallets.id` KHÔNG đổi ⇒ dòng sổ, lệnh rút, `balance_after` không phải sửa gì
- *  I4  một chủ xe KHÔNG còn ví `user` nào
+ *  R1  mở gian hàng ở site partner KHÔNG chạm ví của tài khoản khách cùng số
+ *  R2  khoản hoàn luôn về ví của TÀI KHOẢN KHÁCH đã đặt — kể cả khi cùng số có gian hàng
  *  I5  ghi có hai lần cùng nguồn ⇒ một dòng
  *  I6  hai lệnh rút song song ⇒ đúng một thắng
  */
@@ -39,10 +40,21 @@ let dbAvailable = false;
 const userIds: string[] = [];
 const tenantIds: string[] = [];
 
-async function mkUser(tag: string): Promise<string> {
+let phoneSeq = 0;
+/** SĐT riêng của suite — hai realm dùng CHUNG một số để mô phỏng một người hai tài khoản. */
+function mkPhone(): string {
+  phoneSeq += 1;
+  return `8496${String(Date.now() % 1_000_000).padStart(6, '0')}${phoneSeq}`.slice(0, 11);
+}
+
+async function mkUser(
+  tag: string,
+  realm: AccountRealm,
+  phone: string | null = null,
+): Promise<string> {
   const id = newId();
   await prisma.user.create({
-    data: { id, displayName: `Ví ${tag}`, email: `wou-${tag}-${RUN}@xeprime.test` },
+    data: { id, realm, phone, displayName: `Ví ${tag}`, email: `wou-${tag}-${RUN}@xeprime.test` },
   });
   userIds.push(id);
   return id;
@@ -108,156 +120,78 @@ const maybe = (name: string, fn: () => Promise<void>) =>
     await fn();
   });
 
-describe('đổi chủ ví khi một khách thuê trở thành chủ xe', () => {
-  maybe('I1 + I2: số dư, dòng sổ, id ví và lệnh rút đang chờ đều đi theo nguyên vẹn', async () => {
-    const userId = await mkUser('adopt');
+describe('hai tài khoản cùng số điện thoại — hai ví tách biệt', () => {
+  maybe('R1: mở gian hàng ở site partner không chạm ví của tài khoản khách cùng số', async () => {
+    const phone = mkPhone();
+    const customerId = await mkUser('khach', ACCOUNT_REALM.CUSTOMER, phone);
 
-    // Khách thuê đã nhận hai khoản hoàn và đang có một lệnh rút chờ admin chuyển.
-    await prisma.$transaction(async (tx) => {
-      await wallet.creditWithinTx(tx, {
-        owner: { type: WALLET_OWNER_TYPE.USER, userId },
+    // Tài khoản khách đã nhận hoàn và đang có một lệnh rút chờ admin chuyển.
+    await prisma.$transaction((tx) =>
+      wallet.creditWithinTx(tx, {
+        owner: { type: WALLET_OWNER_TYPE.USER, userId: customerId },
         kind: WALLET_ENTRY_KIND.HOLD_REFUND,
         sourceType: WALLET_ENTRY_SOURCE.BOOKING_HOLD,
         sourceRefId: newId(),
-        amount: new Prisma.Decimal('120000'),
-      });
-      await wallet.creditWithinTx(tx, {
-        owner: { type: WALLET_OWNER_TYPE.USER, userId },
-        kind: WALLET_ENTRY_KIND.HOLD_REFUND,
-        sourceType: WALLET_ENTRY_SOURCE.BOOKING_HOLD,
-        sourceRefId: newId(),
-        amount: new Prisma.Decimal('80000'),
-      });
-    });
-    const walletId = (await wallet.findWalletId({ type: WALLET_OWNER_TYPE.USER, userId }))!;
-    expect(walletId).toBeTruthy();
-
+        amount: new Prisma.Decimal('200000'),
+      }),
+    );
+    const customerWalletId = (await wallet.findWalletId({
+      type: WALLET_OWNER_TYPE.USER,
+      userId: customerId,
+    }))!;
     await prisma.$transaction(async (tx) => {
-      await wallet.holdForWithdrawalWithinTx(tx, walletId, new Prisma.Decimal('50000'));
+      await wallet.holdForWithdrawalWithinTx(tx, customerWalletId, new Prisma.Decimal('50000'));
       await tx.withdrawalRequest.create({
         data: {
           id: newId(),
           code: `XPW${RUN}A1`,
-          walletId,
+          walletId: customerWalletId,
           amount: new Prisma.Decimal('50000'),
           status: WITHDRAWAL_STATUS.PENDING,
           bankCode: 'VCB',
           bankAccountNumber: '1234567890',
           bankAccountName: 'KHACH THUE',
-          requestedByUserId: userId,
+          requestedByUserId: customerId,
         },
       });
     });
-    await prisma.bankAccount.create({
-      data: {
-        id: newId(),
-        ownerType: WALLET_OWNER_TYPE.USER,
-        ownerUserId: userId,
-        bankCode: 'VCB',
-        accountNumber: '1234567890',
-        accountName: 'KHACH THUE',
-        isDefault: true,
-        status: BANK_ACCOUNT_STATUS.ACTIVE,
-      },
-    });
+    const before = await obligationOf(customerWalletId);
 
-    const before = await obligationOf(walletId);
-    const entriesBefore = await prisma.walletEntry.count({ where: { walletId } });
-    expect(before).toBe('200000.00'); // 150.000 khả dụng + 50.000 đang khoá
+    // Cùng người đăng ký site partner (tài khoản KHÁC) và mở gian hàng.
+    const partnerId = await mkUser('chuxe', ACCOUNT_REALM.PARTNER, phone);
+    const tenantId = await mkTenant('chuxe', partnerId);
 
-    // …rồi họ mở gian hàng.
-    const tenantId = await mkTenant('adopt', userId);
-    await prisma.$transaction((tx) => wallet.adoptUserWalletWithinTx(tx, userId, tenantId));
-
-    // I2 — id ví KHÔNG đổi, nên không tham chiếu nào phải sửa.
+    // Ví khách y nguyên — chủ, số dư, lệnh rút.
     const after = await prisma.wallet.findUniqueOrThrow({
-      where: { id: walletId },
+      where: { id: customerWalletId },
       select: { ownerType: true, ownerUserId: true, ownerTenantId: true },
     });
-    expect(after.ownerType).toBe(WALLET_OWNER_TYPE.TENANT);
-    expect(after.ownerTenantId).toBe(tenantId);
-    expect(after.ownerUserId).toBeNull();
-
-    // I1 — không một đồng nào đổi.
-    expect(await obligationOf(walletId)).toBe(before);
-    expect(await prisma.walletEntry.count({ where: { walletId } })).toBe(entriesBefore);
-
-    // Lệnh rút đang chờ đi theo miễn phí, và SNAPSHOT ngân hàng không đổi: admin vẫn chuyển
-    // đúng tài khoản cá nhân mà người dùng đã khai.
-    const wr = await prisma.withdrawalRequest.findFirstOrThrow({
-      where: { walletId },
-      select: { status: true, bankAccountNumber: true },
+    expect(after).toEqual({
+      ownerType: WALLET_OWNER_TYPE.USER,
+      ownerUserId: customerId,
+      ownerTenantId: null,
     });
-    expect(wr.status).toBe(WITHDRAWAL_STATUS.PENDING);
-    expect(wr.bankAccountNumber).toBe('1234567890');
+    expect(await obligationOf(customerWalletId)).toBe(before);
 
-    // Tài khoản ngân hàng đi theo — nếu không, màn rút tiền hiện ô chọn RỖNG.
-    const bank = await prisma.bankAccount.findFirstOrThrow({
-      where: { ownerTenantId: tenantId },
-      select: { ownerType: true, ownerUserId: true },
-    });
-    expect(bank.ownerType).toBe(WALLET_OWNER_TYPE.TENANT);
-    expect(bank.ownerUserId).toBeNull();
-
-    // I4 — không còn ví `user` nào cho người này.
-    expect(await wallet.findWalletId({ type: WALLET_OWNER_TYPE.USER, userId })).toBeNull();
-  });
-
-  maybe('khách CHƯA có ví: mở gian hàng không tạo ví rỗng nào', async () => {
-    const userId = await mkUser('empty');
-    const tenantId = await mkTenant('empty', userId);
-    await prisma.$transaction((tx) => wallet.adoptUserWalletWithinTx(tx, userId, tenantId));
-
-    expect(await wallet.findWalletId({ type: WALLET_OWNER_TYPE.USER, userId })).toBeNull();
+    // Gian hàng chưa có ví cho tới khoản đầu tiên của chính nó; tài khoản partner không có ví user.
     expect(await wallet.findWalletId({ type: WALLET_OWNER_TYPE.TENANT, tenantId })).toBeNull();
+    expect(
+      await wallet.findWalletId({ type: WALLET_OWNER_TYPE.USER, userId: partnerId }),
+    ).toBeNull();
   });
 
-  /*
-   * Tenant vừa tạo trong cùng transaction thì KHÔNG THỂ đã có ví. Gặp là lỗi lập trình (ai đó
-   * gọi hàm này ngoài `registerShop`), và ném to hơn hẳn việc lặng lẽ để lại hai ví.
-   */
-  maybe('tenant ĐÃ có ví ⇒ ném, không tự gộp ở đường chạy thật', async () => {
-    const userId = await mkUser('dup');
-    const tenantId = await mkTenant('dup', userId);
-    await prisma.$transaction((tx) =>
-      wallet.creditWithinTx(tx, {
-        owner: { type: WALLET_OWNER_TYPE.TENANT, tenantId },
-        kind: WALLET_ENTRY_KIND.HOLD_RELEASE,
-        sourceType: WALLET_ENTRY_SOURCE.BOOKING_HOLD,
-        sourceRefId: newId(),
-        amount: new Prisma.Decimal('10000'),
-      }),
-    );
+  maybe('R2: khoản hoàn luôn về ví của tài khoản KHÁCH đã đặt', async () => {
+    const phone = mkPhone();
+    const customerId = await mkUser('hoan', ACCOUNT_REALM.CUSTOMER, phone);
+    const partnerId = await mkUser('hoan-chuxe', ACCOUNT_REALM.PARTNER, phone);
+    const tenantId = await mkTenant('hoan', partnerId);
 
-    await expect(
-      prisma.$transaction((tx) => wallet.adoptUserWalletWithinTx(tx, userId, tenantId)),
-    ).rejects.toThrow(/đã có ví/);
-  });
-});
-
-describe('định tuyến khoản hoàn sau khi hợp nhất', () => {
-  maybe('chủ xe đi thuê ⇒ tiền hoàn về ví TENANT, KHÔNG sinh ví user thứ hai', async () => {
-    const userId = await mkUser('refund');
-    const tenantId = await mkTenant('refund', userId);
-    await prisma.$transaction((tx) => wallet.adoptUserWalletWithinTx(tx, userId, tenantId));
-
-    // Đúng phép tra mà `HoldSettlementService.refundWalletOwner` dùng.
-    const membership = await prisma.tenantMembership.findFirst({
-      where: {
-        userId,
-        status: MEMBERSHIP_STATUS.ACTIVE,
-        roleKey: TENANT_ROLE.SHOP_OWNER,
-        tenant: { deletedAt: null },
-      },
-      orderBy: { createdAt: 'asc' },
-      select: { tenantId: true },
-    });
-    const owner = resolveRefundWalletOwner(userId, membership?.tenantId ?? null);
-    expect(owner).toEqual({ type: 'tenant', tenantId });
+    // Đúng hàm mà `HoldSettlementService.refundWalletOwner` dùng — không còn tham số tenant.
+    expect(resolveRefundWalletOwner(customerId)).toEqual({ type: 'user', userId: customerId });
 
     await prisma.$transaction((tx) =>
       wallet.creditWithinTx(tx, {
-        owner: { type: WALLET_OWNER_TYPE.TENANT, tenantId },
+        owner: { type: WALLET_OWNER_TYPE.USER, userId: customerId },
         kind: WALLET_ENTRY_KIND.HOLD_REFUND,
         sourceType: WALLET_ENTRY_SOURCE.BOOKING_HOLD,
         sourceRefId: newId(),
@@ -265,26 +199,20 @@ describe('định tuyến khoản hoàn sau khi hợp nhất', () => {
       }),
     );
 
-    expect(await wallet.findWalletId({ type: WALLET_OWNER_TYPE.USER, userId })).toBeNull();
-    const tenantWalletId = (await wallet.findWalletId({
-      type: WALLET_OWNER_TYPE.TENANT,
-      tenantId,
+    const customerWalletId = (await wallet.findWalletId({
+      type: WALLET_OWNER_TYPE.USER,
+      userId: customerId,
     }))!;
-    expect(await obligationOf(tenantWalletId)).toBe('70000.00');
-  });
-
-  maybe('người CHỈ đi thuê ⇒ vẫn là ví user (không phải ai cũng có tenant)', async () => {
-    const userId = await mkUser('renter');
-    const owner = resolveRefundWalletOwner(userId, null);
-    expect(owner).toEqual({ type: 'user', userId });
+    expect(await obligationOf(customerWalletId)).toBe('70000.00');
+    // Gian hàng của cùng số không nhận đồng nào.
+    expect(await wallet.findWalletId({ type: WALLET_OWNER_TYPE.TENANT, tenantId })).toBeNull();
   });
 });
 
-describe('bất biến tiền vẫn giữ sau khi đổi chủ', () => {
+describe('bất biến tiền của ví gian hàng', () => {
   maybe('I5: ghi có hai lần cùng nguồn ⇒ một dòng, số dư không nhân đôi', async () => {
-    const userId = await mkUser('idem');
-    const tenantId = await mkTenant('idem', userId);
-    await prisma.$transaction((tx) => wallet.adoptUserWalletWithinTx(tx, userId, tenantId));
+    const ownerId = await mkUser('idem', ACCOUNT_REALM.PARTNER);
+    const tenantId = await mkTenant('idem', ownerId);
 
     const sourceRefId = newId();
     const credit = () =>
@@ -307,9 +235,8 @@ describe('bất biến tiền vẫn giữ sau khi đổi chủ', () => {
   });
 
   maybe('I6: hai lệnh rút song song bằng đúng số dư ⇒ ĐÚNG MỘT thắng', async () => {
-    const userId = await mkUser('race');
-    const tenantId = await mkTenant('race', userId);
-    await prisma.$transaction((tx) => wallet.adoptUserWalletWithinTx(tx, userId, tenantId));
+    const ownerId = await mkUser('race', ACCOUNT_REALM.PARTNER);
+    const tenantId = await mkTenant('race', ownerId);
     await prisma.$transaction((tx) =>
       wallet.creditWithinTx(tx, {
         owner: { type: WALLET_OWNER_TYPE.TENANT, tenantId },

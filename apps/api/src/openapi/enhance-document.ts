@@ -1,4 +1,4 @@
-import { API_ERROR_CODE } from '@xeprime/types';
+import { ACCOUNT_REALM_VALUES, API_ERROR_CODE } from '@xeprime/types';
 import type { OpenAPIObject } from '@nestjs/swagger';
 import { API_TAG_GROUPS_EXTENSION } from './api-tags';
 import type { RouteAccess } from './route-access';
@@ -183,6 +183,11 @@ function applyAccess(operation: OperationObject, route: RouteAccess): void {
       : '**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).',
   ];
 
+  if (route.realms.length > 0) {
+    const realms = route.realms.map((realm) => `\`${realm}\``).join(' · ');
+    lines.push(`**Không gian tài khoản (ADR 0053):** ${realms} — phiên của realm khác bị từ chối.`);
+  }
+
   if (route.tenantScoped) {
     lines.push(
       '**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, ' +
@@ -284,6 +289,10 @@ function collectForbiddenCodes(route: RouteAccess): string[] {
   const codes: string[] = [];
   if (route.permissions.length > 0) codes.push(API_ERROR_CODE.MISSING_PERMISSION);
   if (route.tenantScoped) codes.push(API_ERROR_CODE.NO_TENANT_SCOPE);
+  // Route chỉ mở cho MỘT PHẦN các realm thì phiên của realm còn lại nhận 403 (ADR 0053 điều 5).
+  if (route.realms.length > 0 && route.realms.length < ACCOUNT_REALM_VALUES.length) {
+    codes.push(API_ERROR_CODE.REALM_NOT_ALLOWED);
+  }
   if (route.platformOnly || route.permissions.length > 0) codes.push(API_ERROR_CODE.FORBIDDEN);
   // Trục năng lực theo gói (ADR 0027) — cùng nhánh 403 với quyền, xem docblock của hai mã.
   // `FEATURE_READ_ONLY` chỉ xuất hiện ở route GHI: `read_only` cho mọi lượt đọc đi qua.

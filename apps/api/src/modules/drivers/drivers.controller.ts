@@ -1,15 +1,12 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION, PLAN_FEATURE, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
-  CurrentTenant,
-  CurrentUser,
-  RequirePermissions,
-  TenantScoped,
-  RequiresFeature,
-  SubscriptionTrackOnly,
-  SupportAction,
-} from '../../common/decorators';
+  ACCOUNT_REALM,
+  PERMISSION,
+  PLAN_FEATURE,
+  SUPPORT_CAPABILITY,
+} from '@xeprime/types';
+import { CurrentTenant, CurrentUser, Realms, RequirePermissions, RequiresFeature, SubscriptionTrackOnly, SupportAction, TenantScoped } from '../../common/decorators';
 import { OkResultDto } from '../../common/dto/api-response.dto';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { DriversService } from './drivers.service';
@@ -33,6 +30,7 @@ import {
 @TenantScoped()
 @SubscriptionTrackOnly()
 @RequiresFeature(PLAN_FEATURE.DRIVERS)
+@Realms(ACCOUNT_REALM.PARTNER)
 export class DriversController {
   constructor(private readonly drivers: DriversService) {}
 

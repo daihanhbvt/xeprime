@@ -1,5 +1,5 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
-import { API_ERROR_CODE, AUDIT_ACTOR_SCOPE } from '@xeprime/types';
+import { ACCOUNT_REALM, API_ERROR_CODE, AUDIT_ACTOR_SCOPE } from '@xeprime/types';
 import { PlatformAuditService } from '../src/modules/platform-admin/platform-audit.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 
@@ -61,7 +61,12 @@ beforeAll(async () => {
   actorId = newId();
   tenantId = newId();
   await prisma.user.create({
-    data: { id: actorId, displayName: 'Kiểm duyệt viên', email: `aud-${actorId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: actorId,
+      displayName: 'Kiểm duyệt viên',
+      email: `aud-${actorId}@xeprime.test`,
+    },
   });
   await prisma.tenant.create({
     data: {
@@ -73,12 +78,43 @@ beforeAll(async () => {
     },
   });
 
-  await seedLog({ actorScope: AUDIT_ACTOR_SCOPE.PLATFORM, action: 'tenant.lock', createdAt: day(0), tenantId, actorUserId: actorId, withJson: true });
-  await seedLog({ actorScope: AUDIT_ACTOR_SCOPE.PLATFORM, action: 'tenant.unlock', createdAt: day(1), tenantId, actorUserId: actorId });
-  await seedLog({ actorScope: AUDIT_ACTOR_SCOPE.TENANT, action: 'booking.create', createdAt: day(2), tenantId });
-  await seedLog({ actorScope: AUDIT_ACTOR_SCOPE.TENANT, action: 'booking.transition', createdAt: day(3) });
-  await seedLog({ actorScope: AUDIT_ACTOR_SCOPE.SYSTEM, action: 'system.cleanup', createdAt: day(4) });
-  await seedLog({ actorScope: AUDIT_ACTOR_SCOPE.PLATFORM, action: 'tenant.lock', createdAt: day(5), actorUserId: actorId });
+  await seedLog({
+    actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
+    action: 'tenant.lock',
+    createdAt: day(0),
+    tenantId,
+    actorUserId: actorId,
+    withJson: true,
+  });
+  await seedLog({
+    actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
+    action: 'tenant.unlock',
+    createdAt: day(1),
+    tenantId,
+    actorUserId: actorId,
+  });
+  await seedLog({
+    actorScope: AUDIT_ACTOR_SCOPE.TENANT,
+    action: 'booking.create',
+    createdAt: day(2),
+    tenantId,
+  });
+  await seedLog({
+    actorScope: AUDIT_ACTOR_SCOPE.TENANT,
+    action: 'booking.transition',
+    createdAt: day(3),
+  });
+  await seedLog({
+    actorScope: AUDIT_ACTOR_SCOPE.SYSTEM,
+    action: 'system.cleanup',
+    createdAt: day(4),
+  });
+  await seedLog({
+    actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
+    action: 'tenant.lock',
+    createdAt: day(5),
+    actorUserId: actorId,
+  });
 });
 
 afterAll(async () => {

@@ -15,7 +15,7 @@ import { PermissionState } from '@/components/feedback/PermissionState';
 import {
   ROUTES,
   VEHICLE_REGISTRATION_SOURCE,
-  accountVehiclePath,
+  ownerVehiclePath,
   vehicleListPathFor,
   type VehicleRegistrationSource,
 } from '@/constants/routes';
@@ -550,7 +550,7 @@ export function QuickVehicleWizard({ source }: { source: VehicleRegistrationSour
                 router.push(
                   source === VEHICLE_REGISTRATION_SOURCE.MANAGE
                     ? ROUTES.MANAGE.VEHICLES
-                    : accountVehiclePath.manage(registration.createdVehicle!.id),
+                    : ownerVehiclePath.manage(registration.createdVehicle!.id),
                 )
               }
             >

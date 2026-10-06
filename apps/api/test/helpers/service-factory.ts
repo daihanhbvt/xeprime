@@ -329,9 +329,8 @@ export function makeVehiclesService(
 }
 
 /**
- * `TenantsService` — dựng ở hai spec, và nó vừa mọc thêm dependency thứ SÁU (`WalletService`, để
- * `registerShop` đổi chủ ví sang tenant — ví hợp nhất 15/09/2026). Đúng ca mà factory này sinh
- * ra để giải.
+ * `TenantsService` — dựng ở nhiều spec. ADR 0053 gỡ `WalletService` khỏi nó: tài khoản partner
+ * không có ví người dùng để `registerShop` nhận về, nên không còn bước đổi chủ ví.
  */
 export function makeTenantsService(prisma: PrismaService): TenantsService {
   const audit = new AuditService(prisma);
@@ -341,7 +340,6 @@ export function makeTenantsService(prisma: PrismaService): TenantsService {
     makeAddressService(prisma),
     makeBranchesService(prisma),
     makeBillingService(prisma),
-    new WalletService(prisma),
   );
 }
 
@@ -485,17 +483,18 @@ export async function seedBranch(
  * `missingPackageShopListingRequirements`, nên một spec về VÒNG DUYỆT XE không phải đi qua cổng
  * hồ sơ gian hàng để tới được thứ nó đang kiểm.
  *
- * `upsert` vì tenant tạo qua `prisma.tenant.create` trần chưa có hồ sơ.
+ * `upsert` vì tenant tạo qua `prisma.tenant.create` trần chưa có hồ sơ. Tên hiển thị là
+ * `tenants.name` (nguồn duy nhất từ 05/10/2026) — chỉ ghi đè khi spec truyền tên riêng.
  */
 export async function giveShopStorefront(
   prisma: PrismaService,
   tenantId: string,
   input: { displayName?: string; logoUrl?: string } = {},
 ): Promise<void> {
-  const data = {
-    displayName: input.displayName ?? 'Gian hàng test',
-    logoUrl: input.logoUrl ?? 'https://img.example/logo.png',
-  };
+  if (input.displayName !== undefined) {
+    await prisma.tenant.update({ where: { id: tenantId }, data: { name: input.displayName } });
+  }
+  const data = { logoUrl: input.logoUrl ?? 'https://img.example/logo.png' };
   await prisma.tenantProfile.upsert({
     where: { tenantId },
     create: { tenantId, ...data },

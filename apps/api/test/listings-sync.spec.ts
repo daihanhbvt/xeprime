@@ -1,5 +1,6 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   APPROVAL_STATUS,
   APPROVAL_TARGET_TYPE,
   COLLATERAL_MODE,
@@ -14,7 +15,14 @@ import { ListingsService } from '../src/modules/public-listings/listings.service
 import { passVehicleReviewChecks } from './helpers/vehicle-review-fixture';
 import { PlatformApprovalService } from '../src/modules/platform-admin/platform-approval.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeNotificationService, makePricingService, makePublicListingsService, makeVehiclesService, seedBranch, seedProvince } from './helpers/service-factory';
+import {
+  makeNotificationService,
+  makePricingService,
+  makePublicListingsService,
+  makeVehiclesService,
+  seedBranch,
+  seedProvince,
+} from './helpers/service-factory';
 import { TEST_PROVINCE } from './helpers/test-provinces';
 
 /**
@@ -129,8 +137,18 @@ beforeAll(async () => {
 
   await prisma.user.createMany({
     data: [
-      { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
-      { id: reviewerId, displayName: 'Reviewer', email: `rev-${reviewerId}@xeprime.test` },
+      {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: ownerId,
+        displayName: 'Chủ shop',
+        email: `own-${ownerId}@xeprime.test`,
+      },
+      {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: reviewerId,
+        displayName: 'Reviewer',
+        email: `rev-${reviewerId}@xeprime.test`,
+      },
     ],
   });
   await prisma.tenant.create({
@@ -145,7 +163,7 @@ beforeAll(async () => {
   });
   await seedProvince(asService, PROV, PROV_NAME);
   await prisma.tenantProfile.create({
-    data: { tenantId, displayName: 'Shop Sync', provinceCode: PROV, provinceName: PROV_NAME },
+    data: { tenantId, provinceCode: PROV, provinceName: PROV_NAME },
   });
   branchId = await seedBranch(asService, { tenantId, provinceCode: PROV });
   await prisma.tenantMembership.create({
@@ -287,10 +305,16 @@ describe('public_listings sync (ADR 0008)', () => {
   maybe(
     'giá giờ/% giảm và chính sách gian hàng đổi → listing vẫn active, nhãn đổi theo',
     async () => {
-      await vehicles.update(tenantId, vApprove, ownerId, {
-        hourlyPrice: '150000',
-        discountPercent: 20,
-      }, null);
+      await vehicles.update(
+        tenantId,
+        vApprove,
+        ownerId,
+        {
+          hourlyPrice: '150000',
+          discountPercent: 20,
+        },
+        null,
+      );
       const stillActive = await prisma.publicListing.findUniqueOrThrow({
         where: { vehicleId: vApprove },
         select: { status: true },

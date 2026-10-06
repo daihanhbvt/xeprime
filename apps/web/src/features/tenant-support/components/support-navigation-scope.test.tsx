@@ -116,7 +116,7 @@ describe('SupportNavigationScope', () => {
   });
 
   it('tài khoản của CHÍNH nhân sự (Bảo mật) không bị chặn', () => {
-    renderScope(<a href={ROUTES.MANAGE.SECURITY}>bao-mat</a>);
+    renderScope(<a href={ROUTES.ADMIN.SECURITY}>bao-mat</a>);
     expect(fireEvent.click(screen.getByText('bao-mat'))).toBe(true);
   });
 
@@ -134,7 +134,7 @@ describe('SupportNavigationScope', () => {
   });
 
   it('link ra màn nền tảng (thoát phiên) để nguyên', () => {
-    renderScope(<a href={ROUTES.MANAGE.ADMIN_TENANTS}>thoat</a>);
+    renderScope(<a href={ROUTES.ADMIN.TENANTS}>thoat</a>);
     expect(fireEvent.click(screen.getByText('thoat'))).toBe(true);
     expect(router.push).not.toHaveBeenCalled();
   });

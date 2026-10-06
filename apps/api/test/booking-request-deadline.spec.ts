@@ -1,15 +1,16 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import { giveTenantPlan } from './helpers/billing-fixture';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
-  BILLING_MODE,
   AUDIT_ACTOR_SCOPE,
+  BILLING_MODE,
   BOOKING_REQUEST_DECISION_SOURCE,
   BOOKING_REQUEST_REMINDER_MINUTES,
   BOOKING_REQUEST_RESPOND_WINDOW_MINUTES,
   BOOKING_REQUEST_STATUS,
-  bookingRequestRespondBy,
   BOOKING_STATUS,
+  bookingRequestRespondBy,
   MEMBERSHIP_STATUS,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
@@ -165,6 +166,7 @@ async function submitPendingApproval(vehicleId: string): Promise<string> {
   const customerId = newId();
   await prisma.user.create({
     data: {
+      realm: ACCOUNT_REALM.CUSTOMER,
       id: customerId,
       displayName: 'Khách hạn',
       email: `dl-${customerId}@xeprime.test`,
@@ -213,8 +215,18 @@ beforeAll(async () => {
 
   await prisma.user.createMany({
     data: [
-      { id: ownerId, displayName: 'Chủ shop', email: `owner-${ownerId}@xeprime.test` },
-      { id: guestUserId, displayName: 'Khách vãng lai', email: `g-${guestUserId}@xeprime.test` },
+      {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: ownerId,
+        displayName: 'Chủ shop',
+        email: `owner-${ownerId}@xeprime.test`,
+      },
+      {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: guestUserId,
+        displayName: 'Khách vãng lai',
+        email: `g-${guestUserId}@xeprime.test`,
+      },
     ],
   });
   await prisma.tenant.create({
@@ -395,55 +407,58 @@ describe('Gửi yêu cầu: hạn 60 phút, CHƯA giữ chỗ (ADR 0044)', () =>
    * quên, ở một mức giá đã cũ, cho một khung giờ khách có thể đã lấp bằng xe khác — và không ai
    * bấm nút nào để nó xảy ra. Thay vào đó là một LỜI MỜI đặt lại, trỏ vào chiếc XE.
    */
-  maybe('hold người thắng hết hạn ⇒ người thua nhận LỜI MỜI đặt lại, không bị hồi sinh', async () => {
-    const vehicleId = await seedVehicle();
-    const window = nextWindow();
-    const winner = await requests.submitPublic(
-      { vehicleId, customerName: 'Khách thắng', customerPhone: nextPhone(), ...window },
-      null,
-    );
-    const loser = await requests.submitPublic(
-      { vehicleId, customerName: 'Khách thua', customerPhone: nextPhone(), ...window },
-      null,
-    );
-    await requests.approve(tenantId, ownerId, winner.receipt.id);
+  maybe(
+    'hold người thắng hết hạn ⇒ người thua nhận LỜI MỜI đặt lại, không bị hồi sinh',
+    async () => {
+      const vehicleId = await seedVehicle();
+      const window = nextWindow();
+      const winner = await requests.submitPublic(
+        { vehicleId, customerName: 'Khách thắng', customerPhone: nextPhone(), ...window },
+        null,
+      );
+      const loser = await requests.submitPublic(
+        { vehicleId, customerName: 'Khách thua', customerPhone: nextPhone(), ...window },
+        null,
+      );
+      await requests.approve(tenantId, ownerId, winner.receipt.id);
 
-    const closed = await prisma.bookingRequest.findUniqueOrThrow({
-      where: { id: loser.receipt.id },
-      select: { status: true, customerUserId: true, slotReopenedNotifiedAt: true },
-    });
-    expect(closed.status).toBe(BOOKING_REQUEST_STATUS.SLOT_TAKEN);
-    expect(closed.slotReopenedNotifiedAt).toBeNull();
+      const closed = await prisma.bookingRequest.findUniqueOrThrow({
+        where: { id: loser.receipt.id },
+        select: { status: true, customerUserId: true, slotReopenedNotifiedAt: true },
+      });
+      expect(closed.status).toBe(BOOKING_REQUEST_STATUS.SLOT_TAKEN);
+      expect(closed.slotReopenedNotifiedAt).toBeNull();
 
-    // Người thắng để hết hạn — worker nhả chỗ.
-    await prisma.bookingHold.updateMany({
-      where: { bookingRequestId: winner.receipt.id },
-      data: { expiresAt: new Date(Date.now() - 60_000) },
-    });
-    await sweepBookingHoldExpiry(prisma, new Date());
+      // Người thắng để hết hạn — worker nhả chỗ.
+      await prisma.bookingHold.updateMany({
+        where: { bookingRequestId: winner.receipt.id },
+        data: { expiresAt: new Date(Date.now() - 60_000) },
+      });
+      await sweepBookingHoldExpiry(prisma, new Date());
 
-    expect(await countOccupancyFor(vehicleId)).toBe(0);
+      expect(await countOccupancyFor(vehicleId)).toBe(0);
 
-    // Yêu cầu thua cuộc VẪN đóng — không có đường nào biến nó thành đơn sau lưng hai bên.
-    const after = await prisma.bookingRequest.findUniqueOrThrow({
-      where: { id: loser.receipt.id },
-      select: { status: true, bookingId: true, slotReopenedNotifiedAt: true },
-    });
-    expect(after.status).toBe(BOOKING_REQUEST_STATUS.SLOT_TAKEN);
-    expect(after.bookingId).toBeNull();
-    expect(after.slotReopenedNotifiedAt).not.toBeNull();
+      // Yêu cầu thua cuộc VẪN đóng — không có đường nào biến nó thành đơn sau lưng hai bên.
+      const after = await prisma.bookingRequest.findUniqueOrThrow({
+        where: { id: loser.receipt.id },
+        select: { status: true, bookingId: true, slotReopenedNotifiedAt: true },
+      });
+      expect(after.status).toBe(BOOKING_REQUEST_STATUS.SLOT_TAKEN);
+      expect(after.bookingId).toBeNull();
+      expect(after.slotReopenedNotifiedAt).not.toBeNull();
 
-    // Lời mời trỏ vào CHIẾC XE, để khách gửi một yêu cầu mới ở giá và lịch hiện hành.
-    const invite = await prisma.notification.findFirstOrThrow({
-      where: {
-        userId: closed.customerUserId!,
-        type: NOTIFICATION_TYPE.BOOKING_REQUEST_SLOT_REOPENED,
-      },
-      select: { targetType: true, targetId: true },
-    });
-    expect(invite.targetType).toBe(NOTIFICATION_TARGET_TYPE.VEHICLE);
-    expect(invite.targetId).toBe(vehicleId);
-  });
+      // Lời mời trỏ vào CHIẾC XE, để khách gửi một yêu cầu mới ở giá và lịch hiện hành.
+      const invite = await prisma.notification.findFirstOrThrow({
+        where: {
+          userId: closed.customerUserId!,
+          type: NOTIFICATION_TYPE.BOOKING_REQUEST_SLOT_REOPENED,
+        },
+        select: { targetType: true, targetId: true },
+      });
+      expect(invite.targetType).toBe(NOTIFICATION_TARGET_TYPE.VEHICLE);
+      expect(invite.targetId).toBe(vehicleId);
+    },
+  );
 
   /*
    * Worker chạy theo nhịp, và một lượt quét có thể lặp lại trên cùng dữ liệu. Chống trùng bằng
@@ -489,39 +504,42 @@ describe('Gửi yêu cầu: hạn 60 phút, CHƯA giữ chỗ (ADR 0044)', () =>
 });
 
 describe('Duyệt & giữ xe', () => {
-  maybe('duyệt rồi trả tiền → đơn reserved + occupancy, yêu cầu thành converted_to_booking', async () => {
-    const vehicleId = await seedVehicle();
-    const id = await submit(vehicleId);
+  maybe(
+    'duyệt rồi trả tiền → đơn reserved + occupancy, yêu cầu thành converted_to_booking',
+    async () => {
+      const vehicleId = await seedVehicle();
+      const id = await submit(vehicleId);
 
-    /*
-     * Duyệt trước, tiền sau (ADR 0044 điều 2): lượt duyệt chốt lịch và phát QR, còn ĐƠN THUÊ chỉ
-     * ra đời khi đối soát xác nhận đã nhận đủ tiền.
-     */
-    const accepted = await requests.approve(tenantId, ownerId, id);
-    expect(accepted.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
-    expect(accepted.bookingId).toBeNull();
+      /*
+       * Duyệt trước, tiền sau (ADR 0044 điều 2): lượt duyệt chốt lịch và phát QR, còn ĐƠN THUÊ chỉ
+       * ra đời khi đối soát xác nhận đã nhận đủ tiền.
+       */
+      const accepted = await requests.approve(tenantId, ownerId, id);
+      expect(accepted.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
+      expect(accepted.bookingId).toBeNull();
 
-    await payHoldForRequest(asService, holds, id);
-    const approved = await requests.getOne(tenantId, id);
+      await payHoldForRequest(asService, holds, id);
+      const approved = await requests.getOne(tenantId, id);
 
-    expect(approved.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
-    expect(approved.bookingId).toBeTruthy();
+      expect(approved.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
+      expect(approved.bookingId).toBeTruthy();
 
-    const booking = await prisma.booking.findUniqueOrThrow({
-      where: { id: approved.bookingId! },
-      select: { status: true },
-    });
-    // `reserved` = "Đã giữ xe" (ADR 0005) — và chỗ trên lịch chỉ xuất hiện Ở ĐÂY.
-    expect(booking.status).toBe(BOOKING_STATUS.RESERVED);
-    expect(await countOccupancyFor(vehicleId)).toBe(1);
+      const booking = await prisma.booking.findUniqueOrThrow({
+        where: { id: approved.bookingId! },
+        select: { status: true },
+      });
+      // `reserved` = "Đã giữ xe" (ADR 0005) — và chỗ trên lịch chỉ xuất hiện Ở ĐÂY.
+      expect(booking.status).toBe(BOOKING_STATUS.RESERVED);
+      expect(await countOccupancyFor(vehicleId)).toBe(1);
 
-    const occ = await prisma.vehicleOccupancy.findFirstOrThrow({
-      where: { vehicleId },
-      select: { sourceType: true, sourceId: true },
-    });
-    expect(occ.sourceType).toBe(OCCUPANCY_SOURCE_TYPE.BOOKING);
-    expect(occ.sourceId).toBe(approved.bookingId);
-  });
+      const occ = await prisma.vehicleOccupancy.findFirstOrThrow({
+        where: { vehicleId },
+        select: { sourceType: true, sourceId: true },
+      });
+      expect(occ.sourceType).toBe(OCCUPANCY_SOURCE_TYPE.BOOKING);
+      expect(occ.sourceId).toBe(approved.bookingId);
+    },
+  );
 
   /**
    * Cửa quá hạn phải đóng NGAY cả khi worker chưa chạy — đây chính là cửa sổ mà một endpoint

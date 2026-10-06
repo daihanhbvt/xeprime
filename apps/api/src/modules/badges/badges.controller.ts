@@ -1,6 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
+import { ACCOUNT_REALM_VALUES } from '@xeprime/types';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { CurrentUser } from '../../common/decorators';
+import { CurrentUser, Realms } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import { BadgesService } from './badges.service';
 import { UserBadgesDto } from './dto/badges.dto';
@@ -20,6 +21,7 @@ import { UserBadgesDto } from './dto/badges.dto';
  */
 @ApiTags('badges')
 @Controller('me')
+@Realms(...ACCOUNT_REALM_VALUES)
 export class BadgesController {
   constructor(private readonly badges: BadgesService) {}
 

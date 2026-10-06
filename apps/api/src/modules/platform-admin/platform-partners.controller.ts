@@ -1,7 +1,10 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
-import { CurrentPlatform, PlatformOnly, RequirePermissions } from '../../common/decorators';
+import {
+  ACCOUNT_REALM,
+  PERMISSION,
+} from '@xeprime/types';
+import { CurrentPlatform, PlatformOnly, Realms, RequirePermissions } from '../../common/decorators';
 import type { PlatformContext } from '../../common/types/request-context';
 import {
   PartnerActivityPageDto,
@@ -40,6 +43,7 @@ import { PlatformPartnerOperationsService } from './platform-partner-operations.
 @Controller('platform/partners/:tenantId')
 @PlatformOnly()
 @RequirePermissions(PERMISSION.PLATFORM_TENANT_VIEW)
+@Realms(ACCOUNT_REALM.PLATFORM)
 export class PlatformPartnersController {
   constructor(
     private readonly detail: PlatformPartnerDetailService,

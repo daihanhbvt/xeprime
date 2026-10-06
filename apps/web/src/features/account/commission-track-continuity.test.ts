@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ACCOUNT_REALM,
   BILLING_MODE,
   BILLING_PHASE,
   CHAT_INBOX,
@@ -8,15 +9,20 @@ import {
   type BillingPhase,
 } from '@xeprime/types';
 
-import { flattenAccountNav, resolveAccountNav } from '@/constants/account-nav';
+import { OWNER_LITE_NAV, SHOP_NAV, flattenLeaves, navForZone } from '@/constants/nav';
+import { ROUTES } from '@/constants/routes';
+import {
+  PARTNER_TRACK,
+  partnerPageRedirect,
+  resolvePartnerTrack,
+} from '@/features/auth/post-auth-destination';
 import { resolveChatInbox } from '@/features/chat/chat-inbox';
 import { walletScopeFor } from '@/features/wallet/wallet-scope';
 import type { CurrentUser } from '@/hooks/use-current-user';
-
-import { shopAccountRedirect } from './shop-account-gate';
+import { ZONE } from '@/zones';
 
 /**
- * TUYẾN HOA HỒNG KHÔNG CÓ MỐC HẾT HẠN — nhìn từ phía giao diện.
+ * TUYẾN HOA HỒNG KHÔNG CÓ MỐC HẾT HẠN — nhìn từ phía giao diện của site partner.
  *
  * ## Vì sao bộ test này tồn tại
  *
@@ -26,24 +32,23 @@ import { shopAccountRedirect } from './shop-account-gate';
  * ranh giới đó trong một ngày.
  *
  * `resolveEffectiveBilling` đã khoá phần TIỀN: `billingMode` giữ `commission` ở cả ba pha
- * (`effective-billing.test.ts`). Bộ này khoá phần còn lại — thứ người dùng THẤY:
+ * (`effective-billing.test.ts`). Bộ này khoá phần còn lại — thứ người dùng THẤY ở site partner:
  *
- *   · menu Owner Lite       không được đổi hình
- *   · ví                    không được đổi sổ
- *   · hộp thư               không được tách đôi trở lại
- *   · khu `/account`        không được đóng lại
+ *   · menu Owner Lite        không được đổi hình
+ *   · ví                     không được đổi sổ
+ *   · hộp thư                không được đổi
+ *   · trang của tuyến        không được đóng lại
  *
- * Kỳ kỹ thuật được phép tồn tại đúng khi nào? Khi đi qua nó KHÔNG đổi gì trong bốn dòng trên.
- * Đó là điều test này đo, và nó đo ở cả ba pha — kể cả `lapsed`, tức là khi job vòng đời CHƯA
- * kịp nối dòng mới (job chạy mỗi giờ; ở pha đó giao diện vẫn phải chạy đúng).
+ * Đo ở cả ba pha — kể cả `lapsed`, tức là khi job vòng đời CHƯA kịp nối dòng mới.
  */
 
 type Tenant = NonNullable<CurrentUser['tenant']>;
 
-/** Chủ xe tuyến hoa hồng ở một pha cụ thể của dòng thuê bao kỹ thuật. */
-function ownerAt(phase: BillingPhase): CurrentUser {
+/** Chủ xe tuyến hoa hồng (tài khoản partner) ở một pha của dòng thuê bao kỹ thuật. */
+function ownerAt(phase: BillingPhase, billingMode: string = BILLING_MODE.COMMISSION): CurrentUser {
   return {
     id: 'U1',
+    realm: ACCOUNT_REALM.PARTNER,
     displayName: 'Chủ xe Minh',
     tenant: {
       id: 'T1',
@@ -51,30 +56,32 @@ function ownerAt(phase: BillingPhase): CurrentUser {
       roleKey: TENANT_ROLE.SHOP_OWNER,
       status: 'active',
       publicVehicleCount: 3,
-      billingMode: BILLING_MODE.COMMISSION,
+      billingMode,
       billingPhase: phase,
     } as Tenant,
   } as CurrentUser;
 }
 
-/**
- * Ba pha mà một dòng hoa hồng đi qua.
- *
- *   `current` — trước mốc hết kỳ
- *   `grace`   — ngay sau mốc, worker chưa chạy
- *   `lapsed`  — hết cả ân hạn mà worker VẪN chưa nối dòng mới (worker chạy chậm)
- */
 const PHASES: BillingPhase[] = [BILLING_PHASE.CURRENT, BILLING_PHASE.GRACE, BILLING_PHASE.LAPSED];
 
-describe('Tuyến hoa hồng — đi qua mốc hết kỳ không đổi gì', () => {
-  it('menu Owner Lite giữ nguyên chín mục ở cả ba pha', () => {
-    const shape = PHASES.map((phase) =>
-      flattenAccountNav(resolveAccountNav(ownerAt(phase))).map((i) => i.key),
-    );
+/** Trang của tuyến hoa hồng mà một chủ xe mở hằng ngày. */
+const DAILY_PAGES = [
+  ROUTES.MANAGE.ROOT,
+  ROUTES.MANAGE.VEHICLES,
+  ROUTES.MANAGE.CALENDAR,
+  ROUTES.MANAGE.BOOKING_REQUESTS,
+  ROUTES.MANAGE.BOOKINGS,
+  ROUTES.MANAGE.CHAT,
+  ROUTES.MANAGE.BALANCE,
+];
 
-    expect(shape[0]).toHaveLength(9);
-    // So từng pha với pha đầu: bất kỳ khác biệt nào cũng là một mục xuất hiện/biến mất theo NGÀY.
-    for (const keys of shape) expect(keys).toEqual(shape[0]);
+describe('Tuyến hoa hồng — đi qua mốc hết kỳ không đổi gì', () => {
+  it('menu Owner Lite giữ nguyên ở cả ba pha', () => {
+    for (const phase of PHASES) {
+      const track = resolvePartnerTrack(ownerAt(phase));
+      expect(track, phase).toBe(PARTNER_TRACK.COMMISSION);
+      expect(navForZone(ZONE.PARTNER, track)).toBe(OWNER_LITE_NAV);
+    }
   });
 
   it('ví vẫn là ví TENANT ở cả ba pha', () => {
@@ -83,22 +90,19 @@ describe('Tuyến hoa hồng — đi qua mốc hết kỳ không đổi gì', ()
     }
   });
 
-  it('hộp thư vẫn HỢP NHẤT ở cả ba pha', () => {
-    for (const phase of PHASES) {
-      expect(resolveChatInbox(CHAT_SIDE.CUSTOMER, ownerAt(phase))).toBe(CHAT_INBOX.UNIFIED);
-    }
+  it('hộp thư ở site partner vẫn là hộp thư gian hàng', () => {
+    expect(resolveChatInbox(CHAT_SIDE.SHOP)).toBe(CHAT_INBOX.SHOP);
   });
 
   /*
-   * Cổng URL của khu khách hỏi TUYẾN (`tenantUsesManagePortal`), không hỏi pha. Nếu nó lỡ đọc
-   * pha, thì đúng vào ngày kỳ kỹ thuật hết hạn, mọi chủ xe hoa hồng bị đá ra khỏi `/account` —
-   * và đích của cú đá đó là `/manage`, nơi họ không vào được.
+   * Cổng trang của site partner hỏi TUYẾN, không hỏi pha. Nếu nó lỡ đọc pha, thì đúng vào ngày kỳ
+   * kỹ thuật hết hạn, mọi chủ xe hoa hồng bị đá khỏi chính trang làm việc của họ.
    */
-  it('khu /account vẫn mở ở cả ba pha', () => {
+  it('trang làm việc hằng ngày vẫn mở ở cả ba pha', () => {
     for (const phase of PHASES) {
-      expect(shopAccountRedirect(ownerAt(phase), '/account')).toBeNull();
-      expect(shopAccountRedirect(ownerAt(phase), '/account/vehicles')).toBeNull();
-      expect(shopAccountRedirect(ownerAt(phase), '/trips')).toBeNull();
+      for (const page of DAILY_PAGES) {
+        expect(partnerPageRedirect(ownerAt(phase), page), `${phase} ${page}`).toBeNull();
+      }
     }
   });
 });
@@ -110,24 +114,24 @@ describe('Tuyến hoa hồng — đi qua mốc hết kỳ không đổi gì', ()
  * xoá luôn ranh giới hạ cấp của tuyến gói (ADR 0038 điều 5).
  */
 describe('Đối chứng — tuyến gói VẪN đổi khi hết ân hạn', () => {
-  function packageAt(phase: BillingPhase, billingMode: string): CurrentUser {
-    const user = ownerAt(phase);
-    return {
-      ...user,
-      tenant: { ...(user.tenant as Tenant), billingMode } as Tenant,
-    } as CurrentUser;
-  }
-
-  it('current/grace ở trong Manage; lapsed rơi về Owner Lite', () => {
+  it('current/grace dùng menu Full Manage; lapsed rơi về Owner Lite', () => {
     // `resolveEffectiveBilling` đã đổi `billingMode` sang `commission` TRƯỚC khi giá trị lên dây
     // ở pha `lapsed` — nên web chỉ cần đọc `billingMode`, không phải tự suy từ pha.
     for (const phase of [BILLING_PHASE.CURRENT, BILLING_PHASE.GRACE]) {
-      const inManage = packageAt(phase, BILLING_MODE.PACKAGE);
-      expect(shopAccountRedirect(inManage, '/account')).toBe('/manage/security');
+      const shop = ownerAt(phase, BILLING_MODE.PACKAGE);
+      expect(navForZone(ZONE.PARTNER, resolvePartnerTrack(shop))).toBe(SHOP_NAV);
+      expect(partnerPageRedirect(shop, ROUTES.MANAGE.CUSTOMERS)).toBeNull();
     }
 
-    const lapsed = packageAt(BILLING_PHASE.LAPSED, BILLING_MODE.COMMISSION);
-    expect(shopAccountRedirect(lapsed, '/account')).toBeNull();
+    const lapsed = ownerAt(BILLING_PHASE.LAPSED, BILLING_MODE.COMMISSION);
+    expect(navForZone(ZONE.PARTNER, resolvePartnerTrack(lapsed))).toBe(OWNER_LITE_NAV);
+    expect(partnerPageRedirect(lapsed, ROUTES.MANAGE.CUSTOMERS)).toBe(ROUTES.MANAGE.ROOT);
     expect(walletScopeFor(lapsed)).toBe('shop');
+  });
+
+  it('menu Owner Lite không chứa trang nào của Full Manage', () => {
+    const ownerLite = new Set(flattenLeaves(OWNER_LITE_NAV).map((leaf) => leaf.href));
+    expect(ownerLite.has(ROUTES.MANAGE.CUSTOMERS)).toBe(false);
+    expect(ownerLite.has(ROUTES.MANAGE.FINANCE)).toBe(false);
   });
 });

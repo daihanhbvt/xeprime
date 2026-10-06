@@ -18,7 +18,11 @@ export function socialAuthUrl(
   provider: AuthProvider,
   params: { next: string | null; locale: AppLocale },
 ): string {
-  const url = new URL(`${getApiBaseUrl().replace(/\/+$/, '')}/auth/social/${provider}`);
+  // Gốc API là `/api` CÙNG ORIGIN với site đang mở (ADR 0051 điều 4) — tương đối, nên dựng URL trên
+  // origin của trang: Caddy của chính site này chuyển nó về NestJS kèm realm theo host, và callback
+  // OAuth quay về đúng site (`<site>/api/auth/social/:provider/callback`).
+  const origin = typeof window === 'undefined' ? 'http://localhost' : window.location.origin;
+  const url = new URL(`${getApiBaseUrl().replace(/\/+$/, '')}/auth/social/${provider}`, origin);
   // Backend kiểm lại `next` bằng CHÍNH hàm này (`@xeprime/domain`) trước khi lưu — lọc ở đây chỉ
   // để không gửi đi một tham số chắc chắn bị bỏ.
   if (isSafeNextPath(params.next)) url.searchParams.set('next', params.next);

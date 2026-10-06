@@ -9,20 +9,13 @@ import {
   CUSTOMER_TRIP_FILTER_DEFAULT,
   CUSTOMER_TRIP_FILTER_VALUES,
   CUSTOMER_TRIP_STAGE_VALUES,
-  PERMISSION,
   TRIP_ROLE,
-  isTripRole,
-  type TripRole,
   isCustomerTripFilter,
   type CustomerTripFilter,
   type CustomerTripStage,
 } from '@xeprime/types';
 import { EmptyState } from '@/components/feedback/EmptyState';
-import { ROUTES, tripPath } from '@/constants/routes';
-import { BookingDetailDialog } from '@/features/bookings/components/BookingDetailDialog';
-import { useBookingRequestDecisions } from '@/features/booking-requests/hooks/use-booking-request-decisions';
-import { usePermissions } from '@/hooks/use-permissions';
-import { tripToDecisionTarget } from '../decision-target';
+import { ROUTES } from '@/constants/routes';
 import { useAuthModal, useNextFromCurrentPath } from '@/features/auth/components/AuthModalProvider';
 import { AUTH_MODE } from '@/features/auth/post-auth-destination';
 import { useDomainLabel } from '@/i18n/use-domain-label';
@@ -31,25 +24,8 @@ import { isUnauthenticated } from '@/services/api-client';
 import { TRIPS_DEFAULT_LIMIT } from '../api';
 import { useTrips } from '../hooks';
 import type { CustomerTripCounts } from '../types';
-import type { CustomerTrip } from '../types';
 import { TripCard } from './TripCard';
 import styles from './TripsView.module.css';
-
-export interface TripsViewProps {
-  /**
-   * KHOÁ vai — bỏ qua `?role=` trên URL và giấu bộ chọn vai.
-   *
-   * Lối chuyển tiếp trong Manage (`/manage/account/trips`) truyền `renter`: thành viên gian
-   * hàng tuyến gói chỉ còn lý do vào đây vì chuyến họ ĐI THUÊ chưa khép. Chuyến họ CHO THUÊ có
-   * nơi riêng là `/manage/bookings`, và trộn hai phía lại chính là thứ tách tuyến vừa gỡ bỏ.
-   *
-   * Đây là quyết định ĐIỀU HƯỚNG, không phải rào bảo mật: server vẫn nhận `role` như một chiều
-   * truy vấn và vẫn chỉ trả chuyến của chính người gọi (`scopeWhere`). Rào thật nằm ở chỗ khác.
-   */
-  lockedRole?: TripRole;
-  /** KHU chứa danh sách — mặc định `/trips`. Xem `TripCardProps.basePath`. */
-  basePath?: string;
-}
 
 /**
  * `Chuyến của tôi` — danh sách duy nhất cho khách.
@@ -65,31 +41,12 @@ export interface TripsViewProps {
  * giữ chỗ, sắp tới, đang thuê — do nhãn trên từng thẻ nói; dựng thêm tab cho mỗi chặng là bắt
  * khách mở bốn tab mới biết mình có bao nhiêu chuyến.
  *
- * **Một danh sách, HAI PHÍA** (08/09/2026). Chủ xe thấy ở đây cả chuyến mình cho thuê lẫn chuyến
- * mình đi thuê — server trộn chúng trong CÙNG một truy vấn phân trang (ADR 0014: một con người,
- * nhiều vai), nên hai tab và hai con số vẫn đúng mà không có phép gộp nào ở client. Thẻ tự nói
- * mình thuộc phía nào, và chuyến cho thuê còn chờ trả lời mang thêm hai quyết định.
- *
- * ## Vì sao KHÔNG có hàng chọn vai (16/09/2026)
- *
- * Bản 15/09 thêm một `Segmented` "Tất cả · Tôi đi thuê · Tôi cho thuê" trên hai tab. Hai hàng
- * điều khiển chồng nhau buộc người đọc phải hiểu cái nào lồng trong cái nào trước khi đọc được
- * chuyến nào — trong khi mỗi thẻ đã mang sẵn nhãn vai của nó, và phần lớn chủ xe có vài chuyến
- * chứ không phải vài trăm.
- *
- * Chiều VAI vẫn còn nguyên ở SERVER: `?role=` trên URL vẫn được tôn trọng (deep link, thông báo),
- * và `lockedRole` khoá nó cho lối chuyển tiếp trong Manage. Bỏ phần giao diện không đụng tới phép
- * lọc, nên số đếm trên tab và phân trang vẫn khớp với tập đang xem.
- *
- * Duyệt/từ chối đi qua `useBookingRequestDecisions` — CÙNG hook với hộp thư
- * `/manage/booking-requests`, nên quy tắc thuê dài hạn, hạn phản hồi và lỗi trùng lịch không thể
- * trôi khỏi nhau giữa hai màn.
- *
- * **Một vai, một khu** (15/09/2026). `lockedRole` + `basePath` cho phép cùng danh sách này đứng ở
- * lối chuyển tiếp `/manage/account/trips` với đúng chuyến ĐI THUÊ. Hai prop luôn đi cùng nhau:
- * khoá vai mà quên đổi khu thì mọi liên kết trong danh sách vẫn trỏ về `/trips`.
+ * **CHỈ chuyến ĐI THUÊ** (ADR 0053). Đây là site KHÁCH: tài khoản khách không có gian hàng nào, nên
+ * không có phía "cho thuê" để trộn vào — chuyến cho thuê của chủ xe sống ở site partner
+ * (`/bookings`, `/booking-requests`), nơi có đủ công cụ vận hành. Vai gửi lên server luôn là
+ * `renter`; `?role=` cũ trên URL (bookmark, thông báo trước ADR 0053) bị bỏ qua.
  */
-export function TripsView({ lockedRole, basePath = ROUTES.TRIPS }: TripsViewProps = {}) {
+export function TripsView() {
   const t = useTranslations('Trips');
   const dl = useDomainLabel();
   const errorMessage = useErrorMessage();
@@ -97,16 +54,6 @@ export function TripsView({ lockedRole, basePath = ROUTES.TRIPS }: TripsViewProp
   const params = useSearchParams();
   const { open } = useAuthModal();
   const nextFromHere = useNextFromCurrentPath();
-
-  const { has } = usePermissions();
-  const canApprove = has(PERMISSION.BOOKING_REQUEST_APPROVE);
-  const decisions = useBookingRequestDecisions();
-  /*
-   * Đơn của CHỦ XE mở ngay tại chỗ bằng modal chi tiết đơn của feature bookings — cùng nội
-   * dung, cùng mutation, cùng khoá theo gói với `/manage/bookings/[id]`. Chuyến mình ĐI THUÊ
-   * vẫn đi tới `/trips/[id]` như cũ: hai phía đọc hai bộ thông tin khác nhau về cùng một chuyến.
-   */
-  const [hostBookingId, setHostBookingId] = useState<string | null>(null);
 
   const rawFilter = params?.get('filter');
   const filter: CustomerTripFilter = isCustomerTripFilter(rawFilter)
@@ -122,38 +69,17 @@ export function TripsView({ lockedRole, basePath = ROUTES.TRIPS }: TripsViewProp
    */
   const [stageFilter, setStageFilter] = useState<CustomerTripStage | undefined>(undefined);
 
-  /*
-   * VAI — chiều thứ ba, và KHÁC HẲN `stageFilter` ngay trên.
-   *
-   * Trước 15/09/2026 màn này trộn hai việc vào một danh sách: chuyến tôi ĐI THUÊ nằm lẫn với
-   * yêu cầu khách gửi tới xe tôi CHO THUÊ, và số trên tab cộng gộp cả hai. Hai việc đó có nhịp
-   * khác nhau, nút bấm khác nhau, và người dùng đọc chúng ở hai tâm thế khác nhau.
-   *
-   * Vai đi lên URL (ADR 0004) và lên SERVER, không lọc ở client: nó là một chiều TRUY VẤN, nên
-   * lọc một trang kết quả sẽ cho ra những trang dài ngắn khác nhau và số đếm không khớp. Đây
-   * chính là điều `stageFilter` cố ý KHÔNG làm, vì nó chỉ thu hẹp tầm nhìn trong trang đang đọc.
-   */
-  const rawRole = params?.get('role');
-  /*
-   * `lockedRole` THẮNG tham số URL — không chỉ đặt giá trị mặc định.
-   *
-   * Nếu chỉ dùng làm mặc định thì `?role=host` trên chính URL đó lại mở ra tập chuyến cho thuê,
-   * và cả màn hình quay về đúng cái nó sinh ra để tránh. Bookmark cũ mang sẵn tham số ấy.
-   */
-  const role: TripRole | undefined =
-    lockedRole ?? (isTripRole(rawRole) ? rawRole : undefined);
+  const { data, isLoading, isError, error, refetch, isFetching } = useTrips(
+    filter,
+    page,
+    TRIP_ROLE.RENTER,
+  );
 
-  const { data, isLoading, isError, error, refetch, isFetching } = useTrips(filter, page, role);
-
-  /**
-   * Ghi tab/trang lên URL.
-   *
-   * `role` KHÔNG phải tham số của hàm này (16/09/2026): màn hình không còn nút nào đổi vai. Nó
-   * vẫn SỐNG SÓT qua mọi lần đổi tab vì `search` dựng lại từ chính query hiện tại — một deep link
-   * `?role=host` giữ nguyên phạm vi của nó khi người dùng chuyển sang tab Lịch sử.
-   */
+  /** Ghi tab/trang lên URL — dựng lại từ query hiện tại để tham số khác (`ref`, `utm_*`) sống sót. */
   function navigate(next: { filter?: CustomerTripFilter; page?: number }) {
     const search = new URLSearchParams(params?.toString() ?? '');
+    // `?role=` của bản hai phía cũ không còn nghĩa ở site khách — không mang nó đi tiếp.
+    search.delete('role');
     const nextFilter = next.filter ?? filter;
     // Đổi tab luôn về trang 1: giữ `page=4` khi sang tab chỉ có 1 trang là một trang trống.
     const nextPage = next.page ?? (next.filter !== undefined ? 1 : page);
@@ -165,7 +91,7 @@ export function TripsView({ lockedRole, basePath = ROUTES.TRIPS }: TripsViewProp
     else search.set('page', String(nextPage));
 
     const qs = search.toString();
-    router.replace(qs ? `${basePath}?${qs}` : basePath, { scroll: false });
+    router.replace(qs ? `${ROUTES.TRIPS}?${qs}` : ROUTES.TRIPS, { scroll: false });
   }
 
   if (isError) {
@@ -212,12 +138,6 @@ export function TripsView({ lockedRole, basePath = ROUTES.TRIPS }: TripsViewProp
     ? pageItems.filter((trip) => trip.stage === stageFilter)
     : pageItems;
   const meta = data?.meta;
-
-  /** Mở chi tiết một chuyến của CHỦ XE: có đơn thì vào đơn, chưa có thì vào hồ sơ chuyến. */
-  function openHostDetail(trip: CustomerTrip) {
-    if (trip.bookingId) setHostBookingId(trip.bookingId);
-    else router.push(tripPath.detail(trip.id, basePath));
-  }
 
   return (
     <div className={styles.page}>
@@ -288,28 +208,19 @@ export function TripsView({ lockedRole, basePath = ROUTES.TRIPS }: TripsViewProp
           title={
             filter === CUSTOMER_TRIP_FILTER.HISTORY
               ? t('list.emptyHistoryTitle')
-              : lockedRole
-                ? t('list.emptyTransitionalTitle')
-                : t('list.emptyCurrentTitle')
+              : t('list.emptyCurrentTitle')
           }
           description={
             filter === CUSTOMER_TRIP_FILTER.HISTORY
               ? t('list.emptyHistoryBody')
-              : lockedRole
-                ? t('list.emptyTransitionalBody')
-                : t('list.emptyCurrentBody')
+              : t('list.emptyCurrentBody')
           }
-          /*
-           * "Đi tìm xe" chỉ đúng với người ĐƯỢC đặt xe. Ở lối chuyển tiếp, người xem là thành
-           * viên gian hàng tuyến gói — họ không gửi được yêu cầu thuê (ADR 0038 điều 6), nên một
-           * nút mời họ tìm xe là lời mời tới đúng một thông báo từ chối.
-           */
           action={
             filter === CUSTOMER_TRIP_FILTER.HISTORY ? (
               <Button onClick={() => navigate({ filter: CUSTOMER_TRIP_FILTER.CURRENT })}>
                 {t('list.viewCurrent')}
               </Button>
-            ) : lockedRole ? null : (
+            ) : (
               <Button type="primary" onClick={() => router.push(ROUTES.SEARCH)}>
                 {t('list.findVehicle')}
               </Button>
@@ -320,26 +231,9 @@ export function TripsView({ lockedRole, basePath = ROUTES.TRIPS }: TripsViewProp
         <>
           {/* `aria-busy` khi đang nạp trang/tab mới: nội dung cũ còn đó nhưng đã lỗi thời. */}
           <div className={styles.list} aria-busy={isFetching}>
-            {items.map((trip) => {
-              const isHost = trip.role === TRIP_ROLE.HOST;
-              return (
-                <TripCard
-                  key={trip.id}
-                  trip={trip}
-                  basePath={basePath}
-                  onOpenDetail={isHost ? openHostDetail : undefined}
-                  decisions={
-                    isHost && canApprove
-                      ? {
-                          onApprove: (row) => decisions.openApprove(tripToDecisionTarget(row)),
-                          onReject: (row) => decisions.openReject(tripToDecisionTarget(row)),
-                          pending: decisions.decisionActionFor(trip.id),
-                        }
-                      : undefined
-                  }
-                />
-              );
-            })}
+            {items.map((trip) => (
+              <TripCard key={trip.id} trip={trip} />
+            ))}
           </div>
 
           {meta && meta.total > TRIPS_DEFAULT_LIMIT ? (
@@ -361,15 +255,6 @@ export function TripsView({ lockedRole, basePath = ROUTES.TRIPS }: TripsViewProp
         <Alert type="info" showIcon title={t('list.refreshing')} className={styles.refreshing} />
       ) : null}
 
-      {hostBookingId ? (
-        <BookingDetailDialog
-          bookingId={hostBookingId}
-          open
-          onClose={() => setHostBookingId(null)}
-        />
-      ) : null}
-
-      {decisions.dialogs}
     </div>
   );
 }

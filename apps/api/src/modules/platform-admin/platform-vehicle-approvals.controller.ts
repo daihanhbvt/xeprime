@@ -10,8 +10,13 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
-import { APPROVAL_DECISION, PERMISSION, VEHICLE_REVIEW_CHECK_VALUES } from '@xeprime/types';
-import { CurrentUser, PlatformOnly, RequirePermissions } from '../../common/decorators';
+import {
+  ACCOUNT_REALM,
+  APPROVAL_DECISION,
+  PERMISSION,
+  VEHICLE_REVIEW_CHECK_VALUES,
+} from '@xeprime/types';
+import { CurrentUser, PlatformOnly, Realms, RequirePermissions } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import {
   SaveApprovalInternalNoteDto,
@@ -40,6 +45,7 @@ import { PlatformVehicleApprovalService } from './platform-vehicle-approval.serv
 @Controller('platform/vehicle-approvals')
 @PlatformOnly()
 @RequirePermissions(PERMISSION.PLATFORM_APPROVAL_REVIEW)
+@Realms(ACCOUNT_REALM.PLATFORM)
 export class PlatformVehicleApprovalsController {
   constructor(private readonly vehicleApprovals: PlatformVehicleApprovalService) {}
 

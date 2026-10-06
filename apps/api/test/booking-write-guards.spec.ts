@@ -1,5 +1,6 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   BOOKING_REQUEST_STATUS,
   BOOKING_STATUS,
   MEMBERSHIP_STATUS,
@@ -13,7 +14,13 @@ import type { AuthService } from '../src/modules/auth/auth.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeBookingRequestsService, makeBookingsService, makeCustomersService, makeNotificationService, makePricingService } from './helpers/service-factory';
+import {
+  makeBookingRequestsService,
+  makeBookingsService,
+  makeCustomersService,
+  makeNotificationService,
+  makePricingService,
+} from './helpers/service-factory';
 
 /**
  * Wave 12 — hai lỗ hổng GHI được phát hiện khi soát toàn tuyến, trên PostgreSQL THẬT.
@@ -106,8 +113,18 @@ beforeAll(async () => {
 
   await prisma.user.createMany({
     data: [
-      { id: ownerId, displayName: 'Chủ shop', email: `owner-${ownerId}@xeprime.test` },
-      { id: guestUserId, displayName: 'Khách vãng lai', email: `g-${guestUserId}@xeprime.test` },
+      {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: ownerId,
+        displayName: 'Chủ shop',
+        email: `owner-${ownerId}@xeprime.test`,
+      },
+      {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: guestUserId,
+        displayName: 'Khách vãng lai',
+        email: `g-${guestUserId}@xeprime.test`,
+      },
     ],
   });
   await prisma.tenant.create({

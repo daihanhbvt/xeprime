@@ -1,12 +1,10 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
 import { ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { WALLET_OWNER_TYPE } from '@xeprime/types';
 import {
-  CurrentTenant,
-  CurrentUser,
-  ShopOwnerOnly,
-  TenantScoped,
-} from '../../common/decorators';
+  ACCOUNT_REALM,
+  WALLET_OWNER_TYPE,
+} from '@xeprime/types';
+import { CurrentTenant, CurrentUser, Realms, ShopOwnerOnly, TenantScoped } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import {
   CreateWithdrawalDto,
@@ -22,20 +20,21 @@ import { WalletStatementService } from './wallet-statement.service';
 import { WithdrawalService } from './withdrawal.service';
 
 /**
- * "Ví điểm" của MỘT CON NGƯỜI — dành cho người CHƯA là chủ xe.
+ * "Ví điểm" của TÀI KHOẢN KHÁCH — tiền hoàn của những chuyến chính họ đi thuê (ADR 0053 điều 8).
  *
  * Không gắn `@TenantScoped`: đây là tài sản của tài khoản cá nhân.
  *
- * ⚠️ Từ 15/09/2026, một chủ xe KHÔNG còn ví ở đây. Ví của họ đã đổi chủ sang tenant lúc mở gian
- * hàng (`WalletService.adoptUserWalletWithinTx`), và tiền hoàn khi chính họ đi thuê cũng chảy về
- * đó. Endpoint này vì vậy trả số 0 cho họ — đúng, vì sổ của họ nằm ở `/shop/wallet`. Bản trước
- * ghi "một chủ gian hàng có hai ví và chúng KHÔNG trộn"; đó chính là điều đợt này bỏ đi.
+ * Chủ xe/gian hàng KHÔNG có ví ở đây: họ là tài khoản realm `partner`, và sổ của họ là ví của
+ * tenant ở `/shop/wallet`. Khi họ đi thuê xe, họ dùng một tài khoản KHÁCH riêng, và tiền hoàn của
+ * chuyến đó vào ví của tài khoản khách ấy — hai tài khoản, hai ví, không trộn (bỏ ADR 0038 điều 2).
  *
  * Không gắn `@RequiresFeature`: số dư là tiền của chính họ. Gói hết hạn vẫn phải xem và rút được
  * (ADR 0027 điều 3 — hết hạn là `read_only`, không phải `hidden`; và tiền thì không thuộc về gói).
  */
 @ApiTags('wallet')
 @Controller('account/wallet')
+// Ví CÁ NHÂN — tiền hoàn của chuyến đi thuê, chỉ tài khoản khách có (ADR 0053 điều 8).
+@Realms(ACCOUNT_REALM.CUSTOMER)
 export class AccountWalletController {
   constructor(
     private readonly read: WalletReadService,
@@ -121,6 +120,7 @@ export class AccountWalletController {
 @Controller('shop/wallet')
 @TenantScoped()
 @ShopOwnerOnly()
+@Realms(ACCOUNT_REALM.PARTNER)
 export class ShopWalletController {
   constructor(
     private readonly read: WalletReadService,

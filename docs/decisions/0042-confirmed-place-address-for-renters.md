@@ -5,7 +5,7 @@ Ngày: 17/09/2026 · Trạng thái: **Accepted; ghi đè [ADR 0035](0035-two-tie
 Liên quan: [ADR 0018](0018-map-delivery-distance.md) (quãng đường giao xe đo từ toạ độ; khoá server
 không ra client), [ADR 0037](0037-geoapify-osm-map-provider.md) (nhà cung cấp bản đồ),
 [ADR 0012](0012-i18n-shared-url-cookie-locale.md) (mã là dữ liệu, chỉ nhãn mới dịch),
-[ADR 0004](0004-state-management-boundaries.md) (ranh giới state).
+[ADR 0004](0004-client-state.md) (ranh giới state).
 
 ## Bối cảnh
 

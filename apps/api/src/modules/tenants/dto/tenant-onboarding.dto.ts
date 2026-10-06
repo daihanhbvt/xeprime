@@ -22,6 +22,7 @@ import {
   Length,
   Matches,
   MaxLength,
+  ValidateIf,
 } from 'class-validator';
 
 const trimmed = ({ value }: { value: unknown }) =>
@@ -158,14 +159,44 @@ export class RegisterShopDto {
    */
 }
 
+/** Ô trống là "gỡ giá trị" — chỉ kiểm định dạng khi thật sự có chữ. */
+const hasText = (_: object, value: unknown) => value !== '' && value !== undefined && value !== null;
+
 /** Cập nhật hồ sơ gian hàng — mọi trường tuỳ chọn, gửi cái nào cập nhật cái đó. */
 export class UpdateTenantProfileDto {
-  @ApiPropertyOptional()
+  /**
+   * Tên HIỂN THỊ của gian hàng — ghi vào `tenants.name`, nguồn duy nhất mà mọi màn của khách đọc.
+   * Không gỡ được (2–255 ký tự, cùng luật với `RegisterShopDto.name`); `slug` không đổi theo.
+   */
+  @ApiPropertyOptional({ description: 'Tên hiển thị của gian hàng (`tenants.name`)' })
   @IsOptional()
   @Transform(trimmed)
   @IsString()
-  @MaxLength(255)
+  @Length(2, 255)
   displayName?: string;
+
+  /**
+   * SĐT LIÊN HỆ của gian hàng — khách thấy ở chuyến đi và hợp đồng. KHÔNG phải SĐT đăng nhập của
+   * tài khoản chủ (`users.phone`, đổi qua OTP): hai số độc lập (ADR 0053). Chuỗi rỗng ⇒ gỡ.
+   */
+  @ApiPropertyOptional({
+    example: '0901234567',
+    description: 'SĐT liên hệ hiển thị cho khách. Chuỗi rỗng = gỡ.',
+  })
+  @IsOptional()
+  @Transform(trimmed)
+  @ValidateIf(hasText)
+  @Matches(/^(0|\+84)\d{9}$/, { message: 'Số điện thoại không hợp lệ' })
+  phone?: string;
+
+  /** Email LIÊN HỆ của gian hàng — độc lập với email đăng nhập. Chuỗi rỗng ⇒ gỡ. */
+  @ApiPropertyOptional({ description: 'Email liên hệ hiển thị cho khách. Chuỗi rỗng = gỡ.' })
+  @IsOptional()
+  @Transform(lowered)
+  @ValidateIf(hasText)
+  @IsEmail({}, { message: 'Email không hợp lệ' })
+  @MaxLength(255)
+  email?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -248,7 +279,12 @@ export class UpdateTenantProfileDto {
 }
 
 export class TenantProfileDto {
-  @ApiPropertyOptional({ type: String, nullable: true }) displayName!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Tên hiển thị — chính là `tenants.name` (= `MyShopDto.name`), giữ cho tương thích',
+  })
+  displayName!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) bio!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) logoUrl!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) coverUrl!: string | null;
@@ -338,8 +374,18 @@ export class MyShopDto {
    * gian hàng, còn một chủ xe hoa hồng vừa mua gói thì chưa từng đi qua cửa gian hàng.
    */
   @ApiProperty({ enum: SHOP_ONBOARDING_STATE_VALUES }) onboardingState!: string;
-  @ApiPropertyOptional({ type: String, nullable: true }) phone!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true }) email!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'SĐT liên hệ của GIAN HÀNG (hiện cho khách) — khác SĐT đăng nhập ở `ownerAccount`',
+  })
+  phone!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Email liên hệ của GIAN HÀNG (hiện cho khách) — khác email đăng nhập ở `ownerAccount`',
+  })
+  email!: string | null;
   @ApiProperty({ type: TenantProfileDto }) profile!: TenantProfileDto;
   /**
    * Tài khoản CHỦ gian hàng — LUÔN có: `tenants.owner_user_id` là cột NOT NULL với khoá ngoại

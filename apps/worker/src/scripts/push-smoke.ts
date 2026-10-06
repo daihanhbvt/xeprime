@@ -1,17 +1,23 @@
 import { createPrismaClient } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   ANDROID_NOTIFICATION_CHANNEL,
   NOTIFICATION_TYPE,
   PUSH_PRIORITY,
   PUSH_PROVIDER,
+  isAccountRealm,
   isPushPlatform,
+  type AccountRealm,
 } from '@xeprime/types';
 import { pushDataPayload } from '@xeprime/domain';
 import { classifyPushError, firebaseSender, tokenTail } from '../lib/fcm';
 
 /**
  * Gửi MỘT thông báo thử nghiệm tới thiết bị mới nhất của một người —
- * `pnpm push:smoke -- --user-email ai-do@vi-du.com`.
+ * `pnpm push:smoke -- --user-email ai-do@vi-du.com [--realm partner]`.
+ *
+ * `--realm` (mặc định `customer`): cùng một email là tài khoản KHÁC ở mỗi realm (ADR 0053) — tài
+ * khoản khách dùng app XePrime, tài khoản đối tác dùng app XePrime Partner.
  *
  * Vì sao là script CLI chứ không phải một endpoint (cùng lý lẽ với `holidays:sync`, và mạnh hơn):
  * một endpoint "gửi thử" là một endpoint gửi thông báo tới máy người khác. Dù có gác quyền, nó
@@ -37,11 +43,18 @@ const SMOKE = {
 
 interface Args {
   userEmail?: string;
+  realm: AccountRealm;
+  /** Giá trị `--realm` không hợp lệ — báo lỗi thay vì lặng lẽ rơi về mặc định. */
+  invalidRealm?: string;
   allowProduction: boolean;
 }
 
 function parseArgs(argv: readonly string[]): Args {
-  const args: Args = { allowProduction: false };
+  const args: Args = { realm: ACCOUNT_REALM.CUSTOMER, allowProduction: false };
+  const setRealm = (value: string) => {
+    if (isAccountRealm(value)) args.realm = value;
+    else args.invalidRealm = value;
+  };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     const next = argv[i + 1];
@@ -49,6 +62,10 @@ function parseArgs(argv: readonly string[]): Args {
       args.userEmail = next;
       i++;
     } else if (arg?.startsWith('--user-email=')) args.userEmail = arg.slice('--user-email='.length);
+    else if (arg === '--realm' && next) {
+      setRealm(next);
+      i++;
+    } else if (arg?.startsWith('--realm=')) setRealm(arg.slice('--realm='.length));
     else if (arg === '--allow-production') args.allowProduction = true;
   }
   return args;
@@ -62,6 +79,11 @@ async function main(): Promise<void> {
       'Thiếu --user-email.\n' +
         'Ví dụ: pnpm push:smoke -- --user-email khach.an@xeprime.test',
     );
+    process.exitCode = 1;
+    return;
+  }
+  if (args.invalidRealm !== undefined) {
+    console.error(`--realm không hợp lệ: ${args.invalidRealm} (customer | partner | platform).`);
     process.exitCode = 1;
     return;
   }
@@ -95,12 +117,12 @@ async function main(): Promise<void> {
 
   const prisma = createPrismaClient();
   try {
-    const user = await prisma.user.findFirst({
-      where: { email: args.userEmail },
+    const user = await prisma.user.findUnique({
+      where: { realm_email: { realm: args.realm, email: args.userEmail.trim().toLowerCase() } },
       select: { id: true, displayName: true },
     });
     if (!user) {
-      console.error(`Không tìm thấy tài khoản với email ${args.userEmail}.`);
+      console.error(`Không tìm thấy tài khoản realm ${args.realm} với email ${args.userEmail}.`);
       process.exitCode = 1;
       return;
     }

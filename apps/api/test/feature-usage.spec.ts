@@ -1,14 +1,15 @@
 import { Reflector } from '@nestjs/core';
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   BILLING_MODE,
   BILLING_PHASE,
   FEATURE_STATE,
+  type FeatureState,
   PLAN_FEATURE,
   PLAN_FEATURE_VALUES,
-  SHOP_ONBOARDING_STATE,
-  type FeatureState,
   type PlanFeature,
+  SHOP_ONBOARDING_STATE,
 } from '@xeprime/types';
 import { firstValueFrom, of, throwError } from 'rxjs';
 import { PLAN_FEATURE_KEY } from '../src/common/decorators';
@@ -46,7 +47,12 @@ beforeAll(async () => {
   ownerId = newId();
   tenantId = newId();
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Usage Owner', email: `usage-${RUN}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Usage Owner',
+      email: `usage-${RUN}@xeprime.test`,
+    },
   });
   await prisma.tenant.create({
     data: {
@@ -142,11 +148,14 @@ describe('FeatureUsageInterceptor — chỉ ghi khi thật sự DÙNG', () => {
     expect(await usedFeatures()).toEqual([PLAN_FEATURE.FINANCE]);
   });
 
-  maybe('⚠️ handler NÉM (4xx) ⇒ KHÔNG ghi — lý do đây là interceptor, không phải guard', async () => {
-    await reset();
-    await run(ctxOf({ feature: PLAN_FEATURE.FINANCE, method: 'POST' }), false);
-    expect(await usedFeatures()).toEqual([]);
-  });
+  maybe(
+    '⚠️ handler NÉM (4xx) ⇒ KHÔNG ghi — lý do đây là interceptor, không phải guard',
+    async () => {
+      await reset();
+      await run(ctxOf({ feature: PLAN_FEATURE.FINANCE, method: 'POST' }), false);
+      expect(await usedFeatures()).toEqual([]);
+    },
+  );
 
   maybe('GET không ghi — xem một trang không phải là dùng tính năng', async () => {
     await reset();
@@ -154,17 +163,20 @@ describe('FeatureUsageInterceptor — chỉ ghi khi thật sự DÙNG', () => {
     expect(await usedFeatures()).toEqual([]);
   });
 
-  maybe('read_only KHÔNG ghi — không tự nới hidden→read_only cho tenant chưa từng dùng', async () => {
-    await reset();
-    await run(
-      ctxOf({
-        feature: PLAN_FEATURE.FINANCE,
-        method: 'POST',
-        tenant: tenantCtx(FEATURE_STATE.READ_ONLY),
-      }),
-    );
-    expect(await usedFeatures()).toEqual([]);
-  });
+  maybe(
+    'read_only KHÔNG ghi — không tự nới hidden→read_only cho tenant chưa từng dùng',
+    async () => {
+      await reset();
+      await run(
+        ctxOf({
+          feature: PLAN_FEATURE.FINANCE,
+          method: 'POST',
+          tenant: tenantCtx(FEATURE_STATE.READ_ONLY),
+        }),
+      );
+      expect(await usedFeatures()).toEqual([]);
+    },
+  );
 
   maybe('route không có marker thì không ghi gì', async () => {
     await reset();

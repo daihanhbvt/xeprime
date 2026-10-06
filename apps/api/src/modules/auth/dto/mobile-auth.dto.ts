@@ -9,9 +9,10 @@ import { MeDto, RegisterDto } from './auth.dto';
  * Mô tả dùng chung cho trường `clientApp` của mọi endpoint PHÁT HÀNH phiên native.
  *
  * Optional có chủ đích: app hợp nhất CŨ ngoài thị trường không gửi trường này — thiếu là
- * `customer`, không siết gì thêm. `partner` mở thêm phép kiểm eligibility (403
- * `PARTNER_ACCESS_REQUIRED` khi tài khoản không thuộc phạm vi XePrime Partner) và ghi vào
- * `native_auth_sessions.client_app` để refresh token không tái tạo được phiên cho app kia.
+ * `customer`. Giá trị quyết REALM của tài khoản (ADR 0053): `customer` ⇒ tài khoản khách,
+ * `partner` ⇒ tài khoản đối tác (chủ xe cá nhân lẫn gian hàng) — đăng nhập/đăng ký chỉ tra và tạo
+ * trong realm đó. Ghi vào `native_auth_sessions.client_app` để refresh token không tái tạo được
+ * phiên cho app kia.
  */
 const CLIENT_APP_DESCRIPTION =
   'App đang gọi: `customer` (XePrime) hay `partner` (XePrime Partner). Thiếu = `customer` (app hợp nhất cũ).';

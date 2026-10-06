@@ -13,6 +13,8 @@ import { useAvailableHref } from '@/features/tenant-support/support-session';
 import { useWorkspace } from '@/hooks/use-workspace';
 
 import type { VehicleAlertItem } from '../types';
+import { partnerPathFromApi } from '@/zones';
+import { isCommissionPage } from '@/features/auth/post-auth-destination';
 import { useVehicleCapabilities } from './use-vehicle-capabilities';
 
 /**
@@ -102,17 +104,22 @@ export function useVehicleAlertView(): (
               href: available(vehiclePaths.part(vehicleId, target.tab, target.section)),
             };
           }
+          // API trả đường dẫn khu partner dạng NỘI BỘ `/manage/...` (dùng chung với app Partner) —
+          // đổi về đường dẫn hiển thị của site partner ở chế độ đang chạy (ADR 0051).
+          const partnerHref = alert.href ? partnerPathFromApi(alert.href) : null;
           /*
-           * Cảnh báo ngoài bảng (bàn giao thiếu KM trả, nghĩa vụ nguồn xe) trỏ ra ngoài module
-           * xe — `/manage/bookings?booking=…`, `/manage/vehicles/:id/edit?tab=source`. Ở khu
-           * tài khoản không có đích tương đương chính xác, nên **bỏ link, giữ nguyên câu cảnh
-           * báo**: đúng nguyên tắc mà chính `VehicleAlertsService` đã viết ra — *"không có đích
-           * nào hợp lệ → `href: null`. Thà không có lối đi còn hơn một link 403"*.
+           * Cảnh báo ngoài bảng (bàn giao thiếu KM trả, nghĩa vụ nguồn xe) trỏ ra ngoài module xe —
+           * `/bookings?booking=…`, `/vehicles/:id/edit?tab=source`. Owner Lite ở CÙNG site nhưng
+           * không mở trang chỉ của tuyến gói, nên đích nào tuyến hoa hồng không ở được thì **bỏ
+           * link, giữ nguyên câu cảnh báo** — đúng nguyên tắc của `VehicleAlertsService`: *"không
+           * có đích nào hợp lệ → `href: null`. Thà không có lối đi còn hơn một link bị đá ngược"*.
            */
-          if (!isManage && alert.href?.startsWith('/manage')) return { ...alert, href: null };
+          if (!isManage && partnerHref && !isCommissionPage(partnerHref)) {
+            return { ...alert, href: null };
+          }
           // Phiên hỗ trợ: đích ngoài bảng cũng phải đi qua cổng — viết lại vào phiên, hoặc bỏ link
           // nếu màn đó không mở trong phiên (ADR 0050).
-          return { ...alert, href: available(alert.href ?? null) };
+          return { ...alert, href: available(partnerHref) };
         }),
     [available, can.maintenance, isManage, vehiclePaths],
   );

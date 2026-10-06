@@ -2,6 +2,10 @@
 
 Ngày: 09/09/2026 · Trạng thái: Accepted · Ghi đè một phần: 0014, 0025, 0027, 0028, 0029 · Liên quan: 0006, 0016, 0018, 0022, 0024
 
+> ⚠️ **[ADR 0053](0053-separate-account-realms.md) (02/10/2026) ghi đè VỊ TRÍ ở điều 6:** Owner Lite
+> nay ở `partner.xeprime.vn` (realm `partner`), không còn trong `/account` của site khách. Ranh giới
+> năng lực Owner Lite ↔ Manage giữ nguyên.
+
 ## Bối cảnh
 
 Các tài liệu trước mô tả nhiều biến thể chưa còn phù hợp: gian hàng có thể nhận cọc trực tiếp, XePrime có thể thu hộ toàn bộ tiền thuê, phí bảo hiểm có thể trừ từ chủ xe và Owner Lite có quy trình bàn giao bằng chứng tương tự đội xe. Điều này làm sitemap, checkout, hoàn tiền và phạm vi User/Manage không thống nhất.

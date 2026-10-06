@@ -44,7 +44,7 @@ export function AccountSidebar({ user }: { user: CurrentUser }) {
   const identityLabel = useAccountIdentityLabel();
   const pathname = usePathname();
 
-  const groups = useMemo(() => resolveAccountNav(user), [user]);
+  const groups = useMemo(() => resolveAccountNav(), []);
   const activeKey = matchAccountNavKey(pathname, flattenAccountNav(groups));
 
   const name = user.displayName || user.email || tAccount('profile.accountLabel');

@@ -1,15 +1,26 @@
-# Reverse proxy + TLS tự động cho XePrime.
+# Reverse proxy + TLS tự động cho XePrime — BA SITE web + MỘT host API cho app native.
 #
 # Caddy xin và gia hạn chứng chỉ Let's Encrypt một mình — không cron certbot, không tay chân.
-# Điều kiện: cổng 80 và 443 mở, và A record của cả hai tên miền đã trỏ về IP VPS TRƯỚC khi
+# Điều kiện: cổng 80 và 443 mở, và A record của MỌI tên miền dưới đây đã trỏ về IP VPS TRƯỚC khi
 # container này khởi động lần đầu (ACME xác minh qua HTTP-01).
 #
-# Vì sao HAI tên miền chứ không phải `/api` trên cùng một host:
-#   `redirect_uri` của Google/Facebook (ADR 0019) dựng từ `API_PUBLIC_URL` và phải TRÙNG TỪNG
-#   KÝ TỰ với giá trị khai trong console của provider. Một host riêng cho API giữ đường dẫn đó
-#   ổn định và không phụ thuộc vào luật rewrite của proxy. Cookie phiên vẫn dùng chung được vì
-#   `SESSION_COOKIE_DOMAIN` đặt ở tên miền gốc (`.xeprime.vn`), và `sameSite: lax` coi hai
-#   subdomain là CÙNG site (ADR 0002).
+# ## Ba site, một Next app (ADR 0051) — ba không gian tài khoản (ADR 0053)
+#
+#   {$WEB_DOMAIN}      xeprime.vn          site khách        realm customer
+#   {$PARTNER_DOMAIN}  partner.xeprime.vn  site đối tác      realm partner
+#   {$ADMIN_DOMAIN}    admin.xeprime.vn    site quản trị     realm platform
+#
+# Mỗi site phục vụ `/api/*` CÙNG ORIGIN: Caddy bỏ tiền tố `/api` rồi chuyển về NestJS, kèm header
+# realm theo HOST và khoá proxy. Hệ quả:
+#   - cookie phiên là host-only của đúng site (`<SESSION_COOKIE_NAME>_<realm>`) — cookie site này
+#     không bao giờ tới site kia, không cần `SESSION_COOKIE_DOMAIN`;
+#   - web không còn CORS: trình duyệt chỉ nói chuyện với chính origin của trang;
+#   - realm KHÔNG do client tự khai: header client gửi lên bị GHI ĐÈ ở đây, và API chỉ tin header
+#     đó khi khoá `REALM_PROXY_SECRET` khớp (so sánh hằng thời gian).
+#
+# `redirect_uri` OAuth web của mỗi site là `https://<site>/api/auth/social/<provider>/callback`;
+# app native vẫn dùng host API riêng (`API_PUBLIC_URL`) — mỗi giá trị phải khai TRÙNG TỪNG KÝ TỰ
+# trong console của Google/Facebook (docs/deployment.md §2.3).
 
 {
 	email {$ACME_EMAIL}
@@ -29,10 +40,54 @@
 	}
 }
 
-# --- Web (Next.js) ---------------------------------------------------------
+# `/api/*` của một site web → NestJS, kèm realm của site đó. Đối số: realm (customer|partner|platform).
+#
+# `header_up <tên> <giá trị>` GHI ĐÈ header client gửi lên — một trình duyệt tự gắn
+# `X-Xp-Realm: platform` trên site khách vẫn đến API với `customer`, và không thể đoán khoá.
+# `X-Forwarded-For` / `X-Forwarded-Proto` do Caddy tự thêm; API chỉ tin chúng khi khai
+# `TRUST_PROXY_HOPS` (thiếu thì rate limit đếm MỌI người chung một IP — IP của container này).
+(site_api) {
+	handle_path /api/* {
+		reverse_proxy api:4000 {
+			header_up X-Xp-Realm {args[0]}
+			header_up X-Xp-Proxy-Secret {$REALM_PROXY_SECRET}
+		}
+	}
+}
+
+# Site đối tác và site quản trị không có gì cho công cụ tìm kiếm (trang đăng nhập, khu làm việc).
+# `proxy.ts` cũng gắn header này; đặt ở đây nữa để phủ cả asset và trang lỗi mà proxy không đi qua.
+(noindex) {
+	header X-Robots-Tag "noindex, nofollow"
+}
+
+# --- Site khách (Next.js) ------------------------------------------------------
 {$WEB_DOMAIN} {
 	import common
-	reverse_proxy web:3000
+	import site_api customer
+	handle {
+		reverse_proxy web:3000
+	}
+}
+
+# --- Site đối tác: gian hàng gói + chủ xe tuyến hoa hồng -------------------------
+{$PARTNER_DOMAIN} {
+	import common
+	import noindex
+	import site_api partner
+	handle {
+		reverse_proxy web:3000
+	}
+}
+
+# --- Site quản trị: nhân sự nền tảng ------------------------------------------
+{$ADMIN_DOMAIN} {
+	import common
+	import noindex
+	import site_api platform
+	handle {
+		reverse_proxy web:3000
+	}
 }
 
 # --- www -> tên miền gốc ------------------------------------------------------
@@ -41,19 +96,20 @@
 #
 # Chuyển hướng 301 chứ không phục vụ song song hai tên miền: hai URL cho cùng một nội dung là
 # nội dung trùng lặp dưới mắt công cụ tìm kiếm, và là hai origin khác nhau dưới mắt trình duyệt.
-# Vì đã 301, origin mà trình duyệt gửi lên LUÔN là tên miền gốc — nên KHÔNG cần thêm www vào
-# `CORS_ORIGINS`.
 #
 # www.{$WEB_DOMAIN} {
 #	redir https://{$WEB_DOMAIN}{uri} permanent
 # }
 
-# --- API (NestJS) ----------------------------------------------------------
+# --- API cho app NATIVE (NestJS) -------------------------------------------------
+# Chỉ app native đi đường này (Bearer token — ADR 0017); realm của phiên native suy từ app đã đăng
+# nhập (`client_app`), KHÔNG từ header. Vì thế header realm/khoá proxy client gửi lên bị XOÁ: một
+# request web lạc sang host này không bao giờ mang được realm.
 {$API_DOMAIN} {
 	import common
 
-	# `X-Forwarded-For` / `X-Forwarded-Proto` do Caddy tự thêm. Chúng chỉ có tác dụng khi API
-	# tin proxy: xem `TRUST_PROXY_HOPS` trong .env.production — thiếu nó thì rate limit
-	# (@nestjs/throttler) đếm MỌI người dùng chung một IP, tức là IP của container này.
-	reverse_proxy api:4000
+	reverse_proxy api:4000 {
+		header_up -X-Xp-Realm
+		header_up -X-Xp-Proxy-Secret
+	}
 }

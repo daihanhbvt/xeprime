@@ -1,3 +1,4 @@
+import { ACCOUNT_REALM } from '@xeprime/types';
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { BannersService } from '../src/modules/banners/banners.service';
@@ -33,7 +34,12 @@ beforeAll(async () => {
 
   adminId = newId();
   await prisma.user.create({
-    data: { id: adminId, displayName: 'Banner admin', email: `ban-${adminId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.CUSTOMER,
+      id: adminId,
+      displayName: 'Banner admin',
+      email: `ban-${adminId}@xeprime.test`,
+    },
   });
 
   const active = await prisma.marketplaceBanner.findMany({

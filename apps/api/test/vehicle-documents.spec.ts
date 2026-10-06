@@ -2,8 +2,9 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
-  BILLING_MODE,
+  ACCOUNT_REALM,
   API_ERROR_CODE,
+  BILLING_MODE,
   MEMBERSHIP_STATUS,
   PERMISSION,
   TENANT_ROLE,
@@ -99,6 +100,7 @@ const documents = new VehicleDocumentsService(asService, files, vehicles, audit,
 
 let dbAvailable = false;
 let ownerId: string;
+let otherOwnerId: string;
 let tenantId: string;
 let otherTenantId: string;
 
@@ -116,12 +118,28 @@ beforeAll(async () => {
   tenantId = newId();
   otherTenantId = newId();
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Chủ shop',
+      email: `own-${ownerId}@xeprime.test`,
+    },
+  });
+  // Mỗi gian hàng một chủ — ADR 0053: một tài khoản chỉ thuộc một gian hàng.
+  otherOwnerId = newId();
+  await prisma.user.create({
+    data: {
+      id: otherOwnerId,
+      realm: ACCOUNT_REALM.PARTNER,
+      displayName: 'Chủ shop khác',
+      email: `own-${otherOwnerId}@xeprime.test`,
+    },
   });
   for (const [id, name] of [
     [tenantId, 'Shop Giấy Tờ'],
     [otherTenantId, 'Shop Khác'],
   ] as const) {
+    const owner = id === tenantId ? ownerId : otherOwnerId;
     await prisma.tenant.create({
       data: {
         id,
@@ -129,7 +147,7 @@ beforeAll(async () => {
         slug: `t-${id.toLowerCase().slice(-10)}`,
         name,
         status: TENANT_STATUS.ACTIVE,
-        ownerUserId: ownerId,
+        ownerUserId: owner,
       },
     });
     /*
@@ -144,7 +162,7 @@ beforeAll(async () => {
       data: {
         id: newId(),
         tenantId: id,
-        userId: ownerId,
+        userId: owner,
         roleKey: TENANT_ROLE.SHOP_OWNER,
         status: MEMBERSHIP_STATUS.ACTIVE,
       },
@@ -160,7 +178,7 @@ afterAll(async () => {
       await prisma.tenantMembership.deleteMany({ where: { tenantId: id } });
       await prisma.tenant.deleteMany({ where: { id } });
     }
-    await prisma.user.deleteMany({ where: { id: ownerId } });
+    await prisma.user.deleteMany({ where: { id: { in: [ownerId, otherOwnerId] } } });
   }
   await prisma.$disconnect();
 });
@@ -180,7 +198,10 @@ async function createVehicle(code: string) {
   });
 }
 
-async function createDocument(vehicleId: string, type: string = VEHICLE_DOCUMENT_TYPE.REGISTRATION) {
+async function createDocument(
+  vehicleId: string,
+  type: string = VEHICLE_DOCUMENT_TYPE.REGISTRATION,
+) {
   return documents.create(tenantId, vehicleId, ownerId, { type });
 }
 
@@ -224,44 +245,53 @@ describe('Giấy tờ xe (Wave 5) — vòng đời & isolation', () => {
     expect(JSON.stringify(attached)).not.toMatch(/tenants\/|https?:/);
   });
 
-  maybe('DTO summary (quyền view) KHÔNG mang PII/tên file/OCR — DTO detail mới có metadata', async () => {
-    const v = await createVehicle('DOC-PII');
-    const doc = await documents.create(tenantId, v.id, ownerId, {
-      type: VEHICLE_DOCUMENT_TYPE.REGISTRATION,
-      holderName: 'Nguyễn Văn A',
-      holderAddress: '123 Lê Lợi, Q.1',
-      documentNumber: 'SO-123456',
-      chassisNumber: 'KHUNG-777',
-      engineNumber: 'MAY-888',
-    });
-    await attachFile(v.id, doc.id, 'ten-file-nhay-cam.pdf');
-    fakeOcr.result = {
-      status: 'needs_review',
-      fields: { holderName: { value: 'Nguyễn Văn A OCR', evidence: 'dòng 2 trang 1' } },
-    };
-    await documents.requestOcr(tenantId, v.id, ownerId, doc.id);
+  maybe(
+    'DTO summary (quyền view) KHÔNG mang PII/tên file/OCR — DTO detail mới có metadata',
+    async () => {
+      const v = await createVehicle('DOC-PII');
+      const doc = await documents.create(tenantId, v.id, ownerId, {
+        type: VEHICLE_DOCUMENT_TYPE.REGISTRATION,
+        holderName: 'Nguyễn Văn A',
+        holderAddress: '123 Lê Lợi, Q.1',
+        documentNumber: 'SO-123456',
+        chassisNumber: 'KHUNG-777',
+        engineNumber: 'MAY-888',
+      });
+      await attachFile(v.id, doc.id, 'ten-file-nhay-cam.pdf');
+      fakeOcr.result = {
+        status: 'needs_review',
+        fields: { holderName: { value: 'Nguyễn Văn A OCR', evidence: 'dòng 2 trang 1' } },
+      };
+      await documents.requestOcr(tenantId, v.id, ownerId, doc.id);
 
-    const summaries = await documents.list(tenantId, v.id);
-    const summary = summaries.find((d) => d.id === doc.id)!;
-    // Đủ để hiển thị trạng thái…
-    expect(summary.presentation).toBe(VEHICLE_DOCUMENT_PRESENTATION.NEEDS_REVIEW);
-    expect(summary.hasFile).toBe(true);
-    expect(summary.activeVersionId).not.toBeNull();
-    // …nhưng KHÔNG một mảnh dữ liệu nhạy cảm nào: giá trị, tên trường lẫn tên file/OCR.
-    const serialized = JSON.stringify(summary);
-    expect(serialized).not.toMatch(
-      /Nguyễn Văn A|123 Lê Lợi|SO-123456|KHUNG-777|MAY-888|ten-file-nhay-cam|OCR|evidence/,
-    );
-    expect(Object.keys(summary)).not.toEqual(
-      expect.arrayContaining(['holderName', 'documentNumber', 'notes', 'latestOcr', 'rowVersion']),
-    );
+      const summaries = await documents.list(tenantId, v.id);
+      const summary = summaries.find((d) => d.id === doc.id)!;
+      // Đủ để hiển thị trạng thái…
+      expect(summary.presentation).toBe(VEHICLE_DOCUMENT_PRESENTATION.NEEDS_REVIEW);
+      expect(summary.hasFile).toBe(true);
+      expect(summary.activeVersionId).not.toBeNull();
+      // …nhưng KHÔNG một mảnh dữ liệu nhạy cảm nào: giá trị, tên trường lẫn tên file/OCR.
+      const serialized = JSON.stringify(summary);
+      expect(serialized).not.toMatch(
+        /Nguyễn Văn A|123 Lê Lợi|SO-123456|KHUNG-777|MAY-888|ten-file-nhay-cam|OCR|evidence/,
+      );
+      expect(Object.keys(summary)).not.toEqual(
+        expect.arrayContaining([
+          'holderName',
+          'documentNumber',
+          'notes',
+          'latestOcr',
+          'rowVersion',
+        ]),
+      );
 
-    // Detail (quyền view_details) có metadata nhạy cảm nhưng KHÔNG dữ liệu OCR
-    // (presentation="needs_review" chỉ là TRẠNG THÁI suy ra — không phải giá trị nhận dạng).
-    const detail = await documents.getOne(tenantId, v.id, doc.id);
-    expect(detail.holderName).toBe('Nguyễn Văn A');
-    expect(JSON.stringify(detail)).not.toMatch(/evidence|Nguyễn Văn A OCR/);
-  });
+      // Detail (quyền view_details) có metadata nhạy cảm nhưng KHÔNG dữ liệu OCR
+      // (presentation="needs_review" chỉ là TRẠNG THÁI suy ra — không phải giá trị nhận dạng).
+      const detail = await documents.getOne(tenantId, v.id, doc.id);
+      expect(detail.holderName).toBe('Nguyễn Văn A');
+      expect(JSON.stringify(detail)).not.toMatch(/evidence|Nguyễn Văn A OCR/);
+    },
+  );
 
   maybe('loại chuẩn: xe đã có thì tạo thêm là 409; loại `other` thêm được nhiều', async () => {
     const v = await createVehicle('DOC-DUP');
@@ -281,25 +311,28 @@ describe('Giấy tờ xe (Wave 5) — vòng đời & isolation', () => {
     expect(list.filter((d) => d.type === VEHICLE_DOCUMENT_TYPE.OTHER)).toHaveLength(2);
   });
 
-  maybe('tenant khác không đọc/sửa/tải được giấy tờ (404 chống IDOR, cả lịch sử phiên bản)', async () => {
-    const v = await createVehicle('DOC-ISO');
-    const doc = await createDocument(v.id);
-    await attachFile(v.id, doc.id);
+  maybe(
+    'tenant khác không đọc/sửa/tải được giấy tờ (404 chống IDOR, cả lịch sử phiên bản)',
+    async () => {
+      const v = await createVehicle('DOC-ISO');
+      const doc = await createDocument(v.id);
+      await attachFile(v.id, doc.id);
 
-    await expect(documents.list(otherTenantId, v.id)).rejects.toMatchObject({
-      response: { code: API_ERROR_CODE.NOT_FOUND },
-    });
-    await expect(documents.getOne(otherTenantId, v.id, doc.id)).rejects.toMatchObject({
-      response: { code: API_ERROR_CODE.NOT_FOUND },
-    });
-    await expect(documents.listVersions(otherTenantId, v.id, doc.id)).rejects.toMatchObject({
-      response: { code: API_ERROR_CODE.NOT_FOUND },
-    });
-    const versions = await documents.listVersions(tenantId, v.id, doc.id);
-    await expect(
-      documents.downloadVersion(otherTenantId, v.id, doc.id, versions[0]!.id),
-    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.NOT_FOUND } });
-  });
+      await expect(documents.list(otherTenantId, v.id)).rejects.toMatchObject({
+        response: { code: API_ERROR_CODE.NOT_FOUND },
+      });
+      await expect(documents.getOne(otherTenantId, v.id, doc.id)).rejects.toMatchObject({
+        response: { code: API_ERROR_CODE.NOT_FOUND },
+      });
+      await expect(documents.listVersions(otherTenantId, v.id, doc.id)).rejects.toMatchObject({
+        response: { code: API_ERROR_CODE.NOT_FOUND },
+      });
+      const versions = await documents.listVersions(tenantId, v.id, doc.id);
+      await expect(
+        documents.downloadVersion(otherTenantId, v.id, doc.id, versions[0]!.id),
+      ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.NOT_FOUND } });
+    },
+  );
 
   maybe('id giấy tờ của xe khác không dùng chéo được qua path xe này (404)', async () => {
     const vehicleA = await createVehicle('DOC-CROSS-A');
@@ -343,76 +376,85 @@ describe('Giấy tờ xe (Wave 5) — vòng đời & isolation', () => {
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
   });
 
-  maybe('thay file: version tăng, bản cũ vào lịch sử và vẫn tải được (archive/history)', async () => {
-    const v = await createVehicle('DOC-VER');
-    const doc = await createDocument(v.id);
-    await attachFile(v.id, doc.id, 'ban-1.pdf');
-    const second = await attachFile(v.id, doc.id, 'ban-2.pdf');
+  maybe(
+    'thay file: version tăng, bản cũ vào lịch sử và vẫn tải được (archive/history)',
+    async () => {
+      const v = await createVehicle('DOC-VER');
+      const doc = await createDocument(v.id);
+      await attachFile(v.id, doc.id, 'ban-1.pdf');
+      const second = await attachFile(v.id, doc.id, 'ban-2.pdf');
 
-    expect(second.activeVersion?.version).toBe(2);
-    const versions = await documents.listVersions(tenantId, v.id, doc.id);
-    expect(versions).toHaveLength(2);
-    const archived = versions.find((version) => version.version === 1)!;
-    expect(archived.archivedAt).not.toBeNull();
-    expect(archived.file.name).toBe('ban-1.pdf');
-    // Bản lịch sử vẫn tải được cho người có quyền mở file.
-    const ticket = await documents.downloadVersion(tenantId, v.id, doc.id, archived.id);
-    expect(ticket.downloadUrl).toBe('https://r2.local/signed-get');
-  });
+      expect(second.activeVersion?.version).toBe(2);
+      const versions = await documents.listVersions(tenantId, v.id, doc.id);
+      expect(versions).toHaveLength(2);
+      const archived = versions.find((version) => version.version === 1)!;
+      expect(archived.archivedAt).not.toBeNull();
+      expect(archived.file.name).toBe('ban-1.pdf');
+      // Bản lịch sử vẫn tải được cho người có quyền mở file.
+      const ticket = await documents.downloadVersion(tenantId, v.id, doc.id, archived.id);
+      expect(ticket.downloadUrl).toBe('https://r2.local/signed-get');
+    },
+  );
 
-  maybe('hết hạn CHỈ cảnh báo: presentation=expired nhưng xe không đổi trạng thái nào', async () => {
-    const v = await createVehicle('DOC-EXP');
-    const doc = await documents.create(tenantId, v.id, ownerId, {
-      type: VEHICLE_DOCUMENT_TYPE.INSURANCE,
-      issuedAt: dayFromToday(-400),
-      expiresAt: dayFromToday(-30), // đã qua
-    });
-    await attachFile(v.id, doc.id, 'bhtnds.pdf');
+  maybe(
+    'hết hạn CHỈ cảnh báo: presentation=expired nhưng xe không đổi trạng thái nào',
+    async () => {
+      const v = await createVehicle('DOC-EXP');
+      const doc = await documents.create(tenantId, v.id, ownerId, {
+        type: VEHICLE_DOCUMENT_TYPE.INSURANCE,
+        issuedAt: dayFromToday(-400),
+        expiresAt: dayFromToday(-30), // đã qua
+      });
+      await attachFile(v.id, doc.id, 'bhtnds.pdf');
 
-    const list = await documents.list(tenantId, v.id);
-    const insurance = list.find((d) => d.type === VEHICLE_DOCUMENT_TYPE.INSURANCE)!;
-    expect(insurance.presentation).toBe(VEHICLE_DOCUMENT_PRESENTATION.EXPIRED);
+      const list = await documents.list(tenantId, v.id);
+      const insurance = list.find((d) => d.type === VEHICLE_DOCUMENT_TYPE.INSURANCE)!;
+      expect(insurance.presentation).toBe(VEHICLE_DOCUMENT_PRESENTATION.EXPIRED);
 
-    const vehicleRow = await prisma.vehicle.findUnique({
-      where: { id: v.id },
-      select: { operationStatus: true, publicStatus: true, deletedAt: true },
-    });
-    expect(vehicleRow).toEqual({
-      operationStatus: v.operationStatus,
-      publicStatus: v.publicStatus,
-      deletedAt: null,
-    });
-  });
+      const vehicleRow = await prisma.vehicle.findUnique({
+        where: { id: v.id },
+        select: { operationStatus: true, publicStatus: true, deletedAt: true },
+      });
+      expect(vehicleRow).toEqual({
+        operationStatus: v.operationStatus,
+        publicStatus: v.publicStatus,
+        deletedAt: null,
+      });
+    },
+  );
 
-  maybe('ngưỡng "sắp hết hạn" theo cấu hình tenant; CHƯA cấu hình thì không suy expiring_soon', async () => {
-    // Chưa cấu hình → chỉ valid/expired.
-    expect(
-      vehicleDocumentPresentation({
-        hasActiveVersion: true,
-        expiresAt: '2026-08-20',
-        warningDays: null,
-        today: '2026-08-12',
-      }),
-    ).toBe(VEHICLE_DOCUMENT_PRESENTATION.VALID);
+  maybe(
+    'ngưỡng "sắp hết hạn" theo cấu hình tenant; CHƯA cấu hình thì không suy expiring_soon',
+    async () => {
+      // Chưa cấu hình → chỉ valid/expired.
+      expect(
+        vehicleDocumentPresentation({
+          hasActiveVersion: true,
+          expiresAt: '2026-08-20',
+          warningDays: null,
+          today: '2026-08-12',
+        }),
+      ).toBe(VEHICLE_DOCUMENT_PRESENTATION.VALID);
 
-    const v = await createVehicle('DOC-WARN');
-    const doc = await documents.create(tenantId, v.id, ownerId, {
-      type: VEHICLE_DOCUMENT_TYPE.INSPECTION,
-      expiresAt: dayFromToday(8), // còn 8 ngày → dưới ngưỡng 10 ngày đặt bên dưới
-    });
-    await attachFile(v.id, doc.id, 'dang-kiem.pdf');
+      const v = await createVehicle('DOC-WARN');
+      const doc = await documents.create(tenantId, v.id, ownerId, {
+        type: VEHICLE_DOCUMENT_TYPE.INSPECTION,
+        expiresAt: dayFromToday(8), // còn 8 ngày → dưới ngưỡng 10 ngày đặt bên dưới
+      });
+      await attachFile(v.id, doc.id, 'dang-kiem.pdf');
 
-    // Cấu hình ngưỡng 10 ngày ở tenant → suy được "sắp hết hạn".
-    await prisma.tenantProfile.upsert({
-      where: { tenantId },
-      create: { tenantId, settings: { documentExpiryWarningDays: 10 } },
-      update: { settings: { documentExpiryWarningDays: 10 } },
-    });
-    const list = await documents.list(tenantId, v.id);
-    const inspection = list.find((d) => d.type === VEHICLE_DOCUMENT_TYPE.INSPECTION)!;
-    expect(inspection.presentation).toBe(VEHICLE_DOCUMENT_PRESENTATION.EXPIRING_SOON);
-    expect(inspection.warningDays).toBe(10);
-  });
+      // Cấu hình ngưỡng 10 ngày ở tenant → suy được "sắp hết hạn".
+      await prisma.tenantProfile.upsert({
+        where: { tenantId },
+        create: { tenantId, settings: { documentExpiryWarningDays: 10 } },
+        update: { settings: { documentExpiryWarningDays: 10 } },
+      });
+      const list = await documents.list(tenantId, v.id);
+      const inspection = list.find((d) => d.type === VEHICLE_DOCUMENT_TYPE.INSPECTION)!;
+      expect(inspection.presentation).toBe(VEHICLE_DOCUMENT_PRESENTATION.EXPIRING_SOON);
+      expect(inspection.warningDays).toBe(10);
+    },
+  );
 
   maybe('sửa đè: expectedRowVersion lệch → 409, dữ liệu không đổi', async () => {
     const v = await createVehicle('DOC-CONFLICT');
@@ -453,25 +495,28 @@ describe('Validation metadata (Wave 5.1) — trạng thái gộp, không phá d�
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
   });
 
-  maybe('patch một phần validate TRẠNG THÁI GỘP: chỉ sửa expiresAt vẫn bị chặn nếu trước issuedAt cũ', async () => {
-    const v = await createVehicle('DOC-MERGE');
-    const doc = await documents.create(tenantId, v.id, ownerId, {
-      type: VEHICLE_DOCUMENT_TYPE.INSURANCE,
-      issuedAt: '2026-06-01',
-    });
-    await expect(
-      documents.update(tenantId, v.id, ownerId, doc.id, {
+  maybe(
+    'patch một phần validate TRẠNG THÁI GỘP: chỉ sửa expiresAt vẫn bị chặn nếu trước issuedAt cũ',
+    async () => {
+      const v = await createVehicle('DOC-MERGE');
+      const doc = await documents.create(tenantId, v.id, ownerId, {
         type: VEHICLE_DOCUMENT_TYPE.INSURANCE,
-        expiresAt: '2026-01-01', // trước issuedAt đang có trong DB
-        expectedRowVersion: doc.rowVersion,
-      }),
-    ).rejects.toMatchObject({
-      response: {
-        code: API_ERROR_CODE.VALIDATION_FAILED,
-        details: { fields: [{ field: 'expiresAt', message: expect.any(String) }] },
-      },
-    });
-  });
+        issuedAt: '2026-06-01',
+      });
+      await expect(
+        documents.update(tenantId, v.id, ownerId, doc.id, {
+          type: VEHICLE_DOCUMENT_TYPE.INSURANCE,
+          expiresAt: '2026-01-01', // trước issuedAt đang có trong DB
+          expectedRowVersion: doc.rowVersion,
+        }),
+      ).rejects.toMatchObject({
+        response: {
+          code: API_ERROR_CODE.VALIDATION_FAILED,
+          details: { fields: [{ field: 'expiresAt', message: expect.any(String) }] },
+        },
+      });
+    },
+  );
 
   maybe('trường KHÔNG gửi (undefined) giữ nguyên giá trị — không bị null hoá', async () => {
     const v = await createVehicle('DOC-UNDEF');
@@ -499,29 +544,32 @@ describe('Validation metadata (Wave 5.1) — trạng thái gộp, không phá d�
     expect(cleared.notes).toBe('ghi chú quan trọng');
   });
 
-  maybe('giá trị quá dài / ký tự điều khiển → 400 field-level, không rơi tới Prisma thành 500', async () => {
-    const v = await createVehicle('DOC-LEN');
-    const doc = await createDocument(v.id);
-    await expect(
-      documents.update(tenantId, v.id, ownerId, doc.id, {
-        type: VEHICLE_DOCUMENT_TYPE.REGISTRATION,
-        holderName: 'A'.repeat(161), // cột DB varchar(160)
-        expectedRowVersion: doc.rowVersion,
-      }),
-    ).rejects.toMatchObject({
-      response: {
-        code: API_ERROR_CODE.VALIDATION_FAILED,
-        details: { fields: [{ field: 'holderName', message: expect.stringContaining('160') }] },
-      },
-    });
-    await expect(
-      documents.update(tenantId, v.id, ownerId, doc.id, {
-        type: VEHICLE_DOCUMENT_TYPE.REGISTRATION,
-        documentNumber: 'SO- 123',
-        expectedRowVersion: doc.rowVersion,
-      }),
-    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
-  });
+  maybe(
+    'giá trị quá dài / ký tự điều khiển → 400 field-level, không rơi tới Prisma thành 500',
+    async () => {
+      const v = await createVehicle('DOC-LEN');
+      const doc = await createDocument(v.id);
+      await expect(
+        documents.update(tenantId, v.id, ownerId, doc.id, {
+          type: VEHICLE_DOCUMENT_TYPE.REGISTRATION,
+          holderName: 'A'.repeat(161), // cột DB varchar(160)
+          expectedRowVersion: doc.rowVersion,
+        }),
+      ).rejects.toMatchObject({
+        response: {
+          code: API_ERROR_CODE.VALIDATION_FAILED,
+          details: { fields: [{ field: 'holderName', message: expect.stringContaining('160') }] },
+        },
+      });
+      await expect(
+        documents.update(tenantId, v.id, ownerId, doc.id, {
+          type: VEHICLE_DOCUMENT_TYPE.REGISTRATION,
+          documentNumber: 'SO- 123',
+          expectedRowVersion: doc.rowVersion,
+        }),
+      ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
+    },
+  );
 });
 
 describe('OCR (Wave 5) — provider giả trong test, mặc định production là NOT_CONFIGURED', () => {
@@ -536,9 +584,9 @@ describe('OCR (Wave 5) — provider giả trong test, mặc định production l
       audit,
       new OcrNotConfiguredProvider(),
     );
-    await expect(notConfigured.requestOcr(tenantId, v.id, ownerId, doc.id)).rejects.toMatchObject(
-      { response: { code: API_ERROR_CODE.OCR_NOT_CONFIGURED } },
-    );
+    await expect(notConfigured.requestOcr(tenantId, v.id, ownerId, doc.id)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.OCR_NOT_CONFIGURED },
+    });
     expect(await prisma.vehicleDocumentOcrJob.count({ where: { documentId: doc.id } })).toBe(0);
   });
 
@@ -586,9 +634,17 @@ describe('OCR (Wave 5) — provider giả trong test, mặc định production l
     const job = await documents.requestOcr(tenantId, v.id, ownerId, doc.id);
 
     // Chọn 2/3 trường — trường thứ ba không được đụng.
-    const applied = await documents.applyOcr(tenantId, v.id, ownerId, doc.id, job.id, {
-      fields: ['holderName', 'expiresAt'],
-    }, null);
+    const applied = await documents.applyOcr(
+      tenantId,
+      v.id,
+      ownerId,
+      doc.id,
+      job.id,
+      {
+        fields: ['holderName', 'expiresAt'],
+      },
+      null,
+    );
     expect(applied.holderName).toBe('Nguyễn Văn An');
     expect(applied.expiresAt).toBe('2029-01-15');
     expect(applied.holderAddress).toBeNull();
@@ -599,7 +655,15 @@ describe('OCR (Wave 5) — provider giả trong test, mặc định production l
     fakeOcr.result = { status: 'needs_review', fields: { holderName: { value: 'X' } } };
     const job2 = await documents.requestOcr(tenantId, v.id, ownerId, doc.id);
     await expect(
-      documents.applyOcr(tenantId, v.id, ownerId, doc.id, job2.id, { fields: ['engineNumber'] }, null),
+      documents.applyOcr(
+        tenantId,
+        v.id,
+        ownerId,
+        doc.id,
+        job2.id,
+        { fields: ['engineNumber'] },
+        null,
+      ),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
   });
 
@@ -624,10 +688,18 @@ describe('OCR (Wave 5) — provider giả trong test, mặc định production l
      * thì gỡ xe khỏi chợ rồi sửa tay.
      */
     await expect(
-      documents.applyOcr(tenantId, v.id, ownerId, doc.id, job.id, {
-        fields: ['plateNumber'],
-        applyPlateToVehicle: true,
-      }, null),
+      documents.applyOcr(
+        tenantId,
+        v.id,
+        ownerId,
+        doc.id,
+        job.id,
+        {
+          fields: ['plateNumber'],
+          applyPlateToVehicle: true,
+        },
+        null,
+      ),
     ).rejects.toMatchObject({
       status: 409,
       response: { code: API_ERROR_CODE.VEHICLE_FIELD_LOCKED },
@@ -651,10 +723,18 @@ describe('OCR (Wave 5) — provider giả trong test, mặc định production l
       fields: { plateNumber: { value: '51A-123.45' } },
     };
     const job = await documents.requestOcr(tenantId, v.id, ownerId, doc.id);
-    await documents.applyOcr(tenantId, v.id, ownerId, doc.id, job.id, {
-      fields: ['plateNumber'],
-      applyPlateToVehicle: true,
-    }, null);
+    await documents.applyOcr(
+      tenantId,
+      v.id,
+      ownerId,
+      doc.id,
+      job.id,
+      {
+        fields: ['plateNumber'],
+        applyPlateToVehicle: true,
+      },
+      null,
+    );
 
     const vehicleRow = await prisma.vehicle.findUnique({
       where: { id: v.id },
@@ -685,21 +765,32 @@ describe('OCR (Wave 5) — provider giả trong test, mặc định production l
 });
 
 describe('Transaction & concurrency (Wave 5.1)', () => {
-  maybe('giá trị OCR quá dài → 400, job VẪN needs_review (rollback claim — đối soát lại được)', async () => {
-    const v = await createVehicle('OCR-LONG');
-    const doc = await createDocument(v.id);
-    await attachFile(v.id, doc.id);
-    fakeOcr.result = {
-      status: 'needs_review',
-      fields: { holderName: { value: 'B'.repeat(200) } }, // vượt varchar(160)
-    };
-    const job = await documents.requestOcr(tenantId, v.id, ownerId, doc.id);
-    await expect(
-      documents.applyOcr(tenantId, v.id, ownerId, doc.id, job.id, { fields: ['holderName'] }, null),
-    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
-    const jobRow = await prisma.vehicleDocumentOcrJob.findUnique({ where: { id: job.id } });
-    expect(jobRow?.status).toBe(VEHICLE_DOCUMENT_OCR_STATUS.NEEDS_REVIEW);
-  });
+  maybe(
+    'giá trị OCR quá dài → 400, job VẪN needs_review (rollback claim — đối soát lại được)',
+    async () => {
+      const v = await createVehicle('OCR-LONG');
+      const doc = await createDocument(v.id);
+      await attachFile(v.id, doc.id);
+      fakeOcr.result = {
+        status: 'needs_review',
+        fields: { holderName: { value: 'B'.repeat(200) } }, // vượt varchar(160)
+      };
+      const job = await documents.requestOcr(tenantId, v.id, ownerId, doc.id);
+      await expect(
+        documents.applyOcr(
+          tenantId,
+          v.id,
+          ownerId,
+          doc.id,
+          job.id,
+          { fields: ['holderName'] },
+          null,
+        ),
+      ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
+      const jobRow = await prisma.vehicleDocumentOcrJob.findUnique({ where: { id: job.id } });
+      expect(jobRow?.status).toBe(VEHICLE_DOCUMENT_OCR_STATUS.NEEDS_REVIEW);
+    },
+  );
 
   maybe('hai người đối soát cùng một job: người sau nhận 409, không áp đôi', async () => {
     const v = await createVehicle('OCR-TWICE');
@@ -710,141 +801,177 @@ describe('Transaction & concurrency (Wave 5.1)', () => {
       fields: { holderName: { value: 'Nguyễn Văn An' } },
     };
     const job = await documents.requestOcr(tenantId, v.id, ownerId, doc.id);
-    await documents.applyOcr(tenantId, v.id, ownerId, doc.id, job.id, { fields: ['holderName'] }, null);
+    await documents.applyOcr(
+      tenantId,
+      v.id,
+      ownerId,
+      doc.id,
+      job.id,
+      { fields: ['holderName'] },
+      null,
+    );
     await expect(
       documents.applyOcr(tenantId, v.id, ownerId, doc.id, job.id, { fields: ['holderName'] }, null),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.CONFLICT } });
   });
 
-  maybe('áp OCR + biển số là MỘT transaction: bước xe fail → giấy tờ + job rollback hết', async () => {
-    const v = await createVehicle('OCR-ATOMIC');
-    const doc = await createDocument(v.id);
-    await attachFile(v.id, doc.id);
-    fakeOcr.result = {
-      status: 'needs_review',
-      fields: {
-        holderName: { value: 'Nguyễn Văn An' },
-        plateNumber: { value: '51A-777.77' },
-      },
-    };
-    const job = await documents.requestOcr(tenantId, v.id, ownerId, doc.id);
+  maybe(
+    'áp OCR + biển số là MỘT transaction: bước xe fail → giấy tờ + job rollback hết',
+    async () => {
+      const v = await createVehicle('OCR-ATOMIC');
+      const doc = await createDocument(v.id);
+      await attachFile(v.id, doc.id);
+      fakeOcr.result = {
+        status: 'needs_review',
+        fields: {
+          holderName: { value: 'Nguyễn Văn An' },
+          plateNumber: { value: '51A-777.77' },
+        },
+      };
+      const job = await documents.requestOcr(tenantId, v.id, ownerId, doc.id);
 
-    // Ép bước đồng bộ listing (nằm trong applyUpdate của xe) nổ — mô phỏng fail giữa chừng.
-    const sync = jest
-      .spyOn(listings, 'syncFromVehicle')
-      .mockRejectedValueOnce(new Error('listing sync boom'));
-    try {
-      await expect(
-        documents.applyOcr(tenantId, v.id, ownerId, doc.id, job.id, {
-          fields: ['holderName', 'plateNumber'],
-          applyPlateToVehicle: true,
-        }, null),
-      ).rejects.toThrow('listing sync boom');
-    } finally {
-      sync.mockRestore();
-    }
-
-    // KHÔNG có nửa vời: metadata giấy tờ chưa áp, job vẫn chờ đối soát, biển số xe nguyên.
-    const detail = await documents.getOne(tenantId, v.id, doc.id);
-    expect(detail.holderName).toBeNull();
-    const jobRow = await prisma.vehicleDocumentOcrJob.findUnique({ where: { id: job.id } });
-    expect(jobRow?.status).toBe(VEHICLE_DOCUMENT_OCR_STATUS.NEEDS_REVIEW);
-    const vehicleRow = await prisma.vehicle.findUnique({
-      where: { id: v.id },
-      select: { plateNumber: true },
-    });
-    expect(vehicleRow?.plateNumber).toBe('51A-123.45');
-
-    // Job còn needs_review nên đối soát lại được sau khi lỗi hạ tầng qua đi.
-    const retried = await documents.applyOcr(tenantId, v.id, ownerId, doc.id, job.id, {
-      fields: ['holderName'],
-    }, null);
-    expect(retried.holderName).toBe('Nguyễn Văn An');
-  });
-
-  maybe('hai lượt gắn file ĐỒNG THỜI: khoá dòng serialize — version 1 & 2, không P2002 → 500', async () => {
-    const v = await createVehicle('DOC-RACE');
-    const doc = await createDocument(v.id);
-    const [fileA, fileB] = await Promise.all([
-      readyFile(v.id, doc.id, 'a.pdf'),
-      readyFile(v.id, doc.id, 'b.pdf'),
-    ]);
-
-    const results = await Promise.allSettled([
-      documents.attachVersion(tenantId, v.id, ownerId, doc.id, { fileId: fileA }),
-      documents.attachVersion(tenantId, v.id, ownerId, doc.id, { fileId: fileB }),
-    ]);
-    // Cả hai thành công (xếp hàng qua FOR UPDATE) — hoặc tệ nhất một bên 409 ổn định.
-    for (const result of results) {
-      if (result.status === 'rejected') {
-        expect(result.reason).toMatchObject({ response: { code: API_ERROR_CODE.CONFLICT } });
+      // Ép bước đồng bộ listing (nằm trong applyUpdate của xe) nổ — mô phỏng fail giữa chừng.
+      const sync = jest
+        .spyOn(listings, 'syncFromVehicle')
+        .mockRejectedValueOnce(new Error('listing sync boom'));
+      try {
+        await expect(
+          documents.applyOcr(
+            tenantId,
+            v.id,
+            ownerId,
+            doc.id,
+            job.id,
+            {
+              fields: ['holderName', 'plateNumber'],
+              applyPlateToVehicle: true,
+            },
+            null,
+          ),
+        ).rejects.toThrow('listing sync boom');
+      } finally {
+        sync.mockRestore();
       }
-    }
-    const versions = await prisma.vehicleDocumentVersion.findMany({
-      where: { documentId: doc.id },
-      select: { version: true },
-      orderBy: { version: 'asc' },
-    });
-    // Số version không trùng nhau.
-    expect(new Set(versions.map((row) => row.version)).size).toBe(versions.length);
-    const fulfilled = results.filter((result) => result.status === 'fulfilled');
-    expect(fulfilled.length).toBeGreaterThanOrEqual(1);
-    if (fulfilled.length === 2) {
-      expect(versions.map((row) => row.version)).toEqual([1, 2]);
-    }
-  });
 
-  maybe('một file không gắn được vào hai phiên bản (service 400 + unique DB là chốt cuối)', async () => {
-    const v = await createVehicle('DOC-ONEFILE');
-    const doc = await createDocument(v.id);
-    const attached = await attachFile(v.id, doc.id);
-    const fileId = attached.activeVersion!.file.id;
+      // KHÔNG có nửa vời: metadata giấy tờ chưa áp, job vẫn chờ đối soát, biển số xe nguyên.
+      const detail = await documents.getOne(tenantId, v.id, doc.id);
+      expect(detail.holderName).toBeNull();
+      const jobRow = await prisma.vehicleDocumentOcrJob.findUnique({ where: { id: job.id } });
+      expect(jobRow?.status).toBe(VEHICLE_DOCUMENT_OCR_STATUS.NEEDS_REVIEW);
+      const vehicleRow = await prisma.vehicle.findUnique({
+        where: { id: v.id },
+        select: { plateNumber: true },
+      });
+      expect(vehicleRow?.plateNumber).toBe('51A-123.45');
 
-    // Service từ chối tường minh.
-    await expect(
-      documents.attachVersion(tenantId, v.id, ownerId, doc.id, { fileId }),
-    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
-
-    // Lách qua service, ghi thẳng DB → unique private_file_id chặn (P2002).
-    await expect(
-      prisma.vehicleDocumentVersion.create({
-        data: {
-          id: newId(),
-          tenantId,
-          vehicleId: v.id,
-          documentId: doc.id,
-          privateFileId: fileId,
-          version: 99,
+      // Job còn needs_review nên đối soát lại được sau khi lỗi hạ tầng qua đi.
+      const retried = await documents.applyOcr(
+        tenantId,
+        v.id,
+        ownerId,
+        doc.id,
+        job.id,
+        {
+          fields: ['holderName'],
         },
-      }),
-    ).rejects.toMatchObject({ code: 'P2002' });
-  });
+        null,
+      );
+      expect(retried.holderName).toBe('Nguyễn Văn An');
+    },
+  );
 
-  maybe('DB chặn version trỏ tới file của xe khác (composite FK — không dựa kỷ luật service)', async () => {
-    const vehicleA = await createVehicle('DOC-FKA');
-    const vehicleB = await createVehicle('DOC-FKB');
-    const docA = await createDocument(vehicleA.id);
-    const docB = await createDocument(vehicleB.id);
-    const fileA = await readyFile(vehicleA.id, docA.id, 'a.pdf');
-    // Đánh dấu ready cho chắc (readyFile chỉ presign + PUT giả; attach mới complete).
-    await prisma.vehiclePrivateFile.update({
-      where: { id: fileA },
-      data: { status: 'ready' },
-    });
+  maybe(
+    'hai lượt gắn file ĐỒNG THỜI: khoá dòng serialize — version 1 & 2, không P2002 → 500',
+    async () => {
+      const v = await createVehicle('DOC-RACE');
+      const doc = await createDocument(v.id);
+      const [fileA, fileB] = await Promise.all([
+        readyFile(v.id, doc.id, 'a.pdf'),
+        readyFile(v.id, doc.id, 'b.pdf'),
+      ]);
 
-    await expect(
-      prisma.vehicleDocumentVersion.create({
-        data: {
-          id: newId(),
-          tenantId,
-          vehicleId: vehicleB.id, // xe B nhưng file của xe A
-          documentId: docB.id,
-          privateFileId: fileA,
-          version: 1,
-        },
-      }),
-    ).rejects.toMatchObject({ code: 'P2003' });
-  });
+      const results = await Promise.allSettled([
+        documents.attachVersion(tenantId, v.id, ownerId, doc.id, { fileId: fileA }),
+        documents.attachVersion(tenantId, v.id, ownerId, doc.id, { fileId: fileB }),
+      ]);
+      // Cả hai thành công (xếp hàng qua FOR UPDATE) — hoặc tệ nhất một bên 409 ổn định.
+      for (const result of results) {
+        if (result.status === 'rejected') {
+          expect(result.reason).toMatchObject({ response: { code: API_ERROR_CODE.CONFLICT } });
+        }
+      }
+      const versions = await prisma.vehicleDocumentVersion.findMany({
+        where: { documentId: doc.id },
+        select: { version: true },
+        orderBy: { version: 'asc' },
+      });
+      // Số version không trùng nhau.
+      expect(new Set(versions.map((row) => row.version)).size).toBe(versions.length);
+      const fulfilled = results.filter((result) => result.status === 'fulfilled');
+      expect(fulfilled.length).toBeGreaterThanOrEqual(1);
+      if (fulfilled.length === 2) {
+        expect(versions.map((row) => row.version)).toEqual([1, 2]);
+      }
+    },
+  );
+
+  maybe(
+    'một file không gắn được vào hai phiên bản (service 400 + unique DB là chốt cuối)',
+    async () => {
+      const v = await createVehicle('DOC-ONEFILE');
+      const doc = await createDocument(v.id);
+      const attached = await attachFile(v.id, doc.id);
+      const fileId = attached.activeVersion!.file.id;
+
+      // Service từ chối tường minh.
+      await expect(
+        documents.attachVersion(tenantId, v.id, ownerId, doc.id, { fileId }),
+      ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
+
+      // Lách qua service, ghi thẳng DB → unique private_file_id chặn (P2002).
+      await expect(
+        prisma.vehicleDocumentVersion.create({
+          data: {
+            id: newId(),
+            tenantId,
+            vehicleId: v.id,
+            documentId: doc.id,
+            privateFileId: fileId,
+            version: 99,
+          },
+        }),
+      ).rejects.toMatchObject({ code: 'P2002' });
+    },
+  );
+
+  maybe(
+    'DB chặn version trỏ tới file của xe khác (composite FK — không dựa kỷ luật service)',
+    async () => {
+      const vehicleA = await createVehicle('DOC-FKA');
+      const vehicleB = await createVehicle('DOC-FKB');
+      const docA = await createDocument(vehicleA.id);
+      const docB = await createDocument(vehicleB.id);
+      const fileA = await readyFile(vehicleA.id, docA.id, 'a.pdf');
+      // Đánh dấu ready cho chắc (readyFile chỉ presign + PUT giả; attach mới complete).
+      await prisma.vehiclePrivateFile.update({
+        where: { id: fileA },
+        data: { status: 'ready' },
+      });
+
+      await expect(
+        prisma.vehicleDocumentVersion.create({
+          data: {
+            id: newId(),
+            tenantId,
+            vehicleId: vehicleB.id, // xe B nhưng file của xe A
+            documentId: docB.id,
+            privateFileId: fileA,
+            version: 1,
+          },
+        }),
+      ).rejects.toMatchObject({ code: 'P2003' });
+    },
+  );
 
   maybe('DB chặn hai job OCR processing trên cùng giấy tờ (partial unique)', async () => {
     const v = await createVehicle('OCR-UNIQ');
@@ -900,7 +1027,14 @@ describe('API public không lộ giấy tờ; quyền endpoint đúng BỐN mứ
     expect(permissionsOf('getOne')).toEqual([PERMISSION.VEHICLE_DOCUMENT_DETAIL_VIEW]);
     expect(permissionsOf('listVersions')).toEqual([PERMISSION.VEHICLE_DOCUMENT_FILE_VIEW]);
     expect(permissionsOf('download')).toEqual([PERMISSION.VEHICLE_DOCUMENT_FILE_VIEW]);
-    for (const method of ['create', 'update', 'archive', 'presign', 'attach', 'requestOcr'] as const) {
+    for (const method of [
+      'create',
+      'update',
+      'archive',
+      'presign',
+      'attach',
+      'requestOcr',
+    ] as const) {
       expect(permissionsOf(method)).toEqual([PERMISSION.VEHICLE_DOCUMENT_MANAGE]);
     }
     // Áp OCR có thể ghi biển số vào xe → đòi thêm vehicles.update.

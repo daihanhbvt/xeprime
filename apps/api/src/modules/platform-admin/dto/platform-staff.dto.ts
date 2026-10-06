@@ -1,7 +1,17 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { MEMBERSHIP_STATUS_VALUES, PLATFORM_ROLE_VALUES } from '@xeprime/types';
 import { Type } from 'class-transformer';
-import { IsEmail, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import {
+  IsEmail,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
 
 const DEFAULT_LIMIT = 20;
@@ -37,12 +47,27 @@ export class StaffListQueryDto {
   limit?: number;
 }
 
-/** Thêm nhân sự theo email của user ĐÃ có tài khoản (giống members — chưa có mời qua email). */
+/**
+ * Thêm nhân sự nền tảng — TẠO một tài khoản realm `platform` mới theo email (ADR 0053 điều 3).
+ *
+ * Không bao giờ nâng quyền cho một tài khoản khách/partner có sẵn cùng email: đó là hai tài khoản
+ * khác realm. Người được thêm nhận email đặt mật khẩu tới site admin; đã từng là nhân sự (bị gỡ) thì
+ * kích hoạt lại đúng tài khoản `platform` cũ.
+ */
 export class AddStaffDto {
   @ApiProperty({ example: 'nhanvien@xeprime.vn' })
   @IsEmail({}, { message: 'Email không hợp lệ' })
   @MaxLength(255)
   email!: string;
+
+  @ApiProperty({
+    example: 'Nguyễn Văn A',
+    description: 'Tên hiển thị cho tài khoản quản trị MỚI. Bỏ qua khi kích hoạt lại tài khoản cũ.',
+  })
+  @IsString()
+  @MinLength(2)
+  @MaxLength(120)
+  displayName!: string;
 
   @ApiProperty({ enum: PLATFORM_ROLE_VALUES })
   @IsIn(PLATFORM_ROLE_VALUES)

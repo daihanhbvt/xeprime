@@ -1,0 +1,30 @@
+{
+  "page": {
+    "title": "Account lookup",
+    "subtitle": "One phone number or email can belong to several accounts — renter, partner, platform staff. Each row is a separate account with its own password.",
+    "tableLabel": "Accounts matching the identifier"
+  },
+  "form": {
+    "mode": "Look up by",
+    "byPhone": "Phone number",
+    "byEmail": "Email",
+    "phonePlaceholder": "0901234567",
+    "emailPlaceholder": "name@example.com",
+    "submit": "Look up",
+    "required": "Enter the phone number or email to look up"
+  },
+  "columns": {
+    "account": "Account",
+    "realm": "Space",
+    "contact": "Contact (masked)",
+    "role": "Role",
+    "status": "Status",
+    "createdAt": "Created"
+  },
+  "roleInTenant": "{role} · {tenant}",
+  "states": {
+    "idle": "Enter a phone number or email to see every account using it.",
+    "empty": "No matching accounts.",
+    "error": "Lookup failed"
+  }
+}

@@ -1,18 +1,24 @@
 'use client';
 
-import { CarOutlined, LockOutlined, LogoutOutlined, ShopOutlined, UpOutlined } from '@ant-design/icons';
+import {
+  LockOutlined,
+  LogoutOutlined,
+  ShopOutlined,
+  UpOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
 import { Avatar, Dropdown, Tooltip } from 'antd';
 import type { MenuProps } from 'antd';
 import Link from 'next/link';
-import { CUSTOMER_TRIP_FILTER, PERMISSION, TRIP_ROLE } from '@xeprime/types';
 import { ROUTES } from '@/constants/routes';
+import { ZONE } from '@/zones';
+import { useZone } from '@/zones/ZoneProvider';
 import { AccountTrackBadge } from '@/features/account/components/AccountTrackBadge';
 import { useAccountIdentityLabel } from '@/features/account/hooks/use-account-identity-label';
 import { cx } from '@/lib/cx';
 import { usePortalLogout } from '@/features/auth/hooks/use-portal-logout';
-import { useTrips } from '@/features/trips/hooks';
 import { useCurrentUser } from '@/hooks/use-current-user';
-import { usePermissions } from '@/hooks/use-permissions';
+import { useShopSettingsAccess } from '@/features/shop/hooks/use-shop-settings-access';
 import { initialOf } from '@/lib/initials';
 import styles from './ManageUserCard.module.css';
 import { useTranslations } from 'next-intl';
@@ -50,27 +56,16 @@ export interface ManageUserCardProps {
 export function ManageUserCard({ collapsed = false, tone = 'light' }: ManageUserCardProps) {
   const t = useTranslations('ManageCommon');
   const { data: user } = useCurrentUser();
-  const { has } = usePermissions();
+  const canOpenShopSettings = useShopSettingsAccess();
   const logout = usePortalLogout();
   const identityLabel = useAccountIdentityLabel();
+  const zone = useZone();
+  const isAdmin = zone === ZONE.ADMIN;
   /*
-   * Chuyến ĐI THUÊ chưa khép của chính người này — quyết định mục "Chuyến tôi đi thuê" có mặt
-   * hay không. Trang 1, vai `renter`: chỉ cần `counts.current`, không cần danh sách.
-   *
-   * Mục này là dấu vết của một lần CHUYỂN TUYẾN, không phải một chức năng thường trực: người
-   * nâng từ tuyến hoa hồng lên gói có thể còn chuyến chưa xong, tiền hoàn chưa nhận. Với gian
-   * hàng chưa bao giờ đi thuê thì nó không bao giờ xuất hiện.
-   *
-   * CHỈ hỏi khi người dùng đứng trong một gian hàng: thẻ này nằm trên vỏ của MỌI trang quản lý,
-   * và nhân sự nền tảng không bao giờ có chuyến đi thuê để đếm — một lượt đọc `/trips` cho họ
-   * trên mỗi lần mở trang là một request không bao giờ đổi kết quả.
+   * Không còn mục "Chuyến tôi đi thuê" (ADR 0053): tài khoản partner và nhân sự nền tảng là tài
+   * khoản RIÊNG, không bao giờ đứng tên một chuyến đi thuê — chuyến đi thuê thuộc tài khoản khách ở
+   * `xeprime.vn`. Lối chuyển tiếp `/manage/account/trips` cũ đã gỡ cùng lúc.
    */
-  const trips = useTrips(
-    CUSTOMER_TRIP_FILTER.CURRENT,
-    1,
-    TRIP_ROLE.RENTER,
-    Boolean(user?.tenant),
-  );
 
   if (!user) return null;
 
@@ -84,7 +79,6 @@ export function ManageUserCard({ collapsed = false, tone = 'light' }: ManageUser
    */
   const role = identityLabel(user);
   const dark = tone === 'dark';
-  const hasOpenRenterTrips = (trips.data?.counts.current ?? 0) > 0;
 
   const menuItems: MenuProps['items'] = [
     {
@@ -106,36 +100,32 @@ export function ManageUserCard({ collapsed = false, tone = 'light' }: ManageUser
       disabled: true,
     },
     { type: 'divider' as const },
-    {
-      /*
-       * BẢO MẬT TÀI KHOẢN — mật khẩu, phương thức đăng nhập, yêu cầu xoá tài khoản.
-       *
-       * Đích là `/manage/security`, không phải `/account`: đẩy người dùng sang khu khách để đổi
-       * mật khẩu là bắt họ rời nơi làm việc, và với gian hàng tuyến gói thì khu đó đã đóng —
-       * `AccountShell` chuyển họ ngược về đây, nên mục menu cũ là một vòng tròn.
-       */
-      key: 'security',
-      icon: <LockOutlined aria-hidden />,
-      label: <Link href={ROUTES.MANAGE.SECURITY}>{t('shell.security')}</Link>,
-    },
-    // Cài đặt gian hàng chỉ có nghĩa khi người dùng ĐANG đứng trong một gian hàng — nhân sự
-    // nền tảng không có gian hàng nào để cài đặt.
-    ...(user.tenant && has(PERMISSION.TENANT_VIEW)
+    /*
+     * TÀI KHOẢN của người đang đăng nhập — MỘT mục.
+     *
+     * Site partner: "Tài khoản & bảo mật" (05/10/2026) gộp hai mục "Hồ sơ cá nhân" và "Bảo mật tài
+     * khoản" từng trỏ tới hai trang cùng hiện email/SĐT — người dùng phải đoán đổi số ở cửa nào.
+     * Site quản trị: chỉ có trang bảo mật (đổi mật khẩu) — nhân sự nền tảng không có hồ sơ công khai.
+     */
+    isAdmin
+      ? {
+          key: 'security',
+          icon: <LockOutlined aria-hidden />,
+          label: <Link href={ROUTES.ADMIN.SECURITY}>{t('shell.security')}</Link>,
+        }
+      : {
+          key: 'account',
+          icon: <UserOutlined aria-hidden />,
+          label: <Link href={ROUTES.MANAGE.ACCOUNT}>{t('shell.account')}</Link>,
+        },
+    // Cài đặt gian hàng chỉ có nghĩa khi người dùng ĐANG đứng trong một gian hàng tuyến gói —
+    // điều kiện dùng chung với mọi lối vào khác của trang đó (`useShopSettingsAccess`).
+    ...(canOpenShopSettings
       ? [
           {
             key: 'shop',
             icon: <ShopOutlined aria-hidden />,
             label: <Link href={ROUTES.MANAGE.SHOP}>{t('shell.shopSettings')}</Link>,
-          },
-        ]
-      : []),
-    // Chỉ khi CÒN chuyến — xem docblock của `trips` ở trên.
-    ...(hasOpenRenterTrips
-      ? [
-          {
-            key: 'renter-trips',
-            icon: <CarOutlined aria-hidden />,
-            label: <Link href={ROUTES.MANAGE.ACCOUNT_TRIPS}>{t('shell.renterTrips')}</Link>,
           },
         ]
       : []),

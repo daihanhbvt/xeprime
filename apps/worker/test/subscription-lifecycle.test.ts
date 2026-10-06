@@ -2,6 +2,7 @@ import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   BILLING_MODE,
   BILLING_PHASE,
   COMMISSION_TRACK_TERM_MONTHS,
@@ -99,7 +100,12 @@ before(async () => {
   commissionPlanId = newId();
   packagePlanId = newId();
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Chủ vòng đời', email: `sl-${RUN}@xeprime.test` },
+    data: {
+      id: ownerId,
+      realm: ACCOUNT_REALM.PARTNER,
+      displayName: 'Chủ vòng đời',
+      email: `sl-${RUN}@xeprime.test`,
+    },
   });
   await prisma.plan.create({
     data: {

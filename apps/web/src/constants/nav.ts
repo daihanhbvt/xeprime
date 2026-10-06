@@ -42,6 +42,9 @@ import {
 } from '@xeprime/types';
 import type { useTranslations } from 'next-intl';
 
+import { PARTNER_TRACK, type PartnerTrack } from '@/features/auth/post-auth-destination';
+import { ZONE, type Zone } from '@/zones';
+
 import { ROUTES, adminTenantSupportPath, tenantSupportContextIdFromPath } from './routes';
 import { tenantSupportHref } from './tenant-support-routes';
 
@@ -488,7 +491,7 @@ export const PLATFORM_NAV: readonly NavSection[] = [
       {
         key: 'platform-dashboard',
         labelKey: 'manage.dashboard',
-        href: ROUTES.MANAGE.ROOT,
+        href: ROUTES.ADMIN.DASHBOARD,
         permission: PERMISSION.PLATFORM_DASHBOARD_VIEW,
         icon: DashboardOutlined,
       },
@@ -507,7 +510,7 @@ export const PLATFORM_NAV: readonly NavSection[] = [
          */
         key: 'approvals',
         labelKey: 'platform.approvals',
-        href: ROUTES.MANAGE.ADMIN,
+        href: ROUTES.ADMIN.ROOT,
         permission: PERMISSION.PLATFORM_APPROVAL_REVIEW,
         icon: AuditOutlined,
         exact: true,
@@ -515,7 +518,7 @@ export const PLATFORM_NAV: readonly NavSection[] = [
       {
         key: 'admin-vehicles',
         labelKey: 'platform.vehicles',
-        href: ROUTES.MANAGE.ADMIN_VEHICLES,
+        href: ROUTES.ADMIN.VEHICLES,
         permission: PERMISSION.PLATFORM_VEHICLE_VIEW,
         icon: CarOutlined,
       },
@@ -529,14 +532,14 @@ export const PLATFORM_NAV: readonly NavSection[] = [
         // Cùng quyền với danh sách chung cũ: tách danh sách không mở thêm dữ liệu nào.
         key: 'admin-partner-shops',
         labelKey: 'platform.packageShops',
-        href: ROUTES.MANAGE.ADMIN_PARTNER_SHOPS,
+        href: ROUTES.ADMIN.PARTNER_SHOPS,
         permission: PERMISSION.PLATFORM_TENANT_VIEW,
         icon: ShopOutlined,
       },
       {
         key: 'admin-partner-owners',
         labelKey: 'platform.individualOwners',
-        href: ROUTES.MANAGE.ADMIN_PARTNER_OWNERS,
+        href: ROUTES.ADMIN.PARTNER_OWNERS,
         permission: PERMISSION.PLATFORM_TENANT_VIEW,
         icon: IdcardOutlined,
       },
@@ -549,16 +552,24 @@ export const PLATFORM_NAV: readonly NavSection[] = [
       {
         key: 'admin-bookings',
         labelKey: 'platform.bookings',
-        href: ROUTES.MANAGE.ADMIN_BOOKINGS,
+        href: ROUTES.ADMIN.BOOKINGS,
         permission: PERMISSION.PLATFORM_BOOKING_VIEW,
         icon: FileTextOutlined,
       },
       {
         key: 'admin-customers',
         labelKey: 'platform.customers',
-        href: ROUTES.MANAGE.ADMIN_CUSTOMERS,
+        href: ROUTES.ADMIN.CUSTOMERS,
         permission: PERMISSION.PLATFORM_CUSTOMER_VIEW,
         icon: TeamOutlined,
+      },
+      {
+        // Một SĐT/email → mọi tài khoản ở cả ba realm (ADR 0053 điều 9). Cùng quyền với "Khách thuê".
+        key: 'admin-account-lookup',
+        labelKey: 'platform.accountLookup',
+        href: ROUTES.ADMIN.ACCOUNT_LOOKUP,
+        permission: PERMISSION.PLATFORM_CUSTOMER_VIEW,
+        icon: SolutionOutlined,
       },
     ],
   },
@@ -576,7 +587,7 @@ export const PLATFORM_NAV: readonly NavSection[] = [
          */
         key: 'admin-money',
         labelKey: 'platform.money',
-        href: ROUTES.MANAGE.ADMIN_MONEY,
+        href: ROUTES.ADMIN.MONEY,
         // Cùng bộ quyền với các hàng đợi trong màn (`FINANCE_QUEUE_PERMISSION`): người chỉ có quyền
         // gói vẫn thấy mục này — và trong màn chỉ thấy hàng đợi tiền vào.
         permission: [PERMISSION.PLATFORM_MONEY_MANAGE, PERMISSION.PLATFORM_BILLING_MANAGE],
@@ -589,7 +600,7 @@ export const PLATFORM_NAV: readonly NavSection[] = [
          */
         key: 'admin-support',
         labelKey: 'platform.support',
-        href: ROUTES.MANAGE.ADMIN_SUPPORT,
+        href: ROUTES.ADMIN.SUPPORT,
         permission: PERMISSION.PLATFORM_SUPPORT_MANAGE,
         icon: CustomerServiceOutlined,
       },
@@ -614,14 +625,14 @@ export const PLATFORM_NAV: readonly NavSection[] = [
           {
             key: 'admin-plans',
             labelKey: 'platform.plans',
-            href: ROUTES.MANAGE.ADMIN_PLANS,
+            href: ROUTES.ADMIN.PLANS,
             permission: PERMISSION.PLATFORM_BILLING_MANAGE,
             icon: CreditCardOutlined,
           },
           {
             key: 'admin-fee-policies',
             labelKey: 'platform.feePolicies',
-            href: ROUTES.MANAGE.ADMIN_FEE_POLICIES,
+            href: ROUTES.ADMIN.FEE_POLICIES,
             permission: PERMISSION.PLATFORM_FEE_POLICY_MANAGE,
             icon: PercentageOutlined,
           },
@@ -635,7 +646,7 @@ export const PLATFORM_NAV: readonly NavSection[] = [
          */
         key: 'admin-promo-codes',
         labelKey: 'platform.promoCodes',
-        href: ROUTES.MANAGE.ADMIN_PROMO_CODES,
+        href: ROUTES.ADMIN.PROMO_CODES,
         permission: PERMISSION.PLATFORM_PROMO_CODE_MANAGE,
         icon: GiftOutlined,
       },
@@ -646,7 +657,7 @@ export const PLATFORM_NAV: readonly NavSection[] = [
          */
         key: 'admin-sellers',
         labelKey: 'platform.sellers',
-        href: ROUTES.MANAGE.ADMIN_SELLERS,
+        href: ROUTES.ADMIN.SELLERS,
         permission: PERMISSION.PLATFORM_SELLER_VERIFY,
         icon: IdcardOutlined,
       },
@@ -659,35 +670,35 @@ export const PLATFORM_NAV: readonly NavSection[] = [
       {
         key: 'admin-staff',
         labelKey: 'platform.staff',
-        href: ROUTES.MANAGE.ADMIN_STAFF,
+        href: ROUTES.ADMIN.STAFF,
         permission: PERMISSION.PLATFORM_STAFF_MANAGE,
         icon: UsergroupAddOutlined,
       },
       {
         key: 'admin-catalog',
         labelKey: 'platform.catalog',
-        href: ROUTES.MANAGE.ADMIN_CATALOG,
+        href: ROUTES.ADMIN.CATALOG,
         permission: PERMISSION.PLATFORM_CATALOG_MANAGE,
         icon: AppstoreOutlined,
       },
       {
         key: 'admin-locations',
         labelKey: 'platform.locations',
-        href: ROUTES.MANAGE.ADMIN_LOCATIONS,
+        href: ROUTES.ADMIN.LOCATIONS,
         permission: PERMISSION.PLATFORM_LOCATION_VIEW,
         icon: EnvironmentOutlined,
       },
       {
         key: 'admin-banners',
         labelKey: 'platform.banners',
-        href: ROUTES.MANAGE.ADMIN_BANNERS,
+        href: ROUTES.ADMIN.BANNERS,
         permission: PERMISSION.PLATFORM_BANNER_MANAGE,
         icon: PictureOutlined,
       },
       {
         key: 'admin-audit',
         labelKey: 'platform.audit',
-        href: ROUTES.MANAGE.ADMIN_AUDIT,
+        href: ROUTES.ADMIN.AUDIT,
         permission: PERMISSION.PLATFORM_AUDIT_VIEW,
         icon: HistoryOutlined,
       },
@@ -695,9 +706,171 @@ export const PLATFORM_NAV: readonly NavSection[] = [
   },
 ];
 
-/** Chọn cây menu theo scope: có platformRole → menu nền tảng, còn lại → menu gian hàng. */
-export function navForScope(isPlatform: boolean): readonly NavSection[] {
-  return isPlatform ? PLATFORM_NAV : SHOP_NAV;
+/**
+ * Menu của chủ xe TUYẾN HOA HỒNG ở site partner — Owner Lite (ADR 0051 điều 3).
+ *
+ * CÙNG URL với tuyến gói cho mọi trang có cùng ý nghĩa (xe, lịch, yêu cầu, đơn, hộp thư, số dư, gói,
+ * hỗ trợ); chỉ thêm các trang riêng của tuyến hoa hồng (hồ sơ chủ xe, khai thuế, tài khoản nhận
+ * tiền, cẩm nang…). Không có chi nhánh, nhân viên, tài xế, sổ thu chi, khách hàng: đó là năng lực
+ * của gói (ADR 0027 điều 1), server chặn bằng `@SubscriptionTrackOnly` và menu này không bày ra.
+ *
+ * Nhãn dùng lại nhóm `Navigation.account`/`Navigation.manage` — không bản dịch thứ hai.
+ */
+export const OWNER_LITE_NAV: readonly NavSection[] = [
+  {
+    key: 'owner-operations',
+    labelKey: 'manageGroups.operations',
+    pinned: true,
+    children: [
+      {
+        key: 'home',
+        labelKey: 'manage.dashboard',
+        href: ROUTES.MANAGE.ROOT,
+        permission: PERMISSION.TENANT_VIEW,
+        icon: DashboardOutlined,
+      },
+      {
+        key: 'vehicles',
+        labelKey: 'account.vehicles',
+        href: ROUTES.MANAGE.VEHICLES,
+        permission: PERMISSION.VEHICLE_VIEW,
+        icon: UnorderedListOutlined,
+      },
+      {
+        key: 'calendar',
+        labelKey: 'account.calendar',
+        href: ROUTES.MANAGE.CALENDAR,
+        permission: PERMISSION.CALENDAR_VIEW,
+        icon: CalendarOutlined,
+      },
+      {
+        key: 'booking-requests',
+        labelKey: 'manage.bookingRequests',
+        href: ROUTES.MANAGE.BOOKING_REQUESTS,
+        permission: PERMISSION.BOOKING_REQUEST_VIEW,
+        icon: InboxOutlined,
+        badge: NAV_BADGE.BOOKING_REQUESTS_PENDING,
+      },
+      {
+        key: 'bookings',
+        labelKey: 'manage.bookings',
+        href: ROUTES.MANAGE.BOOKINGS,
+        permission: PERMISSION.BOOKING_VIEW,
+        icon: FileDoneOutlined,
+      },
+      {
+        key: 'chat',
+        labelKey: 'manage.chat',
+        href: ROUTES.MANAGE.CHAT,
+        permission: PERMISSION.TENANT_VIEW,
+        icon: MessageOutlined,
+        badge: NAV_BADGE.CHAT_UNREAD,
+      },
+    ],
+  },
+  {
+    key: 'owner-money',
+    labelKey: 'manageGroups.business',
+    children: [
+      {
+        key: 'balance',
+        labelKey: 'manage.balance',
+        href: ROUTES.MANAGE.BALANCE,
+        permission: PERMISSION.TENANT_VIEW,
+        icon: WalletOutlined,
+        ownerOnly: true,
+      },
+      {
+        key: 'bank-accounts',
+        labelKey: 'account.bankAccounts',
+        href: ROUTES.MANAGE.BANK_ACCOUNTS,
+        permission: PERMISSION.TENANT_VIEW,
+        icon: CreditCardOutlined,
+        ownerOnly: true,
+      },
+      {
+        key: 'tax',
+        labelKey: 'account.tax',
+        href: ROUTES.MANAGE.TAX,
+        permission: PERMISSION.TENANT_VIEW,
+        icon: FileTextOutlined,
+        ownerOnly: true,
+      },
+      {
+        // Phễu nâng cấp lên tuyến gói (ADR 0028 điều 1) — cùng URL với gói của tuyến gói.
+        key: 'subscription',
+        labelKey: 'account.subscription',
+        href: ROUTES.MANAGE.SUBSCRIPTION,
+        permission: PERMISSION.TENANT_VIEW,
+        icon: GiftOutlined,
+        ownerOnly: true,
+      },
+    ],
+  },
+  {
+    key: 'owner-profile',
+    labelKey: 'manageGroups.storefront',
+    children: [
+      {
+        key: 'registration',
+        labelKey: 'account.ownerProfile',
+        href: ROUTES.MANAGE.REGISTRATION,
+        permission: PERMISSION.TENANT_VIEW,
+        icon: SolutionOutlined,
+        ownerOnly: true,
+      },
+    ],
+  },
+  {
+    key: 'owner-support',
+    labelKey: 'manageGroups.support',
+    children: [
+      {
+        key: 'host-guide',
+        labelKey: 'account.hostGuide',
+        href: ROUTES.MANAGE.HOST_GUIDE,
+        permission: PERMISSION.TENANT_VIEW,
+        icon: QuestionCircleOutlined,
+      },
+      {
+        key: 'contracts-documents',
+        labelKey: 'account.contractsDocuments',
+        href: ROUTES.MANAGE.CONTRACTS_DOCUMENTS,
+        permission: PERMISSION.TENANT_VIEW,
+        icon: SafetyCertificateOutlined,
+      },
+      {
+        key: 'data-protection',
+        labelKey: 'account.dataProtection',
+        href: ROUTES.MANAGE.DATA_PROTECTION,
+        permission: PERMISSION.TENANT_VIEW,
+        icon: IdcardOutlined,
+      },
+      {
+        key: 'support-cases',
+        labelKey: 'manage.supportCases',
+        href: ROUTES.MANAGE.SUPPORT_CASES,
+        permission: PERMISSION.SUPPORT_VIEW,
+        icon: ExclamationCircleOutlined,
+      },
+    ],
+  },
+];
+
+/**
+ * Cây menu theo KHU và TUYẾN (ADR 0051 điều 3 — thay `navForScope(isPlatform)`).
+ *
+ *  - khu admin → menu nền tảng;
+ *  - khu partner, tuyến gói → Full Manage; tuyến hoa hồng → Owner Lite; chưa có gian hàng hay đang
+ *    nợ bước thanh toán → không có menu (hai màn đó là màn "bare").
+ *
+ * Khu khách không có khung này.
+ */
+export function navForZone(zone: Zone, track: PartnerTrack): readonly NavSection[] {
+  if (zone === ZONE.ADMIN) return PLATFORM_NAV;
+  if (track === PARTNER_TRACK.PACKAGE) return SHOP_NAV;
+  if (track === PARTNER_TRACK.COMMISSION) return OWNER_LITE_NAV;
+  return [];
 }
 
 /**
@@ -761,7 +934,7 @@ const PLATFORM_MOBILE_TABS: readonly MobileTab[] = [
   {
     key: 'dashboard',
     labelKey: 'manage.dashboard',
-    href: ROUTES.MANAGE.ROOT,
+    href: ROUTES.ADMIN.DASHBOARD,
     permission: PERMISSION.PLATFORM_DASHBOARD_VIEW,
     icon: DashboardOutlined,
   },
@@ -769,7 +942,7 @@ const PLATFORM_MOBILE_TABS: readonly MobileTab[] = [
     // Tab 2: Kiểm duyệt xe — nhãn ngắn vì bốn tab chia nhau bề ngang màn điện thoại.
     key: 'approvals',
     labelKey: 'platform.approvalsShort',
-    href: ROUTES.MANAGE.ADMIN,
+    href: ROUTES.ADMIN.ROOT,
     permission: PERMISSION.PLATFORM_APPROVAL_REVIEW,
     icon: AuditOutlined,
     exact: true,
@@ -778,7 +951,7 @@ const PLATFORM_MOBILE_TABS: readonly MobileTab[] = [
     // Tab 3: Tài chính — tiền vào, giữ chỗ, chi trả, đối soát ngày
     key: 'admin-money',
     labelKey: 'platform.money',
-    href: ROUTES.MANAGE.ADMIN_MONEY,
+    href: ROUTES.ADMIN.MONEY,
     permission: [PERMISSION.PLATFORM_MONEY_MANAGE, PERMISSION.PLATFORM_BILLING_MANAGE],
     icon: WalletOutlined,
   },
@@ -786,15 +959,51 @@ const PLATFORM_MOBILE_TABS: readonly MobileTab[] = [
     // Tab 4: Bookings — đơn thuê toàn hệ thống
     key: 'admin-bookings',
     labelKey: 'platform.bookingsShort',
-    href: ROUTES.MANAGE.ADMIN_BOOKINGS,
+    href: ROUTES.ADMIN.BOOKINGS,
     permission: PERMISSION.PLATFORM_BOOKING_VIEW,
     icon: FileTextOutlined,
   },
 ];
 
-/** 4 tab chính của bottom nav theo scope (tab "Thêm" do MobileNav tự thêm). */
-export function mobileTabsForScope(isPlatform: boolean): readonly MobileTab[] {
-  return isPlatform ? PLATFORM_MOBILE_TABS : SHOP_MOBILE_TABS;
+/** Bốn tab của Owner Lite — việc hằng ngày của một chủ xe có vài chiếc. */
+const OWNER_LITE_MOBILE_TABS: readonly MobileTab[] = [
+  {
+    key: 'home',
+    labelKey: 'manage.dashboard',
+    href: ROUTES.MANAGE.ROOT,
+    permission: PERMISSION.TENANT_VIEW,
+    icon: DashboardOutlined,
+  },
+  {
+    key: 'vehicles',
+    labelKey: 'account.vehicles',
+    href: ROUTES.MANAGE.VEHICLES,
+    permission: PERMISSION.VEHICLE_VIEW,
+    icon: UnorderedListOutlined,
+  },
+  {
+    key: 'booking-requests',
+    labelKey: 'manage.bookingRequestsShort',
+    href: ROUTES.MANAGE.BOOKING_REQUESTS,
+    permission: PERMISSION.BOOKING_REQUEST_VIEW,
+    icon: InboxOutlined,
+    badge: NAV_BADGE.BOOKING_REQUESTS_PENDING,
+  },
+  {
+    key: 'bookings',
+    labelKey: 'manage.bookingsShort',
+    href: ROUTES.MANAGE.BOOKINGS,
+    permission: PERMISSION.BOOKING_VIEW,
+    icon: FileDoneOutlined,
+  },
+];
+
+/** 4 tab chính của bottom nav theo khu + tuyến (tab "Thêm" do MobileNav tự thêm). */
+export function mobileTabsForZone(zone: Zone, track: PartnerTrack): readonly MobileTab[] {
+  if (zone === ZONE.ADMIN) return PLATFORM_MOBILE_TABS;
+  if (track === PARTNER_TRACK.PACKAGE) return SHOP_MOBILE_TABS;
+  if (track === PARTNER_TRACK.COMMISSION) return OWNER_LITE_MOBILE_TABS;
+  return [];
 }
 
 /** Mọi mục lá của một khối, không phân biệt nằm trực tiếp hay trong một mục cha. */
@@ -850,7 +1059,8 @@ export function matchActiveHref(
 function longestPrefixLeaf<T extends NavTarget>(path: string, leaves: readonly T[]): T | undefined {
   let best: T | undefined;
   for (const leaf of leaves) {
-    const exactOnly = leaf.exact === true || leaf.href === ROUTES.MANAGE.ROOT;
+    // Gốc site (Tổng quan) là tiền tố của MỌI đường dẫn ở chế độ `host` — chỉ khớp tuyệt đối.
+    const exactOnly = leaf.exact === true || leaf.href === ROUTES.MANAGE.ROOT || leaf.href === ROUTES.ADMIN.ROOT;
     const isMatch = path === leaf.href || (!exactOnly && path.startsWith(`${leaf.href}/`));
     if (isMatch && (!best || leaf.href.length > best.href.length)) {
       best = leaf;
@@ -907,14 +1117,14 @@ const OWNER_LITE_SUPPORT_NAV: readonly NavSection[] = [
       {
         key: 'vehicles',
         labelKey: 'account.vehicles',
-        href: ROUTES.ACCOUNT.VEHICLES,
+        href: ROUTES.MANAGE.VEHICLES,
         permission: PERMISSION.VEHICLE_VIEW,
         icon: UnorderedListOutlined,
       },
       {
         key: 'calendar',
         labelKey: 'account.calendar',
-        href: ROUTES.ACCOUNT.CALENDAR,
+        href: ROUTES.MANAGE.CALENDAR,
         permission: PERMISSION.CALENDAR_VIEW,
         icon: CalendarOutlined,
       },
@@ -935,7 +1145,7 @@ const OWNER_LITE_SUPPORT_NAV: readonly NavSection[] = [
       {
         key: 'support-cases',
         labelKey: 'manage.supportCases',
-        href: ROUTES.ACCOUNT.SUPPORT,
+        href: ROUTES.MANAGE.SUPPORT_CASES,
         permission: PERMISSION.SUPPORT_VIEW,
         icon: ExclamationCircleOutlined,
       },
@@ -947,14 +1157,14 @@ const OWNER_LITE_SUPPORT_TABS: readonly MobileTab[] = [
   {
     key: 'vehicles',
     labelKey: 'account.vehicles',
-    href: ROUTES.ACCOUNT.VEHICLES,
+    href: ROUTES.MANAGE.VEHICLES,
     permission: PERMISSION.VEHICLE_VIEW,
     icon: UnorderedListOutlined,
   },
   {
     key: 'calendar',
     labelKey: 'account.calendar',
-    href: ROUTES.ACCOUNT.CALENDAR,
+    href: ROUTES.MANAGE.CALENDAR,
     permission: PERMISSION.CALENDAR_VIEW,
     icon: CalendarOutlined,
   },

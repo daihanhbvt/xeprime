@@ -1,7 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ConfigService } from '@nestjs/config';
-import { SESSION_COOKIE_NAME_DEFAULT, resolveSessionCookieName } from '@xeprime/types';
+import {
+  ACCOUNT_REALM,
+  ACCOUNT_REALM_VALUES,
+  SESSION_COOKIE_NAME_DEFAULT,
+  resolveSessionCookieName,
+} from '@xeprime/types';
 import type { CookieOptions, Response } from 'express';
 import { validateEnv } from '../src/config/env.schema';
 import { SessionService } from '../src/modules/auth/session.service';
@@ -33,6 +38,9 @@ function productionEnv(overrides: Record<string, string> = {}): Record<string, s
     OTP_PEPPER: 'production-pepper-value-0001',
     CORS_ORIGINS: 'https://xeprime.vn,https://www.xeprime.vn',
     APP_WEB_URL: 'https://xeprime.vn',
+    WEB_PARTNER_URL: 'https://partner.xeprime.vn',
+    WEB_ADMIN_URL: 'https://admin.xeprime.vn',
+    REALM_PROXY_SECRET: 'r'.repeat(40),
     API_PUBLIC_URL: 'https://api.xeprime.vn',
     FIREBASE_PROJECT_ID: 'p',
     FIREBASE_CLIENT_EMAIL: 'p@p.iam.gserviceaccount.com',
@@ -101,6 +109,9 @@ describe('env: APP_ENV — staging được miễn NĂNG LỰC, KHÔNG được 
       OTP_PEPPER: 'staging-pepper-value-0001',
       CORS_ORIGINS: 'https://stg.xeprime.vn',
       APP_WEB_URL: 'https://stg.xeprime.vn',
+      WEB_PARTNER_URL: 'https://partner-stg.xeprime.vn',
+      WEB_ADMIN_URL: 'https://admin-stg.xeprime.vn',
+      REALM_PROXY_SECRET: 's'.repeat(40),
       API_PUBLIC_URL: 'https://api-stg.xeprime.vn',
       ...overrides,
     });
@@ -139,6 +150,13 @@ describe('env: APP_ENV — staging được miễn NĂNG LỰC, KHÔNG được 
     expect(validationError(stagingEnv({ APP_WEB_URL: 'http://localhost:3000' }))).toContain(
       'APP_WEB_URL',
     );
+  });
+
+  it('staging VẪN bị chặn khi realm có thể do client tự khai (ADR 0053)', () => {
+    expect(validationError(stagingEnv({ REALM_HEADER_FROM_CLIENT: 'true' }))).toContain(
+      'REALM_HEADER_FROM_CLIENT',
+    );
+    expect(validationError(stagingEnv({ REALM_PROXY_SECRET: '' }))).toContain('REALM_PROXY_SECRET');
   });
 
   it('staging VẪN bị chặn khi secret còn là giá trị mẫu', () => {
@@ -299,22 +317,74 @@ describe('env: cặp client id/secret của đăng nhập mạng xã hội', () 
   });
 });
 
+describe('env: ba không gian tài khoản (ADR 0053)', () => {
+  it('SESSION_COOKIE_DOMAIN bị từ chối ở MỌI môi trường — cookie phiên host-only theo site', () => {
+    expect(validationError(baseEnv({ SESSION_COOKIE_DOMAIN: '.xeprime.vn' }))).toContain(
+      'SESSION_COOKIE_DOMAIN',
+    );
+    expect(validationError(productionEnv({ SESSION_COOKIE_DOMAIN: '.xeprime.vn' }))).toContain(
+      'SESSION_COOKIE_DOMAIN',
+    );
+    // Bỏ trống thì vẫn chạy: file env cũ để `SESSION_COOKIE_DOMAIN=` không làm gãy boot.
+    expect(() => validateEnv(baseEnv({ SESSION_COOKIE_DOMAIN: '' }))).not.toThrow();
+  });
+
+  it('cờ dev REALM_HEADER_FROM_CLIENT: dev được bật, production bị chặn', () => {
+    expect(
+      validateEnv(baseEnv({ REALM_HEADER_FROM_CLIENT: 'true' })).REALM_HEADER_FROM_CLIENT,
+    ).toBe(true);
+    expect(validationError(productionEnv({ REALM_HEADER_FROM_CLIENT: 'true' }))).toContain(
+      'REALM_HEADER_FROM_CLIENT',
+    );
+  });
+
+  it('production bắt buộc REALM_PROXY_SECRET đủ dài', () => {
+    expect(validationError(productionEnv({ REALM_PROXY_SECRET: '' }))).toContain(
+      'REALM_PROXY_SECRET',
+    );
+    expect(validationError(productionEnv({ REALM_PROXY_SECRET: 'short' }))).toContain(
+      'REALM_PROXY_SECRET',
+    );
+  });
+
+  it('production chặn URL site partner/admin không https hoặc trỏ localhost', () => {
+    expect(
+      validationError(productionEnv({ WEB_PARTNER_URL: 'http://localhost:3000/manage' })),
+    ).toContain('WEB_PARTNER_URL');
+    expect(validationError(productionEnv({ WEB_ADMIN_URL: 'http://admin.xeprime.vn' }))).toContain(
+      'WEB_ADMIN_URL',
+    );
+  });
+
+  it('dev mặc định chế độ PATH: site partner/admin là tiền tố trên localhost:3000', () => {
+    const env = validateEnv(baseEnv());
+    expect(env.WEB_PARTNER_URL).toBe('http://localhost:3000/manage');
+    expect(env.WEB_ADMIN_URL).toBe('http://localhost:3000/admin');
+  });
+});
+
 describe('tên cookie phiên: một nguồn duy nhất', () => {
   it('default của env schema đúng bằng hằng số dùng chung', () => {
     expect(validateEnv(baseEnv()).SESSION_COOKIE_NAME).toBe(SESSION_COOKIE_NAME_DEFAULT);
   });
 
-  it('web proxy và API cùng một công thức: env đè lên default', () => {
-    expect(resolveSessionCookieName({})).toBe(SESSION_COOKIE_NAME_DEFAULT);
-    expect(resolveSessionCookieName({ SESSION_COOKIE_NAME: '  ' })).toBe(
-      SESSION_COOKIE_NAME_DEFAULT,
+  it('web proxy và API cùng một công thức: env đè lên default, hậu tố là realm', () => {
+    const P = ACCOUNT_REALM.PARTNER;
+    expect(resolveSessionCookieName({}, P)).toBe(`${SESSION_COOKIE_NAME_DEFAULT}_partner`);
+    expect(resolveSessionCookieName({ SESSION_COOKIE_NAME: '  ' }, P)).toBe(
+      `${SESSION_COOKIE_NAME_DEFAULT}_partner`,
     );
-    expect(resolveSessionCookieName({ SESSION_COOKIE_NAME: 'xp_session_stg' })).toBe(
-      'xp_session_stg',
+    expect(resolveSessionCookieName({ SESSION_COOKIE_NAME: 'xp_session_stg' }, P)).toBe(
+      'xp_session_stg_partner',
     );
     expect(
       validateEnv(baseEnv({ SESSION_COOKIE_NAME: 'xp_session_stg' })).SESSION_COOKIE_NAME,
-    ).toBe(resolveSessionCookieName({ SESSION_COOKIE_NAME: 'xp_session_stg' }));
+    ).toBe('xp_session_stg');
+  });
+
+  it('ba realm là ba tên cookie khác nhau — phiên không bao giờ đọc chéo (ADR 0053)', () => {
+    const names = ACCOUNT_REALM_VALUES.map((realm) => resolveSessionCookieName({}, realm));
+    expect(new Set(names).size).toBe(ACCOUNT_REALM_VALUES.length);
   });
 
   it('proxy.ts KHÔNG gõ thẳng tên cookie', () => {
@@ -340,10 +410,8 @@ describe('SessionService: cookie gắn và xoá phải cùng thuộc tính', () 
 
   const PROD_VALUES = {
     SESSION_JWT_SECRET: 'p'.repeat(48),
-    SESSION_TTL_DAYS: 7,
     SESSION_COOKIE_NAME: SESSION_COOKIE_NAME_DEFAULT,
     SESSION_COOKIE_SECURE: true,
-    SESSION_COOKIE_DOMAIN: '.xeprime.vn',
   };
 
   /** Bắt lại đối số của res.cookie / res.clearCookie. */
@@ -367,43 +435,55 @@ describe('SessionService: cookie gắn và xoá phải cùng thuộc tính', () 
     return { res, set, cleared };
   }
 
-  it('production: httpOnly + secure + sameSite lax + domain cấu hình', () => {
+  it('production: httpOnly + secure + sameSite lax + HOST-ONLY, tên cookie mang realm', () => {
     const { res, set } = fakeResponse();
-    serviceWith(PROD_VALUES).attach(res, 'token');
+    serviceWith(PROD_VALUES).attach(res, 'token', ACCOUNT_REALM.PARTNER);
 
-    expect(set.name).toBe(SESSION_COOKIE_NAME_DEFAULT);
+    expect(set.name).toBe(`${SESSION_COOKIE_NAME_DEFAULT}_partner`);
     expect(set.options).toMatchObject({
       httpOnly: true,
       secure: true,
       sameSite: 'lax',
       path: '/',
-      domain: '.xeprime.vn',
     });
+    // ADR 0053 điều 4: không `domain` = host-only. Cookie của partner.xeprime.vn không bao giờ
+    // được trình duyệt gửi sang xeprime.vn hay admin.xeprime.vn.
+    expect(set.options).not.toHaveProperty('domain');
   });
 
-  it('localhost/LAN: cookie host-only (không domain) và secure=false', () => {
+  it('localhost/LAN: secure=false, vẫn host-only', () => {
     const { res, set } = fakeResponse();
-    serviceWith({ ...PROD_VALUES, SESSION_COOKIE_SECURE: false, SESSION_COOKIE_DOMAIN: '' }).attach(
+    serviceWith({ ...PROD_VALUES, SESSION_COOKIE_SECURE: false }).attach(
       res,
       'token',
+      ACCOUNT_REALM.CUSTOMER,
     );
 
     expect(set.options?.secure).toBe(false);
-    // Không có `domain` nghĩa là host-only: mở web bằng localhost và bằng 192.168.x.x là HAI
-    // cookie khác nhau — đúng như tài liệu, và là lý do không được trộn hai host.
     expect(set.options).not.toHaveProperty('domain');
   });
 
   it('clear dùng ĐÚNG bộ thuộc tính của attach (trừ maxAge) — khác một thuộc tính là cookie không bị xoá', () => {
     const { res, set, cleared } = fakeResponse();
     const service = serviceWith(PROD_VALUES);
-    service.attach(res, 'token');
-    service.clear(res);
+    service.attach(res, 'token', ACCOUNT_REALM.PLATFORM);
+    service.clear(res, ACCOUNT_REALM.PLATFORM);
 
     expect(cleared.name).toBe(set.name);
     const { maxAge, ...attachedWithoutMaxAge } = set.options as CookieOptions;
     expect(maxAge).toBeGreaterThan(0);
     expect(cleared.options).toEqual(attachedWithoutMaxAge);
     expect(cleared.options).not.toHaveProperty('maxAge');
+  });
+});
+
+describe('env: APP_ENV=development — nhãn của máy dev (seed demo đòi giá trị này)', () => {
+  it('máy dev (NODE_ENV khác production) boot được với APP_ENV=development', () => {
+    const env = validateEnv(baseEnv({ APP_ENV: 'development' }));
+    expect(env.APP_ENV).toBe('development');
+  });
+
+  it('môi trường đã triển khai (NODE_ENV=production) khai development bị chặn', () => {
+    expect(validationError(productionEnv({ APP_ENV: 'development' }))).toContain('APP_ENV');
   });
 });

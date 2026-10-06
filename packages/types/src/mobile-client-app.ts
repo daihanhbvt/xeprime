@@ -4,8 +4,12 @@ import { tenantUsesManagePortal } from './owner-stage';
 /**
  * Hai app mobile phát hành riêng dùng chung một backend (tách 25/09/2026):
  *
- *   customer — XePrime         (chợ thuê xe + Owner Lite tuyến hoa hồng)
- *   partner  — XePrime Partner (bộ quản lý gian hàng tuyến gói, gồm cả onboarding gói)
+ *   customer — XePrime         (chỉ khách thuê xe — tài khoản realm `customer`)
+ *   partner  — XePrime Partner (mọi chủ xe: cá nhân tuyến hoa hồng lẫn gian hàng tuyến gói —
+ *                               tài khoản realm `partner`)
+ *
+ * Từ ADR 0053 app ⇔ realm (`realmForClientApp` / `clientAppForRealm`): server tra và tạo tài
+ * khoản trong realm của app, nên không còn phép kiểm "tài khoản này được vào app nào".
  *
  * Giá trị đi trên dây ở `clientApp` của các endpoint phát hành phiên native
  * (`/auth/mobile/*`) và ở `push_devices.client_app`. App hợp nhất CŨ không gửi trường này —
@@ -26,6 +30,10 @@ export function isMobileClientApp(value: unknown): value is MobileClientApp {
 }
 
 /**
+ * ⚠️ Quy tắc phạm vi app TRƯỚC ADR 0053 — server KHÔNG còn dùng (realm của tài khoản đã quyết app,
+ * và app Partner nhận cả chủ xe tuyến hoa hồng). Giữ lại vì app mobile hiện còn đọc nó cho màn
+ * "không đủ điều kiện"; gỡ khi đội mobile căn theo ADR 0053.
+ *
  * Tài khoản này có được vào app XePrime Partner không — MỘT nguồn cho cả guard server lẫn
  * màn hình hai app, chính là quy tắc `ScopeGuard` của app hợp nhất cũ chuyển lên server:
  *
@@ -38,21 +46,6 @@ export function isMobileClientApp(value: unknown): value is MobileClientApp {
  * (màn platform trên app cũ chỉ là placeholder). Hết ân hạn ⇒ tenant về tuyến hoa hồng và
  * hàm trả `false` — đúng ADR 0038 điều 5; tiền/hoá đơn của họ vẫn xem được trên web.
  */
-/**
- * App SẼ NHẬN một thông báo đẩy — suy từ deep link đã đóng băng vào `notifications.data_json`
- * lúc phát (`notificationDeepLink`): audience MANAGE là các đường `/manage/**` ⇒ XePrime
- * Partner; CUSTOMER và OWNER (`/trips…`, `/account…`, `/listings…`, Owner Lite) ⇒ XePrime.
- *
- * Suy từ URL chứ không thêm cột audience vào `notifications`: URL là chính dữ liệu mà app sẽ
- * mở, nên nó không thể lệch với app đích — một cột riêng thì có thể. Không có URL (thông báo
- * chỉ nằm trong chuông) thì mặc định `customer`.
- */
-export function pushClientAppForUrl(url: string | null | undefined): MobileClientApp {
-  return url != null && (url === '/manage' || url.startsWith('/manage/'))
-    ? MOBILE_CLIENT_APP.PARTNER
-    : MOBILE_CLIENT_APP.CUSTOMER;
-}
-
 /**
  * URL scheme deep link của từng app — hợp đồng giữa `app.config.ts` hai app, allowlist
  * `MOBILE_AUTH_REDIRECT_URIS` và phép suy app từ `redirect_uri` của luồng social (dưới đây).
@@ -75,13 +68,13 @@ export function clientAppForRedirectUri(redirectUri: string): MobileClientApp {
     : MOBILE_CLIENT_APP.CUSTOMER;
 }
 
-export function canUsePartnerApp(
-  tenant: ShopOnboardingInput | null | undefined,
-): boolean {
+export function canUsePartnerApp(tenant: ShopOnboardingInput | null | undefined): boolean {
   return tenantUsesManagePortal(tenant) || isPackageOnboardingPending(tenant);
 }
 
 /**
+ * ⚠️ Quy tắc phạm vi app TRƯỚC ADR 0053 — server KHÔNG còn dùng; xem `canUsePartnerApp`.
+ *
  * Tài khoản này có được vào app XePrime (khách) không — LOẠI TRỪ với `canUsePartnerApp`.
  *
  * Hai app chia đôi hoàn toàn theo quyết định sản phẩm 28/09/2026: một tài khoản thuộc về ĐÚNG
@@ -97,8 +90,6 @@ export function canUsePartnerApp(
  * họ vẫn thuê xe như người dùng thường (ADR 0032 điều 1). Admin nền tảng cũng vào được app
  * khách với tư cách một người dùng bình thường.
  */
-export function canUseCustomerApp(
-  tenant: ShopOnboardingInput | null | undefined,
-): boolean {
+export function canUseCustomerApp(tenant: ShopOnboardingInput | null | undefined): boolean {
   return !canUsePartnerApp(tenant);
 }

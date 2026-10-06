@@ -1,5 +1,6 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   OCCUPANCY_SOURCE_TYPE,
   SERVICE_TYPE,
   TENANT_STATUS,
@@ -64,7 +65,7 @@ async function seedActiveTenant(provinceCode: string, provinceName: string): Pro
     },
   });
   await prisma.tenantProfile.create({
-    data: { tenantId: id, displayName: `Shop ${provinceName}`, provinceCode, provinceName },
+    data: { tenantId: id, provinceCode, provinceName },
   });
   branchByTenant.set(id, await seedBranch(asService, { tenantId: id, provinceCode }));
   return id;
@@ -108,7 +109,12 @@ beforeAll(async () => {
 
   ownerId = newId();
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Chủ shop',
+      email: `own-${ownerId}@xeprime.test`,
+    },
   });
 
   await seedProvince(asService, PROV_A, PROV_A_NAME);
@@ -167,7 +173,9 @@ const maybe = (name: string, fn: () => Promise<void>) =>
 
 describe('Marketplace filter (giá / ngày rảnh / tỉnh)', () => {
   maybe('lọc khoảng giá 500k–800k → chỉ xe trong khoảng', async () => {
-    const res = await service.search(q({ provinceCode: PROV_A, priceMin: 500000, priceMax: 800000 }));
+    const res = await service.search(
+      q({ provinceCode: PROV_A, priceMin: 500000, priceMax: 800000 }),
+    );
     const ids = res.data.map((v) => v.id);
     expect(ids).toContain(vMid);
     expect(ids).toContain(vBusy); // 600k, chưa lọc ngày

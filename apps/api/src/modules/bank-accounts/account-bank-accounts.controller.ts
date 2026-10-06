@@ -1,7 +1,10 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
 import { ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { WALLET_OWNER_TYPE } from '@xeprime/types';
-import { CurrentUser } from '../../common/decorators';
+import {
+  ACCOUNT_REALM,
+  WALLET_OWNER_TYPE,
+} from '@xeprime/types';
+import { CurrentUser, Realms } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import { BankAccountsService } from './bank-accounts.service';
 import { BankAccountDto, SaveBankAccountDto } from './dto/bank-account.dto';
@@ -18,6 +21,8 @@ import { BankAccountDto, SaveBankAccountDto } from './dto/bank-account.dto';
  */
 @ApiTags('bank-accounts')
 @Controller('account/bank-accounts')
+// Tài khoản ngân hàng của ví cá nhân — đi theo chủ ví, tức tài khoản khách (ADR 0053 điều 8).
+@Realms(ACCOUNT_REALM.CUSTOMER)
 export class AccountBankAccountsController {
   constructor(private readonly accounts: BankAccountsService) {}
 

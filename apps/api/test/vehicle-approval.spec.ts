@@ -1,13 +1,14 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
-  BILLING_MODE,
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   APPROVAL_STATUS,
   APPROVAL_TARGET_TYPE,
-  MEMBERSHIP_STATUS,
+  BILLING_MODE,
   FUEL_TYPE,
-  PUBLISH_REQUIREMENT,
+  MEMBERSHIP_STATUS,
   NOTIFICATION_TYPE,
+  PUBLISH_REQUIREMENT,
   TENANT_ROLE,
   TENANT_STATUS,
   TRANSMISSION_TYPE,
@@ -126,8 +127,18 @@ beforeAll(async () => {
 
   await prisma.user.createMany({
     data: [
-      { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
-      { id: reviewerId, displayName: 'Reviewer', email: `rev-${reviewerId}@xeprime.test` },
+      {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: ownerId,
+        displayName: 'Chủ shop',
+        email: `own-${ownerId}@xeprime.test`,
+      },
+      {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: reviewerId,
+        displayName: 'Reviewer',
+        email: `rev-${reviewerId}@xeprime.test`,
+      },
     ],
   });
   await prisma.tenant.createMany({
@@ -270,7 +281,13 @@ describe('Vehicle public approval (WS0)', () => {
    * hiệu lực ngay. Không còn phiếu duyệt lại nào sinh ra từ thao tác sửa xe.
    */
   maybe('sửa giá xe đang công khai → hiệu lực NGAY, không hạ về chờ duyệt', async () => {
-    const updated = await vehicles.update(tenantId, vehicleId, ownerId, { weekdayPrice: '650000' }, null);
+    const updated = await vehicles.update(
+      tenantId,
+      vehicleId,
+      ownerId,
+      { weekdayPrice: '650000' },
+      null,
+    );
     expect(updated.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC);
     // Ở tầng service tiền còn là Decimal — interceptor mới đổi sang chuỗi ở tầng HTTP (ADR 0007).
     expect(String(updated.weekdayPrice)).toBe('650000');
@@ -286,10 +303,16 @@ describe('Vehicle public approval (WS0)', () => {
   });
 
   maybe('sửa mô tả/ảnh của xe công khai cũng không đụng trạng thái duyệt', async () => {
-    const updated = await vehicles.update(tenantId, vehicleId, ownerId, {
-      description: 'Mô tả mới.',
-      mainImageUrl: 'https://img/main-2.jpg',
-    }, null);
+    const updated = await vehicles.update(
+      tenantId,
+      vehicleId,
+      ownerId,
+      {
+        description: 'Mô tả mới.',
+        mainImageUrl: 'https://img/main-2.jpg',
+      },
+      null,
+    );
     expect(updated.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC);
   });
 
@@ -300,7 +323,9 @@ describe('Vehicle public approval (WS0)', () => {
       { fuelType: FUEL_TYPE.DIESEL },
       { manufactureYear: 2019 },
     ]) {
-      await expect(vehicles.update(tenantId, vehicleId, ownerId, patch, null)).rejects.toMatchObject({
+      await expect(
+        vehicles.update(tenantId, vehicleId, ownerId, patch, null),
+      ).rejects.toMatchObject({
         status: 409,
         response: { code: API_ERROR_CODE.VEHICLE_FIELD_LOCKED },
       });
@@ -316,10 +341,16 @@ describe('Vehicle public approval (WS0)', () => {
 
   maybe('xe CHƯA lên chợ thì bốn trường đó vẫn sửa thoải mái', async () => {
     const draft = await seedVehicle(tenantId);
-    const updated = await vehicles.update(tenantId, draft, ownerId, {
-      plateNumber: '51A-777.77',
-      manufactureYear: 2020,
-    }, null);
+    const updated = await vehicles.update(
+      tenantId,
+      draft,
+      ownerId,
+      {
+        plateNumber: '51A-777.77',
+        manufactureYear: 2020,
+      },
+      null,
+    );
     expect(updated.plateNumber).toBe('51A-777.77');
     expect(updated.manufactureYear).toBe(2020);
   });

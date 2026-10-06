@@ -1,4 +1,4 @@
-import { GOOGLE_HOLIDAY_CALENDAR_ID_DEFAULT, SESSION_COOKIE_NAME_DEFAULT } from '@xeprime/types';
+import { SESSION_COOKIE_NAME_DEFAULT } from '@xeprime/types';
 import { z } from 'zod';
 
 /**
@@ -35,7 +35,13 @@ export const envSchema = z
      * Mặc định là `production` — giá trị NGHIÊM NGẶT nhất. Nới lỏng phải là một hành động tường
      * minh trong file env, không phải thứ rơi vào vì quên khai.
      */
-    APP_ENV: z.enum(['production', 'staging']).default('production'),
+    /*
+     * `development` = máy dev: CÙNG giá trị mà seed đòi để đổ dữ liệu demo (`prisma/src/seed/context.ts`,
+     * `.env.example` hướng dẫn đặt nó vào `.env`). Trước đây schema chỉ nhận production|staging nên
+     * làm theo hướng dẫn của seed là API không boot. Chỉ hợp lệ khi `NODE_ENV` KHÁC production —
+     * môi trường đã triển khai khai `development` bị chặn ở `superRefine`.
+     */
+    APP_ENV: z.enum(['production', 'staging', 'development']).default('production'),
     API_PORT: z.coerce.number().int().positive().default(4000),
 
     DATABASE_URL: z.string().min(1, 'DATABASE_URL là bắt buộc'),
@@ -66,11 +72,36 @@ export const envSchema = z
 
     // --- Session (ADR 0002) ---
     SESSION_JWT_SECRET: z.string().min(32, 'SESSION_JWT_SECRET phải ít nhất 32 ký tự'),
-    SESSION_TTL_DAYS: z.coerce.number().int().positive().default(7),
     // Default lấy từ `@xeprime/types` — web proxy đọc cùng hằng số này (ADR 0002).
     SESSION_COOKIE_NAME: z.string().min(1).default(SESSION_COOKIE_NAME_DEFAULT),
     SESSION_COOKIE_SECURE: booleanish.default(false),
+    /*
+     * BỎ từ ADR 0053 — cookie phiên nay HOST-ONLY, mỗi realm một tên, API cùng origin dưới `/api`
+     * của từng site. Vẫn khai ở đây chỉ để `superRefine` dưới THẤY và từ chối một file env cũ còn
+     * `.xeprime.vn`: im lặng bỏ qua thì người đọc env tưởng cookie đang đi chung ba site.
+     */
     SESSION_COOKIE_DOMAIN: z.string().optional(),
+
+    // --- Không gian tài khoản (ADR 0053) ---
+    /*
+     * Khoá dùng chung giữa Caddy và API. Caddy gắn nó cùng header realm (`x-xp-realm`) ở `/api`
+     * của từng site; API chỉ tin header realm khi khoá khớp. Không có khoá thì một client gọi thẳng
+     * `api.xeprime.vn` (site của app mobile) tự khai được `x-xp-realm: platform`.
+     * Bắt buộc ở mọi môi trường đã triển khai (kiểm ở superRefine).
+     */
+    REALM_PROXY_SECRET: z.preprocess(
+      (value) => (value === '' ? undefined : value),
+      z.string().min(32, 'REALM_PROXY_SECRET phải ít nhất 32 ký tự').optional(),
+    ),
+    /*
+     * CHỈ máy dev: tin header realm do web app gắn, không cần khoá proxy. Ở chế độ `path` của ADR
+     * 0051 cả ba khu chung `localhost:3000`, nên host không cho biết realm — web app tự gắn theo
+     * khu của trang. Bật ở môi trường đã triển khai là API TỪ CHỐI khởi động.
+     */
+    REALM_HEADER_FROM_CLIENT: booleanish.default(false),
+
+    // Thời hạn phiên web và chính sách OTP là HẰNG SỐ ở `@xeprime/types` (`SESSION_TTL_DAYS`,
+    // `OTP_POLICY`) — giống nhau ở mọi môi trường nên không phải biến env.
 
     // --- Phiên app native (ADR 0017) ---
     // Access token JWT ngắn hạn. Khoảng 10–15 phút là RÀNG BUỘC của ADR, không phải gợi ý: nó là
@@ -166,12 +197,6 @@ export const envSchema = z
     ESMS_API_KEY: z.string().optional(),
     ESMS_SECRET_KEY: z.string().optional(),
     ESMS_BRANDNAME: z.string().optional(),
-    OTP_TTL_MINUTES: z.coerce.number().int().positive().default(5),
-    OTP_RESEND_COOLDOWN_SECONDS: z.coerce.number().int().positive().default(60),
-    OTP_MAX_SENDS_PER_HOUR: z.coerce.number().int().positive().default(5),
-    // Số lần nhập SAI mã tối đa cho một OTP trước khi khoá mã (phải gửi lại). Chống brute-force
-    // ngoài @Throttle controller + TTL ngắn.
-    OTP_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
     // Pepper để hash mã OTP (schema phone_verifications không có cột salt). Có default dev để
     // không phá `.env` sẵn có; production bắt buộc đổi (kiểm ở superRefine dưới).
     OTP_PEPPER: z.string().min(16).default('xeprime-dev-otp-pepper-change-me'),
@@ -227,9 +252,6 @@ export const envSchema = z
      * đáng chặn boot — vì vậy KHÔNG có điều kiện nào cho chúng ở `superRefine` bên dưới.
      */
     GOOGLE_HOLIDAY_API_KEY: z.string().optional(),
-    // Lịch nghỉ lễ VN công khai của Google. Mặc định lấy từ `@xeprime/types` để API và worker
-    // không thể mô tả hai lịch khác nhau.
-    GOOGLE_HOLIDAY_CALENDAR_ID: z.string().min(1).default(GOOGLE_HOLIDAY_CALENDAR_ID_DEFAULT),
 
     /*
      * Chế độ THI HÀNH của trục năng lực theo gói (ADR 0027) — `PlanFeatureGuard` đọc biến này.
@@ -278,6 +300,14 @@ export const envSchema = z
 
     // --- Web + Email (cho link đặt lại mật khẩu) ---
     APP_WEB_URL: z.string().default('http://localhost:3000'),
+    /*
+     * URL gốc của site partner và site admin — ADR 0051/0053. `APP_WEB_URL` là site KHÁCH.
+     * Link trong email (đặt lại mật khẩu, lời mời thành viên) và chỗ quay về sau OAuth dựng từ URL
+     * của ĐÚNG realm người nhận, qua `webUrlFor(realm)`. Ở chế độ `path` (máy dev) URL mang luôn
+     * tiền tố khu: `http://localhost:3000/manage`, `http://localhost:3000/admin`.
+     */
+    WEB_PARTNER_URL: z.string().default('http://localhost:3000/manage'),
+    WEB_ADMIN_URL: z.string().default('http://localhost:3000/admin'),
     // SMTP tuỳ chọn: chưa cấu hình thì EmailService in link ra log (dev), không gửi thật.
     SMTP_HOST: z.string().optional(),
     SMTP_PORT: z.coerce.number().int().positive().optional(),
@@ -416,12 +446,63 @@ export const envSchema = z
       });
     }
 
+    // ADR 0053: cookie phiên host-only. Một `SESSION_COOKIE_DOMAIN` còn sót từ file env cũ không
+    // còn tác dụng gì — nhưng người đọc env sẽ tưởng cookie đang đi chung ba site. Từ chối ở MỌI
+    // môi trường để không ai phải đoán.
+    if (env.SESSION_COOKIE_DOMAIN?.trim()) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['SESSION_COOKIE_DOMAIN'],
+        message:
+          'SESSION_COOKIE_DOMAIN không còn dùng (ADR 0053 — cookie phiên host-only theo từng site). Xoá dòng này khỏi env',
+      });
+    }
+
     // ── Cửa chặn cho MỌI môi trường đã triển khai (kể cả staging) ─────────
     // Nhóm này là BẢO MẬT, và staging không được miễn: nó cũng nằm trên Internet công khai, cũng
     // phát cookie phiên thật. Chúng phải fail lúc BOOT — một API ghi link đặt lại mật khẩu ra
     // log, hay gửi `redirect_uri` OAuth trỏ localhost, là sự cố an ninh chứ không phải cấu hình
     // sai vặt.
     if (env.NODE_ENV !== 'production') return;
+
+    // `APP_ENV=development` là nhãn của MÁY DEV (seed demo được phép). Môi trường đã triển khai khai
+    // nó là nhầm file env — và nó còn mở devCode OTP như staging.
+    if (env.APP_ENV === 'development') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['APP_ENV'],
+        message:
+          'APP_ENV=development chỉ dành cho máy dev (NODE_ENV khác production) — môi trường đã triển khai dùng staging hoặc production',
+      });
+    }
+
+    // ADR 0053 điều 4: realm của request web do PROXY quyết. Cờ dev mà lọt lên môi trường thật là
+    // để bất kỳ ai tự khai `x-xp-realm: platform`.
+    if (env.REALM_HEADER_FROM_CLIENT) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['REALM_HEADER_FROM_CLIENT'],
+        message:
+          'REALM_HEADER_FROM_CLIENT chỉ dành cho máy dev — môi trường đã triển khai phải để realm do Caddy gắn (ADR 0053)',
+      });
+    }
+    if (!env.REALM_PROXY_SECRET) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['REALM_PROXY_SECRET'],
+        message:
+          'REALM_PROXY_SECRET là bắt buộc ở môi trường đã triển khai — thiếu nó API không tin được header realm của Caddy (ADR 0053)',
+      });
+    }
+    for (const key of ['WEB_PARTNER_URL', 'WEB_ADMIN_URL'] as const) {
+      if (!env[key].startsWith('https://') || /localhost|127\.0\.0\.1/.test(env[key])) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [key],
+          message: `${key} phải là URL https của tên miền thật (link email và chỗ quay về sau đăng nhập dựng từ đây)`,
+        });
+      }
+    }
 
     // `redirect_uri` của OAuth dựng từ đây và phải trùng từng ký tự với giá trị đã khai trong
     // Google/Facebook console. Trỏ localhost ở production nghĩa là provider sẽ gửi `code` về máy

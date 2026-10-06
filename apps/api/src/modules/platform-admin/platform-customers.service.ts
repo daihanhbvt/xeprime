@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@xeprime/prisma';
-import { API_ERROR_CODE, MEMBERSHIP_STATUS, type PaginationMeta } from '@xeprime/types';
+import { ACCOUNT_REALM, API_ERROR_CODE, type PaginationMeta } from '@xeprime/types';
 import { maskEmail, maskPhone } from '../../common/mask';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
 import { phoneLookupVariants } from '../../common/phone';
@@ -28,18 +28,14 @@ const LIST_SELECT = {
 } satisfies Prisma.UserSelect;
 
 /**
- * "Khách thuê" KHÔNG có bảng riêng — họ là `users` không thuộc gian hàng nào và không phải
- * nhân sự nền tảng (`CUSTOMER_ROLE` ở `@xeprime/types` cũng suy ra như vậy). Điều kiện đó
- * viết thành hai anti-join dưới đây; bỏ nó đi thì màn "khách hàng" sẽ liệt kê cả chủ shop và
- * chính nhân viên nền tảng.
- *
- * Membership `removed` không tính là còn thuộc gian hàng — nhân viên cũ nghỉ việc rồi đi thuê
- * xe thì đúng là khách.
+ * "Khách thuê" là các tài khoản realm `customer` (ADR 0053) — một cột, không còn suy từ "không
+ * thuộc gian hàng nào". Chủ shop và nhân sự nền tảng là tài khoản của realm khác, kể cả khi trùng
+ * số điện thoại với một khách; muốn thấy mọi tài khoản của một số thì dùng tra cứu xuyên realm
+ * (`GET /platform/accounts/lookup`).
  */
 const CUSTOMER_ONLY: Prisma.UserWhereInput = {
   deletedAt: null,
-  tenantMemberships: { none: { status: MEMBERSHIP_STATUS.ACTIVE } },
-  platformMemberships: { none: { status: MEMBERSHIP_STATUS.ACTIVE } },
+  realm: ACCOUNT_REALM.CUSTOMER,
 };
 
 /**
@@ -70,7 +66,7 @@ export class PlatformCustomersService {
       ...CUSTOMER_ONLY,
       ...(query.status ? { status: query.status } : {}),
       ...(query.hasRequests ? { customerBookingRequests: { some: {} } } : {}),
-      // SĐT/email khớp CHÍNH XÁC (cả hai đều unique): hỗ trợ đã có sẵn giá trị khách đọc cho.
+      // SĐT/email khớp CHÍNH XÁC (unique trong realm khách): hỗ trợ đã có sẵn giá trị khách đọc cho.
       // Cho tìm gần đúng ở đây là biến ô tra cứu thành công cụ quét danh bạ khách hàng.
       // `users.phone` lưu dạng `84…`, còn hỗ trợ gõ `09…` — so khớp mọi dạng lưu (common/phone).
       ...(phone ? { phone: { in: phoneLookupVariants(phone) } } : {}),

@@ -1,0 +1,60 @@
+/*
+ * Trang Tài khoản & bảo mật — cùng khuôn với trang Cửa hàng: mục lục 220px dính bên trái, section
+ * xếp dọc bên phải. Dưới 1024px mục lục thành ô chọn dính (xem `SectionNav`) và lưới về một cột.
+ */
+.page {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.layout {
+  display: grid;
+  min-width: 0;
+  align-items: start;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: var(--xp-space-lg);
+}
+
+.content {
+  display: flex;
+  min-width: 0;
+  /* Đọc thoải mái trên màn rộng — form trải hết 1600px là mắt phải chạy quá xa. */
+  max-width: 960px;
+  flex-direction: column;
+  gap: var(--xp-space-lg);
+}
+
+/* Khung giữ chỗ lúc đang tải — cùng kích thước với `SectionCard` để trang không nhảy. */
+.skeletonCard {
+  padding: var(--xp-space-lg);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+.navSkeleton {
+  padding-top: var(--xp-space-lg);
+}
+
+@media (max-width: 1024px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--xp-space-md);
+  }
+
+  .navSkeleton {
+    display: none;
+  }
+
+  .content {
+    max-width: none;
+    gap: var(--xp-space-md);
+  }
+}
+
+@media (max-width: 640px) {
+  .skeletonCard {
+    padding: var(--xp-space-md);
+  }
+}

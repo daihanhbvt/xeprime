@@ -1,6 +1,6 @@
 # ADR 0016 — SePay: đối soát chuyển khoản tự động cho tiền GÓI (khe hẹp của ADR 0013)
 
-Ngày: 21/08/2026 · Trạng thái: Accepted · **Sửa phạm vi [ADR 0013](0013-no-online-payment-mvp.md)**
+Ngày: 21/08/2026 · Trạng thái: Accepted · **Sửa phạm vi ADR 0013**
 
 > ⚠️ **[ADR 0022](0022-sepay-customer-money.md) mở rộng ĐIỀU 1 (28/08/2026):** phạm vi không còn
 > là *"chỉ tiền GÓI, chỉ chiều gian hàng → nền tảng"* mà là **mọi khoản VÀO tài khoản nền tảng**,
@@ -15,7 +15,7 @@ Ngày: 21/08/2026 · Trạng thái: Accepted · **Sửa phạm vi [ADR 0013](001
 100k/tháng (ô tô) và 35k/tháng (xe máy), **thu tiền thủ công lỗ**: mỗi kỳ phải mở app ngân hàng dò
 một giao dịch vài chục nghìn, nhân với số tenant. Không scale quá vài chục người.
 
-[ADR 0013](0013-no-online-payment-mvp.md) chốt **không làm thanh toán trực tuyến** ở giai đoạn này.
+ADR 0013 chốt **không làm thanh toán trực tuyến** ở giai đoạn này.
 Lý do của nó là luồng tiền **khách ↔ gian hàng**: giữ tiền hộ, hoàn tiền, tranh chấp, và giấy phép
 trung gian thanh toán. Luồng **nền tảng ↔ gian hàng** không có tính chất nào trong số đó.
 

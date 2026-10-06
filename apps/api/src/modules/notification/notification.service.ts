@@ -263,8 +263,6 @@ export class NotificationService {
               {
                 notificationId: row.id as string,
                 userId: row.userId,
-                // Deep link đã đóng băng ở `buildData` — nó chọn APP nhận đẩy (customer/partner).
-                url: urlOf(row.dataJson),
               },
             ]
           : [],
@@ -272,13 +270,6 @@ export class NotificationService {
       { expiresAt: payload.pushExpiresAt ?? null },
     );
   }
-}
-
-/** Đọc lại deep link từ `dataJson` của dòng vừa dựng — nguồn duy nhất, không suy lại. */
-function urlOf(dataJson: unknown): string | null {
-  if (!dataJson || typeof dataJson !== 'object') return null;
-  const url = (dataJson as { url?: unknown }).url;
-  return typeof url === 'string' ? url : null;
 }
 
 function buildData(

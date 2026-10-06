@@ -1,5 +1,6 @@
 import { createPrismaClient, newId, refreshListingRankScore } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   AUDIT_ACTOR_SCOPE,
   BOOKING_REQUEST_DECISION_SOURCE,
   BOOKING_REQUEST_STATUS,
@@ -247,8 +248,18 @@ beforeAll(async () => {
   customerId = newId();
   await prisma.user.createMany({
     data: [
-      { id: ownerId, displayName: 'Chủ shop', email: `cs-own-${ownerId}@xeprime.test` },
-      { id: customerId, displayName: 'Khách', email: `cs-cus-${customerId}@xeprime.test` },
+      {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: ownerId,
+        displayName: 'Chủ shop',
+        email: `cs-own-${ownerId}@xeprime.test`,
+      },
+      {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: customerId,
+        displayName: 'Khách',
+        email: `cs-cus-${customerId}@xeprime.test`,
+      },
     ],
   });
   await seedProvince(asService, PROV, PROV_NAME);
@@ -272,7 +283,7 @@ beforeAll(async () => {
       },
     });
     await prisma.tenantProfile.create({
-      data: { tenantId: id, displayName: name, provinceCode: PROV, provinceName: PROV_NAME },
+      data: { tenantId: id, provinceCode: PROV, provinceName: PROV_NAME },
     });
   }
 
@@ -397,38 +408,44 @@ describe('Uy tín chủ xe vào điểm — có trần, và có mức nền', ()
    * Chủ xe MỚI không bị phạt: làm mượt Bayes cho họ mức nền trung tính, không phải 0. Đây là vế
    * quan trọng nhất của việc làm mượt — thiếu nó, mọi người bán mới bắt đầu ở đáy bảng.
    */
-  maybe('chủ xe MỚI (0 mẫu) không bị phạt — chênh với chủ tốt nằm trong trần của vế uy tín', async () => {
-    const fresh = await scoreOf(vFreshComplete);
-    const bad = await scoreOf(vBadHost);
-    /*
-     * Vế uy tín có trần 0,07, nên khoảng cách giữa "chưa biết gì" và "huỷ mọi chuyến" phải NHỎ
-     * — đủ đổi thứ tự trong một nhóm ngang tài, không đủ chôn ai. Đây là con số quan trọng
-     * nhất trong cả spec: nới nó lên là biến một tín hiệu điều chỉnh thành một bản án.
-     */
-    expect(fresh - bad).toBeLessThanOrEqual(0.07);
-    expect(fresh - bad).toBeGreaterThan(0);
-  });
+  maybe(
+    'chủ xe MỚI (0 mẫu) không bị phạt — chênh với chủ tốt nằm trong trần của vế uy tín',
+    async () => {
+      const fresh = await scoreOf(vFreshComplete);
+      const bad = await scoreOf(vBadHost);
+      /*
+       * Vế uy tín có trần 0,07, nên khoảng cách giữa "chưa biết gì" và "huỷ mọi chuyến" phải NHỎ
+       * — đủ đổi thứ tự trong một nhóm ngang tài, không đủ chôn ai. Đây là con số quan trọng
+       * nhất trong cả spec: nới nó lên là biến một tín hiệu điều chỉnh thành một bản án.
+       */
+      expect(fresh - bad).toBeLessThanOrEqual(0.07);
+      expect(fresh - bad).toBeGreaterThan(0);
+    },
+  );
 
   /*
    * Xe MỚI của một chủ xe ĐÃ CÓ LỊCH SỬ thừa hưởng uy tín của người bán, nhưng phần CHẤT LƯỢNG
    * của chính chiếc xe vẫn là prior trung tính — hai câu hỏi khác nhau, hai phép làm mượt khác
    * nhau (ADR 0045 điều 5).
    */
-  maybe('xe mới của chủ xe CŨ hưởng uy tín người bán, không hưởng đánh giá của xe khác', async () => {
-    const newCarOfGoodHost = await seedVehicle('Xe mới của chủ tốt', {
-      tenant: goodTenant,
-      images: 5,
-      features: ['bluetooth', 'gps', 'camera_360'],
-    });
-    await refreshListingRankScore(prisma);
+  maybe(
+    'xe mới của chủ xe CŨ hưởng uy tín người bán, không hưởng đánh giá của xe khác',
+    async () => {
+      const newCarOfGoodHost = await seedVehicle('Xe mới của chủ tốt', {
+        tenant: goodTenant,
+        images: 5,
+        features: ['bluetooth', 'gps', 'camera_360'],
+      });
+      await refreshListingRankScore(prisma);
 
-    // Hưởng uy tín ⇒ trên chiếc y hệt của chủ hay huỷ.
-    expect(await scoreOf(newCarOfGoodHost)).toBeGreaterThan(await scoreOf(vBadHost));
-    // Nhưng KHÔNG hưởng 4,8 sao của `vProven` — chất lượng vẫn là prior trung tính.
-    expect(await scoreOf(newCarOfGoodHost)).toBeLessThan(await scoreOf(vProven));
+      // Hưởng uy tín ⇒ trên chiếc y hệt của chủ hay huỷ.
+      expect(await scoreOf(newCarOfGoodHost)).toBeGreaterThan(await scoreOf(vBadHost));
+      // Nhưng KHÔNG hưởng 4,8 sao của `vProven` — chất lượng vẫn là prior trung tính.
+      expect(await scoreOf(newCarOfGoodHost)).toBeLessThan(await scoreOf(vProven));
 
-    await prisma.vehicle.deleteMany({ where: { id: newCarOfGoodHost } });
-  });
+      await prisma.vehicle.deleteMany({ where: { id: newCarOfGoodHost } });
+    },
+  );
 });
 
 describe('Sort do KHÁCH chọn không đổi một chữ (ADR 0045 điều 4)', () => {

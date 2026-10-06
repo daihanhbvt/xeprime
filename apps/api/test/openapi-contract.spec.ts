@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { NestFactory } from '@nestjs/core';
 import type { INestApplication } from '@nestjs/common';
 import type { OpenAPIObject } from '@nestjs/swagger';
+import { ACCOUNT_REALM } from '@xeprime/types';
 import { AppModule } from '../src/app.module';
 import { buildOpenApiDocument } from '../src/bootstrap';
 import { API_TAGS } from '../src/openapi/api-tags';
@@ -107,6 +108,31 @@ describe('OpenAPI · xác thực', () => {
     });
 
     expect(mismatched.map((r) => r.label)).toEqual([]);
+  });
+
+  /*
+   * ADR 0053 điều 5 — mặc định từ chối. `RealmGuard` chặn route không khai realm trước khi chạm DB;
+   * test này bắt điều đó TRƯỚC khi deploy, kèm tên route, thay vì để người dùng gặp một 403 lạ.
+   */
+  it('mọi route đều khai không gian tài khoản (`@Realms`)', () => {
+    const access = collectRouteAccess(app);
+    const undeclared = routes.filter((r) => {
+      const route = access.get(r.operation.operationId ?? '');
+      return !route || route.realms.length === 0;
+    });
+    expect(undeclared.map((r) => r.label)).toEqual([]);
+  });
+
+  it('route nền tảng chỉ phục vụ realm platform; route gian hàng phục vụ realm partner', () => {
+    const access = collectRouteAccess(app);
+    const wrong = routes.filter((r) => {
+      const route = access.get(r.operation.operationId ?? '');
+      if (!route) return false;
+      if (route.platformOnly) return route.realms.join(',') !== ACCOUNT_REALM.PLATFORM;
+      if (route.tenantScoped) return !route.realms.includes(ACCOUNT_REALM.PARTNER);
+      return false;
+    });
+    expect(wrong.map((r) => r.label)).toEqual([]);
   });
 
   it('scheme cookie được định nghĩa trong components', () => {

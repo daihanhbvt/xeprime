@@ -5,7 +5,9 @@ import { newId } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   PHONE_VERIFICATION_STATUS,
+  type AccountRealm,
   type EmailVerificationPurpose,
+  OTP_POLICY,
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
@@ -43,11 +45,16 @@ export class EmailVerificationService {
     rawEmail: string,
     purpose: EmailVerificationPurpose,
     displayName: string,
+    /**
+     * Realm của tài khoản đang xác minh (ADR 0053) — mã chỉ đối chiếu được trong realm đó. Cooldown
+     * và trần mỗi giờ CỐ Ý vẫn đếm theo ĐỊA CHỈ NHẬN trên mọi realm: thứ cần bảo vệ là hộp thư.
+     */
+    realm: AccountRealm,
   ): Promise<{ expiresAt: Date; devCode: string | null }> {
     const email = normalizeEmail(rawEmail);
     const now = Date.now();
 
-    const cooldownSec = this.config.get<number>('OTP_RESEND_COOLDOWN_SECONDS') ?? 60;
+    const cooldownSec = OTP_POLICY.RESEND_COOLDOWN_SECONDS;
     const last = await this.prisma.emailVerification.findFirst({
       where: { email },
       orderBy: { createdAt: 'desc' },
@@ -64,7 +71,7 @@ export class EmailVerificationService {
       );
     }
 
-    const maxPerHour = this.config.get<number>('OTP_MAX_SENDS_PER_HOUR') ?? 5;
+    const maxPerHour = OTP_POLICY.MAX_SENDS_PER_HOUR;
     const sentLastHour = await this.prisma.emailVerification.count({
       where: { email, createdAt: { gte: new Date(now - 60 * 60 * 1000) } },
     });
@@ -78,19 +85,20 @@ export class EmailVerificationService {
       );
     }
 
-    // Huỷ các mã pending cũ cùng (email, mục đích) — chỉ mã mới nhất còn hiệu lực.
+    // Huỷ các mã pending cũ cùng (realm, email, mục đích) — chỉ mã mới nhất còn hiệu lực.
     await this.prisma.emailVerification.updateMany({
-      where: { email, purpose, status: PHONE_VERIFICATION_STATUS.PENDING },
+      where: { realm, email, purpose, status: PHONE_VERIFICATION_STATUS.PENDING },
       data: { status: PHONE_VERIFICATION_STATUS.EXPIRED },
     });
 
     const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
-    const ttlMin = this.config.get<number>('OTP_TTL_MINUTES') ?? 5;
+    const ttlMin = OTP_POLICY.TTL_MINUTES;
     const expiresAt = new Date(now + ttlMin * 60 * 1000);
 
     await this.prisma.emailVerification.create({
       data: {
         id: newId(),
+        realm,
         email,
         purpose,
         otpHash: this.hash(code, email),
@@ -121,10 +129,11 @@ export class EmailVerificationService {
     purpose: EmailVerificationPurpose,
     code: string,
     userId: string,
+    realm: AccountRealm,
   ): Promise<string> {
     const email = normalizeEmail(rawEmail);
     const row = await this.prisma.emailVerification.findFirst({
-      where: { email, purpose, status: PHONE_VERIFICATION_STATUS.PENDING },
+      where: { realm, email, purpose, status: PHONE_VERIFICATION_STATUS.PENDING },
       orderBy: { createdAt: 'desc' },
       select: { id: true, otpHash: true, expiresAt: true, attemptCount: true },
     });
@@ -148,7 +157,7 @@ export class EmailVerificationService {
     }
 
     if (row.otpHash !== this.hash(code, email)) {
-      const maxAttempts = this.config.get<number>('OTP_MAX_ATTEMPTS') ?? 5;
+      const maxAttempts = OTP_POLICY.MAX_ATTEMPTS;
       const attemptCount = row.attemptCount + 1;
       if (attemptCount >= maxAttempts) {
         await this.prisma.emailVerification.update({

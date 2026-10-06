@@ -2,7 +2,7 @@
 
 Ngày: 28/08/2026 · Trạng thái: Accepted · **Mở rộng [ADR 0014](0014-owner-and-shop-single-role.md) điều 3 và [ADR 0015](0015-vehicle-slot-billing.md) điều 4**
 
-> ⚠️ **[ADR 0026](0026-first-trips-free-then-commission.md) thêm một bậc vào điều 1 (29/08/2026):**
+> ⚠️ **ADR 0026 thêm một bậc vào điều 1 (29/08/2026):**
 > đường quyết định chế độ thu phí hỏi **lượt miễn phí trước**, hết lượt mới hỏi gói hiện hành.
 
 ## Bối cảnh
@@ -51,7 +51,7 @@ Và câu hỏi khó hơn: **tenant nâng cấp lên gói giữa lúc một chuy�
    giá** — cùng bất biến mà `price_snapshot_json` đã có từ đầu.
 
 5. **Nâng cấp giữa chuyến là chuyện KHÔNG CẦN XỬ LÝ.** Đây là phần thưởng lớn nhất của thiết kế
-   thu-trước ở [ADR 0021](0021-booking-hold-is-the-commission.md), và phải ghi ra để không ai
+   thu-trước ở ADR 0021, và phải ghi ra để không ai
    mất công xây thứ không cần:
 
    > Hoa hồng đã nằm trong tài khoản ngân hàng của nền tảng **từ trước khi tenant bấm nâng cấp**.

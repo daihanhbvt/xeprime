@@ -1,8 +1,9 @@
 import { Body, Controller, Headers, HttpCode, Post, Res } from '@nestjs/common';
+import { ACCOUNT_REALM_VALUES } from '@xeprime/types';
 import { SkipThrottle } from '@nestjs/throttler';
 import { ApiExtension, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
-import { Public } from '../../common/decorators';
+import { Public, Realms } from '../../common/decorators';
 import { SepayWebhookAckDto } from './dto/sepay.dto';
 import { SepayService } from './sepay.service';
 
@@ -29,6 +30,8 @@ const SEPAY_WEBHOOK_ACK_BODY = '{"success": true}';
  */
 @ApiTags('billing')
 @Controller('sepay')
+// Webhook công khai của SePay — không có phiên, không có realm.
+@Realms(...ACCOUNT_REALM_VALUES)
 export class SepayController {
   constructor(private readonly sepay: SepayService) {}
 

@@ -1,13 +1,11 @@
 import { Body, Controller, Get, Patch } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION, PLAN_FEATURE } from '@xeprime/types';
 import {
-  CurrentTenant,
-  CurrentUser,
-  RequirePermissions,
-  RequiresFeature,
-  TenantScoped,
-} from '../../common/decorators';
+  ACCOUNT_REALM,
+  PERMISSION,
+  PLAN_FEATURE,
+} from '@xeprime/types';
+import { CurrentTenant, CurrentUser, Realms, RequirePermissions, RequiresFeature, TenantScoped } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { DepositPolicyService, type DepositPolicyResolution } from './deposit-policy.service';
 import { PaymentSettingsDto, UpdatePaymentSettingsDto } from './dto/payment-settings.dto';
@@ -28,6 +26,7 @@ import { PaymentSettingsDto, UpdatePaymentSettingsDto } from './dto/payment-sett
 @ApiTags('shop-payment-settings')
 @Controller('shop/payment-settings')
 @TenantScoped()
+@Realms(ACCOUNT_REALM.PARTNER)
 export class ShopPaymentSettingsController {
   constructor(private readonly depositPolicy: DepositPolicyService) {}
 

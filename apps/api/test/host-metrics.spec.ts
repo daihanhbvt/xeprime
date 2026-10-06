@@ -1,5 +1,6 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   AUDIT_ACTOR_SCOPE,
   BOOKING_REQUEST_DECISION_SOURCE,
   BOOKING_REQUEST_STATUS,
@@ -111,8 +112,7 @@ async function seedRequest(fixture: RequestFixture): Promise<string> {
       createdAt,
       decidedAt: fixture.decidedAt ?? null,
       decisionSource:
-        fixture.decisionSource ??
-        (fixture.decidedAt ? BOOKING_REQUEST_DECISION_SOURCE.HOST : null),
+        fixture.decisionSource ?? (fixture.decidedAt ? BOOKING_REQUEST_DECISION_SOURCE.HOST : null),
     },
   });
   if (fixture.cancelledBy) {
@@ -153,8 +153,18 @@ beforeAll(async () => {
   customerId = newId();
   await prisma.user.createMany({
     data: [
-      { id: ownerId, displayName: 'Chủ xe', email: `hm-own-${RUN}@xeprime.test` },
-      { id: customerId, displayName: 'Khách', email: `hm-cus-${RUN}@xeprime.test` },
+      {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: ownerId,
+        displayName: 'Chủ xe',
+        email: `hm-own-${RUN}@xeprime.test`,
+      },
+      {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: customerId,
+        displayName: 'Khách',
+        email: `hm-cus-${RUN}@xeprime.test`,
+      },
     ],
   });
 
@@ -217,18 +227,21 @@ describe('Mẫu số — ai vào, ai không (ADR 0045 điều 3)', () => {
    * `hold_expired` CÓ `decided_at` là chuyện khác hẳn: ở thứ tự ADR 0044 nó nghĩa là gian hàng
    * đã nhận chuyến rồi khách không trả tiền. Gian hàng làm xong phần của mình (ADR 0044 điều 7).
    */
-  maybe('`hold_expired` CÓ quyết định = đã nhận, khách không trả ⇒ vẫn tính là giữ chuyến', async () => {
-    await seedKeptSamples(4);
-    await seedRequest({
-      status: BOOKING_REQUEST_STATUS.HOLD_EXPIRED,
-      decidedAt: new Date(Date.now() - 2 * 24 * 3600_000),
-    });
+  maybe(
+    '`hold_expired` CÓ quyết định = đã nhận, khách không trả ⇒ vẫn tính là giữ chuyến',
+    async () => {
+      await seedKeptSamples(4);
+      await seedRequest({
+        status: BOOKING_REQUEST_STATUS.HOLD_EXPIRED,
+        decidedAt: new Date(Date.now() - 2 * 24 * 3600_000),
+      });
 
-    const m = await metrics.forTenant(tenantId);
-    expect(m.sampleCount).toBe(5);
-    expect(m.responseRatePercent).toBe(100);
-    expect(m.acceptKeepRatePercent).toBe(100);
-  });
+      const m = await metrics.forTenant(tenantId);
+      expect(m.sampleCount).toBe(5);
+      expect(m.responseRatePercent).toBe(100);
+      expect(m.acceptKeepRatePercent).toBe(100);
+    },
+  );
 
   maybe('quá hạn không ai đụng tới ⇒ là mẫu, và KHÔNG phản hồi', async () => {
     await seedKeptSamples(4);
@@ -305,22 +318,25 @@ describe('Tử số — phản hồi ≠ đồng ý', () => {
    * KHÔNG hề phản hồi, và cố ý để trống `decided_at`. Hỏi `status` ở đây là trao điểm phản hồi
    * cho đúng nhóm không phản hồi.
    */
-  maybe('`rejected_by_host` do worker ghi (không có `decided_at`) KHÔNG phải đã phản hồi', async () => {
-    for (let i = 0; i < 3; i += 1) {
-      await seedRequest({
-        status: BOOKING_REQUEST_STATUS.REJECTED_BY_HOST,
-        decidedAt: new Date(Date.now() - 2 * 24 * 3600_000),
-      });
-    }
-    for (let i = 0; i < 2; i += 1) {
-      await seedRequest({ status: BOOKING_REQUEST_STATUS.REJECTED_BY_HOST, decidedAt: null });
-    }
+  maybe(
+    '`rejected_by_host` do worker ghi (không có `decided_at`) KHÔNG phải đã phản hồi',
+    async () => {
+      for (let i = 0; i < 3; i += 1) {
+        await seedRequest({
+          status: BOOKING_REQUEST_STATUS.REJECTED_BY_HOST,
+          decidedAt: new Date(Date.now() - 2 * 24 * 3600_000),
+        });
+      }
+      for (let i = 0; i < 2; i += 1) {
+        await seedRequest({ status: BOOKING_REQUEST_STATUS.REJECTED_BY_HOST, decidedAt: null });
+      }
 
-    const m = await metrics.forTenant(tenantId);
-    expect(m.sampleCount).toBe(5);
-    // Suy từ status sẽ ra 100%. Đọc `decided_at` ra 60% — con số đúng.
-    expect(m.responseRatePercent).toBe(60);
-  });
+      const m = await metrics.forTenant(tenantId);
+      expect(m.sampleCount).toBe(5);
+      // Suy từ status sẽ ra 100%. Đọc `decided_at` ra 60% — con số đúng.
+      expect(m.responseRatePercent).toBe(60);
+    },
+  );
 
   maybe('khách huỷ SAU khi gian hàng đã nhận ⇒ vẫn là một lượt nhận-và-giữ', async () => {
     await seedKeptSamples(4);

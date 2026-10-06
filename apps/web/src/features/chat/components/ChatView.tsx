@@ -1,8 +1,7 @@
 'use client';
 
 import { Spin } from 'antd';
-import { CHAT_INBOX, CHAT_SIDE, type ChatSide } from '@xeprime/types';
-import { useCurrentUser } from '@/hooks/use-current-user';
+import { CHAT_SIDE, type ChatSide } from '@xeprime/types';
 import { resolveChatInbox } from '../chat-inbox';
 import { useTranslations } from 'next-intl';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -30,13 +29,8 @@ const VEHICLE_PARAM = 'v';
  * dẫn. Nó quyết định BỐ CỤC: khu khách nằm trong một trang cuộn được, khu quản lý nằm trong một
  * vỏ đã khoá `100dvh`.
  *
- * DỮ LIỆU thì do `resolveChatInbox` quyết, và hai thứ đó KHÔNG phải một (16/09/2026). Chủ xe
- * tuyến hoa hồng đứng ở bề mặt khách nhưng đọc hộp thư HỢP NHẤT: họ không có `/manage/chat` để
- * đặt hộp thư công việc, nên với họ "tin nhắn" là một khái niệm chứ không phải hai.
- *
- * Bản trước dựng cùng một danh sách cho hai route nên chủ shop mở khu quản lý thấy lẫn cả hội
- * thoại riêng của mình. Ranh giới đó vẫn còn: bề mặt `shop` không bao giờ hợp nhất, vì
- * `/manage/chat` là bàn làm việc chung của cả gian hàng.
+ * DỮ LIỆU do `resolveChatInbox` quyết theo bề mặt (ADR 0053): site khách đọc hộp thư khách, site
+ * partner đọc hộp thư gian hàng — bàn làm việc chung của cả gian hàng, không trộn hội thoại riêng.
  */
 export function ChatView({
   side,
@@ -50,13 +44,7 @@ export function ChatView({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const { data: user } = useCurrentUser();
-  /*
-   * Chưa biết mình là ai ⇒ `resolveChatInbox` trả hộp thư của bề mặt. Đó là phía AN TOÀN của
-   * phép đoán: hộp thư khách là tập con, nên lúc `/auth/me` trả về, danh sách chỉ RỘNG ra chứ
-   * không bao giờ phải thu lại một hội thoại đã hiện.
-   */
-  const inbox = resolveChatInbox(side, user);
+  const inbox = resolveChatInbox(side);
 
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<ConversationFilterKey>('all');
@@ -153,7 +141,8 @@ export function ChatView({
       >
         <ConversationList
           items={items}
-          showRole={inbox === CHAT_INBOX.UNIFIED}
+          // Mỗi hộp thư một vai (ADR 0053) — không còn danh sách trộn hai vai cần nhãn vai.
+          showRole={false}
           selectedId={selectedId}
           onSelect={(c) => setSelectedId(c.id)}
           search={search}

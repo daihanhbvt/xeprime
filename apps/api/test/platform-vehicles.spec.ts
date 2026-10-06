@@ -1,5 +1,6 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   LISTING_STATUS,
   TENANT_STATUS,
@@ -55,7 +56,12 @@ beforeAll(async () => {
   tag = activeTenant.slice(-6);
 
   await prisma.user.create({
-    data: { id: adminId, displayName: 'Admin', email: `pv-${adminId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: adminId,
+      displayName: 'Admin',
+      email: `pv-${adminId}@xeprime.test`,
+    },
   });
 
   const mkTenant = (id: string, status: string) =>
@@ -86,7 +92,12 @@ beforeAll(async () => {
         weekdayPrice: '700000',
       },
     });
-  await mkVehicle(publicVehicle, activeTenant, `Vios-${tag}`, VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC);
+  await mkVehicle(
+    publicVehicle,
+    activeTenant,
+    `Vios-${tag}`,
+    VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
+  );
   await mkVehicle(draftVehicle, activeTenant, `Nhap-${tag}`, VEHICLE_PUBLIC_STATUS.DRAFT);
   await mkVehicle(
     otherShopVehicle,
@@ -134,12 +145,18 @@ describe('Platform vehicles (Phase 7)', () => {
     const byPlate = await service.list({ q: publicVehicle.slice(-5) });
     expect(byPlate.data.map((v) => v.id)).toContain(publicVehicle);
 
-    const drafts = await service.list({ tenantId: activeTenant, publicStatus: VEHICLE_PUBLIC_STATUS.DRAFT });
+    const drafts = await service.list({
+      tenantId: activeTenant,
+      publicStatus: VEHICLE_PUBLIC_STATUS.DRAFT,
+    });
     expect(drafts.data.map((v) => v.id)).toEqual([draftVehicle]);
     // Xe chưa từng duyệt thì không có snapshot.
     expect(drafts.data[0]?.listingStatus).toBeNull();
 
-    const ofSuspended = await service.list({ tenantStatus: TENANT_STATUS.SUSPENDED, q: `Khoa-${tag}` });
+    const ofSuspended = await service.list({
+      tenantStatus: TENANT_STATUS.SUSPENDED,
+      q: `Khoa-${tag}`,
+    });
     expect(ofSuspended.data.map((v) => v.id)).toEqual([otherShopVehicle]);
   });
 

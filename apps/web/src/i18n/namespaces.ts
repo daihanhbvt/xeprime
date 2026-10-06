@@ -111,6 +111,9 @@ export const MESSAGE_NAMESPACES = [
   { file: 'platform-money', namespace: 'PlatformMoney' },
   // Hàng đợi xác minh người bán của nền tảng (R3 — ADR 0028 release gate 1).
   { file: 'platform-sellers', namespace: 'PlatformSellers' },
+  // Nhân sự nền tảng + tra cứu xuyên realm của site quản trị (ADR 0053 — B4).
+  { file: 'admin-staff', namespace: 'AdminStaff' },
+  { file: 'admin-accounts', namespace: 'AdminAccounts' },
   // ⚠️ `mobile-shell` là VỎ app native (màn lỗi cấp app, not-found, điều hướng gốc), KHÔNG
   // phải "mọi chữ của mobile". Namespace vẫn chia theo TÍNH NĂNG, không theo client: màn
   // booking trên app dùng lại `bookings`/`booking-requests` như web, chuỗi xe dùng lại

@@ -1,31 +1,32 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
+  APPROVAL_ACTION,
+  APPROVAL_STATUS,
+  APPROVAL_TARGET_TYPE,
   AUTO_ACCEPT_BLOCKER,
+  COLLATERAL_MODE,
   CUSTOMER_DOCUMENT_TYPE,
   DRIVER_DEPOSIT_MODE,
   DRIVER_SURCHARGE_KIND,
   DRIVER_SURCHARGE_KIND_VALUES,
   DRIVER_SURCHARGE_UNIT,
   FEATURE_STATE,
+  type FeatureState,
   HANDOVER_WINDOW_KIND,
   IDENTITY_VERIFY_METHOD,
   MEMBERSHIP_STATUS,
   PLAN_FEATURE,
   PLAN_FEATURE_VALUES,
+  type PlanFeature,
   ROUTE_TYPE,
-  APPROVAL_ACTION,
-  APPROVAL_STATUS,
-  APPROVAL_TARGET_TYPE,
-  COLLATERAL_MODE,
   SERVICE_TYPE,
   SURCHARGE_CATEGORY,
   TENANT_ROLE,
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_TYPE,
-  type FeatureState,
-  type PlanFeature,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
@@ -89,7 +90,12 @@ async function makeShop(
   const tenantId = newId();
   const vehicleId = newId();
   await prisma.user.create({
-    data: { id: ownerId, displayName: `Chủ ${label}`, email: `vset-${label}-${RUN}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: `Chủ ${label}`,
+      email: `vset-${label}-${RUN}@xeprime.test`,
+    },
   });
   await prisma.tenant.create({
     data: {
@@ -1013,9 +1019,9 @@ describe('Sửa thiết lập dịch vụ khi phiếu duyệt còn chờ', () =>
     });
     const next = task.snapshot as unknown as NonNullable<typeof snapshot>;
 
-    expect(
-      next.services.find((s) => s.serviceType === SERVICE_TYPE.SELF_DRIVE)?.termsText,
-    ).toBe(`Không hút thuốc trong xe ${RUN}`);
+    expect(next.services.find((s) => s.serviceType === SERVICE_TYPE.SELF_DRIVE)?.termsText).toBe(
+      `Không hút thuốc trong xe ${RUN}`,
+    );
     // Chính sách mang sang nguyên vẹn — không bị `null` hoá vì đường ghi này không nạp được nó.
     expect(next.policy).toEqual(snapshot!.policy);
     expect(task.logs.map((l) => l.action)).toEqual([APPROVAL_ACTION.PROFILE_UPDATED]);

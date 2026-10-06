@@ -2,6 +2,7 @@ import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   MEMBERSHIP_STATUS,
   OUTBOX_STATUS,
   SENDER_TYPE,
@@ -89,8 +90,18 @@ before(async () => {
 
   await prisma.user.createMany({
     data: [
-      { id: customerId, displayName: 'Khách', email: `cus-${customerId}@xeprime.test` },
-      { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
+      {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: customerId,
+        displayName: 'Khách',
+        email: `cus-${customerId}@xeprime.test`,
+      },
+      {
+        id: ownerId,
+        realm: ACCOUNT_REALM.PARTNER,
+        displayName: 'Chủ shop',
+        email: `own-${ownerId}@xeprime.test`,
+      },
     ],
   });
   await prisma.tenant.create({

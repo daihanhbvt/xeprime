@@ -1,11 +1,13 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query, Req } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import { ACCOUNT_REALM } from '@xeprime/types';
 import type { Request } from 'express';
-import { Public } from '../../common/decorators';
+import { Public, Realms } from '../../common/decorators';
 import { resolveOptionalUserId } from '../../common/optional-user';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NativeSessionService } from '../auth/native-session.service';
+import { RequestRealmService } from '../auth/request-realm.service';
 import { SessionService } from '../auth/session.service';
 import {
   AvailablePromoQueryDto,
@@ -41,11 +43,14 @@ import { PromoQuoteService } from './promo-quote.service';
  */
 @ApiTags('public-promo-codes')
 @Controller('public/promo-codes')
+// Mã khuyến mãi áp cho người ĐẶT XE — tức khách (ADR 0046 · ADR 0053).
+@Realms(ACCOUNT_REALM.CUSTOMER)
 export class PublicPromoCodesController {
   constructor(
     private readonly promos: PromoQuoteService,
     private readonly sessions: SessionService,
     private readonly nativeSessions: NativeSessionService,
+    private readonly realms: RequestRealmService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -86,6 +91,15 @@ export class PublicPromoCodesController {
 
   /** Danh tính NẾU có phiên — `null` với khách chưa đăng nhập, không phải một lỗi. */
   private userId(req: Request): Promise<string | null> {
-    return resolveOptionalUserId(req, this.sessions, this.prisma, this.nativeSessions);
+    return resolveOptionalUserId(
+      req,
+      {
+        sessions: this.sessions,
+        prisma: this.prisma,
+        realms: this.realms,
+        nativeSessions: this.nativeSessions,
+      },
+      ACCOUNT_REALM.CUSTOMER,
+    );
   }
 }

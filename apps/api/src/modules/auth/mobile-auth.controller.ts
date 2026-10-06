@@ -7,10 +7,14 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { MOBILE_CLIENT_APP, type MobileClientApp } from '@xeprime/types';
-import { Public, VerifiesCredentials } from '../../common/decorators';
+import {
+  ACCOUNT_REALM,
+  MOBILE_CLIENT_APP,
+  realmForClientApp,
+  type MobileClientApp,
+} from '@xeprime/types';
+import { Public, Realms, VerifiesCredentials } from '../../common/decorators';
 import { AuthService } from './auth.service';
-import { assertMobileAppAccess, assertMobileAppCanCreateAccount } from './mobile-app-access';
 import { NativeAuthCodeService } from './social/native-auth-code.service';
 import {
   NativeSessionService,
@@ -41,6 +45,9 @@ import {
  */
 @ApiTags('auth')
 @Controller('auth/mobile')
+// Hai app mobile ↔ hai realm (ADR 0053): app XePrime ↔ customer, app Partner ↔ partner. Không app
+// nào phục vụ realm platform.
+@Realms(ACCOUNT_REALM.CUSTOMER, ACCOUNT_REALM.PARTNER)
 export class MobileAuthController {
   constructor(
     private readonly auth: AuthService,
@@ -62,7 +69,11 @@ export class MobileAuthController {
   @ApiOperation({ summary: 'Native: đăng nhập bằng email/SĐT + mật khẩu' })
   @ApiOkResponse({ type: MobileSessionDto })
   async login(@Body() dto: MobileLoginDto): Promise<MobileSessionDto> {
-    const { userId } = await this.auth.loginWithPassword(dto.identifier, dto.password);
+    const { userId } = await this.auth.loginWithPassword(
+      dto.identifier,
+      dto.password,
+      realmForClientApp(dto.clientApp),
+    );
     return this.buildSession(userId, dto.device, dto.clientApp);
   }
 
@@ -88,12 +99,9 @@ export class MobileAuthController {
   @ApiOperation({ summary: 'Native: đăng ký bằng số điện thoại + mật khẩu' })
   @ApiCreatedResponse({ type: MobileSessionDto })
   async register(@Body() dto: MobileRegisterDto): Promise<MobileSessionDto> {
-    // TRƯỚC `register`, không phải sau: tài khoản mới tinh chắc chắn không qua được cổng
-    // phạm vi app, và để nó tạo user rồi mới 403 là chiếm mất số điện thoại của chính người
-    // dùng đó. XePrime Partner không có màn đăng ký; hồ sơ gian hàng mở từ app XePrime.
-    assertMobileAppCanCreateAccount(dto.clientApp);
-
-    const { userId } = await this.auth.register(dto);
+    // App nào đăng ký thì tài khoản thuộc realm của app đó (ADR 0053): XePrime Partner tạo tài
+    // khoản ĐỐI TÁC — chủ xe cá nhân lẫn gian hàng — rồi chọn tuyến ở bước onboarding như web.
+    const { userId } = await this.auth.register(dto, realmForClientApp(dto.clientApp));
     return this.buildSession(userId, dto.device, dto.clientApp);
   }
 
@@ -114,7 +122,9 @@ export class MobileAuthController {
   @Post('social/exchange')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  @ApiOperation({ summary: 'Native: đổi one-time code của social login lấy access + refresh token' })
+  @ApiOperation({
+    summary: 'Native: đổi one-time code của social login lấy access + refresh token',
+  })
   @ApiOkResponse({ type: MobileSessionDto })
   async exchangeSocialCode(@Body() dto: MobileSocialExchangeDto): Promise<MobileSessionDto> {
     // `consume` đối chiếu `clientApp` với app đã khởi tạo luồng (suy từ `redirect_uri` lúc
@@ -164,10 +174,11 @@ export class MobileAuthController {
     clientApp: MobileClientApp | undefined,
   ): Promise<MobileSessionDto> {
     // `me()` đọc quyền + tenant scope từ DB. Chúng đi trong BODY, không trong token (ADR 0017 §1).
-    // Đọc TRƯỚC khi phát phiên: một lượt đăng nhập bị chặn phạm vi app (403
-    // `PARTNER_ACCESS_REQUIRED`) không được để lại phiên sống nào trong `native_auth_sessions`.
+    //
+    // Không còn cổng "tài khoản này thuộc app nào": tài khoản đã được tra TRONG realm của app
+    // (`realmForClientApp`) ở mọi đường gọi tới đây, nên app Partner chỉ thấy tài khoản đối tác —
+    // chủ xe tuyến hoa hồng lẫn gian hàng tuyến gói — và app XePrime chỉ thấy tài khoản khách.
     const user = await this.auth.me(userId);
-    assertMobileAppAccess(user, clientApp);
 
     const pair = await this.nativeSessions.issueSession(
       userId,

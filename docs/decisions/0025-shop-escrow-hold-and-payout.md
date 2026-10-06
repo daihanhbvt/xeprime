@@ -14,10 +14,10 @@ Ngày: 29/08/2026 · Trạng thái: **Partially superseded bởi [ADR 0028](0028
 
 ## Bối cảnh
 
-[ADR 0021](0021-booking-hold-is-the-commission.md) mua được một sự đơn giản lớn bằng một mẹo:
+ADR 0021 mua được một sự đơn giản lớn bằng một mẹo:
 khoản giữ chỗ **đúng bằng** hoa hồng, nên nền tảng giữ luôn và **không bao giờ phải chuyển trả cho
 ai**. Không escrow, không payout, không nghĩa vụ trung gian thanh toán — đúng lý do gốc của
-[ADR 0013](0013-no-online-payment-mvp.md).
+ADR 0013.
 
 Mẹo đó chỉ chạy được ở tuyến hoa hồng. Gian hàng tuyến gói trả **0% trên chuyến**, nên bất kỳ đồng
 nào khách chuyển cho nền tảng thay mặt họ đều là **tiền của người khác**.
@@ -44,7 +44,7 @@ quyết định đó **cùng toàn bộ cái giá của nó**, để người đ
 
    | `purpose` | Tiền của ai | Nền tảng có được giữ không |
    | --- | --- | --- |
-   | `commission` | **Của nền tảng** — chính là phí dịch vụ ([ADR 0021](0021-booking-hold-is-the-commission.md)) | Có, khi chuyến hoàn thành |
+   | `commission` | **Của nền tảng** — chính là phí dịch vụ (ADR 0021) | Có, khi chuyến hoàn thành |
    | `escrow` | **Của gian hàng** — nền tảng chỉ giữ hộ | **Không bao giờ** |
 
    Suy `purpose` từ `billing_mode` lúc đọc là sai: chế độ thu phí của tenant đổi được, còn mục đích
@@ -72,7 +72,7 @@ quyết định đó **cùng toàn bộ cái giá của nó**, để người đ
    `kept` chỉ dùng cho `purpose = commission`. Một escrow mang `kept` là một lỗi kế toán, không
    phải một trạng thái — ràng buộc `CHECK` ở migration, không phải quy ước trong code.
 
-5. **Ví đổi vai.** [ADR 0023 điều 1–2](0023-wallet-refund-and-compensation.md) nói ví *"chỉ chứa
+5. **Ví đổi vai.** ADR 0023 điều 1–2 nói ví *"chỉ chứa
    tiền hoàn và bồi thường"* và *"không phải escrow"*. **Câu đó nay sai** cho tuyến gói: ví gian
    hàng nay là **sổ công nợ phải trả** của nền tảng, phát sinh trên **mỗi chuyến** có bật escrow,
    không phải thỉnh thoảng khi có huỷ.
@@ -80,7 +80,7 @@ quyết định đó **cùng toàn bộ cái giá của nó**, để người đ
    Hệ quả trực tiếp: **rút tiền là luồng thường xuyên**, không phải ngoại lệ. Nó phải có cam kết
    thời gian, có hàng đợi, có người trực — xem điều 7.
 
-6. **Đối chiếu phải TÁCH quỹ, không chỉ so tổng.** [ADR 0023](0023-wallet-refund-and-compensation.md)
+6. **Đối chiếu phải TÁCH quỹ, không chỉ so tổng.** ADR 0023
    đề một phép đối chiếu "tổng số dư mọi ví ≤ số dư ngân hàng". Nay **chưa đủ**. Bắt buộc trả lời
    được, mỗi ngày, ba con số tách nhau:
 
@@ -114,8 +114,8 @@ quyết định đó **cùng toàn bộ cái giá của nó**, để người đ
 
 ## Cái giá — ghi ra để không ai quên
 
-- **Nền tảng nay giữ tiền của người khác.** Đây là điều [ADR 0013](0013-no-online-payment-mvp.md)
-  dựng ra để tránh, và [ADR 0021](0021-booking-hold-is-the-commission.md) đã lách được ở tuyến A.
+- **Nền tảng nay giữ tiền của người khác.** Đây là điều ADR 0013
+  dựng ra để tránh, và ADR 0021 đã lách được ở tuyến A.
   Ở tuyến B thì không lách được nữa. Cần rà soát nghĩa vụ pháp lý của trung gian thanh toán trước
   khi bật tính năng này cho khách thật — **đây là việc ngoài code và phải xong trước W6**.
 - **Đối soát thành hai chiều.** Chiều vào đã có SePay; chiều ra là admin chuyển tay, và mỗi lệnh
@@ -133,7 +133,7 @@ quyết định đó **cùng toàn bộ cái giá của nó**, để người đ
 2. **`purpose` là cột, không phải suy luận.** Không hàm nào được viết
    `mode === 'package' ? 'escrow' : 'commission'` khi đọc một hold đã tồn tại.
 3. **Escrow không bao giờ đi vào `payments` hay `booking.paid_amount`** — cùng lý do
-   [ADR 0021 điều 4](0021-booking-hold-is-the-commission.md): nó chưa phải tiền gian hàng đã thu,
+   ADR 0021 điều 4: nó chưa phải tiền gian hàng đã thu,
    nó là tiền nền tảng đang nợ họ. Nó thành thu nhập của shop **khi rút xong**, không sớm hơn.
 4. **Bật/tắt escrow không đụng tới đơn đã tạo.** Shop tắt tính năng giữa chừng: hold đang mở vẫn
    đi hết vòng đời của nó.

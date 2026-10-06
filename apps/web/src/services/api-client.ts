@@ -15,8 +15,8 @@ import { recoverSupportReason } from './support-reason';
  * Toàn bộ phần chạy đã chuyển sang package dùng chung để app native dùng lại được cùng một
  * client (`docs/mobile-readiness-audit.md` §14.1). File này giữ lại đúng ba việc mà chỉ web có:
  *
- *  1. đọc `NEXT_PUBLIC_API_URL` — biến này chỉ tồn tại trong bundle Next, package dùng chung
- *     không được biết tới nó;
+ *  1. chọn gốc API — `/api` CÙNG ORIGIN với site đang mở (ADR 0051 điều 4: Caddy chuyển
+ *     `<site>/api/*` về NestJS và gắn realm theo host); package dùng chung không được đọc env;
  *  2. cắm web transport — ADR 0002: session là httpOnly cookie, nên `credentials: 'include'`;
  *     cộng header phiên hỗ trợ gian hàng khi trang đang mở là một phiên (ADR 0050);
  *  3. `getErrorMessage` (xem docblock của nó ở dưới).
@@ -24,7 +24,23 @@ import { recoverSupportReason } from './support-reason';
  * 143 chỗ `import … from '@/services/api-client'` không phải sửa: mọi ký hiệu cũ vẫn xuất ra từ
  * đây với đúng chữ ký cũ.
  */
-const DEFAULT_API_URL = 'http://localhost:4000';
+/**
+ * Gốc API của TRÌNH DUYỆT: `/api` cùng origin — một image chạy được trên mọi host, mọi request mang
+ * cookie host-only của đúng site, không còn CORS cho web. Máy dev: `proxy.ts` chuyển `/api/*` sang
+ * API local và gắn realm theo khu của trang.
+ */
+const BROWSER_API_URL = process.env.NEXT_PUBLIC_API_URL?.trim() || '/api';
+
+/**
+ * Gốc API cho fetch PHÍA SERVER (các trang công khai cần SEO: chi tiết xe, gian hàng, banner, danh
+ * mục). `/api` không có origin trên server, nên dùng `API_INTERNAL_URL` (compose: `http://api:4000`)
+ * — chỉ endpoint CÔNG KHAI, không cookie, không phiên. Nếu `NEXT_PUBLIC_API_URL` đã là URL tuyệt
+ * đối (vd proxy staging `/api/stg` khai đủ origin) thì dùng luôn.
+ */
+function serverApiUrl(): string {
+  if (/^https?:\/\//.test(BROWSER_API_URL)) return BROWSER_API_URL;
+  return process.env.API_INTERNAL_URL?.trim() || 'http://localhost:4000';
+}
 
 /**
  * Cookie phiên như mọi request web (ADR 0002), cộng header `x-support-context` khi tab đang ở
@@ -63,7 +79,7 @@ export function supportAwareWebTransport(
  * hàm gọi đầu tiên) là mở ra một trạng thái "chưa cấu hình" mà không có gì bắt buộc phải đi qua.
  */
 configureApiClient({
-  baseUrl: process.env.NEXT_PUBLIC_API_URL ?? DEFAULT_API_URL,
+  baseUrl: typeof window === 'undefined' ? serverApiUrl() : BROWSER_API_URL,
   transport: supportAwareWebTransport(),
   // Phiên hỗ trợ: thao tác cần LÝ DO RIÊNG (428) → hỏi rồi gửi lại một lần (ADR 0050 §13).
   recover: recoverSupportReason,

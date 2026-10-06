@@ -1,54 +1,27 @@
 /**
  * Gian hàng demo — bản khai KHAI BÁO, không có logic.
  *
- * Hai NHÓM, và chúng phục vụ hai mục đích khác nhau:
+ * Bộ demo gọn (05/10/2026): mỗi loại tài khoản khoảng BA bản, đủ để mở mọi màn hình với dữ liệu
+ * thật mà không chìm trong dữ liệu mẫu.
  *
- * ## Nhóm DEMO (5 gian hàng)
+ * ## Gian hàng tuyến GÓI (3) — mỗi bậc gói một gian hàng (ADR 0041)
  *
- * Khác nhau về QUY MÔ chứ không chỉ khác tên: 40 xe/4 chi nhánh, 10 xe/2 chi nhánh, 3 xe, 1
- * xe, và một gian hàng chưa xác minh. Để mọi màn hình có ít nhất một trường hợp thật để mở ra
- * xem — danh sách dài phải phân trang, danh sách một dòng phải không vỡ layout, gian hàng chưa
- * duyệt phải không rò xe nào ra chợ. Chúng có đơn, sổ khách, thu chi, đánh giá.
- *
- * ## Nhóm QA (2 gian hàng, tiền tố `qa-`)
- *
- * HAI tài khoản chuẩn để kiểm chứng RANH GIỚI HAI TUYẾN (ADR 0038), không phải để xem giao
- * diện đông dữ liệu:
- *
- * | Tài khoản | Tuyến | Đội xe | Khu làm việc |
+ * | Gian hàng | Đội xe | Bậc | Ghi chú |
  * | --- | --- | --- | --- |
- * | `qa.owner@xeprime.test` | hoa hồng (`free`) | đúng 3 xe (2 ô tô + 1 xe máy) | `/account` — Owner Lite |
- * | `qa.shop@xeprime.test` | gói (`per-vehicle`) | đúng 10 xe (8 ô tô + 2 xe máy) | `/manage` |
+ * | `owner.saigon@` | 12 xe · 2 chi nhánh | Chuyên nghiệp | 3 nhân viên (quản lý · nhân viên · người xem), đủ dữ liệu vận hành |
+ * | `owner.hanoi@` | 5 xe · 2 chi nhánh | Nâng cao | đơn, khách, thu chi |
+ * | `owner.danang@` | 2 xe · 1 chi nhánh | Cơ bản | vài đơn |
  *
- * Cả hai ở `depth: minimal` — **có xe, không có đơn**. Đó là cả điểm: một tài khoản QA lẫn 30
- * đơn demo thì mọi phép đếm trên màn hình đều phải trừ đi phần demo trước khi tin được, và
- * câu hỏi cần trả lời ở đây là 'chiếc xe thứ 4 có bị từ chối không', không phải 'sổ đơn trông
- * thế nào'. Hai gian hàng demo sâu ở trên vẫn còn nguyên cho câu hỏi kia.
+ * ## Chủ xe CÁ NHÂN tuyến hoa hồng (3) — khai ở `commission-owners.ts`
  *
- * ## Nhóm CHỦ XE CÁ NHÂN (20 tài khoản, tuyến hoa hồng)
- *
- * Khai ở `commission-owners.ts` và nối vào `SHOP_SPECS` ở cuối file này. Mỗi người 1–3 xe, rải
- * trên 15 tỉnh — để chợ xe có mật độ thật ngoài bốn thành phố lớn, và để mặt tiền CÁ NHÂN
- * (avatar tài khoản thay logo, không dấu tick) có đủ mẫu để nhìn. Xem file đó để biết vì sao
- * nhóm này sinh từ bảng compact thay vì viết tay như hai nhóm trên.
- *
- * Đội xe QA cố ý TRỘN ô tô với xe máy: trần Owner Lite là 3 xe TỔNG
- * (`OWNER_LITE_VEHICLE_LIMIT`), không phải 3 mỗi loại, và một fixture toàn ô tô sẽ pass cả hai
- * cách hiểu. Tương tự, gian hàng QA mua đúng 8 chỗ ô tô + 2 chỗ xe máy chứ không mua một gói
- * 'không giới hạn' — số chỗ đã mua CHÍNH LÀ hạn mức (ADR 0015 điều 1), và một trần vô hạn
- * không kiểm chứng được gì.
+ * 1 xe · 2 xe · 3 xe (trần Owner Lite là 3 xe TỔNG ô tô + xe máy — `OWNER_LITE_VEHICLE_LIMIT`).
+ * Nối vào `SHOP_SPECS` ở cuối file.
  *
  * Chi tiết dựng dữ liệu nằm ở `shop.ts`; file này chỉ mô tả "gian hàng đó là gì".
  */
-import {
-  BRANCH_STATUS,
-  DEFAULT_COMMISSION_PLAN_CODE,
-  SHOP_PLAN_CODE,
-  TENANT_STATUS,
-  TENANT_ROLE,
-} from '@xeprime/types';
+import { SHOP_PLAN_CODE, TENANT_STATUS, TENANT_ROLE } from '@xeprime/types';
 import { COMMISSION_OWNER_SPECS } from './commission-owners';
-import { photo, portrait } from './context';
+import { photo } from './context';
 
 export interface BranchSpec {
   code: string;
@@ -176,14 +149,9 @@ const SHOP_COVER = {
   road: photo('1469854523086-cc02fe5d8800'),
 } as const;
 
-/**
- * Bảy gian hàng viết TAY — năm gian hàng demo và hai tài khoản QA hai tuyến.
- *
- * Nhóm thứ ba (20 chủ xe cá nhân tuyến hoa hồng) sinh từ bản khai compact ở
- * `commission-owners.ts` và được nối vào `SHOP_SPECS` ở cuối file.
- */
+/** Ba gian hàng tuyến gói viết TAY — mỗi bậc gói một gian hàng. */
 const HANDWRITTEN_SHOPS: readonly ShopSpec[] = [
-  // ── 1. Gian hàng lớn: 40 xe, 4 chi nhánh ở bốn thành phố lớn ─────────────
+  // ── 1. Gian hàng lớn: 12 xe, 2 chi nhánh — bậc Chuyên nghiệp ────────────
   {
     key: 'saigon',
     code: 'SG-PRIME',
@@ -218,7 +186,7 @@ const HANDWRITTEN_SHOPS: readonly ShopSpec[] = [
     ],
     profile: {
       bio:
-        'Đội xe hơn 40 chiếc từ hạng A tới 16 chỗ, có mặt ở TP.HCM, Hà Nội, Đà Nẵng và Cần Thơ. ' +
+        'Đội xe 12 chiếc từ hạng A tới 7 chỗ, có mặt ở TP.HCM và Hà Nội. ' +
         'Nhận thuê tự lái, thuê kèm tài xế và thuê dài hạn theo tháng. Giao xe tận nơi nội thành.',
       address: '123 Nguyễn Văn Cừ, Quận 5, TP. Hồ Chí Minh',
       coverUrl: SHOP_COVER.fleet,
@@ -254,73 +222,30 @@ const HANDWRITTEN_SHOPS: readonly ShopSpec[] = [
         latitude: 21.0313,
         longitude: 105.7873,
       },
-      {
-        code: 'CN03',
-        name: 'Chi nhánh Hải Châu',
-        provinceCode: '48',
-        address: '215 Nguyễn Văn Linh, Hải Châu, Đà Nẵng',
-        wardCode: '20242',
-        addressLine: '215 Nguyễn Văn Linh',
-        phone: '02363001234',
-        latitude: 16.0605,
-        longitude: 108.2145,
-      },
-      {
-        code: 'CN04',
-        name: 'Chi nhánh Ninh Kiều',
-        provinceCode: '92',
-        address: '45 đường 30/4, Ninh Kiều, Cần Thơ',
-        wardCode: '31135',
-        addressLine: '45 đường 30/4',
-        phone: '02923001234',
-        latitude: 10.0299,
-        longitude: 105.77,
-      },
     ],
     fleet: [
       { model: 'toyota-vios', count: 1 },
-      { model: 'honda-city', count: 2 },
-      { model: 'hyundai-accent', count: 2 },
-      { model: 'kia-morning', count: 1 },
-      { model: 'hyundai-i10', count: 1 },
-      { model: 'vinfast-fadil', count: 1 },
-      { model: 'kia-k3', count: 2 },
-      { model: 'mazda-3', count: 1 },
-      { model: 'toyota-camry', count: 2 },
+      { model: 'honda-city', count: 1 },
+      { model: 'hyundai-accent', count: 1 },
+      { model: 'kia-k3', count: 1 },
+      { model: 'toyota-camry', count: 1 },
       { model: 'mercedes-c200', count: 1 },
       { model: 'kia-seltos', count: 1 },
-      { model: 'hyundai-creta', count: 1 },
-      { model: 'mitsubishi-xforce', count: 1 },
-      { model: 'toyota-corolla-cross-hev', count: 1 },
-      { model: 'vinfast-vf5', count: 1 },
       { model: 'vinfast-vf8', count: 1 },
-      { model: 'toyota-fortuner', count: 2 },
-      { model: 'ford-everest', count: 1 },
-      { model: 'hyundai-santafe', count: 1 },
-      { model: 'mitsubishi-xpander', count: 2 },
-      { model: 'toyota-innova', count: 2 },
-      { model: 'toyota-veloz', count: 1 },
+      { model: 'toyota-fortuner', count: 1 },
+      { model: 'mitsubishi-xpander', count: 1 },
       { model: 'kia-carnival', count: 1 },
-      { model: 'ford-ranger', count: 1 },
-      { model: 'ford-transit', count: 1 },
-      { model: 'hyundai-solati', count: 1 },
-      { model: 'suzuki-blind-van', count: 1 },
-      { model: 'suzuki-carry-pro', count: 1 },
-      { model: 'honda-vision', count: 1 },
-      { model: 'honda-airblade', count: 1 },
       { model: 'honda-sh', count: 1 },
-      { model: 'yamaha-exciter', count: 1 },
-      { model: 'vinfast-klara', count: 1 },
     ],
-    // 40 xe + 4 chi nhánh: chỉ bậc không giới hạn chứa nổi (ADR 0041 điều 7).
+    // 12 xe vượt trần 10 xe của bậc nâng cao ⇒ chỉ bậc không giới hạn chứa nổi (ADR 0041 điều 7).
     planCode: SHOP_PLAN_CODE.PRO,
     depth: 'full',
-    driverCount: 4,
-    customerCount: 12,
-    unapprovedEvery: 9,
+    driverCount: 2,
+    customerCount: 8,
+    unapprovedEvery: 6,
   },
 
-  // ── 2. Gian hàng vừa: 10 xe, 2 chi nhánh ─────────────────────────────────
+  // ── 2. Gian hàng vừa: 5 xe, 2 chi nhánh — bậc Nâng cao ──────────────────
   {
     key: 'hanoi',
     code: 'HN-VIET',
@@ -333,14 +258,7 @@ const HANDWRITTEN_SHOPS: readonly ShopSpec[] = [
       displayName: 'Phạm Đức Việt',
       phone: '0903000001',
     },
-    staff: [
-      {
-        roleKey: TENANT_ROLE.SHOP_STAFF,
-        email: 'staff.hanoi@xeprime.test',
-        displayName: 'Hoàng Minh Quân',
-        phone: '0903000011',
-      },
-    ],
+    staff: [],
     profile: {
       bio:
         'Cho thuê xe tự lái và thuê tháng tại Hà Nội, Hải Phòng. Xe đời mới, bảo dưỡng đúng hạn, ' +
@@ -383,24 +301,19 @@ const HANDWRITTEN_SHOPS: readonly ShopSpec[] = [
     fleet: [
       { model: 'toyota-vios', count: 1 },
       { model: 'honda-city', count: 1 },
-      { model: 'kia-morning', count: 1 },
       { model: 'kia-seltos', count: 1 },
-      { model: 'hyundai-creta', count: 1 },
       { model: 'mitsubishi-xpander', count: 1 },
-      { model: 'toyota-innova', count: 1 },
-      { model: 'vinfast-vf5', count: 1 },
       { model: 'honda-vision', count: 1 },
-      { model: 'honda-airblade', count: 1 },
     ],
-    // 10 xe / 2 chi nhánh — vừa khít bậc nâng cao (10 xe / 3 chi nhánh).
+    // 5 xe / 2 chi nhánh — vượt trần 3 xe của bậc cơ bản, nằm gọn trong bậc nâng cao (10 / 3).
     planCode: SHOP_PLAN_CODE.ADVANCED,
     depth: 'medium',
-    driverCount: 2,
-    customerCount: 6,
-    unapprovedEvery: 7,
+    driverCount: 1,
+    customerCount: 5,
+    unapprovedEvery: 0,
   },
 
-  // ── 3. Gian hàng nhỏ: 3 xe ───────────────────────────────────────────────
+  // ── 3. Gian hàng nhỏ: 2 xe — bậc Cơ bản ─────────────────────────────────
   {
     key: 'danang',
     code: 'DN-MINI',
@@ -415,7 +328,7 @@ const HANDWRITTEN_SHOPS: readonly ShopSpec[] = [
     },
     staff: [],
     profile: {
-      bio: 'Ba chiếc xe nhà, chủ tự giao nhận tại Đà Nẵng. Ưu tiên khách thuê theo ngày và cuối tuần.',
+      bio: 'Hai chiếc xe nhà, chủ tự giao nhận tại Đà Nẵng. Ưu tiên khách thuê theo ngày và cuối tuần.',
       address: '30 Nguyễn Chí Thanh, Hải Châu, Đà Nẵng',
       coverUrl: SHOP_COVER.road,
       taxCode: null,
@@ -442,247 +355,20 @@ const HANDWRITTEN_SHOPS: readonly ShopSpec[] = [
     ],
     fleet: [
       { model: 'hyundai-i10', count: 1 },
-      { model: 'mazda-3', count: 1 },
       { model: 'honda-sh', count: 1 },
     ],
-    // 3 xe / 1 chi nhánh — vừa khít bậc cơ bản.
+    // 2 xe / 1 chi nhánh — trong trần bậc cơ bản (3 xe / 1 chi nhánh).
     planCode: SHOP_PLAN_CODE.BASIC,
     depth: 'light',
     driverCount: 0,
     customerCount: 3,
     unapprovedEvery: 0,
   },
-
-  // ── 4. Gian hàng một xe, hồ sơ CHƯA ĐẦY ĐỦ ───────────────────────────────
-  {
-    key: 'cantho',
-    code: 'CT-SOLO',
-    slug: 'xe-nha-can-tho',
-    name: 'Xe Nhà Cần Thơ',
-    tenantType: 'individual',
-    status: TENANT_STATUS.ACTIVE,
-    owner: {
-      email: 'owner.cantho@xeprime.test',
-      displayName: 'Huỳnh Văn Tài',
-      phone: '0905000001',
-      avatarUrl: portrait('1500648767791-00dcc994a43e'),
-    },
-    staff: [],
-    // Cố ý thiếu tài khoản ngân hàng và giấy phép: mọi màn "hồ sơ chưa đủ", mọi cảnh báo bổ
-    // sung thông tin đều cần một gian hàng THẬT ở trạng thái đó để mở ra xem.
-    profile: {
-      bio: 'Xe gia đình cho thuê lúc rảnh. Liên hệ trước một ngày để sắp lịch.',
-      address: 'Ninh Kiều, Cần Thơ',
-      taxCode: null,
-      businessLicenseNo: null,
-      bank: null,
-    },
-    branches: [
-      {
-        code: 'CN01',
-        name: 'Cần Thơ',
-        provinceCode: '92',
-        address: 'Ninh Kiều, Cần Thơ',
-        wardCode: '31135',
-        addressLine: '',
-        phone: '0905000001',
-        latitude: 10.034,
-        longitude: 105.783,
-        isDefault: true,
-      },
-    ],
-    fleet: [{ model: 'toyota-vios', count: 1 }],
-    planCode: DEFAULT_COMMISSION_PLAN_CODE,
-    depth: 'minimal',
-    driverCount: 0,
-    customerCount: 0,
-    unapprovedEvery: 0,
-  },
-
-  /*
-   * ── 5. Gian hàng mới mở, CHƯA XÁC MINH, chưa có xe ────────────────────────
-   *
-   * ADR 0036: gian hàng mở ra là ĐANG HOẠT ĐỘNG ngay — họ đăng xe được luôn, chỉ chưa có xe nào.
-   * Cái còn nằm trong hàng đợi duyệt là hồ sơ XÁC MINH (điều kiện để mua gói), nên màn duyệt của
-   * nền tảng vẫn có một phiếu gian hàng thật để demo.
-   */
-  {
-    key: 'hue',
-    code: 'HUE-NEW',
-    slug: 'hue-rental-moi',
-    name: 'Huế Rental',
-    tenantType: 'individual',
-    status: TENANT_STATUS.ACTIVE,
-    verificationPending: true,
-    owner: {
-      email: 'owner.hue@xeprime.test',
-      displayName: 'Nguyễn Thị Lan',
-      phone: '0906000001',
-      avatarUrl: portrait('1494790108377-be9c29b29330'),
-    },
-    staff: [],
-    profile: {
-      bio: 'Gian hàng mới mở tại Huế, hồ sơ đang chờ xác minh.',
-      address: '5 Lê Lợi, TP. Huế',
-      taxCode: null,
-      businessLicenseNo: null,
-      bank: null,
-    },
-    branches: [
-      {
-        code: 'CN01',
-        name: 'Huế',
-        provinceCode: '46',
-        address: '5 Lê Lợi, TP. Huế',
-        wardCode: '19789',
-        addressLine: '5 Lê Lợi',
-        phone: '0906000001',
-        latitude: 16.464,
-        longitude: 107.593,
-        isDefault: true,
-        status: BRANCH_STATUS.ACTIVE,
-      },
-    ],
-    fleet: [],
-    // `free` chứ không phải null: từ ADR 0015 điều 9, `registerShop` gán gói mặc định NGAY lúc
-    // mở gian hàng, nên "gian hàng không có gói" là trạng thái không còn tồn tại trong dữ liệu
-    // thật. Giữ null ở đây là dựng một ca test cho một thế giới đã biến mất — và che mất việc
-    // gian hàng chưa duyệt VẪN có gói (gói không phụ thuộc duyệt).
-    planCode: DEFAULT_COMMISSION_PLAN_CODE,
-    depth: 'none',
-    driverCount: 0,
-    customerCount: 0,
-    unapprovedEvery: 0,
-  },
-  /*
-   * ── QA 1. Chủ xe cá nhân, TUYẾN HOA HỒNG, đúng 3 xe ──────────────────────
-   *
-   * Fixture RIÊNG thay vì sửa một gian hàng demo có sẵn. Cần-Thơ là tuyến hoa hồng nhưng chỉ
-   * có 1 xe (không chạm được trần), còn Đà-Nẵng có đúng 3 xe nhưng đang ở tuyến GÓI và đã có
-   * đơn + phiếu thu chi — kéo nó về hoa hồng để lấy con số 3 là đổi tuyến của một tenant đã có
-   * tiền chạy qua, tức là làm hỏng chính thứ dữ liệu demo đó tồn tại để kiểm.
-   *
-   * 2 ô tô + 1 xe máy = chạm đúng trần. Chiếc thứ 4 (loại nào cũng vậy) phải bị
-   * `PLAN_LIMIT_REACHED` từ chối.
-   */
-  {
-    key: 'qaOwner',
-    code: 'QA-OWNER',
-    slug: 'qa-chu-xe-hoa-hong',
-    name: 'QA · Chủ xe cá nhân',
-    tenantType: 'individual',
-    status: TENANT_STATUS.ACTIVE,
-    owner: {
-      email: 'qa.owner@xeprime.test',
-      displayName: 'QA Chủ xe cá nhân',
-      phone: '0908000001',
-      avatarUrl: portrait('1506794778202-cad84cf45f1d'),
-    },
-    staff: [],
-    profile: {
-      bio: 'Tài khoản kiểm thử: chủ xe cá nhân tuyến hoa hồng, đúng 3 xe, làm việc ở khu tài khoản.',
-      address: 'Cầu Giấy, Hà Nội',
-      taxCode: null,
-      businessLicenseNo: null,
-      bank: null,
-    },
-    branches: [
-      {
-        code: 'CN01',
-        name: 'Hà Nội',
-        provinceCode: '01',
-        address: 'Cầu Giấy, Hà Nội',
-        wardCode: '00166',
-        addressLine: '',
-        phone: '0908000001',
-        latitude: 21.0333,
-        longitude: 105.79,
-        isDefault: true,
-      },
-    ],
-    fleet: [
-      { model: 'toyota-vios', count: 1 },
-      { model: 'kia-morning', count: 1 },
-      { model: 'honda-vision', count: 1 },
-    ],
-    planCode: DEFAULT_COMMISSION_PLAN_CODE,
-    depth: 'minimal',
-    driverCount: 0,
-    customerCount: 0,
-    unapprovedEvery: 0,
-  },
-
-  /*
-   * ── QA 2. Gian hàng TUYẾN GÓI, đúng 10 xe / 10 chỗ ───────────────────────
-   *
-   * Bậc NÂNG CAO có trần đúng 10 xe (ADR 0041 điều 1) — KHÔNG phải một gói 'không giới hạn'.
-   * Fixture này vì thế kiểm được cả hai chiều: 10 xe hiện có đều hợp lệ, và chiếc thứ 11 bị từ
-   * chối. Trần là TỔNG hai loại, nên chiếc thứ 11 bị chặn dù nó là ô tô hay xe máy.
-   */
-  {
-    key: 'qaShop',
-    code: 'QA-SHOP',
-    slug: 'qa-gian-hang-goi',
-    name: 'QA · Gian hàng gói',
-    tenantType: 'business',
-    status: TENANT_STATUS.ACTIVE,
-    owner: {
-      email: 'qa.shop@xeprime.test',
-      displayName: 'QA Chủ gian hàng',
-      phone: '0908000002',
-    },
-    staff: [],
-    profile: {
-      bio: 'Tài khoản kiểm thử: gian hàng thuê bao theo chỗ, đúng 10 xe, làm việc ở cổng quản lý.',
-      address: 'Quận 1, TP. Hồ Chí Minh',
-      coverUrl: SHOP_COVER.fleet,
-      taxCode: '0316999888',
-      businessLicenseNo: '41C8999888',
-      bank: {
-        name: 'Vietcombank',
-        accountNo: '0071000999888',
-        accountName: 'CONG TY TNHH QA GIAN HANG',
-      },
-    },
-    branches: [
-      {
-        code: 'CN01',
-        name: 'Quận 1',
-        provinceCode: '79',
-        address: 'Quận 1, TP. Hồ Chí Minh',
-        wardCode: '26740',
-        addressLine: '12 Nguyễn Huệ',
-        phone: '0908000002',
-        latitude: 10.7743,
-        longitude: 106.7038,
-        isDefault: true,
-      },
-    ],
-    fleet: [
-      { model: 'toyota-vios', count: 1 },
-      { model: 'honda-city', count: 1 },
-      { model: 'hyundai-accent', count: 1 },
-      { model: 'kia-morning', count: 1 },
-      { model: 'kia-seltos', count: 1 },
-      { model: 'hyundai-creta', count: 1 },
-      { model: 'mitsubishi-xpander', count: 1 },
-      { model: 'toyota-innova', count: 1 },
-      { model: 'honda-vision', count: 1 },
-      { model: 'honda-airblade', count: 1 },
-    ],
-    planCode: SHOP_PLAN_CODE.ADVANCED,
-    depth: 'minimal',
-    driverCount: 0,
-    customerCount: 0,
-    unapprovedEvery: 0,
-  },
 ];
 
 /**
- * Mọi gian hàng của seed demo: bảy bản viết tay ở trên + hai mươi chủ xe cá nhân tuyến hoa hồng.
- *
- * Thứ tự có ý nghĩa với người đọc log chứ không với dữ liệu: gian hàng lớn trước, tài khoản QA
- * giữa, đám chủ xe cá nhân sau — đọc từ trên xuống là đi từ "nhiều dữ liệu nhất" tới "ít nhất".
+ * Mọi gian hàng của seed demo: ba gian hàng tuyến gói ở trên + ba chủ xe cá nhân tuyến hoa hồng.
+ * Thứ tự chỉ có ý nghĩa với người đọc log: nhiều dữ liệu nhất trước.
  */
 export const SHOP_SPECS: readonly ShopSpec[] = [...HANDWRITTEN_SHOPS, ...COMMISSION_OWNER_SPECS];
 

@@ -20,7 +20,7 @@ Ngày: 29/08/2026 · Trạng thái: **Partially superseded bởi [ADR 0038](0038
 
 ## Bối cảnh
 
-[ADR 0020](0020-two-revenue-tracks-one-marketplace.md) đến [ADR 0026](0026-first-trips-free-then-commission.md)
+[ADR 0020](0020-two-revenue-tracks-one-marketplace.md) đến ADR 0026
 mô tả hai tuyến **chỉ khác nhau ở tiền**: chưa mua gói thì trả 10–15% mỗi chuyến, mua gói thì trả
 cước cố định. Nhìn như vậy thì việc nâng cấp là một bài toán số học thuần: xe chạy quá ~1,3
 ngày/tháng là nên mua gói.
@@ -102,7 +102,7 @@ quyết định lấy, và sáu tháng sau không ai trả lời được "gian 
    thuận với khách**. Năng lực thì không — nó là quyền dùng phần mềm *ngay lúc này*. Gia hạn gói
    xong thì sổ thu chi mở lại ngay, không phải chờ chuyến mới.
 
-6. **Ưu đãi hai chuyến đầu ([ADR 0026](0026-first-trips-free-then-commission.md)) KHÔNG mở tính
+6. **Ưu đãi hai chuyến đầu (ADR 0026) KHÔNG mở tính
    năng nâng cao.** Nó miễn *phí*, không nâng *bậc*. Trộn hai thứ lại thì tenant mới được dùng
    thử toàn bộ rồi bị lấy đi — cách chắc chắn nhất để biến một ưu đãi thành một trải nghiệm tệ.
 

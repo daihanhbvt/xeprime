@@ -122,7 +122,7 @@ export class PlatformPartnerDetailService {
             onboardingState: true,
             createdAt: true,
             profile: {
-              select: { displayName: true, logoUrl: true, address: true, provinceName: true },
+              select: { logoUrl: true, address: true, provinceName: true },
             },
             owner: { select: OWNER_SELECT },
             usedFeatures: true,
@@ -227,7 +227,7 @@ export class PlatformPartnerDetailService {
           : null,
         listingRequirementsMissing: isPackage
           ? missingPackageShopListingRequirements({
-              displayName: tenant.profile?.displayName,
+              displayName: tenant.name,
               contactPhone: defaultBranch?.phone,
               provinceCode: defaultBranch?.provinceCode,
               addressLine: defaultBranch?.addressLine,
@@ -264,11 +264,11 @@ export class PlatformPartnerDetailService {
       this.prisma.tenant.findUniqueOrThrow({
         where: { id: partner.tenantId },
         select: {
+          name: true,
           phone: true,
           email: true,
           profile: {
             select: {
-              displayName: true,
               bio: true,
               logoUrl: true,
               coverUrl: true,
@@ -318,7 +318,7 @@ export class PlatformPartnerDetailService {
       publicProfile:
         isPackage && tenant.profile
           ? {
-              displayName: tenant.profile.displayName,
+              displayName: tenant.name,
               bio: tenant.profile.bio,
               logoUrl: tenant.profile.logoUrl,
               coverUrl: tenant.profile.coverUrl,

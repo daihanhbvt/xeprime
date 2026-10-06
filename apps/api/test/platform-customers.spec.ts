@@ -1,6 +1,7 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
   bookingRequestRespondBy,
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   BOOKING_REQUEST_STATUS,
   MEMBERSHIP_STATUS,
@@ -19,8 +20,8 @@ import type { PrismaService } from '../src/prisma/prisma.service';
  * Phase 7 — Tra cứu khách thuê, chạy trên PostgreSQL THẬT.
  *
  * Hai điều dễ sai nhất được kiểm chứng ở đây:
- *  1. "Khách" phải LOẠI chủ shop và nhân sự nền tảng — nếu không, màn tra cứu khách sẽ liệt kê
- *     cả nhân viên của chính mình.
+ *  1. "Khách" là tài khoản realm `customer` (ADR 0053) — chủ shop, nhân viên (kể cả đã nghỉ) và
+ *     nhân sự nền tảng là tài khoản realm khác nên không bao giờ lọt vào màn tra cứu khách.
  *  2. SĐT/email trả ra phải đã che ở mọi đường đọc; bản đầy đủ chỉ qua revealContact + audit.
  */
 const prisma = createPrismaClient();
@@ -81,7 +82,9 @@ beforeAll(async () => {
   fullEmail = `khach.${tag.toLowerCase()}@xeprime.test`;
 
   const mkUser = (id: string, name: string, extra: Record<string, unknown> = {}) =>
-    prisma.user.create({ data: { id, displayName: name, ...extra } });
+    prisma.user.create({
+      data: { realm: ACCOUNT_REALM.CUSTOMER, id, displayName: name, ...extra },
+    });
 
   await mkUser(customerId, `KhachA-${tag}`, {
     phone: storedPhone,
@@ -90,9 +93,18 @@ beforeAll(async () => {
     status: USER_STATUS.ACTIVE,
   });
   await mkUser(quietCustomerId, `KhachB-${tag}`, { status: USER_STATUS.LOCKED });
-  await mkUser(shopMemberId, `NhanVienShop-${tag}`, { email: `nv-${tag}@xeprime.test` });
-  await mkUser(platformStaffId, `NhanSuNenTang-${tag}`, { email: `nt-${tag}@xeprime.test` });
-  await mkUser(exMemberId, `NhanVienCu-${tag}`, { email: `nvc-${tag}@xeprime.test` });
+  await mkUser(shopMemberId, `NhanVienShop-${tag}`, {
+    realm: ACCOUNT_REALM.PARTNER,
+    email: `nv-${tag}@xeprime.test`,
+  });
+  await mkUser(platformStaffId, `NhanSuNenTang-${tag}`, {
+    realm: ACCOUNT_REALM.PLATFORM,
+    email: `nt-${tag}@xeprime.test`,
+  });
+  await mkUser(exMemberId, `NhanVienCu-${tag}`, {
+    realm: ACCOUNT_REALM.PARTNER,
+    email: `nvc-${tag}@xeprime.test`,
+  });
 
   await prisma.tenant.create({
     data: {
@@ -113,7 +125,7 @@ beforeAll(async () => {
         roleKey: TENANT_ROLE.SHOP_OWNER,
         status: MEMBERSHIP_STATUS.ACTIVE,
       },
-      // Nhân viên đã nghỉ: membership `removed` → vẫn được tính là khách.
+      // Nhân viên đã nghỉ: membership `removed` — vẫn là tài khoản PARTNER, không thành khách.
       {
         id: newId(),
         tenantId,
@@ -192,15 +204,18 @@ const maybe = (name: string, fn: () => Promise<void>) =>
   });
 
 describe('Platform customers (Phase 7)', () => {
-  maybe('chỉ liệt kê khách: loại chủ shop và nhân sự nền tảng, giữ nhân viên đã nghỉ', async () => {
-    const res = await service.list({ q: tag, limit: 100 });
-    const ids = res.data.map((c) => c.id);
-    expect(ids).toContain(customerId);
-    expect(ids).toContain(quietCustomerId);
-    expect(ids).toContain(exMemberId);
-    expect(ids).not.toContain(shopMemberId);
-    expect(ids).not.toContain(platformStaffId);
-  });
+  maybe(
+    'chỉ liệt kê tài khoản realm khách: loại chủ shop, nhân viên (cả đã nghỉ), nền tảng',
+    async () => {
+      const res = await service.list({ q: tag, limit: 100 });
+      const ids = res.data.map((c) => c.id);
+      expect(ids).toContain(customerId);
+      expect(ids).toContain(quietCustomerId);
+      expect(ids).not.toContain(exMemberId);
+      expect(ids).not.toContain(shopMemberId);
+      expect(ids).not.toContain(platformStaffId);
+    },
+  );
 
   maybe('SĐT/email trả ra ĐÃ che, không lộ giá trị đầy đủ', async () => {
     const res = await service.list({ phone: localPhone });
@@ -268,7 +283,7 @@ describe('Platform customers (Phase 7)', () => {
   });
 
   maybe('revealContact: trả đầy đủ VÀ ghi audit không chứa PII', async () => {
-    const res = await service.revealContact(customerId, shopMemberId);
+    const res = await service.revealContact(customerId, platformStaffId);
     expect(res.phone).toBe(storedPhone);
     expect(res.email).toBe(fullEmail);
 
@@ -277,13 +292,13 @@ describe('Platform customers (Phase 7)', () => {
       orderBy: { createdAt: 'desc' },
     });
     expect(log?.actorScope).toBe('platform');
-    expect(log?.actorUserId).toBe(shopMemberId);
+    expect(log?.actorUserId).toBe(platformStaffId);
     expect(JSON.stringify(log?.afterJson)).not.toContain(storedPhone);
     expect(JSON.stringify(log?.afterJson)).not.toContain(fullEmail);
   });
 
   maybe('id lạ → NOT_FOUND', async () => {
-    await expect(service.revealContact(newId(), shopMemberId)).rejects.toMatchObject({
+    await expect(service.revealContact(newId(), platformStaffId)).rejects.toMatchObject({
       response: { code: API_ERROR_CODE.NOT_FOUND },
     });
   });

@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { newId } from '@xeprime/prisma';
-import { API_ERROR_CODE, type AuthProvider } from '@xeprime/types';
+import { API_ERROR_CODE, isAccountRealm, type AccountRealm, type AuthProvider } from '@xeprime/types';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { SocialAuthFailure } from './social-auth.error';
 
@@ -16,6 +16,8 @@ const STATE_TTL_MS = 10 * 60 * 1000;
 /** Bản ghi đã tiêu thụ, trả về cho chặng callback. */
 export interface ConsumedOauthState {
   provider: AuthProvider;
+  /** Realm của luồng — ghi lúc bắt đầu, vì chặng callback không mang header realm đáng tin. */
+  realm: AccountRealm;
   codeVerifier: string;
   nonce: string;
   redirectNext: string | null;
@@ -63,6 +65,8 @@ export class OauthStateService {
    */
   async issue(params: {
     provider: AuthProvider;
+    /** Realm của site/app khởi tạo luồng — ADR 0053. */
+    realm: AccountRealm;
     redirectNext: string | null;
     client: string;
     /** Bắt buộc khi `client = 'native'`; CHECK ở DB từ chối hàng thiếu nó. */
@@ -76,6 +80,7 @@ export class OauthStateService {
       data: {
         id: newId(),
         provider: params.provider,
+        realm: params.realm,
         state,
         codeVerifier,
         nonce,
@@ -122,6 +127,7 @@ export class OauthStateService {
       where: { state },
       select: {
         provider: true,
+        realm: true,
         codeVerifier: true,
         nonce: true,
         redirectNext: true,
@@ -137,6 +143,10 @@ export class OauthStateService {
       throw new SocialAuthFailure(API_ERROR_CODE.SOCIAL_STATE_INVALID, 'state biến mất sau khi consume');
     }
 
-    return { ...row, provider: row.provider as AuthProvider };
+    // CHECK ở DB đã giữ realm hợp lệ; kiểm lại để kiểu không phải ép bằng `as`.
+    if (!isAccountRealm(row.realm)) {
+      throw new SocialAuthFailure(API_ERROR_CODE.SOCIAL_STATE_INVALID, 'state mang realm lạ');
+    }
+    return { ...row, realm: row.realm, provider: row.provider as AuthProvider };
   }
 }

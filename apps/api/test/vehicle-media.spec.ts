@@ -1,7 +1,8 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
-  BILLING_MODE,
+  ACCOUNT_REALM,
   API_ERROR_CODE,
+  BILLING_MODE,
   FUEL_TYPE,
   MEMBERSHIP_STATUS,
   TENANT_ROLE,
@@ -41,7 +42,12 @@ beforeAll(async () => {
   ownerId = newId();
   tenantId = newId();
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Chủ shop',
+      email: `own-${ownerId}@xeprime.test`,
+    },
   });
   await prisma.tenant.create({
     data: {
@@ -125,7 +131,13 @@ describe('Vehicle gallery + features (Gap 4)', () => {
     expect(created.lengthMm).toBe(4630);
     expect(Number(created.fuelConsumptionCombined)).toBe(6.5);
 
-    const updated = await vehicles.update(tenantId, created.id, ownerId, { name: 'Altis mới' }, null);
+    const updated = await vehicles.update(
+      tenantId,
+      created.id,
+      ownerId,
+      { name: 'Altis mới' },
+      null,
+    );
     expect(updated.sourceType).toBe(VEHICLE_SOURCE_TYPE.FINANCED);
     expect(updated.lengthMm).toBe(4630);
     expect(updated.transmission).toBe(TRANSMISSION_TYPE.AUTOMATIC);
@@ -140,11 +152,17 @@ describe('Vehicle gallery + features (Gap 4)', () => {
       mainImageUrl: 'https://img/main.jpg',
       description: 'Mô tả cũ',
     });
-    const updated = await vehicles.update(tenantId, created.id, ownerId, {
-      plateNumber: null,
-      mainImageUrl: null,
-      description: null,
-    }, null);
+    const updated = await vehicles.update(
+      tenantId,
+      created.id,
+      ownerId,
+      {
+        plateNumber: null,
+        mainImageUrl: null,
+        description: null,
+      },
+      null,
+    );
     expect(updated.plateNumber).toBeNull();
     expect(updated.mainImageUrl).toBeNull();
     expect(updated.description).toBeNull();
@@ -158,19 +176,31 @@ describe('Vehicle gallery + features (Gap 4)', () => {
 
   maybe('update replace-set: ảnh mới thay toàn bộ, giữ thứ tự', async () => {
     const created = await createBase('MED-2');
-    const updated = await vehicles.update(tenantId, created.id, ownerId, {
-      images: ['https://img/x.jpg'],
-      features: ['camera_360'],
-    }, null);
+    const updated = await vehicles.update(
+      tenantId,
+      created.id,
+      ownerId,
+      {
+        images: ['https://img/x.jpg'],
+        features: ['camera_360'],
+      },
+      null,
+    );
     expect(updated.images).toEqual(['https://img/x.jpg']);
     expect(updated.features).toEqual(['camera_360']);
   });
 
   maybe('update khử trùng feature (unique)', async () => {
     const created = await createBase('MED-3');
-    const updated = await vehicles.update(tenantId, created.id, ownerId, {
-      features: ['gps', 'gps', 'usb'],
-    }, null);
+    const updated = await vehicles.update(
+      tenantId,
+      created.id,
+      ownerId,
+      {
+        features: ['gps', 'gps', 'usb'],
+      },
+      null,
+    );
     expect([...updated.features].sort()).toEqual(['gps', 'usb']);
   });
 
@@ -209,13 +239,19 @@ describe('Vehicle gallery + features (Gap 4)', () => {
 describe('Ảnh theo vị trí — tương thích ngược với client cũ', () => {
   maybe('media gán vị trí và giữ thứ tự; images cũ vẫn đọc ra đúng danh sách URL', async () => {
     const created = await createBase('MED-SLOT-1');
-    const updated = await vehicles.update(tenantId, created.id, ownerId, {
-      media: [
-        { url: 'https://img/front.jpg', type: 'front' },
-        { url: 'https://img/rear.jpg', type: 'rear' },
-        { url: 'https://img/other.jpg' },
-      ],
-    }, null);
+    const updated = await vehicles.update(
+      tenantId,
+      created.id,
+      ownerId,
+      {
+        media: [
+          { url: 'https://img/front.jpg', type: 'front' },
+          { url: 'https://img/rear.jpg', type: 'rear' },
+          { url: 'https://img/other.jpg' },
+        ],
+      },
+      null,
+    );
 
     // Ảnh chưa gán vị trí đọc ra là "other" — màn thư viện xếp nó vào ô "Ảnh khác" thay vì
     // bắt giao diện tự đoán từ một giá trị rỗng.
@@ -234,17 +270,29 @@ describe('Ảnh theo vị trí — tương thích ngược với client cũ', ()
 
   maybe('client cũ lưu bằng images KHÔNG xoá vị trí ảnh chủ xe đã sắp', async () => {
     const created = await createBase('MED-SLOT-2');
-    await vehicles.update(tenantId, created.id, ownerId, {
-      media: [
-        { url: 'https://img/front.jpg', type: 'front' },
-        { url: 'https://img/left.jpg', type: 'left' },
-      ],
-    }, null);
+    await vehicles.update(
+      tenantId,
+      created.id,
+      ownerId,
+      {
+        media: [
+          { url: 'https://img/front.jpg', type: 'front' },
+          { url: 'https://img/left.jpg', type: 'left' },
+        ],
+      },
+      null,
+    );
 
     // Form cũ gửi lại đúng hai URL đó (đảo thứ tự) — vị trí phải được bảo toàn.
-    const legacy = await vehicles.update(tenantId, created.id, ownerId, {
-      images: ['https://img/left.jpg', 'https://img/front.jpg'],
-    }, null);
+    const legacy = await vehicles.update(
+      tenantId,
+      created.id,
+      ownerId,
+      {
+        images: ['https://img/left.jpg', 'https://img/front.jpg'],
+      },
+      null,
+    );
     expect(legacy.media.map((m) => [m.url, m.type])).toEqual([
       ['https://img/left.jpg', 'left'],
       ['https://img/front.jpg', 'front'],
@@ -253,22 +301,40 @@ describe('Ảnh theo vị trí — tương thích ngược với client cũ', ()
 
   maybe('cùng một URL không lưu hai dòng dù gửi lặp', async () => {
     const created = await createBase('MED-SLOT-3');
-    const updated = await vehicles.update(tenantId, created.id, ownerId, {
-      media: [
-        { url: 'https://img/dup.jpg', type: 'front' },
-        { url: 'https://img/dup.jpg', type: 'rear' },
-      ],
-    }, null);
+    const updated = await vehicles.update(
+      tenantId,
+      created.id,
+      ownerId,
+      {
+        media: [
+          { url: 'https://img/dup.jpg', type: 'front' },
+          { url: 'https://img/dup.jpg', type: 'rear' },
+        ],
+      },
+      null,
+    );
     expect(updated.media).toHaveLength(1);
     expect(await prisma.vehicleImage.count({ where: { vehicleId: created.id } })).toBe(1);
   });
 
   maybe('không gửi media lẫn images → giữ nguyên cả URL lẫn vị trí', async () => {
     const created = await createBase('MED-SLOT-4');
-    await vehicles.update(tenantId, created.id, ownerId, {
-      media: [{ url: 'https://img/front.jpg', type: 'front' }],
-    }, null);
-    const untouched = await vehicles.update(tenantId, created.id, ownerId, { name: 'Đổi tên' }, null);
+    await vehicles.update(
+      tenantId,
+      created.id,
+      ownerId,
+      {
+        media: [{ url: 'https://img/front.jpg', type: 'front' }],
+      },
+      null,
+    );
+    const untouched = await vehicles.update(
+      tenantId,
+      created.id,
+      ownerId,
+      { name: 'Đổi tên' },
+      null,
+    );
     expect(untouched.media).toEqual([
       { url: 'https://img/front.jpg', type: 'front', sortOrder: 0 },
     ]);
@@ -283,15 +349,27 @@ describe('Ảnh theo vị trí — tương thích ngược với client cũ', ()
 describe('Quãng đường mỗi lần sạc của xe điện', () => {
   maybe('lưu và đọc lại đúng số km; gửi null thì xoá', async () => {
     const created = await createBase('EV-1');
-    const updated = await vehicles.update(tenantId, created.id, ownerId, {
-      fuelType: 'electric',
-      electricRangeKm: 350,
-      fuelConsumptionCombined: null,
-    }, null);
+    const updated = await vehicles.update(
+      tenantId,
+      created.id,
+      ownerId,
+      {
+        fuelType: 'electric',
+        electricRangeKm: 350,
+        fuelConsumptionCombined: null,
+      },
+      null,
+    );
     expect(updated.electricRangeKm).toBe(350);
     expect(updated.fuelConsumptionCombined).toBeNull();
 
-    const cleared = await vehicles.update(tenantId, created.id, ownerId, { electricRangeKm: null }, null);
+    const cleared = await vehicles.update(
+      tenantId,
+      created.id,
+      ownerId,
+      { electricRangeKm: null },
+      null,
+    );
     expect(cleared.electricRangeKm).toBeNull();
   });
 

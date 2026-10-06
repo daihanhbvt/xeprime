@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, screen } from '@testing-library/react';
-import { TENANT_ROLE } from '@xeprime/types';
+import { ACCOUNT_REALM, TENANT_ROLE } from '@xeprime/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ROUTES } from '@/constants/routes';
@@ -10,14 +10,15 @@ import { WalletBalancePill } from './WalletBalancePill';
 /**
  * Lối tắt số dư ở góc hồ sơ — bốn điều được khoá:
  *
- *  1. Trỏ đúng SỔ của người đang xem: chủ xe có ví thuộc tenant, khách thuê thuần có ví `user`.
+ *  1. Trỏ đúng SỔ của tài khoản đang xem: chủ gian hàng (partner) có ví tenant, tài khoản khách có
+ *     ví `user`, nhân viên gian hàng không có ví nào.
  *     Trỏ nhầm là dẫn người đi tìm tiền tới một màn hiện 0.
  *  2. Con mắt bấm được THẬT — vẽ ra mà không toggle là hứa suông.
  *  3. Chưa có dữ liệu ⇒ không render gì, thay vì một ô "—" ở góc hồ sơ trông như tiền có vấn đề.
  *  4. `localStorage` hỏng (cửa sổ ẩn danh) không được làm vỡ trang.
  */
 const state = vi.hoisted(() => ({
-  user: null as { tenant: { roleKey: string } | null } | null,
+  user: null as { realm: string; tenant: { roleKey: string } | null } | null,
   summary: undefined as WalletSummary | undefined,
 }));
 
@@ -39,7 +40,7 @@ const summary = (available: string): WalletSummary => ({
 });
 
 beforeEach(() => {
-  state.user = { tenant: null };
+  state.user = { realm: ACCOUNT_REALM.CUSTOMER, tenant: null };
   state.summary = summary('1850000');
   try {
     window.localStorage.clear();
@@ -60,14 +61,20 @@ describe('WalletBalancePill', () => {
     );
   });
 
-  /** Ví chủ xe thuộc TENANT (ADR 0038 điều 2) — `/account/balance` trả 0 cho họ. */
-  it('chủ xe: trỏ sang sổ của GIAN HÀNG, không phải sổ cá nhân', () => {
-    state.user = { tenant: { roleKey: TENANT_ROLE.SHOP_OWNER } };
+  /** Ví của chủ gian hàng thuộc TENANT — ở site partner. */
+  it('chủ gian hàng: trỏ sang sổ của GIAN HÀNG ở site partner', () => {
+    state.user = { realm: ACCOUNT_REALM.PARTNER, tenant: { roleKey: TENANT_ROLE.SHOP_OWNER } };
     renderWithIntl(<WalletBalancePill />);
 
     expect(screen.getByText('Số dư').closest('a')?.getAttribute('href')).toBe(
-      ROUTES.ACCOUNT.EARNINGS,
+      ROUTES.MANAGE.BALANCE,
     );
+  });
+
+  it('nhân viên gian hàng: không có ví ⇒ không render gì', () => {
+    state.user = { realm: ACCOUNT_REALM.PARTNER, tenant: { roleKey: TENANT_ROLE.SHOP_STAFF } };
+    const { container } = renderWithIntl(<WalletBalancePill />);
+    expect(container.textContent).toBe('');
   });
 
   it('con mắt che số dư và nhớ lựa chọn cho lần mở sau', () => {

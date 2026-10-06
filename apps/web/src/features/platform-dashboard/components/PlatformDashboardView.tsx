@@ -122,7 +122,7 @@ export function PlatformDashboardView() {
                   <button
                     type="button"
                     className={styles.miniBtn}
-                    onClick={() => router.push(ROUTES.MANAGE.ADMIN)}
+                    onClick={() => router.push(ROUTES.ADMIN.ROOT)}
                   >
                     <span className={styles.miniName}>{t('pending.vehicles')}</span>
                     <span className={styles.miniMeta}>
@@ -132,7 +132,7 @@ export function PlatformDashboardView() {
                 </li>
               </ul>
               <div className={styles.panelFoot}>
-                <Button size="small" onClick={() => router.push(ROUTES.MANAGE.ADMIN)}>
+                <Button size="small" onClick={() => router.push(ROUTES.ADMIN.ROOT)}>
                   {t('pending.open')}
                 </Button>
               </div>
@@ -152,7 +152,7 @@ export function PlatformDashboardView() {
                 onSelect={(id) => router.push(adminPartnerPath.resolveTenant(id))}
               />
               <div className={styles.panelFoot}>
-                <Button size="small" onClick={() => router.push(ROUTES.MANAGE.ADMIN_PARTNER_SHOPS)}>
+                <Button size="small" onClick={() => router.push(ROUTES.ADMIN.PARTNER_SHOPS)}>
                   {t('recent.manage')}
                 </Button>
               </div>

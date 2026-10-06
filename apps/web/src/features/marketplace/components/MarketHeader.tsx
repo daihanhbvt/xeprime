@@ -2,14 +2,11 @@
 
 import {
   CalendarOutlined,
-  CarOutlined,
   DownOutlined,
   LogoutOutlined,
   MessageOutlined,
   RightOutlined,
-  SafetyCertificateOutlined,
   ShopOutlined,
-  SolutionOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 import { Avatar, Badge, Button, Dropdown, type MenuProps } from 'antd';
@@ -27,26 +24,17 @@ import { useAuthModal, useNextFromCurrentPath } from '@/features/auth/components
 import { useMarketLogout } from '@/features/auth/hooks/use-market-logout';
 import { AUTH_MODE, resolveOwnerCtaHref } from '@/features/auth/post-auth-destination';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
-import {
-  ACCOUNT_TRACK,
-  CHAT_SIDE,
-  resolveAccountTrack,
-  tenantUsesManagePortal,
-} from '@xeprime/types';
-import { isCommissionOwner } from '@/constants/account-nav';
-import { VerifiedMark } from '@/components/common/VerifiedMark';
+import { CHAT_SIDE } from '@xeprime/types';
 import { ChatMenu } from '@/features/chat/components/ChatMenu';
 import { useChatBadge } from '@/features/chat/hooks/use-chat-badge';
 import { useCurrentUser, type CurrentUser } from '@/hooks/use-current-user';
 import styles from './MarketHeader.module.css';
 
 /**
- * Điều hướng chính — thứ tự và đích cố định, nhãn theo ngôn ngữ.
- *
- * Mục thứ ba đổi theo TUYẾN của tenant: thành viên gian hàng tuyến gói không phải khách thuê ở
- * chợ này, nên "Chuyến của tôi" thành "Quản lý gian hàng". Xem `navFor`.
+ * Điều hướng chính — thứ tự và đích cố định, nhãn theo ngôn ngữ. Site khách chỉ phục vụ tài khoản
+ * KHÁCH (ADR 0053), nên mục thứ ba luôn là "Chuyến của tôi".
  */
-const NAV_BASE = [
+const NAV = [
   {
     key: 'explore',
     labelKey: 'explore',
@@ -58,25 +46,10 @@ const NAV_BASE = [
      */
     activeWhen: [ROUTES.HOME, ROUTES.SEARCH, '/listings', '/shops'],
   },
-  // Trỏ về `HOME` cho tới 23/09/2026 — một mục menu bấm vào thì đứng yên. Đích thật là
-  // `/about` (`ROUTES.ABOUT`), trang duy nhất nói sàn này là gì và tiền đi đâu.
+  // Đích thật là `/about` (`ROUTES.ABOUT`), trang duy nhất nói sàn này là gì và tiền đi đâu.
   { key: 'about', labelKey: 'about', href: ROUTES.ABOUT },
+  { key: 'trips', labelKey: 'trips', href: ROUTES.TRIPS },
 ] as const;
-
-/**
- * Mục cuối của thanh điều hướng, theo vai của người đang xem.
- *
- * Gian hàng TUYẾN GÓI vẫn **xem marketplace bình thường** — họ chỉ không dùng chức năng khách
- * thuê. Thay vì bỏ trống một chỗ trên thanh, đưa họ về nơi họ thật sự làm việc.
- */
-function navFor(isShopMember: boolean) {
-  return [
-    ...NAV_BASE,
-    isShopMember
-      ? { key: 'manage', labelKey: 'manageShop' as const, href: ROUTES.MANAGE.ROOT }
-      : { key: 'trips', labelKey: 'trips' as const, href: ROUTES.TRIPS },
-  ];
-}
 
 export function MarketHeader() {
   const t = useTranslations('Navigation.public');
@@ -86,26 +59,8 @@ export function MarketHeader() {
   const logout = useMarketLogout();
   const nextFromHere = useNextFromCurrentPath();
   const localeGroup = useLocaleMenuGroup();
-  const tBadge = useTranslations('Account.trackBadge');
-  /*
-   * Số chưa đọc dùng CHUNG với biểu tượng chat, không đếm lại.
-   *
-   * `useChatBadge` cũng trả ĐÍCH của hộp thư, và đích đó đổi theo người: chủ xe tuyến hoa hồng
-   * đi tới hộp thư HỢP NHẤT (ADR 0038 điều 10). Ghép `/chat` cứng vào menu sẽ đúng với khách thuê
-   * và sai với họ ngay khi hộp thư gian hàng có tin.
-   */
+  // Số chưa đọc dùng CHUNG với biểu tượng chat, không đếm lại — và cùng đích hộp thư.
   const chat = useChatBadge(CHAT_SIDE.CUSTOMER);
-
-  /*
-   * Thành viên gian hàng TUYẾN GÓI — mọi vai, kể cả `shop_owner`.
-   *
-   * Hỏi TUYẾN của tenant (`billingMode` hiệu lực, đã gồm cả pha `grace`), KHÔNG hỏi `roleKey`:
-   * chủ xe tuyến hoa hồng cũng là `shop_owner` nhưng họ VẪN là khách thuê ở chợ này.
-   *
-   * Bản trước không hỏi gì cả, nên tài khoản gian hàng thấy "Chuyến của tôi", biểu tượng chat
-   * khách và chuông thông báo khách — ba chức năng không thuộc về họ.
-   */
-  const isShopMember = tenantUsesManagePortal(user?.tenant ?? null);
 
   return (
     <header className={styles.header}>
@@ -115,7 +70,7 @@ export function MarketHeader() {
         </Link>
 
         <nav className={styles.nav} aria-label={t('mainNavLabel')}>
-          {navFor(isShopMember).map((item) => {
+          {NAV.map((item) => {
             /*
              * Trước 23/09/2026 dòng này là `i === 0`, tức mục đầu luôn sáng vàng — ở trang điều
              * khoản sử dụng, thanh trên cùng vẫn khẳng định người dùng đang "Khám phá".
@@ -141,28 +96,8 @@ export function MarketHeader() {
         <div className={styles.right}>
           {user ? (
             <>
-              {/*
-                Chat và chuông PHÍA KHÁCH (15/09/2026).
-
-                Gian hàng tuyến gói không có hộp thư khách ở đây: chat vận hành của họ nằm trong
-                Manage (`/manage/chat`), cùng hộp thư yêu cầu thuê. Hai luồng khác nhau — một là
-                "tôi đang thuê xe của ai đó", một là "khách đang hỏi xe của tôi" — và trộn chúng
-                vào một biểu tượng làm người trực đơn không biết mình đang đọc cái nào.
-              */}
-              {isShopMember ? null : (
-                <>
-                  <ChatMenu side={CHAT_SIDE.CUSTOMER} />
-                  {/*
-                    Chuông của chủ xe tuyến hoa hồng phải dẫn tới route trong KHU USER.
-
-                    Họ nhận thông báo của cả hai vai — khách đặt xe của họ, và chuyến họ đi thuê —
-                    nhưng `/manage` là cánh cửa đóng với họ. Bề mặt `customer` thì làm mọi thông báo
-                    về XE và GIAN HÀNG của chính họ thành dòng không bấm được; bề mặt `owner` đưa
-                    hai loại đó về `/account/vehicles` và hồ sơ chủ xe.
-                  */}
-                  <NotificationBell context={isCommissionOwner(user) ? 'owner' : 'customer'} />
-                </>
-              )}
+              <ChatMenu side={CHAT_SIDE.CUSTOMER} />
+              <NotificationBell context="customer" />
               {/*
                 Đổi ngôn ngữ nằm TRONG menu tài khoản (nhóm cuối), không phải một nút riêng trên
                 thanh: nó là việc làm một lần rồi thôi, còn chỗ trên thanh thì dành cho những thứ
@@ -177,9 +112,7 @@ export function MarketHeader() {
                     onLogout: logout,
                     t,
                     localeGroup,
-                    isShopMember,
                     chat,
-                    verifiedLabel: tBadge('verifiedHint'),
                   }),
                   className: styles.menu,
                 }}
@@ -226,11 +159,10 @@ export function MarketHeader() {
  * nhiều tài khoản (rất thường gặp — một để thuê, một để cho thuê) thì cái tên một mình không đủ
  * phân biệt. Thẻ mang avatar + tên + email + NHÃN TUYẾN, và bấm được để vào thẳng hồ sơ.
  *
- * ## Lối đi đổi theo TUYẾN, không đổi theo vai
+ * ## Chỉ lối đi của KHÁCH
  *
- * Thành viên gian hàng tuyến gói không phải khách thuê ở chợ này (ADR 0038 điều 7): họ không có
- * chuyến, không có hộp thư khách, không có xe trong khu user — cả ba đã ở `/manage`. Chủ xe
- * tuyến hoa hồng thì ngược lại, họ sống ở đây.
+ * Từ ADR 0053 phiên ở site này luôn là tài khoản khách: không còn nhánh gian hàng/chủ xe/quản trị
+ * trong menu. Việc cho thuê xe là một tài khoản KHÁC ở site partner — menu chỉ còn một lối dẫn sang.
  *
  * Mọi dòng đều là `<Link>` thật chứ không phải `onClick` điều hướng: mở tab mới, sao chép địa
  * chỉ và điều hướng bằng bàn phím đều phải hoạt động như người dùng chờ đợi.
@@ -240,19 +172,14 @@ function accountMenu({
   onLogout,
   t,
   localeGroup,
-  isShopMember,
   chat,
-  verifiedLabel,
 }: {
   user: CurrentUser;
   onLogout: () => void;
   t: ReturnType<typeof useTranslations<'Navigation.public'>>;
   localeGroup: NonNullable<MenuProps['items']>[number];
-  isShopMember: boolean;
   /** Đích hộp thư + số chưa đọc, lấy từ `useChatBadge` — xem docblock ở `MarketHeader`. */
   chat: { href: string; count: number };
-  /** Nghĩa của dấu xác thực — dịch ở nơi gọi để component `common/` không dính namespace nào. */
-  verifiedLabel: string;
 }): MenuProps['items'] {
   /**
    * Một dòng điều hướng: nhãn bên trái, huy hiệu (nếu có), mũi tên bên phải.
@@ -272,13 +199,7 @@ function accountMenu({
     ),
   });
 
-  /*
-   * Hồ sơ CON NGƯỜI của người đang đăng nhập.
-   *
-   * Thành viên gian hàng tuyến gói đọc nó ở `/manage/account`; `AccountShell` chuyển hướng `/account`
-   * của họ sang đó, nên trỏ thẳng là bớt một cú nhảy chứ không phải một luật thứ hai.
-   */
-  const profileHref = isShopMember ? ROUTES.MANAGE.SECURITY : ROUTES.ACCOUNT.ROOT;
+  const profileHref = ROUTES.ACCOUNT.ROOT;
 
   return [
     {
@@ -292,20 +213,6 @@ function accountMenu({
           <span className={styles.identityText}>
             <span className={styles.identityNameRow}>
               <span className={styles.identityName}>{user.displayName}</span>
-              {/*
-                DẤU XÁC THỰC thay cho nhãn chữ (16/09/2026).
-
-                Nhãn cũ là một pill mang "Chủ gian hàng · Gói <tên gói do admin đặt>" — dài, chiếm
-                trọn một dòng dưới email, và tên gói thì không phải thứ người ta mở menu tài khoản
-                ra để đọc. Dấu đứng ngay sau tên nói đúng một điều mà khách cần biết về danh tính
-                này, bằng thứ ngôn ngữ thị giác họ đã quen.
-
-                Tên gói KHÔNG mất: nó vẫn ở thẻ tài khoản trong `/account` và ở menu của `/manage`,
-                nơi người dùng đang thật sự nói chuyện về gói.
-              */}
-              {isVerifiedShop(user) ? (
-                <VerifiedMark label={verifiedLabel} className={styles.identityVerified} />
-              ) : null}
             </span>
             {/* Email là thứ phân biệt hai tài khoản trùng tên; thiếu email thì SĐT làm việc đó. */}
             {(user.email ?? user.phone) ? (
@@ -317,64 +224,20 @@ function accountMenu({
       ),
     },
     { type: 'divider' },
-    ...(isShopMember
-      ? [
-          /*
-           * Hồ sơ PHÁP NHÂN — khác hẳn thẻ danh tính ở trên, thứ trỏ về hồ sơ của một CON NGƯỜI.
-           * Gộp hai cái lại là để một người sửa hồ sơ gian hàng trong khi tưởng đang sửa hồ sơ mình.
-           */
-          row('shop-profile', <SolutionOutlined />, ROUTES.MANAGE.SHOP, t('shopProfile')),
-        ]
-      : [
-          row('account', <UserOutlined />, ROUTES.ACCOUNT.ROOT, t('accountMine')),
-          /*
-           * "Xe của tôi" chỉ có nghĩa với CHỦ XE tuyến hoa hồng — họ là người duy nhất có đội xe
-           * nằm trong khu user. Khách thuê thuần không có xe nào, và một mục dẫn tới danh sách
-           * rỗng vĩnh viễn là một mục nói dối về sản phẩm.
-           */
-          ...(isCommissionOwner(user)
-            ? [row('vehicles', <CarOutlined />, ROUTES.ACCOUNT.VEHICLES, t('vehiclesMine'))]
-            : []),
-          row('trips', <CalendarOutlined />, ROUTES.TRIPS, t('trips')),
-          row('chat', <MessageOutlined />, chat.href, t('chat'), chat.count),
-        ]),
+    row('account', <UserOutlined />, ROUTES.ACCOUNT.ROOT, t('accountMine')),
+    row('trips', <CalendarOutlined />, ROUTES.TRIPS, t('trips')),
+    row('chat', <MessageOutlined />, chat.href, t('chat'), chat.count),
     { type: 'divider' },
     /*
-     * Khu làm việc, KHÔNG phải `/manage` cứng: chủ xe tuyến hoa hồng làm việc ở `/account`
-     * (ADR 0027/0028), và mục này từng là một trong 19 đường dẫn đưa họ vào nhầm cổng quản lý.
-     * `resolveOwnerCtaHref` trả về landing công khai cho người chưa có gian hàng.
+     * Lối sang SITE PARTNER (ADR 0051 điều 3) — đăng ký cho thuê xe là một tài khoản riêng ở đó
+     * (ADR 0053). Link khác site: URL tuyệt đối ở chế độ `host`.
      */
-    row(
-      user.tenant ? 'manage' : 'become-owner',
-      <ShopOutlined />,
-      resolveOwnerCtaHref(user),
-      user.tenant ? t('manageShop') : t('becomeOwner'),
-    ),
-    ...(user.platformRole
-      ? [row('admin', <SafetyCertificateOutlined />, ROUTES.MANAGE.ADMIN, t('platformAdmin'))]
-      : []),
+    row('become-owner', <ShopOutlined />, resolveOwnerCtaHref(), t('becomeOwner')),
     { type: 'divider' },
     localeGroup,
     { type: 'divider' },
     { key: 'logout', icon: <LogoutOutlined />, label: t('logout'), onClick: onLogout },
   ];
-}
-
-/**
- * Tài khoản này có được gắn dấu xác thực không.
- *
- * ĐÚNG một nhóm: chủ gian hàng tuyến gói. Họ là người đã đi qua vòng duyệt hồ sơ của nền tảng VÀ
- * đang trả thuê bao — hai điều mà một cái tên không tự nói ra được.
- *
- * Chủ xe tuyến hoa hồng KHÔNG có dấu, và đó không phải sự phân biệt đối xử: họ chưa đi qua vòng
- * duyệt đó. Gắn dấu cho cả hai thì dấu không còn phân biệt được gì, và một dấu không phân biệt
- * được gì là một dấu nói dối.
- *
- * Phép suy mượn `resolveAccountTrack` (`@xeprime/types`) — cùng hàm mà nhãn chữ dùng, nên dấu và
- * nhãn không thể nói hai điều khác nhau về cùng một người.
- */
-function isVerifiedShop(user: CurrentUser): boolean {
-  return resolveAccountTrack(user.tenant).track === ACCOUNT_TRACK.SHOP_OWNER;
 }
 
 /**

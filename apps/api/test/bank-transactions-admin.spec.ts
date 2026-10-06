@@ -1,11 +1,12 @@
 import { ConfigService } from '@nestjs/config';
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   BANK_MATCH_STATUS,
   BANK_TX_CODE_FILTER,
-  BILLING_MODE,
   type BankTxCodeFilter,
+  BILLING_MODE,
   PLAN_STATUS,
   SUBSCRIPTION_INVOICE_STATUS,
   TENANT_STATUS,
@@ -104,10 +105,20 @@ beforeAll(async () => {
   planId = newId();
 
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Chủ shop',
+      email: `own-${ownerId}@xeprime.test`,
+    },
   });
   await prisma.user.create({
-    data: { id: adminId, displayName: 'Nhân viên tài chính', email: `fin-${adminId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.CUSTOMER,
+      id: adminId,
+      displayName: 'Nhân viên tài chính',
+      email: `fin-${adminId}@xeprime.test`,
+    },
   });
   await prisma.tenant.create({
     data: {
@@ -314,13 +325,11 @@ describe('Khớp tay', () => {
   it('lọc theo LUỒNG của mã: giữ chỗ `XPH`, hoá đơn `XPG`, hay không rút được mã', async () => {
     if (!dbAvailable) return;
     // Mã đúng định dạng nhưng không trỏ vào khoản nào ⇒ vẫn nằm hàng đợi, CÓ `referenceCode`.
-    const holdCode = await sepay
-      .ingest(payload({ content: 'chuyen tien XPH23456789' }))
-      .then(() =>
-        prisma.bankTransaction.findFirstOrThrow({
-          where: { ...ownRows, referenceCode: 'XPH23456789' },
-        }),
-      );
+    const holdCode = await sepay.ingest(payload({ content: 'chuyen tien XPH23456789' })).then(() =>
+      prisma.bankTransaction.findFirstOrThrow({
+        where: { ...ownRows, referenceCode: 'XPH23456789' },
+      }),
+    );
     const noCode = await unmatchedTx(120_000);
 
     const ids = async (code: BankTxCodeFilter) =>

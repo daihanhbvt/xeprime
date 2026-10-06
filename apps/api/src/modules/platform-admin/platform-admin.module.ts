@@ -10,6 +10,8 @@ import { PlatformAuditController } from './platform-audit.controller';
 import { PlatformAuditService } from './platform-audit.service';
 import { PlatformBookingsController } from './platform-bookings.controller';
 import { PlatformBookingsService } from './platform-bookings.service';
+import { PlatformAccountsController } from './platform-accounts.controller';
+import { PlatformAccountLookupService } from './platform-account-lookup.service';
 import { PlatformCustomersController } from './platform-customers.controller';
 import { PlatformCustomersService } from './platform-customers.service';
 import { PlatformDashboardController } from './platform-dashboard.controller';
@@ -49,6 +51,7 @@ import { PlatformVehicleApprovalService } from './platform-vehicle-approval.serv
     PlatformVehiclesController,
     PlatformBookingsController,
     PlatformCustomersController,
+    PlatformAccountsController,
   ],
   providers: [
     PlatformApprovalService,
@@ -62,6 +65,7 @@ import { PlatformVehicleApprovalService } from './platform-vehicle-approval.serv
     PlatformVehiclesService,
     PlatformBookingsService,
     PlatformCustomersService,
+    PlatformAccountLookupService,
   ],
 })
 export class PlatformAdminModule {}

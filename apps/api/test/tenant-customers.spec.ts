@@ -1,5 +1,6 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   BOOKING_STATUS,
   MEMBERSHIP_STATUS,
@@ -22,7 +23,11 @@ import { CustomersController } from '../src/modules/customers/customers.controll
 import { CustomerDocumentsController } from '../src/modules/customers/customer-documents.controller';
 import type { R2Service } from '../src/modules/storage/r2.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeBookingsService, makeCustomersService, makeNotificationService } from './helpers/service-factory';
+import {
+  makeBookingsService,
+  makeCustomersService,
+  makeNotificationService,
+} from './helpers/service-factory';
 
 /**
  * Sổ khách của GIAN HÀNG (gap S-01), chạy trên PostgreSQL THẬT:
@@ -149,7 +154,12 @@ beforeAll(async () => {
   otherVehicleId = newId();
 
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Chủ shop', email: `cus-${ownerId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Chủ shop',
+      email: `cus-${ownerId}@xeprime.test`,
+    },
   });
   for (const [tid, name] of [
     [tenantId, 'Shop Sổ Khách'],

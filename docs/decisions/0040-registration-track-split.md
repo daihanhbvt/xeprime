@@ -2,6 +2,11 @@
 
 Ngày: 16/09/2026 · Trạng thái: **Accepted** · **Ghi đè [ADR 0036](0036-single-approval-gate-for-commission-owners.md) điều 4** (_"xác minh là cổng của việc MUA GÓI"_)
 
+> ⚠️ **[ADR 0053](0053-separate-account-realms.md) (02/10/2026):** cả hai cửa đăng ký nay ở
+> `partner.xeprime.vn` (realm `partner`); tuyến hoa hồng vào Owner Lite của site partner, không còn
+> `/account`. `onboarding_state`, `registrationTrack` và mọi luật kích hoạt bằng thanh toán giữ
+> nguyên.
+
 ## Bối cảnh
 
 [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md) đặt ra HAI tuyến trên một

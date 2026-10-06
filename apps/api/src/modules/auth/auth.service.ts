@@ -8,12 +8,16 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { newId, Prisma } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   BILLING_MODE,
   MEMBERSHIP_STATUS,
   USER_STATUS,
   OPEN_CUSTOMER_TRIP_STATUSES,
   VEHICLE_PUBLIC_STATUS,
+  realmAllowsPasswordlessLogin,
+  realmAllowsSelfRegistration,
+  type AccountRealm,
   type Permission,
 } from '@xeprime/types';
 import bcrypt from 'bcryptjs';
@@ -29,6 +33,7 @@ import {
 } from '../../common/plan/feature-state';
 import { EmailService } from '../email/email.service';
 import { FeePoliciesService } from '../fee-policies/fee-policies.service';
+import { RequestRealmService } from './request-realm.service';
 import type { CurrentTenantSummaryDto, MeDto } from './dto/auth.dto';
 import type { VerifiedIdentity } from './social/identity';
 
@@ -46,23 +51,52 @@ export class AuthService {
     private readonly config: ConfigService,
     /** Chỉ dùng cho `/auth/me` — xem `CurrentTenantSummaryDto.serviceFeePercent`. */
     private readonly feePolicies: FeePoliciesService,
+    /** URL site của từng realm — link trong email trỏ về đúng site của tài khoản (ADR 0053). */
+    private readonly realms: RequestRealmService,
   ) {}
+
+  /**
+   * Realm `platform` không tự đăng ký và không vào bằng OTP/Google/Facebook — ADR 0053 điều 3.
+   * Kiểm TRƯỚC khi chạm DB: không có hàng nào được ghi cho một lượt chắc chắn hỏng.
+   */
+  private assertSelfRegistration(realm: AccountRealm): void {
+    if (!realmAllowsSelfRegistration(realm)) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.REALM_LOGIN_METHOD_NOT_ALLOWED,
+        message: 'Tài khoản quản trị do quản trị viên nền tảng tạo, không tự đăng ký',
+      });
+    }
+  }
+
+  private assertPasswordlessLogin(realm: AccountRealm): void {
+    if (!realmAllowsPasswordlessLogin(realm)) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.REALM_LOGIN_METHOD_NOT_ALLOWED,
+        message: 'Tài khoản quản trị chỉ đăng nhập bằng mật khẩu',
+      });
+    }
+  }
 
   // ---- Đăng ký / đăng nhập bằng định danh + mật khẩu ------------------------
 
   /**
-   * Đăng ký bằng SĐT + mật khẩu. SĐT được chuẩn hoá về dạng `84xxxxxxxxx` trước khi lưu.
+   * Đăng ký bằng SĐT + mật khẩu, TRONG một realm (ADR 0053). SĐT được chuẩn hoá về dạng
+   * `84xxxxxxxxx` trước khi lưu. Cùng số đó ở realm khác là một tài khoản khác, không phải trùng.
    * Tạo user + identity(provider='password') trong một transaction.
    */
-  async register(input: {
-    phone: string;
-    password: string;
-    displayName: string;
-  }): Promise<{ userId: string }> {
+  async register(
+    input: {
+      phone: string;
+      password: string;
+      displayName: string;
+    },
+    realm: AccountRealm,
+  ): Promise<{ userId: string }> {
+    this.assertSelfRegistration(realm);
     const phone = normalizePhone(input.phone);
 
     const existing = await this.prisma.user.findFirst({
-      where: { phone, deletedAt: null },
+      where: { realm, phone, deletedAt: null },
       select: { id: true },
     });
     if (existing) {
@@ -80,6 +114,7 @@ export class AuthService {
         await tx.user.create({
           data: {
             id: userId,
+            realm,
             phone,
             displayName: input.displayName.trim(),
             passwordHash,
@@ -91,6 +126,7 @@ export class AuthService {
           data: {
             id: newId(),
             userId,
+            realm,
             provider: 'password',
             providerUserId: phone,
             providerPhone: phone,
@@ -114,17 +150,22 @@ export class AuthService {
 
   /**
    * Đăng nhập bằng **email HOẶC số điện thoại** + mật khẩu. Có `@` → tra email (lowercase);
-   * ngược lại chuẩn hoá SĐT rồi tra `users.phone` (@unique, lưu dạng `84...`).
+   * ngược lại chuẩn hoá SĐT rồi tra `users.phone` (unique TRONG realm, lưu dạng `84...`).
    *
    * Lỗi luôn chung chung (INVALID_CREDENTIALS) dù sai định danh hay sai mật khẩu — không tiết lộ
    * tài khoản nào tồn tại. So khớp bcrypt kể cả khi không có user (giảm timing attack). Tài khoản
    * tạo bằng SĐT/OTP có `passwordHash` null → chưa đặt mật khẩu thì không đăng nhập kiểu này được.
    */
-  async loginWithPassword(rawIdentifier: string, password: string): Promise<{ userId: string }> {
+  async loginWithPassword(
+    rawIdentifier: string,
+    password: string,
+    realm: AccountRealm,
+  ): Promise<{ userId: string }> {
     const identifier = rawIdentifier.trim();
+    // Tra TRONG realm (ADR 0053): cùng số/email ở site khác là một tài khoản khác, mật khẩu khác.
     const where = identifier.includes('@')
-      ? { email: identifier.toLowerCase(), deletedAt: null }
-      : { phone: normalizePhone(identifier), deletedAt: null };
+      ? { realm, email: identifier.toLowerCase(), deletedAt: null }
+      : { realm, phone: normalizePhone(identifier), deletedAt: null };
     const user = await this.prisma.user.findFirst({
       where,
       select: { id: true, passwordHash: true, status: true },
@@ -239,10 +280,10 @@ export class AuthService {
    * Yêu cầu đặt lại mật khẩu. LUÔN trả về như nhau dù email có tồn tại hay không — không để
    * kẻ tấn công dò email nào đã đăng ký.
    */
-  async requestPasswordReset(rawEmail: string): Promise<void> {
+  async requestPasswordReset(rawEmail: string, realm: AccountRealm): Promise<void> {
     const email = rawEmail.trim().toLowerCase();
     const user = await this.prisma.user.findFirst({
-      where: { email, deletedAt: null, status: USER_STATUS.ACTIVE },
+      where: { realm, email, deletedAt: null, status: USER_STATUS.ACTIVE },
       select: { id: true, displayName: true, email: true },
     });
     if (!user || !user.email) return;
@@ -266,8 +307,8 @@ export class AuthService {
       });
     });
 
-    const webUrl = this.config.getOrThrow<string>('APP_WEB_URL').replace(/\/+$/, '');
-    const resetUrl = `${webUrl}/reset-password?token=${token}`;
+    // Link về đúng SITE của tài khoản (ADR 0053): tài khoản partner đặt lại mật khẩu ở site partner.
+    const resetUrl = `${this.realms.webUrlFor(realm)}/reset-password?token=${token}`;
 
     /*
      * Nuốt lỗi gửi thư ở ĐÂY là một quyết định bảo mật, không phải sự cẩu thả.
@@ -287,11 +328,15 @@ export class AuthService {
     }
   }
 
-  /** Đặt mật khẩu mới từ token. Token dùng một lần và phải còn hạn. */
-  async resetPassword(token: string, newPassword: string): Promise<void> {
+  /**
+   * Đặt mật khẩu mới từ token. Token dùng một lần, phải còn hạn, và phải được dùng ở đúng SITE
+   * của tài khoản (ADR 0053): token của tài khoản partner đem sang site khách là token không hợp
+   * lệ — cùng một mã lỗi, không lộ rằng token đó có tồn tại ở nơi khác.
+   */
+  async resetPassword(token: string, newPassword: string, realm: AccountRealm): Promise<void> {
     const tokenHash = this.hashToken(token);
     const record = await this.prisma.passwordResetToken.findFirst({
-      where: { tokenHash, usedAt: null, expiresAt: { gt: new Date() } },
+      where: { tokenHash, usedAt: null, expiresAt: { gt: new Date() }, user: { realm } },
       select: { id: true, userId: true },
     });
     if (!record) {
@@ -316,19 +361,26 @@ export class AuthService {
    * Tìm hoặc tạo user từ một danh tính ĐÃ được nhà cung cấp xác minh — ADR 0002 bước 2.
    *
    * Idempotent: đăng nhập lại bằng cùng provider không tạo user mới. Khoá tra cứu là
-   * `(provider, providerUserId)` chứ không phải email — email đổi được, và tin email
+   * `(realm, provider, providerUserId)` chứ không phải email — email đổi được, và tin email
    * để nhận diện là cách hai tài khoản khác nhau bị gộp làm một.
    *
    * Nhận `VerifiedIdentity` chứ không nhận token (ADR 0019): việc xác minh là chuyện riêng của
    * từng provider và đã xong trước khi vào đây. Nhờ vậy hàm này không biết Google, Facebook hay
    * Apple tồn tại — thêm provider mới không chạm một dòng nào ở đây.
    */
-  async upsertUserFromIdentity(identity: VerifiedIdentity): Promise<{ userId: string }> {
+  async upsertUserFromIdentity(
+    identity: VerifiedIdentity,
+    realm: AccountRealm,
+  ): Promise<{ userId: string }> {
+    this.assertPasswordlessLogin(realm);
     const providerEmail = identity.email?.trim().toLowerCase() ?? null;
 
+    // Khoá tra cứu có realm (ADR 0053 điều 1): cùng một tài khoản Google là một tài khoản XePrime
+    // ở site khách và một tài khoản KHÁC ở site partner.
     const existing = await this.prisma.userIdentity.findUnique({
       where: {
-        provider_providerUserId: {
+        realm_provider_providerUserId: {
+          realm,
           provider: identity.provider,
           providerUserId: identity.providerUserId,
         },
@@ -354,7 +406,7 @@ export class AuthService {
     // động vào tài khoản XePrime có sẵn; nếu không, kẻ khác có thể tự khai cùng email để chiếm tài khoản.
     const emailUser = providerEmail
       ? await this.prisma.user.findFirst({
-          where: { email: providerEmail, deletedAt: null },
+          where: { realm, email: providerEmail, deletedAt: null },
           select: { id: true, status: true },
         })
       : null;
@@ -382,6 +434,7 @@ export class AuthService {
         await tx.user.create({
           data: {
             id: userId,
+            realm,
             email: providerEmail,
             emailVerifiedAt: identity.emailVerified ? new Date() : null,
             phone: identity.phone,
@@ -399,6 +452,7 @@ export class AuthService {
         data: {
           id: newId(),
           userId,
+          realm,
           provider: identity.provider,
           providerUserId: identity.providerUserId,
           providerEmail,
@@ -419,53 +473,17 @@ export class AuthService {
    * bắt P2002 rồi đọc lại. User tạo bằng SĐT có `passwordHash = null` (như tài khoản Google/FB) —
    * sau này người dùng có thể tự đặt mật khẩu / liên kết Google mà không chặn luồng đặt xe.
    */
-  /**
-   * Tìm tài khoản theo SĐT — KHÔNG tạo mới. Trả `null` khi số chưa có tài khoản nào.
-   *
-   * Sinh ra cho app XePrime Partner: ở đó một số chưa đăng ký KHÔNG được âm thầm thành tài
-   * khoản mới (`PARTNER_REGISTRATION_NOT_SUPPORTED`), vì tài khoản đó chắc chắn không có gian
-   * hàng nên sẽ bị cổng phạm vi app chặn ngay sau đó — và thứ còn lại là một hàng rác đã
-   * CHIẾM mất số điện thoại của chính người dùng đó.
-   *
-   * Vẫn chạm `lastLoginAt`/`phoneVerifiedAt` như đường tạo-nếu-thiếu: OTP đã chứng minh sở
-   * hữu số, nên hai cột đó phải được cập nhật dù người gọi là app nào.
-   */
-  async resolveExistingUserByPhone(rawPhone: string): Promise<{ userId: string } | null> {
-    const phone = normalizePhone(rawPhone);
-    const existing = await this.prisma.user.findFirst({
-      where: { phone, deletedAt: null },
-      select: { id: true, status: true, phoneVerifiedAt: true },
-    });
-    if (!existing) return null;
-
-    if (existing.status !== USER_STATUS.ACTIVE) {
-      throw new UnauthorizedException({
-        code: API_ERROR_CODE.ACCOUNT_LOCKED,
-        message: 'Tài khoản đã bị khoá',
-      });
-    }
-
-    const now = new Date();
-    await this.prisma.user.update({
-      where: { id: existing.id },
-      data: {
-        lastLoginAt: now,
-        ...(existing.phoneVerifiedAt ? {} : { phoneVerifiedAt: now }),
-      },
-    });
-
-    return { userId: existing.id };
-  }
-
   async resolveOrCreateUserByPhone(
     rawPhone: string,
+    realm: AccountRealm,
     displayNameFallback?: string | null,
   ): Promise<{ userId: string; created: boolean }> {
+    this.assertPasswordlessLogin(realm);
     const phone = normalizePhone(rawPhone);
     const now = new Date();
 
     const existing = await this.prisma.user.findFirst({
-      where: { phone, deletedAt: null },
+      where: { realm, phone, deletedAt: null },
       select: { id: true, status: true, phoneVerifiedAt: true },
     });
     if (existing) {
@@ -492,6 +510,7 @@ export class AuthService {
         await tx.user.create({
           data: {
             id: userId,
+            realm,
             phone,
             phoneVerifiedAt: now,
             displayName,
@@ -503,6 +522,7 @@ export class AuthService {
           data: {
             id: newId(),
             userId,
+            realm,
             provider: 'phone_otp',
             providerUserId: phone,
             providerPhone: phone,
@@ -514,7 +534,7 @@ export class AuthService {
       // Đua unique(phone): một request khác vừa tạo user cùng SĐT — đọc lại và dùng chung.
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
         const raced = await this.prisma.user.findFirst({
-          where: { phone, deletedAt: null },
+          where: { realm, phone, deletedAt: null },
           select: { id: true },
         });
         if (raced) return { userId: raced.id, created: false };
@@ -528,6 +548,7 @@ export class AuthService {
       where: { id: userId, deletedAt: null },
       select: {
         id: true,
+        realm: true,
         displayName: true,
         email: true,
         avatarUrl: true,
@@ -536,10 +557,20 @@ export class AuthService {
         passwordHash: true,
       },
     });
+    const realm = user.realm as AccountRealm;
+
+    /*
+     * Mỗi realm chỉ có đúng phần của nó (ADR 0053): tài khoản khách không có gian hàng, tài khoản
+     * partner không có chuyến đi thuê, tài khoản nền tảng không có cả hai. DB đã giữ hai vế đầu
+     * bằng trigger; ở đây chỉ là không đi hỏi những thứ chắc chắn rỗng trên endpoint nóng nhất.
+     */
+    const isPartner = realm === ACCOUNT_REALM.PARTNER;
+    const isPlatform = realm === ACCOUNT_REALM.PLATFORM;
+    const isCustomer = realm === ACCOUNT_REALM.CUSTOMER;
 
     const now = new Date();
     const [membership, platformMembership] = await Promise.all([
-      this.prisma.tenantMembership.findFirst({
+      !isPartner ? null : this.prisma.tenantMembership.findFirst({
         where: { userId, status: MEMBERSHIP_STATUS.ACTIVE },
         select: {
           roleKey: true,
@@ -569,9 +600,8 @@ export class AuthService {
             },
           },
         },
-        orderBy: { createdAt: 'asc' },
       }),
-      this.prisma.platformMembership.findFirst({
+      !isPlatform ? null : this.prisma.platformMembership.findFirst({
         where: { userId, status: MEMBERSHIP_STATUS.ACTIVE },
         select: { roleKey: true, roleId: true },
       }),
@@ -583,16 +613,12 @@ export class AuthService {
      * `(tenant_id, public_status)` đã có sẵn nên đây là một index-only scan.
      */
     /*
-     * Chuyến ĐI THUÊ chưa khép của chính người này (15/09/2026).
-     *
-     * Khu `/account` của một tài khoản gian hàng ẩn menu Chuyến — nhưng KHÔNG được giấu một
-     * chuyến đang chạy của chính họ. Ca thật: một chủ xe tuyến hoa hồng đang đi thuê xe của người
-     * khác thì nâng lên gói; chuyến đó chưa xong, tiền hoàn chưa về, và chat với chủ xe kia vẫn
-     * đang mở. Ẩn menu lúc đó là lấy mất đường vào đúng lúc họ cần nhất.
+     * Chuyến ĐI THUÊ chưa khép — CHỈ tài khoản khách có (ADR 0053: chủ xe đi thuê bằng tài khoản
+     * khách riêng, nên tài khoản partner không bao giờ là người thuê).
      *
      * Đếm ở đây thay vì để web tự gọi `/trips`: menu vẽ ở LẦN ĐẦU, và một request thứ hai nghĩa
-     * là menu nhấp nháy. Cùng lý do với `publicVehicleCount` ngay bên cạnh, và cùng vị từ với tab
-     * "đang diễn ra" của `/trips` (`OPEN_CUSTOMER_TRIP_STATUSES`).
+     * là menu nhấp nháy. Cùng vị từ với tab "đang diễn ra" của `/trips`
+     * (`OPEN_CUSTOMER_TRIP_STATUSES`).
      */
     const openTripWhere: Prisma.BookingRequestWhereInput = {
       customerUserId: userId,
@@ -620,7 +646,7 @@ export class AuthService {
       : ([[], 0] as [readonly Permission[], number]);
 
     const [openRenterTripCount, tenantPlan] = await Promise.all([
-      this.prisma.bookingRequest.count({ where: openTripWhere }),
+      isCustomer ? this.prisma.bookingRequest.count({ where: openTripWhere }) : 0,
       /*
        * Giải ngữ cảnh gói TRƯỚC, vì nó quyết định có cần đọc chính sách phí hay không — và
        * `toTenantSummary` dùng lại chính kết quả này thay vì giải lần thứ hai.
@@ -661,6 +687,7 @@ export class AuthService {
 
     return {
       id: user.id,
+      realm,
       displayName: user.displayName,
       email: user.email,
       avatarUrl: user.avatarUrl,

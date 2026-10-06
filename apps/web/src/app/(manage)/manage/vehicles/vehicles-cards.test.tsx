@@ -8,7 +8,8 @@ import { PERMISSION, type Permission } from '@xeprime/types';
 
 import type { VehicleListItem, VehicleStats } from '@/features/vehicles/types';
 
-import VehiclesPage from './page';
+// Màn đội xe của tuyến GÓI — trang `/vehicles` chọn nó theo tuyến (`PartnerTrackView`, ADR 0051).
+import { ManageVehiclesPage as VehiclesPage } from '@/features/vehicles/components/ManageVehiclesPage';
 
 /**
  * `/manage/vehicles` — **lưới thẻ**, hình thái mặc định từ Wave 3B.

@@ -5,9 +5,6 @@ import { TRIP_ROLE } from '@xeprime/types';
 import { ROUTES } from '@/constants/routes';
 import { ApiClientError } from '@/services/api-client';
 
-/** Khu chứa danh sách ở lối chuyển tiếp — hằng, không phải chuỗi gõ tay ở từng khẳng định. */
-const MANAGE_TRIPS = ROUTES.MANAGE.ACCOUNT_TRIPS;
-
 import { TripsView } from './TripsView';
 
 /**
@@ -46,27 +43,6 @@ vi.mock('@/features/auth/components/AuthModalProvider', () => ({
   useNextFromCurrentPath: () => () => '/trips',
 }));
 
-/*
- * Hai cộng tác viên của phía CHỦ XE, mock cùng kiểu với `useTrips` ở trên.
- *
- * Danh sách nay phục vụ cả hai phía (08/09/2026), nên nó hỏi quyền và cầm luồng duyệt/từ chối.
- * Bộ test này khoá hành vi DANH SÁCH — tab, bộ lọc URL, ba trạng thái rỗng/lỗi/hết phiên — nên
- * kéo cả TanStack Query vào chỉ để hai hook đó chạy thật là đổi thứ đang được kiểm.
- * Luồng quyết định có test riêng ở `features/booking-requests`.
- */
-vi.mock('@/hooks/use-permissions', () => ({
-  usePermissions: () => ({ has: () => true, hasAny: () => true, isLoading: false }),
-}));
-
-vi.mock('@/features/booking-requests/hooks/use-booking-request-decisions', () => ({
-  useBookingRequestDecisions: () => ({
-    openApprove: vi.fn(),
-    openReject: vi.fn(),
-    openCancel: vi.fn(),
-    decisionActionFor: () => null,
-    dialogs: null,
-  }),
-}));
 
 const TRIP = {
   id: 'RQ1',
@@ -238,16 +214,10 @@ describe('Danh sách chuyến', () => {
 });
 
 /**
- * HAI TAB, không có hàng chọn vai (16/09/2026).
- *
- * Bản 15/09 thêm một `Segmented` "Tất cả · Tôi đi thuê · Tôi cho thuê" trên hai tab trạng thái.
- * Hai hàng điều khiển chồng nhau buộc người đọc phải hiểu cái nào lồng trong cái nào trước khi
- * đọc được chuyến nào — trong khi mỗi thẻ đã mang nhãn vai của nó.
- *
- * Chiều VAI vẫn còn nguyên ở SERVER, và hai test dưới chứng minh đúng điều đó: bỏ phần giao diện
- * KHÔNG được biến thành bỏ phép lọc, nếu không một deep link `?role=` sẽ lặng lẽ mở rộng phạm vi.
+ * CHỈ chuyến ĐI THUÊ (ADR 0053). Site khách không có phía "cho thuê": tài khoản khách không có gian
+ * hàng. Vai gửi lên server luôn là `renter`, kể cả khi URL cũ mang `?role=host`.
  */
-describe('TripsView — hai tab, không chọn vai', () => {
+describe('TripsView — chỉ chuyến đi thuê', () => {
   it('không dựng hàng chọn vai nào', () => {
     renderView();
 
@@ -256,102 +226,36 @@ describe('TripsView — hai tab, không chọn vai', () => {
     expect(screen.queryByText('Tôi đi thuê')).toBeNull();
   });
 
-  it('mặc định KHÔNG lọc vai — danh sách vẫn là cả hai phía', () => {
+  it('luôn hỏi server ĐÚNG vai renter', () => {
     renderView();
 
-    expect(query.lastArgs[2]).toBeUndefined();
+    expect(query.lastArgs[2]).toBe(TRIP_ROLE.RENTER);
   });
 
-  /* Deep link từ thông báo/email vẫn thu hẹp được phạm vi, dù không còn nút nào tạo ra nó. */
-  it('?role=host trên URL vẫn được tôn trọng và đi lên server', () => {
+  it('?role=host cũ trên URL KHÔNG mở được chuyến cho thuê', () => {
     nav.params = new URLSearchParams('role=host');
     renderView();
 
-    expect(query.lastArgs[2]).toBe(TRIP_ROLE.HOST);
+    expect(query.lastArgs[2]).toBe(TRIP_ROLE.RENTER);
   });
 
-  /*
-   * Đổi tab KHÔNG được đánh rơi `role`: số đếm trên tab và phân trang đều tính theo phạm vi đã
-   * lọc, nên một lần rơi tham số là một lần người dùng thấy tab nói 3 mà danh sách có 11.
-   */
-  it('đổi tab giữ nguyên ?role= trên URL', () => {
-    nav.params = new URLSearchParams('role=host');
+  it('đổi tab bỏ ?role= cũ và ghi URL ở /trips', () => {
+    nav.params = new URLSearchParams('role=host&ref=mail');
     renderView();
 
     fireEvent.click(screen.getByText(/Lịch sử chuyến/));
 
-    expect(nav.replace).toHaveBeenCalledWith(expect.stringContaining('role=host'), expect.anything());
-  });
-});
-
-/**
- * LỐI CHUYỂN TIẾP trong Manage — cùng danh sách, khoá vai `renter` (ADR 0038 điều 7).
- *
- * Người nâng từ tuyến hoa hồng lên tuyến gói có thể còn chuyến ĐI THUÊ chưa khép. Khu khách đã
- * đóng với họ, nên danh sách này là chỗ duy nhất còn đọc được những chuyến đó — nhưng nó không
- * được kéo theo chuyến họ CHO THUÊ, thứ có nơi riêng đầy đủ công cụ ở `/manage/bookings`.
- */
-describe('TripsView — khoá vai ở lối chuyển tiếp', () => {
-  function renderLocked() {
-    return render(
-      <App>
-        <TripsView lockedRole={TRIP_ROLE.RENTER} basePath={MANAGE_TRIPS} />
-      </App>,
-    );
-  }
-
-  it('hỏi server ĐÚNG vai renter', () => {
-    renderLocked();
-
-    expect(query.lastArgs[2]).toBe(TRIP_ROLE.RENTER);
+    const [href] = nav.replace.mock.calls.at(-1) as [string];
+    expect(href.startsWith(`${ROUTES.TRIPS}?`)).toBe(true);
+    expect(href).not.toContain('role=');
+    expect(href).toContain('ref=mail');
   });
 
-  /*
-   * Bookmark cũ mang sẵn `?role=host`. Nếu `lockedRole` chỉ là GIÁ TRỊ MẶC ĐỊNH thì tham số đó mở
-   * lại đúng tập chuyến mà màn này sinh ra để tránh — và người dùng không cần ý đồ gì để tới đó.
-   */
-  it('?role=host KHÔNG mở lại được chuyến cho thuê', () => {
-    nav.params = new URLSearchParams('role=host');
-    renderLocked();
-
-    expect(query.lastArgs[2]).toBe(TRIP_ROLE.RENTER);
-  });
-
-  /*
-   * Mọi liên kết phải ở lại trong Manage. Một liên kết trỏ về `/trips` sẽ bị `AccountShell` chuyển
-   * hướng ngay khi bấm — nút hoạt động, nhưng đưa người dùng đi chỗ khác.
-   */
-  it('liên kết chi tiết trỏ vào lối chuyển tiếp, không về /trips', () => {
-    renderLocked();
+  it('liên kết chi tiết trỏ vào /trips của site khách', () => {
+    renderView();
 
     const links = screen.getAllByRole('link').map((a) => a.getAttribute('href') ?? '');
-    expect(links.some((href) => href.startsWith(MANAGE_TRIPS))).toBe(true);
-    expect(links.some((href) => href === '/trips' || href.startsWith('/trips/'))).toBe(false);
-  });
-
-  it('đổi tab ghi lại URL trong Manage', () => {
-    renderLocked();
-
-    fireEvent.click(screen.getByText(/Lịch sử chuyến/));
-
-    expect(nav.replace).toHaveBeenCalledWith(
-      expect.stringContaining(MANAGE_TRIPS),
-      expect.anything(),
-    );
-  });
-
-  /*
-   * Rỗng ở đây KHÔNG mời đi tìm xe: tài khoản gian hàng tuyến gói không gửi được yêu cầu thuê
-   * (ADR 0038 điều 6), nên nút đó dẫn thẳng tới một thông báo từ chối.
-   */
-  it('danh sách rỗng KHÔNG mời đi tìm xe', () => {
-    query.data = {
-      items: [],
-      meta: { page: 1, limit: 10, total: 0, hasNext: false },
-      counts: { current: 0, history: 0 },
-    };
-    renderLocked();
-
-    expect(screen.queryByText('Tìm xe')).toBeNull();
+    expect(links.some((href) => href.startsWith(`${ROUTES.TRIPS}/`))).toBe(true);
+    expect(links.some((href) => href.startsWith(ROUTES.MANAGE.ROOT))).toBe(false);
   });
 });

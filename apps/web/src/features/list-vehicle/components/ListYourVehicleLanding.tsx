@@ -19,19 +19,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import type { MouseEvent, ReactNode } from 'react';
-
-import { REGISTRATION_TRACK } from '@xeprime/types';
+import type { ReactNode } from 'react';
 
 import { LEGAL_DOC, legalPath } from '@/constants/legal';
-import {
-  VEHICLE_REGISTRATION_SOURCE,
-  listYourVehicleRegisterPath,
-  manageOnboardingPath,
-} from '@/constants/routes';
-import { useAuthModal } from '@/features/auth/components/AuthModalProvider';
-import { AUTH_MODE } from '@/features/auth/post-auth-destination';
-import { useCurrentUser } from '@/hooks/use-current-user';
 import { cx } from '@/lib/cx';
 
 import styles from './ListYourVehicleLanding.module.css';
@@ -47,65 +37,51 @@ import styles from './ListYourVehicleLanding.module.css';
 const BASIC_OWNER_VEHICLE_CAP = 3;
 const PLATFORM_SERVICE_FEE_PILOT_PERCENT = 10;
 
+export interface ListYourVehicleLandingProps {
+  /** Đích của "Đăng xe đầu tiên" (tuyến hoa hồng). */
+  personalHref: string;
+  /** Đích của "Tìm hiểu và tạo gian hàng" (tuyến gói). */
+  shopHref: string;
+  /**
+   * Nút "Quay lại" (lịch sử trình duyệt). Site khách bật — người ta tới đây từ chợ xe. Site partner
+   * tắt: ngay sau khi tạo tài khoản đối tác, trang trước là chính form đăng ký.
+   */
+  showBack?: boolean;
+}
+
 /**
- * Landing "Đăng xe cho thuê" — cửa vào CÔNG KHAI của chủ xe mới, hai tuyến song song.
+ * "Bắt đầu cho thuê xe theo cách phù hợp với bạn" — HAI tuyến song song, một nội dung cho hai nơi:
  *
- * Đọc được khi chưa đăng nhập: người ta cần biết mình sẽ được gì trước khi giao email.
- * Trang trình bày HAI lựa chọn ĐỘC LẬP của ADR 0028 và không tự chuyển lựa chọn này thành
- * lựa chọn kia:
+ *  - **site khách** (`/list-your-vehicle`, công khai, cần SEO): người chưa có tài khoản đối tác đọc
+ *    trước khi giao email; hai nút dẫn sang `/register?track=…` của site partner;
+ *  - **site partner** (`/register`, ngay SAU khi tạo tài khoản đối tác — ADR 0053): hai nút dẫn vào
+ *    bước tiếp theo của tuyến — wizard đăng xe nhanh (hoa hồng) · onboarding gói.
  *
- *  - "Đăng xe cá nhân" → wizard `/list-your-vehicle/register` (tuyến hoa hồng);
- *  - "Mở gian hàng cho thuê" → `/manage/onboarding` (tuyến gói).
- *
- * Chưa đăng nhập thì mở auth modal ngay tại trang, mang theo `next` là ĐÚNG đích vừa chọn —
- * không đẩy người chọn tuyến cá nhân sang form tạo gian hàng. `next` là đường dẫn NỘI BỘ
- * dựng từ hằng số, không nhận URL từ query, nên không có bề mặt open-redirect.
- *
- * Không tự tạo tenant cho ai: chỉ người bấm đúng nút gian hàng mới thể hiện ý định đó.
+ * Trang chỉ TRÌNH BÀY hai lựa chọn độc lập của ADR 0028 và không tự chuyển lựa chọn này thành lựa
+ * chọn kia; nơi dùng quyết định đích. Không tự tạo tenant cho ai.
  */
-export function ListYourVehicleLanding() {
+export function ListYourVehicleLanding({
+  personalHref,
+  shopHref,
+  showBack = true,
+}: ListYourVehicleLandingProps) {
   const t = useTranslations('ListYourVehicle.landing');
   const router = useRouter();
-  const { data: user, isLoading } = useCurrentUser();
-  const { open } = useAuthModal();
-
-  const personalHref = listYourVehicleRegisterPath(VEHICLE_REGISTRATION_SOURCE.MARKETPLACE);
-  /*
-   * CỬA GIAN HÀNG mang theo tuyến (ADR 0040) — `?track=package`.
-   *
-   * Không có tham số này thì cả hai CTA của trang dẫn tới cùng một URL, server gán gói hoa hồng
-   * cho cả hai, và người bấm đúng thẻ "Mở gian hàng cho thuê" bị điều hướng vào màn "Hồ sơ chủ
-   * xe" của tuyến kia. Đó chính là bug mà `?track=` sửa — và vì trang này có thể đẩy người chưa
-   * đăng nhập qua auth modal rồi mới điều hướng, tham số phải nằm trong `next` (nó nằm, vì
-   * `guard()` truyền đúng `destination` này).
-   */
-  const shopHref = manageOnboardingPath(REGISTRATION_TRACK.PACKAGE);
-
-  /**
-   * Chặn điều hướng khi chưa đăng nhập để mở auth modal tại chỗ; đăng nhập xong modal tự đẩy
-   * về `next`. `href` vẫn là đích THẬT nên bot đọc được, chuột giữa/mở tab mới vẫn đúng, và
-   * lúc đang tải `/auth/me` thì cứ để link chạy — trang đích tự có guard của nó.
-   */
-  function guard(destination: string) {
-    return (event: MouseEvent<HTMLElement>) => {
-      if (isLoading || user) return;
-      event.preventDefault();
-      open({ mode: AUTH_MODE.LOGIN, next: destination });
-    };
-  }
 
   return (
     <div className={styles.page}>
-      <div className={styles.backRow}>
-        <Button
-          type="text"
-          icon={<ArrowLeftOutlined />}
-          onClick={() => router.back()}
-          className={styles.back}
-        >
-          {t('back')}
-        </Button>
-      </div>
+      {showBack ? (
+        <div className={styles.backRow}>
+          <Button
+            type="text"
+            icon={<ArrowLeftOutlined />}
+            onClick={() => router.back()}
+            className={styles.back}
+          >
+            {t('back')}
+          </Button>
+        </div>
+      ) : null}
 
       <header className={styles.intro}>
         <h1 className={styles.title}>{t('title')}</h1>
@@ -136,15 +112,8 @@ export function ListYourVehicleLanding() {
           strong: (chunks) => <strong>{chunks}</strong>,
         })}
         cta={
-          <Link href={personalHref} onClick={guard(personalHref)} className={styles.ctaLink}>
-            <Button
-              type="primary"
-              size="large"
-              block
-              loading={isLoading}
-              icon={<ArrowRightOutlined />}
-              iconPosition="end"
-            >
+          <Link href={personalHref} className={styles.ctaLink}>
+            <Button type="primary" size="large" block icon={<ArrowRightOutlined />} iconPlacement="end">
               {t('personal.cta')}
             </Button>
           </Link>
@@ -170,8 +139,8 @@ export function ListYourVehicleLanding() {
         offerTitle={t('shop.offerTitle')}
         offerBody={t('shop.offerBody')}
         cta={
-          <Link href={shopHref} onClick={guard(shopHref)} className={styles.ctaLink}>
-            <Button size="large" block icon={<ArrowRightOutlined />} iconPosition="end">
+          <Link href={shopHref} className={styles.ctaLink}>
+            <Button size="large" block icon={<ArrowRightOutlined />} iconPlacement="end">
               {t('shop.cta')}
             </Button>
           </Link>

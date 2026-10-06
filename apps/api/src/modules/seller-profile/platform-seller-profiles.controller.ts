@@ -1,7 +1,10 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
-import { CurrentUser, PlatformOnly, RequirePermissions } from '../../common/decorators';
+import {
+  ACCOUNT_REALM,
+  PERMISSION,
+} from '@xeprime/types';
+import { CurrentUser, PlatformOnly, Realms, RequirePermissions } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import {
   PlatformSellerListQueryDto,
@@ -22,6 +25,7 @@ import { SellerProfileService } from './seller-profile.service';
 @Controller('platform/seller-profiles')
 @PlatformOnly()
 @RequirePermissions(PERMISSION.PLATFORM_SELLER_VERIFY)
+@Realms(ACCOUNT_REALM.PLATFORM)
 export class PlatformSellerProfilesController {
   constructor(private readonly profiles: SellerProfileService) {}
 

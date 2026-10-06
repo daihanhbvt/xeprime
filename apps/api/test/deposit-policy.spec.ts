@@ -1,6 +1,7 @@
 import { ForbiddenException } from '@nestjs/common';
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   BILLING_MODE,
   BOOKING_HOLD_STATUS,
@@ -8,18 +9,18 @@ import {
   DEPOSIT_COLLECTION_MODE,
   DEPOSIT_POLICY_REASON,
   FEATURE_STATE,
+  type FeatureState,
   MEMBERSHIP_STATUS,
   PLAN_FEATURE,
   PLAN_FEATURE_VALUES,
   PLAN_STATUS,
+  type PlanFeature,
   SERVICE_TYPE,
   SUBSCRIPTION_STATUS,
   TENANT_ROLE,
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_TYPE,
-  type FeatureState,
-  type PlanFeature,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import type { AuthService } from '../src/modules/auth/auth.service';
@@ -154,7 +155,12 @@ async function seedShop(
   const plan = newId();
 
   await prisma.user.create({
-    data: { id: owner, displayName: `Chủ ${label}`, email: `dep-${label}-${RUN}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: owner,
+      displayName: `Chủ ${label}`,
+      email: `dep-${label}-${RUN}@xeprime.test`,
+    },
   });
   await prisma.tenant.create({
     data: {
@@ -197,8 +203,7 @@ async function seedShop(
       name: `Gói ${label}`,
       status: PLAN_STATUS.ACTIVE,
       billingMode,
-      commissionPercent:
-        billingMode === BILLING_MODE.COMMISSION ? new Prisma.Decimal(10) : null,
+      commissionPercent: billingMode === BILLING_MODE.COMMISSION ? new Prisma.Decimal(10) : null,
       basePriceMonthly: new Prisma.Decimal(0),
       limitsJson: { features: [...planFeatures] } as unknown as Prisma.InputJsonValue,
     },
@@ -477,7 +482,11 @@ describe('PATCH /shop/payment-settings — chặn thật ở service (khi giai �
 describe('Duyệt TAY áp đúng chính sách (khi giai đoạn kết thúc)', () => {
   maybe('gói + TẮT cọc → đơn ra đời ngay, không hold, mode = direct', async () => {
     const { receipt } = await submit(packagePlus, 5, twoAxisRequests);
-    const approved = await twoAxisRequests.approve(packagePlus.tenant, packagePlus.owner, receipt.id);
+    const approved = await twoAxisRequests.approve(
+      packagePlus.tenant,
+      packagePlus.owner,
+      receipt.id,
+    );
 
     expect(approved.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
     expect(await prisma.bookingHold.count({ where: { tenantId: packagePlus.tenant } })).toBe(0);
@@ -535,7 +544,11 @@ describe('Duyệt TAY áp đúng chính sách (khi giai đoạn kết thúc)', (
   maybe('gói THIẾU cờ → không thu, mode = direct (gian hàng tự thoả thuận)', async () => {
     await setToggle(packageBasic.tenant, true); // bật lén: không có hiệu lực
     const { receipt } = await submit(packageBasic, 14, twoAxisRequests);
-    const approved = await twoAxisRequests.approve(packageBasic.tenant, packageBasic.owner, receipt.id);
+    const approved = await twoAxisRequests.approve(
+      packageBasic.tenant,
+      packageBasic.owner,
+      receipt.id,
+    );
 
     expect(approved.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
     expect(await prisma.bookingHold.count({ where: { tenantId: packageBasic.tenant } })).toBe(0);
@@ -585,7 +598,11 @@ describe('TỰ NHẬN đơn áp CÙNG chính sách với duyệt tay (khi giai �
 describe('Đóng băng — ADR 0025 ràng buộc 4 (khi giai đoạn kết thúc)', () => {
   maybe('bật công tắc SAU khi đơn đã tạo không viết lại đơn đó', async () => {
     const { receipt } = await submit(packagePlus, 23, twoAxisRequests);
-    const approved = await twoAxisRequests.approve(packagePlus.tenant, packagePlus.owner, receipt.id);
+    const approved = await twoAxisRequests.approve(
+      packagePlus.tenant,
+      packagePlus.owner,
+      receipt.id,
+    );
     const bookingId = approved.bookingId!;
 
     await twoAxis.updateSettings(packagePlus.tenant, packagePlus.owner, true);
@@ -608,58 +625,61 @@ describe('Đóng băng — ADR 0025 ràng buộc 4 (khi giai đoạn kết thúc
  * và đơn đó vẫn mang `platform` — vì nó ra đời từ tiền XePrime đã thu thật.
  */
 describe('Công tắc đổi SAU khi hold đã sinh — đường tiền không đổi giữa chừng', () => {
-  maybe('tắt cọc khi khách đang cầm mã: hold giữ nguyên, tiền về vẫn mở đơn `platform`', async () => {
-    await setToggle(packagePlus.tenant, true);
-    // Hold sinh lúc gian hàng NHẬN chuyến (ADR 0044) — từ đó khách cầm mã và đồng hồ chạy.
-    const { receipt } = await submit(packagePlus, 26);
-    const accepted = await requests.approve(packagePlus.tenant, packagePlus.owner, receipt.id);
-    expect(accepted.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
+  maybe(
+    'tắt cọc khi khách đang cầm mã: hold giữ nguyên, tiền về vẫn mở đơn `platform`',
+    async () => {
+      await setToggle(packagePlus.tenant, true);
+      // Hold sinh lúc gian hàng NHẬN chuyến (ADR 0044) — từ đó khách cầm mã và đồng hồ chạy.
+      const { receipt } = await submit(packagePlus, 26);
+      const accepted = await requests.approve(packagePlus.tenant, packagePlus.owner, receipt.id);
+      expect(accepted.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
 
-    const hold = await prisma.bookingHold.findFirstOrThrow({
-      where: { tenantId: packagePlus.tenant },
-    });
-    const frozenAmount = hold.amount.toFixed(0);
+      const hold = await prisma.bookingHold.findFirstOrThrow({
+        where: { tenantId: packagePlus.tenant },
+      });
+      const frozenAmount = hold.amount.toFixed(0);
 
-    /*
-     * Gian hàng đổi ý TRONG LÚC khách đang cầm mã chuyển khoản.
-     *
-     * Ghi thẳng bản ghi thay vì gọi `updateSettings`: trong giai đoạn cả sàn thu cọc, đường ghi
-     * đó trả 403 cho mọi tuyến. Thứ ca này kiểm không phải "ai được bấm nút" (khối PATCH ở trên
-     * lo) mà là "một lượt đổi công tắc — bất kể đến từ đâu — có viết lại được một chuyến đang
-     * chạy hay không".
-     */
-    await setToggle(packagePlus.tenant, false);
+      /*
+       * Gian hàng đổi ý TRONG LÚC khách đang cầm mã chuyển khoản.
+       *
+       * Ghi thẳng bản ghi thay vì gọi `updateSettings`: trong giai đoạn cả sàn thu cọc, đường ghi
+       * đó trả 403 cho mọi tuyến. Thứ ca này kiểm không phải "ai được bấm nút" (khối PATCH ở trên
+       * lo) mà là "một lượt đổi công tắc — bất kể đến từ đâu — có viết lại được một chuyến đang
+       * chạy hay không".
+       */
+      await setToggle(packagePlus.tenant, false);
 
-    const still = await prisma.bookingHold.findUniqueOrThrow({ where: { id: hold.id } });
-    expect(still.status).toBe(BOOKING_HOLD_STATUS.PENDING);
-    expect(still.code).toBe(hold.code);
-    expect(still.amount.toFixed(0)).toBe(frozenAmount);
+      const still = await prisma.bookingHold.findUniqueOrThrow({ where: { id: hold.id } });
+      expect(still.status).toBe(BOOKING_HOLD_STATUS.PENDING);
+      expect(still.code).toBe(hold.code);
+      expect(still.amount.toFixed(0)).toBe(frozenAmount);
 
-    // Khách chuyển đủ. Đường tiền phải hoạt động y như lúc hold được sinh ra.
-    const applied = await prisma.$transaction((tx) =>
-      holds.applyBankPaymentWithinTx(tx, {
-        code: hold.code,
-        amount: new Prisma.Decimal(frozenAmount),
-        providerTxId: `deposit-freeze-${hold.code}`,
-      }),
-    );
-    expect(applied.outcome).toBe('activated');
+      // Khách chuyển đủ. Đường tiền phải hoạt động y như lúc hold được sinh ra.
+      const applied = await prisma.$transaction((tx) =>
+        holds.applyBankPaymentWithinTx(tx, {
+          code: hold.code,
+          amount: new Prisma.Decimal(frozenAmount),
+          providerTxId: `deposit-freeze-${hold.code}`,
+        }),
+      );
+      expect(applied.outcome).toBe('activated');
 
-    /*
-     * Chuyến đã được nhận từ trước, nên lượt tiền về này mở ĐƠN ngay (ADR 0044 điều 2) — không
-     * bắt gian hàng bấm lần thứ hai. Đó cũng là lúc `deposit_collection_mode` đóng băng, và nó
-     * phải đóng băng theo khoản tiền ĐÃ THU chứ không theo công tắc của hôm nay.
-     */
-    const booking = await prisma.booking.findFirstOrThrow({
-      where: { tenantId: packagePlus.tenant },
-    });
-    /*
-     * `platform` chứ không phải `direct`: đơn này ra đời VÌ tiền đã vào tài khoản XePrime. Đọc
-     * công tắc của hôm nay để suy ra "ai thu cọc" sẽ nói sai về một khoản tiền có thật.
-     */
-    expect(booking.depositCollectionMode).toBe(DEPOSIT_COLLECTION_MODE.PLATFORM);
-    expect(
-      (await prisma.bookingRequest.findUniqueOrThrow({ where: { id: receipt.id } })).status,
-    ).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
-  });
+      /*
+       * Chuyến đã được nhận từ trước, nên lượt tiền về này mở ĐƠN ngay (ADR 0044 điều 2) — không
+       * bắt gian hàng bấm lần thứ hai. Đó cũng là lúc `deposit_collection_mode` đóng băng, và nó
+       * phải đóng băng theo khoản tiền ĐÃ THU chứ không theo công tắc của hôm nay.
+       */
+      const booking = await prisma.booking.findFirstOrThrow({
+        where: { tenantId: packagePlus.tenant },
+      });
+      /*
+       * `platform` chứ không phải `direct`: đơn này ra đời VÌ tiền đã vào tài khoản XePrime. Đọc
+       * công tắc của hôm nay để suy ra "ai thu cọc" sẽ nói sai về một khoản tiền có thật.
+       */
+      expect(booking.depositCollectionMode).toBe(DEPOSIT_COLLECTION_MODE.PLATFORM);
+      expect(
+        (await prisma.bookingRequest.findUniqueOrThrow({ where: { id: receipt.id } })).status,
+      ).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
+    },
+  );
 });

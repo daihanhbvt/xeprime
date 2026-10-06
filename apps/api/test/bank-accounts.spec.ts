@@ -1,5 +1,5 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
-import { BANK_ACCOUNT_STATUS, WALLET_OWNER_TYPE } from '@xeprime/types';
+import { ACCOUNT_REALM, BANK_ACCOUNT_STATUS, WALLET_OWNER_TYPE } from '@xeprime/types';
 import { BankAccountsService } from '../src/modules/bank-accounts/bank-accounts.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 
@@ -35,8 +35,8 @@ beforeAll(async () => {
   otherUserId = newId();
   await prisma.user.createMany({
     data: [
-      { id: userId, displayName: 'Khách A', status: 'active' },
-      { id: otherUserId, displayName: 'Khách B', status: 'active' },
+      { realm: ACCOUNT_REALM.CUSTOMER, id: userId, displayName: 'Khách A', status: 'active' },
+      { realm: ACCOUNT_REALM.CUSTOMER, id: otherUserId, displayName: 'Khách B', status: 'active' },
     ],
   });
 });
@@ -58,11 +58,14 @@ const maybe = (name: string, fn: () => Promise<void>) =>
 const owner = () => ({ type: WALLET_OWNER_TYPE.USER, userId }) as const;
 
 describe('Thêm tài khoản nhận tiền', () => {
-  maybe('tài khoản ĐẦU TIÊN tự thành mặc định — không bắt bấm thêm một nút cho cái duy nhất', async () => {
-    const created = await accounts.create(owner(), ACCOUNT);
-    expect(created.isDefault).toBe(true);
-    expect(created.status).toBe(BANK_ACCOUNT_STATUS.ACTIVE);
-  });
+  maybe(
+    'tài khoản ĐẦU TIÊN tự thành mặc định — không bắt bấm thêm một nút cho cái duy nhất',
+    async () => {
+      const created = await accounts.create(owner(), ACCOUNT);
+      expect(created.isDefault).toBe(true);
+      expect(created.status).toBe(BANK_ACCOUNT_STATUS.ACTIVE);
+    },
+  );
 
   maybe('số tài khoản được CHUẨN HOÁ: bỏ khoảng trắng dán từ app ngân hàng', async () => {
     const row = await prisma.bankAccount.findFirstOrThrow({ where: { ownerUserId: userId } });
@@ -107,15 +110,18 @@ describe('Tài khoản mặc định — đúng MỘT, luôn có một', () => {
    * Bỏ tài khoản mặc định mà không ai lên thay sẽ để danh sách ở trạng thái "có tài khoản nhưng
    * không biết chuyển vào đâu" — và lệnh chi kế tiếp không có đích.
    */
-  maybe('bỏ tài khoản mặc định ⇒ tài khoản còn lại lên thay, danh sách không bao giờ mất mặc định', async () => {
-    const list = await accounts.list(owner());
-    const current = list.find((a) => a.isDefault)!;
-    await accounts.archive(owner(), current.id);
+  maybe(
+    'bỏ tài khoản mặc định ⇒ tài khoản còn lại lên thay, danh sách không bao giờ mất mặc định',
+    async () => {
+      const list = await accounts.list(owner());
+      const current = list.find((a) => a.isDefault)!;
+      await accounts.archive(owner(), current.id);
 
-    const after = await accounts.list(owner());
-    expect(after).toHaveLength(1);
-    expect(after[0]!.isDefault).toBe(true);
-  });
+      const after = await accounts.list(owner());
+      expect(after).toHaveLength(1);
+      expect(after[0]!.isDefault).toBe(true);
+    },
+  );
 
   maybe('bỏ dùng là LƯU TRỮ chứ không xoá — lệnh chuyển cũ còn trỏ về nó', async () => {
     const archived = await prisma.bankAccount.count({

@@ -13,14 +13,14 @@ import {
 import { ApiClientError } from '@xeprime/api-client';
 import { API_ERROR_CODE } from '@xeprime/types';
 
-import { VEHICLE_MANAGE_SECTION, accountVehicleManagePath, listingPath } from '@/constants/routes';
+import { VEHICLE_MANAGE_SECTION, ownerVehicleManagePath, listingPath } from '@/constants/routes';
 import type { VehicleDetail } from '@/features/vehicles/types';
 import { renderWithIntl } from '@/i18n/test-utils';
 
 import { VehicleManageWorkspace } from './VehicleManageWorkspace';
 
 /**
- * Vỏ không gian "Quản lý xe" của chủ xe (`/account/vehicles/:id/manage/*`).
+ * Vỏ không gian "Quản lý xe" của chủ xe (`/vehicles/:id/manage/*` của site partner).
  *
  * Những gì test này khoá:
  *
@@ -36,7 +36,7 @@ import { VehicleManageWorkspace } from './VehicleManageWorkspace';
 const nav = vi.hoisted(() => ({
   push: vi.fn(),
   replace: vi.fn(),
-  pathname: '/account/vehicles/v1/manage/information',
+  pathname: '/manage/vehicles/v1/manage/information',
 }));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: nav.push, replace: nav.replace }),
@@ -123,7 +123,7 @@ function renderWorkspace(children = <div data-testid="section-content">Nội dun
 
 beforeEach(() => {
   permissions.granted = new Set([PERMISSION.VEHICLE_VIEW, PERMISSION.VEHICLE_UPDATE]);
-  nav.pathname = accountVehicleManagePath.section('v1', VEHICLE_MANAGE_SECTION.INFORMATION);
+  nav.pathname = ownerVehicleManagePath.section('v1', VEHICLE_MANAGE_SECTION.INFORMATION);
   queries.vehicle = {
     data: vehicle(),
     isLoading: false,
@@ -222,13 +222,13 @@ describe('Menu của XE, không phải menu khu tài khoản', () => {
       VEHICLE_MANAGE_SECTION.HANDOVER_TIME,
     ]) {
       cleanup();
-      nav.pathname = accountVehicleManagePath.section('v1', section);
+      nav.pathname = ownerVehicleManagePath.section('v1', section);
       renderWorkspace();
 
       const active = screen
         .getByRole('navigation', { name: 'Menu quản lý xe' })
         .querySelector('[aria-current="page"]');
-      expect(active?.getAttribute('href')).toBe(accountVehicleManagePath.section('v1', section));
+      expect(active?.getAttribute('href')).toBe(ownerVehicleManagePath.section('v1', section));
     }
   });
 
@@ -238,12 +238,12 @@ describe('Menu của XE, không phải menu khu tài khoản', () => {
     const hrefs = [...menu.querySelectorAll('a')].map((a) => a.getAttribute('href'));
 
     expect(hrefs).toContain(
-      accountVehicleManagePath.section('v1', VEHICLE_MANAGE_SECTION.DOCUMENTS),
+      ownerVehicleManagePath.section('v1', VEHICLE_MANAGE_SECTION.DOCUMENTS),
     );
     expect(hrefs).toContain(
-      accountVehicleManagePath.section('v1', VEHICLE_MANAGE_SECTION.WITH_DRIVER_SURCHARGES),
+      ownerVehicleManagePath.section('v1', VEHICLE_MANAGE_SECTION.WITH_DRIVER_SURCHARGES),
     );
-    expect(hrefs.every((href) => href && href.startsWith('/account/vehicles/v1/manage/'))).toBe(
+    expect(hrefs.every((href) => href && href.startsWith('/manage/vehicles/v1/manage/'))).toBe(
       true,
     );
   });
@@ -376,7 +376,7 @@ describe('Công tắc dịch vụ — không làm rơi dịch vụ khác', () =>
 
 describe('Mục của dịch vụ đang tắt', () => {
   it('nói rõ lý do và cho bật lại thay vì hiện form chết', () => {
-    nav.pathname = accountVehicleManagePath.section(
+    nav.pathname = ownerVehicleManagePath.section(
       'v1',
       VEHICLE_MANAGE_SECTION.WITH_DRIVER_SURCHARGES,
     );
@@ -395,7 +395,7 @@ describe('Mục của dịch vụ đang tắt', () => {
   });
 
   it('dịch vụ đang bật: nội dung mục hiện bình thường', () => {
-    nav.pathname = accountVehicleManagePath.section(
+    nav.pathname = ownerVehicleManagePath.section(
       'v1',
       VEHICLE_MANAGE_SECTION.SELF_DRIVE_OPTIMIZATION,
     );

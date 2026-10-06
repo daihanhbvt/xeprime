@@ -1,21 +1,30 @@
+import { ZONE, ZONE_MODE, isPathInZone, zoneMode, zoneRelativePath } from '@/zones';
+
 import { ROUTES, adminTenantSupportPath, tenantSupportContextIdFromPath } from './routes';
 
 /**
- * Ánh xạ route của KHU LÀM VIỆC gian hàng (`/manage/...`, Owner Lite `/account/...`, `/trips`) sang
- * route của một phiên hỗ trợ (`/manage/admin/tenant-support/<id>/...`) — ADR 0050 §12.
+ * Ánh xạ route của SITE PARTNER (`ROUTES.MANAGE.*` — Full Manage và Owner Lite dùng chung cây URL)
+ * sang route của một phiên hỗ trợ trong site quản trị (`/tenant-support/<id>/...`) — ADR 0050 §12.
  *
  * Đây là nơi DUY NHẤT biết một route có tồn tại trong phiên hay không. Menu, breadcrumb, lớp chặn
- * `router.push` và lớp chặn click `<Link>` đều đi qua đây — không component nào tự ghép chuỗi
- * `/manage/admin/tenant-support/${id}/...`, và một link trong card/bảng/dialog của trang dùng lại
- * không thể "thoát" khỏi phiên về `/manage` của tài khoản nhân sự (nơi request mất header phiên).
+ * `router.push` và lớp chặn click `<Link>` đều đi qua đây — không component nào tự ghép chuỗi phiên,
+ * và một link trong card/bảng/dialog của view partner dùng lại không thể "thoát" khỏi phiên (nơi
+ * request mất header phiên).
  *
  * Ba kết quả:
  *  - `mapped`  — có trang tương ứng trong phiên; điều hướng tới đó.
- *  - `outside` — không phải route của khu làm việc (trang công khai, màn nền tảng `/manage/admin`,
- *                tài khoản của CHÍNH nhân sự đang đăng nhập): để nguyên — rời phiên có chủ đích
- *                (vd. nút "Thoát chế độ hỗ trợ", "Bảo mật tài khoản" ở thẻ người dùng).
- *  - `blocked` — route của khu làm việc KHÔNG mở trong phiên (tài chính, ví, chat, tài khoản…):
- *                không điều hướng.
+ *  - `outside` — không phải route của site partner (màn nền tảng, tài khoản của CHÍNH nhân sự đang
+ *                đăng nhập, trang công khai): để nguyên — rời phiên có chủ đích (vd "Thoát chế độ hỗ
+ *                trợ", "Bảo mật tài khoản").
+ *  - `blocked` — route của site partner KHÔNG mở trong phiên (tài chính, ví, chat…): không điều hướng.
+ *
+ * ## Vì sao thứ tự kiểm quan trọng (ADR 0051)
+ *
+ * Ở chế độ `host` hai site không còn tiền tố phân biệt: `/vehicles` vừa là danh sách xe của gian hàng
+ * vừa là danh sách xe toàn sàn của khu quản trị. Bên trong phiên, link do VIEW PARTNER dựng (thứ
+ * phiên này tồn tại để hiển thị) thắng: trang có trong phiên → `mapped` TRƯỚC; sau đó mới đến route
+ * quản trị (`outside`), rồi route partner còn lại (`blocked`). Ở chế độ `path` cùng thứ tự đó cho
+ * cùng kết quả, vì tiền tố `/manage` ↔ `/admin` đã tự phân biệt.
  */
 export type TenantSupportRoute =
   | { readonly kind: 'mapped'; readonly href: string }
@@ -51,17 +60,13 @@ const SUPPORT_PAGES: readonly RegExp[] = [
 ];
 
 /**
- * Route của TÀI KHOẢN người đang đăng nhập nằm dưới `/manage` — thẻ người dùng ở menu dựng chúng.
- * Trong phiên chúng vẫn là của nhân sự nền tảng, không của gian hàng: rời phiên mà đi tới, không chặn.
+ * Route của TÀI KHOẢN người đang đăng nhập — thẻ người dùng ở menu dựng chúng. Trong phiên chúng
+ * vẫn là của nhân sự nền tảng, không của gian hàng: rời phiên mà đi tới, không chặn.
  */
-const OPERATOR_ROUTES: readonly string[] = [ROUTES.MANAGE.SECURITY, ROUTES.MANAGE.ACCOUNT_TRIPS];
+const OPERATOR_ROUTES: readonly string[] = [ROUTES.ADMIN.SECURITY];
 
-/** Owner Lite → đường tương đối trong phiên. Chỉ công việc cho thuê; mọi thứ khác bị chặn. */
-const OWNER_LITE_ALIASES: ReadonlyArray<readonly [RegExp, (m: RegExpExecArray) => string]> = [
-  [/^\/account\/vehicles(\/.*)?$/, (m) => `vehicles${m[1] ?? ''}`],
-  [/^\/account\/calendar$/, () => 'calendar'],
-  [/^\/account\/support$/, () => 'support/cases'],
-];
+/** Mọi route của khu quản trị (khớp tiền tố; gốc khu chỉ khớp tuyệt đối). */
+const ADMIN_ROUTES: readonly string[] = Object.values(ROUTES.ADMIN);
 
 function splitHref(href: string): { path: string; rest: string } {
   const cut = href.search(/[?#]/);
@@ -72,8 +77,15 @@ function isSupportPage(relative: string): boolean {
   return SUPPORT_PAGES.some((pattern) => pattern.test(relative));
 }
 
+function isAdminRoute(path: string): boolean {
+  if (zoneMode() === ZONE_MODE.PATH) return isPathInZone(ZONE.ADMIN, path);
+  return ADMIN_ROUTES.some((route) =>
+    route === ROUTES.ADMIN.ROOT ? path === route : path === route || path.startsWith(`${route}/`),
+  );
+}
+
 export function toTenantSupportRoute(contextId: string, href: string): TenantSupportRoute {
-  // Link tuyệt đối (http…), mailto, tel, neo trong trang: không phải route của khu làm việc.
+  // Link tuyệt đối (http…), mailto, tel, neo trong trang: không phải route của site partner.
   if (!href.startsWith('/') || href.startsWith('//')) return { kind: 'outside', href };
   const { path: rawPath, rest } = splitHref(href);
   const path = rawPath.length > 1 ? rawPath.replace(/\/+$/, '') : rawPath;
@@ -82,35 +94,34 @@ export function toTenantSupportRoute(contextId: string, href: string): TenantSup
   const inSession = tenantSupportContextIdFromPath(path);
   if (inSession) return inSession === contextId ? { kind: 'mapped', href } : { kind: 'blocked' };
 
-  const base = adminTenantSupportPath.root(contextId);
-  const target = (relative: string): TenantSupportRoute =>
-    isSupportPage(relative) ? { kind: 'mapped', href: `${base}/${relative}${rest}` } : { kind: 'blocked' };
-
-  if (path === ROUTES.MANAGE.ROOT) return target('dashboard');
   if (OPERATOR_ROUTES.includes(path)) return { kind: 'outside', href };
-  // Màn NỀN TẢNG (`/manage/admin/...`): rời phiên có chủ đích — vd. "Thoát chế độ hỗ trợ".
-  if (path === ROUTES.MANAGE.ADMIN || path.startsWith(`${ROUTES.MANAGE.ADMIN}/`)) {
-    return { kind: 'outside', href };
-  }
-  if (path.startsWith(`${ROUTES.MANAGE.ROOT}/`)) {
-    return target(path.slice(ROUTES.MANAGE.ROOT.length + 1));
+
+  const partnerCandidate = isPathInZone(ZONE.PARTNER, path);
+  if (partnerCandidate) {
+    const relativePath = zoneRelativePath(ZONE.PARTNER, path);
+    const relative = relativePath === '/' ? 'dashboard' : relativePath.slice(1);
+    if (isSupportPage(relative)) {
+      return {
+        kind: 'mapped',
+        href: `${adminTenantSupportPath.root(contextId)}/${relative}${rest}`,
+      };
+    }
   }
 
-  for (const [pattern, toRelative] of OWNER_LITE_ALIASES) {
-    const match = pattern.exec(path);
-    if (match) return target(toRelative(match));
-  }
-  // Mọi route còn lại của khu tài khoản cá nhân (hồ sơ, mật khẩu, ví, thuế, chuyến đi thuê…).
-  if (path === ROUTES.ACCOUNT.ROOT || path.startsWith(`${ROUTES.ACCOUNT.ROOT}/`)) {
+  // Màn NỀN TẢNG: rời phiên có chủ đích — vd "Thoát chế độ hỗ trợ" về danh sách đối tác.
+  if (isAdminRoute(path)) return { kind: 'outside', href };
+
+  // Còn lại của site partner (tài chính, ví, chat, tài khoản…) không mở trong phiên.
+  if (partnerCandidate) return { kind: 'blocked' };
+
+  /*
+   * Chuyến/hộp thư/tài khoản cá nhân của site khách đọc theo NGƯỜI ĐĂNG NHẬP — trong phiên nó sẽ là
+   * của chính nhân sự nền tảng (vốn không có phiên ở site khách). Chặn thay vì để rời phiên.
+   */
+  const personal = [ROUTES.TRIPS, ROUTES.CHAT, ROUTES.ACCOUNT.ROOT];
+  if (personal.some((route) => path === route || path.startsWith(`${route}/`))) {
     return { kind: 'blocked' };
   }
-  /*
-   * `/trips` đọc theo NGƯỜI ĐĂNG NHẬP (`user.id`), không theo gian hàng — trong phiên nó sẽ hiện
-   * chuyến của chính nhân sự nền tảng. Chuyến phía chủ xe của Owner Lite đi qua hai màn
-   * tenant-scoped "Yêu cầu thuê" / "Đơn thuê".
-   */
-  if (path === ROUTES.TRIPS || path.startsWith(`${ROUTES.TRIPS}/`)) return { kind: 'blocked' };
-  if (path === ROUTES.CHAT || path.startsWith(`${ROUTES.CHAT}/`)) return { kind: 'blocked' };
 
   return { kind: 'outside', href };
 }

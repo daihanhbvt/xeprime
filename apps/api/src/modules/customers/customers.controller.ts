@@ -1,13 +1,11 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
-  CurrentTenant,
-  CurrentUser,
-  RequirePermissions,
-  TenantScoped,
-  SupportAction,
-} from '../../common/decorators';
+  ACCOUNT_REALM,
+  PERMISSION,
+  SUPPORT_CAPABILITY,
+} from '@xeprime/types';
+import { CurrentTenant, CurrentUser, Realms, RequirePermissions, SupportAction, TenantScoped } from '../../common/decorators';
 import { OkResultDto } from '../../common/dto/api-response.dto';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { CustomersService } from './customers.service';
@@ -39,6 +37,7 @@ import {
 @ApiTags('customers')
 @Controller('customers')
 @TenantScoped()
+@Realms(ACCOUNT_REALM.PARTNER)
 export class CustomersController {
   constructor(private readonly customers: CustomersService) {}
 

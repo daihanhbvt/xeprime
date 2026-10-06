@@ -5,6 +5,13 @@ Ngày: 15/09/2026 · Trạng thái: **Accepted** · **Ghi đè một phần**
 [ADR 0033](0033-money-ledger-and-deposit-allocation.md) (điều 2, cột chủ ví) ·
 Liên quan: 0002, 0014, 0023, 0024, 0028, 0031, 0032
 
+> ⚠️ **[ADR 0053](0053-separate-account-realms.md) (02/10/2026) ghi đè điều 2, 6, 7, 8, 9, 10.** Khách
+> và chủ xe/gian hàng là hai tài khoản ở hai realm: một TÀI KHOẢN một ví (tenant vẫn một ví); tài
+> khoản `partner` không gọi được endpoint đặt xe; bỏ khu `/account` của tài khoản gian hàng, `/trips`
+> hai vai và hộp thư hợp nhất; Owner Lite là menu tuyến hoa hồng của site partner. **Điều 1, 3, 4, 5,
+> 11–14 giữ nguyên** (bốn pha tuyến hiệu lực, `@ShopOwnerOnly`, `@SubscriptionTrackOnly`, hết ân hạn,
+> hạn mức xe, danh mục gói).
+
 ## Bối cảnh
 
 ADR 0028 và 0032 chốt hai tuyến — chủ xe hoa hồng dùng Owner Lite trong `/account`, gian hàng

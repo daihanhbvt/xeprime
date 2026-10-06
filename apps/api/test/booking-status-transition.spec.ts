@@ -2,8 +2,10 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   BOOKING_NO_SHOW_GRACE_MINUTES,
   BOOKING_STATUS,
+  type BookingStatus,
   CANCELLATION_REASON_CATEGORY,
   HANDOVER_STATUS,
   HANDOVER_TYPE,
@@ -12,13 +14,16 @@ import {
   TENANT_ROLE,
   TENANT_STATUS,
   VEHICLE_TYPE,
-  type BookingStatus,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { TransitionBookingDto } from '../src/modules/bookings/dto/booking.dto';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeBookingsService, makeCustomersService, makeNotificationService } from './helpers/service-factory';
+import {
+  makeBookingsService,
+  makeCustomersService,
+  makeNotificationService,
+} from './helpers/service-factory';
 
 /**
  * Quyết định trạng thái của gian hàng trên một đơn: xác nhận · hủy · ghi nhận khách không đến.
@@ -148,7 +153,12 @@ beforeAll(async () => {
   vehicleId = newId();
 
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Chủ shop', email: `owner-${ownerId}@xeprime.test` },
+    data: {
+      realm: ACCOUNT_REALM.PARTNER,
+      id: ownerId,
+      displayName: 'Chủ shop',
+      email: `owner-${ownerId}@xeprime.test`,
+    },
   });
   await prisma.tenant.create({
     data: {

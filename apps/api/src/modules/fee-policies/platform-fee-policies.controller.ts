@@ -10,8 +10,11 @@ import {
   Post,
 } from '@nestjs/common';
 import { ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
-import { CurrentUser, PlatformOnly, RequirePermissions } from '../../common/decorators';
+import {
+  ACCOUNT_REALM,
+  PERMISSION,
+} from '@xeprime/types';
+import { CurrentUser, PlatformOnly, Realms, RequirePermissions } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import { FeePolicyDto, UpsertFeePolicyDto } from './dto/fee-policy.dto';
 import { FeePoliciesService } from './fee-policies.service';
@@ -27,6 +30,7 @@ import { FeePoliciesService } from './fee-policies.service';
 @Controller('platform/fee-policies')
 @PlatformOnly()
 @RequirePermissions(PERMISSION.PLATFORM_FEE_POLICY_MANAGE)
+@Realms(ACCOUNT_REALM.PLATFORM)
 export class PlatformFeePoliciesController {
   constructor(private readonly policies: FeePoliciesService) {}
 

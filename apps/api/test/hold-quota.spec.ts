@@ -1,5 +1,6 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
+  ACCOUNT_REALM,
   API_ERROR_CODE,
   BILLING_MODE,
   BOOKING_REQUEST_STATUS,
@@ -114,8 +115,18 @@ beforeAll(async () => {
 
   await prisma.user.createMany({
     data: [
-      { id: ownerId, displayName: 'Chủ xe', email: `hq-own-${RUN}@xeprime.test` },
-      { id: customerUserId, displayName: 'Khách', email: `hq-cus-${RUN}@xeprime.test` },
+      {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: ownerId,
+        displayName: 'Chủ xe',
+        email: `hq-own-${RUN}@xeprime.test`,
+      },
+      {
+        realm: ACCOUNT_REALM.CUSTOMER,
+        id: customerUserId,
+        displayName: 'Khách',
+        email: `hq-cus-${RUN}@xeprime.test`,
+      },
     ],
   });
   await prisma.tenant.create({
