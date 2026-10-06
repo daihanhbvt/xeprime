@@ -1,6 +1,6 @@
 # Thông báo đẩy (Firebase Cloud Messaging)
 
-> Ngày viết: 10/09/2026 · Phạm vi: hạ tầng backend đầy đủ + app native ở mức nhận được thông báo
+> Ngày viết: 10/09/2026 · Cập nhật: 06/10/2026 (hai app mobile, realm, ma trận theo ADR 0044) · Phạm vi: hạ tầng backend đầy đủ + app native ở mức nhận được thông báo
 > và bấm vào mở đúng màn. **Chưa** có trung tâm thông báo trên app (xem §9).
 
 ---
@@ -57,34 +57,56 @@ credential. Không tạo bộ mới.
 3. Private key (`FIREBASE_PRIVATE_KEY`) **chỉ nằm ở backend và worker**. Không bao giờ đưa vào app
    native, web, hay bất kỳ bundle nào tới tay người dùng.
 
-### 2.2 Android — `google-services.json`
+### 2.2 Hai app = hai cặp app Firebase
 
-Firebase Console → **Project settings** → **Your apps** → Add app → Android:
+Từ 25/09/2026 mobile là **hai Expo project mỏng** dùng chung `apps/mobile/shared` (ADR 0051 §5).
+Mỗi app có `app.json`, `app.config.ts`, thư mục `credentials/` và `.env` RIÊNG, nên trong MỖI
+Firebase project phải đăng ký **2 app Android + 2 app iOS**:
 
-- **Package name** phải TRÙNG TỪNG KÝ TỰ với `android.package` trong `apps/mobile/app.json`:
-  `vn.xeprime.mobile`. Sai một ký tự thì app đăng ký token thành công nhưng không nhận được gì.
-- Tải `google-services.json` → đặt vào `apps/mobile/credentials/google-services.json`.
+| App | Thư mục | Android `package` / iOS `bundleIdentifier` | Scheme |
+| --- | --- | --- | --- |
+| XePrime (khách, realm `customer`) | `apps/mobile/customer` | `vn.xeprime.mobile` | `xeprime` |
+| XePrime Partner (realm `partner`) | `apps/mobile/manage` | `vn.xeprime.partner` | `xeprimepartner` |
 
-### 2.3 iOS — `GoogleService-Info.plist` + khoá APNs
+Package name / Bundle ID phải TRÙNG TỪNG KÝ TỰ với `android.package` / `ios.bundleIdentifier` trong
+`app.json` của đúng app. Sai một ký tự thì app đăng ký token thành công nhưng không nhận được gì.
 
-1. Add app → iOS, **Bundle ID** = `vn.xeprime.mobile` (khớp `ios.bundleIdentifier`).
-2. Tải `GoogleService-Info.plist` → `apps/mobile/credentials/GoogleService-Info.plist`.
+### 2.3 Android — `google-services.json`
+
+Firebase Console → **Project settings** → **Your apps** → Add app → Android, làm HAI lần
+(`vn.xeprime.mobile` và `vn.xeprime.partner`). Mỗi lần tải một `google-services.json` và đặt vào
+thư mục của đúng app:
+
+- `apps/mobile/customer/credentials/google-services.json`
+- `apps/mobile/manage/credentials/google-services.json`
+
+(Một file `google-services.json` tải sau khi đã thêm cả hai app chứa cả hai client — dùng chung
+được, nhưng vẫn phải chép vào CẢ HAI thư mục.)
+
+### 2.4 iOS — `GoogleService-Info.plist` + khoá APNs
+
+1. Add app → iOS, HAI lần: **Bundle ID** = `vn.xeprime.mobile` và `vn.xeprime.partner`.
+2. Tải `GoogleService-Info.plist` của TỪNG app (file này là theo app, không gộp được) →
+   `apps/mobile/customer/credentials/GoogleService-Info.plist` và
+   `apps/mobile/manage/credentials/GoogleService-Info.plist`.
 3. Apple Developer → **Keys** → tạo key có bật **Apple Push Notifications service (APNs)** →
-   tải file `.p8` (**chỉ tải được MỘT lần**).
+   tải file `.p8` (**chỉ tải được MỘT lần**). Một key APNs dùng được cho mọi app của cùng team.
 4. Firebase Console → Project settings → **Cloud Messaging** → mục **Apple app configuration** →
-   upload `.p8`, kèm **Key ID** và **Team ID**.
+   upload `.p8`, kèm **Key ID** và **Team ID** — cho **từng** app iOS.
    Thiếu bước này thì iOS không nhận thông báo nào, và không có lỗi nào hiện ra ở app.
 
-> ⚠️ Hai file trên **KHÔNG được commit** (`apps/mobile/.gitignore`). Chúng khai project Firebase
+> ⚠️ Các file trên **KHÔNG được commit** (`/credentials/` nằm trong `.gitignore` của từng app:
+> `apps/mobile/customer/.gitignore`, `apps/mobile/manage/.gitignore`). Chúng khai project Firebase
 > nào; một bản trong repo nghĩa là mọi bản build của mọi môi trường đều bắn thông báo vào cùng
 > một nơi. Giao chúng qua kênh bí mật của môi trường (EAS secret file, artifact CI đã mã hoá).
 
-### 2.4 Tách môi trường
+### 2.5 Tách môi trường
 
-Mỗi môi trường (dev · staging · production) là **một Firebase project riêng**, nên cũng là một cặp
-file credential riêng và một `FIREBASE_*` riêng. `apps/mobile/app.config.ts` đọc đường dẫn từ
-`GOOGLE_SERVICES_JSON` / `GOOGLE_SERVICES_PLIST` để CI trỏ tới file vừa giải mã ra, thay vì phải
-sửa code.
+Mỗi môi trường (dev · staging · production) là **một Firebase project riêng**, nên cũng là một bộ
+file credential riêng (cho cả hai app) và một `FIREBASE_*` riêng. `app.config.ts` của MỖI app
+(`apps/mobile/customer/app.config.ts`, `apps/mobile/manage/app.config.ts`) đọc đường dẫn từ
+`GOOGLE_SERVICES_JSON` / `GOOGLE_SERVICES_PLIST` (mặc định `./credentials/...`) để CI trỏ tới file
+vừa giải mã ra, thay vì phải sửa code.
 
 Tối thiểu cần cho giai đoạn này: **staging chạy được mà không phá local**. Ai làm local thì trỏ
 vào project dev của mình; không dùng chung token/project giữa các môi trường.
@@ -121,7 +143,8 @@ xoay token.
   "token": "<registration token>",
   "platform": "android",      // android | ios
   "appVersion": "0.1.0",
-  "deviceName": "Pixel 8"
+  "deviceName": "Pixel 8",
+  "clientApp": "partner"      // customer | partner — app đã cài token này; bỏ trống = app hợp nhất cũ (nhận mọi loại)
 }
 
 // Response — CỐ Ý không có `token`
@@ -139,7 +162,9 @@ xoay token.
 ```
 
 `userId` và `sessionId` **lấy từ phiên**, không nhận từ body: một client gửi được `userId` là một
-client đăng ký được thiết bị đứng tên người khác rồi nhận mọi thông báo của họ.
+client đăng ký được thiết bị đứng tên người khác rồi nhận mọi thông báo của họ. `clientApp` thì
+tự khai và điều đó ổn: nó chỉ LỌC thông báo thiết bị nhận (§5), không mở quyền gì — app gửi
+`APP_PROFILE.clientApp` (`apps/mobile/shared/src/api/notifications/api.ts`).
 
 ### `DELETE /notifications/device-token`
 
@@ -157,26 +182,67 @@ App native **không cần gọi endpoint này khi đăng xuất**: `/auth/mobile
 
 ## 5. Ma trận sự kiện → người nhận → đích
 
-| Sự kiện | Người nhận | `targetType` | Đích (khách) | Đích (quản lý) |
-| --- | --- | --- | --- | --- |
-| Yêu cầu thuê mới | thành viên gian hàng | `booking_request` | — | `/manage/requests` |
-| Yêu cầu sắp hết hạn (20'/45') | thành viên gian hàng | `booking_request` | — | `/manage/requests` |
-| Yêu cầu được duyệt | khách | `booking` | `/trips/:bookingId` | — |
-| Yêu cầu bị từ chối | khách | `booking_request` | `/trips/:requestId` | — |
-| Khách rút yêu cầu | thành viên gian hàng | `booking_request` | — | `/manage/requests` |
-| Yêu cầu hết hạn phản hồi | **cả hai bên** (hai câu khác nhau) | `booking_request` | `/trips/:requestId` | `/manage/requests` |
-| Tự động nhận chuyến | khách + gian hàng | `booking` / `booking_request` | `/trips/:id` | `/manage/bookings/:id` |
-| Đơn thuê được tạo | thành viên gian hàng (trừ người tạo) | `booking` | — | `/manage/bookings/:id` |
-| Đơn đổi trạng thái (kể cả huỷ) | gian hàng + khách | `booking` | `/trips/:id` | `/manage/bookings/:id` |
-| Cần chuyển giữ chỗ | khách | `booking_request` | `/trips/:requestId` | — |
-| Đã giữ chỗ (tiền về) | khách + gian hàng | `booking` | `/trips/:bookingId` | `/manage/bookings/:id` |
-| Hết hạn giữ chỗ | khách + gian hàng | `booking_request` | `/trips/:requestId` | `/manage/requests` |
-| Đã hoàn giữ chỗ | khách | `booking` | `/trips/:id` | — |
-| Xe được duyệt / từ chối | chủ gian hàng | `vehicle` | — | `/manage/vehicles/:id` |
-| Gian hàng được duyệt / từ chối | chủ gian hàng | `tenant` | — | `/manage/shop` |
-| Vòng đời gói (sắp hết hạn, hết hạn, chuyển tuyến…) | thành viên gian hàng | — | — | (không có đích) |
-| Đánh giá mới | thành viên gian hàng | `review` | `/trips` | — |
-| **Tin nhắn mới** | phía đối diện (không bao giờ người gửi) | `conversation` | `/chat/:id` | `/manage/chat/:id` |
+Nguồn: enum `NOTIFICATION_TYPE` ở `packages/types/src/notifications.ts`; đích (`data.url`) do
+`notificationDeepLink` ở `packages/domain/src/notification-delivery.ts` giải lúc phát, theo
+`audience` của người nhận (`emitToUser` → `customer`, `emitToTenantMembers` → `manage`, trừ khi nơi
+phát truyền `audience` tường minh). Đối chiếu lại ngày 06/10/2026 với mọi nơi gọi trong
+`apps/api/src` và `apps/worker/src`.
+
+Đường dẫn trong bảng là đường dẫn của **APP NATIVE**. Web có bảng riêng
+(`apps/web/src/features/notifications/lib/notification-display.tsx`) vì vài route khác thật —
+hộp yêu cầu là `/manage/booking-requests` ở web, `/manage/requests` ở app; hội thoại mở bằng `?c=`.
+Trên web, mọi đích `/manage/...` nằm ở **site partner** (`partner.xeprime.vn`, URL hiển thị không
+mang tiền tố `/manage` — ADR 0051), còn `/trips`, `/chat`, `/listings` ở site khách.
+
+**Thông báo đi theo REALM của người nhận (ADR 0053).** Một thông báo thuộc về một tài khoản, tài
+khoản thuộc đúng một realm, và realm thuộc đúng một app: tài khoản `customer` rung trên app
+XePrime, tài khoản `partner` (gian hàng tuyến gói lẫn chủ xe tuyến hoa hồng) rung trên app XePrime
+Partner. `enqueuePushDeliveries` (`prisma/src/push-outbox.ts`) bỏ qua thiết bị đã đăng ký
+`clientApp` của app kia; thiết bị `client_app` NULL (bản cài app hợp nhất cũ) vẫn nhận mọi loại.
+Cùng một người có tài khoản khách và tài khoản đối tác thì nhận thông báo của MỖI tài khoản trên
+ĐÚNG app của nó.
+
+Luồng đặt xe theo ADR 0044: **gửi yêu cầu → duyệt → thu tiền giữ chỗ → đơn thuê**. Duyệt không còn
+sinh đơn ngay (trừ khi không có gì để thu) — nó chuyển yêu cầu sang `awaiting_hold` và phát
+`hold_requested`.
+
+| Loại (`type`) | Khi nào | Người nhận | `targetType` | Đích app khách | Đích app partner |
+| --- | --- | --- | --- | --- | --- |
+| `booking_request_submitted` | khách gửi yêu cầu (không được tự nhận) | thành viên gian hàng | `booking_request` | — | `/manage/requests` |
+| `booking_request_expiring` | yêu cầu sắp hết hạn phản hồi (mốc 20′ và 45′) | thành viên gian hàng | `booking_request` | — | `/manage/requests` |
+| `booking_request_expired` | hết hạn phản hồi | **cả hai bên** (hai câu khác nhau) | `booking_request` | `/trips/:requestId` | `/manage/requests` |
+| `booking_request_cancelled` | khách rút yêu cầu; hoặc một thành viên huỷ chuyến đã nhận (báo các thành viên còn lại) | thành viên gian hàng | `booking_request` | — | `/manage/requests` |
+| `booking_request_rejected` | gian hàng từ chối yêu cầu đang chờ | khách | `booking_request` | `/trips/:requestId` | — |
+| `hold_requested` | gian hàng nhận chuyến (tay hoặc "Đặt ngay") và có tiền giữ chỗ phải thu ⇒ `awaiting_hold` + QR | khách | `booking_request` | `/trips/:requestId` | — |
+| `booking_auto_accepted` | hệ thống tự nhận theo thiết lập "Đặt ngay" | thành viên gian hàng | `booking_request` (chờ tiền) · `booking` (đơn tạo ngay) | — | `/manage/requests` · `/manage/bookings/:id` |
+| `booking_request_approved` | duyệt mà KHÔNG có gì để thu ⇒ đơn tạo ngay lúc duyệt | khách | `booking` | `/trips/:bookingId` | — |
+| `booking_request_slot_taken` | khung giờ đã được nhận cho khách khác — yêu cầu đóng bằng `slot_taken` | khách thua | `booking_request` | `/trips/:requestId` | — |
+| `promo_code_dropped` | mã khuyến mãi không còn áp được lúc chốt giá (ADR 0046 điều 7) | khách | `booking_request` | `/trips/:requestId` | — |
+| `hold_expiring` | còn 60′ và 15′ trong cửa sổ thanh toán (`HOLD_PAYMENT_REMINDER_REMAINING_MINUTES`) | khách | `booking_request` | `/trips/:requestId` | — |
+| `hold_paid` | đối soát SePay xác nhận ĐỦ tiền ⇒ đơn thuê ra đời | khách + gian hàng | `booking` | `/trips/:bookingId` | `/manage/bookings/:id` |
+| `hold_expired` | quá hạn thanh toán, chỗ đã nhả | khách + gian hàng | `booking_request` | `/trips/:requestId` | `/manage/requests` |
+| `booking_request_slot_reopened` | hold của người thắng hết hạn — mời khách từng thua đặt lại (chống trùng bằng `slot_reopened_notified_at`) | khách từng `slot_taken` | `vehicle` | `/listings/:vehicleId` | — |
+| `booking_cancelled_by_host` | gian hàng huỷ một chuyến đã nhận (ADR 0045) | khách | `booking_request` | `/trips/:requestId` | — |
+| `hold_refunded` | chuyến không thành sau khi khách đã trả — nghĩa vụ hoàn đã ghi vào ví | khách | `booking_request` | `/trips/:requestId` | — |
+| `hold_refund_paid` | admin đã chuyển trả khoản giữ chỗ; **cũng dùng** cho lệnh rút ví đã chuyển / chuyển hỏng (tiền về lại ví) | khách · chủ ví | `booking` (nếu có đơn) · `tenant` (lệnh rút) | `/trips/:bookingId` hoặc không đích | (không đích) |
+| `booking_created` | gian hàng tạo đơn tay | thành viên gian hàng (trừ người tạo) | `booking` | — | `/manage/bookings/:id` |
+| `booking_status_changed` | đơn đổi trạng thái (kể cả huỷ, quyết toán) | gian hàng + khách | `booking` | `/trips/:id` | `/manage/bookings/:id` |
+| `vehicle_approved` · `vehicle_rejected` · `vehicle_needs_revision` | nền tảng duyệt / từ chối / yêu cầu bổ sung hồ sơ xe | chủ gian hàng (`audience: manage`) | `vehicle` | — | `/manage/vehicles/:id` |
+| `shop_approved` · `shop_rejected` · `shop_needs_revision` | nền tảng duyệt / từ chối / yêu cầu bổ sung hồ sơ gian hàng | chủ gian hàng (`audience: manage`) | `tenant` | — | `/manage/shop` |
+| `seller_profile_verified` · `seller_profile_changes_requested` · `seller_profile_rejected` | nền tảng xử lý hồ sơ người bán | thành viên gian hàng | — | — | (không đích) |
+| `subscription_expiring` · `subscription_expired` · `subscription_lapsed` · `free_trips_exhausted` | vòng đời gói (job `subscription-lifecycle`) | thành viên gian hàng | — | — | (không đích) |
+| `subscription_activated` | tiền hoá đơn gói về đủ, gói đã mở (webhook SePay) | thành viên gian hàng | — | — | (không đích) |
+| `support_case_updated` | mở / cập nhật yêu cầu hỗ trợ | gian hàng (khi phía khác thao tác) · người mở case | `support_case` | (không đích) | (không đích) |
+| `review_received` | khách đánh giá chuyến | thành viên gian hàng | `review` | — | (không đích) |
+| **`chat_message_received`** | tin nhắn mới | phía đối diện (không bao giờ người gửi) | `conversation` | `/chat/:id` | `/manage/chat/:id` |
+
+"(không đích)" = bấm vào chỉ đánh dấu đã đọc và mở hộp thư — `notificationDeepLink` trả `null`, và
+nơi gọi không được tự bịa một đường dẫn thay thế. Bản cài app hợp nhất cũ còn một bề mặt `owner`
+(chủ xe tuyến hoa hồng) chọn đích ở client — xem `NOTIFICATION_AUDIENCE.OWNER`.
+
+`hold_paid` còn một nhánh **LEGACY** (luồng thu-trước-duyệt cũ, `decided_at IS NULL`): tiền về mà
+chưa ai nhận chuyến ⇒ cả hai bên nhận tin trỏ `booking_request` ("chờ chủ xe xác nhận"). Đường hiện
+hành (ADR 0044) luôn tạo đơn trong cùng transaction và trỏ `booking`.
 
 Sự kiện nào cũng chỉ đi qua `NotificationService` / `apps/worker/src/lib/notify.ts` — **không có
 API riêng cho từng loại thông báo**.
@@ -235,16 +301,16 @@ với cập nhật trạng thái), và `android.notification.channelId` theo `an
 
 - **xin quyền ở MÀN CHÍNH, không phải lúc đăng nhập** (Android 13+ `POST_NOTIFICATIONS`, iOS
   APNs). Đăng ký thiết bị và xin quyền là hai việc tách rời
-  (`src/features/notifications/push-permission-gate.ts`): có phiên mà quyền đã cấp sẵn thì đăng ký
+  (`apps/mobile/shared/src/features/notifications/push-permission-gate.ts`): có phiên mà quyền đã cấp sẵn thì đăng ký
   ngay và im lặng; chưa có quyền thì ĐỢI tới khi người dùng đã vào trang chủ marketplace hoặc bảng
   điều khiển gian hàng (+1,5s) mới hiện hộp thoại. Gộp hai việc làm một là lý do hộp thoại từng
   nhảy lên giữa màn nhập mã OTP — nơi câu hỏi chưa có nghĩa và câu trả lời "Không" là vĩnh viễn.
-  Hộp thoại đi qua `src/lib/permission-queue.ts` vì trang chủ cũng xin quyền VỊ TRÍ, và hai hộp
+  Hộp thoại đi qua `apps/mobile/shared/src/lib/permission-queue.ts` vì trang chủ cũng xin quyền VỊ TRÍ, và hai hộp
   thoại cùng lúc thì cái sau bị hệ điều hành từ chối thẳng;
 - đăng ký token **sau khi đã đăng nhập**, đăng ký lại khi FCM xoay token;
 - app đang mở → toast; app ở nền/đã tắt → hệ điều hành hiện thông báo;
 - bấm thông báo → điều hướng theo `data.url`, qua allowlist
-  (`src/features/notifications/deep-link.ts`). Chưa đăng nhập thì URL được cất vào
+  (`apps/mobile/shared/src/features/notifications/deep-link.ts`). Chưa đăng nhập thì URL được cất vào
   `pendingDeepLink` và tiêu thụ sau khi đăng nhập;
 - **nhận push khi app đang mở ⇒ làm mới hộp thư và badge** (`notifications` + `chat`). Không có
   bước này thì chuông vẫn hiện số cũ tới nhịp poll kế tiếp — app tự mâu thuẫn với chính thông
@@ -252,8 +318,8 @@ với cập nhật trạng thái), và `android.notification.channelId` theo `an
 
 ### Log trạng thái khi gỡ lỗi
 
-Bật `EXPO_PUBLIC_CHAT_DEBUG=true` trong `apps/mobile/.env` (chỉ có tác dụng ở bản dev). Toàn bộ
-vòng đời đi qua `src/lib/chat-debug.ts` và in ra với tiền tố `[comm] push.*`:
+Bật `EXPO_PUBLIC_CHAT_DEBUG=true` trong `.env` của app đang chạy — `apps/mobile/customer/.env` hoặc `apps/mobile/manage/.env`, mẫu ở `.env.example` cùng thư mục (chỉ có tác dụng ở bản dev). Toàn bộ
+vòng đời đi qua `apps/mobile/shared/src/lib/chat-debug.ts` và in ra với tiền tố `[comm] push.*`:
 
 | Dòng | Nghĩa khi nó KHÔNG xuất hiện |
 | --- | --- |
@@ -268,16 +334,16 @@ vòng đời đi qua `src/lib/chat-debug.ts` và in ra với tiền tố `[comm]
 
 Log **không** mang registration token, tiêu đề/thân thông báo, hay `data.url` thô: đích chỉ lộ
 KHUNG route (`/manage/chat/:id`), không lộ id. Có test khoá lại điều đó
-(`src/lib/chat-debug.push.test.ts`).
+(`apps/mobile/shared/src/lib/chat-debug.push.test.ts`).
 
 **Thông báo đẩy thật KHÔNG chạy trong Expo Go.** Phải là development build:
 
 ```bash
-pnpm --filter @xeprime/mobile run android      # expo run:android
-pnpm --filter @xeprime/mobile run ios          # expo run:ios
+pnpm --filter @xeprime/mobile-customer run android   # app khách (Metro :8081) — expo run:android
+pnpm --filter @xeprime/mobile-manage run android     # app Partner (Metro :8082); đổi android → ios cho iOS
 ```
 
-Thiếu file credential thì `app.config.ts` bỏ hẳn plugin Firebase và in một dòng cảnh báo — app
+Thiếu file credential thì `app.config.ts` của app đó bỏ hẳn plugin Firebase và in một dòng cảnh báo — app
 vẫn build, vẫn chạy, chỉ là không có thông báo đẩy.
 
 ---
@@ -361,6 +427,7 @@ PHẦN nên truy vấn nóng không chậm đi), nhưng cần một lượt dọ
 - `docs/third-party-keys.md` §6 — lấy credential Firebase.
 - `docs/deployment.md` §9.2 — khai biến ở GitHub Environment.
 - `docs/mobile-module-status.md` — COM-07 và phần còn lại của module Communication.
-- `docs/mobile-badges-notifications-migration.md` — **COM-04**: hợp đồng API và kiến trúc đích
-  cho trung tâm thông báo + huy hiệu trên app native (viết 11/09/2026 sau khi web chuyển sang
-  `GET /me/badges` và bản chiếu `user_badges/{uid}`).
+- `docs/decisions/0034-badge-delivery-by-projection.md` — huy hiệu chưa đọc (`GET /me/badges` + bản
+  chiếu `user_badges/{uid}`) mà trung tâm thông báo trên app native (COM-04) dựa vào.
+- `docs/realtime-runbook.md` — vận hành chat/badge realtime khi có sự cố.
+- `docs/decisions/0053-separate-account-realms.md` — realm của người nhận quyết app nào rung (§5).

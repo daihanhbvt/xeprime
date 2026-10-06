@@ -33,7 +33,7 @@ Hai điều này xung đột với styled-components:
 
 ## Hệ quả
 
-- `apps/web/src/styles/theme.ts` giữ token AntD (TypeScript, dùng cho `ConfigProvider`).
-- `apps/web/src/styles/tokens.css` sinh CSS variables tương ứng. **Hai file phải khớp nhau** — viết một unit test nhỏ so sánh key để tránh lệch.
+- `apps/web/src/styles/theme.ts` giữ token AntD (TypeScript, dùng cho `ConfigProvider`), dựng từ `XP_TOKENS` của `@xeprime/ui` (`packages/ui/src/tokens/index.ts`).
+- `packages/ui/src/styles/tokens.css` sinh CSS variables tương ứng (chuyển từ `apps/web` sang `@xeprime/ui` ngày 24/08/2026; web nạp qua `@xeprime/ui/styles.css`). **Hai bản phải khớp nhau** — `apps/web/src/styles/theme.test.ts` so sánh key để tránh lệch.
 - `packages/ui` chỉ chứa component thật sự dùng chung giữa `(public)` và `(manage)`; component nào chỉ một nơi dùng thì để nguyên chỗ đó, đừng đẩy vào package sớm.
 - Màn lịch (`CalendarScheduler`) là chỗ style động nhiều nhất (vị trí/độ dài event bar). Dùng **CSS custom property đặt qua `style` cho riêng giá trị tính toán** (`style={{ '--bar-left': x + 'px' }}`) — đây là ngoại lệ hợp lệ của quy tắc "không inline style", vì giá trị chỉ biết lúc runtime. Màu/hình dạng vẫn nằm trong `.module.css`.

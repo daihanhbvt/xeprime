@@ -22,12 +22,12 @@ Nguồn sống (đọc trước, luôn đúng hiện tại):
 1. `docs/design/02_PRODUCT_VISION.md` — **sản phẩm, persona và mô hình doanh thu hiện hành**.
 2. `docs/completion-roadmap.md` — **đang ở đâu, release gate và việc tiếp theo**.
 3. `docs/design/03_PRODUCT_GAP_ANALYSIS.md` — backlog User/Admin/Manage theo hiện trạng source.
-4. `docs/decisions/` — **40 ADR (0001–0040)**; ADR Accepted mới hơn thắng trong đúng phạm vi ghi đè.
+4. `docs/decisions/` — **46 ADR (0001–0053; số đã gỡ ghi ở bảng "ADR đã gỡ" của `docs/decisions/README.md`)**; ADR Accepted mới hơn thắng trong đúng phạm vi ghi đè.
 5. `docs/CODEMAP.md` — chỉ mục "cái gì nằm ở đâu".
 6. File này (CLAUDE.md).
 7. `docs/deployment.md`, `docs/backup-and-restore.md`, `docs/third-party-keys.md` — vận hành và dịch vụ ngoài.
 
-Không tạo lại `docs/plans/`, file Word hoặc Excel tracking làm nguồn sự thật. Việc ngắn hạn đi qua issue/PR; quyết định lâu dài đi qua ADR; tiến độ chỉ đi vào một roadmap. Lịch sử dọn tài liệu ở `docs/README.md`.
+Không tạo lại `docs/plans/`, file Word hoặc Excel tracking làm nguồn sự thật (plan mode ghi vào `.claude/plans/`, đã gitignore). Việc ngắn hạn đi qua issue/PR; quyết định lâu dài đi qua ADR; tiến độ chỉ đi vào một roadmap. Lịch sử dọn tài liệu ở `docs/README.md`.
 
 ### ⚠️ ADR mới thắng trong phạm vi ghi đè
 
@@ -47,7 +47,7 @@ Kỷ luật code đã đóng gói thành skill/agent — **dùng chúng, đừng
 | skill | `verify-changes` | Trước khi chạy build/lint/test/typecheck — chỉ xác minh phần vừa sửa, không quét cả workspace |
 | agent | `navigator` (haiku) | Định vị file/symbol cần đọc mà không quét cả file — tiết kiệm token |
 | agent | `reviewer` (opus) | Review diff theo chuẩn senior trước khi commit |
-| command | `/commit` | Người dùng gõ tay sau khi review — chạy trọn quy trình Git: cập nhật `develop` → tạo branch → `add -A` → commit → push branch (KHÔNG merge, KHÔNG force). Quy ước ở `docs/git-workflow.md` |
+| command | `/commit` | Người dùng gõ tay sau khi review — chạy trọn quy trình Git: cập nhật `develop` → tạo branch → add (theo đường dẫn khi cây làm việc dùng chung) → gộp vào commit chưa push hoặc commit mới → push branch (KHÔNG merge, KHÔNG force). Quy ước ở `docs/git-workflow.md` |
 
 Skill tự kích hoạt theo mô tả; nếu quên thì gọi tay. `navigator` đọc `docs/CODEMAP.md` trước tiên.
 
@@ -59,7 +59,7 @@ Skill tự kích hoạt theo mô tả; nếu quên thì gọi tay. `navigator` �
 | --- | --- |
 | Repo | Monorepo pnpm workspace: `apps/web`, `apps/api`, `apps/worker`, `packages/{types,validators,api-client,domain,config,ui}`, `prisma`, `docs` |
 | Frontend | Next.js App Router + TS strict, route groups `(public)` `(auth)` `(manage)` `(admin)`, Server Components mặc định |
-| Bề mặt sản phẩm | **ADR 0051 · ADR 0053** — web: MỘT Next app, BA SITE theo host, mỗi site một **không gian tài khoản (realm)**: `xeprime.vn` khách (`customer`, `app/(public)`) · `partner.xeprime.vn` gian hàng gói + chủ xe tuyến hoa hồng/Owner Lite (`partner`, `app/(manage)/manage`) · `admin.xeprime.vn` nhân sự nền tảng (`platform`, `app/(admin)/admin`). URL hiển thị KHÔNG mang tiền tố thư mục; đường dẫn dựng qua `apps/web/src/zones/` (chế độ `path` ở dev, `host` ở staging/prod), khu của trang đọc bằng `useZone()`. Cùng SĐT/email/Google ở hai site là HAI tài khoản, mật khẩu riêng. Mobile: MỘT Expo project, hai variant (XePrime `vn.xeprime.mobile` · XePrime Partner `vn.xeprime.partner`). Quyền, tuyến và realm do server quyết. KHÔNG tách thêm Next app/Expo project/BFF/DB khi chưa chạm điều kiện "Cần xem lại" của ADR |
+| Bề mặt sản phẩm | **ADR 0051 · ADR 0053** — web: MỘT Next app, BA SITE theo host, mỗi site một **không gian tài khoản (realm)**: `xeprime.vn` khách (`customer`, `app/(public)`) · `partner.xeprime.vn` gian hàng gói + chủ xe tuyến hoa hồng/Owner Lite (`partner`, `app/(manage)/manage`) · `admin.xeprime.vn` nhân sự nền tảng (`platform`, `app/(admin)/admin`). URL hiển thị KHÔNG mang tiền tố thư mục; đường dẫn dựng qua `apps/web/src/zones/` (chế độ `path` ở dev, `host` ở staging/prod), khu của trang đọc bằng `useZone()`. Cùng SĐT/email/Google ở hai site là HAI tài khoản, mật khẩu riêng. Mobile: HAI Expo project mỏng + một package dùng chung — `apps/mobile/customer` (XePrime `vn.xeprime.mobile`) · `apps/mobile/manage` (XePrime Partner `vn.xeprime.partner`) · `apps/mobile/shared` (ADR 0051 §5). Quyền, tuyến và realm do server quyết. KHÔNG tách thêm Next app/Expo project/BFF/DB khi chưa chạm điều kiện "Cần xem lại" của ADR |
 | UI | Ant Design + `@ant-design/nextjs-registry`. Style riêng dùng **CSS Modules + AntD token** — ADR 0003. Design token (`XP_TOKENS` + `tokens.css`) sống ở `@xeprime/ui` — dùng chung web + app native, export gốc platform-free |
 | Form | React Hook Form + Yup + `@hookform/resolvers` |
 | State | Redux Toolkit = UI/client state · TanStack Query = server data/cache · **URL searchParams = filter/paging** — ADR 0004 |

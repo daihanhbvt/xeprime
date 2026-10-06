@@ -1,6 +1,6 @@
 # ADR 0007 — Hợp đồng type FE ↔ BE sinh từ OpenAPI
 
-Ngày: 22/07/2026 · Trạng thái: Accepted
+Ngày: 22/07/2026 · Trạng thái: **Accepted; phần tầng gọi API theo feature bị [ADR 0031](0031-split-feature-api-per-app.md) ghi đè** — `@xeprime/api-client` chỉ còn hạ tầng HTTP, lời gọi theo nghiệp vụ mỗi app một bản. Phần contract-first (type sinh từ OpenAPI) giữ nguyên.
 
 ## Bối cảnh
 

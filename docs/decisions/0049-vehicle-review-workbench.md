@@ -93,7 +93,7 @@ Màn `/manage/admin` ("Duyệt hồ sơ") là một hàng đợi chung cho mọi
 
 ## Hoãn có chủ đích
 
-- **App mobile vẫn còn nút gửi xác minh gian hàng** (`apps/mobile/src/api/tenants`, `ShopStatusBanner`
+- **App mobile vẫn còn nút gửi xác minh gian hàng** (`apps/mobile/shared/src/api/tenants`, `ShopStatusBanner`
   native) — thuộc phạm vi đội mobile. Endpoint `POST /tenants/current/submit-review` giữ nguyên để
   không vỡ app đang phát hành; phiếu sinh ra từ đó không còn khoá gì và không hiện ở màn "Duyệt xe".
 - Nhãn hai hành động audit mới (`approval.check_update`, `approval.internal_note_update`) ở màn nhật ký

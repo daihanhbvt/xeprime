@@ -1,6 +1,6 @@
 # ADR 0027 — Hai bậc năng lực: chủ xe dùng bộ cơ bản, gian hàng mở toàn bộ quản lý
 
-Ngày: 29/08/2026 · Trạng thái: **Partially superseded bởi [ADR 0038](0038-owner-track-split-and-unified-wallet.md)** · **Cụ thể hoá [ADR 0014](0014-owner-and-shop-single-role.md) điều 3 · được [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md) làm rõ bằng Owner Lite dùng chung source với Manage**
+Ngày: 29/08/2026 · Trạng thái: **Partially superseded bởi [ADR 0032](0032-booking-deposit-insurance-and-owner-lite.md) và [ADR 0038](0038-owner-track-split-and-unified-wallet.md); điều 6 hết đối tượng áp dụng; mục "Hệ quả về giá trên chợ" bị [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md) điều 10 + [ADR 0029](0029-per-vehicle-flat-pricing-and-customer-side-fees.md) điều 1 thay** · **Cụ thể hoá [ADR 0014](0014-owner-and-shop-single-role.md) điều 3 · được [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md) làm rõ bằng Owner Lite dùng chung source với Manage**
 
 > ⚠️ **Điều 3 bị [ADR 0038](0038-owner-track-split-and-unified-wallet.md) ghi đè trong phạm vi
 > HẾT GÓI (15/09/2026).**
@@ -18,9 +18,24 @@ Ngày: 29/08/2026 · Trạng thái: **Partially superseded bởi [ADR 0038](0038
 > (`@SubscriptionTrackOnly`) và **không** đọc `PLAN_FEATURE_ENFORCEMENT` — công tắc đó chỉ gác
 > đợt rollout hạ cấp năng lực, không gác một ranh giới sản phẩm.
 
+> ⚠️ **Ba chỗ khác đã bị thay:**
+>
+> - **[ADR 0032](0032-booking-deposit-insurance-and-owner-lite.md) điều 6** ghi đè cách hiểu Owner
+>   Lite: chủ xe tuyến hoa hồng không bắt buộc biên bản/ảnh/odometer khi giao nhận, và không dùng
+>   tenant role/gói như gian hàng.
+> - **Điều 6 hết đối tượng áp dụng:** ưu đãi "hai chuyến đầu" của ADR 0026 đã gỡ (thay bởi ADR
+>   0028). Nguyên tắc *"ưu đãi PHÍ không mở bậc NĂNG LỰC"* vẫn là cách đọc đúng nếu sau này có ưu
+>   đãi tương tự.
+> - **Mục "Hệ quả về giá trên chợ" bị thay.** Phí dịch vụ nay cộng ở PHÍA KHÁCH
+>   ([ADR 0029](0029-per-vehicle-flat-pricing-and-customer-side-fees.md) điều 1), không trừ phía chủ
+>   xe — chủ xe không còn phải tự nâng giá để bù. Lệnh cấm *"không đẩy hạng theo tuyến"* hết hiệu
+>   lực: gian hàng thuê bao ĐƯỢC ưu tiên trong nhóm kết quả tương đương, có nhãn
+>   ([ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md) điều 10; sort mặc định
+>   theo `rank_score` — [ADR 0045](0045-host-cancellation-and-reputation.md) điều 4–5).
+
 ## Bối cảnh
 
-[ADR 0020](0020-two-revenue-tracks-one-marketplace.md) đến ADR 0026
+ADR 0020 (đã gỡ, xem [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md)) đến ADR 0026
 mô tả hai tuyến **chỉ khác nhau ở tiền**: chưa mua gói thì trả 10–15% mỗi chuyến, mua gói thì trả
 cước cố định. Nhìn như vậy thì việc nâng cấp là một bài toán số học thuần: xe chạy quá ~1,3
 ngày/tháng là nên mua gói.
@@ -91,8 +106,8 @@ quyết định lấy, và sáu tháng sau không ai trả lời được "gian 
    qua một guard đọc cờ tính năng từ gói hiện hành, **cùng kỷ luật** [ADR 0002](0002-auth-session-cookie.md)
    đặt cho permission. Ẩn nút mà không chặn API là để ngỏ cho bất kỳ ai gọi thẳng endpoint.
 
-   Guard đọc **cờ trên `plans.limits_json.features`** — [ADR 0015 điều 4](0015-vehicle-slot-billing.md)
-   đã chừa sẵn chỗ này. Danh sách cờ là **dữ liệu admin sửa được**; việc *phải có một cổng chặn ở
+   Guard đọc **cờ trên `plans.limits_json.features`** — ADR 0015 điều 4 (đã gỡ; ranh giới dữ
+   liệu/quy tắc chép ở [ADR 0041](0041-plan-tiers-by-vehicle-count.md) điều 9) đã chừa sẵn chỗ này. Danh sách cờ là **dữ liệu admin sửa được**; việc *phải có một cổng chặn ở
    server* là **quy tắc trong code**.
 
 5. **Cờ đọc từ gói HIỆN HÀNH, không đóng băng vào đơn.**
@@ -102,11 +117,15 @@ quyết định lấy, và sáu tháng sau không ai trả lời được "gian 
    thuận với khách**. Năng lực thì không — nó là quyền dùng phần mềm *ngay lúc này*. Gia hạn gói
    xong thì sổ thu chi mở lại ngay, không phải chờ chuyến mới.
 
-6. **Ưu đãi hai chuyến đầu (ADR 0026) KHÔNG mở tính
+6. *(Hết đối tượng áp dụng — ADR 0026 đã gỡ, xem banner.)* **Ưu đãi hai chuyến đầu (ADR 0026) KHÔNG mở tính
    năng nâng cao.** Nó miễn *phí*, không nâng *bậc*. Trộn hai thứ lại thì tenant mới được dùng
    thử toàn bộ rồi bị lấy đi — cách chắc chắn nhất để biến một ưu đãi thành một trải nghiệm tệ.
 
 ## Hệ quả về giá trên chợ — và điều nền tảng KHÔNG được làm
+
+> ⚠️ **Đã bị thay** bởi [ADR 0029](0029-per-vehicle-flat-pricing-and-customer-side-fees.md) điều 1
+> (phí phía khách) và [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md) điều 10
+> (ưu tiên hiển thị có giới hạn) — xem banner đầu ADR. Giữ lại để hiểu lịch sử.
 
 Chủ xe tuyến hoa hồng mất 10–15% mỗi chuyến, nên hành vi tự nhiên của họ là **nâng giá niêm yết
 lên một chút để bù**. Xe của gian hàng không chịu phí trên chuyến nên không cần bù.
@@ -115,7 +134,7 @@ Hệ quả: **cùng một dòng xe, xe gian hàng thường rẻ hơn trên ch�
 giá ⇒ xe gian hàng lên trước ⇒ có nhiều đơn hơn ⇒ thêm một lý do nâng cấp mà nền tảng không phải
 làm gì cả.
 
-Điều này **không mâu thuẫn** [ADR 0020 điều 2](0020-two-revenue-tracks-one-marketplace.md).
+Điều này **không mâu thuẫn** ADR 0020 điều 2 (đã gỡ; chính điều 2 đó bị ADR 0029 điều 1 bỏ).
 Điều 2 cấm **nền tảng** cộng phí lên giá khách; nó không nói gì về việc chủ xe tự định giá xe của
 mình — đó là quyền của họ ([ADR 0014 điều 5](0014-owner-and-shop-single-role.md): nền tảng không
 đứng giữa chuyện giá).
@@ -161,7 +180,7 @@ Hai việc **cấm**, vì cả hai đều là cách phá cơ chế tự nhiên �
 - Màn "Gói của tôi" phải liệt kê **được thêm gì khi nâng cấp** — đây là chỗ bán hàng thật sự, và
   nó chỉ thuyết phục khi danh sách ở điều 1 được viết bằng ngôn ngữ người dùng, không phải tên
   module.
-- Tenant hiện có được backfill gói ([ADR 0015 điều 9](0015-vehicle-slot-billing.md)) phải rơi vào
+- Tenant hiện có được backfill gói (ADR 0015 điều 9, đã gỡ) phải rơi vào
   bậc **có đủ tính năng đang dùng**, nếu không một lần deploy sẽ khoá sổ thu chi của những người
   đang dùng thật.
 

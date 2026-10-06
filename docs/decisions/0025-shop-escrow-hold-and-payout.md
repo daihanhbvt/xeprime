@@ -1,6 +1,6 @@
 # ADR 0025 — Gian hàng được bật thu cọc qua sàn: nền tảng GIỮ TIỀN HỘ và có đường chuyển trả
 
-Ngày: 29/08/2026 · Trạng thái: **Partially superseded bởi [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md)** · Giữ nguyên nguyên tắc tách quỹ/ledger; SLA và phạm vi thu hộ đã đổi.
+Ngày: 29/08/2026 · Trạng thái: **Partially superseded bởi [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md) và [ADR 0032](0032-booking-deposit-insurance-and-owner-lite.md); điều 1–4 bị [ADR 0033](0033-money-ledger-and-deposit-allocation.md) ghi đè** · Giữ nguyên nguyên tắc tách quỹ/ledger; SLA và phạm vi thu hộ đã đổi.
 
 > ⚠️ **[ADR 0033](0033-money-ledger-and-deposit-allocation.md) ghi đè điều 1–4 (10/09/2026).**
 > Với công thức `D + S + IV + IP` của [ADR 0032](0032-booking-deposit-insurance-and-owner-lite.md),
@@ -10,7 +10,16 @@ Ngày: 29/08/2026 · Trạng thái: **Partially superseded bởi [ADR 0028](0028
 > biệt nguồn sinh hold và ràng buộc outcome. **Điều 3** cũng đổi: mức cọc do **nền tảng** đặt trong
 > `fee_policies` (gian hàng chỉ có công tắc bật/tắt thu cọc), vì cọc nay là một phần giá thuê chứ
 > không phải công cụ chống bỏ chuyến riêng của shop. Nguyên tắc điều 4 (*"không bao giờ giữ lại một
-> đồng tiền của người khác"*) giữ nguyên nhưng áp cho **từng dòng tiền**. Điều 5–8 giữ nguyên.
+> đồng tiền của người khác"*) giữ nguyên nhưng áp cho **từng dòng tiền**.
+>
+> **Điều 5, 6, 8 giữ nguyên. Điều 7 giữ nguyên TRỪ cam kết tối đa:** 3 ngày làm việc hạ còn
+> **2 ngày làm việc** kể từ khi yêu cầu hợp lệ được duyệt
+> ([ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md) điều 8).
+> [ADR 0032](0032-booking-deposit-insurance-and-owner-lite.md) ghi đè phạm vi hold/payout ở chỗ mâu
+> thuẫn với công thức `D + S + IV + IP` và thời điểm phát hành bảo hiểm.
+>
+> Các nhắc tới mốc **W6** bên dưới là đợt kế hoạch lúc viết (lịch sử); tiến độ hiện hành ở
+> `docs/completion-roadmap.md`, điều kiện trước khi thu tiền thật là release gate của ADR 0028.
 
 ## Bối cảnh
 
@@ -101,12 +110,13 @@ quyết định đó **cùng toàn bộ cái giá của nó**, để người đ
    | Tiền vào ví | **Tức thì** khi kết cục được chốt. Không có bước chờ |
    | Rút tối thiểu | 50.000đ |
    | Giờ cắt | Yêu cầu trước **16:00** ngày làm việc → chuyển **trong ngày đó**. Sau 16:00, cuối tuần, ngày lễ → ngày làm việc kế tiếp |
-   | Cam kết tối đa | **3 ngày làm việc** kể từ khi duyệt |
+   | Cam kết tối đa | ~~3 ngày làm việc~~ **2 ngày làm việc** kể từ khi duyệt (ADR 0028 điều 8) |
    | Chuyển hụt / sai số tài khoản | Hoàn về ví bằng **dòng đảo**, không bao giờ sửa dòng cũ; báo người dùng nhập lại |
 
    Những con số này là **DỮ LIỆU cấu hình** (admin đổi được), nhưng *việc phải có một cam kết và
    hiện nó ra trước khi người dùng bấm rút* là **QUY TẮC** — cùng ranh giới
-   [ADR 0015 điều 4](0015-vehicle-slot-billing.md) đã đặt.
+   ADR 0015 điều 4 đã đặt (ADR 0015 đã gỡ; ranh giới này chép ở
+   [ADR 0041](0041-plan-tiers-by-vehicle-count.md) điều 9).
 
 8. **Đối soát vẫn dùng chung một sổ** `bank_transactions` ([ADR 0022](0022-sepay-customer-money.md)).
    Escrow đi cùng tiền tố `XPH` như hold hoa hồng — cùng bản chất *tiền vào cho một khoản giữ chỗ*,
@@ -117,13 +127,14 @@ quyết định đó **cùng toàn bộ cái giá của nó**, để người đ
 - **Nền tảng nay giữ tiền của người khác.** Đây là điều ADR 0013
   dựng ra để tránh, và ADR 0021 đã lách được ở tuyến A.
   Ở tuyến B thì không lách được nữa. Cần rà soát nghĩa vụ pháp lý của trung gian thanh toán trước
-  khi bật tính năng này cho khách thật — **đây là việc ngoài code và phải xong trước W6**.
+  khi bật tính năng này cho khách thật — **đây là việc ngoài code và phải xong trước W6** *(mốc
+  kế hoạch lúc viết — nay là release gate của ADR 0028)*.
 - **Đối soát thành hai chiều.** Chiều vào đã có SePay; chiều ra là admin chuyển tay, và mỗi lệnh
   chuyển phải có mã tham chiếu khớp ngược về `withdrawal_requests`.
 - **Tranh chấp có bên thứ ba.** Khách nói đã chuyển, shop nói chưa nhận — nay nền tảng đứng giữa và
   phải trả lời được, chứ không còn quyền nói "hai bên tự làm việc"
   ([ADR 0014 điều 5](0014-owner-and-shop-single-role.md) mất thêm một dòng nữa ở cột phải).
-- **W6 lớn lên và không còn là đợt cuối.** Ví, sổ cái, rút tiền, đối chiếu quỹ trở thành hạ tầng
+- *(Lịch sử — W6 là đợt kế hoạch lúc viết.)* **W6 lớn lên và không còn là đợt cuối.** Ví, sổ cái, rút tiền, đối chiếu quỹ trở thành hạ tầng
   bắt buộc của tuyến B chứ không phải phần đuôi của tuyến A.
 
 ## Ràng buộc bắt buộc
@@ -154,7 +165,8 @@ quyết định đó **cùng toàn bộ cái giá của nó**, để người đ
   chặn trần ở server.
 - `withdrawal_requests` thêm cam kết thời gian; màn admin có hàng đợi theo tuổi và giờ cắt.
 - Màn đối chiếu quỹ cho admin — ba con số ở điều 6, mỗi ngày.
-- W6 phải làm **trước hoặc cùng lúc** với việc mở escrow cho khách thật, không phải sau.
+- W6 *(đợt ví/sổ cái/rút tiền trong kế hoạch lúc viết — lịch sử)* phải làm **trước hoặc cùng lúc**
+  với việc mở escrow cho khách thật, không phải sau.
 
 ## Cần xem lại khi nào
 

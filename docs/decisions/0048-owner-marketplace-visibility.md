@@ -142,7 +142,7 @@ Nhãn trục ở hồ sơ 360 đổi từ "Public" thành **"Kiểm duyệt"**. 
 
 - **Không có đường vòng.** Chi tiết xe ngoài chợ, báo giá công khai, ngữ cảnh mã khuyến mãi, khoảng cách giao xe, mở hội thoại từ trang xe và gửi yêu cầu thuê đều đi qua `marketplaceVehicleWhere()`. Hội thoại ĐÃ mở không bị đụng: chủ xe cất xe đi không phải lý do để cắt liên lạc với người đang hỏi về chuyến của họ.
 - **Mobile tự hưởng phần đúng mà không sửa file nào.** `VehiclePublishCard` đọc `VEHICLE_PUBLIC_STATUS_SUBMITTABLE` nên nút "Gửi duyệt lại" tự biến mất ở xe bị nền tảng ẩn; nhãn `Domain.vehiclePublicStatus.hidden` đổi theo bó message dùng chung. Công tắc thì **chưa** có ở app native (ADR 0031: hai bản tầng gọi API, không tự đồng bộ) — việc của đội mobile.
-- **`Vehicles.publish.panel.submit`/`resubmit`/`submitted` GIỮ NGUYÊN trong bó message dù web không còn dùng.** `apps/mobile/src/features/vehicles/components/VehiclePublishCard.tsx` đọc đúng ba khoá đó, và `next-intl` suy kiểu TỪ cấu trúc JSON — xoá là lỗi biên dịch mobile, không phải một test đỏ (cùng cái bẫy ADR 0047 ghi lại). Xoá được khi màn đó của app native chuyển theo bố cục mới. `panel.title` thì có đổi chữ ("Tiến trình gửi duyệt công khai" → "Tiến trình xét duyệt"), nên tiêu đề thẻ ở app native đổi theo — đúng ý, và không cần mobile sửa gì.
+- **`Vehicles.publish.panel.submit`/`resubmit`/`submitted` GIỮ NGUYÊN trong bó message dù web không còn dùng.** `apps/mobile/shared/src/features/vehicles/components/VehiclePublishCard.tsx` đọc đúng ba khoá đó, và `next-intl` suy kiểu TỪ cấu trúc JSON — xoá là lỗi biên dịch mobile, không phải một test đỏ (cùng cái bẫy ADR 0047 ghi lại). Xoá được khi màn đó của app native chuyển theo bố cục mới. `panel.title` thì có đổi chữ ("Tiến trình gửi duyệt công khai" → "Tiến trình xét duyệt"), nên tiêu đề thẻ ở app native đổi theo — đúng ý, và không cần mobile sửa gì.
 - **Một dòng audit cho một lần đổi thật**, nên `vehicle.marketplace_visibility.update` đếm được như một chỉ số sản phẩm ("bao nhiêu xe bị cất đi trong tháng") mà không phải lọc nhiễu.
 
 ## Phương án đã cân nhắc và bỏ
@@ -161,6 +161,6 @@ Nhãn trục ở hồ sơ 360 đổi từ "Public" thành **"Kiểm duyệt"**. 
 
 ## Điều kiện xem lại
 
-- Khi app native làm công tắc này: bản gọi API của nó ở `apps/mobile/src/api/vehicles/` phải thêm cùng endpoint, và màn hồ sơ xe phải phân biệt được `platform_hidden` với `owner_paused` — ADR 0031, hai bản KHÔNG tự đồng bộ.
+- Khi app native làm công tắc này: bản gọi API của nó ở `apps/mobile/shared/src/api/vehicles/` phải thêm cùng endpoint, và màn hồ sơ xe phải phân biệt được `platform_hidden` với `owner_paused` — ADR 0031, hai bản KHÔNG tự đồng bộ.
 - Khi có nhu cầu "hẹn giờ bật lại" (tắt tới ngày X): thêm cột mốc + job, KHÔNG mượn `operation_status` hay một trạng thái kiểm duyệt mới.
 - Khi trần số xe của gói chuyển sang đếm theo "đang hiện ngoài chợ" thay vì `public_status`: cổng bật phải chạy lại `assertVehicleQuota`, và lập luận ở điều 3 hết hiệu lực.

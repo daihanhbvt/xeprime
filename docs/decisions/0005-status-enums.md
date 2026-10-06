@@ -1,6 +1,6 @@
 # ADR 0005 — Nguồn chốt duy nhất cho status enum
 
-Ngày: 22/07/2026 · Trạng thái: Accepted
+Ngày: 22/07/2026 · Trạng thái: **Accepted; ghi đè một phần** — điều `booking.status` bị [ADR 0047](0047-booking-status-simplification.md) ghi đè (rút còn 5 giá trị thật); `VEHICLE_PUBLIC_STATUS_SUBMITTABLE` bị [ADR 0048](0048-owner-marketplace-visibility.md) ghi đè (bỏ `hidden` khỏi bộ trạng thái gửi duyệt lại). Nguyên tắc nguồn chốt duy nhất cho status giữ nguyên.
 
 ## Bối cảnh
 

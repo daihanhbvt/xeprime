@@ -1,6 +1,6 @@
 # ADR 0014 — Chủ xe và chủ gian hàng là MỘT vai; năng lực đến từ GÓI, không từ role
 
-Ngày: 21/08/2026 · Trạng thái: **Partially superseded bởi [ADR 0020](0020-two-revenue-tracks-one-marketplace.md), [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md) và [ADR 0036](0036-single-approval-gate-for-commission-owners.md)**. Nguyên tắc một role/capability từ gói vẫn còn hiệu lực; phạm vi XePrime đứng giữa giao dịch đã đổi.
+Ngày: 21/08/2026 · Trạng thái: **Partially superseded — điều 1–4 còn hiệu lực**; điều 5 phần lớn bị [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md), [ADR 0032](0032-booking-deposit-insurance-and-owner-lite.md) và [ADR 0036](0036-single-approval-gate-for-commission-owners.md) thay (ADR 0020 từng sửa điều 5 — đã gỡ, xem 0028); giả định một người một tài khoản bị [ADR 0053](0053-separate-account-realms.md) thay. Nguyên tắc một role/capability từ gói vẫn còn hiệu lực; phạm vi XePrime đứng giữa giao dịch đã đổi.
 
 > ⚠️ **[ADR 0053](0053-separate-account-realms.md) (02/10/2026):** một người không còn là một tài
 > khoản mang cả vai khách lẫn vai chủ xe — khách và chủ xe/gian hàng là hai tài khoản ở hai realm.
@@ -10,9 +10,12 @@ Ngày: 21/08/2026 · Trạng thái: **Partially superseded bởi [ADR 0020](0020
 >
 > - **Điều 3** — [ADR 0024](0024-billing-mode-from-plan-frozen-on-booking.md) mở rộng: `plans`
 >   quyết định **năng lực VÀ chế độ thu phí**.
-> - **Điều 5** — [ADR 0020](0020-two-revenue-tracks-one-marketplace.md) thêm **đúng một dòng**
->   vào cột *"VẪN đứng giữa"*: **phí dịch vụ của chính nền tảng**. Mọi dòng khác ở nguyên chỗ —
->   đặc biệt *"Giá, điều kiện thuê, cọc"* vẫn thuộc cột *"KHÔNG đứng giữa"*.
+> - **Điều 5** — ADR 0020 (đã gỡ, xem [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md))
+>   từng thêm **đúng một dòng** vào cột *"VẪN đứng giữa"*: **phí dịch vụ của chính nền tảng**.
+>   [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md) (điều 6–8) và
+>   [ADR 0032](0032-booking-deposit-insurance-and-owner-lite.md) (điều 2: booking on-platform cọc
+>   qua XePrime, `D + S + IV + IP`) đi xa hơn: với booking đi qua nền tảng, **cọc** không còn thuộc
+>   cột *"KHÔNG đứng giữa"*. *Giá và điều kiện thuê* vẫn do chủ xe đặt.
 >
 > **Điều 5 bị [ADR 0036](0036-single-approval-gate-for-commission-owners.md) ghi đè một phần
 > (14/09/2026):** dòng *"Gian hàng được mở hay không (`approval_tasks`)"* KHÔNG còn áp với tuyến
@@ -20,7 +23,9 @@ Ngày: 21/08/2026 · Trạng thái: **Partially superseded bởi [ADR 0020](0020
 > điều kiện để **mua gói thuê bao**. Ba dòng còn lại của cột "VẪN kiểm duyệt" giữ nguyên.
 >
 > **Điều 1** (mọi xe thuộc một tenant) và **điều 2** (`tenant_type` chỉ là nhãn hiển thị, không
-> bao giờ dùng cho quyền/hạn mức/tiền) **giữ nguyên hiệu lực tuyệt đối**.
+> bao giờ dùng cho quyền/hạn mức/tiền) **giữ nguyên hiệu lực tuyệt đối**. **Điều 3** (mở rộng bởi
+> ADR 0024: gói quyết định cả chế độ thu phí; "số xe theo loại" nay là trần TỔNG — ADR 0041) và
+> **điều 4** cũng còn hiệu lực.
 
 ## Bối cảnh
 
@@ -87,7 +92,7 @@ Quyết định 4 là lợi ích lớn nhất: nếu tách role, "nâng cấp" t
 
 - `tenant_type` phải được rà lại: mọi chỗ đang (hoặc sắp) dùng nó để quyết định logic là sai theo
   điều 2, chuyển sang đọc gói.
-- Ẩn/hiện tính năng phải có một nguồn duy nhất là gói hiện hành → xem ADR 0015 cho hình dạng
-  `plans.limits_json`.
+- Ẩn/hiện tính năng phải có một nguồn duy nhất là gói hiện hành → hình dạng `plans.limits_json`
+  hiện hành ở [ADR 0041](0041-plan-tiers-by-vehicle-count.md) điều 1 (ADR 0015 đã gỡ).
 - Marketplace phải hiển thị đúng danh xưng theo `tenant_type` mà không rò rỉ nó thành sự khác biệt
   về quyền.

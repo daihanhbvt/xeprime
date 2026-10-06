@@ -7,7 +7,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t('notifications'), robots: { index: false, follow: false } };
 }
 
-/** Mục đã có chỗ trong menu, nội dung dựng ở wave sau — xem `docs/plans/2026-08-21-*`. */
+/** Route giữ chỗ, chưa có link menu và chưa có nội dung — xem `docs/design/03_PRODUCT_GAP_ANALYSIS.md` §6. */
 export default function AccountPlaceholderPage() {
   return <AccountComingSoon labelKey="notifications" />;
 }

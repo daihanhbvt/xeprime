@@ -5,7 +5,7 @@ description: Any user-facing text in apps/web — a new screen, a label, a toast
 
 # Every screen ships bilingual — and you convert what you touch
 
-The i18n machinery is finished (ADR 0012): one URL for both languages, locale in the `XP_LOCALE` cookie read server-side, `next-intl` with no locale routing, message bundles, formatters, domain labels, error-code mapping, two CI gates. What is *not* finished is coverage — `pnpm --filter @xeprime/web i18n:audit` still names ~3.5k raw Vietnamese strings across the manage portal and later features. That is the backlog you are working against, and the one rule that keeps it shrinking instead of growing:
+The i18n machinery is finished (ADR 0012): one URL for both languages, locale in the `XP_LOCALE` cookie read server-side, `next-intl` with no locale routing, message bundles, formatters, domain labels, error-code mapping, two CI gates. What is *not* finished is coverage — `pnpm --filter @xeprime/web i18n:audit` still names ~720 raw Vietnamese strings across 19 areas (06/10/2026). That is the backlog you are working against, and the one rule that keeps it shrinking instead of growing:
 
 **No new hardcoded UI string, ever. And when you open a file that still has them, convert that file as part of your change.**
 
@@ -19,11 +19,11 @@ Only text genuinely owned by your feature goes in your feature's namespace.
 
 ## Converting a screen — the whole loop
 
-1. **Namespace** — one per feature, by ownership, not by screen. Reuse the existing one if the feature has it (`src/i18n/namespaces.ts` is the list). A new one means: add the entry there, create `packages/domain/messages/vi/<file>.json` **and** `packages/domain/messages/en/<file>.json`, and register it in **both** `messages/vi/index.ts` and `messages/en/index.ts`. All five edits or `i18n:check` fails — and an empty namespace is rejected on purpose, because an empty file is a false claim that the area is done.
-2. **Move the Vietnamese out of the code, verbatim**, into `packages/domain/messages/vi/*.json` (bó dùng chung web + mobile) under nested keys that mirror the UI (`page.title`, `tabs.needsAction`, `form.errors.required`). Then write the English. Plurals and interpolation are ICU: `"{count, plural, other {# yêu cầu}}"`, same variable names in both languages.
+1. **Namespace** — one per feature, by ownership, not by screen. Reuse the existing one if the feature has it (`src/i18n/namespaces.ts` is the list). A new one means: add the entry there, create `packages/domain/messages/vi/<file>.json` **and** `packages/domain/messages/en/<file>.json`, and register it in **both** `apps/web/messages/vi/index.ts` and `apps/web/messages/en/index.ts`. All five edits or `i18n:check` fails (the native app's aggregator `apps/mobile/shared/src/i18n/messages.ts` only has to stay a valid subset — not your edit). JSON never goes back under `apps/web/messages/`; the check rejects it — and an empty namespace is rejected on purpose, because an empty file is a false claim that the area is done.
+2. **Move the Vietnamese out of the code, verbatim**, into `packages/domain/messages/vi/*.json` (one source shared by web and native — namespaces are split by feature, not by client) under nested keys that mirror the UI (`page.title`, `tabs.needsAction`, `form.errors.required`). Then write the English. Plurals and interpolation are ICU: `"{count, plural, other {# yêu cầu}}"`, same variable names in both languages.
 3. **Wire the component** — `useTranslations('Feature')` in a client component, `getTranslations('Feature')` in a server one. Keys are typechecked against the Vietnamese bundle, so a typo is a compile error.
 4. **Do not miss the non-obvious text**: `aria-label`, `alt`, `placeholder`, `title`, `okText`/`cancelText`, `notFoundContent`, Yup validation messages, `message.success` / `notification` / `Modal.confirm` arguments, `<title>`/meta, empty-state and error-state copy. The audit scans exactly these positions because they are exactly what gets forgotten.
-5. **API errors map from the code, not the message.** Backend `message` is Vietnamese and never reaches the screen — `useErrorMessage()` maps `API_ERROR_CODE` through the `Errors` namespace. If your change adds a code in `packages/types/src/api.ts`, add its sentence to `errors.json` in both languages in the same commit.
+5. **API errors map from the code, not the message.** Backend `message` is Vietnamese and never reaches the screen — `useErrorMessage()` maps `API_ERROR_CODE` through the `Errors` namespace. If your change adds a code in `packages/types/src/api.ts`, add its sentence to `packages/domain/messages/{vi,en}/errors.json` in the same commit.
 
 ## Never translated
 
@@ -31,7 +31,7 @@ Codes on the wire (`active`, `self_drive`, `within_7_days`), URL params, DB valu
 
 ## Scope of "convert what you touch"
 
-The unit is the surface you are already changing — the component and its siblings in that feature — converted completely, in the same commit, with `i18n:audit` showing that area gone or measurably smaller. It is not a licence to convert the whole manage portal mid-task, and not an excuse to leave half a dialog translated: a screen with three Vietnamese labels left in an English UI reads as broken, which is worse than a screen that is honestly untranslated. If the area is genuinely too large to finish inside the current task, say so, convert what your change touches, and leave the rest visible in the audit rather than silently allowlisted.
+The unit is the surface you are already changing — the component and its siblings in that feature — converted completely, in the same commit, with `i18n:audit` showing that area gone or measurably smaller. It is not a licence to convert the whole partner site mid-task, and not an excuse to leave half a dialog translated: a screen with three Vietnamese labels left in an English UI reads as broken, which is worse than a screen that is honestly untranslated. If the area is genuinely too large to finish inside the current task, say so, convert what your change touches, and leave the rest visible in the audit rather than silently allowlisted.
 
 The audit allowlist is for strings that must **never** be translated (brand names, provider names), each with a reason. "Not translated yet" is never a reason.
 
