@@ -119,7 +119,7 @@ export class BookingRequestsController {
   @ApiOperation({
     summary: 'Huỷ một chuyến ĐÃ NHẬN (chưa có đơn thuê)',
     description:
-      'Chỉ áp dụng cho awaiting_hold và hold_paid (LEGACY). Đóng hold, nhả lịch, hoàn phần đã ' +
+      'Chỉ áp dụng cho awaiting_hold (đã nhận, chờ khách thanh toán). Đóng hold, nhả lịch, hoàn phần đã ' +
       'chuyển và ghi một dòng booking_cancellations tính vào chỉ số uy tín. Yêu cầu chưa được ' +
       'nhận thì dùng /reject; đơn đã tạo thì dùng POST /bookings/:id/transition.',
   })

@@ -128,6 +128,14 @@ export interface NavLeaf {
    */
   readonly ownerOnly?: true;
   /**
+   * Nghịch đảo của `ownerOnly` trên CÙNG trục sở hữu: chỉ người KHÔNG phải chủ gian hàng thấy.
+   *
+   * Dùng khi chủ và thành viên làm cùng một việc ở hai màn khác nhau — Owner Lite: chủ xe đọc yêu
+   * cầu + đơn ở "Chuyến cho thuê" (`/trips` chỉ dựng phía chủ xe cho CHỦ), thành viên dùng hộp thư +
+   * bảng đơn. Luật chuyển trang tương ứng ở `partnerPageRedirect`.
+   */
+  readonly memberOnly?: true;
+  /**
    * Chỉ sáng khi đường dẫn KHỚP TUYỆT ĐỐI, không nhận route con.
    *
    * Dành cho mục có `href` là tiền tố của cả một khu: "Kiểm duyệt xe" sống ở `/manage/admin`, tức
@@ -709,9 +717,10 @@ export const PLATFORM_NAV: readonly NavSection[] = [
 /**
  * Menu của chủ xe TUYẾN HOA HỒNG ở site partner — Owner Lite (ADR 0051 điều 3).
  *
- * CÙNG URL với tuyến gói cho mọi trang có cùng ý nghĩa (xe, lịch, yêu cầu, đơn, hộp thư, số dư, gói,
- * hỗ trợ, tài khoản); chỉ thêm các trang riêng của tuyến hoa hồng (khai thuế, tài khoản nhận tiền,
- * cẩm nang…). Không có chi nhánh, nhân viên, tài xế, sổ thu chi, khách hàng: đó là năng lực
+ * CÙNG URL với tuyến gói cho mọi trang có cùng ý nghĩa (xe, lịch, hộp thư, số dư, gói, hỗ trợ, tài
+ * khoản); chỉ thêm các trang riêng của tuyến hoa hồng (chuyến cho thuê, khai thuế, tài khoản nhận
+ * tiền, cẩm nang…). "Chuyến cho thuê" thay CẢ hộp thư yêu cầu lẫn bảng đơn của tuyến gói — hai bề
+ * mặt đó dựng cho đội xe hàng chục chiếc, không cho một chủ xe có vài chiếc. Không có chi nhánh, nhân viên, tài xế, sổ thu chi, khách hàng: đó là năng lực
  * của gói (ADR 0027 điều 1), server chặn bằng `@SubscriptionTrackOnly` và menu này không bày ra.
  *
  * Nhãn dùng lại nhóm `Navigation.account`/`Navigation.manage` — không bản dịch thứ hai.
@@ -744,12 +753,31 @@ export const OWNER_LITE_NAV: readonly NavSection[] = [
         icon: CalendarOutlined,
       },
       {
+        /*
+         * MỘT mục cho cả yêu cầu lẫn đơn (07/10/2026). Chủ xe cá nhân có một tới ba xe: tách
+         * "Yêu cầu đặt xe" và "Đơn thuê" thành hai bảng của gian hàng là bắt họ mở hai nơi cho
+         * vài chuyến. Huy hiệu yêu cầu chờ duyệt đi theo mục này.
+         */
+        key: 'trips',
+        labelKey: 'manage.ownerTrips',
+        href: ROUTES.MANAGE.TRIPS,
+        permission: PERMISSION.BOOKING_REQUEST_VIEW,
+        icon: CarOutlined,
+        badge: NAV_BADGE.BOOKING_REQUESTS_PENDING,
+        ownerOnly: true,
+      },
+      /*
+       * THÀNH VIÊN (vd nhân viên của gian hàng vừa hết gói, ADR 0038 điều 5) không có danh sách phía
+       * chủ xe — họ giữ hộp thư + bảng đơn để còn bàn giao những chuyến đang chạy.
+       */
+      {
         key: 'booking-requests',
         labelKey: 'manage.bookingRequests',
         href: ROUTES.MANAGE.BOOKING_REQUESTS,
         permission: PERMISSION.BOOKING_REQUEST_VIEW,
         icon: InboxOutlined,
         badge: NAV_BADGE.BOOKING_REQUESTS_PENDING,
+        memberOnly: true,
       },
       {
         key: 'bookings',
@@ -757,6 +785,7 @@ export const OWNER_LITE_NAV: readonly NavSection[] = [
         href: ROUTES.MANAGE.BOOKINGS,
         permission: PERMISSION.BOOKING_VIEW,
         icon: FileDoneOutlined,
+        memberOnly: true,
       },
       {
         key: 'chat',
@@ -990,19 +1019,20 @@ const OWNER_LITE_MOBILE_TABS: readonly MobileTab[] = [
     icon: UnorderedListOutlined,
   },
   {
-    key: 'booking-requests',
-    labelKey: 'manage.bookingRequestsShort',
-    href: ROUTES.MANAGE.BOOKING_REQUESTS,
+    key: 'trips',
+    labelKey: 'manage.ownerTripsShort',
+    href: ROUTES.MANAGE.TRIPS,
     permission: PERMISSION.BOOKING_REQUEST_VIEW,
-    icon: InboxOutlined,
+    icon: CarOutlined,
     badge: NAV_BADGE.BOOKING_REQUESTS_PENDING,
   },
   {
-    key: 'bookings',
-    labelKey: 'manage.bookingsShort',
-    href: ROUTES.MANAGE.BOOKINGS,
-    permission: PERMISSION.BOOKING_VIEW,
-    icon: FileDoneOutlined,
+    // Yêu cầu + đơn đã gộp vào "Chuyến" — ô thứ tư nhường cho lịch xe, việc hằng ngày kế tiếp.
+    key: 'calendar',
+    labelKey: 'manage.calendarShort',
+    href: ROUTES.MANAGE.CALENDAR,
+    permission: PERMISSION.CALENDAR_VIEW,
+    icon: CalendarOutlined,
   },
 ];
 

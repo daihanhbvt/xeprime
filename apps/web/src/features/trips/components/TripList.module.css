@@ -1,0 +1,36 @@
+/** Khung danh sách chuyến — một cột thẻ, dùng chung cho site khách và site partner. */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+.skeleton {
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+.pager {
+  display: flex;
+  justify-content: center;
+}
+
+.refreshing {
+  align-self: center;
+}
+
+/* Bộ lọc chặng nằm ở khe phải của hàng tab — cùng nhịp với thanh lọc của hộp thư gian hàng. */
+.stageFilter {
+  min-width: 200px;
+}
+
+/** 640px = `--xp-bp-mobile`; custom property không dùng được trong `@media` (quyết định P8). */
+@media (max-width: 640px) {
+  .stageFilter {
+    min-width: 148px;
+  }
+}

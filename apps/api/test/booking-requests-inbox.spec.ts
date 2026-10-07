@@ -7,6 +7,7 @@ import {
   API_ERROR_CODE,
   BILLING_MODE,
   BOOKING_REQUEST_STATUS,
+  BOOKING_REQUEST_STATUS_LIVE_VALUES,
   BRANCH_STATUS,
   MEMBERSHIP_STATUS,
   SERVICE_TYPE,
@@ -451,12 +452,12 @@ describe('BookingRequestsService.list — đếm theo trạng thái', () => {
     expect(countOf(filtered, BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL)).toBeGreaterThan(0);
   });
 
-  maybe('liệt kê ĐỦ bộ trạng thái, kể cả trạng thái chưa có yêu cầu nào', async () => {
+  maybe('liệt kê ĐỦ bộ trạng thái thật, kể cả trạng thái chưa có yêu cầu nào', async () => {
     const page = await requests.list(tenantId, {}, null);
+    // Đúng tập "còn sống" — hai trạng thái đã gỡ (ADR 0055) không còn một ô đếm nào.
     expect(page.meta.statusCounts.map((entry) => entry.status).sort()).toEqual(
-      [...new Set(page.meta.statusCounts.map((e) => e.status))].sort(),
+      [...BOOKING_REQUEST_STATUS_LIVE_VALUES].sort(),
     );
-    expect(countOf(page, BOOKING_REQUEST_STATUS.APPROVED_BY_HOST)).toBe(0);
   });
 
   maybe('scope theo CHI NHÁNH của xe, và không bao giờ ra khỏi gian hàng', async () => {
@@ -703,3 +704,80 @@ function countOf(
 function total(page: { meta: { total: number } }) {
   return page.meta.total;
 }
+
+/*
+ * Liên hệ của KHÁCH (07/10/2026 — `hostSeesCustomerContact`): chủ xe TUYẾN HOA HỒNG chỉ thấy SĐT và
+ * email khi chuyến đã có ĐƠN; gian hàng TUYẾN GÓI thấy ngay (quyền liên hệ đã mua — ADR 0028 điều 9).
+ * Trước đó hộp thư lộ SĐT lúc khách vừa gửi, trong khi trang chuyến của cùng chủ xe đã giấu.
+ */
+describe('Liên hệ của khách theo tuyến', () => {
+  maybe('tuyến hoa hồng: chưa có đơn thì không có SĐT/email; có đơn rồi mới hiện', async () => {
+    const cOwner = newId();
+    const cTenant = newId();
+    const cVehicle = newId();
+    await prisma.user.create({
+      data: {
+        realm: ACCOUNT_REALM.PARTNER,
+        id: cOwner,
+        displayName: 'Chủ xe hoa hồng',
+        email: `own-c-${cOwner}@xeprime.test`,
+      },
+    });
+    await prisma.tenant.create({
+      data: {
+        id: cTenant,
+        code: `COMM-${cTenant.slice(-8)}`,
+        slug: `comm-${cTenant.toLowerCase().slice(-8)}`,
+        name: 'Chủ xe hoa hồng',
+        status: TENANT_STATUS.ACTIVE,
+        ownerUserId: cOwner,
+      },
+    });
+    try {
+      await giveTenantPlan(prisma, cTenant, { billingMode: BILLING_MODE.COMMISSION });
+      await prisma.vehicle.create({
+        data: {
+          id: cVehicle,
+          tenantId: cTenant,
+          code: 'XE-C1',
+          name: 'Mazda CX-5',
+          vehicleType: VEHICLE_TYPE.CAR,
+          publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
+          serviceTypes: [SERVICE_TYPE.SELF_DRIVE],
+          weekdayPrice: new Prisma.Decimal('700000'),
+        },
+      });
+
+      const pending = await seedRequest({ tenantId: cTenant, vehicleId: cVehicle });
+      const converted = await seedRequest({
+        tenantId: cTenant,
+        vehicleId: cVehicle,
+        status: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING,
+        pickupAt: at(9),
+      });
+
+      const hidden = await requests.getOne(cTenant, pending);
+      expect(hidden.customerPhone).toBeNull();
+      expect(hidden.customerEmail).toBeNull();
+      // Danh sách đi qua CÙNG cổng — không có đường vòng nào qua hộp thư.
+      const page = await requests.list(cTenant, {}, null);
+      expect(page.data.find((row) => row.id === pending)?.customerPhone).toBeNull();
+
+      const shown = await requests.getOne(cTenant, converted);
+      expect(shown.customerPhone).toBe('0901234567');
+      expect(shown.customerEmail).toBe('an@test.vn');
+    } finally {
+      await prisma.bookingRequest.deleteMany({ where: { tenantId: cTenant } });
+      await prisma.vehicle.deleteMany({ where: { tenantId: cTenant } });
+      await prisma.tenant.deleteMany({ where: { id: cTenant } });
+      await prisma.user.deleteMany({ where: { id: cOwner } });
+    }
+  });
+
+  maybe('tuyến gói: thấy SĐT/email ngay từ lúc khách gửi', async () => {
+    const id = await seedRequest({ tenantId, vehicleId: vehicleAId, pickupAt: at(11) });
+    const row = await requests.getOne(tenantId, id);
+    expect(row.customerPhone).toBe('0901234567');
+    expect(row.customerEmail).toBe('an@test.vn');
+  });
+});

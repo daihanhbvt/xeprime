@@ -14,8 +14,8 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import {
   BOOKING_REQUEST_STATUS,
+  BOOKING_REQUEST_STATUS_LIVE_VALUES,
   BOOKING_REQUEST_STATUS_META,
-  BOOKING_REQUEST_STATUS_VALUES,
   BOOKING_STATUS_SELECTABLE_VALUES,
   PARTNER_PICKUP_SOON_HOURS,
   SERVICE_TYPE_VALUES,
@@ -270,9 +270,10 @@ export function BookingsTab({ tenantId }: { tenantId: string }) {
                 allowClear: false,
                 options: [
                   all,
-                  ...BOOKING_REQUEST_STATUS_VALUES.filter(
-                    (value) => value !== BOOKING_REQUEST_STATUS.APPROVED_BY_HOST,
-                  ).map((value) => ({ value, label: domainLabel('bookingRequestStatus', value) })),
+                  ...BOOKING_REQUEST_STATUS_LIVE_VALUES.map((value) => ({
+                    value,
+                    label: domainLabel('bookingRequestStatus', value),
+                  })),
                 ],
               },
             ]}

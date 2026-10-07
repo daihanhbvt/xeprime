@@ -25,8 +25,7 @@ import styles from './TripDetailView.module.css';
  *
  * Chặng mới đọc từ `stage`, thứ nói đúng bóng đang ở chân ai:
  *
- *   · `pending_approval` (+ `pending_approval_paid` LEGACY ADR 0039) — chủ xe còn phải quyết:
- *     **Duyệt** hoặc **Từ chối**;
+ *   · `pending_approval` — chủ xe còn phải quyết: **Duyệt** hoặc **Từ chối**;
  *   · `awaiting_hold` — đã nhận, bóng ở chân khách. Việc chính là ĐỢI, và lối duy nhất còn lại
  *     là **Huỷ chuyến** (ADR 0045 điều 1).
  *

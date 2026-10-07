@@ -2,10 +2,10 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   AUTO_ACCEPT_BLOCKER_VALUES,
   BOOKING_REQUEST_DECISION_SOURCE_VALUES,
-  BOOKING_REQUEST_STATUS_VALUES,
+  BOOKING_REQUEST_STATUS_LIVE_VALUES,
   BOOKING_STATUS_VALUES,
   CONFIGURABLE_CUSTOMER_DOCUMENT_TYPES,
-  CUSTOMER_TRIP_STAGE_VALUES,
+  CUSTOMER_TRIP_STAGE_LIVE_VALUES,
   DRIVER_DEPOSIT_MODE_SUPPORTED,
   DRIVER_DEPOSIT_MODE_VALUES,
   DRIVER_SURCHARGE_KIND_VALUES,
@@ -312,9 +312,9 @@ export class VehicleTripHistoryItemDto {
   @ApiPropertyOptional({ type: String, nullable: true }) requestId!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Mã đơn — chỉ có ở đơn' }) code!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, enum: BOOKING_STATUS_VALUES }) bookingStatus!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, enum: BOOKING_REQUEST_STATUS_VALUES })
+  @ApiPropertyOptional({ type: String, nullable: true, enum: BOOKING_REQUEST_STATUS_LIVE_VALUES })
   requestStatus!: string | null;
-  @ApiProperty({ enum: CUSTOMER_TRIP_STAGE_VALUES, description: 'Chặng gộp — cùng phép chiếu với Chuyến của tôi' })
+  @ApiProperty({ enum: CUSTOMER_TRIP_STAGE_LIVE_VALUES, description: 'Chặng gộp — cùng phép chiếu với Chuyến của tôi' })
   stage!: string;
   @ApiProperty({ enum: SERVICE_TYPE_VALUES }) serviceType!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) routeType!: string | null;

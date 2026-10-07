@@ -1,22 +1,19 @@
 import { BOOKING_REQUEST_STATUS, type BookingRequestStatus } from '@xeprime/types';
 
 /**
- * Tab GỘP "Cần xử lý" — KHÔNG phải một trạng thái thật của `BookingRequestStatus`, mà là HAI
- * trạng thái cùng cần gian hàng quyết định (`BookingRequestCard.needsDecision` đã đối xử với
- * chúng như nhau từ lâu — xem component đó): `pending_host_approval` (mới hỏi) và `hold_paid`
- * (**LEGACY ADR 0039** — khách đã trả đủ trước khi ai duyệt; ADR 0044 không sinh trạng thái này
- * nữa, nhưng những yêu cầu đã ở đó vẫn có tiền thật bên trong và vẫn cần một cú bấm).
+ * Tab "Cần xử lý" — những yêu cầu gian hàng còn phải quyết định. Từ ADR 0055 đó chỉ còn MỘT
+ * trạng thái thật (`pending_host_approval`); `hold_paid` của luồng thu-trước-duyệt ADR 0039 đã
+ * bị gỡ khỏi DB.
  *
- * Không phải một mã nghiệp vụ đi trên dây (ADR 0005) — `filtersToParams` dịch nó thành
- * `status=pending_host_approval,hold_paid` (một chuỗi, ngăn cách dấu phẩy: `@xeprime/api-client`
- * cố ý không hỗ trợ query param dạng mảng).
+ * Giữ là một khoá TAB riêng (không phải mã nghiệp vụ đi trên dây — ADR 0005) để URL `?status=
+ * needs_action` đã chia sẻ/bookmark vẫn mở đúng ngăn; `filtersToParams` dịch nó thành danh sách
+ * trạng thái thật bên dưới.
  */
 export const BOOKING_REQUEST_TAB_NEEDS_ACTION = 'needs_action';
 
-/** Hai trạng thái gộp trong tab "Cần xử lý" — cùng thứ tự với chuỗi gửi lên server. */
+/** Trạng thái của tab "Cần xử lý" — cùng thứ tự với chuỗi gửi lên server. */
 export const BOOKING_REQUEST_NEEDS_ACTION_STATUSES = [
   BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
-  BOOKING_REQUEST_STATUS.HOLD_PAID,
 ] as const;
 
 /**
@@ -67,7 +64,7 @@ export interface BookingRequestTab {
  *
  * `converted_to_booking` không có tab riêng: nó là lịch sử của một ĐƠN THUÊ đang sống, và "Tất
  * cả đơn thuê" mới là nơi đúng để tra cứu nó — giữ một tab ở đây chỉ lặp lại đúng thứ menu khác
- * đã có. Tab "Tất cả" cũng bị bỏ cùng lý do: ba tab trên đã phủ hết 11 trạng thái, một tab tổng
+ * đã có. Tab "Tất cả" cũng bị bỏ cùng lý do: ba tab trên đã phủ hết mọi trạng thái, một tab tổng
  * hợp không còn việc gì để làm ngoài đếm lại đúng ba con số đã hiện.
  *
  * ⚠️ Tab "Chờ khách thanh toán" từng KHÔNG tồn tại theo phản hồi người dùng 19/09/2026 (lý do

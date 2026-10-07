@@ -3569,13 +3569,11 @@
                 "type": "string",
                 "enum": [
                   "pending_host_approval",
-                  "approved_by_host",
                   "rejected_by_host",
                   "cancelled_by_customer",
                   "expired",
                   "converted_to_booking",
                   "awaiting_hold",
-                  "hold_paid",
                   "hold_expired",
                   "slot_taken",
                   "cancelled_by_host"
@@ -4036,7 +4034,7 @@
     },
     "/booking-requests/{id}/cancel": {
       "post": {
-        "description": "Chỉ áp dụng cho awaiting_hold và hold_paid (LEGACY). Đóng hold, nhả lịch, hoàn phần đã chuyển và ghi một dòng booking_cancellations tính vào chỉ số uy tín. Yêu cầu chưa được nhận thì dùng /reject; đơn đã tạo thì dùng POST /bookings/:id/transition.\n\n**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `booking_requests.approve` (đọc từ DB mỗi request, không nằm trong session).",
+        "description": "Chỉ áp dụng cho awaiting_hold (đã nhận, chờ khách thanh toán). Đóng hold, nhả lịch, hoàn phần đã chuyển và ghi một dòng booking_cancellations tính vào chỉ số uy tín. Yêu cầu chưa được nhận thì dùng /reject; đơn đã tạo thì dùng POST /bookings/:id/transition.\n\n**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `booking_requests.approve` (đọc từ DB mỗi request, không nằm trong session).",
         "operationId": "BookingRequestsController_cancel",
         "parameters": [
           {
@@ -33240,13 +33238,11 @@
               "type": "string",
               "enum": [
                 "pending_host_approval",
-                "approved_by_host",
                 "rejected_by_host",
                 "cancelled_by_customer",
                 "expired",
                 "converted_to_booking",
                 "awaiting_hold",
-                "hold_paid",
                 "hold_expired",
                 "slot_taken",
                 "cancelled_by_host"
@@ -65278,13 +65274,11 @@
             "type": "string",
             "enum": [
               "pending_host_approval",
-              "approved_by_host",
               "rejected_by_host",
               "cancelled_by_customer",
               "expired",
               "converted_to_booking",
               "awaiting_hold",
-              "hold_paid",
               "hold_expired",
               "slot_taken",
               "cancelled_by_host"
@@ -65294,7 +65288,9 @@
             "type": "string"
           },
           "customerPhone": {
-            "type": "string"
+            "type": "string",
+            "nullable": true,
+            "description": "SĐT khách — null với chủ xe tuyến hoa hồng khi chuyến chưa có đơn"
           },
           "customerEmail": {
             "type": "string",
@@ -65600,13 +65596,11 @@
             "type": "string",
             "enum": [
               "pending_host_approval",
-              "approved_by_host",
               "rejected_by_host",
               "cancelled_by_customer",
               "expired",
               "converted_to_booking",
               "awaiting_hold",
-              "hold_paid",
               "hold_expired",
               "slot_taken",
               "cancelled_by_host"
@@ -65642,13 +65636,11 @@
             "type": "string",
             "enum": [
               "pending_host_approval",
-              "approved_by_host",
               "rejected_by_host",
               "cancelled_by_customer",
               "expired",
               "converted_to_booking",
               "awaiting_hold",
-              "hold_paid",
               "hold_expired",
               "slot_taken",
               "cancelled_by_host"
@@ -69701,12 +69693,12 @@
             "enum": [
               "pending_approval",
               "awaiting_hold",
-              "pending_approval_paid",
               "ready",
               "active",
               "completed",
               "cancelled",
               "rejected",
+              "expired",
               "slot_taken",
               "no_show"
             ],
@@ -70160,12 +70152,12 @@
             "enum": [
               "pending_approval",
               "awaiting_hold",
-              "pending_approval_paid",
               "ready",
               "active",
               "completed",
               "cancelled",
               "rejected",
+              "expired",
               "slot_taken",
               "no_show"
             ],
@@ -74572,13 +74564,11 @@
             "type": "string",
             "enum": [
               "pending_host_approval",
-              "approved_by_host",
               "rejected_by_host",
               "cancelled_by_customer",
               "expired",
               "converted_to_booking",
               "awaiting_hold",
-              "hold_paid",
               "hold_expired",
               "slot_taken",
               "cancelled_by_host"
@@ -88507,13 +88497,11 @@
             "nullable": true,
             "enum": [
               "pending_host_approval",
-              "approved_by_host",
               "rejected_by_host",
               "cancelled_by_customer",
               "expired",
               "converted_to_booking",
               "awaiting_hold",
-              "hold_paid",
               "hold_expired",
               "slot_taken",
               "cancelled_by_host"
@@ -88524,12 +88512,12 @@
             "enum": [
               "pending_approval",
               "awaiting_hold",
-              "pending_approval_paid",
               "ready",
               "active",
               "completed",
               "cancelled",
               "rejected",
+              "expired",
               "slot_taken",
               "no_show"
             ],

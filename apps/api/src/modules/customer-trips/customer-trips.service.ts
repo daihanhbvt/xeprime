@@ -29,10 +29,14 @@ import {
   customerTripStage,
   customerTripStatusesFor,
   handoverOccurredAt,
+  hostSeesCustomerContact,
+  isBookingRequestEngaged,
   isCustomerTripFilter,
   isTripRole,
   isDepositCollectionMode,
+  resolveEffectiveBilling,
   resolveRefundWalletOwner,
+  tenantUsesManagePortal,
   isHandoverPhotoAddedAfterConfirmation,
   type BookingRequestStatus,
   type BookingStatus,
@@ -45,7 +49,10 @@ import {
   type TripRole,
 } from '@xeprime/types';
 import { fromDateOnly } from '../../common/date-only';
-import { currentSubscriptionWhere } from '../../common/plan/feature-state';
+import {
+  EFFECTIVE_SUBSCRIPTION_ARGS,
+  effectiveSubscriptionWhere,
+} from '../../common/plan/feature-state';
 import {
   resolveStorefront,
   storefrontTenantSelect,
@@ -93,10 +100,11 @@ interface TripViewerScope {
   readonly userId: string;
   readonly hostTenantId: string | null;
   /**
-   * Gian hàng THUÊ BAO được liên hệ khách ngay từ lúc có yêu cầu (ADR 0028 điều 9 — họ đã trả
-   * cước và được phép chốt trực tiếp). Tuyến hoa hồng thì không: xem `canContactOn`.
+   * Gian hàng đang ở TUYẾN GÓI (tuyến HIỆU LỰC — ân hạn vẫn tính) — được thấy liên hệ của khách
+   * ngay từ lúc có yêu cầu (ADR 0028 điều 9). Tuyến hoa hồng thì chỉ khi có đơn: xem
+   * `hostSeesCustomerContact`, cùng luật với hộp thư yêu cầu.
    */
-  readonly hostSubscribed: boolean;
+  readonly hostPackageTrack: boolean;
 }
 
 /**
@@ -193,6 +201,7 @@ export class CustomerTripsService {
    * quyết định đúng một chuyện ở màn này — được liên hệ khách trước khi duyệt hay không.
    */
   private async resolveScope(userId: string): Promise<TripViewerScope> {
+    const now = new Date();
     const membership = await this.prisma.tenantMembership.findFirst({
       where: {
         userId,
@@ -204,9 +213,8 @@ export class CustomerTripsService {
         tenant: {
           select: {
             subscriptions: {
-              where: currentSubscriptionWhere(new Date()),
-              take: 1,
-              select: { id: true },
+              where: effectiveSubscriptionWhere(now),
+              ...EFFECTIVE_SUBSCRIPTION_ARGS,
             },
           },
         },
@@ -217,7 +225,14 @@ export class CustomerTripsService {
     return {
       userId,
       hostTenantId: membership?.tenantId ?? null,
-      hostSubscribed: (membership?.tenant.subscriptions.length ?? 0) > 0,
+      // Tuyến HIỆU LỰC — cùng phép chấm với guard tuyến và hộp thư yêu cầu, nên hai màn của cùng
+      // một chủ xe không thể nói hai câu khác nhau về việc có được thấy SĐT khách hay không.
+      hostPackageTrack: membership
+        ? tenantUsesManagePortal({
+            billingMode: resolveEffectiveBilling(membership.tenant.subscriptions[0] ?? null, now)
+              .billingMode,
+          })
+        : false,
     };
   }
 
@@ -447,22 +462,33 @@ export class CustomerTripsService {
     }
 
     /*
-     * Ba trạng thái huỷ được mà chưa có đơn, và chúng khác nhau ở chỗ KHÁCH ĐÃ TRẢ BAO NHIÊU:
+     * Hai trạng thái huỷ được mà chưa có đơn, khác nhau ở chỗ ĐÃ CÓ AI NHẬN CHUYẾN CHƯA:
      *
      *   - `pending_host_approval` — chưa chiếm lịch, chưa có đồng nào. Huỷ là xong.
-     *   - `awaiting_hold` — đã chiếm lịch, chưa trả (hoặc mới trả một phần). Nhả chỗ, đóng hold,
-     *     hoàn phần lẻ nếu có.
-     *   - `hold_paid` (ADR 0039) — đã trả ĐỦ và đang chờ gian hàng nhận. Nhả chỗ và hoàn theo
-     *     đúng mốc `free_cancel_until` đã đóng băng trên hold.
+     *   - `awaiting_hold` — đã được nhận, đã chiếm lịch, chưa trả (hoặc mới trả một phần). Nhả
+     *     chỗ, đóng hold, hoàn phần lẻ nếu có.
+     *
+     * Danh sách TRẮNG chứ không suy từ chặng: chặng `ready` mà đơn đã mất (FK `ON DELETE SET NULL`)
+     * sẽ lọt tới đây với `converted_to_booking` — lật nó thành "khách huỷ" là viết lại lịch sử của
+     * một chuyến đã thành đơn.
      */
-    const cancellable: string[] = [
-      BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
-      BOOKING_REQUEST_STATUS.AWAITING_HOLD,
-      BOOKING_REQUEST_STATUS.HOLD_PAID,
-    ];
+    if (
+      row.status !== BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL &&
+      row.status !== BOOKING_REQUEST_STATUS.AWAITING_HOLD
+    ) {
+      throw cancelNotAllowed(stage);
+    }
     await this.prisma.$transaction(async (tx) => {
+      // Hold TRƯỚC, yêu cầu SAU — cùng thứ tự với lượt tiền về (xem `lockForRequestWithinTx`).
+      await this.holds.lockForRequestWithinTx(tx, row.id);
+      /*
+       * Claim ĐÚNG trạng thái vừa đọc, không phải "một trong hai": nhánh dọn hold bên dưới chọn
+       * theo `row.status`. Gian hàng duyệt xen vào giữa (`pending → awaiting_hold`, hold vừa sinh,
+       * lịch vừa chiếm) thì một claim lỏng vẫn khớp — yêu cầu bị huỷ còn hold và lịch thì treo.
+       * Claim chặt cho 0 dòng ⇒ báo khách tải lại, và lượt bấm sau đi đúng nhánh.
+       */
       const claimed = await tx.bookingRequest.updateMany({
-        where: { id: row.id, status: { in: cancellable } },
+        where: { id: row.id, status: row.status },
         data: { status: BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER },
       });
       if (claimed.count > 0 && row.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD) {
@@ -471,13 +497,6 @@ export class CustomerTripsService {
           tenantId: row.tenantId,
           actorUserId: customerUserId,
           actorScope: AUDIT_ACTOR_SCOPE.CUSTOMER,
-        });
-      }
-      if (claimed.count > 0 && row.status === BOOKING_REQUEST_STATUS.HOLD_PAID) {
-        await this.holds.cancelPaidHoldForCustomerWithinTx(tx, {
-          requestId: row.id,
-          tenantId: row.tenantId,
-          actorUserId: customerUserId,
         });
       }
       /*
@@ -495,10 +514,7 @@ export class CustomerTripsService {
         await this.cancellations.recordWithinTx(tx, {
           tenantId: row.tenantId,
           bookingRequestId: row.id,
-          stage:
-            row.status === BOOKING_REQUEST_STATUS.HOLD_PAID
-              ? CANCELLATION_STAGE.HOLD_PAID
-              : CANCELLATION_STAGE.AWAITING_HOLD,
+          stage: CANCELLATION_STAGE.AWAITING_HOLD,
           reasonCategory: CANCELLATION_REASON_CATEGORY.CUSTOMER_CHANGED_PLAN,
           actorUserId: customerUserId,
           actorScope: AUDIT_ACTOR_SCOPE.CUSTOMER,
@@ -507,8 +523,8 @@ export class CustomerTripsService {
       /*
        * NHẢ lượt mã khuyến mãi (ADR 0046 điều 6) — khách rút lại TRƯỚC khi có đơn.
        *
-       * `releasePromoRedemption` chỉ khớp lượt đang ở trạng thái GIỮ, nên nó tự đúng ở cả ba
-       * chặng huỷ được: chưa duyệt, đã nhận chờ tiền, và (dữ liệu LEGACY) đã trả chờ nhận. Một
+       * `releasePromoRedemption` chỉ khớp lượt đang ở trạng thái GIỮ, nên nó tự đúng ở cả hai
+       * chặng huỷ được: chưa duyệt, và đã nhận chờ tiền. Một
        * lượt đã CHỐT — tức là đơn đã hình thành — không khớp, và đó chính là quy tắc "đơn đã
        * hình thành rồi bị huỷ KHÔNG khôi phục lượt mã".
        */
@@ -518,8 +534,17 @@ export class CustomerTripsService {
           reason: PROMO_RELEASE_REASON.REQUEST_CANCELLED,
         });
       }
-      // 0 dòng = gian hàng vừa duyệt/từ chối xen vào giữa. Không ghi đè quyết định của họ.
-      if (claimed.count === 0) throw cancelNotAllowed(stage);
+      /*
+       * 0 dòng = chuyến vừa đổi chặng xen vào giữa (gian hàng duyệt/từ chối, hoặc tiền vừa về và
+       * đơn đã ra đời). Không ghi đè. Báo `CONFLICT` ("vừa thay đổi — tải lại"), KHÔNG báo "không
+       * còn huỷ được": ở hai trong ba kết cục đó chuyến vẫn huỷ được, chỉ là qua đường khác.
+       */
+      if (claimed.count === 0) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.CONFLICT,
+          message: 'Chuyến vừa được cập nhật — tải lại rồi thử lại',
+        });
+      }
 
       await this.audit.record(
         {
@@ -1012,7 +1037,7 @@ function toListItem(
     requestStatus: row.status as BookingRequestStatus,
     bookingStatus: (booking?.status as BookingStatus | undefined) ?? null,
   });
-  const engaged = isEngagedTrip(row.status as BookingRequestStatus, Boolean(booking));
+  const engaged = isBookingRequestEngaged(row.status, Boolean(booking));
   /*
    * Tôi đi thuê hay tôi cho thuê. So `customerUserId` chứ không so tenant: một chủ gian hàng
    * thuê xe của chính mình vẫn đang ở vai KHÁCH trên chuyến đó, và màn hình phải nói đúng vai
@@ -1201,25 +1226,19 @@ function scopeWhere(scope: TripViewerScope, role?: TripRole): Prisma.BookingRequ
 /**
  * Hai bên được liên hệ trực tiếp chưa — MỘT cổng cho cả SĐT khách lẫn SĐT gian hàng.
  *
- * Mặc định là "chỉ khi chuyến đã thành quan hệ thật" (`isEngagedTrip`): nền tảng không dẫn hai
+ * Mặc định là "chỉ khi chuyến đã thành quan hệ thật" (`isBookingRequestEngaged`): nền tảng không dẫn hai
  * người ra ngoài trước khi có một chuyến, vì một yêu cầu gửi rồi tự huỷ sẽ thành cách moi số
  * điện thoại (ADR 0028 điều 9).
  *
- * Ngoại lệ đúng MỘT chỗ: gian hàng THUÊ BAO nhìn yêu cầu gửi tới xe của họ. Họ đã trả cước, và
+ * Ngoại lệ đúng MỘT chỗ: gian hàng TUYẾN GÓI nhìn yêu cầu gửi tới xe của họ. Họ đã trả cước, và
  * ADR 0028 điều 1 cho phép họ liên hệ và chốt trực tiếp — chặn ở đó là lấy đi thứ họ vừa mua.
  * Ngoại lệ này KHÔNG áp cho chiều ngược lại: khách vẫn chưa thấy SĐT gian hàng trước khi duyệt.
  */
 function canContactOn(engaged: boolean, role: TripRole, scope: TripViewerScope): boolean {
-  if (engaged) return true;
-  return role === TRIP_ROLE.HOST && scope.hostSubscribed;
-}
-
-function isEngagedTrip(requestStatus: BookingRequestStatus, hasBooking: boolean): boolean {
-  if (hasBooking) return true;
-  return (
-    requestStatus === BOOKING_REQUEST_STATUS.APPROVED_BY_HOST ||
-    requestStatus === BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING
-  );
+  if (role === TRIP_ROLE.HOST) {
+    return hostSeesCustomerContact({ engaged, packageTrack: scope.hostPackageTrack });
+  }
+  return engaged;
 }
 
 /**

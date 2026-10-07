@@ -1,5 +1,6 @@
 'use client';
 
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { CheckOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
 import { useRouter } from 'next/navigation';
@@ -90,7 +91,7 @@ export function ApproveSuccessDialog({
           <div className={styles.row}>
             <dt>{t('approve.customer')}</dt>
             <dd>
-              {request.customerName} · {request.customerPhone}
+              {[request.customerName, request.customerPhone].filter(Boolean).join(LIST_SEPARATOR)}
             </dd>
           </div>
           {pickup && dropoff ? (

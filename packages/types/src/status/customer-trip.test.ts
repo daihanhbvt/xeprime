@@ -7,6 +7,7 @@ import {
   CUSTOMER_TRIP_FILTER_STAGES,
   CUSTOMER_TRIP_FILTER_VALUES,
   CUSTOMER_TRIP_STAGE,
+  CUSTOMER_TRIP_STAGE_LIVE_VALUES,
   CUSTOMER_TRIP_STAGE_VALUES,
   customerTripStage,
   customerTripTimeline,
@@ -45,15 +46,21 @@ describe('customerTripStage', () => {
     ).toBe(CUSTOMER_TRIP_STAGE.ACTIVE);
   });
 
-  it('từ chối và quá hạn phản hồi cùng là một kết cục với khách', () => {
-    for (const status of [
-      BOOKING_REQUEST_STATUS.REJECTED_BY_HOST,
-      BOOKING_REQUEST_STATUS.EXPIRED,
-    ]) {
-      expect(customerTripStage({ requestStatus: status, bookingStatus: null })).toBe(
-        CUSTOMER_TRIP_STAGE.REJECTED,
-      );
-    }
+  /*
+   * Hai kết cục KHÁC nhau (07/10/2026): "bị từ chối" là chủ xe đã trả lời "không"; "quá hạn phản
+   * hồi" là không ai trả lời. Gộp nhãn thì chủ xe thấy "Bị từ chối" cho yêu cầu chưa từng mở.
+   */
+  it('từ chối và quá hạn phản hồi là HAI chặng riêng, cùng đã khép', () => {
+    expect(
+      customerTripStage({
+        requestStatus: BOOKING_REQUEST_STATUS.REJECTED_BY_HOST,
+        bookingStatus: null,
+      }),
+    ).toBe(CUSTOMER_TRIP_STAGE.REJECTED);
+    expect(
+      customerTripStage({ requestStatus: BOOKING_REQUEST_STATUS.EXPIRED, bookingStatus: null }),
+    ).toBe(CUSTOMER_TRIP_STAGE.EXPIRED);
+    expect(isCustomerTripClosed(CUSTOMER_TRIP_STAGE.EXPIRED)).toBe(true);
   });
 
   it('huỷ và không-nhận-xe KHÔNG bị gộp vào nhau', () => {
@@ -112,6 +119,7 @@ describe('customerTripTimeline', () => {
     for (const stage of [
       CUSTOMER_TRIP_STAGE.CANCELLED,
       CUSTOMER_TRIP_STAGE.REJECTED,
+      CUSTOMER_TRIP_STAGE.EXPIRED,
       CUSTOMER_TRIP_STAGE.NO_SHOW,
     ]) {
       const timeline = customerTripTimeline(stage);
@@ -139,14 +147,21 @@ describe('bộ lọc', () => {
     ]);
   });
 
-  it('hai tab phủ kín mọi chặng và không giao nhau', () => {
+  it('hai tab phủ kín mọi chặng THẬT và không giao nhau', () => {
     // Không còn tab `Tất cả` để hứng phần rơi rớt: chặng nào không thuộc đúng một tab là một
     // chuyến biến mất khỏi màn hình của khách.
-    for (const stage of CUSTOMER_TRIP_STAGE_VALUES) {
+    for (const stage of CUSTOMER_TRIP_STAGE_LIVE_VALUES) {
       const hits = Object.values(CUSTOMER_TRIP_FILTER_STAGES).filter((stages) =>
         stages.includes(stage),
       );
       expect(hits).toHaveLength(1);
+    }
+  });
+
+  // Chặng đã gỡ (ADR 0055) không còn là một lựa chọn lọc ở tab nào.
+  it('chặng đã gỡ pending_approval_paid không nằm ở tab nào', () => {
+    for (const stages of Object.values(CUSTOMER_TRIP_FILTER_STAGES)) {
+      expect(stages).not.toContain(CUSTOMER_TRIP_STAGE.PENDING_APPROVAL_PAID);
     }
   });
 

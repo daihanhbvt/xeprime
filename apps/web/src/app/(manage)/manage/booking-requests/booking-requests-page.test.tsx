@@ -165,7 +165,6 @@ function meta(overrides: Partial<BookingRequestListMeta> = {}): BookingRequestLi
     hasNext: false,
     statusCounts: [
       { status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL, count: 7 },
-      { status: BOOKING_REQUEST_STATUS.HOLD_PAID, count: 0 },
       { status: BOOKING_REQUEST_STATUS.AWAITING_HOLD, count: 4 },
       { status: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING, count: 12 },
       { status: BOOKING_REQUEST_STATUS.REJECTED_BY_HOST, count: 3 },
@@ -174,7 +173,6 @@ function meta(overrides: Partial<BookingRequestListMeta> = {}): BookingRequestLi
       { status: BOOKING_REQUEST_STATUS.HOLD_EXPIRED, count: 2 },
       { status: BOOKING_REQUEST_STATUS.SLOT_TAKEN, count: 1 },
       { status: BOOKING_REQUEST_STATUS.CANCELLED_BY_HOST, count: 1 },
-      { status: BOOKING_REQUEST_STATUS.APPROVED_BY_HOST, count: 0 },
     ],
     ...overrides,
   };
@@ -269,7 +267,7 @@ describe('/manage/booking-requests — bộ lọc trạng thái ở URL (ba tab,
 
   it('đếm trên tab lấy từ backend, kể cả tab đang KHÔNG mở; mỗi tab cộng ĐÚNG nhóm của nó', () => {
     renderPage();
-    // Cần xử lý = pending_host_approval(7) + hold_paid(0).
+    // Cần xử lý = pending_host_approval(7).
     expect(within(screen.getByRole('tab', { name: /Cần xử lý/ })).getByText('7')).toBeTruthy();
     // Chờ khách thanh toán = awaiting_hold(4) — một mã thật, không gộp.
     expect(
@@ -281,17 +279,15 @@ describe('/manage/booking-requests — bộ lọc trạng thái ở URL (ba tab,
   });
 
   /**
-   * ADR 0039 — tab "Cần xử lý" GỘP `pending_host_approval` + `hold_paid` (trước đây hai tab
-   * riêng). Khoá cả hai nửa của phép gộp: số hiện trên tab CỘNG DỒN, và tham số gửi lên API là
-   * giá trị GỘP (`filtersToParams` dịch thành `status=pending_host_approval,hold_paid`) — không
-   * phải một trong hai mã thật, nếu không backend sẽ chỉ lọc đúng một nửa.
+   * Tab "Cần xử lý" = yêu cầu gian hàng còn phải quyết. ADR 0055 gỡ `hold_paid` (ADR 0039), nên
+   * nó chỉ còn `pending_host_approval` — nhưng vẫn là khoá TAB riêng trên URL để link cũ
+   * `?status=needs_action` mở đúng ngăn.
    */
-  it('tab "Cần xử lý" gộp pending_host_approval + hold_paid — cộng số lẫn tham số gửi API', () => {
+  it('tab "Cần xử lý" đếm đúng yêu cầu chờ duyệt và giữ khoá tab riêng trên URL', () => {
     setRows([], {
       total: 0,
       statusCounts: [
-        { status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL, count: 4 },
-        { status: BOOKING_REQUEST_STATUS.HOLD_PAID, count: 3 },
+        { status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL, count: 7 },
         { status: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING, count: 0 },
         { status: BOOKING_REQUEST_STATUS.REJECTED_BY_HOST, count: 0 },
         { status: BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER, count: 0 },
@@ -422,7 +418,7 @@ describe('/manage/booking-requests — vùng xe và khách', () => {
  *     lặp lại "Khách trả" cho cùng một số — bài học đã sửa ở `PriceBreakdown` (18/09/2026).
  *  3. `isEstimate: true` (còn `pending_host_approval`, chưa từng có hold) ⇒ nhãn "Tạm tính" đi
  *     kèm số khách trả, và KHÔNG có dòng "Đã giữ chỗ"/"Trả chủ xe khi nhận xe" (chưa ai trả gì).
- *  4. Đã cọc (`hold_paid`) ⇒ đủ bốn dòng: tiền thuê, khách trả, đã giữ chỗ, trả chủ xe khi nhận.
+ *  4. Đã cọc (giữ chỗ đã về, đơn đã tạo) ⇒ đủ bốn dòng: tiền thuê, khách trả, đã giữ chỗ, trả chủ xe khi nhận.
  */
 describe('/manage/booking-requests — tiền trên thẻ', () => {
   it('pricing = null ⇒ không vẽ khối tiền nào', () => {
@@ -475,7 +471,8 @@ describe('/manage/booking-requests — tiền trên thẻ', () => {
   it('đã cọc ⇒ đủ bốn dòng: tiền thuê, khách trả, đã giữ chỗ, trả chủ xe khi nhận', () => {
     setRows([
       request({
-        status: BOOKING_REQUEST_STATUS.HOLD_PAID,
+        status: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING,
+        bookingId: 'bk-paid',
         pricing: {
           isEstimate: false,
           rentalTotal: '810000',
@@ -511,7 +508,6 @@ describe('/manage/booking-requests — awaiting_hold (đã nhận, chờ khách 
       total: 1,
       statusCounts: [
         { status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL, count: 0 },
-        { status: BOOKING_REQUEST_STATUS.HOLD_PAID, count: 0 },
         { status: BOOKING_REQUEST_STATUS.AWAITING_HOLD, count: 2 },
         { status: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING, count: 0 },
         { status: BOOKING_REQUEST_STATUS.REJECTED_BY_HOST, count: 0 },
@@ -780,6 +776,20 @@ describe('/manage/booking-requests — liên hệ khách', () => {
     expect(zalo.getAttribute('href')).toBe('https://zalo.me/0901234567');
     expect(zalo.getAttribute('target')).toBe('_blank');
     expect(zalo.getAttribute('rel')).toContain('noopener');
+  });
+
+  /*
+   * Server giấu liên hệ khi chủ xe chưa được thấy (`hostSeesCustomerContact` — tuyến hoa hồng, chưa
+   * có đơn). Thẻ ẨN HẲN gọi/Zalo/email — không vẽ nút chết, không thêm câu giải thích luật.
+   */
+  it('SĐT bị giấu ⇒ không có nút gọi, không Zalo, không email', () => {
+    setRows([request({ customerPhone: null, customerEmail: null })]);
+    renderPage();
+    const card = cardFor('Kia Carnival 2025');
+    expect(within(card).queryByRole('link', { name: /^Gọi / })).toBeNull();
+    expect(within(card).queryByRole('link', { name: /Zalo/ })).toBeNull();
+    expect(within(card).queryByText('0901234567')).toBeNull();
+    expect(within(card).queryByText('an@test.vn')).toBeNull();
   });
 
   it('nhắn tin: mở hội thoại phía GIAN HÀNG rồi chuyển sang khu tin nhắn', async () => {

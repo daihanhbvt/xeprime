@@ -9,13 +9,13 @@ import { STATUS_COLOR, type StatusMeta } from './meta';
 export const BOOKING_REQUEST_STATUS = {
   PENDING_HOST_APPROVAL: 'pending_host_approval',
   /**
-   * **@deprecated — CHẾT, không còn writer nào** (rà toàn bộ `apps/api`/`apps/web`/`apps/worker`
-   * 23/09/2026, ADR 0047: không có điểm ghi nào; DB dev lẫn test đều 0 hàng). Luồng duyệt hiện
-   * hành chuyển thẳng sang `converted_to_booking` (không hold) hoặc `awaiting_hold` (có hold)
-   * trong CÙNG transaction, không bao giờ dừng ở một chặng "đã duyệt, chưa gì khác" riêng.
+   * **@deprecated — CHẾT** (ADR 0047 xác minh 0 writer; ADR 0055 khoá ở DB bằng CHECK
+   * `booking_requests_status_valid`). Luồng duyệt chuyển thẳng sang `converted_to_booking` (không
+   * hold) hoặc `awaiting_hold` (có hold) trong CÙNG transaction, không dừng ở chặng nào khác.
    *
-   * Vẫn giữ trong enum vì `apps/mobile` còn tham chiếu (test) — không xoá khỏi shared type nếu
-   * chưa phối hợp với đội mobile. Không dùng trong code mới.
+   * Chỉ còn ở đây để `apps/mobile` (phụ thuộc workspace) biên dịch được — xoá hẳn là việc của
+   * đội mobile khi họ hết tham chiếu. Không dùng trong code mới; danh sách cho DTO/UI là
+   * `BOOKING_REQUEST_STATUS_LIVE_VALUES`.
    */
   APPROVED_BY_HOST: 'approved_by_host',
   REJECTED_BY_HOST: 'rejected_by_host',
@@ -32,20 +32,20 @@ export const BOOKING_REQUEST_STATUS = {
    * **CHIẾM LỊCH** — khác hẳn `pending_host_approval`: ở kia nhiều khách được phép cùng hỏi một
    * chiếc xe, ở đây chỗ đã thuộc về đúng một người vì chủ xe đã đồng ý.
    *
-   * ⚠️ Trước ADR 0044 trạng thái này mang nghĩa NGƯỢC LẠI — "khách vừa bấm đặt, chưa ai duyệt"
-   * (ADR 0039). Dữ liệu cũ phân biệt được bằng `decided_at`: bản ghi theo luồng cũ cố ý để
-   * trống cột đó.
+   * Luôn có `decided_at` — DB bắt buộc bằng CHECK `booking_requests_awaiting_hold_decided`
+   * (ADR 0055). Trước ADR 0044 trạng thái này mang nghĩa NGƯỢC LẠI ("khách vừa bấm đặt, chưa ai
+   * duyệt", ADR 0039); nghĩa đó đã bị gỡ hẳn cùng mọi nhánh xử lý của nó.
+   *
+   * Tiền ĐỦ ⇒ đi THẲNG sang `converted_to_booking` trong transaction đối soát.
    */
   AWAITING_HOLD: 'awaiting_hold',
   /**
-   * **LEGACY (ADR 0039, đã bị ADR 0044 ghi đè)** — khách đã chuyển đủ tiền TRƯỚC khi có ai duyệt.
+   * **@deprecated — ĐÃ GỠ (ADR 0055).** Chặng "khách đã trả đủ, chờ gian hàng nhận" của luồng
+   * thu-trước-duyệt ADR 0039, đã bị ADR 0044 thay. Không còn writer, không còn nhánh xử lý ở API
+   * lẫn worker, và DB từ chối giá trị này (CHECK `booking_requests_status_valid`).
    *
-   * Luồng hiện hành không bao giờ tạo trạng thái này nữa: tiền chỉ được thu sau khi chuyến đã
-   * được nhận, nên "đã trả đủ" đồng nghĩa với "có đơn thuê". Nó ở lại vì những yêu cầu sinh ra
-   * trong thời gian ADR 0039 còn hiệu lực phải đi hết đường của chúng — chủ xe vẫn nhận/từ chối
-   * được, và worker vẫn hoàn tiền khi hết hạn phản hồi.
-   *
-   * **CHIẾM LỊCH.** Chủ xe từ chối hoặc hết hạn phản hồi ⇒ hoàn đủ cho khách và nhả chỗ.
+   * Chỉ còn ở đây để `apps/mobile` biên dịch được — xoá hẳn là việc của đội mobile. Không dùng
+   * trong code mới.
    */
   HOLD_PAID: 'hold_paid',
   /** Quá cửa sổ chuyển tiền mà chưa đủ — worker ghi, nhả lịch. Kết thúc. */
@@ -72,7 +72,7 @@ export const BOOKING_REQUEST_STATUS = {
    * có thể đang trên đường đi chuyển khoản. Với khách đó là hai trải nghiệm khác nhau, và với
    * chỉ số "nhận và giữ chuyến" chúng là hai con số khác nhau — nên chúng phải là hai trạng thái.
    *
-   * Chỉ dùng cho chặng CHƯA có đơn thuê (`awaiting_hold`, và `hold_paid` của dữ liệu LEGACY).
+   * Chỉ dùng cho chặng CHƯA có đơn thuê (`awaiting_hold`).
    * Sau khi đơn đã tồn tại, việc huỷ thuộc về vòng đời ĐƠN (`bookings.status = cancelled`) và
    * yêu cầu giữ nguyên `converted_to_booking` — nó là lịch sử có thật.
    */
@@ -89,6 +89,23 @@ export const BOOKING_REQUEST_STATUS_VALUES = Object.values(
 export function isBookingRequestStatus(value: unknown): value is BookingRequestStatus {
   return typeof value === 'string' && (BOOKING_REQUEST_STATUS_VALUES as string[]).includes(value);
 }
+
+/** Hai giá trị chỉ còn trong enum cho mobile biên dịch — DB từ chối cả hai (ADR 0055). */
+const BOOKING_REQUEST_STATUS_RETIRED: readonly BookingRequestStatus[] = [
+  BOOKING_REQUEST_STATUS.APPROVED_BY_HOST,
+  BOOKING_REQUEST_STATUS.HOLD_PAID,
+];
+
+/**
+ * Trạng thái THẬT của một yêu cầu — đúng tập CHECK `booking_requests_status_valid` cho phép.
+ *
+ * Dùng cho mọi chỗ liệt kê ra ngoài: `@IsIn` của DTO, enum OpenAPI, ô lọc trạng thái, đếm theo
+ * trạng thái. `BOOKING_REQUEST_STATUS_VALUES` còn mang hai giá trị đã gỡ — cùng khuôn với
+ * `BOOKING_STATUS_SELECTABLE_VALUES` loại `confirmed` (ADR 0047).
+ */
+export const BOOKING_REQUEST_STATUS_LIVE_VALUES = BOOKING_REQUEST_STATUS_VALUES.filter(
+  (status) => !BOOKING_REQUEST_STATUS_RETIRED.includes(status),
+);
 
 /**
  * Trạng thái CHIẾM CHỖ trên lịch xe (ADR 0006).
@@ -107,16 +124,45 @@ export function isBookingRequestStatus(value: unknown): value is BookingRequestS
  * mảng và test đỏ, hãy chắc chắn bạn thật sự muốn đổi ngữ nghĩa chiếm lịch.
  */
 export const BOOKING_REQUEST_STATUS_OCCUPYING: readonly BookingRequestStatus[] = [
-  BOOKING_REQUEST_STATUS.APPROVED_BY_HOST,
   /*
-   * Đã được nhận, đang chờ khách chuyển tiền (ADR 0044) — ô quan trọng nhất trong mảng này.
-   * Nhả lịch ở đây nghĩa là khách vừa được chủ xe đồng ý, quay sang app ngân hàng, rồi quay lại
-   * thấy chiếc xe của mình đã bị người khác đặt.
+   * Đã được nhận, đang chờ khách chuyển tiền (ADR 0044) — trạng thái DUY NHẤT của yêu cầu giữ
+   * lịch (ADR 0055 gỡ `approved_by_host` và `hold_paid`). Nhả lịch ở đây nghĩa là khách vừa được
+   * chủ xe đồng ý, quay sang app ngân hàng, rồi quay lại thấy chiếc xe đã bị người khác đặt.
    */
   BOOKING_REQUEST_STATUS.AWAITING_HOLD,
-  /* LEGACY ADR 0039: đã trả đủ mà chưa ai duyệt — tiền thật đang nằm ở XePrime cho chỗ này. */
-  BOOKING_REQUEST_STATUS.HOLD_PAID,
 ];
+
+// ── Liên hệ giữa hai bên (ADR 0028 điều 9) ──────────────────────────────────
+
+/**
+ * Chuyến đã thành QUAN HỆ THẬT chưa — tức là đã có ĐƠN thuê.
+ *
+ * Đây là mốc nền tảng mở liên hệ trực tiếp giữa hai người: trước nó, một yêu cầu gửi rồi tự huỷ
+ * (hoặc một lượt duyệt rồi không trả tiền giữ chỗ) sẽ thành cách lấy số của nhau để chốt ngoài sàn.
+ * Đã DUYỆT mà chưa có đơn (`awaiting_hold` — chờ khách trả tiền giữ chỗ) vẫn CHƯA phải quan hệ thật.
+ */
+export function isBookingRequestEngaged(status: string, hasBooking: boolean): boolean {
+  return hasBooking || status === BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING;
+}
+
+/**
+ * Phía CHỦ XE được thấy liên hệ (SĐT, email) của KHÁCH chưa — MỘT luật cho mọi bề mặt: hộp thư
+ * yêu cầu, hộp thoại chi tiết, danh sách chuyến cho thuê.
+ *
+ *  - Gian hàng TUYẾN GÓI: luôn thấy — quyền liên hệ và chốt trực tiếp là thứ họ đã mua
+ *    (ADR 0028 điều 1, 9).
+ *  - Chủ xe TUYẾN HOA HỒNG: chỉ khi chuyến đã có đơn (`isBookingRequestEngaged`) — chủ sản phẩm chốt
+ *    07/10/2026. Trước đó hộp thư lộ SĐT ngay khi khách gửi, trong khi trang chuyến đã giấu.
+ *
+ * `packageTrack` là TUYẾN HIỆU LỰC (`tenantUsesManagePortal` trên `resolveEffectiveBilling`), không
+ * phải "có dòng thuê bao" — gian hàng đang trong ân hạn vẫn là tuyến gói.
+ */
+export function hostSeesCustomerContact(input: {
+  engaged: boolean;
+  packageTrack: boolean;
+}): boolean {
+  return input.engaged || input.packageTrack;
+}
 
 /**
  * Lộ trình của yêu cầu thuê XE CÓ TÀI XẾ (mô hình 3 lộ trình — plan 17/08).
@@ -189,7 +235,7 @@ export const BOOKING_REQUEST_STATUS_META: Readonly<Record<BookingRequestStatus, 
     label: 'Đã nhận · chờ khách thanh toán',
     color: STATUS_COLOR.PROCESSING,
   },
-  /* LEGACY ADR 0039 — tiền của khách đã nằm ở XePrime và chỗ xe bị khoá chờ một cú bấm. */
+  /* @deprecated — đã gỡ (ADR 0055); nhãn còn vì `Record` phải phủ đủ enum mobile đang đọc. */
   [BOOKING_REQUEST_STATUS.HOLD_PAID]: {
     label: 'Đã thanh toán · chờ bạn duyệt',
     color: STATUS_COLOR.PROCESSING,

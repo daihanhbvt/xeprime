@@ -14,6 +14,10 @@ import type { ApproveBookingRequestInput, CancelBookingRequestInput } from '../t
  * Duyệt yêu cầu tạo Booking (giữ chỗ lịch) → invalidate cả bookings/calendar/dashboard ngoài
  * booking-requests. Từ chối chỉ đổi trạng thái yêu cầu.
  *
+ * Cả ba quyết định làm mới thêm `trips`: chủ xe tuyến hoa hồng duyệt ngay trên danh sách chuyến
+ * cho thuê (`OwnerTripsView`, đọc `/trips`) — thiếu nhánh đó thì thẻ vừa duyệt vẫn mang nút
+ * "Xác nhận" cho tới lần tải lại kế tiếp.
+ *
  * Wave 9: KHÔNG còn bước báo giá giao nhận trước khi duyệt — yêu cầu có giao tận nơi duyệt
  * được ngay và đơn sinh ra với phí `0đ`.
  */
@@ -27,6 +31,7 @@ export function useApproveBookingRequest() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
       void queryClient.invalidateQueries({ queryKey: queryKeys.calendar.all });
       void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.trips.all });
     },
   });
 }
@@ -36,7 +41,13 @@ export function useRejectBookingRequest() {
   return useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) =>
       rejectBookingRequest(id, reason),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.bookingRequests.all }),
+    // TRẢ VỀ promise: nút "Từ chối" quay cho tới khi danh sách tải lại xong, để dòng vừa từ chối
+    // không thoáng hiện lại với nút còn bấm được.
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.bookingRequests.all }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.trips.all }),
+      ]),
   });
 }
 
@@ -58,6 +69,7 @@ export function useCancelBookingRequest() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
       void queryClient.invalidateQueries({ queryKey: queryKeys.calendar.all });
       void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.trips.all });
     },
   });
 }

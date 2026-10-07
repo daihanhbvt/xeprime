@@ -89,6 +89,16 @@ export async function fetchBookingRequests(
 }
 
 /**
+ * MỘT yêu cầu — cùng DTO với một dòng của hộp thư, nên mọi hộp thoại dựng cho dòng hộp thư nhận
+ * được nó nguyên vẹn. Dùng khi màn đang đứng không có sẵn dòng đó (danh sách chuyến của chủ xe
+ * tuyến hoa hồng đọc `/trips`, một DTO hẹp hơn).
+ */
+export async function fetchBookingRequest(id: string): Promise<BookingRequestItem> {
+  const res = await apiRequest<BookingRequestItem>(`/booking-requests/${encodeURIComponent(id)}`);
+  return res.data;
+}
+
+/**
  * Duyệt yêu cầu. Dịch vụ theo ngày không cần body; THUÊ DÀI HẠN bắt buộc `scheduledPickupAt`
  * (gian hàng chốt giờ nhận, server tính giờ trả theo gói — ADR 0011).
  */

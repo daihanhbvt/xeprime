@@ -128,6 +128,7 @@
     "completed": "Hoàn thành",
     "cancelled": "Đã hủy chuyến",
     "rejected": "Bị từ chối",
+    "expired": "Quá hạn phản hồi",
     "no_show": "Không nhận xe",
     "pending_approval_paid": "Đã thanh toán · chờ chủ xe xác nhận",
     "slot_taken": "Xe đã có khách khác"

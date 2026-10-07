@@ -822,6 +822,32 @@ describe('useManageNav — menu theo tuyến ở site partner', () => {
     expect(screen.queryByText('Tài chính')).toBeNull();
   });
 
+  /*
+   * Chủ xe cá nhân (1–3 xe) đọc yêu cầu + đơn gộp ở MỘT danh sách thẻ. Thành viên của gian hàng
+   * hoa hồng (nhân viên của shop vừa hết gói) không có danh sách đó — `/trips` chỉ dựng phía chủ
+   * xe cho CHỦ — nên giữ hộp thư + bảng đơn để còn bàn giao chuyến đang chạy.
+   */
+  it('chủ xe tuyến hoa hồng: "Chuyến cho thuê" thay cho hộp thư + bảng đơn', () => {
+    grant(...(Object.values(PERMISSION) as Permission[]));
+    user.tenant = { roleKey: TENANT_ROLE.SHOP_OWNER, billingMode: BILLING_MODE.COMMISSION };
+    renderMenu();
+
+    const labels = itemLabels();
+    expect(labels).toContain('Chuyến cho thuê');
+    expect(labels).not.toContain('Yêu cầu đặt xe');
+    expect(labels).not.toContain('Tất cả đơn thuê');
+  });
+
+  it('thành viên gian hàng tuyến hoa hồng: giữ hộp thư + bảng đơn, không có "Chuyến cho thuê"', () => {
+    grant(...(Object.values(PERMISSION) as Permission[]));
+    user.tenant = { roleKey: TENANT_ROLE.SHOP_STAFF, billingMode: BILLING_MODE.COMMISSION };
+    renderMenu();
+
+    const labels = itemLabels();
+    expect(labels).not.toContain('Chuyến cho thuê');
+    expect(labels).toEqual(expect.arrayContaining(['Yêu cầu đặt xe', 'Tất cả đơn thuê']));
+  });
+
   it('chưa có gian hàng: không menu nào', () => {
     grant(...(Object.values(PERMISSION) as Permission[]));
     user.tenant = null;

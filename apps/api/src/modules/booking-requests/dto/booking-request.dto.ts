@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   ADDRESS_LINE_MAX_LENGTH,
   BOOKING_REQUEST_DECISION_SOURCE_VALUES,
+  BOOKING_REQUEST_STATUS_LIVE_VALUES,
   BOOKING_REQUEST_STATUS_VALUES,
   CANCELLATION_REASON_CATEGORY_VALUES,
   LONG_TERM_PACKAGE_MONTHS_VALUES,
@@ -478,11 +479,16 @@ export class BookingRequestListQueryDto {
 
   /**
    * Một trạng thái, hoặc NHIỀU trạng thái nối bằng dấu phẩy (`?status=pending_host_approval,
-   * hold_paid`) — tab GỘP "Cần xử lý" của web dùng hình thức này. Chuỗi, không phải query param
+   * awaiting_hold`) — tab GỘP của hộp thư dùng hình thức này. Chuỗi, không phải query param
    * lặp lại: `@xeprime/api-client` cố ý không hỗ trợ query dạng mảng (xem `packages/api-client`).
+   *
+   * `@IsIn` vẫn NHẬN hai giá trị đã gỡ (`hold_paid`, `approved_by_host` — ADR 0055) và chúng
+   * khớp 0 dòng: bản app native đang chạy còn gửi `pending_host_approval,hold_paid` cho tab "Cần
+   * xử lý", và từ chối cả câu lọc là làm hộp thư của họ vỡ ở đúng tab quan trọng nhất. Swagger
+   * chỉ quảng bá danh sách còn sống.
    */
   @ApiPropertyOptional({
-    enum: BOOKING_REQUEST_STATUS_VALUES,
+    enum: BOOKING_REQUEST_STATUS_LIVE_VALUES,
     isArray: true,
     description: 'Một trạng thái, hoặc nhiều trạng thái nối dấu phẩy',
   })
@@ -567,9 +573,18 @@ export class BookingRequestDto {
   vehicleImageUrl!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, enum: VEHICLE_TYPE_VALUES })
   vehicleType!: string | null;
-  @ApiProperty({ enum: BOOKING_REQUEST_STATUS_VALUES }) status!: string;
+  @ApiProperty({ enum: BOOKING_REQUEST_STATUS_LIVE_VALUES }) status!: string;
   @ApiProperty() customerName!: string;
-  @ApiProperty() customerPhone!: string;
+  /**
+   * `null` khi chủ xe CHƯA được thấy liên hệ của khách: tuyến hoa hồng và chuyến chưa có đơn
+   * (`hostSeesCustomerContact`, ADR 0028 điều 9). Email theo cùng luật.
+   */
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'SĐT khách — null với chủ xe tuyến hoa hồng khi chuyến chưa có đơn',
+  })
+  customerPhone!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) customerEmail!: string | null;
   /**
    * Hồ sơ khách trong SỔ KHÁCH của gian hàng — móc để mở hồ sơ 360 từ inbox. `null` với yêu
@@ -717,7 +732,7 @@ export class BookingRequestDto {
  * theo một lần sửa DTO nữa. `status` vẫn khai `enum` nên spec sinh ra vẫn có đủ giá trị hợp lệ.
  */
 export class BookingRequestStatusCountDto {
-  @ApiProperty({ enum: BOOKING_REQUEST_STATUS_VALUES }) status!: string;
+  @ApiProperty({ enum: BOOKING_REQUEST_STATUS_LIVE_VALUES }) status!: string;
   @ApiProperty({ example: 7 }) count!: number;
 }
 
@@ -741,7 +756,7 @@ export class BookingRequestPageDto {
 /** Kết quả trả khách sau khi gửi yêu cầu (không lộ nội bộ tenant). */
 export class BookingRequestReceiptDto {
   @ApiProperty() id!: string;
-  @ApiProperty({ enum: BOOKING_REQUEST_STATUS_VALUES }) status!: string;
+  @ApiProperty({ enum: BOOKING_REQUEST_STATUS_LIVE_VALUES }) status!: string;
   @ApiProperty({
     description:
       'Sau khi gửi, khách đã có phiên đăng nhập (passwordless qua SĐT) — FE chuyển tới /trips.',

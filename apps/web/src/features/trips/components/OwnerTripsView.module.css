@@ -1,0 +1,8 @@
+/** `Chuyến cho thuê` ở site partner — khung trang đã có lề, nên chỉ xếp cột như "Xe của tôi". */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}

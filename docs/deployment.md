@@ -713,6 +713,15 @@ migrate.
 
 Luồng: `resolve` → `verify` (dùng lại `ci.yml` nguyên vẹn) → `deploy` (build + push + ssh).
 
+> ⚠️ **Rollback qua mốc ADR 0055** (migration `20261007120000_retire_legacy_request_statuses`).
+> Rollback chỉ đổi image, KHÔNG lùi migration. Image trước mốc đó ghi `booking_requests.status =
+> 'hold_paid'` như một bước tạm mỗi lần tiền giữ chỗ về đủ — CHECK `booking_requests_status_valid`
+> làm câu đó hỏng, và lượt đối soát nuốt lỗi (`match_failed`, 200 cho SePay): khách đã trả mà hold
+> vẫn `pending` rồi hết hạn. Trước khi rollback về một image cũ hơn mốc này, chạy trên DB của môi
+> trường đó: `ALTER TABLE booking_requests DROP CONSTRAINT booking_requests_status_valid;` — và thêm
+> lại (chạy lại migration) khi quay về image mới. Ràng buộc còn lại của migration
+> (`booking_requests_awaiting_hold_decided`) tương thích với image cũ, không cần gỡ.
+
 `verify` cố ý **nằm ngoài** Environment để test chạy xong rồi mới tới lượt người duyệt nhìn.
 Build và deploy nằm **chung một job** vì cả hai đều cần Environment, mà GitHub hỏi phê duyệt
 một lần cho mỗi job — tách đôi là bắt người duyệt bấm hai lần cho một lần deploy.

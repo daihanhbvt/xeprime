@@ -2,7 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   AUDIT_ACTION_CATEGORY_VALUES,
   AUDIT_ACTOR_SCOPE_VALUES,
-  BOOKING_REQUEST_STATUS_VALUES,
+  BOOKING_REQUEST_STATUS_LIVE_VALUES,
   BOOKING_STATUS_VALUES,
   DEFAULT_PARTNER_VEHICLE_SORT,
   PARTNER_QUOTA_KIND_VALUES,
@@ -365,15 +365,15 @@ export class PartnerBookingSummaryDto {
 }
 
 export class PartnerBookingRequestListQueryDto extends PagedQueryDto {
-  @ApiPropertyOptional({ enum: BOOKING_REQUEST_STATUS_VALUES })
+  @ApiPropertyOptional({ enum: BOOKING_REQUEST_STATUS_LIVE_VALUES })
   @IsOptional()
-  @IsIn(BOOKING_REQUEST_STATUS_VALUES)
+  @IsIn(BOOKING_REQUEST_STATUS_LIVE_VALUES)
   status?: string;
 }
 
 export class PartnerBookingRequestDto {
   @ApiProperty() id!: string;
-  @ApiProperty({ enum: BOOKING_REQUEST_STATUS_VALUES }) status!: string;
+  @ApiProperty({ enum: BOOKING_REQUEST_STATUS_LIVE_VALUES }) status!: string;
   @ApiProperty({ enum: SERVICE_TYPE_VALUES }) serviceType!: string;
   @ApiProperty() vehicleId!: string;
   @ApiProperty() vehicleName!: string;

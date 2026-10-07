@@ -17,12 +17,16 @@ import {
   AUTO_ACCEPT_BLOCKER,
   BOOKING_REQUEST_DECISION_SOURCE,
   BOOKING_REQUEST_STATUS,
-  BOOKING_REQUEST_STATUS_VALUES,
+  BOOKING_REQUEST_STATUS_LIVE_VALUES,
   CANCELLATION_STAGE,
   cancellationReasonNeedsText,
   bookingRequestRespondBy,
   DEPOSIT_COLLECTION_MODE,
+  hostSeesCustomerContact,
+  isBookingRequestEngaged,
   isBookingRequestPastDue,
+  resolveEffectiveBilling,
+  tenantUsesManagePortal,
   isLongTermPackageMonths,
   vnDateKey,
   vnDayStart,
@@ -56,6 +60,10 @@ import { piiSearch } from '../../common/support/support-search';
 import { marketplaceVehicleWhere } from '../../common/marketplace-vehicle-scope';
 import { normalizeRouteContext } from '../../common/route-context';
 import { addressViewOf, pinOf } from '../../common/address-view';
+import {
+  EFFECTIVE_SUBSCRIPTION_ARGS,
+  effectiveSubscriptionWhere,
+} from '../../common/plan/feature-state';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AddressService } from '../locations/address.service';
 import { CancellationsService } from '../cancellations/cancellations.service';
@@ -1480,8 +1488,12 @@ export class BookingRequestsService {
      * `pending_host_approval` (nhánh 3 của nó), nên chi phí bị CHẶN TRẦN bởi `limit` của trang
      * này, không phải toàn bảng. `Promise.all` vì các hàng độc lập nhau.
      */
+    const packageTrack = await this.isPackageTrack(tenantId);
     const data = await Promise.all(
-      rows.map(async (row) => ({ ...toDto(row), pricing: await this.resolvePricing(tenantId, row) })),
+      rows.map(async (row) => ({
+        ...toDto(row, packageTrack),
+        pricing: await this.resolvePricing(tenantId, row),
+      })),
     );
 
     return {
@@ -1490,7 +1502,7 @@ export class BookingRequestsService {
         ...paginationMeta(paging, total),
         // Liệt kê ĐỦ bộ trạng thái, kể cả trạng thái không có yêu cầu nào: một tab không có
         // con số trông như "chưa tải xong", còn `0` là một câu trả lời.
-        statusCounts: BOOKING_REQUEST_STATUS_VALUES.map((status) => ({
+        statusCounts: BOOKING_REQUEST_STATUS_LIVE_VALUES.map((status) => ({
           status,
           count: counted.get(status) ?? 0,
         })),
@@ -1504,7 +1516,31 @@ export class BookingRequestsService {
       select: SELECT,
     });
     if (!row) throw notFound();
-    return { ...toDto(row), pricing: await this.resolvePricing(tenantId, row) };
+    return {
+      ...toDto(row, await this.isPackageTrack(tenantId)),
+      pricing: await this.resolvePricing(tenantId, row),
+    };
+  }
+
+  /**
+   * Gian hàng đang ở TUYẾN GÓI không — đọc tuyến HIỆU LỰC (`resolveEffectiveBilling`), cùng phép
+   * chấm với guard tuyến, nên gian hàng đang ân hạn vẫn là tuyến gói.
+   *
+   * Quyết định một việc duy nhất ở service này: chủ xe có thấy liên hệ của khách trước khi có đơn
+   * không (`hostSeesCustomerContact`). Đọc ở ĐÂY chứ không nhận từ controller: mọi đường trả DTO
+   * yêu cầu đều phải đi qua cổng, và một tham số quên truyền thì mặc định không được là "hiện".
+   */
+  private async isPackageTrack(tenantId: string): Promise<boolean> {
+    const now = new Date();
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: {
+        subscriptions: { where: effectiveSubscriptionWhere(now), ...EFFECTIVE_SUBSCRIPTION_ARGS },
+      },
+    });
+    return tenantUsesManagePortal({
+      billingMode: resolveEffectiveBilling(tenant?.subscriptions[0] ?? null, now).billingMode,
+    });
   }
 
   /**
@@ -1530,18 +1566,6 @@ export class BookingRequestsService {
     id: string,
     dto: ApproveBookingRequestDto = {},
   ): Promise<BookingRequestDto> {
-    /*
-     * DỮ LIỆU LEGACY ADR 0039 — khách đã trả tiền TRƯỚC khi có ai duyệt. Duyệt ở đây là một
-     * việc KHÁC HẲN: giá đã đóng băng lúc sinh hold, tiền đã nằm ở XePrime, lịch đã bị chiếm.
-     * Không tính lại gì cả — chỉ mở đơn từ snapshot đã chốt. Đi tiếp xuống dưới sẽ báo giá lần
-     * thứ hai và đóng băng một con số khác với con số khách đã trả.
-     *
-     * Luồng hiện hành không sinh `hold_paid` nữa (ADR 0044), nhưng nhánh này phải ở lại cho tới
-     * khi không còn yêu cầu nào của thời kỳ đó chờ quyết định.
-     */
-    if (await this.isAwaitingAcceptAfterHold(tenantId, id)) {
-      return this.acceptPaidRequest(tenantId, userId, id, dto);
-    }
     const req = await this.loadPending(tenantId, id);
 
     // Người quyết định KHÔNG được là người gửi — cổng thứ hai, dọn cả dữ liệu tự đặt có từ trước.
@@ -1624,7 +1648,7 @@ export class BookingRequestsService {
       deposit,
       { promoDropped },
     );
-    return toDto(row);
+    return toDto(row, await this.isPackageTrack(tenantId));
   }
 
   /**
@@ -2052,10 +2076,6 @@ export class BookingRequestsService {
     id: string,
     reason?: string,
   ): Promise<BookingRequestDto> {
-    // Từ chối một yêu cầu ĐÃ CỌC phải hoàn tiền — không dùng chung đường với yêu cầu suông.
-    if (await this.isAwaitingAcceptAfterHold(tenantId, id)) {
-      return this.rejectPaidRequest(tenantId, userId, id, reason);
-    }
     const req = await this.loadPending(tenantId, id);
     // Từ chối yêu cầu của chính mình cũng là tự quyết định — cùng cổng với `approve`.
     this.assertNotOwnRequest(req.customerUserId, userId);
@@ -2112,7 +2132,7 @@ export class BookingRequestsService {
       return updated;
     });
 
-    return toDto(row);
+    return toDto(row, await this.isPackageTrack(tenantId));
   }
 
   /**
@@ -2127,82 +2147,6 @@ export class BookingRequestsService {
    * có điều kiện của `approve`/`reject`: giữa lúc đọc và lúc ghi, worker vẫn có thể chen vào.
    */
   /**
-   * Yêu cầu này có phải bản ghi LEGACY ADR 0039 — "khách đã trả đủ, chờ gian hàng nhận" — không.
-   *
-   * Luồng ADR 0044 không tạo `hold_paid` nữa; hàm này là cái cầu để những yêu cầu đã ở đó đi
-   * hết đường của chúng thay vì bị mắc kẹt với tiền thật bên trong.
-   */
-  private async isAwaitingAcceptAfterHold(tenantId: string, id: string): Promise<boolean> {
-    const row = await this.prisma.bookingRequest.findFirst({
-      where: { id, tenantId },
-      select: { status: true },
-    });
-    if (!row) throw notFound();
-    return row.status === BOOKING_REQUEST_STATUS.HOLD_PAID;
-  }
-
-  /**
-   * GIAN HÀNG NHẬN một chuyến khách đã trả giữ chỗ ⇒ đơn thuê ra đời (ADR 0039 điều 4).
-   *
-   * Không báo giá lại, không đọc chính sách phí, không đụng `deposit_collection_mode`: mọi con
-   * số đã đóng băng trên hold lúc khách bấm đặt, và khách đã trả đúng con số đó. Tính lại ở đây
-   * là mở đường cho một đơn có giá khác với số tiền đã thu.
-   *
-   * `scheduledPickupAt` bị từ chối: lịch cũng đã chốt: dời nó sau khi khách trả tiền là đổi
-   * hàng sau khi đã bán.
-   */
-  private async acceptPaidRequest(
-    tenantId: string,
-    userId: string,
-    id: string,
-    dto: ApproveBookingRequestDto,
-  ): Promise<BookingRequestDto> {
-    if (dto.scheduledPickupAt) {
-      throw new BadRequestException({
-        code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Chuyến đã được khách giữ chỗ — không đổi được giờ nhận khi duyệt',
-      });
-    }
-    const req = await this.prisma.bookingRequest.findFirstOrThrow({
-      where: { id, tenantId },
-      select: { customerUserId: true, customerPhone: true },
-    });
-    this.assertNotOwnRequest(req.customerUserId, userId);
-    await this.customers.assertNotBlocked(tenantId, req.customerPhone, 'internal');
-
-    const row = await this.prisma.$transaction(async (tx) => {
-      /*
-       * Ghi `decided_*` TRƯỚC khi mở đơn: `convertPaidHoldWithinTx` đọc `decided_by` để biết
-       * ai là người tạo đơn. Đảo thứ tự thì đơn ra đời không có người chịu trách nhiệm.
-       */
-      const claimed = await tx.bookingRequest.updateMany({
-        where: { id, tenantId, status: BOOKING_REQUEST_STATUS.HOLD_PAID },
-        data: {
-          decidedBy: userId,
-          decidedAt: new Date(),
-          decisionSource: BOOKING_REQUEST_DECISION_SOURCE.HOST,
-        },
-      });
-      // 0 dòng = hệ thống vừa tự nhận, hoặc worker vừa hoàn vì quá hạn phản hồi.
-      if (claimed.count === 0) throw requestExpired();
-
-      await this.holds.convertPaidHoldWithinTx(tx, id, tenantId, {
-        actorUserId: userId,
-        actorScope: AUDIT_ACTOR_SCOPE.TENANT,
-      });
-
-      return tx.bookingRequest.findFirstOrThrow({ where: { id, tenantId }, select: SELECT });
-    });
-    return toDto(row);
-  }
-
-  /**
-   * GIAN HÀNG TỪ CHỐI một chuyến khách đã trả giữ chỗ ⇒ hoàn đủ, nhả chỗ (ADR 0039 điều 5).
-   *
-   * Khách không có lỗi gì ở đây, nên hoàn **toàn bộ** — không chia đôi, không giữ phí dịch vụ.
-   */
-
-  /**
    * GIAN HÀNG RÚT LẠI một chuyến ĐÃ NHẬN — ADR 0045 điều 1.
    *
    * Khác `reject` ở đúng chỗ tốn kém nhất: ở kia gian hàng nói "không nhận" trước khi có bất kỳ
@@ -2210,16 +2154,18 @@ export class BookingRequestsService {
    * nhận và có thể đang trên đường đi chuyển khoản. Nên nó là một trạng thái riêng
    * (`cancelled_by_host`), một dòng `booking_cancellations`, và một chỉ số bị ảnh hưởng.
    *
-   * Chặng áp dụng: `awaiting_hold` (đường hiện hành) và `hold_paid` (LEGACY ADR 0039). Sau khi
+   * Chặng áp dụng: DUY NHẤT `awaiting_hold` — chặng chưa có đơn nào khác sau ADR 0055. Sau khi
    * ĐƠN đã tồn tại, huỷ thuộc về vòng đời đơn — `POST /bookings/:id/transition` với
    * `to = cancelled`, nơi `HoldSettlementService` đã có sẵn luật hoàn cho phía gian hàng.
    *
    * ## Một transaction, và mọi thứ trong đó
    *
-   * Chiếm trạng thái bằng điều kiện trong WHERE ⇒ tiền về đúng lúc huỷ chỉ có MỘT đường thắng:
-   * `settleFullPaymentWithinTx` cũng claim `status = awaiting_hold`, nên hai bên không thể cùng
-   * khớp. Bên thua quay đầu cả transaction — không có đơn mở ra từ một chuyến vừa bị huỷ, và
-   * không có khoản hoàn ghi hai lần.
+   * Tiền về đúng lúc huỷ chỉ có MỘT đường thắng, và bên thua CHỜ chứ không deadlock: cả hai
+   * khoá hàng HOLD trước (`lockForRequestWithinTx` ở đây, lượt cộng tiền ở đối soát) rồi mới tới
+   * yêu cầu. Huỷ thắng ⇒ hold `cancelled`, khoản tiền tới sau nằm lại hàng đợi đối soát kèm ghi chú
+   * "đến muộn"; tiền thắng ⇒ yêu cầu đã `converted_to_booking`, lượt huỷ nhận `count = 0` và báo
+   * tải lại (đơn huỷ qua vòng đời ĐƠN). Không có đơn mở ra từ một chuyến vừa bị huỷ, và không có
+   * khoản hoàn ghi hai lần.
    *
    * Dòng `booking_cancellations` có UNIQUE trên `booking_request_id`: hai lượt bấm huỷ song
    * song thì bên thứ hai vỡ ở DB chứ không ở một câu `if` đọc trước.
@@ -2250,18 +2196,7 @@ export class BookingRequestsService {
     });
     if (!req) throw notFound();
 
-    /*
-     * Chặng quyết định ĐƯỜNG TIỀN, nên nó được đọc một lần ở đây rồi đi cùng quyết định tới
-     * cuối — và được LƯU. Suy lại từ `status` sau khi huỷ là không được: lúc đó cả hai chặng
-     * đều mang `cancelled_by_host`.
-     */
-    const stage =
-      req.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD
-        ? CANCELLATION_STAGE.AWAITING_HOLD
-        : req.status === BOOKING_REQUEST_STATUS.HOLD_PAID
-          ? CANCELLATION_STAGE.HOLD_PAID
-          : null;
-    if (!stage) {
+    if (req.status !== BOOKING_REQUEST_STATUS.AWAITING_HOLD) {
       throw new ConflictException({
         code: API_ERROR_CODE.BOOKING_CANCEL_NOT_ALLOWED,
         message:
@@ -2273,15 +2208,17 @@ export class BookingRequestsService {
     }
 
     const row = await this.prisma.$transaction(async (tx) => {
+      // Hold TRƯỚC, yêu cầu SAU — cùng thứ tự với lượt tiền về (xem `lockForRequestWithinTx`).
+      await this.holds.lockForRequestWithinTx(tx, id);
       const claimed = await tx.bookingRequest.updateMany({
-        where: { id, tenantId, status: req.status },
+        where: { id, tenantId, status: BOOKING_REQUEST_STATUS.AWAITING_HOLD },
         data: {
           status: BOOKING_REQUEST_STATUS.CANCELLED_BY_HOST,
           rejectReason: dto.reason?.trim() || null,
         },
       });
       /*
-       * 0 dòng = tiền vừa về (yêu cầu đã thành `converted_to_booking`/`hold_paid`), hoặc khách
+       * 0 dòng = tiền vừa về (yêu cầu đã thành `converted_to_booking`), hoặc khách
        * vừa huỷ, hoặc một nhân viên khác vừa bấm. Ai cũng thắng trước ta; quay đầu, không ghi đè.
        */
       if (claimed.count === 0) {
@@ -2292,50 +2229,20 @@ export class BookingRequestsService {
       }
 
       /*
-       * Ba cột QUYẾT ĐỊNH chỉ được ghi khi chúng còn trống — và lượt huỷ này KHÔNG bao giờ ghi
-       * đè một quyết định đã có.
+       * KHÔNG ghi `decided_*`: ở `awaiting_hold` ba cột đó đã mang lượt NHẬN (ADR 0044 điều 2) —
+       * DB bắt buộc thế (`booking_requests_awaiting_hold_decided`, ADR 0055). Ghi đè chúng hỏng
+       * hai con số cùng lúc: trung vị thời gian phản hồi sẽ đo "bao lâu thì huỷ" thay vì "bao lâu
+       * thì trả lời", và một chuyến do xe "Đặt ngay" tự nhận sẽ bị ghi thành người quyết (ADR 0045
+       * điều 3, hệ quả 6). Lượt huỷ có chỗ ghi riêng: `booking_cancellations` giữ ai bấm, lúc nào.
        *
-       * Ở chặng `awaiting_hold`, ba cột đó đã mang lượt NHẬN (ADR 0044 điều 2). Ghi đè chúng
-       * hỏng hai con số cùng lúc: trung vị thời gian phản hồi sẽ đo "bao lâu thì huỷ" thay vì
-       * "bao lâu thì trả lời", và một chuyến do xe "Đặt ngay" tự nhận sẽ bị ghi thành người
-       * quyết (ADR 0045 điều 3, hệ quả 6). Lượt huỷ có chỗ ghi riêng của nó:
-       * `booking_cancellations` giữ ai bấm và bấm lúc nào.
-       *
-       * Ở chặng LEGACY `hold_paid` thì ngược lại — ba cột còn trống vì ở thứ tự ADR 0039 gian
-       * hàng chưa từng quyết gì. Cú huỷ này CHÍNH LÀ câu trả lời đầu tiên của họ, nên nó phải
-       * được ghi, đúng như đường `rejectPaidRequest` vẫn làm.
+       * Đóng hold (`pending`/`underpaid`), nhả lịch, và phần đã chuyển dở thành khoản hoàn.
        */
-      await tx.bookingRequest.updateMany({
-        where: { id, tenantId, decidedAt: null },
-        data: {
-          decidedAt: new Date(),
-          decidedBy: userId,
-          decisionSource: BOOKING_REQUEST_DECISION_SOURCE.HOST,
-        },
+      await this.holds.cancelForRequestWithinTx(tx, {
+        requestId: id,
+        tenantId,
+        actorUserId: userId,
+        actorScope: AUDIT_ACTOR_SCOPE.TENANT,
       });
-
-      /*
-       * Đóng hold + nhả lịch + hoàn phần đã chuyển. HAI đường vì hai chặng có hai hình dạng
-       * tiền khác nhau, và cả hai đã tồn tại sẵn — không viết lại phép ghi tiền ở đây.
-       */
-      if (stage === CANCELLATION_STAGE.AWAITING_HOLD) {
-        // `pending`/`underpaid`: đóng hold, nhả lịch, và phần đã chuyển dở thành khoản hoàn.
-        await this.holds.cancelForRequestWithinTx(tx, {
-          requestId: id,
-          tenantId,
-          actorUserId: userId,
-          actorScope: AUDIT_ACTOR_SCOPE.TENANT,
-        });
-      } else {
-        // LEGACY `hold_paid`: khách đã trả ĐỦ ⇒ hoàn 100%, cùng đường với lượt từ chối.
-        await this.holds.releasePaidHoldWithinTx(tx, {
-          requestId: id,
-          tenantId,
-          reason: 'owner_reject',
-          actorUserId: userId,
-          actorScope: AUDIT_ACTOR_SCOPE.TENANT,
-        });
-      }
 
       /*
        * NHẢ lượt mã khuyến mãi (ADR 0046 điều 6) — gian hàng rút lại chuyến TRƯỚC khi có đơn.
@@ -2349,7 +2256,7 @@ export class BookingRequestsService {
       await this.cancellations.recordWithinTx(tx, {
         tenantId,
         bookingRequestId: id,
-        stage,
+        stage: CANCELLATION_STAGE.AWAITING_HOLD,
         reasonCategory,
         reason: dto.reason,
         actorUserId: userId,
@@ -2365,7 +2272,11 @@ export class BookingRequestsService {
           targetType: 'booking_request',
           targetId: id,
           before: { status: req.status },
-          after: { status: BOOKING_REQUEST_STATUS.CANCELLED_BY_HOST, reasonCategory, stage },
+          after: {
+            status: BOOKING_REQUEST_STATUS.CANCELLED_BY_HOST,
+            reasonCategory,
+            stage: CANCELLATION_STAGE.AWAITING_HOLD,
+          },
         },
         tx,
       );
@@ -2407,65 +2318,7 @@ export class BookingRequestsService {
       return tx.bookingRequest.findFirstOrThrow({ where: { id, tenantId }, select: SELECT });
     });
 
-    return toDto(row);
-  }
-
-  private async rejectPaidRequest(
-    tenantId: string,
-    userId: string,
-    id: string,
-    reason?: string,
-  ): Promise<BookingRequestDto> {
-    const req = await this.prisma.bookingRequest.findFirstOrThrow({
-      where: { id, tenantId },
-      select: { customerUserId: true },
-    });
-    this.assertNotOwnRequest(req.customerUserId, userId);
-
-    const row = await this.prisma.$transaction(async (tx) => {
-      const claimed = await tx.bookingRequest.updateMany({
-        where: { id, tenantId, status: BOOKING_REQUEST_STATUS.HOLD_PAID },
-        data: {
-          status: BOOKING_REQUEST_STATUS.REJECTED_BY_HOST,
-          rejectReason: reason ?? null,
-          decidedBy: userId,
-          decidedAt: new Date(),
-          decisionSource: BOOKING_REQUEST_DECISION_SOURCE.HOST,
-        },
-      });
-      if (claimed.count === 0) throw requestExpired();
-
-      await this.holds.releasePaidHoldWithinTx(tx, {
-        requestId: id,
-        tenantId,
-        reason: 'owner_reject',
-        actorUserId: userId,
-        actorScope: AUDIT_ACTOR_SCOPE.TENANT,
-      });
-
-      // Yêu cầu LEGACY (ADR 0039) bị từ chối sau khi đã trả tiền — vẫn chưa có đơn, nên lượt
-      // mã quay lại kho như mọi đường từ chối khác (ADR 0046 điều 6).
-      await this.promos.releaseWithinTx(tx, {
-        bookingRequestId: id,
-        reason: PROMO_RELEASE_REASON.REQUEST_REJECTED,
-      });
-
-      await this.audit.record(
-        {
-          tenantId,
-          actorUserId: userId,
-          actorScope: AUDIT_ACTOR_SCOPE.TENANT,
-          action: 'booking_request.reject_paid',
-          targetType: 'booking_request',
-          targetId: id,
-          after: { reason: reason ?? null },
-        },
-        tx,
-      );
-
-      return tx.bookingRequest.findFirstOrThrow({ where: { id, tenantId }, select: SELECT });
-    });
-    return toDto(row);
+    return toDto(row, await this.isPackageTrack(tenantId));
   }
 
   private async loadPending(tenantId: string, id: string): Promise<PendingRequestRow> {
@@ -2722,8 +2575,17 @@ type BookingRequestRow = Prisma.BookingRequestGetPayload<{ select: typeof SELECT
  * trước đây. Không còn `needsDeliveryQuote`/`stale` — không có gì để "cần" hay "cũ" nữa khi
  * việc duyệt không phụ thuộc báo giá.
  */
-function toDto(r: BookingRequestRow): BookingRequestDto {
+function toDto(r: BookingRequestRow, packageTrack: boolean): BookingRequestDto {
   const quote = r.deliveryQuote as unknown as BookingRequestDeliveryQuote | null;
+  /*
+   * Liên hệ của KHÁCH chỉ ra ngoài khi luật chung cho phép (`hostSeesCustomerContact`): gian hàng
+   * tuyến gói luôn thấy; chủ xe tuyến hoa hồng chỉ thấy khi chuyến đã có ĐƠN. Email đi cùng SĐT —
+   * giấu số mà để lộ email là để nguyên đường chốt ngoài sàn.
+   */
+  const showContact = hostSeesCustomerContact({
+    engaged: isBookingRequestEngaged(r.status, r.bookingId != null),
+    packageTrack,
+  });
   return {
     id: r.id,
     vehicleId: r.vehicleId,
@@ -2734,8 +2596,8 @@ function toDto(r: BookingRequestRow): BookingRequestDto {
     vehicleType: r.vehicle.vehicleType,
     status: r.status,
     customerName: r.customerName,
-    customerPhone: r.customerPhone,
-    customerEmail: r.customerEmail,
+    customerPhone: showContact ? r.customerPhone : null,
+    customerEmail: showContact ? r.customerEmail : null,
     tenantCustomerId: r.tenantCustomerId,
     customerAvatarUrl: r.customer?.avatarUrl ?? null,
     customerRiskLevel: r.tenantCustomer?.riskLevel ?? null,

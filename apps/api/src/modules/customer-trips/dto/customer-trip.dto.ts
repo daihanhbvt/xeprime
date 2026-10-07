@@ -3,7 +3,7 @@ import {
   CUSTOMER_TRIP_FILTER_DEFAULT,
   CUSTOMER_TRIP_FILTER_VALUES,
   TRIP_ROLE_VALUES,
-  CUSTOMER_TRIP_STAGE_VALUES,
+  CUSTOMER_TRIP_STAGE_LIVE_VALUES,
   DEPOSIT_COLLECTION_MODE_VALUES,
   DEPOSIT_STATUS_VALUES,
   REFUND_METHOD_VALUES,
@@ -258,7 +258,7 @@ export class CustomerTripListItemDto {
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Mã đơn (sau khi được nhận)' })
   code!: string | null;
   @ApiProperty({
-    enum: CUSTOMER_TRIP_STAGE_VALUES,
+    enum: CUSTOMER_TRIP_STAGE_LIVE_VALUES,
     description: '@xeprime/types CustomerTripStage',
   })
   stage!: string;

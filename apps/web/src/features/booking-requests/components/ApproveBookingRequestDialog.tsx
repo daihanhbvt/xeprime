@@ -1,5 +1,6 @@
 'use client';
 
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { Alert, Modal } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -58,7 +59,7 @@ function ApproveForm({ request, submitting, error, onCancel, onConfirm }: Props 
           <div className={styles.row}>
             <dt>{t('approve.customer')}</dt>
             <dd>
-              {request.customerName} · {request.customerPhone}
+              {[request.customerName, request.customerPhone].filter(Boolean).join(LIST_SEPARATOR)}
             </dd>
           </div>
           {pickup && dropoff ? (

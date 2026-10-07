@@ -41,7 +41,11 @@ interface Props {
   /** HUỶ một chuyến ĐÃ NHẬN (ADR 0045 điều 1) — chỉ có ở `awaiting_hold`. */
   onCancel: (request: BookingRequestItem) => void;
   onOpenVehicle: (request: BookingRequestItem) => void;
-  onOpenCustomer: (request: BookingRequestItem) => void;
+  /**
+   * Mở hồ sơ khách trong sổ khách hàng. Vắng mặt ⇒ không có nút: sổ khách là năng lực của gói
+   * (ADR 0027 điều 1), nên "Chuyến cho thuê" của Owner Lite không truyền.
+   */
+  onOpenCustomer?: (request: BookingRequestItem) => void;
   /** Đường quay lại đúng chỗ đang đứng, gắn vào link sang màn lịch. */
   backHref: string;
 }
@@ -77,17 +81,8 @@ function DetailBody({
 
   // Cùng vị từ với thẻ ở danh sách và với server: hết hạn phản hồi thì không còn quyết định nào.
   const pastDue = isBookingRequestPastDue(request.respondBy);
-  /*
-   * HAI chặng cần gian hàng quyết định, và chặng thứ hai là chặng TỐN KÉM hơn hẳn:
-   *
-   *   · `pending_host_approval` — khách mới hỏi, chưa ai mất gì;
-   *   · `hold_paid` (ADR 0039)  — khách ĐÃ TRẢ TIỀN và chỗ xe đang bị giữ. Bỏ sót chặng này là
-   *     bày ra một thẻ ghi "chờ bạn duyệt" mà không có nút nào để duyệt, trong khi tiền của
-   *     khách nằm ở XePrime và đồng hồ phản hồi đang chạy tới lượt hoàn tự động.
-   */
-  const needsDecision =
-    request.status === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL ||
-    request.status === BOOKING_REQUEST_STATUS.HOLD_PAID;
+  // Chặng DUY NHẤT gian hàng còn phải duyệt/từ chối (ADR 0055 gỡ `hold_paid` của ADR 0039).
+  const needsDecision = request.status === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL;
   const decidable = needsDecision && !pastDue;
   const busy = pendingAction !== null;
 
@@ -176,16 +171,22 @@ function DetailBody({
             name={request.customerName}
             subtitle={request.customerEmail ?? undefined}
           />
-          {request.tenantCustomerId ? (
+          {request.tenantCustomerId && onOpenCustomer ? (
             <Button size="small" onClick={() => onOpenCustomer(request)}>
               {t('detail.openCustomer')}
             </Button>
           ) : null}
         </div>
+        {/*
+          SĐT/email khách chỉ có khi chủ xe được phép thấy (`hostSeesCustomerContact`: tuyến hoa
+          hồng phải có đơn). Vắng thì ẩn hẳn hàng, không để một ô trống hay một câu giải thích luật.
+        */}
         <dl className={styles.facts}>
-          <Fact label={t('detail.phone')}>
-            {phoneLink ? <a href={phoneLink}>{request.customerPhone}</a> : request.customerPhone}
-          </Fact>
+          {request.customerPhone ? (
+            <Fact label={t('detail.phone')}>
+              {phoneLink ? <a href={phoneLink}>{request.customerPhone}</a> : request.customerPhone}
+            </Fact>
+          ) : null}
           {zaloLink ? (
             <Fact label={t('actions.zalo')}>
               <a href={zaloLink} target="_blank" rel="noopener noreferrer">
