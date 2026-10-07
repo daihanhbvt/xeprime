@@ -943,7 +943,13 @@ export const shopProfileSchema = yup.object({
    * Tài khoản nhận tiền là `bank_accounts` — sổ riêng, cờ mặc định, lưu trữ, và là bảng mà mọi
    * lệnh chi thật đọc. Bốn ô text cũ ở đây không nối với đồng tiền nào.
    */
-  taxCode: profileText(50),
+  /**
+   * TƯƠNG THÍCH NGƯỢC (07/10/2026) — mã số thuế nay khai ở hồ sơ NGƯỜI BÁN (`seller_profiles.tax_id`,
+   * section "Thông tin khai thuế"), nguồn duy nhất mà hợp đồng và báo cáo thuế đọc. Web không còn
+   * ô này; trường để TUỲ CHỌN cho form của app native chưa chuyển — API vẫn nhận `taxCode` và ghi
+   * vào đúng hồ sơ người bán.
+   */
+  taxCode: yup.string().trim().max(50).optional(),
   businessLicenseNo: profileText(100),
   logoUrl: yup
     .string()

@@ -1,9 +1,10 @@
 'use client';
 
 import { App, Alert, Button, Empty, Pagination, Popconfirm, Skeleton, Tag } from 'antd';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import { WITHDRAWAL_STATUS } from '@xeprime/types';
+import { absoluteMoney, isNegativeMoney, isZeroMoney, subtractMoney } from '@xeprime/domain';
+import { WALLET_STATUS, WITHDRAWAL_STATUS } from '@xeprime/types';
 import { useUrlFilters, positiveIntParam } from '@/hooks/use-url-filters';
 import { nowInAppTz } from '@/lib/datetime';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -24,12 +25,13 @@ const PERIOD_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
  * Màn ví điểm — dùng chung khu cá nhân và khu gian hàng, khác nhau đúng ở `scope`
  * (ADR 0023 điều 7: một bộ cho cả hai phía).
  *
- * Bốn khối theo đúng thứ tự câu hỏi người dùng đặt ra khi mở màn này:
+ * Năm khối theo đúng thứ tự câu hỏi người dùng đặt ra khi mở màn này:
  *
  *  1. *tôi còn bao nhiêu* — thẻ số dư, con số khả dụng lớn hết cỡ;
- *  2. *tháng vừa rồi tôi kiếm được bao nhiêu* — bảng tổng hợp giao dịch (chỉ gian hàng);
- *  3. *tiền đang đi tới đâu* — các lệnh rút đang chạy;
- *  4. *nó đến từ đâu* — sổ ví.
+ *  2. *rút về đâu* — tài khoản nhận tiền, khi trang nhúng nó vào (`payout`);
+ *  3. *tháng vừa rồi tôi kiếm được bao nhiêu* — bảng tổng hợp giao dịch (chỉ gian hàng);
+ *  4. *tiền đang đi tới đâu* — các lệnh rút đang chạy;
+ *  5. *nó đến từ đâu* — sổ ví.
  *
  * Nút RÚT đứng giữa khối 1 và 2, không nằm trong thẻ số dư: nó là hành động của cả màn, và
  * người ta đọc số dư xong mới quyết. Nó KHÔNG có màu riêng — `type="primary"` lấy sắc gold
@@ -38,21 +40,27 @@ const PERIOD_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
  * Sổ và bảng tổng hợp đều phân trang ở SERVER: một chủ xe chạy vài trăm chuyến một năm có sổ
  * dài hàng nghìn dòng.
  *
- * ## Ba người đọc, một màn (16/09/2026)
+ * ## Hai phía, một màn
  *
- *  - **Gian hàng** ở `/manage/balance` — `scope="shop"`, hình thái `full`.
- *  - **Chủ xe cá nhân tuyến hoa hồng** ở `/account/earnings` — cũng `scope="shop"` (ví thuộc
- *    tenant của họ), nhưng hình thái `compact`: khu `/account` có menu trái ăn mất 256px.
- *  - **Khách thuê thuần** ở `/account/balance` — `scope="account"`. KHÔNG có bảng tổng hợp:
+ *  - **Site partner** ở `/balance` — `scope="shop"`, cho CẢ gian hàng tuyến gói lẫn chủ xe tuyến
+ *    hoa hồng (ví thuộc tenant), qua `PartnerBalanceView` — trang đó nhúng thêm tài khoản nhận tiền.
+ *  - **Khách thuê** ở `/account/balance` (site khách) — `scope="account"`. KHÔNG có bảng tổng hợp:
  *    họ không có chuyến nào ở phía bán, và một bảng rỗng vĩnh viễn là một câu hỏi không lời đáp.
  */
 export function WalletView({
   scope,
   variant = 'full',
+  payout,
 }: {
   scope: WalletScope;
   /** Hình thái bảng tổng hợp — `compact` cho khu `/account` (khung hẹp hơn `/manage`). */
   variant?: StatementVariant;
+  /**
+   * Khối "Tài khoản nhận tiền" — đứng NGAY dưới nút Rút (07/10/2026). Trang số dư của site partner
+   * truyền vào; màn ví của khách không truyền (sổ ngân hàng của họ có trang riêng ở khu tài khoản).
+   * Là một slot chứ không phải cờ: trang quyết định id cuộn, tiêu đề và khung của khối đó.
+   */
+  payout?: ReactNode;
 }) {
   const t = useTranslations('Wallet');
   const { message } = App.useApp();
@@ -94,8 +102,9 @@ export function WalletView({
   const balance = summary.data;
   const canWithdraw =
     balance !== undefined &&
-    balance.status !== 'frozen' &&
-    Number(balance.available) >= Number(balance.minWithdrawAmount);
+    balance.status !== WALLET_STATUS.FROZEN &&
+    // So trên CHUỖI tiền, không qua `Number` (ADR 0007): khả dụng − ngưỡng không âm là rút được.
+    !isNegativeMoney(subtractMoney(balance.available, balance.minWithdrawAmount));
 
   return (
     <div className={styles.page}>
@@ -117,12 +126,18 @@ export function WalletView({
         </Button>
         {balance && !canWithdraw ? (
           <p className={styles.ctaHint}>
-            {balance.status === 'frozen'
+            {balance.status === WALLET_STATUS.FROZEN
               ? t('balance.frozen')
               : t('withdraw.belowMinimum', { min: fmt.money(balance.minWithdrawAmount) })}
           </p>
         ) : null}
       </div>
+
+      {/*
+        Nơi tiền về đứng sát nút Rút: người chưa có tài khoản nào thấy chỗ khai ngay bên dưới, và
+        người có nhiều tài khoản đổi mặc định trước khi bấm — không phải đi tìm một trang khác.
+      */}
+      {payout}
 
       {/* Bảng tổng hợp chỉ có ở phía GIAN HÀNG — khách thuê thuần không có chuyến nào để tổng hợp. */}
       {isShop ? (
@@ -201,7 +216,7 @@ export function WalletView({
 
         <ul className={styles.list}>
           {(entries.data?.items ?? []).map((entry) => {
-            const positive = Number(entry.amount) > 0;
+            const positive = !isNegativeMoney(entry.amount) && !isZeroMoney(entry.amount);
             return (
               <li key={entry.id} className={styles.entry}>
                 <div>
@@ -211,7 +226,7 @@ export function WalletView({
                 <div className={styles.entryRight}>
                   <p className={positive ? styles.plus : styles.minus}>
                     {positive ? '+' : '−'}
-                    {fmt.money(String(Math.abs(Number(entry.amount))))}
+                    {fmt.money(absoluteMoney(entry.amount))}
                   </p>
                   <p className={styles.muted}>
                     {t('entries.balanceAfter', { amount: fmt.money(entry.balanceAfter) })}

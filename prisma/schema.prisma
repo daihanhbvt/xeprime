@@ -872,7 +872,9 @@ model TenantProfile {
   /// ngay trên: KHÔNG có FK và KHÔNG dùng để lọc — nguồn sự thật vận hành là `tenant_branches`.
   wardCode          String?  @map("ward_code") @db.VarChar(10)
   wardName          String?  @map("ward_name") @db.VarChar(150)
-  taxCode           String?  @map("tax_code") @db.VarChar(50)
+  /// ⚠️ KHÔNG thêm lại cột MÃ SỐ THUẾ vào bảng này (07/10/2026). Nguồn duy nhất là
+  /// `seller_profiles.tax_id` — bảng mà thuế khấu trừ của mỗi chuyến gắn vào và báo cáo thuế của
+  /// nền tảng đọc. Cột `tax_code` cũ là bản sao thứ hai mà không phép tính thuế nào đọc tới.
   businessLicenseNo String?  @map("business_license_no") @db.VarChar(100)
   /// ⚠️ KHÔNG thêm lại cột ngân hàng hay cột "chủ gian hàng" vào bảng này (16/09/2026).
   ///
@@ -4651,9 +4653,9 @@ model WithdrawalRequest {
 ///
 /// Ràng buộc thật nằm ở migration, Prisma không mô tả được:
 ///   - CHECK owner XOR: đúng một trong `owner_user_id` / `owner_tenant_id` khác NULL.
-///   - Partial unique `(chủ, bank_code, account_number) WHERE status = 'active'` — cùng một số
-///     tài khoản khai hai lần là hai lựa chọn giống hệt nhau trong ô chọn lúc rút tiền.
-///   - Partial unique một `is_default` mỗi chủ.
+///   - Partial unique `(chủ) WHERE status = 'active'` — MỖI CHỦ MỘT tài khoản nhận tiền
+///     (07/10/2026); khai cái mới là THAY cái cũ, cái cũ chuyển `archived`.
+///   - CHECK `is_default = (status = 'active')`.
 ///
 /// Writer duy nhất: `BankAccountsService`.
 model BankAccount {
@@ -4669,6 +4671,7 @@ model BankAccount {
   accountName   String  @map("account_name") @db.VarChar(160)
   /// Tên gợi nhớ do người dùng đặt ("Vietcombank của tôi") — trống thì UI hiện tên ngân hàng.
   label         String? @db.VarChar(60)
+  /// Luôn bằng (`status` = 'active') — CHECK ở migration. Cột còn để client cũ (app native) đọc.
   isDefault     Boolean @default(false) @map("is_default")
   /// @xeprime/types → BankAccountStatus (active | archived). KHÔNG xoá cứng: một tài khoản đã
   /// từng nhận tiền còn bị tham chiếu từ lệnh rút cũ.
@@ -4702,7 +4705,8 @@ model SellerProfile {
   entityType        String    @default("individual") @map("entity_type") @db.VarChar(30)
   /// Tên pháp lý: họ tên (cá nhân) / tên hộ / tên doanh nghiệp.
   legalName         String?   @map("legal_name") @db.VarChar(255)
-  /// Mã số thuế (hộ/doanh nghiệp) hoặc MST cá nhân.
+  /// Mã số thuế (hộ/doanh nghiệp) hoặc MST cá nhân — nguồn DUY NHẤT của MST gian hàng (07/10/2026):
+  /// hợp đồng, màn quản trị và báo cáo thuế đều đọc cột này.
   taxId             String?   @map("tax_id") @db.VarChar(30)
   /// Số CCCD/hộ chiếu của người đại diện — PII, chỉ `platform.sellers.verify` xem đầy đủ.
   idNumber          String?   @map("id_number") @db.VarChar(30)

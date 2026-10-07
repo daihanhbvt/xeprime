@@ -1,315 +1,302 @@
 'use client';
 
-import { EyeInvisibleOutlined, EyeOutlined } from '@ant-design/icons';
-import { App, Button, Descriptions, Input, Popconfirm, Tag } from 'antd';
-import Link from 'next/link';
-import { useTranslations } from 'next-intl';
-import { useState } from 'react';
 import {
-  LISTING_STATUS_META,
-  MARKETPLACE_VISIBILITY_REASON_META,
+  CheckCircleOutlined,
+  ExclamationCircleOutlined,
+  EyeInvisibleOutlined,
+  EyeOutlined,
+  InfoCircleOutlined,
+} from '@ant-design/icons';
+import { App, Button } from 'antd';
+import { useTranslations } from 'next-intl';
+import { useEffect, useRef, useState } from 'react';
+import {
   PERMISSION,
-  STATUS_COLOR,
-  TENANT_STATUS_META,
-  VEHICLE_OPERATION_STATUS_META,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_META,
-  serviceTypesLabel,
-  type ListingStatus,
-  type MarketplaceVisibilityReason,
-  type TenantStatus,
-  type VehicleOperationStatus,
   type VehiclePublicStatus,
 } from '@xeprime/types';
-import { InfoHint } from '@/components/data-display/InfoHint';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { DetailDrawer } from '@/components/overlay/DetailDrawer';
-import { useCatalogLabels, type CatalogLabels } from '@/features/catalog/use-catalog';
+import { ReasonDialog } from '@/components/overlay/ReasonDialog';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
-import { listingPath, shopPath } from '@/constants/routes';
+import {
+  WORK_DRAWER_BODY_CLASS,
+  WorkDrawerFooter,
+  WorkDrawerLayout,
+  WorkDrawerPager,
+  WorkDrawerTitle,
+} from '@/components/overlay/WorkDrawer';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
-import { getErrorMessage } from '@/services/api-client';
+import { useErrorMessage } from '@/i18n/use-error-message';
+import { cx } from '@/lib/cx';
 import { useAdminVehicle, useVehicleModeration } from '../hooks/use-admin-vehicles';
 import type { AdminVehicleDetail } from '../types';
+import { VehicleProfile, VehicleSidePanel } from './VehicleDetailSections';
 import styles from './AdminVehicleDetailDrawer.module.css';
-import { useAppFormat, type AppFormat } from '@/i18n/use-app-format';
-import { LIST_SEPARATOR } from '@xeprime/domain';
 
-export function AdminVehicleDetailDrawer({
-  vehicleId,
-  onClose,
-}: {
+interface AdminVehicleDetailDrawerProps {
   vehicleId: string | null;
+  /** Xe liền trước / liền sau trong trang đang xem — `null` ở hai đầu. */
+  previousId: string | null;
+  nextId: string | null;
+  onNavigate: (vehicleId: string) => void;
   onClose: () => void;
-}) {
-  const t = useTranslations('AdminVehicles.drawer');
-  const { data, isLoading, isError, refetch } = useAdminVehicle(vehicleId);
-
-  return (
-    <DetailDrawer
-      title={data ? data.name : t('fallbackTitle')}
-      size="md"
-      open={Boolean(vehicleId)}
-      onClose={onClose}
-      loading={!isError && (isLoading || !data)}
-      error={isError}
-      errorTitle={t('loadError')}
-      onRetry={() => void refetch()}
-      extra={
-        data ? (
-          <StatusTag
-            value={data.publicStatus as VehiclePublicStatus}
-            meta={VEHICLE_PUBLIC_STATUS_META}
-            group="vehiclePublicStatus"
-          />
-        ) : null
-      }
-    >
-      {data ? <Body vehicle={data} /> : null}
-    </DetailDrawer>
-  );
 }
 
-function Body({ vehicle }: { vehicle: AdminVehicleDetail }) {
-  const t = useTranslations('AdminVehicles.moderation');
-  const tCommon = useTranslations('Common.actions');
-  const fmt = useAppFormat();
-  const detail = useDetailItems();
-  const { message } = App.useApp();
-  const { has } = usePermissions();
-  const moderation = useVehicleModeration(vehicle.id);
-  const labels = useCatalogLabels();
-  const [hideOpen, setHideOpen] = useState(false);
-  const [reason, setReason] = useState('');
+type DialogKind = 'hide' | 'unhide';
 
-  const canModerate = has(PERMISSION.PLATFORM_VEHICLE_MODERATE);
-  const isPublic = vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC;
-  const isHidden = vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.HIDDEN;
-  const trimmedReason = reason.trim();
-
-  /*
-   * Gỡ ẩn CHỈ trả lại trạng thái kiểm duyệt (ADR 0048 điều 4): nếu chủ xe đang tắt công tắc của
-   * họ thì xe vẫn nằm ngoài chợ sau thao tác này. Người kiểm duyệt phải biết điều đó TRƯỚC khi
-   * bấm và được nhắc lại sau khi bấm — nếu không, họ thấy `listingStatus` vẫn `hidden` và kết
-   * luận rằng hệ thống hỏng.
-   */
-  const stillPausedByOwner = !vehicle.marketplaceEnabled;
-
-  function submitHide() {
-    if (!trimmedReason) return;
-    moderation.mutate(
-      { kind: 'hide', reason: trimmedReason },
-      {
-        onSuccess: () => {
-          message.success(t('hideSuccess'));
-          setHideOpen(false);
-          setReason('');
-        },
-        onError: (err) => message.error(getErrorMessage(err)),
-      },
-    );
-  }
-
-  function submitUnhide() {
-    moderation.mutate(
-      { kind: 'unhide' },
-      {
-        onSuccess: () =>
-          message.success(stillPausedByOwner ? t('unhideSuccessOwnerPaused') : t('unhideSuccess')),
-        onError: (err) => message.error(getErrorMessage(err)),
-      },
-    );
-  }
-
-  return (
-    <div>
-      <Descriptions column={1} size="small" bordered items={detail(vehicle, labels, fmt)} />
-
-      <div className={styles.actions}>
-        {!canModerate ? (
-          <div className={styles.hint}>{t('noPermission')}</div>
-        ) : isPublic ? (
-          <Button
-            danger
-            block
-            icon={<EyeInvisibleOutlined />}
-            loading={moderation.isPending}
-            onClick={() => setHideOpen(true)}
-          >
-            {t('hide')}
-          </Button>
-        ) : isHidden ? (
-          <Popconfirm
-            title={t('unhideTitle')}
-            description={stillPausedByOwner ? t('unhideNoteOwnerPaused') : t('unhideNote')}
-            okText={t('unhideOk')}
-            cancelText={tCommon('close')}
-            onConfirm={submitUnhide}
-          >
-            <Button type="primary" block icon={<EyeOutlined />} loading={moderation.isPending}>
-              {t('unhide')}
-            </Button>
-          </Popconfirm>
-        ) : (
-          <div className={styles.hint}>{t('unavailable')}</div>
-        )}
-      </div>
-
-      <ResponsiveDialog
-        title={t('hide')}
-        open={hideOpen}
-        size="sm"
-        okText={t('hideOk')}
-        cancelText={tCommon('cancel')}
-        destructive
-        okDisabled={!trimmedReason}
-        confirmLoading={moderation.isPending}
-        onOk={submitHide}
-        onClose={() => setHideOpen(false)}
-      >
-        <p className={styles.note}>{t('hideNote')}</p>
-        <Input.TextArea
-          rows={3}
-          maxLength={500}
-          showCount
-          value={reason}
-          placeholder={t('reasonPlaceholder')}
-          onChange={(e) => setReason(e.target.value)}
-        />
-      </ResponsiveDialog>
-    </div>
-  );
-}
+/** Trần lý do ẩn — cùng `HideVehicleDto.reason` phía API. */
+const HIDE_REASON_MAX = 500;
 
 /**
- * Bảng thuộc tính của một xe trên màn kiểm duyệt.
+ * Chi tiết MỘT xe trên màn giám sát — panel làm việc (`DetailDrawer size="xl"`): hồ sơ xe bên
+ * trái, ba trục "trên chợ" + gian hàng bên phải (dính khi cuộn), thanh quyết định dính ở đáy.
  *
- * Là HOOK trả về hàm dựng (chứ không một hàm thuần như trước) vì mọi nhãn ở đây đã đi qua `t()`.
- * Ba dòng cuối cùng của khối trạng thái là phần thêm ngày 23/09/2026 và chúng đi thành một BỘ:
+ * Hai hành động, và chúng KHÔNG đối xứng (ADR 0048 điều 4):
+ *  - **Ẩn khỏi chợ**: chỉ với xe đang `approved_public`, BẮT BUỘC lý do (ghi audit).
+ *  - **Gỡ ẩn của nền tảng**: chỉ với xe do nền tảng ẩn; nó KHÔNG bật hộ công tắc của chủ xe —
+ *    hộp xác nhận và toast nói thẳng hệ quả đó, nếu không người kiểm duyệt bấm xong thấy xe vẫn
+ *    không lên chợ và kết luận hệ thống hỏng.
  *
- *  - **Bản ghi trên sàn** — `public_listings.status`, tức dữ liệu thô;
- *  - **Chủ xe cho hiển thị** — `marketplace_enabled`, CHỈ ĐỌC với nền tảng (ADR 0048 điều 4);
- *  - **Kết quả trên chợ** — phép gộp do SERVER suy, kèm LÝ DO khi đang ẩn.
- *
- * Thiếu hai dòng sau, người kiểm duyệt bỏ ẩn một chiếc xe rồi thấy "Trên sàn: Đã ẩn" và không
- * có gì giải thích tại sao — đúng cái kết luận "hệ thống lỗi" mà bộ ba này sinh ra để chặn.
+ * Hộp thoại GẮN VỚI XE đã mở nó: sang xe khác (trước/sau, link) thì hộp thoại của xe cũ tự không
+ * còn — không có cách nào gửi lý do ẩn xe A lên xe B.
  */
-function useDetailItems() {
-  const t = useTranslations('AdminVehicles.detail');
+export function AdminVehicleDetailDrawer({
+  vehicleId,
+  previousId,
+  nextId,
+  onNavigate,
+  onClose,
+}: AdminVehicleDetailDrawerProps) {
+  const t = useTranslations('AdminVehicles');
+  const tCommon = useTranslations('Common.actions');
+  const { message } = App.useApp();
+  const errorMessage = useErrorMessage();
+  const { data, isLoading, isError, refetch } = useAdminVehicle(vehicleId);
+  // Cache của xe trước có thể còn trong tay một nhịp khi vừa chuyển — chỉ vẽ đúng xe đang mở.
+  const detail = data && data.id === vehicleId ? data : undefined;
+  const moderation = useVehicleModeration();
+  const { has } = usePermissions();
+  const canModerate = has(PERMISSION.PLATFORM_VEHICLE_MODERATE);
+
+  const [dialogState, setDialogState] = useState<{ id: string; kind: DialogKind } | null>(null);
+  const dialog = dialogState && dialogState.id === vehicleId ? dialogState.kind : null;
+  const openDialog = (kind: DialogKind) => {
+    if (vehicleId) setDialogState({ id: vehicleId, kind });
+  };
+  // Chỉ đóng hộp thoại của ĐÚNG xe vừa có kết quả — người kiểm duyệt có thể đã sang xe khác.
+  const closeDialog = (id: string | null = vehicleId) =>
+    setDialogState((current) => (current && current.id === id ? null : current));
+
+  const topRef = useRef<HTMLDivElement>(null);
+  const shownId = detail?.id ?? null;
+  useEffect(() => {
+    // `?.()`: jsdom (test) không có `scrollIntoView`; trình duyệt thật thì luôn có.
+    topRef.current?.scrollIntoView?.({ block: 'start' });
+  }, [shownId]);
+
+  // Lượt đang bay CỦA XE NÀY — lượt của xe trước không khoá nút của xe sau.
+  const busy = moderation.isPending && moderation.variables?.id === vehicleId;
+  const isPublic = detail?.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC;
+  const isHidden = detail?.publicStatus === VEHICLE_PUBLIC_STATUS.HIDDEN;
+  const stillPausedByOwner = detail ? !detail.marketplaceEnabled : false;
+
+  function hide(reason: string) {
+    if (!vehicleId) return;
+    const id = vehicleId;
+    moderation.mutate(
+      { id, kind: 'hide', reason },
+      {
+        onSuccess: () => {
+          message.success(t('moderation.hideSuccess'));
+          closeDialog(id);
+        },
+        onError: (error) => message.error(errorMessage(error)),
+      },
+    );
+  }
+
+  function unhide() {
+    if (!vehicleId || busy) return;
+    const id = vehicleId;
+    const ownerPaused = stillPausedByOwner;
+    moderation.mutate(
+      { id, kind: 'unhide' },
+      {
+        onSuccess: () => {
+          message.success(
+            ownerPaused ? t('moderation.unhideSuccessOwnerPaused') : t('moderation.unhideSuccess'),
+          );
+          closeDialog(id);
+        },
+        onError: (error) => message.error(errorMessage(error)),
+      },
+    );
+  }
+
+  return (
+    <>
+      <DetailDrawer
+        open={Boolean(vehicleId)}
+        onClose={onClose}
+        size="xl"
+        closeAtEnd
+        ariaLabel={detail ? t('drawer.ariaLabel', { name: detail.name }) : t('drawer.title')}
+        title={
+          <WorkDrawerTitle
+            label={t('drawer.title')}
+            code={detail?.code}
+            status={
+              detail ? (
+                <StatusTag
+                  value={detail.publicStatus as VehiclePublicStatus}
+                  meta={VEHICLE_PUBLIC_STATUS_META}
+                  group="vehiclePublicStatus"
+                />
+              ) : null
+            }
+          />
+        }
+        extra={
+          <WorkDrawerPager
+            previousId={previousId}
+            nextId={nextId}
+            onNavigate={onNavigate}
+            previousLabel={t('drawer.previous')}
+            nextLabel={t('drawer.next')}
+          />
+        }
+        loading={!detail && !isError && (isLoading || Boolean(vehicleId))}
+        error={isError && !detail}
+        errorTitle={t('drawer.loadError')}
+        onRetry={() => void refetch()}
+        bodyClassName={WORK_DRAWER_BODY_CLASS}
+        footer={
+          detail ? (
+            <WorkDrawerFooter
+              hint={<FooterHint vehicle={detail} canModerate={canModerate} />}
+              actions={
+                canModerate && isPublic ? (
+                  <Button
+                    danger
+                    icon={<EyeInvisibleOutlined />}
+                    loading={busy}
+                    onClick={() => openDialog('hide')}
+                  >
+                    {t('moderation.hide')}
+                  </Button>
+                ) : canModerate && isHidden ? (
+                  <Button
+                    type="primary"
+                    icon={<EyeOutlined />}
+                    loading={busy}
+                    onClick={() => openDialog('unhide')}
+                  >
+                    {t('moderation.unhide')}
+                  </Button>
+                ) : undefined
+              }
+            />
+          ) : null
+        }
+      >
+        {detail ? (
+          // `key` theo XE: khối đang mở, hộp thoại hỗ trợ… thuộc về một xe; sang xe khác là dựng lại.
+          <WorkDrawerLayout
+            key={detail.id}
+            ref={topRef}
+            sideLabel={t('drawer.sideLabel')}
+            main={<VehicleProfile vehicle={detail} />}
+            side={<VehicleSidePanel vehicle={detail} />}
+          />
+        ) : null}
+      </DetailDrawer>
+
+      <ReasonDialog
+        open={dialog === 'hide'}
+        title={t('moderation.hideTitle')}
+        summary={t('moderation.hideNote')}
+        label={t('moderation.reasonLabel')}
+        placeholder={t('moderation.reasonPlaceholder')}
+        requiredMessage={t('moderation.reasonRequired')}
+        minLength={1}
+        maxLength={HIDE_REASON_MAX}
+        submitText={t('moderation.hideOk')}
+        loading={busy}
+        onSubmit={hide}
+        onClose={() => closeDialog()}
+      />
+
+      <ResponsiveDialog
+        open={dialog === 'unhide'}
+        title={t('moderation.unhideTitle')}
+        size="sm"
+        okText={t('moderation.unhideOk')}
+        cancelText={tCommon('close')}
+        confirmLoading={busy}
+        onOk={unhide}
+        onClose={() => closeDialog()}
+      >
+        <p className={styles.dialogHint}>
+          {stillPausedByOwner ? t('moderation.unhideNoteOwnerPaused') : t('moderation.unhideNote')}
+        </p>
+      </ResponsiveDialog>
+    </>
+  );
+}
+
+/** Dòng gợi ý ở thanh quyết định — luôn có chữ, không chỉ màu. */
+function FooterHint({
+  vehicle,
+  canModerate,
+}: {
+  vehicle: AdminVehicleDetail;
+  canModerate: boolean;
+}) {
+  const t = useTranslations('AdminVehicles.footer');
+  const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
 
-  return (v: AdminVehicleDetail, labels: CatalogLabels, fmt: AppFormat) => {
-    const specs = [
-      labels.brandLabel(v.brand),
-      v.model,
-      v.manufactureYear ? String(v.manufactureYear) : null,
-      v.seatCount ? t('seats', { count: v.seatCount }) : null,
-      labels.fuelTypeLabel(v.fuelType),
-    ]
-      .filter(Boolean)
-      .join(LIST_SEPARATOR);
-
-    const empty = '—';
-    const reason = v.marketplaceVisibilityReason as MarketplaceVisibilityReason;
-
-    return [
-      { key: 'code', label: t('code'), children: v.code },
-      { key: 'plate', label: t('plate'), children: v.plateNumber ?? empty },
-      {
-        key: 'type',
-        label: t('type'),
-        children: `${domainLabel('vehicleType', v.vehicleType)} · ${serviceTypesLabel(v.serviceTypes ?? [])}`,
-      },
-      ...(specs ? [{ key: 'specs', label: t('specs'), children: specs }] : []),
-      {
-        key: 'tenant',
-        label: t('tenant'),
-        children: (
-          <span className={styles.inline}>
-            <Link href={shopPath.detail(v.tenantSlug)} target="_blank">
-              {v.tenantName}
-            </Link>
-            <StatusTag
-              value={v.tenantStatus as TenantStatus}
-              meta={TENANT_STATUS_META}
-              group="tenantStatus"
-            />
-          </span>
-        ),
-      },
-      { key: 'owner', label: t('owner'), children: v.ownerName ?? empty },
-      { key: 'province', label: t('province'), children: v.provinceName ?? empty },
-      {
-        key: 'operation',
-        label: t('operation'),
-        children: (
-          <StatusTag
-            value={v.operationStatus as VehicleOperationStatus}
-            meta={VEHICLE_OPERATION_STATUS_META}
-            group="vehicleOperationStatus"
-          />
-        ),
-      },
-      {
-        key: 'listing',
-        label: t('listing'),
-        children: v.listingStatus ? (
-          <StatusTag
-            value={v.listingStatus as ListingStatus}
-            meta={LISTING_STATUS_META}
-            group="listingStatus"
-          />
-        ) : (
-          t('notListed')
-        ),
-      },
-      {
-        key: 'ownerVisibility',
-        label: (
-          <span className={styles.inline}>
-            {t('ownerVisibility')}
-            {/* Dấu "i" nói rõ đây là ô CHỈ ĐỌC với nền tảng — không có endpoint admin nào ghi nó. */}
-            <InfoHint label={t('ownerVisibilityHintLabel')} content={t('ownerVisibilityHint')} />
-          </span>
-        ),
-        children: (
-          <Tag color={v.marketplaceEnabled ? STATUS_COLOR.SUCCESS : STATUS_COLOR.NEUTRAL}>
-            {v.marketplaceEnabled ? t('ownerVisibilityOn') : t('ownerVisibilityOff')}
-          </Tag>
-        ),
-      },
-      {
-        key: 'effective',
-        label: t('effective'),
-        children: v.isMarketplaceVisible ? (
-          <span className={styles.inline}>
-            <Tag color={STATUS_COLOR.SUCCESS}>{t('effectiveVisible')}</Tag>
-            <Link href={listingPath.detail(v.id)} target="_blank">
-              {t('viewListing')}
-            </Link>
-          </span>
-        ) : (
-          <span className={styles.inline}>
-            <Tag color={STATUS_COLOR.NEUTRAL}>{t('effectiveHidden')}</Tag>
-            {/* LÝ DO hiệu lực — thứ trả lời "gỡ ẩn xong rồi sao vẫn không thấy xe". */}
-            <StatusTag
-              value={reason}
-              meta={MARKETPLACE_VISIBILITY_REASON_META}
-              group="marketplaceVisibility"
-            />
-          </span>
-        ),
-      },
-      {
-        key: 'prices',
-        label: t('prices'),
-        children: `${fmt.money(v.weekdayPrice)} · ${fmt.money(v.weekendPrice)} · ${fmt.money(v.hourlyPrice)}`,
-      },
-      { key: 'bookings', label: t('bookings'), children: String(v.bookingCount) },
-      { key: 'reviews', label: t('reviews'), children: String(v.reviewCount) },
-      { key: 'created', label: t('created'), children: fmt.date(v.createdAt) },
-      { key: 'updated', label: t('updated'), children: fmt.date(v.updatedAt) },
-    ];
-  };
+  if (!canModerate) {
+    return (
+      <span className={styles.footerHint}>
+        <InfoCircleOutlined aria-hidden />
+        {t('noPermission')}
+      </span>
+    );
+  }
+  if (vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.HIDDEN) {
+    return (
+      <span className={cx(styles.footerHint, styles.footerHintWarn)}>
+        <ExclamationCircleOutlined aria-hidden />
+        {vehicle.platformHide
+          ? t('platformHidden', { at: fmt.dateTime(vehicle.platformHide.hiddenAt) })
+          : t('platformHiddenUnknown')}
+      </span>
+    );
+  }
+  if (vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC) {
+    return vehicle.isMarketplaceVisible ? (
+      <span className={cx(styles.footerHint, styles.footerHintLive)}>
+        <CheckCircleOutlined aria-hidden />
+        {t('live')}
+      </span>
+    ) : (
+      <span className={cx(styles.footerHint, styles.footerHintWarn)}>
+        <ExclamationCircleOutlined aria-hidden />
+        {t('notShowing', {
+          reason: domainLabel('marketplaceVisibility', vehicle.marketplaceVisibilityReason),
+        })}
+      </span>
+    );
+  }
+  return (
+    <span className={styles.footerHint}>
+      <InfoCircleOutlined aria-hidden />
+      {t('unavailable')}
+    </span>
+  );
 }

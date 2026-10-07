@@ -90,6 +90,7 @@
     "CATALOG_MODEL_IN_USE": "Vehicles are linked to this model — turn it off instead of deleting it so they keep their link.",
     "CATALOG_MODEL_SPEC_INVALID": "The model's specs don't fit together: check the energy source, transmission, seats and years sold.",
     "BANK_ACCOUNT_DUPLICATE": "This bank account is already in your list.",
+    "BANK_ACCOUNT_REPLACE_NOT_CONFIRMED": "You can only have one payout account. To switch to this one, turn on “Make this my default payout account” and save again.",
     "INSUFFICIENT_BALANCE": "Not enough available balance.",
     "WITHDRAWAL_BELOW_MINIMUM": "Amount is below the minimum withdrawal.",
     "WITHDRAWAL_ALREADY_HANDLED": "This withdrawal request has already been handled.",

@@ -255,9 +255,8 @@
     "profileHint": "What customers see on the marketplace.",
     "owner": "Shop owner",
     "legal": "Address & legal",
-    "legalHint": "Where customers pick the car up. Tax code and licence are optional.",
+    "legalHint": "Where customers pick the car up. The business licence is optional; the tax code goes in Tax information.",
     "payout": "Payout account",
-    "payoutHint": "Where XePrime transfers your shop’s money.",
     "plan": "Plan & limits",
     "planHint": "Current plan, vehicle limit and billing invoices."
   },

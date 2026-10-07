@@ -1,9 +1,4 @@
-/**
- * Danh sách tài khoản nhận tiền.
- *
- * Số tài khoản dùng `tabular-nums`: các dòng che đứng thẳng cột nên mắt so được bốn số cuối giữa
- * hai tài khoản — đó là toàn bộ cách người dùng phân biệt chúng.
- */
+/** Khối "Tài khoản nhận tiền" — tiêu đề, nút thêm/đổi và MỘT thẻ (`BankAccountCard`). */
 
 .panel {
   display: flex;
@@ -35,73 +30,4 @@
   margin: var(--xp-space-xs) 0 0;
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body-sm);
-}
-
-.list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--xp-space-sm);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.item {
-  display: flex;
-  align-items: center;
-  gap: var(--xp-space-md);
-  padding: var(--xp-space-md);
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius-lg);
-  background: var(--xp-color-bg-container);
-}
-
-.icon {
-  flex: none;
-  font-size: 20px;
-  color: var(--xp-color-text-tertiary);
-}
-
-.info {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.bank {
-  display: flex;
-  align-items: center;
-  gap: var(--xp-space-xs);
-  margin: 0;
-  font-weight: var(--xp-font-weight-semibold);
-}
-
-.number {
-  margin: var(--xp-space-xs) 0 0;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  font-variant-numeric: tabular-nums;
-}
-
-.name {
-  margin: 0;
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-label);
-}
-
-.actions {
-  display: flex;
-  flex: none;
-  gap: var(--xp-space-xs);
-}
-
-/* Dưới 640px hàng nút xuống dòng riêng — ba cụm chen ngang trên điện thoại thì cụm nào cũng chật. */
-@media (max-width: 640px) {
-  .item {
-    flex-wrap: wrap;
-  }
-
-  .actions {
-    width: 100%;
-    justify-content: flex-end;
-  }
 }

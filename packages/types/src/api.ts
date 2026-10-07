@@ -393,8 +393,18 @@ export const API_ERROR_CODE = {
   REFUND_ACCOUNT_REQUIRED: 'REFUND_ACCOUNT_REQUIRED',
 
   // Tài khoản ngân hàng nhận tiền (ADR 0033)
-  /** Số tài khoản này đã có trong danh sách đang dùng của chính chủ đó. */
+  /**
+   * Số tài khoản này đã có trong danh sách đang dùng của chính chủ đó. KHÔNG còn phát từ
+   * 07/10/2026 — mỗi chủ một tài khoản, khai lại đúng cái đang có là thao tác không đổi gì. Giữ để
+   * bản app native cũ còn ánh xạ được.
+   */
   BANK_ACCOUNT_DUPLICATE: 'BANK_ACCOUNT_DUPLICATE',
+  /**
+   * Khai tài khoản mới khi đã có một tài khoản nhận tiền, nhưng client gửi `isDefault: false` —
+   * tức người dùng KHÔNG đồng ý đổi đích nhận tiền (bản app native cũ: "thêm tài khoản phụ"). Mỗi
+   * chủ chỉ một tài khoản, nên thay vì âm thầm đổi chỗ tiền về, server từ chối.
+   */
+  BANK_ACCOUNT_REPLACE_NOT_CONFIRMED: 'BANK_ACCOUNT_REPLACE_NOT_CONFIRMED',
 
   // Rút tiền (ADR 0033)
   /** Số dư khả dụng không đủ, hoặc ví đang tạm khoá. */

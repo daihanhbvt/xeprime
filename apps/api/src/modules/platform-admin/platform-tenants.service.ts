@@ -190,8 +190,10 @@ export class PlatformTenantsService {
         ...listSelect(now),
         owner: { select: { displayName: true, email: true, phone: true } },
         profile: {
-          select: { provinceName: true, address: true, taxCode: true, businessLicenseNo: true },
+          select: { provinceName: true, address: true, businessLicenseNo: true },
         },
+        // MST: hồ sơ người bán, nguồn duy nhất (07/10/2026).
+        sellerProfile: { select: { taxId: true } },
         _count: { select: { vehicles: true, bookings: true } },
       },
     });
@@ -201,7 +203,7 @@ export class PlatformTenantsService {
       ownerEmail: row.owner?.email ?? null,
       ownerPhone: row.owner?.phone ?? null,
       address: row.profile?.address ?? null,
-      taxCode: row.profile?.taxCode ?? null,
+      taxCode: row.sellerProfile?.taxId ?? null,
       businessLicenseNo: row.profile?.businessLicenseNo ?? null,
       bookingCount: row._count.bookings,
       currentPlan: await this.billing.currentPlan(id),

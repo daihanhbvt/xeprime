@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   BILLING_MODE,
   PERMISSION,
+  SELLER_ENTITY_TYPE,
+  SELLER_PROFILE_STATUS,
   SHOP_ONBOARDING_STATE,
   SHOP_VERIFICATION,
   TENANT_ROLE,
@@ -12,24 +14,24 @@ import {
   type Permission,
 } from '@xeprime/types';
 
+import { toShopProfileBody, toShopProfileValues } from '@/features/shop/shop-profile-form';
 import type { MyShop } from '@/features/shop/types';
 import { makeStore } from '@/store/make-store';
 
 import ShopPage from './page';
 
 /**
- * TRANG CỬA HÀNG — một trang, năm section (16/09/2026).
+ * TRANG CỬA HÀNG — một trang nhiều section (năm từ 16/09/2026, bốn từ 07/10/2026).
  *
  * Bộ này khoá đúng những gì đợt gộp hứa, và mỗi khẳng định tương ứng với một guard thật ở API:
  *
- *  1. **Năm section cùng có mặt**, `?section=` chỉ chọn mục đang sáng — KHÔNG phải tab. Nếu
+ *  1. **Bốn section cùng có mặt**, `?section=` chỉ chọn mục đang sáng — KHÔNG phải tab. Nếu
  *     chọn section là tháo khối cũ ra thì người đang gõ dở hồ sơ mà bấm sang "Gói & hạn mức" để
  *     xem hạn sẽ mất sạch thay đổi chưa lưu.
  *  2. **Query rác rơi về `profile`**, không dựng một trang trống.
  *  3. **Chủ gian hàng CHỈ ĐỌC**, đọc từ `ownerAccount` (`tenants.owner_user_id → users`).
- *  4. **"Tài khoản nhận tiền" chỉ chủ gian hàng** — khớp `@ShopOwnerOnly()` ở
- *     `/shop/bank-accounts`; quản lý ăn 403 ngay ở lượt GET nên hiện khối rỗng cho họ là mời
- *     vào một cánh cửa đã khoá.
+ *  4. **"Tài khoản nhận tiền" KHÔNG còn ở đây** — nó về trang "Số dư & rút tiền" ở cả hai tuyến;
+ *     link `?section=payout` cũ đưa CHỦ sang đó, người khác ở lại đầu trang.
  *  5. **"Gói & hạn mức" theo `subscription.view`**, CTA mua theo `subscription.purchase`.
  */
 const perms = vi.hoisted(() => ({ granted: new Set<string>() }));
@@ -125,17 +127,14 @@ vi.mock('@/features/locations/hooks/use-places', () => ({
 }));
 vi.mock('@/components/form/MapPinPicker', () => ({ MapPinPicker: () => null }));
 
-/** Sổ tài khoản nhận tiền — bộ này chỉ hỏi "khối có mặt không", không kiểm hành vi của sổ. */
-const bankAccounts = vi.hoisted(() => ({
-  data: [] as unknown[],
-  isPending: false,
-  isError: false,
-}));
-vi.mock('@/features/bank-accounts/hooks/use-bank-accounts', () => ({
-  useBankAccounts: () => bankAccounts,
-  useCreateBankAccount: () => ({ mutate: vi.fn(), isPending: false }),
-  useSetDefaultBankAccount: () => ({ mutate: vi.fn(), isPending: false }),
-  useArchiveBankAccount: () => ({ mutate: vi.fn(), isPending: false }),
+/**
+ * Chuyển trang phía client — thay bằng một mốc QUAN SÁT được: bộ này hỏi "có chuyển không, tới
+ * đâu", không kiểm `router.replace` của Next.
+ */
+vi.mock('@/features/partner/components/ClientRedirect', () => ({
+  ClientRedirect: ({ href }: { href: string }) => (
+    <div data-testid="client-redirect" data-href={href} />
+  ),
 }));
 
 const subscription = vi.hoisted(() => ({
@@ -160,6 +159,19 @@ vi.mock('@/features/subscription/hooks/use-subscription', () => ({
   usePaymentInfo: () => ({ data: undefined, isLoading: false, isError: false }),
 }));
 vi.mock('@/hooks/use-feature', () => ({ useFeatureStates: () => ({}) }));
+
+/** Hồ sơ người bán (section "Thông tin khai thuế") — chặn ở tầng hook như các hồ sơ khác. */
+const sellerProfile = vi.hoisted(() => ({
+  data: null as unknown,
+  isLoading: false,
+  isError: false,
+  refetch: vi.fn(),
+}));
+const saveSeller = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
+vi.mock('@/features/seller-profile/hooks/use-seller-profile', () => ({
+  useSellerProfile: () => sellerProfile,
+  useSaveSellerProfile: () => saveSeller,
+}));
 
 /**
  * Dải chào mừng sau lần mua gói đầu (ADR 0040) đếm xe để biết nên mời "đăng xe đầu tiên" hay im.
@@ -264,7 +276,6 @@ beforeEach(() => {
   url.setFilters.mockReset();
   vehicles.data = { items: [] };
   vehicles.isLoading = false;
-  bankAccounts.data = [];
   subscription.data = {
     currentPlan: {
       subscriptionId: 'SUB1',
@@ -288,13 +299,29 @@ beforeEach(() => {
     PERMISSION.TENANT_UPDATE,
     PERMISSION.SUBSCRIPTION_VIEW,
     PERMISSION.SUBSCRIPTION_PURCHASE,
+    PERMISSION.SELLER_PROFILE_VIEW,
+    PERMISSION.SELLER_PROFILE_MANAGE,
   );
+  sellerProfile.data = {
+    id: '01HSELLER0000000000000000',
+    tenantId: '01HSHOP00000000000000000A',
+    entityType: SELLER_ENTITY_TYPE.COMPANY,
+    legalName: 'Công ty TNHH Việt Car',
+    taxId: '0108987654',
+    idNumber: null,
+    idIssuedAt: null,
+    idIssuedBy: null,
+    status: SELLER_PROFILE_STATUS.DRAFT,
+    editable: true,
+    reviewNote: null,
+  };
+  saveSeller.mutate.mockReset();
 });
 
 afterEach(cleanup);
 
-describe('Trang Cửa hàng — năm section trong một trang', () => {
-  it('chủ gian hàng thấy đủ năm mục trong mục lục, đúng thứ tự', () => {
+describe('Trang Cửa hàng — bốn section trong một trang', () => {
+  it('chủ gian hàng thấy đủ bốn mục trong mục lục, đúng thứ tự', () => {
     renderPage();
 
     expect(
@@ -305,24 +332,24 @@ describe('Trang Cửa hàng — năm section trong một trang', () => {
       'Thông tin hiển thị',
       'Chủ gian hàng',
       'Địa chỉ & pháp lý',
-      'Tài khoản nhận tiền',
+      'Thông tin khai thuế',
       'Gói & hạn mức',
     ]);
   });
 
   /*
-   * Đây là khẳng định quan trọng nhất của bố cục: KHÔNG phải tab. Cả năm khối cùng nằm trong
+   * Đây là khẳng định quan trọng nhất của bố cục: KHÔNG phải tab. Cả bốn khối cùng nằm trong
    * DOM, `?section=` chỉ quyết định mục nào sáng và cuộn tới đâu — nếu không thì form hồ sơ bị
    * tháo ra mỗi lần người dùng bấm sang xem hạn gói.
    */
-  it('cả năm khối cùng nằm trong DOM — chọn section không tháo khối nào ra', () => {
+  it('cả bốn khối cùng nằm trong DOM — chọn section không tháo khối nào ra', () => {
     const { container } = renderPage();
 
     for (const id of [
       'shop-section-profile',
       'shop-section-owner',
       'shop-section-legal',
-      'shop-section-payout',
+      'shop-section-tax',
       'shop-section-plan',
     ]) {
       expect(container.querySelector(`#${id}`)).toBeTruthy();
@@ -416,24 +443,79 @@ describe('Trang Cửa hàng — chủ gian hàng', () => {
   });
 });
 
-describe('Trang Cửa hàng — tài khoản nhận tiền', () => {
-  it('chủ gian hàng thấy sổ `bank_accounts` phạm vi gian hàng', () => {
-    renderPage();
-
-    expect(document.querySelector('#shop-section-payout')).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Thêm tài khoản/ })).toBeTruthy();
-  });
-
-  /*
-   * `/shop/bank-accounts` là `@ShopOwnerOnly()`: quản lý ăn 403 ngay ở lượt GET. Hiện một khối
-   * rỗng kèm nút "Thêm tài khoản" cho họ là mời vào một cánh cửa đã khoá.
-   */
-  it('quản lý gian hàng: khối đó KHÔNG tồn tại, kể cả khi có đủ quyền hồ sơ', () => {
-    scope.roleKey = TENANT_ROLE.SHOP_MANAGER;
+/*
+ * 07/10/2026 — "Tài khoản nhận tiền" về trang "Số dư & rút tiền", cùng chỗ với tuyến hoa hồng.
+ * Trang Cửa hàng không còn khối đó, nhưng link `?section=payout` cũ (thông báo, bookmark) vẫn phải
+ * tới được nơi tiền về — với đúng người section cũ từng hiện cho.
+ */
+describe('Trang Cửa hàng — tài khoản nhận tiền đã về trang số dư', () => {
+  it('không còn khối hay mục lục "Tài khoản nhận tiền" trên trang Cửa hàng', () => {
     renderPage();
 
     expect(document.querySelector('#shop-section-payout')).toBeNull();
     expect(sectionNav().queryByRole('link', { name: 'Tài khoản nhận tiền' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Thêm tài khoản/ })).toBeNull();
+  });
+
+  it('chủ gian hàng mở `?section=payout` cũ → chuyển tới khối tài khoản nhận tiền của trang số dư', () => {
+    url.section = 'payout';
+    renderPage();
+
+    expect(screen.getByTestId('client-redirect').getAttribute('data-href')).toBe(
+      '/manage/balance?section=payout',
+    );
+  });
+
+  /* Quản lý chưa bao giờ thấy section đó, và trang số dư là của CHỦ — ở lại, về đầu trang. */
+  it('quản lý mở `?section=payout` cũ: ở lại trang Cửa hàng, rơi về "Thông tin hiển thị"', () => {
+    scope.roleKey = TENANT_ROLE.SHOP_MANAGER;
+    url.section = 'payout';
+    renderPage();
+
+    expect(screen.queryByTestId('client-redirect')).toBeNull();
+    expect(
+      sectionNav().getByRole('link', { name: 'Thông tin hiển thị' }).getAttribute('aria-current'),
+    ).toBe('true');
+  });
+});
+
+/*
+ * 07/10/2026 — mã số thuế có MỘT nguồn: hồ sơ NGƯỜI BÁN, nơi báo cáo thuế và hợp đồng đọc. Ô MST cũ
+ * ở "Địa chỉ & pháp lý" ghi vào một bản sao không ai tính thuế từ đó — nó rời trang, và section
+ * "Thông tin khai thuế" (CÙNG component với "Hồ sơ chủ xe") vào thay.
+ */
+describe('Trang Cửa hàng — thông tin khai thuế', () => {
+  it('"Địa chỉ & pháp lý" không còn ô mã số thuế; giấy phép kinh doanh vẫn ở đó', () => {
+    renderPage();
+
+    const legal = within(document.querySelector('#shop-section-legal') as HTMLElement);
+    expect(legal.queryByLabelText(/Mã số thuế/)).toBeNull();
+    expect(legal.getByLabelText(/Số giấy phép KD/)).toBeTruthy();
+  });
+
+  it('MST khai ở section khai thuế, đọc từ hồ sơ người bán', () => {
+    renderPage();
+
+    const tax = within(document.querySelector('#shop-section-tax') as HTMLElement);
+    expect((tax.getByLabelText(/Mã số thuế/) as HTMLInputElement).value).toBe('0108987654');
+  });
+
+  /*
+   * API còn nhận `taxCode` cho client cũ và ghi nó vào hồ sơ NGƯỜI BÁN. Web gửi kèm mỗi lần lưu hồ
+   * sơ gian hàng là đụng vào bản khai thuế (và đòi `seller_profile.manage`) cho một lần sửa tên.
+   */
+  it('thân request lưu hồ sơ gian hàng KHÔNG mang mã số thuế', () => {
+    const body = toShopProfileBody(toShopProfileValues(makeShop()));
+    expect(body).not.toHaveProperty('taxCode');
+    expect(body.businessLicenseNo).toBe('');
+  });
+
+  it('thiếu `seller_profile.view`: section khai thuế vắng khỏi trang và mục lục', () => {
+    grant(PERMISSION.TENANT_VIEW, PERMISSION.TENANT_UPDATE, PERMISSION.SUBSCRIPTION_VIEW);
+    renderPage();
+
+    expect(document.querySelector('#shop-section-tax')).toBeNull();
+    expect(sectionNav().queryByRole('link', { name: 'Thông tin khai thuế' })).toBeNull();
   });
 });
 
@@ -511,7 +593,8 @@ describe('Trang Cửa hàng — tiêu đề và quyền', () => {
   it('nút Lưu chỉ sáng khi hồ sơ có thay đổi', async () => {
     renderPage();
 
-    const save = screen.getByRole('button', { name: /Lưu thay đổi|Lưu thông tin/ });
+    // Nút lưu HỒ SƠ ở tiêu đề — không phải nút 'Lưu thông tin thuế' của section khai thuế.
+    const save = screen.getByRole('button', { name: /(Lưu thay đổi|Lưu thông tin)$/ });
     expect(save).toHaveProperty('disabled', true);
 
     fireEvent.change(screen.getByLabelText(/Tên hiển thị/), { target: { value: 'Tên mới' } });

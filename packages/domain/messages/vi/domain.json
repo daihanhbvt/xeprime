@@ -477,6 +477,13 @@
     "name": "Tên A → Z",
     "vehicles": "Nhiều xe nhất"
   },
+  "platformVehicleSort": {
+    "newest": "Mới tạo gần nhất",
+    "updated": "Mới cập nhật",
+    "name": "Tên A → Z",
+    "price_desc": "Giá cao → thấp",
+    "price_asc": "Giá thấp → cao"
+  },
   "tenantCustomerSort": {
     "last_rental": "Thuê gần đây nhất",
     "rental_count": "Số lần thuê nhiều nhất",

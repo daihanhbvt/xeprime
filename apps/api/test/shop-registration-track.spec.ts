@@ -47,6 +47,8 @@ import {
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 const tenants = makeTenantsService(asService);
+/** Quyền của CHỦ gian hàng (có `seller_profile.manage`) — controller đọc nó từ membership. */
+const OWNER_ACCESS = { canManageSellerProfile: true };
 const billing = makeBillingService(asService);
 const vehicles = makeVehiclesService(asService);
 
@@ -637,9 +639,14 @@ describe('4. Cổng hồ sơ gian hàng TRƯỚC khi gửi xe duyệt', () => {
   });
 
   maybe('thêm logo ⇒ gửi duyệt đi qua', async () => {
-    await tenants.updateProfile(packageTenantId, packageOwnerId, {
-      logoUrl: 'https://img.example/logo.png',
-    });
+    await tenants.updateProfile(
+      packageTenantId,
+      packageOwnerId,
+      {
+        logoUrl: 'https://img.example/logo.png',
+      },
+      OWNER_ACCESS,
+    );
 
     const detail = await vehicles.submitForPublicReview(
       packageTenantId,

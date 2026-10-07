@@ -58,6 +58,25 @@ describe('countActiveFilters', () => {
     expect(countActiveFilters(FIELDS, { from: '2026-01-01' })).toBe(1);
   });
 
+  it('ô có `defaultValue` (Sắp xếp) chỉ tính là bật khi RỜI giá trị mặc định', () => {
+    const fields: FilterField[] = [
+      ...FIELDS,
+      {
+        kind: 'select',
+        key: 'sort',
+        label: 'Sắp xếp',
+        defaultValue: 'newest',
+        options: [
+          { value: 'newest', label: 'Mới nhất' },
+          { value: 'name', label: 'Tên A → Z' },
+        ],
+      },
+    ];
+    expect(countActiveFilters(fields, { sort: 'newest' })).toBe(0);
+    expect(countActiveFilters(fields, { sort: 'name' })).toBe(1);
+    expect(countActiveFilters(fields, { sort: 'name', status: 'draft' })).toBe(2);
+  });
+
   it('chuỗi rỗng không tính là bật', () => {
     expect(countActiveFilters(FIELDS, { q: '' })).toBe(0);
   });

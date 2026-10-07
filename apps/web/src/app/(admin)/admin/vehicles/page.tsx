@@ -1,30 +1,49 @@
 'use client';
 
-import { Segmented } from 'antd';
+import { CloseOutlined } from '@ant-design/icons';
+import { Tag } from 'antd';
 import { useTranslations } from 'next-intl';
-import { Suspense, useState } from 'react';
+import { Suspense } from 'react';
+import { DEFAULT_PLATFORM_VEHICLE_SORT, PLATFORM_VEHICLE_SORT } from '@xeprime/types';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { FilterBar, type FilterField } from '@/components/filter/FilterBar';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
+import { CountTabs } from '@/components/navigation/CountTabs';
+import { ALL_FILTER } from '@/constants/filters';
 import { ADMIN_VEHICLES_DEFAULT_LIMIT } from '@/features/admin-vehicles/api';
-import { ADMIN_VEHICLE_QUICK_FILTERS } from '@/features/admin-vehicles/constants';
+import {
+  ADMIN_VEHICLE_VIEWS,
+  activeAdminVehicleView,
+  adminVehicleViewPatch,
+} from '@/features/admin-vehicles/constants';
 import { AdminVehicleDetailDrawer } from '@/features/admin-vehicles/components/AdminVehicleDetailDrawer';
 import { AdminVehicleTable } from '@/features/admin-vehicles/components/AdminVehicleTable';
-import { useAdminVehicleFilters } from '@/features/admin-vehicles/hooks/use-admin-vehicle-filters';
+import {
+  filterBarPatch,
+  useAdminVehicleFilters,
+} from '@/features/admin-vehicles/hooks/use-admin-vehicle-filters';
 import { useAdminVehicleOptions } from '@/features/admin-vehicles/hooks/use-admin-vehicle-options';
 import { useAdminVehicles } from '@/features/admin-vehicles/hooks/use-admin-vehicles';
-import type { AdminVehicleFilters } from '@/features/admin-vehicles/types';
+import type { AdminVehicleUrlState } from '@/features/admin-vehicles/types';
+import { useProvinceOptions } from '@/features/locations/hooks/use-provinces';
+import { useOpenRecordPager } from '@/hooks/use-open-record-pager';
 import styles from './vehicles-page.module.css';
 
-const CLEARED: Partial<AdminVehicleFilters> = {
+/** "Xoá bộ lọc" chỉ đụng bộ lọc — giữ nguyên cách sắp xếp và xe đang mở. */
+const CLEARED: Partial<AdminVehicleUrlState> = {
   q: undefined,
-  publicStatus: 'all',
-  operationStatus: 'all',
-  vehicleType: 'all',
-  tenantStatus: 'all',
-  marketplaceVisible: 'all',
   tenantId: undefined,
+  publicStatus: ALL_FILTER,
+  operationStatus: ALL_FILTER,
+  vehicleType: ALL_FILTER,
+  serviceType: ALL_FILTER,
+  provinceCode: ALL_FILTER,
+  tenantStatus: ALL_FILTER,
+  marketplaceVisible: ALL_FILTER,
 };
+
+/** Bốn ô lọc đứng trên hàng; hai ô trạng thái (đã có tab góc nhìn lo phần hay dùng) dồn vào popover. */
+const INLINE_FIELD_LIMIT = 4;
 
 function PageFallback() {
   const t = useTranslations('AdminVehicles.page');
@@ -39,12 +58,20 @@ export default function AdminVehiclesPage() {
   );
 }
 
+/**
+ * "XE TOÀN HỆ THỐNG" — giám sát mọi xe của gian hàng và chủ xe cá nhân trên nền tảng.
+ *
+ * Mọi bộ lọc, sắp xếp, trang và xe đang mở sống ở URL (ADR 0004) — tải lại, Back, và link gửi cho
+ * đồng nghiệp đều rơi đúng chỗ. Lọc, đếm, sắp xếp và phân trang chạy ở SERVER; số trên tab góc
+ * nhìn đến từ cùng lần đọc với danh sách.
+ */
 function AdminVehiclesView() {
   const t = useTranslations('AdminVehicles');
   const options = useAdminVehicleOptions();
+  const provinces = useProvinceOptions();
   const { filters, setFilters } = useAdminVehicleFilters();
-  const { data, isError, refetch, isFetching } = useAdminVehicles(filters);
-  const [selected, setSelected] = useState<string | null>(null);
+  const { open: openId, ...listFilters } = filters;
+  const { data, isError, refetch, isFetching } = useAdminVehicles(listFilters);
 
   const items = data?.items ?? [];
   const meta = data?.meta ?? {
@@ -53,13 +80,45 @@ function AdminVehiclesView() {
     total: 0,
     hasNext: false,
   };
+  const counts = data?.counts;
 
-  const filterFields: FilterField[] = [
+  const all = { value: ALL_FILTER, label: t('filters.all') };
+  const fields: FilterField[] = [
     {
       kind: 'search',
       key: 'q',
       label: t('filters.searchLabel'),
       placeholder: t('filters.searchPlaceholder'),
+    },
+    {
+      kind: 'select',
+      key: 'vehicleType',
+      label: t('filters.vehicleType'),
+      options: options.vehicleType,
+      allowClear: false,
+    },
+    {
+      kind: 'select',
+      key: 'serviceType',
+      label: t('filters.serviceType'),
+      options: options.serviceType,
+      allowClear: false,
+    },
+    {
+      kind: 'select',
+      key: 'provinceCode',
+      label: t('filters.province'),
+      options: [all, ...provinces.options],
+      allowClear: false,
+      searchable: true,
+    },
+    {
+      kind: 'select',
+      key: 'sort',
+      label: t('filters.sort'),
+      options: options.sort,
+      allowClear: false,
+      defaultValue: DEFAULT_PLATFORM_VEHICLE_SORT,
     },
     {
       kind: 'select',
@@ -75,74 +134,87 @@ function AdminVehiclesView() {
       options: options.operationStatus,
       allowClear: false,
     },
-    {
-      kind: 'select',
-      key: 'vehicleType',
-      label: t('filters.vehicleType'),
-      options: options.vehicleType,
-      allowClear: false,
-    },
   ];
 
-  const isSet = (value: string | undefined) => Boolean(value && value !== 'all');
+  const isSet = (value: string | undefined) => Boolean(value && value !== ALL_FILTER);
   const hasFilters = Boolean(
     filters.q ||
       filters.tenantId ||
       isSet(filters.publicStatus) ||
       isSet(filters.operationStatus) ||
       isSet(filters.vehicleType) ||
+      isSet(filters.serviceType) ||
+      isSet(filters.provinceCode) ||
       isSet(filters.tenantStatus) ||
       isSet(filters.marketplaceVisible),
   );
 
+  const activeView = activeAdminVehicleView(filters);
+
+  // Mở/đóng panel chỉ đổi giao diện — không được đưa người dùng về trang 1.
+  const pager = useOpenRecordPager(
+    items.map((row) => row.id),
+    openId,
+  );
+  const openVehicle = (id: string | undefined) => {
+    if (id) pager.remember();
+    setFilters({ open: id }, { resetPage: false });
+  };
+
   /*
-   * Lối tắt nào đang khớp CHÍNH XÁC bộ lọc hiện tại — không khớp thì không sáng cái nào.
-   *
-   * Cố ý KHÔNG đưa vào `FilterBar`: giá trị của nó SUY RA từ ba tham số chứ không phải một, và
-   * chọn một lối tắt ghi một *patch* nhiều khoá. Đó là luật riêng của module giám sát xe — nhét
-   * vào component chung sẽ làm nó biết nghiệp vụ.
-   *
-   * So khớp phải gồm CẢ `marketplaceVisible` (ADR 0048): thiếu nó thì lối tắt "Đang hiển thị"
-   * và "Tất cả" trông giống hệt nhau, vì cả hai cùng để `publicStatus`/`tenantStatus` ở `all`.
+   * Lọc theo gian hàng chỉ đến từ link (trang đối tác, đơn thuê) — không có ô nào trên thanh lọc,
+   * nên phải có một chip nói ra điều đó, gỡ được. Tên gian hàng lấy từ chính dòng dữ liệu (mọi
+   * dòng cùng một gian hàng); chưa có dòng nào thì nói chung chung thay vì đoán.
    */
-  const activeQuick =
-    ADMIN_VEHICLE_QUICK_FILTERS.find(
-      (f) =>
-        f.patch.publicStatus === (filters.publicStatus ?? 'all') &&
-        f.patch.tenantStatus === (filters.tenantStatus ?? 'all') &&
-        f.patch.marketplaceVisible === (filters.marketplaceVisible ?? 'all'),
-    )?.key ?? '';
+  const tenantChipLabel = filters.tenantId
+    ? items[0]?.tenantName
+      ? t('filters.tenantChip', { name: items[0].tenantName })
+      : t('filters.tenantChipUnknown')
+    : null;
 
   return (
     <div>
-      <ManagePageHeader title={t('page.title')} />
+      <ManagePageHeader title={t('page.title')} subtitle={t('page.subtitle')} />
 
-      {/*
-        Cố ý KHÔNG truyền `onClear`: lối xoá lọc của trang này nằm trong màn "không có kết quả",
-        đúng như trước khi migrate và giống ba module còn lại của đợt 1C-D. Nút "Xoá tất cả" luôn
-        hiện là UI MỚI (Figma `127:2339` R5) — thuộc quyết định P24, chưa được chốt.
-      */}
-      <FilterBar
-        fields={filterFields}
-        values={filters as Record<string, string | undefined>}
-        onChange={(patch) => setFilters(patch)}
+      <CountTabs
+        label={t('views.ariaLabel')}
+        value={activeView}
+        items={ADMIN_VEHICLE_VIEWS.map((view) => ({
+          value: view.key,
+          label: t(`views.${view.key}`),
+          count: counts?.[view.key],
+        }))}
+        onChange={(key) => setFilters(adminVehicleViewPatch(key))}
       />
 
-      <div className={styles.quickRow}>
-        <Segmented
-          aria-label={t('quick.ariaLabel')}
-          value={activeQuick}
-          options={options.quickFilters}
-          onChange={(value) => {
-            const hit = ADMIN_VEHICLE_QUICK_FILTERS.find((f) => f.key === value);
-            setFilters(
-              hit
-                ? { ...hit.patch }
-                : { publicStatus: 'all', tenantStatus: 'all', marketplaceVisible: 'all' },
-            );
-          }}
-        />
-      </div>
+      <FilterBar
+        compactFields
+        inlineFieldLimit={INLINE_FIELD_LIMIT}
+        fields={fields}
+        values={{
+          q: filters.q,
+          vehicleType: filters.vehicleType,
+          serviceType: filters.serviceType,
+          provinceCode: filters.provinceCode,
+          sort: filters.sort ?? DEFAULT_PLATFORM_VEHICLE_SORT,
+          publicStatus: filters.publicStatus,
+          operationStatus: filters.operationStatus,
+        }}
+        onChange={(patch) => setFilters(filterBarPatch(patch))}
+        onClear={hasFilters ? () => setFilters(CLEARED) : undefined}
+      />
+
+      {tenantChipLabel ? (
+        <div className={styles.chipRow}>
+          <Tag
+            closable
+            closeIcon={<CloseOutlined aria-label={t('filters.removeTenant')} />}
+            onClose={() => setFilters({ tenantId: undefined })}
+          >
+            {tenantChipLabel}
+          </Tag>
+        </div>
+      ) : null}
 
       <AdminVehicleTable
         items={items}
@@ -151,11 +223,19 @@ function AdminVehiclesView() {
         error={isError && !data ? { onRetry: () => void refetch() } : null}
         filtered={hasFilters}
         onClearFilters={() => setFilters(CLEARED)}
-        onView={(id) => setSelected(id)}
+        onView={(id) => openVehicle(id)}
         onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
+        selectedId={openId ?? null}
+        dateColumn={filters.sort === PLATFORM_VEHICLE_SORT.UPDATED ? 'updatedAt' : 'createdAt'}
       />
 
-      <AdminVehicleDetailDrawer vehicleId={selected} onClose={() => setSelected(null)} />
+      <AdminVehicleDetailDrawer
+        vehicleId={openId ?? null}
+        previousId={pager.previousId}
+        nextId={pager.nextId}
+        onNavigate={(id) => openVehicle(id)}
+        onClose={() => openVehicle(undefined)}
+      />
     </div>
   );
 }

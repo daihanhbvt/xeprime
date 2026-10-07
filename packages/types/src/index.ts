@@ -32,6 +32,7 @@ export * from './shop-verification';
 export * from './shop-storefront';
 export * from './platform-partner';
 export * from './platform-partner-detail';
+export * from './platform-vehicle';
 export * from './vehicle-publication';
 export * from './vehicle-review';
 export * from './owner-stage';

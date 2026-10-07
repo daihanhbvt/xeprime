@@ -63,12 +63,13 @@ export const AUDIT_SCOPE_OPTIONS = [
  */
 export const AUDIT_TARGET_TYPE = {
   BOOKING: 'booking',
+  VEHICLE: 'vehicle',
 } as const;
 
 /** Nhãn VN cho loại đối tượng trong audit (nguồn: grep `targetType` phía API). */
 export const AUDIT_TARGET_TYPE_LABEL: Record<string, string> = {
   tenant: 'Gian hàng',
-  vehicle: 'Xe',
+  [AUDIT_TARGET_TYPE.VEHICLE]: 'Xe',
   [AUDIT_TARGET_TYPE.BOOKING]: 'Đơn thuê',
   booking_request: 'Yêu cầu đặt xe',
   receipt: 'Phiếu thu/chi',

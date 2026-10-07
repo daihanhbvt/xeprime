@@ -7,7 +7,6 @@ import { useTranslations } from 'next-intl';
 import {
   isPackageShopTrack,
   PERMISSION,
-  TENANT_ROLE,
   TENANT_STATUS,
   TENANT_STATUS_META,
   type TenantStatus,
@@ -17,7 +16,7 @@ import { StatusTag } from '@/components/data-display/StatusTag';
 import { trailingRequiredMark } from '@/components/form/required-mark';
 import { SectionCard } from '@/components/layout/SectionCard';
 import { SectionNav, type SectionNavItem } from '@/components/layout/SectionNav';
-import { BankAccountList } from '@/features/bank-accounts/components/BankAccountList';
+import { SellerTaxSection } from '@/features/seller-profile/components/SellerTaxSection';
 import { SubscriptionWorkspace } from '@/features/subscription/components/SubscriptionWorkspace';
 import { shopPath, shopSectionDomId, SHOP_SECTION, type ShopSection } from '@/constants/routes';
 import { useTenantScope } from '@/hooks/use-tenant-scope';
@@ -50,7 +49,7 @@ export interface ShopWorkspaceProps {
   /**
    * `?section=` CÓ MẶT trong URL hay đây chỉ là giá trị mặc định.
    *
-   * Khác nhau ở một việc: có mặt ⇒ cuộn tới section đó ngay lần vẽ đầu. Đó là đường mà ba
+   * Khác nhau ở một việc: có mặt ⇒ cuộn tới section đó ngay lần vẽ đầu. Đó là đường mà các
    * redirect cũ đi vào (`/manage/subscription` → `?section=plan`) và cũng là đường một link chia
    * sẻ đi vào. Mặc định thì KHÔNG cuộn — người mở `/manage/shop` trần phải thấy đầu trang, chứ
    * không phải một cú nhảy ngay khi trang vừa hiện.
@@ -70,7 +69,7 @@ export interface ShopWorkspaceProps {
 }
 
 /**
- * TRANG CỬA HÀNG — một trang, năm section (16/09/2026).
+ * TRANG CỬA HÀNG — một trang nhiều section (16/09/2026; sắp lại 07/10/2026).
  *
  * ## Vì sao gộp
  *
@@ -79,7 +78,13 @@ export interface ShopWorkspaceProps {
  * thì nói về một con người chứ không phải gian hàng. Nay: ba câu hỏi đầu vào MỘT trang có mục
  * lục; câu hỏi thứ tư sang `/manage/security`.
  *
- * ## Năm section dựng CÙNG LÚC, `?section=` chỉ cuộn và làm sáng
+ * 07/10/2026: "Tài khoản nhận tiền" rời trang này về "Số dư & rút tiền" (rút tiền và nơi tiền về là
+ * một việc), và "Thông tin khai thuế" vào thay — hồ sơ NGƯỜI BÁN, nguồn duy nhất của mã số thuế mà
+ * hợp đồng và báo cáo thuế đọc (ô MST cũ ở "Địa chỉ & pháp lý" ghi vào một bản sao không ai tính
+ * thuế từ đó). Trang này và "Hồ sơ chủ xe" nay cùng một vai và cùng thứ tự: danh tính trên chợ ·
+ * địa chỉ & pháp lý · khai thuế · gói.
+ *
+ * ## Các section dựng CÙNG LÚC, `?section=` chỉ cuộn và làm sáng
  *
  * Không phải tab. Nếu mỗi lần chọn là tháo khối cũ ra thì người đang gõ dở hồ sơ mà bấm sang
  * "Gói & hạn mức" để xem hạn sẽ mất sạch thay đổi chưa lưu. `?section=` sống ở URL để reload,
@@ -87,10 +92,10 @@ export interface ShopWorkspaceProps {
  *
  * ## Một `<form>`, một `<fieldset>` hẹp
  *
- * Thẻ `<form>` bọc cả năm section, nhưng `<fieldset disabled>` chỉ bọc hai nhóm ô THUỘC hồ sơ.
- * Ba section còn lại có điều khiển riêng: nút của AntD mặc định là `type="button"` nên chúng
- * không submit nhầm, còn hai form thật (thêm tài khoản ngân hàng, mua gói) sống trong Modal —
- * portal ra `body`, nên không có `<form>` nào lồng vào `<form>` nào.
+ * Thẻ `<form>` của hồ sơ bọc BA section đầu (hiển thị · chủ gian hàng · địa chỉ & pháp lý), và
+ * `<fieldset disabled>` chỉ bọc hai nhóm ô THUỘC hồ sơ. "Thông tin khai thuế" có `<form>` RIÊNG
+ * (lưu vào hồ sơ người bán, nút lưu riêng) nên đứng NGOÀI — một `<form>` lồng trong `<form>` là
+ * HTML hỏng. "Gói & hạn mức" cũng đứng ngoài: form thật của nó (mua gói) sống trong Modal.
  *
  * ## Nút Lưu ở tiêu đề
  *
@@ -135,22 +140,25 @@ export function ShopWorkspace({
   const dirty = formState.isDirty && !readOnly;
 
   /*
-   * Ba trục quyết định section nào có mặt, và cả ba KHỚP với guard của API:
-   *  - "Tài khoản nhận tiền" → `@ShopOwnerOnly()` ở `/shop/bank-accounts`. Quản lý/nhân viên ăn
-   *    403 ngay ở lượt GET, nên hiện một khối rỗng cho họ là mời vào một cánh cửa đã khoá.
+   * Các trục quyết định section nào có mặt, và mỗi trục KHỚP với guard của API:
+   *  - "Thông tin khai thuế" → `seller_profile.view` (`GET /seller-profile`); sửa cần
+   *    `seller_profile.manage` và `SellerTaxSection` tự chuyển chỉ-xem khi thiếu. Vắng trong phiên
+   *    hỗ trợ (ADR 0050 §10): endpoint đó không mở cho phiên, và giấy tờ pháp lý không hiện ở đó.
    *  - "Gói & hạn mức" → `subscription.view`. Mua/gia hạn cần `subscription.purchase`, và
    *    `SubscriptionWorkspace` tự giấu CTA lẫn modal khi thiếu.
    *  - Ba section còn lại đi cùng `tenant.view`, thứ mà trang này đã đòi để vào.
    */
   const { tenant } = useTenantScope();
-  const isOwner = tenant?.roleKey === TENANT_ROLE.SHOP_OWNER;
+  const supportHidesLegal = useSupportHides(SUPPORT_HIDDEN_AREA.SHOP_LEGAL);
+  const canSeeTax = has(PERMISSION.SELLER_PROFILE_VIEW) && !supportHidesLegal;
   const canSeePlan = has(PERMISSION.SUBSCRIPTION_VIEW);
+  const tTax = useTranslations('Account.tax');
 
   const items: SectionNavItem<ShopSection>[] = [
     { key: SHOP_SECTION.PROFILE, label: tSections('profile') },
     { key: SHOP_SECTION.OWNER, label: tSections('owner') },
     { key: SHOP_SECTION.LEGAL, label: tSections('legal') },
-    ...(isOwner ? [{ key: SHOP_SECTION.PAYOUT, label: tSections('payout') }] : []),
+    ...(canSeeTax ? [{ key: SHOP_SECTION.TAX, label: tTax('title') }] : []),
     ...(canSeePlan ? [{ key: SHOP_SECTION.PLAN, label: tSections('plan') }] : []),
   ];
 
@@ -256,70 +264,65 @@ export function ShopWorkspace({
             colon={false}
             requiredMark={trailingRequiredMark}
           >
-            <form id={PROFILE_FORM_ID} onSubmit={submit} noValidate className={styles.form}>
-              {/*
+            <div className={styles.sections}>
+              <form id={PROFILE_FORM_ID} onSubmit={submit} noValidate className={styles.form}>
+                {/*
                 `fieldset[disabled]` khoá mọi ô nhập/nút NATIVE bên trong bằng chính cơ chế của
                 trình duyệt. Các ô CHỌN (tỉnh/thành, xã/phường) vẫn phải nhận `disabled` tường
                 minh: chúng là combobox dựng bằng div, fieldset không với tới được.
 
-                Nó chỉ bọc HAI nhóm ô của hồ sơ. Ba section còn lại nằm ngoài — chúng có luật
-                quyền riêng, và khoá chúng theo trạng thái duyệt hồ sơ là khoá nhầm thứ.
+                Nó chỉ bọc HAI nhóm ô của hồ sơ. Khối chủ gian hàng nằm ngoài — nó chỉ đọc, và có
+                luật quyền riêng.
               */}
-              <fieldset disabled={readOnly || saving} className={styles.fieldset}>
-                <SectionCard
-                  id={shopSectionDomId(SHOP_SECTION.PROFILE)}
-                  title={tSections('profile')}
-                  hint={tSections('profileHint')}
-                >
-                  <ShopDisplayFields control={control} readOnly={readOnly && hidesDenied} />
-                </SectionCard>
-              </fieldset>
+                <fieldset disabled={readOnly || saving} className={styles.fieldset}>
+                  <SectionCard
+                    id={shopSectionDomId(SHOP_SECTION.PROFILE)}
+                    title={tSections('profile')}
+                    hint={tSections('profileHint')}
+                  >
+                    <ShopDisplayFields control={control} readOnly={readOnly && hidesDenied} />
+                  </SectionCard>
+                </fieldset>
 
-              <ShopOwnerSection shop={shop} />
+                <ShopOwnerSection shop={shop} />
 
-              <fieldset disabled={readOnly || saving} className={styles.fieldset}>
-                <SectionCard
-                  id={shopSectionDomId(SHOP_SECTION.LEGAL)}
-                  title={tSections('legal')}
-                  hint={tSections('legalHint')}
-                >
-                  {/*
+                <fieldset disabled={readOnly || saving} className={styles.fieldset}>
+                  <SectionCard
+                    id={shopSectionDomId(SHOP_SECTION.LEGAL)}
+                    title={tSections('legal')}
+                    hint={tSections('legalHint')}
+                  >
+                    {/*
                     Checklist đứng trong section pháp lý vì đây là nơi còn ô để điền. Chỉ hiện khi
                     người xem SỬA được hồ sơ — bảng "còn thiếu gì" không có nghĩa với người chỉ xem.
                     Không còn gắn với trạng thái xác minh: web đã bỏ luồng đó (24/09/2026).
                   */}
-                  {!readOnly ? (
-                    <ShopProfileChecklist
-                      control={control}
-                      ownerAccount={shop.ownerAccount}
-                      /*
-                       * Gian hàng tuyến gói: LOGO là mục chặn, không phải gợi ý — thiếu nó là
-                       * `submitForPublicReview` từ chối thật (ADR 0040 điều 7). Chủ xe tuyến hoa
-                       * hồng không bị cổng đó chạm tới, nên với họ nó vẫn là gợi ý.
-                       */
-                      logoRequired={isPackageShopTrack(tenant)}
-                    />
-                  ) : null}
-                  <ShopLegalFields control={control} readOnly={readOnly} />
-                </SectionCard>
-              </fieldset>
+                    {!readOnly ? (
+                      <ShopProfileChecklist
+                        control={control}
+                        ownerAccount={shop.ownerAccount}
+                        /*
+                         * Gian hàng tuyến gói: LOGO là mục chặn, không phải gợi ý — thiếu nó là
+                         * `submitForPublicReview` từ chối thật (ADR 0040 điều 7). Chủ xe tuyến hoa
+                         * hồng không bị cổng đó chạm tới, nên với họ nó vẫn là gợi ý.
+                         */
+                        logoRequired={isPackageShopTrack(tenant)}
+                      />
+                    ) : null}
+                    <ShopLegalFields control={control} readOnly={readOnly} />
+                  </SectionCard>
+                </fieldset>
+              </form>
 
-              {isOwner ? (
-                <BankAccountList
-                  scope="shop"
-                  id={shopSectionDomId(SHOP_SECTION.PAYOUT)}
-                  className={styles.payoutCard}
-                  title={tSections('payout')}
-                  subtitle={tSections('payoutHint')}
-                />
-              ) : null}
+              {/* <form> riêng, lưu vào hồ sơ người bán — đứng NGOÀI form hồ sơ ở trên. */}
+              {canSeeTax ? <SellerTaxSection id={shopSectionDomId(SHOP_SECTION.TAX)} /> : null}
 
               {canSeePlan ? (
                 <SectionCard id={shopSectionDomId(SHOP_SECTION.PLAN)} title={tSections('plan')}>
-                  <SubscriptionWorkspace header={null} />
+                  <SubscriptionWorkspace />
                 </SectionCard>
               ) : null}
-            </form>
+            </div>
           </Form>
         </div>
       </div>

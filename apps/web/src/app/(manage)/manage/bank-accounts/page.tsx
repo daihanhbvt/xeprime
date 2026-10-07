@@ -1,25 +1,14 @@
-import type { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
+import { redirect } from 'next/navigation';
 
-import { OwnerGate } from '@/features/account/components/OwnerGate';
-import { BankAccountList } from '@/features/bank-accounts/components/BankAccountList';
-
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations('BankAccounts');
-  return { title: t('title'), robots: { index: false, follow: false } };
-}
+import { balancePayoutPath } from '@/constants/routes';
 
 /**
- * Tài khoản ngân hàng NHẬN TIỀN của gian hàng — chủ xe tuyến hoa hồng (tuyến gói khai ở section
- * "Tài khoản nhận tiền" của trang Cửa hàng; `partnerPageRedirect` đưa họ sang đó).
+ * ALIAS CHUYỂN TIẾP (07/10/2026) — "Tài khoản nhận tiền" là một khối của trang "Số dư & rút tiền" ở
+ * CẢ hai tuyến: rút tiền và nơi tiền về là một việc, nên là một trang.
  *
- * Sổ của TENANT (`scope="shop"`): ADR 0053 tách tiền theo tài khoản — tài khoản khách cùng số điện
- * thoại có sổ riêng ở `xeprime.vn/account/bank-accounts`.
+ * Route giữ lại vì bookmark, thông báo cũ và app native vẫn mang nó. Đích như nhau với mọi tuyến nên
+ * chuyển ngay ở server, không phải đợi `/auth/me`. Không còn mục menu nào trỏ tới đây.
  */
-export default function PartnerBankAccountsPage() {
-  return (
-    <OwnerGate>
-      <BankAccountList scope="shop" />
-    </OwnerGate>
-  );
+export default function PartnerBankAccountsRedirectPage(): never {
+  redirect(balancePayoutPath());
 }

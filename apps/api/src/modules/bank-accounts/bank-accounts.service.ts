@@ -2,6 +2,7 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
+  AUDIT_ACTOR_SCOPE,
   BANK_ACCOUNT_STATUS,
   WALLET_OWNER_TYPE,
   maskAccountNumber,
@@ -9,6 +10,7 @@ import {
   type WalletOwnerType,
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import type { BankAccountDto, SaveBankAccountDto } from './dto/bank-account.dto';
 
 /** Chủ của một tài khoản — đúng một trong hai, khớp CHECK owner XOR ở DB. */
@@ -39,119 +41,200 @@ type Row = Prisma.BankAccountGetPayload<{ select: typeof SELECT }>;
  * Một service cho cả hai phía, phân biệt bằng `owner` (ADR 0023 điều 7): hai bộ hàm song sinh là
  * hai chỗ để quên sửa, và quy tắc che PII phải giống hệt nhau ở cả hai.
  *
- * Ba điều bảo đảm, tất cả do DATABASE giữ chứ không phải do service nhớ kiểm:
- *   - Một tài khoản thuộc đúng một chủ (CHECK owner XOR).
- *   - Không trùng số tài khoản trong danh sách đang dùng (partial unique).
- *   - Đúng một tài khoản mặc định mỗi chủ (partial unique).
+ * ## Mỗi chủ MỘT tài khoản nhận tiền (07/10/2026)
  *
- * Service bắt vi phạm unique và dịch thành lỗi người đọc được, nhưng KHÔNG thay thế ràng buộc:
- * hai request đặt mặc định cùng lúc thì database là thứ quyết định ai thắng.
+ * Trước đợt này bảng là một SỔ nhiều tài khoản có một cái "mặc định", và mỗi lệnh rút bắt chọn
+ * trong sổ. Nay một chủ có đúng một tài khoản đang dùng: khai cái mới là THAY cái cũ. "Tiền về
+ * đâu" chỉ còn một câu trả lời — không có cái mặc định để quên đổi, không có danh sách để chọn nhầm.
+ *
+ * Hai điều bảo đảm, cả hai do DATABASE giữ chứ không phải do service nhớ kiểm:
+ *   - Một tài khoản thuộc đúng một chủ (CHECK owner XOR).
+ *   - Mỗi chủ tối đa MỘT tài khoản `active`, và nó luôn là mặc định (partial unique + CHECK —
+ *     migration `20261007160000_bank_accounts_single_active`).
+ *
+ * Cột `is_default` còn đó cho client cũ (app native) đọc; với dòng `active` nó luôn `true`.
  */
 @Injectable()
 export class BankAccountsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    // Mặc định tự dựng cho các spec dựng `new BankAccountsService(prisma)` bằng tay — cùng cách với
+    // `AuditService` và `SupportRequestStore`. Ở runtime Nest tiêm bản của `AuditModule` (global).
+    private readonly audit: AuditService = new AuditService(prisma),
+  ) {}
 
-  /** Danh sách đang dùng, mặc định lên đầu. */
+  /**
+   * Tài khoản đang dùng — mảng 0 hoặc 1 phần tử. Giữ hình MẢNG vì đó là hợp đồng app native đang
+   * đọc (`GET /…/bank-accounts`); ràng buộc DB bảo đảm không bao giờ có phần tử thứ hai.
+   */
   async list(owner: BankAccountOwner): Promise<BankAccountDto[]> {
     const rows = await this.prisma.bankAccount.findMany({
       where: { ...ownerWhere(owner), status: BANK_ACCOUNT_STATUS.ACTIVE },
-      orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }],
       select: SELECT,
     });
     return rows.map(toDto);
   }
 
   /**
-   * Thêm một tài khoản. Tài khoản ĐẦU TIÊN của một chủ tự thành mặc định — bắt người dùng bấm
-   * thêm một nút để chọn cái duy nhất họ có là một bước thừa, và một danh sách không có mặc định
-   * làm lệnh rút không biết chuyển vào đâu.
+   * Đặt tài khoản nhận tiền — chưa có thì THÊM, có rồi thì ĐỔI.
+   *
+   * Đổi = lưu trữ cái cũ + tạo cái mới trong CÙNG transaction: không có khoảnh khắc nào chủ này
+   * "không có tài khoản" hay "có hai". Cái cũ được LƯU TRỮ chứ không sửa tại chỗ — lệnh rút cũ còn
+   * trỏ về nó, và lệnh đang chờ đã chụp số tài khoản vào chính nó
+   * (`withdrawal_requests.bank_account_number`), nên đổi ở đây không âm thầm đổi đích của lệnh đó.
+   *
+   * Khai lại ĐÚNG đích đang dùng (cùng ngân hàng, số, tên thụ hưởng) thì không đẻ dòng mới: giữ
+   * dấu đã đối chiếu (`verified_at`), chỉ cập nhật tên gợi nhớ nếu có gửi. Đổi tên thụ hưởng là một
+   * đích MỚI — ngân hàng đối chiếu tên, nên dấu đối chiếu cũ không còn giá trị.
+   *
+   * ## `isDefault: false` = KHÔNG đồng ý đổi
+   *
+   * Bản app native cũ có ô "thêm tài khoản" với công tắc mặc định TẮT — người dùng đang thêm một
+   * tài khoản PHỤ, không định đổi chỗ tiền về. Lặng lẽ thay tài khoản của họ là chuyển tiền tới nơi
+   * họ không chọn; nên server từ chối (`BANK_ACCOUNT_REPLACE_NOT_CONFIRMED`) và câu lỗi chỉ cách
+   * đổi thật. Web không gửi trường này.
+   *
+   * ## Vì sao khoá tư vấn
+   *
+   * Hai lượt đổi song song cùng thấy "đang có A", cùng lưu trữ A rồi cùng chèn — lượt sau đâm vào
+   * partial unique và người dùng nhận lỗi 500 cho một thao tác hợp lệ. Khoá theo CHỦ tuần tự hoá
+   * chúng: lượt sau chờ, rồi thấy và thay đúng cái lượt trước vừa tạo. Ràng buộc DB vẫn là thứ bảo
+   * đảm "một"; khoá chỉ để lượt đến sau không nổ.
+   *
+   * Thêm/đổi ghi audit trong cùng transaction: đổi chỗ tiền về là thao tác mà kẻ chiếm được tài
+   * khoản sẽ làm đầu tiên, và "ai đổi, lúc nào, từ đâu sang đâu" phải trả lời được.
    */
-  async create(owner: BankAccountOwner, dto: SaveBankAccountDto): Promise<BankAccountDto> {
+  async create(
+    owner: BankAccountOwner,
+    dto: SaveBankAccountDto,
+    actorUserId: string | null = null,
+  ): Promise<BankAccountDto> {
+    const bankCode = dto.bankCode.trim().toUpperCase();
     const accountNumber = normalizeNumber(dto.accountNumber);
-    return this.prisma.$transaction(async (tx) => {
-      const existing = await tx.bankAccount.count({
-        where: { ...ownerWhere(owner), status: BANK_ACCOUNT_STATUS.ACTIVE },
-      });
-      const makeDefault = existing === 0 || dto.isDefault === true;
-      if (makeDefault) await clearDefaultWithinTx(tx, owner);
+    const accountName = dto.accountName.trim();
+    const label = dto.label?.trim() || null;
 
-      try {
-        const row = await tx.bankAccount.create({
-          data: {
-            id: newId(),
-            ownerType: owner.type,
-            ownerUserId: owner.type === WALLET_OWNER_TYPE.USER ? owner.userId : null,
-            ownerTenantId: owner.type === WALLET_OWNER_TYPE.TENANT ? owner.tenantId : null,
-            bankCode: dto.bankCode.trim().toUpperCase(),
-            accountNumber,
-            accountName: dto.accountName.trim(),
-            label: dto.label?.trim() || null,
-            isDefault: makeDefault,
-            changedAt: new Date(),
-          },
+    return this.prisma.$transaction(async (tx) => {
+      await lockOwnerWithinTx(tx, owner);
+
+      const current = await tx.bankAccount.findFirst({
+        where: { ...ownerWhere(owner), status: BANK_ACCOUNT_STATUS.ACTIVE },
+        select: { id: true, bankCode: true, accountNumber: true, accountName: true },
+      });
+
+      if (
+        current &&
+        current.bankCode === bankCode &&
+        current.accountNumber === accountNumber &&
+        current.accountName === accountName
+      ) {
+        const row = await tx.bankAccount.update({
+          where: { id: current.id },
+          // Không gửi tên gợi nhớ thì GIỮ cái cũ — form web không gửi trường để trống.
+          data: dto.label === undefined ? {} : { label },
           select: SELECT,
         });
         return toDto(row);
-      } catch (err) {
-        throw translateUnique(err);
       }
-    });
-  }
 
-  /**
-   * Đặt làm mặc định. Đổi cả hai dòng trong CÙNG transaction: giữa hai câu lệnh có một khoảnh
-   * khắc không tài khoản nào là mặc định, và một lệnh rút rơi đúng vào đó sẽ không tìm ra đích.
-   */
-  async setDefault(owner: BankAccountOwner, id: string): Promise<BankAccountDto> {
-    return this.prisma.$transaction(async (tx) => {
-      const target = await tx.bankAccount.findFirst({
-        where: { id, ...ownerWhere(owner), status: BANK_ACCOUNT_STATUS.ACTIVE },
-        select: { id: true },
-      });
-      if (!target) throw notFound();
+      if (current && dto.isDefault === false) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.BANK_ACCOUNT_REPLACE_NOT_CONFIRMED,
+          message:
+            'Mỗi chủ chỉ có một tài khoản nhận tiền — bật "đặt làm mặc định" để đổi sang tài khoản này',
+        });
+      }
 
-      await clearDefaultWithinTx(tx, owner);
-      const row = await tx.bankAccount.update({
-        where: { id },
-        data: { isDefault: true },
+      if (current) {
+        await tx.bankAccount.update({
+          where: { id: current.id },
+          data: { status: BANK_ACCOUNT_STATUS.ARCHIVED, isDefault: false },
+        });
+      }
+
+      const row = await tx.bankAccount.create({
+        data: {
+          id: newId(),
+          ownerType: owner.type,
+          ownerUserId: owner.type === WALLET_OWNER_TYPE.USER ? owner.userId : null,
+          ownerTenantId: owner.type === WALLET_OWNER_TYPE.TENANT ? owner.tenantId : null,
+          bankCode,
+          accountNumber,
+          accountName,
+          label,
+          isDefault: true,
+          changedAt: new Date(),
+        },
         select: SELECT,
       });
+
+      await this.audit.record(
+        {
+          ...auditScope(owner),
+          actorUserId,
+          action: current ? 'bank_account.replaced' : 'bank_account.added',
+          targetType: 'bank_account',
+          targetId: row.id,
+          // Số tài khoản CHE cả trong audit — sổ này nhiều người đọc hơn đường ghi tiền.
+          before: current ? auditSnapshot(current) : null,
+          after: auditSnapshot(row),
+        },
+        tx,
+      );
       return toDto(row);
     });
   }
 
   /**
-   * Bỏ dùng một tài khoản — LƯU TRỮ, không xoá (ADR 0033): lệnh rút cũ còn trỏ về nó, và xoá là
-   * mất khả năng trả lời "khoản đó đã chuyển vào đâu".
-   *
-   * Bỏ tài khoản mặc định thì tài khoản còn lại gần nhất lên thay, để danh sách không bao giờ ở
-   * trạng thái "có tài khoản nhưng không biết chuyển vào đâu".
+   * TƯƠNG THÍCH NGƯỢC — app native còn nút "Đặt làm mặc định". Từ khi mỗi chủ chỉ có một tài
+   * khoản đang dùng thì nó luôn là mặc định sẵn: endpoint chỉ còn kiểm chủ sở hữu và trả lại nó.
    */
-  async archive(owner: BankAccountOwner, id: string): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      const target = await tx.bankAccount.findFirst({
-        where: { id, ...ownerWhere(owner), status: BANK_ACCOUNT_STATUS.ACTIVE },
-        select: { id: true, isDefault: true },
-      });
-      if (!target) throw notFound();
+  async setDefault(owner: BankAccountOwner, id: string): Promise<BankAccountDto> {
+    const row = await this.prisma.bankAccount.findFirst({
+      where: { id, ...ownerWhere(owner), status: BANK_ACCOUNT_STATUS.ACTIVE },
+      select: SELECT,
+    });
+    if (!row) throw notFound();
+    return toDto(row);
+  }
 
-      await tx.bankAccount.update({
-        where: { id },
+  /**
+   * Bỏ dùng tài khoản — LƯU TRỮ, không xoá (ADR 0033): lệnh rút cũ còn trỏ về nó, và xoá là mất
+   * khả năng trả lời "khoản đó đã chuyển vào đâu". Sau đó chủ này không còn tài khoản nhận tiền
+   * cho tới khi khai cái mới.
+   *
+   * Điều kiện chủ sở hữu nằm trong CHÍNH câu cập nhật: biết id không cho quyền đụng vào nó.
+   */
+  async archive(
+    owner: BankAccountOwner,
+    id: string,
+    actorUserId: string | null = null,
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.bankAccount.updateMany({
+        where: { id, ...ownerWhere(owner), status: BANK_ACCOUNT_STATUS.ACTIVE },
         data: { status: BANK_ACCOUNT_STATUS.ARCHIVED, isDefault: false },
       });
-      if (!target.isDefault) return;
+      if (count === 0) throw notFound();
 
-      const next = await tx.bankAccount.findFirst({
-        where: { ...ownerWhere(owner), status: BANK_ACCOUNT_STATUS.ACTIVE },
-        orderBy: { createdAt: 'desc' },
-        select: { id: true },
-      });
-      if (next) await tx.bankAccount.update({ where: { id: next.id }, data: { isDefault: true } });
+      await this.audit.record(
+        {
+          ...auditScope(owner),
+          actorUserId,
+          action: 'bank_account.archived',
+          targetType: 'bank_account',
+          targetId: id,
+        },
+        tx,
+      );
     });
   }
 
   /**
    * Tài khoản nhận tiền đang dùng của một chủ — dùng khi ghi snapshot vào lệnh hoàn/rút.
+   *
+   * Có `id` thì nó phải CHÍNH LÀ tài khoản đang dùng: một id đã lưu trữ (người dùng vừa đổi tài
+   * khoản ở tab khác) trả `null`, không âm thầm chuyển về đích cũ.
    *
    * Trả SỐ ĐẦY ĐỦ, không che: caller là đường ghi tiền, không phải màn hình.
    */
@@ -163,7 +246,7 @@ export class BankAccountsService {
       where: {
         ...ownerWhere(owner),
         status: BANK_ACCOUNT_STATUS.ACTIVE,
-        ...(id ? { id } : { isDefault: true }),
+        ...(id ? { id } : {}),
       },
       select: { id: true, bankCode: true, accountNumber: true, accountName: true },
     });
@@ -179,14 +262,33 @@ function ownerWhere(owner: BankAccountOwner): Prisma.BankAccountWhereInput {
     : { ownerType: WALLET_OWNER_TYPE.TENANT, ownerTenantId: owner.tenantId };
 }
 
-async function clearDefaultWithinTx(
+/**
+ * Tuần tự hoá mọi lượt ĐỔI tài khoản của một chủ — xem `create`. `hashtext` trả int4, vừa tham số
+ * bigint của `pg_advisory_xact_lock`; tiền tố `bank-account:` giữ không gian khoá (dùng chung toàn
+ * database) không đụng khoá của module khác. Tự nhả khi transaction kết thúc.
+ */
+async function lockOwnerWithinTx(
   tx: Prisma.TransactionClient,
   owner: BankAccountOwner,
 ): Promise<void> {
-  await tx.bankAccount.updateMany({
-    where: { ...ownerWhere(owner), isDefault: true },
-    data: { isDefault: false },
-  });
+  const ownerId = owner.type === WALLET_OWNER_TYPE.USER ? owner.userId : owner.tenantId;
+  const key = `bank-account:${owner.type}:${ownerId}`;
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${key}))`;
+}
+
+/** Phạm vi audit theo chủ: tài khoản của gian hàng ghi vào sổ của tenant đó. */
+function auditScope(owner: BankAccountOwner) {
+  return owner.type === WALLET_OWNER_TYPE.TENANT
+    ? { tenantId: owner.tenantId, actorScope: AUDIT_ACTOR_SCOPE.TENANT }
+    : { tenantId: null, actorScope: AUDIT_ACTOR_SCOPE.CUSTOMER };
+}
+
+function auditSnapshot(row: { bankCode: string; accountNumber: string; accountName: string }) {
+  return {
+    bankCode: row.bankCode,
+    accountNumberMasked: maskAccountNumber(row.accountNumber),
+    accountName: row.accountName,
+  };
 }
 
 function toDto(row: Row): BankAccountDto {
@@ -216,20 +318,4 @@ function notFound(): NotFoundException {
     code: API_ERROR_CODE.NOT_FOUND,
     message: 'Không tìm thấy tài khoản ngân hàng',
   });
-}
-
-/**
- * Vi phạm partial unique số tài khoản → 409 nói đúng chuyện, thay vì một P2002 khó đọc.
- *
- * Chỉ DỊCH lỗi của database, không thay nó bằng một phép kiểm trước: hai request thêm cùng một
- * số tài khoản cùng lúc đều vượt qua phép kiểm đó, và chỉ ràng buộc mới chặn được.
- */
-function translateUnique(err: unknown): unknown {
-  if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-    return new ConflictException({
-      code: API_ERROR_CODE.BANK_ACCOUNT_DUPLICATE,
-      message: 'Tài khoản ngân hàng này đã có trong danh sách',
-    });
-  }
-  return err;
 }

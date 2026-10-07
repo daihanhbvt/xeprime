@@ -15,15 +15,15 @@ import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/
 import styles from './ShopFields.module.css';
 
 /**
- * ĐỊA CHỈ & PHÁP LÝ — nơi xe nằm, cộng hai ô giấy tờ tuỳ chọn.
+ * ĐỊA CHỈ & PHÁP LÝ — nơi xe nằm, cộng số giấy phép kinh doanh (tuỳ chọn).
  *
  * Địa chỉ ở đây là địa chỉ của CHI NHÁNH MẶC ĐỊNH: đổi nó là dời vị trí công khai của mọi xe
  * thuộc chi nhánh đó trên marketplace. Backend chuyển tiếp cho `BranchesService` (writer duy
  * nhất); hai cột tỉnh trên `tenant_profiles` chỉ là bản sao để hiển thị.
  *
- * Mã số thuế và giấy phép kinh doanh KHÔNG bắt buộc và cố ý đứng cuối: màn này là hồ sơ gian
- * hàng, không phải form KYC. Chặn ở đây nghĩa là một chủ xe cá nhân chưa có MST không sửa nổi
- * địa chỉ giao xe của mình.
+ * Giấy phép kinh doanh KHÔNG bắt buộc và cố ý đứng cuối: màn này là hồ sơ gian hàng, không phải
+ * form KYC. MÃ SỐ THUẾ không ở đây (07/10/2026): nó là hồ sơ người bán — section "Thông tin khai
+ * thuế" ngay bên dưới, nguồn duy nhất mà hợp đồng và báo cáo thuế đọc.
  */
 export function ShopLegalFields({
   control,
@@ -41,12 +41,12 @@ export function ShopLegalFields({
 }) {
   const t = useTranslations('Shop');
   const { paths, isManage } = useWorkspace();
-  // Phiên hỗ trợ (ADR 0050 §10): địa chỉ gian hàng — thứ khách cũng thấy — vẫn hiện; MST và số giấy
-  // phép kinh doanh (dù đã che ở server) thì không.
+  // Phiên hỗ trợ (ADR 0050 §10): địa chỉ gian hàng — thứ khách cũng thấy — vẫn hiện; số giấy phép
+  // kinh doanh (dù đã che ở server) thì không.
   const supportHidesLegal = useSupportHides(SUPPORT_HIDDEN_AREA.SHOP_LEGAL);
-  // Chủ xe cá nhân cho thuê xe của chính mình — MST/GPKD là giấy tờ của người bán có pháp nhân,
-  // không có chỗ trên hồ sơ của họ (07/10/2026). Giá trị cũ (nếu có) vẫn nằm trong form và gửi
-  // lại nguyên trạng, nên ẩn ô không xoá dữ liệu.
+  // Chủ xe cá nhân cho thuê xe của chính mình — GPKD là giấy tờ của người bán có pháp nhân, không
+  // có chỗ trên hồ sơ của họ (07/10/2026). Giá trị cũ (nếu có) vẫn nằm trong form và gửi lại
+  // nguyên trạng, nên ẩn ô không xoá dữ liệu.
   const legalHidden = supportHidesLegal || kind === STOREFRONT_KIND.PERSONAL;
 
   return (
@@ -82,12 +82,6 @@ export function ShopLegalFields({
       />
       {legalHidden ? null : (
         <div className={styles.pairRow}>
-          <TextField
-            control={control}
-            name="taxCode"
-            label={t('form.address.taxCode.label')}
-            placeholder={t('form.address.taxCode.placeholder')}
-          />
           <TextField
             control={control}
             name="businessLicenseNo"

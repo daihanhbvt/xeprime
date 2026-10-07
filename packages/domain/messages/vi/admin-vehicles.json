@@ -1,20 +1,30 @@
 {
   "page": {
     "title": "Xe toàn hệ thống",
+    "subtitle": "Mọi xe của gian hàng và chủ xe cá nhân — soát trạng thái trên chợ, ẩn xe vi phạm.",
     "loading": "Đang tải xe toàn hệ thống…"
   },
+  "views": {
+    "ariaLabel": "Góc nhìn danh sách xe",
+    "all": "Tất cả",
+    "visible": "Đang hiển thị",
+    "pending_review": "Chờ duyệt",
+    "platform_hidden": "Nền tảng đã ẩn",
+    "suspended_shop": "Gian hàng bị khoá"
+  },
   "filters": {
+    "all": "Tất cả",
     "searchLabel": "Tìm xe",
-    "searchPlaceholder": "Tìm tên xe / biển số / mã",
+    "searchPlaceholder": "Tên xe, biển số hoặc mã xe",
+    "vehicleType": "Loại xe",
+    "serviceType": "Dịch vụ",
+    "province": "Tỉnh/TP",
     "publicStatus": "Kiểm duyệt",
     "operationStatus": "Vận hành",
-    "vehicleType": "Loại xe"
-  },
-  "quick": {
-    "ariaLabel": "Lối tắt lọc xe",
-    "visible": "Đang hiển thị",
-    "platformHidden": "Nền tảng đã ẩn",
-    "suspendedShop": "Của gian hàng bị khoá"
+    "sort": "Sắp xếp",
+    "tenantChip": "Gian hàng: {name}",
+    "tenantChipUnknown": "Đang lọc theo một gian hàng",
+    "removeTenant": "Bỏ lọc theo gian hàng"
   },
   "table": {
     "label": "Xe toàn hệ thống",
@@ -23,8 +33,9 @@
     "publicStatus": "Kiểm duyệt",
     "marketplace": "Trên chợ",
     "operationStatus": "Vận hành",
-    "weekdayPrice": "Giá ngày thường",
+    "weekdayPrice": "Giá/ngày",
     "createdAt": "Ngày tạo",
+    "updatedAt": "Cập nhật",
     "view": "Xem chi tiết",
     "notListed": "Chưa lên sàn",
     "notListedHint": "Xe chưa từng được duyệt lên Marketplace",
@@ -32,46 +43,109 @@
     "empty": "Chưa có xe nào trong hệ thống",
     "noResults": "Không có xe khớp bộ lọc",
     "clearFilters": "Xoá bộ lọc",
-    "total": "{count} xe"
+    "total": "{count, plural, other {# xe}}"
   },
   "drawer": {
-    "fallbackTitle": "Xe",
-    "loadError": "Không tải được thông tin xe"
+    "title": "Chi tiết xe",
+    "ariaLabel": "Chi tiết xe {name}",
+    "loadError": "Không tải được thông tin xe",
+    "previous": "Xe trước",
+    "next": "Xe sau",
+    "sideLabel": "Trạng thái trên chợ và gian hàng"
+  },
+  "intro": {
+    "hidden": {
+      "title": "Nền tảng đã ẩn xe này",
+      "body": "{name} ẩn lúc {at}. Lý do: {reason}",
+      "bodyNoName": "Ẩn lúc {at}. Lý do: {reason}"
+    },
+    "pending": {
+      "title": "Đang có phiếu chờ duyệt",
+      "body": "Gửi lúc {at}.",
+      "open": "Mở phiếu duyệt"
+    },
+    "returned": {
+      "title": "Phiếu duyệt gần nhất: {status}",
+      "reason": "Lý do gửi chủ xe: {reason}"
+    }
+  },
+  "sections": {
+    "gallery": "Ảnh",
+    "info": "Thông tin xe",
+    "pricing": "Giá",
+    "description": "Mô tả",
+    "activity": "Hoạt động"
   },
   "detail": {
     "code": "Mã xe",
     "plate": "Biển số",
-    "type": "Loại · dịch vụ",
-    "specs": "Thông số",
-    "seats": "{count} chỗ",
-    "tenant": "Gian hàng",
-    "owner": "Chủ shop",
-    "province": "Tỉnh/TP",
-    "operation": "Vận hành",
-    "listing": "Bản ghi trên sàn",
-    "notListed": "Chưa lên sàn",
-    "viewListing": "Xem trang xe",
+    "model": "Hãng · mẫu",
+    "year": "Năm sản xuất",
+    "seats": "Số chỗ",
+    "seatsValue": "{count} chỗ",
+    "transmission": "Hộp số",
+    "fuel": "Nhiên liệu",
+    "color": "Màu",
+    "weekdayPrice": "Ngày thường",
+    "weekendPrice": "Cuối tuần",
+    "hourlyPrice": "Theo giờ",
+    "monthlyPrice": "Theo tháng",
+    "withDriverDailyPrice": "Có tài xế (nội thành)",
+    "discount": "Giảm giá đang chạy",
+    "discountValue": "{percent}%",
+    "delivery": "Giao xe tận nơi",
+    "bookings": "Số đơn thuê",
+    "bookingsLink": "Xem đơn thuê của xe",
+    "reviews": "Số đánh giá",
+    "latestApproval": "Phiếu duyệt gần nhất",
+    "noApproval": "Chưa gửi duyệt lần nào",
+    "openApproval": "Mở phiếu",
+    "created": "Ngày tạo",
+    "updated": "Cập nhật",
+    "audit": "Nhật ký hệ thống",
+    "auditLink": "Xem nhật ký của xe"
+  },
+  "side": {
+    "marketplaceTitle": "Trên chợ",
+    "review": "Kiểm duyệt nền tảng",
     "ownerVisibility": "Chủ xe cho hiển thị",
     "ownerVisibilityOn": "Bật",
     "ownerVisibilityOff": "Tắt",
     "ownerVisibilityHintLabel": "Vì sao nền tảng không đổi được mục này",
     "ownerVisibilityHint": "Đây là lựa chọn của chủ xe. Nền tảng chỉ xem — gỡ ẩn không bật hộ công tắc này.",
+    "shopStatus": "Gian hàng",
     "effective": "Kết quả trên chợ",
     "effectiveVisible": "Đang hiển thị",
     "effectiveHidden": "Đang ẩn",
-    "prices": "Giá thường · cuối tuần · giờ",
-    "bookings": "Số đơn thuê",
-    "reviews": "Số đánh giá",
-    "created": "Ngày tạo",
-    "updated": "Cập nhật"
+    "viewListing": "Xem trang xe",
+    "listing": "Bản ghi trên sàn",
+    "notListed": "Chưa lên sàn",
+    "shopTitle": "Gian hàng chủ quản",
+    "owner": "Chủ shop",
+    "noOwner": "Chưa có",
+    "branch": "Chi nhánh gắn xe",
+    "noBranch": "Chưa gắn chi nhánh",
+    "partnerProfile": "Hồ sơ đối tác",
+    "storefront": "Trang gian hàng",
+    "support": "Mở phiên hỗ trợ",
+    "supportHint": "Sửa hộ thông tin xe trong không gian của gian hàng, có ghi nhật ký."
+  },
+  "footer": {
+    "live": "Khách đang thấy xe này trên chợ.",
+    "notShowing": "Xe đã duyệt nhưng đang ẩn: {reason}.",
+    "platformHidden": "Nền tảng đã ẩn xe này từ {at}.",
+    "platformHiddenUnknown": "Nền tảng đã ẩn xe này.",
+    "unavailable": "Chỉ ẩn được xe đang hiển thị công khai, và chỉ gỡ ẩn được xe do nền tảng ẩn.",
+    "noPermission": "Bạn không có quyền kiểm duyệt xe."
   },
   "moderation": {
-    "noPermission": "Bạn không có quyền kiểm duyệt xe.",
-    "unavailable": "Chỉ ẩn được xe đang hiển thị công khai, và chỉ gỡ ẩn được xe do nền tảng ẩn.",
-    "hide": "Ẩn xe khỏi Marketplace",
+    "hide": "Ẩn xe khỏi chợ",
+    "hideTitle": "Ẩn xe khỏi Marketplace",
     "hideOk": "Ẩn xe",
     "hideNote": "Xe biến mất khỏi Marketplace ngay lập tức. Lý do được lưu vào nhật ký hệ thống nên bắt buộc nhập.",
-    "reasonPlaceholder": "Lý do ẩn xe…",
+    "reasonLabel": "Lý do ẩn",
+    "reasonPlaceholder": "Ví dụ: ảnh không phải xe thật, giá sai lệch, vi phạm điều khoản…",
+    "reasonRequired": "Nhập lý do ẩn xe",
     "hideSuccess": "Đã ẩn xe khỏi Marketplace",
     "unhide": "Gỡ ẩn của nền tảng",
     "unhideOk": "Gỡ ẩn",

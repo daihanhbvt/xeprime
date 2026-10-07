@@ -212,7 +212,6 @@ export async function buildShop(spec: ShopSpec, deps: ShopBuildDeps): Promise<Sh
     provinceName: null as string | null,
     wardCode: defaultBranch.wardCode,
     wardName: null as string | null,
-    taxCode: spec.profile.taxCode,
     businessLicenseNo: spec.profile.businessLicenseNo,
     // KHÔNG còn cột ngân hàng / chủ gian hàng ở đây (16/09/2026): tài khoản nhận tiền đi vào
     // `bank_accounts` (xem `buildBankAccount`), còn chủ gian hàng LÀ `spec.owner` — hàng
@@ -233,6 +232,22 @@ export async function buildShop(spec: ShopSpec, deps: ShopBuildDeps): Promise<Sh
     update: profileFields,
     create: { tenantId, ...profileFields },
   });
+
+  // ── Hồ sơ người bán — nơi duy nhất mang mã số thuế (07/10/2026) ─────────
+  // Upsert theo `tenant_id` (unique): chạy lại seed không đẻ hồ sơ thứ hai, và một bản nháp tạo
+  // lười trước đó (loại mặc định, trống) được ghi đè bằng bộ khai demo.
+  if (spec.seller) {
+    const sellerFields = {
+      entityType: spec.seller.entityType,
+      legalName: spec.seller.legalName,
+      taxId: spec.seller.taxId,
+    };
+    await prisma.sellerProfile.upsert({
+      where: { tenantId },
+      update: sellerFields,
+      create: { id: seedId(`${spec.key}:seller-profile`), tenantId, ...sellerFields },
+    });
+  }
 
   // ── Chi nhánh ───────────────────────────────────────────────────────────
   const branchIds: Array<{ id: string; provinceCode: string }> = [];
@@ -720,6 +735,11 @@ async function buildWallet(spec: ShopSpec, tenantId: string): Promise<void> {
  * `bank.name` trong bản khai là TÊN ngân hàng ("Techcombank"); cột `bank_code` cần mã VietQR,
  * nên tra qua `BANK_CODE_BY_NAME`. Tên không có trong bảng thì rơi về chính nó viết hoa — dữ
  * liệu demo vẫn dựng được, chỉ là QR của nó không quét ra.
+ *
+ * Mỗi chủ MỘT tài khoản đang dùng (07/10/2026, partial unique). Chạy lại seed KHÔNG hồi sinh dòng
+ * seed: người kiểm thử đã đổi tài khoản thì dòng seed đã lưu trữ và một dòng khác đang dùng — đưa
+ * dòng seed về `active` là đâm vào ràng buộc. Nhánh `update` chỉ làm mới thông tin, không đụng
+ * trạng thái.
  */
 async function buildBankAccount(spec: ShopSpec, tenantId: string): Promise<void> {
   if (!spec.profile.bank) return;
@@ -730,8 +750,6 @@ async function buildBankAccount(spec: ShopSpec, tenantId: string): Promise<void>
     accountNumber: accountNo,
     accountName,
     label: name,
-    isDefault: true,
-    status: BANK_ACCOUNT_STATUS.ACTIVE,
   };
   await prisma.bankAccount.upsert({
     where: { id },
@@ -741,6 +759,8 @@ async function buildBankAccount(spec: ShopSpec, tenantId: string): Promise<void>
       ownerType: WALLET_OWNER_TYPE.TENANT,
       ownerTenantId: tenantId,
       ...fields,
+      isDefault: true,
+      status: BANK_ACCOUNT_STATUS.ACTIVE,
     },
   });
 }

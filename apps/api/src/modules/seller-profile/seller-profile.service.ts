@@ -8,6 +8,7 @@ import {
   NOTIFICATION_TYPE,
   SELLER_ENTITY_TYPE,
   SELLER_PROFILE_STATUS,
+  SHOP_ONBOARDING_STATE,
   canEditSellerProfile,
   maskAccountNumber,
   type PaginationMeta,
@@ -74,7 +75,12 @@ export class SellerProfileService {
 
   // ── Phía gian hàng ────────────────────────────────────────────────────────
 
-  /** Hồ sơ của gian hàng — tạo LƯỜI một bản nháp rỗng để màn hình luôn có gì đó để hiện. */
+  /**
+   * Hồ sơ của gian hàng — tạo LƯỜI một bản nháp rỗng để màn hình luôn có gì đó để hiện.
+   *
+   * Loại chủ thể khởi đầu theo TUYẾN ĐĂNG KÝ (`defaultEntityTypeFor`): gian hàng tuyến gói mở
+   * "Thông tin khai thuế" lần đầu phải thấy ngay ô mã số thuế, không phải ô CCCD của một cá nhân.
+   */
   async getOrCreate(tenantId: string): Promise<SellerProfileDto> {
     const existing = await this.prisma.sellerProfile.findUnique({
       where: { tenantId },
@@ -82,8 +88,12 @@ export class SellerProfileService {
     });
     if (existing) return toDto(existing);
 
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { onboardingState: true },
+    });
     const created = await this.prisma.sellerProfile.create({
-      data: { id: newId(), tenantId, entityType: SELLER_ENTITY_TYPE.INDIVIDUAL },
+      data: { id: newId(), tenantId, entityType: defaultEntityTypeFor(tenant?.onboardingState) },
       select: SELECT,
     });
     return toDto(created);
@@ -109,7 +119,7 @@ export class SellerProfileService {
         data: {
           entityType: dto.entityType,
           legalName: dto.legalName?.trim() || null,
-          taxId: dto.taxId?.replace(/\s+/g, '') || null,
+          taxId: normalizeTaxId(dto.taxId),
           idNumber: dto.idNumber?.replace(/\s+/g, '').toUpperCase() || null,
           idIssuedAt: dto.idIssuedAt ? toDateOnly(dto.idIssuedAt) : null,
           idIssuedBy: dto.idIssuedBy?.trim() || null,
@@ -135,6 +145,76 @@ export class SellerProfileService {
     return toDto(row);
   }
 
+  /**
+   * Ghi RIÊNG mã số thuế, trong transaction của nơi gọi — đích của trường `taxCode` cũ trên hồ sơ
+   * gian hàng (`TenantsService.updateProfile`, 07/10/2026). Client cũ (app native) vẫn gửi MST ở
+   * đó; thay vì một cột thứ hai, nó rơi vào đúng hồ sơ này — nguồn duy nhất mà hợp đồng, màn quản
+   * trị và báo cáo thuế đọc.
+   *
+   * Cùng luật với `save`: hồ sơ đang chờ/đã xác minh KHÔNG đổi được (`SELLER_PROFILE_NOT_EDITABLE`)
+   * — trừ khi giá trị không đổi: client cũ gửi lại nguyên trạng mỗi lần lưu hồ sơ gian hàng, và
+   * chặn nó là chặn luôn lần lưu tên/địa chỉ. Chưa có hồ sơ ⇒ tạo bản nháp mang MST đó.
+   *
+   * Quyền `seller_profile.manage` là việc của nơi gọi — hàm này không biết ai đang gọi.
+   */
+  async setTaxIdWithinTx(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    actorUserId: string,
+    rawTaxId: string | null,
+  ): Promise<void> {
+    const taxId = normalizeTaxId(rawTaxId);
+    const current = await tx.sellerProfile.findUnique({
+      where: { tenantId },
+      select: { id: true, status: true, taxId: true },
+    });
+    if ((current?.taxId ?? null) === taxId) return;
+    if (current && !canEditSellerProfile(current.status as SellerProfileStatus)) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.SELLER_PROFILE_NOT_EDITABLE,
+        message: 'Hồ sơ người bán đang chờ hoặc đã xác minh — không đổi được mã số thuế',
+        details: { status: current.status },
+      });
+    }
+
+    let row: { id: string; entityType: string };
+    if (current) {
+      row = await tx.sellerProfile.update({
+        where: { tenantId },
+        data: { taxId },
+        select: { id: true, entityType: true },
+      });
+    } else {
+      const tenant = await tx.tenant.findUnique({
+        where: { id: tenantId },
+        select: { onboardingState: true },
+      });
+      row = await tx.sellerProfile.create({
+        data: {
+          id: newId(),
+          tenantId,
+          entityType: defaultEntityTypeFor(tenant?.onboardingState),
+          taxId,
+        },
+        select: { id: true, entityType: true },
+      });
+    }
+
+    await this.audit.record(
+      {
+        tenantId,
+        actorUserId,
+        actorScope: AUDIT_ACTOR_SCOPE.TENANT,
+        action: 'seller_profile.save',
+        targetType: 'seller_profile',
+        targetId: row.id,
+        // KHÔNG ghi số giấy tờ vào audit — như `save`. `via` nói lần ghi đến từ đường cũ.
+        after: { entityType: row.entityType, via: 'tenant_profile.tax_code' },
+      },
+      tx,
+    );
+  }
+
   /** Gửi xác minh — mở một `approval_task` cho hàng đợi reviewer. */
   async submit(tenantId: string, actorUserId: string): Promise<SellerProfileDto> {
     const current = await this.load(tenantId);
@@ -157,7 +237,11 @@ export class SellerProfileService {
     const row = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.sellerProfile.update({
         where: { tenantId },
-        data: { status: SELLER_PROFILE_STATUS.SUBMITTED, submittedAt: new Date(), reviewNote: null },
+        data: {
+          status: SELLER_PROFILE_STATUS.SUBMITTED,
+          submittedAt: new Date(),
+          reviewNote: null,
+        },
         select: SELECT,
       });
       await this.openApprovalTask(tx, tenantId, updated.id, actorUserId);
@@ -204,7 +288,11 @@ export class SellerProfileService {
         orderBy: { submittedAt: 'asc' },
         skip: paging.skip,
         take: paging.take,
-        select: { ...SELECT, tenant: { select: { name: true } }, verifier: { select: { displayName: true } } },
+        select: {
+          ...SELECT,
+          tenant: { select: { name: true } },
+          verifier: { select: { displayName: true } },
+        },
       }),
     ]);
     return {
@@ -218,7 +306,11 @@ export class SellerProfileService {
   async getForPlatform(id: string): Promise<PlatformSellerProfileDto> {
     const row = await this.prisma.sellerProfile.findUnique({
       where: { id },
-      select: { ...SELECT, tenant: { select: { name: true } }, verifier: { select: { displayName: true } } },
+      select: {
+        ...SELECT,
+        tenant: { select: { name: true } },
+        verifier: { select: { displayName: true } },
+      },
     });
     if (!row) throw notFound();
     return toPlatformDto(row, { mask: false });
@@ -380,6 +472,25 @@ export class SellerProfileService {
     await this.getOrCreate(tenantId);
     return this.prisma.sellerProfile.findUniqueOrThrow({ where: { tenantId }, select: SELECT });
   }
+}
+
+/**
+ * Mã số thuế đã chuẩn hoá: bỏ mọi khoảng trắng, chuỗi rỗng ⇒ `null` (gỡ). MỘT phép cho mọi đường
+ * ghi `seller_profiles.tax_id` — `save` và `setTaxIdWithinTx` — để "không đổi" so được bằng `===`.
+ */
+export function normalizeTaxId(raw: string | null | undefined): string | null {
+  return raw?.replace(/\s+/g, '') || null;
+}
+
+/**
+ * Loại chủ thể của bản NHÁP tạo lười, theo TUYẾN ĐĂNG KÝ (ADR 0040): chủ xe tuyến hoa hồng là cá
+ * nhân; gian hàng đi cửa gói (đã hay đang trả tiền) ít nhất là hộ kinh doanh. Chỉ là giá trị khởi
+ * đầu để form hiện đúng ô (CCCD hay MST) — chủ gian hàng đổi được trước khi gửi xác minh.
+ */
+export function defaultEntityTypeFor(onboardingState: string | null | undefined): SellerEntityType {
+  return !onboardingState || onboardingState === SHOP_ONBOARDING_STATE.COMMISSION
+    ? SELLER_ENTITY_TYPE.INDIVIDUAL
+    : SELLER_ENTITY_TYPE.HOUSEHOLD_BUSINESS;
 }
 
 /**

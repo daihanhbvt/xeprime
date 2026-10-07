@@ -90,6 +90,7 @@
     "CATALOG_MODEL_IN_USE": "Đang có xe gắn mẫu này — hãy tắt mẫu thay vì xoá để xe cũ vẫn giữ liên kết.",
     "CATALOG_MODEL_SPEC_INVALID": "Thông số mẫu xe chưa khớp nhau: kiểm tra lại nguồn năng lượng, hộp số, số chỗ và năm bán.",
     "BANK_ACCOUNT_DUPLICATE": "Tài khoản ngân hàng này đã có trong danh sách của bạn.",
+    "BANK_ACCOUNT_REPLACE_NOT_CONFIRMED": "Bạn chỉ có một tài khoản nhận tiền. Muốn đổi sang tài khoản này, bật “Đặt làm tài khoản nhận tiền mặc định” rồi lưu lại.",
     "INSUFFICIENT_BALANCE": "Số dư khả dụng không đủ.",
     "WITHDRAWAL_BELOW_MINIMUM": "Số tiền rút thấp hơn mức tối thiểu.",
     "WITHDRAWAL_ALREADY_HANDLED": "Yêu cầu rút này đã được xử lý.",

@@ -98,10 +98,12 @@ export class ContractsService {
                 logoUrl: true,
                 address: true,
                 provinceName: true,
-                taxCode: true,
                 businessLicenseNo: true,
               },
             },
+            // MST của bên cho thuê = hồ sơ NGƯỜI BÁN, nguồn duy nhất (07/10/2026) — cùng bản mà
+            // báo cáo thuế đọc, nên hợp đồng và tờ khai không thể ghi hai số khác nhau.
+            sellerProfile: { select: { taxId: true } },
           },
         },
       },
@@ -145,7 +147,7 @@ export class ContractsService {
         email: lessor.email,
         address: profile?.address ?? null,
         province: profile?.provinceName ?? null,
-        taxCode: profile?.taxCode ?? null,
+        taxCode: booking.tenant.sellerProfile?.taxId ?? null,
         businessLicenseNo: profile?.businessLicenseNo ?? null,
         /*
          * GIỮ NGUYÊN ba khoá `bankName`/`bankAccountNo`/`bankAccountName`: snapshot là jsonb

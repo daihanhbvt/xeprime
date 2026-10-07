@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -14,6 +15,7 @@ import {
   MEMBERSHIP_STATUS,
   missingPackageShopRegistrationFields,
   missingShopProfileRequirements,
+  PERMISSION,
   REGISTRATION_TRACK,
   registrationTrackOf,
   resolveShopVerification,
@@ -28,6 +30,7 @@ import type { BranchUpdatePlan } from '../branches/branches.service';
 import { BillingService } from '../billing/billing.service';
 import { BranchesService } from '../branches/branches.service';
 import { AddressService } from '../locations/address.service';
+import { normalizeTaxId, SellerProfileService } from '../seller-profile/seller-profile.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   DefaultBranchDto,
@@ -51,9 +54,15 @@ const PROFILE_SELECT = {
   provinceName: true,
   wardCode: true,
   wardName: true,
-  taxCode: true,
   businessLicenseNo: true,
 } satisfies Prisma.TenantProfileSelect;
+
+/**
+ * Mã số thuế của gian hàng — `seller_profiles.tax_id`, nguồn DUY NHẤT từ 07/10/2026 (cột
+ * `tenant_profiles.tax_code` đã gỡ). `TenantProfileDto.taxCode` vẫn trên dây cho client cũ và đọc
+ * từ đây.
+ */
+const SELLER_TAX_SELECT = { taxId: true } satisfies Prisma.SellerProfileSelect;
 
 /**
  * Tài khoản CHỦ gian hàng — nguồn DUY NHẤT của "chủ gian hàng là ai" (16/09/2026).
@@ -94,6 +103,7 @@ export class TenantsService {
     private readonly address: AddressService,
     private readonly branches: BranchesService,
     private readonly billing: BillingService,
+    private readonly sellerProfiles: SellerProfileService,
   ) {}
 
   /**
@@ -211,83 +221,83 @@ export class TenantsService {
     const id = newId();
     const tenantId = await this.prisma
       .$transaction(async (tx) => {
-      await tx.tenant.create({
-        data: {
-          id,
-          code: `SHOP-${id}`,
-          slug: await this.uniqueSlug(tx, dto.name, id),
-          name: dto.name,
-          tenantType,
-          status: TENANT_STATUS.ACTIVE,
-          // Cửa vào, lưu bền vững — xem docblock của hàm và `shop-onboarding.ts`.
-          onboardingState: shopOnboardingStateForTrack(track),
-          ownerUserId: userId,
-          phone: dto.phone ?? null,
-          email: dto.email ?? null,
-        },
-      });
-      await tx.tenantMembership.create({
-        data: {
-          id: newId(),
+        await tx.tenant.create({
+          data: {
+            id,
+            code: `SHOP-${id}`,
+            slug: await this.uniqueSlug(tx, dto.name, id),
+            name: dto.name,
+            tenantType,
+            status: TENANT_STATUS.ACTIVE,
+            // Cửa vào, lưu bền vững — xem docblock của hàm và `shop-onboarding.ts`.
+            onboardingState: shopOnboardingStateForTrack(track),
+            ownerUserId: userId,
+            phone: dto.phone ?? null,
+            email: dto.email ?? null,
+          },
+        });
+        await tx.tenantMembership.create({
+          data: {
+            id: newId(),
+            tenantId: id,
+            userId,
+            roleKey: TENANT_ROLE.SHOP_OWNER,
+            status: MEMBERSHIP_STATUS.ACTIVE,
+            joinedAt: new Date(),
+          },
+        });
+        // Từ giây này người dùng có thêm một hộp thư công việc — huy hiệu phải biết (ADR 0034).
+        await markBadgesDirty(tx, [userId]);
+        await tx.tenantProfile.create({
+          data: {
+            tenantId: id,
+            // Tên hiển thị KHÔNG ở đây — nó là `tenants.name` vừa ghi ở trên (nguồn duy nhất).
+            // Bốn cột dưới là bản SAO tương thích ngược của chi nhánh mặc định; nguồn sự thật vận
+            // hành là `tenant_branches`. Đồng bộ về sau đi qua `syncProfileFromDefaultBranch`.
+            address: address.displayAddress,
+            provinceCode: address.provinceCode,
+            provinceName: address.provinceName,
+            wardCode: address.wardCode,
+            wardName: address.wardName,
+            /*
+             * KHÔNG còn ba cột chủ gian hàng ở đây (16/09/2026).
+             *
+             * `missingShopProfileRequirements` vẫn đòi họ tên + SĐT chủ mới cho gửi duyệt, nhưng
+             * nó đọc chúng từ `tenants.owner_user_id → users` — tức từ chính tài khoản vừa gọi
+             * endpoint này. Không có bước ghi nào ở đây thì cũng không có bản sao nào trôi khỏi
+             * bản gốc, và một chủ xe đổi SĐT trong hồ sơ cá nhân không còn để lại một số cũ trên
+             * phiếu duyệt.
+             */
+          },
+        });
+        await this.branches.createDefaultBranch(tx, {
           tenantId: id,
           userId,
-          roleKey: TENANT_ROLE.SHOP_OWNER,
-          status: MEMBERSHIP_STATUS.ACTIVE,
-          joinedAt: new Date(),
-        },
-      });
-      // Từ giây này người dùng có thêm một hộp thư công việc — huy hiệu phải biết (ADR 0034).
-      await markBadgesDirty(tx, [userId]);
-      await tx.tenantProfile.create({
-        data: {
-          tenantId: id,
-          // Tên hiển thị KHÔNG ở đây — nó là `tenants.name` vừa ghi ở trên (nguồn duy nhất).
-          // Bốn cột dưới là bản SAO tương thích ngược của chi nhánh mặc định; nguồn sự thật vận
-          // hành là `tenant_branches`. Đồng bộ về sau đi qua `syncProfileFromDefaultBranch`.
-          address: address.displayAddress,
-          provinceCode: address.provinceCode,
-          provinceName: address.provinceName,
-          wardCode: address.wardCode,
-          wardName: address.wardName,
-          /*
-           * KHÔNG còn ba cột chủ gian hàng ở đây (16/09/2026).
-           *
-           * `missingShopProfileRequirements` vẫn đòi họ tên + SĐT chủ mới cho gửi duyệt, nhưng
-           * nó đọc chúng từ `tenants.owner_user_id → users` — tức từ chính tài khoản vừa gọi
-           * endpoint này. Không có bước ghi nào ở đây thì cũng không có bản sao nào trôi khỏi
-           * bản gốc, và một chủ xe đổi SĐT trong hồ sơ cá nhân không còn để lại một số cũ trên
-           * phiếu duyệt.
-           */
-        },
-      });
-      await this.branches.createDefaultBranch(tx, {
-        tenantId: id,
-        userId,
-        address,
-        phone: dto.phone ?? null,
-      });
-      /*
-       * Gói mặc định trong CÙNG transaction (ADR 0015 điều 9) — cùng lý do với chi nhánh và
-       * membership ở trên: một gian hàng nửa vời hỏng theo nhiều kiểu khác nhau.
-       *
-       * Ở đây kiểu hỏng là: từ ADR 0027, cờ năng lực đọc từ gói hiện hành, nên tenant không gói
-       * có tập cờ RỖNG và mất sạch tính năng nâng cao ngày cổng chặn bật. Ghi qua
-       * `BillingService` chứ không tự `tx.tenantSubscription.create` — nó là writer duy nhất của
-       * bảng đó (ADR 0010).
-       *
-       * ⚠️ CHỈ tuyến hoa hồng (ADR 0040). Gán một dòng hoa hồng cho người vừa bấm "Đăng ký gian
-       * hàng" là biến họ thành chủ xe tuyến hoa hồng ở mọi nơi đọc `billingMode` — khu làm việc,
-       * nhãn tài khoản, trần 3 xe của Owner Lite — và đó chính là lỗi ADR 0040 sửa. Họ nhận gói
-       * THẬT ở `activateFromInvoiceWithinTx`, khi tiền đã về.
-       */
-      if (!isPackageTrack) await this.billing.assignDefaultPlanWithinTx(tx, id);
+          address,
+          phone: dto.phone ?? null,
+        });
+        /*
+         * Gói mặc định trong CÙNG transaction (ADR 0015 điều 9) — cùng lý do với chi nhánh và
+         * membership ở trên: một gian hàng nửa vời hỏng theo nhiều kiểu khác nhau.
+         *
+         * Ở đây kiểu hỏng là: từ ADR 0027, cờ năng lực đọc từ gói hiện hành, nên tenant không gói
+         * có tập cờ RỖNG và mất sạch tính năng nâng cao ngày cổng chặn bật. Ghi qua
+         * `BillingService` chứ không tự `tx.tenantSubscription.create` — nó là writer duy nhất của
+         * bảng đó (ADR 0010).
+         *
+         * ⚠️ CHỈ tuyến hoa hồng (ADR 0040). Gán một dòng hoa hồng cho người vừa bấm "Đăng ký gian
+         * hàng" là biến họ thành chủ xe tuyến hoa hồng ở mọi nơi đọc `billingMode` — khu làm việc,
+         * nhãn tài khoản, trần 3 xe của Owner Lite — và đó chính là lỗi ADR 0040 sửa. Họ nhận gói
+         * THẬT ở `activateFromInvoiceWithinTx`, khi tiền đã về.
+         */
+        if (!isPackageTrack) await this.billing.assignDefaultPlanWithinTx(tx, id);
 
-      /*
-       * KHÔNG còn bước "nhận ví cá nhân về tenant" (ADR 0053 điều 8 — bỏ ADR 0038 điều 2). Ví cá
-       * nhân thuộc TÀI KHOẢN KHÁCH, một tài khoản khác hẳn với tài khoản partner đang mở gian hàng
-       * này; tiền hoàn của khách không bao giờ đổi chủ sang ví gian hàng. Ví của tenant được tạo
-       * khi có khoản ghi có đầu tiên, như mọi tenant khác.
-       */
+        /*
+         * KHÔNG còn bước "nhận ví cá nhân về tenant" (ADR 0053 điều 8 — bỏ ADR 0038 điều 2). Ví cá
+         * nhân thuộc TÀI KHOẢN KHÁCH, một tài khoản khác hẳn với tài khoản partner đang mở gian hàng
+         * này; tiền hoàn của khách không bao giờ đổi chủ sang ví gian hàng. Ví của tenant được tạo
+         * khi có khoản ghi có đầu tiên, như mọi tenant khác.
+         */
         return id;
       })
       .catch((error: unknown) => {
@@ -314,6 +324,7 @@ export class TenantsService {
         phone: true,
         email: true,
         profile: { select: PROFILE_SELECT },
+        sellerProfile: { select: SELLER_TAX_SELECT },
         owner: { select: OWNER_SELECT },
       },
     });
@@ -362,7 +373,7 @@ export class TenantsService {
        * gian hàng; chủ xe hoa hồng vừa mua gói thì chưa từng đi qua cửa gian hàng).
        */
       onboardingState: tenant.onboardingState,
-      profile: emptyProfileIfNull(tenant.profile, tenant.name),
+      profile: emptyProfileIfNull(tenant.profile, tenant.name, tenant.sellerProfile?.taxId ?? null),
       /*
        * Chủ gian hàng đọc từ TÀI KHOẢN, không từ hồ sơ (16/09/2026). Đây là lý do khối này là
        * một object riêng chứ không phải ba trường nữa nằm trong `profile`: `profile` là thứ
@@ -412,11 +423,18 @@ export class TenantsService {
    *    trang gian hàng, chat, chuyến, hợp đồng). Tên từng ghi vào bản sao `tenant_profiles.
    *    display_name` mà không màn khách nào đọc, còn SĐT/email liên hệ thì không sửa được sau
    *    đăng ký. Chúng là của GIAN HÀNG, độc lập với SĐT/email đăng nhập của tài khoản chủ.
+   * 4. **Mã số thuế đi vào hồ sơ NGƯỜI BÁN (07/10/2026).** `taxCode` còn trên DTO cho client cũ
+   *    (app native), nhưng cột trên `tenant_profiles` đã gỡ: nó ghi `seller_profiles.tax_id` qua
+   *    `SellerProfileService.setTaxIdWithinTx` — cùng luật khoá khi đang/đã xác minh. Và vì đó là
+   *    hồ sơ người bán, ĐỔI nó cần `seller_profile.manage`, không phải `tenant.update`: một quản lý
+   *    được sửa mặt tiền gian hàng không vì thế mà được sửa bản khai thuế. Gửi lại nguyên giá trị
+   *    cũ (client cũ làm vậy mỗi lần lưu) thì không cần quyền đó — không có gì đổi.
    */
   async updateProfile(
     tenantId: string,
     userId: string,
     dto: UpdateTenantProfileDto,
+    access: { canManageSellerProfile: boolean },
   ): Promise<MyShopDto> {
     const tenant = await this.prisma.tenant.findFirst({
       where: { id: tenantId, deletedAt: null },
@@ -430,8 +448,31 @@ export class TenantsService {
      * sẽ đúng cho tới lần chạm chi nhánh kế tiếp rồi âm thầm bị ghi đè, trong khi xe vẫn hiển
      * thị ở địa chỉ cũ trên marketplace vì `public_listings` không hề biết có thay đổi.
      */
-    const { provinceCode, wardCode, addressLine, address, displayName, phone, email, ...profile } =
-      dto;
+    const {
+      provinceCode,
+      wardCode,
+      addressLine,
+      address,
+      displayName,
+      phone,
+      email,
+      taxCode,
+      ...profile
+    } = dto;
+
+    if (taxCode !== undefined && !access.canManageSellerProfile) {
+      const seller = await this.prisma.sellerProfile.findUnique({
+        where: { tenantId },
+        select: SELLER_TAX_SELECT,
+      });
+      if ((seller?.taxId ?? null) !== normalizeTaxId(taxCode)) {
+        throw new ForbiddenException({
+          code: API_ERROR_CODE.MISSING_PERMISSION,
+          message: 'Không đủ quyền sửa mã số thuế của gian hàng',
+          details: { missing: [PERMISSION.SELLER_PROFILE_MANAGE] },
+        });
+      }
+    }
 
     // Ô trống ở SĐT/email liên hệ nghĩa là GỠ (→ NULL). Tên thì không gỡ được: DTO đòi 2–255 ký
     // tự, vì `tenants.name` NOT NULL và là thứ khách nhìn thấy đầu tiên.
@@ -468,6 +509,10 @@ export class TenantsService {
         create: { tenantId, ...data },
         update: data,
       });
+      // Cùng transaction: MST bị từ chối (hồ sơ người bán đang khoá) thì cả lần lưu lùi lại.
+      if (taxCode !== undefined) {
+        await this.sellerProfiles.setTaxIdWithinTx(tx, tenantId, userId, taxCode);
+      }
     });
     return this.getMyShop(tenantId);
   }
@@ -527,6 +572,7 @@ export class TenantsService {
         name: true,
         status: true,
         profile: { select: PROFILE_SELECT },
+        sellerProfile: { select: SELLER_TAX_SELECT },
         owner: { select: OWNER_SELECT },
         // Tỉnh HIỆU LỰC nằm ở chi nhánh mặc định; hai cột trên hồ sơ chỉ là bản sao
         // (`syncProfileFromDefaultBranch`), nên chấm theo bản sao là chấm nhầm nguồn.
@@ -620,6 +666,8 @@ export class TenantsService {
             ...(tenant.profile ?? {}),
             // Khoá `displayName` giữ nguyên trong snapshot như phiếu cũ — chỉ đổi nguồn đọc.
             displayName: tenant.name,
+            // Cùng lý do với khoá `taxCode` (07/10/2026): nguồn nay là hồ sơ người bán.
+            taxCode: tenant.sellerProfile?.taxId ?? null,
             ownerFullName: tenant.owner.displayName,
             ownerPhone: tenant.owner.phone,
             ownerEmail: tenant.owner.email,
@@ -706,10 +754,13 @@ function normalizeProfileWrite<T extends Record<string, string | undefined>>(
 /**
  * `displayName` của DTO là `tenants.name` — giữ trên dây để client cũ (web, app native) đọc
  * `profile.displayName` không vỡ, nhưng không còn cột nào trên `tenant_profiles` mang nó.
+ *
+ * `taxCode` cùng một kiểu (07/10/2026): là `seller_profiles.tax_id`, nguồn duy nhất của MST.
  */
 function emptyProfileIfNull(
   profile: Prisma.TenantProfileGetPayload<{ select: typeof PROFILE_SELECT }> | null,
   tenantName: string,
+  sellerTaxId: string | null,
 ): TenantProfileDto {
   return {
     displayName: tenantName,
@@ -721,7 +772,7 @@ function emptyProfileIfNull(
     provinceName: profile?.provinceName ?? null,
     wardCode: profile?.wardCode ?? null,
     wardName: profile?.wardName ?? null,
-    taxCode: profile?.taxCode ?? null,
+    taxCode: sellerTaxId,
     businessLicenseNo: profile?.businessLicenseNo ?? null,
   };
 }

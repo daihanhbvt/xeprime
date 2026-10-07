@@ -25,12 +25,14 @@ import {
   shopPath,
   type AccountSection,
 } from '@/constants/routes';
+import { SellerTaxSection } from '@/features/seller-profile/components/SellerTaxSection';
 import { ShopLegalFields } from '@/features/shop/components/ShopLegalFields';
 import { ShopProfileChecklist } from '@/features/shop/components/ShopProfileChecklist';
 import { ShopStatusBanner } from '@/features/shop/components/ShopStatusBanner';
 import { useMyShop, useUpdateShopProfile } from '@/features/shop/hooks/use-shop';
 import { toShopProfileBody, useShopProfileForm } from '@/features/shop/shop-profile-form';
 import type { MyShop } from '@/features/shop/types';
+import { SubscriptionWorkspace } from '@/features/subscription/components/SubscriptionWorkspace';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useScrollToSection } from '@/hooks/use-scroll-to-section';
@@ -59,13 +61,21 @@ const ADDRESS_FORM_ID = 'owner-address-form';
  * mặt tiền công khai của họ là hồ sơ một con người (`STOREFRONT_KIND.PERSONAL`), ảnh của nó là ảnh
  * đại diện của họ (`storefrontAvatar`). Hai trang buộc họ đoán sửa tên ở đâu, ảnh ở đâu.
  *
- * Nay: một trang, năm section, theo thứ tự người ta cần chúng:
+ * Nay: một trang, bảy section, theo thứ tự người ta cần chúng:
  *
  *   1. Thông tin chủ xe       — ảnh (bắt buộc), họ tên, lời giới thiệu: TOÀN BỘ thứ khách thấy về
  *                                họ, một nút lưu (`OwnerInfoForm`).
  *   2. Địa chỉ nhận xe        — chi nhánh mặc định (`tenants`). Không có ô MST/GPKD: đó là giấy
  *                                tờ của người bán có pháp nhân, không phải của chủ xe cá nhân.
- *   3–5. Đăng nhập · Mật khẩu · Xoá tài khoản (`AccountSecuritySections`, chung với tuyến gói).
+ *   3. Thông tin khai thuế    — loại chủ thể, tên pháp lý, CCCD/MST (`SellerTaxSection`; trước
+ *                                07/10/2026 là trang `/tax`).
+ *   4. Gói dịch vụ            — gói đang dùng + phễu nâng cấp lên gian hàng (`SubscriptionWorkspace`;
+ *                                trước là trang `/subscription`).
+ *   5–7. Đăng nhập · Mật khẩu · Xoá tài khoản (`AccountSecuritySections`, chung với tuyến gói).
+ *
+ * Cùng VAI với trang Cửa hàng của tuyến gói — danh tính trên chợ · địa chỉ & pháp lý · gói — để
+ * người nâng gói (hay hết gói) tìm thấy cùng thứ ở cùng chỗ. Tiền (số dư, tài khoản nhận tiền, thuế
+ * đã khấu trừ) KHÔNG ở đây: nó ở "Số dư & rút tiền", cũng như ở tuyến gói.
  *
  * ## MỘT danh tính — tên, SĐT, email, ảnh là của TÀI KHOẢN (ADR 0054)
  *
@@ -151,8 +161,9 @@ export function OwnerProfilePage() {
 }
 
 /**
- * Sáu section — chỉ dựng khi đã có CẢ hồ sơ lẫn gian hàng, để `useScrollToSection` tìm thấy đích
- * ngay lần vẽ đầu (link `?section=address` từ thông báo phải rơi đúng chỗ, không phải đầu trang).
+ * Các section — chỉ dựng khi đã có CẢ hồ sơ lẫn gian hàng, để `useScrollToSection` tìm thấy đích
+ * ngay lần vẽ đầu (link `?section=address` từ thông báo, hay `/tax` · `/subscription` cũ chuyển
+ * tới `?section=tax` · `?section=plan`, phải rơi đúng chỗ, không phải đầu trang).
  */
 function OwnerProfileSections({
   profile,
@@ -171,11 +182,23 @@ function OwnerProfileSections({
 }) {
   const t = useTranslations('Account.ownerHub');
   const tHub = useTranslations('Account.hub');
+  const tTax = useTranslations('Account.tax');
   const tCommon = useTranslations('Common');
   const { message } = App.useApp();
   const errorMessage = useErrorMessage();
   const { data: user } = useCurrentUser();
+  const { has } = usePermissions();
   const updateShop = useUpdateShopProfile();
+
+  /*
+   * Hai section mới đi theo đúng quyền mà API của chúng gác — thiếu quyền thì vắng khỏi cả trang lẫn
+   * mục lục, không thành một khối "không có quyền" giữa một trang hồ sơ:
+   *  - khai thuế → `seller_profile.view` (`GET /seller-profile`);
+   *  - gói → `subscription.view`; mua/nâng cấp cần `subscription.purchase` và `SubscriptionWorkspace`
+   *    tự giấu lối đó khi thiếu — y như section "Gói & hạn mức" của trang Cửa hàng.
+   */
+  const canSeeTax = has(PERMISSION.SELLER_PROFILE_VIEW);
+  const canSeePlan = has(PERMISSION.SUBSCRIPTION_VIEW);
 
   const { control, handleSubmit, reset, formState } = useShopProfileForm(shop);
   const readOnly = !canEdit;
@@ -203,12 +226,21 @@ function OwnerProfileSections({
   const items: SectionNavItem<AccountSection>[] = [
     { key: ACCOUNT_SECTION.PROFILE, label: t('sections.profile') },
     { key: ACCOUNT_SECTION.ADDRESS, label: t('sections.address') },
+    ...(canSeeTax ? [{ key: ACCOUNT_SECTION.TAX, label: tTax('title') }] : []),
+    ...(canSeePlan ? [{ key: ACCOUNT_SECTION.PLAN, label: t('sections.plan') }] : []),
     { key: ACCOUNT_SECTION.LOGIN, label: tHub('sections.login') },
     { key: ACCOUNT_SECTION.PASSWORD, label: tHub('sections.password') },
     { key: ACCOUNT_SECTION.DELETE, label: tHub('sections.delete') },
   ];
+  /*
+   * `?section=tax|plan` mà người xem không có quyền (section đó không dựng) thì rơi về đầu trang, như
+   * mọi giá trị lạ — không để mục lục sáng một mục không tồn tại và lệnh cuộn nhắm vào hư không.
+   */
+  const activeSection = items.some((item) => item.key === section)
+    ? section
+    : ACCOUNT_SECTION.PROFILE;
 
-  useScrollToSection(accountSectionDomId(section), sectionInUrl);
+  useScrollToSection(accountSectionDomId(activeSection), sectionInUrl && activeSection === section);
 
   const status = shop.status as TenantStatus;
   /*
@@ -265,7 +297,7 @@ function OwnerProfileSections({
       <div className={styles.layout}>
         <SectionNav
           items={items}
-          active={section}
+          active={activeSection}
           onSelect={onSectionChange}
           domIdOf={accountSectionDomId}
           title={t('navTitle')}
@@ -334,6 +366,23 @@ function OwnerProfileSections({
                 />
               ) : null}
             </form>
+
+            {/*
+              Mỗi khối dưới đây có <form> RIÊNG (hoặc không có form nào) — không khối nào lồng vào
+              form địa chỉ ở trên.
+            */}
+            {canSeeTax ? <SellerTaxSection id={accountSectionDomId(ACCOUNT_SECTION.TAX)} /> : null}
+
+            {canSeePlan ? (
+              <SectionCard
+                id={accountSectionDomId(ACCOUNT_SECTION.PLAN)}
+                title={t('sections.plan')}
+                hint={t('sections.planHint')}
+              >
+                {/* Nhúng trong `SectionCard` — tiêu đề là của section, nên không có header thứ hai. */}
+                <SubscriptionWorkspace />
+              </SectionCard>
+            ) : null}
 
             <AccountSecuritySections profile={profile} />
           </div>
