@@ -128,6 +128,7 @@
     "completed": "Completed",
     "cancelled": "Trip cancelled",
     "rejected": "Declined",
+    "expired": "No response in time",
     "no_show": "Not picked up",
     "pending_approval_paid": "Paid · awaiting host confirmation",
     "slot_taken": "Another customer got this car"

@@ -224,9 +224,9 @@ async function main(): Promise<void> {
       async () => {
         const result = await sweepBookingRequestDeadlines(prisma);
         // Chỉ log khi THẬT SỰ có việc: một dòng "0/0/0" mỗi phút sẽ chôn mọi dòng đáng đọc khác.
-        if (result.firstReminders || result.finalReminders || result.expired || result.expiredPaid) {
+        if (result.firstReminders || result.finalReminders || result.expired) {
           console.log(
-            `yêu cầu thuê: nhắc ${result.firstReminders} + ${result.finalReminders}, quá hạn ${result.expired}, quá hạn sau khi đã cọc ${result.expiredPaid}`,
+            `yêu cầu thuê: nhắc ${result.firstReminders} + ${result.finalReminders}, quá hạn ${result.expired}`,
           );
         }
       },

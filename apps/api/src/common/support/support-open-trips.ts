@@ -10,12 +10,10 @@ import {
 /** Đơn chưa kết thúc — suy từ bảng chuyển trạng thái, không liệt kê tay. */
 const OPEN_BOOKING_STATUSES = BOOKING_STATUS_VALUES.filter((status) => !isBookingFinal(status));
 
-/** Yêu cầu còn đang chờ một quyết định/khoản tiền (kể cả chặng legacy `approved_by_host`). */
+/** Yêu cầu còn đang chờ một quyết định (gian hàng) hoặc một khoản tiền (khách). */
 const OPEN_REQUEST_STATUSES: readonly string[] = [
   BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
-  BOOKING_REQUEST_STATUS.APPROVED_BY_HOST,
   BOOKING_REQUEST_STATUS.AWAITING_HOLD,
-  BOOKING_REQUEST_STATUS.HOLD_PAID,
 ];
 
 /**

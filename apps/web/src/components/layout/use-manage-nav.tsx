@@ -110,6 +110,7 @@ export function useManageNav(options: UseManageNavOptions = {}): ManageNav {
   const canSeeLeaf = (leaf: NavLeaf): boolean =>
     isNavPermissionGranted(leaf.permission, has) &&
     (leaf.ownerOnly !== true || isShopOwner) &&
+    (leaf.memberOnly !== true || !isShopOwner) &&
     (leaf.feature === undefined ||
       isFeatureVisible(featureStates[leaf.feature] ?? FEATURE_STATE.ENABLED));
 

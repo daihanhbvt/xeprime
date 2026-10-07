@@ -5,7 +5,15 @@ import {
   PERMISSION,
   SUPPORT_CAPABILITY,
 } from '@xeprime/types';
-import { CurrentTenant, CurrentUser, Realms, RequirePermissions, SupportAction, TenantScoped } from '../../common/decorators';
+import {
+  CurrentTenant,
+  CurrentUser,
+  Realms,
+  RequirePermissions,
+  SubscriptionTrackOnly,
+  SupportAction,
+  TenantScoped,
+} from '../../common/decorators';
 import { OkResultDto } from '../../common/dto/api-response.dto';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { CustomersService } from './customers.service';
@@ -37,6 +45,14 @@ import {
 @ApiTags('customers')
 @Controller('customers')
 @TenantScoped()
+/*
+ * SỔ KHÁCH là năng lực của gói (ADR 0027 điều 1) — menu Owner Lite không bày nó ra, và từ
+ * 07/10/2026 server cũng chặn thật. Không chặn thì đây là đường vòng lộ SĐT/email khách cho chủ xe
+ * tuyến hoa hồng TRƯỚC khi có đơn: hồ sơ khách được tạo ngay lúc khách GỬI yêu cầu, trong khi hộp
+ * thư và trang chuyến đã giấu liên hệ đó (`hostSeesCustomerContact`). Giấy tờ khách dùng lúc bàn
+ * giao sống ở controller riêng (`customers/:id/documents`) và không bị cổng này đụng tới.
+ */
+@SubscriptionTrackOnly()
 @Realms(ACCOUNT_REALM.PARTNER)
 export class CustomersController {
   constructor(private readonly customers: CustomersService) {}

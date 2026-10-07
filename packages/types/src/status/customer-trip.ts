@@ -15,7 +15,7 @@
 import { BOOKING_STATUS, BOOKING_STATUS_VALUES, type BookingStatus } from './booking';
 import {
   BOOKING_REQUEST_STATUS,
-  BOOKING_REQUEST_STATUS_VALUES,
+  BOOKING_REQUEST_STATUS_LIVE_VALUES,
   type BookingRequestStatus,
 } from './booking-request';
 import { STATUS_COLOR, type StatusMeta } from './meta';
@@ -57,11 +57,11 @@ export const CUSTOMER_TRIP_STAGE = {
    */
   AWAITING_HOLD: 'awaiting_hold',
   /**
-   * **LEGACY (ADR 0039)** — khách đã trả tiền TRƯỚC khi có ai duyệt, đang chờ chủ xe xác nhận.
+   * **@deprecated — ĐÃ GỠ (ADR 0055).** Phép chiếu của `hold_paid` (luồng thu-trước-duyệt
+   * ADR 0039) — trạng thái DB không còn nhận. Không bao giờ được trả ra nữa, và nằm ngoài
+   * `CUSTOMER_TRIP_STAGE_LIVE_VALUES`.
    *
-   * Luồng hiện hành không dẫn tới chặng này nữa (tiền chỉ thu sau khi chuyến đã được nhận, nên
-   * "đã trả đủ" đồng nghĩa với "có đơn"). Giữ lại để những chuyến sinh trong thời gian ADR 0039
-   * còn hiệu lực đọc đúng tình trạng của chúng: XePrime đang giữ tiền và chủ xe còn phải quyết.
+   * Chỉ còn ở đây để `apps/mobile` biên dịch được — xoá hẳn là việc của đội mobile.
    */
   PENDING_APPROVAL_PAID: 'pending_approval_paid',
   /** Chủ xe đã nhận, chưa tới giờ giao xe. */
@@ -72,8 +72,17 @@ export const CUSTOMER_TRIP_STAGE = {
   COMPLETED: 'completed',
   /** Khách/chủ xe huỷ trước khi chuyến bắt đầu. */
   CANCELLED: 'cancelled',
-  /** Chủ xe từ chối yêu cầu, hoặc yêu cầu quá hạn phản hồi. */
+  /** Chủ xe TRẢ LỜI "không" — một quyết định có người đứng tên. */
   REJECTED: 'rejected',
+  /**
+   * Hết hạn phản hồi mà chủ xe KHÔNG trả lời — yêu cầu tự đóng (worker, `expired`).
+   *
+   * Tách khỏi `REJECTED` (07/10/2026): gộp hai kết cục là nói sai với CẢ HAI phía. Chủ xe nhìn
+   * danh sách thấy "Bị từ chối" cho yêu cầu mình chưa từng mở, và khách tưởng mình bị chọn lọc
+   * trong khi chỉ là không ai kịp trả lời. Chỉ số uy tín cũng đã tách hai thứ này từ trước
+   * (`decided_at`, ADR 0045 điều 3) — nhãn giờ nói đúng như con số.
+   */
+  EXPIRED: 'expired',
   /**
    * Khung giờ đã thuộc về một khách khác — ADR 0044 điều 6.
    *
@@ -90,6 +99,15 @@ export const CUSTOMER_TRIP_STAGE = {
 export type CustomerTripStage = (typeof CUSTOMER_TRIP_STAGE)[keyof typeof CUSTOMER_TRIP_STAGE];
 
 export const CUSTOMER_TRIP_STAGE_VALUES = Object.values(CUSTOMER_TRIP_STAGE) as CustomerTripStage[];
+
+/**
+ * Chặng THẬT một chuyến có thể ở — mọi chỗ liệt kê ra ngoài (enum OpenAPI, ô lọc chặng, tab)
+ * dùng danh sách này. `CUSTOMER_TRIP_STAGE_VALUES` còn mang `pending_approval_paid` đã gỡ
+ * (ADR 0055) chỉ để mobile biên dịch được.
+ */
+export const CUSTOMER_TRIP_STAGE_LIVE_VALUES = CUSTOMER_TRIP_STAGE_VALUES.filter(
+  (stage) => stage !== CUSTOMER_TRIP_STAGE.PENDING_APPROVAL_PAID,
+);
 
 export const CUSTOMER_TRIP_STAGE_META: Readonly<Record<CustomerTripStage, StatusMeta>> = {
   [CUSTOMER_TRIP_STAGE.PENDING_APPROVAL]: {
@@ -112,6 +130,7 @@ export const CUSTOMER_TRIP_STAGE_META: Readonly<Record<CustomerTripStage, Status
     color: STATUS_COLOR.NEUTRAL,
   },
   [CUSTOMER_TRIP_STAGE.REJECTED]: { label: 'Bị từ chối', color: STATUS_COLOR.DANGER },
+  [CUSTOMER_TRIP_STAGE.EXPIRED]: { label: 'Quá hạn phản hồi', color: STATUS_COLOR.NEUTRAL },
   [CUSTOMER_TRIP_STAGE.SLOT_TAKEN]: {
     label: 'Xe đã có khách khác',
     color: STATUS_COLOR.NEUTRAL,
@@ -150,8 +169,15 @@ export function customerTripStage(input: {
       return CUSTOMER_TRIP_STAGE.PENDING_APPROVAL;
     case BOOKING_REQUEST_STATUS.AWAITING_HOLD:
       return CUSTOMER_TRIP_STAGE.AWAITING_HOLD;
+    /*
+     * Hai giá trị đã gỡ (ADR 0055) — DB từ chối chúng (CHECK `booking_requests_status_valid`),
+     * nên hai nhánh dưới không bao giờ chạy. Có mặt chỉ vì enum còn giữ chúng cho mobile và
+     * `switch` phải vét cạn.
+     */
     case BOOKING_REQUEST_STATUS.HOLD_PAID:
       return CUSTOMER_TRIP_STAGE.PENDING_APPROVAL_PAID;
+    case BOOKING_REQUEST_STATUS.APPROVED_BY_HOST:
+      return CUSTOMER_TRIP_STAGE.READY;
     // `hold_expired` xếp cùng `cancelled_by_customer` chứ không phải `REJECTED`: hết hạn chuyển
     // giữ chỗ là chuyến KHÔNG THÀNH, không ai từ chối khách cả — chỗ chỉ được nhả ra. Xếp vào
     // `REJECTED` là đổ lỗi cho chủ xe về một việc họ không dính vào.
@@ -159,8 +185,9 @@ export function customerTripStage(input: {
     case BOOKING_REQUEST_STATUS.HOLD_EXPIRED:
       return CUSTOMER_TRIP_STAGE.CANCELLED;
     case BOOKING_REQUEST_STATUS.REJECTED_BY_HOST:
-    case BOOKING_REQUEST_STATUS.EXPIRED:
       return CUSTOMER_TRIP_STAGE.REJECTED;
+    case BOOKING_REQUEST_STATUS.EXPIRED:
+      return CUSTOMER_TRIP_STAGE.EXPIRED;
     case BOOKING_REQUEST_STATUS.SLOT_TAKEN:
       return CUSTOMER_TRIP_STAGE.SLOT_TAKEN;
     /*
@@ -171,9 +198,8 @@ export function customerTripStage(input: {
      */
     case BOOKING_REQUEST_STATUS.CANCELLED_BY_HOST:
       return CUSTOMER_TRIP_STAGE.CANCELLED;
-    // Đã duyệt/đã chuyển đơn mà chưa thấy đơn: dữ liệu cũ hoặc đơn bị xoá mềm. Coi như sắp tới
-    // thay vì ném lỗi — khách không có gì để làm với một sự cố dữ liệu nội bộ.
-    case BOOKING_REQUEST_STATUS.APPROVED_BY_HOST:
+    // Đã chuyển đơn mà chưa thấy đơn: đơn bị xoá mềm. Coi như sắp tới thay vì ném lỗi — khách
+    // không có gì để làm với một sự cố dữ liệu nội bộ.
     case BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING:
       return CUSTOMER_TRIP_STAGE.READY;
   }
@@ -213,6 +239,7 @@ export function isCustomerTripClosed(stage: CustomerTripStage): boolean {
     stage === CUSTOMER_TRIP_STAGE.COMPLETED ||
     stage === CUSTOMER_TRIP_STAGE.CANCELLED ||
     stage === CUSTOMER_TRIP_STAGE.REJECTED ||
+    stage === CUSTOMER_TRIP_STAGE.EXPIRED ||
     stage === CUSTOMER_TRIP_STAGE.SLOT_TAKEN ||
     stage === CUSTOMER_TRIP_STAGE.NO_SHOW
   );
@@ -236,7 +263,7 @@ export function isCustomerTripClosed(stage: CustomerTripStage): boolean {
 export const CUSTOMER_TRIP_FILTER = {
   /** Chuyến còn đang chạy: chờ duyệt · chờ chuyển giữ chỗ · sắp tới · đang thuê. */
   CURRENT: 'current',
-  /** Chuyến đã khép: hoàn thành · huỷ · bị từ chối · không nhận xe. */
+  /** Chuyến đã khép: hoàn thành · huỷ · bị từ chối · quá hạn phản hồi · không nhận xe. */
   HISTORY: 'history',
 } as const;
 
@@ -266,10 +293,10 @@ export const CUSTOMER_TRIP_FILTER_LABEL: Readonly<Record<CustomerTripFilter, str
 export const CUSTOMER_TRIP_FILTER_STAGES: Readonly<
   Record<CustomerTripFilter, readonly CustomerTripStage[]>
 > = {
-  [CUSTOMER_TRIP_FILTER.CURRENT]: CUSTOMER_TRIP_STAGE_VALUES.filter(
+  [CUSTOMER_TRIP_FILTER.CURRENT]: CUSTOMER_TRIP_STAGE_LIVE_VALUES.filter(
     (stage) => !isCustomerTripClosed(stage),
   ),
-  [CUSTOMER_TRIP_FILTER.HISTORY]: CUSTOMER_TRIP_STAGE_VALUES.filter(isCustomerTripClosed),
+  [CUSTOMER_TRIP_FILTER.HISTORY]: CUSTOMER_TRIP_STAGE_LIVE_VALUES.filter(isCustomerTripClosed),
 };
 
 export function isCustomerTripFilter(value: unknown): value is CustomerTripFilter {
@@ -297,11 +324,6 @@ export const CUSTOMER_CANCELLABLE_STAGES: readonly CustomerTripStage[] = [
    * đã chuyển dở (hold `underpaid`) đi theo đường hoàn thường.
    */
   CUSTOMER_TRIP_STAGE.AWAITING_HOLD,
-  /*
-   * LEGACY ADR 0039 — đã trả đủ, đang chờ gian hàng nhận. Huỷ được, và số tiền quay về theo
-   * đúng mốc `free_cancel_until` đã đóng băng trên hold; không có luật riêng cho chặng này.
-   */
-  CUSTOMER_TRIP_STAGE.PENDING_APPROVAL_PAID,
   CUSTOMER_TRIP_STAGE.READY,
 ];
 
@@ -316,15 +338,13 @@ export function canCustomerCancelTrip(stage: CustomerTripStage): boolean {
  * `respondBy` KHÔNG bị xoá khi chủ xe nhận chuyến, nên chính họ nhìn thấy nút "Duyệt" cho một
  * chuyến mình vừa duyệt. Chặng thì nói đúng bóng đang ở chân ai.
  *
- * Ba chặng, nhưng KHÔNG cùng một bộ nút — `canHostCancelTrip` phân biệt tiếp:
+ * Hai chặng, nhưng KHÔNG cùng một bộ nút — `canHostCancelTrip` phân biệt tiếp:
  *
- *   · `pending_approval` và `pending_approval_paid` (LEGACY ADR 0039) — chủ xe còn phải quyết:
- *     **Duyệt** hoặc **Từ chối**;
+ *   · `pending_approval` — chủ xe còn phải quyết: **Duyệt** hoặc **Từ chối**;
  *   · `awaiting_hold` — đã nhận, đang chờ khách trả tiền. Lối duy nhất còn lại là **Huỷ**.
  */
 export const HOST_DECIDABLE_STAGES: readonly CustomerTripStage[] = [
   CUSTOMER_TRIP_STAGE.PENDING_APPROVAL,
-  CUSTOMER_TRIP_STAGE.PENDING_APPROVAL_PAID,
   CUSTOMER_TRIP_STAGE.AWAITING_HOLD,
 ];
 
@@ -374,7 +394,7 @@ export function customerTripStatusesFor(
         }),
       ),
     ),
-    requestStatuses: BOOKING_REQUEST_STATUS_VALUES.filter((status) =>
+    requestStatuses: BOOKING_REQUEST_STATUS_LIVE_VALUES.filter((status) =>
       stages.includes(customerTripStage({ requestStatus: status, bookingStatus: null })),
     ),
   };
@@ -382,5 +402,5 @@ export function customerTripStatusesFor(
 
 /** Trạng thái của chuyến CHƯA KHÉP — tab "đang diễn ra". */
 export const OPEN_CUSTOMER_TRIP_STATUSES: CustomerTripStatusSets = customerTripStatusesFor(
-  CUSTOMER_TRIP_STAGE_VALUES.filter((stage) => !isCustomerTripClosed(stage)),
+  CUSTOMER_TRIP_STAGE_LIVE_VALUES.filter((stage) => !isCustomerTripClosed(stage)),
 );

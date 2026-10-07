@@ -404,9 +404,9 @@ describe('Đủ điều kiện — hệ thống nhận ngay lúc khách gửi', 
         }),
       ).toBe(0);
 
-      // Audit ghi hệ thống là người ký, không mượn tên chủ xe.
+      // Audit lượt tiền về ghi hệ thống là người ký, không mượn tên chủ xe.
       const log = await prisma.auditLog.findFirst({
-        where: { tenantId, action: 'booking_request.accept_paid' },
+        where: { tenantId, action: 'booking_hold.paid' },
       });
       expect(log?.actorScope).toBe(AUDIT_ACTOR_SCOPE.SYSTEM);
       expect(log?.actorUserId).toBeNull();

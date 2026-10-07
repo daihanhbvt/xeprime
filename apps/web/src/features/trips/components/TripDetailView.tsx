@@ -636,6 +636,17 @@ function TerminalNotice({ trip, stage }: { trip: CustomerTripDetail; stage: Cust
     );
   }
 
+  /*
+   * Hết hạn phản hồi — KHÔNG phải bị từ chối: không ai nói "không" với khách, chỉ là không ai kịp
+   * trả lời. Lối đi tiếp giống nhau (chọn xe khác), nhưng câu "chủ xe không thể tiếp nhận" ở đây
+   * sẽ là một lời nói dối.
+   */
+  if (stage === CUSTOMER_TRIP_STAGE.EXPIRED) {
+    return (
+      <Alert type="info" showIcon title={t('expiredTitle')} description={t('expiredBody')} />
+    );
+  }
+
   if (stage === CUSTOMER_TRIP_STAGE.CANCELLED) {
     return (
       <Alert type="info" showIcon title={t('cancelledTitle')} description={t('cancelledBody')} />
@@ -672,6 +683,7 @@ function TerminalNotice({ trip, stage }: { trip: CustomerTripDetail; stage: Cust
 const SUBTITLE_KEY = {
   [CUSTOMER_TRIP_STAGE.PENDING_APPROVAL]: 'subtitle.pending_approval',
   [CUSTOMER_TRIP_STAGE.AWAITING_HOLD]: 'subtitle.awaiting_hold',
+  // Chặng đã gỡ (ADR 0055) — không bao giờ được trả ra; khoá còn vì `Record` phải phủ đủ enum.
   [CUSTOMER_TRIP_STAGE.PENDING_APPROVAL_PAID]: 'subtitle.pending_approval_paid',
   [CUSTOMER_TRIP_STAGE.READY]: 'subtitle.ready',
   [CUSTOMER_TRIP_STAGE.ACTIVE]: 'subtitle.active',
@@ -679,6 +691,7 @@ const SUBTITLE_KEY = {
   [CUSTOMER_TRIP_STAGE.SLOT_TAKEN]: 'subtitle.slot_taken',
   [CUSTOMER_TRIP_STAGE.CANCELLED]: 'subtitle.terminal',
   [CUSTOMER_TRIP_STAGE.REJECTED]: 'subtitle.terminal',
+  [CUSTOMER_TRIP_STAGE.EXPIRED]: 'subtitle.terminal',
   [CUSTOMER_TRIP_STAGE.NO_SHOW]: 'subtitle.terminal',
   // `as const` giữ kiểu LITERAL cho từng khoá (chú thích kiểu tường minh sẽ nới nó thành
   // `string` và `t()` mất bảo chứng); `satisfies` vẫn bắt lỗi nếu thiếu một chặng.

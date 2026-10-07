@@ -65,3 +65,23 @@ describe('notificationHref — khu quản lý không bị đổi', () => {
     ).toBe('/manage/booking-requests');
   });
 });
+
+describe('notificationHref — Owner Lite (chủ xe tuyến hoa hồng)', () => {
+  it('đơn và yêu cầu dẫn tới "Chuyến cho thuê" — tuyến hoa hồng không có hộp thư/bảng đơn', () => {
+    expect(
+      notificationHref({ targetType: NOTIFICATION_TARGET_TYPE.BOOKING, targetId: 'BK1' }, 'owner'),
+    ).toBe('/manage/trips');
+    expect(
+      notificationHref(
+        { targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST, targetId: 'RQ1' },
+        'owner',
+      ),
+    ).toBe('/manage/trips');
+  });
+
+  it('xe vẫn dẫn về danh sách xe như tuyến gói', () => {
+    expect(
+      notificationHref({ targetType: NOTIFICATION_TARGET_TYPE.VEHICLE, targetId: 'V1' }, 'owner'),
+    ).toBe('/manage/vehicles');
+  });
+});

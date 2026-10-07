@@ -196,7 +196,7 @@ describe('B1 — partner đăng nhập xong vào đâu', () => {
       `${M.VEHICLES}/01V/manage/pricing`,
       `${M.VEHICLE_REGISTER}?from=landing`,
       M.CALENDAR,
-      M.BOOKING_REQUESTS,
+      M.TRIPS,
       `${M.BOOKINGS}/01B`,
       M.CHAT,
       M.BALANCE,
@@ -220,6 +220,36 @@ describe('B1 — partner đăng nhập xong vào đâu', () => {
       shopSectionPath(SHOP_SECTION.PAYOUT),
     );
     expect(partnerPageRedirect(packageCurrent, M.HOST_GUIDE)).toBeNull();
+  });
+
+  /*
+   * "Chuyến cho thuê" (07/10/2026): CHỦ xe tuyến hoa hồng đọc yêu cầu + đơn gộp ở một danh sách
+   * thẻ. Hộp thư và bảng đơn vẫn là trang của tuyến — cho THÀNH VIÊN, những người `/trips` không
+   * dựng phía chủ xe cho — và chi tiết đơn là màn dùng chung, nơi bàn giao.
+   */
+  it('chủ xe tuyến hoa hồng: hộp thư + bảng đơn → "Chuyến cho thuê"; chi tiết đơn ở lại', () => {
+    for (const user of [commission, lapsed, unconfigured]) {
+      for (const path of [M.BOOKING_REQUESTS, M.BOOKINGS, M.BOOKINGS_AWAITING_PICKUP]) {
+        expect(partnerPageRedirect(user, `${path}?status=closed`), path).toBe(M.TRIPS);
+      }
+      expect(partnerPageRedirect(user, M.TRIPS)).toBeNull();
+      expect(partnerPageRedirect(user, `${M.BOOKINGS}/01B`)).toBeNull();
+    }
+  });
+
+  it('THÀNH VIÊN của gian hàng hết gói giữ hộp thư + bảng đơn, /trips đưa về hộp thư', () => {
+    const staff: AuthScope = {
+      tenant: { ...lapsed.tenant!, roleKey: TENANT_ROLE.SHOP_STAFF },
+    };
+    expect(partnerPageRedirect(staff, M.BOOKING_REQUESTS)).toBeNull();
+    expect(partnerPageRedirect(staff, M.BOOKINGS)).toBeNull();
+    expect(partnerPageRedirect(staff, M.TRIPS)).toBe(M.BOOKING_REQUESTS);
+  });
+
+  it('tuyến gói mở /trips → hộp thư yêu cầu (họ có hộp thư + bảng đơn đầy đủ)', () => {
+    expect(partnerPageRedirect(packageCurrent, M.TRIPS)).toBe(M.BOOKING_REQUESTS);
+    expect(partnerPageRedirect(packageCurrent, M.BOOKING_REQUESTS)).toBeNull();
+    expect(partnerPageRedirect(packageCurrent, M.BOOKINGS)).toBeNull();
   });
 });
 

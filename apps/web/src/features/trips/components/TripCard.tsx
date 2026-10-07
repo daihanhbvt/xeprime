@@ -5,6 +5,7 @@ import { Button } from 'antd';
 import Link from 'next/link';
 import {
   CUSTOMER_TRIP_STAGE_META,
+  isCustomerTripClosed,
   SERVICE_TYPE,
   TRIP_ROLE,
   type CustomerTripStage,
@@ -34,23 +35,22 @@ interface TripCardProps {
     /** `cancel` từ ADR 0045: chuyến ĐÃ NHẬN cũng có một thao tác đang chạy để khoá nút. */
   pending: 'approve' | 'reject' | 'cancel' | null;
   };
-  /** Mở chi tiết. Chuyến của chủ xe đi vào đơn/yêu cầu; khách đi vào `/trips/[id]`. */
-  onOpenDetail?: (trip: CustomerTrip) => void;
   /**
-   * KHU chứa chuyến — mặc định `/trips`.
-   *
-   * Thẻ có thể đứng trong lối chuyển tiếp của Manage (`/manage/account/trips`), nơi khu khách
-   * đã đóng với người đang xem. Giữ cứng `/trips` ở đây sẽ tạo một liên kết dẫn thẳng vào
-   * cánh cửa vừa khoá, và `AccountShell` sẽ đá họ ngược lại — một vòng tròn.
+   * Mở chi tiết TẠI CHỖ (hộp thoại) — chỉ chuyến của CHỦ XE: có đơn thì vào đơn, chưa có thì vào
+   * yêu cầu. Vắng mặt thì thẻ điều hướng tới `/trips/[id]` của site khách.
    */
+  onOpenDetail?: (trip: CustomerTrip) => void;
+  /** Đang nạp dữ liệu để mở chi tiết chuyến này — nút "Xem chi tiết" quay, không bấm chồng. */
+  detailLoading?: boolean;
+  /** KHU chứa chuyến — mặc định `/trips`. Chỉ dùng khi thẻ điều hướng (không có `onOpenDetail`). */
   basePath?: string;
 }
 
 /**
- * Một chuyến trong danh sách `Chuyến của tôi` — dùng cho CẢ HAI phía.
+ * Một chuyến trong danh sách chuyến — dùng cho CẢ HAI phía: `Chuyến của tôi` của khách (site khách)
+ * và `Chuyến cho thuê` của chủ xe tuyến hoa hồng (site partner, `OwnerTripsView`).
  *
- * "Chuyến của tôi" trộn chuyến tôi cho thuê với chuyến tôi đi thuê vào một danh sách, nên thẻ
- * phải tự nói mình là phía nào: một nhãn ở đầu thẻ, và dòng người đối diện đổi theo
+ * Thẻ tự nói mình là phía nào: một nhãn ở đầu thẻ, và dòng người đối diện đổi theo
  * ("Chủ xe: …" ↔ "Khách thuê: …"). Cấu trúc thì giữ nguyên một bản — dựng hai thẻ riêng là hai
  * bố cục phải sửa cùng lúc mỗi lần đổi một chi tiết.
  *
@@ -58,7 +58,13 @@ interface TripCardProps {
  * ngược cùng hai quyết định ngay trên thẻ, vì đó là việc phải làm trước khi hết hạn. Mọi chặng
  * còn lại của cả hai phía chỉ có một lối đi tiếp là mở chi tiết.
  */
-export function TripCard({ trip, decisions, onOpenDetail, basePath }: TripCardProps) {
+export function TripCard({
+  trip,
+  decisions,
+  onOpenDetail,
+  detailLoading = false,
+  basePath,
+}: TripCardProps) {
   const t = useTranslations('Trips');
   const dl = useDomainLabel();
   const fmt = useAppFormat();
@@ -67,6 +73,12 @@ export function TripCard({ trip, decisions, onOpenDetail, basePath }: TripCardPr
   const role = trip.role as TripRole;
   const isHost = role === TRIP_ROLE.HOST;
   const href = tripPath.detail(trip.id, basePath);
+  /*
+   * Chủ xe mở chi tiết bằng HỘP THOẠI ở site partner — nơi không có trang `/trips/[id]` nào. Tên
+   * xe khi đó là chữ thường: một link ở đây sẽ dẫn vào trang không tồn tại, còn một nút thứ hai
+   * cho CÙNG hành động với "Xem chi tiết" là hai đích cho trình đọc màn hình.
+   */
+  const opensInPlace = isHost && onOpenDetail !== undefined;
   /* Chỉ chuyến của CHỦ XE còn chờ chính họ trả lời mới có gì để quyết định. */
   const canDecide = Boolean(decisions && isHost && trip.respondBy);
 
@@ -103,9 +115,13 @@ export function TripCard({ trip, decisions, onOpenDetail, basePath }: TripCardPr
           </span>
         </p>
         <h3 className={styles.name}>
-          <Link href={href} className={styles.nameLink}>
-            {trip.vehicle.name}
-          </Link>
+          {opensInPlace ? (
+            trip.vehicle.name
+          ) : (
+            <Link href={href} className={styles.nameLink}>
+              {trip.vehicle.name}
+            </Link>
+          )}
         </h3>
 
         {/*
@@ -158,8 +174,15 @@ export function TripCard({ trip, decisions, onOpenDetail, basePath }: TripCardPr
           <span className={styles.moneyValue}>
             {trip.totalAmount ? fmt.money(trip.totalAmount) : t('card.awaitingQuote')}
           </span>
+          {/*
+            "Chốt khi duyệt" chỉ đúng khi còn một lượt duyệt phía trước. Chuyến đã khép mà chưa
+            từng có đơn (từ chối, quá hạn, huỷ, mất khung giờ) sẽ không bao giờ được chốt giá —
+            con số chỉ còn là báo giá lúc khách gửi.
+          */}
           {trip.totalAmount && trip.totalIsEstimate ? (
-            <span className={styles.moneyNote}>{t('card.estimated')}</span>
+            <span className={styles.moneyNote}>
+              {isCustomerTripClosed(stage) ? t('card.estimatedClosed') : t('card.estimated')}
+            </span>
           ) : null}
         </div>
         {/*
@@ -180,12 +203,13 @@ export function TripCard({ trip, decisions, onOpenDetail, basePath }: TripCardPr
             `<Button>` lồng trong `<Link>`: lồng hai phần tử tương tác cho trình đọc màn hình hai
             đích cho cùng một thứ. Chủ xe MỞ MODAL nên đó là nút thật, không giả dạng link.
           */}
-          {isHost && onOpenDetail ? (
+          {opensInPlace ? (
             <Button
               color="primary"
               variant="outlined"
+              loading={detailLoading}
               disabled={decisions?.pending != null}
-              onClick={() => onOpenDetail(trip)}
+              onClick={() => onOpenDetail?.(trip)}
             >
               {t('card.viewDetail')}
             </Button>

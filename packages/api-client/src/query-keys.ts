@@ -240,6 +240,7 @@ export const queryKeys = {
   bookingRequests: {
     all: ['booking-requests'] as const,
     list: (params: QueryParams) => ['booking-requests', 'list', params] as const,
+    detail: (id: string) => ['booking-requests', 'detail', id] as const,
     /**
      * Lịch bận của MỘT xe, dùng để tô/khoá ô trên hộp chọn thời gian thuê. Cửa sổ nằm trong
      * khoá vì đổi cửa sổ là đổi dữ liệu — không phải cùng một kết quả cắt nhỏ.

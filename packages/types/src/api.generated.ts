@@ -717,7 +717,7 @@ export interface paths {
         put?: never;
         /**
          * Huỷ một chuyến ĐÃ NHẬN (chưa có đơn thuê)
-         * @description Chỉ áp dụng cho awaiting_hold và hold_paid (LEGACY). Đóng hold, nhả lịch, hoàn phần đã chuyển và ghi một dòng booking_cancellations tính vào chỉ số uy tín. Yêu cầu chưa được nhận thì dùng /reject; đơn đã tạo thì dùng POST /bookings/:id/transition.
+         * @description Chỉ áp dụng cho awaiting_hold (đã nhận, chờ khách thanh toán). Đóng hold, nhả lịch, hoàn phần đã chuyển và ghi một dòng booking_cancellations tính vào chỉ số uy tín. Yêu cầu chưa được nhận thì dùng /reject; đơn đã tạo thì dùng POST /bookings/:id/transition.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
@@ -10254,9 +10254,10 @@ export interface components {
             /** @enum {string|null} */
             vehicleType?: "car" | "motorbike" | null;
             /** @enum {string} */
-            status: "pending_host_approval" | "approved_by_host" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_paid" | "hold_expired" | "slot_taken" | "cancelled_by_host";
+            status: "pending_host_approval" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_expired" | "slot_taken" | "cancelled_by_host";
             customerName: string;
-            customerPhone: string;
+            /** @description SĐT khách — null với chủ xe tuyến hoa hồng khi chuyến chưa có đơn */
+            customerPhone: string | null;
             customerEmail?: string | null;
             tenantCustomerId?: string | null;
             /** @description Ảnh đại diện tài khoản khách */
@@ -10349,7 +10350,7 @@ export interface components {
         BookingRequestReceiptDto: {
             id: string;
             /** @enum {string} */
-            status: "pending_host_approval" | "approved_by_host" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_paid" | "hold_expired" | "slot_taken" | "cancelled_by_host";
+            status: "pending_host_approval" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_expired" | "slot_taken" | "cancelled_by_host";
             /** @description Sau khi gửi, khách đã có phiên đăng nhập (passwordless qua SĐT) — FE chuyển tới /trips. */
             authenticated: boolean;
             session?: components["schemas"]["MobileSessionDto"];
@@ -10359,7 +10360,7 @@ export interface components {
         };
         BookingRequestStatusCountDto: {
             /** @enum {string} */
-            status: "pending_host_approval" | "approved_by_host" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_paid" | "hold_expired" | "slot_taken" | "cancelled_by_host";
+            status: "pending_host_approval" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_expired" | "slot_taken" | "cancelled_by_host";
             /** @example 7 */
             count: number;
         };
@@ -11755,7 +11756,7 @@ export interface components {
              * @description @xeprime/types CustomerTripStage
              * @enum {string}
              */
-            stage: "pending_approval" | "awaiting_hold" | "pending_approval_paid" | "ready" | "active" | "completed" | "cancelled" | "rejected" | "slot_taken" | "no_show";
+            stage: "pending_approval" | "awaiting_hold" | "ready" | "active" | "completed" | "cancelled" | "rejected" | "expired" | "slot_taken" | "no_show";
             vehicle: components["schemas"]["CustomerTripVehicleDto"];
             shop: components["schemas"]["CustomerTripShopDto"];
             /** @description ISO-8601 UTC */
@@ -11894,7 +11895,7 @@ export interface components {
              * @description @xeprime/types CustomerTripStage
              * @enum {string}
              */
-            stage: "pending_approval" | "awaiting_hold" | "pending_approval_paid" | "ready" | "active" | "completed" | "cancelled" | "rejected" | "slot_taken" | "no_show";
+            stage: "pending_approval" | "awaiting_hold" | "ready" | "active" | "completed" | "cancelled" | "rejected" | "expired" | "slot_taken" | "no_show";
             vehicle: components["schemas"]["CustomerTripVehicleDto"];
             shop: components["schemas"]["CustomerTripShopDto"];
             /** @description ISO-8601 UTC */
@@ -13214,7 +13215,7 @@ export interface components {
         PartnerBookingRequestDto: {
             id: string;
             /** @enum {string} */
-            status: "pending_host_approval" | "approved_by_host" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_paid" | "hold_expired" | "slot_taken" | "cancelled_by_host";
+            status: "pending_host_approval" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_expired" | "slot_taken" | "cancelled_by_host";
             /** @enum {string} */
             serviceType: "self_drive" | "with_driver" | "long_term";
             vehicleId: string;
@@ -17473,12 +17474,12 @@ export interface components {
             /** @enum {string|null} */
             bookingStatus?: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show" | null;
             /** @enum {string|null} */
-            requestStatus?: "pending_host_approval" | "approved_by_host" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_paid" | "hold_expired" | "slot_taken" | "cancelled_by_host" | null;
+            requestStatus?: "pending_host_approval" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_expired" | "slot_taken" | "cancelled_by_host" | null;
             /**
              * @description Chặng gộp — cùng phép chiếu với Chuyến của tôi
              * @enum {string}
              */
-            stage: "pending_approval" | "awaiting_hold" | "pending_approval_paid" | "ready" | "active" | "completed" | "cancelled" | "rejected" | "slot_taken" | "no_show";
+            stage: "pending_approval" | "awaiting_hold" | "ready" | "active" | "completed" | "cancelled" | "rejected" | "expired" | "slot_taken" | "no_show";
             /** @enum {string} */
             serviceType: "self_drive" | "with_driver" | "long_term";
             routeType?: string | null;
@@ -21522,7 +21523,7 @@ export interface operations {
                 /** @description Lọc theo dịch vụ được yêu cầu */
                 serviceType?: "self_drive" | "with_driver" | "long_term";
                 /** @description Một trạng thái, hoặc nhiều trạng thái nối dấu phẩy */
-                status?: ("pending_host_approval" | "approved_by_host" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_paid" | "hold_expired" | "slot_taken" | "cancelled_by_host")[];
+                status?: ("pending_host_approval" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_expired" | "slot_taken" | "cancelled_by_host")[];
                 vehicleId?: string;
                 /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
                 branchId?: string;
@@ -51049,7 +51050,7 @@ export interface operations {
             query?: {
                 page?: number;
                 limit?: number;
-                status?: "pending_host_approval" | "approved_by_host" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_paid" | "hold_expired" | "slot_taken" | "cancelled_by_host";
+                status?: "pending_host_approval" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_expired" | "slot_taken" | "cancelled_by_host";
             };
             header?: never;
             path: {

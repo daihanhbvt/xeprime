@@ -39,6 +39,7 @@
     "approve": "Xác nhận",
     "reject": "Từ chối",
     "estimated": "Tạm tính · chốt khi duyệt",
+    "estimatedClosed": "Báo giá lúc gửi yêu cầu",
     "cancel": "Huỷ chuyến"
   },
   "pickup": {
@@ -120,6 +121,8 @@
     "pendingBody": "Chủ xe đang xem xét yêu cầu đặt xe của bạn. Bạn sẽ nhận được thông báo ngay khi có phản hồi.",
     "rejectedTitle": "Yêu cầu bị từ chối",
     "rejectedBody": "Chủ xe không thể tiếp nhận yêu cầu này. Bạn có thể tìm một chiếc xe khác cho cùng lịch trình.",
+    "expiredTitle": "Chủ xe chưa phản hồi kịp",
+    "expiredBody": "Yêu cầu đã tự đóng vì chủ xe không trả lời trong thời hạn. Bạn có thể chọn một chiếc xe khác cho cùng lịch trình.",
     "cancelledTitle": "Chuyến đi đã hủy",
     "cancelledBody": "Chuyến này đã được hủy. Khoản giữ chỗ (nếu có) đã được giải phóng.",
     "noShowTitle": "Khách không nhận xe",
@@ -282,6 +285,14 @@
     "acceptedTitle": "Bạn đã nhận chuyến này",
     "acceptedHint": "Đang chờ khách chuyển tiền giữ chỗ. Xe đã được giữ lịch; nếu tiền không về đúng hạn, lịch tự nhả.",
     "cancel": "Huỷ chuyến"
+  },
+  "hostList": {
+    "heading": "Chuyến cho thuê",
+    "sub": "Yêu cầu và đơn thuê trên xe của bạn — duyệt, theo dõi và bàn giao ở cùng một nơi.",
+    "emptyCurrentTitle": "Chưa có chuyến nào đang diễn ra",
+    "emptyCurrentBody": "Khi khách gửi yêu cầu thuê xe của bạn, chuyến sẽ hiện ở đây để bạn duyệt.",
+    "viewVehicles": "Xem xe của tôi",
+    "requestErrorTitle": "Không mở được yêu cầu này"
   },
   "estimate": {
     "title": "Chi tiết giá",
