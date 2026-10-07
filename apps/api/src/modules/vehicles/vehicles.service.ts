@@ -29,6 +29,7 @@ import {
   VEHICLE_LOCKED_AFTER_APPROVAL_FIELDS,
   isMotorbikeCategory,
   isTransmissionAllowedFor,
+  normalizeTransmissionFor,
   missingPublishRequirements,
   vehicleFeatureAppliesTo,
   vehicleFieldPolicy,
@@ -671,13 +672,14 @@ export class VehiclesService {
     assertVehicleProfile(
       vehicleType,
       input.fuelType !== undefined ? input.fuelType : current.fuelType,
-      // Chỉ phần request tự khai. Giá trị giữ lại từ bản ghi cũ do `clearFieldsNotInProfile` dọn.
+      // Chỉ phần request tự khai. Giá trị giữ lại từ bản ghi cũ do `clearIncompatibleProfileFields` dọn.
       {
         ...(input.bodyType !== undefined ? { bodyType: input.bodyType } : {}),
         ...(input.motorbikeCategory !== undefined
           ? { motorbikeCategory: input.motorbikeCategory }
           : {}),
         ...(input.seatCount !== undefined ? { seatCount: input.seatCount } : {}),
+        ...(input.transmission !== undefined ? { transmission: input.transmission } : {}),
       },
     );
 
@@ -1928,8 +1930,9 @@ function applyCatalogModel<T extends VehicleWritableInput>(
  * chối những giá trị người dùng không hề gửi cũng chính là cách một client cũ (app native chưa
  * cập nhật bộ mã hộp số mới) bị khoá cứng khỏi mọi thao tác sửa xe.
  *
- * Cái BỊ TỪ CHỐI là mâu thuẫn do request tự khai: nguồn năng lượng không có ở loại xe đó, hay
- * gửi thẳng một chiều phân loại của loại xe khác. `clearFieldsNotInProfile` lo phần còn lại,
+ * Cái BỊ TỪ CHỐI là mâu thuẫn do request tự khai: nguồn năng lượng không có ở loại xe đó, gửi
+ * thẳng một chiều phân loại của loại xe khác, hay GỬI một hộp số không hợp với nguồn năng lượng
+ * (`VEHICLE_TRANSMISSION_INCOMPATIBLE`). `clearIncompatibleProfileFields` lo phần giá trị giữ lại,
  * và DB giữ vế cuối bằng CHECK.
  */
 function assertVehicleProfile(
@@ -1941,6 +1944,7 @@ function assertVehicleProfile(
     bodyType?: string | null;
     motorbikeCategory?: string | null;
     seatCount?: number | null;
+    transmission?: string | null;
   },
 ): void {
   const fail = (message: string): never => {
@@ -1949,6 +1953,21 @@ function assertVehicleProfile(
 
   if (!isVehicleFuelTypeAllowed(vehicleType, fuelType)) {
     fail('Nguồn năng lượng không phù hợp với loại phương tiện đã chọn');
+  }
+  /*
+   * Hộp số GỬI LÊN mà không hợp với (loại xe, nguồn năng lượng) SAU lệnh ghi thì từ chối — không
+   * âm thầm xoá. Xe điện "số tự động" là một mô tả sai, và người gửi phải biết nó bị từ chối.
+   * Giá trị GIỮ LẠI từ bản ghi cũ thì không chặn ở đây: `clearIncompatibleProfileFields` sửa nó.
+   */
+  if (
+    sent.transmission != null &&
+    !isTransmissionAllowedFor(vehicleType, fuelType, sent.transmission)
+  ) {
+    throw new BadRequestException({
+      code: API_ERROR_CODE.VEHICLE_TRANSMISSION_INCOMPATIBLE,
+      message: 'Kiểu hộp số không phù hợp với nguồn năng lượng của xe',
+      details: { fields: ['transmission'] },
+    });
   }
   if (sent.motorbikeCategory != null && !isMotorbikeCategory(sent.motorbikeCategory)) {
     fail('Phân khúc xe máy không hợp lệ');
@@ -2146,23 +2165,28 @@ function clearIncompatibleProfileFields(
   current: { vehicleType: string; fuelType: string | null; transmission: string | null },
   dto: { vehicleType?: string; fuelType?: string | null; transmission?: string | null },
 ): Partial<VehicleWritableFields> {
-  if (dto.vehicleType === undefined && dto.fuelType === undefined) return {};
+  const profileTouched = dto.vehicleType !== undefined || dto.fuelType !== undefined;
+  if (!profileTouched && dto.transmission === undefined) return {};
   const vehicleType = dto.vehicleType ?? current.vehicleType;
   const fuelType = dto.fuelType !== undefined ? dto.fuelType : current.fuelType;
 
   /*
-   * Hộp số GIỮ LẠI mà không còn hợp lệ thì bỏ.
-   *
-   * Ô tô xăng "số tự động" đổi sang chạy điện: xe điện truyền động một cấp, nên giữ nguyên chữ
-   * "số tự động" là mô tả sai chiếc xe cho người sắp thuê nó. Ma trận không đánh `hidden` cho
-   * hộp số ở xe điện (nó vẫn hỏi được), nên phần dọn này phải xét GIÁ TRỊ chứ không chỉ xét ô.
+   * Hộp số sau lệnh ghi phải khớp nguồn năng lượng (06/10/2026) — `normalizeTransmissionFor`, CÙNG
+   * hàm mà form dùng khi người dùng đổi nguồn năng lượng:
+   *  - xe điện chỉ có MỘT đáp án (1 cấp): tự điền khi request không khai hộp số — client cũ không
+   *    phải biết luật này;
+   *  - nguồn khác: hộp số GIỮ LẠI mà không còn hợp lệ thì bỏ (Điện → Xăng: "1 cấp" không còn
+   *    nghĩa, người dùng chọn lại). Giá trị GỬI LÊN sai đã bị `assertVehicleProfile` từ chối.
    */
   const transmission = dto.transmission !== undefined ? dto.transmission : current.transmission;
-  const staleTransmission = !isTransmissionAllowedFor(vehicleType, fuelType, transmission);
+  const next = normalizeTransmissionFor(vehicleType, fuelType, transmission);
+  const transmissionFix: Partial<VehicleWritableFields> =
+    next === (transmission ?? null) ? {} : { transmission: next };
 
   return {
-    ...clearFieldsNotInProfile(vehicleType, fuelType),
-    ...(staleTransmission ? { transmission: null } : {}),
+    // Chỉ dọn thông số khi lệnh ghi ĐỘNG tới loại xe/nguồn năng lượng — sửa riêng hộp số thì không.
+    ...(profileTouched ? clearFieldsNotInProfile(vehicleType, fuelType) : {}),
+    ...transmissionFix,
   };
 }
 

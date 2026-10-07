@@ -3,12 +3,20 @@
 import { Col, Row } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useEffect } from 'react';
-import { useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
-import { VEHICLE_ENERGY_LIMITS, vehicleEnergySpecPolicy } from '@xeprime/types';
+import { useFormState, useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
+import {
+  VEHICLE_ENERGY_LIMITS,
+  fixedTransmissionFor,
+  normalizeTransmissionFor,
+  vehicleEnergySpecPolicy,
+} from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
 
 import { NumberField } from '@/components/form/NumberField';
 import { SelectField } from '@/components/form/SelectField';
+import { useDomainLabel } from '@/i18n/use-domain-label';
+
+import { useCatalogModelSpec } from '../hooks/use-catalog-model-spec';
 
 import { FuelTypeSelect } from './VehicleFormSections';
 
@@ -21,10 +29,10 @@ interface VehicleEnergyFieldsProps {
   lockedNotice?: React.ReactNode;
   disabled?: boolean;
   /**
-   * Dọn ô không còn nghĩa khi đổi nguồn năng lượng. Truyền `setValue` để form không giữ lại một
-   * con số vô hình mà server sẽ xoá — người dùng phải thấy đúng thứ sắp được lưu.
+   * Dọn ô không còn nghĩa khi đổi nguồn năng lượng. BẮT BUỘC: thiếu nó thì xe điện bị khoá ô hộp
+   * số mà vẫn giữ "số tự động" — không lưu được, không sửa được (lỗi 06/10/2026 ở màn sửa xe).
    */
-  setValue?: UseFormSetValue<VehicleFormValues>;
+  setValue: UseFormSetValue<VehicleFormValues>;
 }
 
 /**
@@ -47,14 +55,72 @@ export function VehicleEnergyFields({
 }: VehicleEnergyFieldsProps) {
   const t = useTranslations('Vehicles.form.advanced');
   const fuelType = useWatch({ control, name: 'fuelType' });
+  const transmission = useWatch({ control, name: 'transmission' });
   const policy = vehicleEnergySpecPolicy(vehicleType, fuelType);
+  const tSpecs = useTranslations('Vehicles.form.specs');
+  const domainLabel = useDomainLabel();
+  // Nguồn năng lượng theo MẪU XE (`catalogSpecRule`). Khoá CHỈ khi giá trị đã khớp mẫu — xe cũ lưu
+  // lệch (VF 5 ghi "Xăng") vẫn phải sửa lại được.
+  const spec = useCatalogModelSpec(control, vehicleType);
+  const fuelLocked =
+    Boolean(spec.model) && spec.fuel.kind === 'fixed' && fuelType === spec.fuel.value;
+  const fuelChoices = spec.model && spec.fuel.kind === 'choice' ? spec.fuel.values : undefined;
+  // Hộp số của mẫu ỨNG VỚI nguồn năng lượng đang chọn. Xe điện đã có đáp án cố định của riêng nó
+  // (`fixedTransmissionFor`) — luật mẫu xe chỉ thu hẹp thêm, không bao giờ mở rộng.
+  const gearRule = spec.transmissionFor(fuelType);
+  const fixedGear = gearRule.kind === 'fixed' ? gearRule.value : null;
+  const gearLocked = fixedGear !== null && transmission === fixedGear;
+  const gearOptions =
+    gearRule.kind === 'choice'
+      ? transmissionOptions.filter(
+          (o) => gearRule.values.includes(o.value) || o.value === transmission,
+        )
+      : transmissionOptions;
+  let fuelHelp: React.ReactNode = lockedNotice;
+  if (!fuelHelp && spec.model && fuelLocked) {
+    fuelHelp = tSpecs('specFromModel', { model: spec.model.label });
+  } else if (!fuelHelp && spec.model && fuelChoices) {
+    fuelHelp = tSpecs('specChoiceFromModel', {
+      model: spec.model.label,
+      values: fuelChoices.map((v) => domainLabel('fuelType', v)).join(', '),
+    });
+  }
+  // Xe điện chỉ có MỘT đáp án (1 cấp) — ô khoá và điền sẵn, không ai phải chọn.
+  const fixedTransmission = fixedTransmissionFor(vehicleType, fuelType);
+
+  /*
+   * Hộp số đi theo nguồn năng lượng: Xăng → Điện thì "Số tự động" cũ phải thành "1 cấp", Điện →
+   * Xăng thì "1 cấp" không còn nghĩa và phải để trống cho người dùng chọn lại. Giữ giá trị cũ là
+   * đúng cái lỗi "xe điện số tự động" — form hiện một lựa chọn không có trong danh sách rồi tự
+   * chặn lúc lưu. Cũng chạy với xe cũ đã lưu sai, ngay khi form mở.
+   */
+  const transmissionError = useFormState({ control, name: 'transmission' }).errors.transmission;
+  useEffect(() => {
+    if (!fuelType) return;
+    const next = normalizeTransmissionFor(vehicleType, fuelType, transmission);
+    if (next === (transmission ?? null)) return;
+    // Đang treo câu lỗi "hộp số không phù hợp" từ lần lưu trước thì kiểm lại ngay để gỡ nó;
+    // còn không thì đừng — về trống mà báo "bắt buộc" ngay lập tức là quá gắt.
+    setValue('transmission', next, { shouldValidate: Boolean(transmissionError) || next !== null });
+  }, [fuelType, setValue, transmission, transmissionError, vehicleType]);
+
+  /*
+   * Mẫu xe chỉ có MỘT hộp số cho nguồn năng lượng này (Raize xăng ⇒ CVT) mà ô đang trống — điền
+   * vào. Chỉ điền ô TRỐNG: giá trị đã lưu (kể cả lệch mẫu) là của chủ xe, và ô vẫn mở để sửa.
+   */
+  useEffect(() => {
+    if (!fixedGear || transmission) return;
+    setValue('transmission', fixedGear as VehicleFormValues['transmission'], { shouldDirty: true });
+  }, [fixedGear, setValue, transmission]);
 
   /*
    * Đổi sang xe điện thì lít/100km không còn nghĩa (và ngược lại). Xoá ngay tại form để người
    * dùng thấy đúng thứ sắp lưu; server vẫn dọn lại một lần nữa vì nó không tin client.
    */
   useEffect(() => {
-    if (!setValue) return;
+    // Chưa chọn nguồn năng lượng thì ma trận ẩn MỌI thông số vì CHƯA BIẾT, không phải vì không áp
+    // dụng — xoá lúc đó là xoá chính con số người dùng vừa gõ (cùng luật `clearFieldsNotInProfile`).
+    if (!fuelType) return;
     if (policy.fuelConsumption === 'hidden') setValue('fuelConsumptionCombined', null);
     if (policy.electricRangeKm === 'hidden') setValue('electricRangeKm', null);
     if (policy.batteryCapacityKwh === 'hidden') setValue('batteryCapacityKwh', null);
@@ -68,6 +134,7 @@ export function VehicleEnergyFields({
     policy.engineDisplacementCc,
     policy.fuelConsumption,
     policy.transmission,
+    fuelType,
     setValue,
   ]);
 
@@ -77,8 +144,9 @@ export function VehicleEnergyFields({
         <FuelTypeSelect
           control={control}
           vehicleType={vehicleType}
-          help={lockedNotice}
-          disabled={disabled}
+          help={fuelHelp}
+          disabled={disabled || fuelLocked}
+          allowedValues={fuelChoices}
         />
       </Col>
 
@@ -88,12 +156,19 @@ export function VehicleEnergyFields({
             control={control}
             name="transmission"
             label={t('transmission')}
-            options={transmissionOptions}
+            options={gearOptions}
             placeholder={t('transmissionPlaceholder')}
             required={policy.transmission === 'required'}
-            help={lockedNotice}
-            disabled={disabled}
-            allowClear
+            help={
+              lockedNotice ??
+              (fixedTransmission
+                ? t('transmissionElectricHelp')
+                : gearLocked && spec.model
+                  ? tSpecs('specFromModel', { model: spec.model.label })
+                  : undefined)
+            }
+            disabled={disabled || Boolean(fixedTransmission) || gearLocked}
+            allowClear={!fixedTransmission && !gearLocked}
           />
         </Col>
       ) : null}

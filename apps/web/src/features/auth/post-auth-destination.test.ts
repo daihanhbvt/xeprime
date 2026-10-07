@@ -1,16 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import {
-  BILLING_MODE,
-  SHOP_ONBOARDING_STATE,
-  TENANT_ROLE,
-  TENANT_STATUS,
-} from '@xeprime/types';
+import { BILLING_MODE, SHOP_ONBOARDING_STATE, TENANT_ROLE, TENANT_STATUS } from '@xeprime/types';
 import { ROUTES, SHOP_SECTION, shopSectionPath } from '@/constants/routes';
 import {
   PARTNER_TRACK,
   adminLoginWithNext,
   canUseManagePortal,
   isAdminPublicPage,
+  isCommissionOwner,
   isCommissionPage,
   isOnboardingRoute,
   isPackageOnboarding,
@@ -163,7 +159,7 @@ describe('B1 — partner đăng nhập xong vào đâu', () => {
         M.RECEIPTS,
         M.DEBTS,
         M.MEMBERS,
-        M.SHOP,
+        `${M.SHOP}/branches`,
         M.DRIVERS,
         M.MAINTENANCE,
         M.VEHICLE_NEW,
@@ -172,6 +168,24 @@ describe('B1 — partner đăng nhập xong vào đâu', () => {
         expect(partnerPageRedirect(user, path), path).toBe(M.ROOT);
       }
     }
+  });
+
+  /*
+   * Trang Cửa hàng có bản tương đương ở tuyến hoa hồng: "Hồ sơ chủ xe" đọc CÙNG bản ghi gian hàng.
+   * Một gian hàng vừa hết gói bấm bookmark /shop phải rơi vào đúng hồ sơ của mình, không về trang chủ.
+   */
+  it('trang Cửa hàng ở tuyến hoa hồng → section "Thông tin chủ xe" của Hồ sơ chủ xe', () => {
+    for (const user of [commission, lapsed, unconfigured]) {
+      expect(partnerPageRedirect(user, M.SHOP)).toBe(`${M.ACCOUNT}?section=profile`);
+    }
+  });
+
+  it('THÀNH VIÊN của gian hàng hết gói mở /shop → trang chủ (trang tài khoản của họ không có section đó)', () => {
+    const staff: AuthScope = {
+      tenant: { ...lapsed.tenant!, roleKey: TENANT_ROLE.SHOP_STAFF },
+    };
+    expect(isCommissionOwner(staff)).toBe(false);
+    expect(partnerPageRedirect(staff, M.SHOP)).toBe(M.ROOT);
   });
 
   it('tuyến hoa hồng ở lại được trang của nó', () => {
@@ -319,7 +333,8 @@ describe('khu làm việc dùng chung với app native', () => {
     expect(resolveWorkspaceHref(packageCurrent)).toBe(M.ROOT);
     expect(resolveWorkspaceHref(commission)).toBe(M.VEHICLES);
     expect(resolveWorkspaceHref(lapsed)).toBe(M.VEHICLES);
-    expect(resolveWorkspaceHref(unconfigured)).toBe(M.REGISTRATION);
+    // Bậc `registering`: trang chủ Owner Lite chính là màn tiến trình đăng ký.
+    expect(resolveWorkspaceHref(unconfigured)).toBe(M.ROOT);
   });
 
   it('isOnboardingRoute so phần đường dẫn, bỏ query', () => {

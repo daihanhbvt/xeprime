@@ -1,8 +1,9 @@
 # ADR 0041 — Ba bậc gian hàng bán theo SỐ XE và KỲ HẠN; bậc doanh nghiệp bán bằng tư vấn
 
 Ngày: 17/09/2026 · Trạng thái: **Accepted** · Ghi đè [ADR 0029](0029-per-vehicle-flat-pricing-and-customer-side-fees.md)
-điều 3, [ADR 0015](0015-vehicle-slot-billing.md) điều 1/3/8, và [ADR 0038](0038-owner-track-split-and-unified-wallet.md)
-điều 12 ở phần CÁCH ĐẾM của tuyến gói
+điều 3, ADR 0015 điều 1/3/8, và [ADR 0038](0038-owner-track-split-and-unified-wallet.md)
+điều 12 ở phần CÁCH ĐẾM của tuyến gói · ADR 0015 đã gỡ khỏi repo (06/10/2026); các điều còn hiệu
+lực của nó chép ở điều 9
 
 ## Bối cảnh
 
@@ -190,6 +191,35 @@ nguyên** — gian hàng đã trả tiền tới ngày nào thì dùng tới ng�
 Điều đó có nghĩa một số dòng sẽ mang `plan_id` trỏ tới bậc đã archive, và đó là đúng: archive nói
 về DANH MỤC, không huỷ thuê bao (ADR 0038 điều 14).
 
+### 9. Kế thừa từ ADR 0015
+
+ADR 0015 (cước theo CHỖ xe, trả trước) đã gỡ khỏi repo ngày 06/10/2026 (bản gốc còn trong lịch sử
+git). Phần định giá theo chỗ của nó bị điều 1–3, 6, 8 ở trên thay; *hết gói thì gỡ xe khỏi chợ*
+đã bị bỏ ([ADR 0024](0024-billing-mode-from-plan-frozen-on-booking.md) điều 6,
+[ADR 0038](0038-owner-track-split-and-unified-wallet.md) điều 12); *nối FK
+`payments.subscription_id`* bị huỷ ([ADR 0022](0022-sepay-customer-money.md) điều 6); gói tự gán
+lúc mở gian hàng nay theo tuyến đăng ký ([ADR 0040](0040-registration-track-split.md)). Ba điều
+dưới đây VẪN HIỆU LỰC và được chép nguyên ý vào đây để ADR này tự đứng được:
+
+1. **Kỳ hạn tính bằng THÁNG LỊCH, không phải ngày.** Kỳ hạn là lựa chọn lúc mua, lưu ở
+   `tenant_subscriptions.term_months`; `ends_at = addCalendarMonthsVn(starts_at, term_months)` —
+   đúng helper của [ADR 0011](0011-long-term-fixed-packages.md). Hai định nghĩa "một tháng" trong
+   cùng một sản phẩm là lỗi chờ sẵn (gia hạn 12 lần gói 30 ngày ra 360 ngày). Tập kỳ hạn chặn ở DB
+   bằng CHECK `tenant_subscriptions_term_months_check`: `term_months IS NULL OR term_months IN (1,
+   3, 6, 12)` — khớp `SUBSCRIPTION_TERM_MONTHS` ở `@xeprime/types`. `plans` mô tả BẬC, không sinh
+   một dòng cho mỗi kỳ hạn.
+2. **`subscription_invoices` chụp lại TỪNG DÒNG lúc phát hành** (mua/gia hạn): `lines_json` mang
+   bậc, kỳ hạn, `quota` và từng dòng tiền, để hoá đơn tự giải thích được mà không join lại `plans`.
+   **`BillingService` là đường ghi duy nhất** của `plans`/`tenant_subscriptions`/
+   `subscription_invoices` (quy tắc 1-writer từ [ADR 0010](0010-billing-plans-subscriptions.md));
+   ngoại lệ có tên duy nhất là job vòng đời gói ở `apps/worker` — tiến trình riêng, không import
+   được service của api, ghi bằng claim có điều kiện và chạy lại ra 0 dòng.
+3. **Giá / số kỳ / số ngày / trần là DỮ LIỆU admin sửa được; QUY TẮC nằm trong code.**
+   `termPrices`, `maxVehicles`, `maxBranches`, `graceDays`, `features`, `commission_percent` là dữ
+   liệu (có audit, không hồi tố hoá đơn/thuê bao đã tạo). Tháng lịch, snapshot hạn mức (điều 3),
+   trần TỔNG (điều 1), gác chợ theo trần đã trả tiền (điều 4), hết gói không gỡ xe là quy tắc —
+   không có núm nào bật/tắt được chúng, vì núm vặn được quy tắc tạo ra trạng thái không ai debug nổi.
+
 ## Hệ quả
 
 - `packages/types`: `PlanLimitsJson` đổi hình; `PlanSlots`/`parsePlanSlots`/`termDiscountPercent`/
@@ -210,8 +240,8 @@ về DANH MỤC, không huỷ thuê bao (ADR 0038 điều 14).
   `used`/`onMarketplace` theo loại vì màn hình vẫn cần chúng.
 - `maxBranches` thành hạn mức THẬT (chặn ở `BranchesService.create`) — trước ADR này nó là một ô
   admin nhập mà không nơi nào đọc, và bảng giá mới in nó lên thẻ.
-- App native (`apps/mobile/src/features/subscription/components/PurchaseSheet.tsx` và
-  `apps/mobile/src/api/subscription/`) dùng chung contract này nên phải sửa theo — ADR 0031 nói rõ
+- App native (`apps/mobile/shared/src/features/subscription/components/PurchaseSheet.tsx` và
+  `apps/mobile/shared/src/api/subscription/`) dùng chung contract này nên phải sửa theo — ADR 0031 nói rõ
   hai bản KHÔNG tự đồng bộ.
 
 ## Xem lại khi nào

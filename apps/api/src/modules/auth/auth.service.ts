@@ -31,6 +31,10 @@ import {
   resolveTenantFeatures,
   type TenantPlanContext,
 } from '../../common/plan/feature-state';
+import {
+  resolveStorefront,
+  storefrontTenantSelect,
+} from '../../common/storefront/storefront-identity';
 import { EmailService } from '../email/email.service';
 import { FeePoliciesService } from '../fee-policies/fee-policies.service';
 import { RequestRealmService } from './request-realm.service';
@@ -583,8 +587,13 @@ export class AuthService {
           // ra một query riêng là menu nhấp nháy.
           tenant: {
             select: {
+              /*
+               * Tên khu làm việc theo tuyến HIỆU LỰC (ADR 0054): chủ xe cá nhân là chính họ — vỏ
+               * site partner hiện họ tên trên tài khoản, không phải tên gian hàng cũ từ thời có
+               * gói. `subscriptions` của fragment trùng khít bản bên dưới (cùng where/args).
+               */
+              ...storefrontTenantSelect(now),
               id: true,
-              name: true,
               slug: true,
               status: true,
               // Trục ĐĂNG KÝ (ADR 0040) — web chọn KHU làm việc từ đây trước cả `billingMode`:
@@ -699,7 +708,13 @@ export class AuthService {
       hasPassword: user.passwordHash !== null,
       tenant:
         membership && tenantPlan
-          ? toTenantSummary(membership, tenantPlan, publicVehicleCount, activeServiceFeePercent)
+          ? toTenantSummary(
+              membership,
+              resolveStorefront(membership.tenant, now).name,
+              tenantPlan,
+              publicVehicleCount,
+              activeServiceFeePercent,
+            )
           : null,
       openRenterTripCount,
       platformRole: platformMembership?.roleKey ?? null,
@@ -733,6 +748,8 @@ function toTenantSummary(
       }[];
     };
   },
+  /** Tên khu làm việc theo tuyến (`resolveStorefront`) — không phải `tenants.name` trần. */
+  workspaceName: string,
   /** Ngữ cảnh gói đã giải ở `me()` — nhận vào thay vì giải lại, để có đúng MỘT phép chấm pha. */
   plan: TenantPlanContext,
   publicVehicleCount: number,
@@ -741,7 +758,7 @@ function toTenantSummary(
 ): CurrentTenantSummaryDto {
   return {
     id: membership.tenant.id,
-    name: membership.tenant.name,
+    name: workspaceName,
     slug: membership.tenant.slug,
     status: membership.tenant.status,
     /*

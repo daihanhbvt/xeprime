@@ -1,6 +1,11 @@
-# ADR 0016 — SePay: đối soát chuyển khoản tự động cho tiền GÓI (khe hẹp của ADR 0013)
+# ADR 0016 — SePay: đối soát chuyển khoản tự động cho tiền GÓI
 
-Ngày: 21/08/2026 · Trạng thái: Accepted · **Sửa phạm vi ADR 0013**
+Ngày: 21/08/2026 · Trạng thái: Accepted · **Mở rộng bởi [ADR 0022](0022-sepay-customer-money.md) và [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md)** · Lúc viết: mở một khe hẹp trong ADR 0013 (đã gỡ, thay bởi 0028)
+
+> ⚠️ **Lịch sử:** ADR này ra đời như một *khe hẹp* trong lệnh cấm thanh toán online của ADR 0013.
+> Lệnh cấm đó **đã được gỡ**: [ADR 0022](0022-sepay-customer-money.md) đưa tiền của khách qua cùng
+> đường đối soát, [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md) thay hẳn
+> ADR 0013. Các câu nhắc ADR 0013 dưới đây là bối cảnh lúc viết, không còn là ràng buộc.
 
 > ⚠️ **[ADR 0022](0022-sepay-customer-money.md) mở rộng ĐIỀU 1 (28/08/2026):** phạm vi không còn
 > là *"chỉ tiền GÓI, chỉ chiều gian hàng → nền tảng"* mà là **mọi khoản VÀO tài khoản nền tảng**,
@@ -11,7 +16,7 @@ Ngày: 21/08/2026 · Trạng thái: Accepted · **Sửa phạm vi ADR 0013**
 
 ## Bối cảnh
 
-[ADR 0015](0015-vehicle-slot-billing.md) mở bán gói theo kỳ, kể cả kỳ 1 tháng. Với đơn giá cỡ
+ADR 0015 (đã gỡ, xem [ADR 0041](0041-plan-tiers-by-vehicle-count.md)) mở bán gói theo kỳ, kể cả kỳ 1 tháng. Với đơn giá cỡ
 100k/tháng (ô tô) và 35k/tháng (xe máy), **thu tiền thủ công lỗ**: mỗi kỳ phải mở app ngân hàng dò
 một giao dịch vài chục nghìn, nhân với số tenant. Không scale quá vài chục người.
 
@@ -51,7 +56,9 @@ trung gian thanh toán. Luồng **nền tảng ↔ gian hàng** không có tính
 
 ## Hoãn có chủ đích
 
-- **Thanh toán tiền thuê xe của khách** — vẫn nằm trong lệnh cấm của ADR 0013, không đụng tới.
+- **Thanh toán tiền thuê xe của khách** — lúc viết còn nằm trong lệnh cấm của ADR 0013. *Lịch sử:*
+  lệnh cấm đã gỡ — tiền giữ chỗ của khách đi qua đối soát theo
+  [ADR 0022](0022-sepay-customer-money.md) và [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md).
 - **Tự động gia hạn (auto-renew)** — không khả thi bằng chuyển khoản đẩy; cần thẻ hoặc uỷ nhiệm
   chi, chưa làm.
 - **Hoàn tiền gói** — xử lý tay, ghi sổ.
@@ -59,8 +66,9 @@ trung gian thanh toán. Luồng **nền tảng ↔ gian hàng** không có tính
 ## Hệ quả
 
 - Phụ thuộc bên ngoài: cần tài khoản SePay + tài khoản ngân hàng thật ⇒ phần này **chặn được**
-  trong khi các phần khác của ADR 0015 vẫn làm được.
+  trong khi các phần khác của ADR 0015 (đã gỡ, xem 0041) vẫn làm được.
 - Bí mật `SEPAY_API_KEY` vào env, validate bằng `zod` như mọi biến môi trường khác.
-- Vì có khe hẹp này, **niêm yết kỳ 1 tháng là chấp nhận được** — nhưng ADR 0015 điều 4 vẫn giữ
-  `terms[].discountPercent` để kỳ dài rẻ hơn, vì rào cản còn lại là trí nhớ của khách chứ không
-  phải công sức của nền tảng.
+- Vì có khe hẹp này, **niêm yết kỳ 1 tháng là chấp nhận được** — nhưng kỳ dài vẫn nên rẻ hơn, vì
+  rào cản còn lại là trí nhớ của khách chứ không phải công sức của nền tảng. (Lúc viết, cơ chế là
+  `terms[].discountPercent` của ADR 0015; nay là giá tuyệt đối từng kỳ `termPrices` —
+  [ADR 0041](0041-plan-tiers-by-vehicle-count.md) điều 2.)

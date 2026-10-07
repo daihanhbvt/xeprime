@@ -36,12 +36,15 @@ pnpm db:seed        # admin + shop owner demo (8 xe, 6 đơn, 1 lịch bảo dư
 pnpm dev            # web :3000 · api :4000 · swagger :4000/docs
 ```
 
-Đăng nhập bằng **email + mật khẩu** tại http://localhost:3000/login (tài khoản do `pnpm db:seed` tạo, đọc từ `.env`):
+Đăng nhập bằng **email + mật khẩu** (tài khoản do `pnpm db:seed` tạo, mật khẩu đọc từ `.env`). Mỗi site là một không gian tài khoản riêng (ADR 0053) — ở dev ba site chạy theo đường dẫn trên cùng `localhost:3000`:
 
-| Vai trò        | Email                                                | Mật khẩu (mặc định)                         |
-| -------------- | ---------------------------------------------------- | ------------------------------------------- |
-| Platform admin | `PLATFORM_ADMIN_EMAIL` (mặc định `admin@xeprime.vn`) | `PLATFORM_ADMIN_PASSWORD`                   |
-| Chủ shop demo  | `owner@xeprime.test`                                 | `DEMO_OWNER_PASSWORD` (mặc định `Abcd1234`) |
+| Site     | Ví dụ tài khoản                                      | Mật khẩu                  |
+| -------- | ---------------------------------------------------- | ------------------------- |
+| Quản trị | `PLATFORM_ADMIN_EMAIL` (mặc định `admin@xeprime.vn`) | `PLATFORM_ADMIN_PASSWORD` |
+| Đối tác  | `owner.saigon@xeprime.test` · `chuxe.huong@xeprime.test` | `DEMO_PASSWORD`       |
+| Khách    | `khach.an@xeprime.test`                              | `DEMO_PASSWORD`           |
+
+Bảng đầy đủ: [`docs/qa-accounts.md`](docs/qa-accounts.md).
 
 Đặt mật khẩu trong `.env` trước khi seed. Google/Facebook hoạt động sau khi khai `GOOGLE_OAUTH_*` / `FACEBOOK_APP_*` và `API_PUBLIC_URL` (ADR 0019) — chưa khai thì nút vẫn hiện nhưng báo "cách đăng nhập này chưa dùng được", còn mật khẩu và OTP chạy bình thường.
 

@@ -127,6 +127,21 @@ export const API_ERROR_CODE = {
    */
   VEHICLE_FIELD_LOCKED: 'VEHICLE_FIELD_LOCKED',
   /**
+   * Hộp số gửi lên không thuộc bộ hợp lệ của (loại xe, nguồn năng lượng) — vd xe điện "số tự
+   * động". Form web đã chặn tại chỗ bằng cùng ma trận; mã này dành cho client cũ / app native /
+   * gọi API trực tiếp, để câu báo nói đúng chuyện hộp số thay vì "dữ liệu không hợp lệ" chung chung.
+   */
+  VEHICLE_TRANSMISSION_INCOMPATIBLE: 'VEHICLE_TRANSMISSION_INCOMPATIBLE',
+  /** Hãng này đã có một mẫu xe cùng tên (danh mục mẫu xe — màn quản trị). */
+  CATALOG_MODEL_DUPLICATE: 'CATALOG_MODEL_DUPLICATE',
+  /** Mẫu xe đang có xe gắn nên không xoá được — tắt mẫu thay vì xoá. */
+  CATALOG_MODEL_IN_USE: 'CATALOG_MODEL_IN_USE',
+  /**
+   * Thông số mẫu xe tự mâu thuẫn: hộp số không khớp nguồn năng lượng, nguồn năng lượng sai loại
+   * xe, số chỗ trên xe máy, năm kết thúc trước năm bắt đầu. Cùng ma trận mà form đăng xe dùng.
+   */
+  CATALOG_MODEL_SPEC_INVALID: 'CATALOG_MODEL_SPEC_INVALID',
+  /**
    * Đã có một yêu cầu thuê y hệt (cùng xe + SĐT + khung giờ) đang chờ shop phản hồi.
    * Mã riêng thay vì `CONFLICT` chung: FE hiện hộp "Yêu cầu trùng lặp" có lối đi tiếp
    * (xem chuyến / nhắn chủ xe), khác hẳn một alert lỗi thường.

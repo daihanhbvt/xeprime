@@ -1,6 +1,6 @@
 # Tài khoản demo và QA
 
-> Cập nhật: 05/10/2026 · Phạm vi: **dev và staging**. Không tồn tại ở production.
+> Cập nhật: 06/10/2026 · Phạm vi: **dev và staging**. Không tồn tại ở production.
 > Nguồn: `prisma/src/seed/shops.ts`, `prisma/src/seed/commission-owners.ts`,
 > `prisma/src/seed/identities.ts` — sửa ở đó, không sửa tay trong database.
 
@@ -10,6 +10,39 @@ dữ liệu mẫu.
 
 Mỗi site là một không gian tài khoản riêng (ADR 0053): cùng email/SĐT ở site khác là tài khoản
 KHÁC. Đăng nhập ở đúng site của tài khoản.
+
+## Dành cho designer và người mới
+
+XePrime là chợ đăng và thuê **ô tô và xe máy** (tự lái hoặc có tài xế, ngắn hạn hoặc dài hạn) trên
+MỘT marketplace, phục vụ hai tuyến người bán:
+
+1. **Chủ xe cá nhân — tuyến hoa hồng:** tối đa 3 xe, không phí cố định, phí nền tảng theo chuyến,
+   dùng bộ quản lý gọn Owner Lite.
+2. **Gian hàng — tuyến gói:** trả gói theo số xe và kỳ hạn, 0% hoa hồng theo chuyến, dùng Full Manage
+   (đội xe, lịch, đơn, khách hàng, thu chi, công nợ, bảo dưỡng, tài xế, nhân viên, chi nhánh).
+
+Sản phẩm, persona và mô hình doanh thu: [`design/02_PRODUCT_VISION.md`](design/02_PRODUCT_VISION.md).
+Ai vào site nào, menu gì: [`design/07_INFORMATION_ARCHITECTURE.md`](design/07_INFORMATION_ARCHITECTURE.md).
+Nguyên tắc UX/UI: [`design/08_UX_GUIDELINES.md`](design/08_UX_GUIDELINES.md).
+
+### Đường dẫn staging
+
+| Site | Staging | Production | Dùng tài khoản |
+| --- | --- | --- | --- |
+| Khách — chợ xe, chuyến, tài khoản khách | <https://stg.xeprime.vn/> | `xeprime.vn` | dòng "Khách" (vd `khach.binh@` — đang thuê dài hạn) |
+| Đối tác — Full Manage / Owner Lite, đăng ký hai tuyến | <https://partner-stg.xeprime.vn/> | `partner.xeprime.vn` | dòng "Đối tác" (vd `owner.saigon@` cho Full Manage, `chuxe.son@` cho Owner Lite) |
+| Quản trị nền tảng | <https://admin-stg.xeprime.vn/> | `admin.xeprime.vn` | dòng "Quản trị" |
+
+Nguồn hostname: [`deployment.md` §2.3](deployment.md). URL không có tiền tố `/manage` hay `/admin`;
+đường dẫn cũ dạng `stg.xeprime.vn/manage…` chỉ còn chuyển tiếp.
+
+**Mật khẩu staging không ghi ở đây** — hỏi người quản trị staging / lấy từ trình quản lý mật khẩu của
+đội. Đó là giá trị `DEMO_PASSWORD` và `PLATFORM_ADMIN_PASSWORD` người vận hành gõ vào lúc chạy seed
+demo (mục "Mật khẩu" bên dưới). Không gửi mật khẩu qua tài liệu, chat công khai hay ảnh chụp màn hình.
+
+Staging dùng để tham khảo **hiện trạng** (cấu trúc, dữ liệu, cách vận hành), không phải giới hạn bắt
+buộc của phương án thiết kế mới. Việc còn dở: [`completion-roadmap.md`](completion-roadmap.md) và
+[`design/03_PRODUCT_GAP_ANALYSIS.md`](design/03_PRODUCT_GAP_ANALYSIS.md).
 
 ## Bảng tra
 
@@ -59,7 +92,7 @@ Seed **idempotent**: chạy lại không thêm user, gian hàng, xe hay đơn n�
 demo của bộ seed cũ (27 gian hàng) — DB đã chạy bộ cũ thì dựng lại (`prisma migrate reset`, người
 dùng tự gõ) để có đúng bộ gọn này.
 
-Staging: [`deployment.md` §3.6](deployment.md) — `SEED_MODE=demo` chạy trong container `migrate`,
+Staging: [`deployment.md` §3.5](deployment.md), mục "Dữ liệu DEMO — chỉ trên staging" — `SEED_MODE=demo` chạy trong container `migrate`,
 kèm `DEMO_PASSWORD` và `PLATFORM_ADMIN_PASSWORD` thật.
 
 ## Những phép kiểm các tài khoản này phục vụ

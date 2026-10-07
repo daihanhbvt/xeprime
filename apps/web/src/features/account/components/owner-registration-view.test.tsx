@@ -88,15 +88,6 @@ vi.mock('@/hooks/use-permissions', () => ({
   }),
 }));
 
-/*
- * Form hồ sơ là `ShopProfileWorkspace` DÙNG CHUNG với `/manage/shop` và đã có test riêng — nó
- * kéo theo ô địa chỉ, bộ chọn danh mục hành chính và bản đồ. Ở đây câu hỏi là tiến trình, không
- * phải cái form.
- */
-vi.mock('@/features/shop/components/ShopProfileWorkspace', () => ({
-  ShopProfileWorkspace: () => <div data-testid="shop-profile-workspace" />,
-}));
-
 function makeShop(over: Record<string, unknown> = {}) {
   return {
     id: 't1',
@@ -277,8 +268,43 @@ describe('Quyền', () => {
     // `useMyShop(enabled)` nhận cờ quyền; ở đây chỉ cần màn không vỡ khi hồ sơ chưa có.
     shop.data = makeShop();
     render();
-    expect(screen.getByTestId('shop-profile-workspace')).toBeTruthy();
+    expect(screen.getByRole('link', { name: /Hồ sơ chủ xe/ })).toBeTruthy();
     expect(PERMISSION.TENANT_VIEW).toBeTruthy();
+  });
+});
+
+/**
+ * Màn tiến trình KHÔNG còn chứa form hồ sơ (06/10/2026) — hồ sơ sửa ở MỘT chỗ, "Hồ sơ chủ xe"
+ * (`/account`). Màn này chỉ dẫn sang đó, và chỉ thúc khi bước 1 thật sự còn thiếu.
+ */
+describe('Lối vào Hồ sơ chủ xe', () => {
+  it('hồ sơ còn thiếu: dải cảnh báo dẫn tới trang tài khoản', () => {
+    shop.data = makeShop({
+      ownerAccount: {
+        userId: '01HUSER000000000000000000',
+        displayName: 'Nguyễn Văn A',
+        email: null,
+        phone: null,
+        emailVerified: false,
+        phoneVerified: false,
+      },
+    });
+    render();
+
+    expect(screen.getByText('Hồ sơ chủ xe còn thiếu thông tin')).toBeTruthy();
+    // Thiếu SĐT ⇒ thẳng tới phần Thông tin đăng nhập, nơi SĐT được xác thực qua OTP.
+    const cta = screen.getByRole('link', { name: /Hoàn thiện hồ sơ/ });
+    expect(cta.getAttribute('href')).toBe('/manage/account?section=login');
+  });
+
+  it('hồ sơ đã đủ: không có dải thúc, chỉ còn nút mở hồ sơ ở tiêu đề', () => {
+    shop.data = makeShop();
+    render();
+
+    expect(screen.queryByText('Hồ sơ chủ xe còn thiếu thông tin')).toBeNull();
+    expect(screen.getByRole('link', { name: /Hồ sơ chủ xe/ }).getAttribute('href')).toBe(
+      '/manage/account',
+    );
   });
 });
 
@@ -323,6 +349,6 @@ describe('Cổng tuyến gói', () => {
     );
 
     expect(router.replace).not.toHaveBeenCalled();
-    expect(screen.getByTestId('shop-profile-workspace')).toBeTruthy();
+    expect(screen.getByRole('link', { name: /Hồ sơ chủ xe/ })).toBeTruthy();
   });
 });

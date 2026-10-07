@@ -412,8 +412,9 @@ describe('walletDrift — phép kiểm ADR 0023 điều 6', () => {
 
   /**
    * Bước 2c của `20260911190000_refund_to_wallet` KHÔNG idempotent, và phép kiểm này là thứ giữ
-   * cho bộ phát hiện của nó không hỏng lặng lẽ. Chi tiết + câu lệnh sửa:
-   * `docs/refund-to-wallet-backfill-runbook.md`.
+   * cho bộ phát hiện của nó không hỏng lặng lẽ. Runbook backfill (kèm câu lệnh sửa) đã gỡ ngày
+   * 06/10/2026 vì hết dịp dùng — bản gốc trong lịch sử git:
+   * `git log --diff-filter=D -- docs/refund-to-wallet-backfill-runbook.md`.
    *
    * Migration cộng số dư bằng `balance = balance + (tổng bút toán có note X)`. Bước chèn bút
    * toán có `ON CONFLICT DO NOTHING` nên chạy lại không đẻ dòng sổ thứ hai — nhưng câu cộng số

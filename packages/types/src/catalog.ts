@@ -10,6 +10,8 @@
  * `VEHICLE_FEATURE_LABEL`) giữ lại làm **nhãn dự phòng** khi chưa tải được catalog — không còn là
  * nguồn sự thật cho danh sách chọn.
  */
+import { VEHICLE_TYPE } from './status/vehicle';
+
 export const CATALOG_TYPE = {
   VEHICLE_BRAND: 'vehicle_brand',
   BODY_TYPE: 'body_type',
@@ -133,4 +135,68 @@ export function catalogModelKey(brandKey: string, modelLabel: string): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
   return `${brandKey}-${slug}`;
+}
+
+/** Biên số chỗ của một mẫu ô tô — cùng biên với CHECK `vehicle_catalog_models_seat_counts_check`. */
+export const CATALOG_SEAT_COUNT_MIN = 2;
+export const CATALOG_SEAT_COUNT_MAX = 64;
+/** Số cấu hình chỗ tối đa một mẫu khai — đủ cho "5 · 7 · 8", chặn một mảng rác dài vô hạn. */
+export const CATALOG_SEAT_OPTIONS_MAX = 6;
+
+/**
+ * Cách form đăng xe dùng MỘT thông số của mẫu xe đã chọn (số chỗ, nguồn năng lượng…).
+ *
+ * Một luật cho mọi thông số, để admin chỉ phải nhớ một câu: một giá trị thì điền sẵn và khoá,
+ * nhiều giá trị thì chủ xe chọn trong đó, để trống thì chủ xe khai tự do.
+ *
+ *  - `fixed`  — cả dòng xe chỉ có một bản (VF 5: 5 chỗ, chạy điện) ⇒ điền sẵn và khoá ô.
+ *  - `choice` — dòng xe có nhiều bản (Fortuner: xăng hoặc dầu) ⇒ chỉ đưa ra các bản đó.
+ *  - `free`   — danh mục chưa xác minh ⇒ chủ xe chọn trong toàn bộ lựa chọn của loại xe.
+ */
+export type CatalogSpecRule<T> =
+  | { kind: 'free' }
+  | { kind: 'fixed'; value: T }
+  | { kind: 'choice'; values: readonly T[] };
+
+export function catalogSpecRule<T>(values: readonly T[] | null | undefined): CatalogSpecRule<T> {
+  if (!values || values.length === 0) return { kind: 'free' };
+  if (values.length === 1) return { kind: 'fixed', value: values[0]! };
+  return { kind: 'choice', values };
+}
+
+/** Thông số của mẫu xe mà form đăng xe dựa vào — màn quản trị đánh dấu mẫu nào còn thiếu. */
+export const CATALOG_MODEL_SPEC = {
+  SEAT_COUNTS: 'seatCounts',
+  MOTORBIKE_CATEGORY: 'motorbikeCategory',
+  FUEL_TYPES: 'fuelTypes',
+  TRANSMISSIONS: 'transmissions',
+} as const;
+
+export type CatalogModelSpec = (typeof CATALOG_MODEL_SPEC)[keyof typeof CATALOG_MODEL_SPEC];
+
+export interface CatalogModelSpecShape {
+  vehicleType: string;
+  seatCounts: readonly number[];
+  motorbikeCategory: string | null;
+  fuelTypes: readonly string[];
+  transmissions: readonly string[];
+}
+
+/**
+ * Thông số còn TRỐNG của một mẫu — rỗng nghĩa là form đăng xe có đủ dữ liệu để điền sẵn.
+ *
+ * Số chỗ chỉ hỏi ở ô tô, phân khúc chỉ hỏi ở xe máy — cùng luật mà CHECK ở DB giữ. Dùng chung
+ * cho bộ đếm "thiếu thông số" của backend và nhãn cảnh báo ở màn quản trị, để hai con số khớp.
+ */
+export function catalogModelMissingSpecs(model: CatalogModelSpecShape): CatalogModelSpec[] {
+  const missing: CatalogModelSpec[] = [];
+  const isMotorbike = model.vehicleType === VEHICLE_TYPE.MOTORBIKE;
+  if (isMotorbike) {
+    if (!model.motorbikeCategory) missing.push(CATALOG_MODEL_SPEC.MOTORBIKE_CATEGORY);
+  } else if (model.seatCounts.length === 0) {
+    missing.push(CATALOG_MODEL_SPEC.SEAT_COUNTS);
+  }
+  if (model.fuelTypes.length === 0) missing.push(CATALOG_MODEL_SPEC.FUEL_TYPES);
+  if (model.transmissions.length === 0) missing.push(CATALOG_MODEL_SPEC.TRANSMISSIONS);
+  return missing;
 }

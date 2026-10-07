@@ -296,5 +296,21 @@
       "address": "Address",
       "logo": "Shop logo"
     }
+  },
+  "personal": {
+    "provinceHelp": "Where renters pick up — your vehicles are listed in this province.",
+    "checklist": {
+      "suggestedTitle": "Recommended — helps renters feel confident choosing your cars",
+      "items": {
+        "displayName": "Name shown on the marketplace",
+        "province": "Pickup province",
+        "ownerName": "Your full name",
+        "ownerPhone": "Your phone number",
+        "logo": "Profile photo",
+        "bio": "A short introduction",
+        "address": "Pickup address",
+        "cover": "Cover image"
+      }
+    }
   }
 }

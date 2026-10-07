@@ -1,6 +1,6 @@
 ---
 name: shared-code
-description: Deciding where a piece of logic, type, constant, or component should live — and whether something being written inline should instead be extracted and reused. Load when you notice a value, transform, or pattern appearing more than once, or when adding something that crosses the web/api boundary. The discipline that keeps the codebase DRY, common-first, and free of hardcoding.
+description: Deciding where a piece of logic, type, constant, or component should live — and whether something being written inline should instead be extracted and reused. Load when you notice a value, transform, or pattern appearing more than once, or when adding something that crosses the web/native/api boundary. The discipline that keeps the codebase DRY, common-first, and free of hardcoding.
 ---
 
 # Common-first: where code lives, and when to extract
@@ -18,18 +18,22 @@ The goal is not maximum abstraction. It is *one source of truth per concept*. A 
 
 ## Where things belong
 
-- **`packages/types`** — anything both the web and api sides must agree on: status unions, roles, permissions, the response/error contract, shared domain shapes. If the frontend and backend could disagree about it, it belongs here so they cannot.
-- **`packages/validators`** — validation schemas shared across forms.
-- **`packages/ui`** — a component genuinely used by more than one app surface. A component used in exactly one place stays there; promote it only when the second real consumer appears.
-- **`apps/web/src/lib`** — framework-agnostic web helpers: formatting, date/time, small pure utilities. The place presentation and transformation logic goes so components stay declarative.
-- **`apps/web/src/components`, `hooks`, `services`, `constants`** — reusable pieces scoped to the web app.
-- **A backend service** — logic that owns a table's writes or a business operation. Cross-cutting request behaviour (auth, scope, errors, response shape) belongs in `apps/api/src/common`, not copied into each module.
+- **`packages/types`** — anything web, native and api must agree on: status unions and their `*_META` maps, roles, permissions, error codes, the generated API types (`api.generated.ts`), shared domain shapes. If two sides could disagree about it, it belongs here so they cannot.
+- **`packages/domain`** — framework-free business logic shared by web, native and api: money on strings, time zone + rental duration, busy calendar, pickup preference, VietQR, address/geo helpers — plus the one message source for i18n (`packages/domain/messages/{vi,en}`). Metro reads it, so it never imports `next/*`, `antd`, React UI, DOM APIs, `File`, CSS, or `process.env`.
+- **`packages/validators`** — Yup schemas shared across forms (web and native).
+- **`packages/api-client`** — HTTP infrastructure only: client, `{data, meta}` envelope, pagination, `ApiClientError`, `AuthTransport`, `queryKeys`. Endpoint paths and feature calls do **not** go here (ADR 0031) — same import ban as `domain`.
+- **`packages/ui`** — design tokens (`XP_TOKENS`, `tokens.css`) shared web + native with a platform-free root export, and a component genuinely used by more than one app surface. A component used in exactly one place stays there; promote it only when the second real consumer appears.
+- **`apps/web/src/lib`** — web-only helpers (CSS class joining, query client, UI preferences, map loading…). Its `money.ts`/`datetime.ts`/`long-term.ts` are re-export shims of `@xeprime/domain`: extend the domain package, not the shim.
+- **`apps/web/src/components`, `hooks`, `services`, `constants`** — reusable pieces scoped to the web app. `features/<feature>/api.ts` holds that feature's API calls.
+- **A backend service** — logic that owns a table's writes or a business operation. Cross-cutting request behaviour (auth, realm, scope, errors, response shape) belongs in `apps/api/src/common`, not copied into each module.
+
+The feature API layer is deliberately **one copy per app** (ADR 0031): web in `apps/web/src/features/<feature>/api.ts`, native in `apps/mobile/shared/src/api/<feature>/`. They do not sync themselves — a change to a shared contract has to land in both. If the other copy is not yours to edit, say so explicitly in your report rather than leaving it silently stale.
 
 ## Judgment, not dogma
 
 Extract on the second occurrence, not in anticipation of the first — a single use with a speculative abstraction around it is its own kind of debt. But do not let "it's only used once" excuse inlining something that is obviously a reusable primitive; a formatter, a mapper, or a validator is reusable by nature even at its first use, and belongs in the shared layer from the start. The test is whether the *concept* is shared, not whether the *call sites* are yet.
 
-When you promote something, promote it cleanly: a clear name, a single responsibility, no leftover duplicate at the old site, and — if it crosses the web/api line — into `packages/*` so both sides consume the one definition. Leaving the inline copy behind "just in case" recreates the drift you were removing.
+When you promote something, promote it cleanly: a clear name, a single responsibility, no leftover duplicate at the old site, and — if it crosses the web/native/api line — into `packages/*` so every side consumes the one definition. Leaving the inline copy behind "just in case" recreates the drift you were removing.
 
 ## The tell
 

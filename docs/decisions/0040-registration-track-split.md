@@ -19,7 +19,7 @@ giờ tồn tại.** Trên `develop`, hai điểm vào của sản phẩm —
 
 — dùng **chung** `ShopRegistration`, **chung** `POST /tenants`, và khác nhau đúng một prop
 `variant` điều khiển câu chữ. Ghép với `TenantsService.registerShop` gán gói hoa hồng mặc định
-cho **mọi** tenant mới ([ADR 0015](0015-vehicle-slot-billing.md) điều 9), kết cục là:
+cho **mọi** tenant mới (ADR 0015 điều 9 — đã gỡ, xem [ADR 0041](0041-plan-tiers-by-vehicle-count.md)), kết cục là:
 
 > người vừa bấm "Đăng ký gian hàng" nhận `billingMode: 'commission'` ở `/auth/me`, và
 > `resolveWorkspaceHref` điều hướng họ vào đúng màn **"Hồ sơ chủ xe"** của tuyến kia — nơi có

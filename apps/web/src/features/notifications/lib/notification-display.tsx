@@ -19,7 +19,13 @@ import {
   ThunderboltOutlined,
 } from '@ant-design/icons';
 import { NOTIFICATION_TARGET_TYPE, NOTIFICATION_TYPE, type NotificationType } from '@xeprime/types';
-import { listingPath, ROUTES, tripPath } from '@/constants/routes';
+import {
+  ACCOUNT_SECTION,
+  accountSectionPath,
+  listingPath,
+  ROUTES,
+  tripPath,
+} from '@/constants/routes';
 
 /**
  * BỀ MẶT mà người dùng đang đứng khi bấm một thông báo — nó quyết định ĐÍCH, không quyết định
@@ -132,9 +138,7 @@ export function notificationHref(
   if (target === NOTIFICATION_TARGET_TYPE.CONVERSATION) {
     // Khách → hộp thư khách; gian hàng (cả hai tuyến) → hộp thư phía gian hàng ở site partner.
     const base = context === 'customer' ? ROUTES.CHAT : ROUTES.MANAGE.CHAT;
-    return notification.targetId
-      ? `${base}?c=${encodeURIComponent(notification.targetId)}`
-      : base;
+    return notification.targetId ? `${base}?c=${encodeURIComponent(notification.targetId)}` : base;
   }
 
   if (context === 'customer') {
@@ -150,9 +154,9 @@ export function notificationHref(
         return null;
     }
   }
-  // Owner Lite: hồ sơ chủ xe thay cho trang Cửa hàng; còn lại CÙNG màn với tuyến gói.
+  // Owner Lite: "Hồ sơ chủ xe" (trang chủ xe) thay cho trang Cửa hàng; còn lại CÙNG màn với tuyến gói.
   if (context === 'owner' && target === NOTIFICATION_TARGET_TYPE.TENANT) {
-    return ROUTES.MANAGE.REGISTRATION;
+    return accountSectionPath(ACCOUNT_SECTION.PROFILE);
   }
   switch (target) {
     case NOTIFICATION_TARGET_TYPE.BOOKING:

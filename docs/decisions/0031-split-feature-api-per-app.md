@@ -40,7 +40,7 @@ thì đi.
 
 ### 2. Mỗi app giữ tầng feature của riêng mình
 
-- **App native**: `apps/mobile/src/api/<feature>/` — bản đầy đủ 25 feature, chép nguyên văn, giữ
+- **App native**: `apps/mobile/shared/src/api/<feature>/` — bản đầy đủ 25 feature, chép nguyên văn, giữ
   nguyên tên export (`bookingsApi`, `vehiclesApi`, `marketplaceApi`…) và import chéo giữa feature.
 - **Web**: KHÔNG có thư mục mirror. Phần web thật sự dùng được viết lại vào chính file api sẵn có
   của web, cạnh phần web đã tự viết — xem bảng ở §Hệ quả.
@@ -61,7 +61,7 @@ Cái giữ hai bản không trôi khỏi nhau **không phải** là code dùng c
   (ADR 0007). Một field đổi tên ở backend làm ĐỎ typecheck ở cả hai app. Đây là hàng rào chính, và
   nó vẫn còn nguyên.
 - Test hàm thuần đứng đôi: `filtersToParams` của sổ khách có test ở cả
-  `apps/web/src/features/customers/api.test.ts` lẫn `apps/mobile/src/api/customers/api.test.ts`,
+  `apps/web/src/features/customers/api.test.ts` lẫn `apps/mobile/shared/src/api/customers/api.test.ts`,
   giữ cùng kỳ vọng.
 
 Thứ hàng rào type KHÔNG bắt được: hai bên gửi hai bộ query param khác nhau tới cùng một endpoint
@@ -90,7 +90,7 @@ Web dùng gì, và sau khi tách thì nó nằm ở đâu:
 
 Luật còn nguyên giá trị sau quyết định này:
 
-- `apps/mobile/src/api/**` vẫn KHÔNG được import `next/*`, `antd`, DOM API, `File`,
+- `apps/mobile/shared/src/api/**` vẫn KHÔNG được import `next/*`, `antd`, DOM API, `File`,
   `XMLHttpRequest`, CSS hay React UI — nó là bản clone của code framework-free, và bước upload dùng
   `File` vẫn ở lại tầng app (web: `services/upload.ts`; native: `lib/r2-image-upload.ts`).
 - Không đọc `process.env` trong `packages/api-client` — app vẫn truyền cấu hình vào bằng

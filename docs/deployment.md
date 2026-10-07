@@ -1,6 +1,7 @@
 # Triển khai XePrime lên VPS
 
-> Ngày viết: 27/08/2026 · Kiến trúc: **một VPS duy nhất** (CLAUDE.md §3 — "Deploy MVP: 1 VPS").
+> Ngày viết: 27/08/2026 · Cập nhật: 06/10/2026 · Trạng thái: đang áp dụng cho staging + production.
+> Kiến trúc: **một VPS duy nhất** (CLAUDE.md §3 — "Deploy MVP: 1 VPS").
 > Mọi file nhắc tới ở đây nằm trong `deploy/` và `docker-compose.prod.yml`.
 
 ---
@@ -12,8 +13,8 @@
 | Thành phần | RAM lúc chạy | Ghi chú |
 | --- | --- | --- |
 | PostgreSQL 16 | ~600 MB – 1.2 GB | `shared_buffers=512MB` + cache |
-| API (NestJS) | ~350 – 700 MB | 33 module, Prisma pool 10 kết nối |
-| Web (Next.js `next start`) | ~300 – 600 MB | 56 page, SSR vỏ + AntD |
+| API (NestJS) | ~350 – 700 MB | 51 thư mục module (53 `*.module.ts`, đếm 06/10/2026), Prisma pool 10 kết nối |
+| Web (Next.js `next start`) | ~300 – 600 MB | 144 `page.tsx` cho ba site (06/10/2026), SSR vỏ + AntD |
 | Worker | ~120 – 250 MB | vòng lặp theo đồng hồ |
 | Caddy | ~30 MB | |
 | **Tổng lúc chạy** | **~1.5 – 2.7 GB** | |
@@ -184,7 +185,6 @@ chặng. Để `1` thì `req.ip` thành IP biên Cloudflare và rate limit lại
 Và như §3.1: **tắt proxy (mây xám) cho tới khi Caddy lấy được chứng chỉ**, rồi mới bật.
 
 ---
----
 
 ### 2.3 Hai môi trường: staging và production
 
@@ -198,7 +198,7 @@ gian bỏ ra cho việc đó, và staging sập cũng không kéo theo productio
 | Web — khách | `xeprime.vn` | `stg.xeprime.vn` |
 | Web — đối tác | `partner.xeprime.vn` | `partner-stg.xeprime.vn` |
 | Web — quản trị | `admin.xeprime.vn` | `admin-stg.xeprime.vn` |
-| API (app native) | `api.xeprime.vn` | `api-stg.xeprime.vn` |
+| API (app native — CẢ HAI app, `EXPO_PUBLIC_API_URL`; không trỏ vào `/api` của site — ADR 0053) | `api.xeprime.vn` | `api-stg.xeprime.vn` |
 | Ảnh (R2) | `cdn.xeprime.vn` | URL `r2.dev` của bucket staging là đủ |
 | File cấu hình | `.env.production` | `.env.staging` |
 | Project Docker | `xeprime-production` | `xeprime-staging` |
@@ -690,8 +690,9 @@ Ghi ra để không ai tưởng là đã có:
 - **Không có giám sát ngoài `/health`.** Nên cắm uptime monitor miễn phí (UptimeRobot, Better
   Stack) vào `https://api.xeprime.vn/health` và `https://xeprime.vn`.
 - **Redis chưa dùng** — giữ sau profile `worker-queue` trong `docker-compose.prod.yml`.
-- **`apps/mobile` chưa có trong CI.** Đã có code nhưng chưa có job lint/typecheck/test, và chưa
-  có `eas.json`. App native **không** deploy lên VPS (§9.5) — đây là việc riêng.
+- **`apps/mobile` chưa có trong CI.** Hai app (`apps/mobile/customer`, `apps/mobile/manage`) đã có
+  code và mỗi app một `eas.json`, nhưng `.github/workflows/` (`ci.yml`, `deploy.yml`) chưa có job
+  lint/typecheck/test/build nào cho chúng. App native **không** deploy lên VPS (§9.5) — đây là việc riêng.
 
 ---
 
@@ -746,11 +747,11 @@ Settings; Secret bị che và không đọc lại được sau khi lưu.
 | `TRUST_PROXY_HOPS` | `1` | `2` nếu bật proxy Cloudflare (§2.2) |
 | `API_PUBLIC_URL` · `APP_WEB_URL` | `https://api-stg.xeprime.vn` · `https://stg.xeprime.vn` | |
 | `WEB_PARTNER_URL` · `WEB_ADMIN_URL` | `https://partner-stg.xeprime.vn` · `https://admin-stg.xeprime.vn` | tuỳ chọn — bỏ trống thì suy từ `PARTNER_DOMAIN`/`ADMIN_DOMAIN`. Link email + callback OAuth web của từng realm, và cũng là `NEXT_PUBLIC_WEB_*_URL` lúc build |
-| `SESSION_COOKIE_NAME` | **`xp_session_stg`** | BẮT BUỘC khác production — §2.3 |
+| `SESSION_COOKIE_NAME` | **`xp_session_stg`** | giữ khác production — lý do ở §2.3 |
 | `SESSION_COOKIE_SECURE` | `true` | |
 | ~~`SESSION_COOKIE_DOMAIN`~~ | **XOÁ** | đã bỏ (ADR 0053 — cookie host-only). Workflow không ghi nó nữa và cảnh báo nếu còn; API từ chối boot nếu thấy |
 | `MOBILE_ACCESS_TTL_MINUTES` · `MOBILE_REFRESH_TTL_DAYS` | `15` · `60` | |
-| `MOBILE_JWT_AUDIENCE` · `MOBILE_AUTH_REDIRECT_URIS` | `xeprime-mobile` · `xeprime://auth/callback` | |
+| `MOBILE_JWT_AUDIENCE` · `MOBILE_AUTH_REDIRECT_URIS` | `xeprime-mobile` · `xeprime://auth/callback,xeprimepartner://auth/callback` | hai scheme của hai app (XePrime · XePrime Partner); scheme quyết app đích của luồng social native |
 | `OTP_MODE` | `mock` | mã in ra log và trả trong response |
 | `PLAN_FEATURE_ENFORCEMENT` | `warn` | trục năng lực theo gói (ADR 0027). Xem §9.4 trước khi đổi sang `on` |
 | ~~`SESSION_TTL_DAYS` · `OTP_TTL_MINUTES` · `OTP_RESEND_COOLDOWN_SECONDS` · `OTP_MAX_SENDS_PER_HOUR` · `OTP_MAX_ATTEMPTS` · `GOOGLE_HOLIDAY_CALENDAR_ID`~~ | **XOÁ** | chính sách giống mọi môi trường ⇒ hằng số ở `@xeprime/types` (`SESSION_TTL_DAYS`, `OTP_POLICY`, `GOOGLE_HOLIDAY_CALENDAR_ID_DEFAULT`); workflow không còn đọc |
@@ -923,15 +924,29 @@ xoá nhầm, và người vận hành không phân biệt được.
 
 ### 9.5 App native KHÔNG deploy lên VPS
 
-`apps/mobile` là Expo / React Native, và nó **cố ý bị loại khỏi image Docker**: `deploy/Dockerfile`
-lọc `--filter @xeprime/{api,web,worker,prisma}...` rồi `rm -rf apps/mobile` (~1 GB Expo/RN),
-`.dockerignore` cũng gạt `apps/mobile/{android,ios,.expo}`.
+Mobile là **hai Expo project mỏng** + một package dùng chung (ADR 0051 §5):
 
-App không phải thứ "deploy" — nó là file `.apk`/`.ipa` build qua **EAS Build** rồi phát hành qua
-TestFlight / Google Play. Nó chỉ *gọi* tới VPS. Để app dùng được staging cần đúng ba việc, và cả
-ba nằm ngoài phạm vi tài liệu này:
+| Package | Thư mục | App | Bundle / package id | Scheme |
+| --- | --- | --- | --- | --- |
+| `@xeprime/mobile-customer` | `apps/mobile/customer` | XePrime (khách) | `vn.xeprime.mobile` | `xeprime` |
+| `@xeprime/mobile-manage` | `apps/mobile/manage` | XePrime Partner | `vn.xeprime.partner` | `xeprimepartner` |
+| `@xeprime/mobile-shared` | `apps/mobile/shared` | mã dùng chung của hai app | — | — |
 
-1. `EXPO_PUBLIC_API_URL=https://api-stg.xeprime.vn` — biến duy nhất app cần.
-2. Thêm `https://api-stg.xeprime.vn/auth/social/google/callback` vào danh sách redirect URI
-   trong console Google/Facebook — chúng là *danh sách*, không phải một giá trị.
-3. Muốn build tự động thì tạo `eas.json` (hiện chưa có) + một workflow riêng.
+Cả ba **cố ý bị loại khỏi image Docker**: `deploy/Dockerfile` chỉ cài
+`--filter @xeprime/{api,web,worker,prisma}...` (chỉ COPY manifest của ba package mobile để
+`--frozen-lockfile` khớp), rồi `rm -rf apps/mobile` (~1 GB Expo/RN); `.dockerignore` cũng gạt
+`apps/mobile/*/{android,ios,.expo}`.
+
+App không phải thứ "deploy" — nó là file `.apk`/`.aab`/`.ipa` build qua **EAS Build** (mỗi app một
+`eas.json`, ba profile `development` · `preview` · `production`) rồi phát hành qua TestFlight /
+Google Play. Nó chỉ *gọi* tới VPS. Để app dùng được staging cần đúng ba việc, làm cho **từng** app:
+
+1. `EXPO_PUBLIC_API_URL=https://api-stg.xeprime.vn` trong `.env` của app (mẫu ở `.env.example`
+   cùng thư mục) — biến duy nhất app cần để nói chuyện với staging.
+2. Thêm `https://api-stg.xeprime.vn/auth/social/<provider>/callback` vào danh sách redirect URI
+   trong console Google/Facebook — chúng là *danh sách*, không phải một giá trị — và giữ
+   `MOBILE_AUTH_REDIRECT_URIS` của API có đủ `xeprime://auth/callback` **và**
+   `xeprimepartner://auth/callback` (mặc định đã có cả hai, §9.2). Thiếu scheme `xeprimepartner`
+   thì đăng nhập Google/Facebook của app Partner dừng ở trang web với `SOCIAL_STATE_INVALID`.
+3. Muốn build tự động thì thêm một workflow riêng gọi `eas build` cho từng app — hiện CI
+   (`ci.yml`, `deploy.yml`) chưa có job nào cho mobile.

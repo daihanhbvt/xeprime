@@ -23,6 +23,8 @@ import {
   CatalogAdminQueryDto,
   CatalogModelAdminDto,
   CatalogModelAdminQueryDto,
+  CatalogModelBrandSummaryDto,
+  CatalogModelBrandSummaryQueryDto,
   CatalogModelDto,
   CreateCatalogModelDto,
   UpdateCatalogModelDto,
@@ -62,8 +64,17 @@ export class PlatformCatalogController {
     return this.models.listForAdmin(query);
   }
 
+  @Get('models/brands')
+  @ApiOperation({ summary: 'Số mẫu xe theo hãng của một loại phương tiện (kèm số mẫu thiếu thông số)' })
+  @ApiOkResponse({ type: [CatalogModelBrandSummaryDto] })
+  modelBrandSummary(
+    @Query() query: CatalogModelBrandSummaryQueryDto,
+  ): Promise<CatalogModelBrandSummaryDto[]> {
+    return this.models.brandSummary(query.vehicleType);
+  }
+
   @Post('models')
-  @ApiOperation({ summary: 'Thêm mẫu xe vào danh mục' })
+  @ApiOperation({ summary: 'Thêm mẫu xe vào danh mục (khôi phục nếu đúng mẫu đó từng bị xoá)' })
   @ApiOkResponse({ type: CatalogModelDto })
   createModel(
     @CurrentUser() user: AuthenticatedUser,

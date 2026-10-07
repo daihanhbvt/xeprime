@@ -10,21 +10,19 @@ import { SectionCard } from '@/components/layout/SectionCard';
 import { SectionNav, type SectionNavItem } from '@/components/layout/SectionNav';
 import {
   ACCOUNT_SECTION,
+  PERSONAL_ACCOUNT_SECTIONS,
   accountSectionDomId,
   accountSectionOf,
   type AccountSection,
 } from '@/constants/routes';
-import { ChangePasswordForm } from '@/features/auth/components/ChangePasswordForm';
 import { useScrollToSection } from '@/hooks/use-scroll-to-section';
 import { useUrlFilters } from '@/hooks/use-url-filters';
 import { useErrorMessage } from '@/i18n/use-error-message';
 
 import { useMyProfile } from '../hooks/use-account';
 import type { UserProfile } from '../types';
-import { AccountDeletionImpact } from './AccountDeletionImpact';
 import { AccountProfileForm } from './AccountProfileForm';
-import { DeleteAccountView } from './DeleteAccountView';
-import { LoginMethods } from './LoginMethods';
+import { AccountSecuritySections } from './AccountSecuritySections';
 import styles from './PartnerAccountPage.module.css';
 
 /**
@@ -45,7 +43,10 @@ import styles from './PartnerAccountPage.module.css';
  * gì của GIAN HÀNG ở đây — tên, logo, SĐT liên hệ của gian hàng sống ở Cài đặt gian hàng.
  *
  * Mỗi section dùng lại component của khu tài khoản (không clone): luồng OTP, luật mật khẩu và
- * luồng yêu cầu xoá tài khoản chỉ có một chỗ để sửa.
+ * luồng yêu cầu xoá tài khoản chỉ có một chỗ để sửa (`AccountSecuritySections`).
+ *
+ * CHỦ xe tuyến hoa hồng không thấy bản này — cùng URL, họ thấy "Hồ sơ chủ xe" (`OwnerProfilePage`,
+ * chọn ở `PartnerAccountRoute`).
  */
 export function PartnerAccountPage() {
   const t = useTranslations('Account.hub');
@@ -54,7 +55,12 @@ export function PartnerAccountPage() {
   const profile = useMyProfile();
 
   const { filters, setFilters } = useUrlFilters((params) => ({
-    section: accountSectionOf(params.get('section')),
+    /*
+     * Hai section của "Hồ sơ chủ xe" (trang chủ xe, địa chỉ) không có ở đây — một link
+     * `?section=storefront` gửi cho người ở tuyến gói rơi về đầu trang, không về một mục lục
+     * đang sáng một dòng không tồn tại.
+     */
+    section: personalSectionOf(params.get('section')),
     // Dẫn xuất, không bao giờ ghi ngược lên URL — chỉ để lần vẽ đầu biết có nên cuộn hay không.
     sectionInUrl: params.has('section'),
   }));
@@ -96,6 +102,11 @@ export function PartnerAccountPage() {
       )}
     </div>
   );
+}
+
+function personalSectionOf(value: string | null): AccountSection {
+  const section = accountSectionOf(value);
+  return PERSONAL_ACCOUNT_SECTIONS.includes(section) ? section : ACCOUNT_SECTION.PROFILE;
 }
 
 /**
@@ -149,30 +160,7 @@ function AccountSections({
             <AccountProfileForm profile={profile} />
           </SectionCard>
 
-          <SectionCard
-            id={accountSectionDomId(ACCOUNT_SECTION.LOGIN)}
-            title={t('sections.login')}
-            hint={t('sections.loginHint')}
-          >
-            <LoginMethods profile={profile} />
-          </SectionCard>
-
-          <SectionCard
-            id={accountSectionDomId(ACCOUNT_SECTION.PASSWORD)}
-            title={t('sections.password')}
-            hint={t('sections.passwordHint')}
-          >
-            <ChangePasswordForm embedded />
-          </SectionCard>
-
-          <SectionCard
-            id={accountSectionDomId(ACCOUNT_SECTION.DELETE)}
-            title={t('sections.delete')}
-            hint={t('sections.deleteHint')}
-            tone="danger"
-          >
-            <DeleteAccountView embedded impact={<AccountDeletionImpact />} />
-          </SectionCard>
+          <AccountSecuritySections profile={profile} />
         </div>
       </Form>
     </div>

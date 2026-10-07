@@ -1,16 +1,18 @@
 'use client';
 
-import { CATALOG_TYPE } from '@xeprime/types';
+import { CATALOG_TYPE, VEHICLE_TYPE } from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
 import { Col, Row } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
-import { useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
+import { useFormState, useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
 
 import { SelectField } from '@/components/form/SelectField';
 import { useCatalogItems, useCatalogOptions } from '@/features/catalog/use-catalog';
 import { useCatalogModelGroups, useCatalogModels } from '@/features/catalog/use-catalog-models';
 import { useDomainLabel } from '@/i18n/use-domain-label';
+
+import { useCatalogModelSpec, valueForSpecRule } from '../hooks/use-catalog-model-spec';
 
 interface VehicleIdentityFieldsProps {
   control: Control<VehicleFormValues>;
@@ -92,6 +94,8 @@ export function VehicleIdentityFields({
     if (changed && setValue) setValue('vehicleCatalogModelId', null, { shouldDirty: true });
   }, [brand, vehicleType, setValue]);
 
+  usePrefillFromModel(control, vehicleType, modelId, setValue);
+
   return (
     <Row gutter={16}>
       <Col xs={24} sm={12}>
@@ -153,4 +157,65 @@ function useBrandOptions(vehicleType: string, current: string | null | undefined
     }
     return options;
   }, [items, fallback, vehicleType, current]);
+}
+
+/**
+ * Chọn MẪU XE ⇒ điền sẵn số chỗ, nguồn năng lượng, phân khúc theo danh mục (`catalogSpecRule`).
+ *
+ * Chỉ chạy khi người dùng ĐỔI mẫu, không chạy lúc form sửa vừa nạp xe: ghi đè dữ liệu chủ xe đã
+ * lưu chỉ vì mở trang là âm thầm sửa xe của họ. Dữ liệu mẫu đến sau giá trị ô chọn (đổi mẫu là
+ * đổi `includeId` ⇒ một lượt tải mới), nên lượt điền chờ tới khi đúng mẫu đó có trong tay.
+ *
+ * Hộp số điền theo nguồn năng lượng vừa đặt (`transmissionFor`); `VehicleEnergyFields` vẫn là nơi
+ * khoá ô và tự sửa hộp số khi chủ xe đổi nguồn năng lượng sau đó.
+ */
+function usePrefillFromModel(
+  control: Control<VehicleFormValues>,
+  vehicleType: string,
+  modelId: string | null | undefined,
+  setValue: UseFormSetValue<VehicleFormValues> | undefined,
+) {
+  const spec = useCatalogModelSpec(control, vehicleType);
+  const seatCount = useWatch({ control, name: 'seatCount' });
+  const fuelType = useWatch({ control, name: 'fuelType' });
+  const transmission = useWatch({ control, name: 'transmission' });
+  // Mẫu ĐÃ LƯU của xe: quay về nó (bấm Huỷ ⇒ `reset`) không phải một lượt chọn mẫu mới, và điền lại
+  // lúc đó sẽ ghi đè dữ liệu cũ rồi để form ở trạng thái "đã sửa" sau một cú Huỷ.
+  const savedModelId = useFormState({ control }).defaultValues?.vehicleCatalogModelId ?? null;
+
+  const pending = useRef<string | null>(null);
+  const lastModelId = useRef(modelId);
+  useEffect(() => {
+    if (lastModelId.current !== modelId) {
+      pending.current = modelId && modelId !== savedModelId ? modelId : null;
+    }
+    lastModelId.current = modelId;
+  }, [modelId, savedModelId]);
+
+  useEffect(() => {
+    const model = spec.model;
+    if (!setValue || !model || pending.current !== model.id) return;
+    pending.current = null;
+
+    const opts = { shouldDirty: true, shouldValidate: true } as const;
+    if (model.vehicleType === VEHICLE_TYPE.CAR) {
+      const seats = valueForSpecRule(spec.seats, seatCount);
+      if (seats !== (seatCount ?? null)) setValue('seatCount', seats, opts);
+    }
+    const fuel = valueForSpecRule(spec.fuel, fuelType);
+    if (fuel !== (fuelType ?? null)) setValue('fuelType', fuel as VehicleFormValues['fuelType'], opts);
+    // Hộp số theo ĐÚNG nguồn năng lượng vừa đặt (Camry hybrid ⇒ e-CVT). Trống nguồn năng lượng thì
+    // luật là `free` và hộp số giữ nguyên; `VehicleEnergyFields` vẫn tự lo phần xe điện.
+    const gear = valueForSpecRule(spec.transmissionFor(fuel), transmission);
+    if (gear !== (transmission ?? null)) {
+      setValue('transmission', gear as VehicleFormValues['transmission'], opts);
+    }
+    if (model.motorbikeCategory) {
+      setValue(
+        'motorbikeCategory',
+        model.motorbikeCategory as VehicleFormValues['motorbikeCategory'],
+        opts,
+      );
+    }
+  }, [spec, seatCount, fuelType, transmission, setValue]);
 }

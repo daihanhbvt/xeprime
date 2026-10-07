@@ -1,6 +1,6 @@
 # ADR 0022 — SePay mở sang tiền của KHÁCH: một sổ giao dịch ngân hàng, hai loại đích khớp
 
-Ngày: 28/08/2026 · Trạng thái: Accepted · **Mở rộng [ADR 0016](0016-sepay-bank-reconciliation.md) điều 1 · huỷ [ADR 0015](0015-vehicle-slot-billing.md) điều 5 câu cuối**
+Ngày: 28/08/2026 · Trạng thái: Accepted · **Mở rộng [ADR 0016](0016-sepay-bank-reconciliation.md) điều 1 · huỷ ADR 0015 điều 5 câu cuối (ADR 0015 đã gỡ — quy tắc này nay sống ở điều 6) · mở rộng bởi [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md)**
 
 ## Bối cảnh
 
@@ -63,10 +63,12 @@ sự không phải "có mở rộng không" mà là **một sổ hay hai sổ**.
      nguyên mã để khách chuyển bù, báo admin. Giao dịch thứ hai khớp vào cùng đích và cộng dồn.
    - Thừa với **hoá đơn gói** → ghi có kỳ sau, như cũ.
    - Thừa với **khoản giữ chỗ** → **không có "kỳ sau"** để ghi có. Xử lý là: coi như đã trả đủ,
-     đánh dấu phần dư để hoàn qua ví khách (ADR 0023).
+     đánh dấu phần dư để hoàn vào Ví điểm ([ADR 0033](0033-money-ledger-and-deposit-allocation.md)
+     điều 5–6; ví của TÀI KHOẢN khách đã đặt chuyến — [ADR 0053](0053-separate-account-realms.md)
+     điều 8).
      Đây là chỗ duy nhất quy tắc của 0016 không chuyển sang được.
 
-6. **HUỶ [ADR 0015 điều 5 câu cuối](0015-vehicle-slot-billing.md)** — *"`payments.subscription_id`
+6. **HUỶ ADR 0015 điều 5 câu cuối** (ADR 0015 đã gỡ khỏi repo; quy tắc này nay chỉ sống ở đây) — *"`payments.subscription_id`
    (cột chờ sẵn từ Phase 0) nay nối FK"*. **Không nối, và cột đó vẫn để trống.**
 
    Lý do: một dòng `payments` có `tenant_id` sẽ **tự sinh phiếu thu đã duyệt cho tenant đó**

@@ -1,6 +1,7 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
   ACCOUNT_REALM,
+  BILLING_MODE,
   BOOKING_STATUS,
   REVIEW_STATUS,
   TENANT_STATUS,
@@ -11,6 +12,7 @@ import { ListingsService } from '../src/modules/public-listings/listings.service
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { makePublicListingsService, seedBranch, seedProvince } from './helpers/service-factory';
 import { TEST_PROVINCE } from './helpers/test-provinces';
+import { giveTenantPlan } from './helpers/billing-fixture';
 
 /**
  * Dữ liệu trang chủ marketplace — "Địa điểm nổi bật", "Gian hàng nổi bật" và điểm đánh giá trên
@@ -66,6 +68,12 @@ async function seedTenant(
   await prisma.tenantProfile.create({
     data: { tenantId: id, provinceCode, provinceName },
   });
+  /*
+   * "Gian hàng nổi bật" là GIAN HÀNG tuyến gói: tên và logo khách thấy là của gian hàng. Không có
+   * gói thì tenant là mặt tiền CÁ NHÂN — tên/ảnh lấy từ tài khoản chủ (ADR 0054), và spec này sẽ
+   * đo một thứ khác thứ nó nói.
+   */
+  await giveTenantPlan(prisma, id, { billingMode: BILLING_MODE.PACKAGE });
   branchByTenant.set(id, await seedBranch(asService, { tenantId: id, provinceCode }));
   return id;
 }
@@ -192,6 +200,7 @@ afterAll(async () => {
     await prisma.vehicle.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.tenantProfile.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.tenantBranch.deleteMany({ where: { tenantId: { in: tenantIds } } });
+    await prisma.tenantSubscription.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.tenant.deleteMany({ where: { id: { in: tenantIds } } });
     await prisma.user.deleteMany({ where: { id: { in: [ownerId, customerId] } } });
     await prisma.province.deleteMany({ where: { code: { in: ALL_PROV } } });

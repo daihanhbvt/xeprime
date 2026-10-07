@@ -32,9 +32,7 @@ import {
   isCustomerTripFilter,
   isTripRole,
   isDepositCollectionMode,
-  resolveEffectiveBilling,
   resolveRefundWalletOwner,
-  resolveStorefrontKind,
   isHandoverPhotoAddedAfterConfirmation,
   type BookingRequestStatus,
   type BookingStatus,
@@ -47,11 +45,11 @@ import {
   type TripRole,
 } from '@xeprime/types';
 import { fromDateOnly } from '../../common/date-only';
+import { currentSubscriptionWhere } from '../../common/plan/feature-state';
 import {
-  currentSubscriptionWhere,
-  effectiveSubscriptionWhere,
-  EFFECTIVE_SUBSCRIPTION_ARGS,
-} from '../../common/plan/feature-state';
+  resolveStorefront,
+  storefrontTenantSelect,
+} from '../../common/storefront/storefront-identity';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { CancellationsService } from '../cancellations/cancellations.service';
@@ -149,10 +147,7 @@ export class CustomerTripsService {
     private readonly cancellations: CancellationsService,
   ) {}
 
-  async list(
-    viewerUserId: string,
-    query: CustomerTripListQueryDto,
-  ): Promise<CustomerTripPageDto> {
+  async list(viewerUserId: string, query: CustomerTripListQueryDto): Promise<CustomerTripPageDto> {
     const now = new Date();
     const paging = resolvePaging(query, CUSTOMER_TRIP_DEFAULT_LIMIT, CUSTOMER_TRIP_MAX_LIMIT);
     const filter: CustomerTripFilter = isCustomerTripFilter(query.filter)
@@ -370,9 +365,7 @@ export class CustomerTripsService {
        * họ không thu được là mời họ hiểu nhầm rằng nền tảng đang giữ hộ.
        */
       hold:
-        base.role === TRIP_ROLE.RENTER
-          ? await this.holds.findForTrip(row.id, viewerUserId)
-          : null,
+        base.role === TRIP_ROLE.RENTER ? await this.holds.findForTrip(row.id, viewerUserId) : null,
       /*
        * Cột ĐÃ ĐÓNG BĂNG trên đơn, không suy từ công tắc hiện tại của gian hàng: khách mở lại
        * một chuyến cũ phải đọc đúng cách thu cọc đã áp cho CHÍNH chuyến đó (ADR 0025 ràng buộc 4).
@@ -498,10 +491,7 @@ export class CustomerTripsService {
        * Chặng `pending_host_approval` KHÔNG ghi: ở đó chưa ai quyết định gì, và mẫu đó bị loại
        * khỏi mẫu số ngay từ truy vấn — một dòng huỷ ở đây chỉ là rác.
        */
-      if (
-        claimed.count > 0 &&
-        row.status !== BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL
-      ) {
+      if (claimed.count > 0 && row.status !== BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL) {
         await this.cancellations.recordWithinTx(tx, {
           tenantId: row.tenantId,
           bookingRequestId: row.id,
@@ -927,85 +917,85 @@ const BOOKING_SELECT = {
   review: { select: { id: true, rating: true, comment: true, createdAt: true } },
 } satisfies Prisma.BookingSelect;
 
-const listSelect = (now: Date) => ({
-  id: true,
-  status: true,
-  pickupAt: true,
-  returnAt: true,
-  serviceType: true,
-  longTermPackageMonths: true,
-  pickupPreference: true,
-  requestedPickupDate: true,
-  pickupWindowStartDate: true,
-  pickupWindowEndDate: true,
-  routeType: true,
-  pickupAddress: true,
-  destination: true,
-  deliveryRequested: true,
-  deliveryAddress: true,
-  createdAt: true,
-  bookingId: true,
-  tenantId: true,
-  // Mã khuyến mãi đã đóng băng lúc gửi — báo giá lại phải mang nó theo (ADR 0046 điều 7).
-  promoSnapshot: true,
-  // Ba trường dưới đây phục vụ PHÍA CHỦ XE: ai đang thuê, và còn bao lâu phải trả lời.
-  customerUserId: true,
-  customerName: true,
-  customerPhone: true,
-  respondBy: true,
-  vehicle: {
-    select: {
-      id: true,
-      name: true,
-      plateNumber: true,
-      mainImageUrl: true,
-      seatCount: true,
-      transmission: true,
-      fuelType: true,
-      // Bảng giá của xe — để báo giá TẠM TÍNH cho yêu cầu chưa duyệt không phải đọc lại
-      // bảng xe một lượt cho mỗi dòng (xem `PricingService.estimateCustomerTotal`).
-      weekdayPrice: true,
-      weekendPrice: true,
-      monthlyPrice: true,
-      withDriverDailyPrice: true,
-      withDriverInterCityPrice: true,
-      withDriverOneWayPrice: true,
-      discountPercent: true,
+const listSelect = (now: Date) =>
+  ({
+    id: true,
+    status: true,
+    pickupAt: true,
+    returnAt: true,
+    serviceType: true,
+    longTermPackageMonths: true,
+    pickupPreference: true,
+    requestedPickupDate: true,
+    pickupWindowStartDate: true,
+    pickupWindowEndDate: true,
+    routeType: true,
+    pickupAddress: true,
+    destination: true,
+    deliveryRequested: true,
+    deliveryAddress: true,
+    createdAt: true,
+    bookingId: true,
+    tenantId: true,
+    // Mã khuyến mãi đã đóng băng lúc gửi — báo giá lại phải mang nó theo (ADR 0046 điều 7).
+    promoSnapshot: true,
+    // Ba trường dưới đây phục vụ PHÍA CHỦ XE: ai đang thuê, và còn bao lâu phải trả lời.
+    customerUserId: true,
+    customerName: true,
+    customerPhone: true,
+    respondBy: true,
+    vehicle: {
+      select: {
+        id: true,
+        name: true,
+        plateNumber: true,
+        mainImageUrl: true,
+        seatCount: true,
+        transmission: true,
+        fuelType: true,
+        // Bảng giá của xe — để báo giá TẠM TÍNH cho yêu cầu chưa duyệt không phải đọc lại
+        // bảng xe một lượt cho mỗi dòng (xem `PricingService.estimateCustomerTotal`).
+        weekdayPrice: true,
+        weekendPrice: true,
+        monthlyPrice: true,
+        withDriverDailyPrice: true,
+        withDriverInterCityPrice: true,
+        withDriverOneWayPrice: true,
+        discountPercent: true,
+      },
     },
-  },
-  tenant: {
-    select: {
-      name: true,
-      slug: true,
-      ratingAvg: true,
-      ratingCount: true,
-      phone: true,
-      /*
-       * Dòng thuê bao HIỆU LỰC — đầu vào của `resolveEffectiveBilling`, để tách "chủ xe cá nhân
-       * tuyến hoa hồng" khỏi "gian hàng tuyến gói" (ADR 0028/0040): màn chi tiết chuyến không
-       * được gọi CẢ HAI là "gian hàng" như trước 17/09/2026, vì chủ xe cá nhân không có mặt tiền
-       * kiểu doanh nghiệp để "xem".
-       */
-      subscriptions: { where: effectiveSubscriptionWhere(now), ...EFFECTIVE_SUBSCRIPTION_ARGS },
+    tenant: {
+      select: {
+        /*
+         * Tên, SĐT và tuyến HIỆU LỰC (ADR 0054): chủ xe cá nhân hiện bằng TÀI KHOẢN của họ (họ tên,
+         * SĐT đăng nhập đã xác thực), gian hàng tuyến gói bằng bộ riêng. Tuyến cũng tách "chủ xe cá
+         * nhân" khỏi "gian hàng" trên màn chi tiết chuyến (ADR 0028/0040) — chủ xe cá nhân không có
+         * mặt tiền kiểu doanh nghiệp để "xem".
+         */
+        ...storefrontTenantSelect(now),
+        slug: true,
+        ratingAvg: true,
+        ratingCount: true,
+      },
     },
-  },
-  booking: { select: BOOKING_SELECT },
-  /*
-   * Snapshot giá ĐÃ ĐÓNG BĂNG lúc sinh khoản giữ chỗ (ADR 0024 · ADR 0039).
-   *
-   * Có mặt ở đây để bảng giá của một chuyến đã cọc đọc đúng con số khách ĐÃ TRẢ, thay vì một
-   * lượt báo giá lại theo chính sách của hôm nay. Hai thứ đó lệch nhau là chuyện bình thường —
-   * giá cuối tuần, khuyến mãi, chính sách phí đều đổi được — và khi lệch thì màn hình đang nói
-   * với khách một con số không ai từng thu của họ.
-   */
-  hold: { select: { status: true, priceSnapshotJson: true } },
-}) satisfies Prisma.BookingRequestSelect;
+    booking: { select: BOOKING_SELECT },
+    /*
+     * Snapshot giá ĐÃ ĐÓNG BĂNG lúc sinh khoản giữ chỗ (ADR 0024 · ADR 0039).
+     *
+     * Có mặt ở đây để bảng giá của một chuyến đã cọc đọc đúng con số khách ĐÃ TRẢ, thay vì một
+     * lượt báo giá lại theo chính sách của hôm nay. Hai thứ đó lệch nhau là chuyện bình thường —
+     * giá cuối tuần, khuyến mãi, chính sách phí đều đổi được — và khi lệch thì màn hình đang nói
+     * với khách một con số không ai từng thu của họ.
+     */
+    hold: { select: { status: true, priceSnapshotJson: true } },
+  }) satisfies Prisma.BookingRequestSelect;
 
-const detailSelect = (now: Date) => ({
-  ...listSelect(now),
-  note: true,
-  rejectReason: true,
-}) satisfies Prisma.BookingRequestSelect;
+const detailSelect = (now: Date) =>
+  ({
+    ...listSelect(now),
+    note: true,
+    rejectReason: true,
+  }) satisfies Prisma.BookingRequestSelect;
 
 type TripRow = Prisma.BookingRequestGetPayload<{ select: ReturnType<typeof detailSelect> }>;
 type BookingRow = NonNullable<TripRow['booking']>;
@@ -1028,9 +1018,9 @@ function toListItem(
    * thuê xe của chính mình vẫn đang ở vai KHÁCH trên chuyến đó, và màn hình phải nói đúng vai
    * để họ không thấy nút "Duyệt" trên yêu cầu do chính mình gửi.
    */
-  const role: TripRole =
-    row.customerUserId === scope.userId ? TRIP_ROLE.RENTER : TRIP_ROLE.HOST;
+  const role: TripRole = row.customerUserId === scope.userId ? TRIP_ROLE.RENTER : TRIP_ROLE.HOST;
   const canContact = canContactOn(engaged, role, scope);
+  const storefront = resolveStorefront(row.tenant, now);
 
   const item: CustomerTripListItemDto = {
     id: row.id,
@@ -1068,16 +1058,16 @@ function toListItem(
             : null,
     },
     shop: {
-      name: row.tenant.name,
+      name: storefront.name,
       slug: row.tenant.slug,
       ratingAvg: Number(row.tenant.ratingAvg),
       ratingCount: row.tenant.ratingCount,
-      phone: canContact ? row.tenant.phone : null,
+      // Chủ xe cá nhân: SĐT ĐĂNG NHẬP đã xác thực của họ — số khách gọi là số nền tảng đã chứng
+      // minh là của người đó (ADR 0054).
+      phone: canContact ? storefront.phone : null,
       // Cùng phép suy với trang gian hàng công khai (`resolveStorefrontKind`, ADR 0038 điều 1):
       // `unconfigured`/hết ân hạn rơi về `personal`, KHÔNG mặc định thành `shop`.
-      shopKind: resolveStorefrontKind(
-        resolveEffectiveBilling(row.tenant.subscriptions[0] ?? null, now).billingMode,
-      ),
+      shopKind: storefront.kind,
     },
     // Giờ trên ĐƠN thắng giờ trên yêu cầu: shop dời lịch thì đơn mới là cái đang có hiệu lực.
     // Yêu cầu dài hạn chờ duyệt chưa có lịch nào — trả null, KHÔNG suy ra ngày từ nguyện vọng.

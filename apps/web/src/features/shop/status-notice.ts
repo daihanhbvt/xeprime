@@ -38,8 +38,8 @@ export interface ShopStatusNotice {
    * Nơi sửa được tình trạng này. `null` = không có việc gì để làm.
    *
    * `target` là MỘT KHOÁ trong bảng đường dẫn theo khu (`workspacePaths`), không phải một URL
-   * cứng: cùng một tình trạng dẫn tới `/manage/shop` với gian hàng có gói và `/account/registration`
-   * với chủ xe tuyến hoa hồng. Nhúng `/manage/...` vào bảng này nghĩa là dải trạng thái luôn mời
+   * cứng: cùng một tình trạng dẫn tới `/manage/shop` với gian hàng có gói và "Hồ sơ chủ xe"
+   * (`/manage/account`) với chủ xe tuyến hoa hồng. Nhúng `/manage/...` vào bảng này nghĩa là dải trạng thái luôn mời
    * tuyến hoa hồng đi vào đúng khu họ không vào được.
    */
   action: { key: ShopNoticeAction; target: keyof WorkspacePaths } | null;

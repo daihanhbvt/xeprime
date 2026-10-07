@@ -15,6 +15,8 @@ import { ZONE } from '@/zones';
 import { useZone } from '@/zones/ZoneProvider';
 import { AccountTrackBadge } from '@/features/account/components/AccountTrackBadge';
 import { useAccountIdentityLabel } from '@/features/account/hooks/use-account-identity-label';
+import { workspaceAvatar } from '@/features/account/workspace-avatar';
+import { isCommissionOwner } from '@/features/auth/post-auth-destination';
 import { cx } from '@/lib/cx';
 import { usePortalLogout } from '@/features/auth/hooks/use-portal-logout';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -42,7 +44,8 @@ export interface ManageUserCardProps {
  * hai hình đại diện cho hai thứ khác nhau trên cùng một màn hình, và người dùng phải tự đoán
  * cái nào nói về cái gì. Nay cả hai chỗ đều là logo gian hàng (`tenant.logoUrl` từ `/auth/me`,
  * fallback là chữ cái đầu của TÊN GIAN HÀNG): trong cổng quản lý, thứ đang được vận hành là
- * gian hàng.
+ * gian hàng. Ngoại lệ duy nhất (06/10/2026): CHỦ xe tuyến hoa hồng — với họ người và trang chủ xe
+ * là một, nên ảnh là ảnh của họ (tròn) theo đúng luật mặt tiền công khai (`workspaceAvatar`).
  *
  * Người đang đăng nhập KHÔNG biến mất — họ là dòng "Đăng nhập: …" trong menu, đúng chỗ cần
  * thiết khi nhiều nhân viên dùng chung một máy. Và KHÔNG có đường nào chép logo gian hàng sang
@@ -116,7 +119,12 @@ export function ManageUserCard({ collapsed = false, tone = 'light' }: ManageUser
       : {
           key: 'account',
           icon: <UserOutlined aria-hidden />,
-          label: <Link href={ROUTES.MANAGE.ACCOUNT}>{t('shell.account')}</Link>,
+          // Chủ xe tuyến hoa hồng: cùng URL là "Hồ sơ chủ xe" (`PartnerAccountRoute`) — nhãn theo.
+          label: (
+            <Link href={ROUTES.MANAGE.ACCOUNT}>
+              {isCommissionOwner(user) ? t('shell.ownerProfile') : t('shell.account')}
+            </Link>
+          ),
         },
     // Cài đặt gian hàng chỉ có nghĩa khi người dùng ĐANG đứng trong một gian hàng tuyến gói —
     // điều kiện dùng chung với mọi lối vào khác của trang đó (`useShopSettingsAccess`).
@@ -139,7 +147,7 @@ export function ManageUserCard({ collapsed = false, tone = 'light' }: ManageUser
   ];
 
   const avatar = (
-    <Avatar className={styles.avatar} shape="square" src={user.tenant?.logoUrl ?? undefined}>
+    <Avatar className={styles.avatar} {...workspaceAvatar(user)}>
       {initialOf(workspaceName)}
     </Avatar>
   );

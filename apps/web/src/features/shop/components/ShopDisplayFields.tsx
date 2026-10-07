@@ -18,13 +18,15 @@ import styles from './ShopFields.module.css';
  * THÔNG TIN HIỂN THỊ — thứ khách nhìn thấy: tên, SĐT/email liên hệ, giới thiệu, logo, ảnh bìa.
  *
  * Tên + SĐT + email là của GIAN HÀNG (`tenants.name/phone/email`), KHÔNG phải của tài khoản chủ:
- * SĐT/email đăng nhập đổi qua OTP ở trang tài khoản, và đổi bên nào cũng không chạm bên kia
- * (ADR 0053). Lúc đăng ký, liên hệ của gian hàng được điền sẵn từ tài khoản — sau đó là hai bộ.
+ * SĐT/email đăng nhập đổi qua OTP ở trang tài khoản, và đổi bên nào cũng không chạm bên kia.
+ * Lúc đăng ký, liên hệ của gian hàng được điền sẵn từ tài khoản — sau đó là hai bộ.
  *
- * Dùng chung bởi trang Cửa hàng (`/manage/shop`) và tiến trình đăng ký chủ xe
- * (`/account/registration`): cùng endpoint, cùng schema, nên cùng một bộ ô. Chỉ nhận `control` —
- * nó KHÔNG biết mình đang nằm trong bố cục nào, và đó là điều kiện để hai màn có bố cục khác
- * nhau mà không cần hai bản sao của bốn ô này.
+ * CHỈ mặt tiền GIAN HÀNG (tuyến gói) có bộ này (ADR 0054). Chủ xe tuyến hoa hồng hiện bằng chính
+ * tài khoản của họ — "Hồ sơ chủ xe" (`OwnerProfilePage`) không dựng các ô này; cột của gian hàng
+ * nằm yên và hiện lại ở đây khi họ lên gói.
+ *
+ * Dùng ở trang Cửa hàng (`/manage/shop`). Chỉ nhận `control` — nó KHÔNG biết mình đang nằm trong
+ * bố cục nào.
  *
  * Logo là hình đại diện DUY NHẤT của gian hàng trong cổng quản lý (`ManageUserCard`, `Topbar`
  * đều đọc nó qua `/auth/me`). Không có đường nào chép nó sang `users.avatar_url` và ngược lại:

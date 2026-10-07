@@ -69,11 +69,11 @@ Tiêu đề trang sửa từ "Đơn thuê" thành "Tất cả đơn thuê" — k
 
 Rà toàn bộ writer trong `apps/api`/`apps/web`/`apps/worker`: **không có writer nào** (chỉ một nhánh đọc phòng thủ trong `customer-trips.service.ts` cho dữ liệu cũ). `SELECT COUNT(*)` trên DB dev lẫn DB test: **0 hàng cả hai**.
 
-Dù vậy **không xoá khỏi enum**: `apps/mobile/src/features/booking-requests/inbox-rules.test.ts` tham chiếu trực tiếp `BOOKING_REQUEST_STATUS.APPROVED_BY_HOST` — xoá sẽ vỡ biên dịch mobile, đúng loại rủi ro đã tránh ở điều 1 cho `confirmed`. Chỉ thêm docblock đánh dấu rõ CHẾT (0 writer, 0 hàng, xác nhận 23/09/2026), không dùng trong code mới.
+Dù vậy **không xoá khỏi enum**: `apps/mobile/shared/src/features/booking-requests/inbox-rules.test.ts` tham chiếu trực tiếp `BOOKING_REQUEST_STATUS.APPROVED_BY_HOST` — xoá sẽ vỡ biên dịch mobile, đúng loại rủi ro đã tránh ở điều 1 cho `confirmed`. Chỉ thêm docblock đánh dấu rõ CHẾT (0 writer, 0 hàng, xác nhận 23/09/2026), không dùng trong code mới.
 
 ### 8. `packages/domain/messages/{vi,en}/booking-requests.json` giữ khoá CŨ bên cạnh khoá MỚI
 
-`apps/mobile/src/features/booking-requests/BookingRequestInboxScreen.tsx` có `RequestStats`/`StatusTabs` RIÊNG (không dùng chung `constants.ts` của web — ADR 0031), đọc trực tiếp `t('stats.pending')`, `t('stats.converted')`, `t('tabs.converted'|'rejected'|'cancelled'|'expired'|'all')` — những khoá này là literal type do next-intl suy ra TỪ CHÍNH cấu trúc JSON, nên xoá khoá (không chỉ đổi giá trị) là lỗi biên dịch TypeScript ở mobile, không phải một dòng test đỏ.
+`apps/mobile/shared/src/features/booking-requests/BookingRequestInboxScreen.tsx` có `RequestStats`/`StatusTabs` RIÊNG (không dùng chung `constants.ts` của web — ADR 0031), đọc trực tiếp `t('stats.pending')`, `t('stats.converted')`, `t('tabs.converted'|'rejected'|'cancelled'|'expired'|'all')` — những khoá này là literal type do next-intl suy ra TỪ CHÍNH cấu trúc JSON, nên xoá khoá (không chỉ đổi giá trị) là lỗi biên dịch TypeScript ở mobile, không phải một dòng test đỏ.
 
 Quyết định: **JSON giữ cả khoá cũ lẫn khoá mới** cho tới khi mobile tự chuyển sang cấu trúc 3 tab và dọn phần của họ. `constants.ts` có docblock cảnh báo rõ lý do các khoá "không dùng" đó không được xoá.
 
@@ -89,12 +89,12 @@ Quyết định: **JSON giữ cả khoá cũ lẫn khoá mới** cho tới khi m
 
 | File | Ảnh hưởng | Đã xác nhận |
 |---|---|---|
-| `apps/mobile/src/features/bookings/booking-rules.test.ts:81` | `isHandoverEligible(PICKUP, CONFIRMED)` kỳ vọng `true`, nay `false` (điều 2). Test đỏ, không phải lỗi biên dịch. | ✅ chạy thật, đúng 1 assertion sai |
-| `apps/mobile/src/features/calendar/components/calendar-legend.test.tsx` | Assertion còn chữ "Đã giữ xe" — nhãn đã đổi thành "Chờ giao xe" (điều 6, khoá dùng chung). | ✅ chạy thật, đỏ |
-| `apps/mobile/src/features/calendar/calendar-tone.ts` | Biên dịch bình thường — `CONFIRMED` vẫn là thành viên hợp lệ của enum (điều 1). | ✅ `tsc --noEmit` sạch |
+| `apps/mobile/shared/src/features/bookings/booking-rules.test.ts:81` | `isHandoverEligible(PICKUP, CONFIRMED)` kỳ vọng `true`, nay `false` (điều 2). Test đỏ, không phải lỗi biên dịch. | ✅ chạy thật, đúng 1 assertion sai |
+| `apps/mobile/shared/src/features/calendar/components/calendar-legend.test.tsx` | Assertion còn chữ "Đã giữ xe" — nhãn đã đổi thành "Chờ giao xe" (điều 6, khoá dùng chung). | ✅ chạy thật, đỏ |
+| `apps/mobile/shared/src/features/calendar/calendar-tone.ts` | Biên dịch bình thường — `CONFIRMED` vẫn là thành viên hợp lệ của enum (điều 1). | ✅ `tsc --noEmit` sạch |
 | `packages/domain/messages/{vi,en}/domain.json` `bookingStatus.reserved` | Đổi chữ áp dụng tự động mọi màn mobile dùng nhãn này (lịch, thẻ đơn, dashboard...) — không cần sửa code. | — |
 | `packages/domain/messages/vi/booking-requests.json` `approve.effect` | Sửa lợi tự động cho `ApproveRequestSheet.tsx` — cùng câu sai như web, nay đúng, không cần mobile làm gì. | — |
-| `apps/mobile/src/features/booking-requests/*` | Cấu trúc tab RIÊNG (ADR 0031) — không vỡ gì, nhưng lệch với 3-tab mới của web cho tới khi mobile tự làm theo (không bắt buộc). | — |
+| `apps/mobile/shared/src/features/booking-requests/*` | Cấu trúc tab RIÊNG (ADR 0031) — không vỡ gì, nhưng lệch với 3-tab mới của web cho tới khi mobile tự làm theo (không bắt buộc). | — |
 
 **Không bị ảnh hưởng:** mobile chưa từng gửi `confirmed`/`active`/`completed` lên endpoint transition (chỉ `cancelled`/`no_show`) — khoá DTO ở điều 2 không đổi hành vi ghi của mobile.
 

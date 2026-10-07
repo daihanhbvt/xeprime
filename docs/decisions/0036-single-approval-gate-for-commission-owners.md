@@ -1,6 +1,6 @@
 # ADR 0036 — Tuyến hoa hồng có MỘT cổng duyệt: duyệt XE. Xác minh gian hàng là trục riêng
 
-Ngày: 14/09/2026 · Trạng thái: **Accepted; điều 4 bị [ADR 0040](0040-registration-track-split.md) ghi đè** · **Ghi đè [ADR 0014](0014-owner-and-shop-single-role.md) điều 5** (dòng *"Gian hàng được mở hay không (`approval_tasks`)"*) trong phạm vi tuyến hoa hồng
+Ngày: 14/09/2026 · Trạng thái: **Accepted; điều 4 bị [ADR 0040](0040-registration-track-split.md) ghi đè; điều 3 (trục xác minh gian hàng) bị [ADR 0049](0049-vehicle-review-workbench.md) tạm dừng (không xoá)** · **Ghi đè [ADR 0014](0014-owner-and-shop-single-role.md) điều 5** (dòng *"Gian hàng được mở hay không (`approval_tasks`)"*) trong phạm vi tuyến hoa hồng
 
 ## Bối cảnh
 

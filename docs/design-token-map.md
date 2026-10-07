@@ -1,22 +1,28 @@
 # Design Token Map — hợp đồng token của XePrime
 
-> Trước 21/08/2026 file này là `docs/implementation/02_DESIGN_TOKEN_MAP.md`. Bộ `docs/implementation/`
-> (kế hoạch migration Figma→code, Wave 0A/0B) đã **nghỉ hưu** khi migration thi công xong; đây là file
-> DUY NHẤT còn hiệu lực và được giữ lại, vì nó là hợp đồng token đang được
+> Cập nhật: 06/10/2026 · Trạng thái: **hợp đồng token đang hiệu lực**, được
 > [`theme.test.ts`](../apps/web/src/styles/theme.test.ts) cưỡng chế (lệch một token giữa
-> `tokens.css` và `theme.ts` là test đỏ). §21 dưới cùng giữ ba quyết định mà mã nguồn còn dẫn chiếu.
-
-> **Trạng thái: Wave 1A ĐÃ TRIỂN KHAI** · Cập nhật 06/08/2026 (bản Wave 0B là kế hoạch; bản này là hiện trạng đã code).
-> **Nguồn Figma**: section 01 “XePrime Foundations” (`14:2`), đọc ở cấp node. File **không dùng Figma Variables** (`get_variable_defs` trên `14:2` trả `{}`) — giá trị nằm trong fill/text của swatch.
+> `tokens.css` và `tokens/index.ts` là test đỏ). §21 dưới cùng giữ ba quyết định mà mã nguồn còn
+> dẫn chiếu (`packages/ui/src/tokens/index.ts`, `packages/ui/src/styles/tokens.css`, `theme.test.ts`).
+>
 > **Nguồn code** (từ 24/08/2026 token sống ở package dùng chung cho web + app native):
 > [tokens/index.ts](../packages/ui/src/tokens/index.ts) ↔ [tokens.css](../packages/ui/src/styles/tokens.css)
-> (`@xeprime/ui`), giữ đồng bộ bởi [theme.test.ts](../apps/web/src/styles/theme.test.ts) (19 test).
+> (`@xeprime/ui`), giữ đồng bộ bởi [theme.test.ts](../apps/web/src/styles/theme.test.ts).
 > Web ánh xạ sang AntD ở [theme.ts](../apps/web/src/styles/theme.ts) (`antdTheme` + re-export API cũ).
+>
+> **Nguồn Figma**: section 01 “XePrime Foundations” (`14:2`), đọc ở cấp node. File **không dùng
+> Figma Variables** (`get_variable_defs` trên `14:2` trả `{}`) — giá trị nằm trong fill/text của swatch.
+>
+> **Lịch sử (chỉ để đọc ngữ cảnh).** File này ra đời là `docs/implementation/02_DESIGN_TOKEN_MAP.md`
+> của bộ kế hoạch migration Figma→code; bộ `docs/implementation/` đã nghỉ hưu ngày 21/08/2026 và
+> không còn trong repo. Các nhãn "Wave 0A/0B/1A/1B/1C/1D", "brief 00 §…", "07 §7.3",
+> `08_DECISION_BACKLOG.md` rải trong file là tham chiếu LỊCH SỬ tới bộ tài liệu đó — không có file
+> nào để mở. Bản chốt hiện trạng đầu tiên là Wave 1A (06/08/2026).
 
 ## 0. Hợp đồng
 
-1. **Foundations `14:*` là nguồn GIÁ TRỊ token duy nhất.** Xem §13 (P15) về bộ giá trị thứ hai trong cùng file Figma.
-2. **Mọi thay đổi token sửa cả `tokens.css` và `theme.ts` trong cùng commit.** `theme.test.ts` so key-set và value; lệch một token là test đỏ.
+1. **Foundations `14:*` là nguồn GIÁ TRỊ token duy nhất.** Xem §21 (P15) về bộ giá trị thứ hai trong cùng file Figma.
+2. **Mọi thay đổi token sửa cả `packages/ui/src/styles/tokens.css` và `XP_TOKENS` ở `packages/ui/src/tokens/index.ts` trong cùng commit (AntD ở `theme.ts` đọc từ `XP_TOKENS`).** `theme.test.ts` so key-set và value; lệch một token là test đỏ.
 3. **Không nhân đôi nguồn.** Bí danh deprecated trỏ `var()` về token canonical — có test chặn việc gán giá trị thật cho bí danh.
 4. **Token nào Figma không định nghĩa thì để AntD dẫn xuất**, không tự chế (vì thế `colorTextDisabled` và `colorLink` vắng mặt trong `antdTheme`).
 
@@ -89,19 +95,30 @@
 | `--xp-color-info` / `-bg` | `#2563eb` / `#eff6ff` | `14:83` / `14:87` | `colorInfo` / `colorInfoBg` |
 | `--xp-color-neutral` / `-bg` | `#6b6560` / `#f5f3ef` | tái dùng | — |
 
-> `StatusTag` **vẫn dùng AntD preset color** qua `StatusMeta.color` ([status/meta.ts](../packages/types/src/status/meta.ts)) — Wave 1A không đổi hợp đồng đó. Bốn token `*-bg` hiện chưa có consumer nào; chúng tồn tại để `Alert`/banner và `EmptyState` dùng ở wave sau. Xem **P5**.
+> `StatusTag` **vẫn dùng AntD preset color** qua `StatusMeta.color` ([status/meta.ts](../packages/types/src/status/meta.ts)) — Wave 1A không đổi hợp đồng đó. Bốn token `*-bg` nay đã có consumer trong CSS Module (~69 lượt `var(--xp-color-{success,warning,error,info}-bg)`, đếm 06/10/2026). Xem **P5** (lịch sử).
 
-## 7. Màu — vỏ portal ⚠️ khai báo, CHƯA áp dụng
+## 7. Màu — vỏ portal ✅ đã áp dụng (sidebar tối)
 
 | Token | Giá trị | Figma |
 | --- | --- | --- |
 | `--xp-shell-sidebar-bg` | `#1e1b16` | `14:92` |
 | `--xp-shell-sidebar-text` | `#e8e4dd` | `14:96` |
 | `--xp-shell-sidebar-active` | `#d6a02c` | `14:100` |
+| `--xp-shell-sidebar-hover` · `-selected-bg` · `-muted` · `-border` | `color-mix` từ ba token trên | *dẫn xuất* |
 | `--xp-shell-topbar-bg` | `#ffffff` | `14:104` |
 | `--xp-shell-topbar-border` | `#e8e4dd` | `14:108` |
 
-**[Sidebar.module.css](../apps/web/src/components/layout/Sidebar.module.css) vẫn dùng `--xp-color-bg-container` (sáng).** Bật sidebar tối là quyết định **P1**, thuộc Wave 1D. Token đã sẵn nên khi P1 chốt chỉ phải đổi CSS Module, không phải đổi token.
+**P1 đã chốt "tối"** và áp dụng ở đợt 1D-B (ghi chú trong `tokens.css`). Vỏ portal đọc các token
+này trực tiếp: [Sidebar.module.css](../apps/web/src/components/layout/Sidebar.module.css) (nền, chữ,
+viền, chiều rộng), [ManageMenu.module.css](../apps/web/src/components/layout/ManageMenu.module.css)
+(mục menu, trạng thái hover/chọn/active, vòng focus), `ManageUserCard.module.css`,
+`MobileNav.module.css`, `SidebarSectionTitle.module.css`, và
+[Topbar.module.css](../apps/web/src/components/layout/Topbar.module.css) (`topbar-bg`/`-border`/`-height`).
+`layout-breakpoints.test.ts` khoá việc `Sidebar.module.css` dùng `--xp-shell-sidebar-bg`.
+
+Bốn bậc trạng thái (`hover`, `selected-bg`, `muted`, `border`) KHÔNG phải màu Figma: Foundations
+chỉ định nghĩa 3 màu sidebar, nền tối cần thêm bậc, nên chúng trộn bằng `color-mix` từ ba màu gốc —
+đổi một màu gốc là cả bộ đi theo.
 
 ## 8. Typography ✅
 
@@ -123,7 +140,7 @@ Font: `--xp-font-family` (Be Vietnam Pro) · `--xp-font-family-display` (Playfai
 Weight: `--xp-font-weight-{regular,medium,semibold,bold}` = 400/500/600/700.
 
 AntD: `fontSizeHeading1..5` ← 32/24/20/16/14 · `fontSizeLG` ← 16 · `fontSizeSM` ← 12 · `fontSize` ← 14.
-Ảnh hưởng thực tế nhỏ: chỉ **2 chỗ** dùng `Typography.Title` ([ManagePageHeader](../apps/web/src/components/layout/ManagePageHeader.tsx) `level={3}` → 24px thành **20px**, [ShopRegistration](../apps/web/src/features/shop/components/ShopRegistration.tsx) `level={4}` → 20px thành **16px**).
+Ảnh hưởng thực tế nhỏ: lúc Wave 1A chỉ **2 chỗ** dùng `Typography.Title`. Hiện trạng 06/10/2026: [ManagePageHeader](../apps/web/src/components/layout/ManagePageHeader.tsx) `level={1}` và [ShopPoliciesPage](../apps/web/src/features/rental-policies/components/ShopPoliciesPage.tsx) `level={2}`, cả hai kèm `className` CSS Module riêng.
 
 ### ⚠️ Nợ: `--xp-line-height` toàn cục
 `--xp-line-height` = **1.5714** (→22px) là giá trị AntD đang chạy; Figma `body` là **14/20** (1.4286). Chưa đổi vì nó làm lệch chiều cao **mọi** hàng bảng và **mọi** form — cần QA thị giác mà Wave 1A không có. Token `--xp-line-height-body` (20px) đã có sẵn cho component dùng. **Đích: wave có QA thị giác (sớm nhất là 1C khi làm `DataTable`).**
@@ -174,7 +191,7 @@ AntD: `fontSizeHeading1..5` ← 32/24/20/16/14 · `fontSizeLG` ← 16 · `fontSi
 
 `XP_BREAKPOINTS` (số) trong `theme.ts` là nguồn cho JS. [use-media-query.ts](../apps/web/src/hooks/use-media-query.ts) giờ có `useIsMobile()` (suy ra từ token, không gõ số), `useIsTablet()`, `useIsDesktop()`.
 
-**Quyết định P8 đã chốt: KHÔNG gom 21 breakpoint CSS trong Wave 1A.** Design-brief 00 §9.4 chỉ định rõ: *“One breakpoint scale expressed as tokens and consumed by both CSS and `useMediaQuery`, **with existing values migrated as files are touched rather than in a bulk change**.”* Brief thắng kế hoạch Wave 0B. Việc còn lại: mỗi khi chạm một `.module.css`, thay điểm gãy của nó về 640/1024/1440.
+**Quyết định P8 đã chốt: KHÔNG gom 21 breakpoint CSS trong Wave 1A.** Design-brief 00 §9.4 (tài liệu lịch sử, đã nghỉ hưu) chỉ định rõ: *“One breakpoint scale expressed as tokens and consumed by both CSS and `useMediaQuery`, **with existing values migrated as files are touched rather than in a bulk change**.”* Brief thắng kế hoạch Wave 0B. Việc còn lại: mỗi khi chạm một `.module.css`, thay điểm gãy của nó về 640/1024/1440.
 
 ## 14. Tầng z / overlay ✅
 
@@ -203,21 +220,23 @@ AntD: `fontSizeHeading1..5` ← 32/24/20/16/14 · `fontSizeLG` ← 16 · `fontSi
 
 Mỗi bí danh trỏ `var()` về token canonical → **không có giá trị nào bị nhân đôi**. `theme.test.ts` có test chặn việc gán giá trị thật cho bí danh.
 
-| Bí danh (deprecated) | → Canonical | Consumer còn lại | Wave gỡ |
+| Bí danh (deprecated) | → Canonical | Consumer còn lại (đếm `var(...)` 06/10/2026) | Wave gỡ |
 | --- | --- | --- | --- |
-| `--xp-color-bg-layout` | `--xp-color-bg` | 13 | 3x (khi chạm file) |
-| `--xp-color-border-secondary` | `--xp-color-border-subtle` | 31 | 3x |
-| `--xp-gold-deep` | `--xp-color-primary-active` | 45 | 3x |
-| `--xp-gold-wash` | `--xp-color-primary-light` | 19 | 3x |
-| `--xp-color-bg-sand` | `--xp-color-primary-light` | 10 | 3x |
-| `--xp-shadow-sm` | `--xp-shadow-card` | 13 | 3x |
+| `--xp-color-bg-layout` | `--xp-color-bg` | 44 | 3x (khi chạm file) |
+| `--xp-color-border-secondary` | `--xp-color-border-subtle` | 70 | 3x |
+| `--xp-gold-deep` | `--xp-color-primary-active` | 75 | 3x |
+| `--xp-gold-wash` | `--xp-color-primary-light` | 32 | 3x |
+| `--xp-color-bg-sand` | `--xp-color-primary-light` | 13 | 3x |
+| `--xp-shadow-sm` | `--xp-shadow-card` | 8 | 3x |
 | `--xp-shadow-md` | `--xp-shadow-raised` | 8 | 3x |
-| `--xp-shadow-lg` | `--xp-shadow-overlay` | 2 | 3x |
+| `--xp-shadow-lg` | `--xp-shadow-overlay` | 0 | 3x |
 | `--xp-gold-soft` | *(chưa có canonical)* | 16 | — |
 
 `--xp-gold-soft` `#f1dba4` (thanh cuộn, [globals.css](../apps/web/src/styles/globals.css)) **không có** đối ứng Figma → giữ nguyên, chưa deprecate.
 
-**Quy tắc: không thêm consumer mới cho nhóm bí danh.**
+**Quy tắc: không thêm consumer mới cho nhóm bí danh.** ⚠️ Quy tắc này đang bị vi phạm: so với lần đếm
+Wave 1A, số consumer của 5/8 bí danh đã TĂNG (vd `--xp-color-bg-layout` 13 → 44, `--xp-gold-deep` 45 → 75).
+Khi chạm file, thay bằng token canonical ở cột giữa.
 
 ## 17. Tương phản — đã đo
 
@@ -239,36 +258,51 @@ Brief 00 §16 ghi *“contrast ratios unverified”* và mức tuân thủ WCAG 
 
 **Không tự sửa** giá trị Figma để đạt AA: brief 00 §16 nói mức tuân thủ là câu hỏi mở (Q7), nên ép AA là quyết định thay thiết kế. Bốn cặp trượt được **pin bằng test** để không tệ thêm. Ghi ở **P18**.
 
-## 18. Nợ token còn lại
+## 18. Nợ token còn lại (kiểm lại 06/10/2026)
 
 | # | Nợ | Mức | Đích |
 | --- | --- | --- | --- |
-| **T1** | **9 tham chiếu `var(--xp-*)` chết trong `CalendarScheduler`** — xem §19 | 🔴 Cao | Wave lịch |
-| T2 | `--xp-line-height` toàn cục 1.5714 ≠ Figma 1.4286 | 🟠 | 1C |
-| T3 | ~21 điểm gãy breakpoint trong `.module.css` | 🟠 | dời dần (brief 00 §9.4) |
+| T2 | `--xp-line-height` toàn cục 1.5714 ≠ Figma 1.4286 — vẫn còn | 🟠 | đợt có QA thị giác |
+| T3 | Điểm gãy `@media` trong `.module.css`: 31 giá trị px khác nhau, ~96 lần dùng nằm ngoài họ 640/1024 (900, 760, 560, 480…) | 🟠 | dời dần khi chạm file (P8) |
 | T4 | Số trần spacing trong `.module.css` | 🟡 | dời dần |
-| T5 | `controlHeight` 32 vs Figma 40 | 🟡 | P16 |
-| T6 | 4 token `*-bg` trạng thái chưa có consumer | 🟢 | 1C (`EmptyState`, `Alert`) |
-| T7 | Token sizing (modal/drawer/container) chưa có consumer | 🟢 | 1B/1C |
-| T8 | `--xp-gold-soft` không có canonical | 🟢 | — |
+| T5 | `controlHeight` 32 vs Figma 40 — vẫn 32 | 🟡 | P16 |
+| T8 | `--xp-gold-soft` không có canonical (16 consumer) | 🟢 | — |
+| T9 | **Tham chiếu `var(--xp-*)` chưa khai báo, không fallback** — xem §19 | 🔴 | sửa khi chạm file |
 
-## 19. 🔴 T1 — Tham chiếu CSS chết trong CalendarScheduler (phát hiện Wave 1A)
+Đã đóng so với bản Wave 1A: **T1** (9 tham chiếu chết trong `CalendarScheduler` — không còn tham
+chiếu nào trong `CalendarScheduler.module.css`/`.tsx`), **T6** (token `*-bg` trạng thái nay có
+~69 lượt dùng trong CSS Module), **T7** (token sizing modal/drawer/container nay có ~22 lượt dùng).
 
-**Không phải nợ, mà là lỗi đang chạy.** [CalendarScheduler.module.css](../apps/web/src/features/calendar/components/CalendarScheduler.module.css) và [.tsx](../apps/web/src/features/calendar/components/CalendarScheduler.tsx) tham chiếu 9 biến **chưa từng được khai báo ở đâu**, không có fallback → thuộc tính không hợp lệ lúc tính giá trị (viền lấy `currentColor`, nền trong suốt, bo góc 0).
+## 19. 🔴 T9 — Tham chiếu CSS chưa khai báo (quét 06/10/2026)
 
-| Tham chiếu chết | Dòng | Ý đồ | Token đúng |
-| --- | --- | --- | --- |
-| `--xp-radius-md` | css:9 | Bo góc khung lịch | `--xp-border-radius` |
-| `--xp-radius-sm` | css:156 | Bo góc thanh event | `--xp-border-radius-sm` |
-| `--xp-color-split` | css:72,103,120,140,141 | Vạch lưới ngày/hàng | `--xp-color-border-subtle` |
-| `--xp-color-fill-quaternary` | css:78 | Nền ô cuối tuần | `--xp-color-bg-muted` |
-| `--xp-color-primary-bg` | css:82 | Nền cột hôm nay | `--xp-color-primary-light` |
-| `--xp-color-fill-secondary` | tsx:383 | Nền event `blocked_range` | `--xp-color-bg-muted` |
-| `--xp-color-purple` / `-bg` / `-border` | tsx:380 | Event `maintenance` | `--xp-color-event-maintenance` (+ cần một bậc nền) |
+Quét `apps/web/src` + `packages/ui/src`: những `var(--xp-…)` **không có giá trị dự phòng** mà tên
+không được khai ở bất kỳ đâu (`tokens.css`, `globals.css`, CSS Module, hay chuỗi set lúc chạy trong
+TSX). AntD v6 phát biến CSS với tiền tố `--ant-`, nên không có gì "tự có" dưới tiền tố `--xp-`.
+Thuộc tính dùng chúng là không hợp lệ lúc tính giá trị (viền `currentColor`, nền trong suốt, bo
+góc 0, cỡ chữ kế thừa).
 
-**Vì sao Wave 1A không sửa**: (a) là feature component có wave riêng và cổng QA riêng (07 §7.3); (b) sửa làm **đổi hình ảnh lịch** mà wave này không QA thị giác được; (c) nhánh `maintenance` cần một bậc nền tím chưa có nguồn Figma → là quyết định thiết kế, không phải ánh xạ token.
+| Tham chiếu chưa khai báo | Token đúng (gợi ý) | File dùng (`*.module.css`) |
+| --- | --- | --- |
+| `--xp-border-radius-md`, `--xp-radius-md` | `--xp-border-radius` | `FileListField`, `Handover`, `VehicleDocumentsWorkspace`, `MaintenanceBoard`, `VehicleMaintenanceWorkspace`, `CreateVehiclePricingStep`, `VehicleCreateSuccess`, `VehicleForm`, `VehicleSourceWorkspace`, `SupportCaseDetailPanel` |
+| `--xp-radius-lg` | `--xp-border-radius-lg` | `ListingDetailView` |
+| `--xp-border-radius-circle` | `--xp-border-radius-pill` | `QuickVehicleSuccess` |
+| `--xp-font-size-caption` | bậc `body-sm` (12px) | `Countdown`, `AccountDeletionImpact`, `MarketHeader`, `InsuranceQueue`, `RefundAccountDialog` |
+| `--xp-font-size-base`, `--xp-font-size-md` | bậc `body` (14px) | `OwnerRegistrationView`, `SupportCaseDetailPanel` |
+| `--xp-font-size-heading-lg` · `-md` | bậc `h3` · `h4` | `VehicleMaintenanceWorkspace` |
+| `--xp-font-weight-strong` | `--xp-font-weight-semibold` | `MissingReturnKmQueue`, `MaintenanceBoard`, `VehicleMaintenanceWorkspace` |
+| `--xp-space-2xl`, `--xp-space-xxs` | thang `--xp-space-{xs..xl}` | `QuickVehicleSuccess`, `InsuranceQueue` |
+| `--xp-color-danger` | `--xp-color-error` | `InsuranceQueue` |
+| `--xp-color-fill-quaternary`, `--xp-color-fill-secondary` | `--xp-color-bg-muted` | `ListingDetailView`, `MaintenanceBoard` |
+| `--xp-color-primary-bg` | `--xp-color-primary-light` | `MaintenanceBoard` |
+| `--xp-color-text-light-solid` | `--xp-color-primary-contrast` hoặc trắng theo nền | `MaintenanceBoard` |
 
-*(Biến `--xp-day-width`, `--xp-resource-col-width`, `--xp-bar-left`, `--xp-bar-width` là CSS custom property **set lúc chạy** — ngoại lệ hợp lệ theo ADR 0003, không phải lỗi.)*
+Cột "Token đúng" là GỢI Ý ánh xạ — đối chiếu tên chính xác trong `tokens.css` trước khi sửa, và QA
+thị giác vì sửa là ĐỔI hình ảnh (thuộc tính đang rơi về giá trị mặc định). Vài file khác dùng các
+tên chưa khai báo này KÈM fallback (`var(--xp-color-fill-quaternary, …)`) — chúng không vỡ, nhưng
+cũng nên đổi sang token thật để chỉ còn một nguồn.
+
+*(Biến `--xp-day-width`, `--xp-resource-col-width`, `--xp-bar-left`, `--xp-bar-width`… là CSS
+custom property **set lúc chạy** — ngoại lệ hợp lệ theo ADR 0003, không phải lỗi.)*
 
 ## 20. Ánh xạ AntD — bảng đầy đủ
 
@@ -300,10 +334,11 @@ Brief 00 §16 ghi *“contrast ratios unverified”* và mức tuân thủ WCAG 
 
 ---
 
-## 21. Ba quyết định giữ lại từ `08_DECISION_BACKLOG.md`
+## 21. Ba quyết định giữ lại từ backlog quyết định của bộ `docs/implementation/` (lịch sử)
 
-Bộ `docs/implementation/` đã nghỉ hưu 21/08/2026. Ba mục dưới đây được chuyển nguyên văn sang đây
-vì **mã nguồn còn dẫn chiếu tới chúng**: [`theme.ts`](../apps/web/src/styles/theme.ts) (P15 — bộ giá
+Bộ `docs/implementation/` (gồm `08_DECISION_BACKLOG.md`) đã nghỉ hưu 21/08/2026 và không còn trong
+repo. Ba mục dưới đây được chuyển nguyên văn sang đây vì **mã nguồn còn dẫn chiếu tới chúng**; các
+trích dẫn "brief 00 §…", "00 §9", "Q7" bên trong là tham chiếu LỊCH SỬ tới bộ đó: [`theme.ts`](../apps/web/src/styles/theme.ts) (P15 — bộ giá
 trị token nào thắng; P8 — cơ chế breakpoint) và
 [`theme.test.ts`](../apps/web/src/styles/theme.test.ts) (P18 — các cặp màu chưa đạt WCAG AA).
 
@@ -323,7 +358,7 @@ trị token nào thắng; P8 — cơ chế breakpoint) và
 
 **Chặn**: phần breakpoint của Wave 1A. **Nếu không trả lời**: làm phần token màu/typo/radius/focus trước, hoãn breakpoint.
 
-### P15 — Hai bộ giá trị token trong cùng file Figma 🔴 CHẶN
+### P15 — Hai bộ giá trị token trong cùng file Figma 🟠 MỞ — không còn chặn
 
 **Phát hiện khi inspect cấp node.** File Figma chứa **hai hệ giá trị mạch lạc và mâu thuẫn nhau**, không phải sai lệch ngẫu nhiên:
 
@@ -349,6 +384,11 @@ trị token nào thắng; P8 — cơ chế breakpoint) và
 **Cần chốt**: xác nhận Hệ A là đúng, hoặc chỉ định Hệ B. Nếu chọn B thì đây là **một dòng đổi token** — nhưng kéo theo đổi màu thương hiệu, đỏ lỗi, bo góc trên toàn sản phẩm và phải QA lại từ đầu.
 
 **Nếu không trả lời**: giữ Hệ A (đang chạy, không hồi quy).
+
+> **Hiện trạng 06/10/2026:** không tìm thấy ADR hay ghi chép nào chốt P15. Nhánh mặc định "giữ Hệ A"
+> đang được áp — `tokens.css`/`tokens/index.ts` mang giá trị Hệ A (`#d6a02c`, `#dc2626`, bo 10px) và
+> ghi rõ "Foundations thắng về GIÁ TRỊ token". Không việc nào đang bị chặn vì nó; mục còn mở chỉ ở
+> chỗ chưa có người có thẩm quyền thiết kế xác nhận Hệ A.
 
 ### P18 — Bốn cặp màu trượt WCAG AA 🟠
 

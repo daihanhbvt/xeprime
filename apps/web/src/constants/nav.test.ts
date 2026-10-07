@@ -333,7 +333,10 @@ describe('nav — cấu trúc khối', () => {
   });
 
   it('mọi href đến từ ROUTES, không có chuỗi gõ tay', () => {
-    const known = new Set<string>([...Object.values(ROUTES.MANAGE), ...Object.values(ROUTES.ADMIN)]);
+    const known = new Set<string>([
+      ...Object.values(ROUTES.MANAGE),
+      ...Object.values(ROUTES.ADMIN),
+    ]);
     for (const leaf of [
       ...flattenLeaves(SHOP_NAV),
       ...flattenLeaves(PLATFORM_NAV),
@@ -582,9 +585,7 @@ describe('matchSelectedKey — quy tắc mục đang mở', () => {
     const session = adminTenantSupportPath.vehicleEdit('A1B2C3D4E5F6G7H8J9K0M1N2P3', 'v1');
     expect(matchSelectedKey(session, platformLeaves)).toBeUndefined();
     // Hàng đợi hỗ trợ/tranh chấp của chính nó vẫn sáng đúng mục.
-    expect(matchSelectedKey(ROUTES.ADMIN.SUPPORT, platformLeaves)).toBe(
-      ROUTES.ADMIN.SUPPORT,
-    );
+    expect(matchSelectedKey(ROUTES.ADMIN.SUPPORT, platformLeaves)).toBe(ROUTES.ADMIN.SUPPORT);
   });
 
   it('route con khớp mục cha', () => {
@@ -648,9 +649,7 @@ describe('matchSelectedKey — quy tắc mục đang mở', () => {
   });
 
   it('"Tất cả xe" và "Kiểm duyệt xe" là hai mục độc lập, route con của xe sáng "Tất cả xe"', () => {
-    expect(matchSelectedKey(ROUTES.ADMIN.VEHICLES, platformLeaves)).toBe(
-      ROUTES.ADMIN.VEHICLES,
-    );
+    expect(matchSelectedKey(ROUTES.ADMIN.VEHICLES, platformLeaves)).toBe(ROUTES.ADMIN.VEHICLES);
     expect(matchSelectedKey(`${ROUTES.ADMIN.VEHICLES}/01H`, platformLeaves)).toBe(
       ROUTES.ADMIN.VEHICLES,
     );
@@ -788,15 +787,30 @@ describe('navForZone — menu theo tuyến ở site partner', () => {
       ROUTES.MANAGE.BOOKINGS,
       ROUTES.MANAGE.CHAT,
       ROUTES.MANAGE.BALANCE,
-      ROUTES.MANAGE.REGISTRATION,
+      ROUTES.MANAGE.ACCOUNT,
     ]) {
       expect(hrefs.has(href), href).toBe(true);
     }
   });
 
+  /*
+   * Chủ xe cá nhân có MỘT hồ sơ (06/10/2026): không còn nhóm "Gian hàng", và "Hồ sơ chủ xe" là trang
+   * tài khoản của chính họ — không phải màn đăng ký cũ (nay chỉ là redirect).
+   */
+  it('menu hoa hồng không có nhóm "Gian hàng" và không trỏ tới màn đăng ký cũ', () => {
+    expect(commissionNav.some((section) => section.labelKey === 'manageGroups.storefront')).toBe(
+      false,
+    );
+    expect(new Set(hrefsOf(commissionNav)).has(ROUTES.MANAGE.REGISTRATION)).toBe(false);
+  });
+
   it('menu tuyến gói KHÔNG có trang chỉ của tuyến hoa hồng (đã có bản trong Cửa hàng)', () => {
     const hrefs = new Set(hrefsOf(SHOP_NAV));
-    for (const href of [ROUTES.MANAGE.REGISTRATION, ROUTES.MANAGE.TAX, ROUTES.MANAGE.BANK_ACCOUNTS]) {
+    for (const href of [
+      ROUTES.MANAGE.REGISTRATION,
+      ROUTES.MANAGE.TAX,
+      ROUTES.MANAGE.BANK_ACCOUNTS,
+    ]) {
       expect(hrefs.has(href), href).toBe(false);
     }
   });

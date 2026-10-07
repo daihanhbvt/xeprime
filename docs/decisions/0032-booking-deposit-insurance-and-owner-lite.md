@@ -6,6 +6,22 @@ Ngày: 09/09/2026 · Trạng thái: Accepted · Ghi đè một phần: 0014, 002
 > nay ở `partner.xeprime.vn` (realm `partner`), không còn trong `/account` của site khách. Ranh giới
 > năng lực Owner Lite ↔ Manage giữ nguyên.
 
+> ⚠️ **Ba chỗ khác đã bị thay:**
+>
+> - **Điều 2 — mốc "đặt xe thành công".** [ADR 0044](0044-approve-before-hold.md) khôi phục thứ
+>   tự duyệt-trước-thu-sau, cửa sổ thanh toán 120 phút và hủy miễn phí 4 giờ tính từ `acceptedAt`
+>   của điều 2 — nhưng `acceptedAt` **không** còn là mốc "đặt xe thành công": đó là lượt NHẬN
+>   chuyến (chốt lịch, chốt giá, phát QR). **Đơn thuê chỉ ra đời khi đối soát xác nhận ĐỦ tiền**
+>   (0044 điều 2).
+> - **Điều 6 — gạch đầu dòng "Admin được vào Manage của bất kỳ gian hàng nào với quyền như chủ
+>   gian hàng"** bị [ADR 0050](0050-platform-tenant-support-context.md) thay: nhân sự nền tảng chỉ
+>   vào khu gian hàng qua **phiên hỗ trợ** có lý do + hạn 45 phút, capability do server cấp theo
+>   từng endpoint, không membership tạm, không giả danh; trong phiên vai là `shop_viewer` và không
+>   vượt cổng gói/tuyến.
+> - **Mục "Hệ quả" — tên "Số dư XePrime"** đổi thành **"Ví điểm"**
+>   ([ADR 0033](0033-money-ledger-and-deposit-allocation.md) điều 1). Bản chất không đổi: sổ công
+>   nợ phải trả, không nạp/chuyển/thanh toán nội bộ.
+
 ## Bối cảnh
 
 Các tài liệu trước mô tả nhiều biến thể chưa còn phù hợp: gian hàng có thể nhận cọc trực tiếp, XePrime có thể thu hộ toàn bộ tiền thuê, phí bảo hiểm có thể trừ từ chủ xe và Owner Lite có quy trình bàn giao bằng chứng tương tự đội xe. Điều này làm sitemap, checkout, hoàn tiền và phạm vi User/Manage không thống nhất.
@@ -24,7 +40,7 @@ Product owner đã chốt lại hai tuyến kinh doanh, thời điểm phát hà
 
 ### 2. Booking chính thức của cả hai tuyến phải cọc qua XePrime
 
-- Sau khi chủ xe duyệt hoặc chế độ tối ưu tự nhận, hệ thống ghi `acceptedAt`; đây là mốc “đặt xe thành công”. Cửa sổ thanh toán 2 giờ và cửa sổ hủy miễn phí 4 giờ cùng bắt đầu tại mốc này.
+- Sau khi chủ xe duyệt hoặc chế độ tối ưu tự nhận, hệ thống ghi `acceptedAt`; đây là mốc “đặt xe thành công”. Cửa sổ thanh toán 2 giờ và cửa sổ hủy miễn phí 4 giờ cùng bắt đầu tại mốc này. *(Mốc "thành công" bị [ADR 0044](0044-approve-before-hold.md) điều 2 thay — đơn thuê ra đời khi đối soát đủ tiền; hai cửa sổ vẫn tính từ `acceptedAt`.)*
 - Khoản thanh toán online gồm `D + S + IV + IP`:
   - `D`: cọc đặt chuyến, là một phần của giá thuê gốc `B`.
   - `S`: phí nền tảng phía khách; tuyến hoa hồng `10% × B`, tuyến gian hàng bằng 0.
@@ -65,7 +81,7 @@ Product owner đã chốt lại hai tuyến kinh doanh, thời điểm phát hà
 - Không bắt buộc biên bản bàn giao, ảnh tình trạng, odometer hoặc nhiên liệu/pin. Hệ thống có thể tự chuyển sang bắt đầu/kết thúc theo lịch; chủ xe cập nhật khi thực tế thay đổi.
 - Manage là bộ công cụ nâng cao của gian hàng: tài chính, công nợ, bảo trì, biên bản/bằng chứng tùy chọn, khách hàng, chi nhánh, thành viên, tài xế dạng bản ghi, hợp đồng và báo cáo.
 - Tài xế không có tài khoản/app. Tuyến hoa hồng mặc định chủ xe là tài xế; gian hàng chỉ lưu và phân công bản ghi tài xế.
-- Admin được vào Manage của bất kỳ gian hàng nào với quyền như chủ gian hàng. Shell phải hiện banner ngữ cảnh và mọi thay đổi phải có audit.
+- ~~Admin được vào Manage của bất kỳ gian hàng nào với quyền như chủ gian hàng. Shell phải hiện banner ngữ cảnh và mọi thay đổi phải có audit.~~ *Bị [ADR 0050](0050-platform-tenant-support-context.md) thay — phiên hỗ trợ có lý do, hạn và capability; không quyền chủ gian hàng.*
 
 ## Ví dụ tiền — VF5 một ngày
 
@@ -93,7 +109,7 @@ XePrime phải trả chủ xe = D − T =         91.000đ
 - Job mua bảo hiểm ở mốc bắt đầu phải idempotent, retry được và có hàng đợi xử lý khi đối tác lỗi.
 - Refund trước chuyến không phụ thuộc khả năng hoàn hợp đồng bảo hiểm vì hợp đồng chưa được mua.
 - Existing code/config khác 2 giờ, 4 giờ hoặc cách tính hold phải được xem là implementation gap, không tự đổi yêu cầu sản phẩm.
-- UI không gọi sổ nội bộ là ví điện tử; dùng “Số dư XePrime” hoặc “Khoản XePrime phải trả”. Rút tiền do admin chuyển khoản thủ công và xác nhận trên hệ thống.
+- UI không gọi sổ nội bộ là ví điện tử; dùng “Số dư XePrime” hoặc “Khoản XePrime phải trả” *(tên hiển thị nay là **"Ví điểm"** — [ADR 0033](0033-money-ledger-and-deposit-allocation.md) điều 1)*. Rút tiền do admin chuyển khoản thủ công và xác nhận trên hệ thống.
 
 ## Release gate và điểm chưa chốt
 

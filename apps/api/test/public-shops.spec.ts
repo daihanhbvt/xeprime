@@ -239,6 +239,23 @@ describe('Public shop page (/shops/[slug])', () => {
     expect(shop.logoUrl).toBe(OWNER_AVATAR);
   });
 
+  /*
+   * ADR 0054 — mặt tiền cá nhân hiện bằng TÀI KHOẢN chủ: tên khách thấy là họ tên, không phải
+   * `tenants.name`. Tenant tuyến gói thì ngược lại: tên gian hàng. Cùng một bản ghi, hai tuyến.
+   */
+  maybe('mặt tiền cá nhân: tên là HỌ TÊN tài khoản chủ, ở trang gian hàng lẫn thẻ xe', async () => {
+    const shop = await service.getShopBySlug(activeSlug);
+    expect(shop.name).toBe('Chủ shop');
+    const cards = await service.listShopVehicles(activeSlug, {});
+    expect(cards.data.every((v) => v.shopName === 'Chủ shop')).toBe(true);
+  });
+
+  maybe('gian hàng tuyến gói: tên là tên GIAN HÀNG, logo không bị thay bằng ảnh chủ', async () => {
+    const shop = await service.getShopBySlug(otherSlug);
+    expect(shop.name).toBe(`Shop ${TENANT_STATUS.ACTIVE}`);
+    expect(shop.logoUrl).not.toBe(OWNER_AVATAR);
+  });
+
   maybe('getShopBySlug đếm đúng số liệu hiển thị', async () => {
     const shop = await service.getShopBySlug(activeSlug);
     // 2 xe approved — cùng con số mà listShopVehicles trả, cùng luật publicListingScope().

@@ -11,11 +11,22 @@ Read one existing module end to end before writing a new one (`modules/tenants/`
 
 ## Scope is never the client's to assert
 
-For anything tenant-scoped, `tenant_id` comes from the caller's membership via `TenantScopeGuard`/`CurrentTenant`, never from the body, query, or a header. An endpoint that accepts a tenant id from the client is a data-leak wearing the costume of a feature. Platform-scoped endpoints use the platform scope, not the tenant guard — the two never share a guard. This is the first thing to get right and the easiest to quietly get wrong.
+For anything tenant-scoped, `tenant_id` comes from the caller's membership, never from the body, query, or a header. Mark the route `@TenantScoped()` and read `@CurrentTenant()` — `TenantScopeGuard` is a GLOBAL guard that runs before `PermissionGuard`, so do not `@UseGuards(TenantScopeGuard)` at controller level (it would resolve the tenant too late for the permission check). An endpoint that accepts a tenant id from the client is a data-leak wearing the costume of a feature. Platform-scoped endpoints are `@PlatformOnly()`, not tenant-scoped — the two never share a guard. This is the first thing to get right and the easiest to quietly get wrong.
+
+## Every route declares its realm
+
+There are three account realms — `customer`, `partner`, `platform` — one per site (ADR 0053). Every route declares which realms it serves with `@Realms(...)` on the class or handler (handler wins). `RealmGuard` rejects an undeclared route before it touches the database and `test/openapi-contract.spec.ts` fails on it: forgetting is default-deny, on purpose. The realm of a request comes from the proxy (Caddy + `REALM_PROXY_SECRET`), never from the body; public web sign-in/sign-up/password endpoints read it with the `@WebRealm()` param decorator and return 400 when it cannot be resolved rather than guessing. Booking is `customer`-only; a partner or platform account never books (ADR 0053 điều 7).
 
 ## The permission is part of the endpoint
 
 Every protected endpoint declares the permission it requires with `@RequirePermissions`, using a key from `@xeprime/types`. The guard is the real gate — hiding a button on the frontend protects nothing. If the permission you need does not exist yet, add it to the permission set and seed it; do not invent a bare string.
+
+Some boundaries are deliberately *not* permissions, because a permission can be delegated to staff. Pick the gate that matches the rule, and stack them — they are independent axes checked in sequence (ADR 0027 điều 2):
+
+- `@ShopOwnerOnly()` — the shop's own money identity: its wallet, payout bank account (ADR 0038 điều 3).
+- `@SubscriptionTrackOnly()` — the boundary between the commission track and the package track; blocks immediately (ADR 0038 điều 4). Not `@RequiresFeature(...)`: that one gates a capability tier under the `PLAN_FEATURE_ENFORCEMENT` rollout switch (ADR 0027), and money, documents, handovers and tax never sit behind it.
+- `@SupportAction(capability)` — the route may be used by platform staff inside a support session (ADR 0050). Default-deny: a tenant-scoped route without it rejects any request carrying a support context. Adding a route to the support space is a deliberate one-line declaration, never a side effect.
+- `@BranchScoped(resource)` — the resource resolves to one branch for branch-limited access (ADR 0052); `resolveBranchScope()` is the single place branch scope is computed.
 
 ## Validate at the edge, type all the way through
 
@@ -33,20 +44,20 @@ Any endpoint that returns a collection returns a *page* of it, never the whole t
 
 ## Build the whole endpoint, not the happy path
 
-A product endpoint handles the inputs that will occur, not only the tidy one from the demo: the not-found, the forbidden, the already-in-that-state, the empty result, the concurrent write. Each maps to the right status and a stable error code from `@xeprime/types`, so the frontend can react precisely. An operation that can partially fail runs in a transaction so it either fully happens or fully does not — a booking that gets created but whose occupancy write fails must roll back both, never leave a half-state. Finishing the success path and leaving the failure paths as "TODO" is shipping a bug with a delay timer on it. A code the web must show is only half-delivered here: the frontend renders the **code**, not your Vietnamese `message` (ADR 0012), so a new `API_ERROR_CODE` needs its sentence added to `apps/web/messages/{vi,en}/errors.json` in the same change — see the `i18n` skill.
+A product endpoint handles the inputs that will occur, not only the tidy one from the demo: the not-found, the forbidden, the already-in-that-state, the empty result, the concurrent write. Each maps to the right status and a stable error code from `@xeprime/types`, so the frontend can react precisely. An operation that can partially fail runs in a transaction so it either fully happens or fully does not — a booking that gets created but whose occupancy write fails must roll back both, never leave a half-state. Finishing the success path and leaving the failure paths as "TODO" is shipping a bug with a delay timer on it. A code the web must show is only half-delivered here: the frontend renders the **code**, not your Vietnamese `message` (ADR 0012), so a new `API_ERROR_CODE` needs its sentence added to `packages/domain/messages/{vi,en}/errors.json` in the same change — see the `i18n` skill.
 
 ## Invariants belong in the database, services own the writes
 
-Business invariants that must never be violated live as database constraints, not as app-level checks that race. The booking calendar is the canonical case: overlapping occupancy is impossible because of an exclusion constraint, and every schedule write goes through `OccupancyService` inside a transaction (ADR 0006). Likewise the public listing snapshot is written only by `ListingsService` (ADR 0008). When you need to write to one of these tables, call its owning service — a second writer is a second way to corrupt the invariant. A `check-conflict` style endpoint is a UX preview only; it never stands in for the constraint.
+Business invariants that must never be violated live as database constraints, not as app-level checks that race. The booking calendar is the canonical case: overlapping occupancy is impossible because of an exclusion constraint, and every schedule write goes through `OccupancyService` inside a transaction (ADR 0006). Likewise the public listing snapshot is written only by `ListingsService` (ADR 0008); wallet ledger rows only by `WalletService` — other modules call `creditWithinTx(...)` inside their own transaction (ADR 0033 điều 6); incoming bank transactions only by `SepayService` (ADR 0022); host reputation is computed only by `HostMetricsService` (ADR 0045). When you need to write to one of these tables, call its owning service — a second writer is a second way to corrupt the invariant. A `check-conflict` style endpoint is a UX preview only; it never stands in for the constraint.
 
 ## Privileged actions leave a trace
 
-Anything an admin or platform user does that changes another party's data — approving, locking, impersonating, overriding — writes an audit record in the same transaction as the change. If it mattered enough to restrict, it matters enough to log.
+Anything an admin or platform user does that changes another party's data — approving, locking, overriding, acting inside a support session — writes an audit record in the same transaction as the change. In a support session the audit actor is always the platform staff member, never the shop: there is no impersonation (ADR 0050). If it mattered enough to restrict, it matters enough to log.
 
 ## Before you call it done
 
-Trace the request once as an attacker (can I pass a scope I do not own? a status I should not set? skip a permission?) and once as the next engineer (is the contract declared, the money a string, the invariant enforced by the DB and not by hope?).
+Trace the request once as an attacker (can I pass a scope I do not own? call it from another site's realm? reach it from a support session it never declared? set a status I should not? skip a permission?) and once as the next engineer (is the contract declared, the money a string, the invariant enforced by the DB and not by hope?).
 
 Then leave the published contract in a shippable state. Touching a controller, DTO, guard, or permission changes what `/docs` shows and what the web's generated types say — so `pnpm contract` runs in the same change, and the regenerated `packages/types/openapi.json` plus `packages/types/src/api.generated.ts` get committed alongside the code. This is not bookkeeping you can defer: the committed spec is what the web compiles against and what another engineer reads, and a stale one means they are building against an API that no longer exists. `test/openapi-contract.spec.ts` fails when the committed spec has drifted from the source, naming the paths and schemas that moved.
 
-Verify with a scoped `pnpm --filter @xeprime/api typecheck`, `pnpm --filter @xeprime/api test -- openapi-contract` (seconds, no database), plus the affected Jest spec by path — not a full-workspace lint/build/test (see `verify-changes`). For anything touching the schedule, a passing concurrency test is not optional.
+Verify with a scoped `pnpm --filter @xeprime/api typecheck`, `pnpm --filter @xeprime/api test -- openapi-contract` (seconds, no database), plus the affected Jest spec by path — not a full-workspace lint/build/test (see `verify-changes`). Specs run against a real PostgreSQL at `TEST_DATABASE_URL`, not a mock. For anything touching the schedule, a passing concurrency test is not optional.

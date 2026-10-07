@@ -23,7 +23,8 @@ import type { RequestContext } from '../types/request-context';
  * `PermissionsGuard`/`AuthService.me` mỗi request (ADR 0002 ràng buộc 1, ADR 0017 §1).
  *
  * **Ranh giới realm (ADR 0053 điều 4):** tài khoản của realm này đi vào request của realm kia ⇒
- * 401 như phiên không tồn tại. Không phải 403: với site partner, tài khoản khách cùng số điện
+ * 401 như phiên không tồn tại. "Realm của request" là realm của SITE khi request đi qua một site
+ * web — áp cho cả Bearer, không chỉ cookie. Không phải 403: với site partner, tài khoản khách cùng số điện
  * thoại là một người LẠ, và câu trả lời đúng cho người lạ là "chưa đăng nhập".
  */
 @Injectable()
@@ -84,6 +85,21 @@ export class AuthGuard implements CanActivate {
     const { userId, sessionId, realm } = bearerToken
       ? await this.resolveBearer(bearerToken)
       : this.resolveCookie(cookieToken as string, webRealm as AccountRealm);
+
+    /*
+     * Request đi qua `/api` của một SITE web thì phiên phải thuộc đúng realm của site đó.
+     *
+     * Cookie tự bảo đảm điều này (guard chỉ đọc cookie mang tên realm của site). Bearer thì mang
+     * realm của app đã đăng nhập, nên phải so tường minh: thiếu phép so, token app Partner gọi
+     * `xeprime.vn/api/vehicles` vẫn chạy và `/api` của site khách thành cửa thứ hai vào API quản
+     * lý. Host API của app native không mang realm web (Caddy xoá header) nên không bị đụng tới.
+     */
+    if (webRealm && realm !== webRealm) {
+      throw new UnauthorizedException({
+        code: API_ERROR_CODE.UNAUTHENTICATED,
+        message: 'Phiên đăng nhập không thuộc trang này',
+      });
+    }
 
     const user = await this.prisma.user.findFirst({
       where: { id: userId, deletedAt: null },

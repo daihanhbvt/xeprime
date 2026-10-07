@@ -1,14 +1,91 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
 .toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  margin-bottom: var(--xp-space-sm);
   gap: var(--xp-space-sm);
 }
 
-/* Đủ rộng cho tên hãng dài nhất mà không kéo dài cả thanh công cụ trên màn hẹp. */
-.brandSelect {
-  min-width: 220px;
+/* Cột hãng cố định, bảng mẫu chiếm phần còn lại; dưới 960px còn một cột (hãng thành ô chọn). */
+.layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  align-items: start;
+  gap: var(--xp-space-lg);
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: var(--xp-space-md);
+}
+
+.brandHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.brandHeading {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.brandName {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-md);
+}
+
+.search {
+  width: 260px;
+  max-width: 100%;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.groupTitle {
+  display: flex;
+  align-items: baseline;
+  margin: 0;
+  gap: var(--xp-space-sm);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.groupCount {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-regular);
+}
+
+.nameCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .label {
@@ -16,14 +93,33 @@
   font-weight: var(--xp-font-weight-medium);
 }
 
-.key,
 .sub {
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body-sm);
 }
 
-/* Mẫu chưa có nguồn tra cứu: nhạt hơn nhưng vẫn đọc được — đây là việc cần làm, không phải lỗi. */
-.missing {
+.spec {
+  color: var(--xp-color-text);
+}
+
+/* Thông số còn trống: nhạt hơn nhưng đọc được — đây là việc cần làm, không phải lỗi. */
+.notSet {
   color: var(--xp-color-text-tertiary);
   font-size: var(--xp-font-size-body-sm);
+}
+
+.missing {
+  color: var(--xp-color-warning);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+@media (max-width: 960px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--xp-space-md);
+  }
+
+  .search {
+    width: 100%;
+  }
 }
