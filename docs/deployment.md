@@ -198,7 +198,7 @@ gian bỏ ra cho việc đó, và staging sập cũng không kéo theo productio
 | Web — khách | `xeprime.vn` | `stg.xeprime.vn` |
 | Web — đối tác | `partner.xeprime.vn` | `partner-stg.xeprime.vn` |
 | Web — quản trị | `admin.xeprime.vn` | `admin-stg.xeprime.vn` |
-| API (app native) | `api.xeprime.vn` | `api-stg.xeprime.vn` |
+| API (app native — CẢ HAI app, `EXPO_PUBLIC_API_URL`; không trỏ vào `/api` của site — ADR 0053) | `api.xeprime.vn` | `api-stg.xeprime.vn` |
 | Ảnh (R2) | `cdn.xeprime.vn` | URL `r2.dev` của bucket staging là đủ |
 | File cấu hình | `.env.production` | `.env.staging` |
 | Project Docker | `xeprime-production` | `xeprime-staging` |

@@ -7,11 +7,15 @@ import { useFormState, useWatch, type Control } from 'react-hook-form';
 import {
   missingShopProfileRequirements,
   missingShopProfileSuggestions,
+  SHOP_PROFILE_REQUIREMENT,
   SHOP_PROFILE_REQUIREMENT_VALUES,
   SHOP_PROFILE_SUGGESTION,
   SHOP_PROFILE_SUGGESTION_VALUES,
+  STOREFRONT_KIND,
+  storefrontAvatarUrl,
   type ShopProfileRequirement,
   type ShopProfileSuggestion,
+  type StorefrontKind,
 } from '@xeprime/types';
 import type { ShopProfileWithContactValues } from '@xeprime/validators';
 import type { ShopOwnerAccount } from '../types';
@@ -44,6 +48,8 @@ export function ShopProfileChecklist({
   control,
   ownerAccount,
   logoRequired = false,
+  kind = STOREFRONT_KIND.SHOP,
+  ownerAvatarUrl = null,
 }: {
   control: Control<ShopProfileWithContactValues>;
   /**
@@ -55,7 +61,7 @@ export function ShopProfileChecklist({
    * chiều: checklist nói "không bắt buộc" trong khi server chặn.
    *
    * Chủ xe tuyến hoa hồng KHÔNG bị cổng đó chạm tới, nên với họ logo vẫn là gợi ý — mặc định
-   * `false` giữ nguyên hành vi cũ ở `/account/registration`.
+   * `false` giữ nguyên hành vi ở "Hồ sơ chủ xe" (`OwnerProfilePage`).
    *
    * Năm mục còn lại của cổng đăng xe (tên · SĐT liên hệ · tỉnh · xã · địa chỉ) KHÔNG xuất hiện
    * ở đây: SĐT liên hệ sống trên CHI NHÁNH MẶC ĐỊNH, không phải trên form này, nên chấm nó bằng
@@ -71,8 +77,21 @@ export function ShopProfileChecklist({
    * sinh ra để tránh.
    */
   ownerAccount: ShopOwnerAccount;
+  /**
+   * Mặt tiền CÁ NHÂN ("Hồ sơ chủ xe") chấm theo đúng thứ khách thấy (`storefrontIdentity`, ADR 0054):
+   *  - tên trên chợ CHÍNH LÀ họ tên chủ ⇒ không có mục "tên hiển thị" riêng (nó trùng "họ tên");
+   *  - "ảnh" là ảnh đại diện tài khoản, không phải logo;
+   *  - không có mục ảnh bìa — mặt tiền cá nhân không vẽ bìa.
+   */
+  kind?: StorefrontKind;
+  /** Ảnh đại diện tài khoản chủ — chỉ đọc khi `kind="personal"`. */
+  ownerAvatarUrl?: string | null;
 }) {
   const t = useTranslations('Shop.checklist');
+  const tPersonal = useTranslations('Shop.personal.checklist');
+  const personal = kind === STOREFRONT_KIND.PERSONAL;
+  const label = (item: ChecklistItem) =>
+    personal ? tPersonal(`items.${item}`) : t(`items.${item}`);
   const values = useWatch({ control }) as Partial<ShopProfileWithContactValues>;
   // Bản ĐÃ LƯU: form `reset` về nó sau mỗi lần lưu, nên `defaultValues` là hồ sơ trên server.
   const { defaultValues } = useFormState({ control });
@@ -80,14 +99,25 @@ export function ShopProfileChecklist({
    * Logo đổi NHÓM, không đổi cách chấm: cùng một phép kiểm "đã có chưa", chỉ khác hệ quả. Dựng
    * hai bảng luật song song ở đây là mời chúng trôi khỏi nhau — xem docblock của `logoRequired`.
    */
-  const requiredItems: readonly ChecklistItem[] = logoRequired
-    ? [...SHOP_PROFILE_REQUIREMENT_VALUES, SHOP_PROFILE_SUGGESTION.LOGO]
+  const baseRequired = personal
+    ? SHOP_PROFILE_REQUIREMENT_VALUES.filter((key) => key !== SHOP_PROFILE_REQUIREMENT.DISPLAY_NAME)
     : SHOP_PROFILE_REQUIREMENT_VALUES;
-  const suggestedItems: readonly ChecklistItem[] = logoRequired
-    ? SHOP_PROFILE_SUGGESTION_VALUES.filter((key) => key !== SHOP_PROFILE_SUGGESTION.LOGO)
-    : SHOP_PROFILE_SUGGESTION_VALUES;
+  const requiredItems: readonly ChecklistItem[] = logoRequired
+    ? [...baseRequired, SHOP_PROFILE_SUGGESTION.LOGO]
+    : baseRequired;
+  const suggestedItems: readonly ChecklistItem[] = SHOP_PROFILE_SUGGESTION_VALUES.filter(
+    (key) =>
+      !(logoRequired && key === SHOP_PROFILE_SUGGESTION.LOGO) &&
+      !(personal && key === SHOP_PROFILE_SUGGESTION.COVER),
+  );
 
-  const { missingRequired, missingSuggested } = missingItems(values, ownerAccount, logoRequired);
+  const { missingRequired, missingSuggested } = missingItems(
+    values,
+    ownerAccount,
+    logoRequired,
+    { kind, ownerAvatarUrl },
+    suggestedItems,
+  );
 
   /*
    * Hồ sơ đã ĐỦ HẾT — cả bản đã lưu lẫn bản đang gõ — thì không còn gì để kiểm kê: một thẻ 100%
@@ -98,6 +128,8 @@ export function ShopProfileChecklist({
     (defaultValues ?? {}) as Partial<ShopProfileWithContactValues>,
     ownerAccount,
     logoRequired,
+    { kind, ownerAvatarUrl },
+    suggestedItems,
   );
   if (
     missingRequired.size + missingSuggested.size === 0 &&
@@ -132,12 +164,14 @@ export function ShopProfileChecklist({
         tone={ready ? 'done' : 'required'}
         items={requiredItems}
         missing={missingRequired}
+        labelOf={label}
       />
       <Group
-        label={t('suggestedTitle')}
+        label={personal ? tPersonal('suggestedTitle') : t('suggestedTitle')}
         tone="suggested"
         items={suggestedItems}
         missing={missingSuggested}
+        labelOf={label}
       />
     </section>
   );
@@ -148,6 +182,10 @@ function missingItems(
   values: Partial<ShopProfileWithContactValues>,
   ownerAccount: ShopOwnerAccount,
   logoRequired: boolean,
+  /** Mặt tiền đang chấm — cá nhân thì tên và ảnh là của tài khoản chủ (`storefrontIdentity`). */
+  storefront: { kind: StorefrontKind; ownerAvatarUrl: string | null },
+  /** Mục gợi ý mà mặt tiền này CÓ — mục không có thì không bao giờ "thiếu". */
+  suggestedItems: readonly ChecklistItem[],
 ): { missingRequired: ReadonlySet<string>; missingSuggested: ReadonlySet<string> } {
   /*
    * Mục "địa chỉ" của checklist chấm phần CHI TIẾT người dùng gõ (`addressLine`), không chấm
@@ -157,10 +195,17 @@ function missingItems(
   const completeness = {
     ...values,
     address: values.addressLine,
+    displayName:
+      storefront.kind === STOREFRONT_KIND.PERSONAL ? ownerAccount.displayName : values.displayName,
+    logoUrl: storefrontAvatarUrl(values.logoUrl, storefront.ownerAvatarUrl, storefront.kind),
     ownerFullName: ownerAccount.displayName,
     ownerPhone: ownerAccount.phone,
   };
-  const suggestedMissing = new Set<string>(missingShopProfileSuggestions(completeness));
+  const suggestedMissing = new Set<string>(
+    missingShopProfileSuggestions(completeness).filter(
+      (key) => key === SHOP_PROFILE_SUGGESTION.LOGO || suggestedItems.includes(key),
+    ),
+  );
   const missingRequired = new Set<string>([
     ...missingShopProfileRequirements(completeness),
     ...(logoRequired && suggestedMissing.has(SHOP_PROFILE_SUGGESTION.LOGO)
@@ -178,14 +223,14 @@ function Group({
   tone,
   items,
   missing,
+  labelOf,
 }: {
   label: string;
   tone: 'required' | 'suggested' | 'done';
   items: readonly ChecklistItem[];
   missing: ReadonlySet<string>;
+  labelOf: (item: ChecklistItem) => string;
 }) {
-  const t = useTranslations('Shop.checklist');
-
   return (
     <div className={styles.group}>
       <p className={tone === 'done' ? styles.groupLabelDone : styles.groupLabel}>{label}</p>
@@ -202,7 +247,7 @@ function Group({
               ) : (
                 <CheckCircleFilled className={styles.iconDone} aria-hidden="true" />
               )}
-              <span className={styles.label}>{t(`items.${item}`)}</span>
+              <span className={styles.label}>{labelOf(item)}</span>
             </li>
           );
         })}

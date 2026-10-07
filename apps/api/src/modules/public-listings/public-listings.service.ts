@@ -9,23 +9,21 @@ import {
   REVIEW_STATUS,
   SEAT_BUCKET_VALUES,
   SERVICE_TYPE,
-  STOREFRONT_KIND,
   TENANT_STATUS,
   hasVehicleServiceSettings,
+  STOREFRONT_KIND,
   hasVerifiedStorefront,
   provinceRegionPeers,
-  resolveEffectiveBilling,
-  resolveStorefrontKind,
   storefrontAllowsPublicChat,
   type PaginationMeta,
   type SeatBucket,
   type ServiceType,
 } from '@xeprime/types';
-import {
-  EFFECTIVE_SUBSCRIPTION_ARGS,
-  effectiveSubscriptionWhere,
-} from '../../common/plan/feature-state';
 import { marketplaceVehicleWhere } from '../../common/marketplace-vehicle-scope';
+import {
+  resolveStorefront,
+  storefrontTenantSelect,
+} from '../../common/storefront/storefront-identity';
 import { ProvincesService } from '../locations/provinces.service';
 import { PricingService } from '../pricing/pricing.service';
 import { VehicleSettingsService } from '../vehicle-settings/vehicle-settings.service';
@@ -150,17 +148,9 @@ const listingCardSelect = (now: Date) =>
     provinceCode: true,
     provinceName: true,
     shopSlug: true,
-    tenant: {
-      select: {
-        name: true,
-        profile: { select: { logoUrl: true } },
-        // Avatar chủ tài khoản — ảnh THAY THẾ của mặt tiền cá nhân, xem `storefrontAvatar`.
-        owner: { select: { avatarUrl: true } },
-        // Dòng thuê bao HIỆU LỰC (gồm cả dòng vừa hết hạn) — đầu vào của `resolveEffectiveBilling`.
-        // `take: 1` nên đây là một truy vấn phụ duy nhất cho cả trang kết quả, không phải N+1.
-        subscriptions: { where: effectiveSubscriptionWhere(now), ...EFFECTIVE_SUBSCRIPTION_ARGS },
-      },
-    },
+    // Tên + ảnh + tuyến HIỆU LỰC của gian hàng — danh tính công khai theo tuyến (ADR 0054).
+    // `subscriptions` là `take: 1` nên đây là một truy vấn phụ cho cả trang kết quả, không N+1.
+    tenant: { select: storefrontTenantSelect(now) },
   }) satisfies Prisma.PublicListingSelect;
 
 type ListingCardRow = Prisma.PublicListingGetPayload<{
@@ -174,28 +164,6 @@ interface VehicleRating {
 }
 
 /**
- * Ảnh đại diện của một mặt tiền: logo gian hàng, và với CHỦ XE CÁ NHÂN thì rơi về avatar của
- * chính chủ tài khoản.
- *
- * Với tuyến hoa hồng, "gian hàng" và "con người" là cùng một thực thể — khách đang thuê xe CỦA
- * NGƯỜI ĐÓ, không phải của một pháp nhân. Bắt họ tải lên một "logo" riêng trong khi tài khoản
- * đã có ảnh là hỏi cùng một câu hai lần, và kết quả đúng như báo cáo: trang gian hàng hiện một
- * chữ cái trong khi chính người đó có ảnh ở góc phải màn hình.
- *
- * KHÔNG rơi về avatar cho mặt tiền GIAN HÀNG: một doanh nghiệp chưa có logo hiện chữ cái đầu là
- * bình thường, còn hiện ảnh chân dung của người đứng tên là trộn danh tính cá nhân vào một pháp
- * nhân — đúng ranh giới mà `tenant_profiles.owner_*` được đánh dấu là dữ liệu NỘI BỘ.
- */
-function storefrontAvatar(
-  logoUrl: string | null | undefined,
-  ownerAvatarUrl: string | null | undefined,
-  kind: string,
-): string | null {
-  if (logoUrl) return logoUrl;
-  return kind === STOREFRONT_KIND.PERSONAL ? (ownerAvatarUrl ?? null) : null;
-}
-
-/**
  * Row listing → thẻ marketplace. `id` của thẻ là `vehicleId` (route `/listings/[id]` + đặt xe
  * dùng vehicle id). Decimal → string do ResponseInterceptor lo (ADR 0007). Rating đọc từ cột
  * denormalize trên snapshot (ListingsService.refreshRating nuôi) — hiển thị 1 chữ số thập phân
@@ -206,10 +174,9 @@ function toListingCard(
   completedTripCount: number,
   now: Date,
 ): PublicListingDto {
-  // MỘT lần chấm tuyến cho cả ba thứ thẻ xe cần nói về gian hàng: dấu tick, mặt tiền, và ảnh
-  // đại diện. Ba lời gọi riêng là ba cơ hội để thẻ tự mâu thuẫn với chính nó.
-  const billingMode = resolveEffectiveBilling(l.tenant.subscriptions[0] ?? null, now).billingMode;
-  const shopKind = resolveStorefrontKind(billingMode);
+  // MỘT lần chấm tuyến cho mọi thứ thẻ xe cần nói về gian hàng: tên, ảnh, dấu tick. Ba lời gọi
+  // riêng là ba cơ hội để thẻ tự mâu thuẫn với chính nó.
+  const storefront = resolveStorefront(l.tenant, now);
 
   return {
     id: l.vehicleId,
@@ -233,12 +200,12 @@ function toListingCard(
     deliveryEnabled: l.deliveryEnabled,
     noCollateral: l.noCollateral,
     discountPercent: l.discountPercent,
-    shopName: l.tenant.name,
+    shopName: storefront.name,
     shopSlug: l.shopSlug,
-    shopLogoUrl: storefrontAvatar(l.tenant.profile?.logoUrl, l.tenant.owner.avatarUrl, shopKind),
+    shopLogoUrl: storefront.avatarUrl,
     // Cùng phép suy với trang gian hàng: dấu chỉ dành cho tuyến gói, và `unconfigured` không
     // được đeo (ADR 0038 điều 1 — đường đọc hiển thị chọn mặt tiền cá nhân khi chưa xác định).
-    shopVerified: hasVerifiedStorefront(billingMode),
+    shopVerified: hasVerifiedStorefront(storefront.billingMode),
     provinceCode: l.provinceCode,
     shopProvince: l.provinceName,
     completedTripCount,
@@ -766,6 +733,7 @@ export class PublicListingsService {
       publicListings: { some: visibleListing },
     };
 
+    const now = new Date();
     const [total, rows] = await this.prisma.$transaction([
       this.prisma.tenant.count({ where }),
       this.prisma.tenant.findMany({
@@ -774,7 +742,7 @@ export class PublicListingsService {
         skip: paging.skip,
         take: paging.take,
         select: {
-          name: true,
+          ...storefrontTenantSelect(now),
           slug: true,
           ratingAvg: true,
           ratingCount: true,
@@ -785,15 +753,19 @@ export class PublicListingsService {
     ]);
 
     return {
-      data: rows.map((t) => ({
-        name: t.name,
-        slug: t.slug,
-        logoUrl: t.profile?.logoUrl ?? null,
-        provinceName: t.profile?.provinceName ?? null,
-        vehicleCount: t._count.publicListings,
-        ratingAvg: t.ratingAvg as unknown as string,
-        ratingCount: t.ratingCount,
-      })),
+      data: rows.map((t) => {
+        // Cùng tên + ảnh với thẻ xe và trang gian hàng — danh tính theo tuyến (ADR 0054).
+        const storefront = resolveStorefront(t, now);
+        return {
+          name: storefront.name,
+          slug: t.slug,
+          logoUrl: storefront.avatarUrl,
+          provinceName: t.profile?.provinceName ?? null,
+          vehicleCount: t._count.publicListings,
+          ratingAvg: t.ratingAvg as unknown as string,
+          ratingCount: t.ratingCount,
+        };
+      }),
       meta: paginationMeta(paging, total),
     };
   }
@@ -807,24 +779,18 @@ export class PublicListingsService {
     const t = await this.prisma.tenant.findFirst({
       where: { slug, status: TENANT_STATUS.ACTIVE, deletedAt: null },
       select: {
+        /*
+         * Tên, ảnh và tuyến thu tiền HIỆU LỰC, đọc trên cùng một hàng tenant. Tuyến quyết định
+         * trang này vẽ mặt tiền nào, đọc danh tính từ đâu (ADR 0054) và có đeo dấu xác thực không —
+         * nên nó phải là phép chấm pha THẬT (`resolveEffectiveBilling`), không phải
+         * `tenants.tenant_type` (ADR 0014 điều 2) và không phải `planCode`.
+         */
+        ...storefrontTenantSelect(now),
         id: true,
-        name: true,
         slug: true,
         ratingAvg: true,
         ratingCount: true,
         createdAt: true,
-        // Avatar chủ tài khoản — ảnh thay thế của mặt tiền cá nhân (`storefrontAvatar`).
-        owner: { select: { avatarUrl: true } },
-        /*
-         * Tuyến thu tiền HIỆU LỰC, đọc trên cùng một hàng tenant đã chạm tới. Nó quyết định trang
-         * này vẽ mặt tiền nào và có đeo dấu xác thực không — nên nó phải là phép chấm pha THẬT
-         * (`resolveEffectiveBilling`), không phải `tenants.tenant_type` (ADR 0014 điều 2) và
-         * không phải `planCode`.
-         */
-        subscriptions: {
-          where: effectiveSubscriptionWhere(now),
-          ...EFFECTIVE_SUBSCRIPTION_ARGS,
-        },
         profile: {
           select: {
             provinceName: true,
@@ -844,17 +810,16 @@ export class PublicListingsService {
     }
 
     const stats = await this.shopStats(t.id);
-    const billingMode = resolveEffectiveBilling(t.subscriptions[0] ?? null, now).billingMode;
-    const kind = resolveStorefrontKind(billingMode);
+    const storefront = resolveStorefront(t, now);
 
     return {
-      name: t.name,
+      name: storefront.name,
       slug: t.slug,
-      storefrontKind: kind,
-      verified: hasVerifiedStorefront(billingMode),
-      chatOpen: storefrontAllowsPublicChat(kind),
+      storefrontKind: storefront.kind,
+      verified: hasVerifiedStorefront(storefront.billingMode),
+      chatOpen: storefrontAllowsPublicChat(storefront.kind),
       provinceName: t.profile?.provinceName ?? null,
-      logoUrl: storefrontAvatar(t.profile?.logoUrl, t.owner.avatarUrl, kind),
+      logoUrl: storefront.avatarUrl,
       coverUrl: t.profile?.coverUrl ?? null,
       bio: t.profile?.bio ?? null,
       address: t.profile?.address ?? null,
@@ -1029,17 +994,11 @@ export class PublicListingsService {
         electricConsumptionKwhPer100Km: true,
         tenant: {
           select: {
-            name: true,
+            // Tên, ảnh, tuyến hiệu lực — cùng nguồn với thẻ ở lưới kết quả (ADR 0054).
+            ...storefrontTenantSelect(now),
             slug: true,
             // `address`: dự phòng cho điểm nhận xe khi chi nhánh chưa điền địa chỉ.
             profile: { select: { provinceName: true, logoUrl: true, bio: true, address: true } },
-            // Avatar chủ tài khoản — ảnh thay thế của mặt tiền cá nhân (`storefrontAvatar`).
-            owner: { select: { avatarUrl: true } },
-            // Dấu xác thực của thẻ gian hàng trên trang xe — cùng nguồn với thẻ ở lưới kết quả.
-            subscriptions: {
-              where: effectiveSubscriptionWhere(now),
-              ...EFFECTIVE_SUBSCRIPTION_ARGS,
-            },
             // Điểm đánh giá CỦA GIAN HÀNG — cột sẵn có, cùng nguồn `PublicShopDto` dùng cho trang
             // gian hàng (không phải một truy vấn tổng hợp mới).
             ratingAvg: true,
@@ -1125,6 +1084,8 @@ export class PublicListingsService {
      * điền. Không có địa chỉ nào thì trả `null` — một điểm hẹn không có địa chỉ là thông tin vô
      * dụng, và bịa ra tên chi nhánh trần còn tệ hơn im lặng.
      */
+    const storefront = resolveStorefront(v.tenant, now);
+
     const pickupAddress = v.branch?.address?.trim() || v.tenant.profile?.address?.trim() || null;
     const pickupPoint = pickupAddress
       ? {
@@ -1132,7 +1093,12 @@ export class PublicListingsService {
           branchName: v.branch?.address?.trim() ? (v.branch.name ?? null) : null,
           address: pickupAddress,
           provinceName: v.branch?.province?.name ?? v.tenant.profile?.provinceName ?? null,
-          phone: v.branch?.phone ?? null,
+          /*
+           * SĐT điểm nhận chỉ của GIAN HÀNG (số tổng đài chi nhánh). Chủ xe cá nhân: số của họ là
+           * SĐT ĐĂNG NHẬP — chỉ trao cho khách SAU khi có yêu cầu thuê (trang chuyến, ADR 0054),
+           * cùng lý do kênh chat của họ không mở công khai (`storefrontAllowsPublicChat`).
+           */
+          phone: storefront.kind === STOREFRONT_KIND.SHOP ? (v.branch?.phone ?? null) : null,
           /*
            * Toạ độ CHỈ đi kèm khi địa chỉ đến từ chính chi nhánh đó. Địa chỉ rơi về hồ sơ gian
            * hàng mà vẫn ghim toạ độ chi nhánh là ghim sai chỗ — trang xe sẽ chỉ khách tới một
@@ -1149,11 +1115,6 @@ export class PublicListingsService {
         }
       : null;
 
-    const detailBilling = resolveEffectiveBilling(
-      v.tenant.subscriptions[0] ?? null,
-      now,
-    ).billingMode;
-    const detailKind = resolveStorefrontKind(detailBilling);
 
     return {
       id: v.id,
@@ -1177,14 +1138,14 @@ export class PublicListingsService {
       deliveryEnabled: v.deliveryEnabled,
       noCollateral: v.noCollateral,
       discountPercent: v.discountPercent,
-      shopName: v.tenant.name,
+      shopName: storefront.name,
       shopSlug: v.tenant.slug,
-      shopVerified: hasVerifiedStorefront(detailBilling),
+      shopVerified: hasVerifiedStorefront(storefront.billingMode),
       shopMetrics,
       // Nút "Nhắn shop" của trang này chỉ hiện khi gian hàng mở hộp thư công khai. Cờ nói đúng
       // CHÍNH SÁCH chứ không phải tuyến, vì đó là thứ nút cần biết — xem
       // `storefrontAllowsPublicChat`. Cổng thật vẫn nằm ở `ChatService`.
-      shopChatOpen: storefrontAllowsPublicChat(detailKind),
+      shopChatOpen: storefrontAllowsPublicChat(storefront.kind),
       completedTripCount,
       // Vị trí là của CHI NHÁNH giữ xe, không phải của hồ sơ gian hàng: shop nhiều chi nhánh thì
       // hai xe cùng shop hoàn toàn có thể ở hai tỉnh khác nhau.
@@ -1193,11 +1154,7 @@ export class PublicListingsService {
       description: v.description,
       color: v.color,
       manufactureYear: v.manufactureYear,
-      shopLogoUrl: storefrontAvatar(
-        v.tenant.profile?.logoUrl,
-        v.tenant.owner.avatarUrl,
-        detailKind,
-      ),
+      shopLogoUrl: storefront.avatarUrl,
       shopBio: v.tenant.profile?.bio ?? null,
       shopRatingAvg: v.tenant.ratingAvg as unknown as string,
       shopRatingCount: v.tenant.ratingCount,

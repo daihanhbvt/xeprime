@@ -36,7 +36,7 @@ import styles from './onboarding.module.css';
  * | chưa có gian hàng, `?track=package` | **bước 1**: tạo gian hàng trả phí |
  * | `onboardingState = package_pending` | **bước 2**: chọn gói → QR chuyển khoản |
  * | gói đã hiệu lực | chuyển tới `/manage/shop?welcome=1` |
- * | tuyến hoa hồng (đã có gian hàng) | chuyển tới khu của họ (`/account/registration`) |
+ * | tuyến hoa hồng (đã có gian hàng) | chuyển tới khu của họ (trang chủ Owner Lite) |
  *
  * `?track=` CHỈ có nghĩa ở dòng đầu và dòng thứ hai — tức khi CHƯA có gian hàng. Sau đó nguồn là
  * `tenants.onboarding_state`, nên F5, đóng trình duyệt hay đăng nhập trên máy khác đều rơi đúng
@@ -71,18 +71,19 @@ export default function OwnerOnboardingPage() {
    * Đích sau khi tạo hồ sơ TUYẾN HOA HỒNG. `safeNextPath` chỉ nhận đường dẫn NỘI BỘ — tham số
    * này đến từ URL, nên nó là bề mặt open-redirect nếu tin thẳng.
    *
-   * Mặc định là `/account/registration` TƯỜNG MINH, không phải `paths.ownerProfile`.
+   * Mặc định là trang chủ site partner TƯỜNG MINH, không phải `paths.ownerProfile` — ở bậc
+   * `registering` trang chủ Owner Lite CHÍNH LÀ màn tiến trình đăng ký (`OwnerLiteHome`).
    *
    * `workspacePaths` mặc định về khu QUẢN LÝ khi chưa biết người dùng thuộc đâu, và ở đúng lúc
    * hàm này chạy thì họ CHƯA có gian hàng — nên bảng đó trả `/manage/shop`, tức là người vừa tạo
    * hồ sơ chủ xe bị đẩy vào cổng quản lý rồi bị `AppShell` đá ra. Một tenant tuyến hoa hồng vừa
-   * tạo thì luôn làm việc ở `/account/registration`; nói thẳng ra rẻ hơn một phép suy đi qua một
+   * tạo thì luôn bắt đầu ở trang chủ của tuyến đó; nói thẳng ra rẻ hơn một phép suy đi qua một
    * bảng không có đủ thông tin để trả lời.
    *
    * Tuyến GÓI thì bỏ qua `next` hoàn toàn: sau bước 1 của họ luôn là bước 2 ngay trên trang này,
    * và tôn trọng một `?next=` ở đó sẽ đưa người vừa tạo gian hàng đi khỏi màn thanh toán.
    */
-  const commissionNext = safeNextPath(params.get('next'), ROUTES.MANAGE.REGISTRATION);
+  const commissionNext = safeNextPath(params.get('next'), ROUTES.MANAGE.ROOT);
   /** Đến từ luồng đăng xe → dùng chữ dành cho chủ xe cá nhân, không phải chữ "mở gian hàng". */
   const personalWording = commissionNext.startsWith(ROUTES.LIST_YOUR_VEHICLE.ROOT);
 
@@ -215,4 +216,3 @@ export default function OwnerOnboardingPage() {
     </div>
   );
 }
-

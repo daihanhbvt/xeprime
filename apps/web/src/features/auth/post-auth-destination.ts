@@ -1,4 +1,5 @@
 import {
+  TENANT_ROLE,
   WORKSPACE_TARGET,
   isPackageOnboardingPending,
   resolveWorkspaceTarget,
@@ -6,7 +7,13 @@ import {
   type WorkspaceTarget,
 } from '@xeprime/types';
 
-import { ROUTES, SHOP_SECTION, shopSectionPath } from '@/constants/routes';
+import {
+  ACCOUNT_SECTION,
+  ROUTES,
+  SHOP_SECTION,
+  accountSectionPath,
+  shopSectionPath,
+} from '@/constants/routes';
 import { ZONE, isPathInZone, siteHref, zoneRelativePath } from '@/zones';
 import { isSafeNextPath, safeNextPath } from './safe-next';
 
@@ -74,6 +81,20 @@ export function resolvePartnerTrack(user: AuthScope | null | undefined): Partner
   if (isPackageOnboardingPending(tenant)) return PARTNER_TRACK.PACKAGE_PENDING;
   if (tenantUsesManagePortal(tenant)) return PARTNER_TRACK.PACKAGE;
   return PARTNER_TRACK.COMMISSION;
+}
+
+/**
+ * CHỦ xe tuyến hoa hồng — người mà "gian hàng" và "con người" là một (`STOREFRONT_KIND.PERSONAL`).
+ *
+ * Với họ trang tài khoản là "Hồ sơ chủ xe": hồ sơ cá nhân và trang chủ xe công khai trên CÙNG một
+ * trang. Thành viên (không phải chủ) của một gian hàng tuyến hoa hồng vẫn chỉ có trang tài khoản
+ * của riêng họ — trang chủ xe không phải của họ để sửa.
+ */
+export function isCommissionOwner(user: AuthScope | null | undefined): boolean {
+  return (
+    user?.tenant?.roleKey === TENANT_ROLE.SHOP_OWNER &&
+    resolvePartnerTrack(user) === PARTNER_TRACK.COMMISSION
+  );
 }
 
 /** Trang chủ của một tài khoản partner theo tuyến (cột "Vào đâu sau đăng nhập" của B1). */
@@ -193,6 +214,20 @@ function packageEquivalent(pathname: string): string | null {
 }
 
 /**
+ * CHỦ xe tuyến hoa hồng mở trang Cửa hàng (bookmark, thông báo, link từ thời còn gói) → phần tương
+ * đương trong "Hồ sơ chủ xe". Cùng một bản ghi gian hàng ở cả hai trang, nên đây là chuyển chỗ đọc,
+ * không phải chuyển dữ liệu. Thành viên không có section đó (trang tài khoản của họ là bản thường)
+ * ⇒ về trang chủ. Trang con của Cửa hàng (chi nhánh, chính sách…) là năng lực của gói ⇒ về trang
+ * chủ như mọi trang tuyến gói khác.
+ */
+function commissionEquivalent(user: AuthScope | null | undefined, pathname: string): string | null {
+  if (pathname === ROUTES.MANAGE.SHOP && isCommissionOwner(user)) {
+    return accountSectionPath(ACCOUNT_SECTION.PROFILE);
+  }
+  return null;
+}
+
+/**
  * Người này có được ở lại trang `path` của site partner không — trả đích cần chuyển tới, hoặc
  * `null`. MỘT hàm cho `AppShell` (gõ thẳng URL) và cho đích sau đăng nhập (`next`).
  */
@@ -214,7 +249,8 @@ export function partnerPageRedirect(
     case PARTNER_TRACK.COMMISSION:
       // Onboarding tự đưa gian hàng hoa hồng về tiến trình đăng ký của nó.
       if (pathname === ROUTES.MANAGE.ONBOARDING) return null;
-      return isCommissionPage(pathname) ? null : ROUTES.MANAGE.ROOT;
+      if (isCommissionPage(pathname)) return null;
+      return commissionEquivalent(user, pathname) ?? ROUTES.MANAGE.ROOT;
     case PARTNER_TRACK.PACKAGE:
       return packageEquivalent(pathname);
   }
@@ -262,7 +298,8 @@ const TARGET_HREF: Readonly<Record<WorkspaceTarget, string>> = {
   [WORKSPACE_TARGET.MANAGE]: ROUTES.MANAGE.ROOT,
   [WORKSPACE_TARGET.ACCOUNT]: ROUTES.MANAGE.ROOT,
   [WORKSPACE_TARGET.VEHICLES]: ROUTES.MANAGE.VEHICLES,
-  [WORKSPACE_TARGET.REGISTRATION]: ROUTES.MANAGE.REGISTRATION,
+  // Bậc `registering`: trang chủ Owner Lite CHÍNH LÀ màn tiến trình đăng ký (`OwnerLiteHome`).
+  [WORKSPACE_TARGET.REGISTRATION]: ROUTES.MANAGE.ROOT,
 };
 
 /**

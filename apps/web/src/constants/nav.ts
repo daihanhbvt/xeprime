@@ -710,8 +710,8 @@ export const PLATFORM_NAV: readonly NavSection[] = [
  * Menu của chủ xe TUYẾN HOA HỒNG ở site partner — Owner Lite (ADR 0051 điều 3).
  *
  * CÙNG URL với tuyến gói cho mọi trang có cùng ý nghĩa (xe, lịch, yêu cầu, đơn, hộp thư, số dư, gói,
- * hỗ trợ); chỉ thêm các trang riêng của tuyến hoa hồng (hồ sơ chủ xe, khai thuế, tài khoản nhận
- * tiền, cẩm nang…). Không có chi nhánh, nhân viên, tài xế, sổ thu chi, khách hàng: đó là năng lực
+ * hỗ trợ, tài khoản); chỉ thêm các trang riêng của tuyến hoa hồng (khai thuế, tài khoản nhận tiền,
+ * cẩm nang…). Không có chi nhánh, nhân viên, tài xế, sổ thu chi, khách hàng: đó là năng lực
  * của gói (ADR 0027 điều 1), server chặn bằng `@SubscriptionTrackOnly` và menu này không bày ra.
  *
  * Nhãn dùng lại nhóm `Navigation.account`/`Navigation.manage` — không bản dịch thứ hai.
@@ -808,13 +808,21 @@ export const OWNER_LITE_NAV: readonly NavSection[] = [
     ],
   },
   {
-    key: 'owner-profile',
-    labelKey: 'manageGroups.storefront',
+    /*
+     * KHÔNG có nhóm "Gian hàng" ở tuyến hoa hồng (06/10/2026): chủ xe cá nhân không có gian hàng
+     * nào để quản lý — họ có MỘT hồ sơ. "Hồ sơ chủ xe" là trang tài khoản của chính họ (`ACCOUNT`,
+     * bản gộp hồ sơ cá nhân + trang chủ xe công khai — xem `OwnerProfilePage`).
+     *
+     * `ownerOnly`: thành viên của một gian hàng tuyến hoa hồng mở cùng URL đó chỉ thấy tài khoản
+     * của riêng họ — nhãn "Hồ sơ chủ xe" sẽ nói sai, nên họ vào qua menu ở thẻ người dùng.
+     */
+    key: 'owner-account',
+    labelKey: 'manageGroups.account',
     children: [
       {
-        key: 'registration',
+        key: 'owner-profile',
         labelKey: 'account.ownerProfile',
-        href: ROUTES.MANAGE.REGISTRATION,
+        href: ROUTES.MANAGE.ACCOUNT,
         permission: PERMISSION.TENANT_VIEW,
         icon: SolutionOutlined,
         ownerOnly: true,
@@ -1060,7 +1068,8 @@ function longestPrefixLeaf<T extends NavTarget>(path: string, leaves: readonly T
   let best: T | undefined;
   for (const leaf of leaves) {
     // Gốc site (Tổng quan) là tiền tố của MỌI đường dẫn ở chế độ `host` — chỉ khớp tuyệt đối.
-    const exactOnly = leaf.exact === true || leaf.href === ROUTES.MANAGE.ROOT || leaf.href === ROUTES.ADMIN.ROOT;
+    const exactOnly =
+      leaf.exact === true || leaf.href === ROUTES.MANAGE.ROOT || leaf.href === ROUTES.ADMIN.ROOT;
     const isMatch = path === leaf.href || (!exactOnly && path.startsWith(`${leaf.href}/`));
     if (isMatch && (!best || leaf.href.length > best.href.length)) {
       best = leaf;

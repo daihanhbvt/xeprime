@@ -74,10 +74,8 @@ export function OwnerGate({
       </p>
       <div className={styles.actions}>
         {member ? null : (
-          <Link href={registering ? ROUTES.MANAGE.REGISTRATION : ROUTES.MANAGE.REGISTER}>
-            <Button type="primary">
-              {registering ? t('openRegistration') : t('becomeOwner')}
-            </Button>
+          <Link href={registering ? ROUTES.MANAGE.ROOT : ROUTES.MANAGE.REGISTER}>
+            <Button type="primary">{registering ? t('openRegistration') : t('becomeOwner')}</Button>
           </Link>
         )}
         <Link href={ROUTES.MANAGE.ACCOUNT}>

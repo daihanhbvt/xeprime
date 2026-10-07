@@ -39,7 +39,8 @@ import type { RequestContext } from '../src/common/types/request-context';
  *  - logout ⇒ access token còn hạn mất hiệu lực ngay;
  *  - user bị khoá ⇒ chặn dù access token chưa hết hạn;
  *  - (ADR 0053) phiên không bao giờ đi chéo realm: cookie đọc theo realm do proxy quyết, Bearer lấy
- *    realm của app đã đăng nhập, tài khoản lệch realm ⇒ 401 như người lạ.
+ *    realm của app đã đăng nhập và — khi đi qua `/api` của một site web — phải trùng realm của site;
+ *    tài khoản lệch realm ⇒ 401 như người lạ.
  *
  * Không có DB thì tự skip, giống các spec khác trong repo.
  */
@@ -599,6 +600,26 @@ describe('resolveOptionalUserId — nhận cả cookie lẫn Bearer', () => {
       await expect(resolveOptionalUserId(req, deps, ACCOUNT_REALM.CUSTOMER)).resolves.toBeNull();
     },
   );
+
+  maybe(
+    'Bearer app Partner đi qua site khách ⇒ null (khách vãng lai), qua site partner ⇒ có',
+    async () => {
+      const partnerId = await mkUser(USER_STATUS.ACTIVE, ACCOUNT_REALM.PARTNER);
+      const pair = await native.issueSession(partnerId, {}, MOBILE_CLIENT_APP.PARTNER);
+      const viaSite = (realm: AccountRealm) =>
+        mkRequest({
+          authorization: `Bearer ${pair.accessToken}`,
+          realm,
+        }) as unknown as Parameters<typeof resolveOptionalUserId>[0];
+
+      await expect(
+        resolveOptionalUserId(viaSite(ACCOUNT_REALM.CUSTOMER), deps),
+      ).resolves.toBeNull();
+      await expect(resolveOptionalUserId(viaSite(ACCOUNT_REALM.PARTNER), deps)).resolves.toBe(
+        partnerId,
+      );
+    },
+  );
 });
 
 /* ───────────────────────── Ranh giới realm (ADR 0053) ───────────────────────── */
@@ -700,4 +721,63 @@ describe('AuthGuard — phiên không đi chéo realm', () => {
     await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
     expect(request.user).toMatchObject({ realm: ACCOUNT_REALM.PARTNER, transport: 'bearer' });
   });
+
+  maybe(
+    'Bearer app Partner đi qua /api của SITE KHÁCH ⇒ 401, kể cả khi tài khoản hợp lệ',
+    async () => {
+      const partnerId = await mkUser(USER_STATUS.ACTIVE, ACCOUNT_REALM.PARTNER);
+      const pair = await native.issueSession(partnerId, {}, MOBILE_CLIENT_APP.PARTNER);
+
+      for (const siteRealm of [ACCOUNT_REALM.CUSTOMER, ACCOUNT_REALM.PLATFORM]) {
+        await expectUnauthorized(() =>
+          guard.canActivate(
+            contextFor(
+              mkRequest({ authorization: `Bearer ${pair.accessToken}`, realm: siteRealm }),
+            ),
+          ),
+        );
+      }
+    },
+  );
+
+  maybe('Bearer app khách đi qua /api của site partner ⇒ 401', async () => {
+    const customerId = await mkUser();
+    const pair = await native.issueSession(customerId, {}, MOBILE_CLIENT_APP.CUSTOMER);
+
+    await expectUnauthorized(() =>
+      guard.canActivate(
+        contextFor(
+          mkRequest({ authorization: `Bearer ${pair.accessToken}`, realm: ACCOUNT_REALM.PARTNER }),
+        ),
+      ),
+    );
+  });
+
+  maybe('Bearer đi qua /api của ĐÚNG site của realm phiên ⇒ vào được', async () => {
+    const partnerId = await mkUser(USER_STATUS.ACTIVE, ACCOUNT_REALM.PARTNER);
+    const pair = await native.issueSession(partnerId, {}, MOBILE_CLIENT_APP.PARTNER);
+    const request = mkRequest({
+      authorization: `Bearer ${pair.accessToken}`,
+      realm: ACCOUNT_REALM.PARTNER,
+    });
+
+    await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
+    expect(request.realm).toBe(ACCOUNT_REALM.PARTNER);
+  });
+
+  maybe(
+    'header realm tự khai không có khoá proxy KHÔNG chặn được Bearer hợp lệ (host API native)',
+    async () => {
+      const partnerId = await mkUser(USER_STATUS.ACTIVE, ACCOUNT_REALM.PARTNER);
+      const pair = await native.issueSession(partnerId, {}, MOBILE_CLIENT_APP.PARTNER);
+      const request = mkRequest({
+        authorization: `Bearer ${pair.accessToken}`,
+        realm: ACCOUNT_REALM.CUSTOMER,
+        proxySecret: null,
+      });
+
+      await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
+      expect(request.user).toMatchObject({ realm: ACCOUNT_REALM.PARTNER, transport: 'bearer' });
+    },
+  );
 });

@@ -305,7 +305,7 @@ describe('Tuyến hoa hồng đã có gian hàng: không thuộc màn này', () 
    * đây sẽ đẩy một chủ xe hoa hồng vào cổng quản lý rồi để `AppShell` đá họ ra — hai cú nhảy và
    * một lần nháy màn hình.
    */
-  it('chưa có xe trên chợ ⇒ màn tiến trình đăng ký, KHÔNG dựng bước nào', async () => {
+  it('chưa có xe trên chợ ⇒ trang chủ (màn tiến trình đăng ký), KHÔNG dựng bước nào', async () => {
     signedIn({
       onboardingState: SHOP_ONBOARDING_STATE.COMMISSION,
       billingMode: BILLING_MODE.COMMISSION,
@@ -314,7 +314,7 @@ describe('Tuyến hoa hồng đã có gian hàng: không thuộc màn này', () 
     renderPage();
 
     await waitFor(() => expect(router.replace).toHaveBeenCalledTimes(1));
-    expect(router.replace.mock.calls[0]![0]).toBe('/manage/registration');
+    expect(router.replace.mock.calls[0]![0]).toBe('/manage');
     expect(screen.queryByTestId('shop-registration')).toBeNull();
   });
 

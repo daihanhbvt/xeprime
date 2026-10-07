@@ -13,7 +13,12 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useLocaleMenuGroup } from '@/components/i18n/locale-menu';
 import { ROUTES } from '@/constants/routes';
-import { PARTNER_TRACK, resolvePartnerTrack } from '@/features/auth/post-auth-destination';
+import { workspaceAvatar } from '@/features/account/workspace-avatar';
+import {
+  PARTNER_TRACK,
+  isCommissionOwner,
+  resolvePartnerTrack,
+} from '@/features/auth/post-auth-destination';
 import { ZONE } from '@/zones';
 import { useZone } from '@/zones/ZoneProvider';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
@@ -124,7 +129,13 @@ export function Topbar({ user }: { user: CurrentUser }) {
                 : {
                     key: 'account',
                     icon: <UserOutlined aria-hidden />,
-                    label: <Link href={ROUTES.MANAGE.ACCOUNT}>{tManage('shell.account')}</Link>,
+                    label: (
+                      <Link href={ROUTES.MANAGE.ACCOUNT}>
+                        {isCommissionOwner(user)
+                          ? tManage('shell.ownerProfile')
+                          : tManage('shell.account')}
+                      </Link>
+                    ),
                   },
               ...(tenantName && !isAdmin && !isCommission
                 ? [
@@ -149,14 +160,11 @@ export function Topbar({ user }: { user: CurrentUser }) {
         >
           <button type="button" className={styles.avatarButton} aria-label={t('public.account')}>
             {/*
-              Logo GIAN HÀNG, fallback là chữ cái đầu của TÊN GIAN HÀNG. Vuông bo góc chứ không
-              tròn: tròn là quy ước của ảnh một con người, còn ở đây danh tính là của cửa hàng.
+              Ảnh của KHU LÀM VIỆC (`workspaceAvatar`): logo gian hàng, vuông bo góc — danh tính
+              của cửa hàng. Chủ xe tuyến hoa hồng: ảnh của chính họ, tròn — với họ người và trang
+              chủ xe là một. Fallback là chữ cái đầu của tên khu.
             */}
-            <Avatar
-              className={styles.avatar}
-              shape="square"
-              src={user.tenant?.logoUrl ?? undefined}
-            >
+            <Avatar className={styles.avatar} {...workspaceAvatar(user)}>
               {initialOf(workspaceName)}
             </Avatar>
             <span className={styles.workspaceName} title={workspaceName}>

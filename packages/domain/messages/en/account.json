@@ -113,7 +113,9 @@
     "phoneInvalid": "That phone number isn't valid",
     "emailRequired": "Enter an email address",
     "emailInvalid": "That email address isn't valid",
-    "emailMax": "Email must be 255 characters or fewer"
+    "emailMax": "Email must be 255 characters or fewer",
+    "avatarRequired": "Please choose a profile photo — renters see it on your host page",
+    "bioMax": "The introduction can be at most 2000 characters"
   },
   "ownerGate": {
     "title": "Hosts only",
@@ -123,7 +125,7 @@
     "openManage": "Open management portal",
     "backToAccount": "Back to my account",
     "registeringTitle": "Your host profile is still under review",
-    "registeringBody": "This section opens once you have at least one vehicle approved for the marketplace. Track your profile and vehicles on the registration screen.",
+    "registeringBody": "This section opens once you have at least one vehicle approved for the marketplace. Track your profile and vehicles on your home page.",
     "openRegistration": "View registration status",
     "bodyMemberPartner": "You are a member of {shop}. This shop uses the host toolkit — vehicle, calendar and money screens are open to the shop owner only. Contact the owner if you need access."
   },
@@ -312,7 +314,6 @@
   "registration": {
     "title": "Host profile",
     "subtitle": "Track your profile and your first vehicle on their way to the marketplace.",
-    "saved": "Profile saved",
     "submitted": "Profile submitted for verification",
     "loadError": "Could not load your host profile",
     "steps": {
@@ -337,7 +338,13 @@
     },
     "queue": {
       "title": "Your vehicles on their way to the marketplace"
-    }
+    },
+    "profileIncomplete": {
+      "title": "Your host profile is missing a few details",
+      "body": "Add your full name, a verified phone number and a pickup province to finish step 1.",
+      "cta": "Complete profile"
+    },
+    "editProfile": "Host profile"
   },
   "deletionImpact": {
     "title": "Read this before you send the request",
@@ -385,8 +392,31 @@
     "profile": {
       "previewLabel": "Profile preview",
       "notShop": "This name and photo belong to your account only. The name, logo and contact phone renters see belong to the shop.",
-      "storefrontFallback": "Until your owner page has a logo, renters will see this profile photo.",
       "shopSettingsLink": "Open shop settings"
+    }
+  },
+  "ownerHub": {
+    "title": "Host profile",
+    "subtitle": "What renters see, and how you sign in.",
+    "navTitle": "On this page",
+    "navLabel": "Host profile sections",
+    "loadError": "Could not load your host profile",
+    "viewPublicPage": "View my host page",
+    "sections": {
+      "profile": "About you",
+      "profileHint": "Renters see this photo, name and introduction on your host page.",
+      "address": "Pickup address",
+      "addressHint": "Where renters pick the car up."
+    },
+    "form": {
+      "saved": "Pickup address saved",
+      "submit": "Save address"
+    },
+    "readOnly": "You can only view the introduction and pickup address.",
+    "info": {
+      "bio": "Introduction",
+      "bioPlaceholder": "A few lines about you and your cars…",
+      "saved": "Host details saved"
     }
   }
 }

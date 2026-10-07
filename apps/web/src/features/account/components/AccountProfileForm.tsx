@@ -5,12 +5,10 @@ import { Avatar, Button } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useWatch } from 'react-hook-form';
-import { TENANT_ROLE } from '@xeprime/types';
 
 import { ImageUploadField } from '@/components/form/ImageUploadField';
 import { TextField } from '@/components/form/TextField';
 import { ROUTES } from '@/constants/routes';
-import { PARTNER_TRACK, resolvePartnerTrack } from '@/features/auth/post-auth-destination';
 import { useShopSettingsAccess } from '@/features/shop/hooks/use-shop-settings-access';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { initialOf } from '@/lib/initials';
@@ -34,7 +32,8 @@ import styles from './AccountProfileForm.module.css';
  *
  * Dòng cuối phân biệt tài khoản với GIAN HÀNG: tên/ảnh ở đây là của con người đang đăng nhập; tên,
  * logo, SĐT liên hệ mà khách thấy là của gian hàng và sửa ở Cài đặt gian hàng. Chủ xe tuyến hoa
- * hồng thì khác một điểm — trang chủ xe của họ dùng chính ảnh này khi chưa có logo.
+ * hồng KHÔNG dùng khối này: với họ ảnh + họ tên là thứ khách thấy, nên trang của họ có khối riêng
+ * (`OwnerInfoForm` — ảnh bắt buộc, kèm lời giới thiệu; ADR 0054).
  */
 export function AccountProfileForm({ profile }: { profile: UserProfile }) {
   const t = useTranslations('Account');
@@ -50,11 +49,6 @@ export function AccountProfileForm({ profile }: { profile: UserProfile }) {
   const displayName = useWatch({ control, name: 'displayName' });
   const previewName = displayName?.trim() || profile.displayName;
   const dirty = formState.isDirty;
-
-  // Trang chủ xe tuyến hoa hồng lấy ảnh đại diện CỦA CHỦ làm mặt tiền khi chưa có logo.
-  const isCommissionOwner =
-    user?.tenant?.roleKey === TENANT_ROLE.SHOP_OWNER &&
-    resolvePartnerTrack(user) === PARTNER_TRACK.COMMISSION;
 
   return (
     <div className={styles.layout}>
@@ -98,7 +92,7 @@ export function AccountProfileForm({ profile }: { profile: UserProfile }) {
         <p className={styles.note}>
           <InfoCircleOutlined aria-hidden className={styles.noteIcon} />
           <span>
-            {isCommissionOwner ? tHub('profile.storefrontFallback') : tHub('profile.notShop')}{' '}
+            {tHub('profile.notShop')}{' '}
             {canOpenShopSettings ? (
               <Link href={ROUTES.MANAGE.SHOP}>{tHub('profile.shopSettingsLink')}</Link>
             ) : null}

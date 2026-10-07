@@ -157,8 +157,9 @@ model Tenant {
   code               String    @unique @db.VarChar(50)
   /// KHÔNG đổi theo `name`: đổi tên gian hàng không được làm chết link trang gian hàng đã chia sẻ.
   slug               String    @unique @db.VarChar(120)
-  /// Tên HIỂN THỊ của gian hàng — nguồn DUY NHẤT (05/10/2026). Mọi nơi khách nhìn thấy (thẻ xe,
-  /// trang gian hàng, chat, chuyến, hợp đồng) đọc cột này; `PATCH /tenants/current/profile` ghi nó.
+  /// Tên HIỂN THỊ của gian hàng TUYẾN GÓI (05/10/2026); `PATCH /tenants/current/profile` ghi nó. Mặt
+  /// tiền CÁ NHÂN hiện bằng họ tên tài khoản chủ thay vì cột này (ADR 0054) — chỗ khách nhìn thấy
+  /// (thẻ xe, trang gian hàng, chat, chuyến, hợp đồng) đọc qua `resolveStorefront`.
   /// Bản sao `tenant_profiles.display_name` đã bị gỡ: form sửa ghi vào bản sao, khách đọc bản gốc,
   /// nên đổi tên ở hồ sơ không bao giờ tới được người thuê.
   name               String    @db.VarChar(255)
@@ -182,9 +183,10 @@ model Tenant {
   /// Giá trị canh bằng CHECK `tenants_onboarding_state_check` ở migration.
   onboardingState    String    @default("commission") @map("onboarding_state") @db.VarChar(20)
   ownerUserId        String    @map("owner_user_id") @db.Char(26)
-  /// SĐT/email LIÊN HỆ của gian hàng — thứ khách thấy ở chuyến đi và hợp đồng. KHÔNG phải định
-  /// danh đăng nhập: đó là `users.phone`/`users.email` của từng tài khoản (ADR 0053). Hai bên độc
-  /// lập — điền sẵn từ tài khoản lúc đăng ký, sau đó đổi bên này không chạm bên kia.
+  /// SĐT/email LIÊN HỆ của gian hàng TUYẾN GÓI — thứ khách thấy ở chuyến đi và hợp đồng. KHÔNG phải
+  /// định danh đăng nhập (`users.phone`/`users.email`, ADR 0053). Mặt tiền CÁ NHÂN (tuyến hoa hồng)
+  /// KHÔNG đọc hai cột này: khách thấy SĐT/email ĐÃ XÁC THỰC của tài khoản chủ (ADR 0054). Cột nằm
+  /// yên khi hết gói và hiện lại khi lên gói — đọc qua `resolveStorefront`, không đọc thẳng.
   phone              String?   @db.VarChar(30)
   email              String?   @db.VarChar(255)
   ratingAvg          Decimal   @default(0) @map("rating_avg") @db.Decimal(3, 2)

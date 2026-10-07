@@ -2,6 +2,7 @@ import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
   ACCOUNT_REALM,
   API_ERROR_CODE,
+  BILLING_MODE,
   CONTRACT_STATUS,
   MEMBERSHIP_STATUS,
   TENANT_ROLE,
@@ -12,6 +13,7 @@ import { AuditService } from '../src/modules/audit/audit.service';
 import { BankAccountsService } from '../src/modules/bank-accounts/bank-accounts.service';
 import { ContractsService } from '../src/modules/contracts/contracts.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { giveTenantPlan } from './helpers/billing-fixture';
 
 /**
  * S3 — Hợp đồng snapshot từ booking, chạy trên PostgreSQL THẬT. Kiểm chứng: snapshot đúng
@@ -51,6 +53,9 @@ beforeAll(async () => {
       id: ownerId,
       displayName: 'Chủ shop',
       email: `own-${ownerId}@xeprime.test`,
+      // SĐT đăng nhập ĐÃ XÁC THỰC — bên cho thuê ở mặt tiền cá nhân (ADR 0054). Email CHƯA xác thực.
+      phone: `849${Date.now().toString().slice(-8)}`,
+      phoneVerifiedAt: new Date(),
     },
   });
   await prisma.tenant.create({
@@ -107,6 +112,7 @@ afterAll(async () => {
     await prisma.booking.deleteMany({ where: { tenantId } });
     await prisma.vehicle.deleteMany({ where: { tenantId } });
     await prisma.tenantMembership.deleteMany({ where: { tenantId } });
+    await prisma.tenantSubscription.deleteMany({ where: { tenantId } });
     await prisma.tenant.deleteMany({ where: { id: tenantId } });
     await prisma.user.deleteMany({ where: { id: ownerId } });
   }
@@ -127,7 +133,15 @@ describe('Contracts (Phase 6 S3)', () => {
     expect(c.snapshot.customer.name).toBe('Nguyễn Văn A');
     expect(c.snapshot.vehicle.name).toBe('Vios');
     expect(c.snapshot.vehicle.plateNumber).toBe('51A-12345');
-    expect(c.snapshot.shop.name).toBe('Shop HĐ');
+    /*
+     * Tenant chưa có gói ⇒ mặt tiền CÁ NHÂN ⇒ bên cho thuê là chính tài khoản chủ (ADR 0054): họ
+     * tên + SĐT đăng nhập đã xác thực, KHÔNG phải tên/số tự khai của "gian hàng". Email chưa xác
+     * thực thì không in lên hợp đồng.
+     */
+    expect(c.snapshot.shop.name).toBe('Chủ shop');
+    expect(c.snapshot.shop.phone).toHaveLength(10);
+    expect(c.snapshot.shop.phone).not.toBe('0900000000');
+    expect(c.snapshot.shop.email).toBeNull();
     expect(c.snapshot.rental.days).toBe(2);
     expect(c.snapshot.pricing.totalAmount).toBe('700000');
     expect(c.snapshot.pricing.paidAmount).toBe('200000');
@@ -141,6 +155,31 @@ describe('Contracts (Phase 6 S3)', () => {
     expect(again.contractNo).toBe(first.contractNo);
     const count = await prisma.contract.count({ where: { bookingId } });
     expect(count).toBe(1);
+  });
+
+  maybe('tuyến gói: bên cho thuê là bộ RIÊNG của gian hàng (tên + SĐT liên hệ)', async () => {
+    await giveTenantPlan(prisma, tenantId, { billingMode: BILLING_MODE.PACKAGE });
+    const secondBookingId = newId();
+    await prisma.booking.create({
+      data: {
+        id: secondBookingId,
+        tenantId,
+        vehicleId,
+        code: `DH${secondBookingId.slice(-6).toUpperCase()}`,
+        customerName: 'Trần Thị B',
+        customerPhone: '0907654321',
+        pickupAt: new Date('2026-09-01T02:00:00.000Z'),
+        returnAt: new Date('2026-09-02T02:00:00.000Z'),
+        baseAmount: '350000',
+        totalAmount: '350000',
+        depositAmount: '0',
+        paidAmount: '0',
+      },
+    });
+
+    const c = await contracts.createFromBooking(tenantId, ownerId, secondBookingId);
+    expect(c.snapshot.shop.name).toBe('Shop HĐ');
+    expect(c.snapshot.shop.phone).toBe('0900000000');
   });
 
   maybe('getById trả đúng; shop khác đọc → NOT_FOUND', async () => {

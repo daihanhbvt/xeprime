@@ -113,7 +113,9 @@
     "phoneInvalid": "Số điện thoại không hợp lệ",
     "emailRequired": "Vui lòng nhập email",
     "emailInvalid": "Địa chỉ email không hợp lệ",
-    "emailMax": "Email tối đa 255 ký tự"
+    "emailMax": "Email tối đa 255 ký tự",
+    "avatarRequired": "Vui lòng chọn ảnh đại diện — khách thấy ảnh này trên trang chủ xe",
+    "bioMax": "Lời giới thiệu tối đa 2000 ký tự"
   },
   "ownerGate": {
     "title": "Khu vực dành cho chủ xe",
@@ -123,7 +125,7 @@
     "openManage": "Vào cổng quản lý",
     "backToAccount": "Về tài khoản của tôi",
     "registeringTitle": "Hồ sơ chủ xe đang trong quá trình duyệt",
-    "registeringBody": "Mục này mở khi bạn có ít nhất một xe đã được duyệt lên chợ. Xem tiến trình hồ sơ và xe của bạn ở màn Hồ sơ đăng ký.",
+    "registeringBody": "Mục này mở khi bạn có ít nhất một xe đã được duyệt lên chợ. Xem tiến trình hồ sơ và xe của bạn ở trang chủ.",
     "openRegistration": "Xem tiến trình đăng ký",
     "bodyMemberPartner": "Bạn đang là thành viên của gian hàng {shop}. Gian hàng này dùng bộ công cụ chủ xe — các màn quản lý xe, lịch và tiền chỉ mở cho chủ gian hàng. Liên hệ chủ gian hàng nếu bạn cần quyền."
   },
@@ -312,7 +314,6 @@
   "registration": {
     "title": "Hồ sơ chủ xe",
     "subtitle": "Theo dõi hồ sơ và chiếc xe đầu tiên của bạn trên đường lên chợ.",
-    "saved": "Đã lưu hồ sơ",
     "submitted": "Đã gửi hồ sơ đi xác minh",
     "loadError": "Không tải được hồ sơ chủ xe",
     "steps": {
@@ -337,7 +338,13 @@
     },
     "queue": {
       "title": "Xe của bạn đang trên đường lên chợ"
-    }
+    },
+    "profileIncomplete": {
+      "title": "Hồ sơ chủ xe còn thiếu thông tin",
+      "body": "Khai đủ họ tên, số điện thoại đã xác thực và tỉnh/thành nhận xe để hoàn tất bước 1.",
+      "cta": "Hoàn thiện hồ sơ"
+    },
+    "editProfile": "Hồ sơ chủ xe"
   },
   "deletionImpact": {
     "title": "Trước khi gửi yêu cầu, hãy xem phần này",
@@ -385,8 +392,31 @@
     "profile": {
       "previewLabel": "Xem trước hồ sơ",
       "notShop": "Tên và ảnh này là của riêng tài khoản bạn. Tên, logo và số điện thoại liên hệ mà khách thấy thuộc về gian hàng.",
-      "storefrontFallback": "Khi trang chủ xe của bạn chưa có logo, khách sẽ thấy ảnh đại diện này.",
       "shopSettingsLink": "Mở Cài đặt gian hàng"
+    }
+  },
+  "ownerHub": {
+    "title": "Hồ sơ chủ xe",
+    "subtitle": "Thông tin khách thấy và cách bạn đăng nhập.",
+    "navTitle": "Trên trang này",
+    "navLabel": "Các phần của hồ sơ chủ xe",
+    "loadError": "Không tải được hồ sơ chủ xe",
+    "viewPublicPage": "Xem trang chủ xe",
+    "sections": {
+      "profile": "Thông tin chủ xe",
+      "profileHint": "Khách thấy ảnh, họ tên và lời giới thiệu này trên trang chủ xe.",
+      "address": "Địa chỉ nhận xe",
+      "addressHint": "Nơi khách đến nhận xe."
+    },
+    "form": {
+      "saved": "Đã lưu địa chỉ nhận xe",
+      "submit": "Lưu địa chỉ"
+    },
+    "readOnly": "Bạn chỉ có quyền xem lời giới thiệu và địa chỉ nhận xe.",
+    "info": {
+      "bio": "Giới thiệu",
+      "bioPlaceholder": "Vài dòng về bạn và xe của bạn…",
+      "saved": "Đã lưu thông tin chủ xe"
     }
   }
 }

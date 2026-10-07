@@ -240,23 +240,6 @@ describe('Tài khoản & bảo mật — tách khỏi gian hàng', () => {
     const link = section('profile').getByRole('link', { name: 'Mở Cài đặt gian hàng' });
     expect(link.getAttribute('href')).toBe('/manage/shop');
   });
-
-  /*
-   * Chủ xe tuyến hoa hồng: trang chủ xe dùng chính ảnh đại diện này khi chưa có logo — nói rõ
-   * điều đó, và không trỏ tới trang Cửa hàng mà họ không vào được.
-   */
-  it('chủ xe tuyến hoa hồng: nói rõ ảnh này là mặt tiền khi chưa có logo, không có link 403', () => {
-    setUser('commission');
-    renderPage();
-
-    const profileSection = section('profile');
-    expect(
-      profileSection.getByText(
-        /Khi trang chủ xe của bạn chưa có logo, khách sẽ thấy ảnh đại diện này/,
-      ),
-    ).toBeTruthy();
-    expect(profileSection.queryByRole('link', { name: 'Mở Cài đặt gian hàng' })).toBeNull();
-  });
 });
 
 describe('Tài khoản & bảo mật — trạng thái tải', () => {

@@ -1,25 +1,21 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { OWNER_STAGE } from '@xeprime/types';
 
-import { OwnerGate } from '@/features/account/components/OwnerGate';
-import { OwnerRegistrationView } from '@/features/account/components/OwnerRegistrationView';
+import { OwnerRegistrationRedirect } from '@/features/account/components/OwnerRegistrationRedirect';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('Navigation.account');
-  return { title: t('registration'), robots: { index: false, follow: false } };
+  return { title: t('ownerProfile'), robots: { index: false, follow: false } };
 }
 
 /**
- * `/account/registration` — tiến trình đăng ký chủ xe, và là màn "Hồ sơ chủ xe" về sau.
+ * ALIAS CHUYỂN TIẾP (06/10/2026) — "Hồ sơ chủ xe" đã gộp vào trang tài khoản (`/account`), cùng
+ * với hồ sơ cá nhân và bảo mật. Tiến trình đăng ký (ba bước) là trang chủ Owner Lite ở bậc
+ * `registering` (`OwnerLiteHome`).
  *
- * Cổng ở mức `registering`: đây chính là màn của bậc đó, nên đòi bậc `owner` sẽ khoá đúng những
- * người duy nhất cần nó.
+ * Route giữ lại vì bookmark, thông báo cũ và link trong email vẫn mang nó. Đích theo tuyến (xem
+ * `OwnerRegistrationRedirect`). Không còn mục menu nào trỏ tới đây.
  */
-export default function AccountRegistrationPage() {
-  return (
-    <OwnerGate minStage={OWNER_STAGE.REGISTERING}>
-      <OwnerRegistrationView />
-    </OwnerGate>
-  );
+export default function OwnerRegistrationRedirectPage() {
+  return <OwnerRegistrationRedirect />;
 }

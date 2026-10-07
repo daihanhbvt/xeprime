@@ -33,7 +33,8 @@ export interface OptionalUser {
  * mà endpoint này tồn tại để phục vụ.
  *
  * Realm theo cùng luật với `AuthGuard` (ADR 0053 điều 4): cookie chỉ đọc đúng tên của realm web
- * do proxy quyết; Bearer lấy realm của phiên; tài khoản lệch realm coi như không có phiên.
+ * do proxy quyết; Bearer lấy realm của phiên, và khi đi qua một site web thì realm đó phải trùng
+ * realm của site; tài khoản lệch realm coi như không có phiên.
  */
 export async function resolveOptionalUser(
   req: Request,
@@ -71,7 +72,8 @@ export async function resolveOptionalUser(
     if (!nativeSessions) return null;
     realm = await nativeSessions.usableSessionRealm(claim.sessionId, user.id);
   }
-  if (!realm || user.realm !== realm) return null;
+  // Qua một site web thì phiên phải thuộc đúng realm của site — cả Bearer (cùng luật AuthGuard).
+  if (!realm || user.realm !== realm || (webRealm && realm !== webRealm)) return null;
 
   return { userId: user.id, realm };
 }

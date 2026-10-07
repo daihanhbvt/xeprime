@@ -1,0 +1,43 @@
+/*
+ * Ảnh bên trái (kèm nút Thay đổi ngay dưới ảnh), các ô bên phải. Màn hẹp: ảnh lên trên, giữa.
+ */
+.layout {
+  display: grid;
+  min-width: 0;
+  align-items: start;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: var(--xp-space-xl);
+}
+
+.avatar {
+  display: flex;
+  justify-content: center;
+  padding-top: var(--xp-space-xs);
+}
+
+.fields {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--xp-space-sm);
+}
+
+@media (max-width: 640px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--xp-space-md);
+  }
+}
+
+/* `fieldset` chỉ để KHOÁ, không để trang trí — gỡ hết mặc định của trình duyệt. */
+.fieldset {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  margin: 0;
+}

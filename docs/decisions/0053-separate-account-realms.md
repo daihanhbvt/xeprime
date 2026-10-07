@@ -76,7 +76,13 @@ Ranh giới hai TUYẾN bên trong realm `partner` giữ nguyên (`resolveEffect
   claim realm vào JWT phiên — realm đọc từ DB mỗi request (ADR 0002).
 - **Native:** realm = app đăng nhập (`clientApp`: `customer` ⇒ `customer`, `partner` ⇒ `partner`;
   thiếu ⇒ `customer`). Refresh token gắn vào phiên nên không dùng chéo realm. Cookie không được chấp
-  nhận trên `api.xeprime.vn`.
+  nhận trên `api.xeprime.vn`. Cả hai app gọi API qua `api.xeprime.vn` (staging `api-stg.xeprime.vn`),
+  không qua `/api` của site nào.
+  > **Sửa 07/10/2026 — Bearer đi qua `/api` của một site.** `AuthGuard` trước đây chỉ so realm của
+  > tài khoản với realm của PHIÊN, nên token app Partner gọi `xeprime.vn/api/vehicles` vẫn chạy:
+  > `/api` của site khách thành một cửa thứ hai vào API quản lý. Nay request đi qua `/api` của một
+  > site (header realm qua khoá proxy) thì realm của phiên — cookie hay Bearer — phải trùng realm
+  > của site; lệch ⇒ 401. `resolveOptionalUser` áp cùng luật cho endpoint công khai.
 - **OAuth:** realm ghi vào `oauth_states` lúc bắt đầu; callback web nằm dưới `/api` của site
   (`https://<site>/api/auth/social/:provider/callback`) và quay về đúng site đó. Luồng native giữ
   nguyên (ADR 0019 §8).
@@ -162,6 +168,8 @@ số). Máy dev cần reset DB — `prisma migrate reset` do người dùng tự
 5. Không nới unique index "một membership `active` cho một tài khoản" bằng kiểm ở tầng app.
 6. Phép chặn tự đặt xe đọc số điện thoại ĐÃ XÁC MINH, không đọc số tự khai.
 7. Không tách DB theo realm.
+8. Không trỏ app native vào `/api` của một site (`EXPO_PUBLIC_API_URL`) — app dùng host API riêng
+   (`API_PUBLIC_URL`). Trỏ vào site sai realm thì mọi request đăng nhập đều 401.
 
 ## Cần xem lại khi nào
 

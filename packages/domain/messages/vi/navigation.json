@@ -98,7 +98,8 @@
     "platformOrders": "Đơn & khách hàng",
     "platformFinance": "Tiền & vận hành",
     "platformPolicy": "Chính sách & gói",
-    "platformSystem": "Hệ thống"
+    "platformSystem": "Hệ thống",
+    "account": "Tài khoản"
   },
   "platform": {
     "dashboard": "Tổng quan",

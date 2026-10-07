@@ -1,37 +1,79 @@
 import { describe, expect, it } from 'vitest';
-import { BILLING_MODE } from './status/billing';
+
 import {
-  hasVerifiedStorefront,
-  resolveStorefrontKind,
   STOREFRONT_KIND,
+  storefrontAvatarUrl,
+  storefrontIdentity,
+  type StorefrontOwnerIdentity,
+  type StorefrontShopIdentity,
 } from './shop-storefront';
 
-describe('resolveStorefrontKind', () => {
-  it('tuyến gói ⇒ mặt tiền gian hàng', () => {
-    expect(resolveStorefrontKind(BILLING_MODE.PACKAGE)).toBe(STOREFRONT_KIND.SHOP);
+/**
+ * ADR 0054 — mặt tiền CÁ NHÂN dùng danh tính tài khoản chủ, mặt tiền GIAN HÀNG giữ bộ riêng.
+ * Suy lúc đọc theo tuyến: đổi tuyến là đổi theo, không có gì để chép.
+ */
+
+const SHOP: StorefrontShopIdentity = {
+  name: 'Xe Sài Gòn Premium',
+  phone: '1900 1234',
+  email: 'lienhe@xesaigon.vn',
+  logoUrl: 'https://cdn.test/logo.png',
+};
+
+const OWNER: StorefrontOwnerIdentity = {
+  displayName: 'Trần Thu Hương',
+  phone: '84903000001',
+  phoneVerified: true,
+  email: 'huong@xeprime.test',
+  emailVerified: true,
+  avatarUrl: 'https://cdn.test/avatar.jpg',
+};
+
+describe('storefrontIdentity', () => {
+  it('mặt tiền gian hàng: bộ riêng của gian hàng, không đụng tài khoản chủ', () => {
+    expect(storefrontIdentity(STOREFRONT_KIND.SHOP, SHOP, OWNER)).toEqual({
+      name: 'Xe Sài Gòn Premium',
+      phone: '1900 1234',
+      email: 'lienhe@xesaigon.vn',
+      avatarUrl: 'https://cdn.test/logo.png',
+    });
   });
 
-  it('tuyến hoa hồng ⇒ mặt tiền cá nhân', () => {
-    expect(resolveStorefrontKind(BILLING_MODE.COMMISSION)).toBe(STOREFRONT_KIND.PERSONAL);
+  it('mặt tiền cá nhân: tên, SĐT (dạng 0…), email, ảnh đều từ tài khoản — logo cũ không thắng', () => {
+    expect(storefrontIdentity(STOREFRONT_KIND.PERSONAL, SHOP, OWNER)).toEqual({
+      name: 'Trần Thu Hương',
+      phone: '0903000001',
+      email: 'huong@xeprime.test',
+      avatarUrl: 'https://cdn.test/avatar.jpg',
+    });
   });
 
-  // ADR 0038 điều 1: `unconfigured` không phải một tuyến. Đường đọc hiển thị phải chọn thứ KHÔNG
-  // khẳng định gì — mặt tiền cá nhân — chứ không mặc định về gói.
-  it('chưa xác định được tuyến ⇒ mặt tiền cá nhân, không phải gian hàng', () => {
-    expect(resolveStorefrontKind(null)).toBe(STOREFRONT_KIND.PERSONAL);
-    expect(resolveStorefrontKind(undefined)).toBe(STOREFRONT_KIND.PERSONAL);
-    expect(resolveStorefrontKind('')).toBe(STOREFRONT_KIND.PERSONAL);
+  it('SĐT/email CHƯA xác thực thì không công bố — không rơi về số tự khai của gian hàng', () => {
+    const identity = storefrontIdentity(STOREFRONT_KIND.PERSONAL, SHOP, {
+      ...OWNER,
+      phoneVerified: false,
+      emailVerified: false,
+    });
+    expect(identity.phone).toBeNull();
+    expect(identity.email).toBeNull();
   });
 
-  it('giá trị lạ ⇒ mặt tiền cá nhân', () => {
-    expect(resolveStorefrontKind('enterprise')).toBe(STOREFRONT_KIND.PERSONAL);
+  it('họ tên toàn dấu cách: rơi về tên đã lưu thay vì hiện một ô trống', () => {
+    expect(
+      storefrontIdentity(STOREFRONT_KIND.PERSONAL, SHOP, { ...OWNER, displayName: '   ' }).name,
+    ).toBe('Xe Sài Gòn Premium');
   });
 });
 
-describe('hasVerifiedStorefront', () => {
-  it('chỉ tuyến gói mới đeo dấu xác thực', () => {
-    expect(hasVerifiedStorefront(BILLING_MODE.PACKAGE)).toBe(true);
-    expect(hasVerifiedStorefront(BILLING_MODE.COMMISSION)).toBe(false);
-    expect(hasVerifiedStorefront(null)).toBe(false);
+describe('storefrontAvatarUrl', () => {
+  it('cùng luật ảnh với storefrontIdentity', () => {
+    expect(storefrontAvatarUrl(SHOP.logoUrl, OWNER.avatarUrl, STOREFRONT_KIND.PERSONAL)).toBe(
+      OWNER.avatarUrl,
+    );
+    expect(storefrontAvatarUrl(SHOP.logoUrl, OWNER.avatarUrl, STOREFRONT_KIND.SHOP)).toBe(
+      SHOP.logoUrl,
+    );
+    // Gian hàng chưa có logo KHÔNG mượn ảnh chân dung của người đứng tên.
+    expect(storefrontAvatarUrl(null, OWNER.avatarUrl, STOREFRONT_KIND.SHOP)).toBeNull();
   });
 });
