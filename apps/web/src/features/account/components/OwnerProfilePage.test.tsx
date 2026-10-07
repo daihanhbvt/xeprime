@@ -10,7 +10,7 @@ import {
   TENANT_STATUS,
 } from '@xeprime/types';
 
-import type { MyShop, UpdateProfileInput } from '@/features/shop/types';
+import type { MyShop } from '@/features/shop/types';
 
 import { PartnerAccountRoute } from './PartnerAccountRoute';
 
@@ -42,9 +42,10 @@ const profile = vi.hoisted(() => ({
   error: null as unknown,
   refetch: vi.fn(),
 }));
+const updateMe = vi.hoisted(() => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false }));
 vi.mock('@/features/account/hooks/use-account', () => ({
   useMyProfile: () => profile,
-  useUpdateMyProfile: () => ({ mutate: vi.fn(), isPending: false }),
+  useUpdateMyProfile: () => updateMe,
 }));
 
 const shop = vi.hoisted(() => ({
@@ -53,7 +54,7 @@ const shop = vi.hoisted(() => ({
   error: null as unknown,
   refetch: vi.fn(),
 }));
-const updateShop = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
+const updateShop = vi.hoisted(() => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false }));
 vi.mock('@/features/shop/hooks/use-shop', () => ({
   useMyShop: () => shop,
   useUpdateShopProfile: () => updateShop,
@@ -184,6 +185,8 @@ beforeEach(() => {
   shop.data = makeShop();
   shop.isError = false;
   updateShop.mutate.mockReset();
+  updateShop.mutateAsync.mockReset().mockResolvedValue({});
+  updateMe.mutateAsync.mockReset().mockResolvedValue({});
   updateShop.isPending = false;
   search.value = '';
   perms.denied = new Set();
@@ -220,13 +223,12 @@ describe('/manage/account — một URL, bản theo tuyến', () => {
 });
 
 describe('Hồ sơ chủ xe — bố cục', () => {
-  it('sáu section theo thứ tự, không còn chữ "gian hàng" ở tiêu đề', () => {
+  it('năm section theo thứ tự — không còn "Trang chủ xe" riêng, không chữ "gian hàng"', () => {
     renderRoute();
 
     const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
     expect(headings).toEqual([
       'Thông tin chủ xe',
-      'Trang chủ xe',
       'Địa chỉ nhận xe',
       'Thông tin đăng nhập',
       'Mật khẩu',
@@ -238,37 +240,17 @@ describe('Hồ sơ chủ xe — bố cục', () => {
     expect(screen.queryByText('Số giấy phép KD')).toBeNull();
   });
 
-  it('khối thông tin chủ xe nói rõ ảnh đại diện là ảnh trang chủ xe, không trỏ sang trang Cửa hàng', () => {
+  it('thông tin chủ xe: ảnh + nút Thay đổi, họ tên, lời giới thiệu — KHÔNG có nút xoá ảnh', () => {
     renderRoute();
 
     const owner = section('profile');
-    expect(owner.getByText(/cũng là tên, ảnh khách thấy trên trang chủ xe/)).toBeTruthy();
+    expect(owner.getByRole('button', { name: /Thay đổi/ })).toBeTruthy();
+    expect(owner.queryByRole('button', { name: /Xoá ảnh/ })).toBeNull();
+    expect(owner.getByLabelText(/Họ tên|Tên hiển thị/)).toBeTruthy();
+    expect(owner.getByLabelText(/Giới thiệu/)).toBeTruthy();
+    // Không có ô tải ảnh thứ hai bên dưới, không có dòng giải thích cơ chế.
+    expect(owner.queryByText('Ảnh đại diện')).toBeNull();
     expect(owner.queryByRole('link', { name: 'Mở Cài đặt gian hàng' })).toBeNull();
-  });
-
-  it('trang chủ xe: "khách thấy bạn là" = TÀI KHOẢN, không có ô tên/SĐT/email/ảnh thứ hai', () => {
-    renderRoute();
-
-    const storefront = section('storefront');
-    expect(storefront.getByText('Khách thấy bạn là')).toBeTruthy();
-    expect(storefront.getByText('Trần Thu Hương')).toBeTruthy();
-    // SĐT đăng nhập ĐÃ XÁC THỰC, dạng nội địa.
-    expect(storefront.getByText('0903000001')).toBeTruthy();
-    expect(storefront.queryByLabelText(/Tên hiển thị/)).toBeNull();
-    expect(storefront.queryByLabelText(/SĐT liên hệ/)).toBeNull();
-    expect(storefront.queryByText(/Ảnh bìa|Logo/)).toBeNull();
-    // Phần riêng duy nhất còn lại: lời giới thiệu.
-    expect(storefront.getByLabelText(/Giới thiệu/)).toBeTruthy();
-  });
-
-  it('SĐT chưa xác thực: nói thẳng khách không có số để gọi, không hiện số tự khai của gian hàng', () => {
-    profile.data = { ...PROFILE, phoneVerified: false };
-    renderRoute();
-
-    const storefront = section('storefront');
-    expect(storefront.getByText(/Chưa xác thực — khách sẽ không thấy số nào/)).toBeTruthy();
-    expect(storefront.queryByText('0903000001')).toBeNull();
-    expect(storefront.queryByText('84903000001')).toBeNull();
   });
 
   it('logo cũ từ thời có gói KHÔNG thay ảnh đại diện — cả trang dùng ảnh tài khoản', () => {
@@ -280,12 +262,17 @@ describe('Hồ sơ chủ xe — bố cục', () => {
     expect(imgs).not.toContain('https://cdn.xeprime.test/logo.png');
   });
 
-  it('thiếu quyền sửa: nói rõ chỉ được xem, không có thanh lưu', () => {
+  it('thiếu quyền sửa gian hàng: nói rõ chỉ được xem, ô giới thiệu bị khoá', () => {
     perms.denied = new Set([PERMISSION.TENANT_UPDATE]);
     renderRoute();
 
-    expect(screen.getByText(/chỉ có quyền xem trang chủ xe/)).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Lưu trang chủ xe/ })).toBeNull();
+    expect(screen.getByText(/chỉ có quyền xem lời giới thiệu/)).toBeTruthy();
+    // `fieldset[disabled]` khoá ô — đọc trạng thái THẬT bằng `:disabled`, không bằng thuộc tính.
+    expect(
+      section('profile')
+        .getByLabelText(/Giới thiệu/)
+        .matches(':disabled'),
+    ).toBe(true);
   });
 
   it('trang đang hoạt động: có lối xem trang chủ xe công khai', () => {
@@ -294,26 +281,56 @@ describe('Hồ sơ chủ xe — bố cục', () => {
   });
 });
 
-describe('Hồ sơ chủ xe — lưu trang chủ xe', () => {
-  it('chưa sửa gì: không có thanh lưu', () => {
+describe('Hồ sơ chủ xe — lưu thông tin chủ xe', () => {
+  const saveButton = () => section('profile').getByRole('button', { name: /Lưu/ });
+
+  it('chưa sửa gì: nút lưu mờ', () => {
     renderRoute();
-    expect(screen.queryByRole('button', { name: /Lưu trang chủ xe/ })).toBeNull();
+    expect((saveButton() as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it('sửa lời giới thiệu: thanh lưu hiện ra và gửi đúng thân request hồ sơ', async () => {
+  it('chỉ sửa lời giới thiệu: gửi RIÊNG bio lên hồ sơ gian hàng, không chạm tài khoản', async () => {
     renderRoute();
 
-    fireEvent.change(section('storefront').getByLabelText(/Giới thiệu/), {
+    fireEvent.change(section('profile').getByLabelText(/Giới thiệu/), {
       target: { value: 'Xe nhà, giao tận nơi trong quận.' },
     });
-    const save = await screen.findByRole('button', { name: /Lưu trang chủ xe/ });
-    fireEvent.click(save);
+    fireEvent.click(saveButton());
 
-    await waitFor(() => expect(updateShop.mutate).toHaveBeenCalledTimes(1));
-    const body = updateShop.mutate.mock.calls[0]![0] as UpdateProfileInput;
-    expect(body.bio).toBe('Xe nhà, giao tận nơi trong quận.');
-    // Mã tỉnh, không phải tên — tên do server tra.
-    expect(body.provinceCode).toBe('79');
+    await waitFor(() => expect(updateShop.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(updateShop.mutateAsync).toHaveBeenCalledWith({
+      bio: 'Xe nhà, giao tận nơi trong quận.',
+    });
+    expect(updateMe.mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('chỉ sửa họ tên: gửi lên tài khoản, không chạm hồ sơ gian hàng', async () => {
+    renderRoute();
+
+    fireEvent.change(section('profile').getByLabelText(/Họ tên|Tên hiển thị/), {
+      target: { value: 'Trần Thu Hương B' },
+    });
+    fireEvent.click(saveButton());
+
+    await waitFor(() => expect(updateMe.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(updateMe.mutateAsync).toHaveBeenCalledWith({
+      displayName: 'Trần Thu Hương B',
+      avatarUrl: 'https://cdn.xeprime.test/avatar.jpg',
+    });
+    expect(updateShop.mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('chưa có ảnh: không lưu được — ảnh là bắt buộc', async () => {
+    profile.data = { ...PROFILE, avatarUrl: null };
+    renderRoute();
+
+    fireEvent.change(section('profile').getByLabelText(/Họ tên|Tên hiển thị/), {
+      target: { value: 'Trần Thu Hương B' },
+    });
+    fireEvent.click(saveButton());
+
+    expect(await section('profile').findByText(/Vui lòng chọn ảnh đại diện/)).toBeTruthy();
+    expect(updateMe.mutateAsync).not.toHaveBeenCalled();
   });
 });
 

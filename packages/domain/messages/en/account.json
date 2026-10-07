@@ -113,7 +113,9 @@
     "phoneInvalid": "That phone number isn't valid",
     "emailRequired": "Enter an email address",
     "emailInvalid": "That email address isn't valid",
-    "emailMax": "Email must be 255 characters or fewer"
+    "emailMax": "Email must be 255 characters or fewer",
+    "avatarRequired": "Please choose a profile photo — renters see it on your host page",
+    "bioMax": "The introduction can be at most 2000 characters"
   },
   "ownerGate": {
     "title": "Hosts only",
@@ -390,39 +392,31 @@
     "profile": {
       "previewLabel": "Profile preview",
       "notShop": "This name and photo belong to your account only. The name, logo and contact phone renters see belong to the shop.",
-      "storefrontFallback": "This name and photo are also what renters see on your host page and on contracts.",
       "shopSettingsLink": "Open shop settings"
     }
   },
   "ownerHub": {
     "title": "Host profile",
-    "subtitle": "Your details, the host page renters see, and how you sign in.",
+    "subtitle": "What renters see, and how you sign in.",
     "navTitle": "On this page",
     "navLabel": "Host profile sections",
     "loadError": "Could not load your host profile",
     "viewPublicPage": "View my host page",
     "sections": {
       "profile": "About you",
-      "profileHint": "Your name and photo — also the name and photo renters see on the marketplace and on rental contracts.",
-      "storefront": "Host page",
-      "storefrontHint": "Renters see you through your own account details. The only thing specific to your host page is your introduction.",
+      "profileHint": "Renters see this photo, name and introduction on your host page.",
       "address": "Pickup address",
       "addressHint": "Where renters pick the car up."
     },
     "form": {
-      "saved": "Host page saved",
-      "submit": "Save host page"
+      "saved": "Pickup address saved",
+      "submit": "Save address"
     },
-    "readOnly": "You can only view the host page and pickup address.",
-    "identity": {
-      "title": "Renters see you as",
-      "editProfile": "Edit name and photo",
-      "phone": "Phone number",
-      "email": "Email",
-      "phoneMissing": "Not verified — renters will not see a number to call you",
-      "emailMissing": "Not verified — renters will not see an email",
-      "note": "The name, photo, phone and email on your host page, trips and contracts come straight from your account. Your phone is shown to a renter only after they send a request.",
-      "editLogin": "Change or verify phone, email"
+    "readOnly": "You can only view the introduction and pickup address.",
+    "info": {
+      "bio": "Introduction",
+      "bioPlaceholder": "A few lines about you and your cars…",
+      "saved": "Host details saved"
     }
   }
 }

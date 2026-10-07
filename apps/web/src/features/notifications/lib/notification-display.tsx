@@ -156,7 +156,7 @@ export function notificationHref(
   }
   // Owner Lite: "Hồ sơ chủ xe" (trang chủ xe) thay cho trang Cửa hàng; còn lại CÙNG màn với tuyến gói.
   if (context === 'owner' && target === NOTIFICATION_TARGET_TYPE.TENANT) {
-    return accountSectionPath(ACCOUNT_SECTION.STOREFRONT);
+    return accountSectionPath(ACCOUNT_SECTION.PROFILE);
   }
   switch (target) {
     case NOTIFICATION_TARGET_TYPE.BOOKING:

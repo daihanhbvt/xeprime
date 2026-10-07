@@ -174,9 +174,9 @@ describe('B1 — partner đăng nhập xong vào đâu', () => {
    * Trang Cửa hàng có bản tương đương ở tuyến hoa hồng: "Hồ sơ chủ xe" đọc CÙNG bản ghi gian hàng.
    * Một gian hàng vừa hết gói bấm bookmark /shop phải rơi vào đúng hồ sơ của mình, không về trang chủ.
    */
-  it('trang Cửa hàng ở tuyến hoa hồng → section "Trang chủ xe" của Hồ sơ chủ xe', () => {
+  it('trang Cửa hàng ở tuyến hoa hồng → section "Thông tin chủ xe" của Hồ sơ chủ xe', () => {
     for (const user of [commission, lapsed, unconfigured]) {
-      expect(partnerPageRedirect(user, M.SHOP)).toBe(`${M.ACCOUNT}?section=storefront`);
+      expect(partnerPageRedirect(user, M.SHOP)).toBe(`${M.ACCOUNT}?section=profile`);
     }
   });
 

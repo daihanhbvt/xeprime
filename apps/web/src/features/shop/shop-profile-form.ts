@@ -111,5 +111,13 @@ export function useShopProfileForm(shop: MyShop): UseFormReturn<ShopProfileWithC
     shopProfileWithContactSchema,
     'Shop.validation',
   );
-  return useForm<ShopProfileWithContactValues>({ resolver, values: toShopProfileValues(shop) });
+  return useForm<ShopProfileWithContactValues>({
+    resolver,
+    values: toShopProfileValues(shop),
+    /*
+     * Gian hàng cũng đổi qua đường KHÁC form này (lưu lời giới thiệu ở "Thông tin chủ xe", lưu hồ
+     * sơ tài khoản làm mới `shop.all`). Nạp lại bản mới nhưng giữ ô người dùng đang sửa dở.
+     */
+    resetOptions: { keepDirtyValues: true },
+  });
 }

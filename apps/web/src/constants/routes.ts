@@ -543,7 +543,7 @@ export function workspacePaths(workspace: Workspace): {
     bookingRequests: ROUTES.MANAGE.BOOKING_REQUESTS,
     // Hồ sơ chủ xe = trang tài khoản của họ. Chủ xe tuyến hoa hồng chỉ có chi nhánh mặc định,
     // và địa chỉ của nó sửa ở section "Địa chỉ nhận xe" của chính trang đó.
-    ownerProfile: accountSectionPath(ACCOUNT_SECTION.STOREFRONT),
+    ownerProfile: accountSectionPath(ACCOUNT_SECTION.PROFILE),
     branches: accountSectionPath(ACCOUNT_SECTION.ADDRESS),
     subscription: ROUTES.MANAGE.SUBSCRIPTION,
     sellerProfile: ROUTES.MANAGE.TAX,
@@ -909,15 +909,16 @@ export const SHOP_LOGO_TRIGGER_ID = 'shop-logo-upload';
  * khoản" vốn là hai trang lặp nhau (cả hai đều hiện email/SĐT). Cùng khuôn với trang Cửa hàng:
  * section xếp dọc, mục lục dính, `?section=` ở URL để link/F5/Quay lại đúng chỗ.
  *
- * `STOREFRONT` và `ADDRESS` CHỈ có ở bản "Hồ sơ chủ xe" (chủ xe tuyến hoa hồng, 06/10/2026). Ở
- * tuyến gói, hồ sơ gian hàng sống ở `SHOP` — trang của họ bỏ qua hai giá trị này
- * (`PERSONAL_ACCOUNT_SECTIONS`).
+ * `ADDRESS` CHỈ có ở bản "Hồ sơ chủ xe" (chủ xe tuyến hoa hồng). Ở tuyến gói, hồ sơ gian hàng sống
+ * ở `SHOP` — trang của họ bỏ qua giá trị này (`PERSONAL_ACCOUNT_SECTIONS`). Bookmark cũ
+ * `?section=storefront` (trước 07/10/2026) rơi về `PROFILE` — nơi lời giới thiệu đã chuyển tới.
  */
 export const ACCOUNT_SECTION = {
-  /** Tên và ảnh đại diện của tài khoản — với chủ xe hoa hồng: "Thông tin chủ xe". */
+  /**
+   * Tên và ảnh đại diện của tài khoản — với chủ xe hoa hồng là "Thông tin chủ xe": họ tên, ảnh
+   * và lời giới thiệu, tức TOÀN BỘ thứ khách thấy về họ (ADR 0054).
+   */
   PROFILE: 'profile',
-  /** Trang chủ xe công khai: tên trên chợ, liên hệ, giới thiệu (`tenants`, chỉ chủ xe hoa hồng). */
-  STOREFRONT: 'storefront',
   /** Địa chỉ nhận xe (chi nhánh mặc định) + MST/giấy phép tuỳ chọn (chỉ chủ xe hoa hồng). */
   ADDRESS: 'address',
   /** Email và SĐT đăng nhập — đổi qua OTP. */

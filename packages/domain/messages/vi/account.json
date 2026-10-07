@@ -113,7 +113,9 @@
     "phoneInvalid": "Số điện thoại không hợp lệ",
     "emailRequired": "Vui lòng nhập email",
     "emailInvalid": "Địa chỉ email không hợp lệ",
-    "emailMax": "Email tối đa 255 ký tự"
+    "emailMax": "Email tối đa 255 ký tự",
+    "avatarRequired": "Vui lòng chọn ảnh đại diện — khách thấy ảnh này trên trang chủ xe",
+    "bioMax": "Lời giới thiệu tối đa 2000 ký tự"
   },
   "ownerGate": {
     "title": "Khu vực dành cho chủ xe",
@@ -390,39 +392,31 @@
     "profile": {
       "previewLabel": "Xem trước hồ sơ",
       "notShop": "Tên và ảnh này là của riêng tài khoản bạn. Tên, logo và số điện thoại liên hệ mà khách thấy thuộc về gian hàng.",
-      "storefrontFallback": "Họ tên và ảnh này cũng là tên, ảnh khách thấy trên trang chủ xe và trên hợp đồng.",
       "shopSettingsLink": "Mở Cài đặt gian hàng"
     }
   },
   "ownerHub": {
     "title": "Hồ sơ chủ xe",
-    "subtitle": "Thông tin của bạn, trang chủ xe khách nhìn thấy và cách bạn đăng nhập.",
+    "subtitle": "Thông tin khách thấy và cách bạn đăng nhập.",
     "navTitle": "Trên trang này",
     "navLabel": "Các phần của hồ sơ chủ xe",
     "loadError": "Không tải được hồ sơ chủ xe",
     "viewPublicPage": "Xem trang chủ xe",
     "sections": {
       "profile": "Thông tin chủ xe",
-      "profileHint": "Họ tên và ảnh của bạn — cũng là tên, ảnh khách thấy trên chợ và trên hợp đồng thuê.",
-      "storefront": "Trang chủ xe",
-      "storefrontHint": "Khách thấy bạn bằng chính thông tin tài khoản. Phần riêng của trang chủ xe chỉ còn lời giới thiệu.",
+      "profileHint": "Khách thấy ảnh, họ tên và lời giới thiệu này trên trang chủ xe.",
       "address": "Địa chỉ nhận xe",
       "addressHint": "Nơi khách đến nhận xe."
     },
     "form": {
-      "saved": "Đã lưu trang chủ xe",
-      "submit": "Lưu trang chủ xe"
+      "saved": "Đã lưu địa chỉ nhận xe",
+      "submit": "Lưu địa chỉ"
     },
-    "readOnly": "Bạn chỉ có quyền xem trang chủ xe và địa chỉ nhận xe.",
-    "identity": {
-      "title": "Khách thấy bạn là",
-      "editProfile": "Sửa họ tên, ảnh",
-      "phone": "Số điện thoại",
-      "email": "Email",
-      "phoneMissing": "Chưa xác thực — khách sẽ không thấy số nào để gọi bạn",
-      "emailMissing": "Chưa xác thực — khách sẽ không thấy email",
-      "note": "Tên, ảnh, SĐT và email trên trang chủ xe, chuyến thuê và hợp đồng lấy thẳng từ tài khoản của bạn. SĐT chỉ hiện cho khách sau khi có yêu cầu thuê.",
-      "editLogin": "Đổi hoặc xác thực SĐT, email"
+    "readOnly": "Bạn chỉ có quyền xem lời giới thiệu và địa chỉ nhận xe.",
+    "info": {
+      "bio": "Giới thiệu",
+      "bioPlaceholder": "Vài dòng về bạn và xe của bạn…",
+      "saved": "Đã lưu thông tin chủ xe"
     }
   }
 }

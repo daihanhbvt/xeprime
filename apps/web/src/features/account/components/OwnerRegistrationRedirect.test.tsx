@@ -36,10 +36,10 @@ afterEach(() => {
 });
 
 describe('/registration → đích theo tuyến', () => {
-  it('chủ xe tuyến hoa hồng → section "Trang chủ xe" của Hồ sơ chủ xe', async () => {
+  it('chủ xe tuyến hoa hồng → section "Thông tin chủ xe" của Hồ sơ chủ xe', async () => {
     user.value = tenant(BILLING_MODE.COMMISSION, SHOP_ONBOARDING_STATE.COMMISSION);
     render(<OwnerRegistrationRedirect />);
-    await waitFor(() => expect(replace).toHaveBeenCalledWith('/manage/account?section=storefront'));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/manage/account?section=profile'));
   });
 
   it('tuyến gói → trang Cửa hàng', async () => {

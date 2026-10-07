@@ -1060,6 +1060,27 @@ export const accountProfileSchema = yup.object({
 export type AccountProfileValues = yup.InferType<typeof accountProfileSchema>;
 
 /**
+ * "Thông tin chủ xe" — chủ xe tuyến hoa hồng (ADR 0054): CÙNG họ tên + ảnh của tài khoản, cộng lời
+ * giới thiệu của trang chủ xe, trên MỘT khối.
+ *
+ * Ảnh BẮT BUỘC: với chủ xe cá nhân nó là ảnh khách thấy trên chợ, thẻ xe và hộp thư — trang chủ xe
+ * không có logo nào để rơi về. Họ tên/ảnh ghi vào `PATCH /users/me`, lời giới thiệu vào
+ * `PATCH /tenants/current/profile`; message là MÃ tra `Account.validation.*`.
+ */
+export const ownerAccountProfileSchema = accountProfileSchema.shape({
+  avatarUrl: yup
+    .string()
+    .trim()
+    .url('avatarUrlInvalid')
+    .max(2000)
+    .required('avatarRequired')
+    .default(''),
+  bio: yup.string().trim().max(2000, 'bioMax').default(''),
+});
+
+export type OwnerAccountProfileValues = yup.InferType<typeof ownerAccountProfileSchema>;
+
+/**
  * Ô nhập định danh MỚI ở luồng đổi email / số điện thoại của trang tài khoản.
  *
  * Cùng tên trường `identifier` cho cả hai kênh, và đó là chủ đích: modal đổi liên lạc là MỘT

@@ -73,9 +73,11 @@ chỉ trao cho khách sau khi có yêu cầu thuê — cùng lý do kênh chat c
 
 ### 5. Giao diện
 
-"Hồ sơ chủ xe" (`/manage/account`) không còn ô tên/SĐT/email/logo/bìa riêng: một thẻ chỉ-đọc "Khách
-thấy bạn là" (cùng hàm `storefrontIdentity`) dẫn tới NƠI DUY NHẤT sửa từng thứ (thông tin chủ xe,
-thông tin đăng nhập). Phần riêng còn lại của trang chủ xe: lời giới thiệu và địa chỉ nhận xe.
+"Hồ sơ chủ xe" (`/manage/account`) không còn ô tên/SĐT/email/logo/bìa riêng. Khối "Thông tin chủ
+xe" gom TOÀN BỘ thứ khách thấy về họ, một nút lưu: ảnh đại diện (BẮT BUỘC, nút "Thay đổi" ngay tại
+ảnh, không có nút xoá — `ownerAccountProfileSchema`), họ tên (`PATCH /users/me`) và lời giới thiệu
+(`PATCH /tenants/current/profile`, chỉ gửi `bio`). SĐT/email sửa ở "Thông tin đăng nhập". Khối
+còn lại của trang chủ xe: địa chỉ nhận xe.
 
 ## Hệ quả
 

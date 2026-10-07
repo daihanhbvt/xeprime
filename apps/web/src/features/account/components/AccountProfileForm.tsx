@@ -32,19 +32,10 @@ import styles from './AccountProfileForm.module.css';
  *
  * Dòng cuối phân biệt tài khoản với GIAN HÀNG: tên/ảnh ở đây là của con người đang đăng nhập; tên,
  * logo, SĐT liên hệ mà khách thấy là của gian hàng và sửa ở Cài đặt gian hàng. Chủ xe tuyến hoa
- * hồng thì khác — họ tên và ảnh này CHÍNH LÀ tên, ảnh khách thấy (`storefrontIdentity`, ADR 0054).
+ * hồng KHÔNG dùng khối này: với họ ảnh + họ tên là thứ khách thấy, nên trang của họ có khối riêng
+ * (`OwnerInfoForm` — ảnh bắt buộc, kèm lời giới thiệu; ADR 0054).
  */
-export function AccountProfileForm({
-  profile,
-  storefront,
-}: {
-  profile: UserProfile;
-  /**
-   * `true` = khối này nằm trong "Hồ sơ chủ xe": họ tên và ảnh ở đây CHÍNH LÀ tên, ảnh khách thấy
-   * trên chợ và trên hợp đồng (ADR 0054). Trang quyết định, không phải component tự đoán tuyến.
-   */
-  storefront?: boolean;
-}) {
+export function AccountProfileForm({ profile }: { profile: UserProfile }) {
   const t = useTranslations('Account');
   const tHub = useTranslations('Account.hub');
   const tCommon = useTranslations('Common');
@@ -58,8 +49,6 @@ export function AccountProfileForm({
   const displayName = useWatch({ control, name: 'displayName' });
   const previewName = displayName?.trim() || profile.displayName;
   const dirty = formState.isDirty;
-
-  const storefrontNote = storefront ? tHub('profile.storefrontFallback') : null;
 
   return (
     <div className={styles.layout}>
@@ -103,7 +92,7 @@ export function AccountProfileForm({
         <p className={styles.note}>
           <InfoCircleOutlined aria-hidden className={styles.noteIcon} />
           <span>
-            {storefrontNote ?? tHub('profile.notShop')}{' '}
+            {tHub('profile.notShop')}{' '}
             {canOpenShopSettings ? (
               <Link href={ROUTES.MANAGE.SHOP}>{tHub('profile.shopSettingsLink')}</Link>
             ) : null}

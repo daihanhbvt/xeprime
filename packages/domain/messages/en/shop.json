@@ -298,12 +298,6 @@
     }
   },
   "personal": {
-    "display": {
-      "bio": {
-        "label": "About you",
-        "placeholder": "A few lines about you and your cars — renters like to know whose car they are renting…"
-      }
-    },
     "provinceHelp": "Where renters pick up — your vehicles are listed in this province.",
     "checklist": {
       "suggestedTitle": "Recommended — helps renters feel confident choosing your cars",

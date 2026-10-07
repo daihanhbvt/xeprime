@@ -11,7 +11,7 @@ import { useCurrentUser } from '@/hooks/use-current-user';
 /**
  * Đích của route cũ `/registration` — THEO TUYẾN, nên phải chạy ở client sau `/auth/me`:
  *
- *  - chủ xe tuyến hoa hồng → section "Trang chủ xe" của Hồ sơ chủ xe;
+ *  - chủ xe tuyến hoa hồng → section "Thông tin chủ xe" của Hồ sơ chủ xe;
  *  - tuyến gói → trang Cửa hàng (bản tương đương, `partnerPageRedirect`);
  *  - chưa có gian hàng / đang chờ thanh toán → nơi B1 đưa họ tới.
  *
@@ -26,7 +26,7 @@ export function OwnerRegistrationRedirect() {
     if (isPending) return;
     router.replace(
       partnerPageRedirect(user, ROUTES.MANAGE.REGISTRATION) ??
-        accountSectionPath(ACCOUNT_SECTION.STOREFRONT),
+        accountSectionPath(ACCOUNT_SECTION.PROFILE),
     );
   }, [isPending, user, router]);
 

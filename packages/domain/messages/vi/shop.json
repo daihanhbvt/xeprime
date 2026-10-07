@@ -298,12 +298,6 @@
     }
   },
   "personal": {
-    "display": {
-      "bio": {
-        "label": "Giới thiệu",
-        "placeholder": "Vài dòng về bạn và xe của bạn — khách thích biết mình đang thuê xe của ai…"
-      }
-    },
     "provinceHelp": "Nơi khách đến nhận xe — xe của bạn hiện ở tỉnh/thành này trên chợ.",
     "checklist": {
       "suggestedTitle": "Nên có — giúp khách yên tâm chọn xe của bạn",

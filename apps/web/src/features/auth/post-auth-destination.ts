@@ -222,7 +222,7 @@ function packageEquivalent(pathname: string): string | null {
  */
 function commissionEquivalent(user: AuthScope | null | undefined, pathname: string): string | null {
   if (pathname === ROUTES.MANAGE.SHOP && isCommissionOwner(user)) {
-    return accountSectionPath(ACCOUNT_SECTION.STOREFRONT);
+    return accountSectionPath(ACCOUNT_SECTION.PROFILE);
   }
   return null;
 }
