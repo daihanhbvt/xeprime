@@ -8,6 +8,7 @@ import {
   CustomerServiceOutlined,
   DashboardOutlined,
   EnvironmentOutlined,
+  FieldTimeOutlined,
   ExclamationCircleOutlined,
   FileDoneOutlined,
   FileTextOutlined,
@@ -559,6 +560,18 @@ export const PLATFORM_NAV: readonly NavSection[] = [
     key: 'platform-orders',
     labelKey: 'manageGroups.platformOrders',
     children: [
+      {
+        /*
+         * Vận hành chuyến đứng đầu khối: đây là HÀNG ĐỢI có người chờ ở đầu kia (khách chờ chủ xe trả
+         * lời, khách đứng chờ giao xe) — tra cứu mọi đơn nằm ngay dưới. Cùng quyền với đơn thuê: màn
+         * này không mở thêm dữ liệu nào, chỉ xếp lại theo chặng và theo giờ.
+         */
+        key: 'admin-trips',
+        labelKey: 'platform.trips',
+        href: ROUTES.ADMIN.TRIPS,
+        permission: PERMISSION.PLATFORM_BOOKING_VIEW,
+        icon: FieldTimeOutlined,
+      },
       {
         key: 'admin-bookings',
         labelKey: 'platform.bookings',

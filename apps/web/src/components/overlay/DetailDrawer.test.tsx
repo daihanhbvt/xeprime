@@ -118,11 +118,11 @@ describe('DetailDrawer', () => {
       expect(drawerWrapper()?.style.width).toBe('720px');
     });
 
-    it('split: phủ kín màn hình từ tablet trở xuống; md giữ hành vi cũ', () => {
+    it('xl: phủ kín màn hình từ tablet trở xuống; md giữ hành vi cũ', () => {
       // jsdom bỏ qua giá trị `clamp()` của token nên không đọc được bề rộng thật — kiểm thứ
       // quyết định hình thái ở tablet: class phủ kín trên wrapper.
       const { unmount } = render(
-        <DetailDrawer open title="Đơn XP-001" size="split" onClose={vi.fn()}>
+        <DetailDrawer open title="Đơn XP-001" size="xl" onClose={vi.fn()}>
           <p>N</p>
         </DetailDrawer>,
       );
@@ -148,50 +148,25 @@ describe('DetailDrawer', () => {
     });
   });
 
-  describe('modeless', () => {
-    it('mặc định vẫn có mask — panel cũ giữ nguyên hành vi', () => {
+  describe('mask', () => {
+    it('luôn có mask tối che trang — mọi panel cùng một hình thái (07/10/2026 gỡ biến thể modeless)', () => {
       render(
         <DetailDrawer open title="T" onClose={vi.fn()}>
           <p>N</p>
         </DetailDrawer>,
       );
       expect(document.querySelector('.ant-drawer-mask')).not.toBeNull();
-    });
-
-    it('modeless: không mask tối che trang, không báo trang phía sau là trơ', () => {
-      render(
-        <DetailDrawer open modeless title="T" onClose={vi.fn()}>
-          <p>N</p>
-        </DetailDrawer>,
-      );
-      expect(document.querySelector('.ant-drawer-mask')).toBeNull();
-      expect(screen.getByRole('dialog').getAttribute('aria-modal')).toBe('false');
-      // Desktop: panel nằm dưới topbar (luật CSS gắn theo class này).
-      expect(document.querySelector('[class*="modelessWrapper"]')).not.toBeNull();
-    });
-
-    it('panel thường vẫn là modal với trình đọc màn hình', () => {
-      render(
-        <DetailDrawer open title="T" onClose={vi.fn()}>
-          <p>N</p>
-        </DetailDrawer>,
-      );
       expect(screen.getByRole('dialog').getAttribute('aria-modal')).toBe('true');
-      expect(document.querySelector('[class*="modelessWrapper"]')).toBeNull();
     });
 
-    it('modeless: Esc vẫn đóng panel kể cả khi focus đang ở nội dung trang phía sau', () => {
+    it('bấm vào mask là đóng', () => {
       const onClose = vi.fn();
       render(
-        <>
-          <button type="button">Dòng trong bảng</button>
-          <DetailDrawer open modeless title="T" onClose={onClose}>
-            <p>N</p>
-          </DetailDrawer>
-        </>,
+        <DetailDrawer open title="T" onClose={onClose}>
+          <p>N</p>
+        </DetailDrawer>,
       );
-      screen.getByRole('button', { name: 'Dòng trong bảng' }).focus();
-      fireEvent.keyDown(window, { key: 'Escape' });
+      fireEvent.click(document.querySelector('.ant-drawer-mask') as HTMLElement);
       expect(onClose).toHaveBeenCalledTimes(1);
     });
   });

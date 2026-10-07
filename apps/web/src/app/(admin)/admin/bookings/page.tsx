@@ -16,7 +16,6 @@ import { useAdminBookings } from '@/features/admin-bookings/hooks/use-admin-book
 import type { AdminBookingFilters } from '@/features/admin-bookings/types';
 import { ALL_FILTER } from '@/constants/filters';
 import { useDatePickerPattern } from '@/i18n/use-app-format';
-import { cx } from '@/lib/cx';
 import { DAY_PARAM_FORMAT, dayjs, type Dayjs } from '@/lib/datetime';
 import styles from './bookings-page.module.css';
 
@@ -74,13 +73,9 @@ function AdminBookingsView() {
   ];
 
   return (
-    /*
-      Panel chi tiết đứng CẠNH trang, không mask. Cả tiêu đề, bộ lọc lẫn bảng chừa đúng bề rộng
-      panel (cùng token `--xp-drawer-width-split`): bộ lọc tự xuống dòng trong phần còn lại thay
-      vì chui dưới panel, năm cột ưu tiên của bảng nằm trọn bên trái, và bảng tự ẩn bớt cột khi
-      chỗ còn lại không đủ.
-    */
-    <div className={cx(styles.page, selected !== null && styles.pageWithPanel)}>
+    // Panel chi tiết là drawer chuẩn (có mask, bấm ra ngoài là đóng) — trang không chừa chỗ, không
+    // co cột; hàng vừa mở được tô để đóng panel rồi vẫn biết mình đang ở dòng nào.
+    <div>
       <ManagePageHeader
         title={t('page.title')}
         extra={

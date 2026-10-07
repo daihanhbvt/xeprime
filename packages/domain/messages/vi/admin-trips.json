@@ -1,0 +1,111 @@
+{
+  "page": {
+    "title": "Vận hành chuyến",
+    "subtitle": "Bốn chặng của một chuyến đang đi qua nền tảng — nhắc đúng người khi một chặng đứng quá lâu.",
+    "loading": "Đang tải vận hành chuyến…",
+    "updatedAt": "Cập nhật {time}",
+    "allBookings": "Tất cả đơn thuê"
+  },
+  "today": {
+    "title": "Hôm nay",
+    "pickups": "{count, plural, other {# giao xe}}",
+    "returns": "{count, plural, other {# nhận xe}}",
+    "loadError": "Chưa có số liệu"
+  },
+  "queues": {
+    "railTitle": "Hàng đợi",
+    "railLabel": "Chọn hàng đợi",
+    "groups": {
+      "before": "Trước chuyến",
+      "during": "Trong chuyến"
+    },
+    "pending_approval": "Chờ chủ xe duyệt",
+    "awaiting_hold": "Chờ khách giữ chỗ",
+    "pickup_soon": "Sắp giao xe",
+    "active": "Đang thuê"
+  },
+  "cards": {
+    "label": "Thẻ đếm việc",
+    "loadError": "Không tải được số đếm.",
+    "urgent": {
+      "pending_approval": "{count, plural, other {# sắp hết hạn}}",
+      "awaiting_hold": "{count, plural, other {# sắp hết hạn}}",
+      "pickup_soon": "{count, plural, other {# quá giờ giao}}",
+      "active": "{count, plural, other {# quá giờ trả}}"
+    },
+    "calm": {
+      "pending_approval": "Chưa có yêu cầu nào kẹt",
+      "awaiting_hold": "Khách còn đủ thời gian",
+      "pickup_soon": "Chưa chuyến nào quá giờ",
+      "active": "Chưa chuyến nào quá giờ trả"
+    }
+  },
+  "intro": {
+    "pending_approval": "Chủ xe có 60 phút để trả lời; máy đã nhắc ở phút 20 và 45. Còn dưới 15 phút mà chưa có câu trả lời thì gọi hoặc nhắc tay — khách đang chờ để còn đi tìm xe khác.",
+    "awaiting_hold": "Chủ xe đã nhận, xe đang được giữ cho khách. Khách có 120 phút để chuyển tiền giữ chỗ; máy tự nhắc ở mốc còn 60 và 15 phút. Hết giờ là xe tự quay lại chợ.",
+    "pickup_soon": "Đơn đã giữ chỗ, giao xe trong 24 giờ tới. Quá giờ mà gian hàng chưa bàn giao thì hỏi họ — khách có thể đang đứng chờ.",
+    "active": "Xe đang ở với khách. Quá giờ trả mà chưa bàn giao trả xe thì hỏi gian hàng; quyết toán chỉ chạy sau biên bản trả xe."
+  },
+  "filters": {
+    "searchLabel": "Tìm trong hàng đợi",
+    "searchPlaceholder": "Khách, xe, biển số, gian hàng"
+  },
+  "request": {
+    "label": "Hàng đợi yêu cầu thuê",
+    "customer": "Khách",
+    "vehicle": "Xe · gian hàng",
+    "schedule": "Lịch thuê",
+    "sentAt": "Gửi lúc",
+    "respondBy": "Hạn trả lời",
+    "holdBy": "Hạn giữ chỗ",
+    "longTerm": "Dài hạn · {package}",
+    "holdAmount": "Giữ chỗ {amount}",
+    "autoReminded": "{count, plural, =1 {máy đã nhắc 1 lần} other {máy đã nhắc # lần}}",
+    "notReminded": "máy chưa nhắc",
+    "remaining": "còn",
+    "expired": "đã hết hạn",
+    "segment": "lượt {index}/{total}",
+    "remind": "Nhắc chủ xe",
+    "remindedAt": "Đã nhắc {time}",
+    "remindCooldown": "Vừa nhắc lúc {time} — đợi {minutes} phút rồi nhắc lại",
+    "remindSuccess": "Đã gửi lời nhắc tới gian hàng",
+    "partnerProfile": "Hồ sơ đối tác",
+    "callOwner": "Gọi chủ xe",
+    "loadError": "Không tải được hàng đợi",
+    "noResults": "Không có yêu cầu khớp từ khoá",
+    "total": "{count, plural, other {# yêu cầu}}"
+  },
+  "booking": {
+    "label": "Hàng đợi đơn thuê",
+    "code": "Mã đơn",
+    "customer": "Khách",
+    "vehicle": "Xe · gian hàng",
+    "pickup": "Giao xe",
+    "return": "Trả xe",
+    "openDetail": "Xem chi tiết đơn {code}",
+    "detail": "Chi tiết",
+    "loadError": "Không tải được hàng đợi",
+    "noResults": "Không có đơn khớp từ khoá",
+    "total": "{count, plural, other {# đơn}}"
+  },
+  "empty": {
+    "pending_approval": "Không có yêu cầu nào đang chờ chủ xe trả lời.",
+    "awaiting_hold": "Không có yêu cầu nào đang chờ khách giữ chỗ.",
+    "pickup_soon": "Không có chuyến nào giao xe trong 24 giờ tới.",
+    "active": "Không có chuyến nào đang chạy."
+  },
+  "time": {
+    "inMinutes": "còn {count} phút",
+    "inHours": "còn {count} giờ",
+    "inDays": "còn {count} ngày",
+    "lateMinutes": "quá {count} phút",
+    "lateHours": "quá {count} giờ",
+    "lateDays": "quá {count} ngày"
+  },
+  "dashboard": {
+    "title": "Vận hành chuyến",
+    "today": "Hôm nay giao {pickups} · nhận {returns}",
+    "open": "Mở vận hành chuyến",
+    "loadError": "Không tải được hàng đợi vận hành"
+  }
+}

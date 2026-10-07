@@ -283,6 +283,8 @@ export const ROUTES = {
     PARTNER_SHOPS: admin('/partners/shops'),
     PARTNER_OWNERS: admin('/partners/owners'),
     VEHICLES: admin('/vehicles'),
+    /** Vận hành chuyến — bốn hàng đợi theo chặng của một chuyến (ADR 0044). */
+    TRIPS: admin('/trips'),
     BOOKINGS: admin('/bookings'),
     CUSTOMERS: admin('/customers'),
     /** Tra cứu XUYÊN REALM — mọi tài khoản trùng một SĐT/email (ADR 0053 điều 9, B4). */
@@ -719,6 +721,15 @@ export const adminVehiclePath = {
 export const adminApprovalPath = {
   task: (taskId: string): string =>
     `${ROUTES.ADMIN.ROOT}?${new URLSearchParams({ [ADMIN_APPROVAL_TASK_PARAM]: taskId })}`,
+};
+
+/** Tham số URL chọn hàng đợi của màn "Vận hành chuyến" (`?queue=`). */
+export const ADMIN_TRIP_QUEUE_PARAM = 'queue';
+
+/** Màn "Vận hành chuyến" — mở sẵn một hàng đợi (thẻ dashboard, link từ hồ sơ đối tác). */
+export const adminTripPath = {
+  queue: (queue: string, params?: Record<string, string>): string =>
+    `${ROUTES.ADMIN.TRIPS}?${new URLSearchParams({ [ADMIN_TRIP_QUEUE_PARAM]: queue, ...params })}`,
 };
 
 /** Màn "Đơn thuê toàn hệ thống" — lọc sẵn theo xe (tham số `vehicleId` của `useAdminBookingFilters`). */

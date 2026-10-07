@@ -40,6 +40,13 @@ export const queryKeys = {
     list: (params: QueryParams) => ['vehicle-approvals', 'list', params] as const,
     detail: (id: string) => ['vehicle-approvals', 'detail', id] as const,
   },
+  /** Màn "Vận hành chuyến" của nền tảng — `/platform/trips` (bốn hàng đợi + nhắc chủ xe). */
+  platformTrips: {
+    all: ['platform-trips'] as const,
+    summary: (params: QueryParams) => ['platform-trips', 'summary', params] as const,
+    requests: (params: QueryParams) => ['platform-trips', 'requests', params] as const,
+    bookings: (params: QueryParams) => ['platform-trips', 'bookings', params] as const,
+  },
   /** Màn "Xe toàn hệ thống" của nền tảng — `/platform/vehicles` (giám sát + ẩn/gỡ ẩn). */
   platformVehicles: {
     all: ['platform-vehicles'] as const,

@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AdminBookingDetailDrawer } from './AdminBookingDetailDrawer';
 
 /**
- * Panel giám sát đơn thuê của NỀN TẢNG — đứng cạnh bảng (modeless, cỡ `split`).
+ * Panel giám sát đơn thuê của NỀN TẢNG — drawer chuẩn có mask, cỡ `lg`.
  *
  * Khoá lại những thứ typecheck không bắt được: masking PII + quyền bỏ che, ba trạng thái tải,
  * dòng thời gian suy từ dữ liệu THẬT (không mốc/giờ bịa), tách bạch tài sản bảo đảm với tiền của
@@ -132,9 +132,12 @@ describe('AdminBookingDetailDrawer — vỏ panel', () => {
     expect(within(header).getByText('Tạo lúc 09:00 · 01/08/2026')).toBeTruthy();
   });
 
-  it('đứng cạnh bảng: không có mask tối che danh sách', () => {
-    renderDrawer();
-    expect(document.querySelector('.ant-drawer-mask')).toBeNull();
+  it('drawer chuẩn như màn Kiểm duyệt xe: có mask, bấm vào mask là đóng', () => {
+    const { onClose } = renderDrawer();
+    const mask = document.querySelector('.ant-drawer-mask') as HTMLElement | null;
+    expect(mask).not.toBeNull();
+    fireEvent.click(mask as HTMLElement);
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('nút đóng có tên khả truy cập và gọi onClose', () => {
