@@ -14,7 +14,8 @@
     "security": "Bảo mật tài khoản",
     "account": "Tài khoản & bảo mật",
     "renterTrips": "Chuyến tôi đi thuê",
-    "partnerHome": "Về trang chủ XePrime Partner"
+    "partnerHome": "Về trang chủ XePrime Partner",
+    "ownerProfile": "Hồ sơ chủ xe"
   },
   "permission": {
     "deniedTitle": "Bạn không có quyền truy cập",

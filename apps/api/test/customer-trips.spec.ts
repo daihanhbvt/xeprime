@@ -212,6 +212,12 @@ beforeAll(async () => {
         id: ownerId,
         displayName: 'Chủ shop',
         email: `owner-${ownerId}@xeprime.test`,
+        /*
+         * Tenant này không có gói ⇒ mặt tiền CÁ NHÂN ⇒ khách thấy SĐT ĐĂNG NHẬP đã xác thực của
+         * chủ, không phải `tenants.phone` (ADR 0054). Hai số cố ý khác nhau để test chứng minh điều đó.
+         */
+        phone: '84909123456',
+        phoneVerifiedAt: new Date(),
       },
       {
         realm: ACCOUNT_REALM.CUSTOMER,
@@ -235,7 +241,8 @@ beforeAll(async () => {
       name: 'Gian hàng Minh Tuấn',
       status: TENANT_STATUS.ACTIVE,
       ownerUserId: ownerId,
-      phone: '0909123456',
+      // Số tự khai của "gian hàng" — KHÔNG được lộ ra ở mặt tiền cá nhân.
+      phone: '0900000999',
     },
   });
   await prisma.tenantMembership.create({

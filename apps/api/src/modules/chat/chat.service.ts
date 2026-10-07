@@ -37,6 +37,11 @@ import {
 } from '@xeprime/types';
 import { chatNotificationCopy } from '@xeprime/domain';
 import {
+  resolveStorefront,
+  storefrontTenantSelect,
+  type StorefrontTenantRow,
+} from '../../common/storefront/storefront-identity';
+import {
   EFFECTIVE_SUBSCRIPTION_ARGS,
   effectiveSubscriptionWhere,
 } from '../../common/plan/feature-state';
@@ -61,21 +66,29 @@ import { paginationMeta, resolvePaging } from '../../common/pagination';
 /** Postgres báo vi phạm unique bằng mã này — Prisma giữ nguyên trong `code`. */
 const UNIQUE_VIOLATION = 'P2002';
 
-const CONVERSATION_SELECT = {
-  id: true,
-  vehicleId: true,
-  tenantId: true,
-  customerUserId: true,
-  status: true,
-  lastMessageText: true,
-  lastMessageAt: true,
-  lastSenderType: true,
-  unreadCustomerCount: true,
-  unreadTenantCount: true,
-  tenant: { select: { name: true, profile: { select: { logoUrl: true } } } },
-  customer: { select: { displayName: true, avatarUrl: true } },
-  vehicle: { select: { name: true, mainImageUrl: true } },
-} satisfies Prisma.ConversationSelect;
+/**
+ * Hàm, không phải hằng: `storefrontTenantSelect` lọc dòng thuê bao theo `now` của TỪNG request —
+ * một hằng dựng lúc nạp module sẽ đóng băng mốc đó tới lần khởi động lại, và một gói vừa bắt đầu
+ * sau mốc ấy không bao giờ được thấy.
+ */
+function conversationSelect(now: Date) {
+  return {
+    id: true,
+    vehicleId: true,
+    tenantId: true,
+    customerUserId: true,
+    status: true,
+    lastMessageText: true,
+    lastMessageAt: true,
+    lastSenderType: true,
+    unreadCustomerCount: true,
+    unreadTenantCount: true,
+    // Tên + ảnh phía chủ xe theo tuyến hiệu lực — chủ xe cá nhân hiện bằng tài khoản (ADR 0054).
+    tenant: { select: storefrontTenantSelect(now) },
+    customer: { select: { displayName: true, avatarUrl: true } },
+    vehicle: { select: { name: true, mainImageUrl: true } },
+  } satisfies Prisma.ConversationSelect;
+}
 
 const MESSAGE_SELECT = {
   id: true,
@@ -328,7 +341,7 @@ export class ChatService {
 
     const existing = await this.prisma.conversation.findFirst({
       where,
-      select: CONVERSATION_SELECT,
+      select: conversationSelect(new Date()),
     });
     if (existing) return existing;
 
@@ -343,7 +356,7 @@ export class ChatService {
             vehicleId: params.vehicleId ?? null,
             status: CONVERSATION_STATUS.OPEN,
           },
-          select: CONVERSATION_SELECT,
+          select: conversationSelect(new Date()),
         });
         // Bản ghi participant của khách để lưu mốc đã đọc; phía shop truy cập qua membership.
         await tx.conversationParticipant.create({
@@ -361,7 +374,7 @@ export class ChatService {
       if (!isUniqueViolation(error)) throw error;
       const winner = await this.prisma.conversation.findFirst({
         where,
-        select: CONVERSATION_SELECT,
+        select: conversationSelect(new Date()),
       });
       if (!winner) throw error;
       return winner;
@@ -406,7 +419,7 @@ export class ChatService {
         orderBy: [{ lastMessageAt: { sort: 'desc', nulls: 'last' } }, { createdAt: 'desc' }],
         skip: paging.skip,
         take: paging.take,
-        select: CONVERSATION_SELECT,
+        select: conversationSelect(new Date()),
       }),
     ]);
 
@@ -452,7 +465,7 @@ export class ChatService {
     const { side } = await this.resolveAccess(userId, conversationId, expected);
     const row = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
-      select: CONVERSATION_SELECT,
+      select: conversationSelect(new Date()),
     });
     if (!row) {
       throw new NotFoundException({
@@ -639,8 +652,7 @@ export class ChatService {
       await tx.conversation.update({
         where: { id: conversationId },
         // Đặt VỀ 0, không trừ dần: trừ là mở đường cho số âm khi hai tab cùng đánh dấu đã đọc.
-        data:
-          side === CHAT_SIDE.CUSTOMER ? { unreadCustomerCount: 0 } : { unreadTenantCount: 0 },
+        data: side === CHAT_SIDE.CUSTOMER ? { unreadCustomerCount: 0 } : { unreadTenantCount: 0 },
       });
       if (side === CHAT_SIDE.CUSTOMER) {
         await tx.conversationParticipant.updateMany({
@@ -675,8 +687,7 @@ export class ChatService {
     }
 
     const side = inbox as ChatSide;
-    const tenantIds =
-      side === CHAT_SIDE.SHOP ? await activeTenantIdsOf(this.prisma, userId) : [];
+    const tenantIds = side === CHAT_SIDE.SHOP ? await activeTenantIdsOf(this.prisma, userId) : [];
     return { count: await chatUnreadOf(this.prisma, userId, side, tenantIds) };
   }
 
@@ -692,9 +703,7 @@ export class ChatService {
    * nào thuộc hộp thư nào và dẫn người dùng tới đúng chỗ. Ràng buộc "một danh sách không bao giờ
    * chứa cả hai vai" (ADR 0009 · `listConversations`) không hề bị nới.
    */
-  async unreadSummary(
-    userId: string,
-  ): Promise<{ customer: number; shop: number; total: number }> {
+  async unreadSummary(userId: string): Promise<{ customer: number; shop: number; total: number }> {
     const chat = await computeChatUnread(this.prisma, userId);
     return { customer: chat.customer, shop: chat.shop, total: chat.customer + chat.shop };
   }
@@ -736,9 +745,7 @@ export class ChatService {
      * chính phạm vi đó — kết quả là một truy vấn không còn ràng buộc quyền sở hữu nào. Đó không
      * phải lỗi giao diện; đó là hộp thư của người khác hiện ra trong ô tìm kiếm của mình.
      */
-    const and: Prisma.ConversationWhereInput[] = [
-      chatInboxScope(scopeInbox, userId, tenantIds),
-    ];
+    const and: Prisma.ConversationWhereInput[] = [chatInboxScope(scopeInbox, userId, tenantIds)];
 
     if (filters.unreadOnly) {
       /*
@@ -807,7 +814,9 @@ export class ChatService {
       senderName:
         senderSide === CHAT_SIDE.CUSTOMER
           ? (conversation.customer?.displayName ?? null)
-          : (conversation.tenant?.name ?? null),
+          : conversation.tenant
+            ? resolveStorefront(conversation.tenant, new Date()).name
+            : null,
       text: message.text,
       attachmentCount: message.attachmentCount,
       messageType: message.messageType,
@@ -895,7 +904,8 @@ export class ChatService {
         id: true,
         tenantId: true,
         customerUserId: true,
-        tenant: { select: { name: true } },
+        // Tên phía chủ xe theo tuyến hiệu lực (ADR 0054) — cùng tên khách thấy ở hộp thư.
+        tenant: { select: storefrontTenantSelect(new Date()) },
         customer: { select: { displayName: true } },
       },
     });
@@ -970,24 +980,24 @@ export class ChatService {
  * Hội thoại ở dạng tối thiểu cho kiểm quyền — cộng TÊN hai phía.
  *
  * Tên có mặt vì một lý do duy nhất: dựng tiêu đề thông báo tin nhắn. Khai tường minh thay vì
- * `ConversationGetPayload` của `CONVERSATION_SELECT` (bản đầy đủ, có logo/ảnh xe/đếm chưa đọc)
+ * `ConversationGetPayload` của `conversationSelect` (bản đầy đủ, có logo/ảnh xe/đếm chưa đọc)
  * để không ai vô tình dựa vào một trường mà truy vấn này không nạp.
  */
 type ConversationAccessRow = {
   id: string;
   tenantId: string;
   customerUserId: string | null;
-  tenant: { name: string } | null;
+  tenant: StorefrontTenantRow | null;
   customer: { displayName: string | null } | null;
 };
 
-type ConversationRow = Prisma.ConversationGetPayload<{ select: typeof CONVERSATION_SELECT }>;
+type ConversationRow = Prisma.ConversationGetPayload<{
+  select: ReturnType<typeof conversationSelect>;
+}>;
 type MessageRow = Prisma.MessageGetPayload<{ select: typeof MESSAGE_SELECT }>;
 
 function isUniqueViolation(error: unknown): boolean {
-  return (
-    error instanceof Prisma.PrismaClientKnownRequestError && error.code === UNIQUE_VIOLATION
-  );
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === UNIQUE_VIOLATION;
 }
 
 /** Nhánh WHERE của cursor keyset — "cũ hơn (sentAt, id)" viết bằng ngôn ngữ Prisma. */
@@ -1013,15 +1023,15 @@ function sideOfRow(c: { customerUserId: string | null }, userId: string): ChatSi
 
 function toSummary(c: ConversationRow, side: ChatSide): ConversationSummaryDto {
   const viewingAsCustomer = side === CHAT_SIDE.CUSTOMER;
+  // Khách thấy chủ xe đúng như ở chợ: tên + ảnh theo tuyến hiệu lực (ADR 0054).
+  const storefront = viewingAsCustomer ? resolveStorefront(c.tenant, new Date()) : null;
   return {
     id: c.id,
     vehicleId: c.vehicleId,
     vehicleName: c.vehicle?.name ?? null,
     vehicleImageUrl: c.vehicle?.mainImageUrl ?? null,
-    partyName: viewingAsCustomer ? c.tenant.name : (c.customer?.displayName ?? 'Khách'),
-    partyAvatarUrl: viewingAsCustomer
-      ? (c.tenant.profile?.logoUrl ?? null)
-      : (c.customer?.avatarUrl ?? null),
+    partyName: storefront ? storefront.name : (c.customer?.displayName ?? 'Khách'),
+    partyAvatarUrl: storefront ? storefront.avatarUrl : (c.customer?.avatarUrl ?? null),
     side,
     lastMessageText: c.lastMessageText,
     lastMessageAt: (c.lastMessageAt as unknown as string | null) ?? null,

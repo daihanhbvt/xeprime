@@ -2,6 +2,10 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
 import { API_ERROR_CODE, CATALOG_TYPE, CONTRACT_STATUS } from '@xeprime/types';
 import { bookingDebt } from '../../common/money';
+import {
+  resolveStorefront,
+  storefrontTenantSelect,
+} from '../../common/storefront/storefront-identity';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { BankAccountsService } from '../bank-accounts/bank-accounts.service';
@@ -50,6 +54,7 @@ export class ContractsService {
     });
     if (existing) return toDto(existing);
 
+    const now = new Date();
     const booking = await this.prisma.booking.findFirst({
       where: { id: bookingId, tenantId, deletedAt: null },
       select: {
@@ -85,11 +90,12 @@ export class ContractsService {
         },
         tenant: {
           select: {
-            name: true,
-            phone: true,
-            email: true,
+            // Bên cho thuê theo tuyến HIỆU LỰC lúc lập hợp đồng (ADR 0054): chủ xe cá nhân đứng tên
+            // bằng chính tài khoản của họ (họ tên, SĐT/email đã xác thực), gian hàng bằng bộ riêng.
+            ...storefrontTenantSelect(now),
             profile: {
               select: {
+                logoUrl: true,
                 address: true,
                 provinceName: true,
                 taxCode: true,
@@ -103,6 +109,7 @@ export class ContractsService {
     if (!booking) throw notFound();
 
     const profile = booking.tenant.profile;
+    const lessor = resolveStorefront(booking.tenant, now);
     /*
      * Tài khoản MẶC ĐỊNH của gian hàng tại thời điểm lập hợp đồng. Số đầy đủ, không che: đây là
      * số khách phải chuyển tiền vào, và một hợp đồng in `•••• 8888` thì không dùng được.
@@ -133,9 +140,9 @@ export class ContractsService {
 
     const snapshot: ContractSnapshotDto = {
       shop: {
-        name: booking.tenant.name,
-        phone: booking.tenant.phone,
-        email: booking.tenant.email,
+        name: lessor.name,
+        phone: lessor.phone,
+        email: lessor.email,
         address: profile?.address ?? null,
         province: profile?.provinceName ?? null,
         taxCode: profile?.taxCode ?? null,

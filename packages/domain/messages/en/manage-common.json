@@ -14,7 +14,8 @@
     "security": "Account security",
     "account": "Account & security",
     "renterTrips": "Trips I rented",
-    "partnerHome": "Go to XePrime Partner home"
+    "partnerHome": "Go to XePrime Partner home",
+    "ownerProfile": "Host profile"
   },
   "permission": {
     "deniedTitle": "You don't have access",

@@ -21,6 +21,7 @@
  * ân hạn giữ `package` ⇒ vẫn là gian hàng; hết ân hạn thành `commission` ⇒ về mặt tiền cá nhân.
  */
 
+import { toLocalVnPhone } from './phone';
 import { BILLING_MODE } from './status/billing';
 
 export const STOREFRONT_KIND = {
@@ -35,10 +36,90 @@ export type StorefrontKind = (typeof STOREFRONT_KIND)[keyof typeof STOREFRONT_KI
 export const STOREFRONT_KIND_VALUES = Object.values(STOREFRONT_KIND) as StorefrontKind[];
 
 /** Mặt tiền suy từ tuyến thu tiền hiệu lực. Mọi giá trị không phải `package` ⇒ cá nhân. */
-export function resolveStorefrontKind(
-  billingMode: string | null | undefined,
-): StorefrontKind {
+export function resolveStorefrontKind(billingMode: string | null | undefined): StorefrontKind {
   return billingMode === BILLING_MODE.PACKAGE ? STOREFRONT_KIND.SHOP : STOREFRONT_KIND.PERSONAL;
+}
+
+/**
+ * DANH TÍNH CÔNG KHAI của một mặt tiền — tên, SĐT, email, ảnh mà khách thấy (ADR 0054).
+ *
+ * ## Mặt tiền CÁ NHÂN (tuyến hoa hồng) = tài khoản của chủ
+ *
+ * Với chủ xe cá nhân, "gian hàng" và "con người" là MỘT: khách đang thuê xe của NGƯỜI ĐÓ. Nên mọi
+ * thứ khách thấy đọc thẳng từ tài khoản chủ (`users`) — họ tên, SĐT ĐĂNG NHẬP, email đăng nhập, ảnh
+ * đại diện. Một bộ thông tin, sửa ở một chỗ, và SĐT khách gọi là số ĐÃ QUA OTP chứ không phải một
+ * số tự khai không ai kiểm.
+ *
+ * Chỉ lấy SĐT/email ĐÃ XÁC THỰC: chưa xác thực thì `null` (giao diện nói "chưa có"), không bao giờ
+ * công bố một số mà nền tảng chưa chứng minh là của người đó.
+ *
+ * ## Mặt tiền GIAN HÀNG (tuyến gói) = bộ riêng của gian hàng
+ *
+ * `tenants.name/phone/email` + logo — một doanh nghiệp có tổng đài, tên thương hiệu, logo riêng.
+ *
+ * ## Vì sao suy lúc ĐỌC, không chép lúc chuyển tuyến
+ *
+ * Cột của gian hàng KHÔNG bị ghi đè khi về tuyến hoa hồng: chúng nằm yên, và lên gói lại là hiện
+ * ra nguyên vẹn. Hết gói đổi tuyến ngay lúc `now >= endsAt + grace` (`resolveEffectiveBilling`) —
+ * một job chép dữ liệu sẽ chạy sau đó tới cả giờ, và trong khoảng đó trang công khai nói sai.
+ * Đọc theo tuyến thì không có khoảng hở nào, và không có gì để đồng bộ.
+ */
+export interface StorefrontShopIdentity {
+  name: string;
+  phone: string | null;
+  email: string | null;
+  logoUrl: string | null;
+}
+
+export interface StorefrontOwnerIdentity {
+  displayName: string;
+  /** Dạng lưu `84…` hoặc nội địa — trả ra luôn ở dạng nội địa `0…`. */
+  phone: string | null;
+  phoneVerified: boolean;
+  email: string | null;
+  emailVerified: boolean;
+  avatarUrl: string | null;
+}
+
+export interface StorefrontIdentity {
+  name: string;
+  phone: string | null;
+  email: string | null;
+  avatarUrl: string | null;
+}
+
+export function storefrontIdentity(
+  kind: StorefrontKind,
+  shop: StorefrontShopIdentity,
+  owner: StorefrontOwnerIdentity,
+): StorefrontIdentity {
+  if (kind === STOREFRONT_KIND.SHOP) {
+    return { name: shop.name, phone: shop.phone, email: shop.email, avatarUrl: shop.logoUrl };
+  }
+  return {
+    // Tên tài khoản không bao giờ rỗng ở DB, nhưng một chuỗi toàn dấu cách thì vẫn có thể.
+    name: owner.displayName.trim() || shop.name,
+    phone: owner.phone && owner.phoneVerified ? toLocalVnPhone(owner.phone) : null,
+    email: owner.email && owner.emailVerified ? owner.email : null,
+    avatarUrl: owner.avatarUrl,
+  };
+}
+
+/**
+ * Chỉ phần ẢNH của `storefrontIdentity` — cho chỗ chỉ có logo + avatar trong tay (thẻ xe, vỏ site
+ * partner). CÙNG luật: mặt tiền cá nhân là ảnh đại diện của chủ, KHÔNG phải logo — logo là của mặt
+ * tiền gian hàng, nằm yên khi hết gói và hiện lại khi lên gói.
+ *
+ * KHÔNG rơi về avatar cho mặt tiền GIAN HÀNG: một doanh nghiệp chưa có logo hiện chữ cái đầu là
+ * bình thường, còn hiện ảnh chân dung của người đứng tên là trộn danh tính cá nhân vào một pháp
+ * nhân.
+ */
+export function storefrontAvatarUrl(
+  logoUrl: string | null | undefined,
+  ownerAvatarUrl: string | null | undefined,
+  kind: StorefrontKind,
+): string | null {
+  return kind === STOREFRONT_KIND.PERSONAL ? (ownerAvatarUrl ?? null) : (logoUrl ?? null);
 }
 
 /**

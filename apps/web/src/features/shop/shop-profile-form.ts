@@ -15,11 +15,11 @@ import type { MyShop, UpdateProfileInput } from './types';
 /**
  * Form hồ sơ gian hàng — MỘT định nghĩa cho hai màn hình.
  *
- * `/manage/shop` (trang Cửa hàng, năm section) và `/account/registration` (tiến trình đăng ký
- * của chủ xe tuyến hoa hồng) hỏi CÙNG một bộ trường và ghi vào CÙNG một endpoint. Trước đợt này
- * cả hai đi qua `ShopProfileWorkspace`, nhưng bố cục của trang Cửa hàng mới (tiêu đề full-width,
- * cột điều hướng riêng) không còn vừa trong một component duy nhất — nên phần KHÔNG phải bố cục
- * tách ra đây.
+ * `/manage/shop` (trang Cửa hàng, năm section) và "Hồ sơ chủ xe" (`/manage/account` của chủ xe
+ * tuyến hoa hồng — `OwnerProfilePage`) hỏi CÙNG một bộ trường và ghi vào CÙNG một endpoint. Hai
+ * màn khác bố cục (năm section của gian hàng ↔ hồ sơ cá nhân gộp trang chủ xe) — nên phần KHÔNG
+ * phải bố cục tách ra đây. Đây cũng là lý do lên gói / hết gói không phải chép dữ liệu: hai màn
+ * đọc và ghi đúng một bản ghi.
  *
  * Tách ở mức này, không thấp hơn: hai màn chia sẻ *giá trị khởi tạo*, *schema* và *cách dựng
  * thân request* — đúng ba thứ mà lệch nhau là một trong hai màn gửi lên thứ khác với thứ nó

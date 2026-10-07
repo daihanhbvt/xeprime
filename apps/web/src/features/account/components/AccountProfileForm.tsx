@@ -5,12 +5,10 @@ import { Avatar, Button } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useWatch } from 'react-hook-form';
-import { TENANT_ROLE } from '@xeprime/types';
 
 import { ImageUploadField } from '@/components/form/ImageUploadField';
 import { TextField } from '@/components/form/TextField';
 import { ROUTES } from '@/constants/routes';
-import { PARTNER_TRACK, resolvePartnerTrack } from '@/features/auth/post-auth-destination';
 import { useShopSettingsAccess } from '@/features/shop/hooks/use-shop-settings-access';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { initialOf } from '@/lib/initials';
@@ -34,9 +32,19 @@ import styles from './AccountProfileForm.module.css';
  *
  * Dòng cuối phân biệt tài khoản với GIAN HÀNG: tên/ảnh ở đây là của con người đang đăng nhập; tên,
  * logo, SĐT liên hệ mà khách thấy là của gian hàng và sửa ở Cài đặt gian hàng. Chủ xe tuyến hoa
- * hồng thì khác một điểm — trang chủ xe của họ dùng chính ảnh này khi chưa có logo.
+ * hồng thì khác — họ tên và ảnh này CHÍNH LÀ tên, ảnh khách thấy (`storefrontIdentity`, ADR 0054).
  */
-export function AccountProfileForm({ profile }: { profile: UserProfile }) {
+export function AccountProfileForm({
+  profile,
+  storefront,
+}: {
+  profile: UserProfile;
+  /**
+   * `true` = khối này nằm trong "Hồ sơ chủ xe": họ tên và ảnh ở đây CHÍNH LÀ tên, ảnh khách thấy
+   * trên chợ và trên hợp đồng (ADR 0054). Trang quyết định, không phải component tự đoán tuyến.
+   */
+  storefront?: boolean;
+}) {
   const t = useTranslations('Account');
   const tHub = useTranslations('Account.hub');
   const tCommon = useTranslations('Common');
@@ -51,10 +59,7 @@ export function AccountProfileForm({ profile }: { profile: UserProfile }) {
   const previewName = displayName?.trim() || profile.displayName;
   const dirty = formState.isDirty;
 
-  // Trang chủ xe tuyến hoa hồng lấy ảnh đại diện CỦA CHỦ làm mặt tiền khi chưa có logo.
-  const isCommissionOwner =
-    user?.tenant?.roleKey === TENANT_ROLE.SHOP_OWNER &&
-    resolvePartnerTrack(user) === PARTNER_TRACK.COMMISSION;
+  const storefrontNote = storefront ? tHub('profile.storefrontFallback') : null;
 
   return (
     <div className={styles.layout}>
@@ -98,7 +103,7 @@ export function AccountProfileForm({ profile }: { profile: UserProfile }) {
         <p className={styles.note}>
           <InfoCircleOutlined aria-hidden className={styles.noteIcon} />
           <span>
-            {isCommissionOwner ? tHub('profile.storefrontFallback') : tHub('profile.notShop')}{' '}
+            {storefrontNote ?? tHub('profile.notShop')}{' '}
             {canOpenShopSettings ? (
               <Link href={ROUTES.MANAGE.SHOP}>{tHub('profile.shopSettingsLink')}</Link>
             ) : null}

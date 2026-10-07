@@ -9,6 +9,10 @@ import {
   type PaymentStatus,
 } from '@xeprime/types';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
+import {
+  resolveStorefront,
+  storefrontTenantSelect,
+} from '../../common/storefront/storefront-identity';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   ACCOUNT_PAYMENT_DEFAULT_LIMIT,
@@ -18,24 +22,30 @@ import {
   type AccountPaymentTotalsDto,
 } from './dto/account-payment.dto';
 
-const SELECT = {
-  id: true,
-  bookingId: true,
-  amount: true,
-  currency: true,
-  kind: true,
-  method: true,
-  status: true,
-  paidAt: true,
-  createdAt: true,
-  booking: {
-    select: {
-      code: true,
-      tenant: { select: { name: true } },
-      vehicle: { select: { name: true } },
+/**
+ * Hàm, không phải hằng — tên chủ xe đọc theo tuyến HIỆU LỰC tại `now` của request (ADR 0054).
+ */
+function paymentSelect(now: Date) {
+  return {
+    id: true,
+    bookingId: true,
+    amount: true,
+    currency: true,
+    kind: true,
+    method: true,
+    status: true,
+    paidAt: true,
+    createdAt: true,
+    booking: {
+      select: {
+        code: true,
+        // Chủ xe cá nhân hiện bằng họ tên tài khoản, gian hàng bằng tên gian hàng (ADR 0054).
+        tenant: { select: storefrontTenantSelect(now) },
+        vehicle: { select: { name: true } },
+      },
     },
-  },
-} satisfies Prisma.PaymentSelect;
+  } satisfies Prisma.PaymentSelect;
+}
 
 /**
  * "Tiền của các chuyến đã thuê" — bề mặt KHÁCH của `payments` (PROMPT 5).
@@ -71,11 +81,7 @@ export class AccountPaymentsService {
     data: AccountPaymentDto[];
     meta: PaginationMeta & { totals: AccountPaymentTotalsDto };
   }> {
-    const paging = resolvePaging(
-      query,
-      ACCOUNT_PAYMENT_DEFAULT_LIMIT,
-      ACCOUNT_PAYMENT_MAX_LIMIT,
-    );
+    const paging = resolvePaging(query, ACCOUNT_PAYMENT_DEFAULT_LIMIT, ACCOUNT_PAYMENT_MAX_LIMIT);
     /*
      * Ranh giới đọc nằm ở ĐÂY và chỉ ở đây: mọi truy vấn của service này đều mang `scope`. Một
      * phép đếm hay một phép tổng thiếu nó sẽ cho khách thấy con số của người khác — và tổng là
@@ -93,13 +99,17 @@ export class AccountPaymentsService {
       this.prisma.payment.count({ where }),
       this.prisma.payment.findMany({
         where,
-        select: SELECT,
+        select: paymentSelect(new Date()),
         /*
          * Sắp theo `paid_at` nhưng rơi về `created_at` khi chưa ghi nhận: khoản `pending` chưa có
          * `paid_at`, và để nó tụt xuống cuối nghĩa là thứ khách đang chờ lại ở trang cuối.
          * `id` chốt cuối để phân trang không lặp dòng khi hai khoản cùng mốc.
          */
-        orderBy: [{ paidAt: { sort: 'desc', nulls: 'first' } }, { createdAt: 'desc' }, { id: 'desc' }],
+        orderBy: [
+          { paidAt: { sort: 'desc', nulls: 'first' } },
+          { createdAt: 'desc' },
+          { id: 'desc' },
+        ],
         skip: paging.skip,
         take: paging.take,
       }),
@@ -139,8 +149,7 @@ export class AccountPaymentsService {
     ]);
 
     const zero = new Prisma.Decimal(0);
-    const sumOf = (kind: PaymentKind) =>
-      byKind.find((k) => k.kind === kind)?._sum.amount ?? zero;
+    const sumOf = (kind: PaymentKind) => byKind.find((k) => k.kind === kind)?._sum.amount ?? zero;
     const rental = sumOf(PAYMENT_KIND.RENTAL);
     const deposit = sumOf(PAYMENT_KIND.DEPOSIT);
 
@@ -153,7 +162,7 @@ export class AccountPaymentsService {
   }
 }
 
-type Row = Prisma.PaymentGetPayload<{ select: typeof SELECT }>;
+type Row = Prisma.PaymentGetPayload<{ select: ReturnType<typeof paymentSelect> }>;
 
 function toDto(r: Row): AccountPaymentDto {
   return {
@@ -161,7 +170,7 @@ function toDto(r: Row): AccountPaymentDto {
     // `booking_id` là NULL-able trên bảng, nhưng `scope` đòi có `booking` nên ở đây luôn có.
     bookingId: r.bookingId!,
     bookingCode: r.booking?.code ?? '',
-    tenantName: r.booking?.tenant?.name ?? '',
+    tenantName: r.booking?.tenant ? resolveStorefront(r.booking.tenant, new Date()).name : '',
     vehicleName: r.booking?.vehicle?.name ?? '',
     amount: r.amount.toFixed(0),
     currency: r.currency,

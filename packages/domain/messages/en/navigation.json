@@ -98,7 +98,8 @@
     "platformOrders": "Bookings & renters",
     "platformFinance": "Money & operations",
     "platformPolicy": "Policies & plans",
-    "platformSystem": "System"
+    "platformSystem": "System",
+    "account": "Account"
   },
   "platform": {
     "dashboard": "Overview",

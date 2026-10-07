@@ -137,7 +137,7 @@ export const ROUTES = {
      * | chưa có gian hàng, `?track=package` | bước 1: tạo gian hàng trả phí |
      * | `package_pending` | bước 2: chọn gói → QR chuyển khoản |
      * | gói đã hiệu lực | chuyển tới `SHOP?welcome=1` |
-     * | tuyến hoa hồng | chuyển tới `REGISTRATION` |
+     * | tuyến hoa hồng | chuyển tới trang chủ Owner Lite (`ROOT`) |
      *
      * `?track=` CHỈ có nghĩa khi chưa có gian hàng — sau đó `tenants.onboarding_state` là nguồn.
      */
@@ -179,9 +179,14 @@ export const ROUTES = {
      */
     SECURITY: partner('/security'),
     /**
-     * TÀI KHOẢN & BẢO MẬT của tài khoản đối tác — tên, ảnh, email/SĐT đăng nhập, mật khẩu, xoá tài
-     * khoản (ADR 0053: tài khoản partner là tài khoản riêng của site partner). Section chọn bằng
-     * `?section=` (xem `ACCOUNT_SECTION`).
+     * TÀI KHOẢN của tài khoản đối tác — MỘT URL, nội dung theo tuyến (ADR 0051 điều 3):
+     *
+     *  - tuyến gói / thành viên: "Tài khoản & bảo mật" — tên, ảnh, đăng nhập, mật khẩu, xoá tài khoản;
+     *    hồ sơ GIAN HÀNG sống riêng ở `SHOP`.
+     *  - CHỦ xe tuyến hoa hồng: "Hồ sơ chủ xe" — cùng bốn phần trên CỘNG trang chủ xe công khai và
+     *    địa chỉ nhận xe (06/10/2026). Với họ người và "gian hàng" là một, nên là một trang.
+     *
+     * Section chọn bằng `?section=` (xem `ACCOUNT_SECTION`).
      */
     ACCOUNT: partner('/account'),
     /**
@@ -212,8 +217,9 @@ export const ROUTES = {
 
     // ── Owner Lite — trang của tuyến hoa hồng (ADR 0051 điều 3) ─────────────────────────────────
     /**
-     * Tiến trình ĐĂNG KÝ chủ xe — hồ sơ và chiếc xe đầu tiên đi qua vòng duyệt nền tảng. Toàn bộ
-     * khu chủ xe của bậc `registering` (`resolveOwnerStage`).
+     * ALIAS CHUYỂN TIẾP (06/10/2026) — "Hồ sơ chủ xe" đã gộp vào `ACCOUNT` (section trang chủ xe);
+     * tiến trình đăng ký là trang chủ Owner Lite ở bậc `registering`. Không mục menu nào còn trỏ
+     * tới đây; route giữ cho bookmark, thông báo cũ và app native.
      */
     REGISTRATION: partner('/registration'),
     /** Thông tin khai thuế — bản compact của hồ sơ người bán. */
@@ -535,8 +541,10 @@ export function workspacePaths(workspace: Workspace): {
     chat: ROUTES.MANAGE.CHAT,
     bookings: ROUTES.MANAGE.BOOKINGS,
     bookingRequests: ROUTES.MANAGE.BOOKING_REQUESTS,
-    ownerProfile: ROUTES.MANAGE.REGISTRATION,
-    branches: ROUTES.MANAGE.REGISTRATION,
+    // Hồ sơ chủ xe = trang tài khoản của họ. Chủ xe tuyến hoa hồng chỉ có chi nhánh mặc định,
+    // và địa chỉ của nó sửa ở section "Địa chỉ nhận xe" của chính trang đó.
+    ownerProfile: accountSectionPath(ACCOUNT_SECTION.STOREFRONT),
+    branches: accountSectionPath(ACCOUNT_SECTION.ADDRESS),
     subscription: ROUTES.MANAGE.SUBSCRIPTION,
     sellerProfile: ROUTES.MANAGE.TAX,
     support: ROUTES.MANAGE.SUPPORT_CASES,
@@ -895,17 +903,23 @@ export function shopSectionDomId(section: ShopSection): string {
 export const SHOP_LOGO_TRIGGER_ID = 'shop-logo-upload';
 
 /**
- * ── TÀI KHOẢN & BẢO MẬT (site partner, 05/10/2026) ───────────────────────────────────────────
+ * ── TÀI KHOẢN (site partner, 05/10/2026) ─────────────────────────────────────────────────────
  *
  * MỘT trang cho mọi thứ của CON NGƯỜI đang đăng nhập — gộp "Hồ sơ cá nhân" và "Bảo mật tài
  * khoản" vốn là hai trang lặp nhau (cả hai đều hiện email/SĐT). Cùng khuôn với trang Cửa hàng:
  * section xếp dọc, mục lục dính, `?section=` ở URL để link/F5/Quay lại đúng chỗ.
  *
- * Không có gì của GIAN HÀNG ở đây — tên, logo, SĐT liên hệ của gian hàng sống ở `SHOP`.
+ * `STOREFRONT` và `ADDRESS` CHỈ có ở bản "Hồ sơ chủ xe" (chủ xe tuyến hoa hồng, 06/10/2026). Ở
+ * tuyến gói, hồ sơ gian hàng sống ở `SHOP` — trang của họ bỏ qua hai giá trị này
+ * (`PERSONAL_ACCOUNT_SECTIONS`).
  */
 export const ACCOUNT_SECTION = {
-  /** Tên và ảnh đại diện của tài khoản. */
+  /** Tên và ảnh đại diện của tài khoản — với chủ xe hoa hồng: "Thông tin chủ xe". */
   PROFILE: 'profile',
+  /** Trang chủ xe công khai: tên trên chợ, liên hệ, giới thiệu (`tenants`, chỉ chủ xe hoa hồng). */
+  STOREFRONT: 'storefront',
+  /** Địa chỉ nhận xe (chi nhánh mặc định) + MST/giấy phép tuỳ chọn (chỉ chủ xe hoa hồng). */
+  ADDRESS: 'address',
   /** Email và SĐT đăng nhập — đổi qua OTP. */
   LOGIN: 'login',
   /** Đổi (hoặc đặt lần đầu) mật khẩu. */
@@ -916,6 +930,14 @@ export const ACCOUNT_SECTION = {
 
 export type AccountSection = (typeof ACCOUNT_SECTION)[keyof typeof ACCOUNT_SECTION];
 export const ACCOUNT_SECTION_VALUES = Object.values(ACCOUNT_SECTION) as AccountSection[];
+
+/** Section của trang "Tài khoản & bảo mật" thường (tuyến gói, thành viên) — không có phần gian hàng. */
+export const PERSONAL_ACCOUNT_SECTIONS: readonly AccountSection[] = [
+  ACCOUNT_SECTION.PROFILE,
+  ACCOUNT_SECTION.LOGIN,
+  ACCOUNT_SECTION.PASSWORD,
+  ACCOUNT_SECTION.DELETE,
+];
 
 /** `?section=` → section hợp lệ; giá trị lạ rơi về `profile` (cùng luật với `shopSectionOf`). */
 export function accountSectionOf(value: string | null | undefined): AccountSection {
