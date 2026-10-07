@@ -3,11 +3,20 @@
 import { App, Button, Result, Skeleton } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { PERMISSION, isEstablishedPackageShop } from '@xeprime/types';
+import { PERMISSION, TENANT_ROLE, isEstablishedPackageShop } from '@xeprime/types';
 
 import { PermissionState } from '@/components/feedback/PermissionState';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
-import { ROUTES, SHOP_WELCOME_PARAM, shopSectionOf, type ShopSection } from '@/constants/routes';
+import {
+  ROUTES,
+  SECTION_PARAM,
+  SHOP_LEGACY_PAYOUT_SECTION,
+  SHOP_WELCOME_PARAM,
+  balancePayoutPath,
+  shopSectionOf,
+  type ShopSection,
+} from '@/constants/routes';
+import { ClientRedirect } from '@/features/partner/components/ClientRedirect';
 import { useVehicles } from '@/features/vehicles/hooks/use-vehicles';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useTenantScope } from '@/hooks/use-tenant-scope';
@@ -42,9 +51,9 @@ export function ShopPage() {
   const { tenant } = useTenantScope();
 
   const { filters, setFilters } = useUrlFilters((params) => ({
-    section: shopSectionOf(params.get('section')),
+    section: shopSectionOf(params.get(SECTION_PARAM)),
     // Dẫn xuất, KHÔNG bao giờ ghi ngược lên URL — xem `ShopWorkspaceProps.sectionInUrl`.
-    sectionInUrl: params.has('section'),
+    sectionInUrl: params.has(SECTION_PARAM),
     /*
      * `?welcome=1` — "gian hàng vừa thanh toán gói xong" (ADR 0040). Chỉ điều khiển một dải chào
      * NHỎ, không mở hay khoá bất cứ thứ gì: quyền đến từ `/auth/me` và cổng logo thật nằm ở
@@ -52,12 +61,25 @@ export function ShopPage() {
      * một link và thấy một dòng chào mừng không dành cho họ.
      */
     welcome: params.get(SHOP_WELCOME_PARAM) === '1',
+    // `?section=payout` CŨ — "Tài khoản nhận tiền" đã về trang số dư (07/10/2026).
+    legacyPayout: params.get(SECTION_PARAM) === SHOP_LEGACY_PAYOUT_SECTION,
   }));
 
   const canView = has(PERMISSION.TENANT_VIEW);
   const canEdit = has(PERMISSION.TENANT_UPDATE);
+  /*
+   * Link cũ tới "Tài khoản nhận tiền" (thông báo, bookmark) đi tiếp tới trang số dư — chỉ với CHỦ,
+   * đúng người section cũ từng hiện cho. Người khác (quản lý, nhân sự trong phiên hỗ trợ) chưa bao
+   * giờ thấy section đó, nên `shopSectionOf` đưa họ về đầu trang như mọi giá trị lạ.
+   */
+  const redirectToPayout = filters.legacyPayout && tenant?.roleKey === TENANT_ROLE.SHOP_OWNER;
 
-  const { data: shop, isLoading, isError, refetch } = useMyShop(canView && Boolean(tenant));
+  const {
+    data: shop,
+    isLoading,
+    isError,
+    refetch,
+  } = useMyShop(canView && Boolean(tenant) && !redirectToPayout);
   const updateProfile = useUpdateShopProfile();
   /*
    * "Đã có xe nào chưa" — CHỈ hỏi khi dải chào mừng đang mở.
@@ -67,6 +89,8 @@ export function ShopPage() {
    * không được trả giá cho một dải chỉ hiện đúng một lần trong đời gian hàng.
    */
   const vehicles = useVehicles({ page: 1, limit: 1 }, { enabled: filters.welcome && canView });
+
+  if (redirectToPayout) return <ClientRedirect href={balancePayoutPath()} />;
 
   if (!canView) {
     return (

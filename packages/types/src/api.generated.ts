@@ -12,16 +12,18 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Tài khoản nhận tiền của tôi — mặc định lên đầu, số đã che
-         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         * Tài khoản nhận tiền của tôi — số đã che
+         * @description Mảng 0 hoặc 1 phần tử: mỗi chủ MỘT tài khoản nhận tiền đang dùng.
+         *
+         *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
          *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
          */
         get: operations["AccountBankAccountsController_list"];
         put?: never;
         /**
-         * Thêm tài khoản nhận tiền
-         * @description Tài khoản ĐẦU TIÊN tự thành mặc định. Trùng số tài khoản trong danh sách đang dùng thì 409 `BANK_ACCOUNT_DUPLICATE` — ràng buộc nằm ở database, không phải ở một phép kiểm trước.
+         * Thêm hoặc ĐỔI tài khoản nhận tiền
+         * @description Mỗi chủ một tài khoản: đã có thì tài khoản mới THAY cái cũ (cái cũ lưu trữ, lệnh rút đang chờ giữ đích đã chụp). Khai lại đúng tài khoản đang dùng thì không tạo dòng mới.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
@@ -45,8 +47,8 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * Bỏ dùng một tài khoản
-         * @description LƯU TRỮ chứ không xoá: lệnh chuyển tiền cũ còn trỏ về nó. Bỏ tài khoản mặc định thì tài khoản còn lại gần nhất lên thay.
+         * Bỏ dùng tài khoản nhận tiền
+         * @description LƯU TRỮ chứ không xoá: lệnh chuyển tiền cũ còn trỏ về nó. Sau đó chưa có tài khoản nhận tiền cho tới khi khai cái mới.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
@@ -73,7 +75,10 @@ export interface paths {
         head?: never;
         /**
          * Đặt làm tài khoản nhận tiền mặc định
-         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         * @deprecated
+         * @description Tương thích ngược — tài khoản duy nhất luôn là mặc định; trả lại chính nó.
+         *
+         *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
          *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
          */
@@ -7301,7 +7306,9 @@ export interface paths {
         };
         /**
          * Tài khoản nhận tiền của gian hàng — số đã che
-         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         * @description Mảng 0 hoặc 1 phần tử: mỗi chủ MỘT tài khoản nhận tiền đang dùng.
+         *
+         *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
          *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
@@ -7310,8 +7317,10 @@ export interface paths {
         get: operations["ShopBankAccountsController_list"];
         put?: never;
         /**
-         * Thêm tài khoản nhận tiền cho gian hàng
-         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         * Thêm hoặc ĐỔI tài khoản nhận tiền của gian hàng
+         * @description Mỗi chủ một tài khoản: đã có thì tài khoản mới THAY cái cũ (cái cũ lưu trữ, lệnh rút đang chờ giữ đích đã chụp). Khai lại đúng tài khoản đang dùng thì không tạo dòng mới.
+         *
+         *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
          *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
@@ -7335,7 +7344,7 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * Bỏ dùng một tài khoản của gian hàng (lưu trữ, không xoá)
+         * Bỏ dùng tài khoản nhận tiền của gian hàng (lưu trữ, không xoá)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
          *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
@@ -7363,7 +7372,10 @@ export interface paths {
         head?: never;
         /**
          * Đặt làm tài khoản nhận tiền mặc định của gian hàng
-         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         * @deprecated
+         * @description Tương thích ngược — tài khoản duy nhất luôn là mặc định; trả lại chính nó.
+         *
+         *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
          *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
          *
@@ -9977,6 +9989,7 @@ export interface components {
             accountNumberMasked: string;
             accountName: string;
             label?: string | null;
+            /** @description Luôn `true` với tài khoản đang dùng — giữ cho client cũ */
             isDefault: boolean;
             /** @enum {string} */
             status: "active" | "archived";
@@ -14188,6 +14201,28 @@ export interface components {
             rejected: number;
             expired: number;
         };
+        PlatformVehicleApprovalRefDto: {
+            taskId: string;
+            /** @enum {string} */
+            status: "pending" | "approved" | "rejected" | "needs_revision" | "cancelled";
+            /** @description ISO-8601 UTC */
+            submittedAt: string;
+            /** @description ISO-8601 UTC */
+            reviewedAt?: string | null;
+            /** @description Lý do gửi chủ xe */
+            reason?: string | null;
+        };
+        PlatformVehicleCountsDto: {
+            all: number;
+            /** @description Đang thật sự hiện ngoài chợ (ADR 0048) */
+            visible: number;
+            /** @description Chờ nền tảng duyệt */
+            pending_review: number;
+            /** @description Nền tảng đã ẩn */
+            platform_hidden: number;
+            /** @description Thuộc gian hàng bị khoá */
+            suspended_shop: number;
+        };
         PlatformVehicleDetailDto: {
             id: string;
             code: string;
@@ -14207,6 +14242,7 @@ export interface components {
             tenantName: string;
             /** @enum {string} */
             tenantStatus: "draft" | "pending_review" | "needs_revision" | "active" | "suspended" | "rejected" | "expired";
+            /** @description Tỉnh/thành của chi nhánh gắn xe — vị trí công khai của xe */
             provinceName?: string | null;
             /**
              * @description Trạng thái snapshot trên Marketplace; null = xe chưa từng lên sàn
@@ -14224,22 +14260,37 @@ export interface components {
             marketplaceVisibilityReason: "visible" | "owner_paused" | "not_approved" | "platform_hidden" | "shop_inactive" | "archived";
             /** @description ISO-8601 UTC */
             createdAt: string;
+            /** @description ISO-8601 UTC */
+            updatedAt: string;
             brand?: string | null;
             model?: string | null;
             manufactureYear?: number | null;
             seatCount?: number | null;
             fuelType?: string | null;
+            transmission?: string | null;
+            color?: string | null;
             description?: string | null;
+            images: string[];
             weekendPrice?: string | null;
             hourlyPrice?: string | null;
+            monthlyPrice?: string | null;
+            withDriverDailyPrice?: string | null;
+            /** @description % giảm giá đang chạy */
+            discountPercent?: number | null;
+            deliveryEnabled: boolean;
+            /** @description Chi nhánh gắn xe */
+            branchName?: string | null;
+            /** @description Địa chỉ chi nhánh gắn xe */
+            branchAddress?: string | null;
             tenantSlug: string;
             ownerName?: string | null;
+            ownerPhone?: string | null;
             /** @description Số đơn thuê đã phát sinh trên xe */
             bookingCount: number;
             /** @description Số đánh giá của xe */
             reviewCount: number;
-            /** @description ISO-8601 UTC */
-            updatedAt: string;
+            latestApproval?: components["schemas"]["PlatformVehicleApprovalRefDto"] | null;
+            platformHide?: components["schemas"]["PlatformVehicleHideDto"] | null;
         };
         PlatformVehicleDto: {
             id: string;
@@ -14260,6 +14311,7 @@ export interface components {
             tenantName: string;
             /** @enum {string} */
             tenantStatus: "draft" | "pending_review" | "needs_revision" | "active" | "suspended" | "rejected" | "expired";
+            /** @description Tỉnh/thành của chi nhánh gắn xe — vị trí công khai của xe */
             provinceName?: string | null;
             /**
              * @description Trạng thái snapshot trên Marketplace; null = xe chưa từng lên sàn
@@ -14277,10 +14329,20 @@ export interface components {
             marketplaceVisibilityReason: "visible" | "owner_paused" | "not_approved" | "platform_hidden" | "shop_inactive" | "archived";
             /** @description ISO-8601 UTC */
             createdAt: string;
+            /** @description ISO-8601 UTC */
+            updatedAt: string;
+        };
+        PlatformVehicleHideDto: {
+            /** @description Lý do đã ghi lúc ẩn */
+            reason: string;
+            /** @description ISO-8601 UTC */
+            hiddenAt: string;
+            hiddenByName?: string | null;
         };
         PlatformVehiclePageDto: {
             data: components["schemas"]["PlatformVehicleDto"][];
             meta: components["schemas"]["PaginationMetaDto"];
+            counts: components["schemas"]["PlatformVehicleCountsDto"];
         };
         PlatformWithdrawalDto: {
             id: string;
@@ -15343,7 +15405,10 @@ export interface components {
             accountName: string;
             /** @description Tên gợi nhớ do người dùng đặt */
             label?: string;
-            /** @description Đặt làm tài khoản nhận tiền mặc định */
+            /**
+             * @deprecated
+             * @description Bỏ qua — tài khoản vừa khai luôn là tài khoản nhận tiền duy nhất.
+             */
             isDefault?: boolean;
         };
         SaveBankBalanceDto: {
@@ -16202,6 +16267,10 @@ export interface components {
             provinceName?: string | null;
             wardCode?: string | null;
             wardName?: string | null;
+            /**
+             * @deprecated
+             * @description Mã số thuế — chính là `seller_profiles.tax_id` (đọc ở `GET /seller-profile`), giữ cho tương thích
+             */
             taxCode?: string | null;
             businessLicenseNo?: string | null;
         };
@@ -16458,6 +16527,10 @@ export interface components {
             provinceCode?: string;
             /** @description Mã xã/phường/đặc khu 5 chữ số */
             wardCode?: string;
+            /**
+             * @deprecated
+             * @description Đã thay bằng `PUT /seller-profile` (`taxId`). Ghi vào hồ sơ người bán; đổi giá trị cần `seller_profile.manage`. Chuỗi rỗng = gỡ.
+             */
             taxCode?: string;
             businessLicenseNo?: string;
         };
@@ -59709,10 +59782,15 @@ export interface operations {
                 publicStatus?: "draft" | "pending_public_review" | "approved_public" | "needs_revision" | "rejected" | "hidden" | "archived";
                 operationStatus?: "available" | "renting" | "maintenance" | "inactive";
                 vehicleType?: "car" | "motorbike";
+                /** @description Xe phục vụ được dịch vụ này (một xe đăng nhiều dịch vụ) */
+                serviceType?: "self_drive" | "with_driver" | "long_term";
+                /** @description Mã tỉnh/thành của chi nhánh gắn xe (`provinces.code`) */
+                provinceCode?: string;
                 /** @description Trạng thái gian hàng chủ xe */
                 tenantStatus?: "draft" | "pending_review" | "needs_revision" | "active" | "suspended" | "rejected" | "expired";
                 /** @description true = chỉ xe ĐANG THẬT SỰ hiện ngoài chợ (đã duyệt + chủ xe bật + gian hàng hoạt động); false = mọi xe không hiện */
                 marketplaceVisible?: boolean;
+                sort?: "newest" | "updated" | "name" | "price_desc" | "price_asc";
                 page?: number;
                 limit?: number;
             };

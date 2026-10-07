@@ -1,19 +1,18 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ACCOUNT_REALM, PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
-  ACCOUNT_REALM,
-  PERMISSION,
-  SUPPORT_CAPABILITY,
-} from '@xeprime/types';
-import { CurrentTenant, CurrentUser, Realms, RequirePermissions, SupportAction, TenantScoped } from '../../common/decorators';
+  CurrentTenant,
+  CurrentUser,
+  Realms,
+  RequirePermissions,
+  SupportAction,
+  TenantScoped,
+} from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CurrentTenantDto } from './dto/current-tenant.dto';
-import {
-  MyShopDto,
-  RegisterShopDto,
-  UpdateTenantProfileDto,
-} from './dto/tenant-onboarding.dto';
+import { MyShopDto, RegisterShopDto, UpdateTenantProfileDto } from './dto/tenant-onboarding.dto';
 import { TenantsService } from './tenants.service';
 
 @ApiTags('tenants')
@@ -109,7 +108,10 @@ export class TenantsController {
     @Body() dto: UpdateTenantProfileDto,
   ): Promise<MyShopDto> {
     // `userId` cần cho nhánh đổi tỉnh: nó dời chi nhánh mặc định và việc đó phải ghi audit có tên.
-    return this.tenants.updateProfile(tenant.tenantId, user.id, dto);
+    // Quyền hồ sơ NGƯỜI BÁN đi kèm: `taxCode` cũ ghi vào đó, và đổi nó cần `seller_profile.manage`.
+    return this.tenants.updateProfile(tenant.tenantId, user.id, dto, {
+      canManageSellerProfile: tenant.permissions.includes(PERMISSION.SELLER_PROFILE_MANAGE),
+    });
   }
 
   @Post('current/submit-review')

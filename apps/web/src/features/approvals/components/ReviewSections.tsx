@@ -18,8 +18,14 @@ import styles from './VehicleApprovalDrawer.module.css';
  * Mọi tấm (kể cả thumbnail) nằm trong CÙNG một nhóm xem trước, nên bấm tấm nào cũng mở trình xem
  * đúng tấm đó và lướt được qua cả bộ. Cổng gửi duyệt đòi ≥4 ảnh khác nhau; người duyệt phải thấy
  * được cả bộ để đối chiếu "đúng xe không, đủ góc không, có ảnh mạng không".
+ *
+ * Chỉ cần `images` + `name`: màn "Xe toàn hệ thống" dùng lại cùng thư viện ảnh cho xe SỐNG.
  */
-export function ReviewGallery({ vehicle }: { vehicle: VehicleApprovalDetail['vehicle'] }) {
+export function ReviewGallery({
+  vehicle,
+}: {
+  vehicle: Pick<VehicleApprovalDetail['vehicle'], 'images' | 'name'>;
+}) {
   const t = useTranslations('Approvals.gallery');
   const images = vehicle.images;
 

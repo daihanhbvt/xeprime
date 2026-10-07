@@ -47,6 +47,12 @@ export type FilterField =
        * đang đứng ở đâu (ADR 0052), nhưng không có gì khác để chuyển sang.
        */
       disabled?: boolean;
+      /**
+       * Giá trị MẶC ĐỊNH của ô — đang ở giá trị này thì KHÔNG tính là đang lọc: không đếm vào huy
+       * hiệu "Lọc n", không sinh chip, không làm nút "Xoá bộ lọc" sáng. Dành cho ô Sắp xếp: nó
+       * luôn có một giá trị, nhưng "mới nhất" không phải một bộ lọc người dùng đã bật.
+       */
+      defaultValue?: string;
     }
   | {
       /**
@@ -129,11 +135,18 @@ function fieldKeys(field: FilterField): string[] {
  * sentinel "không lọc" dùng thống nhất toàn repo (`useUrlFilters` cũng xoá nó khỏi URL).
  */
 export function countActiveFilters(fields: readonly FilterField[], values: FilterValues): number {
-  const isActive = (key: string) => {
+  return fields.filter((field) => isFieldActive(field, values)).length;
+}
+
+function isFieldActive(field: FilterField, values: FilterValues): boolean {
+  if (field.kind === 'select' && field.defaultValue !== undefined) {
+    const value = values[field.key];
+    if (!value || value === field.defaultValue) return false;
+  }
+  return fieldKeys(field).some((key) => {
     const value = values[key];
     return Boolean(value) && value !== 'all';
-  };
-  return fields.filter((field) => fieldKeys(field).some(isActive)).length;
+  });
 }
 
 /** Một filter đang bật, ở dạng gỡ được. */
@@ -165,6 +178,7 @@ function activeChips(
     if (field.kind === 'select' || field.kind === 'segmented') {
       const value = values[field.key];
       if (!value || value === 'all') continue;
+      if (field.kind === 'select' && value === field.defaultValue) continue;
       const option = field.options.find((item) => item.value === value);
       chips.push({
         id: field.key,

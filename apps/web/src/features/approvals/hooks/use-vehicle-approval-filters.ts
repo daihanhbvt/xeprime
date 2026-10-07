@@ -6,6 +6,7 @@ import {
   VEHICLE_TYPE_VALUES,
 } from '@xeprime/types';
 import { ALL_FILTER } from '@/constants/filters';
+import { ADMIN_APPROVAL_TASK_PARAM } from '@/constants/routes';
 import { positiveIntParam, useUrlFilters } from '@/hooks/use-url-filters';
 import { DAY_PARAM_FORMAT, dayjs } from '@/lib/datetime';
 import { VEHICLE_APPROVALS_DEFAULT_STATUS } from '../api';
@@ -76,6 +77,6 @@ export function useVehicleApprovalFilters() {
     submittedTo: dayParam(sp.get('submittedTo')),
     page: positiveIntParam(sp, 'page'),
     limit: positiveIntParam(sp, 'limit'),
-    task: sp.get('task') ?? undefined,
+    task: sp.get(ADMIN_APPROVAL_TASK_PARAM) ?? undefined,
   }));
 }

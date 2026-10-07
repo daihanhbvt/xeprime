@@ -35,6 +35,7 @@ import { TaxReadService } from '../../src/modules/tax/tax-read.service';
 import { TaxService } from '../../src/modules/tax/tax.service';
 import { NoopInsurancePartner } from '../../src/modules/insurance/partner/noop-insurance.partner';
 import { PricingService } from '../../src/modules/pricing/pricing.service';
+import { SellerProfileService } from '../../src/modules/seller-profile/seller-profile.service';
 import { TenantsService } from '../../src/modules/tenants/tenants.service';
 import { VehicleSettingsService } from '../../src/modules/vehicle-settings/vehicle-settings.service';
 import { VehiclesService } from '../../src/modules/vehicles/vehicles.service';
@@ -340,6 +341,16 @@ export function makeTenantsService(prisma: PrismaService): TenantsService {
     makeAddressService(prisma),
     makeBranchesService(prisma),
     makeBillingService(prisma),
+    makeSellerProfileService(prisma),
+  );
+}
+
+/** `SellerProfileService` — writer duy nhất của `seller_profiles`, kể cả MST ghi từ hồ sơ gian hàng. */
+export function makeSellerProfileService(prisma: PrismaService): SellerProfileService {
+  return new SellerProfileService(
+    prisma,
+    new AuditService(prisma),
+    makeNotificationService(prisma),
   );
 }
 

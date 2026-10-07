@@ -106,10 +106,11 @@ function toShopSpec(input: OwnerInput, index: number): ShopSpec {
       address,
       // KHÔNG có `coverUrl`: dải ảnh bìa là của mặt tiền GIAN HÀNG. Trang của chủ xe cá nhân
       // không vẽ nó, nên đặt giá trị ở đây chỉ là dữ liệu chết.
-      taxCode: null,
       businessLicenseNo: null,
       bank: input.bank ? { ...input.bank, accountName: bankAccountName(input.name) } : null,
     },
+    // Chủ xe cá nhân chưa khai thuế — bản nháp tạo lười khi họ mở "Thông tin khai thuế".
+    seller: null,
     branches: [
       {
         code: 'CN01',

@@ -1,4 +1,4 @@
-/** Ô nhập số điểm + chọn tài khoản nhận. */
+/** Ô nhập số điểm + tài khoản nhận. */
 
 .field {
   display: block;
@@ -64,84 +64,12 @@
   font-size: var(--xp-font-size-label);
 }
 
-.group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--xp-space-sm);
-  width: 100%;
-}
-
-.option {
-  display: flex;
-  align-items: center;
-  padding: var(--xp-space-sm) var(--xp-space-md);
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius-lg);
-}
-
-/* Thẻ đang chọn phải nhìn ra được mà không cần soi vào nút radio — đây là ĐÍCH của một lệnh chi. */
-.option:has(:global(.ant-radio-checked)) {
-  border-color: var(--xp-color-primary);
-  background: var(--xp-color-primary-light);
-}
-
-.option :global(.ant-radio + *) {
-  display: flex;
-  align-items: center;
-  gap: var(--xp-space-sm);
-  min-width: 0;
-  width: 100%;
-}
-
-.accountText {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-/*
- * Biểu trưng ngân hàng dựng từ chính MÃ, không tải logo: logo ngân hàng là tài sản có bản
- * quyền, và một ô chữ đọc ra ngay ("VCB") thì không phải chờ tải ảnh.
- */
-.badge {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--xp-border-radius);
-  background: var(--xp-color-text);
-  color: var(--xp-color-bg-container);
-  font-size: var(--xp-font-size-label);
-  font-weight: var(--xp-font-weight-bold);
-  letter-spacing: 0.02em;
-}
-
-.bank {
-  font-weight: var(--xp-font-weight-semibold);
-}
-
-.number {
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  font-variant-numeric: tabular-nums;
-}
-
-.holder {
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-body-sm);
-  text-transform: uppercase;
-}
-
 /**
- * Lối THÊM tài khoản nhận — một ô bấm được, không phải một dòng liên kết nhỏ.
+ * Lối THÊM tài khoản nhận (khi chưa có) — một ô bấm được, không phải một dòng liên kết nhỏ.
  *
- * Khi chưa có tài khoản nào thì đây là bước BẮT BUỘC để rút được tiền, nên nó phải to bằng
- * những thẻ tài khoản mà nó sẽ trở thành. Không dùng biểu tượng cây bút: sửa một tài khoản đã
- * lưu là điều `BankAccountForm` cố ý không cho (đổi số tài khoản tại chỗ sẽ âm thầm đổi đích của
- * những lệnh chuyển đang chờ), và một cây bút hứa đúng điều đó.
+ * Đây là bước BẮT BUỘC để rút được tiền, nên nó phải to bằng thẻ tài khoản mà nó sẽ trở thành.
+ * Không dùng biểu tượng cây bút: sửa tại chỗ một tài khoản đã lưu là điều `BankAccountForm` cố ý
+ * không cho (đổi = khai cái mới), và một cây bút hứa đúng điều đó.
  */
 .addAccount {
   display: flex;

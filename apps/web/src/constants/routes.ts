@@ -170,7 +170,11 @@ export const ROUTES = {
     TRIPS: partner('/trips'),
     CUSTOMERS: partner('/customers'),
     FINANCE: partner('/finance'),
-    /** Ví điểm gian hàng — khoản XePrime phải trả (ADR 0033). Cả hai tuyến; KHÔNG gác bằng gói. */
+    /**
+     * "Số dư & rút tiền" — ví điểm gian hàng, khoản XePrime phải trả (ADR 0033). Cả hai tuyến;
+     * KHÔNG gác bằng gói. Chứa luôn "Tài khoản nhận tiền" (07/10/2026 — `balancePayoutPath`): rút
+     * tiền và nơi tiền về là một việc, nên là một trang.
+     */
     BALANCE: partner('/balance'),
     RECEIPTS: partner('/receipts'),
     DEBTS: partner('/debts'),
@@ -190,8 +194,9 @@ export const ROUTES = {
      *
      *  - tuyến gói / thành viên: "Tài khoản & bảo mật" — tên, ảnh, đăng nhập, mật khẩu, xoá tài khoản;
      *    hồ sơ GIAN HÀNG sống riêng ở `SHOP`.
-     *  - CHỦ xe tuyến hoa hồng: "Hồ sơ chủ xe" — cùng bốn phần trên CỘNG trang chủ xe công khai và
-     *    địa chỉ nhận xe (06/10/2026). Với họ người và "gian hàng" là một, nên là một trang.
+     *  - CHỦ xe tuyến hoa hồng: "Hồ sơ chủ xe" — cùng bốn phần trên CỘNG trang chủ xe công khai,
+     *    địa chỉ nhận xe (06/10/2026), thông tin khai thuế và gói dịch vụ (07/10/2026). Với họ người
+     *    và "gian hàng" là một, nên là một trang — cùng vai với trang Cửa hàng của tuyến gói.
      *
      * Section chọn bằng `?section=` (xem `ACCOUNT_SECTION`).
      */
@@ -206,12 +211,13 @@ export const ROUTES = {
     SHOP_POLICIES: partner('/shop/policies'),
     /** ALIAS CHUYỂN TIẾP (16/09/2026) — đích thật: `SHOP_POLICIES#deposit-collection`. */
     SHOP_PAYMENT_SETTINGS: partner('/shop/payment-settings'),
-    /** ALIAS CHUYỂN TIẾP (16/09/2026) — đích thật: `SHOP?section=legal`. */
+    /** ALIAS CHUYỂN TIẾP (16/09/2026) — đích thật: `SHOP?section=tax` (07/10/2026). */
     SELLER_PROFILE: partner('/shop/seller-profile'),
     MEMBERS: partner('/members'),
     /**
-     * GÓI DỊCH VỤ — MỘT URL, nội dung theo tuyến: tuyến gói chuyển tới `SHOP?section=plan`; tuyến hoa
-     * hồng là phễu nâng cấp (ADR 0028 điều 1).
+     * ALIAS CHUYỂN TIẾP — gói dịch vụ là một SECTION ở cả hai tuyến: tuyến gói ở `SHOP?section=plan`
+     * (16/09/2026), tuyến hoa hồng ở `ACCOUNT?section=plan` của "Hồ sơ chủ xe" (07/10/2026, phễu nâng
+     * cấp — ADR 0028 điều 1). Không mục menu nào còn trỏ tới đây.
      */
     SUBSCRIPTION: partner('/subscription'),
     DRIVERS: partner('/drivers'),
@@ -229,9 +235,16 @@ export const ROUTES = {
      * tới đây; route giữ cho bookmark, thông báo cũ và app native.
      */
     REGISTRATION: partner('/registration'),
-    /** Thông tin khai thuế — bản compact của hồ sơ người bán. */
+    /**
+     * ALIAS CHUYỂN TIẾP (07/10/2026) — "Thông tin khai thuế" là section `?section=tax` của trang
+     * hồ sơ ở cả hai tuyến: "Hồ sơ chủ xe" (`ACCOUNT`) và Cửa hàng (`SHOP`). Không mục menu nào
+     * còn trỏ tới đây.
+     */
     TAX: partner('/tax'),
-    /** Tài khoản ngân hàng nhận tiền của gian hàng (sổ tenant). */
+    /**
+     * ALIAS CHUYỂN TIẾP (07/10/2026) — "Tài khoản nhận tiền" là section của "Số dư & rút tiền" ở CẢ
+     * hai tuyến (`balancePayoutPath`). Không mục menu nào còn trỏ tới đây.
+     */
     BANK_ACCOUNTS: partner('/bank-accounts'),
     /** Cẩm nang cho thuê xe — tài liệu PDF ở `public/owner-resources/`. */
     HOST_GUIDE: partner('/host-guide'),
@@ -502,7 +515,8 @@ export type Workspace = (typeof WORKSPACE)[keyof typeof WORKSPACE];
  *    Chủ xe tới `TRIPS` qua `partnerPageRedirect`.
  *  - `branches` không có bản `/account`: chủ xe tuyến hoa hồng chỉ có chi nhánh mặc định, và địa
  *    chỉ của nó sửa ngay trong hồ sơ chủ xe. Chi nhánh là tính năng của gói (ADR 0027 điều 1).
- *  - `sellerProfile` về `/account/tax` — bản compact của cùng hồ sơ người bán.
+ *  - `sellerProfile` và `subscription` của Owner Lite là hai SECTION của "Hồ sơ chủ xe" (07/10/2026)
+ *    — cùng vị trí mà tuyến gói đặt chúng trong trang Cửa hàng.
  */
 export function workspacePaths(workspace: Workspace): {
   home: string;
@@ -533,7 +547,7 @@ export function workspacePaths(workspace: Workspace): {
       // của trang Cửa hàng. Trỏ vào hằng số route cũ vẫn tới nơi, nhưng qua một lần chuyển
       // hướng thừa, và mỗi lần chuyển hướng là một lần mất tham số mà người gọi vừa gắn vào.
       subscription: shopSectionPath(SHOP_SECTION.PLAN),
-      sellerProfile: shopSectionPath(SHOP_SECTION.LEGAL),
+      sellerProfile: shopSectionPath(SHOP_SECTION.TAX),
       support: ROUTES.MANAGE.SUPPORT,
     };
   }
@@ -554,8 +568,8 @@ export function workspacePaths(workspace: Workspace): {
     // và địa chỉ của nó sửa ở section "Địa chỉ nhận xe" của chính trang đó.
     ownerProfile: accountSectionPath(ACCOUNT_SECTION.PROFILE),
     branches: accountSectionPath(ACCOUNT_SECTION.ADDRESS),
-    subscription: ROUTES.MANAGE.SUBSCRIPTION,
-    sellerProfile: ROUTES.MANAGE.TAX,
+    subscription: accountSectionPath(ACCOUNT_SECTION.PLAN),
+    sellerProfile: accountSectionPath(ACCOUNT_SECTION.TAX),
     support: ROUTES.MANAGE.SUPPORT_CASES,
   };
 }
@@ -683,6 +697,44 @@ export const adminPartnerPath = {
   resolveTenant: (tenantId: string): string =>
     `${ROUTES.ADMIN.TENANTS}?${new URLSearchParams({ [ADMIN_PARTNER_TENANT_PARAM]: tenantId })}`,
 };
+
+/** Tham số URL mở sẵn chi tiết MỘT xe trên màn "Xe toàn hệ thống" (ADR 0004 — sống qua F5, gửi link được). */
+export const ADMIN_VEHICLE_OPEN_PARAM = 'open';
+
+/** Tham số URL mở sẵn một PHIẾU trên màn "Duyệt xe" (trang gốc của site quản trị). */
+export const ADMIN_APPROVAL_TASK_PARAM = 'task';
+
+/**
+ * Màn "Xe toàn hệ thống" của Platform Admin — MỘT chỗ ghép URL cho các màn khác trỏ tới:
+ * mở sẵn một xe (từ đơn thuê, phiếu duyệt, nhật ký) hay xem cả đội xe của một gian hàng.
+ */
+export const adminVehiclePath = {
+  open: (vehicleId: string): string =>
+    `${ROUTES.ADMIN.VEHICLES}?${new URLSearchParams({ [ADMIN_VEHICLE_OPEN_PARAM]: vehicleId })}`,
+  forTenant: (tenantId: string): string =>
+    `${ROUTES.ADMIN.VEHICLES}?${new URLSearchParams({ tenantId })}`,
+};
+
+/** Màn "Duyệt xe" — mở sẵn một phiếu. */
+export const adminApprovalPath = {
+  task: (taskId: string): string =>
+    `${ROUTES.ADMIN.ROOT}?${new URLSearchParams({ [ADMIN_APPROVAL_TASK_PARAM]: taskId })}`,
+};
+
+/** Màn "Đơn thuê toàn hệ thống" — lọc sẵn theo xe (tham số `vehicleId` của `useAdminBookingFilters`). */
+export const adminBookingPath = {
+  forVehicle: (vehicleId: string): string =>
+    `${ROUTES.ADMIN.BOOKINGS}?${new URLSearchParams({ vehicleId })}`,
+};
+
+/**
+ * Link từ site partner/quản trị sang một trang CÔNG KHAI của site khách (trang xe, trang gian
+ * hàng): tương đối ở chế độ `path`, tuyệt đối ở chế độ `host` — một `<a href="/listings/…">` trần
+ * trên `admin.xeprime.vn` sẽ rơi vào khu quản trị và 404 (ADR 0051).
+ */
+export function marketSiteHref(path: string): string {
+  return siteHref(ZONE.MARKET, path);
+}
 
 export function tenantSupportContextIdFromPath(pathname: string): string | null {
   const prefix = `${ROUTES.ADMIN.TENANT_SUPPORT}/`;
@@ -856,6 +908,12 @@ export const shopPath = {
 };
 
 /**
+ * Tên tham số URL chọn section của MỌI trang nhiều section ở site partner — Cửa hàng, Tài khoản /
+ * Hồ sơ chủ xe, Số dư & rút tiền. Một hằng, để bộ dựng đường dẫn và nơi đọc không lệch nhau.
+ */
+export const SECTION_PARAM = 'section';
+
+/**
  * Năm section của trang Cửa hàng — GIÁ TRỊ đi trong `?section=`, không phải nhãn.
  *
  * Ở URL chứ không ở state React vì ba lý do, và cả ba đều là hành vi người dùng trông đợi ở một
@@ -868,13 +926,24 @@ export const SHOP_SECTION = {
   PROFILE: 'profile',
   /** Tài khoản chủ sở hữu (`tenants.owner_user_id`) — chỉ đọc với mọi vai khác chủ. */
   OWNER: 'owner',
-  /** Địa chỉ chi nhánh mặc định + mã số thuế/giấy phép (tuỳ chọn). */
+  /** Địa chỉ chi nhánh mặc định + số giấy phép kinh doanh (tuỳ chọn). */
   LEGAL: 'legal',
-  /** Sổ `bank_accounts` phạm vi gian hàng. */
-  PAYOUT: 'payout',
+  /**
+   * Thông tin khai thuế — hồ sơ NGƯỜI BÁN (`seller_profiles`): loại chủ thể, tên pháp lý, MST
+   * (07/10/2026). CÙNG section, cùng component với "Hồ sơ chủ xe" của tuyến hoa hồng — nguồn duy
+   * nhất của MST mà hợp đồng và báo cáo thuế đọc.
+   */
+  TAX: 'tax',
   /** Gói hiện hành, hạn mức chỗ, và hoá đơn thanh toán. */
   PLAN: 'plan',
 } as const;
+
+/**
+ * `?section=payout` CŨ của trang Cửa hàng (16/09 → 07/10/2026). "Tài khoản nhận tiền" đã về trang
+ * "Số dư & rút tiền" ở cả hai tuyến; trang Cửa hàng đưa giá trị này sang `balancePayoutPath()` để
+ * link trong thông báo và bookmark cũ vẫn tới đúng chỗ. KHÔNG còn là một `ShopSection`.
+ */
+export const SHOP_LEGACY_PAYOUT_SECTION = 'payout';
 
 export type ShopSection = (typeof SHOP_SECTION)[keyof typeof SHOP_SECTION];
 export const SHOP_SECTION_VALUES = Object.values(SHOP_SECTION) as ShopSection[];
@@ -894,7 +963,7 @@ export function shopSectionOf(value: string | null | undefined): ShopSection {
 
 /** Đường dẫn tới một section — dùng cho link, redirect và nút điều hướng trong trang. */
 export function shopSectionPath(section: ShopSection): string {
-  return `${ROUTES.MANAGE.SHOP}?section=${section}`;
+  return `${ROUTES.MANAGE.SHOP}?${SECTION_PARAM}=${section}`;
 }
 
 /** Id của phần tử section trong DOM — dùng chung cho `aria-controls`, anchor và scroll. */
@@ -912,15 +981,35 @@ export function shopSectionDomId(section: ShopSection): string {
 export const SHOP_LOGO_TRIGGER_ID = 'shop-logo-upload';
 
 /**
+ * ── SỐ DƯ & RÚT TIỀN (07/10/2026) ───────────────────────────────────────────────────────────
+ *
+ * "Tài khoản nhận tiền" là một khối của trang số dư ở CẢ hai tuyến — không còn là trang riêng
+ * (`/bank-accounts`, Owner Lite) hay section của trang Cửa hàng (tuyến gói). Rút tiền và nơi tiền
+ * về là một việc: người bấm "Rút" mà chưa có tài khoản phải thấy chỗ khai ngay trên cùng trang.
+ *
+ * `?section=payout` chỉ để CUỘN tới khối đó — đích của hai đường cũ và của link chia sẻ.
+ */
+export const BALANCE_PAYOUT_SECTION = 'payout';
+
+/** Id DOM của khối "Tài khoản nhận tiền" trên trang số dư — đích cuộn của `?section=payout`. */
+export const BALANCE_PAYOUT_DOM_ID = 'balance-payout';
+
+/** Đường dẫn tới khối "Tài khoản nhận tiền" của trang số dư. */
+export function balancePayoutPath(): string {
+  return `${ROUTES.MANAGE.BALANCE}?${SECTION_PARAM}=${BALANCE_PAYOUT_SECTION}`;
+}
+
+/**
  * ── TÀI KHOẢN (site partner, 05/10/2026) ─────────────────────────────────────────────────────
  *
  * MỘT trang cho mọi thứ của CON NGƯỜI đang đăng nhập — gộp "Hồ sơ cá nhân" và "Bảo mật tài
  * khoản" vốn là hai trang lặp nhau (cả hai đều hiện email/SĐT). Cùng khuôn với trang Cửa hàng:
  * section xếp dọc, mục lục dính, `?section=` ở URL để link/F5/Quay lại đúng chỗ.
  *
- * `ADDRESS` CHỈ có ở bản "Hồ sơ chủ xe" (chủ xe tuyến hoa hồng). Ở tuyến gói, hồ sơ gian hàng sống
- * ở `SHOP` — trang của họ bỏ qua giá trị này (`PERSONAL_ACCOUNT_SECTIONS`). Bookmark cũ
- * `?section=storefront` (trước 07/10/2026) rơi về `PROFILE` — nơi lời giới thiệu đã chuyển tới.
+ * `ADDRESS`, `TAX`, `PLAN` CHỈ có ở bản "Hồ sơ chủ xe" (chủ xe tuyến hoa hồng). Ở tuyến gói, ba thứ
+ * đó là section của `SHOP` (địa chỉ & pháp lý, gói & hạn mức) — trang của họ bỏ qua các giá trị
+ * này (`PERSONAL_ACCOUNT_SECTIONS`). Bookmark cũ `?section=storefront` (trước 07/10/2026) rơi về
+ * `PROFILE` — nơi lời giới thiệu đã chuyển tới.
  */
 export const ACCOUNT_SECTION = {
   /**
@@ -930,6 +1019,14 @@ export const ACCOUNT_SECTION = {
   PROFILE: 'profile',
   /** Địa chỉ nhận xe (chi nhánh mặc định) + MST/giấy phép tuỳ chọn (chỉ chủ xe hoa hồng). */
   ADDRESS: 'address',
+  /**
+   * Thông tin khai thuế — loại chủ thể, tên pháp lý, CCCD/MST của hồ sơ người bán (chỉ chủ xe hoa
+   * hồng; trước 07/10/2026 là trang riêng `/tax`). Thuế ĐÃ khấu trừ là chuyện tiền, nên nó ở trang
+   * "Số dư & rút tiền", không ở đây.
+   */
+  TAX: 'tax',
+  /** Gói dịch vụ + phễu nâng cấp lên gian hàng (chỉ chủ xe hoa hồng; trước là trang `/subscription`). */
+  PLAN: 'plan',
   /** Email và SĐT đăng nhập — đổi qua OTP. */
   LOGIN: 'login',
   /** Đổi (hoặc đặt lần đầu) mật khẩu. */
@@ -958,12 +1055,33 @@ export function accountSectionOf(value: string | null | undefined): AccountSecti
 
 /** Đường dẫn tới một section của trang tài khoản partner. */
 export function accountSectionPath(section: AccountSection): string {
-  return `${ROUTES.MANAGE.ACCOUNT}?section=${section}`;
+  return `${ROUTES.MANAGE.ACCOUNT}?${SECTION_PARAM}=${section}`;
 }
 
 /** Id của phần tử section trong DOM — đích của anchor và của cuộn. */
 export function accountSectionDomId(section: AccountSection): string {
   return `account-section-${section}`;
+}
+
+/**
+ * Section của "Hồ sơ chủ xe" → section CÙNG VAI ở trang Cửa hàng, cho người nay đã ở tuyến gói:
+ * chủ xe vừa thanh toán nâng cấp ngay trên section "Gói dịch vụ", hay một bookmark cũ của gian hàng
+ * hết gói rồi gia hạn. `null` = section của CON NGƯỜI (đăng nhập, mật khẩu…) — vẫn ở trang tài khoản.
+ *
+ * Nhận chuỗi thô của `?section=` (không qua `accountSectionOf`): giá trị vắng/lạ không phải là lời
+ * mời sang trang khác.
+ */
+export function shopSectionForAccountSection(value: string | null | undefined): ShopSection | null {
+  switch (value) {
+    case ACCOUNT_SECTION.PLAN:
+      return SHOP_SECTION.PLAN;
+    case ACCOUNT_SECTION.TAX:
+      return SHOP_SECTION.TAX;
+    case ACCOUNT_SECTION.ADDRESS:
+      return SHOP_SECTION.LEGAL;
+    default:
+      return null;
+  }
 }
 
 /**

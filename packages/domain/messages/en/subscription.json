@@ -3,11 +3,7 @@
     "title": "Plan & invoices",
     "loadError": "Couldn't load your plan",
     "accountSubtitle": "Upgrade to a shop to grow your fleet, manage it properly and earn more.",
-    "breadcrumb": "Plan & invoices",
-    "heroBadge": "Shop",
-    "heroBenefit1": "More reach",
-    "heroBenefit2": "More revenue",
-    "heroBenefit3": "A brand of your own"
+    "breadcrumb": "Plan & invoices"
   },
   "current": {
     "none": "No plan yet — this shop is on the per-trip commission track.",

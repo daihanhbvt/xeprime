@@ -636,13 +636,17 @@ export class CustomerTripsService {
     });
 
     /*
-     * Lưu lại cho lần sau — nhưng KHÔNG để nó làm hỏng việc chính. Trùng số tài khoản (khách
-     * khai lại đúng cái đã có) là chuyện thường và không phải lỗi của họ; khoản hoàn đã có đích
-     * rồi, đó mới là thứ phải thành công.
+     * Lưu lại cho lần sau — nhưng KHÔNG để nó làm hỏng việc chính: khoản hoàn đã có đích rồi, đó
+     * mới là thứ phải thành công. Mỗi chủ một tài khoản nhận tiền (07/10/2026), nên khai MỚI ở đây
+     * là ĐỔI tài khoản của họ; khai lại đúng cái đang có thì `create` không đẻ dòng nào.
      */
     if (!dto.bankAccountId) {
       try {
-        await this.bankAccounts.create(ownerRef, { bankCode, accountNumber, accountName });
+        await this.bankAccounts.create(
+          ownerRef,
+          { bankCode, accountNumber, accountName },
+          customerUserId,
+        );
       } catch (err) {
         this.logger.warn(
           `Không lưu được tài khoản nhận của khách ${customerUserId}: ${String(err)}`,

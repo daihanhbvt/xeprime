@@ -18,8 +18,8 @@ import type { PurchaseSubscriptionInput, TenantPlan } from './types';
  *
  * ## Vì sao tồn tại
  *
- * Từ ADR 0040 có HAI màn bán đúng một thứ: `PurchaseModal` (gia hạn/nâng bậc, mở từ trang Cửa
- * hàng và `/account/subscription`) và bước 2 của onboarding gian hàng trả phí. Hai bản của cùng
+ * Từ ADR 0040 có HAI màn bán đúng một thứ: `PurchaseModal` (gia hạn/nâng bậc, mở từ section gói
+ * của trang Cửa hàng / "Hồ sơ chủ xe") và bước 2 của onboarding gian hàng trả phí. Hai bản của cùng
  * bộ chọn nghĩa là hai bản của luật đọc bảng giá — kỳ hạn nào được bán, bậc nào tự mua được — và
  * hai bản là cách chắc chắn nhất để một màn hiện một con số mà server tính ra con số khác.
  *

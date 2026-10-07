@@ -4,7 +4,14 @@
     "tenant": "Balance & withdrawals"
   },
   "page": {
-    "subtitle": "What XePrime owes your shop after each trip, and your withdrawals to your bank account."
+    "subtitle": "What XePrime owes you after each trip, and your withdrawals to your bank account."
+  },
+  "payout": {
+    "hint": "Where XePrime sends your withdrawals. Your default account is preselected for each withdrawal."
+  },
+  "ownerOnly": {
+    "title": "Only the owner can see the balance",
+    "description": "The balance, withdrawals and payout accounts belong to the shop owner. Contact them if you need to reconcile."
   },
   "balance": {
     "available": "Available now",

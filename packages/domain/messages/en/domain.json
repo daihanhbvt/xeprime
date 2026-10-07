@@ -477,6 +477,13 @@
     "name": "Name A → Z",
     "vehicles": "Most vehicles"
   },
+  "platformVehicleSort": {
+    "newest": "Newest first",
+    "updated": "Recently updated",
+    "name": "Name A → Z",
+    "price_desc": "Price high → low",
+    "price_asc": "Price low → high"
+  },
   "tenantCustomerSort": {
     "last_rental": "Most recent rental",
     "rental_count": "Most rentals",

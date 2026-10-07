@@ -1,12 +1,12 @@
 'use client';
 
-import { Tabs } from 'antd';
 import { useTranslations } from 'next-intl';
-import { Suspense, useState } from 'react';
+import { Suspense } from 'react';
 import { STOREFRONT_KIND_VALUES, VEHICLE_TYPE_VALUES } from '@xeprime/types';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { FilterBar, type FilterField } from '@/components/filter/FilterBar';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
+import { CountTabs } from '@/components/navigation/CountTabs';
 import { ALL_FILTER } from '@/constants/filters';
 import {
   VEHICLE_APPROVALS_DEFAULT_LIMIT,
@@ -22,8 +22,8 @@ import {
   type VehicleApprovalUrlState,
 } from '@/features/approvals/hooks/use-vehicle-approval-filters';
 import { useVehicleApprovals } from '@/features/approvals/hooks/use-vehicle-approvals';
+import { useOpenRecordPager } from '@/hooks/use-open-record-pager';
 import { useDomainLabel } from '@/i18n/use-domain-label';
-import styles from './admin-page.module.css';
 
 /** "Xoá bộ lọc" đưa về đúng hàng đợi mặc định: phiếu CHỜ, mọi loại xe, mọi nguồn. */
 const CLEARED: Partial<VehicleApprovalUrlState> = {
@@ -34,10 +34,6 @@ const CLEARED: Partial<VehicleApprovalUrlState> = {
   submittedFrom: undefined,
   submittedTo: undefined,
 };
-
-function sameOrder(a: readonly string[], b: readonly string[]): boolean {
-  return a.length === b.length && a.every((id, index) => id === b[index]);
-}
 
 function PageFallback() {
   const t = useTranslations('Approvals.page');
@@ -128,55 +124,30 @@ function VehicleApprovalsView() {
     filters.submittedTo,
   );
 
-  /*
-   * Trước/sau theo thứ tự người duyệt đang nhìn thấy trên bảng.
-   *
-   * Duyệt xong một xe ở hàng đợi CHỜ ⇒ danh sách nạp lại và xe đó rời trang — nếu chỉ đọc trang
-   * hiện tại thì "Xe sau" tắt ngay đúng lúc người duyệt cần nó nhất. Nên thứ tự lần cuối thấy
-   * phiếu đang mở trên trang được giữ lại, và chỉ dùng thay khi phiếu đó KHÔNG còn trên trang.
-   *
-   * Ghi nhớ ngay trong lúc render (mẫu "chỉnh state theo props" của React), không chỉ lúc bấm
-   * "Xem chi tiết": vào thẳng bằng link hay F5 với `?task=` cũng phải có thứ tự để giữ.
-   */
-  const [openedOrder, setOpenedOrder] = useState<readonly string[]>([]);
-  const liveOrder = items.map((row) => row.approvalTaskId);
-  if (filters.task && liveOrder.includes(filters.task) && !sameOrder(openedOrder, liveOrder)) {
-    setOpenedOrder(liveOrder);
-  }
-  const order =
-    filters.task && !liveOrder.includes(filters.task) && openedOrder.includes(filters.task)
-      ? openedOrder
-      : liveOrder;
-  const openIndex = filters.task ? order.indexOf(filters.task) : -1;
-  const previousId = openIndex > 0 ? order[openIndex - 1]! : null;
-  const nextId = openIndex >= 0 && openIndex < order.length - 1 ? order[openIndex + 1]! : null;
-
+  // Trước/sau theo thứ tự người duyệt đang nhìn thấy — và vẫn còn khi phiếu vừa duyệt rời trang.
+  const pager = useOpenRecordPager(
+    items.map((row) => row.approvalTaskId),
+    filters.task,
+  );
   const openTask = (task: string | undefined) => {
-    if (task) setOpenedOrder(order);
+    if (task) pager.remember();
     setFilters({ task }, { resetPage: false });
   };
-
-  const tabLabel = (text: string, count: number | undefined) => (
-    <span className={styles.tabLabel}>
-      {text}
-      {count === undefined ? null : <span className={styles.tabCount}>{count}</span>}
-    </span>
-  );
 
   return (
     <div>
       <ManagePageHeader title={t('page.title')} subtitle={t('page.subtitle')} />
 
-      <Tabs
-        className={styles.tabs}
-        aria-label={t('tabs.ariaLabel')}
-        activeKey={filters.vehicleType}
+      <CountTabs
+        label={t('tabs.ariaLabel')}
+        value={filters.vehicleType ?? ALL_FILTER}
         onChange={(key) => setFilters({ vehicleType: key })}
         items={[
-          { key: ALL_FILTER, label: tabLabel(t('tabs.all'), counts?.all) },
+          { value: ALL_FILTER, label: t('tabs.all'), count: counts?.all },
           ...VEHICLE_TYPE_VALUES.map((type) => ({
-            key: type,
-            label: tabLabel(domainLabel('vehicleType', type), counts?.[type]),
+            value: type,
+            label: domainLabel('vehicleType', type),
+            count: counts?.[type],
           })),
         ]}
       />
@@ -202,8 +173,8 @@ function VehicleApprovalsView() {
 
       <VehicleApprovalDrawer
         taskId={filters.task ?? null}
-        previousId={previousId}
-        nextId={nextId}
+        previousId={pager.previousId}
+        nextId={pager.nextId}
         onNavigate={(id) => openTask(id)}
         onClose={() => openTask(undefined)}
       />

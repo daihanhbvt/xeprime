@@ -274,7 +274,6 @@ export class PlatformPartnerDetailService {
               coverUrl: true,
               address: true,
               provinceName: true,
-              taxCode: true,
               businessLicenseNo: true,
             },
           },
@@ -334,7 +333,8 @@ export class PlatformPartnerDetailService {
         ? {
             entityType: seller?.entityType ?? null,
             legalName: seller?.legalName ?? null,
-            taxIdMasked: maskOrNull(seller?.taxId ?? tenant.profile?.taxCode ?? null),
+            // Một nguồn (07/10/2026): bản sao trên hồ sơ gian hàng đã gỡ, không còn gì để dự phòng.
+            taxIdMasked: maskOrNull(seller?.taxId ?? null),
             businessLicenseNoMasked: maskOrNull(tenant.profile?.businessLicenseNo ?? null),
             sellerStatus: seller?.status ?? null,
             verifiedAt: seller?.verifiedAt?.toISOString() ?? null,

@@ -1,0 +1,35 @@
+/**
+ * Section "Thông tin khai thuế" — trang Cửa hàng và "Hồ sơ chủ xe". Khung thẻ, tiêu đề và gợi ý do
+ * `SectionCard` vẽ — ở đây chỉ còn nội dung bên trong.
+ */
+
+.alert {
+  margin-bottom: var(--xp-space-md);
+}
+
+.fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--xp-space-sm);
+  margin-top: var(--xp-space-md);
+}
+
+@media (max-width: 640px) {
+  .actions {
+    flex-direction: column-reverse;
+  }
+
+  .actions > :global(.ant-btn) {
+    width: 100%;
+  }
+}

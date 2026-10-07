@@ -5,6 +5,9 @@ import {
   ACCOUNT_REALM,
   API_ERROR_CODE,
   MEMBERSHIP_STATUS,
+  PERMISSION,
+  SELLER_ENTITY_TYPE,
+  SELLER_PROFILE_STATUS,
   SHOP_PROFILE_REQUIREMENT,
   SHOP_VERIFICATION,
   TENANT_ROLE,
@@ -32,6 +35,8 @@ const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 const branches = makeBranchesService(asService);
 const tenants = makeTenantsService(asService);
+/** Quyền của CHỦ gian hàng (có `seller_profile.manage`) — controller đọc nó từ membership. */
+const OWNER_ACCESS = { canManageSellerProfile: true };
 
 const HCM = '79';
 const DANANG = '48';
@@ -98,6 +103,7 @@ afterAll(async () => {
     await prisma.auditLog.deleteMany({ where: { tenantId } });
     await prisma.approvalLog.deleteMany({ where: { task: { tenantId } } });
     await prisma.approvalTask.deleteMany({ where: { tenantId } });
+    await prisma.sellerProfile.deleteMany({ where: { tenantId } });
     await prisma.tenantProfile.deleteMany({ where: { tenantId } });
     await prisma.tenantMembership.deleteMany({ where: { tenantId } });
     await prisma.tenantBranch.deleteMany({ where: { tenantId } });
@@ -146,7 +152,12 @@ describe('Thông tin chủ gian hàng', () => {
    * endpoint này: DTO không khai chúng, nên `forbidNonWhitelisted` trả 400 ngay ở biên.
    */
   maybe('lưu hồ sơ KHÔNG đụng tới danh tính chủ — nó đọc từ users', async () => {
-    const before = await tenants.updateProfile(tenantId, ownerId, { displayName: 'Shop hồ sơ' });
+    const before = await tenants.updateProfile(
+      tenantId,
+      ownerId,
+      { displayName: 'Shop hồ sơ' },
+      OWNER_ACCESS,
+    );
     expect(before.ownerAccount.displayName).toBe('Chủ shop');
 
     await prisma.user.update({ where: { id: ownerId }, data: { displayName: 'Chủ shop đổi tên' } });
@@ -166,13 +177,13 @@ describe('Thông tin chủ gian hàng', () => {
   });
 
   maybe('ô để trống lưu thành NULL, không phải chuỗi rỗng', async () => {
-    await tenants.updateProfile(tenantId, ownerId, { taxCode: '' });
+    await tenants.updateProfile(tenantId, ownerId, { businessLicenseNo: '' }, OWNER_ACCESS);
 
     const row = await prisma.tenantProfile.findUniqueOrThrow({
       where: { tenantId },
-      select: { taxCode: true },
+      select: { businessLicenseNo: true },
     });
-    expect(row.taxCode).toBeNull();
+    expect(row.businessLicenseNo).toBeNull();
   });
 
   maybe('hồ sơ gửi xác minh CHỤP danh tính chủ cho người duyệt', async () => {
@@ -239,14 +250,24 @@ describe('Thông tin chủ gian hàng', () => {
       select: { name: true },
     });
 
-    const shop = await tenants.updateProfile(tenantId, ownerId, {
-      displayName: 'Sửa khi đang chờ',
-    });
+    const shop = await tenants.updateProfile(
+      tenantId,
+      ownerId,
+      {
+        displayName: 'Sửa khi đang chờ',
+      },
+      OWNER_ACCESS,
+    );
     expect(shop.profile.displayName).toBe('Sửa khi đang chờ');
 
-    await tenants.updateProfile(tenantId, ownerId, {
-      displayName: before.name,
-    });
+    await tenants.updateProfile(
+      tenantId,
+      ownerId,
+      {
+        displayName: before.name,
+      },
+      OWNER_ACCESS,
+    );
   });
 
   maybe('gửi phiếu xác minh thứ hai khi phiếu cũ còn chờ bị chặn', async () => {
@@ -277,36 +298,56 @@ describe('Mặt tiền gian hàng độc lập với tài khoản chủ', () => 
       select: { name: true, slug: true },
     });
 
-    const shop = await tenants.updateProfile(tenantId, ownerId, { displayName: 'Tên mới của shop' });
+    const shop = await tenants.updateProfile(
+      tenantId,
+      ownerId,
+      { displayName: 'Tên mới của shop' },
+      OWNER_ACCESS,
+    );
     expect(shop.name).toBe('Tên mới của shop');
     expect(shop.profile.displayName).toBe('Tên mới của shop');
     expect(shop.slug).toBe(before.slug);
     expect(shop.ownerAccount.displayName).toBe('Chủ shop');
 
-    await tenants.updateProfile(tenantId, ownerId, { displayName: before.name });
+    await tenants.updateProfile(tenantId, ownerId, { displayName: before.name }, OWNER_ACCESS);
   });
 
   maybe('SĐT/email liên hệ ghi vào tenants, không chạm SĐT/email đăng nhập', async () => {
-    const shop = await tenants.updateProfile(tenantId, ownerId, {
-      phone: '0912345678',
-      email: 'lienhe@shop.test',
-    });
+    const shop = await tenants.updateProfile(
+      tenantId,
+      ownerId,
+      {
+        phone: '0912345678',
+        email: 'lienhe@shop.test',
+      },
+      OWNER_ACCESS,
+    );
     expect(shop.phone).toBe('0912345678');
     expect(shop.email).toBe('lienhe@shop.test');
     expect(shop.ownerAccount.phone).toBe(OWNER_PHONE);
     expect(shop.ownerAccount.email).toBe(`own-${ownerId}@xeprime.test`);
 
     // Ô trống = gỡ liên hệ của gian hàng.
-    const cleared = await tenants.updateProfile(tenantId, ownerId, { phone: '', email: '' });
+    const cleared = await tenants.updateProfile(
+      tenantId,
+      ownerId,
+      { phone: '', email: '' },
+      OWNER_ACCESS,
+    );
     expect(cleared.phone).toBeNull();
     expect(cleared.email).toBeNull();
   });
 
   maybe('đổi SĐT/email của tài khoản chủ không làm đổi liên hệ của gian hàng', async () => {
-    await tenants.updateProfile(tenantId, ownerId, {
-      phone: '0912345678',
-      email: 'lienhe@shop.test',
-    });
+    await tenants.updateProfile(
+      tenantId,
+      ownerId,
+      {
+        phone: '0912345678',
+        email: 'lienhe@shop.test',
+      },
+      OWNER_ACCESS,
+    );
     const newOwnerPhone = `848${String(Date.now()).slice(-8)}`;
     await prisma.user.update({
       where: { id: ownerId },
@@ -322,7 +363,7 @@ describe('Mặt tiền gian hàng độc lập với tài khoản chủ', () => 
       where: { id: ownerId },
       data: { phone: OWNER_PHONE, email: `own-${ownerId}@xeprime.test` },
     });
-    await tenants.updateProfile(tenantId, ownerId, { phone: '', email: '' });
+    await tenants.updateProfile(tenantId, ownerId, { phone: '', email: '' }, OWNER_ACCESS);
   });
 
   maybe('DTO: tên không gỡ được; SĐT/email trống hợp lệ, sai định dạng bị chặn', async () => {
@@ -337,9 +378,134 @@ describe('Mặt tiền gian hàng độc lập với tài khoản chủ', () => 
   });
 });
 
+/**
+ * MÃ SỐ THUẾ: MỘT NGUỒN LÀ `seller_profiles.tax_id` (07/10/2026).
+ *
+ * Cột `tenant_profiles.tax_code` đã gỡ; `taxCode` còn trên DTO cho client cũ (app native). Bộ này
+ * khoá bốn điều mà một lần "đơn giản hoá" sẽ phá trong im lặng:
+ *  1. ghi `taxCode` là ghi HỒ SƠ NGƯỜI BÁN (tạo nháp nếu chưa có) và đọc lại đúng từ đó;
+ *  2. ĐỔI nó cần `seller_profile.manage` — `tenant.update` không mở bản khai thuế; gửi lại nguyên
+ *     giá trị cũ thì không cần (client cũ làm vậy mỗi lần lưu);
+ *  3. hồ sơ người bán đang chờ/đã xác minh thì từ chối, và CẢ lần lưu lùi lại (một transaction);
+ *  4. DTO cùng luật định dạng với `SaveSellerProfileDto.taxId`.
+ */
+describe('Mã số thuế — một nguồn là hồ sơ người bán', () => {
+  const sellerOf = () =>
+    prisma.sellerProfile.findUnique({
+      where: { tenantId },
+      select: { taxId: true, entityType: true, status: true },
+    });
+
+  maybe(
+    'taxCode ghi vào hồ sơ người bán (tạo nháp nếu chưa có), đọc lại qua profile.taxCode',
+    async () => {
+      await prisma.sellerProfile.deleteMany({ where: { tenantId } });
+
+      const shop = await tenants.updateProfile(
+        tenantId,
+        ownerId,
+        { taxCode: '0316123456' },
+        OWNER_ACCESS,
+      );
+
+      expect(shop.profile.taxCode).toBe('0316123456');
+      const seller = await sellerOf();
+      expect(seller?.taxId).toBe('0316123456');
+      // Gian hàng của spec này mở ở tuyến hoa hồng (mặc định) ⇒ bản nháp là cá nhân.
+      expect(seller?.entityType).toBe(SELLER_ENTITY_TYPE.INDIVIDUAL);
+      expect(seller?.status).toBe(SELLER_PROFILE_STATUS.DRAFT);
+    },
+  );
+
+  maybe(
+    'không có seller_profile.manage: gửi lại nguyên MST thì qua, ĐỔI thì 403 và không ghi gì',
+    async () => {
+      const noSellerAccess = { canManageSellerProfile: false };
+
+      const same = await tenants.updateProfile(
+        tenantId,
+        ownerId,
+        { displayName: 'Shop hồ sơ', taxCode: '0316123456' },
+        noSellerAccess,
+      );
+      expect(same.profile.taxCode).toBe('0316123456');
+
+      await expect(
+        tenants.updateProfile(
+          tenantId,
+          ownerId,
+          { displayName: 'Không được lưu', taxCode: '0109999999' },
+          noSellerAccess,
+        ),
+      ).rejects.toMatchObject({
+        response: {
+          code: API_ERROR_CODE.MISSING_PERMISSION,
+          details: { missing: [PERMISSION.SELLER_PROFILE_MANAGE] },
+        },
+      });
+      expect((await sellerOf())?.taxId).toBe('0316123456');
+      expect((await prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } })).name).toBe(
+        'Shop hồ sơ',
+      );
+    },
+  );
+
+  maybe('hồ sơ người bán đang chờ xác minh: đổi MST bị từ chối và CẢ lần lưu lùi lại', async () => {
+    await prisma.sellerProfile.update({
+      where: { tenantId },
+      data: { status: SELLER_PROFILE_STATUS.SUBMITTED },
+    });
+    try {
+      await expect(
+        tenants.updateProfile(
+          tenantId,
+          ownerId,
+          { displayName: 'Không được lưu', taxCode: '0109999999' },
+          OWNER_ACCESS,
+        ),
+      ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.SELLER_PROFILE_NOT_EDITABLE } });
+      expect((await sellerOf())?.taxId).toBe('0316123456');
+      expect((await prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } })).name).toBe(
+        'Shop hồ sơ',
+      );
+
+      // Nguyên giá trị cũ thì không đụng hồ sơ đang khoá — lần lưu hồ sơ gian hàng đi tiếp.
+      const shop = await tenants.updateProfile(
+        tenantId,
+        ownerId,
+        { taxCode: '0316123456', bio: 'Vẫn lưu được' },
+        OWNER_ACCESS,
+      );
+      expect(shop.profile.bio).toBe('Vẫn lưu được');
+    } finally {
+      await prisma.sellerProfile.update({
+        where: { tenantId },
+        data: { status: SELLER_PROFILE_STATUS.DRAFT },
+      });
+    }
+  });
+
+  maybe('taxCode rỗng gỡ MST (NULL), khoảng trắng bị bỏ khi chuẩn hoá', async () => {
+    await tenants.updateProfile(tenantId, ownerId, { taxCode: '' }, OWNER_ACCESS);
+    expect((await sellerOf())?.taxId).toBeNull();
+
+    const errorsOf = async (body: Record<string, unknown>) =>
+      (await validate(plainToInstance(UpdateTenantProfileDto, body))).map((e) => e.property);
+    expect(await errorsOf({ taxCode: '' })).toEqual([]);
+    expect(await errorsOf({ taxCode: '0316 123 456' })).toEqual([]);
+    expect(await errorsOf({ taxCode: 'MST-abc' })).toContain('taxCode');
+    expect(await errorsOf({ taxCode: '123' })).toContain('taxCode');
+  });
+});
+
 describe('Tỉnh/thành đi qua chi nhánh mặc định', () => {
   maybe('đổi tỉnh ở hồ sơ = dời chi nhánh mặc định, hai cột sao chép theo sau', async () => {
-    const shop = await tenants.updateProfile(tenantId, ownerId, { provinceCode: DANANG });
+    const shop = await tenants.updateProfile(
+      tenantId,
+      ownerId,
+      { provinceCode: DANANG },
+      OWNER_ACCESS,
+    );
 
     expect(shop.defaultBranch?.provinceCode).toBe(DANANG);
     expect(shop.profile.provinceCode).toBe(DANANG);
@@ -354,10 +520,15 @@ describe('Tỉnh/thành đi qua chi nhánh mặc định', () => {
 
   maybe('mã tỉnh không hợp lệ bị từ chối, hồ sơ không đổi gì', async () => {
     await expect(
-      tenants.updateProfile(tenantId, ownerId, {
-        provinceCode: 'ZZ',
-        displayName: 'Không được lưu',
-      }),
+      tenants.updateProfile(
+        tenantId,
+        ownerId,
+        {
+          provinceCode: 'ZZ',
+          displayName: 'Không được lưu',
+        },
+        OWNER_ACCESS,
+      ),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
 
     const [tenant, row] = await Promise.all([

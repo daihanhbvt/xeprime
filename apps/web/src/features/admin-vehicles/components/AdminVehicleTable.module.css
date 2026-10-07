@@ -1,15 +1,82 @@
-.name {
-  font-weight: 600;
-  color: var(--xp-color-text);
-}
+/* Bảng "Xe toàn hệ thống" — dòng gọn để quét: tên 14px đậm, dòng phụ 12px, tiền tabular. */
 
-.meta {
-  font-size: 12.5px;
-  color: var(--xp-color-text-tertiary);
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .tenantName {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+  color: var(--xp-color-text);
+}
+
+.tenantName :global(.ant-tag) {
+  margin-inline-end: 0;
+}
+
+.meta {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+/* Tên gian hàng dài: tối đa hai dòng, không đẩy cột khác ra khỏi bảng. */
+.clamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.money {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ─── Thẻ mobile ─────────────────────────────────────────────────────────── */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.cardHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+.cardHead :global(.ant-tag) {
+  flex: none;
+  margin-inline-end: 0;
+}
+
+.cardLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  color: var(--xp-color-text);
+}
+
+.cardFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.cardFoot .money {
+  font-weight: var(--xp-font-weight-semibold);
 }

@@ -247,9 +247,8 @@ beforeAll(async () => {
   await tenant(ids.lite, ids.liteOwner, SHOP_ONBOARDING_STATE.COMMISSION, 'Xe Lẻ Test');
   await tenant(ids.other, ids.otherOwner, SHOP_ONBOARDING_STATE.COMMISSION, 'Tenant Khác');
 
-  await prisma.tenantProfile.create({
-    data: { tenantId: ids.shop, taxCode: RAW.taxId },
-  });
+  // MST chỉ còn ở hồ sơ người bán (07/10/2026) — hồ sơ gian hàng không mang nó nữa.
+  await prisma.tenantProfile.create({ data: { tenantId: ids.shop } });
   await prisma.sellerProfile.create({
     data: {
       id: newId(),

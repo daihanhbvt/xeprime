@@ -57,7 +57,6 @@ export function PlanSummaryPanel({
   data,
   canPurchase,
   upgrading,
-  framed = false,
   onPurchase,
 }: {
   data: MySubscription;
@@ -71,13 +70,6 @@ export function PlanSummaryPanel({
    * thoại (ADR 0040 điều 4). Hai câu hỏi khác nhau, và chỉ nơi gọi biết nó vừa dựng màn nào.
    */
   upgrading: boolean;
-  /**
-   * Tự vẽ thẻ trắng quanh khối.
-   *
-   * Trang `/account/subscription` dùng khối này như một thẻ độc lập; trang Cửa hàng nhúng nó vào
-   * trong `SectionCard` và khi đó khung thứ hai là hai lớp viền cho cùng một nội dung.
-   */
-  framed?: boolean;
   onPurchase: () => void;
 }) {
   const t = useTranslations('Subscription');
@@ -94,7 +86,7 @@ export function PlanSummaryPanel({
   const serviceFeePercent = tenant?.serviceFeePercent ?? null;
 
   return (
-    <section className={cx(styles.panel, framed && styles.framed)}>
+    <section className={styles.panel}>
       <header className={styles.head}>
         <span className={styles.planIcon} aria-hidden="true">
           <CrownFilled />

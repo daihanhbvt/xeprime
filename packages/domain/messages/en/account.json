@@ -213,7 +213,7 @@
     "idNumber": "National ID number",
     "idNumberHint": "ID number of the person the profile is registered to.",
     "taxId": "Tax code",
-    "save": "Save",
+    "save": "Save tax information",
     "saved": "Tax information saved.",
     "fullProfile": "Bank account and full identity documents are declared in the seller profile.",
     "openFullProfile": "Open seller profile",
@@ -397,7 +397,7 @@
   },
   "ownerHub": {
     "title": "Host profile",
-    "subtitle": "What renters see, and how you sign in.",
+    "subtitle": "What renters see, your tax details, your plan and how you sign in.",
     "navTitle": "On this page",
     "navLabel": "Host profile sections",
     "loadError": "Could not load your host profile",
@@ -406,7 +406,9 @@
       "profile": "About you",
       "profileHint": "Renters see this photo, name and introduction on your host page.",
       "address": "Pickup address",
-      "addressHint": "Where renters pick the car up."
+      "addressHint": "Where renters pick the car up.",
+      "plan": "Plan",
+      "planHint": "Your current plan and payment invoices. Move to a shop plan to manage a full fleet."
     },
     "form": {
       "saved": "Pickup address saved",

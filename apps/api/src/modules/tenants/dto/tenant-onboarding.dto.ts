@@ -160,7 +160,8 @@ export class RegisterShopDto {
 }
 
 /** Ô trống là "gỡ giá trị" — chỉ kiểm định dạng khi thật sự có chữ. */
-const hasText = (_: object, value: unknown) => value !== '' && value !== undefined && value !== null;
+const hasText = (_: object, value: unknown) =>
+  value !== '' && value !== undefined && value !== null;
 
 /** Cập nhật hồ sơ gian hàng — mọi trường tuỳ chọn, gửi cái nào cập nhật cái đó. */
 export class UpdateTenantProfileDto {
@@ -252,10 +253,24 @@ export class UpdateTenantProfileDto {
   @Length(5, 5)
   wardCode?: string;
 
-  @ApiPropertyOptional()
+  /**
+   * TƯƠNG THÍCH NGƯỢC (07/10/2026) — MST của gian hàng là `seller_profiles.tax_id`, khai ở hồ sơ
+   * người bán (`PUT /seller-profile`). Trường này còn để client cũ (app native) không vỡ: giá trị
+   * gửi lên ghi vào ĐÚNG hồ sơ đó (cùng luật khoá khi đang/đã xác minh), và ĐỔI nó cần thêm
+   * `seller_profile.manage`. Cùng luật định dạng với `SaveSellerProfileDto.taxId`; chuỗi rỗng = gỡ.
+   */
+  @ApiPropertyOptional({
+    deprecated: true,
+    description:
+      'Đã thay bằng `PUT /seller-profile` (`taxId`). Ghi vào hồ sơ người bán; đổi giá trị cần ' +
+      '`seller_profile.manage`. Chuỗi rỗng = gỡ.',
+  })
   @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.replace(/\s+/g, '') : value,
+  )
   @IsString()
-  @MaxLength(50)
+  @Matches(/^([0-9-]{10,20})?$/, { message: 'Mã số thuế không hợp lệ' })
   taxCode?: string;
 
   @ApiPropertyOptional()
@@ -298,7 +313,14 @@ export class TenantProfileDto {
   @ApiPropertyOptional({ type: String, nullable: true }) provinceName!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) wardCode!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) wardName!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true }) taxCode!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    deprecated: true,
+    description:
+      'Mã số thuế — chính là `seller_profiles.tax_id` (đọc ở `GET /seller-profile`), giữ cho tương thích',
+  })
+  taxCode!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) businessLicenseNo!: string | null;
 }
 
@@ -383,7 +405,8 @@ export class MyShopDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Email liên hệ của GIAN HÀNG (hiện cho khách) — khác email đăng nhập ở `ownerAccount`',
+    description:
+      'Email liên hệ của GIAN HÀNG (hiện cho khách) — khác email đăng nhập ở `ownerAccount`',
   })
   email!: string | null;
   @ApiProperty({ type: TenantProfileDto }) profile!: TenantProfileDto;

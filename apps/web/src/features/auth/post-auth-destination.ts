@@ -12,6 +12,7 @@ import {
   ROUTES,
   SHOP_SECTION,
   accountSectionPath,
+  balancePayoutPath,
   shopSectionPath,
 } from '@/constants/routes';
 import { ZONE, isPathInZone, siteHref, zoneRelativePath } from '@/zones';
@@ -133,9 +134,8 @@ const COMMISSION_PAGES: ReadonlyArray<{ readonly href: string; readonly exact?: 
   { href: ROUTES.MANAGE.BOOKINGS },
   { href: ROUTES.MANAGE.CHAT },
   { href: ROUTES.MANAGE.BALANCE },
-  { href: ROUTES.MANAGE.SUBSCRIPTION },
-  { href: ROUTES.MANAGE.TAX },
-  { href: ROUTES.MANAGE.BANK_ACCOUNTS },
+  // `/subscription`, `/tax`, `/bank-accounts` KHÔNG ở đây (07/10/2026): chúng là alias, và đích của
+  // chúng là `commissionEquivalent` — một lần chuyển, cùng một luật cho gõ URL lẫn `next`.
   { href: ROUTES.MANAGE.HOST_GUIDE },
   { href: ROUTES.MANAGE.CONTRACTS_DOCUMENTS },
   { href: ROUTES.MANAGE.DATA_PROTECTION },
@@ -207,12 +207,15 @@ const NO_SHOP_PAGES: readonly string[] = [ROUTES.MANAGE.ONBOARDING, ROUTES.MANAG
 
 /**
  * Tuyến gói mở một trang CHỈ của tuyến hoa hồng → bản tương đương của tuyến gói (`null` = ở lại).
- * Ba trang có bản một-đối-một trong trang Cửa hàng; còn lại (cẩm nang, mẫu chứng từ…) dùng chung.
+ * Hồ sơ + khai thuế có bản một-đối-một trong trang Cửa hàng (section "Thông tin khai thuế" dùng CHÍNH
+ * component của tuyến hoa hồng); tài khoản nhận tiền nằm ở trang số dư
+ * như tuyến hoa hồng; còn lại (cẩm nang, mẫu chứng từ…) dùng chung.
  */
 function packageEquivalent(pathname: string): string | null {
   if (matchesPage(pathname, { href: ROUTES.MANAGE.REGISTRATION })) return ROUTES.MANAGE.SHOP;
-  if (pathname === ROUTES.MANAGE.TAX) return shopSectionPath(SHOP_SECTION.LEGAL);
-  if (pathname === ROUTES.MANAGE.BANK_ACCOUNTS) return shopSectionPath(SHOP_SECTION.PAYOUT);
+  if (pathname === ROUTES.MANAGE.TAX) return shopSectionPath(SHOP_SECTION.TAX);
+  if (pathname === ROUTES.MANAGE.SUBSCRIPTION) return shopSectionPath(SHOP_SECTION.PLAN);
+  if (pathname === ROUTES.MANAGE.BANK_ACCOUNTS) return balancePayoutPath();
   if (pathname === ROUTES.MANAGE.TRIPS) return ROUTES.MANAGE.BOOKING_REQUESTS;
   return null;
 }
@@ -248,11 +251,23 @@ function ownerTripsRedirect(user: AuthScope | null | undefined, pathname: string
  * không phải chuyển dữ liệu. Thành viên không có section đó (trang tài khoản của họ là bản thường)
  * ⇒ về trang chủ. Trang con của Cửa hàng (chi nhánh, chính sách…) là năng lực của gói ⇒ về trang
  * chủ như mọi trang tuyến gói khác.
+ *
+ * Ba ALIAS của chính tuyến hoa hồng (07/10/2026) cũng giải ở đây: khai thuế + gói về section của
+ * "Hồ sơ chủ xe", tài khoản nhận tiền về trang số dư. Thành viên không có các section đó (và không có
+ * ví) ⇒ trang tài khoản của họ / trang chủ.
  */
 function commissionEquivalent(user: AuthScope | null | undefined, pathname: string): string | null {
-  if (pathname === ROUTES.MANAGE.SHOP && isCommissionOwner(user)) {
+  const owner = isCommissionOwner(user);
+  if (pathname === ROUTES.MANAGE.SHOP && owner) {
     return accountSectionPath(ACCOUNT_SECTION.PROFILE);
   }
+  if (pathname === ROUTES.MANAGE.TAX) {
+    return owner ? accountSectionPath(ACCOUNT_SECTION.TAX) : ROUTES.MANAGE.ACCOUNT;
+  }
+  if (pathname === ROUTES.MANAGE.SUBSCRIPTION) {
+    return owner ? accountSectionPath(ACCOUNT_SECTION.PLAN) : ROUTES.MANAGE.ACCOUNT;
+  }
+  if (pathname === ROUTES.MANAGE.BANK_ACCOUNTS && owner) return balancePayoutPath();
   return null;
 }
 

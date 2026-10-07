@@ -68,7 +68,7 @@ export function toShopProfileValues(shop: MyShop): ShopProfileWithContactValues 
     latitude: null,
     longitude: null,
     locationSource: null,
-    taxCode: p.taxCode ?? '',
+    // KHÔNG có mã số thuế (07/10/2026): nó ở hồ sơ người bán — section "Thông tin khai thuế".
     businessLicenseNo: p.businessLicenseNo ?? '',
     logoUrl: p.logoUrl ?? null,
     coverUrl: p.coverUrl ?? null,
@@ -93,7 +93,11 @@ export function toShopProfileBody(v: ShopProfileWithContactValues): UpdateProfil
      */
     wardCode: v.wardCode || undefined,
     addressLine: v.addressLine,
-    taxCode: v.taxCode,
+    /*
+     * KHÔNG gửi `taxCode`: API còn nhận nó cho client cũ và ghi vào hồ sơ NGƯỜI BÁN — gửi kèm mỗi
+     * lần lưu hồ sơ gian hàng là đụng vào bản khai thuế (và quyền `seller_profile.manage`) cho
+     * một lần sửa tên hay địa chỉ. Web khai MST ở `SellerTaxSection`.
+     */
     businessLicenseNo: v.businessLicenseNo,
     logoUrl: v.logoUrl ?? '',
     coverUrl: v.coverUrl ?? '',

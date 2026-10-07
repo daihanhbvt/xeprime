@@ -817,9 +817,33 @@ describe('useManageNav — menu theo tuyến ở site partner', () => {
     renderMenu();
 
     const labels = itemLabels();
-    expect(labels).toEqual(expect.arrayContaining(['Tổng quan', 'Lịch xe']));
+    expect(labels).toEqual(expect.arrayContaining(['Tổng quan', 'Lịch thuê']));
     expect(labels).not.toContain('Khách hàng');
     expect(screen.queryByText('Tài chính')).toBeNull();
+  });
+
+  /*
+   * Đồng bộ với tuyến gói (07/10/2026): MỘT cửa tiền, MỘT hồ sơ. Tài khoản nhận tiền nằm trong
+   * "Số dư & rút tiền", khai thuế + gói nằm trong "Hồ sơ chủ xe" — không còn ba mục riêng.
+   */
+  it('chủ xe tuyến hoa hồng: cùng khung khối với tuyến gói, tiền + hồ sơ mỗi thứ một mục', () => {
+    grant(...(Object.values(PERMISSION) as Permission[]));
+    user.tenant = { roleKey: TENANT_ROLE.SHOP_OWNER, billingMode: BILLING_MODE.COMMISSION };
+    renderMenu();
+
+    expect(itemLabels()).toEqual([
+      'Tổng quan',
+      'Xe của tôi',
+      'Lịch thuê',
+      'Chuyến cho thuê',
+      'Trò chuyện',
+      'Số dư & rút tiền',
+      'Hồ sơ chủ xe',
+      'Cẩm nang cho thuê xe',
+      'Hợp đồng & Chứng từ',
+      'Chính sách bảo vệ dữ liệu',
+      'Yêu cầu hỗ trợ',
+    ]);
   });
 
   /*

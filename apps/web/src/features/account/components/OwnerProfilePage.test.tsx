@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   BILLING_MODE,
   PERMISSION,
+  SELLER_ENTITY_TYPE,
+  SELLER_PROFILE_STATUS,
   SHOP_ONBOARDING_STATE,
   SHOP_VERIFICATION,
   TENANT_ROLE,
@@ -21,7 +23,8 @@ import { PartnerAccountRoute } from './PartnerAccountRoute';
  *
  *  1. **Một URL, hai bản theo tuyến**: chủ xe hoa hồng thấy "Hồ sơ chủ xe"; tuyến gói và THÀNH
  *     VIÊN thấy "Tài khoản & bảo mật" thường (`PartnerAccountRoute`).
- *  2. **Sáu section, theo thứ tự**, không chữ "gian hàng" nào ở tiêu đề.
+ *  2. **Bảy section, theo thứ tự**, không chữ "gian hàng" nào ở tiêu đề — gồm "Thông tin khai thuế"
+ *     và "Gói dịch vụ" (07/10/2026, trước là hai mục menu riêng), mỗi section theo đúng quyền API.
  *  3. **Mặt tiền cá nhân**: không ô ảnh bìa; ô logo chỉ có khi hồ sơ ĐANG có logo (để còn xoá được).
  *  4. **Thanh lưu chỉ có khi có thay đổi**, và nó gửi lên ĐÚNG endpoint của trang chủ xe.
  */
@@ -103,6 +106,48 @@ vi.mock('./PartnerAccountPage', () => ({
   PartnerAccountPage: () => <div data-testid="partner-account-page" />,
 }));
 vi.mock('@/components/form/AddressField', () => ({ AddressField: () => null }));
+
+/** Chuyển trang phía client — thay bằng một mốc QUAN SÁT được ("có chuyển không, tới đâu"). */
+vi.mock('@/features/partner/components/ClientRedirect', () => ({
+  ClientRedirect: ({ href }: { href: string }) => (
+    <div data-testid="client-redirect" data-href={href} />
+  ),
+}));
+
+/** Hồ sơ người bán (section khai thuế) — chặn ở tầng hook, như hai hồ sơ ở trên. */
+const sellerProfile = vi.hoisted(() => ({
+  data: null as unknown,
+  isLoading: false,
+  isError: false,
+  refetch: vi.fn(),
+}));
+const saveSeller = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
+vi.mock('@/features/seller-profile/hooks/use-seller-profile', () => ({
+  useSellerProfile: () => sellerProfile,
+  useSaveSellerProfile: () => saveSeller,
+}));
+
+/*
+ * Khối gói DÙNG CHUNG với trang Cửa hàng và có test riêng (`SubscriptionWorkspace.test`) — ở đây
+ * chỉ hỏi nó có nằm đúng section không.
+ */
+vi.mock('@/features/subscription/components/SubscriptionWorkspace', () => ({
+  SubscriptionWorkspace: () => <div data-testid="subscription-workspace" />,
+}));
+
+const SELLER = {
+  id: '01HSELLER0000000000000000',
+  tenantId: '01HSHOP00000000000000000A',
+  entityType: SELLER_ENTITY_TYPE.INDIVIDUAL,
+  legalName: 'Trần Thu Hương',
+  taxId: null,
+  idNumber: '079190000001',
+  idIssuedAt: '2015-06-01',
+  idIssuedBy: 'Cục Cảnh sát QLHC về TTXH',
+  status: SELLER_PROFILE_STATUS.DRAFT,
+  editable: true,
+  reviewNote: null,
+};
 
 function makeShop(profileOverrides: Partial<MyShop['profile']> = {}): MyShop {
   return {
@@ -190,6 +235,11 @@ beforeEach(() => {
   updateShop.isPending = false;
   search.value = '';
   perms.denied = new Set();
+  sellerProfile.data = { ...SELLER };
+  sellerProfile.isLoading = false;
+  sellerProfile.isError = false;
+  saveSeller.mutate.mockReset();
+  saveSeller.isPending = false;
   setUser();
 });
 
@@ -220,24 +270,82 @@ describe('/manage/account — một URL, bản theo tuyến', () => {
     renderRoute();
     expect(screen.getByTestId('partner-account-page')).toBeTruthy();
   });
+
+  /*
+   * Luồng nâng cấp nằm NGAY TRÊN trang này (section "Gói dịch vụ"). Tiền về ⇒ `/auth/me` lật sang
+   * tuyến gói — người vừa trả tiền phải tới gian hàng vừa mở, không phải trang "Tài khoản & bảo mật".
+   * Không phụ thuộc `?section=`: họ có thể đã cuộn tới bảng giá mà không bấm mục lục.
+   */
+  it('thanh toán nâng cấp xong ngay trên trang → sang section gói của trang Cửa hàng', () => {
+    const view = renderRoute();
+    expect(screen.queryByTestId('client-redirect')).toBeNull();
+
+    setUser({ track: 'package' });
+    view.rerender(
+      <App>
+        <PartnerAccountRoute />
+      </App>,
+    );
+
+    expect(screen.getByTestId('client-redirect').getAttribute('data-href')).toBe(
+      '/manage/shop?section=plan',
+    );
+  });
+
+  it.each([
+    ['plan', '/manage/shop?section=plan'],
+    ['tax', '/manage/shop?section=tax'],
+    ['address', '/manage/shop?section=legal'],
+  ])(
+    'tài khoản tuyến gói mở bookmark `?section=%s` → section cùng vai ở trang Cửa hàng',
+    (key, href) => {
+      setUser({ track: 'package' });
+      search.value = `section=${key}`;
+      renderRoute();
+
+      expect(screen.getByTestId('client-redirect').getAttribute('data-href')).toBe(href);
+    },
+  );
+
+  it('tài khoản tuyến gói ở section của CON NGƯỜI (đăng nhập) → ở lại trang tài khoản', () => {
+    setUser({ track: 'package' });
+    search.value = 'section=login';
+    renderRoute();
+
+    expect(screen.queryByTestId('client-redirect')).toBeNull();
+    expect(screen.getByTestId('partner-account-page')).toBeTruthy();
+  });
 });
 
 describe('Hồ sơ chủ xe — bố cục', () => {
-  it('năm section theo thứ tự — không còn "Trang chủ xe" riêng, không chữ "gian hàng"', () => {
+  it('bảy section theo thứ tự — không còn "Trang chủ xe" riêng, không chữ "gian hàng"', () => {
     renderRoute();
 
     const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
     expect(headings).toEqual([
       'Thông tin chủ xe',
       'Địa chỉ nhận xe',
+      'Thông tin khai thuế',
+      'Gói dịch vụ',
       'Thông tin đăng nhập',
       'Mật khẩu',
       'Xoá tài khoản',
     ]);
     expect(headings.some((h) => /gian hàng/i.test(h ?? ''))).toBe(false);
-    // Chủ xe cá nhân không khai MST/GPKD — hai ô đó chỉ có ở trang Cửa hàng của tuyến gói.
-    expect(screen.queryByText('Mã số thuế')).toBeNull();
-    expect(screen.queryByText('Số giấy phép KD')).toBeNull();
+    // Địa chỉ nhận xe KHÔNG có ô MST/GPKD — giấy tờ người bán khai ở section khai thuế.
+    expect(section('address').queryByText('Mã số thuế')).toBeNull();
+    expect(section('address').queryByText('Số giấy phép KD')).toBeNull();
+  });
+
+  /*
+   * Tiền KHÔNG ở trang hồ sơ: số dư, tài khoản nhận tiền, thuế đã khấu trừ sống ở "Số dư & rút
+   * tiền" — cũng như ở tuyến gói, nơi trang Cửa hàng không còn khối tài khoản nhận tiền.
+   */
+  it('không có khối tài khoản nhận tiền hay thuế đã khấu trừ trên trang hồ sơ', () => {
+    renderRoute();
+
+    expect(screen.queryByText('Tài khoản nhận tiền')).toBeNull();
+    expect(screen.queryByText('Thuế đã khấu trừ trong kỳ')).toBeNull();
   });
 
   it('thông tin chủ xe: ảnh + nút Thay đổi, họ tên, lời giới thiệu — KHÔNG có nút xoá ảnh', () => {
@@ -331,6 +439,90 @@ describe('Hồ sơ chủ xe — lưu thông tin chủ xe', () => {
 
     expect(await section('profile').findByText(/Vui lòng chọn ảnh đại diện/)).toBeTruthy();
     expect(updateMe.mutateAsync).not.toHaveBeenCalled();
+  });
+});
+
+describe('Hồ sơ chủ xe — khai thuế và gói dịch vụ', () => {
+  it('khai thuế: chủ xe cá nhân khai CCCD, không có ô mã số thuế', () => {
+    renderRoute();
+
+    const tax = section('tax');
+    expect(tax.getByLabelText(/Số CCCD/)).toBeTruthy();
+    expect(tax.queryByLabelText(/Mã số thuế/)).toBeNull();
+  });
+
+  /*
+   * `PUT /seller-profile` ghi TOÀN PHẦN: payload phải mang cả phần hồ sơ section này không hiện
+   * (ngày/nơi cấp CCCD), nếu không lưu một số CCCD là xoá sạch phần còn lại.
+   */
+  it('lưu khai thuế: gửi bốn trường của section + GIỮ NGUYÊN phần hồ sơ không hiện', async () => {
+    renderRoute();
+
+    const tax = section('tax');
+    fireEvent.change(tax.getByLabelText(/Số CCCD/), { target: { value: '079190000002' } });
+    fireEvent.click(tax.getByRole('button', { name: 'Lưu thông tin thuế' }));
+
+    await waitFor(() => expect(saveSeller.mutate).toHaveBeenCalledTimes(1));
+    expect(saveSeller.mutate.mock.calls[0]?.[0]).toEqual({
+      entityType: SELLER_ENTITY_TYPE.INDIVIDUAL,
+      legalName: 'Trần Thu Hương',
+      taxId: null,
+      idNumber: '079190000002',
+      idIssuedAt: '2015-06-01',
+      idIssuedBy: 'Cục Cảnh sát QLHC về TTXH',
+    });
+  });
+
+  it('gói dịch vụ nằm trong section của nó trên trang hồ sơ', () => {
+    renderRoute();
+
+    expect(section('plan').getByTestId('subscription-workspace')).toBeTruthy();
+  });
+
+  /* Thiếu quyền ⇒ section vắng khỏi trang lẫn mục lục — không thành một khối "không có quyền". */
+  it('thiếu quyền xem hồ sơ người bán / gói: hai section đó không có mặt', () => {
+    perms.denied = new Set([PERMISSION.SELLER_PROFILE_VIEW, PERMISSION.SUBSCRIPTION_VIEW]);
+    renderRoute();
+
+    expect(document.getElementById('account-section-tax')).toBeNull();
+    expect(document.getElementById('account-section-plan')).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Thông tin khai thuế' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Gói dịch vụ' })).toBeNull();
+  });
+
+  /* Link `?section=tax` tới người không có section đó: rơi về đầu trang, không cuộn vào hư không. */
+  it('thiếu quyền mà mở `?section=tax`: mục lục sáng "Thông tin chủ xe", không cuộn', () => {
+    const scroll = vi.fn();
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = scroll;
+    try {
+      perms.denied = new Set([PERMISSION.SELLER_PROFILE_VIEW]);
+      search.value = 'section=tax';
+      renderRoute();
+
+      expect(
+        screen.getByRole('link', { name: 'Thông tin chủ xe' }).getAttribute('aria-current'),
+      ).toBe('true');
+      expect(scroll).not.toHaveBeenCalled();
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
+  });
+
+  /* `/tax` và `/subscription` cũ chuyển tới `?section=tax` · `?section=plan` — phải rơi đúng khối. */
+  it.each(['tax', 'plan'])('mở thẳng `?section=%s`: cuộn tới đúng khối ngay lần vẽ đầu', (key) => {
+    const scrolled: string[] = [];
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function (this: HTMLElement) {
+      scrolled.push(this.id);
+    } as Element['scrollIntoView'];
+    try {
+      search.value = `section=${key}`;
+      renderRoute();
+      expect(scrolled).toEqual([`account-section-${key}`]);
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
   });
 });
 

@@ -328,7 +328,9 @@ export const SHOP_NAV: readonly NavSection[] = [
           {
             /*
              * "Số dư & rút tiền" đứng ĐẦU nhóm Tài chính: đây là tiền THẬT của gian hàng và là
-             * mục duy nhất trong nhóm có HÀNH ĐỘNG (rút), ba mục sau là sổ sách để đọc.
+             * mục duy nhất trong nhóm có HÀNH ĐỘNG (rút), ba mục sau là sổ sách để đọc. Trang này
+             * chứa luôn "Tài khoản nhận tiền" (07/10/2026, trước là một section của Cửa hàng) và thẻ
+             * thuế đã khấu trừ — cùng chỗ với tuyến hoa hồng: rút tiền và nơi tiền về là một việc.
              *
              * KHÔNG gác bằng `feature`: số dư là tiền của chính gian hàng, gói hết hạn vẫn phải
              * xem và rút được (ADR 0027 điều 3, ADR 0033).
@@ -380,15 +382,15 @@ export const SHOP_NAV: readonly NavSection[] = [
         /*
          * MỘT mục cho toàn bộ thiết lập gian hàng (16/09/2026).
          *
-         * Trang đích có năm section — thông tin hiển thị · chủ gian hàng · địa chỉ & pháp lý ·
-         * tài khoản nhận tiền · gói & hạn mức — nên ba mục sidebar cũ ("Gói & hoá đơn", "Tài
-         * khoản & bảo mật", "Hồ sơ người bán") không còn lý do tồn tại: hai mục đầu hỏi cùng một
-         * loại câu hỏi với mục này, mục thứ ba thì trùng nội dung với "Địa chỉ & pháp lý".
+         * Trang đích có bốn section — thông tin hiển thị · chủ gian hàng · địa chỉ & pháp lý ·
+         * gói & hạn mức — nên ba mục sidebar cũ ("Gói & hoá đơn", "Tài khoản & bảo mật", "Hồ sơ
+         * người bán") không còn lý do tồn tại: hai mục đầu hỏi cùng một loại câu hỏi với mục này,
+         * mục thứ ba thì trùng nội dung với "Địa chỉ & pháp lý". "Tài khoản nhận tiền" rời trang
+         * này về "Số dư & rút tiền" (07/10/2026). Cùng vai với "Hồ sơ chủ xe" của tuyến hoa hồng.
          *
          * KHÔNG gác bằng `feature`: hồ sơ, tiền và gói của chính gian hàng không bao giờ nằm
          * sau một cờ tính năng (ADR 0027 điều 3 · ADR 0038 điều 5). Section "Gói & hạn mức" bên
-         * trong tự lọc theo `subscription.view`/`subscription.purchase`, và section "Tài khoản
-         * nhận tiền" theo quyền sở hữu — cùng hai trục mà API đang gác.
+         * trong tự lọc theo `subscription.view`/`subscription.purchase` — cùng trục mà API gác.
          */
         key: 'shop',
         labelKey: 'manage.shop',
@@ -717,18 +719,29 @@ export const PLATFORM_NAV: readonly NavSection[] = [
 /**
  * Menu của chủ xe TUYẾN HOA HỒNG ở site partner — Owner Lite (ADR 0051 điều 3).
  *
- * CÙNG URL với tuyến gói cho mọi trang có cùng ý nghĩa (xe, lịch, hộp thư, số dư, gói, hỗ trợ, tài
- * khoản); chỉ thêm các trang riêng của tuyến hoa hồng (chuyến cho thuê, khai thuế, tài khoản nhận
- * tiền, cẩm nang…). "Chuyến cho thuê" thay CẢ hộp thư yêu cầu lẫn bảng đơn của tuyến gói — hai bề
- * mặt đó dựng cho đội xe hàng chục chiếc, không cho một chủ xe có vài chiếc. Không có chi nhánh, nhân viên, tài xế, sổ thu chi, khách hàng: đó là năng lực
- * của gói (ADR 0027 điều 1), server chặn bằng `@SubscriptionTrackOnly` và menu này không bày ra.
+ * CÙNG KHUNG với menu gian hàng (07/10/2026): Tổng quan · Quản lý · Kinh doanh · Tài khoản · Hỗ trợ,
+ * cùng nhãn và biểu tượng cho mục cùng nghĩa. Chủ xe nâng lên gói (hay gian hàng hết gói rơi về đây)
+ * thấy các khối ở đúng chỗ cũ, chỉ khác số mục bên trong. Mỗi câu hỏi có MỘT chỗ ở cả hai tuyến:
+ *
+ *  - tiền về đâu, rút thế nào, bị trừ thuế bao nhiêu → "Số dư & rút tiền" (kèm tài khoản nhận tiền
+ *    và thuế đã khấu trừ — y như tuyến gói);
+ *  - tôi là ai trên chợ, khai thuế gì, đang dùng gói nào → "Hồ sơ chủ xe" — vai của trang Cửa hàng
+ *    bên tuyến gói. Trước đợt này tài khoản nhận tiền, khai thuế và gói là ba mục riêng.
+ *
+ * Phần KHÁC là thứ phân biệt hai tuyến, và cố ý giữ:
+ *  - "Chuyến cho thuê" thay CẢ hộp thư yêu cầu lẫn bảng đơn — hai bề mặt đó dựng cho đội xe hàng
+ *    chục chiếc, không cho một chủ xe có vài chiếc;
+ *  - không có khối "Cấu hình", không chi nhánh, nhân viên, tài xế, sổ thu chi, khách hàng: đó là năng
+ *    lực của gói (ADR 0027 điều 1), server chặn bằng `@SubscriptionTrackOnly` và menu này không bày ra;
+ *  - khối Hỗ trợ là tài liệu cho người mới cho thuê (cẩm nang, hợp đồng mẫu) thay cho trung tâm hỗ
+ *    trợ của gian hàng — các thẻ "bắt đầu" ở đó trỏ vào trang chỉ của tuyến gói.
  *
  * Nhãn dùng lại nhóm `Navigation.account`/`Navigation.manage` — không bản dịch thứ hai.
  */
 export const OWNER_LITE_NAV: readonly NavSection[] = [
   {
-    key: 'owner-operations',
-    labelKey: 'manageGroups.operations',
+    key: 'owner-overview',
+    labelKey: 'manageGroups.overview',
     pinned: true,
     children: [
       {
@@ -738,16 +751,22 @@ export const OWNER_LITE_NAV: readonly NavSection[] = [
         permission: PERMISSION.TENANT_VIEW,
         icon: DashboardOutlined,
       },
+    ],
+  },
+  {
+    key: 'owner-operations',
+    labelKey: 'manageGroups.operations',
+    children: [
       {
         key: 'vehicles',
-        labelKey: 'account.vehicles',
+        labelKey: 'manage.myVehicles',
         href: ROUTES.MANAGE.VEHICLES,
         permission: PERMISSION.VEHICLE_VIEW,
-        icon: UnorderedListOutlined,
+        icon: CarOutlined,
       },
       {
         key: 'calendar',
-        labelKey: 'account.calendar',
+        labelKey: 'manage.calendar',
         href: ROUTES.MANAGE.CALENDAR,
         permission: PERMISSION.CALENDAR_VIEW,
         icon: CalendarOutlined,
@@ -756,13 +775,14 @@ export const OWNER_LITE_NAV: readonly NavSection[] = [
         /*
          * MỘT mục cho cả yêu cầu lẫn đơn (07/10/2026). Chủ xe cá nhân có một tới ba xe: tách
          * "Yêu cầu đặt xe" và "Đơn thuê" thành hai bảng của gian hàng là bắt họ mở hai nơi cho
-         * vài chuyến. Huy hiệu yêu cầu chờ duyệt đi theo mục này.
+         * vài chuyến. Huy hiệu yêu cầu chờ duyệt đi theo mục này. Biểu tượng của "Đơn thuê" bên
+         * tuyến gói — cùng một việc.
          */
         key: 'trips',
         labelKey: 'manage.ownerTrips',
         href: ROUTES.MANAGE.TRIPS,
         permission: PERMISSION.BOOKING_REQUEST_VIEW,
-        icon: CarOutlined,
+        icon: FileTextOutlined,
         badge: NAV_BADGE.BOOKING_REQUESTS_PENDING,
         ownerOnly: true,
       },
@@ -787,6 +807,13 @@ export const OWNER_LITE_NAV: readonly NavSection[] = [
         icon: FileDoneOutlined,
         memberOnly: true,
       },
+    ],
+  },
+  {
+    // Cùng khối "Kinh doanh" của tuyến gói: nói chuyện với khách + tiền.
+    key: 'owner-business',
+    labelKey: 'manageGroups.business',
+    children: [
       {
         key: 'chat',
         labelKey: 'manage.chat',
@@ -795,43 +822,17 @@ export const OWNER_LITE_NAV: readonly NavSection[] = [
         icon: MessageOutlined,
         badge: NAV_BADGE.CHAT_UNREAD,
       },
-    ],
-  },
-  {
-    key: 'owner-money',
-    labelKey: 'manageGroups.business',
-    children: [
       {
+        /*
+         * MỘT mục tiền (07/10/2026): số dư, lệnh rút, tài khoản nhận tiền và thuế đã khấu trừ. Ba mục
+         * cũ ("Tài khoản nhận tiền", "Thông tin khai thuế" — phần tiền của nó — và chính mục này) trả
+         * lời cùng một câu "tiền của tôi ở đâu"; route cũ của tài khoản nhận tiền là redirect.
+         */
         key: 'balance',
         labelKey: 'manage.balance',
         href: ROUTES.MANAGE.BALANCE,
         permission: PERMISSION.TENANT_VIEW,
         icon: WalletOutlined,
-        ownerOnly: true,
-      },
-      {
-        key: 'bank-accounts',
-        labelKey: 'account.bankAccounts',
-        href: ROUTES.MANAGE.BANK_ACCOUNTS,
-        permission: PERMISSION.TENANT_VIEW,
-        icon: CreditCardOutlined,
-        ownerOnly: true,
-      },
-      {
-        key: 'tax',
-        labelKey: 'account.tax',
-        href: ROUTES.MANAGE.TAX,
-        permission: PERMISSION.TENANT_VIEW,
-        icon: FileTextOutlined,
-        ownerOnly: true,
-      },
-      {
-        // Phễu nâng cấp lên tuyến gói (ADR 0028 điều 1) — cùng URL với gói của tuyến gói.
-        key: 'subscription',
-        labelKey: 'account.subscription',
-        href: ROUTES.MANAGE.SUBSCRIPTION,
-        permission: PERMISSION.TENANT_VIEW,
-        icon: GiftOutlined,
         ownerOnly: true,
       },
     ],
@@ -840,7 +841,7 @@ export const OWNER_LITE_NAV: readonly NavSection[] = [
     /*
      * KHÔNG có nhóm "Gian hàng" ở tuyến hoa hồng (06/10/2026): chủ xe cá nhân không có gian hàng
      * nào để quản lý — họ có MỘT hồ sơ. "Hồ sơ chủ xe" là trang tài khoản của chính họ (`ACCOUNT`,
-     * bản gộp hồ sơ cá nhân + trang chủ xe công khai — xem `OwnerProfilePage`).
+     * bản gộp hồ sơ cá nhân + trang chủ xe công khai + khai thuế + gói — xem `OwnerProfilePage`).
      *
      * `ownerOnly`: thành viên của một gian hàng tuyến hoa hồng mở cùng URL đó chỉ thấy tài khoản
      * của riêng họ — nhãn "Hồ sơ chủ xe" sẽ nói sai, nên họ vào qua menu ở thẻ người dùng.
@@ -861,6 +862,7 @@ export const OWNER_LITE_NAV: readonly NavSection[] = [
   {
     key: 'owner-support',
     labelKey: 'manageGroups.support',
+    pinned: true,
     children: [
       {
         key: 'host-guide',
@@ -1012,18 +1014,19 @@ const OWNER_LITE_MOBILE_TABS: readonly MobileTab[] = [
     icon: DashboardOutlined,
   },
   {
+    // Cùng nhãn + biểu tượng với sidebar (07/10/2026) — một mục, một hình ở mọi chỗ.
     key: 'vehicles',
-    labelKey: 'account.vehicles',
+    labelKey: 'manage.myVehicles',
     href: ROUTES.MANAGE.VEHICLES,
     permission: PERMISSION.VEHICLE_VIEW,
-    icon: UnorderedListOutlined,
+    icon: CarOutlined,
   },
   {
     key: 'trips',
     labelKey: 'manage.ownerTripsShort',
     href: ROUTES.MANAGE.TRIPS,
     permission: PERMISSION.BOOKING_REQUEST_VIEW,
-    icon: CarOutlined,
+    icon: FileTextOutlined,
     badge: NAV_BADGE.BOOKING_REQUESTS_PENDING,
   },
   {
@@ -1141,7 +1144,7 @@ export function branchKeyOf(
 // ── Không gian hỗ trợ gian hàng (ADR 0050 §12) ────────────────────────────────────────────────
 
 /**
- * Owner Lite trong phiên hỗ trợ — CHỈ công việc cho thuê, dùng lại đúng nhãn của `OWNER_NAV`.
+ * Owner Lite trong phiên hỗ trợ — CHỈ công việc cho thuê, dùng lại đúng nhãn của `OWNER_LITE_NAV`.
  *
  * Không hồ sơ/mật khẩu/ví/thuế/chuyến đi thuê: đó là tài khoản CÁ NHÂN của chủ xe, không phải khu
  * vận hành của gian hàng. "Chuyến của tôi" (`/trips`) đọc theo NGƯỜI ĐĂNG NHẬP nên không dùng được
@@ -1155,14 +1158,14 @@ const OWNER_LITE_SUPPORT_NAV: readonly NavSection[] = [
     children: [
       {
         key: 'vehicles',
-        labelKey: 'account.vehicles',
+        labelKey: 'manage.myVehicles',
         href: ROUTES.MANAGE.VEHICLES,
         permission: PERMISSION.VEHICLE_VIEW,
-        icon: UnorderedListOutlined,
+        icon: CarOutlined,
       },
       {
         key: 'calendar',
-        labelKey: 'account.calendar',
+        labelKey: 'manage.calendar',
         href: ROUTES.MANAGE.CALENDAR,
         permission: PERMISSION.CALENDAR_VIEW,
         icon: CalendarOutlined,
@@ -1195,14 +1198,14 @@ const OWNER_LITE_SUPPORT_NAV: readonly NavSection[] = [
 const OWNER_LITE_SUPPORT_TABS: readonly MobileTab[] = [
   {
     key: 'vehicles',
-    labelKey: 'account.vehicles',
+    labelKey: 'manage.myVehicles',
     href: ROUTES.MANAGE.VEHICLES,
     permission: PERMISSION.VEHICLE_VIEW,
-    icon: UnorderedListOutlined,
+    icon: CarOutlined,
   },
   {
     key: 'calendar',
-    labelKey: 'account.calendar',
+    labelKey: 'manage.calendarShort',
     href: ROUTES.MANAGE.CALENDAR,
     permission: PERMISSION.CALENDAR_VIEW,
     icon: CalendarOutlined,

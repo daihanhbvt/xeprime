@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
-import { WalletView } from '@/features/wallet/components/WalletView';
+import { PartnerBalanceView } from '@/features/wallet/components/PartnerBalanceView';
 
 import styles from './page.module.css';
 
@@ -12,7 +12,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * "Số dư & rút tiền" của GIAN HÀNG — khoản XePrime phải trả sau mỗi chuyến (ADR 0033 điều 2).
+ * "Số dư & rút tiền" — khoản XePrime phải trả sau mỗi chuyến (ADR 0033 điều 2), CÙNG một trang cho
+ * gian hàng tuyến gói và chủ xe tuyến hoa hồng. Từ 07/10/2026 trang này chứa luôn "Tài khoản nhận
+ * tiền" (`/bank-accounts` và `/shop?section=payout` cũ chuyển về đây) và thuế đã khấu trừ, ở cả
+ * hai tuyến — xem `PartnerBalanceView`.
  *
  * KHÔNG gác bằng `PLAN_FEATURE`: đây là tiền của chính họ. Gói hết hạn vẫn phải xem và rút được
  * — ADR 0027 điều 3 nói hết hạn là `read_only` chứ không phải `hidden`, và tiền thì không thuộc
@@ -28,7 +31,7 @@ export default async function ManageBalancePage() {
   return (
     <div className={styles.page}>
       <ManagePageHeader title={t('title.tenant')} subtitle={t('page.subtitle')} />
-      <WalletView scope="shop" />
+      <PartnerBalanceView />
     </div>
   );
 }

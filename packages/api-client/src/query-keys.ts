@@ -40,6 +40,12 @@ export const queryKeys = {
     list: (params: QueryParams) => ['vehicle-approvals', 'list', params] as const,
     detail: (id: string) => ['vehicle-approvals', 'detail', id] as const,
   },
+  /** Màn "Xe toàn hệ thống" của nền tảng — `/platform/vehicles` (giám sát + ẩn/gỡ ẩn). */
+  platformVehicles: {
+    all: ['platform-vehicles'] as const,
+    list: (params: QueryParams) => ['platform-vehicles', 'list', params] as const,
+    detail: (id: string) => ['platform-vehicles', 'detail', id] as const,
+  },
   calendar: {
     all: ['calendar'] as const,
     resources: (params: QueryParams) => ['calendar', 'resources', params] as const,

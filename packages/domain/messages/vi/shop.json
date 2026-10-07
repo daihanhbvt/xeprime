@@ -255,9 +255,8 @@
     "profileHint": "Những gì khách nhìn thấy trên marketplace.",
     "owner": "Chủ gian hàng",
     "legal": "Địa chỉ & pháp lý",
-    "legalHint": "Nơi khách nhận xe. Mã số thuế và giấy phép là tuỳ chọn.",
+    "legalHint": "Nơi khách nhận xe. Số giấy phép kinh doanh là tuỳ chọn; mã số thuế khai ở Thông tin khai thuế.",
     "payout": "Tài khoản nhận tiền",
-    "payoutHint": "Nơi XePrime chuyển tiền cho gian hàng.",
     "plan": "Gói & hạn mức",
     "planHint": "Gói hiện hành, hạn mức xe và hoá đơn thanh toán."
   },
