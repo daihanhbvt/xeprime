@@ -1,3 +1,5 @@
+/* Cột hàng đợi dùng chung (rút từ màn Tài chính, 07/10/2026) — mọi giá trị từ token (ADR 0003). */
+
 .rail {
   position: sticky;
   top: calc(var(--xp-shell-topbar-height) + var(--xp-space-md));

@@ -875,6 +875,10 @@ export const API_ERROR_CODE = {
   /** Khoá lịch không do CHÍNH phiên này tạo, hoặc đã bắt đầu — phiên không sửa/gỡ được. */
   SUPPORT_BLOCK_NOT_OWNED: 'SUPPORT_BLOCK_NOT_OWNED',
 
+  // Vận hành chuyến (Platform Admin)
+  /** Nền tảng vừa nhắc chủ xe về yêu cầu này chưa lâu — đợi hết `TRIP_PLATFORM_REMIND_COOLDOWN_MINUTES`. */
+  TRIP_REMIND_TOO_SOON: 'TRIP_REMIND_TOO_SOON',
+
   // Hạ tầng
   RATE_LIMITED: 'RATE_LIMITED',
   INTERNAL_ERROR: 'INTERNAL_ERROR',

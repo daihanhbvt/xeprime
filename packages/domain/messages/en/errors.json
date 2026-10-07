@@ -149,6 +149,7 @@
     "SUPPORT_REASON_REQUIRED": "This action needs its own reason — say why, or give the owner's request code.",
     "SUPPORT_OPEN_TRIPS": "The vehicle has trips that haven't ended — this can't be changed right now.",
     "SUPPORT_BLOCK_NOT_OWNED": "A support session can only edit or remove future blocks it created itself.",
+    "TRIP_REMIND_TOO_SOON": "The host was reminded about this request a moment ago — wait a few minutes before reminding again.",
     "INVITE_SCOPE_STALE": "The branches in this invite no longer exist. Ask the shop to send a new invite.",
     "REALM_UNRESOLVED": "We couldn't tell which XePrime site you're on. Reload the page and try again.",
     "REALM_NOT_ALLOWED": "This account can't be used here. Sign in on the site meant for your account.",

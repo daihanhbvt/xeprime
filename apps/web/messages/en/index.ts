@@ -46,6 +46,7 @@ import finance from '@xeprime/domain/messages/en/finance.json';
 import adminCatalog from '@xeprime/domain/messages/en/admin-catalog.json';
 import adminVehicles from '@xeprime/domain/messages/en/admin-vehicles.json';
 import adminBookings from '@xeprime/domain/messages/en/admin-bookings.json';
+import adminTrips from '@xeprime/domain/messages/en/admin-trips.json';
 import adminTenants from '@xeprime/domain/messages/en/admin-tenants.json';
 import tenantSupport from '@xeprime/domain/messages/en/tenant-support.json';
 import adminPlans from '@xeprime/domain/messages/en/admin-plans.json';
@@ -103,6 +104,7 @@ const messages = {
   AdminCatalog: adminCatalog,
   AdminVehicles: adminVehicles,
   AdminBookings: adminBookings,
+  AdminTrips: adminTrips,
   AdminTenants: adminTenants,
   TenantSupport: tenantSupport,
   AdminPlans: adminPlans,

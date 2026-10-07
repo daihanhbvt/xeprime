@@ -28,9 +28,10 @@
   gap: 12px;
 }
 
+/* Ba khối (vận hành chuyến · chờ duyệt · gian hàng mới): tự xếp 3/2/1 cột theo bề rộng. */
 .panels {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 12px;
 }
 

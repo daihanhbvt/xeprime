@@ -174,6 +174,8 @@ describe('nav — cấu trúc khối', () => {
         ROUTES.ADMIN.PARTNER_SHOPS,
         ROUTES.ADMIN.PARTNER_OWNERS,
         ROUTES.ADMIN.VEHICLES,
+        // Vận hành chuyến (07/10/2026) — hàng đợi theo chặng, cùng quyền với đơn thuê.
+        ROUTES.ADMIN.TRIPS,
         ROUTES.ADMIN.BOOKINGS,
         ROUTES.ADMIN.CUSTOMERS,
         // Tra cứu xuyên realm (ADR 0053 điều 9).
@@ -507,7 +509,7 @@ describe('nav — vai trò nền tảng nhìn thấy gì', () => {
     ).toEqual(flattenLeaves(PLATFORM_NAV).map((leaf) => leaf.labelKey));
   });
 
-  it('platform_staff chỉ thấy 6 mục đọc, KHÔNG thấy mục quản trị của super admin', () => {
+  it('platform_staff chỉ thấy 7 mục đọc, KHÔNG thấy mục quản trị của super admin', () => {
     const labels = visibleLabels(
       DEFAULT_PLATFORM_ROLE_PERMISSIONS[PLATFORM_ROLE.PLATFORM_STAFF],
       true,
@@ -518,6 +520,8 @@ describe('nav — vai trò nền tảng nhìn thấy gì', () => {
     expect(labels).toEqual([
       'manage.dashboard',
       'platform.vehicles',
+      // Vận hành chuyến đi cùng quyền đơn thuê: cùng dữ liệu, xếp lại theo chặng (07/10/2026).
+      'platform.trips',
       'platform.bookings',
       'platform.customers',
       // Tra cứu xuyên realm: CHỈ ĐỌC, liên hệ đã che — cùng quyền với "Khách thuê".

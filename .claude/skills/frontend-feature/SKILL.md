@@ -47,7 +47,7 @@ A panel where someone reads a record and then *decides* something — approve a 
 
 `FilterBar.onChange` sends only the field that changed — write it straight into `setFilters(patch)`; rebuilding the whole filter object from the patch silently clears every other filter. `useUrlFilters` deletes the value `'all'`, so never use `'all'` as a real option value. A "to-do ↔ history" switch (pending / all, unmatched / matched…) is a *view*, not a filter: render it with `QueueViewSwitch` outside the `FilterBar`, so the default view doesn't light up "Lọc 1" or hide inside the mobile filter sheet.
 
-Short confirmations and single-field forms stay `ResponsiveDialog`. A panel that sits beside a list for browsing (not deciding) is the `modeless`/`split` variant of `DetailDrawer`.
+Short confirmations and single-field forms stay `ResponsiveDialog`. A read-only detail opened from a list (a booking, a vehicle) is the standard masked `DetailDrawer` (`md`/`lg`): it slides over the page, the page stays put, and clicking outside or pressing Esc closes it — the same feel as the "Kiểm duyệt xe" panel. There is no side-by-side / modeless variant and no page that reserves space for a panel (removed 07/10/2026); do not reintroduce one.
 
 ## Money inputs format themselves
 

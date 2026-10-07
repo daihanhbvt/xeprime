@@ -1,0 +1,111 @@
+{
+  "page": {
+    "title": "Trip operations",
+    "subtitle": "The four stages a trip goes through on the platform — nudge the right person when a stage stalls.",
+    "loading": "Loading trip operations…",
+    "updatedAt": "Updated {time}",
+    "allBookings": "All bookings"
+  },
+  "today": {
+    "title": "Today",
+    "pickups": "{count, plural, one {# pickup} other {# pickups}}",
+    "returns": "{count, plural, one {# return} other {# returns}}",
+    "loadError": "No figures yet"
+  },
+  "queues": {
+    "railTitle": "Queues",
+    "railLabel": "Choose a queue",
+    "groups": {
+      "before": "Before the trip",
+      "during": "During the trip"
+    },
+    "pending_approval": "Awaiting host approval",
+    "awaiting_hold": "Awaiting customer hold",
+    "pickup_soon": "Pickup soon",
+    "active": "On the road"
+  },
+  "cards": {
+    "label": "Work counters",
+    "loadError": "Could not load the counters.",
+    "urgent": {
+      "pending_approval": "{count, plural, one {# expiring} other {# expiring}}",
+      "awaiting_hold": "{count, plural, one {# expiring} other {# expiring}}",
+      "pickup_soon": "{count, plural, one {# pickup overdue} other {# pickups overdue}}",
+      "active": "{count, plural, one {# return overdue} other {# returns overdue}}"
+    },
+    "calm": {
+      "pending_approval": "Nothing is stuck",
+      "awaiting_hold": "Customers still have time",
+      "pickup_soon": "No overdue pickup",
+      "active": "No overdue return"
+    }
+  },
+  "intro": {
+    "pending_approval": "Hosts have 60 minutes to answer; the system already reminded them at minute 20 and 45. Under 15 minutes left with no answer: call them or send a nudge — the customer is waiting to look elsewhere.",
+    "awaiting_hold": "The host accepted and the vehicle is held for the customer. They have 120 minutes to pay the hold; the system reminds them at 60 and 15 minutes left. When time runs out the vehicle returns to the marketplace by itself.",
+    "pickup_soon": "Paid bookings picking up within the next 24 hours. Past the pickup time with no handover: ask the shop — the customer may be standing there.",
+    "active": "Vehicles currently with customers. Past the return time with no return handover: ask the shop; settlement only runs after the return record."
+  },
+  "filters": {
+    "searchLabel": "Search this queue",
+    "searchPlaceholder": "Customer, vehicle, plate, shop"
+  },
+  "request": {
+    "label": "Booking request queue",
+    "customer": "Customer",
+    "vehicle": "Vehicle · shop",
+    "schedule": "Rental period",
+    "sentAt": "Sent",
+    "respondBy": "Answer by",
+    "holdBy": "Hold by",
+    "longTerm": "Long term · {package}",
+    "holdAmount": "Hold {amount}",
+    "autoReminded": "{count, plural, =1 {auto-reminded once} other {auto-reminded # times}}",
+    "notReminded": "not reminded yet",
+    "remaining": "left",
+    "expired": "expired",
+    "segment": "round {index}/{total}",
+    "remind": "Nudge host",
+    "remindedAt": "Nudged {time}",
+    "remindCooldown": "Nudged at {time} — wait {minutes} minutes before nudging again",
+    "remindSuccess": "Reminder sent to the shop",
+    "partnerProfile": "Partner profile",
+    "callOwner": "Call the host",
+    "loadError": "Could not load the queue",
+    "noResults": "No request matches the search",
+    "total": "{count, plural, one {# request} other {# requests}}"
+  },
+  "booking": {
+    "label": "Booking queue",
+    "code": "Booking",
+    "customer": "Customer",
+    "vehicle": "Vehicle · shop",
+    "pickup": "Pickup",
+    "return": "Return",
+    "openDetail": "View booking {code}",
+    "detail": "Details",
+    "loadError": "Could not load the queue",
+    "noResults": "No booking matches the search",
+    "total": "{count, plural, one {# booking} other {# bookings}}"
+  },
+  "empty": {
+    "pending_approval": "No request is waiting for a host right now.",
+    "awaiting_hold": "No request is waiting for a customer's hold.",
+    "pickup_soon": "No pickup in the next 24 hours.",
+    "active": "No trip is on the road."
+  },
+  "time": {
+    "inMinutes": "{count} min left",
+    "inHours": "{count} h left",
+    "inDays": "{count} d left",
+    "lateMinutes": "{count} min late",
+    "lateHours": "{count} h late",
+    "lateDays": "{count} d late"
+  },
+  "dashboard": {
+    "title": "Trip operations",
+    "today": "Today: {pickups} pickups · {returns} returns",
+    "open": "Open trip operations",
+    "loadError": "Could not load the operations queues"
+  }
+}

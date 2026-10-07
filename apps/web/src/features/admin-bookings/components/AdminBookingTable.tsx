@@ -13,17 +13,8 @@ import {
 } from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
-import { useElementWidth } from '@/hooks/use-element-width';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { isDebtOverdue, isInDebtScope } from '../detail';
-import {
-  ADMIN_BOOKING_COLUMN,
-  FULL_TABLE_MIN_WIDTH,
-  PANEL_COLUMN_WIDTH,
-  panelColumnsAfterDrop,
-  panelDropCount,
-  panelTableMinWidth,
-} from '../table-layout';
 import type { AdminBooking } from '../types';
 import styles from './AdminBookingTable.module.css';
 
@@ -37,12 +28,18 @@ interface AdminBookingTableProps {
   onView: (id: string) => void;
   onPageChange: (page: number, pageSize: number) => void;
   /**
-   * Đơn đang mở ở panel chi tiết. Có giá trị ⇒ bảng chuyển sang chế độ CẠNH PANEL: hàng đó được
-   * tô, hai cột tiền + cột thao tác bị bỏ, và các cột còn lại tự ẩn bớt theo chỗ thật còn lại
-   * (`table-layout.ts`).
+   * Đơn đang mở ở panel chi tiết — hàng đó được tô để khi đóng panel người dùng vẫn biết mình vừa
+   * xem dòng nào. Bố cục cột KHÔNG đổi theo panel (07/10/2026 — bỏ chế độ "cạnh panel" co cột và
+   * đẩy trang sang trái; panel giờ là drawer chuẩn có mask).
    */
   selectedId?: string | null;
 }
+
+/**
+ * Sàn bề rộng bảy cột dữ liệu + cột thao tác (Figma `127:1725` ghi 920px cho Platform Bookings;
+ * code có thêm hai cột tiền). Đây là SÀN, không phải tổng: bảng `tableLayout="auto"` vẫn giãn.
+ */
+const MIN_TABLE_WIDTH = 1180;
 
 export function AdminBookingTable({
   items,
@@ -58,26 +55,18 @@ export function AdminBookingTable({
   const t = useTranslations('AdminBookings.table');
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
-  const [measureRef, dropCount] = useElementWidth<HTMLDivElement, number>(panelDropCount);
-
-  const withPanel = selectedId !== null;
-  const panelColumns = panelColumnsAfterDrop(dropCount ?? 0);
-  const hiddenInPanel = (key: keyof typeof PANEL_COLUMN_WIDTH) =>
-    withPanel && !panelColumns.has(key);
-  const panelWidth = (key: keyof typeof PANEL_COLUMN_WIDTH, full: number) =>
-    withPanel ? PANEL_COLUMN_WIDTH[key] : full;
 
   const columns: DataTableColumn<AdminBooking>[] = [
     {
       title: t('code'),
-      key: ADMIN_BOOKING_COLUMN.CODE,
-      width: panelWidth(ADMIN_BOOKING_COLUMN.CODE, 150),
+      key: 'code',
+      width: 150,
       render: (_, r) => (
         <div>
           {/*
             Mã đơn là NÚT mở panel, không chỉ là chữ: cả hàng bấm được bằng chuột, nhưng `tr`
             không nhận focus — không có nút này thì người dùng bàn phím không mở được đơn nào
-            khi panel đang mở (cột thao tác bị bỏ ở chế độ cạnh panel).
+            khi cột thao tác đang nằm khuất dưới panel.
           */}
           <button
             type="button"
@@ -93,9 +82,8 @@ export function AdminBookingTable({
     },
     {
       title: t('customer'),
-      key: ADMIN_BOOKING_COLUMN.CUSTOMER,
-      width: panelWidth(ADMIN_BOOKING_COLUMN.CUSTOMER, 170),
-      hidden: hiddenInPanel(ADMIN_BOOKING_COLUMN.CUSTOMER),
+      key: 'customer',
+      width: 170,
       render: (_, r) => (
         <div>
           <div className={styles.primary}>{r.customerName}</div>
@@ -106,9 +94,8 @@ export function AdminBookingTable({
     },
     {
       title: t('tenant'),
-      key: ADMIN_BOOKING_COLUMN.TENANT,
-      width: panelWidth(ADMIN_BOOKING_COLUMN.TENANT, 230),
-      hidden: hiddenInPanel(ADMIN_BOOKING_COLUMN.TENANT),
+      key: 'tenant',
+      width: 230,
       render: (_, r) => (
         <div>
           <div className={styles.tenantName}>
@@ -130,17 +117,16 @@ export function AdminBookingTable({
     },
     {
       title: t('period'),
-      key: ADMIN_BOOKING_COLUMN.PERIOD,
-      width: panelWidth(ADMIN_BOOKING_COLUMN.PERIOD, 260),
-      hidden: hiddenInPanel(ADMIN_BOOKING_COLUMN.PERIOD),
+      key: 'period',
+      width: 260,
       render: (_, r) => (
         <span className={styles.period}>{fmt.shortDateTimeRange(r.pickupAt, r.returnAt)}</span>
       ),
     },
     {
       title: tCommon('labels.status'),
-      key: ADMIN_BOOKING_COLUMN.STATUS,
-      width: panelWidth(ADMIN_BOOKING_COLUMN.STATUS, 130),
+      key: 'status',
+      width: 130,
       render: (_, r) => (
         <StatusTag
           value={r.status as BookingStatus}
@@ -151,18 +137,16 @@ export function AdminBookingTable({
     },
     {
       title: t('totalAmount'),
-      key: ADMIN_BOOKING_COLUMN.TOTAL,
+      key: 'totalAmount',
       align: 'right',
       width: 130,
-      hidden: withPanel,
       render: (_, r) => fmt.money(r.totalAmount),
     },
     {
       title: t('debtAmount'),
-      key: ADMIN_BOOKING_COLUMN.DEBT,
+      key: 'debtAmount',
       align: 'right',
       width: 120,
-      hidden: withPanel,
       // Cùng luật với panel: đơn huỷ ngoài phạm vi công nợ; chỉ tô cảnh báo khoản nợ của chuyến
       // ĐÃ hoàn thành.
       render: (_, r) =>
@@ -174,44 +158,39 @@ export function AdminBookingTable({
           tCommon('labels.emptyValue')
         ),
     },
-    {
-      ...actionColumn<AdminBooking>((row) => [
-        {
-          key: 'view',
-          label: tCommon('actions.viewDetail'),
-          icon: <EyeOutlined />,
-          onClick: () => onView(row.id),
-        },
-      ]),
-      hidden: withPanel,
-    },
+    actionColumn<AdminBooking>((row) => [
+      {
+        key: 'view',
+        label: tCommon('actions.viewDetail'),
+        icon: <EyeOutlined />,
+        onClick: () => onView(row.id),
+      },
+    ]),
   ];
 
   return (
-    <div ref={measureRef}>
-      <DataTable<AdminBooking>
-        label={t('label')}
-        columns={columns}
-        items={items}
-        onRowClick={(row) => onView(row.id)}
-        selectedRowKey={selectedId}
-        minWidth={withPanel ? panelTableMinWidth(panelColumns) : FULL_TABLE_MIN_WIDTH}
-        loading={loading}
-        error={error ? { title: t('loadError'), onRetry: error.onRetry } : null}
-        filtered={filtered}
-        empty={{ title: t('empty') }}
-        noResults={{
-          title: t('noResults'),
-          action: onClearFilters ? (
-            <Button onClick={onClearFilters}>{tCommon('actions.clear')}</Button>
-          ) : undefined,
-        }}
-        pagination={{
-          meta,
-          onChange: onPageChange,
-          totalLabel: (total) => t('total', { count: total }),
-        }}
-      />
-    </div>
+    <DataTable<AdminBooking>
+      label={t('label')}
+      columns={columns}
+      items={items}
+      onRowClick={(row) => onView(row.id)}
+      selectedRowKey={selectedId}
+      minWidth={MIN_TABLE_WIDTH}
+      loading={loading}
+      error={error ? { title: t('loadError'), onRetry: error.onRetry } : null}
+      filtered={filtered}
+      empty={{ title: t('empty') }}
+      noResults={{
+        title: t('noResults'),
+        action: onClearFilters ? (
+          <Button onClick={onClearFilters}>{tCommon('actions.clear')}</Button>
+        ) : undefined,
+      }}
+      pagination={{
+        meta,
+        onChange: onPageChange,
+        totalLabel: (total) => t('total', { count: total }),
+      }}
+    />
   );
 }
