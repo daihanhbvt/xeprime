@@ -20,7 +20,13 @@ import {
   type AccountRealm,
   type Permission,
 } from '@xeprime/types';
-import bcrypt from 'bcryptjs';
+/*
+ * `bcrypt` NATIVE chứ không phải `bcryptjs`: bản JS thuần băm ngay trên event loop — mỗi phép
+ * cost 12 chặn cả API ~250ms, bốn lượt đăng nhập cùng lúc xếp hàng thành ~1s. Bản native chạy
+ * trên threadpool của libuv, event loop không kẹt. Định dạng `$2a$`/`$2b$` như nhau nên hash cũ
+ * trong DB vẫn đọc được.
+ */
+import bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RbacService } from '../rbac/rbac.service';
@@ -43,6 +49,19 @@ import type { VerifiedIdentity } from './social/identity';
 
 const BCRYPT_ROUNDS = 12;
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 giờ
+
+let timingDummyHash: Promise<string> | undefined;
+/**
+ * Hash THẬT, cùng cost, của một chuỗi ngẫu nhiên không ai biết — để `loginWithPassword` so khớp
+ * khi định danh không có tài khoản, cho thời gian phản hồi bằng nhau.
+ *
+ * Không dùng hằng số viết tay: hằng `$2a$12$000…` cũ có salt không hợp lệ nên thư viện từ chối
+ * NGAY (0ms) thay vì băm (~250ms) — đo thời gian là biết SĐT/email có tài khoản hay không.
+ */
+function timingDummyHashOnce(): Promise<string> {
+  timingDummyHash ??= bcrypt.hash(randomBytes(32).toString('hex'), BCRYPT_ROUNDS);
+  return timingDummyHash;
+}
 
 @Injectable()
 export class AuthService {
@@ -175,8 +194,7 @@ export class AuthService {
       select: { id: true, passwordHash: true, status: true },
     });
 
-    const hash =
-      user?.passwordHash ?? '$2a$12$0000000000000000000000000000000000000000000000000000';
+    const hash = user?.passwordHash ?? (await timingDummyHashOnce());
     const ok = await bcrypt.compare(password, hash);
 
     if (!user || !user.passwordHash || !ok) {
