@@ -4,6 +4,7 @@ import { EyeOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
 import { useTranslations } from 'next-intl';
 import {
+  PLATFORM_PARTNER_KIND,
   TENANT_STATUS_META,
   type PaginationMeta,
   type PlatformPartnerKind,
@@ -14,6 +15,7 @@ import { StatusTag } from '@/components/data-display/StatusTag';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import type { AdminTenant } from '../types';
+import { PartnerPlanCell, VehicleCountCell } from './PartnerPlanCell';
 import styles from './AdminTenantTable.module.css';
 
 interface AdminTenantTableProps {
@@ -31,6 +33,8 @@ interface AdminTenantTableProps {
 
 /** Suy từ tổng bề rộng cột (P25 — Figma `127:1725` không đặc tả cột cho bảng gian hàng). */
 const MIN_TABLE_WIDTH = 950;
+/** Gian hàng gói có thêm cột "Gói hiện tại". */
+const MIN_TABLE_WIDTH_WITH_PLAN = 1200;
 
 export function AdminTenantTable({
   partnerKind,
@@ -49,6 +53,7 @@ export function AdminTenantTable({
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const empty = tCommon('emptyValue');
+  const showPlan = partnerKind === PLATFORM_PARTNER_KIND.PACKAGE_SHOP;
 
   const columns: DataTableColumn<AdminTenant>[] = [
     {
@@ -76,6 +81,16 @@ export function AdminTenantTable({
         </div>
       ),
     },
+    ...(showPlan
+      ? [
+          {
+            title: t('columns.plan'),
+            key: 'plan',
+            width: 250,
+            render: (_: unknown, r: AdminTenant) => <PartnerPlanCell plan={r.plan} />,
+          },
+        ]
+      : []),
     {
       title: t('columns.type'),
       key: 'type',
@@ -86,8 +101,8 @@ export function AdminTenantTable({
       title: t('columns.vehicles'),
       key: 'vehicles',
       align: 'right',
-      width: 80,
-      render: (_, r) => r.vehicleCount,
+      width: 90,
+      render: (_, r) => <VehicleCountCell count={r.vehicleCount} plan={r.plan} />,
     },
     {
       title: t('columns.status'),
@@ -118,7 +133,7 @@ export function AdminTenantTable({
       columns={columns}
       items={items}
       onRowClick={(row) => onView(row.id)}
-      minWidth={MIN_TABLE_WIDTH}
+      minWidth={showPlan ? MIN_TABLE_WIDTH_WITH_PLAN : MIN_TABLE_WIDTH}
       loading={loading}
       error={error ? { title: tKind('loadError'), onRetry: error.onRetry } : null}
       filtered={filtered}

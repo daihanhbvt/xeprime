@@ -24,6 +24,7 @@ import { FilterBar, type FilterField } from '@/components/filter/FilterBar';
 import { ALL_FILTER } from '@/constants/filters';
 import { adminAuditPath } from '@/constants/routes';
 import { DashboardPanel } from '@/features/dashboard/components/DashboardPanel';
+import { useAuditLabels } from '@/features/admin-audit/hooks/use-audit-labels';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
@@ -244,17 +245,15 @@ function ActivityList({
 function ActivityRow({ row }: { row: PartnerActivity }) {
   const t = useTranslations('AdminTenants.partnerDetail.activity');
   const domainLabel = useDomainLabel();
+  const labels = useAuditLabels();
   const fmt = useAppFormat();
-  const verb = row.action.slice(row.action.lastIndexOf('.') + 1);
-  const verbLabel = domainLabel('auditActionVerb', verb, '');
-  const category = domainLabel('auditActionCategory', row.category);
   return (
     <div className={styles.activityRow}>
       <span className={styles.muted}>{fmt.time(row.createdAt)}</span>
       <span className={styles.stack}>
-        <span className={styles.activityTitle}>
-          {verbLabel ? t('title', { category, verb: verbLabel }) : category}
-        </span>
+        {/* Cùng bộ nhãn với trang Nhật ký hệ thống — một mã, một cách gọi ở cả hai nơi. */}
+        <span className={styles.activityTitle}>{labels.action(row.action)}</span>
+        {row.targetLabel ? <span className={styles.muted}>{labels.target(row)}</span> : null}
         <span className={styles.muted}>
           {row.actorName ?? t('systemActor')} · {domainLabel('auditActorScope', row.actorScope)}
           {row.viaSupport ? (
@@ -264,13 +263,19 @@ function ActivityRow({ row }: { row: PartnerActivity }) {
           ) : null}
         </span>
       </span>
-      {row.targetId ? (
-        <Link href={adminAuditPath.forTarget(row.targetType, row.targetId)}>
-          {t('viewDetail')} <RightOutlined aria-hidden />
-        </Link>
-      ) : (
-        <span />
-      )}
+      {/*
+        Mở ĐÚNG dòng này trên trang Nhật ký hệ thống (`open=<id>`), trong ngữ cảnh lịch sử của
+        đối tượng nếu có — người bấm "Xem chi tiết" một lượt gia hạn gói phải thấy ngay lượt đó.
+      */}
+      <Link
+        href={
+          row.targetId
+            ? adminAuditPath.forTarget(row.targetType, row.targetId, { open: row.id })
+            : adminAuditPath.forLog(row.id)
+        }
+      >
+        {t('viewDetail')} <RightOutlined aria-hidden />
+      </Link>
     </div>
   );
 }

@@ -2983,6 +2983,9 @@ model AuditLog {
 
   @@index([tenantId, createdAt])
   @@index([targetType, targetId])
+  /// Ô tìm kiếm của nhật ký dán một ULID ⇒ khớp `target_id` KHÔNG kèm loại; chỉ mục tổ hợp phía trên
+  /// không phục vụ được (cột đầu là `target_type`), và phép OR bốn cột cần cả bốn nhánh có chỉ mục.
+  @@index([targetId])
   @@index([actorUserId, createdAt])
   @@index([createdAt])
   @@index([action, createdAt])

@@ -18,7 +18,11 @@ import {
   FEATURE_STATE,
   PERMISSION,
   SUBSCRIPTION_INVOICE_STATUS_META,
+  SUBSCRIPTION_TERM_STATE,
+  SUBSCRIPTION_TERM_STATE_META,
+  daysLeftUntil,
   type SubscriptionInvoiceStatus,
+  type SubscriptionTermState,
 } from '@xeprime/types';
 import { DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
@@ -33,8 +37,6 @@ import type { PartnerBilling, PartnerOverview } from './api';
 import { usePartnerBilling } from './hooks';
 import { KeyValues, QuotaValue, useTabState } from './parts';
 import styles from './PartnerDetail.module.css';
-
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 type SubscriptionRow = PartnerBilling['subscriptions'][number];
 type InvoiceRow = PartnerBilling['invoices'][number];
@@ -78,9 +80,7 @@ function BillingContent({ billing, joinedAt }: { billing: PartnerBilling; joined
   const { plan, quota, invoiceStatus } = billing;
   // "Bây giờ" chốt MỘT lần mỗi lần mở tab — render lại không được làm số ngày nhảy.
   const [now] = useState(() => Date.now());
-  const daysLeft = plan.endsAt
-    ? Math.max(0, Math.ceil((new Date(plan.endsAt).getTime() - now) / DAY_MS))
-    : null;
+  const daysLeft = plan.endsAt ? daysLeftUntil(plan.endsAt, now) : null;
 
   const subscriptionColumns: DataTableColumn<SubscriptionRow>[] = [
     {
@@ -101,12 +101,15 @@ function BillingContent({ billing, joinedAt }: { billing: PartnerBilling; joined
       title: t('columns.status'),
       key: 'status',
       width: 140,
-      render: (_, row) =>
-        new Date(row.endsAt).getTime() < now ? (
-          <Tag>{t('expired')}</Tag>
-        ) : (
-          domainLabel('subscriptionStatus', row.status)
-        ),
+      // Trạng thái KỲ, không phải `status` lưu trong DB: kỳ đã xếp lịch cũng là `active` ở DB, in
+      // thẳng ra là thành "hai gói cùng hiệu lực" (ADR 0010 điều 2).
+      render: (_, row) => (
+        <StatusTag
+          value={row.termState as SubscriptionTermState}
+          meta={SUBSCRIPTION_TERM_STATE_META}
+          group="subscriptionTermState"
+        />
+      ),
     },
   ];
 
@@ -148,13 +151,32 @@ function BillingContent({ billing, joinedAt }: { billing: PartnerBilling; joined
   // Mốc quan trọng — dựng từ lịch sử gói đã tải, không phải một nguồn thứ hai.
   const milestones = [
     { key: 'joined', at: joinedAt, label: t('milestones.joined') },
-    ...[...billing.subscriptions].reverse().map((sub) => ({
-      key: sub.id,
-      at: sub.startsAt,
-      label: t('milestones.started', { plan: sub.planName }),
-    })),
-    ...(plan.endsAt ? [{ key: 'renewal', at: plan.endsAt, label: t('milestones.renewal') }] : []),
-  ];
+    ...[...billing.subscriptions]
+      .reverse()
+      // Kỳ bị huỷ khi CHƯA bắt đầu chưa từng là một mốc — bỏ khỏi dòng thời gian.
+      .filter(
+        (sub) =>
+          (sub.termState as SubscriptionTermState) !== SUBSCRIPTION_TERM_STATE.CANCELLED ||
+          new Date(sub.startsAt).getTime() <= now,
+      )
+      .map((sub) => ({
+        key: sub.id,
+        at: sub.startsAt,
+        label:
+          (sub.termState as SubscriptionTermState) === SUBSCRIPTION_TERM_STATE.SCHEDULED
+            ? t('milestones.scheduled', { plan: sub.planName })
+            : t('milestones.started', { plan: sub.planName }),
+      })),
+    ...(plan.endsAt
+      ? [
+          {
+            key: 'renewal',
+            at: plan.endsAt,
+            label: plan.nextTerm ? t('milestones.renewed') : t('milestones.renewal'),
+          },
+        ]
+      : []),
+  ].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
 
   return (
     <div className={styles.tabBody}>
@@ -186,6 +208,17 @@ function BillingContent({ billing, joinedAt }: { billing: PartnerBilling; joined
                   key: 'renewal',
                   label: t('plan.renewal'),
                   value: daysLeft !== null ? t('plan.daysLeft', { days: daysLeft }) : '—',
+                },
+                {
+                  key: 'next',
+                  label: t('plan.next'),
+                  value: plan.nextTerm
+                    ? t('plan.nextValue', {
+                        plan: plan.nextTerm.planName,
+                        from: fmt.date(plan.nextTerm.startsAt),
+                        to: fmt.date(plan.nextTerm.endsAt),
+                      })
+                    : t('plan.noNext'),
                 },
               ]}
             />

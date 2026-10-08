@@ -1,0 +1,122 @@
+{
+  "page": {
+    "title": "Nhật ký hệ thống",
+    "subtitle": "Ai đã làm gì, với đối tượng nào, lúc nào — trên toàn nền tảng. Chỉ đọc.",
+    "loading": "Đang tải nhật ký hệ thống…"
+  },
+  "filters": {
+    "scope": "Phạm vi",
+    "action": "Hành động cụ thể",
+    "allActions": "Mọi hành động",
+    "target": "Loại đối tượng",
+    "allTargets": "Mọi đối tượng",
+    "dateRange": "Khoảng ngày",
+    "search": "Tìm trong nhật ký",
+    "searchPlaceholder": "Tên, email người thực hiện, gian hàng hoặc mã ID",
+    "category": "Nhóm hành động",
+    "allCategories": "Mọi nhóm"
+  },
+  "context": {
+    "title": "Đang xem lịch sử của",
+    "tenant": "Gian hàng {name}",
+    "count": "{count, plural, =0 {Chưa có sự kiện nào} other {# sự kiện}}",
+    "viewAll": "Xem toàn bộ nhật ký",
+    "tenantKind": "Gian hàng",
+    "actorKind": "Người thực hiện",
+    "id": "Mã {id}"
+  },
+  "table": {
+    "label": "Nhật ký hệ thống",
+    "systemActor": "Hệ thống",
+    "total": "{count, plural, other {# sự kiện}}",
+    "empty": "Chưa có nhật ký nào",
+    "noResults": "Không có sự kiện nào khớp bộ lọc",
+    "loadError": "Không tải được nhật ký",
+    "columns": {
+      "time": "Thời gian",
+      "event": "Sự kiện",
+      "actor": "Người thực hiện",
+      "tenant": "Gian hàng"
+    },
+    "viaSupport": "Qua phiên hỗ trợ",
+    "noTenant": "Toàn nền tảng"
+  },
+  "detail": {
+    "title": "Nhật ký",
+    "loadError": "Không tải được sự kiện này",
+    "values": {
+      "unlimited": "Không giới hạn",
+      "percent": "{value}%"
+    },
+    "technical": {
+      "title": "Thông tin kỹ thuật",
+      "rawJson": "Dữ liệu gốc (JSON)",
+      "noData": "Không có dữ liệu"
+    },
+    "openTenant": "Mở gian hàng",
+    "targetHistory": "Mọi sự kiện của đối tượng này",
+    "facts": {
+      "time": "Thời gian",
+      "actor": "Người thực hiện",
+      "category": "Nhóm hành động",
+      "tenant": "Gian hàng",
+      "code": "Mã hành động",
+      "logId": "Mã sự kiện",
+      "targetId": "Mã đối tượng",
+      "ip": "Địa chỉ IP",
+      "userAgent": "Trình duyệt / thiết bị"
+    },
+    "changes": {
+      "title": "Nội dung",
+      "field": "Thông tin",
+      "before": "Trước",
+      "after": "Sau",
+      "created": "Thông tin được ghi nhận khi tạo:",
+      "removed": "Thông tin trước khi gỡ bỏ:",
+      "none": "Sự kiện này không ghi lại dữ liệu chi tiết.",
+      "noChanges": "Không có thông tin nào thay đổi.",
+      "unchangedHidden": "{count, plural, other {# thông tin không đổi đang ẩn}}",
+      "showUnchanged": "Hiện tất cả",
+      "hideUnchanged": "Chỉ hiện thay đổi"
+    },
+    "subscription": {
+      "period": "{from} → {to}",
+      "plan": "Gói",
+      "unknownPlan": "Gói không xác định",
+      "validity": "Hiệu lực",
+      "term": "Kỳ hạn",
+      "months": "{count, plural, other {# tháng}}",
+      "price": "Số tiền",
+      "negotiated": "Giá đàm phán",
+      "listedWas": "niêm yết {amount}",
+      "listPrice": "Theo bảng giá",
+      "quotaLabel": "Hạn mức",
+      "quota": {
+        "vehicles": "{count, plural, other {tối đa # xe}}",
+        "vehiclesUnlimited": "không giới hạn xe",
+        "branches": "{count, plural, other {# chi nhánh}}",
+        "branchesUnlimited": "không giới hạn chi nhánh",
+        "members": "{count, plural, other {# thành viên}}",
+        "membersUnlimited": "không giới hạn thành viên"
+      },
+      "billingMode": "Chế độ thu phí",
+      "previousTerm": "Nối tiếp sau kỳ",
+      "replacedTerms": "Các kỳ bị kết thúc",
+      "providerTx": "Mã giao dịch ngân hàng",
+      "note": "Ghi chú",
+      "cancelledTerm": "Kỳ bị huỷ",
+      "status": "Trạng thái",
+      "statusChange": "{from} → {to}",
+      "reason": "Lý do",
+      "summary": {
+        "assign": "Gán {plan}, hiệu lực từ {date}.",
+        "renew": "Gia hạn {plan}: kỳ mới bắt đầu {date}, nối tiếp ngay sau kỳ đang chạy.",
+        "activate": "Kích hoạt {plan} sau khi nhận đủ tiền hoá đơn — hiệu lực từ {date}.",
+        "cancel": "Huỷ kỳ {plan}.",
+        "schedule_change": "Đổi từ {previous} sang {plan} kể từ kỳ sau — bắt đầu {date}.",
+        "change_now": "Đổi sang {plan} ngay ({date}); {count, plural, =0 {không có kỳ nào bị kết thúc} other {# kỳ còn hạn đã kết thúc}}."
+      },
+      "fallbackTerm": "Chuyển về"
+    }
+  }
+}

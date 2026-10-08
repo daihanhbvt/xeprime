@@ -343,6 +343,9 @@ export const queryKeys = {
     plans: (status: string) => ['billing', 'plans', status] as const,
     subscriptions: (tenantId: string, page: number) =>
       ['billing', 'subscriptions', tenantId, page] as const,
+    /** Chuỗi kỳ CÒN HẠN của một gian hàng (`state=live`) — tách khỏi trang lịch sử. */
+    liveSubscriptions: (tenantId: string) =>
+      ['billing', 'subscriptions', tenantId, 'live'] as const,
   },
   /** "Gói của tôi" — tenant-scoped (W2, ADR 0015/0026). Tách nhánh khỏi `billing` (platform). */
   subscription: {

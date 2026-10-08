@@ -10008,6 +10008,11 @@ export interface components {
             price?: string;
             /** @description Ghi chú (số chứng từ, lý do tặng…) */
             note?: string;
+            /**
+             * @description Bỏ trống hoặc next_term = nối đuôi kỳ còn hạn; now = huỷ các kỳ còn hạn và bắt đầu ngay
+             * @enum {string}
+             */
+            timing?: "next_term" | "now";
         };
         AssignSupportCaseDto: {
             /** @description Nhân sự nền tảng phụ trách; null = bỏ phân công */
@@ -10039,12 +10044,16 @@ export interface components {
             action: string;
             targetType: string;
             targetId?: string | null;
+            /** @description Tên người đọc được của đối tượng (tên gói, biển số, mã đơn…) — null khi loại đối tượng không tra nhãn (dữ liệu cá nhân) hoặc bản ghi không còn */
+            targetLabel?: string | null;
             tenantId?: string | null;
             tenantName?: string | null;
             actorUserId?: string | null;
             actorName?: string | null;
             actorEmail?: string | null;
             ipAddress?: string | null;
+            /** @description Nhân sự nền tảng thực hiện TRONG một phiên hỗ trợ (ADR 0050) */
+            viaSupport: boolean;
             /** @description ISO-8601 UTC */
             createdAt: string;
             beforeJson?: {
@@ -10062,12 +10071,16 @@ export interface components {
             action: string;
             targetType: string;
             targetId?: string | null;
+            /** @description Tên người đọc được của đối tượng (tên gói, biển số, mã đơn…) — null khi loại đối tượng không tra nhãn (dữ liệu cá nhân) hoặc bản ghi không còn */
+            targetLabel?: string | null;
             tenantId?: string | null;
             tenantName?: string | null;
             actorUserId?: string | null;
             actorName?: string | null;
             actorEmail?: string | null;
             ipAddress?: string | null;
+            /** @description Nhân sự nền tảng thực hiện TRONG một phiên hỗ trợ (ADR 0050) */
+            viaSupport: boolean;
             /** @description ISO-8601 UTC */
             createdAt: string;
         };
@@ -13278,6 +13291,8 @@ export interface components {
             actorName?: string | null;
             targetType: string;
             targetId?: string | null;
+            /** @description Tên người đọc được của đối tượng — cùng nguồn với trang Nhật ký hệ thống */
+            targetLabel?: string | null;
             /** @description Thao tác thực hiện trong một phiên hỗ trợ */
             viaSupport: boolean;
             /** @description ISO */
@@ -13552,6 +13567,8 @@ export interface components {
             graceEndsAt?: string | null;
             /** @description Trần xe ĐANG CƯỠNG CHẾ (BillingService.vehicleQuotaFor) và số xe đã dùng */
             vehicleQuota: components["schemas"]["PartnerQuotaItemDto"];
+            /** @description Kỳ đã xếp lịch kế tiếp (gia hạn / đổi gói từ kỳ sau) — null nếu chưa có */
+            nextTerm?: components["schemas"]["PlanTermRefDto"] | null;
         };
         PartnerProfileDto: {
             /** @description Mặt tiền — chỉ gian hàng gói */
@@ -13606,6 +13623,11 @@ export interface components {
             termMonths?: number | null;
             /** @description @xeprime/types → SubscriptionStatus (lưu trữ) */
             status: string;
+            /**
+             * @description Trạng thái KỲ theo đồng hồ server — hiển thị cái này, không phải status
+             * @enum {string}
+             */
+            termState: "current" | "scheduled" | "ended" | "cancelled";
             /** @description ISO */
             startsAt: string;
             /** @description ISO */
@@ -13894,6 +13916,15 @@ export interface components {
              * @example 250000
              */
             price: string;
+        };
+        PlanTermRefDto: {
+            subscriptionId: string;
+            planName: string;
+            planCode: string;
+            /** @description ISO-8601 UTC */
+            startsAt: string;
+            /** @description ISO-8601 UTC */
+            endsAt: string;
         };
         PlatformBookingDetailDto: {
             id: string;
@@ -14262,6 +14293,7 @@ export interface components {
             ownerName?: string | null;
             provinceName?: string | null;
             vehicleCount: number;
+            plan: components["schemas"]["PlatformTenantPlanDto"];
             /** @description ISO-8601 UTC */
             createdAt: string;
             ownerEmail?: string | null;
@@ -14292,12 +14324,39 @@ export interface components {
             ownerName?: string | null;
             provinceName?: string | null;
             vehicleCount: number;
+            plan: components["schemas"]["PlatformTenantPlanDto"];
             /** @description ISO-8601 UTC */
             createdAt: string;
         };
         PlatformTenantPageDto: {
             data: components["schemas"]["PlatformTenantDto"][];
             meta: components["schemas"]["PaginationMetaDto"];
+        };
+        PlatformTenantPlanDto: {
+            /**
+             * @description @xeprime/types → BillingPhase
+             * @enum {string}
+             */
+            phase: "current" | "grace" | "lapsed" | "unconfigured";
+            /** @enum {string|null} */
+            billingMode?: "commission" | "package" | null;
+            planName?: string | null;
+            planCode?: string | null;
+            /** @description ISO — bắt đầu kỳ đang xét */
+            termStartsAt?: string | null;
+            /** @description ISO — kết thúc kỳ đang xét */
+            endsAt?: string | null;
+            /** @description ISO — hết ân hạn */
+            graceEndsAt?: string | null;
+            /**
+             * @description Trần xe của KỲ GÓI đang xét (snapshot — ADR 0041 điều 3). not_applicable khi không ở tuyến gói
+             * @enum {string}
+             */
+            vehicleLimitKind: "total" | "unlimited" | "not_applicable";
+            /** @description Chỉ khi vehicleLimitKind = total */
+            vehicleLimit?: number | null;
+            /** @description Kỳ đã xếp lịch kế tiếp (gia hạn / đổi gói từ kỳ sau) — null nếu chưa có */
+            nextTerm?: components["schemas"]["PlanTermRefDto"] | null;
         };
         PlatformTenantStatusCountsDto: {
             draft: number;
@@ -16067,6 +16126,16 @@ export interface components {
             /** @description ISO-8601 UTC */
             endsAt: string;
             note?: string | null;
+            /**
+             * @description Trạng thái KỲ chấm bằng đồng hồ server (subscriptionTermStateOf) — đang hiệu lực / chờ đến kỳ / đã hết hạn / đã huỷ. Hiển thị cái này, không hiển thị status lưu trong DB
+             * @enum {string}
+             */
+            termState: "current" | "scheduled" | "ended" | "cancelled";
+            /**
+             * @description Ai tạo kỳ: admin gán tay / kích hoạt khi nhận tiền / hệ thống gán mặc định
+             * @enum {string}
+             */
+            origin: "admin" | "payment" | "system";
             /** @description ISO-8601 UTC */
             createdAt: string;
         };
@@ -41881,6 +41950,10 @@ export interface operations {
                 actorScope?: "tenant" | "platform" | "customer" | "system";
                 /** @description Khớp chính xác, vd "tenant.lock" */
                 action?: string;
+                /** @description Nhóm hành động — suy từ tiền tố mã (auditActionCategoryOf), lọc ở DB */
+                category?: "vehicle" | "vehicle_document" | "maintenance" | "booking" | "booking_request" | "finance" | "branch" | "member" | "subscription" | "profile" | "partner_status" | "customer" | "support_session" | "support_case" | "other";
+                /** @description Tìm kiếm: một ULID khớp chính xác mã dòng / đối tượng / gian hàng / tài khoản; chữ thường khớp tên-email người thực hiện hoặc tên-mã gian hàng */
+                q?: string;
                 /** @description Loại đối tượng, vd "tenant" / "booking" */
                 targetType?: string;
                 /** @description ID đối tượng (ULID) */
@@ -57687,6 +57760,8 @@ export interface operations {
                 partnerKind?: "package_shop" | "individual_owner";
                 sort?: "newest" | "oldest" | "name" | "vehicles";
                 status?: "draft" | "pending_review" | "needs_revision" | "active" | "suspended" | "rejected" | "expired";
+                /** @description Hạn gói: active = có kỳ gói đang chạy · expiring = hết trong PLAN_EXPIRING_SOON_DAYS ngày và chưa có kỳ xếp sau · none = không có kỳ gói nào đang chạy (ân hạn / hết hạn / chưa kích hoạt) */
+                planState?: "active" | "expiring" | "none";
                 /** @description Tìm theo tên / mã / slug / SĐT */
                 q?: string;
                 page?: number;
@@ -58313,6 +58388,8 @@ export interface operations {
     SubscriptionsController_list: {
         parameters: {
             query?: {
+                /** @description live = chỉ các kỳ còn hạn (đang chạy + đã xếp lịch), sắp theo ngày bắt đầu — chuỗi kỳ mà màn gia hạn cần, không phụ thuộc trang lịch sử */
+                state?: "live";
                 page?: number;
                 limit?: number;
             };
@@ -67480,6 +67557,8 @@ export interface operations {
     SubscriptionController_invoices: {
         parameters: {
             query?: {
+                /** @description live = chỉ các kỳ còn hạn (đang chạy + đã xếp lịch), sắp theo ngày bắt đầu — chuỗi kỳ mà màn gia hạn cần, không phụ thuộc trang lịch sử */
+                state?: "live";
                 page?: number;
                 limit?: number;
             };

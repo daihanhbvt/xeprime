@@ -3,13 +3,21 @@
     "filters": {
       "status": "Trạng thái",
       "allStatuses": "Tất cả",
-      "sort": "Sắp xếp"
+      "sort": "Sắp xếp",
+      "planState": "Hạn gói",
+      "allPlanStates": "Mọi hạn gói",
+      "planStates": {
+        "active": "Đang có gói",
+        "expiring": "Sắp hết hạn, chưa gia hạn",
+        "none": "Hết hạn / chưa kích hoạt"
+      }
     },
     "columns": {
       "type": "Pháp nhân",
       "vehicles": "Xe",
       "status": "Trạng thái",
-      "createdAt": "Ngày tạo"
+      "createdAt": "Ngày tạo",
+      "plan": "Gói hiện tại"
     },
     "view": "Xem chi tiết",
     "clearFilters": "Xoá bộ lọc",
@@ -42,6 +50,15 @@
         "noResults": "Không có chủ xe khớp bộ lọc",
         "total": "{count, plural, other {# chủ xe}}"
       }
+    },
+    "plan": {
+      "none": "Chưa có gói",
+      "endsOn": "Hết hạn {date}",
+      "endedOn": "Hết hạn từ {date}",
+      "daysLeft": "{days, plural, =0 {hết hạn hôm nay} other {còn # ngày}}",
+      "graceUntil": "ân hạn tới {date}",
+      "next": "Kỳ sau: {plan} từ {date}",
+      "unlimited": "Không giới hạn xe"
     }
   },
   "legacyRedirect": {
@@ -167,9 +184,11 @@
         "none": "Chưa có gói hiệu lực",
         "name": "Gói",
         "phase": "Trạng thái gói",
-        "endsAt": "Ngày gia hạn",
+        "endsAt": "Hết hạn",
         "daysLeft": "(còn {days, plural, other {# ngày}})",
-        "quota": "Hạn mức xe"
+        "quota": "Hạn mức xe",
+        "next": "Kỳ kế tiếp",
+        "nextValue": "{plan} · từ {date}"
       },
       "issues": {
         "title": "Cần xử lý",
@@ -354,15 +373,17 @@
     },
     "billing": {
       "permissionNote": "Chỉ người có quyền quản lý Gói & thanh toán mới xem được tab này. Tab chỉ để xem — gán, gia hạn hay huỷ gói nằm ở “Thao tác quản trị nền tảng”.",
-      "expired": "Đã hết hạn",
       "plan": {
         "title": "Gói hiện tại",
         "none": "Chưa có gói hiệu lực",
         "name": "Gói",
         "phase": "Trạng thái",
         "term": "Chu kỳ gói",
-        "renewal": "Gia hạn sau",
-        "daysLeft": "{days, plural, other {Còn # ngày}}"
+        "renewal": "Thời gian còn lại",
+        "daysLeft": "{days, plural, other {Còn # ngày}}",
+        "next": "Kỳ kế tiếp",
+        "nextValue": "{plan} · {from} → {to}",
+        "noNext": "Chưa xếp lịch"
       },
       "quota": {
         "title": "Hạn mức sử dụng",
@@ -408,7 +429,9 @@
         "title": "Mốc quan trọng",
         "joined": "Tham gia nền tảng",
         "started": "Bắt đầu gói {plan}",
-        "renewal": "Hết kỳ hiện tại — gia hạn tiếp theo"
+        "renewal": "Hết kỳ hiện tại — chưa gia hạn",
+        "scheduled": "Sẽ bắt đầu gói {plan}",
+        "renewed": "Hết kỳ hiện tại — kỳ kế tiếp đã xếp lịch"
       }
     },
     "commission": {
@@ -480,7 +503,6 @@
         "d30": "30 ngày qua",
         "d90": "90 ngày qua"
       },
-      "title": "{category} · {verb}",
       "systemActor": "Hệ thống",
       "viaSupport": "Qua phiên hỗ trợ",
       "viewDetail": "Xem chi tiết",

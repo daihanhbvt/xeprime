@@ -26,7 +26,20 @@ import {
   type PlanStatus,
   SUBSCRIPTION_INVOICE_STATUS,
   SUBSCRIPTION_INVOICE_TTL_HOURS,
+  SUBSCRIPTION_ASSIGN_KIND,
+  SUBSCRIPTION_ASSIGN_KIND_ACTION,
+  SUBSCRIPTION_AUDIT_ACTION,
+  SUBSCRIPTION_CANCEL_BLOCK,
+  SUBSCRIPTION_CANCEL_REASON,
+  SUBSCRIPTION_CHANGE_TIMING,
   SUBSCRIPTION_STATUS,
+  AUDIT_TARGET_TYPE,
+  planSubscriptionChain,
+  subscriptionCancelBlockOf,
+  subscriptionChainLockKey,
+  subscriptionOriginOf,
+  subscriptionTermStateOf,
+  type SubscriptionChainPlan,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_TYPE,
   addCalendarMonthsVn,
@@ -117,9 +130,48 @@ const SUB_SELECT = {
   startsAt: true,
   endsAt: true,
   note: true,
+  createdBy: true,
   createdAt: true,
   plan: { select: { code: true, name: true, limitsJson: true } },
 } satisfies Prisma.TenantSubscriptionSelect;
+
+/**
+ * Khoá CHUỖI KỲ của một tenant (`subscriptionChainLockKey`) — mọi đường ghi `tenant_subscriptions`
+ * lấy nó TRƯỚC khi đọc "đuôi": admin gán/huỷ, webhook kích hoạt, job hết hạn (worker). Khoá theo
+ * transaction, tự nhả khi commit/rollback; lấy lại trong cùng transaction là no-op.
+ */
+async function lockSubscriptionChain(tx: Prisma.TransactionClient, tenantId: string) {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${subscriptionChainLockKey(tenantId)}))`;
+}
+
+/** Đủ để kể lại MỘT kỳ trong audit: kỳ được nối đuôi, kỳ bị huỷ, kỳ bị thay. */
+const TERM_SNAPSHOT_SELECT = {
+  id: true,
+  planId: true,
+  status: true,
+  billingMode: true,
+  startsAt: true,
+  endsAt: true,
+  plan: { select: { code: true, name: true } },
+} satisfies Prisma.TenantSubscriptionSelect;
+
+type TermSnapshotRow = Prisma.TenantSubscriptionGetPayload<{
+  select: typeof TERM_SNAPSHOT_SELECT;
+}>;
+
+/** Kỳ TRẢ PHÍ — mọi dòng không phải hoa hồng 0đ (kể cả dòng cũ thiếu `billing_mode`). */
+const isPaidRow = (term: TermSnapshotRow) => term.billingMode !== BILLING_MODE.COMMISSION;
+
+function termSnapshot(term: TermSnapshotRow) {
+  return {
+    subscriptionId: term.id,
+    planCode: term.plan.code,
+    planName: term.plan.name,
+    billingMode: term.billingMode,
+    startsAt: term.startsAt.toISOString(),
+    endsAt: term.endsAt.toISOString(),
+  };
+}
 
 /**
  * Writer DUY NHẤT của `plans` + `tenant_subscriptions` (ADR 0010, giữ nguyên qua ADR 0015).
@@ -523,12 +575,21 @@ export class BillingService {
   ): Promise<{ data: SubscriptionDto[]; meta: PaginationMeta }> {
     await this.assertTenant(tenantId);
     const paging = resolvePaging(query, SUBSCRIPTION_DEFAULT_LIMIT, SUBSCRIPTION_MAX_LIMIT);
+    /*
+     * `state=live`: chuỗi kỳ còn hạn — tối đa vài dòng (kỳ đang chạy + kỳ đã xếp lịch), nên vẫn đi
+     * qua phân trang nhưng sắp theo ngày BẮT ĐẦU. Màn gia hạn đọc nó thay vì suy từ trang đầu của
+     * lịch sử: lịch sử sắp theo ngày tạo, và vài vòng xếp lịch/huỷ đủ đẩy kỳ đang chạy khỏi trang 1.
+     */
+    const live = query.state === 'live';
+    const where: Prisma.TenantSubscriptionWhereInput = live
+      ? { tenantId, status: SUBSCRIPTION_STATUS.ACTIVE, endsAt: { gt: new Date() } }
+      : { tenantId };
 
     const [total, rows] = await this.prisma.$transaction([
-      this.prisma.tenantSubscription.count({ where: { tenantId } }),
+      this.prisma.tenantSubscription.count({ where }),
       this.prisma.tenantSubscription.findMany({
-        where: { tenantId },
-        orderBy: { createdAt: 'desc' },
+        where,
+        orderBy: live ? [{ startsAt: 'asc' }, { id: 'asc' }] : [{ createdAt: 'desc' }, { id: 'desc' }],
         skip: paging.skip,
         take: paging.take,
         select: SUB_SELECT,
@@ -542,8 +603,16 @@ export class BillingService {
   }
 
   /**
-   * Gán / gia hạn: chèn dòng mới. Còn gói hiện hành → chu kỳ mới nối đuôi (`startsAt =
-   * current.endsAt`, audit `subscription.renew`); hết/chưa có → bắt đầu từ now (`subscription.assign`).
+   * Gán / gia hạn / đổi gói: chèn MỘT dòng mới (lịch sử append-only — ADR 0010).
+   *
+   * Kỳ mới bắt đầu lúc nào do `dto.timing` quyết (`SUBSCRIPTION_CHANGE_TIMING`):
+   *  - `next_term` (mặc định): nối đuôi kỳ trả phí cuối cùng còn hạn (`planChainWithinTx`).
+   *    Audit `subscription.renew` nếu CÙNG bậc, `subscription.schedule_change` nếu khác bậc —
+   *    người đối soát phải phân biệt được gia hạn với đổi gói từ kỳ sau.
+   *  - `now`: huỷ mọi kỳ còn hạn rồi bắt đầu từ `now`, trong CHÍNH transaction này
+   *    (`planChainWithinTx` — ADR 0041 điều 6). Audit `subscription.change_now` + một dòng
+   *    `subscription.cancel` cho mỗi kỳ trả phí bị thay.
+   * Không còn kỳ trả phí nào ⇒ bắt đầu từ `now`, audit `subscription.assign`.
    */
   async assign(
     tenantId: string,
@@ -591,8 +660,16 @@ export class BillingService {
       const now = new Date();
       // Nối đuôi theo endsAt MUỘN NHẤT còn active (kể cả chu kỳ tương lai đã xếp hàng) — dùng
       // findCurrent (startsAt <= now) ở đây sẽ tạo 2 chu kỳ chồng nhau khi gia hạn 2 lần. Dòng
-      // hoa hồng 0đ thì bị HUỶ chứ không nối sau; xem `resolveChainStart`.
-      const { startsAt, renewedPaidTerm } = await this.resolveChainStart(tx, tenantId, now);
+      // hoa hồng 0đ thì bị HUỶ chứ không nối sau; xem `planChainWithinTx`.
+      // Khoá chuỗi kỳ + đặt lượt gán vào chuỗi + huỷ kỳ bị thay — một phép, cùng transaction.
+      const chain = await this.planChainWithinTx(tx, {
+        tenantId,
+        planId: plan.id,
+        timing: dto.timing,
+        actorUserId,
+        now,
+      });
+      const { startsAt } = chain;
       // THÁNG LỊCH, không phải N×30 ngày (ADR 0015 điều 2) — cùng định nghĩa "một tháng"
       // với thuê dài hạn (ADR 0011).
       const endsAt = addCalendarMonthsVn(startsAt, dto.termMonths);
@@ -656,17 +733,19 @@ export class BillingService {
         {
           tenantId,
           actorUserId,
-          actorScope: 'platform',
+          actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
           /*
-           * `renew` chỉ khi nối sau một kỳ ĐÃ TRẢ TIỀN. Nối sau (rồi huỷ) dòng hoa hồng 0đ là
-           * NÂNG CẤP, không phải gia hạn — gọi nó là 'renew' làm mất dấu đúng sự kiện mà một
-           * cuộc đối soát doanh thu đi tìm.
+           * `renew` chỉ khi nối sau một kỳ ĐÃ TRẢ TIỀN cùng bậc. Nối sau (rồi huỷ) dòng hoa hồng
+           * 0đ là NÂNG CẤP, không phải gia hạn — gọi nó là 'renew' làm mất dấu đúng sự kiện mà một
+           * cuộc đối soát doanh thu đi tìm. Bảng quyết định: `planSubscriptionChain`.
            */
-          action: renewedPaidTerm ? 'subscription.renew' : 'subscription.assign',
-          targetType: 'tenant_subscription',
+          action: SUBSCRIPTION_ASSIGN_KIND_ACTION[chain.kind],
+          targetType: AUDIT_TARGET_TYPE.TENANT_SUBSCRIPTION,
           targetId: sub.id,
           after: {
             planCode: plan.code,
+            // Tên gói lúc gán: audit phải đọc được kể cả khi bậc gói bị đổi tên/xoá sau này.
+            planName: plan.name,
             price: price.toString(),
             // Dấu vết của một giá LỆCH bảng giá: một cuộc đối soát doanh thu phải phân biệt được
             // "admin gõ 0đ" với "bậc này niêm yết 0đ".
@@ -679,6 +758,12 @@ export class BillingService {
               plan.commissionPercent === null ? null : plan.commissionPercent.toString(),
             startsAt: startsAt.toISOString(),
             endsAt: endsAt.toISOString(),
+            // Kỳ mà lượt này nối đuôi (gia hạn / đổi gói từ kỳ sau) và các kỳ bị lượt "đổi ngay"
+            // thay thế — để người đọc audit thấy được TỪ gói nào SANG gói nào.
+            ...(chain.previous ? { previousTerm: termSnapshot(chain.previous) } : {}),
+            ...(chain.kind === SUBSCRIPTION_ASSIGN_KIND.CHANGE_NOW
+              ? { replacedTerms: chain.cancel.filter(isPaidRow).map(termSnapshot) }
+              : {}),
             ...(dto.note ? { note: dto.note } : {}),
           },
         },
@@ -690,51 +775,89 @@ export class BillingService {
     return toSubscriptionDto(row);
   }
 
-  /** Huỷ sớm một dòng thuê bao còn hiệu lực (active → cancelled). */
+  /**
+   * Huỷ sớm một kỳ TRẢ PHÍ còn hạn — kỳ đang chạy hoặc kỳ đã xếp lịch (active → cancelled).
+   *
+   * Luật (`subscriptionCancelBlockOf`, web đọc cùng hàm):
+   *  - Kỳ đã huỷ / đã hết hạn ⇒ `INVALID_STATUS_TRANSITION` — không còn gì để huỷ.
+   *  - Dòng hoa hồng mặc định ⇒ `INVALID_STATUS_TRANSITION` — đổi tuyến bằng cách GÁN gói.
+   *  - Đã có kỳ xếp SAU nó ⇒ `SUBSCRIPTION_LATER_TERM_EXISTS` — huỷ từ đuôi chuỗi, hoặc đổi gói ngay.
+   *
+   * Huỷ kỳ CUỐI CÙNG còn hạn thì trong CÙNG transaction gán lại dòng hoa hồng mặc định
+   * (`assignDefaultPlanWithinTx`): "không có gói" là pha `unconfigured` — mọi đường ghi tiền từ
+   * chối, và job vòng đời không bao giờ tự sửa vì nó chỉ nhặt dòng `active` (ADR 0038 điều 1).
+   */
   async cancel(
     tenantId: string,
     actorUserId: string,
     subscriptionId: string,
   ): Promise<SubscriptionDto> {
     const row = await this.prisma.$transaction(async (tx) => {
-      const res = await tx.tenantSubscription.updateMany({
-        where: { id: subscriptionId, tenantId, status: SUBSCRIPTION_STATUS.ACTIVE },
-        data: { status: SUBSCRIPTION_STATUS.CANCELLED },
+      await lockSubscriptionChain(tx, tenantId);
+      const now = new Date();
+      const target = await tx.tenantSubscription.findFirst({
+        where: { id: subscriptionId, tenantId },
+        select: TERM_SNAPSHOT_SELECT,
       });
-      if (res.count !== 1) {
-        const exists = await tx.tenantSubscription.findFirst({
-          where: { id: subscriptionId, tenantId },
-          select: { id: true },
-        });
-        if (!exists) {
-          throw new NotFoundException({
-            code: API_ERROR_CODE.NOT_FOUND,
-            message: 'Không tìm thấy thuê bao',
-          });
-        }
-        throw new ConflictException({
-          code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
-          message: 'Chỉ huỷ được thuê bao đang hiệu lực',
+      if (!target) {
+        throw new NotFoundException({
+          code: API_ERROR_CODE.NOT_FOUND,
+          message: 'Không tìm thấy thuê bao',
         });
       }
-      const sub = await tx.tenantSubscription.findUniqueOrThrow({
-        where: { id: subscriptionId },
-        select: SUB_SELECT,
+      const live = await tx.tenantSubscription.findMany({
+        where: { tenantId, status: SUBSCRIPTION_STATUS.ACTIVE, endsAt: { gt: now } },
+        select: TERM_SNAPSHOT_SELECT,
       });
+      const block = subscriptionCancelBlockOf(target, live, now);
+      if (block === SUBSCRIPTION_CANCEL_BLOCK.LATER_TERM) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.SUBSCRIPTION_LATER_TERM_EXISTS,
+          message:
+            'Gian hàng đã có một kỳ gói xếp lịch sau kỳ này — huỷ kỳ xếp sau trước, hoặc đổi gói ngay',
+        });
+      }
+      if (block) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
+          message:
+            block === SUBSCRIPTION_CANCEL_BLOCK.DEFAULT_TERM
+              ? 'Dòng tuyến hoa hồng mặc định không huỷ được — đổi tuyến bằng cách gán gói'
+              : 'Chỉ huỷ được kỳ đang hiệu lực hoặc đang chờ đến kỳ',
+        });
+      }
+
+      await tx.tenantSubscription.update({
+        where: { id: target.id },
+        data: { status: SUBSCRIPTION_STATUS.CANCELLED },
+      });
+      const remaining = live.filter((term) => term.id !== target.id);
+      const fallback =
+        remaining.length === 0 ? await this.assignDefaultPlanWithinTx(tx, tenantId, now) : null;
+
       await this.audit.record(
         {
           tenantId,
           actorUserId,
-          actorScope: 'platform',
-          action: 'subscription.cancel',
-          targetType: 'tenant_subscription',
-          targetId: subscriptionId,
-          before: { status: SUBSCRIPTION_STATUS.ACTIVE },
-          after: { status: SUBSCRIPTION_STATUS.CANCELLED },
+          actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
+          action: SUBSCRIPTION_AUDIT_ACTION.CANCEL,
+          targetType: AUDIT_TARGET_TYPE.TENANT_SUBSCRIPTION,
+          targetId: target.id,
+          // Kỳ bị huỷ nằm ở CẢ HAI bên: phép so trước/sau chỉ còn đúng trạng thái và lý do.
+          before: { status: SUBSCRIPTION_STATUS.ACTIVE, term: termSnapshot(target) },
+          after: {
+            status: SUBSCRIPTION_STATUS.CANCELLED,
+            reason: SUBSCRIPTION_CANCEL_REASON.MANUAL,
+            term: termSnapshot(target),
+            ...(fallback ? { fallbackTerm: termSnapshot(fallback) } : {}),
+          },
         },
         tx,
       );
-      return sub;
+      return tx.tenantSubscription.findUniqueOrThrow({
+        where: { id: target.id },
+        select: SUB_SELECT,
+      });
     });
     return toSubscriptionDto(row);
   }
@@ -830,66 +953,84 @@ export class BillingService {
   }
 
   /**
-   * Kỳ mới BẮT ĐẦU từ mốc nào — một phép giải cho cả ba đường tạo thuê bao (admin gán, tenant
-   * tự mua, webhook kích hoạt khi tiền về).
+   * Đặt một lượt gán MỚI vào chuỗi kỳ của tenant — một phép cho cả admin gán (`assign`) lẫn webhook
+   * kích hoạt khi tiền về (`activateFromInvoiceWithinTx`).
+   *
+   *  1. Khoá chuỗi kỳ (`lockSubscriptionChain`) rồi mới đọc — hai lượt song song không cùng nối
+   *     sau một "đuôi", và job hết hạn ở worker không chen vào giữa.
+   *  2. Quyết định bằng `planSubscriptionChain` (`@xeprime/types`) — CÙNG hàm mà hộp gia hạn ở web
+   *     dùng để xem trước, nên ngày bắt đầu web hứa là ngày server ghi.
+   *  3. Huỷ các kỳ bị thay trong cùng transaction. Kỳ TRẢ PHÍ bị thay (đổi gói ngay) có một dòng
+   *     audit `subscription.cancel` riêng, lý do `replaced`; dòng hoa hồng 0đ là dòng hệ thống —
+   *     thay nó không ghi audit.
    *
    * ## Vì sao không chỉ là "nối sau `ends_at` muộn nhất"
    *
    * Mọi tenant đều mang một dòng hoa hồng 0đ dài `COMMISSION_TRACK_TERM_MONTHS` (12 tháng) do
-   * `assignDefaultPlanWithinTx` gán lúc mở gian hàng. Phép nối đuôi trần sẽ thấy dòng đó là
-   * "kỳ còn hạn" và đặt `starts_at` của gói vừa mua ở **12 tháng sau**. Hệ quả thì im lặng và
-   * tốn tiền thật:
+   * `assignDefaultPlanWithinTx` gán lúc mở gian hàng. Phép nối đuôi trần sẽ thấy dòng đó là "kỳ
+   * còn hạn" và đặt `starts_at` của gói vừa mua ở **12 tháng sau**: tenant VẪN ở tuyến hoa hồng,
+   * vẫn bị trần Owner Lite, khách vẫn bị cộng phí dịch vụ — trong khi hoá đơn `paid` và audit đủ.
+   * Đuôi vì thế chỉ chọn trong kỳ TRẢ PHÍ; dòng hoa hồng luôn nhường chỗ.
    *
-   *  - `effectiveSubscriptionWhere` đòi `starts_at <= now`, nên dòng gói bị loại khỏi phép chấm
-   *    pha ⇒ tenant VẪN ở tuyến hoa hồng;
-   *  - họ vẫn bị trần Owner Lite 3 xe, vẫn bị `SubscriptionTrackGuard` đẩy khỏi `/manage`, và
-   *    khách của họ vẫn bị cộng phí dịch vụ 10%;
-   *  - hoá đơn thì `paid`, audit thì có, nên không nơi nào trông như đang hỏng.
-   *
-   * ## Luật
-   *
-   * Nhìn dòng ĐUÔI, không nhìn gói sắp tạo:
-   *
-   * | Đuôi | Làm gì | Vì sao |
-   * | --- | --- | --- |
-   * | không có | bắt đầu từ `now` | — |
-   * | `package` còn hạn | nối từ `ends_at` của nó | đó là kỳ ĐÃ TRẢ TIỀN; gia hạn sớm không được cắt ngắn nó |
-   * | `commission` còn hạn | **huỷ nó**, bắt đầu từ `now` | dòng hệ thống 0đ, không ai trả gì cho nó — không có kỳ nào để tôn trọng |
-   *
-   * Huỷ chứ không xoá: dòng bị thay vẫn là lịch sử tuyến của tenant, và `listSubscriptions` phải
-   * kể lại được. Huỷ cũng giữ bất biến "MỘT dòng hiệu lực tại một thời điểm" mà
-   * `findCurrent`/`resolveEffectiveBilling` dựa vào.
+   * Huỷ chứ không xoá: dòng bị thay vẫn là lịch sử tuyến của tenant, và bất biến "MỘT dòng hiệu
+   * lực tại một thời điểm" mà `findCurrent`/`resolveEffectiveBilling` dựa vào được giữ.
    */
-  private async resolveChainStart(
+  private async planChainWithinTx(
     tx: Prisma.TransactionClient,
-    tenantId: string,
-    now: Date,
-  ): Promise<{ startsAt: Date; renewedPaidTerm: boolean }> {
-    const tail = await tx.tenantSubscription.findFirst({
-      where: { tenantId, status: SUBSCRIPTION_STATUS.ACTIVE, endsAt: { gt: now } },
-      orderBy: { endsAt: 'desc' },
-      select: { id: true, endsAt: true, billingMode: true },
-    });
-    if (!tail) return { startsAt: now, renewedPaidTerm: false };
-    if (tail.billingMode !== BILLING_MODE.COMMISSION) {
-      return { startsAt: tail.endsAt, renewedPaidTerm: true };
-    }
-
-    /*
-     * Huỷ TẤT CẢ dòng hoa hồng còn hạn, không chỉ dòng đuôi: job vòng đời nối liền kỳ nên một
-     * tenant có thể mang nhiều dòng hoa hồng chồng nhau sau một lần job chạy trễ, và bỏ sót một
-     * dòng là để lại đúng cái `ends_at` vừa gây ra lỗi này.
-     */
-    await tx.tenantSubscription.updateMany({
+    args: {
+      tenantId: string;
+      planId: string;
+      timing?: string | null;
+      /** `null` = hệ thống (webhook) — không có lượt "đổi gói ngay" nào từ đường đó. */
+      actorUserId: string | null;
+      now: Date;
+    },
+  ): Promise<SubscriptionChainPlan<TermSnapshotRow>> {
+    await lockSubscriptionChain(tx, args.tenantId);
+    const live = await tx.tenantSubscription.findMany({
       where: {
-        tenantId,
+        tenantId: args.tenantId,
         status: SUBSCRIPTION_STATUS.ACTIVE,
-        billingMode: BILLING_MODE.COMMISSION,
-        endsAt: { gt: now },
+        endsAt: { gt: args.now },
       },
-      data: { status: SUBSCRIPTION_STATUS.CANCELLED },
+      orderBy: { startsAt: 'asc' },
+      select: TERM_SNAPSHOT_SELECT,
     });
-    return { startsAt: now, renewedPaidTerm: false };
+    const chain = planSubscriptionChain(
+      live,
+      { planId: args.planId, timing: args.timing },
+      args.now,
+    );
+    if (chain.cancel.length > 0) {
+      await tx.tenantSubscription.updateMany({
+        where: {
+          id: { in: chain.cancel.map((term) => term.id) },
+          status: SUBSCRIPTION_STATUS.ACTIVE,
+        },
+        data: { status: SUBSCRIPTION_STATUS.CANCELLED },
+      });
+    }
+    for (const term of chain.cancel) {
+      if (!isPaidRow(term)) continue;
+      await this.audit.record(
+        {
+          tenantId: args.tenantId,
+          actorUserId: args.actorUserId,
+          actorScope: args.actorUserId ? AUDIT_ACTOR_SCOPE.PLATFORM : AUDIT_ACTOR_SCOPE.SYSTEM,
+          action: SUBSCRIPTION_AUDIT_ACTION.CANCEL,
+          targetType: AUDIT_TARGET_TYPE.TENANT_SUBSCRIPTION,
+          targetId: term.id,
+          before: { status: SUBSCRIPTION_STATUS.ACTIVE, term: termSnapshot(term) },
+          after: {
+            status: SUBSCRIPTION_STATUS.CANCELLED,
+            reason: SUBSCRIPTION_CANCEL_REASON.REPLACED,
+            term: termSnapshot(term),
+          },
+        },
+        tx,
+      );
+    }
+    return chain;
   }
 
   /**
@@ -921,11 +1062,14 @@ export class BillingService {
     });
   }
 
-  async assignDefaultPlanWithinTx(tx: Prisma.TransactionClient, tenantId: string): Promise<void> {
+  async assignDefaultPlanWithinTx(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    now: Date = new Date(),
+  ): Promise<TermSnapshotRow> {
     const plan = await this.loadDefaultCommissionPlanOrThrow(tx);
 
-    const now = new Date();
-    await tx.tenantSubscription.create({
+    return tx.tenantSubscription.create({
       data: {
         id: newId(),
         tenantId,
@@ -937,8 +1081,11 @@ export class BillingService {
         commissionPercent: plan.commissionPercent,
         startsAt: now,
         endsAt: addCalendarMonthsVn(now, COMMISSION_TRACK_TERM_MONTHS),
-        note: 'Gói mặc định khi mở gian hàng (ADR 0015 điều 9).',
+        // Không ghi chú chữ: dòng hệ thống nói bằng `origin` (`subscriptionOriginOf`) và giao diện
+        // tự dịch — một câu tiếng Việt lưu trong DB là câu tiếng Việt trên giao diện tiếng Anh.
+        note: null,
       },
+      select: TERM_SNAPSHOT_SELECT,
     });
   }
 
@@ -1466,11 +1613,17 @@ export class BillingService {
     }
     const plan = await tx.plan.findUniqueOrThrow({
       where: { id: snapshot.planId },
-      select: { id: true, name: true, billingMode: true, commissionPercent: true },
+      select: { id: true, code: true, name: true, billingMode: true, commissionPercent: true },
     });
 
     const now = new Date();
-    const { startsAt } = await this.resolveChainStart(tx, args.tenantId, now);
+    const { startsAt } = await this.planChainWithinTx(tx, {
+      tenantId: args.tenantId,
+      planId: plan.id,
+      timing: SUBSCRIPTION_CHANGE_TIMING.NEXT_TERM,
+      actorUserId: null,
+      now,
+    });
     const endsAt = addCalendarMonthsVn(startsAt, snapshot.termMonths);
 
     const sub = await tx.tenantSubscription.create({
@@ -1510,7 +1663,7 @@ export class BillingService {
      * Ba thứ phải cùng sống cùng chết: hoá đơn `paid`, dòng thuê bao `active`, và mốc onboarding.
      * Tách mốc ra ngoài (một job, hay một lượt gọi API sau khi client thấy `paid`) tạo ra một
      * cửa sổ trong đó gian hàng đã trả tiền nhưng vẫn bị routing giữ ở màn chuyển khoản — và
-     * `resolveChainStart` ngay trên đã huỷ dòng hoa hồng tạm, nên trong cửa sổ đó họ không thuộc
+     * `planChainWithinTx` ngay trên đã huỷ dòng hoa hồng tạm, nên trong cửa sổ đó họ không thuộc
      * tuyến nào cả.
      */
     await this.completePackageOnboardingWithinTx(tx, args.tenantId, plan.billingMode);
@@ -1519,12 +1672,15 @@ export class BillingService {
       {
         tenantId: args.tenantId,
         actorScope: AUDIT_ACTOR_SCOPE.SYSTEM,
-        action: 'subscription.activate_from_payment',
-        targetType: 'tenant_subscription',
+        action: SUBSCRIPTION_AUDIT_ACTION.ACTIVATE_FROM_PAYMENT,
+        targetType: AUDIT_TARGET_TYPE.TENANT_SUBSCRIPTION,
         targetId: sub.id,
         after: {
           invoiceId: args.invoiceId,
           planId: plan.id,
+          // Mã + tên gói lúc kích hoạt — nhật ký đọc được cả khi bậc gói đổi tên sau này.
+          planCode: plan.code,
+          planName: plan.name,
           termMonths: snapshot.termMonths,
           quota: snapshot.quota,
           price: args.totalAmount.toString(),
@@ -1586,7 +1742,7 @@ export class BillingService {
    * bị yêu cầu bổ sung, tạm gỡ) sẽ không bao giờ quay lại được.
    *
    * Trần ĐÃ TRẢ TIỀN thì gác cả hai, vì đó là cửa duy nhất còn lại của một lần HẠ BẬC: gói mới
-   * nối đuôi gói cũ (`resolveChainStart`), nên gian hàng 40 xe hạ về bậc 3 xe bước sang kỳ mới
+   * nối đuôi gói cũ (`planChainWithinTx`), nên gian hàng 40 xe hạ về bậc 3 xe bước sang kỳ mới
    * với 40 xe đang bán và một hoá đơn 100.000đ.
    *
    * ⚠️ Cổng này CHẶN THÊM MỚI, không gỡ thứ đang có (ADR 0038 · ADR 0041 điều 4). Xe ở nguyên
@@ -2107,6 +2263,10 @@ function toSubscriptionDto(s: SubRow): SubscriptionDto {
     startsAt: (s.startsAt as Date).toISOString(),
     endsAt: (s.endsAt as Date).toISOString(),
     note: s.note,
+    // Trạng thái KỲ chấm bằng đồng hồ SERVER: client chấm bằng đồng hồ của nó sẽ thấy kỳ vừa bắt
+    // đầu "bây giờ" là "chờ đến kỳ" (đồng hồ client chậm hơn vài trăm mili-giây là đủ).
+    termState: subscriptionTermStateOf(s, new Date()),
+    origin: subscriptionOriginOf(s),
     createdAt: (s.createdAt as Date).toISOString(),
   };
 }

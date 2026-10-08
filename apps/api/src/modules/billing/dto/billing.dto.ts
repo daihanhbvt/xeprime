@@ -4,6 +4,10 @@ import {
   FREE_TRIP_ALLOWANCE,
   PLAN_FEATURE_VALUES,
   PLAN_STATUS_VALUES,
+  SUBSCRIPTION_CHANGE_TIMING_VALUES,
+  SUBSCRIPTION_ORIGIN_VALUES,
+  SUBSCRIPTION_TERM_STATE_VALUES,
+  type SubscriptionChangeTiming,
   SUBSCRIPTION_INVOICE_STATUS_VALUES,
   SUBSCRIPTION_STATUS_VALUES,
   SUBSCRIPTION_TERM_MONTHS,
@@ -287,7 +291,20 @@ export class PlanDto {
 // Subscriptions
 // ---------------------------------------------------------------------------
 
+/** `live` = chỉ các kỳ CÒN HẠN (đang chạy + đã xếp lịch), sớm nhất trước, không phân trang. */
+export const SUBSCRIPTION_LIST_STATE_VALUES = ['live'] as const;
+
 export class SubscriptionListQueryDto {
+  @ApiPropertyOptional({
+    enum: SUBSCRIPTION_LIST_STATE_VALUES,
+    description:
+      'live = chỉ các kỳ còn hạn (đang chạy + đã xếp lịch), sắp theo ngày bắt đầu — chuỗi kỳ ' +
+      'mà màn gia hạn cần, không phụ thuộc trang lịch sử',
+  })
+  @IsOptional()
+  @IsIn(SUBSCRIPTION_LIST_STATE_VALUES)
+  state?: (typeof SUBSCRIPTION_LIST_STATE_VALUES)[number];
+
   @ApiPropertyOptional({ default: 1, minimum: 1 })
   @IsOptional()
   @Type(() => Number)
@@ -339,6 +356,21 @@ export class AssignSubscriptionDto {
   @IsString()
   @MaxLength(1000)
   note?: string;
+
+  /**
+   * Kỳ mới bắt đầu lúc nào khi gian hàng còn kỳ trả phí — xem `SUBSCRIPTION_CHANGE_TIMING`.
+   * `now` huỷ mọi kỳ còn hạn trong cùng transaction (ADR 0041 điều 6); phần còn lại KHÔNG tự hoàn.
+   */
+  @ApiPropertyOptional({
+    enum: SUBSCRIPTION_CHANGE_TIMING_VALUES,
+    // KHÔNG khai `default`: openapi-typescript sẽ sinh trường thành BẮT BUỘC. Mặc định
+    // `next_term` nằm ở service (mọi giá trị khác `now` đều nối đuôi).
+    description:
+      'Bỏ trống hoặc next_term = nối đuôi kỳ còn hạn; now = huỷ các kỳ còn hạn và bắt đầu ngay',
+  })
+  @IsOptional()
+  @IsIn(SUBSCRIPTION_CHANGE_TIMING_VALUES)
+  timing?: SubscriptionChangeTiming;
 }
 
 export class SubscriptionDto {
@@ -379,6 +411,18 @@ export class SubscriptionDto {
   @ApiProperty({ description: 'ISO-8601 UTC' }) startsAt!: string;
   @ApiProperty({ description: 'ISO-8601 UTC' }) endsAt!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) note!: string | null;
+  @ApiProperty({
+    enum: SUBSCRIPTION_TERM_STATE_VALUES,
+    description:
+      'Trạng thái KỲ chấm bằng đồng hồ server (subscriptionTermStateOf) — đang hiệu lực / chờ đến ' +
+      'kỳ / đã hết hạn / đã huỷ. Hiển thị cái này, không hiển thị status lưu trong DB',
+  })
+  termState!: string;
+  @ApiProperty({
+    enum: SUBSCRIPTION_ORIGIN_VALUES,
+    description: 'Ai tạo kỳ: admin gán tay / kích hoạt khi nhận tiền / hệ thống gán mặc định',
+  })
+  origin!: string;
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
 }
 
@@ -574,6 +618,18 @@ export class MySubscriptionDto {
 export class TenantPlanDto extends OmitType(PlanDto, ['subscriptionCount', 'deletable'] as const) {}
 
 /** Gói hiện hành của tenant — nhúng vào PlatformTenantDetailDto. */
+/**
+ * Một KỲ thuê bao được nhắc tới từ chỗ khác — kỳ kế tiếp đã xếp lịch, kỳ được nối đuôi. Đủ để nói
+ * "Gói nâng cao, từ 08/01/2027 đến 08/02/2027" mà không kéo cả dòng thuê bao.
+ */
+export class PlanTermRefDto {
+  @ApiProperty() subscriptionId!: string;
+  @ApiProperty() planName!: string;
+  @ApiProperty() planCode!: string;
+  @ApiProperty({ description: 'ISO-8601 UTC' }) startsAt!: string;
+  @ApiProperty({ description: 'ISO-8601 UTC' }) endsAt!: string;
+}
+
 export class CurrentPlanDto {
   @ApiProperty() subscriptionId!: string;
   @ApiProperty() planId!: string;

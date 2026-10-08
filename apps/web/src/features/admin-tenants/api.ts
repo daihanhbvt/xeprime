@@ -10,6 +10,7 @@ export function filtersToParams(filters: AdminTenantFilters): QueryParams {
   return {
     partnerKind: filters.partnerKind ?? null,
     status: pickFilter(filters.status),
+    planState: pickFilter(filters.planState),
     sort: filters.sort ?? null,
     q: filters.q ?? null,
     page: filters.page ?? 1,

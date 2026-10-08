@@ -20,6 +20,8 @@ export * from './auth-identifier';
 export * from './long-term';
 export * from './plan-billing';
 export * from './effective-billing';
+export * from './subscription-term';
+export * from './audit-target';
 export * from './booking-eligibility';
 export * from './holds';
 export * from './host-metrics';

@@ -4,10 +4,10 @@ import { HistoryOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { PERMISSION } from '@xeprime/types';
+import {
+  AUDIT_TARGET_TYPE, PERMISSION } from '@xeprime/types';
 import { DetailDrawer } from '@/components/overlay/DetailDrawer';
 import { adminAuditPath } from '@/constants/routes';
-import { AUDIT_TARGET_TYPE } from '@/features/admin-audit/constants';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useAdminBooking } from '../hooks/use-admin-bookings';
 import type { AdminBookingDetail } from '../types';

@@ -1023,5 +1023,439 @@
     "customer": "Khách thuê",
     "partner": "Đối tác",
     "platform": "Nhân sự nền tảng"
+  },
+  "auditAction": {
+    "approval": {
+      "approve": "Duyệt hồ sơ",
+      "reject": "Từ chối hồ sơ",
+      "request_revision": "Yêu cầu bổ sung hồ sơ",
+      "check_update": "Cập nhật mục kiểm tra phiếu duyệt",
+      "internal_note_update": "Cập nhật ghi chú nội bộ phiếu duyệt"
+    },
+    "bank_account": {
+      "archived": "Lưu trữ tài khoản ngân hàng"
+    },
+    "bank_transaction": {
+      "ignore": "Bỏ qua giao dịch ngân hàng",
+      "match_manual": "Khớp tay giao dịch ngân hàng"
+    },
+    "banner": {
+      "create": "Tạo banner trang chủ",
+      "update": "Cập nhật banner trang chủ",
+      "delete": "Xoá banner trang chủ",
+      "reorder": "Sắp xếp lại banner"
+    },
+    "booking": {
+      "create": "Tạo đơn thuê",
+      "transition": "Chuyển trạng thái đơn thuê",
+      "contact_reveal": "Xem liên hệ khách trên đơn",
+      "delivery_fee_update": "Cập nhật phí giao xe",
+      "driver_assign": "Phân công tài xế",
+      "deposit_refund": {
+        "record": "Ghi hoàn cọc thế chấp",
+        "correct": "Sửa hoàn cọc thế chấp"
+      },
+      "handover": {
+        "draft": {
+          "create": "Tạo biên bản bàn giao nháp"
+        },
+        "cancel": "Huỷ biên bản bàn giao",
+        "photo": {
+          "upload": "Tải ảnh bàn giao",
+          "remove": "Gỡ ảnh bàn giao"
+        }
+      },
+      "surcharge": {
+        "create": "Thêm phụ phí đơn thuê",
+        "update": "Cập nhật phụ phí đơn thuê",
+        "void": "Huỷ phụ phí đơn thuê"
+      }
+    },
+    "booking_hold": {
+      "create": "Tạo khoản giữ chỗ",
+      "paid": "Khách đã chuyển tiền giữ chỗ",
+      "cancel": "Huỷ khoản giữ chỗ",
+      "expire": "Khoản giữ chỗ hết hạn",
+      "settle": "Quyết toán khoản giữ chỗ",
+      "settlement_deferred": "Hoãn quyết toán khoản giữ chỗ"
+    },
+    "booking_request": {
+      "approve": "Nhận yêu cầu đặt xe",
+      "reject": "Từ chối yêu cầu đặt xe",
+      "cancel": "Khách rút yêu cầu đặt xe",
+      "cancel_by_host": "Chủ xe huỷ chuyến đang chờ giữ chỗ",
+      "expire": "Yêu cầu quá hạn phản hồi",
+      "slot_taken": "Đóng yêu cầu vì khung giờ đã có người",
+      "auto_accept_skipped": "Bỏ qua tự nhận chuyến",
+      "platform_remind": "Nền tảng nhắc chủ xe phản hồi"
+    },
+    "branch": {
+      "create": "Tạo chi nhánh",
+      "update": "Cập nhật chi nhánh",
+      "activate": "Kích hoạt chi nhánh",
+      "deactivate": "Ngừng hoạt động chi nhánh",
+      "set_default": "Đặt chi nhánh mặc định"
+    },
+    "catalog": {
+      "create": "Tạo mục danh mục",
+      "update": "Cập nhật mục danh mục",
+      "delete": "Xoá mục danh mục",
+      "reorder": "Sắp xếp lại danh mục",
+      "model": {
+        "update": "Cập nhật mẫu xe",
+        "delete": "Xoá mẫu xe"
+      }
+    },
+    "contract": {
+      "create": "Tạo hợp đồng thuê"
+    },
+    "customer": {
+      "contact_reveal": "Xem liên hệ khách"
+    },
+    "customer_document": {
+      "verify": "Đối chiếu giấy tờ khách"
+    },
+    "driver": {
+      "create": "Thêm tài xế",
+      "update": "Cập nhật tài xế",
+      "delete": "Xoá tài xế"
+    },
+    "fee_policy": {
+      "create_draft": "Tạo bản nháp chính sách phí",
+      "update_draft": "Sửa bản nháp chính sách phí",
+      "discard_draft": "Bỏ bản nháp chính sách phí",
+      "activate": "Kích hoạt chính sách phí"
+    },
+    "hold_refund": {
+      "paid": "Đã hoàn tiền giữ chỗ",
+      "rejected": "Từ chối hoàn tiền giữ chỗ"
+    },
+    "holiday": {
+      "sync": "Đồng bộ lịch nghỉ lễ"
+    },
+    "insurance_policy": {
+      "retry": "Phát hành lại bảo hiểm",
+      "void": "Huỷ hợp đồng bảo hiểm"
+    },
+    "listing": {
+      "support": {
+        "repair": "Sửa đồng bộ tin đăng (phiên hỗ trợ)"
+      }
+    },
+    "member": {
+      "add": "Thêm thành viên",
+      "invite": "Mời thành viên",
+      "invite_accept": "Chấp nhận lời mời",
+      "invite_decline": "Từ chối lời mời",
+      "invite_revoke": "Thu hồi lời mời",
+      "update_role": "Đổi vai trò thành viên",
+      "remove": "Gỡ thành viên"
+    },
+    "payment": {
+      "record": "Ghi thanh toán",
+      "void": "Huỷ thanh toán"
+    },
+    "plan": {
+      "create": "Tạo bậc gói",
+      "update": "Cập nhật bậc gói",
+      "delete": "Xoá bậc gói"
+    },
+    "platform": {
+      "location": {
+        "create": "Thêm tỉnh/thành",
+        "update": "Cập nhật tỉnh/thành"
+      }
+    },
+    "platform_bank_balance": {
+      "save": "Ghi số dư ngân hàng nền tảng"
+    },
+    "platform_staff": {
+      "add": "Thêm nhân sự nền tảng",
+      "update_role": "Đổi vai trò nhân sự nền tảng",
+      "remove": "Gỡ nhân sự nền tảng"
+    },
+    "promo_code": {
+      "create": "Tạo mã khuyến mãi",
+      "update": "Cập nhật mã khuyến mãi",
+      "duplicate": "Nhân bản mã khuyến mãi",
+      "enable": "Bật mã khuyến mãi",
+      "disable": "Tắt mã khuyến mãi",
+      "delete": "Xoá mã khuyến mãi"
+    },
+    "receipt": {
+      "create": "Tạo phiếu thu/chi",
+      "approve": "Duyệt phiếu thu/chi",
+      "cancel": "Huỷ phiếu thu/chi"
+    },
+    "rental_policy": {
+      "update": "Cập nhật chính sách cho thuê"
+    },
+    "seller_profile": {
+      "save": "Lưu hồ sơ người bán",
+      "submit": "Gửi xác minh hồ sơ người bán"
+    },
+    "subscription": {
+      "assign": "Gán gói dịch vụ",
+      "renew": "Gia hạn gói dịch vụ",
+      "cancel": "Huỷ kỳ gói dịch vụ",
+      "activate_from_payment": "Kích hoạt gói từ thanh toán",
+      "lapse_to_commission": "Hết gói, chuyển tuyến hoa hồng",
+      "schedule_change": "Đổi gói từ kỳ sau",
+      "change_now": "Đổi gói ngay"
+    },
+    "subscription_invoice": {
+      "issue": "Phát hành hoá đơn gói"
+    },
+    "support_case": {
+      "open": "Mở case hỗ trợ",
+      "assign": "Phân công case hỗ trợ",
+      "transition": "Chuyển trạng thái case hỗ trợ",
+      "resolve": "Giải quyết case hỗ trợ",
+      "withdraw": "Rút case hỗ trợ"
+    },
+    "tax_withholding": {
+      "reverse": "Đảo bút toán khấu trừ thuế"
+    },
+    "tenant": {
+      "submit_review": "Gửi duyệt gian hàng",
+      "lock": "Khoá gian hàng",
+      "unlock": "Mở khoá gian hàng",
+      "free_trips_exhausted": "Hết lượt chuyến miễn phí"
+    },
+    "tenant_customer": {
+      "create": "Thêm khách vào sổ",
+      "update": "Cập nhật khách trong sổ",
+      "restore": "Khôi phục khách trong sổ",
+      "risk_change": "Đổi mức rủi ro khách",
+      "note_delete": "Xoá ghi chú khách",
+      "document_upload": "Tải giấy tờ khách",
+      "document_download": "Tải xuống giấy tờ khách",
+      "document_delete": "Xoá giấy tờ khách"
+    },
+    "tenant_payment_settings": {
+      "update": "Cập nhật cài đặt thanh toán"
+    },
+    "tenant_support": {
+      "open": "Mở phiên hỗ trợ gian hàng",
+      "revoke": "Kết thúc phiên hỗ trợ gian hàng"
+    },
+    "vehicle": {
+      "submit_public": "Gửi duyệt xe lên chợ",
+      "cancel_public_review": "Rút yêu cầu duyệt xe",
+      "platform_hide": "Nền tảng ẩn xe",
+      "platform_unhide": "Nền tảng gỡ ẩn xe",
+      "pricing": {
+        "update": "Cập nhật giá xe"
+      },
+      "marketplace_visibility": {
+        "update": "Đổi hiển thị xe trên chợ"
+      },
+      "operation_settings": {
+        "update": "Cập nhật cài đặt vận hành xe"
+      },
+      "service_settings": {
+        "update": "Cập nhật dịch vụ của xe"
+      },
+      "driver_surcharge_rules": {
+        "update": "Cập nhật phụ phí tài xế"
+      },
+      "source": {
+        "update": "Cập nhật nguồn xe"
+      },
+      "source_type": {
+        "change": "Đổi loại nguồn xe"
+      },
+      "branch": {
+        "reassign": "Chuyển xe sang chi nhánh khác"
+      },
+      "block": {
+        "create": "Chặn lịch xe",
+        "update": "Sửa khoảng chặn lịch",
+        "delete": "Gỡ khoảng chặn lịch",
+        "bulk_create": "Chặn lịch hàng loạt",
+        "bulk_release": "Nhả lịch hàng loạt"
+      },
+      "daily_price": {
+        "save": "Đặt giá theo ngày",
+        "delete": "Xoá giá theo ngày",
+        "bulk_set": "Đặt giá theo ngày hàng loạt",
+        "bulk_clear": "Xoá giá theo ngày hàng loạt"
+      },
+      "document": {
+        "create": "Thêm giấy tờ xe",
+        "update": "Cập nhật giấy tờ xe",
+        "upload": "Tải tệp giấy tờ xe",
+        "archive": "Lưu trữ giấy tờ xe",
+        "version": {
+          "attach": "Đính kèm phiên bản giấy tờ xe"
+        },
+        "ocr": {
+          "apply": "Áp kết quả OCR giấy tờ xe"
+        }
+      },
+      "contract": {
+        "upload": "Tải hợp đồng nguồn xe",
+        "attach_change": "Đổi hợp đồng nguồn xe đính kèm"
+      },
+      "maintenance": {
+        "create": "Tạo phiếu bảo dưỡng",
+        "update": "Cập nhật phiếu bảo dưỡng",
+        "start": "Bắt đầu bảo dưỡng",
+        "complete": "Hoàn tất bảo dưỡng",
+        "cancel": "Huỷ phiếu bảo dưỡng",
+        "cost_correct": "Sửa chi phí bảo dưỡng",
+        "config": {
+          "update": "Cập nhật cấu hình bảo dưỡng"
+        },
+        "due_task": {
+          "create": "Tạo việc bảo dưỡng đến hạn"
+        },
+        "attachment": {
+          "upload": "Tải đính kèm bảo dưỡng"
+        }
+      },
+      "support": {
+        "create_draft": "Tạo xe nháp (phiên hỗ trợ)",
+        "update": "Sửa xe (phiên hỗ trợ)",
+        "submit_review": "Gửi duyệt xe (phiên hỗ trợ)"
+      }
+    },
+    "withdrawal": {
+      "requested": "Yêu cầu rút điểm",
+      "approved": "Duyệt yêu cầu rút điểm",
+      "rejected": "Từ chối yêu cầu rút điểm",
+      "paid": "Đã chi tiền rút điểm",
+      "cancelled": "Huỷ yêu cầu rút điểm",
+      "reversed": "Đảo bút toán rút điểm"
+    }
+  },
+  "auditTargetType": {
+    "approval_task": "Phiếu duyệt",
+    "bank_account": "Tài khoản ngân hàng",
+    "bank_transaction": "Giao dịch ngân hàng",
+    "booking": "Đơn thuê",
+    "booking_hold": "Khoản giữ chỗ",
+    "booking_insurance_policy": "Bảo hiểm chuyến",
+    "booking_request": "Yêu cầu đặt xe",
+    "booking_surcharge": "Phụ phí đơn thuê",
+    "catalog_item": "Mục danh mục",
+    "contract": "Hợp đồng thuê",
+    "driver": "Tài xế",
+    "fee_policy": "Chính sách phí",
+    "hold_refund": "Hoàn tiền giữ chỗ",
+    "holiday_sync_run": "Lượt đồng bộ lịch nghỉ lễ",
+    "marketplace_banner": "Banner trang chủ",
+    "payment": "Thanh toán",
+    "plan": "Bậc gói",
+    "platform_bank_balance": "Số dư ngân hàng nền tảng",
+    "platform_membership": "Nhân sự nền tảng",
+    "promo_code": "Mã khuyến mãi",
+    "province": "Tỉnh/thành",
+    "receipt": "Phiếu thu/chi",
+    "rental_policy": "Chính sách cho thuê",
+    "seller_profile": "Hồ sơ người bán",
+    "subscription_invoice": "Hoá đơn gói",
+    "support_case": "Case hỗ trợ",
+    "tax_period": "Kỳ thuế",
+    "tax_withholding": "Khấu trừ thuế",
+    "tenant": "Gian hàng",
+    "tenant_branch": "Chi nhánh",
+    "tenant_customer": "Khách trong sổ",
+    "tenant_customer_document": "Giấy tờ khách",
+    "tenant_invite": "Lời mời thành viên",
+    "tenant_membership": "Thành viên gian hàng",
+    "tenant_payment_settings": "Cài đặt thanh toán",
+    "tenant_subscription": "Gói dịch vụ",
+    "user": "Người dùng",
+    "vehicle": "Xe",
+    "vehicle_block": "Khoảng chặn lịch",
+    "vehicle_block_batch": "Chặn lịch hàng loạt",
+    "vehicle_catalog_model": "Mẫu xe",
+    "vehicle_daily_price_batch": "Giá theo ngày hàng loạt",
+    "vehicle_document": "Giấy tờ xe",
+    "vehicle_handover": "Biên bản bàn giao",
+    "vehicle_maintenance_record": "Phiếu bảo dưỡng",
+    "vehicle_private_file": "Tệp riêng của xe",
+    "withdrawal_request": "Yêu cầu rút điểm"
+  },
+  "auditField": {
+    "planCode": "Mã gói",
+    "planName": "Gói",
+    "planId": "Bậc gói",
+    "price": "Giá",
+    "listedPrice": "Giá niêm yết",
+    "priceOverridden": "Giá đàm phán",
+    "termMonths": "Kỳ hạn (tháng)",
+    "quota": {
+      "maxVehicles": "Trần số xe",
+      "maxBranches": "Trần chi nhánh",
+      "maxMembers": "Trần thành viên"
+    },
+    "billingMode": "Chế độ thu phí",
+    "commissionPercent": "Phí dịch vụ (%)",
+    "startsAt": "Bắt đầu",
+    "endsAt": "Kết thúc",
+    "expiresAt": "Hết hạn",
+    "note": "Ghi chú",
+    "status": "Trạng thái",
+    "fromStatus": "Trạng thái trước",
+    "toStatus": "Trạng thái sau",
+    "reason": "Lý do",
+    "reasonCategory": "Nhóm lý do",
+    "name": "Tên",
+    "code": "Mã",
+    "amount": "Số tiền",
+    "totalAmount": "Tổng tiền",
+    "holdAmount": "Tiền giữ chỗ",
+    "subtotal": "Tạm tính",
+    "discountAmount": "Giảm giá",
+    "deliveryFee": "Phí giao xe",
+    "paidAt": "Thanh toán lúc",
+    "dueAt": "Hạn thanh toán",
+    "pickupAt": "Nhận xe lúc",
+    "returnAt": "Trả xe lúc",
+    "publicStatus": "Trạng thái kiểm duyệt",
+    "operationStatus": "Trạng thái vận hành",
+    "marketplaceEnabled": "Hiển thị trên chợ",
+    "isActive": "Đang bật",
+    "role": "Vai trò",
+    "roleCode": "Vai trò",
+    "email": "Email",
+    "phone": "Số điện thoại",
+    "lockReason": "Lý do khoá",
+    "description": "Mô tả",
+    "sortOrder": "Thứ tự",
+    "verification": "Xác minh",
+    "vehicleId": "Xe",
+    "bookingId": "Đơn thuê",
+    "tenantId": "Gian hàng",
+    "customerId": "Khách",
+    "branchId": "Chi nhánh",
+    "mode": "Chế độ",
+    "workspace": "Khu làm việc",
+    "capabilities": "Quyền trong phiên",
+    "capability": "Quyền trong phiên",
+    "title": "Tiêu đề",
+    "category": "Nhóm",
+    "priority": "Ưu tiên",
+    "assigneeId": "Người phụ trách",
+    "riskLevel": "Mức rủi ro",
+    "count": "Số lượng",
+    "subscriptionId": "Mã kỳ gói",
+    "invoiceId": "Hoá đơn",
+    "providerTxId": "Mã giao dịch ngân hàng",
+    "graceDays": "Số ngày ân hạn",
+    "lapsedSubscriptionId": "Kỳ gói đã hết",
+    "timing": "Thời điểm áp dụng"
+  },
+  "subscriptionTermState": {
+    "current": "Đang hiệu lực",
+    "scheduled": "Chờ đến kỳ",
+    "ended": "Đã hết hạn",
+    "cancelled": "Đã huỷ"
+  },
+  "subscriptionCancelReason": {
+    "manual": "Quản trị viên huỷ",
+    "replaced": "Bị thay bởi lượt đổi gói ngay"
   }
 }

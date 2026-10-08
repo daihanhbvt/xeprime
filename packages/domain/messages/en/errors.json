@@ -116,6 +116,7 @@
     "BOOKING_CANCEL_NOT_ALLOWED": "This trip is no longer at a stage you can cancel from here.",
     "COMMISSION_PLAN_IS_SINGLETON": "The commission track can only have one default tier.",
     "PLAN_NOT_SELF_SERVE": "This plan is configured for your shop size — contact XePrime for advice and a quote.",
+    "SUBSCRIPTION_LATER_TERM_EXISTS": "This shop already has a term scheduled right after this one. Cancel the scheduled term first, or use “Change plan now”.",
     "PLAN_IN_USE": "This plan already has subscriptions or invoices, so it cannot be deleted — turn it off instead.",
     "DEFAULT_PLAN_PROTECTED": "This is the commission track’s default tier — it cannot be switched to a paid plan or turned off.",
     "DEFAULT_COMMISSION_PLAN_MISSING": "The plan catalog has no default commission tier, so the shop cannot be opened.",

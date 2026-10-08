@@ -114,6 +114,9 @@ export const MESSAGE_NAMESPACES = [
   { file: 'platform-sellers', namespace: 'PlatformSellers' },
   // Nhân sự nền tảng + tra cứu xuyên realm của site quản trị (ADR 0053 — B4).
   { file: 'admin-staff', namespace: 'AdminStaff' },
+  // Nhật ký hệ thống của admin nền tảng — chuyển sang t() ngày 08/10/2026 cùng đợt dựng lại trang
+  // (nhãn hành động/đối tượng/trường nằm ở `Domain.auditAction` · `auditTargetType` · `auditField`).
+  { file: 'admin-audit', namespace: 'AdminAudit' },
   { file: 'admin-accounts', namespace: 'AdminAccounts' },
   // ⚠️ `mobile-shell` là VỎ app native (màn lỗi cấp app, not-found, điều hướng gốc), KHÔNG
   // phải "mọi chữ của mobile". Namespace vẫn chia theo TÍNH NĂNG, không theo client: màn

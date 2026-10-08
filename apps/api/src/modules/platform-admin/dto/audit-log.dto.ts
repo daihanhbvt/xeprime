@@ -1,5 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { AUDIT_ACTOR_SCOPE_VALUES } from '@xeprime/types';
+import {
+  AUDIT_ACTION_CATEGORY_VALUES,
+  AUDIT_ACTOR_SCOPE_VALUES,
+  type AuditActionCategory,
+} from '@xeprime/types';
 import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsISO8601, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
@@ -21,6 +25,24 @@ export class AuditLogListQueryDto {
   @IsString()
   @MaxLength(120)
   action?: string;
+
+  @ApiPropertyOptional({
+    enum: AUDIT_ACTION_CATEGORY_VALUES,
+    description: 'Nhóm hành động — suy từ tiền tố mã (auditActionCategoryOf), lọc ở DB',
+  })
+  @IsOptional()
+  @IsIn(AUDIT_ACTION_CATEGORY_VALUES)
+  category?: AuditActionCategory;
+
+  @ApiPropertyOptional({
+    description:
+      'Tìm kiếm: một ULID khớp chính xác mã dòng / đối tượng / gian hàng / tài khoản; chữ thường ' +
+      'khớp tên-email người thực hiện hoặc tên-mã gian hàng',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  q?: string;
 
   @ApiPropertyOptional({ description: 'Loại đối tượng, vd "tenant" / "booking"' })
   @IsOptional()
@@ -82,12 +104,22 @@ export class AuditLogDto {
   @ApiProperty() action!: string;
   @ApiProperty() targetType!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) targetId!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Tên người đọc được của đối tượng (tên gói, biển số, mã đơn…) — null khi loại đối tượng không ' +
+      'tra nhãn (dữ liệu cá nhân) hoặc bản ghi không còn',
+  })
+  targetLabel!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) tenantId!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) tenantName!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) actorUserId!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) actorName!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) actorEmail!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) ipAddress!: string | null;
+  @ApiProperty({ description: 'Nhân sự nền tảng thực hiện TRONG một phiên hỗ trợ (ADR 0050)' })
+  viaSupport!: boolean;
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
 }
 

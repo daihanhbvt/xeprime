@@ -1,8 +1,36 @@
-.action {
-  font-weight: 600;
+.primary {
+  color: var(--xp-color-text);
 }
 
 .meta {
-  font-size: 12px;
+  font-size: var(--xp-font-size-body-sm);
   color: var(--xp-color-text-secondary);
 }
+
+.event {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.eventText {
+  min-width: 0;
+}
+
+.action {
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+}
+
+.actorLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.actorLine :global(.ant-tag) {
+  margin-inline-end: 0;
+}
+

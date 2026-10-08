@@ -9,7 +9,9 @@ export type AuditLogListResult = Paged<AuditLog>;
 
 export function filtersToParams(filters: AuditLogFilters): QueryParams {
   return {
+    q: filters.q?.trim() || null,
     actorScope: pickFilter(filters.actorScope),
+    category: pickFilter(filters.category),
     action: pickFilter(filters.action),
     targetType: pickFilter(filters.targetType),
     targetId: filters.targetId ?? null,

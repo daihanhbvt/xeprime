@@ -7,3 +7,32 @@
   font-size: 12.5px;
   color: var(--xp-color-text-tertiary);
 }
+
+.plan {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.planHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.planHead :global(.ant-tag) {
+  margin-inline-end: 0;
+}
+
+/* Kỳ kế tiếp đã xếp lịch — tín hiệu "đã gia hạn", không phải cảnh báo. */
+.next {
+  font-size: 12.5px;
+  color: var(--xp-color-info);
+}
+
+.warn {
+  color: var(--xp-color-warning);
+  font-weight: 600;
+}

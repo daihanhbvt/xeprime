@@ -1023,5 +1023,439 @@
     "customer": "Renter",
     "partner": "Partner",
     "platform": "Platform staff"
+  },
+  "auditAction": {
+    "approval": {
+      "approve": "Approve submission",
+      "reject": "Reject submission",
+      "request_revision": "Request revision",
+      "check_update": "Update review checklist",
+      "internal_note_update": "Update internal review note"
+    },
+    "bank_account": {
+      "archived": "Archive bank account"
+    },
+    "bank_transaction": {
+      "ignore": "Ignore bank transaction",
+      "match_manual": "Manually match bank transaction"
+    },
+    "banner": {
+      "create": "Create homepage banner",
+      "update": "Update homepage banner",
+      "delete": "Delete homepage banner",
+      "reorder": "Reorder banners"
+    },
+    "booking": {
+      "create": "Create booking",
+      "transition": "Change booking status",
+      "contact_reveal": "Reveal customer contact on booking",
+      "delivery_fee_update": "Update delivery fee",
+      "driver_assign": "Assign driver",
+      "deposit_refund": {
+        "record": "Record deposit refund",
+        "correct": "Correct deposit refund"
+      },
+      "handover": {
+        "draft": {
+          "create": "Create handover draft"
+        },
+        "cancel": "Cancel handover record",
+        "photo": {
+          "upload": "Upload handover photo",
+          "remove": "Remove handover photo"
+        }
+      },
+      "surcharge": {
+        "create": "Add booking surcharge",
+        "update": "Update booking surcharge",
+        "void": "Void booking surcharge"
+      }
+    },
+    "booking_hold": {
+      "create": "Create booking hold",
+      "paid": "Booking hold paid",
+      "cancel": "Cancel booking hold",
+      "expire": "Booking hold expired",
+      "settle": "Settle booking hold",
+      "settlement_deferred": "Defer hold settlement"
+    },
+    "booking_request": {
+      "approve": "Accept booking request",
+      "reject": "Reject booking request",
+      "cancel": "Customer withdrew booking request",
+      "cancel_by_host": "Host cancelled pending request",
+      "expire": "Booking request expired",
+      "slot_taken": "Closed: slot taken",
+      "auto_accept_skipped": "Auto-accept skipped",
+      "platform_remind": "Platform reminded host"
+    },
+    "branch": {
+      "create": "Create branch",
+      "update": "Update branch",
+      "activate": "Activate branch",
+      "deactivate": "Deactivate branch",
+      "set_default": "Set default branch"
+    },
+    "catalog": {
+      "create": "Create catalog item",
+      "update": "Update catalog item",
+      "delete": "Delete catalog item",
+      "reorder": "Reorder catalog",
+      "model": {
+        "update": "Update vehicle model",
+        "delete": "Delete vehicle model"
+      }
+    },
+    "contract": {
+      "create": "Create rental contract"
+    },
+    "customer": {
+      "contact_reveal": "Reveal customer contact"
+    },
+    "customer_document": {
+      "verify": "Verify customer document"
+    },
+    "driver": {
+      "create": "Add driver",
+      "update": "Update driver",
+      "delete": "Delete driver"
+    },
+    "fee_policy": {
+      "create_draft": "Create fee policy draft",
+      "update_draft": "Update fee policy draft",
+      "discard_draft": "Discard fee policy draft",
+      "activate": "Activate fee policy"
+    },
+    "hold_refund": {
+      "paid": "Hold refund paid",
+      "rejected": "Hold refund rejected"
+    },
+    "holiday": {
+      "sync": "Sync public holidays"
+    },
+    "insurance_policy": {
+      "retry": "Retry insurance issuance",
+      "void": "Void insurance policy"
+    },
+    "listing": {
+      "support": {
+        "repair": "Repair listing sync (support)"
+      }
+    },
+    "member": {
+      "add": "Add member",
+      "invite": "Invite member",
+      "invite_accept": "Accept invitation",
+      "invite_decline": "Decline invitation",
+      "invite_revoke": "Revoke invitation",
+      "update_role": "Change member role",
+      "remove": "Remove member"
+    },
+    "payment": {
+      "record": "Record payment",
+      "void": "Void payment"
+    },
+    "plan": {
+      "create": "Create plan",
+      "update": "Update plan",
+      "delete": "Delete plan"
+    },
+    "platform": {
+      "location": {
+        "create": "Create location",
+        "update": "Update location"
+      }
+    },
+    "platform_bank_balance": {
+      "save": "Save platform bank balance"
+    },
+    "platform_staff": {
+      "add": "Add platform staff",
+      "update_role": "Change platform staff role",
+      "remove": "Remove platform staff"
+    },
+    "promo_code": {
+      "create": "Create promo code",
+      "update": "Update promo code",
+      "duplicate": "Duplicate promo code",
+      "enable": "Enable promo code",
+      "disable": "Disable promo code",
+      "delete": "Delete promo code"
+    },
+    "receipt": {
+      "create": "Create receipt",
+      "approve": "Approve receipt",
+      "cancel": "Cancel receipt"
+    },
+    "rental_policy": {
+      "update": "Update rental policy"
+    },
+    "seller_profile": {
+      "save": "Save seller profile",
+      "submit": "Submit seller profile"
+    },
+    "subscription": {
+      "assign": "Assign subscription plan",
+      "renew": "Renew subscription",
+      "cancel": "Cancel subscription term",
+      "activate_from_payment": "Activate plan from payment",
+      "lapse_to_commission": "Lapsed to commission track",
+      "schedule_change": "Change plan from next term",
+      "change_now": "Change plan now"
+    },
+    "subscription_invoice": {
+      "issue": "Issue subscription invoice"
+    },
+    "support_case": {
+      "open": "Open support case",
+      "assign": "Assign support case",
+      "transition": "Change support case status",
+      "resolve": "Resolve support case",
+      "withdraw": "Withdraw support case"
+    },
+    "tax_withholding": {
+      "reverse": "Reverse tax withholding"
+    },
+    "tenant": {
+      "submit_review": "Submit shop for review",
+      "lock": "Lock shop",
+      "unlock": "Unlock shop",
+      "free_trips_exhausted": "Free trips exhausted"
+    },
+    "tenant_customer": {
+      "create": "Add customer",
+      "update": "Update customer",
+      "restore": "Restore customer",
+      "risk_change": "Change customer risk level",
+      "note_delete": "Delete customer note",
+      "document_upload": "Upload customer document",
+      "document_download": "Download customer document",
+      "document_delete": "Delete customer document"
+    },
+    "tenant_payment_settings": {
+      "update": "Update payment settings"
+    },
+    "tenant_support": {
+      "open": "Open support session",
+      "revoke": "End support session"
+    },
+    "vehicle": {
+      "submit_public": "Submit vehicle for review",
+      "cancel_public_review": "Withdraw vehicle review",
+      "platform_hide": "Platform hid vehicle",
+      "platform_unhide": "Platform unhid vehicle",
+      "pricing": {
+        "update": "Update vehicle pricing"
+      },
+      "marketplace_visibility": {
+        "update": "Change marketplace visibility"
+      },
+      "operation_settings": {
+        "update": "Update operation settings"
+      },
+      "service_settings": {
+        "update": "Update service settings"
+      },
+      "driver_surcharge_rules": {
+        "update": "Update driver surcharge rules"
+      },
+      "source": {
+        "update": "Update vehicle source"
+      },
+      "source_type": {
+        "change": "Change vehicle source type"
+      },
+      "branch": {
+        "reassign": "Reassign vehicle branch"
+      },
+      "block": {
+        "create": "Block vehicle calendar",
+        "update": "Update calendar block",
+        "delete": "Remove calendar block",
+        "bulk_create": "Bulk block calendar",
+        "bulk_release": "Bulk release calendar"
+      },
+      "daily_price": {
+        "save": "Set daily price",
+        "delete": "Delete daily price",
+        "bulk_set": "Bulk set daily prices",
+        "bulk_clear": "Bulk clear daily prices"
+      },
+      "document": {
+        "create": "Add vehicle document",
+        "update": "Update vehicle document",
+        "upload": "Upload vehicle document file",
+        "archive": "Archive vehicle document",
+        "version": {
+          "attach": "Attach document version"
+        },
+        "ocr": {
+          "apply": "Apply document OCR result"
+        }
+      },
+      "contract": {
+        "upload": "Upload vehicle contract",
+        "attach_change": "Change attached vehicle contract"
+      },
+      "maintenance": {
+        "create": "Create maintenance record",
+        "update": "Update maintenance record",
+        "start": "Start maintenance",
+        "complete": "Complete maintenance",
+        "cancel": "Cancel maintenance record",
+        "cost_correct": "Correct maintenance cost",
+        "config": {
+          "update": "Update maintenance config"
+        },
+        "due_task": {
+          "create": "Create due maintenance task"
+        },
+        "attachment": {
+          "upload": "Upload maintenance attachment"
+        }
+      },
+      "support": {
+        "create_draft": "Create draft vehicle (support)",
+        "update": "Update vehicle (support)",
+        "submit_review": "Submit vehicle for review (support)"
+      }
+    },
+    "withdrawal": {
+      "requested": "Withdrawal requested",
+      "approved": "Withdrawal approved",
+      "rejected": "Withdrawal rejected",
+      "paid": "Withdrawal paid",
+      "cancelled": "Withdrawal cancelled",
+      "reversed": "Withdrawal reversed"
+    }
+  },
+  "auditTargetType": {
+    "approval_task": "Review task",
+    "bank_account": "Bank account",
+    "bank_transaction": "Bank transaction",
+    "booking": "Booking",
+    "booking_hold": "Booking hold",
+    "booking_insurance_policy": "Trip insurance policy",
+    "booking_request": "Booking request",
+    "booking_surcharge": "Booking surcharge",
+    "catalog_item": "Catalog item",
+    "contract": "Rental contract",
+    "driver": "Driver",
+    "fee_policy": "Fee policy",
+    "hold_refund": "Hold refund",
+    "holiday_sync_run": "Holiday sync run",
+    "marketplace_banner": "Homepage banner",
+    "payment": "Payment",
+    "plan": "Plan",
+    "platform_bank_balance": "Platform bank balance",
+    "platform_membership": "Platform staff",
+    "promo_code": "Promo code",
+    "province": "Province",
+    "receipt": "Receipt",
+    "rental_policy": "Rental policy",
+    "seller_profile": "Seller profile",
+    "subscription_invoice": "Subscription invoice",
+    "support_case": "Support case",
+    "tax_period": "Tax period",
+    "tax_withholding": "Tax withholding",
+    "tenant": "Shop",
+    "tenant_branch": "Branch",
+    "tenant_customer": "Customer record",
+    "tenant_customer_document": "Customer document",
+    "tenant_invite": "Member invitation",
+    "tenant_membership": "Shop member",
+    "tenant_payment_settings": "Payment settings",
+    "tenant_subscription": "Subscription",
+    "user": "User",
+    "vehicle": "Vehicle",
+    "vehicle_block": "Calendar block",
+    "vehicle_block_batch": "Calendar block batch",
+    "vehicle_catalog_model": "Vehicle model",
+    "vehicle_daily_price_batch": "Daily price batch",
+    "vehicle_document": "Vehicle document",
+    "vehicle_handover": "Handover record",
+    "vehicle_maintenance_record": "Maintenance record",
+    "vehicle_private_file": "Vehicle private file",
+    "withdrawal_request": "Withdrawal request"
+  },
+  "auditField": {
+    "planCode": "Plan code",
+    "planName": "Plan",
+    "planId": "Plan",
+    "price": "Price",
+    "listedPrice": "Listed price",
+    "priceOverridden": "Price overridden",
+    "termMonths": "Term (months)",
+    "quota": {
+      "maxVehicles": "Vehicle limit",
+      "maxBranches": "Branch limit",
+      "maxMembers": "Member limit"
+    },
+    "billingMode": "Billing mode",
+    "commissionPercent": "Service fee (%)",
+    "startsAt": "Starts at",
+    "endsAt": "Ends at",
+    "expiresAt": "Expires at",
+    "note": "Note",
+    "status": "Status",
+    "fromStatus": "Previous status",
+    "toStatus": "New status",
+    "reason": "Reason",
+    "reasonCategory": "Reason category",
+    "name": "Name",
+    "code": "Code",
+    "amount": "Amount",
+    "totalAmount": "Total amount",
+    "holdAmount": "Hold amount",
+    "subtotal": "Subtotal",
+    "discountAmount": "Discount",
+    "deliveryFee": "Delivery fee",
+    "paidAt": "Paid at",
+    "dueAt": "Due at",
+    "pickupAt": "Pickup at",
+    "returnAt": "Return at",
+    "publicStatus": "Review status",
+    "operationStatus": "Operation status",
+    "marketplaceEnabled": "Marketplace visibility",
+    "isActive": "Active",
+    "role": "Role",
+    "roleCode": "Role",
+    "email": "Email",
+    "phone": "Phone",
+    "lockReason": "Lock reason",
+    "description": "Description",
+    "sortOrder": "Sort order",
+    "verification": "Verification",
+    "vehicleId": "Vehicle",
+    "bookingId": "Booking",
+    "tenantId": "Shop",
+    "customerId": "Customer",
+    "branchId": "Branch",
+    "mode": "Mode",
+    "workspace": "Workspace",
+    "capabilities": "Session capabilities",
+    "capability": "Session capability",
+    "title": "Title",
+    "category": "Category",
+    "priority": "Priority",
+    "assigneeId": "Assignee",
+    "riskLevel": "Risk level",
+    "count": "Count",
+    "subscriptionId": "Term ID",
+    "invoiceId": "Invoice",
+    "providerTxId": "Bank transaction ID",
+    "graceDays": "Grace days",
+    "lapsedSubscriptionId": "Lapsed term",
+    "timing": "Effective from"
+  },
+  "subscriptionTermState": {
+    "current": "Active",
+    "scheduled": "Scheduled",
+    "ended": "Ended",
+    "cancelled": "Cancelled"
+  },
+  "subscriptionCancelReason": {
+    "manual": "Cancelled by an admin",
+    "replaced": "Replaced by a plan change"
   }
 }
