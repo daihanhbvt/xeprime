@@ -40,6 +40,22 @@ export const fetchTenantSubscriptions = (
     SUBSCRIPTIONS_DEFAULT_LIMIT,
   );
 
+/** Trần an toàn của chuỗi kỳ còn hạn — thực tế 1–3 dòng; bằng trần `limit` của API. */
+const SUBSCRIPTIONS_LIVE_LIMIT = 100;
+
+/**
+ * Chuỗi kỳ CÒN HẠN (đang chạy + đã xếp lịch), sớm nhất trước — nguồn của thẻ "Đang hiệu lực" /
+ * "Kỳ kế tiếp", của phần xem trước gia hạn và của luật huỷ. Không suy từ trang đầu của lịch sử:
+ * lịch sử sắp theo ngày tạo, vài vòng xếp lịch/huỷ đủ đẩy kỳ đang chạy khỏi trang 1.
+ */
+export const fetchLiveSubscriptions = (tenantId: string): Promise<Subscription[]> =>
+  fetchPage<Subscription>(
+    `/platform/tenants/${tenantId}/subscriptions`,
+    { state: 'live', page: 1, limit: SUBSCRIPTIONS_LIVE_LIMIT },
+    SUBSCRIPTIONS_LIVE_LIMIT,
+  ).then((page) => page.items);
+
+
 export const assignSubscription = (
   tenantId: string,
   body: AssignSubscriptionInput,

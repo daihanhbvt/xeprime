@@ -16,6 +16,7 @@ import { useTranslations } from 'next-intl';
 import { useState, type ReactNode } from 'react';
 import { LIST_SEPARATOR } from '@xeprime/domain';
 import {
+  AUDIT_TARGET_TYPE,
   APPROVAL_STATUS,
   APPROVAL_STATUS_META,
   LISTING_STATUS_META,
@@ -46,7 +47,6 @@ import {
   marketSiteHref,
   shopPath,
 } from '@/constants/routes';
-import { AUDIT_TARGET_TYPE } from '@/features/admin-audit/constants';
 import { ReviewGallery } from '@/features/approvals/components/ReviewSections';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
 import { StartSupportDialog } from '@/features/tenant-support/components/StartSupportDialog';

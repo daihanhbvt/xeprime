@@ -15,6 +15,8 @@ export type AdminTenantDetail = Schemas['PlatformTenantDetailDto'];
 export interface AdminTenantFilters {
   partnerKind?: PlatformPartnerKind;
   status?: string;
+  /** Hạn gói — `PLATFORM_TENANT_PLAN_FILTER` (chỉ danh sách gian hàng gói có ô này). */
+  planState?: string;
   q?: string;
   sort?: PlatformTenantSort;
   page?: number;

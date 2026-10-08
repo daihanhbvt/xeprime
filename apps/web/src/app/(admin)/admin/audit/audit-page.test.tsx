@@ -1,17 +1,18 @@
 import { App } from 'antd';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AuditLog } from '@/features/admin-audit/types';
+import { renderWithIntl } from '@/i18n/test-utils';
 
 import AdminAuditPage from './page';
 
 /**
- * Test ĐẶC TẢ cho `/manage/admin/audit` — viết TRƯỚC khi migrate sang nền tảng Wave 1C.
+ * Test ĐẶC TẢ cho trang Nhật ký hệ thống (`admin.xeprime.vn/audit`).
  *
- * Đây là trang rủi ro THẤP duy nhất trong kiểm kê 1C-A: chỉ đọc, không mutation, không quyền ở
- * tầng trang. Vì vậy nó là nơi an toàn nhất để chứng minh `DataTable` + `FilterBar` + `useUrlFilters`
- * chạy được với nhau — nhưng vẫn phải khoá lại đúng những gì đang có.
+ * Trang chỉ đọc, không mutation, không quyền ở tầng trang — nơi an toàn nhất để chứng minh
+ * `DataTable` + `FilterBar` + `useUrlFilters` chạy được với nhau, và từ 08/10/2026 thêm hai thứ:
+ * dải ngữ cảnh khi đến từ một đối tượng, và dòng đang mở sống ở URL (`?open=`).
  */
 
 const nav = vi.hoisted(() => ({
@@ -21,7 +22,7 @@ const nav = vi.hoisted(() => ({
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: nav.replace, push: vi.fn() }),
-  usePathname: () => '/manage/admin/audit',
+  usePathname: () => '/admin/audit',
   useSearchParams: () => nav.params,
 }));
 
@@ -67,6 +68,8 @@ function log(over: Partial<AuditLog> = {}): AuditLog {
     targetType: 'tenant',
     targetId: 'T-001',
     tenantName: 'Gian hàng Demo',
+    targetLabel: null,
+    viaSupport: false,
     ...over,
   } as AuditLog;
 }
@@ -81,7 +84,7 @@ function setQuery(over: Partial<typeof query> = {}) {
 }
 
 function renderPage() {
-  return render(
+  return renderWithIntl(
     <App>
       <AdminAuditPage />
     </App>,
@@ -109,7 +112,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('/manage/admin/audit — trạng thái', () => {
+describe('admin/audit — trạng thái', () => {
   it('lỗi khi chưa có dữ liệu: câu chữ riêng của module + Thử lại', () => {
     setQuery({ isError: true });
     renderPage();
@@ -147,7 +150,7 @@ describe('/manage/admin/audit — trạng thái', () => {
     setQuery({ data: { items: [], meta: { ...META, total: 0 } } });
     renderPage();
 
-    expect(screen.getByText('Không có dòng nhật ký khớp bộ lọc')).toBeTruthy();
+    expect(screen.getByText('Không có sự kiện nào khớp bộ lọc')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Xoá bộ lọc' })).toBeTruthy();
   });
 
@@ -156,12 +159,12 @@ describe('/manage/admin/audit — trạng thái', () => {
     setQuery({ data: { items: [], meta: { ...META, total: 0 } } });
     renderPage();
 
-    expect(screen.getByText('Không có dòng nhật ký khớp bộ lọc')).toBeTruthy();
+    expect(screen.getByText('Không có sự kiện nào khớp bộ lọc')).toBeTruthy();
   });
 });
 
-describe('/manage/admin/audit — filter và URL', () => {
-  it('mặc định ba bộ lọc là "all" và được truyền xuống lớp dữ liệu', () => {
+describe('admin/audit — filter và URL', () => {
+  it('mặc định ba bộ lọc là "all" và được truyền xuống lớp dữ liệu, KHÔNG kèm `open`', () => {
     setQuery({ data: { items: [log()], meta: META } });
     renderPage();
 
@@ -169,6 +172,7 @@ describe('/manage/admin/audit — filter và URL', () => {
     expect(filters.actorScope).toBe('all');
     expect(filters.action).toBe('all');
     expect(filters.targetType).toBe('all');
+    expect('open' in filters).toBe(false);
   });
 
   it('đọc đủ tham số từ URL, kể cả các tham số sâu (targetId/tenantId/actorUserId)', () => {
@@ -180,6 +184,7 @@ describe('/manage/admin/audit — filter và URL', () => {
 
     expect(query.lastFilters).toEqual({
       actorScope: 'platform',
+      category: 'all',
       action: 'tenant.lock',
       targetType: 'tenant',
       targetId: 'T-001',
@@ -230,23 +235,118 @@ describe('/manage/admin/audit — filter và URL', () => {
   });
 });
 
-describe('/manage/admin/audit — dữ liệu và hành động', () => {
-  it('hiện người thao tác, email, nhãn hành động VN và mã hành động thô', () => {
+describe('admin/audit — dải ngữ cảnh khi đến từ một đối tượng', () => {
+  it('không có tham số sâu thì không có dải', () => {
     setQuery({ data: { items: [log()], meta: META } });
+    renderPage();
+
+    expect(screen.queryByText('Đang xem lịch sử của')).toBeNull();
+  });
+
+  it('targetType + targetId: nêu loại đối tượng bằng nhãn, mã, gian hàng và số dòng', () => {
+    nav.params = new URLSearchParams(
+      'targetType=tenant_subscription&targetId=01M4CX5DY5HJ4RGRVXR3APM5GC',
+    );
+    setQuery({
+      data: {
+        items: [
+          log({
+            action: 'subscription.assign',
+            targetType: 'tenant_subscription',
+            targetId: '01M4CX5DY5HJ4RGRVXR3APM5GC',
+            tenantName: 'HOANG DUC DAI HANH',
+            targetLabel: 'Gói nâng cao',
+          }),
+        ],
+        meta: { ...META, total: 3 },
+      },
+    });
+    renderPage();
+
+    expect(screen.getByText('Đang xem lịch sử của')).toBeTruthy();
+    // Nhãn loại đối tượng — không còn mã `tenant_subscription` thô.
+    expect(screen.getAllByText('Gói dịch vụ').length).toBeGreaterThan(0);
+    // Tên đối tượng do server tra, không phải ULID.
+    expect(screen.getAllByText('Gói nâng cao').length).toBeGreaterThan(0);
+    expect(screen.getByText('Gian hàng HOANG DUC DAI HANH', { exact: false })).toBeTruthy();
+    expect(screen.getAllByText('3 sự kiện', { exact: false }).length).toBeGreaterThan(0);
+  });
+
+  it('"Xem toàn bộ nhật ký" bỏ tham số sâu và đóng panel đang mở', () => {
+    nav.params = new URLSearchParams('targetType=tenant&targetId=T-001&open=l-9&action=tenant.lock');
+    setQuery({ data: { items: [log()], meta: META } });
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Xem toàn bộ nhật ký' }));
+
+    const url = lastUrl();
+    expect(url).not.toContain('targetId=');
+    expect(url).not.toContain('targetType=');
+    expect(url).not.toContain('open=');
+    // Bộ lọc thường thì giữ — người dùng chỉ rời đối tượng, không xoá cách họ đang lọc.
+    expect(url).toContain('action=tenant.lock');
+  });
+});
+
+describe('admin/audit — dữ liệu và hành động', () => {
+  it('hiện người thực hiện, email, nhãn hành động — KHÔNG in mã hành động thô lên bảng', () => {
+    setQuery({ data: { items: [log({ targetLabel: 'Gian hàng Demo' })], meta: META } });
     renderPage();
 
     expect(screen.getByText('Quản trị viên')).toBeTruthy();
     expect(screen.getByText('admin@xeprime.test')).toBeTruthy();
     expect(screen.getByText('Khoá gian hàng')).toBeTruthy();
-    // Mã thô luôn hiện kèm — nhật ký phải tra được kể cả khi chưa có nhãn tiếng Việt.
-    expect(screen.getByText('tenant.lock')).toBeTruthy();
+    // Mã kỹ thuật nằm ở "Thông tin kỹ thuật" của panel chi tiết, không ở bảng.
+    expect(screen.queryByText('tenant.lock')).toBeNull();
   });
 
-  it('thiếu người thao tác thì hiện gạch ngang', () => {
-    setQuery({ data: { items: [log({ actorName: null, actorEmail: null })], meta: META } });
+  it('đối tượng không tra được tên rơi về mã rút gọn, không bao giờ ô trống', () => {
+    setQuery({
+      data: {
+        items: [log({ targetType: 'tenant_customer', targetId: '01M4CX5DY5HJ4RGRVXR3APM5GC' })],
+        meta: META,
+      },
+    });
+    renderPage();
+
+    expect(screen.getByText('…R3APM5GC', { exact: false })).toBeTruthy();
+  });
+
+  it('thao tác trong phiên hỗ trợ được gắn nhãn', () => {
+    setQuery({ data: { items: [log({ viaSupport: true })], meta: META } });
+    renderPage();
+
+    expect(screen.getByText('Qua phiên hỗ trợ')).toBeTruthy();
+  });
+
+  it('hành động của luồng gói có nhãn người đọc', () => {
+    setQuery({
+      data: {
+        items: [log({ action: 'subscription.renew', targetType: 'tenant_subscription' })],
+        meta: META,
+      },
+    });
+    renderPage();
+
+    expect(screen.getByText('Gia hạn gói dịch vụ')).toBeTruthy();
+    // "Loại: tên" — không có tên tra được thì là mã rút gọn của đối tượng.
+    expect(screen.getByText('Gói dịch vụ: T-001')).toBeTruthy();
+  });
+
+  it('thiếu người thao tác thì hiện gạch ngang; phạm vi hệ thống thì ghi "Hệ thống"', () => {
+    setQuery({
+      data: {
+        items: [
+          log({ id: 'a', actorName: null, actorEmail: null }),
+          log({ id: 'b', actorName: null, actorEmail: null, actorScope: 'system' }),
+        ],
+        meta: META,
+      },
+    });
     renderPage();
 
     expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Hệ thống').length).toBeGreaterThan(0);
   });
 
   it('phạm vi hiển thị bằng StatusTag, không phải chữ thô', () => {
@@ -256,11 +356,22 @@ describe('/manage/admin/audit — dữ liệu và hành động', () => {
     expect(container.querySelector('.ant-tag')).toBeTruthy();
   });
 
-  it('"Xem chi tiết" mở panel đúng dòng, KHÔNG điều hướng', () => {
+  it('"Xem chi tiết" ghi dòng vào URL (`open=`) và giữ nguyên trang', () => {
+    nav.params = new URLSearchParams('page=3');
     setQuery({ data: { items: [log({ id: 'l-42' })], meta: META } });
     renderPage();
 
     fireEvent.click(screen.getByRole('button', { name: 'Xem chi tiết' }));
+
+    expect(lastUrl()).toContain('open=l-42');
+    expect(lastUrl()).toContain('page=3');
+  });
+
+  it('`?open=` trên URL mở panel đúng dòng — link từ tab Nhật ký của đối tác rơi thẳng vào sự kiện', () => {
+    nav.params = new URLSearchParams('open=l-42');
+    setQuery({ data: { items: [log({ id: 'l-42' })], meta: META } });
+    renderPage();
+
     expect(drawer.logId).toBe('l-42');
   });
 
@@ -282,10 +393,34 @@ describe('/manage/admin/audit — dữ liệu và hành động', () => {
     expect(lastUrl()).toContain('limit=20');
   });
 
-  it('tổng hiển thị theo đơn vị "dòng"', () => {
+  it('tổng hiển thị theo đơn vị "sự kiện"', () => {
     setQuery({ data: { items: [log()], meta: { ...META, total: 245 } } });
     renderPage();
 
-    expect(screen.getByText('245 dòng')).toBeTruthy();
+    expect(screen.getByText('245 sự kiện')).toBeTruthy();
+  });
+
+  it('đọc ô tìm kiếm và nhóm hành động từ URL; nhóm lạ rơi về "tất cả"', () => {
+    nav.params = new URLSearchParams('q=hoang&category=subscription');
+    setQuery({ data: { items: [log()], meta: META } });
+    const first = renderPage();
+    const filters = query.lastFilters as Record<string, unknown>;
+    expect(filters.q).toBe('hoang');
+    expect(filters.category).toBe('subscription');
+    first.unmount();
+
+    nav.params = new URLSearchParams('category=khong-co');
+    renderPage();
+    expect((query.lastFilters as Record<string, unknown>).category).toBe('all');
+  });
+
+  it('"Xoá bộ lọc" xoá cả ô tìm kiếm và nhóm hành động', () => {
+    nav.params = new URLSearchParams('q=hoang&category=subscription');
+    setQuery({ data: { items: [], meta: { ...META, total: 0 } } });
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Xoá bộ lọc' }));
+    expect(lastUrl()).not.toContain('q=');
+    expect(lastUrl()).not.toContain('category=');
   });
 });

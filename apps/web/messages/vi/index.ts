@@ -68,6 +68,7 @@ import platformMoney from '@xeprime/domain/messages/vi/platform-money.json';
 import platformSellers from '@xeprime/domain/messages/vi/platform-sellers.json';
 import adminStaff from '@xeprime/domain/messages/vi/admin-staff.json';
 import adminAccounts from '@xeprime/domain/messages/vi/admin-accounts.json';
+import adminAudit from '@xeprime/domain/messages/vi/admin-audit.json';
 
 const messages = {
   Common: common,
@@ -126,6 +127,7 @@ const messages = {
   PlatformSellers: platformSellers,
   AdminStaff: adminStaff,
   AdminAccounts: adminAccounts,
+  AdminAudit: adminAudit,
 };
 
 export default messages;

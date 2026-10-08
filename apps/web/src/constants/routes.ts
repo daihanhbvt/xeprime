@@ -846,9 +846,23 @@ export const contractPath = {
  * `audit-page.test.tsx`), nên đây là một đường link thật chứ không phải URL đoán. `targetType`
  * là mã API ghi vào `audit_logs.target_type` — xem `AUDIT_TARGET_TYPE` ở `features/admin-audit`.
  */
+export const ADMIN_AUDIT_OPEN_PARAM = 'open';
+
 export const adminAuditPath = {
-  forTarget: (targetType: string, targetId: string): string =>
-    `${ROUTES.ADMIN.AUDIT}?${new URLSearchParams({ targetType, targetId }).toString()}`,
+  /**
+   * Lịch sử của MỘT đối tượng; `open` mở sẵn một dòng trong panel chi tiết (id của dòng audit —
+   * tab Nhật ký của đối tác có sẵn nó) để người xem rơi đúng vào sự kiện họ vừa bấm, không phải
+   * một danh sách họ còn phải tìm lại.
+   */
+  forTarget: (targetType: string, targetId: string, options: { open?: string } = {}): string =>
+    `${ROUTES.ADMIN.AUDIT}?${new URLSearchParams({
+      targetType,
+      targetId,
+      ...(options.open ? { [ADMIN_AUDIT_OPEN_PARAM]: options.open } : {}),
+    }).toString()}`,
+  /** Mở thẳng một dòng nhật ký không kèm bộ lọc — khi dòng đó không gắn với đối tượng nào. */
+  forLog: (logId: string): string =>
+    `${ROUTES.ADMIN.AUDIT}?${new URLSearchParams({ [ADMIN_AUDIT_OPEN_PARAM]: logId }).toString()}`,
 };
 
 /**

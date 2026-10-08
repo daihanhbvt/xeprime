@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@xeprime/prisma';
 import {
+  subscriptionTermStateOf,
   APPROVAL_TARGET_TYPE,
   BILLING_MODE,
   BOOKING_STATUS,
@@ -49,6 +50,8 @@ import type {
   PartnerQuotaItemDto,
   PartnerVerificationEventDto,
 } from './dto/platform-partner.dto';
+import { scheduledTermsByTenant } from './plan-terms';
+import type { PlanTermRefDto } from '../billing/dto/billing.dto';
 import { canViewPartnerMoney, hasPlatformPermission, loadPartner } from './partner-scope';
 import { PlatformPartnerOperationsService } from './platform-partner-operations.service';
 
@@ -109,7 +112,7 @@ export class PlatformPartnerDetailService {
     const partner = await loadPartner(this.prisma, tenantId, now);
     const isPackage = partner.partnerKind === PLATFORM_PARTNER_KIND.PACKAGE_SHOP;
 
-    const [tenant, verification, vehicleIds, listed, renting, lastActivity, branches] =
+    const [tenant, verification, vehicleIds, listed, renting, lastActivity, branches, nextTerms] =
       await Promise.all([
         this.prisma.tenant.findUniqueOrThrow({
           where: { id: partner.tenantId },
@@ -155,6 +158,7 @@ export class PlatformPartnerDetailService {
           select: { createdAt: true },
         }),
         this.branchesOf(partner.tenantId),
+        scheduledTermsByTenant(this.prisma, [partner.tenantId], now),
       ]);
 
     /*
@@ -245,6 +249,7 @@ export class PlatformPartnerDetailService {
               tenant.usedFeatures,
               vehicleQuotaItem(vehicleQuota, vehicleIds.length),
               now,
+              nextTerms.get(partner.tenantId) ?? null,
             )
           : null,
       branches: isPackage ? branches.map(toBranch) : null,
@@ -368,8 +373,16 @@ export class PlatformPartnerDetailService {
     const now = new Date();
     const partner = await loadPartner(this.prisma, tenantId, now);
 
-    const [tenant, vehiclesUsed, branchesUsed, membersUsed, feePolicy, invoices, subscriptions] =
-      await Promise.all([
+    const [
+      tenant,
+      vehiclesUsed,
+      branchesUsed,
+      membersUsed,
+      feePolicy,
+      invoices,
+      subscriptions,
+      nextTerms,
+    ] = await Promise.all([
         this.prisma.tenant.findUniqueOrThrow({
           where: { id: partner.tenantId },
           select: {
@@ -419,6 +432,7 @@ export class PlatformPartnerDetailService {
             plan: { select: { name: true, code: true } },
           },
         }),
+        scheduledTermsByTenant(this.prisma, [partner.tenantId], now),
       ]);
 
     // Đếm hoá đơn còn nợ trên TOÀN bộ, không chỉ 12 dòng lịch sử đang hiện.
@@ -443,7 +457,8 @@ export class PlatformPartnerDetailService {
     ]);
     const row = tenant.subscriptions[0] ?? null;
     const vehicles = vehicleQuotaItem(vehicleQuota, vehiclesUsed);
-    const plan = planSummaryOf(row, tenant.usedFeatures, vehicles, now);
+    const nextTerm = nextTerms.get(partner.tenantId) ?? null;
+    const plan = planSummaryOf(row, tenant.usedFeatures, vehicles, now, nextTerm);
     const context = resolveTenantFeatures(row, tenant.usedFeatures, now);
     const onPackage = context.billingMode === BILLING_MODE.PACKAGE;
     // Trần nhân sự chỉ được GHI trên gói (chưa cổng nào cưỡng chế) — snapshot trước, chọn TƯỜNG
@@ -489,6 +504,8 @@ export class PlatformPartnerDetailService {
         price: sub.price.toFixed(2),
         termMonths: sub.termMonths,
         status: sub.status,
+        // Đồng hồ SERVER — xem `SubscriptionDto.termState`.
+        termState: subscriptionTermStateOf(sub, now),
         startsAt: sub.startsAt.toISOString(),
         endsAt: sub.endsAt.toISOString(),
       })),
@@ -745,6 +762,7 @@ function planSummaryOf(
   usedFeatures: string[],
   vehicleQuota: PartnerQuotaItemDto,
   now: Date,
+  nextTerm: PlanTermRefDto | null,
 ): PartnerPlanSummaryDto {
   const context = resolveTenantFeatures(row, usedFeatures, now);
   return {
@@ -755,5 +773,6 @@ function planSummaryOf(
     endsAt: context.planEndsAt?.toISOString() ?? null,
     graceEndsAt: context.graceEndsAt?.toISOString() ?? null,
     vehicleQuota,
+    nextTerm,
   };
 }

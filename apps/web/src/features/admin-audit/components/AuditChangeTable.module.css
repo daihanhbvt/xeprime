@@ -1,0 +1,98 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.note {
+  margin: 0;
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: var(--xp-border-radius-sm);
+  overflow: hidden;
+  font-size: var(--xp-font-size-body);
+  table-layout: fixed;
+}
+
+.table th,
+.table td {
+  padding: 8px 12px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--xp-color-border-secondary);
+  word-break: break-word;
+}
+
+.table thead th {
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.table tbody tr:last-child th,
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* Cột trường hẹp hơn hai cột giá trị: 2 : 3 : 3. */
+.table thead th:first-child {
+  width: 28%;
+}
+
+.field {
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+}
+
+/* Trường chưa có nhãn: hiện tên khoá, đơn cách để người đọc biết đó là mã chứ không phải chữ. */
+.path {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: normal;
+  color: var(--xp-color-text-secondary);
+}
+
+.value {
+  color: var(--xp-color-text-secondary);
+}
+
+.changed .value {
+  color: var(--xp-color-text);
+}
+
+/* Hàng đổi: ô "Trước" mờ đi, ô "Sau" nhấn bằng nền primary nhạt — mắt đọc được hướng thay đổi. */
+.before {
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+}
+
+.after {
+  background: var(--xp-color-primary-light);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+@media (max-width: 560px) {
+  .table thead th:first-child {
+    width: 36%;
+  }
+
+  .table th,
+  .table td {
+    padding: 6px 8px;
+  }
+}

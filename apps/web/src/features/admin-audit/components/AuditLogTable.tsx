@@ -1,14 +1,22 @@
 'use client';
 
 import { EyeOutlined } from '@ant-design/icons';
-import { Button } from 'antd';
-import { AUDIT_ACTOR_SCOPE_META, type AuditActorScope, type PaginationMeta } from '@xeprime/types';
+import { Button, Tag } from 'antd';
+import { useTranslations } from 'next-intl';
+import {
+  AUDIT_ACTOR_SCOPE_META,
+  STATUS_COLOR,
+  type AuditActorScope,
+  type PaginationMeta,
+} from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
-import { auditActionLabel, auditTargetTypeLabel } from '../constants';
-import type { AuditLog } from '../types';
-import styles from './AuditLogTable.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { useAuditLabels } from '../hooks/use-audit-labels';
+import { auditActorName } from '../labels';
+import type { AuditLog } from '../types';
+import { AuditCategoryIcon } from './AuditCategoryIcon';
+import styles from './AuditLogTable.module.css';
 
 interface AuditLogTableProps {
   items: AuditLog[];
@@ -22,12 +30,17 @@ interface AuditLogTableProps {
   onPageChange: (page: number, pageSize: number) => void;
 }
 
-/**
- * Bề rộng tối thiểu suy ra từ tổng bề rộng cột (P25 — Figma `127:1725` không có đặc tả cột cho
- * bảng này; con số 700px ở bảng tổng của Figma tính cho 6 cột, code có 7).
- */
-const MIN_TABLE_WIDTH = 1110;
+/** Tổng bề rộng năm cột — đủ chỗ cho câu "Sự kiện" mà không cuộn ngang ở màn 1280px. */
+const MIN_TABLE_WIDTH = 1040;
 
+/**
+ * Bảng nhật ký hệ thống — mỗi dòng đọc như một câu: LÚC NÀO · CHUYỆN GÌ xảy ra với ĐỐI TƯỢNG nào ·
+ * AI làm · ở GIAN HÀNG nào.
+ *
+ * Mã kỹ thuật (mã hành động, ULID) không có trên bảng: chúng nằm ở "Thông tin kỹ thuật" trong
+ * panel chi tiết, và ô tìm kiếm vẫn khớp được ULID. Đối tượng hiện bằng TÊN do server tra
+ * (`targetLabel`); loại không tra nhãn (dữ liệu cá nhân) rơi về mã rút gọn.
+ */
 export function AuditLogTable({
   items,
   meta,
@@ -38,83 +51,100 @@ export function AuditLogTable({
   onView,
   onPageChange,
 }: AuditLogTableProps) {
+  const t = useTranslations('AdminAudit.table');
+  const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
+  const labels = useAuditLabels();
 
   const columns: DataTableColumn<AuditLog>[] = [
     {
-      title: 'Thời gian',
+      title: t('columns.time'),
       key: 'createdAt',
-      width: 150,
-      render: (_, r) => fmt.dateTime(r.createdAt),
-    },
-    {
-      title: 'Người thao tác',
-      key: 'actor',
-      width: 200,
+      width: 130,
       render: (_, r) => (
         <div>
-          <div>{r.actorName ?? '—'}</div>
+          <div className={styles.primary}>{fmt.date(r.createdAt)}</div>
+          <div className={styles.meta}>{fmt.time(r.createdAt)}</div>
+        </div>
+      ),
+    },
+    {
+      title: t('columns.event'),
+      key: 'event',
+      width: 360,
+      render: (_, r) => (
+        <div className={styles.event}>
+          <AuditCategoryIcon action={r.action} />
+          <div className={styles.eventText}>
+            <div className={styles.action}>{labels.action(r.action)}</div>
+            <div className={styles.meta} title={r.targetId ?? undefined}>
+              {labels.target(r)}
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: t('columns.actor'),
+      key: 'actor',
+      width: 260,
+      render: (_, r) => (
+        <div>
+          <div className={styles.actorLine}>
+            <span className={styles.primary}>
+              {auditActorName(r, t('systemActor'), tCommon('labels.emptyValue'))}
+            </span>
+            <StatusTag
+              value={r.actorScope as AuditActorScope}
+              meta={AUDIT_ACTOR_SCOPE_META}
+              group="auditActorScope"
+            />
+            {r.viaSupport ? <Tag color={STATUS_COLOR.WAITING}>{t('viaSupport')}</Tag> : null}
+          </div>
           {r.actorEmail ? <div className={styles.meta}>{r.actorEmail}</div> : null}
         </div>
       ),
     },
     {
-      title: 'Phạm vi',
-      key: 'scope',
-      width: 120,
-      render: (_, r) => (
-        <StatusTag value={r.actorScope as AuditActorScope} meta={AUDIT_ACTOR_SCOPE_META} group="auditActorScope" />
-      ),
+      title: t('columns.tenant'),
+      key: 'tenant',
+      width: 170,
+      render: (_, r) => r.tenantName ?? <span className={styles.meta}>{t('noTenant')}</span>,
     },
-    {
-      title: 'Hành động',
-      key: 'action',
-      width: 200,
-      render: (_, r) => (
-        <div>
-          <div className={styles.action}>{auditActionLabel(r.action)}</div>
-          {/* Mã thô luôn hiện kèm nhãn: nhật ký phải tra được cả khi action chưa có nhãn VN. */}
-          <div className={styles.meta}>{r.action}</div>
-        </div>
-      ),
-    },
-    {
-      title: 'Đối tượng',
-      key: 'target',
-      width: 180,
-      render: (_, r) => (
-        <div>
-          <div>{auditTargetTypeLabel(r.targetType)}</div>
-          {r.targetId ? <div className={styles.meta}>{r.targetId}</div> : null}
-        </div>
-      ),
-    },
-    { title: 'Gian hàng', key: 'tenant', width: 160, render: (_, r) => r.tenantName ?? '—' },
-    // Nút có chữ → 120px theo Figma `127:2060` R2.
-    actionColumn<AuditLog>((row) => [
-      { key: 'view', label: 'Xem chi tiết', icon: <EyeOutlined />, onClick: () => onView(row.id) },
-    ]),
+    actionColumn<AuditLog>(
+      (row) => [
+        {
+          key: 'view',
+          label: tCommon('actions.viewDetail'),
+          icon: <EyeOutlined />,
+          onClick: () => onView(row.id),
+        },
+      ],
+      { width: 120 },
+    ),
   ];
 
   return (
     <DataTable<AuditLog>
-      label="Nhật ký hệ thống"
+      label={t('label')}
       columns={columns}
       items={items}
       onRowClick={(row) => onView(row.id)}
       minWidth={MIN_TABLE_WIDTH}
       loading={loading}
-      error={error ? { title: 'Không tải được nhật ký', onRetry: error.onRetry } : null}
+      error={error ? { title: t('loadError'), onRetry: error.onRetry } : null}
       filtered={filtered}
-      empty={{ title: 'Chưa có nhật ký nào' }}
+      empty={{ title: t('empty') }}
       noResults={{
-        title: 'Không có dòng nhật ký khớp bộ lọc',
-        action: onClearFilters ? <Button onClick={onClearFilters}>Xoá bộ lọc</Button> : undefined,
+        title: t('noResults'),
+        action: onClearFilters ? (
+          <Button onClick={onClearFilters}>{tCommon('actions.clear')}</Button>
+        ) : undefined,
       }}
       pagination={{
         meta,
         onChange: onPageChange,
-        totalLabel: (total) => `${total} dòng`,
+        totalLabel: (total) => t('total', { count: total }),
       }}
     />
   );

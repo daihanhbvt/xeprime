@@ -1,0 +1,122 @@
+{
+  "page": {
+    "title": "Audit log",
+    "subtitle": "Who did what, to which record, and when — across the platform. Read-only.",
+    "loading": "Loading audit log…"
+  },
+  "filters": {
+    "scope": "Scope",
+    "action": "Specific action",
+    "allActions": "All actions",
+    "target": "Record type",
+    "allTargets": "All records",
+    "dateRange": "Date range",
+    "search": "Search the log",
+    "searchPlaceholder": "Name or email of who acted, shop, or an ID",
+    "category": "Action group",
+    "allCategories": "All groups"
+  },
+  "context": {
+    "title": "Viewing history of",
+    "tenant": "Shop {name}",
+    "count": "{count, plural, =0 {No events yet} one {# event} other {# events}}",
+    "viewAll": "View full log",
+    "tenantKind": "Shop",
+    "actorKind": "Performed by",
+    "id": "ID {id}"
+  },
+  "table": {
+    "label": "Audit log",
+    "systemActor": "System",
+    "total": "{count, plural, one {# event} other {# events}}",
+    "empty": "No log entries yet",
+    "noResults": "No events match the filters",
+    "loadError": "Could not load the audit log",
+    "columns": {
+      "time": "Time",
+      "event": "Event",
+      "actor": "Performed by",
+      "tenant": "Shop"
+    },
+    "viaSupport": "Via support session",
+    "noTenant": "Platform-wide"
+  },
+  "detail": {
+    "title": "Log entry",
+    "loadError": "Could not load this event",
+    "values": {
+      "unlimited": "Unlimited",
+      "percent": "{value}%"
+    },
+    "technical": {
+      "title": "Technical details",
+      "rawJson": "Raw data (JSON)",
+      "noData": "No data"
+    },
+    "openTenant": "Open shop",
+    "targetHistory": "All events for this record",
+    "facts": {
+      "time": "Time",
+      "actor": "Performed by",
+      "category": "Action group",
+      "tenant": "Shop",
+      "code": "Action code",
+      "logId": "Event ID",
+      "targetId": "Record ID",
+      "ip": "IP address",
+      "userAgent": "Browser / device"
+    },
+    "changes": {
+      "title": "Details",
+      "field": "Field",
+      "before": "Before",
+      "after": "After",
+      "created": "Recorded when created:",
+      "removed": "Recorded before removal:",
+      "none": "This event did not record any details.",
+      "noChanges": "Nothing changed.",
+      "unchangedHidden": "{count, plural, one {# unchanged field hidden} other {# unchanged fields hidden}}",
+      "showUnchanged": "Show all",
+      "hideUnchanged": "Changes only"
+    },
+    "subscription": {
+      "period": "{from} → {to}",
+      "plan": "Plan",
+      "unknownPlan": "Unknown plan",
+      "validity": "Valid",
+      "term": "Term",
+      "months": "{count, plural, one {# month} other {# months}}",
+      "price": "Amount",
+      "negotiated": "Negotiated price",
+      "listedWas": "list price {amount}",
+      "listPrice": "List price",
+      "quotaLabel": "Limits",
+      "quota": {
+        "vehicles": "{count, plural, one {up to # vehicle} other {up to # vehicles}}",
+        "vehiclesUnlimited": "unlimited vehicles",
+        "branches": "{count, plural, one {# branch} other {# branches}}",
+        "branchesUnlimited": "unlimited branches",
+        "members": "{count, plural, one {# member} other {# members}}",
+        "membersUnlimited": "unlimited members"
+      },
+      "billingMode": "Billing mode",
+      "previousTerm": "Follows term",
+      "replacedTerms": "Terms ended",
+      "providerTx": "Bank transaction ID",
+      "note": "Note",
+      "cancelledTerm": "Cancelled term",
+      "status": "Status",
+      "statusChange": "{from} → {to}",
+      "reason": "Reason",
+      "summary": {
+        "assign": "Assigned {plan}, effective from {date}.",
+        "renew": "Renewed {plan}: the new term starts {date}, right after the current one.",
+        "activate": "Activated {plan} after the invoice was paid in full — effective from {date}.",
+        "cancel": "Cancelled the {plan} term.",
+        "schedule_change": "Changing from {previous} to {plan} from the next term — starts {date}.",
+        "change_now": "Changed to {plan} immediately ({date}); {count, plural, =0 {no term was ended} one {# remaining term was ended} other {# remaining terms were ended}}."
+      },
+      "fallbackTerm": "Moved to"
+    }
+  }
+}

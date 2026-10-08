@@ -1,8 +1,137 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-lg);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stackTight {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.muted {
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-secondary);
+  font-weight: normal;
+}
+
+.inline {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.inline :global(.ant-tag) {
+  margin-inline-end: 0;
+}
+
+/* ── Đầu panel: đối tượng của sự kiện ── */
+
+.hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-muted);
+}
+
+.heroText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.heroKind {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--xp-color-text-tertiary);
+}
+
+.heroName {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--xp-color-text);
+  word-break: break-word;
+}
+
+.heroLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+/* ── Nội dung ── */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+}
+
+/* Câu tóm tắt nghiệp vụ — đọc trước bảng. */
+.summary {
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--xp-color-primary);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-text);
+}
+
+.note {
+  margin: 0;
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.path {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.code {
+  font-size: var(--xp-font-size-body-sm);
+  word-break: break-all;
+}
+
+/* ── Kỹ thuật (gập) ── */
+
+.technical :global(.ant-collapse-header) {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  color: var(--xp-color-text-secondary) !important;
+}
+
+.technical :global(.ant-collapse-content-box) {
+  padding: 0 !important;
+}
+
 .jsonGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 16px;
+  gap: var(--xp-space-sm);
+  margin-top: 8px;
 }
 
 .jsonCol {
@@ -10,8 +139,8 @@
 }
 
 .jsonTitle {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
   margin-bottom: 6px;
   color: var(--xp-color-text);
 }
@@ -19,10 +148,10 @@
 .jsonBox {
   margin: 0;
   padding: 10px 12px;
-  border: 1px solid var(--xp-color-border-secondary, rgba(0, 0, 0, 0.08));
-  border-radius: 8px;
-  background: var(--xp-color-fill-quaternary, rgba(0, 0, 0, 0.02));
-  font-size: 12px;
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+  font-size: var(--xp-font-size-body-sm);
   line-height: 1.55;
   max-height: 320px;
   overflow: auto;
@@ -32,7 +161,7 @@
 
 .jsonEmpty {
   color: var(--xp-color-text-secondary);
-  font-size: 12px;
+  font-size: var(--xp-font-size-body-sm);
 }
 
 @media (max-width: 560px) {

@@ -233,6 +233,12 @@ export const API_ERROR_CODE = {
    */
   PLAN_NOT_SELF_SERVE: 'PLAN_NOT_SELF_SERVE',
   /**
+   * Huỷ một kỳ thuê bao trong khi đã có kỳ khác XẾP LỊCH ngay sau nó. Huỷ kỳ đang chạy lúc đó để lại
+   * một khoảng trống tới ngày kỳ sau bắt đầu — gian hàng không có gói nào, đường ghi tiền từ chối.
+   * Huỷ kỳ xếp sau trước, hoặc dùng "Đổi gói ngay".
+   */
+  SUBSCRIPTION_LATER_TERM_EXISTS: 'SUBSCRIPTION_LATER_TERM_EXISTS',
+  /**
    * Bậc gói đã được DÙNG — có thuê bao hoặc hoá đơn trỏ tới nó — nên không XOÁ được.
    *
    * `details` mang `{ planCode, subscriptions, invoices }`. Xoá chỉ dành cho bậc chưa từng được

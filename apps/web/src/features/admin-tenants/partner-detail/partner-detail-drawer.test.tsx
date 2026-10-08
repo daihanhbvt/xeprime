@@ -13,6 +13,7 @@ import {
   PLATFORM_PARTNER_KIND,
   SUBSCRIPTION_INVOICE_STATUS,
   SUBSCRIPTION_STATUS,
+  SUBSCRIPTION_TERM_STATE,
   type PartnerDetailTab,
 } from '@xeprime/types';
 
@@ -189,6 +190,7 @@ const BILLING: PartnerBilling = {
       price: '3000000.00',
       termMonths: 12,
       status: SUBSCRIPTION_STATUS.ACTIVE,
+      termState: SUBSCRIPTION_TERM_STATE.CURRENT,
       startsAt: '2025-08-12T00:00:00.000Z',
       endsAt: '2099-08-12T00:00:00.000Z',
     },

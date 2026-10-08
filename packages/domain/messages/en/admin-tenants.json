@@ -3,13 +3,21 @@
     "filters": {
       "status": "Status",
       "allStatuses": "All",
-      "sort": "Sort by"
+      "sort": "Sort by",
+      "planState": "Plan status",
+      "allPlanStates": "Any plan status",
+      "planStates": {
+        "active": "Has a running plan",
+        "expiring": "Ending soon, not renewed",
+        "none": "Ended / not activated"
+      }
     },
     "columns": {
       "type": "Legal entity",
       "vehicles": "Vehicles",
       "status": "Status",
-      "createdAt": "Created"
+      "createdAt": "Created",
+      "plan": "Current plan"
     },
     "view": "View details",
     "clearFilters": "Clear filters",
@@ -42,6 +50,15 @@
         "noResults": "No owners match the filters",
         "total": "{count, plural, one {# owner} other {# owners}}"
       }
+    },
+    "plan": {
+      "none": "No plan",
+      "endsOn": "Ends {date}",
+      "endedOn": "Ended {date}",
+      "daysLeft": "{days, plural, =0 {ends today} one {# day left} other {# days left}}",
+      "graceUntil": "grace until {date}",
+      "next": "Next: {plan} from {date}",
+      "unlimited": "Unlimited vehicles"
     }
   },
   "legacyRedirect": {
@@ -167,9 +184,11 @@
         "none": "No active plan",
         "name": "Plan",
         "phase": "Plan status",
-        "endsAt": "Renews on",
+        "endsAt": "Ends",
         "daysLeft": "({days, plural, one {# day left} other {# days left}})",
-        "quota": "Vehicle quota"
+        "quota": "Vehicle quota",
+        "next": "Next term",
+        "nextValue": "{plan} · from {date}"
       },
       "issues": {
         "title": "Needs attention",
@@ -354,15 +373,17 @@
     },
     "billing": {
       "permissionNote": "Only people who manage plans & billing can view this tab. It is read-only — assigning, renewing or cancelling a plan lives under “Platform admin actions”.",
-      "expired": "Expired",
       "plan": {
         "title": "Current plan",
         "none": "No active plan",
         "name": "Plan",
         "phase": "Status",
         "term": "Plan period",
-        "renewal": "Renews in",
-        "daysLeft": "{days, plural, one {# day left} other {# days left}}"
+        "renewal": "Time left",
+        "daysLeft": "{days, plural, one {# day left} other {# days left}}",
+        "next": "Next term",
+        "nextValue": "{plan} · {from} → {to}",
+        "noNext": "Not scheduled"
       },
       "quota": {
         "title": "Usage & quota",
@@ -408,7 +429,9 @@
         "title": "Key dates",
         "joined": "Joined the platform",
         "started": "Started plan {plan}",
-        "renewal": "Current period ends — next renewal"
+        "renewal": "Current term ends — not renewed",
+        "scheduled": "{plan} plan starts",
+        "renewed": "Current term ends — next term scheduled"
       }
     },
     "commission": {
@@ -480,7 +503,6 @@
         "d30": "Last 30 days",
         "d90": "Last 90 days"
       },
-      "title": "{category} · {verb}",
       "systemActor": "System",
       "viaSupport": "Via support session",
       "viewDetail": "View details",

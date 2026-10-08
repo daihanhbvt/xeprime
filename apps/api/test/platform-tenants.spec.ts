@@ -1,5 +1,6 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  BILLING_PHASE,
   ACCOUNT_REALM,
   API_ERROR_CODE,
   BILLING_MODE,
@@ -378,5 +379,94 @@ describe('Platform tenants — tách hai loại đối tác', () => {
     expect((await service.getOne(ids['a_pending']!)).partnerKind).toBe(PACKAGE_SHOP);
     expect((await service.getOne(ids['e_upgraded_grace']!)).partnerKind).toBe(PACKAGE_SHOP);
     expect((await service.getOne(ids['g_upgraded_lapsed']!)).partnerKind).toBe(INDIVIDUAL_OWNER);
+  });
+
+  /* ── Cột "Gói hiện tại" + bộ lọc hạn gói (08/10/2026) ── */
+
+  const listShops = (extra: Record<string, unknown> = {}) =>
+    service.list({ partnerKind: PACKAGE_SHOP, q: prefix, limit: 100, ...extra });
+
+  maybe('mỗi dòng mang tóm tắt gói chấm bằng CÙNG phép với cổng tuyến', async () => {
+    const rows = (await listShops()).data;
+    const byKey = Object.fromEntries(rows.map((row) => [keysOf([row])[0]!, row.plan]));
+    expect(byKey['b_active']).toMatchObject({
+      phase: BILLING_PHASE.CURRENT,
+      billingMode: BILLING_MODE.PACKAGE,
+      planName: 'Gói test ân hạn',
+      nextTerm: null,
+    });
+    expect(byKey['b_active']!.endsAt).toBeTruthy();
+    expect(byKey['e_upgraded_grace']).toMatchObject({ phase: BILLING_PHASE.GRACE });
+    expect(byKey['e_upgraded_grace']!.graceEndsAt).toBeTruthy();
+    // Chưa từng có dòng thuê bao: "chưa cấu hình", không phải một tuyến.
+    expect(byKey['a_pending']).toMatchObject({
+      phase: BILLING_PHASE.UNCONFIGURED,
+      planName: null,
+      vehicleLimitKind: 'not_applicable',
+    });
+  });
+
+  maybe('lọc hạn gói: đang có gói / hết hoặc chưa kích hoạt — trước phân trang', async () => {
+    expect(keysOf((await listShops({ planState: 'active' })).data).sort()).toEqual([
+      'b_active',
+      'd_upgraded',
+    ]);
+    expect(keysOf((await listShops({ planState: 'none' })).data).sort()).toEqual([
+      'a_pending',
+      'c_active_lapsed',
+      'e_upgraded_grace',
+    ]);
+  });
+
+  maybe('sắp hết hạn chỉ tính gian hàng CHƯA gia hạn; kỳ xếp sau hiện ở nextTerm', async () => {
+    const id = newId();
+    const now = Date.now();
+    await prisma.tenant.create({
+      data: {
+        id,
+        code: `P-${id.slice(-8)}`,
+        slug: `p-${id.toLowerCase().slice(-10)}`,
+        name: `${prefix}-z_expiring`,
+        status: TENANT_STATUS.ACTIVE,
+        onboardingState: SHOP_ONBOARDING_STATE.PACKAGE_ACTIVE,
+        ownerUserId: adminId,
+      },
+    });
+    try {
+      await prisma.tenantSubscription.create({
+        data: {
+          id: newId(),
+          tenantId: id,
+          planId,
+          price: 0,
+          billingMode: BILLING_MODE.PACKAGE,
+          startsAt: new Date(now - 20 * DAY),
+          endsAt: new Date(now + 5 * DAY),
+        },
+      });
+      expect(keysOf((await listShops({ planState: 'expiring' })).data)).toEqual(['z_expiring']);
+
+      // Gia hạn trước hạn: kỳ nối đuôi chưa bắt đầu ⇒ không còn "sắp hết hạn", và danh sách nói
+      // kỳ sau là gì thay vì coi nó là gói thứ hai đang chạy.
+      const next = await prisma.tenantSubscription.create({
+        data: {
+          id: newId(),
+          tenantId: id,
+          planId,
+          price: 0,
+          billingMode: BILLING_MODE.PACKAGE,
+          startsAt: new Date(now + 5 * DAY),
+          endsAt: new Date(now + 35 * DAY),
+        },
+      });
+      expect((await listShops({ planState: 'expiring' })).data).toHaveLength(0);
+      const row = (await listShops()).data.find((item) => item.id === id)!;
+      expect(row.plan.phase).toBe(BILLING_PHASE.CURRENT);
+      expect(row.plan.nextTerm).toMatchObject({ subscriptionId: next.id, planName: 'Gói test ân hạn' });
+      expect((await service.getOne(id)).plan.nextTerm?.subscriptionId).toBe(next.id);
+    } finally {
+      await prisma.tenantSubscription.deleteMany({ where: { tenantId: id } });
+      await prisma.tenant.deleteMany({ where: { id } });
+    }
   });
 });

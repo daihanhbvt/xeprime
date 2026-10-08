@@ -811,40 +811,39 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
   });
 
   maybe(
-    'huỷ cả 2 chu kỳ → current null; huỷ lần nữa → INVALID_STATUS_TRANSITION; trần về Owner Lite',
+    'dòng hoa hồng ĐANG CHẠY không huỷ được (đổi tuyến bằng cách gán gói); trần vẫn là Owner Lite',
     async () => {
       const history = await billing.listSubscriptions(tenantId, {});
       /*
-       * Chỉ huỷ dòng còn ACTIVE: dòng hoa hồng đầu tiên đã bị chính lượt gán thứ hai thay thế
-       * (`resolveChainStart`), nên nó vào đây với trạng thái `cancelled` sẵn.
+       * Chỉ còn MỘT dòng ACTIVE: dòng hoa hồng đầu tiên đã bị chính lượt gán thứ hai thay thế
+       * (`planChainWithinTx`), nên nó vào đây với trạng thái `cancelled` sẵn.
        */
       const active = history.data.filter((sub) => sub.status === SUBSCRIPTION_STATUS.ACTIVE);
       expect(active).toHaveLength(1);
-      for (const sub of active) {
-        const cancelled = await billing.cancel(tenantId, actorId, sub.id);
-        expect(cancelled.status).toBe(SUBSCRIPTION_STATUS.CANCELLED);
-      }
-      expect(await billing.currentPlan(tenantId)).toBeNull();
+      expect(active[0]!.billingMode).toBe(BILLING_MODE.COMMISSION);
 
+      /*
+       * Huỷ dòng hoa hồng đang chạy chỉ để hệ thống gán lại đúng dòng đó (08/10/2026): "không có
+       * gói" là pha `unconfigured` — mọi đường ghi tiền từ chối — nên huỷ không bao giờ được để lại
+       * khoảng trống. Đổi tuyến là việc của một lượt GÁN.
+       */
       await expect(billing.cancel(tenantId, actorId, active[0]!.id)).rejects.toMatchObject({
         response: { code: API_ERROR_CODE.INVALID_STATUS_TRANSITION },
       });
-
-      const cancelAudit = await prisma.auditLog.count({
-        where: { action: 'subscription.cancel', tenantId },
-      });
-      expect(cancelAudit).toBe(1);
+      expect((await billing.currentPlan(tenantId))?.subscriptionId).toBe(active[0]!.id);
+      expect(
+        await prisma.auditLog.count({ where: { action: 'subscription.cancel', tenantId } }),
+      ).toBe(0);
 
       /*
-       * Huỷ hết thuê bao KHÔNG mở trần ra vô hạn — nó đưa tenant về Owner Lite (3 xe TỔNG).
-       * `tenantId` đang có 2 xe từ test quota, nên chiếc thứ 3 vào được và chiếc thứ 4 thì
-       * không. Đây là nơi bản cũ nói "unlimited", và câu đó chính là lỗ hổng ADR 0038 vá.
+       * Tuyến hoa hồng KHÔNG mở trần ra vô hạn — nó là Owner Lite (3 xe TỔNG). `tenantId` đang có
+       * 2 xe từ test quota, nên chiếc thứ 3 vào được và chiếc thứ 4 thì không. Đây là nơi bản cũ
+       * nói "unlimited", và câu đó chính là lỗ hổng ADR 0038 vá.
        */
       expect(await billing.vehicleQuotaFor(tenantId)).toEqual({
         kind: 'total',
         limit: OWNER_LITE_VEHICLE_LIMIT,
-        // Huỷ hết thuê bao ⇒ không còn dòng nào ⇒ "chưa cấu hình", không phải hoa hồng.
-        reason: 'billing_unconfigured',
+        reason: 'owner_lite',
       });
       await createVehicle(tenantId, actorId, {
         code: `XE3-${RUN}`,
@@ -858,10 +857,24 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
           vehicleType: VEHICLE_TYPE.CAR,
         } as Parameters<typeof vehicles.create>[2]),
       ).rejects.toMatchObject({
-        response: { code: API_ERROR_CODE.TENANT_BILLING_NOT_CONFIGURED },
+        response: { code: API_ERROR_CODE.PLAN_LIMIT_REACHED },
       });
     },
   );
+
+  maybe('dòng hoa hồng ĐÃ XẾP LỊCH (hạ về hoa hồng từ kỳ sau) thì huỷ được', async () => {
+    const shop = await mkScratchTenant('cancel-downgrade');
+    const pkg = await mkPlan('cd-pkg');
+    const commission = await mkCommissionPlanDirect('cd-comm');
+    const current = await billing.assign(shop, actorId, { planId: pkg.id, termMonths: 1 });
+    const downgrade = await billing.assign(shop, actorId, { planId: commission.id, termMonths: 1 });
+    expect(downgrade.termState).toBe('scheduled');
+
+    const cancelled = await billing.cancel(shop, actorId, downgrade.id);
+    expect(cancelled.status).toBe(SUBSCRIPTION_STATUS.CANCELLED);
+    // Kỳ gói đang chạy giữ nguyên — không có dòng dự phòng nào sinh ra.
+    expect((await billing.currentPlan(shop))?.subscriptionId).toBe(current.id);
+  });
 
   maybe(
     'NÂNG CẤP hoa hồng → gói có hiệu lực NGAY, không xếp hàng sau kỳ hoa hồng 12 tháng',
@@ -961,8 +974,13 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
       new Date(before!.endsAt).getTime(),
     );
 
+    /*
+     * Kỳ đuôi của `tenantPkgId` lúc này là bậc ĐÀM PHÁN (`pro`) gán ở test "giá đàm phán" phía trên;
+     * lượt này nối `pkgPlanId` — khác bậc ⇒ đổi gói từ kỳ sau (08/10/2026). Gia hạn CÙNG bậc được
+     * khoá riêng ở khối "gia hạn / đổi gói theo thời điểm áp dụng".
+     */
     const renewAudit = await prisma.auditLog.findFirst({
-      where: { targetId: renewed.id, action: 'subscription.renew' },
+      where: { targetId: renewed.id, action: 'subscription.schedule_change' },
     });
     expect(renewAudit).toBeTruthy();
   });
@@ -978,5 +996,213 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
     await expect(billing.cancel(tenantId, actorId, newId())).rejects.toMatchObject({
       response: { code: API_ERROR_CODE.NOT_FOUND },
     });
+  });
+});
+
+/**
+ * Thời điểm áp dụng khi đã có kỳ trả phí (08/10/2026): gia hạn cùng gói, đổi gói TỪ KỲ SAU, đổi gói
+ * NGAY — và luật huỷ không để lại khoảng trống. Mỗi test một tenant riêng để chuỗi kỳ độc lập.
+ */
+describe('Billing — gia hạn / đổi gói theo thời điểm áp dụng (ADR 0010 · 0041 điều 6)', () => {
+  /** Các kỳ còn hạn của tenant, sắp theo ngày bắt đầu — và khẳng định không hai kỳ nào chồng nhau. */
+  async function expectNoOverlap(shop: string) {
+    const live = await prisma.tenantSubscription.findMany({
+      where: { tenantId: shop, status: SUBSCRIPTION_STATUS.ACTIVE, endsAt: { gt: new Date() } },
+      orderBy: { startsAt: 'asc' },
+      select: { startsAt: true, endsAt: true },
+    });
+    for (let i = 1; i < live.length; i += 1) {
+      expect(live[i]!.startsAt.getTime()).toBeGreaterThanOrEqual(live[i - 1]!.endsAt.getTime());
+    }
+    return live;
+  }
+
+  const auditOf = (targetId: string, action: string) =>
+    prisma.auditLog.findFirst({
+      where: { targetId, action },
+      select: { afterJson: true, beforeJson: true },
+    });
+
+  maybe('cùng bậc ⇒ subscription.renew; khác bậc ⇒ subscription.schedule_change, kèm kỳ được nối', async () => {
+    const shop = await mkScratchTenant('chain');
+    const basic = await mkPlan('chain-basic');
+    const advanced = await mkPlan('chain-adv');
+
+    const first = await billing.assign(shop, actorId, { planId: basic.id, termMonths: 1 });
+    const renewed = await billing.assign(shop, actorId, { planId: basic.id, termMonths: 1 });
+    expect(renewed.startsAt).toBe(first.endsAt);
+    const renewAudit = await auditOf(renewed.id, 'subscription.renew');
+    expect(renewAudit).toBeTruthy();
+    expect((renewAudit!.afterJson as { previousTerm: { subscriptionId: string } }).previousTerm)
+      .toMatchObject({ subscriptionId: first.id });
+
+    const changed = await billing.assign(shop, actorId, { planId: advanced.id, termMonths: 1 });
+    // Nối sau kỳ CUỐI chuỗi (kỳ vừa gia hạn), không sau kỳ đang chạy.
+    expect(changed.startsAt).toBe(renewed.endsAt);
+    const changeAudit = await auditOf(changed.id, 'subscription.schedule_change');
+    expect(changeAudit).toBeTruthy();
+    expect(changeAudit!.afterJson).toMatchObject({
+      planName: advanced.name,
+      previousTerm: { subscriptionId: renewed.id, planName: basic.name },
+    });
+  });
+
+  maybe('huỷ kỳ đang chạy khi đã có kỳ xếp sau ⇒ SUBSCRIPTION_LATER_TERM_EXISTS; huỷ từ đuôi thì được', async () => {
+    const shop = await mkScratchTenant('gap');
+    const plan = await mkPlan('gap');
+    const current = await billing.assign(shop, actorId, { planId: plan.id, termMonths: 1 });
+    const scheduled = await billing.assign(shop, actorId, { planId: plan.id, termMonths: 1 });
+
+    await expect(billing.cancel(shop, actorId, current.id)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.SUBSCRIPTION_LATER_TERM_EXISTS },
+    });
+    // Không có gì bị đổi khi bị từ chối.
+    expect((await prisma.tenantSubscription.findUnique({ where: { id: current.id } }))?.status)
+      .toBe(SUBSCRIPTION_STATUS.ACTIVE);
+
+    await billing.cancel(shop, actorId, scheduled.id);
+    // Còn kỳ đang chạy ⇒ huỷ kỳ xếp lịch KHÔNG sinh dòng dự phòng.
+    expect((await billing.currentPlan(shop))?.subscriptionId).toBe(current.id);
+
+    const cancelled = await billing.cancel(shop, actorId, current.id);
+    expect(cancelled.status).toBe(SUBSCRIPTION_STATUS.CANCELLED);
+    const fallback = await billing.currentPlan(shop);
+    expect(fallback?.billingMode).toBe(BILLING_MODE.COMMISSION);
+
+    const cancelAudit = await auditOf(current.id, 'subscription.cancel');
+    expect(cancelAudit!.afterJson).toMatchObject({
+      status: SUBSCRIPTION_STATUS.CANCELLED,
+      reason: 'manual',
+      term: { subscriptionId: current.id },
+      fallbackTerm: { subscriptionId: fallback!.subscriptionId },
+    });
+  });
+
+  maybe('kỳ đã hết hạn không huỷ được nữa ⇒ INVALID_STATUS_TRANSITION', async () => {
+    const shop = await mkScratchTenant('ended');
+    const plan = await mkPlan('ended');
+    const ended = await prisma.tenantSubscription.create({
+      data: {
+        id: newId(),
+        tenantId: shop,
+        planId: plan.id,
+        status: SUBSCRIPTION_STATUS.ACTIVE,
+        price: 0,
+        termMonths: 1,
+        billingMode: BILLING_MODE.PACKAGE,
+        startsAt: new Date(Date.now() - 60 * 86_400_000),
+        endsAt: new Date(Date.now() - 30 * 86_400_000),
+      },
+    });
+    await expect(billing.cancel(shop, actorId, ended.id)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.INVALID_STATUS_TRANSITION },
+    });
+  });
+
+  maybe('đổi gói NGAY: mọi kỳ còn hạn bị huỷ trong cùng transaction, kỳ mới bắt đầu từ bây giờ', async () => {
+    const shop = await mkScratchTenant('now');
+    const basic = await mkPlan('now-basic');
+    const advanced = await mkPlan('now-adv');
+    const current = await billing.assign(shop, actorId, { planId: basic.id, termMonths: 1 });
+    const scheduled = await billing.assign(shop, actorId, { planId: basic.id, termMonths: 1 });
+
+    const before = Date.now();
+    const switched = await billing.assign(shop, actorId, {
+      planId: advanced.id,
+      termMonths: 1,
+      timing: 'now',
+    });
+    expect(new Date(switched.startsAt).getTime()).toBeGreaterThanOrEqual(before - 1000);
+    expect(new Date(switched.startsAt).getTime()).toBeLessThan(new Date(current.endsAt).getTime());
+
+    const rows = await prisma.tenantSubscription.findMany({
+      where: { id: { in: [current.id, scheduled.id] } },
+      select: { status: true },
+    });
+    expect(rows.every((row) => row.status === SUBSCRIPTION_STATUS.CANCELLED)).toBe(true);
+
+    // Đúng MỘT kỳ còn hạn sau lượt đổi — không kỳ nào chồng lên.
+    const live = await prisma.tenantSubscription.count({
+      where: { tenantId: shop, status: SUBSCRIPTION_STATUS.ACTIVE, endsAt: { gt: new Date() } },
+    });
+    expect(live).toBe(1);
+    expect((await billing.currentPlan(shop))?.planId).toBe(advanced.id);
+
+    const changeAudit = await auditOf(switched.id, 'subscription.change_now');
+    expect(changeAudit!.afterJson).toMatchObject({
+      replacedTerms: [{ subscriptionId: current.id }, { subscriptionId: scheduled.id }],
+    });
+    for (const id of [current.id, scheduled.id]) {
+      expect((await auditOf(id, 'subscription.cancel'))!.afterJson).toMatchObject({
+        reason: 'replaced',
+      });
+    }
+  });
+
+  maybe('dòng hoa hồng xếp sau kỳ gói KHÔNG làm đuôi: gia hạn kế tiếp nối sau kỳ gói, không chồng', async () => {
+    const shop = await mkScratchTenant('commission-tail');
+    const pkg = await mkPlan('ct-pkg');
+    const commission = await mkCommissionPlanDirect('ct-comm');
+    const current = await billing.assign(shop, actorId, { planId: pkg.id, termMonths: 1 });
+    // Hạ về hoa hồng từ kỳ sau — dòng hoa hồng xếp lịch sau kỳ gói.
+    const downgrade = await billing.assign(shop, actorId, {
+      planId: commission.id,
+      termMonths: 1,
+    });
+    expect(downgrade.startsAt).toBe(current.endsAt);
+
+    // Đổi ý: gia hạn gói. Đuôi phải là kỳ GÓI — dòng hoa hồng nhường chỗ.
+    const renewed = await billing.assign(shop, actorId, { planId: pkg.id, termMonths: 1 });
+    expect(renewed.startsAt).toBe(current.endsAt);
+    expect(
+      (await prisma.tenantSubscription.findUnique({ where: { id: downgrade.id } }))?.status,
+    ).toBe(SUBSCRIPTION_STATUS.CANCELLED);
+    expect(await auditOf(renewed.id, 'subscription.renew')).toBeTruthy();
+    await expectNoOverlap(shop);
+  });
+
+  maybe('hai lượt gán SONG SONG xếp hàng theo khoá chuỗi kỳ — nối nhau, không chồng', async () => {
+    const shop = await mkScratchTenant('race');
+    const plan = await mkPlan('chain-race');
+    await billing.assign(shop, actorId, { planId: plan.id, termMonths: 1 });
+    await Promise.all([
+      billing.assign(shop, actorId, { planId: plan.id, termMonths: 1 }),
+      billing.assign(shop, actorId, { planId: plan.id, termMonths: 1 }),
+    ]);
+    const live = await expectNoOverlap(shop);
+    expect(live).toHaveLength(3);
+  });
+
+  maybe('huỷ kỳ đang chạy SONG SONG với một lượt gia hạn: không bao giờ còn khoảng trống không gói', async () => {
+    const shop = await mkScratchTenant('race-cancel');
+    const plan = await mkPlan('race-cancel');
+    const current = await billing.assign(shop, actorId, { planId: plan.id, termMonths: 1 });
+    await Promise.allSettled([
+      billing.cancel(shop, actorId, current.id),
+      billing.assign(shop, actorId, { planId: plan.id, termMonths: 1 }),
+    ]);
+    // Dù bên nào thắng khoá: luôn có MỘT kỳ đang hiệu lực, và chuỗi không chồng.
+    const now = new Date();
+    const running = await prisma.tenantSubscription.count({
+      where: {
+        tenantId: shop,
+        status: SUBSCRIPTION_STATUS.ACTIVE,
+        startsAt: { lte: now },
+        endsAt: { gt: now },
+      },
+    });
+    expect(running).toBe(1);
+    await expectNoOverlap(shop);
+  });
+
+  maybe('timing = now khi KHÔNG có kỳ trả phí nào ⇒ chỉ là một lượt gán', async () => {
+    const shop = await mkScratchTenant('now-empty');
+    const plan = await mkPlan('now-empty');
+    const assigned = await billing.assign(shop, actorId, {
+      planId: plan.id,
+      termMonths: 1,
+      timing: 'now',
+    });
+    expect(await auditOf(assigned.id, 'subscription.assign')).toBeTruthy();
   });
 });

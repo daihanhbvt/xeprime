@@ -398,6 +398,18 @@ function PlanSummary({ plan }: { plan: NonNullable<PartnerOverview['plan']> }) {
             '—'
           ),
         },
+        ...(plan.nextTerm
+          ? [
+              {
+                key: 'next',
+                label: t('next'),
+                value: t('nextValue', {
+                  plan: plan.nextTerm.planName,
+                  date: fmt.date(plan.nextTerm.startsAt),
+                }),
+              },
+            ]
+          : []),
         {
           key: 'quota',
           label: t('quota'),

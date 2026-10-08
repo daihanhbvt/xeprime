@@ -41,6 +41,7 @@ import {
   type PartnerVehicleListQueryDto,
 } from './dto/platform-partner.dto';
 import { auditCategoriesExclusionWhere, auditCategoryWhere } from './audit-category-where';
+import { auditTargetKey, auditTargetLabels } from './audit-target-labels';
 import {
   PARTNER_HIDDEN_ALERT_KINDS,
   PLATFORM_PARTNER_ALERT_SCOPE,
@@ -435,6 +436,7 @@ export class PlatformPartnerOperationsService {
       }),
     ]);
 
+    const labels = await auditTargetLabels(this.prisma, rows);
     return {
       data: rows.map((row) => ({
         id: row.id,
@@ -449,6 +451,9 @@ export class PlatformPartnerOperationsService {
           : null,
         targetType: row.targetType,
         targetId: row.targetId,
+        targetLabel: row.targetId
+          ? (labels.get(auditTargetKey(row.targetType, row.targetId)) ?? null)
+          : null,
         viaSupport: row.supportContextId !== null,
         createdAt: row.createdAt.toISOString(),
       })),
