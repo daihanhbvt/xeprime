@@ -41,9 +41,14 @@ beforeEach(() => {
 });
 
 describe('Route cũ của cổng quản lý vẫn tới nơi', () => {
-  it('/manage/shop/seller-profile → section "Địa chỉ & pháp lý"', async () => {
+  /*
+   * Đích đổi ngày 07/10/2026: "Hồ sơ người bán" về section "Thông tin khai thuế", không còn về
+   * "Địa chỉ & pháp lý". Section cũ chỉ có ô MST của `tenant_profiles` — một bản sao mà không
+   * phép tính thuế nào đọc, và nó đã được gỡ.
+   */
+  it('/manage/shop/seller-profile → section "Thông tin khai thuế"', async () => {
     expect(await targetOf(() => import('./shop/seller-profile/page'))).toBe(
-      '/manage/shop?section=legal',
+      '/manage/shop?section=tax',
     );
   });
 
