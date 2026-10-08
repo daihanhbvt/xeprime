@@ -1,17 +1,19 @@
-import { useLocalSearchParams } from 'expo-router';
-import { InviteAnswerScreen } from '@/features/members/InviteAnswerScreen';
+import { Redirect, useLocalSearchParams } from 'expo-router';
+import { PARTNER_HANDOFF_INTENT, PARTNER_HANDOFF_PATHNAME } from '@/navigation/routes';
 
 /**
- * Người được mời mở thư và quyết định — `/invites/<token>`.
- *
- * KHÔNG bọc `RequireSession`, và đó là điểm mấu chốt: người mở màn này chưa thuộc gian hàng nào và
- * có thể còn chưa có tài khoản. Bắt họ đăng nhập trước khi được đọc mình đang được mời làm gì là
- * đúng cái mà web tránh bằng cách để trang này ở nhóm `(public)`.
- *
- * Màn tự lo phần "chưa đăng nhập thì chưa trả lời được"; `accept`/`decline` cần phiên, và server
- * còn đòi đúng tài khoản mang email được mời.
+ * Lời mời vào gian hàng dành cho TÀI KHOẢN ĐỐI TÁC (ADR 0053 điều 3) — trả lời ở app XePrime
+ * Partner. Link mời mở nhầm app khách thì chuyển sang màn handoff, và nút "Mở XePrime Partner" mở
+ * thẳng đúng lời mời đó.
  */
-export default function InviteAnswerRoute() {
+export default function InviteHandoffRoute() {
   const { token } = useLocalSearchParams<{ token: string }>();
-  return <InviteAnswerScreen token={token} />;
+  return (
+    <Redirect
+      href={{
+        pathname: PARTNER_HANDOFF_PATHNAME,
+        params: { intent: PARTNER_HANDOFF_INTENT.INVITE, token },
+      }}
+    />
+  );
 }

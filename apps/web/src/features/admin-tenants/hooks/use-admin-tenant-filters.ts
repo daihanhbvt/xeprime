@@ -1,6 +1,10 @@
 'use client';
 
-import { TENANT_STATUS_VALUES, isPlatformTenantSort } from '@xeprime/types';
+import {
+  PLATFORM_TENANT_PLAN_FILTER_VALUES,
+  TENANT_STATUS_VALUES,
+  isPlatformTenantSort,
+} from '@xeprime/types';
 import { ALL_FILTER } from '@/constants/filters';
 import { ADMIN_PARTNER_TAB_PARAM, ADMIN_PARTNER_TENANT_PARAM } from '@/constants/routes';
 import { positiveIntParam, useUrlFilters } from '@/hooks/use-url-filters';
@@ -21,12 +25,17 @@ const MAX_LIMIT = 100;
 export function useAdminTenantFilters() {
   return useUrlFilters<AdminPartnerListUrlState>((sp) => {
     const status = sp.get('status');
+    const planState = sp.get('planState');
     const sort = sp.get('sort');
     const limit = positiveIntParam(sp, 'limit');
     return {
       status:
         status && (TENANT_STATUS_VALUES as readonly string[]).includes(status)
           ? status
+          : ALL_FILTER,
+      planState:
+        planState && (PLATFORM_TENANT_PLAN_FILTER_VALUES as readonly string[]).includes(planState)
+          ? planState
           : ALL_FILTER,
       q: sp.get('q')?.trim() || undefined,
       sort: isPlatformTenantSort(sort) ? sort : undefined,

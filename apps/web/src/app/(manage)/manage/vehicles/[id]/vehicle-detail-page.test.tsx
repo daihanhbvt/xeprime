@@ -5,6 +5,7 @@ import { API_ERROR_CODE, PERMISSION, type Permission } from '@xeprime/types';
 
 import { ApiClientError } from '@/services/api-client';
 import type { Vehicle360Summary, VehicleDetail } from '@/features/vehicles/types';
+import { getLinkByText, queryLinkByText } from '@/test-utils/queries';
 
 import VehicleDetailPage from './page';
 
@@ -203,8 +204,15 @@ function vehicle(over: Partial<VehicleDetail> = {}): VehicleDetail {
     description: 'Xe 16 chỗ đời 2021.',
     transmission: 'manual',
     fuelConsumptionCombined: '9.50',
-    mainImageUrl: 'https://cdn.test/main.jpg',
-    images: ['https://cdn.test/1.jpg', 'https://cdn.test/2.jpg', 'https://cdn.test/3.jpg'],
+    mainImageUrl: 'https://cdn.test/1.jpg',
+    // Đủ năm góc ảnh bắt buộc của ô tô (07/10/2026) — điều kiện lên chợ hỏi GÓC, không hỏi số lượng.
+    media: [
+      { url: 'https://cdn.test/1.jpg', type: 'front' },
+      { url: 'https://cdn.test/2.jpg', type: 'rear' },
+      { url: 'https://cdn.test/3.jpg', type: 'left' },
+      { url: 'https://cdn.test/4.jpg', type: 'right' },
+      { url: 'https://cdn.test/5.jpg', type: 'interior' },
+    ],
     /*
      * Chi nhánh CÓ TỈNH: từ ADR 0036 "chi nhánh chưa có tỉnh" là một mục trong checklist chứ
      * không còn là một mã lỗi rời ở backend. Xe fixture đủ điều kiện thì phải đủ cả mục này.
@@ -573,7 +581,7 @@ describe('/manage/vehicles/[id] — hồ sơ hiển thị', () => {
     renderPage();
 
     expect(screen.getByText('Hoàn tất hồ sơ để đưa xe lên chợ')).toBeTruthy();
-    expect(screen.getByRole('link', { name: /Hoàn tất hồ sơ/ })).toBeTruthy();
+    expect(getLinkByText(/Hoàn tất hồ sơ/)).toBeTruthy();
     expect(screen.queryByText('Không có việc cần làm.')).toBeNull();
   });
 
@@ -860,6 +868,10 @@ describe('/manage/vehicles/[id] — thẻ tổng quan', () => {
     detail.data = vehicle({
       mainImageUrl: 'https://cdn.test/2.jpg',
       images: ['https://cdn.test/1.jpg', 'https://cdn.test/2.jpg'],
+      media: [
+        { url: 'https://cdn.test/1.jpg', type: 'rear', sortOrder: 0 },
+        { url: 'https://cdn.test/2.jpg', type: 'front', sortOrder: 1 },
+      ],
     });
     renderPage();
 
@@ -873,6 +885,7 @@ describe('/manage/vehicles/[id] — thẻ tổng quan', () => {
     detail.data = vehicle({
       mainImageUrl: 'https://cdn.test/cover.jpg',
       images: ['https://cdn.test/1.jpg'],
+      media: [{ url: 'https://cdn.test/1.jpg', type: 'rear', sortOrder: 0 }],
     });
     renderPage();
 
@@ -884,7 +897,11 @@ describe('/manage/vehicles/[id] — thẻ tổng quan', () => {
 
   it('thư viện ảnh: quá 6 ảnh thì ô thứ 6 báo "+N", ảnh dư vẫn trong nhóm xem trước', () => {
     const images = Array.from({ length: 11 }, (_, i) => `https://cdn.test/${i}.jpg`);
-    detail.data = vehicle({ mainImageUrl: images[0], images });
+    detail.data = vehicle({
+      mainImageUrl: images[0],
+      images,
+      media: images.map((url, sortOrder) => ({ url, type: 'other' as const, sortOrder })),
+    });
     renderPage();
 
     expect(within(galleryCard()).getByText('+5')).toBeTruthy();
@@ -893,7 +910,7 @@ describe('/manage/vehicles/[id] — thẻ tổng quan', () => {
   });
 
   it('thư viện ảnh: chưa có ảnh thì nói rõ, và chỉ người sửa được mới thấy lối thêm ảnh', () => {
-    detail.data = vehicle({ mainImageUrl: null, images: [] });
+    detail.data = vehicle({ mainImageUrl: null, images: [], media: [] });
     renderPage();
 
     expect(within(galleryCard()).getByText('Chưa có ảnh nào cho xe này.')).toBeTruthy();
@@ -960,7 +977,7 @@ describe('/manage/vehicles/[id] — thẻ tổng quan', () => {
     renderPage();
 
     expect(screen.getByText('Sắp tới kỳ thanh toán nguồn xe')).toBeTruthy();
-    expect(screen.queryByRole('link', { name: 'Xử lý ngay' })).toBeNull();
+    expect(queryLinkByText('Xử lý ngay')).toBeNull();
   });
 
   it('"Xử lý ngay" dẫn tới việc ĐẦU BẢNG của server, đúng đích theo khu', () => {
@@ -980,7 +997,7 @@ describe('/manage/vehicles/[id] — thẻ tổng quan', () => {
     grant(PERMISSION.VEHICLE_DOCUMENT_VIEW);
     renderPage();
 
-    const cta = screen.getByRole('link', { name: 'Xử lý ngay' });
+    const cta = getLinkByText('Xử lý ngay');
     expect(cta.getAttribute('href')).toBe('/manage/vehicles/v1/edit?tab=documents');
     // Nút nằm TRONG chính việc nó xử lý, không trôi xuống cuối thẻ.
     expect(cta.closest('li')?.textContent).toContain('Có giấy tờ đã hết hạn');
@@ -1008,13 +1025,13 @@ describe('/manage/vehicles/[id] — thẻ tổng quan', () => {
     grant(PERMISSION.VEHICLE_SUBMIT_PUBLIC);
     renderPage();
 
-    const cta = screen.getByRole('link', { name: 'Xử lý ngay' });
+    const cta = getLinkByText('Xử lý ngay');
     const note = screen.getByText('Xe đang tạm ẩn khỏi chợ');
     expect(cta.closest('li')?.textContent).toContain('Có giấy tờ đã hết hạn');
     // Thứ tự trong DOM: nút của việc phải làm đứng TRƯỚC lời nhắc.
     expect(cta.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     // Công tắc "Trên chợ" ở đầu trang là chỗ bấm duy nhất — không có nút thứ hai trong thẻ.
-    expect(screen.queryByRole('link', { name: 'Bật hiển thị' })).toBeNull();
+    expect(queryLinkByText('Bật hiển thị')).toBeNull();
     expect(screen.getAllByRole('switch')).toHaveLength(1);
   });
 
@@ -1052,7 +1069,7 @@ describe('/manage/vehicles/[id] — thẻ tổng quan', () => {
     renderPage();
 
     expect(screen.getByText('Xe đã sẵn sàng để xét duyệt')).toBeTruthy();
-    expect(screen.queryByRole('link', { name: 'Xử lý ngay' })).toBeNull();
+    expect(queryLinkByText('Xử lý ngay')).toBeNull();
   });
 });
 

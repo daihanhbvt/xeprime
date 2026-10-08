@@ -54,7 +54,9 @@ describe('leaveApp', () => {
   });
 
   it('không gọi `dismissAll` khi không có gì để đóng, nhưng vẫn đi về chợ xe', () => {
-    const router = fakeRouter({ canDismiss: jest.fn(() => false) as unknown as Router['canDismiss'] });
+    const router = fakeRouter({
+      canDismiss: jest.fn(() => false) as unknown as Router['canDismiss'],
+    });
 
     leaveApp(router);
 

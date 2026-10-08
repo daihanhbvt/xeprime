@@ -28,6 +28,7 @@ import {
   seedProvince,
 } from './helpers/service-factory';
 import { TEST_PROVINCE } from './helpers/test-provinces';
+import { requiredVehicleImageRows } from './helpers/vehicle-media';
 
 /**
  * ADR 0048 — công tắc HIỂN THỊ TRÊN CHỢ của chủ xe, tách khỏi trạng thái kiểm duyệt.
@@ -85,14 +86,14 @@ async function seedVehicle(over: { tenantId?: string; branchId?: string } = {}):
       weekdayPrice: '600000',
     },
   });
+  // Đủ GÓC ảnh bắt buộc của loại xe (07/10/2026) — ba dòng không gán góc sẽ bị cổng duyệt
+  // báo thiếu `photos`, ở những ca chẳng nói gì về ảnh.
   await prisma.vehicleImage.createMany({
-    data: [1, 2, 3].map((n) => ({
-      id: newId(),
-      tenantId: over.tenantId ?? tenantId,
+    data: requiredVehicleImageRows({
       vehicleId: id,
-      imageUrl: `https://img.example/${id.slice(-4)}-${n}.jpg`,
-      sortOrder: n,
-    })),
+      tenantId: over.tenantId ?? tenantId,
+      vehicleType: VEHICLE_TYPE.CAR,
+    }),
   });
   return id;
 }

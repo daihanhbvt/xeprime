@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { MOBILE_CLIENT_APP, type RegistrationTrack } from '@xeprime/types';
+import { Callout } from '@/components/ui/Callout';
+import { APP_PROFILE } from '@/app-profile';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { type CurrentUser } from '@/features/auth/api';
@@ -33,6 +36,7 @@ export function RegisterScreen({
   onOpenAccount,
   onSwitchToLogin,
   onCancel,
+  chosenTrack = null,
 }: {
   /** Đăng nhập mạng xã hội — tài khoản có thể đã tồn tại, nên KHÔNG đi qua màn "vừa tạo xong". */
   onAuthenticated: (user: CurrentUser) => void;
@@ -41,8 +45,14 @@ export function RegisterScreen({
   onOpenAccount: () => void;
   onSwitchToLogin: () => void;
   onCancel: () => void;
+  /**
+   * Tuyến người dùng đã chọn trước khi tới đây (app Partner mở từ app XePrime với `?next=`) — hiện
+   * câu `partnerRegister.chosen.*` như web `PartnerRegisterView`.
+   */
+  chosenTrack?: RegistrationTrack | null;
 }) {
   const t = useTranslations('Auth');
+  const partner = APP_PROFILE.clientApp === MOBILE_CLIENT_APP.PARTNER;
   const [registered, setRegistered] = useState(false);
   const [consented, setConsented] = useState(false);
 
@@ -56,16 +66,25 @@ export function RegisterScreen({
         ) : (
           <YStack gap={space.xl}>
             <YStack gap={space.xs}>
-              <Text
-                col={colors.text}
-                fos={fontSize.h2}
-                fow={fontWeight.bold}
-              >
-                {t('modal.registerTitle')} <Text col={colors.primaryActive}>{APP_NAME}</Text>
+              <Text col={colors.text} fos={fontSize.h2} fow={fontWeight.bold}>
+                {partner ? (
+                  t('partnerRegister.title')
+                ) : (
+                  <>
+                    {t('modal.registerTitle')} <Text col={colors.primaryActive}>{APP_NAME}</Text>
+                  </>
+                )}
               </Text>
               <Text col={colors.textMuted} fos={fontSize.body}>
-                {t('modal.registerSub')}
+                {/*
+                  App Partner tạo tài khoản ĐỐI TÁC (ADR 0053) — câu của site partner nói rõ nó tách
+                  riêng với tài khoản thuê xe, dùng chung số điện thoại được, mật khẩu riêng.
+                */}
+                {partner ? t('partnerRegister.subtitle') : t('modal.registerSub')}
               </Text>
+              {partner && chosenTrack ? (
+                <Callout tone="info">{t(`partnerRegister.chosen.${chosenTrack}`)}</Callout>
+              ) : null}
             </YStack>
 
             {/*

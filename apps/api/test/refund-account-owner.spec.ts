@@ -3,6 +3,7 @@ import {
   ACCOUNT_REALM,
   BILLING_MODE,
   BOOKING_REQUEST_STATUS,
+  FEE_POLICY_STATUS,
   HOLD_REFUND_REASON,
   MEMBERSHIP_STATUS,
   TENANT_ROLE,
@@ -99,7 +100,13 @@ let hostOwnerId: string;
 let ownTenantId: string;
 let hostTenantId: string;
 let vehicleId: string;
-/** Chính sách phí đang hiệu lực — hold bắt buộc tham chiếu một bản có thật. */
+/**
+ * Chính sách phí RIÊNG của spec — hold bắt buộc tham chiếu một bản có thật.
+ *
+ * Không mượn "bản mới tạo gần nhất": đó thường là policy riêng của một spec khác đang chạy song
+ * song trên cùng DB, và hold của spec này giữ FK tới nó làm `afterAll` của spec kia xoá policy
+ * thất bại (`booking_holds_fee_policy_id_fkey`).
+ */
 let feePolicyId: string;
 
 beforeAll(async () => {
@@ -119,12 +126,19 @@ beforeAll(async () => {
   ownTenantId = newId();
   hostTenantId = newId();
   vehicleId = newId();
-  feePolicyId = (
-    await prisma.feePolicy.findFirstOrThrow({
-      orderBy: { createdAt: 'desc' },
-      select: { id: true },
-    })
-  ).id;
+  feePolicyId = newId();
+  await prisma.feePolicy.create({
+    data: {
+      id: feePolicyId,
+      version: 800 + Math.floor(Math.random() * 90),
+      status: FEE_POLICY_STATUS.ARCHIVED, // không đụng bản `active` toàn sàn của spec khác
+      name: `Policy refund ${feePolicyId.slice(-6)}`,
+      serviceFeePercent: new Prisma.Decimal(10),
+      holdMinAmount: new Prisma.Decimal(20_000),
+      holdPaymentWindowMinutes: 120,
+      freeCancelHours: 4,
+    },
+  });
 
   const minhPhone = `8497${String(Date.now()).slice(-7)}`;
   await prisma.user.createMany({
@@ -204,6 +218,8 @@ afterAll(async () => {
       userIds,
     });
     await prisma.tenant.deleteMany({ where: { id: { in: [ownTenantId, hostTenantId] } } });
+    // Sau tenant: hold đi theo tenant (cascade) và là thứ duy nhất giữ FK tới policy.
+    await prisma.feePolicy.deleteMany({ where: { id: feePolicyId } });
     await prisma.user.deleteMany({ where: { id: { in: userIds } } });
   }
   await prisma.$disconnect();

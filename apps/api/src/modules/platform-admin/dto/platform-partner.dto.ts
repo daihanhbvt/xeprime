@@ -1,8 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  SUBSCRIPTION_TERM_STATE_VALUES,
   AUDIT_ACTION_CATEGORY_VALUES,
   AUDIT_ACTOR_SCOPE_VALUES,
-  BOOKING_REQUEST_STATUS_VALUES,
+  BOOKING_REQUEST_STATUS_LIVE_VALUES,
   BOOKING_STATUS_VALUES,
   DEFAULT_PARTNER_VEHICLE_SORT,
   PARTNER_QUOTA_KIND_VALUES,
@@ -23,6 +24,7 @@ import {
 import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsISO8601, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
+import { PlanTermRefDto } from '../../billing/dto/billing.dto';
 
 /**
  * Read-model của drawer CHI TIẾT đối tác (Platform Admin) — toàn bộ là GET.
@@ -152,6 +154,12 @@ export class PartnerPlanSummaryDto {
     description: 'Trần xe ĐANG CƯỠNG CHẾ (BillingService.vehicleQuotaFor) và số xe đã dùng',
   })
   vehicleQuota!: PartnerQuotaItemDto;
+  @ApiPropertyOptional({
+    type: PlanTermRefDto,
+    nullable: true,
+    description: 'Kỳ đã xếp lịch kế tiếp (gia hạn / đổi gói từ kỳ sau) — null nếu chưa có',
+  })
+  nextTerm!: PlanTermRefDto | null;
 }
 
 export class PartnerOperatingDto {
@@ -365,15 +373,15 @@ export class PartnerBookingSummaryDto {
 }
 
 export class PartnerBookingRequestListQueryDto extends PagedQueryDto {
-  @ApiPropertyOptional({ enum: BOOKING_REQUEST_STATUS_VALUES })
+  @ApiPropertyOptional({ enum: BOOKING_REQUEST_STATUS_LIVE_VALUES })
   @IsOptional()
-  @IsIn(BOOKING_REQUEST_STATUS_VALUES)
+  @IsIn(BOOKING_REQUEST_STATUS_LIVE_VALUES)
   status?: string;
 }
 
 export class PartnerBookingRequestDto {
   @ApiProperty() id!: string;
-  @ApiProperty({ enum: BOOKING_REQUEST_STATUS_VALUES }) status!: string;
+  @ApiProperty({ enum: BOOKING_REQUEST_STATUS_LIVE_VALUES }) status!: string;
   @ApiProperty({ enum: SERVICE_TYPE_VALUES }) serviceType!: string;
   @ApiProperty() vehicleId!: string;
   @ApiProperty() vehicleName!: string;
@@ -543,6 +551,11 @@ export class PartnerSubscriptionRowDto {
   @ApiProperty({ description: 'Decimal' }) price!: string;
   @ApiPropertyOptional({ type: Number, nullable: true }) termMonths!: number | null;
   @ApiProperty({ description: '@xeprime/types → SubscriptionStatus (lưu trữ)' }) status!: string;
+  @ApiProperty({
+    enum: SUBSCRIPTION_TERM_STATE_VALUES,
+    description: 'Trạng thái KỲ theo đồng hồ server — hiển thị cái này, không phải status',
+  })
+  termState!: string;
   @ApiProperty({ description: 'ISO' }) startsAt!: string;
   @ApiProperty({ description: 'ISO' }) endsAt!: string;
 }
@@ -642,6 +655,12 @@ export class PartnerActivityDto {
   @ApiPropertyOptional({ type: String, nullable: true }) actorName!: string | null;
   @ApiProperty() targetType!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) targetId!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Tên người đọc được của đối tượng — cùng nguồn với trang Nhật ký hệ thống',
+  })
+  targetLabel!: string | null;
   @ApiProperty({ description: 'Thao tác thực hiện trong một phiên hỗ trợ' }) viaSupport!: boolean;
   @ApiProperty({ description: 'ISO' }) createdAt!: string;
 }

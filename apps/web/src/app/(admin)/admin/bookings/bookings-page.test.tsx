@@ -7,11 +7,11 @@ import type { AdminBooking } from '@/features/admin-bookings/types';
 import AdminBookingsPage from './page';
 
 /**
- * `/manage/admin/bookings` — bảng + panel chi tiết đứng cạnh.
+ * `/manage/admin/bookings` — bảng + panel chi tiết (drawer chuẩn có mask).
  *
  * Dùng bảng và panel THẬT, chỉ giả tầng dữ liệu: thứ cần khoá là tương tác giữa hai bên — bấm
- * dòng mở đúng đơn, dòng đó được đánh dấu, bảng bỏ các cột đã có trong panel, đóng panel là mọi
- * thứ về như cũ.
+ * dòng mở đúng đơn, dòng đó được đánh dấu, BỐ CỤC BẢNG KHÔNG ĐỔI (nội dung đứng yên dưới panel —
+ * quyết định 07/10/2026), đóng panel là bỏ đánh dấu.
  */
 const nav = vi.hoisted(() => ({ replace: vi.fn(), params: new URLSearchParams() }));
 
@@ -159,43 +159,33 @@ describe('/manage/admin/bookings — bảng + panel chi tiết', () => {
     expect(screen.getByText('Đơn XP-001')).toBeTruthy();
   });
 
-  it('panel mở: bảng giữ năm cột ưu tiên, bỏ cột tiền và cột thao tác (đã có trong panel)', () => {
+  it('panel mở: bảng GIỮ NGUYÊN mọi cột — nội dung đứng yên dưới panel, không co, không đẩy', () => {
     renderPage();
+    const before = headers();
     fireEvent.click(within(rowOf('XP-001')).getByText('Nguyễn Văn A'));
 
-    const shown = headers();
-    expect(shown).toEqual(
-      expect.arrayContaining([
-        'Mã đơn',
-        'Khách thuê',
-        'Gian hàng · xe',
-        'Thời gian thuê',
-        'Trạng thái',
-      ]),
-    );
-    expect(shown).not.toContain('Tổng tiền');
-    expect(shown).not.toContain('Còn nợ');
-    expect(shown).not.toContain('Thao tác');
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(headers()).toEqual(before);
+    expect(headers()).toEqual(expect.arrayContaining(['Tổng tiền', 'Còn nợ', 'Thao tác']));
   });
 
-  it('không có mask: vẫn bấm được dòng khác để đổi đơn đang xem', () => {
+  it('drawer chuẩn như màn Kiểm duyệt xe: có mask, bấm ra ngoài là đóng và bỏ đánh dấu dòng', () => {
     renderPage();
     fireEvent.click(within(rowOf('XP-001')).getByText('Nguyễn Văn A'));
-    expect(document.querySelector('.ant-drawer-mask')).toBeNull();
+    expect(document.querySelector('.ant-drawer-mask')).not.toBeNull();
 
-    fireEvent.click(within(rowOf('XP-002')).getByText('Trần Thị B'));
-    expect(screen.getByText('Đơn XP-002')).toBeTruthy();
-    expect(rowOf('XP-002').getAttribute('aria-current')).toBe('true');
-    expect(rowOf('XP-001').getAttribute('aria-current')).toBeNull();
+    fireEvent.click(document.querySelector('.ant-drawer-mask') as HTMLElement);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.querySelector('tr[aria-current]')).toBeNull();
   });
 
-  it('đóng panel bằng nút X: bỏ đánh dấu dòng, cột tiền trở lại', () => {
+  it('đóng panel bằng nút X: bỏ đánh dấu dòng', () => {
     renderPage();
     fireEvent.click(within(rowOf('XP-001')).getByText('Nguyễn Văn A'));
     fireEvent.click(document.querySelector('.ant-drawer-close') as HTMLElement);
 
     expect(document.querySelector('tr[aria-current]')).toBeNull();
-    expect(headers()).toContain('Tổng tiền');
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('đóng panel bằng Esc', () => {

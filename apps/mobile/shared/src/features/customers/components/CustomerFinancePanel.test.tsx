@@ -83,6 +83,7 @@ async function renderPanel(options: { total?: number } = {}) {
       slug: 'da-nang',
       status: 'active',
       onboardingState: 'commission',
+      branchScope: 'all',
       logoUrl: null,
       roleKey: 'shop_staff',
       features: [],
@@ -119,7 +120,7 @@ async function renderPanel(options: { total?: number } = {}) {
   jest.spyOn(financeApi, 'series').mockResolvedValue({ granularity: 'day', buckets: [] });
   const listSpy = jest.spyOn(receiptsApi, 'list').mockResolvedValue({
     items: [receipt()],
-    meta: { page: 1, limit: 10, total, hasNext: total > 10 },
+    meta: { page: 1, limit: 10, total, hasNext: total > 10, unassignedCount: 0 },
   });
   const detailSpy = jest.spyOn(receiptsApi, 'detail').mockResolvedValue({
     ...receipt(),

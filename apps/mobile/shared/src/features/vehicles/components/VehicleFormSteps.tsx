@@ -6,6 +6,7 @@ import {
   CATALOG_TYPE,
   SERVICE_TYPE,
   SERVICE_TYPE_VALUES,
+  isVehicleServiceTypeAllowed,
   vehicleFeatureAppliesTo,
   VEHICLE_OPERATION_STATUS_VALUES,
   VEHICLE_SOURCE_TYPE_VALUES,
@@ -18,7 +19,6 @@ import { BlockTitle } from '@/components/ui/BlockTitle';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
 import { FieldLabel } from '@/components/ui/Field';
-import { ImageUploadField } from '@/components/ui/ImageUploadField';
 import { MoneyField } from '@/components/ui/MoneyField';
 import { NumberField } from '@/components/ui/NumberField';
 import { RadioOption } from '@/components/ui/RadioOption';
@@ -31,11 +31,11 @@ import { useCatalog } from '@/features/catalog/use-catalog';
 import { VehicleClassificationFields } from './VehicleClassificationFields';
 import { VehicleEnergyFields, useTransmissionOptions } from './VehicleEnergyFields';
 import { VehicleIdentityFields } from './VehicleIdentityFields';
+import { TypedMediaFields } from './TypedMediaFields';
 import { useDomainLabel } from '@/i18n/domain';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
-import { uploadsApi } from '../api';
 import { discountedPriceVnd } from '../pricing';
 
 interface StepProps {
@@ -169,7 +169,7 @@ export function BasicStep({
       />
 
       {/* MẢNG dịch vụ — một xe đăng đồng thời tự lái / có tài xế / dài hạn. */}
-      <ServiceTypesField control={control} />
+      <ServiceTypesField control={control} required />
       <ServicePriceRemovalWarning control={control} />
     </YStack>
   );
@@ -266,6 +266,7 @@ export function SpecsSection({
         control={control}
         vehicleType={vehicleType}
         transmissionOptions={transmissionOptions}
+        fuelTypeRequired
         disabled={Boolean(lockedNotice)}
         {...(lockedNotice ? { lockedNotice } : {})}
         {...(setValue ? { setValue } : {})}
@@ -281,7 +282,7 @@ export function SpecsSection({
  * thấy; ảnh minh hoạ làm việc chọn tường minh hơn hẳn một danh sách "CUV / SUV / MPV" bằng chữ.
  * Cùng component với bộ lọc chợ xe (`CatalogCardPicker`) nên hai màn không thể lệch ảnh.
  */
-function BodyTypePicker({ control }: { control: Control<VehicleFormValues> }) {
+export function BodyTypePicker({ control }: { control: Control<VehicleFormValues> }) {
   const t = useTranslations('Vehicles.form.specs');
   const { catalog } = useCatalog();
   const items = catalog[CATALOG_TYPE.BODY_TYPE] ?? [];
@@ -336,9 +337,16 @@ export function SourceTypeSection({ control }: { control: Control<VehicleFormVal
  * Dịch vụ xe phục vụ được — nhiều lựa chọn, nên là hàng chip bật/tắt chứ không phải menu:
  * một menu không cho thấy tổ hợp nào đang bật.
  */
-function ServiceTypesField({ control }: { control: Control<VehicleFormValues> }) {
+function ServiceTypesField({
+  control,
+  required = false,
+}: {
+  control: Control<VehicleFormValues>;
+  required?: boolean;
+}) {
   const t = useTranslations('Vehicles.form.basic');
   const domainLabel = useDomainLabel();
+  const vehicleType = useWatch({ control, name: 'vehicleType' });
 
   return (
     <Controller
@@ -348,23 +356,37 @@ function ServiceTypesField({ control }: { control: Control<VehicleFormValues> })
         const selected = field.value ?? [];
         return (
           <YStack gap={space.xs}>
-            <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
-              {t('serviceTypes')}
-            </Text>
+            <FieldLabel label={t('serviceTypes')} required={required} />
             <XStack flexWrap="wrap" gap={space.xs}>
               {SERVICE_TYPE_VALUES.map((value) => {
                 const active = selected.includes(value);
+                /*
+                  Dịch vụ loại xe này không phục vụ được (vd xe máy có tài xế) thì KHOÁ chip chưa
+                  chọn — đúng `ServiceTypeChips` của web. Chip đang bật vẫn tắt được.
+                */
+                const locked = !active && !isVehicleServiceTypeAllowed(vehicleType, value);
                 return (
-                  <Chip
+                  // `Chip` không có trạng thái khoá — mờ đi và bỏ `onPress` là đủ, như thẻ khoá của web.
+                  <YStack
                     key={value}
-                    label={domainLabel('serviceType', value)}
-                    selected={active}
-                    onPress={() =>
-                      field.onChange(
-                        active ? selected.filter((item) => item !== value) : [...selected, value],
-                      )
-                    }
-                  />
+                    opacity={locked ? 0.45 : 1}
+                    pointerEvents={locked ? 'none' : 'auto'}
+                  >
+                    <Chip
+                      label={domainLabel('serviceType', value)}
+                      selected={active}
+                      {...(locked
+                        ? {}
+                        : {
+                            onPress: () =>
+                              field.onChange(
+                                active
+                                  ? selected.filter((item) => item !== value)
+                                  : [...selected, value],
+                              ),
+                          })}
+                    />
+                  </YStack>
                 );
               })}
             </XStack>
@@ -621,22 +643,11 @@ export function MediaStep({ control }: StepProps) {
       <Card>
         <YStack gap={space.md}>
           <BlockTitle>{tCards('images')}</BlockTitle>
-          {/* Ảnh xe đi qua endpoint riêng của xe — quyền `vehicles.update`, không phải quyền gian hàng. */}
-          <ImageUploadField
-            control={control}
-            name="mainImageUrl"
-            label={t('mainImage')}
-            emptyLabel={t('addMainImage')}
-            presign={uploadsApi.vehicleImage}
-            publishRequired
-          />
-          <ImageUploadField
-            control={control}
-            name="images"
-            label={t('gallery')}
-            presign={uploadsApi.vehicleImage}
-            multiple
-          />
+          {/*
+            Ảnh theo GÓC CHỤP (`media[{url,type}]`) + ảnh đại diện — cùng `TypedMediaFields` với
+            wizard đăng nhanh, đúng `ImagesSection` của web. Ảnh xe đi qua endpoint riêng của xe.
+          */}
+          <TypedMediaFields control={control} vehicleType={vehicleType} />
         </YStack>
       </Card>
 
@@ -649,7 +660,6 @@ export function MediaStep({ control }: StepProps) {
             name="description"
             label={t('description')}
             placeholder={t('descriptionPlaceholder')}
-            required
             multiline
             rows={5}
             maxLength={DESCRIPTION_MAX}
@@ -671,7 +681,7 @@ const DESCRIPTION_MAX = 4000;
  * "chọn nhiều trong một tập ngắn", và app đã dùng đúng nó ở dịch vụ xe ngay màn trước — đổi kiểu
  * giữa hai màn của cùng một form là thứ người dùng phải học lại.
  */
-function FeaturesField({
+export function FeaturesField({
   control,
   features,
 }: {

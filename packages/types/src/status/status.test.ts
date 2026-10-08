@@ -13,8 +13,10 @@ import { VEHICLE_PUBLIC_STATUS, VEHICLE_PUBLIC_STATUS_META } from './vehicle';
 import { TENANT_STATUS, TENANT_STATUS_META } from './tenant';
 import {
   BOOKING_REQUEST_STATUS,
+  BOOKING_REQUEST_STATUS_LIVE_VALUES,
   BOOKING_REQUEST_STATUS_META,
   BOOKING_REQUEST_STATUS_OCCUPYING,
+  BOOKING_REQUEST_STATUS_VALUES,
 } from './booking-request';
 import { REVIEW_STATUS, REVIEW_STATUS_META, isReviewStatus } from './review';
 import {
@@ -90,10 +92,22 @@ describe('ADR 0005 — bộ giá trị chốt', () => {
     expect(values).not.toContain('published');
   });
 
-  it('booking request dùng "approved_by_host", không phải "approved"', () => {
+  it('booking request không có trạng thái "approved" chung chung', () => {
     const values: string[] = Object.values(BOOKING_REQUEST_STATUS);
-    expect(values).toContain('approved_by_host');
     expect(values).not.toContain('approved');
+  });
+
+  /*
+   * Hai giá trị đã gỡ (ADR 0055) còn trong enum CHỈ cho mobile biên dịch — mọi chỗ liệt kê ra
+   * ngoài (DTO, OpenAPI, ô lọc) đọc danh sách "còn sống", khớp đúng CHECK
+   * `booking_requests_status_valid` ở DB.
+   */
+  it('danh sách trạng thái còn sống loại approved_by_host và hold_paid', () => {
+    expect(BOOKING_REQUEST_STATUS_LIVE_VALUES).not.toContain(
+      BOOKING_REQUEST_STATUS.APPROVED_BY_HOST,
+    );
+    expect(BOOKING_REQUEST_STATUS_LIVE_VALUES).not.toContain(BOOKING_REQUEST_STATUS.HOLD_PAID);
+    expect(BOOKING_REQUEST_STATUS_LIVE_VALUES).toHaveLength(BOOKING_REQUEST_STATUS_VALUES.length - 2);
   });
 
   it('isBookingStatus từ chối giá trị lạ', () => {
@@ -138,19 +152,13 @@ describe('ADR 0006 — trạng thái chiếm lịch', () => {
    * Test này là cái backstop duy nhất. Nếu nó đỏ vì bạn vừa thêm một trạng thái: hãy quyết định
    * TƯỜNG MINH trạng thái đó có giữ chỗ hay không, đừng chỉ sửa con số cho xanh.
    */
-  it('yêu cầu chiếm lịch: approved_by_host, awaiting_hold và hold_paid', () => {
+  it('yêu cầu chiếm lịch: DUY NHẤT awaiting_hold', () => {
     /*
-     * `hold_paid` vào mảng này ở ADR 0039 — khách đã chuyển tiền thật nhưng chủ xe chưa bấm
-     * duyệt. Thiếu nó ở đây là nhả chỗ của một người đã trả tiền, và họ sẽ ngồi nhìn chiếc xe
-     * của mình bị người khác đặt mất trong lúc chờ.
+     * ADR 0055 gỡ `approved_by_host` (chết từ ADR 0047) và `hold_paid` (luồng thu-trước-duyệt
+     * ADR 0039). Chỗ của một chuyến đã được nhận chỉ còn MỘT trạng thái yêu cầu giữ — sau đó là
+     * occupancy của ĐƠN.
      */
-    expect([...BOOKING_REQUEST_STATUS_OCCUPYING].sort()).toEqual(
-      [
-        BOOKING_REQUEST_STATUS.APPROVED_BY_HOST,
-        BOOKING_REQUEST_STATUS.AWAITING_HOLD,
-        BOOKING_REQUEST_STATUS.HOLD_PAID,
-      ].sort(),
-    );
+    expect([...BOOKING_REQUEST_STATUS_OCCUPYING]).toEqual([BOOKING_REQUEST_STATUS.AWAITING_HOLD]);
 
     // Và KHÔNG chiếm lịch: hỏi thì nhiều người cùng hỏi được, chỉ trả tiền mới khoá chỗ.
     expect(BOOKING_REQUEST_STATUS_OCCUPYING).not.toContain(

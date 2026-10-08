@@ -2,8 +2,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { REGISTRATION_TRACK, TENANT_ROLE } from '@xeprime/types';
 import * as authApi from '@/features/auth/api';
-// So đích qua builder của app đang chạy — customer: tuyến gian hàng đổ về /partner/register,
-// partner: các đích khách là fallback /not-available. Ý test là "CTA đi đúng builder + track".
+// So đích qua builder của app đang chạy — app khách: cả hai tuyến đổ về màn handoff sang app
+// Partner (ADR 0053); app Partner: wizard đăng xe nhanh và onboarding gói THẬT. Ý test là "CTA đi
+// đúng builder + track".
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_REGISTRATION_SOURCE } from '@/navigation/vehicle-registration-source';
 import { withIntl } from '@/i18n/test-utils';
@@ -36,6 +37,7 @@ const TENANT = {
   slug: 'viet-car',
   status: 'active',
   onboardingState: 'commission',
+  branchScope: 'all',
   logoUrl: null,
   roleKey: TENANT_ROLE.SHOP_OWNER,
   features: [],
@@ -71,6 +73,8 @@ async function renderScreen(session: authApi.CurrentUser | null) {
  * chính truy vấn nó vừa dựng, và thắng thua đổi theo máy.
  */
 async function pressTrack(view: Awaited<ReturnType<typeof render>>, name: string) {
+  // Tuyến gói phải được CHỌN trước — nút ghim đáy màn chỉ mang hành động của tuyến đang chọn.
+  if (name === SHOP_CTA) await fireEvent.press(view.getByRole('radio', { name: 'Mở gian hàng cho thuê' }));
   const cta = view.getByRole('button', { name });
   await waitFor(() => expect(cta.props.accessibilityState?.disabled).toBe(false));
   await fireEvent.press(cta);
@@ -114,20 +118,26 @@ describe('ListYourVehicleScreen', () => {
    * nên bấm nút thứ hai trong cùng một lượt render là bị chính cái khoá đó chặn — không phải lỗi
    * của màn hình.
    */
-  it('chưa đăng nhập: tuyến CÁ NHÂN dừng ở đăng nhập', async () => {
+  /*
+   * Không còn chặn đăng nhập ở đây (ADR 0053, web `ListYourVehicleLanding` bỏ `guard`): ở app khách
+   * hai CTA mở app Partner — nơi tài khoản ĐỐI TÁC được đăng nhập/tạo; ở app Partner người xem màn
+   * này đã đăng nhập sẵn.
+   */
+  it('chưa đăng nhập: tuyến CÁ NHÂN đi thẳng đích của app, không dừng ở đăng nhập khách', async () => {
     const view = await renderScreen(null);
     await view.findByText(SUBTITLE);
 
     await pressTrack(view, PERSONAL_CTA);
-    expect(mockPush).toHaveBeenCalledWith(ROUTES.account.login());
+    expect(mockPush).toHaveBeenCalledWith(QUICK_REGISTER);
+    expect(mockPush).not.toHaveBeenCalledWith(ROUTES.account.login());
   });
 
-  it('chưa đăng nhập: tuyến GIAN HÀNG cũng dừng ở đăng nhập', async () => {
+  it('chưa đăng nhập: tuyến GIAN HÀNG cũng đi thẳng, mang track=package', async () => {
     const view = await renderScreen(null);
     await view.findByText(SUBTITLE);
 
     await pressTrack(view, SHOP_CTA);
-    expect(mockPush).toHaveBeenCalledWith(ROUTES.account.login());
+    expect(mockPush).toHaveBeenCalledWith(ROUTES.manage.onboarding(REGISTRATION_TRACK.PACKAGE));
   });
 
   /**

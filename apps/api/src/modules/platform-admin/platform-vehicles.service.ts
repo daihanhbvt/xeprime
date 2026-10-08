@@ -2,10 +2,16 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
+  APPROVAL_TARGET_TYPE,
+  DEFAULT_PLATFORM_VEHICLE_SORT,
+  PLATFORM_VEHICLE_SORT,
+  PLATFORM_VEHICLE_VIEW,
   resolveMarketplaceVisibility,
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
   type PaginationMeta,
+  type PlatformVehicleCounts,
+  type PlatformVehicleSort,
 } from '@xeprime/types';
 import { marketplaceVehicleWhere } from '../../common/marketplace-vehicle-scope';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
@@ -20,6 +26,14 @@ import {
   PlatformVehicleDto,
   PlatformVehicleListQueryDto,
 } from './dto/platform-vehicle.dto';
+
+/** Hành động audit của lượt nền tảng ẩn / bỏ ẩn xe — đọc lại ở `getOne` để kể lý do đang hiệu lực. */
+const AUDIT_ACTION = {
+  HIDE: 'vehicle.platform_hide',
+  UNHIDE: 'vehicle.platform_unhide',
+} as const;
+
+const AUDIT_TARGET_VEHICLE = 'vehicle';
 
 const LIST_SELECT = {
   id: true,
@@ -39,6 +53,7 @@ const LIST_SELECT = {
   weekdayPrice: true,
   tenantId: true,
   createdAt: true,
+  updatedAt: true,
   tenant: {
     select: {
       name: true,
@@ -47,8 +62,30 @@ const LIST_SELECT = {
       profile: { select: { provinceName: true } },
     },
   },
+  // Vị trí công khai của xe là CHI NHÁNH (cùng nguồn `public_listings` đọc), không phải hồ sơ
+  // gian hàng — một gian hàng có xe ở nhiều tỉnh. Hồ sơ chỉ là bước lùi cho dữ liệu cũ thiếu chi nhánh.
+  branch: { select: { name: true, province: { select: { name: true } } } },
   publicListing: { select: { status: true } },
 } satisfies Prisma.VehicleSelect;
+
+/**
+ * Sắp xếp — mọi khoá đều có tiebreak `id` để phân trang ổn định khi nhiều xe cùng giá trị.
+ * Giá `NULL` (xe chưa đặt giá) luôn xuống cuối ở cả hai chiều: nó không phải "giá 0".
+ */
+const ORDER_BY: Readonly<Record<PlatformVehicleSort, Prisma.VehicleOrderByWithRelationInput[]>> =
+  {
+    [PLATFORM_VEHICLE_SORT.NEWEST]: [{ createdAt: 'desc' }, { id: 'desc' }],
+    [PLATFORM_VEHICLE_SORT.UPDATED]: [{ updatedAt: 'desc' }, { id: 'desc' }],
+    [PLATFORM_VEHICLE_SORT.NAME]: [{ name: 'asc' }, { id: 'asc' }],
+    [PLATFORM_VEHICLE_SORT.PRICE_DESC]: [
+      { weekdayPrice: { sort: 'desc', nulls: 'last' } },
+      { id: 'desc' },
+    ],
+    [PLATFORM_VEHICLE_SORT.PRICE_ASC]: [
+      { weekdayPrice: { sort: 'asc', nulls: 'last' } },
+      { id: 'asc' },
+    ],
+  };
 
 /**
  * Xe TOÀN HỆ THỐNG cho admin nền tảng (build plan §11.1) — không tenant-scope.
@@ -71,18 +108,42 @@ export class PlatformVehiclesService {
     private readonly listings: ListingsService,
   ) {}
 
-  async list(
-    query: PlatformVehicleListQueryDto,
-  ): Promise<{ data: PlatformVehicleDto[]; meta: PaginationMeta }> {
+  async list(query: PlatformVehicleListQueryDto): Promise<{
+    data: PlatformVehicleDto[];
+    meta: PaginationMeta;
+    counts: PlatformVehicleCounts;
+  }> {
     const paging = resolvePaging(query, PLATFORM_VEHICLE_DEFAULT_LIMIT, PLATFORM_VEHICLE_MAX_LIMIT);
 
+    /*
+     * Hai tầng điều kiện, cố ý tách:
+     *  - `base`: mọi bộ lọc KHÔNG thuộc góc nhìn nhanh (tìm kiếm, gian hàng, loại xe, dịch vụ,
+     *    tỉnh, vận hành) — là phạm vi chung của bảng VÀ của năm con số đếm;
+     *  - `view`: ba chiều mà các góc nhìn nhanh ghi vào (kiểm duyệt, trạng thái gian hàng, hiển
+     *    thị hiệu lực) — chỉ áp cho bảng, để số trên từng góc nhìn vẫn đúng khi đang đứng ở góc
+     *    nhìn khác (UX §1.1 điều 2: số đếm cùng phạm vi lọc với bảng).
+     */
     const q = query.q?.trim();
-    const where: Prisma.VehicleWhereInput = {
+    const base: Prisma.VehicleWhereInput = {
       deletedAt: null,
       ...(query.tenantId ? { tenantId: query.tenantId } : {}),
-      ...(query.publicStatus ? { publicStatus: query.publicStatus } : {}),
       ...(query.operationStatus ? { operationStatus: query.operationStatus } : {}),
       ...(query.vehicleType ? { vehicleType: query.vehicleType } : {}),
+      ...(query.serviceType ? { serviceTypes: { has: query.serviceType } } : {}),
+      ...(query.provinceCode ? { branch: { provinceCode: query.provinceCode } } : {}),
+      ...(q
+        ? {
+            OR: [
+              { name: { contains: q, mode: 'insensitive' } },
+              { plateNumber: { contains: q, mode: 'insensitive' } },
+              { code: { contains: q, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    };
+
+    const view: Prisma.VehicleWhereInput = {
+      ...(query.publicStatus ? { publicStatus: query.publicStatus } : {}),
       // Lọc theo trạng thái gian hàng: dùng để soát xe của shop đang bị khoá.
       ...(query.tenantStatus ? { tenant: { status: query.tenantStatus } } : {}),
       /*
@@ -95,30 +156,41 @@ export class PlatformVehiclesService {
         : query.marketplaceVisible
           ? { AND: [marketplaceVehicleWhere()] }
           : { NOT: marketplaceVehicleWhere() }),
-      ...(q
-        ? {
-            OR: [
-              { name: { contains: q, mode: 'insensitive' } },
-              { plateNumber: { contains: q, mode: 'insensitive' } },
-              { code: { contains: q, mode: 'insensitive' } },
-            ],
-          }
-        : {}),
     };
 
-    const [total, rows] = await this.prisma.$transaction([
-      this.prisma.vehicle.count({ where }),
-      this.prisma.vehicle.findMany({
-        where,
-        // ULID id làm tiebreak — phân trang ổn định khi nhiều xe cùng mili-giây.
-        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-        skip: paging.skip,
-        take: paging.take,
-        select: LIST_SELECT,
-      }),
-    ]);
+    // `AND` thay vì spread: `base` có thể đã mang `branch`/`OR`, `view` có thể mang `tenant`/`AND`.
+    const where: Prisma.VehicleWhereInput = { AND: [base, view] };
+    const count = (extra: Prisma.VehicleWhereInput) =>
+      this.prisma.vehicle.count({ where: { AND: [base, extra] } });
 
-    return { data: rows.map(toListItem), meta: paginationMeta(paging, total) };
+    const [total, rows, all, visible, pendingReview, platformHidden, suspendedShop] =
+      await this.prisma.$transaction([
+        this.prisma.vehicle.count({ where }),
+        this.prisma.vehicle.findMany({
+          where,
+          orderBy: ORDER_BY[query.sort ?? DEFAULT_PLATFORM_VEHICLE_SORT],
+          skip: paging.skip,
+          take: paging.take,
+          select: LIST_SELECT,
+        }),
+        count({}),
+        count(marketplaceVehicleWhere()),
+        count({ publicStatus: VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW }),
+        count({ publicStatus: VEHICLE_PUBLIC_STATUS.HIDDEN }),
+        count({ tenant: { status: TENANT_STATUS.SUSPENDED } }),
+      ]);
+
+    return {
+      data: rows.map(toListItem),
+      meta: paginationMeta(paging, total),
+      counts: {
+        [PLATFORM_VEHICLE_VIEW.ALL]: all,
+        [PLATFORM_VEHICLE_VIEW.VISIBLE]: visible,
+        [PLATFORM_VEHICLE_VIEW.PENDING_REVIEW]: pendingReview,
+        [PLATFORM_VEHICLE_VIEW.PLATFORM_HIDDEN]: platformHidden,
+        [PLATFORM_VEHICLE_VIEW.SUSPENDED_SHOP]: suspendedShop,
+      },
+    };
   }
 
   async getOne(id: string): Promise<PlatformVehicleDetailDto> {
@@ -131,10 +203,24 @@ export class PlatformVehiclesService {
         manufactureYear: true,
         seatCount: true,
         fuelType: true,
+        transmission: true,
+        color: true,
         description: true,
         weekendPrice: true,
         hourlyPrice: true,
-        updatedAt: true,
+        monthlyPrice: true,
+        withDriverDailyPrice: true,
+        discountPercent: true,
+        deliveryEnabled: true,
+        images: { select: { imageUrl: true }, orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] },
+        branch: {
+          select: {
+            name: true,
+            addressLine: true,
+            address: true,
+            province: { select: { name: true } },
+          },
+        },
         tenant: {
           select: {
             name: true,
@@ -143,7 +229,7 @@ export class PlatformVehiclesService {
             // `deletedAt` phải có mặt: select này GHI ĐÈ nhánh `tenant` của `LIST_SELECT`, và
             // `toListItem` đọc nó để suy trạng thái hiển thị (ADR 0048).
             deletedAt: true,
-            owner: { select: { displayName: true } },
+            owner: { select: { displayName: true, phone: true } },
             profile: { select: { provinceName: true } },
           },
         },
@@ -152,6 +238,35 @@ export class PlatformVehiclesService {
     });
     if (!row) throw notFound();
 
+    // Phiếu duyệt gần nhất + lượt ẩn đang hiệu lực: hai đọc nhỏ, chỉ khi cần, không nằm trong
+    // transaction vì toàn bộ là đọc.
+    const [latestApproval, platformHide] = await Promise.all([
+      this.prisma.approvalTask.findFirst({
+        where: { targetType: APPROVAL_TARGET_TYPE.VEHICLE, targetId: id },
+        orderBy: [{ submittedAt: 'desc' }, { id: 'desc' }],
+        select: { id: true, status: true, submittedAt: true, reviewedAt: true, reason: true },
+      }),
+      row.publicStatus === VEHICLE_PUBLIC_STATUS.HIDDEN
+        ? this.prisma.auditLog.findFirst({
+            where: { targetType: AUDIT_TARGET_VEHICLE, targetId: id, action: AUDIT_ACTION.HIDE },
+            orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+            select: { createdAt: true, afterJson: true, actor: { select: { displayName: true } } },
+          })
+        : Promise.resolve(null),
+    ]);
+
+    // Ảnh đại diện đứng đầu; gallery có thể chứa lại chính nó nên khử trùng theo URL.
+    const images = [
+      ...new Set(
+        [row.mainImageUrl, ...row.images.map((image) => image.imageUrl)].filter(
+          (url): url is string => Boolean(url),
+        ),
+      ),
+    ];
+
+    const hideReason =
+      platformHide && isRecord(platformHide.afterJson) ? platformHide.afterJson.reason : undefined;
+
     return {
       ...toListItem(row),
       brand: row.brand,
@@ -159,14 +274,40 @@ export class PlatformVehiclesService {
       manufactureYear: row.manufactureYear,
       seatCount: row.seatCount,
       fuelType: row.fuelType,
+      transmission: row.transmission,
+      color: row.color,
       description: row.description,
+      images,
       weekendPrice: row.weekendPrice as unknown as string | null,
       hourlyPrice: row.hourlyPrice as unknown as string | null,
+      monthlyPrice: row.monthlyPrice as unknown as string | null,
+      withDriverDailyPrice: row.withDriverDailyPrice as unknown as string | null,
+      discountPercent: row.discountPercent,
+      deliveryEnabled: row.deliveryEnabled,
+      branchName: row.branch?.name ?? null,
+      branchAddress: row.branch?.addressLine ?? row.branch?.address ?? null,
       tenantSlug: row.tenant.slug,
       ownerName: row.tenant.owner?.displayName ?? null,
+      ownerPhone: row.tenant.owner?.phone ?? null,
       bookingCount: row._count.bookings,
       reviewCount: row._count.reviews,
-      updatedAt: (row.updatedAt as Date).toISOString(),
+      latestApproval: latestApproval
+        ? {
+            taskId: latestApproval.id,
+            status: latestApproval.status,
+            submittedAt: latestApproval.submittedAt.toISOString(),
+            reviewedAt: latestApproval.reviewedAt?.toISOString() ?? null,
+            reason: latestApproval.reason,
+          }
+        : null,
+      platformHide:
+        platformHide && typeof hideReason === 'string'
+          ? {
+              reason: hideReason,
+              hiddenAt: platformHide.createdAt.toISOString(),
+              hiddenByName: platformHide.actor?.displayName ?? null,
+            }
+          : null,
     };
   }
 
@@ -181,7 +322,7 @@ export class PlatformVehiclesService {
       actorUserId,
       VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
       VEHICLE_PUBLIC_STATUS.HIDDEN,
-      'vehicle.platform_hide',
+      AUDIT_ACTION.HIDE,
       dto.reason,
       'Chỉ ẩn được xe đang hiển thị công khai',
     );
@@ -202,7 +343,7 @@ export class PlatformVehiclesService {
       actorUserId,
       VEHICLE_PUBLIC_STATUS.HIDDEN,
       VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
-      'vehicle.platform_unhide',
+      AUDIT_ACTION.UNHIDE,
       undefined,
       'Chỉ bỏ ẩn được xe đang bị nền tảng ẩn',
     );
@@ -255,7 +396,7 @@ export class PlatformVehiclesService {
           actorUserId,
           actorScope: 'platform',
           action,
-          targetType: 'vehicle',
+          targetType: AUDIT_TARGET_VEHICLE,
           targetId: id,
           before: { publicStatus: from },
           after: { publicStatus: to, ...(reason ? { reason } : {}) },
@@ -296,13 +437,18 @@ function toListItem(r: VehicleRow): PlatformVehicleDto {
     tenantId: r.tenantId,
     tenantName: r.tenant.name,
     tenantStatus: r.tenant.status,
-    provinceName: r.tenant.profile?.provinceName ?? null,
+    provinceName: r.branch?.province?.name ?? r.tenant.profile?.provinceName ?? null,
     listingStatus: r.publicListing?.status ?? null,
     marketplaceEnabled: r.marketplaceEnabled,
     isMarketplaceVisible: visibility.visible,
     marketplaceVisibilityReason: visibility.reason,
     createdAt: (r.createdAt as Date).toISOString(),
+    updatedAt: (r.updatedAt as Date).toISOString(),
   };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function notFound(): NotFoundException {

@@ -2,6 +2,7 @@ import { memo } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
+  MEMBERSHIP_BRANCH_SCOPE,
   MEMBERSHIP_STATUS_META,
   STATUS_COLOR,
   TENANT_ROLE,
@@ -51,17 +52,25 @@ function MemberCardImpl({
   isMe,
   canUpdateRole,
   canRemove,
+  withinScope,
   pending,
   onChangeRole,
+  onChangeScope,
   onRemove,
 }: {
   member: Member;
   isMe: boolean;
   canUpdateRole: boolean;
   canRemove: boolean;
+  /**
+   * Thành viên NẰM GỌN trong phạm vi chi nhánh của người thao tác (ADR 0052) — gương của
+   * `assertWithinActorScope`. Ngoài phạm vi thì không đổi vai, không đổi chi nhánh, không gỡ.
+   */
+  withinScope: boolean;
   /** Có mutation đang chạy trên CHÍNH thành viên này. */
   pending: boolean;
   onChangeRole: (member: Member) => void;
+  onChangeScope: (member: Member) => void;
   onRemove: (member: Member) => void;
 }) {
   const t = useTranslations('Members');
@@ -69,8 +78,13 @@ function MemberCardImpl({
   const domainLabel = useDomainLabel();
 
   const isOwner = member.roleKey === TENANT_ROLE.SHOP_OWNER;
-  const canEditThis = canUpdateRole && !isOwner && !isMe;
-  const canRemoveThis = canRemove && !isOwner && !isMe;
+  const canEditThis = canUpdateRole && !isOwner && !isMe && withinScope;
+  const canRemoveThis = canRemove && !isOwner && !isMe && withinScope;
+  // Chủ gian hàng luôn thấy tất cả — server cũng ép như vậy (member-branch-scope.ts).
+  const scopeLabel =
+    member.branchScope === MEMBERSHIP_BRANCH_SCOPE.LIMITED
+      ? t('branchScope.limitedCount', { count: member.branchIds.length })
+      : t('branchScope.all');
 
   const roleLabel = domainLabel('tenantRole', member.roleKey, member.roleKey);
   const statusMeta = MEMBERSHIP_STATUS_META[member.status as MembershipStatus];
@@ -93,6 +107,17 @@ function MemberCardImpl({
         />
       ),
     },
+    {
+      key: 'branchScope',
+      label: scopeLabel,
+      node: (
+        <StatusBadge
+          label={scopeLabel}
+          color={STATUS_COLOR.NEUTRAL}
+          size="sm"
+        />
+      ),
+    },
   ];
 
   const actions: CardAction[] = [
@@ -104,6 +129,13 @@ function MemberCardImpl({
             icon: 'swap-horizontal-outline' as IconName,
             disabled: pending,
             onPress: () => onChangeRole(member),
+          },
+          {
+            key: 'scope',
+            label: t('columns.branchScope'),
+            icon: 'git-branch-outline' as IconName,
+            disabled: pending,
+            onPress: () => onChangeScope(member),
           },
         ]
       : []),

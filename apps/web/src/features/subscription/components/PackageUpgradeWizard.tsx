@@ -36,8 +36,8 @@ type UpgradeStep = (typeof STEPS)[number];
 export const UPGRADE_TITLE_ID = 'xp-package-upgrade';
 
 /**
- * NÂNG CẤP từ chủ xe tuyến hoa hồng lên gian hàng tuyến gói — ba bước, trên `/account/subscription`
- * (ADR 0028 điều 1 · ADR 0040).
+ * NÂNG CẤP từ chủ xe tuyến hoa hồng lên gian hàng tuyến gói — ba bước, trong section "Gói dịch vụ"
+ * của "Hồ sơ chủ xe" (`/account?section=plan` — ADR 0028 điều 1 · ADR 0040).
  *
  *   1. chọn bậc + kỳ hạn   2. hoàn thiện thông tin gian hàng   3. chuyển khoản
  *
@@ -95,9 +95,9 @@ export function PackageUpgradeWizard() {
 
   /*
    * Tiền về ⇒ hỏi lại `/auth/me`. Kích hoạt gói là việc của webhook SePay, và khi nó xong thì
-   * tenant này thuộc về cổng quản lý: `shopAccountRedirect` đưa họ thẳng sang trang Cửa hàng,
-   * section "Gói & hạn mức". Thiếu lượt làm mới đó, màn thanh toán lặng lẽ quay về bảng giá —
-   * hoá đơn hết "chờ" trong khi scope vẫn nói họ ở tuyến hoa hồng.
+   * tenant này thuộc về cổng quản lý: `PartnerAccountRoute` thấy tuyến lật sang gói và đưa họ
+   * thẳng sang trang Cửa hàng, section "Gói & hạn mức". Thiếu lượt làm mới đó, màn thanh toán lặng
+   * lẽ quay về bảng giá — hoá đơn hết "chờ" trong khi scope vẫn nói họ ở tuyến hoa hồng.
    */
   useSyncScopeWhenInvoiceSettles();
 
@@ -109,11 +109,7 @@ export function PackageUpgradeWizard() {
    *    ở một form mà nút cuối cùng không có gì để mua.
    */
   const step: UpgradeStep =
-    invoice && !editing
-      ? 'payment'
-      : reachedShopInfo && selection.selection
-        ? 'shopInfo'
-        : 'plan';
+    invoice && !editing ? 'payment' : reachedShopInfo && selection.selection ? 'shopInfo' : 'plan';
 
   /**
    * Được phép quay lại SỬA khi đang chờ chuyển khoản.
@@ -299,9 +295,7 @@ export function PackageUpgradeWizard() {
              * `setEditing(false)` ngay khi hoá đơn mới về: không có nó, cờ sửa còn bật sẽ che
              * mất chính màn thanh toán của mã vừa tạo.
              */
-            onSaved={() =>
-              purchase.mutate(chosen.body, { onSuccess: () => setEditing(false) })
-            }
+            onSaved={() => purchase.mutate(chosen.body, { onSuccess: () => setEditing(false) })}
           />
         </div>
       );

@@ -5,7 +5,6 @@ import { App, Checkbox, Tag } from 'antd';
 import { useTranslations } from 'next-intl';
 import {
   APPROVAL_STATUS,
-  VEHICLE_PUBLIC_MIN_IMAGES,
   isVehicleReviewCheck,
   vehicleReviewAutoChecks,
 } from '@xeprime/types';
@@ -63,7 +62,7 @@ export function ReviewChecklist({
                 <CloseCircleFilled className={styles.iconFail} aria-hidden />
               )}
               <span className={styles.checkLabel}>
-                {t(`auto.items.${check.key}`, { min: VEHICLE_PUBLIC_MIN_IMAGES })}
+                {t(`auto.items.${check.key}`)}
               </span>
               <StateTag passed={check.passed} />
             </li>

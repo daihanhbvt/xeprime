@@ -4,6 +4,7 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { BOOKING_STATUS_META, type BookingStatus } from '@xeprime/types';
 import { LIST_SEPARATOR } from '@xeprime/domain';
+import { metaColor, metaLabel } from '@/lib/status-meta';
 import { Card } from '@/components/ui/Card';
 import { CardAccent } from '@/components/ui/CardAccent';
 import { CardActionBar, type CardAction } from '@/components/ui/CardActionBar';
@@ -97,7 +98,7 @@ function DebtCardImpl({
   return (
     <Card padded={false}>
       <XStack>
-        <CardAccent color={BOOKING_STATUS_META[status].color} />
+        <CardAccent color={metaColor(BOOKING_STATUS_META, status)} />
 
         <YStack f={1} minWidth={0}>
           <YStack p={space.md} gap={space.sm}>
@@ -121,8 +122,8 @@ function DebtCardImpl({
                 </Text>
               </YStack>
               <StatusBadge
-                label={domainLabel('bookingStatus', status, BOOKING_STATUS_META[status].label)}
-                color={BOOKING_STATUS_META[status].color}
+                label={domainLabel('bookingStatus', status, metaLabel(BOOKING_STATUS_META, status))}
+                color={metaColor(BOOKING_STATUS_META, status)}
                 size="sm"
               />
             </XStack>

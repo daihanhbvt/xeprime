@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { BILLING_MODE, SHOP_ONBOARDING_STATE, TENANT_ROLE, TENANT_STATUS } from '@xeprime/types';
-import { ROUTES, SHOP_SECTION, shopSectionPath } from '@/constants/routes';
+import {
+  ACCOUNT_SECTION,
+  ROUTES,
+  SHOP_SECTION,
+  accountSectionPath,
+  balancePayoutPath,
+  shopSectionPath,
+} from '@/constants/routes';
 import {
   PARTNER_TRACK,
   adminLoginWithNext,
@@ -196,13 +203,10 @@ describe('B1 — partner đăng nhập xong vào đâu', () => {
       `${M.VEHICLES}/01V/manage/pricing`,
       `${M.VEHICLE_REGISTER}?from=landing`,
       M.CALENDAR,
-      M.BOOKING_REQUESTS,
+      M.TRIPS,
       `${M.BOOKINGS}/01B`,
       M.CHAT,
       M.BALANCE,
-      M.SUBSCRIPTION,
-      M.TAX,
-      M.BANK_ACCOUNTS,
       M.REGISTRATION,
       M.SUPPORT_CASES,
       M.SECURITY,
@@ -213,13 +217,64 @@ describe('B1 — partner đăng nhập xong vào đâu', () => {
     }
   });
 
-  it('tuyến gói mở trang chỉ của tuyến hoa hồng → bản tương đương trong Cửa hàng', () => {
-    expect(partnerPageRedirect(packageCurrent, M.REGISTRATION)).toBe(M.SHOP);
-    expect(partnerPageRedirect(packageCurrent, M.TAX)).toBe(shopSectionPath(SHOP_SECTION.LEGAL));
-    expect(partnerPageRedirect(packageCurrent, M.BANK_ACCOUNTS)).toBe(
-      shopSectionPath(SHOP_SECTION.PAYOUT),
+  /*
+   * Ba ALIAS (07/10/2026): khai thuế + gói là section của "Hồ sơ chủ xe", tài khoản nhận tiền là khối
+   * của trang số dư. Giải ở MỘT chỗ — cùng luật cho gõ URL lẫn `next` — và chuyển THẲNG tới section.
+   */
+  it('chủ xe tuyến hoa hồng mở alias cũ → thẳng tới section đích', () => {
+    expect(partnerPageRedirect(commission, M.TAX)).toBe(accountSectionPath(ACCOUNT_SECTION.TAX));
+    expect(partnerPageRedirect(commission, M.SUBSCRIPTION)).toBe(
+      accountSectionPath(ACCOUNT_SECTION.PLAN),
     );
+    expect(partnerPageRedirect(commission, M.BANK_ACCOUNTS)).toBe(balancePayoutPath());
+  });
+
+  it('THÀNH VIÊN gian hàng hoa hồng mở alias cũ → trang tài khoản của họ / trang chủ', () => {
+    const staff: AuthScope = { tenant: { ...commission.tenant!, roleKey: TENANT_ROLE.SHOP_STAFF } };
+    expect(partnerPageRedirect(staff, M.TAX)).toBe(M.ACCOUNT);
+    expect(partnerPageRedirect(staff, M.SUBSCRIPTION)).toBe(M.ACCOUNT);
+    expect(partnerPageRedirect(staff, M.BANK_ACCOUNTS)).toBe(M.ROOT);
+  });
+
+  it('tuyến gói mở trang chỉ của tuyến hoa hồng → bản tương đương của tuyến gói', () => {
+    expect(partnerPageRedirect(packageCurrent, M.REGISTRATION)).toBe(M.SHOP);
+    expect(partnerPageRedirect(packageCurrent, M.TAX)).toBe(shopSectionPath(SHOP_SECTION.TAX));
+    expect(partnerPageRedirect(packageCurrent, M.SUBSCRIPTION)).toBe(
+      shopSectionPath(SHOP_SECTION.PLAN),
+    );
+    // Tài khoản nhận tiền nằm ở trang số dư ở CẢ hai tuyến (07/10/2026), không ở Cửa hàng.
+    expect(partnerPageRedirect(packageCurrent, M.BANK_ACCOUNTS)).toBe(balancePayoutPath());
     expect(partnerPageRedirect(packageCurrent, M.HOST_GUIDE)).toBeNull();
+  });
+
+  /*
+   * "Chuyến cho thuê" (07/10/2026): CHỦ xe tuyến hoa hồng đọc yêu cầu + đơn gộp ở một danh sách
+   * thẻ. Hộp thư và bảng đơn vẫn là trang của tuyến — cho THÀNH VIÊN, những người `/trips` không
+   * dựng phía chủ xe cho — và chi tiết đơn là màn dùng chung, nơi bàn giao.
+   */
+  it('chủ xe tuyến hoa hồng: hộp thư + bảng đơn → "Chuyến cho thuê"; chi tiết đơn ở lại', () => {
+    for (const user of [commission, lapsed, unconfigured]) {
+      for (const path of [M.BOOKING_REQUESTS, M.BOOKINGS, M.BOOKINGS_AWAITING_PICKUP]) {
+        expect(partnerPageRedirect(user, `${path}?status=closed`), path).toBe(M.TRIPS);
+      }
+      expect(partnerPageRedirect(user, M.TRIPS)).toBeNull();
+      expect(partnerPageRedirect(user, `${M.BOOKINGS}/01B`)).toBeNull();
+    }
+  });
+
+  it('THÀNH VIÊN của gian hàng hết gói giữ hộp thư + bảng đơn, /trips đưa về hộp thư', () => {
+    const staff: AuthScope = {
+      tenant: { ...lapsed.tenant!, roleKey: TENANT_ROLE.SHOP_STAFF },
+    };
+    expect(partnerPageRedirect(staff, M.BOOKING_REQUESTS)).toBeNull();
+    expect(partnerPageRedirect(staff, M.BOOKINGS)).toBeNull();
+    expect(partnerPageRedirect(staff, M.TRIPS)).toBe(M.BOOKING_REQUESTS);
+  });
+
+  it('tuyến gói mở /trips → hộp thư yêu cầu (họ có hộp thư + bảng đơn đầy đủ)', () => {
+    expect(partnerPageRedirect(packageCurrent, M.TRIPS)).toBe(M.BOOKING_REQUESTS);
+    expect(partnerPageRedirect(packageCurrent, M.BOOKING_REQUESTS)).toBeNull();
+    expect(partnerPageRedirect(packageCurrent, M.BOOKINGS)).toBeNull();
   });
 });
 

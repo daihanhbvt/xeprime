@@ -233,6 +233,12 @@ export const API_ERROR_CODE = {
    */
   PLAN_NOT_SELF_SERVE: 'PLAN_NOT_SELF_SERVE',
   /**
+   * Huỷ một kỳ thuê bao trong khi đã có kỳ khác XẾP LỊCH ngay sau nó. Huỷ kỳ đang chạy lúc đó để lại
+   * một khoảng trống tới ngày kỳ sau bắt đầu — gian hàng không có gói nào, đường ghi tiền từ chối.
+   * Huỷ kỳ xếp sau trước, hoặc dùng "Đổi gói ngay".
+   */
+  SUBSCRIPTION_LATER_TERM_EXISTS: 'SUBSCRIPTION_LATER_TERM_EXISTS',
+  /**
    * Bậc gói đã được DÙNG — có thuê bao hoặc hoá đơn trỏ tới nó — nên không XOÁ được.
    *
    * `details` mang `{ planCode, subscriptions, invoices }`. Xoá chỉ dành cho bậc chưa từng được
@@ -393,8 +399,18 @@ export const API_ERROR_CODE = {
   REFUND_ACCOUNT_REQUIRED: 'REFUND_ACCOUNT_REQUIRED',
 
   // Tài khoản ngân hàng nhận tiền (ADR 0033)
-  /** Số tài khoản này đã có trong danh sách đang dùng của chính chủ đó. */
+  /**
+   * Số tài khoản này đã có trong danh sách đang dùng của chính chủ đó. KHÔNG còn phát từ
+   * 07/10/2026 — mỗi chủ một tài khoản, khai lại đúng cái đang có là thao tác không đổi gì. Giữ để
+   * bản app native cũ còn ánh xạ được.
+   */
   BANK_ACCOUNT_DUPLICATE: 'BANK_ACCOUNT_DUPLICATE',
+  /**
+   * Khai tài khoản mới khi đã có một tài khoản nhận tiền, nhưng client gửi `isDefault: false` —
+   * tức người dùng KHÔNG đồng ý đổi đích nhận tiền (bản app native cũ: "thêm tài khoản phụ"). Mỗi
+   * chủ chỉ một tài khoản, nên thay vì âm thầm đổi chỗ tiền về, server từ chối.
+   */
+  BANK_ACCOUNT_REPLACE_NOT_CONFIRMED: 'BANK_ACCOUNT_REPLACE_NOT_CONFIRMED',
 
   // Rút tiền (ADR 0033)
   /** Số dư khả dụng không đủ, hoặc ví đang tạm khoá. */
@@ -777,6 +793,14 @@ export const API_ERROR_CODE = {
    */
   VEHICLE_PUBLISH_INCOMPLETE: 'VEHICLE_PUBLISH_INCOMPLETE',
   /**
+   * Thư viện ảnh gửi lên còn TRỐNG một góc bắt buộc — ô tô 5 góc, xe máy 2 (07/10/2026).
+   *
+   * `details.missing[]` mang khoá `VEHICLE_IMAGE_TYPE` (`front`/`rear`/…), nên giao diện chỉ
+   * đúng ô còn thiếu bằng nhãn của ngôn ngữ đang dùng (ADR 0012). Khác
+   * `VEHICLE_PUBLISH_INCOMPLETE`: lỗi đó nói về cổng GỬI DUYỆT, lỗi này chặn ngay lượt LƯU.
+   */
+  VEHICLE_IMAGES_INCOMPLETE: 'VEHICLE_IMAGES_INCOMPLETE',
+  /**
    * Bật công tắc hiển thị cho một chiếc xe CHƯA qua cổng duyệt (ADR 0048 điều 3).
    *
    * `details.publicStatus` là trạng thái kiểm duyệt hiện tại, để giao diện chỉ đúng lối đi tiếp:
@@ -864,6 +888,10 @@ export const API_ERROR_CODE = {
   SUPPORT_OPEN_TRIPS: 'SUPPORT_OPEN_TRIPS',
   /** Khoá lịch không do CHÍNH phiên này tạo, hoặc đã bắt đầu — phiên không sửa/gỡ được. */
   SUPPORT_BLOCK_NOT_OWNED: 'SUPPORT_BLOCK_NOT_OWNED',
+
+  // Vận hành chuyến (Platform Admin)
+  /** Nền tảng vừa nhắc chủ xe về yêu cầu này chưa lâu — đợi hết `TRIP_PLATFORM_REMIND_COOLDOWN_MINUTES`. */
+  TRIP_REMIND_TOO_SOON: 'TRIP_REMIND_TOO_SOON',
 
   // Hạ tầng
   RATE_LIMITED: 'RATE_LIMITED',

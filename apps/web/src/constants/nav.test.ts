@@ -15,6 +15,7 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import {
+  NAV_BADGE,
   OWNER_LITE_NAV,
   PLATFORM_NAV,
   SHOP_NAV,
@@ -173,6 +174,8 @@ describe('nav — cấu trúc khối', () => {
         ROUTES.ADMIN.PARTNER_SHOPS,
         ROUTES.ADMIN.PARTNER_OWNERS,
         ROUTES.ADMIN.VEHICLES,
+        // Vận hành chuyến (07/10/2026) — hàng đợi theo chặng, cùng quyền với đơn thuê.
+        ROUTES.ADMIN.TRIPS,
         ROUTES.ADMIN.BOOKINGS,
         ROUTES.ADMIN.CUSTOMERS,
         // Tra cứu xuyên realm (ADR 0053 điều 9).
@@ -506,7 +509,7 @@ describe('nav — vai trò nền tảng nhìn thấy gì', () => {
     ).toEqual(flattenLeaves(PLATFORM_NAV).map((leaf) => leaf.labelKey));
   });
 
-  it('platform_staff chỉ thấy 6 mục đọc, KHÔNG thấy mục quản trị của super admin', () => {
+  it('platform_staff chỉ thấy 7 mục đọc, KHÔNG thấy mục quản trị của super admin', () => {
     const labels = visibleLabels(
       DEFAULT_PLATFORM_ROLE_PERMISSIONS[PLATFORM_ROLE.PLATFORM_STAFF],
       true,
@@ -517,6 +520,8 @@ describe('nav — vai trò nền tảng nhìn thấy gì', () => {
     expect(labels).toEqual([
       'manage.dashboard',
       'platform.vehicles',
+      // Vận hành chuyến đi cùng quyền đơn thuê: cùng dữ liệu, xếp lại theo chặng (07/10/2026).
+      'platform.trips',
       'platform.bookings',
       'platform.customers',
       // Tra cứu xuyên realm: CHỈ ĐỌC, liên hệ đã che — cùng quyền với "Khách thuê".
@@ -783,14 +788,35 @@ describe('navForZone — menu theo tuyến ở site partner', () => {
       ROUTES.MANAGE.ROOT,
       ROUTES.MANAGE.VEHICLES,
       ROUTES.MANAGE.CALENDAR,
-      ROUTES.MANAGE.BOOKING_REQUESTS,
-      ROUTES.MANAGE.BOOKINGS,
+      ROUTES.MANAGE.TRIPS,
       ROUTES.MANAGE.CHAT,
       ROUTES.MANAGE.BALANCE,
       ROUTES.MANAGE.ACCOUNT,
     ]) {
       expect(hrefs.has(href), href).toBe(true);
     }
+  });
+
+  /*
+   * Chủ xe cá nhân có một tới ba xe (07/10/2026): yêu cầu và đơn gộp vào MỘT danh sách thẻ
+   * "Chuyến cho thuê". Hộp thư sáu tab + bảng đơn là bề mặt của đội xe tuyến gói.
+   */
+  it('menu hoa hồng: CHỦ thấy "Chuyến cho thuê" (kèm huy hiệu), thành viên giữ hộp thư + bảng đơn', () => {
+    const leaves = flattenLeaves(commissionNav);
+    const byHref = (href: string) => leaves.find((leaf) => leaf.href === href);
+    const trips = byHref(ROUTES.MANAGE.TRIPS);
+    expect(trips?.ownerOnly).toBe(true);
+    expect(trips?.badge).toBe(NAV_BADGE.BOOKING_REQUESTS_PENDING);
+    // Hai trục loại trừ nhau: không ai thấy cả "Chuyến cho thuê" lẫn hộp thư cùng lúc.
+    expect(byHref(ROUTES.MANAGE.BOOKING_REQUESTS)?.memberOnly).toBe(true);
+    expect(byHref(ROUTES.MANAGE.BOOKINGS)?.memberOnly).toBe(true);
+    expect(
+      mobileTabsForZone(ZONE.PARTNER, PARTNER_TRACK.COMMISSION).map((tab) => tab.href),
+    ).toContain(ROUTES.MANAGE.TRIPS);
+  });
+
+  it('menu tuyến gói KHÔNG có "Chuyến cho thuê" — họ có hộp thư + bảng đơn', () => {
+    expect(new Set(hrefsOf(SHOP_NAV)).has(ROUTES.MANAGE.TRIPS)).toBe(false);
   });
 
   /*

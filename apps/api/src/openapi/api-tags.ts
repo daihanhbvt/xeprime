@@ -302,6 +302,11 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
       },
       { name: 'platform-vehicles', description: 'Duyệt xe lên marketplace và gỡ tin vi phạm.' },
       { name: 'platform-bookings', description: 'Tra cứu đơn thuê xuyên gian hàng để hỗ trợ.' },
+      {
+        name: 'platform-trips',
+        description:
+          'Vận hành chuyến: bốn hàng đợi theo chặng (chờ duyệt, chờ giữ chỗ, sắp giao, đang thuê) và nhắc tay chủ xe.',
+      },
       { name: 'platform-customers', description: 'Tra cứu tài khoản khách toàn nền tảng.' },
       { name: 'platform-staff', description: 'Nhân sự nền tảng và vai trò của họ.' },
       { name: 'platform-catalog', description: 'Biên tập danh mục hãng/dòng xe dùng chung.' },

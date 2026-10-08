@@ -14,6 +14,7 @@ import { Card } from '@/components/ui/Card';
 import { CardAccent } from '@/components/ui/CardAccent';
 import { CardActionBar, type CardAction } from '@/components/ui/CardActionBar';
 import type { IconName } from '@/components/ui/Chip';
+import { IconDisc } from '@/components/ui/IconDisc';
 import { IconLine } from '@/components/ui/IconLine';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
@@ -83,6 +84,30 @@ export function BankAccountList({
             title={t('loadError')}
             onRetry={() => void query.refetch()}
           />
+        ) : accounts.length === 0 && title ? (
+          /*
+            Rỗng khi NẰM LẪN giữa các khối khác (tab Tài khoản, hồ sơ gian hàng): một thẻ một dòng.
+            Khối thông báo cỡ toàn màn ở đây chiếm nửa màn hình cho một câu "chưa có gì".
+          */
+          <Card>
+            <XStack ai="center" gap={space.sm}>
+              <IconDisc
+                icon="card-outline"
+                tone={colors.primaryActive}
+                surface={colors.primaryLight}
+              />
+              <Text f={1} col={colors.textMuted} fos={fontSize.bodySm}>
+                {t('emptyTitle')}
+              </Text>
+              <Button
+                label={t('actions.add')}
+                icon="add"
+                size="sm"
+                variant="secondary"
+                onPress={() => setFormOpen(true)}
+              />
+            </XStack>
+          </Card>
         ) : accounts.length === 0 ? (
           <ScreenMessage
             icon="card-outline"

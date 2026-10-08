@@ -9,8 +9,11 @@ import {
   BILLING_MODE,
   BOOKING_HOLD_OUTCOME,
   BOOKING_HOLD_STATUS,
+  BOOKING_REQUEST_DECISION_SOURCE,
   BOOKING_REQUEST_STATUS,
+  BOOKING_REQUEST_STATUS_LIVE_VALUES,
   BOOKING_STATUS,
+  CANCELLATION_REASON_CATEGORY,
   type BookingPriceSnapshot,
   DEPOSIT_COLLECTION_MODE,
   FEE_POLICY_STATUS,
@@ -28,7 +31,6 @@ import {
   VEHICLE_PUBLIC_STATUS,
 } from '@xeprime/types';
 import { sweepBookingHoldExpiry } from '../../worker/src/jobs/booking-hold-expiry';
-import { sweepBookingRequestDeadlines } from '../../worker/src/jobs/booking-request-deadlines';
 import { SepayService } from '../src/modules/sepay/sepay.service';
 import { HoldSettlementService } from '../src/modules/holds/hold-settlement.service';
 import { WalletService } from '../src/modules/wallet/wallet.service';
@@ -1373,120 +1375,131 @@ describe('Cửa sổ thanh toán — nhắc rồi hết hạn, không gia hạn 
 });
 
 /**
- * DỮ LIỆU LEGACY ADR 0039 — hold sinh lúc khách bấm đặt, trước khi có ai duyệt.
- *
- * ADR 0044 không tạo những bản ghi này nữa, nhưng các yêu cầu đã ở chặng đó phải đi hết đường
- * của chúng: bỏ nhánh này đi là để tiền thật của khách nằm lại vô thời hạn. Dấu hiệu nhận biết
- * là `booking_requests.decided_at IS NULL`.
+ * ADR 0055 — luồng thu-trước-duyệt (ADR 0039) đã bị GỠ: không còn `hold_paid`, và tiền về là việc
+ * của KHÁCH, không phải một quyết định thứ hai của gian hàng.
  */
-describe('Dữ liệu LEGACY ADR 0039 vẫn đi hết đường', () => {
-  /** Yêu cầu chờ tiền mà CHƯA ai quyết định — đúng hình dạng luồng ADR 0039 tạo ra. */
-  async function makeUndecidedHold(offsetDays = 40) {
-    const made = await makeHold(offsetDays);
+describe('ADR 0055 — tiền về không viết lại lượt NHẬN; DB khoá luồng thu-trước-duyệt', () => {
+  /*
+   * Bản trước đi vòng qua `hold_paid` và ghi `decided_by = NULL`, `decided_at = lúc tiền về`,
+   * `decision_source = system` lên một chuyến chủ xe đã TỰ TAY nhận: tên người duyệt mất, thời
+   * gian phản hồi đo tới lúc khách chuyển khoản, và chuyến bị kể lại thành "Đặt ngay".
+   */
+  maybe('tiền đủ: thẳng awaiting_hold → converted_to_booking, ba cột quyết định giữ nguyên', async () => {
+    const { code, requestId, acceptedAt } = await makeHold(46);
     await prisma.bookingRequest.update({
-      where: { id: made.requestId },
-      data: { decidedAt: null, decidedBy: null, decisionSource: null },
+      where: { id: requestId },
+      data: { decisionSource: BOOKING_REQUEST_DECISION_SOURCE.HOST },
     });
-    return made;
-  }
 
-  maybe('tiền đủ nhưng CHƯA ai nhận: hold `paid`, yêu cầu `hold_paid`, chưa có đơn', async () => {
-    const { code, holdId, requestId } = await makeUndecidedHold();
     const res = await sepay.ingest(payload(code, 100_000));
     expect(res).toMatchObject({ matched: true, note: 'activated' });
 
-    const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
-    expect(hold.status).toBe(BOOKING_HOLD_STATUS.PAID);
-    // `booking_id` còn trống: ở thời kỳ đó tiền về KHÔNG đồng nghĩa với "có đơn".
-    expect(hold.bookingId).toBeNull();
-    expect(await prisma.booking.count({ where: { tenantId } })).toBe(0);
-
     const req = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: requestId } });
-    expect(req.status).toBe(BOOKING_REQUEST_STATUS.HOLD_PAID);
-    // Chỗ VẪN bị giữ — khách đã trả tiền thật cho nó.
-    expect(
-      await prisma.vehicleOccupancy.count({
-        where: { sourceType: OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST, sourceId: requestId },
-      }),
-    ).toBe(1);
+    expect(req.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
+    expect(req.bookingId).not.toBeNull();
+    expect(req.decidedBy).toBe(ownerId);
+    expect(req.decidedAt?.getTime()).toBe(acceptedAt.getTime());
+    expect(req.decisionSource).toBe(BOOKING_REQUEST_DECISION_SOURCE.HOST);
 
-    // Đồng hồ phản hồi của gian hàng bắt đầu lại từ đây — nếu không, khách trả ở phút cuối sẽ
-    // đẩy chủ xe vào thế quá hạn ngay lập tức.
-    expect(req.respondBy.getTime()).toBeGreaterThan(Date.now());
-  });
-
-  maybe('gian hàng NHẬN sau khi khách đã trả: đơn mở từ snapshot đã chốt', async () => {
-    const { code, holdId, requestId } = await makeUndecidedHold(45);
-    await sepay.ingest(payload(code, 100_000));
-
-    await requests.approve(tenantId, ownerId, requestId);
-
-    const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
-    expect(hold.bookingId).not.toBeNull();
-    const booking = await prisma.booking.findUniqueOrThrow({ where: { id: hold.bookingId! } });
-    // Giá KHÔNG được tính lại: khách đã trả theo con số đóng băng trên hold.
-    expect(booking.totalAmount.toFixed(0)).toBe(BASE);
-    expect(booking.serviceFeeAmount.toFixed(0)).toBe(HOLD_AMOUNT);
-    expect(
-      (await prisma.bookingRequest.findUniqueOrThrow({ where: { id: requestId } })).status,
-    ).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
-  });
-
-  maybe('gian hàng TỪ CHỐI sau khi đã trả tiền: hoàn 100%, nhả chỗ, không chia đôi', async () => {
-    const { code, holdId, requestId } = await makeUndecidedHold(41);
-    await sepay.ingest(payload(code, 100_000));
-
-    await requests.reject(tenantId, ownerId, requestId, 'Xe hỏng đột xuất');
-
-    const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
-    expect(hold.status).toBe(BOOKING_HOLD_STATUS.RELEASED);
-    expect(hold.outcome).toBe(BOOKING_HOLD_OUTCOME.REFUNDED);
-    /*
-     * Phân bổ ba vế phải khớp bốn dòng tiền — `booking_holds_settled_allocation_check` canh ở
-     * DB. Hoàn 100% nghĩa là TOÀN BỘ về phía khách, không đồng nào cho chủ xe hay nền tảng.
-     */
-    expect(hold.settledCustomerAmount.toFixed(0)).toBe(HOLD_AMOUNT);
-    expect(hold.settledOwnerAmount.toFixed(0)).toBe('0');
-    expect(hold.settledPlatformAmount.toFixed(0)).toBe('0');
-
-    const refund = await prisma.holdRefund.findUniqueOrThrow({ where: { holdId } });
-    expect(refund.amount.toFixed(0)).toBe(HOLD_AMOUNT);
-    expect(refund.reason).toBe(HOLD_REFUND_REASON.OWNER_CANCEL);
-
-    expect(await prisma.booking.count({ where: { tenantId } })).toBe(0);
-    expect(await prisma.vehicleOccupancy.count({ where: { sourceId: requestId } })).toBe(0);
-    expect(
-      (await prisma.bookingRequest.findUniqueOrThrow({ where: { id: requestId } })).status,
-    ).toBe(BOOKING_REQUEST_STATUS.REJECTED_BY_HOST);
-  });
-
-  /**
-   * Bỏ sót nhánh này nghĩa là tiền của khách nằm lại VÔ THỜI HẠN vì gian hàng không bấm nút —
-   * kiểu lỗi không ai phát hiện ra cho tới lúc khách gọi hỗ trợ.
-   */
-  maybe('gian hàng KHÔNG phản hồi: worker tự hoàn đủ và nhả chỗ', async () => {
-    const { code, holdId, requestId } = await makeUndecidedHold(42);
-    await sepay.ingest(payload(code, 100_000));
-
-    // Đẩy hạn phản hồi về quá khứ — mô phỏng thời gian trôi mà không phải chờ.
-    await prisma.bookingRequest.update({
-      where: { id: requestId },
-      data: { respondBy: new Date(Date.now() - 60_000) },
+    // Gian hàng nghe "khách đã thanh toán" — KHÔNG phải "đã tự động nhận" cho chuyến họ tự nhận.
+    const notices = await prisma.notification.findMany({
+      where: { tenantId, targetId: req.bookingId! },
+      select: { type: true },
     });
-    const result = await sweepBookingRequestDeadlines(prisma, new Date());
-    expect(result.expiredPaid).toBeGreaterThanOrEqual(1);
+    expect(notices.map((n) => n.type)).toContain(NOTIFICATION_TYPE.HOLD_PAID);
+    expect(notices.map((n) => n.type)).not.toContain(NOTIFICATION_TYPE.BOOKING_AUTO_ACCEPTED);
+  });
 
-    const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
-    expect(hold.status).toBe(BOOKING_HOLD_STATUS.RELEASED);
-    expect(hold.outcome).toBe(BOOKING_HOLD_OUTCOME.REFUNDED);
+  maybe('DB từ chối hai trạng thái đã gỡ', async () => {
+    const { requestId } = await makeHold(47);
+    for (const status of [
+      BOOKING_REQUEST_STATUS.HOLD_PAID,
+      BOOKING_REQUEST_STATUS.APPROVED_BY_HOST,
+    ]) {
+      await expect(
+        prisma.bookingRequest.update({ where: { id: requestId }, data: { status } }),
+      ).rejects.toThrow(/booking_requests_status_valid/);
+    }
+  });
+
+  /*
+   * Bất biến làm cho việc gỡ nhánh legacy an toàn: không có `awaiting_hold` nào thiếu lượt nhận,
+   * nên tiền về không bao giờ mở đơn cho một chuyến chưa ai đồng ý.
+   */
+  maybe('DB từ chối awaiting_hold thiếu decided_at', async () => {
+    const { requestId } = await makeHold(48);
+    await expect(
+      prisma.bookingRequest.update({ where: { id: requestId }, data: { decidedAt: null } }),
+    ).rejects.toThrow(/booking_requests_awaiting_hold_decided/);
+  });
+
+  maybe('chuyến đã nhận đang chờ tiền KHÔNG duyệt lại được — chỉ còn đường Huỷ', async () => {
+    const { requestId } = await makeHold(49);
+    await expect(requests.approve(tenantId, ownerId, requestId)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.INVALID_STATUS_TRANSITION },
+    });
     expect(
-      (await prisma.holdRefund.findUniqueOrThrow({ where: { holdId } })).amount.toFixed(0),
-    ).toBe(HOLD_AMOUNT);
-    expect(await prisma.vehicleOccupancy.count({ where: { sourceId: requestId } })).toBe(0);
+      (await prisma.bookingRequest.findUniqueOrThrow({ where: { id: requestId } })).status,
+    ).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
+  });
 
-    // Chạy lại KHÔNG hoàn lần hai — worker phải idempotent trên đường tiền.
-    const again = await sweepBookingRequestDeadlines(prisma, new Date());
-    expect(again.expiredPaid).toBe(0);
-    expect(await prisma.holdRefund.count({ where: { holdId } })).toBe(1);
+  /*
+   * Huỷ đúng lúc tiền về: hai đường cùng chạm hold + yêu cầu, và cả hai khoá HOLD trước. Kết cục
+   * phải là ĐÚNG MỘT bên thắng — không deadlock (khách nhận 500 / tiền rơi vào hàng đợi không ghi
+   * chú), không hold mồ côi, không lịch treo.
+   */
+  maybe('huỷ chen đúng lúc tiền về: đúng một bên thắng, không deadlock, không lịch treo', async () => {
+    // Cách nhau 3 ngày, lớn hơn chuyến 2 ngày của `makeHold`: vòng nào TIỀN thắng thì đơn thuê
+    // giữ lịch tới hết test (afterEach mới dọn), và offset sát nhau làm `makeHold` vòng sau đụng
+    // `vehicle_occupancies_no_overlap` — test đỏ hay xanh tuỳ ai thắng cuộc đua.
+    for (const offset of [50, 53, 56]) {
+      const { code, holdId, requestId } = await makeHold(offset);
+      const [paid, cancelled] = await Promise.allSettled([
+        sepay.ingest(payload(code, 100_000)),
+        requests.cancelByHost(tenantId, ownerId, requestId, {
+          reasonCategory: CANCELLATION_REASON_CATEGORY.VEHICLE_UNAVAILABLE,
+        }),
+      ]);
+
+      // Lượt đối soát không bao giờ hỏng vì cuộc đua — nó khớp được, hoặc ghi rõ tiền đến muộn.
+      expect(paid.status).toBe('fulfilled');
+      if (paid.status === 'fulfilled') expect(paid.value.note).not.toBe('match_failed');
+
+      const req = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: requestId } });
+      const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
+      if (req.status === BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING) {
+        // Tiền thắng: lượt huỷ lùi bằng CONFLICT ("vừa thay đổi"), không phải lỗi DB thô.
+        expect(cancelled.status).toBe('rejected');
+        if (cancelled.status === 'rejected') {
+          expect(cancelled.reason).toMatchObject({ response: { code: API_ERROR_CODE.CONFLICT } });
+        }
+        expect(hold.status).toBe(BOOKING_HOLD_STATUS.PAID);
+        expect(await prisma.vehicleOccupancy.count({ where: { sourceId: req.bookingId! } })).toBe(1);
+      } else {
+        // Huỷ thắng: hold đóng, khoản tiền tới sau nằm lại hàng đợi đối soát kèm ghi chú.
+        expect(req.status).toBe(BOOKING_REQUEST_STATUS.CANCELLED_BY_HOST);
+        expect(cancelled.status).toBe('fulfilled');
+        expect(hold.status).toBe(BOOKING_HOLD_STATUS.CANCELLED);
+        expect(hold.bookingId).toBeNull();
+      }
+      // Lịch của YÊU CẦU không bao giờ còn treo, ở bên nào thắng cũng vậy.
+      expect(
+        await prisma.vehicleOccupancy.count({
+          where: { sourceType: OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST, sourceId: requestId },
+        }),
+      ).toBe(0);
+    }
+  });
+
+  /*
+   * Danh sách trạng thái sống ở HAI nơi — `BOOKING_REQUEST_STATUS_LIVE_VALUES` và CHECK ở DB. Thêm
+   * một trạng thái vào types mà quên migration phải đỏ ở CI, không phải ở production.
+   */
+  maybe('CHECK booking_requests_status_valid khớp đúng BOOKING_REQUEST_STATUS_LIVE_VALUES', async () => {
+    const [row] = await prisma.$queryRaw<Array<{ def: string }>>`
+      SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint
+      WHERE conname = 'booking_requests_status_valid'`;
+    const inDb = [...(row?.def ?? '').matchAll(/'([a-z_]+)'/g)].map((m) => m[1]).sort();
+    expect(inDb).toEqual([...BOOKING_REQUEST_STATUS_LIVE_VALUES].sort());
   });
 });

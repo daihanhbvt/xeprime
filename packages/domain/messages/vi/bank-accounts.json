@@ -3,11 +3,13 @@
   "subtitle": "XePrime chuyển tiền hoàn và các khoản phải trả bạn về tài khoản này.",
   "emptyTitle": "Chưa có tài khoản nhận tiền",
   "empty": "Chưa có tài khoản nào. Thêm một tài khoản để nhận tiền.",
-  "loadError": "Không tải được danh sách tài khoản.",
+  "loadError": "Không tải được tài khoản nhận tiền.",
   "defaultTag": "Mặc định",
   "verifiedTag": "Đã đối chiếu",
+  "accountNumberLine": "STK: {number}",
   "actions": {
     "add": "Thêm tài khoản",
+    "change": "Đổi tài khoản",
     "setDefault": "Đặt làm mặc định",
     "archive": "Bỏ dùng",
     "archiveConfirm": "Bỏ dùng tài khoản này?",
@@ -15,6 +17,8 @@
   },
   "form": {
     "title": "Thêm tài khoản nhận tiền",
+    "changeTitle": "Đổi tài khoản nhận tiền",
+    "replaces": "Tài khoản mới sẽ thay cho {account}. Lệnh rút đang chờ vẫn chuyển vào tài khoản đã chọn lúc gửi lệnh.",
     "bankCode": "Ngân hàng",
     "bankCodePlaceholder": "Chọn ngân hàng",
     "accountNumber": "Số tài khoản",
@@ -25,6 +29,8 @@
     "isDefault": "Đặt làm tài khoản nhận tiền mặc định",
     "submit": "Lưu tài khoản",
     "created": "Đã thêm tài khoản nhận tiền.",
+    "changed": "Đã đổi tài khoản nhận tiền.",
+    "unchanged": "Tài khoản này đang là tài khoản nhận tiền của bạn.",
     "defaultChanged": "Đã đổi tài khoản mặc định.",
     "archived": "Đã bỏ dùng tài khoản.",
     "validation": {

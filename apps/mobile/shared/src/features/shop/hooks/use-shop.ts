@@ -59,6 +59,8 @@ export function useUpdateShopProfile() {
       queryClient.setQueryData(queryKeys.shop.current(), shop);
       void queryClient.invalidateQueries({ queryKey: queryKeys.branches.all });
       void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
+      // Tên gian hàng = `tenants.name` (PR #151) — `/auth/me` mang nó tới thanh trên, menu và nhãn tuyến.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.auth.me() });
     },
   });
 }

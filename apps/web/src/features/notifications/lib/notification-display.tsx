@@ -154,9 +154,19 @@ export function notificationHref(
         return null;
     }
   }
-  // Owner Lite: "Hồ sơ chủ xe" (trang chủ xe) thay cho trang Cửa hàng; còn lại CÙNG màn với tuyến gói.
-  if (context === 'owner' && target === NOTIFICATION_TARGET_TYPE.TENANT) {
-    return accountSectionPath(ACCOUNT_SECTION.PROFILE);
+  /*
+   * Owner Lite: "Hồ sơ chủ xe" thay cho trang Cửa hàng, và "Chuyến cho thuê" thay cho CẢ hộp thư
+   * yêu cầu lẫn bảng đơn (hai URL đó tự chuyển chủ xe sang đây — đi thẳng đỡ một lần chớp trang).
+   * Còn lại CÙNG màn với tuyến gói.
+   */
+  if (context === 'owner') {
+    if (target === NOTIFICATION_TARGET_TYPE.TENANT) return accountSectionPath(ACCOUNT_SECTION.PROFILE);
+    if (
+      target === NOTIFICATION_TARGET_TYPE.BOOKING ||
+      target === NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST
+    ) {
+      return ROUTES.MANAGE.TRIPS;
+    }
   }
   switch (target) {
     case NOTIFICATION_TARGET_TYPE.BOOKING:

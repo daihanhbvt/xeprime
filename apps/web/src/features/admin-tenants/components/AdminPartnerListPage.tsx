@@ -4,6 +4,8 @@ import { useTranslations } from 'next-intl';
 import { Suspense } from 'react';
 import {
   DEFAULT_PLATFORM_TENANT_SORT,
+  PLATFORM_PARTNER_KIND,
+  PLATFORM_TENANT_PLAN_FILTER_VALUES,
   isPlatformTenantSort,
   type PlatformPartnerKind,
 } from '@xeprime/types';
@@ -21,7 +23,11 @@ import { PartnerDetailDrawer } from '../partner-detail/PartnerDetailDrawer';
 import { AdminTenantTable } from './AdminTenantTable';
 
 /** "Xoá bộ lọc" chỉ đụng bộ lọc — giữ nguyên cách sắp xếp và gian hàng đang mở. */
-const CLEARED: Partial<AdminPartnerListUrlState> = { q: undefined, status: ALL_FILTER };
+const CLEARED: Partial<AdminPartnerListUrlState> = {
+  q: undefined,
+  status: ALL_FILTER,
+  planState: ALL_FILTER,
+};
 
 /**
  * Patch của `FilterBar` → patch URL. Chỉ nhận ba khoá của thanh lọc; sort mặc định thì XOÁ tham
@@ -33,6 +39,7 @@ function filterBarPatch(
   const out: Partial<AdminPartnerListUrlState> = {};
   if ('q' in patch) out.q = patch.q;
   if ('status' in patch) out.status = patch.status;
+  if ('planState' in patch) out.planState = patch.planState;
   if ('sort' in patch) {
     out.sort =
       isPlatformTenantSort(patch.sort) && patch.sort !== DEFAULT_PLATFORM_TENANT_SORT
@@ -75,7 +82,12 @@ function AdminPartnerListView({ partnerKind }: AdminPartnerListPageProps) {
   const domainLabel = useDomainLabel();
   const { filters, setFilters } = useAdminTenantFilters();
   const { tenant: openTenantId, tab: openTab, ...listFilters } = filters;
-  const { data, isError, refetch, isFetching } = useAdminTenants({ ...listFilters, partnerKind });
+  const { data, isError, refetch, isFetching } = useAdminTenants({
+    ...listFilters,
+    // URL của danh sách chủ xe không có ô hạn gói — tham số lạc (link chép nhầm) không được lọc ngầm.
+    planState: partnerKind === PLATFORM_PARTNER_KIND.PACKAGE_SHOP ? listFilters.planState : undefined,
+    partnerKind,
+  });
 
   const items = data?.items ?? [];
   const meta = data?.meta ?? {
@@ -84,7 +96,12 @@ function AdminPartnerListView({ partnerKind }: AdminPartnerListPageProps) {
     total: 0,
     hasNext: false,
   };
-  const hasFilters = Boolean(filters.q || (filters.status && filters.status !== ALL_FILTER));
+  const isPackageShop = partnerKind === PLATFORM_PARTNER_KIND.PACKAGE_SHOP;
+  const hasFilters = Boolean(
+    filters.q ||
+    (filters.status && filters.status !== ALL_FILTER) ||
+    (isPackageShop && filters.planState && filters.planState !== ALL_FILTER),
+  );
 
   const fields: FilterField[] = [
     {
@@ -106,6 +123,24 @@ function AdminPartnerListView({ partnerKind }: AdminPartnerListPageProps) {
         })),
       ],
     },
+    // Hạn gói chỉ có nghĩa ở danh sách gian hàng gói — chủ xe cá nhân không mua kỳ gói nào.
+    ...(isPackageShop
+      ? [
+          {
+            kind: 'select' as const,
+            key: 'planState',
+            label: t('filters.planState'),
+            allowClear: false,
+            options: [
+              { value: ALL_FILTER, label: t('filters.allPlanStates') },
+              ...PLATFORM_TENANT_PLAN_FILTER_VALUES.map((value) => ({
+                value,
+                label: t(`filters.planStates.${value}`),
+              })),
+            ],
+          },
+        ]
+      : []),
     {
       kind: 'select',
       key: 'sort',
@@ -132,6 +167,7 @@ function AdminPartnerListView({ partnerKind }: AdminPartnerListPageProps) {
         values={{
           q: filters.q,
           status: filters.status,
+          planState: filters.planState,
           sort: filters.sort ?? DEFAULT_PLATFORM_TENANT_SORT,
         }}
         onChange={(patch) => setFilters(filterBarPatch(patch))}

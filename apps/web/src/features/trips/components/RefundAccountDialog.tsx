@@ -1,14 +1,13 @@
 'use client';
 
-import { App, Alert, Radio, Skeleton } from 'antd';
+import { App, Alert, Skeleton } from 'antd';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { TENANT_ROLE } from '@xeprime/types';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
+import { BankAccountCard } from '@/features/bank-accounts/components/BankAccountCard';
 import { BankAccountForm } from '@/features/bank-accounts/components/BankAccountForm';
+import { currentBankAccount } from '@/features/bank-accounts/current-account';
 import { useBankAccounts } from '@/features/bank-accounts/hooks/use-bank-accounts';
-import type { BankAccountScope } from '@/features/bank-accounts/types';
-import { useCurrentUser } from '@/hooks/use-current-user';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useProvideRefundAccount } from '../hooks';
 import styles from './RefundAccountDialog.module.css';
@@ -20,16 +19,17 @@ import styles from './RefundAccountDialog.module.css';
  * khai, còn admin thì không bấm được "đã chuyển" vì lệnh chuyển không có đích. Đây là chỗ nối
  * hai đầu đó lại.
  *
- * Có tài khoản đã lưu thì CHỌN, chưa có thì khai một lần rồi hệ thống nhớ: bắt khách gõ lại số
- * tài khoản ở mỗi lần hoàn là cách chắc chắn nhất để có một chữ số sai trong một lệnh chuyển.
+ * Có tài khoản nhận tiền thì XÁC NHẬN nó, chưa có thì khai một lần rồi hệ thống nhớ: bắt khách gõ
+ * lại số tài khoản ở mỗi lần hoàn là cách chắc chắn nhất để có một chữ số sai trong một lệnh
+ * chuyển. Mỗi chủ một tài khoản (07/10/2026): "dùng tài khoản khác" là ĐỔI tài khoản nhận tiền,
+ * không phải thêm một dòng vào sổ.
  *
- * ## Sổ tài khoản nào (15/09/2026 — sửa lỗi tiền)
+ * ## Sổ tài khoản nào
  *
- * `scope` đi theo CHỦ VÍ, không đóng đinh `account`. Chủ gian hàng có một ví duy nhất thuộc
- * tenant (ADR 0038 điều 2) và sổ tài khoản ngân hàng nằm cùng chỗ với ví đó; đọc sổ `account`
- * của họ sẽ ra danh sách rỗng dù họ đã khai số tài khoản từ lâu. Server chọn sổ bằng ĐÚNG luật
- * này (`refundBankOwner`), nên hai phía không thể lệch nhau — lệch là một `404` giữa luồng khai
- * đích cho một lệnh chuyển tiền.
+ * Luôn sổ `account` của chính TÀI KHOẢN KHÁCH đã đặt chuyến — đúng luật server dùng
+ * (`refundBankOwner` → `resolveRefundWalletOwner`, ADR 0053 điều 8). Màn này chỉ sống ở site khách,
+ * nơi `/shop/bank-accounts` (realm partner) vốn không gọi được; đọc sổ khác là một `404` giữa luồng
+ * khai đích cho một lệnh chuyển tiền.
  */
 export function RefundAccountDialog({
   tripId,
@@ -42,28 +42,25 @@ export function RefundAccountDialog({
   open: boolean;
   onClose: () => void;
 }) {
-  const t = useTranslations('BankAccounts.refund');
+  const t = useTranslations('BankAccounts');
   const { message } = App.useApp();
   const errorMessage = useErrorMessage();
 
-  const { data: user } = useCurrentUser();
-  const scope: BankAccountScope =
-    user?.tenant?.roleKey === TENANT_ROLE.SHOP_OWNER ? 'shop' : 'account';
-  const { data: accounts, isPending } = useBankAccounts(scope);
+  const { data: accounts, isPending, isError } = useBankAccounts('account');
   const provide = useProvideRefundAccount(tripId);
-  const [selected, setSelected] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
 
-  const list = accounts ?? [];
-  const chosen = selected ?? list.find((a) => a.isDefault)?.id ?? list[0]?.id ?? null;
+  // Đổi ở hộp thoại con ghi thẳng tài khoản mới vào cache — `account` luôn là đích hiện hành.
+  const account = currentBankAccount(accounts);
+  const chosen = account?.id ?? null;
 
   const submit = () => {
-    if (!chosen) return;
+    if (!chosen || provide.isPending) return;
     provide.mutate(
       { bankAccountId: chosen },
       {
         onSuccess: () => {
-          message.success(t('saved'));
+          message.success(t('refund.saved'));
           onClose();
         },
         onError: (err: unknown) => message.error(errorMessage(err)),
@@ -74,48 +71,42 @@ export function RefundAccountDialog({
   return (
     <>
       <ResponsiveDialog
-        title={t('title')}
+        title={t('refund.title')}
         open={open}
         onClose={onClose}
-        okText={t('submit')}
+        okText={t('refund.submit')}
         onOk={submit}
         okDisabled={!chosen}
         confirmLoading={provide.isPending}
         size="sm"
       >
-        <Alert type="info" showIcon title={t('intro', { amount })} className={styles.intro} />
+        <Alert
+          type="info"
+          showIcon
+          title={t('refund.intro', { amount })}
+          className={styles.intro}
+        />
 
         {isPending ? <Skeleton active paragraph={{ rows: 2 }} /> : null}
+        {isError ? <Alert type="error" showIcon title={t('loadError')} /> : null}
+        {account ? <BankAccountCard account={account} /> : null}
 
-        {!isPending && list.length > 0 ? (
-          <Radio.Group
-            className={styles.group}
-            value={chosen}
-            onChange={(e) => setSelected(e.target.value as string)}
-          >
-            {list.map((account) => (
-              <Radio key={account.id} value={account.id} className={styles.option}>
-                <span className={styles.bank}>{account.label || account.bankCode}</span>
-                <span className={styles.number}>
-                  {account.bankCode} · {account.accountNumberMasked}
-                </span>
-                <span className={styles.name}>{account.accountName}</span>
-              </Radio>
-            ))}
-          </Radio.Group>
+        {/*
+          Tải lỗi thì không mời thêm/đổi: chưa biết khách đã có tài khoản hay chưa, và khai lúc đó
+          là âm thầm thay một tài khoản họ không thấy.
+        */}
+        {!isPending && !isError ? (
+          <button type="button" className={styles.link} onClick={() => setFormOpen(true)}>
+            {account ? t('actions.change') : t('actions.add')}
+          </button>
         ) : null}
-
-        <button type="button" className={styles.link} onClick={() => setFormOpen(true)}>
-          {list.length > 0 ? t('useNew') : t('pickSaved')}
-        </button>
       </ResponsiveDialog>
 
-      {/* Khai xong thì chọn luôn tài khoản vừa thêm — không bắt người dùng tìm lại nó trong danh sách. */}
       <BankAccountForm
-        scope={scope}
+        scope="account"
         open={formOpen}
         onClose={() => setFormOpen(false)}
-        onCreated={(account) => setSelected(account.id)}
+        replacing={account}
       />
     </>
   );

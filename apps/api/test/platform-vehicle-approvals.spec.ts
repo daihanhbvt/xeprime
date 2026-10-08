@@ -38,6 +38,7 @@ import {
   seedBranch,
 } from './helpers/service-factory';
 import { passVehicleReviewChecks } from './helpers/vehicle-review-fixture';
+import { requiredVehicleImageRows } from './helpers/vehicle-media';
 
 /**
  * Màn "DUYỆT XE" của nền tảng (24/09/2026) trên PostgreSQL THẬT.
@@ -101,7 +102,8 @@ async function seedVehicle(tenant: string, overrides: Record<string, unknown>): 
       name: `Toyota Vios ${RUN}`,
       vehicleType: VEHICLE_TYPE.CAR,
       plateNumber: `75A-${id.slice(-3)}.45`,
-      mainImageUrl: `https://img.example/${id}-main.jpg`,
+      // Ảnh BÌA = ảnh MẶT TRƯỚC (07/10/2026) — fixture seed thẳng bằng Prisma nên phải tự khớp.
+      mainImageUrl: `https://img.example/${id.slice(-6)}-front.jpg`,
       brand: 'toyota',
       model: 'Vios',
       manufactureYear: 2023,
@@ -116,14 +118,14 @@ async function seedVehicle(tenant: string, overrides: Record<string, unknown>): 
       ...overrides,
     },
   });
+  // Đủ GÓC ảnh bắt buộc của loại xe (07/10/2026) — ba dòng không gán góc sẽ bị cổng duyệt
+  // báo thiếu `photos`, ở những ca chẳng nói gì về ảnh.
   await prisma.vehicleImage.createMany({
-    data: [1, 2, 3].map((n) => ({
-      id: newId(),
-      tenantId: tenant,
+    data: requiredVehicleImageRows({
       vehicleId: id,
-      imageUrl: `https://img.example/${id}-${n}.jpg`,
-      sortOrder: n,
-    })),
+      tenantId: tenant,
+      vehicleType: String(overrides.vehicleType ?? VEHICLE_TYPE.CAR),
+    }),
   });
   return id;
 }
@@ -468,8 +470,8 @@ describe('2. Snapshot v2: đủ dữ liệu lúc gửi, bất biến sau đó', 
       color: 'Trắng',
       serviceTypes: [SERVICE_TYPE.SELF_DRIVE],
     });
-    // Ảnh đại diện + 3 ảnh thư viện, đại diện đứng đầu.
-    expect(detail.vehicle.images).toHaveLength(4);
+    // Năm góc ảnh bắt buộc của ô tô; ảnh bìa (= mặt trước) đứng đầu.
+    expect(detail.vehicle.images).toHaveLength(5);
     expect(detail.vehicle.images[0]).toBe(detail.vehicle.mainImageUrl);
     expect(detail.vehicle.features).toEqual(['bluetooth', 'camera_reverse']);
     expect(detail.pricing).toMatchObject({ weekdayPrice: '700000', discountPercent: 10 });
@@ -566,7 +568,7 @@ describe('2. Snapshot v2: đủ dữ liệu lúc gửi, bất biến sau đó', 
     const detail = await vehicleApprovals.detail(legacy.id);
     expect(detail.basis).toBe(VEHICLE_REVIEW_BASIS.LIVE);
     expect(detail.vehicle.name).toBe(`Kia Morning ${RUN}`);
-    expect(detail.vehicle.images).toHaveLength(4);
+    expect(detail.vehicle.images).toHaveLength(5);
   });
 });
 

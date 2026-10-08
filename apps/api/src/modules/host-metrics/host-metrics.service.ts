@@ -65,10 +65,10 @@ interface MetricWindow {
  *              hàng huỷ (`booking_cancellations.counts_against_host`)
  * ```
  *
- * ⚠️ `responded` đọc `decided_at`, KHÔNG đọc `status = rejected_by_host`. Worker
- * `expirePaidAwaitingAccept` (dữ liệu LEGACY) cũng ghi `rejected_by_host` khi gian hàng **không**
- * phản hồi — và nó cố ý để trống `decided_at`. Hỏi status ở đây là trao điểm phản hồi cho đúng
- * nhóm không phản hồi.
+ * ⚠️ `responded` đọc `decided_at`, KHÔNG đọc `status = rejected_by_host`. Dữ liệu cũ do worker
+ * `expirePaidAwaitingAccept` ghi (job đã gỡ ở ADR 0055) mang `rejected_by_host` dù gian hàng
+ * **không** phản hồi — và cố ý để trống `decided_at`. Hỏi status ở đây là trao điểm phản hồi cho
+ * đúng nhóm không phản hồi.
  */
 @Injectable()
 export class HostMetricsService {

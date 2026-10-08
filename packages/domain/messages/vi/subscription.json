@@ -3,11 +3,7 @@
     "title": "Gói & hoá đơn",
     "loadError": "Không tải được thông tin gói",
     "accountSubtitle": "Nâng cấp lên gian hàng để mở rộng hoạt động, quản lý xe hiệu quả hơn và tăng doanh thu.",
-    "breadcrumb": "Gói & hoá đơn",
-    "heroBadge": "Gian hàng",
-    "heroBenefit1": "Mở rộng cơ hội",
-    "heroBenefit2": "Tăng doanh thu",
-    "heroBenefit3": "Xây dựng thương hiệu"
+    "breadcrumb": "Gói & hoá đơn"
   },
   "current": {
     "none": "Chưa có gói — gian hàng đang ở tuyến hoa hồng theo chuyến.",

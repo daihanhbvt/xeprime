@@ -15,6 +15,17 @@ import type { PrismaService } from '../src/prisma/prisma.service';
  *    đăng ký và không vào bằng OTP.
  * Không có DB thì tự skip.
  */
+/*
+ * Spec này kiểm RANH GIỚI tài khoản (realm, trùng SĐT, khoá) — không kiểm độ mạnh của hash. Cost
+ * 12 cố ý tốn ~250ms CPU mỗi phép, và test hai realm làm sáu phép liền nhau: trên runner CI có 4
+ * worker giành CPU, riêng phần băm đã chạm mốc 5s. Băm ở cost tối thiểu thì phép so khớp vẫn là
+ * bcrypt thật (cost nằm trong chính hash), chỉ bỏ phần CPU không thuộc về điều đang kiểm.
+ */
+jest.mock('bcrypt', () => {
+  const actual = jest.requireActual<typeof import('bcrypt')>('bcrypt');
+  return { ...actual, hash: (data: string) => actual.hash(data, 4) };
+});
+
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 

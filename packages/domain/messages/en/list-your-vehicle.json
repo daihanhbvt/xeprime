@@ -37,6 +37,23 @@
     "upgrade": {
       "title": "Upgrade whenever you need to",
       "body": "You can start by listing a personal vehicle and upgrade to a shop later. Your account and vehicle data stay exactly as they are."
+    },
+    "chooseTitle": "Choose how you want to rent out",
+    "selected": "Selected",
+    "how": {
+      "title": "Get started in 3 steps",
+      "account": {
+        "title": "Create a partner account",
+        "desc": "Separate from your renter account."
+      },
+      "choose": {
+        "title": "Choose how to rent out",
+        "desc": "List a personal vehicle or open a shop."
+      },
+      "publish": {
+        "title": "List a vehicle or open a shop",
+        "desc": "XePrime reviews it, then puts it on the marketplace."
+      }
     }
   },
   "ownerProfile": {
@@ -212,18 +229,10 @@
   "images": {
     "title": "Vehicle photos",
     "intro": "Upload photos from several angles to build trust. Clear photos get booked more often.",
-    "mainImageHelp": "This photo represents the vehicle on the marketplace and in lists.",
-    "counter": "{count}/{min} photos",
-    "counterAria": "Progress towards the minimum number of photos",
-    "missing": "{count, plural, one {# more photo} other {# more photos}} needed to submit for review. You can still save a draft now.",
-    "enough": "Enough photos to submit for review.",
-    "anglesTitle": "Suggested angles",
-    "angles": {
-      "front": "Front: headlights and plate visible",
-      "rear": "Rear of the vehicle",
-      "side": "Side profile, whole body in frame",
-      "interior": "Interior: seats and dashboard"
-    }
+    "counter": "{count}/{min} angles",
+    "counterAria": "Progress towards the required photo angles",
+    "missing": "{count, plural, one {# angle} other {# angles}} still missing a photo. You can still save a draft now.",
+    "enough": "All required photos are in."
   },
   "success": {
     "submittedTitle": "Submitted for review",
@@ -270,8 +279,7 @@
     "modelRequired": "Choose a model",
     "manufactureYearRequired": "Enter the manufacture year",
     "seatCountRequired": "Enter the number of seats",
-    "mainImageRequired": "Upload the main photo",
-    "photosMin": "At least {min} photos (including the main one) are needed to go on the marketplace",
+    "photosRequired": "{count, plural, one {# angle} other {# angles}} still have no photo — none may be left empty",
     "motorbikeCategoryRequired": "Choose the motorbike segment",
     "engineDisplacementCcRequired": "Enter the engine displacement"
   }

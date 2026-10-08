@@ -291,8 +291,8 @@ describe('Danh mục kiểm tra', () => {
     expect(auto.queryByText('Có giá thuê dài hạn')).toBeNull();
     const plateRow = auto.getByText('Đã nhập biển số').closest('li')!;
     expect(within(plateRow).getByText('Chưa đạt')).toBeTruthy();
-    expect(auto.getByText('Đủ tối thiểu 4 ảnh khác nhau')).toBeTruthy();
-    expect(auto.getByText('6/7 đạt')).toBeTruthy();
+    expect(auto.getByText('Đủ các góc ảnh bắt buộc')).toBeTruthy();
+    expect(auto.getByText('5/6 đạt')).toBeTruthy();
   });
 
   it('thủ công: đánh dấu một mục gọi API lưu (không chỉ đổi state)', () => {
@@ -325,7 +325,7 @@ describe('Quyết định', () => {
       .getByText('Chưa thể phê duyệt: xe đã khác hồ sơ gửi duyệt')
       .closest('.ant-alert') as HTMLElement;
     expect(within(alert).getByText('Biển số')).toBeTruthy();
-    expect(within(alert).getByText('Đủ tối thiểu 4 ảnh khác nhau')).toBeTruthy();
+    expect(within(alert).getByText('Đủ các góc ảnh bắt buộc')).toBeTruthy();
     expect(
       screen.getByText('Xe đã khác hồ sơ gửi duyệt — chỉ có thể yêu cầu bổ sung hoặc từ chối'),
     ).toBeTruthy();

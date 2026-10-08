@@ -19,7 +19,13 @@
  *
  * Chi tiết dựng dữ liệu nằm ở `shop.ts`; file này chỉ mô tả "gian hàng đó là gì".
  */
-import { SHOP_PLAN_CODE, TENANT_STATUS, TENANT_ROLE } from '@xeprime/types';
+import {
+  SELLER_ENTITY_TYPE,
+  SHOP_PLAN_CODE,
+  TENANT_STATUS,
+  TENANT_ROLE,
+  type SellerEntityType,
+} from '@xeprime/types';
 import { COMMISSION_OWNER_SPECS } from './commission-owners';
 import { photo } from './context';
 
@@ -113,11 +119,18 @@ export interface ShopSpec {
      * cũng vô nghĩa.
      */
     coverUrl?: string;
-    taxCode: string | null;
+    /** Mã số thuế KHÔNG ở đây (07/10/2026) — nó là `seller.taxId`, nguồn duy nhất. */
     businessLicenseNo: string | null;
     /** Tài khoản nhận tiền — seed vào `bank_accounts` (ADR 0033), KHÔNG vào hồ sơ gian hàng. */
     bank: { name: string; accountNo: string; accountName: string } | null;
   };
+  /**
+   * Hồ sơ NGƯỜI BÁN (`seller_profiles`) — nơi DUY NHẤT mang mã số thuế (07/10/2026): hợp đồng, màn
+   * quản trị và báo cáo thuế đều đọc nó. Seed ở trạng thái NHÁP, đúng như một gian hàng vừa khai —
+   * không dựng sẵn một hồ sơ "đã xác minh" để bỏ qua bước nền tảng duyệt. `null` = chưa khai: bản
+   * nháp được tạo lười khi chủ gian hàng mở "Thông tin khai thuế".
+   */
+  seller: { entityType: SellerEntityType; legalName: string; taxId: string } | null;
   branches: readonly BranchSpec[];
   fleet: readonly FleetEntry[];
   /** Mã BẬC gói đang dùng (ADR 0041) — null = chưa gán gói. Trần xe/chi nhánh đi theo bậc. */
@@ -190,13 +203,17 @@ const HANDWRITTEN_SHOPS: readonly ShopSpec[] = [
         'Nhận thuê tự lái, thuê kèm tài xế và thuê dài hạn theo tháng. Giao xe tận nơi nội thành.',
       address: '123 Nguyễn Văn Cừ, Quận 5, TP. Hồ Chí Minh',
       coverUrl: SHOP_COVER.fleet,
-      taxCode: '0316123456',
       businessLicenseNo: '41C8123456',
       bank: {
         name: 'Vietcombank',
         accountNo: '0071000123456',
         accountName: 'CONG TY TNHH XEPRIME SAI GON',
       },
+    },
+    seller: {
+      entityType: SELLER_ENTITY_TYPE.COMPANY,
+      legalName: 'Công ty TNHH XePrime Sài Gòn',
+      taxId: '0316123456',
     },
     branches: [
       {
@@ -265,13 +282,17 @@ const HANDWRITTEN_SHOPS: readonly ShopSpec[] = [
         'thủ tục nhanh gọn trong 15 phút.',
       address: '12 Lê Văn Lương, Thanh Xuân, Hà Nội',
       coverUrl: SHOP_COVER.city,
-      taxCode: '0108987654',
       businessLicenseNo: '01C8987654',
       bank: {
         name: 'Techcombank',
         accountNo: '19033888888',
         accountName: 'CONG TY TNHH VIET CAR',
       },
+    },
+    seller: {
+      entityType: SELLER_ENTITY_TYPE.COMPANY,
+      legalName: 'Công ty TNHH Việt Car',
+      taxId: '0108987654',
     },
     branches: [
       {
@@ -331,7 +352,6 @@ const HANDWRITTEN_SHOPS: readonly ShopSpec[] = [
       bio: 'Hai chiếc xe nhà, chủ tự giao nhận tại Đà Nẵng. Ưu tiên khách thuê theo ngày và cuối tuần.',
       address: '30 Nguyễn Chí Thanh, Hải Châu, Đà Nẵng',
       coverUrl: SHOP_COVER.road,
-      taxCode: null,
       businessLicenseNo: null,
       bank: {
         name: 'MB Bank',
@@ -339,6 +359,7 @@ const HANDWRITTEN_SHOPS: readonly ShopSpec[] = [
         accountName: 'NGO THANH HAI',
       },
     },
+    seller: null,
     branches: [
       {
         code: 'CN01',

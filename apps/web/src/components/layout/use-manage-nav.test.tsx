@@ -429,6 +429,7 @@ describe('useManageNav — hiển thị theo quyền (nền tảng)', () => {
       'Tất cả xe',
       'Gian hàng gói',
       'Chủ xe cá nhân',
+      'Vận hành chuyến',
       'Đơn thuê toàn hệ thống',
       'Khách thuê',
       'Tra cứu tài khoản',
@@ -476,6 +477,7 @@ describe('useManageNav — hiển thị theo quyền (nền tảng)', () => {
     expect(labels).toEqual([
       'Tổng quan',
       'Tất cả xe',
+      'Vận hành chuyến',
       'Đơn thuê toàn hệ thống',
       'Khách thuê',
       'Tra cứu tài khoản',
@@ -649,7 +651,7 @@ describe('ManageMenu — trình bày', () => {
     const { container } = renderMenu();
 
     const item = container.querySelector('.ant-menu-item');
-    expect(item?.getAttribute('title')).toBe('Đơn thuê toàn hệ thống');
+    expect(item?.getAttribute('title')).toBe('Vận hành chuyến');
   });
 
   it('thu gọn: nhãn vẫn là tên truy cập được của mục', () => {
@@ -817,9 +819,59 @@ describe('useManageNav — menu theo tuyến ở site partner', () => {
     renderMenu();
 
     const labels = itemLabels();
-    expect(labels).toEqual(expect.arrayContaining(['Tổng quan', 'Lịch xe']));
+    expect(labels).toEqual(expect.arrayContaining(['Tổng quan', 'Lịch thuê']));
     expect(labels).not.toContain('Khách hàng');
     expect(screen.queryByText('Tài chính')).toBeNull();
+  });
+
+  /*
+   * Đồng bộ với tuyến gói (07/10/2026): MỘT cửa tiền, MỘT hồ sơ. Tài khoản nhận tiền nằm trong
+   * "Số dư & rút tiền", khai thuế + gói nằm trong "Hồ sơ chủ xe" — không còn ba mục riêng.
+   */
+  it('chủ xe tuyến hoa hồng: cùng khung khối với tuyến gói, tiền + hồ sơ mỗi thứ một mục', () => {
+    grant(...(Object.values(PERMISSION) as Permission[]));
+    user.tenant = { roleKey: TENANT_ROLE.SHOP_OWNER, billingMode: BILLING_MODE.COMMISSION };
+    renderMenu();
+
+    expect(itemLabels()).toEqual([
+      'Tổng quan',
+      'Xe của tôi',
+      'Lịch thuê',
+      'Chuyến cho thuê',
+      'Trò chuyện',
+      'Số dư & rút tiền',
+      'Hồ sơ chủ xe',
+      'Cẩm nang cho thuê xe',
+      'Hợp đồng & Chứng từ',
+      'Chính sách bảo vệ dữ liệu',
+      'Yêu cầu hỗ trợ',
+    ]);
+  });
+
+  /*
+   * Chủ xe cá nhân (1–3 xe) đọc yêu cầu + đơn gộp ở MỘT danh sách thẻ. Thành viên của gian hàng
+   * hoa hồng (nhân viên của shop vừa hết gói) không có danh sách đó — `/trips` chỉ dựng phía chủ
+   * xe cho CHỦ — nên giữ hộp thư + bảng đơn để còn bàn giao chuyến đang chạy.
+   */
+  it('chủ xe tuyến hoa hồng: "Chuyến cho thuê" thay cho hộp thư + bảng đơn', () => {
+    grant(...(Object.values(PERMISSION) as Permission[]));
+    user.tenant = { roleKey: TENANT_ROLE.SHOP_OWNER, billingMode: BILLING_MODE.COMMISSION };
+    renderMenu();
+
+    const labels = itemLabels();
+    expect(labels).toContain('Chuyến cho thuê');
+    expect(labels).not.toContain('Yêu cầu đặt xe');
+    expect(labels).not.toContain('Tất cả đơn thuê');
+  });
+
+  it('thành viên gian hàng tuyến hoa hồng: giữ hộp thư + bảng đơn, không có "Chuyến cho thuê"', () => {
+    grant(...(Object.values(PERMISSION) as Permission[]));
+    user.tenant = { roleKey: TENANT_ROLE.SHOP_STAFF, billingMode: BILLING_MODE.COMMISSION };
+    renderMenu();
+
+    const labels = itemLabels();
+    expect(labels).not.toContain('Chuyến cho thuê');
+    expect(labels).toEqual(expect.arrayContaining(['Yêu cầu đặt xe', 'Tất cả đơn thuê']));
   });
 
   it('chưa có gian hàng: không menu nào', () => {

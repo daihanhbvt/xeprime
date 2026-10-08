@@ -1,5 +1,6 @@
 import { newId, Prisma, type PrismaClient } from '@xeprime/prisma';
 import {
+  subscriptionChainLockKey,
   BANK_MATCH_TARGET_TYPE,
   BILLING_MODE,
   FREE_TRIP_ALLOWANCE,
@@ -215,6 +216,13 @@ async function lapseToCommission(prisma: PrismaClient, now: Date): Promise<numbe
     const chainFrom = isPackage ? graceEndsAt : sub.endsAt;
 
     const done = await prisma.$transaction(async (tx) => {
+      /*
+       * Cùng khoá chuỗi kỳ với mọi đường ghi thuê bao ở api (admin gán/huỷ, webhook kích hoạt):
+       * không có nó, job này và một lượt admin gán chạy song song cùng thấy "chưa có gói hiện
+       * hành", cùng ghi — và dòng hoa hồng 12 tháng (ends_at muộn hơn) thắng phép chấm tuyến,
+       * đẩy một gian hàng vừa trả tiền về tuyến hoa hồng.
+       */
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${subscriptionChainLockKey(sub.tenantId)}))`;
       const claimed = await tx.tenantSubscription.updateMany({
         where: { id: sub.id, status: SUBSCRIPTION_STATUS.ACTIVE, lapseHandledAt: null },
         data: { lapseHandledAt: now },
@@ -256,7 +264,9 @@ async function lapseToCommission(prisma: PrismaClient, now: Date): Promise<numbe
            */
           startsAt: chainFrom,
           endsAt: addCalendarMonthsVn(chainFrom, COMMISSION_TRACK_TERM_MONTHS),
-          note: 'Tự chuyển về tuyến hoa hồng khi gói hết hạn + ân hạn (job vòng đời — ADR 0020 điều 5).',
+          // Không ghi chú chữ: dòng hệ thống nói bằng `origin` và giao diện tự dịch (ADR 0012).
+          // Dấu vết "vì sao" nằm ở audit `subscription.lapse_to_commission` ngay dưới.
+          note: null,
         },
         select: { id: true },
       });

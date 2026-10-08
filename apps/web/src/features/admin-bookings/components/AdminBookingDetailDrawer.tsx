@@ -4,10 +4,10 @@ import { HistoryOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { PERMISSION } from '@xeprime/types';
+import {
+  AUDIT_TARGET_TYPE, PERMISSION } from '@xeprime/types';
 import { DetailDrawer } from '@/components/overlay/DetailDrawer';
 import { adminAuditPath } from '@/constants/routes';
-import { AUDIT_TARGET_TYPE } from '@/features/admin-audit/constants';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useAdminBooking } from '../hooks/use-admin-bookings';
 import type { AdminBookingDetail } from '../types';
@@ -18,8 +18,9 @@ import { BookingPaymentSummary } from './booking-detail/BookingPaymentSummary';
 import { BookingTimeline } from './booking-detail/BookingTimeline';
 
 /**
- * Panel chi tiết một đơn — ĐỨNG CẠNH bảng (`modeless`, cỡ `split`), không mask: người dùng vẫn
- * thấy danh sách và bấm dòng khác để đổi đơn. Trang chừa chỗ cho bảng bằng cùng token bề rộng.
+ * Panel chi tiết một đơn — drawer chuẩn như màn Kiểm duyệt xe (07/10/2026): có mask, bấm ra
+ * ngoài hay Esc là đóng, trang phía sau đứng yên. Cỡ `lg`: nội dung một cột (thông tin, lịch
+ * trình, thanh toán, hồ sơ) — rộng hơn chỉ là khoảng trống.
  *
  * Header (mã + trạng thái) và footer của AntD Drawer nằm ngoài vùng cuộn, nên cả hai dính cố định
  * khi nội dung dài.
@@ -45,8 +46,7 @@ export function AdminBookingDetailDrawer({
     <DetailDrawer
       title={data ? <BookingDrawerHeader booking={data} /> : t('fallbackTitle')}
       ariaLabel={data ? t('title', { code: data.code }) : t('fallbackTitle')}
-      size="split"
-      modeless
+      size="lg"
       open={Boolean(bookingId)}
       onClose={onClose}
       loading={!isError && (isLoading || !data)}

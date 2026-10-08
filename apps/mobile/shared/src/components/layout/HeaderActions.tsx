@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { CHAT_SIDE, isCommissionOwnerAccount } from '@xeprime/types';
+import { CHAT_SIDE } from '@xeprime/types';
 import { Pressable } from 'react-native';
 import { Text, XStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -35,17 +35,10 @@ export function HeaderActions() {
         <>
           <ChatBadgeButton surface={CHAT_SIDE.CUSTOMER} />
           {/*
-            Chủ xe tuyến hoa hồng dùng bề mặt OWNER (ADR 0038 điều 10): họ nhận thông báo của
-            cả hai vai, nhưng khu quản lý đóng với họ. Dùng CUSTOMER cho họ thì mọi thông báo
-            về XE và GIAN HÀNG của chính họ thành dòng bấm không đi đâu cả.
+            Thanh trên của khu KHÁCH: tài khoản khách không có gian hàng (ADR 0053), nên chuông luôn
+            là bề mặt khách. Bề mặt OWNER cũ đã sang app Partner (khu quản lý).
           */}
-          <NotificationBell
-            context={
-              isCommissionOwnerAccount(user.tenant)
-                ? NOTIFICATION_CONTEXT.OWNER
-                : NOTIFICATION_CONTEXT.CUSTOMER
-            }
-          />
+          <NotificationBell context={NOTIFICATION_CONTEXT.CUSTOMER} />
 
           <Pressable
             onPress={() => navigateOnce(ROUTES.account.home())}

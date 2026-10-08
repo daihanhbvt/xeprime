@@ -14,7 +14,7 @@ import {
   isVehicleFuelTypeAllowed,
   type PublishRequirement,
 } from '@xeprime/types';
-import { vehicleFormSchema, type VehicleFormValues } from '@xeprime/validators';
+import { vehicleFormWithPhotosSchema, type VehicleFormValues } from '@xeprime/validators';
 import { trailingRequiredMark } from '@/components/form/required-mark';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { discountedPriceVnd } from '../pricing';
@@ -82,7 +82,6 @@ const EMPTY_DEFAULTS: VehicleFormValues = {
   deliveryEnabled: false,
   discountPercent: null,
   description: '',
-  mainImageUrl: null,
   images: [],
   media: [],
   features: [],
@@ -117,7 +116,6 @@ const REQUIREMENT_STEP: Record<PublishRequirement, string> = {
   [PUBLISH_REQUIREMENT.SELF_DRIVE_PRICE]: 'pricing',
   [PUBLISH_REQUIREMENT.LONG_TERM_PRICE]: 'pricing',
   [PUBLISH_REQUIREMENT.WITH_DRIVER_PRICE]: 'pricing',
-  [PUBLISH_REQUIREMENT.MAIN_IMAGE]: 'media',
   [PUBLISH_REQUIREMENT.PHOTOS]: 'media',
   [PUBLISH_REQUIREMENT.PLATE_NUMBER]: 'basic',
   [PUBLISH_REQUIREMENT.IDENTITY]: 'basic',
@@ -138,7 +136,7 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
 
   const applyApiFieldErrors = useApiFieldErrors();
   const resolver = useValidationResolver<VehicleFormValues>(
-    vehicleFormSchema,
+    vehicleFormWithPhotosSchema,
     'Vehicles.form.validation',
   );
 

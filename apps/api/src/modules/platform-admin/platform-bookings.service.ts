@@ -1,6 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@xeprime/prisma';
-import { API_ERROR_CODE, BOOKING_DATE_FIELD, type PaginationMeta } from '@xeprime/types';
+import {
+  API_ERROR_CODE,
+  BOOKING_DATE_FIELD,
+  BOOKING_STATUS,
+  PLATFORM_TRIP_QUEUE,
+  TRIP_PICKUP_WINDOW_HOURS,
+  type PaginationMeta,
+} from '@xeprime/types';
 import { maskPhone } from '../../common/mask';
 import {
   bookingMoney,
@@ -8,7 +15,7 @@ import {
   loadBookingMoneySides,
   type BookingMoneySides,
 } from '../../common/booking-money';
-import { paginationMeta, resolvePaging } from '../../common/pagination';
+import { paginationMeta, resolvePaging, type ResolvedPaging } from '../../common/pagination';
 import { phoneLookupVariants } from '../../common/phone';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -20,6 +27,12 @@ import {
   PlatformBookingDto,
   PlatformBookingListQueryDto,
 } from './dto/platform-booking.dto';
+import type { PlatformTripBookingListQueryDto } from './dto/platform-trip.dto';
+
+const HOUR_MS = 3_600_000;
+
+/** Đơn "sắp giao xe": đã có đơn, xe chưa rời bãi. `confirmed` chỉ còn ở dữ liệu cũ (ADR 0047). */
+const UPCOMING_STATUSES: string[] = [BOOKING_STATUS.RESERVED, BOOKING_STATUS.CONFIRMED];
 
 const LIST_SELECT = {
   id: true,
@@ -94,11 +107,65 @@ export class PlatformBookingsService {
         : {}),
     };
 
+    return this.page(where, [{ createdAt: 'desc' }, { id: 'desc' }], paging);
+  }
+
+  /**
+   * Hàng đợi VẬN HÀNH của màn "Vận hành chuyến" — cùng dòng dữ liệu với danh sách tra cứu, khác
+   * ở tập và thứ tự: GẤP lên đầu.
+   *
+   *  - `pickup_soon`: đơn chưa giao xe có giờ nhận trong `TRIP_PICKUP_WINDOW_HOURS` tới — KỂ CẢ
+   *    đã quá giờ (xe chưa rời bãi là việc cần gọi, không phải thứ để lọc mất). Xếp theo giờ nhận
+   *    tăng dần nên quá giờ tự lên đầu.
+   *  - `active`: xe đang ở với khách, xếp theo giờ trả — quá giờ trả lên đầu.
+   */
+  async listQueue(
+    query: PlatformTripBookingListQueryDto,
+    now: Date = new Date(),
+  ): Promise<{ data: PlatformBookingDto[]; meta: PaginationMeta }> {
+    const paging = resolvePaging(query, PLATFORM_BOOKING_DEFAULT_LIMIT, PLATFORM_BOOKING_MAX_LIMIT);
+    const q = query.q?.trim();
+    const pickupSoon = query.queue === PLATFORM_TRIP_QUEUE.PICKUP_SOON;
+
+    const where: Prisma.BookingWhereInput = {
+      deletedAt: null,
+      ...(query.tenantId ? { tenantId: query.tenantId } : {}),
+      ...(pickupSoon
+        ? {
+            status: { in: UPCOMING_STATUSES },
+            pickupAt: { lte: new Date(now.getTime() + TRIP_PICKUP_WINDOW_HOURS * HOUR_MS) },
+          }
+        : { status: BOOKING_STATUS.ACTIVE }),
+      ...(q
+        ? {
+            OR: [
+              { code: { contains: q, mode: 'insensitive' } },
+              { customerName: { contains: q, mode: 'insensitive' } },
+              { vehicle: { name: { contains: q, mode: 'insensitive' } } },
+              { vehicle: { plateNumber: { contains: q, mode: 'insensitive' } } },
+              { tenant: { name: { contains: q, mode: 'insensitive' } } },
+            ],
+          }
+        : {}),
+    };
+
+    return this.page(
+      where,
+      pickupSoon ? [{ pickupAt: 'asc' }, { id: 'asc' }] : [{ returnAt: 'asc' }, { id: 'asc' }],
+      paging,
+    );
+  }
+
+  private async page(
+    where: Prisma.BookingWhereInput,
+    orderBy: Prisma.BookingOrderByWithRelationInput[],
+    paging: ResolvedPaging,
+  ): Promise<{ data: PlatformBookingDto[]; meta: PaginationMeta }> {
     const [total, rows] = await this.prisma.$transaction([
       this.prisma.booking.count({ where }),
       this.prisma.booking.findMany({
         where,
-        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        orderBy,
         skip: paging.skip,
         take: paging.take,
         select: LIST_SELECT,

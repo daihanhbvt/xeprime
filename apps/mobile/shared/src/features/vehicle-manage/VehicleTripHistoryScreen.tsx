@@ -11,8 +11,8 @@ import {
   type VehicleTripHistoryFilter,
   VEHICLE_TRIP_HISTORY_FILTER_VALUES,
   VEHICLE_TRIP_HISTORY_KIND,
-  type CustomerTripStage,
 } from '@xeprime/types';
+import { metaColor } from '@/lib/status-meta';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { Avatar } from '@/components/ui/Avatar';
@@ -44,14 +44,8 @@ import { useVehicleTripHistory } from './hooks/use-vehicle-settings';
  * lọc chết theo màn (ADR 0004).
  */
 export function VehicleTripHistoryScreen({ vehicleId }: { vehicleId: string }) {
-  const t = useTranslations('VehicleManage');
-
   return (
-    <VehicleManageShell
-      vehicleId={vehicleId}
-      section={VEHICLE_MANAGE_SECTION.TRIP_HISTORY}
-      title={t('tripHistory.title')}
-    >
+    <VehicleManageShell vehicleId={vehicleId} section={VEHICLE_MANAGE_SECTION.TRIP_HISTORY}>
       {() => <TripHistoryBody vehicleId={vehicleId} />}
     </VehicleManageShell>
   );
@@ -156,7 +150,7 @@ function TripHistoryCard({ item }: { item: VehicleTripHistoryItem }) {
           </Text>
           <StatusBadge
             label={domainLabel('customerTripStage', item.stage)}
-            color={CUSTOMER_TRIP_STAGE_META[item.stage as CustomerTripStage].color}
+            color={metaColor(CUSTOMER_TRIP_STAGE_META, item.stage)}
             size="sm"
           />
         </XStack>
@@ -198,7 +192,16 @@ function TripHistoryCard({ item }: { item: VehicleTripHistoryItem }) {
           {targetId ? (
             <InlineAction
               label={isBooking ? t('openBooking') : t('openRequest')}
-              onPress={() => navigateOnce(ROUTES.booking.detail(targetId))}
+              /*
+                Chuyến CHO THUÊ mở ở khu quản lý của app Partner (ADR 0053): đơn → chi tiết đơn,
+                yêu cầu → hộp thư yêu cầu (không có màn chi tiết yêu cầu riêng). "Chuyến của tôi"
+                (`/trips`) là chuyến ĐI THUÊ của tài khoản khách, không có ở app này.
+              */
+              onPress={() =>
+                navigateOnce(
+                  isBooking ? ROUTES.manage.bookingDetail(targetId) : ROUTES.manage.requests(),
+                )
+              }
             />
           ) : null}
         </XStack>

@@ -43,7 +43,8 @@ const files = ROOTS.flatMap((root) => sourceFiles(root)).map((path) => ({
 describe('phủ font toàn app', () => {
   it('có tìm thấy mã nguồn để quét', () => {
     // Chặn trường hợp bài test tự vô hiệu hoá vì đường dẫn đổi — khi đó nó xanh mà không kiểm gì.
-    expect(files.length).toBeGreaterThan(50);
+    // Ngưỡng theo app NHỎ hơn: app XePrime chỉ còn route khách từ ADR 0053 (~35 file).
+    expect(files.length).toBeGreaterThan(20);
   });
 
   it('mọi `TextInput` được vẽ ra đều khai `fontFamily`', () => {

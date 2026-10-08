@@ -20,17 +20,17 @@ import styles from './SubscriptionWorkspace.module.css';
 /**
  * "Gói & hạn mức" + "Hoá đơn thanh toán" (W2, ADR 0015/0026).
  *
- * Dựng ở HAI khu:
- *  - `/manage/shop?section=plan` — một section của trang Cửa hàng (gian hàng tuyến gói);
- *  - `/account/subscription` — trang riêng của chủ xe tuyến hoa hồng.
+ * Dựng ở HAI chỗ, cùng một vai — section "gói" của trang hồ sơ ở mỗi tuyến:
+ *  - `SHOP?section=plan` — "Gói & hạn mức" của trang Cửa hàng (gian hàng tuyến gói);
+ *  - `ACCOUNT?section=plan` — "Gói dịch vụ" của "Hồ sơ chủ xe" (tuyến hoa hồng, 07/10/2026).
  *
- * Khu thứ hai là phễu nâng cấp lên tuyến gian hàng (ADR 0028 điều 1) và chủ xe tuyến hoa hồng
- * KHÔNG vào `/manage` được — gộp màn này vào trang Cửa hàng mà không chừa đường đó ra là cắt
- * đứt chính con đường người dùng đi để trả tiền.
+ * Chỗ thứ hai là phễu nâng cấp lên tuyến gian hàng (ADR 0028 điều 1), và chủ xe tuyến hoa hồng
+ * KHÔNG vào trang Cửa hàng được — đặt màn này chỉ ở đó là cắt đứt chính con đường người dùng đi
+ * để trả tiền.
  *
- * `header` đi vào bằng prop thay vì tự dựng: hai khu có hai component tiêu đề khác nhau
- * (`ManagePageHeader` / `AccountPageHeader`), còn trang Cửa hàng thì đã có tiêu đề section của
- * riêng nó và truyền `null`. Mỗi trang vẫn đúng một `h1`.
+ * `header` đi vào bằng prop thay vì tự dựng: cả hai chỗ hiện đều đã có tiêu đề section của riêng
+ * nó và truyền `null`; một trang nào dựng màn này đứng riêng thì tự đưa tiêu đề của trang đó vào.
+ * Mỗi trang vẫn đúng một `h1`.
  *
  * ## Mua gói là quyền RIÊNG
  *
@@ -52,17 +52,10 @@ import styles from './SubscriptionWorkspace.module.css';
  * gì. Ở đây CTA phía trên chỉ cuộn xuống đúng khối đó.
  */
 export function SubscriptionWorkspace({
-  header,
-  framed = false,
+  header = null,
 }: {
-  header: ReactNode;
-  /**
-   * Khối "gói hiện hành" tự vẽ thẻ trắng của nó.
-   *
-   * Bật ở `/account/subscription`, nơi màn này là cả một TRANG; tắt ở trang Cửa hàng, nơi nó
-   * được nhúng vào trong `SectionCard` và khung thứ hai là hai lớp viền cho một nội dung.
-   */
-  framed?: boolean;
+  /** Tiêu đề TRANG khi màn này đứng riêng; nhúng trong một `SectionCard` thì bỏ trống. */
+  header?: ReactNode;
 }) {
   const t = useTranslations('Subscription');
   const tCommon = useTranslations('Common');
@@ -121,7 +114,6 @@ export function SubscriptionWorkspace({
         data={me.data}
         canPurchase={canPurchase}
         upgrading={upgrading}
-        framed={framed}
         onPurchase={() => (upgrading ? focusUpgradeSection() : setPurchaseOpen(true))}
       />
       {/*

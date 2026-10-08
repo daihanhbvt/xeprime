@@ -165,6 +165,11 @@ async function seedTrip(
     });
   }
 
+  const requestStatus =
+    opts.requestStatus ??
+    (bookingId
+      ? BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING
+      : BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
   await prisma.bookingRequest.create({
     data: {
       // Hạn phản hồi 60 phút (25/08) — cột NOT NULL, server luôn tự đặt.
@@ -172,11 +177,11 @@ async function seedTrip(
       id: requestId,
       tenantId,
       vehicleId,
-      status:
-        opts.requestStatus ??
-        (bookingId
-          ? BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING
-          : BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL),
+      status: requestStatus,
+      // `awaiting_hold` chỉ tới được qua lượt NHẬN — DB bắt buộc có `decided_at` (ADR 0055).
+      ...(requestStatus === BOOKING_REQUEST_STATUS.AWAITING_HOLD
+        ? { decidedAt: new Date(), decidedBy: ownerId }
+        : {}),
       customerName: 'Khách Test',
       customerPhone: '0900000000',
       customerUserId: opts.customerUserId ?? customerId,
@@ -377,6 +382,14 @@ describe('Chiếu trạng thái sang chặng của khách', () => {
     const noShow = await seedTrip({ bookingStatus: BOOKING_STATUS.NO_SHOW });
     expect((await trips.detail(customerId, rejected.requestId)).stage).toBe(
       CUSTOMER_TRIP_STAGE.REJECTED,
+    );
+    // Không ai trả lời KHÔNG phải bị từ chối — hai nhãn riêng (07/10/2026).
+    const expired = await seedTrip({
+      bookingStatus: null,
+      requestStatus: BOOKING_REQUEST_STATUS.EXPIRED,
+    });
+    expect((await trips.detail(customerId, expired.requestId)).stage).toBe(
+      CUSTOMER_TRIP_STAGE.EXPIRED,
     );
     expect((await trips.detail(customerId, noShow.requestId)).stage).toBe(
       CUSTOMER_TRIP_STAGE.NO_SHOW,
@@ -1035,13 +1048,7 @@ describe('Không lộ dữ liệu của chủ xe', () => {
     });
   });
 
-  maybe('đã duyệt / đã lên đơn: mở SĐT và biển số ở mọi chặng sau đó', async () => {
-    const approved = await seedTrip({
-      bookingStatus: null,
-      requestStatus: BOOKING_REQUEST_STATUS.APPROVED_BY_HOST,
-    });
-    expect((await trips.detail(customerId, approved.requestId)).shop.phone).toBe('0909123456');
-
+  maybe('đã lên đơn: mở SĐT và biển số ở mọi chặng sau đó', async () => {
     // Đơn đã tồn tại thì mọi kết cục về sau vẫn giữ quyền liên hệ — kể cả chuyến bị huỷ, khách
     // vẫn cần gọi được chủ xe để xử lý nốt.
     const statuses = [

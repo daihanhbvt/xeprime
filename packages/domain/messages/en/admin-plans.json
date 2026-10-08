@@ -146,23 +146,19 @@
     }
   },
   "tenant": {
-    "title": "Service plan",
-    "expires": "Expires {date}",
+    "title": "Subscription",
     "quotaSummary": "up to {vehicles} vehicles · {branches} branches",
-    "noQuota": "no purchased limits",
-    "noPlan": "No plan yet",
+    "noPlan": "No plan",
     "assignButton": "Assign plan",
     "renewButton": "Renew / change plan",
     "historyError": "Could not load the subscription history.",
     "historyEmpty": "No subscription history yet",
-    "expiredTag": "Expired",
-    "cancelAction": "Cancel",
-    "cancelConfirmTitle": "Cancel this subscription early?",
-    "cancelConfirmOk": "Cancel subscription",
+    "cancelAction": "Cancel term",
+    "cancelConfirmOk": "Cancel term",
     "cancelConfirmCancel": "Close",
-    "cancelSuccess": "Subscription cancelled",
+    "cancelSuccess": "Plan term cancelled",
     "assign": {
-      "title": "Assign / renew plan",
+      "title": "Assign plan",
       "selectPlaceholder": "Pick a plan",
       "planOptionCommission": "{name} — {percent}% commission per trip",
       "planOptionPackage": "{name} — up to {vehicles} vehicles",
@@ -176,14 +172,62 @@
       "priceHelp": "Leave empty to use the listed price for this term. Enter a different number if this is a negotiated price.",
       "priceRequiredHelp": "This tier has no listed price for the selected term — enter the negotiated price.",
       "pricePlaceholderRequired": "Enter the negotiated price",
-      "quotaSummary": "Tier limits: up to {vehicles} vehicles · {branches} branches",
-      "preview": "New cycle: {from} → {to}",
-      "previewQueued": "(queued after the current plan)",
-      "previewTotal": "Total for the term: {amount}",
       "previewNeedsPrice": "Enter a price for the term to see the total.",
       "selectFirst": "Pick a plan first",
-      "success": "Plan assigned"
+      "titleRenew": "Renew or change plan",
+      "currentContext": "Last paid term: {plan}, ends {date}.",
+      "plan": "Plan",
+      "timing": "Effective from",
+      "timingNext": "Next term — starts {date}",
+      "timingNextHelp": "The running plan stays until it ends; the new term follows right after.",
+      "timingNow": "Right now",
+      "timingNowHelp": "{count, plural, one {# remaining term ends} other {# remaining terms end}} when you confirm. Unused time is not refunded automatically — enter a negotiated price to offset it if needed.",
+      "kind": {
+        "assign": "Assign a new plan",
+        "renew": "Renew the same plan",
+        "schedule_change": "Change plan from next term",
+        "change_now": "Change plan now"
+      },
+      "kindBody": {
+        "assign": "{plan} starts as soon as you confirm.",
+        "renew": "The new {plan} term follows right after {date}.",
+        "schedule_change": "{current} stays until {date}; {plan} starts on {date}.",
+        "change_now": "{count, plural, one {# remaining term ends} other {# remaining terms end}} now; {plan} starts immediately."
+      },
+      "previewPeriod": "Valid",
+      "previewTotal": "Term total",
+      "previewQuota": "Limits",
+      "submit": {
+        "assign": "Assign plan",
+        "renew": "Renew",
+        "schedule_change": "Schedule plan change",
+        "change_now": "Change plan now"
+      },
+      "success": {
+        "assign": "Plan assigned",
+        "renew": "Plan renewed",
+        "schedule_change": "Plan change scheduled for the next term",
+        "change_now": "Plan changed"
+      }
     },
-    "termMonths": "{months} months"
+    "termMonths": "{months} months",
+    "currentLabel": "Active",
+    "scheduledLabel": "Next term · scheduled",
+    "endsOn": "Ends {date}",
+    "daysLeft": "{days, plural, =0 {ends today} one {# day left} other {# days left}}",
+    "startsIn": "{days, plural, =0 {starts today} one {starts in # day} other {starts in # days}}",
+    "period": "{from} → {to}",
+    "pricePerTerm": "{amount} / {months, plural, one {# month} other {# months}}",
+    "noPlanHint": "This shop has no running plan term.",
+    "historyTitle": "Term history",
+    "cancelScheduledAction": "Cancel schedule",
+    "cancelCurrentTitle": "Cancel the active term?",
+    "cancelCurrentBody": "The shop loses this plan as soon as you confirm and moves to the default commission track. Money already collected is not refunded automatically.",
+    "cancelScheduledTitle": "Cancel the scheduled term?",
+    "cancelScheduledBody": "This term will not start; the current plan keeps running until it ends. Money already collected is not refunded automatically.",
+    "origin": {
+      "payment": "Activated automatically when paid in full",
+      "system": "Default commission track assigned by the system"
+    }
   }
 }

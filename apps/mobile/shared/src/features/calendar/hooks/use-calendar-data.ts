@@ -1,7 +1,6 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { queryKeys, type QueryParams } from '@xeprime/api-client';
-import { useBranchScopeParams } from '@/features/branches/hooks/use-branch-scope';
 import { calendarApi, calendarRangeParams, type CalendarEvent, type CalendarFilters } from '../api';
 import { buildRange, type CalendarRange } from '../utils/calendar-date.util';
 
@@ -51,7 +50,6 @@ export function useCalendarData(
   refetch: () => void;
 } {
   const range = useMemo(() => buildRange(filters.from, filters.days), [filters.from, filters.days]);
-  const branchScope = useBranchScopeParams();
 
   /*
    * `buildRange` trả `Date` — mốc TUYỆT ĐỐI dựng từ ranh giới ngày giờ VN, không phải giá trị một
@@ -67,9 +65,9 @@ export function useCalendarData(
         endAt: range.endAt.toISOString(),
         vehicleType: filters.vehicleType,
         q: filters.q,
-        branchId: branchScope.branchId,
+        branchId: filters.branchId ?? undefined,
       }),
-    [range.startAt, range.endAt, filters.vehicleType, filters.q, branchScope.branchId],
+    [range.startAt, range.endAt, filters.vehicleType, filters.q, filters.branchId],
   );
 
   const resourceQuery = useMemo(() => ({ ...query, sort: filters.sort }), [query, filters.sort]);

@@ -34,11 +34,17 @@ export function StartSupportDialog({
   tenantName,
   open,
   onClose,
+  next = adminTenantSupportPath.root,
 }: {
   tenantId: string;
   tenantName: string;
   open: boolean;
   onClose: () => void;
+  /**
+   * Trang ĐẦU TIÊN trong phiên — mặc định là gốc không gian hỗ trợ. Màn mở phiên vì MỘT bản ghi
+   * (chi tiết một xe) truyền đường dẫn của chính bản ghi đó, để nhân sự không phải đi tìm lại.
+   */
+  next?: (contextId: string) => string;
 }) {
   const t = useTranslations('TenantSupport.start');
   const router = useRouter();
@@ -64,7 +70,7 @@ export function StartSupportDialog({
   const submit = handleSubmit((values) => {
     start.mutate(
       { tenantId, mode: values.mode, reason: values.reason.trim() },
-      { onSuccess: (context) => router.push(adminTenantSupportPath.root(context.id)) },
+      { onSuccess: (context) => router.push(next(context.id)) },
     );
   });
 

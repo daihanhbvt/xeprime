@@ -12,7 +12,8 @@ import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_REGISTRATION_SOURCE } from '@/navigation/vehicle-registration-source';
 import type { VehicleRegistrationSource } from '@/navigation/vehicle-registration-source';
-import { useNavigateOnce } from '@/hooks/use-navigate-once';
+import { useRouter } from 'expo-router';
+import type { Href } from 'expo-router';
 import type { QuickRegistrationResult } from '../hooks/use-quick-vehicle';
 
 /**
@@ -50,7 +51,7 @@ export function QuickVehicleSuccess({
 }) {
   const t = useTranslations('ListYourVehicle.success');
   const tRequirement = useTranslations('Vehicles.publish.requirements');
-  const navigateOnce = useNavigateOnce();
+  const router = useRouter();
 
   const pendingReview = result.vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW;
   const submitted = result.submitted || pendingReview;
@@ -65,11 +66,6 @@ export function QuickVehicleSuccess({
         ? t('submittedTitle')
         : t('draftTitle');
 
-  const manageHref =
-    source === VEHICLE_REGISTRATION_SOURCE.MANAGE
-      ? ROUTES.manage.vehicles()
-      : ROUTES.account.vehicleManage(result.vehicle.id);
-
   /*
     KHÔNG dùng `vehicleListPathFor(source)` ở đây. Hàm đó trả landing "Trở thành chủ xe" cho
     `marketplace` vì nó phục vụ nút QUAY LẠI — lúc chưa đăng xe thì đúng là chưa có danh sách nào
@@ -80,6 +76,27 @@ export function QuickVehicleSuccess({
     source === VEHICLE_REGISTRATION_SOURCE.MANAGE
       ? ROUTES.manage.vehicles()
       : ROUTES.account.vehicles();
+
+  /*
+   * RỜI màn kết quả là rời HẲN — `replace` chứ không `push` (sửa 06/10/2026).
+   *
+   * Wizard và màn kết quả dùng CHUNG một route, nên `push` để nguyên nó dưới đáy stack: người dùng
+   * bấm "Quản lý xe" → mở chi tiết xe → lui lại hai nhịp là rơi ngược vào "Đã gửi xe đi duyệt" của
+   * chiếc xe vừa tạo. Màn đó không còn nghĩa gì sau khi đã rời nó, và từ đó nút "Đăng thêm xe" lại
+   * dựng một wizard mới chồng lên.
+   *
+   * Thay wizard bằng DANH SÁCH xe trước, rồi mới chồng đích thật lên: lui từ bất cứ đâu trong
+   * nhánh này đều về danh sách — đúng câu trả lời cho "xe tôi đâu?".
+   */
+  const leaveTo = (href: Href) => {
+    router.replace(listHref);
+    if (href !== listHref) router.push(href);
+  };
+
+  const manageHref =
+    source === VEHICLE_REGISTRATION_SOURCE.MANAGE
+      ? ROUTES.manage.vehicles()
+      : ROUTES.account.vehicleManage(result.vehicle.id);
 
   return (
     <>
@@ -145,16 +162,16 @@ export function QuickVehicleSuccess({
                   label={t('incompleteCta')}
                   variant="secondary"
                   size="sm"
-                  onPress={() => navigateOnce(manageHref)}
+                  onPress={() => leaveTo(manageHref)}
                 />
               </YStack>
             </Callout>
           ) : null}
 
           <YStack gap={space.sm}>
-            <Button label={t('manageCta')} onPress={() => navigateOnce(manageHref)} />
+            <Button label={t('manageCta')} onPress={() => leaveTo(manageHref)} />
             <Button label={t('addAnotherCta')} variant="secondary" onPress={onAddAnother} />
-            <Button label={t('listCta')} variant="ghost" onPress={() => navigateOnce(listHref)} />
+            <Button label={t('listCta')} variant="ghost" onPress={() => leaveTo(listHref)} />
           </YStack>
         </YStack>
       </Screen>

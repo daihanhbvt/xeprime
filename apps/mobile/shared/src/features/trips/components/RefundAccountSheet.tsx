@@ -6,17 +6,14 @@ import {
   type BankAccount,
   type BankAccountScope,
 } from '@/api/bank-accounts/api';
-import { WALLET_SCOPE } from '@/api/wallet/api';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { MenuOption, MenuOptionList } from '@/components/ui/MenuOption';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
-import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { BankAccountFormSheet } from '@/features/bank-accounts/components/BankAccountFormSheet';
 import { useBankAccounts } from '@/features/bank-accounts/hooks/use-bank-accounts';
-import { walletScopeFor } from '@/features/wallet/wallet-scope';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { colors, fontSize, space } from '@/theme/tokens';
@@ -25,14 +22,9 @@ import { useProvideRefundAccount } from '../hooks/use-trips';
 /**
  * Khai tài khoản nhận tiền hoàn khoản giữ chỗ — ADR 0033.
  *
- * ## Scope đi theo CHỦ VÍ, không đóng đinh `account`
- *
- * ADR 0038 ràng buộc 6: sổ tài khoản ngân hàng đi theo chủ ví, qua cùng luật chọn tenant mà
- * `resolveRefundWalletOwner` dùng ở server. Một chủ xe có ví thuộc TENANT, nên hỏi scope
- * `account` ở đây sẽ hiện một danh sách RỖNG cho người đã khai tài khoản từ lâu — rồi họ khai
- * lại, và sổ vừa hợp nhất bị tách đôi đúng ở chỗ nó vừa được gộp.
- *
- * Đây là lý do scope suy từ `walletScopeFor`, cùng hàm mà màn ví và màn tài khoản nhận tiền dùng.
+ * Sổ tài khoản ngân hàng đi theo CHỦ VÍ (ADR 0038 ràng buộc 6). Từ ADR 0053 điều 8 chủ ví của tiền
+ * hoàn luôn là TÀI KHOẢN KHÁCH đã đặt chuyến — chủ xe đi thuê bằng một tài khoản khách riêng — nên
+ * sổ ở đây luôn là sổ `account`.
  */
 export function RefundAccountSheet({
   tripId,
@@ -50,11 +42,11 @@ export function RefundAccountSheet({
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
 
-  const { data: user } = useCurrentUser();
-  const scope: BankAccountScope =
-    walletScopeFor(user) === WALLET_SCOPE.SHOP
-      ? BANK_ACCOUNT_SCOPE.SHOP
-      : BANK_ACCOUNT_SCOPE.ACCOUNT;
+  /*
+   * Khoản hoàn LUÔN về tài khoản KHÁCH đã đặt chuyến (ADR 0053 điều 8 — server `refundBankOwner`
+   * chỉ còn chủ `user`), nên sổ tài khoản nhận tiền luôn là sổ `account`.
+   */
+  const scope: BankAccountScope = BANK_ACCOUNT_SCOPE.ACCOUNT;
 
   const { data: accounts, isPending } = useBankAccounts(scope, open);
   const provide = useProvideRefundAccount(tripId);

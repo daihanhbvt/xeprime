@@ -140,7 +140,7 @@ minimumReleaseAgeExclude:
 
 # pnpm 11 thay `onlyBuiltDependencies` bằng map này. Thiếu nó thì postinstall bị chặn và
 # `pnpm install` fail bằng ERR_PNPM_IGNORED_BUILDS sau khi đã cài xong package.
-# Prisma tải engine; esbuild/sharp/unrs-resolver/re2 cần native binary. Nhóm false là
+# Prisma tải engine; esbuild/sharp/unrs-resolver/re2/bcrypt cần native binary. Nhóm false là
 # telemetry/tuỳ chọn, không cần chạy.
 allowBuilds:
   '@firebase/util': false
@@ -152,6 +152,9 @@ allowBuilds:
   '@prisma/engines': true
   '@scarf/scarf': false
   '@swc/core': false
+  # bcrypt có prebuild N-API cho linux-x64 glibc/musl, arm64, win32 và darwin, nên script
+  # `node-gyp-build` chỉ kiểm rồi thoát — image `bookworm-slim` không cần trình biên dịch.
+  bcrypt: true
   esbuild: true
   prisma: true
   protobufjs: false

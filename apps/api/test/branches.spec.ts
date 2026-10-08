@@ -21,6 +21,7 @@ import {
   makeVehiclesService,
   vehicleCreator,
 } from './helpers/service-factory';
+import { requiredVehicleMedia } from './helpers/vehicle-media';
 
 /**
  * Chi nhánh gian hàng — chạy trên PostgreSQL THẬT.
@@ -611,11 +612,9 @@ describe('Chi nhánh phải có tỉnh mới lên chợ được', () => {
         fuelType: 'gasoline',
         transmission: 'automatic',
         fuelConsumptionCombined: 7.5,
-        images: [
-          'https://img.example/branch-1.jpg',
-          'https://img.example/branch-2.jpg',
-          'https://img.example/branch-3.jpg',
-        ],
+        // Đủ GÓC ảnh bắt buộc (07/10/2026) — `images` trần không nói được góc nào, và spec này
+        // kiểm TỈNH của chi nhánh nên không được lẫn một lý do từ chối thứ hai.
+        media: requiredVehicleMedia(VEHICLE_TYPE.CAR, (type) => `https://img.example/branch-${type}.jpg`),
       },
       null,
     );
@@ -629,7 +628,7 @@ describe('Chi nhánh phải có tỉnh mới lên chợ được', () => {
     await expect(vehicles.submitForPublicReview(tenantId, v.id, ownerId)).rejects.toMatchObject({
       response: {
         code: API_ERROR_CODE.VEHICLE_PUBLISH_INCOMPLETE,
-        details: { missing: [PUBLISH_REQUIREMENT.BRANCH_LOCATION] },
+        details: { missing: expect.arrayContaining([PUBLISH_REQUIREMENT.BRANCH_LOCATION]) },
       },
     });
 

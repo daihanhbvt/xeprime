@@ -1,16 +1,25 @@
+import { OwnerLiteHomeScreen } from '@/features/account/OwnerLiteHomeScreen';
 import { ShopDashboardScreen } from '@/features/dashboard/ShopDashboardScreen';
+import { PartnerTrackView } from './PartnerTrackView';
 
 /**
- * Màn đầu của khu quản lý — tổng quan GIAN HÀNG (SHP-07).
+ * Màn đầu của khu quản lý — MỘT đường dẫn, nội dung theo TUYẾN (web `ManageHome`, ADR 0053):
+ * gian hàng tuyến gói thấy Tổng quan (SHP-07), chủ xe tuyến hoa hồng thấy trang chủ Owner Lite.
  *
- * KHÔNG còn nhánh `platformRole` (tách app 25/09/2026): admin nền tảng không được phục vụ trên
- * hai app mobile — cổng đăng nhập XePrime Partner trả 403 `PARTNER_ACCESS_REQUIRED` cho tài
- * khoản chỉ có vai nền tảng, cùng luật `canUsePartnerApp` ở server. `PlatformHomeScreen`
- * (placeholder "đang phát triển") vì thế ra khỏi app thay vì ở lại như một nhánh chết.
+ * Đi qua `PartnerTrackView` để có màn chờ khi `/auth/me` chưa về — nếu không, một gian hàng gói sẽ
+ * thoáng dựng trang Owner Lite (tuyến "chưa xác định" rơi vào nhánh hoa hồng) và bắn truy vấn thừa.
+ *
+ * Hai tuyến còn lại (chưa có gian hàng, gói chưa thanh toán) không bao giờ đứng ở đây — `ScopeGuard`
+ * đã đưa họ tới màn chọn cách cho thuê / màn onboarding.
  *
  * Gian hàng chưa `active` vẫn VÀO ĐƯỢC: chặn ở cửa là giấu mất chính cái màn giải thích vì sao
  * họ bị chặn (doc 15 §4.4). Cái đổi theo trạng thái là NỘI DUNG dải trên cùng, không phải quyền vào.
  */
 export function ManageHomeScreen() {
-  return <ShopDashboardScreen />;
+  return (
+    <PartnerTrackView
+      packageView={<ShopDashboardScreen />}
+      commissionView={<OwnerLiteHomeScreen />}
+    />
+  );
 }

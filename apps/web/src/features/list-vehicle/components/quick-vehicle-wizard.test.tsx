@@ -276,9 +276,12 @@ async function fillIdentity() {
   fireEvent.change(screen.getByLabelText(/Số chỗ ngồi/), { target: { value: '5' } });
 }
 
-/** Ảnh đại diện + 3 ảnh vị trí = 4 ảnh khác nhau — đủ mức tối thiểu để lên chợ. */
+/**
+ * Đủ NĂM góc ảnh bắt buộc của ô tô (07/10/2026) — không còn ô "ảnh đại diện" riêng, nên năm ô
+ * tải lên trên bảng ảnh chính là năm góc.
+ */
 async function uploadPhotos() {
-  const inputs = [...document.querySelectorAll('input[type="file"]')].slice(0, 4);
+  const inputs = [...document.querySelectorAll('input[type="file"]')].slice(0, 5);
   for (const [index, input] of inputs.entries()) {
     fireEvent.change(input, {
       target: { files: [new File(['x'], `anh-${index}.jpg`, { type: 'image/jpeg' })] },
@@ -461,7 +464,7 @@ describe('Ba bước — đúng ba, và nút cuối nói đúng việc', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
     expect(
-      await screen.findByText(/Cần bổ sung để xe đủ điều kiện lên chợ: Tối thiểu 4 ảnh xe/),
+      await screen.findByText(/Cần bổ sung để xe đủ điều kiện lên chợ: Đủ các góc ảnh bắt buộc/),
     ).toBeTruthy();
     expect(api.createVehicle).not.toHaveBeenCalled();
   });
@@ -660,7 +663,7 @@ describe('Một cổng duyệt: gửi thẳng XE', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Lưu & gửi duyệt' }));
 
     expect(await screen.findByRole('heading', { name: 'Xe chưa gửi duyệt được' })).toBeTruthy();
-    expect(screen.getByText('Tối thiểu 4 ảnh xe')).toBeTruthy();
+    expect(screen.getByText('Đủ các góc ảnh bắt buộc')).toBeTruthy();
     expect(screen.getByText('Chi nhánh có tỉnh/thành')).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Đã gửi xe đi duyệt' })).toBeNull();
     // Xe ĐÃ tồn tại — lối vào sửa phải có mặt để chủ xe bổ sung rồi gửi lại.

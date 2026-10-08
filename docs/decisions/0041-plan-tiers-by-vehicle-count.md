@@ -162,6 +162,32 @@ DB). Mở kỳ hạn tuỳ ý là một thay đổi ở DB CHECK và ở `addCal
 từ `now` chứ không nối đuôi (đúng ngữ nghĩa "đổi hợp đồng" thay vì "gia hạn"). Endpoint đó chưa có
 nơi gọi nào ở web hay app native.
 
+> **Bổ sung 08/10/2026 — thời điểm áp dụng và luật huỷ.** Hai lượt bấm rời nhau (huỷ rồi gán) để
+> lại một khoảng giữa hai request mà gian hàng không có gói nào, và giao diện cũ gọi kỳ nối đuôi là
+> "Đang hiệu lực" như kỳ đang chạy. Từ ngày này:
+>
+> 1. `POST /platform/tenants/:id/subscriptions` nhận `timing` (`SUBSCRIPTION_CHANGE_TIMING`):
+>    `next_term` (mặc định) nối đuôi như ADR 0010 điều 2; `now` huỷ MỌI kỳ còn hạn và bắt đầu kỳ
+>    mới từ `now` trong CÙNG một transaction. Vẫn mỗi kỳ trả phí bị huỷ một dòng audit
+>    `subscription.cancel` (lý do `replaced`). Phần còn lại của kỳ bị huỷ không tự hoàn — bù trừ
+>    bằng giá đàm phán (prorate vẫn hoãn, ADR 0024).
+> 2. MỘT bảng quyết định — `planSubscriptionChain` (`@xeprime/types`) — cho admin gán, webhook kích
+>    hoạt và phần xem trước ở web. Đuôi chỉ chọn trong kỳ TRẢ PHÍ; dòng hoa hồng còn hạn luôn bị thay,
+>    kể cả dòng hạ về hoa hồng đã xếp lịch sau kỳ gói.
+> 3. Audit tách bốn đường gán: `subscription.assign` · `renew` (cùng bậc) · `schedule_change`
+>    (khác bậc, từ kỳ sau) · `change_now` — kèm `previousTerm` / `replacedTerms` trong `after`.
+> 4. Luật huỷ — `subscriptionCancelBlockOf`, server và nút Huỷ ở web đọc cùng hàm: chỉ huỷ kỳ còn
+>    hạn ở ĐUÔI chuỗi (có kỳ xếp sau ⇒ `SUBSCRIPTION_LATER_TERM_EXISTS`); dòng hoa hồng ĐANG CHẠY
+>    không huỷ được (đổi tuyến bằng cách gán gói), dòng hoa hồng ĐÃ XẾP LỊCH thì huỷ được. Huỷ kỳ
+>    CUỐI CÙNG còn hạn gán lại dòng hoa hồng mặc định trong cùng transaction (`fallbackTerm` trong
+>    audit) — "không có gói" (pha `unconfigured`) không bao giờ là kết quả của một lượt huỷ.
+> 5. Trạng thái KỲ (`subscriptionTermStateOf`: đang hiệu lực / chờ đến kỳ / đã hết hạn / đã huỷ)
+>    chấm bằng đồng hồ SERVER và trả trong DTO (`termState`) — giao diện không in thẳng `status`.
+> 6. Mọi đường GHI chuỗi kỳ lấy khoá `pg_advisory_xact_lock(hashtext(subscriptionChainLockKey(tenant)))`
+>    trước khi đọc đuôi: admin gán/huỷ, webhook kích hoạt và job hết hạn ở worker.
+> 7. Dòng hệ thống không lưu ghi chú chữ; nguồn gốc kỳ là `origin` (`subscriptionOriginOf`), giao
+>    diện tự dịch (ADR 0012).
+
 ### 7. Ba bậc seed, và danh mục KHÔNG bị đóng ở con số ba
 
 Seed tạo ba bậc `package` cạnh bậc hoa hồng duy nhất (ADR 0038 điều 13 giữ nguyên):

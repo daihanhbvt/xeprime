@@ -46,6 +46,7 @@ import finance from '@xeprime/domain/messages/vi/finance.json';
 import adminCatalog from '@xeprime/domain/messages/vi/admin-catalog.json';
 import adminVehicles from '@xeprime/domain/messages/vi/admin-vehicles.json';
 import adminBookings from '@xeprime/domain/messages/vi/admin-bookings.json';
+import adminTrips from '@xeprime/domain/messages/vi/admin-trips.json';
 import adminTenants from '@xeprime/domain/messages/vi/admin-tenants.json';
 import tenantSupport from '@xeprime/domain/messages/vi/tenant-support.json';
 import adminPlans from '@xeprime/domain/messages/vi/admin-plans.json';
@@ -67,6 +68,7 @@ import platformMoney from '@xeprime/domain/messages/vi/platform-money.json';
 import platformSellers from '@xeprime/domain/messages/vi/platform-sellers.json';
 import adminStaff from '@xeprime/domain/messages/vi/admin-staff.json';
 import adminAccounts from '@xeprime/domain/messages/vi/admin-accounts.json';
+import adminAudit from '@xeprime/domain/messages/vi/admin-audit.json';
 
 const messages = {
   Common: common,
@@ -103,6 +105,7 @@ const messages = {
   AdminCatalog: adminCatalog,
   AdminVehicles: adminVehicles,
   AdminBookings: adminBookings,
+  AdminTrips: adminTrips,
   AdminTenants: adminTenants,
   TenantSupport: tenantSupport,
   AdminPlans: adminPlans,
@@ -124,6 +127,7 @@ const messages = {
   PlatformSellers: platformSellers,
   AdminStaff: adminStaff,
   AdminAccounts: adminAccounts,
+  AdminAudit: adminAudit,
 };
 
 export default messages;

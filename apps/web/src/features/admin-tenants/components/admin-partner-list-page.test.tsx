@@ -103,6 +103,18 @@ function tenant(over: Partial<AdminTenant> = {}): AdminTenant {
     phone: '0901234567',
     provinceName: 'TP. Hồ Chí Minh',
     vehicleCount: 12,
+    plan: {
+      phase: 'current',
+      billingMode: 'package',
+      planName: 'Gói nâng cao',
+      planCode: 'shop-advanced',
+      termStartsAt: '2026-07-01T00:00:00.000Z',
+      endsAt: '2027-07-01T00:00:00.000Z',
+      graceEndsAt: null,
+      vehicleLimitKind: 'total',
+      vehicleLimit: 20,
+      nextTerm: null,
+    },
     createdAt: '2026-07-01T00:00:00.000Z',
     ...over,
   };
@@ -295,6 +307,7 @@ describe('danh sách đối tác — filter, sắp xếp và URL', () => {
     expect(query.lastFilters).toEqual({
       partnerKind: PACKAGE_SHOP,
       status: 'all',
+      planState: 'all',
       q: undefined,
       sort: undefined,
       page: undefined,
@@ -313,6 +326,7 @@ describe('danh sách đối tác — filter, sắp xếp và URL', () => {
     expect(query.lastFilters).toEqual({
       partnerKind: PACKAGE_SHOP,
       status: 'active',
+      planState: 'all',
       q: 'demo',
       sort: 'vehicles',
       page: 3,
@@ -510,5 +524,94 @@ describe('danh sách đối tác — dữ liệu và hành động', () => {
     url = lastReplacedUrl();
     expect(url).not.toContain('tenant=');
     expect(url).not.toContain('tab=');
+  });
+});
+
+describe('danh sách gian hàng gói — gói hiện tại', () => {
+  it('cột "Gói hiện tại": tên gói, ngày hết hạn và số ngày còn lại', () => {
+    setQuery({
+      data: {
+        items: [tenant({ plan: { ...tenant().plan, endsAt: '2099-01-08T04:43:22.426Z' } })],
+        meta: META,
+      },
+    });
+    renderPage();
+
+    expect(screen.getAllByText('Gói hiện tại').length).toBeGreaterThan(0);
+    expect(screen.getByText('Gói nâng cao')).toBeTruthy();
+    expect(screen.getByText('Hết hạn 08/01/2099', { exact: false })).toBeTruthy();
+  });
+
+  it('kỳ đã xếp lịch hiện thành "Kỳ sau", không thành gói thứ hai đang chạy', () => {
+    setQuery({
+      data: {
+        items: [
+          tenant({
+            plan: {
+              ...tenant().plan,
+              planName: 'Gói cơ bản',
+              nextTerm: {
+                subscriptionId: 's2',
+                planName: 'Gói nâng cao',
+                planCode: 'shop-advanced',
+                startsAt: '2027-01-08T04:43:22.426Z',
+                endsAt: '2027-02-08T04:43:22.426Z',
+              },
+            },
+          }),
+        ],
+        meta: META,
+      },
+    });
+    renderPage();
+
+    expect(screen.getByText('Gói cơ bản')).toBeTruthy();
+    expect(screen.getByText('Kỳ sau: Gói nâng cao từ 08/01/2027')).toBeTruthy();
+  });
+
+  it('gian hàng chưa có gói nói rõ "Chưa có gói"', () => {
+    setQuery({
+      data: {
+        items: [
+          tenant({
+            plan: {
+              ...tenant().plan,
+              phase: 'unconfigured',
+              planName: null,
+              vehicleLimitKind: 'not_applicable',
+              vehicleLimit: null,
+            },
+          }),
+        ],
+        meta: META,
+      },
+    });
+    renderPage();
+
+    expect(screen.getByText('Chưa có gói')).toBeTruthy();
+  });
+
+  it('cột xe ghi "đã dùng / trần" khi kỳ gói có trần', () => {
+    setQuery({ data: { items: [tenant({ vehicleCount: 4 })], meta: META } });
+    renderPage();
+
+    expect(screen.getByText('/ 20')).toBeTruthy();
+  });
+
+  it('đọc `planState` từ URL ở danh sách gian hàng gói', () => {
+    nav.params = new URLSearchParams('planState=expiring');
+    setQuery({ data: { items: [tenant()], meta: META } });
+    renderPage();
+
+    expect((query.lastFilters as { planState?: string }).planState).toBe('expiring');
+  });
+
+  it('danh sách chủ xe cá nhân không có cột gói và bỏ qua `planState` lạc trên URL', () => {
+    nav.params = new URLSearchParams('planState=expiring');
+    setQuery({ data: { items: [tenant({ partnerKind: INDIVIDUAL_OWNER })], meta: META } });
+    renderPage(INDIVIDUAL_OWNER);
+
+    expect(screen.queryByText('Gói hiện tại')).toBeNull();
+    expect((query.lastFilters as { planState?: string }).planState).toBeUndefined();
   });
 });

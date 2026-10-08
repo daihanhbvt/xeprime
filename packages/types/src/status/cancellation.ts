@@ -151,7 +151,11 @@ export function cancellationReasonNeedsText(category: CancellationReasonCategory
 export const CANCELLATION_STAGE = {
   /** Chuyến đã được nhận, khách chưa trả xong tiền giữ chỗ (ADR 0044 điều 2). */
   AWAITING_HOLD: 'awaiting_hold',
-  /** LEGACY ADR 0039 — khách đã trả đủ, gian hàng chưa nhận. */
+  /**
+   * **@deprecated — không còn writer (ADR 0055).** Chặng "khách đã trả đủ, gian hàng chưa nhận"
+   * của luồng ADR 0039. Giá trị CÒN hợp lệ ở DB vì `booking_cancellations` là SỔ LỊCH SỬ trách
+   * nhiệm: một lượt huỷ đã xảy ra ở chặng đó vẫn phải đọc được như nó đã xảy ra.
+   */
   HOLD_PAID: 'hold_paid',
   /** Đơn thuê đã tồn tại, xe chưa giao. */
   BOOKING_BEFORE_PICKUP: 'booking_before_pickup',

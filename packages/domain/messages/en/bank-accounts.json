@@ -1,13 +1,15 @@
 {
-  "title": "Payout accounts",
+  "title": "Payout account",
   "subtitle": "XePrime sends refunds and amounts owed to you to this account.",
   "emptyTitle": "No payout account yet",
   "empty": "No account yet. Add one to receive money.",
-  "loadError": "Could not load your accounts.",
+  "loadError": "Could not load your payout account.",
   "defaultTag": "Default",
   "verifiedTag": "Verified",
+  "accountNumberLine": "Acct: {number}",
   "actions": {
     "add": "Add account",
+    "change": "Change account",
     "setDefault": "Make default",
     "archive": "Remove",
     "archiveConfirm": "Remove this account?",
@@ -15,6 +17,8 @@
   },
   "form": {
     "title": "Add payout account",
+    "changeTitle": "Change payout account",
+    "replaces": "The new account will replace {account}. Pending withdrawals still go to the account chosen when they were requested.",
     "bankCode": "Bank",
     "bankCodePlaceholder": "Choose a bank",
     "accountNumber": "Account number",
@@ -25,6 +29,8 @@
     "isDefault": "Make this my default payout account",
     "submit": "Save account",
     "created": "Payout account added.",
+    "changed": "Payout account changed.",
+    "unchanged": "This is already your payout account.",
     "defaultChanged": "Default account changed.",
     "archived": "Account removed.",
     "validation": {

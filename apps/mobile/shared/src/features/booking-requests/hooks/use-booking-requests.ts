@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BOOKING_REQUEST_STATUS, type BookingRequestStatus } from '@xeprime/types';
-import { useBranchScopeParams } from '@/features/branches/hooks/use-branch-scope';
 import { keepPageData } from '@/queries/keep-page-data';
 import { queryKeys } from '@/queries/query-keys';
 import type { StatusCounts } from './use-status-counts';
@@ -83,12 +82,8 @@ export const DEFAULT_REQUEST_TAB: string = BOOKING_REQUEST_TAB_NEEDS_ACTION;
  * Khoá CÓ `page` — `keepPageData` giữ dữ liệu cũ khi đổi trang nhưng không khi đổi tab/bộ lọc.
  */
 export function useBookingRequestsPage(filters: BookingRequestFilters) {
-  /*
-   * Scope chi nhánh ghép ở đây, cùng chỗ web ghép — và cùng chỗ huy hiệu "chờ duyệt" đọc
-   * (`useManageNavBadges`). Hai bên lệch nhau là huy hiệu báo 5 trong khi hộp thư mở ra có 2.
-   */
-  const branchScope = useBranchScopeParams();
-  const scoped = { ...filters, ...branchScope };
+  // `branchId` là ô lọc của CHÍNH hộp thư (ADR 0052); huy hiệu menu đếm toàn gian hàng (điều 7).
+  const scoped = filters;
   const params = bookingRequestFiltersToParams(scoped);
 
   /*

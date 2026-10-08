@@ -23,7 +23,6 @@
     "manageSubtitle": "Quản lý gian hàng · {role}",
     "enterManage": "Vào khu quản lý gian hàng",
     "switcherA11y": "Đang ở gian hàng {shop}. Chạm để đổi chế độ",
-    "lostAccess": "Bạn không còn quyền truy cập gian hàng này.",
     "signInRequired": "Đăng nhập để quản lý gian hàng",
     "signIn": "Đăng nhập"
   },
@@ -61,16 +60,43 @@
   },
   "partner": {
     "title": "Ứng dụng XePrime Partner",
-    "intro": "Khu quản lý gian hàng nằm trong ứng dụng XePrime Partner — ứng dụng riêng dành cho đối tác.",
+    "intro": "Cho thuê xe trên XePrime — đăng xe cá nhân hoặc mở gian hàng — diễn ra trong ứng dụng XePrime Partner, với một tài khoản đối tác riêng. Dùng chung số điện thoại cũng được, mật khẩu riêng.",
     "open": "Mở XePrime Partner",
     "download": "Tải XePrime Partner",
     "later": "Để sau",
     "openFailed": "Chưa mở được XePrime Partner. Nếu chưa cài, hãy bấm Tải XePrime Partner.",
-    "successTitle": "Đăng ký gian hàng thành công",
-    "successDescription": "Hồ sơ gian hàng của bạn đã được tạo. Hãy mở hoặc tải ứng dụng XePrime Partner, đăng nhập bằng chính tài khoản này để hoàn tất thanh toán gói và quản lý gian hàng.",
     "notAvailableTitle": "Phần này nằm ở ứng dụng XePrime",
-    "notAvailableDescription": "XePrime Partner chỉ dành cho việc quản lý gian hàng. Để tìm và thuê xe, hãy dùng ứng dụng XePrime.",
-    "notEligibleTitle": "Tài khoản chưa thuộc phạm vi XePrime Partner",
-    "notEligibleDescription": "Ứng dụng này dành cho gian hàng dùng gói dịch vụ. Nếu bạn là khách thuê hoặc chủ xe tuyến hoa hồng, hãy dùng ứng dụng XePrime."
+    "notAvailableDescription": "XePrime Partner dành cho chủ xe và gian hàng. Để tìm và thuê xe, hãy dùng ứng dụng XePrime với tài khoản khách thuê.",
+    "openRegister": "Đăng ký tài khoản XePrime Partner",
+    "skip": "Bỏ qua",
+    "next": "Tiếp",
+    "stepOf": "Bước {current}/{total}",
+    "slides": {
+      "intro": {
+        "title": "Cho thuê xe cùng XePrime Partner",
+        "body": "Biến chiếc xe đang để không thành thu nhập. Mọi việc cho thuê — đăng xe, nhận chuyến, quản lý lịch — diễn ra trong ứng dụng XePrime Partner."
+      },
+      "account": {
+        "title": "Tạo tài khoản đối tác",
+        "body": "Tài khoản đối tác tách riêng với tài khoản thuê xe. Dùng lại số điện thoại hiện tại cũng được, chỉ cần đặt mật khẩu riêng."
+      },
+      "choose": {
+        "title": "Chọn cách cho thuê",
+        "body": "Đăng xe cá nhân để bắt đầu nhanh, không phí đăng ký — hoặc mở gian hàng nếu bạn vận hành nhiều xe. Nâng cấp sau vẫn giữ nguyên xe và dữ liệu."
+      },
+      "publish": {
+        "title": "Đăng xe hoặc mở gian hàng",
+        "body": "Chủ xe cá nhân: khai thông tin, giá, ảnh rồi gửi duyệt xe. Chủ gian hàng: đăng ký gian hàng, chọn gói rồi đăng đội xe. XePrime duyệt xong là xe lên chợ."
+      }
+    },
+    "notInstalledTitle": "Chưa mở được XePrime Partner",
+    "notInstalledBody": "Có vẻ máy bạn chưa cài ứng dụng XePrime Partner. Tải ứng dụng rồi quay lại đây để tiếp tục.",
+    "comingSoonTitle": "XePrime Partner sắp lên cửa hàng",
+    "comingSoonBody": "Ứng dụng XePrime Partner chưa có trên App Store và Google Play. Chúng tôi sẽ thông báo ngay khi bạn tải được.",
+    "storeCta": "Tải trên cửa hàng ứng dụng",
+    "retry": "Thử mở lại",
+    "headerTitle": "Trở thành chủ xe",
+    "haveAccount": "Đã có tài khoản đối tác?",
+    "loginLink": "Đăng nhập"
   }
 }

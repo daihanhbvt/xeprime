@@ -1,8 +1,11 @@
 import { useLocalSearchParams } from 'expo-router';
-import { VehicleEditFormScreen } from '@/features/vehicles/VehicleEditFormScreen';
-import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
+import { VehicleImagesScreen } from '@/features/vehicle-manage/VehicleImagesScreen';
 
+/**
+ * Mục "Hình ảnh" — NGUYÊN section ảnh của khu tài khoản (web 30/09/2026: `VehicleImagesSection`
+ * trong `VehicleEditWorkspace`), tự lưu bằng mutation của chính nó; Lui về hub sửa xe.
+ */
 export default function ManageVehicleEditMediaRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  return <VehicleEditFormScreen vehicleId={id} tab={VEHICLE_EDIT_TAB.MEDIA} />;
+  return <VehicleImagesScreen vehicleId={id} workspace="manage" />;
 }

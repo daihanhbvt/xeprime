@@ -1,22 +1,13 @@
 import { useCallback, useState } from 'react';
-import { XStack, YStack } from 'tamagui';
+import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import {
-  PERMISSION,
-  RECEIPT_SOURCE_GROUP,
-  RECEIPT_STATUS,
-  RECEIPT_TYPE,
-  type TenantStatus,
-} from '@xeprime/types';
+import { PERMISSION, RECEIPT_SOURCE_GROUP, RECEIPT_STATUS, RECEIPT_TYPE } from '@xeprime/types';
 import { nowInAppTz } from '@xeprime/domain';
 import { Screen } from '@/components/layout/Screen';
-import { Button } from '@/components/ui/Button';
-import { Callout, CalloutBody } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { StatGrid, type StatCell } from '@/components/ui/StatGrid';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
-import { useTenantScope } from '@/features/auth/hooks/use-tenant-scope';
 import { ReceiptDetailSheet } from '@/features/finance/components/ReceiptDetailSheet';
 import { useOpenPushPermissionGate } from '@/features/notifications/push-permission-gate';
 import { ManageHeader } from '@/features/shell/ManageHeader';
@@ -26,13 +17,15 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { colors } from '@/theme/tokens';
-import { shopStatusNotice } from '@/features/shop/status-notice';
 import { dashboardMonthRange } from './api';
 import { BookingMiniList } from './components/BookingMiniList';
 import { DashboardPanel } from './components/DashboardPanel';
 import { ReceiptMiniList } from './components/ReceiptMiniList';
 import { ShopOnboardingCard } from './components/ShopOnboardingCard';
 import { useDashboardBookings, useDashboardMoney, useFleetStats } from './hooks/use-dashboard';
+import { withBranchParam } from '@/features/branches/branch-link';
+import { BranchFilterField } from '@/features/branches/components/BranchFilterField';
+import { useScreenBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 
 /**
  * Tổng quan gian hàng (SHP-07) — bản native của `DashboardView` bên web.
@@ -52,11 +45,9 @@ import { useDashboardBookings, useDashboardMoney, useFleetStats } from './hooks/
 export function ShopDashboardScreen() {
   const t = useTranslations('Dashboard');
   const tCommon = useTranslations('Common.labels');
-  const tShop = useTranslations('Shop');
   const fmt = useAppFormat();
   const permissions = usePermissions();
   const navigateOnce = useNavigateOnce();
-  const { tenant } = useTenantScope();
   // Màn CHÍNH của tuyến gói (ADR 0040) — chủ gian hàng không bao giờ đi qua trang chủ marketplace,
   // nên cửa xin quyền thông báo phải mở cả ở đây (`push-permission-gate.ts`).
   useOpenPushPermissionGate();
@@ -74,12 +65,14 @@ export function ShopDashboardScreen() {
   const canViewVehicles = permissions.has(PERMISSION.VEHICLE_VIEW);
   const canViewBookings = permissions.has(PERMISSION.BOOKING_VIEW);
 
-  const fleet = useFleetStats(canViewVehicles);
-  const bookings = useDashboardBookings(canViewBookings);
-  const money = useDashboardMoney();
-
-  const status = tenant?.status as TenantStatus | undefined;
-  const notice = status ? shopStatusNotice(status) : null;
+  /*
+   * Ô "Chi nhánh" của Tổng quan (ADR 0052) — làm TRỌN hoặc không làm: thẻ xe/đơn và cả hai khối
+   * tiền theo CÙNG một chi nhánh, và mọi đích rời màn mang theo nó (`withBranchParam`).
+   */
+  const { branchId, filter: branchFilter } = useScreenBranchFilter();
+  const fleet = useFleetStats(canViewVehicles, branchId);
+  const bookings = useDashboardBookings(canViewBookings, branchId);
+  const money = useDashboardMoney(branchId);
 
   /*
    * Ngày hôm nay kèm THỨ — theo giờ Việt Nam, không phải giờ máy: "hôm nay" của một chiếc điện
@@ -88,7 +81,10 @@ export function ShopDashboardScreen() {
   const today = fmt.fullDate(nowInAppTz());
   const todayLabel = today.charAt(0).toLocaleUpperCase() + today.slice(1);
 
-  const goBookings = useCallback(() => navigateOnce(ROUTES.manage.bookings()), [navigateOnce]);
+  const goBookings = useCallback(
+    () => navigateOnce(withBranchParam(ROUTES.manage.bookings(), branchId)),
+    [navigateOnce, branchId],
+  );
 
   /*
    * Đích của hai thẻ tiền phải LỌC ĐÚNG bộ mà con số trên thẻ được cộng ra — cùng bộ tham số mà
@@ -101,25 +97,31 @@ export function ShopDashboardScreen() {
   const goRevenueReceipts = useCallback(
     () =>
       navigateOnce(
-        ROUTES.manage.receipts({
-          ...dashboardMonthRange(),
-          status: RECEIPT_STATUS.APPROVED,
-          type: RECEIPT_TYPE.INCOME,
-          sourceGroup: RECEIPT_SOURCE_GROUP.BUSINESS,
-        }),
+        withBranchParam(
+          ROUTES.manage.receipts({
+            ...dashboardMonthRange(),
+            status: RECEIPT_STATUS.APPROVED,
+            type: RECEIPT_TYPE.INCOME,
+            sourceGroup: RECEIPT_SOURCE_GROUP.BUSINESS,
+          }),
+          branchId,
+        ),
       ),
-    [navigateOnce],
+    [navigateOnce, branchId],
   );
 
   const goDepositReceipts = useCallback(
     () =>
       navigateOnce(
-        ROUTES.manage.receipts({
-          status: RECEIPT_STATUS.APPROVED,
-          sourceGroup: RECEIPT_SOURCE_GROUP.HELD_FUNDS,
-        }),
+        withBranchParam(
+          ROUTES.manage.receipts({
+            status: RECEIPT_STATUS.APPROVED,
+            sourceGroup: RECEIPT_SOURCE_GROUP.HELD_FUNDS,
+          }),
+          branchId,
+        ),
       ),
-    [navigateOnce],
+    [navigateOnce, branchId],
   );
 
   /**
@@ -230,41 +232,8 @@ export function ShopDashboardScreen() {
         <ManagePageTitle title={t('title')} total={todayLabel} />
 
         <YStack px={layout.screenX} gap={layout.section} pb={layout.section}>
-          {/*
-            Dải trạng thái gian hàng đọc từ CÙNG bảng mà màn hồ sơ dùng (`shopStatusNotice`) —
-            `active` thì không hiện gì, vì một dải "mọi thứ đều ổn" đứng thường trực chỉ dạy
-            người dùng bỏ qua vùng đó.
-          */}
-          {notice?.showInShell ? (
-            <Callout
-              tone={notice.tone}
-              title={tShop(`status.${notice.key}.title` as 'status.draft.title')}
-            >
-              <CalloutBody>
-                {tShop(`status.${notice.key}.shell` as 'status.draft.shell')}
-              </CalloutBody>
-              {/*
-                Nút nằm TRONG dải, không đứng dưới nó: một nút rời bên ngoài đọc ra như hành động
-                của cả trang, trong khi nó chỉ giải quyết đúng chuyện mà dải vừa nói. Cỡ `sm` và
-                không chiếm trọn bề ngang vì đây là hành động của MỘT khối, không phải của màn.
-              */}
-              {notice.action ? (
-                <XStack>
-                  <Button
-                    label={tShop(`status.action.${notice.action.key}` as 'status.action.view')}
-                    variant="secondary"
-                    size="sm"
-                    shape="square"
-                    block={false}
-                    onPress={() => {
-                      if (notice.action) navigateOnce(notice.action.href);
-                    }}
-                  />
-                </XStack>
-              ) : null}
-            </Callout>
-          ) : null}
-
+          <BranchFilterField filter={branchFilter} value={branchId} />
+          {/* Dải trạng thái gian hàng nằm ở `ManageShellNotices` (trong `ManageHeader`) — phủ mọi màn như web. */}
           {/*
             Gian hàng chưa duyệt xong / chưa có xe: ba bước cần làm đứng TRƯỚC bảng số liệu, vì
             lúc đó mọi ô đều là 0 và không ô nào nói được việc gì tiếp theo. Thẻ tự ẩn khi hết việc.

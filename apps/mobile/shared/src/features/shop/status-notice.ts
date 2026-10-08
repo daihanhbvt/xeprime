@@ -84,13 +84,13 @@ const NOTICE: Readonly<Record<TenantStatus, ShopStatusNotice>> = {
     key: 'suspended',
     tone: 'danger',
     showInShell: true,
-    action: { key: 'support', href: ROUTES.manage.support() },
+    action: { key: 'support', href: ROUTES.manage.supportPage() },
   },
   [TENANT_STATUS.EXPIRED]: {
     key: 'expired',
     tone: 'warning',
     showInShell: true,
-    action: { key: 'support', href: ROUTES.manage.support() },
+    action: { key: 'support', href: ROUTES.manage.supportPage() },
   },
 };
 

@@ -1,0 +1,40 @@
+/**
+ * Trang "Số dư & rút tiền" của site partner — ví + tài khoản nhận tiền (+ thuế đã khấu trừ ở tuyến
+ * hoa hồng). Bề ngang do khung trang quyết (`balance/page.module.css`), không phải ở đây.
+ */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+/*
+ * Khối "Tài khoản nhận tiền" — cùng viền/bo góc với bảng tổng hợp và các dòng sổ ngay dưới nó, để
+ * nó đọc ra là một khối của CÙNG trang chứ không phải một thẻ lạc từ trang khác sang.
+ *
+ * `scroll-margin-top`: đích của `?section=payout` không được nằm khuất dưới thanh trên dính.
+ */
+.payout {
+  padding: var(--xp-space-lg);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-container);
+  scroll-margin-top: calc(var(--xp-shell-topbar-height) + var(--xp-space-md));
+}
+
+/* Tiêu điểm đến từ lệnh cuộn (`useScrollToSection`), không phải từ bàn phím — không vẽ viền. */
+.payout:focus {
+  outline: none;
+}
+
+.payout:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .payout {
+    padding: var(--xp-space-md);
+  }
+}

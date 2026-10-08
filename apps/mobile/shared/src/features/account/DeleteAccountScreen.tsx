@@ -7,11 +7,8 @@ import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import * as yup from 'yup';
-import {
-  SUPPORT_CASE_CATEGORY,
-  SUPPORT_CASE_STATUS_META,
-  type SupportCaseStatus,
-} from '@xeprime/types';
+import { SUPPORT_CASE_CATEGORY, SUPPORT_CASE_STATUS_META } from '@xeprime/types';
+import { metaColor } from '@/lib/status-meta';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
@@ -160,7 +157,7 @@ export function DeleteAccountScreen() {
                   </Text>
                   <StatusBadge
                     label={domainLabel('supportCaseStatus', pending.status)}
-                    color={SUPPORT_CASE_STATUS_META[pending.status as SupportCaseStatus].color}
+                    color={metaColor(SUPPORT_CASE_STATUS_META, pending.status)}
                     size="sm"
                   />
                 </XStack>

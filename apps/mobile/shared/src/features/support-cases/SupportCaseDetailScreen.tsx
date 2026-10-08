@@ -36,6 +36,7 @@ import {
   type SupportSurface,
 } from './api';
 import {
+  useCanWriteSupportCase,
   usePostSupportMessage,
   useSupportCase,
   useTransitionSupportCase,
@@ -109,6 +110,7 @@ function SupportCaseBody({ row, surface }: { row: SupportCaseDetail; surface: Su
   const status = row.status as SupportCaseStatus;
   const meta = SUPPORT_CASE_STATUS_META[status];
   const closed = status === SUPPORT_CASE_STATUS.CLOSED;
+  const canWrite = useCanWriteSupportCase(surface);
 
   return (
     <YStack gap={space.lg}>
@@ -183,7 +185,7 @@ function SupportCaseBody({ row, surface }: { row: SupportCaseDetail; surface: Su
       */}
       {closed ? (
         <Callout tone="info">{t('closedNotice')}</Callout>
-      ) : (
+      ) : !canWrite ? null : (
         <ReplyBox row={row} surface={surface} />
       )}
     </YStack>

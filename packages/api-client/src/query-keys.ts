@@ -40,6 +40,19 @@ export const queryKeys = {
     list: (params: QueryParams) => ['vehicle-approvals', 'list', params] as const,
     detail: (id: string) => ['vehicle-approvals', 'detail', id] as const,
   },
+  /** Màn "Vận hành chuyến" của nền tảng — `/platform/trips` (bốn hàng đợi + nhắc chủ xe). */
+  platformTrips: {
+    all: ['platform-trips'] as const,
+    summary: (params: QueryParams) => ['platform-trips', 'summary', params] as const,
+    requests: (params: QueryParams) => ['platform-trips', 'requests', params] as const,
+    bookings: (params: QueryParams) => ['platform-trips', 'bookings', params] as const,
+  },
+  /** Màn "Xe toàn hệ thống" của nền tảng — `/platform/vehicles` (giám sát + ẩn/gỡ ẩn). */
+  platformVehicles: {
+    all: ['platform-vehicles'] as const,
+    list: (params: QueryParams) => ['platform-vehicles', 'list', params] as const,
+    detail: (id: string) => ['platform-vehicles', 'detail', id] as const,
+  },
   calendar: {
     all: ['calendar'] as const,
     resources: (params: QueryParams) => ['calendar', 'resources', params] as const,
@@ -240,6 +253,7 @@ export const queryKeys = {
   bookingRequests: {
     all: ['booking-requests'] as const,
     list: (params: QueryParams) => ['booking-requests', 'list', params] as const,
+    detail: (id: string) => ['booking-requests', 'detail', id] as const,
     /**
      * Lịch bận của MỘT xe, dùng để tô/khoá ô trên hộp chọn thời gian thuê. Cửa sổ nằm trong
      * khoá vì đổi cửa sổ là đổi dữ liệu — không phải cùng một kết quả cắt nhỏ.
@@ -329,6 +343,9 @@ export const queryKeys = {
     plans: (status: string) => ['billing', 'plans', status] as const,
     subscriptions: (tenantId: string, page: number) =>
       ['billing', 'subscriptions', tenantId, page] as const,
+    /** Chuỗi kỳ CÒN HẠN của một gian hàng (`state=live`) — tách khỏi trang lịch sử. */
+    liveSubscriptions: (tenantId: string) =>
+      ['billing', 'subscriptions', tenantId, 'live'] as const,
   },
   /** "Gói của tôi" — tenant-scoped (W2, ADR 0015/0026). Tách nhánh khỏi `billing` (platform). */
   subscription: {

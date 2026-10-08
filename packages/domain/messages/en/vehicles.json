@@ -339,9 +339,7 @@
       "policyDelivery": "Delivery",
       "policyNone": "None",
       "overview": "Overview",
-      "mainImageSet": "Cover photo set",
-      "mainImageMissing": "No cover photo yet",
-      "overviewValue": "{mainImage} • {gallery, plural, one {# gallery photo} other {# gallery photos}} • {features, plural, one {# feature selected} other {# features selected}}",
+      "overviewValue": "{photos, plural, one {# vehicle photo} other {# vehicle photos}} • {features, plural, one {# feature selected} other {# features selected}}",
       "brandWithBody": "{brand} ({bodyType})"
     },
     "success": {
@@ -426,7 +424,6 @@
       "discountPercentInteger": "Discount % must be a whole number",
       "discountPercentMin": "Minimum 0%",
       "discountPercentMax": "Maximum 100%",
-      "mainImageUrlInvalid": "Invalid image URL",
       "imageUrlInvalid": "Invalid image URL",
       "imagesMax": "Maximum 20 photos",
       "seatCountCarOnly": "Seat count applies to cars only",
@@ -438,10 +435,9 @@
       "selfDrivePrice": "Self-drive price (weekday)",
       "longTermPrice": "Long-term monthly price",
       "withDriverPrice": "With-driver day rate",
-      "mainImage": "Cover photo",
       "plateNumber": "Licence plate",
       "description": "Vehicle description",
-      "photos": "At least 4 vehicle photos",
+      "photos": "All required photo angles",
       "identity": "Brand, model, year and seats",
       "energySpec": "Specs for the energy source",
       "branchLocation": "A branch with a province"
@@ -488,7 +484,7 @@
         "plateNumber": "Licence plate",
         "vehicleType": "Vehicle type",
         "serviceTypes": "Service type",
-        "mainImageUrl": "Cover photo"
+        "media": "Vehicle photos"
       }
     },
     "panel": {

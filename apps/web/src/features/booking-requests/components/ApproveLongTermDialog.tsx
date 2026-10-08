@@ -1,5 +1,6 @@
 'use client';
 
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { useQuery } from '@tanstack/react-query';
 import { Alert, DatePicker, Modal, Select, Skeleton } from 'antd';
 import { useMemo, useState } from 'react';
@@ -164,7 +165,7 @@ function ApproveLongTermForm({
           <div className={styles.row}>
             <dt>{t('longTerm.customer')}</dt>
             <dd>
-              {request.customerName} · {request.customerPhone}
+              {[request.customerName, request.customerPhone].filter(Boolean).join(LIST_SEPARATOR)}
             </dd>
           </div>
           <div className={styles.row}>

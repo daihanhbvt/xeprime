@@ -1,31 +1,29 @@
-import type { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
+'use client';
 
-import { OwnerGate } from '@/features/account/components/OwnerGate';
-import { SellerTaxCompactForm } from '@/features/seller-profile/components/SellerTaxCompactForm';
-import { ShopTaxWithheldCard } from '@/features/tax/components/ShopTaxWithheldCard';
-
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations('Navigation.account');
-  return { title: t('tax'), robots: { index: false, follow: false } };
-}
+import {
+  ACCOUNT_SECTION,
+  SHOP_SECTION,
+  accountSectionPath,
+  shopSectionPath,
+} from '@/constants/routes';
+import { ClientRedirect } from '@/features/partner/components/ClientRedirect';
+import { PartnerTrackView } from '@/features/partner/components/PartnerTrackView';
 
 /**
- * Thuế của chủ xe — HAI khối, trả lời hai câu khác nhau:
+ * ALIAS CHUYỂN TIẾP (07/10/2026) — "Thông tin khai thuế" là một section của trang hồ sơ ở cả hai
+ * tuyến, cùng một component: "Hồ sơ chủ xe" của tuyến hoa hồng, trang Cửa hàng của tuyến gói.
+ * Phần còn lại của trang cũ — thuế ĐÃ khấu trừ theo kỳ — là chuyện tiền, nên nó ở trang "Số dư &
+ * rút tiền". Không còn mục menu nào trỏ tới đây.
  *
- *  1. `SellerTaxCompactForm` — *"tôi khai thuế thế nào"*: loại chủ thể, mã số thuế. Dữ liệu chủ
- *     xe NHẬP, và nó quyết định tỷ lệ áp cho chuyến của họ.
- *  2. `ShopTaxWithheldCard` — *"tôi đã bị trừ bao nhiêu"* (Phase 8): nghĩa vụ đã phát sinh theo
- *     kỳ. Số liệu hệ thống sinh; không có nó thì chủ xe chỉ thấy ví vào ít hơn dự kiến mà không
- *     có chỗ nào giải thích vì sao (ADR 0032 điều 3 — thuế khấu trừ khỏi khoản phải trả họ).
- *
- * `OwnerGate` chặn trước khi cả hai gọi API cho người không phải chủ gian hàng.
+ * Lối chuyển CHÍNH là `partnerPageRedirect` (khung trang + đích sau đăng nhập — một luật, một lần
+ * chuyển). Thân trang này chỉ là lưới an toàn nếu khung không chặn trước: đích phụ thuộc tuyến, đọc
+ * từ `/auth/me`, nên chuyển ở client.
  */
-export default function AccountTaxPage() {
+export default function TaxRedirectPage() {
   return (
-    <OwnerGate>
-      <SellerTaxCompactForm />
-      <ShopTaxWithheldCard />
-    </OwnerGate>
+    <PartnerTrackView
+      packageView={<ClientRedirect href={shopSectionPath(SHOP_SECTION.TAX)} />}
+      commissionView={<ClientRedirect href={accountSectionPath(ACCOUNT_SECTION.TAX)} />}
+    />
   );
 }

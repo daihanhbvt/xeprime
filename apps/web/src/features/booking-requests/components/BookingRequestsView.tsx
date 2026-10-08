@@ -17,6 +17,7 @@ import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useWorkspace } from '@/hooks/use-workspace';
 import { currentPathWithQuery } from '@/features/auth/safe-next';
 import { BOOKING_REQUEST_TAB_NEEDS_ACTION, BOOKING_REQUEST_TABS } from '../constants';
 import { useBookingRequestFilters } from '../hooks/use-booking-request-filters';
@@ -53,6 +54,7 @@ export function BookingRequestsView() {
   const searchParams = useSearchParams();
   const { has } = usePermissions();
   const isMobile = useIsMobile();
+  const { isManage: isManageWorkspace } = useWorkspace();
 
   /*
    * Chỗ đang đứng, KÈM tab và trang — gắn vào link "Xem lịch xe" để nút quay lại ở màn lịch
@@ -62,7 +64,12 @@ export function BookingRequestsView() {
 
   const canApprove = has(PERMISSION.BOOKING_REQUEST_APPROVE);
   const canViewVehicle = has(PERMISSION.VEHICLE_VIEW);
-  const canViewCustomer = has(PERMISSION.CUSTOMER_VIEW);
+  /*
+   * Sổ khách là năng lực của GÓI (ADR 0027 điều 1) — server chặn tuyến hoa hồng bằng
+   * `@SubscriptionTrackOnly`. Thành viên của gian hàng tuyến hoa hồng vẫn dùng hộp thư này, nên
+   * quyền thôi chưa đủ: bày lối vào hồ sơ khách cho họ là mời bấm vào một cửa 403.
+   */
+  const canViewCustomer = has(PERMISSION.CUSTOMER_VIEW) && isManageWorkspace;
   const canViewBooking = has(PERMISSION.BOOKING_VIEW);
 
   const { filters, setFilters, activeTab, selectTab, hasFilters, clearFilters } =
@@ -364,7 +371,7 @@ export function BookingRequestsView() {
           decisions.openCancel(row);
         }}
         onOpenVehicle={openVehicleDetail}
-        onOpenCustomer={openCustomerDetail}
+        onOpenCustomer={canViewCustomer ? openCustomerDetail : undefined}
         backHref={backHref}
       />
 

@@ -12,7 +12,7 @@ import type { IconName } from './Chip';
  * màn. Một nhóm nút phụ tô nền đặc sẽ cạnh tranh trực tiếp với nó và người dùng mất chỗ để mắt
  * rơi vào. `accent` giữ được sắc thái thương hiệu mà vẫn đọc ra là hạng dưới.
  */
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'accent';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'ghostDanger' | 'danger' | 'accent';
 /**
  * `md` là mặc định và bằng đúng ngưỡng chạm 44pt. `sm` KHÔNG phá ngưỡng đó — nó giữ nguyên
  * chiều cao chạm được, chỉ rút CỠ CHỮ (12px thay vì 14px), để một lưới thao tác phụ (Lịch sử
@@ -34,6 +34,8 @@ const VARIANT: Record<Variant, { bg: string; fg: string; border: string }> = {
   primary: { bg: colors.primary, fg: colors.onPrimary, border: colors.primary },
   secondary: { bg: colors.surface, fg: colors.text, border: colors.borderInput },
   ghost: { bg: 'transparent', fg: colors.primaryActive, border: 'transparent' },
+  /** Dáng `ghost` (không nền, không viền) nhưng mang màu nguy hiểm — lối phụ mà hệ quả thì nặng. */
+  ghostDanger: { bg: 'transparent', fg: colors.danger, border: 'transparent' },
   danger: { bg: colors.dangerSurface, fg: colors.danger, border: colors.dangerSurface },
   accent: { bg: colors.primaryLight, fg: colors.primaryActive, border: colors.primary },
 };
@@ -146,6 +148,8 @@ export function Button({
     onPress();
   }, [onPress]);
   const skin = VARIANT[variant];
+  /** Hai biến thể KHÔNG nền, không viền — nền mờ lúc bị chặn cũng không áp cho chúng. */
+  const borderless = variant === 'ghost' || variant === 'ghostDanger';
   /*
    * Chữ nút bị khoá dùng `textMuted`, KHÔNG `textDisabled`: cái sau đặt trên nền `surfaceMuted`
    * chỉ đạt tương phản ~1.6:1 nên nhãn gần như biến mất, và trạng thái khoá đọc thành "màn hình
@@ -181,9 +185,9 @@ export function Button({
         ai="center"
         jc="center"
         gap={space.xs}
-        bg={blocked && variant !== 'ghost' ? colors.surfaceMuted : skin.bg}
+        bg={blocked && !borderless ? colors.surfaceMuted : skin.bg}
         bc={blocked ? colors.border : skin.border}
-        bw={variant === 'ghost' ? 0 : 1}
+        bw={borderless ? 0 : 1}
         br={shape === 'square' ? radius.md : radius.pill}
         /*
           Đệm ngang `space.md` cho MỌI cỡ, không phải `space.lg`.

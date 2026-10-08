@@ -29,8 +29,8 @@ export interface BookingRequestDecisions {
   openApprove: (request: BookingRequestDecisionTarget) => void;
   openReject: (request: BookingRequestDecisionTarget) => void;
   /**
-   * Mở hộp thoại HUỶ một chuyến đã nhận (ADR 0045 điều 1) — chỉ dùng cho `awaiting_hold` và
-   * `hold_paid`. Yêu cầu chưa được nhận thì đường đúng là `openReject`.
+   * Mở hộp thoại HUỶ một chuyến đã nhận (ADR 0045 điều 1) — chỉ dùng cho `awaiting_hold`. Yêu
+   * cầu chưa được nhận thì đường đúng là `openReject`.
    */
   openCancel: (request: BookingRequestDecisionTarget) => void;
   /** Quyết định đang chạy trên ĐÚNG yêu cầu này — để khoá nút của riêng nó. */

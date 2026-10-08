@@ -1,20 +1,28 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { useRouter } from 'expo-router';
-import { FlatList, Pressable, RefreshControl, StyleSheet, type ListRenderItem } from 'react-native';
+import { Pressable, RefreshControl, type ListRenderItem } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { PERMISSION, SERVICE_TYPE_VALUES, VEHICLE_OPERATION_STATUS_VALUES } from '@xeprime/types';
 import { FILTER_ALL } from '@/constants/filters';
-import { AppHeader } from '@/components/layout/AppHeader';
+import { ManageHeader } from '@/features/shell/ManageHeader';
+import { ManageListShell } from '@/features/shell/ManageListShell';
+import type { FilterGroup } from '@/features/shell/ManageFilterSheet';
+import { ManageStateScroll } from '@/features/shell/ManageStateScroll';
+import { IconButton } from '@/components/ui/IconButton';
+import { scrollThrottle } from '@/theme/motion';
+import { AccountTrackNotice } from './components/AccountTrackNotice';
 import { Screen } from '@/components/layout/Screen';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import type { IconName } from '@/components/ui/Chip';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { FleetSummaryBar } from '@/features/vehicles/components/FleetSummaryBar';
 import { FleetVehicleCardSkeleton } from '@/components/ui/Skeleton';
-import { SelectControl } from '@/components/ui/SelectControl';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { Callout } from '@/components/ui/Callout';
 import type { CardAction } from '@/components/ui/CardActionBar';
@@ -24,32 +32,24 @@ import {
   useVehicleAlerts,
   useVehicleStats,
 } from '@/features/vehicles/hooks/use-vehicles';
-import type { VehicleListItem } from '@/features/vehicles/api';
+import type { VehicleListItem, VehicleSort } from '@/features/vehicles/api';
 import { useDomainLabel } from '@/i18n/domain';
-import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_REGISTRATION_SOURCE } from '@/navigation/vehicle-registration-source';
 import { layout } from '@/theme/layout';
 import { MEDIA_LIST_TUNING } from '@/theme/list-tuning';
 import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import {
+  DEFAULT_VEHICLE_SORT,
+  VEHICLE_SORT_VALUES,
+  useVehicleSortLabel,
+} from '@/features/vehicles/vehicle-sort';
 
 /** Sentinel "mọi giá trị" của giao diện — không endpoint nào nhận `operationStatus=all`. */
 const ALL = FILTER_ALL;
 
-/**
- * Style của vùng cuộn dựng MỘT lần: object literal ở prop là một tham chiếu mới mỗi render, và
- * `FlatList` so sánh nông nên nó tự coi mình vừa đổi cấu hình.
- */
-const styles = StyleSheet.create({
-  listContent: {
-    paddingHorizontal: layout.screenX,
-    paddingTop: space.md,
-    paddingBottom: space.xl,
-    gap: layout.inline,
-  },
-});
-
 const SKELETON_ROWS = 3;
+const SEARCH_DEBOUNCE_MS = 350;
 
 function vehicleKeyExtractor(vehicle: VehicleListItem): string {
   return vehicle.id;
@@ -60,8 +60,9 @@ function vehicleKeyExtractor(vehicle: VehicleListItem): string {
  *
  * Cùng API, cùng hook và cùng thẻ xe với đội xe ở cổng quản lý (`VehicleListScreen`); khác đúng
  * những gì web khác:
- *  - **bộ lọc ít hơn** — dịch vụ + trạng thái vận hành, không có loại xe / trạng thái công khai /
- *    sắp xếp / tìm kiếm;
+ *  - **bộ lọc ít hơn** — tìm kiếm + trạng thái vận hành (thanh lọc), dịch vụ (dải chip riêng),
+ *    sắp xếp (mặc định "Mới nhất"); chip bộ lọc đang bật + "Xoá bộ lọc"; dải chỉ số đội xe
+ *    (`GET /vehicles/fleet-summary`) — đúng `AccountVehiclesView` (29/09/2026);
  *  - **hai thẻ dẫn đường** tới Cẩm nang và Hợp đồng & Chứng từ, ngay trên bộ lọc;
  *  - **vỏ của khu TÀI KHOẢN** — thanh trên có nút lui về menu tài khoản, không phải `ManageHeader`
  *    với nút mở drawer quản lý.
@@ -73,22 +74,35 @@ function vehicleKeyExtractor(vehicle: VehicleListItem): string {
  * Được `OwnerGate` bọc ở route: người không phải chủ gian hàng không tới được đây, nên không có
  * request tenant nào bay đi vô ích.
  */
-export function AccountVehiclesScreen() {
+export function AccountVehiclesScreen({
+  // Giữ chữ ký cũ cho nơi gọi; màn này chỉ còn sống trong khu quản lý của app Partner (ADR 0053).
+  shell: _shell = 'manage',
+}: {
+  shell?: 'account' | 'manage';
+} = {}) {
   const t = useTranslations('Account.vehicles');
   const tVehicles = useTranslations('Vehicles.list');
   const tLabels = useTranslations('Common.labels');
   const tActions = useTranslations('Common.actions');
   const tPermission = useTranslations('ManageCommon.permission');
+  const tSort = useTranslations('Vehicles.list.sort');
+  const sortLabel = useVehicleSortLabel();
   const router = useRouter();
   const domainLabel = useDomainLabel();
   const permissions = usePermissions();
 
   const [serviceType, setServiceType] = useState<string>(ALL);
   const [operationStatus, setOperationStatus] = useState<string>(ALL);
+  const [search, setSearch] = useState('');
+  const [sort, setSort] = useState<VehicleSort>(DEFAULT_VEHICLE_SORT);
+  const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
+  const q = debouncedSearch.trim();
 
   const query = useInfiniteVehicles({
     ...(serviceType === ALL ? {} : { serviceType }),
     ...(operationStatus === ALL ? {} : { operationStatus }),
+    ...(q ? { q } : {}),
+    sort,
   });
 
   const { items } = query;
@@ -97,7 +111,8 @@ export function AccountVehiclesScreen() {
   const alerts = useVehicleAlerts(ids);
 
   const canCreate = permissions.has(PERMISSION.VEHICLE_CREATE);
-  const filtered = serviceType !== ALL || operationStatus !== ALL;
+  /* Sắp xếp KHÔNG phải bộ lọc — web để nó ở slot `actions`, ngoài phép đếm bộ lọc. */
+  const filtered = serviceType !== ALL || operationStatus !== ALL || search.trim() !== '';
 
   const openVehicle = useCallback(
     (vehicle: VehicleListItem) => router.push(ROUTES.account.vehicleDetail(vehicle.id)),
@@ -113,6 +128,7 @@ export function AccountVehiclesScreen() {
   const clearFilters = useCallback(() => {
     setServiceType(ALL);
     setOperationStatus(ALL);
+    setSearch('');
   }, []);
 
   /**
@@ -193,24 +209,59 @@ export function AccountVehiclesScreen() {
     [t, domainLabel],
   );
 
-  const header = (
-    <AppHeader
-      onBack={() => goBackOr(router, ROUTES.account.home())}
-      title={t('title')}
-      subtitle={t('subtitle')}
-    />
+  const sortOptions = useMemo(
+    () => VEHICLE_SORT_VALUES.map((value) => ({ value, label: sortLabel(value) })),
+    [sortLabel],
   );
+
+  /**
+   * Bộ lọc dùng CHUNG khung của mọi danh sách khu quản lý (`ManageListShell` + tấm trượt lọc):
+   * ô tìm kiếm, nút "Bộ lọc" có đếm số bộ lọc đang bật, và tấm trượt gom các chiều lọc + sắp xếp —
+   * cùng cách danh sách xe của gian hàng tuyến gói làm. Ba chiều theo đúng web
+   * `AccountVehiclesView`: dịch vụ, trạng thái vận hành, sắp xếp.
+   */
+  const groups = useMemo<readonly FilterGroup[]>(
+    () => [
+      {
+        key: 'serviceType',
+        label: t('serviceFilterLabel'),
+        value: serviceType,
+        resetValue: ALL,
+        options: serviceOptions,
+      },
+      {
+        key: 'operationStatus',
+        label: t('statusFilterLabel'),
+        value: operationStatus,
+        resetValue: ALL,
+        options: statusOptions,
+      },
+      {
+        key: 'sort',
+        label: tSort('label'),
+        value: sort,
+        resetValue: DEFAULT_VEHICLE_SORT,
+        options: sortOptions,
+      },
+    ],
+    [t, tSort, serviceType, operationStatus, sort, serviceOptions, statusOptions, sortOptions],
+  );
+
+  const changeFilter = useCallback((groupKey: string, value: string) => {
+    if (groupKey === 'serviceType') setServiceType(value);
+    else if (groupKey === 'operationStatus') setOperationStatus(value);
+    else setSort(value as VehicleSort);
+  }, []);
 
   // Thiếu quyền là 403 của CHÍNH màn này — hiện trạng thái của nó, không đá về đăng nhập.
   if (!permissions.isLoading && !permissions.has(PERMISSION.VEHICLE_VIEW)) {
     return (
       <>
-        {header}
+        <ManageHeader />
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
           {/*
-            Cùng nội dung `PermissionState` của web: nói KHÔNG CÓ QUYỀN (chứ không lấy tên màn
-            làm tiêu đề), nêu đích danh quyền còn thiếu, và một lối về. Thiếu dòng "Cần quyền"
-            thì người dùng chỉ biết mình bị chặn mà không biết phải xin cái gì.
+            Cùng nội dung `PermissionState` của web: nói KHÔNG CÓ QUYỀN, nêu đích danh quyền còn
+            thiếu, và một lối về.
           */}
           <ScreenMessage
             icon="lock-closed-outline"
@@ -225,21 +276,13 @@ export function AccountVehiclesScreen() {
   }
 
   /**
-   * "Thêm xe" — dựng MỘT lần và dùng lại ở cả đầu danh sách lẫn trạng thái rỗng, đúng cách web
-   * truyền cùng một `addButton` vào `AccountPageHeader` và vào `emptyAction` của lưới. Chủ xe
-   * chưa có chiếc nào thì thứ duy nhất họ cần là nút này, và bắt họ cuộn ngược lên đầu để tìm
-   * nó là biến màn rỗng thành một ngõ cụt.
-   *
-   * Đích KHÁC web một bậc: web đi vào wizard đăng xe nhanh 3 bước
-   * (`/list-your-vehicle/register?from=account`), app chưa dựng wizard đó nên vào thẳng biểu mẫu
-   * thêm xe đầy đủ. Cùng kết quả, nhiều bước hơn — đây là phần còn lại của khoảng cách
-   * `QuickVehicleOwnerStep`, không phải một đích sai.
+   * Đầu danh sách (cuộn cùng các thẻ): dải tuyến, hai thẻ dẫn đường, cảnh báo tải hỏng một phần
+   * và dòng đếm. Tìm kiếm + bộ lọc + chỉ số đội xe nằm ở khối đầu của `ManageListShell`.
    */
-  const addButton = <Button label={t('addVehicle')} icon="add" onPress={openRegister} />;
-
   const listHeader = (
-    <YStack gap={space.md} pb={space.md}>
-      {canCreate ? addButton : null}
+    <YStack gap={space.md} pb={space.xs}>
+      {/* Trang chủ Owner Lite mở đầu bằng dải tuyến như web `OwnerLiteHome`. */}
+      <AccountTrackNotice />
 
       {/* Hai thẻ dẫn đường — trỏ tới tài liệu THẬT trong khu này, không nhắc nghị định/tỷ lệ. */}
       <YStack gap={space.sm}>
@@ -257,26 +300,7 @@ export function AccountVehiclesScreen() {
         />
       </YStack>
 
-      <YStack gap={space.sm}>
-        <SelectControl
-          label={t('serviceFilterLabel')}
-          value={serviceType}
-          options={serviceOptions}
-          onChange={setServiceType}
-        />
-        <SelectControl
-          label={t('statusFilterLabel')}
-          value={operationStatus}
-          options={statusOptions}
-          onChange={setOperationStatus}
-        />
-      </YStack>
-
-      {/*
-        Cảnh báo/KM tải hỏng là hỏng MỘT PHẦN, và web nói ra nó ở đầu lưới thay vì để mỗi thẻ tự
-        thì thầm: danh sách vẫn đọc được, nhưng "việc cần làm" và số KM đang vắng mặt — không nói
-        thì chủ xe đọc một đội xe không có việc nào cần làm và tin là thật.
-      */}
+      {/* Cảnh báo/KM tải hỏng là hỏng MỘT PHẦN — web nói ra ở đầu lưới. */}
       {alerts.isError ? (
         <Callout tone="warning" title={tVehicles('grid.alertsErrorTitle')}>
           <YStack gap={space.sm}>
@@ -294,11 +318,6 @@ export function AccountVehiclesScreen() {
         </Callout>
       ) : null}
 
-      {/*
-        Đếm kết quả — bản native của dòng `grid.showing` ở chân lưới web. Ở đây nó lên ĐẦU vì
-        danh sách cuộn vô hạn không có chân để đặt, và "đang xem 12 trong 48 xe" là thứ cần biết
-        TRƯỚC khi cuộn chứ không phải sau.
-      */}
       {items.length > 0 ? (
         <Text col={colors.textMuted} fos={fontSize.label}>
           {tVehicles('grid.showing', { from: 1, to: items.length, total: query.total })}
@@ -308,10 +327,10 @@ export function AccountVehiclesScreen() {
   );
 
   /**
-   * Khung xương, lỗi và rỗng đều nằm DƯỚI khối đầu trang, không thay chỗ nó: bộ lọc phải còn đó
-   * để gỡ ra — nếu không, "không khớp bộ lọc" thành một ngõ cụt.
+   * Khung xương, lỗi và rỗng nằm DƯỚI phần đầu danh sách. "Đang lọc mà rỗng" và "chưa có xe nào"
+   * là hai câu chuyện: một cái lối ra là gỡ bộ lọc, cái kia là thêm xe đầu tiên.
    */
-  const body: ReactNode = query.isInitialLoading ? (
+  const stateBody: ReactNode = query.isInitialLoading ? (
     <YStack gap={layout.inline}>
       {Array.from({ length: SKELETON_ROWS }, (_, i) => (
         <FleetVehicleCardSkeleton key={i} />
@@ -324,10 +343,6 @@ export function AccountVehiclesScreen() {
       onRetry={query.retry}
     />
   ) : (
-    /*
-      "Đang lọc mà rỗng" và "chưa có xe nào" là hai câu chuyện khác nhau: một cái lối ra là gỡ bộ
-      lọc, cái kia là thêm xe đầu tiên. Dùng chung một câu là bỏ rơi cả hai.
-    */
     <ScreenMessage
       icon={filtered ? 'search-outline' : 'car-outline'}
       title={filtered ? tVehicles('grid.noResultsTitle') : tVehicles('grid.emptyTitle')}
@@ -346,36 +361,79 @@ export function AccountVehiclesScreen() {
 
   return (
     <>
-      {header}
+      <ManageHeader />
       <Screen edges={['left', 'right', 'bottom']} scroll={false} padded={false}>
-        <FlatList
-          data={items}
-          keyExtractor={vehicleKeyExtractor}
-          renderItem={renderItem}
-          contentContainerStyle={styles.listContent}
-          ListHeaderComponent={listHeader}
-          ListEmptyComponent={body}
-          {...MEDIA_LIST_TUNING}
-          onEndReached={query.fetchNextPage}
-          ListFooterComponent={
-            query.appendError != null ? (
-              <Button
-                label={tActions('retry')}
-                icon="refresh-outline"
-                variant="ghost"
-                size="sm"
-                onPress={query.fetchNextPage}
+        <ManageListShell
+          title={t('title')}
+          {...(query.total > 0
+            ? { total: tVehicles('summary.vehicleCount', { count: query.total }) }
+            : {})}
+          action={
+            canCreate ? (
+              <IconButton
+                icon="add"
+                label={t('addVehicle')}
+                tone="primary"
+                onPress={openRegister}
               />
             ) : null
           }
-          refreshControl={
-            <RefreshControl
-              refreshing={query.isRefreshing}
-              onRefresh={query.retry}
-              tintColor={colors.primaryActive}
-            />
+          summary={<FleetSummaryBar enabled />}
+          searchValue={search}
+          searchLabel={t('searchLabel')}
+          searchPlaceholder={t('searchPlaceholder')}
+          onSearchChange={setSearch}
+          groups={groups}
+          onFilterChange={changeFilter}
+          hasRows={items.length > 0}
+        >
+          {({ onScroll, headerHeight, contentContainerStyle }) =>
+            items.length === 0 ? (
+              <ManageStateScroll
+                onScroll={onScroll}
+                headerHeight={headerHeight}
+                refreshing={query.isRefreshing}
+                onRefresh={query.retry}
+              >
+                <YStack px={layout.screenX} gap={space.md}>
+                  {listHeader}
+                  {stateBody}
+                </YStack>
+              </ManageStateScroll>
+            ) : (
+              <Animated.FlatList
+                data={items}
+                keyExtractor={vehicleKeyExtractor}
+                renderItem={renderItem}
+                contentContainerStyle={contentContainerStyle}
+                ListHeaderComponent={listHeader}
+                onScroll={onScroll}
+                scrollEventThrottle={scrollThrottle.frame}
+                {...MEDIA_LIST_TUNING}
+                onEndReached={query.fetchNextPage}
+                ListFooterComponent={
+                  query.appendError != null ? (
+                    <Button
+                      label={tActions('retry')}
+                      icon="refresh-outline"
+                      variant="ghost"
+                      size="sm"
+                      onPress={query.fetchNextPage}
+                    />
+                  ) : null
+                }
+                refreshControl={
+                  <RefreshControl
+                    refreshing={query.isRefreshing}
+                    onRefresh={query.retry}
+                    tintColor={colors.primaryActive}
+                    progressViewOffset={headerHeight}
+                  />
+                }
+              />
+            )
           }
-        />
+        </ManageListShell>
       </Screen>
     </>
   );

@@ -27,6 +27,7 @@ import {
   makeTenantsService,
   makeVehiclesService,
 } from './helpers/service-factory';
+import { requiredVehicleImageRows } from './helpers/vehicle-media';
 
 /**
  * HAI TUYẾN ĐĂNG KÝ, TÁCH HẲN NHAU — ADR 0040, chạy trên PostgreSQL THẬT.
@@ -47,6 +48,8 @@ import {
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 const tenants = makeTenantsService(asService);
+/** Quyền của CHỦ gian hàng (có `seller_profile.manage`) — controller đọc nó từ membership. */
+const OWNER_ACCESS = { canManageSellerProfile: true };
 const billing = makeBillingService(asService);
 const vehicles = makeVehiclesService(asService);
 
@@ -135,14 +138,14 @@ async function seedVehicle(tenantId: string, branchId: string): Promise<string> 
       weekdayPrice: '600000',
     },
   });
+  // Đủ GÓC ảnh bắt buộc của loại xe (07/10/2026) — ba dòng không gán góc sẽ bị cổng duyệt
+  // báo thiếu `photos`, ở những ca chẳng nói gì về ảnh.
   await prisma.vehicleImage.createMany({
-    data: [1, 2, 3].map((n) => ({
-      id: newId(),
-      tenantId,
+    data: requiredVehicleImageRows({
       vehicleId: id,
-      imageUrl: `https://img.example/${id.slice(-6)}-${n}.jpg`,
-      sortOrder: n,
-    })),
+      tenantId: tenantId,
+      vehicleType: VEHICLE_TYPE.CAR,
+    }),
   });
   return id;
 }
@@ -637,9 +640,14 @@ describe('4. Cổng hồ sơ gian hàng TRƯỚC khi gửi xe duyệt', () => {
   });
 
   maybe('thêm logo ⇒ gửi duyệt đi qua', async () => {
-    await tenants.updateProfile(packageTenantId, packageOwnerId, {
-      logoUrl: 'https://img.example/logo.png',
-    });
+    await tenants.updateProfile(
+      packageTenantId,
+      packageOwnerId,
+      {
+        logoUrl: 'https://img.example/logo.png',
+      },
+      OWNER_ACCESS,
+    );
 
     const detail = await vehicles.submitForPublicReview(
       packageTenantId,

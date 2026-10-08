@@ -157,7 +157,9 @@ describe('useConversationsInfinite', () => {
     expect(
       queryClient.getQueryData(queryKeys.chat.conversations(CHAT_SIDE.CUSTOMER, {})),
     ).toBeDefined();
-    expect(queryClient.getQueryData(queryKeys.chat.conversations(CHAT_SIDE.SHOP, {}))).toBeDefined();
+    expect(
+      queryClient.getQueryData(queryKeys.chat.conversations(CHAT_SIDE.SHOP, {})),
+    ).toBeDefined();
     expect(customer.result.current.items.map((c) => c.id)).toEqual(['a']);
     expect(shop.result.current.items.map((c) => c.id)).toEqual(['s1']);
   });
@@ -205,43 +207,33 @@ const counts = (chatCustomer: number, chatShop: number) => ({
   notificationsUnread: 0,
 });
 
+/**
+ * MỘT tài khoản, MỘT hộp thư (ADR 0053) — gương của `useChatBadge` web: con số là tin chưa đọc
+ * của CHÍNH hộp thư bề mặt đang đứng, và đích không bao giờ nhảy sang bề mặt kia (bên kia là một
+ * tài khoản khác, ở một app khác).
+ */
 describe('useChatBadge', () => {
-  it('đếm TỔNG cả hai vai', async () => {
+  it('bề mặt khách: chỉ đếm hộp thư khách, mở hộp thư khách', async () => {
     badges.mockReturnValue(counts(2, 5));
     const { result } = await renderHook(() => useChatBadge(CHAT_SIDE.CUSTOMER), { wrapper });
 
-    await waitFor(() => expect(result.current.count).toBe(7));
-  });
-
-  it('ở lại hộp thư của bề mặt đang đứng khi bên này CÒN tin', async () => {
-    badges.mockReturnValue(counts(2, 5));
-    const { result } = await renderHook(() => useChatBadge(CHAT_SIDE.CUSTOMER), { wrapper });
-
-    await waitFor(() => expect(result.current.count).toBe(7));
+    await waitFor(() => expect(result.current.count).toBe(2));
     expect(result.current.href).toEqual(ROUTES.chat.list());
   });
 
-  it('nhảy sang bề mặt KIA khi bên này không còn gì mà bên kia có', async () => {
+  it('bề mặt gian hàng: chỉ đếm hộp thư gian hàng, mở hộp thư gian hàng', async () => {
+    badges.mockReturnValue(counts(2, 5));
+    const { result } = await renderHook(() => useChatBadge(CHAT_SIDE.SHOP), { wrapper });
+
+    await waitFor(() => expect(result.current.count).toBe(5));
+    expect(result.current.href).toEqual(ROUTES.manage.chat());
+  });
+
+  it('bên này hết tin mà bên kia còn: KHÔNG nhảy sang bề mặt kia', async () => {
     badges.mockReturnValue(counts(0, 3));
     const { result } = await renderHook(() => useChatBadge(CHAT_SIDE.CUSTOMER), { wrapper });
 
-    await waitFor(() => expect(result.current.count).toBe(3));
-    expect(result.current.href).toEqual(ROUTES.manage.chat());
-  });
-
-  it('đối xứng: đứng ở gian hàng mà chỉ khách có tin thì dẫn về hộp thư khách', async () => {
-    badges.mockReturnValue(counts(4, 0));
-    const { result } = await renderHook(() => useChatBadge(CHAT_SIDE.SHOP), { wrapper });
-
-    await waitFor(() => expect(result.current.count).toBe(4));
-    expect(result.current.href).toEqual(ROUTES.chat.list());
-  });
-
-  it('không có tin nào thì ở nguyên bề mặt đang đứng', async () => {
-    badges.mockReturnValue(counts(0, 0));
-    const { result } = await renderHook(() => useChatBadge(CHAT_SIDE.SHOP), { wrapper });
-
     expect(result.current.count).toBe(0);
-    expect(result.current.href).toEqual(ROUTES.manage.chat());
+    expect(result.current.href).toEqual(ROUTES.chat.list());
   });
 });

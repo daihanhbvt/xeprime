@@ -179,6 +179,8 @@ async function paidHold(deposit: number, serviceFee: number): Promise<string> {
       customerName: 'Khách đối soát',
       customerPhone: `0900${String(100000 + ++txCounter).slice(-6)}`,
       status: 'awaiting_hold',
+      // `awaiting_hold` chỉ tới được qua lượt NHẬN — DB bắt buộc có `decided_at` (ADR 0055).
+      decidedAt: AT,
       pickupAt: new Date(AT.getTime() + 5 * 86400_000),
       returnAt: new Date(AT.getTime() + 7 * 86400_000),
       respondBy: new Date(AT.getTime() + 3600_000),

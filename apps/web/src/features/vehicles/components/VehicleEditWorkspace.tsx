@@ -246,6 +246,14 @@ export function VehicleEditWorkspace({
   const [sourceDirty, setSourceDirty] = useState(false);
   const [sourceResetKey, setSourceResetKey] = useState(0);
   const resolver = useValidationResolver<VehicleFormValues>(
+    /*
+     * `vehicleFormSchema` TRẦN, không phải bản có luật ảnh bắt buộc (07/10/2026).
+     *
+     * Màn này chia tab và mỗi lần lưu chỉ gửi các ô của tab đang đứng. Gắn luật ảnh vào đây sẽ
+     * chặn chủ xe sửa biển số của một chiếc xe cũ còn thiếu ảnh, bằng một câu lỗi trỏ vào bảng ảnh
+     * ở tab khác — và cổng thật vẫn còn: backend từ chối mọi lượt gửi `media` còn trống một góc,
+     * còn lượt gửi duyệt thì đi qua `missingPublishRequirements`.
+     */
     vehicleFormSchema,
     'Vehicles.form.validation',
   );

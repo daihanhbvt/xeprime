@@ -1,7 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  BILLING_MODE_VALUES,
+  BILLING_PHASE,
   DEFAULT_PLATFORM_TENANT_SORT,
+  PARTNER_QUOTA_KIND_VALUES,
   PLATFORM_PARTNER_KIND_VALUES,
+  PLATFORM_TENANT_PLAN_FILTER_VALUES,
+  type PlatformTenantPlanFilter,
   PLATFORM_TENANT_SORT_VALUES,
   TENANT_STATUS_VALUES,
   type PlatformPartnerKind,
@@ -10,7 +15,7 @@ import {
 import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
-import { CurrentPlanDto } from '../../billing/dto/billing.dto';
+import { CurrentPlanDto, PlanTermRefDto } from '../../billing/dto/billing.dto';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
@@ -39,6 +44,16 @@ export class PlatformTenantListQueryDto {
   @IsOptional()
   @IsIn(TENANT_STATUS_VALUES)
   status?: string;
+
+  @ApiPropertyOptional({
+    enum: PLATFORM_TENANT_PLAN_FILTER_VALUES,
+    description:
+      'Hạn gói: active = có kỳ gói đang chạy · expiring = hết trong PLAN_EXPIRING_SOON_DAYS ngày và ' +
+      'chưa có kỳ xếp sau · none = không có kỳ gói nào đang chạy (ân hạn / hết hạn / chưa kích hoạt)',
+  })
+  @IsOptional()
+  @IsIn(PLATFORM_TENANT_PLAN_FILTER_VALUES)
+  planState?: PlatformTenantPlanFilter;
 
   @ApiPropertyOptional({ description: 'Tìm theo tên / mã / slug / SĐT' })
   @IsOptional()
@@ -71,6 +86,44 @@ export class LockTenantDto {
   reason?: string;
 }
 
+/**
+ * Gói của một gian hàng nhìn từ DANH SÁCH — câu "đang dùng gói gì, tới bao giờ, kỳ sau là gì".
+ *
+ * Pha và tuyến chấm bằng `resolveEffectiveBilling` — cùng phép mà cổng tuyến dùng — nên danh sách
+ * không bao giờ nói một gian hàng "đang dùng gói" trong khi `TenantScopeGuard` coi họ là hoa hồng.
+ */
+export class PlatformTenantPlanDto {
+  @ApiProperty({
+    enum: Object.values(BILLING_PHASE),
+    description: '@xeprime/types → BillingPhase',
+  })
+  phase!: string;
+  @ApiPropertyOptional({ type: String, nullable: true, enum: BILLING_MODE_VALUES })
+  billingMode!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) planName!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) planCode!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO — bắt đầu kỳ đang xét' })
+  termStartsAt!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO — kết thúc kỳ đang xét' })
+  endsAt!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO — hết ân hạn' })
+  graceEndsAt!: string | null;
+  @ApiProperty({
+    enum: PARTNER_QUOTA_KIND_VALUES,
+    description:
+      'Trần xe của KỲ GÓI đang xét (snapshot — ADR 0041 điều 3). not_applicable khi không ở tuyến gói',
+  })
+  vehicleLimitKind!: string;
+  @ApiPropertyOptional({ type: Number, nullable: true, description: 'Chỉ khi vehicleLimitKind = total' })
+  vehicleLimit!: number | null;
+  @ApiPropertyOptional({
+    type: PlanTermRefDto,
+    nullable: true,
+    description: 'Kỳ đã xếp lịch kế tiếp (gia hạn / đổi gói từ kỳ sau) — null nếu chưa có',
+  })
+  nextTerm!: PlanTermRefDto | null;
+}
+
 /** Một gian hàng trong danh sách quản trị nền tảng. */
 export class PlatformTenantDto {
   @ApiProperty() id!: string;
@@ -89,6 +142,7 @@ export class PlatformTenantDto {
   @ApiPropertyOptional({ type: String, nullable: true }) ownerName!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) provinceName!: string | null;
   @ApiProperty() vehicleCount!: number;
+  @ApiProperty({ type: PlatformTenantPlanDto }) plan!: PlatformTenantPlanDto;
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
 }
 

@@ -46,9 +46,7 @@ async function renderButton(surface: ChatSide) {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
-  return render(
-    withIntl(wrapper({ children: <ChatBadgeButton surface={surface} /> })),
-  );
+  return render(withIntl(wrapper({ children: <ChatBadgeButton surface={surface} /> })));
 }
 
 beforeEach(() => {
@@ -56,12 +54,14 @@ beforeEach(() => {
   badges.mockReset().mockReturnValue(counts(0, 0));
 });
 
+/** MỘT tài khoản, MỘT hộp thư (ADR 0053): huy hiệu đếm và mở đúng hộp thư của bề mặt. */
 describe('ChatBadgeButton', () => {
-  it('hiện TỔNG chưa đọc của cả hai vai', async () => {
+  it('khu khách: hiện số chưa đọc của hộp thư KHÁCH, không cộng hộp thư gian hàng', async () => {
     badges.mockReturnValue(counts(2, 5));
     const view = await renderButton(CHAT_SIDE.CUSTOMER);
 
-    expect(await view.findByText('7')).toBeTruthy();
+    expect(await view.findByText('2')).toBeTruthy();
+    expect(view.queryByText('7')).toBeNull();
   });
 
   it('không có tin nào thì KHÔNG vẽ huy hiệu', async () => {
@@ -70,31 +70,21 @@ describe('ChatBadgeButton', () => {
     expect(view.queryByText('0')).toBeNull();
   });
 
-  it('ở khu khách, còn tin bên khách thì mở hộp thư khách', async () => {
+  it('khu khách: bấm mở hộp thư khách', async () => {
     badges.mockReturnValue(counts(2, 5));
     const view = await renderButton(CHAT_SIDE.CUSTOMER);
-    await view.findByText('7');
+    await view.findByText('2');
 
     fireEvent.press(view.getByLabelText('Tin nhắn'));
     expect(mockPush).toHaveBeenCalledWith(ROUTES.chat.list());
   });
 
-  /** Chính là lỗ mà `useChatBadge` sinh ra để bịt — badge sáng mà mở ra không có gì. */
-  it('ở khu khách, chỉ gian hàng có tin thì mở thẳng inbox gian hàng', async () => {
-    badges.mockReturnValue(counts(0, 3));
-    const view = await renderButton(CHAT_SIDE.CUSTOMER);
-    await view.findByText('3');
-
-    fireEvent.press(view.getByLabelText('Tin nhắn'));
-    expect(mockPush).toHaveBeenCalledWith(ROUTES.manage.chat());
-  });
-
-  it('ở khu quản lý, chỉ khách có tin thì mở thẳng hộp thư khách', async () => {
-    badges.mockReturnValue(counts(4, 0));
+  it('khu quản lý: đếm và mở hộp thư gian hàng, kể cả khi chỉ bên khách có tin', async () => {
+    badges.mockReturnValue(counts(4, 1));
     const view = await renderButton(CHAT_SIDE.SHOP);
-    await view.findByText('4');
+    await view.findByText('1');
 
     fireEvent.press(view.getByLabelText('Trò chuyện'));
-    expect(mockPush).toHaveBeenCalledWith(ROUTES.chat.list());
+    expect(mockPush).toHaveBeenCalledWith(ROUTES.manage.chat());
   });
 });

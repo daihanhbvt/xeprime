@@ -1,0 +1,6 @@
+/** Hộp thoại khai tài khoản nhận tiền. */
+
+/* Dòng "tài khoản mới sẽ thay cho…" đứng TRÊN các ô — đọc trước khi gõ, không phải sau khi lưu. */
+.replaces {
+  margin-bottom: var(--xp-space-md);
+}

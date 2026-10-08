@@ -27,7 +27,7 @@
     "@xeprime/domain": "workspace:*",
     "@xeprime/prisma": "workspace:*",
     "@xeprime/types": "workspace:*",
-    "bcryptjs": "3.0.3",
+    "bcrypt": "6.0.0",
     "class-transformer": "0.5.1",
     "class-validator": "0.15.1",
     "cookie-parser": "1.4.7",
@@ -45,6 +45,7 @@
   "devDependencies": {
     "@nestjs/cli": "11.0.24",
     "@nestjs/testing": "11.1.28",
+    "@types/bcrypt": "6.0.0",
     "@types/cookie-parser": "1.4.10",
     "@types/express": "5.0.6",
     "@types/jest": "30.0.0",

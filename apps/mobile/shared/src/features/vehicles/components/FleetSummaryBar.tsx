@@ -8,14 +8,21 @@ import { useFleetSummary } from '../hooks/use-vehicles';
 /**
  * Dải chỉ số đầu danh sách xe — tổng · sẵn sàng · đang thuê.
  *
- * Con số nói về CẢ đội xe (backend đếm bằng `groupBy`), KHÔNG phụ thuộc trang hay bộ lọc hiện
- * tại. Ba ô, đúng ba ô web chọn: ô thứ ba là "Đang thuê" chứ không phải "Cảnh báo".
+ * Con số nói về CẢ đội xe của chi nhánh đang xem (backend đếm bằng `groupBy`), KHÔNG phụ thuộc
+ * trang hay ô lọc trạng thái. Ba ô, đúng ba ô web chọn: ô thứ ba là "Đang thuê" chứ không phải "Cảnh báo".
  *
  * Hỏng thì tự ẩn: dải chỉ số là phụ trợ, không được chặn danh sách phía dưới.
  */
-export function FleetSummaryBar({ enabled }: { enabled: boolean }) {
+export function FleetSummaryBar({
+  enabled,
+  branchId,
+}: {
+  enabled: boolean;
+  /** Cùng chi nhánh với danh sách bên dưới (ADR 0052 điều 3). */
+  branchId?: string | undefined;
+}) {
   const t = useTranslations('Vehicles.list.summary');
-  const { data, isLoading, isError } = useFleetSummary(enabled);
+  const { data, isLoading, isError } = useFleetSummary(enabled, branchId);
 
   if (!enabled || isError) return null;
 

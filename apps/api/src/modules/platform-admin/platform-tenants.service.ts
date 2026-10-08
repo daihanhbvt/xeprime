@@ -31,6 +31,8 @@ import {
   PlatformTenantListQueryDto,
 } from './dto/platform-tenant.dto';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
+import type { PlanTermRefDto } from '../billing/dto/billing.dto';
+import { planStateWhere, scheduledTermsByTenant, tenantPlanSummary } from './plan-terms';
 
 /**
  * Cột của một dòng danh sách. Kèm dòng thuê bao HIỆU LỰC gần nhất (cùng `where`/`orderBy` với
@@ -51,8 +53,16 @@ function listSelect(now: Date) {
     onboardingState: true,
     owner: { select: { displayName: true } },
     profile: { select: { provinceName: true } },
-    _count: { select: { vehicles: true } },
-    subscriptions: { where: effectiveSubscriptionWhere(now), ...EFFECTIVE_SUBSCRIPTION_ARGS },
+    // Xe CHƯA XOÁ — cùng định nghĩa với tab chi tiết và với hạn mức xe (`vehicleQuotaFor`).
+    _count: { select: { vehicles: { where: { deletedAt: null } } } },
+    // Thêm `startsAt` + `quotaJson` vào đúng dòng mà phép chấm tuyến đã đọc: cột gói của danh
+    // sách cần kỳ bắt đầu và trần xe snapshot (ADR 0041 điều 3), không cần một truy vấn thứ hai.
+    subscriptions: {
+      where: effectiveSubscriptionWhere(now),
+      orderBy: EFFECTIVE_SUBSCRIPTION_ARGS.orderBy,
+      take: EFFECTIVE_SUBSCRIPTION_ARGS.take,
+      select: { ...EFFECTIVE_SUBSCRIPTION_ARGS.select, startsAt: true, quotaJson: true },
+    },
   } satisfies Prisma.TenantSelect;
 }
 
@@ -99,6 +109,7 @@ export class PlatformTenantsService {
     const scope: Prisma.TenantWhereInput = {
       deletedAt: null,
       ...(query.status ? { status: query.status } : {}),
+      ...(query.planState ? planStateWhere(query.planState, now) : {}),
       ...(q
         ? {
             OR: [
@@ -125,8 +136,13 @@ export class PlatformTenantsService {
       }),
     ]);
 
+    const nextTerms = await scheduledTermsByTenant(
+      this.prisma,
+      rows.map((row) => row.id),
+      now,
+    );
     return {
-      data: rows.map((row) => toListItem(row, now)),
+      data: rows.map((row) => toListItem(row, now, nextTerms.get(row.id) ?? null)),
       meta: paginationMeta(paging, total),
     };
   }
@@ -190,18 +206,21 @@ export class PlatformTenantsService {
         ...listSelect(now),
         owner: { select: { displayName: true, email: true, phone: true } },
         profile: {
-          select: { provinceName: true, address: true, taxCode: true, businessLicenseNo: true },
+          select: { provinceName: true, address: true, businessLicenseNo: true },
         },
-        _count: { select: { vehicles: true, bookings: true } },
+        // MST: hồ sơ người bán, nguồn duy nhất (07/10/2026).
+        sellerProfile: { select: { taxId: true } },
+        _count: { select: { vehicles: { where: { deletedAt: null } }, bookings: true } },
       },
     });
     if (!row) throw notFound();
+    const nextTerms = await scheduledTermsByTenant(this.prisma, [row.id], now);
     return {
-      ...toListItem(row, now),
+      ...toListItem(row, now, nextTerms.get(row.id) ?? null),
       ownerEmail: row.owner?.email ?? null,
       ownerPhone: row.owner?.phone ?? null,
       address: row.profile?.address ?? null,
-      taxCode: row.profile?.taxCode ?? null,
+      taxCode: row.sellerProfile?.taxId ?? null,
       businessLicenseNo: row.profile?.businessLicenseNo ?? null,
       bookingCount: row._count.bookings,
       currentPlan: await this.billing.currentPlan(id),
@@ -288,7 +307,7 @@ export class PlatformTenantsService {
 
 type TenantRow = Prisma.TenantGetPayload<{ select: ReturnType<typeof listSelect> }>;
 
-function toListItem(r: TenantRow, now: Date): PlatformTenantDto {
+function toListItem(r: TenantRow, now: Date, nextTerm: PlanTermRefDto | null): PlatformTenantDto {
   const billing = resolveEffectiveBilling(r.subscriptions[0] ?? null, now);
   return {
     id: r.id,
@@ -306,6 +325,7 @@ function toListItem(r: TenantRow, now: Date): PlatformTenantDto {
     ownerName: r.owner?.displayName ?? null,
     provinceName: r.profile?.provinceName ?? null,
     vehicleCount: r._count.vehicles,
+    plan: tenantPlanSummary(r.subscriptions[0] ?? null, nextTerm, now),
     createdAt: r.createdAt as unknown as string,
   };
 }

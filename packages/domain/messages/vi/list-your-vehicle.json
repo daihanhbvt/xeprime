@@ -37,6 +37,23 @@
     "upgrade": {
       "title": "Linh hoạt nâng cấp khi cần",
       "body": "Bạn có thể bắt đầu với đăng xe cá nhân và nâng cấp lên gian hàng sau này. Tài khoản và dữ liệu xe của bạn vẫn được giữ nguyên."
+    },
+    "chooseTitle": "Chọn cách bạn muốn cho thuê",
+    "selected": "Đang chọn",
+    "how": {
+      "title": "Bắt đầu trong 3 bước",
+      "account": {
+        "title": "Tạo tài khoản đối tác",
+        "desc": "Tách riêng với tài khoản thuê xe."
+      },
+      "choose": {
+        "title": "Chọn cách cho thuê",
+        "desc": "Đăng xe cá nhân hoặc mở gian hàng."
+      },
+      "publish": {
+        "title": "Đăng xe hoặc mở gian hàng",
+        "desc": "XePrime duyệt hồ sơ rồi đưa xe lên chợ."
+      }
     }
   },
   "ownerProfile": {
@@ -212,18 +229,10 @@
   "images": {
     "title": "Hình ảnh xe",
     "intro": "Đăng nhiều ảnh ở các góc độ khác nhau để tăng độ tin cậy. Ảnh rõ nét giúp tăng tỉ lệ được thuê.",
-    "mainImageHelp": "Ảnh này đại diện cho xe trên chợ và trong danh sách.",
-    "counter": "Đã có {count}/{min} ảnh",
-    "counterAria": "Tiến độ số ảnh tối thiểu",
-    "missing": "Cần thêm {count, plural, other {# ảnh}} nữa để gửi duyệt. Bạn vẫn lưu nháp được ngay bây giờ.",
-    "enough": "Đã đủ ảnh để gửi duyệt.",
-    "anglesTitle": "Gợi ý các góc chụp chuẩn",
-    "angles": {
-      "front": "Góc trước: thấy rõ đầu xe và biển số",
-      "rear": "Góc sau xe",
-      "side": "Góc bên hông, lấy trọn thân xe",
-      "interior": "Nội thất: hàng ghế và khu vực điều khiển"
-    }
+    "counter": "Đã có {count}/{min} góc ảnh",
+    "counterAria": "Tiến độ các góc ảnh bắt buộc",
+    "missing": "Còn {count, plural, other {# góc ảnh}} chưa có. Bạn vẫn lưu nháp được ngay bây giờ.",
+    "enough": "Đã đủ ảnh bắt buộc."
   },
   "success": {
     "submittedTitle": "Đã gửi xe đi duyệt",
@@ -270,8 +279,7 @@
     "modelRequired": "Chọn dòng xe",
     "manufactureYearRequired": "Nhập năm sản xuất",
     "seatCountRequired": "Nhập số chỗ ngồi",
-    "mainImageRequired": "Tải ảnh đại diện của xe",
-    "photosMin": "Cần tối thiểu {min} ảnh xe (tính cả ảnh đại diện) để lên chợ",
+    "photosRequired": "Còn {count, plural, other {# góc ảnh}} chưa có ảnh — không ô nào được để trống",
     "motorbikeCategoryRequired": "Chọn phân khúc xe",
     "engineDisplacementCcRequired": "Nhập dung tích động cơ"
   }

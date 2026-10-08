@@ -1,22 +1,202 @@
-.actions {
-  margin-top: 20px;
+/*
+ * Panel chi tiết xe (màn giám sát) — phần RIÊNG; khung chung (tiêu đề, bố cục hai cột, lưới
+ * nhãn–giá trị, chân panel) nằm ở `components/overlay/WorkDrawer`. Thang chữ cố ý nhỏ và đều
+ * như màn Duyệt xe: tên xe 20px, tiêu đề khối 14px đậm, nội dung 14px, chú thích 12px.
+ */
+
+/* ─── Phần mở đầu ────────────────────────────────────────────────────────── */
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
 }
 
-.hint {
-  font-size: 13px;
-  color: var(--xp-color-text-tertiary);
-  text-align: center;
+.vehicleName {
+  margin: 0;
+  font-size: var(--xp-font-size-h3);
+  line-height: var(--xp-line-height-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+  overflow-wrap: anywhere;
 }
 
-.note {
-  margin: 0 0 12px;
-  font-size: 13.5px;
-  color: var(--xp-color-text-secondary);
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs);
+}
+
+.chip {
+  margin-inline-end: 0;
+  font-size: var(--xp-font-size-label);
+}
+
+.introAlert {
+  font-size: var(--xp-font-size-body);
+}
+
+/* ─── Các khối thu gọn ───────────────────────────────────────────────────── */
+
+.collapse {
+  background: var(--xp-color-bg-container);
+}
+
+.sectionLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
 }
 
 .inline {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
   flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+}
+
+.inline :global(.ant-tag) {
+  margin-inline-end: 0;
+}
+
+.caption {
+  margin: 0;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.muted {
+  color: var(--xp-color-text-tertiary);
+}
+
+.money {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Chữ người dùng gõ (mô tả, lý do): giữ xuống dòng của họ, bẻ chuỗi dài. */
+.prose {
+  margin: 0;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  color: var(--xp-color-text);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.person {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Cột phải ───────────────────────────────────────────────────────────── */
+
+.sideCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  padding: 12px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+.sideTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+}
+
+/* Ba trục: nhãn trái, giá trị phải — mỗi trục một dòng để mắt đọc như một danh mục kiểm tra. */
+.axes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  margin: 0;
+}
+
+.axis {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  min-height: 28px;
+}
+
+.axisLabel {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.axisValue {
+  margin: 0;
+}
+
+.axisValue :global(.ant-tag) {
+  margin-inline-end: 0;
+}
+
+/* Kết quả gộp: một ô tô nền để tách khỏi ba trục nguyên liệu phía trên. */
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  padding: var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+}
+
+.resultLive {
+  background: var(--xp-color-success-bg);
+}
+
+.resultLabel {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text-secondary);
+}
+
+.linkRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm) var(--xp-space-md);
+  font-size: var(--xp-font-size-body);
+}
+
+/* ─── Chân panel ─────────────────────────────────────────────────────────── */
+
+.footerHint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+}
+
+.footerHintLive {
+  color: var(--xp-color-success);
+}
+
+/* Chữ giữ màu thường (tương phản đủ); chỉ biểu tượng mang màu cảnh báo. */
+.footerHintWarn {
+  color: var(--xp-color-text);
+}
+
+.footerHintWarn :global(.anticon) {
+  color: var(--xp-color-warning);
+}
+
+/* ─── Hộp thoại ──────────────────────────────────────────────────────────── */
+
+.dialogHint {
+  margin: 0;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  color: var(--xp-color-text-secondary);
 }

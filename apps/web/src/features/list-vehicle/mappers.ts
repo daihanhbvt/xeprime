@@ -52,7 +52,6 @@ export function quickVehicleToCreateInput(values: QuickVehicleValues): CreateVeh
     engineDisplacementCc: values.engineDisplacementCc ?? undefined,
     description: textOrUndefined(values.description),
     features: values.features ?? [],
-    mainImageUrl: values.mainImageUrl ?? undefined,
     images: values.images ?? [],
     media: (values.media ?? []).map((item) => ({ url: item.url.trim(), type: item.type })),
     weekdayPrice: money(values.weekdayPrice),

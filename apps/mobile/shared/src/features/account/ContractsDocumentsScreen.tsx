@@ -1,14 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { ownerResourcesOfKind } from '@xeprime/domain';
-import { AppHeader } from '@/components/layout/AppHeader';
+import { ShellPageHeader, type PageShell } from '@/features/shell/ShellPageHeader';
 import { Screen } from '@/components/layout/Screen';
 import { BlockTitle } from '@/components/ui/BlockTitle';
 import { Card } from '@/components/ui/Card';
-import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { ResourceList, openOwnerResource } from './components/ResourceList';
@@ -20,15 +18,23 @@ import { ResourceList, openOwnerResource } from './components/ResourceList';
  * Nội dung tĩnh, không gọi API nào. Hai khối theo đúng web — nút hợp đồng mẫu và danh sách chứng
  * từ quyết toán — rồi một ghi chú nói rõ đây là biểu mẫu CHUNG.
  */
-export function ContractsDocumentsScreen() {
+export function ContractsDocumentsScreen({
+  shell = 'account',
+}: {
+  /**
+   * `manage` = mục menu Owner Lite của app XePrime Partner (trong bộ tab, nút mở menu) — ADR 0053.
+   * `account` = màn chen ngang có nút lui.
+   */
+  shell?: PageShell;
+} = {}) {
   const t = useTranslations('Account.contracts');
   const tResources = useTranslations('Account.resources');
-  const router = useRouter();
 
   return (
     <>
-      <AppHeader
-        onBack={() => goBackOr(router, ROUTES.account.home())}
+      <ShellPageHeader
+        shell={shell}
+        backTo={ROUTES.account.home()}
         title={t('title')}
         subtitle={t('subtitle')}
       />

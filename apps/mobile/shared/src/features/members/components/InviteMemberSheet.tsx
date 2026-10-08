@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -15,6 +15,8 @@ import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { space } from '@/theme/tokens';
 import { inviteMemberSchema, type InviteMemberValues } from '@xeprime/validators';
 import { useCreateInvite } from '../hooks/use-members';
+import { toBranchScopeInput, useBranchScopeOptions } from '../branch-scope';
+import { BranchScopePicker } from './BranchScopePicker';
 
 /**
  * GỬI LỜI MỜI vào gian hàng — không phải "thêm thành viên".
@@ -42,6 +44,19 @@ function InviteForm({ onDone }: { onDone: () => void }) {
   const domainLabel = useDomainLabel();
   const errorMessage = useErrorMessage();
   const invite = useCreateInvite();
+  /*
+   * Chi nhánh phụ trách giao NGAY TRÊN LỜI MỜI (ADR 0052). Ô LUÔN có giá trị — mặc định "Tất cả
+   * chi nhánh"; gian hàng chưa có chi nhánh thì ẩn. Giữ ngoài RHF vì `inviteMemberSchema` (gói
+   * dùng chung) chưa có trường này; luật "ít nhất một" kiểm ở `submit` như schema web.
+   */
+  const branchScope = useBranchScopeOptions();
+  // `null` = chưa chạm: giá trị là mặc định SUY RA ("Tất cả", hoặc toàn bộ chi nhánh của người
+  // mời bị GIỚI HẠN — họ không cấp được "Tất cả"). Suy lúc render nên danh sách chi nhánh tải
+  // xong là mặc định đúng ngay, không đè lên lựa chọn tay.
+  const [picked, setPicked] = useState<string[] | null>(null);
+  const branches = picked ?? branchScope.defaultSelection;
+  const [branchError, setBranchError] = useState(false);
+  const showBranches = branchScope.count > 0;
 
   const resolver = useValidationResolver<InviteMemberValues>(
     inviteMemberSchema,
@@ -62,8 +77,16 @@ function InviteForm({ onDone }: { onDone: () => void }) {
   );
 
   const submit = handleSubmit((values) => {
+    if (showBranches && branches.length === 0) {
+      setBranchError(true);
+      return;
+    }
     invite.mutate(
-      { email: values.email.trim(), roleKey: values.roleKey },
+      {
+        email: values.email.trim(),
+        roleKey: values.roleKey,
+        ...toBranchScopeInput(showBranches ? branches : undefined),
+      },
       {
         /*
          * Lời mời đã tạo, nhưng thư có thể KHÔNG gửi được (SMTP hỏng) — server nói thẳng qua
@@ -101,6 +124,21 @@ function InviteForm({ onDone }: { onDone: () => void }) {
         options={roleOptions}
         required
       />
+      {showBranches ? (
+        <BranchScopePicker
+          label={t('branches')}
+          required
+          value={branches}
+          options={branchScope.options}
+          allowAll={branchScope.allowAll}
+          hint={t(branchScope.allowAll ? 'branchesHelp' : 'branchesHelpLimited')}
+          {...(branchError && branches.length === 0 ? { error: t('errors.branchRequired') } : {})}
+          onChange={(next) => {
+            setPicked(next);
+            setBranchError(false);
+          }}
+        />
+      ) : null}
 
       <XStack gap={space.sm}>
         {/*

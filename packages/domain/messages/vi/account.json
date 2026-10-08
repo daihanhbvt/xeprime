@@ -213,7 +213,7 @@
     "idNumber": "Số CCCD",
     "idNumberHint": "Số căn cước của người đứng tên.",
     "taxId": "Mã số thuế",
-    "save": "Lưu thông tin",
+    "save": "Lưu thông tin thuế",
     "saved": "Đã lưu thông tin khai thuế.",
     "fullProfile": "Tài khoản nhận tiền và giấy tờ đầy đủ khai ở hồ sơ người bán.",
     "openFullProfile": "Mở hồ sơ người bán",
@@ -397,7 +397,7 @@
   },
   "ownerHub": {
     "title": "Hồ sơ chủ xe",
-    "subtitle": "Thông tin khách thấy và cách bạn đăng nhập.",
+    "subtitle": "Thông tin khách thấy, khai thuế, gói dịch vụ và cách bạn đăng nhập.",
     "navTitle": "Trên trang này",
     "navLabel": "Các phần của hồ sơ chủ xe",
     "loadError": "Không tải được hồ sơ chủ xe",
@@ -406,7 +406,9 @@
       "profile": "Thông tin chủ xe",
       "profileHint": "Khách thấy ảnh, họ tên và lời giới thiệu này trên trang chủ xe.",
       "address": "Địa chỉ nhận xe",
-      "addressHint": "Nơi khách đến nhận xe."
+      "addressHint": "Nơi khách đến nhận xe.",
+      "plan": "Gói dịch vụ",
+      "planHint": "Gói đang dùng và hoá đơn thanh toán. Lên gói gian hàng để quản lý đội xe đầy đủ."
     },
     "form": {
       "saved": "Đã lưu địa chỉ nhận xe",

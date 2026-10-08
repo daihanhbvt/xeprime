@@ -18,6 +18,8 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
+import { deepLinkPended } from '@/features/shell/shell-scope.slice';
+import { useAppDispatch } from '@/store/hooks';
 import { ROUTES } from '@/navigation/routes';
 import { colors, fontSize, space } from '@/theme/tokens';
 import { useAnswerInvite, useInvitePreview } from './hooks/use-members';
@@ -45,6 +47,7 @@ export function InviteAnswerScreen({ token }: { token: string }) {
   const tCommon = useTranslations('Common.actions');
   const router = useRouter();
   const navigateOnce = useNavigateOnce();
+  const dispatch = useAppDispatch();
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const errorMessage = useErrorMessage();
@@ -57,7 +60,21 @@ export function InviteAnswerScreen({ token }: { token: string }) {
   const [answered, setAnswered] = useState<'accepted' | 'declined' | null>(null);
   const [confirmingDecline, setConfirmingDecline] = useState(false);
 
-  const goHome = () => navigateOnce(ROUTES.explore.home());
+  // Lời mời là việc của tài khoản ĐỐI TÁC ở app Partner (ADR 0053) — "về trang chủ" là trang chủ
+  // khu quản lý, như web `InviteAnswerCard` (`ROUTES.MANAGE.ROOT`).
+  const goHome = () => navigateOnce(ROUTES.manage.home());
+
+  /*
+   * Đăng nhập / tạo tài khoản đối tác rồi QUAY LẠI đúng lời mời — web `resolvePartnerDestination`
+   * xếp `next` là trang lời mời lên trước mọi luật tuyến. Native dùng cùng ngăn "deep link đang chờ"
+   * mà thông báo đẩy dùng: `useEnterApp` tiêu thụ nó ngay sau lượt đăng nhập/đăng ký thành công.
+   * Thiếu bước này, tài khoản mới (chưa có gian hàng) bị `ScopeGuard` đưa sang màn chọn cách cho
+   * thuê và lời mời mất hẳn.
+   */
+  const authenticateThenReturn = (destination: Parameters<typeof navigateOnce>[0]) => {
+    dispatch(deepLinkPended(`/invites/${encodeURIComponent(token)}`));
+    navigateOnce(destination);
+  };
   const header = <AppHeader title={t('title')} onBack={() => router.back()} />;
 
   if (preview.isLoading || userLoading) {
@@ -98,14 +115,10 @@ export function InviteAnswerScreen({ token }: { token: string }) {
           <ScreenMessage
             icon={answered === 'accepted' ? 'checkmark-circle-outline' : 'close-circle-outline'}
             title={
-              answered === 'accepted'
-                ? t('accepted', { shop: invite.tenantName })
-                : t('declined')
+              answered === 'accepted' ? t('accepted', { shop: invite.tenantName }) : t('declined')
             }
             actionLabel={answered === 'accepted' ? t('goManage') : t('goHome')}
-            onAction={
-              answered === 'accepted' ? () => navigateOnce(ROUTES.manage.home()) : goHome
-            }
+            onAction={answered === 'accepted' ? () => navigateOnce(ROUTES.manage.home()) : goHome}
           />
         </Screen>
       </>
@@ -192,11 +205,17 @@ export function InviteAnswerScreen({ token }: { token: string }) {
                 Chưa đăng nhập thì vẫn ĐỌC được lời mời — chỉ không trả lời được. Giấu hẳn nội dung
                 sau cổng đăng nhập là bắt người ta đăng nhập để biết mình đang được mời làm gì.
               */}
-              <Callout tone="info">{t('signInPrompt')}</Callout>
+              <Callout tone="info">{t('signInPartnerPrompt')}</Callout>
               <Button
                 label={t('signIn')}
                 size="lg"
-                onPress={() => navigateOnce(ROUTES.account.login())}
+                onPress={() => authenticateThenReturn(ROUTES.account.login())}
+              />
+              <Button
+                label={t('createPartnerAccount')}
+                variant="secondary"
+                size="lg"
+                onPress={() => authenticateThenReturn(ROUTES.account.register())}
               />
             </>
           )}

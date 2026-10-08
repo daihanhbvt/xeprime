@@ -7,7 +7,7 @@ import { ShopBankAccountsController } from './shop-bank-accounts.controller';
  * Tài khoản ngân hàng NHẬN TIỀN (ADR 0033).
  *
  * Một service cho hai bề mặt — cá nhân và gian hàng — vì cả hai đọc/ghi cùng một bảng với cùng
- * luật che PII, cùng luật "đúng một mặc định" và cùng luật lưu trữ thay vì xoá. Tách đôi là mời
+ * luật che PII, cùng luật "mỗi chủ một tài khoản" và cùng luật lưu trữ thay vì xoá. Tách đôi là mời
  * hai bên trôi khỏi nhau ở đúng những chỗ mà lệch nhau nghĩa là tiền vào sai tài khoản.
  *
  * Export service: `HoldSettlementService` (và sau này luồng rút tiền) cần đọc tài khoản nhận để

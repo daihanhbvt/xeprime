@@ -11,12 +11,14 @@ import {
 import { Button, Result, Spin } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { TENANT_STATUS_META, type TenantStatus } from '@xeprime/types';
+import { PERMISSION, TENANT_STATUS_META, type TenantStatus } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { ROUTES, adminPartnerPath } from '@/constants/routes';
 import { dayjs } from '@/lib/datetime';
+import { TripOpsDashboardPanel } from '@/features/admin-trips/components/TripOpsDashboardPanel';
 import { DashboardPanel } from '@/features/dashboard/components/DashboardPanel';
 import { StatCard } from '@/features/dashboard/components/StatCard';
+import { usePermissions } from '@/hooks/use-permissions';
 import { usePlatformSummary } from '../hooks/use-platform-summary';
 import type { PlatformRecentTenant } from '../types';
 import styles from './PlatformDashboardView.module.css';
@@ -40,7 +42,10 @@ export function PlatformDashboardView() {
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
   const router = useRouter();
+  const { has } = usePermissions();
   const { data, isLoading, isError, refetch } = usePlatformSummary();
+  // Khối vận hành chuyến đọc `/platform/trips/summary` — gác bằng quyền đơn thuê, như chính màn đó.
+  const canViewTrips = has(PERMISSION.PLATFORM_BOOKING_VIEW);
 
   if (isError && !data) {
     return (
@@ -110,6 +115,9 @@ export function PlatformDashboardView() {
       </div>
 
       <div className={styles.panels}>
+        {/* Việc cần làm HÔM NAY đứng trước KPI và danh sách (UX §1.5). */}
+        {canViewTrips ? <TripOpsDashboardPanel /> : null}
+
         <DashboardPanel title={t('pending.title')} icon={<AuditOutlined />}>
           {isLoading ? (
             <div className={styles.center}>

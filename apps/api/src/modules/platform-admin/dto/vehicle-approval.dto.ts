@@ -141,6 +141,17 @@ export class VehicleApprovalPageDto {
 // Chi tiết — hình dạng `VehicleReviewSnapshot` (@xeprime/types)
 // ---------------------------------------------------------------------------
 
+/** Một tấm ảnh của phiếu duyệt, kèm GÓC CHỤP (`VEHICLE_IMAGE_TYPE`). */
+export class VehicleApprovalMediaDto {
+  @ApiProperty() url!: string;
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Mã góc chụp (front/rear/left/right/interior/other); null = ảnh cũ chưa gán',
+  })
+  type!: string | null;
+}
+
 export class VehicleApprovalVehicleDto {
   @ApiProperty() id!: string;
   @ApiProperty() code!: string;
@@ -172,8 +183,22 @@ export class VehicleApprovalVehicleDto {
   electricConsumptionKwhPer100Km!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) description!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) mainImageUrl!: string | null;
-  @ApiProperty({ type: [String], description: 'Toàn bộ ảnh lúc gửi, ảnh đại diện đứng đầu' })
+  @ApiProperty({ type: [String], description: 'Toàn bộ ảnh lúc gửi, ảnh bìa đứng đầu' })
   images!: string[];
+  /**
+   * CÙNG bộ ảnh trên, kèm GÓC CHỤP (07/10/2026).
+   *
+   * Điều kiện ảnh của cổng duyệt hỏi đủ GÓC (ô tô 5, xe máy 2), mà `images` chỉ là URL trần —
+   * thiếu trường này thì `vehicleReviewAutoChecks` ở web không có gì để chấm và lặng lẽ rơi về
+   * nhánh dành cho phiếu cũ, tức mục ảnh luôn hiện "đạt".
+   *
+   * Tuỳ chọn vì phiếu chụp TRƯỚC đợt này không có nó.
+   */
+  @ApiPropertyOptional({
+    type: [VehicleApprovalMediaDto],
+    description: 'Ảnh kèm góc chụp; vắng mặt ở phiếu cũ',
+  })
+  media?: VehicleApprovalMediaDto[];
   @ApiProperty({ type: [String], description: 'Khoá tiện nghi (danh mục vehicle_feature)' })
   features!: string[];
 }

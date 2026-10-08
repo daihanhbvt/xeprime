@@ -1,131 +1,65 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'expo-router';
-import { isPackageOnboardingPending, tenantUsesManagePortal } from '@xeprime/types';
-import { APP_SCOPE } from './app-scope';
 import { useTranslations } from 'use-intl';
 import { Screen } from '@/components/layout/Screen';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenLoading } from '@/components/state/ScreenLoading';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
-import { useAppToast } from '@/components/feedback/use-app-toast';
 import { SESSION_STATUS, useSessionGate } from '@/features/auth/hooks/use-session-gate';
 import { useTenantScope } from '@/features/auth/hooks/use-tenant-scope';
-import { MANAGE_ONBOARDING_PATHNAME, ROUTES } from '@/navigation/routes';
-import { useNavigateOnce } from '@/hooks/use-navigate-once';
-import { fireAndForget } from '@/lib/fire-and-forget';
+import { ROUTES } from '@/navigation/routes';
+import { isSafeAppPath, useCurrentAppPath } from '@/features/auth/auth-next';
+import { deepLinkPended } from '@/features/shell/shell-scope.slice';
 import { useAppDispatch } from '@/store/hooks';
-import { forgetScope, scopeHome } from './use-shell-scope';
-import { scopeChanged } from './shell-scope.slice';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
+import { PARTNER_PATH, partnerPathRedirect } from './partner-track';
 
 /**
- * Cổng của KHU QUẢN LÝ — người có membership gian hàng HOẶC nhân sự nền tảng đi qua.
+ * Cổng của KHU QUẢN LÝ (app XePrime Partner) — bản native của luật trang theo TUYẾN mà `AppShell`
+ * của site partner áp (`partnerPageRedirect`, ADR 0053).
  *
- * Hai loại vai, một khu: menu bên trong đã rẽ nhánh sẵn theo `platformRole` (`manageNavForScope`
- * → `PLATFORM_NAV` / `SHOP_NAV`), nên gác bằng riêng `tenant` sẽ đá nhân sự nền tảng ra khỏi
- * đúng khu được dựng cho họ. Đối xứng với web: `resolvePortalDestination` đưa người chỉ có
- * platform role vào `/manage`, còn 403 thật do guard backend quyết định.
+ * Từ ADR 0053 mọi tài khoản tới được đây đều là tài khoản ĐỐI TÁC — realm do server quyết lúc đăng
+ * nhập, nên không còn ca "tài khoản này không thuộc app" để đá ra. Việc còn lại của cổng là đặt
+ * người dùng vào đúng trang của TUYẾN họ (`partner-track.ts`):
+ *
+ *  - chưa có gian hàng → màn chọn cách cho thuê (`/manage/register`);
+ *  - gian hàng trả phí chưa chuyển khoản → màn onboarding;
+ *  - chủ xe tuyến hoa hồng → chỉ các trang Owner Lite (danh sách trắng), còn lại về trang chủ;
+ *  - gian hàng tuyến gói → ba trang chỉ của tuyến hoa hồng đổi sang bản tương đương trong khu Gian hàng.
  *
  * Hai điều nó cố ý KHÔNG làm:
  *
- * 1. **Không đăng xuất.** Mất quyền gian hàng ≠ mất phiên. Người dùng bị đưa về khu khách kèm
- *    một câu giải thích, và vẫn đăng nhập nguyên vẹn — đối xứng với `AdminLayout` bên web, nơi
- *    403 không bao giờ dẫn về màn đăng nhập.
- * 2. **Không gánh 403 của từng màn.** Màn nào bị API từ chối thì tự hiện trạng thái lỗi của
- *    chính nó; cổng này dọn ở nhịp refetch `/auth/me` kế tiếp. Để mỗi màn tự điều hướng khi
- *    gặp 403 là dựng một máy trạng thái thứ hai chạy song song với cổng này.
+ * 1. **Không đăng xuất.** Đổi tuyến (vd. gói hết ân hạn ⇒ về hoa hồng) không phải mất phiên.
+ * 2. **Không gánh 403 của từng màn.** Màn nào bị API từ chối thì tự hiện trạng thái lỗi của chính
+ *    nó; cổng này dọn ở nhịp refetch `/auth/me` kế tiếp.
  *
- * Đá về khu khách chạy trong `useEffect` chứ không phải `<Redirect>` giữa lúc render: điều
- * hướng trong thân render của một layout đang mount là nguồn của cảnh báo "update during render"
- * và của những cú nháy không lần ra được.
+ * Chuyển hướng chạy trong `useEffect` chứ không phải `<Redirect>` giữa lúc render: điều hướng
+ * trong thân render của một layout đang mount là nguồn của cảnh báo "update during render".
  */
 export function ScopeGuard({ children }: { children: ReactNode }) {
   const t = useTranslations('MobileShell.scope');
   const router = useRouter();
   const navigateOnce = useNavigateOnce();
   const dispatch = useAppDispatch();
-  const toast = useAppToast();
+  const currentPath = useCurrentAppPath();
   const { status, error, retry } = useSessionGate();
   const { tenant } = useTenantScope();
-  const pathname = usePathname();
+  const pathname = usePathname() ?? '';
 
   /**
-   * ĐĂNG KÝ GIAN HÀNG là ngoại lệ có chủ đích của cổng này.
-   *
-   * `/manage/onboarding` nằm dưới `manage/` để deep link ánh xạ 1-1 với web, nhưng nó là màn của
-   * người CHƯA có gian hàng — đá họ về khu khách ngay khi mở chính là đóng cửa duy nhất dẫn tới
-   * việc mở gian hàng. Web giải cùng bài này bằng cách liệt kê route đó là "bare" trong `AppShell`.
-   *
-   * So với HẰNG PHẦN ĐƯỜNG DẪN của `routes.ts`, không `String(ROUTES.manage.onboarding())`: từ
-   * ADR 0040 builder đó nhận `track` và trả về một object `Href`, nên `String()` sẽ cho
-   * `"[object Object]"` ngay khi ai đó thêm một tham số — phép so vẫn chạy và chỉ sai âm thầm.
+   * Còn ĐANG ĐỨNG trong khu quản lý hay không. `pathname` đổi TRƯỚC khi layout này unmount, nên
+   * ngay khi người dùng rời khu (vd. sang wizard đăng xe nhanh) vẫn còn một khung hình mà layout
+   * chưa tháo nhưng đường dẫn đã ở ngoài — đừng chuyển hướng ở khung đó.
    */
-  const onOnboarding = pathname === MANAGE_ONBOARDING_PATHNAME;
-
-  /**
-   * Còn ĐANG ĐỨNG trong khu quản lý hay không.
-   *
-   * `pathname` đổi TRƯỚC khi layout này unmount, nên ngay khi người dùng rời `/manage/onboarding`
-   * về chợ xe, vẫn còn một khung hình mà layout quản lý chưa tháo nhưng đường dẫn đã là
-   * `/explore`. Thiếu chốt này thì ở đúng khung đó `onOnboarding` hoá `false`, cổng tưởng người
-   * chưa có gian hàng đang cố mở khu quản lý, và bắn "Bạn không còn quyền truy cập gian hàng
-   * này" cho một người vừa bấm Quay lại — họ chưa từng mất gì cả.
-   *
-   * Đã rời khu thì cổng không còn gì để gác: để lượt điều hướng đang chạy đi tới nơi.
-   */
-  const insideManage = (pathname ?? '').startsWith(String(ROUTES.manage.home()));
+  const insideManage =
+    pathname === PARTNER_PATH.HOME || pathname.startsWith(`${PARTNER_PATH.HOME}/`);
 
   const ready = status === SESSION_STATUS.READY;
-  /*
-   * "Không còn gì để quản lý" = mất CẢ hai lối: không gian hàng TUYẾN GÓI, và không vai nền tảng.
-   *
-   * Hỏi `tenantUsesManagePortal` chứ không `tenant === null` (ADR 0038 điều 4): chủ xe tuyến hoa
-   * hồng vẫn có `tenant`, nhưng `SubscriptionTrackGuard` ở server từ chối cả bộ quản lý gian hàng.
-   * Thiếu chốt này thì họ vào được khu quản lý rồi nhận 403 ở từng màn — một app trông như hỏng
-   * thay vì một lời giải thích.
-   *
-   * Cổng này cũng bắt ca gian hàng HẾT ÂN HẠN: `billingMode` rơi về `commission`, và chủ, quản
-   * lý, nhân viên, người xem rời khu quản lý cùng lúc — vì câu hỏi hỏi TENANT, không hỏi vai.
-   *
-   * KHÔNG còn nhánh `platformRole` (tách app 25/09/2026): admin nền tảng không được phục vụ
-   * trên hai app mobile — cùng luật với `canUsePartnerApp` mà server dùng ở cổng đăng nhập
-   * Partner (403 `PARTNER_ACCESS_REQUIRED`).
-   */
-  const outsideManagePortal =
-    ready && !tenantUsesManagePortal(tenant) && insideManage && !onOnboarding;
-
-  /**
-   * Gian hàng trả phí CHƯA chuyển khoản, đang đứng ở một màn quản lý khác (ADR 0040).
-   *
-   * Họ không "mất quyền" — họ còn nợ một bước, và bước đó nằm ngay trong khu này. Đá họ về chợ xe
-   * kèm câu "Bạn không còn quyền truy cập gian hàng này" là nói sai với người vừa mở gian hàng và
-   * xoá luôn lối duy nhất dẫn tới màn thanh toán. Web giải cùng bài bằng `WrongWorkspaceRedirect`
-   * tới `resolveWorkspaceHref`, và với họ hàm đó trả về chính màn onboarding.
-   */
-  const needsOnboarding = outsideManagePortal && isPackageOnboardingPending(tenant);
-  const evicted = outsideManagePortal && !needsOnboarding;
-
-  // Toast chỉ bắn MỘT lần cho mỗi lần bị đá: effect chạy lại theo nhịp refetch, và bốn bản sao
-  // của cùng một câu đọc như app đang hỏng chứ không như một lời giải thích.
-  const announced = useRef(false);
+  const redirectTo = ready && insideManage ? partnerPathRedirect({ tenant }, pathname) : null;
 
   useEffect(() => {
-    if (needsOnboarding) {
-      router.replace(ROUTES.manage.onboarding());
-      return;
-    }
-    if (!evicted) {
-      announced.current = false;
-      return;
-    }
-    if (announced.current) return;
-    announced.current = true;
-
-    dispatch(scopeChanged(APP_SCOPE.CUSTOMER));
-    fireAndForget(forgetScope, 'ScopeGuard.forgetScope');
-    toast.showInfo(t('lostAccess'));
-    // `dismissTo`: lùi về `(tabs)` đã có dưới ngăn xếp thay vì dựng bản thứ hai — xem `switchTo`.
-    router.dismissTo(scopeHome(APP_SCOPE.CUSTOMER));
-  }, [dispatch, evicted, needsOnboarding, router, t, toast]);
+    if (redirectTo) router.replace(redirectTo as Parameters<typeof router.replace>[0]);
+  }, [redirectTo, router]);
 
   switch (status) {
     case SESSION_STATUS.LOADING:
@@ -142,7 +76,11 @@ export function ScopeGuard({ children }: { children: ReactNode }) {
             icon="lock-closed-outline"
             title={t('signInRequired')}
             actionLabel={t('signIn')}
-            onAction={() => navigateOnce(ROUTES.account.login())}
+            onAction={() => {
+              // Đăng nhập xong quay lại ĐÚNG trang đang mở (deep link, push, link từ app XePrime).
+              if (isSafeAppPath(currentPath)) dispatch(deepLinkPended(currentPath));
+              navigateOnce(ROUTES.account.login());
+            }}
           />
         </Screen>
       );
@@ -155,9 +93,9 @@ export function ScopeGuard({ children }: { children: ReactNode }) {
       );
 
     case SESSION_STATUS.READY:
-      // Khung hình giữa lúc effect ở trên chưa kịp chạy: hiện màn chờ thay vì nội dung quản lý
-      // của một người chưa được đọc nó. (`READY` đã bảo đảm có `user` — xem `useSessionGate`.)
-      return evicted || needsOnboarding ? (
+      // Khung hình giữa lúc effect ở trên chưa kịp chạy: hiện màn chờ thay vì nội dung của một
+      // trang người này không được đứng. (`READY` đã bảo đảm có `user` — xem `useSessionGate`.)
+      return redirectTo ? (
         <Screen scroll={false}>
           <ScreenLoading />
         </Screen>

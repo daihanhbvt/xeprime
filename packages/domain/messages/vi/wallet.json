@@ -4,7 +4,14 @@
     "tenant": "Số dư & rút tiền"
   },
   "page": {
-    "subtitle": "Khoản XePrime phải trả gian hàng sau mỗi chuyến, và các lệnh rút về tài khoản ngân hàng của bạn."
+    "subtitle": "Khoản XePrime phải trả bạn sau mỗi chuyến, và các lệnh rút về tài khoản ngân hàng của bạn."
+  },
+  "payout": {
+    "hint": "Nơi XePrime chuyển tiền khi bạn rút. Tài khoản mặc định được chọn sẵn ở mỗi lệnh rút."
+  },
+  "ownerOnly": {
+    "title": "Chỉ chủ sở hữu xem được số dư",
+    "description": "Số dư, lệnh rút và tài khoản nhận tiền thuộc về chủ gian hàng. Liên hệ chủ gian hàng nếu bạn cần đối soát."
   },
   "balance": {
     "available": "Rút được ngay",

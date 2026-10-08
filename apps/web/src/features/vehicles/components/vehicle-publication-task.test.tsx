@@ -68,8 +68,14 @@ function makeVehicle(over: Partial<VehicleDetail> = {}): VehicleDetail {
     marketplaceEnabled: true,
     isMarketplaceVisible: false,
     marketplaceVisibilityReason: MARKETPLACE_VISIBILITY_REASON.NOT_APPROVED,
-    mainImageUrl: 'https://img.example/main.jpg',
-    images: ['https://img.example/1.jpg', 'https://img.example/2.jpg', 'https://img.example/3.jpg'],
+    mainImageUrl: 'https://img.example/1.jpg',
+    media: [
+      { url: 'https://img.example/1.jpg', type: 'front' },
+      { url: 'https://img.example/2.jpg', type: 'rear' },
+      { url: 'https://img.example/3.jpg', type: 'left' },
+      { url: 'https://img.example/4.jpg', type: 'right' },
+      { url: 'https://img.example/5.jpg', type: 'interior' },
+    ],
     serviceTypes: ['self_drive'],
     weekdayPrice: '600000',
     brand: 'toyota',
@@ -165,7 +171,7 @@ describe('VehiclePublicationTaskItem — nháp', () => {
   });
 
   it('danh sách dài không đổ hết ra thẻ — phần dư đếm số, chi tiết nằm sau dấu "i"', () => {
-    renderTask({ weekdayPrice: null, mainImageUrl: null, images: [], plateNumber: null });
+    renderTask({ weekdayPrice: null, mainImageUrl: null, media: [], plateNumber: null });
 
     expect(screen.getByText(/mục khác/)).toBeTruthy();
     expect(screen.getByRole('button', { name: /Xem đầy đủ các mục còn thiếu/ })).toBeTruthy();

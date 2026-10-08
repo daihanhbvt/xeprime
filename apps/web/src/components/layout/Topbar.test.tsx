@@ -157,14 +157,15 @@ describe('Topbar — ngữ cảnh trang', () => {
 
     const banner = screen.getByRole('banner');
     expect(within(banner).getByText('Trang chủ')).toBeTruthy();
-    expect(within(banner).getByText('Danh sách xe')).toBeTruthy();
+    // Chủ xe tuyến hoa hồng (OWNER không mang gói) — nhãn của menu Owner Lite, cùng nhãn tuyến gói.
+    expect(within(banner).getByText('Xe của tôi')).toBeTruthy();
   });
 
   it('route con vẫn ra ngữ cảnh cha', () => {
     nav.pathname = '/manage/vehicles/01H/edit';
     renderTopbar();
 
-    expect(within(screen.getByRole('banner')).getByText('Danh sách xe')).toBeTruthy();
+    expect(within(screen.getByRole('banner')).getByText('Xe của tôi')).toBeTruthy();
   });
 
   it('route ngoài cây menu chỉ hiện cấp một, KHÔNG bịa tiêu đề', () => {

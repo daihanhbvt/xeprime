@@ -201,3 +201,78 @@ describe('Platform audit read (Phase 7)', () => {
     });
   });
 });
+
+/**
+ * Nhóm hành động, ô tìm kiếm và tên đối tượng (08/10/2026) — chạy trên cùng bộ dòng seed ở trên,
+ * luôn khoanh bằng `targetType = RUN_TARGET` để không lẫn dữ liệu của spec khác.
+ */
+describe('Platform audit read — nhóm, tìm kiếm, tên đối tượng', () => {
+  maybe('lọc theo nhóm hành động ở DB (tiền tố mã)', async () => {
+    const status = await service.list({ targetType: RUN_TARGET, category: 'partner_status' });
+    expect(status.meta.total).toBe(3);
+    expect(status.data.every((row) => row.action.startsWith('tenant.'))).toBe(true);
+
+    const booking = await service.list({ targetType: RUN_TARGET, category: 'booking' });
+    expect(booking.data.map((row) => row.action).sort()).toEqual([
+      'booking.create',
+      'booking.transition',
+    ]);
+  });
+
+  maybe('tìm theo tên người thực hiện và tên gian hàng', async () => {
+    const byActor = await service.list({ targetType: RUN_TARGET, q: 'kiểm duyệt' });
+    expect(byActor.meta.total).toBe(3);
+    expect(byActor.data.every((row) => row.actorUserId === actorId)).toBe(true);
+
+    const tenant = await prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } });
+    const byTenant = await service.list({ targetType: RUN_TARGET, q: tenant.name });
+    expect(byTenant.meta.total).toBe(3);
+    expect(byTenant.data.every((row) => row.tenantId === tenantId)).toBe(true);
+
+    const nobody = await service.list({ targetType: RUN_TARGET, q: `khong-ai-${newId()}` });
+    expect(nobody.meta.total).toBe(0);
+  });
+
+  maybe('dán một ULID khớp CHÍNH XÁC mã dòng nhật ký (kể cả chữ thường)', async () => {
+    const id = logIds[2]!;
+    const found = await service.list({ q: id.toLowerCase() });
+    expect(found.data.map((row) => row.id)).toEqual([id]);
+  });
+
+  maybe('trả TÊN đối tượng tra theo lô; loại dữ liệu cá nhân thì không tra', async () => {
+    const tenantLog = newId();
+    const customerLog = newId();
+    await prisma.auditLog.createMany({
+      data: [
+        {
+          id: tenantLog,
+          actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
+          action: 'tenant.lock',
+          targetType: 'tenant',
+          targetId: tenantId,
+          tenantId,
+        },
+        {
+          id: customerLog,
+          actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
+          action: 'customer.contact_reveal',
+          targetType: 'tenant_customer',
+          targetId: newId(),
+          tenantId,
+        },
+      ],
+    });
+    try {
+      const tenant = await prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } });
+      const detail = await service.getOne(tenantLog);
+      expect(detail.targetLabel).toBe(tenant.name);
+      expect(detail.viaSupport).toBe(false);
+      expect((await service.getOne(customerLog)).targetLabel).toBeNull();
+
+      const page = await service.list({ tenantId, targetType: 'tenant' });
+      expect(page.data.find((row) => row.id === tenantLog)?.targetLabel).toBe(tenant.name);
+    } finally {
+      await prisma.auditLog.deleteMany({ where: { id: { in: [tenantLog, customerLog] } } });
+    }
+  });
+});

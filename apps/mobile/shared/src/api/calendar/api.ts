@@ -60,6 +60,11 @@ export interface CalendarFilters {
   days: number;
   vehicleType: string | null;
   q: string | null;
+  /**
+   * Chi nhánh giữ xe — ô "Chi nhánh" của màn lịch, sống trên tham số route (ADR 0052). Tuỳ chọn
+   * vì state bộ lọc của màn không giữ nó; màn ghép vào trước khi gọi hook.
+   */
+  branchId?: string | null;
   /** Chỉ ảnh hưởng `resources` — các query khác không mang nó. */
   sort: CalendarSort;
 }
@@ -186,9 +191,13 @@ export const calendarApi = {
     return getApiClient().post<BulkDayBlockResult>('/calendar/bulk-day/blocks', body);
   },
 
-  releaseBulkBlockBatch(batchId: string): Promise<{ released: number }> {
+  /**
+   * Gỡ một lô khoá — CHỈ phần thuộc chi nhánh đang xem (ADR 0052): một lô tạo lúc xem "Tất cả"
+   * phủ mọi chi nhánh; tắt công tắc khi đang lọc chi nhánh A không được gỡ lịch khoá của B.
+   */
+  releaseBulkBlockBatch(batchId: string, branchId?: string): Promise<{ released: number }> {
     return getApiClient().delete<{ released: number }>(
-      `/calendar/bulk-day/blocks/${encodeURIComponent(batchId)}`,
+      `/calendar/bulk-day/blocks/${encodeURIComponent(batchId)}${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`,
     );
   },
 

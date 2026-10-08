@@ -511,8 +511,8 @@ describe('Chỉ số của kỳ', () => {
       });
     };
 
-    // TRONG mẫu số.
-    await mkRequest(BOOKING_REQUEST_STATUS.APPROVED_BY_HOST, {
+    // TRONG mẫu số — nhận và GIỮ: chuyến đã thành đơn.
+    await mkRequest(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING, {
       decidedAt: new Date(at.getTime() + 30 * 60_000),
     });
     // Từ chối TRONG hạn: có phản hồi, nhưng không phải đồng ý.

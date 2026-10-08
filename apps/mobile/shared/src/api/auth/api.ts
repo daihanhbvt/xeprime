@@ -45,6 +45,16 @@ export const authApi = {
    */
   changePassword: (body: ChangePasswordInput): Promise<void> =>
     apiPost<void>('/auth/password/change', body),
+  /*
+   * KHÔNG gửi `clientApp` ở hai lời gọi này (06/10/2026, theo yêu cầu không đụng `apps/api`).
+   *
+   * DTO của develop chưa khai trường đó, và `ValidationPipe` bật `forbidNonWhitelisted`, nên gửi
+   * thêm là ăn 400 `VALIDATION_FAILED` — hỏng nặng hơn chính lỗi đang có.
+   *
+   * ⚠️ Hai endpoint này vì vậy VẪN trả 400 `REALM_UNRESOLVED` khi gọi từ app native: không có
+   * phiên, và app không đi qua site web nên không có header realm do Caddy gắn. Sửa thật nằm ở
+   * `apps/api` (nhận `clientApp` rồi suy realm) — để sang một nhánh riêng.
+   */
   forgotPassword: (body: ForgotPasswordInput): Promise<void> =>
     apiPost<void>('/auth/password/forgot', body),
   resetPassword: (body: ResetPasswordInput): Promise<void> =>
@@ -69,7 +79,7 @@ export const mobileAuthApi = {
    */
   /** Đăng nhập bằng email/SĐT + mật khẩu. */
   login: (client: ApiClient, body: MobileLoginInput): Promise<MobileSession> =>
-    client.post<MobileSession>('/auth/mobile/login', { clientApp: APP_PROFILE.clientApp, ...body }),
+    client.post<MobileSession>('/auth/mobile/login', { ...body, clientApp: APP_PROFILE.clientApp }),
   /**
    * Đăng ký bằng SĐT + mật khẩu.
    *
@@ -78,13 +88,19 @@ export const mobileAuthApi = {
    * (`MeDto.hasPassword` cho biết có nên hỏi hay không).
    */
   register: (client: ApiClient, body: MobileRegisterInput): Promise<MobileSession> =>
-    client.post<MobileSession>('/auth/mobile/register', { clientApp: APP_PROFILE.clientApp, ...body }),
+    client.post<MobileSession>('/auth/mobile/register', {
+      ...body,
+      clientApp: APP_PROFILE.clientApp,
+    }),
   /**
    * Đăng nhập bằng SĐT + OTP. Hai bước trước đó (`/auth/phone/send-otp`, `verify-otp`) dùng
    * chung với web — chúng trả JSON thuần, không đụng cookie.
    */
   phoneLogin: (client: ApiClient, body: MobilePhoneLoginInput): Promise<MobileSession> =>
-    client.post<MobileSession>('/auth/mobile/phone/login', { clientApp: APP_PROFILE.clientApp, ...body }),
+    client.post<MobileSession>('/auth/mobile/phone/login', {
+      ...body,
+      clientApp: APP_PROFILE.clientApp,
+    }),
   /**
    * Đổi one-time code của đăng nhập mạng xã hội lấy cặp token — ADR 0019.
    *
@@ -99,7 +115,11 @@ export const mobileAuthApi = {
   exchangeSocialCode: (
     client: ApiClient,
     body: MobileSocialExchangeInput,
-  ): Promise<MobileSession> => client.post<MobileSession>('/auth/mobile/social/exchange', { clientApp: APP_PROFILE.clientApp, ...body }),
+  ): Promise<MobileSession> =>
+    client.post<MobileSession>('/auth/mobile/social/exchange', {
+      ...body,
+      clientApp: APP_PROFILE.clientApp,
+    }),
   /**
    * Xoay refresh token. Trả cặp MỚI; token cũ chết ngay lập tức.
    *

@@ -15,7 +15,7 @@ import {
 } from 'class-validator';
 
 /**
- * Tài khoản khai mới hoặc sửa.
+ * Tài khoản khai mới — chưa có thì THÊM, có rồi thì ĐỔI (mỗi chủ một tài khoản nhận tiền).
  *
  * KHÔNG có `ownerType`/`ownerUserId`/`ownerTenantId`: chủ luôn suy từ session và membership,
  * không bao giờ từ payload (CLAUDE.md mục 6 — ranh giới tenant scope). Một API nhận chủ từ body
@@ -45,7 +45,14 @@ export class SaveBankAccountDto {
   @MaxLength(60)
   label?: string;
 
-  @ApiPropertyOptional({ description: 'Đặt làm tài khoản nhận tiền mặc định' })
+  /**
+   * TƯƠNG THÍCH NGƯỢC — app native còn gửi. Mỗi chủ một tài khoản (07/10/2026): tài khoản vừa
+   * khai luôn là tài khoản nhận tiền, giá trị gửi lên bị bỏ qua.
+   */
+  @ApiPropertyOptional({
+    deprecated: true,
+    description: 'Bỏ qua — tài khoản vừa khai luôn là tài khoản nhận tiền duy nhất.',
+  })
   @IsOptional()
   @IsBoolean()
   isDefault?: boolean;
@@ -60,7 +67,8 @@ export class BankAccountDto {
   accountNumberMasked!: string;
   @ApiProperty() accountName!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) label!: string | null;
-  @ApiProperty() isDefault!: boolean;
+  @ApiProperty({ description: 'Luôn `true` với tài khoản đang dùng — giữ cho client cũ' })
+  isDefault!: boolean;
   @ApiProperty({ enum: BANK_ACCOUNT_STATUS_VALUES }) status!: BankAccountStatus;
   @ApiPropertyOptional({
     type: String,

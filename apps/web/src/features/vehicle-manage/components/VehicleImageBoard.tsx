@@ -18,9 +18,8 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import {
   IMAGE_UPLOAD_MIME_TYPES,
   VEHICLE_GALLERY_MAX_IMAGES,
-  VEHICLE_IMAGE_TYPE,
-  vehicleImageSlotsFor,
   isSingleVehicleImageSlot,
+  requiredVehicleImageTypes,
   type VehicleImageType,
 } from '@xeprime/types';
 
@@ -59,16 +58,14 @@ interface PendingUpload {
 
 const SLOT_PREFIX = 'slot:';
 
-/**
- * Ô ảnh HIỆN trên web (30/09/2026): KHÔNG có "Ảnh khác" — mỗi tấm ảnh phải có vị trí.
+/*
+ * Ô ảnh HIỆN trên bảng = đúng các góc BẮT BUỘC của loại xe (`requiredVehicleImageTypes`): ô tô 5
+ * (trước · sau · trái · phải · nội thất), xe máy 2 (trước · sau).
  *
- * Không đổi `vehicleImageSlotsFor` ở `@xeprime/types`: app native vẫn đọc nó. Ảnh CŨ thuộc loại
- * "khác" vẫn nằm nguyên trong danh sách và được gửi lại y như cũ khi lưu — không bị xoá, vẫn hiện
- * trên chợ và ở cột xem nhanh; chỉ không còn ô riêng trên màn này.
+ * KHÔNG có ô "Ảnh khác" — mỗi tấm ảnh phải có vị trí (30/09/2026). Ảnh CŨ thuộc loại đó, và ảnh
+ * xe máy thuộc loại `dashboard` của luật trước 07/10/2026, vẫn nằm nguyên trong danh sách và
+ * được gửi lại y như cũ khi lưu — không bị xoá, vẫn hiện trên chợ; chỉ không còn ô trên màn này.
  */
-function visibleSlots(vehicleType: string) {
-  return vehicleImageSlotsFor(vehicleType).filter((slot) => slot !== VEHICLE_IMAGE_TYPE.OTHER);
-}
 
 /**
  * BẢNG ẢNH của một chiếc xe — ảnh chính + các ô theo vị trí (trước · sau · trái · phải · nội
@@ -85,20 +82,15 @@ function visibleSlots(vehicleType: string) {
 export function VehicleImageBoard({
   vehicleType,
   vehicleName,
-  main,
-  onMainChange,
   items,
   onItemsChange,
   canEdit,
   presign = presignVehicleImage,
   onUploadingChange,
-  mainError,
 }: {
   vehicleType: string;
   /** Tên xe cho chữ thay thế của ảnh — wizard chưa có tên thì để trống. */
   vehicleName: string;
-  main: string | null;
-  onMainChange: (url: string | null) => void;
   items: readonly VehicleMediaItem[];
   onItemsChange: MediaUpdater;
   canEdit: boolean;
@@ -106,8 +98,6 @@ export function VehicleImageBoard({
   presign?: (file: File) => Promise<UploadPresign>;
   /** Báo có ảnh ĐANG tải — nơi gọi chặn nút Lưu/Tiếp tục để không lưu thiếu ảnh. */
   onUploadingChange?: (uploading: boolean) => void;
-  /** Lỗi validate của ảnh chính (wizard) — hiện ngay dưới ô ảnh chính. */
-  mainError?: string;
 }) {
   const t = useTranslations('VehicleManage.images');
   const domainLabel = useDomainLabel();
@@ -115,11 +105,10 @@ export function VehicleImageBoard({
   const uploadRejectionMessage = useUploadRejectionMessage();
   const { message } = App.useApp();
   const [pending, setPending] = useState<PendingUpload[]>([]);
-  const [mainUploading, setMainUploading] = useState(false);
   const [reorder, setReorder] = useState(false);
   const sequence = useRef(0);
 
-  const uploading = pending.some((p) => p.status === 'uploading') || mainUploading;
+  const uploading = pending.some((p) => p.status === 'uploading');
   useEffect(() => {
     onUploadingChange?.(uploading);
   }, [onUploadingChange, uploading]);
@@ -215,7 +204,7 @@ export function VehicleImageBoard({
 
   return (
     <>
-      <SectionCard headingLevel={1} title={t('mainImage')}>
+      <SectionCard headingLevel={1} title={t('galleryTitle')}>
         <div className={styles.toolbar}>
           <label className={styles.reorder}>
             <Switch
@@ -230,22 +219,17 @@ export function VehicleImageBoard({
             {t('minimumHint', { max: VEHICLE_GALLERY_MAX_IMAGES })}
           </span>
         </div>
-        <MainImageTile
-          url={main}
-          canEdit={canEdit}
-          label={<PublishRequiredLabel label={t('mainImage')} />}
-          help={t('mainImageHelp')}
-          onChange={onMainChange}
-          presign={presign}
-          onUploadingChange={setMainUploading}
-          error={mainError}
-        />
+        {/*
+          Ảnh BÌA không còn ô tải lên riêng (07/10/2026): nó là ảnh MẶT TRƯỚC, do server suy ra.
+          Trước đây đây là hai ô cạnh nhau hỏi cùng một tấm ảnh, và chủ xe nào tải hai tấm khác
+          nhau thì thẻ xe ngoài chợ trưng một chiếc xe khác với ô "mặt trước" của chính nó.
+        */}
+        <p className={styles.hint}>{t('coverFromFront')}</p>
       </SectionCard>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <div className={styles.grid}>
-          {/* Ô thứ năm đổi theo loại xe: ô tô hỏi ảnh nội thất, xe máy hỏi ảnh mặt đồng hồ. */}
-          {visibleSlots(vehicleType).map((slot) => {
+          {requiredVehicleImageTypes(vehicleType).map((slot) => {
             const slotItems = items.filter((i) => i.type === slot);
             const slotPending = pending.filter((p) => p.slot === slot);
             const single = isSingleVehicleImageSlot(slot);
@@ -294,7 +278,9 @@ export function VehicleImageBoard({
                   ) : null}
                 </div>
                 <div className={styles.slotFoot}>
-                  <span className={styles.slotTitle}>{slotLabel(slot)}</span>
+                  <span className={styles.slotTitle}>
+                    <PublishRequiredLabel label={slotLabel(slot)} />
+                  </span>
                   <span className={cx(styles.slotHelper, slotItems.length > 0 && styles.slotDone)}>
                     {slotItems.length > 0 ? (
                       <Tag color="success" className={styles.doneTag}>
@@ -418,100 +404,6 @@ function PendingTile({
   return (
     <div className={styles.pendingTile} aria-label={uploadingLabel}>
       <Progress type="circle" percent={item.progress} size={42} />
-    </div>
-  );
-}
-
-/** Ảnh đại diện — một ô riêng, cùng đường upload; giữ `mainImageUrl` là nguồn duy nhất của thẻ xe. */
-function MainImageTile({
-  url,
-  canEdit,
-  label,
-  help,
-  onChange,
-  presign,
-  onUploadingChange,
-  error,
-}: {
-  url: string | null;
-  canEdit: boolean;
-  label: ReactNode;
-  help: string;
-  onChange: (url: string | null) => void;
-  presign: (file: File) => Promise<UploadPresign>;
-  onUploadingChange: (uploading: boolean) => void;
-  error?: string;
-}) {
-  const t = useTranslations('VehicleManage.images');
-  const tCommon = useTranslations('Common.components.imageUpload');
-  const errorMessage = useErrorMessage();
-  const uploadRejectionMessage = useUploadRejectionMessage();
-  const { message } = App.useApp();
-  const [progress, setProgress] = useState<number | null>(null);
-
-  function select(file: File): false {
-    const invalid = validateImageFile(file);
-    if (invalid) {
-      message.error(uploadRejectionMessage(invalid));
-      return false;
-    }
-    setProgress(0);
-    onUploadingChange(true);
-    uploadImage(file, presign, setProgress)
-      .then((next) => onChange(next))
-      .catch((err: unknown) => message.error(errorMessage(err)))
-      .finally(() => {
-        setProgress(null);
-        onUploadingChange(false);
-      });
-    return false;
-  }
-
-  return (
-    <div className={styles.mainRow}>
-      <div className={styles.mainTileWrap}>
-        {url ? (
-          <PreviewImage src={url} alt={tCommon('alt')} className={styles.mainPhoto} />
-        ) : (
-          <div className={styles.mainPlaceholder} aria-hidden="true" />
-        )}
-        {progress != null ? (
-          <div className={styles.mainProgress}>
-            <Progress type="circle" percent={progress} size={42} />
-          </div>
-        ) : null}
-      </div>
-      <div className={styles.mainText}>
-        <span className={styles.slotTitle}>{label}</span>
-        <span className={styles.slotHelper}>{help}</span>
-        {canEdit ? (
-          <div className={styles.mainActions}>
-            <Upload
-              accept={IMAGE_UPLOAD_MIME_TYPES.join(',')}
-              showUploadList={false}
-              beforeUpload={select}
-            >
-              <button type="button" className={styles.linkBtn} disabled={progress != null}>
-                {url ? tCommon('change') : t('choose')}
-              </button>
-            </Upload>
-            {url ? (
-              <button
-                type="button"
-                className={cx(styles.linkBtn, styles.dangerBtn)}
-                onClick={() => onChange(null)}
-              >
-                {tCommon('remove')}
-              </button>
-            ) : null}
-          </div>
-        ) : null}
-        {error ? (
-          <span className={styles.mainError} role="alert">
-            {error}
-          </span>
-        ) : null}
-      </div>
     </div>
   );
 }

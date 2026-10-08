@@ -52,6 +52,14 @@ export function carReview(over: Partial<VehicleApprovalDetail> = {}): VehicleApp
         'https://img.example/vios-2.jpg',
         'https://img.example/vios-3.jpg',
       ],
+      // Phiếu duyệt sau 07/10/2026 mang GÓC CHỤP: điều kiện ảnh hỏi đủ góc, không đủ số lượng.
+      media: [
+        { url: 'https://img.example/vios-main.jpg', type: 'front' },
+        { url: 'https://img.example/vios-1.jpg', type: 'rear' },
+        { url: 'https://img.example/vios-2.jpg', type: 'left' },
+        { url: 'https://img.example/vios-3.jpg', type: 'right' },
+        { url: 'https://img.example/vios-4.jpg', type: 'interior' },
+      ],
       features: ['bluetooth', 'backup_camera'],
     },
     pricing: {

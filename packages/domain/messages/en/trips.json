@@ -15,6 +15,8 @@
     "stageFilterLabel": "Filter by trip status",
     "stageAll": "All statuses",
     "stageEmptyTitle": "No trips with this status",
+    "stageEmptyFiltered": "Filtering by: {stage}",
+    "stageEmptyAction": "Tap to clear the filter and see all trips.",
     "stageEmptyBody": "The filter applies to the page you are viewing. Clear it or try another page.",
     "stageClear": "Clear status filter",
     "emptyTransitionalTitle": "No rental trips in progress",
@@ -39,6 +41,7 @@
     "approve": "Approve",
     "reject": "Decline",
     "estimated": "Estimate · final on approval",
+    "estimatedClosed": "Quote at request time",
     "cancel": "Cancel trip"
   },
   "pickup": {
@@ -120,6 +123,8 @@
     "pendingBody": "The host is reviewing your request. You'll get a notification as soon as they reply.",
     "rejectedTitle": "Request declined",
     "rejectedBody": "The host can't take this request. You can look for another car for the same dates.",
+    "expiredTitle": "The host didn't respond in time",
+    "expiredBody": "The request closed automatically because the host didn't reply within the deadline. You can choose another car for the same dates.",
     "cancelledTitle": "Trip cancelled",
     "cancelledBody": "This trip was cancelled. Any hold on the schedule has been released.",
     "noShowTitle": "Marked as no-show",
@@ -282,6 +287,14 @@
     "acceptedTitle": "You accepted this trip",
     "acceptedHint": "Waiting for the guest to send the reservation payment. The dates are held; if the payment does not arrive in time, they are released automatically.",
     "cancel": "Cancel trip"
+  },
+  "hostList": {
+    "heading": "Rental trips",
+    "sub": "Requests and bookings for your vehicles — approve, follow up and hand over in one place.",
+    "emptyCurrentTitle": "No active trips yet",
+    "emptyCurrentBody": "When a guest requests one of your vehicles, the trip shows up here for you to review.",
+    "viewVehicles": "View my vehicles",
+    "requestErrorTitle": "Couldn't open this request"
   },
   "estimate": {
     "title": "Price details",
