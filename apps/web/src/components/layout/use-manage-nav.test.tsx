@@ -429,6 +429,7 @@ describe('useManageNav — hiển thị theo quyền (nền tảng)', () => {
       'Tất cả xe',
       'Gian hàng gói',
       'Chủ xe cá nhân',
+      'Vận hành chuyến',
       'Đơn thuê toàn hệ thống',
       'Khách thuê',
       'Tra cứu tài khoản',
@@ -476,6 +477,7 @@ describe('useManageNav — hiển thị theo quyền (nền tảng)', () => {
     expect(labels).toEqual([
       'Tổng quan',
       'Tất cả xe',
+      'Vận hành chuyến',
       'Đơn thuê toàn hệ thống',
       'Khách thuê',
       'Tra cứu tài khoản',
@@ -649,7 +651,7 @@ describe('ManageMenu — trình bày', () => {
     const { container } = renderMenu();
 
     const item = container.querySelector('.ant-menu-item');
-    expect(item?.getAttribute('title')).toBe('Đơn thuê toàn hệ thống');
+    expect(item?.getAttribute('title')).toBe('Vận hành chuyến');
   });
 
   it('thu gọn: nhãn vẫn là tên truy cập được của mục', () => {

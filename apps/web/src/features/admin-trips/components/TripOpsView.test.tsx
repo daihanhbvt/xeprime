@@ -284,7 +284,11 @@ describe('Vận hành chuyến — hàng đợi yêu cầu', () => {
     );
     renderView();
 
-    const buttons = screen.getAllByRole('button', { name: 'Nhắc chủ xe' });
+    // `getAllByLabelText` thay vì `getAllByRole(..., { name })`: hàng trong cooldown bọc nút
+    // bằng Tooltip, kéo cả bộ style của nó vào jsdom, và phép role tính khả kiến + accessible
+    // name qua `getComputedStyle` cho từng nút — ~6s ở máy dev, chạm `testTimeout` trên CI.
+    // Nút có icon nên nhãn của nó là `aria-label`, tức vẫn là phép kiểm đúng tên cho trình đọc.
+    const buttons = within(screen.getByRole('table')).getAllByLabelText('Nhắc chủ xe');
     expect(buttons).toHaveLength(2);
     fireEvent.click(buttons[0]!);
     expect(remind.mutate.mock.calls[0]?.[0]).toEqual({ id: 'r1' });
