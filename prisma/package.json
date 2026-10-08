@@ -34,12 +34,13 @@
     "@prisma/client": "7.9.0",
     "@prisma/client-runtime-utils": "7.9.0",
     "@xeprime/types": "workspace:*",
-    "bcryptjs": "3.0.3",
+    "bcrypt": "6.0.0",
     "dotenv": "17.4.2",
     "pg": "8.22.0",
     "ulid": "3.0.2"
   },
   "devDependencies": {
+    "@types/bcrypt": "6.0.0",
     "@types/node": "24.13.3",
     "dotenv-cli": "11.0.0",
     "prisma": "7.9.0",

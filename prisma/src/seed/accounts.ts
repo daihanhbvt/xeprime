@@ -16,7 +16,7 @@ import {
   USER_STATUS,
   type AccountRealm,
 } from '@xeprime/types';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import {
   BCRYPT_ROUNDS,
   DEMO_PASSWORD,
