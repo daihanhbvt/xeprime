@@ -1449,7 +1449,10 @@ describe('ADR 0055 — tiền về không viết lại lượt NHẬN; DB khoá 
    * chú), không hold mồ côi, không lịch treo.
    */
   maybe('huỷ chen đúng lúc tiền về: đúng một bên thắng, không deadlock, không lịch treo', async () => {
-    for (const offset of [50, 51, 52]) {
+    // Cách nhau 3 ngày, lớn hơn chuyến 2 ngày của `makeHold`: vòng nào TIỀN thắng thì đơn thuê
+    // giữ lịch tới hết test (afterEach mới dọn), và offset sát nhau làm `makeHold` vòng sau đụng
+    // `vehicle_occupancies_no_overlap` — test đỏ hay xanh tuỳ ai thắng cuộc đua.
+    for (const offset of [50, 53, 56]) {
       const { code, holdId, requestId } = await makeHold(offset);
       const [paid, cancelled] = await Promise.allSettled([
         sepay.ingest(payload(code, 100_000)),
