@@ -5,6 +5,7 @@ import { API_ERROR_CODE, PERMISSION, type Permission } from '@xeprime/types';
 
 import { ApiClientError } from '@/services/api-client';
 import type { Vehicle360Summary, VehicleDetail } from '@/features/vehicles/types';
+import { getLinkByText, queryLinkByText } from '@/test-utils/queries';
 
 import VehicleDetailPage from './page';
 
@@ -580,7 +581,7 @@ describe('/manage/vehicles/[id] — hồ sơ hiển thị', () => {
     renderPage();
 
     expect(screen.getByText('Hoàn tất hồ sơ để đưa xe lên chợ')).toBeTruthy();
-    expect(screen.getByRole('link', { name: /Hoàn tất hồ sơ/ })).toBeTruthy();
+    expect(getLinkByText(/Hoàn tất hồ sơ/)).toBeTruthy();
     expect(screen.queryByText('Không có việc cần làm.')).toBeNull();
   });
 
@@ -976,7 +977,7 @@ describe('/manage/vehicles/[id] — thẻ tổng quan', () => {
     renderPage();
 
     expect(screen.getByText('Sắp tới kỳ thanh toán nguồn xe')).toBeTruthy();
-    expect(screen.queryByRole('link', { name: 'Xử lý ngay' })).toBeNull();
+    expect(queryLinkByText('Xử lý ngay')).toBeNull();
   });
 
   it('"Xử lý ngay" dẫn tới việc ĐẦU BẢNG của server, đúng đích theo khu', () => {
@@ -996,7 +997,7 @@ describe('/manage/vehicles/[id] — thẻ tổng quan', () => {
     grant(PERMISSION.VEHICLE_DOCUMENT_VIEW);
     renderPage();
 
-    const cta = screen.getByRole('link', { name: 'Xử lý ngay' });
+    const cta = getLinkByText('Xử lý ngay');
     expect(cta.getAttribute('href')).toBe('/manage/vehicles/v1/edit?tab=documents');
     // Nút nằm TRONG chính việc nó xử lý, không trôi xuống cuối thẻ.
     expect(cta.closest('li')?.textContent).toContain('Có giấy tờ đã hết hạn');
@@ -1024,13 +1025,13 @@ describe('/manage/vehicles/[id] — thẻ tổng quan', () => {
     grant(PERMISSION.VEHICLE_SUBMIT_PUBLIC);
     renderPage();
 
-    const cta = screen.getByRole('link', { name: 'Xử lý ngay' });
+    const cta = getLinkByText('Xử lý ngay');
     const note = screen.getByText('Xe đang tạm ẩn khỏi chợ');
     expect(cta.closest('li')?.textContent).toContain('Có giấy tờ đã hết hạn');
     // Thứ tự trong DOM: nút của việc phải làm đứng TRƯỚC lời nhắc.
     expect(cta.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     // Công tắc "Trên chợ" ở đầu trang là chỗ bấm duy nhất — không có nút thứ hai trong thẻ.
-    expect(screen.queryByRole('link', { name: 'Bật hiển thị' })).toBeNull();
+    expect(queryLinkByText('Bật hiển thị')).toBeNull();
     expect(screen.getAllByRole('switch')).toHaveLength(1);
   });
 
@@ -1068,7 +1069,7 @@ describe('/manage/vehicles/[id] — thẻ tổng quan', () => {
     renderPage();
 
     expect(screen.getByText('Xe đã sẵn sàng để xét duyệt')).toBeTruthy();
-    expect(screen.queryByRole('link', { name: 'Xử lý ngay' })).toBeNull();
+    expect(queryLinkByText('Xử lý ngay')).toBeNull();
   });
 });
 
