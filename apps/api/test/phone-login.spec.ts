@@ -67,11 +67,22 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
+/**
+ * Mỗi lượt đăng ký/đăng nhập là một phép bcrypt cost 12 bằng `bcryptjs` (JS thuần, ăn CPU), và
+ * test hai realm làm sáu phép như vậy: ~1,4s ở máy dev, nhưng trên runner CI có 4 worker Jest
+ * giành CPU thì vượt mốc 5s mặc định — đỏ vì MÁY BẬN chứ không vì sai.
+ */
+const BCRYPT_TEST_TIMEOUT_MS = 30_000;
+
 const maybe = (name: string, fn: () => Promise<void>) =>
-  it(name, async () => {
-    if (!dbAvailable) return;
-    await fn();
-  });
+  it(
+    name,
+    async () => {
+      if (!dbAvailable) return;
+      await fn();
+    },
+    BCRYPT_TEST_TIMEOUT_MS,
+  );
 
 describe('Phone + password registration', () => {
   maybe('đăng ký lưu SĐT chuẩn hoá + identity password và đăng nhập được ngay', async () => {
