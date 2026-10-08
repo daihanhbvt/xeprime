@@ -11,6 +11,7 @@ import {
 } from '@xeprime/types';
 
 import { renderWithIntl } from '@/i18n/test-utils';
+import { getAllButtonsByText, getButtonByText, queryButtonByText } from '@/test-utils/queries';
 import type {
   DailyReconciliation,
   PlatformHold,
@@ -452,7 +453,7 @@ describe('Tài chính — giữ chỗ chờ chốt', () => {
 
     expect(screen.getByText('XPH23456789')).toBeTruthy();
     expect(screen.getByText('Đang tranh chấp')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Chốt kết cục' })).toBeTruthy();
+    expect(getButtonByText('Chốt kết cục')).toBeTruthy();
   });
 
   it('hold đã có kết cục: KHÔNG còn nút chốt', () => {
@@ -464,7 +465,7 @@ describe('Tài chính — giữ chỗ chờ chốt', () => {
     };
     renderView('queue=holds');
 
-    expect(screen.queryByRole('button', { name: 'Chốt kết cục' })).toBeNull();
+    expect(queryButtonByText('Chốt kết cục')).toBeNull();
   });
 
   it('góc nhìn "Tất cả" lên được URL — không bị nuốt như giá trị lọc "all"', () => {
@@ -488,7 +489,7 @@ describe('Tài chính — giữ chỗ chờ chốt', () => {
   it('chốt kết cục: chỉ mời kết cục CÓ PHÂN BỔ, không chọn sẵn, xem trước ai nhận bao nhiêu', async () => {
     // Mở panel = ghi `?open=` lên URL (F5 và gửi link đều mở lại đúng khoản)…
     const first = renderView('queue=holds');
-    fireEvent.click(screen.getByRole('button', { name: 'Chốt kết cục' }));
+    fireEvent.click(getButtonByText('Chốt kết cục'));
     expect(nav.replace).toHaveBeenCalledWith('/manage/admin/money?queue=holds&open=01HOLD', {
       scroll: false,
     });
@@ -543,7 +544,7 @@ describe('Tài chính — rút tiền', () => {
     renderView('queue=withdrawals');
 
     // Duyệt là hành động chính nằm ngoài; từ chối nằm trong menu "Thêm thao tác" của dòng.
-    fireEvent.click(screen.getByRole('button', { name: 'Thêm thao tác' }));
+    fireEvent.click(screen.getByLabelText('Thêm thao tác'));
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Từ chối' }));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Từ chối yêu cầu rút')).toBeTruthy();
@@ -585,7 +586,7 @@ describe('Tài chính — rút tiền', () => {
       overdueCount: 0,
     };
     renderView('queue=withdrawals');
-    const [openA, openB] = screen.getAllByRole('button', { name: 'Đã chuyển khoản' });
+    const [openA, openB] = getAllButtonsByText('Đã chuyển khoản');
 
     // Lệnh A: gõ mã rồi HUỶ.
     fireEvent.click(openA!);
@@ -630,7 +631,7 @@ describe('Tài chính — rút tiền', () => {
     };
     renderView('queue=withdrawals&view=paid');
 
-    expect(screen.getByRole('button', { name: 'Chuyển hụt / sai tài khoản' })).toBeTruthy();
+    expect(getButtonByText('Chuyển hụt / sai tài khoản')).toBeTruthy();
     expect(screen.getByText('Mã GD FT123')).toBeTruthy();
   });
 
