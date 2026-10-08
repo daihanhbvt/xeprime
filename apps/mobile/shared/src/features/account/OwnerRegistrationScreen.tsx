@@ -11,6 +11,9 @@ import {
   type VehiclePublicStatus,
 } from '@xeprime/types';
 import { AppHeader } from '@/components/layout/AppHeader';
+import { ManageHeader } from '@/features/shell/ManageHeader';
+import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
+import { AccountTrackNotice } from './components/AccountTrackNotice';
 import { Button } from '@/components/ui/Button';
 import { Callout, CalloutBody } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
@@ -57,7 +60,15 @@ const VEHICLE_PAGE = { page: 1, limit: 20 };
  * Phần sửa hồ sơ dùng lại `ShopProfileScreen` với vỏ đầu trang của khu khách — không clone, vì
  * luật lưu và luật gửi duyệt phải có đúng một bản.
  */
-export function OwnerRegistrationScreen() {
+export function OwnerRegistrationScreen({
+  shell = 'account',
+}: {
+  /**
+   * `manage` = trang chủ Owner Lite của app XePrime Partner khi chủ xe chưa có xe nào lên chợ
+   * (web `OwnerLiteHome` → `OwnerRegistrationView`): thanh trên là `ManageHeader`, không lui.
+   */
+  shell?: 'account' | 'manage';
+} = {}) {
   const t = useTranslations('Account.registration');
   const domainLabel = useDomainLabel();
   const router = useRouter();
@@ -126,30 +137,53 @@ export function OwnerRegistrationScreen() {
       */
       variant="profileForm"
       header={
-        <AppHeader
-          /*
-            Màn chen ngang mở từ menu tài khoản ⇒ phải lui được. `goBackOr` chứ không `router.back`
-            trần: vào thẳng bằng deep link thì ngăn xếp rỗng, và một nút lui không làm gì cả đọc
-            như app treo.
-          */
-          onBack={() => goBackOr(router, ROUTES.account.home())}
-          title={t('title')}
-          subtitle={t('subtitle')}
-          right={
-            hasVehicle ? (
-              <Button
-                label={t('steps.vehicle.addMore')}
-                variant="ghost"
-                size="sm"
-                block={false}
-                onPress={addVehicle}
-              />
-            ) : undefined
-          }
-        />
+        shell === 'manage' ? (
+          <>
+            <ManageHeader />
+            <ManagePageTitle
+              title={t('title')}
+              subtitle={t('subtitle')}
+              action={
+                hasVehicle ? (
+                  <Button
+                    label={t('steps.vehicle.addMore')}
+                    variant="ghost"
+                    size="sm"
+                    block={false}
+                    onPress={addVehicle}
+                  />
+                ) : undefined
+              }
+            />
+          </>
+        ) : (
+          <AppHeader
+            /*
+              Màn chen ngang mở từ menu ⇒ phải lui được. `goBackOr` chứ không `router.back`
+              trần: vào thẳng bằng deep link thì ngăn xếp rỗng, và một nút lui không làm gì cả đọc
+              như app treo.
+            */
+            onBack={() => goBackOr(router, ROUTES.account.home())}
+            title={t('title')}
+            subtitle={t('subtitle')}
+            right={
+              hasVehicle ? (
+                <Button
+                  label={t('steps.vehicle.addMore')}
+                  variant="ghost"
+                  size="sm"
+                  block={false}
+                  onPress={addVehicle}
+                />
+              ) : undefined
+            }
+          />
+        )
       }
       intro={
         <YStack gap={space.sm}>
+          {/* Trang chủ Owner Lite mở đầu bằng dải tuyến ở CẢ HAI bậc (web `OwnerLiteHome`). */}
+          {shell === 'manage' ? <AccountTrackNotice /> : null}
           <Card>
             <YStack gap={space.sm}>
               <Step
@@ -273,7 +307,11 @@ function Step({
     <XStack ai="flex-start" gap={space.sm}>
       <Ionicons name={done ? 'checkmark-circle' : icon} size={iconSize.lg} color={tone} />
       <YStack f={1} minWidth={0} gap={2}>
-        <Text col={active ? colors.text : colors.textMuted} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+        <Text
+          col={active ? colors.text : colors.textMuted}
+          fos={fontSize.bodySm}
+          fow={fontWeight.semibold}
+        >
           {title}
         </Text>
         <Text col={colors.textMuted} fos={fontSize.label}>

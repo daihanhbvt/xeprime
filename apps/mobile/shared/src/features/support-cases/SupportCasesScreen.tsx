@@ -42,7 +42,7 @@ import {
   type SupportSurface,
 } from './api';
 import { OpenCaseSheet } from './components/OpenCaseSheet';
-import { useSupportCases } from './hooks/use-support-cases';
+import { useCanWriteSupportCase, useSupportCases } from './hooks/use-support-cases';
 
 /** Sentinel "mọi giá trị" của giao diện — không endpoint nào nhận `status=all`. */
 const ALL = FILTER_ALL;
@@ -122,9 +122,12 @@ export function SupportCasesScreen({ surface }: { surface: SupportSurface }) {
     [t, domainLabel],
   );
 
-  const openButton = (
+  // Thành viên gian hàng chỉ có `support.view` không mở được case — web không dựng nút (cả ở
+  // trạng thái rỗng).
+  const canOpen = useCanWriteSupportCase(surface);
+  const openButton = canOpen ? (
     <Button label={t('page.openButton')} icon="add" onPress={() => setFormOpen(true)} />
-  );
+  ) : null;
 
   /** Đổi bộ lọc là về TRANG 1: giữ trang 5 của một bộ lọc khác thường ra một danh sách rỗng. */
   const patch = (apply: () => void) => {
@@ -214,7 +217,7 @@ export function SupportCasesScreen({ surface }: { surface: SupportSurface }) {
             <ScreenMessage
               icon="chatbubbles-outline"
               title={t('page.empty')}
-              {...(filtered
+              {...(filtered || !canOpen
                 ? {}
                 : { actionLabel: t('page.openButton'), onAction: () => setFormOpen(true) })}
             />

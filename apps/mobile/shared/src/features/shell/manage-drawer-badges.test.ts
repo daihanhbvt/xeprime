@@ -1,5 +1,6 @@
 import { PERMISSION } from '@xeprime/types';
 import { resolveSections } from './ManageDrawer';
+import { PARTNER_TRACK } from './partner-track';
 import { MANAGE_NAV_BADGE } from './manage-nav';
 import type { ManageNavBadgeCounts } from './use-manage-nav-badges';
 
@@ -15,7 +16,7 @@ const ALL_BADGES: ManageNavBadgeCounts = {
 };
 
 function branches(badges: ManageNavBadgeCounts) {
-  return resolveSections(false, () => true, {}, badges)
+  return resolveSections(PARTNER_TRACK.PACKAGE, () => true, {}, badges)
     .flatMap((section) => section.nodes)
     .filter((node) => node.kind === 'branch');
 }
@@ -50,7 +51,7 @@ describe('dồn huy hiệu lên mục cha', () => {
   /** Mục con bị quyền chặn thì số của nó cũng không được tính lên cha. */
   it('mục con KHÔNG có quyền xem thì số của nó không dồn lên', () => {
     const sections = resolveSections(
-      false,
+      PARTNER_TRACK.PACKAGE,
       (permission) => permission !== PERMISSION.BOOKING_REQUEST_VIEW,
       {},
       ALL_BADGES,

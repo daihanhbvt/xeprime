@@ -17,8 +17,8 @@ import styles from './TypedMediaFields.module.css';
  * sửa xe (30/09/2026): ảnh chính + các ô theo vị trí, thanh tiến trình, thử lại khi hỏng, kéo thả.
  *
  * Phần hiển thị + upload là `VehicleImageBoard`. Khác biệt DUY NHẤT với màn sửa: ở đây ảnh là
- * trường RHF (`media` + `mainImageUrl`) và đi cùng một lần `POST /vehicles` với mọi trường khác
- * — lúc thêm xe chưa có `vehicleId` nào để `PATCH`.
+ * trường RHF (`media`) và đi cùng một lần `POST /vehicles` với mọi trường khác — lúc thêm xe
+ * chưa có `vehicleId` nào để `PATCH`.
  *
  * Giữ mảng `images` song song với `media`: payload cũ và thao tác "xoá hết" có chủ đích vẫn chạy
  * như trước.
@@ -28,7 +28,6 @@ export function TypedMediaFields<T extends FieldValues>({
   vehicleType,
   vehicleName = '',
   mediaName = 'media' as Path<T>,
-  mainName = 'mainImageUrl' as Path<T>,
   presign = presignVehicleImage,
   onUploadingChange,
 }: {
@@ -36,7 +35,6 @@ export function TypedMediaFields<T extends FieldValues>({
   vehicleType: string;
   vehicleName?: string;
   mediaName?: Path<T>;
-  mainName?: Path<T>;
   /** Wizard đăng nhanh truyền bản MỞ GIAN HÀNG trước tấm ảnh đầu tiên — xem `QuickVehicleWizard`. */
   presign?: (file: File) => Promise<UploadPresign>;
   /** Có ảnh đang tải — wizard chặn "Tiếp tục"/"Lưu" để không gửi thiếu ảnh. */
@@ -44,7 +42,6 @@ export function TypedMediaFields<T extends FieldValues>({
 }) {
   const { field, fieldState: mediaState } = useController({ control, name: mediaName });
   const { field: legacyImages } = useController({ control, name: 'images' as Path<T> });
-  const { field: mainField, fieldState: mainState } = useController({ control, name: mainName });
 
   const mediaValue = field.value as VehicleMediaItem[] | undefined;
   /*
@@ -69,16 +66,13 @@ export function TypedMediaFields<T extends FieldValues>({
       <VehicleImageBoard
         vehicleType={vehicleType}
         vehicleName={vehicleName}
-        main={(mainField.value as string | null | undefined) ?? null}
-        onMainChange={(url) => mainField.onChange(url)}
         items={mediaValue ?? []}
         onItemsChange={onItemsChange}
         canEdit
         presign={presign}
         onUploadingChange={onUploadingChange}
-        mainError={mainState.error?.message}
       />
-      {/* Chưa đủ số ảnh tối thiểu để lên chợ — lỗi của form, hiện ngay dưới bảng ảnh. */}
+      {/* Còn trống một góc ảnh bắt buộc — lỗi của form, hiện ngay dưới bảng ảnh. */}
       {mediaState.error?.message ? (
         <p className={styles.error} role="alert">
           {mediaState.error.message}

@@ -11,15 +11,16 @@
  * `details.missing`, nên giao diện tiếng Anh không có cách nào hiện đúng danh sách còn thiếu
  * (ADR 0012 — mã là dữ liệu, chỉ NHÃN mới dịch).
  *
- * Vì vậy luật nằm ở đây, dưới dạng MÃ, và hai phía chỉ khác nhau ở chỗ **đếm ảnh**: backend đếm
- * bằng một truy vấn trên `vehicle_images`, web đếm trên mảng `images` đã tải về. Đó là lý do
- * `imageCount` là tham số chứ không đọc từ `vehicle`.
+ * Vì vậy luật nằm ở đây, dưới dạng MÃ, và hai phía chỉ khác nhau ở chỗ **lấy thư viện ảnh ở
+ * đâu**: backend đọc `vehicle_images`, web đọc mảng `media` đã tải về. Đó là lý do danh sách ảnh
+ * là tham số chứ không đọc từ `vehicle`.
  *
  * Nhãn tương ứng: `Vehicles.publish.requirements.<key>` ở cả hai ngôn ngữ.
  */
 
-import { SERVICE_TYPE, VEHICLE_PUBLIC_MIN_IMAGES } from './status/vehicle';
+import { SERVICE_TYPE } from './status/vehicle';
 import { vehicleFieldPolicy } from './status/vehicle-profile';
+import { missingVehicleImageTypes } from './status/vehicle-settings';
 
 export const PUBLISH_REQUIREMENT = {
   /** Giá ngày thường — chỉ khi xe đăng dịch vụ tự lái. */
@@ -28,8 +29,16 @@ export const PUBLISH_REQUIREMENT = {
   LONG_TERM_PRICE: 'longTermPrice',
   /** Giá/ngày có tài xế — chỉ khi xe đăng dịch vụ có tài xế. */
   WITH_DRIVER_PRICE: 'withDriverPrice',
-  MAIN_IMAGE: 'mainImage',
-  /** Tối thiểu `VEHICLE_PUBLIC_MIN_IMAGES` URL KHÁC NHAU (ảnh đại diện tính là một). */
+  /*
+   * `MAIN_IMAGE: 'mainImage'` ĐÃ BỊ BỎ (07/10/2026) — ảnh bìa không còn là một tấm ảnh RIÊNG để
+   * thiếu. Nó là ảnh mặt trước (`VEHICLE_COVER_IMAGE_TYPE`), nên "thiếu ảnh bìa" và "thiếu ảnh
+   * mặt trước" đã là cùng một điều, và hai mục cùng nói một điều thì một trong hai bắt người
+   * dùng đi tải lại tấm ảnh họ vừa tải.
+   */
+  /**
+   * Đủ các GÓC bắt buộc của loại xe — ô tô 5 (trước · sau · trái · phải · nội thất), xe máy 2
+   * (trước · sau). Xem `requiredVehicleImageTypes`.
+   */
   PHOTOS: 'photos',
   PLATE_NUMBER: 'plateNumber',
   /** Hãng · mẫu · năm, cộng chiều phân loại của loại xe (số chỗ với ô tô, phân khúc với xe máy). */
@@ -70,7 +79,6 @@ export interface VehiclePublicationInput {
   weekdayPrice?: unknown;
   monthlyPrice?: unknown;
   withDriverDailyPrice?: unknown;
-  mainImageUrl?: string | null;
   plateNumber?: string | null;
   brand?: string | null;
   model?: string | null;
@@ -90,6 +98,19 @@ export interface VehiclePublicationInput {
   /** Chi nhánh của xe đã có mã tỉnh chưa — nơi gọi tự phân giải từ quan hệ của mình. */
   branchProvinceCode?: string | null;
 }
+
+/**
+ * Thư viện ảnh của xe như luật này cần đọc nó: GÓC CHỤP của từng tấm, không phải một con số.
+ *
+ * Trước 07/10/2026 tham số thứ hai là `imageCount: number`, và mỗi phía tự đếm theo cách của
+ * mình (backend một truy vấn, web một `Set` trên mảng đã tải). Một con số không trả lời được câu
+ * hỏi thật — "còn thiếu GÓC nào" — nên năm tấm ảnh mặt trước vẫn đủ điều kiện lên chợ, trong khi
+ * chiếc xe máy có đúng hai tấm cần thiết thì không.
+ *
+ * `url` không bắt buộc: luật chỉ đọc `type`. Nó có mặt để nơi gọi truyền thẳng `media` của mình
+ * vào mà không phải nhào nặn lại.
+ */
+export type VehiclePublicationImage = { url?: string; type?: string | null };
 
 /** `null`/`undefined`/chuỗi rỗng là "chưa có"; `Decimal(0)` và `'0'` là ĐÃ CÓ (giá 0 là một giá). */
 function hasValue(value: unknown): boolean {
@@ -144,7 +165,10 @@ function energySpecReady(vehicle: VehiclePublicationInput): boolean {
 export const PUBLISH_REQUIREMENTS: readonly {
   key: PublishRequirement;
   applies: (vehicle: VehiclePublicationInput) => boolean;
-  present: (vehicle: VehiclePublicationInput, imageCount: number) => boolean;
+  present: (
+    vehicle: VehiclePublicationInput,
+    images: readonly VehiclePublicationImage[],
+  ) => boolean;
 }[] = [
   {
     key: PUBLISH_REQUIREMENT.SELF_DRIVE_PRICE,
@@ -162,14 +186,9 @@ export const PUBLISH_REQUIREMENTS: readonly {
     present: (v) => hasValue(v.withDriverDailyPrice),
   },
   {
-    key: PUBLISH_REQUIREMENT.MAIN_IMAGE,
-    applies: () => true,
-    present: (v) => filled(v.mainImageUrl),
-  },
-  {
     key: PUBLISH_REQUIREMENT.PHOTOS,
     applies: () => true,
-    present: (_v, imageCount) => imageCount >= VEHICLE_PUBLIC_MIN_IMAGES,
+    present: (v, images) => missingVehicleImageTypes(v.vehicleType, images).length === 0,
   },
   {
     key: PUBLISH_REQUIREMENT.PLATE_NUMBER,
@@ -200,9 +219,9 @@ export function applicablePublishRequirements(vehicle: VehiclePublicationInput) 
  */
 export function missingPublishRequirements(
   vehicle: VehiclePublicationInput,
-  imageCount: number,
+  images: readonly VehiclePublicationImage[],
 ): PublishRequirement[] {
   return applicablePublishRequirements(vehicle)
-    .filter((item) => !item.present(vehicle, imageCount))
+    .filter((item) => !item.present(vehicle, images))
     .map((item) => item.key);
 }

@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { BOOKING_STATUS_META, type BookingStatus } from '@xeprime/types';
+import { BOOKING_STATUS_META } from '@xeprime/types';
 import { isZeroMoney } from '@xeprime/domain';
+import { metaColor } from '@/lib/status-meta';
 import { Card } from '@/components/ui/Card';
 import { DataRow } from '@/components/ui/DataRow';
 import { DetailChevron } from '@/components/ui/DetailArrow';
@@ -100,7 +101,7 @@ export function CustomerBookingHistory({
               </Text>
               <StatusBadge
                 label={domainLabel('bookingStatus', booking.status)}
-                color={BOOKING_STATUS_META[booking.status as BookingStatus].color}
+                color={metaColor(BOOKING_STATUS_META, booking.status)}
                 size="sm"
               />
             </XStack>

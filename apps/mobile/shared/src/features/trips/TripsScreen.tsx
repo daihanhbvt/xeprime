@@ -9,45 +9,25 @@ import {
   CUSTOMER_TRIP_FILTER_DEFAULT,
   CUSTOMER_TRIP_FILTER_VALUES,
   CUSTOMER_TRIP_STAGE_VALUES,
-  PERMISSION,
   TRIP_ROLE,
   type CustomerTripFilter,
   type CustomerTripStage,
-  type TripRole,
 } from '@xeprime/types';
 import { Screen } from '@/components/layout/Screen';
 import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Chip } from '@/components/ui/Chip';
+import { IconButton } from '@/components/ui/IconButton';
 import { MenuOption, MenuOptionList } from '@/components/ui/MenuOption';
 import { TripCardSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
-import { useAppToast } from '@/components/feedback/use-app-toast';
-import { getErrorCode } from '@/lib/api-client';
-import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { cancelErrorKey, decisionErrorKey } from '@/features/booking-requests/decision-error';
-import { ApproveRequestSheet } from '@/features/booking-requests/components/ApproveRequestSheet';
-import { ApproveSuccessSheet } from '@/features/booking-requests/components/ApproveSuccessSheet';
-import { CancelRequestSheet } from '@/features/booking-requests/components/CancelRequestSheet';
-import { RejectRequestSheet } from '@/features/booking-requests/components/RejectRequestSheet';
-import {
-  useApproveBookingRequest,
-  useCancelBookingRequest,
-  useRejectBookingRequest,
-} from '@/features/booking-requests/hooks/use-booking-requests';
-import type {
-  BookingRequestDecisionTarget,
-  CancelBookingRequestInput,
-} from '@/features/booking-requests/api';
 import { useDomainLabel } from '@/i18n/domain';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
 import { colors, space } from '@/theme/tokens';
 import { TripCard } from './components/TripCard';
-import { tripToDecisionTarget } from './decision-target';
 import { useTripsInfinite } from './hooks/use-trips';
 import type { CustomerTrip, CustomerTripCounts } from './api';
 
@@ -82,25 +62,17 @@ const STAGE_FILTER_MIN_ROWS = 6;
  * chết theo màn (ADR 0004, mục "Screen filters").
  */
 /**
- * `lockedRole` — KHOÁ vai cho lối CHUYỂN TIẾP trong khu quản lý (ADR 0038 điều 7–8).
+ * Chuyến đi thuê của TÀI KHOẢN KHÁCH — bản native của `TripsView` bên web.
  *
- * Ca thật: chủ xe tuyến hoa hồng đang đi thuê xe người khác thì nâng lên gói. Chuyến chưa xong,
- * tiền hoàn chưa về, chat với chủ xe kia vẫn mở — nhưng khu khách của họ đã đóng. Những nghĩa vụ
- * đó đi qua `/manage/account/trips` với vai khoá cứng `renter`.
- *
- * Là quyết định ĐIỀU HƯỚNG, không phải hàng rào bảo mật: server vẫn kiểm phạm vi của từng chuyến.
- *
- * Màn hình KHÔNG bày bộ chọn vai (ADR 0038 điều 8, 16/09/2026): mỗi thẻ đã mang nhãn vai của nó,
- * và hai hàng điều khiển chồng nhau buộc người đọc phải hiểu cái nào lồng trong cái nào trước khi
- * đọc được chuyến nào. Chiều vai vẫn sống ở SERVER qua tham số `role`.
+ * Từ ADR 0053 chuyến cho thuê (vai chủ xe) thuộc tài khoản đối tác ở app XePrime Partner, nên màn
+ * này không còn chiều vai, không còn lối chuyển tiếp trong khu quản lý và không còn nút duyệt/từ
+ * chối trên thẻ. Chiều vai vẫn là tham số `role` của server, khoá ở `renter`.
  */
 export function TripsScreen({
-  lockedRole,
   detailHref = ROUTES.booking.detail,
   heading = false,
 }: {
-  lockedRole?: TripRole;
-  /** Đích của một thẻ chuyến — web `TripCard.basePath`: `/trips/:id` hay `/manage/account/trips/:id`. */
+  /** Đích của một thẻ chuyến. */
   detailHref?: (id: string) => Href;
   /**
    * Vẽ tiêu đề trang (`list.heading` + `list.sub`) như `TripsView` bên web. Ở tab "Chuyến" của khu
@@ -110,29 +82,7 @@ export function TripsScreen({
   heading?: boolean;
 } = {}) {
   const t = useTranslations('Trips');
-  const tRequests = useTranslations('BookingRequests');
   const domainLabel = useDomainLabel();
-  const toast = useAppToast();
-  const errorMessage = useErrorMessage();
-  const permissions = usePermissions();
-
-  /*
-   * Duyệt/từ chối đi qua ĐÚNG hai mutation và ĐÚNG ba tấm trượt của hộp thư
-   * `/manage/booking-requests`, không phải một bản sao — nếu không, quy tắc thuê dài hạn, hạn
-   * phản hồi và lỗi trùng lịch sẽ trôi khỏi nhau giữa hai màn.
-   *
-   * Chuyến ở đây chỉ có `CustomerTripListItemDto` (hẹp hơn DTO hộp thư), nên nó đi qua
-   * `tripToDecisionTarget` — xem docblock ở đó.
-   */
-  const canApprove = permissions.has(PERMISSION.BOOKING_REQUEST_APPROVE);
-  const approve = useApproveBookingRequest();
-  const reject = useRejectBookingRequest();
-  const cancel = useCancelBookingRequest();
-  const [approving, setApproving] = useState<BookingRequestDecisionTarget | null>(null);
-  const [rejecting, setRejecting] = useState<BookingRequestDecisionTarget | null>(null);
-  /** Chuyến ĐÃ NHẬN đang chờ huỷ (ADR 0045 điều 1) — khác hẳn `rejecting` về đường tiền. */
-  const [cancelling, setCancelling] = useState<BookingRequestDecisionTarget | null>(null);
-  const [approved, setApproved] = useState<BookingRequestDecisionTarget | null>(null);
 
   const [filter, setFilter] = useState<CustomerTripFilter>(CUSTOMER_TRIP_FILTER_DEFAULT);
   /*
@@ -140,7 +90,9 @@ export function TripsScreen({
    * chưa nhận tham số chặng. Nó thu hẹp thứ đang đọc chứ không mở một chiều truy vấn mới.
    */
   const [stage, setStage] = useState<CustomerTripStage | null>(null);
-  const query = useTripsInfinite(filter, lockedRole);
+  // App này chỉ phục vụ tài khoản KHÁCH (ADR 0053): chuyến luôn là chuyến mình ĐI THUÊ — web
+  // `TripsView` khoá `TRIP_ROLE.RENTER` cùng lý do.
+  const query = useTripsInfinite(filter, TRIP_ROLE.RENTER);
 
   const items = useMemo(() => query.data?.pages.flatMap((page) => page.items) ?? [], [query.data]);
   // Số đếm giống nhau ở mọi trang (server tính trên toàn bộ), nên đọc trang đầu là đủ.
@@ -209,93 +161,10 @@ export function TripsScreen({
     setStage(null);
   }, []);
 
-  /*
-   * Hai quyết định trên thẻ — dựng MỘT lần ở đây, không phải một closure mới cho mỗi thẻ mỗi lần
-   * render (thẻ có `memo`, và một prop đổi danh tính làm `memo` chạy không tải).
-   */
-  const decisions = useMemo(
-    () =>
-      canApprove
-        ? {
-            onApprove: (trip: CustomerTrip) => setApproving(tripToDecisionTarget(trip)),
-            onReject: (trip: CustomerTrip) => setRejecting(tripToDecisionTarget(trip)),
-            onCancel: (trip: CustomerTrip) => setCancelling(tripToDecisionTarget(trip)),
-          }
-        : undefined,
-    [canApprove],
-  );
-
   const renderTrip = useCallback(
-    ({ item }: ListRenderItemInfo<CustomerTrip>) => (
-      <TripCard
-        trip={item}
-        onPress={openTrip}
-        /* Chỉ chuyến mình CHO THUÊ mới có gì để quyết định — chuyến đi thuê thì mình là khách. */
-        {...((item.role as TripRole) === TRIP_ROLE.HOST && decisions ? { decisions } : {})}
-      />
-    ),
-    [openTrip, decisions],
+    ({ item }: ListRenderItemInfo<CustomerTrip>) => <TripCard trip={item} onPress={openTrip} />,
+    [openTrip],
   );
-
-  /** Lỗi quyết định → câu có LỐI ĐI TIẾP; `null` thì rơi về ánh xạ chung theo MÃ. */
-  function decisionError(error: unknown): string {
-    const key = decisionErrorKey(getErrorCode(error));
-    return key ? tRequests(key) : errorMessage(error);
-  }
-
-  function confirmApprove(body?: Parameters<typeof approve.mutate>[0]['body']) {
-    if (!approving) return;
-    approve.mutate(
-      { id: approving.id, ...(body ? { body } : {}) },
-      {
-        /*
-         * Tấm kết quả đọc `bookingId` của BẢN GHI SERVER VỪA TRẢ VỀ (ADR 0044 điều 2) — truyền
-         * lại `approving` là truyền bản ghi TRƯỚC khi duyệt, nơi `bookingId` luôn `null`, nên
-         * mọi lượt duyệt đọc ra "chờ khách thanh toán" kể cả chuyến đã tạo đơn ngay.
-         *
-         * Cũng không còn toast: `approve.success` nói "đã tạo đơn thuê", một lời khẳng định SAI
-         * ở nhánh mặc định của luồng mới. Tấm trượt tự nói đúng cả hai kết cục.
-         */
-        onSuccess: (approved) => {
-          setApproving(null);
-          setApproved(approved);
-        },
-        onError: (error) => toast.showError(decisionError(error)),
-      },
-    );
-  }
-
-  function confirmReject(reason: string) {
-    if (!rejecting) return;
-    reject.mutate(
-      { id: rejecting.id, reason },
-      {
-        onSuccess: () => {
-          toast.showSuccess(tRequests('reject.success'));
-          setRejecting(null);
-        },
-        /* Từ chối đi qua CÙNG cửa `claimPending` với duyệt ⇒ cùng bộ lỗi có lối đi tiếp. */
-        onError: (error) => toast.showError(decisionError(error)),
-      },
-    );
-  }
-
-  function confirmCancel(body: CancelBookingRequestInput) {
-    if (!cancelling) return;
-    cancel.mutate(
-      { id: cancelling.id, body },
-      {
-        onSuccess: () => {
-          toast.showSuccess(tRequests('cancel.success'));
-          setCancelling(null);
-        },
-        onError: (error) => {
-          const key = cancelErrorKey(getErrorCode(error));
-          toast.showError(key ? tRequests(key) : errorMessage(error));
-        },
-      },
-    );
-  }
 
   return (
     <>
@@ -342,27 +211,34 @@ export function TripsScreen({
           </YStack>
         ) : visibleItems.length === 0 && stage !== null ? (
           /*
-            KHÔNG có nút xoá lọc ở đây: viên lọc ngay trên đầu màn vẫn hiện nguyên, đang nói rõ
-            mình đang lọc gì và mở lại được bằng một cú chạm — thêm một nút thứ hai cho cùng
-            việc đó chỉ làm màn rỗng nặng lên.
+            Màn rỗng này phải TỰ nói ra nó rỗng vì lý do gì: người dùng nhìn vào một danh sách
+            trống sẽ tin mình không có chuyến nào, không ai nghĩ tới một bộ lọc mình đã bấm vài
+            giây trước. Nên nó gọi tên trạng thái đang lọc và cho sẵn lối thoát.
           */
-          <ScreenMessage icon="filter-outline" title={t('list.stageEmptyTitle')} />
+          <ScreenMessage
+            icon="filter-outline"
+            title={t('list.stageEmptyTitle')}
+            /* Gọi TÊN trạng thái đang lọc: màn rỗng mà không nói đang lọc gì thì người dùng kết
+               luận mình không có chuyến nào, trong khi chỉ cần bỏ lọc là thấy. */
+            description={t('list.stageEmptyFiltered', {
+              stage: domainLabel('customerTripStage', stage),
+            })}
+            actionLabel={t('list.stageClear')}
+            actionIcon="close-circle-outline"
+            onAction={() => setStage(null)}
+          />
         ) : items.length === 0 ? (
           <ScreenMessage
             icon="calendar-outline"
             title={
               filter === CUSTOMER_TRIP_FILTER.HISTORY
                 ? t('list.emptyHistoryTitle')
-                : lockedRole
-                  ? t('list.emptyTransitionalTitle')
-                  : t('list.emptyCurrentTitle')
+                : t('list.emptyCurrentTitle')
             }
             description={
               filter === CUSTOMER_TRIP_FILTER.HISTORY
                 ? t('list.emptyHistoryBody')
-                : lockedRole
-                  ? t('list.emptyTransitionalBody')
-                  : t('list.emptyCurrentBody')
+                : t('list.emptyCurrentBody')
             }
           />
         ) : (
@@ -383,45 +259,6 @@ export function TripsScreen({
           />
         )}
       </Screen>
-
-      {/*
-        Ba tấm trượt quyết định — gắn CÓ ĐIỀU KIỆN vì `useForm`/`useState` bên trong chốt giá trị
-        mặc định ở lần render đầu; giữ chúng sống sẵn thì tấm mở cho chuyến thứ hai vẫn mang dữ
-        liệu của chuyến thứ nhất.
-      */}
-      {approving ? (
-        <ApproveRequestSheet
-          open
-          onClose={() => setApproving(null)}
-          request={approving}
-          onConfirm={confirmApprove}
-          loading={approve.isPending}
-        />
-      ) : null}
-
-      {approved ? (
-        <ApproveSuccessSheet request={approved} onClose={() => setApproved(null)} />
-      ) : null}
-
-      {rejecting ? (
-        <RejectRequestSheet
-          open
-          onClose={() => setRejecting(null)}
-          request={rejecting}
-          onConfirm={confirmReject}
-          loading={reject.isPending}
-        />
-      ) : null}
-
-      {cancelling ? (
-        <CancelRequestSheet
-          open
-          onClose={() => setCancelling(null)}
-          request={cancelling}
-          onConfirm={confirmCancel}
-          loading={cancel.isPending}
-        />
-      ) : null}
     </>
   );
 }
@@ -477,27 +314,37 @@ const FilterTabs = memo(function FilterTabs({
 
   return (
     /*
-      Hai tầng, không phải một hàng: dải tab ở trên, bộ lọc chặng ở HÀNG RIÊNG bên dưới.
-
-      Web xếp ô trạng thái cạnh tab (`tabBarExtraContent`) vì nó có cả bề ngang màn hình; ở 360dp
-      thì nút lọc ăn mất chỗ của dải tab, và khi tên tab dài ra vì số đếm thì dải tab phải cuộn
-      ngang ngay từ lúc mở màn. Tách tầng trả lại toàn bộ bề ngang cho tab, và bộ lọc chặng — thứ
-      chỉ tác động lên danh sách bên dưới — đứng sát ngay trên danh sách đó.
+      MỘT hàng: dải tab chiếm phần co giãn, nút lọc chặng là một ICON gọn ghim ở mép phải.
+      Icon 32dp ăn rất ít bề ngang; tên tab dài ra thì chính dải tab cuộn ngang, nút lọc đứng yên.
     */
     <YStack>
-      <FlatList
-        horizontal
-        data={CUSTOMER_TRIP_FILTER_VALUES}
-        keyExtractor={filterKey}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.tabsContent}
-        style={styles.tabsList}
-        renderItem={renderChip}
-      />
-
-      <XStack px={layout.screenX} pb={space.sm}>
+      <XStack ai="center" paddingRight={layout.screenX} py={space.sm} gap={space.xs}>
+        <FlatList
+          horizontal
+          data={CUSTOMER_TRIP_FILTER_VALUES}
+          keyExtractor={filterKey}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabsContent}
+          style={styles.tabsList}
+          renderItem={renderChip}
+        />
         <StageFilter value={stage} onChange={onStageChange} domainLabel={domainLabel} />
       </XStack>
+      {/* Icon thôi không nói đang lọc CÁI GÌ: danh sách rỗng mà không thấy bộ lọc thì người dùng
+        tưởng mình không có chuyến. Viên này hiện tên chặng và chạm vào là xoá lọc. */}
+      {stage !== null ? (
+        <XStack paddingHorizontal={layout.screenX} pb={space.sm}>
+          <Chip
+            label={domainLabel('customerTripStage', stage)}
+            accessibilityLabel={t('stageClear')}
+            icon="close-circle"
+            selected
+            size="sm"
+            role="button"
+            onPress={() => onStageChange(null)}
+          />
+        </XStack>
+      ) : null}
     </YStack>
   );
 });
@@ -509,8 +356,7 @@ const FilterTabs = memo(function FilterTabs({
  * chồng nhau thì không còn đọc ra cái nào là tab. Tấm trượt cũng là khuôn chung của mọi lựa chọn
  * từ hai giá trị trở lên trong app (`SelectControl`, `ManageFilterSheet`).
  *
- * Viên tự nói mình đang lọc gì: chưa lọc thì hiện "Tất cả trạng thái", đang lọc thì hiện đúng
- * nhãn chặng và bật trạng thái chọn — người dùng không phải mở tấm ra mới biết.
+ * Hiện là một nút icon ở cuối hàng tab; đang lọc thì nút đổi sang tông nhấn.
  */
 const StageFilter = memo(function StageFilter({
   value,
@@ -534,14 +380,17 @@ const StageFilter = memo(function StageFilter({
 
   return (
     <>
-      <Chip
-        label={value === null ? t('stageAll') : domainLabel('customerTripStage', value)}
-        accessibilityLabel={t('stageFilterLabel')}
+      {/* Đang lọc thì nút đổi sang tông nhấn — người dùng biết danh sách đã bị thu hẹp. */}
+      <IconButton
         icon="options-outline"
-        selected={value !== null}
-        size="sm"
-        role="button"
-        variant="filled"
+        label={
+          value === null
+            ? t('stageFilterLabel')
+            : `${t('stageFilterLabel')}: ${domainLabel('customerTripStage', value)}`
+        }
+        tone={value === null ? 'surface' : 'accent'}
+        size={18}
+        compact
         onPress={() => setOpen(true)}
       />
 
@@ -583,11 +432,8 @@ const styles = StyleSheet.create({
   },
   // `flexGrow: 0` bắt buộc: một `FlatList` ngang trong cột dọc sẽ nuốt hết chiều cao còn lại và
   // đẩy danh sách chuyến ra khỏi màn.
-  // `paddingBottom` nhỏ hơn `paddingTop`: hàng bộ lọc chặng ngay bên dưới đã tự mang khoảng thở
-  // của nó, cộng cả hai lần thành một khoảng trống rộng bằng một thẻ chuyến.
+  // Trong hàng ngang: `flex: 1` để dải tab nhường đúng chỗ cho nút lọc ở mép phải.
   tabsList: {
-    flexGrow: 0,
-    paddingBottom: space.xs,
-    paddingTop: space.sm,
+    flex: 1,
   },
 });

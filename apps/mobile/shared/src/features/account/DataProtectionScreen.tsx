@@ -1,16 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { LEGAL_DOC, LEGAL_EFFECTIVE_FROM } from '@xeprime/domain';
-import { AppHeader } from '@/components/layout/AppHeader';
+import { ShellPageHeader, type PageShell } from '@/features/shell/ShellPageHeader';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { useOpenLegalDoc } from '@/features/legal/use-open-legal-doc';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 
@@ -24,16 +22,24 @@ const POINTS = ['location', 'bank', 'masking', 'rights'] as const;
  * checkbox cục bộ rồi báo "đã lưu" cho một thứ backend không lưu. Ghi chú `consentNote` nói
  * thẳng điều đó với người đọc — y hệt web.
  */
-export function DataProtectionScreen() {
+export function DataProtectionScreen({
+  shell = 'account',
+}: {
+  /**
+   * `manage` = mục menu Owner Lite của app XePrime Partner (trong bộ tab, nút mở menu) — ADR 0053.
+   * `account` = màn chen ngang có nút lui.
+   */
+  shell?: PageShell;
+} = {}) {
   const t = useTranslations('Account.dataProtection');
-  const router = useRouter();
   const fmt = useAppFormat();
   const openLegalDoc = useOpenLegalDoc();
 
   return (
     <>
-      <AppHeader
-        onBack={() => goBackOr(router, ROUTES.account.home())}
+      <ShellPageHeader
+        shell={shell}
+        backTo={ROUTES.account.home()}
         title={t('title')}
         subtitle={t('intro')}
       />

@@ -21,7 +21,6 @@ import {
   APPROVAL_STATUS,
   APPROVAL_STATUS_META,
   STOREFRONT_KIND,
-  VEHICLE_PUBLIC_MIN_IMAGES,
   VEHICLE_REVIEW_BASIS,
   missingVehicleReviewChecks,
   type ApprovalDecision,
@@ -355,7 +354,7 @@ function BlockersAlert({ blockers }: { blockers: VehicleApprovalDetail['approval
               <ul className={styles.blockerList}>
                 {blockers.missingRequirements.map((key) => (
                   <li key={key}>
-                    {t(`checklist.auto.items.${key}`, { min: VEHICLE_PUBLIC_MIN_IMAGES })}
+                    {t(`checklist.auto.items.${key}`)}
                   </li>
                 ))}
               </ul>

@@ -18,6 +18,7 @@ import {
   type MaintenanceProfileFormValues,
 } from '@xeprime/validators';
 import { LIST_SEPARATOR } from '@xeprime/domain';
+import { metaColor, metaLabel } from '@/lib/status-meta';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { BottomSheet } from '@/components/ui/BottomSheet';
@@ -37,7 +38,6 @@ import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { VehicleEditTabs } from '@/features/vehicles/components/VehicleEditTabs';
 import { DateField } from '@/components/ui/DateField';
 import { useVehicle } from '@/features/vehicles/hooks/use-vehicle';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -47,7 +47,6 @@ import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
-import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
 import { FIRST_PAGE } from '@/queries/use-clamped-page';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
@@ -57,10 +56,7 @@ import {
   useOdometerHistory,
   useSaveMaintenanceProfile,
 } from './hooks/use-maintenance';
-import {
-  MaintenanceRecordSheet,
-  type RecordSheetMode,
-} from './components/MaintenanceRecordSheet';
+import { MaintenanceRecordSheet, type RecordSheetMode } from './components/MaintenanceRecordSheet';
 import type { MaintenanceProfile, MaintenanceRecord } from './api';
 
 /**
@@ -75,17 +71,60 @@ import type { MaintenanceProfile, MaintenanceRecord } from './api';
  * điều chỉnh đều BẮT BUỘC có lý do (ba lớp cùng ép: form, DTO, CHECK ở DB).
  */
 export function VehicleMaintenanceScreen({ vehicleId }: { vehicleId: string }) {
-  const t = useTranslations('Vehicles.maintenance');
   const tEdit = useTranslations('Vehicles.edit');
   const router = useRouter();
-  const { has, isLoading: permissionsLoading } = usePermissions();
+  const { has } = usePermissions();
 
   const canView = has(PERMISSION.VEHICLE_MAINTENANCE_VIEW);
-  const canManage = has(PERMISSION.VEHICLE_MAINTENANCE_MANAGE);
   const back = () => goBackOr(router, ROUTES.manage.vehicleEdit(vehicleId));
   const title = tEdit('tabs.maintenance');
 
   const vehicle = useVehicle(vehicleId, has(PERMISSION.VEHICLE_VIEW));
+  // Cùng query key với `VehicleMaintenanceWorkspace` — chỉ để kéo-làm-mới, không gọi thêm request.
+  const profile = useMaintenanceProfile(vehicleId, canView);
+  const records = useMaintenanceRecords(vehicleId, canView);
+
+  return (
+    <>
+      <AppHeader
+        title={title}
+        {...(vehicle.data
+          ? {
+              subtitle: [vehicle.data.name, vehicle.data.plateNumber]
+                .filter(Boolean)
+                .join(LIST_SEPARATOR),
+            }
+          : {})}
+        onBack={back}
+      />
+      <Screen
+        edges={['left', 'right', 'bottom']}
+        refreshing={profile.isRefetching}
+        onRefresh={() => {
+          void profile.refetch();
+          void records.refetch();
+        }}
+      >
+        <VehicleMaintenanceWorkspace vehicleId={vehicleId} />
+      </Screen>
+    </>
+  );
+}
+
+/**
+ * Thân khu bảo dưỡng của MỘT xe — bản native của `VehicleMaintenanceWorkspace` bên web.
+ *
+ * Dùng ở hai chỗ như web: màn bảo dưỡng của xe, và tab "Bảo dưỡng" trên hồ sơ 360. Không có
+ * header/khung cuộn riêng — nơi nhúng lo phần đó.
+ */
+export function VehicleMaintenanceWorkspace({ vehicleId }: { vehicleId: string }) {
+  const t = useTranslations('Vehicles.maintenance');
+  const tEdit = useTranslations('Vehicles.edit');
+  const { has, isLoading: permissionsLoading } = usePermissions();
+
+  const canView = has(PERMISSION.VEHICLE_MAINTENANCE_VIEW);
+  const canManage = has(PERMISSION.VEHICLE_MAINTENANCE_MANAGE);
+
   const profile = useMaintenanceProfile(vehicleId, canView);
   const records = useMaintenanceRecords(vehicleId, canView);
 
@@ -93,42 +132,23 @@ export function VehicleMaintenanceScreen({ vehicleId }: { vehicleId: string }) {
 
   if (!permissionsLoading && !canView) {
     return (
-      <>
-        <AppHeader title={title} onBack={back} />
-        <Screen edges={['left', 'right', 'bottom']} scroll={false}>
-          <ScreenMessage
-            icon="lock-closed-outline"
-            title={title}
-            description={t('noPermission')}
-          />
-        </Screen>
-      </>
+      <ScreenMessage
+        icon="lock-closed-outline"
+        title={tEdit('tabs.maintenance')}
+        description={t('noPermission')}
+      />
     );
   }
 
-  if (profile.isPending) {
-    return (
-      <>
-        <AppHeader title={title} onBack={back} />
-        <Screen edges={['left', 'right', 'bottom']}>
-          <SkeletonText lines={10} />
-        </Screen>
-      </>
-    );
-  }
+  if (profile.isPending) return <SkeletonText lines={10} />;
 
   if (profile.isError) {
     return (
-      <>
-        <AppHeader title={title} onBack={back} />
-        <Screen edges={['left', 'right', 'bottom']} scroll={false}>
-          <ScreenError
-            error={profile.error}
-            title={t('loadError')}
-            onRetry={() => void profile.refetch()}
-          />
-        </Screen>
-      </>
+      <ScreenError
+        error={profile.error}
+        title={t('loadError')}
+        onRetry={() => void profile.refetch()}
+      />
     );
   }
 
@@ -145,51 +165,30 @@ export function VehicleMaintenanceScreen({ vehicleId }: { vehicleId: string }) {
 
   return (
     <>
-      <AppHeader
-        title={title}
-        {...(vehicle.data
-          ? {
-              subtitle: [vehicle.data.name, vehicle.data.plateNumber]
-                .filter(Boolean)
-                .join(LIST_SEPARATOR),
-            }
-          : {})}
-        onBack={back}
-      />
-      <VehicleEditTabs vehicleId={vehicleId} active={VEHICLE_EDIT_TAB.MAINTENANCE} />
-      <Screen
-        edges={['left', 'right', 'bottom']}
-        refreshing={profile.isRefetching}
-        onRefresh={() => {
-          void profile.refetch();
-          void records.refetch();
-        }}
-      >
-        <YStack gap={layout.section}>
-          {!canManage ? <Callout tone="info" title={t('readOnly')} /> : null}
+      <YStack gap={layout.section}>
+        {!canManage ? <Callout tone="info" title={t('readOnly')} /> : null}
 
-          <OdometerCard vehicleId={vehicleId} profile={profile.data} />
-          <OilCard vehicleId={vehicleId} profile={profile.data} />
-          <RecordsCard
-            title={t('records.upcoming')}
-            records={upcoming}
-            loading={records.isPending}
-            failed={records.isError}
-            onRetry={() => void records.refetch()}
-            actionable
-            onOpenSheet={setSheet}
-          />
-          <RecordsCard
-            title={t('records.history')}
-            records={history}
-            loading={records.isPending}
-            failed={records.isError}
-            onRetry={() => void records.refetch()}
-            actionable={false}
-            onOpenSheet={setSheet}
-          />
-        </YStack>
-      </Screen>
+        <OdometerCard vehicleId={vehicleId} profile={profile.data} />
+        <OilCard vehicleId={vehicleId} profile={profile.data} />
+        <RecordsCard
+          title={t('records.upcoming')}
+          records={upcoming}
+          loading={records.isPending}
+          failed={records.isError}
+          onRetry={() => void records.refetch()}
+          actionable
+          onOpenSheet={setSheet}
+        />
+        <RecordsCard
+          title={t('records.history')}
+          records={history}
+          loading={records.isPending}
+          failed={records.isError}
+          onRetry={() => void records.refetch()}
+          actionable={false}
+          onOpenSheet={setSheet}
+        />
+      </YStack>
 
       {sheet ? (
         <MaintenanceRecordSheet
@@ -286,7 +285,11 @@ function OdometerCard({ vehicleId, profile }: { vehicleId: string; profile: Main
         onClose={() => setCorrecting(false)}
       />
 
-      <BottomSheet open={historyOpen} onClose={() => setHistoryOpen(false)} title={t('historyTitle')}>
+      <BottomSheet
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        title={t('historyTitle')}
+      >
         {history.isPending ? (
           <SkeletonText lines={5} />
         ) : history.isError ? (
@@ -415,9 +418,9 @@ function OilCard({ vehicleId, profile }: { vehicleId: string; profile: Maintenan
           label={domainLabel(
             'maintenanceDueStatus',
             dueStatus,
-            MAINTENANCE_DUE_STATUS_META[dueStatus].label,
+            metaLabel(MAINTENANCE_DUE_STATUS_META, dueStatus),
           )}
-          color={MAINTENANCE_DUE_STATUS_META[dueStatus].color}
+          color={metaColor(MAINTENANCE_DUE_STATUS_META, dueStatus)}
           size="sm"
         />
 

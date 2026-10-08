@@ -1,11 +1,7 @@
 import type { Href } from 'expo-router';
 import { MOBILE_CLIENT_APP, type MobileClientApp } from '@xeprime/types';
 import { APP_SCOPE, type AppScope } from '@/features/shell/app-scope';
-import {
-  exact,
-  listOrDetail,
-  type AllowedDeepLink,
-} from '@/features/notifications/deep-link-kit';
+import { exact, listOrDetail, type AllowedDeepLink } from '@/features/notifications/deep-link-kit';
 import { ROUTES } from '@/navigation/routes';
 
 /**
@@ -18,9 +14,8 @@ export const APP_PROFILE: { readonly clientApp: MobileClientApp } = {
 };
 
 /**
- * App Partner chỉ có khu QUẢN LÝ. Server đã gác cổng đăng nhập (403 `PARTNER_ACCESS_REQUIRED`
- * cho tài khoản ngoài phạm vi), nên tới được đây là có việc để quản lý — hoặc còn nợ bước
- * thanh toán gói (ADR 0040), và `scopeHome` đưa họ vào đúng màn onboarding.
+ * App Partner chỉ có khu QUẢN LÝ. Mọi tài khoản đăng nhập ở đây là tài khoản ĐỐI TÁC (realm do
+ * server quyết theo `clientApp` — ADR 0053); `ScopeGuard` đặt họ vào đúng trang của tuyến.
  */
 export function resolveInitialScope(_params: {
   user: unknown;
@@ -30,12 +25,17 @@ export function resolveInitialScope(_params: {
 }
 
 /**
- * Khu CUSTOMER không tồn tại ở app này. `ScopeGuard` đá một phiên mất quyền về
- * `scopeHome(CUSTOMER)` — ở đây đó là màn giải thích "app này dành cho gian hàng dùng gói",
- * không phải một chợ xe không được đăng ký.
+ * Các khu bảng đổi khu được đưa ra. App này KHÔNG có khu khách (ADR 0051 · 0053): tài khoản đối
+ * tác không thuê xe — việc đó là của tài khoản khách ở app XePrime.
  */
-export function scopeHome(scope: AppScope, packageOnboardingPending = false): Href {
-  if (scope !== APP_SCOPE.MANAGE) return '/not-eligible';
+export const SWITCHABLE_SCOPES: readonly AppScope[] = [APP_SCOPE.MANAGE];
+
+/**
+ * Khu CUSTOMER không tồn tại ở app này, nên mọi khu đều về khu quản lý. Tuyến "chưa có gian hàng"
+ * được `ScopeGuard` chuyển tiếp sang màn chọn cách cho thuê; gói chưa thanh toán vào thẳng
+ * onboarding.
+ */
+export function scopeHome(_scope: AppScope, packageOnboardingPending = false): Href {
   return packageOnboardingPending ? ROUTES.manage.onboarding() : ROUTES.manage.home();
 }
 
@@ -45,8 +45,9 @@ export function guestHome(): Href {
 }
 
 /**
- * Allowlist deep link của THÔNG BÁO ĐẨY — chỉ các đích `/manage/**`. Thông báo audience
- * khách/Owner Lite thuộc app XePrime; một payload trỏ đích đó ở đây rơi về màn mặc định.
+ * Allowlist deep link của THÔNG BÁO ĐẨY — chỉ các đích `/manage/**`. Thông báo cho tài khoản đối
+ * tác — kể cả chủ xe tuyến hoa hồng — phát với audience MANAGE (ADR 0053); `ScopeGuard` đổi các
+ * đích tuyến gói sang bản Owner Lite tương ứng.
  */
 export const NOTIFICATION_ALLOWED: readonly AllowedDeepLink[] = [
   { prefix: 'manage/requests', resolve: exact(ROUTES.manage.requests) },

@@ -47,7 +47,11 @@ const upload = uploadAttachmentToR2 as jest.MockedFunction<typeof uploadAttachme
 const api = chatApi as jest.Mocked<typeof chatApi>;
 
 const PHOTO = { uri: 'file:///tmp/a.jpg', fileName: 'a.jpg', contentType: 'image/jpeg' };
-const PDF = { uri: 'file:///tmp/hop-dong.pdf', fileName: 'hop-dong.pdf', contentType: 'application/pdf' };
+const PDF = {
+  uri: 'file:///tmp/hop-dong.pdf',
+  fileName: 'hop-dong.pdf',
+  contentType: 'application/pdf',
+};
 
 /** Số byte THẬT do bước tải lên đo được — thứ bản trước gửi cứng thành 0. */
 const REAL_BYTES = 482_133;
@@ -183,7 +187,9 @@ describe('ChatComposer — đính kèm (COM-03)', () => {
 
     await waitFor(() =>
       expect(onSend).toHaveBeenCalledWith({
-        attachments: [expect.objectContaining({ fileType: 'application/pdf', fileSize: 1_204_887 })],
+        attachments: [
+          expect.objectContaining({ fileType: 'application/pdf', fileSize: 1_204_887 }),
+        ],
       }),
     );
   });
@@ -346,7 +352,11 @@ describe('ChatComposer — ngữ cảnh xe', () => {
     const onClear = jest.fn();
     const view = await render(
       withIntl(
-        <ChatComposer onSend={jest.fn()} vehicleContext={VEHICLE} onClearVehicleContext={onClear} />,
+        <ChatComposer
+          onSend={jest.fn()}
+          vehicleContext={VEHICLE}
+          onClearVehicleContext={onClear}
+        />,
       ),
     );
 

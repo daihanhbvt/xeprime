@@ -45,6 +45,7 @@ function user(permissions: Permission[]): authApi.CurrentUser {
       slug: 'da-nang',
       status: 'active',
       onboardingState: 'commission',
+      branchScope: 'all',
       logoUrl: null,
       roleKey: 'shop_owner',
       features: [],

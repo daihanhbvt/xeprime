@@ -1,28 +1,27 @@
 import { useWatch, type Control } from 'react-hook-form';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { VEHICLE_PUBLIC_MIN_IMAGES } from '@xeprime/types';
+import { missingVehicleImageTypes, requiredVehicleImageTypes } from '@xeprime/types';
 import { BlockTitle } from '@/components/ui/BlockTitle';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
-import { ImageUploadField } from '@/components/ui/ImageUploadField';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import type { UploadMeta, UploadPresign } from '@/api/uploads/api';
+import { TypedMediaFields } from '@/features/vehicles/components/TypedMediaFields';
 import { colors, fontSize, space } from '@/theme/tokens';
 import type { QuickVehicleValues } from '../quick-schema';
-
-/** Bốn góc chụp gợi ý — cùng danh sách và cùng thứ tự với web. */
-const ANGLES = ['front', 'rear', 'side', 'interior'] as const;
 
 /**
  * Bước HÌNH ẢNH của wizard đăng xe nhanh — bản native của `QuickVehicleImagesStep`.
  *
- * Bộ đếm là thứ quan trọng nhất của màn này: xe muốn LÊN CHỢ phải đủ `VEHICLE_PUBLIC_MIN_IMAGES`
- * ảnh, và người dùng phải biết còn thiếu mấy tấm TRƯỚC khi bấm gửi duyệt — chứ không phải đọc
- * một lỗi từ server sau đó. Đếm theo `Set` vì ảnh đại diện cũng tính, và nó có thể trùng một tấm
- * đã nằm trong thư viện.
+ * Ảnh gán theo GÓC CHỤP qua `TypedMediaFields` (`media[{url,type}]`), cùng bảng ảnh với wizard
+ * nâng cao — đúng như web. Ảnh bìa không có ô riêng: nó là ảnh mặt trước, server suy ra khi lưu.
  *
- * Thiếu ảnh KHÔNG chặn lưu: xe vẫn lưu nháp được, chỉ là chưa gửi duyệt được.
+ * Bộ đếm là thứ quan trọng nhất của màn này, và nó đếm GÓC chứ không đếm tấm (07/10/2026): ô tô
+ * 5, xe máy 2. Một con số chung "tối thiểu 4 ảnh" vừa cho năm tấm ảnh mặt trước đi qua, vừa báo
+ * thiếu với một chiếc xe máy đã có đủ hai tấm cần thiết.
+ *
+ * Thiếu ảnh CHẶN lưu (30/09/2026, như web): xe tạo qua wizard phải đủ điều kiện lên chợ.
  */
 export function QuickVehicleImagesStep({
   control,
@@ -38,13 +37,14 @@ export function QuickVehicleImagesStep({
   presign: (meta: UploadMeta) => Promise<UploadPresign>;
 }) {
   const t = useTranslations('ListYourVehicle.images');
-  const tForm = useTranslations('Vehicles.form.media');
 
-  const mainImageUrl = useWatch({ control, name: 'mainImageUrl' });
-  const images = useWatch({ control, name: 'images' });
+  const media = useWatch({ control, name: 'media' }) ?? [];
+  const vehicleType = useWatch({ control, name: 'vehicleType' });
 
-  const total = new Set([...(mainImageUrl ? [mainImageUrl] : []), ...(images ?? [])]).size;
-  const missing = Math.max(0, VEHICLE_PUBLIC_MIN_IMAGES - total);
+  // Đếm theo GÓC đã có — đúng phép kiểm của schema và của backend.
+  const required = requiredVehicleImageTypes(vehicleType).length;
+  const missing = missingVehicleImageTypes(vehicleType, media).length;
+  const done = required - missing;
 
   return (
     <YStack gap={space.md}>
@@ -55,31 +55,17 @@ export function QuickVehicleImagesStep({
             {t('intro')}
           </Text>
 
-          <ImageUploadField
-            control={control}
-            name="mainImageUrl"
-            label={tForm('mainImage')}
-            emptyLabel={tForm('addMainImage')}
-            hint={t('mainImageHelp')}
-            presign={presign}
-          />
-          <ImageUploadField
-            control={control}
-            name="images"
-            label={tForm('gallery')}
-            presign={presign}
-            multiple
-          />
+          <TypedMediaFields control={control} vehicleType={vehicleType} presign={presign} />
 
           {/*
             Thanh tiến độ ĐI KÈM con số, đúng `<Progress>` của web: "2/4" là một phép tính, còn
             một vạch đầy hai phần là thứ đọc được bằng một cái liếc.
           */}
           <ProgressBar
-            percent={(total / VEHICLE_PUBLIC_MIN_IMAGES) * 100}
+            percent={required === 0 ? 100 : (done / required) * 100}
             tone={missing > 0 ? 'active' : 'success'}
             size="sm"
-            label={t('counter', { count: total, min: VEHICLE_PUBLIC_MIN_IMAGES })}
+            label={t('counter', { count: done, min: required })}
           />
 
           {missing > 0 ? (
@@ -90,18 +76,6 @@ export function QuickVehicleImagesStep({
         </YStack>
       </Card>
 
-      <Card tone="muted" lift="flat">
-        <YStack gap={space.xs}>
-          <Text col={colors.text} fos={fontSize.bodySm}>
-            {t('anglesTitle')}
-          </Text>
-          {ANGLES.map((angle) => (
-            <Text key={angle} col={colors.textMuted} fos={fontSize.label}>
-              · {t(`angles.${angle}` as never)}
-            </Text>
-          ))}
-        </YStack>
-      </Card>
     </YStack>
   );
 }

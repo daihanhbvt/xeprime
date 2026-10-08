@@ -90,40 +90,55 @@ const TERM_WARNING_DAYS = 7;
 export function SubscriptionScreen({
   header,
   shell = 'manage',
+  ownerLite = false,
 }: {
   header?: ReactNode;
+  /**
+   * Chủ xe tuyến HOA HỒNG trong app Partner (web `OwnerSubscriptionView`, ADR 0053): cùng vỏ
+   * quản lý, nhưng mô tả là câu của trang nâng cấp (`page.accountSubtitle`).
+   */
+  ownerLite?: boolean;
   /**
    * Vỏ của màn. `account` = mở từ khu TÀI KHOẢN (`/account/subscription`, chủ xe tuyến hoa hồng):
    * không có sidebar quản lý nên KHÔNG được dựng `ManageHeader` (nó đòi `ManageDrawerHost` và
    * ném lỗi ngoài đó — màn trắng). Tiêu đề + mô tả theo đúng trang web của khu đó
    * (`page.accountSubtitle`).
+   *
+   * `stacked` = TRANG CON của khu quản lý (`/manage/plan`, mở từ dải "gói hết hạn"): thanh trên có
+   * nút lui về đúng màn vừa bấm, tiêu đề đứng ở thanh nên không lặp `ManagePageTitle`.
    */
-  shell?: 'manage' | 'account';
+  shell?: 'manage' | 'account' | 'stacked';
 } = {}) {
   const t = useTranslations('Subscription');
   const router = useRouter();
   const account = shell === 'account';
+  const stacked = shell === 'stacked';
 
   return (
     <>
       {header ??
-        (account ? (
+        (account || stacked ? (
           <AppHeader
             title={t('page.title')}
-            onBack={() => goBackOr(router, ROUTES.account.home())}
+            onBack={() =>
+              goBackOr(router, stacked ? ROUTES.manage.subscription() : ROUTES.account.home())
+            }
           />
         ) : (
           <ManageHeader />
         ))}
       <Screen edges={['left', 'right', 'bottom']}>
-        {account ? (
+        {stacked ? null : account ? (
           // Khu tài khoản: tiêu đề đã đứng ở thanh trên (như mọi màn của khu này) — dưới đây chỉ còn
           // câu mô tả của trang web `/account/subscription`, không lặp lại tiêu đề lần hai.
           <Text col={colors.textMuted} fos={fontSize.bodySm}>
             {t('page.accountSubtitle')}
           </Text>
         ) : (
-          <ManagePageTitle title={t('page.title')} />
+          <ManagePageTitle
+            title={t('page.title')}
+            {...(ownerLite ? { subtitle: t('page.accountSubtitle') } : {})}
+          />
         )}
         <SubscriptionWorkspace />
       </Screen>

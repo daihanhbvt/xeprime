@@ -9,6 +9,7 @@ import {
   HANDOVER_STATUS,
   HANDOVER_TYPE,
   MEMBERSHIP_STATUS,
+  MOTORBIKE_CATEGORY,
   POLICY_SOURCE,
   PUBLISH_REQUIREMENT,
   SERVICE_TYPE,
@@ -17,7 +18,7 @@ import {
   TENANT_STATUS,
   TRANSMISSION_TYPE,
   TRANSMISSION_TYPE_EXT,
-  VEHICLE_PUBLIC_MIN_IMAGES,
+  VEHICLE_IMAGE_TYPE,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_TYPE,
 } from '@xeprime/types';
@@ -80,6 +81,15 @@ let seq = 0;
 
 const img = (n: number) => `https://img.example/${RUN}-${n}.jpg`;
 
+/** Đủ năm góc ảnh BẮT BUỘC của ô tô — mọi lượt lưu xe trong file này đều cần nó. */
+const CAR_MEDIA = [
+  { url: img(1), type: VEHICLE_IMAGE_TYPE.FRONT },
+  { url: img(2), type: VEHICLE_IMAGE_TYPE.REAR },
+  { url: img(3), type: VEHICLE_IMAGE_TYPE.LEFT },
+  { url: img(4), type: VEHICLE_IMAGE_TYPE.RIGHT },
+  { url: img(5), type: VEHICLE_IMAGE_TYPE.INTERIOR },
+];
+
 async function seedTenant(label: string, status: string) {
   const owner = newId();
   const tenant = newId();
@@ -135,8 +145,7 @@ async function createListableVehicle(overrides: Record<string, unknown> = {}) {
       transmission: TRANSMISSION_TYPE.AUTOMATIC,
       fuelConsumptionCombined: 7.5,
       weekdayPrice: '700000',
-      mainImageUrl: img(1),
-      images: [img(1), img(2), img(3), img(4)],
+      media: CAR_MEDIA,
       ...overrides,
     } as never,
     null,
@@ -447,10 +456,15 @@ describe('Điều kiện lên chợ', () => {
     expect(submitted.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW);
   });
 
-  maybe('ba ảnh + ảnh đại diện TRÙNG một trong ba: vẫn thiếu ảnh', async () => {
+  /*
+   * Ảnh cũ chỉ có URL (`images: string[]`, client trước 07/10/2026) KHÔNG mang góc chụp nào, nên
+   * dù có bốn tấm thì cổng duyệt vẫn thiếu cả năm góc. Đó là hành vi ĐÚNG: nó chặn lượt gửi
+   * duyệt, chứ không chặn lượt lưu của một bản app đã phát hành.
+   */
+  maybe('bốn ảnh KHÔNG gán góc chụp: chặn gửi duyệt', async () => {
     const created = await createListableVehicle({
-      mainImageUrl: img(1),
-      images: [img(1), img(2), img(3)],
+      media: undefined,
+      images: [img(1), img(2), img(3), img(4)],
     });
     await expect(
       vehicles.submitForPublicReview(tenantId, created.id, ownerId),
@@ -459,13 +473,43 @@ describe('Điều kiện lên chợ', () => {
     });
   });
 
-  maybe(`ảnh đại diện KHÁC ba ảnh thư viện: đủ ${VEHICLE_PUBLIC_MIN_IMAGES} ảnh`, async () => {
+  maybe('xe máy: ĐÚNG hai ảnh trước/sau là đủ điều kiện lên chợ', async () => {
     const created = await createListableVehicle({
-      mainImageUrl: img(9),
-      images: [img(1), img(2), img(3)],
+      vehicleType: VEHICLE_TYPE.MOTORBIKE,
+      // Hãng phải thuộc danh mục của ĐÚNG loại xe — `toyota` của helper là hãng ô tô.
+      brand: 'honda',
+      model: 'Vision',
+      seatCount: undefined,
+      motorbikeCategory: MOTORBIKE_CATEGORY.SCOOTER,
+      transmission: undefined,
+      engineDisplacementCc: 125,
+      media: [
+        { url: img(1), type: VEHICLE_IMAGE_TYPE.FRONT },
+        { url: img(2), type: VEHICLE_IMAGE_TYPE.REAR },
+      ],
     });
     const submitted = await vehicles.submitForPublicReview(tenantId, created.id, ownerId);
     expect(submitted.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW);
+  });
+
+  maybe('ô tô thiếu ảnh nội thất: lượt LƯU bị chặn ngay', async () => {
+    await expect(
+      createListableVehicle({ media: CAR_MEDIA.slice(0, 4) }),
+    ).rejects.toMatchObject({
+      response: {
+        code: API_ERROR_CODE.VEHICLE_IMAGES_INCOMPLETE,
+        details: { missing: [VEHICLE_IMAGE_TYPE.INTERIOR] },
+      },
+    });
+  });
+
+  maybe('ảnh BÌA do server suy từ ô mặt trước, không nhận từ client', async () => {
+    const created = await createListableVehicle({
+      media: [{ url: img(7), type: VEHICLE_IMAGE_TYPE.FRONT }, ...CAR_MEDIA.slice(1)],
+      // Client cũ vẫn gửi ô này; nó phải bị BỎ QUA.
+      mainImageUrl: img(99),
+    });
+    expect(created.mainImageUrl).toBe(img(7));
   });
 
   maybe('xe điện thiếu quãng đường mỗi lần sạc: chặn gửi duyệt', async () => {
@@ -544,8 +588,7 @@ describe('Điều kiện lên chợ', () => {
         transmission: TRANSMISSION_TYPE.AUTOMATIC,
         fuelConsumptionCombined: 7.5,
         weekdayPrice: '700000',
-        mainImageUrl: img(1),
-        images: [img(1), img(2), img(3), img(4)],
+        media: CAR_MEDIA,
       } as never,
       null,
     );
@@ -555,8 +598,8 @@ describe('Điều kiện lên chợ', () => {
   });
 
   maybe('xe ĐANG công khai thiếu ảnh theo luật mới KHÔNG bị tự ẩn', async () => {
-    // Xe cũ: chỉ có ảnh đại diện, đã được duyệt từ trước khi luật siết.
-    const created = await createListableVehicle({ mainImageUrl: img(1), images: [] });
+    // Xe cũ: ảnh không gán góc chụp, đã được duyệt từ trước khi luật siết.
+    const created = await createListableVehicle({ media: undefined, images: [img(1)] });
     await prisma.vehicle.update({
       where: { id: created.id },
       data: { publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC },

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Provider as ReduxProvider } from 'react-redux';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
@@ -16,9 +17,14 @@ import { store } from '@/store';
 import { tenantsApi, type MyShop } from './api';
 import { ShopProfileScreen } from './ShopProfileScreen';
 
+// `jest.mock` được hoist: chỉ biến tiền tố `mock` mới dùng được bên trong.
+const mockUseEffect = useEffect;
+
 jest.mock('expo-router', () => ({
   useNavigation: () => ({ isFocused: () => true }),
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
+  // Màn này cuộn tới khối mỗi lần được focus — trong test coi như focus một lần lúc dựng.
+  useFocusEffect: (effect: () => void) => mockUseEffect(effect, [effect]),
 }));
 
 /** Thanh trên cần context Drawer — không thuộc phạm vi test màn hồ sơ. */
@@ -32,6 +38,7 @@ function currentUser(
     slug: 'binh-minh',
     status: TENANT_STATUS.DRAFT,
     onboardingState: 'commission',
+    branchScope: 'all',
     logoUrl: null,
     roleKey: 'shop_owner',
     features: [],
@@ -122,6 +129,7 @@ async function renderScreen(
       slug: 'binh-minh',
       status: tenantStatus,
       onboardingState: 'commission',
+      branchScope: 'all',
       logoUrl: null,
       roleKey: 'shop_owner',
       features: [],

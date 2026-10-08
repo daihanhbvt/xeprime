@@ -439,7 +439,7 @@ describe('Tổng hợp việc cần làm của xe', () => {
     const missing = row.alerts.find((a) => a.kind === VEHICLE_ALERT_KIND.MISSING_VEHICLE_INFO);
 
     expect(missing?.detail).toContain('biển số');
-    expect(missing?.detail).toContain('ảnh đại diện');
+    expect(missing?.detail).toContain('ảnh xe');
     expect(missing?.count).toBe(2);
     expect(missing?.href).toBe(`/manage/vehicles/${vehicle.id}/edit?tab=information`);
   });

@@ -13,6 +13,7 @@ import {
   VN_PHONE_PATTERN,
 } from '@xeprime/types';
 import { appWallClockToIso, toAppTz, type Dayjs, type RentalMode } from '@xeprime/domain';
+import { FieldLabel } from '@/components/ui/Field';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -281,9 +282,7 @@ export function EditBookingSheet({
 
         <Card onPress={() => setScheduling(true)} accessibilityLabel={t('scheduleLabel')}>
           <YStack gap={2}>
-            <Text col={colors.textMuted} fos={fontSize.label}>
-              {t('scheduleLabel')}
-            </Text>
+            <FieldLabel label={t('scheduleLabel')} required />
             <Text col={colors.text} fos={fontSize.body} fow={fontWeight.medium}>
               {range.pickupAt && range.returnAt
                 ? `${fmt.rentalPoint(range.pickupAt)} – ${fmt.rentalPoint(range.returnAt)}`

@@ -20,6 +20,8 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useFeatureStates } from '@/features/auth/hooks/use-feature';
 import { useAuthenticatedUser } from '@/features/auth/hooks/use-authenticated-user';
 import { useTenantScope } from '@/features/auth/hooks/use-tenant-scope';
+import { withBranchParam } from '@/features/branches/branch-link';
+import { useRememberedBranch } from '@/features/branches/branch-memory';
 import { useAccountIdentityLabel } from '@/features/account/use-account-identity-label';
 import { ROUTES } from '@/navigation/routes';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
@@ -27,7 +29,7 @@ import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, sidebar, space } from '@/theme/tokens';
 import {
   isManageNavBranch,
-  manageNavForScope,
+  manageNavForTrack,
   matchActiveHref,
   type ManageNavBadge,
   type ManageNavBranch,
@@ -35,6 +37,7 @@ import {
   type ManageNavNode,
   type ManageNavSection,
 } from './manage-nav';
+import { resolvePartnerTrack, type PartnerTrack } from './partner-track';
 import { ManageAccountSheet } from './ManageAccountSheet';
 import { useManageDrawer } from './ManageDrawerHost';
 import { useManageNavBadges, type ManageNavBadgeCounts } from './use-manage-nav-badges';
@@ -147,13 +150,13 @@ export function ManageDrawer() {
   const sections = useMemo(
     () =>
       resolveSections(
-        Boolean(user.platformRole),
+        resolvePartnerTrack(user),
         permissions.has,
         featureStates,
         badges,
         user.tenant?.roleKey === TENANT_ROLE.SHOP_OWNER,
       ),
-    [user.platformRole, user.tenant?.roleKey, permissions, featureStates, badges],
+    [user, permissions, featureStates, badges],
   );
 
   const activeHref = useMemo(
@@ -161,7 +164,9 @@ export function ManageDrawer() {
       matchActiveHref(
         pathname,
         sections.flatMap(({ nodes }) =>
-          nodes.flatMap((node) => (node.kind === 'leaf' ? [node.leaf] : node.children.map((c) => c.leaf))),
+          nodes.flatMap((node) =>
+            node.kind === 'leaf' ? [node.leaf] : node.children.map((c) => c.leaf),
+          ),
         ),
         String(ROUTES.manage.home()),
       ),
@@ -179,6 +184,12 @@ export function ManageDrawer() {
     setBranchOverrides((current) => ({ ...current, [key]: !current[key] }));
   }, []);
 
+  /*
+   * Mục menu trỏ tới một màn LỌC ĐƯỢC mang sẵn chi nhánh lọc gần nhất (ADR 0052 điều 5) — màn
+   * đích đúng ngay từ request đầu. `href` của mục giữ nguyên để so mục đang sáng.
+   */
+  const rememberedBranch = useRememberedBranch();
+
   const go = useCallback(
     (leaf: ManageNavLeaf) => {
       if (!leaf.href) {
@@ -187,9 +198,9 @@ export function ManageDrawer() {
       }
       // Đóng TRƯỚC khi đi: tấm menu còn mở trên màn mới đọc như điều hướng chưa chạy.
       drawer.close();
-      navigateOnce(leaf.href);
+      navigateOnce(withBranchParam(leaf.href, rememberedBranch));
     },
-    [drawer, toast, tStates, navigateOnce],
+    [drawer, toast, tStates, navigateOnce, rememberedBranch],
   );
 
   const labelOf = useCallback((node: { labelKey: string }) => t(node.labelKey as never), [t]);
@@ -389,7 +400,7 @@ function branchHasActive(node: ResolvedBranch, activeHref: string | null): boole
 
 /** Xuất ra để kiểm được phép DỒN SỐ lên mục cha mà không phải dựng cả ngăn kéo. */
 export function resolveSections(
-  isPlatform: boolean,
+  track: PartnerTrack,
   has: (permission: ManageNavLeaf['permission']) => boolean,
   featureStates: Partial<Record<PlanFeature, FeatureState>>,
   badges: ManageNavBadgeCounts,
@@ -439,7 +450,7 @@ export function resolveSections(
     };
   };
 
-  return manageNavForScope(isPlatform)
+  return manageNavForTrack(track)
     .map((section) => ({
       section,
       nodes: section.children

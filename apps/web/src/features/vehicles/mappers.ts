@@ -95,7 +95,6 @@ export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput
     deliveryEnabled: values.deliveryEnabled,
     discountPercent: values.discountPercent ?? null,
     description: textOrUndefined(values.description),
-    mainImageUrl: values.mainImageUrl ?? undefined,
     // Gửi mảng để backend replace-set; lọc URL rỗng phòng dữ liệu cũ có dòng trống.
     images: (values.images ?? []).map((u) => u.trim()).filter(Boolean),
     ...(values.media && values.media.length > 0
@@ -157,7 +156,6 @@ export function vehicleToFormValues(v: VehicleDetail): VehicleFormValues {
     deliveryEnabled: v.deliveryEnabled,
     discountPercent: v.discountPercent ?? null,
     description: v.description ?? '',
-    mainImageUrl: v.mainImageUrl ?? null,
     images: v.images ?? [],
     media: (v.media ?? []).map((item) => ({
       url: item.url,

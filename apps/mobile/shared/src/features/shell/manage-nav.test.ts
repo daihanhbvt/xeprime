@@ -2,10 +2,11 @@ import viNavigation from '@xeprime/domain/messages/vi/navigation.json';
 import enNavigation from '@xeprime/domain/messages/en/navigation.json';
 import {
   isManageNavBranch,
-  manageNavForScope,
+  manageNavForTrack,
   matchActiveHref,
   type ManageNavLeaf,
 } from './manage-nav';
+import { PARTNER_TRACK } from './partner-track';
 
 /**
  * Cây menu khu quản lý — hai bất biến, cả hai đều đã từng gãy trên máy thật.
@@ -18,13 +19,15 @@ import {
 
 const MESSAGES = { vi: viNavigation, en: enNavigation } as const;
 
-function leavesOf(sections: ReturnType<typeof manageNavForScope>): ManageNavLeaf[] {
+function leavesOf(sections: ReturnType<typeof manageNavForTrack>): ManageNavLeaf[] {
   return sections.flatMap((section) =>
     section.children.flatMap((node) => (isManageNavBranch(node) ? [...node.children] : [node])),
   );
 }
 
-const ALL_LEAVES = [...leavesOf(manageNavForScope(false)), ...leavesOf(manageNavForScope(true))];
+const SHOP = manageNavForTrack(PARTNER_TRACK.PACKAGE);
+const OWNER_LITE = manageNavForTrack(PARTNER_TRACK.COMMISSION);
+const ALL_LEAVES = [...leavesOf(SHOP), ...leavesOf(OWNER_LITE)];
 
 function labelAt(messages: object, key: string): unknown {
   return key.split('.').reduce<unknown>((node, part) => {
@@ -46,7 +49,7 @@ describe('manage-nav — nhãn', () => {
   });
 
   it('nhãn của mục cha cũng phải có bản dịch', () => {
-    const branchKeys = [manageNavForScope(false), manageNavForScope(true)].flatMap((sections) =>
+    const branchKeys = [SHOP, OWNER_LITE].flatMap((sections) =>
       sections.flatMap((section) => [
         section.labelKey,
         ...section.children.filter(isManageNavBranch).map((branch) => branch.labelKey),
@@ -82,7 +85,7 @@ describe('manage-nav — không mục nào trỏ tới chỗ chưa dựng', () =
  * luật đó.
  */
 describe('matchActiveHref — đúng MỘT mục sáng', () => {
-  const LEAVES = leavesOf(manageNavForScope(false));
+  const LEAVES = leavesOf(SHOP);
   const HOME = '/manage';
   const active = (pathname: string) => matchActiveHref(pathname, LEAVES, HOME);
 
@@ -113,5 +116,61 @@ describe('matchActiveHref — đúng MỘT mục sáng', () => {
 
   it('KHÔNG khớp theo tiền tố chuỗi cụt: /manage/shopping không phải /manage/shop', () => {
     expect(active('/manage/shopping')).toBeNull();
+  });
+});
+
+/**
+ * Menu theo TUYẾN (ADR 0053) — gương của `commission-track-continuity.test.ts` bên web: tuyến hoa
+ * hồng có menu Owner Lite riêng, KHÔNG chứa trang nào của Full Manage; hai tuyến chưa vào được khu
+ * quản lý không có menu.
+ */
+describe('manageNavForTrack — menu theo tuyến', () => {
+  const hrefs = (sections: ReturnType<typeof manageNavForTrack>) =>
+    leavesOf(sections).map((leaf) => String(leaf.href));
+
+  it('Owner Lite không chứa trang nào của Full Manage', () => {
+    const ownerLite = new Set(hrefs(OWNER_LITE));
+    for (const fullManageOnly of [
+      '/manage/customers',
+      '/manage/finance',
+      '/manage/receipts',
+      '/manage/maintenance',
+      '/manage/members',
+      '/manage/shop',
+    ]) {
+      expect(ownerLite.has(fullManageOnly)).toBe(false);
+    }
+  });
+
+  it('Owner Lite giữ đúng các mục của web OWNER_LITE_NAV, đúng thứ tự', () => {
+    expect(leavesOf(OWNER_LITE).map((leaf) => leaf.key)).toEqual([
+      'home',
+      'vehicles',
+      'calendar',
+      'booking-requests',
+      'bookings',
+      'chat',
+      'balance',
+      'bank-accounts',
+      'tax',
+      'subscription',
+      'registration',
+      'host-guide',
+      'contracts-documents',
+      'data-protection',
+      'support-cases',
+    ]);
+  });
+
+  it('ví, tài khoản nhận tiền, thuế, gói và hồ sơ chủ xe chỉ dành cho CHỦ', () => {
+    const ownerOnly = leavesOf(OWNER_LITE)
+      .filter((leaf) => leaf.ownerOnly)
+      .map((leaf) => leaf.key);
+    expect(ownerOnly).toEqual(['balance', 'bank-accounts', 'tax', 'subscription', 'registration']);
+  });
+
+  it('chưa có gian hàng / gói chưa thanh toán: không có menu', () => {
+    expect(manageNavForTrack(PARTNER_TRACK.NONE)).toEqual([]);
+    expect(manageNavForTrack(PARTNER_TRACK.PACKAGE_PENDING)).toEqual([]);
   });
 });

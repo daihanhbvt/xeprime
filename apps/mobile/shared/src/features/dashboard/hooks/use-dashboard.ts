@@ -36,13 +36,14 @@ import {
  * như web. Cùng định nghĩa (`operationStatus`), cùng nguồn, nhưng dùng CHUNG cache với dải chỉ số
  * đầu màn Đội xe, nên mở Tổng quan rồi mở Đội xe không tốn thêm request nào.
  *
- * KHÔNG ghép scope chi nhánh: web cũng không (dashboard nói về cả gian hàng), và `fleetSummary`
- * không nhận tham số nào.
+ * Theo chi nhánh đang lọc của Tổng quan (ADR 0052) — cùng khoá với dải chỉ số màn Đội xe khi hai
+ * màn cùng một chi nhánh.
  */
-export function useFleetStats(enabled: boolean): UseQueryResult<FleetSummary> {
+export function useFleetStats(enabled: boolean, branchId?: string): UseQueryResult<FleetSummary> {
+  const params = branchId ? { branchId } : {};
   return useQuery({
-    queryKey: queryKeys.vehicles.fleetSummary(),
-    queryFn: () => vehiclesApi.fleetSummary(),
+    queryKey: queryKeys.vehicles.fleetSummary(params),
+    queryFn: () => vehiclesApi.fleetSummary(params),
     enabled,
     staleTime: STALE_TIME.STANDARD,
   });
@@ -70,7 +71,7 @@ export interface DashboardBookings {
  *
  * Mỗi ô là một truy vấn `/bookings` CÓ PHÂN TRANG (`limit`), không kéo cả bảng về đếm ở client.
  */
-export function useDashboardBookings(enabled: boolean): DashboardBookings {
+export function useDashboardBookings(enabled: boolean, branchId?: string): DashboardBookings {
   const bounds = useMemo(() => {
     const now = nowInAppTz();
     return {
@@ -82,8 +83,8 @@ export function useDashboardBookings(enabled: boolean): DashboardBookings {
 
   const useList = (filters: BookingFilters) =>
     useQuery({
-      queryKey: queryKeys.bookings.list(bookingFiltersToParams(filters)),
-      queryFn: () => bookingsApi.list(filters),
+      queryKey: queryKeys.bookings.list(bookingFiltersToParams({ ...filters, branchId })),
+      queryFn: () => bookingsApi.list({ ...filters, branchId }),
       enabled,
       staleTime: STALE_TIME.STANDARD,
     });
@@ -140,14 +141,16 @@ export interface DashboardMoney {
  * Dùng lại `financeApi.summary` của màn Tổng quan doanh thu chứ không thêm một endpoint
  * "dashboard summary": hai bề mặt cộng cùng một phép tính thì không được có hai đường tính.
  */
-export function useDashboardMoney(): DashboardMoney {
+export function useDashboardMoney(branchId?: string): DashboardMoney {
   const finance = useFeature(PLAN_FEATURE.FINANCE);
   const { has } = usePermissions();
   const visible = finance.isVisible && has(PERMISSION.FINANCE_VIEW);
 
-  const monthRange = dashboardMonthRange();
+  // Cả hai khối tiền theo CÙNG chi nhánh với thẻ xe/đơn (ADR 0052) — lọc nửa vời là sai.
+  const monthRange = { ...dashboardMonthRange(), branchId };
   const receiptFilters = {
     ...dashboardTodayRange(),
+    branchId,
     page: 1,
     limit: DASHBOARD_RECEIPT_LIMIT,
   };

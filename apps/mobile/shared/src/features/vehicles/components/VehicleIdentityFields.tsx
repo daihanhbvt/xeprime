@@ -34,6 +34,7 @@ export function VehicleIdentityFields({
   vehicleType,
   lockedNotice,
   disabled,
+  required = false,
   setValue,
 }: {
   control: Control<VehicleFormValues>;
@@ -41,6 +42,8 @@ export function VehicleIdentityFields({
   /** Lý do ô bị khoá (xe đã lên chợ) — nơi gọi truyền chữ, component không tự đoán. */
   lockedNotice?: string;
   disabled?: boolean;
+  /** Đánh dấu bắt buộc (wizard thêm xe — điều kiện lên chợ). Luật thật ở schema. */
+  required?: boolean;
   /**
    * Dọn mẫu xe khi đổi loại xe hoặc đổi hãng. Không có nó thì một chiếc xe máy vẫn giữ
    * `vehicleCatalogModelId` của chiếc Vios vừa chọn nhầm, và server mới là nơi phát hiện ra.
@@ -115,6 +118,7 @@ export function VehicleIdentityFields({
         control={control}
         name="brand"
         label={t('brand')}
+        required={required}
         options={brandOptions}
         placeholder={t('brandPlaceholder')}
         disabled={disabled}
@@ -124,6 +128,7 @@ export function VehicleIdentityFields({
         control={control}
         name="vehicleCatalogModelId"
         label={t('model')}
+        required={required}
         options={modelOptions}
         placeholder={t('modelPlaceholder')}
         // Khoá tới khi có hãng: danh sách mẫu xe không kèm hãng là vài trăm dòng vô nghĩa.

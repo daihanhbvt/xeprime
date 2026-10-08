@@ -130,8 +130,7 @@ function groupsOf(values: VehicleFormValues, deps: ReviewDeps): ReviewGroup[] {
         {
           label: t('overview'),
           value: t('overviewValue', {
-            mainImage: values.mainImageUrl ? t('mainImageSet') : t('mainImageMissing'),
-            gallery: values.images?.length ?? 0,
+            photos: values.media?.length ?? 0,
             features: values.features?.length ?? 0,
           }),
         },

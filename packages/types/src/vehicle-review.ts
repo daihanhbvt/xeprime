@@ -23,6 +23,7 @@ import { applicablePublishRequirements, missingPublishRequirements } from './veh
 import type { PublishRequirement, VehiclePublicationInput } from './vehicle-publication';
 import type { StorefrontKind } from './shop-storefront';
 import { VEHICLE_LOCKED_AFTER_APPROVAL_FIELDS, type VehicleLockedField } from './status/vehicle';
+import { requiredVehicleImageTypes } from './status/vehicle-settings';
 
 // ---------------------------------------------------------------------------
 // Quyết định
@@ -202,8 +203,13 @@ export interface VehicleReviewVehicleSnapshot {
   electricConsumptionKwhPer100Km: string | null;
   description: string | null;
   mainImageUrl: string | null;
-  /** TOÀN BỘ ảnh lúc gửi — ảnh đại diện đứng đầu, đã khử trùng. */
+  /** TOÀN BỘ ảnh lúc gửi — ảnh bìa đứng đầu, đã khử trùng. */
   images: string[];
+  /**
+   * CÙNG bộ ảnh, kèm GÓC CHỤP (07/10/2026) — điều kiện ảnh hỏi đủ góc (ô tô 5, xe máy 2), và
+   * `images` là URL trần. Tuỳ chọn: phiếu chụp trước đợt này không có nó.
+   */
+  media?: { url: string; type: string | null }[];
   /** Khoá tiện nghi (`vehicle_features.feature_key`). */
   features: string[];
 }
@@ -272,6 +278,13 @@ export interface VehicleReviewPublicationSource {
   vehicle: Omit<VehiclePublicationInput, 'branchProvinceCode' | 'serviceTypes'> & {
     serviceTypes?: readonly string[] | null;
     images?: readonly string[] | null;
+    /**
+     * Ảnh kèm GÓC CHỤP (07/10/2026) — điều kiện ảnh hỏi đủ GÓC chứ không đủ số lượng, và
+     * `images: string[]` không nói được tấm nào là mặt trước.
+     *
+     * Tuỳ chọn vì phiếu chụp TRƯỚC đợt này không có nó: xem `vehicleReviewAutoChecks`.
+     */
+    media?: readonly { url: string; type?: string | null }[] | null;
   };
   pricing: Pick<VehiclePublicationInput, 'weekdayPrice' | 'monthlyPrice' | 'withDriverDailyPrice'>;
   pickup?: { provinceCode?: string | null } | null;
@@ -286,7 +299,11 @@ export interface VehicleReviewAutoCheck {
  * Danh mục kiểm tra TỰ ĐỘNG của một phiếu — chính cổng gửi duyệt, chấm trên snapshot.
  *
  * Chỉ trả những điều kiện ÁP DỤNG với chiếc xe này (xe chỉ chạy tự lái không bị chấm giá có tài
- * xế). Số ảnh đếm trên `images` của snapshot — cùng tập URL khác nhau mà backend đếm lúc gửi.
+ * xế). Ảnh chấm trên `media` của snapshot — cùng tập mà cổng gửi duyệt đọc.
+ *
+ * Phiếu chụp TRƯỚC 07/10/2026 chỉ có `images: string[]`, không có góc chụp nào. Với chúng, mục
+ * ảnh được chấm ĐẠT khi snapshot có ít nhất một tấm: đánh trượt một phiếu vì một thông tin nó
+ * chưa từng ghi lại là bắt người duyệt đi tìm một tấm ảnh không ai biết là tấm nào.
  */
 export function vehicleReviewAutoChecks(
   review: VehicleReviewPublicationSource,
@@ -299,12 +316,18 @@ export function vehicleReviewAutoChecks(
     withDriverDailyPrice: review.pricing.withDriverDailyPrice,
     branchProvinceCode: review.pickup?.provinceCode ?? null,
   };
-  const imageCount = new Set(
-    [review.vehicle.mainImageUrl, ...(review.vehicle.images ?? [])].filter(
-      (url): url is string => typeof url === 'string' && url !== '',
+  const media = review.vehicle.media;
+  const legacySnapshot = media == null;
+  const images = legacySnapshot
+    ? // Gán góc BẮT BUỘC cho các tấm không biết góc, để mục ảnh của phiếu cũ không trượt oan.
+      requiredVehicleImageTypes(input.vehicleType).map((type) => ({ type }))
+    : media;
+  const missing = new Set(
+    missingPublishRequirements(
+      input,
+      (review.vehicle.images ?? []).length === 0 && legacySnapshot ? [] : images,
     ),
-  ).size;
-  const missing = new Set(missingPublishRequirements(input, imageCount));
+  );
   return applicablePublishRequirements(input).map((item) => ({
     key: item.key,
     passed: !missing.has(item.key),

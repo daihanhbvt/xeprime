@@ -21,6 +21,7 @@ import { VehicleSourceService } from '../src/modules/vehicles/vehicle-source.ser
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { makeVehiclesService, vehicleCreator } from './helpers/service-factory';
 import { giveTenantPlan } from './helpers/billing-fixture';
+import { requiredVehicleMedia } from './helpers/vehicle-media';
 
 /**
  * Wave 4 + 4.1 — hồ sơ nguồn xe & tài chính + tài liệu hợp đồng riêng tư, chạy trên PostgreSQL
@@ -342,7 +343,8 @@ describe('Vehicle source & finance (Wave 4)', () => {
       code: 'SRC-SAFE',
       name: 'Xe giữ nguyên',
       vehicleType: VEHICLE_TYPE.CAR,
-      mainImageUrl: 'https://img/main.jpg',
+      // Ảnh BÌA do server suy từ ô MẶT TRƯỚC (07/10/2026), không nhận từ payload.
+      media: requiredVehicleMedia(VEHICLE_TYPE.CAR, (type) => `https://img/${type}.jpg`),
       weekdayPrice: '800000',
       description: 'Mô tả gốc',
     });
@@ -352,7 +354,7 @@ describe('Vehicle source & finance (Wave 4)', () => {
     });
     const after = await vehicles.getOne(tenantId, v.id);
     expect(after.name).toBe('Xe giữ nguyên');
-    expect(after.mainImageUrl).toBe('https://img/main.jpg');
+    expect(after.mainImageUrl).toBe('https://img/front.jpg');
     // Ở tầng service tiền còn là Decimal (interceptor HTTP mới hoá chuỗi) — so theo giá trị.
     expect(Number(after.weekdayPrice)).toBe(800000);
     expect(after.description).toBe('Mô tả gốc');

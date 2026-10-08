@@ -27,7 +27,8 @@
     "clean:android": "node ../shared/scripts/gradle.mjs clean",
     "install:android": "node ../shared/scripts/install-android.mjs",
     "build:android:apk": "eas build --platform android --profile preview --local",
-    "build:android:aab": "eas build --platform android --profile production --local"
+    "build:android:aab": "eas build --platform android --profile production --local",
+    "release:android": "node ../shared/scripts/release-android.mjs"
   },
   "dependencies": {
     "@expo/metro-runtime": "catalog:",

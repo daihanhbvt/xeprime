@@ -11,10 +11,12 @@ describe('app-profile (partner)', () => {
     );
   });
 
-  it('còn nợ bước thanh toán gói ⇒ màn onboarding; khu CUSTOMER ⇒ màn giải thích', () => {
+  it('còn nợ bước thanh toán gói ⇒ màn onboarding; còn lại ⇒ trang chủ khu quản lý', () => {
     expect(scopeHome(APP_SCOPE.MANAGE, true)).toBe('/manage/onboarding');
     expect(scopeHome(APP_SCOPE.MANAGE, false)).toBe('/manage');
-    expect(scopeHome(APP_SCOPE.CUSTOMER)).toBe('/not-eligible');
+    // Không còn màn "không đủ điều kiện": mọi tài khoản ở app này là tài khoản đối tác (ADR 0053),
+    // `ScopeGuard` đặt họ vào đúng trang của tuyến.
+    expect(scopeHome(APP_SCOPE.CUSTOMER)).toBe('/manage');
   });
 });
 
@@ -25,7 +27,7 @@ describe('allowlist thông báo (partner)', () => {
     expect(notificationHref('/manage/chat/01J00000000000000000000A')).not.toBeNull();
   });
 
-  it('TỪ CHỐI đích khách/Owner Lite — audience đó thuộc app XePrime', () => {
+  it('TỪ CHỐI đích khách — audience đó thuộc app XePrime', () => {
     expect(notificationHref('/trips')).toBeNull();
     expect(notificationHref('/account')).toBeNull();
     expect(notificationHref('/listings/01J00000000000000000000A')).toBeNull();

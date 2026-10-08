@@ -1,5 +1,5 @@
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { LIST_SEPARATOR } from '@xeprime/domain';
@@ -42,13 +42,8 @@ import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
-import {
-  VEHICLE_MANAGE_SECTION,
-  type VehicleManageSection,
-} from '@/navigation/vehicle-manage-section';
 import { Controller } from 'react-hook-form';
 import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
-import { VehicleManageShell } from './components/VehicleManageShell';
 import type { VehicleServiceSetting } from './api';
 import {
   usePatchVehicleServiceSetting,
@@ -78,51 +73,26 @@ type SettingValues = yup.InferType<typeof settingSchema>;
 type FormValues = PolicyFormValues & SettingValues;
 
 /**
- * Mục "Thủ tục cho thuê" — MỘT màn, hai dịch vụ. Bản native của `TermsSection`.
+ * Thân "Thủ tục cho thuê" — MỘT khối, hai dịch vụ, hai khu. Bản native của web `TermsSection`.
  *
- *  - TỰ LÁI: hình thức bảo đảm = `RentalPolicy.collateralMode` (khối dùng chung với chính sách
- *    gian hàng); giấy tờ xuất trình (CCCD hoặc hộ chiếu — GPLX luôn bắt buộc theo luật); cách đối
+ *  - TỰ LÁI: hình thức bảo đảm = `RentalPolicy.collateralMode`; giấy tờ xuất trình; cách đối
  *    chiếu; điều khoản + bắt khách đồng ý.
- *  - CÓ TÀI XẾ: cọc giữ chuyến là `depositMode` RIÊNG (không mượn cọc thế chấp của tự lái); mức
- *    hệ thống chưa thu được thì khoá kèm lý do — không lưu một % không có luồng thu.
+ *  - CÓ TÀI XẾ: cọc giữ chuyến là `depositMode` RIÊNG; mức hệ thống chưa thu được thì khoá.
  *
- * Mọi thứ khách thấy đều được server công bố ở trang xe và đóng băng vào yêu cầu/đơn.
+ * `isManage` = đang ở cổng quản lý (web `useWorkspace().isManage`). Khu tài khoản: chủ xe không
+ * có trang chính sách gian hàng, nên khối bảo đảm sửa thẳng, không banner kế thừa/nút mở khoá.
  */
-export function VehicleTermsScreen({
-  vehicleId,
-  serviceType,
-}: {
-  vehicleId: string;
-  serviceType: ServiceType;
-}) {
-  const t = useTranslations('VehicleManage.terms');
-  const withDriver = serviceType === SERVICE_TYPE.WITH_DRIVER;
-  const section: VehicleManageSection = withDriver
-    ? VEHICLE_MANAGE_SECTION.WITH_DRIVER_TERMS
-    : VEHICLE_MANAGE_SECTION.SELF_DRIVE_TERMS;
-
-  return (
-    <VehicleManageShell
-      vehicleId={vehicleId}
-      section={section}
-      title={t(withDriver ? 'withDriverTitle' : 'selfDriveTitle')}
-      subtitle={t(withDriver ? 'withDriverSubtitle' : 'selfDriveSubtitle')}
-    >
-      {({ canEdit }) => (
-        <TermsBody vehicleId={vehicleId} serviceType={serviceType} canEdit={canEdit} />
-      )}
-    </VehicleManageShell>
-  );
-}
-
 export function TermsBody({
   vehicleId,
   serviceType,
   canEdit,
+  isManage = true,
 }: {
   vehicleId: string;
   serviceType: ServiceType;
   canEdit: boolean;
+  /** Cổng quản lý (mặc định) hay khu tài khoản — xem docblock trên. */
+  isManage?: boolean;
 }) {
   const t = useTranslations('VehicleManage');
   const settings = useVehicleServiceSettings(vehicleId);
@@ -151,6 +121,7 @@ export function TermsBody({
       serviceType={serviceType}
       vehicleId={vehicleId}
       canEdit={canEdit}
+      isManage={isManage}
     />
   );
 }
@@ -161,7 +132,9 @@ function TermsForm({
   serviceType,
   vehicleId,
   canEdit,
+  isManage,
 }: {
+  isManage: boolean;
   setting: VehicleServiceSetting;
   pricing: VehiclePricing;
   serviceType: ServiceType;
@@ -186,8 +159,15 @@ function TermsForm({
    * chính sách sẽ có `collateralMode = cash` với tiền cọc rỗng, và nếu luôn validate thì họ không
    * bao giờ lưu nổi một dòng điều khoản — form đòi số tiền cọc trên một ô họ không định sửa.
    */
-  const [editingCollateral, setEditingCollateral] = useState(overriding);
+  /*
+   * KHU TÀI KHOẢN (web 30/09/2026): không banner kế thừa, không nút mở khoá — hai khối sửa thẳng.
+   * Luật ghi GIỮ NGUYÊN: chỉ khi một ô chính sách thật sự đổi mới ghi bộ chính sách riêng, và
+   * ràng buộc của khối cũng chỉ bật lúc đó.
+   */
+  const [editingCollateral, setEditingCollateral] = useState(overriding || !isManage);
   const collateralEditable = !withDriver && editingCollateral;
+  /** Ô chính sách đã đổi chưa — ref vì RHF đọc `context` lúc validate, ngoài render. */
+  const policyTouchedRef = useRef(false);
 
   const values = useMemo<FormValues>(
     () => ({
@@ -204,9 +184,25 @@ function TermsForm({
   );
   const { control, handleSubmit, reset, formState } = useForm<FormValues>({
     resolver: yupResolver(policyFormSchema.concat(settingSchema)),
-    context: { policyEditable: collateralEditable },
+    // Ràng buộc khối bảo đảm chỉ bật khi chủ xe thật sự mở nó ra sửa (đúng getter của web).
+    context: {
+      get policyEditable() {
+        return collateralEditable && (isManage || policyTouchedRef.current);
+      },
+    },
     values,
   });
+  const policyDirty = Boolean(
+    formState.dirtyFields.collateralMode ||
+    formState.dirtyFields.depositAmount ||
+    formState.dirtyFields.collateralAssetTypes ||
+    formState.dirtyFields.mileageLimitEnabled ||
+    formState.dirtyFields.includedDistanceKmPerDay ||
+    formState.dirtyFields.excessDistanceFeePerKm,
+  );
+  useEffect(() => {
+    policyTouchedRef.current = policyDirty;
+  }, [policyDirty]);
   const identityDocument = useWatch({ control, name: 'identityDocument' });
 
   const legalDocs = requiredIdentityDocuments(serviceType);
@@ -238,14 +234,7 @@ function TermsForm({
        * Bảo đảm là CHÍNH SÁCH — chỉ ghi khi chủ xe thật sự đổi nó; đổi thì phải ghi đè cả bộ
        * (server nhận nguyên khối, không merge từng trường).
        */
-      const policyTouched =
-        collateralEditable &&
-        (formState.dirtyFields.collateralMode ||
-          formState.dirtyFields.depositAmount ||
-          formState.dirtyFields.collateralAssetTypes ||
-          formState.dirtyFields.mileageLimitEnabled ||
-          formState.dirtyFields.includedDistanceKmPerDay ||
-          formState.dirtyFields.excessDistanceFeePerKm);
+      const policyTouched = collateralEditable && policyDirty;
       if (policyTouched) {
         await savePricing.mutateAsync({
           source: POLICY_SOURCE.VEHICLE,
@@ -326,7 +315,11 @@ function TermsForm({
               */
               optionDescriptions={{ [COLLATERAL_MODE.NONE]: t('collateralNoneHint') }}
             />
-            <MileagePolicySection control={control} disabled={!canEdit || !editingCollateral} />
+            <MileagePolicySection
+              control={control}
+              title={t('mileageTitle')}
+              disabled={!canEdit || !editingCollateral}
+            />
           </YStack>
         </Card>
       )}

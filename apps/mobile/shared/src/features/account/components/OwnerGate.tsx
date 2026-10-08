@@ -4,13 +4,15 @@ import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { OWNER_STAGE } from '@xeprime/types';
 import { Screen } from '@/components/layout/Screen';
+import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenLoading } from '@/components/state/ScreenLoading';
+import { AppHeader } from '@/components/layout/AppHeader';
+import { goBackOr } from '@/navigation/go-back-or';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { Button } from '@/components/ui/Button';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { space } from '@/theme/tokens';
-import { resolveOwnerCtaHref } from '../account-nav';
 import { useOwnerAccess } from '../hooks/use-owner-access';
 
 /**
@@ -38,20 +40,48 @@ import { useOwnerAccess } from '../hooks/use-owner-access';
 export function OwnerGate({
   children,
   minStage = OWNER_STAGE.OWNER,
+  header,
 }: {
   children: ReactNode;
+  /**
+   * Thanh trên cho màn CHỜ và màn CHẶN — truyền `<ManageHeader />` khi cổng đứng trong bộ tab của
+   * khu quản lý: màn chặn không có thanh menu là một ngõ cụt (không lui được, không mở menu được).
+   */
+  header?: ReactNode;
   minStage?: typeof OWNER_STAGE.REGISTERING | typeof OWNER_STAGE.OWNER;
 }) {
   const t = useTranslations('Account.ownerGate');
   const router = useRouter();
   const navigateOnce = useNavigateOnce();
-  const { user, stage, isLoading } = useOwnerAccess();
+  const { user, stage, isLoading, loadFailed, error, retry } = useOwnerAccess();
+  /*
+   * Không truyền `header` (màn chen ngang trong stack) ⇒ thanh có nút lui, để màn chờ/màn chặn không
+   * thành ngõ cụt không có đường ra.
+   */
+  const top = header ?? (
+    <AppHeader title="" onBack={() => goBackOr(router, ROUTES.manage.home())} />
+  );
 
   if (isLoading) {
     return (
-      <Screen scroll={false}>
-        <ScreenLoading />
-      </Screen>
+      <>
+        {top}
+        <Screen scroll={false}>
+          <ScreenLoading />
+        </Screen>
+      </>
+    );
+  }
+
+  // Lỗi mạng khi chưa có hồ sơ — KHÔNG kết luận "chưa là chủ xe".
+  if (loadFailed) {
+    return (
+      <>
+        {top}
+        <Screen scroll={false}>
+          <ScreenError error={error} onRetry={retry} />
+        </Screen>
+      </>
     );
   }
 
@@ -66,37 +96,49 @@ export function OwnerGate({
    */
   const registering = stage === OWNER_STAGE.REGISTERING;
   const shopName = user?.tenant?.name;
+  /*
+   * THÀNH VIÊN (không phải chủ) của một gian hàng tuyến hoa hồng — web `OwnerGate` (ADR 0053):
+   * các màn chủ xe chỉ mở cho chủ gian hàng, nên không có nút chính nào để bấm; câu giải thích nói
+   * họ phải hỏi chủ gian hàng.
+   */
+  const member = !registering && Boolean(shopName);
 
   return (
-    <Screen scroll={false}>
-      <ScreenMessage
-        icon="storefront-outline"
-        title={registering ? t('registeringTitle') : t('title')}
-        description={
-          registering
-            ? t('registeringBody')
-            : shopName
-              ? t('bodyMember', { shop: shopName })
-              : t('body')
-        }
-        actionLabel={
-          registering ? t('openRegistration') : shopName ? t('openManage') : t('becomeOwner')
-        }
-        onAction={() =>
-          navigateOnce(registering ? ROUTES.account.registration() : resolveOwnerCtaHref(user))
-        }
-      />
-      {/*
-        Lối thứ HAI, bắt buộc: người mở màn này bằng deep link không có gì trong ngăn xếp để lui
-        về, nên chỉ một nút "trở thành chủ xe" là đẩy họ vào phễu đăng ký mà không có đường ra.
-      */}
-      <YStack px={space.lg} pb={space.lg}>
-        <Button
-          label={t('backToAccount')}
-          variant="ghost"
-          onPress={() => router.replace(ROUTES.account.home())}
+    <>
+      {top}
+      <Screen scroll={false}>
+        <ScreenMessage
+          icon="storefront-outline"
+          title={registering ? t('registeringTitle') : t('title')}
+          description={
+            registering
+              ? t('registeringBody')
+              : member
+                ? t('bodyMemberPartner', { shop: shopName ?? '' })
+                : t('body')
+          }
+          {...(member
+            ? {}
+            : {
+                actionLabel: registering ? t('openRegistration') : t('becomeOwner'),
+                onAction: () =>
+                  navigateOnce(
+                    registering ? ROUTES.account.registration() : ROUTES.manage.register(),
+                  ),
+              })}
         />
-      </YStack>
-    </Screen>
+        {/*
+        Lối thứ HAI, bắt buộc: người mở màn này bằng deep link không có gì trong ngăn xếp để lui
+        về. Web dẫn về trang tài khoản đối tác (`ROUTES.MANAGE.ACCOUNT`).
+      */}
+        <YStack px={space.lg} pb={space.lg}>
+          <Button
+            label={t('backToAccount')}
+            variant="ghost"
+            onPress={() => router.replace(ROUTES.manage.account())}
+          />
+        </YStack>
+      </Screen>
+    </>
   );
 }

@@ -27,8 +27,14 @@ function makeVehicle(over: Partial<VehicleDetail> = {}): VehicleDetail {
     marketplaceEnabled: true,
     isMarketplaceVisible: false,
     marketplaceVisibilityReason: 'not_approved',
-    mainImageUrl: 'https://img.example/main.jpg',
-    images: ['https://img.example/1.jpg', 'https://img.example/2.jpg', 'https://img.example/3.jpg'],
+    mainImageUrl: 'https://img.example/1.jpg',
+    media: [
+      { url: 'https://img.example/1.jpg', type: 'front' },
+      { url: 'https://img.example/2.jpg', type: 'rear' },
+      { url: 'https://img.example/3.jpg', type: 'left' },
+      { url: 'https://img.example/4.jpg', type: 'right' },
+      { url: 'https://img.example/5.jpg', type: 'interior' },
+    ],
     serviceTypes: ['self_drive'],
     weekdayPrice: '600000',
     brand: 'toyota',
@@ -54,7 +60,7 @@ describe('VehiclePublicReviewPanel — thẻ tra cứu', () => {
     renderPanel();
 
     expect(screen.getByText('Tiến trình xét duyệt')).toBeTruthy();
-    expect(screen.getAllByText('Đã có')).toHaveLength(7);
+    expect(screen.getAllByText('Đã có')).toHaveLength(6);
   });
 
   it('KHÔNG có nút gửi duyệt và KHÔNG có công tắc hiển thị', () => {
@@ -101,7 +107,7 @@ describe('VehiclePublicReviewPanel — xe đã duyệt', () => {
 
     expect(screen.getByText('Thông tin xét duyệt')).toBeTruthy();
     // Thu gọn: checklist chưa dựng ra cho tới khi người dùng mở.
-    expect(screen.queryByText('Ảnh đại diện')).toBeNull();
+    expect(screen.queryByText('Đủ các góc ảnh bắt buộc')).toBeNull();
   });
 
   it('mở ra thì có đủ checklist — và cái mở được bằng bàn phím', () => {
@@ -114,6 +120,6 @@ describe('VehiclePublicReviewPanel — xe đã duyệt', () => {
     expect(header.getAttribute('aria-expanded')).toBe('false');
 
     fireEvent.click(header);
-    expect(screen.getByText('Ảnh đại diện')).toBeTruthy();
+    expect(screen.getByText('Đủ các góc ảnh bắt buộc')).toBeTruthy();
   });
 });

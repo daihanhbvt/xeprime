@@ -5,6 +5,9 @@ import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenLoading } from '@/components/state/ScreenLoading';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { ROUTES } from '@/navigation/routes';
+import { isSafeAppPath, useCurrentAppPath } from '@/features/auth/auth-next';
+import { deepLinkPended } from '@/features/shell/shell-scope.slice';
+import { useAppDispatch } from '@/store/hooks';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { SESSION_STATUS, useSessionGate } from './hooks/use-session-gate';
 
@@ -33,6 +36,8 @@ export function RequireSession({
 }) {
   const t = useTranslations('Account');
   const navigateOnce = useNavigateOnce();
+  const dispatch = useAppDispatch();
+  const currentPath = useCurrentAppPath();
   const { status, error, retry } = useSessionGate();
 
   switch (status) {
@@ -52,7 +57,11 @@ export function RequireSession({
             icon="lock-closed-outline"
             title={t('signInRequired')}
             actionLabel={t('signIn')}
-            onAction={() => navigateOnce(ROUTES.account.login())}
+            onAction={() => {
+              // Đăng nhập xong quay lại ĐÚNG trang đang mở (deep link, push, link từ app XePrime).
+              if (isSafeAppPath(currentPath)) dispatch(deepLinkPended(currentPath));
+              navigateOnce(ROUTES.account.login());
+            }}
           />
         </Screen>
       );

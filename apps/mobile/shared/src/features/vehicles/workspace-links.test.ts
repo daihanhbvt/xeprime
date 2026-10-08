@@ -1,3 +1,4 @@
+import { isCommissionPath } from '@/features/shell/partner-track';
 import { SERVICE_TYPE } from '@xeprime/types';
 import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
 import { VEHICLE_MANAGE_SECTION } from '@/navigation/vehicle-manage-section';
@@ -5,7 +6,7 @@ import { ROUTES } from '@/navigation/routes';
 import { vehicleSchedulePath } from './calendar-link';
 import {
   vehicleBookingsHref,
-  vehicleEditHref,
+  vehicleEditPartHref,
   vehicleEditHubHref,
   vehicleOptimizationHref,
   vehiclePricingHref,
@@ -21,13 +22,17 @@ const pathOf = (href: unknown) =>
  * Hồ sơ 360 hiện ở CẢ HAI khu. Web chọn đích bằng `useWorkspace()`; ở khu tài khoản mọi đích phải
  * nằm trong khu tài khoản — chủ xe tuyến hoa hồng không vào được `/manage` (ADR 0038 điều 4).
  */
-describe('workspace-links — khu TÀI KHOẢN không có đích nào ở /manage', () => {
+/**
+ * Owner Lite (`customerScope`) — ADR 0053: ở app Partner các đích nằm dưới `/manage`, nhưng chỉ
+ * trong danh sách trắng tuyến hoa hồng; ở app khách chúng đổ về màn handoff.
+ */
+describe('workspace-links — Owner Lite chỉ dẫn vào trang của tuyến hoa hồng', () => {
   it.each([
-    ['sửa (tab)', vehicleEditHref(ID, VEHICLE_EDIT_TAB.DOCUMENTS, true)],
+    ['sửa (tab)', vehicleEditPartHref(ID, VEHICLE_EDIT_TAB.DOCUMENTS, true)],
     ['hub sửa', vehicleEditHubHref(ID, true)],
     ['giá', vehiclePricingHref(ID, true)],
     ['tối ưu', vehicleOptimizationHref({ id: ID, serviceTypes: [SERVICE_TYPE.SELF_DRIVE] }, true)],
-    ['đơn thuê', vehicleBookingsHref(ID, true)],
+    ['đơn thuê', vehicleBookingsHref(ID)],
     [
       'lịch',
       vehicleSchedulePath(
@@ -36,32 +41,32 @@ describe('workspace-links — khu TÀI KHOẢN không có đích nào ở /manag
       ),
     ],
   ])('%s', (_label, href) => {
-    expect(pathOf(href).startsWith('/manage')).toBe(false);
+    const path = pathOf(href);
+    expect(!path.startsWith('/manage') || isCommissionPath(path)).toBe(true);
   });
 
   it('tab sửa → mục tương ứng của không gian quản lý xe', () => {
-    expect(vehicleEditHref(ID, VEHICLE_EDIT_TAB.DOCUMENTS, true)).toEqual(
+    expect(vehicleEditPartHref(ID, VEHICLE_EDIT_TAB.DOCUMENTS, true)).toEqual(
       ROUTES.account.vehicleManageSection(ID, VEHICLE_MANAGE_SECTION.DOCUMENTS),
     );
-    expect(vehicleEditHref(ID, VEHICLE_EDIT_TAB.MEDIA, true)).toEqual(
+    expect(vehicleEditPartHref(ID, VEHICLE_EDIT_TAB.MEDIA, true)).toEqual(
       ROUTES.account.vehicleManageSection(ID, VEHICLE_MANAGE_SECTION.IMAGES),
     );
   });
 
-  it('lịch → /account/calendar, giữ bộ lọc biển số và cờ quay lại (web: basePath = paths.calendar)', () => {
+  it('lịch → lịch của Owner Lite, giữ bộ lọc biển số và cờ quay lại (web: basePath = paths.calendar)', () => {
     expect(
       vehicleSchedulePath(
         { name: 'Mazda3', plateNumber: '51A-12345' },
         { back: true, customerScope: true },
       ),
-      // So qua builder của APP đang chạy: test này sống ở CẢ HAI app (customer: lịch khu tài
-      // khoản thật; manage: fallback /not-available) — ý của test là "đi đúng builder", không
-      // phải một chuỗi literal của riêng một app.
+      // So qua builder của APP đang chạy: test này sống ở CẢ HAI app (Partner: `/manage/calendar`;
+      // khách: màn handoff) — ý của test là "đi đúng builder", không phải một chuỗi literal.
     ).toEqual(ROUTES.account.calendar({ q: '51A-12345', back: true }));
   });
 
-  it('đơn thuê → "Chuyến của tôi" — web: paths.bookings của khu tài khoản', () => {
-    expect(vehicleBookingsHref(ID, true)).toEqual(ROUTES.booking.list());
+  it('đơn thuê → đơn thuê của xe — web: `workspacePaths` Owner Lite `bookings: MANAGE.BOOKINGS`', () => {
+    expect(vehicleBookingsHref(ID)).toEqual(ROUTES.manage.bookings({ vehicleId: ID }));
   });
 
   it('tối ưu: xe chỉ có tài xế → mục tối ưu CÓ TÀI XẾ', () => {
@@ -73,17 +78,34 @@ describe('workspace-links — khu TÀI KHOẢN không có đích nào ở /manag
   });
 });
 
-describe('workspace-links — cổng QUẢN LÝ giữ nguyên đích cũ', () => {
+describe('vehicleEditPartHref — mục không có ở khu tài khoản thì null (web part)', () => {
+  it('bảo dưỡng / nguồn xe', () => {
+    expect(vehicleEditPartHref(ID, VEHICLE_EDIT_TAB.MAINTENANCE, true)).toBeNull();
+    expect(vehicleEditPartHref(ID, VEHICLE_EDIT_TAB.SOURCE, true)).toBeNull();
+  });
+  it('mục vận hành mới ánh xạ một-một sang mục của không gian quản lý xe', () => {
+    expect(vehicleEditPartHref(ID, VEHICLE_EDIT_TAB.WITH_DRIVER_SURCHARGES, true)).toEqual(
+      ROUTES.account.vehicleManageSection(ID, VEHICLE_MANAGE_SECTION.WITH_DRIVER_SURCHARGES),
+    );
+    expect(vehicleEditPartHref(ID, VEHICLE_EDIT_TAB.OPERATIONS, true)).toEqual(
+      ROUTES.account.vehicleManageSection(ID, VEHICLE_MANAGE_SECTION.HANDOVER_TIME),
+    );
+  });
+});
+
+describe('workspace-links — cổng QUẢN LÝ: mục của màn sửa xe', () => {
   it('đích cổng quản lý', () => {
-    expect(vehicleEditHref(ID, VEHICLE_EDIT_TAB.DOCUMENTS, false)).toEqual(
+    expect(vehicleEditPartHref(ID, VEHICLE_EDIT_TAB.DOCUMENTS, false)).toEqual(
       ROUTES.manage.vehicleEditTab(ID, VEHICLE_EDIT_TAB.DOCUMENTS),
     );
     expect(vehicleEditHubHref(ID, false)).toEqual(ROUTES.manage.vehicleEdit(ID));
-    expect(vehiclePricingHref(ID, false)).toEqual(ROUTES.manage.vehiclePricing(ID));
-    expect(vehicleOptimizationHref({ id: ID, serviceTypes: [] }, false)).toEqual(
-      ROUTES.manage.vehicleOptimization(ID),
+    expect(vehiclePricingHref(ID, false)).toEqual(
+      ROUTES.manage.vehicleEditTab(ID, VEHICLE_EDIT_TAB.PRICING),
     );
-    expect(vehicleBookingsHref(ID, false)).toEqual(ROUTES.manage.bookings({ vehicleId: ID }));
+    expect(vehicleOptimizationHref({ id: ID, serviceTypes: [] }, false)).toEqual(
+      ROUTES.manage.vehicleEditTab(ID, VEHICLE_EDIT_TAB.SELF_DRIVE_OPTIMIZATION),
+    );
+    expect(vehicleBookingsHref(ID)).toEqual(ROUTES.manage.bookings({ vehicleId: ID }));
     // Builder thay literal: ở app Customer mọi đích /manage đổ về handoff /partner, còn ở app
     // Partner là lịch thật — cùng một phép so đúng ở cả hai.
     expect(vehicleSchedulePath({ name: 'Mazda3', plateNumber: null }, { back: true })).toEqual(

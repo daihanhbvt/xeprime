@@ -31,6 +31,8 @@ import {
   isTransmissionAllowedFor,
   normalizeTransmissionFor,
   missingPublishRequirements,
+  missingVehicleImageTypes,
+  vehicleCoverUrlOf,
   vehicleFeatureAppliesTo,
   vehicleFieldPolicy,
   type VehiclePublicationInput,
@@ -1101,6 +1103,29 @@ export class VehiclesService {
           ? await this.preserveImageTypes(tx, vehicleId, dto.images)
           : null;
     if (media) {
+      /*
+       * Đủ GÓC bắt buộc là điều kiện của chính lượt LƯU, không chỉ của lượt gửi duyệt (07/10/2026
+       * — yêu cầu sản phẩm): ô tô 5 góc, xe máy 2.
+       *
+       * Chặn ở đây thay vì chỉ ở `submitForPublicReview` vì màn "Hình ảnh" của khu quản lý lưu
+       * bằng `PATCH` thuần, không đi qua form nào — không có chỗ nào khác giữ được lời hứa "không
+       * ô nào được trống". Xe ĐÃ duyệt với bộ ảnh cũ thì vẫn nằm yên trên chợ: luật này chỉ chạy
+       * khi có người gửi `media` lên.
+       *
+       * `images: string[]` của client cũ KHÔNG bị chặn — payload đó không nói được góc chụp, nên
+       * đòi góc ở đó là khoá cứng một bản app đã phát hành khỏi mọi lượt lưu.
+       */
+      if (dto.media !== undefined) {
+        const missingTypes = missingVehicleImageTypes(vehicleType, media);
+        if (missingTypes.length > 0) {
+          throw new BadRequestException({
+            code: API_ERROR_CODE.VEHICLE_IMAGES_INCOMPLETE,
+            message: 'Xe còn thiếu ảnh bắt buộc theo góc chụp.',
+            // MÃ góc chụp, không phải câu tiếng Việt — client dựng nhãn theo ngôn ngữ (ADR 0012).
+            details: { missing: missingTypes },
+          });
+        }
+      }
       await tx.vehicleImage.deleteMany({ where: { vehicleId } });
       if (media.length > 0) {
         await tx.vehicleImage.createMany({
@@ -1113,6 +1138,32 @@ export class VehiclesService {
             sortOrder: index,
           })),
         });
+      }
+      /*
+       * Ảnh bìa đi THEO thư viện, trong CÙNG transaction — `vehicles.main_image_url` là giá trị
+       * dẫn xuất (`VEHICLE_COVER_IMAGE_TYPE`), và ~30 nơi đọc nó làm ảnh xe (thẻ chợ, lịch, chat,
+       * phiếu thu, phiếu duyệt) không cần biết luật này.
+       *
+       * ĐỌC trước, chỉ ghi khi KHÁC: lượt lưu nào không đổi ảnh mặt trước (sắp lại thứ tự, thêm
+       * một tấm "khác") thì không chạm vào dòng `vehicles` nữa. Lượt ghi dư đó là một lần khoá
+       * dòng thứ hai trong cùng transaction đã khoá `vehicle_occupancies` — một cửa sổ deadlock
+       * rộng hơn mà không đổi lấy gì.
+       *
+       * So ở tầng app chứ không nhét điều kiện vào `where` (`mainImageUrl: { not: cover }`): cột
+       * này NULL được, và `main_image_url <> 'x'` cho ra NULL — tức KHÔNG khớp — với đúng những
+       * dòng đang trống, là những dòng cần ghi nhất. Ba trị của SQL, không phải chỗ để tiết kiệm
+       * một câu lệnh.
+       *
+       * Vẫn ghi khi giá trị mới là `null`: đổi ô mặt trước thành trống phải kéo theo thẻ xe, nếu
+       * không thẻ còn trưng một tấm ảnh chủ xe đã gỡ.
+       */
+      const cover = vehicleCoverUrlOf(media);
+      const current = await tx.vehicle.findUnique({
+        where: { id: vehicleId },
+        select: { mainImageUrl: true },
+      });
+      if (current && current.mainImageUrl !== cover) {
+        await tx.vehicle.update({ where: { id: vehicleId }, data: { mainImageUrl: cover } });
       }
     }
     if (dto.features !== undefined) {
@@ -1209,8 +1260,8 @@ export class VehiclesService {
       });
     }
 
-    const imageCount = await countDistinctImages(this.prisma, vehicle.id, vehicle.mainImageUrl);
-    const missing = missingPublishRequirements(publicationInput(vehicle), imageCount);
+    const images = await vehicleImagesForPublication(this.prisma, vehicle.id);
+    const missing = missingPublishRequirements(publicationInput(vehicle), images);
     if (missing.length > 0) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VEHICLE_PUBLISH_INCOMPLETE,
@@ -1797,7 +1848,6 @@ interface VehicleWritableFields {
   electricConsumptionKwhPer100Km?: number | null;
   operationStatus?: string;
   description?: string | null;
-  mainImageUrl?: string | null;
   weekdayPrice?: string;
   weekendPrice?: string | null;
   hourlyPrice?: string | null;
@@ -1859,7 +1909,11 @@ function writableFields(dto: CreateVehicleDto | UpdateVehicleDto): VehicleWritab
       : {}),
     ...(dto.operationStatus !== undefined ? { operationStatus: dto.operationStatus } : {}),
     ...(dto.description !== undefined ? { description: dto.description } : {}),
-    ...(dto.mainImageUrl !== undefined ? { mainImageUrl: dto.mainImageUrl } : {}),
+    /*
+     * `mainImageUrl` KHÔNG có ở đây (07/10/2026): ảnh bìa là giá trị dẫn xuất từ ô ảnh mặt trước,
+     * do `replaceMedia` ghi. Nhận nó từ client mở lại đúng chỗ lệch mà đợt này đi dẹp — thẻ xe
+     * ngoài chợ hiện một tấm ảnh khác với ô "mặt trước" của chính chiếc xe đó.
+     */
     ...(dto.weekdayPrice !== undefined ? { weekdayPrice: dto.weekdayPrice } : {}),
     ...(dto.weekendPrice !== undefined ? { weekendPrice: dto.weekendPrice } : {}),
     ...(dto.hourlyPrice !== undefined ? { hourlyPrice: dto.hourlyPrice } : {}),
@@ -2243,7 +2297,6 @@ function publicationInput(v: VehicleRow): VehiclePublicationInput {
     weekdayPrice: v.weekdayPrice,
     monthlyPrice: v.monthlyPrice,
     withDriverDailyPrice: v.withDriverDailyPrice,
-    mainImageUrl: v.mainImageUrl,
     plateNumber: v.plateNumber,
     brand: v.brand,
     model: v.model,
@@ -2263,23 +2316,22 @@ function publicationInput(v: VehicleRow): VehiclePublicationInput {
 }
 
 /**
- * Số ảnh THẬT của một chiếc xe: ảnh đại diện ∪ thư viện, khử trùng theo URL.
+ * Thư viện ảnh của một chiếc xe như luật lên chợ cần đọc nó — URL kèm GÓC CHỤP.
  *
- * Đếm hai nguồn riêng rồi cộng lại sẽ tính đôi tấm ảnh vừa làm đại diện vừa nằm trong thư viện —
- * và checklist báo "đủ 4" trong khi khách chỉ thấy 3 tấm khác nhau.
+ * Trước 07/10/2026 chỗ này đếm số URL khác nhau (`countDistinctImages`), cộng cả ảnh đại diện vào
+ * tập để không tính đôi một tấm nằm ở cả hai nơi. Phép đếm đó không còn trả lời được câu hỏi
+ * thật — "còn thiếu GÓC nào" — và ảnh đại diện nay chính là ảnh mặt trước, nên nó không còn là
+ * một nguồn thứ hai để hợp vào.
  */
-async function countDistinctImages(
+async function vehicleImagesForPublication(
   db: Prisma.TransactionClient | PrismaService,
   vehicleId: string,
-  mainImageUrl: string | null,
-): Promise<number> {
+): Promise<{ url: string; type: string | null }[]> {
   const rows = await db.vehicleImage.findMany({
     where: { vehicleId },
-    select: { imageUrl: true },
+    select: { imageUrl: true, imageType: true },
   });
-  const urls = new Set(rows.map((row) => row.imageUrl));
-  if (mainImageUrl) urls.add(mainImageUrl);
-  return urls.size;
+  return rows.map((row) => ({ url: row.imageUrl, type: row.imageType }));
 }
 
 function notFound(): NotFoundException {

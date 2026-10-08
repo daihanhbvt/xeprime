@@ -3,6 +3,8 @@ import { render, waitFor } from '@testing-library/react-native';
 import { API_ERROR_CODE } from '@xeprime/types';
 import type { ReactElement } from 'react';
 import { Text } from 'react-native';
+import { Provider as ReduxProvider } from 'react-redux';
+import { store } from '@/store';
 import * as authApi from '@/features/auth/api';
 import { withIntl } from '@/i18n/test-utils';
 import { ApiClientError, CLIENT_ERROR_CODE } from '@/lib/api-client';
@@ -15,6 +17,8 @@ import { RequireSession } from './RequireSession';
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn() }),
   useNavigation: () => ({ isFocused: () => true }),
+  usePathname: () => '/manage/vehicles',
+  useGlobalSearchParams: () => ({}),
 }));
 
 const SECRET = 'Dữ liệu của phiên';
@@ -22,11 +26,13 @@ const SECRET = 'Dữ liệu của phiên';
 async function renderGuard() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const ui: ReactElement = withIntl(
-    <QueryClientProvider client={queryClient}>
-      <RequireSession>
-        <Text>{SECRET}</Text>
-      </RequireSession>
-    </QueryClientProvider>,
+    <ReduxProvider store={store}>
+      <QueryClientProvider client={queryClient}>
+        <RequireSession>
+          <Text>{SECRET}</Text>
+        </RequireSession>
+      </QueryClientProvider>
+    </ReduxProvider>,
   );
   return await render(ui);
 }

@@ -25,7 +25,6 @@ import { MEDIA_LIST_TUNING } from '@/theme/list-tuning';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { ChatComposer } from './components/ChatComposer';
 import { MessageBubble } from './components/MessageBubble';
-import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { resolveChatInbox } from './chat-inbox';
 import { useConversation } from './hooks/use-chat';
 import { useThread, type ThreadEntry } from './hooks/use-thread';
@@ -84,13 +83,8 @@ export function ChatThreadScreen({
   const router = useRouter();
   const navigateOnce = useNavigateOnce();
 
-  /*
-   * Trục TRUY VẤN là hộp thư, không phải vai của dòng: server kiểm phạm vi bằng chính tham số
-   * này, nên một chủ xe tuyến hoa hồng mở hội thoại phía gian hàng của mình từ hộp thư hợp nhất
-   * sẽ nhận 403 nếu ta gửi `customer` (ADR 0038 điều 10).
-   */
-  const { data: user } = useCurrentUser();
-  const inbox = resolveChatInbox(side, user);
+  // Trục TRUY VẤN là hộp thư của bề mặt — server kiểm phạm vi bằng chính tham số này.
+  const inbox = resolveChatInbox(side);
 
   const conversationQuery = useConversation(inbox, conversationId);
   /*
@@ -130,10 +124,15 @@ export function ChatThreadScreen({
 
   // Thẻ xe trên bong bóng dẫn sang tin đăng — cùng lối đi với thẻ xe ở màn khám phá.
   const openListing = useCallback(
-    (vehicleId: string) => navigateOnce(ROUTES.explore.listingDetail(vehicleId)),
-    [navigateOnce],
+    (vehicleId: string) =>
+      // Phía gian hàng (app Partner) không có chợ xe: thẻ xe mở hồ sơ xe của chính gian hàng.
+      navigateOnce(
+        side === CHAT_SIDE.SHOP
+          ? ROUTES.manage.vehicleDetail(vehicleId)
+          : ROUTES.explore.listingDetail(vehicleId),
+      ),
+    [navigateOnce, side],
   );
-
 
   const rows = useMemo<ThreadRow[]>(() => {
     const groups = groupThreadMessages(thread.entries, {
@@ -310,7 +309,11 @@ export function ChatThreadScreen({
         {thread.loading ? (
           <ScreenLoading />
         ) : thread.error ? (
-          <ScreenError error={thread.error} title={t('messagesLoadError')} onRetry={thread.reload} />
+          <ScreenError
+            error={thread.error}
+            title={t('messagesLoadError')}
+            onRetry={thread.reload}
+          />
         ) : rows.length === 0 ? (
           /*
             Trạng thái rỗng nằm NGOÀI `FlatList`, không phải ở `ListEmptyComponent`: cờ `inverted`
@@ -402,7 +405,14 @@ function DaySeparator({ day }: { day: string }) {
  */
 function JumpToLatest({ label, onPress }: { label: string; onPress: () => void }) {
   return (
-    <YStack pos="absolute" bottom={space.md} left={0} right={0} ai="center" pointerEvents="box-none">
+    <YStack
+      pos="absolute"
+      bottom={space.md}
+      left={0}
+      right={0}
+      ai="center"
+      pointerEvents="box-none"
+    >
       <Pressable
         onPress={onPress}
         accessibilityRole="button"

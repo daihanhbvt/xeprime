@@ -118,7 +118,7 @@ export const VEHICLE_SECTIONS: ReadonlyArray<{
   },
   {
     key: 'media',
-    fields: ['mainImageUrl', 'images', 'features', 'description'],
+    fields: ['media', 'images', 'features', 'description'],
   },
 ];
 

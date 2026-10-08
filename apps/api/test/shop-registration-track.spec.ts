@@ -27,6 +27,7 @@ import {
   makeTenantsService,
   makeVehiclesService,
 } from './helpers/service-factory';
+import { requiredVehicleImageRows } from './helpers/vehicle-media';
 
 /**
  * HAI TUYẾN ĐĂNG KÝ, TÁCH HẲN NHAU — ADR 0040, chạy trên PostgreSQL THẬT.
@@ -137,14 +138,14 @@ async function seedVehicle(tenantId: string, branchId: string): Promise<string> 
       weekdayPrice: '600000',
     },
   });
+  // Đủ GÓC ảnh bắt buộc của loại xe (07/10/2026) — ba dòng không gán góc sẽ bị cổng duyệt
+  // báo thiếu `photos`, ở những ca chẳng nói gì về ảnh.
   await prisma.vehicleImage.createMany({
-    data: [1, 2, 3].map((n) => ({
-      id: newId(),
-      tenantId,
+    data: requiredVehicleImageRows({
       vehicleId: id,
-      imageUrl: `https://img.example/${id.slice(-6)}-${n}.jpg`,
-      sortOrder: n,
-    })),
+      tenantId: tenantId,
+      vehicleType: VEHICLE_TYPE.CAR,
+    }),
   });
   return id;
 }

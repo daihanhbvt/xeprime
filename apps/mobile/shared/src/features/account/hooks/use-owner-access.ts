@@ -5,6 +5,9 @@ import type { CurrentUser } from '@/features/auth/api';
 export interface OwnerAccess {
   user: CurrentUser | null;
   isLoading: boolean;
+  loadFailed: boolean;
+  error: unknown;
+  retry: () => void;
   /** `tenant.roleKey === shop_owner` — chủ gian hàng, dù đã mua gói hay chưa (ADR 0014). */
   isOwner: boolean;
   /**
@@ -32,12 +35,16 @@ export interface OwnerAccess {
  * và chỉ khi không phải `shop_owner`) — giữ một nguồn là để nó còn đúng ở lần sửa sau.
  */
 export function useOwnerAccess(): OwnerAccess {
-  const { data, isLoading } = useCurrentUser();
+  const { data, isLoading, isError, error, refetch } = useCurrentUser();
   const stage = resolveOwnerStage(data?.tenant ?? null);
 
   return {
     user: data ?? null,
     isLoading,
+    /** Chưa có hồ sơ vì LỖI (mạng) — khác "không phải chủ xe"; nơi gọi phải báo lỗi, không xét stage. */
+    loadFailed: !data && isError,
+    error,
+    retry: () => void refetch(),
     isOwner: stage !== OWNER_STAGE.NONE,
     stage,
     isActiveOwner: stage === OWNER_STAGE.OWNER,

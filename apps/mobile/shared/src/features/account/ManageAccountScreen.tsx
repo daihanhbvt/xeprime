@@ -1,4 +1,5 @@
-import { YStack } from 'tamagui';
+import { Text, YStack } from 'tamagui';
+import { TENANT_ROLE } from '@xeprime/types';
 import { useTranslations } from 'use-intl';
 import { Screen } from '@/components/layout/Screen';
 import { ProfileSkeleton } from '@/components/ui/Skeleton';
@@ -9,8 +10,12 @@ import { SettingRow } from '@/components/ui/SettingRow';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
+import { InlineAction } from '@/components/ui/InlineAction';
+import { useShopSettingsAccess } from '@/features/shop/hooks/use-shop-settings-access';
+import { PARTNER_TRACK, resolvePartnerTrack } from '@/features/shell/partner-track';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
-import { space } from '@/theme/tokens';
+import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
 import { PersonalProfileCard } from './components/PersonalProfileCard';
 import { useMyProfile } from './hooks/use-account';
 import { useAccountIdentityLabel } from './use-account-identity-label';
@@ -48,6 +53,9 @@ import { useAccountIdentityLabel } from './use-account-identity-label';
 export function ManageAccountScreen() {
   const t = useTranslations('Navigation');
   const tAccount = useTranslations('Account');
+  const tHub = useTranslations('Account.hub');
+  const canOpenShopSettings = useShopSettingsAccess();
+  const navigateOnce = useNavigateOnce();
   const { data: user } = useCurrentUser();
   const identityLabel = useAccountIdentityLabel();
   /*
@@ -56,6 +64,9 @@ export function ManageAccountScreen() {
    */
   const profile = useMyProfile();
   const tenant = user?.tenant ?? null;
+  const isCommissionOwner =
+    tenant?.roleKey === TENANT_ROLE.SHOP_OWNER &&
+    resolvePartnerTrack(user) === PARTNER_TRACK.COMMISSION;
 
   /* Nhãn danh tính — xem `useAccountIdentityLabel`: tuyến, không phải vai RBAC. */
   const userRole = identityLabel(user);
@@ -91,7 +102,7 @@ export function ManageAccountScreen() {
         qua `ManagePageTitle`, đúng khuôn mọi màn gốc khác của khu quản lý.
       */}
       <ManageHeader />
-      <ManagePageTitle title={t('manage.security')} />
+      <ManagePageTitle title={tHub('title')} subtitle={tHub('subtitle')} />
 
       <Screen
         edges={['left', 'right', 'bottom']}
@@ -104,7 +115,38 @@ export function ManageAccountScreen() {
             app (người dùng chốt 16/09/2026). Tab Tài khoản bên khu khách dựng CÙNG component ở
             bản chỉ xem, nên hai màn không thể lệch nhau về cách hiển thị.
           */}
-          <PersonalProfileCard profile={profile.data} subtitle={userRole} tenant={tenant} editable />
+          {/*
+            BỐN phần, cùng thứ tự và cùng lời dẫn với trang "Tài khoản & bảo mật" của web (PR #151 —
+            `PartnerAccountPage`): hồ sơ · thông tin đăng nhập · mật khẩu · xoá tài khoản. Thẻ hồ sơ
+            gánh luôn phần đăng nhập (email/SĐT đổi qua OTP) — tách thành hai thẻ là hai nơi hiện
+            cùng một danh tính.
+          */}
+          <SectionHead title={tHub('sections.profile')} hint={tHub('sections.profileHint')} />
+          <PersonalProfileCard
+            profile={profile.data}
+            subtitle={userRole}
+            tenant={tenant}
+            editable
+          />
+          {/*
+            Tài khoản ≠ gian hàng: tên/ảnh ở đây là của con người; tên, logo, SĐT liên hệ khách thấy là
+            của gian hàng. Chủ xe tuyến hoa hồng khác một điểm — trang chủ xe dùng ảnh này khi chưa có
+            logo (web `AccountProfileForm`).
+          */}
+          {tenant ? (
+            <YStack gap={space.xs}>
+              <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                {isCommissionOwner ? tHub('profile.storefrontFallback') : tHub('profile.notShop')}
+              </Text>
+              {canOpenShopSettings ? (
+                <InlineAction
+                  label={tHub('profile.shopSettingsLink')}
+                  onPress={() => navigateOnce(ROUTES.manage.shop())}
+                />
+              ) : null}
+            </YStack>
+          ) : null}
+          <SectionHead title={tHub('sections.password')} hint={tHub('sections.passwordHint')} />
 
           <Card padded={false}>
             <YStack px={space.md} py={space.xs}>
@@ -117,6 +159,7 @@ export function ManageAccountScreen() {
             </YStack>
           </Card>
 
+          <SectionHead title={tHub('sections.delete')} hint={tHub('sections.deleteHint')} danger />
           {/*
             Xoá tài khoản đứng RIÊNG một thẻ, tông nguy hiểm. Xếp nó ngay dưới "đổi mật khẩu",
             cùng cỡ chữ cùng màu, là mời người dùng chạm nhầm vào thứ không rút lại được.
@@ -137,5 +180,27 @@ export function ManageAccountScreen() {
         </YStack>
       </Screen>
     </>
+  );
+}
+
+/** Tiêu đề + lời dẫn một phần của trang — gương `SectionCard` (title/hint) bên web. */
+function SectionHead({
+  title,
+  hint,
+  danger = false,
+}: {
+  title: string;
+  hint: string;
+  danger?: boolean;
+}) {
+  return (
+    <YStack gap={2} mb={-space.sm}>
+      <Text col={danger ? colors.danger : colors.text} fos={fontSize.h4} fow={fontWeight.semibold}>
+        {title}
+      </Text>
+      <Text col={colors.textMuted} fos={fontSize.bodySm}>
+        {hint}
+      </Text>
+    </YStack>
   );
 }

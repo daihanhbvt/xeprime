@@ -68,7 +68,7 @@ describe('BookingStatusSheet — huỷ đơn', () => {
   it('bày lưới nhóm lý do', async () => {
     const { view } = await renderSheet(BOOKING_STATUS.CANCELLED);
 
-    expect(await view.findByText(dialog.categoryLabel)).toBeTruthy();
+    expect(await view.findByText(dialog.categoryLabel, { exact: false })).toBeTruthy();
     expect(
       await view.findByText(categoryLabel(CANCELLATION_REASON_CATEGORY.VEHICLE_UNAVAILABLE)),
     ).toBeTruthy();
@@ -110,9 +110,7 @@ describe('BookingStatusSheet — huỷ đơn', () => {
     const { view } = await renderSheet(BOOKING_STATUS.CANCELLED);
 
     expect(view.queryByText(dialog.reasonHelpOther)).toBeNull();
-    await fireEvent.press(
-      await view.findByText(categoryLabel(CANCELLATION_REASON_CATEGORY.OTHER)),
-    );
+    await fireEvent.press(await view.findByText(categoryLabel(CANCELLATION_REASON_CATEGORY.OTHER)));
 
     expect(await view.findByText(dialog.reasonHelpOther)).toBeTruthy();
     expect(view.queryByText(dialog.reasonHelp)).toBeNull();
@@ -128,7 +126,7 @@ describe('BookingStatusSheet — khách không đến', () => {
   it('không bày lưới nhóm lý do, và payload không kèm `reasonCategory`', async () => {
     const { view, onConfirm, confirm } = await renderSheet(BOOKING_STATUS.NO_SHOW);
 
-    expect(view.queryByText(dialog.categoryLabel)).toBeNull();
+    expect(view.queryByText(dialog.categoryLabel, { exact: false })).toBeNull();
 
     await fireEvent.changeText(await view.findByLabelText(dialog.reasonLabel), 'Chờ 2 tiếng');
     await fireEvent.press(confirm);

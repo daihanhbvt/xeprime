@@ -77,14 +77,8 @@ const FIELDS: ReadonlyArray<keyof VehicleFormValues> = [
  * Ở đây: đúng 15 trường, đúng vỏ của khu tài khoản, lui về mục lục quản lý xe.
  */
 export function VehicleInformationScreen({ vehicleId }: { vehicleId: string }) {
-  const tNav = useTranslations('VehicleManage.nav');
-
   return (
-    <VehicleManageShell
-      vehicleId={vehicleId}
-      section={VEHICLE_MANAGE_SECTION.INFORMATION}
-      title={tNav('information')}
-    >
+    <VehicleManageShell vehicleId={vehicleId} section={VEHICLE_MANAGE_SECTION.INFORMATION}>
       {({ vehicle, canEdit }) => (
         <InformationForm vehicle={vehicle} canEdit={canEdit} vehicleId={vehicleId} />
       )}

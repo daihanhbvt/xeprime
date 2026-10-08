@@ -4,9 +4,8 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   VEHICLE_GALLERY_MAX_IMAGES,
-  VEHICLE_IMAGE_TYPE,
   isSingleVehicleImageSlot,
-  vehicleImageSlotsFor,
+  requiredVehicleImageTypes,
   type VehicleImageType,
 } from '@xeprime/types';
 import { useAppToast } from '@/components/feedback/use-app-toast';
@@ -20,12 +19,12 @@ import { useUpdateVehicle } from '@/features/vehicles/hooks/use-vehicle';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { VEHICLE_MANAGE_SECTION } from '@/navigation/vehicle-manage-section';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { colors, fontSize, iconSize, radius, space } from '@/theme/tokens';
 import type { VehicleDetail } from '@/features/vehicles/api';
-import { VehicleManageShell } from './components/VehicleManageShell';
+import { VehicleManageShell, type VehicleSectionWorkspace } from './components/VehicleManageShell';
 
 /** Một tấm ảnh đã gán vị trí. */
-interface SlotItem {
+export interface SlotItem {
   url: string;
   type: VehicleImageType;
 }
@@ -41,23 +40,28 @@ const TILE_RATIO = 4 / 3;
  * Một danh sách `images: string[]` không nói được tấm nào là mặt trước, nên trang xe không dựng
  * được thứ tự tử tế và chủ xe không biết còn thiếu góc nào.
  *
- * Ô thứ năm KHÁC nhau theo loại xe: ô tô hỏi nội thất, xe máy hỏi mặt đồng hồ — hỏi "ảnh nội
- * thất" của một chiếc Wave là hỏi một tấm ảnh không tồn tại (`vehicleImageSlotsFor`).
+ * Bộ ô KHÁC nhau theo loại xe (`requiredVehicleImageTypes`): ô tô hỏi năm góc (trước · sau ·
+ * trái · phải · nội thất), xe máy chỉ hỏi HAI (trước · sau). Hỏi "ảnh nội thất" của một chiếc
+ * Wave là hỏi một tấm ảnh không tồn tại, và đòi nó đủ bốn mặt ngoài là đòi bốn tấm gần giống
+ * nhau. MỌI ô ở đây đều BẮT BUỘC, và mỗi ô giữ đúng MỘT ảnh.
  *
- * Bốn góc + ô thứ năm mỗi ô giữ ĐÚNG MỘT ảnh; riêng "Ảnh khác" nhận nhiều.
- *
- * Ảnh đại diện (`mainImageUrl`) là một trường ĐỘC LẬP với thư viện — đúng như web: tải ảnh mặt
- * trước KHÔNG kéo theo ảnh đại diện, và xoá một tấm trong thư viện cũng không đụng tới nó. Muốn
- * đổi hay gỡ ảnh đại diện thì thao tác ngay trên ô của nó.
+ * Ảnh BÌA không có ô riêng (07/10/2026): nó là ảnh MẶT TRƯỚC, server suy ra từ `media` trong
+ * cùng transaction. Trước đây đây là một ô độc lập, nên tải ảnh mặt trước KHÔNG kéo theo ảnh bìa
+ * và thẻ xe ngoài chợ hiện được một tấm khác với ô "mặt trước" của chính chiếc xe đó.
  */
-export function VehicleImagesScreen({ vehicleId }: { vehicleId: string }) {
-  const tNav = useTranslations('VehicleManage.nav');
-
+export function VehicleImagesScreen({
+  vehicleId,
+  workspace,
+}: {
+  vehicleId: string;
+  /** `manage` = mục của màn sửa xe ở app Partner (Lui về hub sửa xe) — xem `VehicleManageShell`. */
+  workspace?: VehicleSectionWorkspace;
+}) {
   return (
     <VehicleManageShell
       vehicleId={vehicleId}
+      {...(workspace ? { workspace } : {})}
       section={VEHICLE_MANAGE_SECTION.IMAGES}
-      title={tNav('images')}
     >
       {({ vehicle, canEdit }) => (
         <ImagesForm vehicle={vehicle} canEdit={canEdit} vehicleId={vehicleId} />
@@ -84,24 +88,28 @@ function ImagesForm({
   const update = useUpdateVehicle(vehicleId);
 
   const initial = useMemo(
-    () => ({
-      main: vehicle.mainImageUrl ?? null,
-      items: (vehicle.media ?? []).map((m) => ({ url: m.url, type: m.type as VehicleImageType })),
-    }),
-    [vehicle.mainImageUrl, vehicle.media],
+    () => (vehicle.media ?? []).map((m) => ({ url: m.url, type: m.type as VehicleImageType })),
+    [vehicle.media],
   );
-  const [items, setItems] = useState<SlotItem[]>(initial.items);
-  const [mainImageUrl, setMainImageUrl] = useState<string | null>(initial.main);
+  const [items, setItems] = useState<SlotItem[]>(initial);
+  /*
+   * Chế độ sắp xếp — bản native của công tắc "kéo thả" bên web. Trên màn cảm ứng kéo qua cả trang
+   * cuộn rất dễ trượt, nên cử chỉ là CHẠM ảnh để nhấc lên rồi CHẠM ô đích; kết quả y hệt thả.
+   */
 
   /*
    * "Đã đổi gì chưa" tính bằng SO SÁNH với giá trị gốc, không phải một cờ bật-một-chiều: tải lên
    * rồi xoá đúng tấm vừa tải là quay về hiện trạng, và nút Lưu phải tắt lại — như web.
    */
-  const dirty =
-    mainImageUrl !== initial.main || JSON.stringify(items) !== JSON.stringify(initial.items);
+  const dirty = JSON.stringify(items) !== JSON.stringify(initial);
 
+  /*
+   * Ô HIỆN = đúng các góc BẮT BUỘC của loại xe, như web: KHÔNG có ô "Ảnh khác", mỗi tấm ảnh phải
+   * có vị trí (30/09/2026). Ảnh CŨ loại "khác" — và ảnh xe máy loại `dashboard` của luật trước
+   * 07/10/2026 — vẫn nằm nguyên trong `items` và được gửi lại y như cũ khi lưu.
+   */
   const slots = useMemo(
-    () => vehicleImageSlotsFor(vehicle.vehicleType ?? ''),
+    () => requiredVehicleImageTypes(vehicle.vehicleType ?? ''),
     [vehicle.vehicleType],
   );
 
@@ -112,7 +120,11 @@ function ImagesForm({
    * đó; ai có ảnh thư viện cũng bị báo là dữ liệu cũ chưa phân loại. Và câu chữ bảo người dùng
    * "kéo sang ô phù hợp" trong khi màn này không có kéo thả — hướng dẫn một cử chỉ không tồn tại.
    */
-  const galleryCount = items.filter((i) => i.type === VEHICLE_IMAGE_TYPE.OTHER).length;
+  /*
+   * Trần ảnh tính trên TOÀN BỘ danh sách (web `items.length + pending.length`), không riêng một ô —
+   * ô đơn vẫn thay được ảnh của nó khi đã chạm trần.
+   */
+  const remaining = Math.max(0, VEHICLE_GALLERY_MAX_IMAGES - items.length);
 
   /** Đặt một ảnh vào ô — ô đơn thì THAY, ô "khác" thì thêm. */
   function place(slot: VehicleImageType, url: string) {
@@ -141,10 +153,7 @@ function ImagesForm({
 
   function save() {
     update.mutate(
-      {
-        mainImageUrl,
-        media: items.map((i) => ({ url: i.url, type: i.type })),
-      } as never,
+      { media: items.map((i) => ({ url: i.url, type: i.type })) } as never,
       {
         onSuccess: () => toast.showSuccess(t('saved')),
         onError: (error) => toast.showError(errorMessage(error)),
@@ -154,14 +163,6 @@ function ImagesForm({
 
   return (
     <YStack gap={space.md}>
-      <MainImageCard
-        url={mainImageUrl}
-        vehicleName={vehicle.name}
-        canEdit={canEdit}
-        onChange={setMainImageUrl}
-        onBusyChange={trackUpload}
-      />
-
       {slots.map((slot) => (
         <SlotCard
           key={slot}
@@ -171,7 +172,8 @@ function ImagesForm({
           helper={t(`helper.${slot}` as never)}
           items={items.filter((i) => i.type === slot)}
           canEdit={canEdit}
-          full={!isSingleVehicleImageSlot(slot) && galleryCount >= VEHICLE_GALLERY_MAX_IMAGES}
+          full={!isSingleVehicleImageSlot(slot) && remaining === 0}
+          remaining={remaining}
           onUploaded={(url) => place(slot, url)}
           onRemove={removeUrl}
           onBusyChange={trackUpload}
@@ -190,114 +192,11 @@ function ImagesForm({
             label={tEdit('revert')}
             variant="ghost"
             disabled={!dirty || update.isPending}
-            onPress={() => {
-              setItems(initial.items);
-              setMainImageUrl(initial.main);
-            }}
+            onPress={() => setItems(initial)}
           />
         </YStack>
       ) : null}
     </YStack>
-  );
-}
-
-/**
- * Ảnh đại diện — ô RIÊNG, cùng đường tải lên nhưng không dính gì tới thư viện góc chụp.
- *
- * Đây là nguồn duy nhất của thẻ xe ngoài chợ (`mainImageUrl`), nên nó có đủ ba thao tác như web:
- * chọn · thay · xoá. Trên native cả ba nằm trong tấm chọn nguồn của `useImageUpload` (chụp ảnh ·
- * chọn từ thư viện · xoá ảnh) thay vì hai nút chữ cạnh nhau — một nút phá huỷ đứng trần ngay
- * cạnh ảnh là thứ ngón cái chạm nhầm khi chỉ định cuộn trang.
- */
-function MainImageCard({
-  url,
-  vehicleName,
-  canEdit,
-  onChange,
-  onBusyChange,
-}: {
-  url: string | null;
-  vehicleName: string;
-  canEdit: boolean;
-  onChange: (url: string | null) => void;
-  /** Báo lên màn khi ô này bắt đầu/kết thúc một lượt tải — xem `uploading` ở màn. */
-  onBusyChange: (busy: boolean) => void;
-}) {
-  const t = useTranslations('VehicleManage.images');
-  const tImage = useTranslations('Common.components.imageUpload');
-
-  const upload = useImageUpload({
-    title: t('mainImage'),
-    hint: t('mainImageHelp'),
-    presign: uploadsApi.vehicleImage,
-    remaining: 1,
-    /* Chọn nhiều tấm một lượt thì tấm cuối thắng — ảnh đại diện chỉ có một. */
-    onUploaded: (urls: readonly string[]) => {
-      const last = urls[urls.length - 1];
-      if (last) onChange(last);
-    },
-    onRemove: url ? () => onChange(null) : undefined,
-  });
-
-  /*
-   * Báo trạng thái tải lên NGƯỢC về màn, để nút Lưu khoá trong lúc còn ảnh đang bay.
-   *
-   * Dọn dẹp trả lại một lần giảm: ô bị tháo giữa chừng (đổi mục, lui màn) mà không trả thì bộ đếm
-   * ở màn kẹt trên 0 và nút Lưu khoá vĩnh viễn.
-   */
-  const busy = upload.busy;
-  useEffect(() => {
-    if (!busy) return;
-    onBusyChange(true);
-    return () => onBusyChange(false);
-  }, [busy, onBusyChange]);
-
-  return (
-    <Card>
-      <YStack gap={space.sm}>
-        {/* Ảnh đại diện mang dấu ● "cần cho duyệt công khai" — đúng `MainImageTile` của web. */}
-        <FieldLabel label={t('mainImage')} publishRequired />
-        <Text col={colors.textMuted} fos={fontSize.bodySm}>
-          {t('mainImageHelp')}
-        </Text>
-        {url ? (
-          <YStack aspectRatio={TILE_RATIO} br={radius.md} ov="hidden">
-            <RemoteImage
-              uri={url}
-              fallback={null}
-              contentFit="cover"
-              accessibilityLabel={t('alt', { slot: t('mainImage'), vehicle: vehicleName })}
-            />
-          </YStack>
-        ) : (
-          <YStack
-            aspectRatio={TILE_RATIO}
-            br={radius.md}
-            bg={colors.surfaceMuted}
-            ai="center"
-            jc="center"
-          >
-            <Ionicons name="image-outline" size={iconSize.lg} color={colors.placeholder} />
-          </YStack>
-        )}
-        {canEdit ? (
-          <Button
-            label={url ? tImage('change') : t('choose')}
-            variant="secondary"
-            size="sm"
-            icon="camera-outline"
-            loading={upload.busy}
-            onPress={upload.open}
-          />
-        ) : null}
-        <Text col={colors.placeholder} fos={fontSize.label}>
-          {t('minimumHint', { max: VEHICLE_GALLERY_MAX_IMAGES })}
-        </Text>
-      </YStack>
-
-      {/* Tấm chọn nguồn ảnh — `useImageUpload` yêu cầu nơi gọi tự render nó. */}
-      {upload.sheet}
-    </Card>
   );
 }
 
@@ -316,10 +215,13 @@ function SlotCard({
   items,
   canEdit,
   full,
+  remaining,
   onUploaded,
   onRemove,
   onBusyChange,
 }: {
+  /** Số ảnh còn thêm được cho cả bảng — ô nhiều ảnh không chọn quá con số này một lượt. */
+  remaining: number;
   slot: VehicleImageType;
   label: string;
   vehicleName: string;
@@ -340,7 +242,7 @@ function SlotCard({
     title: label,
     hint: helper,
     presign: uploadsApi.vehicleImage,
-    remaining: single ? 1 : VEHICLE_GALLERY_MAX_IMAGES,
+    remaining: single ? 1 : remaining,
     /* Người dùng chọn được NHIỀU tấm một lượt — ô đơn chỉ giữ tấm cuối, ô "khác" nhận hết. */
     onUploaded: (urls: readonly string[]) => urls.forEach(onUploaded),
   });
@@ -362,12 +264,16 @@ function SlotCard({
     <Card>
       <YStack gap={space.sm}>
         <XStack ai="center" gap={space.sm}>
-          <Text f={1} col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-            {label}
-          </Text>
-          <Text col={items.length > 0 ? colors.success : colors.placeholder} fos={fontSize.label}>
-            {items.length > 0 ? t('uploaded') : t('missing')}
-          </Text>
+          {/* Mọi ô hiện ra đều BẮT BUỘC (07/10/2026) — dấu ● "cần cho duyệt công khai", như web. */}
+          <YStack f={1}>
+            <FieldLabel label={label} publishRequired />
+          </YStack>
+          {/* Web: thẻ "Đã tải lên" khi ô có ảnh; chưa có thì chỉ dòng hướng dẫn bên dưới. */}
+          {items.length > 0 ? (
+            <Text col={colors.success} fos={fontSize.label}>
+              {t('uploaded')}
+            </Text>
+          ) : null}
         </XStack>
 
         <Text col={colors.textMuted} fos={fontSize.label}>

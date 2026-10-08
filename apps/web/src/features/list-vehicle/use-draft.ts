@@ -21,7 +21,7 @@ const draftKey = (userId: string, tenantId: string | null) =>
 const ownerDraftKey = (userId: string) => `xp.list-vehicle.owner.${userId}`;
 
 /** Trường KHÔNG bao giờ ghi vào bộ nhớ trình duyệt — ảnh đã tải nằm ở R2, key có thời hạn. */
-const OMITTED = ['mainImageUrl', 'images'] as const;
+const OMITTED = ['images'] as const;
 
 interface Options {
   userId: string | null;

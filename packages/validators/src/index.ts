@@ -6,7 +6,7 @@
  * lớp chặn thật. Bỏ lớp backend vì "frontend đã validate rồi" là lỗ bảo mật.
  */
 import * as yup from 'yup';
-import { VEHICLE_IMAGE_TYPE_VALUES } from '@xeprime/types';
+import { missingVehicleImageTypes, VEHICLE_IMAGE_TYPE_VALUES } from '@xeprime/types';
 import {
   ADDRESS_LINE_MAX_LENGTH,
   ASSIGNABLE_TENANT_ROLES,
@@ -350,14 +350,13 @@ export const vehicleFormSchema = yup.object({
     .nullable()
     .default(null),
   description: optionalText(4000),
-  mainImageUrl: yup
-    .string()
-    .trim()
-    .transform((v) => (v === '' ? null : v))
-    .url('mainImageUrlInvalid')
-    .max(2000)
-    .nullable()
-    .default(null),
+  /*
+   * `mainImageUrl` ĐÃ BỊ BỎ khỏi form (07/10/2026).
+   *
+   * Ảnh bìa là ảnh MẶT TRƯỚC, do server suy ra từ `media` (`VEHICLE_COVER_IMAGE_TYPE`). Một ô
+   * tải ảnh riêng bắt chủ xe tải cùng tấm ảnh hai lần, và hai ô lệch nhau được — thẻ xe ngoài
+   * chợ hiện một chiếc xe khác với ô "mặt trước" của chính nó.
+   */
   images: yup
     .array()
     .of(yup.string().trim().url('imageUrlInvalid').max(2000).required())
@@ -380,6 +379,41 @@ export const vehicleFormSchema = yup.object({
 });
 
 export type VehicleFormValues = yup.InferType<typeof vehicleFormSchema>;
+
+/**
+ * Các GÓC ảnh bắt buộc còn TRỐNG của một bộ giá trị form — ô tô 5, xe máy 2 (07/10/2026).
+ *
+ * Form nào cũng gọi được, kể cả form sửa xe không dùng `quickVehicleSchema`. Luật gốc nằm ở
+ * `@xeprime/types` (`missingVehicleImageTypes`), đây chỉ là lối vào theo shape của form.
+ */
+export function missingVehiclePhotoSlots(values: {
+  vehicleType?: string | null;
+  media?: readonly { type?: string | null }[] | null;
+}): string[] {
+  return missingVehicleImageTypes(values.vehicleType ?? '', values.media ?? []);
+}
+
+/**
+ * `vehicleFormSchema` + luật ẢNH BẮT BUỘC — dùng cho các form xe CÓ bước ảnh (thêm nâng cao, sửa
+ * xe ở cả hai khu, app native).
+ *
+ * Cố ý là một schema RIÊNG, không phải một `.test` gắn luôn vào `vehicleFormSchema`: mục "Thông
+ * tin" của màn quản lý xe cũng dùng schema đó cho một form KHÔNG có ô ảnh nào. Gắn luật vào gốc
+ * sẽ chặn lượt sửa biển số của một chiếc xe cũ còn thiếu ảnh, với một câu lỗi trỏ vào một bảng
+ * ảnh không có trên màn hình — và không có cách nào sửa được từ chỗ đó.
+ */
+export const vehicleFormWithPhotosSchema = vehicleFormSchema.test(
+  'photos-required',
+  function photosRequired(values) {
+    const missing = missingVehiclePhotoSlots(values);
+    return missing.length === 0
+      ? true
+      : this.createError({
+          path: 'media',
+          message: `photosRequired::${JSON.stringify({ count: missing.length })}`,
+        });
+  },
+);
 
 /**
  * Số nguyên VND tuỳ chọn — form nhập number (NumberField), hoá chuỗi khi gửi API (ADR 0007).

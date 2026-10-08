@@ -7,7 +7,10 @@ describe('app-profile (customer)', () => {
   it('luôn hạ cánh ở khu KHÁCH — kể cả gian hàng tuyến gói và lựa chọn manage đã nhớ', () => {
     expect(resolveInitialScope({ user: null })).toBe(APP_SCOPE.CUSTOMER);
     expect(
-      resolveInitialScope({ user: { platformRole: 'platform_admin' }, remembered: APP_SCOPE.MANAGE }),
+      resolveInitialScope({
+        user: { platformRole: 'platform_admin' },
+        remembered: APP_SCOPE.MANAGE,
+      }),
     ).toBe(APP_SCOPE.CUSTOMER);
   });
 
@@ -18,14 +21,15 @@ describe('app-profile (customer)', () => {
 });
 
 describe('allowlist thông báo (customer)', () => {
-  it('nhận đích khách + Owner Lite', () => {
+  it('nhận đích khách', () => {
     expect(notificationHref('/trips')).not.toBeNull();
     expect(notificationHref('/trips/01J00000000000000000000A')).not.toBeNull();
-    expect(notificationHref('/account/vehicles')).not.toBeNull();
+    expect(notificationHref('/account')).not.toBeNull();
     expect(notificationHref('/listings/01J00000000000000000000A')).not.toBeNull();
   });
 
-  it('TỪ CHỐI đích /manage/** — audience đó thuộc app XePrime Partner', () => {
+  it('TỪ CHỐI đích /manage/** và đích Owner Lite cũ — chúng thuộc app XePrime Partner', () => {
+    expect(notificationHref('/account/vehicles')).toBeNull();
     expect(notificationHref('/manage/requests')).toBeNull();
     expect(notificationHref('/manage/bookings/01J00000000000000000000A')).toBeNull();
     expect(notificationHref('/manage/shop')).toBeNull();

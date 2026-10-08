@@ -236,6 +236,18 @@ describe('Vehicle gallery + features (Gap 4)', () => {
  * (URL + vị trí), client cũ và app native vẫn gửi `images` (chỉ URL). Cùng một bảng
  * `vehicle_images`; điều phải giữ là hai hình thái không giẫm lên nhau.
  */
+/**
+ * Đủ NĂM góc ảnh bắt buộc của ô tô (07/10/2026) — mọi lượt gửi `media` phải đủ góc, nên các ca
+ * dưới đây dựng từ bộ này rồi chỉ thay đúng phần đang kiểm.
+ */
+const CAR_MEDIA = [
+  { url: 'https://img/front.jpg', type: 'front' },
+  { url: 'https://img/rear.jpg', type: 'rear' },
+  { url: 'https://img/left.jpg', type: 'left' },
+  { url: 'https://img/right.jpg', type: 'right' },
+  { url: 'https://img/interior.jpg', type: 'interior' },
+];
+
 describe('Ảnh theo vị trí — tương thích ngược với client cũ', () => {
   maybe('media gán vị trí và giữ thứ tự; images cũ vẫn đọc ra đúng danh sách URL', async () => {
     const created = await createBase('MED-SLOT-1');
@@ -243,54 +255,39 @@ describe('Ảnh theo vị trí — tương thích ngược với client cũ', ()
       tenantId,
       created.id,
       ownerId,
-      {
-        media: [
-          { url: 'https://img/front.jpg', type: 'front' },
-          { url: 'https://img/rear.jpg', type: 'rear' },
-          { url: 'https://img/other.jpg' },
-        ],
-      },
+      { media: [...CAR_MEDIA, { url: 'https://img/other.jpg' }] },
       null,
     );
 
     // Ảnh chưa gán vị trí đọc ra là "other" — màn thư viện xếp nó vào ô "Ảnh khác" thay vì
     // bắt giao diện tự đoán từ một giá trị rỗng.
     expect(updated.media.map((m) => [m.url, m.type])).toEqual([
-      ['https://img/front.jpg', 'front'],
-      ['https://img/rear.jpg', 'rear'],
+      ...CAR_MEDIA.map((m) => [m.url, m.type]),
       ['https://img/other.jpg', 'other'],
     ]);
     // Trường cũ vẫn là danh sách URL theo đúng thứ tự — app native không phải sửa gì.
     expect(updated.images).toEqual([
-      'https://img/front.jpg',
-      'https://img/rear.jpg',
+      ...CAR_MEDIA.map((m) => m.url),
       'https://img/other.jpg',
     ]);
+    // Ảnh BÌA do server suy từ ô mặt trước, trong cùng lượt lưu.
+    expect(updated.mainImageUrl).toBe('https://img/front.jpg');
   });
 
+  /*
+   * `images: string[]` KHÔNG bị luật đủ-góc chặn: payload đó không nói được góc chụp nào, nên đòi
+   * góc ở đó là khoá cứng một bản app đã phát hành khỏi mọi lượt lưu.
+   */
   maybe('client cũ lưu bằng images KHÔNG xoá vị trí ảnh chủ xe đã sắp', async () => {
     const created = await createBase('MED-SLOT-2');
-    await vehicles.update(
-      tenantId,
-      created.id,
-      ownerId,
-      {
-        media: [
-          { url: 'https://img/front.jpg', type: 'front' },
-          { url: 'https://img/left.jpg', type: 'left' },
-        ],
-      },
-      null,
-    );
+    await vehicles.update(tenantId, created.id, ownerId, { media: CAR_MEDIA }, null);
 
-    // Form cũ gửi lại đúng hai URL đó (đảo thứ tự) — vị trí phải được bảo toàn.
+    // Form cũ gửi lại đúng hai URL trong số đó (đảo thứ tự) — vị trí phải được bảo toàn.
     const legacy = await vehicles.update(
       tenantId,
       created.id,
       ownerId,
-      {
-        images: ['https://img/left.jpg', 'https://img/front.jpg'],
-      },
+      { images: ['https://img/left.jpg', 'https://img/front.jpg'] },
       null,
     );
     expect(legacy.media.map((m) => [m.url, m.type])).toEqual([
@@ -305,29 +302,19 @@ describe('Ảnh theo vị trí — tương thích ngược với client cũ', ()
       tenantId,
       created.id,
       ownerId,
-      {
-        media: [
-          { url: 'https://img/dup.jpg', type: 'front' },
-          { url: 'https://img/dup.jpg', type: 'rear' },
-        ],
-      },
+      // Tấm `interior` gửi HAI lần: lần sau bị khử, nên ô nội thất vẫn có ảnh và lượt lưu qua.
+      { media: [...CAR_MEDIA, { url: 'https://img/interior.jpg', type: 'other' }] },
       null,
     );
-    expect(updated.media).toHaveLength(1);
-    expect(await prisma.vehicleImage.count({ where: { vehicleId: created.id } })).toBe(1);
+    expect(updated.media).toHaveLength(CAR_MEDIA.length);
+    expect(await prisma.vehicleImage.count({ where: { vehicleId: created.id } })).toBe(
+      CAR_MEDIA.length,
+    );
   });
 
   maybe('không gửi media lẫn images → giữ nguyên cả URL lẫn vị trí', async () => {
     const created = await createBase('MED-SLOT-4');
-    await vehicles.update(
-      tenantId,
-      created.id,
-      ownerId,
-      {
-        media: [{ url: 'https://img/front.jpg', type: 'front' }],
-      },
-      null,
-    );
+    await vehicles.update(tenantId, created.id, ownerId, { media: CAR_MEDIA }, null);
     const untouched = await vehicles.update(
       tenantId,
       created.id,
@@ -335,9 +322,24 @@ describe('Ảnh theo vị trí — tương thích ngược với client cũ', ()
       { name: 'Đổi tên' },
       null,
     );
-    expect(untouched.media).toEqual([
-      { url: 'https://img/front.jpg', type: 'front', sortOrder: 0 },
-    ]);
+    expect(untouched.media).toEqual(
+      CAR_MEDIA.map((m, sortOrder) => ({ url: m.url, type: m.type, sortOrder })),
+    );
+  });
+
+  maybe('ô tô thiếu một góc: lượt lưu bị từ chối, ảnh cũ không suy suyển', async () => {
+    const created = await createBase('MED-SLOT-5');
+    await vehicles.update(tenantId, created.id, ownerId, { media: CAR_MEDIA }, null);
+    await expect(
+      vehicles.update(tenantId, created.id, ownerId, { media: CAR_MEDIA.slice(0, 4) }, null),
+    ).rejects.toMatchObject({
+      response: {
+        code: API_ERROR_CODE.VEHICLE_IMAGES_INCOMPLETE,
+        details: { missing: ['interior'] },
+      },
+    });
+    const after = await vehicles.getOne(tenantId, created.id);
+    expect(after.media).toHaveLength(CAR_MEDIA.length);
   });
 });
 

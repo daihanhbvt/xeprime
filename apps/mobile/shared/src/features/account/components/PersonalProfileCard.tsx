@@ -6,6 +6,7 @@ import { useTranslations } from 'use-intl';
 import { STATUS_COLOR } from '@xeprime/types';
 import { accountProfileSchema, type AccountProfileValues } from '@xeprime/validators';
 import { Button } from '@/components/ui/Button';
+import { IconButton } from '@/components/ui/IconButton';
 import { InlineAction } from '@/components/ui/InlineAction';
 import { Card } from '@/components/ui/Card';
 import { ImageUploadField } from '@/components/ui/ImageUploadField';
@@ -117,6 +118,16 @@ export function PersonalProfileCard({
           avatarUrl={avatarUrl ?? null}
           subtitle={subtitle}
           tenant={tenant}
+          action={
+            editable && !isEditing ? (
+              <IconButton
+                icon="create-outline"
+                label={t('profile.edit')}
+                disabled={update.isPending}
+                onPress={() => setIsEditing(true)}
+              />
+            ) : undefined
+          }
         />
 
         <YStack gap={space.md} p={space.md}>
@@ -127,26 +138,8 @@ export function PersonalProfileCard({
           */}
           {editable ? (
             <>
-              {!isEditing ? (
-                <YStack gap={space.sm}>
-                  <YStack gap={2}>
-                    <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.semibold}>
-                      {t('profile.title')}
-                    </Text>
-                    <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                      {t('profile.description')}
-                    </Text>
-                  </YStack>
-                  <Button
-                    label={t('profile.edit')}
-                    variant="secondary"
-                    size="sm"
-                    icon="create-outline"
-                    disabled={update.isPending}
-                    onPress={() => setIsEditing(true)}
-                  />
-                </YStack>
-              ) : (
+              {/* Lối vào sửa là bút chì trên đầu thẻ; ở đây chỉ còn form khi đang sửa. */}
+              {!isEditing ? null : (
                 <YStack
                   gap={space.md}
                   p={space.md}
@@ -214,7 +207,7 @@ export function PersonalProfileCard({
                 </YStack>
               )}
 
-              <YStack h={1} bg={colors.borderSubtle} />
+              {isEditing ? <YStack h={1} bg={colors.borderSubtle} /> : null}
             </>
           ) : null}
 
@@ -269,22 +262,16 @@ export function PersonalProfileCard({
               không có trên màn.
             */}
             {editable ? (
-              <XStack
-                ai="flex-start"
-                gap={space.sm}
-                p={space.md}
-                br={radius.md}
-                bg={colors.infoSurface}
-              >
-                <YStack pt={1}>
+              <XStack ai="flex-start" gap={space.xs} px={space.xs}>
+                <YStack pt={2}>
                   <Ionicons
                     name="shield-checkmark-outline"
-                    size={iconSize.md}
+                    size={iconSize.sm}
                     color={colors.info}
                   />
                 </YStack>
                 <YStack f={1} minWidth={0}>
-                  <Text col={colors.textMuted} fos={fontSize.label}>
+                  <Text col={colors.textMuted} fos={fontSize.meta}>
                     {t('profile.securityDescription')}
                   </Text>
                 </YStack>

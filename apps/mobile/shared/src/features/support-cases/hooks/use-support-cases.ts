@@ -1,4 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { PERMISSION } from '@xeprime/types';
+import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { keepPageData } from '@/queries/keep-page-data';
 import { queryKeys } from '@/queries/query-keys';
 import {
@@ -96,3 +98,16 @@ export function useTransitionSupportCase(surface: SupportSurface) {
 }
 
 export { SUPPORT_SURFACE };
+
+/**
+ * Có được GHI vào case (mở case, trả lời, đổi trạng thái) ở bề mặt này không — đúng
+ * `useCanWriteSupportCase` bên web.
+ *
+ * Bề mặt gian hàng: mọi lệnh ghi đòi `support.manage` ở server — thành viên chỉ có `support.view`
+ * chỉ ĐỌC case, nên không dựng nút mở case hay ô trả lời chắc chắn nhận 403. Khách tự mở case của
+ * mình.
+ */
+export function useCanWriteSupportCase(surface: SupportSurface): boolean {
+  const { has } = usePermissions();
+  return surface !== SUPPORT_SURFACE.TENANT || has(PERMISSION.SUPPORT_MANAGE);
+}

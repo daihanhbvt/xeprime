@@ -31,6 +31,7 @@ function tenant(overrides: Partial<Tenant> = {}): Tenant {
     slug: 'gian-hang',
     status: 'active',
     onboardingState: 'package_active',
+    branchScope: 'all',
     logoUrl: null,
     roleKey: 'shop_owner',
     features: [],

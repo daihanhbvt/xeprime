@@ -23,7 +23,8 @@ jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
 }));
 
-const CONSENT_LABEL = 'Tôi đã đọc và đồng ý với Điều khoản sử dụng và Chính sách bảo mật của XePrime.';
+const CONSENT_LABEL =
+  'Tôi đã đọc và đồng ý với Điều khoản sử dụng và Chính sách bảo mật của XePrime.';
 const SUBMIT_LABEL = 'Tạo tài khoản';
 const GOOGLE_LABEL = 'Tiếp tục với Google';
 

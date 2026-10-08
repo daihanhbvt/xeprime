@@ -24,6 +24,7 @@ import {
   seedProvince,
 } from './helpers/service-factory';
 import { TEST_PROVINCE } from './helpers/test-provinces';
+import { requiredVehicleImageRows } from './helpers/vehicle-media';
 
 /**
  * Gap 3 — 4 test bắt buộc ADR 0008 (§Test), chạy qua các service THẬT trên PostgreSQL:
@@ -87,14 +88,14 @@ async function seedVehicle(): Promise<string> {
     },
   });
   // Ảnh thư viện: luật 09/09/2026 đòi tối thiểu 4 URL KHÁC NHAU (ảnh đại diện tính là một).
+  // Đủ GÓC ảnh bắt buộc của loại xe (07/10/2026) — ba dòng không gán góc sẽ bị cổng duyệt
+  // báo thiếu `photos`, ở những ca chẳng nói gì về ảnh.
   await prisma.vehicleImage.createMany({
-    data: [1, 2, 3].map((n) => ({
-      id: newId(),
-      tenantId,
+    data: requiredVehicleImageRows({
       vehicleId: id,
-      imageUrl: `https://img.example/listing-${id.slice(-4)}-${n}.jpg`,
-      sortOrder: n,
-    })),
+      tenantId: tenantId,
+      vehicleType: VEHICLE_TYPE.CAR,
+    }),
   });
   await prisma.vehicleFeature.create({
     data: { id: newId(), vehicleId: id, featureKey: 'bluetooth' },

@@ -1,4 +1,9 @@
-import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { chatApi, type ConversationListResult } from '@/features/chat/api';
 import { CHAT_INBOX, CHAT_SIDE, type ChatInbox, type ChatSide } from '@xeprime/types';
@@ -9,7 +14,6 @@ import { useBadgeRealtime } from '@/features/badges/BadgeRealtimeProvider';
 import { useBadges } from '@/features/badges/hooks/use-badges';
 import { useOnBadgeChange } from '@/features/badges/hooks/use-on-badge-change';
 import { queryKeys } from '@/queries/query-keys';
-import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { resolveChatInbox } from '../chat-inbox';
 
 /**
@@ -30,7 +34,6 @@ export interface ConversationListFilters {
   unreadOnly?: boolean;
 }
 
-
 /**
  * Hộp thư của MỘT bề mặt, tải dần theo cuộn.
  *
@@ -42,10 +45,7 @@ export interface ConversationListFilters {
  * Phân trang là tải-thêm-khi-cuộn thay cho bộ số trang của web, nhưng việc CẮT TRANG và LỌC vẫn
  * ở server — không có chỗ nào kéo cả hộp thư về rồi lọc tại chỗ.
  */
-export function useConversationsInfinite(
-  inbox: ChatInbox,
-  filters: ConversationListFilters = {},
-) {
+export function useConversationsInfinite(inbox: ChatInbox, filters: ConversationListFilters = {}) {
   const params = {
     ...(filters.q ? { q: filters.q } : {}),
     ...(filters.unreadOnly ? { unreadOnly: true } : {}),
@@ -59,17 +59,7 @@ export function useConversationsInfinite(
    * tải lại danh sách. Đây là cầu nối mà trước đây thiếu: bản chiếu huy hiệu biết MỌI hội
    * thoại, còn listener của thread chỉ biết một.
    */
-  /*
-   * Hộp thư HỢP NHẤT phải theo dõi CẢ HAI con số: nó chứa cả hai vế, nên một tin đến ở vế gian
-   * hàng cũng là một dòng vừa đổi trong chính danh sách đang mở. Nghe một vế thôi thì nửa hộp
-   * thư đứng im tới nhịp poll kế tiếp.
-   */
-  const watched =
-    inbox === CHAT_INBOX.UNIFIED
-      ? counts.chatCustomer + counts.chatShop
-      : inbox === CHAT_INBOX.CUSTOMER
-        ? counts.chatCustomer
-        : counts.chatShop;
+  const watched = inbox === CHAT_INBOX.CUSTOMER ? counts.chatCustomer : counts.chatShop;
 
   useOnBadgeChange(watched, () => {
     void queryClient.invalidateQueries({ queryKey: queryKeys.chat.conversations(inbox) });
@@ -133,8 +123,6 @@ export function useConversation(inbox: ChatInbox, id: string) {
   });
 }
 
-
-
 /*
  * ĐÃ GỠ: `useChatUnreadCount(side)` và `useChatUnreadSummary()`.
  *
@@ -144,7 +132,7 @@ export function useConversation(inbox: ChatInbox, id: string) {
  * bản app cũ — tài liệu chuyển tiếp §A ghi rõ là không gỡ trong đợt này — app chỉ ngừng gọi.
  */
 export interface ChatBadge {
-  /** Con số hiện trên biểu tượng — tổng CẢ HAI vai. */
+  /** Con số hiện trên biểu tượng — tin chưa đọc của hộp thư thuộc bề mặt này. */
   count: number;
   /** Hộp thư nên mở khi bấm vào biểu tượng. */
   href: Href;
@@ -155,13 +143,9 @@ export interface ChatBadge {
 /**
  * Biểu tượng chat trên thanh trên cùng — con số và đích đến. Bản native của `useChatBadge` web.
  *
- * Bài toán nó giải: một chủ gian hàng đang lướt chợ xe KHÔNG hề biết khách vừa nhắn vào shop, vì
- * badge ở khu khách chỉ đếm hộp thư khách. Người dùng chỉ có một khái niệm "tin nhắn chưa đọc";
- * việc nó nằm ở vai nào là chuyện nội bộ của hệ thống.
- *
- * Nên badge đếm TỔNG, còn đích đến thì chọn theo nơi thật sự có tin: ưu tiên hộp thư của bề mặt
- * đang đứng, và chỉ nhảy sang bề mặt kia khi bên này không còn gì. Thiếu bước đó thì con số và
- * màn hình mở ra nói hai điều khác nhau — badge báo 3, mở ra trống trơn.
+ * Từ ADR 0053 một tài khoản chỉ có MỘT hộp thư (khách ở app XePrime, gian hàng ở app Partner), nên
+ * con số và đích đến đều là của chính hộp thư đó — không còn đếm gộp hai vai hay nhảy sang bề mặt
+ * kia.
  */
 export function useChatBadge(surface: ChatSide): ChatBadge {
   /*
@@ -173,29 +157,15 @@ export function useChatBadge(surface: ChatSide): ChatBadge {
    */
   const { chatCustomer, chatShop } = useBadges();
 
-  const { data: user } = useCurrentUser();
-  const inbox = resolveChatInbox(surface, user);
-
   /*
-   * Hộp thư hợp nhất KHÔNG bao giờ nhảy khu: nó đã chứa cả hai vế, nên "bên này hết thì sang bên
-   * kia" không còn nghĩa gì — và bên kia (khu quản lý) là nơi chủ xe tuyến hoa hồng không vào
-   * được. Chính cái nhảy đó là lỗi ADR 0038 điều 10 viết ra để bỏ.
+   * MỘT tài khoản, MỘT hộp thư (ADR 0053): không còn nhảy sang hộp thư bên kia khi bên này hết tin
+   * — bên kia thuộc một tài khoản khác, ở một app khác. Con số chỉ đếm hộp thư của chính bề mặt.
    */
-  if (inbox === CHAT_INBOX.UNIFIED) {
-    return { count: chatCustomer + chatShop, href: ROUTES.chat.list(), inbox };
-  }
-
-  const here = surface === CHAT_SIDE.CUSTOMER ? chatCustomer : chatShop;
-  const there = surface === CHAT_SIDE.CUSTOMER ? chatShop : chatCustomer;
-  const elsewhere = here === 0 && there > 0;
-
-  const stay = surface === CHAT_SIDE.CUSTOMER ? ROUTES.chat.list() : ROUTES.manage.chat();
-  const away = surface === CHAT_SIDE.CUSTOMER ? ROUTES.manage.chat() : ROUTES.chat.list();
-  const other = surface === CHAT_SIDE.CUSTOMER ? CHAT_INBOX.SHOP : CHAT_INBOX.CUSTOMER;
-
+  const inbox = resolveChatInbox(surface);
+  const isCustomer = surface === CHAT_SIDE.CUSTOMER;
   return {
-    count: chatCustomer + chatShop,
-    href: elsewhere ? away : stay,
-    inbox: elsewhere ? other : (surface as ChatInbox),
+    count: isCustomer ? chatCustomer : chatShop,
+    href: isCustomer ? ROUTES.chat.list() : ROUTES.manage.chat(),
+    inbox,
   };
 }

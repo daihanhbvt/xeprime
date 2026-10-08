@@ -60,6 +60,7 @@ const TENANT: NonNullable<authApi.CurrentUser['tenant']> = {
   slug: 'viet-car',
   status: 'active',
   onboardingState: 'commission',
+  branchScope: 'all',
   logoUrl: null,
   roleKey: TENANT_ROLE.SHOP_OWNER,
   features: [],
@@ -249,69 +250,18 @@ describe('AccountScreen — điều hướng tài khoản', () => {
     expect(view.queryByText('TÀI KHOẢN')).toBeNull();
   });
 
-  it('chủ xe tuyến hoa hồng: chín mục trong MỘT nhóm phẳng, không tiêu đề', async () => {
+  /**
+   * ADR 0053: tài khoản ở app này là tài khoản KHÁCH — menu không rẽ theo vai hay tuyến. Một API
+   * cũ hơn có thể còn trả `tenant`; menu vẫn y hệt, không mọc lại mục Owner Lite nào.
+   */
+  it('API cũ còn trả tenant: menu vẫn là menu khách, không mục Owner Lite', async () => {
     const view = await renderScreen(PROFILE, { tenant: TENANT });
     await view.findByText(PROFILE_CARD_TEXT);
 
-    for (const label of [
-      'Danh sách xe',
-      'Lịch xe',
-      'Cẩm nang cho thuê xe',
-      'Chuyến của tôi',
-      'Thông tin khai thuế',
-      'Hợp đồng & Chứng từ',
-      'Chính sách bảo vệ dữ liệu',
-      'Tài khoản của tôi',
-      'Đổi mật khẩu',
-    ]) {
-      expect(view.getAllByRole('menuitem', { name: label }).length).toBeGreaterThan(0);
-    }
-    /*
-     * MỘT nhóm, không tiêu đề (ADR 0038 điều 9): chủ xe không đổi vai khi bấm từ "Lịch xe" sang
-     * "Tài khoản của tôi", nên một tiêu đề ở giữa vẽ ra một ranh giới không có thật.
-     */
-    expect(view.queryByText('TÀI KHOẢN')).toBeNull();
-    /*
-     * "Yêu cầu xoá tài khoản" rời MENU (ADR 0038 điều 9) nhưng KHÔNG rời màn: nó là thẻ riêng
-     * tông đỏ ở cuối "Tài khoản của tôi". Canh cả hai vế — thiếu vế sau thì chủ xe tuyến hoa
-     * hồng không còn lối nào tới màn xoá tài khoản, đúng lỗi đã có trước 16/09/2026.
-     *
-     * Vế "không nằm trong menu" được canh ở tầng dữ liệu (`account-nav.test.ts`), nơi nói được
-     * chính xác điều đó; ở tầng màn thì cả hai đều là `menuitem` và một phép đếm không phân
-     * biệt được thẻ đỏ cuối màn với một mục menu.
-     */
-    expect(view.getByRole('menuitem', { name: 'Yêu cầu xoá tài khoản' })).toBeTruthy();
-    // Chủ xe KHÔNG được mời "trở thành chủ xe" lần nữa.
-    expect(view.queryByRole('menuitem', { name: 'Trở thành chủ xe' })).toBeNull();
-  });
-
-  /**
-   * ADR 0038 điều 7: khu khách của một tài khoản gian hàng tuyến GÓI còn đúng hai mục. Công cụ
-   * cho thuê, chuyến và hồ sơ con người sống ở khu quản lý.
-   */
-  it('gian hàng tuyến gói: khu khách còn ba mục, cả ba đều dẫn sang khu quản lý', async () => {
-    const view = await renderScreen(PROFILE, {
-      tenant: { ...TENANT, billingMode: 'package' },
-    });
-    await view.findByText(PROFILE_CARD_TEXT);
-
-    expect(view.getAllByRole('menuitem', { name: 'Quản lý gian hàng' }).length).toBeGreaterThan(0);
-    expect(view.getAllByRole('menuitem', { name: 'Hồ sơ gian hàng' }).length).toBeGreaterThan(0);
-    // Lối DUY NHẤT từ khu khách sang 'Tài khoản & bảo mật' — nơi sửa hồ sơ con người.
-    expect(view.getAllByRole('menuitem', { name: 'Hồ sơ cá nhân' }).length).toBeGreaterThan(0);
-    for (const gone of ['Danh sách xe', 'Lịch xe', 'Chuyến của tôi', 'Đổi mật khẩu']) {
+    expect(view.getAllByRole('menuitem', { name: 'Trở thành chủ xe' }).length).toBeGreaterThan(0);
+    for (const gone of ['Danh sách xe', 'Lịch xe', 'Thông tin khai thuế', 'Quản lý gian hàng']) {
       expect(view.queryByRole('menuitem', { name: gone })).toBeNull();
     }
-  });
-
-  it('nhân viên gian hàng KHÔNG nhận menu chủ xe, CTA của họ là "Quản lý gian hàng"', async () => {
-    const view = await renderScreen(PROFILE, {
-      tenant: { ...TENANT, roleKey: TENANT_ROLE.SHOP_STAFF },
-    });
-    await view.findByText(PROFILE_CARD_TEXT);
-
-    expect(view.queryByRole('menuitem', { name: 'Danh sách xe' })).toBeNull();
-    expect(view.getAllByRole('menuitem', { name: 'Quản lý gian hàng' }).length).toBeGreaterThan(0);
   });
 
   it('mục đang mở (/account) được đánh dấu chọn và không điều hướng lại chính nó', async () => {
@@ -327,28 +277,6 @@ describe('AccountScreen — điều hướng tài khoản', () => {
     expect(mockPush).not.toHaveBeenCalled();
   });
 
-  /**
-   * "Lịch xe" và "Danh sách xe" mở màn của CHÍNH khu tài khoản — không đổi khu, nên thanh tab
-   * khách ở dưới chân màn hình đứng yên và nút lui trả về đúng menu này.
-   */
-  it('chủ xe bấm "Lịch xe": mở lịch trong khu tài khoản, KHÔNG đổi khu', async () => {
-    const view = await renderScreen(PROFILE, { tenant: TENANT });
-    await view.findByText(PROFILE_CARD_TEXT);
-
-    await fireEvent.press(view.getAllByRole('menuitem', { name: 'Lịch xe' })[0]!);
-    expect(mockPush).toHaveBeenCalledWith('/account/calendar');
-    expect(mockReplace).not.toHaveBeenCalled();
-    expect(mockDismissTo).not.toHaveBeenCalled();
-  });
-
-  it('chủ xe bấm "Danh sách xe": mở danh sách xe của khu tài khoản', async () => {
-    const view = await renderScreen(PROFILE, { tenant: TENANT });
-    await view.findByText(PROFILE_CARD_TEXT);
-
-    await fireEvent.press(view.getAllByRole('menuitem', { name: 'Danh sách xe' })[0]!);
-    expect(mockPush).toHaveBeenCalledWith('/account/vehicles');
-  });
-
   it('mục "Đổi mật khẩu" mở đúng màn, không phải một chỗ trống', async () => {
     const view = await renderScreen();
     await view.findByText(PROFILE_CARD_TEXT);
@@ -357,16 +285,13 @@ describe('AccountScreen — điều hướng tài khoản', () => {
     expect(mockPush).toHaveBeenCalledWith('/account/change-password');
   });
 
-  /**
-   * Mục MENU và nút trên THẺ là hai luồng khác nhau, đúng như web: menu dừng ở landing công khai,
-   * thẻ vào thẳng form đăng ký gian hàng. Gộp chúng lại là mất bước "đọc trước khi khai".
-   */
-  it('mục "Trở thành chủ xe" dừng ở landing, không ném thẳng vào form đăng ký', async () => {
+  /** ADR 0053: đăng ký cho thuê là việc của tài khoản ĐỐI TÁC — ở app Partner, không ở đây. */
+  it('mục "Trở thành chủ xe" mở màn handoff sang app Partner (đẩy lên, lui về được)', async () => {
     const view = await renderScreen();
     await view.findByText(PROFILE_CARD_TEXT);
 
     await fireEvent.press(view.getAllByRole('menuitem', { name: 'Trở thành chủ xe' })[0]!);
-    expect(mockPush).toHaveBeenCalledWith('/list-your-vehicle');
+    expect(mockPush).toHaveBeenCalledWith(ROUTES.manage.register());
   });
 
   it('Đăng xuất nằm TRONG menu và hỏi lại trước khi làm', async () => {
@@ -386,20 +311,19 @@ describe('AccountScreen — điều hướng tài khoản', () => {
  */
 describe('AccountScreen — thẻ gian hàng', () => {
   /**
-   * Đích là LANDING "Đăng xe cho thuê", không phải thẳng form đăng ký (ADR 0040).
+   * Lối vào duy nhất của hành trình chủ xe ở app khách là MỤC MENU "Trở thành chủ xe" — thẻ quảng
+   * bá riêng đã bị gỡ ngày 06/10/2026 (người dùng chốt: màn Tài khoản không cần hai lối vào cho
+   * cùng một việc).
    *
-   * Từ ADR 0040 có HAI cửa vào với hai hợp đồng khác nhau, và landing là nơi người dùng chọn cửa.
-   * Nhảy thẳng vào `/manage/onboarding` là chọn hộ họ cửa MẶC ĐỊNH (hoa hồng) — người muốn mở gian
-   * hàng trả phí sẽ được server gán gói hoa hồng và rơi vào màn "Hồ sơ chủ xe" của tuyến kia. Web
-   * dẫn cùng chỗ (`ROUTES.LIST_YOUR_VEHICLE.ROOT`) vì cùng lý do.
+   * Đích là màn HANDOFF sang app Partner, không phải form đăng ký: từ ADR 0053 việc cho thuê thuộc
+   * về một tài khoản ĐỐI TÁC riêng, và từ ADR 0040 có HAI cửa vào để người dùng tự chọn.
    */
-  it('chưa có gian hàng: mời đăng xe, nút "Bắt đầu" dẫn tới landing hai tuyến', async () => {
+  it('chưa có gian hàng: mục menu "Trở thành chủ xe" dẫn sang app Partner', async () => {
     const view = await renderScreen();
     await view.findByText(PROFILE_CARD_TEXT);
 
-    expect(view.getByText('Đăng xe cho thuê')).toBeTruthy();
-    await fireEvent.press(view.getByRole('button', { name: new RegExp('Bắt đầu$') }));
-    expect(mockPush).toHaveBeenCalledWith('/list-your-vehicle');
+    await fireEvent.press(view.getByText('Trở thành chủ xe'));
+    expect(mockPush).toHaveBeenCalledWith(ROUTES.manage.register());
   });
 
   /**
@@ -425,14 +349,18 @@ describe('AccountScreen — thẻ gian hàng', () => {
     expect(view.queryByRole('button', { name: /Vào quản lý gian hàng/ })).toBeNull();
   });
 
-  it('gian hàng tuyến GÓI: thẻ dẫn vào cổng quản lý', async () => {
+  /**
+   * Gian hàng tuyến GÓI cũng không có thẻ: app khách phục vụ realm `customer`, nơi không tài khoản
+   * nào mang gian hàng (ADR 0053). Dữ liệu cũ còn `tenant` thì cũng chỉ được dẫn qua menu.
+   */
+  it('gian hàng tuyến GÓI: cũng KHÔNG dựng thẻ gian hàng nào', async () => {
     const view = await renderScreen(PROFILE, {
       tenant: { ...TENANT, billingMode: 'package' },
     });
     await view.findByText(PROFILE_CARD_TEXT);
 
-    await fireEvent.press(view.getByRole('button', { name: /Vào quản lý gian hàng/ }));
-    expect(mockDismissTo).toHaveBeenCalledWith(ROUTES.manage.home());
+    expect(view.queryByRole('button', { name: /Vào quản lý gian hàng/ })).toBeNull();
+    expect(view.queryByText('Đăng xe cho thuê')).toBeNull();
   });
 
   /**

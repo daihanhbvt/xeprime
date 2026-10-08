@@ -51,8 +51,7 @@ export function sourceDetailToFormValues(detail: VehicleSourceDetail): VehicleSo
     ownerPhone: detail.ownerPhone ?? '',
     ownerEmail: detail.ownerEmail ?? '',
     monthlyRent: money(detail.monthlyRent),
-    commissionPercent:
-      detail.commissionPercent == null ? null : Number(detail.commissionPercent),
+    commissionPercent: detail.commissionPercent == null ? null : Number(detail.commissionPercent),
     paymentDay: detail.paymentDay ?? null,
     startDate: detail.startDate ?? null,
     endDate: detail.endDate ?? null,

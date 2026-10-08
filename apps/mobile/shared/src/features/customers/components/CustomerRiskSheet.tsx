@@ -103,6 +103,7 @@ export function CustomerRiskSheet({
           control={control}
           name="riskLevel"
           label={t('risk.level')}
+          required
           options={levelOptions}
         />
         <Callout tone={blocked ? 'danger' : 'info'}>{t('hints.riskLevel')}</Callout>
@@ -114,6 +115,7 @@ export function CustomerRiskSheet({
               ? t('risk.reasonOptional')
               : t('risk.reason')
           }
+          required={riskLevel !== TENANT_CUSTOMER_RISK_LEVEL.NORMAL}
           multiline
           rows={3}
           maxLength={TENANT_CUSTOMER_FIELD_MAX.RISK_REASON}

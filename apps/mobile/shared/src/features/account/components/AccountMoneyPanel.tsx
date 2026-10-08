@@ -49,12 +49,14 @@ export function AccountMoneyPanel() {
   if (!user) return null;
 
   const scope = walletScopeFor(user);
+  // Nhân viên gian hàng không có ví — không có gì để hiện (web `AccountMoneyPanel`).
+  if (!scope) return null;
   const accountScope: BankAccountScope =
     scope === WALLET_SCOPE.SHOP ? BANK_ACCOUNT_SCOPE.SHOP : BANK_ACCOUNT_SCOPE.ACCOUNT;
 
   return (
     <YStack gap={space.lg}>
-      <WalletSummaryCard scope={scope} onOpenLedger={() => navigateOnce(walletHrefFor(user))} />
+      <WalletSummaryCard scope={scope} onOpenLedger={() => navigateOnce(walletHrefFor(scope))} />
       <BankAccountList scope={accountScope} title={t('title')} />
     </YStack>
   );

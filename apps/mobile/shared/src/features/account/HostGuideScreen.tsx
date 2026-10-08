@@ -1,15 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { LEGAL_DOC, LEGAL_EFFECTIVE_FROM, ownerResourcesOfKind } from '@xeprime/domain';
-import { AppHeader } from '@/components/layout/AppHeader';
+import { ShellPageHeader, type PageShell } from '@/features/shell/ShellPageHeader';
 import { Screen } from '@/components/layout/Screen';
 import { Card } from '@/components/ui/Card';
 import { useOpenLegalDoc } from '@/features/legal/use-open-legal-doc';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { ResourceList } from './components/ResourceList';
@@ -24,17 +22,25 @@ const POLICY_DOCS = [LEGAL_DOC.MARKETPLACE_RULES, LEGAL_DOC.TERMS] as const;
  * nhật chính sách". Khối thứ hai trỏ tới hai văn bản pháp lý THẬT của sàn với ngày hiệu lực đọc
  * từ `LEGAL_EFFECTIVE_FROM` — nguồn duy nhất trong repo nói được "bản nào đang có hiệu lực".
  */
-export function HostGuideScreen() {
+export function HostGuideScreen({
+  shell = 'account',
+}: {
+  /**
+   * `manage` = mục menu Owner Lite của app XePrime Partner (trong bộ tab, nút mở menu) — ADR 0053.
+   * `account` = màn chen ngang có nút lui.
+   */
+  shell?: PageShell;
+} = {}) {
   const t = useTranslations('Account.hostGuide');
   const tLegal = useTranslations('Legal.docs');
-  const router = useRouter();
   const fmt = useAppFormat();
   const openLegalDoc = useOpenLegalDoc();
 
   return (
     <>
-      <AppHeader
-        onBack={() => goBackOr(router, ROUTES.account.home())}
+      <ShellPageHeader
+        shell={shell}
+        backTo={ROUTES.account.home()}
         title={t('title')}
         subtitle={t('subtitle')}
       />

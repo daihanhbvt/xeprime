@@ -22,6 +22,8 @@ export interface MaintenanceBoardFilters {
   filter?: string;
   q?: string;
   type?: string;
+  /** Chi nhánh của XE — ô "Chi nhánh" của màn (ADR 0052). */
+  branchId?: string;
   from?: string;
   to?: string;
   sort?: string;
@@ -36,6 +38,7 @@ export function maintenanceBoardToParams(filters: MaintenanceBoardFilters): Quer
     ...(filters.filter && filters.filter !== 'all' ? { filter: filters.filter } : {}),
     ...(filters.q ? { q: filters.q } : {}),
     ...(filters.type && filters.type !== 'all' ? { type: filters.type } : {}),
+    ...(filters.branchId ? { branchId: filters.branchId } : {}),
     ...(filters.from ? { from: filters.from } : {}),
     ...(filters.to ? { to: filters.to } : {}),
     ...(filters.sort ? { sort: filters.sort } : {}),
@@ -169,8 +172,11 @@ export const maintenanceApi = {
     );
   },
 
-  /** Đếm theo nhóm việc — độc lập với trang/bộ lọc hiện tại nên có query key riêng. */
-  boardSummary(): Promise<MaintenanceBoardSummary> {
-    return getApiClient().get<MaintenanceBoardSummary>('/maintenance/summary');
+  /**
+   * Đếm theo nhóm việc — độc lập với trang/nhóm việc đang mở, nhưng CÙNG chi nhánh với bảng nó
+   * đứng trên (ADR 0052 điều 3).
+   */
+  boardSummary(params: QueryParams = {}): Promise<MaintenanceBoardSummary> {
+    return getApiClient().get<MaintenanceBoardSummary>('/maintenance/summary', params);
   },
 };

@@ -85,7 +85,7 @@ const STEP_FIELDS = {
     'excessDistanceFeePerKm',
     'termsText',
   ],
-  images: ['mainImageUrl', 'images', 'media'],
+  images: ['images', 'media'],
 } as const satisfies Record<string, ReadonlyArray<keyof QuickVehicleValues>>;
 
 const STEP_KEYS = ['info', 'rental', 'images'] as const;
@@ -99,7 +99,6 @@ const REQUIREMENT_STEP: Record<PublishRequirement, (typeof STEP_KEYS)[number]> =
   [PUBLISH_REQUIREMENT.SELF_DRIVE_PRICE]: 'rental',
   [PUBLISH_REQUIREMENT.LONG_TERM_PRICE]: 'rental',
   [PUBLISH_REQUIREMENT.WITH_DRIVER_PRICE]: 'rental',
-  [PUBLISH_REQUIREMENT.MAIN_IMAGE]: 'images',
   [PUBLISH_REQUIREMENT.PHOTOS]: 'images',
   [PUBLISH_REQUIREMENT.PLATE_NUMBER]: 'info',
   [PUBLISH_REQUIREMENT.IDENTITY]: 'info',

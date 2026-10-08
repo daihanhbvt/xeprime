@@ -1173,13 +1173,28 @@ describe('Ảnh xe (14)', () => {
         .set(inContext(id))
         .send({ fileName: 'moi.jpg', contentType: 'image/jpeg', fileSize: 1024 });
       const fresh = presign.body.publicUrl as string;
+      /*
+       * Ô tô phải đủ NĂM góc trong CÙNG một lượt lưu (07/10/2026) — `replaceMedia` thay cả tập,
+       * nên gửi hai góc là gửi một chiếc xe còn trống ba ô. Ba tấm còn lại cũng phải nằm trong kho
+       * ảnh của chính gian hàng, nên mỗi tấm là một lượt presign thật trong phiên này.
+       */
+      const more: string[] = [];
+      for (const name of ['phai.jpg', 'sau.jpg', 'trai.jpg']) {
+        const one = await request(app.getHttpServer())
+          .post('/uploads/vehicle-images/presign')
+          .set(inContext(id))
+          .send({ fileName: name, contentType: 'image/jpeg', fileSize: 1024 });
+        more.push(one.body.publicUrl as string);
+      }
       const res = await request(app.getHttpServer())
         .patch(`/vehicles/${liteVehicleId}`)
         .set(inContext(id))
         .send({
-          mainImageUrl: fresh,
           media: [
             { url: fresh, type: VEHICLE_IMAGE_TYPE.FRONT },
+            { url: more[0], type: VEHICLE_IMAGE_TYPE.RIGHT },
+            { url: more[1], type: VEHICLE_IMAGE_TYPE.REAR },
+            { url: more[2], type: VEHICLE_IMAGE_TYPE.LEFT },
             { url: 'https://legacy.example/cu.jpg', type: VEHICLE_IMAGE_TYPE.INTERIOR },
           ],
         });
@@ -1188,8 +1203,10 @@ describe('Ảnh xe (14)', () => {
         where: { supportContextId: id, action: 'vehicle.support.update' },
       });
       expect(row.supportCapability).toBe(SUPPORT_CAPABILITY.VEHICLE_MEDIA_MANAGE);
-      expect((row.afterJson as { mainImageUrl: string }).mainImageUrl).toBe(fresh);
-      expect((row.afterJson as { media: unknown[] }).media).toHaveLength(2);
+      expect((row.afterJson as { media: unknown[] }).media).toHaveLength(5);
+      // Ảnh BÌA do server suy từ ô mặt trước, không phải một ô payload gửi lên.
+      const saved = await prisma.vehicle.findUniqueOrThrow({ where: { id: liteVehicleId } });
+      expect(saved.mainImageUrl).toBe(fresh);
     },
   );
 });

@@ -241,6 +241,7 @@ export function QuickVehicleOwnerStep({
               }}
               title={t('fields.address.title')}
               required
+              wardRequired={false}
               prefillRememberedProvince
             />
           </YStack>

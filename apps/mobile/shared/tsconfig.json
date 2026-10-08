@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  /* CHỈ cho editor (VS Code mở file trong shared/ tìm tsconfig gần nhất). Build/typecheck thật
+     chạy từ tsconfig của từng app. Overlay giống app Partner: `@/x` thử bản riêng của app rồi rơi
+     về shared — để `@/navigation/routes`, `@/app-profile` phân giải được. */
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["../manage/src/*", "./src/*"]
+    }
+  },
+  "include": ["global.d.ts", "src/**/*.ts", "src/**/*.tsx", "../manage/expo-env.d.ts"],
+  "exclude": ["node_modules"]
+}

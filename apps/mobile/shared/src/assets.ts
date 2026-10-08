@@ -4,6 +4,11 @@ import logoMark from '../assets/images/xeprime-mark.png';
 import shopOnboarding from '../assets/images/shop-onboarding.png';
 import ownerPersonalCar from '../assets/images/owner-personal-car.png';
 import ownerShopShowroom from '../assets/images/owner-shop-showroom.png';
+// Ảnh CHỤP THẬT từ app XePrime Partner cho màn hướng dẫn đăng ký ở app khách. Chụp lại khi giao
+// diện ba màn đó đổi: form tạo tài khoản đối tác, màn chọn cách cho thuê, wizard đăng xe.
+import partnerGuideAccount from '../assets/images/partner-guide/step-account.png';
+import partnerGuideChoose from '../assets/images/partner-guide/step-choose.png';
+import partnerGuidePublish from '../assets/images/partner-guide/step-publish.png';
 
 /**
  * Ảnh tĩnh gom một chỗ vì Metro nội suy đường dẫn lúc build — không dựng động được.
@@ -23,6 +28,9 @@ export const images = {
   shopOnboarding,
   ownerPersonalCar,
   ownerShopShowroom,
+  partnerGuideAccount,
+  partnerGuideChoose,
+  partnerGuidePublish,
 } as const;
 
 /**
@@ -32,6 +40,9 @@ export const images = {
  */
 export const OWNER_PERSONAL_CAR_RATIO = 640 / 420;
 export const OWNER_SHOP_SHOWROOM_RATIO = 720 / 420;
+
+/** Tỉ lệ (rộng ÷ cao) của ba ảnh chụp hướng dẫn — cùng khung cắt 1080×2190, thu về 480 ngang. */
+export const PARTNER_GUIDE_SHOT_RATIO = 480 / 973;
 
 /** Tỉ lệ THẬT của file (rộng ÷ cao) — sai số ở đây là logo bị bóp méo. */
 export const LOGO_RATIO = 1024 / 331;

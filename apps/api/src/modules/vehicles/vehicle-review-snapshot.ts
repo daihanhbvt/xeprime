@@ -56,7 +56,7 @@ export async function buildVehicleReviewSnapshot(
     db.vehicleImage.findMany({
       where: { vehicleId: args.vehicleId },
       orderBy: { sortOrder: 'asc' },
-      select: { imageUrl: true },
+      select: { imageUrl: true, imageType: true },
     }),
     db.vehicleFeature.findMany({
       where: { vehicleId: args.vehicleId },
@@ -99,8 +99,14 @@ export async function buildVehicleReviewSnapshot(
       electricConsumptionKwhPer100Km: decimalText(vehicle.electricConsumptionKwhPer100Km),
       description: vehicle.description,
       mainImageUrl: vehicle.mainImageUrl,
-      // Ảnh đại diện ĐỨNG ĐẦU rồi mới tới thư viện, khử trùng theo URL — đúng tập mà cổng gửi
-      // duyệt đếm (`countDistinctImages`), nên "đủ 4 ảnh" ở đây và ở đó là một con số.
+      /*
+       * Ảnh BÌA đứng đầu rồi mới tới thư viện, khử trùng theo URL — nên `images[0]` là tấm ảnh
+       * mà phiếu duyệt trưng ra (`approval_vehicle_subjects.main_image_url`).
+       *
+       * Từ 07/10/2026 ảnh bìa CHÍNH LÀ ảnh mặt trước trong thư viện, nên phép hợp này gần như
+       * luôn là một no-op; nó ở lại để xe cũ (bìa là một tấm riêng, không nằm trong thư viện) vẫn
+       * vào phiếu duyệt với đúng tấm người duyệt đang thấy ngoài chợ.
+       */
       images: [
         ...new Set(
           [vehicle.mainImageUrl, ...images.map((image) => image.imageUrl)].filter(
@@ -108,6 +114,13 @@ export async function buildVehicleReviewSnapshot(
           ),
         ),
       ],
+      /*
+       * Ảnh kèm GÓC CHỤP (07/10/2026) — điều kiện ảnh của cổng duyệt hỏi đủ GÓC (ô tô 5, xe máy
+       * 2), và `images` ở trên chỉ là URL. Danh mục kiểm tra tự động của phiếu
+       * (`vehicleReviewAutoChecks`) chấm trên mảng này; phiếu cũ không có nó và được chấm theo
+       * luật dự phòng ghi trong hàm đó.
+       */
+      media: images.map((image) => ({ url: image.imageUrl, type: image.imageType })),
       features: features.map((f) => f.featureKey),
     },
     pricing: {

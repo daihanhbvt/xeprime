@@ -2,6 +2,7 @@ import type { Href } from 'expo-router';
 import { PERMISSION, PLAN_FEATURE, type Permission, type PlanFeature } from '@xeprime/types';
 import type { IconName } from '@/components/ui/Chip';
 import { ROUTES } from '@/navigation/routes';
+import { PARTNER_TRACK, type PartnerTrack } from './partner-track';
 
 /**
  * Cây menu khu quản lý — gương của `apps/web/src/constants/nav.ts`: cùng KHOÁ, cùng khối, cùng
@@ -324,9 +325,9 @@ const SHOP_NAV: readonly ManageNavSection[] = [
          */
         key: 'account',
         /*
-         * Dùng lại khoá `manage.security` của web, không tạo `manage.account` thứ hai: mục này mở
-         * đúng màn mà `/manage/account` bên web chuyển hướng tới (`/manage/security`), nên hai nhãn
-         * khác nhau cho cùng một màn là hai chỗ để chúng trôi khỏi nhau.
+         * Web không có mục này trong menu trái — chỉ trong thẻ người dùng ("Tài khoản & bảo mật", PR #151;
+         * bản native là `ManageAccountSheet`). Drawer giữ thêm một lối, nhãn dùng khoá có sẵn của
+         * namespace `Navigation` (`manage.security`) thay vì thêm khoá dịch dùng chung với web.
          */
         labelKey: 'manage.security',
         icon: 'person-outline',
@@ -356,13 +357,158 @@ const SHOP_NAV: readonly ManageNavSection[] = [
 ];
 
 /**
- * Cây menu của khu quản lý — chỉ còn MỘT cây (tách app 25/09/2026): `PLATFORM_NAV` đã ra khỏi
- * app vì admin nền tảng không được phục vụ trên mobile (cổng đăng nhập Partner trả 403
- * `PARTNER_ACCESS_REQUIRED`). Giữ chữ ký nhận cờ để các nơi gọi không phải đổi cùng đợt;
- * cờ không còn rẽ nhánh gì.
+ * Menu của chủ xe tuyến HOA HỒNG (Owner Lite) trong app XePrime Partner — gương của `OWNER_LITE_NAV`
+ * bên web (ADR 0053: Owner Lite rời khu tài khoản của app khách). Chỉ các trang trong danh sách
+ * trắng `isCommissionPath`; không có trang nào của Full Manage (khách hàng, thu chi, bảo dưỡng…).
  */
-export function manageNavForScope(_isPlatform: boolean): readonly ManageNavSection[] {
-  return SHOP_NAV;
+const OWNER_LITE_NAV: readonly ManageNavSection[] = [
+  {
+    key: 'owner-operations',
+    labelKey: 'manageGroups.operations',
+    pinned: true,
+    children: [
+      {
+        key: 'home',
+        labelKey: 'manage.dashboard',
+        icon: 'speedometer-outline',
+        permission: PERMISSION.TENANT_VIEW,
+        href: ROUTES.manage.home(),
+      },
+      {
+        key: 'vehicles',
+        labelKey: 'account.vehicles',
+        icon: 'list-outline',
+        permission: PERMISSION.VEHICLE_VIEW,
+        href: ROUTES.manage.vehicles(),
+      },
+      {
+        key: 'calendar',
+        labelKey: 'account.calendar',
+        icon: 'calendar-outline',
+        permission: PERMISSION.CALENDAR_VIEW,
+        href: ROUTES.manage.calendar(),
+      },
+      {
+        key: 'booking-requests',
+        labelKey: 'manage.bookingRequests',
+        icon: 'mail-unread-outline',
+        permission: PERMISSION.BOOKING_REQUEST_VIEW,
+        href: ROUTES.manage.requests(),
+        badge: MANAGE_NAV_BADGE.BOOKING_REQUESTS_PENDING,
+      },
+      {
+        key: 'bookings',
+        labelKey: 'manage.bookings',
+        icon: 'checkbox-outline',
+        permission: PERMISSION.BOOKING_VIEW,
+        href: ROUTES.manage.bookings(),
+      },
+      {
+        key: 'chat',
+        labelKey: 'manage.chat',
+        icon: 'chatbubble-ellipses-outline',
+        permission: PERMISSION.TENANT_VIEW,
+        href: ROUTES.manage.chat(),
+        badge: MANAGE_NAV_BADGE.CHAT_UNREAD,
+      },
+    ],
+  },
+  {
+    key: 'owner-money',
+    labelKey: 'manageGroups.business',
+    children: [
+      {
+        key: 'balance',
+        labelKey: 'manage.balance',
+        icon: 'wallet-outline',
+        permission: PERMISSION.TENANT_VIEW,
+        href: ROUTES.manage.balance(),
+        ownerOnly: true,
+      },
+      {
+        key: 'bank-accounts',
+        labelKey: 'account.bankAccounts',
+        icon: 'card-outline',
+        permission: PERMISSION.TENANT_VIEW,
+        href: ROUTES.manage.bankAccounts(),
+        ownerOnly: true,
+      },
+      {
+        key: 'tax',
+        labelKey: 'account.tax',
+        icon: 'document-text-outline',
+        permission: PERMISSION.TENANT_VIEW,
+        href: ROUTES.manage.tax(),
+        ownerOnly: true,
+      },
+      {
+        key: 'subscription',
+        labelKey: 'account.subscription',
+        icon: 'gift-outline',
+        permission: PERMISSION.TENANT_VIEW,
+        href: ROUTES.manage.subscription(),
+        ownerOnly: true,
+      },
+    ],
+  },
+  {
+    key: 'owner-profile',
+    labelKey: 'manageGroups.storefront',
+    children: [
+      {
+        key: 'registration',
+        labelKey: 'account.ownerProfile',
+        icon: 'id-card-outline',
+        permission: PERMISSION.TENANT_VIEW,
+        href: ROUTES.manage.registration(),
+        ownerOnly: true,
+      },
+    ],
+  },
+  {
+    key: 'owner-support',
+    labelKey: 'manageGroups.support',
+    children: [
+      {
+        key: 'host-guide',
+        labelKey: 'account.hostGuide',
+        icon: 'book-outline',
+        permission: PERMISSION.TENANT_VIEW,
+        href: ROUTES.manage.hostGuide(),
+      },
+      {
+        key: 'contracts-documents',
+        labelKey: 'account.contractsDocuments',
+        icon: 'documents-outline',
+        permission: PERMISSION.TENANT_VIEW,
+        href: ROUTES.manage.contractsDocuments(),
+      },
+      {
+        key: 'data-protection',
+        labelKey: 'account.dataProtection',
+        icon: 'shield-checkmark-outline',
+        permission: PERMISSION.TENANT_VIEW,
+        href: ROUTES.manage.dataProtection(),
+      },
+      {
+        key: 'support-cases',
+        labelKey: 'manage.supportCases',
+        icon: 'alert-circle-outline',
+        permission: PERMISSION.SUPPORT_VIEW,
+        href: ROUTES.manage.supportCases(),
+      },
+    ],
+  },
+];
+
+/**
+ * Cây menu theo TUYẾN (web `navForZone(ZONE.PARTNER, track)`): gói ⇒ Full Manage, hoa hồng ⇒
+ * Owner Lite; hai tuyến còn lại không có menu (`ScopeGuard` giữ họ ở màn chọn tuyến/onboarding).
+ */
+export function manageNavForTrack(track: PartnerTrack): readonly ManageNavSection[] {
+  if (track === PARTNER_TRACK.PACKAGE) return SHOP_NAV;
+  if (track === PARTNER_TRACK.COMMISSION) return OWNER_LITE_NAV;
+  return [];
 }
 
 /** Trải phẳng mọi mục lá của một cây menu — cùng vai trò `flattenLeaves` của web. */

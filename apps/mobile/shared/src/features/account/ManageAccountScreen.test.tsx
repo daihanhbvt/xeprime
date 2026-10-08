@@ -53,6 +53,7 @@ const SESSION: authApi.CurrentUser = {
     slug: 'viet-car',
     status: 'active',
     onboardingState: 'commission',
+    branchScope: 'all',
     logoUrl: null,
     roleKey: TENANT_ROLE.SHOP_OWNER,
     features: [],
@@ -87,8 +88,11 @@ async function renderScreen(profile: UserProfile = PROFILE) {
   return { ...view, queryClient, meSpy };
 }
 
-/** Mốc neo "thẻ hồ sơ đã hiện" — mô tả của khối SỬA, thứ chỉ màn này có. */
-const PROFILE_CARD_TEXT = 'Cập nhật tên hiển thị và ảnh đại diện của bạn.';
+/**
+ * Mốc neo "thẻ hồ sơ đã hiện" — nút bút chì mở khối SỬA, thứ chỉ màn CHO SỬA mới có.
+ * Trước 06/10/2026 mốc này là dòng mô tả của khối sửa; khối đó nay chỉ dựng khi đang sửa.
+ */
+const EDIT_PROFILE = new RegExp('Chỉnh sửa hồ sơ$');
 
 beforeEach(() => {
   mockPush.mockClear();
@@ -105,7 +109,7 @@ describe('ManageAccountScreen — hồ sơ con người', () => {
   it('đọc hồ sơ từ `GET /users/me` — chỉ ở đó mới có SĐT và tình trạng xác thực', async () => {
     const view = await renderScreen();
 
-    expect(await view.findByText(PROFILE_CARD_TEXT)).toBeTruthy();
+    expect(await view.findByRole('button', { name: EDIT_PROFILE })).toBeTruthy();
     expect(view.meSpy).toHaveBeenCalledTimes(1);
     expect(view.getByText('an@xeprime.test')).toBeTruthy();
     expect(view.getByText('0901234567')).toBeTruthy();
@@ -113,20 +117,20 @@ describe('ManageAccountScreen — hồ sơ con người', () => {
 
   it('đã có email/SĐT: mỗi dòng có nút "Đổi" của riêng nó', async () => {
     const view = await renderScreen();
-    await view.findByText(PROFILE_CARD_TEXT);
+    await view.findByRole('button', { name: EDIT_PROFILE });
     // Khớp CHÍNH XÁC: dòng "Đổi mật khẩu" bên dưới cũng mang nhãn bắt đầu bằng "Đổi".
     expect(view.getAllByRole('button', { name: 'Đổi' })).toHaveLength(2);
   });
 
   it('còn trống: nút đổi thành "Thêm" — cùng một luồng, khác chữ theo việc', async () => {
     const view = await renderScreen({ ...PROFILE, email: null, phone: null });
-    await view.findByText(PROFILE_CARD_TEXT);
+    await view.findByRole('button', { name: EDIT_PROFILE });
     expect(view.getAllByRole('button', { name: 'Thêm' })).toHaveLength(2);
   });
 
   it('luôn giải thích vì sao đổi email/SĐT lại cần một mã', async () => {
     const view = await renderScreen();
-    await view.findByText(PROFILE_CARD_TEXT);
+    await view.findByRole('button', { name: EDIT_PROFILE });
     expect(view.getByText('Thông tin đăng nhập')).toBeTruthy();
     expect(view.getByText(/cần một mã 6 số/)).toBeTruthy();
   });
@@ -146,16 +150,16 @@ describe('ManageAccountScreen — hồ sơ con người', () => {
     );
 
     expect(await view.findByRole('button', { name: 'Thử lại' })).toBeTruthy();
-    expect(view.queryByText(PROFILE_CARD_TEXT)).toBeNull();
+    expect(view.queryByRole('button', { name: EDIT_PROFILE })).toBeNull();
   });
 });
 
 describe('ManageAccountScreen — chỉnh sửa hồ sơ', () => {
   it('mở chế độ sửa thì hiện ĐÚNG hai trường backend nhận', async () => {
     const view = await renderScreen();
-    await view.findByText(PROFILE_CARD_TEXT);
+    await view.findByRole('button', { name: EDIT_PROFILE });
 
-    await fireEvent.press(view.getByRole('button', { name: new RegExp('Chỉnh sửa hồ sơ$') }));
+    await fireEvent.press(view.getByRole('button', { name: EDIT_PROFILE }));
 
     expect(await view.findByText(/Họ tên hiển thị/)).toBeTruthy();
     // Ảnh đại diện nay là ô TẢI ẢNH (presign → R2), không còn ô dán URL.
@@ -164,8 +168,8 @@ describe('ManageAccountScreen — chỉnh sửa hồ sơ', () => {
 
   it('huỷ chỉnh sửa TRẢ LẠI dữ liệu gốc, không giữ thứ vừa gõ dở', async () => {
     const view = await renderScreen();
-    await view.findByText(PROFILE_CARD_TEXT);
-    await fireEvent.press(view.getByRole('button', { name: new RegExp('Chỉnh sửa hồ sơ$') }));
+    await view.findByRole('button', { name: EDIT_PROFILE });
+    await fireEvent.press(view.getByRole('button', { name: EDIT_PROFILE }));
 
     await fireEvent.changeText(await view.findByDisplayValue('Nguyễn Văn An'), 'Tên gõ dở');
     await fireEvent.press(view.getByRole('button', { name: 'Huỷ' }));
@@ -178,8 +182,8 @@ describe('ManageAccountScreen — chỉnh sửa hồ sơ', () => {
   it('tên rỗng bị chặn NGAY ở client — không gửi request', async () => {
     const update = jest.spyOn(accountApi, 'updateMe');
     const view = await renderScreen();
-    await view.findByText(PROFILE_CARD_TEXT);
-    await fireEvent.press(view.getByRole('button', { name: new RegExp('Chỉnh sửa hồ sơ$') }));
+    await view.findByRole('button', { name: EDIT_PROFILE });
+    await fireEvent.press(view.getByRole('button', { name: EDIT_PROFILE }));
 
     await fireEvent.changeText(await view.findByDisplayValue('Nguyễn Văn An'), '   ');
     await fireEvent.press(view.getByRole('button', { name: new RegExp('Lưu thay đổi$') }));
@@ -193,10 +197,10 @@ describe('ManageAccountScreen — chỉnh sửa hồ sơ', () => {
     const update = jest.spyOn(accountApi, 'updateMe').mockResolvedValue(saved);
 
     const view = await renderScreen();
-    await view.findByText(PROFILE_CARD_TEXT);
+    await view.findByRole('button', { name: EDIT_PROFILE });
     const invalidate = jest.spyOn(view.queryClient, 'invalidateQueries');
 
-    await fireEvent.press(view.getByRole('button', { name: new RegExp('Chỉnh sửa hồ sơ$') }));
+    await fireEvent.press(view.getByRole('button', { name: EDIT_PROFILE }));
     await fireEvent.changeText(await view.findByDisplayValue('Nguyễn Văn An'), 'Nguyễn Văn Bình');
     await fireEvent.press(view.getByRole('button', { name: new RegExp('Lưu thay đổi$') }));
 
@@ -224,7 +228,7 @@ describe('ManageAccountScreen — chỉnh sửa hồ sơ', () => {
 describe('ManageAccountScreen — lối đi bảo mật', () => {
   it('mở đúng màn đổi mật khẩu và màn yêu cầu xoá tài khoản', async () => {
     const view = await renderScreen();
-    await view.findByText(PROFILE_CARD_TEXT);
+    await view.findByRole('button', { name: EDIT_PROFILE });
 
     await fireEvent.press(view.getByRole('menuitem', { name: 'Đổi mật khẩu' }));
     expect(mockPush).toHaveBeenCalledWith(ROUTES.account.changePassword());

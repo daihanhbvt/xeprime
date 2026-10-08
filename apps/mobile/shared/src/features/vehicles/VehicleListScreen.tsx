@@ -21,6 +21,9 @@ import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManageListShell } from '@/features/shell/ManageListShell';
+import { withBranchReturn } from '@/features/branches/branch-link';
+import { BranchFilterField, useBranchEmptyCopy } from '@/features/branches/components/BranchFilterField';
+import { useScreenBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { ManageStateScroll } from '@/features/shell/ManageStateScroll';
 import type { FilterGroup } from '@/features/shell/ManageFilterSheet';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
@@ -37,18 +40,10 @@ import { scrollThrottle } from '@/theme/motion';
 import { FleetSummaryBar } from './components/FleetSummaryBar';
 import { VehicleCard } from './components/VehicleCard';
 import { useInfiniteVehicles, useVehicleAlerts, useVehicleStats } from './hooks/use-vehicles';
-import type { VehicleListItem, VehicleSort } from './api';
+import { useVehicleAlertView } from './hooks/use-vehicle-alert-view';
+import type { VehicleAlertGroup, VehicleListItem, VehicleSort } from './api';
+import { DEFAULT_VEHICLE_SORT, VEHICLE_SORT_VALUES, useVehicleSortLabel } from './vehicle-sort';
 
-/** Khớp `VEHICLE_SORT` ở backend DTO — năm giá trị, không nhiều hơn. */
-const VEHICLE_SORT_VALUES: readonly VehicleSort[] = [
-  'newest',
-  'name_asc',
-  'code_asc',
-  'price_asc',
-  'price_desc',
-];
-
-const DEFAULT_SORT: VehicleSort = 'newest';
 
 const SKELETON_ROWS = 3;
 const SEARCH_DEBOUNCE_MS = 350;
@@ -76,6 +71,7 @@ function vehicleKeyExtractor(vehicle: VehicleListItem): string {
  */
 export function VehicleListScreen() {
   const t = useTranslations('Vehicles.list');
+  const sortLabel = useVehicleSortLabel();
   const tLabels = useTranslations('Common.labels');
   const tActions = useTranslations('Common.actions');
   const navigateOnce = useNavigateOnce();
@@ -86,13 +82,17 @@ export function VehicleListScreen() {
   const [serviceType, setServiceType] = useState<string>(ALL);
   const [operationStatus, setOperationStatus] = useState<string>(ALL);
   const [publicStatus, setPublicStatus] = useState<string>(ALL);
-  const [sort, setSort] = useState<VehicleSort>(DEFAULT_SORT);
+  const [sort, setSort] = useState<VehicleSort>(DEFAULT_VEHICLE_SORT);
   const [search, setSearch] = useState('');
   /** Tấm trượt chọn LỐI thêm xe — đăng nhanh hay thiết lập nâng cao. */
   const [adding, setAdding] = useState(false);
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
+  /* Ô "Chi nhánh" của màn, sống trên tham số route (ADR 0052) — dải chỉ số đi CÙNG chi nhánh. */
+  const { branchId, filter: branchFilter } = useScreenBranchFilter();
+  const branchEmpty = useBranchEmptyCopy(branchFilter, branchId);
 
   const query = useInfiniteVehicles({
+    ...(branchId ? { branchId } : {}),
     ...(vehicleType === ALL ? {} : { vehicleType }),
     ...(serviceType === ALL ? {} : { serviceType }),
     ...(operationStatus === ALL ? {} : { operationStatus }),
@@ -114,6 +114,16 @@ export function VehicleListScreen() {
    */
   const stats = useVehicleStats(ids);
   const alerts = useVehicleAlerts(ids);
+  /*
+   * Cảnh báo đã LỌC theo năng lực — đúng `alertsOf` của `VehicleCardGrid` web: cảnh báo bảo
+   * dưỡng chỉ hiện khi người đọc có module bảo dưỡng (quyền ∧ cờ gói). Màn này là cổng quản lý.
+   */
+  const alertView = useVehicleAlertView(false);
+  const alertsById = useMemo(() => {
+    const map = new Map<string, VehicleAlertGroup>();
+    alerts.byId.forEach((group, id) => map.set(id, { ...group, alerts: alertView(id, group.alerts) }));
+    return map;
+  }, [alertView, alerts.byId]);
 
   /*
    * Mọi thay đổi bộ lọc đều VỀ TRANG 1: đứng ở trang 7 rồi lọc còn 12 bản ghi thì trang 7 không
@@ -183,15 +193,16 @@ export function VehicleListScreen() {
         key: 'sort',
         label: t('sort.label'),
         value: sort,
-        resetValue: DEFAULT_SORT,
-        options: VEHICLE_SORT_VALUES.map((value) => ({ value, label: sortLabel(t, value) })),
+        resetValue: DEFAULT_VEHICLE_SORT,
+        options: VEHICLE_SORT_VALUES.map((value) => ({ value, label: sortLabel(value) })),
       },
     ];
-  }, [t, tLabels, domainLabel, vehicleType, serviceType, operationStatus, publicStatus, sort]);
+  }, [t, tLabels, domainLabel, sortLabel, vehicleType, serviceType, operationStatus, publicStatus, sort]);
 
   const openVehicle = useCallback(
-    (vehicle: VehicleListItem) => navigateOnce(ROUTES.manage.vehicleDetail(vehicle.id)),
-    [navigateOnce],
+    (vehicle: VehicleListItem) =>
+      navigateOnce(withBranchReturn(ROUTES.manage.vehicleDetail(vehicle.id), branchId)),
+    [navigateOnce, branchId],
   );
 
   const editVehicle = useCallback(
@@ -262,7 +273,7 @@ export function VehicleListScreen() {
         stats={stats.byId.get(item.id)}
         statsLoading={stats.pendingIds.has(item.id)}
         statsFailed={stats.isError}
-        alerts={alerts.byId.get(item.id)}
+        alerts={alertsById.get(item.id)}
         alertsLoading={alerts.pendingIds.has(item.id)}
         alertsFailed={alerts.isError}
       />
@@ -273,7 +284,7 @@ export function VehicleListScreen() {
       stats.byId,
       stats.pendingIds,
       stats.isError,
-      alerts.byId,
+      alertsById,
       alerts.pendingIds,
       alerts.isError,
     ],
@@ -326,7 +337,13 @@ export function VehicleListScreen() {
               />
             ) : null
           }
-          summary={<FleetSummaryBar enabled={items.length > 0 || query.isInitialLoading} />}
+          branch={<BranchFilterField filter={branchFilter} value={branchId} />}
+          summary={
+            <FleetSummaryBar
+              enabled={items.length > 0 || query.isInitialLoading}
+              branchId={branchId}
+            />
+          }
           searchValue={search}
           searchLabel={t('filters.search')}
           searchPlaceholder={t('filters.searchPlaceholder')}
@@ -377,7 +394,13 @@ export function VehicleListScreen() {
                 là gỡ bộ lọc, cái kia là thêm xe đầu tiên. Dùng chung một câu là bỏ rơi cả hai.
               */
               inStateScroll(
-                filtered ? (
+                branchEmpty && !filtered ? (
+                  <ScreenMessage
+                    icon="location-outline"
+                    title={branchEmpty.title}
+                    description={branchEmpty.hint}
+                  />
+                ) : filtered ? (
                   <ScreenMessage
                     icon="search-outline"
                     title={t('grid.noResultsTitle')}
@@ -436,25 +459,31 @@ export function VehicleListScreen() {
       <BottomSheet open={adding} onClose={() => setAdding(false)} title={t('page.addVehicle')}>
         <YStack gap={space.xs}>
           {/*
-            "Đăng nhanh" đứng TRƯỚC và mang tông chính — đúng thứ tự web: nó là nút chính, còn
-            "Thiết lập nâng cao" nằm trong menu xổ. Phần lớn xe thêm mới là xe tự lái thông
-            thường, và bốn bước ngắn là đường đúng cho chúng.
+            "Thiết lập nâng cao" đứng TRƯỚC và mang tông chính — đúng web từ 29/09/2026: đây là
+            cổng của GIAN HÀNG, và chỉ wizard nâng cao mới hỏi nguồn xe, nhiều dịch vụ và chi nhánh
+            giữ xe. "Đăng nhanh" lùi xuống lựa chọn thứ hai.
           */}
           <SheetActionRow
-            icon="flash-outline"
-            tone="primary"
-            label={t('page.addVehicleQuick')}
-            onPress={() => {
-              setAdding(false);
-              navigateOnce(ROUTES.listYourVehicle.register(VEHICLE_REGISTRATION_SOURCE.MANAGE));
-            }}
-          />
-          <SheetActionRow
             icon="options-outline"
+            tone="primary"
             label={t('page.addVehicleAdvanced')}
             onPress={() => {
               setAdding(false);
-              navigateOnce(ROUTES.manage.vehicleNew());
+              // Chi nhánh đang lọc là GỢI Ý cho form (ADR 0052 điều 6) — form điền sẵn, đổi được.
+              navigateOnce(withBranchReturn(ROUTES.manage.vehicleNew(), branchId));
+            }}
+          />
+          <SheetActionRow
+            icon="flash-outline"
+            label={t('page.addVehicleQuick')}
+            onPress={() => {
+              setAdding(false);
+              navigateOnce(
+                withBranchReturn(
+                  ROUTES.listYourVehicle.register(VEHICLE_REGISTRATION_SOURCE.MANAGE),
+                  branchId,
+                ),
+              );
             }}
           />
         </YStack>
@@ -504,23 +533,4 @@ function ListFooter({
       <ActivityIndicator color={colors.primary} />
     </YStack>
   );
-}
-
-/** Liệt kê tường minh — khoá i18n ghép động lọt qua typecheck của `use-intl`. */
-function sortLabel(
-  t: ReturnType<typeof useTranslations<'Vehicles.list'>>,
-  sort: VehicleSort,
-): string {
-  switch (sort) {
-    case 'name_asc':
-      return t('sort.name_asc');
-    case 'code_asc':
-      return t('sort.code_asc');
-    case 'price_asc':
-      return t('sort.price_asc');
-    case 'price_desc':
-      return t('sort.price_desc');
-    default:
-      return t('sort.newest');
-  }
 }
