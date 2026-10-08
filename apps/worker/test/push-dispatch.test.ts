@@ -1,4 +1,4 @@
-import { after, before, test } from 'node:test';
+import { after, before, beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
@@ -102,6 +102,37 @@ before(async () => {
       providerToken: `tok-${deviceId}`,
       platform: PUSH_PLATFORM.ANDROID,
     },
+  });
+});
+
+/*
+ * Dọn hàng đợi TRƯỚC TỪNG test.
+ *
+ * Cả file dùng CHUNG một người nhận và một thiết bị, trong khi `dispatchPushDeliveries` vét
+ * TOÀN BỘ hàng đợi đến hạn chứ không riêng dòng mà test vừa seed. Mọi test ở đây đều khẳng định
+ * con số TUYỆT ĐỐI (`sent === 1`, `devicesDisabled === 1`), nên một dòng còn sót từ test trước
+ * — dòng chờ retry của "lỗi tạm thời", dòng quá hạn không ai đóng — biến thành một lượt gửi thừa
+ * ở test sau. Chạy riêng thì xanh, chạy cả file thì đỏ: đúng loại lỗi làm người đọc đi tìm bug
+ * trong code production.
+ *
+ * Xoá `notifications` của chính người này luôn: `push_deliveries` trỏ vào nó, và để lại thì mỗi
+ * lượt chạy bồi thêm rác vào database dev.
+ */
+beforeEach(async () => {
+  if (!dbAvailable) return;
+  // `push_deliveries` chỉ có khoá vô hướng (không khai quan hệ), nên lọc qua danh sách id thiết bị
+  // của chính người này thay vì một `where` lồng.
+  const devices = await prisma.pushDevice.findMany({ where: { userId }, select: { id: true } });
+  await prisma.pushDelivery.deleteMany({
+    where: { pushDeviceId: { in: devices.map((d) => d.id) } },
+  });
+  await prisma.notification.deleteMany({ where: { userId } });
+  // Thiết bị phụ do từng test tự tạo (token chết, thiết bị thứ hai) không được sống sang test sau.
+  await prisma.pushDevice.deleteMany({ where: { userId, id: { not: deviceId } } });
+  // …và thiết bị gốc phải trở lại trạng thái BẬT: một test trước có thể vừa tắt nó.
+  await prisma.pushDevice.update({
+    where: { id: deviceId },
+    data: { enabled: true, disabledAt: null },
   });
 });
 

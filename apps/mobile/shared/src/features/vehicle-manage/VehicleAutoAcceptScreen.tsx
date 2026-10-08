@@ -1,7 +1,7 @@
 import { yupResolver } from '@hookform/resolvers/yup';
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo } from 'react';
-import { Controller, useForm, useWatch } from 'react-hook-form';
+import { useMemo, useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -28,12 +28,7 @@ import { useShellScope } from '@/features/shell/use-shell-scope';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { ROUTES } from '@/navigation/routes';
-import {
-  VEHICLE_MANAGE_SECTION,
-  type VehicleManageSection,
-} from '@/navigation/vehicle-manage-section';
 import { colors, fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
-import { VehicleManageShell } from './components/VehicleManageShell';
 import type { VehicleServiceSetting } from './api';
 import {
   usePatchVehicleServiceSetting,
@@ -45,47 +40,18 @@ const RULES = ['schedule', 'window', 'quote', 'longTerm'] as const;
 
 const HOUR = 60;
 
+/*
+ * Form chỉ còn hai ô riêng của CÓ TÀI XẾ. Công tắc tự nhận KHÔNG thuộc form (web 30/09/2026): nó
+ * LƯU NGAY khi bấm, cùng `PATCH /vehicles/:id/service-settings/:service`, chỉ gửi đúng
+ * `autoAcceptEnabled` — server gộp từng trường, nên hai ô bên dưới không bị ghi đè.
+ */
 const schema = yup.object({
-  autoAcceptEnabled: yup.boolean().defined(),
   // Giá trị giữ dạng CHUỖI vì `options` của ô chọn (web + native) khoá `value: string`; số thô
   // không khớp option nào nên ô hiện ra số phút trần ("60") hoặc bỏ trống. Quy về số lúc gửi đi.
   minRentalMinutes: yup.string().nullable().defined(),
   preferredRouteTypes: yup.array().of(yup.string().defined()).defined(),
 });
 type FormValues = yup.InferType<typeof schema>;
-
-/**
- * Mục "Tối ưu nhận chuyến" — MỘT màn cho cả hai dịch vụ, bản native của `AutoAcceptSection`.
- *
- * Công tắc ở đây chỉ GHI thiết lập; quyết định tự nhận nằm ở server
- * (`VehicleSettingsService.evaluateAutoAccept` + `BookingRequestsService.tryAutoAccept`) — màn
- * hình không đoán lại luật, nó chỉ liệt kê chúng ở khối "Điều kiện để hệ thống tự nhận".
- */
-export function VehicleAutoAcceptScreen({
-  vehicleId,
-  serviceType,
-}: {
-  vehicleId: string;
-  serviceType: ServiceType;
-}) {
-  const t = useTranslations('VehicleManage');
-  const withDriver = serviceType === SERVICE_TYPE.WITH_DRIVER;
-  const section: VehicleManageSection = withDriver
-    ? VEHICLE_MANAGE_SECTION.WITH_DRIVER_OPTIMIZATION
-    : VEHICLE_MANAGE_SECTION.SELF_DRIVE_OPTIMIZATION;
-
-  return (
-    <VehicleManageShell
-      vehicleId={vehicleId}
-      section={section}
-      title={t(withDriver ? 'nav.withDriverOptimization' : 'nav.selfDriveOptimization')}
-    >
-      {({ canEdit }) => (
-        <AutoAcceptBody vehicleId={vehicleId} serviceType={serviceType} canEdit={canEdit} />
-      )}
-    </VehicleManageShell>
-  );
-}
 
 /**
  * Thân của mục — nạp thiết lập rồi dựng form. Xuất ra ngoài vì cổng QUẢN LÝ dùng lại đúng nó
@@ -119,8 +85,6 @@ export function AutoAcceptBody({
 
   return (
     <AutoAcceptForm
-      // Bản mới về từ server ⇒ dựng lại form với giá trị mới, không giữ bản nháp đã cũ.
-      key={setting.updatedAt ?? 'new'}
       setting={setting}
       serviceType={serviceType}
       vehicleId={vehicleId}
@@ -158,14 +122,45 @@ function AutoAcceptForm({
 
   const values = useMemo<FormValues>(
     () => ({
-      autoAcceptEnabled: setting.autoAcceptEnabled,
       minRentalMinutes: setting.minRentalMinutes == null ? null : String(setting.minRentalMinutes),
       preferredRouteTypes: setting.preferredRouteTypes,
     }),
     [setting],
   );
-  const { control, handleSubmit, reset, formState } = useForm<FormValues>({ resolver, values });
-  const enabled = useWatch({ control, name: 'autoAcceptEnabled' });
+  /* `keepDirtyValues`: bật/tắt công tắc làm thiết lập tải lại; ô đang sửa dở không bị ghi đè. */
+  const { control, handleSubmit, reset, formState } = useForm<FormValues>({
+    resolver,
+    values,
+    resetOptions: { keepDirtyValues: true },
+  });
+
+  /*
+   * Công tắc LƯU NGAY — đúng web `changeAutoAccept`. Giá trị lạc quan gắn với `updatedAt` của
+   * bản đang hiển thị: bản mới (đã lưu) về thì nhường chỗ cho dữ liệu server; lỗi thì bỏ và trả
+   * công tắc về như cũ.
+   */
+  const toggleAuto = usePatchVehicleServiceSetting(vehicleId, serviceType);
+  const [optimistic, setOptimistic] = useState<{ value: boolean; basis: string | null } | null>(
+    null,
+  );
+  const enabled =
+    optimistic && optimistic.basis === (setting.updatedAt ?? null)
+      ? optimistic.value
+      : setting.autoAcceptEnabled;
+
+  function changeAutoAccept(next: boolean) {
+    setOptimistic({ value: next, basis: setting.updatedAt ?? null });
+    toggleAuto.mutate(
+      { autoAcceptEnabled: next },
+      {
+        onSuccess: () => toast.showSuccess(t('autoAccept.saved')),
+        onError: (err) => {
+          setOptimistic(null);
+          toast.showError(errorMessage(err));
+        },
+      },
+    );
+  }
 
   const minRentalOptions = Array.from(
     { length: MIN_RENTAL_MINUTES_RANGE.max / HOUR },
@@ -173,17 +168,12 @@ function AutoAcceptForm({
   ).map((m) => ({ value: String(m), label: t('common.hours', { count: m / HOUR }) }));
 
   const submit = handleSubmit((next) => {
+    // Chỉ có tài xế còn nút Lưu — tự lái không còn trường nào ngoài công tắc lưu ngay.
     patch.mutate(
       {
-        autoAcceptEnabled: next.autoAcceptEnabled,
-        ...(withDriver
-          ? {
-              minRentalMinutes:
-                next.minRentalMinutes == null ? null : Number(next.minRentalMinutes),
-              // Lọc qua `isRouteType` — form giữ string, dây chỉ nhận mã lộ trình thật.
-              preferredRouteTypes: next.preferredRouteTypes.filter(isRouteType),
-            }
-          : {}),
+        minRentalMinutes: next.minRentalMinutes == null ? null : Number(next.minRentalMinutes),
+        // Lọc qua `isRouteType` — form giữ string, dây chỉ nhận mã lộ trình thật.
+        preferredRouteTypes: next.preferredRouteTypes.filter(isRouteType),
       },
       {
         onSuccess: () => toast.showSuccess(t('autoAccept.saved')),
@@ -229,18 +219,14 @@ function AutoAcceptForm({
       ) : null}
 
       <Card>
-        <Controller
-          control={control}
-          name="autoAcceptEnabled"
-          render={({ field }) => (
-            <ToggleRow
-              label={t(withDriver ? 'autoAccept.instantTitle' : 'autoAccept.toggleTitle')}
-              hint={t(withDriver ? 'autoAccept.instantBody' : 'autoAccept.toggleBody')}
-              checked={field.value}
-              disabled={!canEdit || (capabilityBlocked && !setting.autoAcceptEnabled)}
-              onToggle={() => field.onChange(!field.value)}
-            />
-          )}
+        <ToggleRow
+          label={t(withDriver ? 'autoAccept.instantTitle' : 'autoAccept.toggleTitle')}
+          hint={t(withDriver ? 'autoAccept.instantBody' : 'autoAccept.toggleBody')}
+          checked={enabled}
+          disabled={
+            !canEdit || toggleAuto.isPending || (capabilityBlocked && !setting.autoAcceptEnabled)
+          }
+          onToggle={() => changeAutoAccept(!enabled)}
         />
       </Card>
 
@@ -334,7 +320,8 @@ function AutoAcceptForm({
         </YStack>
       </Card>
 
-      {canEdit ? (
+      {/* Nút Lưu chỉ còn ở có tài xế — đúng web. */}
+      {canEdit && withDriver ? (
         <XStack gap={space.sm}>
           {formState.isDirty ? (
             <YStack flexShrink={0}>

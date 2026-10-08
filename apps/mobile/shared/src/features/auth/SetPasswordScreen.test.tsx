@@ -74,9 +74,7 @@ describe('SetPasswordScreen', () => {
     await fireEvent.press(view.getByRole('button', { name: 'Đặt mật khẩu' }));
 
     // Câu NGUYÊN VĂN của server — đúng `SetPasswordPrompt` bên web (`getErrorMessage`).
-    await waitFor(() =>
-      expect(view.getByText('Dữ liệu không hợp lệ')).toBeTruthy(),
-    );
+    await waitFor(() => expect(view.getByText('Dữ liệu không hợp lệ')).toBeTruthy());
     expect(onDone).not.toHaveBeenCalled();
   });
 });

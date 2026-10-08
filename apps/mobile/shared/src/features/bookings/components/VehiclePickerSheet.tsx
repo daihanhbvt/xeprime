@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { BranchFilterField } from '@/features/branches/components/BranchFilterField';
+import { useBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { getErrorMessage } from '@/lib/get-error-message';
@@ -27,24 +29,33 @@ const SEARCH_DEBOUNCE_MS = 350;
  *
  * Xe đang bảo dưỡng/ngừng hoạt động vẫn HIỆN, chỉ gắn nhãn: chủ shop biết chuyện mà hệ thống
  * không biết (xe vừa sửa xong, chưa kịp đổi trạng thái). Ẩn đi là quyết định thay họ.
+ *
+ * Mở sẵn ở chi nhánh danh sách đang lọc (`initialBranchId`) nhưng ĐỔI ĐƯỢC tại chỗ — ADR 0052
+ * điều 6: điều một chiếc xe từ chi nhánh khác sang cho khách là việc bình thường. Lựa chọn là
+ * state CỤC BỘ của tấm (`local`), không ghi bộ nhớ menu.
  */
 export function VehiclePickerSheet({
   open,
   onClose,
   selectedId,
   onSelect,
+  initialBranchId,
 }: {
   open: boolean;
   onClose: () => void;
   selectedId: string | null;
   onSelect: (vehicle: VehicleListItem) => void;
+  initialBranchId?: string | undefined;
 }) {
   const t = useTranslations('Bookings.create.vehicle');
+  const tPicker = useTranslations('BookingRequests.vehiclePicker');
   const tActions = useTranslations('Common.actions');
   const [search, setSearch] = useState('');
   const debounced = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
+  const [branchId, setBranchId] = useState<string | undefined>(initialBranchId);
+  const branch = useBranchFilter({ value: branchId, onChange: setBranchId, local: true });
 
-  const query = useVehiclePicker(debounced.trim(), open);
+  const query = useVehiclePicker(debounced.trim(), open, branchId);
   const items = useMemo(() => query.data?.items ?? [], [query.data]);
 
   return (
@@ -55,6 +66,13 @@ export function VehiclePickerSheet({
         label={t('searchLabel')}
         placeholder={t('searchPlaceholder')}
       />
+
+      <BranchFilterField filter={branch} value={branchId} />
+      {branchId && branch.selectedLabel ? (
+        <Text col={colors.textMuted} fos={fontSize.label}>
+          {tPicker('branchHint', { branch: branch.selectedLabel })}
+        </Text>
+      ) : null}
 
       {query.isPending ? (
         <YStack gap={space.sm}>
@@ -83,7 +101,11 @@ export function VehiclePickerSheet({
         </Callout>
       ) : items.length === 0 ? (
         <Text col={colors.textMuted} fos={fontSize.bodySm}>
-          {t('empty')}
+          {debounced.trim()
+            ? tPicker('emptySearch')
+            : branchId && branch.selectedLabel
+              ? tPicker('emptyBranch')
+              : t('empty')}
         </Text>
       ) : (
         items.map((vehicle) => (

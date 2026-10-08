@@ -33,11 +33,16 @@ export type { PublishRequirement };
 /** Tên cũ, giữ để nơi gọi không phải đổi import. */
 export type PublishRequirementKey = PublishRequirement;
 
-/** Ảnh đại diện ∪ thư viện, khử trùng theo URL — cùng phép đếm với backend. */
-function distinctImageCount(vehicle: VehicleDetail): number {
-  const urls = new Set<string>(vehicle.images ?? []);
-  if (vehicle.mainImageUrl) urls.add(vehicle.mainImageUrl);
-  return urls.size;
+/**
+ * Thư viện ảnh kèm GÓC CHỤP — cùng tập mà backend đọc từ `vehicle_images`.
+ *
+ * Trước 07/10/2026 đây là một phép ĐẾM URL khác nhau (ảnh đại diện ∪ `images`). Điều kiện ảnh nay
+ * hỏi đủ GÓC chứ không hỏi đủ số lượng, nên `media` là nguồn duy nhất trả lời được. Xe cũ trong
+ * cache có thể chưa có `media` (DTO khai bắt buộc, bản ghi cũ thì không) — khi đó trả danh sách
+ * rỗng là ĐÚNG: không tấm nào trong đó nói được nó là mặt trước hay nội thất.
+ */
+function publicationImages(vehicle: VehicleDetail): { url: string; type: string | null }[] {
+  return (vehicle.media ?? []).map((item) => ({ url: item.url, type: item.type ?? null }));
 }
 
 /**
@@ -54,7 +59,6 @@ function toInput(vehicle: VehicleDetail): VehiclePublicationInput {
     weekdayPrice: vehicle.weekdayPrice,
     monthlyPrice: vehicle.monthlyPrice,
     withDriverDailyPrice: vehicle.withDriverDailyPrice,
-    mainImageUrl: vehicle.mainImageUrl,
     plateNumber: vehicle.plateNumber,
     brand: vehicle.brand,
     model: vehicle.model,
@@ -80,10 +84,10 @@ export function publishChecklist(
   vehicle: VehicleDetail,
 ): { key: PublishRequirement; met: boolean }[] {
   const input = toInput(vehicle);
-  const imageCount = distinctImageCount(vehicle);
+  const images = publicationImages(vehicle);
   return applicableRequirements(input).map((item) => ({
     key: item.key,
-    met: item.present(input, imageCount),
+    met: item.present(input, images),
   }));
 }
 
@@ -101,9 +105,7 @@ export function missingPublishRequirementsForForm(values: {
   weekdayPrice?: unknown;
   monthlyPrice?: unknown;
   withDriverDailyPrice?: unknown;
-  mainImageUrl?: string | null;
-  images?: readonly string[] | null;
-  media?: readonly { url: string }[] | null;
+  media?: readonly { url: string; type?: string | null }[] | null;
   plateNumber?: string | null;
   brand?: string | null;
   model?: string | null;
@@ -117,17 +119,16 @@ export function missingPublishRequirementsForForm(values: {
   engineDisplacementCc?: number | null;
   electricRangeKm?: number | null;
 }): PublishRequirement[] {
-  const urls = new Set<string>([
-    ...(values.images ?? []),
-    ...(values.media ?? []).map((item) => item.url),
-  ]);
-  if (values.mainImageUrl) urls.add(values.mainImageUrl);
+  const images = (values.media ?? []).map((item) => ({
+    url: item.url,
+    type: item.type ?? null,
+  }));
   /*
    * Form chọn DÒNG XE bằng id danh mục; chữ \`model\` do backend chép từ danh mục lúc lưu. Đã chọn
    * mẫu trong danh mục nghĩa là đã có dòng xe — không được báo thiếu chỉ vì ô chữ còn trống.
    */
   const model = values.model || (values.vehicleCatalogModelId ? values.vehicleCatalogModelId : null);
-  return missingRequirements({ ...values, model }, urls.size).filter(
+  return missingRequirements({ ...values, model }, images).filter(
     (key) => key !== PUBLISH_REQUIREMENT.BRANCH_LOCATION,
   );
 }
@@ -183,7 +184,7 @@ export function publishGapFields(
 
 /** Khoá các điều kiện còn thiếu — rỗng nghĩa là đủ điều kiện gửi duyệt. */
 export function missingPublishRequirements(vehicle: VehicleDetail): PublishRequirement[] {
-  return missingRequirements(toInput(vehicle), distinctImageCount(vehicle));
+  return missingRequirements(toInput(vehicle), publicationImages(vehicle));
 }
 
 /**
@@ -381,7 +382,6 @@ const REQUIREMENT_TAB: Readonly<Record<PublishRequirement, VehicleEditTab>> = {
   [PUBLISH_REQUIREMENT.SELF_DRIVE_PRICE]: VEHICLE_EDIT_TAB.PRICING,
   [PUBLISH_REQUIREMENT.LONG_TERM_PRICE]: VEHICLE_EDIT_TAB.PRICING,
   [PUBLISH_REQUIREMENT.WITH_DRIVER_PRICE]: VEHICLE_EDIT_TAB.PRICING,
-  [PUBLISH_REQUIREMENT.MAIN_IMAGE]: VEHICLE_EDIT_TAB.MEDIA,
   [PUBLISH_REQUIREMENT.PHOTOS]: VEHICLE_EDIT_TAB.MEDIA,
   [PUBLISH_REQUIREMENT.PLATE_NUMBER]: VEHICLE_EDIT_TAB.INFORMATION,
   [PUBLISH_REQUIREMENT.IDENTITY]: VEHICLE_EDIT_TAB.INFORMATION,
@@ -400,7 +400,6 @@ const REQUIREMENT_SECTION: Readonly<Record<PublishRequirement, VehicleManageSect
   [PUBLISH_REQUIREMENT.SELF_DRIVE_PRICE]: VEHICLE_MANAGE_SECTION.PRICING,
   [PUBLISH_REQUIREMENT.LONG_TERM_PRICE]: VEHICLE_MANAGE_SECTION.PRICING,
   [PUBLISH_REQUIREMENT.WITH_DRIVER_PRICE]: VEHICLE_MANAGE_SECTION.PRICING,
-  [PUBLISH_REQUIREMENT.MAIN_IMAGE]: VEHICLE_MANAGE_SECTION.IMAGES,
   [PUBLISH_REQUIREMENT.PHOTOS]: VEHICLE_MANAGE_SECTION.IMAGES,
   [PUBLISH_REQUIREMENT.PLATE_NUMBER]: VEHICLE_MANAGE_SECTION.INFORMATION,
   [PUBLISH_REQUIREMENT.IDENTITY]: VEHICLE_MANAGE_SECTION.INFORMATION,

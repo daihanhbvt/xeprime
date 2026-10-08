@@ -121,7 +121,14 @@ export const VEHICLE_PUBLIC_SENSITIVE_FIELDS = [
   'plateNumber',
   'vehicleType',
   'serviceTypes',
-  'mainImageUrl',
+  /*
+   * ẢNH — trước 07/10/2026 là `mainImageUrl`, một ô tải lên riêng mà form còn hỏi.
+   *
+   * Ảnh bìa nay là giá trị DẪN XUẤT từ ô mặt trước, nên form không còn trường đó để so sánh;
+   * thứ chủ xe thực sự đổi là THƯ VIỆN. Đổi ảnh mặt trước vẫn đúng là một thay đổi nhạy cảm —
+   * nó đổi tấm ảnh khách thấy ngoài chợ — và `media` bắt được cả nó lẫn các góc còn lại.
+   */
+  'media',
 ] as const;
 export type VehicleSensitiveField = (typeof VEHICLE_PUBLIC_SENSITIVE_FIELDS)[number];
 
@@ -482,14 +489,16 @@ export const VEHICLE_ENERGY_LIMITS = {
   electricConsumptionKwhPer100Km: { min: 1, max: 200 },
 } as const;
 
-/**
- * Số ảnh TỐI THIỂU để một chiếc xe được gửi lên chợ.
+/*
+ * `VEHICLE_PUBLIC_MIN_IMAGES = 4` ĐÃ BỊ BỎ (07/10/2026).
  *
- * Bốn góc (trước · sau · bên · nội thất) là mức tối thiểu để khách tin đây là xe thật. Con số
- * sống ở đây vì cả form, checklist và `submit-public` ở server cùng đọc — ba bản sao của nó là
- * ba cơ hội để giao diện nói "đủ" trong khi server nói "chưa".
+ * Một con số cho mọi loại xe là một con số sai với một trong hai loại: ô tô cần năm góc (bốn mặt
+ * ngoài + nội thất), xe máy chỉ cần hai (trước · sau). Dưới luật cũ, chiếc xe máy có đủ ảnh cần
+ * thiết vẫn bị báo "còn thiếu 2 ảnh" mà màn hình không có ô nào để điền chúng.
+ *
+ * Nay điều kiện ảnh nói về CÁC GÓC, không về số lượng: `requiredVehicleImageTypes(vehicleType)`
+ * ở `./vehicle-settings` (và `vehiclePublicMinImages` khi chỗ gọi chỉ cần con số để hiện tiến độ).
  */
-export const VEHICLE_PUBLIC_MIN_IMAGES = 4;
 
 /**
  * Kiểu dáng thân xe (body type) — thuộc tính dữ liệu như nhiên liệu, chỉ áp dụng cho ô tô

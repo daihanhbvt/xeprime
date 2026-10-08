@@ -15,6 +15,8 @@
     "stageFilterLabel": "Lọc theo trạng thái chuyến",
     "stageAll": "Tất cả trạng thái",
     "stageEmptyTitle": "Không có chuyến nào ở trạng thái này",
+    "stageEmptyFiltered": "Đang lọc: {stage}",
+    "stageEmptyAction": "Chạm để xoá lọc và xem tất cả.",
     "stageEmptyBody": "Bộ lọc chỉ áp cho trang đang xem. Thử xoá lọc hoặc chuyển trang.",
     "stageClear": "Xoá lọc trạng thái",
     "emptyTransitionalTitle": "Không còn chuyến đi thuê nào đang chạy",

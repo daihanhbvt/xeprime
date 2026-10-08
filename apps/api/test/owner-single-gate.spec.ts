@@ -27,6 +27,7 @@ import {
   makeTenantsService,
   makeVehiclesService,
 } from './helpers/service-factory';
+import { requiredVehicleImageRows } from './helpers/vehicle-media';
 
 /**
  * ADR 0036 — **cá nhân tuyến hoa hồng chỉ đi qua MỘT cổng: duyệt XE.**
@@ -81,7 +82,8 @@ async function seedVehicle(overrides: Record<string, unknown> = {}): Promise<str
       name: 'Toyota Vios',
       vehicleType: VEHICLE_TYPE.CAR,
       plateNumber: `51K-${id.slice(-3)}.45`,
-      mainImageUrl: `https://img.example/${id.slice(-6)}-main.jpg`,
+      // Ảnh BÌA = ảnh MẶT TRƯỚC (07/10/2026) — fixture seed thẳng bằng Prisma nên phải tự khớp.
+      mainImageUrl: `https://img.example/${id.slice(-6)}-front.jpg`,
       brand: 'toyota',
       model: 'Vios',
       manufactureYear: 2022,
@@ -94,14 +96,14 @@ async function seedVehicle(overrides: Record<string, unknown> = {}): Promise<str
     },
   });
   // Luật 09/09/2026: tối thiểu 4 URL KHÁC NHAU, ảnh đại diện tính là một.
+  // Đủ GÓC ảnh bắt buộc của loại xe (07/10/2026) — ba dòng không gán góc sẽ bị cổng duyệt
+  // báo thiếu `photos`, ở những ca chẳng nói gì về ảnh.
   await prisma.vehicleImage.createMany({
-    data: [1, 2, 3].map((n) => ({
-      id: newId(),
-      tenantId,
+    data: requiredVehicleImageRows({
       vehicleId: id,
-      imageUrl: `https://img.example/${id.slice(-6)}-${n}.jpg`,
-      sortOrder: n,
-    })),
+      tenantId: tenantId,
+      vehicleType: VEHICLE_TYPE.CAR,
+    }),
   });
   return id;
 }
@@ -316,11 +318,19 @@ describe('2. Gửi duyệt xe: một cổng, một phiếu', () => {
     const snapshot = detail.snapshot as unknown as VehicleReviewSnapshot;
 
     /*
-     * Cổng gửi duyệt bắt buộc ≥4 ảnh và chi nhánh có tỉnh, nhưng snapshot cũ chỉ mang
-     * `mainImageUrl` — reviewer phải duyệt một chiếc xe lên chợ khi chỉ nhìn được một tấm ảnh và
-     * không biết nó nằm ở tỉnh nào. Không thể duyệt đúng thứ mình không thấy.
+     * Cổng gửi duyệt bắt buộc đủ GÓC ảnh (ô tô 5 — 07/10/2026) và chi nhánh có tỉnh, nhưng
+     * snapshot cũ chỉ mang `mainImageUrl` — reviewer phải duyệt một chiếc xe lên chợ khi chỉ nhìn
+     * được một tấm ảnh và không biết nó nằm ở tỉnh nào. Không thể duyệt đúng thứ mình không thấy.
      */
-    expect(snapshot.vehicle.images).toHaveLength(4);
+    expect(snapshot.vehicle.images).toHaveLength(5);
+    // …và kèm GÓC CHỤP, để reviewer biết tấm nào là mặt trước, tấm nào là nội thất.
+    expect(snapshot.vehicle.media?.map((m) => m.type)).toEqual([
+      'front',
+      'rear',
+      'left',
+      'right',
+      'interior',
+    ]);
     expect(snapshot.pickup?.provinceName).toBe('Hồ Chí Minh');
     // Thông tin liên hệ của chủ xe đi kèm phiếu, không phải reviewer tự đi tra.
     expect(detail.tenant?.phone).toBe('84901234567');
@@ -388,6 +398,8 @@ describe('2. Gửi duyệt xe: một cổng, một phiếu', () => {
 describe('3. Xe thiếu điều kiện: vẫn là nháp, nói rõ thiếu gì', () => {
   maybe('thiếu ảnh + giá → chặn kèm MÃ từng mục, xe không nhúc nhích', async () => {
     const bare = await seedVehicle({ weekdayPrice: null, mainImageUrl: null });
+    // Ảnh nay là GÓC CHỤP, không phải một cột: xoá thư viện mới là "thiếu ảnh" (07/10/2026).
+    await prisma.vehicleImage.deleteMany({ where: { vehicleId: bare } });
 
     await expect(vehicles.submitForPublicReview(tenantId, bare, ownerId)).rejects.toMatchObject({
       response: {
@@ -396,7 +408,7 @@ describe('3. Xe thiếu điều kiện: vẫn là nháp, nói rõ thiếu gì', 
           // MÃ, không phải câu tiếng Việt — web dựng nhãn theo ngôn ngữ đang dùng (ADR 0012).
           missing: expect.arrayContaining([
             PUBLISH_REQUIREMENT.SELF_DRIVE_PRICE,
-            PUBLISH_REQUIREMENT.MAIN_IMAGE,
+            PUBLISH_REQUIREMENT.PHOTOS,
           ]),
         },
       },

@@ -203,8 +203,15 @@ function vehicle(over: Partial<VehicleDetail> = {}): VehicleDetail {
     description: 'Xe 16 chỗ đời 2021.',
     transmission: 'manual',
     fuelConsumptionCombined: '9.50',
-    mainImageUrl: 'https://cdn.test/main.jpg',
-    images: ['https://cdn.test/1.jpg', 'https://cdn.test/2.jpg', 'https://cdn.test/3.jpg'],
+    mainImageUrl: 'https://cdn.test/1.jpg',
+    // Đủ năm góc ảnh bắt buộc của ô tô (07/10/2026) — điều kiện lên chợ hỏi GÓC, không hỏi số lượng.
+    media: [
+      { url: 'https://cdn.test/1.jpg', type: 'front' },
+      { url: 'https://cdn.test/2.jpg', type: 'rear' },
+      { url: 'https://cdn.test/3.jpg', type: 'left' },
+      { url: 'https://cdn.test/4.jpg', type: 'right' },
+      { url: 'https://cdn.test/5.jpg', type: 'interior' },
+    ],
     /*
      * Chi nhánh CÓ TỈNH: từ ADR 0036 "chi nhánh chưa có tỉnh" là một mục trong checklist chứ
      * không còn là một mã lỗi rời ở backend. Xe fixture đủ điều kiện thì phải đủ cả mục này.
@@ -860,6 +867,10 @@ describe('/manage/vehicles/[id] — thẻ tổng quan', () => {
     detail.data = vehicle({
       mainImageUrl: 'https://cdn.test/2.jpg',
       images: ['https://cdn.test/1.jpg', 'https://cdn.test/2.jpg'],
+      media: [
+        { url: 'https://cdn.test/1.jpg', type: 'rear', sortOrder: 0 },
+        { url: 'https://cdn.test/2.jpg', type: 'front', sortOrder: 1 },
+      ],
     });
     renderPage();
 
@@ -873,6 +884,7 @@ describe('/manage/vehicles/[id] — thẻ tổng quan', () => {
     detail.data = vehicle({
       mainImageUrl: 'https://cdn.test/cover.jpg',
       images: ['https://cdn.test/1.jpg'],
+      media: [{ url: 'https://cdn.test/1.jpg', type: 'rear', sortOrder: 0 }],
     });
     renderPage();
 
@@ -884,7 +896,11 @@ describe('/manage/vehicles/[id] — thẻ tổng quan', () => {
 
   it('thư viện ảnh: quá 6 ảnh thì ô thứ 6 báo "+N", ảnh dư vẫn trong nhóm xem trước', () => {
     const images = Array.from({ length: 11 }, (_, i) => `https://cdn.test/${i}.jpg`);
-    detail.data = vehicle({ mainImageUrl: images[0], images });
+    detail.data = vehicle({
+      mainImageUrl: images[0],
+      images,
+      media: images.map((url, sortOrder) => ({ url, type: 'other' as const, sortOrder })),
+    });
     renderPage();
 
     expect(within(galleryCard()).getByText('+5')).toBeTruthy();
@@ -893,7 +909,7 @@ describe('/manage/vehicles/[id] — thẻ tổng quan', () => {
   });
 
   it('thư viện ảnh: chưa có ảnh thì nói rõ, và chỉ người sửa được mới thấy lối thêm ảnh', () => {
-    detail.data = vehicle({ mainImageUrl: null, images: [] });
+    detail.data = vehicle({ mainImageUrl: null, images: [], media: [] });
     renderPage();
 
     expect(within(galleryCard()).getByText('Chưa có ảnh nào cho xe này.')).toBeTruthy();

@@ -8,9 +8,9 @@ import { useLandingScope } from '@/features/shell/use-landing-scope';
  *
  *  - Chưa đăng nhập → màn đăng nhập.
  *  - Gian hàng trả phí chưa chuyển khoản → thẳng bước 2 của onboarding (ADR 0040).
- *  - Có gian hàng tuyến gói → dashboard `/manage`.
- *  - Tài khoản ngoài phạm vi app (đã lọt qua cổng đăng nhập từ trước) → `ScopeGuard` trong
- *    `/manage` xử lý bằng màn giải thích, không đá sang một "khu khách" không tồn tại ở đây.
+ *  - Có gian hàng (tuyến gói hoặc hoa hồng) → `/manage` — Tổng quan hoặc trang chủ Owner Lite.
+ *  - Tài khoản đối tác CHƯA có gian hàng → `ScopeGuard` trong `/manage` đưa tới màn chọn cách cho
+ *    thuê (ADR 0053).
  *
  * Bản landing này đọc `use-landing-scope` CỦA APP PARTNER (overlay `manage/src`), không phải
  * bản của app Customer.

@@ -339,9 +339,7 @@
       "policyDelivery": "Giao tận nơi",
       "policyNone": "Không áp dụng",
       "overview": "Tổng quan",
-      "mainImageSet": "Ảnh đại diện đã thiết lập",
-      "mainImageMissing": "Chưa có ảnh đại diện",
-      "overviewValue": "{mainImage} • {gallery, plural, other {# ảnh thư viện}} • {features, plural, other {# tiện ích được chọn}}",
+      "overviewValue": "{photos, plural, other {# ảnh xe}} • {features, plural, other {# tiện ích được chọn}}",
       "brandWithBody": "{brand} ({bodyType})"
     },
     "success": {
@@ -426,7 +424,6 @@
       "discountPercentInteger": "% giảm giá phải là số nguyên",
       "discountPercentMin": "Tối thiểu 0%",
       "discountPercentMax": "Tối đa 100%",
-      "mainImageUrlInvalid": "Đường dẫn ảnh không hợp lệ",
       "imageUrlInvalid": "Đường dẫn ảnh không hợp lệ",
       "imagesMax": "Tối đa 20 ảnh",
       "seatCountCarOnly": "Số chỗ ngồi chỉ áp dụng cho ô tô",
@@ -438,10 +435,9 @@
       "selfDrivePrice": "Giá tự lái (ngày thường)",
       "longTermPrice": "Giá tháng thuê dài hạn",
       "withDriverPrice": "Giá/ngày có tài xế",
-      "mainImage": "Ảnh đại diện",
       "plateNumber": "Biển số",
       "description": "Mô tả xe",
-      "photos": "Tối thiểu 4 ảnh xe",
+      "photos": "Đủ các góc ảnh bắt buộc",
       "identity": "Hãng, mẫu, năm sản xuất và số chỗ",
       "energySpec": "Thông số của nguồn năng lượng",
       "branchLocation": "Chi nhánh có tỉnh/thành"
@@ -488,7 +484,7 @@
         "plateNumber": "Biển số",
         "vehicleType": "Loại xe",
         "serviceTypes": "Loại dịch vụ",
-        "mainImageUrl": "Ảnh đại diện"
+        "media": "Ảnh xe"
       }
     },
     "panel": {

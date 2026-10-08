@@ -350,12 +350,19 @@ export class VehicleAlertsService {
           href: informationTab(vehicle.id),
         });
       }
-      // Điều kiện lên sàn: có biển số, có giá ngày thường, có ảnh đại diện. Cùng bộ điều kiện
-      // với `missingPublishRequirements` ở FE — nhưng ở đây server là nơi chốt.
+      /*
+       * Điều kiện lên sàn: có biển số, có giá ngày thường, có ảnh. Cùng bộ điều kiện với
+       * `missingPublishRequirements` ở FE — nhưng ở đây server là nơi chốt.
+       *
+       * Ảnh đọc qua `mainImageUrl` (07/10/2026 vẫn đúng, chỉ đổi nghĩa): cột đó nay là ảnh MẶT
+       * TRƯỚC do server suy ra, nên nó rỗng đúng khi thư viện chưa có góc bắt buộc đầu tiên. Cảnh
+       * báo này là một dòng nhắc ở danh sách xe, không phải cổng chặn — nó cố ý KHÔNG đếm đủ năm
+       * góc, vì làm vậy là một truy vấn ảnh cho mỗi chiếc xe của gian hàng.
+       */
       const missingFields = [
         vehicle.plateNumber ? null : 'biển số',
         vehicle.weekdayPrice ? null : 'giá ngày thường',
-        vehicle.mainImageUrl ? null : 'ảnh đại diện',
+        vehicle.mainImageUrl ? null : 'ảnh xe',
       ].filter(Boolean) as string[];
       if (missingFields.length > 0 && status !== VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC) {
         push(vehicle.id, VEHICLE_ALERT_KIND.MISSING_VEHICLE_INFO, {

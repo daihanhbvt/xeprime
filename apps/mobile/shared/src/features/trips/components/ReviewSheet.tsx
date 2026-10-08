@@ -3,7 +3,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Pressable } from 'react-native';
-import { Text, XStack, YStack } from 'tamagui';
+import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   API_ERROR_CODE,
@@ -13,12 +13,13 @@ import {
   REVIEW_COMMENT_MAX,
 } from '@xeprime/types';
 import { buildReviewSchema, type ReviewFormValues } from '../review-schema';
+import { FieldLabel } from '@/components/ui/Field';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { getErrorCode } from '@/lib/api-client';
-import { colors, fontSize, fontWeight, sizing, space } from '@/theme/tokens';
+import { colors, sizing, space } from '@/theme/tokens';
 import { useCreateReview } from '../hooks/use-trips';
 import type { CustomerTripDetail } from '../api';
 import { getErrorMessage } from '@/lib/get-error-message';
@@ -109,9 +110,7 @@ export function ReviewSheet({
         name="rating"
         render={({ field }) => (
           <YStack gap={space.xs}>
-            <Text col={colors.textMuted} fos={fontSize.bodySm} fow={fontWeight.medium}>
-              {t('ratingLabel')}
-            </Text>
+            <FieldLabel label={t('ratingLabel')} required />
             <StarPicker value={field.value} onChange={field.onChange} />
           </YStack>
         )}

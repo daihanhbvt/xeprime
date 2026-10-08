@@ -1,4 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
+import type { ReactNode } from 'react';
 import { StyleSheet } from 'react-native';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -36,18 +37,21 @@ import { AccountTrackBadge } from './AccountTrackBadge';
  */
 
 /** Đường kính ảnh — vòng nhấn của chủ gian hàng cộng vào TRONG con số này. */
-const AVATAR = 96;
+const AVATAR = 72;
 
 /** Con dấu cạnh tên: nhỉnh hơn chữ `h3` một chút, đủ thấy mà không cao hơn dòng chữ. */
-const NAME_MARK = 20;
+const NAME_MARK = 18;
 
 /** `LinearGradient` là view của Expo, không phải của Tamagui — nó chỉ nhận style RN thuần. */
 const styles = StyleSheet.create({
+  // Bố cục NGANG (06/10/2026): ảnh trái, danh tính phải — thẻ hồ sơ thấp lại gần một nửa so với
+  // bản xếp dọc căn giữa, để tiền và menu lên được màn đầu.
   hero: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: space.sm,
+    gap: space.md,
     paddingHorizontal: space.md,
-    paddingVertical: space.lg,
+    paddingVertical: space.md,
   },
 });
 
@@ -56,7 +60,10 @@ export function AccountIdentityHero({
   avatarUrl,
   subtitle,
   tenant,
+  action,
 }: {
+  /** Nút nhỏ ở mép phải (vd. bút chì "Chỉnh sửa hồ sơ"). */
+  action?: ReactNode;
   name: string;
   avatarUrl: string | null;
   /** Dòng ngay dưới tên: vai trong gian hàng, hoặc "Tài khoản XePrime" khi không có vai nào. */
@@ -75,9 +82,7 @@ export function AccountIdentityHero({
   return (
     <LinearGradient
       colors={
-        isShopOwner
-          ? [colors.primaryLight, colors.surface]
-          : [colors.surfaceMuted, colors.surfaceMuted]
+        isShopOwner ? [colors.primaryLight, colors.surface] : [colors.primaryLight, colors.surface]
       }
       start={{ x: 0.5, y: 0 }}
       end={{ x: 0.5, y: 1 }}
@@ -90,16 +95,15 @@ export function AccountIdentityHero({
         verifiedLabel={isShopOwner ? t('trackBadge.verifiedHint') : undefined}
       />
 
-      <YStack ai="center" gap={space.xs}>
-        <YStack ai="center" gap={2}>
+      <YStack f={1} minWidth={0} gap={space.xs}>
+        <YStack gap={2}>
           <VerifiedName
             name={name}
             verifiedLabel={isShopOwner ? t('trackBadge.verifiedHint') : undefined}
-            size={fontSize.h3}
+            size={fontSize.h4}
             weight={fontWeight.bold}
             markSize={NAME_MARK}
             numberOfLines={2}
-            center
             /* Con dấu trên ảnh ngay phía trên đã đọc lên câu ấy rồi. */
             decorativeMark
           />
@@ -116,8 +120,9 @@ export function AccountIdentityHero({
           Vỏ `plain`: con dấu đã nằm cạnh tên ngay phía trên, nên một viên nhãn gold ở đây là câu
           thứ hai nói cùng một điều. Còn lại một dòng chữ gold căn giữa, thẳng cột với tên.
         */}
-        <AccountTrackBadge tenant={tenant ?? null} variant="plain" center />
+        <AccountTrackBadge tenant={tenant ?? null} variant="plain" />
       </YStack>
+      {action}
     </LinearGradient>
   );
 }

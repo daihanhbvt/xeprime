@@ -26,7 +26,9 @@ import { AddressFields } from '@/components/form/AddressFields';
 import { TextField } from '@/components/ui/TextField';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
+import { useRouter } from 'expo-router';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
+import { LogoutRow } from '@/features/shell/LogoutRow';
 import { APP_SCOPE } from '@/features/shell/app-scope';
 import { useShellScope } from '@/features/shell/use-shell-scope';
 import { isPackageOnboarding, resolveWorkspaceHref } from '@/features/shell/workspace';
@@ -110,6 +112,7 @@ export function ShopOnboardingScreen({
   const domainLabel = useDomainLabel();
   const register = useRegisterShop();
 
+  const router = useRouter();
   const { data: user, isLoading } = useCurrentUser();
   const tenant = user?.tenant ?? null;
   const hasTenant = tenant != null;
@@ -130,20 +133,15 @@ export function ShopOnboardingScreen({
     if (!hasTenant || packagePending) return;
     /*
      * Gói đã bật ⇒ hồ sơ gian hàng; còn lại (tuyến hoa hồng, hoặc nhân viên) ⇒ khu làm việc của
-     * chính họ. `resolveWorkspaceHref` chứ không cố định `/manage/shop` như bản trước: chủ xe
-     * tuyến hoa hồng KHÔNG vào được khu quản lý, nên đích cũ đẩy họ thẳng vào `ScopeGuard` rồi bị
-     * đá ngược ra chợ xe — hai cú nhảy cho một lần bấm.
-     *
-     * Đi qua `switchTo` chứ không `router.replace` trần: màn này nằm dưới `manage/`, nên vỏ app
-     * đang ghi nhận khu QUẢN LÝ. Thả một chủ xe tuyến hoa hồng về `/account/...` bằng một lượt
-     * replace để lại `shellScope` trỏ sang khu kia — bộ đổi khu tô sáng nhầm nửa, và lần bấm tiếp
-     * theo của họ rơi về một màn quản lý mà `ScopeGuard` sẽ đá ra.
+     * chính họ — "Hồ sơ chủ xe" hoặc "Xe của tôi" (`resolveWorkspaceHref`). Từ ADR 0053 màn này chỉ
+     * sống ở app XePrime Partner và Owner Lite cũng ở đó, nên cả hai nhánh đều ở khu QUẢN LÝ —
+     * không còn thả chủ xe tuyến hoa hồng sang khu khách.
      */
     if (packageReady) {
       switchTo(APP_SCOPE.MANAGE, ROUTES.manage.shop({ welcome: true }));
       return;
     }
-    switchTo(APP_SCOPE.CUSTOMER, resolveWorkspaceHref(user) ?? ROUTES.account.home());
+    switchTo(APP_SCOPE.MANAGE, resolveWorkspaceHref(user) ?? ROUTES.manage.home());
   }, [hasTenant, packagePending, packageReady, switchTo, user]);
 
   const resolver = useValidationResolver<RegisterShopValues>(
@@ -249,8 +247,14 @@ export function ShopOnboardingScreen({
         Thanh trên cùng mang LOGO chứ không mang tiêu đề — tiêu đề là chữ lớn trong dải hero ngay
         dưới, y như web. Đặt cả hai chỗ thì cùng một câu hiện hai lần cách nhau 40dp.
       */}
+      {/*
+        KHÔNG có nút lui ở bước CHỜ THANH TOÁN (sửa 06/10/2026): tuyến gói chưa trả tiền chỉ được
+        phép ở đúng màn này (ADR 0040 điều 3 · `partnerPathRedirect`), nên mũi tên lui đá về
+        `/manage` rồi bị `ScopeGuard` ném ngược lại đây — một nút không đi đâu cả. Lối ra thật
+        của họ là ĐĂNG XUẤT, đặt ở cuối màn cùng kiểu với màn chọn cách cho thuê.
+      */}
       <AppHeader
-        onBack={() => navigateOnce(ROUTES.explore.home())}
+        {...(packagePending ? {} : { onBack: () => navigateOnce(ROUTES.manage.home()) })}
         right={
           <IconButton
             icon="help-circle-outline"
@@ -530,13 +534,19 @@ export function ShopOnboardingScreen({
               </Card>
             )}
 
-            {/* Lối lui đặt ở CUỐI nội dung, đúng `.back` của web — ngoài nút lui trên thanh. */}
-            <Button
-              label={t('page.back')}
-              variant="ghost"
-              icon="arrow-back"
-              onPress={() => navigateOnce(ROUTES.explore.home())}
-            />
+            {/*
+              ĐĂNG XUẤT ở cuối nội dung — thay cho "Quay lại marketplace" của web (sửa 06/10/2026).
+
+              Nút cũ dẫn về `/manage`, và ở app Partner KHÔNG có marketplace nào để về: chợ xe nằm
+              ở app XePrime, một realm khác (ADR 0053). Với tuyến gói chưa trả tiền nó còn chết
+              hẳn — họ chỉ được ở đúng màn này (ADR 0040 điều 3), nên `ScopeGuard` ném ngược lại
+              ngay.
+
+              Giữ nguyên CHỖ ĐỨNG và dáng LIÊN KẾT CHỮ của nút cũ — đổi chữ và việc nó làm, chứ
+              không đổi vai trò của nó trên trang: đây là lối phụ ở chân một trang dài, sau hành
+              động chính. Ai còn nơi để lui vẫn có mũi tên trên thanh.
+            */}
+            <LogoutRow variant="link" onDone={() => router.replace(ROUTES.account.login())} />
           </YStack>
         </YStack>
       </Screen>

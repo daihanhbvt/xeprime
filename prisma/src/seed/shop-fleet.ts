@@ -19,7 +19,7 @@ import {
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_SOURCE_TYPE,
   VEHICLE_TYPE,
-  vehicleImageSlotsFor,
+  requiredVehicleImageTypes,
 } from '@xeprime/types';
 import {
   PLATE_PREFIX,
@@ -291,18 +291,15 @@ export async function buildFleet(spec: ShopSpec, deps: FleetDeps): Promise<Vehic
     // Ảnh và tiện ích ghi theo kiểu THAY TẬP (giống `VehiclesService.replaceMedia`) — chạy lại
     // seed không nhân bản gallery.
     await prisma.vehicleImage.deleteMany({ where: { vehicleId } });
-    // Đủ năm ô ảnh theo vị trí như chủ xe đăng thật (`vehicleImageSlotsFor`) — ảnh đại diện là ảnh
-    // mặt trước, cùng URL với ô `front`.
-    const slots = vehicleImageSlotsFor(model.vehicleType).filter(
-      (slot) => slot !== VEHICLE_IMAGE_TYPE.OTHER,
-    );
+    // Đủ các góc BẮT BUỘC của loại xe như chủ xe đăng thật (`requiredVehicleImageTypes`): ô tô 5,
+    // xe máy 2. Ảnh bìa là ảnh mặt trước, cùng URL với ô `front` — xem `mainImageUrl` ở trên.
+    const slots = requiredVehicleImageTypes(model.vehicleType);
     const bySlot: Readonly<Record<string, SeedPhoto>> = {
       [VEHICLE_IMAGE_TYPE.FRONT]: photos.front,
       [VEHICLE_IMAGE_TYPE.REAR]: photos.rear,
       [VEHICLE_IMAGE_TYPE.LEFT]: photos.left,
       [VEHICLE_IMAGE_TYPE.RIGHT]: photos.right,
       [VEHICLE_IMAGE_TYPE.INTERIOR]: photos.fifth,
-      [VEHICLE_IMAGE_TYPE.DASHBOARD]: photos.fifth,
     };
     await prisma.vehicleImage.createMany({
       data: slots.map((slot, i) => {

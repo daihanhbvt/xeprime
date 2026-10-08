@@ -787,6 +787,14 @@ export const API_ERROR_CODE = {
    */
   VEHICLE_PUBLISH_INCOMPLETE: 'VEHICLE_PUBLISH_INCOMPLETE',
   /**
+   * Thư viện ảnh gửi lên còn TRỐNG một góc bắt buộc — ô tô 5 góc, xe máy 2 (07/10/2026).
+   *
+   * `details.missing[]` mang khoá `VEHICLE_IMAGE_TYPE` (`front`/`rear`/…), nên giao diện chỉ
+   * đúng ô còn thiếu bằng nhãn của ngôn ngữ đang dùng (ADR 0012). Khác
+   * `VEHICLE_PUBLISH_INCOMPLETE`: lỗi đó nói về cổng GỬI DUYỆT, lỗi này chặn ngay lượt LƯU.
+   */
+  VEHICLE_IMAGES_INCOMPLETE: 'VEHICLE_IMAGES_INCOMPLETE',
+  /**
    * Bật công tắc hiển thị cho một chiếc xe CHƯA qua cổng duyệt (ADR 0048 điều 3).
    *
    * `details.publicStatus` là trạng thái kiểm duyệt hiện tại, để giao diện chỉ đúng lối đi tiếp:

@@ -42,7 +42,6 @@ jest.mock('@/hooks/use-app-active', () => ({
   useRefetchOnForeground: jest.fn(),
 }));
 
-
 const api = chatApi as jest.Mocked<typeof chatApi>;
 const realtime = useChatRealtime as jest.MockedFunction<typeof useChatRealtime>;
 const threadRealtime = useThreadRealtime as jest.MockedFunction<typeof useThreadRealtime>;
@@ -246,10 +245,13 @@ describe('useThread (native)', () => {
         }),
     );
 
-    const { result, rerender } = await renderHook((props: { id: string }) => useThread(props.id, CHAT_SIDE.CUSTOMER), {
-      wrapper,
-      initialProps: { id: 'A' },
-    });
+    const { result, rerender } = await renderHook(
+      (props: { id: string }) => useThread(props.id, CHAT_SIDE.CUSTOMER),
+      {
+        wrapper,
+        initialProps: { id: 'A' },
+      },
+    );
 
     // Người dùng lui ra và mở hội thoại khác trong lúc A còn đang tải.
     api.messages.mockResolvedValue({

@@ -1,6 +1,6 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { holidayRunAround, LIST_SEPARATOR, startOfAppDay } from '@xeprime/domain';
@@ -43,6 +43,11 @@ import { VehicleInfoSheet } from './components/VehicleInfoSheet';
 import { useBulkBlockDay, useBulkDayPreview, useReleaseBulkBlock } from './hooks/use-bulk-day';
 import { useCalendarData } from './hooks/use-calendar-data';
 import { useCalendarFilters } from './hooks/use-calendar-filters';
+import {
+  BranchFilterField,
+  useBranchEmptyCopy,
+} from '@/features/branches/components/BranchFilterField';
+import { useScreenBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { useCalendarHolidays } from './hooks/use-calendar-holidays';
 import { listDays, type DayCell } from './utils/calendar-date.util';
 import { getErrorMessage } from '@/lib/get-error-message';
@@ -104,7 +109,18 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
     days?: string;
     back?: string;
   }>();
-  const { filters, setFilters, filtered, reset } = useCalendarFilters(params);
+  const { filters: screenFilters, setFilters, filtered, reset } = useCalendarFilters(params);
+  /*
+   * Ô "Chi nhánh" của lịch (ADR 0052) sống trên tham số route, còn các chiều khác ở state của màn.
+   * Ghép lại thành MỘT bộ lọc: lưới, xem trước cả ngày và hai tấm thao tác hàng loạt đọc CÙNG nó
+   * (điều 8) — sót chi nhánh ở thao tác ghi là khoá xe của chi nhánh người dùng không mở ra xem.
+   */
+  const { branchId, filter: branchFilter } = useScreenBranchFilter();
+  const branchEmpty = useBranchEmptyCopy(branchFilter, branchId);
+  const filters = useMemo(
+    () => ({ ...screenFilters, branchId: branchId ?? null }),
+    [screenFilters, branchId],
+  );
 
   const [search, setSearch] = useState(filters.q ?? '');
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
@@ -448,6 +464,12 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
             : {})}
         />
 
+        {branchFilter.visible ? (
+          <XStack px={layout.screenX} pb={space.xs}>
+            <BranchFilterField filter={branchFilter} value={branchId} />
+          </XStack>
+        ) : null}
+
         <CalendarLegend />
 
         {data.isLoading ? (
@@ -458,6 +480,12 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
             error={data.error}
             title={t('states.loadFailed')}
             onRetry={data.refetch}
+          />
+        ) : resources.length === 0 && branchEmpty && !filtered ? (
+          <ScreenMessage
+            icon="location-outline"
+            title={branchEmpty.title}
+            description={branchEmpty.hint}
           />
         ) : resources.length === 0 ? (
           <ScreenMessage
@@ -523,7 +551,7 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
                 Cần dù `Screen` đã ăn vùng an toàn: màn này đi `padded={false}` để mọi pixel dọc
                 thuộc về lưới, nên hàng "Xe còn trống" nằm sát mép và bị thanh điều hướng liếm vào.
               */
-              style={{ flex: 1, marginBottom: space.xs }}
+              style={styles.grid}
               onLayout={(e) =>
                 setViewport({
                   width: e.nativeEvent.layout.width,
@@ -598,10 +626,13 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
         onClose={() => setDayPanel(null)}
         onQuickBlock={runQuickBlock}
         onRelease={(batchId) =>
-          releaseBatch.mutate(batchId, {
-            onSuccess: () => toast.showSuccess(t('bulkBlock.released')),
-            onError: (error) => toast.showError(errorMessage(error)),
-          })
+          releaseBatch.mutate(
+            { batchId, branchId: filters.branchId },
+            {
+              onSuccess: () => toast.showSuccess(t('bulkBlock.released')),
+              onError: (error) => toast.showError(errorMessage(error)),
+            },
+          )
         }
         onOpenBlockDialog={() => {
           if (dayPanel) setBulkBlock({ date: dayPanel.day.key, suggestedRange });
@@ -666,18 +697,7 @@ function GridBusyOverlay() {
   const t = useTranslations('Calendar');
 
   return (
-    <View
-      pointerEvents="none"
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
+    <View pointerEvents="none" style={styles.busyOverlay}>
       <XStack
         ai="center"
         gap={space.xs}
@@ -698,3 +718,12 @@ function GridBusyOverlay() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  grid: { flex: 1, marginBottom: space.xs },
+  busyOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});

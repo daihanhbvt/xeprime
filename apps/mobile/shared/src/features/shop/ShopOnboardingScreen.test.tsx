@@ -117,9 +117,16 @@ describe('ShopOnboardingScreen (SHP-01)', () => {
     const view = await renderScreen();
 
     expect(await view.findByRole('button', { name: 'Tạo gian hàng' })).toBeTruthy();
-    // Vẫn có đường lui về marketplace — tài khoản khách dùng chợ được mà không cần gian hàng.
-    // Câu chữ lấy từ web (khoá page.back), không phải nhãn "Quay lại" chung của app.
-    expect(view.getByRole('button', { name: 'Quay lại marketplace' })).toBeTruthy();
+    /*
+     * Lối ra ở chân trang là ĐĂNG XUẤT, không còn "Quay lại marketplace" (06/10/2026).
+     *
+     * Nút cũ dẫn về `/manage`, mà ở app Partner KHÔNG có marketplace nào để về — chợ xe nằm ở app
+     * XePrime, một realm khác (ADR 0053). Với tuyến gói chưa trả tiền nó còn chết hẳn:
+     * `partnerPathRedirect` chỉ cho họ ở đúng màn này (ADR 0040 điều 3) nên `ScopeGuard` ném
+     * ngược lại ngay.
+     */
+    expect(view.queryByRole('button', { name: 'Quay lại marketplace' })).toBeNull();
+    expect(view.getByRole('button', { name: new RegExp('Đăng xuất$') })).toBeTruthy();
   });
 
   it('đã có gian hàng: không dựng form, đưa thẳng tới hồ sơ gian hàng', async () => {
@@ -129,6 +136,7 @@ describe('ShopOnboardingScreen (SHP-01)', () => {
       slug: 'da-nang',
       status: 'active',
       onboardingState: 'commission',
+      branchScope: 'all',
       logoUrl: null,
       roleKey: 'shop_owner',
       features: [],

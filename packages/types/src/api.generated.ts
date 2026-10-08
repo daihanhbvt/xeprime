@@ -11548,7 +11548,10 @@ export interface components {
             /** @enum {string} */
             operationStatus?: "available" | "renting" | "maintenance" | "inactive";
             description?: string | null;
-            /** @description URL ảnh đại diện xe */
+            /**
+             * @deprecated
+             * @description BỊ BỎ QUA — ảnh bìa luôn là ảnh mặt trước trong `media`
+             */
             mainImageUrl?: string | null;
             /**
              * @description Giá ngày thường, string thập phân — ADR 0007
@@ -16803,7 +16806,10 @@ export interface components {
             /** @enum {string} */
             operationStatus?: "available" | "renting" | "maintenance" | "inactive";
             description?: string | null;
-            /** @description URL ảnh đại diện xe */
+            /**
+             * @deprecated
+             * @description BỊ BỎ QUA — ảnh bìa luôn là ảnh mặt trước trong `media`
+             */
             mainImageUrl?: string | null;
             /**
              * @description Giá ngày thường, string thập phân — ADR 0007
@@ -17058,7 +17064,7 @@ export interface components {
         };
         VehicleApprovalBlockersDto: {
             /** @description Điều kiện lên chợ xe hiện tại không còn đạt */
-            missingRequirements: ("selfDrivePrice" | "longTermPrice" | "withDriverPrice" | "mainImage" | "photos" | "plateNumber" | "identity" | "energySpec" | "branchLocation")[];
+            missingRequirements: ("selfDrivePrice" | "longTermPrice" | "withDriverPrice" | "photos" | "plateNumber" | "identity" | "energySpec" | "branchLocation")[];
             /** @description Trường căn cước đã bị sửa sau khi gửi duyệt */
             changedLockedFields: ("plateNumber" | "vehicleType" | "transmission" | "fuelType" | "manufactureYear")[];
         };
@@ -17142,6 +17148,11 @@ export interface components {
             submittedByName?: string | null;
             /** @description ISO-8601 UTC */
             submittedAt: string;
+        };
+        VehicleApprovalMediaDto: {
+            url: string;
+            /** @description Mã góc chụp (front/rear/left/right/interior/other); null = ảnh cũ chưa gán */
+            type: string | null;
         };
         VehicleApprovalPageDto: {
             data: components["schemas"]["VehicleApprovalListItemDto"][];
@@ -17233,8 +17244,10 @@ export interface components {
             electricConsumptionKwhPer100Km?: string | null;
             description?: string | null;
             mainImageUrl?: string | null;
-            /** @description Toàn bộ ảnh lúc gửi, ảnh đại diện đứng đầu */
+            /** @description Toàn bộ ảnh lúc gửi, ảnh bìa đứng đầu */
             images: string[];
+            /** @description Ảnh kèm góc chụp; vắng mặt ở phiếu cũ */
+            media?: components["schemas"]["VehicleApprovalMediaDto"][];
             /** @description Khoá tiện nghi (danh mục vehicle_feature) */
             features: string[];
         };

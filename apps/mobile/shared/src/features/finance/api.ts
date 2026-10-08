@@ -38,6 +38,8 @@ export type {
   ReceiptBookingOption,
   ReceiptDetail,
   ReceiptFilters,
+  ReceiptListResult,
+  ReceiptPageMeta,
   ReceiptSummary,
   ReceiptVehicleOption,
   VehicleProfit,

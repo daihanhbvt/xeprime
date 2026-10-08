@@ -1,11 +1,6 @@
 import type { Href } from 'expo-router';
 import type { useTranslations } from 'use-intl';
-import {
-  OWNER_STAGE,
-  TENANT_ROLE,
-  resolveOwnerStage,
-  tenantUsesManagePortal,
-} from '@xeprime/types';
+import { tenantUsesManagePortal } from '@xeprime/types';
 import type { IconName } from '@/components/ui/Chip';
 import type { CurrentUser } from '@/features/auth/api';
 import { ROUTES } from '@/navigation/routes';
@@ -55,7 +50,7 @@ export interface AccountNavItem {
 }
 
 export interface AccountNavGroup {
-  readonly key: 'owner' | 'account';
+  readonly key: 'account';
   /** Tiêu đề nhóm — `undefined` là nhóm không có tiêu đề (menu ngắn của người không phải chủ xe). */
   readonly labelKey?: AccountNavLabelKey;
   readonly items: readonly AccountNavItem[];
@@ -109,14 +104,6 @@ const PAYMENTS: AccountNavItem = {
   target: NAV_TARGET.SCREEN,
 };
 
-const REGISTRATION: AccountNavItem = {
-  key: 'registration',
-  labelKey: 'account.registration',
-  href: ROUTES.account.registration(),
-  icon: 'document-text-outline',
-  target: NAV_TARGET.SCREEN,
-};
-
 const DELETE_ACCOUNT: AccountNavItem = {
   key: 'deleteAccount',
   labelKey: 'account.deleteAccount',
@@ -126,250 +113,52 @@ const DELETE_ACCOUNT: AccountNavItem = {
 };
 
 /**
- * Owner Lite — MỘT nhóm phẳng, KHÔNG tiêu đề, CHÍN mục (ADR 0038 điều 9). Thứ tự y hệt
- * `OWNER_NAV` bên web và là một phần của hợp đồng: test hai bên so cả danh sách lẫn thứ tự.
+ * "Trở thành chủ xe" — LUÔN sang app XePrime Partner (web `BECOME_OWNER` → trang đăng ký của site
+ * partner). Tài khoản khách không có gian hàng (ADR 0053), nên không còn nhánh "về khu làm việc
+ * của bạn": ở app này `ROUTES.manage.register()` là màn handoff mở thẳng màn chọn cách cho thuê.
  *
- * Không tách "Tài khoản" thành nhóm thứ hai: chủ xe không đổi vai khi bấm từ "Lịch xe" sang
- * "Tài khoản của tôi", nên một tiêu đề ở giữa chỉ vẽ ra một ranh giới không có thật.
- *
- * "Yêu cầu xoá tài khoản" rời menu — nó nằm TRONG "Tài khoản của tôi", cạnh danh tính mà nó đụng
- * tới. Route vẫn mở được; đây là thay đổi ĐIỀU HƯỚNG, không xoá màn nào.
- *
- * Mọi mục Ở LẠI khu khách: hai màn đầu chỉ là feature của `/manage` mặc vỏ tài khoản (cùng API,
- * cùng hook, cùng thẻ xe và cùng lưới lịch), đúng như web. Đẩy chúng sang khu quản lý là đổi cả
- * thanh tab dưới chân màn hình cho một người đang xem hồ sơ của chính mình.
- *
- * Biểu tượng lấy theo ĐÍCH (`manage-nav.ts`) để người dùng không phải học hai hình cho một màn.
+ * `SCREEN` chứ không `MANAGE`: màn handoff là một màn THƯỜNG của app khách (đẩy lên, lui về được).
+ * `MANAGE` sẽ đổi khu của vỏ app sang một khu mà app này không có.
  */
-export const OWNER_NAV: readonly AccountNavItem[] = [
-  {
-    key: 'vehicles',
-    labelKey: 'account.vehicles',
-    href: ROUTES.account.vehicles(),
-    icon: 'list-outline',
-    target: NAV_TARGET.SCREEN,
-  },
-  {
-    key: 'calendar',
-    labelKey: 'account.calendar',
-    href: ROUTES.account.calendar(),
-    icon: 'calendar-outline',
-    target: NAV_TARGET.SCREEN,
-  },
-  {
-    key: 'hostGuide',
-    labelKey: 'account.hostGuide',
-    href: ROUTES.account.hostGuide(),
-    icon: 'book-outline',
-    target: NAV_TARGET.SCREEN,
-  },
-  TRIPS,
-  {
-    key: 'tax',
-    labelKey: 'account.tax',
-    href: ROUTES.account.tax(),
-    icon: 'document-text-outline',
-    target: NAV_TARGET.SCREEN,
-  },
-  {
-    key: 'contractsDocuments',
-    labelKey: 'account.contractsDocuments',
-    href: ROUTES.account.contractsDocuments(),
-    icon: 'documents-outline',
-    target: NAV_TARGET.SCREEN,
-  },
-  {
-    key: 'dataProtection',
-    labelKey: 'account.dataProtection',
-    href: ROUTES.account.dataProtection(),
-    icon: 'shield-checkmark-outline',
-    target: NAV_TARGET.SCREEN,
-  },
-  // Danh tính đứng cuối: việc thỉnh thoảng, sau những việc hằng ngày.
+const BECOME_OWNER: AccountNavItem = {
+  key: 'becomeOwner',
+  labelKey: 'public.becomeOwner',
+  href: ROUTES.manage.register(),
+  icon: 'storefront-outline',
+  target: NAV_TARGET.SCREEN,
+};
+
+/** Menu tài khoản KHÁCH — cùng tám mục, cùng thứ tự với `ACCOUNT_NAV` bên web. */
+export const ACCOUNT_NAV: readonly AccountNavItem[] = [
   PROFILE,
+  BECOME_OWNER,
+  TRIPS,
+  PAYMENTS,
+  // Khách thuê CÓ số dư: tiền hoàn khoản giữ chỗ chảy vào ví điểm của họ (ADR 0033 điều 5), và tài
+  // khoản nhận tiền là nơi khai số để rút nó ra.
+  BALANCE,
+  BANK_ACCOUNTS,
   CHANGE_PASSWORD,
+  DELETE_ACCOUNT,
 ];
 
 /**
- * Chủ xe ĐANG ĐĂNG KÝ — chưa có xe nào trên chợ, nên những màn nói về việc cho thuê chưa có gì
- * để nói. Cùng tập, cùng thứ tự với `OWNER_REGISTERING_NAV` bên web.
- *
- * "Hồ sơ đăng ký" đứng ĐẦU: đó là việc duy nhất còn dang dở của họ, và cũng là chỗ duy nhất họ
- * sửa được hồ sơ gian hàng (khu quản lý đóng với tuyến hoa hồng — ADR 0038 điều 4).
- */
-export const OWNER_REGISTERING_NAV: readonly AccountNavItem[] = [
-  REGISTRATION,
-  {
-    key: 'vehicles',
-    labelKey: 'account.vehicles',
-    href: ROUTES.account.vehicles(),
-    icon: 'list-outline',
-    target: NAV_TARGET.SCREEN,
-  },
-  {
-    key: 'hostGuide',
-    labelKey: 'account.hostGuide',
-    href: ROUTES.account.hostGuide(),
-    icon: 'book-outline',
-    target: NAV_TARGET.SCREEN,
-  },
-  TRIPS,
-  PROFILE,
-  CHANGE_PASSWORD,
-];
-
-/** Người đang đăng nhập là CHỦ gian hàng (ADR 0014: chủ xe và chủ gian hàng cùng một vai). */
-export function isShopOwner(user: Pick<CurrentUser, 'tenant'> | null | undefined): boolean {
-  return user?.tenant?.roleKey === TENANT_ROLE.SHOP_OWNER;
-}
-
-/**
- * KHU LÀM VIỆC của người này — bản native của `resolveWorkspaceHref` bên web.
- *
- * `null` = chưa thuộc gian hàng nào, nên chưa có khu làm việc.
- *
- * Hỏi TUYẾN trước, rồi mới hỏi vai (ADR 0038 điều 4): chỉ gian hàng tuyến GÓI mới có cổng quản
- * lý. Trả `manage.home()` cho một tenant tuyến hoa hồng là đẩy họ vào khu mà `ScopeGuard` đá ra
- * ngay khung hình sau — người dùng thấy một cái nháy kèm toast "bạn không còn quyền truy cập",
- * trong khi họ chẳng mất gì cả.
+ * "Khu làm việc của người này" — `null` khi không có gian hàng. Ở app khách luôn `null` (ADR 0053);
+ * giữ phép suy để một API cũ hơn còn trả `tenant` vẫn được dẫn sang app Partner thay vì vỡ.
  */
 export function resolveWorkspaceHref(
   user: Pick<CurrentUser, 'tenant'> | null | undefined,
 ): Href | null {
-  const tenant = user?.tenant ?? null;
-  if (!tenant) return null;
-  if (tenantUsesManagePortal(tenant)) return ROUTES.manage.home();
-  /*
-   * Tuyến hoa hồng. Quản lý/nhân viên/người xem KHÔNG có bộ công cụ cho thuê nào ở đây — khu làm
-   * việc của họ là hồ sơ của chính mình.
-   */
-  if (tenant.roleKey !== TENANT_ROLE.SHOP_OWNER) return ROUTES.account.home();
-  /*
-   * Chủ xe: đã có xe trên chợ ⇒ vào thẳng danh sách xe. Còn đang đăng ký ⇒ về màn tài khoản, nơi
-   * `ShopEntryCard` và dải trạng thái đang nói tiến trình duyệt tới đâu (web có
-   * `/account/registration` riêng; app native chưa dựng màn đó).
-   */
-  return resolveOwnerStage(tenant) === OWNER_STAGE.OWNER
-    ? ROUTES.account.vehicles()
-    : ROUTES.account.home();
+  return user?.tenant ? ROUTES.manage.home() : null;
 }
 
-/**
- * Đích của mọi CTA "chủ xe" trong MENU.
- *
- * Chưa có gian hàng ⇒ dừng ở LANDING công khai `/list-your-vehicle`: mục menu này mà ném thẳng
- * người ta vào form hỏi tên gian hàng và mã số thuế trước khi họ kịp biết mình được gì chính là
- * lỗi web đã sửa ngày 09/09/2026.
- *
- * Thẻ `ShopEntryCard` cố ý KHÔNG đi qua hàm này: nút "Bắt đầu" trên thẻ là lời mời đã đọc rồi, nó
- * vào thẳng form đăng ký gian hàng — hai luồng khác nhau, y hệt web.
- */
-export function resolveOwnerCtaHref(user: Pick<CurrentUser, 'tenant'> | null | undefined): Href {
-  return resolveWorkspaceHref(user) ?? ROUTES.listYourVehicle.root();
-}
-
-/** Khu làm việc là cổng quản lý — tức người này ĐƯỢC đổi khu, không bị đá ra. */
-export function canUseManagePortal(
-  user: Pick<CurrentUser, 'tenant'> | null | undefined,
-): boolean {
+export function canUseManagePortal(user: Pick<CurrentUser, 'tenant'> | null | undefined): boolean {
   return tenantUsesManagePortal(user?.tenant ?? null);
 }
 
-/**
- * Menu theo LOẠI người dùng — BA nhánh, cùng luật và cùng thứ tự với `resolveAccountNav` bên web.
- *
- * Thứ tự hỏi là một phần của luật, không phải chuyện sắp xếp:
- *
- * 1. **Tuyến GÓI** (`tenantUsesManagePortal`) — hỏi TENANT, không hỏi vai, nên chủ/quản lý/nhân
- *    viên/người xem nhận CÙNG một menu. Khu khách của họ còn ĐÚNG HAI mục: "Quản lý gian hàng" và
- *    "Hồ sơ gian hàng" (hồ sơ PHÁP NHÂN). Hồ sơ con người, đổi mật khẩu và yêu cầu xoá tài khoản
- *    sống ở khu quản lý (ADR 0038 điều 7).
- * 2. **Chủ xe tuyến hoa hồng** (và cả `unconfigured`) — Owner Lite, một nhóm phẳng: 9 mục khi đã
- *    có xe trên chợ, 5 mục khi còn đang đăng ký.
- * 3. **Còn lại** — khách thuê, và quản lý/nhân viên/người xem của một gian hàng tuyến hoa hồng:
- *    ở đây họ là một CON NGƯỜI, nên menu là menu cá nhân kèm CTA mở gian hàng.
- *
- * Nhánh 2 dùng `resolveOwnerStage` chứ không `isShopOwner`: một chủ xe chưa có xe nào trên chợ
- * mà nhận đủ chín mục sẽ mở ra những màn rỗng và không màn nào nói vì sao.
- */
-export function resolveAccountNav(user: CurrentUser | null | undefined): AccountNavGroup[] {
-  const tenant = user?.tenant ?? null;
-
-  if (tenantUsesManagePortal(tenant)) {
-    const manageShop: AccountNavItem = {
-      key: 'manageShop',
-      labelKey: 'public.manageShop',
-      href: ROUTES.manage.home(),
-      icon: 'storefront-outline',
-      target: NAV_TARGET.MANAGE,
-    };
-    const shopProfile: AccountNavItem = {
-      key: 'shopProfile',
-      labelKey: 'account.shopProfile',
-      href: ROUTES.manage.shop(),
-      icon: 'document-text-outline',
-      target: NAV_TARGET.MANAGE,
-    };
-    /*
-     * HỒ SƠ CÁ NHÂN — lối duy nhất từ khu khách sang "Tài khoản & bảo mật" của khu quản lý, nơi
-     * người này sửa tên/ảnh/email/SĐT và đổi mật khẩu (người dùng chốt 16/09/2026).
-     *
-     * Chỉ có ở nhánh TUYẾN GÓI: `/manage/account` nằm sau `ScopeGuard`, nên mục này mọc ra ở menu
-     * của một khách thuê thường là đẩy họ vào khu bị đá ra ngay khung hình sau.
-     *
-     * Nhãn KHÁC `account.profile` ("Tài khoản của tôi") có chủ đích: hai chuỗi đó đang trỏ vào
-     * hai bề mặt khác nhau, và dùng chung một chữ thì người dùng tưởng mình bấm nhầm.
-     */
-    const personalProfile: AccountNavItem = {
-      key: 'personalProfile',
-      labelKey: 'account.personalProfile',
-      href: ROUTES.manage.account(),
-      icon: 'person-outline',
-      target: NAV_TARGET.MANAGE,
-    };
-    return [{ key: 'account', items: [manageShop, shopProfile, personalProfile] }];
-  }
-
-  const stage = resolveOwnerStage(tenant);
-  if (stage !== OWNER_STAGE.NONE) {
-    return [
-      {
-        key: 'owner',
-        items: stage === OWNER_STAGE.OWNER ? OWNER_NAV : OWNER_REGISTERING_NAV,
-      },
-    ];
-  }
-
-  const becomeOwner: AccountNavItem = {
-    key: 'becomeOwner',
-    labelKey: user?.tenant ? 'public.manageShop' : 'public.becomeOwner',
-    href: resolveOwnerCtaHref(user),
-    icon: 'storefront-outline',
-    /*
-     * Đã thuộc một gian hàng ⇒ ĐỔI KHU về cổng quản lý. Chưa có ⇒ form đăng ký gian hàng là một
-     * màn chen ngang của khu khách (`ScopeGuard` cho qua đúng route đó), nên nó `push` như mọi
-     * màn khác — đổi khu sang nơi họ chưa có quyền vào là đá chính họ ra ngay sau đó.
-     */
-    target: canUseManagePortal(user) ? NAV_TARGET.MANAGE : NAV_TARGET.SCREEN,
-  };
-
-  return [
-    {
-      key: 'account',
-      items: [
-        PROFILE,
-        becomeOwner,
-        TRIPS,
-        PAYMENTS,
-        // Khách thuê CÓ số dư: tiền hoàn khoản giữ chỗ chảy vào ví điểm của họ (ADR 0033 điều 5),
-        // và tài khoản nhận tiền là nơi khai số để rút nó ra.
-        BALANCE,
-        BANK_ACCOUNTS,
-        CHANGE_PASSWORD,
-        DELETE_ACCOUNT,
-      ],
-    },
-  ];
+/** Menu tài khoản — MỘT nhóm, như `resolveAccountNav()` của web (ADR 0053 bỏ menu Owner Lite ở đây). */
+export function resolveAccountNav(_user?: CurrentUser | null): AccountNavGroup[] {
+  return [{ key: 'account', items: ACCOUNT_NAV }];
 }
 
 /**
@@ -385,7 +174,6 @@ export function resolveAccountNav(user: CurrentUser | null | undefined): Account
  */
 export function showsDeleteAccountCard(user: CurrentUser | null | undefined): boolean {
   if (!user) return false;
-  if (canUseManagePortal(user)) return false;
   return !flattenAccountNav(resolveAccountNav(user)).some(
     (item) => item.key === DELETE_ACCOUNT.key,
   );

@@ -20,7 +20,6 @@ import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
 import { colors, space } from '@/theme/tokens';
 import { ConversationRow } from './components/ConversationRow';
-import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { resolveChatInbox } from './chat-inbox';
 import { useConversationsInfinite } from './hooks/use-chat';
 
@@ -57,13 +56,8 @@ export function ChatListScreen({ side }: { side: ChatSide }) {
 
   const shop = side === CHAT_SIDE.SHOP;
 
-  /*
-   * `side` là BỀ MẶT người dùng đang đứng; `inbox` là thứ hỏi server "cho tôi xem hội thoại
-   * nào" (ADR 0038 điều 10). Với chủ xe tuyến hoa hồng ở bề mặt khách, hai thứ đó khác nhau:
-   * họ thấy hộp thư HỢP NHẤT, hợp trong MỘT truy vấn ở server.
-   */
-  const { data: user } = useCurrentUser();
-  const inbox = resolveChatInbox(side, user);
+  // `side` là BỀ MẶT đang đứng; `inbox` là hộp thư hỏi server — một-một từ ADR 0053.
+  const inbox = resolveChatInbox(side);
 
   const [search, setSearch] = useState('');
   const [unreadOnly, setUnreadOnly] = useState(false);
@@ -83,7 +77,6 @@ export function ChatListScreen({ side }: { side: ChatSide }) {
       ),
     [navigateOnce, shop],
   );
-
 
   /*
    * Phụ thuộc vào ĐÚNG ba thứ nó đọc, không phải cả object `query`: object đó là bản mới ở mọi
@@ -122,7 +115,11 @@ export function ChatListScreen({ side }: { side: ChatSide }) {
   const body = (
     // Tab gốc KHÔNG có cạnh 'bottom' (thanh tab đã cộng `insets.bottom`); khu quản lý thì có,
     // vì ở đó màn nằm trong một stack không có thanh tab nào chừa chỗ.
-    <Screen edges={shop ? ['left', 'right', 'bottom'] : ['left', 'right']} scroll={false} padded={false}>
+    <Screen
+      edges={shop ? ['left', 'right', 'bottom'] : ['left', 'right']}
+      scroll={false}
+      padded={false}
+    >
       {shop ? <ManagePageTitle title={tNav('chat')} /> : null}
 
       <YStack gap={space.sm} px={layout.screenX} pt={space.sm} pb={space.sm}>
@@ -133,7 +130,11 @@ export function ChatListScreen({ side }: { side: ChatSide }) {
           placeholder={t('searchPlaceholder')}
         />
         <XStack gap={space.xs}>
-          <Chip label={t('filterAll')} selected={!unreadOnly} onPress={() => setUnreadOnly(false)} />
+          <Chip
+            label={t('filterAll')}
+            selected={!unreadOnly}
+            onPress={() => setUnreadOnly(false)}
+          />
           <Chip
             label={t('filterUnread')}
             selected={unreadOnly}

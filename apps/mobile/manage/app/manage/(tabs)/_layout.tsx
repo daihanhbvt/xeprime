@@ -71,13 +71,8 @@ export default function ManageTabsLayout() {
         <Tabs.Screen name="shop/seller-profile" />
         <Tabs.Screen name="members" />
         <Tabs.Screen name="drivers" />
-        {/*
-          "Tài khoản & bảo mật" (ADR 0038 điều 7) và lối chuyển tiếp của nó — SCREEN PHẲNG của
-          chính bộ tab này, cùng khuôn với nhóm `shop/` và `support/`. `account/trips` không có
-          mục menu nào dẫn tới: lối vào duy nhất là thẻ theo ngữ cảnh trong `account`.
-        */}
+        {/* "Tài khoản & bảo mật" — hồ sơ của CON NGƯỜI đang đăng nhập (web `/account` site partner). */}
         <Tabs.Screen name="account" />
-        <Tabs.Screen name="account/trips" />
         <Tabs.Screen name="support" />
         {/*
           `support/cases` và `support/cases/[id]` là SCREEN PHẲNG của chính bộ tab này (không có
@@ -86,6 +81,17 @@ export default function ManageTabsLayout() {
         */}
         <Tabs.Screen name="support/cases" />
         <Tabs.Screen name="support/cases/[id]" />
+        {/*
+          Các mục MENU của tuyến hoa hồng (Owner Lite — ADR 0053): đứng trong bộ tab như mọi mục menu
+          khác, nên mở từ drawer là ĐỔI mục chứ không chồng thêm một nấc lui (web: chuyển trang trong
+          cùng khung). Màn dùng vỏ `manage` (`ShellPageHeader`).
+        */}
+        <Tabs.Screen name="registration" />
+        <Tabs.Screen name="tax" />
+        <Tabs.Screen name="bank-accounts" />
+        <Tabs.Screen name="host-guide" />
+        <Tabs.Screen name="contracts-documents" />
+        <Tabs.Screen name="data-protection" />
         <Tabs.Screen name="more" />
       </Tabs>
     </ManageDrawerHost>

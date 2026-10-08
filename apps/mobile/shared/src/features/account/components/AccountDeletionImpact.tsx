@@ -13,6 +13,7 @@ import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { useTripsInfinite } from '@/features/trips/hooks/use-trips';
 import { useWalletSummary, useWithdrawals } from '@/features/wallet/hooks/use-wallet';
 import { walletScopeFor } from '@/features/wallet/wallet-scope';
+import { WALLET_SCOPE } from '@/api/wallet/api';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
@@ -40,8 +41,10 @@ export function AccountDeletionImpact() {
   const { data: user } = useCurrentUser();
 
   const scope = walletScopeFor(user);
-  const wallet = useWalletSummary(scope, Boolean(user));
-  const withdrawals = useWithdrawals(scope, Boolean(user));
+  // Nhân viên gian hàng không có ví (`null`) — không gọi sổ nào, như web `AccountDeletionImpact`.
+  const hasWallet = Boolean(user) && scope !== null;
+  const wallet = useWalletSummary(scope ?? WALLET_SCOPE.ACCOUNT, hasWallet);
+  const withdrawals = useWithdrawals(scope ?? WALLET_SCOPE.ACCOUNT, hasWallet);
   /*
    * Vai `renter`: chuyến gian hàng CHO THUÊ không thuộc về con người này, chúng thuộc pháp nhân
    * và không đóng theo tài khoản cá nhân.

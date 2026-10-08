@@ -5,6 +5,13 @@ import type { UploadMeta, UploadPresign } from '../vehicles/api';
 type Schemas = components['schemas'];
 
 export type Receipt = Schemas['ReceiptListItemDto'];
+/** Meta trang sổ thu chi — kèm số khoản chung bị bỏ khi lọc chi nhánh (ADR 0052). */
+export type ReceiptPageMeta = Schemas['ReceiptPageMetaDto'];
+/**
+ * Trang sổ thu chi mang thêm `unassignedCount` — số khoản chi CHUNG bị bỏ lại khi lọc chi nhánh
+ * (ADR 0052 điều 3). Không khai kiểu thì giao diện không nói ra được con số đó.
+ */
+export type ReceiptListResult = Paged<Receipt, ReceiptPageMeta>;
 export type ReceiptDetail = Schemas['ReceiptDetailDto'];
 export type ReceiptSummary = Schemas['ReceiptSummaryDto'];
 export type CreateReceiptInput = Schemas['CreateReceiptDto'];
@@ -33,6 +40,8 @@ export const RECEIPTS_DEFAULT_LIMIT = 20;
  * xuống API, nên nó thuộc về client dựng ra nó.
  */
 export interface ReceiptFilters {
+  /** Chi nhánh của XE — ô "Chi nhánh" của màn (ADR 0052). */
+  branchId?: string;
   type?: string;
   status?: string;
   categoryId?: string;
@@ -61,6 +70,7 @@ export function receiptFiltersToParams(filters: ReceiptFilters): QueryParams {
     bookingId: filters.bookingId ?? null,
     vehicleId: filters.vehicleId ?? null,
     tenantCustomerId: filters.tenantCustomerId ?? null,
+    branchId: filters.branchId ?? null,
     q: filters.q ?? null,
     from: filters.from ?? null,
     to: filters.to ?? null,
@@ -108,6 +118,8 @@ export function hasReceiptFilters(filters: ReceiptFilters): boolean {
 
 /** KỲ của mọi bề mặt tiền theo kỳ — hai đầu `YYYY-MM-DD` + độ mịn biểu đồ. */
 export interface FinancePeriodFilters {
+  /** Chi nhánh của XE — ô "Chi nhánh" của màn (ADR 0052). */
+  branchId?: string;
   from?: string;
   to?: string;
   granularity?: string;
@@ -152,6 +164,7 @@ export function financeRangeParams(
     to: filters.to ?? null,
     vehicleId: scope.vehicleId ?? null,
     tenantCustomerId: scope.tenantCustomerId ?? null,
+    branchId: filters.branchId ?? null,
   };
 }
 
@@ -188,6 +201,7 @@ export function customerRevenueParams(filters: FinanceOverviewFilters): QueryPar
   return {
     from: filters.from ?? null,
     to: filters.to ?? null,
+    branchId: filters.branchId ?? null,
     sort: filters.customerSort ?? null,
     page: filters.customerPage ?? 1,
     limit: filters.customerLimit ?? RECEIPTS_DEFAULT_LIMIT,
@@ -196,6 +210,8 @@ export function customerRevenueParams(filters: FinanceOverviewFilters): QueryPar
 
 /** Bộ lọc màn Công nợ — từ khoá + nhóm hạn trả, cả hai lọc ở SERVER. */
 export interface DebtFilters {
+  /** Chi nhánh của XE — ô "Chi nhánh" của màn (ADR 0052). */
+  branchId?: string;
   q?: string;
   filter?: string;
   page?: number;
@@ -206,18 +222,19 @@ export function debtFiltersToParams(filters: DebtFilters): QueryParams {
   return {
     q: filters.q ?? null,
     filter: filters.filter ?? null,
+    branchId: filters.branchId ?? null,
     page: filters.page ?? 1,
     limit: filters.limit ?? RECEIPTS_DEFAULT_LIMIT,
   };
 }
 
 export const receiptsApi = {
-  list(filters: ReceiptFilters): Promise<Paged<Receipt>> {
+  list(filters: ReceiptFilters): Promise<ReceiptListResult> {
     return getApiClient().fetchPage<Receipt>(
       '/receipts',
       receiptFiltersToParams(filters),
       RECEIPTS_DEFAULT_LIMIT,
-    );
+    ) as Promise<ReceiptListResult>;
   },
 
   detail(id: string): Promise<ReceiptDetail> {

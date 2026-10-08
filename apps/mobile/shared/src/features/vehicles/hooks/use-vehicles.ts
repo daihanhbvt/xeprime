@@ -1,6 +1,5 @@
 import { useInfiniteQuery, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
-import { useBranchScopeParams } from '@/features/branches/hooks/use-branch-scope';
 import { keepPageData } from '@/queries/keep-page-data';
 import { queryKeys } from '@/queries/query-keys';
 import {
@@ -38,19 +37,14 @@ export const VEHICLES_PAGE_SIZE = 10;
  * thì, giữ nguyên vị trí cuộn.
  */
 export function useInfiniteVehicles(filters: Omit<VehicleFilters, 'page' | 'limit'>) {
-  /*
-   * Bộ chọn chi nhánh ở thanh trên ghép vào ĐÂY chứ không ở từng màn (cùng chỗ web ghép):
-   * `branchId` nằm trong bộ lọc nên nó vào query key, đổi chi nhánh là tự tải lại, và không màn
-   * nào có cơ hội quên gửi tham số.
-   */
-  const branchScope = useBranchScopeParams();
+  // `branchId` (ô lọc của màn — ADR 0052) nằm TRONG `filters` nên vào query key cùng mọi chiều khác.
   // So theo NỘI DUNG bộ lọc (chuỗi hoá) — object mới mỗi render nhưng key không được đổi oan.
   const serialized = JSON.stringify(
-    vehicleFiltersToParams({ ...filters, ...branchScope } as VehicleFilters),
+    vehicleFiltersToParams({ ...filters } as VehicleFilters),
   );
 
   const baseFilters = useMemo(
-    () => ({ ...filters, ...branchScope, limit: VEHICLES_PAGE_SIZE }) as VehicleFilters,
+    () => ({ ...filters, limit: VEHICLES_PAGE_SIZE }) as VehicleFilters,
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `serialized` đại diện trọn bộ lọc
     [serialized],
   );
@@ -114,8 +108,7 @@ export function useInfiniteVehicles(filters: Omit<VehicleFilters, 'page' | 'limi
 }
 
 export function useVehiclesPage(filters: VehicleFilters, enabled = true) {
-  const branchScope = useBranchScopeParams();
-  const scoped = { ...filters, ...branchScope };
+  const scoped = filters;
   const params = vehicleFiltersToParams(scoped);
 
   return useQuery({
@@ -249,14 +242,16 @@ export function useVehicleAlerts(ids: readonly string[]) {
 }
 
 /**
- * Đếm đội xe theo trạng thái vận hành — nói về CẢ đội xe, không phụ thuộc trang hay bộ lọc.
+ * Đếm đội xe theo trạng thái vận hành — nói về CẢ đội xe của chi nhánh đang xem, không phụ thuộc trang hay ô lọc trạng thái.
  *
  * Hỏng thì dải chỉ số tự ẩn: nó là phụ trợ, không được chặn danh sách phía dưới.
  */
-export function useFleetSummary(enabled: boolean) {
+export function useFleetSummary(enabled: boolean, branchId?: string) {
+  // Cùng chi nhánh với bảng nó đứng cạnh (ADR 0052 điều 3) — nhưng vẫn độc lập với trang/trạng thái.
+  const params = branchId ? { branchId } : {};
   return useQuery({
-    queryKey: queryKeys.vehicles.fleetSummary(),
-    queryFn: () => vehiclesApi.fleetSummary(),
+    queryKey: queryKeys.vehicles.fleetSummary(params),
+    queryFn: () => vehiclesApi.fleetSummary(params),
     enabled,
   });
 }

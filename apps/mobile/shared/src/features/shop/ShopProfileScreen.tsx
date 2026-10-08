@@ -1,4 +1,6 @@
-import { useRef } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useRef } from 'react';
+import type { LayoutChangeEvent, ScrollView } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import type { ReactNode } from 'react';
@@ -10,9 +12,13 @@ import {
   TENANT_ROLE,
   TENANT_STATUS,
   type TenantStatus,
+  toLocalVnPhone,
 } from '@xeprime/types';
 import { guessAddressLine } from '@xeprime/domain';
-import { shopProfileSchema, type ShopProfileValues } from '@xeprime/validators';
+import {
+  shopProfileWithContactSchema,
+  type ShopProfileWithContactValues,
+} from '@xeprime/validators';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
@@ -30,7 +36,7 @@ import { ManageHeader } from '@/features/shell/ManageHeader';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
-import { ROUTES } from '@/navigation/routes';
+import { ROUTES, SHOP_SECTION, type ShopSection } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
 import type { MyShop, UpdateShopProfileInput } from './api';
@@ -61,9 +67,13 @@ const ADDRESS_PIN_NAMES = {
 const WELCOME_VEHICLE_PAGE = { page: 1, limit: 1 };
 
 /** Giá trị form → thân request của lượt Lưu. */
-function toBody(v: ShopProfileValues): UpdateShopProfileInput {
+function toBody(v: ShopProfileWithContactValues): UpdateShopProfileInput {
   return {
     displayName: v.displayName,
+    // Liên hệ của GIAN HÀNG (khách thấy) — khác SĐT/email đăng nhập. Chuỗi rỗng = gỡ (DTO
+    // `ValidateIf(hasText)`), nên gửi nguyên, không đổi thành `undefined`.
+    phone: v.phone,
+    email: v.email,
     bio: v.bio,
     // Chỉ gửi MÃ + phần chi tiết — tên tỉnh/xã và chuỗi hiển thị do server ghép, rồi chuyển tiếp
     // cho chi nhánh mặc định (writer duy nhất của địa chỉ vận hành).
@@ -92,10 +102,16 @@ function toBody(v: ShopProfileValues): UpdateShopProfileInput {
  *
  * SĐT đổi về dạng `09…` để nhập/đọc; backend lưu `84…` và tự chuẩn hoá lại khi nhận.
  */
-function toValues(shop: MyShop): ShopProfileValues {
+function toValues(shop: MyShop): ShopProfileWithContactValues {
   const p = shop.profile;
   return {
-    displayName: p.displayName ?? '',
+    /*
+     * Tên hiển thị CHÍNH LÀ `tenants.name` từ PR #151 (một nguồn — `profile.displayName` chỉ giữ cho
+     * tương thích). Liên hệ đọc từ GIAN HÀNG (`shop.phone/email`), không từ tài khoản chủ.
+     */
+    displayName: shop.name,
+    phone: shop.phone ? toLocalVnPhone(shop.phone) : '',
+    email: shop.email ?? '',
     bio: p.bio ?? '',
     provinceCode: shop.defaultBranch?.provinceCode ?? p.provinceCode ?? '',
     wardCode: shop.defaultBranch?.wardCode ?? p.wardCode ?? '',
@@ -144,8 +160,15 @@ export function ShopProfileScreen({
   intro,
   welcome = false,
   variant = 'settings',
+  section,
 }: {
   header?: ReactNode;
+  /**
+   * Khối cần CUỘN TỚI khi mở — bản native của `?section=` trên trang Cửa hàng web. Liên kết "Tài
+   * khoản nhận tiền"/"Thông tin khai thuế" của tuyến hoa hồng đổi sang đây khi gian hàng tuyến gói
+   * mở chúng (`partnerPathRedirect`).
+   */
+  section?: ShopSection;
   intro?: ReactNode;
   /**
    * Vừa thanh toán lượt gói đầu tiên xong — bật DẢI CHÀO một lần (ADR 0040).
@@ -247,6 +270,7 @@ export function ShopProfileScreen({
        */
       welcome={welcome && isEstablishedPackageShop(tenant)}
       variant={variant}
+      {...(section ? { section } : {})}
     />
   );
 }
@@ -278,8 +302,10 @@ function ProfileForm({
   canEdit,
   welcome,
   variant,
+  section,
 }: {
   shell: ReactNode;
+  section?: ShopSection;
   /** Khối của khu gọi, đặt TRÊN biểu mẫu — tiến trình đăng ký ở khu khách, không có gì ở Manage. */
   intro?: ReactNode;
   shop: MyShop;
@@ -308,6 +334,54 @@ function ProfileForm({
   const logoPicker = useRef<(() => void) | null>(null);
 
   /*
+   * Cuộn tới khối được yêu cầu (`section`) — MỘT lần, khi đã đo được vị trí. Toạ độ của khối là
+   * tương đối với cột nội dung, cột đó lại nằm dưới thẻ danh tính, nên cộng hai lớp. Không cuộn lại
+   * ở các lần đo sau (form mở rộng, danh sách tài khoản tải xong) để không giật trang người đang đọc.
+   */
+  const scrollRef = useRef<ScrollView | null>(null);
+  const columnY = useRef<number | null>(null);
+  const sectionY = useRef<Partial<Record<ShopSection, number>>>({});
+  const scrolled = useRef(false);
+  const scrollToSection = useCallback(() => {
+    if (!section || scrolled.current) return;
+    const y = sectionY.current[section];
+    if (columnY.current === null || y === undefined) return;
+    scrolled.current = true;
+    scrollRef.current?.scrollTo({ y: Math.max(0, columnY.current + y - space.md), animated: true });
+  }, [section]);
+  /*
+   * Màn này nằm trong bộ tab — KHÔNG dựng lại giữa các lần mở. Mỗi lần được focus (hoặc đổi
+   * `section`) thì cho phép cuộn lại một lần, như web cuộn mỗi khi vào `?section=`.
+   */
+  useFocusEffect(
+    useCallback(() => {
+      scrolled.current = false;
+      scrollToSection();
+    }, [scrollToSection]),
+  );
+  const onColumnLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      columnY.current = event.nativeEvent.layout.y;
+      scrollToSection();
+    },
+    [scrollToSection],
+  );
+  const onLegalLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      sectionY.current[SHOP_SECTION.LEGAL] = event.nativeEvent.layout.y;
+      scrollToSection();
+    },
+    [scrollToSection],
+  );
+  const onPayoutLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      sectionY.current[SHOP_SECTION.PAYOUT] = event.nativeEvent.layout.y;
+      scrollToSection();
+    },
+    [scrollToSection],
+  );
+
+  /*
    * Chỉ cần BIẾT có xe nào chưa — dải chào đổi câu theo đó. Trang đầu là đủ để trả lời, nên không
    * kéo bộ lọc của màn danh sách vào một màn không có ô lọc nào.
    *
@@ -325,12 +399,15 @@ function ProfileForm({
    */
   const hasVehicle = vehicles.isLoading || (vehicles.data?.items.length ?? 0) > 0;
 
-  const resolver = useValidationResolver<ShopProfileValues>(shopProfileSchema, 'Shop.validation');
+  const resolver = useValidationResolver<ShopProfileWithContactValues>(
+    shopProfileWithContactSchema,
+    'Shop.validation',
+  );
   /*
    * `values` (không phải `defaultValues`): sau khi lưu, query trả hồ sơ mới và form phải theo —
    * nếu không, "Huỷ bỏ" mời người dùng hoàn tác thứ đã lưu xong rồi.
    */
-  const { control, handleSubmit, reset, formState } = useForm<ShopProfileValues>({
+  const { control, handleSubmit, reset, formState } = useForm<ShopProfileWithContactValues>({
     resolver,
     values: toValues(shop),
   });
@@ -390,6 +467,7 @@ function ProfileForm({
       <Screen
         edges={['left', 'right', 'bottom']}
         padded={false}
+        scrollRef={scrollRef}
         /*
           Hành động Lưu neo ở ĐÁY MÀN và LUÔN có mặt khi form sửa được — mờ đi cho tới khi thật
           sự có thay đổi, đúng như `ShopProfileWorkspace` bên web.
@@ -447,7 +525,13 @@ function ProfileForm({
             : {})}
         />
 
-        <YStack px={layout.screenX} pt={layout.section} gap={layout.section} pb={layout.section}>
+        <YStack
+          px={layout.screenX}
+          pt={layout.section}
+          gap={layout.section}
+          pb={layout.section}
+          onLayout={onColumnLayout}
+        >
           {/*
             Khối của khu gọi — tiến trình đăng ký ở khu khách, không có gì ở khu quản lý. Đặt TRÊN
             dải trạng thái: người mới đăng ký cần biết mình đang ở bước nào trước khi đọc bất cứ
@@ -490,6 +574,28 @@ function ProfileForm({
             />
             <TextField
               control={control}
+              name="phone"
+              label={t('form.display.phone.label')}
+              placeholder={t('form.display.phone.placeholder')}
+              keyboardType="phone-pad"
+              autoComplete="tel"
+              editable={editable}
+            />
+            <TextField
+              control={control}
+              name="email"
+              label={t('form.display.email.label')}
+              placeholder={t('form.display.email.placeholder')}
+              keyboardType="email-address"
+              autoComplete="email"
+              autoCapitalize="none"
+              editable={editable}
+            />
+            <Text col={colors.textMuted} fos={fontSize.label}>
+              {t('form.display.contactHint')}
+            </Text>
+            <TextField
+              control={control}
               name="bio"
               label={t('form.display.bio.label')}
               placeholder={t('form.display.bio.placeholder')}
@@ -515,21 +621,24 @@ function ProfileForm({
             />
           ) : null}
 
-          <FormSection title={t('form.address.title')} icon="location-outline">
-            {isSettings ? checklist : null}
-            {/*
+          <YStack onLayout={onLegalLayout}>
+            <FormSection title={t('form.address.title')} icon="location-outline">
+              {isSettings ? checklist : null}
+              {/*
               Địa chỉ ở đây là địa chỉ của CHI NHÁNH MẶC ĐỊNH: đổi nó là backend dời chi nhánh đó
               và đồng bộ lại vị trí công khai của mọi xe thuộc nó. Không có nguồn địa chỉ thứ hai
               nào ở client.
             */}
-            <AddressFields
-              control={control}
-              names={ADDRESS_FIELD_NAMES}
-              pin={ADDRESS_PIN_NAMES}
-              required
-              disabled={!editable}
-            />
-            {/*
+              <AddressFields
+                control={control}
+                names={ADDRESS_FIELD_NAMES}
+                pin={ADDRESS_PIN_NAMES}
+                required
+                wardRequired={false}
+                addressLineRequired={false}
+                disabled={!editable}
+              />
+              {/*
               Lối sang màn Chi nhánh là một LIÊN KẾT CHỮ, không phải nút.
 
               `Button` mang theo hộp cao 48dp và lề ngang 16 kể cả ở biến thể ghost — cho một
@@ -540,27 +649,36 @@ function ProfileForm({
               Bọc `XStack` để vùng chạm ôm đúng chữ: trong `YStack` thì `Pressable` giãn hết bề
               ngang thẻ, và chạm vào khoảng trắng bên phải cũng điều hướng.
             */}
-            <XStack>
-              <InlineAction
-                label={t('form.address.province.branchLink')}
-                onPress={() => navigateOnce(ROUTES.manage.shopBranches())}
+              {/*
+                CHỈ tuyến GÓI: chi nhánh là năng lực của Full Manage (ADR 0027 điều 1 · ADR 0041).
+                Chủ xe tuyến hoa hồng chỉ có một địa chỉ mặc định và `OWNER_LITE_NAV` không có mục
+                Chi nhánh nào — để link ở đây là mời họ vào một màn sẽ từ chối họ. Web gác cùng chỗ
+                bằng `isManage` trong `ShopLegalFields`.
+              */}
+              {isPackageShopTrack(tenant) ? (
+                <XStack>
+                  <InlineAction
+                    label={t('form.address.province.branchLink')}
+                    onPress={() => navigateOnce(ROUTES.manage.shopBranches())}
+                  />
+                </XStack>
+              ) : null}
+              <TextField
+                control={control}
+                name="taxCode"
+                label={t('form.address.taxCode.label')}
+                placeholder={t('form.address.taxCode.placeholder')}
+                editable={editable}
               />
-            </XStack>
-            <TextField
-              control={control}
-              name="taxCode"
-              label={t('form.address.taxCode.label')}
-              placeholder={t('form.address.taxCode.placeholder')}
-              editable={editable}
-            />
-            <TextField
-              control={control}
-              name="businessLicenseNo"
-              label={t('form.address.businessLicenseNo.label')}
-              placeholder={t('form.address.businessLicenseNo.placeholder')}
-              editable={editable}
-            />
-          </FormSection>
+              <TextField
+                control={control}
+                name="businessLicenseNo"
+                label={t('form.address.businessLicenseNo.label')}
+                placeholder={t('form.address.businessLicenseNo.placeholder')}
+                editable={editable}
+              />
+            </FormSection>
+          </YStack>
 
           {/*
             TÀI KHOẢN NHẬN TIỀN — sổ `bank_accounts` phạm vi gian hàng, nơi lệnh rút thật sự
@@ -571,7 +689,9 @@ function ProfileForm({
             (ADR 0038 điều 3), và quản lý mở khối này chỉ để nhận 403.
           */}
           {isSettings && isShopOwner ? (
-            <BankAccountList scope="shop" title={t('sections.payout')} />
+            <YStack onLayout={onPayoutLayout}>
+              <BankAccountList scope="shop" title={t('sections.payout')} />
+            </YStack>
           ) : null}
 
           {/*

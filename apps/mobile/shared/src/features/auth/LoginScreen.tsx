@@ -43,8 +43,8 @@ export function LoginScreen({
   onSuccess: (user: CurrentUser, method: LoginMethod) => void;
   onForgotPassword: () => void;
   /**
-   * Không truyền = ẨN lối "chưa có tài khoản?" — app XePrime Partner không có màn đăng ký
-   * (hồ sơ gian hàng mở từ app XePrime rồi handoff sang, tách app 25/09/2026).
+   * Không truyền = ẨN lối "chưa có tài khoản?". Cả hai app đều truyền: từ ADR 0053 app Partner tạo
+   * tài khoản ĐỐI TÁC như site partner.
    */
   onSwitchToRegister?: () => void;
   /**
@@ -87,14 +87,13 @@ export function LoginScreen({
               {t('modal.loginTitle')} <Text col={colors.primaryActive}>{APP_NAME}</Text>
             </Text>
             {/*
-              Lời dẫn theo APP (tách app 25/09/2026): XePrime nói về đặt xe và chuyến đi,
-              XePrime Partner nói về gian hàng — cùng một màn đăng nhập dùng chung, nhưng
-              hứa hẹn với người đọc thì phải đúng app họ vừa mở.
+              Lời dẫn theo APP: XePrime nói về đặt xe và chuyến đi; XePrime Partner dùng đúng
+              câu của site partner (`portal.subtitle` — chủ xe cá nhân, gian hàng, nhân viên).
             */}
             <Text col={colors.textMuted} fos={fontSize.body}>
               {t(
                 APP_PROFILE.clientApp === MOBILE_CLIENT_APP.PARTNER
-                  ? 'modal.loginSubPartner'
+                  ? 'portal.subtitle'
                   : 'modal.loginSub',
               )}
             </Text>

@@ -643,7 +643,19 @@ export class CreateVehicleDto {
   @MaxLength(4000)
   description?: string | null;
 
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'URL ảnh đại diện xe' })
+  /**
+   * @deprecated BỊ BỎ QUA từ 07/10/2026 — ảnh bìa là giá trị DẪN XUẤT từ ô ảnh mặt trước
+   * (`VEHICLE_COVER_IMAGE_TYPE`), server tự ghi mỗi lần `media` được lưu.
+   *
+   * Trường còn ở đây để bản app đã phát hành không bị `forbidNonWhitelisted` trả 400 khi nó vẫn
+   * gửi ô này; giá trị không đi vào `writableFields` nên không ghi được gì.
+   */
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    deprecated: true,
+    description: 'BỊ BỎ QUA — ảnh bìa luôn là ảnh mặt trước trong `media`',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(2000)

@@ -15,6 +15,8 @@
     "stageFilterLabel": "Filter by trip status",
     "stageAll": "All statuses",
     "stageEmptyTitle": "No trips with this status",
+    "stageEmptyFiltered": "Filtering by: {stage}",
+    "stageEmptyAction": "Tap to clear the filter and see all trips.",
     "stageEmptyBody": "The filter applies to the page you are viewing. Clear it or try another page.",
     "stageClear": "Clear status filter",
     "emptyTransitionalTitle": "No rental trips in progress",

@@ -10,9 +10,10 @@ import {
   SELLER_ENTITY_TYPE_VALUES,
   SELLER_PROFILE_STATUS,
   SELLER_PROFILE_STATUS_META,
-  type SellerProfileStatus,
 } from '@xeprime/types';
+import { metaColor } from '@/lib/status-meta';
 import { AppHeader } from '@/components/layout/AppHeader';
+import { ShellPageHeader, type PageShell } from '@/features/shell/ShellPageHeader';
 import { Screen } from '@/components/layout/Screen';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
@@ -69,7 +70,15 @@ function toValues(profile: SellerProfile): TaxFormValues {
  *  - Cổng chủ xe nằm ở route (`OwnerGate`), nên tới được đây đã là chủ gian hàng; phần kiểm ở
  *    đây là QUYỀN (`seller_profile.*`), thứ nhân sự cùng gian hàng cũng có thể thiếu.
  */
-export function TaxScreen() {
+export function TaxScreen({
+  shell = 'account',
+}: {
+  /**
+   * `manage` = mục menu Owner Lite của app XePrime Partner (trong bộ tab, nút mở menu) — ADR 0053.
+   * `account` = màn chen ngang có nút lui.
+   */
+  shell?: PageShell;
+} = {}) {
   const t = useTranslations('Account.tax');
   const tSeller = useTranslations('SellerProfile');
   const router = useRouter();
@@ -117,24 +126,30 @@ export function TaxScreen() {
   const entityType = useWatch({ control, name: 'entityType' });
   const isIndividual = entityType === SELLER_ENTITY_TYPE.INDIVIDUAL;
 
-  const header = (
-    <AppHeader
-      onBack={() => goBackOr(router, ROUTES.account.home())}
-      title={t('title')}
-      subtitle={t('subtitle')}
-      {...(profile
-        ? {
-            badge: (
-              <StatusBadge
-                label={domainLabel('sellerProfileStatus', profile.status)}
-                color={SELLER_PROFILE_STATUS_META[profile.status as SellerProfileStatus].color}
-                size="sm"
-              />
-            ),
-          }
-        : {})}
+  const statusBadge = profile ? (
+    <StatusBadge
+      label={domainLabel('sellerProfileStatus', profile.status)}
+      color={metaColor(SELLER_PROFILE_STATUS_META, profile.status)}
+      size="sm"
     />
-  );
+  ) : null;
+  const header =
+    shell === 'manage' ? (
+      <ShellPageHeader
+        shell="manage"
+        title={t('title')}
+        subtitle={t('subtitle')}
+        backTo={ROUTES.account.home()}
+        {...(statusBadge ? { right: statusBadge } : {})}
+      />
+    ) : (
+      <AppHeader
+        onBack={() => goBackOr(router, ROUTES.account.home())}
+        title={t('title')}
+        subtitle={t('subtitle')}
+        {...(statusBadge ? { badge: statusBadge } : {})}
+      />
+    );
 
   if (!canView) {
     return (

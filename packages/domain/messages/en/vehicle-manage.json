@@ -89,9 +89,9 @@
   "images": {
     "reorderToggle": "Allow drag and drop to reorder photos.",
     "reorderLabel": "Enable drag-and-drop reordering",
-    "minimumHint": "A cover photo is required to list the vehicle. Each slot holds one photo; \"Other photos\" accepts several (up to {max} gallery photos).",
-    "mainImage": "Cover photo",
-    "mainImageHelp": "Shown on the vehicle card and listing — a clear front view works best.",
+    "minimumHint": "Each slot holds one photo and none may be left empty (up to {max} gallery photos).",
+    "galleryTitle": "Vehicle photos",
+    "coverFromFront": "The front photo is used as the cover on the vehicle card and listing — pick your sharpest shot.",
     "choose": "Choose photo",
     "uploaded": "Uploaded",
     "missing": "Not uploaded",

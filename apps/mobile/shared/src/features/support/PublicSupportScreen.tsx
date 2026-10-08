@@ -28,7 +28,7 @@ export function PublicSupportScreen() {
   return (
     <ContentWebScreen
       path={CONTENT_PATH.SUPPORT}
-      onBack={() => goBackOr(router, ROUTES.explore.home())}
+      onBack={() => goBackOr(router, ROUTES.root.index())}
     />
   );
 }

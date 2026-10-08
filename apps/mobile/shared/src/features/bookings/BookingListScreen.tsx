@@ -17,6 +17,9 @@ import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManageListShell } from '@/features/shell/ManageListShell';
+import { withBranchParam, withBranchReturn } from '@/features/branches/branch-link';
+import { BranchFilterField, useBranchEmptyCopy } from '@/features/branches/components/BranchFilterField';
+import { useScreenBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { ManageStateScroll } from '@/features/shell/ManageStateScroll';
 import type { FilterGroup } from '@/features/shell/ManageFilterSheet';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
@@ -90,8 +93,12 @@ export function BookingListScreen({
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(FIRST_PAGE);
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
+  /* Ô "Chi nhánh" (ADR 0052) — cả "Tất cả đơn thuê" lẫn hàng đợi "Chờ giao xe". */
+  const { branchId, filter: branchFilter } = useScreenBranchFilter(() => setPage(FIRST_PAGE));
+  const branchEmpty = useBranchEmptyCopy(branchFilter, branchId);
 
   const query = useBookingsPage({
+    ...(branchId ? { branchId } : {}),
     ...(status === STATUS_ALL ? {} : { status }),
     ...(preset ? { preset } : {}),
     // Lọc theo xe đến từ ĐƯỜNG DẪN, không phải tấm lọc: nó là ngữ cảnh của lối đi từ hồ sơ xe,
@@ -238,10 +245,12 @@ export function BookingListScreen({
                 // Nút ở đầu danh sách: `Bookings.list.create` ("Tạo đơn") — đúng nút của web.
                 label={t('create')}
                 tone="primary"
-                onPress={() => navigateOnce(ROUTES.manage.bookingCreate())}
+                // Bộ chọn xe mở sẵn ở chi nhánh đang lọc — gợi ý, đổi được (ADR 0052 điều 6).
+                onPress={() => navigateOnce(withBranchReturn(ROUTES.manage.bookingCreate(), branchId))}
               />
             ) : null
           }
+          branch={<BranchFilterField filter={branchFilter} value={branchId} />}
           searchValue={search}
           searchLabel={t('searchLabel')}
           searchPlaceholder={t('searchPlaceholder')}
@@ -294,7 +303,13 @@ export function BookingListScreen({
                 người dùng đứng trước một màn trắng và cách duy nhất là tự nhớ mình đã lọc gì.
               */
               inStateScroll(
-                filtered ? (
+                branchEmpty && !filtered ? (
+                  <ScreenMessage
+                    icon="location-outline"
+                    title={branchEmpty.title}
+                    description={branchEmpty.hint}
+                  />
+                ) : filtered ? (
                   <ScreenMessage
                     icon="search-outline"
                     title={
@@ -321,7 +336,7 @@ export function BookingListScreen({
                     title={tRoot('awaitingPickup.emptyTitle')}
                     description={tRoot('awaitingPickup.emptyBody')}
                     actionLabel={tRoot('awaitingPickup.goToAll')}
-                    onAction={() => navigateOnce(ROUTES.manage.bookings())}
+                    onAction={() => navigateOnce(withBranchParam(ROUTES.manage.bookings(), branchId))}
                   />
                 ) : (
                   <ScreenMessage

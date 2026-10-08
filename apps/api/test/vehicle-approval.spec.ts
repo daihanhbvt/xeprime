@@ -28,6 +28,7 @@ import {
 } from './helpers/service-factory';
 import { giveTenantPlan } from './helpers/billing-fixture';
 import { passVehicleReviewChecks } from './helpers/vehicle-review-fixture';
+import { requiredVehicleImageRows } from './helpers/vehicle-media';
 
 /**
  * WS0 — vòng đăng xe → duyệt → công khai (ADR 0008) chạy trên PostgreSQL THẬT. Kiểm chứng:
@@ -85,14 +86,14 @@ async function seedVehicle(
     },
   });
   // Ảnh thư viện: luật 09/09/2026 đòi tối thiểu 4 URL KHÁC NHAU (ảnh đại diện tính là một).
+  // Đủ GÓC ảnh bắt buộc của loại xe (07/10/2026) — ba dòng không gán góc sẽ bị cổng duyệt
+  // báo thiếu `photos`, ở những ca chẳng nói gì về ảnh.
   await prisma.vehicleImage.createMany({
-    data: [1, 2, 3].map((n) => ({
-      id: newId(),
-      tenantId,
+    data: requiredVehicleImageRows({
       vehicleId: id,
-      imageUrl: `https://img.example/approval-${id.slice(-4)}-${n}.jpg`,
-      sortOrder: n,
-    })),
+      tenantId: tenantId,
+      vehicleType: VEHICLE_TYPE.CAR,
+    }),
   });
   return id;
 }
@@ -384,6 +385,8 @@ describe('Vehicle public approval (WS0)', () => {
       weekendPrice: null,
       mainImageUrl: null,
     });
+    // Ảnh nay là GÓC CHỤP, không phải một cột: xoá thư viện mới là "thiếu ảnh" (07/10/2026).
+    await prisma.vehicleImage.deleteMany({ where: { vehicleId: bare } });
     await expect(vehicles.submitForPublicReview(tenantId, bare, ownerId)).rejects.toMatchObject({
       response: {
         code: API_ERROR_CODE.VEHICLE_PUBLISH_INCOMPLETE,
@@ -391,7 +394,7 @@ describe('Vehicle public approval (WS0)', () => {
         details: {
           missing: expect.arrayContaining([
             PUBLISH_REQUIREMENT.SELF_DRIVE_PRICE,
-            PUBLISH_REQUIREMENT.MAIN_IMAGE,
+            PUBLISH_REQUIREMENT.PHOTOS,
           ]),
         },
       },

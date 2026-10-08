@@ -31,6 +31,8 @@ import type { Member } from './api';
 import { InviteMemberSheet } from './components/InviteMemberSheet';
 import { MemberCard } from './components/MemberCard';
 import { MemberRoleSheet } from './components/MemberRoleSheet';
+import { MemberScopeSheet } from './components/MemberScopeSheet';
+import { canManageMemberScope, useBranchScopeOptions } from './branch-scope';
 import { PendingInvitesPanel } from './components/PendingInvitesPanel';
 import { useMembersPage, useRemoveMember } from './hooks/use-members';
 
@@ -76,7 +78,14 @@ export function MemberListScreen() {
   const [page, setPage] = useState(FIRST_PAGE);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Member | null>(null);
+  const [editingScope, setEditingScope] = useState<Member | null>(null);
   const [removing, setRemoving] = useState<Member | null>(null);
+  /*
+   * Người bị giới hạn chi nhánh chỉ chạm được thành viên NẰM GỌN trong phần của mình (ADR 0052) —
+   * gương của `assertWithinActorScope`; backend vẫn chặn bằng `BRANCH_SCOPE_EXCEEDED`.
+   */
+  const scopeOptions = useBranchScopeOptions();
+  const { allowAll: scopeAllowAll, branchIds: myBranchIds } = scopeOptions;
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
   const trimmedSearch = debouncedSearch.trim();
 
@@ -147,8 +156,10 @@ export function MemberListScreen() {
         isMe={item.userId === me?.id}
         canUpdateRole={canUpdateRole && membersFeature.canWrite}
         canRemove={canRemove && membersFeature.canWrite}
+        withinScope={canManageMemberScope(scopeAllowAll, myBranchIds, item)}
         pending={removeMember.isPending && removeMember.variables === item.userId}
         onChangeRole={setEditingRole}
+        onChangeScope={setEditingScope}
         onRemove={setRemoving}
       />
     ),
@@ -157,6 +168,8 @@ export function MemberListScreen() {
       canUpdateRole,
       me?.id,
       membersFeature.canWrite,
+      myBranchIds,
+      scopeAllowAll,
       removeMember.isPending,
       removeMember.variables,
     ],
@@ -287,6 +300,7 @@ export function MemberListScreen() {
 
       <InviteMemberSheet open={inviteOpen} onClose={() => setInviteOpen(false)} />
       <MemberRoleSheet member={editingRole} onClose={() => setEditingRole(null)} />
+      <MemberScopeSheet member={editingScope} onClose={() => setEditingScope(null)} />
 
       <AlertDialog
         open={removing !== null}

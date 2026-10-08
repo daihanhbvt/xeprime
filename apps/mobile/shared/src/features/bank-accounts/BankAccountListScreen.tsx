@@ -1,10 +1,8 @@
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslations } from 'use-intl';
-import { AppHeader } from '@/components/layout/AppHeader';
+import { ShellPageHeader, type PageShell } from '@/features/shell/ShellPageHeader';
 import { Screen } from '@/components/layout/Screen';
 import { IconButton } from '@/components/ui/IconButton';
-import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { BANK_ACCOUNT_SCOPE, type BankAccountScope } from '@/api/bank-accounts/api';
 import { BankAccountList } from './components/BankAccountList';
@@ -26,17 +24,23 @@ import { BankAccountList } from './components/BankAccountList';
  */
 export function BankAccountListScreen({
   scope = BANK_ACCOUNT_SCOPE.ACCOUNT,
+  shell = 'account',
 }: {
   scope?: BankAccountScope;
+  /**
+   * `manage` = mục menu Owner Lite của app XePrime Partner (trong bộ tab, nút mở menu) — ADR 0053.
+   * `account` = màn chen ngang có nút lui.
+   */
+  shell?: PageShell;
 }) {
   const t = useTranslations('BankAccounts');
-  const router = useRouter();
   const [formOpen, setFormOpen] = useState(false);
 
   return (
     <>
-      <AppHeader
-        onBack={() => goBackOr(router, ROUTES.account.home())}
+      <ShellPageHeader
+        shell={shell}
+        backTo={ROUTES.account.home()}
         title={t('title')}
         subtitle={t('subtitle')}
         right={

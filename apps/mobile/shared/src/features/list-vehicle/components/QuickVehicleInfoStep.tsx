@@ -24,6 +24,7 @@ import {
   useTransmissionOptions,
 } from '@/features/vehicles/components/VehicleEnergyFields';
 import { VehicleIdentityFields } from '@/features/vehicles/components/VehicleIdentityFields';
+import { BodyTypePicker } from '@/features/vehicles/components/VehicleFormSteps';
 import { useDomainLabel } from '@/i18n/domain';
 import { colors, fontSize, space } from '@/theme/tokens';
 import { suggestVehicleName } from '../quick-mappers';
@@ -135,13 +136,16 @@ export function QuickVehicleInfoStep({
           <BlockTitle>{t('basicTitle')}</BlockTitle>
 
           <VehicleIdentityFields
+            required
             control={control as never}
             vehicleType={vehicleType}
             setValue={setValue as never}
           />
           <VehicleClassificationFields
+            required
             control={control as never}
             vehicleType={vehicleType}
+            bodyTypePicker={<BodyTypePicker control={control as never} />}
             setValue={setValue as never}
           />
 
@@ -150,6 +154,7 @@ export function QuickVehicleInfoStep({
             name="manufactureYear"
             grouped={false}
             integer
+            required
             label={tForm('specs.manufactureYear')}
             placeholder={String(new Date().getFullYear())}
             min={1980}
@@ -189,6 +194,7 @@ export function QuickVehicleInfoStep({
             control={control as never}
             vehicleType={vehicleType}
             transmissionOptions={transmissionOptions}
+            fuelTypeRequired
             setValue={setValue as never}
           />
         </YStack>

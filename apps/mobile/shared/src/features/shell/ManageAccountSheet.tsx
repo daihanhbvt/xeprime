@@ -2,19 +2,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { CUSTOMER_TRIP_FILTER, TENANT_ROLE, TRIP_ROLE } from '@xeprime/types';
 import type { Href } from 'expo-router';
 import { LocaleSwitcher } from '@/components/i18n/LocaleSwitcher';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { AccountTrackBadge } from '@/features/account/components/AccountTrackBadge';
-import { useTripsInfinite } from '@/features/trips/hooks/use-trips';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { colors, fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
 import type { IconName } from '@/components/ui/Chip';
 import { LogoutRow } from './LogoutRow';
 import { useManageDrawer } from './ManageDrawerHost';
+import { useShopSettingsAccess } from '@/features/shop/hooks/use-shop-settings-access';
 
 /**
  * MENU TÀI KHOẢN của khu quản lý — bản native của dropdown trên `ManageUserCard` bên web.
@@ -46,26 +45,11 @@ export function ManageAccountSheet({ open, onClose }: { open: boolean; onClose: 
   const drawer = useManageDrawer();
   const { data: user } = useCurrentUser();
 
-  /* Cài đặt gian hàng là của CHỦ — cùng điều kiện web đặt trên mục tương ứng. */
-  const isShopOwner = user?.tenant?.roleKey === TENANT_ROLE.SHOP_OWNER;
-
   /*
-   * Chuyến ĐI THUÊ chưa khép của chính người này — quyết định mục "Chuyến tôi đi thuê" có mặt hay
-   * không, CÙNG vị từ với dropdown `ManageUserCard` bên web.
-   *
-   * Nó là dấu vết của một lần CHUYỂN TUYẾN chứ không phải chức năng thường trực: người nâng từ
-   * tuyến hoa hồng lên gói có thể còn chuyến chưa xong. Gian hàng chưa bao giờ đi thuê thì mục
-   * này không bao giờ xuất hiện.
-   *
-   * Chỉ hỏi khi tấm trượt ĐANG mở và người dùng đứng trong một gian hàng: nhân sự nền tảng không
-   * bao giờ có chuyến để đếm, và tấm đóng thì không ai đọc con số này.
+   * "Cài đặt gian hàng" — cùng luật web `useShopSettingsAccess` (PR #151): có `tenant.view` và gian
+   * hàng TUYẾN GÓI. Chủ xe tuyến hoa hồng không có trang Cửa hàng; hồ sơ của họ là "Hồ sơ chủ xe".
    */
-  const trips = useTripsInfinite(
-    CUSTOMER_TRIP_FILTER.CURRENT,
-    TRIP_ROLE.RENTER,
-    open && Boolean(user?.tenant),
-  );
-  const hasOpenRenterTrips = (trips.data?.pages[0]?.counts.current ?? 0) > 0;
+  const canOpenShopSettings = useShopSettingsAccess();
 
   /** Đóng cả tấm trượt LẪN drawer trước khi đi: để ngỏ thì màn mới mở ra sau hai lớp phủ. */
   const go = (href: Href) => {
@@ -90,21 +74,14 @@ export function ManageAccountSheet({ open, onClose }: { open: boolean; onClose: 
 
           <MenuRow
             icon="person-outline"
-            label={t('security')}
+            label={t('account')}
             onPress={() => go(ROUTES.manage.account())}
           />
-          {isShopOwner ? (
+          {canOpenShopSettings ? (
             <MenuRow
               icon="storefront-outline"
               label={t('shopSettings')}
               onPress={() => go(ROUTES.manage.shop())}
-            />
-          ) : null}
-          {hasOpenRenterTrips ? (
-            <MenuRow
-              icon="car-outline"
-              label={t('renterTrips')}
-              onPress={() => go(ROUTES.manage.accountTrips())}
             />
           ) : null}
 

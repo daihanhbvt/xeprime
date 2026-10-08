@@ -18,9 +18,12 @@ import styles from './ImagesSection.module.css';
  * `imageType`; API cũ `images: string[]` vẫn nguyên.
  *
  * Phần hiển thị + upload là `VehicleImageBoard`, dùng CHUNG với bước ảnh của hai wizard thêm xe
- * (30/09/2026). Mục này chỉ giữ bản nháp và tự lưu bằng `PATCH /vehicles/:id`. Ảnh đại diện vẫn
- * là `mainImageUrl` — nguồn duy nhất của thẻ xe/chợ. Nút Lưu bị chặn khi còn ảnh đang tải, để
- * không lưu thiếu.
+ * (30/09/2026). Mục này chỉ giữ bản nháp và tự lưu bằng `PATCH /vehicles/:id`.
+ *
+ * Ảnh BÌA không có ô riêng ở đây (07/10/2026): `vehicles.main_image_url` là giá trị dẫn xuất từ
+ * ô ảnh MẶT TRƯỚC, server ghi trong cùng transaction lưu thư viện. Nút Lưu bị chặn khi còn ảnh
+ * đang tải, để không lưu thiếu — và server từ chối lượt lưu còn trống một góc bắt buộc
+ * (`VEHICLE_IMAGES_INCOMPLETE`), nên câu lỗi đó hiện bằng toast như mọi lỗi khác.
  */
 export function ImagesSection() {
   const { vehicle, canEdit } = useManagedVehicle();
@@ -32,24 +35,17 @@ export function ImagesSection() {
   const update = useUpdateVehicle(vehicle.id);
 
   const initial = useMemo(
-    () => ({
-      main: vehicle.mainImageUrl ?? null,
-      items: (vehicle.media ?? []).map((m) => ({ url: m.url, type: m.type as VehicleImageType })),
-    }),
-    [vehicle.mainImageUrl, vehicle.media],
+    () => (vehicle.media ?? []).map((m) => ({ url: m.url, type: m.type as VehicleImageType })),
+    [vehicle.media],
   );
-  const [main, setMain] = useState<string | null>(initial.main);
-  const [items, setItems] = useState<VehicleMediaItem[]>(initial.items);
+  const [items, setItems] = useState<VehicleMediaItem[]>(initial);
   const [uploading, setUploading] = useState(false);
 
-  const dirty = main !== initial.main || JSON.stringify(items) !== JSON.stringify(initial.items);
+  const dirty = JSON.stringify(items) !== JSON.stringify(initial);
 
   async function submit() {
     try {
-      await update.mutateAsync({
-        mainImageUrl: main,
-        media: items.map((i) => ({ url: i.url, type: i.type })),
-      });
+      await update.mutateAsync({ media: items.map((i) => ({ url: i.url, type: i.type })) });
       message.success(t('saved'));
     } catch (err) {
       message.error(errorMessage(err));
@@ -68,8 +64,6 @@ export function ImagesSection() {
       <VehicleImageBoard
         vehicleType={vehicle.vehicleType}
         vehicleName={vehicle.name}
-        main={main}
-        onMainChange={setMain}
         items={items}
         onItemsChange={setItems}
         canEdit={canEdit}
@@ -81,10 +75,7 @@ export function ImagesSection() {
         cancelLabel={tEdit('revert')}
         onCancel={
           dirty
-            ? () => {
-                setMain(initial.main);
-                setItems(initial.items);
-              }
+            ? () => setItems(initial)
             : undefined
         }
         submitting={update.isPending}

@@ -1,6 +1,6 @@
 import { Redirect } from 'expo-router';
 
-import { ROUTES } from '@/navigation/routes';
+import { ROUTES, SHOP_SECTION } from '@/navigation/routes';
 
 /**
  * ALIAS CHUYỂN TIẾP — "Hồ sơ người bán" thôi làm màn của chủ gian hàng, y như web.
@@ -13,5 +13,5 @@ import { ROUTES } from '@/navigation/routes';
  * thuế đều sống tiếp. Bản KHAI compact của cùng hồ sơ vẫn ở `/account/tax`.
  */
 export default function ManageSellerProfileRedirectRoute() {
-  return <Redirect href={ROUTES.manage.shop()} />;
+  return <Redirect href={ROUTES.manage.shop({ section: SHOP_SECTION.LEGAL })} />;
 }

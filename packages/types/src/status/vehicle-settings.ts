@@ -26,7 +26,13 @@ export const VEHICLE_IMAGE_TYPE = {
   LEFT: 'left',
   RIGHT: 'right',
   INTERIOR: 'interior',
-  /** Xe máy: mặt đồng hồ / ODO — thay chỗ của `interior`. */
+  /**
+   * Xe máy: mặt đồng hồ / ODO.
+   *
+   * @deprecated Không còn là một Ô trên màn ảnh từ 07/10/2026 — xe máy chỉ hỏi mặt trước và mặt
+   * sau. Giá trị giữ lại vì `vehicle_images` còn những dòng mang nó: bỏ khỏi union là biến dữ
+   * liệu thật thành giá trị "lạ" và đẩy ảnh của chủ xe về `other`.
+   */
   DASHBOARD: 'dashboard',
   OTHER: 'other',
 } as const;
@@ -37,9 +43,8 @@ export const VEHICLE_IMAGE_TYPE_VALUES = Object.values(VEHICLE_IMAGE_TYPE) as Ve
 /**
  * Thứ tự ô ảnh trên màn thư viện — mặt trước tới nội thất, "khác" đứng cuối.
  *
- * @deprecated Dùng `vehicleImageSlotsFor(vehicleType)`: ô thứ năm KHÁC nhau giữa ô tô (nội thất)
- * và xe máy (mặt đồng hồ). Hằng này giữ lại cho `apps/mobile` cho tới khi màn ảnh của app native
- * chuyển theo.
+ * @deprecated Dùng `vehicleImageSlotsFor(vehicleType)`: bộ ô KHÁC nhau giữa ô tô (năm góc) và xe
+ * máy (hai góc). Hằng này giữ lại cho nơi gọi cũ cho tới khi chúng chuyển theo.
  */
 export const VEHICLE_IMAGE_SLOT_ORDER: readonly VehicleImageType[] = [
   VEHICLE_IMAGE_TYPE.FRONT,
@@ -51,20 +56,71 @@ export const VEHICLE_IMAGE_SLOT_ORDER: readonly VehicleImageType[] = [
 ];
 
 /**
+ * Ảnh BÌA của một chiếc xe LUÔN là ảnh mặt trước (07/10/2026).
+ *
+ * Trước đợt này ảnh bìa là một ô tải lên RIÊNG (`vehicles.main_image_url` do client gửi): chủ xe
+ * phải tải cùng một tấm ảnh mặt trước hai lần, và hai ô có thể lệch nhau — thẻ xe ngoài chợ hiện
+ * một chiếc Vios màu trắng trong khi ô "mặt trước" của chính nó là một chiếc màu đỏ. Nay cột đó
+ * là giá trị DẪN XUẤT: server tự lấy URL của ô mặt trước mỗi lần thư viện được lưu, và không có
+ * đường nào cho client đặt nó.
+ */
+export const VEHICLE_COVER_IMAGE_TYPE: VehicleImageType = VEHICLE_IMAGE_TYPE.FRONT;
+
+/**
  * Ô ảnh của MỘT loại xe.
  *
- * Bốn góc là chung; ô thứ năm là chỗ hai loại xe khác nhau. Hỏi "ảnh nội thất" của một chiếc
- * Wave là hỏi một tấm ảnh không tồn tại — và ô trống đó đếm vào số ảnh tối thiểu để lên chợ.
+ * Ô tô hỏi năm góc (bốn mặt ngoài + nội thất); xe máy chỉ hỏi HAI (trước · sau). Hỏi "ảnh nội
+ * thất" của một chiếc Wave là hỏi một tấm ảnh không tồn tại, và bắt nó chụp đủ bốn mặt ngoài là
+ * đòi bốn tấm gần như giống nhau — trong khi mỗi ô trống vẫn đếm vào điều kiện lên chợ.
+ *
+ * `other` ("Ảnh khác") đứng cuối và KHÔNG bắt buộc: các màn ảnh hiện không vẽ ô này nữa (mỗi tấm
+ * phải có góc chụp), nhưng ảnh CŨ thuộc loại đó vẫn đi qua nguyên vẹn mỗi lần lưu.
  */
 export function vehicleImageSlotsFor(vehicleType: string): readonly VehicleImageType[] {
-  return [
-    VEHICLE_IMAGE_TYPE.FRONT,
-    VEHICLE_IMAGE_TYPE.REAR,
-    VEHICLE_IMAGE_TYPE.LEFT,
-    VEHICLE_IMAGE_TYPE.RIGHT,
-    vehicleType === 'motorbike' ? VEHICLE_IMAGE_TYPE.DASHBOARD : VEHICLE_IMAGE_TYPE.INTERIOR,
-    VEHICLE_IMAGE_TYPE.OTHER,
-  ];
+  return vehicleType === 'motorbike'
+    ? [VEHICLE_IMAGE_TYPE.FRONT, VEHICLE_IMAGE_TYPE.REAR, VEHICLE_IMAGE_TYPE.OTHER]
+    : [
+        VEHICLE_IMAGE_TYPE.FRONT,
+        VEHICLE_IMAGE_TYPE.REAR,
+        VEHICLE_IMAGE_TYPE.LEFT,
+        VEHICLE_IMAGE_TYPE.RIGHT,
+        VEHICLE_IMAGE_TYPE.INTERIOR,
+        VEHICLE_IMAGE_TYPE.OTHER,
+      ];
+}
+
+/**
+ * Các góc BẮT BUỘC của một loại xe — ô tô 5, xe máy 2. Không ô nào trong danh sách này được để
+ * trống khi thêm/sửa xe, và cùng danh sách đó là điều kiện ảnh để lên chợ.
+ */
+export function requiredVehicleImageTypes(vehicleType: string): readonly VehicleImageType[] {
+  return vehicleImageSlotsFor(vehicleType).filter((slot) => slot !== VEHICLE_IMAGE_TYPE.OTHER);
+}
+
+/**
+ * Số ảnh TỐI THIỂU của một loại xe — chỉ là số góc bắt buộc, không phải một con số thứ hai.
+ *
+ * Trước 07/10/2026 đây là hằng `VEHICLE_PUBLIC_MIN_IMAGES = 4` cho mọi loại xe, nên một chiếc xe
+ * máy có đúng hai tấm ảnh cần thiết vẫn bị báo "còn thiếu 2 ảnh" mà không có ô nào để điền.
+ */
+export function vehiclePublicMinImages(vehicleType: string): number {
+  return requiredVehicleImageTypes(vehicleType).length;
+}
+
+/** Ảnh bìa suy từ thư viện: URL của ô mặt trước, `null` khi chưa có tấm nào. */
+export function vehicleCoverUrlOf(
+  media: readonly { url: string; type?: string | null }[],
+): string | null {
+  return media.find((item) => item.type === VEHICLE_COVER_IMAGE_TYPE)?.url ?? null;
+}
+
+/** Các góc bắt buộc còn TRỐNG của một thư viện — rỗng = đủ ảnh. */
+export function missingVehicleImageTypes(
+  vehicleType: string,
+  media: readonly { type?: string | null }[],
+): VehicleImageType[] {
+  const present = new Set(media.map((item) => item.type ?? ''));
+  return requiredVehicleImageTypes(vehicleType).filter((slot) => !present.has(slot));
 }
 
 export const VEHICLE_IMAGE_TYPE_LABEL: Readonly<Record<VehicleImageType, string>> = {

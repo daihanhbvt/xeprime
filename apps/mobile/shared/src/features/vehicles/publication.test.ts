@@ -1,6 +1,6 @@
-import { PUBLISH_REQUIREMENT, VEHICLE_PUBLIC_STATUS } from '@xeprime/types';
+import { PUBLISH_REQUIREMENT, VEHICLE_ALERT_SEVERITY, VEHICLE_PUBLIC_STATUS } from '@xeprime/types';
 import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
-import { publicationEditTab, vehiclePublicationTask } from './publication';
+import { publicationEditTab, todoLeadAlert, vehiclePublicationTask } from './publication';
 import type { VehicleDetail } from './api';
 
 /**
@@ -18,15 +18,23 @@ function vehicle(over: Partial<VehicleDetail> = {}): VehicleDetail {
     monthlyPrice: null,
     withDriverDailyPrice: null,
     mainImageUrl: 'https://cdn.test/a.jpg',
-    /*
-     * BỐN ảnh khác nhau — `VEHICLE_PUBLIC_MIN_IMAGES`. Ảnh đại diện nằm trong danh sách nên phép
-     * đếm khử trùng theo URL chỉ ra 4, đúng cách backend đếm.
-     */
     images: [
       'https://cdn.test/a.jpg',
       'https://cdn.test/b.jpg',
       'https://cdn.test/c.jpg',
       'https://cdn.test/d.jpg',
+      'https://cdn.test/e.jpg',
+    ],
+    /*
+     * Đủ NĂM GÓC bắt buộc của ô tô (07/10/2026). Điều kiện ảnh hỏi GÓC, không hỏi số lượng — bốn
+     * URL khác nhau không còn là một câu trả lời.
+     */
+    media: [
+      { url: 'https://cdn.test/a.jpg', type: 'front' },
+      { url: 'https://cdn.test/b.jpg', type: 'rear' },
+      { url: 'https://cdn.test/c.jpg', type: 'left' },
+      { url: 'https://cdn.test/d.jpg', type: 'right' },
+      { url: 'https://cdn.test/e.jpg', type: 'interior' },
     ],
     plateNumber: '51A-12345',
     brand: 'Mazda',
@@ -64,12 +72,12 @@ describe('vehiclePublicationTask', () => {
    * Chủ xe tự tắt là một GỢI Ý (`info`), không phải việc cần làm: nó xuống cuối thẻ và không vào
    * số đếm — một lời nhắc không được đẩy một chuyến sắp phải giao ra khỏi ba dòng đầu.
    */
-  it('đã duyệt nhưng chủ xe tắt ⇒ gợi ý bật lại, mức info', () => {
+  it('đã duyệt nhưng chủ xe tắt ⇒ lời nhắc mức info, KHÔNG có nút (công tắc ở đầu màn)', () => {
     const task = vehiclePublicationTask(vehicle({ marketplaceEnabled: false }));
     expect(task).toMatchObject({
       key: 'ownerPaused',
       tone: 'info',
-      primary: { kind: 'enableMarketplace', cta: 'enableMarketplace' },
+      primary: null,
       secondary: null,
     });
   });
@@ -122,7 +130,7 @@ describe('vehiclePublicationTask', () => {
    */
   it('nháp còn thiếu ⇒ nút sửa hồ sơ, KHÔNG có nút gửi duyệt', () => {
     const task = vehiclePublicationTask(
-      vehicle({ publicStatus: VEHICLE_PUBLIC_STATUS.DRAFT, mainImageUrl: null, images: [] }),
+      vehicle({ publicStatus: VEHICLE_PUBLIC_STATUS.DRAFT, mainImageUrl: null, images: [], media: [] }),
     );
     expect(task).toMatchObject({
       key: 'completeProfile',
@@ -142,6 +150,7 @@ describe('vehiclePublicationTask', () => {
         publicStatus: VEHICLE_PUBLIC_STATUS.NEEDS_REVISION,
         mainImageUrl: null,
         images: [],
+        media: [],
       }),
     );
     expect(incomplete).toMatchObject({ key: 'needsRevision', tone: 'warning', secondary: null });
@@ -187,7 +196,7 @@ describe('vehiclePublicationTask', () => {
  */
 describe('publicationEditTab', () => {
   it('mở mục chứa điều kiện thiếu ĐẦU TIÊN', () => {
-    expect(publicationEditTab([PUBLISH_REQUIREMENT.MAIN_IMAGE])).toBe(VEHICLE_EDIT_TAB.MEDIA);
+    expect(publicationEditTab([PUBLISH_REQUIREMENT.PHOTOS])).toBe(VEHICLE_EDIT_TAB.MEDIA);
     expect(publicationEditTab([PUBLISH_REQUIREMENT.SELF_DRIVE_PRICE])).toBe(
       VEHICLE_EDIT_TAB.PRICING,
     );
@@ -204,5 +213,28 @@ describe('publicationEditTab', () => {
 
   it('không thiếu gì thì về mục thông tin', () => {
     expect(publicationEditTab([])).toBe(VEHICLE_EDIT_TAB.INFORMATION);
+  });
+});
+
+describe('todoLeadAlert — nút "Xử lý ngay" (web TodoCard 02/10/2026)', () => {
+  const critical = { kind: 'a', severity: VEHICLE_ALERT_SEVERITY.CRITICAL, target: '/x' };
+  const info = { kind: 'b', severity: VEHICLE_ALERT_SEVERITY.INFO, target: '/y' };
+
+  it('việc đầu bảng phải làm, có đích ⇒ gắn nút', () => {
+    expect(todoLeadAlert({ alerts: [critical, info], listReady: true, taskLeads: false })).toBe(
+      critical,
+    );
+  });
+
+  it('việc lên chợ đứng đầu, danh sách chưa sẵn, đầu bảng là info, hoặc không đích ⇒ không nút', () => {
+    expect(todoLeadAlert({ alerts: [critical], listReady: true, taskLeads: true })).toBeNull();
+    expect(todoLeadAlert({ alerts: [critical], listReady: false, taskLeads: false })).toBeNull();
+    expect(
+      todoLeadAlert({ alerts: [info, critical], listReady: true, taskLeads: false }),
+    ).toBeNull();
+    expect(
+      todoLeadAlert({ alerts: [{ ...critical, target: null }], listReady: true, taskLeads: false }),
+    ).toBeNull();
+    expect(todoLeadAlert({ alerts: [], listReady: true, taskLeads: false })).toBeNull();
   });
 });

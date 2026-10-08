@@ -3,9 +3,9 @@ import {
   MILEAGE_LIMIT,
   SERVICE_TYPE,
   VEHICLE_OPERATION_STATUS,
-  VEHICLE_PUBLIC_MIN_IMAGES,
   VEHICLE_SOURCE_TYPE,
   VEHICLE_TYPE,
+  missingVehicleImageTypes,
   vehicleEnergySpecPolicy,
 } from '@xeprime/types';
 import { vehicleFormSchema, type VehicleFormValues } from '@xeprime/validators';
@@ -49,7 +49,6 @@ const VEHICLE_FIELDS = [
   'engineDisplacementCc',
   'description',
   'features',
-  'mainImageUrl',
   'images',
   'media',
   'weekdayPrice',
@@ -72,7 +71,7 @@ const filledText = (value: unknown) => typeof value === 'string' && value.trim()
 /**
  * Trường của xe mà điều kiện LÊN CHỢ đòi (30/09/2026) — bắt buộc ngay ở từng ô, báo lỗi dưới đúng
  * ô như mọi trường khác. Cùng danh sách với `PUBLISH_REQUIREMENTS` của `@xeprime/types` (biển số,
- * hãng + dòng xe + năm + số chỗ, ảnh đại diện, tối thiểu `VEHICLE_PUBLIC_MIN_IMAGES` ảnh).
+ * hãng + dòng xe + năm + số chỗ, và đủ các GÓC ảnh bắt buộc của loại xe).
  * Giữ NGUYÊN luật gốc của `vehicleFormSchema` và chỉ cộng thêm phép "bắt buộc".
  */
 const base = vehicleFormSchema.fields;
@@ -107,11 +106,6 @@ const PUBLISH_REQUIRED_FIELDS = {
       is: VEHICLE_TYPE.MOTORBIKE,
       then: (schema) => schema.test('required', 'motorbikeCategoryRequired', filledText),
     },
-  ),
-  mainImageUrl: (base.mainImageUrl as yup.StringSchema<string | null | undefined>).test(
-    'required',
-    'mainImageRequired',
-    filledText,
   ),
 };
 
@@ -178,23 +172,25 @@ export const quickVehicleSchema = vehicleFormSchema.pick(VEHICLE_FIELDS).shape({
   /** Điều khoản riêng của chủ xe — snapshot vào yêu cầu/đơn qua `VehicleServiceSetting`. */
   termsText: yup.string().trim().max(4000, 'termsTooLong').defined().default(''),
 }).test(
-  'photos-min',
+  'photos-required',
   /*
-   * Tối thiểu `VEHICLE_PUBLIC_MIN_IMAGES` ảnh — đếm như backend: ảnh đại diện ∪ thư viện, khử
-   * trùng theo URL. Kiểm ở mức object (cần cả ba trường) nhưng gắn lỗi vào `media` để hiện dưới
-   * đúng bảng ảnh.
+   * Đủ các GÓC ảnh bắt buộc của loại xe — ô tô 5 (trước · sau · trái · phải · nội thất), xe máy
+   * 2 (trước · sau). CÙNG luật `missingVehicleImageTypes` mà backend chạy khi lưu và khi gửi
+   * duyệt, nên form không thể nói "đủ" trong khi server nói "thiếu".
+   *
+   * Trước 07/10/2026 phép kiểm ở đây là ĐẾM: tối thiểu 4 URL khác nhau. Năm tấm ảnh mặt trước
+   * cũng qua được, còn chiếc xe máy có đúng hai tấm cần thiết thì không.
+   *
+   * Kiểm ở mức object (cần cả `vehicleType` lẫn `media`) nhưng gắn lỗi vào `media` để hiện ngay
+   * dưới bảng ảnh.
    */
-  function photosMin(values) {
-    const urls = new Set<string>([
-      ...(values.images ?? []),
-      ...(values.media ?? []).map((item) => item.url),
-    ]);
-    if (values.mainImageUrl) urls.add(values.mainImageUrl);
-    return urls.size >= VEHICLE_PUBLIC_MIN_IMAGES
+  function photosRequired(values) {
+    const missing = missingVehicleImageTypes(values.vehicleType, values.media ?? []);
+    return missing.length === 0
       ? true
       : this.createError({
           path: 'media',
-          message: `photosMin::${JSON.stringify({ min: VEHICLE_PUBLIC_MIN_IMAGES })}`,
+          message: `photosRequired::${JSON.stringify({ count: missing.length })}`,
         });
   },
 );
@@ -248,7 +244,6 @@ export const QUICK_VEHICLE_DEFAULTS: QuickVehicleValues = {
   engineDisplacementCc: null,
   description: '',
   features: [],
-  mainImageUrl: null,
   images: [],
   media: [],
   weekdayPrice: null,

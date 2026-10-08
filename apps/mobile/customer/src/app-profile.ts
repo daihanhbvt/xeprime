@@ -31,6 +31,12 @@ export function resolveInitialScope(_params: {
   return APP_SCOPE.CUSTOMER;
 }
 
+/**
+ * Các khu bảng đổi khu được đưa ra. Chỉ khu khách: tài khoản ở app này là tài khoản KHÁCH và không có
+ * gian hàng nào (ADR 0053) — việc của chủ xe đi qua CTA "Trở thành chủ xe" sang app Partner.
+ */
+export const SWITCHABLE_SCOPES: readonly AppScope[] = [APP_SCOPE.CUSTOMER];
+
 /** Màn đầu mỗi khu. Khu MANAGE không tồn tại ở app này ⇒ handoff sang XePrime Partner. */
 export function scopeHome(scope: AppScope, _packageOnboardingPending = false): Href {
   return scope === APP_SCOPE.MANAGE ? '/partner' : ROUTES.explore.home();
@@ -42,17 +48,15 @@ export function guestHome(): Href {
 }
 
 /**
- * Allowlist deep link của THÔNG BÁO ĐẨY — app Customer chỉ nhận các đích khách + Owner Lite.
- * Đường `/manage/**` KHÔNG có ở đây: thông báo audience MANAGE đi tới app XePrime Partner
- * (server lọc theo `push_devices.client_app`), và một payload lạc/giả trỏ `/manage` sẽ rơi về
- * màn mặc định thay vì một màn trắng.
+ * Allowlist deep link của THÔNG BÁO ĐẨY — app Customer chỉ nhận các đích của KHÁCH. Đường
+ * `/manage/**` KHÔNG có ở đây: server chọn app theo realm người nhận (ADR 0053), và một payload
+ * lạc/giả trỏ `/manage` sẽ rơi về màn mặc định thay vì một màn trắng.
  */
 export const NOTIFICATION_ALLOWED: readonly AllowedDeepLink[] = [
   { prefix: 'trips', resolve: listOrDetail(ROUTES.booking.list, ROUTES.booking.detail) },
   { prefix: 'chat', resolve: listOrDetail(ROUTES.chat.list, ROUTES.chat.thread) },
-  // Hai đích của bề mặt CHỦ XE tuyến hoa hồng (`NOTIFICATION_AUDIENCE.OWNER`) — Owner Lite ở
-  // khu tài khoản. `exact` vì `notificationDeepLink` không bao giờ gắn id vào hai đích này.
-  { prefix: 'account/vehicles', resolve: exact(ROUTES.account.vehicles) },
+  // `/account` (khu tài khoản của khách). Đích Owner Lite cũ (`/account/vehicles`) KHÔNG còn: tài
+  // khoản khách không có gian hàng (ADR 0053), `exact` nên đường con rơi về màn mặc định.
   { prefix: 'account', resolve: exact(ROUTES.account.home) },
   // Trang xe công khai — "xe bạn hỏi đã rảnh lại" (ADR 0045 điều 6). Bắt buộc có id.
   { prefix: 'listings', resolve: singleDetail((id) => ROUTES.explore.listingDetail(id)) },

@@ -143,7 +143,9 @@ describe('ChatRealtimeProvider', () => {
     });
 
     expect(firebase.signOutChat).toHaveBeenCalled();
-    await waitFor(() => expect(firebase.signInChat).toHaveBeenLastCalledWith('token-cua-nguoi-hai'));
+    await waitFor(() =>
+      expect(firebase.signInChat).toHaveBeenLastCalledWith('token-cua-nguoi-hai'),
+    );
   });
 
   /**

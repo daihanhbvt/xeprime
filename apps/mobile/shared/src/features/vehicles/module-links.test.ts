@@ -1,6 +1,11 @@
+import { isCommissionPath } from '@/features/shell/partner-track';
 import { PERMISSION, type Permission } from '@xeprime/types';
 import { ROUTES } from '@/navigation/routes';
-import { vehicleModuleLinks } from './module-links';
+import { vehicleCapabilities } from './hooks/use-vehicle-capabilities';
+import { overviewViews, vehicleModuleLinks, vehicleProfileHref } from './module-links';
+import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
+import { vehicleEditPartHref } from './workspace-links';
+import { VEHICLE_MANAGE_SECTION } from '@/navigation/vehicle-manage-section';
 
 const VEHICLE = { id: '01JQZX0000000000000000000V', name: 'Mazda3', plateNumber: '51A-12345' };
 
@@ -13,12 +18,24 @@ const ALL: Permission[] = [
   PERMISSION.BOOKING_VIEW,
 ];
 
-function links(customerScope: boolean, permissions: Permission[] = ALL, canEdit = true) {
+/** Cờ gói: mặc định đủ (tuyến gói); `false` = tuyến hoa hồng — finance/maintenance ẩn. */
+function links(
+  customerScope: boolean,
+  permissions: Permission[] = ALL,
+  canEdit = true,
+  planFeatures = true,
+) {
+  const has = (permission: Permission) => permissions.includes(permission);
   return vehicleModuleLinks({
     vehicle: VEHICLE,
     canEdit,
     customerScope,
-    has: (permission) => permissions.includes(permission),
+    has,
+    can: vehicleCapabilities({
+      has,
+      finance: { isVisible: planFeatures, canWrite: planFeatures },
+      maintenance: { isVisible: planFeatures },
+    }),
   });
 }
 
@@ -66,14 +83,17 @@ describe('vehicleModuleLinks — khu TÀI KHOẢN (web: isManage = false)', () =
     expect(calendar?.href).toEqual(ROUTES.account.calendar({ q: '51A-12345', back: true }));
   });
 
-  it('đơn thuê → danh sách Chuyến của tôi', () => {
-    expect(links(true).find((link) => link.key === 'bookings')?.href).toEqual(ROUTES.booking.list());
+  it('đơn thuê → đơn thuê của xe ở khu quản lý (Owner Lite dùng chung trang với tuyến gói)', () => {
+    expect(links(true).find((link) => link.key === 'bookings')?.href).toEqual(
+      ROUTES.manage.bookings({ vehicleId: VEHICLE.id }),
+    );
   });
 
-  it('KHÔNG mục nào dẫn vào /manage', () => {
+  /** ADR 0053: Owner Lite sống ở `/manage` của app Partner — nhưng CHỈ các trang tuyến hoa hồng mở. */
+  it('không mục nào dẫn vào trang chỉ của Full Manage', () => {
     for (const link of links(true)) {
       const path = typeof link.href === 'string' ? link.href : link.href.pathname;
-      expect(path.startsWith('/manage')).toBe(false);
+      expect(!path.startsWith('/manage') || isCommissionPath(path)).toBe(true);
     }
   });
 
@@ -85,5 +105,65 @@ describe('vehicleModuleLinks — khu TÀI KHOẢN (web: isManage = false)', () =
   it('không quyền sửa ⇒ không có thông tin/ảnh/giá', () => {
     const keys = links(true, ALL, false).map((link) => link.key);
     expect(keys).toEqual(['documents', 'calendar', 'bookings']);
+  });
+});
+
+describe('vehicleModuleLinks — gác bằng NĂNG LỰC (quyền ∧ cờ gói), không chỉ permission', () => {
+  it('đủ permission nhưng gói không có finance/maintenance ⇒ không nguồn xe, bảo dưỡng, Thu-Chi', () => {
+    expect(links(false, ALL, true, false).map((link) => link.key)).toEqual([
+      'information',
+      'media',
+      'pricing',
+      'documents',
+      'calendar',
+      'bookings',
+    ]);
+  });
+
+  it('giấy tờ chỉ cần permission — không cờ gói nào gác', () => {
+    expect(
+      links(false, [PERMISSION.VEHICLE_DOCUMENT_VIEW], false, false).map((l) => l.key),
+    ).toEqual(['documents']);
+  });
+});
+
+describe('vehicleEditPartHref / vehicleProfileHref — đích theo khu', () => {
+  const id = VEHICLE.id;
+  it('khu tài khoản: bảo dưỡng và nguồn xe KHÔNG có mục ⇒ null', () => {
+    expect(vehicleEditPartHref(id, VEHICLE_EDIT_TAB.MAINTENANCE, true)).toBeNull();
+    expect(vehicleEditPartHref(id, VEHICLE_EDIT_TAB.SOURCE, true)).toBeNull();
+    expect(vehicleEditPartHref(id, VEHICLE_EDIT_TAB.SOURCE, false)).toEqual(
+      ROUTES.manage.vehicleEditTab(id, VEHICLE_EDIT_TAB.SOURCE),
+    );
+  });
+
+  it('nút Chỉnh sửa: quản lý → màn sửa xe; tài khoản → mục Thông tin xe (web vehiclePaths.profile)', () => {
+    expect(vehicleProfileHref(id, false)).toEqual(ROUTES.manage.vehicleEdit(id));
+    expect(vehicleProfileHref(id, true)).toEqual(
+      ROUTES.account.vehicleManageSection(id, VEHICLE_MANAGE_SECTION.INFORMATION),
+    );
+  });
+});
+
+describe('overviewViews — tab của Hồ sơ 360 (web Vehicle360Overview)', () => {
+  it('đủ năng lực: Tổng quan · Thông số · Tài chính · Bảo dưỡng, đúng thứ tự', () => {
+    expect(overviewViews({ money: true, maintenance: true })).toEqual([
+      'overview',
+      'specs',
+      'finance',
+      'maintenance',
+    ]);
+  });
+
+  it('tuyến hoa hồng (không cờ gói): chỉ Tổng quan · Thông số', () => {
+    expect(overviewViews({ money: false, maintenance: false })).toEqual(['overview', 'specs']);
+  });
+
+  it('chỉ có bảo dưỡng: không tab Tài chính', () => {
+    expect(overviewViews({ money: false, maintenance: true })).toEqual([
+      'overview',
+      'specs',
+      'maintenance',
+    ]);
   });
 });

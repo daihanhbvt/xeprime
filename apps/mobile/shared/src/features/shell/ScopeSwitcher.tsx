@@ -5,6 +5,7 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { ACCOUNT_TRACK, resolveAccountTrack, tenantUsesManagePortal } from '@xeprime/types';
 import { APP_SCOPE, type AppScope } from './app-scope';
+import { SWITCHABLE_SCOPES } from '@/app-profile';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { useTenantScope } from '@/features/auth/hooks/use-tenant-scope';
@@ -180,7 +181,9 @@ export function ScopeSwitcherSheet({ open, onClose }: { open: boolean; onClose: 
 
         <YStack gap={space.sm} px={space.md}>
           {/* Chỉ gian hàng TUYẾN GÓI có khu quản lý — ADR 0038 điều 4, cùng vị từ với `ScopeGuard`. */}
-          {tenant && tenantUsesManagePortal(tenant) ? (
+          {SWITCHABLE_SCOPES.includes(APP_SCOPE.MANAGE) &&
+          tenant &&
+          tenantUsesManagePortal(tenant) ? (
             <ScopeOption
               icon="storefront-outline"
               title={tenant.name}
@@ -190,13 +193,15 @@ export function ScopeSwitcherSheet({ open, onClose }: { open: boolean; onClose: 
             />
           ) : null}
 
-          <ScopeOption
-            icon="search-outline"
-            title={t('customerTitle')}
-            subtitle={t('customerSubtitle')}
-            selected={scope === APP_SCOPE.CUSTOMER}
-            onPress={() => choose(APP_SCOPE.CUSTOMER)}
-          />
+          {SWITCHABLE_SCOPES.includes(APP_SCOPE.CUSTOMER) ? (
+            <ScopeOption
+              icon="search-outline"
+              title={t('customerTitle')}
+              subtitle={t('customerSubtitle')}
+              selected={scope === APP_SCOPE.CUSTOMER}
+              onPress={() => choose(APP_SCOPE.CUSTOMER)}
+            />
+          ) : null}
         </YStack>
 
         {/*

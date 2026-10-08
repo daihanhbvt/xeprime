@@ -101,6 +101,7 @@
     "SHOP_NOT_ACTIVE": "Your shop is locked, so this action is not available.",
     "TENANT_BILLING_NOT_CONFIGURED": "This shop has no active service plan, so fees cannot be calculated. Contact XePrime support before accepting new bookings.",
     "VEHICLE_PUBLISH_INCOMPLETE": "This vehicle is still missing required details, so it cannot be submitted.",
+    "VEHICLE_IMAGES_INCOMPLETE": "This vehicle is missing required photos — cars need 5 (front, rear, left, right, interior), motorbikes need 2 (front, rear).",
     "VEHICLE_NOT_APPROVED_PUBLIC": "XePrime has not approved this vehicle yet, so it cannot go live on the marketplace. Submit it for review first.",
     "VEHICLE_PLATFORM_HIDDEN": "XePrime has hidden this vehicle. Contact XePrime support to have it reviewed again.",
     "APPROVAL_ALREADY_DECIDED": "Someone else has just handled this request. Reloading the latest status.",

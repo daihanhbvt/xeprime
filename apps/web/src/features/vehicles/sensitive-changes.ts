@@ -28,13 +28,13 @@ export interface SensitiveChangeLabels {
    * duyệt lại hay không. Chép tay sang FE là mở đường cho hộp xác nhận nói một đằng, backend
    * làm một nẻo.
    *
-   * (Figma `193:2297` tóm tắt còn "giá, biển số, loại xe, ảnh đại diện" — đó là câu văn cho
+   * (Figma `193:2297` tóm tắt còn "giá, biển số, loại xe, ảnh xe" — đó là câu văn cho
    * người đọc, không phải đặc tả. Các trường còn lại vẫn kích hoạt duyệt lại.)
    */
   field: (field: VehicleSensitiveField) => string;
   /** Giá trị trống. */
   empty: string;
-  /** Ảnh đại diện đã có — xem docblock của `display`. */
+  /** Thư viện ảnh đã đổi — xem docblock của `display`. */
   imageSet: string;
   /** `{value}%` — dấu phần trăm đứng khác bên trong một số ngôn ngữ. */
   percent: (value: number | string) => string;
@@ -63,11 +63,12 @@ function display(
       return labels.percent(String(value));
     case 'vehicleType':
       return domainLabel('vehicleType', String(value));
-    case 'serviceTypes':
-      return fmt.serviceTypes(Array.isArray(value) ? value : [String(value)]);
     // Ảnh: so URL thì đúng nhưng đọc ra vô nghĩa — chỉ nói CÓ đổi hay không.
-    case 'mainImageUrl':
+    // Đứng TRƯỚC `serviceTypes`: cả hai là mảng, và nhánh này phải thu hẹp kiểu trước nhánh đó.
+    case 'media':
       return labels.imageSet;
+    case 'serviceTypes':
+      return fmt.serviceTypes(Array.isArray(value) ? value.map(String) : [String(value)]);
     default:
       return String(value);
   }

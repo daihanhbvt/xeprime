@@ -9,6 +9,8 @@ import { RecordCardSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { BranchFilterField, useBranchEmptyCopy } from '@/features/branches/components/BranchFilterField';
+import { useScreenBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { MissingOdometerCard } from '@/features/handovers/components/MissingOdometerCard';
 import { ResolveQueueSheet } from '@/features/handovers/components/ResolveQueueSheet';
 import { useMissingOdometerQueue } from '@/features/handovers/hooks/use-handovers';
@@ -95,6 +97,12 @@ export function MaintenanceBoardScreen() {
   const [action, setAction] = useState<BoardAction | null>(null);
   const [resolving, setResolving] = useState<MissingOdometerItem | null>(null);
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
+  /*
+   * Ô "Chi nhánh" (ADR 0052) — MỘT phạm vi cho mọi tab của màn, kể cả "Thiếu KM trả" đọc endpoint
+   * khác (điều 4). Ba tab lọc mà tab thứ tư âm thầm hiện cả gian hàng là lỗi khó thấy hơn hẳn.
+   */
+  const { branchId, filter: branchFilter } = useScreenBranchFilter(() => setPage(FIRST_PAGE));
+  const branchEmpty = useBranchEmptyCopy(branchFilter, branchId);
 
   const canView = permissions.has(PERMISSION.VEHICLE_MAINTENANCE_VIEW);
   const canManage = permissions.has(PERMISSION.VEHICLE_MAINTENANCE_MANAGE);
@@ -118,12 +126,13 @@ export function MaintenanceBoardScreen() {
       ...(searchTerm ? { q: searchTerm } : {}),
       ...(from ? { from } : {}),
       ...(to ? { to } : {}),
+      ...(branchId ? { branchId } : {}),
       page,
     },
     canView && !isQueue,
   );
   const queue = useMissingOdometerQueue(
-    { page, ...(searchTerm ? { q: searchTerm } : {}) },
+    { page, branchId, ...(searchTerm ? { q: searchTerm } : {}) },
     isQueue,
   );
 
@@ -272,6 +281,7 @@ export function MaintenanceBoardScreen() {
           searchLabel={isQueue ? tFilters('queueSearch') : t('searchLabel')}
           searchPlaceholder={isQueue ? tFilters('queueSearchPlaceholder') : t('searchPlaceholder')}
           onSearchChange={changeSearch}
+          branch={<BranchFilterField filter={branchFilter} value={branchId} />}
           hasRows={rows.length > 0}
           groups={groups}
           onFilterChange={changeFilter}
@@ -310,7 +320,13 @@ export function MaintenanceBoardScreen() {
               )
             ) : rows.length === 0 ? (
               inStateScroll(
-                filtered ? (
+                branchEmpty && !filtered && !isQueue ? (
+                  <ScreenMessage
+                    icon="location-outline"
+                    title={branchEmpty.title}
+                    description={branchEmpty.hint}
+                  />
+                ) : filtered ? (
                   <ScreenMessage
                     icon="search-outline"
                     title={t('emptyFilteredTitle')}

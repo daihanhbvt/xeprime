@@ -10,8 +10,8 @@ import { lastRouteChanged, scopeChanged } from './shell-scope.slice';
 
 /*
  * "Màn đầu của mỗi khu" từ đợt tách app (25/09/2026) là luật CỦA TỪNG APP — nó sống ở
- * `@/app-profile` (Customer: MANAGE ⇒ màn handoff `/partner`; Partner: CUSTOMER ⇒
- * `/not-eligible`). Re-export để các nơi đang import từ đây không phải đổi.
+ * `@/app-profile` (Customer: MANAGE ⇒ màn handoff `/partner`; Partner: mọi khu ⇒ khu quản lý).
+ * Re-export để các nơi đang import từ đây không phải đổi.
  */
 export { scopeHome };
 

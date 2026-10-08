@@ -17,7 +17,6 @@ import { LIST_SEPARATOR } from '@xeprime/domain';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { AlertDialog } from '@/components/ui/AlertDialog';
-import { VehicleEditTabs } from './components/VehicleEditTabs';
 import { Button } from '@/components/ui/Button';
 import { BlockTitle } from '@/components/ui/BlockTitle';
 import { Callout } from '@/components/ui/Callout';
@@ -39,7 +38,6 @@ import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { goBackOr } from '@/navigation/go-back-or';
 import { useLeaveGuard } from '@/hooks/use-leave-guard';
 import { ROUTES } from '@/navigation/routes';
-import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { DateField } from '@/components/ui/DateField';
@@ -251,11 +249,6 @@ function SourceForm({
         title={title}
         subtitle={[vehicle.name, vehicle.plateNumber].filter(Boolean).join(LIST_SEPARATOR)}
         onBack={() => leave.guard(onBack)}
-      />
-      <VehicleEditTabs
-        vehicleId={vehicle.id}
-        active={VEHICLE_EDIT_TAB.SOURCE}
-        guard={leave.guard}
       />
       <Screen
         edges={['left', 'right', 'bottom']}

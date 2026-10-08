@@ -89,9 +89,9 @@
   "images": {
     "reorderToggle": "Cho phép kéo thả để sắp xếp thứ tự hình ảnh.",
     "reorderLabel": "Bật kéo thả sắp xếp ảnh",
-    "minimumHint": "Ảnh đại diện là bắt buộc để đăng xe lên chợ. Mỗi ô chỉ giữ một ảnh, riêng \"Ảnh khác\" nhận nhiều ảnh (tối đa {max} ảnh thư viện).",
-    "mainImage": "Ảnh đại diện",
-    "mainImageHelp": "Ảnh hiện trên thẻ xe và trang xe — nên là mặt trước rõ nét.",
+    "minimumHint": "Mỗi ô giữ một ảnh và không ô nào được để trống (tối đa {max} ảnh thư viện).",
+    "galleryTitle": "Ảnh xe",
+    "coverFromFront": "Ảnh mặt trước được dùng làm ảnh bìa trên thẻ xe và trang xe — nên chọn tấm rõ nét nhất.",
     "choose": "Chọn hình",
     "uploaded": "Đã tải lên",
     "missing": "Chưa đăng tải",

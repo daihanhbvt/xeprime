@@ -8,7 +8,6 @@ import { SettingRow } from '@/components/ui/SettingRow';
 import { ProfileSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
-import { ShopEntryCard } from '@/features/shell/ShopEntryCard';
 import { ROUTES } from '@/navigation/routes';
 import { space } from '@/theme/tokens';
 import { showsDeleteAccountCard } from './account-nav';
@@ -28,7 +27,6 @@ import type { UserProfile } from './api';
  *  2. điều hướng tài khoản (`AccountNav` = `AccountSidebar`, kèm Đăng xuất ở cuối) — web ở
  *     ≤900px xếp menu LÊN TRÊN, app cố ý để DƯỚI thẻ hồ sơ (người dùng chốt 15/09/2026): mở tab
  *     Tài khoản là muốn thấy mình là ai trước, rồi mới tới danh sách lối đi;
- *  3. thẻ cửa vào gian hàng (`ShopEntryCard`).
  *
  * ## Sửa hồ sơ ở đây hay ở khu quản lý — theo TUYẾN (người dùng chốt 16/09/2026)
  *
@@ -127,8 +125,6 @@ function AccountBody({
         <AccountMoneyPanel />
 
         <AccountNav />
-
-        <ShopEntryCard />
 
         {/*
           YÊU CẦU XOÁ TÀI KHOẢN — chỗ hẹn mà ADR 0038 điều 9 nói tới khi đẩy mục này ra khỏi menu

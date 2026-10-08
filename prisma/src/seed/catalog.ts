@@ -93,16 +93,16 @@ export interface SeedPhoto {
 }
 
 /**
- * Bộ ảnh của MỘT chiếc xe — đủ năm ô ảnh theo vị trí mà màn đăng xe dùng
- * (`vehicleImageSlotsFor`): trước · sau · trái · phải · nội thất (ô tô) hoặc đồng hồ (xe máy).
- * Ảnh đại diện là ảnh mặt trước. Năm URL khác nhau nên vượt `VEHICLE_PUBLIC_MIN_IMAGES`.
+ * Bộ ảnh của MỘT chiếc xe — đủ các GÓC bắt buộc mà màn đăng xe đòi
+ * (`requiredVehicleImageTypes`): ô tô năm góc (trước · sau · trái · phải · nội thất), xe máy hai
+ * (trước · sau). Ảnh bìa là ảnh mặt trước, server suy ra khi lưu thư viện.
  */
 export interface VehiclePhotoSet {
   front: SeedPhoto;
   rear: SeedPhoto;
   left: SeedPhoto;
   right: SeedPhoto;
-  /** Nội thất (ô tô) hoặc mặt đồng hồ (xe máy). */
+  /** Nội thất — chỉ ô tô dùng tới ô này; xe máy chỉ hỏi mặt trước và mặt sau. */
   fifth: SeedPhoto;
 }
 

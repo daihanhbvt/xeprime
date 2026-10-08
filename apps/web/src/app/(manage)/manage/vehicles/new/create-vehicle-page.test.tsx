@@ -27,9 +27,13 @@ vi.mock('@/hooks/use-media-query', () => ({
 }));
 vi.mock('@/services/upload', () => ({
   presignVehicleImage: vi.fn(),
-  uploadImage: vi.fn(),
+  // Mỗi lượt tải trả một URL KHÁC nhau — năm ô ảnh của ô tô phải là năm tấm, không phải một tấm
+  // ghi đè bốn lần (07/10/2026: đủ góc là điều kiện lưu).
+  uploadImage: vi.fn(async () => `https://cdn.test/${++uploaded}.jpg`),
   validateImageFile: () => null,
 }));
+
+let uploaded = 0;
 
 const mutation = vi.hoisted(() => ({
   // Trang dùng `mutateAsync` để NÉM lại lỗi API cho wizard gắn vào đúng ô nhập
@@ -125,8 +129,20 @@ async function goNext(expectedHeading: string) {
   await screen.findByRole('heading', { name: expectedHeading });
 }
 
+/** Đủ NĂM góc ảnh bắt buộc của ô tô — bước ảnh không cho đi tiếp khi còn ô trống. */
+async function uploadPhotos() {
+  const inputs = [...document.querySelectorAll('input[type="file"]')].slice(0, 5);
+  for (const [index, input] of inputs.entries()) {
+    fireEvent.change(input, {
+      target: { files: [new File(['x'], `anh-${index}.jpg`, { type: 'image/jpeg' })] },
+    });
+    await waitFor(() => expect(uploaded).toBeGreaterThanOrEqual(index + 1));
+  }
+}
+
 beforeEach(() => {
   permissions.allow = true;
+  uploaded = 0;
   mutation.mutateAsync.mockReset();
   mutation.mutateAsync.mockResolvedValue(createdVehicle);
   mutation.isPending = false;
@@ -171,6 +187,7 @@ describe('/manage/vehicles/new — Wave 3 create wizard', () => {
     fireEvent.click(screen.getByText('Trả góp'));
     await goNext('2. Giá thuê & chính sách');
     await goNext('3. Hình ảnh, tiện ích & mô tả xe');
+    await uploadPhotos();
     await goNext('4. Xác nhận thông tin hồ sơ xe');
     expect(screen.getByText('Toyota Altis')).toBeTruthy();
     expect(screen.getByText('Trả góp')).toBeTruthy();
@@ -190,6 +207,7 @@ describe('/manage/vehicles/new — Wave 3 create wizard', () => {
     fireEvent.change(screen.getByLabelText(/Tên xe/), { target: { value: createdVehicle.name } });
     await goNext('2. Giá thuê & chính sách');
     await goNext('3. Hình ảnh, tiện ích & mô tả xe');
+    await uploadPhotos();
     await goNext('4. Xác nhận thông tin hồ sơ xe');
     fireEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
     expect(await screen.findByText('Tạo xe thành công!')).toBeTruthy();
