@@ -1,0 +1,187 @@
+.window {
+  font-size: 12px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.groups {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.groupTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 11.5px;
+  font-weight: var(--xp-font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--xp-color-text-secondary);
+}
+
+.groupOverdue {
+  color: var(--xp-color-error);
+}
+
+.groupCount {
+  min-width: 18px;
+  padding: 0 6px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-muted);
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+  color: var(--xp-color-text-secondary);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Cả hàng là vùng chạm; ≥ 56px trên mobile (UX §2.2). */
+.row {
+  display: grid;
+  grid-template-columns: 64px auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.row:hover {
+  color: inherit;
+  background: var(--xp-color-bg-hover);
+}
+
+.row:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-focus-ring);
+  outline-offset: 1px;
+}
+
+.rowOverdue {
+  background: var(--xp-color-error-bg);
+}
+
+.rowOverdue:hover {
+  background: color-mix(in srgb, var(--xp-color-error) 12%, var(--xp-color-bg-container));
+}
+
+.time {
+  font-size: 13px;
+  font-weight: var(--xp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  color: var(--xp-color-text);
+}
+
+.rowOverdue .time {
+  font-size: 12px;
+  color: var(--xp-color-error);
+}
+
+.kind {
+  padding: 2px 8px;
+  border-radius: var(--xp-border-radius-pill);
+  font-size: 11.5px;
+  font-weight: var(--xp-font-weight-semibold);
+  white-space: nowrap;
+}
+
+.kindPickup {
+  background: var(--xp-color-info-bg);
+  color: var(--xp-color-info);
+}
+
+.kindReturn {
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.vehicle,
+.sub {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.vehicle {
+  font-size: 13.5px;
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+}
+
+.sub {
+  font-size: 12px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.chevron {
+  font-size: 11px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.foot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--xp-color-border-secondary);
+}
+
+.more {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-link);
+}
+
+@media (max-width: 640px) {
+  .row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'time kind chevron'
+      'main main chevron';
+    row-gap: 2px;
+    min-height: 56px;
+  }
+
+  .time {
+    grid-area: time;
+  }
+
+  .kind {
+    grid-area: kind;
+    justify-self: start;
+  }
+
+  .main {
+    grid-area: main;
+  }
+
+  .chevron {
+    grid-area: chevron;
+  }
+}

@@ -323,10 +323,13 @@ export const queryKeys = {
   },
   dashboard: {
     all: ['dashboard'] as const,
+    /** `GET /dashboard/overview` — khoá mang tham số (chi nhánh) vì đổi ô lọc là đổi dữ liệu. */
+    overview: (params: QueryParams) => ['dashboard', 'overview', params] as const,
   },
   platformDashboard: {
     all: ['platform-dashboard'] as const,
     summary: () => ['platform-dashboard', 'summary'] as const,
+    overview: () => ['platform-dashboard', 'overview'] as const,
   },
   /** Sổ giao dịch ngân hàng của nền tảng (R2 — ADR 0022). */
   bankTransactions: {

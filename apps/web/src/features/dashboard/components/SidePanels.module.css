@@ -1,0 +1,327 @@
+/*
+ * Kiểu dùng chung của các panel phụ trên Tổng quan (uy tín, xe trên chợ, gói, ví, xe của chủ xe) —
+ * một bảng nhịp chữ/khoảng cách cho cả cột, để năm panel đứng cạnh nhau đọc như một hệ.
+ */
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.note {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--xp-color-text-tertiary);
+}
+
+.noteWarn {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--xp-color-warning);
+}
+
+.extraNote {
+  font-size: 12px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.extraLink {
+  font-size: 13px;
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-link);
+}
+
+.footLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-link);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.actionsSplit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.emptyBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+/* ── Danh sách đếm (xe trên chợ) ─────────────────────────────────────────────────────────── */
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.row:hover {
+  color: inherit;
+  background: var(--xp-color-bg-hover);
+}
+
+.row:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-focus-ring);
+}
+
+.dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--xp-color-border-strong);
+}
+
+.dot_good {
+  background: var(--xp-color-success);
+}
+
+.dot_warn {
+  background: var(--xp-color-warning);
+}
+
+.dot_plain {
+  background: var(--xp-color-border-strong);
+}
+
+.rowLabel {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--xp-color-text-secondary);
+}
+
+.rowValue {
+  font-size: 15px;
+  font-weight: var(--xp-font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--xp-color-text);
+}
+
+.rowValueWarn {
+  color: var(--xp-color-warning);
+}
+
+/* ── Gói dịch vụ ─────────────────────────────────────────────────────────────────────────── */
+
+.planHead {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.planName {
+  font-size: 16px;
+  font-weight: var(--xp-font-weight-bold);
+  color: var(--xp-color-text);
+}
+
+.planDue {
+  font-size: 12.5px;
+  color: var(--xp-color-text-secondary);
+}
+
+.planDueWarn {
+  color: var(--xp-color-warning);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.quotaHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--xp-color-text-secondary);
+}
+
+.quotaValue {
+  font-weight: var(--xp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  color: var(--xp-color-text);
+}
+
+/* ── Tiền ───────────────────────────────────────────────────────────────────────────────── */
+
+.moneyHero {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--xp-gold-wash);
+}
+
+.moneyLabel {
+  font-size: 12px;
+  color: var(--xp-color-text-secondary);
+}
+
+.moneyValue {
+  font-size: 22px;
+  font-weight: var(--xp-font-weight-bold);
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+  color: var(--xp-color-text);
+}
+
+.moneyHint {
+  font-size: 12px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.moneyGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.moneyGrid dd {
+  margin: 2px 0 0;
+}
+
+.moneyStrong {
+  font-size: 16px;
+  font-weight: var(--xp-font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+  color: var(--xp-color-success);
+}
+
+.moneyPlain {
+  font-size: 16px;
+  font-weight: var(--xp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+  color: var(--xp-color-text);
+}
+
+/* ── Xe của chủ xe cá nhân ─────────────────────────────────────────────────────────────── */
+
+.vehicleList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.vehicleRow {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.vehicleRow:hover {
+  color: inherit;
+  background: var(--xp-color-bg-hover);
+}
+
+.vehicleRow:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-focus-ring);
+}
+
+.vehicleThumb,
+.vehicleThumbEmpty {
+  width: 52px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--xp-color-bg-muted);
+}
+
+.vehicleThumbEmpty {
+  display: grid;
+  place-items: center;
+  color: var(--xp-color-text-tertiary);
+}
+
+.vehicleMain {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.vehicleName {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 13.5px;
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+}
+
+.vehiclePlate {
+  font-size: 12px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.vehicleTags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.upsell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--xp-color-info-bg);
+}
+
+.upsellText {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--xp-color-text);
+}
+
+@media (max-width: 640px) {
+  .vehicleRow {
+    grid-template-columns: 52px minmax(0, 1fr);
+  }
+
+  .vehicleTags {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+}

@@ -1,61 +1,66 @@
+/*
+ * Khuôn Tổng quan (UX §1.5): việc cần làm → KPI → hai cột (lịch giao nhận + biểu đồ | tiền, gói,
+ * uy tín). Bề rộng nội dung do khung trang giới hạn (`--xp-shell-workspace-max-width`).
+ */
 .wrap {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
 }
 
-/* Tiêu đề bên trái, ô chọn chi nhánh dồn phải; hẹp thì ô xuống dòng (ADR 0051). */
-.header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--xp-space-sm);
-}
-
-.title {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--xp-color-text);
-  letter-spacing: -0.01em;
-}
-
-.date {
-  font-size: 13px;
-  color: var(--xp-color-text-secondary);
-}
-
-.stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
-}
-
-.panels {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-@media (max-width: 760px) {
-  .stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
-
-  .panels {
-    grid-template-columns: 1fr;
-  }
-
-  .title {
-    font-size: 18px;
-  }
-}
-
-/*
- * Ô chọn chi nhánh trên đầu Tổng quan (ADR 0051). Nằm ở header chứ không trong một thanh lọc
- * riêng: màn này không có bộ lọc nào khác, dựng cả một `FilterBar` cho đúng một ô là thừa.
- */
+/* Ô chọn chi nhánh nằm ở đầu trang: màn này không có bộ lọc nào khác (ADR 0052). */
 .branch {
   min-width: 220px;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  align-items: start;
+  gap: 16px;
+}
+
+.main,
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 1024px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Hai cột thành một: các panel phụ xếp đôi để màn tablet không dài lê thê. */
+  .side {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .wrap {
+    gap: 14px;
+  }
+
+  .branch {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .charts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .side {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

@@ -1,13 +1,12 @@
 'use client';
 
 import { OWNER_STAGE } from '@xeprime/types';
-import { Suspense } from 'react';
 
 import { LoadingState } from '@/components/feedback/LoadingState';
+import { OwnerDashboardView } from '@/features/dashboard/components/OwnerDashboardView';
 
 import { useOwnerAccess } from '../hooks/use-owner-access';
 import { AccountTrackNotice } from './AccountTrackNotice';
-import { AccountVehiclesView } from './AccountVehiclesView';
 import { OwnerGate } from './OwnerGate';
 import { OwnerRegistrationView } from './OwnerRegistrationView';
 import styles from './OwnerLiteHome.module.css';
@@ -17,7 +16,9 @@ import styles from './OwnerLiteHome.module.css';
  *
  * Nội dung theo BẬC chủ xe (`resolveOwnerStage`), đúng như đích làm việc cũ của họ:
  *  - đang đăng ký (hồ sơ/xe đầu tiên chưa qua vòng duyệt) → màn tiến trình đăng ký;
- *  - đã có xe trên chợ → danh sách xe của họ.
+ *  - đã có xe trên chợ → TỔNG QUAN của chủ xe (`OwnerDashboardView`): việc cần làm, lịch giao nhận,
+ *    tiền, xe và uy tín. Trước 09/10/2026 đây là danh sách xe — trùng hệt mục "Xe của tôi" ngay
+ *    bên dưới trên menu, nên "Tổng quan" của chủ xe cá nhân thực chất không tồn tại.
  *
  * `AccountTrackNotice` đứng đầu: với tuyến `unconfigured` (danh mục gói hỏng) đó là cảnh báo KHÔNG
  * chặn mà ADR 0038 điều 11 yêu cầu — họ vẫn làm việc bình thường, đường ghi tiền do server chặn.
@@ -34,13 +35,7 @@ export function OwnerLiteHome() {
     <div className={styles.stack}>
       <AccountTrackNotice />
       <OwnerGate minStage={OWNER_STAGE.REGISTERING}>
-        {stage === OWNER_STAGE.OWNER ? (
-          <Suspense fallback={<LoadingState variant="cards" />}>
-            <AccountVehiclesView />
-          </Suspense>
-        ) : (
-          <OwnerRegistrationView />
-        )}
+        {stage === OWNER_STAGE.OWNER ? <OwnerDashboardView /> : <OwnerRegistrationView />}
       </OwnerGate>
     </div>
   );

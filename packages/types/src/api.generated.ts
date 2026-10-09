@@ -2645,6 +2645,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dashboard/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tổng quan partner: việc giao/nhận hôm nay, yêu cầu chờ duyệt, lịch 7 ngày, tháng này so cùng kỳ, xe trên chợ, uy tín
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
+         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         */
+        get: operations["PartnerDashboardController_overview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/debts": {
         parameters: {
             query?: never;
@@ -4393,6 +4417,32 @@ export interface paths {
          *     **Quyền yêu cầu:** `platform.customers.view`, `platform.customers.view_pii` (đọc từ DB mỗi request, không nằm trong session).
          */
         post: operations["PlatformCustomersController_revealContact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/dashboard/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * KPI tháng so cùng kỳ (đơn, GMV, khách/đối tác mới, doanh thu nền tảng), xu hướng 30 ngày, phễu kích hoạt đối tác
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
+         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *
+         *     **Quyền yêu cầu:** `platform.dashboard.view` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        get: operations["PlatformDashboardController_overview"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -13780,6 +13830,103 @@ export interface components {
             /** @description Số xe có ít nhất một cảnh báo — null khi không có platform.vehicles.view */
             vehiclesWithAlerts?: number | null;
         };
+        PartnerDashboardAgendaDto: {
+            /** @description Tối đa 8 mốc, xếp theo giờ hẹn tăng dần: mọi mốc đã QUÁ giờ, rồi các mốc tới hết ngày thứ 7 (tính cả hôm nay, giờ VN). */
+            items: components["schemas"]["PartnerDashboardAgendaItemDto"][];
+            /** @description Còn mốc trong cửa sổ mà danh sách đã cắt bớt. */
+            hasMore: boolean;
+        };
+        PartnerDashboardAgendaItemDto: {
+            /** @enum {string} */
+            kind: "pickup" | "return";
+            /** @description Giờ HẸN giao (pickup) hoặc trả (return) — ISO-8601 UTC. */
+            at: string;
+            bookingId: string;
+            /** @description Mã đơn hiển thị */
+            code: string;
+            vehicleId: string;
+            vehicleName: string;
+            plateNumber: string | null;
+            customerName: string;
+            /** @enum {string} */
+            serviceType: "self_drive" | "with_driver" | "long_term";
+        };
+        PartnerDashboardMarketDto: {
+            /** @description Xe khách đang tìm thấy được — tin đăng `active` do `ListingsService` duy trì. */
+            onMarket: number;
+            /** @description Xe đang chờ XePrime duyệt (`pending_public_review`). */
+            inReview: number;
+            /** @description Xe XePrime yêu cầu sửa (`needs_revision`) — việc của gian hàng. */
+            needsRevision: number;
+            /** @description Xe chưa gửi duyệt (`draft`). */
+            draft: number;
+        };
+        PartnerDashboardMonthDto: {
+            /** @description Tháng lịch hiện tại, `YYYY-MM` giờ VN. */
+            period: string;
+            /** @description Đơn thuê RA ĐỜI từ đầu tháng tới hiện tại. */
+            newBookings: number;
+            /** @description Cùng phép đếm, cùng số ngày, của tháng trước. */
+            newBookingsPrevious: number;
+            /** @description Chuyến KẾT THÚC (completed) từ đầu tháng — cùng câu với "Số chuyến" của bảng tổng hợp giao dịch (`completedTripsInPeriodWhere`). */
+            completedTrips: number;
+            /** @description Cùng phép đếm, cùng số ngày, của tháng trước. */
+            completedTripsPrevious: number;
+            /** @description Tỉ lệ lấp đầy (0–100, một chữ số thập phân): thời gian xe có khách (đơn đang thuê hoặc đã hoàn thành) ÷ thời gian xe có mặt trong đội (từ lúc tạo xe), trong kỳ. Null = chưa có xe nào trong kỳ — KHÔNG phải 0%. */
+            utilizationPercent: number | null;
+            /** @description Cùng phép tính cho cùng kỳ tháng trước. */
+            utilizationPercentPrevious: number | null;
+        };
+        PartnerDashboardOverviewDto: {
+            /** @description Thời điểm tính — mọi mốc "hôm nay", "quá giờ" đều so với nó. */
+            generatedAt: string;
+            /** @description Cần `bookings.view`. */
+            today: components["schemas"]["PartnerDashboardTodayDto"] | null;
+            /** @description Cần `booking_requests.view`. */
+            requests: components["schemas"]["PartnerDashboardRequestsDto"] | null;
+            /** @description Cần `bookings.view`. */
+            agenda: components["schemas"]["PartnerDashboardAgendaDto"] | null;
+            /** @description Cần `bookings.view`. */
+            month: components["schemas"]["PartnerDashboardMonthDto"] | null;
+            /** @description 6 tháng gần nhất, cũ → mới. Chỉ có ở TUYẾN GÓI có tính năng sổ tổng hợp (`finance` không `hidden`) và người gọi có `bookings.view` — báo cáo theo kỳ là năng lực của gói (ADR 0027 điều 1). */
+            trend: components["schemas"]["PartnerDashboardTrendPointDto"][] | null;
+            /** @description Cần `vehicles.view`. */
+            market: components["schemas"]["PartnerDashboardMarketDto"] | null;
+            /** @description Uy tín của CẢ gian hàng, cửa sổ công khai 90 ngày — đúng con số khách thấy trên chợ (`HostMetricsService`, ADR 0045). Không đổi theo ô chi nhánh. */
+            reputation: components["schemas"]["HostMetricsDto"];
+        };
+        PartnerDashboardRequestsDto: {
+            /** @description Yêu cầu đang chờ gian hàng duyệt (`pending_host_approval`). */
+            pending: number;
+            /** @description Trong `pending`: còn ít hơn `TRIP_REQUEST_URGENT_MINUTES` phút tới hạn trả lời (gồm cả yêu cầu đã chạm hạn mà worker chưa quét) — cùng mốc với lượt nhắc cuối của hệ thống. */
+            pendingUrgent: number;
+            /** @description Hạn trả lời SỚM NHẤT trong các yêu cầu đang chờ — ISO-8601 UTC. Null = không có. */
+            nextRespondBy: string | null;
+            /** @description Đã nhận, chờ KHÁCH chuyển tiền giữ chỗ (`awaiting_hold`, ADR 0044). */
+            awaitingPayment: number;
+        };
+        PartnerDashboardTodayDto: {
+            /** @description Đơn CHỜ GIAO XE — đúng tập của màn "Chờ giao xe" (`preset=awaiting_pickup`): đơn đã hình thành, xe chưa rời bãi. Gồm cả đơn đã quá giờ hẹn. */
+            awaitingPickup: number;
+            /** @description Trong `awaitingPickup`: hẹn giao trong HÔM NAY (ngày lịch VN). */
+            pickupsToday: number;
+            /** @description Trong `awaitingPickup`: đã QUÁ giờ hẹn giao mà xe chưa rời bãi (mọi ngày). */
+            pickupsOverdue: number;
+            /** @description Đơn đang thuê (`status = active`) — xe đang ở với khách. */
+            active: number;
+            /** @description Trong `active`: hẹn trả trong HÔM NAY (ngày lịch VN). */
+            returnsToday: number;
+            /** @description Trong `active`: đã QUÁ giờ hẹn trả (mọi ngày). */
+            returnsOverdue: number;
+        };
+        PartnerDashboardTrendPointDto: {
+            /** @description Tháng lịch `YYYY-MM` giờ VN. */
+            period: string;
+            /** @description Đơn thuê ra đời trong tháng. */
+            newBookings: number;
+            /** @description Chuyến kết thúc (completed) trong tháng. */
+            completedTrips: number;
+        };
         PartnerFeatureStateDto: {
             /** @description @xeprime/types → PlanFeature */
             feature: string;
@@ -14431,6 +14578,62 @@ export interface components {
             /** @description ISO-8601 UTC */
             createdAt: string;
         };
+        PlatformDashboardActivityDto: {
+            /** @description Đơn thuê RA ĐỜI trong kỳ, mọi trạng thái — cùng phép đếm `bookingThisMonth`. */
+            bookings: components["schemas"]["PlatformPeriodCountDto"];
+            /** @description Trong `bookings`: đơn đã huỷ hoặc khách không đến — phần không vào GMV. */
+            cancelled: components["schemas"]["PlatformPeriodCountDto"];
+            /** @description GMV = Σ tiền thuê `B` (`bookings.total_amount`, KHÔNG gồm phí dịch vụ phía khách, bảo hiểm hay phụ phí) của đơn ra đời trong kỳ, trừ đơn huỷ/không đến. */
+            gmv: components["schemas"]["PlatformPeriodMoneyDto"];
+            /** @description 30 ngày gần nhất, cũ → mới, đủ ngày. */
+            series: components["schemas"]["PlatformDashboardDayDto"][];
+        };
+        PlatformDashboardDayDto: {
+            /** @description Ngày lịch `YYYY-MM-DD` giờ VN */
+            date: string;
+            /** @description Đơn thuê ra đời trong ngày (mọi trạng thái) */
+            bookings: number;
+            /** @description GMV của các đơn đó — VND string, cùng định nghĩa với `gmv` */
+            gmv: string;
+        };
+        PlatformDashboardFunnelDto: {
+            /** @description Đối tác đã đăng ký */
+            registered: number;
+            /** @description …có ít nhất một xe */
+            withVehicle: number;
+            /** @description …đang có xe trên chợ (tin đăng active) */
+            withListing: number;
+            /** @description …và đã có đơn thuê */
+            withBooking: number;
+            /** @description …và đã hoàn thành ít nhất một chuyến */
+            withCompletedTrip: number;
+        };
+        PlatformDashboardGrowthDto: {
+            /** @description Tài khoản KHÁCH (realm customer) mới. */
+            newCustomers: components["schemas"]["PlatformPeriodCountDto"];
+            /** @description Đối tác mới — gian hàng/chủ xe (tenant) được tạo trong kỳ, cả hai tuyến. */
+            newPartners: components["schemas"]["PlatformPeriodCountDto"];
+        };
+        PlatformDashboardOverviewDto: {
+            /** @description Thời điểm tính — ISO-8601 UTC */
+            generatedAt: string;
+            /** @description Tháng lịch hiện tại `YYYY-MM` giờ VN */
+            period: string;
+            /** @description Cần `platform.bookings.view`. */
+            activity: components["schemas"]["PlatformDashboardActivityDto"] | null;
+            growth: components["schemas"]["PlatformDashboardGrowthDto"];
+            /** @description Cần `platform.money.manage`. */
+            revenue: components["schemas"]["PlatformDashboardRevenueDto"] | null;
+            funnel: components["schemas"]["PlatformDashboardFunnelDto"];
+        };
+        PlatformDashboardRevenueDto: {
+            /** @description Phí dịch vụ GHI NHẬN: Σ `settled_platform_amount` của khoản giữ chỗ đã chốt (`released_at` trong kỳ). Là số RÒNG sau tài trợ mã khuyến mãi — âm được (ADR 0046). */
+            serviceFee: components["schemas"]["PlatformPeriodMoneyDto"];
+            /** @description Tiền gói ĐÃ THU: Σ `paid_amount` của hoá đơn gói có `paid_at` trong kỳ. */
+            subscriptions: components["schemas"]["PlatformPeriodMoneyDto"];
+            /** @description `serviceFee + subscriptions`. */
+            total: components["schemas"]["PlatformPeriodMoneyDto"];
+        };
         PlatformDashboardSummaryDto: {
             /** @description Tổng gian hàng (chưa xoá) */
             tenantTotal: number;
@@ -14634,6 +14837,18 @@ export interface components {
             insurance: components["schemas"]["MoneyQueueCountDto"];
             /** @description Dòng thuế kỳ hiện hành CHỜ KÊ KHAI */
             tax: components["schemas"]["TaxQueueSummaryDto"];
+        };
+        PlatformPeriodCountDto: {
+            /** @description Từ đầu tháng (giờ VN) tới hiện tại */
+            current: number;
+            /** @description Cùng số ngày, tháng trước */
+            previous: number;
+        };
+        PlatformPeriodMoneyDto: {
+            /** @description Từ đầu tháng (giờ VN) tới hiện tại — VND string */
+            current: string;
+            /** @description Cùng số ngày, tháng trước — VND string */
+            previous: string;
         };
         PlatformProvinceDto: {
             /**
@@ -35904,6 +36119,136 @@ export interface operations {
             };
         };
     };
+    PartnerDashboardController_overview: {
+        parameters: {
+            query?: {
+                /** @description Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại */
+                branchId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["PartnerDashboardOverviewDto"];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NO_TENANT_SCOPE",
+                     *         "message": "Tài khoản không thuộc gian hàng nào"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     FinanceOverviewController_debts: {
         parameters: {
             query?: {
@@ -47381,6 +47726,112 @@ export interface operations {
                      *       "error": {
                      *         "code": "CONFLICT",
                      *         "message": "Dữ liệu đã tồn tại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PlatformDashboardController_overview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["PlatformDashboardOverviewDto"];
+                    };
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
                      *       }
                      *     }
                      */

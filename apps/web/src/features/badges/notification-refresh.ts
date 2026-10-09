@@ -42,6 +42,12 @@ const NOTIFICATION_AFFECTED: readonly QueryKey[] = [
    * tốn gì; mở thì đó đúng là màn không được phép còn hiện một ô đã hết hiệu lực.
    */
   queryKeys.calendar.all,
+  /**
+   * Tổng quan site partner — "việc cần làm", lịch giao nhận và số yêu cầu chờ duyệt đọc từ CHÍNH
+   * các đơn/yêu cầu ở trên. Thiếu dòng này thì thẻ "Yêu cầu chờ duyệt" đứng ở số cũ trong khi huy
+   * hiệu menu ngay bên cạnh đã nhảy.
+   */
+  queryKeys.dashboard.all,
 ];
 
 /**

@@ -17140,6 +17140,132 @@
         "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `customers.view` (đọc từ DB mỗi request, không nằm trong session)."
       }
     },
+    "/dashboard/overview": {
+      "get": {
+        "operationId": "PartnerDashboardController_overview",
+        "parameters": [
+          {
+            "name": "branchId",
+            "required": false,
+            "in": "query",
+            "description": "Id chi nhánh (ULID) — chỉ thu hẹp trong gian hàng hiện tại",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PartnerDashboardOverviewDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "NO_TENANT_SCOPE",
+                    "message": "Tài khoản không thuộc gian hàng nào"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Tổng quan partner: việc giao/nhận hôm nay, yêu cầu chờ duyệt, lịch 7 ngày, tháng này so cùng kỳ, xe trên chợ, uy tín",
+        "tags": [
+          "partner-dashboard"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query."
+      }
+    },
     "/debts": {
       "get": {
         "operationId": "FinanceOverviewController_debts",
@@ -28962,6 +29088,106 @@
           }
         ],
         "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.\n\n**Quyền yêu cầu:** `platform.customers.view`, `platform.customers.view_pii` (đọc từ DB mỗi request, không nằm trong session)."
+      }
+    },
+    "/platform/dashboard/overview": {
+      "get": {
+        "operationId": "PlatformDashboardController_overview",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PlatformDashboardOverviewDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "KPI tháng so cùng kỳ (đơn, GMV, khách/đối tác mới, doanh thu nền tảng), xu hướng 30 ngày, phễu kích hoạt đối tác",
+        "tags": [
+          "platform-dashboard"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.\n\n**Quyền yêu cầu:** `platform.dashboard.view` (đọc từ DB mỗi request, không nằm trong session)."
       }
     },
     "/platform/dashboard/summary": {
@@ -65302,6 +65528,10 @@
       "description": "Tài xế của gian hàng cho dịch vụ có lái."
     },
     {
+      "name": "partner-dashboard",
+      "description": "Tổng quan site partner (cả hai tuyến): việc giao/nhận hôm nay, yêu cầu chờ duyệt, lịch giao/nhận, tháng này so cùng kỳ, xe trên chợ, uy tín. Mỗi khối gác bằng quyền của dữ liệu nó lộ ra; tiền KHÔNG ở đây (đọc sổ thu chi hoặc sổ ví)."
+    },
+    {
       "name": "booking-requests",
       "description": "Hộp thư yêu cầu thuê: duyệt, từ chối, chốt lịch thành đơn."
     },
@@ -77464,6 +77694,324 @@
           "renting"
         ]
       },
+      "PartnerDashboardAgendaDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Tối đa 8 mốc, xếp theo giờ hẹn tăng dần: mọi mốc đã QUÁ giờ, rồi các mốc tới hết ngày thứ 7 (tính cả hôm nay, giờ VN).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PartnerDashboardAgendaItemDto"
+            }
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "Còn mốc trong cửa sổ mà danh sách đã cắt bớt."
+          }
+        },
+        "required": [
+          "items",
+          "hasMore"
+        ]
+      },
+      "PartnerDashboardAgendaItemDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "pickup",
+              "return"
+            ]
+          },
+          "at": {
+            "type": "string",
+            "description": "Giờ HẸN giao (pickup) hoặc trả (return) — ISO-8601 UTC."
+          },
+          "bookingId": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "description": "Mã đơn hiển thị"
+          },
+          "vehicleId": {
+            "type": "string"
+          },
+          "vehicleName": {
+            "type": "string"
+          },
+          "plateNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "customerName": {
+            "type": "string"
+          },
+          "serviceType": {
+            "type": "string",
+            "enum": [
+              "self_drive",
+              "with_driver",
+              "long_term"
+            ]
+          }
+        },
+        "required": [
+          "kind",
+          "at",
+          "bookingId",
+          "code",
+          "vehicleId",
+          "vehicleName",
+          "plateNumber",
+          "customerName",
+          "serviceType"
+        ]
+      },
+      "PartnerDashboardMarketDto": {
+        "type": "object",
+        "properties": {
+          "onMarket": {
+            "type": "number",
+            "description": "Xe khách đang tìm thấy được — tin đăng `active` do `ListingsService` duy trì."
+          },
+          "inReview": {
+            "type": "number",
+            "description": "Xe đang chờ XePrime duyệt (`pending_public_review`)."
+          },
+          "needsRevision": {
+            "type": "number",
+            "description": "Xe XePrime yêu cầu sửa (`needs_revision`) — việc của gian hàng."
+          },
+          "draft": {
+            "type": "number",
+            "description": "Xe chưa gửi duyệt (`draft`)."
+          }
+        },
+        "required": [
+          "onMarket",
+          "inReview",
+          "needsRevision",
+          "draft"
+        ]
+      },
+      "PartnerDashboardMonthDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "string",
+            "description": "Tháng lịch hiện tại, `YYYY-MM` giờ VN."
+          },
+          "newBookings": {
+            "type": "number",
+            "description": "Đơn thuê RA ĐỜI từ đầu tháng tới hiện tại."
+          },
+          "newBookingsPrevious": {
+            "type": "number",
+            "description": "Cùng phép đếm, cùng số ngày, của tháng trước."
+          },
+          "completedTrips": {
+            "type": "number",
+            "description": "Chuyến KẾT THÚC (completed) từ đầu tháng — cùng câu với \"Số chuyến\" của bảng tổng hợp giao dịch (`completedTripsInPeriodWhere`)."
+          },
+          "completedTripsPrevious": {
+            "type": "number",
+            "description": "Cùng phép đếm, cùng số ngày, của tháng trước."
+          },
+          "utilizationPercent": {
+            "type": "number",
+            "nullable": true,
+            "description": "Tỉ lệ lấp đầy (0–100, một chữ số thập phân): thời gian xe có khách (đơn đang thuê hoặc đã hoàn thành) ÷ thời gian xe có mặt trong đội (từ lúc tạo xe), trong kỳ. Null = chưa có xe nào trong kỳ — KHÔNG phải 0%."
+          },
+          "utilizationPercentPrevious": {
+            "type": "number",
+            "nullable": true,
+            "description": "Cùng phép tính cho cùng kỳ tháng trước."
+          }
+        },
+        "required": [
+          "period",
+          "newBookings",
+          "newBookingsPrevious",
+          "completedTrips",
+          "completedTripsPrevious",
+          "utilizationPercent",
+          "utilizationPercentPrevious"
+        ]
+      },
+      "PartnerDashboardOverviewDto": {
+        "type": "object",
+        "properties": {
+          "generatedAt": {
+            "type": "string",
+            "description": "Thời điểm tính — mọi mốc \"hôm nay\", \"quá giờ\" đều so với nó."
+          },
+          "today": {
+            "nullable": true,
+            "description": "Cần `bookings.view`.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PartnerDashboardTodayDto"
+              }
+            ]
+          },
+          "requests": {
+            "nullable": true,
+            "description": "Cần `booking_requests.view`.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PartnerDashboardRequestsDto"
+              }
+            ]
+          },
+          "agenda": {
+            "nullable": true,
+            "description": "Cần `bookings.view`.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PartnerDashboardAgendaDto"
+              }
+            ]
+          },
+          "month": {
+            "nullable": true,
+            "description": "Cần `bookings.view`.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PartnerDashboardMonthDto"
+              }
+            ]
+          },
+          "trend": {
+            "nullable": true,
+            "description": "6 tháng gần nhất, cũ → mới. Chỉ có ở TUYẾN GÓI có tính năng sổ tổng hợp (`finance` không `hidden`) và người gọi có `bookings.view` — báo cáo theo kỳ là năng lực của gói (ADR 0027 điều 1).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PartnerDashboardTrendPointDto"
+            }
+          },
+          "market": {
+            "nullable": true,
+            "description": "Cần `vehicles.view`.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PartnerDashboardMarketDto"
+              }
+            ]
+          },
+          "reputation": {
+            "description": "Uy tín của CẢ gian hàng, cửa sổ công khai 90 ngày — đúng con số khách thấy trên chợ (`HostMetricsService`, ADR 0045). Không đổi theo ô chi nhánh.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HostMetricsDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "generatedAt",
+          "today",
+          "requests",
+          "agenda",
+          "month",
+          "trend",
+          "market",
+          "reputation"
+        ]
+      },
+      "PartnerDashboardRequestsDto": {
+        "type": "object",
+        "properties": {
+          "pending": {
+            "type": "number",
+            "description": "Yêu cầu đang chờ gian hàng duyệt (`pending_host_approval`)."
+          },
+          "pendingUrgent": {
+            "type": "number",
+            "description": "Trong `pending`: còn ít hơn `TRIP_REQUEST_URGENT_MINUTES` phút tới hạn trả lời (gồm cả yêu cầu đã chạm hạn mà worker chưa quét) — cùng mốc với lượt nhắc cuối của hệ thống."
+          },
+          "nextRespondBy": {
+            "type": "string",
+            "nullable": true,
+            "description": "Hạn trả lời SỚM NHẤT trong các yêu cầu đang chờ — ISO-8601 UTC. Null = không có."
+          },
+          "awaitingPayment": {
+            "type": "number",
+            "description": "Đã nhận, chờ KHÁCH chuyển tiền giữ chỗ (`awaiting_hold`, ADR 0044)."
+          }
+        },
+        "required": [
+          "pending",
+          "pendingUrgent",
+          "nextRespondBy",
+          "awaitingPayment"
+        ]
+      },
+      "PartnerDashboardTodayDto": {
+        "type": "object",
+        "properties": {
+          "awaitingPickup": {
+            "type": "number",
+            "description": "Đơn CHỜ GIAO XE — đúng tập của màn \"Chờ giao xe\" (`preset=awaiting_pickup`): đơn đã hình thành, xe chưa rời bãi. Gồm cả đơn đã quá giờ hẹn."
+          },
+          "pickupsToday": {
+            "type": "number",
+            "description": "Trong `awaitingPickup`: hẹn giao trong HÔM NAY (ngày lịch VN)."
+          },
+          "pickupsOverdue": {
+            "type": "number",
+            "description": "Trong `awaitingPickup`: đã QUÁ giờ hẹn giao mà xe chưa rời bãi (mọi ngày)."
+          },
+          "active": {
+            "type": "number",
+            "description": "Đơn đang thuê (`status = active`) — xe đang ở với khách."
+          },
+          "returnsToday": {
+            "type": "number",
+            "description": "Trong `active`: hẹn trả trong HÔM NAY (ngày lịch VN)."
+          },
+          "returnsOverdue": {
+            "type": "number",
+            "description": "Trong `active`: đã QUÁ giờ hẹn trả (mọi ngày)."
+          }
+        },
+        "required": [
+          "awaitingPickup",
+          "pickupsToday",
+          "pickupsOverdue",
+          "active",
+          "returnsToday",
+          "returnsOverdue"
+        ]
+      },
+      "PartnerDashboardTrendPointDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "string",
+            "description": "Tháng lịch `YYYY-MM` giờ VN."
+          },
+          "newBookings": {
+            "type": "number",
+            "description": "Đơn thuê ra đời trong tháng."
+          },
+          "completedTrips": {
+            "type": "number",
+            "description": "Chuyến kết thúc (completed) trong tháng."
+          }
+        },
+        "required": [
+          "period",
+          "newBookings",
+          "completedTrips"
+        ]
+      },
       "PartnerFeatureStateDto": {
         "type": "object",
         "properties": {
@@ -79599,6 +80147,208 @@
           "createdAt"
         ]
       },
+      "PlatformDashboardActivityDto": {
+        "type": "object",
+        "properties": {
+          "bookings": {
+            "description": "Đơn thuê RA ĐỜI trong kỳ, mọi trạng thái — cùng phép đếm `bookingThisMonth`.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlatformPeriodCountDto"
+              }
+            ]
+          },
+          "cancelled": {
+            "description": "Trong `bookings`: đơn đã huỷ hoặc khách không đến — phần không vào GMV.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlatformPeriodCountDto"
+              }
+            ]
+          },
+          "gmv": {
+            "description": "GMV = Σ tiền thuê `B` (`bookings.total_amount`, KHÔNG gồm phí dịch vụ phía khách, bảo hiểm hay phụ phí) của đơn ra đời trong kỳ, trừ đơn huỷ/không đến.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlatformPeriodMoneyDto"
+              }
+            ]
+          },
+          "series": {
+            "description": "30 ngày gần nhất, cũ → mới, đủ ngày.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlatformDashboardDayDto"
+            }
+          }
+        },
+        "required": [
+          "bookings",
+          "cancelled",
+          "gmv",
+          "series"
+        ]
+      },
+      "PlatformDashboardDayDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "Ngày lịch `YYYY-MM-DD` giờ VN"
+          },
+          "bookings": {
+            "type": "number",
+            "description": "Đơn thuê ra đời trong ngày (mọi trạng thái)"
+          },
+          "gmv": {
+            "type": "string",
+            "description": "GMV của các đơn đó — VND string, cùng định nghĩa với `gmv`"
+          }
+        },
+        "required": [
+          "date",
+          "bookings",
+          "gmv"
+        ]
+      },
+      "PlatformDashboardFunnelDto": {
+        "type": "object",
+        "properties": {
+          "registered": {
+            "type": "number",
+            "description": "Đối tác đã đăng ký"
+          },
+          "withVehicle": {
+            "type": "number",
+            "description": "…có ít nhất một xe"
+          },
+          "withListing": {
+            "type": "number",
+            "description": "…đang có xe trên chợ (tin đăng active)"
+          },
+          "withBooking": {
+            "type": "number",
+            "description": "…và đã có đơn thuê"
+          },
+          "withCompletedTrip": {
+            "type": "number",
+            "description": "…và đã hoàn thành ít nhất một chuyến"
+          }
+        },
+        "required": [
+          "registered",
+          "withVehicle",
+          "withListing",
+          "withBooking",
+          "withCompletedTrip"
+        ]
+      },
+      "PlatformDashboardGrowthDto": {
+        "type": "object",
+        "properties": {
+          "newCustomers": {
+            "description": "Tài khoản KHÁCH (realm customer) mới.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlatformPeriodCountDto"
+              }
+            ]
+          },
+          "newPartners": {
+            "description": "Đối tác mới — gian hàng/chủ xe (tenant) được tạo trong kỳ, cả hai tuyến.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlatformPeriodCountDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "newCustomers",
+          "newPartners"
+        ]
+      },
+      "PlatformDashboardOverviewDto": {
+        "type": "object",
+        "properties": {
+          "generatedAt": {
+            "type": "string",
+            "description": "Thời điểm tính — ISO-8601 UTC"
+          },
+          "period": {
+            "type": "string",
+            "description": "Tháng lịch hiện tại `YYYY-MM` giờ VN"
+          },
+          "activity": {
+            "nullable": true,
+            "description": "Cần `platform.bookings.view`.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlatformDashboardActivityDto"
+              }
+            ]
+          },
+          "growth": {
+            "$ref": "#/components/schemas/PlatformDashboardGrowthDto"
+          },
+          "revenue": {
+            "nullable": true,
+            "description": "Cần `platform.money.manage`.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlatformDashboardRevenueDto"
+              }
+            ]
+          },
+          "funnel": {
+            "$ref": "#/components/schemas/PlatformDashboardFunnelDto"
+          }
+        },
+        "required": [
+          "generatedAt",
+          "period",
+          "activity",
+          "growth",
+          "revenue",
+          "funnel"
+        ]
+      },
+      "PlatformDashboardRevenueDto": {
+        "type": "object",
+        "properties": {
+          "serviceFee": {
+            "description": "Phí dịch vụ GHI NHẬN: Σ `settled_platform_amount` của khoản giữ chỗ đã chốt (`released_at` trong kỳ). Là số RÒNG sau tài trợ mã khuyến mãi — âm được (ADR 0046).",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlatformPeriodMoneyDto"
+              }
+            ]
+          },
+          "subscriptions": {
+            "description": "Tiền gói ĐÃ THU: Σ `paid_amount` của hoá đơn gói có `paid_at` trong kỳ.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlatformPeriodMoneyDto"
+              }
+            ]
+          },
+          "total": {
+            "description": "`serviceFee + subscriptions`.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlatformPeriodMoneyDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "serviceFee",
+          "subscriptions",
+          "total"
+        ]
+      },
       "PlatformDashboardSummaryDto": {
         "type": "object",
         "properties": {
@@ -80390,6 +81140,40 @@
           "withdrawals",
           "insurance",
           "tax"
+        ]
+      },
+      "PlatformPeriodCountDto": {
+        "type": "object",
+        "properties": {
+          "current": {
+            "type": "number",
+            "description": "Từ đầu tháng (giờ VN) tới hiện tại"
+          },
+          "previous": {
+            "type": "number",
+            "description": "Cùng số ngày, tháng trước"
+          }
+        },
+        "required": [
+          "current",
+          "previous"
+        ]
+      },
+      "PlatformPeriodMoneyDto": {
+        "type": "object",
+        "properties": {
+          "current": {
+            "type": "string",
+            "description": "Từ đầu tháng (giờ VN) tới hiện tại — VND string"
+          },
+          "previous": {
+            "type": "string",
+            "description": "Cùng số ngày, tháng trước — VND string"
+          }
+        },
+        "required": [
+          "current",
+          "previous"
         ]
       },
       "PlatformProvinceDto": {
@@ -92893,6 +93677,7 @@
     {
       "name": "Gian hàng — vận hành thuê",
       "tags": [
+        "partner-dashboard",
         "booking-requests",
         "bookings",
         "calendar",

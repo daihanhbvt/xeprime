@@ -43,6 +43,7 @@ import { SellerProfileModule } from './modules/seller-profile/seller-profile.mod
 import { DriverLicencesModule } from './modules/driver-licences/driver-licences.module';
 import { SupportModule } from './modules/support/support.module';
 import { BadgesModule } from './modules/badges/badges.module';
+import { PartnerDashboardModule } from './modules/partner-dashboard/partner-dashboard.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { FirebaseModule } from './modules/firebase/firebase.module';
 import { CalendarModule } from './modules/calendar/calendar.module';
@@ -166,6 +167,8 @@ import { HolidaysModule } from './modules/holidays/holidays.module';
     // Không gian hỗ trợ gian hàng của nhân sự nền tảng — ADR 0050.
     SupportRequestModule,
     TenantSupportModule,
+    // Tổng quan site partner (cả hai tuyến) — chỉ đọc.
+    PartnerDashboardModule,
   ],
   providers: [
     // Thứ tự quan trọng (guard global chạy theo đúng thứ tự khai báo): Throttler chặn trước

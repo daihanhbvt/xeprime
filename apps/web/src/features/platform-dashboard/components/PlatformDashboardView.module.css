@@ -1,102 +1,236 @@
+/*
+ * Tổng quan nền tảng — cùng nhịp với Tổng quan partner: hàng đợi → KPI → hai cột (xu hướng + phễu
+ * | vận hành chuyến + đối tác). Site quản trị là desktop-first nhưng vẫn phải dùng được ở 360px.
+ */
 .wrap {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
 }
 
-.header {
+.queues {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.kpiSection {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 8px;
 }
 
-.title {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--xp-color-text);
-  letter-spacing: -0.01em;
+.sectionHeading {
+  margin: 0;
+  font-size: 12px;
+  font-weight: var(--xp-font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--xp-color-text-tertiary);
 }
 
-.date {
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+  align-items: start;
+  gap: 16px;
+}
+
+.main,
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.muted {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.panelDescription {
+  margin: 0 0 12px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--xp-color-text-tertiary);
+}
+
+.extraLink {
+  font-size: 13px;
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-link);
+}
+
+/* ── Phễu ─────────────────────────────────────────────────────────────────────────────── */
+
+.funnel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.funnelRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.funnelHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.funnelLabel {
   font-size: 13px;
   color: var(--xp-color-text-secondary);
 }
 
-.stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
+.funnelValue {
+  font-size: 14px;
+  font-weight: var(--xp-font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--xp-color-text);
 }
 
-/* Ba khối (vận hành chuyến · chờ duyệt · gian hàng mới): tự xếp 3/2/1 cột theo bề rộng. */
-.panels {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 12px;
+.funnelTrack {
+  height: 10px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-muted);
+  overflow: hidden;
 }
 
-.center {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px 0;
+/* Độ dài thanh là giá trị lúc chạy (`--xp-bar-width`) — ngoại lệ được phép của ADR 0003. */
+.funnelBar {
+  display: block;
+  width: var(--xp-bar-width, 0%);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--xp-color-viz-revenue);
 }
+
+.funnelConversion {
+  font-size: 11.5px;
+  color: var(--xp-color-text-tertiary);
+}
+
+/* ── Đối tác mới ─────────────────────────────────────────────────────────────────────────── */
 
 .miniList {
-  list-style: none;
-  margin: 0;
-  padding: 0;
   display: flex;
   flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .miniRow {
-  border-bottom: 1px solid var(--xp-color-border-secondary, rgba(0, 0, 0, 0.06));
+  border-bottom: 1px solid var(--xp-color-border-secondary);
 }
 
 .miniRow:last-child {
   border-bottom: none;
 }
 
-.miniBtn {
+.miniLink {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  width: 100%;
-  padding: 10px 2px;
-  border: none;
-  background: none;
-  cursor: pointer;
-  text-align: left;
+  min-height: 52px;
+  padding: 8px 4px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.miniLink:hover {
+  color: inherit;
+  background: var(--xp-color-bg-hover);
+}
+
+.miniLink:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-focus-ring);
+}
+
+.miniText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .miniName {
-  font-size: 14px;
-  font-weight: 600;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 13.5px;
+  font-weight: var(--xp-font-weight-semibold);
   color: var(--xp-color-text);
 }
 
 .miniMeta {
   font-size: 12px;
-  color: var(--xp-color-text-secondary);
+  color: var(--xp-color-text-tertiary);
 }
 
-.panelFoot {
-  padding-top: 8px;
+/* ── Đối tác theo trạng thái ─────────────────────────────────────────────────────────────── */
+
+.statusList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-@media (max-width: 760px) {
-  .stats {
+.statusRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.statusCount {
+  font-size: 14px;
+  font-weight: var(--xp-font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--xp-color-text);
+}
+
+@media (max-width: 1024px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .side {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .wrap {
+    gap: 14px;
+  }
+
+  .queues,
+  .kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
   }
 
-  .panels {
-    grid-template-columns: 1fr;
-  }
-
-  .title {
-    font-size: 18px;
+  .side {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

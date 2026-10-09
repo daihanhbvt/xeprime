@@ -97,8 +97,12 @@ export function useSyncScopeWhenInvoiceSettles(enabled = true): void {
   }, [awaiting, queryClient]);
 }
 
-export function useMySubscription() {
-  return useQuery({ queryKey: queryKeys.subscription.me(), queryFn: fetchMySubscription });
+/**
+ * `enabled` cho nơi gọi TẮT hẳn lượt đọc khi người xem không có `subscription.view` (vd thẻ gói
+ * trên Tổng quan của một nhân viên) — gọi rồi nuốt 403 là một dòng lỗi vô ích trong log.
+ */
+export function useMySubscription(enabled = true) {
+  return useQuery({ queryKey: queryKeys.subscription.me(), queryFn: fetchMySubscription, enabled });
 }
 
 export function useTenantPlans(enabled = true) {

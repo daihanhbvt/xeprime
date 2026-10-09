@@ -147,6 +147,13 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
     title: 'Gian hàng — vận hành thuê',
     tags: [
       {
+        name: 'partner-dashboard',
+        description:
+          'Tổng quan site partner (cả hai tuyến): việc giao/nhận hôm nay, yêu cầu chờ duyệt, lịch ' +
+          'giao/nhận, tháng này so cùng kỳ, xe trên chợ, uy tín. Mỗi khối gác bằng quyền của dữ ' +
+          'liệu nó lộ ra; tiền KHÔNG ở đây (đọc sổ thu chi hoặc sổ ví).',
+      },
+      {
         name: 'booking-requests',
         description: 'Hộp thư yêu cầu thuê: duyệt, từ chối, chốt lịch thành đơn.',
       },

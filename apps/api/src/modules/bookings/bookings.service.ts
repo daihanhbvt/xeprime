@@ -1397,8 +1397,11 @@ function orderByOf(
  *
  * ⚠️ CỐ Ý không có vế "đã qua `pickup_at`": quá giờ hẹn KHÔNG phải là đã giao xe. Đơn quá giờ
  * là đơn cần chú ý NHẤT, nó phải nằm lại trong danh sách chứ không được tự rụng ra.
+ *
+ * Export cho Tổng quan partner (`PartnerDashboardService`): thẻ "Chờ giao xe" đếm ĐÚNG tập mà
+ * màn "Chờ giao xe" liệt kê — một câu nghiệp vụ, hai nơi đọc, không có bản chép thứ hai.
  */
-function presetWhere(preset: BookingListPreset): Prisma.BookingWhereInput {
+export function presetWhere(preset: BookingListPreset): Prisma.BookingWhereInput {
   switch (preset) {
     case BOOKING_LIST_PRESET.AWAITING_PICKUP:
       return {

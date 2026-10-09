@@ -50,6 +50,13 @@ describe('refreshNotificationAffected', () => {
     expect(invalidated).toContainEqual(key(queryKeys.calendar.all));
   });
 
+  /** Thẻ "Yêu cầu chờ duyệt" trên Tổng quan không được đứng ở số cũ khi huy hiệu menu đã nhảy. */
+  it('làm mới Tổng quan partner', () => {
+    refreshNotificationAffected(client);
+
+    expect(invalidated).toContainEqual(key(queryKeys.dashboard.all));
+  });
+
   /**
    * KHÔNG quét sạch cache.
    *

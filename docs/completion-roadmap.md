@@ -77,7 +77,7 @@ Mục tiêu: có một bản web đáng tin để demo/pilot mà chưa nhận ti
 Trạng thái: **Đang đóng gate**. Code hiện tại đã bổ sung dashboard dùng dữ liệu thật, invitation token, legal pages/consent và email delivery; chưa được tuyên bố hoàn thành R1 cho tới khi production integration, security review và UAT có bằng chứng.
 
 - Review và chạy lại test/typecheck/build toàn workspace sau thay đổi slot billing/i18n.
-- Hoàn thiện dashboard shop: doanh thu, tiền giữ/cọc và việc cần làm bằng dữ liệu thật.
+- ~~Hoàn thiện dashboard shop: doanh thu, tiền giữ/cọc và việc cần làm bằng dữ liệu thật.~~ Xong 09/10/2026: Tổng quan ba bề mặt (gian hàng gói · chủ xe cá nhân · nền tảng) — việc cần làm + câu trả lời đầu trang, lịch giao/nhận 7 ngày, KPI tháng so cùng kỳ (tỉ lệ lấp đầy), uy tín, gói, ví; API `GET /dashboard/overview` + `GET /platform/dashboard/overview`. Còn chờ: UAT trên dữ liệu pilot.
 - Ẩn dead links và menu placeholder chưa có luồng.
 - Đổi “mời thành viên” thành đúng hành vi hoặc làm invitation thật.
 - Hoàn thiện Terms, Privacy, quy chế marketplace, chính sách hủy và kênh support.
@@ -136,7 +136,7 @@ Bằng chứng test ngày 14/09/2026: **5 suite / 64 test xanh** trên PostgreSQ
 
 Cái này KHÔNG phải bằng chứng vượt gate: tất cả đều là máy dev. Xem mục 8 để biết còn thiếu gì.
 
-- Owner Lite navigation và dashboard.
+- Owner Lite navigation và dashboard. (Dashboard xong 09/10/2026 — `OwnerDashboardView`: việc cần làm, lịch giao nhận, thu nhập + số dư từ sổ ví, xe của bạn, uy tín; KHÔNG báo cáo theo kỳ — ADR 0027 điều 1.)
 - Xác minh người bán, loại chủ thể, thông tin thuế và tài khoản nhận tiền.
 - Versioned fee policy và booking snapshot, phân biệt phí dịch vụ XePrime, thuế thật, bảo vệ xe và bảo hiểm chuyến đi.
 - Quote breakdown minh bạch cho khách và net earning preview cho chủ xe; phí dịch vụ XePrime 10% của tuyến Basic nằm phía khách, không trừ khỏi tiền thuê chủ xe; tuyến gói là 0%.

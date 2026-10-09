@@ -14,6 +14,11 @@ export interface TooltipRow {
   label: string;
   color: string;
   raw: string;
+  /**
+   * Chữ đã định dạng sẵn cho dòng KHÔNG phải tiền (số đơn, số chuyến — `fmt.count`). Có thì in nó
+   * thay cho `fmt.money(raw)`: một số đếm in kèm "₫" là nói sai đơn vị.
+   */
+  text?: string;
 }
 
 interface ChartTooltipProps {
@@ -45,7 +50,7 @@ export function ChartTooltip({ title, rows }: ChartTooltipProps) {
               />
               {row.label}
             </dt>
-            <dd className={styles.value}>{fmt.money(row.raw)}</dd>
+            <dd className={styles.value}>{row.text ?? fmt.money(row.raw)}</dd>
           </div>
         ))}
       </dl>
