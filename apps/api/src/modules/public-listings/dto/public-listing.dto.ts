@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
+import { SEARCH_QUERY_MAX_LENGTH } from '@xeprime/domain';
 import { LongTermPackageOptionDto } from '../../pricing/dto/pricing.dto';
 import {
   BODY_TYPE_VALUES,
@@ -153,11 +154,17 @@ export class PublicListingQueryDto {
   minSeats?: number;
 
   // Có trần: không ai gõ câu tìm kiếm 100 ký tự, còn chuỗi dài tự do thì vừa phình khoá cache
-  // (facets dùng query làm khoá) vừa là chi phí ILIKE vô ích trên toàn bảng.
-  @ApiPropertyOptional({ description: 'Tìm theo tên/hãng/model', maxLength: 100 })
+  // (facets dùng query làm khoá) vừa là chi phí LIKE vô ích. Luật khớp: `keywordTokenWhere`.
+  @ApiPropertyOptional({
+    description:
+      'Từ khoá — khớp tên xe/hãng/model và TÊN CÔNG KHAI của chủ xe/gian hàng. Không phân biệt ' +
+      'dấu và hoa thường; mỗi từ phải là đầu một từ ("vf8" khớp "VinFast VF 8"), không cần đúng ' +
+      'thứ tự hay cùng một trường.',
+    maxLength: SEARCH_QUERY_MAX_LENGTH,
+  })
   @IsOptional()
   @IsString()
-  @MaxLength(100)
+  @MaxLength(SEARCH_QUERY_MAX_LENGTH)
   q?: string;
 
   /**
@@ -931,6 +938,13 @@ export class PublicShopSummaryDto {
   ratingAvg!: string;
 
   @ApiProperty() ratingCount!: number;
+
+  @ApiProperty({
+    description:
+      'Gian hàng tuyến gói — đeo dấu xác thực XePrime (hasVerifiedStorefront). Cùng phép suy ' +
+      'với `shopVerified` của thẻ xe: false là mặt tiền chủ xe cá nhân.',
+  })
+  verified!: boolean;
 }
 
 export class PublicShopPageDto {
@@ -954,6 +968,18 @@ export class PublicShopListQueryDto {
   @Min(1)
   @Max(48)
   limit?: number;
+
+  /** Gợi ý chủ xe ở ô từ khoá của `/search` — CÙNG luật tên công khai với `q` của danh sách xe. */
+  @ApiPropertyOptional({
+    description:
+      'Từ khoá — chỉ giữ chủ xe/gian hàng có TÊN CÔNG KHAI khớp (cùng luật với `q` của ' +
+      '`GET /public/listings`: không dấu, khớp đầu từ).',
+    maxLength: SEARCH_QUERY_MAX_LENGTH,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(SEARCH_QUERY_MAX_LENGTH)
+  q?: string;
 }
 
 /** Query danh sách xe của một gian hàng — phân trang + sort (không nhận slug qua body). */

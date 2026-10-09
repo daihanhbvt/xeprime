@@ -1,3 +1,4 @@
+import { SEARCH_QUERY_MAX_LENGTH } from '@xeprime/domain';
 import { LISTING_SORT_VALUES } from '@xeprime/types';
 import type { QueryParams } from '@/services/api-client';
 import type { ListingSort, MarketplaceFilters } from './types';
@@ -14,6 +15,7 @@ import type { ListingSort, MarketplaceFilters } from './types';
  */
 export function toListingQueryParams(filters: MarketplaceFilters): QueryParams {
   return {
+    q: filters.q ?? null,
     vehicleType: filters.vehicleType ?? null,
     serviceType: filters.serviceType ?? null,
     // Tham số chuẩn là MÃ. `province` (tên) chỉ gửi kèm khi chưa có mã — backend quy nó về mã
@@ -57,10 +59,10 @@ const ARRAY_KEYS = [
 ] as const;
 const BOOLEAN_KEYS = ['hourly', 'delivery', 'noCollateral', 'discount'] as const;
 const NUMBER_KEYS = ['minSeats', 'priceMin', 'priceMax', 'page', 'limit'] as const;
-// Từ khoá `q` đã bị BỎ khỏi contract FE (yêu cầu 17/08 — gõ sai key là không ra xe, không thân
-// thiện): mọi lối vào tìm kiếm đều có cấu trúc (dịch vụ / loại xe / địa điểm / thời gian).
-// Link cũ còn mang `q` thì param bị lơ đi — kết quả RỘNG HƠN chứ không thành bộ lọc tàng hình.
 const STRING_KEYS = [
+  // Từ khoá (09/10, quay lại sau lần gỡ 17/08): lý do gỡ là "gõ không dấu / tách chữ số thì
+  // không ra xe" — server nay gấp chuỗi trước khi so (`searchTokens`), nên khớp cả hai cách gõ.
+  'q',
   'vehicleType',
   'serviceType',
   // Lộ trình có tài xế (17/08) — NGỮ CẢNH mang sang yêu cầu thuê, KHÔNG gửi API listings
@@ -93,6 +95,13 @@ export function parseFilters(searchParams: URLSearchParams): MarketplaceFilters 
   for (const key of STRING_KEYS) {
     const raw = searchParams.get(key);
     if (raw) filters[key] = raw;
+  }
+  // Link tự sửa tay có thể dài hơn trần của API — cắt thay vì để cả trang thành lỗi 400; chuỗi
+  // chỉ toàn khoảng trắng thì coi như không có từ khoá.
+  if (filters.q !== undefined) {
+    const q = filters.q.trim().slice(0, SEARCH_QUERY_MAX_LENGTH);
+    if (q) filters.q = q;
+    else delete filters.q;
   }
   for (const key of NUMBER_KEYS) {
     const raw = searchParams.get(key);

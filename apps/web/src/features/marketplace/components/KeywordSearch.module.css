@@ -1,0 +1,183 @@
+/*
+ * Ô từ khoá — nửa trái của thanh tìm kiếm `/search`. Thanh ngoài (`.searchBar` ở
+ * MarketplaceResults) đã có viền và vạch ngăn, nên ô này không có viền riêng (variant borderless).
+ */
+.root {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+}
+
+/* Cao bằng vùng ngữ cảnh bên cạnh (padding 12px + một dòng chữ body). */
+.root:global(.ant-select) {
+  min-height: 48px;
+  padding-inline: 16px 12px;
+}
+
+.icon {
+  color: var(--xp-color-text-secondary);
+  font-size: 16px;
+}
+
+.root:focus-within .icon {
+  color: var(--xp-color-primary-active);
+}
+
+.input {
+  font-size: var(--xp-font-size-body);
+}
+
+/* ── Danh sách thả xuống ─────────────────────────────────────────────── */
+
+.popup {
+  /* Ô từ khoá trên desktop chỉ ~40% thanh — danh sách cần đủ chỗ cho tên + dòng phụ. */
+  min-width: min(380px, calc(100vw - 32px));
+  padding: 6px;
+}
+
+.groupTitle {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-overline);
+  font-weight: var(--xp-font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.host {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  padding-block: 4px;
+  gap: 12px;
+}
+
+/* Chủ xe cá nhân = ảnh tròn (con người); gian hàng = ô bo góc (thương hiệu) — như thẻ xe. */
+.avatar {
+  display: inline-flex;
+  overflow: hidden;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.avatarShop {
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-gold-wash);
+  color: var(--xp-gold-deep);
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hostBody {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hostNameRow {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+.hostName {
+  overflow: hidden;
+  min-width: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Phần khớp từ khoá — đậm + màu thương hiệu, không nền vàng kiểu bút dạ (đọc ồn trên nền trắng). */
+.mark {
+  background: none;
+  color: var(--xp-color-primary-active);
+  font-weight: var(--xp-font-weight-bold);
+}
+
+.hostMeta {
+  overflow: hidden;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chevron {
+  flex: none;
+  color: var(--xp-color-text-tertiary);
+  font-size: 11px;
+}
+
+/* Dòng cuối: áp từ khoá cho cả lưới — cùng việc với phím Enter, nên mang luôn biểu tượng Enter. */
+.searchAll {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  padding: 10px 12px;
+  margin-top: 4px;
+  border: none;
+  border-top: 1px solid var(--xp-color-border-subtle);
+  background: none;
+  color: var(--xp-color-text);
+  cursor: pointer;
+  font-size: var(--xp-font-size-body-sm);
+  gap: 10px;
+  text-align: left;
+}
+
+.searchAll:hover {
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-hover);
+}
+
+.searchAllText {
+  overflow: hidden;
+  min-width: 0;
+  flex: 1;
+  font-weight: var(--xp-font-weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.enterHint {
+  padding: 2px 6px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-sm);
+  color: var(--xp-color-text-tertiary);
+  font-size: 11px;
+}
+
+@media (max-width: 640px) {
+  .root:global(.ant-select) {
+    min-height: 44px;
+    padding-inline: 12px 8px;
+  }
+
+  /* 16px: dưới mức đó Safari iOS tự phóng to trang khi chạm vào ô nhập. */
+  .input {
+    font-size: 16px;
+  }
+
+  /* Màn cảm ứng không có phím Enter để gợi ý. Hai lớp: `.anticon` của AntD (cùng độ ưu tiên,
+     chèn sau) sẽ thắng một lớp đơn. */
+  .searchAll .enterHint {
+    display: none;
+  }
+}

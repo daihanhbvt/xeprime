@@ -1,3 +1,4 @@
+import { searchTokens } from '@xeprime/domain';
 import { Prisma } from '@xeprime/prisma';
 import {
   LISTING_STATUS,
@@ -7,6 +8,7 @@ import {
   type SeatBucket,
 } from '@xeprime/types';
 import type { PublicListingQueryDto } from './dto/public-listing.dto';
+import type { ResolvedKeyword } from './keyword-match';
 
 /**
  * Bộ lọc marketplace — CẢ HAI hiện thực của cùng một bộ điều kiện nằm trong file này:
@@ -38,7 +40,10 @@ export type FacetDimension =
   | 'discount';
 
 /** Bộ filter dùng chung giữa search và facets (facets không có sort/paging). */
-export type ListingFilterQuery = Omit<PublicListingQueryDto, 'sort' | 'page' | 'limit'>;
+export type ListingFilterQuery = Omit<PublicListingQueryDto, 'sort' | 'page' | 'limit'> & {
+  /** `q` ĐÃ PHÂN GIẢI bằng `resolveKeyword` — hai bản dựng điều kiện chỉ đọc trường này. */
+  keyword?: ResolvedKeyword;
+};
 
 /**
  * Điều kiện để một snapshot ĐƯỢC PHÉP xuất hiện công khai — dùng chung cho search, facets,
@@ -83,6 +88,26 @@ function priceFilter(min?: number, max?: number): Prisma.PublicListingWhereInput
       ...(max != null ? { lte: max } : {}),
     },
   };
+}
+
+/**
+ * Chuỗi con cần tìm trong một cột GẤP SẴN (mở đầu bằng dấu cách) để khớp ĐẦU TỪ — `LIKE '% <từ>%'`.
+ * Từ đã gấp chỉ còn `[a-z0-9]`, nên không mang ký tự đại diện nào của LIKE.
+ */
+export function keywordNeedle(token: string): string {
+  return ` ${token}`;
+}
+
+/**
+ * Từ khoá đã phân giải của một query. `q` có chữ mà chưa qua `resolveKeyword` là LỖI LẬP TRÌNH,
+ * không phải "không lọc": lặng lẽ bỏ qua sẽ trả cả chợ cho một khách vừa gõ tên một chủ xe.
+ */
+function keywordOf(query: ListingFilterQuery): ResolvedKeyword | undefined {
+  if (query.keyword) return query.keyword;
+  if (searchTokens(query.q).length > 0) {
+    throw new Error('listing-filter: `q` phải được phân giải bằng resolveKeyword() trước.');
+  }
+  return undefined;
 }
 
 /** Bucket số chỗ của một seatCount cụ thể (mỗi giá trị rơi vào đúng một bucket). */
@@ -137,12 +162,13 @@ export function buildListingWhere(
   if (query.minSeats) and.push({ seatCount: { gte: query.minSeats } });
   const availability = availabilityFilter(query.pickupAt, query.returnAt);
   if (Object.keys(availability).length > 0) and.push(availability);
-  if (query.q) {
+  // Từ khoá (luật ở `keyword-match.ts`): mỗi từ khớp đầu từ của tên xe, HOẶC chủ xe có tên
+  // công khai khớp từ đó (danh sách đã chấm tuyến lúc đọc).
+  for (const { token, hostTenantIds } of keywordOf(query)?.tokens ?? []) {
     and.push({
       OR: [
-        { title: { contains: query.q, mode: 'insensitive' } },
-        { brand: { contains: query.q, mode: 'insensitive' } },
-        { model: { contains: query.q, mode: 'insensitive' } },
+        { searchText: { contains: keywordNeedle(token) } },
+        ...(hostTenantIds.length > 0 ? [{ tenantId: { in: hostTenantIds } }] : []),
       ],
     });
   }
@@ -236,13 +262,14 @@ export function buildListingWhereSql(
   const availability = availabilitySql(query.pickupAt, query.returnAt);
   if (availability) and.push(availability);
 
-  if (query.q) {
-    // Cùng ngữ nghĩa `contains` + `mode: 'insensitive'` của Prisma: ILIKE hai đầu %, KHÔNG thoát
-    // ký tự đại diện (Prisma cũng không) — để hai bản cho cùng kết quả trên mọi chuỗi.
-    const needle = `%${query.q}%`;
-    and.push(Prisma.sql`(
-      pl."title" ILIKE ${needle} OR pl."brand" ILIKE ${needle} OR pl."model" ILIKE ${needle}
-    )`);
+  // Đối chiếu 1:1 với vế từ khoá của `buildListingWhere`.
+  for (const { token, hostTenantIds } of keywordOf(query)?.tokens ?? []) {
+    const like = `%${keywordNeedle(token)}%`;
+    and.push(
+      hostTenantIds.length > 0
+        ? Prisma.sql`(pl."search_text" LIKE ${like} OR pl."tenant_id" IN (${Prisma.join(hostTenantIds)}))`
+        : Prisma.sql`pl."search_text" LIKE ${like}`,
+    );
   }
 
   if (exclude !== 'bodyType' && query.bodyType?.length) {
