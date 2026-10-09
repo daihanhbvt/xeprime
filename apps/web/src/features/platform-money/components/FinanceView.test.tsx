@@ -150,6 +150,7 @@ function moneySummary(over: Partial<PlatformMoneySummary> = {}): PlatformMoneySu
       amount: '4200000',
       oldestAt: new Date(Date.now() - 50 * 3_600_000).toISOString(),
     },
+    gatewayIn: { count: 0, amount: '0' },
     holds: { count: 12, amount: '3600000', disputeCount: 2 },
     refunds: { count: 4, amount: '800000' },
     withdrawals: { count: 5, amount: '9000000', overdueCount: 1 },

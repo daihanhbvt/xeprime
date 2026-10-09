@@ -138,6 +138,8 @@ export const AUDIT_ACTION_CATEGORY_PREFIXES: ReadonlyArray<
   ['hold_refund.', AUDIT_ACTION_CATEGORY.FINANCE],
   ['receipt.', AUDIT_ACTION_CATEGORY.FINANCE],
   ['payment.', AUDIT_ACTION_CATEGORY.FINANCE],
+  // Lượt thanh toán qua cổng MoMo/VNPAY (ADR 0058) — người trực đóng việc, truy vấn lại cổng.
+  ['payment_gateway_order.', AUDIT_ACTION_CATEGORY.FINANCE],
   ['withdrawal.', AUDIT_ACTION_CATEGORY.FINANCE],
   ['tax_withholding.', AUDIT_ACTION_CATEGORY.FINANCE],
   ['tax_period.', AUDIT_ACTION_CATEGORY.FINANCE],

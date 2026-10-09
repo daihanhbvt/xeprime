@@ -6,6 +6,7 @@ import {
   BOOKING_HOLD_STATUS,
   HOLD_REFUND_STATUS,
   INSURANCE_POLICY_STATUS,
+  PAYMENT_ORDER_REVIEW_STATUS,
   SUPPORT_CASE_CATEGORY,
   SUPPORT_CASE_STATUS_OPEN,
   TAX_WITHHOLDING_STATUS,
@@ -37,14 +38,29 @@ export class PlatformMoneySummaryService {
       status: { in: [...WITHDRAWAL_STATUS_HOLDING_FUNDS] },
     };
 
-    const [bankIn, holds, disputeCount, refunds, withdrawals, overdueCount, insurance, tax] =
-      await Promise.all([
+    const [
+      bankIn,
+      gatewayIn,
+      holds,
+      disputeCount,
+      refunds,
+      withdrawals,
+      overdueCount,
+      insurance,
+      tax,
+    ] = await Promise.all([
         // = `BankTransactionsService.list` không lọc gì.
         this.prisma.bankTransaction.aggregate({
           where: { direction: BANK_DIRECTION.IN, matchStatus: BANK_MATCH_STATUS.UNMATCHED },
           _count: { _all: true },
           _sum: { amountIn: true },
           _min: { bankTime: true, createdAt: true },
+        }),
+        // = `PlatformPaymentOrdersService.list` không lọc gì (`view=review`) — ADR 0058.
+        this.prisma.paymentGatewayOrder.aggregate({
+          where: { reviewStatus: PAYMENT_ORDER_REVIEW_STATUS.OPEN },
+          _count: { _all: true },
+          _sum: { amount: true },
         }),
         // = `BookingHoldsService.listForPlatform` với `unsettled=true`.
         this.prisma.bookingHold.aggregate({
@@ -102,6 +118,7 @@ export class PlatformMoneySummaryService {
         amount: money(bankIn._sum.amountIn),
         oldestAt: earliest(bankIn._min.bankTime, bankIn._min.createdAt)?.toISOString() ?? null,
       },
+      gatewayIn: { count: gatewayIn._count._all, amount: money(gatewayIn._sum.amount) },
       holds: {
         count: holds._count._all,
         amount: money(holds._sum.paidAmount),

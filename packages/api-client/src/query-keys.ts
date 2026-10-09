@@ -414,6 +414,12 @@ export const queryKeys = {
     destinations: (params: QueryParams) => ['marketplace', 'destinations', params] as const,
     shops: (params: QueryParams) => ['marketplace', 'shops', params] as const,
     /**
+     * Gợi ý chủ xe của ô từ khoá (`/public/shops?q=`). Khoá RIÊNG dù cùng endpoint với `shops`:
+     * hai bên cất hai hình dữ liệu khác nhau trong cache (trang + meta ↔ mảng gợi ý).
+     */
+    shopSuggestions: (q: string, limit: number) =>
+      ['marketplace', 'shop-suggestions', q, limit] as const,
+    /**
      * Khoảng giá tham khảo khi chủ xe đặt giá. Nằm dưới `marketplace` vì nguồn của nó là mặt
      * bằng giá CỦA CHỢ, không phải hồ sơ chiếc xe đang khai — và nó dùng chung cho web lẫn app.
      */
@@ -586,6 +592,19 @@ export const queryKeys = {
     reconciliation: (date: string) => ['platform-money', 'reconciliation', date] as const,
     /** Số đếm các hàng đợi — dải thẻ đầu màn Tài chính. Nằm dưới `all` để mọi thao tác tiền làm mới nó. */
     summary: ['platform-money', 'summary'] as const,
+    /** Hàng đợi lượt thanh toán qua cổng MoMo/VNPAY (ADR 0058) — nằm dưới `all` cùng lý do với `summary`. */
+    gatewayOrders: (params: QueryParams) => ['platform-money', 'gateway-orders', params] as const,
+    gatewayOrder: (id: string) => ['platform-money', 'gateway-order', id] as const,
+  },
+  /**
+   * Thanh toán qua cổng MoMo/VNPAY phía NGƯỜI TRẢ (ADR 0058). `surface` (`customer` · `partner`) nằm
+   * trong khoá: hai site gọi hai endpoint khác nhau cho cùng một khái niệm, và cache của site này không
+   * được trả lời cho site kia.
+   */
+  paymentGateway: {
+    all: ['payment-gateway'] as const,
+    methods: (surface: string) => ['payment-gateway', 'methods', surface] as const,
+    order: (surface: string, id: string) => ['payment-gateway', 'order', surface, id] as const,
   },
   /** Support case — ba bề mặt (khách/gian hàng/nền tảng) cùng dùng chung nhánh dữ liệu. */
   supportCases: {

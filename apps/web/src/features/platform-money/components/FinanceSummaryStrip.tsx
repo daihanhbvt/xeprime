@@ -94,6 +94,12 @@ export function FinanceSummaryStrip({
         hint: oldest ? t('cards.oldest', { age: ageLabel(oldest) }) : undefined,
       },
       {
+        queue: FINANCE_QUEUE.GATEWAY_IN,
+        label: t('cards.gatewayIn'),
+        // Mỗi lượt ở đây là tiền có thể đã về mà chưa vào đâu — không bao giờ là việc nhàn.
+        tone: s.gatewayIn.count > 0 ? 'urgent' : 'idle',
+      },
+      {
         queue: FINANCE_QUEUE.HOLDS,
         label: t('cards.holds'),
         tone: s.holds.disputeCount > 0 ? 'urgent' : 'idle',

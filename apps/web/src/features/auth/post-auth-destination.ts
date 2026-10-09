@@ -281,6 +281,12 @@ export function partnerPageRedirect(
 ): string | null {
   const pathname = pathOnly(path);
   if (isPartnerPublicPage(pathname)) return null;
+  /*
+   * Trang quay về từ cổng thanh toán (ADR 0058) đúng cho MỌI tuyến: gian hàng đang nợ bước thanh
+   * toán đầu tiên phải thấy kết quả của chính lượt vừa trả, không bị đẩy về `/onboarding` giữa chừng.
+   * Server mới gác dữ liệu (lượt chỉ đọc được trong phạm vi gian hàng của người gọi).
+   */
+  if (pathname === ROUTES.MANAGE.PAYMENT_RETURN) return null;
 
   switch (resolvePartnerTrack(user)) {
     case PARTNER_TRACK.NONE:

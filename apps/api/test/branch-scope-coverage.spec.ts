@@ -36,6 +36,9 @@ const TENANT_LEVEL: Record<string, string> = {
   'support/support.controller.ts': 'Ticket giữa gian hàng và nền tảng, không gắn chi nhánh.',
   'customer-trips/customer-trips.controller.ts':
     'Màn của chính KHÁCH (chuyến của tôi) — khoá theo người thuê, không theo nhân sự gian hàng.',
+  'payment-gateway/partner-payment-gateway.controller.ts':
+    'Hoá đơn gói và lượt thanh toán qua cổng của nó thuộc GIAN HÀNG, không gắn chi nhánh — cùng ' +
+    'quyền với mua gói (ADR 0058).',
 };
 
 /**

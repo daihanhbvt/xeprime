@@ -94,6 +94,8 @@ export const MESSAGE_NAMESPACES = [
   { file: 'maintenance', namespace: 'Maintenance' },
   // "Gói của tôi" phía gian hàng — W2 (ADR 0015/0026).
   { file: 'subscription', namespace: 'Subscription' },
+  // Thanh toán qua cổng MoMo · VNPAY phía người trả — cả hai site (ADR 0058).
+  { file: 'payment-gateway', namespace: 'PaymentGateway' },
   // Hồ sơ người bán do gian hàng khai (R3 — ADR 0028 release gate 1).
   { file: 'seller-profile', namespace: 'SellerProfile' },
   // Sổ tài khoản ngân hàng NHẬN TIỀN — dùng chung khách và gian hàng (ADR 0033).

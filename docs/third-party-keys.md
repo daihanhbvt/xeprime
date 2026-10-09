@@ -28,6 +28,7 @@ thiếu thì phần đó suy giảm có kiểm soát chứ không làm sập app
 | 7 | **SMTP** | Thư mời thành viên + đặt lại mật khẩu gửi thật | Email **in ra log** container — chạy được nhưng KHÔNG đi qua nodemailer, nên lỗi SMTP/TLS/`From` chỉ lộ ở production. Staging nay gửi thật (§7.2); máy dev dùng Mailpit (§7.1) | Miễn phí ở mức pilot |
 | 8 | **Telegram bot** | Cảnh báo sao lưu thất bại | Không ai biết khi backup hỏng | Miễn phí |
 | 9 | **SePay** | Đối soát chuyển khoản tự động: kích hoạt gói, tạo đơn thuê khi tiền giữ chỗ về đủ, VietQR trên màn thanh toán | Webhook trả 503 `SEPAY_NOT_CONFIGURED`; màn thanh toán chỉ còn mã + số tiền, không tiền nào được ghi nhận tự động | Tuỳ gói dịch vụ SePay |
+| 10 | **MoMo · VNPAY** (ADR 0058 — Proposed) | Nút "Thanh toán qua Ví MoMo / VNPAY" dưới khối chuyển khoản, cho hoá đơn gói và tiền giữ chỗ — **chỉ staging** cho tới khi ADR 0058 chuyển Accepted | Không nút nào hiện; checkout trả 503 `PAYMENT_GATEWAY_UNAVAILABLE`; chuyển khoản VietQR vẫn chạy | Sandbox miễn phí; production theo hợp đồng merchant (phí % mỗi giao dịch) |
 
 **eSMS.vn KHÔNG cần cho staging.** `OTP_MODE=mock` in mã ra log và trả kèm `devCode` trong
 response — đủ để test mọi luồng OTP. Chỉ production mới bắt buộc eSMS.
@@ -633,6 +634,98 @@ Khai ở GitHub Environment như mọi biến khác (`.github/workflows/deploy.y
 
 ---
 
+## 8c. MoMo · VNPAY — cổng thanh toán bổ sung (ADR 0058 — Proposed)
+
+Hai cổng là phương thức **bổ sung** cho chuyển khoản VietQR/SePay (§8b), không thay nó. Mã ở
+`apps/api/src/modules/payment-gateway/`; writer duy nhất của sổ `payment_gateway_orders` là
+`PaymentGatewayService`. Tiền qua cổng **không** đi vào `bank_transactions`.
+
+Mọi thứ **mặc định tắt**. Có hai trục, cả hai phải bật thì nút mới hiện:
+
+| Trục | Biến | Giá trị |
+| --- | --- | --- |
+| Luồng hoá đơn gói | `PAYMENT_GATEWAY_SUBSCRIPTION` | `off` (mặc định) · `on` — **production từ chối boot khi `on`** (phí cổng, đối soát, chứng từ chưa chốt — ADR 0058 Q2, Q5–Q7) |
+| Luồng tiền giữ chỗ | `PAYMENT_GATEWAY_BOOKING_HOLD` | `off` (mặc định) · `on` — **production từ chối boot khi `on`** (thêm gate pháp lý L1/L5, ADR 0058 Q1–Q4) |
+| Nhãn môi trường cổng | `PAYMENT_GATEWAY_MODE` | `sandbox` (mặc định — web gắn thẻ "Môi trường thử") · `live` (bắt buộc ở production khi được bật luồng, sau khi gỡ chặn) |
+| Cổng MoMo | `MOMO_PARTNER_CODE` · `MOMO_ACCESS_KEY` · `MOMO_SECRET_KEY` · `MOMO_API_BASE_URL` | nhóm bốn-biến-hoặc-không |
+| Cổng VNPAY | `VNPAY_TMN_CODE` · `VNPAY_HASH_SECRET` · `VNPAY_PAYMENT_URL` · `VNPAY_API_URL` | nhóm bốn-biến-hoặc-không |
+
+Phân loại ở GitHub Environment: `MOMO_ACCESS_KEY`, `MOMO_SECRET_KEY`, `VNPAY_HASH_SECRET` là **Secret**
+(lộ là phải xoay lại); mã merchant, URL của cổng và ba công tắc là **Variable**. Khai lẻ một nhóm thì
+API từ chối boot; bật một luồng mà không cổng nào đủ khoá cũng từ chối boot. Ở môi trường đã triển
+khai, URL của cổng bắt buộc `https://`.
+
+### 8c.1 MoMo sandbox
+
+1. Đăng ký tài khoản doanh nghiệp/nhà phát triển ở cổng MoMo Business để nhận bộ khoá **môi trường
+   thử** (`partnerCode`, `accessKey`, `secretKey`). Tài liệu: <https://developers.momo.vn/v3/docs/payment/onboarding/test-instructions/>.
+2. Khai `MOMO_API_BASE_URL=https://test-payment.momo.vn` (production: `https://payment.momo.vn`).
+3. **IPN URL không khai ở portal** — server gửi kèm từng request: `${API_PUBLIC_URL}/payment-gateway/momo/ipn`.
+   MoMo POST JSON và chờ HTTP 204 trong 15 giây. URL phải ra được Internet bằng https (staging:
+   `https://api-stg.xeprime.vn/payment-gateway/momo/ipn`).
+4. Trang quay về dựng từ `APP_WEB_URL` (tiền giữ chỗ → `/trips/:id?paymentOrder=…`) và
+   `WEB_PARTNER_URL` (hoá đơn gói → `/payment-return?order=…`).
+5. Thử: tải **MoMo Test App** (trang download của developers.momo.vn), tạo ví bằng một SĐT 10 số;
+   OTP và mật khẩu mặc định của môi trường thử là `000000`.
+6. Hạn mức theo tài liệu `captureWallet`: 1.000đ – 50.000.000đ mỗi giao dịch (nút tự khoá ngoài
+   khoảng này).
+
+### 8c.2 VNPAY sandbox
+
+1. Đăng ký merchant thử ở <https://sandbox.vnpayment.vn/devreg/> — VNPAY gửi `vnp_TmnCode` và
+   `vnp_HashSecret` qua email, kèm tài khoản trang quản trị merchant thử và thông tin thẻ test.
+2. Khai `VNPAY_PAYMENT_URL=https://sandbox.vnpayment.vn/paymentv2/vpcpay.html` và
+   `VNPAY_API_URL=https://sandbox.vnpayment.vn/merchant_webapi/api/transaction`.
+3. **IPN URL khai ở trang quản trị merchant của VNPAY** (không gửi theo request):
+   `${API_PUBLIC_URL}/payment-gateway/vnpay/ipn`. VNPAY gọi GET và đọc `{ RspCode, Message }`; nếu
+   không nhận `00`/`02` thì gọi lại tối đa 10 lần, cách 5 phút.
+4. Đặc tả: <https://sandbox.vnpayment.vn/apis/docs/thanh-toan-pay/pay.html> (thanh toán, IPN, bảng
+   mã) · <https://sandbox.vnpayment.vn/apis/docs/truy-van-hoan-tien/querydr&refund.html> (`querydr`).
+
+### 8c.3 Máy dev (IPN không tới được localhost)
+
+Cổng không gọi được `http://localhost:4000`. Hai cách, chọn một:
+
+- **Không cần IPN**: trang quay về hỏi trạng thái, và server tự truy vấn cổng (MoMo `query` /
+  VNPAY `querydr`) khi lượt còn chờ quá 10 giây — đủ để thử trọn luồng trên máy dev. Đóng trình duyệt
+  trước khi quay về cũng không sao: bộ quét trong API hỏi cổng các lượt còn chờ mỗi 5 phút.
+- **Có IPN**: mở một tunnel https tới cổng 4000 và đặt `API_PUBLIC_URL` bằng URL tunnel (MoMo đọc IPN
+  URL từ đó); với VNPAY khai URL tunnel ở trang quản trị merchant thử.
+
+### 8c.4 Ca thử bắt buộc trên staging (bằng chứng UAT)
+
+| Ca | Kỳ vọng |
+| --- | --- |
+| Trả thành công hoá đơn gói | Trang quay về: "đang chờ" → "đã nhận"; gói bật đúng MỘT lần; hoá đơn `paid` |
+| Huỷ trên trang cổng | "Bạn đã huỷ thanh toán…"; hoá đơn vẫn chờ; mở phiên mới được |
+| Bấm lại nút khi phiên cũ còn hạn | Dùng lại đúng phiên cũ (không mở phiên thứ hai) |
+| IPN gửi lại (cổng retry) | Không cộng tiền lần hai |
+| Hoá đơn bị void trước khi trả xong | Lượt vào hàng đợi "Cổng thanh toán cần xử lý" với lý do tiền về muộn; gói KHÔNG bật |
+| IPN không tới | Trang quay về vẫn ra kết quả nhờ truy vấn phía server; người trực bấm "Hỏi lại cổng" được và màn hình nói đúng kết quả |
+| IPN không tới VÀ không quay về trang | Trong ~5–10 phút bộ quét tự hỏi cổng và ghi nhận; gói bật / đơn thuê ra đời |
+| Trả tiền giữ chỗ khi hold đã quá hạn | Không tạo đơn; lượt vào hàng đợi với lý do tiền về muộn |
+| Vừa chuyển khoản đủ vừa trả qua cổng | Hoá đơn gói: lượt vào hàng đợi lý do "trả trùng". Tiền giữ chỗ: KHÔNG vào hàng đợi cổng — có yêu cầu hoàn phần thừa ở hàng đợi hoàn của khoản giữ chỗ; trang chuyến báo "khoản trùng đã được hoàn" |
+| Trả trùng vào khoản giữ chỗ đã có một khoản hoàn từ trước | Lượt vào hàng đợi cổng lý do "trả trùng" — khoản hoàn cũ không bị cộng dồn |
+| Đóng lượt ở hàng đợi | Có ghi chú + mã hoàn; nhật ký `payment_gateway_order.resolve` |
+| Cổng báo thu SAU khi lượt đã đóng | Không tự áp; lượt mở lại, hiện ghi chú + mã hoàn lần trước; nút "Ghi nhận khoản này" chạy áp tiền kèm nhật ký `payment_gateway_order.apply` |
+
+### 8c.5 Lên production — việc với nhà cung cấp
+
+1. **Hợp đồng merchant** với từng cổng (hồ sơ pháp nhân, tài khoản ngân hàng nhận quyết toán, website có
+   điều khoản, chính sách đổi trả/hoàn tiền và thông tin liên hệ công khai — Luật TMĐT, ADR 0028 điều 9).
+2. **Nghiệm thu tích hợp** theo checklist của cổng (MoMo: mục "Launch And Reports" trên developers.momo.vn;
+   VNPAY: nghiệm thu sandbox trước khi cấp bộ khoá production). Cổng cấp bộ khoá **production riêng** —
+   không dùng chung với staging.
+3. Khai bộ khoá production ở GitHub Environment `production`, `PAYMENT_GATEWAY_MODE=live`, URL production
+   của cổng, và IPN URL production ở portal VNPAY.
+4. Cả hai công tắc ở production bị MÃ chặn (env schema từ chối boot) cho tới khi ADR 0058 chuyển
+   Accepted. Luồng gói gỡ được khi chủ sản phẩm chốt phí cổng, đối soát và chứng từ (Q2, Q5–Q7); luồng
+   tiền giữ chỗ cần thêm ý kiến pháp lý L1/L5 và chính sách hoàn (Q1, Q3, Q4). Gỡ chặn là một PR sửa
+   `apps/api/src/config/env.schema.ts` kèm ADR Accepted, không phải một lần đổi biến.
+5. Muốn mở thẳng app MoMo (`deeplink`/`qrCodeUrl`) phải xin quyền riêng — hiện dùng `payUrl`.
+
+---
+
 ## 9. Sang production thì khác gì
 
 Lặp lại đúng các bước trên với bộ **riêng**. Bốn thứ **phải khác**, còn lại nên khác:
@@ -641,6 +734,7 @@ Lặp lại đúng các bước trên với bộ **riêng**. Bốn thứ **phả
 | --- | --- |
 | `R2_BUCKET` / `R2_PRIVATE_BUCKET` | Ảnh test và giấy tờ test lẫn vào kho khách hàng thật |
 | `SEPAY_API_KEY` | Một khoá dùng chung thì ai cầm khoá staging cũng giả được webhook "tiền đã về" cho production (§8b) |
+| `MOMO_SECRET_KEY` · `VNPAY_HASH_SECRET` | Khoá ký IPN — dùng chung là ai cầm khoá staging cũng ký được "đã thanh toán" cho production; cổng cấp bộ production riêng (§8c.5) |
 | `SESSION_COOKIE_NAME` | Từ ADR 0053 cookie là **host-only** theo từng site (`<tên>_<realm>`, không có `Domain`) nên hai môi trường không còn ghi đè phiên nhau. Vẫn giữ khác tên (`xp_session` ↔ `xp_session_stg`) để nhìn devtools là biết đang ở môi trường nào, và để một file env chép nhầm không âm thầm trùng — `docs/deployment.md` §2.3 |
 | `APP_ENV` | `staging` trên máy production ⇒ mã OTP của khách bị trả thẳng trong response |
 

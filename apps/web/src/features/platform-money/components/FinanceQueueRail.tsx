@@ -3,6 +3,7 @@
 import {
   BankOutlined,
   BookOutlined,
+  CreditCardOutlined,
   FileTextOutlined,
   LockOutlined,
   RollbackOutlined,
@@ -23,6 +24,7 @@ import type { PlatformMoneySummary } from '../types';
 
 const QUEUE_ICON: Readonly<Record<FinanceQueue, ComponentType<{ className?: string }>>> = {
   [FINANCE_QUEUE.BANK_IN]: BankOutlined,
+  [FINANCE_QUEUE.GATEWAY_IN]: CreditCardOutlined,
   [FINANCE_QUEUE.HOLDS]: LockOutlined,
   [FINANCE_QUEUE.REFUNDS]: RollbackOutlined,
   [FINANCE_QUEUE.WITHDRAWALS]: WalletOutlined,
@@ -36,6 +38,7 @@ export function useFinanceQueueLabel() {
   const t = useTranslations('PlatformMoney.queues');
   const labels: Record<FinanceQueue, string> = {
     [FINANCE_QUEUE.BANK_IN]: t('bankIn'),
+    [FINANCE_QUEUE.GATEWAY_IN]: t('gatewayIn'),
     [FINANCE_QUEUE.HOLDS]: t('holds'),
     [FINANCE_QUEUE.REFUNDS]: t('refunds'),
     [FINANCE_QUEUE.WITHDRAWALS]: t('withdrawals'),

@@ -27,6 +27,12 @@ import OwnerOnboardingPage from './page';
  */
 const router = vi.hoisted(() => ({ replace: vi.fn(), push: vi.fn() }));
 const search = vi.hoisted(() => ({ value: '' }));
+// Lối thanh toán qua cổng có test riêng (`InvoicePaymentPanel.test.tsx`); ở đây nó im lặng để không
+// kéo một truy vấn cấu hình cổng thật vào test của màn này.
+vi.mock('@/features/payment-gateway/components/GatewayPayOptions', () => ({
+  GatewayPayOptions: () => null,
+}));
+
 vi.mock('next/navigation', () => ({
   useRouter: () => router,
   usePathname: () => '/manage/onboarding',

@@ -233,6 +233,7 @@
   "cards": {
     "label": "Pending work",
     "bankIn": "Unmatched incoming",
+    "gatewayIn": "Gateway to review",
     "holds": "Holds awaiting settlement",
     "refunds": "Refunds to transfer",
     "withdrawals": "Withdrawals to process",
@@ -256,6 +257,7 @@
       "ledger": "Ledger"
     },
     "bankIn": "Unmatched incoming",
+    "gatewayIn": "Gateway payments to review",
     "holds": "Holds awaiting settlement",
     "refunds": "Customer refunds",
     "withdrawals": "Owner withdrawals",
@@ -267,5 +269,134 @@
     "minutes": "{count, plural, one {# minute} other {# minutes}}",
     "hours": "{count, plural, one {# hour} other {# hours}}",
     "days": "{count, plural, one {# day} other {# days}}"
+  },
+  "gateway": {
+    "tableLabel": "Gateway payments",
+    "empty": "No gateway payments need action.",
+    "emptyDescription": "Payments the gateway reported but the system could not record automatically appear here.",
+    "total": "{count, plural, one {# payment} other {# payments}}",
+    "loadError": "Could not load gateway payments.",
+    "filters": {
+      "search": "Search",
+      "searchPlaceholder": "XPG/XPH code, order ref or gateway transaction id",
+      "provider": "Gateway",
+      "target": "Item type",
+      "status": "Gateway status",
+      "view": "View"
+    },
+    "columns": {
+      "amount": "Amount",
+      "provider": "Gateway",
+      "code": "Reference code",
+      "tenant": "Shop / owner",
+      "status": "Gateway status",
+      "reason": "Reason",
+      "outcome": "Outcome",
+      "createdAt": "Opened at",
+      "waited": "Waiting"
+    },
+    "detail": {
+      "title": "Gateway payment",
+      "previous": "Previous payment",
+      "next": "Next payment",
+      "loadError": "Could not load the payment.",
+      "sideLabel": "Handling",
+      "amountSent": "Amount sent to gateway",
+      "amountPaid": "Amount gateway reported",
+      "target": "Item type",
+      "orderRef": "Order ref sent to gateway",
+      "providerTx": "Gateway transaction id",
+      "resultCode": "Result code",
+      "message": "Gateway message",
+      "payMethod": "Paid with",
+      "paidAt": "Collected at",
+      "resultSource": "Result source",
+      "appliedAt": "Recorded at",
+      "applyOutcome": "Recording outcome",
+      "applyError": "Recording error",
+      "initiatedBy": "Opened by",
+      "createdAt": "Opened at",
+      "expiresAt": "Link valid until",
+      "lastQueriedAt": "Last gateway check",
+      "targetTitle": "Current state of the item",
+      "targetStatus": "Status",
+      "targetAmount": "Amount due",
+      "targetPaid": "Received",
+      "targetExpires": "Payment deadline",
+      "targetGone": "The item no longer exists.",
+      "rawTitle": "Raw gateway result",
+      "rawHint": "Signature removed. Use this as evidence when reconciling with the gateway.",
+      "rawEmpty": "The gateway has not reported a result yet.",
+      "reasonTitle": "Why it needs action",
+      "resultTitle": "Resolved",
+      "resolvedBy": "Closed by {name} at {time}",
+      "refundReference": "Refund reference: {reference}",
+      "priorResultTitle": "Previous handling"
+    },
+    "source": {
+      "ipn": "Gateway IPN",
+      "query": "Server query"
+    },
+    "footer": {
+      "open": "Reconcile with the gateway portal before closing.",
+      "handled": "This payment is no longer in the queue.",
+      "requery": "Re-check gateway",
+      "resolve": "Close",
+      "apply": "Record this payment"
+    },
+    "requery": {
+      "changed": "The gateway has a new result. This payment was updated.",
+      "noChange": "Nothing new from the gateway for this payment.",
+      "unreachable": "Could not reach the gateway right now. Try again in a few minutes."
+    },
+    "resolve": {
+      "title": "Close gateway payment",
+      "body": "Record what you did (for example, refunded manually through the gateway portal). This button moves no money.",
+      "note": "What was done and why",
+      "notePlaceholder": "E.g. Refunded 300,000 VND through the MoMo portal, refund ref …",
+      "noteRequired": "Record what was done.",
+      "noteMin": "At least {min, number} characters.",
+      "refunded": "Refunded to the payer",
+      "refundReference": "Gateway refund reference",
+      "refundReferencePlaceholder": "Refund transaction id",
+      "refundReferenceRequired": "Enter the refund reference (at least 3 characters).",
+      "submit": "Close",
+      "success": "Gateway payment closed."
+    },
+    "apply": {
+      "title": "Record a collected gateway payment",
+      "summary": "{amount} will be applied to {code} as a real payment: an invoice may activate a plan, a booking hold may create a booking. Only do this after checking the gateway portal and confirming this payment has NOT been refunded.",
+      "note": "What you checked",
+      "notePlaceholder": "E.g. MoMo portal confirms transaction …, not refunded",
+      "noteRequired": "Record what you checked.",
+      "submit": "Record",
+      "success": "Payment recorded."
+    },
+    "events": {
+      "title": "Gateway result log ({count, number})",
+      "empty": "The gateway has not reported any result yet.",
+      "effectLine": "System: {effect}",
+      "code": "Code {code}",
+      "outcome": {
+        "succeeded": "Collected",
+        "pending": "Pending",
+        "failed": "Failed",
+        "cancelled": "Cancelled by payer",
+        "expired": "Expired",
+        "flagged": "Flagged by gateway",
+        "not_found": "Not found at gateway"
+      },
+      "effect": {
+        "order_not_found": "no matching payment",
+        "amount_mismatch": "amount mismatch, waiting for review",
+        "pending": "no final result yet",
+        "recorded_failure": "recorded as unsuccessful",
+        "already_final": "payment had already ended",
+        "succeeded": "recorded as collected",
+        "already_succeeded": "already recorded",
+        "flagged": "needs review",
+        "duplicate_provider_tx": "transaction id used by another payment"
+      }
+    }
   }
 }

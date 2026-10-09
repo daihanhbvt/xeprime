@@ -466,6 +466,40 @@ export const API_ERROR_CODE = {
    */
   BANK_TX_TARGET_NOT_PAYABLE: 'BANK_TX_TARGET_NOT_PAYABLE',
 
+  // Cổng thanh toán MoMo / VNPAY (ADR 0058)
+  /**
+   * Phương thức này chưa mở cho loại khoản đang trả — thiếu cấu hình cổng, hoặc công tắc của
+   * luồng (`PAYMENT_GATEWAY_SUBSCRIPTION` / `PAYMENT_GATEWAY_BOOKING_HOLD`) đang tắt. 503, fail
+   * closed: không bao giờ dựng một liên kết thanh toán giả.
+   */
+  PAYMENT_GATEWAY_UNAVAILABLE: 'PAYMENT_GATEWAY_UNAVAILABLE',
+  /**
+   * Gọi sang cổng để mở phiên thanh toán thất bại (mạng, timeout, cổng từ chối). Chưa có đồng
+   * nào được thu; khách thử lại hoặc chuyển khoản. `details` mang `{ provider }`.
+   */
+  PAYMENT_GATEWAY_PROVIDER_ERROR: 'PAYMENT_GATEWAY_PROVIDER_ERROR',
+  /**
+   * Hoá đơn / khoản giữ chỗ không còn nhận tiền (đã trả đủ, đã huỷ, đã hết hạn). Lối đi tiếp là
+   * tải lại trạng thái, không phải thử lại. `details` mang `{ status }`.
+   */
+  PAYMENT_TARGET_NOT_PAYABLE: 'PAYMENT_TARGET_NOT_PAYABLE',
+  /**
+   * Khoản giữ chỗ còn quá ít thời gian để thanh toán qua cổng an toàn — tiền có thể về sau khi chỗ
+   * đã nhả. `details` mang `{ expiresAt, minWindowMinutes }`.
+   */
+  PAYMENT_HOLD_WINDOW_TOO_SHORT: 'PAYMENT_HOLD_WINDOW_TOO_SHORT',
+  /** Số tiền nằm ngoài hạn mức cổng công bố. `details` mang `{ provider, amount, min, max }`. */
+  PAYMENT_AMOUNT_OUT_OF_RANGE: 'PAYMENT_AMOUNT_OUT_OF_RANGE',
+  /** IPN sai chữ ký / sai merchant. Không kèm chi tiết nào. */
+  PAYMENT_GATEWAY_SIGNATURE_INVALID: 'PAYMENT_GATEWAY_SIGNATURE_INVALID',
+  /** Lượt thanh toán đã được người khác xử lý (hoặc không còn ở hàng đợi). Tải lại để xem. */
+  PAYMENT_ORDER_ALREADY_HANDLED: 'PAYMENT_ORDER_ALREADY_HANDLED',
+  /**
+   * Một khoản trả qua cổng cho chính mục này đang được ghi nhận (cổng đã thu, hệ thống chưa áp xong).
+   * Mở phiên mới lúc này là mời khách trả lần hai — chờ vài phút rồi tải lại.
+   */
+  PAYMENT_ORDER_IN_PROGRESS: 'PAYMENT_ORDER_IN_PROGRESS',
+
   // Sổ Thu-Chi (Phase 6 · epic nối tiền)
   /**
    * Phiếu sinh TỰ ĐỘNG từ một nghiệp vụ — không huỷ trực tiếp được.

@@ -1,0 +1,73 @@
+/* Màn một việc, không khung — cùng thanh trên cùng với onboarding để người vừa trả tiền thấy liền mạch. */
+.page {
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  background: var(--xp-color-bg);
+}
+
+.topbar {
+  display: flex;
+  height: 64px;
+  flex-shrink: 0;
+  align-items: center;
+  padding-inline: var(--xp-space-lg);
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+  background: var(--xp-color-bg-container);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+}
+
+.main {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  padding: var(--xp-space-xl) var(--xp-space-md);
+}
+
+.card {
+  display: flex;
+  width: 100%;
+  max-width: 560px;
+  flex-direction: column;
+  align-self: flex-start;
+  gap: var(--xp-space-md);
+  padding: var(--xp-space-lg);
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-container);
+}
+
+.title {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 575px) {
+  .topbar {
+    padding-inline: var(--xp-space-md);
+  }
+
+  .card {
+    padding: var(--xp-space-md);
+  }
+
+  .actions :global(.ant-btn) {
+    width: 100%;
+  }
+
+  .actions a {
+    width: 100%;
+  }
+}

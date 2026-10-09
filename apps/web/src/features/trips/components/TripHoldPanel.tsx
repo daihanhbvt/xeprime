@@ -49,6 +49,7 @@ export function TripHoldPanel({
   tripId,
   tripTotalAmount,
   payAtHandoverAmount,
+  gatewayOptions,
 }: {
   hold: Hold;
   tripId: string;
@@ -56,6 +57,12 @@ export function TripHoldPanel({
   tripTotalAmount?: string | null;
   /** B − D — phần trả TRỰC TIẾP chủ xe lúc nhận xe, không đi qua khoản giữ chỗ này. */
   payAtHandoverAmount?: string | null;
+  /**
+   * Lối thanh toán qua cổng MoMo/VNPAY (ADR 0058) — CHỈ hiện khi khoản còn chờ tiền, ngay dưới khối
+   * chuyển khoản. Là một slot chứ không dựng tại đây: panel này cũng nằm trong luồng đặt xe, nơi
+   * không phải lúc nào cũng mở phiên cổng được, và nơi gọi biết điều đó.
+   */
+  gatewayOptions?: ReactNode;
 }) {
   const t = useTranslations('Trips.hold');
   const tCommon = useTranslations('Common');
@@ -224,6 +231,8 @@ export function TripHoldPanel({
           </div>
         </dl>
       </div>
+
+      {gatewayOptions}
 
       {/*
         HAI câu, không phải ba đoạn: hệ quả khi hết giờ, và mốc huỷ miễn phí. Cả hai là điều kiện

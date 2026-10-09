@@ -24,6 +24,7 @@ import {
   NOTIFICATION_TYPE,
   PLAN_STATUS,
   type PlanStatus,
+  SUBSCRIPTION_INVOICE_PAYABLE_STATUSES,
   SUBSCRIPTION_INVOICE_STATUS,
   SUBSCRIPTION_INVOICE_TTL_HOURS,
   SUBSCRIPTION_ASSIGN_KIND,
@@ -1236,7 +1237,7 @@ export class BillingService {
       where: {
         tenantId,
         status: {
-          in: [SUBSCRIPTION_INVOICE_STATUS.ISSUED, SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID],
+          in: [...SUBSCRIPTION_INVOICE_PAYABLE_STATUSES],
         },
       },
       orderBy: { createdAt: 'desc' },
@@ -1487,10 +1488,7 @@ export class BillingService {
     if (!invoice) return { outcome: 'invoice_not_found' };
 
     // string[] tường minh: cột status là String (ADR 0005) nên phép includes so với giá trị DB.
-    const payable: string[] = [
-      SUBSCRIPTION_INVOICE_STATUS.ISSUED,
-      SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID,
-    ];
+    const payable: string[] = [...SUBSCRIPTION_INVOICE_PAYABLE_STATUSES];
 
     if (invoice.status === SUBSCRIPTION_INVOICE_STATUS.PAID) {
       // Tiền về lần nữa cho hoá đơn đã đủ: cộng dồn làm BẰNG CHỨNG chênh lệch (paid > total

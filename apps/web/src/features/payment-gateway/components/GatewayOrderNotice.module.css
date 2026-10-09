@@ -1,0 +1,8 @@
+/* Đứng TRÊN khối thanh toán ở mọi nơi dùng — khoảng cách dưới thuộc về chính khối này. */
+.notice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  margin-bottom: var(--xp-space-md);
+  text-align: left;
+}

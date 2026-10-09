@@ -29,6 +29,12 @@ const plans = vi.hoisted(() => ({
 
 const purchase = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
 
+// Lối thanh toán qua cổng có test riêng (`InvoicePaymentPanel.test.tsx`); ở đây nó im lặng để không
+// kéo một truy vấn cấu hình cổng thật vào test của màn này.
+vi.mock('@/features/payment-gateway/components/GatewayPayOptions', () => ({
+  GatewayPayOptions: () => null,
+}));
+
 vi.mock('../hooks/use-subscription', () => ({
   useTenantPlans: () => plans,
   usePurchaseSubscription: () => purchase,

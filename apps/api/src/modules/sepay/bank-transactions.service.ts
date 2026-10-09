@@ -8,6 +8,7 @@ import {
   BANK_MATCH_TARGET_TYPE,
   BANK_TX_CODE_FILTER,
   REFERENCE_CODE_PREFIX,
+  SUBSCRIPTION_INVOICE_PAYABLE_STATUSES,
   SUBSCRIPTION_INVOICE_STATUS,
   addDateKeyDays,
   vnDayStart,
@@ -317,7 +318,7 @@ export class BankTransactionsService {
     const rows = await this.prisma.subscriptionInvoice.findMany({
       where: {
         status: {
-          in: [SUBSCRIPTION_INVOICE_STATUS.ISSUED, SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID],
+          in: [...SUBSCRIPTION_INVOICE_PAYABLE_STATUSES],
         },
       },
       orderBy: { createdAt: 'desc' },
