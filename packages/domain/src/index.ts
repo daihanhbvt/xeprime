@@ -35,6 +35,7 @@ export {
   formatMoneyVndVi,
   compactMoneyParts,
   wholeUnits,
+  moneyChangePercent,
   applyDiscountPercent,
   formatMoneyInput,
   parseMoneyInput,
@@ -331,3 +332,6 @@ export {
   type DriverLicenceTripGate,
   type LicenceCoverage,
 } from './driver-licence';
+
+/** So kỳ này với kỳ trước — mũi tên tăng/giảm của thẻ KPI trên Tổng quan (web + app native). */
+export { countChangePercent } from './period-change';

@@ -42,6 +42,30 @@ const TRIP_SELECT = {
 type TripRow = Prisma.BookingGetPayload<{ select: typeof TRIP_SELECT }>;
 
 /**
+ * "Chuyến KẾT THÚC trong kỳ" = đơn `completed` có `COALESCE(actual_return_at, return_at)` thuộc
+ * `[start, end)`.
+ *
+ * Viết bằng `OR` thay vì SQL thô để giữ kiểu của Prisma; hai nhánh loại trừ nhau nên không đơn nào
+ * bị đếm hai lần. Export vì Tổng quan partner đếm "chuyến hoàn thành tháng này" bằng CHÍNH câu này:
+ * thẻ trên Tổng quan và dòng "Số chuyến" của bảng tổng hợp phải là một con số.
+ */
+export function completedTripsInPeriodWhere(
+  tenantId: string,
+  start: Date,
+  end: Date,
+): Prisma.BookingWhereInput {
+  return {
+    tenantId,
+    deletedAt: null,
+    status: BOOKING_STATUS.COMPLETED,
+    OR: [
+      { actualReturnAt: { gte: start, lt: end } },
+      { actualReturnAt: null, returnAt: { gte: start, lt: end } },
+    ],
+  };
+}
+
+/**
  * "Bảng tổng hợp giao dịch" của gian hàng — một KỲ `YYYY-MM` theo giờ Việt Nam.
  *
  * Chỉ ĐỌC, và cố ý nằm ngoài `WalletReadService`: sổ ví trả lời "tiền vào ra ví thế nào", còn
@@ -92,20 +116,7 @@ export class WalletStatementService {
     const { start, end } = taxPeriodRangeVn(periodKey);
     const paging = resolvePaging(query, STATEMENT_DEFAULT_LIMIT, STATEMENT_MAX_LIMIT);
 
-    /*
-     * "Chuyến kết thúc trong kỳ" = `COALESCE(actual_return_at, return_at)` thuộc `[start, end)`.
-     * Viết bằng `OR` thay vì SQL thô để giữ kiểu của Prisma; hai nhánh loại trừ nhau nên không
-     * đơn nào bị đếm hai lần.
-     */
-    const where: Prisma.BookingWhereInput = {
-      tenantId,
-      deletedAt: null,
-      status: BOOKING_STATUS.COMPLETED,
-      OR: [
-        { actualReturnAt: { gte: start, lt: end } },
-        { actualReturnAt: null, returnAt: { gte: start, lt: end } },
-      ],
-    };
+    const where = completedTripsInPeriodWhere(tenantId, start, end);
 
     const walletId = await this.wallet.findWalletId(owner);
 

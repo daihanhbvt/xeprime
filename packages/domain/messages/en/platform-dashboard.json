@@ -19,5 +19,77 @@
     "title": "New shops",
     "empty": "No shops yet",
     "manage": "Manage shops"
+  },
+  "subtitle": "Queues to work through, this month's numbers and partner health.",
+  "answer": {
+    "busy": "Waiting for action: {parts}.",
+    "calm": "No queues are waiting for you."
+  },
+  "queues": {
+    "title": "To do",
+    "none": "Nothing waiting",
+    "loadError": "Couldn't load",
+    "vehicles": {
+      "label": "Cars awaiting review",
+      "part": "{count, plural, one {# car awaiting review} other {# cars awaiting review}}"
+    },
+    "licences": {
+      "label": "Driver's licences to review",
+      "part": "{count, plural, one {# driver's licence to review} other {# driver's licences to review}}"
+    },
+    "bankIn": {
+      "label": "Unmatched incoming payments",
+      "part": "{count, plural, one {# unmatched incoming payment} other {# unmatched incoming payments}}",
+      "amount": "Total {amount}"
+    },
+    "withdrawals": {
+      "label": "Withdrawals to transfer",
+      "part": "{count, plural, one {# withdrawal to transfer} other {# withdrawals to transfer}}",
+      "overdue": "{count, plural, other {# past commitment}}"
+    },
+    "refunds": {
+      "label": "Refunds to transfer",
+      "part": "{count, plural, one {# refund to transfer} other {# refunds to transfer}}"
+    },
+    "cases": {
+      "label": "Open complaints",
+      "part": "{count, plural, one {# open complaint} other {# open complaints}}"
+    }
+  },
+  "kpi": {
+    "title": "This month",
+    "gmv": "GMV",
+    "gmvHint": "Rental value of new bookings, excluding cancellations",
+    "bookings": "New bookings",
+    "bookingsHint": "{count, plural, other {# cancelled or no-show}}",
+    "revenue": "Platform revenue",
+    "revenueHint": "Service fees {fee} · Plans {subs}",
+    "customers": "New customers",
+    "partners": "New partners",
+    "listings": "Cars on the marketplace",
+    "listingsHint": "{total, plural, one {of # listing} other {of # listings}}"
+  },
+  "trend": {
+    "title": "GMV and bookings, last {days} days",
+    "description": "By booking creation date (Vietnam time). Bars show GMV; hover for booking counts.",
+    "gmv": "GMV",
+    "bookings": "New bookings",
+    "empty": "No bookings in the last {days} days",
+    "error": "Couldn't load the chart."
+  },
+  "funnel": {
+    "title": "Partner activation funnel",
+    "description": "Current state, all time — each step includes the conditions of the step before it.",
+    "registered": "Signed up",
+    "withVehicle": "Has a car",
+    "withListing": "Has a car on the marketplace",
+    "withBooking": "Has a booking",
+    "withCompletedTrip": "Has completed a trip",
+    "ofPrevious": "{percent, number}% of previous step",
+    "empty": "No partners yet."
+  },
+  "mix": {
+    "title": "Partners by status",
+    "total": "{count, plural, one {# partner} other {# partners}}"
   }
 }

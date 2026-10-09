@@ -19,5 +19,77 @@
     "title": "Gian hàng mới",
     "empty": "Chưa có gian hàng nào",
     "manage": "Quản lý gian hàng"
+  },
+  "subtitle": "Hàng đợi cần xử lý, số liệu tháng này và sức khoẻ đối tác.",
+  "answer": {
+    "busy": "Đang chờ xử lý: {parts}.",
+    "calm": "Không có hàng đợi nào đang chờ bạn."
+  },
+  "queues": {
+    "title": "Việc cần xử lý",
+    "none": "Không có việc chờ",
+    "loadError": "Chưa tải được",
+    "vehicles": {
+      "label": "Xe chờ duyệt",
+      "part": "{count, plural, other {# xe chờ duyệt}}"
+    },
+    "licences": {
+      "label": "Bằng lái chờ duyệt",
+      "part": "{count, plural, other {# bằng lái chờ duyệt}}"
+    },
+    "bankIn": {
+      "label": "Tiền vào chưa khớp",
+      "part": "{count, plural, other {# khoản tiền vào chưa khớp}}",
+      "amount": "Tổng {amount}"
+    },
+    "withdrawals": {
+      "label": "Lệnh rút chờ chuyển",
+      "part": "{count, plural, other {# lệnh rút chờ chuyển}}",
+      "overdue": "{count, plural, other {# trễ cam kết}}"
+    },
+    "refunds": {
+      "label": "Hoàn tiền chờ chuyển",
+      "part": "{count, plural, other {# khoản hoàn chờ chuyển}}"
+    },
+    "cases": {
+      "label": "Khiếu nại đang mở",
+      "part": "{count, plural, other {# khiếu nại đang mở}}"
+    }
+  },
+  "kpi": {
+    "title": "Tháng này",
+    "gmv": "GMV",
+    "gmvHint": "Tiền thuê của đơn mới, trừ đơn huỷ",
+    "bookings": "Đơn mới",
+    "bookingsHint": "{count, plural, other {# huỷ hoặc không đến}}",
+    "revenue": "Doanh thu nền tảng",
+    "revenueHint": "Phí dịch vụ {fee} · Gói {subs}",
+    "customers": "Khách mới",
+    "partners": "Đối tác mới",
+    "listings": "Xe đang trên chợ",
+    "listingsHint": "{total, plural, other {trên # tin đăng}}"
+  },
+  "trend": {
+    "title": "GMV và đơn {days} ngày qua",
+    "description": "Theo ngày tạo đơn (giờ Việt Nam). Cột là GMV, số đơn ở chú thích khi rê chuột.",
+    "gmv": "GMV",
+    "bookings": "Đơn mới",
+    "empty": "Chưa có đơn nào trong {days} ngày qua",
+    "error": "Chưa tải được biểu đồ."
+  },
+  "funnel": {
+    "title": "Phễu kích hoạt đối tác",
+    "description": "Hiện trạng toàn thời gian — mỗi bước gồm cả điều kiện của bước trước.",
+    "registered": "Đã đăng ký",
+    "withVehicle": "Có xe",
+    "withListing": "Đang có xe trên chợ",
+    "withBooking": "Đã có đơn",
+    "withCompletedTrip": "Đã hoàn thành chuyến",
+    "ofPrevious": "{percent, number}% bước trước",
+    "empty": "Chưa có đối tác nào."
+  },
+  "mix": {
+    "title": "Đối tác theo trạng thái",
+    "total": "{count, plural, other {# đối tác}}"
   }
 }

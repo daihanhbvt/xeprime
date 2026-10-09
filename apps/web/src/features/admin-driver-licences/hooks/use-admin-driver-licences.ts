@@ -48,10 +48,12 @@ export function useDriverLicenceQueue(filters: DriverLicenceQueueFilters) {
   });
 }
 
-export function useDriverLicenceCounts() {
+/** `enabled` để Tổng quan nền tảng không gọi khi người xem không có quyền duyệt bằng lái. */
+export function useDriverLicenceCounts(enabled = true) {
   return useQuery({
     queryKey: queryKeys.platformDriverLicences.counts,
     queryFn: fetchDriverLicenceCounts,
+    enabled,
   });
 }
 

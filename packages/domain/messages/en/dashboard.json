@@ -48,5 +48,143 @@
         "action": "View my vehicles"
       }
     }
+  },
+  "greeting": {
+    "morning": "Good morning, {name}",
+    "afternoon": "Good afternoon, {name}",
+    "evening": "Good evening, {name}"
+  },
+  "ownerSubtitle": "Today's tasks, handover schedule and your money — all in one place.",
+  "answer": {
+    "busy": "Today: {parts}.",
+    "pickups": "{count, plural, one {hand over # car} other {hand over # cars}}",
+    "returns": "{count, plural, one {take back # car} other {take back # cars}}",
+    "requests": "{count, plural, one {# request waiting for your reply} other {# requests waiting for your reply}}",
+    "overdue": "{count, plural, one {# task overdue} other {# tasks overdue}}",
+    "calm": "No handovers scheduled today and no requests waiting for you."
+  },
+  "focus": {
+    "title": "To do",
+    "loadError": "Couldn't load today's tasks.",
+    "requests": {
+      "label": "Requests to review",
+      "urgent": "{count, plural, one {# close to its reply deadline} other {# close to their reply deadline}}",
+      "next": "Next reply deadline {time}",
+      "none": "No new requests"
+    },
+    "awaitingPayment": {
+      "label": "Awaiting customer payment",
+      "hint": "Accepted, waiting for the hold payment",
+      "none": "No trips waiting for payment"
+    },
+    "pickups": {
+      "label": "Awaiting handover",
+      "today": "{count, plural, other {# due today}}",
+      "overdue": "{count, plural, other {# overdue}}",
+      "none": "No cars waiting to be handed over"
+    },
+    "active": {
+      "label": "Currently rented",
+      "returnsToday": "{count, plural, other {# due back today}}",
+      "overdue": "{count, plural, other {# overdue for return}}",
+      "none": "No cars out with customers"
+    }
+  },
+  "agenda": {
+    "title": "Handover schedule",
+    "window": "Next {days} days",
+    "empty": "No handovers or returns in the next {days} days.",
+    "emptyHint": "New trips appear here as soon as the customer pays the hold.",
+    "loadError": "Couldn't load the handover schedule.",
+    "overdue": "Overdue",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "more": "See all bookings",
+    "kind": {
+      "pickup": "Hand over",
+      "return": "Take back"
+    },
+    "itemAria": "{kind} {vehicle} — {customer}, {time}"
+  },
+  "kpi": {
+    "title": "This month",
+    "newBookings": "New bookings",
+    "completedTrips": "Completed trips",
+    "utilization": "Utilisation",
+    "utilizationValue": "{value, number}%",
+    "utilizationHint": "Time cars were rented out over time they were available",
+    "utilizationEmpty": "No cars in this period",
+    "fleetHint": "{renting} rented · {maintenance} in maintenance"
+  },
+  "change": {
+    "up": "+{value, number}%",
+    "down": "−{value, number}%",
+    "flat": "No change",
+    "pointsUp": "+{value, number} pts",
+    "pointsDown": "−{value, number} pts",
+    "none": "Nothing to compare yet",
+    "suffix": "vs. the same period last month"
+  },
+  "charts": {
+    "revenueTitle": "Revenue, last {days} days",
+    "revenueDescription": "From approved income and expense records, excluding deposits held.",
+    "revenueEmpty": "No income or expense records in the last {days} days",
+    "revenueEmptyHint": "Income records are created automatically when you settle a trip.",
+    "revenueError": "Couldn't load the revenue chart.",
+    "tripsTitle": "Bookings and trips, last {months} months",
+    "tripsDescription": "New bookings by creation date, completed trips by return date.",
+    "tripsEmpty": "No bookings in the last {months} months",
+    "tripsError": "Couldn't load the trips chart.",
+    "newBookings": "New bookings",
+    "completedTrips": "Completed trips"
+  },
+  "market": {
+    "title": "Cars on the marketplace",
+    "onMarket": "Visible to customers",
+    "inReview": "Awaiting XePrime review",
+    "needsRevision": "Needs changes",
+    "draft": "Not submitted",
+    "manage": "Manage cars",
+    "empty": "No cars yet. Add your first car so customers can find you.",
+    "add": "Add a car"
+  },
+  "reputation": {
+    "title": "Reputation with customers",
+    "window": "Last {days} days",
+    "note": "Customers see exactly these figures on your car and shop pages. Reply to requests promptly and keep the trips you accept to keep them strong."
+  },
+  "plan": {
+    "title": "Service plan",
+    "daysLeft": "{count, plural, =0 {Expires today} one {# day left} other {# days left}}",
+    "endsAt": "Expires {date}",
+    "grace": "Plan expired — grace period until {date}",
+    "vehicles": "Cars used",
+    "vehiclesValue": "{used}/{limit} cars",
+    "vehiclesUnlimited": "{used} cars · unlimited",
+    "atCapacity": "You have used every car slot in your plan.",
+    "renew": "Renew plan",
+    "open": "View plan",
+    "none": "Your shop has no current plan.",
+    "loadError": "Couldn't load your plan."
+  },
+  "wallet": {
+    "title": "Your money",
+    "available": "Available to withdraw",
+    "pending": "Pending transfer",
+    "income": "Income this month",
+    "incomeHint": "{count, plural, one {# completed trip} other {# completed trips}} · after withheld tax",
+    "open": "Balance & withdrawals",
+    "frozen": "Your balance is temporarily frozen — contact XePrime for help.",
+    "loadError": "Couldn't load your balance."
+  },
+  "ownerVehicles": {
+    "title": "Your cars",
+    "quota": "{used}/{limit} cars",
+    "viewAll": "View all",
+    "add": "List another car",
+    "empty": "You don't have any cars on XePrime yet.",
+    "loadError": "Couldn't load your cars.",
+    "atCapacity": "You've used all {limit} car slots for individual owners. Open a shop to list more cars and get income tracking and reports.",
+    "upgrade": "See shop plans"
   }
 }
