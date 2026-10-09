@@ -1,7 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { useRouter } from 'expo-router';
-import { Pressable, RefreshControl, type ListRenderItem } from 'react-native';
+import { RefreshControl, type ListRenderItem } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -17,9 +16,9 @@ import { AccountTrackNotice } from './components/AccountTrackNotice';
 import { Screen } from '@/components/layout/Screen';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
+import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import type { IconName } from '@/components/ui/Chip';
+import { SheetActionRow } from '@/features/calendar/components/SheetActionRow';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { FleetSummaryBar } from '@/features/vehicles/components/FleetSummaryBar';
 import { FleetVehicleCardSkeleton } from '@/components/ui/Skeleton';
@@ -38,7 +37,7 @@ import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_REGISTRATION_SOURCE } from '@/navigation/vehicle-registration-source';
 import { layout } from '@/theme/layout';
 import { MEDIA_LIST_TUNING } from '@/theme/list-tuning';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { colors, fontSize, space } from '@/theme/tokens';
 import {
   DEFAULT_VEHICLE_SORT,
   VEHICLE_SORT_VALUES,
@@ -94,6 +93,7 @@ export function AccountVehiclesScreen({
   const [serviceType, setServiceType] = useState<string>(ALL);
   const [operationStatus, setOperationStatus] = useState<string>(ALL);
   const [search, setSearch] = useState('');
+  const [resourcesOpen, setResourcesOpen] = useState(false);
   const [sort, setSort] = useState<VehicleSort>(DEFAULT_VEHICLE_SORT);
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
   const q = debouncedSearch.trim();
@@ -284,21 +284,6 @@ export function AccountVehiclesScreen({
       {/* Trang chủ Owner Lite mở đầu bằng dải tuyến như web `OwnerLiteHome`. */}
       <AccountTrackNotice />
 
-      {/* Hai thẻ dẫn đường — trỏ tới tài liệu THẬT trong khu này, không nhắc nghị định/tỷ lệ. */}
-      <YStack gap={space.sm}>
-        <TipCard
-          icon="book-outline"
-          title={t('tips.guideTitle')}
-          body={t('tips.guideBody')}
-          onPress={() => router.push(ROUTES.account.hostGuide())}
-        />
-        <TipCard
-          icon="documents-outline"
-          title={t('tips.documentsTitle')}
-          body={t('tips.documentsBody')}
-          onPress={() => router.push(ROUTES.account.contractsDocuments())}
-        />
-      </YStack>
 
       {/* Cảnh báo/KM tải hỏng là hỏng MỘT PHẦN — web nói ra ở đầu lưới. */}
       {alerts.isError ? (
@@ -369,14 +354,22 @@ export function AccountVehiclesScreen({
             ? { total: tVehicles('summary.vehicleCount', { count: query.total }) }
             : {})}
           action={
-            canCreate ? (
+            <XStack gap={space.xs}>
+              {canCreate ? (
+                <IconButton
+                  icon="add"
+                  label={t('addVehicle')}
+                  tone="primary"
+                  onPress={openRegister}
+                />
+              ) : null}
+              {/* Cẩm nang + Hợp đồng gom vào một nút — trước là hai thẻ chiếm đầu danh sách. */}
               <IconButton
-                icon="add"
-                label={t('addVehicle')}
-                tone="primary"
-                onPress={openRegister}
+                icon="book-outline"
+                label={t('tips.menuLabel')}
+                onPress={() => setResourcesOpen(true)}
               />
-            ) : null
+            </XStack>
           }
           summary={<FleetSummaryBar enabled />}
           searchValue={search}
@@ -435,45 +428,35 @@ export function AccountVehiclesScreen({
           }
         </ManageListShell>
       </Screen>
-    </>
-  );
-}
 
-/** Thẻ dẫn đường tới một tài liệu của chủ xe — hình tròn, hai dòng chữ, mũi tên. */
-function TipCard({
-  icon,
-  title,
-  body,
-  onPress,
-}: {
-  icon: IconName;
-  title: string;
-  body: string;
-  onPress: () => void;
-}) {
-  return (
-    <Card padded={false} lift="flat">
-      <Pressable
-        onPress={onPress}
-        accessibilityRole="link"
-        accessibilityLabel={title}
-        style={({ pressed }) => (pressed ? { backgroundColor: colors.surfaceMuted } : null)}
+      <BottomSheet
+        open={resourcesOpen}
+        onClose={() => setResourcesOpen(false)}
+        title={t('tips.menuLabel')}
       >
-        <XStack ai="center" gap={space.sm} p={space.md} minHeight={sizing.touchTarget}>
-          <YStack w={36} h={36} br={radius.sm} bg={colors.primaryLight} ai="center" jc="center">
-            <Ionicons name={icon} size={iconSize.sm} color={colors.primaryActive} />
-          </YStack>
-          <YStack f={1} minWidth={0} gap={2}>
-            <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-              {title}
-            </Text>
-            <Text col={colors.textMuted} fos={fontSize.label}>
-              {body}
-            </Text>
-          </YStack>
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.placeholder} />
-        </XStack>
-      </Pressable>
-    </Card>
+        <YStack gap={space.xs}>
+          <SheetActionRow
+            tone="primary"
+            icon="book-outline"
+            label={t('tips.guideTitle')}
+            hint={t('tips.guideBody')}
+            onPress={() => {
+              setResourcesOpen(false);
+              router.push(ROUTES.account.hostGuide());
+            }}
+          />
+          <SheetActionRow
+            tone="primary"
+            icon="documents-outline"
+            label={t('tips.documentsTitle')}
+            hint={t('tips.documentsBody')}
+            onPress={() => {
+              setResourcesOpen(false);
+              router.push(ROUTES.account.contractsDocuments());
+            }}
+          />
+        </YStack>
+      </BottomSheet>
+    </>
   );
 }

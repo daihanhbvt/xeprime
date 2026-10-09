@@ -54,12 +54,15 @@ export const MaintenanceBoardCard = memo(function MaintenanceBoardCard({
   item,
   canManage,
   canCorrectOdometer,
+  writeLocked = false,
   onPress,
   onAction,
 }: {
   item: MaintenanceBoardItem;
   canManage: boolean;
   canCorrectOdometer: boolean;
+  /** Gói ở `read_only` (ADR 0027 điều 3): thao tác GHI khoá chứ không ẩn — web `writeBlock`. */
+  writeLocked?: boolean;
   onPress: (item: MaintenanceBoardItem) => void;
   onAction: (action: BoardAction) => void;
 }) {
@@ -118,6 +121,7 @@ export const MaintenanceBoardCard = memo(function MaintenanceBoardCard({
             key: 'odometer',
             label: tActions('updateOdometer'),
             icon: 'speedometer-outline' as IconName,
+            disabled: writeLocked,
             onPress: () => onAction({ kind: 'odometer', row: item }),
           },
         ]
@@ -128,6 +132,7 @@ export const MaintenanceBoardCard = memo(function MaintenanceBoardCard({
             key: 'schedule',
             label: item.activeRecord ? tActions('editSchedule') : tActions('schedule'),
             icon: 'calendar-outline' as IconName,
+            disabled: writeLocked,
             onPress: () => onAction({ kind: 'schedule', row: item }),
           },
         ]
@@ -140,6 +145,7 @@ export const MaintenanceBoardCard = memo(function MaintenanceBoardCard({
             icon: 'checkmark-outline' as IconName,
             /* Thao tác ĐÓNG việc lại — xanh lá, đối trọng với sắc đỏ của "Hủy lịch" ngay cạnh. */
             tone: 'success' as const,
+            disabled: writeLocked,
             onPress: () => onAction({ kind: 'complete', row: item }),
           },
           {
@@ -147,6 +153,7 @@ export const MaintenanceBoardCard = memo(function MaintenanceBoardCard({
             label: tActions('cancelSchedule'),
             icon: 'stop-circle-outline' as IconName,
             tone: 'danger' as const,
+            disabled: writeLocked,
             onPress: () => onAction({ kind: 'cancel', row: item }),
           },
         ]
@@ -285,4 +292,3 @@ export const MaintenanceBoardCard = memo(function MaintenanceBoardCard({
     </Card>
   );
 });
-

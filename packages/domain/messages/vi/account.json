@@ -140,6 +140,7 @@
     "viewDetail": "Xem chi tiết",
     "addVehicle": "Thêm xe",
     "tips": {
+      "menuLabel": "Tài liệu chủ xe",
       "guideTitle": "Cẩm nang cho thuê xe",
       "guideBody": "Quy trình bàn giao, nhận lại xe và hồ sơ thủ tục cần chuẩn bị.",
       "documentsTitle": "Hợp đồng & chứng từ mẫu",
@@ -392,7 +393,8 @@
     "profile": {
       "previewLabel": "Xem trước hồ sơ",
       "notShop": "Tên và ảnh này là của riêng tài khoản bạn. Tên, logo và số điện thoại liên hệ mà khách thấy thuộc về gian hàng.",
-      "shopSettingsLink": "Mở Cài đặt gian hàng"
+      "shopSettingsLink": "Mở Cài đặt gian hàng",
+      "storefrontFallback": "Tên và ảnh này cũng là thứ khách thấy khi xem xe của bạn — bạn cho thuê với tư cách cá nhân, không qua gian hàng."
     }
   },
   "ownerHub": {

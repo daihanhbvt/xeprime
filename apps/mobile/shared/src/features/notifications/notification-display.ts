@@ -4,20 +4,23 @@ import {
   notificationDeepLink,
   type NotificationAudience,
 } from '@xeprime/domain';
-import { NOTIFICATION_TYPE, type NotificationType } from '@xeprime/types';
+import { NOTIFICATION_TARGET_TYPE, NOTIFICATION_TYPE, type NotificationType } from '@xeprime/types';
 import type { IconName } from '@/components/ui/Chip';
+import { PARTNER_PATH } from '@/features/shell/partner-track';
 import { notificationHref as hrefFromPath } from './deep-link';
 
 /** Ngữ cảnh xem thông báo — quyết định link click-through (khu quản lý vs khu khách). */
 export const NOTIFICATION_CONTEXT = {
   MANAGE: 'manage',
   CUSTOMER: 'customer',
-  /** Chủ xe tuyến hoa hồng — xem `NOTIFICATION_AUDIENCE.OWNER` (ADR 0038 điều 10). */
+  /**
+   * CHỦ xe tuyến hoa hồng (Owner Lite) trong app Partner — gương `context === 'owner'` của web:
+   * yêu cầu + đơn mở "Chuyến cho thuê", còn lại CÙNG màn với tuyến gói (audience MANAGE).
+   */
   OWNER: 'owner',
 } as const;
 
-export type NotificationContext =
-  (typeof NOTIFICATION_CONTEXT)[keyof typeof NOTIFICATION_CONTEXT];
+export type NotificationContext = (typeof NOTIFICATION_CONTEXT)[keyof typeof NOTIFICATION_CONTEXT];
 
 /**
  * Bề mặt đang xem → audience của `@xeprime/domain`.
@@ -30,7 +33,8 @@ export type NotificationContext =
 const AUDIENCE_OF: Readonly<Record<NotificationContext, NotificationAudience>> = {
   [NOTIFICATION_CONTEXT.CUSTOMER]: NOTIFICATION_AUDIENCE.CUSTOMER,
   [NOTIFICATION_CONTEXT.MANAGE]: NOTIFICATION_AUDIENCE.MANAGE,
-  [NOTIFICATION_CONTEXT.OWNER]: NOTIFICATION_AUDIENCE.OWNER,
+  // Từ ADR 0053 Owner Lite sống ở site/app PARTNER — đích còn lại là đích của khu quản lý.
+  [NOTIFICATION_CONTEXT.OWNER]: NOTIFICATION_AUDIENCE.MANAGE,
 };
 
 /**
@@ -137,5 +141,21 @@ export function notificationHref(
   notification: { targetType?: string | null; targetId?: string | null; type?: string | null },
   context: NotificationContext,
 ): Href | null {
+  /*
+   * "Chuyến cho thuê" thay cho CẢ hộp thư lẫn bảng đơn của chủ xe tuyến hoa hồng (web PR #158).
+   * Hai đích kia vẫn tự chuyển chủ xe sang đây (`partnerPathRedirect`), đi thẳng đỡ một lần chớp.
+   */
+  if (context === NOTIFICATION_CONTEXT.OWNER) {
+    /*
+     * Mở ĐÚNG chuyến, không chỉ danh sách (web chỉ mở danh sách — mobile đi thêm một bước): đơn thì
+     * thẳng chi tiết đơn (trang chi tiết đơn không bị chuyển hướng cho chủ xe); yêu cầu thì màn
+     * Chuyến mở sẵn yêu cầu đó. Qua CÙNG allowlist của app — app Customer không có các màn này.
+     */
+    const id = notification.targetId;
+    if (notification.targetType === NOTIFICATION_TARGET_TYPE.BOOKING)
+      return hrefFromPath(id ? `${PARTNER_PATH.BOOKINGS}/${id}` : PARTNER_PATH.TRIPS);
+    if (notification.targetType === NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST)
+      return hrefFromPath(id ? `${PARTNER_PATH.TRIPS}/${id}` : PARTNER_PATH.TRIPS);
+  }
   return hrefFromPath(notificationDeepLink(notification, AUDIENCE_OF[context]));
 }

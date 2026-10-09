@@ -51,8 +51,15 @@ export function PersonalProfileCard({
   subtitle,
   tenant,
   editable = false,
+  loginOnly = false,
 }: {
   profile: UserProfile;
+  /**
+   * CHỈ khối "Thông tin đăng nhập" (email/SĐT đổi qua OTP) — "Hồ sơ chủ xe" (`OwnerProfileScreen`)
+   * đã có khối nhận diện và biểu mẫu tên/ảnh của riêng nó; dựng lại chúng ở đây là hai nơi sửa
+   * cùng một họ tên.
+   */
+  loginOnly?: boolean;
   /** Dòng ngay dưới tên — vai trong gian hàng, hoặc "Tài khoản XePrime". */
   subtitle: string;
   tenant: AccountTrackInput | null | undefined;
@@ -113,22 +120,24 @@ export function PersonalProfileCard({
   return (
     <>
       <Card padded={false}>
-        <AccountIdentityHero
-          name={displayName || profile.displayName}
-          avatarUrl={avatarUrl ?? null}
-          subtitle={subtitle}
-          tenant={tenant}
-          action={
-            editable && !isEditing ? (
-              <IconButton
-                icon="create-outline"
-                label={t('profile.edit')}
-                disabled={update.isPending}
-                onPress={() => setIsEditing(true)}
-              />
-            ) : undefined
-          }
-        />
+        {loginOnly ? null : (
+          <AccountIdentityHero
+            name={displayName || profile.displayName}
+            avatarUrl={avatarUrl ?? null}
+            subtitle={subtitle}
+            tenant={tenant}
+            action={
+              editable && !isEditing ? (
+                <IconButton
+                  icon="create-outline"
+                  label={t('profile.edit')}
+                  disabled={update.isPending}
+                  onPress={() => setIsEditing(true)}
+                />
+              ) : undefined
+            }
+          />
+        )}
 
         <YStack gap={space.md} p={space.md}>
           {/*
@@ -136,7 +145,7 @@ export function PersonalProfileCard({
             tài khoản" đứng trơ không nút nào là một khối không nói thêm được gì so với cái tên
             vừa đọc ở ngay trên nó.
           */}
-          {editable ? (
+          {editable && !loginOnly ? (
             <>
               {/* Lối vào sửa là bút chì trên đầu thẻ; ở đây chỉ còn form khi đang sửa. */}
               {!isEditing ? null : (

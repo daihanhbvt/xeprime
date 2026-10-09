@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
-import { Fragment, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import type { LayoutChangeEvent, ScrollView } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { absoluteMoney, bankDisplayName, isNegativeMoney, nowInAppTz } from '@xeprime/domain';
@@ -28,6 +29,8 @@ import { IconLine } from '@/components/ui/IconLine';
 import { Pagination } from '@/components/ui/Pagination';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { BankAccountList } from '@/features/bank-accounts/components/BankAccountList';
+import { ShopTaxWithheldCard } from '@/features/tax/components/ShopTaxWithheldCard';
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -81,11 +84,49 @@ export type WalletShell = 'manage' | 'account';
 export function WalletScreen({
   scope = WALLET_SCOPE.ACCOUNT,
   shell = scope === WALLET_SCOPE.SHOP ? 'manage' : 'account',
+  focusPayout = false,
 }: {
   scope?: WalletScope;
   shell?: WalletShell;
+  /** Mở bằng `?section=payout` (alias `/manage/bank-accounts`) ⇒ cuộn tới khối tài khoản nhận tiền. */
+  focusPayout?: boolean;
 }) {
   const t = useTranslations('Wallet');
+  const tBank = useTranslations('BankAccounts');
+  /*
+   * Cuộn tới khối payout MỘT lần, khi đã đo được vị trí — cùng cách `ShopProfileScreen` cuộn tới
+   * `?section=`. Toạ độ khối là tương đối với cột nội dung, nên cộng thêm vị trí của cột.
+   */
+  const scrollRef = useRef<ScrollView | null>(null);
+  const columnY = useRef<number | null>(null);
+  const payoutY = useRef<number | null>(null);
+  const scrolled = useRef(false);
+  const scrollToPayout = useCallback(() => {
+    if (!focusPayout || scrolled.current) return;
+    if (columnY.current === null || payoutY.current === null) return;
+    scrolled.current = true;
+    scrollRef.current?.scrollTo({
+      y: Math.max(0, columnY.current + payoutY.current - space.md),
+      animated: true,
+    });
+  }, [focusPayout]);
+  useEffect(() => {
+    if (!focusPayout) scrolled.current = false;
+  }, [focusPayout]);
+  const onColumnLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      columnY.current = event.nativeEvent.layout.y;
+      scrollToPayout();
+    },
+    [scrollToPayout],
+  );
+  const onPayoutLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      payoutY.current = event.nativeEvent.layout.y;
+      scrollToPayout();
+    },
+    [scrollToPayout],
+  );
   const router = useRouter();
   const [page, setPage] = useState(1);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
@@ -134,7 +175,7 @@ export function WalletScreen({
   return (
     <>
       {header}
-      <Screen edges={['left', 'right', 'bottom']} padded={!manageShell}>
+      <Screen edges={['left', 'right', 'bottom']} padded={!manageShell} scrollRef={scrollRef}>
         {/*
           Câu mô tả trang nói ĐÂY LÀ KHOẢN PHẢI TRẢ, không phải ví điện tử (ADR 0033 điều 1) — cùng
           khe `subtitle` mà `/manage/balance` bên web dùng. Nó thay cho dòng "1 điểm = 1đ" đã bị gỡ
@@ -170,6 +211,7 @@ export function WalletScreen({
           gap={layout.section}
           px={manageShell ? layout.screenX : 0}
           pb={manageShell ? layout.section : 0}
+          onLayout={onColumnLayout}
         >
           <WalletSummaryCard
             scope={scope}
@@ -178,17 +220,31 @@ export function WalletScreen({
           />
 
           {/*
+            TÀI KHOẢN NHẬN TIỀN của gian hàng — khối của trang số dư từ PR #159 (web
+            `PartnerBalanceView`): rút tiền và nơi tiền về là một việc, người bấm "Rút" mà chưa có
+            tài khoản phải thấy chỗ khai ngay trên cùng màn. Màn này chỉ dựng cho CHỦ (route gác),
+            đúng `@ShopOwnerOnly` của `/shop/bank-accounts`.
+          */}
+          {isShop ? (
+            <YStack onLayout={onPayoutLayout}>
+              <BankAccountList scope="shop" title={tBank('title')} hint={t('payout.hint')} />
+            </YStack>
+          ) : null}
+
+          {/*
             Bảng tổng hợp chỉ có ở phía GIAN HÀNG — khách thuê thuần không có chuyến nào ở phía bán,
             và một bảng rỗng vĩnh viễn là một câu hỏi không lời đáp.
           */}
           {isShop ? (
-            <WalletStatementPanel
-              filters={statementFilters}
-              onFiltersChange={(patch) => setStatementFilters((prev) => ({ ...prev, ...patch }))}
-            />
+            <SectionCard>
+              <WalletStatementPanel
+                filters={statementFilters}
+                onFiltersChange={(patch) => setStatementFilters((prev) => ({ ...prev, ...patch }))}
+              />
+            </SectionCard>
           ) : null}
 
-          <YStack gap={space.sm}>
+          <SectionCard>
             <BlockTitle>{t('requests.title')}</BlockTitle>
             {withdrawals.isPending ? (
               <MiniRowsSkeleton rows={2} />
@@ -199,9 +255,9 @@ export function WalletScreen({
                 <WithdrawalRow key={request.id} request={request} scope={scope} />
               ))
             )}
-          </YStack>
+          </SectionCard>
 
-          <YStack gap={space.sm}>
+          <SectionCard>
             <BlockTitle>{t('entries.title')}</BlockTitle>
             {entries.isPending ? (
               <MiniRowsSkeleton rows={4} />
@@ -219,14 +275,14 @@ export function WalletScreen({
                * Bản trước đệm cả cụm rồi kẻ bên trong: đường kẻ thụt vào 16pt hai đầu đọc ra như
                * vẽ hụt, và mỗi dòng phải gánh thêm một lớp `YStack` chỉ để chở đường kẻ đó.
                */
-              <Card padded={false}>
+              <YStack mx={-space.md}>
                 {rows.map((entry, index) => (
                   <Fragment key={entry.id}>
                     {index > 0 ? <Divider /> : null}
                     <EntryRow entry={entry} />
                   </Fragment>
                 ))}
-              </Card>
+              </YStack>
             )}
 
             {(entries.data?.total ?? 0) > (entries.data?.limit ?? ENTRIES_LIMIT) ? (
@@ -237,7 +293,17 @@ export function WalletScreen({
                 onChange={setPage}
               />
             ) : null}
-          </YStack>
+          </SectionCard>
+
+          {/*
+            Thuế TNCN/GTGT XePrime đã khấu trừ — khối CUỐI của trang số dư web (`PartnerBalanceView`
+            đặt `ShopTaxWithheldCard` sau toàn bộ `WalletView`), tức sau tổng hợp, lệnh rút và sổ.
+          */}
+          {isShop ? (
+            <SectionCard>
+              <ShopTaxWithheldCard />
+            </SectionCard>
+          ) : null}
         </YStack>
       </Screen>
 
@@ -252,6 +318,18 @@ export function WalletScreen({
  * Một dòng chữ xám thả trần dưới tiêu đề khối đọc ra như phần nội dung chưa tải xong. Cho nó một
  * mặt phẳng mờ thì nó thành câu trả lời "ở đây đang trống", đúng chỗ mà nội dung sẽ xuất hiện.
  */
+/**
+ * Thẻ bọc một KHỐI của trang (tổng hợp, lệnh rút, sổ, thuế) — mỗi khối một mặt phẳng, tiêu đề
+ * `BlockTitle` nằm TRONG thẻ đúng như thiết kế của nó, thay vì các cụm chữ thả trên nền trang.
+ */
+function SectionCard({ children }: { children: ReactNode }) {
+  return (
+    <Card lift="flat">
+      <YStack gap={space.sm}>{children}</YStack>
+    </Card>
+  );
+}
+
 function EmptyNote({ children }: { children: string }) {
   return (
     <Card tone="muted" lift="flat">

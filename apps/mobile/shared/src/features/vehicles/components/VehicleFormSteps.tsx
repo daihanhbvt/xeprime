@@ -194,7 +194,7 @@ export function SpecsSection({
    * Dọn ô không còn nghĩa khi đổi loại xe / hãng / nguồn năng lượng — ba khối dùng chung bên
    * dưới tự làm việc đó. Thiếu nó thì form giữ lại một mẫu xe hoặc một con số mà server sẽ xoá.
    */
-  setValue?: UseFormSetValue<VehicleFormValues>;
+  setValue: UseFormSetValue<VehicleFormValues>;
 }) {
   const t = useTranslations('Vehicles.form');
   const vehicleType = isCar ? VEHICLE_TYPE.CAR : VEHICLE_TYPE.MOTORBIKE;
@@ -224,7 +224,7 @@ export function SpecsSection({
         vehicleType={vehicleType}
         disabled={Boolean(lockedNotice)}
         {...(lockedNotice ? { lockedNotice } : {})}
-        {...(setValue ? { setValue } : {})}
+        setValue={setValue}
       />
 
       <NumberField
@@ -255,7 +255,7 @@ export function SpecsSection({
         vehicleType={vehicleType}
         bodyTypePicker={<BodyTypePicker control={control} />}
         disabled={Boolean(lockedNotice)}
-        {...(setValue ? { setValue } : {})}
+        setValue={setValue}
       />
 
       {/*
@@ -269,7 +269,7 @@ export function SpecsSection({
         fuelTypeRequired
         disabled={Boolean(lockedNotice)}
         {...(lockedNotice ? { lockedNotice } : {})}
-        {...(setValue ? { setValue } : {})}
+        setValue={setValue}
       />
     </YStack>
   );

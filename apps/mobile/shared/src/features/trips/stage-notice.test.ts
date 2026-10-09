@@ -59,3 +59,15 @@ describe('stageNotice', () => {
     }
   });
 });
+
+describe('stageNotice — chủ xe không phản hồi kịp (PR #158)', () => {
+  it('`expired` có khối giải thích riêng, tông `info` như web — không mượn câu của `rejected`', () => {
+    expect(stageNotice(CUSTOMER_TRIP_STAGE.EXPIRED)).toEqual({
+      tone: 'info',
+      titleKey: 'expiredTitle',
+      bodyKey: 'expiredBody',
+    });
+    expect(viTrips.notice.expiredTitle).toBeTruthy();
+    expect(viTrips.notice.expiredBody).toBeTruthy();
+  });
+});

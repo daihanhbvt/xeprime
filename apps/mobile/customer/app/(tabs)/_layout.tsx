@@ -69,7 +69,7 @@ const TAB_BADGE_MAX = 9;
 const styles = StyleSheet.create({
   bar: { flexDirection: 'row' },
   item: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2 },
-  icon: { alignItems: 'center', justifyContent: 'center' },
+  icon: { width: iconSize.lg, height: iconSize.lg, alignItems: 'center', justifyContent: 'center' },
   badge: { position: 'absolute', top: -space.xs, left: '60%' },
 });
 

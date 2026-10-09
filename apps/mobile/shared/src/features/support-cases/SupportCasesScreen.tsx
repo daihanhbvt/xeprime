@@ -1,5 +1,7 @@
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { RefreshControl } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { Text, XStack, YStack } from 'tamagui';
 import { LIST_SEPARATOR } from '@xeprime/domain';
 import { useTranslations } from 'use-intl';
@@ -20,6 +22,16 @@ import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { CardAccent } from '@/components/ui/CardAccent';
+import { IconButton } from '@/components/ui/IconButton';
+import { IconLine } from '@/components/ui/IconLine';
+import { ActionCardSkeleton } from '@/components/ui/Skeleton';
+import { ManageListShell } from '@/features/shell/ManageListShell';
+import { ManageStateScroll } from '@/features/shell/ManageStateScroll';
+import type { FilterGroup } from '@/features/shell/ManageFilterSheet';
+import { layout } from '@/theme/layout';
+import { LIST_TUNING } from '@/theme/list-tuning';
+import { scrollThrottle } from '@/theme/motion';
 import { Pagination } from '@/components/ui/Pagination';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { SelectControl } from '@/components/ui/SelectControl';
@@ -59,12 +71,20 @@ const ALL = FILTER_ALL;
 /** Hoãn gọi API trong lúc người dùng còn gõ — cùng nhịp với hộp thư yêu cầu thuê. */
 const SEARCH_DEBOUNCE_MS = 350;
 
+const SKELETON_ROWS = 3;
+
+function caseKey(row: SupportCase): string {
+  return row.id;
+}
+
 export function SupportCasesScreen({ surface }: { surface: SupportSurface }) {
   const t = useTranslations('SupportCases');
   const router = useRouter();
   const domainLabel = useDomainLabel();
   const permissions = usePermissions();
   const tPermission = useTranslations('ManageCommon.permission');
+  const tLabels = useTranslations('Common.labels');
+  const tActions = useTranslations('Common.actions');
 
   const isTenant = surface === SUPPORT_SURFACE.TENANT;
   // Kiểu union, không phải `string`: sentinel "tất cả" là giá trị của GIAO DIỆN, còn khi đã
@@ -135,6 +155,40 @@ export function SupportCasesScreen({ surface }: { surface: SupportSurface }) {
     setPage(1);
   };
 
+  /** Hai chiều lọc trong tấm trượt "Bộ lọc" — lựa chọn đầu là "Tất cả", như mọi danh sách khác. */
+  const groups = useMemo<readonly FilterGroup[]>(
+    () => [
+      {
+        key: 'status',
+        label: t('filters.status'),
+        value: status,
+        resetValue: ALL,
+        options: [{ value: ALL, label: tLabels('all') }, ...statusOptions.slice(1)],
+      },
+      {
+        key: 'category',
+        label: t('filters.category'),
+        value: category,
+        resetValue: ALL,
+        options: [{ value: ALL, label: tLabels('all') }, ...categoryOptions.slice(1)],
+      },
+    ],
+    [t, tLabels, status, category, statusOptions, categoryOptions],
+  );
+
+  const changeFilter = useCallback((groupKey: string, value: string) => {
+    if (groupKey === 'status') setStatus(isSupportCaseStatus(value) ? value : ALL);
+    else setCategory(isSupportCaseCategory(value) ? value : ALL);
+    setPage(1);
+  }, []);
+
+  const clearFilters = () => {
+    setStatus(ALL);
+    setCategory(ALL);
+    setSearch('');
+    setPage(1);
+  };
+
   /*
    * Bề mặt GIAN HÀNG gác bằng quyền `SUPPORT_VIEW`, đúng như trang web tương ứng — và KHÔNG gác
    * bằng cờ gói: tranh chấp có hệ quả tiền (nó tạm giữ việc chốt khoản giữ chỗ của chuyến), nên
@@ -154,6 +208,109 @@ export function SupportCasesScreen({ surface }: { surface: SupportSurface }) {
             onAction={() => router.replace(ROUTES.manage.home())}
           />
         </Screen>
+      </>
+    );
+  }
+
+  if (isTenant) {
+    return (
+      <>
+        <ManageHeader />
+        <Screen edges={['left', 'right', 'bottom']} scroll={false} padded={false}>
+          {/*
+            Cùng khung với mọi danh sách của khu quản lý (`ManageListShell`): nút "+" tròn ở hàng
+            tiêu đề, ô tìm + nút "Bộ lọc" mở tấm trượt gom Trạng thái và Loại — thay hai ô chọn
+            dàn hàng dọc và nút "Mở yêu cầu" trải ngang.
+          */}
+          <ManageListShell
+            title={t('page.tenantTitle')}
+            {...(total > 0 ? { total: t('page.total', { count: total }) } : {})}
+            action={
+              canOpen ? (
+                <IconButton
+                  icon="add"
+                  label={t('page.openButton')}
+                  tone="primary"
+                  onPress={() => setFormOpen(true)}
+                />
+              ) : null
+            }
+            searchValue={search}
+            searchLabel={t('filters.search')}
+            searchPlaceholder={t('filters.searchPlaceholder')}
+            onSearchChange={(next) => patch(() => setSearch(next))}
+            groups={groups}
+            onFilterChange={changeFilter}
+            hasRows={items.length > 0}
+            {...(total > 0 ? { meta: { page, limit: SUPPORT_CASES_PAGE_SIZE, total } } : {})}
+            onPageChange={setPage}
+          >
+            {({ onScroll, headerHeight, contentContainerStyle, bindList }) => {
+              const inStateScroll = (body: ReactNode) => (
+                <ManageStateScroll
+                  onScroll={onScroll}
+                  headerHeight={headerHeight}
+                  refreshing={query.isRefetching}
+                  onRefresh={() => void query.refetch()}
+                >
+                  {body}
+                </ManageStateScroll>
+              );
+              return query.isLoading ? (
+                inStateScroll(
+                  <YStack px={layout.screenX} gap={layout.inline}>
+                    {Array.from({ length: SKELETON_ROWS }, (_, i) => (
+                      <ActionCardSkeleton key={i} />
+                    ))}
+                  </YStack>,
+                )
+              ) : query.isError && !query.data ? (
+                inStateScroll(
+                  <ScreenError
+                    error={query.error}
+                    title={t('page.loadError')}
+                    onRetry={() => void query.refetch()}
+                  />,
+                )
+              ) : items.length === 0 ? (
+                inStateScroll(
+                  filtered ? (
+                    <ScreenMessage
+                      icon="search-outline"
+                      title={tLabels('none')}
+                      actionLabel={tActions('clear')}
+                      onAction={clearFilters}
+                    />
+                  ) : (
+                    // Nút "mở" đã ở hàng tiêu đề — không lặp lại ở đây.
+                    <ScreenMessage icon="chatbubbles-outline" title={t('page.empty')} />
+                  ),
+                )
+              ) : (
+                <Animated.FlatList
+                  ref={bindList}
+                  data={items}
+                  keyExtractor={caseKey}
+                  {...LIST_TUNING}
+                  renderItem={({ item }) => <SupportCaseRow row={item} surface={surface} />}
+                  contentContainerStyle={contentContainerStyle}
+                  onScroll={onScroll}
+                  scrollEventThrottle={scrollThrottle.frame}
+                  refreshControl={
+                    <RefreshControl
+                      refreshing={query.isRefetching}
+                      onRefresh={() => void query.refetch()}
+                      tintColor={colors.primaryActive}
+                      progressViewOffset={headerHeight}
+                    />
+                  }
+                />
+              );
+            }}
+          </ManageListShell>
+        </Screen>
+
+        <OpenCaseSheet surface={surface} open={formOpen} onClose={() => setFormOpen(false)} />
       </>
     );
   }
@@ -255,6 +412,7 @@ function SupportCaseRow({ row, surface }: { row: SupportCase; surface: SupportSu
   const domainLabel = useDomainLabel();
 
   const meta = SUPPORT_CASE_STATUS_META[row.status as SupportCaseStatus];
+  const statusColor = meta?.color ?? STATUS_COLOR.NEUTRAL;
 
   /* Mỗi khu có route riêng — mở một case của gian hàng bằng đường của khu khách là lạc khu. */
   const detailHref =
@@ -263,28 +421,30 @@ function SupportCaseRow({ row, surface }: { row: SupportCase; surface: SupportSu
       : ROUTES.account.supportCase(row.id);
 
   return (
-    <Card onPress={() => router.push(detailHref)} accessibilityLabel={row.subject}>
-      <XStack ai="center" gap={space.sm}>
-        <YStack f={1} minWidth={0} gap={2}>
-          <Text col={colors.textMuted} fos={fontSize.label}>
-            {row.code}
-          </Text>
-          <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold} numberOfLines={2}>
+    /* Ngôn ngữ thẻ danh sách chung: vạch màu trạng thái ở mép trái, nhãn trạng thái góc phải. */
+    <Card padded={false} onPress={() => router.push(detailHref)} accessibilityLabel={row.subject}>
+      <XStack>
+        <CardAccent color={statusColor} />
+        <YStack f={1} minWidth={0} p={space.sm} gap={space.xs}>
+          <XStack ai="center" gap={space.xs}>
+            <Text f={1} minWidth={0} col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
+              {row.code}
+            </Text>
+            <StatusBadge
+              label={domainLabel('supportCaseStatus', row.status, meta?.label)}
+              color={statusColor}
+              size="sm"
+            />
+          </XStack>
+          <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold} numberOfLines={2}>
             {row.subject}
           </Text>
-          <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
+          <IconLine icon="pricetag-outline">
             {domainLabel('supportCaseCategory', row.category)}
-            {LIST_SEPARATOR}
-            {t('columns.updatedAt')}: {fmt.dateTime(row.updatedAt)}
-          </Text>
-        </YStack>
-
-        <YStack ai="flex-end">
-          <StatusBadge
-            label={domainLabel('supportCaseStatus', row.status, meta?.label)}
-            color={meta?.color ?? STATUS_COLOR.NEUTRAL}
-            size="sm"
-          />
+          </IconLine>
+          <IconLine icon="time-outline">
+            {`${t('columns.updatedAt')}${LIST_SEPARATOR}${fmt.dateTime(row.updatedAt)}`}
+          </IconLine>
         </YStack>
       </XStack>
     </Card>

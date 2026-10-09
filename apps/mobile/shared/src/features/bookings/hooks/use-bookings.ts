@@ -58,6 +58,8 @@ function invalidateBookingSurfaces(queryClient: ReturnType<typeof useQueryClient
   void queryClient.invalidateQueries({ queryKey: queryKeys.calendar.all });
   void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.settlement(id) });
   void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.handovers(id) });
+  // "Chuyến cho thuê" (PR #158) đọc cùng đơn qua `/trips` — web làm mới nó khi đóng hộp thoại đơn.
+  void queryClient.invalidateQueries({ queryKey: queryKeys.trips.all });
 }
 
 /**

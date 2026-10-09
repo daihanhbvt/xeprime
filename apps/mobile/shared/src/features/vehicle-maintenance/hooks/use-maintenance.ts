@@ -63,8 +63,7 @@ export function useInvalidateMaintenance(vehicleId: string) {
 export function useSaveMaintenanceProfile(vehicleId: string) {
   const invalidate = useInvalidateMaintenance(vehicleId);
   return useMutation({
-    mutationFn: (body: SaveMaintenanceProfileInput) =>
-      maintenanceApi.saveProfile(vehicleId, body),
+    mutationFn: (body: SaveMaintenanceProfileInput) => maintenanceApi.saveProfile(vehicleId, body),
     onSuccess: invalidate,
   });
 }

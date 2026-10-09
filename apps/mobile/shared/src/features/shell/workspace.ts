@@ -23,7 +23,8 @@ const TARGET_HREF: Readonly<Record<WorkspaceTarget, () => Href>> = {
   [WORKSPACE_TARGET.MANAGE]: () => ROUTES.manage.home(),
   [WORKSPACE_TARGET.ACCOUNT]: () => ROUTES.account.home(),
   [WORKSPACE_TARGET.VEHICLES]: () => ROUTES.account.vehicles(),
-  [WORKSPACE_TARGET.REGISTRATION]: () => ROUTES.account.registration(),
+  // Web PR #156: tiến trình đăng ký là trang chủ Owner Lite (`/manage`), không còn trang riêng.
+  [WORKSPACE_TARGET.REGISTRATION]: () => ROUTES.manage.home(),
 };
 
 /**

@@ -1,11 +1,13 @@
 import { useEffect, useMemo } from 'react';
-import { useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
+import { useFormState, useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
 import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   CATALOG_TYPE,
   VEHICLE_ENERGY_LIMITS,
   VEHICLE_TYPE,
+  fixedTransmissionFor,
+  normalizeTransmissionFor,
   vehicleEnergySpecPolicy,
   vehicleFuelTypesFor,
   vehicleTransmissionTypesFor,
@@ -16,6 +18,7 @@ import { SelectField } from '@/components/ui/SelectField';
 import { useCatalog } from '@/features/catalog/use-catalog';
 import { useDomainLabel } from '@/i18n/domain';
 import { space } from '@/theme/tokens';
+import { useCatalogModelSpec } from '../hooks/use-catalog-model-spec';
 
 /**
  * Lựa chọn truyền động HỢP LỆ của chiếc xe đang khai — bản native của `useTransmissionOptions`.
@@ -43,6 +46,9 @@ export function useTransmissionOptions(vehicleType: string, fuelType: string | n
  * lần sạc đầy (kèm pin và kWh/100km tuỳ chọn); hybrid khai phần xăng, phần điện để tuỳ chọn. Ma
  * trận là `vehicleEnergySpecPolicy` ở `@xeprime/types` — cùng hàm backend dùng để chuẩn hoá lúc
  * ghi và để dựng checklist lên chợ, nên form không thể nói khác server.
+ *
+ * Hộp số đi theo nguồn năng lượng (`normalizeTransmissionFor`) và theo MẪU XE đang chọn
+ * (`useCatalogModelSpec`): một bản ⇒ điền và khoá, nhiều bản ⇒ chỉ chọn trong đó.
  */
 export function VehicleEnergyFields({
   control,
@@ -66,31 +72,93 @@ export function VehicleEnergyFields({
    */
   fuelTypeRequired?: boolean;
   /**
-   * Dọn ô không còn nghĩa khi đổi nguồn năng lượng. Không có nó, form giữ lại một con số vô hình
-   * mà server sẽ xoá — người dùng phải thấy đúng thứ sắp được lưu.
+   * BẮT BUỘC: dọn ô không còn nghĩa và chuẩn hoá hộp số khi đổi nguồn năng lượng. Thiếu nó thì
+   * form giữ "xe điện số tự động" — giá trị server từ chối (`VEHICLE_TRANSMISSION_INCOMPATIBLE`).
    */
-  setValue?: UseFormSetValue<VehicleFormValues>;
+  setValue: UseFormSetValue<VehicleFormValues>;
 }) {
   const t = useTranslations('Vehicles.form.advanced');
   const tSpecs = useTranslations('Vehicles.form.specs');
+  const domainLabel = useDomainLabel();
   const { catalog } = useCatalog();
   const fuelType = useWatch({ control, name: 'fuelType' });
+  const transmission = useWatch({ control, name: 'transmission' });
   const policy = vehicleEnergySpecPolicy(vehicleType, fuelType);
 
-  /* Nhiên liệu hợp lệ phụ thuộc LOẠI XE — xe máy không có dầu diesel. */
+  // Nguồn năng lượng theo MẪU XE (`catalogSpecRule`). Khoá CHỈ khi giá trị đã khớp mẫu — xe cũ lưu
+  // lệch (VF 5 ghi "Xăng") vẫn phải sửa lại được.
+  const spec = useCatalogModelSpec(control, vehicleType);
+  const fuelLocked =
+    Boolean(spec.model) && spec.fuel.kind === 'fixed' && fuelType === spec.fuel.value;
+  const fuelChoices = spec.model && spec.fuel.kind === 'choice' ? spec.fuel.values : undefined;
+  // Hộp số của mẫu ỨNG VỚI nguồn năng lượng đang chọn; luật mẫu chỉ thu hẹp, không mở rộng.
+  const gearRule = spec.transmissionFor(fuelType);
+  const fixedGear = gearRule.kind === 'fixed' ? gearRule.value : null;
+  const gearLocked = fixedGear !== null && transmission === fixedGear;
+  const gearOptions =
+    gearRule.kind === 'choice'
+      ? transmissionOptions.filter(
+          (o) => gearRule.values.includes(o.value) || o.value === transmission,
+        )
+      : transmissionOptions;
+
+  let fuelHint: string | undefined = lockedNotice;
+  if (!fuelHint && spec.model && fuelLocked) {
+    fuelHint = tSpecs('specFromModel', { model: spec.model.label });
+  } else if (!fuelHint && spec.model && fuelChoices) {
+    fuelHint = tSpecs('specChoiceFromModel', {
+      model: spec.model.label,
+      values: fuelChoices.map((v) => domainLabel('fuelType', v)).join(', '),
+    });
+  }
+  // Xe điện chỉ có MỘT đáp án (1 cấp) — ô khoá và điền sẵn, không ai phải chọn.
+  const fixedTransmission = fixedTransmissionFor(vehicleType, fuelType);
+  const transmissionHint =
+    lockedNotice ??
+    (fixedTransmission
+      ? t('transmissionElectricHelp')
+      : gearLocked && spec.model
+        ? tSpecs('specFromModel', { model: spec.model.label })
+        : undefined);
+
+  /* Nhiên liệu hợp lệ phụ thuộc LOẠI XE (xe máy không có dầu) và MẪU XE (nhiều bản ⇒ chỉ các bản đó). */
   const fuelOptions = useMemo(() => {
     const allowed = vehicleFuelTypesFor(vehicleType);
     return (catalog[CATALOG_TYPE.FUEL_TYPE] ?? [])
       .filter((item) => allowed.some((value) => value === item.key))
+      // Không giấu giá trị ĐANG LƯU dù nó nằm ngoài các bản của mẫu — ô không được giấu thứ nó gửi.
+      .filter((item) => !fuelChoices || fuelChoices.includes(item.key) || item.key === fuelType)
       .map((item) => ({ value: item.key, label: item.label }));
-  }, [catalog, vehicleType]);
+  }, [catalog, vehicleType, fuelChoices, fuelType]);
+
+  /*
+   * Hộp số đi theo nguồn năng lượng: Xăng → Điện thì "Số tự động" phải thành "1 cấp", Điện → Xăng
+   * thì "1 cấp" hết nghĩa và để trống cho người dùng chọn lại. Chạy cả với xe cũ đã lưu sai, ngay
+   * khi form mở — giữ giá trị cũ là đúng lỗi server từ chối.
+   */
+  const transmissionError = useFormState({ control, name: 'transmission' }).errors.transmission;
+  useEffect(() => {
+    if (!fuelType) return;
+    const next = normalizeTransmissionFor(vehicleType, fuelType, transmission);
+    if (next === (transmission ?? null)) return;
+    // Đang treo lỗi từ lần lưu trước thì kiểm lại để gỡ; về trống thì đừng báo "bắt buộc" ngay.
+    setValue('transmission', next, { shouldValidate: Boolean(transmissionError) || next !== null });
+  }, [fuelType, setValue, transmission, transmissionError, vehicleType]);
+
+  /* Mẫu xe chỉ có MỘT hộp số cho nguồn năng lượng này mà ô đang trống — điền vào (chỉ ô TRỐNG). */
+  useEffect(() => {
+    if (!fixedGear || transmission) return;
+    setValue('transmission', fixedGear as VehicleFormValues['transmission'], { shouldDirty: true });
+  }, [fixedGear, setValue, transmission]);
 
   /*
    * Đổi sang xe điện thì lít/100km không còn nghĩa (và ngược lại). Xoá ngay tại form để người
    * dùng thấy đúng thứ sắp lưu; server vẫn dọn lại một lần nữa vì nó không tin client.
    */
   useEffect(() => {
-    if (!setValue) return;
+    // Chưa chọn nguồn năng lượng thì ma trận ẩn MỌI thông số vì CHƯA BIẾT, không phải vì không áp
+    // dụng — xoá lúc đó là xoá chính con số người dùng vừa gõ.
+    if (!fuelType) return;
     if (policy.fuelConsumption === 'hidden') setValue('fuelConsumptionCombined', null);
     if (policy.electricRangeKm === 'hidden') setValue('electricRangeKm', null);
     if (policy.batteryCapacityKwh === 'hidden') setValue('batteryCapacityKwh', null);
@@ -104,6 +172,7 @@ export function VehicleEnergyFields({
     policy.engineDisplacementCc,
     policy.fuelConsumption,
     policy.transmission,
+    fuelType,
     setValue,
   ]);
 
@@ -119,9 +188,9 @@ export function VehicleEnergyFields({
             ? tSpecs('fuelPlaceholderCar')
             : tSpecs('fuelPlaceholderMotorbike')
         }
-        disabled={disabled}
+        disabled={disabled || fuelLocked}
         required={fuelTypeRequired}
-        {...(lockedNotice ? { hint: lockedNotice } : {})}
+        {...(fuelHint ? { hint: fuelHint } : {})}
       />
 
       {policy.transmission !== 'hidden' ? (
@@ -129,11 +198,12 @@ export function VehicleEnergyFields({
           control={control}
           name="transmission"
           label={t('transmission')}
-          options={transmissionOptions}
+          options={gearOptions}
           placeholder={t('transmissionPlaceholder')}
           required={policy.transmission === 'required'}
-          disabled={disabled}
-          {...(lockedNotice ? { hint: lockedNotice } : {})}
+          disabled={disabled || Boolean(fixedTransmission) || gearLocked}
+          allowClear={!fixedTransmission && !gearLocked}
+          {...(transmissionHint ? { hint: transmissionHint } : {})}
         />
       ) : null}
 

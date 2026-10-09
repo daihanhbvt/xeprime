@@ -1,19 +1,23 @@
 import { useState } from 'react';
 import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { bankDisplayName } from '@xeprime/domain';
+import { useQueryClient } from '@tanstack/react-query';
+import { getErrorCode } from '@xeprime/api-client';
+import { API_ERROR_CODE } from '@xeprime/types';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { FieldLabel } from '@/components/ui/Field';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
-import { RadioOption } from '@/components/ui/RadioOption';
 import { MoneyControl } from '@/components/ui/MoneyControl';
+import { BankAccountCard } from '@/features/bank-accounts/components/BankAccountCard';
 import { BankAccountFormSheet } from '@/features/bank-accounts/components/BankAccountFormSheet';
+import { currentBankAccount } from '@/features/bank-accounts/current-account';
 import { useBankAccounts } from '@/features/bank-accounts/hooks/use-bank-accounts';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { queryKeys } from '@/queries/query-keys';
 import { space } from '@/theme/tokens';
 import { BANK_ACCOUNT_SCOPE, type BankAccountScope } from '@/api/bank-accounts/api';
 import { WALLET_SCOPE, type WalletScope } from '@/api/wallet/api';
@@ -25,8 +29,9 @@ const FALLBACK_BUSINESS_DAYS = 2;
 /**
  * Yêu cầu rút điểm về ngân hàng — bản native của `WithdrawDialog`.
  *
- * Đích chuyển là một tài khoản ĐÃ LƯU, không phải ba ô gõ tự do: gõ số tài khoản ngay tại bước
- * chi tiền là chỗ dễ sai nhất, và sai thì tiền đi mất chứ không báo lỗi.
+ * Đích chuyển là tài khoản nhận tiền ĐANG DÙNG (mỗi chủ một tài khoản — PR #159), hiện thành một
+ * thẻ kèm lối "Đổi tài khoản"; không còn bộ chọn. Gõ số tài khoản ngay tại bước chi tiền là chỗ
+ * dễ sai nhất, nên đích luôn là một tài khoản đã lưu.
  *
  * Cam kết thời gian hiện ra TRƯỚC khi bấm gửi — đó là quy tắc (ADR 0025 điều 7), và con số lấy từ
  * server để web và app native không nói hai điều khác nhau.
@@ -41,10 +46,12 @@ export function WithdrawSheet({
   onClose: () => void;
 }) {
   const t = useTranslations('Wallet.withdraw');
+  const tBank = useTranslations('BankAccounts');
   const tCommon = useTranslations('Common.actions');
   const fmt = useAppFormat();
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
+  const queryClient = useQueryClient();
 
   const summary = useWalletSummary(scope);
   /* Ví gian hàng rút về tài khoản của GIAN HÀNG; ví cá nhân về tài khoản cá nhân — hai sổ khác. */
@@ -55,12 +62,10 @@ export function WithdrawSheet({
 
   /* `null` = chưa gõ gì, khác `0` = gõ số không — nút gửi khoá ở cả hai, nhưng ô thì khác. */
   const [amount, setAmount] = useState<number | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
 
-  const list = accounts.data ?? [];
-  /* Mặc định: cái người dùng vừa chọn → tài khoản mặc định → cái đầu tiên. */
-  const chosen = selected ?? list.find((a) => a.isDefault)?.id ?? list[0]?.id ?? null;
+  const account = currentBankAccount(accounts.data);
+  const chosen = account?.id ?? null;
 
   const available = summary.data?.available ?? '0';
   const min = summary.data?.minWithdrawAmount ?? '0';
@@ -79,7 +84,7 @@ export function WithdrawSheet({
      * trong lúc `available` tụt xuống (một lệnh rút khác vừa được duyệt) thì lần bấm sau đó gửi
      * đi một số tiền vượt số dư. Rẻ hơn nhiều so với một lệnh rút phải huỷ tay.
      */
-    if (!chosen || !valid) return;
+    if (!chosen || !valid || create.isPending) return;
     create.mutate(
       { amount: String(parsed), bankAccountId: chosen },
       {
@@ -88,7 +93,18 @@ export function WithdrawSheet({
           setAmount(null);
           onClose();
         },
-        onError: (error) => toast.showError(errorMessage(error)),
+        onError: (error) => {
+          toast.showError(errorMessage(error));
+          /*
+           * Tài khoản đã đổi ở nơi khác (web, máy khác) ⇒ id trong thẻ đã bị lưu trữ. Tải lại để
+           * thẻ hiện đúng đích hiện hành trước khi người dùng bấm gửi lần nữa — đúng web.
+           */
+          if (getErrorCode(error) === API_ERROR_CODE.NOT_FOUND) {
+            void queryClient.invalidateQueries({
+              queryKey: queryKeys.bankAccounts.list(accountScope),
+            });
+          }
+        },
       },
     );
   };
@@ -116,36 +132,33 @@ export function WithdrawSheet({
 
             {accounts.isLoading ? <MiniRowsSkeleton rows={2} /> : null}
 
-            {list.length > 0 ? (
-              <YStack gap={space.xs}>
-                {list.map((account) => (
-                  <RadioOption
-                    key={account.id}
-                    label={account.label || bankDisplayName(account.bankCode)}
-                    /*
-                      Ba mẩu, đúng ba mẩu mà web hiện: ngân hàng · số tài khoản · TÊN CHỦ. Tên chủ
-                      là thứ người ta soát lại lần cuối trước khi tiền rời đi — một số tài khoản
-                      đúng ngân hàng nhưng sai người thì vẫn là tiền mất.
-                    */
-                    hint={`${bankDisplayName(account.bankCode)} · ${t('accountNumber', {
-                      number: account.accountNumberMasked,
-                    })} · ${account.accountName}`}
-                    checked={account.id === chosen}
-                    onPress={() => setSelected(account.id)}
+            {accounts.isError ? <Callout tone="danger">{tBank('loadError')}</Callout> : null}
+
+            {account ? (
+              <BankAccountCard
+                account={account}
+                emphasis
+                action={
+                  <Button
+                    label={tBank('actions.change')}
+                    variant="ghost"
+                    size="sm"
+                    icon="swap-horizontal-outline"
+                    disabled={create.isPending}
+                    onPress={() => setFormOpen(true)}
                   />
-                ))}
-              </YStack>
+                }
+              />
             ) : null}
 
             {/*
-              Chưa có tài khoản nào ⇒ chính nút này ĐỔI NHÃN thành lời mời khai, thay cho một dòng
-              "chưa có gì" nằm trên một nút. Đây là bước bắt buộc để rút được tiền, nên nó phải là
-              một lối đi chứ không phải một thông báo — đúng như web.
+              Chưa có tài khoản ⇒ lời mời khai thay cho một dòng "chưa có gì": đây là bước bắt
+              buộc để rút được tiền, nên nó phải là một lối đi — đúng như web.
             */}
-            {!accounts.isLoading ? (
+            {!accounts.isLoading && !accounts.isError && !account ? (
               <Button
-                label={list.length === 0 ? t('accountEmpty') : t('addAccount')}
-                variant="ghost"
+                label={t('accountEmpty')}
+                variant="secondary"
                 size="sm"
                 icon="add"
                 onPress={() => setFormOpen(true)}
@@ -175,12 +188,12 @@ export function WithdrawSheet({
         </YStack>
       </BottomSheet>
 
-      {/* Khai xong là CHỌN LUÔN tài khoản mới — khách đang ở giữa luồng rút, đừng bắt tìm lại. */}
+      {/* Khai/đổi xong, danh sách được làm mới và thẻ tự trỏ vào tài khoản mới. */}
       <BankAccountFormSheet
         scope={accountScope}
         open={formOpen}
+        replacing={account}
         onClose={() => setFormOpen(false)}
-        onCreated={(account) => setSelected(account.id)}
       />
     </>
   );

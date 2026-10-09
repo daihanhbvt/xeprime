@@ -16,9 +16,8 @@ export function useBankAccounts(scope: BankAccountScope, enabled = true) {
 }
 
 /**
- * Mọi thao tác đều đụng tới cờ `isDefault` của CÁC dòng khác, nên phải làm mới cả danh sách chứ
- * không sửa một dòng trong cache: thêm một tài khoản mặc định làm dòng cũ thôi mặc định, và bỏ
- * một dòng làm dòng khác lên thay.
+ * Thêm/đổi/bỏ đều đụng tới TÀI KHOẢN KHÁC (đổi = lưu trữ cái cũ), nên làm mới cả danh sách chứ
+ * không sửa một dòng trong cache. `setDefault` không còn hook: server đã bỏ nghĩa (PR #159).
  */
 function useInvalidate(scope: BankAccountScope) {
   const queryClient = useQueryClient();
@@ -29,22 +28,6 @@ export function useCreateBankAccount(scope: BankAccountScope) {
   const invalidate = useInvalidate(scope);
   return useMutation({
     mutationFn: (body: SaveBankAccountInput) => bankAccountsApi.create(scope, body),
-    onSuccess: invalidate,
-  });
-}
-
-export function useSetDefaultBankAccount(scope: BankAccountScope) {
-  const invalidate = useInvalidate(scope);
-  return useMutation({
-    mutationFn: (id: string) => bankAccountsApi.setDefault(scope, id),
-    onSuccess: invalidate,
-  });
-}
-
-export function useArchiveBankAccount(scope: BankAccountScope) {
-  const invalidate = useInvalidate(scope);
-  return useMutation({
-    mutationFn: (id: string) => bankAccountsApi.archive(scope, id),
     onSuccess: invalidate,
   });
 }

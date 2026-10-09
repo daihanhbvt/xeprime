@@ -6,6 +6,8 @@ import { IconButton } from '@/components/ui/IconButton';
 import { ROUTES } from '@/navigation/routes';
 import { BANK_ACCOUNT_SCOPE, type BankAccountScope } from '@/api/bank-accounts/api';
 import { BankAccountList } from './components/BankAccountList';
+import { currentBankAccount } from './current-account';
+import { useBankAccounts } from './hooks/use-bank-accounts';
 
 /**
  * MÀN tài khoản nhận tiền — chỉ còn cái VỎ.
@@ -35,6 +37,8 @@ export function BankAccountListScreen({
 }) {
   const t = useTranslations('BankAccounts');
   const [formOpen, setFormOpen] = useState(false);
+  /* Cùng khoá cache với thân danh sách — không thêm request. Có tài khoản thì nút là ĐỔI. */
+  const hasAccount = currentBankAccount(useBankAccounts(scope).data) !== null;
 
   return (
     <>
@@ -45,9 +49,9 @@ export function BankAccountListScreen({
         subtitle={t('subtitle')}
         right={
           <IconButton
-            icon="add"
+            icon={hasAccount ? 'swap-horizontal-outline' : 'add'}
             tone="accent"
-            label={t('actions.add')}
+            label={hasAccount ? t('actions.change') : t('actions.add')}
             onPress={() => setFormOpen(true)}
           />
         }

@@ -51,6 +51,8 @@ export function guestHome(): Href {
  */
 export const NOTIFICATION_ALLOWED: readonly AllowedDeepLink[] = [
   { prefix: 'manage/requests', resolve: exact(ROUTES.manage.requests) },
+  // "Chuyến cho thuê" của chủ xe tuyến hoa hồng (PR #158): `/manage/trips/<requestId>` mở sẵn yêu cầu đó.
+  { prefix: 'manage/trips', resolve: listOrDetail(ROUTES.manage.trips, ROUTES.manage.tripRequest) },
   {
     prefix: 'manage/bookings',
     resolve: listOrDetail(ROUTES.manage.bookings, ROUTES.manage.bookingDetail),

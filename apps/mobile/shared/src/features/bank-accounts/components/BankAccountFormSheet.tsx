@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -10,11 +10,12 @@ import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { SelectField } from '@/components/ui/SelectField';
 import { TextField } from '@/components/ui/TextField';
-import { ToggleRow } from '@/features/rental-policies/components/PolicySections';
+import { Callout } from '@/components/ui/Callout';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { space } from '@/theme/tokens';
 import type { BankAccount, BankAccountScope } from '@/api/bank-accounts/api';
 import { useCreateBankAccount } from '../hooks/use-bank-accounts';
+import { bankAccountSaveOutcome, bankAccountSummary } from '../current-account';
 
 const BANK_CODE_MAX = 20;
 const ACCOUNT_NUMBER_MAX = 40;
@@ -35,16 +36,23 @@ const LABEL_MAX = 60;
  * còn TÊN CHỦ TÀI KHOẢN là thứ ngân hàng đối chiếu — sai tên thì lệnh bị trả về và tiền quay
  * lại sau vài ngày mà không ai biết vì sao. Vì thế ô tên có dòng nhắc riêng.
  *
- * Không cho SỬA một tài khoản đã lưu: đổi số tại chỗ sẽ âm thầm đổi đích của những lệnh chuyển
- * đang chờ. Muốn đổi thì thêm cái mới và bỏ cái cũ — hai hành động nhìn thấy được.
+ * ## Mỗi chủ MỘT tài khoản (PR #159, 07/10/2026)
+ *
+ * THÊM khi chưa có, ĐỔI khi đã có (`replacing`): server lưu trữ tài khoản cũ trong cùng
+ * transaction. Không còn công tắc "mặc định" — luôn gửi `isDefault: true`, vì `false` khi đã có
+ * tài khoản bị từ chối bằng `BANK_ACCOUNT_REPLACE_NOT_CONFIRMED`. Gửi lại đúng tài khoản đang
+ * dùng thì server trả CÙNG id (chỉ đổi tên gợi nhớ) ⇒ báo "không đổi".
  */
 export function BankAccountFormSheet({
   scope,
   open,
   onClose,
   onCreated,
+  replacing = null,
 }: {
   scope: BankAccountScope;
+  /** Tài khoản đang dùng sẽ bị thay — có thì tấm này là luồng ĐỔI. */
+  replacing?: BankAccount | null;
   open: boolean;
   onClose: () => void;
   /** Cho luồng RÚT: chọn sẵn tài khoản vừa khai, để khách không phải tự tìm lại nó. */
@@ -90,29 +98,25 @@ export function BankAccountFormSheet({
           // Cho phép khoảng trắng khi gõ/dán; server chuẩn hoá bỏ chúng trước khi lưu.
           .matches(/^[0-9\s]+$/, t('validation.numberDigits'))
           .max(ACCOUNT_NUMBER_MAX),
-        accountName: yup.string().trim().required(t('validation.nameRequired')).max(ACCOUNT_NAME_MAX),
+        accountName: yup
+          .string()
+          .trim()
+          .required(t('validation.nameRequired'))
+          .max(ACCOUNT_NAME_MAX),
         label: yup.string().trim().max(LABEL_MAX).default(''),
-        isDefault: yup.boolean().required(),
       }),
     [t],
   );
 
-  const { control, handleSubmit, reset, setValue } = useForm({
+  const { control, handleSubmit, reset } = useForm({
     resolver: yupResolver(schema),
     defaultValues: {
       bankCode: '',
       accountNumber: '',
       accountName: '',
       label: '',
-      isDefault: false,
     },
   });
-
-  /*
-   * `useWatch` chứ không phải `watch()`: bản kia trả về một HÀM mà React Compiler không memo hoá
-   * an toàn được, nên nó bỏ tối ưu cho cả component. Cùng dữ liệu, không mất gì.
-   */
-  const isDefault = useWatch({ control, name: 'isDefault' });
 
   const close = () => {
     reset();
@@ -126,11 +130,12 @@ export function BankAccountFormSheet({
         accountNumber: values.accountNumber,
         accountName: values.accountName,
         ...(values.label ? { label: values.label } : {}),
-        isDefault: values.isDefault,
+        // Một chủ một tài khoản: lưu là THAY tài khoản đang dùng (server lưu trữ cái cũ).
+        isDefault: true,
       },
       {
         onSuccess: (account) => {
-          toast.showSuccess(t('created'));
+          toast.showSuccess(t(bankAccountSaveOutcome(replacing, account)));
           reset();
           onCreated?.(account);
           onClose();
@@ -141,8 +146,13 @@ export function BankAccountFormSheet({
   });
 
   return (
-    <BottomSheet open={open} onClose={close} title={t('title')}>
+    <BottomSheet open={open} onClose={close} title={replacing ? t('changeTitle') : t('title')}>
       <YStack gap={space.md}>
+        {replacing ? (
+          <Callout tone="warning">
+            {t('replaces', { account: bankAccountSummary(replacing) })}
+          </Callout>
+        ) : null}
         {/* Ba mươi lăm nhà băng — gõ vài chữ nhanh hơn cuộn, đúng `showSearch` của web. */}
         <SelectField
           control={control}
@@ -176,12 +186,6 @@ export function BankAccountFormSheet({
           label={t('label')}
           placeholder={t('labelPlaceholder')}
         />
-        <ToggleRow
-          label={t('isDefault')}
-          checked={isDefault}
-          onToggle={() => setValue('isDefault', !isDefault, { shouldDirty: true })}
-        />
-
         <YStack gap={space.sm}>
           <Button label={t('submit')} loading={create.isPending} onPress={() => void onSubmit()} />
           <Button

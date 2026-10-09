@@ -1,11 +1,6 @@
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import {
-  isShopProfileSubmittable,
-  PERMISSION,
-  TENANT_STATUS,
-  type TenantStatus,
-} from '@xeprime/types';
+import { isShopProfileSubmittable, PERMISSION } from '@xeprime/types';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { IconDisc } from '@/components/ui/IconDisc';
@@ -17,7 +12,7 @@ import { ROUTES } from '@/navigation/routes';
 import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type { Href } from 'expo-router';
 
-type StepKey = 'profile' | 'review' | 'vehicle';
+type StepKey = 'profile' | 'vehicle' | 'review';
 type StepState = 'todo' | 'waiting' | 'done';
 
 /** Đường kính đĩa của một bước — bằng đĩa đầu khối, để hai thẻ cạnh nhau cùng một nhịp. */
@@ -27,7 +22,15 @@ const STEP_DISC = 28;
 const RAIL_WIDTH = 2;
 
 /**
- * Ba bước từ "vừa mở gian hàng" tới "bán được xe", đặt ở ĐẦU Tổng quan.
+ * Ba bước từ "vừa mở gian hàng" tới "bán được xe", đặt ở ĐẦU Tổng quan — bản native của web
+ * `ShopOnboardingCard`.
+ *
+ * ## Bước 2 đổi nghĩa (ADR 0036)
+ *
+ * Bước giữa từng là "gửi hồ sơ gian hàng cho XePrime duyệt". Nền tảng không còn duyệt GIAN HÀNG —
+ * vòng duyệt duy nhất là duyệt XE. Thứ tự nay là: hồ sơ → thêm xe → **chờ duyệt xe**, và mốc
+ * biến mất của thẻ là `publicVehicleCount > 0` (xe đầu tiên đã lên chợ) — đúng mốc web dùng. Bản
+ * cũ chờ `tenant.status = active` nên thẻ có thể kẹt ở bước "chờ duyệt" mãi.
  *
  * Gian hàng mới tạo rơi vào một màn mà mọi ô đều là `0`/`—`: không xe, không đơn, không doanh
  * thu. Bảng số đó đúng nhưng vô dụng — nó không nói được việc gì tiếp theo, trong khi việc tiếp
@@ -39,7 +42,7 @@ const RAIL_WIDTH = 2;
  * không bao giờ xanh trong khi nút Gửi duyệt vẫn bị từ chối.
  *
  * **Hình thức là một cái THANG DỌC**, không phải ba đoạn văn xếp chồng: ba việc này có THỨ TỰ —
- * hồ sơ xong mới gửi được duyệt, duyệt xong xe mới lên chợ. Sợi nối giữa hai đĩa là thứ nói ra
+ * hồ sơ xong mới thêm xe, thêm xe xong mới chờ duyệt xe. Sợi nối giữa hai đĩa là thứ nói ra
  * quan hệ đó, và nó đổi sang màu xanh ở phần đã đi qua nên nhìn một cái là biết còn mấy bước.
  */
 export function ShopOnboardingCard({ vehicleCount }: { vehicleCount: number | undefined }) {
@@ -49,25 +52,15 @@ export function ShopOnboardingCard({ vehicleCount }: { vehicleCount: number | un
   const navigateOnce = useNavigateOnce();
 
   const canViewShop = has(PERMISSION.TENANT_VIEW);
-  const status = tenant?.status as TenantStatus | undefined;
-  const isActive = status === TENANT_STATUS.ACTIVE;
   const hasVehicle = (vehicleCount ?? 0) > 0;
+  const liveVehicle = (tenant?.publicVehicleCount ?? 0) > 0;
 
   /*
    * Chỉ hỏi hồ sơ khi thẻ CÒN HIỆN và người xem có quyền — nhân viên không có `tenant.view` vẫn
    * thấy ba bước, chỉ là không chấm được bước hồ sơ.
    */
-  /*
-   * `vehicleCount === undefined` nghĩa là API đội xe CHƯA VỀ (hoặc người xem không có quyền
-   * xem xe) — KHÔNG phải "chưa có xe nào". Coi hai chuyện đó là một khiến thẻ này bật lên ở
-   * MỌI lần vào Tổng quan của một gian hàng đã active và có xe thật: đúng khoảng số liệu còn
-   * rỗng thì `hasVehicle` tính ra `false`, thẻ hiện ra rồi biến mất ngay khi dữ liệu tới.
-   *
-   * Chỉ chặn bước xe khi ĐÃ BIẾT chắc là 0 (`vehicleCount !== undefined`). `!isActive` không
-   * đợi gì cả — hồ sơ/duyệt không phụ thuộc API đội xe nên không có lý do trễ thẻ vì nó.
-   */
-  const needsCard =
-    Boolean(tenant) && (!isActive || (vehicleCount !== undefined && !hasVehicle));
+  // Hiện cho tới khi chiếc xe ĐẦU TIÊN lên chợ — đúng web (`!liveVehicle`).
+  const needsCard = Boolean(tenant) && !liveVehicle;
   const { data: shop } = useMyShop(needsCard && canViewShop);
 
   if (!needsCard) return null;
@@ -84,23 +77,17 @@ export function ShopOnboardingCard({ vehicleCount }: { vehicleCount: number | un
       })
     : false;
 
-  const steps: { key: StepKey; state: StepState; href: Href }[] = [
+  const steps: { key: StepKey; state: StepState; href: Href | null }[] = [
+    { key: 'profile', state: profileDone ? 'done' : 'todo', href: ROUTES.manage.shop() },
+    { key: 'vehicle', state: hasVehicle ? 'done' : 'todo', href: ROUTES.manage.vehicleNew() },
     {
-      key: 'profile',
-      // Hồ sơ đã đi qua vòng duyệt thì không còn gì để "hoàn thiện" ở bước này nữa.
-      state:
-        profileDone || status === TENANT_STATUS.PENDING_REVIEW || isActive ? 'done' : 'todo',
-      href: ROUTES.manage.shop(),
-    },
-    {
+      /*
+       * KHÔNG có nút gửi duyệt ở đây (web cũng không): nút đó nằm trên chính chiếc xe, nơi có
+       * checklist xe còn thiếu gì. Có xe rồi thì lối đi là danh sách xe; chưa có thì chưa có gì.
+       */
       key: 'review',
-      state: isActive ? 'done' : status === TENANT_STATUS.PENDING_REVIEW ? 'waiting' : 'todo',
-      href: ROUTES.manage.shop(),
-    },
-    {
-      key: 'vehicle',
-      state: hasVehicle ? 'done' : 'todo',
-      href: ROUTES.manage.vehicleNew(),
+      state: liveVehicle ? 'done' : hasVehicle ? 'waiting' : 'todo',
+      href: hasVehicle ? ROUTES.manage.vehicles() : null,
     },
   ];
 
@@ -164,7 +151,7 @@ export function ShopOnboardingCard({ vehicleCount }: { vehicleCount: number | un
                   <Text col={colors.warning} fos={fontSize.label} fow={fontWeight.semibold}>
                     {t('waiting')}
                   </Text>
-                ) : (
+                ) : step.href ? (
                   <XStack pt={space.xs}>
                     <Button
                       label={t(`steps.${step.key}.action` as 'steps.profile.action')}
@@ -172,10 +159,10 @@ export function ShopOnboardingCard({ vehicleCount }: { vehicleCount: number | un
                       size="sm"
                       shape="square"
                       block={false}
-                      onPress={() => navigateOnce(step.href)}
+                      onPress={() => step.href && navigateOnce(step.href)}
                     />
                   </XStack>
-                )}
+                ) : null}
               </YStack>
             </XStack>
           );

@@ -97,7 +97,7 @@ describe('resolveWorkspaceHref', () => {
     const user = me(
       tenant({ onboardingState: 'commission', billingMode: 'commission', publicVehicleCount: 0 }),
     );
-    expect(resolveWorkspaceHref(user)).toEqual(ROUTES.account.registration());
+    expect(resolveWorkspaceHref(user)).toEqual(ROUTES.manage.home());
   });
 
   it('chủ xe tuyến hoa hồng đã có xe trên chợ ⇒ danh sách xe', () => {

@@ -1,11 +1,13 @@
 import viNavigation from '@xeprime/domain/messages/vi/navigation.json';
 import enNavigation from '@xeprime/domain/messages/en/navigation.json';
 import {
+  MANAGE_NAV_BADGE,
   isManageNavBranch,
   manageNavForTrack,
   matchActiveHref,
   type ManageNavLeaf,
 } from './manage-nav';
+import { ROUTES } from '@/navigation/routes';
 import { PARTNER_TRACK } from './partner-track';
 
 /**
@@ -147,14 +149,12 @@ describe('manageNavForTrack — menu theo tuyến', () => {
       'home',
       'vehicles',
       'calendar',
+      'trips',
       'booking-requests',
       'bookings',
       'chat',
       'balance',
-      'bank-accounts',
-      'tax',
-      'subscription',
-      'registration',
+      'owner-profile',
       'host-guide',
       'contracts-documents',
       'data-protection',
@@ -162,11 +162,21 @@ describe('manageNavForTrack — menu theo tuyến', () => {
     ]);
   });
 
-  it('ví, tài khoản nhận tiền, thuế, gói và hồ sơ chủ xe chỉ dành cho CHỦ', () => {
+  it('chuyến, số dư và hồ sơ chủ xe (gồm thuế + gói, PR #159) chỉ dành cho CHỦ', () => {
     const ownerOnly = leavesOf(OWNER_LITE)
       .filter((leaf) => leaf.ownerOnly)
       .map((leaf) => leaf.key);
-    expect(ownerOnly).toEqual(['balance', 'bank-accounts', 'tax', 'subscription', 'registration']);
+    expect(ownerOnly).toEqual(['trips', 'balance', 'owner-profile']);
+  });
+
+  it('PR #158: chủ đọc "Chuyến cho thuê"; hộp thư + bảng đơn chỉ còn cho THÀNH VIÊN', () => {
+    const memberOnly = leavesOf(OWNER_LITE)
+      .filter((leaf) => leaf.memberOnly)
+      .map((leaf) => leaf.key);
+    expect(memberOnly).toEqual(['booking-requests', 'bookings']);
+    const trips = leavesOf(OWNER_LITE).find((leaf) => leaf.key === 'trips');
+    expect(trips?.badge).toBe(MANAGE_NAV_BADGE.BOOKING_REQUESTS_PENDING);
+    expect(trips?.href).toBe(ROUTES.manage.trips());
   });
 
   it('chưa có gian hàng / gói chưa thanh toán: không có menu', () => {

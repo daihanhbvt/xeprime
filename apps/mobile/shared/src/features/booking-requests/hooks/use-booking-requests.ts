@@ -49,9 +49,8 @@ export interface RequestInboxTab {
  */
 export const REQUEST_INBOX_TABS: readonly RequestInboxTab[] = [
   /*
-   * Tab GỘP: `pending_host_approval` + `hold_paid` (LEGACY ADR 0039). Hai trạng thái này đều
-   * CẦN gian hàng quyết định và thẻ đã đối xử với chúng như nhau từ lâu (`needsDecision`), nên
-   * tách hai tab chỉ bắt người trực nhìn hai chỗ cho cùng một việc.
+   * Tab "Cần xử lý": chỉ `pending_host_approval` — trạng thái DUY NHẤT còn cần gian hàng quyết
+   * định (`needsDecision`). `hold_paid` của luồng thu-trước-duyệt đã gỡ hẳn ở ADR 0055.
    */
   {
     value: BOOKING_REQUEST_TAB_NEEDS_ACTION,
@@ -135,10 +134,13 @@ export function useRejectBookingRequest() {
   return useMutation({
     mutationFn: (input: { id: string; reason: string }) =>
       bookingRequestsApi.reject(input.id, input.reason),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.bookingRequests.all });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.trips.all });
-    },
+    // TRẢ promise (web `use-booking-request-mutations`): nút còn quay tới khi danh sách nạp lại,
+    // thẻ vừa từ chối không loé lại kèm hai nút còn bấm được.
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.bookingRequests.all }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.trips.all }),
+      ]),
   });
 }
 

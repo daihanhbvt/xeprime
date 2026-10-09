@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, waitFor } from '@testing-library/react-native';
 import { Provider as ReduxProvider } from 'react-redux';
-import { CUSTOMER_TRIP_STAGE, TRIP_ROLE, type CustomerTripStage } from '@xeprime/types';
+import { CUSTOMER_TRIP_STAGE, TRIP_ROLE } from '@xeprime/types';
 import viTrips from '@xeprime/domain/messages/vi/trips.json';
 import { withIntl } from '@/i18n/test-utils';
 import { store } from '@/store';
@@ -108,7 +108,15 @@ describe('TripDetailScreen — cụm của khách chỉ dành cho khách', () =>
  * hay từ chối là "đã đóng" mà chắc chắn không có biên bản nào.
  */
 describe('TripDetailScreen — bằng chứng bàn giao', () => {
-  it.each<CustomerTripStage>([CUSTOMER_TRIP_STAGE.CANCELLED, CUSTOMER_TRIP_STAGE.REJECTED])(
+  /*
+    Kiểu lấy từ CHÍNH trường sẽ nhận giá trị, không phải `CustomerTripStage`: union kia còn mang
+    `pending_approval_paid` đã gỡ (ADR 0055) và chỉ giữ để mobile biên dịch, nên nó RỘNG hơn thứ
+    một chuyến thật có thể mang.
+  */
+  it.each<CustomerTripDetail['stage']>([
+    CUSTOMER_TRIP_STAGE.CANCELLED,
+    CUSTOMER_TRIP_STAGE.REJECTED,
+  ])(
     'chặng %s, chưa có mốc bàn giao: KHÔNG gọi API bằng chứng',
     async (stage) => {
       const view = await renderTrip(trip({ stage }));

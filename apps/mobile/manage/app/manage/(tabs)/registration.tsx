@@ -1,18 +1,25 @@
-import { OWNER_STAGE } from '@xeprime/types';
-import { OwnerGate } from '@/features/account/components/OwnerGate';
-import { ManageHeader } from '@/features/shell/ManageHeader';
-import { OwnerRegistrationScreen } from '@/features/account/OwnerRegistrationScreen';
+import { Redirect, type Href } from 'expo-router';
+import { ScreenLoading } from '@/components/state/ScreenLoading';
+import { useCurrentUser } from '@/features/auth/hooks/use-auth';
+import { PARTNER_PATH, partnerPathRedirect } from '@/features/shell/partner-track';
+import { ACCOUNT_SECTION } from '@/navigation/account-section';
+import { ROUTES } from '@/navigation/routes';
 
 /**
- * Tiến trình đăng ký chủ xe, và là màn "Hồ sơ chủ xe" về sau.
+ * ALIAS CHUYỂN TIẾP (web PR #156 `OwnerRegistrationRedirect`).
  *
- * Cổng ở mức CHỦ XE (bậc `registering` trở lên): đây chính là màn của bậc đó, nên đòi bậc `owner`
- * sẽ khoá đúng những người duy nhất cần nó.
+ * "Hồ sơ chủ xe" đã gộp vào trang tài khoản (`/manage/account?section=profile`); tiến trình đăng
+ * ký là trang chủ Owner Lite (`/manage`). Route này giữ lại để deep link / thông báo cũ vẫn tới
+ * đúng chỗ. Hỏi luật tuyến TRƯỚC (`partnerPathRedirect` — gian hàng tuyến gói về trang Cửa hàng),
+ * đúng thứ tự web; không phụ thuộc việc `ScopeGuard` đã kịp chuyển hay chưa.
  */
 export default function ManageOwnerLiteRegistrationRoute() {
+  const { data: user, isLoading } = useCurrentUser();
+  // Chưa biết tuyến thì chưa chuyển: `user` rỗng sẽ bị coi là "chưa có gian hàng" và đẩy sang
+  // `/manage/register` — không có đường quay lại khi phiên nạp xong.
+  if (isLoading) return <ScreenLoading />;
+  const byTrack = partnerPathRedirect(user, PARTNER_PATH.REGISTRATION);
   return (
-    <OwnerGate minStage={OWNER_STAGE.REGISTERING} header={<ManageHeader />}>
-      <OwnerRegistrationScreen shell="manage" />
-    </OwnerGate>
+    <Redirect href={(byTrack as Href | null) ?? ROUTES.manage.account(ACCOUNT_SECTION.PROFILE)} />
   );
 }

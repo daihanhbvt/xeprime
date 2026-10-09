@@ -6,6 +6,7 @@ import { useTranslations } from 'use-intl';
 import {
   canHostCancelTrip,
   canHostDecideTrip,
+  isCustomerTripClosed,
   CUSTOMER_TRIP_STAGE_META,
   SERVICE_TYPE,
   STATUS_COLOR,
@@ -44,6 +45,8 @@ interface TripCardProps {
     onReject: (trip: CustomerTrip) => void;
     /** HUỶ một chuyến ĐÃ NHẬN (ADR 0045 điều 1) — chỉ có ở `awaiting_hold`. */
     onCancel: (trip: CustomerTrip) => void;
+    /** Quyết định đang chạy cho CHÍNH thẻ này — khoá cả ba nút (web `TripCard` `pending`). */
+    pending: 'approve' | 'reject' | 'cancel' | null;
   };
 }
 
@@ -217,7 +220,10 @@ function TripCardImpl({ trip, onPress, decisions }: TripCardProps) {
               */}
                 {trip.totalIsEstimate ? (
                   <Text col={colors.textMuted} fos={fontSize.label}>
-                    {t('card.estimated')}
+                    {/* Chuyến đã khép thì không còn "chốt khi duyệt" nữa — con số là báo giá lúc gửi. */}
+                    {isCustomerTripClosed(trip.stage as CustomerTripStage)
+                      ? t('card.estimatedClosed')
+                      : t('card.estimated')}
                   </Text>
                 ) : null}
               </YStack>
@@ -240,6 +246,8 @@ function TripCardImpl({ trip, onPress, decisions }: TripCardProps) {
                 variant="danger"
                 size="sm"
                 icon="close-circle-outline"
+                loading={decisions.pending === 'cancel'}
+                disabled={decisions.pending !== null}
                 onPress={() => decisions.onCancel(trip)}
               />
             ) : (
@@ -250,6 +258,8 @@ function TripCardImpl({ trip, onPress, decisions }: TripCardProps) {
                     variant="secondary"
                     size="sm"
                     icon="close-circle-outline"
+                    loading={decisions.pending === 'reject'}
+                    disabled={decisions.pending !== null}
                     onPress={() => decisions.onReject(trip)}
                   />
                 </YStack>
@@ -258,6 +268,8 @@ function TripCardImpl({ trip, onPress, decisions }: TripCardProps) {
                     label={t('card.approve')}
                     size="sm"
                     icon="checkmark-circle-outline"
+                    loading={decisions.pending === 'approve'}
+                    disabled={decisions.pending !== null}
                     onPress={() => decisions.onApprove(trip)}
                   />
                 </YStack>
