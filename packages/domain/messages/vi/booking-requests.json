@@ -393,7 +393,8 @@
       "vehicleAt": "Xe đang ở {province}. Nhập địa chỉ rồi chọn trong danh sách gợi ý."
     },
     "licence": {
-      "title": "Xác thực bằng lái"
+      "title": "Xác thực bằng lái",
+      "verified": "Bằng lái hợp lệ cho chuyến này"
     }
   },
   "approved": {

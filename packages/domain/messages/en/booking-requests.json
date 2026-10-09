@@ -393,7 +393,8 @@
       "vehicleAt": "The car is in {province}. Type an address, then pick it from the suggestions."
     },
     "licence": {
-      "title": "Verify your driving licence"
+      "title": "Verify your driving licence",
+      "verified": "Your driving licence is valid for this trip"
     }
   },
   "approved": {

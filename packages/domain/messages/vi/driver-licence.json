@@ -14,30 +14,13 @@
     "idp": "Giấy phép lái xe quốc tế (IDP): trang có ảnh và thông tin người lái — mang theo bằng gốc khi nhận xe",
     "foreign": "Bằng lái nước ngoài: mang theo bằng gốc (và IDP theo Công ước 1968) khi nhận xe để chủ xe đối chiếu"
   },
-  "tips": {
-    "title": "Để được xác thực ngay",
-    "front": "Chụp mặt TRƯỚC — mặt có ảnh, số bằng và hạng",
-    "corners": "Thấy đủ 4 góc, bằng nằm gọn trong khung",
-    "light": "Đủ sáng, không loá đèn, không bị ngón tay che",
-    "flat": "Đặt bằng trên mặt phẳng, chụp thẳng từ trên xuống"
-  },
   "picker": {
-    "takePhoto": "Chụp ảnh",
-    "chooseFile": "Chọn ảnh từ máy",
-    "dropTitle": "Kéo thả ảnh bằng lái vào đây",
-    "tapTitle": "Chạm để chọn hoặc chụp ảnh bằng lái",
-    "dropHint": "hoặc bấm để chọn ảnh",
-    "formats": "Ảnh JPG, PNG, WEBP hoặc HEIC",
+    "dropTitle": "Kéo thả hoặc bấm để chọn ảnh",
+    "tapTitle": "Chạm để chụp mặt trước bằng lái",
+    "hint": "Ảnh mặt trước · JPG, PNG, WEBP, HEIC",
+    "chooseFile": "Chọn ảnh có sẵn",
     "preparing": "Đang chuẩn bị ảnh…"
   },
-  "preview": {
-    "title": "Kiểm tra ảnh trước khi gửi",
-    "check": "Chữ trên bằng có đọc rõ không? Nếu ảnh mờ hoặc loá, hãy chọn ảnh khác.",
-    "retake": "Chọn ảnh khác",
-    "submit": "Gửi để xác thực",
-    "alt": "Ảnh bằng lái vừa chọn"
-  },
-  "consent": "Khi bấm gửi, bạn đồng ý để XePrime đọc ảnh bằng lái nhằm xác thực tài khoản. Ảnh được đọc ngay trên máy chủ của XePrime, lưu riêng tư và không hiển thị công khai.",
   "prepare": {
     "unsupported": "Không mở được ảnh này. Hãy chụp lại hoặc chọn ảnh JPG, PNG.",
     "tooSmall": "Ảnh quá nhỏ để đọc rõ chữ — hãy chụp gần hơn.",

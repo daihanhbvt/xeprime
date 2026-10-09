@@ -2,43 +2,57 @@
 
 import {
   CameraOutlined,
-  CheckCircleOutlined,
-  IdcardOutlined,
+  CheckCircleFilled,
+  CloudUploadOutlined,
+  LoadingOutlined,
   PictureOutlined,
-  ReloadOutlined,
-  SafetyCertificateOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
-import { Alert, Button, Progress } from 'antd';
+import { Alert, Button } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState, type DragEvent } from 'react';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { cx } from '@/lib/cx';
-import { useSubmitDriverLicence } from '../hooks/use-driver-licence';
+import { useDriverLicenceImage, useSubmitDriverLicence } from '../hooks/use-driver-licence';
 import {
   PrepareImageError,
   prepareLicenceImage,
   type PrepareImageRejection,
 } from '../prepare-licence-image';
+import type { DriverLicence } from '../types';
 import styles from './DriverLicenceUploader.module.css';
 
-const TIP_KEYS = ['front', 'corners', 'light', 'flat'] as const;
+type StepState = 'done' | 'active' | 'todo';
+
+/** Màn cảm ứng ⇒ chạm vào khung là mở camera sau; chuột ⇒ mở hộp chọn tệp. Hỏi lúc BẤM, không lúc render. */
+const isTouchScreen = () =>
+  typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
 
 /**
- * Chọn / chụp ảnh mặt trước bằng lái → xem lại → gửi.
+ * Chọn / chụp ảnh mặt trước bằng lái → GỬI NGAY → tiến trình xác thực hiện TẠI CHỖ.
  *
- * Ảnh được chuẩn bị NGAY khi chọn (thu nhỏ, xoay đúng chiều, bỏ EXIF) để khung xem trước hiện
- * đúng thứ sẽ được gửi đi, và để lỗi "ảnh quá nhỏ / không mở được" hiện trước khi khách bấm gửi.
+ * Khung chọn mang dáng một tấm bằng lái (thẻ ID-1, 85,6 × 54 mm — ô chân dung bên trái, chữ bên
+ * phải) để khách hiểu "đặt bằng vào đây" mà không phải đọc. Chọn xong, ảnh hiện ngay TRONG chính
+ * khung đó kèm vạch quét, ba bước hiện ngay bên dưới — không đổi bố cục giữa "chọn" và "đang đọc".
  *
- * Trên thiết bị cảm ứng có thêm nút "Chụp ảnh" mở thẳng camera sau (`capture="environment"`);
- * trên máy tính chỉ còn vùng kéo-thả / chọn tệp — hai nút cùng mở một hộp chọn tệp chỉ gây rối.
+ * Không có bước "xem lại rồi bấm gửi": chọn xong là tải lên và máy đọc luôn; ảnh không dùng được
+ * thì kết quả nói rõ vì sao và khách chọn ảnh khác ngay tại đây. Ảnh được chuẩn bị ở trình duyệt
+ * trước khi tải (thu nhỏ, xoay đúng chiều, bỏ EXIF), nên ảnh hỏng/quá nhỏ bị báo trước khi gửi.
+ *
+ * Màn cảm ứng: chạm vào khung là chụp bằng camera sau, kèm lối "Chọn ảnh có sẵn". Máy tính: kéo
+ * thả hoặc bấm để chọn tệp.
  */
 export function DriverLicenceUploader({
+  processing,
+  onPick,
   onSubmitted,
-  showTips = true,
 }: {
-  /** Gửi xong (lượt nộp đã sang "đang đọc") — nơi gọi đổi màn hình nếu cần. */
+  /** Lượt nộp ĐANG ĐƯỢC ĐỌC ở server (`processing`), hoặc `null`. */
+  processing: DriverLicence | null;
+  /** Khách vừa chọn một ảnh mới — nơi chứa ẩn kết quả CŨ (lý do bị từ chối) đi. */
+  onPick?: () => void;
+  /** Tải xong (lượt nộp đã sang "đang đọc"). */
   onSubmitted?: () => void;
-  showTips?: boolean;
 }) {
   const t = useTranslations('DriverLicence');
   const errorMessage = useErrorMessage();
@@ -46,7 +60,6 @@ export function DriverLicenceUploader({
 
   const fileInput = useRef<HTMLInputElement | null>(null);
   const cameraInput = useRef<HTMLInputElement | null>(null);
-  const [prepared, setPrepared] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [preparing, setPreparing] = useState(false);
   const [rejection, setRejection] = useState<PrepareImageRejection | null>(null);
@@ -59,41 +72,51 @@ export function DriverLicenceUploader({
     return () => URL.revokeObjectURL(previewUrl);
   }, [previewUrl]);
 
-  async function pick(raw: File | undefined) {
-    if (!raw || preparing || submit.isPending) return;
-    setRejection(null);
-    submit.reset();
-    setPreparing(true);
-    try {
-      const file = await prepareLicenceImage(raw);
-      setPrepared(file);
-      setPreviewUrl(URL.createObjectURL(file));
-    } catch (error) {
-      setRejection(error instanceof PrepareImageError ? error.reason : 'unsupported');
-    } finally {
-      setPreparing(false);
+  // Máy đọc xong (lượt nộp rời `processing`): về lại trạng thái chọn ảnh cho lần sau.
+  const processingId = processing?.id ?? null;
+  const [trackedId, setTrackedId] = useState<string | null>(processingId);
+  if (trackedId !== processingId) {
+    setTrackedId(processingId);
+    if (processingId === null && !submit.isPending) {
+      setPreviewUrl(null);
+      setProgress(0);
     }
   }
 
-  function clear() {
-    setPrepared(null);
-    setPreviewUrl(null);
-    setProgress(0);
-    submit.reset();
-  }
+  // Tải lại trang giữa lúc máy đang đọc thì không còn ảnh cục bộ — lấy ảnh đã nộp từ server.
+  const serverImage = useDriverLicenceImage(processing && !previewUrl ? processing.id : null);
 
-  function send() {
-    if (!prepared || submit.isPending) return;
+  const busy = preparing || submit.isPending || processing !== null;
+
+  async function pick(raw: File | undefined) {
+    if (!raw || busy) return;
+    onPick?.();
+    setRejection(null);
+    submit.reset();
+    setPreparing(true);
+    let file: File;
+    try {
+      file = await prepareLicenceImage(raw);
+    } catch (error) {
+      setRejection(error instanceof PrepareImageError ? error.reason : 'unsupported');
+      setPreparing(false);
+      return;
+    }
+    setPreviewUrl(URL.createObjectURL(file));
+    setPreparing(false);
     setProgress(0);
     submit.mutate(
-      { file: prepared, onProgress: setProgress },
+      { file, onProgress: setProgress },
       {
-        onSuccess: () => {
-          clear();
-          onSubmitted?.();
-        },
+        onSuccess: () => onSubmitted?.(),
+        // Tải hỏng: bỏ ảnh xem trước, khách chọn lại ngay ở đây (lỗi hiện bên dưới).
+        onError: () => setPreviewUrl(null),
       },
     );
+  }
+
+  function openPicker() {
+    (isTouchScreen() ? cameraInput : fileInput).current?.click();
   }
 
   function onDrop(event: DragEvent<HTMLButtonElement>) {
@@ -102,8 +125,15 @@ export function DriverLicenceUploader({
     void pick(event.dataTransfer.files[0]);
   }
 
-  const inputs = (
-    <>
+  const steps: { key: 'upload' | 'read' | 'check'; state: StepState }[] = [
+    { key: 'upload', state: processing ? 'done' : 'active' },
+    { key: 'read', state: processing ? 'active' : 'todo' },
+    { key: 'check', state: 'todo' },
+  ];
+  const image = previewUrl ?? serverImage.data?.url ?? null;
+
+  return (
+    <div className={styles.root}>
       <input
         ref={fileInput}
         type="file"
@@ -129,133 +159,91 @@ export function DriverLicenceUploader({
           event.target.value = '';
         }}
       />
-    </>
-  );
 
-  if (prepared && previewUrl) {
-    const sending = submit.isPending;
-    return (
-      <div className={styles.root}>
-        {inputs}
-        <p className={styles.previewTitle}>{t('preview.title')}</p>
-        <div className={cx(styles.previewFrame, sending && styles.previewSending)}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- blob URL cục bộ, không qua next/image */}
-          <img src={previewUrl} alt={t('preview.alt')} className={styles.previewImage} />
-          {sending ? (
-            <div className={styles.previewOverlay}>
-              <Progress
-                type="circle"
-                percent={progress}
-                size={72}
-                aria-label={t('progress.uploading', { percent: progress })}
-              />
-              <span>{t('progress.uploading', { percent: progress })}</span>
-            </div>
-          ) : null}
+      {busy ? (
+        <div className={cx(styles.card, styles.cardBusy)}>
+          {image ? (
+            // eslint-disable-next-line @next/next/no-img-element -- blob cục bộ / URL ký ngắn hạn của kho riêng tư
+            <img src={image} alt="" className={styles.cardImage} />
+          ) : (
+            <div className={styles.cardPlaceholder} />
+          )}
+          <span className={styles.scanLine} aria-hidden="true" />
         </div>
-        {!sending ? <p className={styles.previewCheck}>{t('preview.check')}</p> : null}
-        {submit.isError ? (
-          <Alert
-            type="error"
-            showIcon
-            title={errorMessage(submit.error)}
-            className={styles.alert}
-          />
-        ) : null}
-        <p className={styles.consent}>
-          <SafetyCertificateOutlined aria-hidden="true" />
-          <span>{t('consent')}</span>
-        </p>
-        <div className={styles.previewActions}>
-          <Button icon={<ReloadOutlined aria-hidden="true" />} onClick={clear} disabled={sending}>
-            {t('preview.retake')}
-          </Button>
+      ) : (
+        <button
+          type="button"
+          className={cx(styles.card, styles.cardPicker, dragging && styles.cardDragging)}
+          onClick={openPicker}
+          onDragOver={(event) => {
+            event.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={onDrop}
+        >
+          {/* Dáng mặt trước bằng lái: dải tiêu đề, ô chân dung bên trái — chỉ để nhận ra, không chữ. */}
+          <span className={styles.sketchTitle} aria-hidden="true" />
+          <span className={styles.sketchPhoto} aria-hidden="true">
+            <UserOutlined />
+          </span>
+          <span className={styles.cardText}>
+            <span className={styles.cardIcon} aria-hidden="true">
+              <CloudUploadOutlined className={styles.onPointer} />
+              <CameraOutlined className={styles.onTouch} />
+            </span>
+            <span className={cx(styles.cardTitle, styles.onPointer)}>{t('picker.dropTitle')}</span>
+            <span className={cx(styles.cardTitle, styles.onTouch)}>{t('picker.tapTitle')}</span>
+            <span className={styles.cardHint}>{t('picker.hint')}</span>
+          </span>
+        </button>
+      )}
+
+      {busy ? (
+        <div className={styles.progress} role="status" aria-live="polite">
+          <p className={styles.progressTitle}>
+            {preparing ? t('picker.preparing') : t('progress.title')}
+          </p>
+          <ol className={styles.steps}>
+            {steps.map((step) => (
+              <li key={step.key} className={cx(styles.step, styles[`step_${step.state}`])}>
+                <span className={styles.stepIcon} aria-hidden="true">
+                  {step.state === 'done' ? (
+                    <CheckCircleFilled />
+                  ) : step.state === 'active' ? (
+                    <LoadingOutlined />
+                  ) : (
+                    <span className={styles.stepDot} />
+                  )}
+                </span>
+                <span>
+                  {t(`progress.steps.${step.key}`)}
+                  {step.key === 'upload' && submit.isPending && progress > 0
+                    ? ` · ${progress}%`
+                    : null}
+                </span>
+              </li>
+            ))}
+          </ol>
+          <p className={styles.progressHint}>{t('progress.hint')}</p>
+        </div>
+      ) : (
+        <div className={styles.onTouch}>
           <Button
-            type="primary"
-            icon={<CheckCircleOutlined aria-hidden="true" />}
-            loading={sending}
-            onClick={send}
+            type="link"
+            icon={<PictureOutlined aria-hidden="true" />}
+            onClick={() => fileInput.current?.click()}
           >
-            {t('preview.submit')}
+            {t('picker.chooseFile')}
           </Button>
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className={styles.root}>
-      {inputs}
-      <button
-        type="button"
-        className={cx(styles.dropzone, dragging && styles.dropzoneActive)}
-        onClick={() => fileInput.current?.click()}
-        onDragOver={(event) => {
-          event.preventDefault();
-          setDragging(true);
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={onDrop}
-        disabled={preparing}
-        aria-busy={preparing}
-      >
-        <span className={styles.cardSilhouette} aria-hidden="true">
-          <IdcardOutlined />
-        </span>
-        {preparing ? (
-          <span className={styles.dropTitle}>{t('picker.preparing')}</span>
-        ) : (
-          <>
-            <span className={cx(styles.dropTitle, styles.dropTitleDesktop)}>
-              {t('picker.dropTitle')}
-            </span>
-            <span className={cx(styles.dropTitle, styles.dropTitleTouch)}>
-              {t('picker.tapTitle')}
-            </span>
-          </>
-        )}
-        <span className={styles.dropHint}>{t('picker.dropHint')}</span>
-        <span className={styles.dropFormats}>{t('picker.formats')}</span>
-      </button>
-
-      <div className={styles.pickerActions}>
-        <Button
-          type="primary"
-          size="large"
-          icon={<CameraOutlined aria-hidden="true" />}
-          className={styles.cameraButton}
-          onClick={() => cameraInput.current?.click()}
-          disabled={preparing}
-        >
-          {t('picker.takePhoto')}
-        </Button>
-        <Button
-          size="large"
-          icon={<PictureOutlined aria-hidden="true" />}
-          className={styles.fileButton}
-          onClick={() => fileInput.current?.click()}
-          disabled={preparing}
-        >
-          {t('picker.chooseFile')}
-        </Button>
-      </div>
+      )}
 
       {rejection ? (
         <Alert type="warning" showIcon title={t(`prepare.${rejection}`)} className={styles.alert} />
       ) : null}
-
-      {showTips ? (
-        <div className={styles.tips}>
-          <p className={styles.tipsTitle}>{t('tips.title')}</p>
-          <ul className={styles.tipList}>
-            {TIP_KEYS.map((key) => (
-              <li key={key}>
-                <CheckCircleOutlined aria-hidden="true" />
-                <span>{t(`tips.${key}`)}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+      {submit.isError ? (
+        <Alert type="error" showIcon title={errorMessage(submit.error)} className={styles.alert} />
       ) : null}
     </div>
   );

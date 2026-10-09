@@ -5,7 +5,6 @@ import {
   ClockCircleFilled,
   CloseCircleFilled,
   ExclamationCircleFilled,
-  LoadingOutlined,
   ReloadOutlined,
   SyncOutlined,
 } from '@ant-design/icons';
@@ -27,11 +26,7 @@ import {
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { cx } from '@/lib/cx';
-import {
-  useDriverLicence,
-  useDriverLicenceImage,
-  useRequestDriverLicenceReview,
-} from '../hooks/use-driver-licence';
+import { useDriverLicence, useRequestDriverLicenceReview } from '../hooks/use-driver-licence';
 import type { DriverLicence, DriverLicenceTrip } from '../types';
 import { DriverLicenceDetails } from './DriverLicenceDetails';
 import { DriverLicenceUploader } from './DriverLicenceUploader';
@@ -45,6 +40,9 @@ type TripIssue = 'expired' | 'expiredToday' | 'classMismatchCar' | 'classMismatc
  * Xác thực bằng lái — MỘT component cho cả trang "Giấy tờ & Xác minh" lẫn bước bằng lái trong
  * luồng đặt xe (ADR 0057). Màn hình hoàn toàn do trạng thái SERVER quyết: đang đọc → hợp lệ /
  * chờ duyệt / bị từ chối; component chỉ thêm một trạng thái của riêng nó — "đang thay bằng mới".
+ *
+ * "Cần nộp", "đang thay bằng" và "đang đọc" dùng CHUNG một khung: chỉ ô ảnh đổi từ bộ chọn sang
+ * tiến trình, nên khách không bị đẩy sang một bố cục khác giữa lúc máy đang đọc.
  *
  * Có `trip` (luồng đặt xe) thì "hợp lệ" nghĩa là hợp lệ CHO CHUYẾN ĐÓ: đúng hạng loại xe và còn
  * hạn tới hết ngày trả — cùng một hàm (`evaluateDriverLicenceForTrip`) với cổng ở server, nên giao
@@ -60,6 +58,12 @@ export function DriverLicenceVerifier({
   const fmt = useAppFormat();
   const query = useDriverLicence();
   const [replacing, setReplacing] = useState(false);
+  /**
+   * Khách vừa chọn ảnh MỚI khi kết quả gần nhất là lượt nộp này (`latest.id`, hoặc `null` khi chưa có) —
+   * lý do bị từ chối / cảnh báo của kết quả CŨ ẩn ngay, không đứng cạnh ảnh mới đang đọc. Kết quả của
+   * lượt mới mang id khác nên tự hiện lại khi về.
+   */
+  const [pickedOver, setPickedOver] = useState<string | null | undefined>(undefined);
   // Trong hộp thoại đặt xe, hộp thoại ĐÃ là khung — thêm một thẻ viền + bóng đổ bên trong chỉ là
   // một lớp khung thừa. Trang Giấy tờ thì đứng riêng nên vẫn là một thẻ.
   const panel = cx(styles.panel, trip && styles.panelEmbedded);
@@ -110,36 +114,14 @@ export function DriverLicenceVerifier({
   }
 
   const status = latest?.status;
+  const processing = status === DRIVER_LICENCE_STATUS.PROCESSING && latest ? latest : null;
   const rejected =
     latest && status === DRIVER_LICENCE_STATUS.REJECTED && latest.id !== verified?.id
       ? latest
       : null;
 
-  // 1. Đang đọc ảnh — trạng thái của server, thắng mọi thứ khác (kể cả khi đang "thay bằng").
-  if (status === DRIVER_LICENCE_STATUS.PROCESSING && latest) {
-    return <ProcessingPanel licence={latest} className={panel} />;
-  }
-
-  // 2. Khách chủ động thay bằng mới.
-  if (replacing) {
-    return (
-      <div className={panel}>
-        <PanelHeading
-          title={booking ? null : t('intro.title')}
-          body={booking ? t('intro.bookingBody') : t('intro.body')}
-        />
-        <DriverLicenceUploader onSubmitted={() => setReplacing(false)} />
-        <div className={styles.footerActions}>
-          <Button type="text" onClick={() => setReplacing(false)}>
-            {t('verified.cancelReplace')}
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  // 3. Bằng dùng được (cho chuyến này, nếu có chuyến).
-  if (usable && verified) {
+  // 1. Bằng dùng được (cho chuyến này, nếu có chuyến) — trừ khi khách đang chủ động thay bằng.
+  if (usable && verified && !replacing && !processing) {
     return (
       <div className={cx(panel, styles.panelSuccess)}>
         <StatusBanner
@@ -170,8 +152,8 @@ export function DriverLicenceVerifier({
     );
   }
 
-  // 4. Đang chờ người của XePrime xem.
-  if (status === DRIVER_LICENCE_STATUS.PENDING_REVIEW) {
+  // 2. Đang chờ người của XePrime xem.
+  if (status === DRIVER_LICENCE_STATUS.PENDING_REVIEW && !replacing) {
     return (
       <div className={cx(panel, styles.panelWaiting)}>
         <StatusBanner
@@ -187,27 +169,47 @@ export function DriverLicenceVerifier({
     );
   }
 
-  // 5–7. Cần nộp (lại): bị từ chối, bằng không hợp lệ cho chuyến, hoặc chưa từng nộp.
+  // 3. Cần nộp (lại) / đang thay bằng / máy đang đọc — CÙNG một khung.
+  const heading = (
+    <PanelHeading
+      title={booking ? null : t('intro.title')}
+      body={booking ? t('intro.bookingBody') : t('intro.body')}
+    />
+  );
+  // Kết quả CŨ chỉ hiện khi máy không đang đọc ảnh mới và khách chưa chọn ảnh mới đè lên nó.
+  const showResult =
+    !processing && !(pickedOver !== undefined && pickedOver === (latest?.id ?? null));
+  let notice: ReactNode = heading;
+  if (showResult && rejected) {
+    notice = <RejectedNotice licence={rejected} />;
+  } else if (showResult && !replacing && tripIssue && verified) {
+    notice = (
+      <Alert
+        type="warning"
+        showIcon
+        icon={<ExclamationCircleFilled />}
+        title={t(`tripIssue.${tripIssue}`, {
+          date: verified.expiresOn ? fmt.dateKey(verified.expiresOn) : '',
+        })}
+      />
+    );
+  }
+
   return (
     <div className={panel}>
-      {rejected ? (
-        <RejectedNotice licence={rejected} />
-      ) : tripIssue && verified ? (
-        <Alert
-          type="warning"
-          showIcon
-          icon={<ExclamationCircleFilled />}
-          title={t(`tripIssue.${tripIssue}`, {
-            date: verified.expiresOn ? fmt.dateKey(verified.expiresOn) : '',
-          })}
-        />
-      ) : (
-        <PanelHeading
-          title={booking ? null : t('intro.title')}
-          body={booking ? t('intro.bookingBody') : t('intro.body')}
-        />
-      )}
-      <DriverLicenceUploader />
+      {notice}
+      <DriverLicenceUploader
+        processing={processing}
+        onPick={() => setPickedOver(latest?.id ?? null)}
+        onSubmitted={() => setReplacing(false)}
+      />
+      {replacing && !processing ? (
+        <div className={styles.footerActions}>
+          <Button type="text" onClick={() => setReplacing(false)}>
+            {t('verified.cancelReplace')}
+          </Button>
+        </div>
+      ) : null}
       {!verified && !rejected ? <AcceptedDocuments /> : null}
     </div>
   );
@@ -242,51 +244,6 @@ function StatusBanner({
       <div>
         <p className={styles.bannerTitle}>{title}</p>
         {body ? <p className={styles.bannerBody}>{body}</p> : null}
-      </div>
-    </div>
-  );
-}
-
-/** Ba bước "tải lên → đọc → kiểm tra" — bước giữa quay cho tới khi server trả kết quả. */
-function ProcessingPanel({ licence, className }: { licence: DriverLicence; className: string }) {
-  const t = useTranslations('DriverLicence.progress');
-  const image = useDriverLicenceImage(licence.id);
-  const steps = [
-    { key: 'upload', state: 'done' },
-    { key: 'read', state: 'active' },
-    { key: 'check', state: 'todo' },
-  ] as const;
-
-  return (
-    <div className={cx(className, styles.processing)} role="status" aria-live="polite">
-      <div className={styles.scanFrame}>
-        {image.data ? (
-          // eslint-disable-next-line @next/next/no-img-element -- URL ký ngắn hạn của kho riêng tư
-          <img src={image.data.url} alt="" className={styles.scanImage} />
-        ) : (
-          <div className={styles.scanPlaceholder} />
-        )}
-        <span className={styles.scanLine} aria-hidden="true" />
-      </div>
-      <div className={styles.processingBody}>
-        <p className={styles.headingTitle}>{t('title')}</p>
-        <ol className={styles.steps}>
-          {steps.map((step) => (
-            <li key={step.key} className={cx(styles.step, styles[`step_${step.state}`])}>
-              <span className={styles.stepIcon} aria-hidden="true">
-                {step.state === 'done' ? (
-                  <CheckCircleFilled />
-                ) : step.state === 'active' ? (
-                  <LoadingOutlined />
-                ) : (
-                  <span className={styles.stepDot} />
-                )}
-              </span>
-              <span>{t(`steps.${step.key}`)}</span>
-            </li>
-          ))}
-        </ol>
-        <p className={styles.headingBody}>{t('hint')}</p>
       </div>
     </div>
   );

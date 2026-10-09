@@ -14,7 +14,7 @@ import {
 } from '@ant-design/icons';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Button, Radio, Segmented, Skeleton } from 'antd';
+import { Alert, App, Button, Radio, Segmented, Skeleton } from 'antd';
 import { CheckboxField } from '@/components/form/CheckboxField';
 import { CopyButton } from '@/components/data-display/CopyButton';
 
@@ -231,6 +231,7 @@ export function RequestBookingFlow({
   const dl = useDomainLabel();
   const fmt = useAppFormat();
   const errorMessage = useErrorMessage();
+  const { message } = App.useApp();
 
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -695,6 +696,25 @@ export function RequestBookingFlow({
     licenceTrip !== null &&
     licenceQ.data !== undefined &&
     evaluateDriverLicenceForTrip(licenceQ.data, licenceTrip) === DRIVER_LICENCE_TRIP_GATE.OK;
+
+  /*
+   * Bằng vừa hợp lệ cho CHUYẾN NÀY (máy đọc xong ngay tại bước) ⇒ tự sang bước Xác nhận: không bắt
+   * khách bấm "Tiếp tục" cho một bước đã xong. Không có vòng lặp: "Quay lại" từ bước Xác nhận về
+   * thẳng bước Chuyến đi.
+   *
+   * Đổi bước NGAY TRONG render (mẫu "điều chỉnh state theo dữ liệu" của React) chứ không trong
+   * effect — effect là thêm một vòng render hiện bước bằng lái đã xong. Effect chỉ còn hiện một lời
+   * báo ngắn, để bước bằng lái không biến mất im lặng.
+   */
+  const [licenceAdvances, setLicenceAdvances] = useState(0);
+  if (step === 'licence' && licenceReady && !licenceQ.isFetching) {
+    setStep('review');
+    setPriceExpanded(true);
+    setLicenceAdvances((n) => n + 1);
+  }
+  useEffect(() => {
+    if (licenceAdvances > 0) void message.success(t('licence.verified'));
+  }, [licenceAdvances, message, t]);
 
   /** SĐT đang dùng có phải chính SĐT đã xác thực của tài khoản không (bỏ qua 0/84/+84). */
   const phoneMatchesAccount = (phone: string) =>

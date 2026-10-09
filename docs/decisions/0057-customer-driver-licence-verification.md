@@ -153,8 +153,9 @@ làm GPLX Việt Nam, và cả bằng quốc tế nếu được.
 ## Điều kiện phát hành (production)
 
 - Cập nhật chính sách quyền riêng tư nêu mục đích xử lý ảnh bằng lái và thời hạn lưu. Ảnh được đọc
-  ngay trên máy chủ XePrime (không gửi bên đọc ảnh nào); câu đồng ý trên màn nộp ảnh đã có và được
-  ghi `consented_at`.
+  ngay trên máy chủ XePrime (không gửi bên đọc ảnh nào). Màn nộp ảnh KHÔNG hiện câu đồng ý riêng
+  (bỏ 09/10/2026 cho giao diện gọn — chủ sản phẩm quyết): `consented_at` ghi thời điểm khách chủ
+  động chọn ảnh để xác thực, nên chính sách quyền riêng tư phải nêu rõ việc xử lý ảnh bằng lái.
 - Thử bộ đọc trên vài ảnh GPLX THẬT chụp bằng điện thoại (`licence:try ./anh.jpg` — ảnh không rời
   máy) và chỉnh ngưỡng nếu cần; bộ ảnh mẫu hiện tại là ảnh dựng.
 - Job dọn ảnh định kỳ cho phần điều 9 còn để lại (lượt bị từ chối không nộp lại, tài khoản đã xoá),

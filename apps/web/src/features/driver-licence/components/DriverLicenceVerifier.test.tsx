@@ -10,7 +10,8 @@ import { DriverLicenceVerifier } from './DriverLicenceVerifier';
  *
  * Bộ này khoá năm lời hứa với khách: thấy đúng việc phải làm ở mỗi trạng thái; bị từ chối thì
  * biết VÌ SAO và chụp lại thế nào; chỉ thấy nút "nhờ xem lại" khi server cho phép; bằng hợp lệ
- * nhưng không đủ cho CHUYẾN này thì được nói rõ; và ảnh chọn sai được báo trước khi gửi.
+ * nhưng không đủ cho CHUYẾN này thì được nói rõ; và ảnh chọn sai được báo trước khi gửi. Chọn ảnh
+ * xong là gửi luôn, và tiến trình hiện NGAY TRONG khung đang đứng — không đổi bố cục.
  */
 
 const query = vi.hoisted(() => ({
@@ -78,18 +79,25 @@ beforeEach(() => {
   query.isError = false;
   review.mutate.mockReset();
   submit.mutate.mockReset();
+  submit.isPending = false;
   prepare.fn.mockReset();
 });
 
 afterEach(cleanup);
 
 describe('DriverLicenceVerifier', () => {
-  it('chưa nộp: lời mời, vùng chọn ảnh, gợi ý chụp và giấy tờ được chấp nhận', () => {
+  it('chưa nộp: lời mời, chụp ảnh (điện thoại) / kéo thả (máy tính), giấy tờ được chấp nhận', () => {
     renderVerifier();
     expect(screen.getByText('Xác thực bằng lái xe')).toBeTruthy();
-    expect(screen.getByText('Kéo thả ảnh bằng lái vào đây')).toBeTruthy();
-    expect(screen.getByText(/Chụp mặt TRƯỚC/)).toBeTruthy();
+    expect(screen.getByText('Kéo thả hoặc bấm để chọn ảnh')).toBeTruthy();
+    // Khung chọn là MỘT nút: kéo thả / bấm (chuột) và chạm để chụp (cảm ứng) — CSS chọn câu hiện.
+    expect(screen.getByRole('button', { name: /Chạm để chụp mặt trước bằng lái/ })).toBeTruthy();
+    // Dòng "Khi chọn ảnh, bạn đồng ý…" đã bỏ.
+    expect(screen.queryByText(/bạn đồng ý/)).toBeNull();
     expect(screen.getByText(/Giấy phép lái xe quốc tế \(IDP\)/)).toBeTruthy();
+    // Mục "Để được xác thực ngay" đã bỏ, không còn bước "Gửi để xác thực".
+    expect(screen.queryByText(/Để được xác thực ngay/)).toBeNull();
+    expect(screen.queryByRole('button', { name: /Gửi để xác thực/ })).toBeNull();
   });
 
   it('đã xác thực: hiện thông tin trên bằng và loại xe lái được', () => {
@@ -102,11 +110,23 @@ describe('DriverLicenceVerifier', () => {
     expect(screen.getByRole('button', { name: 'Cập nhật bằng mới' })).toBeTruthy();
   });
 
-  it('đang đọc ảnh: ba bước, bước giữa đang chạy', () => {
+  it('đang đọc ảnh: tiến trình nằm TRONG khung cũ (lời mời + giấy tờ chấp nhận vẫn còn)', () => {
     query.data = { verified: null, latest: { ...BASE, status: 'processing' } };
     renderVerifier();
     expect(screen.getByText('Đang xác thực bằng lái')).toBeTruthy();
     expect(screen.getByText('Đọc thông tin trên bằng')).toBeTruthy();
+    expect(screen.getByText('Xác thực bằng lái xe')).toBeTruthy();
+    expect(screen.getByText(/Giấy phép lái xe quốc tế \(IDP\)/)).toBeTruthy();
+    // Đang đọc thì không cho chọn ảnh khác chen ngang.
+    expect(screen.queryByText('Kéo thả hoặc bấm để chọn ảnh')).toBeNull();
+  });
+
+  it('đang tải ảnh lên: cũng là tiến trình tại chỗ, bước tải lên đang chạy', () => {
+    submit.isPending = true;
+    renderVerifier();
+    expect(screen.getByText('Đang xác thực bằng lái')).toBeTruthy();
+    expect(screen.getByText('Tải ảnh lên')).toBeTruthy();
+    expect(screen.getByText('Xác thực bằng lái xe')).toBeTruthy();
   });
 
   it('bị máy từ chối vì ảnh mờ: lý do + mẹo chụp lại + nút nhờ xem lại', () => {
@@ -183,14 +203,14 @@ describe('DriverLicenceVerifier', () => {
     renderVerifier();
     expect(screen.getByText('Đang chờ XePrime xác thực')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Gửi ảnh khác' }));
-    expect(screen.getByText('Kéo thả ảnh bằng lái vào đây')).toBeTruthy();
+    expect(screen.getByText('Kéo thả hoặc bấm để chọn ảnh')).toBeTruthy();
   });
 
   it('bằng hợp lệ nhưng hết hạn trước ngày trả xe: nói rõ ngày hết hạn, mời cập nhật', () => {
     query.data = { verified: BASE, latest: BASE };
     renderVerifier({ vehicleType: 'car', lastDayKey: '2031-03-20' });
     expect(screen.getByText(/hết hạn ngày 15\/03\/2031, trước khi chuyến kết thúc/)).toBeTruthy();
-    expect(screen.getByText('Kéo thả ảnh bằng lái vào đây')).toBeTruthy();
+    expect(screen.getByText('Kéo thả hoặc bấm để chọn ảnh')).toBeTruthy();
   });
 
   it('bằng ô tô đặt xe máy: báo hạng không phù hợp', () => {
@@ -212,7 +232,26 @@ describe('DriverLicenceVerifier', () => {
     expect(submit.mutate).not.toHaveBeenCalled();
   });
 
-  it('ảnh hợp lệ: xem trước rồi mới gửi', async () => {
+  it('bị từ chối rồi chọn ảnh MỚI: lý do cũ ẩn ngay, chỉ còn lời mời trong lúc ảnh mới được đọc', async () => {
+    prepare.fn.mockResolvedValue(new File(['y'], 'driver-licence.jpg', { type: 'image/jpeg' }));
+    Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:new'), revokeObjectURL: vi.fn() });
+    query.data = {
+      verified: null,
+      latest: { ...BASE, status: 'rejected', rejectionReason: 'not_a_licence' },
+    };
+    const { container } = renderVerifier();
+    expect(screen.getByText('Chưa xác thực được bằng lái')).toBeTruthy();
+
+    const input = container.querySelector('input[type="file"]:not([capture])') as HTMLInputElement;
+    fireEvent.change(input, {
+      target: { files: [new File(['x'], 'b.jpg', { type: 'image/jpeg' })] },
+    });
+
+    await waitFor(() => expect(screen.queryByText('Chưa xác thực được bằng lái')).toBeNull());
+    expect(screen.getByText('Xác thực bằng lái xe')).toBeTruthy();
+  });
+
+  it('chọn ảnh xong là GỬI NGAY — không có bước xem trước / bấm gửi', async () => {
     const prepared = new File(['y'], 'driver-licence.jpg', { type: 'image/jpeg' });
     prepare.fn.mockResolvedValue(prepared);
     const createObjectURL = vi.fn(() => 'blob:preview');
@@ -225,14 +264,25 @@ describe('DriverLicenceVerifier', () => {
       target: { files: [new File(['x'], 'a.heic', { type: 'image/heic' })] },
     });
 
-    await screen.findByText('Kiểm tra ảnh trước khi gửi');
-    expect(screen.getByText(/đồng ý để XePrime đọc ảnh bằng lái/)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: /Gửi để xác thực/ }));
     await waitFor(() =>
       expect(submit.mutate).toHaveBeenCalledWith(
         expect.objectContaining({ file: prepared }),
         expect.anything(),
       ),
     );
+  });
+
+  it('chụp bằng camera (ô chọn có capture) cũng gửi ngay', async () => {
+    const prepared = new File(['y'], 'driver-licence.jpg', { type: 'image/jpeg' });
+    prepare.fn.mockResolvedValue(prepared);
+    Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:cam'), revokeObjectURL: vi.fn() });
+
+    const { container } = renderVerifier();
+    const camera = container.querySelector('input[type="file"][capture]') as HTMLInputElement;
+    fireEvent.change(camera, {
+      target: { files: [new File(['x'], 'cam.jpg', { type: 'image/jpeg' })] },
+    });
+
+    await waitFor(() => expect(submit.mutate).toHaveBeenCalledTimes(1));
   });
 });

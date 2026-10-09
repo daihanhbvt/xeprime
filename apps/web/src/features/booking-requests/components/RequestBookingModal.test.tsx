@@ -1441,11 +1441,36 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Xác thực' }));
 
       await screen.findByRole('heading', { name: 'Xác thực bằng lái' });
-      expect(await screen.findByText('Kéo thả ảnh bằng lái vào đây')).toBeTruthy();
+      expect(await screen.findByText('Kéo thả hoặc bấm để chọn ảnh')).toBeTruthy();
       const next = screen.getByRole('button', { name: 'Tiếp tục' });
       expect((next as HTMLButtonElement).disabled).toBe(true);
       expect(screen.queryByRole('button', { name: 'Gửi yêu cầu thuê' })).toBeNull();
       expect(api.submitBookingRequest).not.toHaveBeenCalled();
+    });
+
+    it('máy đọc xong ngay tại bước và bằng hợp lệ → TỰ sang bước Xác nhận, kèm lời báo', async () => {
+      api.fetchDriverLicenceOverview.mockResolvedValue({
+        verified: null,
+        latest: { ...VERIFIED_LICENCE, id: 'L2', status: 'processing' },
+      });
+      renderModal();
+      await advanceToOtp();
+      fireEvent.change(screen.getByLabelText('Mã OTP'), { target: { value: '123456' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Xác thực' }));
+
+      // Tiến trình hiện ngay trong bước bằng lái…
+      expect(await screen.findByText('Đang xác thực bằng lái')).toBeTruthy();
+      // …máy đọc xong (lượt hỏi lại kế tiếp) → không cần bấm "Tiếp tục".
+      api.fetchDriverLicenceOverview.mockResolvedValue({
+        verified: VERIFIED_LICENCE,
+        latest: VERIFIED_LICENCE,
+      });
+      expect(
+        await screen.findByRole('button', { name: 'Gửi yêu cầu thuê' }, { timeout: 6000 }),
+      ).toBeTruthy();
+      // Lời báo của AntD hiện qua portal, bất đồng bộ.
+      expect(await screen.findByText('Bằng lái hợp lệ cho chuyến này')).toBeTruthy();
+      expect(screen.queryByRole('heading', { name: 'Xác thực bằng lái' })).toBeNull();
     });
 
     it('bằng ô tô mà đặt xe máy → bước bằng lái nói rõ hạng không phù hợp', async () => {

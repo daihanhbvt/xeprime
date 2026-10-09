@@ -14,30 +14,13 @@
     "idp": "International Driving Permit (IDP): the page with your photo and particulars — bring your original licence at pickup",
     "foreign": "Foreign licence: bring the original (and an IDP under the 1968 Convention) at pickup so the owner can check it"
   },
-  "tips": {
-    "title": "To get verified instantly",
-    "front": "Photograph the FRONT — the side with your photo, number and class",
-    "corners": "All 4 corners visible, the card fully inside the frame",
-    "light": "Good light, no glare, no fingers covering it",
-    "flat": "Lay the card flat and shoot straight from above"
-  },
   "picker": {
-    "takePhoto": "Take a photo",
-    "chooseFile": "Choose a photo",
-    "dropTitle": "Drop your licence photo here",
-    "tapTitle": "Tap to choose or take a licence photo",
-    "dropHint": "or click to choose a photo",
-    "formats": "JPG, PNG, WEBP or HEIC photo",
+    "dropTitle": "Drag a photo here or click to choose",
+    "tapTitle": "Tap to photograph the front of your licence",
+    "hint": "Front side · JPG, PNG, WEBP, HEIC",
+    "chooseFile": "Choose an existing photo",
     "preparing": "Preparing the photo…"
   },
-  "preview": {
-    "title": "Check the photo before sending",
-    "check": "Can you read the text on the licence? If it is blurry or has glare, choose another photo.",
-    "retake": "Choose another photo",
-    "submit": "Send for verification",
-    "alt": "Selected licence photo"
-  },
-  "consent": "By sending, you agree that XePrime reads your licence photo to verify your account. The photo is read on XePrime's own servers, stored privately and never shown publicly.",
   "prepare": {
     "unsupported": "This photo cannot be opened. Retake it or choose a JPG or PNG photo.",
     "tooSmall": "The photo is too small to read — move closer.",
