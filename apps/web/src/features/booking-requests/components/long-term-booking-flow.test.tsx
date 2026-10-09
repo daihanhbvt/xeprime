@@ -20,6 +20,8 @@ const api = vi.hoisted(() => ({
   fetchVehicleBusyDays: vi.fn(),
   submitBookingRequest: vi.fn(),
   verifyOtp: vi.fn(),
+  phoneLogin: vi.fn(),
+  fetchDriverLicenceOverview: vi.fn(),
   sendAsync: vi.fn(),
   send: vi.fn(),
   reset: vi.fn(),
@@ -188,6 +190,27 @@ vi.mock('@/features/phone-verification/api', () => ({
   verifyOtp: (...a: unknown[]) => api.verifyOtp(...a),
   sendOtp: vi.fn(),
 }));
+/*
+ * Dài hạn là thuê TỰ LÁI (ADR 0057): khách vãng lai đăng nhập bằng OTP rồi mới soát bằng lái.
+ * Bằng mặc định đã hợp lệ — spec này khoá gói + nguyện vọng, không phải bước bằng lái.
+ */
+vi.mock('@/services/auth.service', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/services/auth.service')>()),
+  phoneLogin: (...a: unknown[]) => api.phoneLogin(...a),
+}));
+vi.mock('@/features/driver-licence/api', () => ({
+  fetchDriverLicenceOverview: (...a: unknown[]) => api.fetchDriverLicenceOverview(...a),
+  fetchDriverLicenceImage: vi.fn(),
+  requestDriverLicenceReview: vi.fn(),
+  submitDriverLicence: vi.fn(),
+}));
+const VALID_LICENCE = {
+  status: 'verified',
+  expiresOn: '2099-01-01',
+  noExpiry: false,
+  coversCar: true,
+  coversMotorbike: false,
+};
 vi.mock('@/features/phone-verification/hooks/use-phone-verify', () => ({
   usePhoneVerify: () => ({
     status: 'idle',
@@ -236,6 +259,11 @@ beforeEach(() => {
   nav.push.mockReset();
   quoteCalls.length = 0;
   Object.values(api).forEach((fn) => fn.mockReset());
+  api.fetchDriverLicenceOverview.mockResolvedValue({
+    verified: VALID_LICENCE,
+    latest: VALID_LICENCE,
+  });
+  api.phoneLogin.mockResolvedValue({ id: 'U1' });
   api.fetchVehicleBusyDays.mockResolvedValue({ days: [], from: '2026-01-01', to: '2026-01-01' });
 });
 

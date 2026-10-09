@@ -74,7 +74,10 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
         name: 'public-reviews',
         description: 'Đánh giá hiển thị công khai trên tin đăng và trang gian hàng.',
       },
-      { name: 'public-banners', description: 'Banner khuyến mãi hiển thị ở trang chủ marketplace.' },
+      {
+        name: 'public-banners',
+        description: 'Banner khuyến mãi hiển thị ở trang chủ marketplace.',
+      },
       {
         name: 'catalog',
         description: 'Danh mục hãng/dòng xe dùng chung khi đăng xe và khi lọc tìm kiếm.',
@@ -230,6 +233,12 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
           'không thanh toán nội bộ, không hết hạn. Rút về ngân hàng do admin chuyển thủ công.',
       },
       {
+        name: 'driver-licences',
+        description:
+          'Bằng lái của tài khoản khách (ADR 0057): nộp ảnh mặt trước, máy đọc và tự xác thực khi ' +
+          'đủ điều kiện, còn lại chờ người duyệt. Là điều kiện gửi yêu cầu thuê xe tự lái.',
+      },
+      {
         name: 'bank-accounts',
         description:
           'Tài khoản ngân hàng NHẬN tiền của khách và của gian hàng (ADR 0033). Một bộ cho cả ' +
@@ -294,7 +303,10 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
         description: 'Tác vụ quản trị nền tảng dùng chung và hàng chờ duyệt.',
       },
       { name: 'platform-dashboard', description: 'Số liệu tổng quan toàn nền tảng.' },
-      { name: 'platform-tenants', description: 'Quản lý gian hàng: duyệt, tạm ngưng, xem chi tiết.' },
+      {
+        name: 'platform-tenants',
+        description: 'Quản lý gian hàng: duyệt, tạm ngưng, xem chi tiết.',
+      },
       {
         name: 'platform-tenant-support',
         description:
@@ -331,6 +343,12 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
         description:
           'Vận hành tiền marketplace: hàng đợi khoản giữ chỗ, chuyển trả và đối chiếu ngày. ' +
           'Không có đường nào sửa/xoá một dòng tiền — chỉ chốt kết cục và ghi bằng chứng.',
+      },
+      {
+        name: 'platform-driver-licences',
+        description:
+          'Hàng đợi bằng lái của khách — duyệt/từ chối lượt máy không tự quyết được. Danh sách ' +
+          'che liên hệ; ảnh mở qua URL sống ngắn và ghi audit mỗi lần mở.',
       },
       {
         name: 'platform-sellers',

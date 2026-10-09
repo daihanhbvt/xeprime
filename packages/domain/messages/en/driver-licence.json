@@ -1,0 +1,109 @@
+{
+  "page": {
+    "subtitle": "A verified driving licence lets you book self-drive vehicles in just a few steps.",
+    "sectionTitle": "Driving licence"
+  },
+  "intro": {
+    "title": "Verify your driving licence",
+    "body": "Take a photo of the front of your driving licence. You only need to do this once — it usually takes less than a minute.",
+    "bookingBody": "Self-drive rentals need a valid driving licence. Take a photo of the front of your licence — you only do this once for all future trips."
+  },
+  "accepted": {
+    "title": "Accepted documents",
+    "vn": "Vietnamese licence: PET card, the 2025 card or a screenshot from the VNeID app",
+    "idp": "International Driving Permit (IDP): the page with your photo and particulars — bring your original licence at pickup",
+    "foreign": "Foreign licence: bring the original (and an IDP under the 1968 Convention) at pickup so the owner can check it"
+  },
+  "picker": {
+    "dropTitle": "Drag a photo here or click to choose",
+    "tapTitle": "Tap to photograph the front of your licence",
+    "hint": "Front side · JPG, PNG, WEBP, HEIC",
+    "chooseFile": "Choose an existing photo",
+    "preparing": "Preparing the photo…"
+  },
+  "prepare": {
+    "unsupported": "This photo cannot be opened. Retake it or choose a JPG or PNG photo.",
+    "tooSmall": "The photo is too small to read — move closer.",
+    "tooLarge": "The photo is too large — choose another one."
+  },
+  "progress": {
+    "uploading": "Uploading photo… {percent}%",
+    "title": "Verifying your licence",
+    "hint": "This usually takes just a few seconds. Stay on this page — the result appears automatically.",
+    "steps": {
+      "upload": "Upload photo",
+      "read": "Read the licence details",
+      "check": "Check class and validity"
+    }
+  },
+  "verified": {
+    "title": "Your driving licence is verified",
+    "body": "You can book self-drive vehicles that match your licence class.",
+    "bookingTitle": "Your licence is valid for this trip",
+    "replace": "Update licence",
+    "cancelReplace": "Keep current licence",
+    "replaceFailed": "The new licence photo you sent could not be verified: {reason} Your current licence remains valid.",
+    "replacePending": "The new licence you sent is awaiting verification by XePrime. Your current licence remains valid."
+  },
+  "fields": {
+    "fullName": "Full name",
+    "number": "Licence number",
+    "classes": "Class",
+    "expiresOn": "Valid until",
+    "noExpiry": "No expiry",
+    "dateOfBirth": "Date of birth",
+    "kind": "Licence type",
+    "drives": "Can drive",
+    "car": "Car",
+    "motorbike": "Motorbike",
+    "country": "Issued in",
+    "foreignNote": "For international and foreign licences, the owner checks the class and expiry against your original licence at pickup."
+  },
+  "pending": {
+    "title": "Waiting for XePrime to verify",
+    "body": "We will check your photo as soon as possible. This page updates automatically when there is a result.",
+    "bookingBody": "You can send your rental request as soon as your licence is verified.",
+    "replace": "Send another photo"
+  },
+  "rejected": {
+    "title": "We could not verify your licence",
+    "retake": "Retake",
+    "requestReview": "The photo is clear — ask XePrime to check",
+    "reviewRequested": "Your request for a check has been sent.",
+    "expiredOn": "The licence expired on {date}.",
+    "expiredMisread": "Is the date on your licence different? The reader may have misread it — ask XePrime to check.",
+    "note": "Message from XePrime: {note}"
+  },
+  "reasons": {
+    "not_a_licence": "We could not find a driving licence in this photo. Take a clear photo of the front of your licence — not an ID card, passport or other document.",
+    "back_side": "This is the back — photograph the front, the side with your photo and number.",
+    "unreadable": "The photo is not clear enough to read the licence details.",
+    "missing_fields": "We could not read the number, name, class and expiry date from the photo.",
+    "expired": "The driving licence has expired.",
+    "no_drivable_class": "The licence class does not cover rental cars or motorbikes.",
+    "other": "XePrime cannot verify this licence."
+  },
+  "issues": {
+    "blurry": "The photo is blurry — hold the phone steady and tap the card on screen to focus.",
+    "glare": "There is glare — tilt the card slightly or turn off the flash.",
+    "cropped": "A corner is cut off — move back so all 4 corners show.",
+    "too_dark": "The photo is too dark — shoot somewhere with good light.",
+    "obstructed": "Part of the card is covered — move your fingers or the object away.",
+    "low_resolution": "The photo is too small — move closer."
+  },
+  "tripIssue": {
+    "expired": "Your licence expires on {date}, before the trip ends. Please update to a valid licence.",
+    "expiredToday": "Your licence expired on {date}. Please update to a valid licence.",
+    "classMismatchCar": "Your current licence class does not cover cars. Please update to a licence with a suitable class, e.g. B, B1 or B2.",
+    "classMismatchMotorbike": "Your current licence class does not cover motorbikes. Please update to a licence with class A1, A2 or A."
+  },
+  "image": {
+    "view": "View submitted photo",
+    "alt": "Submitted licence photo",
+    "loadFailed": "Could not open the photo"
+  },
+  "error": {
+    "load": "Could not load your licence details.",
+    "retry": "Try again"
+  }
+}

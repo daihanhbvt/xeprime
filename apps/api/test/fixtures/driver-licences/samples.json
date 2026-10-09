@@ -1,0 +1,77 @@
+[
+  {
+    "file": "vn-pet-b2-valid.jpg",
+    "expect": "verified",
+    "note": "GPLX Việt Nam thẻ PET, hạng B2, còn hạn tới 15/03/2031 ⇒ lái ô tô"
+  },
+  {
+    "file": "vn-pet-b2-tilted.jpg",
+    "expect": "verified",
+    "note": "Cùng tấm B2, cầm nghiêng điện thoại: phối cảnh, hơi nhoè, hơi tối"
+  },
+  {
+    "file": "vn-pet-b2-rotated.jpg",
+    "expect": "verified",
+    "note": "Cùng tấm B2, ảnh xoay 90° — bộ đọc phải tự tìm ra chiều đúng"
+  },
+  {
+    "file": "vn-pet-b2-dim.jpg",
+    "expect": "verified",
+    "note": "Cùng tấm B2 trong phòng tối"
+  },
+  {
+    "file": "vn-2025-a-b-valid.jpg",
+    "expect": "verified",
+    "note": "Mẫu 2025, hạng A + B ⇒ lái được cả xe máy lẫn ô tô"
+  },
+  {
+    "file": "vn-a1-no-expiry.jpg",
+    "expect": "verified",
+    "note": "Hạng A1 'Không thời hạn' ⇒ chỉ xe máy"
+  },
+  {
+    "file": "vn-pet-expired.jpg",
+    "expect": "rejected:expired",
+    "note": "Hết hạn 20/05/2024"
+  },
+  {
+    "file": "vn-pet-blurry.jpg",
+    "expect": "rejected:not_a_licence",
+    "note": "Nhoè tới mức không nhận ra chữ nào ⇒ \"không nhận ra bằng lái\" (kèm gợi ý ảnh mờ), không được nhờ xem lại"
+  },
+  {
+    "file": "vn-back-side.jpg",
+    "expect": "rejected:back_side",
+    "note": "Mặt sau (bảng hạng xe) — không có số bằng, họ tên"
+  },
+  {
+    "file": "vn-citizen-id.jpg",
+    "expect": "rejected:not_a_licence",
+    "note": "CCCD chụp nhầm — cùng quốc hiệu, cùng số 12 chữ số, có cả 'Có giá trị đến'"
+  },
+  {
+    "file": "idp-b.jpg",
+    "expect": "verified",
+    "note": "Giấy phép lái xe quốc tế ⇒ tự xác thực khi máy nhận ra đúng là bằng lái; chủ xe đối chiếu hạng/hạn trên bằng gốc lúc giao xe"
+  },
+  {
+    "file": "foreign-us-class-c.jpg",
+    "expect": "verified",
+    "note": "Bằng quốc gia khác ⇒ tự xác thực khi máy nhận ra đúng là bằng lái; chủ xe đối chiếu lúc giao xe"
+  },
+  {
+    "file": "foreign-text-poster.jpg",
+    "expect": "rejected:not_a_licence",
+    "note": "Ảnh linh tinh chữ nước ngoài (Trung, Hàn, Nga, Thái) ⇒ từ chối ngay, KHÔNG vào hàng đợi duyệt tay"
+  },
+  {
+    "file": "licence-article.jpg",
+    "expect": "rejected:not_a_licence",
+    "note": "Một trang chữ NÓI VỀ bằng lái (có chữ \"Driver License\") — không phải tấm bằng ⇒ từ chối ngay"
+  },
+  {
+    "file": "not-a-licence.jpg",
+    "expect": "rejected:not_a_licence",
+    "note": "Hoá đơn bán lẻ"
+  }
+]

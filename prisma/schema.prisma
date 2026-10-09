@@ -108,6 +108,8 @@ model User {
   promoRedemptions           PromoRedemption[]         @relation("promo_redemption_customer")
   supportContextsOpened      TenantSupportContext[]    @relation("tenant_support_context_actor")
   supportContextsRevoked     TenantSupportContext[]    @relation("tenant_support_context_revoker")
+  driverLicences             CustomerDriverLicence[]   @relation("driver_licence_owner")
+  decidedDriverLicences      CustomerDriverLicence[]   @relation("driver_licence_decider")
 
   /// ADR 0053: định danh đăng nhập unique TRONG realm, không unique toàn hệ thống.
   @@unique([realm, email], map: "users_realm_email_key")
@@ -494,6 +496,87 @@ model EmailVerification {
   @@index([userId], map: "email_verifications_user_id_idx")
   @@index([status, expiresAt], map: "email_verifications_status_expires_at_idx")
   @@map("email_verifications")
+}
+
+/// Bằng lái của TÀI KHOẢN KHÁCH — ADR 0057. Điều kiện để gửi yêu cầu thuê xe tự lái / dài hạn.
+///
+/// Mỗi LƯỢT NỘP là một dòng (lịch sử giữ nguyên, không ghi đè ảnh cũ). Hai bất biến do DB giữ:
+/// tối đa MỘT dòng `verified` (bằng đang dùng) và tối đa MỘT lượt đang dở (`uploading` |
+/// `processing` | `pending_review`) cho mỗi tài khoản — partial unique ở migration.
+///
+/// Chỉ tài khoản realm `customer`: cột `realm` cố định (CHECK) và FK tổ hợp `(user_id, realm)`
+/// → `users(id, realm)`, nên một tài khoản đối tác/quản trị không bao giờ mang bằng lái ở đây.
+///
+/// Nhị phân ở bucket R2 RIÊNG TƯ; bảng chỉ giữ metadata + `object_key` do server dựng. Các cột
+/// "đọc được từ ảnh" là bản ĐÃ CHỐT (máy tự quyết, hoặc người duyệt sửa rồi duyệt) — kết quả thô
+/// của bộ đọc nằm riêng ở `ocr_result_json` để đối chiếu.
+model CustomerDriverLicence {
+  id                String    @id @db.Char(26)
+  userId            String    @map("user_id") @db.Char(26)
+  /// Luôn `customer` — CHECK; tồn tại để làm vế thứ hai của FK tổ hợp tới `users`.
+  realm             String    @default("customer") @db.VarChar(20)
+  /// @xeprime/types → DriverLicenceStatus — CHECK.
+  status            String    @db.VarChar(20)
+  /// customers/{userId}/driver-licences/{id}.{ext} — server dựng, unique.
+  objectKey         String    @unique @map("object_key") @db.VarChar(255)
+  mimeType          String    @map("mime_type") @db.VarChar(100)
+  sizeBytes         Int       @map("size_bytes")
+  /// File đã được xác minh trên R2 (kích thước + chữ ký định dạng) — lượt `complete`.
+  uploadedAt        DateTime? @map("uploaded_at") @db.Timestamptz(3)
+  /// @xeprime/types → DriverLicenceKind — CHECK. NULL tới khi đọc xong.
+  kind              String?   @db.VarChar(30)
+  licenceNumber     String?   @map("licence_number") @db.VarChar(40)
+  fullName          String?   @map("full_name") @db.VarChar(160)
+  dateOfBirth       DateTime? @map("date_of_birth") @db.Date
+  /// Hạng đã chuẩn hoá (`normalizeLicenceClasses`), vd {A1,B2}.
+  licenceClasses    String[]  @default([]) @map("licence_classes") @db.VarChar(8)
+  issuedOn          DateTime? @map("issued_on") @db.Date
+  /// Ngày hết hạn (date-only). "Còn hạn cho chuyến này không" SUY RA lúc soát, không lưu cột.
+  expiresOn         DateTime? @map("expires_on") @db.Date
+  /// Bằng "không thời hạn" (vd A1 mẫu cũ). CHECK: không đồng thời có `expires_on`.
+  noExpiry          Boolean   @default(false) @map("no_expiry")
+  /// ISO 3166-1 alpha-2 của nơi cấp — `VN` với GPLX Việt Nam.
+  issuingCountry    String?   @map("issuing_country") @db.Char(2)
+  /// Lái được ô tô / xe máy. GPLX VN + IDP suy tất định từ hạng (`licenceClassCoverage`); bằng
+  /// nước ngoài do người duyệt chốt.
+  coversCar         Boolean   @default(false) @map("covers_car")
+  coversMotorbike   Boolean   @default(false) @map("covers_motorbike")
+  /// Bộ đọc ảnh đã dùng — `not_configured` khi chưa bật (lượt nộp đi thẳng vào hàng đợi duyệt).
+  ocrProvider       String?   @map("ocr_provider") @db.VarChar(50)
+  ocrModel          String?   @map("ocr_model") @db.VarChar(80)
+  /// Kết quả thô của bộ đọc — để người duyệt đối chiếu và để đo độ chính xác. Không chứa ảnh.
+  ocrResult         Json?     @map("ocr_result_json") @db.JsonB
+  /// Mã lỗi khi bộ đọc hỏng (timeout, nhà cung cấp lỗi) — lượt nộp vẫn sang hàng đợi duyệt.
+  ocrErrorCode      String?   @map("ocr_error_code") @db.VarChar(60)
+  ocrCompletedAt    DateTime? @map("ocr_completed_at") @db.Timestamptz(3)
+  /// @xeprime/types → DriverLicenceRejectReason — CHECK; có ⇔ `status = rejected`.
+  rejectionReason   String?   @map("rejection_reason") @db.VarChar(30)
+  /// Ghi chú của người duyệt cho khách — bắt buộc khi lý do là `other` (CHECK).
+  reviewNote        String?   @map("review_note") @db.VarChar(500)
+  /// Khách nhờ người xem lại một lượt bị máy từ chối (chỉ các lý do máy có thể đọc sai).
+  reviewRequestedAt DateTime? @map("review_requested_at") @db.Timestamptz(3)
+  /// @xeprime/types → DriverLicenceDecisionSource — CHECK; `manual` thì phải có `decided_by`.
+  decisionSource    String?   @map("decision_source") @db.VarChar(10)
+  decidedBy         String?   @map("decided_by") @db.Char(26)
+  decidedAt         DateTime? @map("decided_at") @db.Timestamptz(3)
+  /// Khách đồng ý cho XePrime (và nhà cung cấp đọc ảnh) xử lý ảnh bằng — ghi lúc cấp link tải.
+  consentedAt       DateTime  @map("consented_at") @db.Timestamptz(3)
+  /// Ảnh đã xoá khỏi R2 (lượt bị huỷ, bằng đã bị thay, lượt từ chối sau khi có bằng hợp lệ) — dòng
+  /// metadata ở lại làm lịch sử, ảnh thì không: không giữ ảnh giấy tờ tuỳ thân lâu hơn cần thiết.
+  imageDeletedAt    DateTime? @map("image_deleted_at") @db.Timestamptz(3)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user    User  @relation("driver_licence_owner", fields: [userId, realm], references: [id, realm], onDelete: Cascade, map: "customer_driver_licences_user_realm_fkey")
+  decider User? @relation("driver_licence_decider", fields: [decidedBy], references: [id], onDelete: Restrict)
+
+  /// Trang tài khoản + cổng đặt xe: lượt nộp mới nhất của một người.
+  @@index([userId, createdAt(sort: Desc)], map: "customer_driver_licences_user_created_idx")
+  /// Hàng đợi duyệt của nền tảng: lọc theo trạng thái, cũ nhất lên trước.
+  @@index([status, createdAt], map: "customer_driver_licences_status_created_idx")
+  /// Tìm theo họ tên trên bằng (ILIKE %q%).
+  @@index([fullName(ops: raw("gin_trgm_ops"))], map: "customer_driver_licences_full_name_trgm_idx", type: Gin)
+  @@map("customer_driver_licences")
 }
 
 /// Token đặt lại mật khẩu gửi qua email.

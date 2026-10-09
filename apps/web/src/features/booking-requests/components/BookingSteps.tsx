@@ -13,10 +13,10 @@ export interface BookingStepItem {
 
 /**
  * Mọi trạng thái mà một luồng đặt xe có thể đứng — gồm cả những trạng thái KHÔNG có ô riêng
- * trên thanh (`otp`, `done`). Nơi gọi tự quy các trạng thái đó về một khoá bước trước khi
+ * trên thanh (`otp`, `licence`, `done`). Nơi gọi tự quy các trạng thái đó về một khoá bước trước khi
  * truyền vào (xem `current`).
  */
-export type BookingStepKey = 'trip' | 'time' | 'contact' | 'review' | 'otp' | 'done';
+export type BookingStepKey = 'trip' | 'time' | 'contact' | 'review' | 'otp' | 'licence' | 'done';
 
 interface BookingStepsProps {
   /**

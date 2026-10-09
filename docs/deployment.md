@@ -13,7 +13,7 @@
 | Thành phần | RAM lúc chạy | Ghi chú |
 | --- | --- | --- |
 | PostgreSQL 16 | ~600 MB – 1.2 GB | `shared_buffers=512MB` + cache |
-| API (NestJS) | ~350 – 700 MB | 51 thư mục module (53 `*.module.ts`, đếm 06/10/2026), Prisma pool 10 kết nối |
+| API (NestJS) | ~350 – 700 MB (+~230 MB khi đang đọc ảnh bằng lái) | 51 thư mục module (53 `*.module.ts`, đếm 06/10/2026), Prisma pool 10 kết nối. Worker Tesseract (ADR 0057) chỉ sống khi có lượt nộp bằng lái và tự tắt sau 3 phút rảnh — vẫn nằm trong `mem_limit: 1200m` |
 | Web (Next.js `next start`) | ~300 – 600 MB | 144 `page.tsx` cho ba site (06/10/2026), SSR vỏ + AntD |
 | Worker | ~120 – 250 MB | vòng lặp theo đồng hồ |
 | Caddy | ~30 MB | |
@@ -763,6 +763,8 @@ Settings; Secret bị che và không đọc lại được sau khi lưu.
 | `MOBILE_JWT_AUDIENCE` · `MOBILE_AUTH_REDIRECT_URIS` | `xeprime-mobile` · `xeprime://auth/callback,xeprimepartner://auth/callback` | hai scheme của hai app (XePrime · XePrime Partner); scheme quyết app đích của luồng social native |
 | `OTP_MODE` | `mock` | mã in ra log và trả trong response |
 | `PLAN_FEATURE_ENFORCEMENT` | `warn` | trục năng lực theo gói (ADR 0027). Xem §9.4 trước khi đổi sang `on` |
+| `DRIVER_LICENCE_ENFORCEMENT` | `on` | cổng bằng lái khi gửi yêu cầu thuê xe tự lái (ADR 0057). `off` là thoát hiểm khi app native chưa có bước nộp bằng — luồng nộp/duyệt vẫn chạy |
+| `DRIVER_LICENCE_OCR` | `tesseract` | đọc ảnh bằng lái tự động (ADR 0057) bằng Tesseract chạy ngay trong container API — không khoá, không bên thứ ba, không tốn phí. Đang đọc thì tiến trình API thêm ~230MB RAM (đo 09/10/2026: 14 ảnh mẫu + 6 lượt dồn), worker tự tắt sau 3 phút rảnh; mỗi ảnh 1–4 giây CPU một nhân, chạy tuần tự, quá 20 lượt chờ thì lượt mới vào thẳng hàng đợi duyệt tay (`OCR_BUSY`). `off` ⇒ mọi lượt nộp vào hàng đợi duyệt tay (thoát hiểm khi CPU quá tải hay bộ đọc quyết sai) |
 | ~~`SESSION_TTL_DAYS` · `OTP_TTL_MINUTES` · `OTP_RESEND_COOLDOWN_SECONDS` · `OTP_MAX_SENDS_PER_HOUR` · `OTP_MAX_ATTEMPTS` · `GOOGLE_HOLIDAY_CALENDAR_ID`~~ | **XOÁ** | chính sách giống mọi môi trường ⇒ hằng số ở `@xeprime/types` (`SESSION_TTL_DAYS`, `OTP_POLICY`, `GOOGLE_HOLIDAY_CALENDAR_ID_DEFAULT`); workflow không còn đọc |
 | `SMTP_HOST` · `SMTP_PORT` · `SMTP_USER` | `smtp.resend.com` · `587` · `resend` | staging gửi thư THẬT (quyết định 04/09/2026) — `third-party-keys.md` §7.2. Để trống thì email rơi về in ra log |
 | `SMTP_FROM` | `XePrime STG <no-reply@stg.xeprime.vn>` | tên miền **con**, không phải `xeprime.vn` — uy tín gửi thư tính theo tên miền, test hỏng không được kéo thư của khách vào Junk |

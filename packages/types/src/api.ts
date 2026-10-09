@@ -494,6 +494,25 @@ export const API_ERROR_CODE = {
   /** Nhập sai mã quá số lần cho phép — mã bị khoá, phải gửi lại mã mới. */
   OTP_LOCKED: 'OTP_LOCKED',
 
+  // Bằng lái của tài khoản khách (ADR 0057)
+  /**
+   * Thuê xe tự lái/dài hạn mà tài khoản chưa có bằng lái ĐÃ XÁC THỰC (chưa nộp, bị từ chối, hoặc
+   * khách chưa đăng nhập). `details.status` mang trạng thái lượt nộp gần nhất nếu có.
+   */
+  DRIVER_LICENCE_REQUIRED: 'DRIVER_LICENCE_REQUIRED',
+  /** Đã nộp, đang chờ người của XePrime xem — chưa đặt được, khác hẳn "chưa nộp". */
+  DRIVER_LICENCE_PENDING_REVIEW: 'DRIVER_LICENCE_PENDING_REVIEW',
+  /** Bằng hết hạn trước khi chuyến kết thúc. `details.expiresOn` (YYYY-MM-DD). */
+  DRIVER_LICENCE_EXPIRED: 'DRIVER_LICENCE_EXPIRED',
+  /** Hạng trên bằng không lái được loại xe này (vd bằng xe máy, đặt ô tô). `details.vehicleType`. */
+  DRIVER_LICENCE_CLASS_MISMATCH: 'DRIVER_LICENCE_CLASS_MISMATCH',
+  /** Lượt nộp không còn ở trạng thái cho phép thao tác (đã có kết quả / đã bị thay). */
+  DRIVER_LICENCE_STATE_CONFLICT: 'DRIVER_LICENCE_STATE_CONFLICT',
+  /** Ảnh tải lên không hợp lệ (sai định dạng thật, sai kích thước khai báo, chưa tải xong). */
+  DRIVER_LICENCE_IMAGE_INVALID: 'DRIVER_LICENCE_IMAGE_INVALID',
+  /** Chạm trần lượt nộp trong 24 giờ (`details.limit`) — mỗi lượt chiếm vài giây CPU của máy chủ. */
+  DRIVER_LICENCE_SUBMISSION_LIMIT: 'DRIVER_LICENCE_SUBMISSION_LIMIT',
+
   // OCR giấy tờ xe (Wave 5)
   /** Chưa cấu hình nhà cung cấp OCR — trích xuất tự động không khả dụng, mời nhập tay. */
   OCR_NOT_CONFIGURED: 'OCR_NOT_CONFIGURED',

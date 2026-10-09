@@ -240,7 +240,8 @@
       "resend": "Gửi lại mã",
       "resendIn": "Gửi lại ({seconds}s)",
       "sessionExpired": "Phiên đăng nhập đã hết hạn. Vui lòng xác thực lại số điện thoại.",
-      "editPhoneShort": "Đổi số"
+      "editPhoneShort": "Đổi số",
+      "loginHint": "Mã gồm 6 số đã được gửi đến {phone}. Nhập mã để đăng nhập — tài khoản giữ bằng lái đã xác thực cho mọi chuyến sau của bạn."
     },
     "review": {
       "vehicle": "Xe",
@@ -390,6 +391,10 @@
     },
     "address": {
       "vehicleAt": "Xe đang ở {province}. Nhập địa chỉ rồi chọn trong danh sách gợi ý."
+    },
+    "licence": {
+      "title": "Xác thực bằng lái",
+      "verified": "Bằng lái hợp lệ cho chuyến này"
     }
   },
   "approved": {

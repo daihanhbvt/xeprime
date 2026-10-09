@@ -11,6 +11,9 @@
  */
 import {
   ACCOUNT_REALM,
+  DRIVER_LICENCE_DECISION_SOURCE,
+  DRIVER_LICENCE_KIND,
+  DRIVER_LICENCE_STATUS,
   MEMBERSHIP_STATUS,
   PLATFORM_ROLE,
   USER_STATUS,
@@ -22,6 +25,7 @@ import {
   DEMO_PASSWORD,
   PLATFORM_ADMIN_EMAIL,
   PLATFORM_ADMIN_PASSWORD,
+  dateOnlyFromToday,
   log,
   prisma,
   seedId,
@@ -214,6 +218,95 @@ export async function seedCustomerAccounts(): Promise<CustomerAccounts> {
 
   log(`  tài khoản khách: ${CUSTOMER_ACCOUNTS.length}`);
   return accounts;
+}
+
+// ---------------------------------------------------------------------------
+// Bằng lái của khách (ADR 0057)
+// ---------------------------------------------------------------------------
+
+/**
+ * Bằng lái ĐÃ XÁC THỰC cho hai khách demo — cổng đặt xe tự lái chặn khách chưa có bằng, nên thiếu
+ * bước này thì mọi tài khoản demo đều dừng ở bước "Xác thực bằng lái" khi thử đặt xe.
+ *
+ * `khach.cuong@` CỐ Ý không có bằng: anh ấy thuê xe CÓ TÀI XẾ (không cần bằng), và là tài khoản để
+ * thử trọn luồng nộp ảnh → máy đọc → xác thực.
+ *
+ * Ghi thẳng một dòng `verified` (quyết định TAY bởi admin nền tảng, kèm lời nhắn "dữ liệu demo")
+ * thay vì đi qua bộ đọc: seed không gọi nhà cung cấp OCR. Không có ảnh thật trên R2 cho các dòng
+ * này — "Xem ảnh đã nộp" sẽ báo không mở được ảnh, đúng như một bằng chưa từng được chụp.
+ */
+const DEMO_LICENCES: ReadonlyArray<{
+  customer: CustomerKey;
+  number: string;
+  classes: string[];
+  coversMotorbike: boolean;
+  issuedDaysAgo: number;
+  expiresInDays: number;
+}> = [
+  {
+    customer: 'an',
+    number: '790100000001',
+    classes: ['B2'],
+    coversMotorbike: false,
+    issuedDaysAgo: 1460,
+    expiresInDays: 2190,
+  },
+  {
+    customer: 'binh',
+    number: '790100000002',
+    classes: ['A1', 'B2'],
+    coversMotorbike: true,
+    issuedDaysAgo: 900,
+    expiresInDays: 2700,
+  },
+];
+
+export async function seedCustomerDriverLicences(
+  customers: CustomerAccounts,
+  adminUserId: string,
+): Promise<void> {
+  for (const spec of DEMO_LICENCES) {
+    const customer = customers.get(spec.customer);
+    if (!customer) continue;
+    const id = seedId(`driver-licence:${spec.customer}`);
+    const decidedAt = new Date(Date.now() - 30 * 86_400_000);
+    const data = {
+      userId: customer.userId,
+      status: DRIVER_LICENCE_STATUS.VERIFIED,
+      objectKey: `customers/${customer.userId}/driver-licences/${id}.jpg`,
+      mimeType: 'image/jpeg',
+      sizeBytes: 1,
+      uploadedAt: decidedAt,
+      kind: DRIVER_LICENCE_KIND.VN,
+      licenceNumber: spec.number,
+      fullName: customer.name.toUpperCase(),
+      licenceClasses: spec.classes,
+      issuedOn: dateOnlyFromToday(-spec.issuedDaysAgo),
+      expiresOn: dateOnlyFromToday(spec.expiresInDays),
+      noExpiry: false,
+      issuingCountry: 'VN',
+      coversCar: true,
+      coversMotorbike: spec.coversMotorbike,
+      decisionSource: DRIVER_LICENCE_DECISION_SOURCE.MANUAL,
+      decidedBy: adminUserId,
+      decidedAt,
+      reviewNote: 'Dữ liệu demo',
+      consentedAt: decidedAt,
+    };
+    // Bằng đang dùng là MỘT dòng `verified` mỗi tài khoản — chỉ tạo khi chưa có (QA có thể đã
+    // tự nộp bằng khác cho tài khoản này; seed không được giẫm lên nó).
+    const existingVerified = await prisma.customerDriverLicence.findFirst({
+      where: { userId: customer.userId, status: DRIVER_LICENCE_STATUS.VERIFIED },
+      select: { id: true },
+    });
+    if (existingVerified && existingVerified.id !== id) continue;
+    await prisma.customerDriverLicence.upsert({
+      where: { id },
+      create: { id, ...data },
+      update: data,
+    });
+  }
+  log(`  bằng lái demo: ${DEMO_LICENCES.length} (khach.cuong@ để trống — thử luồng nộp bằng)`);
 }
 
 // ---------------------------------------------------------------------------

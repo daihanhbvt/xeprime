@@ -1,0 +1,130 @@
+{
+  "page": {
+    "title": "Customer driving licences",
+    "subtitle": "Review licence submissions the system could not verify automatically. Customers can book self-drive vehicles as soon as their licence is verified.",
+    "tableLabel": "Driving licence submissions",
+    "loadError": "Could not load the licence list.",
+    "empty": "No submissions in this status.",
+    "emptyPending": "No submissions are waiting for review.",
+    "total": "{count, plural, one {# submission} other {# submissions}}"
+  },
+  "tabs": {
+    "label": "Submission status",
+    "pending": "Awaiting review",
+    "verified": "Verified",
+    "rejected": "Not valid"
+  },
+  "filters": {
+    "search": "Search",
+    "searchPlaceholder": "Name, licence number, account name or phone",
+    "kind": "Licence type"
+  },
+  "columns": {
+    "account": "Account",
+    "fullName": "Name on licence",
+    "kind": "Licence type",
+    "classes": "Class",
+    "expiresOn": "Expires",
+    "status": "Status",
+    "pendingReason": "Why waiting",
+    "submittedAt": "Submitted"
+  },
+  "pendingReason": {
+    "low_confidence": "Low-confidence read",
+    "implausible_birth_date": "Unusual date of birth",
+    "implausible_expiry": "Unusual expiry date",
+    "reader_unavailable": "Not read automatically",
+    "customer_request": "Customer asked for review"
+  },
+  "drawer": {
+    "title": "Driving licence",
+    "ariaLabel": "Driving licence of {name}",
+    "previous": "Previous",
+    "next": "Next",
+    "loadError": "Could not load the submission.",
+    "image": {
+      "title": "Front photo",
+      "alt": "Licence photo submitted by the customer",
+      "loadFailed": "Could not open the photo.",
+      "retry": "Reload photo",
+      "zoomHint": "Click the photo to zoom in."
+    },
+    "account": {
+      "title": "Account",
+      "name": "Account name",
+      "phone": "Phone",
+      "email": "Email",
+      "submittedAt": "Submitted",
+      "reviewRequestedAt": "Customer asked for review"
+    },
+    "reading": {
+      "title": "Automatic reading",
+      "pendingReason": "Why it is waiting",
+      "provider": "Reader",
+      "confidence": "Confidence",
+      "notes": "Reader notes",
+      "error": "Reader error",
+      "confidenceValues": {
+        "high": "High",
+        "medium": "Medium",
+        "low": "Low"
+      }
+    },
+    "decided": {
+      "title": "Outcome",
+      "source": "Decided by",
+      "sourceAuto": "Automatic system",
+      "by": "Reviewer",
+      "at": "At",
+      "reason": "Reason",
+      "note": "Message to the customer"
+    }
+  },
+  "form": {
+    "title": "Verified details",
+    "hint": "Check each field against the photo, correct any misread value, then click Verify.",
+    "kind": "Licence type",
+    "fullName": "Full name",
+    "licenceNumber": "Licence number",
+    "dateOfBirth": "Date of birth",
+    "classes": "Class",
+    "classesHelp": "Separate classes with commas, e.g. A1, B2",
+    "issuedOn": "Issue date",
+    "expiresOn": "Valid until",
+    "noExpiry": "Licence has no expiry",
+    "issuingCountry": "Issued in (2-letter country code, e.g. US)",
+    "drives": "Can drive",
+    "coversCar": "Car",
+    "coversMotorbike": "Motorbike",
+    "drivesDerived": "Derived from the classes: {value}",
+    "drivesNone": "no vehicle type",
+    "errors": {
+      "fullName": "Enter the name on the licence",
+      "licenceNumber": "Enter the licence number",
+      "classes": "Enter at least one class",
+      "expiresOn": "Enter the expiry date or tick no expiry",
+      "country": "The country code has 2 letters"
+    }
+  },
+  "actions": {
+    "approve": "Verify",
+    "reject": "Reject"
+  },
+  "reject": {
+    "title": "Reject driving licence",
+    "choiceLabel": "Reason",
+    "choiceRequired": "Choose a reason",
+    "label": "Message to the customer",
+    "placeholder": "e.g. The licence number is covered, please retake the photo.",
+    "required": "The \"other\" reason needs a message to the customer",
+    "audience": "The customer sees this reason and message, then sends another photo."
+  },
+  "footer": {
+    "pending": "Check the photo against the details, then decide.",
+    "decided": "This submission already has an outcome."
+  },
+  "toasts": {
+    "approved": "Driving licence verified.",
+    "rejected": "Driving licence rejected."
+  }
+}

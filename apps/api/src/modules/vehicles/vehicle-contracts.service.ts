@@ -13,6 +13,7 @@ import {
   PRIVATE_FILE_STATUS,
   type DocumentUploadMimeType,
 } from '@xeprime/types';
+import { FILE_SIGNATURE_PREFIX_BYTES, matchesFileSignature } from '../../common/file-signature';
 import { AuditService } from '../audit/audit.service';
 import { R2Service } from '../storage/r2.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -25,28 +26,6 @@ import {
 
 /** Signed GET sống ngắn — đủ cho một cú click tải, không đủ để chia sẻ lại có ý nghĩa. */
 const DOWNLOAD_URL_TTL_SECONDS = 120;
-
-/**
- * Chữ ký byte đầu (magic bytes) của các định dạng được duyệt — Content-Type do CLIENT khai
- * lúc PUT, không tin được; đối chiếu nội dung thật trước khi cho file thành `ready`.
- * WebP: RIFF....WEBP (4 byte offset 8), kiểm hai đoạn.
- */
-const FILE_SIGNATURES: Record<DocumentUploadMimeType, (bytes: Uint8Array) => boolean> = {
-  'application/pdf': (b) => startsWith(b, [0x25, 0x50, 0x44, 0x46]), // %PDF
-  'image/jpeg': (b) => startsWith(b, [0xff, 0xd8, 0xff]),
-  'image/png': (b) => startsWith(b, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-  'image/webp': (b) =>
-    startsWith(b, [0x52, 0x49, 0x46, 0x46]) && // RIFF
-    b.length >= 12 &&
-    b[8] === 0x57 &&
-    b[9] === 0x45 &&
-    b[10] === 0x42 &&
-    b[11] === 0x50, // WEBP
-};
-
-function startsWith(bytes: Uint8Array, signature: number[]): boolean {
-  return signature.every((byte, index) => bytes[index] === byte);
-}
 
 /**
  * Tài liệu hợp đồng RIÊNG TƯ của xe (Wave 4.1) — writer duy nhất của `vehicle_private_files`.
@@ -180,8 +159,11 @@ export class VehicleContractsService {
       throw invalidObject();
     }
 
-    const prefix = await this.r2.readPrivateObjectPrefix(file.objectKey, 12);
-    if (!prefix || !FILE_SIGNATURES[allowedMime]?.(prefix)) {
+    const prefix = await this.r2.readPrivateObjectPrefix(
+      file.objectKey,
+      FILE_SIGNATURE_PREFIX_BYTES,
+    );
+    if (!matchesFileSignature(allowedMime, prefix)) {
       throw invalidObject();
     }
 

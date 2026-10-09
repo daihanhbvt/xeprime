@@ -58,6 +58,7 @@ import members from '@xeprime/domain/messages/vi/members.json';
 import drivers from '@xeprime/domain/messages/vi/drivers.json';
 import maintenance from '@xeprime/domain/messages/vi/maintenance.json';
 import bankAccounts from '@xeprime/domain/messages/vi/bank-accounts.json';
+import driverLicence from '@xeprime/domain/messages/vi/driver-licence.json';
 import accountPayments from '@xeprime/domain/messages/vi/account-payments.json';
 import wallet from '@xeprime/domain/messages/vi/wallet.json';
 import sellerProfile from '@xeprime/domain/messages/vi/seller-profile.json';
@@ -66,6 +67,7 @@ import feePolicies from '@xeprime/domain/messages/vi/fee-policies.json';
 import promoCodes from '@xeprime/domain/messages/vi/promo-codes.json';
 import platformMoney from '@xeprime/domain/messages/vi/platform-money.json';
 import platformSellers from '@xeprime/domain/messages/vi/platform-sellers.json';
+import adminDriverLicences from '@xeprime/domain/messages/vi/admin-driver-licences.json';
 import adminStaff from '@xeprime/domain/messages/vi/admin-staff.json';
 import adminAccounts from '@xeprime/domain/messages/vi/admin-accounts.json';
 import adminAudit from '@xeprime/domain/messages/vi/admin-audit.json';
@@ -117,6 +119,7 @@ const messages = {
   Drivers: drivers,
   Maintenance: maintenance,
   BankAccounts: bankAccounts,
+  DriverLicence: driverLicence,
   AccountPayments: accountPayments,
   Wallet: wallet,
   SellerProfile: sellerProfile,
@@ -125,6 +128,7 @@ const messages = {
   PromoCodes: promoCodes,
   PlatformMoney: platformMoney,
   PlatformSellers: platformSellers,
+  AdminDriverLicences: adminDriverLicences,
   AdminStaff: adminStaff,
   AdminAccounts: adminAccounts,
   AdminAudit: adminAudit,

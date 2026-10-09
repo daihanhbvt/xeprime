@@ -55,7 +55,10 @@ const RESOLVERS: Readonly<Partial<Record<AuditTargetType, Resolver>>> = {
     ).map((row) => [row.id, joinLabel(row.name, row.plateNumber)] as const),
   [AUDIT_TARGET_TYPE.BOOKING]: async (prisma, ids) =>
     (
-      await prisma.booking.findMany({ where: { id: { in: ids } }, select: { id: true, code: true } })
+      await prisma.booking.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, code: true },
+      })
     ).map((row) => [row.id, row.code] as const),
   [AUDIT_TARGET_TYPE.BOOKING_REQUEST]: async (prisma, ids) =>
     (
@@ -71,6 +74,15 @@ const RESOLVERS: Readonly<Partial<Record<AuditTargetType, Resolver>>> = {
         select: { id: true, code: true },
       })
     ).map((row) => [row.id, row.code] as const),
+  // Tên chủ TÀI KHOẢN, không phải họ tên đọc từ bằng: nhật ký là nơi tra "ai", và một bằng bị
+  // từ chối có thể mang tên của người khác hẳn.
+  [AUDIT_TARGET_TYPE.CUSTOMER_DRIVER_LICENCE]: async (prisma, ids) =>
+    (
+      await prisma.customerDriverLicence.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, user: { select: { displayName: true } } },
+      })
+    ).map((row) => [row.id, row.user.displayName] as const),
   [AUDIT_TARGET_TYPE.CONTRACT]: async (prisma, ids) =>
     (
       await prisma.contract.findMany({

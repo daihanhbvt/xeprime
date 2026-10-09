@@ -300,6 +300,8 @@ export const ROUTES = {
     BANNERS: admin('/marketplace-banners'),
     /** Hàng đợi xác minh người bán (R3 — ADR 0028 release gate 1). */
     SELLERS: admin('/sellers'),
+    /** Hàng đợi bằng lái của khách (ADR 0057). */
+    DRIVER_LICENCES: admin('/driver-licences'),
     /** Quản trị chính sách phí có phiên bản (R3 — ADR 0028 điều 2–3). */
     FEE_POLICIES: admin('/fee-policies'),
     PROMO_CODES: admin('/promo-codes'),

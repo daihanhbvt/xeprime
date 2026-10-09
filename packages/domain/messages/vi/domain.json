@@ -691,6 +691,29 @@
     "changes_requested": "Cần bổ sung",
     "rejected": "Bị từ chối"
   },
+  "driverLicenceStatus": {
+    "uploading": "Đang tải lên",
+    "processing": "Đang đọc ảnh",
+    "pending_review": "Chờ duyệt",
+    "verified": "Đã xác thực",
+    "rejected": "Không hợp lệ",
+    "superseded": "Đã thay bằng mới",
+    "cancelled": "Đã huỷ"
+  },
+  "driverLicenceKind": {
+    "vn": "GPLX Việt Nam",
+    "international_permit": "Giấy phép lái xe quốc tế",
+    "foreign": "Bằng lái nước ngoài"
+  },
+  "driverLicenceRejectReason": {
+    "not_a_licence": "Không phải bằng lái",
+    "back_side": "Chụp mặt sau",
+    "unreadable": "Ảnh không đọc được",
+    "missing_fields": "Thiếu thông tin",
+    "expired": "Bằng đã hết hạn",
+    "no_drivable_class": "Hạng không lái được xe thuê",
+    "other": "Lý do khác"
+  },
   "feePolicyStatus": {
     "draft": "Nháp",
     "active": "Đang hiệu lực",
@@ -1112,6 +1135,12 @@
     "customer": {
       "contact_reveal": "Xem liên hệ khách"
     },
+    "driver_licence": {
+      "submit": "Nộp ảnh bằng lái",
+      "verified": "Xác thực bằng lái",
+      "rejected": "Từ chối bằng lái",
+      "view_image": "Mở ảnh bằng lái"
+    },
     "customer_document": {
       "verify": "Đối chiếu giấy tờ khách"
     },
@@ -1340,6 +1369,7 @@
     "booking_surcharge": "Phụ phí đơn thuê",
     "catalog_item": "Mục danh mục",
     "contract": "Hợp đồng thuê",
+    "customer_driver_licence": "Bằng lái của khách",
     "driver": "Tài xế",
     "fee_policy": "Chính sách phí",
     "hold_refund": "Hoàn tiền giữ chỗ",

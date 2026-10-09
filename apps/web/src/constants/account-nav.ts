@@ -3,6 +3,7 @@ import {
   CarOutlined,
   CreditCardOutlined,
   DeleteOutlined,
+  IdcardOutlined,
   LockOutlined,
   ShopOutlined,
   UserOutlined,
@@ -55,6 +56,14 @@ const PROFILE: AccountNavItem = {
   labelKey: 'account.profile',
   href: ROUTES.ACCOUNT.ROOT,
   icon: UserOutlined,
+};
+
+/** Giấy tờ & Xác minh — bằng lái, điều kiện đặt xe tự lái (ADR 0057). */
+const DOCUMENTS: AccountNavItem = {
+  key: 'documents',
+  labelKey: 'account.documents',
+  href: ROUTES.ACCOUNT.DOCUMENTS,
+  icon: IdcardOutlined,
 };
 
 const TRIPS: AccountNavItem = {
@@ -128,6 +137,7 @@ const BECOME_OWNER: AccountNavItem = {
  */
 export const ACCOUNT_NAV: readonly AccountNavItem[] = [
   PROFILE,
+  DOCUMENTS,
   BECOME_OWNER,
   TRIPS,
   PAYMENTS,

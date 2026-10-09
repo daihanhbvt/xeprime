@@ -691,6 +691,29 @@
     "changes_requested": "Changes requested",
     "rejected": "Rejected"
   },
+  "driverLicenceStatus": {
+    "uploading": "Uploading",
+    "processing": "Reading photo",
+    "pending_review": "Awaiting review",
+    "verified": "Verified",
+    "rejected": "Not valid",
+    "superseded": "Replaced",
+    "cancelled": "Cancelled"
+  },
+  "driverLicenceKind": {
+    "vn": "Vietnamese licence",
+    "international_permit": "International Driving Permit",
+    "foreign": "Foreign licence"
+  },
+  "driverLicenceRejectReason": {
+    "not_a_licence": "Not a driving licence",
+    "back_side": "Back side photographed",
+    "unreadable": "Photo unreadable",
+    "missing_fields": "Missing details",
+    "expired": "Licence expired",
+    "no_drivable_class": "Class does not cover rentals",
+    "other": "Other reason"
+  },
   "feePolicyStatus": {
     "draft": "Draft",
     "active": "Active",
@@ -1112,6 +1135,12 @@
     "customer": {
       "contact_reveal": "Reveal customer contact"
     },
+    "driver_licence": {
+      "submit": "Submit driving licence photo",
+      "verified": "Verify driving licence",
+      "rejected": "Reject driving licence",
+      "view_image": "Open driving licence photo"
+    },
     "customer_document": {
       "verify": "Verify customer document"
     },
@@ -1340,6 +1369,7 @@
     "booking_surcharge": "Booking surcharge",
     "catalog_item": "Catalog item",
     "contract": "Rental contract",
+    "customer_driver_licence": "Customer driving licence",
     "driver": "Driver",
     "fee_policy": "Fee policy",
     "hold_refund": "Hold refund",

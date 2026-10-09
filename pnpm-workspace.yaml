@@ -160,4 +160,7 @@ allowBuilds:
   protobufjs: false
   re2: true
   sharp: true
+  # postinstall của tesseract.js chỉ in lời mời tài trợ (opencollective) — lõi WASM và dữ liệu
+  # ngôn ngữ (`@tesseract.js-data/*`) là file tĩnh, không cần build gì.
+  tesseract.js: false
   unrs-resolver: true
