@@ -11,6 +11,8 @@ import type { PlatformMoneySummary } from './types';
  */
 export const FINANCE_QUEUE = {
   BANK_IN: 'bank-in',
+  /** Lượt thanh toán qua cổng MoMo/VNPAY cần người xử lý (ADR 0058). */
+  GATEWAY_IN: 'gateway-in',
   HOLDS: 'holds',
   REFUNDS: 'refunds',
   WITHDRAWALS: 'withdrawals',
@@ -31,7 +33,7 @@ export function isFinanceQueue(value: unknown): value is FinanceQueue {
  * phần của bên thứ ba → sổ kiểm cả vòng.
  */
 export const FINANCE_QUEUE_GROUPS = [
-  { key: 'moneyIn', queues: [FINANCE_QUEUE.BANK_IN] },
+  { key: 'moneyIn', queues: [FINANCE_QUEUE.BANK_IN, FINANCE_QUEUE.GATEWAY_IN] },
   { key: 'held', queues: [FINANCE_QUEUE.HOLDS] },
   { key: 'moneyOut', queues: [FINANCE_QUEUE.REFUNDS, FINANCE_QUEUE.WITHDRAWALS] },
   { key: 'thirdParty', queues: [FINANCE_QUEUE.INSURANCE, FINANCE_QUEUE.TAX] },
@@ -47,6 +49,8 @@ export type FinanceQueueGroupKey = (typeof FINANCE_QUEUE_GROUPS)[number]['key'];
  */
 export const FINANCE_QUEUE_PERMISSION: Readonly<Record<FinanceQueue, Permission>> = {
   [FINANCE_QUEUE.BANK_IN]: PERMISSION.PLATFORM_BILLING_MANAGE,
+  // Cùng quyền với tiền vào ngân hàng — `platform/payment-orders` gác bằng chính quyền này.
+  [FINANCE_QUEUE.GATEWAY_IN]: PERMISSION.PLATFORM_BILLING_MANAGE,
   [FINANCE_QUEUE.HOLDS]: PERMISSION.PLATFORM_MONEY_MANAGE,
   [FINANCE_QUEUE.REFUNDS]: PERMISSION.PLATFORM_MONEY_MANAGE,
   [FINANCE_QUEUE.WITHDRAWALS]: PERMISSION.PLATFORM_MONEY_MANAGE,
@@ -80,6 +84,8 @@ export function queueSummary(
   switch (queue) {
     case FINANCE_QUEUE.BANK_IN:
       return summary.bankIn;
+    case FINANCE_QUEUE.GATEWAY_IN:
+      return summary.gatewayIn;
     case FINANCE_QUEUE.HOLDS:
       return summary.holds;
     case FINANCE_QUEUE.REFUNDS:

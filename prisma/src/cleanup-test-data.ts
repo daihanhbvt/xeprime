@@ -17,6 +17,7 @@
  *   pnpm db:cleanup-test          # đếm, không xoá
  *   pnpm db:cleanup-test --execute
  */
+import { PAYMENT_ORDER_REVIEW_STATUS } from '@xeprime/types';
 import { createPrismaClient, Prisma } from './index';
 import { SEED_OWNED_EMAILS, SEED_OWNED_TENANT_SLUGS } from './seed/identities';
 
@@ -198,6 +199,27 @@ async function main(): Promise<void> {
       data: { supportContextId: null },
     });
     await tx.tenantSupportContext.deleteMany({ where: supportWhere });
+
+    /*
+     * Lượt thanh toán qua cổng (ADR 0058) là `RESTRICT` về gian hàng, hoá đơn và khoản giữ chỗ — chúng là
+     * bằng chứng tiền. Còn lượt CẦN NGƯỜI XỬ LÝ (tiền có thể đã về mà chưa ai kết luận) thì dừng hẳn;
+     * còn lại là dữ liệu test đã có kết luận, gỡ tường minh: nhật ký trước, lượt sau.
+     */
+    const gatewayWhere = { tenantId: { in: tenantIds } };
+    const openGateway = tenantIds.length
+      ? await tx.paymentGatewayOrder.count({
+          where: { ...gatewayWhere, reviewStatus: PAYMENT_ORDER_REVIEW_STATUS.OPEN },
+        })
+      : 0;
+    if (openGateway > 0) {
+      throw new Error(
+        `DỪNG: còn ${openGateway} lượt thanh toán qua cổng cần người xử lý. Đóng chúng ở màn Tài chính trước khi dọn.`,
+      );
+    }
+    if (tenantIds.length) {
+      await tx.paymentGatewayOrderEvent.deleteMany({ where: { order: gatewayWhere } });
+      await tx.paymentGatewayOrder.deleteMany({ where: gatewayWhere });
+    }
 
     const tenantsDeleted = tenantIds.length
       ? (await tx.tenant.deleteMany({ where: { id: { in: tenantIds } } })).count

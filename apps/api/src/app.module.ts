@@ -44,6 +44,7 @@ import { DriverLicencesModule } from './modules/driver-licences/driver-licences.
 import { SupportModule } from './modules/support/support.module';
 import { BadgesModule } from './modules/badges/badges.module';
 import { PartnerDashboardModule } from './modules/partner-dashboard/partner-dashboard.module';
+import { PaymentGatewayModule } from './modules/payment-gateway/payment-gateway.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { FirebaseModule } from './modules/firebase/firebase.module';
 import { CalendarModule } from './modules/calendar/calendar.module';
@@ -169,6 +170,8 @@ import { HolidaysModule } from './modules/holidays/holidays.module';
     TenantSupportModule,
     // Tổng quan site partner (cả hai tuyến) — chỉ đọc.
     PartnerDashboardModule,
+    // Cổng thanh toán MoMo · VNPAY — bổ sung cho chuyển khoản SePay, mặc định tắt (ADR 0058).
+    PaymentGatewayModule,
   ],
   providers: [
     // Thứ tự quan trọng (guard global chạy theo đúng thứ tự khai báo): Throttler chặn trước

@@ -5,6 +5,7 @@
  * cấu trúc URL mà phải grep chuỗi `/manage/...` khắp source là cách sinh link chết.
  */
 import {
+  PARTNER_PAYMENT_RETURN_PATH,
   PLATFORM_PARTNER_KIND,
   REGISTRATION_TRACK,
   isSupportContextId,
@@ -142,6 +143,12 @@ export const ROUTES = {
      * `?track=` CHỈ có nghĩa khi chưa có gian hàng — sau đó `tenants.onboarding_state` là nguồn.
      */
     ONBOARDING: partner('/onboarding'),
+    /**
+     * TRANG QUAY VỀ từ cổng MoMo/VNPAY sau khi trả hoá đơn gói (ADR 0058). Đường dẫn dùng CHUNG hằng
+     * với server (`PARTNER_PAYMENT_RETURN_PATH`) — server dựng `returnUrl` từ nó. Mở được ở MỌI tuyến
+     * (kể cả gian hàng đang nợ bước thanh toán đầu tiên) và không có khung: nó là màn một việc.
+     */
+    PAYMENT_RETURN: partner(PARTNER_PAYMENT_RETURN_PATH),
 
     // ── Vận hành (cả hai tuyến) ───────────────────────────────────────────────────────────────
     CALENDAR: partner('/calendar'),

@@ -250,6 +250,19 @@ export const SUBSCRIPTION_INVOICE_STATUS_META: Readonly<
   [SUBSCRIPTION_INVOICE_STATUS.VOID]: { label: 'Đã huỷ', color: STATUS_COLOR.NEUTRAL },
 };
 
+/**
+ * Hoá đơn gói còn NHẬN tiền — một danh sách cho mọi đường tiền vào (SePay, cổng, gợi ý khớp tay).
+ * `paid` không nằm đây: tiền về cho hoá đơn đã đủ là tiền thừa, đi nhánh riêng.
+ */
+export const SUBSCRIPTION_INVOICE_PAYABLE_STATUSES: readonly SubscriptionInvoiceStatus[] = [
+  SUBSCRIPTION_INVOICE_STATUS.ISSUED,
+  SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID,
+];
+
+export function isSubscriptionInvoicePayable(status: string): boolean {
+  return (SUBSCRIPTION_INVOICE_PAYABLE_STATUSES as readonly string[]).includes(status);
+}
+
 // ── Sổ giao dịch ngân hàng ──────────────────────────────────────────────────
 
 /**

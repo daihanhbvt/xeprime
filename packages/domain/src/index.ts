@@ -82,6 +82,20 @@ export {
 export { isSafeNextPath, safeNextPath } from './safe-path';
 
 /**
+ * Từ khoá tìm xe ở chợ — gấp chuỗi (bỏ dấu, tách chữ ↔ số) và tô phần khớp. Server dùng để dựng
+ * điều kiện lọc, client dùng để tô kết quả; bản sinh đôi SQL là `xeprime_search_fold()`.
+ */
+export {
+  SEARCH_QUERY_MAX_LENGTH,
+  SEARCH_QUERY_MAX_TOKENS,
+  foldSearchText,
+  highlightSearchMatch,
+  searchFoldTranslateTable,
+  searchTokens,
+  type SearchHighlightPart,
+} from './search-text';
+
+/**
  * Thông báo đẩy: một thông báo dẫn đi đâu, gộp với tin nào, ồn tới mức nào.
  *
  * Ở domain vì server ĐÓNG GÓI đường dẫn vào payload còn app native ĐIỀU HƯỚNG theo nó — hai

@@ -246,8 +246,9 @@ export function SearchExperienceProvider({ children }: { children: ReactNode }) 
   /*
    * Nháp → URL, **chỉ khi chính người dùng chạm vào thẻ tìm kiếm**.
    *
-   *  - Trang KẾT QUẢ: ghi qua `setFilters` (router.replace) — facet của panel Bộ lọc giữ nguyên,
-   *    `page` về 1, danh sách nạp lại. Thẻ tìm kiếm ở đây LÀ bộ lọc, không phải bản nháp.
+   *  - Trang KẾT QUẢ: ghi qua `setFilters` (cũng `replaceState`, các lần ghi cộng dồn) — facet
+   *    của panel Bộ lọc giữ nguyên, `page` về 1, danh sách nạp lại. Thẻ tìm kiếm ở đây LÀ bộ
+   *    lọc, không phải bản nháp.
    *  - Trang CHỦ: `history.replaceState` (shallow — Next đồng bộ `useSearchParams`) để khối "Xe
    *    khả dụng" đọc `?serviceType=`; không re-render server component, không thêm entry lịch sử.
    *

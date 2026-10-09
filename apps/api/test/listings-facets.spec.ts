@@ -13,6 +13,7 @@ import {
 } from '@xeprime/types';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
 import { buildListingWhereSql } from '../src/modules/public-listings/listing-filter';
+import { resolveKeyword } from '../src/modules/public-listings/keyword-match';
 import type {
   ListingFacetsQueryDto,
   PublicListingQueryDto,
@@ -394,9 +395,11 @@ describe('Facets marketplace (đếm theo chiều + filter CSV)', () => {
 describe('buildListingWhereSql khớp buildListingWhere (chống lệch hai bản)', () => {
   /** vehicle_id khớp bộ lọc, đi đường raw SQL. */
   async function idsViaSql(query: PublicListingQueryDto): Promise<string[]> {
+    // Từ khoá phải qua bước phân giải tên công khai như `service.search` (xem keyword-match.ts).
+    const keyword = await resolveKeyword(prisma as unknown as PrismaService, query.q, new Date());
     const rows = await prisma.$queryRaw<Array<{ vehicle_id: string }>>`
       SELECT pl."vehicle_id" FROM "public_listings" pl
-      WHERE ${buildListingWhereSql(query)}
+      WHERE ${buildListingWhereSql({ ...query, keyword })}
     `;
     return rows.map((r) => r.vehicle_id.trim()).sort();
   }

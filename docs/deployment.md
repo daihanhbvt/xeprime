@@ -769,6 +769,9 @@ Settings; Secret bị che và không đọc lại được sau khi lưu.
 | `SMTP_HOST` · `SMTP_PORT` · `SMTP_USER` | `smtp.resend.com` · `587` · `resend` | staging gửi thư THẬT (quyết định 04/09/2026) — `third-party-keys.md` §7.2. Để trống thì email rơi về in ra log |
 | `SMTP_FROM` | `XePrime STG <no-reply@stg.xeprime.vn>` | tên miền **con**, không phải `xeprime.vn` — uy tín gửi thư tính theo tên miền, test hỏng không được kéo thư của khách vào Junk |
 | `SEPAY_BANK_CODE` · `SEPAY_ACCOUNT_NUMBER` · `SEPAY_ACCOUNT_NAME` | trống | in vào mã VietQR ⇒ công khai theo bản chất. Đi cùng `SEPAY_API_KEY` (Secret) — bốn cái khai cùng nhau hoặc cùng để trống, khai lẻ thì API từ chối boot |
+| `PAYMENT_GATEWAY_MODE` · `PAYMENT_GATEWAY_SUBSCRIPTION` · `PAYMENT_GATEWAY_BOOKING_HOLD` | `sandbox` · `off` · `off` | cổng MoMo/VNPAY (ADR 0058 — Proposed), mặc định TẮT. Production: bật BẤT KỲ luồng nào ⇒ API từ chối boot khi ADR 0058 còn Proposed (gỡ chặn là PR, không phải đổi biến); sau khi gỡ, bật luồng ⇒ `MODE` bắt buộc `live`. Chi tiết `third-party-keys.md` §8c |
+| `MOMO_PARTNER_CODE` · `MOMO_API_BASE_URL` | trống | đi cùng hai Secret `MOMO_ACCESS_KEY` · `MOMO_SECRET_KEY` — bốn cái cùng khai hoặc cùng trống. Sandbox `https://test-payment.momo.vn` |
+| `VNPAY_TMN_CODE` · `VNPAY_PAYMENT_URL` · `VNPAY_API_URL` | trống | đi cùng Secret `VNPAY_HASH_SECRET` — bốn cái cùng khai hoặc cùng trống. IPN URL khai ở portal VNPAY: `${API_PUBLIC_URL}/payment-gateway/vnpay/ipn` |
 | `FIRESTORE_ENABLED` | `false` | |
 | `PUSH_ENABLED` | `false` | thông báo đẩy FCM — ĐỘC LẬP với `FIRESTORE_ENABLED`, dùng chung bộ `FIREBASE_*`. Bật thì worker gửi thật (`docs/push-notifications.md`) |
 | `FIREBASE_PROJECT_ID` · `FIREBASE_CLIENT_EMAIL` | trống | là ĐỊNH DANH, không phải bí mật |
@@ -792,6 +795,7 @@ Settings; Secret bị che và không đọc lại được sau khi lưu.
 | `ESMS_API_KEY` · `ESMS_SECRET_KEY` · `ESMS_BRANDNAME` | trống ở staging |
 | `SMTP_PASS` | API key SMTP — **key riêng cho staging**, không dùng chung với production (thu hồi một bên không kéo bên kia) |
 | `SEPAY_API_KEY` | khoá **webhook** trong bảng điều khiển SePay (≥16 ký tự). Trống ⇒ `/sepay/webhook` trả 503 `SEPAY_NOT_CONFIGURED` — fail closed, không giả vờ đã nhận tiền |
+| `MOMO_ACCESS_KEY` · `MOMO_SECRET_KEY` · `VNPAY_HASH_SECRET` | khoá ký của cổng do MoMo/VNPAY cấp — bộ sandbox cho staging, bộ production RIÊNG cho production. Trống ⇒ cổng tắt (không nút, checkout 503, IPN không xác nhận gì) |
 | `R2_ACCESS_KEY_ID` · `R2_SECRET_ACCESS_KEY` | trống ⇒ endpoint upload trả 503, phần còn lại vẫn chạy |
 | `FIREBASE_PRIVATE_KEY` | một dòng, xuống dòng viết `\n`. Đây là credential **lúc chạy** (ký custom token, ghi bản chiếu) — không dùng để đẩy rules |
 | `FIREBASE_DEPLOY_CREDENTIALS_JSON` | **Bắt buộc khi `FIRESTORE_ENABLED=true`.** Nguyên file JSON của một service account RIÊNG có quyền quản trị Firestore rules (`roles/firebaserules.admin`). Workflow dùng nó ở step "Đẩy Firestore rules" và **không bao giờ** ghi nó vào `.env` của môi trường. Tách khỏi credential runtime để một lần rò rỉ `.env` không kèm theo quyền sửa rules |

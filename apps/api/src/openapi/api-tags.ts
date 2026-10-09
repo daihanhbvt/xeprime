@@ -204,6 +204,15 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
           'khớp theo mã đối soát và kích hoạt gói khi hoá đơn đủ tiền. Idempotent bằng unique ' +
           'DB; trùng giao dịch trả 200.',
       },
+      {
+        name: 'payment-gateway',
+        description:
+          'Thanh toán qua cổng MoMo · VNPAY (ADR 0058 — Proposed), BỔ SUNG cho chuyển khoản ' +
+          'VietQR/SePay: mở phiên cho hoá đơn gói (site partner) hoặc tiền giữ chỗ (site khách), ' +
+          'đọc trạng thái ở trang quay về, và IPN công khai của cổng. Số tiền và đích luôn đọc từ ' +
+          'DB; chỉ IPN có chữ ký hoặc truy vấn do server gửi mới ghi kết quả. Mặc định TẮT — ' +
+          'thiếu cấu hình thì 503 `PAYMENT_GATEWAY_UNAVAILABLE`.',
+      },
     ],
   },
   {

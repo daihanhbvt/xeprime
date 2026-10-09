@@ -27,6 +27,48 @@
     "manual": "Manual match",
     "ignored": "Skipped"
   },
+  "paymentGatewayProvider": {
+    "momo": "MoMo wallet",
+    "vnpay": "VNPAY"
+  },
+  "paymentOrderTarget": {
+    "subscription_invoice": "Plan invoice",
+    "booking_hold": "Reservation payment"
+  },
+  "paymentOrderStatus": {
+    "pending": "Awaiting gateway",
+    "succeeded": "Collected by gateway",
+    "failed": "Failed",
+    "cancelled": "Cancelled by payer",
+    "expired": "Expired"
+  },
+  "paymentOrderApplyOutcome": {
+    "activated": "Fully applied",
+    "partial": "Partly applied",
+    "already_paid": "Overpayment",
+    "target_closed": "Target closed",
+    "target_not_found": "Target not found"
+  },
+  "paymentOrderReviewStatus": {
+    "none": "No action needed",
+    "open": "Needs action",
+    "resolved": "Resolved"
+  },
+  "paymentOrderReviewReason": {
+    "target_closed": "Money arrived after the invoice/reservation closed",
+    "target_not_found": "No invoice/reservation carries this code any more",
+    "amount_mismatch": "Gateway amount differs from the amount sent",
+    "apply_failed": "Money arrived but recording it failed",
+    "provider_flagged": "Gateway flagged the transaction",
+    "duplicate_provider_tx": "Gateway transaction already used on another payment",
+    "result_after_resolution": "Gateway confirmed payment after the case was closed",
+    "overpaid": "Duplicate payment — the item was already fully paid"
+  },
+  "paymentOrderQueueView": {
+    "review": "Needs action",
+    "resolved": "Resolved",
+    "history": "All payments"
+  },
   "billingMode": {
     "commission": "Per-trip commission",
     "package": "Slot-based plan"
@@ -1062,6 +1104,11 @@
       "ignore": "Ignore bank transaction",
       "match_manual": "Manually match bank transaction"
     },
+    "payment_gateway_order": {
+      "resolve": "Close gateway payment",
+      "requery": "Re-check payment gateway",
+      "apply": "Record gateway payment manually"
+    },
     "banner": {
       "create": "Create homepage banner",
       "update": "Update homepage banner",
@@ -1376,6 +1423,7 @@
     "holiday_sync_run": "Holiday sync run",
     "marketplace_banner": "Homepage banner",
     "payment": "Payment",
+    "payment_gateway_order": "Gateway payment",
     "plan": "Plan",
     "platform_bank_balance": "Platform bank balance",
     "platform_membership": "Platform staff",

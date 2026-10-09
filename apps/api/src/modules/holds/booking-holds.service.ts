@@ -74,7 +74,12 @@ export type HoldPaymentOutcome =
   | { outcome: 'hold_not_found' }
   | { outcome: 'hold_closed'; holdId: string; tenantId: string; status: string }
   | { outcome: 'partial'; holdId: string; tenantId: string; paid: string; amount: string }
-  | { outcome: 'already_paid'; holdId: string; tenantId: string }
+  /**
+   * Tiền về cho hold đã đủ (trả trùng). `refundRecorded`: phần thừa ĐÃ vào hàng đợi hoàn của hold
+   * (`hold_refunds`). `false` khi hold đã có khoản hoàn đóng từ trước — khoản này không nằm ở hàng
+   * đợi nào, người gọi phải đưa nó tới người xử lý.
+   */
+  | { outcome: 'already_paid'; holdId: string; tenantId: string; refundRecorded: boolean }
   /**
    * Tiền đã ĐỦ ⇒ có đơn ngay trong cùng transaction (ADR 0044): hold chỉ tồn tại sau khi chuyến
    * đã được nhận, nên không còn chặng "đã trả, chờ người nhận" nào (ADR 0055).
@@ -502,7 +507,7 @@ export class BookingHoldsService {
         where: { id: hold.id },
         data: { paidAmount: { increment: args.amount } },
       });
-      await this.settlement.upsertRefundWithinTx(tx, {
+      const refund = await this.settlement.upsertRefundWithinTx(tx, {
         holdId: hold.id,
         tenantId: hold.tenantId,
         customerUserId: hold.customerUserId,
@@ -510,7 +515,12 @@ export class BookingHoldsService {
         reason: HOLD_REFUND_REASON.OVERPAID,
         note: `Chuyển thừa (giao dịch ${args.providerTxId})`,
       });
-      return { outcome: 'already_paid', holdId: hold.id, tenantId: hold.tenantId };
+      return {
+        outcome: 'already_paid',
+        holdId: hold.id,
+        tenantId: hold.tenantId,
+        refundRecorded: refund.recorded,
+      };
     }
     if (!awaiting.includes(hold.status) || isHoldPastDue(hold.expiresAt)) {
       return {
@@ -547,7 +557,7 @@ export class BookingHoldsService {
           where: { id: hold.id },
           data: { paidAmount: { increment: args.amount } },
         });
-        await this.settlement.upsertRefundWithinTx(tx, {
+        const refund = await this.settlement.upsertRefundWithinTx(tx, {
           holdId: hold.id,
           tenantId: hold.tenantId,
           customerUserId: hold.customerUserId,
@@ -555,7 +565,12 @@ export class BookingHoldsService {
           reason: HOLD_REFUND_REASON.OVERPAID,
           note: `Chuyển thừa (giao dịch ${args.providerTxId})`,
         });
-        return { outcome: 'already_paid', holdId: hold.id, tenantId: hold.tenantId };
+        return {
+          outcome: 'already_paid',
+          holdId: hold.id,
+          tenantId: hold.tenantId,
+          refundRecorded: refund.recorded,
+        };
       }
       return {
         outcome: 'hold_closed',
@@ -588,7 +603,13 @@ export class BookingHoldsService {
       data: { status: BOOKING_HOLD_STATUS.PAID, paidAt: new Date() },
     });
     if (claimed.count === 0) {
-      return { outcome: 'already_paid', holdId: hold.id, tenantId: hold.tenantId };
+      // Tiền đã cộng vào hold nhưng không có yêu cầu hoàn nào cho phần này — người xử lý phải thấy.
+      return {
+        outcome: 'already_paid',
+        holdId: hold.id,
+        tenantId: hold.tenantId,
+        refundRecorded: false,
+      };
     }
 
     if (updated.paidAmount.gt(updated.amount)) {

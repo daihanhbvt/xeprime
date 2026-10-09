@@ -1,6 +1,12 @@
 'use client';
 
-import { CloseOutlined, EditOutlined, FilterOutlined, ReloadOutlined } from '@ant-design/icons';
+import {
+  CloseOutlined,
+  EditOutlined,
+  FilterOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+} from '@ant-design/icons';
 import { Badge, Button, Select, Skeleton } from 'antd';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
@@ -18,6 +24,7 @@ import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import type { MarketplaceFilters } from '../types';
 import { StickySearchOnly } from '../search/SearchExperience';
 import { FilterPanel } from './FilterPanel';
+import { KeywordSearch } from './KeywordSearch';
 import { SearchDialog } from './SearchDialog';
 import { VehicleCard } from './VehicleCard';
 import styles from './MarketplaceResults.module.css';
@@ -120,19 +127,19 @@ export function MarketplaceResults() {
       if (filters[amenity])
         chips.push({
           key: `amenity-${amenity}`,
-          label: LISTING_AMENITY_LABEL[amenity],
+          label: domainLabel('listingAmenity', amenity, LISTING_AMENITY_LABEL[amenity]),
           onRemove: () => setFilters({ [amenity]: undefined }),
         });
     if (filters.priceMin != null || filters.priceMax != null)
       chips.push({
         key: 'price',
-        label: `${filters.priceMin != null ? fmt.money(String(filters.priceMin)) : '0 ₫'} – ${
+        label: `${filters.priceMin != null ? fmt.money(String(filters.priceMin)) : fmt.money('0')} – ${
           filters.priceMax != null ? fmt.money(String(filters.priceMax)) : '∞'
         }`,
         onRemove: () => setFilters({ priceMin: undefined, priceMax: undefined }),
       });
     return chips;
-  }, [filters, setFilters, brandLabel, bodyTypeLabel, fuelTypeLabel, featureLabel, fmt]);
+  }, [filters, setFilters, brandLabel, bodyTypeLabel, fuelTypeLabel, featureLabel, fmt, domainLabel]);
 
   /** Xoá đúng nhóm chip của panel Bộ lọc — giữ ngữ cảnh tìm kiếm (tỉnh/ngày/loại xe/dịch vụ). */
   function clearFacets() {
@@ -142,6 +149,7 @@ export function MarketplaceResults() {
   /** Có đang lọc/tìm gì không — quyết định "rỗng vì bộ lọc" hay "hệ thống chưa có xe". */
   const hasActiveQuery = Boolean(
     appliedChips.length > 0 ||
+    filters.q ||
     filters.provinceCode ||
     filters.province ||
     filters.vehicleType ||
@@ -191,16 +199,22 @@ export function MarketplaceResults() {
       </h1>
 
       {/*
-       * Thanh ngữ cảnh tìm kiếm (loại xe · dịch vụ · địa điểm · thời gian) là MỘT NÚT — bấm bất
-       * kỳ đâu trong vùng đều mở hộp chỉnh sửa, không phải nhắm trúng chữ "Chỉnh sửa". Ô từ khoá
-       * đã bỏ (yêu cầu 17/08) — mọi tiêu chí đều có cấu trúc: chip nhanh, hộp chỉnh sửa, panel
-       * Bộ lọc.
+       * Thanh tìm kiếm, hai nửa (mobile: hai tầng):
+       *
+       *   - Ô TỪ KHOÁ — tên xe / hãng / model hoặc tên chủ xe, gian hàng (`KeywordSearch`). Quay
+       *     lại 09/10 sau lần gỡ 17/08: lý do gỡ là "gõ không dấu thì không ra xe", nay server gấp
+       *     chuỗi trước khi so nên "nguyen", "vf8", "saigon" đều ra đúng xe.
+       *   - VÙNG NGỮ CẢNH (loại xe · dịch vụ · địa điểm · thời gian) là MỘT NÚT — bấm bất kỳ đâu
+       *     trong vùng đều mở hộp chỉnh sửa, không phải nhắm trúng chữ "Chỉnh sửa".
        *
        * `StickySearchOnly` KHÔNG đổi gì ở thanh này; nó chỉ lấy thanh làm mốc quan sát và bung
        * cụm tìm kiếm thu gọn (giống trang chủ) khi thanh đã cuộn khuất sau header.
        */}
       <StickySearchOnly>
         <div className={styles.searchBar}>
+          <div className={styles.keywordZone}>
+            <KeywordSearch value={filters.q} onApply={(q) => setFilters({ q })} />
+          </div>
           <button
             type="button"
             className={styles.contextZone}
@@ -224,7 +238,9 @@ export function MarketplaceResults() {
               ? tCommon('labels.emptyValue')
               : isInitialLoading
                 ? t('searching')
-                : t('available', { count: total })}
+                : filters.q
+                  ? t('availableFor', { count: total, q: filters.q })
+                  : t('available', { count: total })}
           </span>
           {appliedChips.length > 0 ? (
             <span className={styles.filterCountBadge}>
@@ -252,7 +268,7 @@ export function MarketplaceResults() {
                 });
               }}
             >
-              {VEHICLE_TYPE_LABEL[type]}
+              {domainLabel('vehicleType', type, VEHICLE_TYPE_LABEL[type])}
             </Chip>
           ))}
           <span className={styles.chipDivider} aria-hidden="true" />
@@ -348,7 +364,27 @@ export function MarketplaceResults() {
           ))}
         </div>
       ) : listings.length === 0 ? (
-        hasActiveQuery ? (
+        filters.q ? (
+          /*
+           * RỖNG VÌ TỪ KHOÁ — nói thẳng từ khoá nào không ra, gợi cách gõ ra được, và đưa lối thoát
+           * đúng chỗ: xoá TỪ KHOÁ (không phải bộ lọc — "Xoá bộ lọc" giữ nguyên từ khoá nên vẫn rỗng).
+           */
+          <div className={styles.stateBox}>
+            <div className={styles.stateIcon} aria-hidden>
+              <SearchOutlined />
+            </div>
+            <h2 className={styles.stateTitle}>{t('emptyKeywordTitle', { q: filters.q })}</h2>
+            <p className={styles.stateDesc}>{t('emptyKeywordDesc')}</p>
+            <Button type="primary" onClick={() => setFilters({ q: undefined })}>
+              {t('clearKeyword')}
+            </Button>
+            {appliedChips.length > 0 ? (
+              <button type="button" className={styles.stateLink} onClick={clearFacets}>
+                {tFilters('clear')}
+              </button>
+            ) : null}
+          </div>
+        ) : hasActiveQuery ? (
           /* RỖNG VÌ BỘ LỌC (Figma `18:1449`) — giữ nguyên truy vấn, đưa lối thoát. */
           <div className={styles.stateBox}>
             <div className={styles.stateIcon} aria-hidden>

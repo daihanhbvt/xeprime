@@ -24,6 +24,8 @@ export const AUDIT_TARGET_TYPE = {
   HOLIDAY_SYNC_RUN: 'holiday_sync_run',
   MARKETPLACE_BANNER: 'marketplace_banner',
   PAYMENT: 'payment',
+  /** Một lượt thanh toán qua cổng MoMo/VNPAY (ADR 0058). */
+  PAYMENT_GATEWAY_ORDER: 'payment_gateway_order',
   PLAN: 'plan',
   PLATFORM_BANK_BALANCE: 'platform_bank_balance',
   PLATFORM_MEMBERSHIP: 'platform_membership',

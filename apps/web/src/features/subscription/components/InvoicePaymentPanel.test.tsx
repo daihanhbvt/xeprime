@@ -1,6 +1,6 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { SUBSCRIPTION_INVOICE_STATUS } from '@xeprime/types';
+import { PERMISSION, SUBSCRIPTION_INVOICE_STATUS } from '@xeprime/types';
 
 import type { PaymentInfo, SubscriptionInvoice } from '../types';
 import { InvoicePaymentPanel } from './InvoicePaymentPanel';
@@ -34,6 +34,29 @@ vi.mock('../hooks/use-subscription', () => ({
   useTenantPlans: () => plans,
 }));
 
+/*
+ * Lối thanh toán qua cổng (ADR 0058) — hai hook của nó và quyền mua gói được thay bằng giá trị điều
+ * khiển được, để khoá ĐÚNG điều màn này hứa: không cổng nào mở thì không vẽ gì; có cổng thì mỗi cổng
+ * một nút, và bấm nút chỉ gửi TÊN CỔNG lên server (không số tiền, không mã).
+ */
+const gateway = vi.hoisted(() => ({
+  methods: { data: undefined as unknown, isLoading: false, isError: false },
+  start: { mutate: vi.fn(), isPending: false, isError: false, error: null as unknown },
+}));
+vi.mock('@/features/payment-gateway/hooks', () => ({
+  useGatewayMethods: () => gateway.methods,
+  useStartGatewayCheckout: () => gateway.start,
+}));
+
+const perms = vi.hoisted(() => ({ granted: new Set<string>() }));
+vi.mock('@/hooks/use-permissions', () => ({
+  usePermissions: () => ({
+    has: (permission: string) => perms.granted.has(permission),
+    hasAny: (...permissions: string[]) => permissions.some((p) => perms.granted.has(p)),
+    isLoading: false,
+  }),
+}));
+
 function makeInvoice(over: Partial<SubscriptionInvoice> = {}): SubscriptionInvoice {
   return {
     id: '01HINVOICE00000000000000',
@@ -64,6 +87,11 @@ const CONFIGURED: PaymentInfo = {
 
 beforeEach(() => {
   paymentInfo.data = CONFIGURED;
+  gateway.methods.data = undefined;
+  gateway.start.mutate = vi.fn();
+  gateway.start.isPending = false;
+  gateway.start.isError = false;
+  perms.granted = new Set([PERMISSION.SUBSCRIPTION_PURCHASE]);
 });
 
 afterEach(cleanup);
@@ -118,5 +146,61 @@ describe('InvoicePaymentPanel', () => {
   it('nói rõ gói TỰ kích hoạt khi tiền về — không ai phải giữ tab mở', () => {
     render(<InvoicePaymentPanel invoice={makeInvoice()} />);
     expect(screen.getByText(/Gói tự kích hoạt khi tiền về/)).toBeTruthy();
+  });
+});
+
+describe('InvoicePaymentPanel — thanh toán qua cổng (ADR 0058)', () => {
+  const BOTH = {
+    target: 'subscription_invoice',
+    sandbox: true,
+    methods: [
+      { provider: 'momo', minAmount: '1000', maxAmount: '50000000' },
+      { provider: 'vnpay', minAmount: null, maxAmount: null },
+    ],
+  };
+
+  it('chưa cổng nào mở: KHÔNG vẽ gì — chuyển khoản vẫn là đường duy nhất', () => {
+    gateway.methods.data = { target: 'subscription_invoice', sandbox: false, methods: [] };
+    render(<InvoicePaymentPanel invoice={makeInvoice()} />);
+    expect(screen.queryByText('Hoặc thanh toán qua cổng')).toBeNull();
+    expect(screen.getByText('XPG2K9ADFG')).toBeTruthy();
+  });
+
+  it('có cổng: mỗi cổng một nút, kèm nhãn môi trường thử', () => {
+    gateway.methods.data = BOTH;
+    render(<InvoicePaymentPanel invoice={makeInvoice()} />);
+    expect(screen.getByRole('button', { name: 'Thanh toán qua Ví MoMo' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Thanh toán qua VNPAY' })).toBeTruthy();
+    expect(screen.getByText('Môi trường thử')).toBeTruthy();
+  });
+
+  it('bấm nút chỉ gửi TÊN CỔNG — số tiền và mã do server đọc từ DB', () => {
+    gateway.methods.data = BOTH;
+    render(<InvoicePaymentPanel invoice={makeInvoice()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Thanh toán qua Ví MoMo' }));
+    expect(gateway.start.mutate).toHaveBeenCalledTimes(1);
+    expect(gateway.start.mutate.mock.calls[0]![0]).toEqual({
+      provider: 'momo',
+      client: 'web',
+      locale: 'vi',
+    });
+  });
+
+  it('không có quyền mua gói: không có lối thanh toán qua cổng', () => {
+    gateway.methods.data = BOTH;
+    perms.granted = new Set();
+    render(<InvoicePaymentPanel invoice={makeInvoice()} />);
+    expect(screen.queryByText('Hoặc thanh toán qua cổng')).toBeNull();
+  });
+
+  it('số tiền ngoài hạn mức của cổng: nút khoá và nói rõ hạn mức', () => {
+    gateway.methods.data = {
+      ...BOTH,
+      methods: [{ provider: 'momo', minAmount: '1000', maxAmount: '2000000' }],
+    };
+    render(<InvoicePaymentPanel invoice={makeInvoice()} />);
+    const button = screen.getByRole('button', { name: 'Thanh toán qua Ví MoMo' });
+    expect((button as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText(/chỉ nhận từ/)).toBeTruthy();
   });
 });

@@ -22,7 +22,7 @@ Nguồn sống (đọc trước, luôn đúng hiện tại):
 1. `docs/design/02_PRODUCT_VISION.md` — **sản phẩm, persona và mô hình doanh thu hiện hành**.
 2. `docs/completion-roadmap.md` — **đang ở đâu, release gate và việc tiếp theo**.
 3. `docs/design/03_PRODUCT_GAP_ANALYSIS.md` — backlog User/Admin/Manage theo hiện trạng source.
-4. `docs/decisions/` — **50 ADR (0001–0057; số đã gỡ ghi ở bảng "ADR đã gỡ" của `docs/decisions/README.md`)**; ADR Accepted mới hơn thắng trong đúng phạm vi ghi đè.
+4. `docs/decisions/` — **51 ADR (0001–0058; số đã gỡ ghi ở bảng "ADR đã gỡ" của `docs/decisions/README.md`)**; ADR Accepted mới hơn thắng trong đúng phạm vi ghi đè.
 5. `docs/CODEMAP.md` — chỉ mục "cái gì nằm ở đâu".
 6. File này (CLAUDE.md).
 7. `docs/deployment.md`, `docs/backup-and-restore.md`, `docs/third-party-keys.md` — vận hành và dịch vụ ngoài.
@@ -78,7 +78,7 @@ Skill tự kích hoạt theo mô tả; nếu quên thì gọi tay. `navigator` �
 | RBAC | Role/permission lưu DB, **guard backend là nguồn bảo vệ chính** |
 | Thuê dài hạn | **Gói cố định** 1/2/3/6/9/12 tháng; ngày trả = ngày nhận + N **tháng lịch** (server tính, client không gửi); khách nêu nguyện vọng ngày nhận, gian hàng chốt lịch khi duyệt; ưu đãi cam kết thời hạn theo THÁNG, không cộng dồn — ADR 0011 |
 | Doanh thu | **Hai tuyến trên MỘT chợ** — ADR 0028. Basic Owner: không thuê bao, phí dịch vụ theo chuyến (giả thuyết 10%) + Owner Lite. Gian hàng: **BA BẬC** bán theo trần SỐ XE + kỳ hạn (ADR 0041 — Cơ bản 3 xe · Nâng cao 10 xe · Chuyên nghiệp không giới hạn, bán bằng tư vấn), 0% hoa hồng XePrime/chuyến + Full Manage. Thuế, bảo hiểm và phí dịch vụ là ba dòng riêng; mode/policy đóng băng vào booking |
-| Tiền vào nền tảng | **ĐÃ triển khai trên `develop`** (PR #57): SePay đối soát các khoản vào qua MỘT bảng `bank_transactions`, phân loại đích bằng tiền tố mã (`XPG…` gói · `XPH…` giữ chỗ). Webhook công khai không session có khoá time-safe, idempotent bằng unique DB và trả 200 khi nhận lại giao dịch — ADR 0022/0028. Writer duy nhất: `SepayService` |
+| Tiền vào nền tảng | **ĐÃ triển khai trên `develop`** (PR #57): SePay đối soát các khoản vào qua MỘT bảng `bank_transactions`, phân loại đích bằng tiền tố mã (`XPG…` gói · `XPH…` giữ chỗ). Webhook công khai không session có khoá time-safe, idempotent bằng unique DB và trả 200 khi nhận lại giao dịch — ADR 0022/0028. Writer duy nhất: `SepayService`. **MoMo/VNPAY là phương thức BỔ SUNG** (ADR 0058 — Proposed, mặc định tắt): sổ riêng `payment_gateway_orders` (writer `PaymentGatewayService`), tiền áp qua CÙNG `applyBankPaymentWithinTx` của SePay; production từ chối boot nếu bật cổng cho BẤT KỲ luồng nào khi ADR còn Proposed |
 | Huỷ của chủ xe | Quyền huỷ theo CHẶNG — ADR 0045 điều 1. `pending_host_approval` dùng **Từ chối** (không chạm tiền); `awaiting_hold` dùng **Huỷ chuyến** (`POST /booking-requests/:id/cancel`: đóng hold, nhả lịch, hoàn phần đã chuyển, ghi trách nhiệm — MỘT transaction); đơn `reserved`/`confirmed` huỷ qua transition kèm `reasonCategory`, hoàn 100%; đơn `active` **KHÔNG huỷ** (`BOOKING_CANCEL_NOT_ALLOWED`) — đường đúng là bàn giao trả xe sớm rồi quyết toán. `booking_cancellations` là writer duy nhất của trách nhiệm, và `responsible_party` do SERVER suy |
 | Uy tín gian hàng | BA chỉ số công khai (tỉ lệ phản hồi · thời gian phản hồi · nhận-và-giữ chuyến), cửa sổ 90 ngày, dưới `HOST_METRIC_MIN_SAMPLES` mẫu (hạ 5 → **1** ngày 23/09/2026) thì `null` chứ không phải 0; `0` mẫu thì luôn `null` — ADR 0045 điều 3. **Nguồn tính duy nhất là `HostMetricsService`**; sổ ví dùng cùng phép phân loại, chỉ đổi cửa sổ và ngưỡng |
 | Thứ tự đặt xe | **Gửi yêu cầu → DUYỆT → thu tiền giữ chỗ → ĐƠN THUÊ** (ADR 0044). Gửi yêu cầu KHÔNG thu tiền và KHÔNG chiếm lịch. Lượt duyệt (tay hoặc "Đặt ngay", cùng một đường `commitDecision`) mới chốt lịch, chốt giá, giữ xe và phát QR ⇒ `awaiting_hold`. **Đơn thuê ra đời DUY NHẤT khi đối soát xác nhận đủ tiền** — không bao giờ vì một cú bấm hay một lượt quét QR. Khung giờ đã mất ⇒ các yêu cầu còn chờ đóng bằng `slot_taken` |
@@ -214,6 +214,9 @@ Bổ sung ngoài tài liệu, đã thống nhất đưa vào base:
 - ❌ Tính lại giá/hoa hồng của một đơn đã tạo — mọi thứ đóng băng lúc tạo (ADR 0024)
 - ❌ Nối FK `payments.subscription_id` — sẽ tự sinh phiếu thu cho tenant, biến tiền gói thành thu nhập của chính họ (ADR 0022 điều 6)
 - ❌ Khớp giao dịch ngân hàng TỰ ĐỘNG theo số tiền khi không rút được mã — chỉ gợi ý cho admin (ADR 0022)
+- ❌ Ghi giao dịch MoMo/VNPAY vào `bank_transactions`, hay đọc kết quả thanh toán từ URL mà cổng chuyển trình duyệt về — chỉ IPN có chữ ký hoặc truy vấn do server gửi mới ghi kết quả, vào `payment_gateway_orders` (ADR 0058)
+- ❌ Nhận số tiền / mã đối soát / đích từ client khi mở phiên cổng, hay tự hoàn tiền qua cổng khi chính sách hoàn chưa được quyết (ADR 0058 Q3/Q4)
+- ❌ Tự áp một khoản cổng báo thu SAU khi người trực đã đóng lượt — có thể khoản đó đã được hoàn tay; lượt mở lại (`result_after_resolution`) và chỉ người trực ghi nhận, kèm ghi chú + audit (ADR 0058 điều 7)
 - ❌ Chống ghi đôi tiền bằng check ở tầng app — luôn bằng constraint DB (`provider_tx_id`, `(ledger, source_type, source_ref_id)`) — ADR 0022/0028
 - ❌ Cho số dư nạp tiền / chuyển ngang / thanh toán nội bộ / chi tự động khi chưa có đối tác và release gate — nó chỉ là sổ công nợ phải trả (ADR 0028)
 - ❌ Nhét cờ tính năng vào bảng permission, hay suy quyền của một người từ GÓI — hai trục độc lập, kiểm tra nối tiếp (ADR 0027 điều 2)

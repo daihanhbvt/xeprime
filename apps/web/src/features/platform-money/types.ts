@@ -48,3 +48,23 @@ export interface WithdrawalFilters {
   overdue?: boolean;
   page?: number;
 }
+
+/** Lượt thanh toán qua cổng MoMo/VNPAY nhìn từ người trực (ADR 0058). */
+export type PlatformPaymentOrder = Schemas['PlatformPaymentOrderDto'];
+export type PlatformPaymentOrderDetail = Schemas['PlatformPaymentOrderDetailDto'];
+export type ResolvePaymentOrderInput = Schemas['ResolvePaymentOrderDto'];
+export type ApplyPaymentOrderInput = Schemas['ApplyPaymentOrderDto'];
+/** Kết quả "hỏi lại cổng" — kèm `outcome` để màn hình nói đúng điều đã xảy ra. */
+export type PlatformPaymentOrderRequery = Schemas['PlatformPaymentOrderRequeryDto'];
+export type PlatformPaymentOrderEvent = Schemas['PlatformPaymentOrderEventDto'];
+
+/** Bỏ trống `view` = hàng đợi CẦN XỬ LÝ — xem `PAYMENT_ORDER_QUEUE_VIEW`. */
+export interface GatewayOrderFilters {
+  view?: string;
+  provider?: string;
+  target?: string;
+  status?: string;
+  q?: string;
+  page?: number;
+  limit?: number;
+}

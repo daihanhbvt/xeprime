@@ -26,9 +26,16 @@ describe('parseFilters — URL searchParams → MarketplaceFilters', () => {
     });
   });
 
-  it('từ khoá `q` đã bỏ khỏi contract (17/08) — link cũ mang q bị lơ đi, không thành filter tàng hình', () => {
-    const params = new URLSearchParams('q=vios&provinceCode=48');
-    expect(parseFilters(params)).toEqual({ provinceCode: '48' });
+  it('từ khoá `q` sống trên URL (09/10) — chia sẻ được, F5 không mất', () => {
+    const params = new URLSearchParams('q=Nguy%E1%BB%85n%20VF8&provinceCode=48');
+    expect(parseFilters(params)).toEqual({ q: 'Nguyễn VF8', provinceCode: '48' });
+  });
+
+  it('từ khoá: cắt khoảng trắng, toàn khoảng trắng = không có, quá trần thì cắt chứ không 400', () => {
+    expect(parseFilters(new URLSearchParams('q=%20%20vios%20%20'))).toEqual({ q: 'vios' });
+    expect(parseFilters(new URLSearchParams('q=%20%20%20'))).toEqual({});
+    const long = 'x'.repeat(150);
+    expect(parseFilters(new URLSearchParams(`q=${long}`)).q).toHaveLength(100);
   });
 
   it('bỏ giá trị rác: sort lạ, số không parse được, CSV toàn dấu phẩy, boolean khác "1"', () => {
@@ -102,6 +109,11 @@ describe('toListingQueryParams — filter → query API', () => {
     const q = toListingQueryParams(filters);
     expect(q.features).toBe('gps,map');
     expect(q.delivery).toBe('1');
+  });
+
+  it('từ khoá gửi NGUYÊN VĂN — gấp chuỗi là việc của server', () => {
+    expect(toListingQueryParams({ q: 'Nguyễn VF8' }).q).toBe('Nguyễn VF8');
+    expect(toListingQueryParams({}).q).toBeNull();
   });
 
   it('gửi `provinceCode` khi có mã, và KHÔNG gửi kèm tên cũ', () => {

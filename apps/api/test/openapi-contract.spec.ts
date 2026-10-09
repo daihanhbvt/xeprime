@@ -197,13 +197,24 @@ describe('OpenAPI · hình dạng response', () => {
         (route.operation as unknown as Record<string, unknown>)[RAW_RESPONSE_EXTENSION] === true,
     );
 
-    expect(rawRoutes.map((route) => route.label)).toEqual(['POST /sepay/webhook']);
+    // Hai hợp đồng của bên thứ ba: webhook SePay và IPN của VNPAY (ADR 0058 — VNPAY đọc
+    // `{ RspCode, Message }` để quyết có gọi lại). IPN MoMo là 204 không thân nên không ở đây.
+    expect(rawRoutes.map((route) => route.label).sort()).toEqual([
+      'GET /payment-gateway/vnpay/ipn',
+      'POST /sepay/webhook',
+    ]);
 
-    const response = rawRoutes[0]?.operation.responses['200'];
-    expect(
-      response && !('$ref' in response) ? response.content?.['application/json']?.schema : null,
-    ).toMatchObject({
+    const schemaOf = (label: string) => {
+      const response = rawRoutes.find((route) => route.label === label)?.operation.responses['200'];
+      return response && !('$ref' in response)
+        ? response.content?.['application/json']?.schema
+        : null;
+    };
+    expect(schemaOf('POST /sepay/webhook')).toMatchObject({
       $ref: '#/components/schemas/SepayWebhookAckDto',
+    });
+    expect(schemaOf('GET /payment-gateway/vnpay/ipn')).toMatchObject({
+      $ref: '#/components/schemas/VnpayIpnAckDto',
     });
   });
 
@@ -239,6 +250,10 @@ describe('OpenAPI · nhánh lỗi', () => {
     // ADR 0022 ràng buộc 4: SePay bắn dồn khi retry; chặn nó là tự trì hoãn tiền của chính mình.
     // Cửa thật là khoá `Authorization: Apikey …` so time-safe trong `SepayService`.
     'POST /sepay/webhook': '@SkipThrottle()',
+    // ADR 0058: IPN của cổng thanh toán — cổng gửi lại theo lịch của nó (VNPAY tới 10 lần), chặn nó
+    // là tự trì hoãn tiền. Cửa thật là CHỮ KÝ HMAC của cổng, kiểm time-safe ở adapter.
+    'POST /payment-gateway/momo/ipn': '@SkipThrottle()',
+    'GET /payment-gateway/vnpay/ipn': '@SkipThrottle()',
   };
 
   it('mọi route đều mô tả 500, và mô tả 429 trừ các route khai miễn throttle', () => {

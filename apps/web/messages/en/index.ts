@@ -54,6 +54,7 @@ import approvals from '@xeprime/domain/messages/en/approvals.json';
 import platformDashboard from '@xeprime/domain/messages/en/platform-dashboard.json';
 import bankTransactions from '@xeprime/domain/messages/en/bank-transactions.json';
 import subscription from '@xeprime/domain/messages/en/subscription.json';
+import paymentGateway from '@xeprime/domain/messages/en/payment-gateway.json';
 import members from '@xeprime/domain/messages/en/members.json';
 import drivers from '@xeprime/domain/messages/en/drivers.json';
 import maintenance from '@xeprime/domain/messages/en/maintenance.json';
@@ -115,6 +116,7 @@ const messages = {
   PlatformDashboard: platformDashboard,
   BankTransactions: bankTransactions,
   Subscription: subscription,
+  PaymentGateway: paymentGateway,
   Members: members,
   Drivers: drivers,
   Maintenance: maintenance,
