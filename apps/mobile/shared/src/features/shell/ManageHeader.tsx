@@ -11,6 +11,7 @@ import { NOTIFICATION_CONTEXT } from '@/features/notifications/notification-disp
 import { colors, fontSize, space } from '@/theme/tokens';
 import { useManageDrawer } from './ManageDrawerHost';
 import { ManageShellNotices } from './ManageShellNotices';
+import { isCommissionOwner } from './partner-track';
 import { ScopeSwitcherButton } from './ScopeSwitcher';
 
 /**
@@ -58,7 +59,12 @@ export function ManageHeader() {
         */
           <XStack ai="center" gap={space.xs}>
             <ChatBadgeButton surface={CHAT_SIDE.SHOP} compact />
-            <NotificationBell context={NOTIFICATION_CONTEXT.MANAGE} compact />
+            <NotificationBell
+              context={
+                isCommissionOwner(user) ? NOTIFICATION_CONTEXT.OWNER : NOTIFICATION_CONTEXT.MANAGE
+              }
+              compact
+            />
             <ScopeSwitcherButton compact />
           </XStack>
         }

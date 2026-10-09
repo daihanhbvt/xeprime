@@ -151,7 +151,7 @@ export function VehiclePublicationTaskItem({
             variant={variant}
             block={false}
             onPress={() =>
-              navigateOnce(customerScope ? ROUTES.account.support() : ROUTES.manage.support())
+              navigateOnce(customerScope ? ROUTES.account.support() : ROUTES.manage.supportPage())
             }
           />
         );

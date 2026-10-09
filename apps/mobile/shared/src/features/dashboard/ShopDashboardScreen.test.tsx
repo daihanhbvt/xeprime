@@ -88,7 +88,8 @@ function currentUser(
       planEndsAt: null,
       billingPhase: 'current',
       graceEndsAt: null,
-      publicVehicleCount: 1,
+      // Gian hàng nháp chưa có xe nào lên chợ — mốc ẩn thẻ ba bước (ADR 0036, web `liveVehicle`).
+      publicVehicleCount: status === TENANT_STATUS.DRAFT ? 0 : 1,
     },
     openRenterTripCount: 0,
     platformRole: null,

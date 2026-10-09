@@ -2,6 +2,7 @@ import type { Href as TypedHref } from 'expo-router';
 import type { LegalDoc } from '@xeprime/domain';
 import { REGISTRATION_TRACK, type RegistrationTrack } from '@xeprime/types';
 import { VEHICLE_EDIT_TAB, type VehicleEditTab } from './vehicle-edit-tab';
+import { ACCOUNT_SECTION_PARAM, type AccountSection } from './account-section';
 import {
   VEHICLE_REGISTRATION_SOURCE,
   type VehicleRegistrationSource,
@@ -97,16 +98,24 @@ export const SHOP_WELCOME_PARAM = 'welcome';
  * Native chỉ cần hai khối nằm sâu dưới trang; các khối khác đã ở ngay đầu.
  */
 export const SHOP_SECTION_PARAM = 'section';
+
+/** `?section=payout` của trang số dư — cuộn tới khối tài khoản nhận tiền (web PR #159). */
+export const BALANCE_SECTION_PARAM = 'section';
+export const BALANCE_PAYOUT_SECTION = 'payout';
 export const SHOP_SECTION = {
   /** Địa chỉ chi nhánh mặc định + mã số thuế/giấy phép. */
   LEGAL: 'legal',
-  /** Sổ `bank_accounts` phạm vi gian hàng. */
+  /** Sổ `bank_accounts` phạm vi gian hàng. CŨ (PR #159): route chuyển sang trang số dư. */
   PAYOUT: 'payout',
+  /** Thông tin khai thuế — hồ sơ NGƯỜI BÁN (`seller_profiles`), nguồn duy nhất của MST (PR #159). */
+  TAX: 'tax',
+  /** Gói hiện hành, hạn mức chỗ và hoá đơn. */
+  PLAN: 'plan',
 } as const;
 export type ShopSection = (typeof SHOP_SECTION)[keyof typeof SHOP_SECTION];
 
 export function isShopSection(value: unknown): value is ShopSection {
-  return value === SHOP_SECTION.LEGAL || value === SHOP_SECTION.PAYOUT;
+  return (Object.values(SHOP_SECTION) as unknown[]).includes(value);
 }
 
 /**
@@ -372,6 +381,17 @@ export const ROUTES = {
     more: (): Href => '/manage/more',
     requests: (): Href => '/manage/requests',
     /**
+     * "Chuyến cho thuê" — CHỦ xe tuyến hoa hồng (Owner Lite, PR #158): một danh sách gộp yêu cầu +
+     * đơn thay cho hộp thư và bảng đơn. Thành viên không phải chủ bị `partnerPathRedirect` đưa về
+     * hộp thư (`GET /trips` chỉ dựng phía chủ xe cho CHỦ).
+     */
+    trips: (): Href => '/manage/trips',
+    /** Màn Chuyến mở sẵn chi tiết MỘT yêu cầu — đích của thông báo yêu cầu cho chủ xe tuyến hoa hồng. */
+    tripRequest: (requestId: string): Href => ({
+      pathname: '/manage/trips',
+      params: { request: requestId },
+    }),
+    /**
      * Danh sách đơn thuê. `vehicleId` lọc theo MỘT xe — cùng tham số web đặt trên URL
      * (`/manage/bookings?vehicleId=…`), dùng cho lối đi từ hồ sơ xe.
      */
@@ -573,7 +593,11 @@ export const ROUTES = {
      * NGƯỜI. Trước đợt này, khu khách của một tài khoản gian hàng đóng lại mà không mục nào trong
      * `SHOP_NAV` dẫn tới màn đổi mật khẩu — họ phải tự đoán ra một URL thuộc khu khác.
      */
-    account: (): Href => '/manage/account',
+    /** `section` cuộn tới một khối — cùng `?section=` với web `accountSectionPath` (PR #156). */
+    account: (section?: AccountSection): Href =>
+      section
+        ? { pathname: '/manage/account', params: { [ACCOUNT_SECTION_PARAM]: section } }
+        : '/manage/account',
 
     /** Chi nhánh gian hàng (SHP-03) — nơi xe thực sự nằm. */
     shopBranches: (): Href => '/manage/shop/branches',
@@ -626,6 +650,11 @@ export const ROUTES = {
      */
     subscriptionPage: (): Href => '/manage/plan',
     balance: (): Href => '/manage/balance',
+    /** Khối 'Tài khoản nhận tiền' của trang số dư — web `balancePayoutPath()` (PR #159). */
+    balancePayout: (): Href => ({
+      pathname: '/manage/balance',
+      params: { [BALANCE_SECTION_PARAM]: BALANCE_PAYOUT_SECTION },
+    }),
     /**
      * Các trang của tuyến HOA HỒNG trong app Partner (ADR 0053 — trước nằm ở `/account/*` của app
      * khách). Màn dùng chung với bản cũ; chỉ đổi chỗ đứng.

@@ -6,8 +6,20 @@ export type StageNoticeTone = 'warning' | 'danger' | 'info';
 export interface StageNotice {
   tone: StageNoticeTone;
   /** Khoá trong `Trips.notice` — literal để `t()` còn giữ bảo chứng kiểu. */
-  titleKey: 'pendingTitle' | 'rejectedTitle' | 'cancelledTitle' | 'slotTakenTitle' | 'noShowTitle';
-  bodyKey: 'pendingBody' | 'rejectedBody' | 'cancelledBody' | 'slotTakenBody' | 'noShowBody';
+  titleKey:
+    | 'pendingTitle'
+    | 'rejectedTitle'
+    | 'expiredTitle'
+    | 'cancelledTitle'
+    | 'slotTakenTitle'
+    | 'noShowTitle';
+  bodyKey:
+    | 'pendingBody'
+    | 'rejectedBody'
+    | 'expiredBody'
+    | 'cancelledBody'
+    | 'slotTakenBody'
+    | 'noShowBody';
 }
 
 /**
@@ -37,6 +49,12 @@ export function stageNotice(stage: CustomerTripStage): StageNotice | null {
       return { tone: 'warning', titleKey: 'pendingTitle', bodyKey: 'pendingBody' };
     case CUSTOMER_TRIP_STAGE.REJECTED:
       return { tone: 'danger', titleKey: 'rejectedTitle', bodyKey: 'rejectedBody' };
+    /*
+     * Chủ xe KHÔNG trả lời kịp hạn (PR #158) — khác `REJECTED`: không ai nói "không" cả, nên
+     * tông `info` và câu mời đặt xe khác thay vì câu "chủ xe không thể tiếp nhận".
+     */
+    case CUSTOMER_TRIP_STAGE.EXPIRED:
+      return { tone: 'info', titleKey: 'expiredTitle', bodyKey: 'expiredBody' };
     case CUSTOMER_TRIP_STAGE.CANCELLED:
       return { tone: 'info', titleKey: 'cancelledTitle', bodyKey: 'cancelledBody' };
     /*

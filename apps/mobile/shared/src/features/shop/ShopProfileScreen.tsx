@@ -9,7 +9,6 @@ import {
   isEstablishedPackageShop,
   isPackageShopTrack,
   PERMISSION,
-  TENANT_ROLE,
   TENANT_STATUS,
   type TenantStatus,
   toLocalVnPhone,
@@ -40,8 +39,8 @@ import { ROUTES, SHOP_SECTION, type ShopSection } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
 import type { MyShop, UpdateShopProfileInput } from './api';
-import { BankAccountList } from '@/features/bank-accounts/components/BankAccountList';
 import { SubscriptionWorkspace } from '@/features/subscription/SubscriptionScreen';
+import { SellerTaxSection } from '@/features/seller-profile/components/SellerTaxSection';
 import { ShopIdentityCard } from './components/ShopIdentityCard';
 import { ShopOwnerCard } from './components/ShopOwnerCard';
 import { ShopProfileChecklist } from './components/ShopProfileChecklist';
@@ -86,7 +85,8 @@ function toBody(v: ShopProfileWithContactValues): UpdateShopProfileInput {
      */
     wardCode: v.wardCode || undefined,
     addressLine: v.addressLine,
-    taxCode: v.taxCode,
+    // Mã số thuế KHÔNG gửi từ đây (PR #159): nó sống ở hồ sơ người bán (`seller_profiles.tax_id`);
+    // gửi lại làm cả lượt Lưu hỏng vì 403/SELLER_PROFILE_NOT_EDITABLE/sai định dạng.
     businessLicenseNo: v.businessLicenseNo,
     logoUrl: v.logoUrl ?? '',
     coverUrl: v.coverUrl ?? '',
@@ -102,7 +102,7 @@ function toBody(v: ShopProfileWithContactValues): UpdateShopProfileInput {
  *
  * SĐT đổi về dạng `09…` để nhập/đọc; backend lưu `84…` và tự chuẩn hoá lại khi nhận.
  */
-function toValues(shop: MyShop): ShopProfileWithContactValues {
+export function toValues(shop: MyShop): ShopProfileWithContactValues {
   const p = shop.profile;
   return {
     /*
@@ -124,7 +124,6 @@ function toValues(shop: MyShop): ShopProfileWithContactValues {
     latitude: null,
     longitude: null,
     locationSource: null,
-    taxCode: p.taxCode ?? '',
     businessLicenseNo: p.businessLicenseNo ?? '',
     logoUrl: p.logoUrl ?? null,
     coverUrl: p.coverUrl ?? null,
@@ -373,14 +372,20 @@ function ProfileForm({
     },
     [scrollToSection],
   );
-  const onPayoutLayout = useCallback(
+  const onTaxLayout = useCallback(
     (event: LayoutChangeEvent) => {
-      sectionY.current[SHOP_SECTION.PAYOUT] = event.nativeEvent.layout.y;
+      sectionY.current[SHOP_SECTION.TAX] = event.nativeEvent.layout.y;
       scrollToSection();
     },
     [scrollToSection],
   );
-
+  const onPlanLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      sectionY.current[SHOP_SECTION.PLAN] = event.nativeEvent.layout.y;
+      scrollToSection();
+    },
+    [scrollToSection],
+  );
   /*
    * Chỉ cần BIẾT có xe nào chưa — dải chào đổi câu theo đó. Trang đầu là đủ để trả lời, nên không
    * kéo bộ lọc của màn danh sách vào một màn không có ô lọc nào.
@@ -422,13 +427,15 @@ function ProfileForm({
   const readOnlyReason = canEdit ? null : t('form.readOnly');
 
   /*
-   * Hai trục quyết định KHỐI nào có mặt cuối màn, và cả hai khớp với guard của API:
-   *  - "Tài khoản nhận tiền" theo SỞ HỮU — `/shop/bank-accounts` là `@ShopOwnerOnly()`
-   *    (ADR 0038 điều 3). Không hỏi permission: khoá đó uỷ quyền được, quyền sở hữu thì không.
-   *  - "Gói & hạn mức" theo `subscription.view`, đúng quyền mà mục menu cũ mang.
+   * "Gói & hạn mức" có mặt cuối màn theo `subscription.view`, đúng quyền mà mục menu cũ mang
+   * và khớp guard của API. ("Tài khoản nhận tiền" đã sang trang Số dư — PR #159.)
    */
-  const isShopOwner = tenant?.roleKey === TENANT_ROLE.SHOP_OWNER;
   const canSeePlan = permissions.has(PERMISSION.SUBSCRIPTION_VIEW);
+  /*
+   * "Thông tin khai thuế" theo `seller_profile.view` (`GET /seller-profile`) — web `canSeeTax`.
+   * Sửa cần `seller_profile.manage`; `SellerTaxForm` tự chuyển chỉ-xem khi thiếu.
+   */
+  const canSeeTax = permissions.has(PERMISSION.SELLER_PROFILE_VIEW);
 
   const dirty = formState.isDirty && !readOnly;
   const saving = updateProfile.isPending;
@@ -624,6 +631,10 @@ function ProfileForm({
           <YStack onLayout={onLegalLayout}>
             <FormSection title={t('form.address.title')} icon="location-outline">
               {isSettings ? checklist : null}
+              {/* Mã số thuế khai ở Thông tin khai thuế, không ở đây nữa (PR #159) — đúng web. */}
+              <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                {t('sections.legalHint')}
+              </Text>
               {/*
               Địa chỉ ở đây là địa chỉ của CHI NHÁNH MẶC ĐỊNH: đổi nó là backend dời chi nhánh đó
               và đồng bộ lại vị trí công khai của mọi xe thuộc nó. Không có nguồn địa chỉ thứ hai
@@ -665,13 +676,6 @@ function ProfileForm({
               ) : null}
               <TextField
                 control={control}
-                name="taxCode"
-                label={t('form.address.taxCode.label')}
-                placeholder={t('form.address.taxCode.placeholder')}
-                editable={editable}
-              />
-              <TextField
-                control={control}
                 name="businessLicenseNo"
                 label={t('form.address.businessLicenseNo.label')}
                 placeholder={t('form.address.businessLicenseNo.placeholder')}
@@ -681,16 +685,17 @@ function ProfileForm({
           </YStack>
 
           {/*
-            TÀI KHOẢN NHẬN TIỀN — sổ `bank_accounts` phạm vi gian hàng, nơi lệnh rút thật sự
-            đọc. Khối thứ tư của trang Cửa hàng bên web, và cùng một danh sách dùng chung với
-            khu cá nhân, khác đúng ở `scope` (ADR 0023 điều 7).
-
-            Gác bằng SỞ HỮU chứ không bằng permission: `/shop/bank-accounts` là `@ShopOwnerOnly()`
-            (ADR 0038 điều 3), và quản lý mở khối này chỉ để nhận 403.
+            TÀI KHOẢN NHẬN TIỀN đã rời trang Cửa hàng (PR #159) — nó là khối của trang Số dư, nơi
+            lệnh rút đọc nó. `?section=payout` cũ được route chuyển tiếp sang đó.
           */}
-          {isSettings && isShopOwner ? (
-            <YStack onLayout={onPayoutLayout}>
-              <BankAccountList scope="shop" title={t('sections.payout')} />
+          {/*
+            THÔNG TIN KHAI THUẾ — hồ sơ người bán, nguồn duy nhất của MST (web PR #159
+            `SellerTaxSection`). Nút Lưu RIÊNG, đứng ngoài biểu mẫu hồ sơ gian hàng ở trên: hai bản
+            ghi, hai endpoint.
+          */}
+          {isSettings && canSeeTax ? (
+            <YStack onLayout={onTaxLayout}>
+              <SellerTaxSection />
             </YStack>
           ) : null}
 
@@ -707,7 +712,7 @@ function ProfileForm({
             hoá đơn) đã tự mang thẻ của nó — đó chính là chỗ web phải tắt `framed`.
           */}
           {isSettings && canSeePlan ? (
-            <YStack gap={space.md}>
+            <YStack gap={space.md} onLayout={onPlanLayout}>
               <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.semibold}>
                 {t('sections.plan')}
               </Text>

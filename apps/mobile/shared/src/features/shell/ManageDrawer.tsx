@@ -423,6 +423,8 @@ export function resolveSections(
   const canSeeLeaf = (leaf: ManageNavLeaf): boolean =>
     has(leaf.permission) &&
     (leaf.ownerOnly !== true || isShopOwner) &&
+    // `memberOnly` — nghịch đảo trên cùng trục: chủ đọc "Chuyến cho thuê", thành viên giữ hộp thư.
+    (leaf.memberOnly !== true || !isShopOwner) &&
     (leaf.feature === undefined ||
       isFeatureVisible(featureStates[leaf.feature] ?? FEATURE_STATE.ENABLED));
 

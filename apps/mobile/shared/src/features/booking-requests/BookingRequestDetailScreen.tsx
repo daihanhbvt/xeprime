@@ -27,6 +27,7 @@ import { DetailChevron } from '@/components/ui/DetailArrow';
 import { DataRow } from '@/components/ui/DataRow';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { useCustomerProfileAccess } from './hooks/use-customer-profile-access';
 import { ROUTES } from '@/navigation/routes';
 import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
@@ -70,20 +71,15 @@ export function BookingRequestDetailScreen({
   const domainLabel = useDomainLabel();
   const permissions = usePermissions();
   const navigateOnce = useNavigateOnce();
+  const customerProfileAccess = useCustomerProfileAccess();
 
   const status = request.status as BookingRequestStatus;
   const meta = BOOKING_REQUEST_STATUS_META[status];
   /*
-   * HAI chặng cần gian hàng quyết định, và chặng thứ hai là chặng TỐN KÉM hơn hẳn:
-   *
-   *   · `pending_host_approval` — khách mới hỏi, chưa ai mất gì;
-   *   · `hold_paid` (LEGACY ADR 0039) — khách ĐÃ TRẢ TIỀN và chỗ xe đang bị giữ. Bỏ sót chặng này là
-   *     bày ra một màn ghi "chờ bạn duyệt" mà không có nút nào để duyệt, trong khi tiền của
-   *     khách nằm ở XePrime và đồng hồ phản hồi đang chạy tới lượt hoàn tự động.
+   * Chỉ `pending_host_approval` còn cần gian hàng quyết định: `hold_paid` (luồng thu-trước-duyệt)
+   * đã gỡ hẳn ở ADR 0055 và DB từ chối trạng thái đó — cùng vị từ `needsDecision` của web.
    */
-  const needsDecision =
-    status === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL ||
-    status === BOOKING_REQUEST_STATUS.HOLD_PAID;
+  const needsDecision = status === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL;
   /*
    * Quá hạn phản hồi thì KHÔNG còn quyết định nào — server từ chối cả duyệt lẫn từ chối
    * (`BOOKING_REQUEST_EXPIRED`), nên bày nút ra là mời người dùng bấm một thứ chắc chắn hỏng.
@@ -283,11 +279,12 @@ export function BookingRequestDetailScreen({
               </XStack>
 
               {/*
-                "Mở hồ sơ khách" — cùng điều kiện web (`request.tenantCustomerId`): khách đã có hồ sơ
-                trong sổ khách của gian hàng. Web mở hộp thoại hồ sơ khách; native đẩy màn hồ sơ và
+                "Mở hồ sơ khách" — cùng điều kiện web (`request.tenantCustomerId` + `customers.view` +
+                tuyến GÓI, vì sổ khách là `@SubscriptionTrackOnly` — ADR 0056): khách đã có hồ sơ
+                trong sổ khách VÀ người xem mở được sổ. Web mở hộp thoại hồ sơ khách; native đẩy màn hồ sơ và
                 nút Lui trả về đúng đây.
               */}
-              {request.tenantCustomerId ? (
+              {customerProfileAccess && request.tenantCustomerId ? (
                 <XStack>
                   <Button
                     label={t('detail.openCustomer')}
@@ -302,30 +299,37 @@ export function BookingRequestDetailScreen({
                 </XStack>
               ) : null}
 
-              {/* Số điện thoại bấm gọi được — trên điện thoại đó là việc gần nhất làm được. */}
-              <DataRow
-                label={t('detail.phone')}
-                value={request.customerPhone}
-                {...(tel
-                  ? {
-                      action: (
-                        <Pressable
-                          onPress={() => void Linking.openURL(tel)}
-                          accessibilityRole="button"
-                          accessibilityLabel={t('actions.call')}
-                          hitSlop={space.sm}
-                        >
-                          <Ionicons
-                            name="call-outline"
-                            size={iconSize.sm}
-                            color={colors.primaryActive}
-                          />
-                        </Pressable>
-                      ),
-                    }
-                  : {})}
-              />
-              {zalo ? (
+              {/*
+                Số điện thoại bấm gọi được — trên điện thoại đó là việc gần nhất làm được.
+
+                `null` = CHƯA ĐƯỢC PHÉP xem (ADR 0056: tuyến hoa hồng chỉ thấy khi đã có đơn),
+                nên ẩn hẳn hàng thay vì hiện một ô trống — ô trống đọc ra như dữ liệu bị thiếu.
+              */}
+              {request.customerPhone ? (
+                <DataRow
+                  label={t('detail.phone')}
+                  value={request.customerPhone}
+                  {...(tel
+                    ? {
+                        action: (
+                          <Pressable
+                            onPress={() => void Linking.openURL(tel)}
+                            accessibilityRole="button"
+                            accessibilityLabel={t('actions.call')}
+                            hitSlop={space.sm}
+                          >
+                            <Ionicons
+                              name="call-outline"
+                              size={iconSize.sm}
+                              color={colors.primaryActive}
+                            />
+                          </Pressable>
+                        ),
+                      }
+                    : {})}
+                />
+              ) : null}
+              {zalo && request.customerPhone ? (
                 <DataRow
                   label={t('actions.zalo')}
                   value={request.customerPhone}

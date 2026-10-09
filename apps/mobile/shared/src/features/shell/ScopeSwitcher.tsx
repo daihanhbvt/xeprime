@@ -10,6 +10,7 @@ import { BottomSheet } from '@/components/ui/BottomSheet';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { useTenantScope } from '@/features/auth/hooks/use-tenant-scope';
 import { Avatar } from '@/components/ui/Avatar';
+import { AccountTrackBadge } from '@/features/account/components/AccountTrackBadge';
 import { VerifiedMark } from '@/components/ui/VerifiedMark';
 import { useDomainLabel } from '@/i18n/domain';
 import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
@@ -131,13 +132,20 @@ export function ScopeSwitcherSheet({ open, onClose }: { open: boolean; onClose: 
         */}
         {user ? (
           /*
-            Hàng TRẦN — không nền, không viền: nó đứng ngay dưới tiêu đề tấm trượt, và một panel
-            có viền ở đó đọc ra như một lựa chọn thứ ba bên cạnh hai thẻ chọn khu bên dưới.
+            Nền vàng nhạt KHÔNG viền (người dùng chốt 09/10/2026): khác hẳn thẻ chọn khu bên dưới
+            (viền, nền trắng) nên không đọc ra như một lựa chọn thứ ba.
 
             Vòng gold + con dấu chỉ dành cho chủ gian hàng TUYẾN GÓI (ADR 0038) — cùng phép suy
             với đầu màn "Tài khoản & bảo mật". Gắn cho mọi vai là làm dấu mất nghĩa.
           */
-          <XStack ai="center" gap={space.sm} px={space.md}>
+          <XStack
+            ai="center"
+            gap={space.sm}
+            mx={space.md}
+            p={space.md}
+            br={radius.md}
+            bg={colors.primaryLight}
+          >
             <Avatar
               name={name}
               url={user.avatarUrl}
@@ -174,6 +182,15 @@ export function ScopeSwitcherSheet({ open, onClose }: { open: boolean; onClose: 
                 <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
                   {user.email}
                 </Text>
+              ) : null}
+              {/*
+                Nhãn tuyến/vai — MỘT nguồn cho ba loại tài khoản của app Partner: chủ xe hoa hồng
+                (kèm % phí), chủ gian hàng (kèm tên gói), nhân viên gian hàng (theo vai).
+              */}
+              {user.tenant ? (
+                <XStack pt={2}>
+                  <AccountTrackBadge tenant={user.tenant} size="sm" />
+                </XStack>
               ) : null}
             </YStack>
           </XStack>

@@ -38,13 +38,5 @@ export const bankAccountsApi = {
     return getApiClient().post<BankAccount>(base(scope), body);
   },
 
-  /** Đặt làm mặc định — server tự gỡ cờ của tài khoản cũ, client không phải gọi hai lệnh. */
-  setDefault(scope: BankAccountScope, id: string): Promise<BankAccount> {
-    return getApiClient().patch<BankAccount>(`${base(scope)}/${id}/default`);
-  },
-
-  /** Gỡ khỏi danh sách. LƯU TRỮ chứ không xoá: lệnh chi cũ vẫn phải tra được về tài khoản đích. */
-  archive(scope: BankAccountScope, id: string): Promise<void> {
-    return getApiClient().delete<void>(`${base(scope)}/${id}`);
-  },
+  // Không còn `setDefault`/`archive` (web PR #159): mỗi chủ MỘT tài khoản, đổi là THAY qua `create`.
 };

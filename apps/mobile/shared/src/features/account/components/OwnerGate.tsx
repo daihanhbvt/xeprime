@@ -123,7 +123,8 @@ export function OwnerGate({
                 actionLabel: registering ? t('openRegistration') : t('becomeOwner'),
                 onAction: () =>
                   navigateOnce(
-                    registering ? ROUTES.account.registration() : ROUTES.manage.register(),
+                    // Web PR #156: "openRegistration" về trang chủ Owner Lite — nơi tiến trình đăng ký sống.
+                    registering ? ROUTES.manage.home() : ROUTES.manage.register(),
                   ),
               })}
         />

@@ -27,6 +27,7 @@ import { applyDiscountPercent, LIST_SEPARATOR } from '@xeprime/domain';
 import { catalogLabel } from '@/api/catalog';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { MapPreview } from '@/components/map/MapPreview';
+import { ListingConditionCards } from './components/ListingConditionCards';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ListingDetailSkeleton } from '@/components/ui/Skeleton';
 import { ShopQuickInfoCard } from '@/components/shop/ShopQuickInfoCard';
@@ -558,6 +559,9 @@ function DetailBody({
           </Card>
         ) : null}
 
+        {/* Thủ tục · khung giờ giao nhận · phụ phí tài xế — cùng chỗ đứng với web (trước thông số). */}
+        <ListingConditionCards listing={listing} activeService={activeService as ServiceType} />
+
         <Card lift="flat" padded={false}>
           <YStack>
             {specs.map((spec, index) => (
@@ -888,11 +892,7 @@ function Reviews({ vehicleId }: { vehicleId: string }) {
  * Chạm vào ảnh mở GOOGLE MAPS để khách chỉ đường: đó là việc native làm được mà web không —
  * ảnh ở đây chỉ để XEM, không có ghim nào để kéo.
  */
-function PickupPointCard({
-  point,
-}: {
-  point: NonNullable<PublicListingDetail['pickupPoint']>;
-}) {
+function PickupPointCard({ point }: { point: NonNullable<PublicListingDetail['pickupPoint']> }) {
   const t = useTranslations('Listings.detail');
   const tAddress = useTranslations('Address');
   const tStates = useTranslations('Common.states');

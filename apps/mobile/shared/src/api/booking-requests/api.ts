@@ -123,10 +123,19 @@ export const BOOKING_REQUEST_STATUS_ALL = 'all';
  */
 export const BOOKING_REQUEST_TAB_NEEDS_ACTION = 'needs_action';
 
-/** Hai trạng thái gộp trong tab "Cần xử lý" — cùng thứ tự với chuỗi gửi lên server. */
+/**
+ * Trạng thái của tab "Cần xử lý" — cùng thứ tự với chuỗi gửi lên server.
+ *
+ * CÒN MỘT (08/10/2026): `hold_paid` thuộc luồng thu-trước-duyệt đã gỡ hẳn ở ADR 0055, và DB nay
+ * từ chối trạng thái đó. Gửi nó lên trong `status=` là lọc theo một mã không còn bản ghi nào —
+ * tab vẫn chạy nhưng con số thì nói về một thế giới không tồn tại. Gương
+ * `BOOKING_REQUEST_NEEDS_ACTION_STATUSES` bên web, nơi đã chỉ còn một mã.
+ *
+ * Việc chờ khách trả tiền giờ là `awaiting_hold`, và nó KHÔNG thuộc tab này: chủ xe đã quyết
+ * định xong, không còn gì để họ xử lý.
+ */
 export const BOOKING_REQUEST_NEEDS_ACTION_STATUSES = [
   BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
-  BOOKING_REQUEST_STATUS.HOLD_PAID,
 ] as const;
 
 /**

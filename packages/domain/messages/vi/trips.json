@@ -116,7 +116,8 @@
     "completed": "Chuyến đi đã kết thúc tốt đẹp. Cảm ơn bạn đã đồng hành cùng XePrime!",
     "terminal": "Chuyến đi đã kết thúc sớm",
     "pending_approval_paid": "Đã nhận tiền giữ chỗ của bạn. Đang chờ chủ xe xác nhận — nếu chủ xe từ chối, toàn bộ số tiền được hoàn ngay.",
-    "slot_taken": "Khung giờ này đã có khách khác đặt trước"
+    "slot_taken": "Khung giờ này đã có khách khác đặt trước",
+    "expired": "Chủ xe chưa kịp trả lời trong thời hạn, nên yêu cầu đã đóng. Bạn có thể chọn xe khác."
   },
   "notice": {
     "pendingTitle": "Đang chờ chủ xe xác nhận",

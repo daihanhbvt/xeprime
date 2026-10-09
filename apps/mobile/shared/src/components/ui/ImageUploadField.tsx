@@ -63,6 +63,11 @@ interface Props<T extends FieldValues> {
   emptyLabel?: string;
   /** Gợi ý kích thước ảnh — hiện trong tấm chọn nguồn, xem `useImageUpload`. */
   hint?: string;
+  /**
+   * `false` = ảnh ĐƠN không có nút xoá, chỉ đổi tại chỗ — ảnh đại diện của chủ xe cá nhân là ảnh
+   * khách thấy, bắt buộc và không có logo nào để rơi về (web `OwnerInfoForm`, PR #156).
+   */
+  removable?: boolean;
 }
 
 /**
@@ -91,6 +96,7 @@ export function ImageUploadField<T extends FieldValues>({
   presign,
   emptyLabel,
   hint,
+  removable = true,
 }: Props<T>) {
   const t = useTranslations('Common.image');
   const tCommon = useTranslations('Common.actions');
@@ -169,17 +175,19 @@ export function ImageUploadField<T extends FieldValues>({
                     Xoá: THÙNG RÁC trên nền trắng ở góc trên phải. Dấu × đọc ra là "đóng/bỏ chọn";
                     thùng rác nói đúng việc đang làm — bỏ hẳn tấm ảnh đã tải lên.
                   */}
-                  <Pressable
-                    onPress={() => removeAt(urls[0] as string)}
-                    accessibilityRole="button"
-                    accessibilityLabel={tCommon('delete')}
-                    hitSlop={space.xs}
-                    style={styles.coverRemove}
-                  >
-                    <YStack bg={colors.surface} br={radius.pill} p={space.xs}>
-                      <Ionicons name="trash-outline" size={iconSize.sm} color={colors.danger} />
-                    </YStack>
-                  </Pressable>
+                  {removable ? (
+                    <Pressable
+                      onPress={() => removeAt(urls[0] as string)}
+                      accessibilityRole="button"
+                      accessibilityLabel={tCommon('delete')}
+                      hitSlop={space.xs}
+                      style={styles.coverRemove}
+                    >
+                      <YStack bg={colors.surface} br={radius.pill} p={space.xs}>
+                        <Ionicons name="trash-outline" size={iconSize.sm} color={colors.danger} />
+                      </YStack>
+                    </Pressable>
+                  ) : null}
 
                   {/*
                     Camera nằm GIỮA ảnh: chạm vào đâu trên ảnh cũng đổi được, và giữa khung là chỗ

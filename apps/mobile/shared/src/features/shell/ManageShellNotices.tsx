@@ -22,7 +22,7 @@ import { queryKeys } from '@/queries/query-keys';
 import { layout } from '@/theme/layout';
 import { space } from '@/theme/tokens';
 import { flattenManageLeaves, manageNavForTrack, matchActiveHref } from './manage-nav';
-import { PARTNER_TRACK } from './partner-track';
+import { PARTNER_TRACK, resolvePartnerTrack } from './partner-track';
 
 /**
  * Tính năng của trang đang mở nếu nó ở `read_only` — bản native của `expiredFeature` trong
@@ -59,7 +59,11 @@ export function ManageShellNotices() {
   const navigateOnce = useNavigateOnce();
 
   const shopNotice = useMemo(() => {
-    if (!tenant || pathname === String(ROUTES.manage.shop())) return null;
+    // CHỈ tuyến gói, đúng web `AppShell`: tuyến hoa hồng theo dõi trạng thái ở màn tiến trình đăng ký
+    // và "Hồ sơ chủ xe" (`ShopStatusBanner`) — dải ở vỏ là lần nói thứ hai, và câu "gian hàng tạm
+    // khoá" sai đối tượng với một chủ xe cá nhân.
+    if (!tenant || resolvePartnerTrack({ tenant }) !== PARTNER_TRACK.PACKAGE) return null;
+    if (pathname === String(ROUTES.manage.shop())) return null;
     const notice = shopStatusNotice(tenant.status as TenantStatus);
     return notice.showInShell ? notice : null;
   }, [tenant, pathname]);

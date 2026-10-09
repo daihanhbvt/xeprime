@@ -140,6 +140,7 @@
     "viewDetail": "View details",
     "addVehicle": "Add vehicle",
     "tips": {
+      "menuLabel": "Host resources",
       "guideTitle": "Host guide",
       "guideBody": "Handover and return procedure, plus the paperwork to prepare.",
       "documentsTitle": "Contract & document templates",
@@ -392,7 +393,8 @@
     "profile": {
       "previewLabel": "Profile preview",
       "notShop": "This name and photo belong to your account only. The name, logo and contact phone renters see belong to the shop.",
-      "shopSettingsLink": "Open shop settings"
+      "shopSettingsLink": "Open shop settings",
+      "storefrontFallback": "This name and photo are also what renters see on your vehicles — you rent out as an individual, not through a shop."
     }
   },
   "ownerHub": {

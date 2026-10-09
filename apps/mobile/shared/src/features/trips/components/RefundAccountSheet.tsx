@@ -1,22 +1,19 @@
 import { useState } from 'react';
-import { Text, YStack } from 'tamagui';
+import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import {
-  BANK_ACCOUNT_SCOPE,
-  type BankAccount,
-  type BankAccountScope,
-} from '@/api/bank-accounts/api';
+import { BANK_ACCOUNT_SCOPE, type BankAccountScope } from '@/api/bank-accounts/api';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
-import { MenuOption, MenuOptionList } from '@/components/ui/MenuOption';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
+import { BankAccountCard } from '@/features/bank-accounts/components/BankAccountCard';
 import { BankAccountFormSheet } from '@/features/bank-accounts/components/BankAccountFormSheet';
+import { currentBankAccount } from '@/features/bank-accounts/current-account';
 import { useBankAccounts } from '@/features/bank-accounts/hooks/use-bank-accounts';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { space } from '@/theme/tokens';
 import { useProvideRefundAccount } from '../hooks/use-trips';
 
 /**
@@ -38,6 +35,7 @@ export function RefundAccountSheet({
   onClose: () => void;
 }) {
   const t = useTranslations('BankAccounts.refund');
+  const tBank = useTranslations('BankAccounts');
   const fmt = useAppFormat();
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
@@ -48,20 +46,17 @@ export function RefundAccountSheet({
    */
   const scope: BankAccountScope = BANK_ACCOUNT_SCOPE.ACCOUNT;
 
-  const { data: accounts, isPending } = useBankAccounts(scope, open);
+  const { data: accounts, isPending, isError } = useBankAccounts(scope, open);
   const provide = useProvideRefundAccount(tripId);
-
-  const [selected, setSelected] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
 
-  const list = accounts ?? [];
-  // Mặc định là tài khoản MẶC ĐỊNH của họ — người dùng thường không có lựa chọn thứ hai để cân nhắc.
-  const chosen = selected ?? list.find((a) => a.isDefault)?.id ?? list[0]?.id ?? null;
+  /* Mỗi chủ MỘT tài khoản (PR #159): không còn bộ chọn, tiền hoàn về đúng tài khoản đang dùng. */
+  const account = currentBankAccount(accounts);
 
   const submit = () => {
-    if (!chosen) return;
+    if (!account || provide.isPending) return;
     provide.mutate(
-      { bankAccountId: chosen },
+      { bankAccountId: account.id },
       {
         onSuccess: () => {
           toast.showSuccess(t('saved'));
@@ -80,49 +75,36 @@ export function RefundAccountSheet({
 
           {isPending ? <MiniRowsSkeleton rows={2} /> : null}
 
-          {!isPending && list.length > 0 ? (
-            <MenuOptionList>
-              {list.map((account) => (
-                <MenuOption
-                  key={account.id}
-                  label={account.label || account.bankCode}
-                  hint={`${account.bankCode} · ${account.accountNumberMasked}`}
-                  meta={account.accountName}
-                  selected={account.id === chosen}
-                  onPress={() => setSelected(account.id)}
-                />
-              ))}
-            </MenuOptionList>
-          ) : null}
+          {isError ? <Callout tone="danger">{tBank('loadError')}</Callout> : null}
 
-          {!isPending && list.length === 0 ? (
-            <Text col={colors.textMuted} fos={fontSize.bodySm}>
-              {t('pickSaved')}
-            </Text>
-          ) : null}
+          {account ? <BankAccountCard account={account} emphasis /> : null}
 
-          <Button
-            label={list.length > 0 ? t('useNew') : t('pickSaved')}
-            variant="ghost"
-            onPress={() => setFormOpen(true)}
-          />
+          {/* Lối thêm/đổi chỉ hiện khi đã biết chắc có hay chưa có tài khoản — đúng web. */}
+          {!isPending && !isError ? (
+            <Button
+              label={account ? tBank('actions.change') : tBank('actions.add')}
+              icon={account ? 'swap-horizontal-outline' : 'add'}
+              variant="ghost"
+              disabled={provide.isPending}
+              onPress={() => setFormOpen(true)}
+            />
+          ) : null}
 
           <Button
             label={t('submit')}
             size="lg"
-            disabled={!chosen}
+            disabled={!account}
             loading={provide.isPending}
             onPress={submit}
           />
         </YStack>
       </BottomSheet>
 
-      {/* Khai xong thì chọn luôn tài khoản vừa thêm — không bắt người dùng tìm lại nó trong danh sách. */}
       <BankAccountFormSheet
         scope={scope}
         open={formOpen}
+        replacing={account}
         onClose={() => setFormOpen(false)}
-        onCreated={(account: BankAccount) => setSelected(account.id)}
       />
     </>
   );

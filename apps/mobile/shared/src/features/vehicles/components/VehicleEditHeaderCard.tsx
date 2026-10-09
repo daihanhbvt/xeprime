@@ -57,14 +57,23 @@ export function VehicleEditHeaderCard({
   vehicle,
   onEditImages,
   statusEditable = false,
+  footer,
 }: {
   vehicle: VehicleDetail;
   onEditImages?: (() => void) | undefined;
   statusEditable?: boolean;
+  /**
+   * Phần RIÊNG của nơi gọi, dưới công tắc "Trên chợ" — màn Quản lý xe gắn điểm đánh giá + số
+   * chuyến và hai lối Hồ sơ xe · Trang xe, đúng web `VehicleManageHeader` bọc `VehicleEditHeader`.
+   */
+  footer?: ReactNode;
 }) {
   const t = useTranslations('Vehicles.overview');
   const tEdit = useTranslations('Vehicles.edit.aside');
   const tLabels = useTranslations('Common.labels');
+  // Nhãn NGẮN của góc chụp ("Mặt sau", "Nội thất") — web cũng ghi ngắn trên ảnh nhỏ; bản đầy đủ
+  // "Ảnh mặt sau" thừa chữ "Ảnh" và cắt cụt ở ô 1/4 bề ngang.
+  const tSlot = useTranslations('Vehicles.imageSlot');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const errorMessage = useErrorMessage();
@@ -145,10 +154,10 @@ export function VehicleEditHeaderCard({
                     style={styles.thumb}
                     contentFit="cover"
                     cachePolicy="memory-disk"
-                    accessibilityLabel={domainLabel('vehicleImageType', item.type)}
+                    accessibilityLabel={tSlot(item.type as never)}
                   />
                   <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
-                    {domainLabel('vehicleImageType', item.type)}
+                    {tSlot(item.type as never)}
                   </Text>
                 </YStack>
               ))}
@@ -239,6 +248,8 @@ export function VehicleEditHeaderCard({
         <YStack pt={space.xs} borderTopWidth={1} borderColor={colors.borderSubtle}>
           <MarketplaceVisibilityRow vehicle={vehicle} />
         </YStack>
+
+        {footer}
       </YStack>
 
       <BottomSheet open={picking} onClose={() => setPicking(false)} title={t('axisOperation')}>

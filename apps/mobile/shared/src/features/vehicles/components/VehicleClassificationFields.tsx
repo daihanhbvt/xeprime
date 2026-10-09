@@ -1,13 +1,16 @@
 import { useEffect, useMemo, type ReactNode } from 'react';
-import { useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
-import { YStack } from 'tamagui';
+import { useController, useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
+import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { MOTORBIKE_CATEGORY_VALUES, vehicleFieldPolicy } from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
+import { Chip } from '@/components/ui/Chip';
+import { FieldLabel, FieldMessage } from '@/components/ui/Field';
 import { NumberField } from '@/components/ui/NumberField';
 import { SelectField } from '@/components/ui/SelectField';
 import { useDomainLabel } from '@/i18n/domain';
 import { space } from '@/theme/tokens';
+import { useCatalogModelSpec } from '../hooks/use-catalog-model-spec';
 
 /**
  * Ô PHÂN LOẠI xe — bản native của `VehicleClassificationFields` bên web.
@@ -41,6 +44,13 @@ export function VehicleClassificationFields({
   const domainLabel = useDomainLabel();
   const fuelType = useWatch({ control, name: 'fuelType' });
   const policy = vehicleFieldPolicy(vehicleType, fuelType);
+  const tCommon = useTranslations('Common');
+  const spec = useCatalogModelSpec(control, vehicleType);
+  const seatRequired = required && policy.seatCount === 'required';
+  const seatCount = useWatch({ control, name: 'seatCount' });
+  // Khoá CHỈ khi giá trị đã khớp mẫu: xe cũ lưu lệch (VF 5 mà ghi 4 chỗ) vẫn phải sửa lại được.
+  const seatLocked =
+    Boolean(spec.model) && spec.seats.kind === 'fixed' && seatCount === spec.seats.value;
 
   const categoryOptions = useMemo(
     () =>
@@ -64,18 +74,39 @@ export function VehicleClassificationFields({
 
   return (
     <YStack gap={space.md}>
+      {/*
+        Số chỗ theo MẪU XE (`catalogSpecRule`): một cấu hình ⇒ điền sẵn và khoá; nhiều cấu hình ⇒
+        chỉ chọn trong đó; mẫu chưa khai ⇒ nhập tự do.
+      */}
       {policy.seatCount !== 'hidden' ? (
-        <NumberField
-          control={control}
-          name="seatCount"
-          integer
-          label={t('seatCount')}
-          required={required && policy.seatCount === 'required'}
-          placeholder={t('seatPlaceholder')}
-          min={1}
-          max={64}
-          editable={!disabled}
-        />
+        spec.model && spec.seats.kind === 'choice' ? (
+          <SeatChoiceField
+            control={control}
+            label={t('seatCount')}
+            required={seatRequired}
+            values={spec.seats.values}
+            disabled={disabled}
+            hint={t('specChoiceFromModel', {
+              model: spec.model.label,
+              values: spec.seats.values.map((count) => tCommon('units.seat', { count })).join(', '),
+            })}
+          />
+        ) : (
+          <NumberField
+            control={control}
+            name="seatCount"
+            integer
+            label={t('seatCount')}
+            required={seatRequired}
+            placeholder={t('seatPlaceholder')}
+            min={1}
+            max={64}
+            editable={!disabled && !seatLocked}
+            {...(seatLocked && spec.model
+              ? { hint: t('specFromModel', { model: spec.model.label }) }
+              : {})}
+          />
+        )
       ) : null}
 
       {policy.motorbikeCategory !== 'hidden' ? (
@@ -92,6 +123,50 @@ export function VehicleClassificationFields({
       ) : null}
 
       {policy.bodyType !== 'hidden' && bodyTypePicker ? bodyTypePicker : null}
+    </YStack>
+  );
+}
+
+/**
+ * Số chỗ khi mẫu xe có NHIỀU cấu hình (VF 9: 6 hoặc 7 chỗ) — hàng viên chọn thay cho ô nhập số,
+ * bản native của `SeatChoiceField` bên web. Giá trị ĐANG LƯU nằm ngoài các bản của mẫu vẫn hiện
+ * thành một viên đã chọn: ô chọn không được giấu đúng con số nó sắp gửi đi. Hàng tự xuống dòng
+ * nên màn hẹp không tràn ngang.
+ */
+function SeatChoiceField({
+  control,
+  label,
+  values,
+  required,
+  disabled,
+  hint,
+}: {
+  control: Control<VehicleFormValues>;
+  label: string;
+  values: readonly number[];
+  required?: boolean;
+  disabled?: boolean | undefined;
+  hint?: string;
+}) {
+  const tCommon = useTranslations('Common');
+  const { field, fieldState } = useController({ control, name: 'seatCount' });
+  const current = typeof field.value === 'number' ? field.value : null;
+  const shown = current != null && !values.includes(current) ? [...values, current] : values;
+
+  return (
+    <YStack gap={space.xs}>
+      <FieldLabel label={label} required={Boolean(required)} />
+      <XStack flexWrap="wrap" gap={space.sm}>
+        {shown.map((count) => (
+          <Chip
+            key={count}
+            label={tCommon('units.seat', { count })}
+            selected={current === count}
+            {...(disabled ? {} : { onPress: () => field.onChange(count) })}
+          />
+        ))}
+      </XStack>
+      <FieldMessage error={fieldState.error?.message} hint={hint} />
     </YStack>
   );
 }

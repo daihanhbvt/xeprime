@@ -59,7 +59,7 @@ export function toShopUpgradeValues(shop: MyShop, branch: Branch | null): ShopUp
 }
 
 /**
- * Thân `PATCH /shop/profile` — giữ nguyên những ô form này không hỏi.
+ * Thân `PATCH /shop/profile` — giữ nguyên những ô form này không hỏi (trừ `taxCode`, bỏ hẳn).
  *
  * `wardCode` rỗng KHÔNG được gửi: DTO khai `@IsOptional()` kèm `@Length(5, 5)`, mà `@IsOptional`
  * chỉ bỏ qua `null`/`undefined`. Từ ADR 0042 form không còn ô Xã/phường, nên hồ sơ chưa từng khai
@@ -77,7 +77,8 @@ export function toShopUpgradeProfileBody(
     provinceCode: values.provinceCode,
     wardCode: values.wardCode || undefined,
     addressLine: values.addressLine,
-    taxCode: p.taxCode ?? '',
+    // KHÔNG gửi `taxCode` (PR #159): MST sống ở hồ sơ người bán; gửi lại một giá trị cũ không
+    // hợp lệ, hay khi hồ sơ người bán đã nộp/duyệt, làm hỏng cả lượt nâng cấp.
     businessLicenseNo: p.businessLicenseNo ?? '',
     logoUrl: values.logoUrl ?? '',
     coverUrl: p.coverUrl ?? '',

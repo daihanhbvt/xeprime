@@ -3,13 +3,21 @@ import { RefreshControl, type ListRenderItem } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { MAINTENANCE_BOARD_FILTER, MAINTENANCE_TYPE_VALUES, PERMISSION } from '@xeprime/types';
+import {
+  MAINTENANCE_BOARD_FILTER,
+  MAINTENANCE_TYPE_VALUES,
+  PERMISSION,
+  PLAN_FEATURE,
+} from '@xeprime/types';
 import { Screen } from '@/components/layout/Screen';
 import { RecordCardSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { BranchFilterField, useBranchEmptyCopy } from '@/features/branches/components/BranchFilterField';
+import {
+  BranchFilterField,
+  useBranchEmptyCopy,
+} from '@/features/branches/components/BranchFilterField';
 import { useScreenBranchFilter } from '@/features/branches/hooks/use-branch-filter';
 import { MissingOdometerCard } from '@/features/handovers/components/MissingOdometerCard';
 import { ResolveQueueSheet } from '@/features/handovers/components/ResolveQueueSheet';
@@ -29,6 +37,8 @@ import { LIST_TUNING, MEDIA_LIST_TUNING } from '@/theme/list-tuning';
 import { colors } from '@/theme/tokens';
 import { scrollThrottle } from '@/theme/motion';
 import { BoardActionSheets, type BoardAction } from './components/BoardActionSheets';
+import { FeatureReadOnlyNotice } from '@/components/feedback/FeatureReadOnlyNotice';
+import { useFeature } from '@/features/auth/hooks/use-feature';
 import { MaintenanceBoardCard } from './components/MaintenanceBoardCard';
 import { useMaintenanceBoard } from './hooks/use-maintenance';
 import type { MaintenanceBoardItem } from './api';
@@ -107,6 +117,12 @@ export function MaintenanceBoardScreen() {
   const canView = permissions.has(PERMISSION.VEHICLE_MAINTENANCE_VIEW);
   const canManage = permissions.has(PERMISSION.VEHICLE_MAINTENANCE_MANAGE);
   const canCorrectOdometer = permissions.has(PERMISSION.VEHICLE_ODOMETER_CORRECT);
+  /*
+   * Bảo dưỡng là năng lực của GÓI (ADR 0027): ở `read_only` thao tác GHI khoá kèm lý do chứ không
+   * ẩn — đúng web `MaintenanceBoardTable` (`writeBlock`). Đường ĐỌC (mở chi tiết) không khoá.
+   */
+  const { canWrite } = useFeature(PLAN_FEATURE.MAINTENANCE);
+  const writeLocked = !canWrite;
   const canViewHandovers = permissions.has(PERMISSION.HANDOVER_VIEW);
 
   /*
@@ -236,11 +252,12 @@ export function MaintenanceBoardScreen() {
         item={item}
         canManage={canManage}
         canCorrectOdometer={canCorrectOdometer}
+        writeLocked={writeLocked}
         onPress={openVehicle}
         onAction={setAction}
       />
     ),
-    [canManage, canCorrectOdometer, openVehicle],
+    [canManage, canCorrectOdometer, writeLocked, openVehicle],
   );
 
   const renderQueueItem = useCallback<ListRenderItem<MissingOdometerItem>>(
@@ -286,6 +303,9 @@ export function MaintenanceBoardScreen() {
           groups={groups}
           onFilterChange={changeFilter}
           {...(meta === undefined ? {} : { meta })}
+          summary={
+            <FeatureReadOnlyNotice show={writeLocked && (canManage || canCorrectOdometer)} />
+          }
           onPageChange={setPage}
         >
           {({ onScroll, headerHeight, contentContainerStyle, bindList }) => {

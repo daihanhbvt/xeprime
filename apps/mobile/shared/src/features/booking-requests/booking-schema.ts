@@ -95,6 +95,11 @@ export function buildBookingRequestSchema(
       .required(labels.phoneRequired)
       .matches(VN_PHONE_PATTERN, { message: labels.phoneInvalid }),
     customerEmail: yup.string().trim().default('').email(labels.emailInvalid),
+    /**
+     * Khách tick "đã đọc điều khoản của chủ xe" — chỉ BẮT BUỘC khi điều khoản của dịch vụ đang chọn
+     * có `requireTermsAcceptance`; phép chặn nằm ở lượt gửi (`submitRequest`), đúng như web.
+     */
+    acceptedTerms: yup.boolean().default(false),
     serviceType: yup.string().oneOf(SERVICE_TYPE_VALUES).required(labels.serviceRequired),
 
     /** ISO-8601. Chuỗi chứ không phải `Date`: nó đi thẳng vào body, không qua bộ chọn của AntD. */

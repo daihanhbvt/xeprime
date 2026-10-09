@@ -86,6 +86,8 @@ export function toRequestBody(
         }
       : {}),
     ...(values.note ? { note: values.note } : {}),
+    // Đúng web: chỉ gửi khi đã tick — server tự kiểm lại với điều khoản hiệu lực của dịch vụ.
+    ...(values.acceptedTerms ? { acceptedTerms: true } : {}),
     ...(promoCode ? { promoCode } : {}),
   };
 }

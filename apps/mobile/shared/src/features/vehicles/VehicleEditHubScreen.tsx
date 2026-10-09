@@ -5,23 +5,15 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   PERMISSION,
-  STATUS_COLOR,
   VEHICLE_ALERT_KIND,
-  VEHICLE_OPERATION_STATUS_META,
-  VEHICLE_PUBLIC_STATUS_META,
   type VehicleAlertKind,
-  type VehicleOperationStatus,
-  type VehiclePublicStatus,
 } from '@xeprime/types';
-import { LIST_SEPARATOR } from '@xeprime/domain';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { Card } from '@/components/ui/Card';
 import { InlineAction } from '@/components/ui/InlineAction';
 import { DetailChevron } from '@/components/ui/DetailArrow';
 import { CountBadge } from '@/components/ui/CountBadge';
-import { RemoteImage } from '@/components/ui/RemoteImage';
-import { StatusBadge } from '@/components/ui/StatusBadge';
 import { SkeletonText } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
@@ -41,15 +33,13 @@ import type { VehicleDetail } from './api';
 import { vehicleEditNavGroups } from './edit-nav';
 import { useVehicle, useVehicleSummary } from './hooks/use-vehicle';
 import { useVehicleCapabilities } from './hooks/use-vehicle-capabilities';
+import { VehicleEditHeaderCard } from './components/VehicleEditHeaderCard';
 
 /** Ô đựng biểu tượng của một mục. Đủ to để hình 18px có khoảng thở quanh nó. */
 const ICON_BOX = 32;
 
 /** Chiều cao tối thiểu một dòng mục — trên mức 44dp chạm được, gọn hơn thẻ riêng lẻ. */
 const ROW_HEIGHT = 56;
-
-/** Ảnh xe ở thẻ tóm tắt đầu hub. */
-const THUMB = 64;
 
 /** Độ mờ của mục thuộc một dịch vụ đang tắt — web làm mờ cả nhóm (`dimmed`). */
 const DIMMED_OPACITY = 0.55;
@@ -203,7 +193,15 @@ function EditMenu({
   return (
     <>
       <YStack gap={layout.section} accessibilityLabel={tNav('menuLabel')}>
-        <VehicleSummaryRow vehicle={vehicle} />
+        {/*
+          CÙNG thẻ đầu xe với web `VehicleEditWorkspace` (`VehicleEditHeader`): ảnh + dải góc, tên + mã,
+          biển số · loại / dịch vụ, số KM, hai trục trạng thái, công tắc "Trên chợ".
+        */}
+        <VehicleEditHeaderCard
+          vehicle={vehicle}
+          statusEditable={canToggle}
+          onEditImages={canToggle ? () => open(VEHICLE_EDIT_TAB.MEDIA) : undefined}
+        />
 
         {groups.map((group) => {
           const service = group.serviceType;
@@ -294,65 +292,6 @@ function SectionLabel({ children }: { children: string }) {
 /** Đường kẻ giữa hai dòng của một nhóm — thụt vào bằng ô biểu tượng, như danh sách hệ thống. */
 function RowDivider() {
   return <YStack h={1} marginLeft={space.md + ICON_BOX + space.sm} bg={colors.borderSubtle} />;
-}
-
-/**
- * Tóm tắt chiếc xe đang sửa ở đầu hub: ảnh · tên · biển số/mã · hai trục trạng thái. Người dùng
- * biết mình đang sửa xe nào mà không phải đọc dòng chữ nhỏ trên thanh đầu.
- */
-function VehicleSummaryRow({ vehicle }: { vehicle: VehicleDetail }) {
-  const domainLabel = useDomainLabel();
-  const operation = vehicle.operationStatus as VehicleOperationStatus;
-  const publicStatus = vehicle.publicStatus as VehiclePublicStatus;
-
-  return (
-    <Card lift="flat">
-      <XStack ai="center" gap={space.md}>
-        <YStack w={THUMB} h={THUMB} br={radius.md} ov="hidden" bg={colors.surfaceMuted}>
-          {vehicle.mainImageUrl ? (
-            <RemoteImage
-              uri={vehicle.mainImageUrl}
-              fallback={null}
-              contentFit="cover"
-              accessibilityLabel={vehicle.name}
-            />
-          ) : (
-            <YStack f={1} ai="center" jc="center">
-              <Ionicons name="car-outline" size={iconSize.lg} color={colors.placeholder} />
-            </YStack>
-          )}
-        </YStack>
-        <YStack f={1} minWidth={0} gap={4}>
-          <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold} numberOfLines={1}>
-            {vehicle.name}
-          </Text>
-          <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
-            {[vehicle.plateNumber, vehicle.code].filter(Boolean).join(LIST_SEPARATOR)}
-          </Text>
-          <XStack gap={space.xs} flexWrap="wrap">
-            <StatusBadge
-              size="sm"
-              label={domainLabel(
-                'vehicleOperationStatus',
-                operation,
-                VEHICLE_OPERATION_STATUS_META[operation]?.label ?? operation,
-              )}
-              color={VEHICLE_OPERATION_STATUS_META[operation]?.color ?? STATUS_COLOR.NEUTRAL}
-            />
-            <StatusBadge
-              size="sm"
-              label={domainLabel(
-                'vehiclePublicStatus',
-                publicStatus,
-                VEHICLE_PUBLIC_STATUS_META[publicStatus]?.label ?? publicStatus,
-              )}
-              color={VEHICLE_PUBLIC_STATUS_META[publicStatus]?.color ?? STATUS_COLOR.NEUTRAL}
-            />
-          </XStack>
-        </YStack>
-      </XStack>
-    </Card>
-  );
 }
 
 /**

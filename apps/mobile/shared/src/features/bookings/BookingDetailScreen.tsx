@@ -13,6 +13,7 @@ import {
   isBookingFinal,
   isNoShowGracePassed,
   PERMISSION,
+  PLAN_FEATURE,
   SERVICE_TYPE,
   type BookingStatus,
   type CancellationReasonCategory,
@@ -29,6 +30,7 @@ import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { useFeature } from '@/features/auth/hooks/use-feature';
 import { useIsFetching, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/queries/query-keys';
 import { useHandoverContext } from '@/features/handovers/hooks/use-handovers';
@@ -214,12 +216,20 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
     [assignDriver, t, toast],
   );
   const updateFee = useUpdateDeliveryFee(booking.id);
+  /*
+   * Tài xế là năng lực của gói (`drivers`, ADR 0027): tuyến hoa hồng không có sổ tài xế, và
+   * `GET drivers/assignable` trả 403 cho họ. Khối vẫn hiện khi đơn ĐÃ có tài xế (đọc được), còn
+   * nút gán/đổi/bỏ chỉ khi có năng lực + `drivers.view` (server dò danh sách bằng quyền đó).
+   */
+  const driversFeature = useFeature(PLAN_FEATURE.DRIVERS);
 
   const status = booking.status as BookingStatus;
   const meta = BOOKING_STATUS_META[status];
   const closed = isBookingFinal(status);
 
   const canUpdate = permissions.has(PERMISSION.BOOKING_UPDATE);
+  const canAssignDriver =
+    canUpdate && driversFeature.isVisible && permissions.has(PERMISSION.DRIVER_VIEW);
   const withDriver = booking.serviceType === SERVICE_TYPE.WITH_DRIVER;
 
   /**
@@ -433,6 +443,9 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
           />
 
           {/*
+            Năng lực `drivers` (ADR 0027): tuyến hoa hồng không có tài xế — khối chỉ hiện khi
+            gói có năng lực đó, hoặc đơn đã mang sẵn một tài xế (đọc được, không gán lại).
+
             Khối Tài xế hiện trên MỌI đơn, không chỉ đơn `with_driver` — đúng như
             `BookingDriverSection` của web, vốn không có nhánh nào chặn theo `serviceType`.
 
@@ -440,13 +453,14 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
             (giao xe tận nơi vẫn cần người lái đi giao), nên ẩn khối đi là khoá một việc server
             vẫn cho phép. `withDriver` chỉ quyết định có hiện thêm dòng lộ trình hay không.
           */}
-          <Card>
-            <YStack gap={space.sm}>
-              <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
-                {t('driver.title')}
-              </Text>
+          {driversFeature.isVisible || booking.driver ? (
+            <Card>
+              <YStack gap={space.sm}>
+                <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
+                  {t('driver.title')}
+                </Text>
 
-              {/*
+                {/*
                 Hành trình NHẮC LẠI ngay tại khối phân công, dù khối thông tin đơn phía trên đã
                 có đủ ba dòng đó — web cũng lặp đúng như vậy, và có lý do: người trực chọn tài xế
                 theo tuyến ("đi Huế thì giao anh Tuấn"), nên hỏi "chạy đâu" mà phải cuộn ngược
@@ -454,50 +468,50 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
 
                 Chỉ đơn CÓ TÀI XẾ mới có tuyến để nhắc.
               */}
-              {withDriver && booking.routeType ? (
-                <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                  {[
-                    domainLabel('routeType', booking.routeType),
-                    booking.pickupAddress
-                      ? t('driver.routePickup', { address: booking.pickupAddress })
-                      : null,
-                  ]
-                    .filter(Boolean)
-                    .join(LIST_SEPARATOR)}
-                  {booking.destination
-                    ? ` ${t('driver.routeDestination', { address: booking.destination })}`
-                    : ''}
-                </Text>
-              ) : null}
-              {booking.driver ? (
-                <XStack ai="center" gap={space.sm}>
-                  <Ionicons
-                    name="person-circle-outline"
-                    size={iconSize.lg}
-                    color={colors.textMuted}
-                  />
-                  <YStack f={1} gap={1}>
-                    <Text col={colors.text} fos={fontSize.body} fow={fontWeight.medium}>
-                      {booking.driver.name}
-                    </Text>
-                    {/*
+                {withDriver && booking.routeType ? (
+                  <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                    {[
+                      domainLabel('routeType', booking.routeType),
+                      booking.pickupAddress
+                        ? t('driver.routePickup', { address: booking.pickupAddress })
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(LIST_SEPARATOR)}
+                    {booking.destination
+                      ? ` ${t('driver.routeDestination', { address: booking.destination })}`
+                      : ''}
+                  </Text>
+                ) : null}
+                {booking.driver ? (
+                  <XStack ai="center" gap={space.sm}>
+                    <Ionicons
+                      name="person-circle-outline"
+                      size={iconSize.lg}
+                      color={colors.textMuted}
+                    />
+                    <YStack f={1} gap={1}>
+                      <Text col={colors.text} fos={fontSize.body} fow={fontWeight.medium}>
+                        {booking.driver.name}
+                      </Text>
+                      {/*
                       SĐT là một liên kết GỌI ĐƯỢC, đúng như `<a href="tel:">` của web: đây là
                       con số người trực bấm để gọi, không phải một chú thích cạnh tên.
                     */}
-                    {booking.driver.phone ? (
-                      <Pressable
-                        onPress={() => void Linking.openURL(`tel:${booking.driver?.phone}`)}
-                        accessibilityRole="button"
-                        accessibilityLabel={booking.driver.phone}
-                      >
-                        <Text col={colors.primaryActive} fos={fontSize.bodySm}>
-                          {booking.driver.phone}
-                        </Text>
-                      </Pressable>
-                    ) : null}
-                  </YStack>
+                      {booking.driver.phone ? (
+                        <Pressable
+                          onPress={() => void Linking.openURL(`tel:${booking.driver?.phone}`)}
+                          accessibilityRole="button"
+                          accessibilityLabel={booking.driver.phone}
+                        >
+                          <Text col={colors.primaryActive} fos={fontSize.bodySm}>
+                            {booking.driver.phone}
+                          </Text>
+                        </Pressable>
+                      ) : null}
+                    </YStack>
 
-                  {/*
+                    {/*
                     HAI nút, đúng như web: "Đổi" mở lại danh sách, "Bỏ gán" gỡ hẳn người khỏi đơn.
                     Chúng là hai việc khác nhau — gỡ tài xế mà không thay ai là một trạng thái hợp
                     lệ (đơn hoãn, người nghỉ), và bắt phải chọn người mới mới gỡ được là bịa thêm
@@ -509,57 +523,58 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
                     hơn nhiều so với `Button` mang chữ, nên hai nút cộng tên tài xế cộng số điện
                     thoại vừa một hàng ở 360dp mà không phải bóp nút.
                   */}
-                  {canUpdate && !closed ? (
-                    <XStack gap={space.xs}>
-                      <IconButton
-                        icon="swap-horizontal-outline"
-                        label={t('driver.change')}
-                        tone="accent"
-                        onPress={() => setAssigningDriver(true)}
-                      />
-                      <IconButton
-                        icon="person-remove-outline"
-                        label={t('driver.unassign')}
-                        tone="dangerSurface"
-                        loading={assignDriver.isPending}
-                        onPress={unassignDriver}
-                      />
-                    </XStack>
-                  ) : null}
-                </XStack>
-              ) : (
-                <XStack ai="center" gap={space.sm}>
-                  <Ionicons
-                    name="person-circle-outline"
-                    size={iconSize.lg}
-                    color={colors.textMuted}
-                  />
-                  {/*
+                    {canAssignDriver && !closed ? (
+                      <XStack gap={space.xs}>
+                        <IconButton
+                          icon="swap-horizontal-outline"
+                          label={t('driver.change')}
+                          tone="accent"
+                          onPress={() => setAssigningDriver(true)}
+                        />
+                        <IconButton
+                          icon="person-remove-outline"
+                          label={t('driver.unassign')}
+                          tone="dangerSurface"
+                          loading={assignDriver.isPending}
+                          onPress={unassignDriver}
+                        />
+                      </XStack>
+                    ) : null}
+                  </XStack>
+                ) : (
+                  <XStack ai="center" gap={space.sm}>
+                    <Ionicons
+                      name="person-circle-outline"
+                      size={iconSize.lg}
+                      color={colors.textMuted}
+                    />
+                    {/*
                     Đơn CÓ TÀI XẾ mà chưa phân công thì nhắc bằng MÀU CẢNH BÁO, không phải chữ xám
                     cho qua — đúng `.missing` của web. Đơn tự lái vốn không cần ai nên chỉ là một
                     dòng ghi chú (`.meta`). Hai sự thật khác nhau, hai cách đọc khác nhau.
                   */}
-                  <Text
-                    f={1}
-                    col={withDriver ? colors.warning : colors.textMuted}
-                    fos={fontSize.bodySm}
-                    {...(withDriver ? { fow: fontWeight.medium } : {})}
-                  >
-                    {withDriver ? t('driver.noneWithDriver') : t('driver.none')}
-                  </Text>
-                  {canUpdate && !closed ? (
-                    <Button
-                      label={t('driver.assign')}
-                      variant={withDriver ? 'primary' : 'secondary'}
-                      size="sm"
-                      block={false}
-                      onPress={() => setAssigningDriver(true)}
-                    />
-                  ) : null}
-                </XStack>
-              )}
-            </YStack>
-          </Card>
+                    <Text
+                      f={1}
+                      col={withDriver ? colors.warning : colors.textMuted}
+                      fos={fontSize.bodySm}
+                      {...(withDriver ? { fow: fontWeight.medium } : {})}
+                    >
+                      {withDriver ? t('driver.noneWithDriver') : t('driver.none')}
+                    </Text>
+                    {canAssignDriver && !closed ? (
+                      <Button
+                        label={t('driver.assign')}
+                        variant={withDriver ? 'primary' : 'secondary'}
+                        size="sm"
+                        block={false}
+                        onPress={() => setAssigningDriver(true)}
+                      />
+                    ) : null}
+                  </XStack>
+                )}
+              </YStack>
+            </Card>
+          ) : null}
 
           <BookingTripCard bookingId={booking.id} bookingStatus={status} />
 
@@ -648,13 +663,22 @@ function BookingActionBar({
 
   // Chỉ hỏi ngữ cảnh bàn giao khi đơn CÒN SỐNG — đơn đã khép thì không chiều nào mở được nữa.
   const closed = isBookingFinal(status);
-  const handovers = useHandoverContext(booking.id, !closed);
+  // Như web: đơn đã khép vẫn cần ngữ cảnh để hiện lối "Ảnh bàn giao" cho biên bản đã có.
+  const handovers = useHandoverContext(booking.id, permissions.has(PERMISSION.HANDOVER_VIEW));
   const context = handovers.data;
 
   const canViewHandover = permissions.has(PERMISSION.HANDOVER_VIEW);
   const canManageHandover = permissions.has(PERMISSION.HANDOVER_MANAGE);
   const canUpdate = permissions.has(PERMISSION.BOOKING_UPDATE);
   const canRecordPayment = permissions.has(PERMISSION.PAYMENT_RECORD);
+  const canConfirmHandover = permissions.has(PERMISSION.HANDOVER_CONFIRM);
+  /*
+   * Hai trục nối tiếp (ADR 0027 điều 2), đúng web `BookingActionBar`: chủ xe tuyến hoa hồng mang
+   * ĐỦ quyền `shop_owner`, nên chỉ hỏi quyền là bày cho họ Hợp đồng / Lịch sử tiền / Thu tiền —
+   * những năng lực của gói (`contracts`, `finance`) họ không có.
+   */
+  const contractsFeature = useFeature(PLAN_FEATURE.CONTRACTS);
+  const financeFeature = useFeature(PLAN_FEATURE.FINANCE);
 
   const hasDebt = !isZeroMoney(booking.debtAmount);
   /** Đã lập biên bản chưa — lối "Ảnh bàn giao" chỉ có nghĩa khi thật sự đã có biên bản. */
@@ -722,7 +746,7 @@ function BookingActionBar({
    * Server idempotent: bấm lại trả đúng bản cũ chứ không lập bản thứ hai, nên không cần hỏi
    * "đã có hợp đồng chưa" trước khi bấm. Gate `contracts.manage` như web.
    */
-  if (permissions.has(PERMISSION.CONTRACT_MANAGE)) {
+  if (permissions.has(PERMISSION.CONTRACT_MANAGE) && contractsFeature.isVisible) {
     actions.push({
       label: t('contract'),
       icon: 'document-attach-outline',
@@ -740,7 +764,8 @@ function BookingActionBar({
    * ĐƠN, còn "sổ" là cuốn Thu-Chi của cả gian hàng — hai thứ khác nhau mà gọi cùng một chữ thì
    * người dùng tưởng mình mở nhầm chỗ.
    */
-  if (permissions.hasAny(PERMISSION.PAYMENT_RECORD, PERMISSION.FINANCE_VIEW)) {
+  // Web gác CHỈ bằng năng lực `finance` (đọc lịch sử tiền của đơn không cần quyền ghi).
+  if (financeFeature.isVisible) {
     actions.push({
       label: t('moneyHistory'),
       icon: 'receipt-outline',
@@ -762,7 +787,7 @@ function BookingActionBar({
     });
   }
 
-  if (canRecordPayment) {
+  if (canRecordPayment && financeFeature.isVisible) {
     actions.push({
       // Hết nợ thì nút vẫn đứng nguyên chỗ nhưng nói rõ là không còn gì để thu.
       label: hasDebt ? t('collect') : t('collected'),
@@ -806,8 +831,16 @@ function BookingActionBar({
           <Button
             label={cta.label}
             size="lg"
+            // Thiếu `handovers.confirm` thì nút đứng đó nhưng mờ kèm lời giải thích — đúng web,
+            // thay vì bấm được rồi ăn 403.
+            disabled={!canConfirmHandover}
             onPress={() => navigateOnce(ROUTES.manage.handover(booking.id, cta.type))}
           />
+        ) : null}
+        {cta && !canConfirmHandover ? (
+          <Text col={colors.textMuted} fos={fontSize.label}>
+            {t('confirmPermissionHint')}
+          </Text>
         ) : null}
 
         {/*
