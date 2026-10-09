@@ -51,6 +51,7 @@ import {
 } from './dto/handover.dto';
 import { paginationMeta, resolvePaging } from '../../../common/pagination';
 import { resolveBranchScope } from '../../../common/dto/branch-scope';
+import { isUniqueViolation } from '../../../common/prisma-errors';
 
 /** Người gọi thấy được gì — controller kiểm quyền rồi truyền xuống, service không tự đọc. */
 export interface HandoverViewScope {
@@ -643,8 +644,8 @@ export class HandoversService {
   async missingOdometerQueue(
     tenantId: string,
     query: { q?: string; branchId?: string; page?: number; limit?: number },
-  /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
-  allowedBranchIds: readonly string[] | null,
+    /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
+    allowedBranchIds: readonly string[] | null,
   ): Promise<MissingOdometerQueueDto> {
     const paging = resolvePaging(query, 20, 100);
     const search = query.q?.trim();
@@ -1193,6 +1194,3 @@ function photoNotFound(): NotFoundException {
 }
 
 /** Prisma 7 làm hỏng `instanceof` — nhận diện lỗi theo mã như các module khác trong kho. */
-function isUniqueViolation(err: unknown): boolean {
-  return typeof err === 'object' && err !== null && (err as { code?: unknown }).code === 'P2002';
-}

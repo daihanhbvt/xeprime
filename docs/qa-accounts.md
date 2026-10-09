@@ -58,9 +58,9 @@ buộc của phương án thiết kế mới. Việc còn dở: [`completion-roa
 | Đối tác | `chuxe.huong@xeprime.test` | chủ xe cá nhân tuyến hoa hồng, **1 xe** |
 | Đối tác | `chuxe.tuan@xeprime.test` | chủ xe cá nhân tuyến hoa hồng, **2 xe** |
 | Đối tác | `chuxe.son@xeprime.test` | chủ xe cá nhân tuyến hoa hồng, **3 xe** = 2 ô tô + 1 xe máy (chạm trần Owner Lite); 1 xe nháp |
-| Khách | `khach.an@xeprime.test` | khách quen, nhiều chuyến đã xong, có đánh giá |
-| Khách | `khach.binh@xeprime.test` | đang thuê dài hạn theo gói tháng |
-| Khách | `khach.cuong@xeprime.test` | thuê có tài xế; bị gian hàng Sài Gòn đưa vào danh sách chặn (chỉ ở gian hàng đó) |
+| Khách | `khach.an@xeprime.test` | khách quen, nhiều chuyến đã xong, có đánh giá; **bằng lái B2 đã xác thực** |
+| Khách | `khach.binh@xeprime.test` | đang thuê dài hạn theo gói tháng; **bằng lái A1 + B2 đã xác thực** |
+| Khách | `khach.cuong@xeprime.test` | thuê có tài xế; bị gian hàng Sài Gòn đưa vào danh sách chặn (chỉ ở gian hàng đó); **chưa có bằng lái** — tài khoản để thử luồng nộp/xác thực bằng lái (ADR 0057) |
 
 **Tài khoản song sinh** (cùng email + SĐT, khác site, mật khẩu như nhau ở seed):
 `owner.saigon@` và `chuxe.son@` có thêm tài khoản **khách** — chủ xe đi thuê xe bằng tài khoản

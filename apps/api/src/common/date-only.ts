@@ -10,6 +10,16 @@
 /** `YYYY-MM-DD` — dùng cho `@Matches` ở DTO. */
 export const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
+/**
+ * `YYYY-MM-DD` CÓ THẬT trên lịch. `DATE_ONLY_PATTERN` chỉ kiểm hình: "2026-02-30" khớp nó, rồi
+ * `toDateOnly` âm thầm đẩy sang 02/03 — một ngày người dùng không hề nhập.
+ */
+export function isValidDateOnly(value: string): boolean {
+  if (!DATE_ONLY_PATTERN.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}
+
 /** `YYYY-MM-DD` → giá trị ghi vào cột `@db.Date`. */
 export function toDateOnly(isoDate: string): Date {
   return new Date(`${isoDate}T00:00:00.000Z`);

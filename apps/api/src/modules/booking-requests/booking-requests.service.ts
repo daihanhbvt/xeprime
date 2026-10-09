@@ -7,7 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
-import { subtractMoney } from '@xeprime/domain';
+import { licenceTripLastDayKey, subtractMoney } from '@xeprime/domain';
 import {
   ACCOUNT_REALM,
   addDateKeyDays,
@@ -82,6 +82,7 @@ import { PhoneVerificationService } from '../phone-verification/phone-verificati
 import { PricingService } from '../pricing/pricing.service';
 import { PromoCodeEvaluatorService } from '../promo-codes/promo-code-evaluator.service';
 import { VehicleSettingsService } from '../vehicle-settings/vehicle-settings.service';
+import { DriverLicencesService } from '../driver-licences/driver-licences.service';
 import type { EffectivePolicy } from '../pricing/pricing.service';
 import {
   ApproveBookingRequestDto,
@@ -268,6 +269,8 @@ export class BookingRequestsService {
      * không đọc `promo_codes` ngoài đường của evaluator.
      */
     private readonly promos: PromoCodeEvaluatorService,
+    /** Bằng lái của tài khoản khách — cổng gửi yêu cầu thuê xe tự lái (ADR 0057). */
+    private readonly driverLicences: DriverLicencesService,
   ) {}
 
   private readonly logger = new Logger(BookingRequestsService.name);
@@ -279,12 +282,16 @@ export class BookingRequestsService {
    * Dùng chung cho submit + check-availability, nên một link cũ tới chiếc xe vừa bị cất đi
    * không gửi được yêu cầu.
    */
-  private async loadBookableVehicle(
-    vehicleId: string,
-  ): Promise<{ id: string; tenantId: string; name: string; serviceTypes: string[] }> {
+  private async loadBookableVehicle(vehicleId: string): Promise<{
+    id: string;
+    tenantId: string;
+    name: string;
+    serviceTypes: string[];
+    vehicleType: string;
+  }> {
     const vehicle = await this.prisma.vehicle.findFirst({
       where: { id: vehicleId, ...marketplaceVehicleWhere() },
-      select: { id: true, tenantId: true, name: true, serviceTypes: true },
+      select: { id: true, tenantId: true, name: true, serviceTypes: true, vehicleType: true },
     });
     if (!vehicle) {
       throw new NotFoundException({
@@ -573,6 +580,27 @@ export class BookingRequestsService {
      */
     await this.customers.assertNotBlocked(vehicle.tenantId, dto.customerPhone, 'public');
 
+    /*
+     * BẰNG LÁI (ADR 0057) — thuê tự lái / dài hạn phải có bằng đã xác thực, còn hạn tới hết ngày
+     * cuối của chuyến và đúng hạng cho loại xe. Thuê có tài xế: cổng tự bỏ qua.
+     *
+     * Khách CHƯA đăng nhập soát ở ĐÂY, trước khi tạo tài khoản theo SĐT: một yêu cầu chắc chắn bị
+     * từ chối không được để lại một tài khoản rỗng. SĐT đã qua OTP ở trên nên tra tài khoản sẵn
+     * có theo số đó không mở thêm đường dò nào. Khách ĐANG đăng nhập soát sau cổng tài khoản bên
+     * dưới — "xe của chính bạn" là câu trả lời đúng hơn "chưa có bằng lái".
+     */
+    const licenceTrip = {
+      serviceType,
+      vehicleType: vehicle.vehicleType,
+      lastDayKey: this.tripLastDayKey(returnAt, longTerm),
+    };
+    if (!customerUserId) {
+      await this.driverLicences.assertCanDriveForTrip({
+        userId: await this.findCustomerAccountId(dto.customerPhone),
+        ...licenceTrip,
+      });
+    }
+
     // Khách vãng lai đã verify SĐT → tạo/đăng nhập tài khoản KHÁCH theo SĐT, gắn yêu cầu vào đó.
     // Luôn realm `customer` (ADR 0053): người đặt xe là khách, kể cả khi cùng số đó có một tài
     // khoản partner — đó là một tài khoản khác, không được kéo vào đơn này.
@@ -604,6 +632,9 @@ export class BookingRequestsService {
      * tài khoản gian hàng".
      */
     await this.assertCanBook(effectiveUserId, vehicle.tenantId, dto.customerPhone);
+    if (customerUserId) {
+      await this.driverLicences.assertCanDriveForTrip({ userId: customerUserId, ...licenceTrip });
+    }
 
     await this.assertNoPendingDuplicate(
       vehicle.id,
@@ -881,7 +912,11 @@ export class BookingRequestsService {
   private async resolveFeesWithPromo(
     tenantId: string,
     req: PendingRequestRow,
-    breakdown: { totalAmount: string; rows: { key: string; amount: string }[]; estimateNote: string | null },
+    breakdown: {
+      totalAmount: string;
+      rows: { key: string; amount: string }[];
+      estimateNote: string | null;
+    },
     deposit: DepositPolicyResolution,
   ): Promise<{ fees: CustomerFeeBreakdown | null; promoDropped: boolean }> {
     const quoteIsEstimate = breakdown.estimateNote != null;
@@ -913,9 +948,7 @@ export class BookingRequestsService {
         sponsorableAmount: baseFees
           ? String(
               Number(baseFees.depositAmount) +
-                Number(
-                  baseFees.lines.find((l) => l.key === FEE_LINE.SERVICE_FEE)?.amount ?? 0,
-                ),
+                Number(baseFees.lines.find((l) => l.key === FEE_LINE.SERVICE_FEE)?.amount ?? 0),
             )
           : '0',
         holdMinAmount: baseFees?.policy.holdMinAmount ?? '0',
@@ -1009,11 +1042,7 @@ export class BookingRequestsService {
        */
       const deposit = await this.depositPolicy.resolveForTenant(tenantId);
       if (!deposit.billingMode) {
-        await this.recordAutoAcceptSkip(
-          tenantId,
-          id,
-          AUTO_ACCEPT_BLOCKER.BILLING_NOT_CONFIGURED,
-        );
+        await this.recordAutoAcceptSkip(tenantId, id, AUTO_ACCEPT_BLOCKER.BILLING_NOT_CONFIGURED);
         return null;
       }
       const { fees, promoDropped } = await this.resolveFeesWithPromo(
@@ -1406,6 +1435,35 @@ export class BookingRequestsService {
     };
   }
 
+  /**
+   * Ngày cuối của chuyến theo giờ Việt Nam — bằng lái phải còn hạn tới hết ngày đó (ADR 0057).
+   *
+   * Thuê theo ngày: ngày của thời điểm trả (trừ 1ms, cùng quy ước "trả lúc 00:00 là hết ngày
+   * hôm trước" với lịch bận). Dài hạn chưa có ngày nhận chắc chắn ⇒ lấy ngày nhận MUỘN NHẤT khách
+   * đã nêu cộng số tháng lịch của gói — trường hợp xấu nhất, để bằng không hết hạn giữa chừng.
+   */
+  private tripLastDayKey(returnAt: Date | null, longTerm: LongTermIntent | null): string {
+    if (returnAt) return licenceTripLastDayKey({ returnAt });
+    const latestPickup = longTerm?.requestedPickupDate ?? longTerm?.windowEnd ?? null;
+    return licenceTripLastDayKey({
+      latestPickupDateKey: fromDateOnly(latestPickup) ?? vnDateKey(new Date()),
+      packageMonths: longTerm?.packageMonths ?? 0,
+    });
+  }
+
+  /**
+   * Tài khoản KHÁCH sẵn có của một SĐT (khách chưa đăng nhập) — không tạo mới. Tra ĐÚNG cách
+   * `resolveOrCreateUserByPhone` tra (SĐT đã chuẩn hoá, khớp chính xác), nếu không cổng bằng lái
+   * soát tài khoản A trong khi yêu cầu lại gắn vào tài khoản B vừa được tạo.
+   */
+  private async findCustomerAccountId(rawPhone: string): Promise<string | null> {
+    const account = await this.prisma.user.findFirst({
+      where: { realm: ACCOUNT_REALM.CUSTOMER, phone: normalizePhone(rawPhone), deletedAt: null },
+      select: { id: true },
+    });
+    return account?.id ?? null;
+  }
+
   private async canSkipBookingOtp(
     customerUserId: string | null | undefined,
     rawPhone: string,
@@ -1433,8 +1491,8 @@ export class BookingRequestsService {
   async list(
     tenantId: string,
     query: BookingRequestListQueryDto,
-  /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
-  allowedBranchIds: readonly string[] | null,
+    /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
+    allowedBranchIds: readonly string[] | null,
   ): Promise<{ data: BookingRequestDto[]; meta: BookingRequestPageMetaDto }> {
     const paging = resolvePaging(query, BOOKING_REQUEST_DEFAULT_LIMIT, BOOKING_REQUEST_MAX_LIMIT);
 
@@ -1595,7 +1653,12 @@ export class BookingRequestsService {
      * (08/09/2026) — khách không có lịch để kiểm lúc gửi, nên kiểm ở đây.
      */
     if (req.serviceType === SERVICE_TYPE.LONG_TERM) {
-      await this.settings.assertHandoverWindows(this.prisma, req.vehicleId, schedule.pickupAt, null);
+      await this.settings.assertHandoverWindows(
+        this.prisma,
+        req.vehicleId,
+        schedule.pickupAt,
+        null,
+      );
     }
     const breakdown =
       req.serviceType === SERVICE_TYPE.LONG_TERM

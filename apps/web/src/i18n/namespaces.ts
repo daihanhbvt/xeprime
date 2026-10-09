@@ -98,6 +98,8 @@ export const MESSAGE_NAMESPACES = [
   { file: 'seller-profile', namespace: 'SellerProfile' },
   // Sổ tài khoản ngân hàng NHẬN TIỀN — dùng chung khách và gian hàng (ADR 0033).
   { file: 'bank-accounts', namespace: 'BankAccounts' },
+  // Bằng lái của tài khoản khách (ADR 0057) — trang Giấy tờ + bước xác thực khi đặt xe tự lái.
+  { file: 'driver-licence', namespace: 'DriverLicence' },
   // Ví điểm — sổ công nợ phải trả, dùng chung khách + gian hàng + admin (ADR 0033).
   { file: 'account-payments', namespace: 'AccountPayments' },
   { file: 'wallet', namespace: 'Wallet' },
@@ -112,6 +114,8 @@ export const MESSAGE_NAMESPACES = [
   { file: 'platform-money', namespace: 'PlatformMoney' },
   // Hàng đợi xác minh người bán của nền tảng (R3 — ADR 0028 release gate 1).
   { file: 'platform-sellers', namespace: 'PlatformSellers' },
+  // Hàng đợi bằng lái của khách (ADR 0057) — chỉ site quản trị.
+  { file: 'admin-driver-licences', namespace: 'AdminDriverLicences' },
   // Nhân sự nền tảng + tra cứu xuyên realm của site quản trị (ADR 0053 — B4).
   { file: 'admin-staff', namespace: 'AdminStaff' },
   // Nhật ký hệ thống của admin nền tảng — chuyển sang t() ngày 08/10/2026 cùng đợt dựng lại trang

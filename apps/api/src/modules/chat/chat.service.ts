@@ -62,9 +62,7 @@ import {
   MESSAGE_MAX_LIMIT,
 } from './dto/chat.dto';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
-
-/** Postgres báo vi phạm unique bằng mã này — Prisma giữ nguyên trong `code`. */
-const UNIQUE_VIOLATION = 'P2002';
+import { isUniqueViolation } from '../../common/prisma-errors';
 
 /**
  * Hàm, không phải hằng: `storefrontTenantSelect` lọc dòng thuê bao theo `now` của TỪNG request —
@@ -995,10 +993,6 @@ type ConversationRow = Prisma.ConversationGetPayload<{
   select: ReturnType<typeof conversationSelect>;
 }>;
 type MessageRow = Prisma.MessageGetPayload<{ select: typeof MESSAGE_SELECT }>;
-
-function isUniqueViolation(error: unknown): boolean {
-  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === UNIQUE_VIOLATION;
-}
 
 /** Nhánh WHERE của cursor keyset — "cũ hơn (sentAt, id)" viết bằng ngôn ngữ Prisma. */
 function beforeCursor(query: MessageListQueryDto): Prisma.MessageWhereInput {

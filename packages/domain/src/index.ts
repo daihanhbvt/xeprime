@@ -310,3 +310,24 @@ export {
   type OwnerResourceKey,
   type OwnerResourceKind,
 } from './owner-resources';
+
+/**
+ * Bằng lái của khách (ADR 0057) — hạng nào lái được loại xe nào, và bằng có dùng được cho một
+ * chuyến không. API soát ở cổng gửi yêu cầu; client soát trước để chỉ cho khách bước còn thiếu.
+ */
+export {
+  DRIVER_LICENCE_GATE_ERROR_CODE,
+  DRIVER_LICENCE_TRIP_GATE,
+  isDriverLicenceGateErrorCode,
+  VN_LICENCE_CLASS_REFORM_DATE,
+  evaluateDriverLicenceForTrip,
+  licenceClassCoverage,
+  licenceCoversVehicleType,
+  licenceTripLastDayKey,
+  licenceValidThrough,
+  normalizeLicenceClass,
+  normalizeLicenceClasses,
+  type DriverLicenceGateInput,
+  type DriverLicenceTripGate,
+  type LicenceCoverage,
+} from './driver-licence';

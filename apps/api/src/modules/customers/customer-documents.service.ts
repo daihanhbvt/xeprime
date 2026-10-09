@@ -18,6 +18,7 @@ import {
   type DocumentUploadMimeType,
 } from '@xeprime/types';
 import { fromDateOnly, toDateOnly } from '../../common/date-only';
+import { FILE_SIGNATURE_PREFIX_BYTES, matchesFileSignature } from '../../common/file-signature';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { R2Service } from '../storage/r2.service';
@@ -32,27 +33,6 @@ import {
 
 /** Signed GET sống ngắn — đủ cho một cú click mở giấy tờ, không đủ để chia sẻ lại có ý nghĩa. */
 const DOWNLOAD_URL_TTL_SECONDS = 120;
-
-/**
- * Chữ ký byte đầu của các định dạng được duyệt. Content-Type do CLIENT khai lúc PUT nên không
- * tin được; đối chiếu nội dung thật trước khi cho file thành `ready`.
- */
-const FILE_SIGNATURES: Record<DocumentUploadMimeType, (bytes: Uint8Array) => boolean> = {
-  'application/pdf': (b) => startsWith(b, [0x25, 0x50, 0x44, 0x46]),
-  'image/jpeg': (b) => startsWith(b, [0xff, 0xd8, 0xff]),
-  'image/png': (b) => startsWith(b, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-  'image/webp': (b) =>
-    startsWith(b, [0x52, 0x49, 0x46, 0x46]) &&
-    b.length >= 12 &&
-    b[8] === 0x57 &&
-    b[9] === 0x45 &&
-    b[10] === 0x42 &&
-    b[11] === 0x50,
-};
-
-function startsWith(bytes: Uint8Array, signature: number[]): boolean {
-  return signature.every((byte, index) => bytes[index] === byte);
-}
 
 const SELECT = {
   id: true,
@@ -277,8 +257,11 @@ export class CustomerDocumentsService {
     ) {
       throw invalidObject();
     }
-    const prefix = await this.r2.readPrivateObjectPrefix(document.objectKey, 12);
-    if (!prefix || !FILE_SIGNATURES[document.mimeType as DocumentUploadMimeType]?.(prefix)) {
+    const prefix = await this.r2.readPrivateObjectPrefix(
+      document.objectKey,
+      FILE_SIGNATURE_PREFIX_BYTES,
+    );
+    if (!matchesFileSignature(document.mimeType, prefix)) {
       throw invalidObject();
     }
 
@@ -422,9 +405,7 @@ function toDto(row: DocumentRow, uploaderNames: Map<string, string>): CustomerDo
     id: row.id,
     documentType: row.documentType,
     verifiedAt: row.verifiedAt ? row.verifiedAt.toISOString() : null,
-    verifiedByName: row.verifiedByUserId
-      ? (uploaderNames.get(row.verifiedByUserId) ?? null)
-      : null,
+    verifiedByName: row.verifiedByUserId ? (uploaderNames.get(row.verifiedByUserId) ?? null) : null,
     verifyMethod: row.verifyMethod,
     verifyNote: row.verifyNote,
     customTypeName: row.customTypeName,

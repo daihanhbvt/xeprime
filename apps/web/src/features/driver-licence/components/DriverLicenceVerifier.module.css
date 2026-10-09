@@ -1,0 +1,348 @@
+/**
+ * Bộ xác thực bằng lái — dùng chung trang Giấy tờ và bước bằng lái khi đặt xe.
+ *
+ * Màu trạng thái lấy từ token ngữ nghĩa (success/warning/error + nền `-bg`) — cùng bảng màu với
+ * `StatusTag`, nên "đã xác thực" ở đây và ở hàng đợi admin là cùng một màu.
+ */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  padding: var(--xp-space-lg);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-card);
+}
+
+/* Trong hộp thoại đặt xe: phẳng, không viền/bóng — hộp thoại đã là khung. */
+.panelEmbedded {
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+}
+
+.panelEmbedded.panelSuccess,
+.panelEmbedded.panelWaiting {
+  border: 0;
+}
+
+.panelSuccess {
+  border-color: var(--xp-color-success);
+}
+
+.panelWaiting {
+  border-color: var(--xp-color-warning);
+}
+
+.heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.headingTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-h4);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h4);
+}
+
+.headingBody {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+}
+
+/* ── Băng trạng thái ─────────────────────────────────────────────────────────── */
+
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-md);
+  border-radius: var(--xp-border-radius-lg);
+}
+
+.banner_success {
+  background: var(--xp-color-success-bg);
+}
+
+.banner_waiting {
+  background: var(--xp-color-warning-bg);
+}
+
+.banner_danger {
+  background: var(--xp-color-error-bg);
+}
+
+.bannerIcon {
+  flex: none;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.banner_success .bannerIcon {
+  color: var(--xp-color-success);
+}
+
+.banner_waiting .bannerIcon {
+  color: var(--xp-color-warning);
+}
+
+.banner_danger .bannerIcon {
+  color: var(--xp-color-error);
+}
+
+.bannerTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.bannerBody {
+  margin: var(--xp-space-xs) 0 0;
+  color: var(--xp-color-text-secondary);
+}
+
+.rejectedBody {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.issueList {
+  margin: var(--xp-space-xs) 0 0;
+  padding-left: var(--xp-space-lg);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.reviewButton {
+  margin-top: var(--xp-space-sm);
+}
+
+/* ── Thông tin trên bằng ─────────────────────────────────────────────────────── */
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--xp-space-sm) var(--xp-space-lg);
+  margin: 0;
+}
+
+.fact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.fact dt {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-sm);
+}
+
+.fact dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-weight: var(--xp-font-weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+.drives {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+}
+
+.imageButton {
+  align-self: flex-start;
+  padding-inline: 0;
+}
+
+.hiddenPreviewAnchor {
+  display: none;
+}
+
+.footerActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--xp-space-sm);
+}
+
+@media (max-width: 575px) {
+  .panel {
+    padding: var(--xp-space-md);
+  }
+
+  .footerActions > * {
+    flex: 1 1 100%;
+  }
+}
+
+/* ── Đang đọc ảnh ────────────────────────────────────────────────────────────── */
+
+.processing {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--xp-space-lg);
+}
+
+@media (max-width: 575px) {
+  .processing {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+.scanFrame {
+  position: relative;
+  flex: none;
+  width: 220px;
+  max-width: 100%;
+  aspect-ratio: 85.6 / 54;
+  overflow: hidden;
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-muted);
+}
+
+@media (max-width: 575px) {
+  .scanFrame {
+    width: 100%;
+  }
+}
+
+.scanImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.scanPlaceholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    var(--xp-color-bg-muted),
+    var(--xp-color-bg-hover),
+    var(--xp-color-bg-muted)
+  );
+}
+
+/* Vạch quét chạy dọc ảnh — tín hiệu "máy đang đọc", không phải thanh tiến trình giả. */
+.scanLine {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 3px;
+  background: var(--xp-color-primary);
+  box-shadow: 0 0 12px var(--xp-color-primary);
+  animation: scan 1.8s ease-in-out infinite alternate;
+}
+
+@keyframes scan {
+  from {
+    top: 0;
+  }
+
+  to {
+    top: calc(100% - 3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scanLine {
+    animation: none;
+    top: 50%;
+  }
+}
+
+.processingBody {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.step_done {
+  color: var(--xp-color-text-secondary);
+}
+
+.step_done .stepIcon {
+  color: var(--xp-color-success);
+}
+
+.step_active {
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.step_active .stepIcon {
+  color: var(--xp-color-primary);
+}
+
+.step_todo {
+  color: var(--xp-color-text-tertiary);
+}
+
+.stepIcon {
+  display: inline-flex;
+  justify-content: center;
+  width: 18px;
+}
+
+.stepDot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-border-strong);
+}
+
+/* ── Giấy tờ được chấp nhận ──────────────────────────────────────────────────── */
+
+.accepted {
+  padding-top: var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border-subtle);
+}
+
+.acceptedTitle {
+  margin: 0 0 var(--xp-space-xs);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.acceptedList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding-left: var(--xp-space-lg);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-sm);
+}

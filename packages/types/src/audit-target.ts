@@ -16,6 +16,8 @@ export const AUDIT_TARGET_TYPE = {
   BOOKING_SURCHARGE: 'booking_surcharge',
   CATALOG_ITEM: 'catalog_item',
   CONTRACT: 'contract',
+  /** Lượt nộp bằng lái của tài khoản khách (ADR 0057). */
+  CUSTOMER_DRIVER_LICENCE: 'customer_driver_licence',
   DRIVER: 'driver',
   FEE_POLICY: 'fee_policy',
   HOLD_REFUND: 'hold_refund',

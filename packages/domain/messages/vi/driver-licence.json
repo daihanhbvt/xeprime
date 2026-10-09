@@ -1,0 +1,126 @@
+{
+  "page": {
+    "subtitle": "Bằng lái đã xác thực giúp bạn đặt xe tự lái chỉ trong vài bước.",
+    "sectionTitle": "Bằng lái xe"
+  },
+  "intro": {
+    "title": "Xác thực bằng lái xe",
+    "body": "Chụp mặt trước bằng lái của bạn. Chỉ cần làm một lần — thường xong trong chưa đầy một phút.",
+    "bookingBody": "Thuê xe tự lái cần bằng lái hợp lệ. Chụp mặt trước bằng lái của bạn — chỉ cần làm một lần cho mọi chuyến sau."
+  },
+  "accepted": {
+    "title": "Giấy tờ được chấp nhận",
+    "vn": "Bằng lái Việt Nam: thẻ PET, mẫu mới 2025 hoặc ảnh chụp từ ứng dụng VNeID",
+    "idp": "Giấy phép lái xe quốc tế (IDP): trang có ảnh và thông tin người lái — mang theo bằng gốc khi nhận xe",
+    "foreign": "Bằng lái nước ngoài: mang theo bằng gốc (và IDP theo Công ước 1968) khi nhận xe để chủ xe đối chiếu"
+  },
+  "tips": {
+    "title": "Để được xác thực ngay",
+    "front": "Chụp mặt TRƯỚC — mặt có ảnh, số bằng và hạng",
+    "corners": "Thấy đủ 4 góc, bằng nằm gọn trong khung",
+    "light": "Đủ sáng, không loá đèn, không bị ngón tay che",
+    "flat": "Đặt bằng trên mặt phẳng, chụp thẳng từ trên xuống"
+  },
+  "picker": {
+    "takePhoto": "Chụp ảnh",
+    "chooseFile": "Chọn ảnh từ máy",
+    "dropTitle": "Kéo thả ảnh bằng lái vào đây",
+    "tapTitle": "Chạm để chọn hoặc chụp ảnh bằng lái",
+    "dropHint": "hoặc bấm để chọn ảnh",
+    "formats": "Ảnh JPG, PNG, WEBP hoặc HEIC",
+    "preparing": "Đang chuẩn bị ảnh…"
+  },
+  "preview": {
+    "title": "Kiểm tra ảnh trước khi gửi",
+    "check": "Chữ trên bằng có đọc rõ không? Nếu ảnh mờ hoặc loá, hãy chọn ảnh khác.",
+    "retake": "Chọn ảnh khác",
+    "submit": "Gửi để xác thực",
+    "alt": "Ảnh bằng lái vừa chọn"
+  },
+  "consent": "Khi bấm gửi, bạn đồng ý để XePrime đọc ảnh bằng lái nhằm xác thực tài khoản. Ảnh được đọc ngay trên máy chủ của XePrime, lưu riêng tư và không hiển thị công khai.",
+  "prepare": {
+    "unsupported": "Không mở được ảnh này. Hãy chụp lại hoặc chọn ảnh JPG, PNG.",
+    "tooSmall": "Ảnh quá nhỏ để đọc rõ chữ — hãy chụp gần hơn.",
+    "tooLarge": "Ảnh quá lớn — hãy chọn ảnh khác."
+  },
+  "progress": {
+    "uploading": "Đang tải ảnh lên… {percent}%",
+    "title": "Đang xác thực bằng lái",
+    "hint": "Thường chỉ mất vài giây. Bạn cứ ở lại trang này, kết quả sẽ tự hiện.",
+    "steps": {
+      "upload": "Tải ảnh lên",
+      "read": "Đọc thông tin trên bằng",
+      "check": "Kiểm tra hạng và thời hạn"
+    }
+  },
+  "verified": {
+    "title": "Bằng lái đã được xác thực",
+    "body": "Bạn có thể đặt xe tự lái phù hợp với hạng bằng của mình.",
+    "bookingTitle": "Bằng lái hợp lệ cho chuyến này",
+    "replace": "Cập nhật bằng mới",
+    "cancelReplace": "Giữ bằng hiện tại",
+    "replaceFailed": "Ảnh bằng mới bạn vừa gửi chưa được xác thực: {reason} Bằng hiện tại vẫn dùng được.",
+    "replacePending": "Bằng mới bạn gửi đang chờ XePrime xác thực. Bằng hiện tại vẫn dùng được."
+  },
+  "fields": {
+    "fullName": "Họ tên",
+    "number": "Số bằng",
+    "classes": "Hạng",
+    "expiresOn": "Có giá trị đến",
+    "noExpiry": "Không thời hạn",
+    "dateOfBirth": "Ngày sinh",
+    "kind": "Loại bằng",
+    "drives": "Lái được",
+    "car": "Ô tô",
+    "motorbike": "Xe máy",
+    "country": "Nơi cấp",
+    "foreignNote": "Với bằng quốc tế / nước ngoài, chủ xe đối chiếu hạng và thời hạn trên bằng gốc khi giao xe."
+  },
+  "pending": {
+    "title": "Đang chờ XePrime xác thực",
+    "body": "Chúng tôi sẽ kiểm tra ảnh của bạn trong thời gian sớm nhất. Trang này tự cập nhật khi có kết quả.",
+    "bookingBody": "Bạn có thể gửi yêu cầu thuê xe ngay khi bằng lái được xác thực.",
+    "replace": "Gửi ảnh khác"
+  },
+  "rejected": {
+    "title": "Chưa xác thực được bằng lái",
+    "retake": "Chụp lại",
+    "requestReview": "Ảnh đã rõ — nhờ XePrime kiểm tra",
+    "reviewRequested": "Đã gửi yêu cầu kiểm tra.",
+    "expiredOn": "Bằng lái đã hết hạn ngày {date}.",
+    "expiredMisread": "Ngày in trên bằng của bạn khác? Máy có thể đọc nhầm — hãy nhờ XePrime kiểm tra.",
+    "note": "Lời nhắn từ XePrime: {note}"
+  },
+  "reasons": {
+    "not_a_licence": "Không nhận ra bằng lái xe trong ảnh. Hãy chụp rõ mặt trước bằng lái — không phải CCCD, hộ chiếu hay giấy tờ khác.",
+    "back_side": "Đây là mặt sau — hãy chụp mặt trước, mặt có ảnh và số bằng.",
+    "unreadable": "Ảnh chưa đủ rõ để đọc thông tin trên bằng.",
+    "missing_fields": "Không đọc được đủ số bằng, họ tên, hạng và thời hạn trên ảnh.",
+    "expired": "Bằng lái đã hết hạn.",
+    "no_drivable_class": "Hạng trên bằng không lái được ô tô hay xe máy cho thuê.",
+    "other": "XePrime chưa thể xác thực bằng lái này."
+  },
+  "issues": {
+    "blurry": "Ảnh bị mờ — giữ máy chắc tay và chạm vào bằng trên màn hình để lấy nét.",
+    "glare": "Ảnh bị loá — nghiêng nhẹ bằng hoặc tắt đèn flash.",
+    "cropped": "Bằng bị cắt góc — lùi máy ra một chút cho thấy đủ 4 góc.",
+    "too_dark": "Ảnh quá tối — chụp ở nơi đủ sáng.",
+    "obstructed": "Một phần bằng bị che — bỏ ngón tay hoặc vật che ra.",
+    "low_resolution": "Ảnh quá nhỏ — chụp gần hơn."
+  },
+  "tripIssue": {
+    "expired": "Bằng lái của bạn hết hạn ngày {date}, trước khi chuyến kết thúc. Hãy cập nhật bằng còn hạn.",
+    "expiredToday": "Bằng lái của bạn đã hết hạn ngày {date}. Hãy cập nhật bằng còn hạn.",
+    "classMismatchCar": "Hạng bằng hiện tại không lái được ô tô. Hãy cập nhật bằng có hạng phù hợp, ví dụ B, B1 hoặc B2.",
+    "classMismatchMotorbike": "Hạng bằng hiện tại không lái được xe máy. Hãy cập nhật bằng có hạng A1, A2 hoặc A."
+  },
+  "image": {
+    "view": "Xem ảnh đã nộp",
+    "alt": "Ảnh bằng lái đã nộp",
+    "loadFailed": "Không mở được ảnh"
+  },
+  "error": {
+    "load": "Không tải được thông tin bằng lái.",
+    "retry": "Thử lại"
+  }
+}

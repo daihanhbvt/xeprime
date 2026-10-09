@@ -152,6 +152,8 @@ export const AUDIT_ACTION_CATEGORY_PREFIXES: ReadonlyArray<
   ['support_case.', AUDIT_ACTION_CATEGORY.SUPPORT_CASE],
   ['tenant_customer.', AUDIT_ACTION_CATEGORY.CUSTOMER],
   ['customer.', AUDIT_ACTION_CATEGORY.CUSTOMER],
+  // Bằng lái của tài khoản khách (ADR 0057) — nộp, xác thực, từ chối, mở ảnh.
+  ['driver_licence.', AUDIT_ACTION_CATEGORY.CUSTOMER],
   ['tenant_payment_settings.', AUDIT_ACTION_CATEGORY.PROFILE],
   ['seller_profile.', AUDIT_ACTION_CATEGORY.PROFILE],
   ['rental_policy.', AUDIT_ACTION_CATEGORY.PROFILE],

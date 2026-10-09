@@ -161,6 +161,47 @@ export class R2Service {
   }
 
   /**
+   * Đọc TRỌN một object riêng tư về server — cho việc phải xử lý nội dung ở phía server (đọc ảnh
+   * bằng lái gửi sang bộ đọc). `maxBytes` là trần cứng: object to hơn trả `null` thay vì kéo cả
+   * tệp vào bộ nhớ — caller đã khai dung lượng lúc presign, nên vượt trần nghĩa là có gì sai.
+   */
+  async readPrivateObject(key: string, maxBytes: number): Promise<Uint8Array | null> {
+    const { GetObjectCommand } = await import('@aws-sdk/client-s3');
+    try {
+      const res = await (
+        await this.getClient()
+      ).send(new GetObjectCommand({ Bucket: this.privateBucket(), Key: key }));
+      if (res.ContentLength !== undefined && res.ContentLength > maxBytes) {
+        res.Body?.transformToWebStream()
+          .cancel()
+          .catch(() => undefined);
+        return null;
+      }
+      const bytes = await res.Body?.transformToByteArray();
+      if (!bytes || bytes.length > maxBytes) return null;
+      return bytes;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Xoá một object riêng tư. S3/R2 xoá idempotent (key không tồn tại cũng là thành công), nên
+   * `true` nghĩa là "chắc chắn không còn"; `false` chỉ khi gọi R2 lỗi — caller thử lại lần sau.
+   */
+  async deletePrivateObject(key: string): Promise<boolean> {
+    const { DeleteObjectCommand } = await import('@aws-sdk/client-s3');
+    try {
+      await (
+        await this.getClient()
+      ).send(new DeleteObjectCommand({ Bucket: this.privateBucket(), Key: key }));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * Signed GET NGẮN HẠN cho tài liệu riêng tư — chỉ gọi SAU khi caller đã kiểm quyền.
    * `Content-Disposition` ký kèm để trình duyệt tải về đúng tên hiển thị đã khử ký tự lạ.
    */

@@ -25,6 +25,7 @@ export * from './booking-request';
 export * from './customer-trip';
 export * from './cancellation';
 export * from './tenant-customer';
+export * from './driver-licence';
 export * from './driver';
 export * from './handover';
 export * from './settlement';

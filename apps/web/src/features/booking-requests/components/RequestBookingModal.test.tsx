@@ -35,6 +35,9 @@ const api = vi.hoisted(() => ({
   fetchVehicleBusyDays: vi.fn(),
   submitBookingRequest: vi.fn(),
   verifyOtp: vi.fn(),
+  /** OTP ĐĂNG NHẬP của khách vãng lai thuê tự lái (ADR 0057) — thay cho `verifyOtp` ở đường đó. */
+  phoneLogin: vi.fn(),
+  fetchDriverLicenceOverview: vi.fn(),
   sendAsync: vi.fn(),
   send: vi.fn(),
   reset: vi.fn(),
@@ -186,6 +189,54 @@ vi.mock('@/features/phone-verification/api', () => ({
   sendOtp: vi.fn(),
 }));
 
+vi.mock('@/services/auth.service', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/services/auth.service')>()),
+  phoneLogin: (...a: unknown[]) => api.phoneLogin(...a),
+}));
+
+/**
+ * Bằng lái (ADR 0057). Mặc định ĐÃ XÁC THỰC, còn hạn, lái được ô tô — phần lớn test ở đây khoá
+ * luồng đặt xe, không phải bước bằng lái; ca nào cần bằng thiếu thì tự đặt lại.
+ */
+vi.mock('@/features/driver-licence/api', () => ({
+  fetchDriverLicenceOverview: (...a: unknown[]) => api.fetchDriverLicenceOverview(...a),
+  fetchDriverLicenceImage: vi.fn(),
+  requestDriverLicenceReview: vi.fn(),
+  submitDriverLicence: vi.fn(),
+}));
+
+const VERIFIED_LICENCE = {
+  id: 'L1',
+  status: 'verified',
+  kind: 'vn',
+  licenceNumber: '790123456789',
+  fullName: 'NGUYỄN VĂN A',
+  dateOfBirth: '1990-01-01',
+  classes: ['B2'],
+  issuedOn: '2021-01-01',
+  expiresOn: '2099-01-01',
+  noExpiry: false,
+  issuingCountry: 'VN',
+  coversCar: true,
+  coversMotorbike: false,
+  rejectionReason: null,
+  reviewNote: null,
+  qualityIssues: [],
+  canRequestReview: false,
+  reviewRequestedAt: null,
+  decisionSource: 'auto',
+  decidedAt: '2026-01-01T00:00:00.000Z',
+  submittedAt: '2026-01-01T00:00:00.000Z',
+};
+const NO_LICENCE = { verified: null, latest: null };
+/** Tài khoản mà OTP đăng nhập tạo ra/khớp lại — `useCurrentUser` đọc nó sau lượt đăng nhập. */
+const LOGGED_IN_ME = {
+  id: 'U9',
+  displayName: 'Nguyễn Văn A',
+  phone: '0901234567',
+  phoneVerified: true,
+};
+
 vi.mock('@/features/phone-verification/hooks/use-phone-verify', () => ({
   usePhoneVerify: () => ({
     status: 'idle',
@@ -306,7 +357,7 @@ async function advanceToOtp(phone = '0901234567') {
   await screen.findByLabelText('Mã OTP');
 }
 
-/** otp → review. */
+/** otp → review (bằng lái mặc định đã hợp lệ nên không dừng ở bước bằng lái). */
 async function advanceToReview(code = '123456') {
   api.verifyOtp.mockResolvedValue({});
   fireEvent.change(screen.getByLabelText('Mã OTP'), { target: { value: code } });
@@ -335,6 +386,14 @@ beforeEach(() => {
   listing.data = null;
   quote.data = null;
   Object.values(api).forEach((fn) => fn.mockReset());
+  api.fetchDriverLicenceOverview.mockResolvedValue({
+    verified: VERIFIED_LICENCE,
+    latest: VERIFIED_LICENCE,
+  });
+  api.phoneLogin.mockImplementation(async () => {
+    me.data = LOGGED_IN_ME;
+    return LOGGED_IN_ME;
+  });
   // Xe rảnh trơn là mặc định — test nào cần lịch bận thì tự đặt lại.
   api.fetchVehicleBusyDays.mockResolvedValue({ days: [], from: TODAY_KEY, to: TODAY_KEY });
 });
@@ -522,13 +581,15 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       expect((submit as HTMLButtonElement).disabled).toBe(true);
       fireEvent.click(submit);
       expect(api.verifyOtp).not.toHaveBeenCalled();
+      expect(api.phoneLogin).not.toHaveBeenCalled();
     });
 
     it('OTP sai → báo lỗi, giữ nguyên màn OTP, KHÔNG sang bước xác nhận', async () => {
       renderModal();
       await advanceToOtp();
 
-      api.verifyOtp.mockRejectedValue(
+      // Khách vãng lai thuê tự lái: mã này là mã ĐĂNG NHẬP (ADR 0057).
+      api.phoneLogin.mockRejectedValue(
         new ApiClientError({
           code: API_ERROR_CODE.OTP_INVALID,
           message: 'Mã xác thực không đúng',
@@ -538,7 +599,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       fireEvent.change(screen.getByLabelText('Mã OTP'), { target: { value: '000000' } });
       fireEvent.click(screen.getByRole('button', { name: 'Xác thực' }));
 
-      await waitFor(() => expect(api.verifyOtp).toHaveBeenCalled());
+      await waitFor(() => expect(api.phoneLogin).toHaveBeenCalled());
       expect(api.submitBookingRequest).not.toHaveBeenCalled();
       expect(screen.getByLabelText('Mã OTP')).toBeTruthy();
     });
@@ -615,9 +676,8 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       submitFromReview();
 
       await waitFor(() => expect(api.submitBookingRequest).toHaveBeenCalledTimes(1));
-      expect(api.verifyOtp).toHaveBeenCalledWith(
-        expect.objectContaining({ phone: '0901234567', code: '123456' }),
-      );
+      // Tên khách vừa nhập đi kèm — chỉ dùng khi lượt đăng nhập TẠO tài khoản mới.
+      expect(api.phoneLogin).toHaveBeenCalledWith('0901234567', '123456', 'Nguyễn Văn A');
       expect(api.submitBookingRequest.mock.calls[0]![0]).toEqual({
         vehicleId: 'V1',
         customerName: 'Nguyễn Văn A',
@@ -1349,8 +1409,76 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       expect(
         screen.getByText('Phiên đăng nhập đã hết hạn. Vui lòng xác thực lại số điện thoại.'),
       ).toBeTruthy();
-      // Không đá về bước đầu: ngày giờ và SĐT vẫn còn; mã mới gửi bằng `send` (không ném lỗi).
-      expect(api.send).toHaveBeenCalledWith('0901234567');
+      // Không đá về bước đầu: ngày giờ và SĐT vẫn còn. Thuê TỰ LÁI cần phiên (bằng lái gắn với
+      // tài khoản — ADR 0057) nên mã gửi lại là mã ĐĂNG NHẬP cho chính số đó.
+      expect(api.sendAsync).toHaveBeenCalledWith('0901234567');
+      expect(screen.getByText(/Nhập mã để đăng nhập/)).toBeTruthy();
+    });
+  });
+
+  /**
+   * BẰNG LÁI (ADR 0057) — thuê tự lái phải có bằng đã xác thực, hợp lệ cho CHÍNH chuyến này.
+   * Bằng gắn với TÀI KHOẢN, nên khách vãng lai đăng nhập bằng OTP trước bước bằng lái.
+   */
+  describe('bằng lái', () => {
+    it('khách vãng lai thuê tự lái: OTP là mã ĐĂNG NHẬP, không phải mã xác minh đơn', async () => {
+      renderModal();
+      await advanceToOtp();
+      expect(screen.getByText(/Nhập mã để đăng nhập/)).toBeTruthy();
+      await advanceToReview();
+
+      // Tên khách vừa nhập đi kèm — chỉ dùng khi lượt đăng nhập TẠO tài khoản mới.
+      expect(api.phoneLogin).toHaveBeenCalledWith('0901234567', '123456', 'Nguyễn Văn A');
+      expect(api.verifyOtp).not.toHaveBeenCalled();
+      expect(api.fetchDriverLicenceOverview).toHaveBeenCalled();
+    });
+
+    it('chưa có bằng lái → dừng ở bước Xác thực bằng lái, KHÔNG đi tới bước gửi', async () => {
+      api.fetchDriverLicenceOverview.mockResolvedValue(NO_LICENCE);
+      renderModal();
+      await advanceToOtp();
+      fireEvent.change(screen.getByLabelText('Mã OTP'), { target: { value: '123456' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Xác thực' }));
+
+      await screen.findByRole('heading', { name: 'Xác thực bằng lái' });
+      expect(await screen.findByText('Kéo thả ảnh bằng lái vào đây')).toBeTruthy();
+      const next = screen.getByRole('button', { name: 'Tiếp tục' });
+      expect((next as HTMLButtonElement).disabled).toBe(true);
+      expect(screen.queryByRole('button', { name: 'Gửi yêu cầu thuê' })).toBeNull();
+      expect(api.submitBookingRequest).not.toHaveBeenCalled();
+    });
+
+    it('bằng ô tô mà đặt xe máy → bước bằng lái nói rõ hạng không phù hợp', async () => {
+      listing.data = { ...LISTING, vehicleType: 'motorbike' };
+      me.data = LOGGED_IN_ME;
+      renderModal();
+      await screen.findByText('Toyota Vios 2022');
+      api.checkAvailability.mockResolvedValue({ available: true });
+      fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+
+      expect(await screen.findByText(/không lái được xe máy/)).toBeTruthy();
+      expect((screen.getByRole('button', { name: 'Tiếp tục' }) as HTMLButtonElement).disabled).toBe(
+        true,
+      );
+    });
+
+    it('server từ chối vì bằng lái lúc gửi → lùi về bước bằng lái, giữ nguyên dữ liệu', async () => {
+      me.data = LOGGED_IN_ME;
+      renderModal();
+      await advanceToReviewAsMember();
+
+      api.fetchDriverLicenceOverview.mockResolvedValue(NO_LICENCE);
+      api.submitBookingRequest.mockRejectedValue(
+        new ApiClientError({
+          code: API_ERROR_CODE.DRIVER_LICENCE_REQUIRED,
+          message: 'Bạn cần xác thực bằng lái',
+          status: 403,
+        }),
+      );
+      submitFromReview();
+
+      await screen.findByRole('heading', { name: 'Xác thực bằng lái' });
+      expect(screen.queryByText('Đã gửi yêu cầu')).toBeNull();
     });
   });
 
@@ -1390,11 +1518,11 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       await advanceToOtp();
 
       // Giữ request treo để trạng thái "đang gửi" tồn tại trong lúc bấm Esc.
-      api.verifyOtp.mockReturnValue(new Promise(() => {}));
+      api.phoneLogin.mockReturnValue(new Promise(() => {}));
       fireEvent.change(screen.getByLabelText('Mã OTP'), { target: { value: '123456' } });
       fireEvent.click(screen.getByRole('button', { name: 'Xác thực' }));
 
-      await waitFor(() => expect(api.verifyOtp).toHaveBeenCalled());
+      await waitFor(() => expect(api.phoneLogin).toHaveBeenCalled());
       /*
        * "Đang gửi" leo lên vỏ (RequestBookingModal) qua `onBusyChange`, rồi vỏ mới khoá
        * `keyboard` của Modal — hai vòng render/effect NỐI TIẾP nhau ngoài lần render đã đợi ở

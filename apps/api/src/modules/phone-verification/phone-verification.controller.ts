@@ -112,7 +112,11 @@ export class PhoneVerificationController {
       realm,
       null,
     );
-    const { userId } = await this.auth.resolveOrCreateUserByPhone(dto.phone, realm);
+    const { userId } = await this.auth.resolveOrCreateUserByPhone(
+      dto.phone,
+      realm,
+      dto.displayName,
+    );
     const { token } = this.sessions.issue(userId);
     this.sessions.attach(res, token, realm);
     return this.auth.me(userId);

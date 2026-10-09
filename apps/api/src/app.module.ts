@@ -40,6 +40,7 @@ import { DepositPolicyModule } from './modules/deposit-policy/deposit-policy.mod
 import { InsuranceModule } from './modules/insurance/insurance.module';
 import { TaxModule } from './modules/tax/tax.module';
 import { SellerProfileModule } from './modules/seller-profile/seller-profile.module';
+import { DriverLicencesModule } from './modules/driver-licences/driver-licences.module';
 import { SupportModule } from './modules/support/support.module';
 import { BadgesModule } from './modules/badges/badges.module';
 import { NotificationModule } from './modules/notification/notification.module';
@@ -160,6 +161,7 @@ import { HolidaysModule } from './modules/holidays/holidays.module';
     // Phase 8 — thuế khấu trừ của chủ xe (ADR 0032 điều 3).
     TaxModule,
     SellerProfileModule,
+    DriverLicencesModule,
     SupportModule,
     // Không gian hỗ trợ gian hàng của nhân sự nền tảng — ADR 0050.
     SupportRequestModule,

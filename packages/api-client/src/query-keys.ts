@@ -536,6 +536,23 @@ export const queryKeys = {
     all: ['bank-accounts'] as const,
     list: (scope: string) => ['bank-accounts', scope] as const,
   },
+  /**
+   * Bằng lái của TÀI KHOẢN khách (ADR 0057) — trang Giấy tờ và bước "Xác thực bằng lái" khi đặt
+   * xe đọc CÙNG khoá, nên nộp ở chỗ này thì chỗ kia thấy ngay.
+   */
+  driverLicence: {
+    all: ['driver-licence'] as const,
+    overview: ['driver-licence', 'overview'] as const,
+    image: (id: string) => ['driver-licence', 'image', id] as const,
+  },
+  /** Hàng đợi bằng lái của nền tảng — tách khỏi `driverLicence` (phạm vi khác, quyền khác). */
+  platformDriverLicences: {
+    all: ['platform-driver-licences'] as const,
+    list: (params: QueryParams) => ['platform-driver-licences', 'list', params] as const,
+    counts: ['platform-driver-licences', 'counts'] as const,
+    detail: (id: string) => ['platform-driver-licences', 'detail', id] as const,
+    image: (id: string) => ['platform-driver-licences', 'image', id] as const,
+  },
   /** Hàng đợi xác minh người bán của nền tảng — tách khỏi `sellerProfile` (phạm vi tenant). */
   platformSellers: {
     all: ['platform-sellers'] as const,

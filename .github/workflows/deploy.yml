@@ -251,6 +251,8 @@ jobs:
           V_FACEBOOK_APP_ID: ${{ vars.FACEBOOK_APP_ID }}
           V_OTP_MODE: ${{ vars.OTP_MODE }}
           V_PLAN_FEATURE_ENFORCEMENT: ${{ vars.PLAN_FEATURE_ENFORCEMENT }}
+          V_DRIVER_LICENCE_ENFORCEMENT: ${{ vars.DRIVER_LICENCE_ENFORCEMENT }}
+          V_DRIVER_LICENCE_OCR: ${{ vars.DRIVER_LICENCE_OCR }}
           V_SMTP_HOST: ${{ vars.SMTP_HOST }}
           V_SMTP_PORT: ${{ vars.SMTP_PORT }}
           V_SMTP_USER: ${{ vars.SMTP_USER }}
@@ -500,6 +502,13 @@ jobs:
           kv FIREBASE_PRIVATE_KEY "${S_FIREBASE_PRIVATE_KEY:-}"
           kv GEOAPIFY_API_KEY "${S_GEOAPIFY_API_KEY:-}"
           kv GOOGLE_HOLIDAY_API_KEY "${S_GOOGLE_HOLIDAY_API_KEY:-}"
+
+          # Bằng lái của khách (ADR 0057). Đọc ảnh bằng Tesseract tại chỗ — không khoá, không bên
+          # thứ ba; "off" ⇒ mọi lượt nộp vào hàng đợi duyệt tay (thoát hiểm khi CPU quá tải hay
+          # bộ đọc quyết sai). Cổng đặt xe mặc định "on"; "off" là thoát hiểm (vd app native chưa
+          # có bước nộp bằng).
+          kv DRIVER_LICENCE_OCR "${V_DRIVER_LICENCE_OCR:-tesseract}"
+          kv DRIVER_LICENCE_ENFORCEMENT "${V_DRIVER_LICENCE_ENFORCEMENT:-on}"
 
           # Nhóm NEXT_PUBLIC_* đã nhúng cứng vào image lúc build. Ghi vào file env chỉ để
           # `docker compose build` còn dùng được nếu có ngày phải build tay ngay trên máy.

@@ -268,6 +268,29 @@ export const envSchema = z
     PLAN_FEATURE_ENFORCEMENT: z.enum(['off', 'warn', 'on']).default('warn'),
 
     /*
+     * --- Bằng lái của khách: đọc ảnh tự động (ADR 0057) ---
+     *
+     *   tesseract — MẶC ĐỊNH: đọc bằng Tesseract chạy NGAY TRONG tiến trình API (WASM + dữ liệu
+     *               tiếng Việt đóng gói trong node_modules). Không khoá, không gọi ra ngoài, không
+     *               tốn phí theo lượt.
+     *   off       — thoát hiểm: không đọc tự động, mọi lượt nộp vào hàng đợi duyệt tay (vd máy chủ
+     *               quá tải CPU, hay bộ đọc đang tự quyết sai). Không cần revert.
+     *
+     * Ở cả hai chế độ, máy KHÔNG BAO GIỜ tự đánh dấu "đã xác thực" khi chưa đọc được ảnh.
+     */
+    DRIVER_LICENCE_OCR: z.enum(['tesseract', 'off']).default('tesseract'),
+
+    /*
+     * Cổng "phải có bằng lái đã xác thực mới gửi được yêu cầu thuê xe tự lái" (ADR 0057).
+     *
+     *   on   — MẶC ĐỊNH: chặn thật ở `POST /public/booking-requests`.
+     *   off  — thoát hiểm: bỏ qua cổng (vd app native chưa có bước nộp bằng). Không cần revert.
+     *
+     * Chỉ là công tắc ROLLOUT — luồng nộp/duyệt bằng lái chạy bình thường ở cả hai chế độ.
+     */
+    DRIVER_LICENCE_ENFORCEMENT: z.enum(['off', 'on']).default('on'),
+
+    /*
      * --- SePay: đối soát tiền VÀO tài khoản nền tảng (ADR 0016/0022, R2) ---
      *
      * BỐN biến là MỘT nhóm bật/tắt: khai một nửa là cấu hình gõ thiếu và fail lúc boot

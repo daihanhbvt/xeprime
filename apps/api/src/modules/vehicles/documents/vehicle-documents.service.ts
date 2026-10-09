@@ -41,6 +41,7 @@ import {
   type OcrExtractedField,
   type VehicleDocumentOcrProvider,
 } from './ocr-provider';
+import { isUniqueViolation } from '../../../common/prisma-errors';
 
 /** Trường OCR là DATE — áp vào phải qua validate ngày lịch, không nhận chuỗi tuỳ ý. */
 const DATE_FIELDS: readonly VehicleDocumentOcrField[] = [
@@ -51,9 +52,6 @@ const DATE_FIELDS: readonly VehicleDocumentOcrField[] = [
 type StoredOcrFields = Partial<Record<VehicleDocumentOcrField, OcrExtractedField>>;
 
 /** Nhận diện vi phạm unique của Prisma bằng duck-typing (cùng lý do all-exceptions.filter). */
-function isUniqueViolation(err: unknown): boolean {
-  return typeof err === 'object' && err !== null && (err as { code?: unknown }).code === 'P2002';
-}
 
 /**
  * Giấy tờ xe (Wave 5 + đóng an ninh Wave 5.1) — writer duy nhất của

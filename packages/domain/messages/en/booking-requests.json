@@ -240,7 +240,8 @@
       "resend": "Resend code",
       "resendIn": "Resend ({seconds}s)",
       "sessionExpired": "Your session has expired. Please verify your phone number again.",
-      "editPhoneShort": "Change number"
+      "editPhoneShort": "Change number",
+      "loginHint": "A 6-digit code has been sent to {phone}. Enter it to sign in — your account keeps your verified licence for all future trips."
     },
     "review": {
       "vehicle": "Car",
@@ -390,6 +391,9 @@
     },
     "address": {
       "vehicleAt": "The car is in {province}. Type an address, then pick it from the suggestions."
+    },
+    "licence": {
+      "title": "Verify your driving licence"
     }
   },
   "approved": {
