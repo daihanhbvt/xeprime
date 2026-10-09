@@ -16,6 +16,7 @@ import type { RequestContext } from '../../../common/types/request-context';
 import { SessionService } from '../session.service';
 import { NativeAuthCodeService } from './native-auth-code.service';
 import { socialErrorCode } from './social-auth.error';
+import { OAUTH_ERROR, OAUTH_ERROR_DESCRIPTION_PARAM } from './social-provider';
 import { SocialAuthService } from './social-auth.service';
 
 /**
@@ -172,7 +173,7 @@ export class SocialAuthController {
     name: 'error',
     required: false,
     description: 'Mã lỗi của provider. `access_denied` = người dùng bấm huỷ.',
-    example: 'access_denied',
+    example: OAUTH_ERROR.ACCESS_DENIED,
   })
   @ApiResponse({ status: 302, description: 'Chuyển hướng về web, kèm Set-Cookie khi thành công.' })
   async callback(
@@ -189,7 +190,19 @@ export class SocialAuthController {
     // Người dùng bấm huỷ ở màn đồng ý. Không phải sự cố — đừng ghi log lỗi, và đừng nói với họ
     // rằng có gì đó hỏng.
     if (providerError) {
-      const cancelled = providerError === 'access_denied';
+      const cancelled = providerError === OAUTH_ERROR.ACCESS_DENIED;
+      /*
+       * Lỗi THẬT của provider (không phải người dùng huỷ) — ví dụ app Facebook chưa Live, sai
+       * redirect URI. Lý do nằm ở `error_description`; trước đây nhánh này nuốt mất nó và không
+       * ghi gì, nên đăng nhập hỏng mà log trống trơn.
+       */
+      if (!cancelled) {
+        const description = req.query[OAUTH_ERROR_DESCRIPTION_PARAM];
+        this.social.logFailure(
+          providerKey,
+          `provider trả error=${providerError}${typeof description === 'string' ? ` (${description})` : ''}`,
+        );
+      }
       res.redirect(
         this.social.webRedirect(
           errorRealm,

@@ -69,6 +69,9 @@ catalogs:
     expo:
       specifier: 54.0.37
       version: 54.0.37
+    expo-apple-authentication:
+      specifier: ~8.0.8
+      version: 8.0.8
     expo-build-properties:
       specifier: ~1.0.10
       version: 1.0.10
@@ -470,6 +473,9 @@ importers:
       expo:
         specifier: 'catalog:'
         version: 54.0.37(@babel/core@7.29.7)(@expo/metro-runtime@6.1.2)(expo-router@6.0.24)(react-native-webview@13.15.0(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)(typescript@5.9.3)
+      expo-apple-authentication:
+        specifier: 'catalog:'
+        version: 8.0.8(expo@54.0.37)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))
       expo-build-properties:
         specifier: 'catalog:'
         version: 1.0.10(expo@54.0.37)
@@ -675,6 +681,9 @@ importers:
       expo:
         specifier: 'catalog:'
         version: 54.0.37(@babel/core@7.29.7)(@expo/metro-runtime@6.1.2)(expo-router@6.0.24)(react-native-webview@13.15.0(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)(typescript@5.9.3)
+      expo-apple-authentication:
+        specifier: 'catalog:'
+        version: 8.0.8(expo@54.0.37)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))
       expo-build-properties:
         specifier: 'catalog:'
         version: 1.0.10(expo@54.0.37)
@@ -868,6 +877,9 @@ importers:
       expo:
         specifier: 'catalog:'
         version: 54.0.37(@babel/core@7.29.7)(@expo/metro-runtime@6.1.2)(expo-router@6.0.24)(react-native-webview@13.15.0(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)(typescript@5.9.3)
+      expo-apple-authentication:
+        specifier: 'catalog:'
+        version: 8.0.8(expo@54.0.37)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))
       expo-build-properties:
         specifier: 'catalog:'
         version: 1.0.10(expo@54.0.37)
@@ -8401,6 +8413,12 @@ packages:
   expect@30.4.1:
     resolution: {integrity: sha512-PMARsyh/JtqC20HoGqlFcIlQAyqUtW4PlI1rup1uhYJtKuwAjbvWi3GQMAn+STdHum/dk8xrKfUM1+5SAwpolA==}
     engines: {node: ^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0}
+
+  expo-apple-authentication@8.0.8:
+    resolution: {integrity: sha512-TwCHWXYR1kS0zaeV7QZKLWYluxsvqL31LFJubzK30njZqeWoWO89HZ8nZVaeXbFV1LrArKsze4BmMb+94wS0AQ==}
+    peerDependencies:
+      expo: '*'
+      react-native: '*'
 
   expo-asset@12.0.13:
     resolution: {integrity: sha512-x/p7WvQUnkn6K43b9eL6SPeq5Vnf1E8BDe9bDrWrvMqzyUvJnUFvl+ctg3034s/+UHe7Ne2pAmc0+yzbl8CrDQ==}
@@ -22404,6 +22422,11 @@ snapshots:
       jest-message-util: 30.4.1
       jest-mock: 30.4.1
       jest-util: 30.4.1
+
+  expo-apple-authentication@8.0.8(expo@54.0.37)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0)):
+    dependencies:
+      expo: 54.0.37(@babel/core@7.29.7)(@expo/metro-runtime@6.1.2)(expo-router@6.0.24)(react-native-webview@13.15.0(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)(typescript@5.9.3)
+      react-native: 0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0)
 
   expo-asset@12.0.13(expo@54.0.37)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)(typescript@5.9.3):
     dependencies:

@@ -18,6 +18,7 @@
     "SOCIAL_STATE_INVALID": "That sign-in attempt has expired. Please start again.",
     "SOCIAL_CANCELLED": "You cancelled at the permission step, so you weren't signed in.",
     "SOCIAL_EXCHANGE_FAILED": "We couldn't reach the sign-in provider. Please try again in a moment.",
+    "SOCIAL_TOKEN_INVALID": "We couldn't verify this account. Please try signing in again.",
     "FORBIDDEN": "You don't have permission to do this.",
     "MISSING_PERMISSION": "You don't have permission to do this.",
     "NO_TENANT_SCOPE": "This account doesn't belong to a shop yet.",

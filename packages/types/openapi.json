@@ -2621,6 +2621,144 @@
         "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối."
       }
     },
+    "/auth/mobile/apple": {
+      "post": {
+        "operationId": "MobileAuthController_appleLogin",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MobileAppleLoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MobileSessionDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Thông tin đăng nhập không hợp lệ, hoặc phiên đã hết hạn.\n\nMã lỗi: `INVALID_CREDENTIALS` · `SESSION_EXPIRED` · `ACCOUNT_LOCKED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INVALID_CREDENTIALS",
+                    "message": "Email/số điện thoại hoặc mật khẩu không đúng"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `REALM_NOT_ALLOWED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "REALM_NOT_ALLOWED",
+                    "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "Dữ liệu đã tồn tại"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 10 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Native iOS: đăng nhập bằng Apple — đổi identityToken lấy access + refresh token",
+        "tags": [
+          "auth"
+        ],
+        "security": [],
+        "description": "**Truy cập:** công khai — không cần đăng nhập.\n\n**Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối."
+      }
+    },
     "/auth/mobile/login": {
       "post": {
         "operationId": "MobileAuthController_login",
@@ -67775,6 +67913,21 @@
           "error"
         ]
       },
+      "AppleFullNameDto": {
+        "type": "object",
+        "properties": {
+          "givenName": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 60
+          },
+          "familyName": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 60
+          }
+        }
+      },
       "ApplyOcrFieldsDto": {
         "type": "object",
         "properties": {
@@ -77894,6 +78047,43 @@
         "required": [
           "data",
           "meta"
+        ]
+      },
+      "MobileAppleLoginDto": {
+        "type": "object",
+        "properties": {
+          "identityToken": {
+            "type": "string",
+            "description": "`identityToken` (JWT) mà iOS trả về sau khi người dùng đồng ý."
+          },
+          "nonce": {
+            "type": "string",
+            "description": "Nonce THÔ app đã sinh. Apple nhận SHA-256 của nó; server băm lại để đối chiếu."
+          },
+          "fullName": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AppleFullNameDto"
+              }
+            ]
+          },
+          "device": {
+            "$ref": "#/components/schemas/MobileDeviceDto"
+          },
+          "clientApp": {
+            "type": "string",
+            "enum": [
+              "customer",
+              "partner"
+            ],
+            "description": "App đang gọi: `customer` (XePrime) hay `partner` (XePrime Partner). Thiếu = `customer` (app hợp nhất cũ)."
+          }
+        },
+        "required": [
+          "identityToken",
+          "nonce"
         ]
       },
       "MobileDeviceDto": {

@@ -2,6 +2,8 @@ import { authApi } from '@/api/auth/api';
 import { type CurrentUser, type MobileRegisterInput } from '@/api/auth/types';
 import type { AuthProvider } from '@xeprime/types';
 import {
+  isAppleSignInAvailable,
+  signInWithApple,
   signInWithOtp,
   signInWithPassword,
   signInWithSocial,
@@ -36,6 +38,13 @@ export function loginWithSocial(
 ): Promise<CurrentUser | null> {
   return signInWithSocial(provider, locale);
 }
+
+/** "Sign in with Apple" — chỉ iOS. `null` = người dùng tự huỷ bảng đăng nhập, KHÔNG phải lỗi. */
+export function loginWithApple(): Promise<CurrentUser | null> {
+  return signInWithApple();
+}
+
+export { isAppleSignInAvailable };
 
 export function setAccountPassword(password: string): Promise<void> {
   return authApi.setPassword({ password });

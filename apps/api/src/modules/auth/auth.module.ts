@@ -9,6 +9,7 @@ import { NativeAuthCodeService } from './social/native-auth-code.service';
 import { OauthStateService } from './social/oauth-state.service';
 import { SocialAuthController } from './social/social-auth.controller';
 import { SocialAuthService } from './social/social-auth.service';
+import { AppleIdentityVerifier } from './social/apple-identity.verifier';
 import { FeePoliciesModule } from '../fee-policies/fee-policies.module';
 
 /**
@@ -41,6 +42,7 @@ import { FeePoliciesModule } from '../fee-policies/fee-policies.module';
     OauthStateService,
     NativeAuthCodeService,
     SocialAuthService,
+    AppleIdentityVerifier,
   ],
   exports: [
     SessionService,

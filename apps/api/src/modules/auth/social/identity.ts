@@ -1,4 +1,4 @@
-import type { AuthProvider } from '@xeprime/types';
+import type { IdentityProvider } from '@xeprime/types';
 
 /**
  * Một người dùng đã được nhà cung cấp đăng nhập xác nhận — ADR 0019.
@@ -20,7 +20,7 @@ export interface VerifiedIdentity {
    * được, và tin email để nhận diện là cách hai tài khoản khác nhau bị gộp làm một.
    */
   providerUserId: string;
-  provider: AuthProvider;
+  provider: IdentityProvider;
   email: string | null;
   /**
    * Provider có CAM KẾT email này đã được xác minh không.

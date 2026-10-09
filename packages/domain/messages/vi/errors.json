@@ -18,6 +18,7 @@
     "SOCIAL_STATE_INVALID": "Lần đăng nhập này đã quá hạn. Bấm đăng nhập lại giúp mình nhé.",
     "SOCIAL_CANCELLED": "Bạn đã huỷ ở bước cấp quyền nên chưa đăng nhập được.",
     "SOCIAL_EXCHANGE_FAILED": "Chưa kết nối được với nhà cung cấp đăng nhập. Thử lại sau ít phút nhé.",
+    "SOCIAL_TOKEN_INVALID": "Không xác thực được tài khoản này. Bạn thử đăng nhập lại giúp mình nhé.",
     "FORBIDDEN": "Bạn không có quyền thực hiện thao tác này.",
     "MISSING_PERMISSION": "Bạn không có quyền thực hiện thao tác này.",
     "NO_TENANT_SCOPE": "Tài khoản chưa thuộc gian hàng nào.",

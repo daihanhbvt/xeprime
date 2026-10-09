@@ -437,6 +437,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/mobile/apple": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Native iOS: đăng nhập bằng Apple — đổi identityToken lấy access + refresh token
+         * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         */
+        post: operations["MobileAuthController_appleLogin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/mobile/login": {
         parameters: {
             query?: never;
@@ -10520,6 +10542,10 @@ export interface components {
         ApiErrorDto: {
             error: components["schemas"]["ApiErrorBodyDto"];
         };
+        AppleFullNameDto: {
+            givenName?: string | null;
+            familyName?: string | null;
+        };
         ApplyOcrFieldsDto: {
             fields: ("holderName" | "holderAddress" | "plateNumber" | "chassisNumber" | "engineNumber" | "issuedAt" | "expiresAt" | "documentNumber")[];
             applyPlateToVehicle?: boolean;
@@ -13738,6 +13764,19 @@ export interface components {
         MissingOdometerQueueDto: {
             data: components["schemas"]["MissingOdometerItemDto"][];
             meta: components["schemas"]["PaginationMetaDto"];
+        };
+        MobileAppleLoginDto: {
+            /** @description `identityToken` (JWT) mà iOS trả về sau khi người dùng đồng ý. */
+            identityToken: string;
+            /** @description Nonce THÔ app đã sinh. Apple nhận SHA-256 của nó; server băm lại để đối chiếu. */
+            nonce: string;
+            fullName?: components["schemas"]["AppleFullNameDto"] | null;
+            device?: components["schemas"]["MobileDeviceDto"];
+            /**
+             * @description App đang gọi: `customer` (XePrime) hay `partner` (XePrime Partner). Thiếu = `customer` (app hợp nhất cũ).
+             * @enum {string}
+             */
+            clientApp?: "customer" | "partner";
         };
         MobileDeviceDto: {
             /** @example iPhone 15 Pro */
@@ -21940,6 +21979,158 @@ export interface operations {
             };
             /**
              * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MobileAuthController_appleLogin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MobileAppleLoginDto"];
+            };
+        };
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["MobileSessionDto"];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Thông tin đăng nhập không hợp lệ, hoặc phiên đã hết hạn.
+             *
+             *     Mã lỗi: `INVALID_CREDENTIALS` · `SESSION_EXPIRED` · `ACCOUNT_LOCKED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INVALID_CREDENTIALS",
+                     *         "message": "Email/số điện thoại hoặc mật khẩu không đúng"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             *
+             *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "CONFLICT",
+                     *         "message": "Dữ liệu đã tồn tại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 10 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
              */
