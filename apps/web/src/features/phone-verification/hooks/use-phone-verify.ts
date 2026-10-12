@@ -5,6 +5,7 @@ import { useMutation } from '@tanstack/react-query';
 import type { PhoneVerificationPurpose } from '@xeprime/types';
 import { getErrorMessage } from '@/services/api-client';
 import { sendOtp, verifyOtp } from '../api';
+import { useOtpTestCodeEnabled } from './use-otp-config';
 
 export type PhoneVerifyStatus = 'idle' | 'code_sent' | 'verified';
 
@@ -19,6 +20,7 @@ export function usePhoneVerify(purpose: PhoneVerificationPurpose) {
   const [cooldown, setCooldown] = useState(0);
   const [devCode, setDevCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const testCodeEnabled = useOtpTestCodeEnabled();
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -59,6 +61,13 @@ export function usePhoneVerify(purpose: PhoneVerificationPurpose) {
     cooldown,
     devCode,
     error,
+    /**
+     * Môi trường nhận mã OTP test (dev/staging): cho nhập mã ngay cả khi chưa gửi — gõ mã test là
+     * qua, bấm gửi thì nhận SMS thật như thường. Production luôn false.
+     */
+    testCodeEnabled,
+    /** Ô nhập mã được hiện: đã gửi mã, hoặc môi trường nhận mã test. */
+    canEnterCode: status === 'code_sent' || testCodeEnabled,
     sending: sendMutation.isPending,
     verifying: verifyMutation.isPending,
     send: (phone: string) => sendMutation.mutate(phone),

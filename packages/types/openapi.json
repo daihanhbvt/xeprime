@@ -4098,6 +4098,86 @@
         "description": "**Truy cập:** công khai — không cần đăng nhập.\n\n**Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối."
       }
     },
+    "/auth/phone/otp-config": {
+      "get": {
+        "operationId": "PhoneVerificationController_otpConfig",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OtpConfigDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `REALM_NOT_ALLOWED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "REALM_NOT_ALLOWED",
+                    "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Cấu hình OTP cho giao diện (có nhận mã test hay không)",
+        "tags": [
+          "phone-verification"
+        ],
+        "security": [],
+        "description": "**Truy cập:** công khai — không cần đăng nhập.\n\n**Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối."
+      }
+    },
     "/auth/phone/send-otp": {
       "post": {
         "operationId": "PhoneVerificationController_sendOtp",
@@ -79021,6 +79101,18 @@
           "tenantId",
           "mode",
           "reason"
+        ]
+      },
+      "OtpConfigDto": {
+        "type": "object",
+        "properties": {
+          "testCodeEnabled": {
+            "type": "boolean",
+            "description": "Môi trường nhận mã OTP test (dev/staging): giao diện hiện ô nhập mã ngay, không bắt gửi SMS trước. Chỉ là CỜ — bản thân mã không bao giờ đi trên dây. Production luôn false."
+          }
+        },
+        "required": [
+          "testCodeEnabled"
         ]
       },
       "OvertimeSuggestionDto": {

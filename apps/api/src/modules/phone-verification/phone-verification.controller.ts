@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Res } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import {
@@ -20,6 +20,7 @@ import { RequestRealmService } from '../auth/request-realm.service';
 import { SessionService } from '../auth/session.service';
 import { MeDto } from '../auth/dto/auth.dto';
 import {
+  OtpConfigDto,
   PhoneLoginDto,
   SendOtpDto,
   SendOtpResultDto,
@@ -52,6 +53,14 @@ export class PhoneVerificationController {
     private readonly realms: RequestRealmService,
     private readonly prisma: PrismaService,
   ) {}
+
+  @Public()
+  @Get('otp-config')
+  @ApiOperation({ summary: 'Cấu hình OTP cho giao diện (có nhận mã test hay không)' })
+  @ApiOkResponse({ type: OtpConfigDto })
+  otpConfig(): OtpConfigDto {
+    return { testCodeEnabled: this.service.testCodeEnabled() };
+  }
 
   @Public()
   @Throttle({ default: { limit: 5, ttl: 60_000 } })

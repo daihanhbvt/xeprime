@@ -43,6 +43,8 @@ const api = vi.hoisted(() => ({
   reset: vi.fn(),
 }));
 const media = vi.hoisted(() => ({ isMobile: false }));
+/** Môi trường nhận mã OTP test (dev/staging) — mặc định tắt, như production. */
+const otpEnv = vi.hoisted(() => ({ testCodeEnabled: false }));
 
 const me = vi.hoisted(() => ({ data: undefined as unknown }));
 vi.mock('@/hooks/use-current-user', () => ({ useCurrentUser: () => me }));
@@ -239,7 +241,11 @@ const LOGGED_IN_ME = {
 
 vi.mock('@/features/phone-verification/hooks/use-phone-verify', () => ({
   usePhoneVerify: () => ({
-    status: 'idle',
+    // Luồng chuẩn chỉ tới màn OTP SAU khi gửi mã thành công ⇒ `code_sent`. Môi trường mã test
+    // vào màn OTP mà chưa gửi gì ⇒ `idle`.
+    status: otpEnv.testCodeEnabled ? 'idle' : 'code_sent',
+    testCodeEnabled: otpEnv.testCodeEnabled,
+    canEnterCode: true,
     cooldown: 0,
     devCode: null,
     error: null,
@@ -379,6 +385,7 @@ function submitFromReview() {
 
 beforeEach(() => {
   media.isMobile = false;
+  otpEnv.testCodeEnabled = false;
   nav.push.mockReset();
   trip.data = undefined;
   // Mặc định là KHÁCH VÃNG LAI — mọi test cũ mô tả đúng luồng đó.
@@ -619,6 +626,18 @@ describe('RequestBookingModal — luồng đặt xe', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'Gửi lại mã' }));
       expect(api.send).toHaveBeenCalledWith('0901234567');
+    });
+
+    it('môi trường có mã test: vào thẳng màn OTP KHÔNG gửi SMS — gõ mã là qua, "Gửi mã" mới gửi', async () => {
+      otpEnv.testCodeEnabled = true;
+      renderModal();
+      await advanceToOtp();
+
+      expect(api.sendAsync).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole('button', { name: 'Gửi mã' }));
+      expect(api.send).toHaveBeenCalledWith('0901234567');
+
+      await advanceToReview();
     });
   });
 

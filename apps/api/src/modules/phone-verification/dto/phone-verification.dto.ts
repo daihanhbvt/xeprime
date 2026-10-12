@@ -100,6 +100,16 @@ export class VerifyOtpResultDto {
   @ApiProperty() verified!: boolean;
 }
 
+/** `GET /auth/phone/otp-config` — cấu hình OTP mà giao diện cần biết TRƯỚC khi gửi mã. */
+export class OtpConfigDto {
+  @ApiProperty({
+    description:
+      'Môi trường nhận mã OTP test (dev/staging): giao diện hiện ô nhập mã ngay, không bắt gửi ' +
+      'SMS trước. Chỉ là CỜ — bản thân mã không bao giờ đi trên dây. Production luôn false.',
+  })
+  testCodeEnabled!: boolean;
+}
+
 /**
  * `POST /auth/mobile/phone/login` — bản NATIVE của đăng nhập OTP.
  *

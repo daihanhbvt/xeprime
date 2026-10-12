@@ -21,6 +21,7 @@ import {
 } from '@xeprime/types';
 import { normalizePhone } from '../../common/phone';
 import { PrismaService } from '../../prisma/prisma.service';
+import { isProductionDeployment, OTP_BYPASS_PROVIDER, resolveOtpBypassCode } from './otp-bypass';
 import { OTP_PROVIDER, type OtpProvider } from './otp-provider';
 
 /** Trong bao lâu sau khi verify thì SĐT còn được coi là đã xác thực cho một hành động. */
@@ -33,6 +34,11 @@ export class PhoneVerificationService {
     private readonly config: ConfigService,
     @Inject(OTP_PROVIDER) private readonly provider: OtpProvider,
   ) {}
+
+  /** Môi trường này có nhận mã OTP test không — để giao diện cho nhập mã mà không cần gửi trước. */
+  testCodeEnabled(): boolean {
+    return resolveOtpBypassCode(this.config) !== null;
+  }
 
   /**
    * Gửi mã OTP cho (SĐT, mục đích). Chống spam: cooldown giữa 2 lần gửi + trần số lần/giờ theo
@@ -54,8 +60,10 @@ export class PhoneVerificationService {
     const now = Date.now();
 
     const cooldownSec = OTP_POLICY.RESEND_COOLDOWN_SECONDS;
+    // Hàng của mã test không tốn tin nhắn nào nên không tính vào cooldown/trần gửi.
+    const notBypass = { not: OTP_BYPASS_PROVIDER };
     const last = await this.prisma.phoneVerification.findFirst({
-      where: { phone },
+      where: { phone, provider: notBypass },
       orderBy: { createdAt: 'desc' },
       select: { createdAt: true },
     });
@@ -72,7 +80,7 @@ export class PhoneVerificationService {
 
     const maxPerHour = OTP_POLICY.MAX_SENDS_PER_HOUR;
     const sentLastHour = await this.prisma.phoneVerification.count({
-      where: { phone, createdAt: { gte: new Date(now - 60 * 60 * 1000) } },
+      where: { phone, provider: notBypass, createdAt: { gte: new Date(now - 60 * 60 * 1000) } },
     });
     if (sentLastHour >= maxPerHour) {
       throw new HttpException(
@@ -126,11 +134,11 @@ export class PhoneVerificationService {
      * `OTP_MODE !== 'esms'` là lớp thứ hai: với luật ở `env.schema.ts`, một triển khai production
      * không thể chạy mock. Giữ cả hai vế để lớp này không phụ thuộc vào việc luật kia còn đúng.
      */
-    const isProductionDeployment =
-      this.config.getOrThrow<string>('NODE_ENV') === 'production' &&
-      this.config.getOrThrow<string>('APP_ENV') === 'production';
     const isMockProvider = this.config.get<string>('OTP_MODE') !== 'esms';
-    return { expiresAt, devCode: isMockProvider && !isProductionDeployment ? code : null };
+    return {
+      expiresAt,
+      devCode: isMockProvider && !isProductionDeployment(this.config) ? code : null,
+    };
   }
 
   /**
@@ -138,6 +146,10 @@ export class PhoneVerificationService {
    * `users.phone` + `phone_verified_at` để lần sau khỏi verify lại. Sai/hết hạn → lỗi typed.
    * Nhập sai được đếm (`attempt_count`); chạm OTP_MAX_ATTEMPTS → khoá mã (status=failed) và trả
    * OTP_LOCKED, buộc gửi mã mới. Kèm TTL ngắn + @Throttle ở controller để hãm brute-force.
+   *
+   * Mã test (`resolveOtpBypassCode` — dev/staging, KHÔNG BAO GIỜ production) bỏ qua cả ba phép kiểm
+   * trên: có mã đang chờ thì đánh dấu chính hàng đó verified, chưa gửi mã nào thì tạo một hàng
+   * verified mới — để `assertPhoneVerifiedForBooking` đọc được như mã thật.
    */
   async verifyOtp(
     rawPhone: string,
@@ -165,6 +177,12 @@ export class PhoneVerificationService {
       orderBy: { createdAt: 'desc' },
       select: { id: true, otpHash: true, expiresAt: true, attemptCount: true },
     });
+
+    const bypassCode = resolveOtpBypassCode(this.config);
+    if (bypassCode !== null && code === bypassCode) {
+      await this.markVerified({ rowId: row?.id ?? null, realm, phone, purpose, userId });
+      return;
+    }
 
     if (!row) {
       throw new BadRequestException({
@@ -209,17 +227,46 @@ export class PhoneVerificationService {
       });
     }
 
+    await this.markVerified({ rowId: row.id, realm, phone, purpose, userId });
+  }
+
+  /**
+   * Chốt một lượt xác thực đúng: đánh dấu hàng mã verified (hoặc tạo hàng verified khi mã test
+   * được gõ mà chưa gửi mã nào), và nếu có `userId` thì gắn SĐT vào tài khoản — cùng MỘT transaction.
+   */
+  private async markVerified(args: {
+    rowId: string | null;
+    realm: AccountRealm;
+    phone: string;
+    purpose: PhoneVerificationPurpose;
+    userId?: string | null;
+  }): Promise<void> {
+    const { rowId, realm, phone, purpose, userId } = args;
     const now = new Date();
     try {
       await this.prisma.$transaction(async (tx) => {
-        await tx.phoneVerification.update({
-          where: { id: row.id },
-          data: {
-            status: PHONE_VERIFICATION_STATUS.VERIFIED,
-            verifiedAt: now,
-            userId: userId ?? null,
-          },
-        });
+        const verified = {
+          status: PHONE_VERIFICATION_STATUS.VERIFIED,
+          verifiedAt: now,
+          userId: userId ?? null,
+        };
+        if (rowId) {
+          await tx.phoneVerification.update({ where: { id: rowId }, data: verified });
+        } else {
+          await tx.phoneVerification.create({
+            data: {
+              id: newId(),
+              realm,
+              phone,
+              purpose,
+              provider: OTP_BYPASS_PROVIDER,
+              otpHash: null,
+              sentCount: 0,
+              expiresAt: now,
+              ...verified,
+            },
+          });
+        }
 
         if (userId) {
           /*

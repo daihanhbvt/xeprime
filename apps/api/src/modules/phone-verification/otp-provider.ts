@@ -40,9 +40,10 @@ export class EsmsOtpProvider implements OtpProvider {
       SecretKey: this.config.getOrThrow<string>('ESMS_SECRET_KEY'),
       Brandname: this.config.getOrThrow<string>('ESMS_BRANDNAME'),
       Phone: phone,
-      // SmsType 2 = brandname (CSKH). Nội dung khớp mẫu đã duyệt của brandname.
+      // SmsType 2 = brandname (CSKH). Nội dung PHẢI khớp mẫu đã duyệt của brandname — câu mẫu
+      // đi theo môi trường (`ESMS_OTP_TEMPLATE`), không cố định trong code.
       SmsType: '2',
-      Content: `${code} la ma xac thuc XePrime cua ban. Ma het han sau 5 phut.`,
+      Content: this.config.getOrThrow<string>('ESMS_OTP_TEMPLATE').replace('{code}', code),
     };
 
     const res = await fetch(this.endpoint, {
@@ -50,11 +51,16 @@ export class EsmsOtpProvider implements OtpProvider {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    const data = (await res.json().catch(() => null)) as { CodeResult?: string } | null;
+    const data = (await res.json().catch(() => null)) as {
+      CodeResult?: string;
+      ErrorMessage?: string;
+    } | null;
 
-    // eSMS trả CodeResult "100" khi thành công.
+    // eSMS trả CodeResult "100" khi thành công. 104 = brandname sai, 146 = nội dung lệch mẫu.
     if (!res.ok || data?.CodeResult !== '100') {
-      this.logger.error(`eSMS gửi thất bại: HTTP ${res.status} CodeResult=${data?.CodeResult}`);
+      this.logger.error(
+        `eSMS gửi thất bại: HTTP ${res.status} CodeResult=${data?.CodeResult} ${data?.ErrorMessage ?? ''}`,
+      );
       throw new Error('Không gửi được SMS OTP');
     }
   }
