@@ -28,6 +28,7 @@ import { ManageStateScroll } from '@/features/shell/ManageStateScroll';
 import type { FilterGroup } from '@/features/shell/ManageFilterSheet';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useDomainLabel } from '@/i18n/domain';
+import { useListParam, useListParamChange } from '@/navigation/list-params';
 import { SheetActionRow } from '@/features/calendar/components/SheetActionRow';
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_REGISTRATION_SOURCE } from '@/navigation/vehicle-registration-source';
@@ -80,8 +81,13 @@ export function VehicleListScreen() {
 
   const [vehicleType, setVehicleType] = useState<string>(ALL);
   const [serviceType, setServiceType] = useState<string>(ALL);
-  const [operationStatus, setOperationStatus] = useState<string>(ALL);
-  const [publicStatus, setPublicStatus] = useState<string>(ALL);
+  // Bộ lọc KHỞI TẠO từ tham số route — thẻ Tổng quan / panel Chợ, như URL web.
+  const routeOperation = useListParam('operationStatus', VEHICLE_OPERATION_STATUS_VALUES);
+  const routePublic = useListParam('publicStatus', VEHICLE_PUBLIC_STATUS_VALUES);
+  const [operationStatus, setOperationStatus] = useState<string>(routeOperation ?? ALL);
+  const [publicStatus, setPublicStatus] = useState<string>(routePublic ?? ALL);
+  useListParamChange('operationStatus', routeOperation, setOperationStatus);
+  useListParamChange('publicStatus', routePublic, setPublicStatus);
   const [sort, setSort] = useState<VehicleSort>(DEFAULT_VEHICLE_SORT);
   const [search, setSearch] = useState('');
   /** Tấm trượt chọn LỐI thêm xe — đăng nhanh hay thiết lập nâng cao. */

@@ -356,7 +356,16 @@ export function SearchExperienceProvider({
     });
   }, []);
 
-  const submit = useCallback(() => setFiltersState(applied(draft)), [draft]);
+  // Từ khoá không thuộc ngữ cảnh (nơi · thời gian · loại xe): sửa ngữ cảnh ở màn kết quả giữ nó lại,
+  // như web — mất từ khoá vì vừa đổi ngày là một lượt gõ lại vô cớ.
+  const submit = useCallback(
+    () =>
+      setFiltersState((prev) => {
+        const next = applied(draft);
+        return prev.q ? { ...next, q: prev.q } : next;
+      }),
+    [draft],
+  );
 
   const setFilters = useCallback((patch: Partial<MarketplaceFilters>) => {
     setFiltersState((prev) => {

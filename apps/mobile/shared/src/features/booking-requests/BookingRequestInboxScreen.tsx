@@ -26,6 +26,7 @@ import { FIRST_PAGE, useClampedPage } from '@/queries/use-clamped-page';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { ROUTES } from '@/navigation/routes';
+import { useListParam, useListParamChange } from '@/navigation/list-params';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
@@ -59,6 +60,8 @@ const SEARCH_DEBOUNCE_MS = 350;
 // Ở module scope, không inline: FlatList coi `keyExtractor` mới là prop đổi và dựng lại cả cây con.
 const keyOf = (request: BookingRequestItem) => request.id;
 const tabKeyOf = (tab: { value: string }) => tab.value;
+/** Giá trị tab hợp lệ cho tham số route `status` — ngoài danh sách này thì bỏ qua. */
+const REQUEST_TAB_VALUES: readonly string[] = REQUEST_INBOX_TABS.map((tab) => tab.value);
 
 /**
  * Hộp thư yêu cầu thuê (BKG-02 → 05).
@@ -83,7 +86,9 @@ export function BookingRequestInboxScreen() {
   const domainLabel = useDomainLabel();
   const navigateOnce = useNavigateOnce();
 
-  const [status, setStatus] = useState<string>(DEFAULT_REQUEST_TAB);
+  // Tab KHỞI TẠO từ tham số route (thẻ "Chờ khách trả" của Tổng quan, như `?status=` của web).
+  const routeStatus = useListParam('status', REQUEST_TAB_VALUES);
+  const [status, setStatus] = useState<string>(routeStatus ?? DEFAULT_REQUEST_TAB);
   const [search, setSearch] = useState('');
   const [serviceType, setServiceType] = useState<string | null>(null);
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
@@ -98,6 +103,10 @@ export function BookingRequestInboxScreen() {
   const [detail, setDetail] = useState<BookingRequestItem | null>(null);
 
   const [page, setPage] = useState(FIRST_PAGE);
+  useListParamChange('status', routeStatus, (next) => {
+    setStatus(next);
+    setPage(FIRST_PAGE);
+  });
   /*
    * Ô "Chi nhánh" của hộp thư (ADR 0052) — số trên tab (`meta.statusCounts`) đi cùng chi nhánh.
    * Huy hiệu menu thì đếm toàn gian hàng (điều 7, nợ 5c).

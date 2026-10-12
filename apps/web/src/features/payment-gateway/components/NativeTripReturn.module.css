@@ -1,0 +1,7 @@
+.page {
+  display: flex;
+  min-height: 60dvh;
+  align-items: center;
+  justify-content: center;
+  padding: var(--xp-space-xl) var(--xp-space-md);
+}

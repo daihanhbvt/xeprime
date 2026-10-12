@@ -47,11 +47,13 @@ function tenant(overrides: Partial<NonNullable<CurrentUser['tenant']>> = {}) {
 }
 
 describe('resolveAccountNav — MỘT menu khách', () => {
-  it('tám mục, cùng thứ tự với ACCOUNT_NAV bên web', () => {
+  it('chín mục, cùng thứ tự với ACCOUNT_NAV bên web', () => {
     const groups = resolveAccountNav(user());
     expect(groups.map((g) => g.key)).toEqual(['account']);
     expect(groups[0]?.items.map((i) => i.key)).toEqual([
       'profile',
+      // Giấy tờ & Xác minh — bằng lái (ADR 0057).
+      'documents',
       'becomeOwner',
       'trips',
       'payments',

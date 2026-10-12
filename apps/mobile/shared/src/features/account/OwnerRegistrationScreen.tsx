@@ -35,6 +35,7 @@ import { useDomainLabel } from '@/i18n/domain';
 import { ACCOUNT_SECTION, type AccountSection } from '@/navigation/account-section';
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_REGISTRATION_SOURCE } from '@/navigation/vehicle-registration-source';
+import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 
 /** Xe đang trên đường lên chợ — mọi trạng thái TRỪ "đã lên chợ". */
@@ -137,7 +138,7 @@ export function OwnerRegistrationScreen({
   const current = !profileDone ? 0 : publicCount > 0 ? 2 : 1;
 
   const headerActions = (
-    <XStack gap={space.xs} flexWrap="wrap" jc="flex-end">
+    <XStack gap={space.xs} flexWrap="wrap" jc={shell === 'manage' ? 'flex-start' : 'flex-end'}>
       {canViewProfile ? (
         <Button
           label={t('editProfile')}
@@ -164,7 +165,17 @@ export function OwnerRegistrationScreen({
     shell === 'manage' ? (
       <>
         <ManageHeader />
-        <ManagePageTitle title={t('title')} subtitle={t('subtitle')} action={headerActions} />
+        {/*
+          Hai nút KHÔNG đi vào khe `action` (cùng hàng với tiêu đề): ở màn hẹp chúng ép tiêu đề
+          thành "Hồ sơ chủ ..." và mô tả thành một cột hẹp. Tiêu đề + mô tả chiếm full width,
+          nút xuống hàng riêng và tự xuống dòng.
+        */}
+        <ManagePageTitle title={t('title')} subtitle={t('subtitle')} />
+        {canViewProfile || hasVehicle ? (
+          <XStack px={layout.screenX} pb={space.xs}>
+            {headerActions}
+          </XStack>
+        ) : null}
       </>
     ) : (
       <AppHeader

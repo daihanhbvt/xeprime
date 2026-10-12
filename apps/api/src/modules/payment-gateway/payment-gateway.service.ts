@@ -31,6 +31,7 @@ import {
   PAYMENT_ORDER_STATUS,
   PAYMENT_ORDER_TARGET,
   PAYMENT_RETURN_PARAM,
+  PAYMENT_NATIVE_TRIP_RETURN_PATH,
   PAYMENT_RETURN_TRIP_PATH,
   type AppLocale,
   type BookingHoldStatus,
@@ -397,6 +398,9 @@ export class PaymentGatewayService {
       // Không dấu, không ký tự đặc biệt — yêu cầu của VNPAY cho `vnp_OrderInfo`.
       orderInfo: `Thanh toan goi XePrime ${invoice.code}`,
       expiresAt,
+      // Lưu ý: `/payment-return` cần phiên partner — trình duyệt của app native không có cookie.
+      // App Partner trả gói bằng IAP, không mở cổng; nếu sau này mở thì cần trang quay về công khai
+      // như `PAYMENT_NATIVE_TRIP_RETURN_PATH` của site khách.
       returnUrl: (orderId) =>
         withNativeFlag(
           `${this.realms.webUrlFor(ACCOUNT_REALM.PARTNER)}${PARTNER_PAYMENT_RETURN_PATH}` +
@@ -471,12 +475,15 @@ export class PaymentGatewayService {
       orderInfo: `Tien giu cho XePrime ${hold.code}`,
       // Phiên của cổng kết thúc TRƯỚC hạn giữ chỗ — VNPAY tự từ chối một lượt trả sau khi chỗ đã nhả.
       expiresAt: capExpiry(now, hold.expiresAt),
+      // App native: trình duyệt của app không có cookie phiên ⇒ trang chuyến (cần đăng nhập) kẹt.
+      // Quay về trang CÔNG KHAI chỉ chuyển tiếp sang deep link của app.
       returnUrl: (orderId) =>
-        withNativeFlag(
-          `${this.realms.webUrlFor(ACCOUNT_REALM.CUSTOMER)}${PAYMENT_RETURN_TRIP_PATH}/` +
+        client === PAYMENT_GATEWAY_CLIENT.NATIVE
+          ? `${this.realms.webUrlFor(ACCOUNT_REALM.CUSTOMER)}${PAYMENT_NATIVE_TRIP_RETURN_PATH}` +
+            `?${PAYMENT_RETURN_PARAM.NATIVE_TRIP}=${encodeURIComponent(hold.bookingRequestId)}` +
+            `&${PAYMENT_RETURN_PARAM.TRIP_ORDER}=${orderId}`
+          : `${this.realms.webUrlFor(ACCOUNT_REALM.CUSTOMER)}${PAYMENT_RETURN_TRIP_PATH}/` +
             `${encodeURIComponent(hold.bookingRequestId)}?${PAYMENT_RETURN_PARAM.TRIP_ORDER}=${orderId}`,
-          client,
-        ),
     };
   }
 

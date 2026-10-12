@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Provider as ReduxProvider } from 'react-redux';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import {
-  BOOKING_STATUS,
+  DASHBOARD_AGENDA_KIND,
   FEATURE_STATE,
   type FeatureState,
   PERMISSION,
@@ -19,7 +19,8 @@ import {
 } from '@xeprime/types';
 import { ApiClientError } from '@xeprime/api-client';
 import * as authApi from '@/features/auth/api';
-import { bookingsApi, type BookingListItem } from '@/features/bookings/api';
+import { walletApi } from '@/api/wallet/api';
+import { dashboardApi, type PartnerOverview } from './api';
 import { financeApi, receiptsApi, type FinanceSummary } from '@/features/finance/api';
 import { tenantsApi } from '@/features/shop/api';
 import { vehiclesApi } from '@/features/vehicles/api';
@@ -97,27 +98,59 @@ function currentUser(
   };
 }
 
-function booking(overrides: Partial<BookingListItem> = {}): BookingListItem {
+/**
+ * `GET /dashboard/overview` giả lập ĐÚNG luật quyền của server: khối thiếu quyền về `null`.
+ */
+function overviewFor(permissions: Permission[]): PartnerOverview {
+  const can = (p: Permission) => permissions.includes(p);
+  const bookings = can(PERMISSION.BOOKING_VIEW);
   return {
-    id: '01JQZX0000000000000000000K',
-    code: 'BK001',
-    vehicleId: '01JQZX0000000000000000000V',
-    vehicleName: 'Toyota Vios',
-    vehiclePlate: '43A-12345',
-    customerName: 'Nguyễn Văn An',
-    customerPhone: '0901234567',
-    status: BOOKING_STATUS.ACTIVE,
-    serviceType: SERVICE_TYPE.SELF_DRIVE,
-    longTermPackageMonths: null,
-    pickupAt: '2026-09-08T02:00:00.000Z',
-    returnAt: '2026-09-10T02:00:00.000Z',
-    totalAmount: '2000000',
-    paidAmount: '1000000',
-    surchargeTotal: '0',
-    amountDue: '2000000',
-    otherCollected: '0',
-    ...overrides,
-  } as BookingListItem;
+    generatedAt: new Date().toISOString(),
+    today: bookings
+      ? { awaitingPickup: 2, pickupsToday: 1, pickupsOverdue: 1, active: 3, returnsToday: 0, returnsOverdue: 0 }
+      : null,
+    requests: can(PERMISSION.BOOKING_REQUEST_VIEW)
+      ? { pending: 4, pendingUrgent: 0, nextRespondBy: null, awaitingPayment: 1 }
+      : null,
+    agenda: bookings
+      ? {
+          items: [
+            {
+              kind: DASHBOARD_AGENDA_KIND.PICKUP,
+              at: new Date(Date.now() + 3_600_000).toISOString(),
+              bookingId: '01JQZX0000000000000000000K',
+              code: 'BK001',
+              vehicleId: '01JQZX0000000000000000000V',
+              vehicleName: 'Toyota Vios',
+              plateNumber: '43A-12345',
+              customerName: 'Nguyễn Văn An',
+              serviceType: SERVICE_TYPE.SELF_DRIVE,
+            },
+          ],
+          hasMore: false,
+        }
+      : null,
+    month: bookings
+      ? {
+          period: '2026-10',
+          newBookings: 12,
+          newBookingsPrevious: 10,
+          completedTrips: 5,
+          completedTripsPrevious: 0,
+          utilizationPercent: 50,
+          utilizationPercentPrevious: 40,
+        }
+      : null,
+    trend: bookings ? [{ period: '2026-10', newBookings: 12, completedTrips: 5 }] : null,
+    market: can(PERMISSION.VEHICLE_VIEW) ? { onMarket: 3, inReview: 1, needsRevision: 2, draft: 0 } : null,
+    reputation: {
+      sampleCount: 0,
+      responseRatePercent: null,
+      acceptKeepRatePercent: null,
+      responseMinutesMedian: null,
+      instantBook: false,
+    },
+  } as PartnerOverview;
 }
 
 const SUMMARY: FinanceSummary = {
@@ -140,7 +173,7 @@ const SUMMARY: FinanceSummary = {
 interface Options {
   fleetError?: boolean;
   summaryError?: boolean;
-  bookingsError?: boolean;
+  overviewError?: boolean;
   status?: TenantStatus;
   features?: TenantFeature[];
   vehicleTotal?: number;
@@ -150,7 +183,7 @@ async function renderScreen(permissions: Permission[], options: Options = {}) {
   const {
     fleetError = false,
     summaryError = false,
-    bookingsError = false,
+    overviewError = false,
     status = TENANT_STATUS.ACTIVE,
     features = [],
     vehicleTotal = 12,
@@ -174,17 +207,23 @@ async function renderScreen(permissions: Permission[], options: Options = {}) {
       inactive: 0,
     });
 
-  const bookingsSpy = jest.spyOn(bookingsApi, 'list');
-  if (bookingsError) bookingsSpy.mockImplementation(fail);
-  else
-    bookingsSpy.mockResolvedValue({
-      items: [booking()],
-      meta: { page: 1, limit: 6, total: 1, hasNext: false },
-    });
+  const overviewSpy = jest.spyOn(dashboardApi, 'overview');
+  if (overviewError) overviewSpy.mockImplementation(fail);
+  else overviewSpy.mockResolvedValue(overviewFor(permissions));
+
+  jest.spyOn(walletApi, 'summary').mockResolvedValue({
+    available: '1500000',
+    pending: '200000',
+    total: '1700000',
+    status: 'active',
+    minWithdrawAmount: '100000',
+    maxBusinessDays: 3,
+  });
 
   const summarySpy = jest.spyOn(financeApi, 'summary');
   if (summaryError) summarySpy.mockImplementation(fail);
   else summarySpy.mockResolvedValue(SUMMARY);
+  jest.spyOn(financeApi, 'series').mockResolvedValue({ granularity: 'day', buckets: [] });
 
   const receiptsSpy = jest.spyOn(receiptsApi, 'list').mockResolvedValue({
     items: [],
@@ -205,7 +244,7 @@ async function renderScreen(permissions: Permission[], options: Options = {}) {
       </ReduxProvider>,
     ),
   );
-  return { ...view, fleetSpy, bookingsSpy, summarySpy, receiptsSpy, shopSpy };
+  return { ...view, fleetSpy, overviewSpy, summarySpy, receiptsSpy, shopSpy };
 }
 
 beforeEach(() => {
@@ -217,6 +256,7 @@ const FULL: Permission[] = [
   PERMISSION.TENANT_VIEW,
   PERMISSION.VEHICLE_VIEW,
   PERMISSION.BOOKING_VIEW,
+  PERMISSION.BOOKING_REQUEST_VIEW,
   PERMISSION.FINANCE_VIEW,
 ];
 
@@ -230,19 +270,30 @@ describe('ShopDashboardScreen — không gọi API cho khối thiếu quyền', 
     expect(view.receiptsSpy).not.toHaveBeenCalled();
   });
 
-  it('thiếu `bookings.view`: KHÔNG gọi `/bookings` và không có ba khối đơn', async () => {
+  it('thiếu `bookings.view`: server trả `today/agenda/month = null` ⇒ không ô giao xe, không lịch, không KPI tháng', async () => {
     const view = await renderScreen([PERMISSION.VEHICLE_VIEW]);
 
     await view.findByText('Xe sẵn sàng');
-    expect(view.bookingsSpy).not.toHaveBeenCalled();
-    expect(view.queryByText('Đơn gần đây')).toBeNull();
+    await view.findByText('Xe trên chợ');
+    expect(view.queryByText('Chờ giao xe')).toBeNull();
+    expect(view.queryByText('Lịch giao & nhận xe')).toBeNull();
+    expect(view.queryByText('Đơn mới')).toBeNull();
+    // Thiếu cả yêu cầu lẫn đơn: không câu trả lời đầu trang nào để khẳng định.
+    expect(view.queryByText(/^Hôm nay/)).toBeNull();
   });
 
-  it('thiếu `vehicles.view`: KHÔNG gọi đếm đội xe', async () => {
+  it('thiếu `vehicles.view`: KHÔNG gọi đếm đội xe, không khối xe trên chợ', async () => {
     const view = await renderScreen([PERMISSION.BOOKING_VIEW]);
 
-    await view.findByText('Đơn gần đây');
+    await view.findByText('Lịch giao & nhận xe');
     expect(view.fleetSpy).not.toHaveBeenCalled();
+    expect(view.queryByText('Xe trên chợ')).toBeNull();
+  });
+
+  it('thiếu `subscription.view`: không khối gói', async () => {
+    const view = await renderScreen(FULL);
+    await view.findByText('Lịch giao & nhận xe');
+    expect(view.queryByText('Gói dịch vụ')).toBeNull();
   });
 
   it('gói KHÔNG có tính năng tài chính: khối tiền biến mất dù có `finance.view`', async () => {
@@ -260,8 +311,8 @@ describe('ShopDashboardScreen — lỗi KHÔNG được hoá thành số 0', () 
   it('một khối lỗi không kéo cả màn thành màn lỗi', async () => {
     const view = await renderScreen(FULL, { summaryError: true });
 
-    // Khối đơn vẫn dùng được.
-    expect(await view.findByText('Đơn gần đây')).toBeTruthy();
+    // Lịch giao nhận vẫn dùng được.
+    expect(await view.findByText('Toyota Vios · 43A-12345')).toBeTruthy();
     // Ô doanh thu KHÔNG in "0 ₫".
     await waitFor(() => expect(view.queryByText('0 ₫')).toBeNull());
   });
@@ -274,12 +325,48 @@ describe('ShopDashboardScreen — lỗi KHÔNG được hoá thành số 0', () 
     expect(view.getAllByText('Không rõ').length).toBeGreaterThan(0);
   });
 
-  it('khối đơn lỗi: nói "Đã có lỗi xảy ra", không nói "Chưa có đơn nào"', async () => {
-    const view = await renderScreen(FULL, { bookingsError: true });
+  it('tổng quan lỗi: ô việc nói lỗi, lịch có "Thử lại" — không ô nào in 0', async () => {
+    const view = await renderScreen(FULL, { overviewError: true });
 
-    await view.findByText('Đơn gần đây');
-    await waitFor(() => expect(view.getAllByText('Đã có lỗi xảy ra').length).toBeGreaterThan(0));
-    expect(view.queryByText('Chưa có đơn nào')).toBeNull();
+    await waitFor(() =>
+      expect(view.getAllByText('Chưa tải được việc hôm nay.').length).toBeGreaterThan(0),
+    );
+    expect(view.getAllByText('Đã có lỗi xảy ra').length).toBeGreaterThan(0);
+    expect(view.queryByText('Không có yêu cầu mới')).toBeNull();
+    // Lịch giao nhận VÀ biểu đồ chuyến (lần tải đầu lỗi vẫn hiện panel) đều mời thử lại overview.
+    const retries = view.getAllByRole('button', { name: 'Thử lại' });
+    expect(retries.length).toBeGreaterThanOrEqual(2);
+    const calls = view.overviewSpy.mock.calls.length;
+    await fireEvent.press(retries[0]!);
+    await waitFor(() => expect(view.overviewSpy.mock.calls.length).toBeGreaterThan(calls));
+  });
+});
+
+describe('ShopDashboardScreen — việc cần làm, KPI tháng và đích của thẻ', () => {
+  it('câu trả lời đầu trang dựng từ chính các ô việc', async () => {
+    const view = await renderScreen(FULL);
+    expect(
+      await view.findByText('Hôm nay: 1 việc đã quá giờ · 4 yêu cầu chờ bạn trả lời · giao 1 xe.'),
+    ).toBeTruthy();
+  });
+
+  it('KPI so cùng kỳ: +20% cho đơn mới; kỳ trước 0 ⇒ "Chưa có số cùng kỳ để so", không 0%', async () => {
+    const view = await renderScreen(FULL);
+    expect(await view.findByText('+20% so với cùng kỳ tháng trước')).toBeTruthy();
+    expect(view.getAllByText('Chưa có số cùng kỳ để so').length).toBeGreaterThan(0);
+    expect(view.getByText('+10 điểm so với cùng kỳ tháng trước')).toBeTruthy();
+  });
+
+  it('ô "Chờ giao xe" mở màn Chờ giao xe; dòng lịch mở chi tiết đơn', async () => {
+    const view = await renderScreen(FULL);
+    await fireEvent.press(await view.findByLabelText(/^Chờ giao xe: 2/));
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/manage/bookings/awaiting-pickup'));
+  });
+
+  it('chủ gian hàng thấy khối ví (CHỈ chủ — `@ShopOwnerOnly`)', async () => {
+    const view = await renderScreen(FULL);
+    expect(await view.findByText('Tiền của bạn')).toBeTruthy();
+    expect(await view.findByText('1.500.000 ₫')).toBeTruthy();
   });
 });
 

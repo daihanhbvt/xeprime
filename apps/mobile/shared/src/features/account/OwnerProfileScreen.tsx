@@ -4,13 +4,7 @@ import type { LayoutChangeEvent, ScrollView } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import {
-  PERMISSION,
-  STOREFRONT_KIND,
-  TENANT_STATUS,
-  storefrontIdentity,
-  type TenantStatus,
-} from '@xeprime/types';
+import { PERMISSION, STOREFRONT_KIND, storefrontIdentity } from '@xeprime/types';
 import {
   shopProfileWithContactSchema,
   type ShopProfileWithContactValues,
@@ -32,11 +26,9 @@ import { ShopProfileChecklist } from '@/features/shop/components/ShopProfileChec
 import { ShopStatusBanner } from '@/features/shop/components/ShopStatusBanner';
 import { useMyShop, useUpdateShopProfile } from '@/features/shop/hooks/use-shop';
 import { toValues as shopFormValues } from '@/features/shop/ShopProfileScreen';
-import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { ACCOUNT_SECTION, type AccountSection } from '@/navigation/account-section';
-import { ROUTES } from '@/navigation/routes';
 import { colors, fontSize, space } from '@/theme/tokens';
 import type { UserProfile } from './api';
 import { AccountIdentityHero } from './components/AccountIdentityHero';
@@ -147,7 +139,6 @@ function OwnerProfileSections({
   const tCommon = useTranslations('Common.actions');
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
-  const navigateOnce = useNavigateOnce();
   const permissions = usePermissions();
   const { data: user } = useCurrentUser();
   const updateShop = useUpdateShopProfile();
@@ -229,10 +220,13 @@ function OwnerProfileSections({
     },
     [scrollToSection],
   );
-  const layoutOf = (key: AccountSection) => (event: LayoutChangeEvent) => {
-    sectionY.current[key] = event.nativeEvent.layout.y;
-    scrollToSection();
-  };
+  const onSectionLayout = useCallback(
+    (key: AccountSection, event: LayoutChangeEvent) => {
+      sectionY.current[key] = event.nativeEvent.layout.y;
+      scrollToSection();
+    },
+    [scrollToSection],
+  );
 
   /*
    * Thứ khách thấy — CÙNG hàm với API (`storefrontIdentity`), nên khối nhận diện không thể nói
@@ -255,7 +249,6 @@ function OwnerProfileSections({
       avatarUrl: profile.avatarUrl ?? null,
     },
   );
-  const status = shop.status as TenantStatus;
 
   return (
     <>
@@ -274,19 +267,6 @@ function OwnerProfileSections({
               subtitle={t('subtitle')}
               tenant={user?.tenant ?? null}
             />
-            {/* Chỉ trang đang hoạt động mới có bản công khai — link tới 404 là hành động giả. */}
-            {status === TENANT_STATUS.ACTIVE ? (
-              <XStack px={space.md} pb={space.md}>
-                <Button
-                  label={t('viewPublicPage')}
-                  icon="open-outline"
-                  variant="secondary"
-                  size="sm"
-                  block={false}
-                  onPress={() => navigateOnce(ROUTES.explore.shopDetail(shop.slug))}
-                />
-              </XStack>
-            ) : null}
           </Card>
 
           <ShopStatusBanner shop={shop} />
@@ -307,14 +287,20 @@ function OwnerProfileSections({
             />
           )}
 
-          <YStack gap={space.sm} onLayout={layoutOf(ACCOUNT_SECTION.PROFILE)}>
+          <YStack
+            gap={space.sm}
+            onLayout={(event: LayoutChangeEvent) => onSectionLayout(ACCOUNT_SECTION.PROFILE, event)}
+          >
             <SectionHead title={t('sections.profile')} hint={t('sections.profileHint')} />
             <Card>
               <OwnerInfoForm profile={profile} shop={shop} canEditBio={canEdit} />
             </Card>
           </YStack>
 
-          <YStack gap={space.sm} onLayout={layoutOf(ACCOUNT_SECTION.ADDRESS)}>
+          <YStack
+            gap={space.sm}
+            onLayout={(event: LayoutChangeEvent) => onSectionLayout(ACCOUNT_SECTION.ADDRESS, event)}
+          >
             <SectionHead title={t('sections.address')} hint={t('sections.addressHint')} />
             <Card>
               <YStack gap={space.md}>
@@ -359,7 +345,10 @@ function OwnerProfileSections({
           </YStack>
 
           {canSeeTax ? (
-            <YStack gap={space.sm} onLayout={layoutOf(ACCOUNT_SECTION.TAX)}>
+            <YStack
+              gap={space.sm}
+              onLayout={(event: LayoutChangeEvent) => onSectionLayout(ACCOUNT_SECTION.TAX, event)}
+            >
               <SectionHead title={tTax('title')} hint={tTax('subtitle')} />
               {/* Nhúng thẳng biểu mẫu — đúng `SellerTaxSection` của web `OwnerProfilePage`. */}
               <OwnerTaxSection />
@@ -367,14 +356,20 @@ function OwnerProfileSections({
           ) : null}
 
           {canSeePlan ? (
-            <YStack gap={space.sm} onLayout={layoutOf(ACCOUNT_SECTION.PLAN)}>
+            <YStack
+              gap={space.sm}
+              onLayout={(event: LayoutChangeEvent) => onSectionLayout(ACCOUNT_SECTION.PLAN, event)}
+            >
               <SectionHead title={t('sections.plan')} hint={t('sections.planHint')} />
               {/* Nhúng `SubscriptionWorkspace` như web — tiêu đề là của section, không header thứ hai. */}
               <SubscriptionWorkspace />
             </YStack>
           ) : null}
 
-          <YStack gap={space.sm} onLayout={layoutOf(ACCOUNT_SECTION.LOGIN)}>
+          <YStack
+            gap={space.sm}
+            onLayout={(event: LayoutChangeEvent) => onSectionLayout(ACCOUNT_SECTION.LOGIN, event)}
+          >
             <SectionHead title={tHub('sections.login')} hint={tHub('sections.loginHint')} />
             <PersonalProfileCard
               profile={profile}
@@ -386,8 +381,12 @@ function OwnerProfileSections({
           </YStack>
 
           <AccountSecuritySections
-            onPasswordLayout={layoutOf(ACCOUNT_SECTION.PASSWORD)}
-            onDeleteLayout={layoutOf(ACCOUNT_SECTION.DELETE)}
+            onPasswordLayout={(event: LayoutChangeEvent) =>
+              onSectionLayout(ACCOUNT_SECTION.PASSWORD, event)
+            }
+            onDeleteLayout={(event: LayoutChangeEvent) =>
+              onSectionLayout(ACCOUNT_SECTION.DELETE, event)
+            }
           />
 
           <AppVersion />

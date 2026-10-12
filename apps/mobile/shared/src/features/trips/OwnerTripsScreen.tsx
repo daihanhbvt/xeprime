@@ -7,6 +7,7 @@ import { useTranslations } from 'use-intl';
 import {
   CUSTOMER_TRIP_FILTER,
   CUSTOMER_TRIP_FILTER_DEFAULT,
+  CUSTOMER_TRIP_FILTER_VALUES,
   PERMISSION,
   TRIP_ROLE,
   type CustomerTripFilter,
@@ -29,9 +30,10 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useDomainLabel } from '@/i18n/domain';
 import { queryKeys } from '@/queries/query-keys';
 import { ROUTES } from '@/navigation/routes';
+import { useListParam, useListParamChange } from '@/navigation/list-params';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
-import { colors, space } from '@/theme/tokens';
+import { colors } from '@/theme/tokens';
 import { TripCard } from './components/TripCard';
 import { tripToDecisionTarget } from './decision-target';
 import { useTripsInfinite } from './hooks/use-trips';
@@ -67,9 +69,17 @@ export function OwnerTripsScreen() {
   const canApprove = permissions.has(PERMISSION.BOOKING_REQUEST_APPROVE);
   const canViewBooking = permissions.has(PERMISSION.BOOKING_VIEW);
 
-  const [filter, setFilter] = useState<CustomerTripFilter>(CUSTOMER_TRIP_FILTER_DEFAULT);
+  // Tab KHỞI TẠO từ tham số route (thẻ "Đã xong" của Tổng quan, như `?filter=history` của web).
+  const routeFilter = useListParam('filter', CUSTOMER_TRIP_FILTER_VALUES);
+  const [filter, setFilter] = useState<CustomerTripFilter>(
+    routeFilter ?? CUSTOMER_TRIP_FILTER_DEFAULT,
+  );
   // Lọc theo chặng — đúng web `OwnerTripsView` (dùng chung `TripList`): chỉ chặng của tab đang mở.
   const [stage, setStage] = useState<CustomerTripStage | null>(null);
+  useListParamChange('filter', routeFilter, (next) => {
+    setFilter(next);
+    setStage(null);
+  });
   const changeFilter = useCallback((next: CustomerTripFilter) => {
     setFilter(next);
     setStage(null);
@@ -100,16 +110,21 @@ export function OwnerTripsScreen() {
    * phản hồi): mở lại không được bày nút "Duyệt" cho một yêu cầu đã đóng. Nằm dưới tiền tố
    * `bookingRequests`, nên mọi quyết định (vốn invalidate cả tiền tố) làm mới luôn bản đang mở.
    */
-  const [requestId, setRequestId] = useState<string | null>(null);
+  const router = useRouter();
+  const { request: requestParam } = useLocalSearchParams<{ request?: string }>();
+  const [requestId, setRequestId] = useState<string | null>(
+    typeof requestParam === 'string' && requestParam ? requestParam : null,
+  );
   /*
    * `?request=<id>` — đích của thông báo yêu cầu (`ROUTES.manage.tripRequest`): mở sẵn yêu cầu đó.
    * Đóng chi tiết thì gỡ tham số, để bấm lại CÙNG thông báo vẫn mở được lần nữa.
    */
-  const router = useRouter();
-  const { request: requestParam } = useLocalSearchParams<{ request?: string }>();
-  useEffect(() => {
+  // Tham số mới ⇒ mở yêu cầu đó, điều chỉnh NGAY trong render (không setState trong effect).
+  const [seenRequestParam, setSeenRequestParam] = useState(requestParam);
+  if (requestParam !== seenRequestParam) {
+    setSeenRequestParam(requestParam);
     if (typeof requestParam === 'string' && requestParam) setRequestId(requestParam);
-  }, [requestParam]);
+  }
   const request = useQuery({
     queryKey: queryKeys.bookingRequests.detail(requestId ?? ''),
     queryFn: () => bookingRequestsApi.detail(requestId ?? ''),
