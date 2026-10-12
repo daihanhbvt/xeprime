@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
+import { useFormState, useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
 import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { CATALOG_TYPE } from '@xeprime/types';
+import { CATALOG_TYPE, VEHICLE_TYPE } from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
 import { SelectField } from '@/components/ui/SelectField';
 import type { SelectControlOption } from '@/components/ui/SelectControl';
@@ -10,6 +10,7 @@ import { useCatalog } from '@/features/catalog/use-catalog';
 import { useCatalogModelGroups, useCatalogModels } from '@/features/catalog/use-catalog-models';
 import { useDomainLabel } from '@/i18n/domain';
 import { space } from '@/theme/tokens';
+import { useCatalogModelSpec, valueForSpecRule } from '../hooks/use-catalog-model-spec';
 
 /**
  * Cặp chọn PHỤ THUỘC: Hãng xe → Mẫu xe — bản native của `VehicleIdentityFields` bên web.
@@ -112,6 +113,8 @@ export function VehicleIdentityFields({
     if (changed && setValue) setValue('vehicleCatalogModelId', null, { shouldDirty: true });
   }, [brand, vehicleType, setValue]);
 
+  usePrefillFromModel(control, vehicleType, modelId, setValue);
+
   return (
     <YStack gap={space.md}>
       <SelectField
@@ -140,4 +143,60 @@ export function VehicleIdentityFields({
       />
     </YStack>
   );
+}
+
+/**
+ * Chọn một MẪU XE MỚI ⇒ điền sẵn số chỗ, nguồn năng lượng, hộp số và phân khúc theo danh mục —
+ * bản native của `usePrefillFromModel` bên web, cùng luật `valueForSpecRule`.
+ *
+ * Chỉ chạy khi người dùng ĐỔI sang một mẫu khác mẫu đã lưu, và đợi tới khi mẫu đó tải xong: form
+ * sửa vừa nạp xe (hay quay về mẫu cũ sau `reset`) không phải một lượt chọn mẫu, điền lại lúc đó là
+ * ghi đè dữ liệu đã lưu.
+ */
+function usePrefillFromModel(
+  control: Control<VehicleFormValues>,
+  vehicleType: string,
+  modelId: string | null | undefined,
+  setValue: UseFormSetValue<VehicleFormValues> | undefined,
+) {
+  const spec = useCatalogModelSpec(control, vehicleType);
+  const seatCount = useWatch({ control, name: 'seatCount' });
+  const fuelType = useWatch({ control, name: 'fuelType' });
+  const transmission = useWatch({ control, name: 'transmission' });
+  const savedModelId = useFormState({ control }).defaultValues?.vehicleCatalogModelId ?? null;
+
+  const pending = useRef<string | null>(null);
+  const lastModelId = useRef(modelId);
+  useEffect(() => {
+    if (lastModelId.current !== modelId) {
+      pending.current = modelId && modelId !== savedModelId ? modelId : null;
+    }
+    lastModelId.current = modelId;
+  }, [modelId, savedModelId]);
+
+  useEffect(() => {
+    const model = spec.model;
+    if (!setValue || !model || pending.current !== model.id) return;
+    pending.current = null;
+
+    const opts = { shouldDirty: true, shouldValidate: true } as const;
+    if (model.vehicleType === VEHICLE_TYPE.CAR) {
+      const seats = valueForSpecRule(spec.seats, seatCount);
+      if (seats !== (seatCount ?? null)) setValue('seatCount', seats, opts);
+    }
+    const fuel = valueForSpecRule(spec.fuel, fuelType);
+    if (fuel !== (fuelType ?? null)) setValue('fuelType', fuel as VehicleFormValues['fuelType'], opts);
+    // Hộp số theo ĐÚNG nguồn năng lượng vừa đặt (Camry hybrid ⇒ e-CVT).
+    const gear = valueForSpecRule(spec.transmissionFor(fuel), transmission);
+    if (gear !== (transmission ?? null)) {
+      setValue('transmission', gear as VehicleFormValues['transmission'], opts);
+    }
+    if (model.motorbikeCategory) {
+      setValue(
+        'motorbikeCategory',
+        model.motorbikeCategory as VehicleFormValues['motorbikeCategory'],
+        opts,
+      );
+    }
+  }, [spec, seatCount, fuelType, transmission, setValue]);
 }

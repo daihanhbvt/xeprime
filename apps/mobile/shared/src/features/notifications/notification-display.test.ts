@@ -215,3 +215,46 @@ describe('notificationIcon', () => {
     );
   });
 });
+
+describe('notificationHref — CHỦ xe tuyến hoa hồng (Owner Lite, PR #158)', () => {
+  it('`booking` mở thẳng chi tiết ĐƠN đó', () => {
+    expect(
+      notificationHref(
+        { targetType: NOTIFICATION_TARGET_TYPE.BOOKING, targetId: BOOKING_ID },
+        NOTIFICATION_CONTEXT.OWNER,
+      ),
+    ).toEqual(manageOnly(ROUTES.manage.bookingDetail(BOOKING_ID)));
+  });
+
+  it('`booking_request` mở "Chuyến cho thuê" với ĐÚNG yêu cầu đó mở sẵn', () => {
+    expect(
+      notificationHref(
+        { targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST, targetId: BOOKING_ID },
+        NOTIFICATION_CONTEXT.OWNER,
+      ),
+    ).toEqual(manageOnly(ROUTES.manage.tripRequest(BOOKING_ID)));
+  });
+
+  it('thiếu id thì về danh sách "Chuyến cho thuê"', () => {
+    expect(
+      notificationHref(
+        { targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST, targetId: null },
+        NOTIFICATION_CONTEXT.OWNER,
+      ),
+    ).toEqual(manageOnly(ROUTES.manage.trips()));
+  });
+
+  it('đích còn lại CÙNG màn với tuyến gói', () => {
+    expect(
+      notificationHref(
+        { targetType: NOTIFICATION_TARGET_TYPE.CONVERSATION, targetId: CONVERSATION_ID },
+        NOTIFICATION_CONTEXT.OWNER,
+      ),
+    ).toEqual(
+      notificationHref(
+        { targetType: NOTIFICATION_TARGET_TYPE.CONVERSATION, targetId: CONVERSATION_ID },
+        NOTIFICATION_CONTEXT.MANAGE,
+      ),
+    );
+  });
+});

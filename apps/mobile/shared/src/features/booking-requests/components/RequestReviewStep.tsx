@@ -1,4 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Pressable } from 'react-native';
+import { Controller } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -19,6 +21,7 @@ import {
 import type { BookingRequestFormValues } from '../booking-schema';
 import type { RequestForm } from '../RequestBookingScreen';
 import { Callout, CalloutBody } from '@/components/ui/Callout';
+import { CheckMark } from '@/components/ui/CheckMark';
 import { FormSection } from '@/components/ui/FormSection';
 import { DataRow } from '@/components/ui/DataRow';
 import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
@@ -64,6 +67,11 @@ export function RequestReviewStep({
   const domainLabel = useDomainLabel();
 
   const longTerm = values.serviceType === SERVICE_TYPE.LONG_TERM;
+
+  /** Điều khoản chủ xe cho ĐÚNG dịch vụ đang chọn — cùng phép chọn với web và với lượt gửi. */
+  const activeTerms =
+    listing.rentalTerms?.find((term) => term.serviceType === values.serviceType) ?? null;
+  const requiresTermsAcceptance = Boolean(activeTerms?.requireTermsAcceptance);
   const withDriver = values.serviceType === SERVICE_TYPE.WITH_DRIVER;
 
   /*
@@ -252,6 +260,50 @@ export function RequestReviewStep({
         <Callout tone="success" title={t('review.instantBook')}>
           <CalloutBody>{t('review.instantBookHint')}</CalloutBody>
         </Callout>
+      ) : null}
+
+      {/*
+        Điều khoản của CHỦ XE — đúng khối `termsBox` của web: hiện khi chủ xe có viết điều khoản
+        HOẶC bắt đồng ý; ô tick chỉ có khi bắt đồng ý. Xe không cấu hình gì thì không có khối này.
+      */}
+      {activeTerms?.termsText || requiresTermsAcceptance ? (
+        <YStack
+          gap={space.sm}
+          p={space.md}
+          br={radius.md}
+          bw={1}
+          bc={colors.border}
+          bg={colors.surface}
+        >
+          {activeTerms?.termsText ? (
+            <Text col={colors.text} fos={fontSize.bodySm}>
+              {activeTerms.termsText}
+            </Text>
+          ) : null}
+          {requiresTermsAcceptance ? (
+            <Controller
+              control={form.control}
+              name="acceptedTerms"
+              render={({ field }) => (
+                <Pressable
+                  onPress={() => field.onChange(!field.value)}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: Boolean(field.value) }}
+                  accessibilityLabel={t('review.termsCheckbox')}
+                >
+                  <XStack ai="flex-start" gap={space.sm} py={space.xs}>
+                    <YStack pt={2}>
+                      <CheckMark checked={Boolean(field.value)} />
+                    </YStack>
+                    <Text f={1} col={colors.text} fos={fontSize.bodySm}>
+                      {t('review.termsCheckbox')}
+                    </Text>
+                  </XStack>
+                </Pressable>
+              )}
+            />
+          ) : null}
+        </YStack>
       ) : null}
 
       {/*

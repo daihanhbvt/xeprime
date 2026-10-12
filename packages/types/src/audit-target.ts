@@ -16,12 +16,16 @@ export const AUDIT_TARGET_TYPE = {
   BOOKING_SURCHARGE: 'booking_surcharge',
   CATALOG_ITEM: 'catalog_item',
   CONTRACT: 'contract',
+  /** Lượt nộp bằng lái của tài khoản khách (ADR 0057). */
+  CUSTOMER_DRIVER_LICENCE: 'customer_driver_licence',
   DRIVER: 'driver',
   FEE_POLICY: 'fee_policy',
   HOLD_REFUND: 'hold_refund',
   HOLIDAY_SYNC_RUN: 'holiday_sync_run',
   MARKETPLACE_BANNER: 'marketplace_banner',
   PAYMENT: 'payment',
+  /** Một lượt thanh toán qua cổng MoMo/VNPAY (ADR 0058). */
+  PAYMENT_GATEWAY_ORDER: 'payment_gateway_order',
   PLAN: 'plan',
   PLATFORM_BANK_BALANCE: 'platform_bank_balance',
   PLATFORM_MEMBERSHIP: 'platform_membership',

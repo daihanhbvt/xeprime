@@ -233,6 +233,7 @@
   "cards": {
     "label": "Việc đang chờ",
     "bankIn": "Tiền vào chưa khớp",
+    "gatewayIn": "Cổng cần xử lý",
     "holds": "Giữ chỗ chờ chốt",
     "refunds": "Hoàn chờ chuyển",
     "withdrawals": "Rút tiền chờ xử lý",
@@ -256,6 +257,7 @@
       "ledger": "Sổ"
     },
     "bankIn": "Tiền vào chưa khớp",
+    "gatewayIn": "Cổng thanh toán cần xử lý",
     "holds": "Giữ chỗ chờ chốt",
     "refunds": "Hoàn cho khách",
     "withdrawals": "Rút tiền chủ xe",
@@ -267,5 +269,134 @@
     "minutes": "{count} phút",
     "hours": "{count} giờ",
     "days": "{count} ngày"
+  },
+  "gateway": {
+    "tableLabel": "Lượt thanh toán qua cổng",
+    "empty": "Không có lượt thanh toán nào cần xử lý.",
+    "emptyDescription": "Lượt mà cổng đã báo về nhưng hệ thống không tự ghi nhận được sẽ hiện ở đây.",
+    "total": "{count, plural, other {# lượt}}",
+    "loadError": "Không tải được danh sách lượt thanh toán.",
+    "filters": {
+      "search": "Tìm",
+      "searchPlaceholder": "Mã XPG/XPH, mã đơn hoặc mã giao dịch của cổng",
+      "provider": "Cổng",
+      "target": "Loại khoản",
+      "status": "Trạng thái cổng",
+      "view": "Góc nhìn"
+    },
+    "columns": {
+      "amount": "Số tiền",
+      "provider": "Cổng",
+      "code": "Mã đối soát",
+      "tenant": "Gian hàng / chủ xe",
+      "status": "Trạng thái cổng",
+      "reason": "Lý do",
+      "outcome": "Kết cục",
+      "createdAt": "Mở phiên lúc",
+      "waited": "Đã chờ"
+    },
+    "detail": {
+      "title": "Lượt thanh toán qua cổng",
+      "previous": "Lượt trước",
+      "next": "Lượt sau",
+      "loadError": "Không tải được lượt thanh toán.",
+      "sideLabel": "Xử lý",
+      "amountSent": "Số tiền đã gửi sang cổng",
+      "amountPaid": "Số tiền cổng báo đã thu",
+      "target": "Loại khoản",
+      "orderRef": "Mã đơn gửi sang cổng",
+      "providerTx": "Mã giao dịch của cổng",
+      "resultCode": "Mã kết quả",
+      "message": "Thông điệp của cổng",
+      "payMethod": "Hình thức trả",
+      "paidAt": "Cổng thu lúc",
+      "resultSource": "Nguồn kết quả",
+      "appliedAt": "Ghi nhận lúc",
+      "applyOutcome": "Kết cục ghi nhận",
+      "applyError": "Lỗi ghi nhận",
+      "initiatedBy": "Người mở phiên",
+      "createdAt": "Mở phiên lúc",
+      "expiresAt": "Hạn dùng liên kết",
+      "lastQueriedAt": "Hỏi cổng gần nhất",
+      "targetTitle": "Khoản đích hiện tại",
+      "targetStatus": "Trạng thái",
+      "targetAmount": "Phải trả",
+      "targetPaid": "Đã nhận",
+      "targetExpires": "Hạn nhận tiền",
+      "targetGone": "Khoản đích không còn.",
+      "rawTitle": "Kết quả gốc của cổng",
+      "rawHint": "Đã bỏ chữ ký. Đây là bằng chứng khi đối chiếu với cổng.",
+      "rawEmpty": "Cổng chưa báo kết quả nào.",
+      "reasonTitle": "Vì sao cần xử lý",
+      "resultTitle": "Đã xử lý",
+      "resolvedBy": "{name} đóng lúc {time}",
+      "refundReference": "Mã hoàn tiền: {reference}",
+      "priorResultTitle": "Lần xử lý trước"
+    },
+    "source": {
+      "ipn": "IPN của cổng",
+      "query": "Server hỏi cổng"
+    },
+    "footer": {
+      "open": "Đối chiếu với portal của cổng trước khi đóng lượt.",
+      "handled": "Lượt này không còn ở hàng đợi.",
+      "requery": "Hỏi lại cổng",
+      "resolve": "Đóng lượt",
+      "apply": "Ghi nhận khoản này"
+    },
+    "requery": {
+      "changed": "Cổng có kết quả mới — đã cập nhật lượt này.",
+      "noChange": "Cổng chưa có gì mới cho lượt này.",
+      "unreachable": "Không hỏi được cổng lúc này. Thử lại sau ít phút."
+    },
+    "resolve": {
+      "title": "Đóng lượt thanh toán",
+      "body": "Ghi lại bạn đã làm gì (vd đã hoàn tay qua portal của cổng). Nút này không chạy thao tác tiền nào.",
+      "note": "Đã làm gì và vì sao",
+      "notePlaceholder": "Vd: Đã hoàn 300.000đ qua portal MoMo, mã hoàn …",
+      "noteRequired": "Ghi lại việc đã làm.",
+      "noteMin": "Tối thiểu {min, number} ký tự.",
+      "refunded": "Đã hoàn tiền cho người trả",
+      "refundReference": "Mã hoàn tiền phía cổng",
+      "refundReferencePlaceholder": "Mã giao dịch hoàn",
+      "refundReferenceRequired": "Nhập mã hoàn tiền (ít nhất 3 ký tự).",
+      "submit": "Đóng lượt",
+      "success": "Đã đóng lượt thanh toán."
+    },
+    "apply": {
+      "title": "Ghi nhận khoản cổng đã thu",
+      "summary": "{amount} sẽ được ghi vào khoản {code} như một lần thanh toán thật: hoá đơn có thể bật gói, khoản giữ chỗ có thể tạo đơn thuê. Chỉ làm khi đã đối chiếu với portal của cổng và chắc chắn khoản này CHƯA được hoàn.",
+      "note": "Đã đối chiếu gì",
+      "notePlaceholder": "Vd: Portal MoMo xác nhận giao dịch …, chưa hoàn",
+      "noteRequired": "Ghi lại bạn đã đối chiếu gì.",
+      "submit": "Ghi nhận",
+      "success": "Đã ghi nhận khoản thanh toán."
+    },
+    "events": {
+      "title": "Nhật ký kết quả của cổng ({count, number})",
+      "empty": "Cổng chưa báo kết quả nào.",
+      "effectLine": "Hệ thống: {effect}",
+      "code": "Mã {code}",
+      "outcome": {
+        "succeeded": "Đã thu",
+        "pending": "Đang chờ",
+        "failed": "Thất bại",
+        "cancelled": "Người trả huỷ",
+        "expired": "Hết hạn",
+        "flagged": "Cổng nghi ngờ",
+        "not_found": "Cổng không tìm thấy"
+      },
+      "effect": {
+        "order_not_found": "không có lượt tương ứng",
+        "amount_mismatch": "lệch số tiền, chờ người xử lý",
+        "pending": "chưa có kết quả cuối",
+        "recorded_failure": "ghi nhận không thành công",
+        "already_final": "lượt đã kết thúc trước đó",
+        "succeeded": "ghi nhận đã thu",
+        "already_succeeded": "đã ghi nhận từ trước",
+        "flagged": "cần người xử lý",
+        "duplicate_provider_tx": "mã giao dịch trùng lượt khác"
+      }
+    }
   }
 }

@@ -16,6 +16,12 @@ import type {
   WithdrawalFilters,
   InsuranceFilters,
   PlatformInsurancePage,
+  GatewayOrderFilters,
+  PlatformPaymentOrder,
+  PlatformPaymentOrderDetail,
+  PlatformPaymentOrderRequery,
+  ResolvePaymentOrderInput,
+  ApplyPaymentOrderInput,
 } from './types';
 
 export const MONEY_DEFAULT_LIMIT = DEFAULT_PAGE_SIZE;
@@ -120,3 +126,59 @@ export const retryInsurance = (id: string): Promise<void> =>
 
 export const voidInsurance = (id: string, body: { reason: string }): Promise<void> =>
   apiPost<void>(`/platform/money/insurance/${id}/void`, body);
+
+// ── Cổng thanh toán MoMo/VNPAY (ADR 0058) ───────────────────────────────────
+
+export function gatewayOrderFiltersToParams(filters: GatewayOrderFilters): QueryParams {
+  return {
+    view: filters.view ?? null,
+    provider: filters.provider ?? null,
+    target: filters.target ?? null,
+    status: filters.status ?? null,
+    q: filters.q ?? null,
+    page: filters.page ?? 1,
+    limit: filters.limit ?? MONEY_DEFAULT_LIMIT,
+  };
+}
+
+export const fetchGatewayOrders = (
+  filters: GatewayOrderFilters,
+): Promise<Paged<PlatformPaymentOrder>> =>
+  fetchPage<PlatformPaymentOrder>(
+    '/platform/payment-orders',
+    gatewayOrderFiltersToParams(filters),
+    MONEY_DEFAULT_LIMIT,
+  );
+
+export const fetchGatewayOrderDetail = (id: string): Promise<PlatformPaymentOrderDetail> =>
+  apiGet<PlatformPaymentOrderDetail>(`/platform/payment-orders/${encodeURIComponent(id)}`);
+
+/** Đóng lượt ở hàng đợi — ghi lại việc đã làm bên ngoài; KHÔNG chạy thao tác tiền nào. */
+export const resolveGatewayOrder = (
+  id: string,
+  body: ResolvePaymentOrderInput,
+): Promise<PlatformPaymentOrderDetail> =>
+  apiPost<PlatformPaymentOrderDetail>(
+    `/platform/payment-orders/${encodeURIComponent(id)}/resolve`,
+    body,
+  );
+
+/**
+ * Người trực GHI NHẬN TAY một khoản cổng đã thu mà máy không tự áp (kết quả tới sau khi lượt đã đóng).
+ * Server chạy đúng hàm áp tiền của webhook, kèm ghi chú + audit.
+ */
+export const applyGatewayOrder = (
+  id: string,
+  body: ApplyPaymentOrderInput,
+): Promise<PlatformPaymentOrderDetail> =>
+  apiPost<PlatformPaymentOrderDetail>(
+    `/platform/payment-orders/${encodeURIComponent(id)}/apply`,
+    body,
+  );
+
+/** Hỏi lại cổng ngay (bỏ qua nhịp giới hạn) và thử ghi nhận nếu cổng đã thu. */
+export const requeryGatewayOrder = (id: string): Promise<PlatformPaymentOrderRequery> =>
+  apiPost<PlatformPaymentOrderRequery>(
+    `/platform/payment-orders/${encodeURIComponent(id)}/requery`,
+    {},
+  );

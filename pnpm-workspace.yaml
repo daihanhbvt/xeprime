@@ -33,6 +33,7 @@ catalog:
   dayjs: 1.11.21
   expo: 54.0.37
   expo-build-properties: ~1.0.10
+  expo-apple-authentication: ~8.0.8
   expo-camera: ~17.0.10
   expo-clipboard: 8.0.8
   expo-constants: ~18.0.14
@@ -160,4 +161,7 @@ allowBuilds:
   protobufjs: false
   re2: true
   sharp: true
+  # postinstall của tesseract.js chỉ in lời mời tài trợ (opencollective) — lõi WASM và dữ liệu
+  # ngôn ngữ (`@tesseract.js-data/*`) là file tĩnh, không cần build gì.
+  tesseract.js: false
   unrs-resolver: true

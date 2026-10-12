@@ -10,7 +10,7 @@ import { cx } from '@/lib/cx';
 import styles from './MiniList.module.css';
 
 /**
- * Sổ quỹ hôm nay ở dạng rút gọn cho panel dashboard — cùng khuôn với `BookingMiniList`
+ * Sổ quỹ hôm nay ở dạng rút gọn cho panel dashboard
  * (loading/empty tự lo, một dòng là một nút mở sổ đầy đủ).
  *
  * Dòng CHI hiện dấu trừ và màu lỗi: trên một danh sách trộn thu lẫn chi, chiều của tiền là

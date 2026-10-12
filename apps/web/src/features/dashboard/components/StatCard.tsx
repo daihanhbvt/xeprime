@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import type { ComponentType, ReactNode } from 'react';
 import { createElement } from 'react';
 import { cx } from '@/lib/cx';
@@ -32,6 +33,8 @@ export function StatCard({
   danger,
   loading,
   onClick,
+  href,
+  change,
   variant = 'default',
 }: {
   label: string;
@@ -48,6 +51,14 @@ export function StatCard({
   loading?: boolean;
   /** Có đích để đi tiếp thì thẻ thành `<button>`; không có thì vẫn là một khối tĩnh. */
   onClick?: () => void;
+  /**
+   * Đích là một ĐƯỜNG DẪN (danh sách đã lọc tạo ra con số — UX §1.5) ⇒ thẻ là `<Link>` thật:
+   * mở được tab mới, trình đọc màn hình đọc là liên kết, và phiên hỗ trợ gian hàng tự ánh xạ nó.
+   * Thắng `onClick` khi có cả hai.
+   */
+  href?: string;
+  /** Dòng so với cùng kỳ (`ChangeBadge`) — dưới `hint`, ẩn khi đang tải. */
+  change?: ReactNode;
   /**
    * `'default'` — thẻ trắng gọn của dashboard.
    * `'tinted'` — cả thẻ nhuộm theo tông, icon tròn và số lớn hơn: dải số liệu đầu trang danh mục
@@ -66,9 +77,18 @@ export function StatCard({
         <div className={styles.label}>{label}</div>
         <div className={cx(styles.value, danger && styles.danger)}>{loading ? '…' : value}</div>
         {hint ? <div className={styles.hint}>{loading ? null : hint}</div> : null}
+        {change && !loading ? <div className={styles.change}>{change}</div> : null}
       </div>
     </>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className={cx(cardClass, styles.link)}>
+        {body}
+      </Link>
+    );
+  }
 
   // Thẻ bấm được phải là `<button>` chứ không phải `<div onClick>`: bàn phím và trình đọc màn
   // hình chỉ thấy được cái thứ nhất.

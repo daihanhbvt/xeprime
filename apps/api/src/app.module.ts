@@ -40,8 +40,11 @@ import { DepositPolicyModule } from './modules/deposit-policy/deposit-policy.mod
 import { InsuranceModule } from './modules/insurance/insurance.module';
 import { TaxModule } from './modules/tax/tax.module';
 import { SellerProfileModule } from './modules/seller-profile/seller-profile.module';
+import { DriverLicencesModule } from './modules/driver-licences/driver-licences.module';
 import { SupportModule } from './modules/support/support.module';
 import { BadgesModule } from './modules/badges/badges.module';
+import { PartnerDashboardModule } from './modules/partner-dashboard/partner-dashboard.module';
+import { PaymentGatewayModule } from './modules/payment-gateway/payment-gateway.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { FirebaseModule } from './modules/firebase/firebase.module';
 import { CalendarModule } from './modules/calendar/calendar.module';
@@ -160,10 +163,15 @@ import { HolidaysModule } from './modules/holidays/holidays.module';
     // Phase 8 — thuế khấu trừ của chủ xe (ADR 0032 điều 3).
     TaxModule,
     SellerProfileModule,
+    DriverLicencesModule,
     SupportModule,
     // Không gian hỗ trợ gian hàng của nhân sự nền tảng — ADR 0050.
     SupportRequestModule,
     TenantSupportModule,
+    // Tổng quan site partner (cả hai tuyến) — chỉ đọc.
+    PartnerDashboardModule,
+    // Cổng thanh toán MoMo · VNPAY — bổ sung cho chuyển khoản SePay, mặc định tắt (ADR 0058).
+    PaymentGatewayModule,
   ],
   providers: [
     // Thứ tự quan trọng (guard global chạy theo đúng thứ tự khai báo): Throttler chặn trước

@@ -33,6 +33,7 @@ function values(overrides: Partial<BookingRequestFormValues> = {}): BookingReque
     deliveryLongitude: null,
     deliveryLocationSource: null,
     note: '',
+    acceptedTerms: false,
     ...overrides,
   } as BookingRequestFormValues;
 }
@@ -188,5 +189,10 @@ describe('toRequestBody', () => {
     const body = toRequestBody(values(), DEVICE);
     expect(body).not.toHaveProperty('customerEmail');
     expect(body).not.toHaveProperty('note');
+    expect(body).not.toHaveProperty('acceptedTerms');
+  });
+
+  it('đã tick điều khoản chủ xe thì gửi acceptedTerms: true — như web', () => {
+    expect(toRequestBody(values({ acceptedTerms: true }), DEVICE).acceptedTerms).toBe(true);
   });
 });

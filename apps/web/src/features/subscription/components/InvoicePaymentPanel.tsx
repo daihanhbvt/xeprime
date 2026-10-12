@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl';
 import { buildVietQrUrl, subtractMoney } from '@xeprime/domain';
 import { SUBSCRIPTION_INVOICE_STATUS } from '@xeprime/types';
 import { CopyButton } from '@/components/data-display/CopyButton';
+import { GatewayPayOptions } from '@/features/payment-gateway/components/GatewayPayOptions';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { usePaymentInfo, useTenantPlans } from '../hooks/use-subscription';
 import type { SubscriptionInvoice } from '../types';
@@ -139,6 +140,13 @@ export function InvoicePaymentPanel({ invoice }: { invoice: SubscriptionInvoice 
         <p className={styles.expires}>{t('expires', { date: fmt.dateTime(invoice.expiresAt) })}</p>
       ) : null}
       <p className={styles.note}>{t('autoActivateNote')}</p>
+
+      {/*
+        MoMo / VNPAY — BỔ SUNG dưới chuyển khoản (ADR 0058). Tự ẩn khi chưa có cổng nào mở cho hoá
+        đơn gói, hoặc người xem không có quyền mua gói. Số tiền chỉ để báo trước hạn mức của cổng;
+        server đọc phần còn thiếu từ DB.
+      */}
+      <GatewayPayOptions target={{ kind: 'invoice', invoiceId: invoice.id }} amount={remaining} />
     </div>
   );
 }

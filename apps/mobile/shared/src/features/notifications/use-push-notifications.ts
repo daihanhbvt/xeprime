@@ -45,6 +45,9 @@ import {
  *     thoại quyền nhảy lên ngay trên màn nhập mã OTP: xem docblock của cửa.
  *  3. **Không bao giờ log token.**
  */
+/** Đã bật hộp thoại xin quyền thông báo trong lượt chạy này chưa — xem chỗ dùng. */
+let pushPromptedThisRun = false;
+
 export function usePushNotifications(): void {
   const router = useRouter();
   const dispatch = useAppDispatch();
@@ -140,6 +143,10 @@ export function usePushNotifications(): void {
         }
         // Qua hàng đợi: trang chủ cũng xin quyền VỊ TRÍ, và hai hộp thoại cùng lúc thì cái sau bị
         // hệ điều hành từ chối thẳng mà không hỏi ai.
+        // MỘT lần hỏi cho mỗi lượt chạy app: cửa giờ đóng/mở theo focus màn chính, và người đã bấm
+        // "Không" không được bị hỏi lại mỗi lần quay về trang chủ.
+        if (pushPromptedThisRun) return;
+        pushPromptedThisRun = true;
         granted = await requestPermissionExclusively('notification', requestPushPermission);
         chatDebug.pushPermission(granted);
       }

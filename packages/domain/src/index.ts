@@ -35,6 +35,7 @@ export {
   formatMoneyVndVi,
   compactMoneyParts,
   wholeUnits,
+  moneyChangePercent,
   applyDiscountPercent,
   formatMoneyInput,
   parseMoneyInput,
@@ -79,6 +80,20 @@ export {
 } from './long-term';
 
 export { isSafeNextPath, safeNextPath } from './safe-path';
+
+/**
+ * Từ khoá tìm xe ở chợ — gấp chuỗi (bỏ dấu, tách chữ ↔ số) và tô phần khớp. Server dùng để dựng
+ * điều kiện lọc, client dùng để tô kết quả; bản sinh đôi SQL là `xeprime_search_fold()`.
+ */
+export {
+  SEARCH_QUERY_MAX_LENGTH,
+  SEARCH_QUERY_MAX_TOKENS,
+  foldSearchText,
+  highlightSearchMatch,
+  searchFoldTranslateTable,
+  searchTokens,
+  type SearchHighlightPart,
+} from './search-text';
 
 /**
  * Thông báo đẩy: một thông báo dẫn đi đâu, gộp với tin nào, ồn tới mức nào.
@@ -310,3 +325,27 @@ export {
   type OwnerResourceKey,
   type OwnerResourceKind,
 } from './owner-resources';
+
+/**
+ * Bằng lái của khách (ADR 0057) — hạng nào lái được loại xe nào, và bằng có dùng được cho một
+ * chuyến không. API soát ở cổng gửi yêu cầu; client soát trước để chỉ cho khách bước còn thiếu.
+ */
+export {
+  DRIVER_LICENCE_GATE_ERROR_CODE,
+  DRIVER_LICENCE_TRIP_GATE,
+  isDriverLicenceGateErrorCode,
+  VN_LICENCE_CLASS_REFORM_DATE,
+  evaluateDriverLicenceForTrip,
+  licenceClassCoverage,
+  licenceCoversVehicleType,
+  licenceTripLastDayKey,
+  licenceValidThrough,
+  normalizeLicenceClass,
+  normalizeLicenceClasses,
+  type DriverLicenceGateInput,
+  type DriverLicenceTripGate,
+  type LicenceCoverage,
+} from './driver-licence';
+
+/** So kỳ này với kỳ trước — mũi tên tăng/giảm của thẻ KPI trên Tổng quan (web + app native). */
+export { countChangePercent } from './period-change';

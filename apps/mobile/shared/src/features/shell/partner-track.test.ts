@@ -3,6 +3,7 @@ import type { CurrentUser } from '@/features/auth/api';
 import {
   PARTNER_PATH,
   PARTNER_TRACK,
+  isCommissionOwner,
   isCommissionPath,
   partnerPathRedirect,
   resolvePartnerTrack,
@@ -92,7 +93,62 @@ describe('isCommissionPath', () => {
   });
 });
 
+describe('partnerPathRedirect — "Chuyến cho thuê" (PR #158)', () => {
+  const commissionStaff = me({
+    roleKey: TENANT_ROLE.SHOP_STAFF,
+    billingMode: BILLING_MODE.COMMISSION,
+    onboardingState: SHOP_ONBOARDING_STATE.COMMISSION,
+  });
+
+  it('chỉ CHỦ gian hàng tuyến hoa hồng là commission owner', () => {
+    expect(isCommissionOwner(commission)).toBe(true);
+    expect(isCommissionOwner(commissionStaff)).toBe(false);
+    expect(isCommissionOwner(pkg)).toBe(false);
+  });
+
+  it('chủ xe hoa hồng: hộp thư, bảng đơn, chờ giao xe → chuyến cho thuê; trips ở lại', () => {
+    for (const path of [
+      PARTNER_PATH.REQUESTS,
+      PARTNER_PATH.BOOKINGS,
+      PARTNER_PATH.BOOKINGS_AWAITING_PICKUP,
+    ]) {
+      expect(partnerPathRedirect(commission, path)).toBe(PARTNER_PATH.TRIPS);
+    }
+    expect(partnerPathRedirect(commission, PARTNER_PATH.TRIPS)).toBeNull();
+    // Chi tiết đơn là màn dùng chung, nơi bàn giao — không bị chuyển.
+    expect(
+      partnerPathRedirect(commission, `${PARTNER_PATH.BOOKINGS}/01JQZX0000000000000000000B`),
+    ).toBeNull();
+  });
+
+  it('thành viên hoa hồng và tuyến gói mở trips → hộp thư', () => {
+    expect(partnerPathRedirect(commissionStaff, PARTNER_PATH.TRIPS)).toBe(PARTNER_PATH.REQUESTS);
+    expect(partnerPathRedirect(commissionStaff, PARTNER_PATH.REQUESTS)).toBeNull();
+    expect(partnerPathRedirect(pkg, PARTNER_PATH.TRIPS)).toBe(PARTNER_PATH.REQUESTS);
+  });
+});
+
 describe('partnerPathRedirect', () => {
+  it('PR #159: chủ mở /bank-accounts về khối payout của trang số dư ở cả hai tuyến', () => {
+    expect(partnerPathRedirect(commission, PARTNER_PATH.BANK_ACCOUNTS)).toBe(
+      PARTNER_PATH.BALANCE_PAYOUT,
+    );
+    expect(partnerPathRedirect(pkg, PARTNER_PATH.BANK_ACCOUNTS)).toBe(PARTNER_PATH.BALANCE_PAYOUT);
+    // Đích không tự chuyển tiếp lần nữa.
+    expect(partnerPathRedirect(commission, PARTNER_PATH.BALANCE_PAYOUT)).toBeNull();
+    expect(partnerPathRedirect(pkg, PARTNER_PATH.BALANCE_PAYOUT)).toBeNull();
+  });
+
+  it.each([PARTNER_PATH.TAX, PARTNER_PATH.SUBSCRIPTION, PARTNER_PATH.BANK_ACCOUNTS])(
+    'PR #159: thành viên gian hàng mở %s về trang tài khoản (cả hai tuyến)',
+    (path) => {
+      const staffOf = (base: typeof pkg) =>
+        me({ ...(base.tenant as Tenant), roleKey: TENANT_ROLE.SHOP_STAFF });
+      expect(partnerPathRedirect(staffOf(pkg), path)).toBe(PARTNER_PATH.ACCOUNT);
+      expect(partnerPathRedirect(staffOf(commission), path)).toBe(PARTNER_PATH.ACCOUNT);
+    },
+  );
+
   it('chưa có gian hàng: chỉ ở màn chọn tuyến và onboarding', () => {
     expect(partnerPathRedirect(none, PARTNER_PATH.REGISTER)).toBeNull();
     expect(partnerPathRedirect(none, PARTNER_PATH.ONBOARDING)).toBeNull();
@@ -113,15 +169,22 @@ describe('partnerPathRedirect', () => {
     expect(partnerPathRedirect(commission, PARTNER_PATH.REGISTER)).toBe(PARTNER_PATH.HOME);
   });
 
-  it('tuyến hoa hồng: thông báo gian hàng (/manage/shop) mở hồ sơ chủ xe', () => {
-    expect(partnerPathRedirect(commission, PARTNER_PATH.SHOP)).toBe(PARTNER_PATH.REGISTRATION);
+  it('tuyến hoa hồng: /manage/shop và alias /manage/registration mở section hồ sơ của trang tài khoản', () => {
+    expect(partnerPathRedirect(commission, PARTNER_PATH.SHOP)).toBe(PARTNER_PATH.ACCOUNT_PROFILE);
+    expect(partnerPathRedirect(commission, PARTNER_PATH.REGISTRATION)).toBe(
+      '/manage/account?section=profile',
+    );
+    // Đích không tự chuyển tiếp lần nữa — không vòng lặp trong ScopeGuard.
+    expect(partnerPathRedirect(commission, PARTNER_PATH.ACCOUNT_PROFILE)).toBeNull();
   });
 
   it('tuyến gói: ba trang chỉ của tuyến hoa hồng đổi sang bản trong khu Gian hàng', () => {
     expect(partnerPathRedirect(pkg, PARTNER_PATH.REGISTRATION)).toBe(PARTNER_PATH.SHOP);
-    expect(partnerPathRedirect(pkg, PARTNER_PATH.TAX)).toBe('/manage/shop?section=legal');
+    expect(partnerPathRedirect(pkg, PARTNER_PATH.TAX)).toBe('/manage/shop?section=tax');
+    expect(partnerPathRedirect(pkg, PARTNER_PATH.SELLER_PROFILE)).toBe('/manage/shop?section=tax');
+    expect(partnerPathRedirect(pkg, PARTNER_PATH.SUBSCRIPTION)).toBe('/manage/shop?section=plan');
     expect(partnerPathRedirect(pkg, PARTNER_PATH.BANK_ACCOUNTS)).toBe(
-      '/manage/shop?section=payout',
+      '/manage/balance?section=payout',
     );
     expect(partnerPathRedirect(pkg, '/manage/customers')).toBeNull();
     expect(partnerPathRedirect(pkg, PARTNER_PATH.REGISTER)).toBe(PARTNER_PATH.HOME);

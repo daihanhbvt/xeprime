@@ -5,3 +5,6 @@ type Schemas = components['schemas'];
 
 export type PlatformDashboardSummary = Schemas['PlatformDashboardSummaryDto'];
 export type PlatformRecentTenant = Schemas['PlatformRecentTenantDto'];
+export type PlatformDashboardOverview = Schemas['PlatformDashboardOverviewDto'];
+export type PlatformDashboardFunnel = Schemas['PlatformDashboardFunnelDto'];
+export type PlatformDashboardDay = Schemas['PlatformDashboardDayDto'];

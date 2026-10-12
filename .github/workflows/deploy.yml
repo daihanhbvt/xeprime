@@ -251,6 +251,8 @@ jobs:
           V_FACEBOOK_APP_ID: ${{ vars.FACEBOOK_APP_ID }}
           V_OTP_MODE: ${{ vars.OTP_MODE }}
           V_PLAN_FEATURE_ENFORCEMENT: ${{ vars.PLAN_FEATURE_ENFORCEMENT }}
+          V_DRIVER_LICENCE_ENFORCEMENT: ${{ vars.DRIVER_LICENCE_ENFORCEMENT }}
+          V_DRIVER_LICENCE_OCR: ${{ vars.DRIVER_LICENCE_OCR }}
           V_SMTP_HOST: ${{ vars.SMTP_HOST }}
           V_SMTP_PORT: ${{ vars.SMTP_PORT }}
           V_SMTP_USER: ${{ vars.SMTP_USER }}
@@ -261,6 +263,16 @@ jobs:
           V_SEPAY_BANK_CODE: ${{ vars.SEPAY_BANK_CODE }}
           V_SEPAY_ACCOUNT_NUMBER: ${{ vars.SEPAY_ACCOUNT_NUMBER }}
           V_SEPAY_ACCOUNT_NAME: ${{ vars.SEPAY_ACCOUNT_NAME }}
+          # Cổng thanh toán MoMo/VNPAY (ADR 0058) — mặc định TẮT. Mã merchant và URL của cổng là định
+          # danh/cấu hình công khai ⇒ Variable; khoá ký (access/secret/hash) là Secret.
+          V_PAYMENT_GATEWAY_MODE: ${{ vars.PAYMENT_GATEWAY_MODE }}
+          V_PAYMENT_GATEWAY_SUBSCRIPTION: ${{ vars.PAYMENT_GATEWAY_SUBSCRIPTION }}
+          V_PAYMENT_GATEWAY_BOOKING_HOLD: ${{ vars.PAYMENT_GATEWAY_BOOKING_HOLD }}
+          V_MOMO_PARTNER_CODE: ${{ vars.MOMO_PARTNER_CODE }}
+          V_MOMO_API_BASE_URL: ${{ vars.MOMO_API_BASE_URL }}
+          V_VNPAY_TMN_CODE: ${{ vars.VNPAY_TMN_CODE }}
+          V_VNPAY_PAYMENT_URL: ${{ vars.VNPAY_PAYMENT_URL }}
+          V_VNPAY_API_URL: ${{ vars.VNPAY_API_URL }}
           V_FIRESTORE_ENABLED: ${{ vars.FIRESTORE_ENABLED }}
           V_PUSH_ENABLED: ${{ vars.PUSH_ENABLED }}
           V_FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
@@ -290,6 +302,9 @@ jobs:
           S_ESMS_BRANDNAME: ${{ secrets.ESMS_BRANDNAME }}
           S_SMTP_PASS: ${{ secrets.SMTP_PASS }}
           S_SEPAY_API_KEY: ${{ secrets.SEPAY_API_KEY }}
+          S_MOMO_ACCESS_KEY: ${{ secrets.MOMO_ACCESS_KEY }}
+          S_MOMO_SECRET_KEY: ${{ secrets.MOMO_SECRET_KEY }}
+          S_VNPAY_HASH_SECRET: ${{ secrets.VNPAY_HASH_SECRET }}
           S_R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           S_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           S_FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
@@ -485,6 +500,20 @@ jobs:
           kv SEPAY_ACCOUNT_NUMBER "${V_SEPAY_ACCOUNT_NUMBER:-}"
           kv SEPAY_ACCOUNT_NAME "${V_SEPAY_ACCOUNT_NAME:-}"
 
+          # Cổng thanh toán (ADR 0058). Mỗi cổng là nhóm bốn-biến-hoặc-không; khai lẻ thì API từ chối
+          # boot. Production TỪ CHỐI boot khi PAYMENT_GATEWAY_BOOKING_HOLD=on (chưa vượt release gate).
+          kv PAYMENT_GATEWAY_MODE "${V_PAYMENT_GATEWAY_MODE:-sandbox}"
+          kv PAYMENT_GATEWAY_SUBSCRIPTION "${V_PAYMENT_GATEWAY_SUBSCRIPTION:-off}"
+          kv PAYMENT_GATEWAY_BOOKING_HOLD "${V_PAYMENT_GATEWAY_BOOKING_HOLD:-off}"
+          kv MOMO_PARTNER_CODE "${V_MOMO_PARTNER_CODE:-}"
+          kv MOMO_ACCESS_KEY "${S_MOMO_ACCESS_KEY:-}"
+          kv MOMO_SECRET_KEY "${S_MOMO_SECRET_KEY:-}"
+          kv MOMO_API_BASE_URL "${V_MOMO_API_BASE_URL:-}"
+          kv VNPAY_TMN_CODE "${V_VNPAY_TMN_CODE:-}"
+          kv VNPAY_HASH_SECRET "${S_VNPAY_HASH_SECRET:-}"
+          kv VNPAY_PAYMENT_URL "${V_VNPAY_PAYMENT_URL:-}"
+          kv VNPAY_API_URL "${V_VNPAY_API_URL:-}"
+
           kv R2_ACCOUNT_ID "${V_R2_ACCOUNT_ID:-}"
           kv R2_ACCESS_KEY_ID "${S_R2_ACCESS_KEY_ID:-}"
           kv R2_SECRET_ACCESS_KEY "${S_R2_SECRET_ACCESS_KEY:-}"
@@ -500,6 +529,13 @@ jobs:
           kv FIREBASE_PRIVATE_KEY "${S_FIREBASE_PRIVATE_KEY:-}"
           kv GEOAPIFY_API_KEY "${S_GEOAPIFY_API_KEY:-}"
           kv GOOGLE_HOLIDAY_API_KEY "${S_GOOGLE_HOLIDAY_API_KEY:-}"
+
+          # Bằng lái của khách (ADR 0057). Đọc ảnh bằng Tesseract tại chỗ — không khoá, không bên
+          # thứ ba; "off" ⇒ mọi lượt nộp vào hàng đợi duyệt tay (thoát hiểm khi CPU quá tải hay
+          # bộ đọc quyết sai). Cổng đặt xe mặc định "on"; "off" là thoát hiểm (vd app native chưa
+          # có bước nộp bằng).
+          kv DRIVER_LICENCE_OCR "${V_DRIVER_LICENCE_OCR:-tesseract}"
+          kv DRIVER_LICENCE_ENFORCEMENT "${V_DRIVER_LICENCE_ENFORCEMENT:-on}"
 
           # Nhóm NEXT_PUBLIC_* đã nhúng cứng vào image lúc build. Ghi vào file env chỉ để
           # `docker compose build` còn dùng được nếu có ngày phải build tay ngay trên máy.

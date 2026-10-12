@@ -1,0 +1,279 @@
+/**
+ * Khung chọn ảnh mang dáng MẶT TRƯỚC một tấm bằng lái (thẻ ID-1, 85,6 × 54 mm): dải tiêu đề, ô chân
+ * dung bên trái, chữ hướng dẫn bên phải. Ảnh khách chọn hiện ngay trong CHÍNH khung đó khi máy đọc.
+ *
+ * Màn cảm ứng / chuột đổi bằng `pointer: coarse` — tín hiệu "ngón tay", không phải bề rộng: máy tính
+ * bảng nằm ngang vẫn là cảm ứng, một cửa sổ trình duyệt hẹp trên máy tính thì không.
+ */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  /* Thẳng lề trái với tiêu đề và lời nhắn phía trên — khung là một phần của dòng nội dung. */
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+}
+
+.hiddenInput {
+  display: none;
+}
+
+/* ── Khung hình tấm bằng ─────────────────────────────────────────────────────── */
+
+.card {
+  position: relative;
+  width: min(100%, 360px);
+  aspect-ratio: 85.6 / 54;
+  overflow: hidden;
+  border-radius: var(--xp-border-radius-lg);
+}
+
+.cardPicker {
+  display: block;
+  padding: 0;
+  border: 2px dashed var(--xp-color-border-strong);
+  background: linear-gradient(135deg, var(--xp-color-bg-container), var(--xp-color-bg-muted));
+  color: var(--xp-color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.cardPicker:hover,
+.cardPicker:focus-visible,
+.cardDragging {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-light);
+  box-shadow: var(--xp-shadow-card);
+  transform: translateY(-1px);
+}
+
+.cardPicker:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-focus-ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cardPicker,
+  .cardPicker:hover {
+    transform: none;
+    transition: none;
+  }
+}
+
+/* Dải tiêu đề của tấm bằng. */
+.sketchTitle {
+  position: absolute;
+  top: 10%;
+  left: 50%;
+  width: 44%;
+  height: 6%;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-border);
+  transform: translateX(-50%);
+}
+
+/* Ô ảnh chân dung bên trái. */
+.sketchPhoto {
+  position: absolute;
+  top: 27%;
+  left: 6%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22%;
+  aspect-ratio: 3 / 4;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-border-strong);
+  font-size: 30px;
+}
+
+/* Chữ hướng dẫn ở chỗ thông tin của tấm bằng. */
+.cardText {
+  position: absolute;
+  top: 25%;
+  right: 5%;
+  bottom: 10%;
+  left: 33%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+}
+
+.cardIcon {
+  display: inline-flex;
+  color: var(--xp-color-primary);
+  font-size: 26px;
+  line-height: 1;
+}
+
+.cardTitle {
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.cardHint {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+/* ── Đang đọc: ảnh vừa chọn nằm trong khung, vạch quét chạy dọc ───────────── */
+
+.cardBusy {
+  border: 1px solid var(--xp-color-border);
+  background: var(--xp-color-bg-muted);
+  box-shadow: var(--xp-shadow-card);
+}
+
+.cardImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cardPlaceholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    var(--xp-color-bg-muted),
+    var(--xp-color-bg-hover),
+    var(--xp-color-bg-muted)
+  );
+}
+
+/* Vạch quét — tín hiệu "máy đang đọc", không phải thanh tiến trình giả. */
+.scanLine {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 3px;
+  background: var(--xp-color-primary);
+  box-shadow: 0 0 14px var(--xp-color-primary);
+  animation: scan 1.8s ease-in-out infinite alternate;
+}
+
+@keyframes scan {
+  from {
+    top: 0;
+  }
+
+  to {
+    top: calc(100% - 3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scanLine {
+    animation: none;
+    top: 50%;
+  }
+}
+
+/* ── Ba bước, ngay dưới khung ────────────────────────────────────────────────── */
+
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.progressTitle {
+  margin: 0;
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.progressHint {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-sm);
+}
+
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs) var(--xp-space-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.step_done {
+  color: var(--xp-color-text-secondary);
+}
+
+.step_done .stepIcon {
+  color: var(--xp-color-success);
+}
+
+.step_active {
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.step_active .stepIcon {
+  color: var(--xp-color-primary);
+}
+
+.step_todo {
+  color: var(--xp-color-text-tertiary);
+}
+
+.stepIcon {
+  display: inline-flex;
+  justify-content: center;
+  width: 16px;
+}
+
+.stepDot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-border-strong);
+}
+
+.alert {
+  align-self: stretch;
+  margin: 0;
+}
+
+/* ── Chuột ↔ cảm ứng ─────────────────────────────────────────────────────────── */
+
+/* Hai lớp để thắng `display` của `.anticon` (AntD nạp CSS sau CSS Modules). */
+.cardIcon .onTouch,
+.cardText .onTouch,
+.root > .onTouch {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .cardIcon .onPointer,
+  .cardText .onPointer {
+    display: none;
+  }
+
+  .cardIcon .onTouch {
+    display: inline-flex;
+  }
+
+  .cardText .onTouch,
+  .root > .onTouch {
+    display: block;
+  }
+}

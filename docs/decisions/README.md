@@ -1,6 +1,6 @@
 # Architecture Decision Records — XePrime
 
-> Cập nhật: 07/10/2026
+> Cập nhật: 08/10/2026
 
 ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted mới hơn thắng trong đúng phạm vi phần **Quan hệ với ADR cũ**; không suy rằng toàn bộ ADR cũ mất hiệu lực.
 
@@ -64,6 +64,8 @@ ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted
 | [0054](0054-personal-storefront-uses-account-identity.md) | Mặt tiền CÁ NHÂN (tuyến hoa hồng) hiện bằng danh tính TÀI KHOẢN chủ — họ tên, SĐT/email đăng nhập ĐÃ XÁC THỰC, ảnh đại diện; mặt tiền GIAN HÀNG giữ bộ riêng (`tenants.name/phone/email`, logo). Suy lúc ĐỌC theo tuyến hiệu lực (`storefrontIdentity` · `resolveStorefront`), không chép khi đổi tuyến — lên gói bộ riêng hiện lại, hết gói tự về tài khoản | **Accepted; ghi đè một phần 0040 (SĐT liên hệ trong phạm vi tuyến hoa hồng); mở rộng 0028/0038, 0053** |
 | [0055](0055-retire-pay-before-approve-states.md) | Gỡ hẳn `hold_paid` / `approved_by_host` (yêu cầu) và `pending_approval_paid` (chặng chuyến): DB từ chối bằng CHECK `booking_requests_status_valid`, `awaiting_hold` bắt buộc có `decided_at`; tiền về đi thẳng `awaiting_hold → converted_to_booking` và KHÔNG ghi đè ba cột quyết định; hằng số còn trong `@xeprime/types` chỉ để mobile biên dịch | **Accepted; hoàn tất phần LEGACY 0039 mà 0044 tạm giữ; mở rộng 0005, 0045 điều 3** |
 | [0056](0056-host-sees-customer-contact.md) | Chủ xe thấy liên hệ của khách theo MỘT luật (`hostSeesCustomerContact`): tuyến gói luôn thấy, tuyến hoa hồng chỉ khi đã có ĐƠN; hộp thư + trang chuyến cùng đi qua cổng; sổ khách chặn tuyến hoa hồng ở server; chặng "Quá hạn phản hồi" tách khỏi "Bị từ chối" | **Accepted; làm rõ 0028 điều 9, mở rộng 0027 điều 1** |
+| [0057](0057-customer-driver-licence-verification.md) | Bằng lái của tài khoản khách: nộp ảnh một lần, máy đọc (Tesseract tại chỗ, không bên thứ ba) tự xác thực GPLX Việt Nam khi đủ điều kiện (còn lại — kể cả bằng quốc tế/nước ngoài — chờ người duyệt), cổng chặn lúc gửi yêu cầu thuê tự lái/dài hạn theo hạng + hạn cho CHÍNH chuyến; khách vãng lai đăng nhập bằng OTP trước bước bằng lái | **Accepted; mở rộng 0044 (thêm điều kiện trước khi gửi) và 0053 điều 7** |
+| [0058](0058-momo-vnpay-payment-gateways.md) | MoMo và VNPAY là phương thức thanh toán BỔ SUNG cho chuyển khoản SePay: sổ riêng `payment_gateway_orders` (không ghi giả vào `bank_transactions`), một đường tiền chung với SePay (`applyBankPaymentWithinTx`), chỉ IPN có chữ ký hoặc truy vấn phía server đổi được tiền, không tự hoàn; mặc định tắt, production từ chối boot khi bật cổng cho bất kỳ luồng nào cho tới khi Accepted | **Proposed; mở rộng 0016/0022 (nhiều nhà cung cấp), không ghi đè ADR nào; còn mở Q1–Q8** |
 
 ## ADR đã gỡ khỏi repo
 

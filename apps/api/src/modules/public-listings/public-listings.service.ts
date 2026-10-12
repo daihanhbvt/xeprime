@@ -48,6 +48,8 @@ import type {
 } from './dto/public-listing.dto';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
 import { stableCacheKey, TtlCache } from '../../common/ttl-cache';
+import { searchTokens } from '@xeprime/domain';
+import { hostsMatchingAllTokens, resolveKeyword } from './keyword-match';
 import {
   buildListingWhere,
   buildListingWhereSql,
@@ -306,7 +308,7 @@ export class PublicListingsService {
     const now = new Date();
     const paging = resolvePaging(query, DEFAULT_LIMIT, MAX_LIMIT);
 
-    const where = buildListingWhere(await this.withResolvedProvince(query));
+    const where = buildListingWhere(await this.toListingFilter(query, now));
 
     // Đếm và lấy trang trong một transaction để total khớp với data cùng thời điểm.
     const [total, rows] = await this.prisma.$transaction([
@@ -459,10 +461,19 @@ export class PublicListingsService {
     const query = await this.withResolvedProvince(rawQuery);
     /*
      * Khoá bỏ `province` (tên) vì `provinceCode` đã là kết quả quy đổi của nó — giữ cả hai thì
-     * "?province=TP.HCM" và "?provinceCode=79" thành hai khoá cho cùng một câu trả lời.
+     * "?province=TP.HCM" và "?provinceCode=79" thành hai khoá cho cùng một câu trả lời. Cùng lý
+     * do, từ khoá vào khoá ở dạng ĐÃ GẤP: "Tuấn", "tuan", "TUAN " là một câu hỏi, không phải ba
+     * khoá đẩy nhau ra khỏi cache.
      */
-    const key = stableCacheKey({ ...query, province: undefined });
-    return this.facetsCache.wrap(key, () => this.computeFacets(query));
+    const key = stableCacheKey({
+      ...query,
+      province: undefined,
+      q: searchTokens(query.q).join(' ') || undefined,
+    });
+    // Phân giải từ khoá TRONG `wrap`: trúng cache thì không tốn truy vấn ứng viên nào.
+    return this.facetsCache.wrap(key, async () =>
+      this.computeFacets(await this.withResolvedKeyword(query, new Date())),
+    );
   }
 
   /** Bỏ toàn bộ facet đã cache. Có mặt để test không phải chờ TTL. */
@@ -651,6 +662,17 @@ export class PublicListingsService {
    * lọc: bỏ qua nghĩa là người dùng hỏi "xe ở Vientiane" và nhận về xe toàn quốc — sai lặng lẽ,
    * kiểu tệ nhất.
    */
+  /** Query thô → bộ lọc dựng được: tỉnh quy về mã, từ khoá đã phân giải tên công khai. */
+  private async toListingFilter<T extends ListingFilterQuery>(query: T, now: Date): Promise<T> {
+    return this.withResolvedKeyword(await this.withResolvedProvince(query), now);
+  }
+
+  /** Gắn `keyword` (xem `keyword-match.ts`) — query không có từ khoá thì trả nguyên. */
+  private async withResolvedKeyword<T extends ListingFilterQuery>(query: T, now: Date): Promise<T> {
+    const keyword = await resolveKeyword(this.prisma, query.q, now);
+    return keyword ? { ...query, keyword } : query;
+  }
+
   private async withResolvedProvince<T extends { province?: string; provinceCode?: string }>(
     query: T,
   ): Promise<T> {
@@ -718,6 +740,9 @@ export class PublicListingsService {
   /**
    * "Gian hàng nổi bật" — shop đang `active` và CÓ ít nhất một xe hiển thị công khai, sắp theo
    * điểm đánh giá. Số xe đếm ngay trong query (`_count` có điều kiện), không N+1.
+   *
+   * Có `q` thì đây là GỢI Ý CHỦ XE của ô từ khoá ở `/search`: chỉ giữ chủ xe/gian hàng có tên
+   * công khai khớp, theo đúng luật mà lưới kết quả dùng (`storefrontKeywordWhere`).
    */
   async listShops(
     query: PublicShopListQueryDto,
@@ -727,13 +752,17 @@ export class PublicListingsService {
     // "Có xe hiển thị được" phải dùng đúng luật hiển thị, không chỉ `status = active`: gian hàng
     // mà toàn bộ xe nằm ở tỉnh đã ẩn thì không còn là gian hàng nổi bật.
     const visibleListing = publicListingScope();
+    const now = new Date();
+    // Gợi ý chủ xe: CÙNG phép phân giải tên công khai với lưới kết quả — nên không bao giờ nêu
+    // một cái tên mà lưới không coi là khớp. Ở đây mọi từ phải nằm trong TÊN.
+    const keyword = await resolveKeyword(this.prisma, query.q, now);
     const where: Prisma.TenantWhereInput = {
       status: TENANT_STATUS.ACTIVE,
       deletedAt: null,
       publicListings: { some: visibleListing },
+      ...(keyword ? { id: { in: hostsMatchingAllTokens(keyword) } } : {}),
     };
 
-    const now = new Date();
     const [total, rows] = await this.prisma.$transaction([
       this.prisma.tenant.count({ where }),
       this.prisma.tenant.findMany({
@@ -764,6 +793,7 @@ export class PublicListingsService {
           vehicleCount: t._count.publicListings,
           ratingAvg: t.ratingAvg as unknown as string,
           ratingCount: t.ratingCount,
+          verified: hasVerifiedStorefront(storefront.billingMode),
         };
       }),
       meta: paginationMeta(paging, total),

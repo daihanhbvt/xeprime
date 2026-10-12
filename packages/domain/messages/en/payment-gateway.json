@@ -1,0 +1,41 @@
+{
+  "options": {
+    "title": "Or pay through a gateway",
+    "payWith": "Pay with {provider}",
+    "sandbox": "Test environment",
+    "sandboxHint": "The gateway is in its test environment — no real money is charged.",
+    "redirectNote": "You will be taken to the payment gateway's page. XePrime records the payment once the gateway confirms it, even if you close that page.",
+    "outOfRange": "{provider} only accepts {min} to {max} per transaction.",
+    "windowTooShort": "Too little time is left on this reservation to pay through a gateway. Please pay by bank transfer with the QR code now.",
+    "missingLink": "The gateway did not return a payment link. Please try again."
+  },
+  "order": {
+    "loading": "Checking the payment status…",
+    "loadError": "Could not load the payment status.",
+    "awaitingTitle": "Waiting for {provider} to confirm the payment of {amount}",
+    "awaitingBody": "If you have finished paying, this page updates itself in a moment.",
+    "continue": "Continue payment",
+    "expiredTitle": "The {provider} payment session has expired",
+    "expiredBody": "If your account was charged, XePrime still records it once the gateway reports back — do not pay again. If not, choose a payment method again.",
+    "confirmingTitle": "{provider} received {amount} — XePrime is recording it",
+    "confirmingBody": "This usually takes only a few seconds. You do not need to pay again.",
+    "completedTitle": "Received {amount} through {provider}",
+    "completedInvoice": "The payment was recorded against invoice {code}.",
+    "completedHold": "The payment was recorded against reservation payment {code} for this trip.",
+    "cancelledTitle": "You cancelled the {provider} payment",
+    "expiredResultTitle": "The {provider} payment session expired",
+    "failedTitle": "The {provider} payment did not go through",
+    "failedBody": "Nothing has been recorded. You can try again or pay by bank transfer with the QR code. If your account was charged, contact support with code {code}.",
+    "duplicateRefundedTitle": "Received {amount} via {provider} — this was a duplicate payment",
+    "duplicateRefundedBody": "Booking hold {code} had already been paid in full, so XePrime has refunded this duplicate to your points wallet. You do not need to do anything.",
+    "needsSupportTitle": "XePrime received the payment details for {amount} but could not record them automatically",
+    "needsSupportBody": "Our support team will review it and contact you — do not pay again. Reference: {code}.",
+    "openApp": "Return to the XePrime app",
+    "sandbox": "Test environment"
+  },
+  "return": {
+    "title": "Payment result",
+    "missingOrder": "This link does not carry a payment.",
+    "continue": "Continue"
+  }
+}

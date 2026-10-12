@@ -126,13 +126,17 @@ describe('TripHostDecisions — chuyến còn chờ chủ xe quyết', () => {
     expect(view.queryByText(host.cancel)).toBeNull();
   });
 
-  /* Dữ liệu LEGACY ADR 0039: khách đã trả tiền trước, chủ xe vẫn còn phải quyết. */
-  it('chặng LEGACY `pending_approval_paid` vẫn là hai nút quyết định', async () => {
-    const view = await renderBlock(CUSTOMER_TRIP_STAGE.PENDING_APPROVAL_PAID);
-
-    expect(await view.findByText(host.approve)).toBeTruthy();
-    expect(view.queryByText(host.cancel)).toBeNull();
-  });
+  /**
+   * KHÔNG còn ca `pending_approval_paid` (gỡ 08/10/2026).
+   *
+   * Chặng đó thuộc luồng thu-trước-duyệt của ADR 0039, đã gỡ hẳn ở ADR 0055: DB từ chối nó bằng
+   * CHECK, và `HOST_DECIDABLE_STAGES` không còn liệt kê nó — nên component đúng khi không bày
+   * nút nào. Test cũ khoá ngược lại, tức là khoá một hành vi cho một trạng thái không thể tồn
+   * tại nữa; giữ nó lại chỉ buộc ai đó sau này phải hồi sinh chặng chết để làm test xanh.
+   *
+   * Hằng số `CUSTOMER_TRIP_STAGE.PENDING_APPROVAL_PAID` vẫn còn trong `@xeprime/types` để mobile
+   * biên dịch, nhưng đó không phải lý do để kiểm nó.
+   */
 });
 
 describe('TripHostDecisions — chuyến ĐÃ NHẬN, đang chờ khách thanh toán', () => {

@@ -33,6 +33,9 @@ export type MobileSession = Schemas['MobileSessionDto'];
 /** `POST /auth/mobile/social/exchange` — đổi one-time code (deep link) lấy cặp token (ADR 0019). */
 export type MobileSocialExchangeInput = Schemas['MobileSocialExchangeDto'];
 
+/** `POST /auth/mobile/apple` — "Sign in with Apple" trên iOS (identityToken + nonce thô). */
+export type MobileAppleLoginInput = Schemas['MobileAppleLoginDto'];
+
 /** `POST /auth/mobile/phone/login` — SĐT + OTP, bản trả token thay vì cookie. */
 export type MobilePhoneLoginInput = Schemas['MobilePhoneLoginDto'];
 

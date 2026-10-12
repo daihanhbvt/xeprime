@@ -115,7 +115,21 @@
     "endNote": "Showing all {count, plural, one {# vehicle} other {# vehicles}}",
     "title": "Search vehicles for rent",
     "removeFilter": "Remove filter {label}",
-    "clearAll": "Clear all"
+    "clearAll": "Clear all",
+    "availableFor": "{count, plural, one {# vehicle} other {# vehicles}} matching “{q}”",
+    "emptyKeywordTitle": "No vehicles match “{q}”",
+    "emptyKeywordDesc": "Try a shorter term — just the make or model (e.g. “vios”, “vf8”), or the owner's name. Accents are optional.",
+    "clearKeyword": "Clear search",
+    "keyword": {
+      "placeholder": "Search by vehicle, owner or shop",
+      "ariaLabel": "Search vehicles by vehicle, owner or shop name",
+      "hostsGroup": "Owners & shops",
+      "shop": "Shop",
+      "owner": "Owner",
+      "verified": "Shop verified by XePrime",
+      "vehicleCount": "{count, plural, one {# vehicle} other {# vehicles}}",
+      "searchAll": "See all vehicles matching “{q}”"
+    }
   },
   "filterPanel": {
     "title": "Filters",

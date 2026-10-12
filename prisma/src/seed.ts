@@ -19,6 +19,7 @@ import { refreshListingRankScore } from './listing-rank';
 import {
   seedCrossRealmTwins,
   seedCustomerAccounts,
+  seedCustomerDriverLicences,
   seedPlatformAccounts,
   seedPlatformAdmin,
 } from './seed/accounts';
@@ -110,6 +111,7 @@ async function main(): Promise<void> {
   await cleanupLegacySeedData();
   const platform = await seedPlatformAccounts(adminUserId);
   const customers = await seedCustomerAccounts();
+  await seedCustomerDriverLicences(customers, adminUserId);
 
   log('\nGian hàng:');
   const brandLabels = await loadBrandLabels();

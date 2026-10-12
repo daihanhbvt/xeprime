@@ -46,6 +46,23 @@ export abstract class SocialProvider {
 const PROVIDER_TIMEOUT_MS = 10_000;
 
 /**
+ * Mã lỗi chuẩn OAuth 2.0 (RFC 6749 §4.1.2.1) mà provider gắn vào callback. `access_denied` = người
+ * dùng bấm huỷ ở màn đồng ý — không phải sự cố.
+ */
+export const OAUTH_ERROR = {
+  ACCESS_DENIED: 'access_denied',
+} as const;
+
+/** Tham số mô tả lỗi kèm theo `error` ở callback (RFC 6749 §4.1.2.1). */
+export const OAUTH_ERROR_DESCRIPTION_PARAM = 'error_description';
+
+/**
+ * Trần độ dài phần lỗi của provider chép vào message — đủ cho object lỗi OAuth, nhưng một trang
+ * lỗi HTML/JSON vài trăm KB không được tràn vào log.
+ */
+const PROVIDER_ERROR_DETAIL_MAX = 500;
+
+/**
  * Gọi HTTP sang provider rồi parse JSON, quy MỌI kiểu hỏng về `SOCIAL_EXCHANGE_FAILED`.
  *
  * Gom vào một chỗ vì ba kiểu hỏng dưới đây trông rất khác nhau trong code nhưng giống hệt nhau
@@ -73,7 +90,8 @@ export async function fetchProviderJson(
   if (!response.ok) {
     throw new SocialAuthFailure(
       API_ERROR_CODE.SOCIAL_EXCHANGE_FAILED,
-      `${context}: provider trả HTTP ${response.status}`,
+      // Kèm `error` của provider — Graph API/Google ghi lý do thật ở đó, không phải ở mã HTTP.
+      `${context}: provider trả HTTP ${response.status} ${JSON.stringify((body as { error?: unknown } | null)?.error ?? body).slice(0, PROVIDER_ERROR_DETAIL_MAX)}`,
     );
   }
   if (body === null || typeof body !== 'object') {

@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { useSyncExternalStore } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
+import { useFocusEffect } from 'expo-router';
 import { chatDebug } from '@/lib/chat-debug';
 
 /**
@@ -28,8 +28,11 @@ import { chatDebug } from '@/lib/chat-debug';
  * đọc lại nó sau, và nó phải đọc được từ một effect chạy trước khi store kịp có gì — đưa vào
  * Redux là thêm một slice mà không một reducer nào có việc để làm.
  *
- * Mở một lần cho mỗi lượt chạy app. Cửa mở rồi thì mở luôn: hệ điều hành đã tự nhớ quyết định của
- * người dùng, nên mọi lượt sau là no-op ở tầng native.
+ * Cửa chỉ mở khi màn chính ĐANG ĐƯỢC NHÌN THẤY, và đóng lại ngay khi có màn khác đè lên (09/10/2026).
+ * Bản trước mở một lần cho cả lượt chạy: khách vãng lai đứng ở trang chủ 1,5 giây là cửa đã mở, nên
+ * lúc họ đăng nhập OTP xong — còn đang ở màn ĐẶT MẬT KHẨU — phiên vừa có là hộp thoại bật lên ngay.
+ * Giờ màn đăng nhập/OTP/đặt mật khẩu đè lên làm trang chủ mất focus ⇒ cửa đóng ⇒ chỉ hỏi khi
+ * người dùng thực sự quay về màn chính. Hệ điều hành tự nhớ quyết định, nên đóng/mở lại vô hại.
  */
 let open = false;
 const listeners = new Set<() => void>();
@@ -50,6 +53,13 @@ export function openPushPermissionGate(): void {
   if (open) return;
   open = true;
   chatDebug.pushGateOpened();
+  for (const listener of listeners) listener();
+}
+
+/** Màn chính bị che (đăng nhập, OTP, đặt mật khẩu…) — chưa phải lúc hỏi. */
+export function closePushPermissionGate(): void {
+  if (!open) return;
+  open = false;
   for (const listener of listeners) listener();
 }
 
@@ -80,8 +90,13 @@ const GATE_DELAY_MS = 1_500;
  * gian hàng sẽ không bao giờ được hỏi, và đó là người CẦN thông báo nhất.
  */
 export function useOpenPushPermissionGate(): void {
-  useEffect(() => {
-    const timer = setTimeout(openPushPermissionGate, GATE_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      const timer = setTimeout(openPushPermissionGate, GATE_DELAY_MS);
+      return () => {
+        clearTimeout(timer);
+        closePushPermissionGate();
+      };
+    }, []),
+  );
 }

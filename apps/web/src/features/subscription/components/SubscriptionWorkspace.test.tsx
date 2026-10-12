@@ -28,6 +28,12 @@ import { SubscriptionWorkspace } from './SubscriptionWorkspace';
  *     `fee_policies` (ADR 0028 — mỗi dòng tiền có chủ sở hữu và snapshot riêng).
  */
 const perms = vi.hoisted(() => ({ granted: new Set<string>() }));
+// Lối thanh toán qua cổng có test riêng (`InvoicePaymentPanel.test.tsx`); ở đây nó im lặng để không
+// kéo một truy vấn cấu hình cổng thật vào test của màn này.
+vi.mock('@/features/payment-gateway/components/GatewayPayOptions', () => ({
+  GatewayPayOptions: () => null,
+}));
+
 vi.mock('@/hooks/use-permissions', () => ({
   usePermissions: () => ({
     has: (p: string) => perms.granted.has(p),

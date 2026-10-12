@@ -5,11 +5,15 @@ import { useTranslations } from 'use-intl';
 import {
   missingShopProfileRequirements,
   missingShopProfileSuggestions,
+  SHOP_PROFILE_REQUIREMENT,
   SHOP_PROFILE_REQUIREMENT_VALUES,
   SHOP_PROFILE_SUGGESTION,
   SHOP_PROFILE_SUGGESTION_VALUES,
+  STOREFRONT_KIND,
+  storefrontAvatarUrl,
   type ShopProfileRequirement,
   type ShopProfileSuggestion,
+  type StorefrontKind,
 } from '@xeprime/types';
 import type { ShopProfileWithContactValues } from '@xeprime/validators';
 import type { ShopOwnerAccount } from '../api';
@@ -37,6 +41,8 @@ export function ShopProfileChecklist({
   control,
   ownerAccount,
   logoRequired = false,
+  kind = STOREFRONT_KIND.SHOP,
+  ownerAvatarUrl = null,
 }: {
   control: Control<ShopProfileWithContactValues>;
   /**
@@ -58,8 +64,22 @@ export function ShopProfileChecklist({
    * `false` giữ nguyên hành vi cũ ở màn tiến trình đăng ký.
    */
   logoRequired?: boolean;
+  /**
+   * Mặt tiền mà hồ sơ này dựng (ADR 0054, web PR #156). `PERSONAL` = chủ xe tuyến hoa hồng: tên
+   * khách thấy là tên TÀI KHOẢN (không có mục "tên gian hàng"), ảnh là ảnh đại diện của người
+   * (`storefrontAvatarUrl`), không có ảnh bìa, và chữ từng mục nói về "bạn", không về gian hàng.
+   */
+  kind?: StorefrontKind;
+  /** Ảnh đại diện tài khoản chủ — ảnh mặt tiền của `PERSONAL`. */
+  ownerAvatarUrl?: string | null;
 }) {
   const t = useTranslations('Shop.checklist');
+  const tPersonal = useTranslations('Shop.personal.checklist');
+  const personal = kind === STOREFRONT_KIND.PERSONAL;
+  const labelOf = (item: ChecklistItem) =>
+    personal
+      ? tPersonal(`items.${item}` as 'items.logo')
+      : t(`items.${item}` as 'items.displayName');
   const values = useWatch({ control }) as Partial<ShopProfileWithContactValues>;
   /*
    * Bản ĐÃ LƯU: màn hồ sơ nạp form bằng `values: toValues(shop)`, nên sau mỗi lần lưu query trả
@@ -70,14 +90,26 @@ export function ShopProfileChecklist({
    * Logo đổi NHÓM, không đổi cách chấm: cùng một phép kiểm "đã có chưa", chỉ khác hệ quả. Dựng hai
    * bảng luật song song ở đây là mời chúng trôi khỏi nhau — xem docblock của `logoRequired`.
    */
-  const requiredItems: readonly ChecklistItem[] = logoRequired
-    ? [...SHOP_PROFILE_REQUIREMENT_VALUES, SHOP_PROFILE_SUGGESTION.LOGO]
+  const baseRequired = personal
+    ? SHOP_PROFILE_REQUIREMENT_VALUES.filter((key) => key !== SHOP_PROFILE_REQUIREMENT.DISPLAY_NAME)
     : SHOP_PROFILE_REQUIREMENT_VALUES;
-  const suggestedItems: readonly ChecklistItem[] = logoRequired
-    ? SHOP_PROFILE_SUGGESTION_VALUES.filter((key) => key !== SHOP_PROFILE_SUGGESTION.LOGO)
-    : SHOP_PROFILE_SUGGESTION_VALUES;
+  const requiredItems: readonly ChecklistItem[] = logoRequired
+    ? [...baseRequired, SHOP_PROFILE_SUGGESTION.LOGO]
+    : baseRequired;
+  const suggestedItems: readonly ChecklistItem[] = SHOP_PROFILE_SUGGESTION_VALUES.filter(
+    (key) =>
+      !(logoRequired && key === SHOP_PROFILE_SUGGESTION.LOGO) &&
+      !(personal && key === SHOP_PROFILE_SUGGESTION.COVER),
+  );
+  const storefront = { kind, ownerAvatarUrl };
 
-  const { missingRequired, missingSuggested } = missingItems(values, ownerAccount, logoRequired);
+  const { missingRequired, missingSuggested } = missingItems(
+    values,
+    ownerAccount,
+    logoRequired,
+    storefront,
+    suggestedItems,
+  );
 
   /*
    * Hồ sơ đã ĐỦ HẾT — cả bản đã lưu lẫn bản đang gõ — thì không còn gì để kiểm kê: một thẻ 100%
@@ -88,6 +120,8 @@ export function ShopProfileChecklist({
     (defaultValues ?? {}) as Partial<ShopProfileWithContactValues>,
     ownerAccount,
     logoRequired,
+    storefront,
+    suggestedItems,
   );
   if (
     missingRequired.size + missingSuggested.size === 0 &&
@@ -119,12 +153,14 @@ export function ShopProfileChecklist({
           items={requiredItems}
           missing={missingRequired}
           tone={ready ? 'done' : 'required'}
+          labelOf={labelOf}
         />
         <Group
-          label={t('suggestedTitle')}
+          label={personal ? tPersonal('suggestedTitle') : t('suggestedTitle')}
           items={suggestedItems}
           missing={missingSuggested}
           tone="suggested"
+          labelOf={labelOf}
         />
       </YStack>
     </Card>
@@ -136,6 +172,8 @@ function missingItems(
   values: Partial<ShopProfileWithContactValues>,
   ownerAccount: ShopOwnerAccount,
   logoRequired: boolean,
+  storefront: { kind: StorefrontKind; ownerAvatarUrl: string | null },
+  suggestedItems: readonly ChecklistItem[],
 ): { missingRequired: ReadonlySet<string>; missingSuggested: ReadonlySet<string> } {
   /*
    * Mục "địa chỉ" của checklist chấm phần CHI TIẾT người dùng gõ (`addressLine`), không chấm
@@ -146,10 +184,19 @@ function missingItems(
   const completeness = {
     ...values,
     address: values.addressLine,
+    // PERSONAL: tên khách thấy là tên tài khoản, ảnh là ảnh đại diện (ADR 0054).
+    displayName:
+      storefront.kind === STOREFRONT_KIND.PERSONAL ? ownerAccount.displayName : values.displayName,
+    logoUrl: storefrontAvatarUrl(values.logoUrl, storefront.ownerAvatarUrl, storefront.kind),
     ownerFullName: ownerAccount.displayName,
     ownerPhone: ownerAccount.phone,
   };
-  const suggestedMissing = new Set<string>(missingShopProfileSuggestions(completeness));
+  // Mục gợi ý không hiện (ảnh bìa của PERSONAL) không được đếm; logo luôn giữ để nâng nhóm.
+  const suggestedMissing = new Set<string>(
+    missingShopProfileSuggestions(completeness).filter(
+      (key) => key === SHOP_PROFILE_SUGGESTION.LOGO || suggestedItems.includes(key),
+    ),
+  );
   const missingRequired = new Set<string>([
     ...missingShopProfileRequirements(completeness),
     ...(logoRequired && suggestedMissing.has(SHOP_PROFILE_SUGGESTION.LOGO)
@@ -167,14 +214,14 @@ function Group({
   items,
   missing,
   tone,
+  labelOf,
 }: {
   label: string;
   items: readonly ChecklistItem[];
   missing: ReadonlySet<string>;
   tone: 'required' | 'suggested' | 'done';
+  labelOf: (item: ChecklistItem) => string;
 }) {
-  const t = useTranslations('Shop.checklist');
-
   return (
     <YStack gap={space.xs}>
       <Text
@@ -200,7 +247,7 @@ function Group({
               }
             />
             <Text f={1} col={isMissing ? colors.text : colors.textMuted} fos={fontSize.bodySm}>
-              {t(`items.${item}` as 'items.displayName')}
+              {labelOf(item)}
             </Text>
           </XStack>
         );

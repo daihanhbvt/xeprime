@@ -54,8 +54,8 @@ XePrime ở mức **functional alpha / web pilot-ready có kiểm soát**. So v�
 
 ### P1 — trước controlled pilot mở rộng
 
-- Dashboard funnel: chủ xe đăng ký → xe được duyệt → listing active → đơn đầu tiên (dashboard nền tảng hiện chỉ đếm tenant/listing/booking/việc chờ duyệt).
-- Dashboard tiền: GMV, doanh thu phí dịch vụ, doanh thu gói, thuế giữ hộ, bảo hiểm giữ hộ, nợ phải trả, ngân sách khuyến mãi đã dùng.
+- ~~Dashboard funnel~~ — **đã có (09/10/2026)**: phễu hiện trạng đăng ký → có xe → có xe trên chợ → có đơn → hoàn thành chuyến (`GET /platform/dashboard/overview`). Còn thiếu: phễu theo COHORT (đối tác đăng ký trong kỳ) để đo hiệu quả onboarding theo thời gian.
+- Dashboard tiền: **đã có** GMV, phí dịch vụ ghi nhận (ròng), tiền gói đã thu — tháng này so cùng kỳ + xu hướng 30 ngày, doanh thu gác bằng `platform.money.manage`. Còn thiếu: thuế giữ hộ, bảo hiểm giữ hộ, nợ phải trả, ngân sách khuyến mãi đã dùng.
 - Risk flags: cùng tài khoản ngân hàng/định danh cho nhiều hồ sơ, tỷ lệ huỷ/no-show cao, đổi thông tin nhận tiền sát lệnh rút.
 - Quản trị vị trí tài trợ (nhãn, thời hạn, báo cáo tác động) — chỉ khi quyết định mở ưu tiên gói (ADR 0043 điều 6). Công thức `rank_score` đã chạy bằng job `listing-rank-refresh`.
 - Mở rộng capability của phiên hỗ trợ (ADR 0050 — phần "Nằm ngoài Đợt 1") theo nhu cầu đo được.

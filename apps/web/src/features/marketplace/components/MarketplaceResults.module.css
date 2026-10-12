@@ -16,8 +16,8 @@
 }
 
 /*
- * Thanh ngữ cảnh trên cùng — MỘT nút chiếm cả thanh (ô từ khoá đã bỏ, yêu cầu 17/08): bấm đâu
- * cũng mở hộp chỉnh sửa, không phải nhắm trúng chữ "Chỉnh sửa".
+ * Thanh tìm kiếm trên cùng — hai nửa trong MỘT khung viền: ô từ khoá (trái) | vùng ngữ cảnh
+ * (phải, MỘT nút: bấm đâu cũng mở hộp chỉnh sửa). Mobile: hai tầng, ngăn bằng vạch ngang.
  */
 .searchBar {
   display: flex;
@@ -30,12 +30,22 @@
 
 .searchBar:focus-within {
   border-color: var(--xp-color-border-focus);
+  box-shadow: 0 0 0 var(--xp-focus-ring-width) var(--xp-color-focus-ring);
+}
+
+/* Từ khoá rộng hơn một chút so với ngữ cảnh: đó là chỗ khách GÕ, ngữ cảnh chỉ để ĐỌC. */
+.keywordZone {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 44%;
+  align-items: stretch;
+  border-right: 1px solid var(--xp-color-border);
 }
 
 .contextZone {
   display: flex;
   min-width: 0;
-  flex: 1;
+  flex: 1 1 56%;
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
@@ -325,7 +335,18 @@
 
 @media (max-width: 640px) {
   /* Mobile: từ khoá một tầng, vùng ngữ cảnh một tầng — ngăn bằng vạch ngang. */
+  .searchBar {
+    flex-direction: column;
+  }
+
+  .keywordZone {
+    flex: none;
+    border-right: none;
+    border-bottom: 1px solid var(--xp-color-border);
+  }
+
   .contextZone {
+    flex: none;
     padding: 10px 12px;
   }
 
@@ -358,4 +379,3 @@
   }
 }
 
-/* Bỏ viền tròn bên trong ô từ khoá — thanh ngoài đã có viền (yêu cầu 10/08). */

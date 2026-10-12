@@ -59,6 +59,12 @@ export interface ManageNavLeaf {
    * "người này được làm gì trong gian hàng" mà "tiền này của ai".
    */
   readonly ownerOnly?: true;
+  /**
+   * Nghịch đảo của `ownerOnly` trên CÙNG trục sở hữu: chỉ người KHÔNG phải chủ gian hàng thấy —
+   * gương `memberOnly` của web. Owner Lite: chủ đọc yêu cầu + đơn ở "Chuyến cho thuê", thành viên
+   * giữ hộp thư + bảng đơn. Luật chuyển trang tương ứng ở `partnerPathRedirect`.
+   */
+  readonly memberOnly?: true;
 }
 
 /**
@@ -389,12 +395,30 @@ const OWNER_LITE_NAV: readonly ManageNavSection[] = [
         href: ROUTES.manage.calendar(),
       },
       {
+        /*
+         * MỘT mục cho cả yêu cầu lẫn đơn (web PR #158): chủ xe cá nhân có vài xe, hai bảng của gian
+         * hàng là bắt họ mở hai nơi cho vài chuyến. Huy hiệu yêu cầu chờ duyệt đi theo mục này.
+         */
+        key: 'trips',
+        labelKey: 'manage.ownerTrips',
+        icon: 'document-text-outline',
+        permission: PERMISSION.BOOKING_REQUEST_VIEW,
+        href: ROUTES.manage.trips(),
+        badge: MANAGE_NAV_BADGE.BOOKING_REQUESTS_PENDING,
+        ownerOnly: true,
+      },
+      /*
+       * THÀNH VIÊN (vd nhân viên của gian hàng vừa hết gói, ADR 0038 điều 5) không có danh sách phía
+       * chủ xe — họ giữ hộp thư + bảng đơn để còn bàn giao những chuyến đang chạy.
+       */
+      {
         key: 'booking-requests',
         labelKey: 'manage.bookingRequests',
         icon: 'mail-unread-outline',
         permission: PERMISSION.BOOKING_REQUEST_VIEW,
         href: ROUTES.manage.requests(),
         badge: MANAGE_NAV_BADGE.BOOKING_REQUESTS_PENDING,
+        memberOnly: true,
       },
       {
         key: 'bookings',
@@ -402,6 +426,7 @@ const OWNER_LITE_NAV: readonly ManageNavSection[] = [
         icon: 'checkbox-outline',
         permission: PERMISSION.BOOKING_VIEW,
         href: ROUTES.manage.bookings(),
+        memberOnly: true,
       },
       {
         key: 'chat',
@@ -425,42 +450,27 @@ const OWNER_LITE_NAV: readonly ManageNavSection[] = [
         href: ROUTES.manage.balance(),
         ownerOnly: true,
       },
-      {
-        key: 'bank-accounts',
-        labelKey: 'account.bankAccounts',
-        icon: 'card-outline',
-        permission: PERMISSION.TENANT_VIEW,
-        href: ROUTES.manage.bankAccounts(),
-        ownerOnly: true,
-      },
-      {
-        key: 'tax',
-        labelKey: 'account.tax',
-        icon: 'document-text-outline',
-        permission: PERMISSION.TENANT_VIEW,
-        href: ROUTES.manage.tax(),
-        ownerOnly: true,
-      },
-      {
-        key: 'subscription',
-        labelKey: 'account.subscription',
-        icon: 'gift-outline',
-        permission: PERMISSION.TENANT_VIEW,
-        href: ROUTES.manage.subscription(),
-        ownerOnly: true,
-      },
+      /*
+       * PR #159 (web `nav.ts`): MỘT mục tiền. "Tài khoản nhận tiền" là khối của trang số dư; "Thuế"
+       * và "Gói dịch vụ" là hai phần của "Hồ sơ chủ xe" — `/manage/tax`, `/manage/subscription`
+       * chỉ còn là alias chuyển tiếp (`partner-track.ts`).
+       */
     ],
   },
   {
-    key: 'owner-profile',
-    labelKey: 'manageGroups.storefront',
+    /*
+     * "Tài khoản" — web PR #156: hồ sơ chủ xe đã gộp vào trang tài khoản (`/manage/account`), nên
+     * mục trỏ thẳng vào đó; `/manage/registration` chỉ còn là alias chuyển tiếp.
+     */
+    key: 'owner-account',
+    labelKey: 'manageGroups.account',
     children: [
       {
-        key: 'registration',
+        key: 'owner-profile',
         labelKey: 'account.ownerProfile',
         icon: 'id-card-outline',
         permission: PERMISSION.TENANT_VIEW,
-        href: ROUTES.manage.registration(),
+        href: ROUTES.manage.account(),
         ownerOnly: true,
       },
     ],

@@ -11,6 +11,30 @@ const booleanish = z
   .union([z.boolean(), z.string()])
   .transform((v) => (typeof v === 'boolean' ? v : v.toLowerCase() === 'true'));
 
+/**
+ * Chuỗi RỖNG = chưa khai — cùng luật với `SEPAY_API_KEY` bên dưới: `.env.example` để trống các biến
+ * này, CI chạy `cp .env.example .env`, và `kv()` của deploy bỏ qua giá trị rỗng. Không `preprocess`
+ * thì một ràng buộc định dạng chạy TRƯỚC `superRefine` và đánh trượt cả bộ env vì một ô trống.
+ */
+const emptyAsUndefined = (value: unknown) =>
+  typeof value === 'string' && value.trim() === '' ? undefined : value;
+
+function optionalSecret() {
+  return z.preprocess(emptyAsUndefined, z.string().trim().min(1).optional());
+}
+
+function optionalUrl() {
+  return z.preprocess(
+    emptyAsUndefined,
+    z
+      .string()
+      .trim()
+      .url()
+      .transform((url) => url.replace(/\/+$/, ''))
+      .optional(),
+  );
+}
+
 export const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -268,6 +292,29 @@ export const envSchema = z
     PLAN_FEATURE_ENFORCEMENT: z.enum(['off', 'warn', 'on']).default('warn'),
 
     /*
+     * --- Bằng lái của khách: đọc ảnh tự động (ADR 0057) ---
+     *
+     *   tesseract — MẶC ĐỊNH: đọc bằng Tesseract chạy NGAY TRONG tiến trình API (WASM + dữ liệu
+     *               tiếng Việt đóng gói trong node_modules). Không khoá, không gọi ra ngoài, không
+     *               tốn phí theo lượt.
+     *   off       — thoát hiểm: không đọc tự động, mọi lượt nộp vào hàng đợi duyệt tay (vd máy chủ
+     *               quá tải CPU, hay bộ đọc đang tự quyết sai). Không cần revert.
+     *
+     * Ở cả hai chế độ, máy KHÔNG BAO GIỜ tự đánh dấu "đã xác thực" khi chưa đọc được ảnh.
+     */
+    DRIVER_LICENCE_OCR: z.enum(['tesseract', 'off']).default('tesseract'),
+
+    /*
+     * Cổng "phải có bằng lái đã xác thực mới gửi được yêu cầu thuê xe tự lái" (ADR 0057).
+     *
+     *   on   — MẶC ĐỊNH: chặn thật ở `POST /public/booking-requests`.
+     *   off  — thoát hiểm: bỏ qua cổng (vd app native chưa có bước nộp bằng). Không cần revert.
+     *
+     * Chỉ là công tắc ROLLOUT — luồng nộp/duyệt bằng lái chạy bình thường ở cả hai chế độ.
+     */
+    DRIVER_LICENCE_ENFORCEMENT: z.enum(['off', 'on']).default('on'),
+
+    /*
      * --- SePay: đối soát tiền VÀO tài khoản nền tảng (ADR 0016/0022, R2) ---
      *
      * BỐN biến là MỘT nhóm bật/tắt: khai một nửa là cấu hình gõ thiếu và fail lúc boot
@@ -297,6 +344,49 @@ export const envSchema = z
     SEPAY_ACCOUNT_NUMBER: z.string().optional(),
     /** Tên chủ tài khoản in trên QR — người chuyển đối chiếu trước khi bấm gửi. */
     SEPAY_ACCOUNT_NAME: z.string().optional(),
+
+    /*
+     * --- Cổng thanh toán MoMo · VNPAY (ADR 0058 — Proposed) ---
+     *
+     * Phương thức BỔ SUNG bên cạnh chuyển khoản VietQR/SePay, không thay nó. Mọi thứ mặc định TẮT
+     * và fail closed: thiếu cấu hình thì endpoint checkout trả 503 `PAYMENT_GATEWAY_UNAVAILABLE`,
+     * IPN trả lời "không nhận", và giao diện không hiện nút nào — không bao giờ dựng một liên kết
+     * thanh toán giả.
+     *
+     * HAI TRỤC độc lập:
+     *   • CỔNG có cấu hình chưa — mỗi cổng là một nhóm bốn-biến-hoặc-không (khai nửa nhóm fail lúc
+     *     boot, cùng khuôn SePay/OAuth);
+     *   • LUỒNG nào được dùng cổng — `PAYMENT_GATEWAY_SUBSCRIPTION` (hoá đơn gói) và
+     *     `PAYMENT_GATEWAY_BOOKING_HOLD` (tiền giữ chỗ). Phương thức hiện cho một luồng = luồng bật
+     *     VÀ cổng có cấu hình.
+     *
+     * Release gate nằm ở `superRefine`: production từ chối boot nếu bật cổng cho BẤT KỲ luồng nào
+     * khi ADR 0058 còn Proposed (tiền giữ chỗ: gate L1/L5; cả hai luồng: phí cổng, đối soát, hợp
+     * đồng merchant). Gỡ chặn đó là một PR có ADR Accepted đi kèm, không phải một lần đổi biến.
+     *
+     * Bí mật (`MOMO_SECRET_KEY`, `MOMO_ACCESS_KEY`, `VNPAY_HASH_SECRET`) chỉ đọc ở backend, không
+     * bao giờ ra frontend, bundle app, log hay OpenAPI. URL của cổng là cấu hình — không gõ cứng
+     * miền sandbox hay production trong mã.
+     */
+    /**
+     * `sandbox` | `live` — nhãn môi trường của cổng. Web hiện thẻ "Môi trường thử" khi `sandbox` để
+     * người thử không tưởng mình trả tiền thật; production bắt buộc `live` khi có luồng nào bật.
+     */
+    PAYMENT_GATEWAY_MODE: z.enum(['sandbox', 'live']).default('sandbox'),
+    PAYMENT_GATEWAY_SUBSCRIPTION: z.enum(['off', 'on']).default('off'),
+    PAYMENT_GATEWAY_BOOKING_HOLD: z.enum(['off', 'on']).default('off'),
+    MOMO_PARTNER_CODE: optionalSecret(),
+    MOMO_ACCESS_KEY: optionalSecret(),
+    MOMO_SECRET_KEY: optionalSecret(),
+    /** Gốc API của MoMo, không có `/` cuối (vd sandbox `https://test-payment.momo.vn`). */
+    MOMO_API_BASE_URL: optionalUrl(),
+    /** `vnp_TmnCode` — mã website/terminal VNPAY cấp. */
+    VNPAY_TMN_CODE: optionalSecret(),
+    VNPAY_HASH_SECRET: optionalSecret(),
+    /** URL trang thanh toán (vd sandbox `https://sandbox.vnpayment.vn/paymentv2/vpcpay.html`). */
+    VNPAY_PAYMENT_URL: optionalUrl(),
+    /** URL API truy vấn giao dịch `querydr` (vd sandbox `…/merchant_webapi/api/transaction`). */
+    VNPAY_API_URL: optionalUrl(),
 
     // --- Web + Email (cho link đặt lại mật khẩu) ---
     APP_WEB_URL: z.string().default('http://localhost:3000'),
@@ -350,6 +440,40 @@ export const envSchema = z
             message: `${key} thiếu — bốn biến SEPAY_* phải khai cùng nhau (hoặc bỏ trống cả bốn để tắt)`,
           });
         }
+      }
+    }
+
+    // Cổng thanh toán (ADR 0058): mỗi cổng là nhóm bốn-biến-hoặc-không — một IPN công khai có
+    // quyền ghi tiền mà thiếu khoá để kiểm chữ ký là cấu hình gõ thiếu, fail lúc boot.
+    const gatewayGroups = {
+      MOMO: ['MOMO_PARTNER_CODE', 'MOMO_ACCESS_KEY', 'MOMO_SECRET_KEY', 'MOMO_API_BASE_URL'],
+      VNPAY: ['VNPAY_TMN_CODE', 'VNPAY_HASH_SECRET', 'VNPAY_PAYMENT_URL', 'VNPAY_API_URL'],
+    } as const;
+    let gatewaysConfigured = 0;
+    for (const [name, keys] of Object.entries(gatewayGroups)) {
+      const set = keys.filter((key) => Boolean(env[key]));
+      if (set.length === keys.length) gatewaysConfigured += 1;
+      if (set.length > 0 && set.length < keys.length) {
+        for (const key of keys) {
+          if (!env[key]) {
+            ctx.addIssue({
+              code: 'custom',
+              path: [key],
+              message: `${key} thiếu — bốn biến ${name}_* phải khai cùng nhau (hoặc bỏ trống cả bốn để tắt cổng)`,
+            });
+          }
+        }
+      }
+    }
+    // Bật một luồng mà không có cổng nào là cấu hình vô nghĩa — nói ra lúc boot thay vì để màn
+    // thanh toán im lặng không có nút nào mà không ai biết vì sao.
+    for (const flag of ['PAYMENT_GATEWAY_SUBSCRIPTION', 'PAYMENT_GATEWAY_BOOKING_HOLD'] as const) {
+      if (env[flag] === 'on' && gatewaysConfigured === 0) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [flag],
+          message: `${flag}=on nhưng chưa cổng nào được cấu hình đủ (MOMO_* hoặc VNPAY_*)`,
+        });
       }
     }
 
@@ -546,6 +670,19 @@ export const envSchema = z
       });
     }
 
+    // Cổng thanh toán: khoá ký đi kèm mọi request — một URL http là gửi chữ ký và dữ liệu thanh toán
+    // qua đường truyền không mã hoá. Áp cho cả staging (cũng nằm trên Internet công khai).
+    for (const key of ['MOMO_API_BASE_URL', 'VNPAY_PAYMENT_URL', 'VNPAY_API_URL'] as const) {
+      const url = env[key];
+      if (url && !url.startsWith('https://')) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [key],
+          message: `${key} phải là URL https ở môi trường đã triển khai`,
+        });
+      }
+    }
+
     // ── Từ đây trở xuống: CHỈ production ──────────────────────────────────
     // Nhóm NĂNG LỰC. Thiếu chúng, app vẫn boot và vẫn chạy, chỉ là ba tính năng suy giảm một
     // cách có kiểm soát: mã OTP vào log thay vì SMS, email đặt lại mật khẩu vào log thay vì hộp
@@ -592,6 +729,40 @@ export const envSchema = z
           message: `${key} là bắt buộc ở production (upload ảnh + tài liệu riêng tư của xe)`,
         });
       }
+    }
+
+    /*
+     * RELEASE GATE của cổng thanh toán (ADR 0058 — Proposed · ADR 0028 release gate · roadmap §8.2).
+     *
+     *  - Tiền giữ chỗ chứa tiền của NHIỀU bên (`D` của chủ xe, `IV`/`IP` giữ hộ hãng bảo hiểm) — nhận
+     *    nó qua một cổng là thu hộ qua một trung gian thanh toán, đúng thứ gate L1 (ý kiến pháp lý thu
+     *    hộ/chi hộ) và L5 (điều khoản) đang chặn, cộng ADR 0058 Q1–Q4.
+     *  - Hoá đơn gói: ADR 0058 Q2 (ai chịu phí cổng), Q5 (đối soát ngày chưa có vế tiền đang nằm ở
+     *    cổng — gate R2 "khớp sổ mà admin không sửa database"), Q8 (hợp đồng merchant).
+     *
+     * Chặn CẢ HAI ở đây chứ không chỉ để mặc định `off`: gỡ chặn phải là một PR kèm ADR 0058 Accepted,
+     * không phải một lần sửa biến môi trường. Staging (sandbox) không bị chặn — đó là chỗ để UAT.
+     */
+    for (const flag of ['PAYMENT_GATEWAY_SUBSCRIPTION', 'PAYMENT_GATEWAY_BOOKING_HOLD'] as const) {
+      if (env[flag] === 'on') {
+        ctx.addIssue({
+          code: 'custom',
+          path: [flag],
+          message: `${flag}=on chưa được phép ở production — cổng thanh toán chưa vượt release gate (ADR 0058 còn Proposed)`,
+        });
+      }
+    }
+    // Khi đã gỡ chặn: production thu tiền THẬT, một nhãn `sandbox` là dấu hiệu khoá thử đang dùng thật.
+    if (
+      (env.PAYMENT_GATEWAY_SUBSCRIPTION === 'on' || env.PAYMENT_GATEWAY_BOOKING_HOLD === 'on') &&
+      env.PAYMENT_GATEWAY_MODE !== 'live'
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['PAYMENT_GATEWAY_MODE'],
+        message:
+          'PAYMENT_GATEWAY_MODE phải là live khi bật cổng thanh toán ở production (khoá và URL của môi trường thật)',
+      });
     }
   });
 

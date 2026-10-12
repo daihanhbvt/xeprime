@@ -1,0 +1,42 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--xp-color-text-tertiary);
+}
+
+.icon {
+  font-size: 10px;
+}
+
+.value {
+  font-weight: var(--xp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.suffix {
+  color: var(--xp-color-text-tertiary);
+  font-weight: var(--xp-font-weight-regular);
+}
+
+.good .icon,
+.good .value {
+  color: var(--xp-color-success);
+}
+
+.bad .icon,
+.bad .value {
+  color: var(--xp-color-error);
+}
+
+.flat .icon,
+.flat .value {
+  color: var(--xp-color-text-secondary);
+}
+
+.none {
+  font-style: italic;
+}

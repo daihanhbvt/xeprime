@@ -13,7 +13,7 @@
 | Thành phần | RAM lúc chạy | Ghi chú |
 | --- | --- | --- |
 | PostgreSQL 16 | ~600 MB – 1.2 GB | `shared_buffers=512MB` + cache |
-| API (NestJS) | ~350 – 700 MB | 51 thư mục module (53 `*.module.ts`, đếm 06/10/2026), Prisma pool 10 kết nối |
+| API (NestJS) | ~350 – 700 MB (+~230 MB khi đang đọc ảnh bằng lái) | 51 thư mục module (53 `*.module.ts`, đếm 06/10/2026), Prisma pool 10 kết nối. Worker Tesseract (ADR 0057) chỉ sống khi có lượt nộp bằng lái và tự tắt sau 3 phút rảnh — vẫn nằm trong `mem_limit: 1200m` |
 | Web (Next.js `next start`) | ~300 – 600 MB | 144 `page.tsx` cho ba site (06/10/2026), SSR vỏ + AntD |
 | Worker | ~120 – 250 MB | vòng lặp theo đồng hồ |
 | Caddy | ~30 MB | |
@@ -763,10 +763,15 @@ Settings; Secret bị che và không đọc lại được sau khi lưu.
 | `MOBILE_JWT_AUDIENCE` · `MOBILE_AUTH_REDIRECT_URIS` | `xeprime-mobile` · `xeprime://auth/callback,xeprimepartner://auth/callback` | hai scheme của hai app (XePrime · XePrime Partner); scheme quyết app đích của luồng social native |
 | `OTP_MODE` | `mock` | mã in ra log và trả trong response |
 | `PLAN_FEATURE_ENFORCEMENT` | `warn` | trục năng lực theo gói (ADR 0027). Xem §9.4 trước khi đổi sang `on` |
+| `DRIVER_LICENCE_ENFORCEMENT` | `on` | cổng bằng lái khi gửi yêu cầu thuê xe tự lái (ADR 0057). `off` là thoát hiểm khi app native chưa có bước nộp bằng — luồng nộp/duyệt vẫn chạy |
+| `DRIVER_LICENCE_OCR` | `tesseract` | đọc ảnh bằng lái tự động (ADR 0057) bằng Tesseract chạy ngay trong container API — không khoá, không bên thứ ba, không tốn phí. Đang đọc thì tiến trình API thêm ~230MB RAM (đo 09/10/2026: 14 ảnh mẫu + 6 lượt dồn), worker tự tắt sau 3 phút rảnh; mỗi ảnh 1–4 giây CPU một nhân, chạy tuần tự, quá 20 lượt chờ thì lượt mới vào thẳng hàng đợi duyệt tay (`OCR_BUSY`). `off` ⇒ mọi lượt nộp vào hàng đợi duyệt tay (thoát hiểm khi CPU quá tải hay bộ đọc quyết sai) |
 | ~~`SESSION_TTL_DAYS` · `OTP_TTL_MINUTES` · `OTP_RESEND_COOLDOWN_SECONDS` · `OTP_MAX_SENDS_PER_HOUR` · `OTP_MAX_ATTEMPTS` · `GOOGLE_HOLIDAY_CALENDAR_ID`~~ | **XOÁ** | chính sách giống mọi môi trường ⇒ hằng số ở `@xeprime/types` (`SESSION_TTL_DAYS`, `OTP_POLICY`, `GOOGLE_HOLIDAY_CALENDAR_ID_DEFAULT`); workflow không còn đọc |
 | `SMTP_HOST` · `SMTP_PORT` · `SMTP_USER` | `smtp.resend.com` · `587` · `resend` | staging gửi thư THẬT (quyết định 04/09/2026) — `third-party-keys.md` §7.2. Để trống thì email rơi về in ra log |
 | `SMTP_FROM` | `XePrime STG <no-reply@stg.xeprime.vn>` | tên miền **con**, không phải `xeprime.vn` — uy tín gửi thư tính theo tên miền, test hỏng không được kéo thư của khách vào Junk |
 | `SEPAY_BANK_CODE` · `SEPAY_ACCOUNT_NUMBER` · `SEPAY_ACCOUNT_NAME` | trống | in vào mã VietQR ⇒ công khai theo bản chất. Đi cùng `SEPAY_API_KEY` (Secret) — bốn cái khai cùng nhau hoặc cùng để trống, khai lẻ thì API từ chối boot |
+| `PAYMENT_GATEWAY_MODE` · `PAYMENT_GATEWAY_SUBSCRIPTION` · `PAYMENT_GATEWAY_BOOKING_HOLD` | `sandbox` · `off` · `off` | cổng MoMo/VNPAY (ADR 0058 — Proposed), mặc định TẮT. Production: bật BẤT KỲ luồng nào ⇒ API từ chối boot khi ADR 0058 còn Proposed (gỡ chặn là PR, không phải đổi biến); sau khi gỡ, bật luồng ⇒ `MODE` bắt buộc `live`. Chi tiết `third-party-keys.md` §8c |
+| `MOMO_PARTNER_CODE` · `MOMO_API_BASE_URL` | trống | đi cùng hai Secret `MOMO_ACCESS_KEY` · `MOMO_SECRET_KEY` — bốn cái cùng khai hoặc cùng trống. Sandbox `https://test-payment.momo.vn` |
+| `VNPAY_TMN_CODE` · `VNPAY_PAYMENT_URL` · `VNPAY_API_URL` | trống | đi cùng Secret `VNPAY_HASH_SECRET` — bốn cái cùng khai hoặc cùng trống. IPN URL khai ở portal VNPAY: `${API_PUBLIC_URL}/payment-gateway/vnpay/ipn` |
 | `FIRESTORE_ENABLED` | `false` | |
 | `PUSH_ENABLED` | `false` | thông báo đẩy FCM — ĐỘC LẬP với `FIRESTORE_ENABLED`, dùng chung bộ `FIREBASE_*`. Bật thì worker gửi thật (`docs/push-notifications.md`) |
 | `FIREBASE_PROJECT_ID` · `FIREBASE_CLIENT_EMAIL` | trống | là ĐỊNH DANH, không phải bí mật |
@@ -790,6 +795,7 @@ Settings; Secret bị che và không đọc lại được sau khi lưu.
 | `ESMS_API_KEY` · `ESMS_SECRET_KEY` · `ESMS_BRANDNAME` | trống ở staging |
 | `SMTP_PASS` | API key SMTP — **key riêng cho staging**, không dùng chung với production (thu hồi một bên không kéo bên kia) |
 | `SEPAY_API_KEY` | khoá **webhook** trong bảng điều khiển SePay (≥16 ký tự). Trống ⇒ `/sepay/webhook` trả 503 `SEPAY_NOT_CONFIGURED` — fail closed, không giả vờ đã nhận tiền |
+| `MOMO_ACCESS_KEY` · `MOMO_SECRET_KEY` · `VNPAY_HASH_SECRET` | khoá ký của cổng do MoMo/VNPAY cấp — bộ sandbox cho staging, bộ production RIÊNG cho production. Trống ⇒ cổng tắt (không nút, checkout 503, IPN không xác nhận gì) |
 | `R2_ACCESS_KEY_ID` · `R2_SECRET_ACCESS_KEY` | trống ⇒ endpoint upload trả 503, phần còn lại vẫn chạy |
 | `FIREBASE_PRIVATE_KEY` | một dòng, xuống dòng viết `\n`. Đây là credential **lúc chạy** (ký custom token, ghi bản chiếu) — không dùng để đẩy rules |
 | `FIREBASE_DEPLOY_CREDENTIALS_JSON` | **Bắt buộc khi `FIRESTORE_ENABLED=true`.** Nguyên file JSON của một service account RIÊNG có quyền quản trị Firestore rules (`roles/firebaserules.admin`). Workflow dùng nó ở step "Đẩy Firestore rules" và **không bao giờ** ghi nó vào `.env` của môi trường. Tách khỏi credential runtime để một lần rò rỉ `.env` không kèm theo quyền sửa rules |

@@ -116,7 +116,8 @@
     "completed": "The trip is complete. Thanks for riding with XePrime!",
     "terminal": "This trip ended early",
     "pending_approval_paid": "Your reservation payment has been received. Waiting for the host to confirm — if they decline, the full amount is refunded right away.",
-    "slot_taken": "Another customer booked these dates first"
+    "slot_taken": "Another customer booked these dates first",
+    "expired": "The host didn't reply in time, so this request closed. You can pick another car."
   },
   "notice": {
     "pendingTitle": "Waiting for the host to confirm",

@@ -14,7 +14,7 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useTenantScope } from '@/features/auth/hooks/use-tenant-scope';
 import { ToggleRow } from '@/features/rental-policies/components/PolicySections';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { ROUTES } from '@/navigation/routes';
+import { ROUTES, SHOP_SECTION } from '@/navigation/routes';
 import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 import type { PaymentSettings } from '../api';
 import { usePaymentSettings, useUpdatePaymentSettings } from '../hooks/use-shop';
@@ -176,7 +176,7 @@ function DepositToggleCard({ settings, canEdit }: { settings: PaymentSettings; c
                 label={t(`locked.${locked}.cta` as never)}
                 variant="secondary"
                 size="sm"
-                onPress={() => router.push(ROUTES.manage.subscription())}
+                onPress={() => router.push(ROUTES.manage.shop({ section: SHOP_SECTION.PLAN }))}
               />
             )}
           </YStack>

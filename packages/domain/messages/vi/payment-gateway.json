@@ -1,0 +1,41 @@
+{
+  "options": {
+    "title": "Hoặc thanh toán qua cổng",
+    "payWith": "Thanh toán qua {provider}",
+    "sandbox": "Môi trường thử",
+    "sandboxHint": "Cổng đang ở môi trường thử — không có tiền thật nào bị trừ.",
+    "redirectNote": "Bạn sẽ được chuyển sang trang của cổng thanh toán. XePrime ghi nhận khi cổng báo đã thu tiền, kể cả khi bạn đóng trang đó.",
+    "outOfRange": "{provider} chỉ nhận từ {min} đến {max} mỗi giao dịch.",
+    "windowTooShort": "Thời hạn giữ chỗ còn quá ngắn để thanh toán qua cổng. Vui lòng chuyển khoản theo mã QR ngay.",
+    "missingLink": "Cổng chưa trả về liên kết thanh toán. Vui lòng thử lại."
+  },
+  "order": {
+    "loading": "Đang kiểm tra trạng thái thanh toán…",
+    "loadError": "Chưa tải được trạng thái thanh toán.",
+    "awaitingTitle": "Đang chờ {provider} xác nhận thanh toán {amount}",
+    "awaitingBody": "Nếu bạn đã thanh toán xong, trang này tự cập nhật trong giây lát.",
+    "continue": "Tiếp tục thanh toán",
+    "expiredTitle": "Phiên thanh toán qua {provider} đã hết hạn",
+    "expiredBody": "Nếu tài khoản của bạn đã bị trừ tiền, XePrime vẫn tự ghi nhận khi cổng báo về — không cần thanh toán lại. Nếu chưa, hãy chọn lại phương thức thanh toán.",
+    "confirmingTitle": "{provider} đã nhận {amount} — XePrime đang ghi nhận",
+    "confirmingBody": "Việc này thường chỉ mất vài giây. Bạn không cần thanh toán thêm.",
+    "completedTitle": "Đã nhận {amount} qua {provider}",
+    "completedInvoice": "Khoản tiền đã được ghi vào hoá đơn {code}.",
+    "completedHold": "Khoản tiền đã được ghi vào tiền giữ chỗ {code} của chuyến.",
+    "cancelledTitle": "Bạn đã huỷ thanh toán qua {provider}",
+    "expiredResultTitle": "Phiên thanh toán qua {provider} đã hết hạn",
+    "failedTitle": "Thanh toán qua {provider} không thành công",
+    "failedBody": "Chưa có khoản nào được ghi nhận. Bạn có thể thử lại hoặc chuyển khoản theo mã QR. Nếu tài khoản đã bị trừ tiền, hãy liên hệ hỗ trợ kèm mã {code}.",
+    "duplicateRefundedTitle": "Đã nhận {amount} qua {provider} — khoản này bị trả trùng",
+    "duplicateRefundedBody": "Tiền giữ chỗ {code} đã được trả đủ trước đó, nên XePrime đã ghi hoàn khoản trùng này vào Ví điểm của bạn. Bạn không cần làm gì thêm.",
+    "needsSupportTitle": "XePrime đã nhận thông tin thanh toán {amount} nhưng chưa thể ghi nhận tự động",
+    "needsSupportBody": "Bộ phận hỗ trợ sẽ kiểm tra và liên hệ với bạn — không cần thanh toán lại. Mã tham chiếu: {code}.",
+    "openApp": "Mở lại ứng dụng XePrime",
+    "sandbox": "Môi trường thử"
+  },
+  "return": {
+    "title": "Kết quả thanh toán",
+    "missingOrder": "Đường dẫn này không mang lượt thanh toán nào.",
+    "continue": "Tiếp tục"
+  }
+}

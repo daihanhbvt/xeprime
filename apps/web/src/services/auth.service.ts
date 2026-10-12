@@ -69,8 +69,17 @@ export function changePassword(currentPassword: string, newPassword: string): Pr
  * CỐ Ý không nằm trong `authApi`: endpoint này thuộc `PhoneVerificationController`, và nó là
  * luồng CHỈ-WEB (đặt cookie). Native đăng nhập qua `/auth/mobile/*`.
  */
-export function phoneLogin(phone: string, code: string): Promise<CurrentUser> {
-  return apiPost<CurrentUser>('/auth/phone/login', { phone, code });
+export function phoneLogin(
+  phone: string,
+  code: string,
+  /** Chỉ dùng khi số này CHƯA có tài khoản — tên của tài khoản sắp được tạo. */
+  displayName?: string,
+): Promise<CurrentUser> {
+  return apiPost<CurrentUser>('/auth/phone/login', {
+    phone,
+    code,
+    ...(displayName ? { displayName } : {}),
+  });
 }
 
 /** POST /auth/password/forgot — gửi link đặt lại qua email. Luôn thành công (không rò rỉ email). */

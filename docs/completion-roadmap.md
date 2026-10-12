@@ -21,6 +21,7 @@ Trạng thái dưới đây phân biệt rõ **đã có trong source/feature bra
 | Platform admin core     | Đã có                                        | Approval, tenants, vehicles, bookings, customers, staff, plans, content, audit                                                                                           |
 | Gói thuê bao W1–W3      | Đã có trong code                             | Gói theo bậc số xe (ADR 0041), subscription UI/invoice, feature guard                                                                                                                         |
 | SePay subscription W4   | **Đã merge vào `develop` và lên staging**; chưa vượt Gate R2 | Có VietQR, webhook, bank matching, xử lý thiếu/thừa/trùng và admin match tay; còn cần cấu hình môi trường thật và UAT gate                                              |
+| Cổng MoMo · VNPAY (ADR 0058) | **Đủ mã, chưa merge (09/10/2026), mặc định TẮT; chưa vượt gate nào** | Phương thức bổ sung cho hoá đơn gói và tiền giữ chỗ: sổ `payment_gateway_orders` + nhật ký kết quả, IPN có chữ ký, truy vấn phía server, bộ quét định kỳ, hàng đợi người xử lý (hỏi lại · đóng · ghi nhận tay). CHƯA CÓ: bộ khoá sandbox thật + UAT staging (third-party-keys §8c.4), hợp đồng merchant, quyết định phí cổng/hoàn tiền/đối soát (ADR 0058 Q1–Q8). Cả hai luồng bị mã chặn ở production cho tới khi ADR 0058 Accepted; app native chưa có lối này |
 | Marketplace money       | **Đủ mã, đã lên staging; chưa vượt gate nào** | Mọi mảnh của luồng tiền ADR 0032/0033/0044 đã có mã + test và đã được deploy lên staging (mục 8.1). CHƯA CÓ: một lượt UAT tiền có bằng chứng trên staging, đối tác bảo hiểm thật, ý kiến thuế, ý kiến pháp lý thu hộ. Bảo hiểm và thuế đang BẬT bằng **số tham khảo thị trường** theo chỉ đạo 14/09 — xem mục 5 quyết định 4 và 5 |
 | Basic-owner experience  | **Đã tách ở code (ADR 0038 · 0053); chưa vượt gate** | Ranh giới hai tuyến chặn ở server (ADR 0038 điều 1, 3, 4, 5). Theo ADR 0053: **ví theo TÀI KHOẢN** (tài khoản khách có ví riêng, ví gian hàng thuộc tenant; tiền hoàn chuyến đi thuê luôn về ví tài khoản khách qua `resolveRefundWalletOwner`), **tài khoản đối tác/quản trị không đặt xe** (đặt xe chỉ ở realm `customer`), **chặn tự đặt xe** bằng phép so SĐT ĐÃ XÁC MINH giữa tài khoản khách và chủ/thành viên gian hàng ở backend (`CANNOT_BOOK_OWN_VEHICLE`). CHƯA CÓ: smoke test có bằng chứng cho bốn nhóm người dùng trên staging |
 | Khuyến mãi nền tảng     | **Đã có mã (ADR 0046); chưa vượt gate R3**    | Mã do XePrime tài trợ: admin phát hành, khách áp ở web + app, dòng tiền khép kín qua hold/đơn/hoàn. CHƯA CÓ: một chiến dịch chạy thật và một lần đối soát ngân sách tài trợ trên staging |
@@ -77,7 +78,7 @@ Mục tiêu: có một bản web đáng tin để demo/pilot mà chưa nhận ti
 Trạng thái: **Đang đóng gate**. Code hiện tại đã bổ sung dashboard dùng dữ liệu thật, invitation token, legal pages/consent và email delivery; chưa được tuyên bố hoàn thành R1 cho tới khi production integration, security review và UAT có bằng chứng.
 
 - Review và chạy lại test/typecheck/build toàn workspace sau thay đổi slot billing/i18n.
-- Hoàn thiện dashboard shop: doanh thu, tiền giữ/cọc và việc cần làm bằng dữ liệu thật.
+- ~~Hoàn thiện dashboard shop: doanh thu, tiền giữ/cọc và việc cần làm bằng dữ liệu thật.~~ Xong 09/10/2026: Tổng quan ba bề mặt (gian hàng gói · chủ xe cá nhân · nền tảng) — việc cần làm + câu trả lời đầu trang, lịch giao/nhận 7 ngày, KPI tháng so cùng kỳ (tỉ lệ lấp đầy), uy tín, gói, ví; API `GET /dashboard/overview` + `GET /platform/dashboard/overview`. Còn chờ: UAT trên dữ liệu pilot.
 - Ẩn dead links và menu placeholder chưa có luồng.
 - Đổi “mời thành viên” thành đúng hành vi hoặc làm invitation thật.
 - Hoàn thiện Terms, Privacy, quy chế marketplace, chính sách hủy và kênh support.
@@ -136,7 +137,7 @@ Bằng chứng test ngày 14/09/2026: **5 suite / 64 test xanh** trên PostgreSQ
 
 Cái này KHÔNG phải bằng chứng vượt gate: tất cả đều là máy dev. Xem mục 8 để biết còn thiếu gì.
 
-- Owner Lite navigation và dashboard.
+- Owner Lite navigation và dashboard. (Dashboard xong 09/10/2026 — `OwnerDashboardView`: việc cần làm, lịch giao nhận, thu nhập + số dư từ sổ ví, xe của bạn, uy tín; KHÔNG báo cáo theo kỳ — ADR 0027 điều 1.)
 - Xác minh người bán, loại chủ thể, thông tin thuế và tài khoản nhận tiền.
 - Versioned fee policy và booking snapshot, phân biệt phí dịch vụ XePrime, thuế thật, bảo vệ xe và bảo hiểm chuyến đi.
 - Quote breakdown minh bạch cho khách và net earning preview cho chủ xe; phí dịch vụ XePrime 10% của tuyến Basic nằm phía khách, không trừ khỏi tiền thuê chủ xe; tuyến gói là 0%.

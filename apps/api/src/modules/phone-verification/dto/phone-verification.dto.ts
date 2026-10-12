@@ -4,7 +4,7 @@ import {
   PHONE_VERIFICATION_PURPOSE_VALUES,
   type MobileClientApp,
 } from '@xeprime/types';
-import { IsIn, IsOptional, IsString, Length, Matches } from 'class-validator';
+import { IsIn, IsOptional, IsString, Length, Matches, MaxLength } from 'class-validator';
 import { Type } from 'class-transformer';
 import { MobileDeviceDto } from '../../auth/dto/mobile-auth.dto';
 
@@ -71,6 +71,17 @@ export class PhoneLoginDto {
   @IsString()
   @Length(6, 6)
   code!: string;
+
+  @ApiPropertyOptional({
+    maxLength: 120,
+    description:
+      'Tên hiển thị — CHỈ dùng khi số này chưa có tài khoản và lượt đăng nhập tạo mới. Luồng đặt ' +
+      'xe tự lái gửi tên khách vừa nhập, để tài khoản không mang tên mặc định "Khách 1234".',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  displayName?: string;
 }
 
 export class SendOtpResultDto {

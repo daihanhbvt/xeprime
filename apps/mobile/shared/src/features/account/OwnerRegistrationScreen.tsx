@@ -1,16 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
+  PERMISSION,
+  SHOP_PROFILE_REQUIREMENT,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_META,
   isEstablishedPackageShop,
   missingShopProfileRequirements,
+  type ShopProfileRequirement,
   type VehiclePublicStatus,
 } from '@xeprime/types';
 import { AppHeader } from '@/components/layout/AppHeader';
+import { Screen } from '@/components/layout/Screen';
+import { ScreenError } from '@/components/state/ScreenError';
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
 import { AccountTrackNotice } from './components/AccountTrackNotice';
@@ -20,13 +25,14 @@ import { Card } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
-import { ShopProfileScreen } from '@/features/shop/ShopProfileScreen';
+import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useMyShop } from '@/features/shop/hooks/use-shop';
 import { useVehiclesPage } from '@/features/vehicles/hooks/use-vehicles';
 import { useRouter } from 'expo-router';
 import { goBackOr } from '@/navigation/go-back-or';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useDomainLabel } from '@/i18n/domain';
+import { ACCOUNT_SECTION, type AccountSection } from '@/navigation/account-section';
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_REGISTRATION_SOURCE } from '@/navigation/vehicle-registration-source';
 import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
@@ -42,23 +48,29 @@ const IN_FLIGHT: readonly VehiclePublicStatus[] = [
 const VEHICLE_PAGE = { page: 1, limit: 20 };
 
 /**
- * "Hồ sơ chủ xe" — tiến trình đăng ký, và về sau là chỗ sửa hồ sơ gian hàng.
+ * Mục hồ sơ còn thiếu → section của "Hồ sơ chủ xe" sửa được nó (web `REQUIREMENT_SECTION`, PR
+ * #156). `Record` đầy đủ: thêm một yêu cầu mà quên chỗ sửa sẽ đỏ ngay ở đây.
+ */
+export const REQUIREMENT_SECTION: Readonly<Record<ShopProfileRequirement, AccountSection>> = {
+  [SHOP_PROFILE_REQUIREMENT.OWNER_NAME]: ACCOUNT_SECTION.PROFILE,
+  [SHOP_PROFILE_REQUIREMENT.OWNER_PHONE]: ACCOUNT_SECTION.LOGIN,
+  [SHOP_PROFILE_REQUIREMENT.DISPLAY_NAME]: ACCOUNT_SECTION.PROFILE,
+  [SHOP_PROFILE_REQUIREMENT.PROVINCE]: ACCOUNT_SECTION.ADDRESS,
+};
+
+/**
+ * Tiến trình đăng ký chủ xe — CHỈ tiến trình (web PR #156 `OwnerRegistrationView`).
  *
- * ## Vì sao màn này cần thiết trên app
- *
- * Chủ xe tuyến hoa hồng KHÔNG vào khu quản lý được (ADR 0038 điều 4), nên `/manage/shop` đóng với
- * họ. Thiếu màn này thì họ không có đường nào sửa hồ sơ gian hàng của chính mình — và cũng không
- * có chỗ nào trả lời câu hỏi duy nhất người mới đăng ký có trong đầu: "chiếc xe tôi vừa khai đang
- * ở đâu".
+ * Phần SỬA hồ sơ đã gộp vào "Hồ sơ chủ xe" ở trang tài khoản (`OwnerProfileScreen`); màn này dẫn
+ * tới đó (nút "Hồ sơ chủ xe", và CTA "Hoàn thiện hồ sơ" nhảy thẳng tới mục đầu tiên còn thiếu).
+ * Không nhúng biểu mẫu nào: với chủ xe cá nhân, tên/SĐT/logo của gian hàng không phải thứ khách
+ * thấy (ADR 0054) — sửa chúng ở đây là sửa vào hư không.
  *
  * ## Ba bước, và bước nào cũng KHÔNG chờ ai gật đầu trừ bước cuối
  *
  * Khai hồ sơ đủ là xong bước 1 — không có vòng duyệt hồ sơ nào. Đăng xe rồi gửi duyệt là bước 2.
  * XePrime duyệt XE là bước duyệt DUY NHẤT (ADR 0036). Vẽ sai chỗ này là dựng lại đúng cái bế tắc
  * "chờ duyệt hồ sơ rồi mới được đăng xe" mà ADR đó gỡ đi.
- *
- * Phần sửa hồ sơ dùng lại `ShopProfileScreen` với vỏ đầu trang của khu khách — không clone, vì
- * luật lưu và luật gửi duyệt phải có đúng một bản.
  */
 export function OwnerRegistrationScreen({
   shell = 'account',
@@ -74,17 +86,13 @@ export function OwnerRegistrationScreen({
   const router = useRouter();
   const navigateOnce = useNavigateOnce();
   const { data: user } = useCurrentUser();
+  const permissions = usePermissions();
+  /** "Hồ sơ chủ xe" đọc hồ sơ gian hàng — thiếu `tenant.view` thì không mời họ vào. */
+  const canViewProfile = permissions.has(PERMISSION.TENANT_VIEW);
 
   /*
-   * GIAN HÀNG TRẢ PHÍ KHÔNG BAO GIỜ THẤY MÀN NÀY (ADR 0040 điều 4).
-   *
-   * Một gian hàng vừa hết gói thì `resolveOwnerStage` chấm là `registering` ngay khi chiếc xe cuối
-   * rời chợ, nên `OwnerGate` cho họ qua. Màn này kể một câu chuyện ba bước dành cho người CHƯA bắt
-   * đầu ("Hồ sơ chủ xe → Đăng xe đầu tiên → Lên chợ"); với một gian hàng 10 xe vừa cần gia hạn thì
-   * đó là câu chuyện sai hoàn toàn.
-   *
-   * Điều hướng, không render một màn lỗi: họ có một khu làm việc hợp lệ, chỉ là không phải khu này.
-   * `replace` để nút lui không rơi lại đúng màn vừa bị đẩy ra.
+   * GIAN HÀNG TRẢ PHÍ KHÔNG BAO GIỜ THẤY MÀN NÀY (ADR 0040 điều 4): câu chuyện ba bước dành cho
+   * người CHƯA bắt đầu. Điều hướng, không render lỗi; `replace` để nút lui không rơi lại đây.
    */
   const wrongWorkspace = isEstablishedPackageShop(user?.tenant);
   useEffect(() => {
@@ -92,10 +100,6 @@ export function OwnerRegistrationScreen({
   }, [router, wrongWorkspace]);
 
   const vehicles = useVehiclesPage(VEHICLE_PAGE);
-  /*
-   * Cùng query mà `ShopProfileScreen` bên dưới đang dùng — TanStack trả từ cache, không phải một
-   * lượt gọi thứ hai.
-   */
   const shop = useMyShop(true);
 
   const items = vehicles.data?.items ?? [];
@@ -109,111 +113,153 @@ export function OwnerRegistrationScreen({
     navigateOnce(ROUTES.listYourVehicle.register(VEHICLE_REGISTRATION_SOURCE.ACCOUNT));
 
   /*
-   * Bước đang đứng suy từ DỮ LIỆU THẬT, không từ một cờ lưu riêng — một cờ riêng là một thứ nữa
-   * có thể lệch với sự thật.
-   *
-   * Chấm hồ sơ bằng `missingShopProfileRequirements` của `@xeprime/types` — CÙNG hàm backend dùng,
-   * nên màn không bao giờ nói "xong" về một hồ sơ mà server sẽ từ chối.
+   * Bước đang đứng suy từ DỮ LIỆU THẬT, chấm bằng `missingShopProfileRequirements` — CÙNG hàm
+   * backend dùng, nên màn không bao giờ nói "xong" về một hồ sơ mà server sẽ từ chối.
    */
-  const profileDone =
-    shop.data != null &&
-    missingShopProfileRequirements({
-      displayName: shop.data.profile.displayName,
-      provinceCode: shop.data.defaultBranch?.provinceCode ?? shop.data.profile.provinceCode,
-      // Chủ gian hàng đọc từ TÀI KHOẢN (16/09/2026) — cùng nguồn mà cổng gửi duyệt ở backend
-      // dùng. Ba cột sao chép trên hồ sơ đã bị gỡ.
-      ownerFullName: shop.data.ownerAccount.displayName,
-      ownerPhone: shop.data.ownerAccount.phone,
-    }).length === 0;
+  const missing = shop.data
+    ? missingShopProfileRequirements({
+        // Mặt tiền cá nhân: tên khách thấy là họ tên tài khoản chủ (`storefrontIdentity`, ADR 0054).
+        displayName: shop.data.ownerAccount.displayName,
+        provinceCode: shop.data.defaultBranch?.provinceCode ?? shop.data.profile.provinceCode,
+        // Chủ gian hàng đọc từ TÀI KHOẢN (16/09/2026) — cùng nguồn cổng gửi duyệt ở backend dùng.
+        ownerFullName: shop.data.ownerAccount.displayName,
+        ownerPhone: shop.data.ownerAccount.phone,
+      })
+    : [];
+  const profileDone = shop.data != null && missing.length === 0;
+  // CTA đưa thẳng tới mục ĐẦU TIÊN còn thiếu, không bắt người dùng đi tìm trong các section.
+  const firstMissing = missing[0];
+  const openProfile = () =>
+    navigateOnce(
+      ROUTES.manage.account(firstMissing ? REQUIREMENT_SECTION[firstMissing] : undefined),
+    );
 
   const current = !profileDone ? 0 : publicCount > 0 ? 2 : 1;
 
-  return (
-    <ShopProfileScreen
-      /*
-        CHỈ hai nhóm ô của hồ sơ — đúng `ShopProfileWorkspace` mà web nhúng vào màn này. Chủ gian
-        hàng, tài khoản nhận tiền và gói & hạn mức thuộc trang Cửa hàng ở cổng quản lý, nơi người
-        đứng ở đây (tuyến hoa hồng) không vào được.
-      */
-      variant="profileForm"
-      header={
-        shell === 'manage' ? (
-          <>
-            <ManageHeader />
-            <ManagePageTitle
-              title={t('title')}
-              subtitle={t('subtitle')}
-              action={
-                hasVehicle ? (
-                  <Button
-                    label={t('steps.vehicle.addMore')}
-                    variant="ghost"
-                    size="sm"
-                    block={false}
-                    onPress={addVehicle}
-                  />
-                ) : undefined
-              }
-            />
-          </>
-        ) : (
-          <AppHeader
-            /*
-              Màn chen ngang mở từ menu ⇒ phải lui được. `goBackOr` chứ không `router.back`
-              trần: vào thẳng bằng deep link thì ngăn xếp rỗng, và một nút lui không làm gì cả đọc
-              như app treo.
-            */
-            onBack={() => goBackOr(router, ROUTES.account.home())}
-            title={t('title')}
-            subtitle={t('subtitle')}
-            right={
-              hasVehicle ? (
-                <Button
-                  label={t('steps.vehicle.addMore')}
-                  variant="ghost"
-                  size="sm"
-                  block={false}
-                  onPress={addVehicle}
-                />
-              ) : undefined
-            }
+  const headerActions = (
+    <XStack gap={space.xs} flexWrap="wrap" jc="flex-end">
+      {canViewProfile ? (
+        <Button
+          label={t('editProfile')}
+          icon="id-card-outline"
+          variant="ghost"
+          size="sm"
+          block={false}
+          onPress={() => navigateOnce(ROUTES.manage.account())}
+        />
+      ) : null}
+      {hasVehicle ? (
+        <Button
+          label={t('steps.vehicle.addMore')}
+          variant="ghost"
+          size="sm"
+          block={false}
+          onPress={addVehicle}
+        />
+      ) : null}
+    </XStack>
+  );
+
+  const header: ReactNode =
+    shell === 'manage' ? (
+      <>
+        <ManageHeader />
+        <ManagePageTitle title={t('title')} subtitle={t('subtitle')} action={headerActions} />
+      </>
+    ) : (
+      <AppHeader
+        /*
+          Màn chen ngang mở từ menu ⇒ phải lui được. `goBackOr` chứ không `router.back` trần: vào
+          thẳng bằng deep link thì ngăn xếp rỗng.
+        */
+        onBack={() => goBackOr(router, ROUTES.account.home())}
+        title={t('title')}
+        subtitle={t('subtitle')}
+        right={headerActions}
+      />
+    );
+
+  if (wrongWorkspace) return <>{header}</>;
+
+  if (shop.isError && !shop.data) {
+    return (
+      <>
+        {header}
+        <Screen edges={['left', 'right', 'bottom']} scroll={false}>
+          <ScreenError
+            error={shop.error}
+            title={t('loadError')}
+            onRetry={() => void shop.refetch()}
           />
-        )
-      }
-      intro={
+        </Screen>
+      </>
+    );
+  }
+
+  return (
+    <>
+      {header}
+      <Screen
+        edges={['left', 'right', 'bottom']}
+        refreshing={shop.isRefetching || vehicles.isRefetching}
+        onRefresh={() => {
+          void shop.refetch();
+          void vehicles.refetch();
+        }}
+      >
         <YStack gap={space.sm}>
           {/* Trang chủ Owner Lite mở đầu bằng dải tuyến ở CẢ HAI bậc (web `OwnerLiteHome`). */}
           {shell === 'manage' ? <AccountTrackNotice /> : null}
-          <Card>
-            <YStack gap={space.sm}>
-              <Step
-                index={0}
-                current={current}
-                icon="storefront-outline"
-                title={t('steps.profile.title')}
-                description={t('steps.profile.description')}
+
+          {shop.isPending ? (
+            <MiniRowsSkeleton rows={3} />
+          ) : (
+            <Card>
+              <YStack gap={space.sm}>
+                <Step
+                  index={0}
+                  current={current}
+                  icon="storefront-outline"
+                  title={t('steps.profile.title')}
+                  description={t('steps.profile.description')}
+                />
+                <Step
+                  index={1}
+                  current={current}
+                  icon="car-outline"
+                  title={t('steps.vehicle.title')}
+                  description={t('steps.vehicle.description')}
+                />
+                <Step
+                  index={2}
+                  current={current}
+                  icon="bag-check-outline"
+                  title={t('steps.live.title')}
+                  description={t('steps.live.description')}
+                />
+              </YStack>
+            </Card>
+          )}
+
+          {/*
+            Bước 1 chưa xong: dẫn thẳng tới mục đầu tiên còn thiếu ở "Hồ sơ chủ xe". Đặt TRƯỚC dải
+            "chưa có xe" vì đó là thứ tự của ba bước.
+          */}
+          {shop.data && !profileDone && canViewProfile ? (
+            <Callout tone="warning" title={t('profileIncomplete.title')}>
+              <CalloutBody>{t('profileIncomplete.body')}</CalloutBody>
+              <Button
+                label={t('profileIncomplete.cta')}
+                icon="id-card-outline"
+                size="sm"
+                onPress={openProfile}
               />
-              <Step
-                index={1}
-                current={current}
-                icon="car-outline"
-                title={t('steps.vehicle.title')}
-                description={t('steps.vehicle.description')}
-              />
-              <Step
-                index={2}
-                current={current}
-                icon="bag-check-outline"
-                title={t('steps.live.title')}
-                description={t('steps.live.description')}
-              />
-            </YStack>
-          </Card>
+            </Callout>
+          ) : null}
 
           {/*
             Chưa có xe nào: nói thẳng việc còn lại và dẫn tới wizard. KHÔNG phụ thuộc hồ sơ đã
-            "duyệt" hay chưa — chủ xe đăng được xe ngay, và bắt họ chờ một cái gật đầu không tồn
-            tại là đúng bế tắc mà ADR 0036 gỡ.
+            "duyệt" hay chưa — chủ xe đăng được xe ngay (ADR 0036).
           */}
           {!hasVehicle && !vehicles.isPending ? (
             <Callout tone="info" title={t('noVehicle.title')}>
@@ -225,11 +271,8 @@ export function OwnerRegistrationScreen({
           {vehicles.isPending ? <MiniRowsSkeleton rows={2} /> : null}
 
           {/*
-            Xe đang trên đường lên chợ — danh sách NGẮN, chỉ trạng thái và lối vào sửa. Đây không
-            phải bản thứ hai của "Danh sách xe": nó chỉ trả lời "chiếc xe tôi vừa khai đang ở đâu".
-
-            Lý do người duyệt trả xe về đi kèm NGAY tại dòng đó: bắt chủ xe mở từng chiếc để tìm
-            xem mình sai chỗ nào là biến một câu trả lời thành một cuộc đi tìm.
+            Xe đang trên đường lên chợ — danh sách NGẮN, chỉ trạng thái và lối vào sửa, kèm lý do
+            người duyệt trả xe về ngay tại dòng đó.
           */}
           {inFlight.length > 0 ? (
             <Card>
@@ -281,8 +324,8 @@ export function OwnerRegistrationScreen({
             </Card>
           ) : null}
         </YStack>
-      }
-    />
+      </Screen>
+    </>
   );
 }
 

@@ -323,10 +323,13 @@ export const queryKeys = {
   },
   dashboard: {
     all: ['dashboard'] as const,
+    /** `GET /dashboard/overview` — khoá mang tham số (chi nhánh) vì đổi ô lọc là đổi dữ liệu. */
+    overview: (params: QueryParams) => ['dashboard', 'overview', params] as const,
   },
   platformDashboard: {
     all: ['platform-dashboard'] as const,
     summary: () => ['platform-dashboard', 'summary'] as const,
+    overview: () => ['platform-dashboard', 'overview'] as const,
   },
   /** Sổ giao dịch ngân hàng của nền tảng (R2 — ADR 0022). */
   bankTransactions: {
@@ -410,6 +413,12 @@ export const queryKeys = {
       ['marketplace', 'delivery-distance', vehicleId, address] as const,
     destinations: (params: QueryParams) => ['marketplace', 'destinations', params] as const,
     shops: (params: QueryParams) => ['marketplace', 'shops', params] as const,
+    /**
+     * Gợi ý chủ xe của ô từ khoá (`/public/shops?q=`). Khoá RIÊNG dù cùng endpoint với `shops`:
+     * hai bên cất hai hình dữ liệu khác nhau trong cache (trang + meta ↔ mảng gợi ý).
+     */
+    shopSuggestions: (q: string, limit: number) =>
+      ['marketplace', 'shop-suggestions', q, limit] as const,
     /**
      * Khoảng giá tham khảo khi chủ xe đặt giá. Nằm dưới `marketplace` vì nguồn của nó là mặt
      * bằng giá CỦA CHỢ, không phải hồ sơ chiếc xe đang khai — và nó dùng chung cho web lẫn app.
@@ -536,6 +545,23 @@ export const queryKeys = {
     all: ['bank-accounts'] as const,
     list: (scope: string) => ['bank-accounts', scope] as const,
   },
+  /**
+   * Bằng lái của TÀI KHOẢN khách (ADR 0057) — trang Giấy tờ và bước "Xác thực bằng lái" khi đặt
+   * xe đọc CÙNG khoá, nên nộp ở chỗ này thì chỗ kia thấy ngay.
+   */
+  driverLicence: {
+    all: ['driver-licence'] as const,
+    overview: ['driver-licence', 'overview'] as const,
+    image: (id: string) => ['driver-licence', 'image', id] as const,
+  },
+  /** Hàng đợi bằng lái của nền tảng — tách khỏi `driverLicence` (phạm vi khác, quyền khác). */
+  platformDriverLicences: {
+    all: ['platform-driver-licences'] as const,
+    list: (params: QueryParams) => ['platform-driver-licences', 'list', params] as const,
+    counts: ['platform-driver-licences', 'counts'] as const,
+    detail: (id: string) => ['platform-driver-licences', 'detail', id] as const,
+    image: (id: string) => ['platform-driver-licences', 'image', id] as const,
+  },
   /** Hàng đợi xác minh người bán của nền tảng — tách khỏi `sellerProfile` (phạm vi tenant). */
   platformSellers: {
     all: ['platform-sellers'] as const,
@@ -566,6 +592,19 @@ export const queryKeys = {
     reconciliation: (date: string) => ['platform-money', 'reconciliation', date] as const,
     /** Số đếm các hàng đợi — dải thẻ đầu màn Tài chính. Nằm dưới `all` để mọi thao tác tiền làm mới nó. */
     summary: ['platform-money', 'summary'] as const,
+    /** Hàng đợi lượt thanh toán qua cổng MoMo/VNPAY (ADR 0058) — nằm dưới `all` cùng lý do với `summary`. */
+    gatewayOrders: (params: QueryParams) => ['platform-money', 'gateway-orders', params] as const,
+    gatewayOrder: (id: string) => ['platform-money', 'gateway-order', id] as const,
+  },
+  /**
+   * Thanh toán qua cổng MoMo/VNPAY phía NGƯỜI TRẢ (ADR 0058). `surface` (`customer` · `partner`) nằm
+   * trong khoá: hai site gọi hai endpoint khác nhau cho cùng một khái niệm, và cache của site này không
+   * được trả lời cho site kia.
+   */
+  paymentGateway: {
+    all: ['payment-gateway'] as const,
+    methods: (surface: string) => ['payment-gateway', 'methods', surface] as const,
+    order: (surface: string, id: string) => ['payment-gateway', 'order', surface, id] as const,
   },
   /** Support case — ba bề mặt (khách/gian hàng/nền tảng) cùng dùng chung nhánh dữ liệu. */
   supportCases: {

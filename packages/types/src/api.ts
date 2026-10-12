@@ -82,6 +82,11 @@ export const API_ERROR_CODE = {
   SOCIAL_CANCELLED: 'SOCIAL_CANCELLED',
   /** Đổi code thất bại, `debug_token` không khớp app, hoặc `id_token` không hợp lệ. */
   SOCIAL_EXCHANGE_FAILED: 'SOCIAL_EXCHANGE_FAILED',
+  /**
+   * Token định danh của provider native (`identityToken` của Apple) không qua kiểm: sai chữ ký,
+   * sai app (`aud`), hết hạn, nonce không khớp. Khác `SOCIAL_STATE_INVALID` (luồng redirect quá hạn).
+   */
+  SOCIAL_TOKEN_INVALID: 'SOCIAL_TOKEN_INVALID',
 
   /*
    * Thư mời vào gian hàng (R1 — thay cho việc thêm thẳng người vào tenant).
@@ -466,6 +471,40 @@ export const API_ERROR_CODE = {
    */
   BANK_TX_TARGET_NOT_PAYABLE: 'BANK_TX_TARGET_NOT_PAYABLE',
 
+  // Cổng thanh toán MoMo / VNPAY (ADR 0058)
+  /**
+   * Phương thức này chưa mở cho loại khoản đang trả — thiếu cấu hình cổng, hoặc công tắc của
+   * luồng (`PAYMENT_GATEWAY_SUBSCRIPTION` / `PAYMENT_GATEWAY_BOOKING_HOLD`) đang tắt. 503, fail
+   * closed: không bao giờ dựng một liên kết thanh toán giả.
+   */
+  PAYMENT_GATEWAY_UNAVAILABLE: 'PAYMENT_GATEWAY_UNAVAILABLE',
+  /**
+   * Gọi sang cổng để mở phiên thanh toán thất bại (mạng, timeout, cổng từ chối). Chưa có đồng
+   * nào được thu; khách thử lại hoặc chuyển khoản. `details` mang `{ provider }`.
+   */
+  PAYMENT_GATEWAY_PROVIDER_ERROR: 'PAYMENT_GATEWAY_PROVIDER_ERROR',
+  /**
+   * Hoá đơn / khoản giữ chỗ không còn nhận tiền (đã trả đủ, đã huỷ, đã hết hạn). Lối đi tiếp là
+   * tải lại trạng thái, không phải thử lại. `details` mang `{ status }`.
+   */
+  PAYMENT_TARGET_NOT_PAYABLE: 'PAYMENT_TARGET_NOT_PAYABLE',
+  /**
+   * Khoản giữ chỗ còn quá ít thời gian để thanh toán qua cổng an toàn — tiền có thể về sau khi chỗ
+   * đã nhả. `details` mang `{ expiresAt, minWindowMinutes }`.
+   */
+  PAYMENT_HOLD_WINDOW_TOO_SHORT: 'PAYMENT_HOLD_WINDOW_TOO_SHORT',
+  /** Số tiền nằm ngoài hạn mức cổng công bố. `details` mang `{ provider, amount, min, max }`. */
+  PAYMENT_AMOUNT_OUT_OF_RANGE: 'PAYMENT_AMOUNT_OUT_OF_RANGE',
+  /** IPN sai chữ ký / sai merchant. Không kèm chi tiết nào. */
+  PAYMENT_GATEWAY_SIGNATURE_INVALID: 'PAYMENT_GATEWAY_SIGNATURE_INVALID',
+  /** Lượt thanh toán đã được người khác xử lý (hoặc không còn ở hàng đợi). Tải lại để xem. */
+  PAYMENT_ORDER_ALREADY_HANDLED: 'PAYMENT_ORDER_ALREADY_HANDLED',
+  /**
+   * Một khoản trả qua cổng cho chính mục này đang được ghi nhận (cổng đã thu, hệ thống chưa áp xong).
+   * Mở phiên mới lúc này là mời khách trả lần hai — chờ vài phút rồi tải lại.
+   */
+  PAYMENT_ORDER_IN_PROGRESS: 'PAYMENT_ORDER_IN_PROGRESS',
+
   // Sổ Thu-Chi (Phase 6 · epic nối tiền)
   /**
    * Phiếu sinh TỰ ĐỘNG từ một nghiệp vụ — không huỷ trực tiếp được.
@@ -493,6 +532,25 @@ export const API_ERROR_CODE = {
   OTP_TOO_MANY: 'OTP_TOO_MANY',
   /** Nhập sai mã quá số lần cho phép — mã bị khoá, phải gửi lại mã mới. */
   OTP_LOCKED: 'OTP_LOCKED',
+
+  // Bằng lái của tài khoản khách (ADR 0057)
+  /**
+   * Thuê xe tự lái/dài hạn mà tài khoản chưa có bằng lái ĐÃ XÁC THỰC (chưa nộp, bị từ chối, hoặc
+   * khách chưa đăng nhập). `details.status` mang trạng thái lượt nộp gần nhất nếu có.
+   */
+  DRIVER_LICENCE_REQUIRED: 'DRIVER_LICENCE_REQUIRED',
+  /** Đã nộp, đang chờ người của XePrime xem — chưa đặt được, khác hẳn "chưa nộp". */
+  DRIVER_LICENCE_PENDING_REVIEW: 'DRIVER_LICENCE_PENDING_REVIEW',
+  /** Bằng hết hạn trước khi chuyến kết thúc. `details.expiresOn` (YYYY-MM-DD). */
+  DRIVER_LICENCE_EXPIRED: 'DRIVER_LICENCE_EXPIRED',
+  /** Hạng trên bằng không lái được loại xe này (vd bằng xe máy, đặt ô tô). `details.vehicleType`. */
+  DRIVER_LICENCE_CLASS_MISMATCH: 'DRIVER_LICENCE_CLASS_MISMATCH',
+  /** Lượt nộp không còn ở trạng thái cho phép thao tác (đã có kết quả / đã bị thay). */
+  DRIVER_LICENCE_STATE_CONFLICT: 'DRIVER_LICENCE_STATE_CONFLICT',
+  /** Ảnh tải lên không hợp lệ (sai định dạng thật, sai kích thước khai báo, chưa tải xong). */
+  DRIVER_LICENCE_IMAGE_INVALID: 'DRIVER_LICENCE_IMAGE_INVALID',
+  /** Chạm trần lượt nộp trong 24 giờ (`details.limit`) — mỗi lượt chiếm vài giây CPU của máy chủ. */
+  DRIVER_LICENCE_SUBMISSION_LIMIT: 'DRIVER_LICENCE_SUBMISSION_LIMIT',
 
   // OCR giấy tờ xe (Wave 5)
   /** Chưa cấu hình nhà cung cấp OCR — trích xuất tự động không khả dụng, mời nhập tay. */

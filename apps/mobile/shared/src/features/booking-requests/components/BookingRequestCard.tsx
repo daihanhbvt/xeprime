@@ -27,6 +27,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { telHref, toAppTz, zaloHref, LIST_SEPARATOR } from '@xeprime/domain';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { useCustomerProfileAccess } from '../hooks/use-customer-profile-access';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
 import { useAppToast } from '@/components/feedback/use-app-toast';
@@ -96,20 +97,15 @@ function BookingRequestCardImpl({
   const domainLabel = useDomainLabel();
   const permissions = usePermissions();
   const navigateOnce = useNavigateOnce();
+  const customerProfileAccess = useCustomerProfileAccess();
 
   const status = request.status as BookingRequestStatus;
   const meta = BOOKING_REQUEST_STATUS_META[status];
   /*
-   * HAI chặng cần gian hàng quyết định, và chặng thứ hai là chặng TỐN KÉM hơn hẳn:
-   *
-   *   · `pending_host_approval` — khách mới hỏi, chưa ai mất gì;
-   *   · `hold_paid` (LEGACY ADR 0039) — khách ĐÃ TRẢ TIỀN và chỗ xe đang bị giữ. Bỏ sót chặng này là
-   *     bày ra một thẻ ghi "chờ bạn duyệt" mà không có nút nào để duyệt, trong khi tiền của
-   *     khách nằm ở XePrime và đồng hồ phản hồi đang chạy tới lượt hoàn tự động.
+   * Chỉ `pending_host_approval` còn cần gian hàng quyết định: `hold_paid` (luồng thu-trước-duyệt)
+   * đã gỡ hẳn ở ADR 0055 và DB từ chối trạng thái đó — cùng vị từ `needsDecision` của web.
    */
-  const needsDecision =
-    status === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL ||
-    status === BOOKING_REQUEST_STATUS.HOLD_PAID;
+  const needsDecision = status === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL;
   /*
    * Quá hạn phản hồi thì KHÔNG còn quyết định nào — server từ chối cả duyệt lẫn từ chối
    * (`BOOKING_REQUEST_EXPIRED`), nên bày nút ra là mời người dùng bấm một thứ chắc chắn hỏng.
@@ -123,9 +119,11 @@ function BookingRequestCardImpl({
   const canDecide = permissions.has(PERMISSION.BOOKING_REQUEST_APPROVE);
   /** Lối "Xem lịch" gác bằng ĐÚNG quyền web gác nó (`canViewVehicle` = `vehicles.view`). */
   const canViewVehicle = permissions.has(PERMISSION.VEHICLE_VIEW);
-  /** Tên khách là LỐI VÀO hồ sơ khách — chỉ khi có hồ sơ trong sổ VÀ người xem đọc được sổ. */
-  const customerLinkable =
-    permissions.has(PERMISSION.CUSTOMER_VIEW) && Boolean(request.tenantCustomerId);
+  /**
+   * Tên khách là LỐI VÀO hồ sơ khách — chỉ khi có hồ sơ trong sổ VÀ người xem đọc được sổ (quyền
+   * `customers.view` + gian hàng tuyến GÓI: sổ khách là `@SubscriptionTrackOnly`, ADR 0056).
+   */
+  const customerLinkable = customerProfileAccess && Boolean(request.tenantCustomerId);
   const [noteExpanded, setNoteExpanded] = useState(false);
 
   /*
@@ -738,7 +736,12 @@ function ContactRow({ request }: { request: BookingRequestItem }) {
         onPress={message}
       />
 
-      {tel ? (
+      {/*
+        Điều kiện đọc `phone` chứ không `tel`: `tel` chỉ là chuỗi dẫn xuất, nên TypeScript không
+        thu hẹp được `phone` qua nó và `callAria` (ICU, đòi `string`) nhận phải `string | null`.
+        `tel` không `null` thì `phone` cũng vậy — `telHref` trả `null` cho mọi đầu vào rỗng.
+      */}
+      {tel && phone ? (
         <ContactButton
           label={t('call')}
           accessibilityLabel={t('callAria', { name: request.customerName, phone })}

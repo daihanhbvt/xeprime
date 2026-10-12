@@ -14,7 +14,7 @@ import {
 } from '@ant-design/icons';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Button, Radio, Segmented, Skeleton } from 'antd';
+import { Alert, App, Button, Radio, Segmented, Skeleton } from 'antd';
 import { CheckboxField } from '@/components/form/CheckboxField';
 import { CopyButton } from '@/components/data-display/CopyButton';
 
@@ -36,13 +36,27 @@ import {
   SERVICE_TYPE_VALUES,
   isRouteType,
   isSameVnPhone,
+  longTermPickupWindow,
+  serviceRequiresDriverLicence,
   vnDateKey,
   PHONE_VERIFICATION_PURPOSE,
   type LongTermPackageMonths,
   type RouteType,
   type ServiceType,
 } from '@xeprime/types';
-import { LIST_SEPARATOR, type GeoPoint } from '@xeprime/domain';
+import {
+  DRIVER_LICENCE_TRIP_GATE,
+  LIST_SEPARATOR,
+  evaluateDriverLicenceForTrip,
+  isDriverLicenceGateErrorCode,
+  licenceTripLastDayKey,
+  type GeoPoint,
+} from '@xeprime/domain';
+import { fetchDriverLicenceOverview } from '@/features/driver-licence/api';
+import { DriverLicenceVerifier } from '@/features/driver-licence/components/DriverLicenceVerifier';
+import { useDriverLicence } from '@/features/driver-licence/hooks/use-driver-licence';
+import type { DriverLicenceTrip } from '@/features/driver-licence/types';
+import { phoneLogin } from '@/services/auth.service';
 import type { BookingRequestReceipt } from '../types';
 import { LongTermPackageStep } from './LongTermPackageStep';
 import {
@@ -80,12 +94,9 @@ import {
   type Dayjs,
 } from '@/lib/datetime';
 import { buildBusyDayIndex } from '@/lib/rental-busy';
-import {
-  readDeliveryAddress,
-  rememberDeliveryAddress,
-} from '@/lib/delivery-address-memory';
+import { readDeliveryAddress, rememberDeliveryAddress } from '@/lib/delivery-address-memory';
 import { rememberedOrDefaultRentalRange } from '@/lib/rental-range-memory';
-import { getErrorCode } from '@/services/api-client';
+import { getErrorCode, isUnauthenticated } from '@/services/api-client';
 import { queryKeys } from '@/services/query-keys';
 import {
   BUSY_DAYS_LOOKAHEAD,
@@ -220,6 +231,7 @@ export function RequestBookingFlow({
   const dl = useDomainLabel();
   const fmt = useAppFormat();
   const errorMessage = useErrorMessage();
+  const { message } = App.useApp();
 
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -257,6 +269,17 @@ export function RequestBookingFlow({
   const [rentalMode, setRentalMode] = useState<RentalMode>(seededRange?.mode ?? 'daily');
   const [otpPhone, setOtpPhone] = useState('');
   const [code, setCode] = useState('');
+  /**
+   * Mã OTP đang chờ là để làm gì.
+   *
+   *  - `booking`: xác minh SĐT cho MỘT yêu cầu (khách đã đăng nhập, hoặc thuê có tài xế).
+   *  - `login`  : khách CHƯA đăng nhập thuê xe tự lái — mã này đăng nhập/tạo tài khoản theo SĐT
+   *    TRƯỚC khi gửi, vì bằng lái gắn với TÀI KHOẢN (ADR 0057) và phải được xác thực trước bước
+   *    Xác nhận. Cùng một SMS, cùng một tài khoản mà bước gửi yêu cầu sẽ tạo ra — chỉ sớm hơn.
+   */
+  const [otpMode, setOtpMode] = useState<'booking' | 'login'>('booking');
+  /** Đang đọc bằng lái để quyết định có cần bước bằng lái không — giữ nút Tiếp tục ở trạng thái chờ. */
+  const [checkingLicence, setCheckingLicence] = useState(false);
   const [stepError, setStepError] = useState<string | null>(null);
 
   /** Yêu cầu trùng lặp — trạng thái riêng, có lối đi tiếp, không phải một alert đỏ. */
@@ -313,8 +336,7 @@ export function RequestBookingFlow({
    * hai thứ đó), và khối QR cần khoản giữ chỗ. Truyền chuỗi rỗng khi chưa tới chặng đó thì
    * `useTrip` tự tắt — không có request nào cho chuyến chưa cần.
    */
-  const holdTripId =
-    receipt?.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD ? receipt.id : '';
+  const holdTripId = receipt?.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD ? receipt.id : '';
   const holdTrip = useTrip(holdTripId);
 
   /**
@@ -380,6 +402,42 @@ export function RequestBookingFlow({
   const watchedRequestedDate = useWatch({ control, name: 'requestedPickupDate' });
   const isLongTerm = watchedService === SERVICE_TYPE.LONG_TERM;
   const isWithDriver = watchedService === SERVICE_TYPE.WITH_DRIVER;
+  /** Tự lái / dài hạn ⇒ khách phải có bằng lái hợp lệ cho chuyến (ADR 0057). */
+  const needsLicence = serviceRequiresDriverLicence(watchedService);
+  /**
+   * Chuyến mà bằng phải dùng được: loại xe + ngày cuối (cùng `licenceTripLastDayKey` với cổng ở
+   * server). Dài hạn chưa có ngày nhận chắc ⇒ ngày nhận MUỘN NHẤT khách đã nêu.
+   */
+  const licenceTrip = useMemo<DriverLicenceTrip | null>(() => {
+    if (!needsLicence) return null;
+    const vehicleType = listing?.vehicleType ?? null;
+    if (isLongTerm) {
+      if (!watchedPackage) return null;
+      const latestPickupDateKey =
+        watchedPreference === PICKUP_PREFERENCE.SPECIFIC_DATE && watchedRequestedDate
+          ? watchedRequestedDate.format('YYYY-MM-DD')
+          : longTermPickupWindow(new Date()).end;
+      return {
+        vehicleType,
+        lastDayKey: licenceTripLastDayKey({ latestPickupDateKey, packageMonths: watchedPackage }),
+      };
+    }
+    if (!watchedReturn) return null;
+    return {
+      vehicleType,
+      lastDayKey: licenceTripLastDayKey({
+        returnAt: appWallClockToInstant(watchedReturn).toDate(),
+      }),
+    };
+  }, [
+    needsLicence,
+    listing?.vehicleType,
+    isLongTerm,
+    watchedPackage,
+    watchedPreference,
+    watchedRequestedDate,
+    watchedReturn,
+  ]);
   // Có tài xế thì xe ĐẾN ĐÓN khách — "giao xe tận nơi" không có nghĩa với chuyến này.
   const isDelivery = !isWithDriver && pickupMethod === PICKUP_METHOD.DELIVERY;
   /**
@@ -595,8 +653,7 @@ export function RequestBookingFlow({
    * thuê dài hạn chưa chốt lịch — ADR 0046 điều 2). Đọc từ `holdAmount` của SERVER, không tự suy
    * theo dịch vụ: điều kiện thật là "XePrime có thu đồng nào online không", và chỉ server biết.
    */
-  const promoUnavailable =
-    quoteQ.data != null && quoteQ.data.breakdown.fees?.holdAmount == null;
+  const promoUnavailable = quoteQ.data != null && quoteQ.data.breakdown.fees?.holdAmount == null;
 
   /**
    * Báo giá đã ÁP MÃ — nguồn duy nhất cho mọi con số trong bảng giá.
@@ -625,7 +682,39 @@ export function RequestBookingFlow({
     if (!getValues('customerPhone') && accountPhone) setValue('customerPhone', accountPhone);
   }, [me, accountPhone, getValues, setValue]);
 
-  const vp = usePhoneVerify(PHONE_VERIFICATION_PURPOSE.BOOKING);
+  const vpBooking = usePhoneVerify(PHONE_VERIFICATION_PURPOSE.BOOKING);
+  const vpLogin = usePhoneVerify(PHONE_VERIFICATION_PURPOSE.LOGIN);
+  /** Bộ gửi mã của lượt OTP đang hiện — đếm ngược, mã dev, gửi lại đều theo đúng mục đích. */
+  const vp = otpMode === 'login' ? vpLogin : vpBooking;
+
+  /**
+   * Bằng lái của tài khoản — chỉ nạp khi đang ở bước bằng lái (nút Tiếp tục cần biết bằng đã
+   * hợp lệ cho chuyến chưa). Cùng khoá cache với bộ xác thực bên trong, nên không gọi hai lần.
+   */
+  const licenceQ = useDriverLicence({ enabled: step === 'licence' && Boolean(me) });
+  const licenceReady =
+    licenceTrip !== null &&
+    licenceQ.data !== undefined &&
+    evaluateDriverLicenceForTrip(licenceQ.data, licenceTrip) === DRIVER_LICENCE_TRIP_GATE.OK;
+
+  /*
+   * Bằng vừa hợp lệ cho CHUYẾN NÀY (máy đọc xong ngay tại bước) ⇒ tự sang bước Xác nhận: không bắt
+   * khách bấm "Tiếp tục" cho một bước đã xong. Không có vòng lặp: "Quay lại" từ bước Xác nhận về
+   * thẳng bước Chuyến đi.
+   *
+   * Đổi bước NGAY TRONG render (mẫu "điều chỉnh state theo dữ liệu" của React) chứ không trong
+   * effect — effect là thêm một vòng render hiện bước bằng lái đã xong. Effect chỉ còn hiện một lời
+   * báo ngắn, để bước bằng lái không biến mất im lặng.
+   */
+  const [licenceAdvances, setLicenceAdvances] = useState(0);
+  if (step === 'licence' && licenceReady && !licenceQ.isFetching) {
+    setStep('review');
+    setPriceExpanded(true);
+    setLicenceAdvances((n) => n + 1);
+  }
+  useEffect(() => {
+    if (licenceAdvances > 0) void message.success(t('licence.verified'));
+  }, [licenceAdvances, message, t]);
 
   /** SĐT đang dùng có phải chính SĐT đã xác thực của tài khoản không (bỏ qua 0/84/+84). */
   const phoneMatchesAccount = (phone: string) =>
@@ -858,12 +947,29 @@ export function RequestBookingFlow({
        * NGUYÊN xe/ngày giờ/liên hệ đã nhập, gửi mã cho chính số đó.
        */
       if (code === API_ERROR_CODE.PHONE_NOT_VERIFIED) {
+        /*
+         * Thuê tự lái cần PHIÊN (bằng lái gắn với tài khoản), nên lối khôi phục là mã ĐĂNG NHẬP;
+         * thuê có tài xế giữ mã xác minh đơn lẻ như trước.
+         */
         const phone = getValues('customerPhone').trim();
-        setOtpPhone(phone);
-        setCode('');
-        goToStep('otp');
-        setStepError(t('otp.sessionExpired'));
-        vp.send(phone);
+        void startOtp(needsLicence ? 'login' : 'booking', phone).then(() =>
+          setStepError(t('otp.sessionExpired')),
+        );
+        return;
+      }
+      /*
+       * Cổng BẰNG LÁI ở server (ADR 0057) nói "chưa" trong khi giao diện tưởng là "được" — bằng
+       * vừa hết hạn, vừa bị thay, hoặc phiên vừa mất. Lùi về bước bằng lái với dữ liệu MỚI, giữ
+       * nguyên mọi thứ khách đã nhập; mất phiên thì đi lại đường OTP đăng nhập.
+       */
+      if (isDriverLicenceGateErrorCode(code)) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.driverLicence.overview });
+        setStepError(null);
+        if (!me) {
+          void startOtp('login');
+          return;
+        }
+        goToStep('licence');
         return;
       }
       setStepError(errorMessage(e));
@@ -871,9 +977,23 @@ export function RequestBookingFlow({
   });
 
   const verifyM = useMutation({
-    mutationFn: () =>
-      verifyOtp({ phone: otpPhone, purpose: PHONE_VERIFICATION_PURPOSE.BOOKING, code }),
-    onSuccess: () => goToStep('review'),
+    mutationFn: async () => {
+      if (otpMode === 'login') {
+        // Đăng nhập/tạo tài khoản theo SĐT — phiên mới gắn vào trình duyệt ngay tại đây.
+        // Tên khách vừa nhập chỉ dùng khi số này CHƯA có tài khoản — không thì tài khoản mới mang
+        // tên mặc định "Khách 1234" ở mọi nơi (đầu trang, hàng đợi duyệt, nhật ký).
+        const user = await phoneLogin(
+          otpPhone,
+          code,
+          getValues('customerName').trim() || undefined,
+        );
+        queryClient.setQueryData(queryKeys.auth.me(), user);
+        await queryClient.invalidateQueries({ queryKey: queryKeys.driverLicence.all });
+        return;
+      }
+      await verifyOtp({ phone: otpPhone, purpose: PHONE_VERIFICATION_PURPOSE.BOOKING, code });
+    },
+    onSuccess: () => continueAfterPhone(),
     onError: (e) => setStepError(errorMessage(e)),
   });
 
@@ -907,20 +1027,64 @@ export function RequestBookingFlow({
     priceDetailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [priceExpanded]);
 
-  /** Rời bước Chuyến đi: SĐT đã xác thực thì sang thẳng Xác nhận, chưa thì dựng OTP. */
+  /**
+   * Rời bước Chuyến đi: SĐT đã xác thực thì đi tiếp (qua bước bằng lái nếu cần), chưa thì OTP.
+   *
+   * Khách CHƯA đăng nhập thuê tự lái nhận mã ĐĂNG NHẬP thay vì mã xác minh đơn lẻ: bằng lái gắn
+   * với tài khoản, nên tài khoản phải có trước bước bằng lái. Thuê có tài xế giữ đường cũ.
+   */
   async function afterTripStep() {
     const phone = getValues('customerPhone').trim();
     if (phoneMatchesAccount(phone)) {
-      goToStep('review');
+      await continueAfterPhone();
       return;
     }
+    await startOtp(needsLicence && !me ? 'login' : 'booking', phone);
+  }
+
+  /** Gửi mã và dựng màn OTP — lỗi gửi mã hiện qua `vp.error` tại bước đang đứng. */
+  async function startOtp(mode: 'booking' | 'login', phone = getValues('customerPhone').trim()) {
+    setOtpMode(mode);
     try {
-      await vp.sendAsync(phone);
+      await (mode === 'login' ? vpLogin : vpBooking).sendAsync(phone);
       setOtpPhone(phone);
       setCode('');
       goToStep('otp');
     } catch {
-      /* lỗi gửi mã hiển thị qua vp.error tại bước Chuyến đi */
+      /* lỗi gửi mã hiển thị qua vp.error */
+    }
+  }
+
+  /**
+   * SĐT đã chắc chắn. Thuê tự lái/dài hạn thì soát bằng lái cho CHÍNH chuyến này trước bước Xác
+   * nhận — đã hợp lệ thì khách không thấy bước bằng lái bao giờ. Đọc mới từ server (không dùng
+   * cache): khách có thể vừa nộp bằng ở một tab khác.
+   */
+  async function continueAfterPhone() {
+    if (!needsLicence || !licenceTrip) {
+      goToStep('review');
+      return;
+    }
+    setCheckingLicence(true);
+    try {
+      const overview = await queryClient.fetchQuery({
+        queryKey: queryKeys.driverLicence.overview,
+        queryFn: fetchDriverLicenceOverview,
+        staleTime: 0,
+      });
+      const gate = evaluateDriverLicenceForTrip(overview, licenceTrip);
+      goToStep(gate === DRIVER_LICENCE_TRIP_GATE.OK ? 'review' : 'licence');
+    } catch (error) {
+      // Mất phiên: bước bằng lái không đọc được gì — đi lại đường OTP đăng nhập thay vì để khách
+      // bấm "Thử lại" vào một lỗi 401 mãi mãi.
+      if (isUnauthenticated(error)) {
+        await startOtp('login');
+        return;
+      }
+      // Lỗi khác: bộ xác thực tự hiện lỗi tải + nút Thử lại.
+      goToStep('licence');
+    } finally {
+      setCheckingLicence(false);
     }
   }
 
@@ -982,7 +1146,8 @@ export function RequestBookingFlow({
     if (editContact) setEditingContact(true);
     setStepError(null);
     setCode('');
-    vp.reset();
+    vpBooking.reset();
+    vpLogin.reset();
     verifyM.reset();
     submitM.reset();
   }
@@ -1086,22 +1251,30 @@ export function RequestBookingFlow({
       ? {
           label: availabilityM.isPending ? t('actions.checking') : t('actions.continue'),
           onClick: () => void continueFromTrip(),
-          loading: availabilityM.isPending || vp.sending,
+          loading: availabilityM.isPending || vp.sending || checkingLicence,
           disabled: false,
         }
-      : step === 'otp'
+      : step === 'licence'
         ? {
-            label: t('actions.verify'),
-            onClick: confirmOtp,
-            loading: verifying,
-            disabled: code.length !== 6,
+            label: t('actions.continue'),
+            onClick: () => goToStep('review'),
+            loading: false,
+            // Chỉ mở khi bằng đã hợp lệ CHO CHUYẾN NÀY — cùng phép soát với cổng ở server.
+            disabled: !licenceReady,
           }
-        : {
-            label: t('actions.submit'),
-            onClick: submitRequest,
-            loading: submitting,
-            disabled: false,
-          };
+        : step === 'otp'
+          ? {
+              label: t('actions.verify'),
+              onClick: confirmOtp,
+              loading: verifying || checkingLicence,
+              disabled: code.length !== 6,
+            }
+          : {
+              label: t('actions.submit'),
+              onClick: submitRequest,
+              loading: submitting,
+              disabled: false,
+            };
 
   const secondaryAction =
     step === 'trip'
@@ -1215,7 +1388,7 @@ export function RequestBookingFlow({
               <CheckOutlined />
             </span>
           </span>
-{/*
+          {/*
             Ba chặng, ba câu. Chặng CHỜ TIỀN (xe bật "Đặt ngay" và hệ thống vừa nhận) không được
             nói "đã gửi yêu cầu, chủ xe sẽ phản hồi": chuyến đã được nhận, đồng hồ đang chạy, và
             việc tiếp theo thuộc về KHÁCH. Câu sai ở đây là lý do khách đóng tab rồi mất chuyến.
@@ -1282,65 +1455,65 @@ export function RequestBookingFlow({
             </header>
 
             <dl className={styles.doneRows}>
-            <div className={styles.doneRow}>
-              <dt>
-                <CalendarOutlined aria-hidden />
-                {t('done.time')}
-              </dt>
-              <dd>
-                {v.pickupAt ? fmt.rentalPoint(v.pickupAt) : '—'} →{' '}
-                {v.returnAt ? fmt.rentalPoint(v.returnAt) : '—'}
-              </dd>
-            </div>
-            <div className={styles.doneRow}>
-              <dt>
-                <CarOutlined aria-hidden />
-                {t('review.service')}
-              </dt>
-              <dd>
-                {dl('serviceType', v.serviceType)}
-                {v.serviceType === SERVICE_TYPE.WITH_DRIVER
-                  ? ` · ${dl('routeType', v.routeType)}`
-                  : ''}
-              </dd>
-            </div>
-            <div className={styles.doneRow}>
-              <dt>
-                <EnvironmentOutlined aria-hidden />
-                {t('done.pickupMethod')}
-              </dt>
-              <dd>
-                {v.serviceType === SERVICE_TYPE.WITH_DRIVER
-                  ? t('done.driverPickup', { address: pickupAddressPreview ?? '—' })
-                  : isDelivery
-                    ? t('pickup.delivery')
-                    : t('pickup.self')}
-              </dd>
-            </div>
-            {quoteWithPromo ? (
               <div className={styles.doneRow}>
-                {/* Còn phụ phí chưa tính (estimateNote) thì KHÔNG gọi "Tổng dự kiến" — 17/08. */}
                 <dt>
-                  <FileTextOutlined aria-hidden />
-                  {quoteWithPromo.breakdown.estimateNote ? t('price.subtotal') : t('price.total')}
+                  <CalendarOutlined aria-hidden />
+                  {t('done.time')}
                 </dt>
-                {/*
+                <dd>
+                  {v.pickupAt ? fmt.rentalPoint(v.pickupAt) : '—'} →{' '}
+                  {v.returnAt ? fmt.rentalPoint(v.returnAt) : '—'}
+                </dd>
+              </div>
+              <div className={styles.doneRow}>
+                <dt>
+                  <CarOutlined aria-hidden />
+                  {t('review.service')}
+                </dt>
+                <dd>
+                  {dl('serviceType', v.serviceType)}
+                  {v.serviceType === SERVICE_TYPE.WITH_DRIVER
+                    ? ` · ${dl('routeType', v.routeType)}`
+                    : ''}
+                </dd>
+              </div>
+              <div className={styles.doneRow}>
+                <dt>
+                  <EnvironmentOutlined aria-hidden />
+                  {t('done.pickupMethod')}
+                </dt>
+                <dd>
+                  {v.serviceType === SERVICE_TYPE.WITH_DRIVER
+                    ? t('done.driverPickup', { address: pickupAddressPreview ?? '—' })
+                    : isDelivery
+                      ? t('pickup.delivery')
+                      : t('pickup.self')}
+                </dd>
+              </div>
+              {quoteWithPromo ? (
+                <div className={styles.doneRow}>
+                  {/* Còn phụ phí chưa tính (estimateNote) thì KHÔNG gọi "Tổng dự kiến" — 17/08. */}
+                  <dt>
+                    <FileTextOutlined aria-hidden />
+                    {quoteWithPromo.breakdown.estimateNote ? t('price.subtotal') : t('price.total')}
+                  </dt>
+                  {/*
                   Số khách PHẢI CHUẨN BỊ, không phải tiền thuê. `totalAmount` là `B` — nó bỏ cả
                   phụ phí lẫn mã khuyến mãi, nên màn xác nhận từng hiện một con số thứ ba khác
                   với bảng giá vừa bấm qua (24/09/2026). Tiền LUÔN qua bộ format.
                 */}
-                <dd className={styles.doneMoney}>
-                  {fmt.money(
-                    quoteWithPromo.breakdown.fees?.customerTotalAmount ??
-                      quoteWithPromo.breakdown.totalAmount,
-                  )}
-                </dd>
-              </div>
-            ) : null}
+                  <dd className={styles.doneMoney}>
+                    {fmt.money(
+                      quoteWithPromo.breakdown.fees?.customerTotalAmount ??
+                        quoteWithPromo.breakdown.totalAmount,
+                    )}
+                  </dd>
+                </div>
+              ) : null}
             </dl>
           </section>
 
-{/*
+          {/*
             Chặng chờ tiền KHÔNG có Alert nào ở đây: `TripHoldPanel` ngay bên dưới đã mở đầu bằng
             đúng câu đó, và hai khối nói cùng một điều chồng lên nhau chỉ đẩy mã QR xuống dưới nếp
             gấp — thứ duy nhất khách cần thấy.
@@ -1369,9 +1542,7 @@ export function RequestBookingFlow({
             là hai chỗ để số tiền hoặc nội dung chuyển khoản trôi khỏi nhau — và một nội dung
             sai là một khoản tiền không khớp được.
           */}
-          {awaitingHold && receipt ? (
-            <HoldStep tripId={receipt.id} trip={holdTrip} />
-          ) : null}
+          {awaitingHold && receipt ? <HoldStep tripId={receipt.id} trip={holdTrip} /> : null}
 
           <div className={cx(styles.doneActions, styles.doneActionsRow)}>
             {/*
@@ -1384,9 +1555,7 @@ export function RequestBookingFlow({
               block
               onClick={() => {
                 onClose();
-                router.push(
-                  awaitingHold && receipt ? tripPath.detail(receipt.id) : ROUTES.TRIPS,
-                );
+                router.push(awaitingHold && receipt ? tripPath.detail(receipt.id) : ROUTES.TRIPS);
               }}
             >
               {awaitingHold ? <ClockCircleOutlined aria-hidden /> : null}
@@ -1418,8 +1587,14 @@ export function RequestBookingFlow({
       <div className={styles.left}>{summaryPanel}</div>
 
       <div className={styles.right}>
-        {/* OTP nằm TRONG bước Chuyến đi nên thanh vẫn sáng ô đó — xem docblock `BookingSteps`. */}
-        <BookingSteps steps={steps} current={step === 'otp' ? 'trip' : step} />
+        {/*
+          OTP và bằng lái nằm GIỮA hai bước nên thanh vẫn sáng ô Chuyến đi — xem docblock
+          `BookingSteps`: không phải ai cũng đi qua chúng.
+        */}
+        <BookingSteps
+          steps={steps}
+          current={step === 'otp' || step === 'licence' ? 'trip' : step}
+        />
 
         {/* ── Bước 1 — Chuyến đi ───────────────────────────────────────────── */}
         {step === 'trip' ? (
@@ -1750,7 +1925,11 @@ export function RequestBookingFlow({
         {step === 'otp' ? (
           <section className={styles.stepBody}>
             <h3 className={styles.otpTitle}>{t('otp.title')}</h3>
-            <p className={styles.stepHint}>{t('otp.hint', { phone: maskPhone(otpPhone) })}</p>
+            <p className={styles.stepHint}>
+              {t(otpMode === 'login' ? 'otp.loginHint' : 'otp.hint', {
+                phone: maskPhone(otpPhone),
+              })}
+            </p>
             <OtpCodeInput
               value={code}
               onChange={onCodeChange}
@@ -1761,14 +1940,11 @@ export function RequestBookingFlow({
             {vp.devCode ? (
               <div className={styles.devHint}>{t('otp.devCode', { code: vp.devCode })}</div>
             ) : null}
+            {vp.error ? (
+              <Alert type="error" showIcon title={vp.error} className={styles.err} />
+            ) : null}
             {stepError ? (
-              <Alert
-                type="error"
-                showIcon
-                title={stepError}
-                className={styles.err}
-                role="alert"
-              />
+              <Alert type="error" showIcon title={stepError} className={styles.err} role="alert" />
             ) : null}
             <div className={styles.otpLinks}>
               <button type="button" className={styles.linkBtn} onClick={() => backToTrip(true)}>
@@ -1783,6 +1959,20 @@ export function RequestBookingFlow({
                 {vp.cooldown > 0 ? t('otp.resendIn', { seconds: vp.cooldown }) : t('otp.resend')}
               </button>
             </div>
+          </section>
+        ) : null}
+
+        {/* ── Trạng thái BẰNG LÁI — giữa hai bước, chỉ khi thuê tự lái/dài hạn (ADR 0057) ─ */}
+        {step === 'licence' && licenceTrip ? (
+          <section className={styles.stepBody}>
+            <h3 className={styles.otpTitle}>{t('licence.title')}</h3>
+            <DriverLicenceVerifier trip={licenceTrip} />
+            {vp.error ? (
+              <Alert type="error" showIcon title={vp.error} className={styles.err} />
+            ) : null}
+            {stepError ? (
+              <Alert type="error" showIcon title={stepError} className={styles.err} role="alert" />
+            ) : null}
           </section>
         ) : null}
 
@@ -1893,7 +2083,9 @@ export function RequestBookingFlow({
                 <div className={styles.reviewRow}>
                   <dt>{t('pickup.self')}</dt>
                   <dd>
-                    {[pickupPoint.branchName, pickupPoint.address].filter(Boolean).join(LIST_SEPARATOR)}
+                    {[pickupPoint.branchName, pickupPoint.address]
+                      .filter(Boolean)
+                      .join(LIST_SEPARATOR)}
                   </dd>
                 </div>
               ) : null}
@@ -1954,9 +2146,7 @@ export function RequestBookingFlow({
               nó (auto · ba lý do manual · không tìm thấy địa chỉ · chưa cấu hình · đang tính)
               phải nói y hệt nhau ở cả hai chỗ.
             */}
-            {isDelivery ? (
-              <DeliveryEstimate pending={deliveryPending} result={delivery} />
-            ) : null}
+            {isDelivery ? <DeliveryEstimate pending={deliveryPending} result={delivery} /> : null}
 
             {/* Đặt ngay: server xem trước (`quote.autoAccept`) — chỉ NÓI khi không có blocker. */}
             {quoteQ.data?.autoAccept?.eligible ? (
@@ -1983,13 +2173,11 @@ export function RequestBookingFlow({
             ) : null}
 
             {stepError ? (
-              <Alert
-                type="error"
-                showIcon
-                title={stepError}
-                className={styles.err}
-                role="alert"
-              />
+              <Alert type="error" showIcon title={stepError} className={styles.err} role="alert" />
+            ) : null}
+            {/* Lỗi gửi mã khi phiên vừa mất ở bước này (cổng bằng lái → OTP đăng nhập). */}
+            {vp.error ? (
+              <Alert type="error" showIcon title={vp.error} className={styles.err} />
             ) : null}
 
             {priceDetail}
@@ -2005,7 +2193,7 @@ export function RequestBookingFlow({
           trong đúng mạch cuộn của nội dung.
         */}
         <div className={styles.dock}>
-          {step === 'otp' ? null : (
+          {step === 'otp' || step === 'licence' ? null : (
             <BookingPriceSummary
               {...priceProps}
               variant="bar"
@@ -2068,12 +2256,7 @@ function HoldStep({
    */
   if (!trip.data?.hold) {
     return (
-      <Alert
-        type="warning"
-        showIcon
-        className={styles.doneNote}
-        title={t('done.holdLoadFailed')}
-      />
+      <Alert type="warning" showIcon className={styles.doneNote} title={t('done.holdLoadFailed')} />
     );
   }
 

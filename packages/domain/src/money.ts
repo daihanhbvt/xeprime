@@ -158,6 +158,36 @@ export function compactMoneyParts(
   return null;
 }
 
+/** Hình dạng một số tiền hợp lệ trên dây — kiểm TRƯỚC `toCents`, vì `BigInt` ném lỗi với chuỗi rác. */
+const MONEY_WIRE_SHAPE = /^-?\d+(\.\d+)?$/;
+
+/**
+ * Thay đổi của một số tiền so với kỳ trước, tính bằng PHẦN TRĂM NGUYÊN — mũi tên tăng/giảm trên
+ * thẻ KPI ("+12% so với cùng kỳ tháng trước").
+ *
+ * Tính hoàn toàn trên `bigint` (ADR 0007): doanh thu một tháng của cả nền tảng vượt xa 2^53 xu là
+ * chuyện bình thường, và một phép chia float ở đó cho ra con số lệch mà không ai nhìn thấy.
+ *
+ * `null` — KHÔNG phải 0 — khi không có gì để so: kỳ trước bằng 0 ("tăng vô hạn" không phải một con
+ * số), hoặc một vế không phải số tiền hợp lệ. Giao diện hiện "chưa có kỳ để so", không hiện 0%.
+ * Làm tròn nửa-xa-0 để +0,5% và −0,5% đối xứng nhau.
+ */
+export function moneyChangePercent(
+  current: MoneyString | null | undefined,
+  previous: MoneyString | null | undefined,
+): number | null {
+  if (!current || !previous) return null;
+  const cur = current.trim();
+  const prev = previous.trim();
+  if (!MONEY_WIRE_SHAPE.test(cur) || !MONEY_WIRE_SHAPE.test(prev)) return null;
+  const base = toCents(prev);
+  if (base === 0n) return null;
+  const magnitude = base < 0n ? -base : base;
+  const permille = ((toCents(cur) - base) * 1000n) / magnitude;
+  const rounded = permille >= 0n ? (permille + 5n) / 10n : (permille - 5n) / 10n;
+  return Number(rounded);
+}
+
 /** Số tiền còn lại sau khi bỏ phần lẻ — dùng cho nhánh "quá nhỏ để rút gọn". */
 export function wholeUnits(value: MoneyString): MoneyString {
   const cents = toCents(value);

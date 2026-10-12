@@ -4,8 +4,12 @@ import {
   ACCOUNT_REALM,
   PERMISSION,
 } from '@xeprime/types';
-import { PlatformOnly, Realms, RequirePermissions } from '../../common/decorators';
-import { PlatformDashboardSummaryDto } from './dto/platform-dashboard.dto';
+import { CurrentPlatform, PlatformOnly, Realms, RequirePermissions } from '../../common/decorators';
+import type { PlatformContext } from '../../common/types/request-context';
+import {
+  PlatformDashboardOverviewDto,
+  PlatformDashboardSummaryDto,
+} from './dto/platform-dashboard.dto';
 import { PlatformDashboardService } from './platform-dashboard.service';
 
 /** Dashboard nền tảng (Phase 7). `@PlatformOnly` — không dùng chung guard với API gian hàng. */
@@ -22,5 +26,15 @@ export class PlatformDashboardController {
   @ApiOkResponse({ type: PlatformDashboardSummaryDto })
   summary(): Promise<PlatformDashboardSummaryDto> {
     return this.dashboard.summary();
+  }
+
+  @Get('overview')
+  @ApiOperation({
+    summary:
+      'KPI tháng so cùng kỳ (đơn, GMV, khách/đối tác mới, doanh thu nền tảng), xu hướng 30 ngày, phễu kích hoạt đối tác',
+  })
+  @ApiOkResponse({ type: PlatformDashboardOverviewDto })
+  overview(@CurrentPlatform() platform: PlatformContext): Promise<PlatformDashboardOverviewDto> {
+    return this.dashboard.overview(platform);
   }
 }

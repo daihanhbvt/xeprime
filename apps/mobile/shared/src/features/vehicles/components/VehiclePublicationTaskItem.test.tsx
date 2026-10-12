@@ -137,12 +137,12 @@ describe('VehiclePublicationTaskItem — đích theo khu làm việc', () => {
     expect(mockPush).toHaveBeenCalledWith(ROUTES.account.support());
   });
 
-  it('xe bị nền tảng ẩn, cổng quản lý: "Liên hệ hỗ trợ" mở /manage/support', async () => {
+  it('xe bị nền tảng ẩn, cổng quản lý: "Liên hệ hỗ trợ" mở trung tâm hỗ trợ dạng trang con (/manage/help)', async () => {
     const view = await renderItem(vehicle({ publicStatus: VEHICLE_PUBLIC_STATUS.HIDDEN }), {});
 
     await fireEvent.press(await view.findByText(actions.contactSupport));
     // Ở app Customer đích /manage đổ về màn handoff /partner — builder nói đúng cả hai app.
-    expect(mockPush).toHaveBeenCalledWith(ROUTES.manage.support());
+    expect(mockPush).toHaveBeenCalledWith(ROUTES.manage.supportPage());
   });
 
   it('Owner Lite: "Cập nhật hồ sơ" mở mục trong không gian quản lý xe, không vào Full Manage', async () => {

@@ -792,6 +792,12 @@ const SUBTITLE_KEY = {
   [CUSTOMER_TRIP_STAGE.ACTIVE]: 'subtitle.active',
   [CUSTOMER_TRIP_STAGE.COMPLETED]: 'subtitle.completed',
   [CUSTOMER_TRIP_STAGE.SLOT_TAKEN]: 'subtitle.slot_taken',
+  /*
+    `expired` có câu RIÊNG, không dùng chung `subtitle.terminal` với `cancelled`/`rejected`.
+    Chặng này vừa tách khỏi `rejected` (07/10/2026) đúng vì gộp lại là nói sai với khách: không
+    ai từ chối họ, chỉ là hết hạn trả lời. Dồn về "đã kết thúc sớm" là lặp lại chính lỗi đó.
+  */
+  [CUSTOMER_TRIP_STAGE.EXPIRED]: 'subtitle.expired',
   [CUSTOMER_TRIP_STAGE.CANCELLED]: 'subtitle.terminal',
   [CUSTOMER_TRIP_STAGE.REJECTED]: 'subtitle.terminal',
   [CUSTOMER_TRIP_STAGE.NO_SHOW]: 'subtitle.terminal',

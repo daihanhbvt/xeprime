@@ -44,6 +44,10 @@ model User {
   phone           String?   @db.VarChar(30)
   phoneVerifiedAt DateTime? @map("phone_verified_at") @db.Timestamptz(3)
   displayName     String    @map("display_name") @db.VarChar(255)
+  /// Dạng GẤP của `displayName` (không dấu, chữ thường, kèm dạng viết liền) cho ô từ khoá ở chợ —
+  /// tên công khai của chủ xe tuyến hoa hồng là tên tài khoản (ADR 0054). Cột DẪN XUẤT: trigger
+  /// `users_search_name` ghi, ứng dụng KHÔNG ghi (migration `20261009170000_marketplace_keyword_search`).
+  searchName      String    @default("") @map("search_name")
   avatarUrl       String?   @map("avatar_url") @db.Text
   /// Bcrypt hash cho đăng nhập email/mật khẩu. Null với user chỉ đăng nhập Google/Facebook.
   passwordHash    String?   @map("password_hash") @db.VarChar(255)
@@ -91,6 +95,8 @@ model User {
   customerBookingHolds       BookingHold[]             @relation("hold_customer")
   customerHoldRefunds        HoldRefund[]              @relation("refund_customer")
   paidHoldRefunds            HoldRefund[]              @relation("refund_payer")
+  initiatedGatewayOrders     PaymentGatewayOrder[]     @relation("gateway_order_initiator")
+  reviewedGatewayOrders      PaymentGatewayOrder[]     @relation("gateway_order_reviewer")
   createdFeePolicies         FeePolicy[]               @relation("fee_policy_creator")
   activatedFeePolicies       FeePolicy[]               @relation("fee_policy_activator")
   verifiedSellerProfiles     SellerProfile[]           @relation("seller_verifier")
@@ -108,6 +114,8 @@ model User {
   promoRedemptions           PromoRedemption[]         @relation("promo_redemption_customer")
   supportContextsOpened      TenantSupportContext[]    @relation("tenant_support_context_actor")
   supportContextsRevoked     TenantSupportContext[]    @relation("tenant_support_context_revoker")
+  driverLicences             CustomerDriverLicence[]   @relation("driver_licence_owner")
+  decidedDriverLicences      CustomerDriverLicence[]   @relation("driver_licence_decider")
 
   /// ADR 0053: định danh đăng nhập unique TRONG realm, không unique toàn hệ thống.
   @@unique([realm, email], map: "users_realm_email_key")
@@ -119,6 +127,8 @@ model User {
   @@index([createdAt])
   /// Tìm khách theo tên ở màn giám sát nền tảng (ILIKE '%q%' — btree không dùng được).
   @@index([displayName(ops: raw("gin_trgm_ops"))], map: "users_display_name_trgm_idx", type: Gin)
+  /// Ô từ khoá ở chợ khớp ĐẦU TỪ trên tên chủ xe (`LIKE '% tuan%'`) — trigram đầu từ.
+  @@index([searchName(ops: raw("gin_trgm_ops"))], map: "users_search_name_trgm_idx", type: Gin)
   @@map("users")
 }
 
@@ -163,6 +173,9 @@ model Tenant {
   /// Bản sao `tenant_profiles.display_name` đã bị gỡ: form sửa ghi vào bản sao, khách đọc bản gốc,
   /// nên đổi tên ở hồ sơ không bao giờ tới được người thuê.
   name               String    @db.VarChar(255)
+  /// Dạng GẤP của `name` cho ô từ khoá ở chợ. Cột DẪN XUẤT: trigger `tenants_search_name` ghi,
+  /// ứng dụng KHÔNG ghi (migration `20261009170000_marketplace_keyword_search`).
+  searchName         String    @default("") @map("search_name")
   /// individual | business
   tenantType         String    @default("individual") @map("tenant_type") @db.VarChar(50)
   /// @xeprime/types → TenantStatus. Client KHÔNG được set trực tiếp (CLAUDE.md mục 5).
@@ -258,6 +271,7 @@ model Tenant {
   tenantCustomerDocuments       TenantCustomerDocument[]
   bookingHolds                  BookingHold[]
   holdRefunds                   HoldRefund[]
+  paymentGatewayOrders          PaymentGatewayOrder[]
   bankAccounts                  BankAccount[]
   wallet                        Wallet?
   sellerProfile                 SellerProfile?
@@ -270,6 +284,7 @@ model Tenant {
   @@index([status])
   @@index([ownerUserId])
   @@index([tenantType])
+  @@index([searchName(ops: raw("gin_trgm_ops"))], map: "tenants_search_name_trgm_idx", type: Gin)
   @@map("tenants")
 }
 
@@ -494,6 +509,87 @@ model EmailVerification {
   @@index([userId], map: "email_verifications_user_id_idx")
   @@index([status, expiresAt], map: "email_verifications_status_expires_at_idx")
   @@map("email_verifications")
+}
+
+/// Bằng lái của TÀI KHOẢN KHÁCH — ADR 0057. Điều kiện để gửi yêu cầu thuê xe tự lái / dài hạn.
+///
+/// Mỗi LƯỢT NỘP là một dòng (lịch sử giữ nguyên, không ghi đè ảnh cũ). Hai bất biến do DB giữ:
+/// tối đa MỘT dòng `verified` (bằng đang dùng) và tối đa MỘT lượt đang dở (`uploading` |
+/// `processing` | `pending_review`) cho mỗi tài khoản — partial unique ở migration.
+///
+/// Chỉ tài khoản realm `customer`: cột `realm` cố định (CHECK) và FK tổ hợp `(user_id, realm)`
+/// → `users(id, realm)`, nên một tài khoản đối tác/quản trị không bao giờ mang bằng lái ở đây.
+///
+/// Nhị phân ở bucket R2 RIÊNG TƯ; bảng chỉ giữ metadata + `object_key` do server dựng. Các cột
+/// "đọc được từ ảnh" là bản ĐÃ CHỐT (máy tự quyết, hoặc người duyệt sửa rồi duyệt) — kết quả thô
+/// của bộ đọc nằm riêng ở `ocr_result_json` để đối chiếu.
+model CustomerDriverLicence {
+  id                String    @id @db.Char(26)
+  userId            String    @map("user_id") @db.Char(26)
+  /// Luôn `customer` — CHECK; tồn tại để làm vế thứ hai của FK tổ hợp tới `users`.
+  realm             String    @default("customer") @db.VarChar(20)
+  /// @xeprime/types → DriverLicenceStatus — CHECK.
+  status            String    @db.VarChar(20)
+  /// customers/{userId}/driver-licences/{id}.{ext} — server dựng, unique.
+  objectKey         String    @unique @map("object_key") @db.VarChar(255)
+  mimeType          String    @map("mime_type") @db.VarChar(100)
+  sizeBytes         Int       @map("size_bytes")
+  /// File đã được xác minh trên R2 (kích thước + chữ ký định dạng) — lượt `complete`.
+  uploadedAt        DateTime? @map("uploaded_at") @db.Timestamptz(3)
+  /// @xeprime/types → DriverLicenceKind — CHECK. NULL tới khi đọc xong.
+  kind              String?   @db.VarChar(30)
+  licenceNumber     String?   @map("licence_number") @db.VarChar(40)
+  fullName          String?   @map("full_name") @db.VarChar(160)
+  dateOfBirth       DateTime? @map("date_of_birth") @db.Date
+  /// Hạng đã chuẩn hoá (`normalizeLicenceClasses`), vd {A1,B2}.
+  licenceClasses    String[]  @default([]) @map("licence_classes") @db.VarChar(8)
+  issuedOn          DateTime? @map("issued_on") @db.Date
+  /// Ngày hết hạn (date-only). "Còn hạn cho chuyến này không" SUY RA lúc soát, không lưu cột.
+  expiresOn         DateTime? @map("expires_on") @db.Date
+  /// Bằng "không thời hạn" (vd A1 mẫu cũ). CHECK: không đồng thời có `expires_on`.
+  noExpiry          Boolean   @default(false) @map("no_expiry")
+  /// ISO 3166-1 alpha-2 của nơi cấp — `VN` với GPLX Việt Nam.
+  issuingCountry    String?   @map("issuing_country") @db.Char(2)
+  /// Lái được ô tô / xe máy. GPLX VN + IDP suy tất định từ hạng (`licenceClassCoverage`); bằng
+  /// nước ngoài do người duyệt chốt.
+  coversCar         Boolean   @default(false) @map("covers_car")
+  coversMotorbike   Boolean   @default(false) @map("covers_motorbike")
+  /// Bộ đọc ảnh đã dùng — `not_configured` khi chưa bật (lượt nộp đi thẳng vào hàng đợi duyệt).
+  ocrProvider       String?   @map("ocr_provider") @db.VarChar(50)
+  ocrModel          String?   @map("ocr_model") @db.VarChar(80)
+  /// Kết quả thô của bộ đọc — để người duyệt đối chiếu và để đo độ chính xác. Không chứa ảnh.
+  ocrResult         Json?     @map("ocr_result_json") @db.JsonB
+  /// Mã lỗi khi bộ đọc hỏng (timeout, nhà cung cấp lỗi) — lượt nộp vẫn sang hàng đợi duyệt.
+  ocrErrorCode      String?   @map("ocr_error_code") @db.VarChar(60)
+  ocrCompletedAt    DateTime? @map("ocr_completed_at") @db.Timestamptz(3)
+  /// @xeprime/types → DriverLicenceRejectReason — CHECK; có ⇔ `status = rejected`.
+  rejectionReason   String?   @map("rejection_reason") @db.VarChar(30)
+  /// Ghi chú của người duyệt cho khách — bắt buộc khi lý do là `other` (CHECK).
+  reviewNote        String?   @map("review_note") @db.VarChar(500)
+  /// Khách nhờ người xem lại một lượt bị máy từ chối (chỉ các lý do máy có thể đọc sai).
+  reviewRequestedAt DateTime? @map("review_requested_at") @db.Timestamptz(3)
+  /// @xeprime/types → DriverLicenceDecisionSource — CHECK; `manual` thì phải có `decided_by`.
+  decisionSource    String?   @map("decision_source") @db.VarChar(10)
+  decidedBy         String?   @map("decided_by") @db.Char(26)
+  decidedAt         DateTime? @map("decided_at") @db.Timestamptz(3)
+  /// Khách đồng ý cho XePrime (và nhà cung cấp đọc ảnh) xử lý ảnh bằng — ghi lúc cấp link tải.
+  consentedAt       DateTime  @map("consented_at") @db.Timestamptz(3)
+  /// Ảnh đã xoá khỏi R2 (lượt bị huỷ, bằng đã bị thay, lượt từ chối sau khi có bằng hợp lệ) — dòng
+  /// metadata ở lại làm lịch sử, ảnh thì không: không giữ ảnh giấy tờ tuỳ thân lâu hơn cần thiết.
+  imageDeletedAt    DateTime? @map("image_deleted_at") @db.Timestamptz(3)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user    User  @relation("driver_licence_owner", fields: [userId, realm], references: [id, realm], onDelete: Cascade, map: "customer_driver_licences_user_realm_fkey")
+  decider User? @relation("driver_licence_decider", fields: [decidedBy], references: [id], onDelete: Restrict)
+
+  /// Trang tài khoản + cổng đặt xe: lượt nộp mới nhất của một người.
+  @@index([userId, createdAt(sort: Desc)], map: "customer_driver_licences_user_created_idx")
+  /// Hàng đợi duyệt của nền tảng: lọc theo trạng thái, cũ nhất lên trước.
+  @@index([status, createdAt], map: "customer_driver_licences_status_created_idx")
+  /// Tìm theo họ tên trên bằng (ILIKE %q%).
+  @@index([fullName(ops: raw("gin_trgm_ops"))], map: "customer_driver_licences_full_name_trgm_idx", type: Gin)
+  @@map("customer_driver_licences")
 }
 
 /// Token đặt lại mật khẩu gửi qua email.
@@ -1611,6 +1707,9 @@ model PublicListing {
   vehicleId                String   @unique @map("vehicle_id") @db.Char(26)
   shopSlug                 String   @map("shop_slug") @db.VarChar(120)
   title                    String   @db.VarChar(255)
+  /// Dạng GẤP của `title + brand + model` cho ô từ khoá ở chợ. Cột DẪN XUẤT: trigger
+  /// `public_listings_search_text` ghi — ListingsService (ADR 0008) chỉ ghi cột gốc.
+  searchText               String   @default("") @map("search_text")
   /// @xeprime/types → ListingStatus (active | hidden | suspended | archived)
   status                   String   @default("active") @db.VarChar(50)
   vehicleType              String   @map("vehicle_type") @db.VarChar(50)
@@ -1689,6 +1788,8 @@ model PublicListing {
   @@index([status, motorbikeCategory])
   @@index([status, fuelType])
   @@index([features], type: Gin)
+  /// Ô từ khoá khớp ĐẦU TỪ (`LIKE '% vf%'`) — trigram đầu từ, xem `listing-filter.ts`.
+  @@index([searchText(ops: raw("gin_trgm_ops"))], map: "public_listings_search_text_trgm_idx", type: Gin)
   @@map("public_listings")
 }
 
@@ -3733,6 +3834,7 @@ model SubscriptionInvoice {
 
   tenant       Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   subscription TenantSubscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  gatewayOrders PaymentGatewayOrder[]
 
   @@index([tenantId, createdAt])
   @@index([status, expiresAt])
@@ -3792,6 +3894,141 @@ model BankTransaction {
   @@index([referenceCode])
   @@index([direction, bankTime])
   @@map("bank_transactions")
+}
+
+/// MỘT lượt thanh toán qua CỔNG (MoMo · VNPAY) — ADR 0058 (Proposed).
+///
+/// Vì sao bảng riêng, không phải thêm dòng vào `bank_transactions`: bảng đó là sổ của MỘT tài khoản
+/// ngân hàng, writer duy nhất là `SepayService`, và mỗi dòng của nó là một biến động THẬT của tài
+/// khoản đó. Tiền qua cổng nằm ở tài khoản merchant của cổng và về ngân hàng sau (gộp, trừ phí) —
+/// ghi nó vào sổ ngân hàng là bịa ra những biến động không có thật và làm hỏng đối soát ba vế.
+///
+/// Writer duy nhất: `PaymentGatewayService`. Hiệu ứng tiền đi qua ĐÚNG hai hàm áp tiền đã dùng cho
+/// SePay (`BillingService.applyBankPaymentWithinTx` · `BookingHoldsService.applyBankPaymentWithinTx`).
+///
+/// Bất biến (CHECK ở migration):
+///  - đích là đúng MỘT trong hai cột FK, khớp `target_type`;
+///  - `succeeded` ⇒ có mã giao dịch của cổng, số tiền cổng báo và mốc nhận kết quả;
+///  - `applied_at` ⇔ `apply_outcome`, và chỉ lượt `succeeded` mới có;
+///  - `resolved` ⇒ có người, có mốc, có ghi chú.
+/// Chống ghi đôi bằng hai unique: `(provider, provider_order_ref)` và `(provider, provider_tx_id)`.
+model PaymentGatewayOrder {
+  id                    String    @id @db.Char(26)
+  /// @xeprime/types → PaymentGatewayProvider; DB canh CHECK.
+  provider              String    @db.VarChar(20)
+  /// @xeprime/types → PaymentOrderTarget; DB canh CHECK.
+  targetType            String    @map("target_type") @db.VarChar(30)
+  subscriptionInvoiceId String?   @map("subscription_invoice_id") @db.Char(26)
+  bookingHoldId         String?   @map("booking_hold_id") @db.Char(26)
+  /// Mã đối soát của đích (`XPG…`/`XPH…`) chụp lúc tạo — chính khoá mà hàm áp tiền tra lại.
+  targetCode            String    @map("target_code") @db.VarChar(20)
+  /// Suy từ ĐÍCH lúc tạo, không bao giờ từ client hay từ payload của cổng.
+  tenantId              String    @map("tenant_id") @db.Char(26)
+  /// Tài khoản đã mở phiên — chủ sở hữu của lượt khi đọc trạng thái (khách) hoặc nhật ký (gian hàng).
+  initiatedBy           String?   @map("initiated_by") @db.Char(26)
+  /// Mã đơn gửi sang cổng (MoMo `orderId` · VNPAY `vnp_TxnRef`). Chính là `id` — ULID chỉ gồm chữ số
+  /// và chữ in hoa, khớp mọi bảng ký tự của hai cổng.
+  providerOrderRef      String    @map("provider_order_ref") @db.VarChar(64)
+  /// Số tiền ĐÃ GỬI sang cổng — tính từ DB lúc tạo (phần còn thiếu của đích), không từ client.
+  amount                Decimal   @db.Decimal(14, 2)
+  currency              String    @default("VND") @db.Char(3)
+  /// @xeprime/types → PaymentOrderStatus; DB canh CHECK.
+  status                String    @default("pending") @db.VarChar(20)
+  /// @xeprime/types → PaymentGatewayClient — chỉ để trang quay về biết có mời mở lại app không.
+  client                String    @default("web") @db.VarChar(10)
+  /// Liên kết thanh toán cổng trả về (MoMo `payUrl`) hoặc URL đã ký (VNPAY). NULL khi tạo thất bại.
+  checkoutUrl           String?   @map("checkout_url") @db.Text
+  /// Mốc dùng cho `vnp_CreateDate` / truy vấn sau này — giây chẵn, giờ VN khi định dạng.
+  providerCreatedAt     DateTime  @map("provider_created_at") @db.Timestamptz(3)
+  /// Hạn DÙNG LẠI liên kết (và `vnp_ExpireDate`). KHÔNG phải hạn của tiền — xem `PAYMENT_ORDER_STATUS`.
+  expiresAt             DateTime  @map("expires_at") @db.Timestamptz(3)
+  /// Mã giao dịch phía cổng (MoMo `transId` · VNPAY `vnp_TransactionNo`).
+  providerTxId          String?   @map("provider_tx_id") @db.VarChar(100)
+  providerResultCode    String?   @map("provider_result_code") @db.VarChar(20)
+  providerMessage       String?   @map("provider_message") @db.VarChar(255)
+  /// Hình thức khách trả trên cổng (MoMo `payType`, VNPAY `vnp_CardType`/`vnp_BankCode`).
+  providerPayMethod     String?   @map("provider_pay_method") @db.VarChar(50)
+  providerPaidAt        DateTime? @map("provider_paid_at") @db.Timestamptz(3)
+  /// Số tiền cổng BÁO đã thu — chỉ ghi khi khớp `amount`; lệch thì nằm ở `result_json` + hàng đợi.
+  paidAmount            Decimal?  @map("paid_amount") @db.Decimal(14, 2)
+  /// @xeprime/types → PaymentOrderResultSource — IPN hay truy vấn phía server.
+  resultSource          String?   @map("result_source") @db.VarChar(10)
+  resultAt              DateTime? @map("result_at") @db.Timestamptz(3)
+  /// Phản hồi tạo phiên của cổng, ĐÃ BỎ chữ ký — bằng chứng, không bao giờ ra log.
+  createResponseJson    Json?     @map("create_response_json") @db.JsonB
+  /// Payload kết quả gần nhất của cổng (IPN hoặc truy vấn), đã bỏ chữ ký.
+  resultJson            Json?     @map("result_json") @db.JsonB
+  lastQueriedAt         DateTime? @map("last_queried_at") @db.Timestamptz(3)
+  /// Lượt áp tiền vào đích ĐÃ CÓ KẾT LUẬN (kể cả khi đích từ chối) — ghi trong CÙNG transaction với
+  /// hiệu ứng tiền, nên NULL chứng minh chưa có gì được áp.
+  appliedAt             DateTime? @map("applied_at") @db.Timestamptz(3)
+  /// @xeprime/types → PaymentOrderApplyOutcome; DB canh CHECK.
+  applyOutcome          String?   @map("apply_outcome") @db.VarChar(30)
+  /// Lỗi của lượt áp gần nhất (máy đọc được) — để người trực biết vì sao tiền đã về mà chưa áp.
+  applyError            String?   @map("apply_error") @db.Text
+  /// @xeprime/types → PaymentOrderReviewStatus; DB canh CHECK.
+  reviewStatus          String    @default("none") @map("review_status") @db.VarChar(20)
+  /// @xeprime/types → PaymentOrderReviewReason; NULL khi không cần người xử lý.
+  reviewReason          String?   @map("review_reason") @db.VarChar(40)
+  reviewNote            String?   @map("review_note") @db.Text
+  reviewedBy            String?   @map("reviewed_by") @db.Char(26)
+  reviewedAt            DateTime? @map("reviewed_at") @db.Timestamptz(3)
+  /// Mã hoàn tiền phía cổng/ngân hàng khi người trực đã hoàn TAY cho khách — bằng chứng chiều ra.
+  refundReference       String?   @map("refund_reference") @db.VarChar(100)
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  /// `RESTRICT` (không Cascade): đây là bằng chứng tiền đã đi qua cổng — xoá gian hàng, hoá đơn hay
+  /// khoản giữ chỗ không được kéo theo nó. Cùng kỷ luật `wallets.owner_*` (ADR 0033).
+  tenant              Tenant               @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  subscriptionInvoice SubscriptionInvoice? @relation(fields: [subscriptionInvoiceId], references: [id], onDelete: Restrict)
+  bookingHold         BookingHold?         @relation(fields: [bookingHoldId], references: [id], onDelete: Restrict)
+  initiator           User?                @relation("gateway_order_initiator", fields: [initiatedBy], references: [id], onDelete: SetNull)
+  reviewer            User?                @relation("gateway_order_reviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+  events              PaymentGatewayOrderEvent[]
+
+  @@unique([provider, providerOrderRef])
+  @@unique([provider, providerTxId])
+  /// Dùng lại phiên còn hạn + đọc lịch sử thanh toán của MỘT đích.
+  @@index([subscriptionInvoiceId, createdAt])
+  @@index([bookingHoldId, createdAt])
+  /// Hàng đợi người xử lý của admin (mặc định: `open`, mới nhất trước).
+  @@index([reviewStatus, createdAt])
+  @@index([status, createdAt])
+  @@index([tenantId, createdAt])
+  @@map("payment_gateway_orders")
+}
+
+/// Nhật ký CHỈ GHI THÊM các kết quả ĐÃ XÁC MINH của cổng cho một lượt — ADR 0058.
+///
+/// Dòng `payment_gateway_orders` chỉ giữ kết quả GẦN NHẤT; một IPN lệch số tiền rồi một truy vấn
+/// "hết hạn" sau đó sẽ ghi đè nhau ở đó. Bảng này giữ TOÀN BỘ chuỗi — thứ người trực dựa vào để đối
+/// chiếu với cổng và để giải thích một quyết định hoàn tiền. Writer duy nhất: `PaymentGatewayService`;
+/// không đường nào sửa hay xoá một dòng (dữ liệu test được dọn tường minh).
+///
+/// Truy vấn trả "chưa có gì mới" (`pending`) KHÔNG được ghi — nó lặp lại mỗi nhịp quét và không mang
+/// thông tin nào.
+model PaymentGatewayOrderEvent {
+  id           String   @id @db.Char(26)
+  orderId      String   @map("order_id") @db.Char(26)
+  /// @xeprime/types → PaymentOrderResultSource; DB canh CHECK.
+  source       String   @db.VarChar(10)
+  /// Kết cục theo lời cổng, đã chuẩn hoá (succeeded · pending · failed · cancelled · expired · flagged ·
+  /// not_found); DB canh CHECK.
+  outcome      String   @db.VarChar(20)
+  resultCode   String   @map("result_code") @db.VarChar(20)
+  amount       Decimal? @db.Decimal(14, 2)
+  providerTxId String?  @map("provider_tx_id") @db.VarChar(100)
+  /// Hệ thống đã làm gì với kết quả này (vd `succeeded`, `amount_mismatch`, `already_final`).
+  effect       String   @db.VarChar(40)
+  /// Payload của cổng, đã bỏ chữ ký.
+  rawJson      Json     @map("raw_json") @db.JsonB
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  order PaymentGatewayOrder @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  @@index([orderId, createdAt])
+  @@map("payment_gateway_order_events")
 }
 
 /// Số dư tài khoản ngân hàng CUỐI NGÀY — vế trái của phép đối soát ba vế (Phase 9).
@@ -4287,6 +4524,7 @@ model BookingHold {
   feePolicy      FeePolicy      @relation(fields: [feePolicyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   refund         HoldRefund?
   insurancePolicies BookingInsurancePolicy[]
+  gatewayOrders  PaymentGatewayOrder[]
 
   /// Worker quét hold quá hạn; admin xem hàng đợi theo trạng thái.
   @@index([status, expiresAt])

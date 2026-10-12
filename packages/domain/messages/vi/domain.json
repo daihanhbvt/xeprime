@@ -27,6 +27,48 @@
     "manual": "Khớp tay",
     "ignored": "Bỏ qua"
   },
+  "paymentGatewayProvider": {
+    "momo": "Ví MoMo",
+    "vnpay": "VNPAY"
+  },
+  "paymentOrderTarget": {
+    "subscription_invoice": "Hoá đơn gói",
+    "booking_hold": "Tiền giữ chỗ"
+  },
+  "paymentOrderStatus": {
+    "pending": "Chờ cổng xác nhận",
+    "succeeded": "Cổng đã thu tiền",
+    "failed": "Thất bại",
+    "cancelled": "Khách huỷ",
+    "expired": "Hết hạn"
+  },
+  "paymentOrderApplyOutcome": {
+    "activated": "Đã áp đủ",
+    "partial": "Đã áp một phần",
+    "already_paid": "Tiền thừa",
+    "target_closed": "Đích đã đóng",
+    "target_not_found": "Không tìm thấy đích"
+  },
+  "paymentOrderReviewStatus": {
+    "none": "Không cần xử lý",
+    "open": "Cần xử lý",
+    "resolved": "Đã xử lý"
+  },
+  "paymentOrderReviewReason": {
+    "target_closed": "Tiền về khi hoá đơn/khoản giữ chỗ đã đóng",
+    "target_not_found": "Không còn hoá đơn/khoản giữ chỗ mang mã này",
+    "amount_mismatch": "Số tiền cổng báo khác số tiền đã gửi",
+    "apply_failed": "Tiền đã về nhưng ghi nhận lỗi",
+    "provider_flagged": "Cổng báo giao dịch bị nghi ngờ",
+    "duplicate_provider_tx": "Mã giao dịch của cổng đã dùng ở lượt khác",
+    "result_after_resolution": "Cổng báo đã thu sau khi lượt đã được đóng",
+    "overpaid": "Tiền trả trùng — khoản này đã được trả đủ từ trước"
+  },
+  "paymentOrderQueueView": {
+    "review": "Cần xử lý",
+    "resolved": "Đã xử lý",
+    "history": "Tất cả lượt"
+  },
   "billingMode": {
     "commission": "Hoa hồng theo chuyến",
     "package": "Gói theo chỗ"
@@ -691,6 +733,29 @@
     "changes_requested": "Cần bổ sung",
     "rejected": "Bị từ chối"
   },
+  "driverLicenceStatus": {
+    "uploading": "Đang tải lên",
+    "processing": "Đang đọc ảnh",
+    "pending_review": "Chờ duyệt",
+    "verified": "Đã xác thực",
+    "rejected": "Không hợp lệ",
+    "superseded": "Đã thay bằng mới",
+    "cancelled": "Đã huỷ"
+  },
+  "driverLicenceKind": {
+    "vn": "GPLX Việt Nam",
+    "international_permit": "Giấy phép lái xe quốc tế",
+    "foreign": "Bằng lái nước ngoài"
+  },
+  "driverLicenceRejectReason": {
+    "not_a_licence": "Không phải bằng lái",
+    "back_side": "Chụp mặt sau",
+    "unreadable": "Ảnh không đọc được",
+    "missing_fields": "Thiếu thông tin",
+    "expired": "Bằng đã hết hạn",
+    "no_drivable_class": "Hạng không lái được xe thuê",
+    "other": "Lý do khác"
+  },
   "feePolicyStatus": {
     "draft": "Nháp",
     "active": "Đang hiệu lực",
@@ -1039,6 +1104,11 @@
       "ignore": "Bỏ qua giao dịch ngân hàng",
       "match_manual": "Khớp tay giao dịch ngân hàng"
     },
+    "payment_gateway_order": {
+      "resolve": "Đóng lượt thanh toán qua cổng",
+      "requery": "Truy vấn lại cổng thanh toán",
+      "apply": "Ghi nhận tay lượt thanh toán qua cổng"
+    },
     "banner": {
       "create": "Tạo banner trang chủ",
       "update": "Cập nhật banner trang chủ",
@@ -1111,6 +1181,12 @@
     },
     "customer": {
       "contact_reveal": "Xem liên hệ khách"
+    },
+    "driver_licence": {
+      "submit": "Nộp ảnh bằng lái",
+      "verified": "Xác thực bằng lái",
+      "rejected": "Từ chối bằng lái",
+      "view_image": "Mở ảnh bằng lái"
     },
     "customer_document": {
       "verify": "Đối chiếu giấy tờ khách"
@@ -1340,12 +1416,14 @@
     "booking_surcharge": "Phụ phí đơn thuê",
     "catalog_item": "Mục danh mục",
     "contract": "Hợp đồng thuê",
+    "customer_driver_licence": "Bằng lái của khách",
     "driver": "Tài xế",
     "fee_policy": "Chính sách phí",
     "hold_refund": "Hoàn tiền giữ chỗ",
     "holiday_sync_run": "Lượt đồng bộ lịch nghỉ lễ",
     "marketplace_banner": "Banner trang chủ",
     "payment": "Thanh toán",
+    "payment_gateway_order": "Lượt thanh toán qua cổng",
     "plan": "Bậc gói",
     "platform_bank_balance": "Số dư ngân hàng nền tảng",
     "platform_membership": "Nhân sự nền tảng",

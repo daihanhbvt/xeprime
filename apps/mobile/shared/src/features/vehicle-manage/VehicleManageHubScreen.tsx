@@ -1,48 +1,27 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { useRouter } from 'expo-router';
-import { Linking, Pressable, StyleSheet } from 'react-native';
+import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import {
-  API_ERROR_CODE,
-  PERMISSION,
-  MARKETPLACE_VISIBILITY_REASON_META,
-  VEHICLE_OPERATION_STATUS_META,
-  VEHICLE_OPERATION_STATUS_VALUES,
-  VEHICLE_PUBLIC_STATUS_META,
-  type MarketplaceVisibilityReason,
-  type VehicleOperationStatus,
-} from '@xeprime/types';
+import { API_ERROR_CODE, PERMISSION } from '@xeprime/types';
 import { LIST_SEPARATOR } from '@xeprime/domain';
 import { getErrorCode } from '@xeprime/api-client';
-import { metaColor, metaLabel } from '@/lib/status-meta';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { Card } from '@/components/ui/Card';
-import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Callout } from '@/components/ui/Callout';
-import type { IconName } from '@/components/ui/Chip';
 import { InlineAction } from '@/components/ui/InlineAction';
-import { MenuOption, MenuOptionList } from '@/components/ui/MenuOption';
-import { RemoteImage } from '@/components/ui/RemoteImage';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
-import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { ToggleRow } from '@/features/rental-policies/components/PolicySections';
-import {
-  useUpdateVehicle,
-  useVehicle,
-  useVehicleSummary,
-} from '@/features/vehicles/hooks/use-vehicle';
+import { useVehicle, useVehicleSummary } from '@/features/vehicles/hooks/use-vehicle';
 import type { VehicleDetail } from '@/features/vehicles/api';
+import { VehicleEditHeaderCard } from '@/features/vehicles/components/VehicleEditHeaderCard';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { useErrorMessage } from '@/i18n/use-error-message';
-import { fireAndForget } from '@/lib/fire-and-forget';
-import { resolveWebBaseUrl } from '@/lib/web-base-url';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
@@ -51,11 +30,8 @@ import {
   VEHICLE_MANAGE_SECTION,
   type VehicleManageNavItem,
 } from '@/navigation/vehicle-manage-section';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { colors, fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
 import { useServiceToggle } from './hooks/use-service-toggle';
-
-const COVER_WIDTH = 88;
-const COVER_HEIGHT = 64;
 
 /**
  * MỤC LỤC của không gian "Quản lý xe" — bản native của menu trái `VehicleManageSidebar`.
@@ -240,11 +216,13 @@ function HubBody({
 }
 
 /**
- * Ảnh · tên · trạng thái · điểm đánh giá + số chuyến THẬT · Hồ sơ xe · Trang xe — bản native của
- * `VehicleManageHeader` (+ `VehicleEditHeader`) bên web.
+ * Thẻ đầu xe của màn Quản lý xe — đúng web `VehicleManageHeader`: DÙNG LẠI thẻ đầu xe của màn sửa
+ * xe (`VehicleEditHeaderCard`: ảnh + dải ảnh góc, tên + mã, biển số · loại / dịch vụ, số KM, hai
+ * trục trạng thái, công tắc "Trên chợ") rồi gắn phần RIÊNG của khu này bên dưới: điểm đánh giá +
+ * số chuyến thật. Một nguồn cho cả hai màn — không còn lệch nhau.
  *
- * `statusEditable`: chủ xe đổi trạng thái vận hành NGAY trên chip — cùng mutation, cùng câu báo
- * với web (`update({ operationStatus })`, `Vehicles.edit.aside.statusSaved`).
+ * App BỎ hai lối "Xem hồ sơ xe" · "Xem trang xe" của web (chốt với người dùng 09/10/2026): màn
+ * nhỏ, và hồ sơ xe đã nằm ngay trong các mục bên dưới.
  */
 function VehicleSummaryCard({
   vehicle,
@@ -253,184 +231,41 @@ function VehicleSummaryCard({
   vehicle: VehicleDetail;
   statusEditable: boolean;
 }) {
-  const t = useTranslations('VehicleManage.header');
-  const tAside = useTranslations('Vehicles.edit.aside');
-  const fmt = useAppFormat();
-  const domainLabel = useDomainLabel();
   const navigateOnce = useNavigateOnce();
-  const toast = useAppToast();
-  const errorMessage = useErrorMessage();
-  const summary = useVehicleSummary(vehicle.id);
-  const update = useUpdateVehicle(vehicle.id);
-  const [statusOpen, setStatusOpen] = useState(false);
-  const stats = summary.data?.stats;
-  /*
-   * "Xem trang xe" theo KẾT QUẢ hiển thị thật, không theo trạng thái kiểm duyệt (ADR 0048 điều 7):
-   * một chiếc xe đã duyệt nhưng chủ xe đang tạm ẩn thì `/listings/:id` trả 404.
-   */
-  const isPublic = vehicle.isMarketplaceVisible;
-  const statusLabel = domainLabel('vehicleOperationStatus', vehicle.operationStatus);
-
-  async function changeStatus(next: VehicleOperationStatus) {
-    setStatusOpen(false);
-    if (next === vehicle.operationStatus) return;
-    try {
-      await update.mutateAsync({ operationStatus: next });
-      toast.showSuccess(tAside('statusSaved'));
-    } catch (err) {
-      toast.showError(errorMessage(err));
-    }
-  }
-
-  const statusBadge = (
-    <StatusBadge
-      label={statusLabel}
-      color={metaColor(VEHICLE_OPERATION_STATUS_META, vehicle.operationStatus)}
-      size="sm"
-    />
-  );
-
   return (
-    <Card>
-      <YStack gap={space.sm}>
-        <XStack gap={space.sm} ai="center">
-          <YStack w={COVER_WIDTH} h={COVER_HEIGHT} br={radius.sm} ov="hidden">
-            <RemoteImage
-              uri={vehicle.mainImageUrl}
-              radius={radius.sm}
-              fallback={<YStack f={1} bg={colors.surfaceMuted} />}
-            />
-          </YStack>
-          <YStack f={1} minWidth={0} gap={space.xs}>
-            <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold} numberOfLines={2}>
-              {vehicle.name}
-            </Text>
-            <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
-              {stats
-                ? [
-                    stats.ratingAvg ? fmt.rating(Number(stats.ratingAvg)) : t('noRating'),
-                    t('trips', { count: stats.completedBookings }),
-                  ].join(` ${LIST_SEPARATOR} `)
-                : (vehicle.plateNumber ?? vehicle.code)}
-            </Text>
-          </YStack>
-        </XStack>
-
-        <XStack gap={space.xs} flexWrap="wrap" ai="center">
-          {statusEditable ? (
-            <Pressable
-              onPress={() => setStatusOpen(true)}
-              disabled={update.isPending}
-              accessibilityRole="button"
-              accessibilityLabel={tAside('changeStatus', { status: statusLabel })}
-              // Hàng ngang tường minh + hitSlop thay cho minHeight: chip và mũi tên nằm cùng dòng,
-              // vùng chạm vẫn đủ lớn mà không đẩy giãn khối đầu thẻ.
-              hitSlop={space.sm}
-              style={({ pressed }) => [styles.statusTrigger, pressed ? styles.pressed : null]}
-            >
-              {statusBadge}
-              <Ionicons
-                name={update.isPending ? 'hourglass-outline' : 'chevron-down'}
-                size={iconSize.sm}
-                color={colors.textMuted}
-              />
-            </Pressable>
-          ) : (
-            statusBadge
-          )}
-          <StatusBadge
-            label={domainLabel('vehiclePublicStatus', vehicle.publicStatus)}
-            color={metaColor(VEHICLE_PUBLIC_STATUS_META, vehicle.publicStatus)}
-            size="sm"
-          />
-          {/* Kết quả hiển thị THẬT — server suy, client không ghép lại từ ba status (ADR 0048). */}
-          <StatusBadge
-            label={domainLabel(
-              'marketplaceVisibility',
-              vehicle.marketplaceVisibilityReason,
-              metaLabel(
-                MARKETPLACE_VISIBILITY_REASON_META,
-                vehicle.marketplaceVisibilityReason as MarketplaceVisibilityReason,
-              ),
-            )}
-            color={metaColor(
-              MARKETPLACE_VISIBILITY_REASON_META,
-              vehicle.marketplaceVisibilityReason as MarketplaceVisibilityReason,
-            )}
-            size="sm"
-          />
-        </XStack>
-
-        <HeaderLink
-          icon="document-text-outline"
-          label={t('viewProfile')}
-          onPress={() => navigateOnce(ROUTES.account.vehicleDetail(vehicle.id))}
-        />
-        {/* "Xem trang xe" chỉ đi được khi xe ĐÃ công khai — web khoá nút kèm lý do, đây nói lý do. */}
-        {isPublic ? (
-          <HeaderLink
-            icon="open-outline"
-            label={t('viewListing')}
-            /*
-              Trang xe CÔNG KHAI thuộc chợ xe (site/app khách) — app Partner không có chợ xe, nên mở
-              bản web của trang xe trong trình duyệt, như web mở tab mới (`target="_blank"`).
-            */
-            onPress={() =>
-              fireAndForget(
-                () =>
-                  Linking.openURL(
-                    `${resolveWebBaseUrl()}/listings/${encodeURIComponent(vehicle.id)}`,
-                  ),
-                'VehicleManageHub.viewListing',
+    <VehicleEditHeaderCard
+      vehicle={vehicle}
+      statusEditable={statusEditable}
+      onEditImages={
+        statusEditable
+          ? () =>
+              navigateOnce(
+                ROUTES.account.vehicleManageSection(vehicle.id, VEHICLE_MANAGE_SECTION.IMAGES),
               )
-            }
-          />
-        ) : (
-          <Text col={colors.placeholder} fos={fontSize.label}>
-            {t('viewListingDisabled')}
-          </Text>
-        )}
-      </YStack>
-
-      <BottomSheet open={statusOpen} onClose={() => setStatusOpen(false)} title={tAside('status')}>
-        <MenuOptionList>
-          {VEHICLE_OPERATION_STATUS_VALUES.map((status) => (
-            <MenuOption
-              key={status}
-              label={domainLabel('vehicleOperationStatus', status)}
-              selected={status === vehicle.operationStatus}
-              onPress={() => void changeStatus(status)}
-            />
-          ))}
-        </MenuOptionList>
-      </BottomSheet>
-    </Card>
+          : undefined
+      }
+      footer={<ManageHeaderExtras vehicle={vehicle} />}
+    />
   );
 }
 
-function HeaderLink({
-  icon,
-  label,
-  onPress,
-}: {
-  icon: IconName;
-  label: string;
-  onPress: () => void;
-}) {
+function ManageHeaderExtras({ vehicle }: { vehicle: VehicleDetail }) {
+  const t = useTranslations('VehicleManage.header');
+  const fmt = useAppFormat();
+  const stats = useVehicleSummary(vehicle.id).data?.stats;
+  if (!stats) return null;
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="link"
-      accessibilityLabel={label}
-      style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
-    >
-      <XStack ai="center" gap={space.xs} minHeight={sizing.touchTarget}>
-        <Ionicons name={icon} size={iconSize.sm} color={colors.primaryActive} />
-        <Text col={colors.primaryActive} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-          {label}
+    <YStack gap={space.sm} pt={space.sm} borderTopWidth={1} borderColor={colors.borderSubtle}>
+      <XStack ai="center" gap={space.xs} flexWrap="wrap">
+        <Ionicons name="star" size={iconSize.sm} color={colors.primaryActive} />
+        <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+          {stats.ratingAvg ? fmt.rating(Number(stats.ratingAvg)) : t('noRating')}
+        </Text>
+        <Text col={colors.textMuted} fos={fontSize.bodySm}>
+          {`${LIST_SEPARATOR} ${t('trips', { count: stats.completedBookings })}`}
         </Text>
       </XStack>
-    </Pressable>
+    </YStack>
   );
 }
 
@@ -481,8 +316,3 @@ function SectionRow({
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  statusTrigger: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  pressed: { opacity: 0.6 },
-});

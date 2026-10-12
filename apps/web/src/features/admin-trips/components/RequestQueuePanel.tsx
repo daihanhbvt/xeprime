@@ -22,7 +22,8 @@ import { TRIPS_DEFAULT_LIMIT } from '../api';
 import { useRemindTripRequest, useTripRequests } from '../hooks/use-admin-trips';
 import { useTripQueueFilters } from '../hooks/use-trip-queue-filters';
 import type { TripRequest } from '../types';
-import { HoldCountdown, RespondByCountdown, useNow } from './TripDeadline';
+import { useNow } from '@/hooks/use-now';
+import { HoldCountdown, RespondByCountdown } from './TripDeadline';
 import styles from './TripQueuePanels.module.css';
 
 const MINUTE_MS = 60_000;
@@ -68,7 +69,8 @@ export function RequestQueuePanel({ queue }: { queue: PlatformTripRequestQueue }
   /** Lần nhắc tay gần nhất còn trong cooldown ⇒ nút tắt kèm lý do (không phải ngõ cụt). */
   const cooldownUntil = (row: TripRequest): number | null => {
     if (!row.lastPlatformRemindAt) return null;
-    const until = Date.parse(row.lastPlatformRemindAt) + TRIP_PLATFORM_REMIND_COOLDOWN_MINUTES * MINUTE_MS;
+    const until =
+      Date.parse(row.lastPlatformRemindAt) + TRIP_PLATFORM_REMIND_COOLDOWN_MINUTES * MINUTE_MS;
     return until > now ? until : null;
   };
 
@@ -122,7 +124,9 @@ export function RequestQueuePanel({ queue }: { queue: PlatformTripRequestQueue }
         <div className={styles.stack}>
           <span className={styles.primary}>{r.customerName}</span>
           {/* SĐT khách LUÔN đã che — bản đầy đủ chỉ qua đơn thuê, có audit. */}
-          <span className={styles.meta}>{r.customerPhoneMasked ?? tCommon('labels.emptyValue')}</span>
+          <span className={styles.meta}>
+            {r.customerPhoneMasked ?? tCommon('labels.emptyValue')}
+          </span>
         </div>
       ),
     },
@@ -233,7 +237,9 @@ export function RequestQueuePanel({ queue }: { queue: PlatformTripRequestQueue }
         items={items}
         minWidth={MIN_TABLE_WIDTH}
         loading={isFetching}
-        error={isError && !data ? { title: t('request.loadError'), onRetry: () => void refetch() } : null}
+        error={
+          isError && !data ? { title: t('request.loadError'), onRetry: () => void refetch() } : null
+        }
         filtered={Boolean(filters.q)}
         empty={{ title: t(`empty.${queue}`) }}
         noResults={{ title: t('request.noResults') }}
@@ -247,7 +253,9 @@ export function RequestQueuePanel({ queue }: { queue: PlatformTripRequestQueue }
             <div className={styles.cardHead}>
               <div className={styles.stack}>
                 <span className={styles.primary}>{row.customerName}</span>
-                <span className={styles.meta}>{row.customerPhoneMasked ?? tCommon('labels.emptyValue')}</span>
+                <span className={styles.meta}>
+                  {row.customerPhoneMasked ?? tCommon('labels.emptyValue')}
+                </span>
               </div>
               {deadline(row)}
             </div>

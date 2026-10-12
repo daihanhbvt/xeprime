@@ -243,6 +243,10 @@ export class HoldSettlementService {
    *
    * Chống hoàn hai lần không nằm ở đây mà ở `wallet_entries` unique 4 cột: worker chạy lại hay
    * admin bấm hai lần đều ra cùng một số dư.
+   *
+   * `recorded = false` khi BỎ QUA vì hold đã có khoản hoàn đã đóng (`credited`/`transferred`/…):
+   * khoản tiền này KHÔNG nằm trong hàng đợi hoàn nào, nên người gọi phải tự đưa nó tới người xử lý
+   * (cổng thanh toán mở hàng đợi `overpaid` của mình — ADR 0058 điều 3).
    */
   async upsertRefundWithinTx(
     tx: Prisma.TransactionClient,
@@ -254,7 +258,7 @@ export class HoldSettlementService {
       reason: HoldRefundReason;
       note: string | null;
     },
-  ): Promise<{ id: string; created: boolean }> {
+  ): Promise<{ id: string; created: boolean; recorded: boolean }> {
     if (input.amount.lte(0)) {
       throw new Error(`Số tiền hoàn phải dương (hold ${input.holdId})`);
     }
@@ -268,13 +272,13 @@ export class HoldSettlementService {
         this.logger.warn(
           `Hold ${input.holdId} đã có yêu cầu hoàn ${existing.status}; bỏ qua cộng dồn`,
         );
-        return { id: existing.id, created: false };
+        return { id: existing.id, created: false, recorded: false };
       }
       await tx.holdRefund.update({
         where: { id: existing.id },
         data: { amount: { increment: input.amount }, note: input.note ?? undefined },
       });
-      return { id: existing.id, created: false };
+      return { id: existing.id, created: false, recorded: true };
     }
     /*
      * Khách CÓ tài khoản ⇒ ghi có ví điểm ngay trong chính transaction này. Không tách ra một
@@ -314,7 +318,7 @@ export class HoldSettlementService {
       },
       select: { id: true },
     });
-    return { id: created.id, created: true };
+    return { id: created.id, created: true, recorded: true };
   }
 
   /**

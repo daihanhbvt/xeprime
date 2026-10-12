@@ -35,6 +35,15 @@ const cancelMutation = vi.hoisted(() => ({
   isError: false,
   error: undefined as unknown,
 }));
+// Thanh toán qua cổng có test riêng (`features/payment-gateway`); ở đây hai khối đó im lặng để không
+// kéo truy vấn cấu hình cổng / trạng thái lượt thanh toán thật vào test của trang.
+vi.mock('@/features/payment-gateway/components/TripGatewayOptions', () => ({
+  TripGatewayOptions: () => null,
+}));
+vi.mock('@/features/payment-gateway/components/TripGatewayReturn', () => ({
+  TripGatewayReturn: () => null,
+}));
+
 vi.mock('../hooks', () => ({
   useTrip: () => query,
   useCancelTrip: () => cancelMutation,

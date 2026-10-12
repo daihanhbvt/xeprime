@@ -33,6 +33,8 @@ export default function ManageTabsLayout() {
       >
         <Tabs.Screen name="index" />
         <Tabs.Screen name="requests" />
+        {/* "Chuyến cho thuê" — mục menu của CHỦ xe tuyến hoa hồng (thay hộp thư + bảng đơn). */}
+        <Tabs.Screen name="trips" />
         {/*
           `bookings/` KHÔNG có `_layout` riêng — cùng thủ pháp với `shop/` ở dưới: hai màn của nó
           là hai SCREEN phẳng của chính bộ tab này, nên đi từ "Tất cả đơn thuê" sang "Chờ giao xe"

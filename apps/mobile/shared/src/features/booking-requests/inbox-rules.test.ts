@@ -1,6 +1,6 @@
 import {
   BOOKING_REQUEST_STATUS,
-  BOOKING_REQUEST_STATUS_VALUES,
+  BOOKING_REQUEST_STATUS_LIVE_VALUES,
   bookingRequestRespondBy,
   BOOKING_REQUEST_RESPOND_WINDOW_MINUTES,
   isBookingRequestPastDue,
@@ -58,12 +58,16 @@ describe('tab của hộp thư yêu cầu', () => {
     ]);
   });
 
-  it('tab GỘP mang đúng hai trạng thái cần quyết định, không kèm awaiting_hold', () => {
+  /**
+   * Tab "Cần xử lý" chỉ còn MỘT mã (08/10/2026): `hold_paid` thuộc luồng thu-trước-duyệt đã gỡ
+   * ở ADR 0055 và DB nay từ chối nó.
+   *
+   * `awaiting_hold` vẫn phải nằm NGOÀI tab này, và nay là ứng viên dễ thêm nhầm nhất — nó trông
+   * như đang chờ, nhưng chờ KHÁCH trả tiền chứ không chờ chủ xe làm gì.
+   */
+  it('tab Cần xử lý chỉ mang yêu cầu đang chờ chủ xe quyết, không kèm awaiting_hold', () => {
     const needsAction = REQUEST_INBOX_TABS[0];
-    expect(needsAction?.statuses).toEqual([
-      BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
-      BOOKING_REQUEST_STATUS.HOLD_PAID,
-    ]);
+    expect(needsAction?.statuses).toEqual([BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL]);
     expect(needsAction?.statuses).not.toContain(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
   });
 
@@ -106,12 +110,15 @@ describe('tab của hộp thư yêu cầu', () => {
    * Trừ `approved_by_host`: ADR 0047 điều 7 đã xác minh nó CHẾT (0 writer, 0 hàng ở cả DB dev
    * lẫn DB test), giữ trong enum chỉ vì test này còn tham chiếu.
    */
+  /*
+    "Còn sống" đọc từ `BOOKING_REQUEST_STATUS_LIVE_VALUES` thay vì tự lọc tay (08/10/2026):
+    danh sách đó là đúng tập CHECK `booking_requests_status_valid` cho phép, nên khi ADR tiếp
+    theo gỡ thêm một mã, test này theo ngay mà không cần ai nhớ sửa thêm một dòng `!==`.
+  */
   it('ba tab phủ hết mọi trạng thái còn sống', () => {
     const covered = new Set(REQUEST_INBOX_TABS.flatMap((tab) => [...tab.statuses]));
-    const alive = BOOKING_REQUEST_STATUS_VALUES.filter(
-      (status) =>
-        status !== BOOKING_REQUEST_STATUS.APPROVED_BY_HOST &&
-        status !== BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING,
+    const alive = BOOKING_REQUEST_STATUS_LIVE_VALUES.filter(
+      (status) => status !== BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING,
     );
     expect(alive.filter((status) => !covered.has(status))).toEqual([]);
   });
@@ -128,13 +135,14 @@ describe('filtersToParams', () => {
     expect(bookingRequestFiltersToParams({ status: BOOKING_REQUEST_STATUS_ALL }).status).toBeNull();
   });
 
-  it('dịch tab GỘP thành hai mã thật nối dấu phẩy', () => {
+  it('dịch tab GỘP thành mã thật của nó', () => {
     /*
      * MỘT chuỗi, không phải mảng: `QueryParams` của `@xeprime/api-client` cố ý không có kiểu
-     * mảng, backend tách chuỗi ở DTO. Thứ tự phải khớp web để hai client gửi cùng một URL.
+     * mảng, backend tách chuỗi ở DTO. Phải khớp web để hai client gửi cùng một URL — và web đã
+     * chỉ còn một mã từ khi ADR 0055 gỡ `hold_paid`.
      */
     expect(bookingRequestFiltersToParams({ status: BOOKING_REQUEST_TAB_NEEDS_ACTION }).status).toBe(
-      'pending_host_approval,hold_paid',
+      'pending_host_approval',
     );
   });
 
@@ -180,11 +188,21 @@ describe('statusCountOf', () => {
     expect(statusCountOf(counts, BOOKING_REQUEST_STATUS.REJECTED_BY_HOST)).toBe(0);
   });
 
-  it('tab GỘP cộng dồn hai trạng thái của nó', () => {
-    // Đếm hụt ở đây nghĩa là tab "Cần xử lý" báo 7 trong khi danh sách bên dưới có 10 việc.
-    const withHoldPaid = [...counts, { status: BOOKING_REQUEST_STATUS.HOLD_PAID, count: 3 }];
-    expect(statusCountOf(withHoldPaid, BOOKING_REQUEST_TAB_NEEDS_ACTION)).toBe(10);
-    expect(BOOKING_REQUEST_NEEDS_ACTION_STATUSES).toHaveLength(2);
+  /**
+   * Tab "Cần xử lý" chỉ còn MỘT mã (08/10/2026) — `hold_paid` thuộc luồng thu-trước-duyệt đã gỡ
+   * ở ADR 0055.
+   *
+   * Khoá độ dài ở đây là cố ý: thêm lại một mã vào tab này nghĩa là mời chủ xe "xử lý" một việc
+   * đã xong phần của họ, và `awaiting_hold` (đang chờ KHÁCH trả tiền) là ứng viên dễ bị thêm
+   * nhầm nhất — nó trông như đang chờ, nhưng chờ người khác.
+   */
+  it('tab Cần xử lý chỉ đếm yêu cầu đang chờ chủ xe quyết định', () => {
+    expect(statusCountOf(counts, BOOKING_REQUEST_TAB_NEEDS_ACTION)).toBe(7);
+    expect(BOOKING_REQUEST_NEEDS_ACTION_STATUSES).toHaveLength(1);
+
+    // `awaiting_hold` đã được chủ xe nhận — không còn việc gì cho họ, nên KHÔNG vào tab này.
+    const withAwaiting = [...counts, { status: BOOKING_REQUEST_STATUS.AWAITING_HOLD, count: 3 }];
+    expect(statusCountOf(withAwaiting, BOOKING_REQUEST_TAB_NEEDS_ACTION)).toBe(7);
   });
 
   /**

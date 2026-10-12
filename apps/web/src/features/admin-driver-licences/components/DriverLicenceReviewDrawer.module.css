@@ -1,0 +1,90 @@
+.record {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-lg);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-h4);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h4);
+}
+
+/* Ảnh bằng lái là thứ người duyệt nhìn NHIỀU nhất — to, nền trung tính, giữ nguyên tỉ lệ. */
+.imageFrame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 240px;
+  padding: var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-muted);
+}
+
+.image {
+  max-width: 100%;
+  max-height: 480px;
+  object-fit: contain;
+}
+
+.caption {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-sm);
+}
+
+.decided {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.form :global(.ant-form-item) {
+  margin-bottom: var(--xp-space-xs);
+}
+
+.formHint {
+  margin: 0 0 var(--xp-space-xs);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0 var(--xp-space-sm);
+}
+
+.drives {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-xs) var(--xp-space-md);
+}
+
+.drivesLabel {
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.derived {
+  margin: 0;
+  padding: var(--xp-space-sm);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}

@@ -52,6 +52,7 @@
     "expo-camera": "catalog:",
     "expo-clipboard": "catalog:",
     "expo-constants": "catalog:",
+    "expo-apple-authentication": "catalog:",
     "expo-crypto": "catalog:",
     "expo-document-picker": "catalog:",
     "expo-font": "catalog:",

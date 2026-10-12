@@ -35,6 +35,8 @@ import { ROUTES, listingPath, shopPath } from '@/constants/routes';
 import { useAuthModal, useNextFromCurrentPath } from '@/features/auth/components/AuthModalProvider';
 import { AUTH_MODE } from '@/features/auth/post-auth-destination';
 import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
+import { TripGatewayOptions } from '@/features/payment-gateway/components/TripGatewayOptions';
+import { TripGatewayReturn } from '@/features/payment-gateway/components/TripGatewayReturn';
 import { ReviewModal } from '@/features/reviews/components/ReviewModal';
 import { dayjs } from '@/lib/datetime';
 import { useDomainLabel } from '@/i18n/use-domain-label';
@@ -402,11 +404,23 @@ export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailVi
           */}
           {data.hold ? (
             <section className={styles.block}>
+              {/*
+                Quay về từ MoMo/VNPAY (ADR 0058): trạng thái lượt thanh toán, hỏi từ server — đứng
+                TRÊN khối tiền giữ chỗ vì đó là câu trả lời người vừa quay về đang tìm.
+              */}
+              <TripGatewayReturn tripId={data.id} />
               <TripHoldPanel
                 hold={data.hold}
                 tripId={data.id}
                 tripTotalAmount={data.estimate?.fees?.customerTotalAmount ?? null}
                 payAtHandoverAmount={data.estimate?.fees?.payAtPickupAmount ?? null}
+                gatewayOptions={
+                  <TripGatewayOptions
+                    tripId={data.id}
+                    amount={data.hold.remainingAmount}
+                    deadline={data.hold.expiresAt}
+                  />
+                }
               />
             </section>
           ) : null}

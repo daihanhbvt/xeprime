@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { Provider as ReduxProvider } from 'react-redux';
-import { BOOKING_REQUEST_STATUS, PERMISSION, type Permission } from '@xeprime/types';
+import { BILLING_MODE, BOOKING_REQUEST_STATUS, PERMISSION, type Permission } from '@xeprime/types';
 import viBookingRequests from '@xeprime/domain/messages/vi/booking-requests.json';
 import * as authApi from '@/features/auth/api';
 import { withIntl } from '@/i18n/test-utils';
@@ -64,6 +64,7 @@ function renderCard(
   item: BookingRequestItem,
   permissions: Permission[] = ALL,
   onOpenDetail: (request: BookingRequestItem) => void = jest.fn(),
+  billingMode: string = BILLING_MODE.PACKAGE,
 ) {
   jest.spyOn(authApi, 'fetchCurrentUser').mockResolvedValue({
     id: '01JQZX00000000000000000USR',
@@ -73,7 +74,7 @@ function renderCard(
     phone: null,
     phoneVerified: true,
     hasPassword: true,
-    tenant: null,
+    tenant: { id: '01JQZX00000000000000000TEN', billingMode },
     openRenterTripCount: 0,
     platformRole: null,
     permissions,
@@ -169,6 +170,13 @@ describe('BookingRequestCard — lối vào hồ sơ khách / xe', () => {
     expect(view.queryByRole('link', { name: 'Nguyễn Văn An' })).toBeNull();
     await fireEvent.press(view.getByText('Nguyễn Văn An'));
     expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('gian hàng tuyến HOA HỒNG: tên khách chỉ là chữ dù có quyền (sổ khách @SubscriptionTrackOnly)', async () => {
+    const view = await renderCard(request(), ALL, jest.fn(), BILLING_MODE.COMMISSION);
+
+    await view.findByRole('link', { name: 'Toyota Vios 2022' });
+    expect(view.queryByRole('link', { name: 'Nguyễn Văn An' })).toBeNull();
   });
 
   it('tên xe mở hồ sơ xe khi có quyền xem xe', async () => {

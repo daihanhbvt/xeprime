@@ -4,13 +4,17 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { PERMISSION, PLAN_FEATURE } from '@xeprime/types';
 import { queryKeys } from '@/services/query-keys';
 import type { ReceiptListResult } from '@/features/finance/api';
-import type { FinanceSummary } from '@/features/finance/types';
+import type { FinanceSeries, FinanceSummary } from '@/features/finance/types';
 import { useFeature } from '@/hooks/use-feature';
 import { usePermissions } from '@/hooks/use-permissions';
 import {
+  dashboardFinanceSeriesParams,
   dashboardFinanceSummaryParams,
+  dashboardPreviousFinanceSummaryParams,
   dashboardTodayReceiptParams,
+  fetchDashboardFinanceSeries,
   fetchDashboardFinanceSummary,
+  fetchDashboardPreviousFinanceSummary,
   fetchDashboardTodayReceipts,
 } from '../api';
 
@@ -25,15 +29,21 @@ export interface DashboardMoney {
    */
   visible: boolean;
   summary: UseQueryResult<FinanceSummary>;
+  /** Cùng phép tính, CÙNG KỲ tháng trước — mẫu số của mũi tên tăng/giảm. */
+  previousSummary: UseQueryResult<FinanceSummary>;
+  /** Doanh thu · chi phí · lợi nhuận theo ngày, 30 ngày gần nhất. */
+  series: UseQueryResult<FinanceSeries>;
   todayReceipts: UseQueryResult<ReceiptListResult>;
 }
 
 /**
- * Tiền thật của dashboard: doanh thu THÁNG NÀY, cọc đang giữ, và sổ quỹ HÔM NAY.
+ * Tiền thật của dashboard tuyến gói: doanh thu THÁNG NÀY (và cùng kỳ tháng trước), cọc đang giữ,
+ * chuỗi 30 ngày và sổ quỹ HÔM NAY — tất cả đọc từ sổ thu chi, cùng endpoint với màn Tổng quan
+ * doanh thu.
  *
- * Bậc cơ bản không có sổ tổng hợp (ADR 0027 điều 1) — khi đó `visible` là `false` và hai truy
- * vấn KHÔNG chạy, thay vì chạy rồi nuốt 403. `enabled` là chỗ duy nhất quyết định điều đó, nên
- * không có đường nào để một thẻ tiền hiện lên với dữ liệu rỗng mà trông như "chưa có doanh thu".
+ * Bậc không có sổ tổng hợp (ADR 0027 điều 1) — khi đó `visible` là `false` và các truy vấn
+ * KHÔNG chạy, thay vì chạy rồi nuốt 403. `enabled` là chỗ duy nhất quyết định điều đó, nên không
+ * có đường nào để một thẻ tiền hiện lên với dữ liệu rỗng mà trông như "chưa có doanh thu".
  */
 export function useDashboardMoney(branchId?: string): DashboardMoney {
   const finance = useFeature(PLAN_FEATURE.FINANCE);
@@ -47,6 +57,21 @@ export function useDashboardMoney(branchId?: string): DashboardMoney {
     staleTime: 60_000,
   });
 
+  const previousSummary = useQuery({
+    queryKey: queryKeys.finance.summary(dashboardPreviousFinanceSummaryParams(branchId)),
+    queryFn: () => fetchDashboardPreviousFinanceSummary(branchId),
+    enabled: visible,
+    // Quá khứ không đổi theo phút — chỉ một phiếu duyệt muộn mới làm nó nhúc nhích.
+    staleTime: 5 * 60_000,
+  });
+
+  const series = useQuery({
+    queryKey: queryKeys.finance.series(dashboardFinanceSeriesParams(branchId)),
+    queryFn: () => fetchDashboardFinanceSeries(branchId),
+    enabled: visible,
+    staleTime: 60_000,
+  });
+
   const todayReceipts = useQuery({
     queryKey: queryKeys.receipts.list(dashboardTodayReceiptParams(branchId)),
     queryFn: () => fetchDashboardTodayReceipts(branchId),
@@ -54,5 +79,5 @@ export function useDashboardMoney(branchId?: string): DashboardMoney {
     staleTime: 60_000,
   });
 
-  return { visible, summary, todayReceipts };
+  return { visible, summary, previousSummary, series, todayReceipts };
 }

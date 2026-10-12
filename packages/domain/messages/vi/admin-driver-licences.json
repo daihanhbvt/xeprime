@@ -1,0 +1,130 @@
+{
+  "page": {
+    "title": "Bằng lái của khách",
+    "subtitle": "Duyệt các lượt nộp bằng lái mà hệ thống chưa tự xác thực được. Khách đặt được xe tự lái ngay khi bằng được xác thực.",
+    "tableLabel": "Danh sách lượt nộp bằng lái",
+    "loadError": "Không tải được danh sách bằng lái.",
+    "empty": "Không có lượt nộp nào ở trạng thái này.",
+    "emptyPending": "Không còn lượt nộp nào chờ duyệt.",
+    "total": "{count, plural, other {# lượt nộp}}"
+  },
+  "tabs": {
+    "label": "Trạng thái lượt nộp",
+    "pending": "Chờ duyệt",
+    "verified": "Đã xác thực",
+    "rejected": "Không hợp lệ"
+  },
+  "filters": {
+    "search": "Tìm kiếm",
+    "searchPlaceholder": "Họ tên, số bằng, tên hoặc SĐT tài khoản",
+    "kind": "Loại bằng"
+  },
+  "columns": {
+    "account": "Tài khoản",
+    "fullName": "Họ tên trên bằng",
+    "kind": "Loại bằng",
+    "classes": "Hạng",
+    "expiresOn": "Hết hạn",
+    "status": "Trạng thái",
+    "pendingReason": "Lý do chờ",
+    "submittedAt": "Gửi lúc"
+  },
+  "pendingReason": {
+    "low_confidence": "Ảnh chưa đủ chắc chắn",
+    "implausible_birth_date": "Ngày sinh bất thường",
+    "implausible_expiry": "Hạn bằng bất thường",
+    "reader_unavailable": "Chưa đọc tự động được",
+    "customer_request": "Khách nhờ xem lại"
+  },
+  "drawer": {
+    "title": "Bằng lái",
+    "ariaLabel": "Bằng lái của {name}",
+    "previous": "Lượt trước",
+    "next": "Lượt sau",
+    "loadError": "Không tải được lượt nộp.",
+    "image": {
+      "title": "Ảnh mặt trước",
+      "alt": "Ảnh bằng lái khách đã nộp",
+      "loadFailed": "Không mở được ảnh.",
+      "retry": "Tải lại ảnh",
+      "zoomHint": "Bấm vào ảnh để phóng to."
+    },
+    "account": {
+      "title": "Tài khoản",
+      "name": "Tên tài khoản",
+      "phone": "Số điện thoại",
+      "email": "Email",
+      "submittedAt": "Gửi lúc",
+      "reviewRequestedAt": "Khách nhờ xem lại lúc"
+    },
+    "reading": {
+      "title": "Kết quả đọc tự động",
+      "pendingReason": "Vì sao chờ duyệt",
+      "provider": "Bộ đọc",
+      "confidence": "Độ tin cậy",
+      "notes": "Ghi chú của bộ đọc",
+      "error": "Lỗi bộ đọc",
+      "confidenceValues": {
+        "high": "Cao",
+        "medium": "Trung bình",
+        "low": "Thấp"
+      }
+    },
+    "decided": {
+      "title": "Kết quả",
+      "source": "Quyết định bởi",
+      "sourceAuto": "Hệ thống tự động",
+      "by": "Người duyệt",
+      "at": "Lúc",
+      "reason": "Lý do",
+      "note": "Lời nhắn cho khách"
+    }
+  },
+  "form": {
+    "title": "Thông tin đối chiếu",
+    "hint": "Đối chiếu từng trường với ảnh, sửa chỗ đọc sai rồi bấm Xác thực.",
+    "kind": "Loại bằng",
+    "fullName": "Họ tên",
+    "licenceNumber": "Số bằng",
+    "dateOfBirth": "Ngày sinh",
+    "classes": "Hạng",
+    "classesHelp": "Các hạng cách nhau bằng dấu phẩy, ví dụ: A1, B2",
+    "issuedOn": "Ngày cấp",
+    "expiresOn": "Có giá trị đến",
+    "noExpiry": "Bằng không thời hạn",
+    "issuingCountry": "Nơi cấp (mã quốc gia 2 chữ, ví dụ US)",
+    "drives": "Lái được",
+    "coversCar": "Ô tô",
+    "coversMotorbike": "Xe máy",
+    "drivesDerived": "Suy tự động từ hạng: {value}",
+    "drivesNone": "không lái được loại xe nào",
+    "errors": {
+      "fullName": "Nhập họ tên trên bằng",
+      "licenceNumber": "Nhập số bằng",
+      "classes": "Nhập ít nhất một hạng",
+      "expiresOn": "Nhập ngày hết hạn hoặc chọn không thời hạn",
+      "country": "Mã quốc gia gồm 2 chữ cái"
+    }
+  },
+  "actions": {
+    "approve": "Xác thực",
+    "reject": "Từ chối"
+  },
+  "reject": {
+    "title": "Từ chối bằng lái",
+    "choiceLabel": "Lý do",
+    "choiceRequired": "Chọn một lý do",
+    "label": "Lời nhắn cho khách",
+    "placeholder": "Ví dụ: Ảnh bị che mất số bằng, vui lòng chụp lại.",
+    "required": "Lý do \"khác\" cần một lời nhắn cho khách",
+    "audience": "Khách thấy lý do và lời nhắn này, rồi nộp ảnh khác."
+  },
+  "footer": {
+    "pending": "Đối chiếu ảnh với thông tin rồi quyết định.",
+    "decided": "Lượt nộp này đã có kết quả."
+  },
+  "toasts": {
+    "approved": "Đã xác thực bằng lái.",
+    "rejected": "Đã từ chối bằng lái."
+  }
+}

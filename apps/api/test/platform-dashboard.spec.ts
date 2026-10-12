@@ -4,10 +4,16 @@ import {
   APPROVAL_STATUS,
   APPROVAL_TARGET_TYPE,
   LISTING_STATUS,
+  PERMISSION,
+  PLATFORM_DASHBOARD_TREND_DAYS,
+  PLATFORM_ROLE,
   SERVICE_TYPE,
   TENANT_STATUS,
   VEHICLE_TYPE,
+  type Permission,
 } from '@xeprime/types';
+import { vnDateKey } from '../src/common/day-range';
+import type { PlatformContext } from '../src/common/types/request-context';
 import { PlatformDashboardService } from '../src/modules/platform-admin/platform-dashboard.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 
@@ -163,5 +169,56 @@ describe('Platform dashboard (Phase 7)', () => {
       expect(typeof t.name).toBe('string');
       expect(typeof t.status).toBe('string');
     }
+  });
+});
+
+/**
+ * Tổng quan mở rộng — KPI tháng, xu hướng 30 ngày, phễu. Cùng kỷ luật với khối trên: bảng global
+ * bị suite khác ghi song song, nên chỉ assert HÌNH DẠNG, CẬN DƯỚI và BẤT BIẾN nội tại.
+ */
+describe('PlatformDashboardService.overview', () => {
+  const staff = (...permissions: Permission[]): PlatformContext => ({
+    roleKey: PLATFORM_ROLE.PLATFORM_STAFF,
+    permissions,
+  });
+
+  maybe('thiếu quyền đơn/tiền ⇒ hai khối đó null; phễu + tăng trưởng vẫn có', async () => {
+    const res = await service.overview(staff(PERMISSION.PLATFORM_DASHBOARD_VIEW));
+    expect(res.activity).toBeNull();
+    expect(res.revenue).toBeNull();
+    expect(res.growth.newPartners.current).toBeGreaterThanOrEqual(0);
+    expect(res.period).toMatch(/^\d{4}-\d{2}$/);
+  });
+
+  maybe('phễu không bao giờ phình ở giữa — mỗi bậc là tập con của bậc trước', async () => {
+    const { funnel } = await service.overview(staff(PERMISSION.PLATFORM_DASHBOARD_VIEW));
+    expect(funnel.registered).toBeGreaterThanOrEqual(funnel.withVehicle);
+    expect(funnel.withVehicle).toBeGreaterThanOrEqual(funnel.withListing);
+    expect(funnel.withListing).toBeGreaterThanOrEqual(funnel.withBooking);
+    expect(funnel.withBooking).toBeGreaterThanOrEqual(funnel.withCompletedTrip);
+  });
+
+  maybe('xu hướng đủ 30 ngày lịch VN, cũ → mới, kết thúc HÔM NAY; GMV là chuỗi tiền', async () => {
+    const now = new Date();
+    const res = await service.overview(staff(PERMISSION.PLATFORM_BOOKING_VIEW), now);
+    const activity = res.activity!;
+
+    expect(activity.series).toHaveLength(PLATFORM_DASHBOARD_TREND_DAYS);
+    const dates = activity.series.map((d) => d.date);
+    expect([...dates].sort()).toEqual(dates);
+    expect(new Set(dates).size).toBe(dates.length);
+    expect(dates.at(-1)).toBe(vnDateKey(now));
+    for (const day of activity.series) expect(day.gmv).toMatch(/^-?\d+$/);
+
+    expect(activity.gmv.current).toMatch(/^\d+$/);
+    expect(activity.cancelled.current).toBeLessThanOrEqual(activity.bookings.current);
+  });
+
+  maybe('có quyền tiền ⇒ doanh thu = phí dịch vụ ròng + tiền gói', async () => {
+    const res = await service.overview(staff(PERMISSION.PLATFORM_MONEY_MANAGE));
+    const revenue = res.revenue!;
+    const sum = (a: string, b: string) => (BigInt(a) + BigInt(b)).toString();
+    expect(revenue.total.current).toBe(sum(revenue.serviceFee.current, revenue.subscriptions.current));
+    expect(revenue.total.previous).toBe(sum(revenue.serviceFee.previous, revenue.subscriptions.previous));
   });
 });

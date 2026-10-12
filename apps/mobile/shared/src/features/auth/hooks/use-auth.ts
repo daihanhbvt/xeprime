@@ -14,6 +14,7 @@ import {
   fetchCurrentUser,
   loginWithOtp,
   loginWithPassword,
+  loginWithApple,
   loginWithSocial,
   registerWithPassword,
   type CurrentUser,
@@ -70,6 +71,17 @@ export function useSocialLogin() {
   return useMutation({
     mutationFn: (values: { provider: AuthProvider; locale: string }) =>
       loginWithSocial(values.provider, values.locale),
+    onSuccess: (user) => {
+      if (user) seedSession(queryClient, user);
+    },
+  });
+}
+
+export function useAppleLogin() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => loginWithApple(),
     onSuccess: (user) => {
       if (user) seedSession(queryClient, user);
     },

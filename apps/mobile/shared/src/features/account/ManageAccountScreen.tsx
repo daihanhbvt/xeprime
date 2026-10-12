@@ -1,22 +1,24 @@
 import { Text, YStack } from 'tamagui';
-import { TENANT_ROLE } from '@xeprime/types';
+import { PERMISSION } from '@xeprime/types';
 import { useTranslations } from 'use-intl';
 import { Screen } from '@/components/layout/Screen';
 import { ProfileSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { AppVersion } from '@/components/ui/AppVersion';
-import { Card } from '@/components/ui/Card';
-import { SettingRow } from '@/components/ui/SettingRow';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
 import { InlineAction } from '@/components/ui/InlineAction';
 import { useShopSettingsAccess } from '@/features/shop/hooks/use-shop-settings-access';
-import { PARTNER_TRACK, resolvePartnerTrack } from '@/features/shell/partner-track';
+import { isCommissionOwner as isCommissionOwnerOf } from '@/features/shell/partner-track';
+import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import type { AccountSection } from '@/navigation/account-section';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { colors, fontSize, space } from '@/theme/tokens';
+import { AccountSecuritySections, SectionHead } from './components/AccountSecuritySections';
 import { PersonalProfileCard } from './components/PersonalProfileCard';
+import { OwnerProfileScreen } from './OwnerProfileScreen';
 import { useMyProfile } from './hooks/use-account';
 import { useAccountIdentityLabel } from './use-account-identity-label';
 
@@ -50,9 +52,21 @@ import { useAccountIdentityLabel } from './use-account-identity-label';
  * cỡ chữ cùng màu, là mời người dùng chạm nhầm vào thứ không rút lại được.
  */
 
-export function ManageAccountScreen() {
-  const t = useTranslations('Navigation');
-  const tAccount = useTranslations('Account');
+export function ManageAccountScreen({ section }: { section?: AccountSection } = {}) {
+  const { data: user } = useCurrentUser();
+  const { has } = usePermissions();
+  /*
+   * MỘT URL, nội dung theo tuyến (web `PartnerAccountRoute`, PR #156): CHỦ xe tuyến hoa hồng có
+   * `tenant.view` → "Hồ sơ chủ xe"; mọi người khác → "Tài khoản & bảo mật". Thiếu `tenant.view`
+   * thì vẫn bản thường — quản lý được tài khoản của mình thay vì đứng trước trang không tải nổi.
+   */
+  if (isCommissionOwnerOf(user) && has(PERMISSION.TENANT_VIEW)) {
+    return <OwnerProfileScreen {...(section ? { section } : {})} />;
+  }
+  return <PartnerAccountScreen />;
+}
+
+function PartnerAccountScreen() {
   const tHub = useTranslations('Account.hub');
   const canOpenShopSettings = useShopSettingsAccess();
   const navigateOnce = useNavigateOnce();
@@ -64,9 +78,7 @@ export function ManageAccountScreen() {
    */
   const profile = useMyProfile();
   const tenant = user?.tenant ?? null;
-  const isCommissionOwner =
-    tenant?.roleKey === TENANT_ROLE.SHOP_OWNER &&
-    resolvePartnerTrack(user) === PARTNER_TRACK.COMMISSION;
+  const isCommissionOwner = isCommissionOwnerOf(user);
 
   /* Nhãn danh tính — xem `useAccountIdentityLabel`: tuyến, không phải vai RBAC. */
   const userRole = identityLabel(user);
@@ -130,15 +142,16 @@ export function ManageAccountScreen() {
           />
           {/*
             Tài khoản ≠ gian hàng: tên/ảnh ở đây là của con người; tên, logo, SĐT liên hệ khách thấy là
-            của gian hàng. Chủ xe tuyến hoa hồng khác một điểm — trang chủ xe dùng ảnh này khi chưa có
-            logo (web `AccountProfileForm`).
+            của gian hàng. Một câu cho mọi tuyến, đúng web `AccountProfileForm` sau PR #156 (danh tính
+            trang chủ xe tuyến hoa hồng nay do server suy — ADR 0054).
           */}
           {tenant ? (
             <YStack gap={space.xs}>
               <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                {isCommissionOwner ? tHub('profile.storefrontFallback') : tHub('profile.notShop')}
+                {tHub('profile.notShop')}
               </Text>
-              {canOpenShopSettings ? (
+              {/* Chủ xe tuyến hoa hồng không có trang Cửa hàng (`/manage/shop` → hồ sơ chủ xe). */}
+              {canOpenShopSettings && !isCommissionOwner ? (
                 <InlineAction
                   label={tHub('profile.shopSettingsLink')}
                   onPress={() => navigateOnce(ROUTES.manage.shop())}
@@ -146,61 +159,11 @@ export function ManageAccountScreen() {
               ) : null}
             </YStack>
           ) : null}
-          <SectionHead title={tHub('sections.password')} hint={tHub('sections.passwordHint')} />
-
-          <Card padded={false}>
-            <YStack px={space.md} py={space.xs}>
-              <SettingRow
-                icon="lock-closed-outline"
-                label={t('account.changePassword')}
-                description={tAccount('changePassword.subtitle')}
-                href={ROUTES.account.changePassword()}
-              />
-            </YStack>
-          </Card>
-
-          <SectionHead title={tHub('sections.delete')} hint={tHub('sections.deleteHint')} danger />
-          {/*
-            Xoá tài khoản đứng RIÊNG một thẻ, tông nguy hiểm. Xếp nó ngay dưới "đổi mật khẩu",
-            cùng cỡ chữ cùng màu, là mời người dùng chạm nhầm vào thứ không rút lại được.
-          */}
-          <Card padded={false}>
-            <YStack px={space.md} py={space.xs}>
-              <SettingRow
-                icon="trash-outline"
-                label={t('account.deleteAccount')}
-                description={tAccount('deleteAccount.subtitle')}
-                href={ROUTES.account.deleteAccount()}
-                danger
-              />
-            </YStack>
-          </Card>
+          <AccountSecuritySections />
 
           <AppVersion />
         </YStack>
       </Screen>
     </>
-  );
-}
-
-/** Tiêu đề + lời dẫn một phần của trang — gương `SectionCard` (title/hint) bên web. */
-function SectionHead({
-  title,
-  hint,
-  danger = false,
-}: {
-  title: string;
-  hint: string;
-  danger?: boolean;
-}) {
-  return (
-    <YStack gap={2} mb={-space.sm}>
-      <Text col={danger ? colors.danger : colors.text} fos={fontSize.h4} fow={fontWeight.semibold}>
-        {title}
-      </Text>
-      <Text col={colors.textMuted} fos={fontSize.bodySm}>
-        {hint}
-      </Text>
-    </YStack>
   );
 }

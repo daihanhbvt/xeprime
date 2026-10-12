@@ -3,9 +3,10 @@
 import { Alert, Form } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useEffect, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch, type Resolver } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import * as yup from 'yup';
+import { RadioGroupField, type RadioGroupFieldOption } from '@/components/form/RadioGroupField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import styles from './ReasonDialog.module.css';
@@ -27,15 +28,26 @@ interface ReasonDialogProps {
   /** Mặc định `true` (từ chối, đảo lệnh, bỏ qua). Quyết định không phá huỷ (chốt, khớp) truyền `false`. */
   destructive?: boolean;
   loading: boolean;
-  onSubmit: (reason: string) => void;
+  /**
+   * Lý do CÓ MÃ — khi quyết định đi kèm một mã mà phía bên kia đọc thành câu riêng (vd mã từ chối
+   * bằng lái → câu hướng dẫn khách chụp lại). Có `choices` thì người dùng BẮT BUỘC chọn một mã,
+   * còn ô chữ thành lời nhắn kèm theo — chỉ bắt buộc với các mã ở `textRequiredFor`.
+   */
+  choices?: readonly RadioGroupFieldOption[];
+  choiceLabel?: string;
+  choiceRequiredMessage?: string;
+  textRequiredFor?: readonly string[];
+  /** `choice` chỉ có khi khai `choices`; chuỗi lời nhắn có thể rỗng khi mã không đòi lời nhắn. */
+  onSubmit: (reason: string, choice?: string) => void;
   onClose: () => void;
 }
 
 /**
  * Hộp nhập LÝ DO cho một quyết định phải có người chịu trách nhiệm — mở từ CHÂN panel làm việc
  * (`WorkDrawer`) hay từ nút trên một dòng: từ chối hoàn, từ chối / đảo lệnh rút, chốt kết cục giữ
- * chỗ, khớp tay tiền vào, vô hiệu hợp đồng bảo hiểm. Một chỗ dùng chung để mọi quyết định có cùng
- * một hình thức: lý do bắt buộc, nói rõ ai đọc nó, nút xác nhận màu nguy hiểm khi phá huỷ.
+ * chỗ, khớp tay tiền vào, vô hiệu hợp đồng bảo hiểm, từ chối bằng lái. Một chỗ dùng chung để mọi
+ * quyết định có cùng một hình thức: lý do bắt buộc, nói rõ ai đọc nó, nút xác nhận màu nguy hiểm
+ * khi phá huỷ.
  *
  * Form RESET mỗi lần mở — lý do của quyết định trước không bao giờ điền sẵn cho quyết định sau.
  * Enter trong ô nhập gửi form kể cả khi nút OK đang quay, nên lượt gửi thứ hai bị chặn ở đây.
@@ -53,37 +65,63 @@ export function ReasonDialog({
   submitText,
   destructive = true,
   loading,
+  choices,
+  choiceLabel,
+  choiceRequiredMessage,
+  textRequiredFor,
   onSubmit,
   onClose,
 }: ReasonDialogProps) {
   const tCommon = useTranslations('Common');
-  const schema = useMemo(
-    () =>
-      yup.object({
-        reason: yup
-          .string()
-          .trim()
-          .min(minLength, requiredMessage)
-          .max(maxLength, tCommon('validation.maxLength', { max: maxLength }))
-          .required(requiredMessage),
-      }),
-    [minLength, maxLength, requiredMessage, tCommon],
-  );
+  const hasChoices = Boolean(choices && choices.length > 0);
+  const schema = useMemo(() => {
+    const text = yup
+      .string()
+      .trim()
+      .max(maxLength, tCommon('validation.maxLength', { max: maxLength }));
+    const required = text.min(minLength, requiredMessage).required(requiredMessage);
+    return yup.object({
+      choice: hasChoices
+        ? yup.string().required(choiceRequiredMessage ?? requiredMessage)
+        : yup.string().default(''),
+      reason: hasChoices
+        ? yup
+            .string()
+            .when('choice', ([choice]: unknown[]) =>
+              textRequiredFor?.includes(String(choice)) ? required : text.default(''),
+            )
+        : required,
+    });
+  }, [
+    hasChoices,
+    minLength,
+    maxLength,
+    requiredMessage,
+    choiceRequiredMessage,
+    textRequiredFor,
+    tCommon,
+  ]);
 
-  type FormValues = yup.InferType<typeof schema>;
+  type FormValues = { choice?: string; reason?: string };
 
   const { control, handleSubmit, reset } = useForm<FormValues>({
-    resolver: yupResolver(schema),
-    defaultValues: { reason: '' },
+    // Schema đổi hình theo `choices` (nhánh `.when`), nên kiểu suy ra của yup không khớp một
+    // `FormValues` cố định — ép ở MỘT chỗ này thay vì để nó lan ra nơi gọi.
+    resolver: yupResolver(schema) as unknown as Resolver<FormValues>,
+    defaultValues: { choice: '', reason: '' },
   });
+  const choice = useWatch({ control, name: 'choice' });
+  const textRequired = !hasChoices || Boolean(choice && textRequiredFor?.includes(choice));
 
   useEffect(() => {
-    if (open) reset({ reason: '' });
+    if (open) reset({ choice: '', reason: '' });
   }, [open, reset]);
 
   const submit = handleSubmit((values) => {
     if (loading) return;
-    onSubmit(values.reason.trim());
+    const reason = (values.reason ?? '').trim();
+    if (hasChoices) onSubmit(reason, values.choice);
+    else onSubmit(reason);
   });
 
   return (
@@ -101,6 +139,15 @@ export function ReasonDialog({
         <form className={styles.form} noValidate onSubmit={(e) => void submit(e)}>
           {summary ? <Alert type="info" showIcon title={summary} /> : null}
           {audienceHint ? <p className={styles.hint}>{audienceHint}</p> : null}
+          {hasChoices ? (
+            <RadioGroupField
+              control={control}
+              name="choice"
+              label={choiceLabel}
+              options={choices!}
+              required
+            />
+          ) : null}
           <TextAreaField
             control={control}
             name="reason"
@@ -108,7 +155,7 @@ export function ReasonDialog({
             placeholder={placeholder}
             rows={3}
             maxLength={maxLength}
-            required
+            required={textRequired}
           />
         </form>
       </Form>

@@ -53,6 +53,11 @@ export class TaxQueueSummaryDto extends MoneyQueueCountDto {
 export class PlatformMoneySummaryDto {
   @ApiProperty({ type: BankInQueueSummaryDto, description: 'Tiền vào CHƯA KHỚP' })
   bankIn!: BankInQueueSummaryDto;
+  @ApiProperty({
+    type: MoneyQueueCountDto,
+    description: 'Lượt thanh toán qua cổng MoMo/VNPAY CẦN NGƯỜI XỬ LÝ (ADR 0058)',
+  })
+  gatewayIn!: MoneyQueueCountDto;
   @ApiProperty({ type: HoldQueueSummaryDto, description: 'Giữ chỗ ĐÃ TRẢ, chưa chốt kết cục' })
   holds!: HoldQueueSummaryDto;
   @ApiProperty({ type: MoneyQueueCountDto, description: 'Khoản hoàn CHỜ CHUYỂN tay' })

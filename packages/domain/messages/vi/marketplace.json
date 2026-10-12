@@ -115,7 +115,21 @@
     "endNote": "Đã hiển thị tất cả {count, plural, other {# xe}}",
     "title": "Tìm xe cho thuê",
     "removeFilter": "Bỏ lọc {label}",
-    "clearAll": "Xoá tất cả"
+    "clearAll": "Xoá tất cả",
+    "availableFor": "{count, plural, other {# xe}} khớp “{q}”",
+    "emptyKeywordTitle": "Không tìm thấy xe khớp “{q}”",
+    "emptyKeywordDesc": "Thử gõ ngắn hơn — chỉ tên hãng hoặc dòng xe (vd. “vios”, “vf8”), hoặc tên chủ xe. Không cần gõ dấu.",
+    "clearKeyword": "Xoá từ khoá",
+    "keyword": {
+      "placeholder": "Tìm tên xe, chủ xe hoặc gian hàng",
+      "ariaLabel": "Tìm xe theo tên xe, chủ xe hoặc gian hàng",
+      "hostsGroup": "Chủ xe & gian hàng",
+      "shop": "Gian hàng",
+      "owner": "Chủ xe",
+      "verified": "Gian hàng đã được XePrime xác minh",
+      "vehicleCount": "{count, plural, other {# xe}}",
+      "searchAll": "Xem mọi xe khớp “{q}”"
+    }
   },
   "filterPanel": {
     "title": "Bộ lọc",

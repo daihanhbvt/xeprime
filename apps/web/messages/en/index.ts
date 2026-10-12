@@ -54,10 +54,12 @@ import approvals from '@xeprime/domain/messages/en/approvals.json';
 import platformDashboard from '@xeprime/domain/messages/en/platform-dashboard.json';
 import bankTransactions from '@xeprime/domain/messages/en/bank-transactions.json';
 import subscription from '@xeprime/domain/messages/en/subscription.json';
+import paymentGateway from '@xeprime/domain/messages/en/payment-gateway.json';
 import members from '@xeprime/domain/messages/en/members.json';
 import drivers from '@xeprime/domain/messages/en/drivers.json';
 import maintenance from '@xeprime/domain/messages/en/maintenance.json';
 import bankAccounts from '@xeprime/domain/messages/en/bank-accounts.json';
+import driverLicence from '@xeprime/domain/messages/en/driver-licence.json';
 import accountPayments from '@xeprime/domain/messages/en/account-payments.json';
 import wallet from '@xeprime/domain/messages/en/wallet.json';
 import sellerProfile from '@xeprime/domain/messages/en/seller-profile.json';
@@ -66,6 +68,7 @@ import feePolicies from '@xeprime/domain/messages/en/fee-policies.json';
 import promoCodes from '@xeprime/domain/messages/en/promo-codes.json';
 import platformMoney from '@xeprime/domain/messages/en/platform-money.json';
 import platformSellers from '@xeprime/domain/messages/en/platform-sellers.json';
+import adminDriverLicences from '@xeprime/domain/messages/en/admin-driver-licences.json';
 import adminStaff from '@xeprime/domain/messages/en/admin-staff.json';
 import adminAccounts from '@xeprime/domain/messages/en/admin-accounts.json';
 import adminAudit from '@xeprime/domain/messages/en/admin-audit.json';
@@ -113,10 +116,12 @@ const messages = {
   PlatformDashboard: platformDashboard,
   BankTransactions: bankTransactions,
   Subscription: subscription,
+  PaymentGateway: paymentGateway,
   Members: members,
   Drivers: drivers,
   Maintenance: maintenance,
   BankAccounts: bankAccounts,
+  DriverLicence: driverLicence,
   AccountPayments: accountPayments,
   Wallet: wallet,
   SellerProfile: sellerProfile,
@@ -125,6 +130,7 @@ const messages = {
   PromoCodes: promoCodes,
   PlatformMoney: platformMoney,
   PlatformSellers: platformSellers,
+  AdminDriverLicences: adminDriverLicences,
   AdminStaff: adminStaff,
   AdminAccounts: adminAccounts,
   AdminAudit: adminAudit,

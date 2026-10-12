@@ -38,6 +38,11 @@ export type { ListingSort };
  * thao tác của người dùng.
  */
 export interface MarketplaceFilters {
+  /**
+   * Từ khoá — tên xe/hãng/model hoặc tên công khai của chủ xe/gian hàng. Server gấp chuỗi
+   * (không dấu, khớp đầu từ — `searchTokens` ở @xeprime/domain), client gửi nguyên văn.
+   */
+  q?: string;
   vehicleType?: string;
   /**
    * Loại dịch vụ (SERVICE_TYPE) — tab Xe tự lái / Xe có tài xế / Thuê dài hạn của thẻ tìm kiếm.

@@ -4,12 +4,13 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import type { Href } from 'expo-router';
 import { LocaleSwitcher } from '@/components/i18n/LocaleSwitcher';
+import { Avatar } from '@/components/ui/Avatar';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { AccountTrackBadge } from '@/features/account/components/AccountTrackBadge';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
-import { colors, fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
+import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import type { IconName } from '@/components/ui/Chip';
 import { LogoutRow } from './LogoutRow';
 import { useManageDrawer } from './ManageDrawerHost';
@@ -40,7 +41,7 @@ import { useShopSettingsAccess } from '@/features/shop/hooks/use-shop-settings-a
  */
 export function ManageAccountSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const t = useTranslations('ManageCommon.shell');
-  const tAccount = useTranslations('Account');
+  const tCommon = useTranslations('Common');
   const navigateOnce = useNavigateOnce();
   const drawer = useManageDrawer();
   const { data: user } = useCurrentUser();
@@ -66,9 +67,41 @@ export function ManageAccountSheet({ open, onClose }: { open: boolean; onClose: 
             Nhãn TUYẾN mở đầu, đúng như web: tên gói đang trả tiền / % phí dịch vụ đang thu / gói
             đang hỏng (ADR 0038) — thứ mà chip vai trên thẻ ở chân drawer không nói được.
           */}
-          {user?.tenant ? (
-            <XStack px={space.md} pb={space.sm}>
-              <AccountTrackBadge tenant={user.tenant} size="sm" />
+          {user ? (
+            <XStack
+              ai="center"
+              gap={space.sm}
+              mx={space.md}
+              mb={space.sm}
+              p={space.md}
+              br={radius.md}
+              bg={colors.primaryLight}
+            >
+              <Avatar
+                name={user.displayName || user.email || ''}
+                url={user.avatarUrl}
+                size={AVATAR_SIZE}
+              />
+              <YStack f={1} minWidth={0} gap={2}>
+                <Text
+                  col={colors.text}
+                  fos={fontSize.body}
+                  fow={fontWeight.semibold}
+                  numberOfLines={1}
+                >
+                  {user.displayName || user.email}
+                </Text>
+                {user.email || user.phone ? (
+                  <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
+                    {user.email || user.phone}
+                  </Text>
+                ) : null}
+                {user.tenant ? (
+                  <XStack pt={2}>
+                    <AccountTrackBadge tenant={user.tenant} size="sm" />
+                  </XStack>
+                ) : null}
+              </YStack>
             </XStack>
           ) : null}
 
@@ -88,9 +121,9 @@ export function ManageAccountSheet({ open, onClose }: { open: boolean; onClose: 
           <Divider />
 
           <XStack ai="center" gap={space.sm} px={space.md} py={space.sm}>
-            <Ionicons name="language-outline" size={iconSize.md} color={colors.textMuted} />
+            <IconDot icon="language-outline" />
             <Text f={1} col={colors.text} fos={fontSize.body} fow={fontWeight.medium}>
-              {tAccount('title')}
+              {tCommon('locale.switchLabel')}
             </Text>
             <LocaleSwitcher />
           </XStack>
@@ -106,6 +139,25 @@ export function ManageAccountSheet({ open, onClose }: { open: boolean; onClose: 
         </YStack>
       </BottomSheet>
     </>
+  );
+}
+
+const AVATAR_SIZE = 48;
+const ICON_DOT = 32;
+
+/** Ô tròn vàng nhạt bọc biểu tượng — cùng ngôn ngữ màu của app (primary). */
+function IconDot({ icon, tone = colors.primaryActive }: { icon: IconName; tone?: string }) {
+  return (
+    <YStack
+      w={ICON_DOT}
+      h={ICON_DOT}
+      br={radius.pill}
+      bg={colors.primaryLight}
+      ai="center"
+      jc="center"
+    >
+      <Ionicons name={icon} size={iconSize.sm} color={tone} />
+    </YStack>
   );
 }
 
@@ -132,10 +184,11 @@ function MenuRow({
       style={({ pressed }) => (pressed ? { backgroundColor: colors.surfaceMuted } : null)}
     >
       <XStack ai="center" gap={space.sm} minHeight={sizing.touchTarget} px={space.md}>
-        <Ionicons name={icon} size={iconSize.md} color={tone} />
+        <IconDot icon={icon} />
         <Text f={1} col={tone} fos={fontSize.body} fow={fontWeight.medium} numberOfLines={1}>
           {label}
         </Text>
+        <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.placeholder} />
       </XStack>
     </Pressable>
   );

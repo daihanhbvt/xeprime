@@ -5,6 +5,12 @@ import { SupportRequestStore } from '../../src/common/support/support-request.st
 import { AuditService } from '../../src/modules/audit/audit.service';
 import { CancellationsService } from '../../src/modules/cancellations/cancellations.service';
 import { PromoCodeEvaluatorService } from '../../src/modules/promo-codes/promo-code-evaluator.service';
+import { DriverLicencesService } from '../../src/modules/driver-licences/driver-licences.service';
+import {
+  NotConfiguredDriverLicenceReader,
+  type DriverLicenceReader,
+} from '../../src/modules/driver-licences/reader/driver-licence-reader';
+import { R2Service } from '../../src/modules/storage/r2.service';
 import { HostMetricsService } from '../../src/modules/host-metrics/host-metrics.service';
 import { BookingHoldsService } from '../../src/modules/holds/booking-holds.service';
 import { BookingRequestsService } from '../../src/modules/booking-requests/booking-requests.service';
@@ -185,6 +191,11 @@ export function makeBookingRequestsService(
      * `deposit_collection_mode` không khớp với số tiền của chính nó.
      */
     depositPolicy?: DepositPolicyService;
+    /**
+     * Cổng bằng lái (ADR 0057). Mặc định TẮT — spec đặt xe không phải spec bằng lái, và bật cổng
+     * nghĩa là mỗi spec phải dựng một bằng đã xác thực cho khách. Spec của cổng truyền bản BẬT.
+     */
+    driverLicences?: DriverLicencesService;
   },
 ): BookingRequestsService {
   const audit = stubs.audit ?? new AuditService(prisma);
@@ -211,6 +222,29 @@ export function makeBookingRequestsService(
      * có mã thì mọi hàm của nó là no-op.
      */
     new PromoCodeEvaluatorService(prisma),
+    stubs.driverLicences ?? makeDriverLicencesService(prisma, { enforcement: 'off' }),
+  );
+}
+
+/**
+ * `DriverLicencesService` (ADR 0057) — kho R2 và bộ đọc ảnh là hai thứ spec PHẢI thay bằng giả
+ * (không gọi mạng); còn lại là service thật trên Postgres thật.
+ */
+export function makeDriverLicencesService(
+  prisma: PrismaService,
+  opts: {
+    enforcement?: 'on' | 'off';
+    r2?: R2Service;
+    reader?: DriverLicenceReader;
+    audit?: AuditService;
+  } = {},
+): DriverLicencesService {
+  return new DriverLicencesService(
+    prisma,
+    opts.r2 ?? ({ privateEnabled: false } as unknown as R2Service),
+    opts.audit ?? new AuditService(prisma),
+    opts.reader ?? new NotConfiguredDriverLicenceReader(),
+    new ConfigService({ DRIVER_LICENCE_ENFORCEMENT: opts.enforcement ?? 'on' }),
   );
 }
 

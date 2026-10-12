@@ -237,6 +237,7 @@ function RequestBookingBody({
       customerName: '',
       customerPhone: flow.accountPhone ?? '',
       customerEmail: '',
+      acceptedTerms: false,
       serviceType: defaultService as BookingRequestFormValues['serviceType'],
       pickupAt: '',
       returnAt: '',
@@ -353,6 +354,14 @@ function RequestBookingBody({
    */
   const serviceType = useWatch({ control: form.control, name: 'serviceType' });
   const isLongTerm = serviceType === SERVICE_TYPE.LONG_TERM;
+
+  /**
+   * Điều khoản chủ xe công bố cho ĐÚNG dịch vụ đang chọn — cùng phép chọn với web
+   * `RequestBookingFlow`. Server đã tính giấy tờ hiệu lực và cờ bắt đồng ý; client chỉ hiển thị
+   * và bắt tick khi được yêu cầu.
+   */
+  const activeTerms = listing.rentalTerms?.find((term) => term.serviceType === serviceType) ?? null;
+  const requiresTermsAcceptance = Boolean(activeTerms?.requireTermsAcceptance);
 
   /*
    * Lịch bận chỉ có nghĩa với dịch vụ theo NGÀY. Dài hạn chưa có khung giờ cụ thể — khách nêu
@@ -497,6 +506,11 @@ function RequestBookingBody({
 
   const submitRequest = useCallback(() => {
     setError(null);
+    // Xe bắt đồng ý điều khoản cho dịch vụ này mà khách chưa tick ⇒ dừng lại, như web.
+    if (requiresTermsAcceptance && !form.getValues('acceptedTerms')) {
+      setError(t('review.termsRequired'));
+      return;
+    }
     flow.submit.mutate(toRequestBody(form.getValues(), describeDevice(), promo.appliedCode), {
       /*
        * Nhớ địa chỉ giao xe CHỈ khi đã gửi thành công — đúng chỗ web gọi
@@ -563,6 +577,7 @@ function RequestBookingBody({
     });
   }, [
     errorMessage,
+    requiresTermsAcceptance,
     flow,
     form,
     otp,

@@ -48,5 +48,143 @@
         "action": "Xem xe của tôi"
       }
     }
+  },
+  "greeting": {
+    "morning": "Chào buổi sáng, {name}",
+    "afternoon": "Chào buổi chiều, {name}",
+    "evening": "Chào buổi tối, {name}"
+  },
+  "ownerSubtitle": "Việc hôm nay, lịch giao nhận và tiền của bạn — tất cả ở một chỗ.",
+  "answer": {
+    "busy": "Hôm nay: {parts}.",
+    "pickups": "{count, plural, other {giao # xe}}",
+    "returns": "{count, plural, other {nhận lại # xe}}",
+    "requests": "{count, plural, other {# yêu cầu chờ bạn trả lời}}",
+    "overdue": "{count, plural, other {# việc đã quá giờ}}",
+    "calm": "Hôm nay chưa có lịch giao nhận xe nào và không có yêu cầu nào chờ bạn."
+  },
+  "focus": {
+    "title": "Việc cần làm",
+    "loadError": "Chưa tải được việc hôm nay.",
+    "requests": {
+      "label": "Yêu cầu chờ duyệt",
+      "urgent": "{count, plural, other {# sắp hết hạn trả lời}}",
+      "next": "Hạn trả lời gần nhất {time}",
+      "none": "Không có yêu cầu mới"
+    },
+    "awaitingPayment": {
+      "label": "Chờ khách thanh toán",
+      "hint": "Đã nhận chuyến, chờ tiền giữ chỗ",
+      "none": "Không có chuyến chờ tiền"
+    },
+    "pickups": {
+      "label": "Chờ giao xe",
+      "today": "{count, plural, other {# hẹn hôm nay}}",
+      "overdue": "{count, plural, other {# đã quá giờ}}",
+      "none": "Không có xe chờ giao"
+    },
+    "active": {
+      "label": "Đang cho thuê",
+      "returnsToday": "{count, plural, other {# trả hôm nay}}",
+      "overdue": "{count, plural, other {# quá hạn trả}}",
+      "none": "Không có xe đang ở với khách"
+    }
+  },
+  "agenda": {
+    "title": "Lịch giao & nhận xe",
+    "window": "{days} ngày tới",
+    "empty": "Không có lịch giao hay nhận xe nào trong {days} ngày tới.",
+    "emptyHint": "Chuyến mới sẽ hiện ở đây ngay khi khách thanh toán giữ chỗ.",
+    "loadError": "Chưa tải được lịch giao nhận.",
+    "overdue": "Đã quá giờ",
+    "today": "Hôm nay",
+    "tomorrow": "Ngày mai",
+    "more": "Xem tất cả đơn",
+    "kind": {
+      "pickup": "Giao xe",
+      "return": "Nhận xe"
+    },
+    "itemAria": "{kind} {vehicle} — {customer}, {time}"
+  },
+  "kpi": {
+    "title": "Tháng này",
+    "newBookings": "Đơn mới",
+    "completedTrips": "Chuyến hoàn thành",
+    "utilization": "Tỉ lệ lấp đầy",
+    "utilizationValue": "{value, number}%",
+    "utilizationHint": "Thời gian xe có khách trên thời gian xe sẵn có",
+    "utilizationEmpty": "Chưa có xe trong kỳ",
+    "fleetHint": "{renting} đang thuê · {maintenance} bảo dưỡng"
+  },
+  "change": {
+    "up": "+{value, number}%",
+    "down": "−{value, number}%",
+    "flat": "Không đổi",
+    "pointsUp": "+{value, number} điểm",
+    "pointsDown": "−{value, number} điểm",
+    "none": "Chưa có số cùng kỳ để so",
+    "suffix": "so với cùng kỳ tháng trước"
+  },
+  "charts": {
+    "revenueTitle": "Doanh thu {days} ngày qua",
+    "revenueDescription": "Theo sổ thu chi đã duyệt, không gồm tiền cọc giữ hộ.",
+    "revenueEmpty": "Chưa có phiếu thu chi nào trong {days} ngày qua",
+    "revenueEmptyHint": "Phiếu thu tự sinh khi bạn quyết toán chuyến.",
+    "revenueError": "Chưa tải được biểu đồ doanh thu.",
+    "tripsTitle": "Đơn và chuyến {months} tháng gần nhất",
+    "tripsDescription": "Đơn mới theo ngày tạo, chuyến hoàn thành theo ngày trả xe.",
+    "tripsEmpty": "Chưa có đơn nào trong {months} tháng gần nhất",
+    "tripsError": "Chưa tải được biểu đồ chuyến.",
+    "newBookings": "Đơn mới",
+    "completedTrips": "Chuyến hoàn thành"
+  },
+  "market": {
+    "title": "Xe trên chợ",
+    "onMarket": "Khách đang thấy",
+    "inReview": "Chờ XePrime duyệt",
+    "needsRevision": "Cần sửa",
+    "draft": "Chưa gửi duyệt",
+    "manage": "Quản lý xe",
+    "empty": "Chưa có xe nào. Thêm xe đầu tiên để khách tìm thấy bạn.",
+    "add": "Thêm xe"
+  },
+  "reputation": {
+    "title": "Uy tín với khách",
+    "window": "{days} ngày qua",
+    "note": "Khách thấy đúng các chỉ số này trên trang xe và trang gian hàng của bạn. Trả lời yêu cầu sớm và giữ chuyến đã nhận để chúng luôn đẹp."
+  },
+  "plan": {
+    "title": "Gói dịch vụ",
+    "daysLeft": "{count, plural, =0 {Hết hạn hôm nay} other {Còn # ngày}}",
+    "endsAt": "Hết hạn {date}",
+    "grace": "Gói đã hết hạn — đang trong thời gian ân hạn tới {date}",
+    "vehicles": "Xe đã dùng",
+    "vehiclesValue": "{used}/{limit} xe",
+    "vehiclesUnlimited": "{used} xe · không giới hạn",
+    "atCapacity": "Đã dùng hết số xe của gói.",
+    "renew": "Gia hạn gói",
+    "open": "Xem gói",
+    "none": "Gian hàng chưa có gói hiện hành.",
+    "loadError": "Chưa tải được thông tin gói."
+  },
+  "wallet": {
+    "title": "Tiền của bạn",
+    "available": "Rút được ngay",
+    "pending": "Đang chờ chuyển",
+    "income": "Thu nhập tháng này",
+    "incomeHint": "{count, plural, other {# chuyến hoàn thành}} · sau thuế khấu trừ",
+    "open": "Số dư & rút tiền",
+    "frozen": "Số dư đang tạm khoá — liên hệ XePrime để được hỗ trợ.",
+    "loadError": "Chưa tải được số dư."
+  },
+  "ownerVehicles": {
+    "title": "Xe của bạn",
+    "quota": "{used}/{limit} xe",
+    "viewAll": "Xem tất cả",
+    "add": "Đăng thêm xe",
+    "empty": "Bạn chưa có xe nào trên XePrime.",
+    "loadError": "Chưa tải được danh sách xe.",
+    "atCapacity": "Bạn đã dùng hết {limit} xe của chủ xe cá nhân. Mở gian hàng để đăng thêm xe và có sổ thu chi, báo cáo.",
+    "upgrade": "Xem gói gian hàng"
   }
 }

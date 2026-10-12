@@ -90,7 +90,8 @@ describe('toShopUpgradeProfileBody', () => {
     const body = toShopUpgradeProfileBody(shopFixture(), valuesFixture());
 
     expect(body.bio).toBe('Giới thiệu đã viết từ trước');
-    expect(body.taxCode).toBe('0101234567');
+    // PR #159: MST không còn đi qua hồ sơ gian hàng.
+    expect(body).not.toHaveProperty('taxCode');
     expect(body.businessLicenseNo).toBe('GP-123');
     expect(body.coverUrl).toBe('https://cdn.test/cover.png');
   });

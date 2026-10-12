@@ -41,7 +41,12 @@ const VIEWPORT_PATHS: readonly string[] = [ROUTES.MANAGE.CALENDAR, ROUTES.MANAGE
  * gian hàng — dựng sidebar rồi để mọi mục bên trong trả 403 là lừa người dùng. Wizard còn tự mở gian
  * hàng ở bước lưu: nằm trong khung đầy đủ thì sidebar bật lên giữa chừng.
  */
-const BARE_PATHS: readonly string[] = [ROUTES.MANAGE.ONBOARDING, ROUTES.MANAGE.VEHICLE_REGISTER];
+const BARE_PATHS: readonly string[] = [
+  ROUTES.MANAGE.ONBOARDING,
+  ROUTES.MANAGE.VEHICLE_REGISTER,
+  // Quay về từ cổng thanh toán (ADR 0058) — có thể là gian hàng chưa mở cổng quản lý.
+  ROUTES.MANAGE.PAYMENT_RETURN,
+];
 
 /**
  * Khung của SITE PARTNER (`partner.xeprime.vn`, realm `partner` — ADR 0051 điều 3 · ADR 0053).

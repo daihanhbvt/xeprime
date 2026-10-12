@@ -1,0 +1,146 @@
+/*
+ * Ô việc cần làm — cao bằng nhau trong một hàng (lưới đặt `align-items: stretch`), số to ở giữa,
+ * ngữ cảnh ở đáy. Cả ô là một link: vùng chạm lớn, không có nút con nào để bấm trượt.
+ */
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 132px;
+  padding: 14px 16px;
+  background: var(--xp-color-bg-container);
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: 14px;
+  box-shadow: var(--xp-shadow-sm);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.tile:hover {
+  color: inherit;
+  border-color: var(--xp-color-border);
+  box-shadow: var(--xp-shadow-md);
+  transform: translateY(-1px);
+}
+
+.tile:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.iconTile {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+}
+
+.icon {
+  font-size: 16px;
+}
+
+.label {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text-secondary);
+}
+
+.chevron {
+  flex: none;
+  font-size: 11px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.count {
+  font-size: 30px;
+  font-weight: var(--xp-font-weight-bold);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--xp-color-text);
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: auto;
+  min-height: 18px;
+}
+
+.metaLine {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--xp-color-text-tertiary);
+}
+
+.metaUrgent {
+  color: var(--xp-color-error);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* Không có việc — ô lùi về sau, số nhạt. */
+.calm {
+  box-shadow: none;
+  background: var(--xp-color-bg-layout);
+}
+
+.calm .count {
+  color: var(--xp-color-text-tertiary);
+}
+
+/* Có việc — nhấn bằng màu thương hiệu, không phải đỏ. */
+.attention .iconTile {
+  background: var(--xp-gold-wash);
+  color: var(--xp-gold-deep);
+}
+
+/* Có việc QUÁ GIỜ / sắp hết hạn — đỏ dành riêng cho thứ đã trễ (UX §0 nguyên tắc 4). */
+.urgent {
+  border-color: color-mix(in srgb, var(--xp-color-error) 35%, var(--xp-color-border-secondary));
+}
+
+.urgent .iconTile {
+  background: var(--xp-color-error-bg);
+  color: var(--xp-color-error);
+}
+
+.urgent .count {
+  color: var(--xp-color-error);
+}
+
+@media (max-width: 640px) {
+  .tile {
+    min-height: 116px;
+    padding: 12px;
+  }
+
+  .count {
+    font-size: 26px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile,
+  .tile:hover {
+    transition: none;
+    transform: none;
+  }
+}

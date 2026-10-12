@@ -8,7 +8,7 @@ import {
   CUSTOMER_TRIP_FILTER,
   CUSTOMER_TRIP_FILTER_DEFAULT,
   CUSTOMER_TRIP_FILTER_VALUES,
-  CUSTOMER_TRIP_STAGE_VALUES,
+  CUSTOMER_TRIP_FILTER_STAGES,
   TRIP_ROLE,
   type CustomerTripFilter,
   type CustomerTripStage,
@@ -49,7 +49,7 @@ const filterKey = (filter: CustomerTripFilter) => filter;
  * thấy 'không có chuyến nào' trong khi trang sau đầy chuyến khớp. Nên bộ lọc tự kéo tiếp cho tới
  * khi đủ chừng này thẻ hoặc hết dữ liệu.
  */
-const STAGE_FILTER_MIN_ROWS = 6;
+export const STAGE_FILTER_MIN_ROWS = 6;
 
 /**
  * Tab "Chuyến" (BKG-15).
@@ -177,7 +177,7 @@ export function TripsScreen({
       */}
       <Screen edges={['left', 'right']} scroll={false} padded={false}>
         {heading ? <ManagePageTitle title={t('list.heading')} subtitle={t('list.sub')} /> : null}
-        <FilterTabs
+        <TripFilterTabs
           value={filter}
           counts={counts}
           onChange={changeFilter}
@@ -280,7 +280,7 @@ function countOf(counts: CustomerTripCounts | undefined, filter: CustomerTripFil
  * `renderItem` cũng phải `useCallback` — một hàm mới mỗi lần render buộc `VirtualizedList` dựng
  * lại toàn bộ ô đang gắn, tức đúng cái "bấm một tab thì render cả dải".
  */
-const FilterTabs = memo(function FilterTabs({
+export const TripFilterTabs = memo(function FilterTabs({
   value,
   counts,
   onChange,
@@ -328,7 +328,12 @@ const FilterTabs = memo(function FilterTabs({
           style={styles.tabsList}
           renderItem={renderChip}
         />
-        <StageFilter value={stage} onChange={onStageChange} domainLabel={domainLabel} />
+        <StageFilter
+          filter={value}
+          value={stage}
+          onChange={onStageChange}
+          domainLabel={domainLabel}
+        />
       </XStack>
       {/* Icon thôi không nói đang lọc CÁI GÌ: danh sách rỗng mà không thấy bộ lọc thì người dùng
         tưởng mình không có chuyến. Viên này hiện tên chặng và chạm vào là xoá lọc. */}
@@ -359,10 +364,13 @@ const FilterTabs = memo(function FilterTabs({
  * Hiện là một nút icon ở cuối hàng tab; đang lọc thì nút đổi sang tông nhấn.
  */
 const StageFilter = memo(function StageFilter({
+  filter,
   value,
   onChange,
   domainLabel,
 }: {
+  /** Tab đang mở — chỉ bày các chặng thuộc tab đó, đúng web (`CUSTOMER_TRIP_FILTER_STAGES`). */
+  filter: CustomerTripFilter;
   value: CustomerTripStage | null;
   onChange: (next: CustomerTripStage | null) => void;
   domainLabel: (group: 'customerTripStage', code: string) => string;
@@ -403,7 +411,7 @@ const StageFilter = memo(function StageFilter({
             selected={value === null}
             onPress={() => select(null)}
           />
-          {CUSTOMER_TRIP_STAGE_VALUES.map((item) => (
+          {CUSTOMER_TRIP_FILTER_STAGES[filter].map((item) => (
             <MenuOption
               key={item}
               label={domainLabel('customerTripStage', item)}

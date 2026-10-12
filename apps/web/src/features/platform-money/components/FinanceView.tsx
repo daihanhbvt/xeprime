@@ -13,6 +13,7 @@ import { useFinanceQueue } from '../hooks/use-finance-queue';
 import { useDailyReconciliation, useMoneySummary } from '../hooks/use-platform-money';
 import { FinanceQueueRail, useFinanceQueueLabel } from './FinanceQueueRail';
 import { FinanceSummaryStrip } from './FinanceSummaryStrip';
+import { GatewayOrderQueue } from './GatewayOrderQueue';
 import { HoldsPanel } from './HoldsPanel';
 import { InsuranceQueue } from './InsuranceQueue';
 import { LedgerPanel } from './LedgerPanel';
@@ -147,6 +148,8 @@ function QueuePanel({
   switch (queue) {
     case FINANCE_QUEUE.BANK_IN:
       return <BankInQueue />;
+    case FINANCE_QUEUE.GATEWAY_IN:
+      return <GatewayOrderQueue />;
     case FINANCE_QUEUE.HOLDS:
       return <HoldsPanel />;
     case FINANCE_QUEUE.REFUNDS:
