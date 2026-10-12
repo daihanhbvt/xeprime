@@ -1,7 +1,6 @@
 'use client';
 
 import { ClockCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   HOLD_COUNTDOWN_SEGMENT_MINUTES,
@@ -17,19 +16,6 @@ import styles from './TripDeadline.module.css';
 
 const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
-
-/**
- * "Bây giờ" nhích mỗi phút — đủ cho nhãn "còn 3 giờ"/"quá 12 phút" đổi kịp mà không bắt cả bảng
- * render lại từng giây (đồng hồ giây là việc của `Countdown`, chỉ ở những dòng có hạn tính phút).
- */
-export function useNow(intervalMs: number = MINUTE_MS): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), intervalMs);
-    return () => clearInterval(timer);
-  }, [intervalMs]);
-  return now;
-}
 
 /** Hạn TRẢ LỜI của chủ xe — đồng hồ m:ss, đổi sắc thái ở đúng mốc nhắc cuối của worker. */
 export function RespondByCountdown({ deadline }: { deadline: string }) {
@@ -73,12 +59,7 @@ export function HandoverDistance({ at, now }: { at: string; now: number }) {
     soonMs: TRIP_HANDOVER_SOON_HOURS * HOUR_MS,
   });
   const key = `${distance.direction === 'past' ? 'late' : 'in'}${capitalize(distance.unit)}` as
-    | 'inMinutes'
-    | 'inHours'
-    | 'inDays'
-    | 'lateMinutes'
-    | 'lateHours'
-    | 'lateDays';
+    'inMinutes' | 'inHours' | 'inDays' | 'lateMinutes' | 'lateHours' | 'lateDays';
 
   return (
     <span
