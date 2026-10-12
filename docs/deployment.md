@@ -794,7 +794,7 @@ Settings; Secret bị che và không đọc lại được sau khi lưu.
 | `REALM_PROXY_SECRET` | **mới, bắt buộc** (ADR 0053). Cùng lệnh như trên, giá trị KHÁC `SESSION_JWT_SECRET` và khác giữa staging/production. Caddy gắn nó kèm header realm của `/api`; thiếu nó API từ chối boot |
 | `OTP_PEPPER` | `openssl rand -base64 32` |
 | `GOOGLE_OAUTH_CLIENT_SECRET` · `FACEBOOK_APP_SECRET` | console provider; trống ⇒ nút social trả `SOCIAL_NOT_CONFIGURED` |
-| `ESMS_API_KEY` · `ESMS_SECRET_KEY` · `ESMS_BRANDNAME` | tài khoản eSMS.vn (brandname + mẫu tin đã duyệt). Bắt buộc khi `OTP_MODE=esms`. Staging: `ESMS_BRANDNAME=Baotrixemay` (brandname dùng chung có sẵn trong tài khoản — tin hiện tên người gửi Baotrixemay) cho tới khi brandname XePrime được duyệt |
+| `ESMS_API_KEY` · `ESMS_SECRET_KEY` · `ESMS_BRANDNAME` | tài khoản eSMS.vn (brandname + mẫu tin đã duyệt). Bắt buộc khi `OTP_MODE=esms`. `ESMS_BRANDNAME` (tên người gửi, không bí mật) khai ở Secret HOẶC Variable đều được; thiếu bất kỳ khoá nào thì job deploy dừng TRƯỚC migrate. Staging: `ESMS_BRANDNAME=Baotrixemay` (brandname dùng chung có sẵn trong tài khoản — tin hiện tên người gửi Baotrixemay) cho tới khi brandname XePrime được duyệt |
 | `SMTP_PASS` | API key SMTP — **key riêng cho staging**, không dùng chung với production (thu hồi một bên không kéo bên kia) |
 | `SEPAY_API_KEY` | khoá **webhook** trong bảng điều khiển SePay (≥16 ký tự). Trống ⇒ `/sepay/webhook` trả 503 `SEPAY_NOT_CONFIGURED` — fail closed, không giả vờ đã nhận tiền |
 | `MOMO_ACCESS_KEY` · `MOMO_SECRET_KEY` · `VNPAY_HASH_SECRET` | khoá ký của cổng do MoMo/VNPAY cấp — bộ sandbox cho staging, bộ production RIÊNG cho production. Trống ⇒ cổng tắt (không nút, checkout 503, IPN không xác nhận gì) |
