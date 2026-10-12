@@ -301,7 +301,9 @@ jobs:
           S_FACEBOOK_APP_SECRET: ${{ secrets.FACEBOOK_APP_SECRET }}
           S_ESMS_API_KEY: ${{ secrets.ESMS_API_KEY }}
           S_ESMS_SECRET_KEY: ${{ secrets.ESMS_SECRET_KEY }}
-          S_ESMS_BRANDNAME: ${{ secrets.ESMS_BRANDNAME }}
+          # Brandname là tên người gửi in trên chính tin SMS — không bí mật gì. Nhận cả Secret (chỗ
+          # cũ) lẫn Variable, vì khai nó làm Variable là lựa chọn tự nhiên và từng làm sập staging.
+          S_ESMS_BRANDNAME: ${{ secrets.ESMS_BRANDNAME || vars.ESMS_BRANDNAME }}
           S_SMTP_PASS: ${{ secrets.SMTP_PASS }}
           S_SEPAY_API_KEY: ${{ secrets.SEPAY_API_KEY }}
           S_MOMO_ACCESS_KEY: ${{ secrets.MOMO_ACCESS_KEY }}
@@ -384,6 +386,15 @@ jobs:
               echo "::error::FIREBASE_PROJECT_ID và NEXT_PUBLIC_FIREBASE_PROJECT_ID phải là CÙNG một project khi FIRESTORE_ENABLED=true"
               MISSING=1
             fi
+          fi
+
+          # `OTP_MODE=esms` mà thiếu một trong ba khoá eSMS thì API từ chối boot (env.schema.ts) và
+          # crash-loop SAU khi migrate đã chạy — đúng sự cố staging 12/10/2026 (brandname khai làm
+          # Variable trong khi bước này chỉ đọc Secret). Bắt ở đây, trước khi chạm vào database.
+          if [ "${V_OTP_MODE:-mock}" = "esms" ]; then
+            req ESMS_API_KEY    "${S_ESMS_API_KEY:-}"
+            req ESMS_SECRET_KEY "${S_ESMS_SECRET_KEY:-}"
+            req ESMS_BRANDNAME  "${S_ESMS_BRANDNAME:-}"
           fi
 
           # Mã OTP test ở production = ai cũng xác thực được SĐT của người khác. API cũng từ chối
