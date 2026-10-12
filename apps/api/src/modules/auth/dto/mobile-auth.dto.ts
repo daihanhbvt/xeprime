@@ -1,7 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsIn, IsOptional, IsString, MaxLength, MinLength, ValidateNested } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
-import { MOBILE_CLIENT_APP_VALUES, type MobileClientApp } from '@xeprime/types';
+import {
+  APPLE_SIGN_IN_LIMITS,
+  MOBILE_CLIENT_APP_VALUES,
+  type MobileClientApp,
+} from '@xeprime/types';
 import { IsLoginIdentifier } from '../../../common/login-identifier';
 import { MeDto, RegisterDto } from './auth.dto';
 
@@ -187,6 +191,67 @@ export class MobileSocialExchangeDto {
  * Khác biệt duy nhất nằm ở ĐẦU RA — web nhận cookie httpOnly, native nhận cặp token.
  */
 export class MobileRegisterDto extends RegisterDto {
+  @ApiPropertyOptional({ type: MobileDeviceDto })
+  @IsOptional()
+  @Type(() => MobileDeviceDto)
+  device?: MobileDeviceDto;
+
+  @ApiPropertyOptional({ enum: MOBILE_CLIENT_APP_VALUES, description: CLIENT_APP_DESCRIPTION })
+  @IsOptional()
+  @IsIn(MOBILE_CLIENT_APP_VALUES)
+  clientApp?: MobileClientApp;
+}
+
+/** Họ tên Apple trả về ở LẦN ĐĂNG NHẬP ĐẦU TIÊN (chỉ qua app, không có trong token). */
+export class AppleFullNameDto {
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    maxLength: APPLE_SIGN_IN_LIMITS.NAME_PART_MAX,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(APPLE_SIGN_IN_LIMITS.NAME_PART_MAX)
+  givenName?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    maxLength: APPLE_SIGN_IN_LIMITS.NAME_PART_MAX,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(APPLE_SIGN_IN_LIMITS.NAME_PART_MAX)
+  familyName?: string | null;
+}
+
+/**
+ * `POST /auth/mobile/apple` — "Sign in with Apple" trên iOS.
+ *
+ * App gọi API native của iOS với `nonce` = SHA-256 của một chuỗi ngẫu nhiên, rồi gửi lên token
+ * Apple trả về KÈM chuỗi thô đó. Server băm lại và so — token bị nhặt lại không dùng được.
+ */
+export class MobileAppleLoginDto {
+  @ApiProperty({ description: '`identityToken` (JWT) mà iOS trả về sau khi người dùng đồng ý.' })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(APPLE_SIGN_IN_LIMITS.IDENTITY_TOKEN_MAX)
+  identityToken!: string;
+
+  @ApiProperty({
+    description: 'Nonce THÔ app đã sinh. Apple nhận SHA-256 của nó; server băm lại để đối chiếu.',
+  })
+  @IsString()
+  @MinLength(APPLE_SIGN_IN_LIMITS.NONCE_MIN)
+  @MaxLength(APPLE_SIGN_IN_LIMITS.NONCE_MAX)
+  nonce!: string;
+
+  @ApiPropertyOptional({ type: AppleFullNameDto, nullable: true })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => AppleFullNameDto)
+  fullName?: AppleFullNameDto | null;
+
   @ApiPropertyOptional({ type: MobileDeviceDto })
   @IsOptional()
   @Type(() => MobileDeviceDto)

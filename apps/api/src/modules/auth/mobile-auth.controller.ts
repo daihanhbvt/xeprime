@@ -1,4 +1,12 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Logger,
+  Post,
+  UnauthorizedException,
+} from '@nestjs/common';
 import {
   ApiCreatedResponse,
   ApiNoContentResponse,
@@ -16,6 +24,8 @@ import {
 import { Public, Realms, VerifiesCredentials } from '../../common/decorators';
 import { AuthService } from './auth.service';
 import { NativeAuthCodeService } from './social/native-auth-code.service';
+import { AppleIdentityVerifier } from './social/apple-identity.verifier';
+import { SocialAuthFailure } from './social/social-auth.error';
 import {
   NativeSessionService,
   type NativeDeviceInfo,
@@ -24,6 +34,7 @@ import {
 import {
   MobileDeviceDto,
   MobileLoginDto,
+  MobileAppleLoginDto,
   MobileLogoutDto,
   MobileRefreshDto,
   MobileRegisterDto,
@@ -31,6 +42,21 @@ import {
   MobileSocialExchangeDto,
   MobileTokenPairDto,
 } from './dto/mobile-auth.dto';
+
+/**
+ * Mức chặn tần suất theo LOẠI cửa — đặt tên một chỗ thay vì rải số ở từng route:
+ *  - `CREDENTIAL`: cửa dò mật khẩu (đăng nhập, đăng ký) — chặt nhất;
+ *  - `SOCIAL`: đổi bằng chứng của provider lấy phiên (one-time code, token Apple) — dùng một lần;
+ *  - `SESSION`: xoay / thu hồi refresh token — app gọi thường xuyên.
+ */
+const THROTTLE_PER_MINUTE = {
+  CREDENTIAL: { default: { limit: 5, ttl: 60_000 } },
+  SOCIAL: { default: { limit: 10, ttl: 60_000 } },
+  SESSION: { default: { limit: 20, ttl: 60_000 } },
+} as const;
+
+/** Thông điệp kỹ thuật khi token Apple không qua kiểm — app hiển thị theo MÃ (ADR 0012). */
+const APPLE_TOKEN_REJECTED_MESSAGE = 'Không xác thực được tài khoản Apple';
 
 /**
  * Xác thực cho app native — ADR 0017.
@@ -49,10 +75,13 @@ import {
 // nào phục vụ realm platform.
 @Realms(ACCOUNT_REALM.CUSTOMER, ACCOUNT_REALM.PARTNER)
 export class MobileAuthController {
+  private readonly logger = new Logger(MobileAuthController.name);
+
   constructor(
     private readonly auth: AuthService,
     private readonly nativeSessions: NativeSessionService,
     private readonly nativeCodes: NativeAuthCodeService,
+    private readonly apple: AppleIdentityVerifier,
   ) {}
 
   /**
@@ -65,7 +94,7 @@ export class MobileAuthController {
   @VerifiesCredentials()
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Throttle(THROTTLE_PER_MINUTE.CREDENTIAL)
   @ApiOperation({ summary: 'Native: đăng nhập bằng email/SĐT + mật khẩu' })
   @ApiOkResponse({ type: MobileSessionDto })
   async login(@Body() dto: MobileLoginDto): Promise<MobileSessionDto> {
@@ -95,7 +124,7 @@ export class MobileAuthController {
   @VerifiesCredentials()
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
-  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Throttle(THROTTLE_PER_MINUTE.CREDENTIAL)
   @ApiOperation({ summary: 'Native: đăng ký bằng số điện thoại + mật khẩu' })
   @ApiCreatedResponse({ type: MobileSessionDto })
   async register(@Body() dto: MobileRegisterDto): Promise<MobileSessionDto> {
@@ -121,7 +150,7 @@ export class MobileAuthController {
   @VerifiesCredentials()
   @Post('social/exchange')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Throttle(THROTTLE_PER_MINUTE.SOCIAL)
   @ApiOperation({
     summary: 'Native: đổi one-time code của social login lấy access + refresh token',
   })
@@ -131,6 +160,54 @@ export class MobileAuthController {
     // begin) — một code xin cho app này không đổi được phiên cho app kia.
     const { userId } = await this.nativeCodes.consume(dto.code, dto.codeVerifier, dto.clientApp);
     return this.buildSession(userId, dto.device, dto.clientApp);
+  }
+
+  /**
+   * "Sign in with Apple" trên iOS — chỉ có ở app native, không có trên web.
+   *
+   * Không đi luồng redirect như Google/Facebook: iOS trả thẳng `identityToken` cho app, app gửi
+   * lên đây. Server kiểm chữ ký Apple, `aud` = bundle ID của ĐÚNG app, và `nonce` (xem
+   * `AppleIdentityVerifier`), rồi tạo/nối tài khoản TRONG realm của app — cùng đường
+   * `upsertUserFromIdentity` với hai provider kia, nên luật nối email (chỉ khi provider đã xác
+   * minh email) và chặn tài khoản khoá giữ nguyên.
+   *
+   * `@Public()` vì đây là lúc app chưa có phiên — token Apple là bằng chứng.
+   */
+  @Public()
+  @VerifiesCredentials()
+  @Post('apple')
+  @HttpCode(HttpStatus.OK)
+  @Throttle(THROTTLE_PER_MINUTE.SOCIAL)
+  @ApiOperation({
+    summary: 'Native iOS: đăng nhập bằng Apple — đổi identityToken lấy access + refresh token',
+  })
+  @ApiOkResponse({ type: MobileSessionDto })
+  async appleLogin(@Body() dto: MobileAppleLoginDto): Promise<MobileSessionDto> {
+    const clientApp = dto.clientApp ?? MOBILE_CLIENT_APP.CUSTOMER;
+    let identity;
+    try {
+      identity = await this.apple.verify({
+        identityToken: dto.identityToken,
+        rawNonce: dto.nonce,
+        clientApp,
+        fullName: dto.fullName ?? null,
+      });
+    } catch (error) {
+      // Lỗi của provider là Error thường — đổi sang 401 kèm MÃ để app dịch được (ADR 0012).
+      if (error instanceof SocialAuthFailure) {
+        this.logger.warn(`Đăng nhập Apple thất bại: ${error.message}`);
+        throw new UnauthorizedException({
+          code: error.code,
+          message: APPLE_TOKEN_REJECTED_MESSAGE,
+        });
+      }
+      throw error;
+    }
+    const { userId } = await this.auth.upsertUserFromIdentity(
+      identity,
+      realmForClientApp(clientApp),
+    );
+    return this.buildSession(userId, dto.device, clientApp);
   }
 
   /**
@@ -144,7 +221,7 @@ export class MobileAuthController {
   @VerifiesCredentials()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @Throttle(THROTTLE_PER_MINUTE.SESSION)
   @ApiOperation({ summary: 'Native: xoay refresh token, nhận cặp token mới' })
   @ApiOkResponse({ type: MobileTokenPairDto })
   async refresh(@Body() dto: MobileRefreshDto): Promise<MobileTokenPairDto> {
@@ -161,7 +238,7 @@ export class MobileAuthController {
   @Public()
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @Throttle(THROTTLE_PER_MINUTE.SESSION)
   @ApiOperation({ summary: 'Native: thu hồi phiên của thiết bị hiện tại' })
   @ApiNoContentResponse()
   async logout(@Body() dto: MobileLogoutDto): Promise<void> {

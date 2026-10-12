@@ -10,6 +10,7 @@ import type {
   MobileRefreshInput,
   MobilePhoneLoginInput,
   MobileRegisterInput,
+  MobileAppleLoginInput,
   MobileSession,
   MobileSocialExchangeInput,
   MobileTokenPair,
@@ -117,6 +118,15 @@ export const mobileAuthApi = {
     body: MobileSocialExchangeInput,
   ): Promise<MobileSession> =>
     client.post<MobileSession>('/auth/mobile/social/exchange', {
+      ...body,
+      clientApp: APP_PROFILE.clientApp,
+    }),
+  /**
+   * "Sign in with Apple" (chỉ iOS) — gửi `identityToken` iOS trả về kèm nonce THÔ; server kiểm
+   * chữ ký Apple, `aud` = bundle ID của app này, và băm lại nonce để đối chiếu.
+   */
+  appleLogin: (client: ApiClient, body: MobileAppleLoginInput): Promise<MobileSession> =>
+    client.post<MobileSession>('/auth/mobile/apple', {
       ...body,
       clientApp: APP_PROFILE.clientApp,
     }),

@@ -52,6 +52,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     ios: {
       ...config.ios,
+      // "Sign in with Apple" (App Store Guideline 4.8): bật capability + entitlement
+      // `com.apple.developer.applesignin` cho bundle ID; EAS đồng bộ nó lên Apple Developer khi build.
+      usesAppleSignIn: true,
       ...(ios ? { googleServicesFile: IOS_CREDENTIAL } : {}),
       entitlements: {
         ...config.ios?.entitlements,
@@ -70,6 +73,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     plugins: [
       ...(config.plugins ?? []),
+      'expo-apple-authentication',
       /*
        * Phải nằm ở đây chứ không ở `app.json`: nó sửa thẳng AndroidManifest, và `app.json`
        * chỉ khai được những khoá Expo đã định nghĩa sẵn. Xem chú thích trong file plugin.

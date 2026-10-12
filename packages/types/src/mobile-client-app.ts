@@ -30,6 +30,19 @@ export function isMobileClientApp(value: unknown): value is MobileClientApp {
 }
 
 /**
+ * Bundle ID (iOS) / package (Android) của từng app — ADR 0051 §5. Cố định theo app: đổi nó là phát
+ * hành một app KHÁC trên store. Server dùng làm `aud` khi kiểm `identityToken` của "Sign in with
+ * Apple" — token xin cho app này không đổi được phiên app kia (hai realm, ADR 0053).
+ *
+ * ⚠️ `apps/mobile/{customer,manage}/app.json` khai lại hai giá trị này (JSON không import được);
+ * `apps/mobile/shared/src/lib/bundle-id.test.ts` đỏ ngay khi hai nơi lệch nhau.
+ */
+export const MOBILE_APP_BUNDLE_ID: Readonly<Record<MobileClientApp, string>> = {
+  [MOBILE_CLIENT_APP.CUSTOMER]: 'vn.xeprime.mobile',
+  [MOBILE_CLIENT_APP.PARTNER]: 'vn.xeprime.partner',
+};
+
+/**
  * ⚠️ Quy tắc phạm vi app TRƯỚC ADR 0053 — server KHÔNG còn dùng (realm của tài khoản đã quyết app,
  * và app Partner nhận cả chủ xe tuyến hoa hồng). Giữ lại vì app mobile hiện còn đọc nó cho màn
  * "không đủ điều kiện"; gỡ khi đội mobile căn theo ADR 0053.

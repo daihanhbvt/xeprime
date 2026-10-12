@@ -13,7 +13,9 @@ import {
   type MobileTokenPair,
 } from '@/api/auth/types';
 import { API_ERROR_CODE, type AuthProvider } from '@xeprime/types';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import Constants from 'expo-constants';
+import * as Crypto from 'expo-crypto';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
@@ -233,6 +235,70 @@ export async function signInWithSocial(
   });
   await storeTokens(session.tokens);
   return session.user;
+}
+
+/** Mã lỗi `expo-apple-authentication` trả khi người dùng tự đóng bảng đăng nhập của iOS. */
+const APPLE_SIGN_IN_CANCELED = 'ERR_REQUEST_CANCELED';
+/** Thông điệp kỹ thuật (log) khi iOS không trả token — người dùng thấy câu dịch theo MÃ. */
+const APPLE_NO_TOKEN_MESSAGE = 'Apple returned no identityToken';
+
+/**
+ * "Sign in with Apple" — CHỈ iOS (App Store Guideline 4.8: app có đăng nhập bên thứ ba phải có
+ * thêm lựa chọn này; Android và web không yêu cầu).
+ *
+ * Không đi qua trình duyệt như Google/Facebook: iOS hiện bảng đăng nhập hệ thống và trả thẳng
+ * `identityToken`. Nonce THÔ sinh mới mỗi lần, CHỈ bản SHA-256 đi tới Apple (nằm trong token);
+ * bản thô đi tới server để nó băm lại và so — token bị nhặt lại ở đâu đó không dùng lại được.
+ *
+ * Trả `null` khi người dùng tự huỷ — không phải lỗi, đừng báo đỏ.
+ */
+export async function signInWithApple(): Promise<CurrentUser | null> {
+  const rawNonce = Crypto.randomUUID() + Crypto.randomUUID();
+  const hashedNonce = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, rawNonce);
+
+  let credential: AppleAuthentication.AppleAuthenticationCredential;
+  try {
+    credential = await AppleAuthentication.signInAsync({
+      requestedScopes: [
+        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+        AppleAuthentication.AppleAuthenticationScope.EMAIL,
+      ],
+      nonce: hashedNonce,
+    });
+  } catch (error) {
+    if ((error as { code?: string }).code === APPLE_SIGN_IN_CANCELED) return null;
+    throw error;
+  }
+
+  if (!credential.identityToken) {
+    throw new ApiClientError({
+      code: API_ERROR_CODE.SOCIAL_TOKEN_INVALID,
+      message: APPLE_NO_TOKEN_MESSAGE,
+      status: 0,
+    });
+  }
+
+  const session = await mobileAuthApi.appleLogin(authClient, {
+    identityToken: credential.identityToken,
+    nonce: rawNonce,
+    // Apple chỉ trả họ tên ở LẦN ĐẦU — gửi lên ngay, lần sau nó là null.
+    fullName: credential.fullName
+      ? { givenName: credential.fullName.givenName, familyName: credential.fullName.familyName }
+      : null,
+    device: describeDevice(),
+  });
+  await storeTokens(session.tokens);
+  return session.user;
+}
+
+/** Máy này có "Sign in with Apple" không — iOS 13+; Android/web luôn `false`. */
+export async function isAppleSignInAvailable(): Promise<boolean> {
+  if (Platform.OS !== 'ios') return false;
+  try {
+    return await AppleAuthentication.isAvailableAsync();
+  } catch {
+    return false;
+  }
 }
 
 export async function signOut(): Promise<void> {

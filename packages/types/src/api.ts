@@ -82,6 +82,11 @@ export const API_ERROR_CODE = {
   SOCIAL_CANCELLED: 'SOCIAL_CANCELLED',
   /** Đổi code thất bại, `debug_token` không khớp app, hoặc `id_token` không hợp lệ. */
   SOCIAL_EXCHANGE_FAILED: 'SOCIAL_EXCHANGE_FAILED',
+  /**
+   * Token định danh của provider native (`identityToken` của Apple) không qua kiểm: sai chữ ký,
+   * sai app (`aud`), hết hạn, nonce không khớp. Khác `SOCIAL_STATE_INVALID` (luồng redirect quá hạn).
+   */
+  SOCIAL_TOKEN_INVALID: 'SOCIAL_TOKEN_INVALID',
 
   /*
    * Thư mời vào gian hàng (R1 — thay cho việc thêm thẳng người vào tenant).
