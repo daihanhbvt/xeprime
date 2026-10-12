@@ -53,6 +53,7 @@ const SUPPORT_ALLOWLIST = [
   'MaintenanceBoardController.list',
   'MaintenanceBoardController.summary',
   'MembersController.list',
+  'PartnerDashboardController.overview',
   'ShopPoliciesController.get',
   'SubscriptionController.invoices',
   'SubscriptionController.mySubscription',

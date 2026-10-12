@@ -95,7 +95,9 @@ describe('TesseractEngine — không bao giờ treo', () => {
     const stuck = fakeWorker(jest.fn(() => never()));
     const healthy = fakeWorker();
     createWorkerMock.mockResolvedValueOnce(stuck).mockResolvedValueOnce(healthy);
-    const reader = new TesseractDriverLicenceReader({ ...LIMITS, readTimeoutMs: 1_500 });
+    // Hạn phải đủ cho lượt THỨ HAI (giải mã + sáu biến thể ảnh bằng sharp): trên runner CI 2 nhân
+    // chạy song song các suite khác, 1,5s từng không đủ và lượt lành bị cắt thành TIMEOUT.
+    const reader = new TesseractDriverLicenceReader({ ...LIMITS, readTimeoutMs: 5_000 });
 
     expect(codeOf(await settle(reader.read(input)))).toBe(READER_FAILURE.TIMEOUT);
     expect(stuck.terminate).toHaveBeenCalled();
@@ -103,7 +105,7 @@ describe('TesseractEngine — không bao giờ treo', () => {
     expect(second).toMatchObject({ ok: true, value: { readable: false } });
     expect(createWorkerMock).toHaveBeenCalledTimes(2);
     await reader.dispose();
-  });
+  }, 20_000);
 
   it('thread chết giữa chừng ⇒ lượt đang chờ nó được nhả ngay, tiến trình không sập', async () => {
     const dying = fakeWorker(jest.fn(() => never()));

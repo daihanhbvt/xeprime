@@ -659,7 +659,7 @@ export class PaymentGatewayService {
       }
       // Cùng một giao dịch của cổng đã nằm trên một lượt KHÁC — không thể có ở luồng đúng. Transaction
       // trên đã quay đầu; ghi bằng chứng và mở hàng đợi trong một transaction mới.
-      outcome = await this.prisma.$transaction(async (tx) => {
+      outcome = await this.prisma.$transaction(async (tx): Promise<RecordOutcome> => {
         await this.lockOrder(tx, order.id);
         const current = await tx.paymentGatewayOrder.findUniqueOrThrow({
           where: { id: order.id },
