@@ -181,7 +181,9 @@ jobs:
       # glob-expand thành từng thư mục và làm hỏng cờ --filter.
       - run: pnpm --filter @xeprime/prisma --filter "./packages/*" -r build
 
-      - run: pnpm --filter @xeprime/web test
+      # Toàn bộ vitest của web chạy ở job `web-test` ngay dưới (4 shard song song) — KHÔNG bỏ
+      # bớt test nào, chỉ dời chỗ. Trước đây nó đứng ĐẦU job này và chiếm ~18′ trên 24′, nên một
+      # lỗi lint/typecheck rẻ phải chờ 22′ mới lộ. Job này giờ chỉ còn phần kiểm tĩnh.
       - run: pnpm --filter @xeprime/web typecheck
       - run: pnpm --filter @xeprime/web lint
       # Parity vi↔en + ICU + không giá trị rỗng. Rẻ và chặn đúng thứ review của người hay bỏ sót.
@@ -207,6 +209,35 @@ jobs:
           pnpm --filter @xeprime/web test src/components/form/RentalRangePanel.test.tsx
           pnpm --filter @xeprime/web test src/features/bookings/components/booking-form-timezone.test.tsx
           pnpm --filter @xeprime/web test src/features/marketplace/search/search-draft.test.ts
+
+  # Toàn bộ vitest của web (256 file), chia 4 shard chạy SONG SONG trên 4 runner. Mỗi file dựng
+  # một jsdom và cả cây AntD thật; trên một runner 2 nhân cả bộ mất ~18′, chia 4 thì mỗi shard
+  # vài phút (cộng ~2′ cài đặt). Tổng phút Actions gần như không đổi — chỉ chia việc ra.
+  # `fail-fast: false`: một shard đỏ không huỷ ba shard kia, để thấy HẾT test hỏng trong một lượt.
+  web-test:
+    name: Web · test (${{ matrix.shard }}/4)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: corepack enable
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+
+      - run: pnpm install --frozen-lockfile
+      - run: cp .env.example .env
+      - run: pnpm --filter @xeprime/prisma --filter "./packages/*" -r build
+      - run: pnpm --filter @xeprime/web exec vitest run --passWithNoTests --shard=${{ matrix.shard }}/4
 
   # ---------------------------------------------------------------------------
   # Build image — CỔNG CHẶN, không đẩy đi đâu.

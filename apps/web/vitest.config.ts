@@ -17,6 +17,20 @@ export default defineConfig({
     setupFiles: ['./vitest.setup.tsx'],
     restoreMocks: true,
     /**
+     * Gói sẵn antd MỘT lần thay vì để mỗi file nạp lại `antd/lib/index.js` (bản CJS, ~1,5s/file
+     * vì `isolate` dựng module mới cho từng file). Đo 12/10/2026 trên cả bộ: thời gian nạp module
+     * 423s → 194s, tổng 298s → 243s ở máy dev.
+     *
+     * CHỈ antd: gói thêm `@ant-design/icons` (hay react, dayjs) làm vỡ interop — component thành
+     * `undefined` ở hầu hết các file. Hệ quả cần nhớ: mock antd phải có export `default` — dựng
+     * nó bằng `@/test-utils/antd-mock`.
+     */
+    deps: {
+      optimizer: {
+        client: { enabled: true, include: ['antd'] },
+      },
+    },
+    /**
      * Giới hạn số worker thay vì để vitest lấy gần hết số nhân.
      *
      * Mỗi file test dựng một jsdom riêng và render cả cây Ant Design thật; chạy 15 file như

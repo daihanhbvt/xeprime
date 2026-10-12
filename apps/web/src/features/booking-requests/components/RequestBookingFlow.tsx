@@ -1042,11 +1042,17 @@ export function RequestBookingFlow({
     await startOtp(needsLicence && !me ? 'login' : 'booking', phone);
   }
 
-  /** Gửi mã và dựng màn OTP — lỗi gửi mã hiện qua `vp.error` tại bước đang đứng. */
+  /**
+   * Gửi mã và dựng màn OTP — lỗi gửi mã hiện qua `vp.error` tại bước đang đứng.
+   *
+   * Môi trường nhận mã test (dev/staging) KHÔNG tự gửi: vào thẳng màn OTP, khách gõ mã test là
+   * qua, hoặc tự bấm "Gửi mã" để nhận SMS thật — một lượt thử không tốn tin nhắn nào.
+   */
   async function startOtp(mode: 'booking' | 'login', phone = getValues('customerPhone').trim()) {
     setOtpMode(mode);
+    const sender = mode === 'login' ? vpLogin : vpBooking;
     try {
-      await (mode === 'login' ? vpLogin : vpBooking).sendAsync(phone);
+      if (!sender.testCodeEnabled) await sender.sendAsync(phone);
       setOtpPhone(phone);
       setCode('');
       goToStep('otp');
@@ -1926,9 +1932,14 @@ export function RequestBookingFlow({
           <section className={styles.stepBody}>
             <h3 className={styles.otpTitle}>{t('otp.title')}</h3>
             <p className={styles.stepHint}>
-              {t(otpMode === 'login' ? 'otp.loginHint' : 'otp.hint', {
-                phone: maskPhone(otpPhone),
-              })}
+              {t(
+                vp.status !== 'code_sent'
+                  ? 'otp.notSentHint'
+                  : otpMode === 'login'
+                    ? 'otp.loginHint'
+                    : 'otp.hint',
+                { phone: maskPhone(otpPhone) },
+              )}
             </p>
             <OtpCodeInput
               value={code}
@@ -1939,6 +1950,8 @@ export function RequestBookingFlow({
             />
             {vp.devCode ? (
               <div className={styles.devHint}>{t('otp.devCode', { code: vp.devCode })}</div>
+            ) : vp.testCodeEnabled && vp.status !== 'code_sent' ? (
+              <div className={styles.devHint}>{t('otp.testCodeHint')}</div>
             ) : null}
             {vp.error ? (
               <Alert type="error" showIcon title={vp.error} className={styles.err} />
@@ -1956,7 +1969,11 @@ export function RequestBookingFlow({
                 disabled={vp.cooldown > 0 || vp.sending}
                 onClick={resend}
               >
-                {vp.cooldown > 0 ? t('otp.resendIn', { seconds: vp.cooldown }) : t('otp.resend')}
+                {vp.cooldown > 0
+                  ? t('otp.resendIn', { seconds: vp.cooldown })
+                  : vp.status === 'code_sent'
+                    ? t('otp.resend')
+                    : t('otp.send')}
               </button>
             </div>
           </section>

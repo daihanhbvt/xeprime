@@ -221,6 +221,28 @@ export const envSchema = z
     ESMS_API_KEY: z.string().optional(),
     ESMS_SECRET_KEY: z.string().optional(),
     ESMS_BRANDNAME: z.string().optional(),
+    // Nội dung tin OTP, `{code}` là chỗ điền mã. Nhà mạng chỉ giao tin KHỚP mẫu đã duyệt cho
+    // brandname (lệch một ký tự là lỗi 146), nên câu này đi theo brandname của từng môi trường:
+    // staging dùng brandname dùng chung `Baotrixemay` của eSMS ⇒ khai đúng câu mẫu của nó.
+    ESMS_OTP_TEMPLATE: z.preprocess(
+      emptyAsUndefined,
+      z
+        .string()
+        .trim()
+        .refine((v) => v.includes('{code}'), 'ESMS_OTP_TEMPLATE phải chứa {code}')
+        .default('{code} la ma xac thuc XePrime cua ban. Ma het han sau 5 phut.'),
+    ),
+    // Mã OTP TEST (6 số) — gõ nó là xác thực xong, có gửi mã hay không, chạy SONG SONG với mã
+    // thật. Staging khai ở GitHub Environment; máy dev không khai thì mặc định `123456`
+    // (`resolveOtpBypassCode`). Production có giá trị là từ chối boot (superRefine dưới).
+    OTP_BYPASS_CODE: z.preprocess(
+      emptyAsUndefined,
+      z
+        .string()
+        .trim()
+        .regex(/^\d{6}$/, 'OTP_BYPASS_CODE phải là đúng 6 chữ số')
+        .optional(),
+    ),
     // Pepper để hash mã OTP (schema phone_verifications không có cột salt). Có default dev để
     // không phá `.env` sẵn có; production bắt buộc đổi (kiểm ở superRefine dưới).
     OTP_PEPPER: z.string().min(16).default('xeprime-dev-otp-pepper-change-me'),
@@ -697,6 +719,17 @@ export const envSchema = z
         code: 'custom',
         path: ['OTP_MODE'],
         message: 'OTP_MODE=mock không gửi SMS và chỉ in mã ra log — production phải dùng esms',
+      });
+    }
+
+    // Mã test ở production = ai cũng đăng nhập/xác thực được SĐT của người khác. Đây là cửa BẢO
+    // MẬT, nhưng nằm trong nhóm production vì staging CỐ Ý được dùng nó.
+    if (env.OTP_BYPASS_CODE) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['OTP_BYPASS_CODE'],
+        message:
+          'OTP_BYPASS_CODE chỉ dành cho dev/staging — production phải để trống (xoá Variable ở GitHub Environment production)',
       });
     }
 

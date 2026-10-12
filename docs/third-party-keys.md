@@ -30,8 +30,11 @@ thiếu thì phần đó suy giảm có kiểm soát chứ không làm sập app
 | 9 | **SePay** | Đối soát chuyển khoản tự động: kích hoạt gói, tạo đơn thuê khi tiền giữ chỗ về đủ, VietQR trên màn thanh toán | Webhook trả 503 `SEPAY_NOT_CONFIGURED`; màn thanh toán chỉ còn mã + số tiền, không tiền nào được ghi nhận tự động | Tuỳ gói dịch vụ SePay |
 | 10 | **MoMo · VNPAY** (ADR 0058 — Proposed) | Nút "Thanh toán qua Ví MoMo / VNPAY" dưới khối chuyển khoản, cho hoá đơn gói và tiền giữ chỗ — **chỉ staging** cho tới khi ADR 0058 chuyển Accepted | Không nút nào hiện; checkout trả 503 `PAYMENT_GATEWAY_UNAVAILABLE`; chuyển khoản VietQR vẫn chạy | Sandbox miễn phí; production theo hợp đồng merchant (phí % mỗi giao dịch) |
 
-**eSMS.vn KHÔNG cần cho staging.** `OTP_MODE=mock` in mã ra log và trả kèm `devCode` trong
-response — đủ để test mọi luồng OTP. Chỉ production mới bắt buộc eSMS.
+**eSMS.vn ở staging là tuỳ chọn.** Staging gửi SMS thật (`OTP_MODE=esms` + ba `ESMS_*`) và nhận
+thêm mã test `OTP_BYPASS_CODE` (vd `123456`) — gõ mã thật hay mã test đều qua, gửi mã hay không
+cũng vậy. Không có eSMS thì `OTP_MODE=mock` in mã ra log và trả kèm `devCode`. Máy dev không khai
+`OTP_BYPASS_CODE` thì mặc định `123456`. Production bắt buộc eSMS và CẤM `OTP_BYPASS_CODE` (workflow
+dừng, API từ chối boot).
 
 **Thứ tự đề nghị:** 1 → 2 → 4 → 6. Làm R2 trước vì bật Firebase (`FIRESTORE_ENABLED=true`) sẽ
 khiến **toàn bộ biến R2 thành bắt buộc lúc boot** — thiếu là API không lên.

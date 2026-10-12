@@ -10,6 +10,8 @@ export const queryKeys = {
   auth: {
     all: ['auth'] as const,
     me: () => ['auth', 'me'] as const,
+    /** Cấu hình OTP của môi trường — `GET /auth/phone/otp-config` (có nhận mã test hay không). */
+    otpConfig: () => ['auth', 'otp-config'] as const,
   },
   /** Hồ sơ tài khoản khách (`/users/me`) — khác `auth.me` (scope + quyền của phiên). */
   account: {

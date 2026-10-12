@@ -85,13 +85,9 @@ vi.mock('@/features/admin-bookings/components/AdminBookingDetailDrawer', () => (
 }));
 
 const messages = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
-vi.mock('antd', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('antd')>();
-  return {
-    ...actual,
-    App: Object.assign(actual.App, { useApp: () => ({ message: messages }) }),
-  };
-});
+vi.mock('antd', async (importOriginal) =>
+  (await import('@/test-utils/antd-mock')).antdWithApp(importOriginal, () => ({ message: messages })),
+);
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
