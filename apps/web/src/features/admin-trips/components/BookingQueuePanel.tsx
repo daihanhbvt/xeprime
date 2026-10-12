@@ -20,7 +20,8 @@ import { TRIPS_DEFAULT_LIMIT } from '../api';
 import { useTripBookings } from '../hooks/use-admin-trips';
 import { useTripQueueFilters } from '../hooks/use-trip-queue-filters';
 import type { TripBooking } from '../types';
-import { HandoverDistance, useNow } from './TripDeadline';
+import { useNow } from '@/hooks/use-now';
+import { HandoverDistance } from './TripDeadline';
 import styles from './TripQueuePanels.module.css';
 
 /** Sáu cột, hai cột mốc giờ có chip — dưới ngưỡng này bảng cuộn ngang. */
@@ -126,7 +127,11 @@ export function BookingQueuePanel({ queue }: { queue: PlatformTripBookingQueue }
       key: 'status',
       width: 130,
       render: (_, r) => (
-        <StatusTag value={r.status as BookingStatus} meta={BOOKING_STATUS_META} group="bookingStatus" />
+        <StatusTag
+          value={r.status as BookingStatus}
+          meta={BOOKING_STATUS_META}
+          group="bookingStatus"
+        />
       ),
     },
     actionColumn<TripBooking>(
@@ -158,7 +163,9 @@ export function BookingQueuePanel({ queue }: { queue: PlatformTripBookingQueue }
         selectedRowKey={open ?? null}
         minWidth={MIN_TABLE_WIDTH}
         loading={isFetching}
-        error={isError && !data ? { title: t('booking.loadError'), onRetry: () => void refetch() } : null}
+        error={
+          isError && !data ? { title: t('booking.loadError'), onRetry: () => void refetch() } : null
+        }
         filtered={Boolean(filters.q)}
         empty={{ title: t(`empty.${queue}`) }}
         noResults={{ title: t('booking.noResults') }}
@@ -181,7 +188,9 @@ export function BookingQueuePanel({ queue }: { queue: PlatformTripBookingQueue }
               {row.vehiclePlateNumber ? ` · ${row.vehiclePlateNumber}` : ''}
             </div>
             <div className={styles.meta}>{row.tenantName}</div>
-            <span className={styles.period}>{fmt.shortDateTimeRange(row.pickupAt, row.returnAt)}</span>
+            <span className={styles.period}>
+              {fmt.shortDateTimeRange(row.pickupAt, row.returnAt)}
+            </span>
           </article>
         )}
       />

@@ -9,6 +9,7 @@ import {
   PAYMENT_GATEWAY_MIN_HOLD_WINDOW_MINUTES,
   PERMISSION,
 } from '@xeprime/types';
+import { useNow } from '@/hooks/use-now';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
@@ -58,6 +59,8 @@ export function GatewayPayOptions({
   /** Đã có liên kết và đang rời trang — giữ nút ở trạng thái quay cho tới khi trang đổi. */
   const [redirecting, setRedirecting] = useState(false);
   const [missingLink, setMissingLink] = useState(false);
+  // Nhịp nửa phút: nút cổng ẩn kịp khi hạn giữ chỗ trôi qua mốc tối thiểu lúc khách còn ở trang.
+  const now = useNow(30_000);
 
   const list = methods.data?.methods ?? [];
   if (!allowed || list.length === 0) return null;
@@ -70,7 +73,7 @@ export function GatewayPayOptions({
    */
   const windowTooShort =
     deadline != null &&
-    new Date(deadline).getTime() - Date.now() < PAYMENT_GATEWAY_MIN_HOLD_WINDOW_MINUTES * 60_000;
+    new Date(deadline).getTime() - now < PAYMENT_GATEWAY_MIN_HOLD_WINDOW_MINUTES * 60_000;
 
   function outOfRange(method: PaymentGatewayMethod): boolean {
     return (
