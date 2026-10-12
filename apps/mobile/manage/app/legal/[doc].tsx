@@ -29,7 +29,7 @@ export default function LegalDocRoute() {
     if (valid) return;
     logger.warn(`Slug văn bản pháp lý không hợp lệ: ${String(doc)}`);
     if (router.canGoBack()) router.back();
-    else router.replace(ROUTES.explore.home());
+    else router.replace(ROUTES.root.index());
   }, [valid, doc, router]);
 
   if (!valid) return null;
@@ -37,7 +37,7 @@ export default function LegalDocRoute() {
   return (
     <LegalDocScreen
       doc={doc}
-      onBack={() => (router.canGoBack() ? router.back() : router.replace(ROUTES.explore.home()))}
+      onBack={() => (router.canGoBack() ? router.back() : router.replace(ROUTES.root.index()))}
     />
   );
 }

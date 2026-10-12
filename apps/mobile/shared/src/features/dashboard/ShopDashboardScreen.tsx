@@ -2,12 +2,11 @@ import { useCallback, useState } from 'react';
 import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { PERMISSION, RECEIPT_SOURCE_GROUP, RECEIPT_STATUS, RECEIPT_TYPE } from '@xeprime/types';
-import { nowInAppTz } from '@xeprime/domain';
+import { dayjs, moneyChangePercent } from '@xeprime/domain';
 import { Screen } from '@/components/layout/Screen';
 import { Card } from '@/components/ui/Card';
 import { StatGrid, type StatCell } from '@/components/ui/StatGrid';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { ReceiptDetailSheet } from '@/features/finance/components/ReceiptDetailSheet';
 import { useOpenPushPermissionGate } from '@/features/notifications/push-permission-gate';
 import { ManageHeader } from '@/features/shell/ManageHeader';
@@ -17,83 +16,63 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { colors } from '@/theme/tokens';
-import { dashboardMonthRange } from './api';
-import { BookingMiniList } from './components/BookingMiniList';
-import { DashboardPanel } from './components/DashboardPanel';
-import { ReceiptMiniList } from './components/ReceiptMiniList';
-import { ShopOnboardingCard } from './components/ShopOnboardingCard';
-import { useDashboardBookings, useDashboardMoney, useFleetStats } from './hooks/use-dashboard';
 import { withBranchParam } from '@/features/branches/branch-link';
 import { BranchFilterField } from '@/features/branches/components/BranchFilterField';
 import { useScreenBranchFilter } from '@/features/branches/hooks/use-branch-filter';
+import { dashboardMonthRange } from './api';
+import { todayLabel } from './dashboard-model';
+import { AgendaPanel } from './components/AgendaPanel';
+import { DashboardPanel } from './components/DashboardPanel';
+import { ReceiptMiniList } from './components/ReceiptMiniList';
+import { ShopOnboardingCard } from './components/ShopOnboardingCard';
+import { MarketPanel, PlanPanel, ReputationPanel, WalletPanel } from './components/SidePanels';
+import { AnswerBanner, TodayFocus } from './components/TodayFocus';
+import { RevenueTrendPanel, TripsTrendPanel } from './components/TrendPanels';
+import {
+  useDashboardAnswer,
+  useDashboardLinks,
+  useDashboardRefresh,
+  useDashboardMoney,
+  useFleetStats,
+  useIsShopOwner,
+  usePartnerOverview,
+} from './hooks/use-dashboard';
+import { useChangeText, useMonthKpiCells } from './hooks/use-month-kpis';
 
 /**
- * Tổng quan gian hàng (SHP-07) — bản native của `DashboardView` bên web.
+ * Tổng quan gian hàng TUYẾN GÓI — bản native của `DashboardView` bên web (PR #170):
  *
- * Ba nguyên tắc, và cả ba đều là chuyện đúng-sai chứ không phải thẩm mỹ:
+ *  1. Câu trả lời đầu trang + bốn ô VIỆC CẦN LÀM (`GET /dashboard/overview`);
+ *  2. KPI tháng này (doanh thu · đơn mới · chuyến hoàn thành · lấp đầy · xe · cọc), mỗi ô so cùng
+ *     kỳ tháng trước và dẫn tới danh sách tạo nên nó;
+ *  3. Lịch giao/nhận 7 ngày, biểu đồ doanh thu 30 ngày + đơn/chuyến 6 tháng;
+ *  4. Ví (chỉ chủ), gói (`subscription.view`), xe trên chợ, uy tín, sổ quỹ hôm nay.
  *
- * 1. **Không khối nào bịa số 0.** Truy vấn lỗi thì ô đó nói "lỗi", không nói "0" — một gian hàng
- *    chưa có doanh thu và một sổ quỹ hỏng là hai sự thật khác nhau.
- * 2. **Một khối lỗi không kéo cả màn thành màn lỗi.** Mỗi khối có loading/rỗng/lỗi RIÊNG.
- * 3. **Không gọi API cho khối người dùng không có quyền/không có gói.** `enabled` tắt query từ
- *    gốc thay vì gọi rồi nuốt 403.
- *
- * Số liệu KHÔNG tính lại ở đây: đội xe lấy `fleetSummary`, đơn lấy `/bookings` có phân trang,
- * tiền lấy `/finance/summary` — cùng endpoint, cùng định nghĩa với chính các màn nguồn, nên thẻ
- * ở đây và bảng ở kia không thể nói hai con số.
+ * Mỗi khối tự ẩn khi thiếu quyền (server trả `null`, hoặc query không chạy). Lỗi một khối không
+ * kéo cả màn, và lỗi không bao giờ hoá thành số 0.
  */
 export function ShopDashboardScreen() {
   const t = useTranslations('Dashboard');
   const tCommon = useTranslations('Common.labels');
   const fmt = useAppFormat();
-  const permissions = usePermissions();
+  const { has } = usePermissions();
   const navigateOnce = useNavigateOnce();
-  // Màn CHÍNH của tuyến gói (ADR 0040) — chủ gian hàng không bao giờ đi qua trang chủ marketplace,
-  // nên cửa xin quyền thông báo phải mở cả ở đây (`push-permission-gate.ts`).
   useOpenPushPermissionGate();
-
-  /*
-   * Kéo-làm-mới đọc lại HỒ SƠ PHIÊN trước tiên: trạng thái gian hàng và quyền đều đến từ
-   * `/auth/me`. Chủ shop vừa gia hạn gói, hay vừa bị gỡ khỏi gian hàng — đó là những thứ màn này
-   * hiển thị, và không có lối làm mới thì phải đóng app mở lại mới thấy.
-   */
-  const session = useCurrentUser();
-
-  /** Phiếu đang mở ở tấm trượt chi tiết. `null` = đóng, và `ReceiptDetailSheet` không gọi API. */
+  const isOwner = useIsShopOwner();
   const [receiptDetailId, setReceiptDetailId] = useState<string | null>(null);
 
-  const canViewVehicles = permissions.has(PERMISSION.VEHICLE_VIEW);
-  const canViewBookings = permissions.has(PERMISSION.BOOKING_VIEW);
-
-  /*
-   * Ô "Chi nhánh" của Tổng quan (ADR 0052) — làm TRỌN hoặc không làm: thẻ xe/đơn và cả hai khối
-   * tiền theo CÙNG một chi nhánh, và mọi đích rời màn mang theo nó (`withBranchParam`).
-   */
+  const canViewVehicles = has(PERMISSION.VEHICLE_VIEW);
   const { branchId, filter: branchFilter } = useScreenBranchFilter();
+  const overview = usePartnerOverview(branchId);
   const fleet = useFleetStats(canViewVehicles, branchId);
-  const bookings = useDashboardBookings(canViewBookings, branchId);
   const money = useDashboardMoney(branchId);
+  const links = useDashboardLinks(branchId);
+  const refresh = useDashboardRefresh();
+  const answer = useDashboardAnswer(overview.data);
+  const change = useChangeText();
+  const data = overview.data;
+  const monthCells = useMonthKpiCells(data?.month, overview.isError, links);
 
-  /*
-   * Ngày hôm nay kèm THỨ — theo giờ Việt Nam, không phải giờ máy: "hôm nay" của một chiếc điện
-   * thoại đang ở múi giờ khác không phải hôm nay của gian hàng.
-   */
-  const today = fmt.fullDate(nowInAppTz());
-  const todayLabel = today.charAt(0).toLocaleUpperCase() + today.slice(1);
-
-  const goBookings = useCallback(
-    () => navigateOnce(withBranchParam(ROUTES.manage.bookings(), branchId)),
-    [navigateOnce, branchId],
-  );
-
-  /*
-   * Đích của hai thẻ tiền phải LỌC ĐÚNG bộ mà con số trên thẻ được cộng ra — cùng bộ tham số mà
-   * màn Tổng quan doanh thu dùng. Thiếu `status`/`sourceGroup` thì thẻ nói một số còn sổ nó mở ra
-   * nói số khác: `revenue` đã LOẠI tiền giữ hộ và chỉ tính phiếu đã duyệt.
-   *
-   * Thẻ cọc KHÔNG mang kỳ: `depositHeld` là số TẠI THỜI ĐIỂM NÀY (cọc đã thu chưa hoàn), không
-   * phải số của tháng — kẹp thêm `from`/`to` là dẫn sang một tập phiếu khác hẳn.
-   */
   const goRevenueReceipts = useCallback(
     () =>
       navigateOnce(
@@ -110,6 +89,7 @@ export function ShopDashboardScreen() {
     [navigateOnce, branchId],
   );
 
+  /* Thẻ cọc KHÔNG mang kỳ: `depositHeld` là số TẠI THỜI ĐIỂM NÀY. */
   const goDepositReceipts = useCallback(
     () =>
       navigateOnce(
@@ -124,16 +104,28 @@ export function ShopDashboardScreen() {
     [navigateOnce, branchId],
   );
 
-  /**
-   * Giá trị của một ô số: lỗi nói ra thành CHỮ, chưa có dữ liệu thì `—`.
-   *
-   * Nuốt lỗi thành `—` cũng được, nhưng nuốt thành `0` thì không: một thẻ hỏng sẽ trông y hệt
-   * một gian hàng chưa có doanh thu.
-   */
+  /** Lỗi nói ra thành CHỮ, chưa có dữ liệu thì `—` — không bao giờ `0`. */
   const cellValue = (isError: boolean, value: string | undefined): string =>
     isError ? tCommon('unknown') : (value ?? tCommon('emptyValue'));
 
   const cells: StatCell[] = [];
+
+  if (money.visible) {
+    const s = money.summary.data;
+    const prev = money.previousSummary.data;
+    cells.push({
+      key: 'revenue',
+      icon: 'cash-outline',
+      label: t('stats.revenue'),
+      hint: s && prev ? [t('stats.revenueHint'), change(moneyChangePercent(s.revenue, prev.revenue))] : t('stats.revenueHint'),
+      value: cellValue(money.summary.isError, s ? fmt.money(s.revenue) : undefined),
+      tone: colors.primaryActive,
+      surface: colors.primaryLight,
+      onPress: goRevenueReceipts,
+    });
+  }
+
+  cells.push(...monthCells);
 
   if (canViewVehicles) {
     cells.push({
@@ -142,83 +134,41 @@ export function ShopDashboardScreen() {
       label: t('stats.available'),
       value: cellValue(
         fleet.isError,
-        fleet.data ? `${fleet.data.available}/${fleet.data.total}` : undefined,
+        fleet.data ? `${fmt.count(fleet.data.available)}/${fmt.count(fleet.data.total)}` : undefined,
       ),
+      ...(fleet.data
+        ? {
+            hint: t('kpi.fleetHint', {
+              renting: fmt.count(fleet.data.renting),
+              maintenance: fmt.count(fleet.data.maintenance),
+            }),
+          }
+        : {}),
       tone: colors.success,
       surface: colors.successSurface,
+      onPress: () => navigateOnce(links.availableVehicles),
     });
   }
 
-  if (canViewBookings) {
-    cells.push(
-      {
-        key: 'renting',
-        icon: 'key-outline',
-        label: t('stats.renting'),
-        value: cellValue(
-          bookings.activeError,
-          bookings.activeCount === undefined
-            ? undefined
-            : t('stats.rentingValue', { count: bookings.activeCount }),
-        ),
-        tone: colors.info,
-        surface: colors.infoSurface,
-      },
-      {
-        key: 'overdue',
-        icon: 'alert-circle-outline',
-        label: t('stats.overdue'),
-        value: cellValue(
-          bookings.overdueError,
-          bookings.overdueCount === undefined
-            ? undefined
-            : t('stats.overdueValue', { count: bookings.overdueCount }),
-        ),
-        tone: colors.danger,
-        surface: colors.dangerSurface,
-        ...(bookings.overdueCount ? { valueTone: colors.danger } : {}),
-        onPress: goBookings,
-      },
-    );
+  if (money.visible) {
+    cells.push({
+      key: 'deposit',
+      icon: 'lock-closed-outline',
+      label: t('stats.deposit'),
+      ...(money.summary.data
+        ? { hint: t('stats.depositHint', { count: money.summary.data.depositHeldBookings }) }
+        : {}),
+      value: cellValue(
+        money.summary.isError,
+        money.summary.data ? fmt.money(money.summary.data.depositHeld) : undefined,
+      ),
+      tone: colors.primaryActive,
+      surface: colors.primaryLight,
+      onPress: goDepositReceipts,
+    });
   }
 
-  /*
-   * Hai thẻ tiền chỉ có ở bậc CÓ sổ tổng hợp (ADR 0027 điều 1). Bậc cơ bản KHÔNG thấy chúng —
-   * thẻ "Doanh thu 0 ₫" cho người chưa mua gói vừa sai vừa trông như hỏng.
-   */
-  if (money.visible) {
-    cells.push(
-      {
-        key: 'revenue',
-        icon: 'cash-outline',
-        label: t('stats.revenue'),
-        hint: t('stats.revenueHint'),
-        value: cellValue(
-          money.summary.isError,
-          money.summary.data ? fmt.money(money.summary.data.revenue) : undefined,
-        ),
-        tone: colors.primaryActive,
-        surface: colors.primaryLight,
-        onPress: goRevenueReceipts,
-      },
-      {
-        key: 'deposit',
-        icon: 'lock-closed-outline',
-        label: t('stats.deposit'),
-        // Mẫu số chỉ có nghĩa khi con số bên trên có nghĩa — lỗi thì bỏ trống.
-        ...(money.summary.data
-          ? { hint: t('stats.depositHint', { count: money.summary.data.depositHeldBookings }) }
-          : {}),
-        value: cellValue(
-          money.summary.isError,
-          money.summary.data ? fmt.money(money.summary.data.depositHeld) : undefined,
-        ),
-        tone: colors.primaryActive,
-        surface: colors.primaryLight,
-        onPress: goDepositReceipts,
-      },
-    );
-  }
+  const trend = data?.trend ?? null;
 
   return (
     <>
@@ -226,96 +176,50 @@ export function ShopDashboardScreen() {
       <Screen
         edges={['left', 'right', 'bottom']}
         padded={false}
-        refreshing={session.isRefetching}
-        onRefresh={() => void session.refetch()}
+        refreshing={refresh.refreshing}
+        onRefresh={refresh.onRefresh}
       >
-        <ManagePageTitle title={t('title')} total={todayLabel} />
+        <ManagePageTitle title={t('title')} total={todayLabel(fmt, dayjs())} />
 
         <YStack px={layout.screenX} gap={layout.section} pb={layout.section}>
           <BranchFilterField filter={branchFilter} value={branchId} />
-          {/* Dải trạng thái gian hàng nằm ở `ManageShellNotices` (trong `ManageHeader`) — phủ mọi màn như web. */}
-          {/*
-            Gian hàng chưa duyệt xong / chưa có xe: ba bước cần làm đứng TRƯỚC bảng số liệu, vì
-            lúc đó mọi ô đều là 0 và không ô nào nói được việc gì tiếp theo. Thẻ tự ẩn khi hết việc.
-          */}
+          <AnswerBanner answer={answer} />
           <ShopOnboardingCard vehicleCount={fleet.data?.total} />
+          <TodayFocus overview={data} isError={overview.isError} links={links} />
 
-          {/*
-            Dải chỉ số ở dạng DÒNG SỔ trong MỘT thẻ — cùng khuôn với `FinanceOverviewCards` ở màn
-            Thu–Chi, và cùng lý do: mỗi chỉ số một hàng, nhãn đầy đủ bên trái, con số căn phải nên
-            cả cột số thẳng một mép và mắt dò dọc được.
-
-            Lưới hai cột thì mỗi ô cao gấp đôi (hình · số · nhãn · chú thích xếp chồng) và năm chỉ
-            số ăn gần trọn màn hình trước khi tới khối đầu tiên — đúng cái làm Tổng quan phải cuộn
-            mới thấy được việc cần làm.
-
-            Thẻ bọc là BẮT BUỘC: `StatGrid` cố ý không có vỏ, để trần thì mấy nét kẻ chia ô trôi
-            trên nền trang và cả dải trông như một khối chưa dựng xong.
-          */}
           {cells.length > 0 ? (
             <Card padded={false}>
-              {/*
-                `emphasis="even"`: dải này đứng một mình dưới tiêu đề trang, không có `BlockTitle`
-                nào ở trên như bên màn Tài chính — nhãn chính là thứ người ta quét mắt qua, nên nó
-                phải ăn mực đen và đứng cùng bậc chữ với con số, không lép vế trước nó.
-              */}
               <StatGrid variant="list" cells={cells} emphasis="even" />
             </Card>
           ) : null}
 
-          {canViewBookings ? (
-            <>
-              <DashboardPanel
-                title={t('panels.recent')}
-                icon="document-text"
-                tone="primary"
-                loading={bookings.recent.isPending}
-                error={bookings.recent.isError && !bookings.recent.data}
-                empty={t('panels.recentEmpty')}
-              >
-                {bookings.recent.data?.items.length ? (
-                  <BookingMiniList
-                    items={bookings.recent.data.items}
-                    onSelect={(booking) => navigateOnce(ROUTES.manage.bookingDetail(booking.id))}
-                  />
-                ) : null}
-              </DashboardPanel>
-
-              <DashboardPanel
-                title={t('panels.dueToday')}
-                icon="alert-circle"
-                tone="danger"
-                loading={bookings.dueToday.isPending}
-                error={bookings.dueToday.isError && !bookings.dueToday.data}
-                empty={t('panels.dueTodayEmpty')}
-              >
-                {bookings.dueToday.data?.items.length ? (
-                  <BookingMiniList
-                    items={bookings.dueToday.data.items}
-                    onSelect={(booking) => navigateOnce(ROUTES.manage.bookingDetail(booking.id))}
-                  />
-                ) : null}
-              </DashboardPanel>
-
-              <DashboardPanel
-                title={t('panels.upcoming')}
-                icon="time"
-                tone="warning"
-                loading={bookings.upcoming.isPending}
-                error={bookings.upcoming.isError && !bookings.upcoming.data}
-                empty={t('panels.upcomingEmpty')}
-              >
-                {bookings.upcoming.data?.items.length ? (
-                  <BookingMiniList
-                    items={bookings.upcoming.data.items}
-                    onSelect={(booking) => navigateOnce(ROUTES.manage.bookingDetail(booking.id))}
-                  />
-                ) : null}
-              </DashboardPanel>
-            </>
+          {data?.agenda !== null ? (
+            <AgendaPanel
+              agenda={data?.agenda ?? undefined}
+              generatedAt={data?.generatedAt}
+              isError={overview.isError}
+              onRetry={() => void overview.refetch()}
+              bookingHref={links.booking}
+              moreHref={links.allBookings}
+            />
           ) : null}
 
-          {/* Khối sổ quỹ đi cùng điều kiện với hai thẻ tiền — cùng tính năng, cùng quyền. */}
+          {money.visible ? <RevenueTrendPanel series={money.series} /> : null}
+          {/* Lần tải đầu lỗi: chưa biết tuyến có `trend` không — vẫn hiện panel với lỗi + thử lại. */}
+          {(data ? trend !== null : overview.isError) ? (
+            <TripsTrendPanel
+              trend={trend ?? undefined}
+              loading={overview.isPending}
+              isError={overview.isError}
+              onRetry={() => void overview.refetch()}
+            />
+          ) : null}
+
+          {isOwner ? <WalletPanel showIncome={false} href={links.balance} /> : null}
+          {has(PERMISSION.SUBSCRIPTION_VIEW) ? <PlanPanel href={links.subscription} /> : null}
+          {data?.market !== null ? <MarketPanel market={data?.market ?? undefined} links={links} /> : null}
+          <ReputationPanel metrics={data?.reputation} />
+
           {money.visible ? (
             <DashboardPanel
               title={t('panels.receipts')}
@@ -323,6 +227,7 @@ export function ShopDashboardScreen() {
               tone="success"
               loading={money.todayReceipts.isPending}
               error={money.todayReceipts.isError && !money.todayReceipts.data}
+              onRetry={() => void money.todayReceipts.refetch()}
               empty={t('panels.receiptsEmpty')}
             >
               {money.todayReceipts.data?.items.length ? (
@@ -336,16 +241,6 @@ export function ShopDashboardScreen() {
         </YStack>
       </Screen>
 
-      {/*
-        Chạm một dòng sổ quỹ mở CHI TIẾT phiếu ngay tại chỗ, không nhảy sang màn Thu-Chi.
-
-        Dùng lại `ReceiptDetailSheet` — MỘT implementation cho mọi lối vào (sổ Thu-Chi, hồ sơ
-        khách, hồ sơ xe, và giờ là Tổng quan). Chép một bản rút gọn ở đây là thêm một nơi phải nhớ
-        cập nhật, và nơi bị bỏ quên luôn là nơi người dùng đang mở.
-
-        Tấm trượt KHÔNG phát request nào khi `receiptId` là `null` — nó nằm ngoài `Screen` để lớp
-        phủ che trọn màn thay vì nằm trong vùng cuộn.
-      */}
       <ReceiptDetailSheet receiptId={receiptDetailId} onClose={() => setReceiptDetailId(null)} />
     </>
   );

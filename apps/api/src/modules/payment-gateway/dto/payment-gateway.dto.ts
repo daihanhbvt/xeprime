@@ -107,7 +107,8 @@ export class PaymentOrderDto {
   @ApiProperty({
     enum: PAYMENT_ORDER_VIEW_STATE_VALUES,
     description:
-      'Chặng nhìn từ phía người trả — awaiting · confirming · completed · failed · needs_support',
+      'Chặng nhìn từ phía người trả — awaiting · confirming · completed · ' +
+      'duplicate_refunded (trả trùng, đã ghi hoàn vào Ví điểm) · failed · needs_support',
   })
   viewState!: string;
   @ApiPropertyOptional({ enum: PAYMENT_ORDER_APPLY_OUTCOME_VALUES, nullable: true, type: String })

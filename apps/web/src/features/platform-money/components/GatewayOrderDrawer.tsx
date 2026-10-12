@@ -299,7 +299,7 @@ function OrderFile({ order }: { order: PlatformPaymentOrderDetail }) {
     { key: 'tenant', label: t('columns.tenant'), value: order.tenantName },
     { key: 'initiatedBy', label: t('detail.initiatedBy'), value: order.initiatedByName ?? empty },
     { key: 'orderRef', label: t('detail.orderRef'), value: mono(order.providerOrderRef, t('detail.orderRef')) },
-    { key: 'providerTx', label: t('detail.providerTx'), value: mono(order.providerTxId, t('detail.providerTx')) },
+    { key: 'providerTx', label: t('detail.providerTx'), value: mono(order.providerTxId ?? null, t('detail.providerTx')) },
     {
       key: 'amountPaid',
       label: t('detail.amountPaid'),

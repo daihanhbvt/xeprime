@@ -60,10 +60,10 @@ export function RegisterScreen({
     <>
       <AppHeader {...(registered ? {} : { onBack: onCancel })} />
 
-      <Screen edges={['left', 'right', 'bottom']}>
-        {registered ? (
-          <RegisterSuccess onContinue={onRegistered} onOpenAccount={onOpenAccount} />
-        ) : (
+      {registered ? (
+        <RegisterSuccess onContinue={onRegistered} onOpenAccount={onOpenAccount} />
+      ) : (
+        <Screen edges={['left', 'right', 'bottom']}>
           <YStack gap={space.xl}>
             <YStack gap={space.xs}>
               <Text col={colors.text} fos={fontSize.h2} fow={fontWeight.bold}>
@@ -114,8 +114,8 @@ export function RegisterScreen({
               onPress={onSwitchToLogin}
             />
           </YStack>
-        )}
-      </Screen>
+        </Screen>
+      )}
     </>
   );
 }

@@ -17,6 +17,8 @@ import {
   SERVICE_TYPE,
   STOREFRONT_KIND,
   TRIP_ROLE,
+  isAwaitingPayment,
+  type BookingHoldStatus,
   type CustomerTripStage,
 } from '@xeprime/types';
 import { dayjs, LIST_SEPARATOR } from '@xeprime/domain';
@@ -47,6 +49,11 @@ import { ReviewSheet } from './components/ReviewSheet';
 import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
 import { TripEstimateCard } from './components/TripEstimateCard';
 import { TripFinanceCard } from './components/TripFinanceCard';
+import {
+  TripGatewayNotice,
+  TripGatewayPay,
+  useTripGateway,
+} from '@/features/payment-gateway/components/TripGatewayPay';
 import { TripHoldPanel } from './components/TripHoldPanel';
 import { TripHandoverEvidence } from './components/TripHandoverEvidence';
 import { ApproveSuccessSheet } from '@/features/booking-requests/components/ApproveSuccessSheet';
@@ -156,6 +163,8 @@ function TripDetailBody({ trip, listHref }: { trip: CustomerTripDetail; listHref
    */
   const [approved, setApproved] = useState<BookingRequestDecisionTarget | null>(null);
   const cancelTrip = useCancelTrip(trip.id);
+  /** Lượt MoMo/VNPAY — thông báo đứng NGOÀI panel giữ chỗ (web: `TripGatewayReturn`), nút ở trong. */
+  const gateway = useTripGateway(trip.id);
 
   const stage = trip.stage as CustomerTripStage;
   const meta = CUSTOMER_TRIP_STAGE_META[stage];
@@ -303,12 +312,26 @@ function TripDetailBody({ trip, listHref }: { trip: CustomerTripDetail; listHref
             NHẤT khách cần làm, và nó không được nằm dưới một bảng số liệu mà họ chưa có lý do để
             đọc.
           */}
+          <TripGatewayNotice
+            gateway={gateway}
+            holdAwaitingPayment={
+              trip.hold ? isAwaitingPayment(trip.hold.status as BookingHoldStatus) : false
+            }
+          />
+
           {trip.hold ? (
             <TripHoldPanel
               hold={trip.hold}
               tripId={trip.id}
               tripTotalAmount={trip.estimate?.fees?.customerTotalAmount ?? null}
               payAtHandoverAmount={trip.estimate?.fees?.payAtPickupAmount ?? null}
+              gatewayOptions={
+                <TripGatewayPay
+                  gateway={gateway}
+                  amount={trip.hold.remainingAmount}
+                  deadline={trip.hold.expiresAt}
+                />
+              }
             />
           ) : null}
 

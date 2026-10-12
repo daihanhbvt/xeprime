@@ -20,12 +20,21 @@ export function SearchInput({
   label,
   placeholder,
   variant = 'pill',
+  onSubmit,
+  onFocus,
+  onBlur,
+  maxLength,
 }: {
   value: string;
   onChange: (next: string) => void;
   label: string;
   placeholder: string;
   variant?: 'pill' | 'boxed';
+  /** Phím "Tìm" trên bàn phím — áp ngay, không đợi nhịp trì hoãn. */
+  onSubmit?: () => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
+  maxLength?: number;
 }) {
   const inputRef = useRef<TextInput>(null);
   const boxed = variant === 'boxed';
@@ -54,6 +63,10 @@ export function SearchInput({
         placeholderTextColor={colors.placeholder}
         accessibilityLabel={label}
         returnKeyType="search"
+        onSubmitEditing={onSubmit}
+        onFocus={onFocus}
+        onBlur={onBlur}
+        maxLength={maxLength}
         /*
          * `fontFamily` PHẢI khai tường minh: `TextInput` của React Native không thừa kế font từ
          * Tamagui và không có font kế thừa như CSS. Bỏ trống thì ô tìm kiếm chạy font hệ điều

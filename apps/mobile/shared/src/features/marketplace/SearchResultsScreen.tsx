@@ -38,6 +38,7 @@ import { scrollThrottle } from '@/theme/motion';
 import { SearchExperienceProvider, useSearchExperience } from './search-context';
 import { useInfinitePublicListings } from './hooks/use-search-results';
 import { FilterSheet } from './components/FilterSheet';
+import { KeywordSearch } from './components/KeywordSearch';
 import { LocationPicker } from './components/LocationPicker';
 import { RentalRangeSheet } from './components/RentalRangeSheet';
 import { SortMenu } from './components/SortMenu';
@@ -302,6 +303,16 @@ function ResultsBody({ onBack }: { onBack: () => void }) {
 
           <YStack px={layout.screenX} pt={space.sm} pb={space.sm} gap={space.sm}>
             {/*
+              Ô TỪ KHOÁ (09/10, bản native của `KeywordSearch` web) đứng trên thanh ngữ cảnh: tên
+              xe / hãng / model hoặc tên chủ xe, gian hàng. Áp thẳng vào bộ lọc, facet giữ nguyên.
+            */}
+            <KeywordSearch
+              value={filters.q}
+              onApply={(q) => setFilters({ q })}
+              onOpenShop={(slug) => navigateOnce(ROUTES.explore.shopDetail(slug))}
+            />
+
+            {/*
           Thanh tóm tắt ngữ cảnh: chạm vào thân để sửa ĐỊA ĐIỂM, nút lịch bên phải để sửa
           KHOẢNG THUÊ.
 
@@ -384,7 +395,9 @@ function ResultsBody({ onBack }: { onBack: () => void }) {
               >
                 {results.isInitialLoading
                   ? t('searching')
-                  : t('available', { count: results.total })}
+                  : filters.q
+                    ? t('availableFor', { count: results.total, q: filters.q })
+                    : t('available', { count: results.total })}
               </Text>
               {filterCount > 0 ? (
                 <Text flexShrink={0} col={colors.textMuted} fos={fontSize.label}>
@@ -528,6 +541,8 @@ function ResultsBody({ onBack }: { onBack: () => void }) {
         ) : results.listings.length === 0 ? (
           <YStack f={1} pt={filterHeight}>
             <Empty
+              keyword={filters.q}
+              onClearKeyword={() => setFilters({ q: undefined })}
               filtered={filterCount > 0}
               onClear={() =>
                 setFilters(Object.fromEntries(FACET_KEYS.map((key) => [key, undefined])))
@@ -621,15 +636,41 @@ function ResultsBody({ onBack }: { onBack: () => void }) {
  * nhau. Gộp lại thì khách đang lọc quá tay sẽ tưởng nền tảng không có xe nào.
  */
 function Empty({
+  keyword,
+  onClearKeyword,
   filtered,
   onClear,
   onChangeContext,
 }: {
+  /** Rỗng vì TỪ KHOÁ — lối thoát đúng là xoá từ khoá, không phải bộ lọc. */
+  keyword?: string;
+  onClearKeyword: () => void;
   filtered: boolean;
   onClear: () => void;
   onChangeContext: () => void;
 }) {
   const t = useTranslations('Marketplace.results');
+
+  if (keyword) {
+    return (
+      <YStack f={1} ai="center" jc="center" gap={space.md} p={layout.screenX}>
+        <ScreenMessage
+          icon="search-outline"
+          title={t('emptyKeywordTitle', { q: keyword })}
+          description={t('emptyKeywordDesc')}
+          actionLabel={t('clearKeyword')}
+          onAction={onClearKeyword}
+        />
+        {filtered ? (
+          <Pressable onPress={onClear} accessibilityRole="button" hitSlop={space.sm}>
+            <Text col={colors.primaryActive} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+              {t('clearAll')}
+            </Text>
+          </Pressable>
+        ) : null}
+      </YStack>
+    );
+  }
 
   if (!filtered) {
     return (

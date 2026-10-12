@@ -30,6 +30,8 @@ import type {
  */
 export function toListingQueryParams(filters: MarketplaceFilters): QueryParams {
   return {
+    // Từ khoá gửi NGUYÊN VĂN — server gấp chuỗi (bỏ dấu, tách chữ↔số) trước khi so.
+    q: filters.q ?? null,
     vehicleType: filters.vehicleType ?? null,
     serviceType: filters.serviceType ?? null,
     // Tham số chuẩn là MÃ. `province` (tên) chỉ gửi kèm khi chưa có mã — backend quy nó về mã
@@ -140,6 +142,14 @@ export const marketplaceApi = {
   /** Gian hàng đang hoạt động có xe công khai, sắp theo điểm đánh giá. */
   shops(limit: number): Promise<Paged<PublicShopSummary>> {
     return getApiClient().fetchPage<PublicShopSummary>('/public/shops', { page: 1, limit }, limit);
+  },
+
+  /**
+   * Chủ xe / gian hàng có tên công khai khớp từ khoá — gợi ý của ô từ khoá. Cùng luật khớp với
+   * lưới kết quả ở server, nên gợi ý không nêu một cái tên mà lưới không coi là khớp.
+   */
+  shopSuggestions(q: string, limit: number): Promise<Paged<PublicShopSummary>> {
+    return getApiClient().fetchPage<PublicShopSummary>('/public/shops', { q, page: 1, limit }, limit);
   },
 
   shop(slug: string): Promise<PublicShop> {

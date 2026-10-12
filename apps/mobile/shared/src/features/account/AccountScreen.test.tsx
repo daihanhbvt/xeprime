@@ -229,6 +229,8 @@ describe('AccountScreen — điều hướng tài khoản', () => {
 
     for (const label of [
       'Tài khoản của tôi',
+      // Bằng lái của tài khoản khách (ADR 0057).
+      'Giấy tờ & Xác minh',
       'Trở thành chủ xe',
       'Chuyến của tôi',
       /*

@@ -9,7 +9,6 @@ import {
   isEstablishedPackageShop,
   isPackageShopTrack,
   PERMISSION,
-  TENANT_STATUS,
   type TenantStatus,
   toLocalVnPhone,
 } from '@xeprime/types';
@@ -527,9 +526,6 @@ function ProfileForm({
           description={t('page.subtitle')}
           editable={editable}
           logoPickerRef={logoPicker}
-          {...(status === TENANT_STATUS.ACTIVE
-            ? { onViewPublicPage: () => navigateOnce(ROUTES.explore.shopDetail(shop.slug)) }
-            : {})}
         />
 
         <YStack

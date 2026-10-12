@@ -81263,7 +81263,7 @@
               "failed",
               "needs_support"
             ],
-            "description": "Chặng nhìn từ phía người trả — awaiting · confirming · completed · failed · needs_support"
+            "description": "Chặng nhìn từ phía người trả — awaiting · confirming · completed · duplicate_refunded (trả trùng, đã ghi hoàn vào Ví điểm) · failed · needs_support"
           },
           "applyOutcome": {
             "type": "string",

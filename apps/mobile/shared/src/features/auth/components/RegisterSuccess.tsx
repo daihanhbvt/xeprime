@@ -4,6 +4,7 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { MOBILE_CLIENT_APP } from '@xeprime/types';
 import { APP_PROFILE } from '@/app-profile';
+import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 
@@ -50,74 +51,89 @@ export function RegisterSuccess({
   const partner = APP_PROFILE.clientApp === MOBILE_CLIENT_APP.PARTNER;
   const ns = partner ? 'registeredPartner' : 'registered';
 
+  /*
+   * Nút NEO Ở ĐÁY MÀN (`footer` của `Screen`) như mọi bước của luồng đăng ký — nên bước này tự
+   * dựng `Screen` của nó thay vì nằm trong vùng cuộn của màn đăng ký.
+   */
   return (
-    <YStack f={1} gap={space.lg}>
-      <YStack h={280} br={radius.lg} ov="hidden" ai="center" jc="center" bg={colors.primaryLight}>
-        <YStack
-          w={ORB_LARGE}
-          h={ORB_LARGE}
-          br={ORB_LARGE / 2}
-          bg={colors.primary}
-          style={styles.orbLarge}
-        />
-        <YStack
-          w={ORB_SMALL}
-          h={ORB_SMALL}
-          br={ORB_SMALL / 2}
-          bg={colors.primary}
-          style={styles.orbSmall}
-        />
-        <YStack
-          w={HERO_DISC}
-          h={HERO_DISC}
-          br={HERO_DISC / 2}
-          ai="center"
-          jc="center"
-          bg={colors.success}
-        >
-          <Ionicons name="checkmark" size={HERO_ICON} color={colors.onPrimary} />
+    <Screen
+      edges={['left', 'right', 'bottom']}
+      footer={
+        <YStack gap={space.sm}>
+          {partner ? (
+            <Button label={t('registeredPartner.cta')} icon="arrow-forward" onPress={onContinue} />
+          ) : (
+            <>
+              <Button label={t('modal.continueLabel')} icon="arrow-forward" onPress={onContinue} />
+              <Button
+                label={t('registered.openAccount')}
+                variant="secondary"
+                icon="person-outline"
+                onPress={onOpenAccount}
+              />
+            </>
+          )}
         </YStack>
-      </YStack>
-
-      <YStack ai="center" gap={space.sm}>
-        <Text col={colors.text} fos={fontSize.h2} fow={fontWeight.bold} ta="center">
-          {t(`${ns}.title`)}
-        </Text>
-        <Text col={colors.textMuted} fos={fontSize.body} ta="center" maxWidth={420}>
-          {t(`${ns}.body`)}
-        </Text>
-      </YStack>
-
-      {/* Chặng kế tiếp nói trước ở app Partner: màn sau là một lựa chọn, không phải một biểu mẫu. */}
-      {partner ? (
-        <XStack ai="flex-start" gap={space.sm} p={space.md} br={radius.md} bg={colors.surfaceMuted}>
-          <Ionicons name="git-branch-outline" size={iconSize.md} color={colors.primaryActive} />
-          <YStack f={1} minWidth={0} gap={2}>
-            <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-              {t('registeredPartner.nextTitle')}
-            </Text>
-            <Text col={colors.textMuted} fos={fontSize.label}>
-              {t('registeredPartner.nextBody')}
-            </Text>
+      }
+    >
+      <YStack f={1} gap={space.lg}>
+        <YStack h={280} br={radius.lg} ov="hidden" ai="center" jc="center" bg={colors.primaryLight}>
+          <YStack
+            w={ORB_LARGE}
+            h={ORB_LARGE}
+            br={ORB_LARGE / 2}
+            bg={colors.primary}
+            style={styles.orbLarge}
+          />
+          <YStack
+            w={ORB_SMALL}
+            h={ORB_SMALL}
+            br={ORB_SMALL / 2}
+            bg={colors.primary}
+            style={styles.orbSmall}
+          />
+          <YStack
+            w={HERO_DISC}
+            h={HERO_DISC}
+            br={HERO_DISC / 2}
+            ai="center"
+            jc="center"
+            bg={colors.success}
+          >
+            <Ionicons name="checkmark" size={HERO_ICON} color={colors.onPrimary} />
           </YStack>
-        </XStack>
-      ) : null}
+        </YStack>
 
-      <YStack gap={space.sm} w="100%">
+        <YStack ai="center" gap={space.sm}>
+          <Text col={colors.text} fos={fontSize.h2} fow={fontWeight.bold} ta="center">
+            {t(`${ns}.title`)}
+          </Text>
+          <Text col={colors.textMuted} fos={fontSize.body} ta="center" maxWidth={420}>
+            {t(`${ns}.body`)}
+          </Text>
+        </YStack>
+
+        {/* Chặng kế tiếp nói trước ở app Partner: màn sau là một lựa chọn, không phải một biểu mẫu. */}
         {partner ? (
-          <Button label={t('registeredPartner.cta')} icon="arrow-forward" onPress={onContinue} />
-        ) : (
-          <>
-            <Button label={t('modal.continueLabel')} icon="arrow-forward" onPress={onContinue} />
-            <Button
-              label={t('registered.openAccount')}
-              variant="secondary"
-              icon="person-outline"
-              onPress={onOpenAccount}
-            />
-          </>
-        )}
+          <XStack
+            ai="flex-start"
+            gap={space.sm}
+            p={space.md}
+            br={radius.md}
+            bg={colors.surfaceMuted}
+          >
+            <Ionicons name="git-branch-outline" size={iconSize.md} color={colors.primaryActive} />
+            <YStack f={1} minWidth={0} gap={2}>
+              <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+                {t('registeredPartner.nextTitle')}
+              </Text>
+              <Text col={colors.textMuted} fos={fontSize.label}>
+                {t('registeredPartner.nextBody')}
+              </Text>
+            </YStack>
+          </XStack>
+        ) : null}
       </YStack>
-    </YStack>
+    </Screen>
   );
 }

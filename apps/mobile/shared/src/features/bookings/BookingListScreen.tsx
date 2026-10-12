@@ -26,6 +26,7 @@ import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { FIRST_PAGE, useClampedPage } from '@/queries/use-clamped-page';
 import { useDomainLabel } from '@/i18n/domain';
 import { ROUTES } from '@/navigation/routes';
+import { useListParam, useListParamChange } from '@/navigation/list-params';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
@@ -83,15 +84,31 @@ export function BookingListScreen({
 
   const awaitingPickup = preset === BOOKING_LIST_PRESET.AWAITING_PICKUP;
 
-  const [status, setStatus] = useState<string>(STATUS_ALL);
+  /*
+   * Bộ lọc KHỞI TẠO từ tham số route — thẻ Tổng quan mở sẵn "Đang thuê, trả sớm nhất trước" như
+   * `?status=active&sort=return_asc` của web. Giá trị lạ bị bỏ qua; người dùng vẫn đổi được.
+   */
+  const routeStatus = useListParam('status', awaitingPickup ? [] : BOOKING_STATUS_SELECTABLE_VALUES);
+  const routeSort = useListParam('sort', BOOKING_SORT_VALUES);
+  const [status, setStatus] = useState<string>(routeStatus ?? STATUS_ALL);
   /*
    * Nhóm việc quyết cách sắp xếp MẶC ĐỊNH: một ca trực đọc theo giờ hẹn, không theo ngày tạo.
    * Server cũng mặc định đúng như vậy — đặt tường minh ở đây chỉ để ô "Sắp xếp" trên màn không
    * nói một đằng còn dữ liệu một nẻo.
    */
-  const [sort, setSort] = useState<BookingSort>(awaitingPickup ? 'pickup_asc' : DEFAULT_SORT);
+  const [sort, setSort] = useState<BookingSort>(
+    routeSort ?? (awaitingPickup ? 'pickup_asc' : DEFAULT_SORT),
+  );
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(FIRST_PAGE);
+  useListParamChange('status', routeStatus, (next) => {
+    setStatus(next);
+    setPage(FIRST_PAGE);
+  });
+  useListParamChange('sort', routeSort, (next) => {
+    setSort(next);
+    setPage(FIRST_PAGE);
+  });
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
   /* Ô "Chi nhánh" (ADR 0052) — cả "Tất cả đơn thuê" lẫn hàng đợi "Chờ giao xe". */
   const { branchId, filter: branchFilter } = useScreenBranchFilter(() => setPage(FIRST_PAGE));

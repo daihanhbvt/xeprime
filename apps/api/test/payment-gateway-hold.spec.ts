@@ -353,9 +353,9 @@ describe('Mở phiên cho tiền giữ chỗ', () => {
       expect(order.amount).toBe('60000');
       expect(order.tripId).toBe(requestId);
       expect(momo.created[0]!.amount).toBe(60000);
-      // App native: trang web quay về mang cờ để hiện nút mở lại app.
+      // App native: quay về trang CÔNG KHAI (trình duyệt của app không có cookie phiên).
       expect(momo.created[0]!.returnUrl).toBe(
-        `${SPEC_WEB.customer}/trips/${requestId}?paymentOrder=${order.id}&app=1`,
+        `${SPEC_WEB.customer}/app-return?trip=${requestId}&paymentOrder=${order.id}`,
       );
 
       const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
