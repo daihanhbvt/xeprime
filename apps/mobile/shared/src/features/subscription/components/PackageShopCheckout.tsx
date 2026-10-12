@@ -11,7 +11,7 @@ import {
   useTenantPlans,
 } from '../hooks/use-subscription';
 import { InvoiceWaitingPanel } from './InvoiceWaitingPanel';
-import { PlanPickerPanel } from './PlanPickerPanel';
+import { PlanPickerPanel, PlanPickerSubmit } from './PlanPickerPanel';
 
 /**
  * BƯỚC 2 của onboarding gian hàng trả phí: chọn gói → chuyển khoản (ADR 0040).
@@ -41,20 +41,50 @@ import { PlanPickerPanel } from './PlanPickerPanel';
  * mang đúng số đó, và màn này giữ nguyên chỗ. Gọi nó là "đã thanh toán" vì đã có tiền về là mở
  * Manage cho một khoản chưa đủ.
  */
-export function PackageShopCheckout() {
-  const t = useTranslations('ShopOnboarding.checkout');
-  const errorMessage = useErrorMessage();
-
-  const pending = usePendingInvoice();
+/**
+ * State của bước 2, gọi ở MÀN (không ở thân) để màn neo nút hành động vào `footer` của `Screen`.
+ * `enabled = false` ở bước 1: hook phải gọi vô điều kiện, nhưng chưa có gian hàng thì không có
+ * hoá đơn hay danh mục gói nào để hỏi.
+ */
+export function usePackageShopCheckout(enabled = true) {
+  const pending = usePendingInvoice(enabled);
   const invoice = pending.data ?? null;
   /*
    * Danh mục gói chỉ tải khi CHƯA có hoá đơn chờ: khi đã có mã để chuyển khoản thì bảng giá không
    * còn là thứ người dùng đang quyết định, và một request nữa lúc đó chỉ làm màn thanh toán hiện
    * ra chậm hơn.
    */
-  const plans = useTenantPlans(!pending.isLoading && invoice === null);
+  const plans = useTenantPlans(enabled && !pending.isLoading && invoice === null);
   const purchase = usePurchaseSubscription();
   const selection = usePlanPurchase(plans.data ?? []);
+  const submit = () => {
+    if (selection.selection) purchase.mutate(selection.selection.body);
+  };
+  /*
+   * Nút "Tạo hoá đơn" chỉ có nghĩa ở hình dạng BỘ CHỌN GÓI có danh mục thật — đang tải, lỗi,
+   * danh mục rỗng hay đã có hoá đơn chờ thì không có gì để bấm.
+   */
+  const pickerReady =
+    enabled &&
+    !pending.isLoading &&
+    !(pending.isError && !pending.data) &&
+    invoice === null &&
+    !plans.isLoading &&
+    !plans.isError &&
+    selection.tiers.length > 0;
+  return { pending, invoice, plans, purchase, selection, submit, pickerReady };
+}
+
+export type PackageShopCheckoutState = ReturnType<typeof usePackageShopCheckout>;
+
+/**
+ * Thân bước 2. Nút hành động KHÔNG nằm ở đây mà ở `PackageShopCheckoutAction`, để màn gọi neo nó
+ * vào `footer` của `Screen` — cả hai đọc cùng MỘT `usePackageShopCheckout` của nơi gọi.
+ */
+export function PackageShopCheckout({ checkout }: { checkout: PackageShopCheckoutState }) {
+  const t = useTranslations('ShopOnboarding.checkout');
+  const errorMessage = useErrorMessage();
+  const { pending, invoice, plans, purchase, selection, submit } = checkout;
 
   if (pending.isLoading) return <MiniRowsSkeleton rows={6} />;
 
@@ -72,16 +102,29 @@ export function PackageShopCheckout() {
       state={selection}
       submitting={purchase.isPending}
       errorText={purchase.isError ? errorMessage(purchase.error) : null}
+      showSubmit={false}
       copy={{
         loadError: t('plansError'),
         empty: t('noPlans'),
         emptyHint: t('noPlansHint'),
-        submit: t('createInvoice'),
-        pickTermHint: t('pickTermFirst'),
       }}
-      onSubmit={() => {
-        if (selection.selection) purchase.mutate(selection.selection.body);
-      }}
+      onSubmit={submit}
+    />
+  );
+}
+
+/** Nút "Tạo hoá đơn" của bước 2 — neo ở đáy màn; `null` khi không ở hình dạng bộ chọn gói. */
+export function PackageShopCheckoutAction({ checkout }: { checkout: PackageShopCheckoutState }) {
+  const t = useTranslations('ShopOnboarding.checkout');
+  const { pickerReady, purchase, selection, submit } = checkout;
+  if (!pickerReady) return null;
+  return (
+    <PlanPickerSubmit
+      label={t('createInvoice')}
+      hint={t('pickTermFirst')}
+      submitting={purchase.isPending}
+      selected={selection.selection != null}
+      onSubmit={submit}
     />
   );
 }

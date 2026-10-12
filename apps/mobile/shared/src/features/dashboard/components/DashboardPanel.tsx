@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { ReactNode } from 'react';
+import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { Card } from '@/components/ui/Card';
+import { InlineAction } from '@/components/ui/InlineAction';
 import { IconDisc } from '@/components/ui/IconDisc';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import type { IconName } from '@/components/ui/Chip';
@@ -55,6 +57,9 @@ export function DashboardPanel({
   loading = false,
   error = false,
   empty,
+  extra,
+  onRetry,
+  action,
   children,
 }: {
   title: string;
@@ -63,10 +68,21 @@ export function DashboardPanel({
   loading?: boolean;
   error?: boolean;
   /** Câu hiện khi KHÔNG có dòng nào và cũng không lỗi. */
-  empty: string;
+  /** Chữ của khối rỗng — bỏ trống khi khối tự vẽ trạng thái rỗng trong `children`. */
+  empty?: string;
+  /** Chú thích nhỏ bên phải đầu khối ("7 ngày tới", "90 ngày qua"). */
+  extra?: string;
+  /** Có thì trạng thái lỗi kèm "Thử lại" — lỗi tạm thời không bắt người dùng kéo cả màn. */
+  onRetry?: () => void;
+  /**
+   * Lối "mở cả khối" (Quản lý, Mở, Xem tất cả) — nằm TRÊN dải đầu khối như link ở header bản web,
+   * không phải một mũi tên nổi trong thân khối (chồng lên mũi tên của từng hàng).
+   */
+  action?: { label: string; onPress: () => void };
   children?: ReactNode;
 }) {
   const tStates = useTranslations('Common.states');
+  const tActions = useTranslations('Common.actions');
   const skin = TONE[tone];
   const hasRows = Boolean(children);
 
@@ -95,6 +111,26 @@ export function DashboardPanel({
         <Text f={1} col={colors.text} fos={fontSize.bodySm} fow={fontWeight.bold}>
           {title}
         </Text>
+        {extra ? (
+          <Text col={colors.textMuted} fos={fontSize.label}>
+            {extra}
+          </Text>
+        ) : null}
+        {action ? (
+          <Pressable
+            onPress={action.onPress}
+            accessibilityRole="link"
+            accessibilityLabel={action.label}
+            hitSlop={space.sm}
+          >
+            <XStack ai="center" gap={2}>
+              <Text col={colors.primaryActive} fos={fontSize.label} fow={fontWeight.semibold}>
+                {action.label}
+              </Text>
+              <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.primaryActive} />
+            </XStack>
+          </Pressable>
+        ) : null}
       </XStack>
 
       {loading ? (
@@ -106,17 +142,18 @@ export function DashboardPanel({
             <Text f={1} col={colors.danger} fos={fontSize.bodySm}>
               {tStates('error')}
             </Text>
+            {onRetry ? <InlineAction label={tActions('retry')} onPress={onRetry} /> : null}
           </XStack>
         </PanelBody>
       ) : hasRows ? (
         children
-      ) : (
+      ) : empty ? (
         <PanelBody>
           <Text col={colors.textMuted} fos={fontSize.bodySm}>
             {empty}
           </Text>
         </PanelBody>
-      )}
+      ) : null}
     </Card>
   );
 }

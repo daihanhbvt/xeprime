@@ -32,7 +32,11 @@ import { LogoutRow } from '@/features/shell/LogoutRow';
 import { APP_SCOPE } from '@/features/shell/app-scope';
 import { useShellScope } from '@/features/shell/use-shell-scope';
 import { isPackageOnboarding, resolveWorkspaceHref } from '@/features/shell/workspace';
-import { PackageShopCheckout } from '@/features/subscription/components/PackageShopCheckout';
+import {
+  PackageShopCheckout,
+  PackageShopCheckoutAction,
+  usePackageShopCheckout,
+} from '@/features/subscription/components/PackageShopCheckout';
 import { useSyncScopeWhenInvoiceSettles } from '@/features/subscription/hooks/use-subscription';
 import { useDomainLabel } from '@/i18n/domain';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
@@ -124,6 +128,8 @@ export function ShopOnboardingScreen({
   const packageWording = isPackageTrack || packagePending;
 
   useSyncScopeWhenInvoiceSettles(packagePending);
+  /** State bước 2 sống ở màn để nút "Tạo hoá đơn" neo được vào `footer` — bước 1 không hỏi gì. */
+  const checkout = usePackageShopCheckout(packagePending);
 
   /*
    * Điều hướng trong effect, KHÔNG giữa lúc render: đổi route trong thân render của một màn đang
@@ -251,7 +257,7 @@ export function ShopOnboardingScreen({
         KHÔNG có nút lui ở bước CHỜ THANH TOÁN (sửa 06/10/2026): tuyến gói chưa trả tiền chỉ được
         phép ở đúng màn này (ADR 0040 điều 3 · `partnerPathRedirect`), nên mũi tên lui đá về
         `/manage` rồi bị `ScopeGuard` ném ngược lại đây — một nút không đi đâu cả. Lối ra thật
-        của họ là ĐĂNG XUẤT, đặt ở cuối màn cùng kiểu với màn chọn cách cho thuê.
+        của họ là ĐĂNG XUẤT, neo ở đáy màn ngay dưới nút chính.
       */}
       <AppHeader
         {...(packagePending ? {} : { onBack: () => navigateOnce(ROUTES.manage.home()) })}
@@ -263,7 +269,36 @@ export function ShopOnboardingScreen({
           />
         }
       />
-      <Screen edges={['left', 'right', 'bottom']} padded={false}>
+      {/*
+        Hành động của bước NEO Ở ĐÁY MÀN (`footer` của `Screen` — ngoài vùng cuộn, trong lớp tránh
+        bàn phím), cùng cách màn chọn cách cho thuê: form dài, điền ô đầu mà phải cuộn hết mới tới
+        nút là một quãng đi vô ích. Gọn: nút chính + ĐĂNG XUẤT dạng chữ ngay dưới.
+
+        ĐĂNG XUẤT thay cho "Quay lại marketplace" của web (sửa 06/10/2026): ở app Partner không có
+        chợ xe nào để về (ADR 0053), và tuyến gói chưa trả tiền chỉ được ở đúng màn này (ADR 0040
+        điều 3) — đây là lối ra thật của họ. Ai còn nơi để lui vẫn có mũi tên trên thanh.
+      */}
+      <Screen
+        edges={['left', 'right', 'bottom']}
+        padded={false}
+        footer={
+          <YStack gap={space.xs}>
+            {packagePending ? (
+              <PackageShopCheckoutAction checkout={checkout} />
+            ) : (
+              <Button
+                label={isPackageTrack ? t('form.submitPackage') : t('form.submit')}
+                icon="storefront-outline"
+                loading={register.isPending}
+                // Đã có gian hàng (đang rời màn) ⇒ khoá: chạm thêm là một POST /tenants thứ hai.
+                disabled={hasTenant}
+                onPress={() => void submit()}
+              />
+            )}
+            <LogoutRow variant="link" onDone={() => router.replace(ROUTES.account.login())} />
+          </YStack>
+        }
+      >
         <YStack gap={layout.section} pb={layout.section}>
           {/*
             Dải hero nền kem: tiêu đề lớn, câu mô tả, rồi hình minh hoạ neo đáy dải — đúng bố cục
@@ -343,7 +378,7 @@ export function ShopOnboardingScreen({
 
             {packagePending ? (
               <Card>
-                <PackageShopCheckout />
+                <PackageShopCheckout checkout={checkout} />
               </Card>
             ) : (
               <Card>
@@ -517,36 +552,14 @@ export function ShopOnboardingScreen({
                     </YStack>
                   </XStack>
 
-                  <Button
-                    label={isPackageTrack ? t('form.submitPackage') : t('form.submit')}
-                    icon="storefront-outline"
-                    loading={register.isPending}
-                    onPress={() => void submit()}
-                  />
-
                   {/*
-                    Quy chế sàn ràng buộc NGƯỜI BÁN kể từ khoảnh khắc này (ADR 0028 điều 9), nên
-                    câu này phải đứng cạnh nút — không phải ở một chân trang mà cổng quản lý không
-                    có.
+                    Quy chế sàn ràng buộc NGƯỜI BÁN kể từ khoảnh khắc này (ADR 0028 điều 9): câu
+                    này là dòng CUỐI của form, ngay trên thanh neo chứa nút gửi.
                   */}
                   <LegalConsentNote place="shop" />
                 </YStack>
               </Card>
             )}
-
-            {/*
-              ĐĂNG XUẤT ở cuối nội dung — thay cho "Quay lại marketplace" của web (sửa 06/10/2026).
-
-              Nút cũ dẫn về `/manage`, và ở app Partner KHÔNG có marketplace nào để về: chợ xe nằm
-              ở app XePrime, một realm khác (ADR 0053). Với tuyến gói chưa trả tiền nó còn chết
-              hẳn — họ chỉ được ở đúng màn này (ADR 0040 điều 3), nên `ScopeGuard` ném ngược lại
-              ngay.
-
-              Giữ nguyên CHỖ ĐỨNG và dáng LIÊN KẾT CHỮ của nút cũ — đổi chữ và việc nó làm, chứ
-              không đổi vai trò của nó trên trang: đây là lối phụ ở chân một trang dài, sau hành
-              động chính. Ai còn nơi để lui vẫn có mũi tên trên thanh.
-            */}
-            <LogoutRow variant="link" onDone={() => router.replace(ROUTES.account.login())} />
           </YStack>
         </YStack>
       </Screen>

@@ -5,15 +5,29 @@ import { useForm, useWatch } from 'react-hook-form';
 import { useRouter } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   ADDRESS_LINE_MAX_LENGTH,
+  PHONE_VERIFICATION_PURPOSE,
   PICKUP_PREFERENCE,
   ROUTE_TYPE,
   SERVICE_TYPE,
+  serviceRequiresDriverLicence,
   type PublicListingDetail,
 } from '@xeprime/types';
 import { readDeliveryAddress, rememberDeliveryAddress } from '@/lib/delivery-address-memory';
-import type { RentalMode } from '@xeprime/domain';
+import {
+  DRIVER_LICENCE_TRIP_GATE,
+  evaluateDriverLicenceForTrip,
+  type RentalMode,
+} from '@xeprime/domain';
+import { driverLicenceApi } from '@/api/driver-licence/api';
+import { useCurrentUser, useOtpLogin } from '@/features/auth/hooks/use-auth';
+import { DriverLicenceVerifier } from '@/features/driver-licence/components/DriverLicenceVerifier';
+import { useDriverLicence } from '@/features/driver-licence/hooks/use-driver-licence';
+import { isUnauthenticated } from '@/lib/api-client';
+import { queryKeys } from '@/queries/query-keys';
+import { buildLicenceTrip } from './licence-trip';
 import {
   buildBookingRequestSchema,
   NAME_MAX,
@@ -431,26 +445,157 @@ function RequestBookingBody({
     />
   );
 
-  const otp = usePhoneVerify(flow.otpPurpose);
+  const queryClient = useQueryClient();
+  const { data: me } = useCurrentUser();
 
-  /** Rời bước Chuyến đi: SĐT đã xác thực thì sang thẳng Xác nhận, chưa thì dựng bước OTP. */
+  /*
+   * BẰNG LÁI — ADR 0057. Tự lái / dài hạn ⇒ khách phải có bằng hợp lệ cho CHÍNH chuyến này (đúng
+   * hạng loại xe, còn hạn tới hết ngày cuối). Cùng phép dựng chuyến với web và với cổng ở server.
+   */
+  const pickupPreference = useWatch({ control: form.control, name: 'pickupPreference' });
+  const requestedPickupDate = useWatch({ control: form.control, name: 'requestedPickupDate' });
+  const needsLicence = serviceRequiresDriverLicence(serviceType);
+  const licenceTrip = useMemo(
+    () =>
+      buildLicenceTrip({
+        serviceType,
+        vehicleType: listing.vehicleType,
+        packageMonths,
+        pickupPreference,
+        requestedPickupDate,
+        returnAt,
+      }),
+    [serviceType, listing.vehicleType, packageMonths, pickupPreference, requestedPickupDate, returnAt],
+  );
+
+  /**
+   * Mã OTP đang chờ là để làm gì — cùng hai chế độ với web:
+   *  - `booking`: xác minh SĐT cho MỘT yêu cầu (đã đăng nhập, hoặc thuê có tài xế).
+   *  - `login`  : khách CHƯA đăng nhập thuê tự lái — mã này đăng nhập/tạo tài khoản theo SĐT
+   *    TRƯỚC bước bằng lái, vì bằng lái gắn với TÀI KHOẢN.
+   */
+  const [otpMode, setOtpMode] = useState<'booking' | 'login'>('booking');
+  const otpBooking = usePhoneVerify(flow.otpPurpose);
+  const otpLogin = usePhoneVerify(PHONE_VERIFICATION_PURPOSE.LOGIN);
+  const otp = otpMode === 'login' ? otpLogin : otpBooking;
+  const otpSignIn = useOtpLogin();
+  /** Đang đọc bằng lái để quyết định có cần bước bằng lái — giữ nút ở trạng thái chờ. */
+  const [checkingLicence, setCheckingLicence] = useState(false);
+
+  /**
+   * Gửi mã và dựng bước OTP. Lỗi gửi mã đi bằng toast (ô SĐT nằm dưới bàn phím).
+   *
+   * Môi trường nhận mã test (dev/staging) KHÔNG tự gửi: vào thẳng bước OTP, khách gõ mã test là
+   * qua, hoặc tự bấm "Gửi mã" để nhận SMS thật — như web.
+   */
+  const startOtp = useCallback(
+    async (mode: 'booking' | 'login', phone = form.getValues('customerPhone').trim()) => {
+      setOtpMode(mode);
+      try {
+        const sender = mode === 'login' ? otpLogin : otpBooking;
+        if (!sender.testCodeEnabled) await sender.sendAsync(phone);
+        setOtpPhone(phone);
+        setStep(REQUEST_STEP.OTP);
+        return true;
+      } catch (error) {
+        toast.showError(getErrorMessage(error));
+        return false;
+      }
+    },
+    [form, otpBooking, otpLogin, setOtpPhone, setStep, toast],
+  );
+
+  /**
+   * SĐT đã chắc chắn. Tự lái/dài hạn thì soát bằng lái cho CHÍNH chuyến này trước bước Xác nhận —
+   * hợp lệ rồi thì khách không thấy bước bằng lái. Đọc MỚI từ server (khách có thể vừa nộp ở màn
+   * Giấy tờ).
+   */
+  const continueAfterPhone = useCallback(async () => {
+    if (!needsLicence || !licenceTrip) {
+      // Thiếu dữ liệu chuyến (`licenceTrip` null) thì không soát được ở đây — bỏ bước là AN TOÀN vì
+      // cổng thật nằm ở server (`submitPublic`, ADR 0057): bằng lái sai hạng/hết hạn vẫn bị từ chối.
+      setStep(REQUEST_STEP.REVIEW);
+      return;
+    }
+    setCheckingLicence(true);
+    try {
+      const overview = await queryClient.fetchQuery({
+        queryKey: queryKeys.driverLicence.overview,
+        queryFn: () => driverLicenceApi.overview(),
+        staleTime: 0,
+      });
+      const gate = evaluateDriverLicenceForTrip(overview, licenceTrip);
+      setStep(gate === DRIVER_LICENCE_TRIP_GATE.OK ? REQUEST_STEP.REVIEW : REQUEST_STEP.LICENCE);
+    } catch (error) {
+      // Mất phiên: đi lại đường OTP đăng nhập thay vì để khách bấm "Thử lại" vào một 401 mãi mãi.
+      if (isUnauthenticated(error)) {
+        await startOtp('login');
+        return;
+      }
+      // Lỗi khác: bộ xác thực tự hiện lỗi tải + nút Thử lại.
+      setStep(REQUEST_STEP.LICENCE);
+    } finally {
+      setCheckingLicence(false);
+    }
+  }, [licenceTrip, needsLicence, queryClient, setStep, startOtp]);
+
+  /** Mã ĐĂNG NHẬP vừa nhập — phiên mới nạp qua đúng kho token của app (ADR 0017). */
+  const submitLoginCode = useCallback(
+    (code: string) => {
+      setError(null);
+      otpSignIn.mutate(
+        { phone: state.otpPhone, code, displayName: form.getValues('customerName') },
+        {
+          onSuccess: async () => {
+            await queryClient.invalidateQueries({ queryKey: queryKeys.driverLicence.all });
+            await continueAfterPhone();
+          },
+          onError: (error) => toast.showError(errorMessage(error)),
+        },
+      );
+    },
+    [continueAfterPhone, errorMessage, form, otpSignIn, queryClient, setError, state.otpPhone, toast],
+  );
+
+  /** Bằng lái ở bước bằng lái — nút Tiếp tục chỉ mở khi bằng đã hợp lệ cho chuyến này. */
+  const licenceQ = useDriverLicence({ enabled: state.step === REQUEST_STEP.LICENCE && Boolean(me) });
+  const licenceReady =
+    licenceTrip !== null &&
+    licenceQ.data !== undefined &&
+    evaluateDriverLicenceForTrip(licenceQ.data, licenceTrip) === DRIVER_LICENCE_TRIP_GATE.OK;
+
+  /*
+   * Bằng vừa hợp lệ cho chuyến này (máy đọc xong ngay tại bước) ⇒ tự sang Xác nhận và báo ngắn,
+   * như web — không bắt khách bấm "Tiếp tục" cho một bước đã xong.
+   */
+  const licenceFetching = licenceQ.isFetching;
+  // Đổi bước NGAY TRONG render (mẫu "điều chỉnh state theo dữ liệu", như web); effect chỉ báo.
+  const [licenceAdvances, setLicenceAdvances] = useState(0);
+  if (state.step === REQUEST_STEP.LICENCE && licenceReady && !licenceFetching) {
+    setStepRaw(REQUEST_STEP.REVIEW);
+    // Như web: tự sang Xác nhận thì MỞ khối giá — khách cần thấy con số trước khi gửi.
+    setPriceExpanded(true);
+    setLicenceAdvances((n) => n + 1);
+  }
+  // Báo theo SỐ LẦN đã báo, không theo lần chạy effect: `toast` đổi danh tính mỗi lần provider
+  // render, nên effect chạy lại mà `licenceAdvances` không đổi — thiếu ref là toast lặp.
+  const licenceAdvancesAnnounced = useRef(0);
+  useEffect(() => {
+    if (licenceAdvances <= licenceAdvancesAnnounced.current) return;
+    licenceAdvancesAnnounced.current = licenceAdvances;
+    toast.showSuccess(t('licence.verified'));
+  }, [licenceAdvances, t, toast]);
+
+  /** Rời bước Chuyến đi: SĐT đã xác thực thì đi tiếp (qua bước bằng lái nếu cần), chưa thì OTP. */
   const afterTripStep = useCallback(async () => {
     const phone = form.getValues('customerPhone').trim();
 
     if (flow.phoneMatchesAccount(phone)) {
-      setStep(REQUEST_STEP.REVIEW);
+      await continueAfterPhone();
       return;
     }
-    try {
-      await otp.sendAsync(phone);
-      setOtpPhone(phone);
-      setStep(REQUEST_STEP.OTP);
-    } catch (error) {
-      // Lỗi GỬI mã cũng đi bằng toast: ô số điện thoại đang ở cuối form, dòng đỏ dưới nó nằm
-      // đúng vùng bàn phím che.
-      toast.showError(getErrorMessage(error));
-    }
-  }, [flow, form, otp, setOtpPhone, setStep, toast]);
+    await startOtp(needsLicence && !me ? 'login' : 'booking', phone);
+  }, [continueAfterPhone, flow, form, me, needsLicence, startOtp]);
 
   /** Một nút "Tiếp tục": kiểm dữ liệu → kiểm khung giờ còn trống → quyết định đi qua OTP hay không. */
   const continueFromTrip = useCallback(async () => {
@@ -565,11 +710,24 @@ function RequestBookingBody({
          * mọi thứ đã nhập, gửi mã cho chính số đó.
          */
         if (flow.isPhoneUnverified(error)) {
-          const phone = form.getValues('customerPhone').trim();
-          setOtpPhone(phone);
-          setStep(REQUEST_STEP.OTP);
-          setError(t('otp.sessionExpired'));
-          otp.send(phone);
+          // Thuê tự lái cần PHIÊN (bằng lái gắn với tài khoản) ⇒ lối khôi phục là mã ĐĂNG NHẬP.
+          void startOtp(needsLicence ? 'login' : 'booking').then((sent) => {
+            if (sent) setError(t('otp.sessionExpired'));
+          });
+          return;
+        }
+        /*
+         * Cổng BẰNG LÁI ở server (ADR 0057) nói "chưa" trong khi giao diện tưởng là "được" — bằng
+         * vừa hết hạn, vừa bị thay, hoặc phiên vừa mất. Lùi về bước bằng lái với dữ liệu MỚI.
+         */
+        if (flow.isDriverLicenceGate(error)) {
+          void queryClient.invalidateQueries({ queryKey: queryKeys.driverLicence.overview });
+          setError(null);
+          if (!me) {
+            void startOtp('login');
+            return;
+          }
+          setStep(REQUEST_STEP.LICENCE);
           return;
         }
         setError(errorMessage(error));
@@ -580,14 +738,16 @@ function RequestBookingBody({
     requiresTermsAcceptance,
     flow,
     form,
-    otp,
+    me,
+    needsLicence,
     promo,
+    queryClient,
     quote,
     setBlocked,
     setDuplicate,
     setError,
-    setOtpPhone,
     setStep,
+    startOtp,
     t,
   ]);
 
@@ -597,9 +757,11 @@ function RequestBookingBody({
       if (editContact) setEditingContact(true);
       setStep(REQUEST_STEP.TRIP);
       setError(null);
-      otp.reset();
+      otpBooking.reset();
+      otpLogin.reset();
+      otpSignIn.reset();
     },
-    [otp, setError, setStep],
+    [otpBooking, otpLogin, otpSignIn, setError, setStep],
   );
 
   const closeFlow = useCallback(
@@ -631,9 +793,9 @@ function RequestBookingBody({
    * Bước OTP không có khối này nhưng vẫn phải chừa chỗ cho dòng lỗi: `submitRequest` lùi về đúng
    * bước này khi phiên hết hạn, và câu đó là thứ duy nhất nói cho khách biết vì sao.
    */
-  const showDock = state.step !== REQUEST_STEP.OTP;
+  const showDock = state.step !== REQUEST_STEP.OTP && state.step !== REQUEST_STEP.LICENCE;
   const footer =
-    showDock || state.error ? (
+    showDock || state.error || state.step === REQUEST_STEP.LICENCE ? (
       <>
         {showDock ? (
           <BookingPriceSummary
@@ -670,8 +832,19 @@ function RequestBookingBody({
             label={flow.availability.isPending ? t('actions.checking') : t('actions.continue')}
             icon="arrow-forward"
             size="lg"
-            loading={flow.availability.isPending || otp.sending}
+            loading={flow.availability.isPending || otp.sending || checkingLicence}
             onPress={() => void continueFromTrip()}
+          />
+        ) : null}
+
+        {state.step === REQUEST_STEP.LICENCE ? (
+          <Button
+            label={t('actions.continue')}
+            icon="arrow-forward"
+            size="lg"
+            // Chỉ mở khi bằng đã hợp lệ CHO CHUYẾN NÀY — cùng phép soát với cổng ở server.
+            disabled={!licenceReady}
+            onPress={() => setStep(REQUEST_STEP.REVIEW)}
           />
         ) : null}
 
@@ -743,9 +916,22 @@ function RequestBookingBody({
             <RequestOtpStep
               phone={state.otpPhone}
               otp={otp}
-              onVerified={() => setStep(REQUEST_STEP.REVIEW)}
+              onVerified={() => void continueAfterPhone()}
               onEditPhone={() => backToTrip()}
+              {...(otpMode === 'login'
+                ? { onSubmitCode: submitLoginCode, submitting: otpSignIn.isPending || checkingLicence }
+                : {})}
             />
+          ) : null}
+
+          {/* Bằng lái — giữa hai bước, chỉ khi thuê tự lái/dài hạn (ADR 0057). */}
+          {state.step === REQUEST_STEP.LICENCE && licenceTrip ? (
+            <YStack gap={space.sm}>
+              <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
+                {t('licence.title')}
+              </Text>
+              <DriverLicenceVerifier trip={licenceTrip} />
+            </YStack>
           ) : null}
 
           {state.step === REQUEST_STEP.REVIEW ? (

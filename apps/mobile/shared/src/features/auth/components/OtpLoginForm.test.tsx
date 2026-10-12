@@ -41,6 +41,61 @@ function stubSendOtp(devCode: string | null = null) {
 /** Nhãn khả truy cập của ô mã — nay lấy từ Auth.otp.codeAria, không còn chuỗi thô "OTP". */
 const OTP_ARIA = 'Mã xác thực gồm 6 số';
 
+/*
+ * Mọi test phải mock otp-config: không mock thì hook gọi API thật. Mặc định TẮT mã test
+ * (production) — các test luồng thường ở dưới giữ nguyên nghĩa.
+ */
+let otpConfig: jest.SpyInstance;
+beforeEach(() => {
+  otpConfig = jest.spyOn(otpApi, 'getOtpConfig').mockResolvedValue({ testCodeEnabled: false });
+});
+afterEach(() => jest.restoreAllMocks());
+
+describe('OtpLoginForm — mã OTP test (dev/staging)', () => {
+  it('production: ô mã chỉ hiện SAU khi gửi mã', async () => {
+    const view = await renderForm();
+    await waitFor(() => expect(otpConfig).toHaveBeenCalled());
+
+    expect(view.queryByLabelText(OTP_ARIA)).toBeNull();
+    expect(view.getByRole('button', { name: 'Gửi mã xác thực' })).toBeTruthy();
+  });
+
+  it('môi trường có mã test: gõ mã là đăng nhập, KHÔNG gửi SMS nào', async () => {
+    otpConfig.mockResolvedValue({ testCodeEnabled: true });
+    const sendOtp = stubSendOtp();
+    const login = jest.spyOn(authApi, 'loginWithOtp').mockResolvedValue(DEMO_USER);
+    const onSuccess = jest.fn();
+    const view = await renderForm(onSuccess);
+
+    await fireEvent.changeText(view.getByPlaceholderText('0901234567'), '0901000003');
+    await fireEvent.changeText(await view.findByLabelText(OTP_ARIA), '123456');
+
+    await waitFor(() => expect(login).toHaveBeenCalledWith('0901000003', '123456', undefined));
+    await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+    expect(sendOtp).not.toHaveBeenCalled();
+  });
+
+  it('môi trường có mã test: SĐT chưa hợp lệ thì chưa đăng nhập được', async () => {
+    otpConfig.mockResolvedValue({ testCodeEnabled: true });
+    const login = jest.spyOn(authApi, 'loginWithOtp').mockResolvedValue(DEMO_USER);
+    const view = await renderForm();
+
+    await fireEvent.changeText(view.getByPlaceholderText('0901234567'), '12345');
+    await fireEvent.changeText(await view.findByLabelText(OTP_ARIA), '123456');
+
+    expect(view.getByRole('button', { name: 'Đăng nhập' })).toBeDisabled();
+    expect(login).not.toHaveBeenCalled();
+  });
+
+  it('lỗi tải cấu hình ⇒ rơi về luồng chuẩn (gửi mã trước)', async () => {
+    otpConfig.mockRejectedValue(new Error('network'));
+    const view = await renderForm();
+    await waitFor(() => expect(otpConfig).toHaveBeenCalled());
+
+    expect(view.queryByLabelText(OTP_ARIA)).toBeNull();
+  });
+});
+
 describe('OtpLoginForm', () => {
   it('chặn gửi mã khi SĐT không hợp lệ', async () => {
     const sendOtp = stubSendOtp();
@@ -74,7 +129,7 @@ describe('OtpLoginForm', () => {
     // Gõ đủ 6 số là đăng nhập luôn — không bắt bấm thêm nút sau khi đã gõ xong.
     await fireEvent.changeText(await view.findByLabelText(OTP_ARIA), '123456');
 
-    await waitFor(() => expect(login).toHaveBeenCalledWith('0901000003', '123456'));
+    await waitFor(() => expect(login).toHaveBeenCalledWith('0901000003', '123456', undefined));
     await waitFor(() => expect(onSuccess).toHaveBeenCalled());
   });
 
@@ -88,7 +143,7 @@ describe('OtpLoginForm', () => {
 
     await fireEvent.changeText(await view.findByLabelText(OTP_ARIA), '123-456');
 
-    await waitFor(() => expect(login).toHaveBeenCalledWith('0901000003', '123456'));
+    await waitFor(() => expect(login).toHaveBeenCalledWith('0901000003', '123456', undefined));
   });
 
   it('hiện mã dev khi backend trả devCode', async () => {

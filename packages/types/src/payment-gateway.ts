@@ -283,6 +283,8 @@ export const PAYMENT_RETURN_PARAM = {
   ORDER: 'order',
   /** Có mặt (`1`) khi lượt được mở từ app native. */
   NATIVE: 'app',
+  /** Trang quay về CÔNG KHAI cho app native: `/app-return?trip=<id>&paymentOrder=<id>`. */
+  NATIVE_TRIP: 'trip',
 } as const;
 
 /** Đường dẫn trang quay về của site partner, KHÔNG gồm tiền tố khu — server ghép sau `WEB_PARTNER_URL`. */
@@ -294,6 +296,17 @@ export const PARTNER_PAYMENT_RETURN_PATH = '/payment-return';
  * (có test khoá).
  */
 export const PAYMENT_RETURN_TRIP_PATH = '/trips';
+
+/**
+ * Trang quay về CÔNG KHAI của site khách cho lượt mở từ app native:
+ * `${APP_WEB_URL}${PAYMENT_NATIVE_TRIP_RETURN_PATH}?trip=<id>&paymentOrder=<id>`.
+ *
+ * Vì sao không dùng trang chuyến: trình duyệt mà app mở (Custom Tab / ASWebAuthenticationSession)
+ * KHÔNG có cookie phiên của site, nên `/trips/:id` kẹt ở màn "Phiên hết hạn" và không bao giờ trả
+ * khách về app. Trang này không gọi API, không cần đăng nhập — chỉ điều hướng sang deep link
+ * `xeprime://trips/<id>` để trình duyệt tự đóng; app tự hỏi server trạng thái lượt sau đó.
+ */
+export const PAYMENT_NATIVE_TRIP_RETURN_PATH = '/app-return';
 
 /**
  * Một phiên thanh toán qua cổng sống bao lâu trước khi hệ thống mời khách mở phiên mới.

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { IconDisc } from '@/components/ui/IconDisc';
+import { InlineAction } from '@/components/ui/InlineAction';
 import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_REGISTRATION_SOURCE } from '@/navigation/vehicle-registration-source';
@@ -101,7 +102,33 @@ export function QuickVehicleSuccess({
   return (
     <>
       <AppHeader title={title} onBack={onDone} />
-      <Screen edges={['left', 'right', 'bottom']}>
+      {/*
+        Hành động NEO Ở ĐÁY MÀN (`footer` của `Screen`) như mọi bước của luồng đăng xe: nút chính
+        + một nút phụ cùng hàng, lối về danh sách là liên kết bên dưới.
+      */}
+      <Screen
+        edges={['left', 'right', 'bottom']}
+        footer={
+          <YStack gap={space.xs}>
+            <XStack gap={space.sm}>
+              <YStack flexShrink={0}>
+                <Button
+                  label={t('addAnotherCta')}
+                  variant="secondary"
+                  block={false}
+                  onPress={onAddAnother}
+                />
+              </YStack>
+              <YStack f={1}>
+                <Button label={t('manageCta')} onPress={() => leaveTo(manageHref)} />
+              </YStack>
+            </XStack>
+            <XStack jc="center">
+              <InlineAction label={t('listCta')} onPress={() => leaveTo(listHref)} />
+            </XStack>
+          </YStack>
+        }
+      >
         <YStack gap={space.lg}>
           <Card>
             <YStack ai="center" gap={space.md}>
@@ -167,12 +194,6 @@ export function QuickVehicleSuccess({
               </YStack>
             </Callout>
           ) : null}
-
-          <YStack gap={space.sm}>
-            <Button label={t('manageCta')} onPress={() => leaveTo(manageHref)} />
-            <Button label={t('addAnotherCta')} variant="secondary" onPress={onAddAnother} />
-            <Button label={t('listCta')} variant="ghost" onPress={() => leaveTo(listHref)} />
-          </YStack>
         </YStack>
       </Screen>
     </>

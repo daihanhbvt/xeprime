@@ -3,6 +3,7 @@ import { API_ERROR_CODE, type PhoneVerificationPurpose } from '@xeprime/types';
 import { getErrorCode } from '@/lib/api-client';
 import { useCallback, useEffect, useState } from 'react';
 import { sendOtp, verifyOtp } from '../api';
+import { useOtpTestCodeEnabled } from './use-otp-config';
 
 export type PhoneVerifyStatus = 'idle' | 'code_sent' | 'verified';
 
@@ -15,6 +16,7 @@ function serverCooldownSec(error: unknown): number {
 }
 
 export function usePhoneVerify(purpose: PhoneVerificationPurpose) {
+  const testCodeEnabled = useOtpTestCodeEnabled();
   const [status, setStatus] = useState<PhoneVerifyStatus>('idle');
   const [cooldown, setCooldown] = useState(0);
   const [devCode, setDevCode] = useState<string | null>(null);
@@ -66,6 +68,13 @@ export function usePhoneVerify(purpose: PhoneVerificationPurpose) {
     cooldown,
     devCode,
     error,
+    /**
+     * Môi trường nhận mã OTP test (dev/staging): cho nhập mã ngay cả khi chưa gửi — gõ mã test là
+     * qua, bấm gửi thì nhận SMS thật như thường. Production luôn false.
+     */
+    testCodeEnabled,
+    /** Ô nhập mã được hiện: đã gửi mã, hoặc môi trường nhận mã test. */
+    canEnterCode: status === 'code_sent' || testCodeEnabled,
     sending: sendMutation.isPending,
     verifying: verifyMutation.isPending,
     send: (phone: string) => sendMutation.mutate(phone),

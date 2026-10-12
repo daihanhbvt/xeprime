@@ -75,7 +75,6 @@ export function QuickVehicleImagesStep({
           )}
         </YStack>
       </Card>
-
     </YStack>
   );
 }

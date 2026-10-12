@@ -455,7 +455,10 @@ function VehicleAddressBlock({
           onClose={() => setEditing(false)}
           notice={
             selected.vehicleCount > 0 ? (
-              <Callout tone="warning" title={t('addressSharedTitle', { count: selected.vehicleCount })}>
+              <Callout
+                tone="warning"
+                title={t('addressSharedTitle', { count: selected.vehicleCount })}
+              >
                 {t('addressSharedBody')}
               </Callout>
             ) : null

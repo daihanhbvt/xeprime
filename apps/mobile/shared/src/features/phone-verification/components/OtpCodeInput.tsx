@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type RefObject } from 'react';
 import { Pressable, StyleSheet, TextInput } from 'react-native';
 import { useRevealOnFocus } from '@/components/layout/focus-reveal';
 import { Text, XStack } from 'tamagui';
@@ -23,6 +23,8 @@ interface OtpCodeInputProps {
   onComplete?: (code: string) => void;
   disabled?: boolean;
   autoFocus?: boolean;
+  /** Ref của ô nhập thật — để nơi gọi chuyển focus sang ô mã (vd. phím gửi của ô SĐT). */
+  inputRef?: RefObject<TextInput | null>;
 }
 
 export function OtpCodeInput({
@@ -31,8 +33,10 @@ export function OtpCodeInput({
   onComplete,
   disabled = false,
   autoFocus = false,
+  inputRef: externalRef,
 }: OtpCodeInputProps) {
-  const inputRef = useRef<TextInput>(null);
+  const ownRef = useRef<TextInput>(null);
+  const inputRef = externalRef ?? ownRef;
   /*
    * Ô nhập thật bị ẩn sau dải sáu viên, nên NHÃN KHẢ TRUY CẬP là thứ duy nhất trình đọc màn hình
    * đọc ra. "OTP" gõ cứng vừa là chữ thô (CLAUDE.md §5) vừa không nói ra mã dài mấy — dùng đúng

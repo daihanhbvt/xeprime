@@ -18,6 +18,8 @@ const TRIP_BRANCHES = [
   queryKeys.trips.all,
   queryKeys.bookings.all,
   queryKeys.calendar.all,
+  /** Tổng quan partner — việc cần làm / lịch giao nhận đọc từ CHÍNH các đơn, yêu cầu ở trên. */
+  queryKeys.dashboard.all,
 ] as const;
 
 /** Yêu cầu thuê: thêm hộp thư chờ duyệt, vì duyệt xong nó BIẾN thành một chuyến. */

@@ -30,7 +30,7 @@ import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButto
 import { TripHoldPanel } from '@/features/trips/components/TripHoldPanel';
 import { useTrip } from '@/features/trips/hooks/use-trips';
 import { useCopy } from '@/hooks/use-copy';
-import { BOOKING_BLOCKED, type BookingBlocked } from '../hooks/use-booking-request-flow';
+import { type BookingBlocked } from '../hooks/use-booking-request-flow';
 import type { BookingRequestReceipt, PublicQuote } from '../api';
 
 /**
@@ -98,17 +98,11 @@ export function RequestResultStep({
               </YStack>
               <YStack alignSelf="stretch" gap={space.sm}>
                 {/*
-                  Chỉ nhánh tài khoản gian hàng có lối đi tiếp. Nhánh "xe của chính mình" cố ý
-                  KHÔNG mời đổi tài khoản: xe đó vẫn là của họ ở mọi tài khoản khác, nên lời mời
-                  đó dẫn tới đúng một lần từ chối nữa.
+                  Không có lối "vào khu quản lý" ở đây (web có, vì site partner cùng trình duyệt):
+                  luồng đặt xe chỉ có ở app khách, và `ROUTES.manage.*` của app này là màn handoff
+                  mở app Partner — nhảy sang app kia giữa luồng đặt xe là bỏ khách ở app khác với
+                  một tài khoản khác (ADR 0053). Nhánh "xe của chính mình" cũng chỉ có nút đóng.
                 */}
-                {blocked === BOOKING_BLOCKED.SHOP_ACCOUNT ? (
-                  <Button
-                    label={t('blocked.shopAccount.manage')}
-                    size="lg"
-                    onPress={() => router.replace(ROUTES.manage.home())}
-                  />
-                ) : null}
                 <Button label={t('blocked.close')} variant="ghost" onPress={onClose} />
               </YStack>
             </YStack>

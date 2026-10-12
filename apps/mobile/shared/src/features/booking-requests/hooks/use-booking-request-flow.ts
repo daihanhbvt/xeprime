@@ -9,7 +9,11 @@ import {
   vnDateKey,
 } from '@xeprime/types';
 import { STALE_TIME } from '@xeprime/api-client';
-import { buildBusyDayIndex, type BusyDayIndex } from '@xeprime/domain';
+import {
+  buildBusyDayIndex,
+  isDriverLicenceGateErrorCode,
+  type BusyDayIndex,
+} from '@xeprime/domain';
 import { getErrorCode } from '@/lib/api-client';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { adoptMobileSession } from '@/features/auth/api';
@@ -25,10 +29,16 @@ import {
   type PublicQuoteParams,
 } from '../api';
 
-/** Bốn bước của luồng gửi yêu cầu — cùng tên với web (`trip → otp → review → done`). */
+/**
+ * Các bước của luồng gửi yêu cầu — cùng tên với web (`trip → otp → licence → review → done`).
+ *
+ * `licence` (ADR 0057) chỉ có ở thuê tự lái/dài hạn khi bằng lái của tài khoản CHƯA hợp lệ cho
+ * chuyến này — bằng đã hợp lệ thì khách không bao giờ thấy bước đó.
+ */
 export const REQUEST_STEP = {
   TRIP: 'trip',
   OTP: 'otp',
+  LICENCE: 'licence',
   REVIEW: 'review',
   DONE: 'done',
 } as const;
@@ -224,6 +234,11 @@ export function useBookingRequestFlow(vehicleId: string) {
     /** Mã lỗi "SĐT chưa xác thực" — nơi gọi lùi về bước OTP và GIỮ NGUYÊN dữ liệu đã nhập. */
     isPhoneUnverified: (e: unknown) => getErrorCode(e) === API_ERROR_CODE.PHONE_NOT_VERIFIED,
     isDuplicate: (e: unknown) => getErrorCode(e) === API_ERROR_CODE.BOOKING_REQUEST_DUPLICATE,
+    /**
+     * Cổng BẰNG LÁI ở server (ADR 0057) nói "chưa" — nơi gọi lùi về bước bằng lái với dữ liệu MỚI,
+     * giữ nguyên mọi thứ khách đã nhập.
+     */
+    isDriverLicenceGate: (e: unknown) => isDriverLicenceGateErrorCode(getErrorCode(e)),
     /**
      * Hai mã chặn đặt xe của ADR 0038 điều 6, trả về nhãn nhánh kết quả tương ứng.
      *

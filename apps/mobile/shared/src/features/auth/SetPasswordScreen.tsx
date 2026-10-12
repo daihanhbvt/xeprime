@@ -4,7 +4,7 @@ import { buildResetPasswordSchema, type ResetPasswordValues } from '@xeprime/val
 import { useAuthSchemaLabels } from './use-auth-schema-labels';
 import { useMutation } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import { Text, YStack } from 'tamagui';
+import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { AppHeader } from '@/components/layout/AppHeader';
@@ -70,7 +70,33 @@ export function SetPasswordScreen({ onDone }: { onDone: () => void }) {
     <>
       <AppHeader />
 
-      <Screen edges={['left', 'right', 'bottom']}>
+      {/* Nút NEO Ở ĐÁY MÀN (`footer` của `Screen`): lối ra co vừa chữ bên trái, nút chính bên phải. */}
+      <Screen
+        edges={['left', 'right', 'bottom']}
+        footer={
+          <XStack gap={space.sm}>
+            <YStack flexShrink={0}>
+              {/* "Bỏ qua" là LỐI RA, không phụ thuộc `isValid` — chỉ khoá lúc đang lưu. */}
+              <Button
+                label={tSet('skip')}
+                variant="ghost"
+                block={false}
+                onPress={onDone}
+                disabled={save.isPending}
+              />
+            </YStack>
+            <YStack f={1}>
+              <Button
+                label={tSet('submit')}
+                icon="checkmark-outline"
+                onPress={onSubmit}
+                loading={save.isPending}
+                disabled={!isValid}
+              />
+            </YStack>
+          </XStack>
+        }
+      >
         <YStack gap={space.xl}>
           <YStack gap={space.xs}>
             <Text col={colors.text} fos={fontSize.h2} fow={fontWeight.bold}>
@@ -109,24 +135,6 @@ export function SetPasswordScreen({ onDone }: { onDone: () => void }) {
               returnKeyType="go"
               onSubmitEditing={onSubmit}
               editable={!save.isPending}
-            />
-          </YStack>
-
-          <YStack gap={space.sm}>
-            <Button
-              label={tSet('submit')}
-              icon="checkmark-outline"
-              onPress={onSubmit}
-              loading={save.isPending}
-              disabled={!isValid}
-            />
-
-            {/* "Bỏ qua" là LỐI RA, không phụ thuộc `isValid` — chỉ khoá lúc đang lưu. */}
-            <Button
-              label={tSet('skip')}
-              variant="ghost"
-              onPress={onDone}
-              disabled={save.isPending}
             />
           </YStack>
         </YStack>

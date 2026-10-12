@@ -1,8 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import {
-  Linking,
-  Pressable,
   ScrollView,
   useWindowDimensions,
   type NativeScrollEvent,
@@ -231,20 +229,6 @@ const BannerSlide = memo(function BannerSlide({
     </YStack>
   );
 
-  if (!banner.linkUrl) return image;
-
-  return (
-    <Pressable
-      accessibilityRole="link"
-      accessibilityLabel={banner.altText}
-      onPress={() => {
-        // Đích banner là URL do admin nhập, có thể trỏ ra ngoài app — mở bằng trình duyệt hệ
-        // thống. Không mở được (đường dẫn hỏng) thì im lặng: banner là mục marketing, không
-        // đáng dựng một hộp thoại lỗi chắn trang chủ.
-        void Linking.openURL(banner.linkUrl as string).catch(() => undefined);
-      }}
-    >
-      {image}
-    </Pressable>
-  );
+  // Banner chỉ hiển thị: đích của nó là link web, app không mở trình duyệt ra ngoài.
+  return image;
 });

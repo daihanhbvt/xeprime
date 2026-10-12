@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Provider as ReduxProvider } from 'react-redux';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
-import { API_ERROR_CODE, SHOP_VERIFICATION, TENANT_TYPE } from '@xeprime/types';
+import { API_ERROR_CODE, BILLING_MODE, SHOP_VERIFICATION, TENANT_TYPE } from '@xeprime/types';
 import { ApiClientError } from '@xeprime/api-client';
+import { subscriptionApi, type TenantPlan } from '@/api/subscription/api';
 import * as authApi from '@/features/auth/api';
 import { locationsApi } from '@/features/locations/api';
 import { withIntl } from '@/i18n/test-utils';
@@ -118,7 +119,7 @@ describe('ShopOnboardingScreen (SHP-01)', () => {
 
     expect(await view.findByRole('button', { name: 'Tạo gian hàng' })).toBeTruthy();
     /*
-     * Lối ra ở chân trang là ĐĂNG XUẤT, không còn "Quay lại marketplace" (06/10/2026).
+     * Lối ra (neo ở thanh đáy, dưới nút chính) là ĐĂNG XUẤT, không còn "Quay lại marketplace" (06/10/2026).
      *
      * Nút cũ dẫn về `/manage`, mà ở app Partner KHÔNG có marketplace nào để về — chợ xe nằm ở app
      * XePrime, một realm khác (ADR 0053). Với tuyến gói chưa trả tiền nó còn chết hẳn:
@@ -127,6 +128,52 @@ describe('ShopOnboardingScreen (SHP-01)', () => {
      */
     expect(view.queryByRole('button', { name: 'Quay lại marketplace' })).toBeNull();
     expect(view.getByRole('button', { name: new RegExp('Đăng xuất$') })).toBeTruthy();
+  });
+
+  it('bước 2 (package_pending): nút tạo hoá đơn + Đăng xuất neo ở thanh đáy, form bước 1 không còn', async () => {
+    jest.spyOn(subscriptionApi, 'pendingInvoice').mockResolvedValue(null);
+    jest.spyOn(subscriptionApi, 'plans').mockResolvedValue([
+      {
+        id: 'basic',
+        code: 'basic',
+        name: 'Cơ bản',
+        billingMode: BILLING_MODE.PACKAGE,
+        currency: 'VND',
+        limits: {
+          maxVehicles: 3,
+          maxBranches: 1,
+          features: [],
+          termPrices: [{ months: 1, price: '1000000' }],
+        },
+      } as unknown as TenantPlan,
+    ]);
+    const view = await renderScreen({
+      id: '01JQZX0000000000000000000T',
+      name: 'Gian hàng Đà Nẵng',
+      slug: 'da-nang',
+      status: 'draft',
+      onboardingState: 'package_pending',
+      branchScope: 'all',
+      logoUrl: null,
+      roleKey: 'shop_owner',
+      features: [],
+      planCode: null,
+      planName: null,
+      serviceFeePercent: null,
+      billingMode: null,
+      planEndsAt: null,
+      billingPhase: null,
+      graceEndsAt: null,
+      publicVehicleCount: 0,
+    } as unknown as authApi.CurrentUser['tenant']);
+
+    // Chưa chọn kỳ hạn ⇒ nút mờ KÈM lời giải thích — cả hai đi theo nút xuống thanh đáy.
+    expect(
+      await view.findByRole('button', { name: 'Tạo hoá đơn và lấy mã chuyển khoản' }),
+    ).toBeTruthy();
+    expect(view.getByText('Chọn kỳ hạn để tạo hoá đơn.')).toBeTruthy();
+    expect(view.getByRole('button', { name: new RegExp('Đăng xuất$') })).toBeTruthy();
+    expect(view.queryByRole('button', { name: 'Tạo gian hàng' })).toBeNull();
   });
 
   it('đã có gian hàng: không dựng form, đưa thẳng tới hồ sơ gian hàng', async () => {

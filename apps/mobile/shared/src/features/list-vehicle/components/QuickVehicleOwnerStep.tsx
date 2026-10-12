@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Image } from 'expo-image';
 import { useForm } from 'react-hook-form';
 import { StyleSheet } from 'react-native';
@@ -8,6 +8,7 @@ import { useTranslations } from 'use-intl';
 import { ownerProfileSchema, type OwnerProfileValues } from '@xeprime/validators';
 import { OWNER_PERSONAL_CAR_RATIO, images } from '@/assets';
 import { AddressFields } from '@/components/form/AddressFields';
+import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
@@ -65,6 +66,7 @@ export function QuickVehicleOwnerStep({
   onCompleted,
   onCancel,
   submitLabel,
+  top,
 }: {
   /** Giá trị đã khai ở lần trước — quay lại sửa địa chỉ thì không phải gõ lại từ đầu. */
   defaultValues?: OwnerProfileValues | null;
@@ -73,6 +75,8 @@ export function QuickVehicleOwnerStep({
   onCancel: () => void;
   /** Nhãn nút chính: lần đầu là "Tiếp tục", lúc quay lại sửa thì là "Lưu". */
   submitLabel?: string;
+  /** Phần đầu vùng cuộn (thanh bước của wizard). */
+  top?: ReactNode;
 }) {
   const t = useTranslations('ListYourVehicle.ownerProfile');
   const tCommon = useTranslations('Common.actions');
@@ -108,160 +112,177 @@ export function QuickVehicleOwnerStep({
     onCompleted(values);
   });
 
+  /*
+   * Bước này TỰ dựng `Screen` để nút của nó neo được vào `footer` (ngoài vùng cuộn, trong lớp tránh
+   * bàn phím) — form nằm ở đây nên nút submit cũng phải ở đây. Lối thoát co vừa chữ bên trái, nút
+   * chính lấy phần còn lại (luật ở `Button`).
+   */
   return (
     <>
-      <YStack gap={space.md}>
-        <Card>
-          <YStack gap={space.sm}>
+      <Screen
+        edges={['left', 'right', 'bottom']}
+        footer={
+          <XStack gap={space.sm}>
+            <YStack flexShrink={0}>
+              <Button label={tCommon('cancel')} variant="ghost" block={false} onPress={onCancel} />
+            </YStack>
+            <YStack f={1}>
+              <Button
+                label={submitLabel ?? tCommon('next')}
+                disabled={!phoneVerified}
+                onPress={() => void submit()}
+              />
+            </YStack>
+          </XStack>
+        }
+      >
+        {top}
+        <YStack gap={space.md}>
+          <Card>
+            <YStack gap={space.sm}>
+              <Text col={colors.text} fos={fontSize.h3} fow={fontWeight.bold}>
+                {t('pageTitle')}
+              </Text>
+              <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                {t('pageSubtitle')}
+              </Text>
+              <Image
+                source={images.ownerPersonalCar}
+                style={[styles.art, { aspectRatio: OWNER_PERSONAL_CAR_RATIO }]}
+                contentFit="contain"
+                accessibilityIgnoresInvertColors
+              />
+              <Text col={colors.textMuted} fos={fontSize.label} ta="center">
+                {t('tagline')}
+              </Text>
+            </YStack>
+          </Card>
+
+          <YStack gap={space.xs}>
             <Text col={colors.text} fos={fontSize.h3} fow={fontWeight.bold}>
-              {t('pageTitle')}
+              {t('heading')}
             </Text>
             <Text col={colors.textMuted} fos={fontSize.bodySm}>
-              {t('pageSubtitle')}
-            </Text>
-            <Image
-              source={images.ownerPersonalCar}
-              style={[styles.art, { aspectRatio: OWNER_PERSONAL_CAR_RATIO }]}
-              contentFit="contain"
-              accessibilityIgnoresInvertColors
-            />
-            <Text col={colors.textMuted} fos={fontSize.label} ta="center">
-              {t('tagline')}
+              {t('intro')}
             </Text>
           </YStack>
-        </Card>
 
-        <YStack gap={space.xs}>
-          <Text col={colors.text} fos={fontSize.h3} fow={fontWeight.bold}>
-            {t('heading')}
-          </Text>
-          <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {t('intro')}
-          </Text>
-        </YStack>
+          <XStack ai="flex-start" gap={space.xs}>
+            <Ionicons name="checkmark-circle" size={iconSize.sm} color={colors.success} />
+            <Text f={1} col={colors.textMuted} fos={fontSize.label}>
+              {t('publicNote')}
+            </Text>
+          </XStack>
 
-        <XStack ai="flex-start" gap={space.xs}>
-          <Ionicons name="checkmark-circle" size={iconSize.sm} color={colors.success} />
-          <Text f={1} col={colors.textMuted} fos={fontSize.label}>
-            {t('publicNote')}
-          </Text>
-        </XStack>
+          <Card>
+            <YStack gap={space.md}>
+              <TextField
+                control={control}
+                name="name"
+                label={t('fields.name.label')}
+                placeholder={t('fields.name.placeholder')}
+                hint={t('fields.name.help')}
+                icon="person-outline"
+                required
+              />
 
-        <Card>
-          <YStack gap={space.md}>
-            <TextField
-              control={control}
-              name="name"
-              label={t('fields.name.label')}
-              placeholder={t('fields.name.placeholder')}
-              hint={t('fields.name.help')}
-              icon="person-outline"
-              required
-            />
-
-            {/*
+              {/*
               SỐ LIÊN HỆ là dòng ĐỌC, không phải ô nhập: nó đến từ tài khoản đã qua OTP. Ba trạng
               thái tách rời nhau, đúng web — đã xác thực (kèm lối đổi số), có số mà chưa xác thực,
               và chưa có số nào. Gộp hai ca sau lại là bảo một người "xác thực số của bạn" khi họ
               chưa hề có số.
             */}
-            <YStack gap={space.xs}>
-              <Text col={colors.text} fos={fontSize.label} fow={fontWeight.medium}>
-                {t('fields.phone.label')}
-              </Text>
-              {phoneVerified ? (
-                <XStack ai="center" gap={space.sm} flexWrap="wrap">
-                  <Ionicons name="checkmark-circle" size={iconSize.sm} color={colors.success} />
-                  <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-                    {phone}
-                  </Text>
-                  <Text col={colors.success} fos={fontSize.label}>
-                    {t('fields.phone.verified')}
-                  </Text>
-                  <InlineAction
-                    label={t('fields.phone.change')}
-                    onPress={() => setVerifyOpen(true)}
-                  />
-                </XStack>
-              ) : (
-                <Callout
-                  tone="warning"
-                  title={phone ? t('fields.phone.unverifiedTitle') : t('fields.phone.missingTitle')}
-                >
-                  <YStack gap={space.sm}>
-                    <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                      {phone ? t('fields.phone.unverifiedBody') : t('fields.phone.missingBody')}
+              <YStack gap={space.xs}>
+                <Text col={colors.text} fos={fontSize.label} fow={fontWeight.medium}>
+                  {t('fields.phone.label')}
+                </Text>
+                {phoneVerified ? (
+                  <XStack ai="center" gap={space.sm} flexWrap="wrap">
+                    <Ionicons name="checkmark-circle" size={iconSize.sm} color={colors.success} />
+                    <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+                      {phone}
                     </Text>
-                    <Button
-                      label={phone ? t('fields.phone.verifyCta') : t('fields.phone.addCta')}
-                      icon="call-outline"
-                      variant="secondary"
-                      size="sm"
+                    <Text col={colors.success} fos={fontSize.label}>
+                      {t('fields.phone.verified')}
+                    </Text>
+                    <InlineAction
+                      label={t('fields.phone.change')}
                       onPress={() => setVerifyOpen(true)}
                     />
-                  </YStack>
-                </Callout>
-              )}
+                  </XStack>
+                ) : (
+                  <Callout
+                    tone="warning"
+                    title={
+                      phone ? t('fields.phone.unverifiedTitle') : t('fields.phone.missingTitle')
+                    }
+                  >
+                    <YStack gap={space.sm}>
+                      <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                        {phone ? t('fields.phone.unverifiedBody') : t('fields.phone.missingBody')}
+                      </Text>
+                      <Button
+                        label={phone ? t('fields.phone.verifyCta') : t('fields.phone.addCta')}
+                        icon="call-outline"
+                        variant="secondary"
+                        size="sm"
+                        onPress={() => setVerifyOpen(true)}
+                      />
+                    </YStack>
+                  </Callout>
+                )}
+              </YStack>
+
+              <TextField
+                control={control}
+                name="email"
+                label={t('fields.email.label')}
+                placeholder={t('fields.email.placeholder')}
+                hint={t('fields.email.help')}
+                icon="mail-outline"
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+
+              <TextField
+                control={control}
+                name="bio"
+                label={t('fields.bio.label')}
+                placeholder={t('fields.bio.placeholder')}
+                hint={t('fields.bio.help')}
+                multiline
+                rows={4}
+                maxLength={BIO_MAX}
+              />
+
+              <AddressFields
+                control={control}
+                names={{
+                  provinceCode: 'provinceCode',
+                  wardCode: 'wardCode',
+                  addressLine: 'addressLine',
+                }}
+                pin={{
+                  placeId: 'placeId',
+                  latitude: 'latitude',
+                  longitude: 'longitude',
+                  locationSource: 'locationSource',
+                }}
+                title={t('fields.address.title')}
+                required
+                wardRequired={false}
+                prefillRememberedProvince
+              />
             </YStack>
+          </Card>
 
-            <TextField
-              control={control}
-              name="email"
-              label={t('fields.email.label')}
-              placeholder={t('fields.email.placeholder')}
-              hint={t('fields.email.help')}
-              icon="mail-outline"
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
+          <Text col={colors.textMuted} fos={fontSize.label}>
+            {t('editableLater')}
+          </Text>
 
-            <TextField
-              control={control}
-              name="bio"
-              label={t('fields.bio.label')}
-              placeholder={t('fields.bio.placeholder')}
-              hint={t('fields.bio.help')}
-              multiline
-              rows={4}
-              maxLength={BIO_MAX}
-            />
-
-            <AddressFields
-              control={control}
-              names={{
-                provinceCode: 'provinceCode',
-                wardCode: 'wardCode',
-                addressLine: 'addressLine',
-              }}
-              pin={{
-                placeId: 'placeId',
-                latitude: 'latitude',
-                longitude: 'longitude',
-                locationSource: 'locationSource',
-              }}
-              title={t('fields.address.title')}
-              required
-              wardRequired={false}
-              prefillRememberedProvince
-            />
-          </YStack>
-        </Card>
-
-        <Text col={colors.textMuted} fos={fontSize.label}>
-          {t('editableLater')}
-        </Text>
-
-        <OwnerReassurance />
-
-        <YStack gap={space.sm}>
-          <Button
-            label={submitLabel ?? tCommon('next')}
-            disabled={!phoneVerified}
-            onPress={() => void submit()}
-          />
-          <Button label={tCommon('cancel')} variant="ghost" icon="arrow-back" onPress={onCancel} />
+          <OwnerReassurance />
         </YStack>
-      </YStack>
+      </Screen>
 
       {/* `key` theo kênh: mỗi lần mở là một lượt xác thực mới, không giữ mã của lần trước. */}
       {verifyOpen ? (

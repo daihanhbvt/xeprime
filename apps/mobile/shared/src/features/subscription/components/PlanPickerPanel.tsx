@@ -113,24 +113,47 @@ export function PlanPickerPanel({
       <LegalConsentNote place="subscription" />
 
       {showSubmit ? (
-        <YStack gap={space.sm}>
-          <Button
-            label={copy.submit ?? ''}
-            loading={submitting}
-            disabled={!state.selection}
-            onPress={onSubmit}
-          />
-          {/*
-            Nút mờ phải nói VÌ SAO. Không có dòng này, người dùng chọn xong một bậc rồi thấy nút
-            xám và không có cách nào biết mình còn thiếu một cú chạm vào thẻ kỳ hạn.
-          */}
-          {state.selection ? null : (
-            <Text col={colors.textMuted} fos={fontSize.label} ta="center">
-              {copy.pickTermHint}
-            </Text>
-          )}
-        </YStack>
+        <PlanPickerSubmit
+          label={copy.submit ?? ''}
+          hint={copy.pickTermHint}
+          submitting={submitting}
+          selected={!!state.selection}
+          onSubmit={onSubmit}
+        />
       ) : null}
+    </YStack>
+  );
+}
+
+/**
+ * Nút hành động + câu giải thích khi nút mờ. Tách riêng để màn onboarding neo nó vào `footer` của
+ * `Screen` mà không chép lại logic mờ/giải thích.
+ */
+export function PlanPickerSubmit({
+  label,
+  hint,
+  submitting,
+  selected,
+  onSubmit,
+}: {
+  label: string;
+  hint?: string | undefined;
+  submitting: boolean;
+  selected: boolean;
+  onSubmit: () => void;
+}) {
+  return (
+    <YStack gap={space.xs}>
+      <Button label={label} loading={submitting} disabled={!selected} onPress={onSubmit} />
+      {/*
+        Nút mờ phải nói VÌ SAO. Không có dòng này, người dùng chọn xong một bậc rồi thấy nút xám
+        và không có cách nào biết mình còn thiếu một cú chạm vào thẻ kỳ hạn.
+      */}
+      {selected || !hint ? null : (
+        <Text col={colors.textMuted} fos={fontSize.label} ta="center">
+          {hint}
+        </Text>
+      )}
     </YStack>
   );
 }

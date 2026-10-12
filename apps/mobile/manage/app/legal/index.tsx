@@ -16,7 +16,7 @@ export default function LegalIndexRoute() {
   return (
     <ContentWebScreen
       path={CONTENT_PATH.LEGAL}
-      onBack={() => (router.canGoBack() ? router.back() : router.replace(ROUTES.explore.home()))}
+      onBack={() => (router.canGoBack() ? router.back() : router.replace(ROUTES.root.index()))}
     />
   );
 }
