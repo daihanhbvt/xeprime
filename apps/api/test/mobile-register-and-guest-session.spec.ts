@@ -14,6 +14,7 @@ import { AuthService } from '../src/modules/auth/auth.service';
 import { NativeSessionService } from '../src/modules/auth/native-session.service';
 import { RequestRealmService } from '../src/modules/auth/request-realm.service';
 import { SessionService } from '../src/modules/auth/session.service';
+import { AppleIdentityVerifier } from '../src/modules/auth/social/apple-identity.verifier';
 import { NativeAuthCodeService } from '../src/modules/auth/social/native-auth-code.service';
 import { MobileAuthController } from '../src/modules/auth/mobile-auth.controller';
 import { PublicBookingRequestsController } from '../src/modules/booking-requests/public-booking-requests.controller';
@@ -67,6 +68,7 @@ describe('Đăng ký + đặt xe cho app native — luôn trả token, không ba
         { provide: SessionService, useValue: sessions },
         { provide: RequestRealmService, useValue: realms },
         { provide: NativeAuthCodeService, useValue: { issue: jest.fn(), consume: jest.fn() } },
+        { provide: AppleIdentityVerifier, useValue: { verify: jest.fn() } },
         { provide: BookingRequestsService, useValue: requests },
         { provide: PrismaService, useValue: { user: { findFirst: jest.fn() } } },
       ],

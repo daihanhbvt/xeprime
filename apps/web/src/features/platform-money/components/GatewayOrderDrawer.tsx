@@ -275,7 +275,7 @@ function OrderFile({ order }: { order: PlatformPaymentOrderDetail }) {
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const empty = <span className={styles.muted}>{tCommon('labels.emptyValue')}</span>;
-  const mono = (value: string | null, copyLabel: string) =>
+  const mono = (value: string | null | undefined, copyLabel: string) =>
     value ? (
       <span className={styles.copyable}>
         <span className={styles.mono}>{value}</span>

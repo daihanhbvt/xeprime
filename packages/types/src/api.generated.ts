@@ -5851,6 +5851,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/platform/payment-orders/{id}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ghi nhận TAY một lượt cổng đã thu mà máy không tự áp (vd kết quả tới sau khi đã đóng) — cùng đường tiền, có audit
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
+         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *
+         *     **Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        post: operations["PlatformPaymentOrdersController_apply"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/platform/payment-orders/{id}/requery": {
         parameters: {
             query?: never;
@@ -5861,7 +5887,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Hỏi lại cổng ngay và thử áp tiền nếu cổng đã thu — cho lượt kẹt vì IPN không tới
+         * Hỏi lại cổng ngay và thử áp tiền nếu cổng đã thu — trả kèm kết quả của lượt hỏi
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
          *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
@@ -10550,6 +10576,10 @@ export interface components {
             fields: ("holderName" | "holderAddress" | "plateNumber" | "chassisNumber" | "engineNumber" | "issuedAt" | "expiresAt" | "documentNumber")[];
             applyPlateToVehicle?: boolean;
         };
+        ApplyPaymentOrderDto: {
+            /** @description Vì sao ghi nhận tay — đã đối chiếu gì với cổng */
+            note: string;
+        };
         ApprovalLogEntryDto: {
             /** @enum {string} */
             action: "submit" | "approve" | "reject" | "request_revision" | "cancel" | "resubmit" | "profile_updated";
@@ -14618,7 +14648,7 @@ export interface components {
              * @description Chặng nhìn từ phía người trả — awaiting · confirming · completed · failed · needs_support
              * @enum {string}
              */
-            viewState: "awaiting" | "confirming" | "completed" | "failed" | "needs_support";
+            viewState: "awaiting" | "confirming" | "completed" | "duplicate_refunded" | "failed" | "needs_support";
             /** @enum {string|null} */
             applyOutcome?: "activated" | "partial" | "already_paid" | "target_closed" | "target_not_found" | null;
             /** @description Liên kết thanh toán — chỉ có khi lượt còn chờ và chưa quá hạn dùng lại; mở lại để trả tiếp */
@@ -15251,7 +15281,7 @@ export interface components {
             /** @enum {string} */
             reviewStatus: "none" | "open" | "resolved";
             /** @enum {string|null} */
-            reviewReason?: "target_closed" | "target_not_found" | "amount_mismatch" | "apply_failed" | "provider_flagged" | "duplicate_provider_tx" | "result_after_resolution" | null;
+            reviewReason?: "target_closed" | "target_not_found" | "amount_mismatch" | "apply_failed" | "provider_flagged" | "duplicate_provider_tx" | "result_after_resolution" | "overpaid" | null;
             providerTxId?: string | null;
             providerPayMethod?: string | null;
             /** @description ISO */
@@ -15283,6 +15313,10 @@ export interface components {
             target: components["schemas"]["PaymentOrderTargetSnapshotDto"];
             /** @description Kết quả gần nhất của cổng, đã bỏ chữ ký — BẰNG CHỨNG, chỉ ở màn chi tiết */
             resultJson?: Record<string, never> | null;
+            /** @description Nhật ký mọi kết quả đã xác minh của cổng, mới nhất trước (tối đa 50) */
+            events: components["schemas"]["PlatformPaymentOrderEventDto"][];
+            /** @description Người trực ghi nhận tay được không — cổng đã thu, chưa áp, lượt đang ở hàng đợi (vd kết quả tới sau khi đã đóng) */
+            canApply: boolean;
         };
         PlatformPaymentOrderDto: {
             id: string;
@@ -15305,7 +15339,7 @@ export interface components {
             /** @enum {string} */
             reviewStatus: "none" | "open" | "resolved";
             /** @enum {string|null} */
-            reviewReason?: "target_closed" | "target_not_found" | "amount_mismatch" | "apply_failed" | "provider_flagged" | "duplicate_provider_tx" | "result_after_resolution" | null;
+            reviewReason?: "target_closed" | "target_not_found" | "amount_mismatch" | "apply_failed" | "provider_flagged" | "duplicate_provider_tx" | "result_after_resolution" | "overpaid" | null;
             providerTxId?: string | null;
             providerPayMethod?: string | null;
             /** @description ISO */
@@ -15320,9 +15354,31 @@ export interface components {
             /** @description ISO-8601 UTC */
             createdAt: string;
         };
+        PlatformPaymentOrderEventDto: {
+            id: string;
+            /** @enum {string} */
+            source: "ipn" | "query";
+            /** @description Kết cục theo lời cổng — succeeded · pending · failed · cancelled · expired · flagged · not_found */
+            outcome: string;
+            resultCode: string;
+            /** @description VND, chuỗi */
+            amount?: string | null;
+            providerTxId?: string | null;
+            /** @description Hệ thống đã làm gì với kết quả này (máy đọc được) */
+            effect: string;
+            /** @description Payload của cổng, đã bỏ chữ ký */
+            rawJson: Record<string, never>;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+        };
         PlatformPaymentOrderPageDto: {
             data: components["schemas"]["PlatformPaymentOrderDto"][];
             meta: components["schemas"]["PaginationMetaDto"];
+        };
+        PlatformPaymentOrderRequeryDto: {
+            /** @enum {string} */
+            outcome: "changed" | "no_change" | "unreachable";
+            order: components["schemas"]["PlatformPaymentOrderDetailDto"];
         };
         PlatformPeriodCountDto: {
             /** @description Từ đầu tháng (giờ VN) tới hiện tại */
@@ -56628,6 +56684,181 @@ export interface operations {
             };
         };
     };
+    PlatformPaymentOrdersController_apply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplyPaymentOrderDto"];
+            };
+        };
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["PlatformPaymentOrderDetailDto"];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Không tìm thấy bản ghi tương ứng.
+             *
+             *     Mã lỗi: `NOT_FOUND`
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Không tìm thấy dữ liệu"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             *
+             *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "CONFLICT",
+                     *         "message": "Dữ liệu đã tồn tại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     PlatformPaymentOrdersController_requery: {
         parameters: {
             query?: never;
@@ -56646,7 +56877,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data: components["schemas"]["PlatformPaymentOrderDetailDto"];
+                        data: components["schemas"]["PlatformPaymentOrderRequeryDto"];
                     };
                 };
             };
