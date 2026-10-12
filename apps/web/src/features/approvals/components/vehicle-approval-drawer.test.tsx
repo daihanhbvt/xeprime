@@ -61,13 +61,9 @@ vi.mock('@/hooks/use-media-query', () => ({
 
 const messages = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn(), warning: vi.fn() }));
 const modals = vi.hoisted(() => ({ confirm: vi.fn() }));
-vi.mock('antd', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('antd')>();
-  return {
-    ...actual,
-    App: Object.assign(actual.App, { useApp: () => ({ message: messages, modal: modals }) }),
-  };
-});
+vi.mock('antd', async (importOriginal) =>
+  (await import('@/test-utils/antd-mock')).antdWithApp(importOriginal, () => ({ message: messages, modal: modals })),
+);
 
 const onNavigate = vi.fn();
 const onClose = vi.fn();

@@ -48,13 +48,9 @@ vi.mock('@/hooks/use-permissions', () => ({
 }));
 
 const messages = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
-vi.mock('antd', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('antd')>();
-  return {
-    ...actual,
-    App: Object.assign(actual.App, { useApp: () => ({ message: messages }) }),
-  };
-});
+vi.mock('antd', async (importOriginal) =>
+  (await import('@/test-utils/antd-mock')).antdWithApp(importOriginal, () => ({ message: messages })),
+);
 
 /** Xe ĐỦ điều kiện theo `publishChecklist` — mỗi test tự bỏ đi thứ nó cần thiếu. */
 function makeVehicle(over: Partial<VehicleDetail> = {}): VehicleDetail {
