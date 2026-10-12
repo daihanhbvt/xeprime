@@ -16,13 +16,9 @@ vi.mock('../hooks/use-vehicle-approvals', () => ({
 }));
 
 const messages = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
-vi.mock('antd', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('antd')>();
-  return {
-    ...actual,
-    App: Object.assign(actual.App, { useApp: () => ({ message: messages }) }),
-  };
-});
+vi.mock('antd', async (importOriginal) =>
+  (await import('@/test-utils/antd-mock')).antdWithApp(importOriginal, () => ({ message: messages })),
+);
 
 const SAVED_AT = '2026-06-08T02:15:00.000Z';
 

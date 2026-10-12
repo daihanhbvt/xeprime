@@ -10,12 +10,14 @@ const mutations = vi.hoisted(() => ({
   update: { mutate: vi.fn(), isPending: false },
 }));
 
-vi.mock('antd', () => ({
-  App: {
-    useApp: () => ({ message: { success: vi.fn(), error: vi.fn() } }),
-  },
-  Button: ({ children }: { children: ReactNode }) => <button type="button">{children}</button>,
-}));
+vi.mock('antd', async () =>
+  (await import('@/test-utils/antd-mock')).asAntdModule({
+    App: {
+      useApp: () => ({ message: { success: vi.fn(), error: vi.fn() } }),
+    },
+    Button: ({ children }: { children: ReactNode }) => <button type="button">{children}</button>,
+  }),
+);
 
 vi.mock('@ant-design/icons', () => ({
   DesktopOutlined: () => null,
