@@ -72,6 +72,35 @@ describe('env: APP_ENV — staging được miễn NĂNG LỰC, KHÔNG được 
     expect(env.R2_BUCKET).toBeUndefined();
   });
 
+  it('staging nhận eSMS thật KÈM mã OTP test — hai đường song song', () => {
+    const env = validateEnv(
+      stagingEnv({
+        OTP_MODE: 'esms',
+        ESMS_API_KEY: 'k',
+        ESMS_SECRET_KEY: 's',
+        ESMS_BRANDNAME: 'XePrime',
+        OTP_BYPASS_CODE: '123456',
+      }),
+    );
+    expect(env.OTP_MODE).toBe('esms');
+    expect(env.OTP_BYPASS_CODE).toBe('123456');
+    expect(validationError(stagingEnv({ OTP_BYPASS_CODE: '12345' }))).toContain('OTP_BYPASS_CODE');
+  });
+
+  it('ESMS_OTP_TEMPLATE: trống = câu XePrime; khai thì phải có {code}', () => {
+    expect(validateEnv(stagingEnv()).ESMS_OTP_TEMPLATE).toBe(
+      '{code} la ma xac thuc XePrime cua ban. Ma het han sau 5 phut.',
+    );
+    expect(validateEnv(stagingEnv({ ESMS_OTP_TEMPLATE: '' })).ESMS_OTP_TEMPLATE).toContain(
+      'XePrime',
+    );
+    const baotri = '{code} la ma xac minh dang ky Baotrixemay cua ban';
+    expect(validateEnv(stagingEnv({ ESMS_OTP_TEMPLATE: baotri })).ESMS_OTP_TEMPLATE).toBe(baotri);
+    expect(validationError(stagingEnv({ ESMS_OTP_TEMPLATE: 'ma cua ban la' }))).toContain(
+      'ESMS_OTP_TEMPLATE',
+    );
+  });
+
   /*
    * Bốn test dưới là phần QUAN TRỌNG của describe này. Cái bẫy hiển nhiên khi thêm một môi
    * trường "dễ tính hơn" là nới luôn cả nhóm bảo mật — và staging thì cũng nằm trên Internet
@@ -183,6 +212,14 @@ describe('env: cửa chặn production', () => {
 
   it('chặn OTP_MODE=mock — mã OTP chỉ nằm trong log, không có SMS nào được gửi', () => {
     expect(validationError(productionEnv({ OTP_MODE: 'mock' }))).toContain('OTP_MODE');
+  });
+
+  it('chặn OTP_BYPASS_CODE — mã test ở production là xác thực được SĐT của bất kỳ ai', () => {
+    expect(validationError(productionEnv({ OTP_BYPASS_CODE: '123456' }))).toContain(
+      'OTP_BYPASS_CODE',
+    );
+    // Ô trống (deploy bỏ key / `.env.example` để trống) không phải "có giá trị".
+    expect(() => validateEnv(productionEnv({ OTP_BYPASS_CODE: '' }))).not.toThrow();
   });
 
   it('chặn thiếu SMTP — link đặt lại mật khẩu (kèm token) sẽ bị ghi ra log', () => {

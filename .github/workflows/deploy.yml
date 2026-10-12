@@ -250,6 +250,8 @@ jobs:
           V_GOOGLE_OAUTH_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}
           V_FACEBOOK_APP_ID: ${{ vars.FACEBOOK_APP_ID }}
           V_OTP_MODE: ${{ vars.OTP_MODE }}
+          V_OTP_BYPASS_CODE: ${{ vars.OTP_BYPASS_CODE }}
+          V_ESMS_OTP_TEMPLATE: ${{ vars.ESMS_OTP_TEMPLATE }}
           V_PLAN_FEATURE_ENFORCEMENT: ${{ vars.PLAN_FEATURE_ENFORCEMENT }}
           V_DRIVER_LICENCE_ENFORCEMENT: ${{ vars.DRIVER_LICENCE_ENFORCEMENT }}
           V_DRIVER_LICENCE_OCR: ${{ vars.DRIVER_LICENCE_OCR }}
@@ -384,6 +386,13 @@ jobs:
             fi
           fi
 
+          # Mã OTP test ở production = ai cũng xác thực được SĐT của người khác. API cũng từ chối
+          # boot (env.schema.ts), nhưng bắt ở đây là bắt TRƯỚC khi migrate chạm vào database.
+          if [ "${V_APP_ENV:-}" = "production" ] && [ -n "${V_OTP_BYPASS_CODE:-}" ]; then
+            echo "::error::OTP_BYPASS_CODE chỉ dành cho staging — xoá Variable này ở Settings → Environments → $XP_ENV"
+            MISSING=1
+          fi
+
           [ "$MISSING" -eq 0 ] || exit 1
 
           PG_USER="${V_POSTGRES_USER:-xeprime}"
@@ -477,6 +486,9 @@ jobs:
           kv FACEBOOK_APP_SECRET "${S_FACEBOOK_APP_SECRET:-}"
 
           kv OTP_MODE "${V_OTP_MODE:-mock}"
+          # Mã OTP test (dev/staging). CHỈ khai ở Environment staging — production có giá trị là API
+          # từ chối boot (`env.schema.ts`).
+          kv OTP_BYPASS_CODE "${V_OTP_BYPASS_CODE:-}"
           # Trục năng lực theo gói (ADR 0027). Mặc định "warn": ghi log ai SẼ bị chặn nhưng vẫn
           # cho qua. Lật sang "on" là một lần deploy RIÊNG, không kèm thay đổi nào khác — nhờ
           # vậy rollback là sửa một biến ở GitHub Environment, không phải revert code.
@@ -484,6 +496,8 @@ jobs:
           kv ESMS_API_KEY "${S_ESMS_API_KEY:-}"
           kv ESMS_SECRET_KEY "${S_ESMS_SECRET_KEY:-}"
           kv ESMS_BRANDNAME "${S_ESMS_BRANDNAME:-}"
+          # Câu mẫu OTP đã duyệt cho brandname ở trên (`{code}` = mã). Trống ⇒ câu XePrime mặc định.
+          kv ESMS_OTP_TEMPLATE "${V_ESMS_OTP_TEMPLATE:-}"
           kv OTP_PEPPER "${S_OTP_PEPPER:-}"
 
           kv SMTP_HOST "${V_SMTP_HOST:-}"

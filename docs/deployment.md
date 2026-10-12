@@ -80,7 +80,7 @@ nhau giữa hai môi trường, do biến `APP_ENV` (§2.3):
 | Thứ | Staging | Production | Ghi chú |
 | --- | --- | --- | --- |
 | Tên miền + quyền sửa DNS | ✅ | ✅ | nhà đăng ký tên miền |
-| Tài khoản **eSMS.vn** + brandname | ⬜ | ✅ | staging để `OTP_MODE=mock`: mã in ra log và trả trong response |
+| Tài khoản **eSMS.vn** + brandname | ✅ | ✅ | staging gửi SMS thật (`OTP_MODE=esms`) và nhận thêm mã test `OTP_BYPASS_CODE`; bỏ trống `ESMS_*` + `OTP_MODE=mock` thì mã in ra log và trả trong response |
 | **SMTP** (Zoho / Google Workspace / Amazon SES) | ⬜ | ✅ | staging bỏ trống: email in ra log |
 | **Cloudflare R2**: 2 bucket (public + private) | ⬜ | ✅ | staging bỏ trống: endpoint upload trả 503 |
 | Google/Facebook OAuth client | ⬜ | ⬜ | thiếu thì nút social trả `SOCIAL_NOT_CONFIGURED`; mật khẩu và OTP vẫn chạy |
@@ -761,7 +761,9 @@ Settings; Secret bị che và không đọc lại được sau khi lưu.
 | ~~`SESSION_COOKIE_DOMAIN`~~ | **XOÁ** | đã bỏ (ADR 0053 — cookie host-only). Workflow không ghi nó nữa và cảnh báo nếu còn; API từ chối boot nếu thấy |
 | `MOBILE_ACCESS_TTL_MINUTES` · `MOBILE_REFRESH_TTL_DAYS` | `15` · `60` | |
 | `MOBILE_JWT_AUDIENCE` · `MOBILE_AUTH_REDIRECT_URIS` | `xeprime-mobile` · `xeprime://auth/callback,xeprimepartner://auth/callback` | hai scheme của hai app (XePrime · XePrime Partner); scheme quyết app đích của luồng social native |
-| `OTP_MODE` | `mock` | mã in ra log và trả trong response |
+| `OTP_MODE` | `esms` | gửi SMS thật qua eSMS.vn — cần đủ ba Secret `ESMS_*`. `mock` ⇒ mã in ra log và trả trong response |
+| `ESMS_OTP_TEMPLATE` | `{code} la ma xac minh dang ky Baotrixemay cua ban` | câu tin OTP, PHẢI khớp mẫu đã duyệt của `ESMS_BRANDNAME` (lệch là lỗi 146). Staging dùng brandname dùng chung `Baotrixemay` của eSMS; production để trống = câu XePrime mặc định của brandname riêng |
+| `OTP_BYPASS_CODE` | `123456` | mã OTP test: gõ nó là xác thực xong, có gửi mã hay không — chạy song song với mã thật. **CHỈ staging**: khai ở production thì workflow dừng và API từ chối boot |
 | `PLAN_FEATURE_ENFORCEMENT` | `warn` | trục năng lực theo gói (ADR 0027). Xem §9.4 trước khi đổi sang `on` |
 | `DRIVER_LICENCE_ENFORCEMENT` | `on` | cổng bằng lái khi gửi yêu cầu thuê xe tự lái (ADR 0057). `off` là thoát hiểm khi app native chưa có bước nộp bằng — luồng nộp/duyệt vẫn chạy |
 | `DRIVER_LICENCE_OCR` | `tesseract` | đọc ảnh bằng lái tự động (ADR 0057) bằng Tesseract chạy ngay trong container API — không khoá, không bên thứ ba, không tốn phí. Đang đọc thì tiến trình API thêm ~230MB RAM (đo 09/10/2026: 14 ảnh mẫu + 6 lượt dồn), worker tự tắt sau 3 phút rảnh; mỗi ảnh 1–4 giây CPU một nhân, chạy tuần tự, quá 20 lượt chờ thì lượt mới vào thẳng hàng đợi duyệt tay (`OCR_BUSY`). `off` ⇒ mọi lượt nộp vào hàng đợi duyệt tay (thoát hiểm khi CPU quá tải hay bộ đọc quyết sai) |
@@ -792,7 +794,7 @@ Settings; Secret bị che và không đọc lại được sau khi lưu.
 | `REALM_PROXY_SECRET` | **mới, bắt buộc** (ADR 0053). Cùng lệnh như trên, giá trị KHÁC `SESSION_JWT_SECRET` và khác giữa staging/production. Caddy gắn nó kèm header realm của `/api`; thiếu nó API từ chối boot |
 | `OTP_PEPPER` | `openssl rand -base64 32` |
 | `GOOGLE_OAUTH_CLIENT_SECRET` · `FACEBOOK_APP_SECRET` | console provider; trống ⇒ nút social trả `SOCIAL_NOT_CONFIGURED` |
-| `ESMS_API_KEY` · `ESMS_SECRET_KEY` · `ESMS_BRANDNAME` | trống ở staging |
+| `ESMS_API_KEY` · `ESMS_SECRET_KEY` · `ESMS_BRANDNAME` | tài khoản eSMS.vn (brandname + mẫu tin đã duyệt). Bắt buộc khi `OTP_MODE=esms`. Staging: `ESMS_BRANDNAME=Baotrixemay` (brandname dùng chung có sẵn trong tài khoản — tin hiện tên người gửi Baotrixemay) cho tới khi brandname XePrime được duyệt |
 | `SMTP_PASS` | API key SMTP — **key riêng cho staging**, không dùng chung với production (thu hồi một bên không kéo bên kia) |
 | `SEPAY_API_KEY` | khoá **webhook** trong bảng điều khiển SePay (≥16 ký tự). Trống ⇒ `/sepay/webhook` trả 503 `SEPAY_NOT_CONFIGURED` — fail closed, không giả vờ đã nhận tiền |
 | `MOMO_ACCESS_KEY` · `MOMO_SECRET_KEY` · `VNPAY_HASH_SECRET` | khoá ký của cổng do MoMo/VNPAY cấp — bộ sandbox cho staging, bộ production RIÊNG cho production. Trống ⇒ cổng tắt (không nút, checkout 503, IPN không xác nhận gì) |

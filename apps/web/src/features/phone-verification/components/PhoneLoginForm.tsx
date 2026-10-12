@@ -3,6 +3,7 @@
 import { Alert, Button, Form, Input } from 'antd';
 import { PhoneOutlined } from '@ant-design/icons';
 import { useMutation } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { PHONE_VERIFICATION_PURPOSE, VN_PHONE_PATTERN } from '@xeprime/types';
 import { getErrorMessage } from '@/services/api-client';
@@ -16,12 +17,16 @@ import styles from './PhoneLoginForm.module.css';
  * Đăng nhập passwordless bằng SĐT + OTP: nhập SĐT → gửi mã → nhập mã → đăng nhập. OTP purpose
  * `login` (không dùng chéo mục đích khác). Tài khoản chưa có sẽ được BE tạo ngầm, không mật khẩu.
  * `onSuccess(user)` nhận tài khoản vừa đăng nhập để trang login điều hướng / gợi ý đặt mật khẩu.
+ *
+ * Môi trường nhận mã test (dev/staging): ô mã hiện ngay dưới nút gửi — gõ mã test là đăng nhập
+ * được mà không tốn SMS, bấm gửi thì vẫn nhận mã thật.
  */
 export function PhoneLoginForm({
   onSuccess,
 }: {
   onSuccess: (user: CurrentUser) => Promise<void> | void;
 }) {
+  const t = useTranslations('Auth.otp');
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -38,10 +43,11 @@ export function PhoneLoginForm({
 
   const phoneValid = VN_PHONE_PATTERN.test(phone.trim());
   const sent = vp.status === 'code_sent';
+  const canSubmit = code.length === 6 && phoneValid && !login.isPending;
   const displayError = error ?? vp.error;
 
   function submitCode(next: string) {
-    if (next.length === 6 && !login.isPending) login.mutate();
+    if (next.length === 6 && phoneValid && !login.isPending) login.mutate();
   }
 
   function editPhone() {
@@ -56,18 +62,14 @@ export function PhoneLoginForm({
         <Alert type="error" showIcon title={displayError} className={styles.err} />
       ) : null}
 
-      <Form.Item
-        label="Số điện thoại"
-        className={styles.item}
-        help={sent ? undefined : 'Chúng tôi sẽ gửi mã xác thực gồm 6 số qua SMS.'}
-      >
+      <Form.Item label={t('phone')} className={styles.item} help={sent ? undefined : t('phoneHint')}>
         <Input
           size="large"
           value={phone}
           type="tel"
           inputMode="tel"
           autoComplete="tel"
-          placeholder="0901234567"
+          placeholder={t('phonePlaceholder')}
           prefix={<PhoneOutlined />}
           disabled={sent}
           onChange={(e) => setPhone(e.target.value)}
@@ -77,7 +79,7 @@ export function PhoneLoginForm({
 
       {!sent ? (
         <Button
-          type="primary"
+          type={vp.canEnterCode ? 'default' : 'primary'}
           block
           size="large"
           className={styles.submit}
@@ -85,28 +87,30 @@ export function PhoneLoginForm({
           disabled={!phoneValid}
           onClick={() => vp.send(phone.trim())}
         >
-          Gửi mã xác thực
+          {t('sendCode')}
         </Button>
-      ) : (
+      ) : null}
+
+      {vp.canEnterCode ? (
         <>
           <Form.Item
-            label="Mã xác thực"
+            label={t('code')}
             className={styles.item}
-            help={`Mã gồm 6 số đã được gửi đến ${maskPhone(phone)}.`}
+            help={sent ? t('codeHint', { phone: maskPhone(phone) }) : undefined}
           >
             <OtpCodeInput
               value={code}
               onChange={setCode}
               onComplete={submitCode}
-              autoFocus
+              autoFocus={sent}
               disabled={login.isPending}
             />
           </Form.Item>
 
           {vp.devCode ? (
-            <div className={styles.devHint}>
-              Mã dev: <b>{vp.devCode}</b> — chỉ hiện ở môi trường phát triển.
-            </div>
+            <div className={styles.devHint}>{t('devCode', { code: vp.devCode })}</div>
+          ) : !sent ? (
+            <div className={styles.devHint}>{t('testCodeHint')}</div>
           ) : null}
 
           <Button
@@ -115,27 +119,29 @@ export function PhoneLoginForm({
             size="large"
             className={styles.submit}
             loading={login.isPending}
-            disabled={code.length !== 6}
+            disabled={!canSubmit}
             onClick={() => login.mutate()}
           >
-            Đăng nhập
+            {t('submit')}
           </Button>
-
-          <div className={styles.footRow}>
-            <button type="button" className={styles.linkBtn} onClick={editPhone}>
-              Đổi số điện thoại
-            </button>
-            <button
-              type="button"
-              className={styles.linkBtn}
-              disabled={vp.cooldown > 0 || vp.sending}
-              onClick={() => vp.send(phone.trim())}
-            >
-              {vp.cooldown > 0 ? `Gửi lại (${vp.cooldown}s)` : 'Gửi lại mã'}
-            </button>
-          </div>
         </>
-      )}
+      ) : null}
+
+      {sent ? (
+        <div className={styles.footRow}>
+          <button type="button" className={styles.linkBtn} onClick={editPhone}>
+            {t('editPhone')}
+          </button>
+          <button
+            type="button"
+            className={styles.linkBtn}
+            disabled={vp.cooldown > 0 || vp.sending}
+            onClick={() => vp.send(phone.trim())}
+          >
+            {vp.cooldown > 0 ? t('resendIn', { seconds: vp.cooldown }) : t('resend')}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

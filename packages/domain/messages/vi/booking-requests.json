@@ -241,7 +241,10 @@
       "resendIn": "Gửi lại ({seconds}s)",
       "sessionExpired": "Phiên đăng nhập đã hết hạn. Vui lòng xác thực lại số điện thoại.",
       "editPhoneShort": "Đổi số",
-      "loginHint": "Mã gồm 6 số đã được gửi đến {phone}. Nhập mã để đăng nhập — tài khoản giữ bằng lái đã xác thực cho mọi chuyến sau của bạn."
+      "loginHint": "Mã gồm 6 số đã được gửi đến {phone}. Nhập mã để đăng nhập — tài khoản giữ bằng lái đã xác thực cho mọi chuyến sau của bạn.",
+      "notSentHint": "Bấm “Gửi mã” để nhận mã gồm 6 số qua SMS tại {phone}.",
+      "testCodeHint": "Môi trường thử nghiệm — nhập mã test để xác thực mà không cần gửi SMS.",
+      "send": "Gửi mã"
     },
     "review": {
       "vehicle": "Xe",

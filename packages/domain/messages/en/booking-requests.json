@@ -241,7 +241,10 @@
       "resendIn": "Resend ({seconds}s)",
       "sessionExpired": "Your session has expired. Please verify your phone number again.",
       "editPhoneShort": "Change number",
-      "loginHint": "A 6-digit code has been sent to {phone}. Enter it to sign in — your account keeps your verified licence for all future trips."
+      "loginHint": "A 6-digit code has been sent to {phone}. Enter it to sign in — your account keeps your verified licence for all future trips.",
+      "notSentHint": "Tap “Send code” to receive a 6-digit code by SMS at {phone}.",
+      "testCodeHint": "Test environment — enter the test code to verify without sending an SMS.",
+      "send": "Send code"
     },
     "review": {
       "vehicle": "Car",
