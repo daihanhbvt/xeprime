@@ -194,6 +194,7 @@ describe('nav — cấu trúc khối', () => {
         ROUTES.ADMIN.CATALOG,
         ROUTES.ADMIN.LOCATIONS,
         ROUTES.ADMIN.BANNERS,
+        ROUTES.ADMIN.APP_CONFIG,
         ROUTES.ADMIN.AUDIT,
       ].sort(),
     );

@@ -31,6 +31,15 @@ export function useCurrentUser(): UseQueryResult<CurrentUser> {
     queryFn: fetchCurrentUser,
     // 401 nghĩa là chưa đăng nhập — đó là trạng thái hợp lệ, không phải lỗi cần retry.
     retry: false,
+    /*
+     * Observer MỚI mount KHÔNG tự hỏi lại khi lượt trước đã lỗi (401 = chưa đăng nhập). Mặc định
+     * của TanStack là hỏi lại, và lượt hỏi lại đưa một query CHƯA có data về `pending` ⇒
+     * `isLoading` bật ⇒ màn nào dựng spinner thay cây con (vd `PartnerRegisterView`) tháo cây đó;
+     * cây mount lại kèm observer mới ⇒ hỏi lại ⇒ … vòng `/auth/me` vô tận cho người chưa đăng
+     * nhập. Phiên đổi qua đường TƯỜNG MINH (`refreshAfterAuth` / `invalidateQueries(auth)`); lỗi
+     * tạm thời vẫn được hỏi lại khi focus cửa sổ / hết stale.
+     */
+    retryOnMount: false,
     staleTime: 60_000,
   });
 }

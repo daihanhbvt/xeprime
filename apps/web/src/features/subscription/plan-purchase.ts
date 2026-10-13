@@ -1,15 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  BILLING_MODE,
-  isPlanSelfServe,
-  parsePlanLimits,
-  planTermPrice,
-  planTermSavingPercent,
-  type PlanLimitsJson,
-  type SubscriptionTermMonths,
-} from '@xeprime/types';
+import { buildPlanPricingCards, type PlanPricingCard } from '@xeprime/domain';
+import type { PlanLimitsJson, SubscriptionTermMonths } from '@xeprime/types';
 
 import type { PurchaseSubscriptionInput, TenantPlan } from './types';
 
@@ -60,6 +53,11 @@ export interface PlanTier {
   /** Tự mua được không — `false` = bậc `salesOnly`, hoặc bậc chưa khai bảng giá. */
   selfServe: boolean;
   terms: readonly PlanTermChoice[];
+  /**
+   * Thẻ dẫn xuất DÙNG CHUNG với email hướng dẫn gói (`@xeprime/domain` — `buildPlanPricingCards`):
+   * biểu tượng, cờ đề xuất, dòng quyền lợi, giá tiêu đề. Bảng giá vẽ từ đây để hai nơi không lệch.
+   */
+  card: PlanPricingCard<TenantPlan>;
 }
 
 export interface PlanPurchaseState {
@@ -101,21 +99,17 @@ export function usePlanPurchase(plans: readonly TenantPlan[]): PlanPurchaseState
    * tối ưu cả component** (`react-hooks/preserve-manual-memoization`). Đây là vài lần parse JSON
    * trên một danh mục ba dòng — bỏ memo tay rẻ hơn giữ memo tay rồi mất tối ưu ở mọi thứ khác.
    */
-  const tiers: PlanTier[] = plans
-    .filter((p) => p.billingMode === BILLING_MODE.PACKAGE)
-    .map((plan) => {
-      const limits = parsePlanLimits(plan.limits);
-      return {
-        plan,
-        limits,
-        selfServe: isPlanSelfServe(limits),
-        terms: limits.termPrices.map((term) => ({
-          months: term.months as SubscriptionTermMonths,
-          total: Number(planTermPrice(limits, term.months) ?? 0),
-          savingPercent: planTermSavingPercent(limits, term.months),
-        })),
-      };
-    });
+  const tiers: PlanTier[] = buildPlanPricingCards(plans).map((card) => ({
+    plan: card.plan,
+    limits: card.limits,
+    selfServe: card.selfServe,
+    terms: card.terms.map((term) => ({
+      months: term.months as SubscriptionTermMonths,
+      total: Number(term.price),
+      savingPercent: term.savingPercent,
+    })),
+    card,
+  }));
 
   const selected = tiers.find((tier) => tier.plan.id === planId);
 

@@ -164,6 +164,40 @@
     "grace": "Đang trong thời gian ân hạn",
     "lapsed": "Đã hết hạn"
   },
+  "mobilePlan": {
+    "title": "Tài khoản & hạn mức",
+    "subtitleHidden": "Thông tin tài khoản và hạn mức xe của bạn.",
+    "subtitleShown": "Thông tin tài khoản và hạn mức xe của bạn. Cần hỗ trợ? Liên hệ đội ngũ XePrime.",
+    "packageSummary": "Tài khoản gian hàng với đầy đủ công cụ quản lý đội xe.",
+    "commissionLimitReached": "Bạn đã đạt giới hạn {limit} xe.",
+    "contactButton": "Liên hệ tư vấn",
+    "consult": {
+      "title": "Liên hệ tư vấn",
+      "intro": "Để lại thông tin, đội ngũ XePrime sẽ liên hệ hỗ trợ bạn.",
+      "fullName": "Họ và tên",
+      "phone": "Số điện thoại",
+      "email": "Email",
+      "message": "Nội dung",
+      "messagePlaceholder": "Ví dụ: tôi có 5 xe, cần hỗ trợ về tài khoản",
+      "submit": "Gửi yêu cầu",
+      "successTitle": "Đã gửi yêu cầu tư vấn",
+      "successBodyNoEmail": "Cảm ơn bạn! Đội ngũ XePrime sẽ liên hệ với bạn trong thời gian sớm nhất.",
+      "successBody": "Cảm ơn bạn! Đội ngũ XePrime sẽ liên hệ với bạn trong thời gian sớm nhất. Hướng dẫn chi tiết đã được gửi tới email {email}.",
+      "done": "Đóng",
+      "validation": {
+        "fullNameRequired": "Vui lòng nhập họ và tên",
+        "phoneRequired": "Vui lòng nhập số điện thoại",
+        "phoneInvalid": "Số điện thoại không hợp lệ",
+        "emailRequired": "Vui lòng nhập email",
+        "emailInvalid": "Email không hợp lệ",
+        "messageTooLong": "Nội dung tối đa 1000 ký tự"
+      }
+    },
+    "noPlan": "Tài khoản chủ xe cá nhân",
+    "commissionSummary": "Bạn đang là chủ xe cá nhân. Phí dịch vụ tính theo từng chuyến hoàn thành.",
+    "termGrace": "Sắp hết thời hạn sử dụng",
+    "termLapsed": "Đã hết thời hạn sử dụng"
+    },
   "checkout": {
     "back": "Quay lại",
     "title": "Thanh toán gói dịch vụ",

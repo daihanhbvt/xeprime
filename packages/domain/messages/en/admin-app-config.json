@@ -1,0 +1,162 @@
+{
+  "page": {
+    "title": "App configuration",
+    "subtitle": "Toggle XePrime Partner app features and manage the plan guide email templates.",
+    "tabs": {
+      "config": "Partner app settings",
+      "templates": "Plan email template sets"
+    }
+  },
+  "config": {
+    "loading": "Loading configuration…",
+    "loadError": "Could not load the app configuration.",
+    "isPlanPromotionEnabled": {
+      "label": "Enable plan promotion",
+      "description": "Show the plan list and the Contact for consultation button in the XePrime Partner app, and send plan sign-up/renewal guide emails (including when a shop registers on the web). Changes apply immediately to users who have the app open."
+    },
+    "contactTitle": "Consultation contact channels",
+    "contactHint": "Shown in the app and in the plan guide email. Leave empty if you do not use that channel.",
+    "hotline": "Hotline",
+    "hotlinePlaceholder": "E.g. 1900 1234",
+    "zalo": "Zalo",
+    "zaloPlaceholder": "E.g. 0901234567",
+    "zaloHint": "This number is used for the \"Contact for advice\" link in plan guide emails (opens zalo.me).",
+    "contactInvalid": "6–20 characters, starting with a digit or +; digits, spaces, dots and hyphens only.",
+    "contactTooLong": "At most {max} characters.",
+    "meta": "Updated {updatedAt}",
+    "metaBy": "Updated {updatedAt} by {name}",
+    "save": "Save configuration",
+    "reset": "Undo",
+    "saved": "Configuration saved. Open apps will receive the change right away.",
+    "unsaved": "You have unsaved changes."
+  },
+  "templates": {
+    "create": "New template set",
+    "search": "Search by set code or name",
+    "column": {
+      "name": "Template set",
+      "status": "Status",
+      "updatedAt": "Updated"
+    },
+    "active": "In use",
+    "inactive": "Not in use",
+    "updatedBy": "by {name}",
+    "action": {
+      "edit": "Edit",
+      "activate": "Use this set",
+      "duplicate": "Duplicate",
+      "delete": "Delete"
+    },
+    "confirm": {
+      "activateTitle": "Use template “{name}”?",
+      "activateBody": "Every plan guide email sent from now on will use this template. The template currently in use will be switched off.",
+      "deleteTitle": "Delete template “{name}”?",
+      "deleteBody": "A deleted template can no longer be used. This cannot be undone.",
+      "ok": "Confirm",
+      "cancel": "Cancel"
+    },
+    "duplicateDialog": {
+      "title": "Duplicate template “{name}”",
+      "code": "New template code",
+      "name": "New template name",
+      "namePlaceholder": "Leave empty to use “{name} (copy)”",
+      "submit": "Duplicate"
+    },
+    "toast": {
+      "activated": "Now using template “{name}”.",
+      "duplicated": "Created copy “{name}”.",
+      "deleted": "Deleted template “{name}”."
+    },
+    "error": "Could not load the template list.",
+    "empty": {
+      "title": "No email templates yet",
+      "hint": "Create a template to send plan subscription and renewal guide emails."
+    },
+    "emptyFiltered": "No templates match your search.",
+    "total": "{count, plural, one {# template} other {# templates}}",
+    "explain": "The active set applies to every plan email; the system picks the content per case: Shop registration & Consultation request → Welcome; ≤ 7 days left → Expiring; Expiry day → Expired; During grace → Grace."
+  },
+  "editor": {
+    "createTitle": "New email template set",
+    "editTitle": "Edit set “{name}”",
+    "loadError": "Could not load the email template.",
+    "backToList": "Back to templates",
+    "code": "Template code",
+    "codeHelp": "Lowercase letters, digits, underscores or hyphens; cannot be changed after creation.",
+    "name": "Template name",
+    "subject": "Email subject",
+    "body": "Content (HTML)",
+    "locale": {
+      "vi": "Vietnamese",
+      "en": "English"
+    },
+    "validation": {
+      "codeRequired": "Enter a template code.",
+      "codeFormat": "2–60 characters: lowercase letters, digits, underscores or hyphens, starting with a letter or digit.",
+      "nameRequired": "Enter a template name.",
+      "nameTooLong": "Name must be at most {max} characters.",
+      "subjectRequired": "Enter a subject in both languages for every content.",
+      "subjectTooLong": "Subject must be at most {max} characters.",
+      "bodyRequired": "Enter a body in both languages for every content.",
+      "bodyTooLong": "Content must be at most {max} characters."
+    },
+    "save": "Save template",
+    "create": "Create template",
+    "saved": "Template saved.",
+    "created": "Template created. You can now preview it and send a test email.",
+    "conflictTitle": "Someone else just edited this template",
+    "conflictBody": "Your draft is out of date. Reload the latest version (your unsaved changes will be lost) or copy your content out first.",
+    "conflictReload": "Load latest version",
+    "unsaved": "You have unsaved changes.",
+    "activeBadge": "Active set",
+    "versionMeta": "Updated {updatedAt}",
+    "placeholders": {
+      "title": "Available variables",
+      "hint": "Click to copy. Values are filled in and sanitised by the system.",
+      "conditional": "Show the text between the tags only when the variable has a value (hotline, grace period, fee %…), e.g.:",
+      "copied": "Copied {token}",
+      "recipientName": "Recipient name",
+      "shopName": "Shop name",
+      "planTable": "Plan price table (HTML built by the system)",
+      "purchaseUrl": "Link to buy or renew a plan on the website",
+      "hotline": "Consultation hotline",
+      "zalo": "Consultation Zalo",
+      "zaloUrl": "Consultation link: opens Zalo (https://zalo.me/…) when a Zalo number is set, otherwise the support page",
+      "expiresAt": "Plan expiry date",
+      "reminderDays": "Days before expiry the reminder is sent (system setting)",
+      "graceDays": "Grace period of the plan in days (empty when the plan has none)",
+      "graceEndsAt": "Grace period end date (only for emails about an active plan)",
+      "commissionPercent": "Per-trip service fee % on the per-trip track (current fee policy)",
+      "packageCommissionPercent": "XePrime per-trip commission % on a shop plan",
+      "reason": "Reason for the email",
+      "assetBase": "Base URL of email icons (e.g. '{{'assetBase'}}'/phone.png)"
+    },
+    "preview": {
+      "title": "Preview",
+      "locale": "Preview language",
+      "frameTitle": "Email preview",
+      "subject": "Subject",
+      "createFirst": "Save the template once to preview it and send a test email.",
+      "error": "Could not render the preview.",
+      "updating": "Updating…",
+      "variant": "Content: {variant}"
+    },
+    "sendTest": "Send me a test email",
+    "sendTestDone": "Test email queued to {to}.",
+    "sendTestUsesSaved": "The test email uses the SAVED version — save first if you just made changes.",
+    "variantHelp": "Every set has all four contents, each with a subject and body in both languages."
+  },
+  "reason": {
+    "registered": "Just registered a shop",
+    "consultation": "Plan consultation request",
+    "expiring": "Plan expiring soon",
+    "expired": "Plan expires today",
+    "grace": "In grace period"
+  },
+  "variant": {
+    "welcome": "Welcome & consultation",
+    "expiring": "Expiring soon",
+    "expired": "Expired",
+    "grace": "Grace period"
+  }
+}

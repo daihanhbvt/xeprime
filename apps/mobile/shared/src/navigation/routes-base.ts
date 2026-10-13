@@ -3,7 +3,7 @@ import type { LegalDoc } from '@xeprime/domain';
 import { REGISTRATION_TRACK, type RegistrationTrack } from '@xeprime/types';
 import { VEHICLE_EDIT_TAB, type VehicleEditTab } from './vehicle-edit-tab';
 import { compactParams } from './list-params';
-import { ACCOUNT_SECTION_PARAM, type AccountSection } from './account-section';
+import { ACCOUNT_SECTION, ACCOUNT_SECTION_PARAM, type AccountSection } from './account-section';
 import {
   VEHICLE_REGISTRATION_SOURCE,
   type VehicleRegistrationSource,
@@ -669,13 +669,15 @@ export const ROUTES = {
 
     /** Tổng quan doanh thu (FIN-01) — ba lớp tiền của một kỳ + hai bảng xếp hạng. */
     /** Ví điểm của GIAN HÀNG — khoản XePrime phải trả sau mỗi chuyến (ADR 0033 điều 2). */
-    /** Gói thuê bao của gian hàng — mua/gia hạn, hoá đơn, mức dùng chỗ (ADR 0015/0026). */
-    subscription: (): Href => '/manage/subscription',
     /**
-     * Cùng màn Gói & hoá đơn nhưng là TRANG CON (stack ngoài bộ tab, có nút lui) — đích của nút trong
-     * NỘI DUNG (dải 'gói hết hạn'). Mục menu vẫn đi `subscription` (tab, thay màn).
+     * Khối "Gói & hạn mức" (chỉ đọc, không thanh toán) — app Partner không có màn gói riêng, như web:
+     * `/manage/account?section=plan` mở khối gói của "Hồ sơ chủ xe" (tuyến hoa hồng) và route đó
+     * chuyển tuyến gói sang khối gói của trang Cửa hàng (`/manage/shop?section=plan`).
      */
-    subscriptionPage: (): Href => '/manage/plan',
+    plan: (): Href => ({
+      pathname: '/manage/account',
+      params: { [ACCOUNT_SECTION_PARAM]: ACCOUNT_SECTION.PLAN },
+    }),
     balance: (): Href => '/manage/balance',
     /** Khối 'Tài khoản nhận tiền' của trang số dư — web `balancePayoutPath()` (PR #159). */
     balancePayout: (): Href => ({

@@ -5,6 +5,7 @@ import { logger } from '@/lib/logger';
 import type { AppMessages } from './messages';
 
 type ErrorCodeKey = keyof AppMessages['Errors']['code'];
+type AppErrorCodeKey = keyof AppMessages['Errors']['appCode'];
 
 /**
  * Lỗi từ API → câu tiếng người theo ngôn ngữ đang dùng — bản native của `useErrorMessage` bên web
@@ -40,6 +41,12 @@ export function useErrorMessage(): (error: unknown) => string {
       if (code) {
         // Mã lỗi đến từ mạng nên chỉ là `string`; `t.has` mới là bộ chặn thật, ép kiểu ở đây
         // chỉ để nói với TypeScript rằng khoá nằm trong nhánh `code.*`.
+        /*
+         * `appCode.*` thắng `code.*`: vài mã nói về mua/gia hạn gói — app Partner không được mời
+         * mua gói (quy định App Store / Google Play), nên app có câu trung tính riêng; web giữ câu cũ.
+         */
+        const appKey = `appCode.${code}` as `appCode.${AppErrorCodeKey}`;
+        if (t.has(appKey)) return t(appKey);
         const key = `code.${code}` as `code.${ErrorCodeKey}`;
         if (t.has(key)) return t(key);
       }

@@ -1,6 +1,7 @@
 import { Injectable, Logger, type OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import nodemailer, { type Transporter } from 'nodemailer';
+import type { RenderedEmail } from './plan-guide-email';
 
 /**
  * Gửi email giao dịch.
@@ -189,6 +190,14 @@ export class EmailService implements OnModuleDestroy {
         <p style="color:#6f6450;font-size:13px">Nếu KHÔNG phải bạn thực hiện, hãy liên hệ hỗ trợ XePrime ngay — tài khoản của bạn có thể đang bị người khác truy cập.</p>
       </div>`;
     await this.send(to, subject, html, `Email đăng nhập đổi sang: ${newEmail}`);
+  }
+
+  /**
+   * Thư đã dựng sẵn từ mẫu do admin quản lý ("Hướng dẫn đăng ký và gia hạn gói") — chỉ gọi từ
+   * hàng đợi `email_outbox` (`EmailOutboxDispatcher`), không bao giờ trong request.
+   */
+  async sendRendered(to: string, email: RenderedEmail): Promise<void> {
+    await this.send(to, email.subject, email.html, email.text);
   }
 
   onModuleDestroy(): void {

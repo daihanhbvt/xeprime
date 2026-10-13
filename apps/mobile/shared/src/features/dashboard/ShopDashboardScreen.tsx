@@ -7,6 +7,7 @@ import { Screen } from '@/components/layout/Screen';
 import { Card } from '@/components/ui/Card';
 import { StatGrid, type StatCell } from '@/components/ui/StatGrid';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { usePartnerAppConfig } from '@/features/app-config/use-partner-app-config';
 import { ReceiptDetailSheet } from '@/features/finance/components/ReceiptDetailSheet';
 import { useOpenPushPermissionGate } from '@/features/notifications/push-permission-gate';
 import { ManageHeader } from '@/features/shell/ManageHeader';
@@ -56,6 +57,7 @@ export function ShopDashboardScreen() {
   const tCommon = useTranslations('Common.labels');
   const fmt = useAppFormat();
   const { has } = usePermissions();
+  const { isPlanPromotionEnabled } = usePartnerAppConfig();
   const navigateOnce = useNavigateOnce();
   useOpenPushPermissionGate();
   const isOwner = useIsShopOwner();
@@ -216,7 +218,8 @@ export function ShopDashboardScreen() {
           ) : null}
 
           {isOwner ? <WalletPanel showIncome={false} href={links.balance} /> : null}
-          {has(PERMISSION.SUBSCRIPTION_VIEW) ? <PlanPanel href={links.subscription} /> : null}
+          {/* Thông tin tài khoản & hạn mức chỉ hiện khi nền tảng bật cờ (quy định store). */}
+          {isPlanPromotionEnabled && has(PERMISSION.SUBSCRIPTION_VIEW) ? <PlanPanel href={links.subscription} /> : null}
           {data?.market !== null ? <MarketPanel market={data?.market ?? undefined} links={links} /> : null}
           <ReputationPanel metrics={data?.reputation} />
 

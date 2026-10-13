@@ -1,0 +1,48 @@
+/* Danh sách mẫu email hướng dẫn gói. */
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.search {
+  max-width: 420px;
+  min-width: 240px;
+  flex: 1 1 240px;
+}
+
+.cellStack {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cellMain {
+  font-weight: var(--xp-font-weight-bold);
+  word-break: break-word;
+}
+
+.cellSub {
+  color: var(--xp-color-text-secondary);
+}
+
+.code {
+  color: var(--xp-color-text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+
+/*
+ * Khoảng cách dòng giải thích ↔ ô tìm kiếm ↔ bảng do KHUNG cha quyết (gap), không đặt margin lên
+ * `Alert` — style CSS-in-JS của AntD có độ ưu tiên cao hơn class module nên margin bị nuốt.
+ */
+.head {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: var(--xp-space-md);
+  gap: var(--xp-space-md);
+} 

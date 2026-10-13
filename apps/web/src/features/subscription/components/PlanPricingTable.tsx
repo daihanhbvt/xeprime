@@ -4,7 +4,7 @@ import { CheckCircleFilled, CrownFilled, RiseOutlined, StarFilled } from '@ant-d
 import { Tag } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import type { PlanFeature, PlanLimitsJson } from '@xeprime/types';
+import { PLAN_TIER_ICON, type PlanBenefitLine, type PlanTierIcon } from '@xeprime/domain';
 
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
@@ -22,22 +22,15 @@ import styles from './PlanPricingTable.module.css';
 const CONTACT_SALES_HREF = '/support';
 
 /**
- * Số dòng NĂNG LỰC in dưới hai dòng hạn mức.
- *
- * Cắt ở 2 vì thẻ phải cao bằng nhau để so ngang được: bậc cao nhất có tám cờ, và in hết sẽ đẩy
- * giá của nó xuống dưới màn hình trong khi bậc rẻ nhất còn trống một nửa thẻ. Hai dòng là đủ để
- * nói "bậc này khác ở chỗ nào"; danh sách đầy đủ thuộc về trang bảng giá công khai.
+ * Huy hiệu của bậc — LOẠI biểu tượng (đường tăng → ngôi sao → vương miện, theo vị trí) do
+ * `buildPlanPricingCards` (`@xeprime/domain`) quyết, dùng chung với email hướng dẫn gói. Ở đây chỉ
+ * ánh xạ loại → icon AntD.
  */
-const FEATURE_LINES = 2;
-
-/**
- * Huy hiệu của bậc, theo THỨ TỰ trên bảng giá: mầm cây → ngôi sao → vương miện.
- *
- * Đọc theo vị trí chứ không theo `plan.code`: mã bậc là dữ liệu admin gõ vào và có thể là bất cứ
- * chuỗi nào, còn thứ tự thì chính `sortOrder` của danh mục đã quyết định. Bậc thứ tư trở đi dùng
- * lại vương miện — thà lặp một biểu tượng còn hơn để trống một ô.
- */
-const TIER_ICONS = [RiseOutlined, StarFilled, CrownFilled] as const;
+const TIER_ICONS: Readonly<Record<PlanTierIcon, typeof RiseOutlined>> = {
+  [PLAN_TIER_ICON.TREND]: RiseOutlined,
+  [PLAN_TIER_ICON.STAR]: StarFilled,
+  [PLAN_TIER_ICON.CROWN]: CrownFilled,
+};
 
 /**
  * BẢNG GIÁ ba bậc — phần vẽ của bộ chọn mua gói (ADR 0041). Dùng CHUNG cho `PurchaseModal`
@@ -70,12 +63,12 @@ export function PlanPricingTable({ state }: { state: PlanPurchaseState }) {
   return (
     <div className={styles.wrap}>
       <div className={styles.tiers} role="radiogroup" aria-label={t('purchase.planLabel')}>
-        {tiers.map((tier, index) => {
+        {tiers.map((tier) => {
           const active = tier.plan.id === planId;
-          const monthly = tier.terms.find((term) => term.months === 1) ?? tier.terms[0];
-          const TierIcon = TIER_ICONS[index] ?? TIER_ICONS[TIER_ICONS.length - 1]!;
+          const { headline } = tier.card;
+          const TierIcon = TIER_ICONS[tier.card.icon];
           /* Bậc được đề xuất nổi bật SẴN, không chờ ai bấm — nó là gợi ý của nền tảng. */
-          const featured = active || tier.limits.recommended;
+          const featured = active || tier.card.recommended;
           /*
            * Bậc TƯ VẤN dùng ĐÚNG một thẻ như hai bậc kia — không tô nền chìm để "nó là lối khác".
            * Ba thẻ cùng hình dạng mới so sánh được với nhau, và thứ nói ra sự khác biệt là chỗ
@@ -91,7 +84,7 @@ export function PlanPricingTable({ state }: { state: PlanPurchaseState }) {
                   <TierIcon />
                 </span>
                 <h3 className={styles.tierName}>{tier.plan.name}</h3>
-                {tier.limits.recommended ? (
+                {tier.card.recommended ? (
                   <span className={styles.recommendedTag}>{t('purchase.recommendedTag')}</span>
                 ) : null}
               </div>
@@ -99,15 +92,15 @@ export function PlanPricingTable({ state }: { state: PlanPurchaseState }) {
                 <p className={styles.tierDesc}>{tier.plan.description}</p>
               ) : null}
 
-              <TierBenefits limits={tier.limits} />
+              <TierBenefits benefits={tier.card.benefits} />
 
-              {tier.selfServe && monthly ? (
+              {headline ? (
                 <p className={styles.tierPrice}>
-                  <strong>{fmt.money(String(monthly.total))}</strong>
+                  <strong>{fmt.money(headline.price)}</strong>
                   <span>
-                    {monthly.months === 1
+                    {headline.months === 1
                       ? t('purchase.perMonth')
-                      : t('purchase.perTerm', { months: monthly.months })}
+                      : t('purchase.perTerm', { months: headline.months })}
                   </span>
                 </p>
               ) : (
@@ -208,28 +201,31 @@ export function PlanPricingTable({ state }: { state: PlanPurchaseState }) {
  * không người dùng đọc thấy "Quản lý công nợ" ở một chỗ và "Theo dõi công nợ" ở chỗ kia rồi
  * tưởng đó là hai thứ.
  */
-function TierBenefits({ limits }: { limits: PlanLimitsJson }) {
+function TierBenefits({ benefits }: { benefits: readonly PlanBenefitLine[] }) {
   const t = useTranslations('Subscription');
   const domainLabel = useDomainLabel();
 
+  function label(line: PlanBenefitLine): string {
+    switch (line.kind) {
+      case 'vehicles':
+        return line.count == null
+          ? t('purchase.limitVehiclesUnlimited')
+          : t('purchase.limitVehicles', { count: line.count });
+      case 'branches':
+        return line.count == null
+          ? t('purchase.limitBranchesUnlimited')
+          : t('purchase.limitBranches', { count: line.count });
+      case 'feature':
+        return domainLabel('planFeature', line.feature);
+    }
+  }
+
   return (
     <ul className={styles.limits}>
-      <li>
-        <CheckCircleFilled aria-hidden="true" />
-        {limits.maxVehicles == null
-          ? t('purchase.limitVehiclesUnlimited')
-          : t('purchase.limitVehicles', { count: limits.maxVehicles })}
-      </li>
-      <li>
-        <CheckCircleFilled aria-hidden="true" />
-        {limits.maxBranches == null
-          ? t('purchase.limitBranchesUnlimited')
-          : t('purchase.limitBranches', { count: limits.maxBranches })}
-      </li>
-      {limits.features.slice(0, FEATURE_LINES).map((feature: PlanFeature) => (
-        <li key={feature}>
+      {benefits.map((line) => (
+        <li key={line.kind === 'feature' ? line.feature : line.kind}>
           <CheckCircleFilled aria-hidden="true" />
-          {domainLabel('planFeature', feature)}
+          {label(line)}
         </li>
       ))}
     </ul>

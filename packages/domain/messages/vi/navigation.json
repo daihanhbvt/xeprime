@@ -104,6 +104,7 @@
     "account": "Tài khoản"
   },
   "platform": {
+    "appConfig": "Cấu hình ứng dụng",
     "dashboard": "Tổng quan",
     "approvals": "Kiểm duyệt xe",
     "approvalsShort": "Kiểm duyệt",

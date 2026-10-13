@@ -812,6 +812,7 @@
     "payment": "Thanh toán / hoàn tiền",
     "account": "Tài khoản",
     "account_deletion": "Yêu cầu xoá tài khoản",
+    "plan_consultation": "Tư vấn gói",
     "other": "Khác"
   },
   "supportCaseParty": {
@@ -1403,9 +1404,21 @@
       "paid": "Đã chi tiền rút điểm",
       "cancelled": "Huỷ yêu cầu rút điểm",
       "reversed": "Đảo bút toán rút điểm"
+    },
+    "app_config": {
+      "update": "Đổi cấu hình app Partner"
+    },
+    "plan_guide_template": {
+      "create": "Tạo mẫu email hướng dẫn gói",
+      "update": "Sửa mẫu email hướng dẫn gói",
+      "duplicate": "Nhân bản mẫu email hướng dẫn gói",
+      "activate": "Bật mẫu email hướng dẫn gói",
+      "delete": "Xoá mẫu email hướng dẫn gói",
+      "send_test": "Gửi thư thử mẫu email hướng dẫn gói"
     }
   },
   "auditTargetType": {
+    "app_config": "Cấu hình app",
     "approval_task": "Phiếu duyệt",
     "bank_account": "Tài khoản ngân hàng",
     "bank_transaction": "Giao dịch ngân hàng",
@@ -1425,6 +1438,7 @@
     "payment": "Thanh toán",
     "payment_gateway_order": "Lượt thanh toán qua cổng",
     "plan": "Bậc gói",
+    "plan_guide_template": "Mẫu email hướng dẫn gói",
     "platform_bank_balance": "Số dư ngân hàng nền tảng",
     "platform_membership": "Nhân sự nền tảng",
     "promo_code": "Mã khuyến mãi",

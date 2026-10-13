@@ -71,6 +71,11 @@
       "shell": "Your plan has expired, so your vehicles are hidden from the marketplace."
     }
   },
+  "appStatusExpired": {
+    "title": "Usage period ended",
+    "body": "Your vehicles are temporarily hidden from the marketplace. Contact XePrime for help.",
+    "shell": "The usage period has ended, so your vehicles are temporarily hidden from the marketplace."
+  },
   "form": {
     "saved": "Shop details saved",
     "submit": "Save details",
@@ -230,6 +235,21 @@
         "cta": "Contact support"
       }
     },
+    "appLocked": {
+      "commission": {
+        "title": "Your shop always collects the reservation amount through XePrime",
+        "body": "You are an individual owner: XePrime charges a per-trip service fee on the customer side. The reservation payment is a condition of this account type, so the switch is locked."
+      },
+      "featureMissing": {
+        "title": "Your account does not include this yet",
+        "body": "Your account does not include collecting the reservation payment through XePrime yet. You still take bookings as usual and arrange the security deposit with guests directly at handover."
+      },
+      "notConfigured": {
+        "title": "We cannot determine your shop account details",
+        "body": "We could not read your shop account details, so fees cannot be calculated and new bookings are paused. This is a XePrime configuration problem, not something you did. Contact support to get it fixed."
+      },
+      "viewAccountCta": "View account & limits"
+    },
     "frozen": "Changing this switch only affects rental requests approved from now on. Existing bookings keep the arrangement frozen when they were created."
   },
   "verification": {
@@ -258,7 +278,8 @@
     "legalHint": "Where customers pick the car up. The business licence is optional; the tax code goes in Tax information.",
     "payout": "Payout account",
     "plan": "Plan & limits",
-    "planHint": "Current plan, vehicle limit and billing invoices."
+    "planHint": "Current plan, vehicle limit and billing invoices.",
+    "appPlan": "Account & limits"
   },
   "owner": {
     "title": "Shop owner",

@@ -38,10 +38,10 @@ export function AccountTrackNotice() {
    */
   if (track === ACCOUNT_TRACK.PACKAGE_PENDING) {
     return (
-      <Callout tone="info" title={t('packagePendingTitle')}>
-        <CalloutBody>{t('packagePendingBody')}</CalloutBody>
+      <Callout tone="info" title={t('appPackagePendingTitle')}>
+        <CalloutBody>{t('appPackagePendingBody')}</CalloutBody>
         <Button
-          label={t('packagePendingCta')}
+          label={t('appPackagePendingCta')}
           size="sm"
           block={false}
           onPress={() => navigateOnce(ROUTES.manage.onboarding())}
@@ -53,7 +53,7 @@ export function AccountTrackNotice() {
   if (track !== ACCOUNT_TRACK.UNCONFIGURED) return null;
 
   return (
-    <Callout tone="danger" title={t('unconfiguredTitle')}>
+    <Callout tone="danger" title={t('appUnconfiguredTitle')}>
       <CalloutBody>{t('unconfiguredBody')}</CalloutBody>
       <Button
         label={t('contactSupport')}

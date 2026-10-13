@@ -1,9 +1,15 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Provider as ReduxProvider } from 'react-redux';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
-import { API_ERROR_CODE, BILLING_MODE, SHOP_VERIFICATION, TENANT_TYPE } from '@xeprime/types';
+import {
+  API_ERROR_CODE,
+  REGISTRATION_TRACK,
+  SHOP_VERIFICATION,
+  TENANT_TYPE,
+  type RegistrationTrack,
+} from '@xeprime/types';
 import { ApiClientError } from '@xeprime/api-client';
-import { subscriptionApi, type TenantPlan } from '@/api/subscription/api';
+import { appConfigApi } from '@/api/app-config/api';
 import * as authApi from '@/features/auth/api';
 import { locationsApi } from '@/features/locations/api';
 import { withIntl } from '@/i18n/test-utils';
@@ -84,8 +90,32 @@ const SHOP: MyShop = {
   },
 };
 
-async function renderScreen(tenant: authApi.CurrentUser['tenant'] = null) {
+const PENDING_TENANT = {
+  id: '01JQZX0000000000000000000T',
+  name: 'Gian hàng Đà Nẵng',
+  slug: 'da-nang',
+  status: 'draft',
+  onboardingState: 'package_pending',
+  branchScope: 'all',
+  logoUrl: null,
+  roleKey: 'shop_owner',
+  features: [],
+  planCode: null,
+  planName: null,
+  serviceFeePercent: null,
+  billingMode: null,
+  planEndsAt: null,
+  billingPhase: null,
+  graceEndsAt: null,
+  publicVehicleCount: 0,
+} as unknown as authApi.CurrentUser['tenant'];
+
+async function renderScreen(
+  tenant: authApi.CurrentUser['tenant'] = null,
+  { isPlanPromotionEnabled = false, track }: { isPlanPromotionEnabled?: boolean; track?: RegistrationTrack } = {},
+) {
   jest.spyOn(authApi, 'fetchCurrentUser').mockResolvedValue(customerUser(tenant));
+  jest.spyOn(appConfigApi, 'partner').mockResolvedValue({ isPlanPromotionEnabled, version: 1 });
   jest
     .spyOn(locationsApi, 'provinces')
     .mockResolvedValue([
@@ -99,7 +129,7 @@ async function renderScreen(tenant: authApi.CurrentUser['tenant'] = null) {
     withIntl(
       <ReduxProvider store={store}>
         <QueryClientProvider client={queryClient}>
-          <ShopOnboardingScreen />
+          <ShopOnboardingScreen {...(track ? { track } : {})} />
         </QueryClientProvider>
       </ReduxProvider>,
     ),
@@ -130,50 +160,71 @@ describe('ShopOnboardingScreen (SHP-01)', () => {
     expect(view.getByRole('button', { name: new RegExp('Đăng xuất$') })).toBeTruthy();
   });
 
-  it('bước 2 (package_pending): nút tạo hoá đơn + Đăng xuất neo ở thanh đáy, form bước 1 không còn', async () => {
-    jest.spyOn(subscriptionApi, 'pendingInvoice').mockResolvedValue(null);
-    jest.spyOn(subscriptionApi, 'plans').mockResolvedValue([
-      {
-        id: 'basic',
-        code: 'basic',
-        name: 'Cơ bản',
-        billingMode: BILLING_MODE.PACKAGE,
-        currency: 'VND',
-        limits: {
-          maxVehicles: 3,
-          maxBranches: 1,
-          features: [],
-          termPrices: [{ months: 1, price: '1000000' }],
-        },
-      } as unknown as TenantPlan,
-    ]);
-    const view = await renderScreen({
-      id: '01JQZX0000000000000000000T',
-      name: 'Gian hàng Đà Nẵng',
-      slug: 'da-nang',
-      status: 'draft',
-      onboardingState: 'package_pending',
-      branchScope: 'all',
-      logoUrl: null,
-      roleKey: 'shop_owner',
-      features: [],
-      planCode: null,
-      planName: null,
-      serviceFeePercent: null,
-      billingMode: null,
-      planEndsAt: null,
-      billingPhase: null,
-      graceEndsAt: null,
-      publicVehicleCount: 0,
-    } as unknown as authApi.CurrentUser['tenant']);
+  it('bước 2 (package_pending): màn CHỜ KÍCH HOẠT, không bộ chọn gói, không QR, không hoá đơn', async () => {
+    const view = await renderScreen(PENDING_TENANT);
 
-    // Chưa chọn kỳ hạn ⇒ nút mờ KÈM lời giải thích — cả hai đi theo nút xuống thanh đáy.
+    expect(await view.findByText('Đăng ký gian hàng thành công!')).toBeTruthy();
     expect(
-      await view.findByRole('button', { name: 'Tạo hoá đơn và lấy mã chuyển khoản' }),
+      view.getByText('Tài khoản Gian hàng Đà Nẵng đã được tạo và đang chờ kích hoạt.'),
     ).toBeTruthy();
-    expect(view.getByText('Chọn kỳ hạn để tạo hoá đơn.')).toBeTruthy();
-    expect(view.getByRole('button', { name: new RegExp('Đăng xuất$') })).toBeTruthy();
+    expect(
+      view.getByText(
+        'XePrime sẽ liên hệ với bạn qua 0903333333 và gửi hướng dẫn tới khach@xeprime.test trong thời gian sớm nhất.',
+      ),
+    ).toBeTruthy();
+    expect(view.getByRole('button', { name: 'Về trang chính' })).toBeTruthy();
+    expect(view.getByRole('button', { name: 'Làm mới trạng thái' })).toBeTruthy();
+    // Không có một bước thanh toán nào.
+    expect(view.queryByText(/hoá đơn|QR|chuyển khoản/i)).toBeNull();
     expect(view.queryByRole('button', { name: 'Tạo gian hàng' })).toBeNull();
+    // Cờ tắt (mặc định) ⇒ không có "Liên hệ tư vấn".
+    expect(view.queryByRole('button', { name: 'Liên hệ tư vấn' })).toBeNull();
+    expect(view.getByRole('button', { name: new RegExp('Đăng xuất$') })).toBeTruthy();
+  });
+
+  it('bước 2 + isPlanPromotionEnabled bật: có nút "Liên hệ tư vấn"', async () => {
+    const view = await renderScreen(PENDING_TENANT, { isPlanPromotionEnabled: true });
+
+    expect(await view.findByRole('button', { name: 'Liên hệ tư vấn' })).toBeTruthy();
+  });
+
+  it('Làm mới trạng thái: gói đã kích hoạt trên web ⇒ vào Manage', async () => {
+    const view = await renderScreen(PENDING_TENANT);
+    await view.findByText('Đăng ký gian hàng thành công!');
+
+    jest.spyOn(authApi, 'fetchCurrentUser').mockResolvedValue(
+      customerUser({
+        ...PENDING_TENANT,
+        status: 'active',
+        onboardingState: 'package_active',
+        billingMode: 'package',
+        billingPhase: 'current',
+      } as unknown as authApi.CurrentUser['tenant']),
+    );
+    await fireEvent.press(view.getByRole('button', { name: 'Làm mới trạng thái' }));
+
+    await waitFor(() =>
+      expect(mockDismissTo).toHaveBeenCalledWith({
+        pathname: '/manage/shop',
+        params: { welcome: '1' },
+      }),
+    );
+  });
+
+  it('tuyến gói: bước 2 là "Chờ kích hoạt", không có bước chọn gói/thanh toán', async () => {
+    const view = await renderScreen(null, { track: REGISTRATION_TRACK.PACKAGE });
+
+    expect(await view.findByRole('button', { name: 'Đăng ký gian hàng' })).toBeTruthy();
+    expect(view.getByText('Chờ kích hoạt')).toBeTruthy();
+    expect(view.queryByText('Gói và thanh toán')).toBeNull();
+    expect(view.queryByText(/QR|hoá đơn/i)).toBeNull();
+
+    // Đăng ký xong (`/auth/me` về `package_pending`) ⇒ thẳng màn chờ, không qua bước trả tiền.
+    jest.spyOn(authApi, 'fetchCurrentUser').mockResolvedValue(customerUser(PENDING_TENANT));
+    await view.queryClient.invalidateQueries();
+
+    expect(await view.findByText('Đăng ký gian hàng thành công!')).toBeTruthy();
+    expect(view.queryByText(/QR|hoá đơn|chuyển khoản/i)).toBeNull();
   });
 
   it('đã có gian hàng: không dựng form, đưa thẳng tới hồ sơ gian hàng', async () => {

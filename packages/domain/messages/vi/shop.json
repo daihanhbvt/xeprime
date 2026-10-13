@@ -71,6 +71,11 @@
       "shell": "Gói dịch vụ đã hết hạn nên xe tạm ẩn khỏi marketplace."
     }
   },
+  "appStatusExpired": {
+    "title": "Đã hết thời hạn sử dụng",
+    "body": "Xe tạm ẩn khỏi marketplace. Liên hệ XePrime để được hỗ trợ.",
+    "shell": "Đã hết thời hạn sử dụng nên xe tạm ẩn khỏi marketplace."
+  },
   "form": {
     "saved": "Đã lưu thông tin gian hàng",
     "submit": "Lưu thông tin",
@@ -230,6 +235,21 @@
         "cta": "Liên hệ hỗ trợ"
       }
     },
+    "appLocked": {
+      "commission": {
+        "title": "Gian hàng của bạn luôn thu khoản giữ chỗ qua XePrime",
+        "body": "Bạn đang là chủ xe cá nhân: XePrime thu phí dịch vụ theo từng chuyến ở phía khách. Khoản giữ chỗ là điều kiện của loại tài khoản này nên công tắc bị khoá."
+      },
+      "featureMissing": {
+        "title": "Tài khoản hiện tại chưa có tính năng này",
+        "body": "Tài khoản của bạn chưa có tính năng thu khoản giữ chỗ qua XePrime. Bạn vẫn nhận đơn bình thường và tự thoả thuận tiền cọc/thế chấp trực tiếp với khách khi giao xe."
+      },
+      "notConfigured": {
+        "title": "Chưa xác định được thông tin tài khoản của gian hàng",
+        "body": "Hệ thống chưa đọc được thông tin tài khoản của gian hàng nên tạm thời chưa tính được phí và chưa nhận đơn mới. Đây là lỗi cấu hình phía XePrime, không phải do bạn. Liên hệ hỗ trợ để được xử lý ngay."
+      },
+      "viewAccountCta": "Xem tài khoản & hạn mức"
+    },
     "frozen": "Đổi công tắc chỉ áp dụng cho yêu cầu thuê được duyệt từ lúc này trở đi. Đơn đã tạo giữ nguyên cách thu đã chốt lúc đó."
   },
   "verification": {
@@ -258,7 +278,8 @@
     "legalHint": "Nơi khách nhận xe. Số giấy phép kinh doanh là tuỳ chọn; mã số thuế khai ở Thông tin khai thuế.",
     "payout": "Tài khoản nhận tiền",
     "plan": "Gói & hạn mức",
-    "planHint": "Gói hiện hành, hạn mức xe và hoá đơn thanh toán."
+    "planHint": "Gói hiện hành, hạn mức xe và hoá đơn thanh toán.",
+    "appPlan": "Tài khoản & hạn mức"
   },
   "owner": {
     "title": "Chủ gian hàng",

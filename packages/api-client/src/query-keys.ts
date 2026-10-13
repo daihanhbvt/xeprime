@@ -7,6 +7,17 @@ import type { QueryParams } from './url';
  * nhờ vậy `invalidateQueries({ queryKey: queryKeys.calendar.all })` xoá được cả nhánh.
  */
 export const queryKeys = {
+  /** Cấu hình app bật/tắt từ xa — `GET /app-config/partner` (+ SSE) và bản quản trị. */
+  appConfig: {
+    all: ['app-config'] as const,
+    partner: ['app-config', 'partner'] as const,
+    platformPartner: ['app-config', 'platform', 'partner'] as const,
+    planGuideTemplatesAll: ['app-config', 'plan-guide-templates'] as const,
+    planGuideTemplateLists: ['app-config', 'plan-guide-templates', 'list'] as const,
+    planGuideTemplates: (params: QueryParams) =>
+      ['app-config', 'plan-guide-templates', 'list', params] as const,
+    planGuideTemplate: (id: string) => ['app-config', 'plan-guide-templates', 'detail', id] as const,
+  },
   auth: {
     all: ['auth'] as const,
     me: () => ['auth', 'me'] as const,

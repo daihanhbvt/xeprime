@@ -20,6 +20,7 @@ import { Card } from '@/components/ui/Card';
 import { ProfileSkeleton } from '@/components/ui/Skeleton';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { usePartnerAppConfig } from '@/features/app-config/use-partner-app-config';
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import type { MyShop } from '@/features/shop/api';
 import { ShopProfileChecklist } from '@/features/shop/components/ShopProfileChecklist';
@@ -40,6 +41,7 @@ import { useSellerProfile } from '@/features/seller-profile/hooks/use-seller-pro
 import { SubscriptionWorkspace } from '@/features/subscription/SubscriptionScreen';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { useMyProfile } from './hooks/use-account';
+import { usePartnerProfileRefresh } from '@/hooks/use-partner-profile-refresh';
 
 const ADDRESS_FIELD_NAMES = {
   provinceCode: 'provinceCode',
@@ -68,8 +70,8 @@ const ADDRESS_PIN_NAMES = {
  *
  * ## Khác web ở VỎ
  *
- * Khai thuế và gói là MÀN riêng đã có sẵn trên app (`/manage/tax`, `/manage/subscription`) — ở đây
- * chúng là dòng dẫn đi, không phải bản sao thứ hai của biểu mẫu/luồng mua gói. `?section=` cuộn tới
+ * Khai thuế là MÀN riêng đã có sẵn trên app (`/manage/tax`) — ở đây là dòng dẫn đi. Gói không có màn
+ * riêng: khối "Gói & hạn mức" nhúng `SubscriptionWorkspace` (chỉ đọc, không thanh toán). `?section=` cuộn tới
  * khối tương ứng như `useScrollToSection` bên web.
  */
 export function OwnerProfileScreen({ section }: { section?: AccountSection }) {
@@ -78,6 +80,7 @@ export function OwnerProfileScreen({ section }: { section?: AccountSection }) {
   const profile = useMyProfile();
   // Màn này chỉ dựng khi có `tenant.view` (xem `ManageAccountScreen`).
   const shop = useMyShop(permissions.has(PERMISSION.TENANT_VIEW));
+  const pull = usePartnerProfileRefresh();
 
   if (profile.data && shop.data) {
     return (
@@ -85,10 +88,11 @@ export function OwnerProfileScreen({ section }: { section?: AccountSection }) {
         profile={profile.data}
         shop={shop.data}
         canEdit={permissions.has(PERMISSION.TENANT_UPDATE)}
-        refreshing={profile.isRefetching || shop.isRefetching}
+        refreshing={profile.isRefetching || pull.refreshing}
         onRefresh={() => {
           void profile.refetch();
-          void shop.refetch();
+          // Hồ sơ gian hàng + khối "Gói & hạn mức" + danh sách gói theo cờ quảng bá.
+          pull.onRefresh();
         }}
         {...(section ? { section } : {})}
       />
@@ -148,7 +152,9 @@ function OwnerProfileSections({
    *  - khai thuế → `seller_profile.view`; gói → `subscription.view`.
    */
   const canSeeTax = permissions.has(PERMISSION.SELLER_PROFILE_VIEW);
-  const canSeePlan = permissions.has(PERMISSION.SUBSCRIPTION_VIEW);
+  // Khối tài khoản & hạn mức chỉ có khi nền tảng bật cờ (mặc định tắt — quy định store).
+  const { isPlanPromotionEnabled } = usePartnerAppConfig();
+  const canSeePlan = isPlanPromotionEnabled && permissions.has(PERMISSION.SUBSCRIPTION_VIEW);
   const readOnly = !canEdit;
 
   /* ---------- Địa chỉ nhận xe — form của hồ sơ gian hàng, chỉ phần địa chỉ ---------- */
@@ -264,7 +270,7 @@ function OwnerProfileSections({
             <AccountIdentityHero
               name={identity.name}
               avatarUrl={identity.avatarUrl}
-              subtitle={t('subtitle')}
+              subtitle={t('appSubtitle')}
               tenant={user?.tenant ?? null}
             />
           </Card>
@@ -360,7 +366,7 @@ function OwnerProfileSections({
               gap={space.sm}
               onLayout={(event: LayoutChangeEvent) => onSectionLayout(ACCOUNT_SECTION.PLAN, event)}
             >
-              <SectionHead title={t('sections.plan')} hint={t('sections.planHint')} />
+              <SectionHead title={t('sections.appPlan')} hint={t('sections.appPlanHint')} />
               {/* Nhúng `SubscriptionWorkspace` như web — tiêu đề là của section, không header thứ hai. */}
               <SubscriptionWorkspace />
             </YStack>

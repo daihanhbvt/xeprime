@@ -28,9 +28,14 @@ export function ShopStatusBanner({ shop }: { shop: MyShop }) {
   if ((shop.status as TenantStatus) === TENANT_STATUS.ACTIVE) return null;
   const notice = shopStatusNotice(shop.status);
 
+  // `expired`: app Partner dùng câu trung tính (không mời gia hạn gói — quy định store).
+  const expired = notice.key === 'expired';
   return (
-    <Callout tone={notice.tone} title={t(`status.${notice.key}.title` as 'status.draft.title')}>
-      {t(`status.${notice.key}.body` as 'status.draft.body')}
+    <Callout
+      tone={notice.tone}
+      title={expired ? t('appStatusExpired.title') : t(`status.${notice.key}.title` as 'status.draft.title')}
+    >
+      {expired ? t('appStatusExpired.body') : t(`status.${notice.key}.body` as 'status.draft.body')}
     </Callout>
   );
 }

@@ -1,3 +1,4 @@
+import { AppConfigModule } from '../app-config/app-config.module';
 import { Module } from '@nestjs/common';
 import { BillingModule } from '../billing/billing.module';
 import { BranchesModule } from '../branches/branches.module';
@@ -18,7 +19,7 @@ import { TenantsService } from './tenants.service';
  * (07/10/2026) — qua service của nó, writer duy nhất của `seller_profiles`.
  */
 @Module({
-  imports: [LocationsModule, BranchesModule, BillingModule, SellerProfileModule],
+  imports: [LocationsModule, BranchesModule, BillingModule, SellerProfileModule, AppConfigModule],
   controllers: [TenantsController],
   providers: [TenantsService],
 })

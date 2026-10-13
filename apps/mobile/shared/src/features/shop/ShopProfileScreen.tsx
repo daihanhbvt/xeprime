@@ -29,11 +29,13 @@ import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { usePartnerAppConfig } from '@/features/app-config/use-partner-app-config';
 import { useTenantScope } from '@/features/auth/hooks/use-tenant-scope';
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
+import { usePartnerProfileRefresh } from '@/hooks/use-partner-profile-refresh';
 import { ROUTES, SHOP_SECTION, type ShopSection } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
@@ -315,6 +317,7 @@ function ProfileForm({
 }) {
   /** Trang Cửa hàng đầy đủ của cổng quản lý — ba khối cuối chỉ thuộc về nó. */
   const isSettings = variant === 'settings';
+  const pull = usePartnerProfileRefresh();
   const t = useTranslations('Shop');
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
@@ -429,7 +432,10 @@ function ProfileForm({
    * "Gói & hạn mức" có mặt cuối màn theo `subscription.view`, đúng quyền mà mục menu cũ mang
    * và khớp guard của API. ("Tài khoản nhận tiền" đã sang trang Số dư — PR #159.)
    */
-  const canSeePlan = permissions.has(PERMISSION.SUBSCRIPTION_VIEW);
+  // Cờ nền tảng tắt (mặc định, quy định store) ⇒ khối không dựng; `?section=plan` không đo được toạ
+  // độ nên màn mở ở đầu trang thay vì cuộn tới khoảng trống.
+  const { isPlanPromotionEnabled } = usePartnerAppConfig();
+  const canSeePlan = isPlanPromotionEnabled && permissions.has(PERMISSION.SUBSCRIPTION_VIEW);
   /*
    * "Thông tin khai thuế" theo `seller_profile.view` (`GET /seller-profile`) — web `canSeeTax`.
    * Sửa cần `seller_profile.manage`; `SellerTaxForm` tự chuyển chỉ-xem khi thiếu.
@@ -474,6 +480,8 @@ function ProfileForm({
         edges={['left', 'right', 'bottom']}
         padded={false}
         scrollRef={scrollRef}
+        refreshing={pull.refreshing}
+        onRefresh={pull.onRefresh}
         /*
           Hành động Lưu neo ở ĐÁY MÀN và LUÔN có mặt khi form sửa được — mờ đi cho tới khi thật
           sự có thay đổi, đúng như `ShopProfileWorkspace` bên web.
@@ -710,7 +718,7 @@ function ProfileForm({
           {isSettings && canSeePlan ? (
             <YStack gap={space.md} onLayout={onPlanLayout}>
               <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.semibold}>
-                {t('sections.plan')}
+                {t('sections.appPlan')}
               </Text>
               <SubscriptionWorkspace />
             </YStack>

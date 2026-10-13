@@ -349,3 +349,17 @@ export {
 
 /** So kỳ này với kỳ trước — mũi tên tăng/giảm của thẻ KPI trên Tổng quan (web + app native). */
 export { countChangePercent } from './period-change';
+
+export {
+  PLAN_CARD_FEATURE_LINES,
+  PLAN_TIER_ICON,
+  buildPlanPricingCards,
+  planBenefitLines,
+  planTierIcon,
+  type PlanBenefitLine,
+  type PlanCardHeadline,
+  type PlanCardSource,
+  type PlanCardTerm,
+  type PlanPricingCard,
+  type PlanTierIcon,
+} from './plan-pricing-card';

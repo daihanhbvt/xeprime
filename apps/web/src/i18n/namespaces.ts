@@ -118,6 +118,8 @@ export const MESSAGE_NAMESPACES = [
   { file: 'platform-sellers', namespace: 'PlatformSellers' },
   // Hàng đợi bằng lái của khách (ADR 0057) — chỉ site quản trị.
   { file: 'admin-driver-licences', namespace: 'AdminDriverLicences' },
+  // Cấu hình app Partner (isPlanPromotionEnabled) + mẫu email hướng dẫn gói — chỉ site quản trị.
+  { file: 'admin-app-config', namespace: 'AdminAppConfig' },
   // Nhân sự nền tảng + tra cứu xuyên realm của site quản trị (ADR 0053 — B4).
   { file: 'admin-staff', namespace: 'AdminStaff' },
   // Nhật ký hệ thống của admin nền tảng — chuyển sang t() ngày 08/10/2026 cùng đợt dựng lại trang
