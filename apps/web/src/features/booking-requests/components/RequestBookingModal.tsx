@@ -63,14 +63,14 @@ export function RequestBookingModal({
    * thẻ xác nhận vài dòng thì phần lớn hộp thoại là chỗ trống, và mắt phải đi rất xa mới tới
    * hàng nút. Kết quả là một thông báo, không phải một không gian làm việc.
    */
-  const [result, setResult] = useState<false | 'compact' | 'payment'>(false);
+  const [result, setResult] = useState(false);
 
   return (
     <ResponsiveDialog
       title={t('title')}
       open={open}
       onClose={onClose}
-      size={result === 'payment' ? 'lg' : result ? 'md' : 'xl'}
+      size={result ? 'md' : 'xl'}
       // Bố cục hai cột tự cuộn từng bên (RequestBookingFlow `.left`/`.right`, StaffVehiclePicker
       // `.scroller`) — thân overlay phải khoá cuộn để không thành hai lớp lồng nhau.
       bodyScroll="content"

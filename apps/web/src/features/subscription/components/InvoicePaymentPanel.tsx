@@ -1,152 +1,74 @@
 'use client';
 
-/* eslint-disable @next/next/no-img-element -- ảnh QR sinh động theo số tiền + mã, không phải
- * asset tĩnh để đi qua next/image; kích thước cố định nên không gây layout shift. */
-
-import { Alert } from 'antd';
+import { CreditCardOutlined } from '@ant-design/icons';
+import { Alert, Button } from 'antd';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { buildVietQrUrl, subtractMoney } from '@xeprime/domain';
+import { subtractMoney } from '@xeprime/domain';
 import { SUBSCRIPTION_INVOICE_STATUS } from '@xeprime/types';
 import { CopyButton } from '@/components/data-display/CopyButton';
-import { GatewayPayOptions } from '@/features/payment-gateway/components/GatewayPayOptions';
+import { paymentPath } from '@/constants/routes';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { usePaymentInfo, useTenantPlans } from '../hooks/use-subscription';
 import type { SubscriptionInvoice } from '../types';
+import { InvoicePlanSummary } from './InvoicePlanSummary';
 import styles from './InvoicePaymentPanel.module.css';
 
+/** Số còn phải chuyển — hoá đơn đã nhận một phần thì là phần CÒN THIẾU, không phải tổng. */
+export function invoiceRemainingAmount(invoice: SubscriptionInvoice): string {
+  return invoice.status === SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID
+    ? (subtractMoney(invoice.totalAmount, invoice.paidAmount) ?? invoice.totalAmount)
+    : invoice.totalAmount;
+}
+
 /**
- * Hướng dẫn chuyển khoản cho MỘT hoá đơn gói đang chờ tiền — dùng ở hai chỗ: màn "chuyển
- * khoản" của PurchaseModal ngay sau khi mua, và đầu trang "Gói của tôi" khi còn hoá đơn chờ
- * (người dùng đóng modal rồi vẫn phải tìm lại được QR — kích hoạt là việc của webhook, không
- * phải của tab trình duyệt còn mở).
+ * THẺ HOÁ ĐƠN ĐANG CHỜ TIỀN — đang mua gì, còn phải trả bao nhiêu, trước khi nào, và MỘT nút sang
+ * trang thanh toán (`/payment/:invoiceId`).
  *
- * QR là VietQR quicklink CÓ SẴN số tiền + nội dung (ADR 0016 điều 5): nội dung chuyển khoản là
- * khoá đối soát, không bao giờ để người dùng tự gõ. Chưa cấu hình tài khoản nhận (nhóm SEPAY_*)
- * thì rơi về mã + số tiền như trước — có gì hiện nấy, không hiện QR trỏ vào hư không.
+ * Dùng ở đầu khối "Hoá đơn thanh toán" của trang gói, bước thanh toán của onboarding gian hàng và
+ * của luồng nâng cấp từ tuyến hoa hồng. Từ 13/10/2026 việc TRẢ nằm ở trang thanh toán riêng: chuyển
+ * khoản VietQR và ví điện tử ở cùng một chỗ, và đó cũng là trang cổng quay về. Thẻ này không vẽ mã
+ * QR thứ hai — hai chỗ trả là hai chỗ để số tiền hoặc nội dung chuyển khoản trôi khỏi nhau.
  *
- * Hoá đơn `partially_paid` hiện SỐ CÒN THIẾU và QR mang đúng số đó — bắt người chuyển thiếu tự
- * trừ nhẩm là cách nhận thêm một lần chuyển sai.
+ * Hoá đơn `partially_paid` nói SỐ CÒN THIẾU — bắt người chuyển thiếu tự trừ nhẩm là cách nhận thêm
+ * một lần chuyển sai.
  */
 export function InvoicePaymentPanel({ invoice }: { invoice: SubscriptionInvoice }) {
   const t = useTranslations('Subscription.payment');
-  const tPurchase = useTranslations('Subscription.purchase');
   const fmt = useAppFormat();
-  const paymentInfo = usePaymentInfo();
-  /*
-   * Danh mục gói chỉ để lấy TÊN bậc: hoá đơn mang `planCode` (`shop-advanced`) chứ không mang
-   * tên người đọc được. Dùng chung query key với bảng giá nên khi người dùng vừa đi qua bước
-   * chọn gói thì đây là một lượt đọc cache, không phải một request nữa.
-   */
-  const plans = useTenantPlans();
-
-  const remaining =
-    invoice.status === SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID
-      ? (subtractMoney(invoice.totalAmount, invoice.paidAmount) ?? invoice.totalAmount)
-      : invoice.totalAmount;
-
-  const info = paymentInfo.data;
-  const qrUrl = info ? buildVietQrUrl(info, remaining, invoice.code) : null;
-  /* Danh mục chưa về (hoặc bậc đã lưu trữ) ⇒ rơi về MÃ bậc: một chuỗi kỹ thuật vẫn hơn một ô trống. */
-  const planName = plans.data?.find((plan) => plan.id === invoice.planId)?.name ?? invoice.planCode;
+  const partial = invoice.status === SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID;
+  const remaining = invoiceRemainingAmount(invoice);
 
   return (
     <div className={styles.panel}>
-      {/*
-        BẠN ĐANG MUA GÌ — trước cả hướng dẫn chuyển khoản.
+      <InvoicePlanSummary invoice={invoice} />
 
-        Màn này sống qua F5 và qua một lần đăng nhập ở máy khác, nên không có gì bảo đảm người
-        đang đọc còn nhớ mình đã chọn bậc nào: thiếu dòng này, thứ duy nhất họ thấy là một số
-        tiền và một mã. Dữ liệu lấy từ CHÍNH hoá đơn (bậc, kỳ hạn, kỳ áp dụng, hạn mức đã đóng
-        băng lúc tạo), không phải từ lựa chọn còn trong bộ nhớ trình duyệt.
-      */}
-      <div className={styles.plan}>
-        <span className={styles.planLabel}>{t('buying')}</span>
-        <p className={styles.planName}>
-          {planName}
-          <span className={styles.planTerm}>
-            {tPurchase('termOption', { months: invoice.termMonths })}
-          </span>
-        </p>
-        <p className={styles.planMeta}>
-          {t('period', { from: fmt.date(invoice.periodFrom), to: fmt.date(invoice.periodTo) })}
-          {invoice.quota.maxVehicles == null
-            ? ` · ${tPurchase('limitVehiclesUnlimited')}`
-            : ` · ${tPurchase('limitVehicles', { count: invoice.quota.maxVehicles })}`}
-        </p>
-      </div>
-
-      <Alert
-        type="info"
-        showIcon
-        title={
-          invoice.status === SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID
-            ? t('partialIntro', { paid: fmt.money(invoice.paidAmount) })
-            : t('intro')
-        }
-      />
-
-      <div className={styles.body}>
-        {qrUrl ? (
-          <img
-            src={qrUrl}
-            alt={t('qrAlt')}
-            width={220}
-            height={260}
-            className={styles.qr}
-            loading="lazy"
-          />
-        ) : null}
-
-        <dl className={styles.fields}>
-          {info?.configured ? (
-            <>
-              <div className={styles.row}>
-                <dt>{t('bank')}</dt>
-                <dd>{info.bankCode}</dd>
-              </div>
-              <div className={styles.row}>
-                <dt>{t('accountNumber')}</dt>
-                <dd>
-                  <b>{info.accountNumber}</b>{' '}
-                  {info.accountNumber ? (
-                    <CopyButton value={info.accountNumber} label={t('copyAccount')} />
-                  ) : null}
-                </dd>
-              </div>
-              <div className={styles.row}>
-                <dt>{t('accountName')}</dt>
-                <dd>{info.accountName}</dd>
-              </div>
-            </>
-          ) : null}
-          <div className={styles.row}>
-            <dt>{t('amount')}</dt>
-            <dd>
-              <b className={styles.amount}>{fmt.money(remaining)}</b>{' '}
-              <CopyButton value={remaining} label={t('copyAmount')} />
-            </dd>
-          </div>
-          <div className={styles.row}>
-            <dt>{t('code')}</dt>
-            <dd>
-              <b className={styles.code}>{invoice.code}</b>{' '}
-              <CopyButton value={invoice.code} label={t('copyCode')} />
-            </dd>
-          </div>
-        </dl>
-      </div>
-
-      {invoice.expiresAt ? (
-        <p className={styles.expires}>{t('expires', { date: fmt.dateTime(invoice.expiresAt) })}</p>
+      {partial ? (
+        <Alert type="warning" showIcon title={t('partialIntro', { paid: fmt.money(invoice.paidAmount) })} />
       ) : null}
-      <p className={styles.note}>{t('autoActivateNote')}</p>
 
-      {/*
-        MoMo / VNPAY — BỔ SUNG dưới chuyển khoản (ADR 0058). Tự ẩn khi chưa có cổng nào mở cho hoá
-        đơn gói, hoặc người xem không có quyền mua gói. Số tiền chỉ để báo trước hạn mức của cổng;
-        server đọc phần còn thiếu từ DB.
-      */}
-      <GatewayPayOptions target={{ kind: 'invoice', invoiceId: invoice.id }} amount={remaining} />
+      <div className={styles.due}>
+        <div className={styles.dueText}>
+          <span className={styles.dueLabel}>{partial ? t('remainingLabel') : t('amount')}</span>
+          <b className={styles.dueAmount}>{fmt.money(remaining)}</b>
+          {/* Mã là thứ người dùng đọc cho hỗ trợ và nhận ra trên sao kê — chép được. */}
+          <span className={styles.dueCode}>
+            {t('code')}: <b>{invoice.code}</b>
+            <CopyButton value={invoice.code} label={t('copyCode')} />
+          </span>
+          {invoice.expiresAt ? (
+            <span className={styles.dueMeta}>
+              {t('expires', { date: fmt.dateTime(invoice.expiresAt) })}
+            </span>
+          ) : null}
+        </div>
+        <Link href={paymentPath.invoice(invoice.id)} className={styles.payLink}>
+          <Button type="primary" size="large" icon={<CreditCardOutlined aria-hidden />}>
+            {t('payNow')}
+          </Button>
+        </Link>
+      </div>
+
+      <p className={styles.note}>{t('autoActivateNote')}</p>
     </div>
   );
 }

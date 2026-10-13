@@ -370,6 +370,12 @@ export const queryKeys = {
      * là cách nói điều này ngắn nhất.
      */
     pendingInvoice: () => ['subscription', 'invoices', 'pending'] as const,
+    /**
+     * MỘT hoá đơn — `GET /subscription/invoices/:id`, nguồn của trang thanh toán `/payment/:id`.
+     * Cùng tiền tố `['subscription','invoices']` vì cùng lý do với `pendingInvoice`: tiền về thì
+     * một lượt làm mới theo tiền tố đó phải lật cả trang thanh toán đang mở.
+     */
+    invoice: (id: string) => ['subscription', 'invoices', 'detail', id] as const,
     /** Thông tin nhận chuyển khoản của nền tảng — gần như tĩnh, cache dài. */
     paymentInfo: () => ['subscription', 'payment-info'] as const,
   },
@@ -463,6 +469,11 @@ export const queryKeys = {
     all: ['trips'] as const,
     list: (params: QueryParams) => ['trips', 'list', params] as const,
     detail: (id: string) => ['trips', 'detail', id] as const,
+    /**
+     * Chuyến khách đang GIỮ mà chưa trả + đã chạm trần chưa — `GET /trips/unpaid-holds`. Dưới nhánh
+     * `trips` có chủ đích: thông báo tiền về / hết hạn làm mới `trips.all`, và lời nhắc phải đổi theo.
+     */
+    unpaidHolds: () => ['trips', 'unpaid-holds'] as const,
     /** Biên bản bàn giao của MỘT chuyến — nhánh con của chi tiết, huỷ chuyến cũng dọn theo. */
     handoverEvidence: (id: string) => ['trips', 'detail', id, 'handover-evidence'] as const,
     /**

@@ -22,9 +22,11 @@ import { PlatformPaymentOrdersService } from '../src/modules/payment-gateway/pla
 import type { PrismaService } from '../src/prisma/prisma.service';
 import {
   buildGateway,
+  FakeVnpay,
   gatewayEnv,
   momoIpn,
   nextTransId,
+  notFoundQueryResult,
   paidQueryResult,
   SPEC_WEB,
   vnpayIpn,
@@ -194,7 +196,7 @@ describe('Mở phiên', () => {
     expect(momo.created[0]!.amount).toBe(PRICE);
     // Trang quay về là site PARTNER, mang đúng ID của lượt — không mang kết quả gì.
     expect(momo.created[0]!.returnUrl).toBe(
-      `${SPEC_WEB.partner}/payment-return?order=${first.id}`,
+      `${SPEC_WEB.partner}/payment/${invoice.id}?order=${first.id}`,
     );
 
     const again = await service.startInvoiceCheckout(tenantId, invoice.id, request());
@@ -449,6 +451,54 @@ describe('Truy vấn phía server và bộ quét', () => {
     const row = await prisma.paymentGatewayOrder.findUniqueOrThrow({ where: { id: order.id } });
     expect(row.status).toBe(PAYMENT_ORDER_STATUS.PENDING);
     expect(row.lastQueriedAt).not.toBeNull();
+  });
+
+  /**
+   * Khách mở phiên rồi bấm HUỶ ở trang cổng (13/10/2026): cổng ký xác nhận "không có giao dịch".
+   * ADR 0058 không cho lượt hết hạn trước ân hạn — nhưng trang không được quay "đang chờ" ~45 phút,
+   * và lượt sau phải là một phiên MỚI, không phải liên kết vừa bị huỷ.
+   */
+  it('cổng xác nhận KHÔNG có giao dịch: lượt giữ pending, thôi chờ, lượt sau mở phiên MỚI', async () => {
+    if (!dbAvailable) return;
+    const invoice = await issueInvoice();
+    const order = await service.startInvoiceCheckout(tenantId, invoice.id, request());
+    momo.queryResult = notFoundQueryResult(order.id);
+
+    expect(await service.settle(order.id, { force: true })).toBe('recorded');
+    const row = await prisma.paymentGatewayOrder.findUniqueOrThrow({ where: { id: order.id } });
+    expect(row.status).toBe(PAYMENT_ORDER_STATUS.PENDING);
+    expect(row.noTransactionAt).not.toBeNull();
+    expect(row.providerResultCode).toBe('91');
+
+    const view = await service.orderForTenant(tenantId, order.id);
+    expect(view.viewState).toBe(PAYMENT_ORDER_VIEW_STATE.AWAITING);
+    expect(view.noTransaction).toBe(true);
+    // Liên kết vừa bị huỷ không được mời mở lại.
+    expect(view.checkoutUrl).toBeNull();
+
+    const again = await service.startInvoiceCheckout(tenantId, invoice.id, request());
+    expect(again.id).not.toBe(order.id);
+    expect(momo.created).toHaveLength(2);
+  });
+
+  it('sau "không có giao dịch", tiền vẫn về trên lượt cũ: thành công thắng, dấu bị xoá', async () => {
+    if (!dbAvailable) return;
+    const invoice = await issueInvoice();
+    const order = await service.startInvoiceCheckout(tenantId, invoice.id, request());
+    momo.queryResult = notFoundQueryResult(order.id);
+    await service.settle(order.id, { force: true });
+
+    momo.queryResult = paidQueryResult(order.id, PRICE);
+    expect(await service.settle(order.id, { force: true })).toBe('recorded');
+    const row = await prisma.paymentGatewayOrder.findUniqueOrThrow({ where: { id: order.id } });
+    expect(row.status).toBe(PAYMENT_ORDER_STATUS.SUCCEEDED);
+    expect(row.noTransactionAt).toBeNull();
+    expect(await activeSubscriptions()).toBe(1);
+  });
+
+  it('VNPAY hỏi thưa hơn cửa sổ chống trùng 5 phút của `querydr` — hỏi dày chỉ nhận `94`', () => {
+    const vnpay = new FakeVnpay(config);
+    expect(vnpay.queryMinIntervalMs).toBeGreaterThanOrEqual(5 * 60_000);
   });
 
   it('IPN không tới và người trả không quay lại: BỘ QUÉT hỏi cổng và ghi nhận', async () => {

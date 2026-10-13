@@ -3,6 +3,7 @@ import { Prisma, releasePromoRedemption } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
+  HOLD_MAX_OPEN_PER_CUSTOMER,
   BOOKING_REQUEST_STATUS,
   type BookingPriceSnapshot,
   BOOKING_STATUS,
@@ -83,6 +84,7 @@ import {
   CustomerTripListItemDto,
   CustomerTripListQueryDto,
   CustomerTripPageDto,
+  CustomerUnpaidHoldsDto,
   ProvideRefundAccountDto,
 } from './dto/customer-trip.dto';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
@@ -154,6 +156,31 @@ export class CustomerTripsService {
     /** Writer DUY NHẤT của `booking_cancellations` (ADR 0045 điều 1). */
     private readonly cancellations: CancellationsService,
   ) {}
+
+  /**
+   * LỜI NHẮC THANH TOÁN — chuyến khách đang giữ mà chưa trả, và đã chạm trần chưa.
+   *
+   * Đọc qua `BookingHoldsService` — CÙNG vị từ với trần đang chặn khách, nên lời nhắc không bao giờ
+   * nói "2 chuyến" trong khi cổng đặt xe đếm ra 3. Số tiền là phần CÒN phải chuyển (đã trả một phần
+   * thì trừ đi), cùng cách tính với khối tiền giữ chỗ của trang chuyến.
+   */
+  async unpaidHolds(customerUserId: string): Promise<CustomerUnpaidHoldsDto> {
+    const rows = await this.holds.listOpenForCustomer(customerUserId);
+    return {
+      limit: HOLD_MAX_OPEN_PER_CUSTOMER,
+      limitReached: rows.length >= HOLD_MAX_OPEN_PER_CUSTOMER,
+      items: rows.map((row) => ({
+        tripId: row.bookingRequest.id,
+        code: row.code,
+        vehicleName: row.bookingRequest.vehicle.name,
+        vehicleImageUrl: row.bookingRequest.vehicle.mainImageUrl,
+        pickupAt: row.bookingRequest.pickupAt?.toISOString() ?? null,
+        returnAt: row.bookingRequest.returnAt?.toISOString() ?? null,
+        remainingAmount: Prisma.Decimal.max(row.amount.sub(row.paidAmount), 0).toFixed(0),
+        expiresAt: row.expiresAt.toISOString(),
+      })),
+    };
+  }
 
   async list(viewerUserId: string, query: CustomerTripListQueryDto): Promise<CustomerTripPageDto> {
     const now = new Date();

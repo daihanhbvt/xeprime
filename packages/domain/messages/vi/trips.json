@@ -244,7 +244,8 @@
     "checkingBody": "Ngân hàng báo về XePrime thường trong vài phút. Trang này tự cập nhật khi tiền về — bạn không cần chuyển lại.",
     "declarePaid": "Tôi đã chuyển khoản",
     "qrFailed": "Không tải được mã QR. Dùng thông tin bên cạnh để chuyển khoản thủ công.",
-    "qrUnavailable": "Chưa dựng được mã QR cho khoản này. Dùng số tiền và nội dung bên cạnh để chuyển khoản."
+    "qrUnavailable": "Chưa dựng được mã QR cho khoản này. Dùng số tiền và nội dung bên cạnh để chuyển khoản.",
+    "payNow": "Thanh toán ngay"
   },
   "sides": {
     "ariaLabel": "Chọn phía của chuyến",
@@ -306,5 +307,37 @@
     "noteHost": "Phụ phí chuyến nằm ở phía khách và không trừ vào tiền của bạn. Số chốt được xác nhận khi bạn duyệt yêu cầu.",
     "badgeSettled": "Đã chốt",
     "noteSettled": "Số này đã được chốt khi bạn thanh toán giữ chỗ và không đổi nữa."
+  },
+  "payment": {
+    "back": "Chi tiết chuyến",
+    "backToTrips": "Chuyến của tôi",
+    "title": "Thanh toán giữ chỗ",
+    "subtitle": "Chuyến thuê {vehicle}",
+    "notFoundTitle": "Không tìm thấy chuyến",
+    "notFoundBody": "Chuyến này không tồn tại hoặc không thuộc tài khoản của bạn.",
+    "loadErrorTitle": "Chưa tải được thông tin thanh toán",
+    "time": "Thời gian",
+    "service": "Dịch vụ",
+    "amountLabel": "Tiền giữ chỗ",
+    "remainingLabel": "Còn phải chuyển",
+    "viewTrip": "Xem chi tiết chuyến",
+    "noHoldTitle": "Chuyến này chưa cần thanh toán",
+    "noHoldBody": "Khoản giữ chỗ chỉ phát sinh khi chủ xe nhận chuyến. Bạn sẽ được báo ngay khi đến lượt thanh toán.",
+    "paidTitle": "Đặt xe thành công",
+    "paidBody": "Đã nhận {amount} cho khoản giữ chỗ {code}. Chuyến của bạn đã được xác nhận."
+  },
+  "unpaid": {
+    "listLabel": "Chuyến chờ thanh toán",
+    "amountLabel": "Tiền giữ chỗ",
+    "pay": "Thanh toán",
+    "payAria": "Thanh toán chuyến {vehicle}",
+    "reminderTitle": "{count, plural, other {Bạn có # chuyến chờ thanh toán}}",
+    "reminderBody": "Thanh toán trước khi hết giờ để giữ xe — chuyến chưa thanh toán sẽ tự huỷ khi hết thời gian giữ chỗ.",
+    "limitTitle": "Bạn đã giữ tối đa {limit} chuyến chưa thanh toán",
+    "limitBody": "Bạn chưa thể đặt thêm xe. Mỗi tài khoản giữ được tối đa {limit} chuyến chưa thanh toán cùng lúc — thanh toán hoặc huỷ bớt một chuyến để tiếp tục đặt.",
+    "limitBodyBooking": "Mỗi tài khoản giữ được tối đa {limit} chuyến chưa thanh toán cùng lúc. Thanh toán hoặc huỷ bớt một chuyến bên dưới, rồi quay lại đặt xe này.",
+    "limitTitleFallback": "Bạn đang có quá nhiều chuyến chờ thanh toán",
+    "limitBodyFallback": "Thanh toán hoặc huỷ bớt một chuyến ở mục Chuyến của tôi, rồi quay lại đặt xe này.",
+    "viewTrips": "Xem chuyến của tôi"
   }
 }

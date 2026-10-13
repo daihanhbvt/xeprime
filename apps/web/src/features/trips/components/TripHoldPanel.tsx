@@ -1,9 +1,8 @@
 'use client';
 
-/* eslint-disable @next/next/no-img-element -- ảnh QR sinh động theo số tiền + mã, không phải
- * asset tĩnh để đi qua next/image; kích thước cố định nên không gây layout shift. */
-
+import { CreditCardOutlined } from '@ant-design/icons';
 import { Alert, Button } from 'antd';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
@@ -12,10 +11,9 @@ import {
   HOLD_COUNTDOWN_SEGMENT_MINUTES,
   HOLD_REFUND_STATUS,
 } from '@xeprime/types';
-import { buildVietQrUrl } from '@xeprime/domain';
 import { Countdown } from '@/components/data-display/Countdown';
-import { CopyButton } from '@/components/data-display/CopyButton';
 import { InfoHint } from '@/components/data-display/InfoHint';
+import { paymentPath } from '@/constants/routes';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { RefundAccountDialog } from './RefundAccountDialog';
 import type { CustomerTripDetail } from '../types';
@@ -26,20 +24,19 @@ type Hold = NonNullable<CustomerTripDetail['hold']>;
 /**
  * TIỀN GIỮ CHỖ của một chuyến đã được nhận, nhìn từ phía KHÁCH — ADR 0044 điều 2.
  *
- * Panel trả lời đúng bốn câu, theo thứ tự khách cần:
- *   1. Phải chuyển bao nhiêu (và còn thiếu bao nhiêu nếu đã chuyển một phần);
+ * Từ 13/10/2026 việc TRẢ nằm ở trang thanh toán riêng (`/payment/:tripId` — `TripPaymentView`):
+ * chuyển khoản VietQR và ví điện tử ở cùng một chỗ, và đó cũng là trang cổng chuyển khách về. Khối
+ * này ở trang chuyến chỉ còn trả lời ba câu, theo thứ tự khách cần:
+ *   1. Phải trả bao nhiêu (và còn thiếu bao nhiêu nếu đã chuyển một phần);
  *   2. Trước khi nào, và hết giờ thì sao;
- *   3. Chuyển thế nào — QR mang sẵn số tiền + MÃ, thứ quyết định tiền khớp vào chuyến nào;
- *   4. Phần còn lại trả cho ai (chủ xe, lúc nhận xe — ADR 0028 điều 7A).
+ *   3. Trả ở đâu — một nút, dẫn sang trang thanh toán.
  *
  * ⚠️ **"Tiền giữ chỗ" KHÁC "cọc thế chấp khi nhận xe".** Khoản ở đây chuyển cho XePrime để chốt
  * chuyến và là một phần tiền thuê; cọc thế chấp là tài sản khách đặt lại cho chủ xe lúc nhận xe
  * và lấy về khi trả xe nguyên vẹn (`rental-policies`). Hai khoản có hai chủ, hai thời điểm và
  * hai đường về — nên giao diện gọi tên chúng khác nhau ở mọi chỗ, và dấu "i" nói rõ khác biệt.
  *
- * **Không màn hình nào xác nhận "đã thanh toán" vì khách bấm một nút.** Nút "Tôi đã chuyển
- * khoản" chỉ đổi cách màn hình TRÌNH BÀY sự chờ đợi (và đúng ra thì trang tự hỏi lại server —
- * xem `useTrip`); chuyến chỉ thành đơn khi backend đối soát xác nhận đã nhận đủ tiền.
+ * Khoản đã khép (đã trả, hết hạn, huỷ, có hoàn) thì khối nói kết cục — `HoldOutcome`.
  *
  * Mọi mốc đọc từ server (`expiresAt`, `freeCancelUntil`) — không tính lại ở client, vì lệch đồng
  * hồ máy khách sẽ rơi đúng vào lúc tiền phụ thuộc vào nó.
@@ -49,7 +46,6 @@ export function TripHoldPanel({
   tripId,
   tripTotalAmount,
   payAtHandoverAmount,
-  gatewayOptions,
 }: {
   hold: Hold;
   tripId: string;
@@ -57,27 +53,10 @@ export function TripHoldPanel({
   tripTotalAmount?: string | null;
   /** B − D — phần trả TRỰC TIẾP chủ xe lúc nhận xe, không đi qua khoản giữ chỗ này. */
   payAtHandoverAmount?: string | null;
-  /**
-   * Lối thanh toán qua cổng MoMo/VNPAY (ADR 0058) — CHỈ hiện khi khoản còn chờ tiền, ngay dưới khối
-   * chuyển khoản. Là một slot chứ không dựng tại đây: panel này cũng nằm trong luồng đặt xe, nơi
-   * không phải lúc nào cũng mở phiên cổng được, và nơi gọi biết điều đó.
-   */
-  gatewayOptions?: ReactNode;
 }) {
   const t = useTranslations('Trips.hold');
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
-
-  /**
-   * Khách đã bấm "Tôi đã chuyển khoản" — CHỈ là một trạng thái hiển thị.
-   *
-   * Nó không ghi gì lên server và không rút ngắn hạn nào. Lý do tồn tại: sau khi rời sang app
-   * ngân hàng và quay lại, khách cần biết hệ thống đang làm gì với khoản vừa chuyển. Không có
-   * nó, màn hình vẫn nói "hãy chuyển khoản" và người ta chuyển lần thứ hai.
-   */
-  const [declared, setDeclared] = useState(false);
-  /** Ảnh QR không tải được (chặn mạng, nhà cung cấp lỗi) — có gì hiện nấy, không im lặng. */
-  const [qrFailed, setQrFailed] = useState(false);
 
   const awaiting =
     hold.status === BOOKING_HOLD_STATUS.PENDING || hold.status === BOOKING_HOLD_STATUS.UNDERPAID;
@@ -92,9 +71,8 @@ export function TripHoldPanel({
 
   /*
    * Bức tranh đầy đủ, CÙNG chữ dùng ở bảng "Chi tiết giá" (`PriceBreakdown`) — khách hỏi hoài
-   * "chuyển 176k xong thì tổng chuyến/còn lại là bao nhiêu" (phản hồi 18/09/2026) vì trước đây
-   * khối này chỉ có một câu văn mơ hồ "phần còn lại trả tay chủ xe", không có con số. Chỉ vẽ khi
-   * CẢ HAI số đều có — thiếu một nửa còn tệ hơn không có gì.
+   * "chuyển 176k xong thì tổng chuyến/còn lại là bao nhiêu" (phản hồi 18/09/2026). Chỉ vẽ khi CẢ
+   * HAI số đều có — thiếu một nửa còn tệ hơn không có gì.
    */
   const summary =
     tripTotalAmount != null && payAtHandoverAmount != null ? (
@@ -112,15 +90,11 @@ export function TripHoldPanel({
 
   if (!awaiting) return <HoldOutcome hold={hold} tripId={tripId} summary={summary} />;
 
-  const info = hold.paymentInfo;
-  const qrUrl = buildVietQrUrl(info, hold.remainingAmount, hold.code);
-
   return (
     <section className={styles.panel} aria-label={t('title')}>
       {/*
-        HERO: số tiền và đồng hồ đứng cùng một khối, to nhất màn hình. Đây là hai thứ duy nhất
-        khách phải nắm trước khi làm bất cứ việc gì khác; đẩy chúng xuống dưới một đoạn văn là
-        cách chắc chắn để người ta bỏ lỡ hạn.
+        HERO: số tiền và đồng hồ đứng cùng một khối, to nhất khối. Đây là hai thứ duy nhất khách
+        phải nắm trước khi làm việc gì khác.
       */}
       <header className={styles.head}>
         <p className={styles.headLabel}>
@@ -128,11 +102,6 @@ export function TripHoldPanel({
           <InfoHint content={t('vsDepositHint')} label={t('vsDepositHintLabel')} />
         </p>
         <p className={styles.headAmount}>{fmt.money(hold.remainingAmount)}</p>
-        {/*
-          Đồng hồ chạy, không phải một dòng "hạn lúc 14:35": một mốc giờ tuyệt đối bắt khách tự
-          trừ nhẩm đúng lúc họ cần hành động. Hai chặng 60 phút — ranh giới giữa chúng chính là
-          mốc hệ thống gửi lời nhắc, nên đồng hồ và thông báo nói cùng một điều.
-        */}
         <Countdown
           deadline={hold.expiresAt}
           urgentMs={HOLD_COUNTDOWN_SEGMENT_MINUTES * 60_000}
@@ -145,103 +114,26 @@ export function TripHoldPanel({
         />
       </header>
 
-      {/*
-        MỘT alert duy nhất, và chỉ khi có chuyện bất thường. Trạng thái bình thường ("hãy chuyển
-        khoản") đã được nói bằng chính số tiền và mã QR — thêm một dòng nữa là nói lại.
-      */}
       {underpaid ? (
         <Alert
           type="warning"
           showIcon
           title={t('partialIntro', { paid: fmt.money(hold.paidAmount) })}
         />
-      ) : declared ? (
-        <Alert type="info" showIcon title={t('checking')} description={t('checkingBody')} />
       ) : null}
 
       {summary}
 
-      <div className={styles.body}>
-        {/*
-          QR kèm CHÚ THÍCH: một mã vuông không tự nói nó dùng để làm gì, và khách chưa quen
-          chuyển khoản bằng QR sẽ đứng lại ở đúng bước này.
-
-          Ảnh hỏng hoặc chưa cấu hình tài khoản nhận ⇒ nói thẳng và chỉ sang cột bên phải, nơi
-          mọi thứ cần để chuyển tay đều có. Một khung trắng im lặng là chỗ khách bỏ cuộc.
-        */}
-        {qrUrl && !qrFailed ? (
-          <figure className={styles.qrWrap}>
-            <img
-              src={qrUrl}
-              alt={t('qrAlt')}
-              width={220}
-              height={260}
-              className={styles.qr}
-              loading="lazy"
-              onError={() => setQrFailed(true)}
-            />
-            <figcaption className={styles.qrCaption}>{t('qrCaption')}</figcaption>
-          </figure>
-        ) : (
-          <p className={styles.qrFallback}>{qrUrl ? t('qrFailed') : t('qrUnavailable')}</p>
-        )}
-
-        <dl className={styles.fields}>
-          {info.configured ? (
-            <>
-              <div className={styles.row}>
-                <dt>{t('bank')}</dt>
-                <dd>
-                  <span>{info.bankCode}</span>
-                </dd>
-              </div>
-              <div className={styles.row}>
-                <dt>{t('accountNumber')}</dt>
-                <dd>
-                  <b>{info.accountNumber}</b>{' '}
-                  {info.accountNumber ? (
-                    <CopyButton value={info.accountNumber} label={t('copyAccount')} />
-                  ) : null}
-                </dd>
-              </div>
-              <div className={styles.row}>
-                <dt>{t('accountName')}</dt>
-                <dd>
-                  <span>{info.accountName}</span>
-                </dd>
-              </div>
-            </>
-          ) : null}
-          <div className={styles.row}>
-            <dt>{t('amount')}</dt>
-            <dd>
-              <b className={styles.amount}>{fmt.money(hold.remainingAmount)}</b>{' '}
-              <CopyButton value={hold.remainingAmount} label={t('copyAmount')} />
-            </dd>
-          </div>
-          <div className={styles.row}>
-            <dt>
-              {t('code')}
-              <InfoHint content={t('codeHint')} label={t('codeHintLabel')} />
-            </dt>
-            <dd>
-              <b className={styles.code}>{hold.code}</b>{' '}
-              <CopyButton value={hold.code} label={t('copyCode')} />
-            </dd>
-          </div>
-        </dl>
-      </div>
-
-      {gatewayOptions}
-
       {/*
-        HAI câu, không phải ba đoạn: hệ quả khi hết giờ, và mốc huỷ miễn phí. Cả hai là điều kiện
-        của khoản tiền vừa nhìn, nên chúng đứng ngay dưới nó. Mọi giải thích sâu hơn nằm sau dấu
-        "i" ở trên — một khối chữ dài ở đây chỉ đẩy mã QR xuống dưới nếp gấp.
-
-        Huỷ miễn phí đếm xuôi từ mốc chuyến được nhận và bị kẹp bởi giờ nhận xe, nên chuyến sát
-        giờ có cửa sổ ngắn hơn 4 tiếng — ADR 0032 điều 5 bắt cảnh báo điều đó TRƯỚC khi trả tiền.
+        MỘT nút, không phải một mã QR thứ hai: trang thanh toán là nơi duy nhất có đủ kênh trả và là
+        nơi cổng quay về. Hai chỗ trả là hai chỗ để số tiền hoặc nội dung chuyển khoản trôi khỏi nhau.
       */}
+      <Link href={paymentPath.trip(tripId)} className={styles.payLink}>
+        <Button type="primary" size="large" block icon={<CreditCardOutlined aria-hidden />}>
+          {t('payNow')}
+        </Button>
+      </Link>
+
       <ul className={styles.notes}>
         <li>{t('expires')}</li>
         <li>
@@ -249,24 +141,8 @@ export function TripHoldPanel({
             time: fmt.dateTime(hold.freeCancelUntil),
           })}
         </li>
-        {/*
-          Phần tiền thuê còn lại: chỉ nói bằng CÂU khi không có con số thật. Có `summary` thì hai
-          dòng ở trên đã ghi rõ "Trả chủ xe khi nhận xe" kèm số — nhắc lại bằng một câu mơ hồ là
-          nói cùng một điều hai lần, đúng thứ khối này phải tránh.
-        */}
         {summary ? null : <li>{t('restAtHandover')}</li>}
       </ul>
-
-      {/*
-        "Tôi đã chuyển khoản" KHÔNG xác nhận gì — nó chỉ chuyển màn sang trạng thái chờ đối soát.
-        Nút biến mất sau khi bấm: bấm lần thứ hai không làm gì thêm, và một nút vô tác dụng là
-        một lời mời hiểu nhầm rằng bấm nữa sẽ nhanh hơn.
-      */}
-      {declared ? null : (
-        <Button block onClick={() => setDeclared(true)}>
-          {t('declarePaid')}
-        </Button>
-      )}
     </section>
   );
 }

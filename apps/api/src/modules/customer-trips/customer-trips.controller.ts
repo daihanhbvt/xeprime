@@ -11,6 +11,7 @@ import {
   CustomerTripDetailDto,
   CustomerTripListQueryDto,
   CustomerTripPageDto,
+  CustomerUnpaidHoldsDto,
   ProvideRefundAccountDto,
 } from './dto/customer-trip.dto';
 
@@ -39,6 +40,21 @@ export class CustomerTripsController {
     @Query() query: CustomerTripListQueryDto,
   ): Promise<CustomerTripPageDto> {
     return this.trips.list(user.id, query);
+  }
+
+  /**
+   * LỜI NHẮC THANH TOÁN — chuyến đang giữ mà chưa trả, gấp nhất trước (13/10/2026). Khai TRƯỚC
+   * `:id` để đường tĩnh này không bị `:id` nuốt mất. Chỉ realm khách: tài khoản đối tác không đặt
+   * xe (ADR 0053 điều 7) nên không bao giờ giữ chỗ nào.
+   */
+  @Get('unpaid-holds')
+  @Realms(ACCOUNT_REALM.CUSTOMER)
+  @ApiOperation({
+    summary: 'Chuyến đang giữ chưa thanh toán của tôi + đã chạm trần giữ chỗ chưa',
+  })
+  @ApiOkResponse({ type: CustomerUnpaidHoldsDto })
+  unpaidHolds(@CurrentUser() user: AuthenticatedUser): Promise<CustomerUnpaidHoldsDto> {
+    return this.trips.unpaidHolds(user.id);
   }
 
   @Get(':id')

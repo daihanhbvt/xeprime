@@ -120,6 +120,12 @@ export class PaymentOrderDto {
       'Liên kết thanh toán — chỉ có khi lượt còn chờ và chưa quá hạn dùng lại; mở lại để trả tiếp',
   })
   checkoutUrl!: string | null;
+  @ApiProperty({
+    description:
+      'Lượt còn chờ nhưng cổng đã KÝ XÁC NHẬN chưa có giao dịch nào (khách huỷ ở cổng / chưa trả) — ' +
+      'thôi hiện "đang chờ", mời chọn lại phương thức; trạng thái vẫn `pending` (ADR 0058)',
+  })
+  noTransaction!: boolean;
   @ApiProperty({ description: 'Hạn dùng lại liên kết — ISO-8601 UTC' }) expiresAt!: string;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Lúc cổng báo đã thu — ISO' })
   paidAt!: string | null;

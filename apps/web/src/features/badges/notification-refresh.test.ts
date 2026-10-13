@@ -58,6 +58,16 @@ describe('refreshNotificationAffected', () => {
   });
 
   /**
+   * `subscription_activated` — tiền gói về đủ. Màn đang hiện QR phải lật ngay, không đợi nhịp
+   * hỏi lại (giờ chỉ còn là lưới an toàn hai phút khi nghe được bản chiếu).
+   */
+  it('làm mới gói và hoá đơn gói', () => {
+    refreshNotificationAffected(client);
+
+    expect(invalidated).toContainEqual(key(queryKeys.subscription.all));
+  });
+
+  /**
    * KHÔNG quét sạch cache.
    *
    * `chat` và `notifications` có tín hiệu RIÊNG chính xác hơn (`chatCustomer`/`chatShop` và
@@ -111,6 +121,30 @@ describe('refreshNotificationAffected — màn chi tiết chuyến đang mở', 
      * lượt tải còn đang bay sẽ bị gộp vào chính lượt đó và không sinh lượt mới — ca này sẽ xanh
      * giả, đúng thứ nó sinh ra để bắt.
      */
+    await vi.waitFor(() => expect(observer.getCurrentResult().isSuccess).toBe(true));
+    expect(calls).toBe(1);
+
+    refreshNotificationAffected(client);
+
+    await vi.waitFor(() => expect(calls).toBe(2));
+
+    unsubscribe();
+    client.clear();
+  });
+
+  /** Cùng phép kiểm cho hoá đơn gói đang chờ: `subscription.all` phải phủ `pendingInvoice()`. */
+  it('kéo lại HOÁ ĐƠN GÓI đang chờ khi gói vừa kích hoạt', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+
+    let calls = 0;
+    const observer = new QueryObserver(client, {
+      queryKey: queryKeys.subscription.pendingInvoice(),
+      queryFn: async () => {
+        calls += 1;
+        return null;
+      },
+    });
+    const unsubscribe = observer.subscribe(() => undefined);
     await vi.waitFor(() => expect(observer.getCurrentResult().isSuccess).toBe(true));
     expect(calls).toBe(1);
 

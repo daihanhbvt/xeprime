@@ -244,7 +244,8 @@
     "checkingBody": "Banks usually report to XePrime within a few minutes. This page updates itself when the money lands — no need to send it again.",
     "declarePaid": "I've made the transfer",
     "qrFailed": "The QR code didn't load. Use the details beside it to transfer manually.",
-    "qrUnavailable": "No QR code is available for this payment. Use the amount and reference beside it to transfer."
+    "qrUnavailable": "No QR code is available for this payment. Use the amount and reference beside it to transfer.",
+    "payNow": "Pay now"
   },
   "sides": {
     "ariaLabel": "Choose trip side",
@@ -306,5 +307,37 @@
     "noteHost": "Trip fees sit on the guest side and are not deducted from your payout. The final amount is confirmed when you approve.",
     "badgeSettled": "Final",
     "noteSettled": "These figures were locked when you paid the reservation and will not change."
+  },
+  "payment": {
+    "back": "Trip details",
+    "backToTrips": "My trips",
+    "title": "Pay the booking hold",
+    "subtitle": "Rental of {vehicle}",
+    "notFoundTitle": "Trip not found",
+    "notFoundBody": "This trip does not exist or does not belong to your account.",
+    "loadErrorTitle": "Could not load the payment details",
+    "time": "Time",
+    "service": "Service",
+    "amountLabel": "Booking hold",
+    "remainingLabel": "Still to transfer",
+    "viewTrip": "View trip details",
+    "noHoldTitle": "Nothing to pay for this trip yet",
+    "noHoldBody": "A booking hold is only created once the owner accepts the trip. You will be notified as soon as it is time to pay.",
+    "paidTitle": "Booking confirmed",
+    "paidBody": "We received {amount} for booking hold {code}. Your trip is confirmed."
+  },
+  "unpaid": {
+    "listLabel": "Trips awaiting payment",
+    "amountLabel": "Booking hold",
+    "pay": "Pay",
+    "payAria": "Pay for {vehicle}",
+    "reminderTitle": "{count, plural, one {You have # trip awaiting payment} other {You have # trips awaiting payment}}",
+    "reminderBody": "Pay before the timer runs out to keep the car — unpaid trips are cancelled automatically when the hold expires.",
+    "limitTitle": "You are holding the maximum of {limit} unpaid trips",
+    "limitBody": "You can't book another car yet. Each account can hold up to {limit} unpaid trips at a time — pay for or cancel one to keep booking.",
+    "limitBodyBooking": "Each account can hold up to {limit} unpaid trips at a time. Pay for or cancel one below, then come back to book this car.",
+    "limitTitleFallback": "You have too many trips awaiting payment",
+    "limitBodyFallback": "Pay for or cancel a trip in My trips, then come back to book this car.",
+    "viewTrips": "View my trips"
   }
 }

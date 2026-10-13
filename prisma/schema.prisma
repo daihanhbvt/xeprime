@@ -3959,6 +3959,11 @@ model PaymentGatewayOrder {
   /// Payload kết quả gần nhất của cổng (IPN hoặc truy vấn), đã bỏ chữ ký.
   resultJson            Json?     @map("result_json") @db.JsonB
   lastQueriedAt         DateTime? @map("last_queried_at") @db.Timestamptz(3)
+  /// Lần gần nhất cổng KÝ XÁC NHẬN "không có giao dịch nào" cho lượt còn chờ (VNPAY `91`) — khách đã
+  /// huỷ hoặc chưa trả. KHÔNG đổi trạng thái (ADR 0058: chỉ hết hạn sau ân hạn); chỉ để trang thanh
+  /// toán thôi quay chờ và cho mở phiên mới. Mọi kết quả khác của cổng xoá nó; DB canh CHECK chỉ
+  /// lượt `pending` mới mang nó.
+  noTransactionAt       DateTime? @map("no_transaction_at") @db.Timestamptz(3)
   /// Lượt áp tiền vào đích ĐÃ CÓ KẾT LUẬN (kể cả khi đích từ chối) — ghi trong CÙNG transaction với
   /// hiệu ứng tiền, nên NULL chứng minh chưa có gì được áp.
   appliedAt             DateTime? @map("applied_at") @db.Timestamptz(3)

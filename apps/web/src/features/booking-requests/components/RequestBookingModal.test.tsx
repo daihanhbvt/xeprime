@@ -47,14 +47,11 @@ const media = vi.hoisted(() => ({ isMobile: false }));
 const otpEnv = vi.hoisted(() => ({ testCodeEnabled: false }));
 
 const me = vi.hoisted(() => ({ data: undefined as unknown }));
+/** Lời nhắc thanh toán (`useUnpaidHolds`) — mặc định chưa có dữ liệu: không chặn gì. */
+const unpaid = vi.hoisted(() => ({ data: undefined as unknown }));
+vi.mock('@/features/trips/hooks', () => ({ useUnpaidHolds: () => unpaid }));
 vi.mock('@/hooks/use-current-user', () => ({ useCurrentUser: () => me }));
 
-/**
- * Khối giữ chỗ ở bước cuối nạp chuyến qua `useTrip`. Mặc định trả rỗng nên mọi ca khác không đổi
- * hành vi; chỉ ca ADR 0039 bên dưới bơm dữ liệu vào.
- */
-const trip = vi.hoisted(() => ({ data: undefined as unknown, isPending: false }));
-vi.mock('@/features/trips/hooks', () => ({ useTrip: () => trip }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: nav.push }) }));
 /*
  * Danh mục hành chính + bản đồ: stub cố định.
@@ -387,9 +384,9 @@ beforeEach(() => {
   media.isMobile = false;
   otpEnv.testCodeEnabled = false;
   nav.push.mockReset();
-  trip.data = undefined;
   // Mặc định là KHÁCH VÃNG LAI — mọi test cũ mô tả đúng luồng đó.
   me.data = undefined;
+  unpaid.data = undefined;
   listing.data = null;
   quote.data = null;
   Object.values(api).forEach((fn) => fn.mockReset());
@@ -709,69 +706,25 @@ describe('RequestBookingModal — luồng đặt xe', () => {
     });
 
     /**
-     * BƯỚC QR NGAY SAU KHI GỬI — chỉ khi xe bật "Đặt ngay" và hệ thống vừa NHẬN chuyến
-     * (ADR 0044 điều 2). Ở đường mặc định, gửi xong là chờ duyệt và KHÔNG có QR nào.
+     * CHUYẾN ĐƯỢC NHẬN NGAY (xe "Đặt ngay" — ADR 0044 điều 2) ⇒ khách sang thẳng TRANG THANH TOÁN
+     * của chuyến (`/payment/:id`, 13/10/2026), hộp thoại đóng lại.
      *
-     * Ba lỗi mà ca này chặn, cả ba đều đến từ ảnh chụp màn hình thật:
-     *
-     *  1. Tiêu đề "Yêu cầu đã được gửi" + câu "chủ xe sẽ xem xét và phản hồi" — SAI ở chặng này:
-     *     chuyến đã được nhận, đồng hồ đang chạy, và việc tiếp theo thuộc về KHÁCH.
-     *  2. HAI khối nói cùng một điều chồng lên nhau, đẩy mã QR xuống dưới nếp gấp.
-     *  3. Không có mã QR nào cả ⇒ khách rời đi mà không trả tiền.
+     * Lỗi mà ca này chặn: khách thấy một lời cảm ơn rồi rời đi trong khi chỗ đã bị giữ và đồng hồ
+     * đang chạy — chuyến chết vì hết hạn chứ không vì khách đổi ý. Trang thanh toán là nơi có đủ
+     * kênh trả (VietQR + ví điện tử), và không mất đi khi lỡ tay đóng một hộp thoại.
      */
-    it('trả về awaiting_hold: tiêu đề nói ĐÃ ĐƯỢC NHẬN, có QR, và không có khối chữ trùng', async () => {
-      trip.data = {
-        vehicle: { id: 'V1', name: 'Kia Seltos 2022', plateNumber: '43A-123.45' },
-        hold: {
-          id: '01HOLD',
-          code: 'XPH23456789',
-          status: 'pending',
-          outcome: null,
-          amount: '176000',
-          paidAmount: '0',
-          remainingAmount: '176000',
-          expiresAt: new Date(Date.now() + 10 * 60_000).toISOString(),
-          freeCancelUntil: new Date(Date.now() + 4 * 3600_000).toISOString(),
-          paidAt: null,
-          allocation: [],
-          refund: null,
-          paymentInfo: {
-            configured: true,
-            bankCode: 'VCB',
-            accountNumber: '0123456789',
-            accountName: 'XE PRIME',
-          },
-        },
-      };
-      renderModal();
+    it('trả về awaiting_hold: đóng hộp thoại và sang TRANG THANH TOÁN của đúng chuyến', async () => {
+      const { onClose } = renderModal();
       await advanceToOtp();
       await advanceToReview();
 
       api.submitBookingRequest.mockResolvedValue({ id: 'R9', status: 'awaiting_hold' });
       submitFromReview();
 
-      await waitFor(() => expect(screen.getByText('XPH23456789')).toBeTruthy());
-
-      // (1) Không còn nói "chủ xe sẽ xem xét" ở một chặng mà chỗ đã được giữ.
+      await waitFor(() => expect(nav.push).toHaveBeenCalledWith('/payment/R9'));
+      expect(onClose).toHaveBeenCalled();
+      // Không dựng màn "đã gửi, chờ chủ xe" cho một chuyến đã được nhận.
       expect(screen.queryByText(/sẽ xem xét và phản hồi/i)).toBeNull();
-
-      /*
-       * (2) MỖI Ý NÓI ĐÚNG MỘT LẦN — đây là thứ ảnh chụp 16/09 cho thấy đã hỏng:
-       *   · "chuyến đã được nhận"  → tiêu đề, một lần;
-       *   · "phải làm gì tiếp"     → dòng dưới tiêu đề, một lần;
-       *   · "hết giờ thì mở lại"   → dòng ghi chú của panel, một lần.
-       */
-      expect(screen.getAllByText(/chủ xe đã nhận chuyến của bạn/i)).toHaveLength(1);
-      expect(screen.getAllByText(/thanh toán tiền giữ chỗ trước khi hết giờ/i)).toHaveLength(1);
-      expect(screen.getAllByText(/xe được mở lại cho khách khác/i)).toHaveLength(1);
-
-      // (3) QR mang sẵn số tiền và nội dung — khách không bao giờ gõ tay mã đối soát.
-      const qr = screen.getByAltText(/mã qr/i) as HTMLImageElement;
-      expect(qr.src).toContain('amount=176000');
-      expect(qr.src).toContain('addInfo=XPH23456789');
-
-      // Biển số và ảnh xe đến từ CHUYẾN, không từ phiếu gửi yêu cầu — phiếu không mang chúng.
-      expect(screen.getByText('43A-123.45')).toBeTruthy();
     });
 
     it('có dòng "Người thuê" ngay trên bảng xác nhận', async () => {
@@ -1543,6 +1496,70 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       expect(await screen.findByText('Yêu cầu trùng lặp')).toBeTruthy();
       expect(screen.getByRole('button', { name: 'Xem chuyến của tôi' })).toBeTruthy();
       expect(screen.getByRole('button', { name: 'Đóng' })).toBeTruthy();
+    });
+  });
+
+  /**
+   * ĐÃ GIỮ ĐỦ SỐ CHUYẾN CHƯA THANH TOÁN (13/10/2026) — server từ chối mọi yêu cầu mới bằng
+   * `HOLD_LIMIT_REACHED`. Việc cần làm thuộc về KHÁCH (trả hoặc huỷ bớt), nên hộp thoại phải nói
+   * điều đó NGAY khi mở — trước khi khách mất công điền form — và đưa họ tới đúng việc đó.
+   */
+  describe('đã giữ đủ chuyến chưa thanh toán', () => {
+    const HOLD = (n: number) => ({
+      tripId: `T${n}`,
+      code: `XPH0000000${n}`,
+      vehicleName: `Xe số ${n}`,
+      vehicleImageUrl: null,
+      pickupAt: '2026-10-23T10:00:00.000Z',
+      returnAt: '2026-10-24T03:00:00.000Z',
+      remainingAmount: '176000',
+      expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
+    });
+
+    it('mở hộp thoại khi đã chạm trần ⇒ màn nhắc thanh toán, không có form', () => {
+      me.data = LOGGED_IN_ME;
+      unpaid.data = { limit: 3, limitReached: true, items: [HOLD(1), HOLD(2), HOLD(3)] };
+      const { onClose } = renderModal();
+
+      expect(screen.getByText('Bạn đã giữ tối đa 3 chuyến chưa thanh toán')).toBeTruthy();
+      expect(screen.queryByRole('button', { name: 'Huỷ' })).toBeNull();
+      const payLinks = screen.getAllByRole('link', { name: /Thanh toán chuyến/ });
+      expect(payLinks.map((link) => link.getAttribute('href'))).toEqual([
+        '/payment/T1',
+        '/payment/T2',
+        '/payment/T3',
+      ]);
+
+      // Bấm trả ⇒ hộp thoại đóng trước khi rời sang trang thanh toán.
+      fireEvent.click(payLinks[0]!);
+      expect(onClose).toHaveBeenCalled();
+    });
+
+    it('chưa chạm trần ⇒ đặt xe như thường', () => {
+      me.data = LOGGED_IN_ME;
+      unpaid.data = { limit: 3, limitReached: false, items: [HOLD(1)] };
+      renderModal();
+
+      expect(screen.queryByText(/chuyến chưa thanh toán/)).toBeNull();
+      expect(screen.getByRole('button', { name: 'Huỷ' })).toBeTruthy();
+    });
+
+    it('server từ chối lúc gửi (khách vãng lai) ⇒ cùng màn nhắc, có lối sang Chuyến của tôi', async () => {
+      api.submitBookingRequest.mockRejectedValue(
+        new ApiClientError({
+          code: API_ERROR_CODE.HOLD_LIMIT_REACHED,
+          message: 'trần',
+          status: 409,
+        }),
+      );
+      renderModal();
+      await advanceToOtp();
+      await advanceToReview();
+      submitFromReview();
+
+      expect(await screen.findByText('Bạn đang có quá nhiều chuyến chờ thanh toán')).toBeTruthy();
+      fireEvent.click(screen.getByRole('button', { name: 'Xem chuyến của tôi' }));
+      expect(nav.push).toHaveBeenCalledWith('/trips');
     });
   });
 

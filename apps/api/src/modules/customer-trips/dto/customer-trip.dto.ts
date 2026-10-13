@@ -439,3 +439,32 @@ export class ProvideRefundAccountDto {
   @MaxLength(160)
   accountName?: string;
 }
+
+/** Một chuyến khách đang GIỮ mà chưa trả — một dòng của lời nhắc thanh toán. */
+export class CustomerUnpaidHoldDto {
+  @ApiProperty({ description: 'Id yêu cầu thuê — đích của trang thanh toán `/payment/:id`' })
+  tripId!: string;
+  @ApiProperty({ description: 'Mã giữ chỗ (XPH…)' }) code!: string;
+  @ApiProperty() vehicleName!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) vehicleImageUrl!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO-8601 UTC' })
+  pickupAt!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO-8601 UTC' })
+  returnAt!: string | null;
+  @ApiProperty({ description: 'Số CÒN phải chuyển — VND, chuỗi (ADR 0007)' })
+  remainingAmount!: string;
+  @ApiProperty({ description: 'Hạn thanh toán — ISO-8601 UTC' }) expiresAt!: string;
+}
+
+/**
+ * Lời nhắc thanh toán của khách — những chuyến đang giữ mà chưa trả, và khách đã chạm trần chưa.
+ * Chạm trần (`limitReached`) thì server từ chối mọi yêu cầu đặt xe mới bằng `HOLD_LIMIT_REACHED`.
+ */
+export class CustomerUnpaidHoldsDto {
+  @ApiProperty({ description: 'Số chỗ chưa trả tối đa được giữ cùng lúc (HOLD_MAX_OPEN_PER_CUSTOMER)' })
+  limit!: number;
+  @ApiProperty({ description: 'Đã giữ đủ trần — không đặt thêm xe được tới khi trả hoặc huỷ bớt' })
+  limitReached!: boolean;
+  @ApiProperty({ type: [CustomerUnpaidHoldDto], description: 'Gấp nhất trước' })
+  items!: CustomerUnpaidHoldDto[];
+}

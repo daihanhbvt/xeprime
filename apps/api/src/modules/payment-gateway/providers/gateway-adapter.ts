@@ -79,6 +79,12 @@ export type VerifyCallbackResult =
 export interface PaymentGatewayAdapter {
   readonly provider: PaymentGatewayProvider;
   /**
+   * Khoảng cách tối thiểu giữa hai lượt `queryPayment` cho CÙNG một đơn — nhịp do CỔNG đặt. Hỏi dày
+   * hơn thì cổng từ chối (VNPAY `94` "Request is duplicated", cửa sổ 5 phút), và mỗi lượt bị từ chối
+   * lại kéo dài cửa sổ đó: trang đang mở hỏi 20 giây một lần thì cổng KHÔNG BAO GIỜ trả lời được.
+   */
+  readonly queryMinIntervalMs: number;
+  /**
    * Mở phiên thanh toán. Ném `PaymentProviderError` khi cổng không trả được liên kết — chưa có đồng
    * nào bị trừ trong trường hợp đó.
    */

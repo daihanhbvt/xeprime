@@ -14,7 +14,7 @@ import {
 } from '@ant-design/icons';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, App, Button, Radio, Segmented, Skeleton } from 'antd';
+import { Alert, App, Button, Radio, Segmented } from 'antd';
 import { CheckboxField } from '@/components/form/CheckboxField';
 import { CopyButton } from '@/components/data-display/CopyButton';
 
@@ -66,9 +66,7 @@ import {
 import { DeliveryEstimate } from './DeliveryEstimate';
 import { RenterAddressBlock } from './RenterAddressBlock';
 import { TextField } from '@/components/form/TextField';
-import { ROUTES, tripPath } from '@/constants/routes';
-import { TripHoldPanel } from '@/features/trips/components/TripHoldPanel';
-import { useTrip } from '@/features/trips/hooks';
+import { ROUTES, paymentPath } from '@/constants/routes';
 import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
 import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
 import { fetchListingDetailClient } from '@/features/marketplace/api';
@@ -80,6 +78,8 @@ import { maskPhone } from '@/features/phone-verification/mask';
 import { useAddressPreview } from '@/features/locations/hooks/use-address-preview';
 import { fetchDeliveryDistance, fetchPublicQuote } from '@/features/rental-policies/api';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import { UnpaidHoldList } from '@/features/trips/components/UnpaidHoldList';
+import { useUnpaidHolds } from '@/features/trips/hooks';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
@@ -167,15 +167,12 @@ interface RequestBookingFlowProps {
    */
   onBusyChange?: (busy: boolean) => void;
   /**
-   * Đã sang màn KẾT QUẢ, và thuộc KIỂU nào — vỏ overlay đổi bề rộng theo tín hiệu này.
+   * Đã sang màn KẾT QUẢ hay chưa — vỏ overlay thu bề rộng theo tín hiệu này: giữ khung hai cột
+   * rộng 1180px cho một thẻ xác nhận vài dòng thì phần lớn hộp thoại là chỗ trống.
    *
-   *  - `false`     — còn đang nhập liệu: giữ khung hai cột rộng 1180px của biểu mẫu;
-   *  - `'compact'` — một thẻ xác nhận vài dòng: thu lại, vì giữ nguyên khung biểu mẫu thì phần
-   *    lớn hộp thoại là chỗ trống và mắt phải đi rất xa mới tới hàng nút;
-   *  - `'payment'` — có mã QR, số tài khoản và nội dung chuyển khoản: rộng hơn `compact` để một
-   *    chuỗi 19 ký tự liền mạch không bị bẻ làm ba khúc, vì mã đọc thành ba dòng là mã gõ sai.
+   * Không còn kiểu kết quả "thanh toán": chuyến được nhận ngay thì khách sang trang `/payment/:id`.
    */
-  onResultChange?: (result: false | 'compact' | 'payment') => void;
+  onResultChange?: (isResult: boolean) => void;
 }
 
 /**
@@ -226,6 +223,7 @@ export function RequestBookingFlow({
   onResultChange,
 }: RequestBookingFlowProps) {
   const t = useTranslations('BookingRequests.flow');
+  const tTrips = useTranslations('Trips');
   /** Chữ của các câu báo lỗi validation — namespace riêng, dùng bởi `requestFormSchema`. */
   const tf = useTranslations('BookingRequests.form');
   const dl = useDomainLabel();
@@ -296,6 +294,12 @@ export function RequestBookingFlow({
    * đi thì chủ gian hàng bấm mãi không được mà không bao giờ biết vì sao.
    */
   const [blocked, setBlocked] = useState<'shopAccount' | 'ownVehicle' | null>(null);
+  /**
+   * Server vừa từ chối lượt gửi vì khách đã giữ đủ số chuyến chưa trả (`HOLD_LIMIT_REACHED`). Chỉ là
+   * nguồn DỰ PHÒNG cho người chưa có phiên (không đọc được lời nhắc) — có phiên thì màn chặn đọc
+   * thẳng từ `useUnpaidHolds`, xem `holdLimitBlocked`.
+   */
+  const [submitHitHoldLimit, setSubmitHitHoldLimit] = useState(false);
   /** Người đã đăng nhập bấm "Đổi" ở bước xác nhận → hiện lại ô nhập liên hệ ở bước Chuyến đi. */
   const [editingContact, setEditingContact] = useState(false);
   const [requestCode, setRequestCode] = useState<string | null>(null);
@@ -313,6 +317,13 @@ export function RequestBookingFlow({
 
   // 401 = chưa đăng nhập, là trạng thái hợp lệ ở màn công khai này → coi như khách vãng lai.
   const { data: me } = useCurrentUser();
+  /*
+   * Khách đang giữ những chuyến nào chưa trả — đọc NGAY khi mở hộp thoại. Đã chạm trần thì server
+   * sẽ từ chối mọi yêu cầu mới (`HOLD_LIMIT_REACHED`), nên nói trước khi khách mất công điền form.
+   * Khoá nằm dưới nhánh `trips`: trả xong ở tab khác thì thông báo realtime làm mới nó, và hộp thoại
+   * tự mở lại form.
+   */
+  const unpaidHolds = useUnpaidHolds(Boolean(me));
   const accountPhone = me?.phone ?? null;
   const accountPhoneVerified = Boolean(me?.phoneVerified && accountPhone);
 
@@ -329,23 +340,10 @@ export function RequestBookingFlow({
   const listing = providedListing ?? listingQ.data ?? null;
 
   /**
-   * Chuyến vừa tạo — chỉ nạp khi đang CHỜ TIỀN, và nạp ở thân component chứ không trong bước
-   * cuối vì hook không được đặt sau một `return`.
-   *
-   * Một lượt đọc phục vụ HAI chỗ: thẻ tóm tắt cần biển số + ảnh xe (phiếu gửi yêu cầu không có
-   * hai thứ đó), và khối QR cần khoản giữ chỗ. Truyền chuỗi rỗng khi chưa tới chặng đó thì
-   * `useTrip` tự tắt — không có request nào cho chuyến chưa cần.
+   * Ảnh xe cho thẻ tóm tắt — ảnh tin đăng, rồi tới ảnh thẻ xe mà nơi gọi truyền vào. Thiếu cả hai
+   * thì bỏ ảnh chứ không dựng ô xám rỗng.
    */
-  const holdTripId = receipt?.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD ? receipt.id : '';
-  const holdTrip = useTrip(holdTripId);
-
-  /**
-   * Ảnh xe cho thẻ tóm tắt — ưu tiên ảnh của CHUYẾN (chính chiếc xe đã được giữ), rồi tới ảnh
-   * tin đăng, rồi tới ảnh thẻ xe mà nơi gọi truyền vào. Ba nguồn vì ba chặng khác nhau có sẵn
-   * ba thứ khác nhau; thiếu cả ba thì bỏ ảnh chứ không dựng ô xám rỗng.
-   */
-  const vehicleThumbUrl =
-    holdTrip.data?.vehicle.imageUrl ?? listing?.mainImageUrl ?? vehicleImageUrl ?? null;
+  const vehicleThumbUrl = listing?.mainImageUrl ?? vehicleImageUrl ?? null;
 
   /*
    * Schema dựng lại khi ĐỔI NGÔN NGỮ, không phải mỗi lần render: câu báo lỗi validation là chữ
@@ -912,6 +910,17 @@ export function RequestBookingFlow({
       }
       // Có thể vừa được cấp phiên mới (passwordless) → làm mới toàn bộ cache để cả app biết.
       await queryClient.invalidateQueries();
+      /*
+       * Chuyến được NHẬN NGAY (xe "Đặt ngay") ⇒ khách sang thẳng TRANG THANH TOÁN của chuyến
+       * (`/payment/:id`): chuyển khoản VietQR và ví điện tử ở cùng một chỗ, đồng hồ đang chạy, và
+       * đó cũng là trang cổng quay về. Một màn QR trong hộp thoại thì mất khi lỡ tay đóng, và không
+       * có chỗ cho các kênh trả khác.
+       */
+      if (receipt.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD && receipt.id) {
+        onClose();
+        router.push(paymentPath.trip(receipt.id));
+        return;
+      }
       goToStep('done');
     },
     onError: (e) => {
@@ -926,6 +935,11 @@ export function RequestBookingFlow({
       }
       if (code === API_ERROR_CODE.CANNOT_BOOK_OWN_VEHICLE) {
         setBlocked('ownVehicle');
+        return;
+      }
+      if (code === API_ERROR_CODE.HOLD_LIMIT_REACHED) {
+        setSubmitHitHoldLimit(true);
+        void queryClient.invalidateQueries({ queryKey: queryKeys.trips.unpaidHolds() });
         return;
       }
       /*
@@ -1005,16 +1019,19 @@ export function RequestBookingFlow({
     onBusyChange?.(submitting || verifying);
   }, [submitting, verifying, onBusyChange]);
 
-  const isResult = step === 'done' || duplicate || blocked !== null;
+  /*
+   * Chạm trần giữ chỗ — chỉ chặn khi còn đang ĐIỀN form: màn "đã gửi" của một yêu cầu vừa thành công
+   * không được bị thay bằng lời nhắc chỉ vì lượt đọc lại sau đó thấy đủ trần. Có dữ liệu thì tin dữ
+   * liệu (trả xong là mở lại); chưa có (khách chưa có phiên) thì tin câu trả lời của server.
+   */
+  const holdLimitBlocked =
+    step !== 'done' &&
+    (unpaidHolds.data ? unpaidHolds.data.limitReached : submitHitHoldLimit);
+
+  const isResult = step === 'done' || duplicate || blocked !== null || holdLimitBlocked;
   useEffect(() => {
-    onResultChange?.(
-      isResult
-        ? receipt?.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD
-          ? 'payment'
-          : 'compact'
-        : false,
-    );
-  }, [isResult, receipt?.status, onResultChange]);
+    onResultChange?.(isResult);
+  }, [isResult, onResultChange]);
 
   /**
    * Vừa mở bảng chi tiết thì đưa nó vào tầm mắt. Bảng nằm cuối thân bước nên với một bước dài
@@ -1332,6 +1349,57 @@ export function RequestBookingFlow({
     );
   }
 
+  /*
+   * --- Đã giữ đủ số chuyến chưa thanh toán: nhắc trả, không cho đặt thêm ----------------------
+   *
+   * Việc cần làm thuộc về KHÁCH — trả tiền hoặc huỷ bớt — nên màn này đưa họ tới đúng việc đó:
+   * danh sách chuyến đang giữ (gấp nhất trước) với một nút trả cho từng chuyến, rồi lối sang
+   * "Chuyến của tôi" nơi có cả nút huỷ. Không phải một dòng lỗi cạnh nút gửi: khách cần biết vì sao
+   * và làm gì, một câu lỗi không nói được hai điều đó.
+   */
+  if (holdLimitBlocked) {
+    const limitData = unpaidHolds.data;
+    return (
+      <div className={styles.resultWrap}>
+        <div className={styles.centered}>
+          <span className={cx(styles.doneBadge, styles.warnBadge)} aria-hidden>
+            <ClockCircleOutlined />
+          </span>
+          <h3 className={styles.doneTitle}>
+            {limitData
+              ? tTrips('unpaid.limitTitle', { limit: limitData.limit })
+              : tTrips('unpaid.limitTitleFallback')}
+          </h3>
+          <p className={styles.doneText}>
+            {limitData
+              ? tTrips('unpaid.limitBodyBooking', { limit: limitData.limit })
+              : tTrips('unpaid.limitBodyFallback')}
+          </p>
+          {limitData && limitData.items.length > 0 ? (
+            <div className={styles.holdLimitList}>
+              <UnpaidHoldList items={limitData.items} onNavigate={onClose} />
+            </div>
+          ) : null}
+          <div className={cx(styles.doneActions, styles.doneActionsRow, styles.doneActionsPair)}>
+            <Button
+              size="large"
+              block
+              onClick={() => {
+                onClose();
+                router.push(ROUTES.TRIPS);
+              }}
+            >
+              {tTrips('unpaid.viewTrips')}
+            </Button>
+            <Button size="large" block onClick={onClose}>
+              {t('blocked.close')}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // --- Trạng thái trùng lặp: chiếm trọn thân hộp thoại, có hai lối đi tiếp ------------------
   if (duplicate) {
     return (
@@ -1367,11 +1435,9 @@ export function RequestBookingFlow({
   if (step === 'done') {
     const v = getValues();
     /*
-     * Chặng CHỜ TIỀN quyết định cả ba thứ ở bước cuối: tiêu đề, có hiện mã QR không, và nút
-     * chính dẫn đi đâu. Tính một lần ở đây thay vì so lại `receipt.status` ở bốn chỗ — bốn chỗ
-     * là bốn cơ hội để một chỗ bị quên và màn hình nói hai điều trái nhau.
+     * Màn này chỉ còn cho yêu cầu CHƯA được nhận (chờ chủ xe duyệt). Chuyến được nhận ngay đã
+     * sang trang thanh toán `/payment/:id` từ `onSuccess` — không có chặng chờ tiền nào ở đây.
      */
-    const awaitingHold = receipt?.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD;
     return (
       <div className={styles.resultWrap}>
         <div className={styles.centered}>
@@ -1394,19 +1460,7 @@ export function RequestBookingFlow({
               <CheckOutlined />
             </span>
           </span>
-          {/*
-            Ba chặng, ba câu. Chặng CHỜ TIỀN (xe bật "Đặt ngay" và hệ thống vừa nhận) không được
-            nói "đã gửi yêu cầu, chủ xe sẽ phản hồi": chuyến đã được nhận, đồng hồ đang chạy, và
-            việc tiếp theo thuộc về KHÁCH. Câu sai ở đây là lý do khách đóng tab rồi mất chuyến.
-          */}
-          <h3 className={styles.doneTitle}>
-            {awaitingHold ? t('done.heldTitle') : t('done.title')}
-          </h3>
-          {/*
-            Chặng chờ tiền có thêm MỘT dòng nói việc phải làm. Tiêu đề nói chỗ đã giữ; dòng này
-            nói vì sao chưa xong — hai ý khác nhau, không phải một câu bị chẻ đôi.
-          */}
-          {awaitingHold ? <p className={styles.doneLead}>{t('done.heldSubtitle')}</p> : null}
+          <h3 className={styles.doneTitle}>{t('done.title')}</h3>
           {/*
             Mã yêu cầu là thứ khách đọc cho tổng đài khi gọi hỗ trợ, nên nó phải CHÉP ĐƯỢC —
             một chuỗi 26 ký tự đọc qua điện thoại là một chuỗi đọc sai.
@@ -1417,12 +1471,7 @@ export function RequestBookingFlow({
               <CopyButton value={requestCode} label={t('done.copyRequestCode')} />
             </p>
           ) : null}
-          {/*
-            Chặng chờ tiền KHÔNG có đoạn mô tả ở đây: tiêu đề đã nói chỗ được giữ, và khối
-            `TripHoldPanel` ngay dưới nói phải làm gì cùng hệ quả khi hết giờ. Thêm một đoạn nữa
-            là nói lại lần thứ ba và đẩy mã QR xuống dưới nếp gấp.
-          */}
-          {awaitingHold ? null : <p className={styles.doneText}>{t('done.body')}</p>}
+          <p className={styles.doneText}>{t('done.body')}</p>
 
           <section className={styles.doneSummary}>
             {/*
@@ -1430,8 +1479,6 @@ export function RequestBookingFlow({
               khách nhận diện chuyến bằng mắt, và một cái tên xe nằm lẫn giữa "Dịch vụ" và
               "Nhận xe" thì phải đọc mới thấy.
 
-              Biển số và ảnh lấy từ CHUYẾN vừa tạo — phiếu gửi yêu cầu không mang hai thứ đó, và
-              cả hai chỉ tồn tại khi chỗ đã thực sự được giữ.
             */}
             <header className={styles.summaryHead}>
               <span className={styles.summaryHeadLabel}>
@@ -1441,9 +1488,6 @@ export function RequestBookingFlow({
               <span className={styles.summaryVehicle}>
                 <span className={styles.summaryVehicleText}>
                   <b>{listing?.name ?? vehicleName}</b>
-                  {holdTrip.data?.vehicle.plateNumber ? (
-                    <small>{holdTrip.data.vehicle.plateNumber}</small>
-                  ) : null}
                 </span>
                 {vehicleThumbUrl ? (
                   /* Ảnh xe từ storage ngoài, 56×40 và TRANG TRÍ (alt rỗng). `PreviewImage` sẽ
@@ -1519,12 +1563,7 @@ export function RequestBookingFlow({
             </dl>
           </section>
 
-          {/*
-            Chặng chờ tiền KHÔNG có Alert nào ở đây: `TripHoldPanel` ngay bên dưới đã mở đầu bằng
-            đúng câu đó, và hai khối nói cùng một điều chồng lên nhau chỉ đẩy mã QR xuống dưới nếp
-            gấp — thứ duy nhất khách cần thấy.
-          */}
-          {awaitingHold ? null : receipt?.autoAccepted ? (
+          {receipt?.autoAccepted ? (
             <Alert
               type="success"
               showIcon
@@ -1540,32 +1579,17 @@ export function RequestBookingFlow({
             />
           )}
 
-          {/*
-            MÃ QR NGAY TẠI ĐÂY — chỉ khi hệ thống vừa TỰ NHẬN chuyến (ADR 0044 điều 2).
-
-            Dùng lại `TripHoldPanel` của màn chi tiết chuyến chứ không vẽ QR lần thứ hai: đó là
-            nơi đã có đồng hồ đếm ngược, nút sao chép, và mọi trạng thái hoàn tiền. Hai bản QR
-            là hai chỗ để số tiền hoặc nội dung chuyển khoản trôi khỏi nhau — và một nội dung
-            sai là một khoản tiền không khớp được.
-          */}
-          {awaitingHold && receipt ? <HoldStep tripId={receipt.id} trip={holdTrip} /> : null}
-
           <div className={cx(styles.doneActions, styles.doneActionsRow)}>
-            {/*
-              Đang chờ tiền thì đích là CHUYẾN NÀY, không phải danh sách: khách cần chỗ có mã QR
-              và đồng hồ, và họ sẽ quay lại đó sau khi chuyển khoản xong.
-            */}
             <Button
               type="primary"
               size="large"
               block
               onClick={() => {
                 onClose();
-                router.push(awaitingHold && receipt ? tripPath.detail(receipt.id) : ROUTES.TRIPS);
+                router.push(ROUTES.TRIPS);
               }}
             >
-              {awaitingHold ? <ClockCircleOutlined aria-hidden /> : null}
-              {awaitingHold ? t('done.openHold') : t('done.myTrips')}
+              {t('done.myTrips')}
             </Button>
             {/*
               Hỏi thêm chủ xe là việc RẤT hay xảy ra ngay sau khi gửi (giao xe ở đâu, có giao
@@ -2240,49 +2264,5 @@ export function RequestBookingFlow({
         </div>
       </div>
     </div>
-  );
-}
-
-/**
- * KHỐI MÃ QR ngay trong bước cuối của luồng đặt xe — ADR 0039 điều 1.
- *
- * Vì sao nạp lại chuyến thay vì đọc từ `receipt`: phiếu gửi yêu cầu chỉ mang id và trạng thái,
- * còn khoản giữ chỗ (mã `XPH…`, số tiền, hạn, tài khoản nhận) thuộc về chuyến. Nhét chúng vào
- * phiếu nghĩa là hai endpoint cùng mô tả một khoản tiền — và chỗ nào lệch thì khách quét ra một
- * nội dung chuyển khoản không khớp được.
- *
- * Dùng lại `TripHoldPanel` của màn chi tiết chuyến: đồng hồ đếm ngược, nút sao chép tài khoản/số
- * tiền/nội dung và mọi trạng thái hoàn tiền đã nằm sẵn ở đó.
- */
-function HoldStep({
-  tripId,
-  trip,
-}: {
-  tripId: string;
-  /** Kết quả nạp do bước cuối truyền xuống — một lượt đọc dùng cho cả thẻ tóm tắt lẫn khối này. */
-  trip: ReturnType<typeof useTrip>;
-}) {
-  const t = useTranslations('BookingRequests.flow');
-
-  if (trip.isPending) return <Skeleton active paragraph={{ rows: 6 }} />;
-
-  /*
-   * Không nạp được thì KHÔNG im lặng: khách vừa được báo là chỗ đã giữ và đồng hồ đang chạy, nên
-   * một khoảng trống ở đây là cách chắc chắn để họ bỏ đi mà không trả tiền. Chỉ đường sang màn
-   * chuyến, nơi cùng khối đó được nạp lại.
-   */
-  if (!trip.data?.hold) {
-    return (
-      <Alert type="warning" showIcon className={styles.doneNote} title={t('done.holdLoadFailed')} />
-    );
-  }
-
-  return (
-    <TripHoldPanel
-      hold={trip.data.hold}
-      tripId={tripId}
-      tripTotalAmount={trip.data.estimate?.fees?.customerTotalAmount ?? null}
-      payAtHandoverAmount={trip.data.estimate?.fees?.payAtPickupAmount ?? null}
-    />
   );
 }

@@ -272,6 +272,20 @@ function commissionEquivalent(user: AuthScope | null | undefined, pathname: stri
 }
 
 /**
+ * Trang THANH TOÁN của site partner — trang chọn kênh trả một hoá đơn gói (`/payment/:invoiceId`)
+ * và trang quay về cũ của cổng (`/payment-return`). Cả hai đúng cho MỌI tuyến và không có khung:
+ * gian hàng đang nợ bước thanh toán đầu tiên (ADR 0040) trả tiền ngay tại đây, và một trang ép họ
+ * về `/onboarding` giữa chừng là mất luôn lượt vừa trả. Server mới gác dữ liệu (hoá đơn và lượt chỉ
+ * đọc được trong phạm vi gian hàng của người gọi).
+ */
+export function isPartnerPaymentPage(path: string): boolean {
+  const pathname = pathOnly(path);
+  return (
+    pathname === ROUTES.MANAGE.PAYMENT_RETURN || pathname.startsWith(`${ROUTES.MANAGE.PAYMENT}/`)
+  );
+}
+
+/**
  * Người này có được ở lại trang `path` của site partner không — trả đích cần chuyển tới, hoặc
  * `null`. MỘT hàm cho `AppShell` (gõ thẳng URL) và cho đích sau đăng nhập (`next`).
  */
@@ -286,7 +300,7 @@ export function partnerPageRedirect(
    * toán đầu tiên phải thấy kết quả của chính lượt vừa trả, không bị đẩy về `/onboarding` giữa chừng.
    * Server mới gác dữ liệu (lượt chỉ đọc được trong phạm vi gian hàng của người gọi).
    */
-  if (pathname === ROUTES.MANAGE.PAYMENT_RETURN) return null;
+  if (isPartnerPaymentPage(pathname)) return null;
 
   switch (resolvePartnerTrack(user)) {
     case PARTNER_TRACK.NONE:

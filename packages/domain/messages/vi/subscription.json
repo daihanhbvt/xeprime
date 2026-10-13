@@ -110,7 +110,9 @@
     "statusWaiting": "Đang chờ tiền về. Chuyển khoản theo đúng mã bên dưới — gói mở tự động khi XePrime nhận được tiền.",
     "statusPartial": "Đã nhận một phần. Chuyển nốt số còn thiếu theo đúng mã bên dưới.",
     "buying": "Gói đang mua",
-    "period": "Áp dụng {from} → {to}"
+    "period": "Áp dụng {from} → {to}",
+    "remainingLabel": "Còn phải chuyển",
+    "payNow": "Thanh toán"
   },
   "upgrade": {
     "title": "Các bước nâng cấp gian hàng",
@@ -161,5 +163,19 @@
     "daysLeft": "{days, plural, other {Còn # ngày}}",
     "grace": "Đang trong thời gian ân hạn",
     "lapsed": "Đã hết hạn"
+  },
+  "checkout": {
+    "back": "Quay lại",
+    "title": "Thanh toán gói dịch vụ",
+    "notFoundTitle": "Không tìm thấy hoá đơn",
+    "notFoundBody": "Hoá đơn này không tồn tại hoặc không thuộc gian hàng của bạn.",
+    "loadErrorTitle": "Chưa tải được hoá đơn",
+    "backHome": "Về trang quản lý",
+    "amountLabel": "Số tiền cần thanh toán",
+    "paidTitle": "Gói đã được kích hoạt",
+    "enterManage": "Vào trang quản lý",
+    "voidTitle": "Hoá đơn này không còn nhận thanh toán",
+    "voidBody": "Hoá đơn {code} đã hết hạn hoặc đã được thay bằng hoá đơn mới. Vui lòng chọn gói lại.",
+    "pickAgain": "Chọn gói"
   }
 }

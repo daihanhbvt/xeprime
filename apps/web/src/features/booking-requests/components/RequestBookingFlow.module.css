@@ -475,14 +475,6 @@
   color: var(--xp-color-text);
 }
 
-/* Một dòng dẫn dưới tiêu đề — nói VIỆC CẦN LÀM, nên đậm hơn ghi chú và nhạt hơn tiêu đề. */
-.doneLead {
-  margin: 0 0 var(--xp-space-md);
-  font-size: var(--xp-font-size);
-  line-height: var(--xp-line-height);
-  color: var(--xp-color-text-secondary);
-}
-
 /*
  * Mã yêu cầu là một THẺ chép được, không phải một dòng chữ mờ: khách đọc nó cho tổng đài, và
  * viền + nền nhạt là thứ nói cho mắt biết "đây là một giá trị, không phải lời dẫn".
@@ -642,6 +634,24 @@
   min-width: 0;
   padding-inline: var(--xp-space-xs);
   font-size: var(--xp-font-size-sm);
+}
+
+/* Màn có HAI lối đi tiếp (nhắc thanh toán): hai cột thay vì ba. */
+.doneActionsPair {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/*
+ * Danh sách chuyến chưa trả trong màn chặn — khung nhạt, căn TRÁI (vỏ `.centered` căn giữa chữ),
+ * để mắt đọc từng hàng như một bảng chứ không như một đoạn văn.
+ */
+.holdLimitList {
+  margin: var(--xp-space-md) 0 var(--xp-space-sm);
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-container);
+  text-align: left;
 }
 
 /* Ba nút cạnh nhau ở overlay hẹp thì chữ vỡ — xuống hàng dọc trước khi tới mức đó. */

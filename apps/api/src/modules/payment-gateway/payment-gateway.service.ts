@@ -15,7 +15,7 @@ import {
   isAwaitingPayment,
   isHoldPastDue,
   isSubscriptionInvoicePayable,
-  PARTNER_PAYMENT_RETURN_PATH,
+  PAYMENT_PAGE_PATH,
   PAYMENT_GATEWAY_AMOUNT_LIMITS,
   PAYMENT_GATEWAY_CLIENT,
   PAYMENT_GATEWAY_EXPIRY_MARGIN_MINUTES,
@@ -23,7 +23,6 @@ import {
   PAYMENT_GATEWAY_NOT_FOUND_GRACE_MINUTES,
   PAYMENT_GATEWAY_ORDER_TTL_MINUTES,
   PAYMENT_GATEWAY_PROVIDER,
-  PAYMENT_GATEWAY_QUERY_MIN_INTERVAL_SECONDS,
   PAYMENT_ORDER_APPLY_OUTCOME,
   PAYMENT_ORDER_RESULT_SOURCE,
   PAYMENT_ORDER_REVIEW_REASON,
@@ -32,7 +31,6 @@ import {
   PAYMENT_ORDER_TARGET,
   PAYMENT_RETURN_PARAM,
   PAYMENT_NATIVE_TRIP_RETURN_PATH,
-  PAYMENT_RETURN_TRIP_PATH,
   type AppLocale,
   type BookingHoldStatus,
   type PaymentGatewayClient,
@@ -116,6 +114,8 @@ export type RecordOutcome =
   | 'order_not_found'
   | 'amount_mismatch'
   | 'pending'
+  /** Cổng ký xác nhận chưa có giao dịch (VNPAY `91`) — trạng thái giữ nguyên, ghi `no_transaction_at`. */
+  | 'no_transaction'
   | 'recorded_failure'
   | 'already_final'
   | 'succeeded'
@@ -129,6 +129,7 @@ export type SettleResult = 'applied' | 'recorded' | 'no_change' | 'unreachable' 
 /** Kết quả "đã đổi trạng thái" — mọi giá trị còn lại là không có gì mới. */
 const CHANGING_OUTCOMES: readonly RecordOutcome[] = [
   'succeeded',
+  'no_transaction',
   'recorded_failure',
   'amount_mismatch',
   'flagged',
@@ -270,6 +271,9 @@ export class PaymentGatewayService {
           client: request.client,
           amount: p.amount,
           checkoutUrl: { not: null },
+          // Cổng đã xác nhận phiên này không có giao dịch (khách bấm Huỷ ở cổng) — không đưa lại
+          // đúng liên kết vừa bị huỷ; mở phiên MỚI.
+          noTransactionAt: null,
           expiresAt: { gt: new Date(now.getTime() + REUSE_MIN_REMAINING_MS) },
         },
         orderBy: { createdAt: 'desc' },
@@ -398,13 +402,13 @@ export class PaymentGatewayService {
       // Không dấu, không ký tự đặc biệt — yêu cầu của VNPAY cho `vnp_OrderInfo`.
       orderInfo: `Thanh toan goi XePrime ${invoice.code}`,
       expiresAt,
-      // Lưu ý: `/payment-return` cần phiên partner — trình duyệt của app native không có cookie.
+      // Lưu ý: trang thanh toán `/payment/:invoiceId` cần phiên partner — trình duyệt của app native không có cookie.
       // App Partner trả gói bằng IAP, không mở cổng; nếu sau này mở thì cần trang quay về công khai
       // như `PAYMENT_NATIVE_TRIP_RETURN_PATH` của site khách.
       returnUrl: (orderId) =>
         withNativeFlag(
-          `${this.realms.webUrlFor(ACCOUNT_REALM.PARTNER)}${PARTNER_PAYMENT_RETURN_PATH}` +
-            `?${PAYMENT_RETURN_PARAM.ORDER}=${orderId}`,
+          `${this.realms.webUrlFor(ACCOUNT_REALM.PARTNER)}${PAYMENT_PAGE_PATH}/` +
+            `${encodeURIComponent(invoice.id)}?${PAYMENT_RETURN_PARAM.ORDER}=${orderId}`,
           client,
         ),
     };
@@ -475,14 +479,17 @@ export class PaymentGatewayService {
       orderInfo: `Tien giu cho XePrime ${hold.code}`,
       // Phiên của cổng kết thúc TRƯỚC hạn giữ chỗ — VNPAY tự từ chối một lượt trả sau khi chỗ đã nhả.
       expiresAt: capExpiry(now, hold.expiresAt),
-      // App native: trình duyệt của app không có cookie phiên ⇒ trang chuyến (cần đăng nhập) kẹt.
-      // Quay về trang CÔNG KHAI chỉ chuyển tiếp sang deep link của app.
+      /*
+       * Web: quay về TRANG THANH TOÁN của chuyến (`/payment/:id`) — nơi khách vừa chọn kênh trả.
+       * App native: trình duyệt của app không có cookie phiên ⇒ trang thanh toán (cần đăng nhập) kẹt.
+       * Quay về trang CÔNG KHAI chỉ chuyển tiếp sang deep link của app.
+       */
       returnUrl: (orderId) =>
         client === PAYMENT_GATEWAY_CLIENT.NATIVE
           ? `${this.realms.webUrlFor(ACCOUNT_REALM.CUSTOMER)}${PAYMENT_NATIVE_TRIP_RETURN_PATH}` +
             `?${PAYMENT_RETURN_PARAM.NATIVE_TRIP}=${encodeURIComponent(hold.bookingRequestId)}` +
             `&${PAYMENT_RETURN_PARAM.TRIP_ORDER}=${orderId}`
-          : `${this.realms.webUrlFor(ACCOUNT_REALM.CUSTOMER)}${PAYMENT_RETURN_TRIP_PATH}/` +
+          : `${this.realms.webUrlFor(ACCOUNT_REALM.CUSTOMER)}${PAYMENT_PAGE_PATH}/` +
             `${encodeURIComponent(hold.bookingRequestId)}?${PAYMENT_RETURN_PARAM.TRIP_ORDER}=${orderId}`,
     };
   }
@@ -603,7 +610,8 @@ export class PaymentGatewayService {
    * Hỏi cổng trạng thái của một lượt còn chờ — server gọi đi, phản hồi xác minh ở adapter.
    *
    * Nhịp được CLAIM bằng `updateMany` có điều kiện trên `last_queried_at`: hai tab, bộ quét và người
-   * trực cùng hỏi vẫn chỉ ra một request sang cổng mỗi `PAYMENT_GATEWAY_QUERY_MIN_INTERVAL_SECONDS`.
+   * trực cùng hỏi vẫn chỉ ra một request sang cổng mỗi `queryMinIntervalMs` — nhịp do TỪNG CỔNG đặt
+   * (VNPAY từ chối lượt hỏi trùng trong 5 phút; hỏi dày hơn là không bao giờ nhận được câu trả lời).
    */
   private async refreshFromProvider(order: SettleRow, force: boolean): Promise<SettleResult> {
     const now = Date.now();
@@ -611,7 +619,7 @@ export class PaymentGatewayService {
     const provider = order.provider as PaymentGatewayProvider;
     if (!this.config.isConfigured(provider)) return 'unreachable';
 
-    const threshold = new Date(now - PAYMENT_GATEWAY_QUERY_MIN_INTERVAL_SECONDS * 1000);
+    const threshold = new Date(now - this.adapters[provider].queryMinIntervalMs);
     const claimed = await this.prisma.paymentGatewayOrder.updateMany({
       where: {
         id: order.id,
@@ -713,7 +721,13 @@ export class PaymentGatewayService {
     await this.lockOrder(tx, orderId);
     const current = await tx.paymentGatewayOrder.findUniqueOrThrow({
       where: { id: orderId },
-      select: { amount: true, status: true, reviewStatus: true, expiresAt: true },
+      select: {
+        amount: true,
+        status: true,
+        reviewStatus: true,
+        expiresAt: true,
+        noTransactionAt: true,
+      },
     });
     const now = new Date();
     const resolved = current.reviewStatus === PAYMENT_ORDER_REVIEW_STATUS.RESOLVED;
@@ -727,13 +741,39 @@ export class PaymentGatewayService {
 
     switch (result.outcome) {
       case 'pending':
+        /*
+         * Cổng đã THẤY giao dịch (đang dở — vd khách mở lại liên kết và đang nhập OTP): lời xác nhận
+         * "không có giao dịch" trước đó hết đúng, trang phải quay lại chờ thay vì mời mở phiên mới.
+         */
+        if (current.noTransactionAt) {
+          await tx.paymentGatewayOrder.update({
+            where: { id: orderId },
+            data: { noTransactionAt: null },
+          });
+        }
         return done('pending');
 
       case 'not_found': {
         const graceOver =
           now.getTime() >
           current.expiresAt.getTime() + PAYMENT_GATEWAY_NOT_FOUND_GRACE_MINUTES * MINUTE_MS;
-        if (current.status !== PAYMENT_ORDER_STATUS.PENDING || !graceOver) return 'pending';
+        if (current.status !== PAYMENT_ORDER_STATUS.PENDING) return 'pending';
+        if (!graceOver) {
+          /*
+           * Cổng KÝ XÁC NHẬN chưa có giao dịch nào — khách đã huỷ ở trang cổng, hoặc chưa trả. ADR 0058
+           * chỉ cho lượt hết hạn sau ân hạn, nên trạng thái GIỮ NGUYÊN; chỉ ghi lại lời xác nhận để
+           * trang thanh toán thôi quay "đang chờ" và cho mở phiên mới (`no_transaction_at`). Tiền tới
+           * muộn trên lượt này vẫn đi đúng đường: thành công thắng mọi thứ chưa thành công.
+           */
+          if (!current.noTransactionAt) {
+            await tx.paymentGatewayOrder.update({
+              where: { id: orderId },
+              data: { ...evidenceOf(result, source), noTransactionAt: now },
+            });
+            return done('no_transaction');
+          }
+          return 'pending';
+        }
         await tx.paymentGatewayOrder.update({
           where: { id: orderId },
           data: { ...evidenceOf(result, source), status: PAYMENT_ORDER_STATUS.EXPIRED, resultAt: now },
@@ -1141,12 +1181,17 @@ export class PaymentGatewayService {
 }
 
 /** Bằng chứng gần nhất trên dòng lượt — lịch sử đầy đủ nằm ở `payment_gateway_order_events`. */
+/**
+ * Bằng chứng của MỘT kết quả cổng. Xoá luôn `no_transaction_at`: mọi kết quả khác "không có giao
+ * dịch" đều làm lời xác nhận đó hết đúng — và CHECK ở DB đòi lượt rời `pending` phải không mang nó.
+ */
 function evidenceOf(result: ProviderPaymentResult, source: PaymentOrderResultSource) {
   return {
     providerResultCode: result.resultCode.slice(0, 20),
     providerMessage: result.message,
     resultSource: source,
     resultJson: result.raw as Prisma.InputJsonValue,
+    noTransactionAt: null,
   };
 }
 

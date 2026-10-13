@@ -10,6 +10,9 @@ type Schemas = components['schemas'];
 
 export type CustomerTrip = Schemas['CustomerTripListItemDto'];
 export type CustomerTripDetail = Schemas['CustomerTripDetailDto'];
+/** Lời nhắc thanh toán: chuyến đang giữ chưa trả + đã chạm trần giữ chỗ chưa. */
+export type CustomerUnpaidHolds = Schemas['CustomerUnpaidHoldsDto'];
+export type CustomerUnpaidHold = Schemas['CustomerUnpaidHoldDto'];
 
 /** Bảng kê giá tạm tính của chuyến chưa có đơn — xem `CustomerTripEstimateDto`. */
 export type CustomerTripEstimate = Schemas['CustomerTripEstimateDto'];

@@ -29,10 +29,17 @@ const submit = vi.hoisted(() => ({
   error: null,
 }));
 const prepare = vi.hoisted(() => ({ fn: vi.fn() }));
+const photo = vi.hoisted(() => ({
+  data: undefined as { url: string } | undefined,
+  isPending: false,
+  isError: false,
+  isStale: false,
+  refetch: vi.fn(),
+}));
 
 vi.mock('../hooks/use-driver-licence', () => ({
   useDriverLicence: () => query,
-  useDriverLicenceImage: () => ({ data: undefined }),
+  useDriverLicenceImage: () => photo,
   useRequestDriverLicenceReview: () => review,
   useSubmitDriverLicence: () => submit,
 }));
@@ -81,6 +88,11 @@ beforeEach(() => {
   submit.mutate.mockReset();
   submit.isPending = false;
   prepare.fn.mockReset();
+  photo.data = undefined;
+  photo.isPending = false;
+  photo.isError = false;
+  photo.isStale = false;
+  photo.refetch.mockReset();
 });
 
 afterEach(cleanup);
@@ -108,6 +120,44 @@ describe('DriverLicenceVerifier', () => {
     expect(screen.getByText('790123456789')).toBeTruthy();
     expect(screen.getByText('Ô tô')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Cập nhật bằng mới' })).toBeTruthy();
+  });
+
+  it('đã xác thực: ảnh bằng nằm mờ trong khung, bấm mới mở trình xem — không có ảnh thứ hai dưới nền', async () => {
+    query.data = { verified: BASE, latest: BASE };
+    photo.data = { url: 'https://r2.test/l1.jpg' };
+    const { container } = renderVerifier();
+    const frame = screen.getByRole('button', { name: 'Xem ảnh bằng lái' });
+    expect(frame.querySelector('img')?.getAttribute('src')).toBe('https://r2.test/l1.jpg');
+    expect(document.querySelector('.ant-image-preview')).toBeNull();
+
+    fireEvent.click(frame);
+    await waitFor(() => expect(document.querySelector('.ant-image-preview')).not.toBeNull());
+    // URL còn mới: mở ngay, không xin lại. Trong trang vẫn chỉ có MỘT ảnh — ảnh mờ trong khung.
+    expect(photo.refetch).not.toHaveBeenCalled();
+    expect(container.querySelectorAll('img')).toHaveLength(1);
+  });
+
+  it('URL ảnh đã cũ: xin URL mới rồi mới mở trình xem', async () => {
+    query.data = { verified: BASE, latest: BASE };
+    photo.data = { url: 'https://r2.test/l1.jpg' };
+    photo.isStale = true;
+    photo.refetch.mockResolvedValue({ isSuccess: true });
+    renderVerifier();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Xem ảnh bằng lái' }));
+    expect(photo.refetch).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(document.querySelector('.ant-image-preview')).not.toBeNull());
+  });
+
+  it('không tải được ảnh: khung báo lỗi, bấm là thử lại chứ không mở trình xem trống', () => {
+    query.data = { verified: BASE, latest: BASE };
+    photo.isError = true;
+    renderVerifier();
+    expect(screen.getByText('Chưa tải được ảnh')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tải lại ảnh bằng lái' }));
+    expect(photo.refetch).toHaveBeenCalledTimes(1);
+    expect(document.querySelector('.ant-image-preview')).toBeNull();
   });
 
   it('đang đọc ảnh: tiến trình nằm TRONG khung cũ (lời mời + giấy tờ chấp nhận vẫn còn)', () => {
