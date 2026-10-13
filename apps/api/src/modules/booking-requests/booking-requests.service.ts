@@ -632,6 +632,12 @@ export class BookingRequestsService {
      * tài khoản gian hàng".
      */
     await this.assertCanBook(effectiveUserId, vehicle.tenantId, dto.customerPhone);
+    /*
+     * Khách đang giữ đủ số chỗ chưa trả (\`HOLD_MAX_OPEN_PER_CUSTOMER\`) ⇒ KHÔNG gửi thêm (13/10/2026).
+     * Cùng chỗ đứng với cổng tài khoản ở trên vì cùng lý do: chỉ ở đây mới biết người gửi là ai, và
+     * chưa có tác dụng phụ nào (yêu cầu, lượt mã, thông báo cho gian hàng) để phải dọn.
+     */
+    await this.holds.assertBelowHoldQuota(effectiveUserId);
     if (customerUserId) {
       await this.driverLicences.assertCanDriveForTrip({ userId: customerUserId, ...licenceTrip });
     }

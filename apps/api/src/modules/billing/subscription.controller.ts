@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   ACCOUNT_REALM,
@@ -92,6 +92,23 @@ export class SubscriptionController {
   @ApiOkResponse({ type: PendingSubscriptionInvoiceDto })
   pendingInvoice(@CurrentTenant() tenant: TenantContext): Promise<PendingSubscriptionInvoiceDto> {
     return this.billing.pendingInvoiceForTenant(tenant.tenantId);
+  }
+
+  /**
+   * MỘT hoá đơn của chính gian hàng — trang thanh toán `/payment/:invoiceId` đọc nó để nói đúng
+   * kết cục (chờ / đã trả / đã huỷ). Khai SAU `invoices/pending` để đường tĩnh đó không bị
+   * `:id` nuốt mất.
+   */
+  @Get('invoices/:id')
+  @RequirePermissions(PERMISSION.SUBSCRIPTION_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.SUBSCRIPTION_STATUS_VIEW)
+  @ApiOperation({ summary: 'Một hoá đơn gói của gian hàng (mọi trạng thái)' })
+  @ApiOkResponse({ type: SubscriptionInvoiceDto })
+  invoice(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('id') id: string,
+  ): Promise<SubscriptionInvoiceDto> {
+    return this.billing.invoiceForTenant(tenant.tenantId, id);
   }
 
   @Post('purchase')

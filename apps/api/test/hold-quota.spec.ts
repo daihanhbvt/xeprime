@@ -21,7 +21,11 @@ import { VehicleSettingsService } from '../src/modules/vehicle-settings/vehicle-
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { giveTenantPlan } from './helpers/billing-fixture';
 import { releaseWalletObligations } from './helpers/wallet-cleanup';
-import { makeBookingRequestsService, makeNotificationService } from './helpers/service-factory';
+import {
+  makeBookingHoldsService,
+  makeBookingRequestsService,
+  makeNotificationService,
+} from './helpers/service-factory';
 
 /**
  * TRẦN SỐ CHỖ CHƯA THANH TOÁN của một khách — trên PostgreSQL THẬT (ADR 0045 điều 6).
@@ -204,7 +208,10 @@ const maybe = (name: string, fn: () => Promise<void>) =>
   });
 
 describe('Trần chỗ chưa thanh toán (ADR 0045 điều 6)', () => {
-  maybe('đúng trần thì còn nhận được; vượt trần thì HOLD_LIMIT_REACHED', async () => {
+  maybe('đúng trần thì còn nhận được; vượt trần thì HOLD_LIMIT_REACHED ở lượt DUYỆT', async () => {
+    // Yêu cầu thứ tư gửi TRƯỚC khi chạm trần (lúc đó cổng ở đường gửi còn cho qua) — đúng ca hai
+    // lượt gửi lọt qua cổng sớm, và trần dưới khoá ở đường duyệt phải là chốt chặn cuối cùng.
+    const overflow = await submit(HOLD_MAX_OPEN_PER_CUSTOMER);
     for (let i = 0; i < HOLD_MAX_OPEN_PER_CUSTOMER; i += 1) {
       const id = await submit(i);
       await requests.approve(tenantId, ownerId, id, {});
@@ -213,7 +220,6 @@ describe('Trần chỗ chưa thanh toán (ADR 0045 điều 6)', () => {
       HOLD_MAX_OPEN_PER_CUSTOMER,
     );
 
-    const overflow = await submit(HOLD_MAX_OPEN_PER_CUSTOMER);
     await expect(requests.approve(tenantId, ownerId, overflow, {})).rejects.toMatchObject({
       response: {
         code: API_ERROR_CODE.HOLD_LIMIT_REACHED,
@@ -238,6 +244,44 @@ describe('Trần chỗ chưa thanh toán (ADR 0045 điều 6)', () => {
       where: { id: overflow },
     });
     expect(stillPending.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
+  });
+
+  /*
+   * CỔNG Ở ĐƯỜNG GỬI (13/10/2026): đã giữ đủ trần thì KHÔNG gửi thêm yêu cầu nào. Trước đây yêu cầu
+   * vẫn vào, xe "Đặt ngay" lặng lẽ không tự nhận được, và khách thấy "chờ xác nhận" mà không biết vì
+   * sao — việc cần làm (trả tiền / huỷ bớt) thuộc về KHÁCH, nên câu trả lời phải đến với khách.
+   */
+  maybe('đã giữ đủ trần ⇒ GỬI yêu cầu mới bị từ chối, không để lại yêu cầu nào', async () => {
+    for (let i = 0; i < HOLD_MAX_OPEN_PER_CUSTOMER; i += 1) {
+      const id = await submit(i);
+      await requests.approve(tenantId, ownerId, id, {});
+    }
+
+    await expect(submit(HOLD_MAX_OPEN_PER_CUSTOMER)).rejects.toMatchObject({
+      response: {
+        code: API_ERROR_CODE.HOLD_LIMIT_REACHED,
+        details: { openHolds: HOLD_MAX_OPEN_PER_CUSTOMER, limit: HOLD_MAX_OPEN_PER_CUSTOMER },
+      },
+    });
+    expect(
+      await prisma.bookingRequest.count({
+        where: { vehicleId: vehicleIds[HOLD_MAX_OPEN_PER_CUSTOMER] },
+      }),
+    ).toBe(0);
+  });
+
+  /** Lời nhắc thanh toán đọc CÙNG vị từ với trần — gấp nhất trước, đủ số đang chặn khách. */
+  maybe('danh sách chuyến chưa trả khớp đúng số đang chặn, gấp nhất trước', async () => {
+    for (let i = 0; i < HOLD_MAX_OPEN_PER_CUSTOMER; i += 1) {
+      const id = await submit(i);
+      await requests.approve(tenantId, ownerId, id, {});
+    }
+    const holds = makeBookingHoldsService(asService);
+    const open = await holds.listOpenForCustomer(customerUserId);
+    expect(open).toHaveLength(HOLD_MAX_OPEN_PER_CUSTOMER);
+    const deadlines = open.map((row) => row.expiresAt.getTime());
+    expect([...deadlines].sort((a, b) => a - b)).toEqual(deadlines);
+    expect(open.every((row) => row.bookingRequest.vehicle.name.length > 0)).toBe(true);
   });
 
   /*

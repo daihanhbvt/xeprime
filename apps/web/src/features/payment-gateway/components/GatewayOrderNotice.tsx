@@ -103,6 +103,26 @@ function OrderAlert({ order }: { order: PaymentOrder }) {
 
   switch (order.viewState as PaymentOrderViewState) {
     case PAYMENT_ORDER_VIEW_STATE.AWAITING:
+      /*
+       * Cổng đã KÝ XÁC NHẬN chưa có giao dịch nào — thường là khách vừa bấm Huỷ ở trang cổng. Không
+       * quay "đang chờ" nữa (không có gì để chờ), không mời mở lại liên kết vừa bị huỷ; các kênh trả
+       * ở ngay bên dưới, kể cả ví đó (server mở phiên MỚI). Trạng thái vẫn `pending` (ADR 0058), nên
+       * nếu tiền vẫn về trên phiên này thì trang tự đổi như thường.
+       */
+      if (order.noTransaction) {
+        return (
+          <Alert
+            type="warning"
+            showIcon
+            title={t('noTransactionTitle', { provider })}
+            description={
+              <>
+                {t('noTransactionBody', { provider })} {sandboxTag}
+              </>
+            }
+          />
+        );
+      }
       // Không còn liên kết dùng lại ⇒ phiên đã hết hạn dùng; tiền trả muộn (nếu có) vẫn tự ghi nhận.
       return order.checkoutUrl ? (
         <Alert
@@ -112,7 +132,7 @@ function OrderAlert({ order }: { order: PaymentOrder }) {
           title={t('awaitingTitle', { provider, amount })}
           description={
             <>
-              {t('awaitingBody')} {sandboxTag}
+              {t('awaitingBody', { provider })} {sandboxTag}
             </>
           }
           action={

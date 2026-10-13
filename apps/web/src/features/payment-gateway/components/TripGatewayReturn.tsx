@@ -9,12 +9,13 @@ import { PAYMENT_SURFACE } from '../types';
 import { GatewayOrderNotice } from './GatewayOrderNotice';
 
 /**
- * Trang chuyến là TRANG QUAY VỀ của tiền giữ chỗ qua cổng: server dựng `returnUrl` =
- * `/trips/:id?paymentOrder=<lượt>` (ADR 0058). Khối này đọc ĐÚNG MỘT tham số — ID của lượt — rồi hỏi
- * server; mọi tham số khác mà cổng gắn lên URL bị bỏ qua.
+ * Khối "kết quả lượt cổng" của tiền giữ chỗ (ADR 0058). Server dựng `returnUrl` =
+ * `/payment/:id?paymentOrder=<lượt>` — trang thanh toán; liên kết CŨ (lượt mở trước 13/10/2026)
+ * quay về `/trips/:id?paymentOrder=…`, nên trang chuyến cũng gắn khối này. Nó đọc ĐÚNG MỘT tham
+ * số — ID của lượt — rồi hỏi server; mọi tham số khác mà cổng gắn lên URL bị bỏ qua.
  *
  * Lượt rời chặng chờ ⇒ làm mới chuyến: tiền đã vào thì khoản giữ chỗ thành `paid` và chuyến có đơn,
- * và khối tiền giữ chỗ phía dưới phải nói đúng điều đó ngay, không đợi nhịp hỏi 20 giây của nó.
+ * và khối tiền giữ chỗ phía dưới phải nói đúng điều đó ngay, không đợi nhịp hỏi lại của nó.
  */
 export function TripGatewayReturn({ tripId }: { tripId: string }) {
   const params = useSearchParams();

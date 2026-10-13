@@ -355,7 +355,7 @@ describe('Mở phiên cho tiền giữ chỗ', () => {
       expect(momo.created[0]!.amount).toBe(60000);
       // App native: trang web quay về mang cờ để hiện nút mở lại app.
       expect(momo.created[0]!.returnUrl).toBe(
-        `${SPEC_WEB.customer}/trips/${requestId}?paymentOrder=${order.id}&app=1`,
+        `${SPEC_WEB.customer}/payment/${requestId}?paymentOrder=${order.id}&app=1`,
       );
 
       const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });

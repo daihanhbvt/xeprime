@@ -1,0 +1,41 @@
+/* Trang trần — cùng thanh trên cùng với onboarding để người đang trả bước đầu thấy liền mạch. */
+.page {
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  background: var(--xp-color-bg);
+}
+
+.topbar {
+  display: flex;
+  height: 64px;
+  flex-shrink: 0;
+  align-items: center;
+  padding-inline: var(--xp-space-lg);
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+  background: var(--xp-color-bg-container);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+}
+
+.main {
+  flex: 1;
+}
+
+.notes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.notes li::marker {
+  color: var(--xp-color-warning);
+}

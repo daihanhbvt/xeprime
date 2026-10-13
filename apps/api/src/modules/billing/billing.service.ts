@@ -1220,6 +1220,30 @@ export class BillingService {
   }
 
   /**
+   * MỘT hoá đơn gói của gian hàng — nguồn của trang thanh toán `/payment/:invoiceId`.
+   *
+   * Trang đó phải nói đúng kết cục của chính hoá đơn trên đường dẫn ở MỌI trạng thái: đang chờ
+   * (mời trả), đã trả (gói đã bật), đã huỷ/hết hạn (mời mua lại). `invoices/pending` chỉ trả lời
+   * câu "đang nợ gì" — trả xong là `null`, và trang không phân biệt được "vừa trả" với "đã huỷ".
+   *
+   * Lọc theo `tenantId` của PHẠM VI người gọi trong cùng câu truy vấn: id hoá đơn của gian hàng
+   * khác trả 404 y như id không tồn tại — không lộ việc nó có thật.
+   */
+  async invoiceForTenant(tenantId: string, invoiceId: string): Promise<SubscriptionInvoiceDto> {
+    const row = await this.prisma.subscriptionInvoice.findFirst({
+      where: { id: invoiceId, tenantId },
+      select: INVOICE_SELECT,
+    });
+    if (!row) {
+      throw new NotFoundException({
+        code: API_ERROR_CODE.NOT_FOUND,
+        message: 'Không tìm thấy hoá đơn gói',
+      });
+    }
+    return toInvoiceDto(row);
+  }
+
+  /**
    * HOÁ ĐƠN GÓI ĐANG CHỜ TIỀN của gian hàng — `null` khi không có (ADR 0040).
    *
    * Endpoint riêng thay vì để web lọc trang đầu của `listInvoicesForTenant`, vì đây là thứ màn

@@ -21,6 +21,7 @@ import {
   VNPAY_COMMAND,
   VNPAY_CURRENCY,
   VNPAY_ORDER_TYPE,
+  VNPAY_QUERY_DUPLICATE_WINDOW_MS,
   VNPAY_QUERY_NOT_FOUND,
   VNPAY_QUERY_SERVER_IP,
   VNPAY_TRANSACTION_TYPE_PAYMENT,
@@ -50,6 +51,8 @@ export const VNPAY_IPN_PATH = '/payment-gateway/vnpay/ipn';
 @Injectable()
 export class VnpayAdapter implements PaymentGatewayAdapter {
   readonly provider = PAYMENT_GATEWAY_PROVIDER.VNPAY;
+  /** Cửa sổ chống trùng của `querydr` cộng một nhịp đệm — hỏi sớm hơn chỉ nhận `94`. */
+  readonly queryMinIntervalMs = VNPAY_QUERY_DUPLICATE_WINDOW_MS + 15_000;
 
   constructor(private readonly config: PaymentGatewayConfig) {}
 

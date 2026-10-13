@@ -2,9 +2,12 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
-import { SUBSCRIPTION_INVOICE_STATUS } from '@xeprime/types';
+import { API_ERROR_CODE, SUBSCRIPTION_INVOICE_STATUS } from '@xeprime/types';
+import { useBadgeRealtime } from '@/features/badges/BadgeRealtimeProvider';
+import { getErrorCode } from '@/services/api-client';
 import { queryKeys } from '@/services/query-keys';
 import {
+  fetchInvoice,
   fetchInvoices,
   fetchPaymentInfo,
   fetchMySubscription,
@@ -15,15 +18,25 @@ import {
 import type { PurchaseSubscriptionInput, SubscriptionInvoice } from '../types';
 
 /**
- * Nhịp hỏi lại trạng thái hoá đơn trong lúc chờ đối soát ngân hàng.
+ * Nhịp hỏi lại hoá đơn đang chờ tiền — chỉ là LƯỚI AN TOÀN, không phải đường chính.
  *
- * 8 giây: SePay đẩy webhook trong vài giây sau khi tiền về, nên nhịp nhanh hơn chỉ tốn request
- * mà không sớm hơn được; nhịp chậm hơn thì người vừa chuyển khoản ngồi nhìn một màn hình không
- * đổi và bắt đầu nghi ngờ mình chuyển sai.
+ * Đường chính là thông báo `subscription_activated` mà webhook phát trong transaction kích hoạt:
+ * bản chiếu huy hiệu đẩy nó tới trình duyệt và `refreshNotificationAffected` làm mới nhánh
+ * `subscription` ngay lúc đó. Hỏi lại vài giây một lần trên một hoá đơn sống tới ba ngày là mỗi
+ * tab đang mở bắn một dòng request đều đặn vào API và Postgres để nhận cùng một câu trả lời.
+ *
+ *  - Nghe được bản chiếu: hai phút — chỉ bắt ca worker chết hoặc bản chiếu lệch, cùng nhịp lưới
+ *    an toàn của huy hiệu (`BadgeRealtimeProvider`).
+ *  - Không nghe được (chưa bật Firestore, mất quyền, rớt mạng): hai mươi giây — cùng nhịp màn chờ
+ *    tiền giữ chỗ (`useTrip`).
+ *
+ * Người chuyển khoản trên điện thoại rồi quay lại tab không phải đợi nhịp nào:
+ * `refetchOnWindowFocus` (mặc định của TanStack) hỏi lại ngay khi tab có focus.
  *
  * KHÔNG polling khi hoá đơn đã ở trạng thái kết thúc (`paid`/`void`) — xem `usePendingInvoice`.
  */
-const INVOICE_POLL_MS = 8_000;
+const INVOICE_POLL_LIVE_MS = 120_000;
+const INVOICE_POLL_FALLBACK_MS = 20_000;
 
 /** Hoá đơn còn có thể nhận thêm tiền ⇒ còn đáng hỏi lại. */
 function isAwaitingPayment(invoice: SubscriptionInvoice | null | undefined): boolean {
@@ -48,11 +61,33 @@ function isAwaitingPayment(invoice: SubscriptionInvoice | null | undefined): boo
  * việc của webhook, không phải của một tab còn mở — quay lại tab là có một lượt fetch ngay.
  */
 export function usePendingInvoice(enabled = true) {
+  const { live } = useBadgeRealtime();
+  const pollMs = live ? INVOICE_POLL_LIVE_MS : INVOICE_POLL_FALLBACK_MS;
   return useQuery({
     queryKey: queryKeys.subscription.pendingInvoice(),
     queryFn: fetchPendingInvoice,
     enabled,
-    refetchInterval: (query) => (isAwaitingPayment(query.state.data) ? INVOICE_POLL_MS : false),
+    refetchInterval: (query) => (isAwaitingPayment(query.state.data) ? pollMs : false),
+  });
+}
+
+/**
+ * MỘT hoá đơn — trang thanh toán `/payment/:invoiceId`. Hỏi lại theo cùng nhịp với
+ * `usePendingInvoice` (lưới an toàn — đường chính là thông báo `subscription_activated` làm mới
+ * nhánh `subscription`), và dừng hẳn khi hoá đơn tới trạng thái kết thúc.
+ *
+ * Không thử lại khi `NOT_FOUND`: id gõ tay hay hoá đơn của gian hàng khác sẽ không tự xuất hiện.
+ */
+export function useSubscriptionInvoice(id: string) {
+  const { live } = useBadgeRealtime();
+  const pollMs = live ? INVOICE_POLL_LIVE_MS : INVOICE_POLL_FALLBACK_MS;
+  return useQuery({
+    queryKey: queryKeys.subscription.invoice(id),
+    queryFn: () => fetchInvoice(id),
+    enabled: Boolean(id),
+    refetchInterval: (query) => (isAwaitingPayment(query.state.data) ? pollMs : false),
+    retry: (failureCount, error) =>
+      getErrorCode(error) !== API_ERROR_CODE.NOT_FOUND && failureCount < 2,
   });
 }
 
@@ -135,8 +170,9 @@ export function useSubscriptionInvoices(page: number) {
  * `pendingInvoice` giờ trả về đúng mã vừa tạo.
  *
  * `setQueryData` cho `pendingInvoice` NGAY từ kết quả mutation, trước khi lượt invalidate kịp
- * quay về: màn onboarding đọc chính key đó để quyết định hiện form hay hiện QR, nên chờ một
- * round-trip nữa là một nhịp nhấp nháy đúng vào lúc người dùng vừa bấm.
+ * quay về: màn onboarding đọc chính key đó để quyết định hiện form hay hiện hoá đơn chờ, nên chờ
+ * một round-trip nữa là một nhịp nhấp nháy đúng vào lúc người dùng vừa bấm. Cùng lý do cho
+ * `invoice(id)` — trang thanh toán mà nơi gọi chuyển tới ngay sau đó.
  */
 export function usePurchaseSubscription() {
   const queryClient = useQueryClient();
@@ -144,6 +180,8 @@ export function usePurchaseSubscription() {
     mutationFn: (body: PurchaseSubscriptionInput) => purchaseSubscription(body),
     onSuccess: (invoice) => {
       queryClient.setQueryData(queryKeys.subscription.pendingInvoice(), invoice);
+      // Nơi gọi chuyển ngay sang trang thanh toán của hoá đơn này — trang đó mở ra có sẵn dữ liệu.
+      queryClient.setQueryData(queryKeys.subscription.invoice(invoice.id), invoice);
       void queryClient.invalidateQueries({ queryKey: queryKeys.subscription.all });
     },
   });

@@ -28,8 +28,25 @@ export const VNPAY_CODE_SUSPECTED = '07';
 export const VNPAY_STATUS_INCOMPLETE = '01';
 export const VNPAY_STATUS_ERROR = '02';
 export const VNPAY_STATUS_REVERSED = '04';
+/**
+ * `vnp_TransactionStatus = 11` của `querydr` — KHÔNG có trong bảng mã của tài liệu `querydr`, nhưng
+ * VNPAY trả nó (có chữ ký) cho giao dịch ĐÃ ĐÓNG mà không thu tiền. Đo trên sandbox 13/10/2026:
+ *  - khách bấm "Hủy thanh toán" ở trang VNPAY (trang quay về mang `ResponseCode 24`,
+ *    `TransactionStatus 02`) ⇒ `querydr` ngay sau đó, TRƯỚC hạn phiên, trả `11`;
+ *  - phiên quá `vnp_ExpireDate` mà khách không trả ⇒ `11`.
+ * Cùng con số với `ResponseCode 11` "đã hết hạn chờ thanh toán" của bảng mã thanh toán. Hiểu nó là
+ * "chưa biết" làm lượt kẹt "đang chờ" tới hết ân hạn — đúng lỗi khách bấm Huỷ rồi thấy trang quay mãi.
+ */
+export const VNPAY_STATUS_CLOSED_UNPAID = '11';
 /** `vnp_TransactionType` của giao dịch THANH TOÁN (02/03 là hoàn). */
 export const VNPAY_TRANSACTION_TYPE_PAYMENT = '01';
+/**
+ * `querydr` từ chối lượt hỏi trùng cho cùng một đơn trong cửa sổ này (`94` "Request is duplicated" —
+ * phản hồi KHÔNG ký). Đo trên sandbox 13/10/2026: hỏi 20 giây một lần thì mọi lượt sau lượt đầu đều
+ * nhận `94`; cách nhau ≥ 5 phút thì nhận kết quả thật.
+ */
+export const VNPAY_QUERY_DUPLICATE_WINDOW_MS = 5 * 60_000;
+
 /** `querydr`: "Không tìm thấy giao dịch yêu cầu". */
 export const VNPAY_QUERY_NOT_FOUND = '91';
 
@@ -178,6 +195,10 @@ export function vnpayQueryOutcome(transactionStatus: string): ProviderOutcome {
     case VNPAY_STATUS_ERROR:
     case VNPAY_STATUS_REVERSED:
       return 'failed';
+    // Giao dịch đã đóng, không thu tiền — thường là khách vừa bấm Huỷ ở trang VNPAY. Tiền vẫn về
+    // sau đó (không xảy ra ở luồng đúng) thì vẫn được ghi: thành công thắng mọi thứ chưa thành công.
+    case VNPAY_STATUS_CLOSED_UNPAID:
+      return 'cancelled';
     case VNPAY_CODE_SUSPECTED:
       return 'flagged';
     default:

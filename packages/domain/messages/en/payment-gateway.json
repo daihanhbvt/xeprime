@@ -1,19 +1,54 @@
 {
-  "options": {
-    "title": "Or pay through a gateway",
-    "payWith": "Pay with {provider}",
-    "sandbox": "Test environment",
-    "sandboxHint": "The gateway is in its test environment — no real money is charged.",
-    "redirectNote": "You will be taken to the payment gateway's page. XePrime records the payment once the gateway confirms it, even if you close that page.",
-    "outOfRange": "{provider} only accepts {min} to {max} per transaction.",
-    "windowTooShort": "Too little time is left on this reservation to pay through a gateway. Please pay by bank transfer with the QR code now.",
-    "missingLink": "The gateway did not return a payment link. Please try again."
+  "checkout": {
+    "methodsTitle": "Choose a payment method",
+    "transfer": {
+      "title": "Instant bank transfer (VietQR)",
+      "badge": "Auto-confirmed",
+      "hint": "Scan with any banking app — the amount and transfer reference are pre-filled.",
+      "qrAlt": "VietQR transfer code",
+      "qrCaption": "Open your banking app and choose Scan QR",
+      "qrFailed": "The QR code could not be loaded — please transfer using the details alongside.",
+      "qrUnavailable": "No QR code yet — please transfer using the details alongside.",
+      "bank": "Bank",
+      "accountNumber": "Account number",
+      "accountName": "Account holder",
+      "amount": "Amount",
+      "code": "Transfer reference",
+      "codeHint": "Enter exactly this reference so the system can match your payment automatically. A wrong or missing reference means the payment waits for manual matching.",
+      "codeHintLabel": "Why the reference matters",
+      "copyAccount": "Copy account number",
+      "copyAmount": "Copy amount",
+      "copyCode": "Copy transfer reference"
+    },
+    "wallet": {
+      "title": "E-wallet",
+      "sandbox": "Test mode",
+      "sandboxHint": "The gateway is in test mode — no real money is charged.",
+      "redirectNote": "You will be taken to the wallet's page to confirm. XePrime records the payment once the wallet reports it, even if you close that page.",
+      "outOfRange": "{provider} only accepts {min} to {max} per transaction.",
+      "windowTooShort": "There is too little time left to pay by e-wallet. Please transfer using the QR code now.",
+      "missingLink": "The wallet did not return a payment link. Please try again."
+    },
+    "pay": {
+      "submit": "Pay",
+      "withProvider": "Pay with {provider}",
+      "pickWallet": "Choose an e-wallet to continue.",
+      "pickMethod": "Choose a payment method alongside.",
+      "transferAuto": "The system confirms automatically as soon as the money arrives — you don't need to stay on this page."
+    },
+    "summary": {
+      "title": "Payment details",
+      "code": "Payment code",
+      "safety": "To protect your payment, only transfer using the exact details on this page."
+    }
   },
   "order": {
     "loading": "Checking the payment status…",
     "loadError": "Could not load the payment status.",
     "awaitingTitle": "Waiting for {provider} to confirm the payment of {amount}",
-    "awaitingBody": "If you have finished paying, this page updates itself in a moment.",
+    "awaitingBody": "If you have finished paying, this page updates itself once {provider} reports the result — no need to pay again.",
+    "noTransactionTitle": "No payment made via {provider}",
+    "noTransactionBody": "{provider} reports this attempt was not paid — you may have cancelled or not finished. Please choose a payment method below.",
     "continue": "Continue payment",
     "expiredTitle": "The {provider} payment session has expired",
     "expiredBody": "If your account was charged, XePrime still records it once the gateway reports back — do not pay again. If not, choose a payment method again.",

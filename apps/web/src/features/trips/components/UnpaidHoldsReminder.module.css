@@ -1,0 +1,69 @@
+/* Nhắc nhẹ: nền thẻ, viền trái màu thương hiệu — nổi hơn danh sách bên dưới mà không báo động. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  padding: var(--xp-space-md) var(--xp-space-lg);
+  border: 1px solid var(--xp-color-border-secondary);
+  border-left: 4px solid var(--xp-color-primary);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-card);
+}
+
+/* Chạm trần: giọng cảnh báo — khách đang bị chặn đặt xe, và đây là chỗ họ tìm lý do. */
+.cardLimit {
+  border-color: var(--xp-color-warning);
+  background: var(--xp-color-warning-bg);
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+}
+
+.icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-active);
+  font-size: 18px;
+}
+
+.iconLimit {
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-warning);
+}
+
+.headText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h4);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h4);
+}
+
+.body {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: var(--xp-space-md);
+  }
+}

@@ -2,7 +2,11 @@ import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { PARTNER_PAYMENT_RETURN_PATH, PAYMENT_RETURN_TRIP_PATH } from '@xeprime/types';
+import {
+  PARTNER_PAYMENT_RETURN_PATH,
+  PAYMENT_PAGE_PATH,
+  PAYMENT_RETURN_TRIP_PATH,
+} from '@xeprime/types';
 import { ROUTES } from '@/constants/routes';
 
 /**
@@ -13,6 +17,15 @@ import { ROUTES } from '@/constants/routes';
 const APP_DIR = join(dirname(fileURLToPath(import.meta.url)), '../../app');
 
 describe('đường quay về từ cổng thanh toán', () => {
+  it('trang thanh toán `/payment/:id` có thật ở CẢ HAI site — server quay về đó', () => {
+    expect(ROUTES.PAYMENT).toBe(PAYMENT_PAGE_PATH);
+    expect(existsSync(join(APP_DIR, `(public)${PAYMENT_PAGE_PATH}/[id]/page.tsx`))).toBe(true);
+    expect(existsSync(join(APP_DIR, `(manage)/manage${PAYMENT_PAGE_PATH}/[id]/page.tsx`))).toBe(
+      true,
+    );
+  });
+
+  /* Hai trang quay về CŨ — vẫn phục vụ các lượt mở trước 13/10/2026. */
   it('tiền giữ chỗ quay về trang chi tiết chuyến của khách', () => {
     expect(ROUTES.TRIPS).toBe(PAYMENT_RETURN_TRIP_PATH);
     expect(existsSync(join(APP_DIR, `(public)${PAYMENT_RETURN_TRIP_PATH}/[id]/page.tsx`))).toBe(true);

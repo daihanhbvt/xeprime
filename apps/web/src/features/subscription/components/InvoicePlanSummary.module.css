@@ -1,0 +1,42 @@
+/* "Bạn đang mua gì" — nền vàng nhạt, viền màu nhấn: thứ đầu tiên mắt bắt gặp trên thẻ hoá đơn. */
+.plan {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-primary);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-primary-light);
+  gap: 2px;
+}
+
+.planLabel {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.planName {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: baseline;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  gap: var(--xp-space-sm);
+}
+
+.planTerm {
+  color: var(--xp-color-primary-active);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.planMeta {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}

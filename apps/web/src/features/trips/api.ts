@@ -5,6 +5,7 @@ import type {
   CustomerTripCounts,
   CustomerTripDetail,
   CustomerTripHandoverEvidence,
+  CustomerUnpaidHolds,
   PrivateFileTicket,
   ProvideRefundAccountInput,
 } from './types';
@@ -62,6 +63,14 @@ export async function fetchTrips(
     },
     counts: res.counts ?? EMPTY_COUNTS,
   };
+}
+
+/**
+ * Chuyến khách đang GIỮ mà chưa trả, gấp nhất trước, và đã chạm trần chưa — chạm trần thì server từ
+ * chối mọi yêu cầu đặt xe mới (`HOLD_LIMIT_REACHED`).
+ */
+export function fetchUnpaidHolds(): Promise<CustomerUnpaidHolds> {
+  return apiGet<CustomerUnpaidHolds>('/trips/unpaid-holds');
 }
 
 export function fetchTrip(id: string): Promise<CustomerTripDetail> {

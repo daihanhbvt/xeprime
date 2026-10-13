@@ -27,6 +27,7 @@ export const PAYMENT_ORDER_VIEW_SELECT = {
   appliedAt: true,
   applyOutcome: true,
   reviewStatus: true,
+  noTransactionAt: true,
   createdAt: true,
   bookingHold: { select: { bookingRequestId: true } },
 } satisfies Prisma.PaymentGatewayOrderSelect;
@@ -75,9 +76,16 @@ export function toPaymentOrderDto(
 ): PaymentOrderDto {
   const now = opts.now ?? new Date();
   const viewState = paymentOrderViewState(row);
+  /*
+   * Cổng đã xác nhận phiên này KHÔNG có giao dịch (khách bấm Huỷ ở trang cổng): lượt vẫn `pending`
+   * theo ADR 0058, nhưng người trả không còn gì để chờ — và liên kết vừa bị huỷ không được mời mở lại.
+   */
+  const noTransaction = viewState === PAYMENT_ORDER_VIEW_STATE.AWAITING && row.noTransactionAt !== null;
   // Liên kết chỉ còn ý nghĩa khi lượt còn chờ, không ai đang xử lý, và chưa quá hạn dùng lại.
   const reusable =
-    viewState === PAYMENT_ORDER_VIEW_STATE.AWAITING && row.expiresAt.getTime() > now.getTime();
+    viewState === PAYMENT_ORDER_VIEW_STATE.AWAITING &&
+    !noTransaction &&
+    row.expiresAt.getTime() > now.getTime();
   return {
     id: row.id,
     provider: row.provider,
@@ -96,6 +104,7 @@ export function toPaymentOrderDto(
     viewState,
     applyOutcome: row.applyOutcome,
     checkoutUrl: reusable ? row.checkoutUrl : null,
+    noTransaction,
     expiresAt: row.expiresAt.toISOString(),
     paidAt: row.providerPaidAt?.toISOString() ?? null,
     sandbox: opts.sandbox,

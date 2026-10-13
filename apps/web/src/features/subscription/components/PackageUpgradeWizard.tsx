@@ -3,11 +3,12 @@
 import { ArrowRightOutlined, CustomerServiceOutlined, SafetyOutlined } from '@ant-design/icons';
 import { Alert, Button, Skeleton } from 'antd';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { SUBSCRIPTION_INVOICE_STATUS } from '@xeprime/types';
 
-import { ROUTES } from '@/constants/routes';
+import { ROUTES, paymentPath } from '@/constants/routes';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { cx } from '@/lib/cx';
@@ -92,6 +93,7 @@ export function PackageUpgradeWizard() {
   const plans = useTenantPlans(!pending.isLoading && (invoice === null || editing));
   const selection = usePlanPurchase(plans.data ?? []);
   const purchase = usePurchaseSubscription();
+  const router = useRouter();
 
   /*
    * Tiền về ⇒ hỏi lại `/auth/me`. Kích hoạt gói là việc của webhook SePay, và khi nó xong thì
@@ -292,10 +294,17 @@ export function PackageUpgradeWizard() {
              * Không truyền giá: server đọc lại bảng giá của chính bậc + kỳ hạn này (ADR 0041 điều 2).
              */
             /*
-             * `setEditing(false)` ngay khi hoá đơn mới về: không có nó, cờ sửa còn bật sẽ che
-             * mất chính màn thanh toán của mã vừa tạo.
+             * Hoá đơn mới về ⇒ sang thẳng trang thanh toán của nó. `setEditing(false)` vẫn cần:
+             * quay lại wizard thì cờ sửa còn bật sẽ che mất bước thanh toán của mã vừa tạo.
              */
-            onSaved={() => purchase.mutate(chosen.body, { onSuccess: () => setEditing(false) })}
+            onSaved={() =>
+              purchase.mutate(chosen.body, {
+                onSuccess: (created) => {
+                  setEditing(false);
+                  router.push(paymentPath.invoice(created.id));
+                },
+              })
+            }
           />
         </div>
       );

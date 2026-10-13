@@ -1,27 +1,20 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PERMISSION, SUBSCRIPTION_INVOICE_STATUS } from '@xeprime/types';
+import { cleanup, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { SUBSCRIPTION_INVOICE_STATUS } from '@xeprime/types';
 
-import type { PaymentInfo, SubscriptionInvoice } from '../types';
-import { InvoicePaymentPanel } from './InvoicePaymentPanel';
+import type { SubscriptionInvoice } from '../types';
+import { InvoicePaymentPanel, invoiceRemainingAmount } from './InvoicePaymentPanel';
 
 /**
- * Bảng hướng dẫn chuyển khoản của một hoá đơn gói (R2).
+ * THẺ HOÁ ĐƠN CHỜ TIỀN của một hoá đơn gói.
  *
- * Ba điều được khoá — cả ba đều là chỗ mà sai thì TIỀN đi lạc:
+ * Từ 13/10/2026 việc TRẢ nằm ở trang thanh toán riêng (`/payment/:invoiceId` — QR, mã và ví điện tử
+ * được khoá ở `CheckoutPanel.test.tsx`). Thẻ này khoá ba điều:
  *
- *  1. **QR mang đúng số tiền và đúng mã** (ADR 0016 điều 5: không bao giờ để người dùng tự gõ
- *     nội dung). Với hoá đơn trả một phần, số trên QR là SỐ CÒN THIẾU — không phải tổng.
- *  2. **Chưa cấu hình tài khoản nhận thì KHÔNG có QR** — một QR trỏ vào tài khoản rỗng tệ hơn
- *     không có QR; mã + số tiền vẫn hiện để chuyển tay.
- *  3. Mã đối soát luôn hiện kèm nút sao chép — nó là khoá đối soát duy nhất.
+ *  1. **Đang mua gì** — đọc từ CHÍNH hoá đơn, sống qua F5.
+ *  2. **Số phải trả là số CÒN THIẾU** khi hoá đơn đã nhận một phần — không phải tổng.
+ *  3. **Lối trả dẫn tới trang thanh toán của ĐÚNG hoá đơn**, và thẻ không vẽ QR thứ hai.
  */
-const paymentInfo = vi.hoisted(() => ({
-  data: undefined as PaymentInfo | undefined,
-  isLoading: false,
-  isError: false,
-}));
-
 const plans = vi.hoisted(() => ({
   data: [{ id: 'plan-basic', name: 'Gói cơ bản' }] as unknown[],
   isLoading: false,
@@ -29,32 +22,8 @@ const plans = vi.hoisted(() => ({
 }));
 
 vi.mock('../hooks/use-subscription', () => ({
-  usePaymentInfo: () => paymentInfo,
   /* Danh mục gói chỉ để tra TÊN bậc từ `invoice.planId` — rỗng ⇒ rơi về mã bậc. */
   useTenantPlans: () => plans,
-}));
-
-/*
- * Lối thanh toán qua cổng (ADR 0058) — hai hook của nó và quyền mua gói được thay bằng giá trị điều
- * khiển được, để khoá ĐÚNG điều màn này hứa: không cổng nào mở thì không vẽ gì; có cổng thì mỗi cổng
- * một nút, và bấm nút chỉ gửi TÊN CỔNG lên server (không số tiền, không mã).
- */
-const gateway = vi.hoisted(() => ({
-  methods: { data: undefined as unknown, isLoading: false, isError: false },
-  start: { mutate: vi.fn(), isPending: false, isError: false, error: null as unknown },
-}));
-vi.mock('@/features/payment-gateway/hooks', () => ({
-  useGatewayMethods: () => gateway.methods,
-  useStartGatewayCheckout: () => gateway.start,
-}));
-
-const perms = vi.hoisted(() => ({ granted: new Set<string>() }));
-vi.mock('@/hooks/use-permissions', () => ({
-  usePermissions: () => ({
-    has: (permission: string) => perms.granted.has(permission),
-    hasAny: (...permissions: string[]) => permissions.some((p) => perms.granted.has(p)),
-    isLoading: false,
-  }),
 }));
 
 function makeInvoice(over: Partial<SubscriptionInvoice> = {}): SubscriptionInvoice {
@@ -78,40 +47,21 @@ function makeInvoice(over: Partial<SubscriptionInvoice> = {}): SubscriptionInvoi
   } as SubscriptionInvoice;
 }
 
-const CONFIGURED: PaymentInfo = {
-  configured: true,
-  bankCode: 'MB',
-  accountNumber: '0123456789',
-  accountName: 'CONG TY XEPRIME',
-};
-
-beforeEach(() => {
-  paymentInfo.data = CONFIGURED;
-  gateway.methods.data = undefined;
-  gateway.start.mutate = vi.fn();
-  gateway.start.isPending = false;
-  gateway.start.isError = false;
-  perms.granted = new Set([PERMISSION.SUBSCRIPTION_PURCHASE]);
-});
-
 afterEach(cleanup);
 
 describe('InvoicePaymentPanel', () => {
-  it('đã cấu hình: QR mang ĐÚNG số tiền + mã đối soát, kèm thông tin tài khoản', () => {
-    render(<InvoicePaymentPanel invoice={makeInvoice()} />);
+  it('nói đang mua gì, bao nhiêu, và MỘT nút sang trang thanh toán của đúng hoá đơn', () => {
+    const { container } = render(<InvoicePaymentPanel invoice={makeInvoice()} />);
 
-    const qr = screen.getByRole('img', { name: 'Mã VietQR chuyển khoản thanh toán gói' });
-    const src = qr.getAttribute('src')!;
-    expect(src).toContain('img.vietqr.io/image/MB-0123456789');
-    expect(src).toContain('amount=3000000');
-    expect(src).toContain('addInfo=XPG2K9ADFG');
-
-    expect(screen.getByText('0123456789')).toBeTruthy();
-    expect(screen.getByText('CONG TY XEPRIME')).toBeTruthy();
-    expect(screen.getByText('XPG2K9ADFG')).toBeTruthy();
+    expect(screen.getByText('Gói cơ bản')).toBeTruthy();
+    expect(screen.getByText(/3\.000\.000/)).toBeTruthy();
+    const pay = screen.getByRole('link', { name: /thanh toán/i });
+    expect(pay.getAttribute('href')).toBe('/manage/payment/01HINVOICE00000000000000');
+    // Không QR thứ hai — hai chỗ trả là hai chỗ để số tiền hoặc nội dung trôi khỏi nhau.
+    expect(container.querySelector('img')).toBeNull();
   });
 
-  it('trả MỘT PHẦN: QR và số tiền hiện SỐ CÒN THIẾU, không phải tổng', () => {
+  it('trả MỘT PHẦN: hiện SỐ CÒN THIẾU và nói đã nhận bao nhiêu', () => {
     render(
       <InvoicePaymentPanel
         invoice={makeInvoice({
@@ -121,86 +71,29 @@ describe('InvoicePaymentPanel', () => {
       />,
     );
 
-    const qr = screen.getByRole('img', { name: 'Mã VietQR chuyển khoản thanh toán gói' });
-    expect(qr.getAttribute('src')).toContain('amount=2000000');
-    expect(screen.getByText('2.000.000 ₫')).toBeTruthy();
-    // Câu dẫn nói rõ đã nhận bao nhiêu — người chuyển thiếu phải biết mình đang bù, không mua mới.
-    expect(screen.getByText(/Đã nhận 1\.000\.000 ₫/)).toBeTruthy();
+    expect(screen.getByText(/2\.000\.000/)).toBeTruthy();
+    expect(screen.getByText('Còn phải chuyển')).toBeTruthy();
+    expect(screen.getByText(/1\.000\.000/)).toBeTruthy();
   });
 
-  it('CHƯA cấu hình tài khoản nhận: không QR, không số tài khoản — mã và số tiền vẫn còn', () => {
-    paymentInfo.data = {
-      configured: false,
-      bankCode: null,
-      accountNumber: null,
-      accountName: null,
-    };
+  it('danh mục gói chưa về ⇒ rơi về MÃ bậc, không để trống', () => {
+    plans.data = [];
     render(<InvoicePaymentPanel invoice={makeInvoice()} />);
-
-    expect(screen.queryByRole('img', { name: 'Mã VietQR chuyển khoản thanh toán gói' })).toBeNull();
-    expect(screen.queryByText('Số tài khoản')).toBeNull();
-    expect(screen.getByText('XPG2K9ADFG')).toBeTruthy();
-    expect(screen.getByText('3.000.000 ₫')).toBeTruthy();
-  });
-
-  it('nói rõ gói TỰ kích hoạt khi tiền về — không ai phải giữ tab mở', () => {
-    render(<InvoicePaymentPanel invoice={makeInvoice()} />);
-    expect(screen.getByText(/Gói tự kích hoạt khi tiền về/)).toBeTruthy();
+    expect(screen.getByText('shop-basic')).toBeTruthy();
+    plans.data = [{ id: 'plan-basic', name: 'Gói cơ bản' }];
   });
 });
 
-describe('InvoicePaymentPanel — thanh toán qua cổng (ADR 0058)', () => {
-  const BOTH = {
-    target: 'subscription_invoice',
-    sandbox: true,
-    methods: [
-      { provider: 'momo', minAmount: '1000', maxAmount: '50000000' },
-      { provider: 'vnpay', minAmount: null, maxAmount: null },
-    ],
-  };
-
-  it('chưa cổng nào mở: KHÔNG vẽ gì — chuyển khoản vẫn là đường duy nhất', () => {
-    gateway.methods.data = { target: 'subscription_invoice', sandbox: false, methods: [] };
-    render(<InvoicePaymentPanel invoice={makeInvoice()} />);
-    expect(screen.queryByText('Hoặc thanh toán qua cổng')).toBeNull();
-    expect(screen.getByText('XPG2K9ADFG')).toBeTruthy();
+describe('invoiceRemainingAmount', () => {
+  it('hoá đơn chưa nhận đồng nào ⇒ cả tổng', () => {
+    expect(invoiceRemainingAmount(makeInvoice())).toBe('3000000');
   });
 
-  it('có cổng: mỗi cổng một nút, kèm nhãn môi trường thử', () => {
-    gateway.methods.data = BOTH;
-    render(<InvoicePaymentPanel invoice={makeInvoice()} />);
-    expect(screen.getByRole('button', { name: 'Thanh toán qua Ví MoMo' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Thanh toán qua VNPAY' })).toBeTruthy();
-    expect(screen.getByText('Môi trường thử')).toBeTruthy();
-  });
-
-  it('bấm nút chỉ gửi TÊN CỔNG — số tiền và mã do server đọc từ DB', () => {
-    gateway.methods.data = BOTH;
-    render(<InvoicePaymentPanel invoice={makeInvoice()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Thanh toán qua Ví MoMo' }));
-    expect(gateway.start.mutate).toHaveBeenCalledTimes(1);
-    expect(gateway.start.mutate.mock.calls[0]![0]).toEqual({
-      provider: 'momo',
-      client: 'web',
-      locale: 'vi',
-    });
-  });
-
-  it('không có quyền mua gói: không có lối thanh toán qua cổng', () => {
-    gateway.methods.data = BOTH;
-    perms.granted = new Set();
-    render(<InvoicePaymentPanel invoice={makeInvoice()} />);
-    expect(screen.queryByText('Hoặc thanh toán qua cổng')).toBeNull();
-  });
-
-  it('số tiền ngoài hạn mức của cổng: nút khoá và nói rõ hạn mức', () => {
-    gateway.methods.data = {
-      ...BOTH,
-      methods: [{ provider: 'momo', minAmount: '1000', maxAmount: '2000000' }],
-    };
-    render(<InvoicePaymentPanel invoice={makeInvoice()} />);
-    const button = screen.getByRole('button', { name: 'Thanh toán qua Ví MoMo' });
-    expect((button as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByText(/chỉ nhận từ/)).toBeTruthy();
+  it('đã nhận một phần ⇒ phần còn thiếu', () => {
+    expect(
+      invoiceRemainingAmount(
+        makeInvoice({ status: SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID, paidAmount: '1250000' }),
+      ),
+    ).toBe('1750000');
   });
 });

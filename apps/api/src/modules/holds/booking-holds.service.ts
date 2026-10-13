@@ -451,15 +451,7 @@ export class BookingHoldsService {
     // chung toàn database, nên tiền tố `hold:` giữ nó không đụng advisory lock của worker.
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'hold:' + customerUserId}))`;
 
-    const openHolds = await tx.bookingHold.count({
-      where: {
-        customerUserId,
-        status: { in: [...BOOKING_HOLD_STATUS_AWAITING] },
-        // Hold quá mốc nhưng worker chưa kịp lật vẫn là một chỗ CHẾT — không tính vào trần, nếu
-        // không một khách xui sẽ bị chặn bởi chính những chỗ họ đã mất.
-        expiresAt: { gt: new Date() },
-      },
-    });
+    const openHolds = await tx.bookingHold.count({ where: openCustomerHoldWhere(customerUserId) });
     if (openHolds >= HOLD_MAX_OPEN_PER_CUSTOMER) {
       throw new ConflictException({
         code: API_ERROR_CODE.HOLD_LIMIT_REACHED,
@@ -469,6 +461,61 @@ export class BookingHoldsService {
         details: { openHolds, limit: HOLD_MAX_OPEN_PER_CUSTOMER },
       });
     }
+  }
+
+  /**
+   * CỔNG Ở ĐƯỜNG GỬI YÊU CẦU (13/10/2026) — khách đã giữ đủ `HOLD_MAX_OPEN_PER_CUSTOMER` chỗ chưa
+   * trả thì KHÔNG gửi thêm yêu cầu nào, cho mọi xe, mọi dịch vụ.
+   *
+   * Trước đây trần chỉ chặn ở đường DUYỆT: yêu cầu vẫn vào, xe "Đặt ngay" lặng lẽ không tự nhận
+   * được (`tryAutoAccept` nuốt `HOLD_LIMIT_REACHED`), khách thấy "chờ xác nhận" mà không biết vì
+   * sao, và chủ xe bấm duyệt tay lại dính đúng lỗi đó. Việc cần làm thuộc về KHÁCH — trả tiền hoặc
+   * huỷ bớt — nên câu trả lời phải đến với khách, ngay lúc họ gửi.
+   *
+   * Không khoá: cổng này là lời nhắc sớm, không phải bất biến. Bất biến vẫn là
+   * `assertHoldQuotaWithinTx` dưới advisory lock ở đường tạo hold — hai lượt gửi song song cùng lọt
+   * qua đây thì lượt DUYỆT thứ hai vẫn bị chặn đúng chỗ.
+   */
+  async assertBelowHoldQuota(customerUserId: string): Promise<void> {
+    const openHolds = await this.prisma.bookingHold.count({
+      where: openCustomerHoldWhere(customerUserId),
+    });
+    if (openHolds >= HOLD_MAX_OPEN_PER_CUSTOMER) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.HOLD_LIMIT_REACHED,
+        message:
+          'Bạn đang có tối đa số chuyến chờ thanh toán cho phép — thanh toán hoặc huỷ bớt một chuyến ' +
+          'trước khi đặt thêm xe',
+        details: { openHolds, limit: HOLD_MAX_OPEN_PER_CUSTOMER },
+      });
+    }
+  }
+
+  /**
+   * Những chuyến khách đang GIỮ mà chưa trả — nguồn của lời nhắc thanh toán (trang "Chuyến của tôi",
+   * màn chặn đặt xe). CÙNG vị từ với trần, nên danh sách khách thấy luôn khớp con số đang chặn họ.
+   * Gấp nhất trước; số dòng bị trần giữ nhỏ, `take` chỉ là lưới an toàn cho dữ liệu cũ vượt trần.
+   */
+  async listOpenForCustomer(customerUserId: string) {
+    return this.prisma.bookingHold.findMany({
+      where: openCustomerHoldWhere(customerUserId),
+      orderBy: { expiresAt: 'asc' },
+      take: OPEN_HOLD_LIST_MAX,
+      select: {
+        code: true,
+        amount: true,
+        paidAmount: true,
+        expiresAt: true,
+        bookingRequest: {
+          select: {
+            id: true,
+            pickupAt: true,
+            returnAt: true,
+            vehicle: { select: { name: true, mainImageUrl: true } },
+          },
+        },
+      },
+    });
   }
 
   // ── Tiền về ──────────────────────────────────────────────────────────────
@@ -1495,4 +1542,23 @@ function vnDayRange(date: string): { start: Date; end: Date } {
     });
   }
   return { start, end: new Date(start.getTime() + 24 * 60 * 60 * 1000) };
+}
+
+/** Lưới an toàn cho `listOpenForCustomer` — trần thật là `HOLD_MAX_OPEN_PER_CUSTOMER`. */
+const OPEN_HOLD_LIST_MAX = 20;
+
+/**
+ * Khoản giữ chỗ khách đang MỞ — MỘT vị từ cho trần ở đường duyệt, cổng ở đường gửi và lời nhắc
+ * thanh toán. Hold quá mốc nhưng worker chưa kịp lật vẫn là một chỗ CHẾT — không tính, nếu không một
+ * khách xui sẽ bị chặn (và bị nhắc trả) bởi chính những chỗ họ đã mất.
+ */
+export function openCustomerHoldWhere(
+  customerUserId: string,
+  now: Date = new Date(),
+): Prisma.BookingHoldWhereInput {
+  return {
+    customerUserId,
+    status: { in: [...BOOKING_HOLD_STATUS_AWAITING] },
+    expiresAt: { gt: now },
+  };
 }

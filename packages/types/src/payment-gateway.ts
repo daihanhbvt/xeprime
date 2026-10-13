@@ -285,13 +285,26 @@ export const PAYMENT_RETURN_PARAM = {
   NATIVE: 'app',
 } as const;
 
-/** Đường dẫn trang quay về của site partner, KHÔNG gồm tiền tố khu — server ghép sau `WEB_PARTNER_URL`. */
+/**
+ * Gốc TRANG THANH TOÁN, giống nhau ở cả hai site và KHÔNG gồm tiền tố khu (13/10/2026):
+ *  - site khách:   `/payment/:tripId`    — tiền giữ chỗ của một chuyến đã được nhận;
+ *  - site partner: `/payment/:invoiceId` — một hoá đơn gói.
+ *
+ * Trang đó vừa là nơi chọn kênh trả (chuyển khoản VietQR · ví điện tử qua cổng) vừa là TRANG QUAY
+ * VỀ của cổng: server dựng `returnUrl` = site + gốc này + `/:id?<tham số lượt>`. Phải trùng route
+ * thật của web (có test khoá).
+ */
+export const PAYMENT_PAGE_PATH = '/payment';
+
+/**
+ * Trang quay về CŨ của site partner (`/payment-return?order=…`). Server không dựng nó nữa — giữ hằng
+ * và trang cho các lượt đã mở trước 13/10/2026, mà liên kết quay về đã nằm ở phía cổng.
+ */
 export const PARTNER_PAYMENT_RETURN_PATH = '/payment-return';
 
 /**
- * Gốc đường dẫn trang CHUYẾN của site khách — trang quay về của tiền giữ chỗ là
- * `${APP_WEB_URL}${PAYMENT_RETURN_TRIP_PATH}/:id?paymentOrder=…`. Phải trùng `ROUTES.TRIPS` của web
- * (có test khoá).
+ * Trang quay về CŨ của tiền giữ chỗ (`/trips/:id?paymentOrder=…`). Server không dựng nó nữa — trang
+ * chuyến vẫn đọc tham số đó cho các lượt đã mở trước 13/10/2026. Phải trùng `ROUTES.TRIPS` của web.
  */
 export const PAYMENT_RETURN_TRIP_PATH = '/trips';
 
@@ -319,6 +332,9 @@ export const PAYMENT_GATEWAY_EXPIRY_MARGIN_MINUTES = 2;
 /**
  * Khoảng cách tối thiểu giữa hai lượt server truy vấn cổng cho CÙNG một lượt thanh toán. Truy vấn
  * do trang quay về kích hoạt — không có nhịp này, mỗi lần khách F5 là một request sang cổng.
+ *
+ * Đây là nhịp MẶC ĐỊNH (MoMo). Cổng có giới hạn riêng thì adapter đặt nhịp của nó
+ * (`queryMinIntervalMs`) — VNPAY từ chối lượt hỏi trùng trong 5 phút (`94`), nên VNPAY hỏi thưa hơn.
  */
 export const PAYMENT_GATEWAY_QUERY_MIN_INTERVAL_SECONDS = 20;
 

@@ -1,0 +1,123 @@
+/*
+ * QR và thông tin chuyển khoản đứng cạnh nhau khi còn chỗ, xếp chồng khi hết.
+ *
+ * Container query, KHÔNG media query: khối nằm trong một mục của danh sách phương thức thanh toán,
+ * nơi bề ngang THẬT nhỏ hơn khổ máy nhiều. `minmax(0, …)` ở cột phải giữ cho mã đối soát và số tài
+ * khoản (chuỗi 19 ký tự liền mạch) không đẩy cả lưới tràn ra.
+ */
+.body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+  container-type: inline-size;
+  text-align: left;
+}
+
+@container (max-width: 520px) {
+  .body {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+  }
+}
+
+/* Khung QR + chú thích đứng thành một cụm. Nền trắng cố định: ứng dụng ngân hàng đọc QR tối kém. */
+.qrWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: var(--xp-border-radius);
+  background: #fff;
+}
+
+.qr {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.qrCaption {
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-tertiary);
+  text-align: center;
+}
+
+/* Chỗ của QR khi không dựng được — giữ bề ngang của ảnh để bố cục không nhảy. */
+.qrFallback {
+  display: flex;
+  align-items: center;
+  width: 220px;
+  max-width: 100%;
+  min-height: 140px;
+  margin: 0;
+  padding: var(--xp-space-md);
+  border: 1px dashed var(--xp-color-border-secondary);
+  border-radius: var(--xp-border-radius);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height);
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+}
+
+/* Nhãn trái, giá trị trái trong cột của nó — KHÔNG căn phải (mã bị bẻ ba khúc là mã gõ sai). */
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 130px) minmax(0, 1fr);
+  gap: 4px 12px;
+  align-items: baseline;
+  font-size: var(--xp-font-size-body);
+}
+
+@container (max-width: 400px) {
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.row dt {
+  display: flex;
+  align-items: center;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.row dd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+}
+
+/* Flex item không co dưới `min-content` — thiếu dòng này, chuỗi số dài tràn ra thay vì xuống dòng. */
+.row dd > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.row dd > button {
+  flex: none;
+}
+
+.amount {
+  color: var(--xp-color-price);
+  font-size: var(--xp-font-size-body-lg);
+}
+
+/* Mã đối soát phải đọc lại được từng ký tự — font đơn cách, giãn chữ. */
+.code {
+  font-family: var(--xp-font-mono, monospace);
+  letter-spacing: 0.08em;
+}

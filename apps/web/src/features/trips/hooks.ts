@@ -8,12 +8,14 @@ import {
   type HandoverPhotoSlot,
   type HandoverType,
 } from '@xeprime/types';
+import { useBadgeRealtime } from '@/features/badges/BadgeRealtimeProvider';
 import { getErrorCode } from '@/services/api-client';
 import { queryKeys } from '@/services/query-keys';
 import {
   cancelTrip,
   fetchTrip,
   fetchTripHandoverEvidence,
+  fetchUnpaidHolds,
   fetchTripHandoverPhotoUrl,
   fetchTrips,
   provideRefundAccount,
@@ -40,13 +42,35 @@ export function useTrips(filter: string, page: number, role?: string, enabled = 
 }
 
 /**
- * Nhịp hỏi lại khi chuyến đang CHỜ TIỀN GIỮ CHỖ.
+ * Lời nhắc thanh toán — chuyến khách đang giữ mà chưa trả, và đã chạm trần chưa.
  *
- * Hai mươi giây là độ trễ tối đa giữa "ngân hàng báo về XePrime" và "màn hình của khách đổi" —
- * đủ nhanh để người vừa chuyển khoản xong không phải tự tải lại trang, đủ thưa để một cửa sổ
- * hai giờ không thành vài nghìn request. TanStack dừng hẳn nhịp này khi cửa sổ mất focus.
+ * Không tự hỏi lại theo nhịp: khoá nằm dưới nhánh `trips`, nên thông báo realtime tiền về / hết hạn
+ * (`refreshNotificationAffected` làm mới `trips.all`) kéo nó theo; quay lại tab là một lượt đọc mới.
+ * `enabled` tắt hẳn khi chưa có phiên khách — endpoint chỉ mở cho realm khách.
  */
-const HOLD_POLL_INTERVAL_MS = 20_000;
+export function useUnpaidHolds(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.trips.unpaidHolds(),
+    queryFn: fetchUnpaidHolds,
+    enabled,
+    staleTime: 30_000,
+  });
+}
+
+/**
+ * Nhịp hỏi lại khi chuyến đang CHỜ TIỀN GIỮ CHỖ — lưới an toàn, không phải đường chính.
+ *
+ * Đường chính là thông báo `hold_paid` mà webhook phát lúc đơn ra đời: bản chiếu huy hiệu đẩy nó
+ * tới trình duyệt và `refreshNotificationAffected` làm mới `trips.all` (phủ cả chi tiết đang mở).
+ *
+ *  - Nghe được bản chiếu: hai phút — chỉ bắt ca worker chết hoặc bản chiếu lệch.
+ *  - Không nghe được: hai mươi giây — độ trễ tối đa giữa "ngân hàng báo về XePrime" và "màn
+ *    hình của khách đổi", đủ thưa để một cửa sổ hai giờ không thành vài nghìn request.
+ *
+ * TanStack dừng hẳn nhịp này khi cửa sổ mất focus, và hỏi lại ngay khi khách quay lại tab.
+ */
+const HOLD_POLL_LIVE_MS = 120_000;
+const HOLD_POLL_FALLBACK_MS = 20_000;
 
 /**
  * Một chuyến. `id` nhận cả id yêu cầu lẫn id đơn — thông báo trỏ vào cả hai loại.
@@ -59,15 +83,15 @@ const HOLD_POLL_INTERVAL_MS = 20_000;
  * Nhịp TẮT ở mọi chặng khác: một chuyến đã có đơn hoặc đã khép không có gì thay đổi theo giây.
  */
 export function useTrip(id: string) {
+  const { live } = useBadgeRealtime();
+  const pollMs = live ? HOLD_POLL_LIVE_MS : HOLD_POLL_FALLBACK_MS;
   return useQuery({
     queryKey: queryKeys.trips.detail(id),
     queryFn: () => fetchTrip(id),
     enabled: Boolean(id),
     refetchInterval: (query) => {
       const hold = query.state.data?.hold;
-      return hold && isAwaitingPayment(hold.status as BookingHoldStatus)
-        ? HOLD_POLL_INTERVAL_MS
-        : false;
+      return hold && isAwaitingPayment(hold.status as BookingHoldStatus) ? pollMs : false;
     },
   });
 }
