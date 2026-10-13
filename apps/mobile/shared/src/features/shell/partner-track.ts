@@ -73,8 +73,6 @@ export const PARTNER_PATH = {
   TRIPS: '/manage/trips',
   CHAT: '/manage/chat',
   BALANCE: '/manage/balance',
-  SUBSCRIPTION: '/manage/subscription',
-  PLAN: '/manage/plan',
   TAX: '/manage/tax',
   BANK_ACCOUNTS: '/manage/bank-accounts',
   HOST_GUIDE: '/manage/host-guide',
@@ -128,8 +126,6 @@ const COMMISSION_PAGES: readonly PageRule[] = [
   { href: PARTNER_PATH.TRIPS },
   { href: PARTNER_PATH.CHAT },
   { href: PARTNER_PATH.BALANCE },
-  { href: PARTNER_PATH.SUBSCRIPTION },
-  { href: PARTNER_PATH.PLAN },
   { href: PARTNER_PATH.TAX },
   { href: PARTNER_PATH.BANK_ACCOUNTS },
   { href: PARTNER_PATH.HOST_GUIDE },
@@ -174,11 +170,10 @@ export function isCommissionPath(path: string): boolean {
 function packageEquivalent(pathname: string): string | null {
   if (matchesPage(pathname, { href: PARTNER_PATH.REGISTRATION })) return PARTNER_PATH.SHOP;
   // PR #159: mã số thuế là khối "Thông tin khai thuế" của trang Cửa hàng (web `shopSectionPath(TAX)`),
-  // gói là khối "Gói & hạn mức" (web `/manage/subscription` → `shopSectionPath(PLAN)`); tài khoản
-  // nhận tiền về trang số dư.
+  // tài khoản nhận tiền về trang số dư. (Gói không còn màn riêng trên app: khối "Gói & hạn mức" của
+  // trang Cửa hàng / Hồ sơ chủ xe.)
   if (pathname === PARTNER_PATH.TAX || pathname === PARTNER_PATH.SELLER_PROFILE)
     return PARTNER_PATH.SHOP_TAX;
-  if (pathname === PARTNER_PATH.SUBSCRIPTION) return PARTNER_PATH.SHOP_PLAN;
   if (pathname === PARTNER_PATH.BANK_ACCOUNTS) return PARTNER_PATH.BALANCE_PAYOUT;
   if (pathname === PARTNER_PATH.REGISTER) return PARTNER_PATH.HOME;
   // "Chuyến cho thuê" là màn của Owner Lite — tuyến gói đọc yêu cầu ở hộp thư.
@@ -186,16 +181,15 @@ function packageEquivalent(pathname: string): string | null {
   return null;
 }
 
-/** Ba trang tiền/thuế/gói của CHỦ — với thành viên gian hàng chúng là alias về trang tài khoản. */
+/** Hai trang tiền/thuế của CHỦ — với thành viên gian hàng chúng là alias về trang tài khoản. */
 const OWNER_MONEY_ALIASES: readonly string[] = [
   PARTNER_PATH.TAX,
-  PARTNER_PATH.SUBSCRIPTION,
   PARTNER_PATH.BANK_ACCOUNTS,
 ];
 
 /**
- * Thành viên (không phải chủ) của một gian hàng ĐÃ vào khu quản lý mở `/manage/tax`,
- * `/manage/subscription` hay `/manage/bank-accounts` ⇒ trang tài khoản, đúng web PR #159: ví,
+ * Thành viên (không phải chủ) của một gian hàng ĐÃ vào khu quản lý mở `/manage/tax`
+ * hay `/manage/bank-accounts` ⇒ trang tài khoản, đúng web PR #159: ví,
  * tài khoản nhận tiền, thuế và gói là của chủ (`@ShopOwnerOnly`), mở chúng chỉ để nhận 403.
  * Chủ mở `/manage/bank-accounts` ⇒ khối payout của trang số dư, ở cả hai tuyến.
  */

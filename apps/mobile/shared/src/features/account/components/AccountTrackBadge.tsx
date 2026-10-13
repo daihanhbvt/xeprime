@@ -9,6 +9,7 @@ import {
   type AccountTrackInput,
 } from '@xeprime/types';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { usePlanPromotionEnabledPassive } from '@/features/app-config/use-partner-app-config';
 import { VerifiedMark } from '@/components/ui/VerifiedMark';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 
@@ -46,14 +47,17 @@ export function AccountTrackBadge({
 }) {
   const t = useTranslations('Account.trackBadge');
   const { track, roleKey, planName, serviceFeePercent } = resolveAccountTrack(tenant);
+  // Tên gói là thông tin gói — app Partner chỉ hiện khi nền tảng bật cờ (quy định store).
+  // Chỉ hỏi cờ khi thật sự có tên gói để hiện — app khách (không gian hàng) không gọi endpoint này.
+  const showPlanName = usePlanPromotionEnabledPassive(track === ACCOUNT_TRACK.SHOP_OWNER && !!planName);
 
   /** Chữ của nhãn — một nguồn cho cả hai vỏ, để `plain` không đẻ ra một bó khoá thứ hai. */
   const labelFor = () => {
-    if (track === ACCOUNT_TRACK.PACKAGE_PENDING) return t('packagePending');
-    if (track === ACCOUNT_TRACK.UNCONFIGURED) return t('unconfigured');
+    if (track === ACCOUNT_TRACK.PACKAGE_PENDING) return t('appPackagePending');
+    if (track === ACCOUNT_TRACK.UNCONFIGURED) return t('appUnconfigured');
     if (track === ACCOUNT_TRACK.SHOP_MEMBER) return t(accountTrackLabelKey(track, roleKey) ?? 'shopMember');
     if (track === ACCOUNT_TRACK.SHOP_OWNER) {
-      return planName ? t('shopOwnerWithPlan', { plan: planName }) : t('shopOwner');
+      return planName && showPlanName ? t('shopOwnerWithPlan', { plan: planName }) : t('shopOwner');
     }
     return serviceFeePercent == null
       ? t('commissionOwner')
@@ -87,7 +91,7 @@ export function AccountTrackBadge({
    * của nền tảng. Dùng tông lỗi cho cả hai là gắn nhãn "hỏng" lên mọi gian hàng vừa mở.
    */
   if (track === ACCOUNT_TRACK.PACKAGE_PENDING) {
-    return <StatusBadge label={t('packagePending')} color={STATUS_COLOR.PROCESSING} size={size} />;
+    return <StatusBadge label={t('appPackagePending')} color={STATUS_COLOR.PROCESSING} size={size} />;
   }
 
   if (track === ACCOUNT_TRACK.UNCONFIGURED) {

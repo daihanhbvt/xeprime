@@ -22,6 +22,7 @@ import { RemoteImage } from '@/components/ui/RemoteImage';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { usePartnerAppConfig } from '@/features/app-config/use-partner-app-config';
 import { HostMetrics } from '@/features/marketplace/components/HostMetrics';
 import { useMySubscription } from '@/features/subscription/hooks/use-subscription';
 import { VEHICLE_SORT } from '@/features/vehicles/vehicle-sort';
@@ -168,10 +169,9 @@ export function MarketPanel({
  * Nơi gọi chỉ dựng khối này khi có `subscription.view`.
  */
 export function PlanPanel({ href }: { href: Href }) {
-  const t = useTranslations('Dashboard.plan');
+  const t = useTranslations('Dashboard.appPlan');
   const fmt = useAppFormat();
   const navigateOnce = useNavigateOnce();
-  const { has } = usePermissions();
   const { data: user } = useCurrentUser();
   const { data, isPending, isError, refetch } = useMySubscription();
 
@@ -180,7 +180,6 @@ export function PlanPanel({ href }: { href: Href }) {
   const inGrace = user?.tenant?.billingPhase === BILLING_PHASE.GRACE;
   const daysLeft = plan ? daysUntil(plan.endsAt, dayjs()) : null;
   const expiring = inGrace || (daysLeft !== null && daysLeft <= PLAN_RENEW_WARNING_DAYS);
-  const canRenew = has(PERMISSION.SUBSCRIPTION_PURCHASE);
 
   const limit = quota?.kind === 'total' ? quota.totalLimit : null;
   const used = quota?.totalUsed ?? 0;
@@ -232,11 +231,8 @@ export function PlanPanel({ href }: { href: Href }) {
                 />
               ) : null}
               {atCapacity ? <Note text={t('atCapacity')} warn /> : null}
-              {expiring && canRenew ? (
-                <Button label={t('renew')} onPress={() => navigateOnce(href)} />
-              ) : (
-                <InlineAction label={t('open')} onPress={() => navigateOnce(href)} />
-              )}
+              {/* Không gia hạn trong app (mua gói trên web) — chỉ còn lối XEM gói. */}
+              <InlineAction label={t('open')} onPress={() => navigateOnce(href)} />
             </>
           )}
         </Body>
@@ -353,8 +349,12 @@ const THUMB = 44;
  */
 export function OwnerVehiclesPanel({ links }: { links: DashboardLinks }) {
   const t = useTranslations('Dashboard.ownerVehicles');
+  const tPlan = useTranslations('Subscription.mobilePlan');
+  const tDashPlan = useTranslations('Dashboard.appPlan');
   const navigateOnce = useNavigateOnce();
   const { has } = usePermissions();
+  // Lối sang khối "Tài khoản & hạn mức" chỉ có khi nền tảng bật cờ — tắt thì khối đó không tồn tại.
+  const { isPlanPromotionEnabled } = usePartnerAppConfig();
   const vehicles = useVehiclesPage({ page: 1, limit: OWNER_VEHICLE_PREVIEW, sort: VEHICLE_SORT.NEWEST });
   const subscription = useMySubscription(has(PERMISSION.SUBSCRIPTION_VIEW));
 
@@ -393,9 +393,11 @@ export function OwnerVehiclesPanel({ links }: { links: DashboardLinks }) {
           {atCapacity ? (
             <YStack gap={space.xs} p={space.sm} br={radius.md} bg={colors.warningSurface}>
               <Text col={colors.text} fos={fontSize.label}>
-                {t('atCapacity', { limit: limit ?? 0 })}
+                {tPlan('commissionLimitReached', { limit: limit ?? 0 })}
               </Text>
-              <InlineAction label={t('upgrade')} onPress={() => navigateOnce(links.subscription)} />
+              {isPlanPromotionEnabled ? (
+                <InlineAction label={tDashPlan('open')} onPress={() => navigateOnce(links.subscription)} />
+              ) : null}
             </YStack>
           ) : null}
           {canCreate ? (

@@ -14,6 +14,7 @@ import {
   accountSectionPath,
   balancePayoutPath,
   shopSectionPath,
+  withPlanPurchaseIntent,
 } from '@/constants/routes';
 import { ZONE, isPathInZone, siteHref, zoneRelativePath } from '@/zones';
 import { isSafeNextPath, safeNextPath } from './safe-next';
@@ -214,7 +215,10 @@ const NO_SHOP_PAGES: readonly string[] = [ROUTES.MANAGE.ONBOARDING, ROUTES.MANAG
 function packageEquivalent(pathname: string): string | null {
   if (matchesPage(pathname, { href: ROUTES.MANAGE.REGISTRATION })) return ROUTES.MANAGE.SHOP;
   if (pathname === ROUTES.MANAGE.TAX) return shopSectionPath(SHOP_SECTION.TAX);
-  if (pathname === ROUTES.MANAGE.SUBSCRIPTION) return shopSectionPath(SHOP_SECTION.PLAN);
+  // `/subscription` là lối vào ỔN ĐỊNH của email hướng dẫn gói: tới "Gói & hạn mức" VÀ mở hộp thoại mua.
+  if (pathname === ROUTES.MANAGE.SUBSCRIPTION) {
+    return withPlanPurchaseIntent(shopSectionPath(SHOP_SECTION.PLAN));
+  }
   if (pathname === ROUTES.MANAGE.BANK_ACCOUNTS) return balancePayoutPath();
   if (pathname === ROUTES.MANAGE.TRIPS) return ROUTES.MANAGE.BOOKING_REQUESTS;
   return null;
@@ -265,7 +269,9 @@ function commissionEquivalent(user: AuthScope | null | undefined, pathname: stri
     return owner ? accountSectionPath(ACCOUNT_SECTION.TAX) : ROUTES.MANAGE.ACCOUNT;
   }
   if (pathname === ROUTES.MANAGE.SUBSCRIPTION) {
-    return owner ? accountSectionPath(ACCOUNT_SECTION.PLAN) : ROUTES.MANAGE.ACCOUNT;
+    return owner
+      ? withPlanPurchaseIntent(accountSectionPath(ACCOUNT_SECTION.PLAN))
+      : ROUTES.MANAGE.ACCOUNT;
   }
   if (pathname === ROUTES.MANAGE.BANK_ACCOUNTS && owner) return balancePayoutPath();
   return null;

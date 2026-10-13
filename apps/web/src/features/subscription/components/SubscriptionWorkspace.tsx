@@ -1,15 +1,18 @@
 'use client';
 
 import { Alert, Button, Spin } from 'antd';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { PERMISSION, canUpgradeToPackageTrack } from '@xeprime/types';
 
+import { PLAN_PURCHASE_PARAM } from '@/constants/routes';
 import { useTenantScope } from '@/hooks/use-tenant-scope';
+import { useUrlFilters } from '@/hooks/use-url-filters';
 import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import { usePermissions } from '@/hooks/use-permissions';
 
 import { useMySubscription } from '../hooks/use-subscription';
+import { PLAN_PURCHASE_INTENT_ACTION, planPurchaseIntentAction } from '../plan-purchase-intent';
 import { PackageUpgradeWizard, UPGRADE_TITLE_ID } from './PackageUpgradeWizard';
 import { PlanFeatureList } from './PlanFeatureList';
 import { PlanSummaryPanel } from './PlanSummaryPanel';
@@ -77,6 +80,29 @@ export function SubscriptionWorkspace({
 
   const me = useMySubscription();
   const [purchaseOpen, setPurchaseOpen] = useState(false);
+
+  /*
+   * `?purchase=1` (email hướng dẫn gói → `/subscription` → `partnerPageRedirect`): đọc MỘT lần khi
+   * dữ liệu gói đã có, rồi gỡ khỏi URL ngay — F5 hay nút Quay lại không mở lại hộp thoại. Thiếu quyền
+   * thì chỉ gỡ tham số và đứng yên ở section.
+   */
+  const { filters: intent, setFilters: setIntent } = useUrlFilters((params) => ({
+    [PLAN_PURCHASE_PARAM]: params.get(PLAN_PURCHASE_PARAM) === '1',
+  }));
+  const intentRequested = intent[PLAN_PURCHASE_PARAM] === true;
+  const ready = Boolean(me.data);
+  useEffect(() => {
+    if (!intentRequested || !ready) return;
+    setIntent({ [PLAN_PURCHASE_PARAM]: false }, { resetPage: false });
+    const action = planPurchaseIntentAction({ canPurchase, upgrading, inSupport });
+    if (action === PLAN_PURCHASE_INTENT_ACTION.OPEN_DIALOG) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- phản ứng một lần với ý định trên URL
+      setPurchaseOpen(true);
+    } else if (action === PLAN_PURCHASE_INTENT_ACTION.FOCUS_UPGRADE) {
+      // Khối nâng cấp dựng ở lượt render này — đợi một khung hình rồi mới cuộn tới.
+      requestAnimationFrame(focusUpgradeSection);
+    }
+  }, [intentRequested, ready, canPurchase, upgrading, inSupport, setIntent]);
 
   if (me.isLoading) {
     return (

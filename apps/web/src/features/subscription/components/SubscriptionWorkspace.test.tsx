@@ -77,9 +77,16 @@ vi.mock('../hooks/use-subscription', () => ({
   useSyncScopeWhenInvoiceSettles: () => undefined,
 }));
 
+const url = vi.hoisted(() => ({ purchase: false, setFilters: (() => undefined) as (p: unknown) => void }));
 vi.mock('@/hooks/use-url-filters', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/hooks/use-url-filters')>();
-  return { ...actual, useUrlFilters: () => ({ filters: { page: 1 }, setFilters: vi.fn() }) };
+  return {
+    ...actual,
+    useUrlFilters: () => ({
+      filters: { page: 1, purchase: url.purchase },
+      setFilters: (patch: unknown) => url.setFilters(patch),
+    }),
+  };
 });
 
 vi.mock('@/hooks/use-feature', () => ({ useFeatureStates: () => ({}) }));
@@ -173,6 +180,31 @@ beforeEach(() => {
   pendingInvoice.data = undefined;
   currentUser.data = packageScope();
   grant(PERMISSION.SUBSCRIPTION_VIEW, PERMISSION.SUBSCRIPTION_PURCHASE);
+  url.purchase = false;
+  url.setFilters = vi.fn();
+});
+
+/*
+ * `?purchase=1` — link email hướng dẫn gói (`/subscription` → section gói): mở hộp thoại một lần
+ * rồi gỡ tham số; thiếu quyền mua thì chỉ gỡ tham số.
+ */
+describe('SubscriptionWorkspace — ý định mua từ URL', () => {
+  it('có quyền mua: tự mở hộp thoại và gỡ tham số khỏi URL', async () => {
+    url.purchase = true;
+    renderWorkspace();
+
+    expect(await screen.findByText('Mua / gia hạn gói')).toBeTruthy();
+    expect(url.setFilters).toHaveBeenCalledWith({ purchase: false });
+  });
+
+  it('thiếu quyền mua: không mở hộp thoại, vẫn gỡ tham số', () => {
+    grant(PERMISSION.SUBSCRIPTION_VIEW);
+    url.purchase = true;
+    renderWorkspace();
+
+    expect(screen.queryByText('Mua / gia hạn gói')).toBeNull();
+    expect(url.setFilters).toHaveBeenCalledWith({ purchase: false });
+  });
 });
 
 afterEach(cleanup);

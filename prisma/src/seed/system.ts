@@ -7,6 +7,7 @@
  * Danh mục tỉnh và catalog bộ lọc KHÔNG nằm ở đây — chúng do migration baseline nạp, vì chúng
  * là một phần của lược đồ (mọi môi trường có ngay sau `migrate deploy`, không đợi ai chạy seed).
  */
+import { seedPlanGuideTemplates } from './plan-guide-templates';
 import {
   DEFAULT_COMMISSION_PLAN_CODE,
   RETIRED_PER_VEHICLE_PLAN_CODE,
@@ -762,6 +763,9 @@ export async function seedSystemData(): Promise<SystemSeedResult> {
   log(`  banner trang chủ: ${BANNERS.length}`);
 
   await seedPromoCodes();
+
+  // Mẫu email "Hướng dẫn đăng ký và gia hạn gói" — admin quản lý; seed chỉ TẠO MỚI, không ghi đè.
+  await seedPlanGuideTemplates();
   log(`  mã khuyến mãi nền tảng: ${PROMO_CODES.length}`);
 
   return { permissionIds, financeCategoryIds, planIds };

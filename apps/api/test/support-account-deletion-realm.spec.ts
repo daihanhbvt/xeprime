@@ -20,6 +20,7 @@ import { AllExceptionsFilter } from '../src/common/filters/all-exceptions.filter
 import { RealmGuard } from '../src/common/guards/realm.guard';
 import { SupportRequestStore } from '../src/common/support/support-request.store';
 import type { RequestContext } from '../src/common/types/request-context';
+import { AppConfigService } from '../src/modules/app-config/app-config.service';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { NotificationService } from '../src/modules/notification/notification.service';
 import { CustomerSupportController } from '../src/modules/support/customer-support.controller';
@@ -126,6 +127,7 @@ beforeAll(async () => {
       { provide: PrismaServiceToken, useValue: asService },
       { provide: AuditService, useValue: audit },
       { provide: NotificationService, useValue: silentNotifications },
+      { provide: AppConfigService, useValue: new AppConfigService(asService, audit) },
       SupportService,
       { provide: APP_GUARD, useClass: HeaderAuthGuard },
       { provide: APP_GUARD, useClass: RealmGuard },

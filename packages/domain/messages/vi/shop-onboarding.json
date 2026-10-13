@@ -15,7 +15,8 @@
       "publish": "Gửi xe duyệt. Được duyệt là xe lên chợ và bắt đầu nhận đơn.",
       "createShop": "Tạo gian hàng: tên, số điện thoại liên hệ và địa chỉ.",
       "pay": "Chọn gói, số chỗ xe và kỳ hạn, rồi chuyển khoản theo mã QR.",
-      "logo": "Tải logo gian hàng — cần có trước khi gửi xe lên chợ."
+      "logo": "Tải logo gian hàng — cần có trước khi gửi xe lên chợ.",
+      "activate": "XePrime xem xét và duyệt tài khoản gian hàng của bạn."
     },
     "packageTitle": "Mở gian hàng trong 4 bước"
   },
@@ -53,7 +54,8 @@
         "placeholder": "lienhe@gianhang.vn"
       }
     },
-    "submitPackage": "Tạo gian hàng và chọn gói"
+    "submitPackage": "Tạo gian hàng và chọn gói",
+    "submitPackageApp": "Đăng ký gian hàng"
   },
   "tips": {
     "title": "Lưu ý",
@@ -85,12 +87,14 @@
   },
   "packagePage": {
     "title": "Đăng ký gian hàng",
-    "subtitle": "Hai bước: khai thông tin gian hàng, rồi chọn gói và thanh toán. Bộ quản lý gian hàng mở ngay khi XePrime nhận được tiền."
+    "subtitle": "Hai bước: khai thông tin gian hàng, rồi chọn gói và thanh toán. Bộ quản lý gian hàng mở ngay khi XePrime nhận được tiền.",
+    "subtitleApp": "Khai thông tin gian hàng — XePrime sẽ xem xét và duyệt tài khoản của bạn."
   },
   "steps": {
     "label": "Tiến trình đăng ký gian hàng",
     "shopInfo": "Thông tin gian hàng",
-    "planPayment": "Gói và thanh toán"
+    "planPayment": "Gói và thanh toán",
+    "activation": "Chờ kích hoạt"
   },
   "checkout": {
     "loadError": "Không tải được trạng thái thanh toán",
@@ -99,5 +103,14 @@
     "noPlansHint": "Liên hệ hỗ trợ XePrime để mở gói cho gian hàng của bạn.",
     "createInvoice": "Tạo hoá đơn và lấy mã chuyển khoản",
     "pickTermFirst": "Chọn kỳ hạn để tạo hoá đơn."
+  },
+  "packageWaiting": {
+    "title": "Đăng ký gian hàng thành công!",
+    "status": "Đang chờ kích hoạt",
+    "next": {
+      "review": "XePrime đang xem xét thông tin gian hàng của bạn.",
+      "notify": "Bạn sẽ nhận được thông báo ngay khi tài khoản được duyệt.",
+      "refresh": "Màn này tự cập nhật khi tài khoản được duyệt."
+    }
   }
 }

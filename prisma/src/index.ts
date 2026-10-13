@@ -89,3 +89,14 @@ export {
   releasePromoRedemption,
   reservePromoRedemption,
 } from './promo-redemption';
+
+/**
+ * Email hướng dẫn gói (`email_outbox`) — cổng `isPlanPromotionEnabled` + khoá chống trùng dùng chung cho API và
+ * worker. Xem docblock `plan-guide-outbox.ts`.
+ */
+export {
+  enqueuePlanGuideEmail,
+  enqueuePlanGuideForSubscription,
+  isPlanPromotionEnabled,
+  type EnqueuePlanGuideEmailInput,
+} from './plan-guide-outbox';

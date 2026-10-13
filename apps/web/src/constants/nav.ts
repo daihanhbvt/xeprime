@@ -17,6 +17,7 @@ import {
   IdcardOutlined,
   InboxOutlined,
   LineChartOutlined,
+  MobileOutlined,
   MessageOutlined,
   PercentageOutlined,
   PictureOutlined,
@@ -726,6 +727,13 @@ export const PLATFORM_NAV: readonly NavSection[] = [
         href: ROUTES.ADMIN.BANNERS,
         permission: PERMISSION.PLATFORM_BANNER_MANAGE,
         icon: PictureOutlined,
+      },
+      {
+        key: 'admin-app-config',
+        labelKey: 'platform.appConfig',
+        href: ROUTES.ADMIN.APP_CONFIG,
+        permission: PERMISSION.PLATFORM_APP_CONFIG_MANAGE,
+        icon: MobileOutlined,
       },
       {
         key: 'admin-audit',

@@ -140,7 +140,7 @@ export function CategoryManagerSheet({ open, onClose }: { open: boolean; onClose
           />
         </YStack>
       ) : finance.isVisible && !finance.canWrite ? (
-        <Callout tone="warning">{tFeature('readOnlyTooltip')}</Callout>
+        <Callout tone="warning">{tFeature('appReadOnlyTooltip')}</Callout>
       ) : null}
 
       {query.isPending ? (

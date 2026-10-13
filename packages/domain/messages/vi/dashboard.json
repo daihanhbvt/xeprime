@@ -186,5 +186,18 @@
     "loadError": "Chưa tải được danh sách xe.",
     "atCapacity": "Bạn đã dùng hết {limit} xe của chủ xe cá nhân. Mở gian hàng để đăng thêm xe và có sổ thu chi, báo cáo.",
     "upgrade": "Xem gói gian hàng"
+  },
+  "appPlan": {
+    "title": "Tài khoản & hạn mức",
+    "daysLeft": "{count, plural, =0 {Hết hạn hôm nay} other {Còn # ngày}}",
+    "endsAt": "Thời hạn tới {date}",
+    "grace": "Sắp hết thời hạn sử dụng (tới {date})",
+    "vehicles": "Xe đã dùng",
+    "vehiclesValue": "{used}/{limit} xe",
+    "vehiclesUnlimited": "{used} xe · không giới hạn",
+    "atCapacity": "Đã dùng hết hạn mức xe.",
+    "open": "Xem chi tiết",
+    "none": "Chưa có thông tin hạn mức.",
+    "loadError": "Chưa tải được thông tin tài khoản."
   }
 }

@@ -36,6 +36,8 @@ export function useAccountIdentityLabel(): (user: IdentityInput | null | undefin
   return (user) => {
     const { track, roleKey } = resolveAccountTrack(user?.tenant ?? null);
     const key = accountTrackLabelKey(track, roleKey);
+    // App Partner: nhãn 'chưa xác định gói' dùng bản trung tính, không nhắc tới gói.
+    if (key === 'unconfigured') return tTrack('appUnconfigured');
     if (key) return tTrack(key);
     if (user?.platformRole) return domainLabel('platformRole', user.platformRole, user.platformRole);
     return tAccount('profile.accountLabel');

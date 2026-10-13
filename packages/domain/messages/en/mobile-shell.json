@@ -42,8 +42,8 @@
     "newBooking": "New counter booking",
     "inactiveTitle": "Shop is not live yet",
     "inactiveBody": "Your vehicles are not listed on the marketplace. You can still view and manage existing data.",
-    "expiredTitle": "Subscription expired",
-    "expiredBody": "Your vehicles were removed from the marketplace. Renew to list them again; bookings and vehicle data are untouched.",
+    "expiredTitle": "Usage period ended",
+    "expiredBody": "Your vehicles were removed from the marketplace. Contact XePrime to list them again; bookings and vehicle data are untouched.",
     "contactSupport": "Contact support"
   },
   "more": {
@@ -82,11 +82,11 @@
       },
       "choose": {
         "title": "Choose how to rent out",
-        "body": "List a personal vehicle to start fast with no sign-up fee — or open a shop if you run several vehicles. Upgrading later keeps your vehicles and data."
+        "body": "List a personal vehicle to start fast with no sign-up fee — or open a shop if you run several vehicles. Switching later keeps your vehicles and data."
       },
       "publish": {
         "title": "List a vehicle or open a shop",
-        "body": "Personal hosts: add details, pricing and photos, then submit for review. Shops: register the shop, pick a plan, then list the fleet. Once XePrime approves, vehicles go live."
+        "body": "Personal hosts: add details, pricing and photos, then submit for review. Shops: register the shop, then list the fleet. Once XePrime approves, vehicles go live."
       }
     },
     "notInstalledTitle": "Couldn’t open XePrime Partner",

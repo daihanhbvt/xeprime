@@ -280,6 +280,15 @@ function percentOf(base: number, percent: number): number {
 }
 
 /**
+ * % phí dịch vụ XePrime mỗi chuyến của MỘT tuyến: tuyến hoa hồng dùng `service_fee_percent` của
+ * chính sách phí đang hiệu lực, tuyến GÓI luôn 0 (ADR 0029 điều 2). Luật duy nhất — báo giá
+ * (`computeCustomerFees`) và nội dung hiển thị (email hướng dẫn gói) cùng đọc nó.
+ */
+export function tripServiceFeePercent(billingMode: BillingMode, policyServiceFeePercent: number): number {
+  return billingMode === BILLING_MODE.COMMISSION ? policyServiceFeePercent : 0;
+}
+
+/**
  * Tính tiền cho một chuyến. Hàm THUẦN — cùng đầu vào cho cùng đầu ra ở api, web, mobile, worker.
  *
  * `baseAmount` là chuỗi VND nguyên (không thập phân) — bảng kê giá thuê đã làm tròn.
@@ -324,13 +333,14 @@ export function computeCustomerFees(input: {
   const p = input.policy;
   const lines: FeeLine[] = [];
 
-  if (input.billingMode === BILLING_MODE.COMMISSION && p.serviceFeePercent > 0) {
+  const serviceFeePercent = tripServiceFeePercent(input.billingMode, p.serviceFeePercent);
+  if (serviceFeePercent > 0) {
     lines.push({
       key: FEE_LINE.SERVICE_FEE,
       beneficiary: FEE_BENEFICIARY.PLATFORM,
       bearer: FEE_BEARER.CUSTOMER,
-      percent: p.serviceFeePercent,
-      amount: String(percentOf(base, p.serviceFeePercent)),
+      percent: serviceFeePercent,
+      amount: String(percentOf(base, serviceFeePercent)),
     });
   }
   /*

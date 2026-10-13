@@ -12,7 +12,9 @@
     "unconfiguredHint": "Gian hàng của bạn chưa có gói dịch vụ hiệu lực nên nền tảng chưa xác định được cách tính phí. Đây là lỗi cấu hình phía XePrime — liên hệ hỗ trợ trước khi nhận đơn mới.",
     "verifiedHint": "Chủ gian hàng đã xác thực",
     "packagePending": "Chờ thanh toán gói",
-    "packagePendingHint": "Gian hàng đã tạo xong nhưng chưa thanh toán gói đầu tiên. Hoàn tất chuyển khoản để mở bộ quản lý gian hàng."
+    "packagePendingHint": "Gian hàng đã tạo xong nhưng chưa thanh toán gói đầu tiên. Hoàn tất chuyển khoản để mở bộ quản lý gian hàng.",
+    "appPackagePending": "Đang chờ kích hoạt",
+    "appUnconfigured": "Chưa xác định loại tài khoản"
   },
   "title": "Tài khoản của tôi",
   "subtitle": "Quản lý thông tin tài khoản và cài đặt của bạn",
@@ -368,7 +370,11 @@
     "contactSupport": "Liên hệ hỗ trợ",
     "packagePendingTitle": "Còn một bước: thanh toán gói",
     "packagePendingBody": "Gian hàng của bạn đã được tạo. Chọn gói và chuyển khoản để mở bộ quản lý gian hàng và bắt đầu đăng xe.",
-    "packagePendingCta": "Tiếp tục thanh toán"
+    "packagePendingCta": "Tiếp tục thanh toán",
+    "appPackagePendingTitle": "Gian hàng đang chờ kích hoạt",
+    "appPackagePendingBody": "Gian hàng của bạn đã được tạo và đang chờ XePrime kích hoạt. Xem chi tiết để biết các bước tiếp theo.",
+    "appPackagePendingCta": "Xem chi tiết",
+    "appUnconfiguredTitle": "Chưa xác định được thông tin tài khoản gian hàng"
   },
   "security": {
     "title": "Bảo mật tài khoản",
@@ -400,6 +406,7 @@
   "ownerHub": {
     "title": "Hồ sơ chủ xe",
     "subtitle": "Thông tin khách thấy, khai thuế, gói dịch vụ và cách bạn đăng nhập.",
+    "appSubtitle": "Thông tin khách thấy, khai thuế và cách bạn đăng nhập.",
     "navTitle": "Trên trang này",
     "navLabel": "Các phần của hồ sơ chủ xe",
     "loadError": "Không tải được hồ sơ chủ xe",
@@ -410,7 +417,9 @@
       "address": "Địa chỉ nhận xe",
       "addressHint": "Nơi khách đến nhận xe.",
       "plan": "Gói dịch vụ",
-      "planHint": "Gói đang dùng và hoá đơn thanh toán. Lên gói gian hàng để quản lý đội xe đầy đủ."
+      "planHint": "Gói đang dùng và hoá đơn thanh toán. Lên gói gian hàng để quản lý đội xe đầy đủ.",
+      "appPlan": "Tài khoản & hạn mức",
+      "appPlanHint": "Thông tin tài khoản và hạn mức xe của bạn."
     },
     "form": {
       "saved": "Đã lưu địa chỉ nhận xe",

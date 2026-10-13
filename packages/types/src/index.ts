@@ -50,6 +50,7 @@ export * from './push';
 export * from './mobile-client-app';
 export * from './account-realm';
 export * from './badges';
+export * from './app-config';
 export * from './api';
 export * from './province';
 export * from './ward';

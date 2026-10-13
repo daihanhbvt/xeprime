@@ -104,6 +104,7 @@
     "account": "Account"
   },
   "platform": {
+    "appConfig": "App configuration",
     "dashboard": "Overview",
     "approvals": "Vehicle review",
     "approvalsShort": "Review",

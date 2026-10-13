@@ -164,6 +164,40 @@
     "grace": "In grace period",
     "lapsed": "Expired"
   },
+  "mobilePlan": {
+    "title": "Account & limits",
+    "subtitleHidden": "Your account information and vehicle limits.",
+    "subtitleShown": "Your account information and vehicle limits. Need help? Contact the XePrime team.",
+    "packageSummary": "Shop account with the full fleet management toolkit.",
+    "commissionLimitReached": "You have reached the limit of {limit} vehicles.",
+    "contactButton": "Contact for advice",
+    "consult": {
+      "title": "Contact for advice",
+      "intro": "Leave your details and the XePrime team will get in touch to help.",
+      "fullName": "Full name",
+      "phone": "Phone number",
+      "email": "Email",
+      "message": "Message",
+      "messagePlaceholder": "E.g. I have 5 vehicles and need help with my account",
+      "submit": "Send request",
+      "successTitle": "Request sent",
+      "successBodyNoEmail": "Thank you! The XePrime team will contact you as soon as possible.",
+      "successBody": "Thank you! The XePrime team will contact you as soon as possible. Detailed instructions have been sent to {email}.",
+      "done": "Close",
+      "validation": {
+        "fullNameRequired": "Please enter your full name",
+        "phoneRequired": "Please enter your phone number",
+        "phoneInvalid": "Invalid phone number",
+        "emailRequired": "Please enter your email",
+        "emailInvalid": "Invalid email",
+        "messageTooLong": "Message must be at most 1000 characters"
+      }
+    },
+    "noPlan": "Personal owner account",
+    "commissionSummary": "You are a personal owner. A service fee applies to each completed trip.",
+    "termGrace": "Usage period ending soon",
+    "termLapsed": "Usage period ended"
+    },
   "checkout": {
     "back": "Back",
     "title": "Pay for your plan",

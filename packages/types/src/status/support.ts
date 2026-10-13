@@ -28,6 +28,8 @@ export const SUPPORT_CASE_CATEGORY = {
    * loại này còn mở — partial unique index ở DB (`support_cases_open_account_deletion_key`).
    */
   ACCOUNT_DELETION: 'account_deletion',
+  /** Yêu cầu tư vấn gói gửi từ app Partner — chỉ qua `POST /support/plan-consultation`. */
+  PLAN_CONSULTATION: 'plan_consultation',
   OTHER: 'other',
 } as const;
 
@@ -47,6 +49,7 @@ export const SUPPORT_CASE_CATEGORY_LABEL: Readonly<Record<SupportCaseCategory, s
   [SUPPORT_CASE_CATEGORY.PAYMENT]: 'Thanh toán / hoàn tiền',
   [SUPPORT_CASE_CATEGORY.ACCOUNT]: 'Tài khoản',
   [SUPPORT_CASE_CATEGORY.ACCOUNT_DELETION]: 'Yêu cầu xoá tài khoản',
+  [SUPPORT_CASE_CATEGORY.PLAN_CONSULTATION]: 'Tư vấn gói',
   [SUPPORT_CASE_CATEGORY.OTHER]: 'Khác',
 };
 
@@ -166,3 +169,12 @@ export const SUPPORT_PARTY = {
 
 export type SupportParty = (typeof SUPPORT_PARTY)[keyof typeof SUPPORT_PARTY];
 export const SUPPORT_PARTY_VALUES = Object.values(SUPPORT_PARTY) as SupportParty[];
+
+/** Mã `audit_logs.action` của case hỗ trợ. */
+export const SUPPORT_CASE_AUDIT_ACTION = {
+  OPEN: 'support_case.open',
+  WITHDRAW: 'support_case.withdraw',
+  TRANSITION: 'support_case.transition',
+  RESOLVE: 'support_case.resolve',
+  ASSIGN: 'support_case.assign',
+} as const;

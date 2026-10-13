@@ -1,4 +1,9 @@
-import { newId, Prisma, type PrismaClient } from '@xeprime/prisma';
+import {
+  enqueuePlanGuideForSubscription,
+  newId,
+  Prisma,
+  type PrismaClient,
+} from '@xeprime/prisma';
 import {
   subscriptionChainLockKey,
   BANK_MATCH_TARGET_TYPE,
@@ -12,6 +17,7 @@ import {
   SUBSCRIPTION_STATUS,
   addCalendarMonthsVn,
   parsePlanLimits,
+  PLAN_GUIDE_REASON,
   type PlanInvoiceSnapshot,
 } from '@xeprime/types';
 import { notifyTenantMembers, recordSystemAudit } from '../lib/notify';
@@ -33,6 +39,8 @@ export interface SubscriptionLifecycleResult {
   lapsed: number;
   invoicesVoided: number;
   freeTripOffers: number;
+  /** Email hướng dẫn gói mốc "đang ân hạn" vừa xếp hàng (chỉ khi `isPlanPromotionEnabled` bật). */
+  graceGuides: number;
 }
 
 /**
@@ -62,6 +70,7 @@ export async function sweepSubscriptionLifecycle(
     lapsed: await lapseToCommission(prisma, now),
     invoicesVoided: await voidExpiredInvoices(prisma, now),
     freeTripOffers: await offerPlanOnFreeTripsExhausted(prisma, now),
+    graceGuides: await remindDuringGrace(prisma, now),
   };
 }
 
@@ -93,6 +102,12 @@ async function remindRenewal(prisma: PrismaClient, now: Date): Promise<number> {
       title: `Gói ${sub.plan.name} sắp hết hạn`,
       body: `Hết hạn ${sub.endsAt.toLocaleDateString('vi-VN')} — gia hạn ở màn "Gói của tôi" để giữ 0đ trên chuyến.`,
       tenantId: sub.tenantId,
+    });
+    await enqueuePlanGuideForSubscription(prisma, {
+      tenantId: sub.tenantId,
+      subscriptionId: sub.id,
+      endsAt: sub.endsAt,
+      reason: PLAN_GUIDE_REASON.EXPIRING,
     });
     sent += 1;
   }
@@ -136,9 +151,88 @@ async function notifyExpiry(prisma: PrismaClient, now: Date): Promise<number> {
           : 'Gia hạn ngay để không chuyển sang tính hoa hồng theo chuyến. Xe vẫn ở trên chợ.',
       tenantId: sub.tenantId,
     });
+    await enqueuePlanGuideForSubscription(prisma, {
+      tenantId: sub.tenantId,
+      subscriptionId: sub.id,
+      endsAt: sub.endsAt,
+      reason: PLAN_GUIDE_REASON.EXPIRED,
+    });
     sent += 1;
   }
   return sent;
+}
+
+/**
+ * Mốc "đang ân hạn" của email hướng dẫn gói: từ ngày THỨ HAI sau `ends_at` (mốc "đúng ngày hết
+ * hạn" đã có thư riêng) tới trước khi ân hạn kết thúc. Một thuê bao một mốc: CLAIM
+ * `grace_guide_notified_at` (updateMany WHERE NULL) rồi mới xếp hàng — như `renewalRemindedAt` /
+ * `expiryNotifiedAt`, mốc được đánh dấu CẢ KHI `isPlanPromotionEnabled` đang tắt, nên bật cờ về sau
+ * KHÔNG gửi bù thư cho mốc đã qua. `dedupe_key` UNIQUE của outbox là lớp gác thứ hai.
+ *
+ * Lọc trong SQL, không ở Node: cận dưới `ends_at > now − max(graceDays)` của các gói tuyến gói,
+ * loại thuê bao đã qua mốc (`grace_guide_notified_at IS NOT NULL`), sắp tăng dần và đi theo trang keyset
+ * `(ends_at, id)` — thuê bao không có email người nhận không chặn những trang sau.
+ * `pageSize` chỉ để test ép nhiều trang.
+ */
+export async function remindDuringGrace(
+  prisma: PrismaClient,
+  now: Date,
+  pageSize: number = BATCH,
+): Promise<number> {
+  // Mọi gói (không chỉ gói đang bán): thuê bao cũ có thể gắn gói đã ngừng.
+  const plans = await prisma.plan.findMany({
+    select: { limitsJson: true },
+  });
+  const maxGraceDays = plans.reduce(
+    (max, p) => Math.max(max, parsePlanLimits(p.limitsJson).graceDays),
+    0,
+  );
+  if (maxGraceDays <= 1) return 0;
+
+  const upper = new Date(now.getTime() - MS_PER_DAY);
+  const lower = new Date(now.getTime() - maxGraceDays * MS_PER_DAY);
+  let queued = 0;
+  let cursor: { endsAt: Date; id: string } | null = null;
+  for (;;) {
+    const afterCursor: Prisma.Sql = cursor
+      ? Prisma.sql`AND (s.ends_at, s.id) > (${cursor.endsAt}, ${cursor.id})`
+      : Prisma.empty;
+    const page: { id: string; tenant_id: string; ends_at: Date; limits_json: unknown }[] =
+      await prisma.$queryRaw`
+      SELECT s.id, s.tenant_id, s.ends_at, p.limits_json
+        FROM tenant_subscriptions s
+        JOIN plans p ON p.id = s.plan_id
+       WHERE s.status = ${SUBSCRIPTION_STATUS.ACTIVE}
+         AND s.billing_mode = ${BILLING_MODE.PACKAGE}
+         AND s.ends_at <= ${upper}
+         AND s.ends_at > ${lower}
+         AND s.grace_guide_notified_at IS NULL
+         ${afterCursor}
+       ORDER BY s.ends_at ASC, s.id ASC
+       LIMIT ${pageSize}`;
+
+    for (const sub of page) {
+      const graceDays = parsePlanLimits(sub.limits_json).graceDays;
+      const graceEndsAt = new Date(sub.ends_at.getTime() + graceDays * MS_PER_DAY);
+      if (now >= graceEndsAt) continue; // hết ân hạn — `lapseToCommission` lo
+      const claimed = await prisma.tenantSubscription.updateMany({
+        where: { id: sub.id, graceGuideNotifiedAt: null },
+        data: { graceGuideNotifiedAt: now },
+      });
+      if (claimed.count === 0) continue;
+      const added = await enqueuePlanGuideForSubscription(prisma, {
+        tenantId: sub.tenant_id,
+        subscriptionId: sub.id,
+        endsAt: sub.ends_at,
+        reason: PLAN_GUIDE_REASON.GRACE,
+      });
+      if (added) queued += 1;
+    }
+    if (page.length < pageSize) break;
+    const last = page[page.length - 1]!;
+    cursor = { endsAt: last.ends_at, id: last.id };
+  }
+  return queued;
 }
 
 /**

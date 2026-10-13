@@ -6,6 +6,7 @@
  */
 import {
   PARTNER_PAYMENT_RETURN_PATH,
+  PARTNER_PLAN_PURCHASE_PATH,
   PAYMENT_PAGE_PATH,
   PLATFORM_PARTNER_KIND,
   REGISTRATION_TRACK,
@@ -239,7 +240,7 @@ export const ROUTES = {
      * (16/09/2026), tuyến hoa hồng ở `ACCOUNT?section=plan` của "Hồ sơ chủ xe" (07/10/2026, phễu nâng
      * cấp — ADR 0028 điều 1). Không mục menu nào còn trỏ tới đây.
      */
-    SUBSCRIPTION: partner('/subscription'),
+    SUBSCRIPTION: partner(PARTNER_PLAN_PURCHASE_PATH),
     DRIVERS: partner('/drivers'),
     /** Hộp thư phía gian hàng — CẢ hai tuyến (chủ xe hoa hồng nhắn với khách ở đây). */
     CHAT: partner('/chat'),
@@ -325,6 +326,8 @@ export const ROUTES = {
     /** Quản trị chính sách phí có phiên bản (R3 — ADR 0028 điều 2–3). */
     FEE_POLICIES: admin('/fee-policies'),
     PROMO_CODES: admin('/promo-codes'),
+    /** Cấu hình ứng dụng Partner (`isPlanPromotionEnabled`, hotline/Zalo) + mẫu email hướng dẫn gói. */
+    APP_CONFIG: admin('/app-config'),
     /** Màn Tài chính: tiền vào, giữ chỗ, hoàn, rút, bảo hiểm, thuế, đối soát ngày (`?queue=`). */
     MONEY: admin('/money'),
     /** Hàng đợi hỗ trợ/tranh chấp toàn sàn (R3 — ADR 0028 release gate 7). */
@@ -740,6 +743,18 @@ export const adminVehiclePath = {
 };
 
 /** Màn "Duyệt xe" — mở sẵn một phiếu. */
+/** Tab của màn "Cấu hình ứng dụng" (`?tab=`) + trang soạn mẫu email hướng dẫn gói. */
+export const ADMIN_APP_CONFIG_TAB_PARAM = 'tab';
+export const ADMIN_APP_CONFIG_TAB = { CONFIG: 'config', TEMPLATES: 'templates' } as const;
+export type AdminAppConfigTab = (typeof ADMIN_APP_CONFIG_TAB)[keyof typeof ADMIN_APP_CONFIG_TAB];
+
+export const adminAppConfigPath = {
+  templates: (): string =>
+    `${ROUTES.ADMIN.APP_CONFIG}?${new URLSearchParams({ [ADMIN_APP_CONFIG_TAB_PARAM]: ADMIN_APP_CONFIG_TAB.TEMPLATES })}`,
+  newTemplate: (): string => `${ROUTES.ADMIN.APP_CONFIG}/templates/new`,
+  template: (id: string): string => `${ROUTES.ADMIN.APP_CONFIG}/templates/${encodeURIComponent(id)}`,
+};
+
 export const adminApprovalPath = {
   task: (taskId: string): string =>
     `${ROUTES.ADMIN.ROOT}?${new URLSearchParams({ [ADMIN_APPROVAL_TASK_PARAM]: taskId })}`,
@@ -972,6 +987,18 @@ export const shopPath = {
  * Hồ sơ chủ xe, Số dư & rút tiền. Một hằng, để bộ dựng đường dẫn và nơi đọc không lệch nhau.
  */
 export const SECTION_PARAM = 'section';
+
+/**
+ * `?purchase=1` — Ý ĐỊNH "mở luồng mua / gia hạn gói" khi tới section gói (link email hướng dẫn gói
+ * → `/subscription` → `partnerPageRedirect`). Section gói đọc nó MỘT lần rồi gỡ khỏi URL, nên F5
+ * không mở lại hộp thoại. Chỉ là gợi ý giao diện: thiếu quyền mua thì nó bị bỏ qua, và API vẫn gác.
+ */
+export const PLAN_PURCHASE_PARAM = 'purchase';
+
+/** Gắn ý định mở luồng mua gói vào đường dẫn section gói. */
+export function withPlanPurchaseIntent(path: string): string {
+  return `${path}${path.includes('?') ? '&' : '?'}${PLAN_PURCHASE_PARAM}=1`;
+}
 
 /**
  * Năm section của trang Cửa hàng — GIÁ TRỊ đi trong `?section=`, không phải nhãn.

@@ -34,7 +34,13 @@
     "readOnlyTooltip": "Gói đã hết hạn nên tính năng này chỉ xem được. Gia hạn để thao tác tiếp.",
     "upsellTitle": "{feature} thuộc gói dịch vụ",
     "upsellBody": "Gian hàng của bạn chưa có tính năng này. Xem các gói để mở khoá — dữ liệu và thao tác hiện tại không bị ảnh hưởng.",
-    "viewPlansCta": "Xem các gói"
+    "viewPlansCta": "Xem các gói",
+    "viewPlanCta": "Xem tài khoản & hạn mức",
+    "appExpiredTitle": "{feature}: đang ở chế độ chỉ xem",
+    "appExpiredBody": "Toàn bộ dữ liệu cũ vẫn còn nguyên và xem lại được. Liên hệ XePrime để tiếp tục nhập và chỉnh sửa.",
+    "appExpiredBodyWithDate": "Hết thời hạn sử dụng ngày {date}. Toàn bộ dữ liệu cũ vẫn còn nguyên và xem lại được — liên hệ XePrime để tiếp tục nhập và chỉnh sửa.",
+    "appRefreshCta": "Tải lại",
+    "appReadOnlyTooltip": "Tính năng này đang ở chế độ chỉ xem. Liên hệ XePrime để tiếp tục thao tác."
   },
   "support": {
     "title": "Trung tâm hỗ trợ",

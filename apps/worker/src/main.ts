@@ -248,11 +248,12 @@ async function main(): Promise<void> {
         result.expiryNotices ||
         result.lapsed ||
         result.invoicesVoided ||
-        result.freeTripOffers
+        result.freeTripOffers ||
+        result.graceGuides
       ) {
         console.log(
           `vòng đời gói: nhắc ${result.renewalReminders}, hết hạn ${result.expiryNotices}, ` +
-            `chuyển tuyến ${result.lapsed}, void hoá đơn ${result.invoicesVoided}, chào gói ${result.freeTripOffers}`,
+            `chuyển tuyến ${result.lapsed}, void hoá đơn ${result.invoicesVoided}, chào gói ${result.freeTripOffers}, email ân hạn ${result.graceGuides}`,
         );
       }
     }),

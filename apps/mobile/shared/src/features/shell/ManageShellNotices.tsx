@@ -11,6 +11,7 @@ import {
 } from '@xeprime/types';
 import { Button } from '@/components/ui/Button';
 import { Callout, CalloutBody } from '@/components/ui/Callout';
+import { usePartnerAppConfig } from '@/features/app-config/use-partner-app-config';
 import { useFeatureStates, usePlanEndsAt } from '@/features/auth/hooks/use-feature';
 import { useTenantScope } from '@/features/auth/hooks/use-tenant-scope';
 import { shopStatusNotice } from '@/features/shop/status-notice';
@@ -51,6 +52,7 @@ export function ManageShellNotices() {
   const { tenant } = useTenantScope();
   const featureStates = useFeatureStates();
   const planEndsAt = usePlanEndsAt();
+  const { isPlanPromotionEnabled } = usePartnerAppConfig();
   const tShop = useTranslations('Shop');
   const t = useTranslations('ManageCommon');
   const domainLabel = useDomainLabel();
@@ -77,10 +79,16 @@ export function ManageShellNotices() {
       {shopNotice ? (
         <Callout
           tone={shopNotice.tone}
-          title={tShop(`status.${shopNotice.key}.title` as 'status.draft.title')}
+          title={
+            shopNotice.key === 'expired'
+              ? tShop('appStatusExpired.title')
+              : tShop(`status.${shopNotice.key}.title` as 'status.draft.title')
+          }
         >
           <CalloutBody>
-            {tShop(`status.${shopNotice.key}.shell` as 'status.draft.shell')}
+            {shopNotice.key === 'expired'
+              ? tShop('appStatusExpired.shell')
+              : tShop(`status.${shopNotice.key}.shell` as 'status.draft.shell')}
           </CalloutBody>
           {shopNotice.action ? (
             <XStack>
@@ -101,23 +109,26 @@ export function ManageShellNotices() {
       {expiredFeature ? (
         <Callout
           tone="warning"
-          title={t('feature.expiredTitle', { feature: domainLabel('planFeature', expiredFeature) })}
+          title={t('feature.appExpiredTitle', { feature: domainLabel('planFeature', expiredFeature) })}
         >
           <CalloutBody>
             {planEndsAt
-              ? t('feature.expiredBodyWithDate', { date: fmt.date(planEndsAt) })
-              : t('feature.expiredBody')}
+              ? t('feature.appExpiredBodyWithDate', { date: fmt.date(planEndsAt) })
+              : t('feature.appExpiredBody')}
           </CalloutBody>
           <XStack gap={space.sm} flexWrap="wrap">
+            {/* Lối sang khối tài khoản & hạn mức chỉ có khi nền tảng bật cờ (quy định store). */}
+            {isPlanPromotionEnabled ? (
+              <Button
+                label={t('feature.viewPlanCta')}
+                size="sm"
+                shape="square"
+                block={false}
+                onPress={() => navigateOnce(ROUTES.manage.plan())}
+              />
+            ) : null}
             <Button
-              label={t('feature.renewCta')}
-              size="sm"
-              shape="square"
-              block={false}
-              onPress={() => navigateOnce(ROUTES.manage.subscriptionPage())}
-            />
-            <Button
-              label={t('feature.refreshCta')}
+              label={t('feature.appRefreshCta')}
               variant="secondary"
               size="sm"
               shape="square"

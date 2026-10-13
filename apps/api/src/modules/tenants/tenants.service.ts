@@ -24,6 +24,7 @@ import {
   TENANT_ROLE,
   TENANT_STATUS,
   TENANT_TYPE,
+  PLAN_GUIDE_REASON,
 } from '@xeprime/types';
 import { AuditService } from '../audit/audit.service';
 import type { BranchUpdatePlan } from '../branches/branches.service';
@@ -32,6 +33,7 @@ import { BranchesService } from '../branches/branches.service';
 import { AddressService } from '../locations/address.service';
 import { normalizeTaxId, SellerProfileService } from '../seller-profile/seller-profile.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AppConfigService } from '../app-config/app-config.service';
 import {
   DefaultBranchDto,
   MyShopDto,
@@ -104,6 +106,7 @@ export class TenantsService {
     private readonly branches: BranchesService,
     private readonly billing: BillingService,
     private readonly sellerProfiles: SellerProfileService,
+    private readonly appConfig: AppConfigService,
   ) {}
 
   /**
@@ -291,6 +294,30 @@ export class TenantsService {
          * THẬT ở `activateFromInvoiceWithinTx`, khi tiền đã về.
          */
         if (!isPackageTrack) await this.billing.assignDefaultPlanWithinTx(tx, id);
+
+        /*
+         * Tuyến GÓI: xếp hàng email "Hướng dẫn đăng ký và gia hạn gói trên website" trong CÙNG
+         * transaction — chỉ khi nền tảng bật `isPlanPromotionEnabled` (đọc trong tx), trùng thì DB bỏ qua
+         * (`email_outbox.dedupe_key`). Thư GỬI ở `EmailOutboxDispatcher`, không ở request này.
+         */
+        if (isPackageTrack) {
+          const owner = await tx.user.findUnique({
+            where: { id: userId },
+            select: { email: true, displayName: true },
+          });
+          // CHỈ email của TÀI KHOẢN chủ gian hàng (như `SupportService.openPlanConsultation`) — email liên hệ của hồ sơ có thể là của người khác.
+          // RegisterShopDto không mang locale ⇒ bỏ trống, outbox mặc định `vi`.
+          const to = owner?.email?.trim() || null;
+          if (to) {
+            await this.appConfig.enqueuePlanGuide(tx, {
+              to,
+              reason: PLAN_GUIDE_REASON.REGISTERED,
+              displayName: owner?.displayName ?? null,
+              shopName: dto.name,
+              tenantId: id,
+            });
+          }
+        }
 
         /*
          * KHÔNG còn bước "nhận ví cá nhân về tenant" (ADR 0053 điều 8 — bỏ ADR 0038 điều 2). Ví cá

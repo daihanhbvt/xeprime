@@ -152,6 +152,10 @@
     "SELLER_PROFILE_INCOMPLETE": "The profile is missing required information.",
     "SUPPORT_CASE_CLOSED": "This support case is closed. Please open a new one instead.",
     "SUPPORT_CASE_CATEGORY_NOT_ALLOWED": "This case category cannot be submitted here.",
+    "PLAN_CONSULTATION_DISABLED": "Plan consultation in the app is not available yet.",
+    "PLAN_GUIDE_TEMPLATE_ACTIVE": "This template set is in use and cannot be deleted. Switch to another set first.",
+    "PLAN_GUIDE_TEMPLATE_CODE_TAKEN": "This template code is already used. Choose another one.",
+    "PLAN_GUIDE_TEST_NO_EMAIL": "Your account has no email address to receive the test email.",
     "SEPAY_NOT_CONFIGURED": "SePay reconciliation is not configured.",
     "SHOP_OWNER_ONLY": "Only the shop owner can view and withdraw the shop’s money.",
     "BRANCH_SCOPE_EXCEEDED": "You can only assign branches within your own scope, and cannot change members who cover other branches.",
@@ -174,6 +178,16 @@
     "REALM_LOGIN_METHOD_NOT_ALLOWED": "This sign-in method isn't available here. Sign in with your email and password.",
     "ORIGIN_NOT_ALLOWED": "The request was blocked because it didn't come from a XePrime page. Reload the page and try again.",
     "MEMBER_ALREADY_IN_OTHER_TENANT": "This account already works for another shop. Each partner account belongs to one shop only."
+  },
+  "appCode": {
+    "PLAN_LIMIT_REACHED": "Your account has reached its limit.",
+    "FEATURE_NOT_IN_PLAN": "Your account does not include this feature yet. Contact XePrime for details.",
+    "FEATURE_READ_ONLY": "This feature is view-only for now. Your existing data is untouched — contact XePrime to continue.",
+    "PACKAGE_ONBOARDING_INCOMPLETE": "Your shop is awaiting activation of shop management by XePrime.",
+    "PARTNER_ACCESS_REQUIRED": "This account is not covered by the XePrime Partner app. If you are a renter or an individual vehicle owner, please use the XePrime app.",
+    "TENANT_BILLING_NOT_CONFIGURED": "We could not determine your shop account details, so fees cannot be calculated. Contact XePrime support before taking new bookings.",
+    "SUBSCRIPTION_TRACK_ONLY": "This area is not available for your account yet.",
+    "SUBSCRIPTION_INVOICE_PARTIALLY_PAID": "There is an item pending review. Contact XePrime support for guidance."
   },
   "upload": {
     "imageType": "Only JPG, PNG or WebP images are accepted",

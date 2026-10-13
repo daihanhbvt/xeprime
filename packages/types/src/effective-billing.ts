@@ -34,6 +34,11 @@ import { parsePlanLimits } from './plan-billing';
 
 const MS_PER_DAY = 86_400_000;
 
+/** Mốc hết ân hạn = `ends_at` + `graceDays` ngày — phép DUY NHẤT (luật tiền + email hướng dẫn gói). */
+export function graceEndsAtFor(endsAt: Date, graceDays: number): Date {
+  return new Date(endsAt.getTime() + graceDays * MS_PER_DAY);
+}
+
 
 /**
  * Tenant đang ở đâu trong vòng đời gói.
@@ -145,7 +150,7 @@ export function resolveEffectiveBilling(
   }
 
   const graceDays = parsePlanLimits(row.plan.limitsJson).graceDays;
-  const graceEndsAt = new Date(planEndsAt.getTime() + graceDays * MS_PER_DAY);
+  const graceEndsAt = graceEndsAtFor(planEndsAt, graceDays);
 
   if (graceEndsAt.getTime() > now.getTime()) {
     /*

@@ -116,6 +116,7 @@ model User {
   supportContextsRevoked     TenantSupportContext[]    @relation("tenant_support_context_revoker")
   driverLicences             CustomerDriverLicence[]   @relation("driver_licence_owner")
   decidedDriverLicences      CustomerDriverLicence[]   @relation("driver_licence_decider")
+  updatedAppConfigs            PlatformAppConfig[]       @relation("app_config_updated_by")
 
   /// ADR 0053: định danh đăng nhập unique TRONG realm, không unique toàn hệ thống.
   @@unique([realm, email], map: "users_realm_email_key")
@@ -3768,6 +3769,8 @@ model TenantSubscription {
   /// nhắc sắp hết hạn · báo hết hạn/ân hạn · đã chuyển tuyến hoa hồng khi hết ân hạn.
   renewalRemindedAt DateTime? @map("renewal_reminded_at") @db.Timestamptz(3)
   expiryNotifiedAt  DateTime? @map("expiry_notified_at") @db.Timestamptz(3)
+  /// Mốc email "đang ân hạn" đã qua (đánh dấu cả khi cờ quảng bá gói tắt — không gửi bù).
+  graceGuideNotifiedAt DateTime? @map("grace_guide_notified_at") @db.Timestamptz(3)
   lapseHandledAt    DateTime? @map("lapse_handled_at") @db.Timestamptz(3)
   note              String?   @db.Text
   createdBy         String?   @map("created_by") @db.Char(26)
@@ -5052,4 +5055,93 @@ model SupportCaseEvent {
 
   @@index([caseId, createdAt])
   @@map("support_case_events")
+}
+
+// ---------------------------------------------------------------------------
+// Cấu hình app bật/tắt từ xa + hàng đợi email (docs/app-config-realtime.md)
+// ---------------------------------------------------------------------------
+
+/// MỘT dòng mỗi khoá (`partner`) — CHECK `platform_app_configs_key_check`. Writer duy nhất:
+/// `AppConfigService` (admin PATCH: audit cùng transaction, `version` +1; worker chiếu sang Firestore `app_config/partner` — ADR 0059).
+model PlatformAppConfig {
+  /// @xeprime/types → AppConfigKey
+  key                    String   @id @db.VarChar(50)
+  isPlanPromotionEnabled Boolean  @default(false) @map("is_plan_promotion_enabled")
+  /// Tăng 1 mỗi lần đổi — client so sánh để biết cấu hình mới.
+  version                Int      @default(1)
+  /// Hotline/Zalo in trong email hướng dẫn gói. NULL = không in dòng đó.
+  supportHotline         String?  @map("support_hotline") @db.VarChar(30)
+  supportZalo            String?  @map("support_zalo") @db.VarChar(30)
+  updatedBy              String?  @map("updated_by") @db.Char(26)
+  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt              DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  updater User? @relation("app_config_updated_by", fields: [updatedBy], references: [id], onDelete: SetNull)
+
+  @@map("platform_app_configs")
+}
+
+/// Hàng đợi email (outbox) — request/worker chỉ XẾP HÀNG, `EmailOutboxDispatcher` của API gửi.
+/// `dedupe_key` UNIQUE: một mốc (vd `plan_guide:sub:<id>:expiring`) chỉ vào hàng MỘT lần, do DB gác.
+model EmailOutbox {
+  id            String    @id @db.Char(26)
+  /// @xeprime/types → EmailOutboxKind; CHECK.
+  kind          String    @db.VarChar(50)
+  toEmail       String    @map("to_email") @db.VarChar(255)
+  /// @xeprime/types → AppLocale; CHECK.
+  locale        String    @default("vi") @db.VarChar(5)
+  payloadJson   Json      @map("payload_json") @db.JsonB
+  dedupeKey     String?   @unique @map("dedupe_key") @db.VarChar(200)
+  /// @xeprime/types → EmailOutboxStatus; CHECK.
+  status        String    @default("pending") @db.VarChar(20)
+  attempts      Int       @default(0)
+  nextAttemptAt DateTime  @default(now()) @map("next_attempt_at") @db.Timestamptz(3)
+  lastError     String?   @map("last_error") @db.Text
+  sentAt        DateTime? @map("sent_at") @db.Timestamptz(3)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([status, nextAttemptAt])
+  @@map("email_outbox")
+}
+
+/// BỘ MẪU email "Hướng dẫn đăng ký và gia hạn gói" do ADMIN nền tảng quản lý. Mỗi bộ có ĐỦ bốn
+/// nội dung (`PlanGuideEmailTemplateVariant`, PLAN_GUIDE_VARIANT); đúng MỘT bộ đang dùng (partial
+/// unique `plan_guide_email_templates_single_active_key`), hệ thống chọn nội dung theo lý do gửi
+/// (PLAN_GUIDE_REASON_VARIANT). Writer duy nhất: `PlanGuideTemplatesService`.
+model PlanGuideEmailTemplate {
+  id        String    @id @db.Char(26)
+  /// Mã máy, unique trong các bộ CHƯA xoá (partial unique `plan_guide_email_templates_code_key`).
+  code      String    @db.VarChar(60)
+  name      String    @db.VarChar(120)
+  isActive  Boolean   @default(false) @map("is_active")
+  /// Tăng 1 mỗi lần sửa nội dung (của bất kỳ biến thể nào).
+  version   Int       @default(1)
+  createdBy String?   @map("created_by") @db.Char(26)
+  updatedBy String?   @map("updated_by") @db.Char(26)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  variants PlanGuideEmailTemplateVariant[]
+
+  @@index([deletedAt, updatedAt])
+  @@map("plan_guide_email_templates")
+}
+
+/// Một nội dung (PLAN_GUIDE_VARIANT, CHECK ở DB) trong một bộ mẫu — tiêu đề + thân HTML hai ngôn
+/// ngữ. Bộ mẫu chỉ xoá mềm nên CASCADE chỉ chạy khi xoá cứng (test/dọn dữ liệu).
+model PlanGuideEmailTemplateVariant {
+  templateId String                 @map("template_id") @db.Char(26)
+  template   PlanGuideEmailTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  variant    String                 @db.VarChar(20)
+  subjectVi  String                 @map("subject_vi") @db.VarChar(200)
+  subjectEn  String                 @map("subject_en") @db.VarChar(200)
+  /// HTML có biến `{{name}}` — @xeprime/types → PLAN_GUIDE_PLACEHOLDER.
+  bodyVi     String                 @map("body_vi") @db.Text
+  bodyEn     String                 @map("body_en") @db.Text
+  updatedAt  DateTime               @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@id([templateId, variant])
+  @@map("plan_guide_email_template_variants")
 }

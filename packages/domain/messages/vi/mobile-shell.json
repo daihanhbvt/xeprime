@@ -42,8 +42,8 @@
     "newBooking": "Tạo đơn tại quầy",
     "inactiveTitle": "Gian hàng chưa hoạt động",
     "inactiveBody": "Xe của bạn chưa hiện trên chợ. Bạn vẫn xem và quản lý được dữ liệu hiện có.",
-    "expiredTitle": "Gói dịch vụ đã hết hạn",
-    "expiredBody": "Xe đã được gỡ khỏi chợ. Gia hạn gói để đăng bán trở lại; dữ liệu đơn và xe vẫn còn nguyên.",
+    "expiredTitle": "Đã hết thời hạn sử dụng",
+    "expiredBody": "Xe đã được gỡ khỏi chợ. Liên hệ XePrime để đăng bán trở lại; dữ liệu đơn và xe vẫn còn nguyên.",
     "contactSupport": "Liên hệ hỗ trợ"
   },
   "more": {
@@ -82,11 +82,11 @@
       },
       "choose": {
         "title": "Chọn cách cho thuê",
-        "body": "Đăng xe cá nhân để bắt đầu nhanh, không phí đăng ký — hoặc mở gian hàng nếu bạn vận hành nhiều xe. Nâng cấp sau vẫn giữ nguyên xe và dữ liệu."
+        "body": "Đăng xe cá nhân để bắt đầu nhanh, không phí đăng ký — hoặc mở gian hàng nếu bạn vận hành nhiều xe. Chuyển đổi sau vẫn giữ nguyên xe và dữ liệu."
       },
       "publish": {
         "title": "Đăng xe hoặc mở gian hàng",
-        "body": "Chủ xe cá nhân: khai thông tin, giá, ảnh rồi gửi duyệt xe. Chủ gian hàng: đăng ký gian hàng, chọn gói rồi đăng đội xe. XePrime duyệt xong là xe lên chợ."
+        "body": "Chủ xe cá nhân: khai thông tin, giá, ảnh rồi gửi duyệt xe. Chủ gian hàng: đăng ký gian hàng rồi đăng đội xe. XePrime duyệt xong là xe lên chợ."
       }
     },
     "notInstalledTitle": "Chưa mở được XePrime Partner",
