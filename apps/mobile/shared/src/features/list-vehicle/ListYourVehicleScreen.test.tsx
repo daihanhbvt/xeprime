@@ -74,7 +74,8 @@ async function renderScreen(session: authApi.CurrentUser | null) {
  */
 async function pressTrack(view: Awaited<ReturnType<typeof render>>, name: string) {
   // Tuyến gói phải được CHỌN trước — nút ghim đáy màn chỉ mang hành động của tuyến đang chọn.
-  if (name === SHOP_CTA) await fireEvent.press(view.getByRole('radio', { name: 'Mở gian hàng cho thuê' }));
+  if (name === SHOP_CTA)
+    await fireEvent.press(view.getByRole('radio', { name: 'Mở gian hàng cho thuê' }));
   const cta = view.getByRole('button', { name });
   await waitFor(() => expect(cta.props.accessibilityState?.disabled).toBe(false));
   await fireEvent.press(cta);

@@ -69,7 +69,12 @@ export class MobilePhoneAuthController {
     // Tìm/tạo tài khoản theo SĐT TRONG realm của app (ADR 0053): app Partner tạo tài khoản đối tác
     // cho số chưa đăng ký, như site partner. Quyền + tenant scope đi trong BODY, không trong token
     // (ADR 0017 §1).
-    const { userId } = await this.auth.resolveOrCreateUserByPhone(dto.phone, realm);
+    // `displayName` chỉ đặt tên cho tài khoản TẠO MỚI — tên khách gõ ở form đặt xe, như bản web.
+    const { userId } = await this.auth.resolveOrCreateUserByPhone(
+      dto.phone,
+      realm,
+      dto.displayName,
+    );
     const user = await this.auth.me(userId);
 
     const pair = await this.nativeSessions.issueSession(

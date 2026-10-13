@@ -20,6 +20,7 @@ import enListYourVehicle from '@xeprime/domain/messages/en/list-your-vehicle.jso
 import enListings from '@xeprime/domain/messages/en/listings.json';
 import enMarketplace from '@xeprime/domain/messages/en/marketplace.json';
 import enPromoCodes from '@xeprime/domain/messages/en/promo-codes.json';
+import enPaymentGateway from '@xeprime/domain/messages/en/payment-gateway.json';
 import enMobileShell from '@xeprime/domain/messages/en/mobile-shell.json';
 import enNavigation from '@xeprime/domain/messages/en/navigation.json';
 import enManageCommon from '@xeprime/domain/messages/en/manage-common.json';
@@ -32,6 +33,7 @@ import enFinance from '@xeprime/domain/messages/en/finance.json';
 import enMaintenance from '@xeprime/domain/messages/en/maintenance.json';
 import enDashboard from '@xeprime/domain/messages/en/dashboard.json';
 import enDrivers from '@xeprime/domain/messages/en/drivers.json';
+import enDriverLicence from '@xeprime/domain/messages/en/driver-licence.json';
 import enLegal from '@xeprime/domain/messages/en/legal.json';
 import enMembers from '@xeprime/domain/messages/en/members.json';
 import enShop from '@xeprime/domain/messages/en/shop.json';
@@ -60,6 +62,7 @@ import viListYourVehicle from '@xeprime/domain/messages/vi/list-your-vehicle.jso
 import viListings from '@xeprime/domain/messages/vi/listings.json';
 import viMarketplace from '@xeprime/domain/messages/vi/marketplace.json';
 import viPromoCodes from '@xeprime/domain/messages/vi/promo-codes.json';
+import viPaymentGateway from '@xeprime/domain/messages/vi/payment-gateway.json';
 import viMobileShell from '@xeprime/domain/messages/vi/mobile-shell.json';
 import viNavigation from '@xeprime/domain/messages/vi/navigation.json';
 import viManageCommon from '@xeprime/domain/messages/vi/manage-common.json';
@@ -72,6 +75,7 @@ import viFinance from '@xeprime/domain/messages/vi/finance.json';
 import viMaintenance from '@xeprime/domain/messages/vi/maintenance.json';
 import viDashboard from '@xeprime/domain/messages/vi/dashboard.json';
 import viDrivers from '@xeprime/domain/messages/vi/drivers.json';
+import viDriverLicence from '@xeprime/domain/messages/vi/driver-licence.json';
 import viLegal from '@xeprime/domain/messages/vi/legal.json';
 import viMembers from '@xeprime/domain/messages/vi/members.json';
 import viShop from '@xeprime/domain/messages/vi/shop.json';
@@ -120,6 +124,7 @@ export const MESSAGES = {
     HomeSearch: viHomeSearch,
     Marketplace: viMarketplace,
     PromoCodes: viPromoCodes,
+    PaymentGateway: viPaymentGateway,
     Listings: viListings,
     ListYourVehicle: viListYourVehicle,
     ManageCommon: viManageCommon,
@@ -132,6 +137,7 @@ export const MESSAGES = {
     Maintenance: viMaintenance,
     Dashboard: viDashboard,
     Drivers: viDrivers,
+    DriverLicence: viDriverLicence,
     Legal: viLegal,
     Members: viMembers,
     Shop: viShop,
@@ -162,6 +168,7 @@ export const MESSAGES = {
     HomeSearch: enHomeSearch,
     Marketplace: enMarketplace,
     PromoCodes: enPromoCodes,
+    PaymentGateway: enPaymentGateway,
     Listings: enListings,
     ListYourVehicle: enListYourVehicle,
     ManageCommon: enManageCommon,
@@ -174,6 +181,7 @@ export const MESSAGES = {
     Maintenance: enMaintenance,
     Dashboard: enDashboard,
     Drivers: enDrivers,
+    DriverLicence: enDriverLicence,
     Legal: enLegal,
     Members: enMembers,
     Shop: enShop,

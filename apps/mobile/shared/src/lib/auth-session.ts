@@ -157,10 +157,16 @@ export async function signUpWithPassword(
  * mã không phát phiên. Chỉ bước cuối này là của riêng native: web đổi mã lấy cookie ở
  * `/auth/phone/login`, app đổi lấy cặp Bearer (ADR 0017).
  */
-export async function signInWithOtp(phone: string, code: string): Promise<CurrentUser> {
+/** `displayName` chỉ đặt tên cho tài khoản server TẠO MỚI từ lượt đăng nhập này (form đặt xe). */
+export async function signInWithOtp(
+  phone: string,
+  code: string,
+  displayName?: string,
+): Promise<CurrentUser> {
   const session = await mobileAuthApi.phoneLogin(authClient, {
     phone,
     code,
+    ...(displayName?.trim() ? { displayName: displayName.trim() } : {}),
     device: describeDevice(),
   });
   await storeTokens(session.tokens);
@@ -321,6 +327,8 @@ async function endSession(): Promise<void> {
   accessToken = null;
   accessExpiresAt = 0;
   await deleteSecureItem(SECURE_KEY.REFRESH_TOKEN);
+  // Lượt cổng thanh toán đang theo dõi thuộc về TÀI KHOẢN vừa ra — không để lại cho người kế tiếp.
+  await deleteSecureItem(SECURE_KEY.TRIP_PAYMENT_ORDERS);
   for (const listener of sessionEndedListeners) listener();
 }
 

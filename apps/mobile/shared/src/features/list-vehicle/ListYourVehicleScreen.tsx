@@ -104,11 +104,15 @@ export function ListYourVehicleScreen({
       <Screen
         edges={['left', 'right', 'bottom']}
         footer={
-          <Button
-            label={isPersonal ? t('personal.cta') : t('shop.cta')}
-            icon={isPersonal ? 'car-sport-outline' : 'storefront-outline'}
-            onPress={go}
-          />
+          <YStack gap={space.xs}>
+            <Button
+              label={isPersonal ? t('personal.cta') : t('shop.cta')}
+              icon={isPersonal ? 'car-sport-outline' : 'storefront-outline'}
+              onPress={go}
+            />
+            {/* Phần đuôi của nơi dùng (Đăng xuất ở app Partner) dính đáy cùng nút chính. */}
+            {footer}
+          </YStack>
         }
       >
         <YStack gap={space.lg} pb={space.md}>
@@ -224,7 +228,6 @@ export function ListYourVehicleScreen({
               onPress={() => openLegalDoc(LEGAL_DOC.MARKETPLACE_RULES)}
             />
           </XStack>
-          {footer}
         </YStack>
       </Screen>
     </>

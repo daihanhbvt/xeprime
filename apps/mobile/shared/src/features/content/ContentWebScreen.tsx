@@ -5,6 +5,8 @@ import { WebDocView } from '@/components/web/WebDocView';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { resolveWebBaseUrl } from '@/lib/web-base-url';
+import { APP_PROFILE } from '@/app-profile';
+import { MOBILE_CLIENT_APP } from '@xeprime/types';
 import {
   contentNavigation,
   contentPage,
@@ -13,12 +15,31 @@ import {
 } from './content-navigation';
 
 /** Màn NATIVE nào nhận đích nào — phần LUẬT nằm ở `content-navigation.ts` và có test riêng. */
-const NATIVE_HREF: Readonly<Record<ContentNativeTarget, () => Href>> = {
+const CUSTOMER_NATIVE_HREF: Readonly<Record<ContentNativeTarget, () => Href>> = {
   [CONTENT_NATIVE_TARGET.HOME]: () => ROUTES.explore.home(),
   [CONTENT_NATIVE_TARGET.LIST_YOUR_VEHICLE]: () => ROUTES.listYourVehicle.root(),
   [CONTENT_NATIVE_TARGET.SEARCH]: () => ROUTES.explore.search(),
+  /*
+   * Liên kết `/manage/…` của trung tâm trợ giúp là hướng dẫn cho CHỦ XE (đăng xe, chính sách…).
+   * Ở app khách, đích đó (`ROUTES.manage.*` = màn handoff) sẽ mở app Partner — không nhảy app:
+   * người khách bấm vào là người đang tìm cách cho thuê, nên dẫn vào màn "Trở thành chủ xe".
+   */
+  [CONTENT_NATIVE_TARGET.MANAGE]: () => ROUTES.listYourVehicle.root(),
+};
+
+/**
+ * App Partner không có chợ xe: "Trang chủ" là khu quản lý của chính app này (`ROUTES.explore.*`
+ * ở đây đổ về `/not-available`). Tìm xe — xem `allowNavigation`.
+ */
+const PARTNER_NATIVE_HREF: Readonly<Record<ContentNativeTarget, () => Href>> = {
+  [CONTENT_NATIVE_TARGET.HOME]: () => ROUTES.root.index(),
+  [CONTENT_NATIVE_TARGET.LIST_YOUR_VEHICLE]: () => ROUTES.listYourVehicle.root(),
+  [CONTENT_NATIVE_TARGET.SEARCH]: () => ROUTES.root.index(),
   [CONTENT_NATIVE_TARGET.MANAGE]: () => ROUTES.manage.home(),
 };
+
+const IS_PARTNER_APP = APP_PROFILE.clientApp === MOBILE_CLIENT_APP.PARTNER;
+const NATIVE_HREF = IS_PARTNER_APP ? PARTNER_NATIVE_HREF : CUSTOMER_NATIVE_HREF;
 
 /**
  * Bộ đọc CHUNG cho mọi trang nội dung của web — giới thiệu sàn, trung tâm trợ giúp, khu pháp lý.
@@ -72,6 +93,8 @@ export function ContentWebScreen({
     (url: string) => {
       const next = contentNavigation(url, webBaseUrl);
       if (next.kind === 'native') {
+        // Trang tìm xe thuộc site khách: app Partner không có màn đó — chặn, không mở gì.
+        if (IS_PARTNER_APP && next.target === CONTENT_NATIVE_TARGET.SEARCH) return false;
         /*
          * Trang chủ là một TAB đã có sẵn dưới màn này — `dismissTo` lui về đúng bản đó (hoặc thay
          * màn hiện tại nếu không có). `push` sẽ dựng một bản `(tabs)` THỨ HAI chồng lên: mất vùng

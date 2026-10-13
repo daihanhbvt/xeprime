@@ -10,7 +10,8 @@ import { TripDetailScreen } from './TripDetailScreen';
 
 jest.mock('expo-router', () => ({
   useNavigation: () => ({ isFocused: () => true }),
-  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
+  useLocalSearchParams: () => ({}),
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn(), setParams: jest.fn() }),
 }));
 
 /** Nút chat cần phiên + chat realtime — không thuộc phạm vi màn này. */

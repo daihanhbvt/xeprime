@@ -2,6 +2,7 @@ import type { Href as TypedHref } from 'expo-router';
 import type { LegalDoc } from '@xeprime/domain';
 import { REGISTRATION_TRACK, type RegistrationTrack } from '@xeprime/types';
 import { VEHICLE_EDIT_TAB, type VehicleEditTab } from './vehicle-edit-tab';
+import { compactParams } from './list-params';
 import { ACCOUNT_SECTION_PARAM, type AccountSection } from './account-section';
 import {
   VEHICLE_REGISTRATION_SOURCE,
@@ -293,6 +294,13 @@ export const ROUTES = {
     tax: (): Href => '/account/tax',
     /** Đổi mật khẩu, hoặc ĐẶT lần đầu với tài khoản OTP/mạng xã hội (`hasPassword === false`). */
     changePassword: (): Href => '/account/change-password',
+    /**
+     * Giấy tờ & Xác minh — bằng lái của tài khoản KHÁCH, điều kiện đặt xe tự lái (ADR 0057).
+     * Chỉ app khách có màn này. Ở app Partner, builder này đổ về `/not-available` (overlay
+     * `routes.ts` của nó); còn deep link URL `/account/documents` thì KHÔNG có route ở đó nên rơi
+     * vào `+not-found`.
+     */
+    documents: (): Href => '/account/documents',
     /** YÊU CẦU xoá tài khoản — mở support case `account_deletion`, nền tảng xử lý tay. */
     deleteAccount: (): Href => '/account/delete-account',
     /**
@@ -379,13 +387,20 @@ export const ROUTES = {
   manage: {
     home: (): Href => '/manage',
     more: (): Href => '/manage/more',
-    requests: (): Href => '/manage/requests',
+    /** Hộp thư yêu cầu. `status` = tab mở sẵn (thẻ Tổng quan, như `?status=` của web). */
+    requests: (filters?: { status?: string }): Href => {
+      const params = compactParams({ status: filters?.status });
+      return params ? { pathname: '/manage/requests', params } : '/manage/requests';
+    },
     /**
      * "Chuyến cho thuê" — CHỦ xe tuyến hoa hồng (Owner Lite, PR #158): một danh sách gộp yêu cầu +
      * đơn thay cho hộp thư và bảng đơn. Thành viên không phải chủ bị `partnerPathRedirect` đưa về
      * hộp thư (`GET /trips` chỉ dựng phía chủ xe cho CHỦ).
      */
-    trips: (): Href => '/manage/trips',
+    trips: (filters?: { filter?: string }): Href => {
+      const params = compactParams({ filter: filters?.filter });
+      return params ? { pathname: '/manage/trips', params } : '/manage/trips';
+    },
     /** Màn Chuyến mở sẵn chi tiết MỘT yêu cầu — đích của thông báo yêu cầu cho chủ xe tuyến hoa hồng. */
     tripRequest: (requestId: string): Href => ({
       pathname: '/manage/trips',
@@ -395,10 +410,15 @@ export const ROUTES = {
      * Danh sách đơn thuê. `vehicleId` lọc theo MỘT xe — cùng tham số web đặt trên URL
      * (`/manage/bookings?vehicleId=…`), dùng cho lối đi từ hồ sơ xe.
      */
-    bookings: (filters?: { vehicleId?: string }): Href =>
-      filters?.vehicleId
-        ? { pathname: '/manage/bookings', params: { vehicleId: filters.vehicleId } }
-        : '/manage/bookings',
+    bookings: (filters?: { vehicleId?: string; status?: string; sort?: string }): Href => {
+      // `status`/`sort` = bộ lọc KHỞI TẠO từ thẻ Tổng quan (như `?status=active&sort=return_asc`).
+      const params = compactParams({
+        vehicleId: filters?.vehicleId,
+        status: filters?.status,
+        sort: filters?.sort,
+      });
+      return params ? { pathname: '/manage/bookings', params } : '/manage/bookings';
+    },
     /**
      * Lối tắt "Chờ giao xe" — CÙNG danh sách, cùng endpoint, chỉ khác một nhóm việc dựng sẵn
      * (`preset=awaiting_pickup` gửi lên server — ADR 0047).
@@ -455,7 +475,14 @@ export const ROUTES = {
     }),
 
     /** Đội xe của gian hàng — danh sách, thêm xe, hồ sơ 360, hub sửa xe, giá & chính sách. */
-    vehicles: (): Href => '/manage/vehicles',
+    /** `operationStatus`/`publicStatus` = bộ lọc KHỞI TẠO từ thẻ Tổng quan, như URL web. */
+    vehicles: (filters?: { operationStatus?: string; publicStatus?: string }): Href => {
+      const params = compactParams({
+        operationStatus: filters?.operationStatus,
+        publicStatus: filters?.publicStatus,
+      });
+      return params ? { pathname: '/manage/vehicles', params } : '/manage/vehicles';
+    },
     vehicleNew: (): Href => '/manage/vehicles/new',
     vehicleDetail: (vehicleId: string): Href => ({
       pathname: '/manage/vehicles/[id]',

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useRouter } from 'expo-router';
 import { useBranchReturnParam } from '@/features/branches/hooks/use-branch-filter';
-import { Text, YStack } from 'tamagui';
+import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { PERMISSION, PUBLISH_REQUIREMENT, type PublishRequirement } from '@xeprime/types';
 import type { OwnerProfileValues } from '@xeprime/validators';
@@ -329,20 +329,18 @@ export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrati
     return (
       <>
         <AppHeader title={t('exit')} onBack={exit} />
-        <Screen edges={['left', 'right', 'bottom']}>
-          <VehicleWizardBar steps={barSteps} current={0} onStepChange={() => undefined} />
-          <QuickVehicleOwnerStep
-            defaultValues={ownerProfile}
-            {...(ownerReturnStep ? { submitLabel: tCommon('save') } : {})}
-            onCompleted={(values) => {
-              setOwnerProfile(values);
-              // Quay lại đúng chỗ đã bấm "Sửa địa chỉ"; lần đầu thì đi tiếp sang bước xe.
-              setStep(ownerReturnStep ?? 'info');
-              setOwnerReturnStep(null);
-            }}
-            onCancel={exit}
-          />
-        </Screen>
+        <QuickVehicleOwnerStep
+          top={<VehicleWizardBar steps={barSteps} current={0} onStepChange={() => undefined} />}
+          defaultValues={ownerProfile}
+          {...(ownerReturnStep ? { submitLabel: tCommon('save') } : {})}
+          onCompleted={(values) => {
+            setOwnerProfile(values);
+            // Quay lại đúng chỗ đã bấm "Sửa địa chỉ"; lần đầu thì đi tiếp sang bước xe.
+            setStep(ownerReturnStep ?? 'info');
+            setOwnerReturnStep(null);
+          }}
+          onCancel={exit}
+        />
       </>
     );
   }
@@ -506,7 +504,61 @@ export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrati
   return (
     <>
       <AppHeader title={t('exit')} onBack={exit} />
-      <Screen edges={['left', 'right', 'bottom']}>
+      {/*
+        Hành động của bước NEO Ở ĐÁY MÀN (`footer` của `Screen` — ngoài vùng cuộn, trong lớp tránh
+        bàn phím): lối thoát co vừa chữ bên trái, hành động chính lấy phần còn lại (luật ở `Button`).
+        Bước cuối có HAI việc khác nhau — "Lưu nháp" là nút phụ cùng hàng, nên "Quay lại" lùi xuống
+        thành liên kết bên dưới (thanh bước phía trên cũng lùi được).
+      */}
+      <Screen
+        edges={['left', 'right', 'bottom']}
+        footer={
+          <YStack gap={space.xs}>
+            <XStack gap={space.sm}>
+              <YStack flexShrink={0}>
+                {isLastStep ? (
+                  <Button
+                    label={t('saveDraft')}
+                    variant="secondary"
+                    block={false}
+                    disabled={registration.pending}
+                    onPress={() => void save(false)}
+                  />
+                ) : vehicleIndex > 0 ? (
+                  <Button
+                    label={tCommon('back')}
+                    variant="ghost"
+                    block={false}
+                    onPress={() => setStep(STEP_KEYS[vehicleIndex - 1] as StepKey)}
+                  />
+                ) : (
+                  /* Bước đầu không có chỗ để lùi — nút phụ là lối THOÁT, đúng như web. */
+                  <Button label={t('exit')} variant="ghost" block={false} onPress={exit} />
+                )}
+              </YStack>
+              <YStack f={1}>
+                {isLastStep ? (
+                  <Button
+                    label={t('finish')}
+                    loading={registration.pending}
+                    onPress={() => void save(true)}
+                  />
+                ) : (
+                  <Button label={tCommon('next')} onPress={() => void next()} />
+                )}
+              </YStack>
+            </XStack>
+            {isLastStep && vehicleIndex > 0 && !registration.pending ? (
+              <XStack jc="center">
+                <InlineAction
+                  label={tCommon('back')}
+                  onPress={() => setStep(STEP_KEYS[vehicleIndex - 1] as StepKey)}
+                />
+              </XStack>
+            ) : null}
+          </YStack>
+        }
+      >
         <VehicleWizardBar steps={barSteps} current={barIndex} onStepChange={goToBar} />
 
         <YStack gap={space.md}>
@@ -558,43 +610,6 @@ export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrati
               </YStack>
             </Callout>
           ) : null}
-
-          <YStack gap={space.sm}>
-            {isLastStep ? (
-              <>
-                {/*
-                  Bước cuối có HAI hành động khác nhau, nên nút chính nói đúng việc nó làm —
-                  "Lưu & gửi duyệt" hay "Lưu nháp" — chứ không phải "Kế tiếp".
-                */}
-                <Button
-                  label={t('finish')}
-                  loading={registration.pending}
-                  onPress={() => void save(true)}
-                />
-                <Button
-                  label={t('saveDraft')}
-                  variant="secondary"
-                  disabled={registration.pending}
-                  onPress={() => void save(false)}
-                />
-              </>
-            ) : (
-              <Button label={tCommon('next')} onPress={() => void next()} />
-            )}
-
-            {vehicleIndex > 0 ? (
-              <Button
-                label={tCommon('back')}
-                variant="ghost"
-                icon="arrow-back"
-                disabled={registration.pending}
-                onPress={() => setStep(STEP_KEYS[vehicleIndex - 1] as StepKey)}
-              />
-            ) : (
-              /* Bước đầu không có chỗ để lùi — nút phụ là lối THOÁT, đúng như web. */
-              <Button label={t('exit')} variant="ghost" icon="arrow-back" onPress={exit} />
-            )}
-          </YStack>
         </YStack>
       </Screen>
     </>

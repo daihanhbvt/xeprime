@@ -3,8 +3,9 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { API_ERROR_CODE, PHONE_VERIFICATION_PURPOSE } from '@xeprime/types';
 import { buildOtpLoginSchema, type OtpLoginValues } from '@xeprime/validators';
 import { useAuthSchemaLabels } from '../use-auth-schema-labels';
-import { useState, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useMemo, useRef, useState } from 'react';
+import type { TextInput } from 'react-native';
+import { useForm, useWatch } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { useAppToast } from '@/components/feedback/use-app-toast';
@@ -49,6 +50,7 @@ export function OtpLoginForm({ onSuccess }: { onSuccess: (user: CurrentUser) => 
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
   const [code, setCode] = useState('');
+  const codeInputRef = useRef<TextInput>(null);
 
   const vp = usePhoneVerify(PHONE_VERIFICATION_PURPOSE.LOGIN);
   const login = useOtpLogin();
@@ -64,7 +66,6 @@ export function OtpLoginForm({ onSuccess }: { onSuccess: (user: CurrentUser) => 
   const {
     control,
     handleSubmit,
-    getValues,
     formState: { isValid, isSubmitting },
   } = useForm<OtpLoginValues>({
     // Xem docblock cùng chỗ ở `LoginForm`: nút khoá theo `isValid` nên phải validate real-time.
@@ -74,7 +75,9 @@ export function OtpLoginForm({ onSuccess }: { onSuccess: (user: CurrentUser) => 
   });
 
   const sent = vp.status === 'code_sent';
-  const phone = getValues('phone').trim();
+  const phone = useWatch({ control, name: 'phone' }).trim();
+  // Môi trường mã test cho nhập mã trước khi gửi ⇒ SĐT phải hợp lệ mới đăng nhập được (như web).
+  const canSubmit = code.length === OTP_LENGTH && isValid && !login.isPending;
 
   // `sendAsync` chứ không `send`: chờ được thì `isSubmitting` mới bật, và đó là thứ khoá nút.
   const sendCode = handleSubmit(async (values) => {
@@ -88,7 +91,7 @@ export function OtpLoginForm({ onSuccess }: { onSuccess: (user: CurrentUser) => 
   });
 
   function submitCode(next = code) {
-    if (next.length !== OTP_LENGTH || login.isPending) return;
+    if (next.length !== OTP_LENGTH || !isValid || login.isPending) return;
     login.mutate(
       { phone, code: next },
       {
@@ -120,8 +123,13 @@ export function OtpLoginForm({ onSuccess }: { onSuccess: (user: CurrentUser) => 
         icon="call-outline"
         keyboardType="phone-pad"
         autoComplete="tel"
-        returnKeyType="send"
-        onSubmitEditing={sendCode}
+        // Môi trường mã test: ô mã đã hiện trước khi gửi ⇒ phím của bàn phím chuyển sang ô mã chứ
+        // không phát SMS — gửi thật vẫn có nút "Gửi mã xác thực" riêng.
+        returnKeyType={vp.canEnterCode && !sent ? 'next' : 'send'}
+        onSubmitEditing={() => {
+          if (vp.canEnterCode && !sent) codeInputRef.current?.focus();
+          else void sendCode();
+        }}
         // Chú thích tắt sau khi gửi: lúc đó nó đã thành sự thật, giữ lại là nói thừa.
         {...(sent ? {} : { hint: t('otp.phoneHint') })}
         // Khoá ô sau khi gửi: mã đã phát cho SỐ NÀY: đổi số mà giữ mã là gửi mã của người khác.
@@ -136,25 +144,35 @@ export function OtpLoginForm({ onSuccess }: { onSuccess: (user: CurrentUser) => 
           onPress={sendCode}
           loading={isSubmitting}
           disabled={!isValid || vp.cooldown > 0}
+          {...(vp.canEnterCode ? { variant: 'secondary' as const } : {})}
         />
-      ) : (
+      ) : null}
+
+      {vp.canEnterCode ? (
         <>
           <YStack gap={space.xs}>
-            <Text col={colors.textMuted} fos={fontSize.bodySm}>
-              {t('otp.codeHint', { phone: maskPhone(phone) })}
-            </Text>
+            {sent ? (
+              <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                {t('otp.codeHint', { phone: maskPhone(phone) })}
+              </Text>
+            ) : null}
             <OtpCodeInput
               value={code}
               onChange={setCode}
               onComplete={submitCode}
               disabled={login.isPending}
-              autoFocus
+              autoFocus={sent}
+              inputRef={codeInputRef}
             />
           </YStack>
 
           {vp.devCode ? (
             <Text col={colors.textMuted} fos={fontSize.bodySm}>
               {t('otp.devCode', { code: vp.devCode })}
+            </Text>
+          ) : !sent ? (
+            <Text col={colors.textMuted} fos={fontSize.bodySm}>
+              {t('otp.testCodeHint')}
             </Text>
           ) : null}
 
@@ -163,9 +181,13 @@ export function OtpLoginForm({ onSuccess }: { onSuccess: (user: CurrentUser) => 
             icon="checkmark-outline"
             onPress={() => submitCode()}
             loading={login.isPending}
-            disabled={code.length !== OTP_LENGTH}
+            disabled={!canSubmit}
           />
+        </>
+      ) : null}
 
+      {sent ? (
+        <>
           {/*
             Hai hành động khác nhau về LOẠI phần tử, không chỉ về màu: "Đổi số" luôn là nút, còn
             "Gửi lại" là dòng chữ trạng thái khi đang đếm và chỉ thành nút khi gửi lại được.
@@ -191,7 +213,7 @@ export function OtpLoginForm({ onSuccess }: { onSuccess: (user: CurrentUser) => 
             )}
           </XStack>
         </>
-      )}
+      ) : null}
     </YStack>
   );
 }

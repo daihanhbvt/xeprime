@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -23,18 +23,33 @@ export function RequestOtpStep({
   otp,
   onVerified,
   onEditPhone,
+  onSubmitCode,
+  submitting = false,
 }: {
   phone: string;
   otp: ReturnType<typeof usePhoneVerify>;
   onVerified: () => void;
   onEditPhone: () => void;
+  /**
+   * Mã ĐĂNG NHẬP (ADR 0057): khách chưa đăng nhập thuê xe tự lái — mã này đăng nhập/tạo tài
+   * khoản theo SĐT TRƯỚC bước bằng lái, vì bằng lái gắn với TÀI KHOẢN. Có prop này thì nút xác
+   * nhận gọi nó thay cho `otp.verify` (mã đăng nhập không đi qua lượt xác minh `booking`).
+   */
+  onSubmitCode?: (code: string) => void;
+  /** Lượt đăng nhập bằng mã đang chạy — chỉ có nghĩa khi có `onSubmitCode`. */
+  submitting?: boolean;
 }) {
   const t = useTranslations('BookingRequests.flow.otp');
   const tActions = useTranslations('BookingRequests.flow.actions');
   const [code, setCode] = useState('');
+  const busy = onSubmitCode ? submitting : otp.verifying;
 
   function confirm(next = code) {
-    if (next.length !== OTP_LENGTH || otp.verifying) return;
+    if (next.length !== OTP_LENGTH || busy) return;
+    if (onSubmitCode) {
+      onSubmitCode(next);
+      return;
+    }
     otp.verify(phone, next);
   }
 
@@ -42,11 +57,21 @@ export function RequestOtpStep({
     otp.send(phone);
   }
 
-  // Trong effect chứ không trong thân render: gọi `setStep` lúc render là update-during-render
-  // của component khác, React cảnh báo đúng vì nó có thể lặp vô hạn.
+  /*
+   * Trong effect chứ không trong thân render: gọi `setStep` lúc render là update-during-render
+   * của component khác. Chốt MỘT lần cho mỗi lượt `verified`: nơi gọi có thể làm việc bất đồng bộ
+   * (soát bằng lái) và render lại với một hàm `onVerified` mới — không chốt thì gọi lặp.
+   */
+  const fired = useRef(false);
   useEffect(() => {
-    if (otp.status === 'verified') onVerified();
-  }, [onVerified, otp.status]);
+    if (otp.status !== 'verified') {
+      fired.current = false;
+      return;
+    }
+    if (onSubmitCode || fired.current) return;
+    fired.current = true;
+    onVerified();
+  }, [onSubmitCode, onVerified, otp.status]);
 
   return (
     <Card>
@@ -67,7 +92,14 @@ export function RequestOtpStep({
             {t('title')}
           </Text>
           <Text col={colors.textMuted} fos={fontSize.bodySm} ta="center">
-            {t('hint', { phone: maskPhone(phone) })}
+            {t(
+              otp.status !== 'code_sent'
+                ? 'notSentHint'
+                : onSubmitCode
+                  ? 'loginHint'
+                  : 'hint',
+              { phone: maskPhone(phone) },
+            )}
           </Text>
         </YStack>
 
@@ -90,7 +122,7 @@ export function RequestOtpStep({
             setCode(next);
           }}
           onComplete={confirm}
-          disabled={otp.verifying}
+          disabled={busy}
           autoFocus
         />
 
@@ -101,6 +133,12 @@ export function RequestOtpStep({
               {t('devCode', { code: otp.devCode })}
             </Text>
           </YStack>
+        ) : otp.testCodeEnabled && otp.status !== 'code_sent' ? (
+          <YStack alignSelf="stretch" p={space.sm} br={radius.md} bg={colors.surfaceMuted}>
+            <Text col={colors.textMuted} fos={fontSize.label} ta="center">
+              {t('testCodeHint')}
+            </Text>
+          </YStack>
         ) : null}
 
         <YStack alignSelf="stretch">
@@ -108,7 +146,7 @@ export function RequestOtpStep({
             label={tActions('verify')}
             icon="checkmark-outline"
             size="lg"
-            loading={otp.verifying}
+            loading={busy}
             disabled={code.length !== OTP_LENGTH}
             onPress={() => confirm()}
           />
@@ -121,7 +159,13 @@ export function RequestOtpStep({
           </YStack>
           <YStack f={1}>
             <Button
-              label={otp.cooldown > 0 ? t('resendIn', { seconds: otp.cooldown }) : t('resend')}
+              label={
+                otp.cooldown > 0
+                  ? t('resendIn', { seconds: otp.cooldown })
+                  : otp.status === 'code_sent'
+                    ? t('resend')
+                    : t('send')
+              }
               variant="ghost"
               disabled={otp.cooldown > 0 || otp.sending}
               onPress={resend}

@@ -1,8 +1,8 @@
 // Side-effect import, KHÔNG xoá: nạp module này là lúc client mặc định được cấu hình.
 import '@/lib/api-client';
 import { APP_PROFILE } from '@/app-profile';
-import { apiPost } from '@/lib/api-client';
-import type { SendOtpInput, SendOtpResult, VerifyOtpInput, VerifyOtpResult } from './types';
+import { apiGet, apiPost } from '@/lib/api-client';
+import type { OtpConfig, SendOtpInput, SendOtpResult, VerifyOtpInput, VerifyOtpResult } from './types';
 
 /**
  * Hai endpoint này DÙNG CHUNG với web, không có bản riêng cho native — và được phép dùng chung
@@ -24,3 +24,6 @@ export const verifyOtp = (body: Omit<VerifyOtpInput, 'clientApp'>): Promise<Veri
     ...body,
     clientApp: APP_PROFILE.clientApp,
   });
+
+/** Cấu hình OTP của môi trường (công khai) — dev/staging nhận mã test, production không. */
+export const getOtpConfig = (): Promise<OtpConfig> => apiGet<OtpConfig>('/auth/phone/otp-config');

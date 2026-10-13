@@ -23,6 +23,8 @@ export const SECURE_KEY = {
   DELIVERY_ADDRESS: 'xp.deliveryAddress',
   /** Tỉnh SUY RA từ vị trí thiết bị — gợi ý của máy, không phải lựa chọn của người dùng. */
   GEO_PROVINCE: 'xp.geoProvince',
+  /** Lượt cổng MoMo/VNPAY đang theo dõi theo chuyến — `features/payment-gateway/trip-order-memory`. */
+  TRIP_PAYMENT_ORDERS: 'xp.tripPaymentOrders',
 } as const;
 
 export type SecureKey = (typeof SECURE_KEY)[keyof typeof SECURE_KEY];

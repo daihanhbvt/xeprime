@@ -19,6 +19,8 @@ function otp(over: Partial<Otp> = {}): Otp {
     verify: jest.fn(),
     clearError: jest.fn(),
     reset: jest.fn(),
+    testCodeEnabled: false,
+    canEnterCode: true,
     ...over,
   } as Otp;
 }
@@ -63,5 +65,46 @@ describe('RequestOtpStep — lỗi hiện ngay trong bước', () => {
     );
 
     expect(view.queryByText(/Vui lòng đợi/)).toBeNull();
+  });
+});
+
+/*
+ * Môi trường mã test: màn OTP mở mà CHƯA gửi SMS (startOtp bỏ qua sendAsync) — nút gửi phải nói
+ * "Gửi mã" chứ không phải "Gửi lại", và chú thích nói rõ chưa có mã nào được gửi.
+ */
+describe('RequestOtpStep — mã test, chưa gửi', () => {
+  it('nhãn "Gửi mã" + notSentHint + testCodeHint', async () => {
+    const view = await render(
+      withIntl(
+        <RequestOtpStep
+          phone="0901234567"
+          otp={otp({ status: 'idle', testCodeEnabled: true })}
+          onVerified={jest.fn()}
+          onEditPhone={jest.fn()}
+        />,
+      ),
+    );
+
+    expect(await view.findByRole('button', { name: 'Gửi mã' })).toBeTruthy();
+    expect(view.getByText(/Bấm “Gửi mã” để nhận mã gồm 6 số qua SMS/)).toBeTruthy();
+    expect(
+      view.getByText('Môi trường thử nghiệm — nhập mã test để xác thực mà không cần gửi SMS.'),
+    ).toBeTruthy();
+  });
+
+  it('đã gửi: không còn testCodeHint', async () => {
+    const view = await render(
+      withIntl(
+        <RequestOtpStep
+          phone="0901234567"
+          otp={otp({ status: 'code_sent', testCodeEnabled: true })}
+          onVerified={jest.fn()}
+          onEditPhone={jest.fn()}
+        />,
+      ),
+    );
+
+    expect(await view.findByRole('button', { name: 'Gửi lại mã' })).toBeTruthy();
+    expect(view.queryByText(/nhập mã test để xác thực/)).toBeNull();
   });
 });

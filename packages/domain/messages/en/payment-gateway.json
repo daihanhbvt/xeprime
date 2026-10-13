@@ -72,5 +72,11 @@
     "title": "Payment result",
     "missingOrder": "This link does not carry a payment.",
     "continue": "Continue"
+  },
+  "appReturn": {
+    "title": "Returning to the XePrime app",
+    "detail": "The payment result will show in the app. If the app does not open automatically, tap the button below.",
+    "invalid": "This app return link is not valid.",
+    "home": "Back to home"
   }
 }

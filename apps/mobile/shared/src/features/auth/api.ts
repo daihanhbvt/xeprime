@@ -27,8 +27,12 @@ export function registerWithPassword(input: RegisterInput): Promise<CurrentUser>
   return signUpWithPassword(input);
 }
 
-export function loginWithOtp(phone: string, code: string): Promise<CurrentUser> {
-  return signInWithOtp(phone, code);
+export function loginWithOtp(
+  phone: string,
+  code: string,
+  displayName?: string,
+): Promise<CurrentUser> {
+  return signInWithOtp(phone, code, displayName);
 }
 
 /** `null` = người dùng đóng trình duyệt giữa chừng, KHÔNG phải lỗi — xem `signInWithSocial`. */

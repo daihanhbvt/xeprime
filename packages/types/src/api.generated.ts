@@ -14743,7 +14743,7 @@ export interface components {
             /** @enum {string} */
             status: "pending" | "succeeded" | "failed" | "cancelled" | "expired";
             /**
-             * @description Chặng nhìn từ phía người trả — awaiting · confirming · completed · failed · needs_support
+             * @description Chặng nhìn từ phía người trả — awaiting · confirming · completed · duplicate_refunded (trả trùng, đã ghi hoàn vào Ví điểm) · failed · needs_support
              * @enum {string}
              */
             viewState: "awaiting" | "confirming" | "completed" | "duplicate_refunded" | "failed" | "needs_support";
