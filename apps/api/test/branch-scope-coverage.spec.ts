@@ -39,6 +39,9 @@ const TENANT_LEVEL: Record<string, string> = {
   'payment-gateway/partner-payment-gateway.controller.ts':
     'Hoá đơn gói và lượt thanh toán qua cổng của nó thuộc GIAN HÀNG, không gắn chi nhánh — cùng ' +
     'quyền với mua gói (ADR 0058).',
+  'billing/subscription.controller.ts':
+    'Thuê bao và hoá đơn gói thuộc GIAN HÀNG, không gắn chi nhánh — `invoiceForTenant` khoá theo ' +
+    'tenant của phiên (ADR 0041).',
 };
 
 /**

@@ -55,6 +55,8 @@ const SUPPORT_ALLOWLIST = [
   'MembersController.list',
   'PartnerDashboardController.overview',
   'ShopPoliciesController.get',
+  // Một hoá đơn theo id — cùng dữ liệu với danh sách, cùng `subscription_status.view` (ADR 0050).
+  'SubscriptionController.invoice',
   'SubscriptionController.invoices',
   'SubscriptionController.mySubscription',
   'SupportController.detail',
