@@ -233,7 +233,7 @@ export async function seedCustomerAccounts(): Promise<CustomerAccounts> {
  *
  * Ghi thẳng một dòng `verified` (quyết định TAY bởi admin nền tảng, kèm lời nhắn "dữ liệu demo")
  * thay vì đi qua bộ đọc: seed không gọi nhà cung cấp OCR. Không có ảnh thật trên R2 cho các dòng
- * này — "Xem ảnh đã nộp" sẽ báo không mở được ảnh, đúng như một bằng chưa từng được chụp.
+ * này — khung ảnh bằng ở trang Giấy tờ sẽ báo chưa tải được ảnh, đúng như một bằng chưa từng được chụp.
  */
 const DEMO_LICENCES: ReadonlyArray<{
   customer: CustomerKey;
