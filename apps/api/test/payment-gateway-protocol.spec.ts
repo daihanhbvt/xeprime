@@ -269,6 +269,15 @@ describe('VNPAY — chữ ký và định dạng', () => {
     expect(vnpayQueryOutcome('05')).toBe('pending');
   });
 
+  /**
+   * `11` không có trong bảng mã `querydr` của tài liệu, nhưng là thứ VNPAY sandbox trả (có chữ ký) ngay
+   * sau khi khách bấm Huỷ ở trang VNPAY, và khi phiên quá hạn (đo 13/10/2026). Hiểu nó là "chưa biết"
+   * làm trang thanh toán quay "đang chờ VNPAY" tới hết ân hạn.
+   */
+  it('querydr `11` (giao dịch đã đóng, không thu tiền) ⇒ đã huỷ, không phải chưa biết', () => {
+    expect(vnpayQueryOutcome('11')).toBe('cancelled');
+  });
+
   it('querydr: chuỗi ký request và phản hồi đúng thứ tự tài liệu, trường vắng là rỗng', () => {
     expect(
       vnpayQueryRequestHashData({

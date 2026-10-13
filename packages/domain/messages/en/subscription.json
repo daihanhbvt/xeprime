@@ -110,7 +110,9 @@
     "statusWaiting": "Waiting for your transfer. Use exactly the code below — the plan unlocks automatically once XePrime receives the money.",
     "statusPartial": "Part of the amount has arrived. Transfer the remainder using exactly the code below.",
     "buying": "What you are buying",
-    "period": "Covers {from} → {to}"
+    "period": "Covers {from} → {to}",
+    "remainingLabel": "Still to transfer",
+    "payNow": "Pay"
   },
   "upgrade": {
     "title": "How the upgrade works",
@@ -161,5 +163,19 @@
     "daysLeft": "{days, plural, one {# day left} other {# days left}}",
     "grace": "In grace period",
     "lapsed": "Expired"
+  },
+  "checkout": {
+    "back": "Back",
+    "title": "Pay for your plan",
+    "notFoundTitle": "Invoice not found",
+    "notFoundBody": "This invoice does not exist or does not belong to your shop.",
+    "loadErrorTitle": "Could not load the invoice",
+    "backHome": "Back to management",
+    "amountLabel": "Amount due",
+    "paidTitle": "Your plan is active",
+    "enterManage": "Go to management",
+    "voidTitle": "This invoice no longer accepts payment",
+    "voidBody": "Invoice {code} has expired or was replaced by a newer one. Please choose a plan again.",
+    "pickAgain": "Choose a plan"
   }
 }

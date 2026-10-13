@@ -4,111 +4,72 @@
   gap: 14px;
 }
 
-/*
- * "Bạn đang mua gì" — nền vàng nhạt, đứng trên hướng dẫn chuyển khoản.
- *
- * Màn này sống qua F5 và qua một lần đăng nhập ở máy khác, nên không có gì bảo đảm người đang
- * đọc còn nhớ mình đã chọn bậc nào. Thiếu khối này, thứ duy nhất họ thấy là một số tiền và một mã.
- */
-.plan {
+/* Số phải trả + nút — đứng cạnh nhau khi đủ chỗ, nút xuống dòng (và trải hết bề ngang) khi hẹp. */
+.due {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+}
+
+.dueText {
   display: flex;
   min-width: 0;
   flex-direction: column;
-  padding: var(--xp-space-sm) var(--xp-space-md);
-  border: 1px solid var(--xp-color-primary);
-  border-radius: var(--xp-border-radius);
-  background: var(--xp-color-primary-light);
   gap: 2px;
 }
 
-.planLabel {
+.dueLabel {
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
 }
 
-.planName {
-  display: flex;
-  min-width: 0;
+.dueAmount {
+  color: var(--xp-color-price);
+  font-size: var(--xp-font-size-h3);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--xp-line-height-h3);
+}
+
+.dueCode {
+  display: inline-flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  margin: 0;
+  align-items: center;
+  gap: 4px;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.dueCode b {
+  font-family: var(--xp-font-mono, monospace);
+  letter-spacing: 0.06em;
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body-lg);
-  font-weight: var(--xp-font-weight-semibold);
-  gap: var(--xp-space-sm);
-}
-
-.planTerm {
-  color: var(--xp-color-primary-active);
-  font-size: var(--xp-font-size-body-sm);
-  font-weight: var(--xp-font-weight-semibold);
-}
-
-.planMeta {
-  margin: 0;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
-}
-
-.body {
-  display: flex;
-  gap: 20px;
-  align-items: flex-start;
-  flex-wrap: wrap;
-}
-
-.qr {
-  flex: none;
-  border: 1px solid var(--xp-color-border-secondary);
-  border-radius: 12px;
-  background: #fff;
-}
-
-.fields {
-  flex: 1 1 240px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-width: 0;
-}
-
-.row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 14px;
-}
-
-.row dt {
-  color: var(--xp-color-text-tertiary);
-  flex: none;
-}
-
-.row dd {
-  text-align: right;
   overflow-wrap: anywhere;
 }
 
-.amount {
-  color: var(--xp-color-price);
-  font-size: 16px;
-}
-
-/* Mã đối soát phải đọc lại được từng ký tự — font đơn cách, giãn chữ. */
-.code {
-  font-family: var(--xp-font-mono, monospace);
-  letter-spacing: 0.08em;
-}
-
-.expires {
-  font-size: 12.5px;
+.dueMeta {
   color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.payLink {
+  flex: none;
+}
+
+@media (max-width: 560px) {
+  .payLink {
+    flex: 1 1 100%;
+  }
+
+  .payLink :global(.ant-btn) {
+    width: 100%;
+  }
 }
 
 .note {
-  font-size: 13px;
+  margin: 0;
   color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
 }

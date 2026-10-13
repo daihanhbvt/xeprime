@@ -26,11 +26,13 @@ const query = vi.hoisted(() => ({
 }));
 const nav = vi.hoisted(() => ({ params: new URLSearchParams(), replace: vi.fn(), push: vi.fn() }));
 
+/** Lời nhắc thanh toán đầu trang — có test riêng (`UnpaidHoldsReminder.test.tsx`); ở đây im lặng. */
 vi.mock('../hooks', () => ({
   useTrips: (...args: unknown[]) => {
     query.lastArgs = args;
     return query;
   },
+  useUnpaidHolds: () => ({ data: undefined }),
 }));
 
 vi.mock('next/navigation', () => ({

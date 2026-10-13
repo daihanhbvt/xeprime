@@ -1,19 +1,54 @@
 {
-  "options": {
-    "title": "Hoặc thanh toán qua cổng",
-    "payWith": "Thanh toán qua {provider}",
-    "sandbox": "Môi trường thử",
-    "sandboxHint": "Cổng đang ở môi trường thử — không có tiền thật nào bị trừ.",
-    "redirectNote": "Bạn sẽ được chuyển sang trang của cổng thanh toán. XePrime ghi nhận khi cổng báo đã thu tiền, kể cả khi bạn đóng trang đó.",
-    "outOfRange": "{provider} chỉ nhận từ {min} đến {max} mỗi giao dịch.",
-    "windowTooShort": "Thời hạn giữ chỗ còn quá ngắn để thanh toán qua cổng. Vui lòng chuyển khoản theo mã QR ngay.",
-    "missingLink": "Cổng chưa trả về liên kết thanh toán. Vui lòng thử lại."
+  "checkout": {
+    "methodsTitle": "Chọn phương thức thanh toán",
+    "transfer": {
+      "title": "Chuyển khoản nhanh (VietQR)",
+      "badge": "Xác nhận tự động",
+      "hint": "Quét mã bằng ứng dụng ngân hàng bất kỳ — số tiền và nội dung chuyển khoản đã điền sẵn.",
+      "qrAlt": "Mã VietQR chuyển khoản",
+      "qrCaption": "Mở ứng dụng ngân hàng và chọn quét mã QR",
+      "qrFailed": "Không tải được mã QR — vui lòng chuyển khoản theo thông tin bên cạnh.",
+      "qrUnavailable": "Chưa có mã QR — vui lòng chuyển khoản theo thông tin bên cạnh.",
+      "bank": "Ngân hàng",
+      "accountNumber": "Số tài khoản",
+      "accountName": "Chủ tài khoản",
+      "amount": "Số tiền",
+      "code": "Nội dung chuyển khoản",
+      "codeHint": "Ghi đúng nội dung này để hệ thống tự nhận ra khoản tiền của bạn. Sai hoặc thiếu nội dung, khoản tiền phải chờ đối soát thủ công.",
+      "codeHintLabel": "Vì sao cần ghi đúng nội dung",
+      "copyAccount": "Sao chép số tài khoản",
+      "copyAmount": "Sao chép số tiền",
+      "copyCode": "Sao chép nội dung chuyển khoản"
+    },
+    "wallet": {
+      "title": "Ví điện tử",
+      "sandbox": "Môi trường thử",
+      "sandboxHint": "Cổng đang ở môi trường thử — không có tiền thật nào bị trừ.",
+      "redirectNote": "Bạn sẽ được chuyển sang trang của ví để xác nhận. XePrime ghi nhận khi ví báo đã thu tiền, kể cả khi bạn đóng trang đó.",
+      "outOfRange": "{provider} chỉ nhận từ {min} đến {max} mỗi giao dịch.",
+      "windowTooShort": "Thời hạn thanh toán còn quá ngắn để trả qua ví điện tử. Vui lòng chuyển khoản theo mã QR ngay.",
+      "missingLink": "Ví chưa trả về liên kết thanh toán. Vui lòng thử lại."
+    },
+    "pay": {
+      "submit": "Thanh toán",
+      "withProvider": "Thanh toán qua {provider}",
+      "pickWallet": "Chọn một ví điện tử để tiếp tục.",
+      "pickMethod": "Chọn một phương thức thanh toán ở bên cạnh.",
+      "transferAuto": "Hệ thống tự xác nhận ngay khi tiền về — bạn không cần ở lại trang này."
+    },
+    "summary": {
+      "title": "Thông tin thanh toán",
+      "code": "Mã thanh toán",
+      "safety": "Để bảo vệ khoản thanh toán của bạn, chỉ chuyển tiền theo đúng thông tin trên trang này."
+    }
   },
   "order": {
     "loading": "Đang kiểm tra trạng thái thanh toán…",
     "loadError": "Chưa tải được trạng thái thanh toán.",
     "awaitingTitle": "Đang chờ {provider} xác nhận thanh toán {amount}",
-    "awaitingBody": "Nếu bạn đã thanh toán xong, trang này tự cập nhật trong giây lát.",
+    "awaitingBody": "Nếu bạn đã thanh toán xong, trang này tự cập nhật khi {provider} báo kết quả — bạn không cần thanh toán lại.",
+    "noTransactionTitle": "Chưa có giao dịch nào qua {provider}",
+    "noTransactionBody": "{provider} cho biết lượt này chưa được thanh toán — có thể bạn đã huỷ hoặc chưa hoàn tất. Hãy chọn lại phương thức thanh toán bên dưới.",
     "continue": "Tiếp tục thanh toán",
     "expiredTitle": "Phiên thanh toán qua {provider} đã hết hạn",
     "expiredBody": "Nếu tài khoản của bạn đã bị trừ tiền, XePrime vẫn tự ghi nhận khi cổng báo về — không cần thanh toán lại. Nếu chưa, hãy chọn lại phương thức thanh toán.",

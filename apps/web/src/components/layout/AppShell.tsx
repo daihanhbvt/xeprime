@@ -12,6 +12,7 @@ import { ROUTES } from '@/constants/routes';
 import { FeatureExpiredNotice } from '@/components/feedback/FeatureExpiredNotice';
 import {
   PARTNER_TRACK,
+  isPartnerPaymentPage,
   isPartnerPublicPage,
   partnerPageRedirect,
   portalLoginWithNext,
@@ -44,8 +45,6 @@ const VIEWPORT_PATHS: readonly string[] = [ROUTES.MANAGE.CALENDAR, ROUTES.MANAGE
 const BARE_PATHS: readonly string[] = [
   ROUTES.MANAGE.ONBOARDING,
   ROUTES.MANAGE.VEHICLE_REGISTER,
-  // Quay về từ cổng thanh toán (ADR 0058) — có thể là gian hàng chưa mở cổng quản lý.
-  ROUTES.MANAGE.PAYMENT_RETURN,
 ];
 
 /**
@@ -116,7 +115,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const redirect = partnerPageRedirect(user, pathname);
   if (redirect) return <WrongPageRedirect href={redirect} />;
 
-  if (BARE_PATHS.includes(pathname)) return <>{children}</>;
+  // Trang thanh toán (`/payment/:id`, `/payment-return`) cũng tự dựng khung — xem `isPartnerPaymentPage`.
+  if (BARE_PATHS.includes(pathname) || isPartnerPaymentPage(pathname)) return <>{children}</>;
 
   const track = resolvePartnerTrack(user);
 

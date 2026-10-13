@@ -98,9 +98,12 @@
     "classMismatchMotorbike": "Hạng bằng hiện tại không lái được xe máy. Hãy cập nhật bằng có hạng A1, A2 hoặc A."
   },
   "image": {
-    "view": "Xem ảnh đã nộp",
-    "alt": "Ảnh bằng lái đã nộp",
-    "loadFailed": "Không mở được ảnh"
+    "view": "Xem ảnh",
+    "viewLabel": "Xem ảnh bằng lái",
+    "alt": "Ảnh bằng lái của bạn",
+    "loadFailed": "Chưa tải được ảnh",
+    "retry": "Thử lại",
+    "retryLabel": "Tải lại ảnh bằng lái"
   },
   "error": {
     "load": "Không tải được thông tin bằng lái.",

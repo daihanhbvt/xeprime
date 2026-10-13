@@ -39,10 +39,3 @@
   font-weight: var(--xp-font-weight-semibold);
   color: var(--xp-color-text);
 }
-
-/* ── Màn "chuyển khoản" sau khi hoá đơn tạo xong ── */
-.payment {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}

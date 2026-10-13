@@ -43,6 +43,7 @@ function makeOrder(over: Partial<PaymentOrder> = {}): PaymentOrder {
     paidAt: null,
     sandbox: false,
     createdAt: new Date().toISOString(),
+    noTransaction: false,
     ...over,
   } as PaymentOrder;
 }
@@ -124,6 +125,20 @@ describe('GatewayOrderNotice', () => {
     expect(screen.getByText(/Chưa có khoản nào được ghi nhận/)).toBeTruthy();
   });
 
+  /**
+   * Khách bấm Huỷ ở trang VNPAY và quay về (13/10/2026): cổng ký xác nhận "không có giao dịch", lượt
+   * vẫn `pending` theo ADR 0058. Trang KHÔNG được quay "đang chờ" — không có gì để chờ — và không mời
+   * mở lại liên kết vừa bị huỷ.
+   */
+  it('cổng xác nhận chưa có giao dịch (khách huỷ ở cổng): thôi chờ, mời chọn lại phương thức', () => {
+    query.data = makeOrder({ provider: 'vnpay', noTransaction: true, checkoutUrl: null });
+    render(<GatewayOrderNotice surface="customer" orderId="X" />);
+    expect(screen.getByText('Chưa có giao dịch nào qua VNPAY')).toBeTruthy();
+    expect(screen.getByText(/chọn lại phương thức thanh toán bên dưới/)).toBeTruthy();
+    expect(screen.queryByText(/Đang chờ VNPAY xác nhận/)).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Tiếp tục thanh toán' })).toBeNull();
+  });
+
   it('mở từ app: có nút quay lại ứng dụng', () => {
     query.data = makeOrder();
     render(
@@ -145,6 +160,10 @@ describe('shouldPollGatewayOrder', () => {
       shouldPollGatewayOrder(makeOrder({ viewState: PAYMENT_ORDER_VIEW_STATE.COMPLETED })),
     ).toBe(false);
     expect(shouldPollGatewayOrder(undefined)).toBe(false);
+  });
+
+  it('cổng xác nhận chưa có giao dịch: không còn gì để chờ trên lượt đó — thôi hỏi', () => {
+    expect(shouldPollGatewayOrder(makeOrder({ noTransaction: true, checkoutUrl: null }))).toBe(false);
   });
 
   it('thôi hỏi một lượt bỏ dở khi liên kết đã hết hạn quá lâu', () => {
@@ -178,6 +197,8 @@ describe('canStartAnotherCheckout', () => {
       ),
     ).toBe(true);
     expect(canStartAnotherCheckout(makeOrder({ checkoutUrl: null }), loaded)).toBe(true);
+    // Khách huỷ ở cổng — server sẽ mở phiên MỚI, không đưa lại liên kết vừa bị huỷ.
+    expect(canStartAnotherCheckout(makeOrder({ noTransaction: true }), loaded)).toBe(true);
   });
 
   it('đang tải thì chưa vẽ; không đọc được lượt thì để server làm chốt chặn', () => {

@@ -29,10 +29,11 @@ const plans = vi.hoisted(() => ({
 
 const purchase = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
 
-// Lối thanh toán qua cổng có test riêng (`InvoicePaymentPanel.test.tsx`); ở đây nó im lặng để không
-// kéo một truy vấn cấu hình cổng thật vào test của màn này.
-vi.mock('@/features/payment-gateway/components/GatewayPayOptions', () => ({
-  GatewayPayOptions: () => null,
+/** Mua gói xong là sang trang thanh toán của hoá đơn — điều hướng ghi lại để kiểm. */
+const nav = vi.hoisted(() => ({ push: vi.fn() }));
+vi.mock('next/navigation', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('next/navigation')>()),
+  useRouter: () => ({ push: nav.push, replace: vi.fn(), back: vi.fn(), prefetch: vi.fn(), refresh: vi.fn() }),
 }));
 
 vi.mock('../hooks/use-subscription', () => ({
@@ -78,12 +79,13 @@ function makePlan(over: Partial<TenantPlan> = {}): TenantPlan {
   } as TenantPlan;
 }
 
-function renderModal() {
-  return render(
+function renderModal(onClose = vi.fn()) {
+  render(
     <App>
-      <PurchaseModal open onClose={vi.fn()} />
+      <PurchaseModal open onClose={onClose} />
     </App>,
   );
+  return { onClose };
 }
 
 /** Thẻ kỳ hạn = radio bên trong nhóm "Chọn thời hạn"; thẻ BẬC nằm ở nhóm còn lại. */
@@ -99,6 +101,7 @@ function pickTier(name: string) {
 beforeEach(() => {
   plans.data = [makePlan()];
   purchase.mutate.mockReset();
+  nav.push.mockReset();
 });
 
 afterEach(cleanup);
@@ -160,6 +163,23 @@ describe('PurchaseModal — bậc nào được bán', () => {
       { planId: 'plan-basic', termMonths: 3 },
       expect.anything(),
     );
+  });
+
+  /**
+   * Hoá đơn tạo xong ⇒ hộp thoại đóng và người dùng sang TRANG THANH TOÁN của đúng hoá đơn đó —
+   * nơi có cả chuyển khoản VietQR lẫn ví điện tử, sống qua F5 và là trang cổng quay về.
+   */
+  it('tạo hoá đơn xong ⇒ đóng hộp thoại, sang trang thanh toán của hoá đơn vừa tạo', () => {
+    const { onClose } = renderModal();
+    pickTier('Chọn gói');
+    fireEvent.click(termCards()[1]!);
+    fireEvent.click(screen.getByRole('button', { name: /Tạo hoá đơn/ }));
+
+    const options = purchase.mutate.mock.calls[0]![1] as { onSuccess: (invoice: unknown) => void };
+    options.onSuccess({ id: 'INV-NEW', code: 'XPGNEW' });
+
+    expect(onClose).toHaveBeenCalled();
+    expect(nav.push).toHaveBeenCalledWith('/manage/payment/INV-NEW');
   });
 
   it('gói tuyến hoa hồng KHÔNG lọt vào bảng giá', () => {

@@ -103,6 +103,19 @@ tiền về là tiền về); thất bại chỉ đổi được lượt còn ch
 "không tìm thấy đơn" chỉ làm lượt hết hạn khi đã quá hạn phiên một khoảng
 `PAYMENT_GATEWAY_NOT_FOUND_GRACE_MINUTES`.
 
+_Bổ sung 13/10/2026 — khách bấm Huỷ ở trang cổng._ VNPAY tạo giao dịch ngay khi khách mở trang thanh
+toán; bấm "Hủy thanh toán" thì `querydr` trả (có chữ ký) `ResponseCode 00` + `TransactionStatus 11` —
+mã KHÔNG có trong bảng của tài liệu `querydr`, đo trên sandbox, và cũng là mã của phiên quá hạn không
+trả. Nó được hiểu là ĐÃ HUỶ (`cancelled`), không phải "chưa biết": hiểu sai làm trang quay "đang chờ"
+tới hết ân hạn. Phiên mà khách chưa kịp mở (không có giao dịch nào) thì `querydr` trả `91`; trước ân hạn, lời xác nhận "không có giao dịch" (có
+chữ ký — VNPAY `91`) được GHI vào `payment_gateway_orders.no_transaction_at` mà KHÔNG đổi trạng thái:
+DTO trả `noTransaction: true`, trang thanh toán thôi quay "đang chờ" và mời chọn lại phương thức, và
+lượt mở phiên kế tiếp tạo phiên MỚI thay vì đưa lại liên kết vừa bị huỷ. Mọi kết quả khác của cổng xoá
+dấu đó; CHECK ở DB chỉ cho lượt `pending` mang nó. Tiền tới muộn trên lượt cũ vẫn theo luật thành công
+thắng. Nhịp hỏi cổng là của TỪNG cổng (`PaymentGatewayAdapter.queryMinIntervalMs`): VNPAY từ chối lượt
+`querydr` trùng trong 5 phút (`94`, không ký) và mỗi lượt bị từ chối kéo dài cửa sổ đó — nên VNPAY hỏi
+cách nhau ≥ 5 phút, MoMo giữ `PAYMENT_GATEWAY_QUERY_MIN_INTERVAL_SECONDS`.
+
 **Bộ quét** (`PaymentGatewaySweeper`, trong tiến trình API, mỗi `PAYMENT_GATEWAY_SWEEP_INTERVAL_MS`, chỉ
 chạy khi có cổng đủ khoá) phủ đúng ca IPN và trang quay về cùng hụt — khách trả trong app MoMo rồi đóng
 luôn: hỏi cổng các lượt còn chờ đủ cũ (`SWEEP_MIN_AGE_MINUTES` – `SWEEP_MAX_AGE_DAYS`), và áp lại các lượt

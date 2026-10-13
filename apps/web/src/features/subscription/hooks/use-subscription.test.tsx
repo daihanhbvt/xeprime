@@ -26,8 +26,14 @@ import { useSyncScopeWhenInvoiceSettles } from './use-subscription';
  */
 const fetchPendingInvoice = vi.hoisted(() => vi.fn());
 
+// Nhịp hỏi lại đọc trạng thái bản chiếu realtime; ở đây không có provider Firestore nào.
+vi.mock('@/features/badges/BadgeRealtimeProvider', () => ({
+  useBadgeRealtime: () => ({ live: false, counts: {} }),
+}));
+
 vi.mock('../api', () => ({
   fetchPendingInvoice,
+  fetchInvoice: vi.fn(),
   fetchInvoices: vi.fn(),
   fetchPaymentInfo: vi.fn(),
   fetchMySubscription: vi.fn(),

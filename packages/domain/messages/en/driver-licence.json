@@ -98,9 +98,12 @@
     "classMismatchMotorbike": "Your current licence class does not cover motorbikes. Please update to a licence with class A1, A2 or A."
   },
   "image": {
-    "view": "View submitted photo",
-    "alt": "Submitted licence photo",
-    "loadFailed": "Could not open the photo"
+    "view": "View photo",
+    "viewLabel": "View licence photo",
+    "alt": "Your licence photo",
+    "loadFailed": "Couldn't load the photo",
+    "retry": "Try again",
+    "retryLabel": "Reload licence photo"
   },
   "error": {
     "load": "Could not load your licence details.",

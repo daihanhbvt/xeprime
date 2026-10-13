@@ -188,6 +188,21 @@ export function vnpayIpn(
 }
 
 /** Kết quả truy vấn "đã thu đủ" như adapter trả sau khi xác minh. */
+/** Cổng KÝ XÁC NHẬN không có giao dịch nào cho đơn (VNPAY `91`) — khách huỷ ở cổng / chưa trả. */
+export function notFoundQueryResult(orderRef: string): ProviderPaymentResult {
+  return {
+    orderRef,
+    amount: null,
+    outcome: 'not_found',
+    providerTxId: null,
+    resultCode: '91',
+    message: 'Transaction not found',
+    payMethod: null,
+    paidAt: null,
+    raw: { vnp_ResponseCode: '91' },
+  };
+}
+
 export function paidQueryResult(orderRef: string, amount: number): ProviderPaymentResult {
   return {
     orderRef,

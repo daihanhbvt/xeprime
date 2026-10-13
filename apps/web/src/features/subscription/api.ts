@@ -32,6 +32,14 @@ export const fetchPaymentInfo = (): Promise<PaymentInfo> =>
 export const fetchPendingInvoice = (): Promise<SubscriptionInvoice | null> =>
   apiGet<PendingSubscriptionInvoice>('/subscription/invoices/pending').then((r) => r.invoice);
 
+/**
+ * MỘT hoá đơn của gian hàng, ở MỌI trạng thái — nguồn của trang thanh toán `/payment/:invoiceId`.
+ * Trang đó phải nói đúng kết cục của chính hoá đơn trên đường dẫn (chờ / đã trả / đã huỷ), điều mà
+ * `fetchPendingInvoice` không trả lời được: trả xong là nó thành `null`, y như hoá đơn đã huỷ.
+ */
+export const fetchInvoice = (id: string): Promise<SubscriptionInvoice> =>
+  apiGet<SubscriptionInvoice>(`/subscription/invoices/${encodeURIComponent(id)}`);
+
 export type InvoiceListResult = Paged<SubscriptionInvoice>;
 
 export const fetchInvoices = (page = 1): Promise<InvoiceListResult> =>

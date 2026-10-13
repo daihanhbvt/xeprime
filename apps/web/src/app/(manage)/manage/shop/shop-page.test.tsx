@@ -35,6 +35,13 @@ import ShopPage from './page';
  *  5. **"Gói & hạn mức" theo `subscription.view`**, CTA mua theo `subscription.purchase`.
  */
 const perms = vi.hoisted(() => ({ granted: new Set<string>() }));
+/** Mua gói xong là sang trang thanh toán của hoá đơn — điều hướng ghi lại để kiểm. */
+const nav = vi.hoisted(() => ({ push: vi.fn() }));
+vi.mock('next/navigation', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('next/navigation')>()),
+  useRouter: () => ({ push: nav.push, replace: vi.fn(), back: vi.fn(), prefetch: vi.fn(), refresh: vi.fn() }),
+}));
+
 vi.mock('@/hooks/use-permissions', () => ({
   usePermissions: () => ({
     has: (p: string) => perms.granted.has(p),

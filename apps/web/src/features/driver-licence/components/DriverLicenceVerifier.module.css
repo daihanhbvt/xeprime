@@ -124,10 +124,129 @@
 
 /* ── Thông tin trên bằng ─────────────────────────────────────────────────────── */
 
+/*
+ * Ảnh bên trái, thông tin bên phải. Không dùng media query: cùng khối này nằm cả trong trang Giấy
+ * tờ lẫn hộp thoại đặt xe hẹp — `flex-wrap` tự xếp thông tin xuống dưới ảnh khi CHỖ ĐỨNG hẹp, bất
+ * kể màn hình rộng bao nhiêu.
+ */
 .details {
   display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--xp-space-md) var(--xp-space-lg);
+}
+
+.detailsBody {
+  display: flex;
+  flex: 1 1 260px;
   flex-direction: column;
   gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+/* ── Ảnh bằng: khung dáng thẻ ID-1, làm mờ cho tới khi bấm xem ───────────────── */
+
+.photo {
+  position: relative;
+  display: block;
+  flex: 0 0 200px;
+  aspect-ratio: 85.6 / 54;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-lg);
+  background: linear-gradient(135deg, var(--xp-color-bg-muted), var(--xp-color-bg-sand));
+  color: var(--xp-color-text);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.photo:hover {
+  border-color: var(--xp-color-primary);
+  box-shadow: var(--xp-shadow-card);
+}
+
+.photo:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.photo[aria-busy='true'] {
+  cursor: progress;
+}
+
+.photoFailed {
+  border-style: dashed;
+}
+
+/* `scale` đẩy viền nhoè của blur ra ngoài khung — không có nó, mép ảnh lộ một quầng sáng. */
+.photoImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(10px);
+  transform: scale(1.15);
+  transition:
+    filter 0.25s ease,
+    transform 0.25s ease;
+}
+
+.photo:hover .photoImage,
+.photo:focus-visible .photoImage {
+  filter: blur(7px);
+  transform: scale(1.1);
+}
+
+.photoCover {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--xp-space-xs);
+  padding: var(--xp-space-sm);
+  background: color-mix(in srgb, var(--xp-color-bg-container) 18%, transparent);
+}
+
+.photoPill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  padding: 4px 12px;
+  border-radius: var(--xp-border-radius-pill);
+  background: color-mix(in srgb, var(--xp-color-bg-container) 92%, transparent);
+  box-shadow: var(--xp-shadow-sm);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-sm);
+  font-weight: var(--xp-font-weight-medium);
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.photo:hover .photoPill,
+.photo:focus-visible .photoPill {
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+}
+
+.photoNote {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .photo,
+  .photoImage,
+  .photoPill {
+    transition: none;
+  }
 }
 
 .facts {
@@ -162,15 +281,6 @@
   gap: var(--xp-space-xs);
   margin: 0;
   color: var(--xp-color-text-secondary);
-}
-
-.imageButton {
-  align-self: flex-start;
-  padding-inline: 0;
-}
-
-.hiddenPreviewAnchor {
-  display: none;
 }
 
 .footerActions {

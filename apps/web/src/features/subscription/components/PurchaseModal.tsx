@@ -1,23 +1,23 @@
 'use client';
 
 import { App, Button, Spin } from 'antd';
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
+import { paymentPath } from '@/constants/routes';
 import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
-import { InvoicePaymentPanel } from './InvoicePaymentPanel';
 import { PlanPricingTable } from './PlanPricingTable';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { usePlanPurchase } from '../plan-purchase';
 import { usePurchaseSubscription, useTenantPlans } from '../hooks/use-subscription';
-import type { SubscriptionInvoice } from '../types';
 import styles from './PurchaseModal.module.css';
 
 /**
  * Mua / gia hạn gói: chọn BẬC + KỲ HẠN → sinh HOÁ ĐƠN kèm mã đối soát. Gói chỉ kích hoạt khi
- * tiền về (ADR 0026 điều 4), nên modal chuyển sang màn "chuyển khoản" ngay khi hoá đơn tạo xong
- * để mã không bị bỏ lỡ.
+ * tiền về (ADR 0026 điều 4), nên hoá đơn tạo xong là modal đóng và người dùng sang thẳng TRANG
+ * THANH TOÁN của hoá đơn đó (`/payment/:invoiceId` — chuyển khoản VietQR + ví điện tử). Trang đó
+ * sống qua F5 và là nơi cổng quay về; một màn chuyển khoản trong modal thì không.
  *
  * Bảng giá và toàn bộ phép đọc giá nằm ở `usePlanPurchase` + `PlanPricingTable`, dùng CHUNG với
  * bước 2 của onboarding gian hàng trả phí (ADR 0040 · ADR 0041). Modal này chỉ còn là VỎ: quyền,
@@ -33,20 +33,21 @@ export function PurchaseModal({ open, onClose }: { open: boolean; onClose: () =>
   const plans = useTenantPlans(open);
   const purchase = usePurchaseSubscription();
   const selection = usePlanPurchase(plans.data ?? []);
-
-  /** Hoá đơn vừa tạo — có giá trị là modal đang ở màn "chuyển khoản". */
-  const [invoice, setInvoice] = useState<SubscriptionInvoice | null>(null);
+  const router = useRouter();
 
   function submit() {
-    if (!selection.selection) return;
+    // Enter vẫn gửi form khi nút đang quay — không tạo hoá đơn thứ hai trong lúc lượt đầu đang bay.
+    if (!selection.selection || purchase.isPending) return;
     purchase.mutate(selection.selection.body, {
-      onSuccess: (created) => setInvoice(created),
+      onSuccess: (created) => {
+        close();
+        router.push(paymentPath.invoice(created.id));
+      },
       onError: (err) => message.error(errorMessage(err)),
     });
   }
 
   function close() {
-    setInvoice(null);
     /*
      * Dọn LỰA CHỌN, không chỉ dọn hoá đơn: hộp thoại này không bị tháo khỏi cây khi đóng, nên
      * không có lần remount nào dọn hộ. Thiếu dòng này thì mở lại thấy một kỳ hạn đã sáng — và
@@ -58,23 +59,12 @@ export function PurchaseModal({ open, onClose }: { open: boolean; onClose: () =>
 
   return (
     <ResponsiveDialog
-      title={invoice ? t('payment.title') : t('purchase.title')}
+      title={t('purchase.title')}
       open={open}
       onClose={close}
       footer={null}
     >
-      {invoice ? (
-        <div className={styles.payment}>
-          {/* R2: hướng dẫn chuyển khoản (kèm VietQR khi đã cấu hình) dùng CHUNG với trang
-              "Gói của tôi" — đóng modal rồi vẫn tìm lại được cùng một QR ở đó. */}
-          <InvoicePaymentPanel invoice={invoice} />
-          <div className={styles.actions}>
-            <Button type="primary" onClick={close}>
-              {t('payment.done')}
-            </Button>
-          </div>
-        </div>
-      ) : plans.isLoading ? (
+      {plans.isLoading ? (
         <div className={styles.center}>
           <Spin />
         </div>

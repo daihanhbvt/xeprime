@@ -18,6 +18,7 @@ import {
   isOnboardingRoute,
   isPackageOnboarding,
   isPartnerInvitePage,
+  isPartnerPaymentPage,
   isPartnerPublicPage,
   partnerHomeHref,
   partnerPageRedirect,
@@ -126,6 +127,21 @@ describe('B1 — partner đăng nhập xong vào đâu', () => {
     expect(partnerPageRedirect(packagePending, M.VEHICLE_REGISTER)).toBe(M.ONBOARDING);
     expect(partnerPageRedirect(packagePending, M.ONBOARDING)).toBeNull();
     expect(isPackageOnboarding(packagePending)).toBe(true);
+  });
+
+  /**
+   * Trang thanh toán hoá đơn gói đúng cho MỌI tuyến: gian hàng đang nợ bước thanh toán đầu tiên
+   * TRẢ TIỀN ở đây — ép họ về `/onboarding` giữa chừng là mất luôn lượt vừa trả.
+   */
+  it('trang thanh toán `/payment/:id` mở được ở mọi tuyến, kể cả đang nợ thanh toán gói', () => {
+    const page = `${M.PAYMENT}/01HINVOICE?order=01ORDER`;
+    expect(isPartnerPaymentPage(page)).toBe(true);
+    expect(isPartnerPaymentPage(M.PAYMENT_RETURN)).toBe(true);
+    // Gốc trần không phải một trang thanh toán — không có hoá đơn nào để trả.
+    expect(isPartnerPaymentPage(M.PAYMENT)).toBe(false);
+    for (const user of [packagePending, packageCurrent, commission, lapsed]) {
+      expect(partnerPageRedirect(user, page)).toBeNull();
+    }
   });
 
   it('gói current → dashboard Manage (menu tuyến gói)', () => {

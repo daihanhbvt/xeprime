@@ -35,7 +35,6 @@ import { ROUTES, listingPath, shopPath } from '@/constants/routes';
 import { useAuthModal, useNextFromCurrentPath } from '@/features/auth/components/AuthModalProvider';
 import { AUTH_MODE } from '@/features/auth/post-auth-destination';
 import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
-import { TripGatewayOptions } from '@/features/payment-gateway/components/TripGatewayOptions';
 import { TripGatewayReturn } from '@/features/payment-gateway/components/TripGatewayReturn';
 import { ReviewModal } from '@/features/reviews/components/ReviewModal';
 import { dayjs } from '@/lib/datetime';
@@ -184,8 +183,9 @@ export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailVi
         : [];
 
   /*
-   * Có QR để chuyển khoản hay không mới là thứ quyết định bố cục — KHÔNG phải cứ có `hold` là
-   * đẩy tóm tắt chuyến lên full-width. Hold đã hết hạn/đã huỷ/đã chốt chỉ còn một dòng Alert
+   * Khoản giữ chỗ CÒN CHỜ TRẢ hay không mới là thứ quyết định bố cục — KHÔNG phải cứ có `hold` là
+   * đẩy tóm tắt chuyến lên full-width. (Tên biến giữ từ thời khối này mang QR; từ 13/10/2026 nó là
+   * thẻ "Thanh toán ngay" dẫn sang `/payment/:id`.) Hold đã hết hạn/đã huỷ/đã chốt chỉ còn một dòng Alert
    * (`TripHoldPanel` tự vẽ `HoldOutcome`), và một dòng Alert không đáng để đẩy "Chi tiết giá"
    * xuống dưới một khối tóm tắt cao — báo cáo 24/09/2026 đúng lỗi này.
    */
@@ -385,9 +385,9 @@ export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailVi
       <TerminalNotice trip={data} stage={stage} />
 
       {/*
-        Full-width CHỈ khi có QR thật cần chỗ riêng: một khoản giữ chỗ còn đang chờ chuyển khoản
-        (`hasQrPanel`) đáng để tách tóm tắt chuyến ra khỏi cột trái, nhường `.main` lại cho đúng
-        một việc (mã QR + số tài khoản) đứng ngang tầm "Chi tiết giá" bên `.side`. Không có QR
+        Full-width CHỈ khi còn khoản phải trả: một khoản giữ chỗ đang chờ tiền (`hasQrPanel`) đáng
+        để tách tóm tắt chuyến ra khỏi cột trái, nhường `.main` lại cho đúng một việc (số tiền, đồng
+        hồ, nút "Thanh toán ngay") đứng ngang tầm "Chi tiết giá" bên `.side`. Không có khoản chờ
         (hold đã chốt/huỷ/hết hạn — chỉ còn một dòng Alert, hoặc không có `hold` nào) thì quay về
         đúng bố cục hai cột kinh điển: tóm tắt nằm trong `.main`, "Chi tiết giá" đứng NGAY ĐẦU
         `.side`, ngang hàng với xe — không phải bị đẩy xuống dưới một khối tóm tắt cao.
@@ -405,8 +405,9 @@ export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailVi
           {data.hold ? (
             <section className={styles.block}>
               {/*
-                Quay về từ MoMo/VNPAY (ADR 0058): trạng thái lượt thanh toán, hỏi từ server — đứng
-                TRÊN khối tiền giữ chỗ vì đó là câu trả lời người vừa quay về đang tìm.
+                Quay về từ MoMo/VNPAY (ADR 0058) bằng liên kết CŨ `/trips/:id?paymentOrder=` — lượt mở
+                trước 13/10/2026; lượt mới quay về trang thanh toán `/payment/:id`. Trạng thái hỏi từ
+                server, đứng TRÊN khối tiền giữ chỗ vì đó là câu trả lời người vừa quay về đang tìm.
               */}
               <TripGatewayReturn tripId={data.id} />
               <TripHoldPanel
@@ -414,13 +415,6 @@ export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailVi
                 tripId={data.id}
                 tripTotalAmount={data.estimate?.fees?.customerTotalAmount ?? null}
                 payAtHandoverAmount={data.estimate?.fees?.payAtPickupAmount ?? null}
-                gatewayOptions={
-                  <TripGatewayOptions
-                    tripId={data.id}
-                    amount={data.hold.remainingAmount}
-                    deadline={data.hold.expiresAt}
-                  />
-                }
               />
             </section>
           ) : null}

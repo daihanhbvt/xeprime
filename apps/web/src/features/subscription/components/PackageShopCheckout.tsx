@@ -1,7 +1,9 @@
 'use client';
 
 import { Alert, Button, Skeleton } from 'antd';
+import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { paymentPath } from '@/constants/routes';
 
 import { useErrorMessage } from '@/i18n/use-error-message';
 
@@ -46,6 +48,7 @@ export function PackageShopCheckout() {
   const t = useTranslations('ShopOnboarding.checkout');
   const tCommon = useTranslations('Common');
   const errorMessage = useErrorMessage();
+  const router = useRouter();
 
   const pending = usePendingInvoice();
   const invoice = pending.data ?? null;
@@ -98,7 +101,12 @@ export function PackageShopCheckout() {
         pickTermHint: t('pickTermFirst'),
       }}
       onSubmit={() => {
-        if (selection.selection) purchase.mutate(selection.selection.body);
+        // Hoá đơn vừa tạo ⇒ sang thẳng trang thanh toán của nó (chuyển khoản VietQR + ví điện tử).
+        if (selection.selection) {
+          purchase.mutate(selection.selection.body, {
+            onSuccess: (created) => router.push(paymentPath.invoice(created.id)),
+          });
+        }
       }}
     />
   );

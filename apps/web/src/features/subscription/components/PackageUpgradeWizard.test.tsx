@@ -49,10 +49,11 @@ const purchase = vi.hoisted(() => ({
   error: null as unknown,
 }));
 
-// Lối thanh toán qua cổng có test riêng (`InvoicePaymentPanel.test.tsx`); ở đây nó im lặng để không
-// kéo một truy vấn cấu hình cổng thật vào test của màn này.
-vi.mock('@/features/payment-gateway/components/GatewayPayOptions', () => ({
-  GatewayPayOptions: () => null,
+/** Mua gói xong là sang trang thanh toán của hoá đơn — điều hướng ghi lại để kiểm. */
+const nav = vi.hoisted(() => ({ push: vi.fn() }));
+vi.mock('next/navigation', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('next/navigation')>()),
+  useRouter: () => ({ push: nav.push, replace: vi.fn(), back: vi.fn(), prefetch: vi.fn(), refresh: vi.fn() }),
 }));
 
 vi.mock('../hooks/use-subscription', () => ({
@@ -263,6 +264,7 @@ const addressInput = () =>
 const submitButton = () => screen.getByRole('button', { name: /Lưu thông tin và tạo hoá đơn/ });
 
 beforeEach(() => {
+  nav.push.mockReset();
   pendingInvoice.data = null;
   pendingInvoice.isLoading = false;
   pendingInvoice.isError = false;
@@ -459,12 +461,17 @@ describe('PackageUpgradeWizard — bước thông tin gian hàng', () => {
     fireEvent.click(submitButton());
 
     await waitFor(() =>
-      // Tham số thứ hai là callback dọn cờ "đang sửa" sau khi hoá đơn mới về.
+      // Tham số thứ hai là callback chạy khi hoá đơn mới về.
       expect(purchase.mutate).toHaveBeenCalledWith(
         { planId: 'plan-basic', termMonths: 3 },
         expect.anything(),
       ),
     );
+
+    // Hoá đơn về ⇒ sang thẳng TRANG THANH TOÁN của nó.
+    const options = purchase.mutate.mock.calls[0]![1] as { onSuccess: (invoice: unknown) => void };
+    options.onSuccess({ ...INVOICE, id: 'INV-NEW' });
+    expect(nav.push).toHaveBeenCalledWith('/manage/payment/INV-NEW');
 
     // Hồ sơ giữ nguyên những ô form này không hỏi (giới thiệu, ảnh bìa, giấy tờ).
     expect(updateProfile.mutateAsync).toHaveBeenCalledWith(
@@ -558,12 +565,15 @@ describe('PackageUpgradeWizard — bước thanh toán', () => {
    * Hoá đơn chờ đến từ `GET /subscription/invoices/pending`, nên F5 / đổi máy đều rơi thẳng vào
    * màn chuyển khoản với ĐÚNG mã cũ — không ai bị mời tạo hoá đơn thứ hai cho cùng một khoản.
    */
-  it('đang có hoá đơn chờ: vào thẳng màn chuyển khoản dùng chung, không hiện bảng giá', () => {
+  it('đang có hoá đơn chờ: vào thẳng thẻ hoá đơn chờ, không hiện bảng giá', () => {
     pendingInvoice.data = INVOICE;
     renderWizard();
 
     expect(screen.getByText('XPG123456')).toBeTruthy();
-    expect(screen.getByText('Nội dung chuyển khoản (mã đối soát)')).toBeTruthy();
+    // Lối trả là TRANG THANH TOÁN của đúng hoá đơn này (chuyển khoản VietQR + ví điện tử).
+    expect(screen.getByRole('link', { name: /thanh toán/i }).getAttribute('href')).toBe(
+      '/manage/payment/INV1',
+    );
     expect(screen.getByText(/Đang chờ tiền về/)).toBeTruthy();
     expect(screen.queryByRole('radiogroup', { name: /Chọn gói dịch vụ/ })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Tiếp tục' })).toBeNull();

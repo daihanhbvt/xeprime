@@ -14,6 +14,7 @@ import { useTrips } from '../hooks';
 import { useTripListUrl } from '../use-trip-list-url';
 import { TripCard } from './TripCard';
 import { TripList } from './TripList';
+import { UnpaidHoldsReminder } from './UnpaidHoldsReminder';
 import styles from './TripsView.module.css';
 
 /**
@@ -87,6 +88,9 @@ export function TripsView() {
         <h1 className={styles.heading}>{t('list.heading')}</h1>
         <p className={styles.sub}>{t('list.sub')}</p>
       </header>
+
+      {/* Chuyến đang giữ chưa trả — việc phải làm NGAY, nên đứng trên mọi tab. */}
+      <UnpaidHoldsReminder />
 
       <TripList
         filter={filter}

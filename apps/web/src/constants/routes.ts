@@ -6,6 +6,7 @@
  */
 import {
   PARTNER_PAYMENT_RETURN_PATH,
+  PAYMENT_PAGE_PATH,
   PLATFORM_PARTNER_KIND,
   REGISTRATION_TRACK,
   isSupportContextId,
@@ -55,6 +56,12 @@ export const ROUTES = {
   RESET_PASSWORD: '/reset-password',
   /** Khu khách hàng: các chuyến thuê + đánh giá sau chuyến (cần đăng nhập, ngoài khu /manage). */
   TRIPS: '/trips',
+  /**
+   * TRANG THANH TOÁN tiền giữ chỗ `/payment/:tripId` (13/10/2026) — chọn kênh trả (chuyển khoản
+   * VietQR · ví điện tử qua cổng) và là trang quay về của cổng. Dùng CHUNG hằng với server
+   * (`PAYMENT_PAGE_PATH`); dựng link bằng `paymentPath.trip`.
+   */
+  PAYMENT: PAYMENT_PAGE_PATH,
   /** Khu tin nhắn của khách (chat với shop). Shop dùng /manage/chat. */
   CHAT: '/chat',
   /**
@@ -149,6 +156,12 @@ export const ROUTES = {
      * (kể cả gian hàng đang nợ bước thanh toán đầu tiên) và không có khung: nó là màn một việc.
      */
     PAYMENT_RETURN: partner(PARTNER_PAYMENT_RETURN_PATH),
+    /**
+     * TRANG THANH TOÁN một hoá đơn gói `/payment/:invoiceId` (13/10/2026) — kênh trả + trang quay
+     * về của cổng. Như `PAYMENT_RETURN`: mở được ở MỌI tuyến (gian hàng đang nợ bước thanh toán đầu
+     * tiên trả ở đây) và không có khung. Dựng link bằng `paymentPath.invoice`.
+     */
+    PAYMENT: partner(PAYMENT_PAGE_PATH),
 
     // ── Vận hành (cả hai tuyến) ───────────────────────────────────────────────────────────────
     CALENDAR: partner('/calendar'),
@@ -929,6 +942,19 @@ export const tripPath = {
    * màn tự nhớ một tiền tố, và một trong số đó sẽ trỏ ngược vào khu người dùng vừa bị đưa ra.
    */
   detail: (id: string, base: string = ROUTES.TRIPS): string => `${base}/${id}`,
+};
+
+/**
+ * Trang thanh toán — một gốc `/payment` trên CẢ HAI site, khác nhau ở thứ đứng sau nó: chuyến (khách)
+ * hay hoá đơn gói (partner). Hai hàm chứ không một, vì gọi nhầm site là đưa người trả sang một
+ * realm họ không có phiên.
+ */
+export const paymentPath = {
+  /** Tiền giữ chỗ của một chuyến — site khách. `id` là id yêu cầu thuê (như `tripPath`). */
+  trip: (tripId: string): string => `${ROUTES.PAYMENT}/${encodeURIComponent(tripId)}`,
+  /** Một hoá đơn gói — site partner. */
+  invoice: (invoiceId: string): string =>
+    `${ROUTES.MANAGE.PAYMENT}/${encodeURIComponent(invoiceId)}`,
 };
 
 /** Đường dẫn xe công khai trên Marketplace. */

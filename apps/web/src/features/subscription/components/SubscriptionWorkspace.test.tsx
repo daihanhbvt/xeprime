@@ -28,10 +28,11 @@ import { SubscriptionWorkspace } from './SubscriptionWorkspace';
  *     `fee_policies` (ADR 0028 — mỗi dòng tiền có chủ sở hữu và snapshot riêng).
  */
 const perms = vi.hoisted(() => ({ granted: new Set<string>() }));
-// Lối thanh toán qua cổng có test riêng (`InvoicePaymentPanel.test.tsx`); ở đây nó im lặng để không
-// kéo một truy vấn cấu hình cổng thật vào test của màn này.
-vi.mock('@/features/payment-gateway/components/GatewayPayOptions', () => ({
-  GatewayPayOptions: () => null,
+/** Mua gói xong là sang trang thanh toán của hoá đơn — điều hướng ghi lại để kiểm. */
+const nav = vi.hoisted(() => ({ push: vi.fn() }));
+vi.mock('next/navigation', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('next/navigation')>()),
+  useRouter: () => ({ push: nav.push, replace: vi.fn(), back: vi.fn(), prefetch: vi.fn(), refresh: vi.fn() }),
 }));
 
 vi.mock('@/hooks/use-permissions', () => ({

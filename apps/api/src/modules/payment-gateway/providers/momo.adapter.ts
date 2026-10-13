@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
-import { PAYMENT_GATEWAY_PROVIDER } from '@xeprime/types';
+import { PAYMENT_GATEWAY_PROVIDER, PAYMENT_GATEWAY_QUERY_MIN_INTERVAL_SECONDS } from '@xeprime/types';
 import { PaymentGatewayConfig, type MomoCredentials } from '../payment-gateway.config';
 import {
   hexDigestEquals,
@@ -38,6 +38,7 @@ export const MOMO_IPN_PATH = '/payment-gateway/momo/ipn';
 @Injectable()
 export class MomoAdapter implements PaymentGatewayAdapter {
   readonly provider = PAYMENT_GATEWAY_PROVIDER.MOMO;
+  readonly queryMinIntervalMs = PAYMENT_GATEWAY_QUERY_MIN_INTERVAL_SECONDS * 1000;
 
   constructor(private readonly config: PaymentGatewayConfig) {}
 

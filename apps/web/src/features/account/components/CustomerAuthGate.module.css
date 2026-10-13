@@ -1,0 +1,8 @@
+.center {
+  display: grid;
+  place-items: center;
+  gap: var(--xp-space-md);
+  min-height: 50vh;
+  padding: var(--xp-space-xl) var(--xp-space-md);
+  text-align: center;
+}
