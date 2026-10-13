@@ -253,7 +253,7 @@ phân tách duy nhất là **hạn chế truy cập** ở bước sau. Vì vậy
 
 **Key A — server** (`GEOAPIFY_API_KEY`)
 - Backend gọi: geocoding, address autocomplete, place details, reverse geocoding, routing
-- Trong **Projects → API keys → Restrictions**: **Allowed IPs** → `222.255.215.242` (IP VPS staging)
+- Trong **Projects → API keys → Restrictions**: **Allowed IPs** → IP VPS staging (`nslookup api-stg.xeprime.vn`)
 - Không đặt referrer cho key này: API server không gửi HTTP referrer
 
 **Key B — web** (`NEXT_PUBLIC_GEOAPIFY_MAP_KEY`)
@@ -327,7 +327,7 @@ Key **thứ ba**, tách khỏi hai key trên (khác API, khác hạn mức, và 
 
 1. Cùng project → **Library** → bật **Google Calendar API**
 2. **Credentials** → *Create credentials* → **API key**
-   - Application restrictions: **IP addresses** → `222.255.215.242`
+   - Application restrictions: **IP addresses** → IP VPS staging (như §4.2)
    - API restrictions: chỉ **Google Calendar API**
 
 | Loại | Tên | Giá trị |
@@ -758,7 +758,7 @@ Biến chỉ vào máy khi deploy lại — file `.env.staging` được sinh m�
 Rồi kiểm bằng **log boot của API**, nơi nó tự khai đang chạy suy giảm những gì:
 
 ```bash
-ssh xeprime@222.255.215.242
+ssh xeprime@<ip-vps>
 cd /opt/xeprime
 docker compose -p xeprime-staging -f docker-compose.prod.yml --env-file .env.staging \
   logs api | grep -A5 'APP_ENV=staging'

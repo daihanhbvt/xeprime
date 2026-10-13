@@ -7,16 +7,37 @@
 # đều chỉ sống trong đúng những spec đó. `test/global-setup.ts` biến thiếu DB thành lỗi cứng.
 name: CI
 
+# MỖI cây mã chỉ kiểm trọn bộ MỘT lần trước khi ship. Repo private ăn vào quỹ Actions có hạn
+# (gói Free: 2.000 phút/tháng), một lượt trọn bộ ≈ 54 phút tính tiền — và ngày 13/10/2026 quỹ
+# cạn sau 13 ngày, chặn luôn job deploy staging. Phần lớn số phút đó là kiểm lại cùng một cây:
+#
+# - KHÔNG `push: develop`. Lượt PR đã kiểm chính KẾT QUẢ MERGE (`refs/pull/N/merge` = nhánh PR
+#   ghép lên `develop` lúc chạy); chạy thêm sau khi merge là kiểm lại gần như đúng cây đó.
+# - KHÔNG chạy PR vào `staging`/`main`. Merge xong là push vào nhánh deploy, và `deploy.yml` gọi
+#   lại chính file này ở job `verify` trên đúng SHA sắp ship. Hai PR xanh ghép lại thành đỏ thì
+#   `verify` chặn deploy, môi trường không bị chạm. Muốn biết sớm hơn: Run workflow trên
+#   `develop` (`workflow_dispatch`).
+# - PR chỉ sửa tài liệu hay app native không chạy: không job nào ở đây kiểm chúng. Ngoại lệ là
+#   hai chỗ CI CÓ đọc — bảng message của app native (`i18n:check` canh nó là tập con hợp lệ) và
+#   `package.json` của mobile (`pnpm install --frozen-lockfile` + `deploy/Dockerfile`). Thứ tự
+#   mẫu có nghĩa: mẫu dương đứng SAU mẫu `!` thì kéo đường dẫn trở lại.
+# - PR nháp không chạy (mỗi job mang `if: … draft != true`); bấm "Ready for review" thì chạy.
 on:
-  # CỐ Ý chỉ có `develop`, KHÔNG có `staging`/`main`: push vào hai nhánh đó chạy `deploy.yml`,
-  # mà `deploy.yml` gọi lại chính file này ở job `verify`. Liệt kê chúng ở đây nữa là chạy trọn
-  # bộ kiểm tra HAI LẦN cho mỗi lần phát hành — gấp đôi thời gian chờ và gấp đôi hoá đơn Actions.
-  push:
-    branches: [develop]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches-ignore: [staging, main]
+    paths:
+      - '**'
+      - '!**.md'
+      - '!docs/**'
+      - '!.claude/**'
+      - '!apps/mobile/**'
+      - 'apps/mobile/shared/src/i18n/**'
+      - 'apps/mobile/**/package.json'
+  workflow_dispatch:
   # `deploy.yml` gọi lại workflow này làm CỔNG CHẶN trước khi đẩy image lên GHCR. Gọi lại chứ
   # không chép sang file kia: hai bản kiểm tra chép nhau sẽ trôi lệch, và chỗ trôi lệch đầu tiên
-  # luôn là chỗ nguy hiểm nhất.
+  # luôn là chỗ nguy hiểm nhất. Bộ lọc ở trên KHÔNG áp cho đường này — `verify` luôn chạy trọn bộ.
   workflow_call:
 
 concurrency:
@@ -38,6 +59,7 @@ env:
 jobs:
   api:
     name: API (PostgreSQL thật)
+    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
 
     services:
@@ -127,6 +149,7 @@ jobs:
   # ---------------------------------------------------------------------------
   rules:
     name: Firestore Rules (emulator)
+    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -159,6 +182,7 @@ jobs:
 
   web:
     name: Web
+    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -216,6 +240,7 @@ jobs:
   # `fail-fast: false`: một shard đỏ không huỷ ba shard kia, để thấy HẾT test hỏng trong một lượt.
   web-test:
     name: Web · test (${{ matrix.shard }}/4)
+    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -252,6 +277,7 @@ jobs:
   # ---------------------------------------------------------------------------
   build:
     name: Build image (gate)
+    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
