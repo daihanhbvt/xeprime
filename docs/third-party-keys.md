@@ -11,6 +11,9 @@
 > có cấu hình thật trong code — §8b. Đối tác thu hộ/chi hộ và bảo hiểm chuyến đi vẫn nằm trong
 > roadmap, chưa có cấu hình; không tạo key hay viết tên biến đoán trước khi implementation và hợp
 > đồng đối tác được chốt.
+>
+> **Cập nhật 13/10/2026:** §4 viết lại cho Google Maps Platform (ADR 0059 — Geoapify đã gỡ khỏi
+> API và web). Biến cũ `GEOAPIFY_API_KEY` / `NEXT_PUBLIC_GEOAPIFY_MAP_KEY` không còn được đọc.
 
 ## 0. Cần cái nào trước
 
@@ -22,7 +25,7 @@ thiếu thì phần đó suy giảm có kiểm soát chứ không làm sập app
 | 1 | **Cloudflare R2** | Tải ảnh xe, ảnh gian hàng, giấy tờ, đính kèm chat | Mọi endpoint upload trả **503 `UPLOADS_NOT_CONFIGURED`** | Gần như 0 ở mức staging |
 | 2 | **Google OAuth** | Nút "Đăng nhập bằng Google" | Nút trả `SOCIAL_NOT_CONFIGURED`; mật khẩu + OTP vẫn chạy | Miễn phí |
 | 3 | **Facebook Login** | Nút "Đăng nhập bằng Facebook" | như trên | Miễn phí |
-| 4 | **Geoapify** (2 key) | Ước lượng quãng đường + phí giao, bản đồ trên trang | Khối bản đồ **ẩn hẳn**, phí giao không hiện | Có, xem 4.3 |
+| 4 | **Google Maps Platform** (2 key + billing) | Gợi ý địa chỉ, ghim bản đồ, ước lượng quãng đường + phí giao, bản đồ trên trang xe | Khối bản đồ **ẩn hẳn**, ô địa chỉ nhập tay, phí giao không hiện | Có — cần thẻ; hạn mức miễn phí theo tháng, xem 4.6 |
 | 5 | **Google Calendar** | Lớp ngày lễ trên lịch xe | `GET /holidays` trả rỗng | Miễn phí |
 | 6 | **Firebase** | Chat **realtime** | Chat vẫn chạy trên PostgreSQL, chỉ không đẩy tức thì | Miễn phí ở mức này |
 | 7 | **SMTP** | Thư mời thành viên + đặt lại mật khẩu gửi thật | Email **in ra log** container — chạy được nhưng KHÔNG đi qua nodemailer, nên lỗi SMTP/TLS/`From` chỉ lộ ở production. Staging nay gửi thật (§7.2); máy dev dùng Mailpit (§7.1) | Miễn phí ở mức pilot |
@@ -231,103 +234,183 @@ https://api-stg.xeprime.vn/auth/social/facebook/callback
 
 ---
 
-## 4. Geoapify (OpenStreetMap) — **hai key riêng biệt**
+## 4. Google Maps Platform — bản đồ, gợi ý địa chỉ, phí giao xe
 
-Từ **ADR 0037**, bản đồ KHÔNG còn chạy trên Google Maps Platform. Lý do: Google bắt buộc gắn
-billing account hợp lệ trước khi bất kỳ key nào hoạt động, kể cả trong hạn mức miễn phí — một
-rào chắn thật ở giai đoạn pilot. Geoapify cho **3.000 credit/ngày, không cần thẻ tín dụng**.
+Từ **ADR 0059** (13/10/2026) mọi việc bản đồ chạy trên Google Maps Platform — Geoapify/Leaflet đã
+gỡ khỏi API và web. Google **bắt buộc gắn billing account (thẻ Visa/Master)** trước khi bất kỳ key
+nào chạy, kể cả trong hạn mức miễn phí — làm §4.1 trước, không thì mọi bước sau đều ra lỗi
+`BillingNotEnabledMapError` / `REQUEST_DENIED`.
 
-**Không được** dùng chung một key cho cả hai. Key vẽ bản đồ nằm lộ thiên trong bundle mà ai cũng
-xem được; nếu nó cũng gọi được routing thì bất kỳ ai cũng tiêu hạn mức của bạn.
+**Không được** dùng chung một key cho server và trình duyệt. Key trình duyệt nằm lộ thiên trong
+bundle; nếu nó cũng gọi được Geocoding/Places thì ai xem trang cũng tiêu được tiền của bạn.
 
-### 4.1 Đăng ký và tạo project
+### 4.1 Project + billing
 
-1. Đăng ký ở <https://myprojects.geoapify.com> (email, không cần thẻ)
-2. **New project** → đặt tên `xeprime` (hoặc `xeprime-staging`)
-3. Mỗi project có sẵn một API key; tạo thêm key thứ hai bằng **Add key**
+1. Bản đồ có project **RIÊNG**, không nằm chung project Firebase (`xeprime-staging`, §6.1):
+   - Firebase tự tạo một API key nằm lộ trong bundle web (`NEXT_PUBLIC_FIREBASE_API_KEY`), key
+     tạo từ trước thường KHÔNG giới hạn API. Bật Maps cùng project là để key đó gọi được Maps
+     tính tiền.
+   - Gắn billing vào project Firebase đẩy nó sang gói Blaze; billing trục trặc là chat realtime
+     và push của staging hỏng theo. Tách ra thì Firebase vẫn ở gói Spark, không cần thẻ.
 
-Không có bước "bật API" như Google Cloud: một key Geoapify gọi được mọi API của gói, nên lớp
-phân tách duy nhất là **hạn chế truy cập** ở bước sau. Vì vậy bước đó không phải tuỳ chọn.
+   | | Dev + staging | Production (§4.7) |
+   | --- | --- | --- |
+   | Project ID | `xeprime-maps` (có từ thời ADR 0018/0037) | `xeprime-maps-prod` |
+   | Nằm ở | *No organization*, cùng chỗ `xeprime-staging` · `xe-prime` | như bên trái |
 
-### 4.2 Hai key, và **khoá chúng lại**
+   Tạo project mới: ô chọn project → **New project** → nhập name → *Project ID* bấm **Edit** để
+   đặt ID → Location *No organization* → **Create**.
 
-**Key A — server** (`GEOAPIFY_API_KEY`)
-- Backend gọi: geocoding, address autocomplete, place details, reverse geocoding, routing
-- Trong **Projects → API keys → Restrictions**: **Allowed IPs** → IP VPS staging (`nslookup api-stg.xeprime.vn`)
-- Không đặt referrer cho key này: API server không gửi HTTP referrer
+   ⚠️ **Hạn mức số project.** Tài khoản free trial chỉ có vài suất project, và project ĐANG CHỜ
+   XOÁ vẫn chiếm suất trọn 30 ngày — xoá một project để tạo cái mới chỉ làm mất luôn cái cũ. Lỡ
+   xoá thì khôi phục: **Manage resources → Resources pending deletion** → tick → **Restore** (billing
+   của nó đã bị gỡ khi xoá, phải gắn lại ở bước 3).
+2. Cần một billing account **Active**. Yêu cầu trả trước gắn với BILLING ACCOUNT, không với project:
+   xoá/tạo project không làm nó biến mất. Tài khoản Việt Nam có thể bị đòi một khoản trả trước
+   một lần để kích hoạt (14/10/2026: tối thiểu ₫1.300.000) — khoản này thành số dư, trừ dần vào
+   phí. Thanh đỏ trên trang Billing → Overview còn hiện thì account CHƯA dùng được.
+3. **Billing → Manage billing accounts → Your projects** → dòng `xeprime-maps` → **⋮** →
+   **Change billing** → chọn account Active.
+4. Không có billing Active ⇒ dừng ở đây; app vẫn chạy, chỉ là không có bản đồ (§4.5).
 
-**Key B — web** (`NEXT_PUBLIC_GEOAPIFY_MAP_KEY`)
-- Trình duyệt gọi: ảnh bản đồ tĩnh (`maps.geoapify.com/v1/staticmap`) và tile của bản đồ kéo-ghim
-  (`maps.geoapify.com/v1/tile/...`)
-- **Allowed origins / HTTP referrers** → `https://stg.xeprime.vn/*`, cộng `http://localhost:3000/*`
-  nếu dùng chung key với máy dev
-- MỘT key lo cả ảnh tĩnh lẫn tile — khác Google, nơi Embed và Maps JavaScript là hai API phải bật
-  riêng. Không cần key thứ ba.
+### 4.2 Bật đúng năm API
 
-| API | Key nào | Code gọi gì |
+**APIs & Services → Library**, tìm và *Enable* từng cái:
+
+| API | Key nào gọi | Code gọi gì |
 | --- | --- | --- |
-| Geocoding | server | `api.geoapify.com/v1/geocode/search` — địa chỉ chữ → toạ độ |
-| Address Autocomplete | server | `/v1/geocode/autocomplete` — gợi ý cho ô nhập địa chỉ |
-| Reverse Geocoding | server | `/v1/geocode/reverse` — toạ độ → địa chỉ chữ; cũng là cách giải mã địa điểm đã chọn (ADR 0037 điều 5) |
-| Routing | server | `/v1/routing?mode=drive` — quãng đường đường bộ |
-| Static Maps | web | `maps.geoapify.com/v1/staticmap` — ảnh bản đồ có ghim |
-| Map Tiles | web | `maps.geoapify.com/v1/tile/osm-bright/...` — nền cho Leaflet |
+| **Geocoding API** | server | `maps.googleapis.com/maps/api/geocode/json` — địa chỉ chữ ↔ toạ độ |
+| **Places API (New)** | server | `places.googleapis.com/v1/places:autocomplete` + `/v1/places/{id}` — gợi ý + chi tiết địa điểm |
+| **Routes API** | server | `routes.googleapis.com/directions/v2:computeRoutes` — quãng đường đường bộ |
+| **Maps Embed API** | trình duyệt | `<iframe>` bản đồ điểm nhận xe ở trang xe — **miễn phí, không giới hạn** |
+| **Maps JavaScript API** | trình duyệt | bản đồ kéo ghim ở ô nhập địa chỉ (chỉ nạp khi ô đó mở) |
 
-| Loại | Tên |
-| --- | --- |
-| **Secret** | `GEOAPIFY_API_KEY` |
-| Variable | `NEXT_PUBLIC_GEOAPIFY_MAP_KEY` — nằm trong bundle JS ⇒ **không bao giờ** là Secret |
-| Variable | `EXPO_PUBLIC_GEOAPIFY_MAP_KEY` — app native, Static Maps; nằm trong bundle ⇒ **không bao giờ** là Secret |
+⚠️ Bật **Places API (New)**, không phải "Places API" bản cũ — code gọi `places.googleapis.com/v1`.
+Bật nhầm bản cũ thì gợi ý địa chỉ trả `PERMISSION_DENIED`.
 
-Cả hai key đều **tuỳ chọn**: thiếu thì khối bản đồ tự ẩn, ô địa chỉ rơi về nhập tay, phí giao dự
-kiến không hiện — luồng đặt xe chạy y như trước. Không key nào chặn boot.
+### 4.3 Tạo key — dev + staging cần BA key
 
-### 4.3 Hạn mức
+**APIs & Services → Credentials → Create credentials → API key**. Tạo xong bấm vào key → *Edit*:
 
-3.000 credit/ngày là hạn mức chung cho mọi API. Các lớp chặn đã có trong code:
+**Key 1 — `maps-server-stg`** → `GOOGLE_MAPS_SERVER_KEY` của **staging**
+- *Application restrictions*: **IP addresses** → IP mà VPS staging dùng để gọi RA ngoài. Lấy ngay
+  trên VPS: `ssh xeprime@stg.xeprime.vn 'curl -s -4 ifconfig.me; echo; curl -s -6 ifconfig.me'`
+  (có IPv6 thì thêm cả IPv6). Đừng lấy bằng `nslookup` tên miền: bản ghi DNS đi qua proxy
+  Cloudflare trả IP của Cloudflare, không phải IP Google nhìn thấy.
+- *API restrictions*: **Restrict key** → Geocoding API · Places API (New) · Routes API
+
+**Key 2 — `maps-server-dev`** → `GOOGLE_MAPS_SERVER_KEY` trong `.env` của **máy dev**
+- *Application restrictions*: **None** — IP nhà/văn phòng đổi liên tục, khoá IP là tự chặn mình
+- *API restrictions*: **Restrict key** → đúng ba API như key 1
+- Chỉ nằm trong `.env` của máy dev (đã gitignore). Lộ thì *Regenerate* — staging không bị kéo theo
+
+**Key 3 — `maps-browser-dev-stg`** → `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY` cho **cả dev lẫn staging**
+- *Application restrictions*: **Websites** → thêm từng dòng:
+
+```
+http://localhost:3000/*
+https://stg.xeprime.vn/*
+https://partner-stg.xeprime.vn/*
+https://admin-stg.xeprime.vn/*
+```
+
+- *API restrictions*: **Restrict key** → Maps Embed API · Maps JavaScript API
+
+> Key server không có referrer (máy chủ không gửi HTTP referrer), nên KHÔNG chọn "Websites" cho
+> key 1/2 — chọn nhầm là mọi lượt gọi từ API bị từ chối.
+
+### 4.4 Map ID — cho ghim kéo được (khuyến nghị, miễn phí)
+
+Ghim kéo được (`AdvancedMarkerElement`) cần một Map ID. Không khai thì code dùng `DEMO_MAP_ID` của
+Google — chạy được, đủ cho máy dev, nhưng Google ghi rõ id đó chỉ để thử.
+
+**Google Maps Platform → Map management → Create map ID** → tên `xeprime-pin-stg` (production: `xeprime-pin-prod`) · Map type
+**JavaScript** · **Raster** → Save → chép **Map ID** vào `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID`.
+
+### 4.5 Khai vào GitHub (staging) và `.env` (máy dev)
+
+| Loại | Tên | Staging (GitHub Environment) | Máy dev (`.env`) |
+| --- | --- | --- | --- |
+| **Secret** | `GOOGLE_MAPS_SERVER_KEY` | key 1 | key 2 |
+| Variable | `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY` | key 3 | key 3 |
+| Variable | `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID` | Map ID §4.4 | Map ID §4.4, hoặc để trống |
+
+`NEXT_PUBLIC_*` nằm trong bundle JS ⇒ **không bao giờ** là Secret, và chỉ có hiệu lực sau khi
+**build lại** (staging: Run workflow deploy; máy dev: tắt rồi chạy lại `pnpm dev`).
+
+**Xoá biến cũ** ở GitHub Environment — Secret `GEOAPIFY_API_KEY` và Variable
+`NEXT_PUBLIC_GEOAPIFY_MAP_KEY` — **SAU KHI** code ADR 0059 đã deploy lên môi trường đó. Trước mốc
+đó staging vẫn chạy code Geoapify và vẫn đọc hai biến này; khai biến Google trước thì vô hại (code
+cũ không đọc). Ở `.env` máy dev thì xoá ngay khi đã kéo code mới.
+
+Cả ba biến đều **tuỳ chọn**: thiếu thì khối bản đồ tự ẩn, ô địa chỉ rơi về nhập tay, phí giao dự
+kiến không hiện — luồng đặt xe chạy y như trước. Không biến nào chặn boot.
+
+### 4.6 Chặn hoá đơn bất ngờ — làm NGAY sau khi bật billing
+
+Mỗi SKU nhóm Essentials (Geocoding, Autocomplete, Place Details Essentials, Compute Routes
+Essentials, Dynamic Maps) có hạn mức miễn phí theo tháng; vượt là tiền thật. Maps Embed API miễn phí
+không giới hạn. Số liệu hiện hành: <https://mapsplatform.google.com/pricing/>.
+
+1. **Billing → Budgets & alerts** → *Create budget* cho project `xeprime-maps`, ví dụ 10 USD/tháng,
+   cảnh báo ở 50% · 90% · 100%. ⚠️ Budget chỉ GỬI MAIL, không chặn chi tiêu.
+2. **Trần cứng là quota.** *APIs & Services* → từng API (Geocoding, Places API (New), Routes, Maps
+   JavaScript) → *Quotas & System Limits* → hạ quota **theo ngày** về khoảng `300` (≈ hạn mức miễn
+   phí tháng chia 30); API nào chỉ có quota **theo phút** thì hạ nó về mức tương đương (~`20`/phút).
+   Chạm trần thì API trả lỗi và app rơi về nhập tay — tốt hơn một hoá đơn. Quota tính theo
+   PROJECT, nên dev và staging chia nhau trần này.
+
+Lớp chặn đã có trong code:
 
 - Kết quả geocode cache trong `geocode_cache`, quãng đường cache trong `geo_route_cache` — cùng
   một địa chỉ hoặc cùng một cặp điểm không gọi lại trong 30 ngày.
 - **Lọc trước bằng đường chim bay**: ngoài bán kính giao thì kết luận ngay, không tốn request
-  routing nào. Đây là chỗ tiết kiệm lớn nhất.
+  Routes API nào. Đây là chỗ tiết kiệm lớn nhất.
 - Ca "không tìm thấy" cũng được cache — người gõ sai địa chỉ thường thử lại vài lần liền.
 - **Ngưỡng 3 ký tự** + **debounce 400ms** ở client, và chỉ hỏi khi đã chọn tỉnh.
 - `@Throttle` 30 req/phút trên `/places/*`: trần cứng cho phần lưu lượng không thật.
-- Chi tiết địa điểm cache dưới khoá `place:<id>` — mã địa điểm là khoá ỔN ĐỊNH, nên mở lại form
-  sửa không hỏi lại cùng một chỗ.
+- FieldMask hẹp nhất cho Places/Routes — xin thêm trường là tự lên bậc tính tiền cao hơn.
+- Bản đồ ở trang xe dùng Embed API (miễn phí); Maps JavaScript API chỉ nạp khi ô kéo ghim mở.
 
-Ảnh bản đồ tĩnh trên trang xe là khoản tốn nhiều nhất và **không** đi qua cache của mình (trình
-duyệt gọi thẳng Geoapify). Nếu hạn mức chật, lối đi tiếp theo là một route proxy giữ key phía
-server chứ **không** phải bật `next/image` — xem ADR 0037 điều 2.
+> **Điều khoản 30 ngày.** Google chỉ cho lưu tạm toạ độ tối đa 30 ngày. Worker xoá bản ghi cache
+> quá hạn mỗi giờ (`apps/worker/src/jobs/geo-cache-cleanup.ts`) — đừng tắt job đó để "tiết kiệm
+> request".
 
-### 4.4 Ghi công nguồn dữ liệu — bắt buộc
+### 4.7 Production
 
-Giấy phép ODbL của OpenStreetMap và điều khoản gói miễn phí của Geoapify đều đòi ghi công. Code
-đã có sẵn: `StaticMap` có một dòng `<figcaption>`, bản đồ Leaflet dùng attribution control.
-**Không được gỡ** — đây là điều kiện giấy phép, không phải trang trí.
+Project **riêng** (`xeprime-maps-prod`), billing riêng, budget riêng. Hai key:
 
-### 4.5 App native
+| Key | Restrictions |
+| --- | --- |
+| `GOOGLE_MAPS_SERVER_KEY` | IP VPS production · Geocoding API · Places API (New) · Routes API |
+| `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY` | Websites: `https://xeprime.vn/*` · `https://partner.xeprime.vn/*` · `https://admin.xeprime.vn/*` — **KHÔNG có `localhost`** · Maps Embed API · Maps JavaScript API |
 
-Hai app native — `apps/mobile/customer` (XePrime) và `apps/mobile/manage` (XePrime Partner),
-ADR 0051 §5 — dùng Geoapify Static Maps qua `EXPO_PUBLIC_GEOAPIFY_MAP_KEY` (16/09/2026 — không
-còn Google), khai trong `.env` của TỪNG app (mẫu ở `.env.example` cùng thư mục). Đây là key RIÊNG
-của app, không dùng chung với `NEXT_PUBLIC_GEOAPIFY_MAP_KEY` của web: hai client hai key thì hạn
-mức tách được, và một key bị moi ra khỏi bundle app không kéo theo web. Hai app mobile dùng chung
-một key cũng được (cùng là bundle app); tách riêng nếu muốn đo hạn mức theo app.
+Cộng một Map ID tạo trong chính project đó.
 
-App native không có bản đồ tương tác nên không tiêu thụ Map Tiles — chỉ Static Maps, mỗi lần mở
-khối "Vị trí trên bản đồ" là một lượt. Thiếu key thì khối đó lùi về nút "Mở bản đồ"; luồng không
-gãy chỗ nào.
+### 4.8 "Một key dùng cho cả dev và staging được không?"
+
+| Key | Dùng chung dev + staging? | Vì sao |
+| --- | --- | --- |
+| Key trình duyệt | **Được** — một key, khai đủ referrer của cả hai (§4.3 key 3) | Nó vốn đã lộ trong bundle; referrer là lớp bảo vệ duy nhất, và danh sách referrer nhận nhiều dòng |
+| Key server | **Không** — hai key (§4.3 key 1 + 2) | Key staging khoá theo IP VPS. Muốn máy dev dùng chung thì phải gỡ khoá IP, và từ đó một file `.env` lộ ra là một key không khoá gọi được API tính tiền của bạn. Tách ra thì lộ key dev chỉ cần *Regenerate* key dev |
+| Bất kỳ key nào | **Không bao giờ** dùng chung với production | `localhost` trong key trình duyệt production là mở cửa cho mọi trang chạy ở `localhost:3000`; và thu hồi key staging không được kéo sập production |
+
+### 4.9 App native — CHƯA chuyển (ADR 0059 điều 8)
+
+Hai app native (`apps/mobile/customer`, `apps/mobile/manage`) vẫn vẽ bản đồ bằng Geoapify qua
+`EXPO_PUBLIC_GEOAPIFY_MAP_KEY` cho tới khi dev mobile chuyển sang Google. Trong lúc chờ, giữ key
+Geoapify của app như cũ. Điều khoản Google cấm dùng dữ liệu của họ (gợi ý địa điểm — app nhận qua
+API) cùng bản đồ không phải Google, nên việc chuyển này phải xong **trước production**.
 
 ---
 
 ## 5. Google Calendar — ngày lễ
 
-Key **thứ ba**, tách khỏi hai key trên (khác API, khác hạn mức, và nó chạy ở worker).
+Key **thứ ba**, tách khỏi hai key bản đồ ở §4 (khác API, khác hạn mức, và nó chạy ở worker).
 
-1. Cùng project → **Library** → bật **Google Calendar API**
+1. Cùng project với §2 (`XePrime`) → **Library** → bật **Google Calendar API**
 2. **Credentials** → *Create credentials* → **API key**
-   - Application restrictions: **IP addresses** → IP VPS staging (như §4.2)
+   - Application restrictions: **IP addresses** → IP VPS staging (như key server ở §4.3)
    - API restrictions: chỉ **Google Calendar API**
 
 | Loại | Tên | Giá trị |
@@ -771,7 +854,7 @@ nhanh hơn đi bấm thử trên giao diện.
 | --- | --- |
 | R2 | Vào một xe → thêm ảnh. Lỗi CORS hiện ở Console trình duyệt, không phải ở log server |
 | Google/Facebook | Bấm nút đăng nhập tương ứng. `?authError=SOCIAL_NOT_CONFIGURED` trên URL = chưa nhận biến |
-| Geoapify | Mở chi tiết một xe có địa chỉ — khối bản đồ chỉ hiện khi key web hợp lệ |
+| Google Maps | Mở chi tiết một xe có địa chỉ — khối bản đồ chỉ hiện khi key trình duyệt đã khai; gõ địa chỉ ở ô giao xe phải ra gợi ý (key server). Log boot của API có dòng `Bản đồ (Google Maps): đã cấu hình` |
 | Ngày lễ | `curl https://api-stg.xeprime.vn/holidays` — worker chạy mỗi ngày một lần, chờ tới hôm sau |
 | Chat | Mở hội thoại ở hai trình duyệt, gửi tin. Không realtime ⇒ xem `docker compose logs worker` |
 
@@ -785,4 +868,6 @@ nhanh hơn đi bấm thử trên giao diện.
 | Ảnh chat bị từ chối `VALIDATION_FAILED` | `R2_PUBLIC_BASE_URL` có dấu `/` thừa ở cuối |
 | API không boot sau khi bật Firebase | `FIRESTORE_ENABLED=true` bắt buộc đủ 6 biến R2 — làm §1 trước |
 | Bản đồ không hiện dù đã khai key | `NEXT_PUBLIC_*` nhúng lúc build — phải **deploy lại**, restart không đủ |
-| Geoapify trả HTTP 401/403 | Key bị khoá theo IP mà IP VPS không nằm trong danh sách, hoặc dùng nhầm key web cho backend |
+| Bản đồ báo `RefererNotAllowedMapError` / khung xám "không thể tải Google Maps" | Thiếu referrer của đúng site trong key trình duyệt (§4.3 key 3), hoặc chưa bật Maps JavaScript API / Maps Embed API cho key đó |
+| `ApiNotActivatedMapError` · `BillingNotEnabledMapError` | Chưa bật API tương ứng (§4.2) hoặc project chưa gắn billing (§4.1) |
+| Ô địa chỉ không ra gợi ý, log API có `REQUEST_DENIED` / `PERMISSION_DENIED` | Key server bị khoá theo IP mà IP VPS không nằm trong danh sách, bật nhầm "Places API" bản cũ thay vì **(New)**, hoặc dùng nhầm key trình duyệt cho backend |

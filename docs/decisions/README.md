@@ -1,6 +1,6 @@
 # Architecture Decision Records — XePrime
 
-> Cập nhật: 08/10/2026
+> Cập nhật: 13/10/2026
 
 ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted mới hơn thắng trong đúng phạm vi phần **Quan hệ với ADR cũ**; không suy rằng toàn bộ ADR cũ mất hiệu lực.
 
@@ -30,7 +30,7 @@ ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted
 | [0014](0014-owner-and-shop-single-role.md) | Một role owner/shop, capability từ gói | **Partially superseded — điều 1–4 còn hiệu lực**; điều 5 phần lớn bị 0028/0032/0036 thay; giả định một người một tài khoản bị 0053 thay |
 | [0016](0016-sepay-bank-reconciliation.md) | SePay đối soát tiền gói | Accepted; phạm vi mở rộng bởi 0022/0028 |
 | [0017](0017-native-bearer-auth.md) | Bearer auth cho native | Accepted; **phiên mang realm theo app (0053)** |
-| [0018](0018-map-delivery-distance.md) | Khoảng cách giao xe là ước lượng | **Partially superseded bởi 0037** (nhà cung cấp + khoá); mọi quyết định sản phẩm còn hiệu lực |
+| [0018](0018-map-delivery-distance.md) | Khoảng cách giao xe là ước lượng | **Partially superseded bởi 0059** (nhà cung cấp + khoá; trước đó 0037); mọi quyết định sản phẩm còn hiệu lực |
 | [0019](0019-backend-led-social-oauth.md) | Backend-led OAuth | Accepted; **định danh social unique theo realm, callback web dưới `/api` từng site (0053)** |
 | [0022](0022-sepay-customer-money.md) | Một sổ giao dịch ngân hàng cho các khoản vào | Accepted; mở rộng bởi 0028 |
 | [0024](0024-billing-mode-from-plan-frozen-on-booking.md) | Billing mode đóng băng vào booking | **Partially superseded — điều 3 (không gói ⇒ `package`) bị 0038 điều 1 ghi đè** (`unconfigured`, `resolveEffectiveBilling`); nguồn ở điều 1 nay là `resolveEffectiveBilling`; breakdown mở rộng bởi 0028 |
@@ -43,9 +43,9 @@ ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted
 | [0032](0032-booking-deposit-insurance-and-owner-lite.md) | Cọc booking bắt buộc, bảo hiểm tại bàn giao và ranh giới Owner Lite | **Accepted; ghi đè một phần 0014/0025/0027/0028/0029; vị trí Owner Lite ở điều 6 bị 0053 ghi đè; mốc "đặt xe thành công" ở điều 2 bị 0044 điều 2 thay; quyền admin vào Manage ở điều 6 bị 0050 thay; tên "Số dư XePrime" đổi thành "Ví điểm" theo 0033 điều 1** |
 | [0033](0033-money-ledger-and-deposit-allocation.md) | Sổ công nợ "Ví điểm", phân bổ cọc nhiều dòng, định tuyến kết cục | **Accepted; ghi đè một phần 0023/0025/0028; chủ ví ở điều 2 bị 0038 rồi 0053 ghi đè; điều 6 mang các điều còn hiệu lực của 0023** |
 | [0034](0034-badge-delivery-by-projection.md) | Huy hiệu đi bằng bản chiếu, không bằng nhịp hỏi lại | **Accepted; mở rộng 0009 sang projection thứ hai** |
-| [0035](0035-two-tier-administrative-address.md) | Địa chỉ vật lý theo danh mục hành chính hai cấp (tỉnh → xã/phường/đặc khu) | **Accepted; mở rộng 0018 sang gợi ý địa điểm + ghim có xác nhận; điều 6 bị 0037 ghi đè ở phần thư viện bản đồ; điều 3 (xã/phường) và 5 bị 0042 ghi đè ở ô địa chỉ có ghim** |
+| [0035](0035-two-tier-administrative-address.md) | Địa chỉ vật lý theo danh mục hành chính hai cấp (tỉnh → xã/phường/đặc khu) | **Accepted; mở rộng 0018 sang gợi ý địa điểm + ghim có xác nhận; điều 6 bị 0059 ghi đè ở phần thư viện bản đồ; điều 3 (xã/phường) và 5 bị 0042 ghi đè ở ô địa chỉ có ghim** |
 | [0036](0036-single-approval-gate-for-commission-owners.md) | Tuyến hoa hồng chỉ có cổng duyệt XE; xác minh gian hàng là trục riêng | **Accepted; ghi đè 0014 điều 5 trong phạm vi tuyến hoa hồng; điều 4 (cổng mua gói) bị 0040 ghi đè; điều 3 (trục xác minh gian hàng) bị 0049 tạm dừng** |
-| [0037](0037-geoapify-osm-map-provider.md) | Nhà cung cấp bản đồ là Geoapify/OpenStreetMap, không phải Google Maps | **Accepted; ghi đè 0018 ở phần nhà cung cấp + khoá, 0035 điều 6 ở thư viện bản đồ** |
+| [0037](0037-geoapify-osm-map-provider.md) | Nhà cung cấp bản đồ là Geoapify/OpenStreetMap, không phải Google Maps | **Superseded bởi 0059** — giữ để đọc mã `gp1:` trong dữ liệu cũ (điều 5); ý định điều 6 chép sang 0059 điều 4 |
 | [0038](0038-owner-track-split-and-unified-wallet.md) | Tách hai tuyến chủ xe: ranh giới Manage chặn ở server (phần ví/khu user bị 0053 thay) | **Partially superseded bởi 0053 (điều 2, 6–10); điều 12 phần cách đếm tuyến gói bị 0041 ghi đè**; ghi đè 0024 điều 3; điều 1, 3, 4, 5, 11, 13, 14 còn hiệu lực |
 | [0040](0040-registration-track-split.md) | Hai tuyến ĐĂNG KÝ tách hẳn: ý định lưu ở `tenants.onboarding_state`, thanh toán mở Manage, cổng logo chỉ áp tuyến gói | **Accepted; ghi đè 0036 điều 4 (xác minh thôi làm cổng mua gói); nơi đăng ký chuyển sang site partner theo 0053** |
 | [0041](0041-plan-tiers-by-vehicle-count.md) | Ba bậc gian hàng bán theo SỐ XE và KỲ HẠN; bậc doanh nghiệp bán bằng tư vấn | **Accepted; ghi đè 0029 điều 3, 0015 (đã gỡ) điều 1/3/8, và 0038 điều 12 ở phần cách đếm tuyến gói; điều 9 chép các điều còn hiệu lực của 0015** |
@@ -66,6 +66,7 @@ ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted
 | [0056](0056-host-sees-customer-contact.md) | Chủ xe thấy liên hệ của khách theo MỘT luật (`hostSeesCustomerContact`): tuyến gói luôn thấy, tuyến hoa hồng chỉ khi đã có ĐƠN; hộp thư + trang chuyến cùng đi qua cổng; sổ khách chặn tuyến hoa hồng ở server; chặng "Quá hạn phản hồi" tách khỏi "Bị từ chối" | **Accepted; làm rõ 0028 điều 9, mở rộng 0027 điều 1** |
 | [0057](0057-customer-driver-licence-verification.md) | Bằng lái của tài khoản khách: nộp ảnh một lần, máy đọc (Tesseract tại chỗ, không bên thứ ba) tự xác thực GPLX Việt Nam khi đủ điều kiện (còn lại — kể cả bằng quốc tế/nước ngoài — chờ người duyệt), cổng chặn lúc gửi yêu cầu thuê tự lái/dài hạn theo hạng + hạn cho CHÍNH chuyến; khách vãng lai đăng nhập bằng OTP trước bước bằng lái | **Accepted; mở rộng 0044 (thêm điều kiện trước khi gửi) và 0053 điều 7** |
 | [0058](0058-momo-vnpay-payment-gateways.md) | MoMo và VNPAY là phương thức thanh toán BỔ SUNG cho chuyển khoản SePay: sổ riêng `payment_gateway_orders` (không ghi giả vào `bank_transactions`), một đường tiền chung với SePay (`applyBankPaymentWithinTx`), chỉ IPN có chữ ký hoặc truy vấn phía server đổi được tiền, không tự hoàn; mặc định tắt, production từ chối boot khi bật cổng cho bất kỳ luồng nào cho tới khi Accepted | **Proposed; mở rộng 0016/0022 (nhiều nhà cung cấp), không ghi đè ADR nào; còn mở Q1–Q8** |
+| [0059](0059-google-maps-platform.md) | Google Maps Platform là nhà cung cấp bản đồ DUY NHẤT: Geocoding · Places (New) · Routes ở server; Maps Embed (xem, miễn phí) + Maps JavaScript (kéo ghim) ở web; hai khoá server/trình duyệt; không tự chốt ghim mức tỉnh; cache toạ độ tối đa 30 ngày rồi xoá; app native chuyển theo trước production | **Accepted; ghi đè TOÀN BỘ 0037, 0018 ở nhà cung cấp + khoá, 0035 điều 6 ở thư viện bản đồ; còn mở Q1 (toạ độ Google lưu vĩnh viễn trong dữ liệu nghiệp vụ)** |
 
 ## ADR đã gỡ khỏi repo
 

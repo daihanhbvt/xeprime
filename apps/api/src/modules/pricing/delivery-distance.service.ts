@@ -101,16 +101,22 @@ export class DeliveryDistanceService {
     if (!isValidGeoPoint(origin) || !this.geo.enabled) return UNAVAILABLE;
     if (!pinned && !address) return UNAVAILABLE;
 
-    const resolved = pinned
-      ? { point: pinned, formattedAddress: address || null }
-      : await this.geo.geocode(address);
-    if (!resolved) {
-      // Phân biệt hai ca giống hệt nhau ở bề ngoài nhưng khác hẳn ở lối đi tiếp: nhà cung cấp
-      // còn sống nghĩa là địa chỉ thật sự không tra được → khách sửa được. Nhà cung cấp hỏng
-      // thì im lặng, vì đó không phải lỗi của khách.
-      return this.geo.enabled
-        ? { ...UNAVAILABLE, status: DELIVERY_DISTANCE_STATUS.ADDRESS_NOT_FOUND }
-        : UNAVAILABLE;
+    let resolved: { point: GeoPoint; formattedAddress: string | null };
+    if (pinned) {
+      resolved = { point: pinned, formattedAddress: address || null };
+    } else {
+      /*
+       * Phân biệt hai ca giống hệt nhau ở bề ngoài nhưng khác hẳn ở lối đi tiếp: nhà cung cấp
+       * trả lời "không có" nghĩa là địa chỉ thật sự không tra được → khách sửa được. Nhà cung cấp
+       * không trả lời được (key bị từ chối, hết hạn mức, lỗi mạng) thì im lặng, vì đó không phải
+       * lỗi của khách — chỉ xét `geo.enabled` là bỏ sót ca có key mà Google vẫn từ chối.
+       */
+      const looked = await this.geo.geocodeOutcome(address);
+      if (looked.outcome === 'unavailable') return UNAVAILABLE;
+      if (looked.outcome === 'not_found') {
+        return { ...UNAVAILABLE, status: DELIVERY_DISTANCE_STATUS.ADDRESS_NOT_FOUND };
+      }
+      resolved = looked.address;
     }
 
     const maxRadiusKm = policy.values.deliveryMaxRadiusKm;

@@ -1,12 +1,12 @@
 # ADR 0018 — Bản đồ tính khoảng cách giao xe tận nơi
 
-Ngày: 24/08/2026 · Trạng thái: **Partially superseded bởi [ADR 0037](0037-geoapify-osm-map-provider.md)** — mọi quyết định SẢN PHẨM ở đây vẫn còn hiệu lực; chỉ nhà cung cấp và bộ khoá đã đổi.
+Ngày: 24/08/2026 · Trạng thái: **Partially superseded bởi [ADR 0059](0059-google-maps-platform.md)** (trước đó 0037) — mọi quyết định SẢN PHẨM ở đây vẫn còn hiệu lực; chỉ nhà cung cấp và bộ khoá đã đổi.
 
-> ⚠️ **Nhà cung cấp đã đổi (15/09/2026).** Bản đồ chạy trên **Geoapify/OpenStreetMap**, không còn
-> Google Maps Platform. Bảng khoá ở §4 dưới đây (`GOOGLE_MAPS_SERVER_KEY` ·
-> `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY`) **không còn đúng** — hai khoá hiện hành là
-> `GEOAPIFY_API_KEY` và `NEXT_PUBLIC_GEOAPIFY_MAP_KEY`. Xem
-> [ADR 0037](0037-geoapify-osm-map-provider.md).
+> ⚠️ **Bộ khoá đã đổi (13/10/2026).** Bản đồ chạy lại trên **Google Maps Platform** (ADR 0059,
+> sau chặng Geoapify của ADR 0037). Bảng khoá ở §4 dưới đây **không còn đúng**: khoá hiện hành là
+> `GOOGLE_MAPS_SERVER_KEY` (server) và `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY` (một key trình duyệt
+> cho cả Embed lẫn Maps JavaScript API — không còn `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY` riêng). Xem
+> [ADR 0059](0059-google-maps-platform.md).
 
 Liên quan: [ADR 0014](0014-owner-and-shop-single-role.md) (nền tảng không đứng giữa quan hệ khách ↔
 gian hàng), [ADR 0007](0007-api-type-contract.md) (tiền là chuỗi),

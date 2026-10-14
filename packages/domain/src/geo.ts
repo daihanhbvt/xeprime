@@ -7,6 +7,15 @@
  * có mặt trong package dùng chung (CLAUDE.md §5).
  */
 
+/**
+ * Kết quả tra bản đồ (toạ độ, quãng đường) được giữ trong cache tối đa bấy nhiêu ngày.
+ *
+ * Không phải con số tuỳ hứng: điều khoản Google Maps Platform chỉ cho lưu TẠM toạ độ họ trả về
+ * tối đa 30 ngày liên tiếp, sau đó phải XOÁ (ADR 0059). Một con số dùng ở hai nơi — API thôi
+ * đọc bản ghi quá hạn, worker xoá hẳn nó — nên nó sống ở đây để hai nơi không lệch nhau.
+ */
+export const GEO_CACHE_TTL_DAYS = 30;
+
 /** Một điểm trên bản đồ. Luôn là độ thập phân WGS84, không phải độ-phút-giây. */
 export interface GeoPoint {
   readonly lat: number;

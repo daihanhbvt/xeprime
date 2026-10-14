@@ -118,6 +118,7 @@ export {
 export { TEL_SCHEME, ZALO_PROFILE_BASE_URL, telHref, zaloHref } from './contact';
 
 export {
+  GEO_CACHE_TTL_DAYS,
   haversineKm,
   isValidGeoPoint,
   normalizeAddressKey,

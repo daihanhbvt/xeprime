@@ -16,9 +16,9 @@ import { RequestBookingButton } from '@/features/booking-requests/components/Req
 import { catalogLabel, type CatalogMap } from '@/features/catalog/types';
 import { ShopChatButton } from '@/features/chat/components/ShopChatButton';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
-import { StaticMap } from '@/components/data-display/StaticMap';
+import { EmbedMap } from '@/components/data-display/EmbedMap';
 import { ShopQuickInfoCard } from '@/components/shop/ShopQuickInfoCard';
-import { mapPlaceUrl, toGeoPoint } from '@/lib/map-static';
+import { mapPlaceUrl, toGeoPoint } from '@/lib/map-embed';
 import { applyDiscountPercent } from '@/lib/money';
 import type { PublicListingDetail } from '../types';
 import { ListingGallery } from './ListingGallery';
@@ -27,7 +27,8 @@ import { ListingServiceSelector } from './ListingServiceSelector';
 import { ListingSpecsCard } from './ListingSpecsCard';
 import styles from './ListingDetailView.module.css';
 import { getAppFormat } from '@/i18n/server-format';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
+import { resolveAppLocale } from '@/i18n/config';
 import { createDomainLabel } from '@/i18n/domain';
 
 /** Trang chi tiết một xe trên Marketplace (server-render). Nút thuê là client island. */
@@ -51,11 +52,12 @@ export async function ListingDetailView({
   /** Tỉnh đang lọc ở trang tìm xe — prefill ô địa chỉ giao xe của luồng đặt (ADR 0035). */
   searchProvinceCode?: string;
 }) {
-  const [fmt, t, tCard, tDomain] = await Promise.all([
+  const [fmt, t, tCard, tDomain, locale] = await Promise.all([
     getAppFormat(),
     getTranslations('Listings.detail'),
     getTranslations('Listings.card'),
     getTranslations('Domain'),
+    getLocale(),
   ]);
   const domainLabel = createDomainLabel(tDomain as never);
 
@@ -469,7 +471,7 @@ export async function ListingDetailView({
         </section>
         {/*
           Điểm nhận xe: địa chỉ là thông tin CHÍNH, bản đồ chỉ minh hoạ. Khối vẫn hiện đầy đủ khi
-          chưa có toạ độ hoặc chưa cấu hình key bản đồ — `StaticMap` tự biến mất, phần chữ ở lại.
+          chưa có toạ độ hoặc chưa cấu hình key bản đồ — `EmbedMap` tự biến mất, phần chữ ở lại.
           Trải hết chiều ngang (`pickupCard`) để không đẻ ra một ô trống cạnh nó trong lưới 2 cột.
         */}
         {listing.pickupPoint ? (
@@ -488,9 +490,10 @@ export async function ListingDetailView({
             {listing.pickupPoint.provinceName ? (
               <p className={styles.pickupMeta}>{listing.pickupPoint.provinceName}</p>
             ) : null}
-            <StaticMap
+            <EmbedMap
               src={mapPlaceUrl(
                 toGeoPoint(listing.pickupPoint.latitude, listing.pickupPoint.longitude),
+                resolveAppLocale(locale),
               )}
               title={t('pickupPoint.mapTitle')}
               height={260}

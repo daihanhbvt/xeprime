@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
+  GEO_CACHE_TTL_DAYS,
   haversineKm,
   isValidGeoPoint,
   normalizeAddressKey,
@@ -17,13 +18,12 @@ import {
 } from './geo-provider';
 
 /**
- * Bao lâu thì coi một bản ghi cache là cũ.
- *
- * KHÔNG phải con số tuỳ hứng: điều khoản của nhà cung cấp bản đồ giới hạn thời gian được lưu
- * toạ độ họ trả về, và 30 ngày là mốc quen thuộc của giới hạn đó. Nó cũng vừa đủ để một địa chỉ
- * bị đặt lại tên đường không nằm sai chỗ mãi mãi trong cache của mình.
+ * Bao lâu thì coi một bản ghi cache là cũ — {@link GEO_CACHE_TTL_DAYS}, mốc điều khoản Google cho
+ * phép lưu toạ độ (ADR 0059). Ở đây chỉ THÔI ĐỌC bản ghi quá hạn; xoá hẳn là việc của job
+ * `geo-cache-cleanup` bên worker. Mốc này cũng vừa đủ để một địa chỉ bị đặt lại tên đường không
+ * nằm sai chỗ mãi mãi trong cache của mình.
  */
-const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const CACHE_TTL_MS = GEO_CACHE_TTL_DAYS * 24 * 60 * 60 * 1000;
 
 /** Toạ độ làm tròn về lưới ~110m trước khi băm — mọi lần hỏi lại cùng một chuyến đều trúng. */
 const ROUTE_KEY_DECIMALS = 3;
@@ -34,6 +34,18 @@ export interface ResolvedAddress extends GeocodeResult {
   /** Địa chỉ này đến từ cache hay vừa hỏi nhà cung cấp — chỉ để log/đo, không lộ ra API. */
   cached: boolean;
 }
+
+/**
+ * Kết quả tra địa chỉ — ba ngả PHÂN BIỆT ĐƯỢC, cùng lý do với {@link RoadDistanceResult}.
+ *
+ * "Không tìm thấy" là lỗi khách sửa được (gõ lại địa chỉ). "Không hỏi được" (key bị từ chối,
+ * billing hết hạn, chạm trần quota) thì không — báo khách "địa chỉ không tìm thấy" lúc đó là đổ
+ * lỗi cho họ về một sự cố của mình.
+ */
+export type GeocodeOutcome =
+  | { outcome: 'ok'; address: ResolvedAddress }
+  | { outcome: 'not_found' }
+  | { outcome: 'unavailable' };
 
 /**
  * Kết quả đo đường bộ — bốn ngả PHÂN BIỆT ĐƯỢC, không phải một `number | null`.
@@ -65,7 +77,9 @@ export type RoadDistanceResult =
  * kèm một dòng log. Người gọi là luồng đặt xe của khách: bản đồ hỏng không được phép trở thành
  * "không đặt được xe".
  *
- * Là writer DUY NHẤT của `geocode_cache` và `geo_route_cache`.
+ * Là writer DUY NHẤT của `geocode_cache` và `geo_route_cache`. Worker chỉ XOÁ bản ghi quá
+ * {@link GEO_CACHE_TTL_DAYS} ngày (`apps/worker/src/jobs/geo-cache-cleanup.ts`) — dọn theo điều
+ * khoản, không ghi nội dung.
  */
 @Injectable()
 export class GeoService {
@@ -94,21 +108,32 @@ export class GeoService {
    * thật: người gõ sai địa chỉ thường thử lại vài lần liền.
    */
   async geocode(rawAddress: string): Promise<ResolvedAddress | null> {
-    const address = rawAddress.trim();
-    if (!address || !this.provider.enabled) return null;
+    const res = await this.geocodeOutcome(rawAddress);
+    return res.outcome === 'ok' ? res.address : null;
+  }
 
-    const key = normalizeAddressKey(address);
-    if (!key) return null;
+  /**
+   * Như {@link geocode} nhưng nói RÕ vì sao không có toạ độ — cho nơi gọi phải trả lời khách
+   * khác nhau giữa "địa chỉ không tra được" và "hệ thống không hỏi được".
+   */
+  async geocodeOutcome(rawAddress: string): Promise<GeocodeOutcome> {
+    if (!this.provider.enabled) return { outcome: 'unavailable' };
+    const address = rawAddress.trim();
+    const key = address ? normalizeAddressKey(address) : '';
+    if (!key) return { outcome: 'not_found' };
     const hash = sha256(`${this.provider.name}\n${key}`);
 
     const cached = await this.prisma.geocodeCache.findUnique({ where: { addressHash: hash } });
     if (cached && this.isFresh(cached.fetchedAt)) {
-      if (cached.latitude == null || cached.longitude == null) return null;
+      if (cached.latitude == null || cached.longitude == null) return { outcome: 'not_found' };
       return {
-        point: { lat: Number(cached.latitude), lng: Number(cached.longitude) },
-        formattedAddress: cached.formattedAddress,
-        placeId: cached.placeId,
-        cached: true,
+        outcome: 'ok',
+        address: {
+          point: { lat: Number(cached.latitude), lng: Number(cached.longitude) },
+          formattedAddress: cached.formattedAddress,
+          placeId: cached.placeId,
+          cached: true,
+        },
       };
     }
 
@@ -119,11 +144,13 @@ export class GeoService {
       // Không ghi cache ca lỗi: lần sau có thể hỏi được, và nhớ một sự cố tạm thời trong 30
       // ngày thì tệ hơn nhiều so với việc tốn thêm một request.
       this.logger.warn(`Geocode thất bại (${this.provider.name}): ${String(err)}`);
-      return null;
+      return { outcome: 'unavailable' };
     }
 
     await this.writeGeocodeCache(hash, address, result);
-    return result ? { ...result, cached: false } : null;
+    return result
+      ? { outcome: 'ok', address: { ...result, cached: false } }
+      : { outcome: 'not_found' };
   }
 
   private async writeGeocodeCache(
@@ -155,20 +182,29 @@ export class GeoService {
   }
 
   /**
-   * Gợi ý địa điểm cho ô nhập địa chỉ. Lỗi/chưa cấu hình → mảng RỖNG.
+   * Gợi ý địa điểm cho ô nhập địa chỉ. Mảng RỖNG = không có gợi ý nào (câu trả lời); `null` =
+   * KHÔNG HỎI ĐƯỢC (chưa cấu hình, key bị từ chối, hết hạn mức, lỗi mạng).
+   *
+   * Hai ca đó phải tách nhau vì client phản ứng ngược nhau: không có gợi ý thì người dùng gõ tiếp
+   * hoặc tự đặt ghim, còn không hỏi được thì ô địa chỉ phải mở cho nhập tay — nếu không, một lần
+   * Google từ chối key là mọi khách kẹt ở bước "chưa xác nhận địa chỉ" (ADR 0035 điều 6).
    *
    * KHÔNG cache: gợi ý phụ thuộc từng ký tự người dùng vừa gõ, nên tỉ lệ trúng cache gần bằng
    * không trong khi mỗi dòng cache là một bản ghi rác. Chỗ tiết kiệm thật nằm ở client —
    * debounce và độ dài tối thiểu trước khi hỏi.
    */
-  async searchPlaces(query: string, biasPoint?: GeoPoint | null): Promise<PlaceSuggestion[]> {
+  async searchPlaces(
+    query: string,
+    biasPoint?: GeoPoint | null,
+  ): Promise<PlaceSuggestion[] | null> {
+    if (!this.provider.enabled) return null;
     const q = query.trim();
-    if (!q || !this.provider.enabled) return [];
+    if (!q) return [];
     try {
       return await this.provider.searchPlaces(q, biasPoint ?? null);
     } catch (err) {
       this.logger.warn(`Tìm địa điểm thất bại (${this.provider.name}): ${String(err)}`);
-      return [];
+      return null;
     }
   }
 

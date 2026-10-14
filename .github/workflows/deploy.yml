@@ -200,7 +200,8 @@ jobs:
             NEXT_PUBLIC_WEB_PARTNER_URL=${{ vars.WEB_PARTNER_URL || format('https://{0}', vars.PARTNER_DOMAIN) }}
             NEXT_PUBLIC_WEB_ADMIN_URL=${{ vars.WEB_ADMIN_URL || format('https://{0}', vars.ADMIN_DOMAIN) }}
             NEXT_PUBLIC_APP_NAME=${{ vars.NEXT_PUBLIC_APP_NAME }}
-            NEXT_PUBLIC_GEOAPIFY_MAP_KEY=${{ vars.NEXT_PUBLIC_GEOAPIFY_MAP_KEY }}
+            NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY=${{ vars.NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY }}
+            NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID=${{ vars.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID }}
             NEXT_PUBLIC_FIREBASE_API_KEY=${{ vars.NEXT_PUBLIC_FIREBASE_API_KEY }}
             NEXT_PUBLIC_FIREBASE_PROJECT_ID=${{ vars.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
             NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${{ vars.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
@@ -286,7 +287,8 @@ jobs:
           V_R2_PUBLIC_BASE_URL: ${{ vars.R2_PUBLIC_BASE_URL }}
           V_BACKUP_KEEP_DAYS: ${{ vars.BACKUP_KEEP_DAYS }}
           V_NEXT_PUBLIC_APP_NAME: ${{ vars.NEXT_PUBLIC_APP_NAME }}
-          V_NEXT_PUBLIC_GEOAPIFY_MAP_KEY: ${{ vars.NEXT_PUBLIC_GEOAPIFY_MAP_KEY }}
+          V_NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY: ${{ vars.NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY }}
+          V_NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID: ${{ vars.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID }}
           V_NEXT_PUBLIC_FIREBASE_API_KEY: ${{ vars.NEXT_PUBLIC_FIREBASE_API_KEY }}
           V_NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ vars.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
           V_NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ vars.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
@@ -315,7 +317,7 @@ jobs:
           # Chỉ để KIỂM SỰ TỒN TẠI ở bước này — nội dung được dùng ở step "Đẩy Firestore rules",
           # và nó KHÔNG bao giờ được ghi vào `.env` của môi trường (runtime không cần nó).
           S_FIREBASE_DEPLOY_CREDENTIALS_JSON: ${{ secrets.FIREBASE_DEPLOY_CREDENTIALS_JSON }}
-          S_GEOAPIFY_API_KEY: ${{ secrets.GEOAPIFY_API_KEY }}
+          S_GOOGLE_MAPS_SERVER_KEY: ${{ secrets.GOOGLE_MAPS_SERVER_KEY }}
           S_GOOGLE_HOLIDAY_API_KEY: ${{ secrets.GOOGLE_HOLIDAY_API_KEY }}
           S_TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           S_TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -357,6 +359,14 @@ jobs:
           # Không ghi vào file env; nhắc xoá biến ở GitHub Environment.
           if [ -n "${V_SESSION_COOKIE_DOMAIN:-}" ]; then
             echo "::warning::SESSION_COOKIE_DOMAIN không còn được dùng (ADR 0053). Xoá biến này ở Settings → Environments → $XP_ENV."
+          fi
+
+          # Ghim kéo được cần Map ID; trống thì web dùng `DEMO_MAP_ID` — id Google chỉ dành để thử.
+          # Nhắc ở production, không chặn: bản đồ vẫn chạy (ADR 0059 điều 3).
+          if [ "${V_APP_ENV:-}" = "production" ] \
+             && [ -n "${V_NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY:-}" ] \
+             && [ -z "${V_NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID:-}" ]; then
+            echo "::warning::NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID trống — production đang dùng DEMO_MAP_ID của Google. Tạo Map ID (docs/third-party-keys.md §4.4) rồi khai ở Settings → Environments → $XP_ENV."
           fi
 
           # --- Firestore: bật thì phải bật ĐỦ -------------------------------------------------
@@ -552,7 +562,7 @@ jobs:
           kv FIREBASE_PROJECT_ID "${V_FIREBASE_PROJECT_ID:-}"
           kv FIREBASE_CLIENT_EMAIL "${V_FIREBASE_CLIENT_EMAIL:-}"
           kv FIREBASE_PRIVATE_KEY "${S_FIREBASE_PRIVATE_KEY:-}"
-          kv GEOAPIFY_API_KEY "${S_GEOAPIFY_API_KEY:-}"
+          kv GOOGLE_MAPS_SERVER_KEY "${S_GOOGLE_MAPS_SERVER_KEY:-}"
           kv GOOGLE_HOLIDAY_API_KEY "${S_GOOGLE_HOLIDAY_API_KEY:-}"
 
           # Bằng lái của khách (ADR 0057). Đọc ảnh bằng Tesseract tại chỗ — không khoá, không bên
@@ -570,7 +580,8 @@ jobs:
           kv NEXT_PUBLIC_WEB_PARTNER_URL "${V_WEB_PARTNER_URL:-https://${V_PARTNER_DOMAIN}}"
           kv NEXT_PUBLIC_WEB_ADMIN_URL "${V_WEB_ADMIN_URL:-https://${V_ADMIN_DOMAIN}}"
           kv NEXT_PUBLIC_APP_NAME "${V_NEXT_PUBLIC_APP_NAME:-XePrime}"
-          kv NEXT_PUBLIC_GEOAPIFY_MAP_KEY "${V_NEXT_PUBLIC_GEOAPIFY_MAP_KEY:-}"
+          kv NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY "${V_NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY:-}"
+          kv NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID "${V_NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID:-}"
           kv NEXT_PUBLIC_FIREBASE_API_KEY "${V_NEXT_PUBLIC_FIREBASE_API_KEY:-}"
           kv NEXT_PUBLIC_FIREBASE_PROJECT_ID "${V_NEXT_PUBLIC_FIREBASE_PROJECT_ID:-}"
           kv NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN "${V_NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:-}"

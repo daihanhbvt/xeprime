@@ -5,7 +5,7 @@
 /*
  * Bọc riêng để lớp "đang tải" phủ đúng khung bản đồ.
  *
- * `position: relative` ở đây chứ không ở `.map`: Leaflet tự đặt `position` lên chính phần tử nó
+ * `position: relative` ở đây chứ không ở `.map`: Google Maps tự đặt style lên chính phần tử nó
  * dựng bản đồ vào, nên mọi thứ của mình phải nằm ở lớp ngoài.
  */
 .mapWrap {
@@ -26,16 +26,18 @@
 }
 
 /*
- * Ghim tự vẽ — `L.divIcon` nhận đúng class này và KHÔNG kèm style mặc định nào của Leaflet
- * (truyền `className` là thay hẳn `leaflet-div-icon`, không phải cộng thêm).
+ * Ghim tự vẽ — nội dung (`content`) của `AdvancedMarkerElement`. Google neo nội dung ở ĐÁY GIỮA
+ * của hộp, nên kích thước hộp phải tường minh: thiếu nó hộp cao 0px và mũi ghim lệch khỏi toạ độ.
  *
  * Dựng bằng hình tròn + tam giác chứ không bằng một hình vuông bo góc xoay 45°: cách xoay đẩy
- * mũi ghim ra khỏi hộp 28×28 một đoạn lẻ (14·√2 ≈ 19,8px), nên `iconAnchor` sẽ phải là một con
- * số ước lượng. Ở đây mũi nằm đúng đáy hộp, và `iconAnchor: [14, 28]` là chính xác — điều đáng
- * giá, vì lệch vài pixel ở mức thu phóng 17 là lệch cả một căn nhà.
+ * mũi ghim ra khỏi hộp 28×28 một đoạn lẻ (14·√2 ≈ 19,8px), nên điểm neo sẽ lệch một con số ước
+ * lượng. Ở đây mũi nằm đúng đáy hộp, trùng điểm neo — điều đáng giá, vì lệch vài pixel ở mức
+ * thu phóng 17 là lệch cả một căn nhà.
  */
 .pin {
   position: relative;
+  width: 28px;
+  height: 28px;
   cursor: grab;
 }
 

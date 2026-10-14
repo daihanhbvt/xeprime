@@ -24,6 +24,7 @@ import { sweepSubscriptionLifecycle } from './jobs/subscription-lifecycle';
 import { sweepBookingHoldExpiry } from './jobs/booking-hold-expiry';
 import { sweepInsuranceIssue } from './jobs/insurance-issue';
 import { purgeExpiredOauthStates } from './jobs/oauth-state-cleanup';
+import { purgeExpiredGeoCache } from './jobs/geo-cache-cleanup';
 import { refreshListingRanks } from './jobs/listing-rank-refresh';
 import { dispatchPushDeliveries } from './jobs/push-dispatch';
 import { HOLIDAY_INTERVAL_MS, shouldRunHolidaySync, syncHolidays } from './jobs/holiday-sync';
@@ -31,7 +32,7 @@ import { HOLIDAY_INTERVAL_MS, shouldRunHolidaySync, syncHolidays } from './jobs/
 /**
  * Worker XePrime — mọi việc chạy theo ĐỒNG HỒ, không theo request của người dùng.
  *
- * Bảy nhóm việc, và chúng độc lập với nhau:
+ * Tám nhóm việc, và chúng độc lập với nhau:
  *
  *  1. **Hạn phản hồi yêu cầu thuê** (25/08) — nhắc gian hàng ở phút 20/45 và đóng yêu cầu ở
  *     phút 60. Đây là việc NGHIỆP VỤ LÕI: nó chạy ở mọi cấu hình, kể cả khi chat Firestore tắt.
@@ -51,6 +52,8 @@ import { HOLIDAY_INTERVAL_MS, shouldRunHolidaySync, syncHolidays } from './jobs/
  *  7. **Xếp hạng chợ xe** (22/09/2026) — tính lại `public_listings.rank_score` để khối "Xe phù
  *     hợp với bạn" xếp đúng thứ tự. Việc nghiệp vụ, chạy ở mọi cấu hình; xem
  *     `jobs/listing-rank-refresh.ts` để biết vì sao nó cần nhịp đồng hồ thay vì chỉ cần sự kiện.
+ *  8. **Dọn cache bản đồ** (13/10/2026, ADR 0059) — xoá toạ độ/quãng đường tra từ Google quá 30
+ *     ngày, theo điều khoản Google Maps Platform. Chạy ở mọi cấu hình.
  *
  * Ràng buộc chung: idempotent + advisory lock chống hai instance chạy chồng nhau. Chạy polling
  * loop (không kéo cả Nest runtime vào worker), và có endpoint `/health` nội bộ để Docker và
@@ -109,6 +112,12 @@ const LOCK_BADGES = 4_209;
  */
 const LOCK_LISTING_RANK = 4_211;
 const LISTING_RANK_INTERVAL_MS = 6 * 60 * 60 * 1_000;
+/**
+ * Dọn cache bản đồ (ADR 0059). Hạn tính bằng NGÀY nên một giờ một nhịp là dư độ mịn; nhịp
+ * thưa hơn thì một bản ghi có thể nằm lố hạn điều khoản thêm gần một ngày.
+ */
+const LOCK_GEO_CACHE = 4_212;
+const GEO_CACHE_INTERVAL_MS = 60 * 60 * 1_000;
 /**
  * Nhịp chiếu huy hiệu. Ba giây là độ trễ tối đa giữa "có tin/thông báo mới" và "con số trên
  * chuông đổi" — đủ nhanh để badge còn giống realtime, và rẻ hơn hẳn thứ nó thay thế: trước đây
@@ -301,6 +310,14 @@ async function main(): Promise<void> {
       if (purged.states || purged.nativeCodes) {
         console.log(
           `oauth: dọn ${purged.states} state + ${purged.nativeCodes} one-time code hết hạn`,
+        );
+      }
+    }),
+    loop('dọn cache bản đồ', LOCK_GEO_CACHE, GEO_CACHE_INTERVAL_MS, async () => {
+      const purged = await purgeExpiredGeoCache(prisma);
+      if (purged.geocodes || purged.routes) {
+        console.log(
+          `bản đồ: xoá ${purged.geocodes} địa chỉ + ${purged.routes} quãng đường quá hạn cache`,
         );
       }
     }),

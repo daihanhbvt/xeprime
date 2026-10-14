@@ -1,13 +1,13 @@
 'use client';
 
 import { Alert, App, Button, Col, Form, Row } from 'antd';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { VEHICLE_PUBLIC_STATUS } from '@xeprime/types';
 import { vehicleFormSchema, type VehicleFormValues } from '@xeprime/validators';
 
-import { StaticMap } from '@/components/data-display/StaticMap';
+import { EmbedMap } from '@/components/data-display/EmbedMap';
 import { NumberField } from '@/components/form/NumberField';
 import { StickyFormActions } from '@/components/form/StickyFormActions';
 import { TextAreaField } from '@/components/form/TextAreaField';
@@ -32,9 +32,10 @@ import {
 import { useUpdateVehicle } from '@/features/vehicles/hooks/use-vehicle-mutations';
 import { manageInformationValuesToInput, vehicleToFormValues } from '@/features/vehicles/mappers';
 import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
+import { resolveAppLocale } from '@/i18n/config';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
-import { mapPlaceUrl, toGeoPoint } from '@/lib/map-static';
+import { mapPlaceUrl, toGeoPoint } from '@/lib/map-embed';
 
 import { useManagedVehicle } from '../VehicleManageContext';
 import { SectionCard } from '../SectionCard';
@@ -264,12 +265,13 @@ export function InformationSection() {
 
 /**
  * Địa chỉ hiện tại của xe = chi nhánh giữ xe. Đọc từ danh sách chi nhánh (đã có toạ độ và số xe)
- * chứ không gọi endpoint riêng; bản đồ là `StaticMap` với `NEXT_PUBLIC_GEOAPIFY_MAP_KEY` —
+ * chứ không gọi endpoint riêng; bản đồ là `EmbedMap` với `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY` —
  * thiếu key/toạ độ thì chỉ hiện chữ, không bao giờ chặn sửa.
  */
 function AddressCard({ canEdit }: { canEdit: boolean }) {
   const { vehicle } = useManagedVehicle();
   const t = useTranslations('VehicleManage.information');
+  const locale = resolveAppLocale(useLocale());
   const branches = useBranches();
   const [editing, setEditing] = useState(false);
 
@@ -280,7 +282,7 @@ function AddressCard({ canEdit }: { canEdit: boolean }) {
         branch.longitude == null ? null : Number(branch.longitude),
       )
     : null;
-  const mapUrl = mapPlaceUrl(point);
+  const mapUrl = mapPlaceUrl(point, locale);
   const addressLine = [branch?.address, branch?.provinceName ?? vehicle.branch?.provinceName]
     .filter(Boolean)
     .join(', ');
@@ -303,7 +305,7 @@ function AddressCard({ canEdit }: { canEdit: boolean }) {
           <p className={styles.address}>{addressLine || t('addressNoStreet')}</p>
           {branch?.name ? <p className={styles.branchName}>{branch.name}</p> : null}
           {mapUrl ? (
-            <StaticMap src={mapUrl} title={t('addressMapTitle')} height={220} />
+            <EmbedMap src={mapUrl} title={t('addressMapTitle')} height={220} />
           ) : branch?.address ? (
             <p className={styles.mapHint}>{t('addressMapPending')}</p>
           ) : null}

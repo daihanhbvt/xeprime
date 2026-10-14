@@ -1,0 +1,10 @@
+.frame {
+  display: block;
+  width: 100%;
+  /* `--xp-map-height` do nơi gọi truyền (giá trị chỉ biết lúc chạy — ngoại lệ ADR 0003). */
+  height: var(--xp-map-height, 220px);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  /* Nền trong lúc iframe chưa tải xong — tránh một mảng trắng nhấp nháy. */
+  background: var(--xp-color-bg-muted);
+}

@@ -66,7 +66,8 @@ khối địa chỉ của khách đều dùng nó.
 
 `/places/search` trả `available: false` ⇒ ô quay về một ô chữ tự do, không xoá gì. Và điều kiện
 **bắt buộc có toạ độ** chỉ áp khi người dùng thật sự tạo ra được một toạ độ — tức khi trình duyệt
-dựng được bản đồ tương tác (`NEXT_PUBLIC_GEOAPIFY_MAP_KEY`). Thiếu khoá thì không có gợi ý để chọn
+dựng được bản đồ tương tác (`NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY` từ ADR 0059 — và Google không
+từ chối nó lúc chạy). Thiếu khoá thì không có gợi ý để chọn
 và cũng không có bản đồ để ghim, nên đòi toạ độ là khoá nút "Tiếp tục" bằng một lỗi không thao tác
 nào sửa được. Đây là ADR 0035 điều 6 áp dụng đúng chữ.
 

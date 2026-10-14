@@ -1,20 +1,22 @@
 'use client';
 
 import { Alert, Button, Spin } from 'antd';
-import type { Map as LeafletMap, Marker } from 'leaflet';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
 import type { GeoPoint } from '@xeprime/domain';
-import { StaticMap } from '@/components/data-display/StaticMap';
+import { EmbedMap } from '@/components/data-display/EmbedMap';
+import { useGoogleMapsAuthFailed } from '@/hooks/use-interactive-map';
+import { resolveAppLocale } from '@/i18n/config';
 import {
-  isInteractiveMapConfigured,
-  geoapifyMapKey,
-  loadLeaflet,
-  tileUrlTemplate,
-  TILE_ATTRIBUTION,
-  TILE_MAX_ZOOM,
-} from '@/lib/leaflet-loader';
-import { mapPlaceUrl } from '@/lib/map-static';
+  googleMapsMapId,
+  isGoogleMapsAuthFailed,
+  loadGoogleMaps,
+  type GoogleAdvancedMarker,
+  type GoogleMap,
+  type MapMouseEvent,
+  type MapsEventListener,
+} from '@/lib/google-maps-loader';
+import { isMapConfigured, mapExternalUrl, mapPlaceUrl } from '@/lib/map-embed';
 import styles from './MapPinPicker.module.css';
 
 /** Mức thu phóng khi đã có ghim — đủ gần để thấy số nhà, đủ xa để nhận ra ngã tư quanh đó. */
@@ -25,8 +27,15 @@ const UNPINNED_ZOOM = 13;
 /** Trung tâm Việt Nam khi chưa biết gì — chỉ dùng để bản đồ có một chỗ để mở ra, không phải gợi ý. */
 const FALLBACK_CENTER: GeoPoint = { lat: 16.0471, lng: 108.2062 };
 
-/** Kích thước ghim, tính bằng pixel. Neo ở ĐÁY giữa: mũi ghim mới là điểm toạ độ, không phải tâm. */
-const PIN_SIZE = 28;
+/** Cùng chiều cao với `.map` trong CSS Module — khung nhúng thay thế không làm form nhảy chỗ. */
+const EMBED_HEIGHT = 240;
+
+const samePoint = (a: GeoPoint | null, b: GeoPoint | null): boolean =>
+  a !== null && b !== null && a.lat === b.lat && a.lng === b.lng;
+
+/** `MapMouseEvent.latLng` → toạ độ thuần. `null` khi sự kiện không mang toạ độ. */
+const pointOf = (e: MapMouseEvent): GeoPoint | null =>
+  e.latLng ? { lat: e.latLng.lat(), lng: e.latLng.lng() } : null;
 
 export interface MapPinPickerProps {
   /** Ghim hiện tại. `null` = chưa ai ghim — bản đồ mở ở `fallbackCenter` và chờ một cú bấm. */
@@ -43,24 +52,25 @@ export interface MapPinPickerProps {
    * được gì.
    */
   fallbackZoom?: number;
-  /** Nhãn cho trình đọc màn hình; cũng là `alt` của ảnh khi rơi về bản đồ tĩnh. */
+  /** Nhãn cho trình đọc màn hình và `title` của ghim; cũng là `title` của khung nhúng chỉ-xem. */
   label: string;
   disabled?: boolean;
 }
 
 /**
- * Chọn/chỉnh GHIM trên bản đồ (Leaflet + tile Geoapify/OSM — ADR 0037).
+ * Chọn/chỉnh GHIM trên bản đồ (Google Maps JavaScript API — ADR 0059).
  *
  * **Vì sao thao tác này tồn tại.** Máy tra địa chỉ thường trả về tên đơn vị hành chính CŨ (trước
  * sắp xếp 01/07/2025) và đôi khi ghim lệch cả trăm mét — vào giữa toà nhà bên cạnh, hoặc ra mặt
- * đường lớn thay vì trong hẻm. Với dữ liệu OpenStreetMap ở Việt Nam, nơi số nhà và hẻm còn thưa,
- * thao tác này càng quan trọng hơn chứ không kém đi. Toạ độ đó là thứ tính phí giao xe tận nơi
- * và là thứ tài xế lái tới, nên người khai địa chỉ phải NHÌN nó một lần trước khi lưu.
+ * đường lớn thay vì trong hẻm. Toạ độ đó là thứ tính phí giao xe tận nơi và là thứ tài xế lái
+ * tới, nên người khai địa chỉ phải NHÌN nó một lần trước khi lưu.
  *
- * **Hai chế độ, và cả hai đều là sản phẩm hoàn chỉnh:**
- *   - Có `NEXT_PUBLIC_GEOAPIFY_MAP_KEY` → bản đồ tương tác, bấm hoặc kéo để đặt lại ghim.
- *   - Không có → bản đồ TĨNH chỉ-xem. Người dùng vẫn kiểm được vị trí và vẫn sửa được bằng cách
- *     chọn một gợi ý địa điểm khác; chỉ mất thao tác kéo tay.
+ * **Mỗi lần dựng bản đồ là một lượt tính tiền** (Dynamic Maps), nên bản đồ tương tác chỉ dựng
+ * MỘT LẦN cho vòng đời của ô, và chỉ khi ô từng được phép sửa:
+ *   - Ô mở ra đã `disabled` (form chỉ-xem) → bản đồ NHÚNG miễn phí, không nạp Maps JavaScript API.
+ *   - Ô đang sửa rồi bị `disabled` (đang lưu) → khoá thao tác trên chính bản đồ đó, không dựng lại.
+ *   - Google từ chối key / script không tải được → một câu thông báo; người dùng vẫn sửa được
+ *     bằng cách chọn một gợi ý địa điểm khác.
  *
  * Không có key nào cả → không hiện gì. Một khung bản đồ vỡ tệ hơn hẳn việc không có khung nào.
  */
@@ -70,144 +80,171 @@ export function MapPinPicker({
   fallbackCenter,
   fallbackZoom = UNPINNED_ZOOM,
   label,
-  disabled,
+  disabled = false,
 }: MapPinPickerProps) {
   const t = useTranslations('Address.map');
+  const locale = resolveAppLocale(useLocale());
+  const authFailed = useGoogleMapsAuthFailed();
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<LeafletMap | null>(null);
-  const markerRef = useRef<Marker | null>(null);
+  const mapRef = useRef<GoogleMap | null>(null);
+  const markerRef = useRef<GoogleAdvancedMarker | null>(null);
   /**
-   * `onChange` mới nhất, đọc trong listener của Leaflet.
+   * Điểm mà CHÍNH bản đồ vừa phát ra (bấm/kéo). Khi `value` quay về đúng điểm đó thì không dời
+   * khung nhìn — người dùng vừa đặt ghim ở chỗ họ đang nhìn, kéo bản đồ về tâm và đổi mức thu
+   * phóng lúc đó là giật màn hình ngay dưới con trỏ của họ.
+   */
+  const emittedRef = useRef<GeoPoint | null>(null);
+  /**
+   * `onChange` và `disabled` mới nhất, đọc trong listener của Google.
    *
    * Listener chỉ gắn MỘT LẦN (gắn lại mỗi lần `onChange` đổi định danh sẽ rò listener và làm
-   * bản đồ dựng lại giữa lúc người dùng đang kéo), nên nó phải đọc callback qua ref thay vì
-   * đóng gói giá trị của lần render đầu.
+   * bản đồ dựng lại giữa lúc người dùng đang kéo), nên nó phải đọc qua ref thay vì đóng gói giá
+   * trị của lần render đầu.
    */
   const onChangeRef = useRef(onChange);
+  const disabledRef = useRef(disabled);
   /*
    * Gán trong effect chứ không lúc render: ghi vào ref giữa chừng một lần render làm hàm render
    * hết thuần tuý — React 19 có quyền bỏ dở và dựng lại lần render đó, và `react-hooks/refs-in-render`
    * chặn đúng chỗ đó. Không có mảng phụ thuộc: chạy sau MỌI lần render, nên listener luôn đọc
-   * được `onChange` của lần render gần nhất.
+   * được giá trị của lần render gần nhất.
    */
   useEffect(() => {
     onChangeRef.current = onChange;
+    disabledRef.current = disabled;
   });
+
+  /*
+   * Ô đã TỪNG được phép sửa chưa. Chốt một chiều: `disabled` bật/tắt quanh mỗi lần lưu, và dựng
+   * lại bản đồ theo nhịp đó là một lượt tính tiền cho mỗi lần bấm Lưu.
+   *
+   * Cập nhật ngay trong lúc render (mẫu "lưu thông tin từ lần render trước" của React) chứ không
+   * trong effect: có điều kiện nên không lặp, và không thêm một vòng render rỗng.
+   */
+  const [everEditable, setEverEditable] = useState(!disabled);
+  if (!disabled && !everEditable) setEverEditable(true);
 
   /*
    * Khởi tạo thẳng ở `loading` thay vì `idle` rồi `setStatus('loading')` ngay đầu effect (thứ
    * `react-hooks/set-state-in-effect` chặn, vì nó thêm một vòng render trước cả khi bản đồ kịp
    * bắt đầu tải). Hai trạng thái đó vốn hiện RA cùng một thứ — phần dưới chỉ phân biệt `ready`
-   * và `unavailable` — nên gộp chúng không đổi gì trên màn hình, kể cả nhánh `disabled` (effect
-   * dừng sớm, ô ở nguyên spinner đúng như trước).
+   * và `unavailable` — nên gộp chúng không đổi gì trên màn hình.
    */
   const [status, setStatus] = useState<'loading' | 'ready' | 'unavailable'>('loading');
-  const interactive = isInteractiveMapConfigured();
+  const interactive = isMapConfigured();
+  const live = interactive && everEditable && !authFailed;
 
   useEffect(() => {
-    if (!interactive || disabled) return;
+    if (!live) return;
 
     let cancelled = false;
-    /*
-     * Giữ bản đồ ở biến CỤC BỘ chứ không chỉ ở ref: hàm dọn dẹp phải huỷ đúng bản đồ của LẦN
-     * CHẠY NÀY. Leaflet ném "Map container is already initialized" nếu một phần tử đã có bản đồ
-     * bị dựng bản đồ lần hai — và ở dev, `reactStrictMode` chạy mọi effect đúng hai lần.
-     */
-    let map: LeafletMap | null = null;
-    let observer: ResizeObserver | null = null;
+    const listeners: MapsEventListener[] = [];
+    let marker: GoogleAdvancedMarker | null = null;
 
-    void loadLeaflet().then((L) => {
+    void loadGoogleMaps(locale).then((api) => {
       const el = containerRef.current;
-      const key = geoapifyMapKey();
       if (cancelled) return;
-      if (!L || !el || !key) {
+      /*
+       * Hỏi lại cờ từ chối key NGAY trước khi dựng: cờ đó có thể vừa bật trong lúc chờ, và
+       * `setStatus` của nó chưa kịp render. Dựng tiếp lúc đó là trả tiền cho một khung xám.
+       */
+      if (!api || !el || isGoogleMapsAuthFailed()) {
         setStatus('unavailable');
         return;
       }
 
       const center = value ?? fallbackCenter ?? FALLBACK_CENTER;
-      map = L.map(el, {
-        center: [center.lat, center.lng],
+      const map = new api.Map(el, {
+        center,
         zoom: value ? PINNED_ZOOM : fallbackZoom,
-        // Bàn phím/cuộn: giữ cuộn trang là mặc định của Leaflet khi `scrollWheelZoom: false`,
-        // nhưng ô này nằm giữa một form dài — cuộn qua bản đồ mà bị "hút" vào thu phóng là một
-        // trong những khó chịu kinh điển của form có bản đồ.
-        scrollWheelZoom: false,
-        attributionControl: true,
+        mapId: googleMapsMapId(),
+        disableDefaultUI: true,
+        zoomControl: true,
+        /*
+         * Ô này nằm giữa một form dài: cuộn trang đi qua bản đồ mà bị "hút" vào thu phóng là một
+         * trong những khó chịu kinh điển của form có bản đồ. `cooperative` = thu phóng cần
+         * Ctrl + cuộn trên máy tính, hai ngón trên điện thoại; một ngón vẫn cuộn trang.
+         */
+        gestureHandling: 'cooperative',
+        /*
+         * Tắt bấm vào biểu tượng địa điểm của Google: bật thì bấm trúng một quán cà phê sẽ mở
+         * khung thông tin của Google thay vì đặt ghim — đúng ở chỗ người dùng muốn ghim nhất.
+         */
+        clickableIcons: false,
       });
 
-      L.tileLayer(tileUrlTemplate(key), {
-        attribution: TILE_ATTRIBUTION,
-        maxZoom: TILE_MAX_ZOOM,
-      }).addTo(map);
-
       /*
-       * Ghim tự vẽ bằng `divIcon` thay vì ảnh mặc định của Leaflet. Hai lý do: ảnh mặc định trỏ
-       * tới đường dẫn tương đối mà bundler không giữ nguyên (lỗi kinh điển "marker mất tiêu"),
-       * và một khối HTML thì lấy được màu từ token của mình qua CSS Module.
+       * Ghim tự vẽ bằng một khối HTML + CSS Module thay vì ghim đỏ mặc định: lấy được màu thương
+       * hiệu từ token (ADR 0003). `AdvancedMarkerElement` neo nội dung ở ĐÁY GIỮA — đúng chỗ mũi
+       * ghim, là điểm toạ độ thật.
        */
-      const icon = L.divIcon({
-        className: styles.pin,
-        iconSize: [PIN_SIZE, PIN_SIZE],
-        // Neo ở ĐÁY giữa: mũi ghim là điểm toạ độ, không phải tâm hình tròn.
-        iconAnchor: [PIN_SIZE / 2, PIN_SIZE],
+      const pin = document.createElement('div');
+      pin.className = styles.pin ?? '';
+      marker = new api.AdvancedMarkerElement({
+        /*
+         * Chưa có toạ độ thì CHƯA đặt ghim lên bản đồ: một cái ghim ở giữa màn hình trông y hệt
+         * một vị trí đã chọn, và người dùng sẽ lưu nó mà không biết mình chưa chọn gì. Ghim được
+         * gắn muộn — ở cú bấm bản đồ, hoặc khi người dùng chọn một gợi ý địa điểm.
+         */
+        map: value ? map : null,
+        position: value ?? null,
+        content: pin,
+        gmpDraggable: true,
+        title: label,
       });
-      const marker = L.marker([center.lat, center.lng], { draggable: true, icon, keyboard: true });
-      /*
-       * Chưa có toạ độ thì CHƯA đặt ghim: một cái ghim ở giữa màn hình trông y hệt một vị trí đã
-       * chọn, và người dùng sẽ lưu nó mà không biết mình chưa chọn gì.
-       *
-       * Vì vậy ghim được thêm MUỘN — ở cú bấm bản đồ bên dưới, hoặc ở effect đồng bộ khi người
-       * dùng chọn một gợi ý địa điểm. Cả hai chỗ đó gọi thẳng `addTo` mà không kiểm gì trước:
-       * `Map.addLayer` tra `_layers` theo id rồi return sớm nếu lớp đã có, nên gọi lại là vô hại.
-       *
-       * Và tuyệt đối đừng kiểm bằng `marker.getPane()`. Thân hàm đó là `this._map.getPane(...)`,
-       * mà `_map` chỉ tồn tại SAU khi lớp được thêm vào — nên dùng nó để hỏi "đã thêm chưa" sẽ
-       * đúng ở ca đã thêm và ném `Cannot read properties of undefined` ở ca CHƯA thêm, tức là
-       * hỏng đúng ca mà câu hỏi được đặt ra để xử lý.
-       */
-      if (value) marker.addTo(map);
+      const placed = marker;
+
+      const emit = (next: GeoPoint) => {
+        emittedRef.current = next;
+        onChangeRef.current(next);
+      };
 
       // Bấm vào bản đồ = đặt ghim ở đó. Nhanh hơn kéo khi ghim đang ở rất xa chỗ cần tới.
-      map.on('click', (e) => {
-        const next = { lat: e.latlng.lat, lng: e.latlng.lng };
-        marker.setLatLng(e.latlng);
-        marker.addTo(map!);
-        onChangeRef.current(next);
-      });
-      marker.on('dragend', () => {
-        const position = marker.getLatLng();
-        onChangeRef.current({ lat: position.lat, lng: position.lng });
-      });
-
-      /*
-       * Leaflet đo khung chứa MỘT LẦN lúc dựng. Ô này hay nằm trong hộp thoại sửa chi nhánh —
-       * lúc effect chạy thì hộp thoại còn đang mở ra, khung còn cao 0px, và bản đồ sẽ hiện ra
-       * một mảng xám với vài ô tile lệch. `ResizeObserver` bắt đúng khoảnh khắc khung có kích
-       * thước thật và bảo Leaflet đo lại.
-       */
-      observer = new ResizeObserver(() => map?.invalidateSize());
-      observer.observe(el);
+      listeners.push(
+        map.addListener('click', (e) => {
+          if (disabledRef.current) return;
+          const next = pointOf(e);
+          if (!next) return;
+          placed.position = next;
+          placed.map = map;
+          emit(next);
+        }),
+        placed.addListener('dragend', (e) => {
+          const next = pointOf(e);
+          if (next) emit(next);
+        }),
+      );
 
       mapRef.current = map;
-      markerRef.current = marker;
+      markerRef.current = placed;
       setStatus('ready');
     });
 
     return () => {
       cancelled = true;
-      observer?.disconnect();
-      // `remove()` gỡ mọi listener và trả phần tử về trạng thái trống — thiếu nó là rò bộ nhớ
-      // cộng với một lần ném ở lần dựng kế tiếp.
-      map?.remove();
+      // Google không có `map.destroy()`; gỡ listener và ghim là đủ để bản đồ cũ không còn gọi về
+      // một `onChange` của lần dựng trước (ở dev, `reactStrictMode` chạy mọi effect hai lần).
+      for (const listener of listeners) listener.remove();
+      if (marker) marker.map = null;
       mapRef.current = null;
       markerRef.current = null;
     };
     // Chạy MỘT LẦN cho vòng đời của ô. `value`/`fallbackCenter` chỉ dùng làm vị trí MỞ ĐẦU; đồng
-    // bộ về sau đi qua effect dưới, vì dựng lại cả bản đồ mỗi lần toạ độ đổi sẽ nháy màn hình và
-    // huỷ luôn cú kéo mà người dùng đang thực hiện.
+    // bộ về sau đi qua các effect dưới, vì dựng lại cả bản đồ mỗi lần toạ độ đổi sẽ nháy màn hình,
+    // huỷ luôn cú kéo mà người dùng đang thực hiện, và tốn thêm một lượt tính tiền.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [interactive, disabled]);
+  }, [live]);
+
+  /** `disabled` bật/tắt (đang lưu) → khoá/mở thao tác trên CHÍNH bản đồ đang có. */
+  useEffect(() => {
+    if (status !== 'ready') return;
+    mapRef.current?.setOptions({
+      gestureHandling: disabled ? 'none' : 'cooperative',
+      zoomControl: !disabled,
+      keyboardShortcuts: !disabled,
+    });
+    if (markerRef.current) markerRef.current.gmpDraggable = !disabled;
+  }, [status, disabled]);
 
   /** Ghim đổi từ BÊN NGOÀI (người dùng vừa chọn một gợi ý địa điểm) → dời bản đồ theo. */
   useEffect(() => {
@@ -216,10 +253,11 @@ export function MapPinPicker({
     const marker = markerRef.current;
     if (!map || !marker) return;
 
-    marker.setLatLng([value.lat, value.lng]);
-    // Ghim đầu tiên đến từ một gợi ý địa điểm: lúc đó nó chưa nằm trên bản đồ (xem lúc dựng).
-    marker.addTo(map);
-    map.setView([value.lat, value.lng], PINNED_ZOOM);
+    marker.position = value;
+    marker.map = map;
+    if (samePoint(value, emittedRef.current)) return;
+    map.setCenter(value);
+    map.setZoom(PINNED_ZOOM);
   }, [status, value]);
 
   /*
@@ -233,24 +271,30 @@ export function MapPinPicker({
    */
   useEffect(() => {
     if (status !== 'ready' || value || !fallbackCenter) return;
-    mapRef.current?.setView([fallbackCenter.lat, fallbackCenter.lng], fallbackZoom);
+    mapRef.current?.setCenter(fallbackCenter);
+    mapRef.current?.setZoom(fallbackZoom);
   }, [status, value, fallbackCenter, fallbackZoom]);
 
-  if (!interactive) {
-    const staticUrl = mapPlaceUrl(value);
-    if (!staticUrl) return null;
-    return (
-      <div className={styles.block}>
-        <StaticMap src={staticUrl} title={label} height={200} />
-        <p className={styles.hint}>{t('readOnlyHint')}</p>
-      </div>
-    );
+  if (!interactive) return null;
+
+  if (authFailed || status === 'unavailable') {
+    /*
+     * Bản đồ không tải được KHÔNG phải lỗi của người đang điền form: nói một câu, giữ nguyên toạ
+     * độ đang có, và để họ lưu bình thường. Không rơi về bản đồ nhúng: hai bản đồ dùng CHUNG một
+     * key, nên ca hay gặp nhất (Google từ chối key) làm hỏng cả khung nhúng.
+     */
+    return <Alert type="info" showIcon className={styles.block} title={t('unavailable')} />;
   }
 
-  if (status === 'unavailable') {
-    // Bản đồ không tải được KHÔNG phải lỗi của người đang điền form: nói một câu, giữ nguyên
-    // toạ độ đang có, và để họ lưu bình thường.
-    return <Alert type="info" showIcon className={styles.block} title={t('unavailable')} />;
+  if (!everEditable) {
+    // Form chỉ-xem: xem vị trí bằng bản đồ nhúng MIỄN PHÍ. Chưa có ghim thì không có gì để xem.
+    const embedUrl = mapPlaceUrl(value, locale);
+    if (!embedUrl) return null;
+    return (
+      <div className={styles.block}>
+        <EmbedMap src={embedUrl} title={label} height={EMBED_HEIGHT} />
+      </div>
+    );
   }
 
   return (
@@ -269,11 +313,11 @@ export function MapPinPicker({
           <Button
             size="small"
             type="link"
-            href={`https://www.openstreetmap.org/?mlat=${value.lat}&mlon=${value.lng}#map=${PINNED_ZOOM}/${value.lat}/${value.lng}`}
+            href={mapExternalUrl(value)}
             target="_blank"
             rel="noreferrer"
           >
-            {t('openInMaps')}
+            {t('openInGoogleMaps')}
           </Button>
         ) : null}
       </div>

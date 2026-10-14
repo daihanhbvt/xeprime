@@ -85,7 +85,7 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { cx } from '@/lib/cx';
-import { isInteractiveMapConfigured } from '@/lib/leaflet-loader';
+import { useInteractiveMapUsable } from '@/hooks/use-interactive-map';
 import {
   appWallClockToInstant,
   appWallClockToIso,
@@ -349,10 +349,14 @@ export function RequestBookingFlow({
    * Schema dựng lại khi ĐỔI NGÔN NGỮ, không phải mỗi lần render: câu báo lỗi validation là chữ
    * hiện cho khách đọc, nên nó phải đi qua `t` (ADR 0012). `t` ổn định theo locale, nên `useMemo`
    * ở đây giữ cho `yupResolver` không nhận một schema mới ở mỗi phím gõ.
+   *
+   * Và khi bản đồ HỎNG LÚC CHẠY (Google từ chối key, script không tải được): lúc đó không có chỗ
+   * nào để đặt ghim, nên đòi toạ độ là khoá khách ở bước địa chỉ (ADR 0035 điều 6).
    */
+  const canConfirmLocation = useInteractiveMapUsable();
   const schema = useMemo(
-    () => requestFormSchema(tf, { canConfirmLocation: isInteractiveMapConfigured() }),
-    [tf],
+    () => requestFormSchema(tf, { canConfirmLocation }),
+    [tf, canConfirmLocation],
   );
 
   const { control, trigger, getValues, setValue, formState } = useForm<RequestFormValues>({

@@ -1,6 +1,9 @@
 # ADR 0037 — Chuyển nhà cung cấp bản đồ sang Geoapify (OpenStreetMap)
 
-Ngày: 15/09/2026 · Trạng thái: Accepted
+Ngày: 15/09/2026 · Trạng thái: **Superseded bởi [ADR 0059](0059-google-maps-platform.md)** (13/10/2026)
+— nhà cung cấp quay lại Google Maps Platform, Geoapify/Leaflet đã gỡ khỏi API và web. Ý định của
+điều 6 (không tự chốt ghim ở tâm tỉnh) được ADR 0059 điều 4 giữ lại. Giữ file này để hiểu lịch sử
+và để đọc mã `gp1:` còn trong dữ liệu cũ (điều 5).
 
 Ghi đè: [ADR 0018](0018-map-delivery-distance.md) ở **phần nhà cung cấp và khoá** (mọi quyết định
 sản phẩm của 0018 giữ nguyên) · [ADR 0035](0035-two-tier-administrative-address.md) điều 6 ở phần

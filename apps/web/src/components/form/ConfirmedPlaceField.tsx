@@ -83,8 +83,8 @@ export interface ConfirmedPlaceFieldProps<T extends FieldValues> {
  * Nên chữ trong ô luôn là một trong hai thứ, không có thứ ba:
  *   1. dòng người dùng BẤM trong danh sách gợi ý của bản đồ; hoặc
  *   2. chữ đang có tại thời điểm họ tự ĐẶT GHIM trên bản đồ — ghim tay cũng là một lời xác nhận
- *      vị trí, và với dữ liệu OpenStreetMap ở Việt Nam (hẻm, số nhà mới còn thưa) đó là lối ra
- *      duy nhất cho những địa chỉ mà không nhà cung cấp nào biết.
+ *      vị trí, và với dữ liệu bản đồ ở Việt Nam (hẻm, số nhà mới còn thưa) đó là lối ra duy
+ *      nhất cho những địa chỉ mà không nhà cung cấp nào biết.
  *
  * Gõ mà không xác nhận thì khi rời ô, chữ quay về giá trị đã xác nhận GẦN NHẤT — với form tạo
  * mới đó là rỗng, nên ô trống và schema chặn Lưu. Cố ý không xoá về rỗng một cách máy móc: ở form

@@ -19,9 +19,9 @@ import { ProvincesService } from './provinces.service';
  *
  * **Vì sao đi vòng qua server thay vì gọi thẳng nhà cung cấp từ trình duyệt.** Khoá bản đồ có
  * hạn mức theo request. Một khoá nhúng trong bundle web là một khoá ai cũng sao chép được, và
- * hạn mức cạn là của mình. Cùng kỷ luật với ADR 0018/0037: `GEOAPIFY_API_KEY` khoá theo IP,
- * không bao giờ đi qua `NEXT_PUBLIC_*`. Đi vòng qua đây còn cho ba thứ miễn phí: rate limit thật,
- * cache dùng chung giữa mọi người dùng, và MỘT điểm để đổi nhà cung cấp (Goong, OSRM tự host).
+ * hạn mức cạn là của mình. Cùng kỷ luật với ADR 0018/0059: `GOOGLE_MAPS_SERVER_KEY` khoá theo
+ * IP, không bao giờ đi qua `NEXT_PUBLIC_*`. Đi vòng qua đây còn cho ba thứ miễn phí: rate limit
+ * thật, cache dùng chung giữa mọi người dùng, và MỘT điểm để đổi nhà cung cấp.
  *
  * **Không endpoint nào ở đây trả lỗi vì bản đồ.** Chưa cấu hình khoá, hết hạn mức, nhà cung cấp
  * chậm — tất cả thành `available: false` với danh sách rỗng, và giao diện rơi về nhập tay. Người
@@ -42,6 +42,10 @@ export class PlacesController {
   /**
    * Gợi ý khi người dùng gõ. Client phải debounce — `@Throttle` ở đây là trần cứng, không phải
    * cơ chế tiết kiệm chính.
+   *
+   * `available: false` cả khi nhà cung cấp CÓ cấu hình nhưng không trả lời được (key bị từ chối,
+   * hết hạn mức): đó là tín hiệu để ô địa chỉ mở cho nhập tay. Trả `available: true` kèm danh sách
+   * rỗng lúc đó là bắt khách chọn từ một danh sách không bao giờ có gì.
    */
   @Get('search')
   @Public()
@@ -49,9 +53,9 @@ export class PlacesController {
   @ApiOperation({ summary: 'Gợi ý địa điểm theo chữ đang gõ (giới hạn trong Việt Nam)' })
   @ApiOkResponse({ type: PlaceSearchResultDto })
   async search(@Query() query: PlaceSearchQueryDto): Promise<PlaceSearchResultDto> {
-    if (!this.geo.enabled) return { items: [], available: false };
     const bias = query.lat != null && query.lng != null ? { lat: query.lat, lng: query.lng } : null;
-    return { items: await this.geo.searchPlaces(query.q, bias), available: true };
+    const items = await this.geo.searchPlaces(query.q, bias);
+    return items ? { items, available: true } : { items: [], available: false };
   }
 
   /** Một gợi ý đã chọn → toạ độ + gợi ý tỉnh + gợi ý phần "số nhà, đường". */

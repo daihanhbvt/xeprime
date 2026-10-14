@@ -1,6 +1,6 @@
 # ADR 0035 — Địa chỉ vật lý theo danh mục hành chính HAI CẤP
 
-Ngày: 14/09/2026 · Trạng thái: **Accepted; điều 6 bị [ADR 0037](0037-geoapify-osm-map-provider.md) ghi đè ở phần THƯ VIỆN** — bản đồ tương tác nay là Leaflet + tile Geoapify/OSM, không phải Maps JavaScript API, và khoá là `NEXT_PUBLIC_GEOAPIFY_MAP_KEY`. Quyết định sản phẩm (ghim phải được người dùng xác nhận) không đổi.
+Ngày: 14/09/2026 · Trạng thái: **Accepted; điều 6 bị [ADR 0059](0059-google-maps-platform.md) ghi đè ở phần THƯ VIỆN** (trước đó 0037) — bản đồ tương tác là Maps JavaScript API + `AdvancedMarkerElement`, khoá là `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY`. Quyết định sản phẩm (ghim phải được người dùng xác nhận) không đổi.
 **Điều 3 và điều 5 bị [ADR 0042](0042-confirmed-place-address-for-renters.md) ghi đè ở mọi ô địa chỉ CÓ GHIM**: ở đó không còn hỏi xã/phường (toạ độ đã xác nhận định vị chính xác hơn một mã 5 chữ số) và phần "số nhà, đường" phải được bản đồ xác nhận — chọn từ gợi ý, hoặc tự đặt ghim. Luồng khách thuê còn bỏ luôn bộ chọn tỉnh, lấy mã tỉnh từ địa điểm đã chọn. Ô KHÔNG ghim (sổ khách) giữ nguyên hai cấp danh mục dưới đây; `wardCode` vẫn ở nguyên trong hợp đồng và trong dữ liệu cũ.
 
 Liên quan: [ADR 0018](0018-map-delivery-distance.md) (bản đồ là ước lượng; khoá server không bao

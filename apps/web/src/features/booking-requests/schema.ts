@@ -62,10 +62,11 @@ export interface RequestFormSchemaOptions {
   /**
    * Người dùng CÓ CÁCH nào để tạo ra một toạ độ không.
    *
-   * `false` khi trình duyệt không dựng được bản đồ tương tác (chưa cấu hình
-   * `NEXT_PUBLIC_GEOAPIFY_MAP_KEY`) — lúc đó không có gợi ý để chọn và cũng không có bản đồ để
-   * đặt ghim, nên đòi toạ độ là khoá luôn nút "Tiếp tục" bằng một lỗi mà không thao tác nào sửa
-   * được. Bản đồ hỏng không được phép trở thành "không đặt được xe" (ADR 0035 điều 6).
+   * `false` khi trình duyệt không dựng được bản đồ tương tác — chưa cấu hình
+   * `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY`, hoặc có key mà Google từ chối / script không tải được
+   * (`useInteractiveMapUsable`). Lúc đó không có bản đồ để đặt ghim, nên đòi toạ độ là khoá luôn
+   * nút "Tiếp tục" bằng một lỗi mà không thao tác nào sửa được. Bản đồ hỏng không được phép trở
+   * thành "không đặt được xe" (ADR 0035 điều 6).
    *
    * Chú ý: `/places/search` chết mà khoá bản đồ vẫn còn thì cờ này VẪN `true`, và đúng như vậy —
    * khách hết gợi ý nhưng vẫn tự đặt được ghim, tức là vẫn có đường đi tới một toạ độ thật.
