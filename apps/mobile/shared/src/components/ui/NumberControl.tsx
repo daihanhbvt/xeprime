@@ -30,9 +30,7 @@ export interface NumberControlBounds {
  *
  * Tách khỏi [`NumberField`](./NumberField.tsx) đúng theo cặp `SelectControl`/`SelectField`: file
  * này là HÌNH DẠNG + hành vi gõ/kẹp, file kia chỉ nối nó vào RHF. Có những con số sống ở state
- * component chứ không ở form — số chỗ xe trong bộ chọn mua gói, nơi cùng một state còn quyết định
- * cả bảng giá kỳ hạn (`usePlanPurchase`) — và trước khi tách, chúng phải dựng một form giả chỉ để
- * mượn được ô này.
+ * component chứ không ở form — và chúng không phải dựng một form giả chỉ để mượn được ô này.
  *
  * Toàn bộ docblock về thập phân, ngăn nhóm nghìn và `percent` nằm ở `NumberField`.
  */
@@ -96,7 +94,7 @@ export function NumberControl({
    * Giá trị THÔ vừa gõ, để `onBlur` kẹp đúng con số cuối cùng.
    *
    * Không đọc `value` trong `onBlur`: nơi gọi có thể đã NÂNG nó lên mức gồm sẵn trước khi trả
-   * xuống (`usePlanPurchase.slots` làm đúng vậy), nên kẹp lại giá trị đã nâng sẽ không bao giờ
+   * xuống, nên kẹp lại giá trị đã nâng sẽ không bao giờ
    * nhận ra người dùng vừa gõ một số dưới ngưỡng.
    */
   const rawRef = useRef<number | null>(value);

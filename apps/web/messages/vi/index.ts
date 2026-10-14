@@ -69,6 +69,7 @@ import promoCodes from '@xeprime/domain/messages/vi/promo-codes.json';
 import platformMoney from '@xeprime/domain/messages/vi/platform-money.json';
 import platformSellers from '@xeprime/domain/messages/vi/platform-sellers.json';
 import adminDriverLicences from '@xeprime/domain/messages/vi/admin-driver-licences.json';
+import adminAppConfig from '@xeprime/domain/messages/vi/admin-app-config.json';
 import adminStaff from '@xeprime/domain/messages/vi/admin-staff.json';
 import adminAccounts from '@xeprime/domain/messages/vi/admin-accounts.json';
 import adminAudit from '@xeprime/domain/messages/vi/admin-audit.json';
@@ -131,6 +132,7 @@ const messages = {
   PlatformMoney: platformMoney,
   PlatformSellers: platformSellers,
   AdminDriverLicences: adminDriverLicences,
+  AdminAppConfig: adminAppConfig,
   AdminStaff: adminStaff,
   AdminAccounts: adminAccounts,
   AdminAudit: adminAudit,

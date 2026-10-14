@@ -186,5 +186,18 @@
     "loadError": "Couldn't load your cars.",
     "atCapacity": "You've used all {limit} car slots for individual owners. Open a shop to list more cars and get income tracking and reports.",
     "upgrade": "See shop plans"
+  },
+  "appPlan": {
+    "title": "Account & limits",
+    "daysLeft": "{count, plural, =0 {Expires today} one {# day left} other {# days left}}",
+    "endsAt": "Valid until {date}",
+    "grace": "Usage period ending soon (until {date})",
+    "vehicles": "Cars used",
+    "vehiclesValue": "{used}/{limit} cars",
+    "vehiclesUnlimited": "{used} cars · unlimited",
+    "atCapacity": "Vehicle limit reached.",
+    "open": "View details",
+    "none": "No limit information yet.",
+    "loadError": "Could not load account information."
   }
 }

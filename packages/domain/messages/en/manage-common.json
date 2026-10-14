@@ -34,7 +34,13 @@
     "readOnlyTooltip": "Your plan expired, so this feature is view-only. Renew to continue.",
     "upsellTitle": "{feature} is part of a paid plan",
     "upsellBody": "Your shop doesn't have this feature yet. Browse the plans to unlock it — nothing you use today is affected.",
-    "viewPlansCta": "View plans"
+    "viewPlansCta": "View plans",
+    "viewPlanCta": "View account & limits",
+    "appExpiredTitle": "{feature}: now view-only",
+    "appExpiredBody": "All of your existing data is untouched and still readable. Contact XePrime to keep adding and editing.",
+    "appExpiredBodyWithDate": "Usage period ended on {date}. All existing data is untouched and still readable — contact XePrime to keep adding and editing.",
+    "appRefreshCta": "Refresh",
+    "appReadOnlyTooltip": "This feature is view-only for now. Contact XePrime to continue."
   },
   "support": {
     "title": "Help centre",

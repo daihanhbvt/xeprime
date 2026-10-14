@@ -152,6 +152,10 @@
     "SELLER_PROFILE_INCOMPLETE": "Hồ sơ còn thiếu thông tin bắt buộc.",
     "SUPPORT_CASE_CLOSED": "Yêu cầu hỗ trợ này đã đóng. Hãy mở yêu cầu mới thay vì viết tiếp.",
     "SUPPORT_CASE_CATEGORY_NOT_ALLOWED": "Loại yêu cầu này không gửi được từ đây.",
+    "PLAN_CONSULTATION_DISABLED": "Tư vấn gói qua ứng dụng hiện chưa mở.",
+    "PLAN_GUIDE_TEMPLATE_ACTIVE": "Bộ mẫu đang dùng nên không xoá được. Hãy chuyển sang dùng bộ khác trước.",
+    "PLAN_GUIDE_TEMPLATE_CODE_TAKEN": "Mã mẫu này đã được dùng. Hãy chọn mã khác.",
+    "PLAN_GUIDE_TEST_NO_EMAIL": "Tài khoản của bạn chưa có email để nhận thư thử.",
     "SEPAY_NOT_CONFIGURED": "Đối soát SePay chưa được cấu hình.",
     "SHOP_OWNER_ONLY": "Chỉ chủ gian hàng mới xem và rút được tiền của gian hàng.",
     "BRANCH_SCOPE_EXCEEDED": "Bạn chỉ giao được chi nhánh trong phạm vi mình phụ trách, và không sửa được thành viên đang phụ trách chi nhánh khác.",
@@ -174,6 +178,16 @@
     "REALM_LOGIN_METHOD_NOT_ALLOWED": "Cách đăng nhập này không dùng được ở đây. Hãy đăng nhập bằng email và mật khẩu.",
     "ORIGIN_NOT_ALLOWED": "Yêu cầu bị chặn vì không đến từ trang XePrime. Tải lại trang rồi thử lại.",
     "MEMBER_ALREADY_IN_OTHER_TENANT": "Tài khoản này đang làm việc cho một gian hàng khác. Mỗi tài khoản đối tác chỉ thuộc một gian hàng."
+  },
+  "appCode": {
+    "PLAN_LIMIT_REACHED": "Tài khoản của bạn đã đạt giới hạn.",
+    "FEATURE_NOT_IN_PLAN": "Tài khoản của bạn chưa có tính năng này. Liên hệ XePrime để biết thêm chi tiết.",
+    "FEATURE_READ_ONLY": "Tính năng này đang ở chế độ chỉ xem. Dữ liệu cũ vẫn còn nguyên — liên hệ XePrime để tiếp tục thao tác.",
+    "PACKAGE_ONBOARDING_INCOMPLETE": "Gian hàng đang chờ XePrime kích hoạt bộ quản lý gian hàng.",
+    "PARTNER_ACCESS_REQUIRED": "Tài khoản này không thuộc phạm vi ứng dụng XePrime Partner. Nếu bạn là khách thuê hoặc chủ xe cá nhân, hãy dùng ứng dụng XePrime.",
+    "TENANT_BILLING_NOT_CONFIGURED": "Chưa xác định được thông tin tài khoản gian hàng nên chưa tính được phí. Liên hệ hỗ trợ XePrime trước khi nhận đơn mới.",
+    "SUBSCRIPTION_TRACK_ONLY": "Khu vực này chưa mở cho tài khoản của bạn.",
+    "SUBSCRIPTION_INVOICE_PARTIALLY_PAID": "Có một khoản đang chờ xử lý. Liên hệ hỗ trợ XePrime để được hướng dẫn."
   },
   "upload": {
     "imageType": "Chỉ nhận ảnh JPG, PNG hoặc WebP",

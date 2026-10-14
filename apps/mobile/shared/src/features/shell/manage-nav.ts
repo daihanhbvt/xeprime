@@ -452,8 +452,8 @@ const OWNER_LITE_NAV: readonly ManageNavSection[] = [
       },
       /*
        * PR #159 (web `nav.ts`): MỘT mục tiền. "Tài khoản nhận tiền" là khối của trang số dư; "Thuế"
-       * và "Gói dịch vụ" là hai phần của "Hồ sơ chủ xe" — `/manage/tax`, `/manage/subscription`
-       * chỉ còn là alias chuyển tiếp (`partner-track.ts`).
+       * và "Gói dịch vụ" là hai phần của "Hồ sơ chủ xe" (tuyến gói: trang Cửa hàng) — app không có
+       * mục menu gói riêng; `/manage/tax` chỉ còn là alias chuyển tiếp (`partner-track.ts`).
        */
     ],
   },

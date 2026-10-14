@@ -1,0 +1,162 @@
+{
+  "page": {
+    "title": "Cấu hình ứng dụng",
+    "subtitle": "Bật/tắt tính năng của app XePrime Partner và quản lý mẫu email hướng dẫn gói.",
+    "tabs": {
+      "config": "Cấu hình app Partner",
+      "templates": "Bộ mẫu email gói"
+    }
+  },
+  "config": {
+    "loading": "Đang tải cấu hình…",
+    "loadError": "Không tải được cấu hình ứng dụng.",
+    "isPlanPromotionEnabled": {
+      "label": "Bật quảng bá gói",
+      "description": "Hiện danh sách gói và nút Liên hệ tư vấn trên app XePrime Partner, và gửi email hướng dẫn đăng ký/gia hạn gói (kể cả khi đăng ký gian hàng trên web). Thay đổi áp dụng ngay cho người dùng đang mở ứng dụng."
+    },
+    "contactTitle": "Kênh liên hệ tư vấn",
+    "contactHint": "Hiện trong app và trong email hướng dẫn gói. Để trống nếu không dùng kênh đó.",
+    "hotline": "Hotline",
+    "hotlinePlaceholder": "Ví dụ: 1900 1234",
+    "zalo": "Zalo",
+    "zaloPlaceholder": "Ví dụ: 0901234567",
+    "zaloHint": "Số này dùng cho link \"Liên hệ tư vấn\" trong email hướng dẫn gói (mở zalo.me).",
+    "contactInvalid": "6–20 ký tự, bắt đầu bằng chữ số hoặc dấu +; chỉ gồm chữ số, dấu cách, dấu chấm và gạch ngang.",
+    "contactTooLong": "Tối đa {max} ký tự.",
+    "meta": "Cập nhật {updatedAt}",
+    "metaBy": "Cập nhật {updatedAt} bởi {name}",
+    "save": "Lưu cấu hình",
+    "reset": "Hoàn tác",
+    "saved": "Đã lưu cấu hình. Ứng dụng đang mở sẽ nhận thay đổi ngay.",
+    "unsaved": "Có thay đổi chưa lưu."
+  },
+  "templates": {
+    "create": "Tạo bộ mẫu",
+    "search": "Tìm theo mã hoặc tên bộ mẫu",
+    "column": {
+      "name": "Bộ mẫu",
+      "status": "Trạng thái",
+      "updatedAt": "Cập nhật"
+    },
+    "active": "Đang dùng",
+    "inactive": "Không dùng",
+    "updatedBy": "bởi {name}",
+    "action": {
+      "edit": "Sửa",
+      "activate": "Dùng bộ này",
+      "duplicate": "Nhân bản",
+      "delete": "Xoá"
+    },
+    "confirm": {
+      "activateTitle": "Dùng mẫu “{name}”?",
+      "activateBody": "Mọi email hướng dẫn gói gửi từ bây giờ sẽ dùng mẫu này. Mẫu đang dùng hiện tại sẽ tự tắt.",
+      "deleteTitle": "Xoá mẫu “{name}”?",
+      "deleteBody": "Mẫu bị xoá không dùng được nữa. Thao tác này không hoàn tác được.",
+      "ok": "Đồng ý",
+      "cancel": "Huỷ"
+    },
+    "duplicateDialog": {
+      "title": "Nhân bản mẫu “{name}”",
+      "code": "Mã mẫu mới",
+      "name": "Tên mẫu mới",
+      "namePlaceholder": "Để trống để dùng “{name} (bản sao)”",
+      "submit": "Nhân bản"
+    },
+    "toast": {
+      "activated": "Đã chuyển sang dùng mẫu “{name}”.",
+      "duplicated": "Đã tạo bản sao “{name}”.",
+      "deleted": "Đã xoá mẫu “{name}”."
+    },
+    "error": "Không tải được danh sách mẫu.",
+    "empty": {
+      "title": "Chưa có mẫu email nào",
+      "hint": "Tạo một mẫu để gửi email hướng dẫn đăng ký và gia hạn gói."
+    },
+    "emptyFiltered": "Không có mẫu nào khớp từ khoá.",
+    "total": "{count, plural, other {# mẫu}}",
+    "explain": "Bộ mẫu đang dùng áp cho mọi email gói; hệ thống tự chọn nội dung theo trường hợp: Đăng ký gian hàng & Liên hệ tư vấn → Chào mừng; Gói còn ≤ 7 ngày → Sắp hết hạn; Ngày hết hạn → Hết hạn; Trong ân hạn → Ân hạn."
+  },
+  "editor": {
+    "createTitle": "Tạo bộ mẫu email",
+    "editTitle": "Sửa bộ mẫu “{name}”",
+    "loadError": "Không tải được mẫu email.",
+    "backToList": "Về danh sách mẫu",
+    "code": "Mã mẫu",
+    "codeHelp": "Chữ thường, số, gạch dưới hoặc gạch ngang; không đổi được sau khi tạo.",
+    "name": "Tên mẫu",
+    "subject": "Tiêu đề email",
+    "body": "Nội dung (HTML)",
+    "locale": {
+      "vi": "Tiếng Việt",
+      "en": "Tiếng Anh"
+    },
+    "validation": {
+      "codeRequired": "Nhập mã mẫu.",
+      "codeFormat": "Mã 2–60 ký tự: chữ thường, số, gạch dưới hoặc gạch ngang, bắt đầu bằng chữ hoặc số.",
+      "nameRequired": "Nhập tên mẫu.",
+      "nameTooLong": "Tên tối đa {max} ký tự.",
+      "subjectRequired": "Nhập tiêu đề cho cả hai ngôn ngữ ở mọi nội dung.",
+      "subjectTooLong": "Tiêu đề tối đa {max} ký tự.",
+      "bodyRequired": "Nhập thân thư cho cả hai ngôn ngữ ở mọi nội dung.",
+      "bodyTooLong": "Nội dung tối đa {max} ký tự."
+    },
+    "save": "Lưu mẫu",
+    "create": "Tạo mẫu",
+    "saved": "Đã lưu mẫu.",
+    "created": "Đã tạo mẫu. Giờ bạn có thể xem trước và gửi thư thử.",
+    "conflictTitle": "Mẫu vừa được người khác sửa",
+    "conflictBody": "Bản bạn đang soạn đã cũ. Tải lại bản mới nhất (thay đổi chưa lưu của bạn sẽ mất) hoặc sao chép nội dung ra trước.",
+    "conflictReload": "Tải bản mới nhất",
+    "unsaved": "Có thay đổi chưa lưu.",
+    "activeBadge": "Bộ đang dùng",
+    "versionMeta": "Cập nhật {updatedAt}",
+    "placeholders": {
+      "title": "Biến dùng được",
+      "hint": "Bấm để chép. Giá trị do hệ thống điền và đã được làm sạch.",
+      "conditional": "Chỉ hiện đoạn giữa hai thẻ khi biến có giá trị (hotline, ân hạn, % phí…), vd:",
+      "copied": "Đã chép {token}",
+      "recipientName": "Tên người nhận",
+      "shopName": "Tên gian hàng",
+      "planTable": "Bảng giá các gói (HTML do hệ thống dựng)",
+      "purchaseUrl": "Đường dẫn mua/gia hạn gói trên website",
+      "hotline": "Hotline tư vấn",
+      "zalo": "Zalo tư vấn",
+      "zaloUrl": "Link Liên hệ tư vấn: mở Zalo (https://zalo.me/…) khi đã khai Zalo, không thì trang hỗ trợ",
+      "expiresAt": "Ngày hết hạn gói",
+      "reminderDays": "Số ngày nhắc trước khi gói hết hạn (cấu hình hệ thống)",
+      "graceDays": "Số ngày ân hạn của gói (trống khi gói không có ân hạn)",
+      "graceEndsAt": "Ngày hết ân hạn (chỉ thư gắn với gói đang dùng)",
+      "commissionPercent": "% phí dịch vụ mỗi chuyến của tuyến phí theo chuyến (chính sách phí đang hiệu lực)",
+      "packageCommissionPercent": "% hoa hồng XePrime mỗi chuyến của gói gian hàng",
+      "reason": "Lý do gửi thư",
+      "assetBase": "Gốc đường dẫn icon email (vd '{{'assetBase'}}'/phone.png)"
+    },
+    "preview": {
+      "title": "Xem trước",
+      "locale": "Ngôn ngữ xem trước",
+      "frameTitle": "Bản xem trước email",
+      "subject": "Tiêu đề",
+      "createFirst": "Lưu mẫu lần đầu để xem trước và gửi thư thử.",
+      "error": "Không dựng được bản xem trước.",
+      "updating": "Đang cập nhật…",
+      "variant": "Nội dung: {variant}"
+    },
+    "sendTest": "Gửi thư thử cho tôi",
+    "sendTestDone": "Đã xếp hàng thư thử tới {to}.",
+    "sendTestUsesSaved": "Thư thử dùng bản ĐÃ LƯU — lưu trước nếu bạn vừa sửa.",
+    "variantHelp": "Mỗi bộ mẫu có đủ bốn nội dung, mỗi nội dung có tiêu đề và thân thư bằng hai ngôn ngữ."
+  },
+  "reason": {
+    "registered": "Vừa đăng ký gian hàng",
+    "consultation": "Yêu cầu tư vấn gói",
+    "expiring": "Gói sắp hết hạn",
+    "expired": "Gói hết hạn hôm nay",
+    "grace": "Đang trong ân hạn"
+  },
+  "variant": {
+    "welcome": "Chào mừng & tư vấn",
+    "expiring": "Sắp hết hạn",
+    "expired": "Hết hạn",
+    "grace": "Ân hạn"
+  }
+}

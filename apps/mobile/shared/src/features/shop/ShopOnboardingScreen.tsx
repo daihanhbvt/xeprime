@@ -32,12 +32,7 @@ import { LogoutRow } from '@/features/shell/LogoutRow';
 import { APP_SCOPE } from '@/features/shell/app-scope';
 import { useShellScope } from '@/features/shell/use-shell-scope';
 import { isPackageOnboarding, resolveWorkspaceHref } from '@/features/shell/workspace';
-import {
-  PackageShopCheckout,
-  PackageShopCheckoutAction,
-  usePackageShopCheckout,
-} from '@/features/subscription/components/PackageShopCheckout';
-import { useSyncScopeWhenInvoiceSettles } from '@/features/subscription/hooks/use-subscription';
+import { PackageWaitingPanel } from './components/PackageWaitingPanel';
 import { useDomainLabel } from '@/i18n/domain';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
@@ -62,8 +57,8 @@ const styles = StyleSheet.create({ heroArt: { width: '100%', height: 132 } });
 
 /** Bốn bước của TUYẾN HOA HỒNG, đúng thứ tự `<ol>` của web. Khoá con của `ShopOnboarding.guide.steps`. */
 const GUIDE_STEPS = ['create', 'complete', 'prepare', 'publish'] as const;
-/** Bốn bước của TUYẾN GÓI — mở gian hàng → trả tiền → logo → lên chợ. */
-const PACKAGE_GUIDE_STEPS = ['createShop', 'pay', 'logo', 'publish'] as const;
+/** Bốn bước của TUYẾN GÓI — mở gian hàng → kích hoạt gói (trên web) → logo → lên chợ. */
+const PACKAGE_GUIDE_STEPS = ['createShop', 'activate', 'logo', 'publish'] as const;
 
 /** Tên trường địa chỉ trong `registerShopSchema` — hằng ngoài component, định danh ổn định. */
 const ADDRESS_FIELD_NAMES = {
@@ -91,7 +86,7 @@ const ADDRESS_PIN_NAMES = {
  * | --- | --- |
  * | chưa có gian hàng, `track=commission` (mặc định) | form hồ sơ chủ xe |
  * | chưa có gian hàng, `track=package` | **bước 1**: tạo gian hàng trả phí |
- * | `onboardingState = package_pending` | **bước 2**: chọn gói → QR chuyển khoản |
+ * | `onboardingState = package_pending` | **bước 2**: màn CHỜ KÍCH HOẠT — app không bán gói (không IAP); mua trên web, tiền về thì webhook bật `package_active` |
  * | gói đã hiệu lực | chuyển tới hồ sơ gian hàng |
  * | tuyến hoa hồng (đã có gian hàng) | chuyển tới khu của họ |
  *
@@ -126,10 +121,6 @@ export function ShopOnboardingScreen({
   const isPackageTrack = track === REGISTRATION_TRACK.PACKAGE;
   /** Câu chữ và chỉ dẫn bước theo tuyến GÓI — bước 1 chọn cửa đó, hoặc đã sang bước 2. */
   const packageWording = isPackageTrack || packagePending;
-
-  useSyncScopeWhenInvoiceSettles(packagePending);
-  /** State bước 2 sống ở màn để nút "Tạo hoá đơn" neo được vào `footer` — bước 1 không hỏi gì. */
-  const checkout = usePackageShopCheckout(packagePending);
 
   /*
    * Điều hướng trong effect, KHÔNG giữa lúc render: đổi route trong thân render của một màn đang
@@ -283,11 +274,9 @@ export function ShopOnboardingScreen({
         padded={false}
         footer={
           <YStack gap={space.xs}>
-            {packagePending ? (
-              <PackageShopCheckoutAction checkout={checkout} />
-            ) : (
+            {packagePending ? null : (
               <Button
-                label={isPackageTrack ? t('form.submitPackage') : t('form.submit')}
+                label={isPackageTrack ? t('form.submitPackageApp') : t('form.submit')}
                 icon="storefront-outline"
                 loading={register.isPending}
                 // Đã có gian hàng (đang rời màn) ⇒ khoá: chạm thêm là một POST /tenants thứ hai.
@@ -313,7 +302,7 @@ export function ShopOnboardingScreen({
                 {packageWording ? t('packagePage.title') : t('page.title')}
               </Text>
               <Text col={colors.textMuted} fos={fontSize.bodyLg}>
-                {packageWording ? t('packagePage.subtitle') : t('page.subtitle')}
+                {packageWording ? t('packagePage.subtitleApp') : t('page.subtitle')}
               </Text>
             </YStack>
             <Image
@@ -368,7 +357,7 @@ export function ShopOnboardingScreen({
                         fos={fontSize.label}
                         fow={active ? fontWeight.semibold : fontWeight.medium}
                       >
-                        {t(step === 1 ? 'steps.shopInfo' : 'steps.planPayment')}
+                        {t(step === 1 ? 'steps.shopInfo' : 'steps.activation')}
                       </Text>
                     </XStack>
                   );
@@ -377,9 +366,7 @@ export function ShopOnboardingScreen({
             ) : null}
 
             {packagePending ? (
-              <Card>
-                <PackageShopCheckout checkout={checkout} />
-              </Card>
+              <PackageWaitingPanel />
             ) : (
               <Card>
                 <YStack gap={space.md}>

@@ -307,7 +307,7 @@ export function ReceiptDetailSheet({
 
           {/* Gói hết hạn: nói RÕ là chế độ chỉ xem, không để nút tắt trông như thiếu quyền. */}
           {showFooter && !finance.canWrite ? (
-            <Callout tone="warning">{tFeature('readOnlyTooltip')}</Callout>
+            <Callout tone="warning">{tFeature('appReadOnlyTooltip')}</Callout>
           ) : null}
 
           <Section title={t('sections.info')}>

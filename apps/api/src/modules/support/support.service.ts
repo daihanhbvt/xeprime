@@ -9,6 +9,10 @@ import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
+  AUDIT_TARGET_TYPE,
+  SUPPORT_CASE_AUDIT_ACTION,
+  planGuideDedupeKey,
+  vnDateKey,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
   SUPPORT_CASE_CATEGORY,
@@ -21,12 +25,18 @@ import {
   isSupportCaseOpen,
   type PaginationMeta,
   type SupportCaseStatus,
+  type AppLocale,
   type SupportParty,
+  DEFAULT_LOCALE,
+  MEMBERSHIP_STATUS,
+  PLAN_GUIDE_REASON,
 } from '@xeprime/types';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationService } from '../notification/notification.service';
+import { AppConfigService } from '../app-config/app-config.service';
+import type { PlanConsultationDto, PlanConsultationResultDto } from '../app-config/dto/app-config.dto';
 import {
   AssignSupportCaseDto,
   OpenSupportCaseDto,
@@ -86,6 +96,7 @@ export class SupportService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly notifications: NotificationService,
+    private readonly appConfig: AppConfigService,
   ) {}
 
   // ── Mở case ───────────────────────────────────────────────────────────────
@@ -96,6 +107,13 @@ export class SupportService {
   ): Promise<SupportCaseDetailDto> {
     if (dto.category === SUPPORT_CASE_CATEGORY.ACCOUNT_DELETION) {
       return this.openAccountDeletion(actor, dto);
+    }
+    // Tư vấn gói chỉ đi qua `POST /support/plan-consultation` (cổng `isPlanPromotionEnabled` + email hướng dẫn).
+    if (dto.category === SUPPORT_CASE_CATEGORY.PLAN_CONSULTATION) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.SUPPORT_CASE_CATEGORY_NOT_ALLOWED,
+        message: 'Yêu cầu tư vấn gói gửi qua mục Tư vấn gói',
+      });
     }
     if (dto.category === SUPPORT_CASE_CATEGORY.DISPUTE && !dto.bookingId) {
       throw new BadRequestException({
@@ -156,8 +174,8 @@ export class SupportService {
           tenantId,
           actorUserId: actor.userId,
           actorScope: scopeToAudit(actor.scope),
-          action: 'support_case.open',
-          targetType: 'support_case',
+          action: SUPPORT_CASE_AUDIT_ACTION.OPEN,
+          targetType: AUDIT_TARGET_TYPE.SUPPORT_CASE,
           targetId: id,
           after: { code: created.code, category: dto.category, bookingId: dto.bookingId ?? null },
         },
@@ -181,6 +199,97 @@ export class SupportService {
       return created;
     });
     return this.detail(row.id, actor);
+  }
+
+  /**
+   * Yêu cầu TƯ VẤN GÓI từ app/web Partner — chỉ mở khi nền tảng bật `isPlanPromotionEnabled`
+   * (`PLAN_CONSULTATION_DISABLED` nếu tắt). Tạo case `plan_consultation` + xếp hàng email hướng dẫn
+   * gói trong MỘT transaction; thư gửi ở dispatcher. Gian hàng (nếu có) lấy từ membership của
+   * chính người gọi — không nhận từ client.
+   */
+  async openPlanConsultation(
+    userId: string,
+    dto: PlanConsultationDto,
+  ): Promise<PlanConsultationResultDto> {
+    const config = await this.appConfig.getPartner();
+    if (!config.isPlanPromotionEnabled) {
+      throw new ForbiddenException({
+        code: API_ERROR_CODE.PLAN_CONSULTATION_DISABLED,
+        message: 'Tư vấn gói qua ứng dụng hiện chưa mở',
+      });
+    }
+    const membership = await this.prisma.tenantMembership.findFirst({
+      where: { userId, status: MEMBERSHIP_STATUS.ACTIVE },
+      select: { tenantId: true, tenant: { select: { name: true } } },
+    });
+    const account = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+    const accountEmail = account?.email?.trim() || null;
+    const tenantId = membership?.tenantId ?? null;
+    const scope = tenantId ? SUPPORT_PARTY.TENANT : SUPPORT_PARTY.CUSTOMER;
+    const locale = (dto.locale as AppLocale | undefined) ?? DEFAULT_LOCALE;
+
+    const id = newId();
+    const code = `SC${id.slice(-6).toUpperCase()}`;
+    const description = [
+      `Họ tên: ${dto.fullName}`,
+      `SĐT: ${dto.phone}`,
+      `Email: ${dto.email}`,
+      ...(dto.message ? ['', dto.message] : []),
+    ].join('\n');
+
+    const emailQueued = await this.prisma.$transaction(async (tx) => {
+      await tx.supportCase.create({
+        data: {
+          id,
+          code,
+          tenantId,
+          bookingId: null,
+          bookingRequestId: null,
+          openedByUserId: userId,
+          openedByScope: scope,
+          category: SUPPORT_CASE_CATEGORY.PLAN_CONSULTATION,
+          status: SUPPORT_CASE_STATUS.OPEN,
+          subject: `Tư vấn gói — ${dto.fullName}`.slice(0, 255),
+          description,
+        },
+      });
+      // Audit chỉ mang mã case — không chép SĐT/email vào nhật ký.
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId: userId,
+          actorScope: scopeToAudit(scope),
+          action: SUPPORT_CASE_AUDIT_ACTION.OPEN,
+          targetType: AUDIT_TARGET_TYPE.SUPPORT_CASE,
+          targetId: id,
+          after: { code, category: SUPPORT_CASE_CATEGORY.PLAN_CONSULTATION },
+        },
+        tx,
+      );
+      /*
+       * Thư hướng dẫn đi tới email CỦA TÀI KHOẢN (đã gắn với phiên), không tới `dto.email` do
+       * client gõ — nhận địa chỉ tuỳ ý là biến endpoint này thành máy gửi thư hộ. `dto.email` chỉ
+       * là thông tin liên hệ trên case. Khoá chống trùng theo tài khoản + ngày VN: DB chặn ở mức
+       * MỘT thư mỗi tài khoản mỗi ngày dù gửi bao nhiêu yêu cầu.
+       */
+      if (!accountEmail) return false;
+      return this.appConfig.enqueuePlanGuide(tx, {
+        to: accountEmail,
+        locale,
+        reason: PLAN_GUIDE_REASON.CONSULTATION,
+        displayName: dto.fullName,
+        shopName: membership?.tenant.name ?? null,
+        tenantId,
+        dedupeKey: planGuideDedupeKey(PLAN_GUIDE_REASON.CONSULTATION, {
+          userId,
+          vnDayKey: vnDateKey(new Date()),
+        }),
+      });
+    });
+    return { caseId: id, code, emailQueued, emailedTo: emailQueued ? accountEmail : null };
   }
 
   /**
@@ -236,8 +345,8 @@ export class SupportService {
             tenantId: null,
             actorUserId: actor.userId,
             actorScope: AUDIT_ACTOR_SCOPE.CUSTOMER,
-            action: 'support_case.open',
-            targetType: 'support_case',
+            action: SUPPORT_CASE_AUDIT_ACTION.OPEN,
+            targetType: AUDIT_TARGET_TYPE.SUPPORT_CASE,
             targetId: id,
             after: { code: created.code, category: SUPPORT_CASE_CATEGORY.ACCOUNT_DELETION },
           },
@@ -324,8 +433,8 @@ export class SupportService {
           tenantId: null,
           actorUserId: userId,
           actorScope: AUDIT_ACTOR_SCOPE.CUSTOMER,
-          action: 'support_case.withdraw',
-          targetType: 'support_case',
+          action: SUPPORT_CASE_AUDIT_ACTION.WITHDRAW,
+          targetType: AUDIT_TARGET_TYPE.SUPPORT_CASE,
           targetId: id,
           before: { status: row.status },
           after: { status: SUPPORT_CASE_STATUS.CLOSED },
@@ -520,8 +629,8 @@ export class SupportService {
           tenantId: row.tenantId,
           actorUserId: actor.userId,
           actorScope: scopeToAudit(actor.scope),
-          action: 'support_case.transition',
-          targetType: 'support_case',
+          action: SUPPORT_CASE_AUDIT_ACTION.TRANSITION,
+          targetType: AUDIT_TARGET_TYPE.SUPPORT_CASE,
           targetId: id,
           before: { status: row.status },
           after: { status: to, ...(note ? { note } : {}) },
@@ -575,8 +684,8 @@ export class SupportService {
           tenantId: row.tenantId,
           actorUserId,
           actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
-          action: 'support_case.resolve',
-          targetType: 'support_case',
+          action: SUPPORT_CASE_AUDIT_ACTION.RESOLVE,
+          targetType: AUDIT_TARGET_TYPE.SUPPORT_CASE,
           targetId: id,
           after: { resolution: resolution.trim() },
         },
@@ -623,8 +732,8 @@ export class SupportService {
           tenantId: row.tenantId,
           actorUserId,
           actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
-          action: 'support_case.assign',
-          targetType: 'support_case',
+          action: SUPPORT_CASE_AUDIT_ACTION.ASSIGN,
+          targetType: AUDIT_TARGET_TYPE.SUPPORT_CASE,
           targetId: id,
           after: { assigneeUserId: dto.assigneeUserId ?? null, priority: dto.priority ?? null },
         },

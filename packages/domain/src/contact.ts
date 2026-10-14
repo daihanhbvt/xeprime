@@ -1,4 +1,4 @@
-import { toLocalVnPhone } from '@xeprime/types';
+import { APP_CONFIG_CONTACT_PHONE_PATTERN, toLocalVnPhone } from '@xeprime/types';
 
 /**
  * Liên kết liên hệ một khách/đối tác từ một số điện thoại.
@@ -36,9 +36,18 @@ export function telHref(phone: string | null | undefined): string | null {
  * của chỗ gọi; hàm này chỉ dựng URL.
  */
 export function zaloHref(phone: string | null | undefined): string | null {
+  // Chỉ dựng link cho một SĐT Việt Nam hợp lý: đầu vào theo CÙNG luật với ô Zalo của admin
+  // (`APP_CONFIG_CONTACT_PHONE_PATTERN`) và kết quả nội địa `0` + 8–10 chữ số. Chuỗi rác (ghi chú,
+  // URL…) ra `null` — chỗ gọi rơi về đường dự phòng thay vì một link zalo.me hỏng.
+  if (!phone || !APP_CONFIG_CONTACT_PHONE_PATTERN.test(phone.trim())) return null;
   const normalized = normalizeContactPhone(phone);
-  return normalized ? `${ZALO_PROFILE_BASE_URL}${normalized}` : null;
+  return normalized && ZALO_LOCAL_PHONE_RE.test(normalized)
+    ? `${ZALO_PROFILE_BASE_URL}${normalized}`
+    : null;
 }
+
+/** SĐT nội địa Việt Nam: `0` + 8–10 chữ số (di động 10 số, cố định 11 số). */
+const ZALO_LOCAL_PHONE_RE = /^0\d{8,10}$/;
 
 /**
  * Dạng nội địa `0xxxxxxxxx` đã bỏ khoảng trắng; `null` nếu rỗng sau khi chuẩn hoá — hoặc nếu số đã

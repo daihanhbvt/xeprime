@@ -139,7 +139,7 @@ describe('partnerPathRedirect', () => {
     expect(partnerPathRedirect(pkg, PARTNER_PATH.BALANCE_PAYOUT)).toBeNull();
   });
 
-  it.each([PARTNER_PATH.TAX, PARTNER_PATH.SUBSCRIPTION, PARTNER_PATH.BANK_ACCOUNTS])(
+  it.each([PARTNER_PATH.TAX, PARTNER_PATH.BANK_ACCOUNTS])(
     'PR #159: thành viên gian hàng mở %s về trang tài khoản (cả hai tuyến)',
     (path) => {
       const staffOf = (base: typeof pkg) =>
@@ -182,7 +182,6 @@ describe('partnerPathRedirect', () => {
     expect(partnerPathRedirect(pkg, PARTNER_PATH.REGISTRATION)).toBe(PARTNER_PATH.SHOP);
     expect(partnerPathRedirect(pkg, PARTNER_PATH.TAX)).toBe('/manage/shop?section=tax');
     expect(partnerPathRedirect(pkg, PARTNER_PATH.SELLER_PROFILE)).toBe('/manage/shop?section=tax');
-    expect(partnerPathRedirect(pkg, PARTNER_PATH.SUBSCRIPTION)).toBe('/manage/shop?section=plan');
     expect(partnerPathRedirect(pkg, PARTNER_PATH.BANK_ACCOUNTS)).toBe(
       '/manage/balance?section=payout',
     );

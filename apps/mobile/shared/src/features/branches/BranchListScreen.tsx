@@ -156,7 +156,7 @@ export function BranchListScreen() {
       // Gói hết hạn: nói RÕ lý do khoá thay vì để ô mờ đi không giải thích (ADR 0027 điều 3).
       const lockedByPlan = canWrite
         ? undefined
-        : { enabled: false, reason: tFeature('readOnlyTooltip') };
+        : { enabled: false, reason: tFeature('appReadOnlyTooltip') };
       return {
         [BRANCH_ACTION.SET_DEFAULT]:
           branch.status !== BRANCH_STATUS.ACTIVE

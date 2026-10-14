@@ -3,6 +3,7 @@ import { BRANCH_STATUS } from '@xeprime/types';
 import { ConfigService } from '@nestjs/config';
 import { SupportRequestStore } from '../../src/common/support/support-request.store';
 import { AuditService } from '../../src/modules/audit/audit.service';
+import { AppConfigService } from '../../src/modules/app-config/app-config.service';
 import { CancellationsService } from '../../src/modules/cancellations/cancellations.service';
 import { PromoCodeEvaluatorService } from '../../src/modules/promo-codes/promo-code-evaluator.service';
 import { DriverLicencesService } from '../../src/modules/driver-licences/driver-licences.service';
@@ -376,7 +377,13 @@ export function makeTenantsService(prisma: PrismaService): TenantsService {
     makeBranchesService(prisma),
     makeBillingService(prisma),
     makeSellerProfileService(prisma),
+    makeAppConfigService(prisma),
   );
+}
+
+/** `AppConfigService` — công tắc `isPlanPromotionEnabled` + cửa xếp hàng email hướng dẫn gói. */
+export function makeAppConfigService(prisma: PrismaService): AppConfigService {
+  return new AppConfigService(prisma, new AuditService(prisma));
 }
 
 /** `SellerProfileService` — writer duy nhất của `seller_profiles`, kể cả MST ghi từ hồ sơ gian hàng. */

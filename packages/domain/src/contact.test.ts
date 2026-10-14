@@ -36,4 +36,17 @@ describe('telHref / zaloHref', () => {
     expect(telHref('091****678')).toBeNull();
     expect(zaloHref('091****678')).toBeNull();
   });
+
+  it('Zalo: bỏ cách/chấm/gạch, quy +84/84 về 0, từ chối số không hợp lý', () => {
+    expect(zaloHref('0901 234 567')).toBe('https://zalo.me/0901234567');
+    expect(zaloHref('090.123.4567')).toBe('https://zalo.me/0901234567');
+    expect(zaloHref('090-123-4567')).toBe('https://zalo.me/0901234567');
+    expect(zaloHref('84 901 234 567')).toBe('https://zalo.me/0901234567');
+    expect(zaloHref('+84 90 123 4567')).toBe('https://zalo.me/0901234567');
+    expect(zaloHref('12345')).toBeNull();
+    expect(zaloHref('0901')).toBeNull();
+    expect(zaloHref('zalo 0901234567')).toBeNull();
+    expect(zaloHref('https://evil.example')).toBeNull();
+    expect(zaloHref('090123456789012')).toBeNull();
+  });
 });

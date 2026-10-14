@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
+import { AppConfigModule } from '../app-config/app-config.module';
 import { CustomerSupportController } from './customer-support.controller';
 import { PlatformSupportController } from './platform-support.controller';
+import { PlanConsultationController } from './plan-consultation.controller';
 import { SupportController } from './support.controller';
 import { SupportService } from './support.service';
 
@@ -11,7 +13,13 @@ import { SupportService } from './support.service';
  * tranh chấp trên chuyến của người khác — thứ giữ tiền của bên thứ ba.
  */
 @Module({
-  controllers: [SupportController, CustomerSupportController, PlatformSupportController],
+  imports: [AppConfigModule],
+  controllers: [
+    SupportController,
+    CustomerSupportController,
+    PlatformSupportController,
+    PlanConsultationController,
+  ],
   providers: [SupportService],
   exports: [SupportService],
 })

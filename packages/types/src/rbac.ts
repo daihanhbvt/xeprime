@@ -331,6 +331,8 @@ export const PERMISSION = {
   PLATFORM_MONEY_MANAGE: 'platform.money.manage',
   /** Support case / tranh chấp toàn sàn: nhận, phân công, kết luận. */
   PLATFORM_SUPPORT_MANAGE: 'platform.support.manage',
+  /** Cấu hình app bật/tắt từ xa (`isPlanPromotionEnabled` của app Partner) — app đọc lại khi màn được focus. */
+  PLATFORM_APP_CONFIG_MANAGE: 'platform.app_config.manage',
 } as const;
 
 export type Permission = (typeof PERMISSION)[keyof typeof PERMISSION];

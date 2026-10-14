@@ -10,6 +10,7 @@ import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { usePartnerAppConfig } from '@/features/app-config/use-partner-app-config';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useTenantScope } from '@/features/auth/hooks/use-tenant-scope';
 import { ToggleRow } from '@/features/rental-policies/components/PolicySections';
@@ -112,6 +113,7 @@ function lockReason(
 function DepositToggleCard({ settings, canEdit }: { settings: PaymentSettings; canEdit: boolean }) {
   const t = useTranslations('Shop.paymentSettings');
   const router = useRouter();
+  const { isPlanPromotionEnabled } = usePartnerAppConfig();
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
   const update = useUpdatePaymentSettings();
@@ -159,26 +161,38 @@ function DepositToggleCard({ settings, canEdit }: { settings: PaymentSettings; c
               <Ionicons name="lock-closed" size={iconSize.sm} color={colors.info} />
               <YStack f={1} minWidth={0} gap={2}>
                 <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-                  {t(`locked.${locked}.title` as never)}
+                  {locked === 'platform'
+                    ? t('locked.platform.title')
+                    : t(`appLocked.${locked}.title` as never)}
                 </Text>
                 <Text col={colors.textMuted} fos={fontSize.label}>
-                  {t(`locked.${locked}.body` as never)}
+                  {locked === 'platform'
+                    ? t('locked.platform.body')
+                    : t(`appLocked.${locked}.body` as never)}
                 </Text>
               </YStack>
             </XStack>
             {/*
-              Khoá theo GIAI ĐOẠN thì không có nút nào cả: không có gói nào mua được để mở nó, và
-              một nút "Xem gói thuê bao" ở đây là mời gian hàng đi tiêu tiền cho một thứ không
-              liên quan. Ba lý do còn lại đều có một việc thật để làm.
+              App Partner không mời mua/nâng gói (quy định App Store / Google Play): lời giải thích
+              dùng bản `appLocked.*` trung tính. Khoá theo GIAI ĐOẠN không có nút; lỗi cấu hình
+              dẫn tới hỗ trợ; hai lý do theo tài khoản chỉ có lối XEM khối tài khoản & hạn mức, và
+              chỉ khi nền tảng bật cờ — tắt thì khối đó không tồn tại.
             */}
-            {locked === 'platform' ? null : (
+            {locked === 'notConfigured' ? (
               <Button
-                label={t(`locked.${locked}.cta` as never)}
+                label={t('locked.notConfigured.cta')}
+                variant="secondary"
+                size="sm"
+                onPress={() => router.push(ROUTES.manage.support())}
+              />
+            ) : locked !== 'platform' && isPlanPromotionEnabled ? (
+              <Button
+                label={t('appLocked.viewAccountCta')}
                 variant="secondary"
                 size="sm"
                 onPress={() => router.push(ROUTES.manage.shop({ section: SHOP_SECTION.PLAN }))}
               />
-            )}
+            ) : null}
           </YStack>
         </Card>
       ) : null}

@@ -300,6 +300,12 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
         description: 'Yêu cầu hỗ trợ / tranh chấp gắn đơn, nhìn từ phía gian hàng.',
       },
       {
+        name: 'app-config',
+        description:
+          'Cấu hình app Partner bật/tắt từ xa (`isPlanPromotionEnabled`): `GET` công khai không cache; app đọc lại mỗi lần màn ' +
+          'được focus (không realtime). Xem docs/app-config.md.',
+      },
+      {
         name: 'conversations',
         description: 'Danh sách hội thoại và thành viên. PostgreSQL là source of truth (ADR 0009).',
       },
@@ -319,6 +325,12 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
         description: 'Tác vụ quản trị nền tảng dùng chung và hàng chờ duyệt.',
       },
       { name: 'platform-dashboard', description: 'Số liệu tổng quan toàn nền tảng.' },
+      {
+        name: 'platform-app-config',
+        description:
+          'Công tắc `isPlanPromotionEnabled` của app Partner (đổi ⇒ audit + version +1; worker chiếu sang Firestore) và mẫu email ' +
+          '"Hướng dẫn đăng ký và gia hạn gói" (đúng một mẫu bật). Quyền `platform.app_config.manage`.',
+      },
       {
         name: 'platform-tenants',
         description: 'Quản lý gian hàng: duyệt, tạm ngưng, xem chi tiết.',

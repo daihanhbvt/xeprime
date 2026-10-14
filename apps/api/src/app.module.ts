@@ -71,6 +71,7 @@ import { PricingModule } from './modules/pricing/pricing.module';
 import { DriversModule } from './modules/drivers/drivers.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { HolidaysModule } from './modules/holidays/holidays.module';
+import { AppConfigModule } from './modules/app-config/app-config.module';
 
 @Module({
   imports: [
@@ -149,6 +150,7 @@ import { HolidaysModule } from './modules/holidays/holidays.module';
     DriversModule,
     CustomersModule,
     HolidaysModule,
+    AppConfigModule,
     // R3 — giao dịch Basic Owner. Đăng ký CUỐI để route mới nối vào đuôi OpenAPI thay vì chèn
     // giữa, giữ diff của contract đọc được.
     FeePoliciesModule,

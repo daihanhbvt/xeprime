@@ -713,6 +713,17 @@ migrate.
 
 Luồng: `resolve` → `verify` (dùng lại `ci.yml` nguyên vẹn) → `deploy` (build + push + ssh).
 
+**CI (`ci.yml`) chạy khi nào.** Mỗi cây mã chỉ kiểm trọn bộ MỘT lần trước khi ship — repo
+private ăn vào quỹ Actions có hạn, và một lượt trọn bộ ≈ 54 phút tính tiền (quỹ 2.000 phút của
+gói Free cạn ngày 13/10/2026, chặn luôn job deploy staging). Lý do từng dòng nằm ở đầu `ci.yml`.
+
+| Sự kiện | CI |
+| --- | --- |
+| PR vào `develop` (hay nhánh nào khác ngoài `staging`/`main`) | Chạy, trên kết quả merge. PR **nháp** thì đợi tới khi bấm *Ready for review* |
+| PR chỉ sửa `docs/`, `*.md`, `.claude/`, `apps/mobile/` | Bỏ qua — trừ `apps/mobile/shared/src/i18n/` và `package.json` của mobile, hai chỗ CI có đọc |
+| Merge vào `develop` | Không chạy lại. Muốn kiểm `develop` sau nhiều lần merge: **Actions → CI → Run workflow** |
+| PR vào `staging`/`main` | Không chạy — `verify` kiểm đúng SHA đó ngay khi merge, đỏ thì không deploy |
+
 > ⚠️ **Rollback qua mốc ADR 0055** (migration `20261007120000_retire_legacy_request_statuses`).
 > Rollback chỉ đổi image, KHÔNG lùi migration. Image trước mốc đó ghi `booking_requests.status =
 > 'hold_paid'` như một bước tạm mỗi lần tiền giữ chỗ về đủ — CHECK `booking_requests_status_valid`

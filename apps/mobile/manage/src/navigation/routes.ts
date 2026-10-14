@@ -62,7 +62,7 @@ export const ROUTES = {
     contractsDocuments: BASE_ROUTES.manage.contractsDocuments,
     dataProtection: BASE_ROUTES.manage.dataProtection,
     tax: BASE_ROUTES.manage.tax,
-    subscription: BASE_ROUTES.manage.subscription,
+    plan: BASE_ROUTES.manage.plan,
     earnings: BASE_ROUTES.manage.balance,
     registration: BASE_ROUTES.manage.registration,
     bankAccounts: BASE_ROUTES.manage.bankAccounts,

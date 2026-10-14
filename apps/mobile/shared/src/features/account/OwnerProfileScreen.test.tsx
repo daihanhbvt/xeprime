@@ -13,6 +13,7 @@ import {
 import viAccount from '@xeprime/domain/messages/vi/account.json';
 import viCommon from '@xeprime/domain/messages/vi/common.json';
 import viShop from '@xeprime/domain/messages/vi/shop.json';
+import { appConfigApi } from '@/api/app-config/api';
 import * as authApi from '@/features/auth/api';
 import { locationsApi } from '@/features/locations/api';
 import { tenantsApi, type MyShop } from '@/features/shop/api';
@@ -126,7 +127,9 @@ async function renderScreen(
   permissions: Permission[],
   billingMode: 'commission' | 'package' = 'commission',
   profile: UserProfile = PROFILE,
+  isPlanPromotionEnabled = false,
 ) {
+  jest.spyOn(appConfigApi, 'partner').mockResolvedValue({ isPlanPromotionEnabled, version: 1 });
   jest.spyOn(authApi, 'fetchCurrentUser').mockResolvedValue(session(permissions, billingMode));
   jest.spyOn(accountApi, 'me').mockResolvedValue(profile);
   jest
@@ -218,20 +221,31 @@ describe('OwnerProfileScreen — "Hồ sơ chủ xe" của chủ xe tuyến hoa 
     expect(view.queryByText(viShop.checklist.title)).toBeNull();
   });
 
-  it('khai thuế và gói chỉ có mặt khi có quyền của chúng', async () => {
-    const without = await renderScreen(OWNER);
+  it('khai thuế và tài khoản & hạn mức chỉ có mặt khi có quyền của chúng (cờ bật)', async () => {
+    const without = await renderScreen(OWNER, 'commission', PROFILE, true);
     await without.findByText(HUB.sections.profile);
-    expect(without.queryByText(HUB.sections.plan)).toBeNull();
+    expect(without.queryByText(HUB.sections.appPlan)).toBeNull();
     expect(without.queryByText(viAccount.tax.title)).toBeNull();
     without.unmount();
 
-    const withAll = await renderScreen([
+    const withAll = await renderScreen(
+      [...OWNER, PERMISSION.SELLER_PROFILE_VIEW, PERMISSION.SUBSCRIPTION_VIEW],
+      'commission',
+      PROFILE,
+      true,
+    );
+    expect((await withAll.findAllByText(HUB.sections.appPlan)).length).toBeGreaterThan(0);
+    expect(withAll.getAllByText(viAccount.tax.title).length).toBeGreaterThan(0);
+  });
+
+  it('cờ isPlanPromotionEnabled tắt: không có khối tài khoản & hạn mức dù có quyền', async () => {
+    const view = await renderScreen([
       ...OWNER,
       PERMISSION.SELLER_PROFILE_VIEW,
       PERMISSION.SUBSCRIPTION_VIEW,
     ]);
-    expect((await withAll.findAllByText(HUB.sections.plan)).length).toBeGreaterThan(0);
-    expect(withAll.getAllByText(viAccount.tax.title).length).toBeGreaterThan(0);
+    expect((await view.findAllByText(viAccount.tax.title)).length).toBeGreaterThan(0);
+    expect(view.queryByText(HUB.sections.appPlan)).toBeNull();
   });
 
   /*

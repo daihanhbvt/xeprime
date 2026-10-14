@@ -15,7 +15,8 @@
       "publish": "Submit the vehicle for review. Once approved it goes live and starts taking bookings.",
       "createShop": "Create the shop: name, contact phone number and address.",
       "pay": "Pick a plan, vehicle slots and term, then transfer using the QR code.",
-      "logo": "Upload your shop logo — required before you can submit a vehicle."
+      "logo": "Upload your shop logo — required before you can submit a vehicle.",
+      "activate": "XePrime reviews and approves your shop account."
     },
     "packageTitle": "Open your shop in 4 steps"
   },
@@ -53,7 +54,8 @@
         "placeholder": "contact@yourshop.vn"
       }
     },
-    "submitPackage": "Create shop and pick a plan"
+    "submitPackage": "Create shop and pick a plan",
+    "submitPackageApp": "Register shop"
   },
   "tips": {
     "title": "Good to know",
@@ -85,12 +87,14 @@
   },
   "packagePage": {
     "title": "Register your shop",
-    "subtitle": "Two steps: fill in your shop details, then pick a plan and pay. The shop management tools unlock as soon as XePrime receives the money."
+    "subtitle": "Two steps: fill in your shop details, then pick a plan and pay. The shop management tools unlock as soon as XePrime receives the money.",
+    "subtitleApp": "Enter your shop details — XePrime will review and approve your account."
   },
   "steps": {
     "label": "Shop registration progress",
     "shopInfo": "Shop details",
-    "planPayment": "Plan and payment"
+    "planPayment": "Plan and payment",
+    "activation": "Awaiting activation"
   },
   "checkout": {
     "loadError": "Could not load the payment status",
@@ -99,5 +103,14 @@
     "noPlansHint": "Contact XePrime support to have a plan opened for your shop.",
     "createInvoice": "Create invoice and get the transfer code",
     "pickTermFirst": "Pick a term to create the invoice."
+  },
+  "packageWaiting": {
+    "title": "Shop registered successfully!",
+    "status": "Awaiting activation",
+    "next": {
+      "review": "XePrime is reviewing your shop details.",
+      "notify": "You will be notified as soon as your account is approved.",
+      "refresh": "This screen updates automatically once your account is approved."
+    }
   }
 }

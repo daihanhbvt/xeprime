@@ -7,6 +7,7 @@ import {
   accountSectionPath,
   balancePayoutPath,
   shopSectionPath,
+  withPlanPurchaseIntent,
 } from '@/constants/routes';
 import {
   PARTNER_TRACK,
@@ -240,7 +241,7 @@ describe('B1 — partner đăng nhập xong vào đâu', () => {
   it('chủ xe tuyến hoa hồng mở alias cũ → thẳng tới section đích', () => {
     expect(partnerPageRedirect(commission, M.TAX)).toBe(accountSectionPath(ACCOUNT_SECTION.TAX));
     expect(partnerPageRedirect(commission, M.SUBSCRIPTION)).toBe(
-      accountSectionPath(ACCOUNT_SECTION.PLAN),
+      withPlanPurchaseIntent(accountSectionPath(ACCOUNT_SECTION.PLAN)),
     );
     expect(partnerPageRedirect(commission, M.BANK_ACCOUNTS)).toBe(balancePayoutPath());
   });
@@ -256,7 +257,7 @@ describe('B1 — partner đăng nhập xong vào đâu', () => {
     expect(partnerPageRedirect(packageCurrent, M.REGISTRATION)).toBe(M.SHOP);
     expect(partnerPageRedirect(packageCurrent, M.TAX)).toBe(shopSectionPath(SHOP_SECTION.TAX));
     expect(partnerPageRedirect(packageCurrent, M.SUBSCRIPTION)).toBe(
-      shopSectionPath(SHOP_SECTION.PLAN),
+      withPlanPurchaseIntent(shopSectionPath(SHOP_SECTION.PLAN)),
     );
     // Tài khoản nhận tiền nằm ở trang số dư ở CẢ hai tuyến (07/10/2026), không ở Cửa hàng.
     expect(partnerPageRedirect(packageCurrent, M.BANK_ACCOUNTS)).toBe(balancePayoutPath());
@@ -412,5 +413,41 @@ describe('khu làm việc dùng chung với app native', () => {
     expect(isOnboardingRoute(`${M.ONBOARDING}?track=package`)).toBe(true);
     expect(isOnboardingRoute(M.ROOT)).toBe(false);
     expect(isOnboardingRoute(null)).toBe(false);
+  });
+});
+
+/*
+ * Lối vào ỔN ĐỊNH của email hướng dẫn gói (`PARTNER_PLAN_PURCHASE_PATH` = `/subscription`): server-side
+ * dữ liệu tuyến (`/auth/me`) quyết đích, và đích mang `?purchase=1` để section gói mở luồng mua.
+ */
+describe('/subscription — bảng quyết định của link email gói', () => {
+  it('chưa đăng nhập → trang đăng nhập partner, quay lại đúng /subscription', () => {
+    expect(portalLoginWithNext(M.SUBSCRIPTION)).toBe(
+      `${M.LOGIN}?next=${encodeURIComponent(M.SUBSCRIPTION)}`,
+    );
+  });
+
+  it('đăng nhập xong với next=/subscription → đi thẳng tới đích theo tuyến', () => {
+    expect(resolvePartnerDestination({ user: packageCurrent, next: M.SUBSCRIPTION })).toBe(
+      withPlanPurchaseIntent(shopSectionPath(SHOP_SECTION.PLAN)),
+    );
+    expect(resolvePartnerDestination({ user: commission, next: M.SUBSCRIPTION })).toBe(
+      withPlanPurchaseIntent(accountSectionPath(ACCOUNT_SECTION.PLAN)),
+    );
+    expect(resolvePartnerDestination({ user: packagePending, next: M.SUBSCRIPTION })).toBe(
+      M.ONBOARDING,
+    );
+    expect(resolvePartnerDestination({ user: noShop, next: M.SUBSCRIPTION })).toBe(M.REGISTER);
+  });
+
+  it('tuyến gói → "Gói & hạn mức" + mở hộp thoại; gian hàng đang nợ thanh toán đầu → onboarding', () => {
+    expect(partnerPageRedirect(packageCurrent, M.SUBSCRIPTION)).toBe(
+      `${M.SHOP}?section=${SHOP_SECTION.PLAN}&purchase=1`,
+    );
+    expect(partnerPageRedirect(packagePending, M.SUBSCRIPTION)).toBe(M.ONBOARDING);
+  });
+
+  it('chỉ /subscription mang ý định mua — section gói mở trực tiếp thì không', () => {
+    expect(partnerPageRedirect(packageCurrent, shopSectionPath(SHOP_SECTION.PLAN))).toBeNull();
   });
 });

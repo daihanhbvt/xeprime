@@ -812,6 +812,7 @@
     "payment": "Payment / refund",
     "account": "Account",
     "account_deletion": "Account deletion request",
+    "plan_consultation": "Plan consultation",
     "other": "Other"
   },
   "supportCaseParty": {
@@ -1403,9 +1404,21 @@
       "paid": "Withdrawal paid",
       "cancelled": "Withdrawal cancelled",
       "reversed": "Withdrawal reversed"
+    },
+    "app_config": {
+      "update": "Change Partner app config"
+    },
+    "plan_guide_template": {
+      "create": "Create plan guide email template",
+      "update": "Edit plan guide email template",
+      "duplicate": "Duplicate plan guide email template",
+      "activate": "Activate plan guide email template",
+      "delete": "Delete plan guide email template",
+      "send_test": "Send test plan guide email"
     }
   },
   "auditTargetType": {
+    "app_config": "App config",
     "approval_task": "Review task",
     "bank_account": "Bank account",
     "bank_transaction": "Bank transaction",
@@ -1425,6 +1438,7 @@
     "payment": "Payment",
     "payment_gateway_order": "Gateway payment",
     "plan": "Plan",
+    "plan_guide_template": "Plan guide email template",
     "platform_bank_balance": "Platform bank balance",
     "platform_membership": "Platform staff",
     "promo_code": "Promo code",

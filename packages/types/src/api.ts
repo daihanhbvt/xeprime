@@ -439,6 +439,14 @@ export const API_ERROR_CODE = {
    * gian hàng/nền tảng không mở hộ, và không gắn đơn thuê.
    */
   SUPPORT_CASE_CATEGORY_NOT_ALLOWED: 'SUPPORT_CASE_CATEGORY_NOT_ALLOWED',
+  /** Tư vấn gói từ app chỉ mở khi nền tảng bật `isPlanPromotionEnabled`. */
+  PLAN_CONSULTATION_DISABLED: 'PLAN_CONSULTATION_DISABLED',
+  /** Bộ mẫu email hướng dẫn gói đang dùng thì không xoá được — bật bộ khác trước. */
+  PLAN_GUIDE_TEMPLATE_ACTIVE: 'PLAN_GUIDE_TEMPLATE_ACTIVE',
+  /** Mã mẫu email đã có ở một mẫu chưa xoá. */
+  PLAN_GUIDE_TEMPLATE_CODE_TAKEN: 'PLAN_GUIDE_TEMPLATE_CODE_TAKEN',
+  /** Tài khoản admin chưa có email để nhận thư thử. */
+  PLAN_GUIDE_TEST_NO_EMAIL: 'PLAN_GUIDE_TEST_NO_EMAIL',
 
   // Ví (ADR 0023)
   /** Số dư khả dụng không đủ cho yêu cầu rút (đã trừ phần đang bị khoá bởi yêu cầu chờ duyệt). */

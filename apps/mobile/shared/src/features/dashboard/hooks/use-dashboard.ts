@@ -197,7 +197,7 @@ export function useDashboardLinks(branchId?: string): DashboardLinks {
         branch(m.vehicles({ publicStatus })),
       vehicle: (id: string) => m.vehicleDetail(id),
       vehicleNew: m.vehicleNew(),
-      subscription: m.subscriptionPage(),
+      subscription: m.plan(),
       balance: m.balance(),
     };
   }, [branchId, ownerTrips]);

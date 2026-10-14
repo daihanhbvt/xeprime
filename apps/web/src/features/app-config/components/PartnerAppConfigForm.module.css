@@ -1,0 +1,61 @@
+/* Màn "Cấu hình ứng dụng" — tab cấu hình app Partner. */
+
+.form {
+  display: flex;
+  max-width: 760px;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.card {
+  width: 100%;
+}
+
+.hint {
+  margin: 0 0 var(--xp-space-md);
+  color: var(--xp-color-text-secondary);
+}
+
+.contactGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--xp-space-md);
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  color: var(--xp-color-text-secondary);
+  gap: var(--xp-space-xs);
+}
+
+.dirty {
+  color: var(--xp-color-warning);
+}
+
+.actions {
+  display: flex;
+  gap: var(--xp-space-sm);
+}
+
+@media (max-width: 640px) {
+  .contactGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .actions {
+    width: 100%;
+  }
+
+  .actions > * {
+    flex: 1;
+  }
+}

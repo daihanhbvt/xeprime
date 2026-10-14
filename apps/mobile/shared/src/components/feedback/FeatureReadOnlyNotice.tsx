@@ -10,5 +10,5 @@ import { Callout } from '@/components/ui/Callout';
 export function FeatureReadOnlyNotice({ show }: { show: boolean }) {
   const tFeature = useTranslations('ManageCommon.feature');
   if (!show) return null;
-  return <Callout tone="warning">{tFeature('readOnlyTooltip')}</Callout>;
+  return <Callout tone="warning">{tFeature('appReadOnlyTooltip')}</Callout>;
 }

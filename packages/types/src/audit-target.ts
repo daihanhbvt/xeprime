@@ -6,6 +6,8 @@
  * Các module cũ còn viết mã bằng chuỗi tại chỗ ghi; chuyển dần sang hằng này khi đụng tới.
  */
 export const AUDIT_TARGET_TYPE = {
+  /** Cấu hình app bật/tắt từ xa (`platform_app_configs`, khoá `partner`). */
+  APP_CONFIG: 'app_config',
   APPROVAL_TASK: 'approval_task',
   BANK_ACCOUNT: 'bank_account',
   BANK_TRANSACTION: 'bank_transaction',
@@ -27,6 +29,8 @@ export const AUDIT_TARGET_TYPE = {
   /** Một lượt thanh toán qua cổng MoMo/VNPAY (ADR 0058). */
   PAYMENT_GATEWAY_ORDER: 'payment_gateway_order',
   PLAN: 'plan',
+  /** Mẫu email "Hướng dẫn đăng ký và gia hạn gói" do admin quản lý. */
+  PLAN_GUIDE_TEMPLATE: 'plan_guide_template',
   PLATFORM_BANK_BALANCE: 'platform_bank_balance',
   PLATFORM_MEMBERSHIP: 'platform_membership',
   PROMO_CODE: 'promo_code',

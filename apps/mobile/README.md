@@ -787,8 +787,8 @@ Thư viện UI là **Tamagui** ([src/theme/tamagui.config.ts](src/theme/tamagui.
   [`<SelectControl>`](src/components/ui/SelectControl.tsx) và
   [`<NumberControl>`](src/components/ui/NumberControl.tsx) là HÌNH DẠNG + hành vi, còn
   `SelectField`/`NumberField` chỉ thêm phần nối vào RHF. Có những giá trị lái cả màn chứ không
-  phải một trường của form — số chỗ xe trong bộ chọn mua gói quyết định luôn bảng giá kỳ hạn
-  (`usePlanPurchase`) — và chúng phải ra CÙNG một ô, nếu không trên một màn sẽ có hai kiểu ô nhập.
+  phải một trường của form — và chúng phải ra CÙNG một ô, nếu không trên một màn sẽ có hai kiểu
+  ô nhập.
 - **Dòng trong menu xổ từ đáy đi qua [`<MenuOption>`](src/components/ui/MenuOption.tsx), gói
   trong `<MenuOptionList>`** — danh sách kẻ GẠCH GOLD (`colors.primary` hạ độ mờ; thang gold
   không có bậc trung gian nào giữa nó và `primaryLight` — thứ là màu NỀN, kẻ 1px thì mất hẳn)
