@@ -142,6 +142,13 @@
     "fuelType": "Fuel type",
     "features": "Features",
     "amenities": "Amenities",
+    "amenityDesc": {
+      "hourly": "Vehicles with an hourly rate",
+      "delivery": "Owner offers delivery and pickup",
+      "noCollateral": "No asset collateral required",
+      "discount": "Vehicles with a promotion",
+      "vatInvoice": "The owner invoices the rental under a direct agreement with you — XePrime does not issue invoices on the owner's behalf"
+    },
     "clear": "Clear filters",
     "apply": "Apply",
     "priceRangeValue": "{from} – {to}",

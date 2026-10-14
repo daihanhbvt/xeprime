@@ -26,6 +26,7 @@ import {
   type AccountSection,
 } from '@/constants/routes';
 import { SellerTaxSection } from '@/features/seller-profile/components/SellerTaxSection';
+import { VatInvoiceSetting } from '@/features/shop/components/VatInvoiceSetting';
 import { ShopLegalFields } from '@/features/shop/components/ShopLegalFields';
 import { ShopProfileChecklist } from '@/features/shop/components/ShopProfileChecklist';
 import { ShopStatusBanner } from '@/features/shop/components/ShopStatusBanner';
@@ -61,12 +62,14 @@ const ADDRESS_FORM_ID = 'owner-address-form';
  * mặt tiền công khai của họ là hồ sơ một con người (`STOREFRONT_KIND.PERSONAL`), ảnh của nó là ảnh
  * đại diện của họ (`storefrontAvatar`). Hai trang buộc họ đoán sửa tên ở đâu, ảnh ở đâu.
  *
- * Nay: một trang, bảy section, theo thứ tự người ta cần chúng:
+ * Nay: một trang, tám section, theo thứ tự người ta cần chúng:
  *
  *   1. Thông tin chủ xe       — ảnh (bắt buộc), họ tên, lời giới thiệu: TOÀN BỘ thứ khách thấy về
  *                                họ, một nút lưu (`OwnerInfoForm`).
  *   2. Địa chỉ nhận xe        — chi nhánh mặc định (`tenants`). Không có ô MST/GPKD: đó là giấy
  *                                tờ của người bán có pháp nhân, không phải của chủ xe cá nhân.
+ *   2b. Hoá đơn VAT           — hỗ trợ xuất hoá đơn VAT cho MỌI xe (`VatInvoiceSetting`, ADR 0059;
+ *                                tuyến gói đặt cùng component ở "Chính sách thuê").
  *   3. Thông tin khai thuế    — loại chủ thể, tên pháp lý, CCCD/MST (`SellerTaxSection`; trước
  *                                07/10/2026 là trang `/tax`).
  *   4. Gói dịch vụ            — gói đang dùng + phễu nâng cấp lên gian hàng (`SubscriptionWorkspace`;
@@ -183,6 +186,7 @@ function OwnerProfileSections({
   const t = useTranslations('Account.ownerHub');
   const tHub = useTranslations('Account.hub');
   const tTax = useTranslations('Account.tax');
+  const tVat = useTranslations('Shop.vatInvoice');
   const tCommon = useTranslations('Common');
   const { message } = App.useApp();
   const errorMessage = useErrorMessage();
@@ -226,6 +230,7 @@ function OwnerProfileSections({
   const items: SectionNavItem<AccountSection>[] = [
     { key: ACCOUNT_SECTION.PROFILE, label: t('sections.profile') },
     { key: ACCOUNT_SECTION.ADDRESS, label: t('sections.address') },
+    { key: ACCOUNT_SECTION.VAT_INVOICE, label: tVat('title') },
     ...(canSeeTax ? [{ key: ACCOUNT_SECTION.TAX, label: tTax('title') }] : []),
     ...(canSeePlan ? [{ key: ACCOUNT_SECTION.PLAN, label: t('sections.plan') }] : []),
     { key: ACCOUNT_SECTION.LOGIN, label: tHub('sections.login') },
@@ -371,6 +376,19 @@ function OwnerProfileSections({
               Mỗi khối dưới đây có <form> RIÊNG (hoặc không có form nào) — không khối nào lồng vào
               form địa chỉ ở trên.
             */}
+            {/*
+              Hoá đơn VAT — MỘT thiết lập cho mọi xe (ADR 0059). Chủ xe cá nhân không có trang
+              "Chính sách thuê" của gian hàng, nên nó ở đây; cùng component với trang đó của tuyến
+              gói. Lưu ngay khi bấm, không qua thanh lưu của khối địa chỉ.
+            */}
+            <SectionCard
+              id={accountSectionDomId(ACCOUNT_SECTION.VAT_INVOICE)}
+              title={tVat('title')}
+              hint={tVat('subtitle')}
+            >
+              <VatInvoiceSetting canEdit={canEdit} />
+            </SectionCard>
+
             {canSeeTax ? <SellerTaxSection id={accountSectionDomId(ACCOUNT_SECTION.TAX)} /> : null}
 
             {canSeePlan ? (

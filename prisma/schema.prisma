@@ -217,6 +217,16 @@ model Tenant {
   /// đều là "gói hiện hành KHÔNG có cờ". Quyền dùng đến từ `plans.limits_json.features`.
   /// Ghi bởi `FeatureUsageInterceptor` sau một lượt GHI thành công; append-only.
   usedFeatures       String[]  @default([]) @map("used_features")
+  /// Gian hàng / chủ xe CAM KẾT hỗ trợ xuất hoá đơn VAT cho tiền thuê — áp cho MỌI xe của tenant
+  /// (ADR 0059). THÔNG TIN công bố cho khách: hai bên tự thoả thuận và xác nhận trực tiếp;
+  /// XePrime không xuất hoá đơn thay chủ xe, và cờ không chạm giá/phí/thuế khấu trừ (ADR 0028 §4),
+  /// duyệt xe hay đặt xe. Áp như nhau hai tuyến — chủ xe cá nhân có thể xuất qua doanh nghiệp
+  /// hoặc bên thứ ba, họ tự quyết.
+  ///
+  /// `false` mặc định: không suy ra cho dữ liệu cũ. Chỉ `TenantsService.setVatInvoiceSupport` ghi
+  /// (`PATCH /tenants/current/vat-invoice`). KHÔNG mirror sang `public_listings` — chợ JOIN
+  /// `tenants` như với `status` (ADR 0008 §3): bật/tắt là một UPDATE một dòng cho cả đội xe.
+  vatInvoiceSupported Boolean @default(false) @map("vat_invoice_supported")
   createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt          DateTime? @map("deleted_at") @db.Timestamptz(3)

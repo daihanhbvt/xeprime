@@ -1,7 +1,7 @@
 'use client';
 
 import { CheckCircleOutlined, CarOutlined, DashboardOutlined } from '@ant-design/icons';
-import { Alert, App, Button, Result, Skeleton, Tabs, Typography } from 'antd';
+import { Alert, App, Button, Card, Result, Skeleton, Tabs, Typography } from 'antd';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
 import { useState } from 'react';
@@ -14,6 +14,7 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { PermissionState } from '@/components/feedback/PermissionState';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { DepositToggleCard } from '@/features/shop/components/DepositToggleCard';
+import { VatInvoiceSetting } from '@/features/shop/components/VatInvoiceSetting';
 import { usePaymentSettings, useUpdatePaymentSettings } from '@/features/shop/hooks/use-shop';
 import { PolicyInfoTip } from '@/features/rental-policies/components/PolicyInfoTip';
 import { ShopPolicyForm } from '@/features/rental-policies/components/ShopPolicyForm';
@@ -52,8 +53,30 @@ export function ShopPoliciesPage() {
     <div className={styles.page}>
       <ManagePageHeader title={t('title')} subtitle={t('subtitle')} />
       <DepositCollectionSection />
+      <VatInvoiceSection canEdit={canEdit} />
       <PolicyWorkspace canEdit={canEdit} />
     </div>
+  );
+}
+
+/**
+ * Hoá đơn VAT — MỘT thiết lập cho mọi xe (ADR 0059), nên đứng ngoài tabs theo loại xe như công tắc
+ * thu cọc: đặt trong tabs xe hơi/xe máy sẽ gợi ý sai rằng nó khác nhau theo loại xe. Cùng component
+ * với section "Hoá đơn VAT" ở Hồ sơ chủ xe của tuyến hoa hồng.
+ */
+function VatInvoiceSection({ canEdit }: { canEdit: boolean }) {
+  const t = useTranslations('Shop.vatInvoice');
+
+  return (
+    <section className={styles.vatSection}>
+      <Title level={2} className={styles.sectionTitle}>
+        {t('title')}
+      </Title>
+      <Paragraph type="secondary">{t('subtitle')}</Paragraph>
+      <Card className={styles.vatCard}>
+        <VatInvoiceSetting canEdit={canEdit} />
+      </Card>
+    </section>
   );
 }
 

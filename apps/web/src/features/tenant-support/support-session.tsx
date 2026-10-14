@@ -91,6 +91,11 @@ export const SUPPORT_HIDDEN_AREA = {
   //    nhưng KHÔNG mở cho phiên (backend không khai `@SupportAction`), nên phải ẩn ở màn dùng lại.
   /** Công tắc lên chợ của chủ xe — cùng quyền `vehicles.submit_public` với gửi duyệt. */
   MARKETPLACE_TOGGLE: 'marketplace_toggle',
+  /**
+   * Công tắc "hỗ trợ xuất hoá đơn VAT" cho mọi xe — cùng quyền `tenants.update` với hồ sơ gian hàng,
+   * nhưng là cam kết thương mại chủ xe đưa ra với khách nên phiên không bật/tắt thay (ADR 0059).
+   */
+  VAT_INVOICE_TOGGLE: 'vat_invoice_toggle',
   /** Ngưng / mở lại / đặt mặc định chi nhánh — cùng quyền `branches.manage` với tạo/sửa chi nhánh. */
   BRANCH_LIFECYCLE: 'branch_lifecycle',
   /** Nhận dạng giấy tờ (OCR — đọc NỘI DUNG file) và lưu trữ giấy tờ. */

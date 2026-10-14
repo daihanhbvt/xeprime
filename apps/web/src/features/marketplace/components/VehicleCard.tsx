@@ -192,6 +192,13 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
           {listing.noCollateral ? (
             <span className={styles.amenityTag}>{t('noCollateral')}</span>
           ) : null}
+          {/*
+            Thẻ chỉ có chỗ cho một nhãn ngắn — câu "ai xuất hoá đơn, cho khoản nào" nằm ở trang xe
+            (ADR 0059). Không nhét nó vào `title`: chạm và bàn phím không bao giờ thấy được.
+          */}
+          {listing.vatInvoiceSupported ? (
+            <span className={styles.amenityTag}>{t('vatInvoice')}</span>
+          ) : null}
         </div>
 
         <div className={styles.reputationRow}>

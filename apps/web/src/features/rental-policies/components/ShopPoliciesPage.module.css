@@ -17,6 +17,16 @@
 
 /* Cấp heading lấy theo NGỮ NGHĨA (h2 dưới h1 của trang), cỡ chữ lấy theo bố cục — cùng kỷ luật
    với `ManagePageHeader`: không hạ cấp heading chỉ để lấy chữ nhỏ. */
+/* Section hoá đơn VAT — cùng khung (vạch kẻ, khoảng cách) với section thu cọc phía trên. */
+.vatSection {
+  composes: depositSection;
+}
+
+/* Cùng bề rộng với thẻ công tắc thu cọc ngay phía trên. */
+.vatCard {
+  max-width: 760px;
+}
+
 .sectionTitle {
   margin-bottom: var(--xp-space-xs);
   font-size: var(--xp-font-size-h4);

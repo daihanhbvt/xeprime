@@ -1,5 +1,5 @@
 import { SEARCH_QUERY_MAX_LENGTH } from '@xeprime/domain';
-import { LISTING_SORT_VALUES } from '@xeprime/types';
+import { LISTING_AMENITY_VALUES, LISTING_SORT_VALUES, type ListingAmenity } from '@xeprime/types';
 import type { QueryParams } from '@/services/api-client';
 import type { ListingSort, MarketplaceFilters } from './types';
 
@@ -30,10 +30,8 @@ export function toListingQueryParams(filters: MarketplaceFilters): QueryParams {
     seats: filters.seats?.length ? filters.seats.join(',') : null,
     fuelType: filters.fuelType?.length ? filters.fuelType.join(',') : null,
     features: filters.features?.length ? filters.features.join(',') : null,
-    hourly: filters.hourly ? '1' : null,
-    delivery: filters.delivery ? '1' : null,
-    noCollateral: filters.noCollateral ? '1' : null,
-    discount: filters.discount ? '1' : null,
+    // Toggle tiện ích: `1` khi bật, vắng khi tắt — đúng bộ `LISTING_AMENITY` (xem `BOOLEAN_KEYS`).
+    ...Object.fromEntries(BOOLEAN_KEYS.map((key) => [key, filters[key] ? '1' : null])),
     minSeats: filters.minSeats ?? null,
     priceMin: filters.priceMin ?? null,
     priceMax: filters.priceMax ?? null,
@@ -57,7 +55,12 @@ const ARRAY_KEYS = [
   'fuelType',
   'features',
 ] as const;
-const BOOLEAN_KEYS = ['hourly', 'delivery', 'noCollateral', 'discount'] as const;
+/**
+ * Boolean trên URL = đúng bộ toggle tiện ích của panel Bộ lọc (`LISTING_AMENITY`, key trùng tên
+ * query param). Đọc từ hằng dùng chung thay vì chép lại: thêm một tiện ích mà quên chỗ này là
+ * một bộ lọc bấm được nhưng mất khi tải lại trang, và "Xoá bộ lọc" không xoá được nó.
+ */
+const BOOLEAN_KEYS: readonly ListingAmenity[] = LISTING_AMENITY_VALUES;
 const NUMBER_KEYS = ['minSeats', 'priceMin', 'priceMax', 'page', 'limit'] as const;
 const STRING_KEYS = [
   // Từ khoá (09/10, quay lại sau lần gỡ 17/08): lý do gỡ là "gõ không dấu / tách chữ số thì

@@ -42,6 +42,7 @@ import {
   TenantProfileDto,
   UpdateTenantProfileDto,
 } from './dto/tenant-onboarding.dto';
+import type { VatInvoiceSettingDto } from './dto/vat-invoice-setting.dto';
 
 /*
  * KHÔNG có `displayName` (05/10/2026): tên hiển thị là `tenants.name`, nguồn duy nhất. Nơi trả
@@ -730,6 +731,63 @@ export class TenantsService {
     });
 
     return this.getMyShop(tenantId);
+  }
+
+  /** Thiết lập "Có hỗ trợ xuất hoá đơn VAT" của gian hàng / chủ xe (ADR 0059). */
+  async getVatInvoiceSetting(tenantId: string): Promise<VatInvoiceSettingDto> {
+    const tenant = await this.prisma.tenant.findFirst({
+      where: { id: tenantId, deletedAt: null },
+      select: { vatInvoiceSupported: true },
+    });
+    if (!tenant) throw notFound();
+    return { vatInvoiceSupported: tenant.vatInvoiceSupported };
+  }
+
+  /**
+   * Bật/tắt "Có hỗ trợ xuất hoá đơn VAT" cho MỌI xe của gian hàng / chủ xe (ADR 0059).
+   *
+   * THÔNG TIN công bố cho khách, không phải một chức năng hoá đơn: không cổng nào ngoài quyền
+   * (controller), áp như nhau hai tuyến — chủ xe cá nhân có thể xuất qua doanh nghiệp hoặc bên thứ
+   * ba, họ tự quyết — và không chạm giá, phí, thuế khấu trừ (ADR 0028 §4), xe, yêu cầu hay đơn.
+   *
+   * Đúng MỘT dòng đổi: `tenants`. Chợ JOIN cột này (ADR 0008 §3) nên không có snapshot nào phải
+   * đồng bộ — cả đội xe đổi cùng lúc trong một UPDATE.
+   *
+   * Compare-and-set: `where` mang giá trị CŨ, nên gửi lại đúng giá trị đang có là no-op và hai lượt
+   * bấm song song chỉ một lượt ghi — một dòng audit cho một lần đổi thật.
+   */
+  async setVatInvoiceSupport(
+    tenantId: string,
+    userId: string,
+    supported: boolean,
+  ): Promise<VatInvoiceSettingDto> {
+    const current = await this.getVatInvoiceSetting(tenantId);
+    if (current.vatInvoiceSupported === supported) return current;
+
+    await this.prisma.$transaction(async (tx) => {
+      const res = await tx.tenant.updateMany({
+        where: { id: tenantId, deletedAt: null, vatInvoiceSupported: !supported },
+        data: { vatInvoiceSupported: supported },
+      });
+      // Không ghi được nghĩa là ai đó đã đổi trước — trạng thái thật đọc lại bên dưới.
+      if (res.count !== 1) return;
+
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId: userId,
+          actorScope: 'tenant',
+          action: 'tenant.vat_invoice.update',
+          targetType: APPROVAL_TARGET_TYPE.TENANT,
+          targetId: tenantId,
+          before: { vatInvoiceSupported: !supported },
+          after: { vatInvoiceSupported: supported },
+        },
+        tx,
+      );
+    });
+
+    return this.getVatInvoiceSetting(tenantId);
   }
 
   private async uniqueSlug(

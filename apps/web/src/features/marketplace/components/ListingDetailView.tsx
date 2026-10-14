@@ -215,13 +215,16 @@ export async function ListingDetailView({
             </div>
           )}
 
-          {listing.deliveryEnabled || listing.noCollateral ? (
+          {listing.deliveryEnabled || listing.noCollateral || listing.vatInvoiceSupported ? (
             <div className={styles.amenities}>
               {listing.deliveryEnabled ? (
                 <span className={styles.amenityBadge}>{t('delivery')}</span>
               ) : null}
               {listing.noCollateral ? (
                 <span className={styles.amenityBadge}>{t('noCollateral')}</span>
+              ) : null}
+              {listing.vatInvoiceSupported ? (
+                <span className={styles.amenityBadge}>{t('vatInvoice.badge')}</span>
               ) : null}
             </div>
           ) : null}
@@ -379,6 +382,23 @@ export async function ListingDetailView({
                 ))}
               </ul>
               <p className={styles.collateralLine}>{t('surcharges.note')}</p>
+            </section>
+          ) : null}
+
+          {/*
+            HOÁ ĐƠN VAT (ADR 0059) — chỉ khi chủ xe đã công bố hỗ trợ. `false` nghĩa là "chưa công
+            bố", không phải "từ chối", nên không có câu phủ định nào cho xe còn lại.
+
+            Câu chữ phải nói rõ AI làm gì và cho KHOẢN NÀO: chủ xe xuất cho tiền thuê trả cho chủ
+            xe, hai bên tự thống nhất; XePrime không xuất thay, và khoản khách trả cho XePrime (phí
+            dịch vụ) không nằm trong hoá đơn đó. Một dòng mơ hồ ở đây là khách doanh nghiệp tưởng
+            một hoá đơn phủ mọi thứ họ đã trả, hoặc tưởng nền tảng sẽ gửi hoá đơn sau chuyến.
+          */}
+          {listing.vatInvoiceSupported ? (
+            <section className={styles.collateral} aria-label={t('vatInvoice.title')}>
+              <h2 className={styles.collateralTitle}>{t('vatInvoice.title')}</h2>
+              <p className={styles.collateralLine}>{t('vatInvoice.body')}</p>
+              <p className={styles.collateralLine}>{t('vatInvoice.disclaimer')}</p>
             </section>
           ) : null}
 

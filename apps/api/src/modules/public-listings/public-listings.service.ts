@@ -86,7 +86,7 @@ const RANK_CANDIDATE_POOL = 200;
 /**
  * Facet sống 60 giây trong bộ nhớ tiến trình.
  *
- * Đây là đầu ra ĐẮT NHẤT của marketplace: một lần mở panel Bộ lọc là 11 phép gộp gần như quét
+ * Đây là đầu ra ĐẮT NHẤT của marketplace: một lần mở panel Bộ lọc là 12 phép gộp gần như quét
  * trọn `public_listings`, và panel gọi lại sau mỗi lần khách chạm một ô (đã debounce). Nội dung
  * thì hoàn toàn công khai — không đọc cookie, không phụ thuộc người đang xem — nên hai khách
  * cùng bộ lọc đang bắt Postgres tính lại y hệt nhau.
@@ -152,7 +152,8 @@ const listingCardSelect = (now: Date) =>
     shopSlug: true,
     // Tên + ảnh + tuyến HIỆU LỰC của gian hàng — danh tính công khai theo tuyến (ADR 0054).
     // `subscriptions` là `take: 1` nên đây là một truy vấn phụ cho cả trang kết quả, không N+1.
-    tenant: { select: storefrontTenantSelect(now) },
+    // `vatInvoiceSupported`: thiết lập cấp gian hàng (ADR 0059), đọc cùng lượt join này.
+    tenant: { select: { ...storefrontTenantSelect(now), vatInvoiceSupported: true } },
   }) satisfies Prisma.PublicListingSelect;
 
 type ListingCardRow = Prisma.PublicListingGetPayload<{
@@ -201,6 +202,7 @@ function toListingCard(
     withDriverOneWayPrice: l.withDriverOneWayPrice as unknown as string | null,
     deliveryEnabled: l.deliveryEnabled,
     noCollateral: l.noCollateral,
+    vatInvoiceSupported: l.tenant.vatInvoiceSupported,
     discountPercent: l.discountPercent,
     shopName: storefront.name,
     shopSlug: l.shopSlug,
@@ -452,7 +454,7 @@ export class PublicListingsService {
 
   /**
    * Facet counts cho panel Bộ lọc: total (mọi filter), biên giá (bỏ filter giá → slider không
-   * tự co khi kéo), groupBy cho từng chiều scalar (bỏ chính chiều đó), 4 count tiện ích.
+   * tự co khi kéo), groupBy cho từng chiều scalar (bỏ chính chiều đó), 5 count tiện ích.
    *
    * Có cache (xem `facetsCache`) vì đây là đầu ra đắt nhất của marketplace và panel gọi lại sau
    * mỗi thao tác lọc. Phần tính thật nằm ở `computeFacets`.
@@ -482,7 +484,7 @@ export class PublicListingsService {
   }
 
   /**
-   * Phần tính thật của `facets` — 11 phép gộp, mỗi chiều bỏ chính filter của nó.
+   * Phần tính thật của `facets` — 12 phép gộp, mỗi chiều bỏ chính filter của nó.
    *
    * Tính năng nằm trong mảng `features` nên đếm riêng bằng raw unnest (Prisma groupBy không
    * bung được phần tử mảng). Dùng Promise.all thay vì `$transaction([...])` dạng mảng vì
@@ -502,6 +504,7 @@ export class PublicListingsService {
       deliveryCount,
       noCollateralCount,
       discountCount,
+      vatInvoiceCount,
       features,
     ] = await Promise.all([
       this.prisma.publicListing.count({ where: buildListingWhere(query) }),
@@ -550,8 +553,13 @@ export class PublicListingsService {
       this.prisma.publicListing.count({
         where: { AND: [buildListingWhere(query, 'discount'), { discountPercent: { gt: 0 } }] },
       }),
-      // Phần tử thứ 11 nằm TRONG Promise.all: đây là phép gộp đắt nhất (raw unnest), để nó chạy
-      // nối tiếp sau 10 phép kia là cộng thẳng thời gian của nó vào p95 của endpoint.
+      this.prisma.publicListing.count({
+        where: {
+          AND: [buildListingWhere(query, 'vatInvoice'), { tenant: { vatInvoiceSupported: true } }],
+        },
+      }),
+      // Phép gộp cuối nằm TRONG Promise.all: đây là phép đắt nhất (raw unnest), để nó chạy nối
+      // tiếp sau các phép kia là cộng thẳng thời gian của nó vào p95 của endpoint.
       this.featureFacets(query),
     ]);
 
@@ -592,6 +600,7 @@ export class PublicListingsService {
         delivery: deliveryCount,
         noCollateral: noCollateralCount,
         discount: discountCount,
+        vatInvoice: vatInvoiceCount,
       },
     };
   }
@@ -1033,6 +1042,8 @@ export class PublicListingsService {
             // gian hàng (không phải một truy vấn tổng hợp mới).
             ratingAvg: true,
             ratingCount: true,
+            // Thiết lập hoá đơn VAT của gian hàng — áp cho mọi xe (ADR 0059).
+            vatInvoiceSupported: true,
           },
         },
         images: { orderBy: { sortOrder: 'asc' }, select: { imageUrl: true } },
@@ -1167,6 +1178,7 @@ export class PublicListingsService {
       withDriverOneWayPrice: v.withDriverOneWayPrice as unknown as string | null,
       deliveryEnabled: v.deliveryEnabled,
       noCollateral: v.noCollateral,
+      vatInvoiceSupported: v.tenant.vatInvoiceSupported,
       discountPercent: v.discountPercent,
       shopName: storefront.name,
       shopSlug: v.tenant.slug,

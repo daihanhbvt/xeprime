@@ -48,6 +48,7 @@ const LISTING = {
   shopProvince: 'Đà Nẵng',
   deliveryEnabled: true,
   noCollateral: false,
+  vatInvoiceSupported: false,
 } as unknown as PublicListing;
 
 beforeEach(() => {
@@ -230,6 +231,14 @@ describe('VehicleCard', () => {
     const clipped = screen.getByText('XePrime Sài Gòn Cho Thuê Xe Tự Lái Giá Rẻ');
     expect(mark).toBeTruthy();
     expect(clipped.contains(mark)).toBe(false);
+  });
+
+  it('hoá đơn VAT (ADR 0059): chỉ gắn nhãn khi chủ xe đã bật — false không có nhãn phủ định', () => {
+    const { rerender } = render(<VehicleCard listing={LISTING} />);
+    expect(screen.queryByText(/hoá đơn VAT/i)).toBeNull();
+
+    rerender(<VehicleCard listing={{ ...LISTING, vatInvoiceSupported: true }} />);
+    expect(screen.getByText('Xuất hoá đơn VAT')).toBeTruthy();
   });
 
   it('không để lại vùng hành động rỗng ở chân thẻ', () => {

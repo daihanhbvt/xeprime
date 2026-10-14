@@ -149,6 +149,9 @@ export async function buildShop(spec: ShopSpec, deps: ShopBuildDeps): Promise<Sh
     ownerUserId,
     phone: spec.owner.phone,
     email: spec.owner.email,
+    // Dữ liệu DEMO: gian hàng lớn nhất công bố hỗ trợ hoá đơn VAT để bộ lọc chợ có gì để lọc
+    // (ADR 0059). Dữ liệu thật không bao giờ được suy ra cờ này — migration để `false` hết.
+    vatInvoiceSupported: spec.key === 'saigon',
   };
   const tenant = await prisma.tenant.upsert({
     where: { slug: spec.slug },

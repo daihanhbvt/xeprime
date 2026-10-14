@@ -270,7 +270,8 @@
     "hourly": "Hourly rental",
     "delivery": "Vehicle delivery",
     "noCollateral": "No collateral",
-    "discount": "On discount"
+    "discount": "On discount",
+    "vatInvoice": "VAT invoice available"
   },
   "listingSort": {
     "recommended": "Recommended",
@@ -1297,7 +1298,10 @@
       "submit_review": "Submit shop for review",
       "lock": "Lock shop",
       "unlock": "Unlock shop",
-      "free_trips_exhausted": "Free trips exhausted"
+      "free_trips_exhausted": "Free trips exhausted",
+      "vat_invoice": {
+        "update": "Change VAT invoice support (all vehicles)"
+      }
     },
     "tenant_customer": {
       "create": "Add customer",
@@ -1509,6 +1513,7 @@
     "publicStatus": "Review status",
     "operationStatus": "Operation status",
     "marketplaceEnabled": "Marketplace visibility",
+    "vatInvoiceSupported": "VAT invoice support",
     "isActive": "Active",
     "role": "Role",
     "roleCode": "Role",

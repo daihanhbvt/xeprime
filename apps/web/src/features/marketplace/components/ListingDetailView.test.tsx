@@ -63,6 +63,7 @@ const LISTING = {
   withDriverDailyPrice: null,
   deliveryEnabled: false,
   noCollateral: true,
+  vatInvoiceSupported: false,
   discountPercent: 15,
   shopName: 'Gian hàng Demo XePrime',
   shopSlug: 'demo-xeprime',
@@ -111,6 +112,35 @@ describe('ListingDetailView pricing', () => {
     expect(screen.queryByText(/Thuê giờ/)).toBeNull();
     expect(screen.queryByText(/550\.000/)).toBeNull();
     expect(screen.queryByText(/70\.000/)).toBeNull();
+  });
+});
+
+/**
+ * Hoá đơn VAT (ADR 0059) — THÔNG TIN chủ xe công bố. Dấu hiệu chỉ hiện khi chủ xe đã bật, và câu
+ * chữ phải nói rõ hai bên tự thoả thuận, XePrime không xuất hoá đơn thay chủ xe. `false` là "chưa công
+ * bố", nên xe còn lại không mang câu phủ định nào.
+ */
+describe('ListingDetailView — hoá đơn VAT', () => {
+  it('chủ xe chưa bật: không badge, không khối giải thích', async () => {
+    renderWithIntl(await ListingDetailView({ listing: LISTING, catalog: EMPTY_CATALOG }));
+    expect(screen.queryByText('Hỗ trợ xuất hoá đơn VAT')).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Hoá đơn VAT' })).toBeNull();
+  });
+
+  it('chủ xe đã bật: badge + khối nói rõ thoả thuận trực tiếp, XePrime không xuất thay', async () => {
+    renderWithIntl(
+      await ListingDetailView({
+        listing: { ...LISTING, vatInvoiceSupported: true },
+        catalog: EMPTY_CATALOG,
+      }),
+    );
+    expect(screen.getByText('Hỗ trợ xuất hoá đơn VAT')).toBeTruthy();
+    const section = screen.getByRole('region', { name: 'Hoá đơn VAT' });
+    expect(section.textContent).toContain('xác nhận trực tiếp với chủ xe');
+    // Phạm vi đúng: hoá đơn của CHỦ XE cho tiền thuê — không phủ khoản trả cho XePrime.
+    expect(section.textContent).toContain('tiền thuê xe trả cho chủ xe');
+    expect(section.textContent).toContain('XePrime không xuất hoá đơn thay chủ xe');
+    expect(section.textContent).toContain('không nằm trong hoá đơn này');
   });
 });
 
