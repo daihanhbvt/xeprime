@@ -144,7 +144,6 @@ const listingCardSelect = (now: Date) =>
     withDriverOneWayPrice: true,
     deliveryEnabled: true,
     noCollateral: true,
-    vatInvoiceSupported: true,
     discountPercent: true,
     ratingAvg: true,
     ratingCount: true,
@@ -153,7 +152,8 @@ const listingCardSelect = (now: Date) =>
     shopSlug: true,
     // Tên + ảnh + tuyến HIỆU LỰC của gian hàng — danh tính công khai theo tuyến (ADR 0054).
     // `subscriptions` là `take: 1` nên đây là một truy vấn phụ cho cả trang kết quả, không N+1.
-    tenant: { select: storefrontTenantSelect(now) },
+    // `vatInvoiceSupported`: thiết lập cấp gian hàng (ADR 0059), đọc cùng lượt join này.
+    tenant: { select: { ...storefrontTenantSelect(now), vatInvoiceSupported: true } },
   }) satisfies Prisma.PublicListingSelect;
 
 type ListingCardRow = Prisma.PublicListingGetPayload<{
@@ -202,7 +202,7 @@ function toListingCard(
     withDriverOneWayPrice: l.withDriverOneWayPrice as unknown as string | null,
     deliveryEnabled: l.deliveryEnabled,
     noCollateral: l.noCollateral,
-    vatInvoiceSupported: l.vatInvoiceSupported,
+    vatInvoiceSupported: l.tenant.vatInvoiceSupported,
     discountPercent: l.discountPercent,
     shopName: storefront.name,
     shopSlug: l.shopSlug,
@@ -554,7 +554,9 @@ export class PublicListingsService {
         where: { AND: [buildListingWhere(query, 'discount'), { discountPercent: { gt: 0 } }] },
       }),
       this.prisma.publicListing.count({
-        where: { AND: [buildListingWhere(query, 'vatInvoice'), { vatInvoiceSupported: true }] },
+        where: {
+          AND: [buildListingWhere(query, 'vatInvoice'), { tenant: { vatInvoiceSupported: true } }],
+        },
       }),
       // Phép gộp cuối nằm TRONG Promise.all: đây là phép đắt nhất (raw unnest), để nó chạy nối
       // tiếp sau các phép kia là cộng thẳng thời gian của nó vào p95 của endpoint.
@@ -1018,7 +1020,6 @@ export class PublicListingsService {
         withDriverOneWayPrice: true,
         deliveryEnabled: true,
         noCollateral: true,
-        vatInvoiceSupported: true,
         discountPercent: true,
         description: true,
         color: true,
@@ -1041,6 +1042,8 @@ export class PublicListingsService {
             // gian hàng (không phải một truy vấn tổng hợp mới).
             ratingAvg: true,
             ratingCount: true,
+            // Thiết lập hoá đơn VAT của gian hàng — áp cho mọi xe (ADR 0059).
+            vatInvoiceSupported: true,
           },
         },
         images: { orderBy: { sortOrder: 'asc' }, select: { imageUrl: true } },
@@ -1175,7 +1178,7 @@ export class PublicListingsService {
       withDriverOneWayPrice: v.withDriverOneWayPrice as unknown as string | null,
       deliveryEnabled: v.deliveryEnabled,
       noCollateral: v.noCollateral,
-      vatInvoiceSupported: v.vatInvoiceSupported,
+      vatInvoiceSupported: v.tenant.vatInvoiceSupported,
       discountPercent: v.discountPercent,
       shopName: storefront.name,
       shopSlug: v.tenant.slug,

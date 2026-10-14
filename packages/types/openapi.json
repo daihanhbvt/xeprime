@@ -49157,7 +49157,7 @@
             "name": "vatInvoice",
             "required": false,
             "in": "query",
-            "description": "Chỉ xe chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê (thông tin chủ xe công bố — XePrime không xuất hoá đơn thay chủ xe)",
+            "description": "Chỉ xe của gian hàng/chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê (thiết lập chung của tenant — XePrime không xuất hoá đơn thay chủ xe)",
             "schema": {
               "type": "boolean"
             }
@@ -50002,7 +50002,7 @@
             "name": "vatInvoice",
             "required": false,
             "in": "query",
-            "description": "Chỉ xe chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê (thông tin chủ xe công bố — XePrime không xuất hoá đơn thay chủ xe)",
+            "description": "Chỉ xe của gian hàng/chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê (thiết lập chung của tenant — XePrime không xuất hoá đơn thay chủ xe)",
             "schema": {
               "type": "boolean"
             }
@@ -57975,6 +57975,246 @@
           }
         ],
         "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `tenant.submit_review` (đọc từ DB mỗi request, không nằm trong session)."
+      }
+    },
+    "/tenants/current/vat-invoice": {
+      "get": {
+        "operationId": "TenantsController_vatInvoiceSetting",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/VatInvoiceSettingDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Thiết lập hỗ trợ xuất hoá đơn VAT của gian hàng (ADR 0059)",
+        "tags": [
+          "tenants"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `tenant.view` (đọc từ DB mỗi request, không nằm trong session)."
+      },
+      "patch": {
+        "operationId": "TenantsController_setVatInvoiceSupport",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetVatInvoiceSupportDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/VatInvoiceSettingDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "Dữ liệu đã tồn tại"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Bật/tắt hỗ trợ xuất hoá đơn VAT cho mọi xe của gian hàng (ADR 0059)",
+        "tags": [
+          "tenants"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `tenant.update` (đọc từ DB mỗi request, không nằm trong session)."
       }
     },
     "/trips": {
@@ -69039,173 +69279,6 @@
           }
         ],
         "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `bookings.view`, `booking_requests.view` (đọc từ DB mỗi request, không nằm trong session)."
-      }
-    },
-    "/vehicles/{id}/vat-invoice": {
-      "patch": {
-        "operationId": "VehiclesController_setVatInvoiceSupport",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SetVatInvoiceSupportDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Thành công",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/VehicleDetailDto"
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "VALIDATION_FAILED",
-                    "message": "Dữ liệu gửi lên không hợp lệ"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "UNAUTHENTICATED",
-                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
-                  }
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "MISSING_PERMISSION",
-                    "message": "Tài khoản không có quyền thực hiện thao tác này"
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Không tìm thấy bản ghi tương ứng.\n\nMã lỗi: `NOT_FOUND`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "NOT_FOUND",
-                    "message": "Không tìm thấy dữ liệu"
-                  }
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "CONFLICT",
-                    "message": "Dữ liệu đã tồn tại"
-                  }
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "RATE_LIMITED",
-                    "message": "Vượt giới hạn số request"
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorDto"
-                },
-                "example": {
-                  "error": {
-                    "code": "INTERNAL_ERROR",
-                    "message": "Có lỗi xảy ra, vui lòng thử lại"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "summary": "Bật/tắt \"Có hỗ trợ xuất hoá đơn VAT\" cho một xe (ADR 0059)",
-        "tags": [
-          "vehicles"
-        ],
-        "security": [
-          {
-            "cookie": []
-          }
-        ],
-        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `vehicles.update` (đọc từ DB mỗi request, không nằm trong session)."
       }
     },
     "/vehicles/alerts": {
@@ -92428,7 +92501,7 @@
         "properties": {
           "supported": {
             "type": "boolean",
-            "description": "true = chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê xe này; false = không công bố. Không đổi giá, phí, thuế hay điều kiện đặt xe."
+            "description": "true = hỗ trợ xuất hoá đơn VAT cho tiền thuê của mọi xe; false = không công bố. Không đổi giá, phí, thuế hay điều kiện đặt xe."
           }
         },
         "required": [
@@ -95840,6 +95913,18 @@
           "emailVerified"
         ]
       },
+      "VatInvoiceSettingDto": {
+        "type": "object",
+        "properties": {
+          "vatInvoiceSupported": {
+            "type": "boolean",
+            "description": "Gian hàng / chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê — áp cho mọi xe, khách lọc được trên chợ. XePrime không xuất hoá đơn thay chủ xe."
+          }
+        },
+        "required": [
+          "vatInvoiceSupported"
+        ]
+      },
       "Vehicle360SummaryDto": {
         "type": "object",
         "properties": {
@@ -97283,10 +97368,6 @@
             "type": "boolean",
             "description": "Chủ xe hỗ trợ giao xe tận nơi"
           },
-          "vatInvoiceSupported": {
-            "type": "boolean",
-            "description": "Chủ xe cam kết xuất hoá đơn VAT cho tiền thuê xe này — thông tin công bố trên chợ, đổi qua PATCH /vehicles/:id/vat-invoice (ADR 0059)"
-          },
           "createdAt": {
             "type": "string",
             "description": "ISO-8601 UTC"
@@ -97325,7 +97406,6 @@
           "marketplaceVisibilityReason",
           "updatedAt",
           "deliveryEnabled",
-          "vatInvoiceSupported",
           "createdAt",
           "images",
           "media",

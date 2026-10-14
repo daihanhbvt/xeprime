@@ -56,7 +56,6 @@ export class ListingsService {
         withDriverInterCityPrice: true,
         withDriverOneWayPrice: true,
         deliveryEnabled: true,
-        vatInvoiceSupported: true,
         discountPercent: true,
         publicStatus: true,
         marketplaceEnabled: true,
@@ -112,9 +111,6 @@ export class ListingsService {
         withDriverOneWayPrice: v.withDriverOneWayPrice,
         deliveryEnabled: v.deliveryEnabled,
         noCollateral,
-        // Cam kết xuất hoá đơn VAT của chủ xe — chỉ là THÔNG TIN công bố (ADR 0059), mirror ở
-        // đây để bộ lọc chợ không phải join sang `vehicles`.
-        vatInvoiceSupported: v.vatInvoiceSupported,
         billingMode: billing.billingMode,
         serviceFeePercent: billing.serviceFeePercent,
         discountPercent: v.discountPercent,

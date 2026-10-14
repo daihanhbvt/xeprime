@@ -607,17 +607,7 @@
       "publicPrice": "Giá hiển thị sàn",
       "delivery": "Giao xe tận nơi",
       "deliveryOn": "Có hỗ trợ",
-      "deliveryOff": "Không",
-      "vatInvoice": {
-        "label": "Xuất hoá đơn VAT",
-        "ariaLabel": "Bật hoặc tắt hỗ trợ xuất hoá đơn VAT cho xe {name}",
-        "on": "Có hỗ trợ",
-        "off": "Không",
-        "hintLabel": "Giải thích về hỗ trợ xuất hoá đơn VAT",
-        "hint": "Bật khi bạn (tự xuất hoặc qua doanh nghiệp, đơn vị bạn sắp xếp) xuất được hoá đơn VAT cho tiền thuê xe này: khách thấy dấu hiệu trên thẻ xe và lọc được theo đó. Bạn và khách tự thoả thuận, xác nhận thông tin hoá đơn trực tiếp — XePrime không xuất hoá đơn thay bạn, và lựa chọn này không đổi giá, phí hay điều kiện đặt xe.",
-        "enabled": "Đã bật hỗ trợ xuất hoá đơn VAT cho xe này",
-        "disabled": "Đã tắt hỗ trợ xuất hoá đơn VAT cho xe này"
-      }
+      "deliveryOff": "Không"
     },
     "links": {
       "ariaLabel": "Liên kết nhanh tới các mục của xe",

@@ -13,6 +13,7 @@ import type { AuthenticatedUser, TenantContext } from '../../common/types/reques
 import { PrismaService } from '../../prisma/prisma.service';
 import { CurrentTenantDto } from './dto/current-tenant.dto';
 import { MyShopDto, RegisterShopDto, UpdateTenantProfileDto } from './dto/tenant-onboarding.dto';
+import { SetVatInvoiceSupportDto, VatInvoiceSettingDto } from './dto/vat-invoice-setting.dto';
 import { TenantsService } from './tenants.service';
 
 @ApiTags('tenants')
@@ -112,6 +113,39 @@ export class TenantsController {
     return this.tenants.updateProfile(tenant.tenantId, user.id, dto, {
       canManageSellerProfile: tenant.permissions.includes(PERMISSION.SELLER_PROFILE_MANAGE),
     });
+  }
+
+  /**
+   * Thiết lập "Có hỗ trợ xuất hoá đơn VAT" của gian hàng / chủ xe — áp cho mọi xe (ADR 0059).
+   * Phiên hỗ trợ XEM được (cùng capability với hồ sơ gian hàng) để trả lời khách khi được hỏi.
+   */
+  @Get('current/vat-invoice')
+  @TenantScoped()
+  @RequirePermissions(PERMISSION.TENANT_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.TENANT_PROFILE_VIEW)
+  @ApiOperation({ summary: 'Thiết lập hỗ trợ xuất hoá đơn VAT của gian hàng (ADR 0059)' })
+  @ApiOkResponse({ type: VatInvoiceSettingDto })
+  vatInvoiceSetting(@CurrentTenant() tenant: TenantContext): Promise<VatInvoiceSettingDto> {
+    return this.tenants.getVatInvoiceSetting(tenant.tenantId);
+  }
+
+  /**
+   * Bật/tắt cho MỌI xe. `tenants.update` — cùng quyền với hồ sơ và chính sách gian hàng; tenant từ
+   * membership. KHÔNG `@SubscriptionTrackOnly`: áp như nhau hai tuyến. KHÔNG `@SupportAction`: đây
+   * là cam kết thương mại chủ xe đưa ra với khách, phiên hỗ trợ không bật/tắt thay (ADR 0050 —
+   * mặc định từ chối).
+   */
+  @Patch('current/vat-invoice')
+  @TenantScoped()
+  @RequirePermissions(PERMISSION.TENANT_UPDATE)
+  @ApiOperation({ summary: 'Bật/tắt hỗ trợ xuất hoá đơn VAT cho mọi xe của gian hàng (ADR 0059)' })
+  @ApiOkResponse({ type: VatInvoiceSettingDto })
+  setVatInvoiceSupport(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: SetVatInvoiceSupportDto,
+  ): Promise<VatInvoiceSettingDto> {
+    return this.tenants.setVatInvoiceSupport(tenant.tenantId, user.id, dto.supported);
   }
 
   @Post('current/submit-review')

@@ -17,3 +17,6 @@ export type UpdateProfileInput = Schemas['UpdateTenantProfileDto'];
 /** Công tắc thu cọc + LÝ DO — Phase 6. Màn hình vẽ theo `reason`, không tự suy từ `editable`. */
 export type PaymentSettings = Schemas['PaymentSettingsDto'];
 export type UpdatePaymentSettingsInput = Schemas['UpdatePaymentSettingsDto'];
+
+/** Hỗ trợ xuất hoá đơn VAT cho MỌI xe của gian hàng / chủ xe — ADR 0059. */
+export type VatInvoiceSetting = Schemas['VatInvoiceSettingDto'];

@@ -342,13 +342,6 @@ export class VehicleDetailDto extends VehicleListItemDto {
 
   @ApiProperty({ description: 'Chủ xe hỗ trợ giao xe tận nơi' }) deliveryEnabled!: boolean;
 
-  @ApiProperty({
-    description:
-      'Chủ xe cam kết xuất hoá đơn VAT cho tiền thuê xe này — thông tin công bố trên chợ, ' +
-      'đổi qua PATCH /vehicles/:id/vat-invoice (ADR 0059)',
-  })
-  vatInvoiceSupported!: boolean;
-
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
 
   @ApiProperty({ type: [String], description: 'URL ảnh gallery theo thứ tự' })
@@ -822,26 +815,6 @@ export class SetMarketplaceVisibilityDto {
   })
   @IsBoolean()
   enabled!: boolean;
-}
-
-/**
- * `PATCH /vehicles/:id/vat-invoice` — chủ xe bật/tắt "Có hỗ trợ xuất hoá đơn VAT" (ADR 0059).
- *
- * Endpoint riêng chứ không phải một trường trong `UpdateVehicleDto`: công tắc lưu NGAY khi bấm
- * và có dòng audit riêng, còn `PATCH /vehicles/:id` là lượt lưu cả form hồ sơ (khoá dòng, chấm
- * danh mục, làm mới phiếu duyệt đang chờ) — kéo cả chừng đó cho một cờ thông tin là thừa, và
- * thêm một trường vào form sẽ thành chỗ ghi thứ hai cho cùng một trạng thái.
- *
- * Chỉ nhận boolean THẬT (cùng lý do với `SetMarketplaceVisibilityDto`).
- */
-export class SetVatInvoiceSupportDto {
-  @ApiProperty({
-    description:
-      'true = chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê xe này; false = không công bố. ' +
-      'Không đổi giá, phí, thuế hay điều kiện đặt xe.',
-  })
-  @IsBoolean()
-  supported!: boolean;
 }
 
 /**

@@ -5,6 +5,7 @@ import type {
   RegisterShopInput,
   UpdatePaymentSettingsInput,
   UpdateProfileInput,
+  VatInvoiceSetting,
 } from './types';
 
 export const registerShop = (body: RegisterShopInput): Promise<MyShop> =>
@@ -26,3 +27,13 @@ export const fetchPaymentSettings = (): Promise<PaymentSettings> =>
 
 export const updatePaymentSettings = (body: UpdatePaymentSettingsInput): Promise<PaymentSettings> =>
   apiPatch<PaymentSettings>('/shop/payment-settings', body);
+
+/**
+ * Hỗ trợ xuất hoá đơn VAT cho MỌI xe (ADR 0059) — thiết lập của gian hàng / chủ xe, áp như nhau hai
+ * tuyến. Thông tin công bố cho khách: không đổi giá, phí, thuế hay điều kiện đặt xe.
+ */
+export const fetchVatInvoiceSetting = (): Promise<VatInvoiceSetting> =>
+  apiGet<VatInvoiceSetting>('/tenants/current/vat-invoice');
+
+export const updateVatInvoiceSetting = (supported: boolean): Promise<VatInvoiceSetting> =>
+  apiPatch<VatInvoiceSetting>('/tenants/current/vat-invoice', { supported });

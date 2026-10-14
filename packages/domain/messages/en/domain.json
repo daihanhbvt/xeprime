@@ -1298,7 +1298,10 @@
       "submit_review": "Submit shop for review",
       "lock": "Lock shop",
       "unlock": "Unlock shop",
-      "free_trips_exhausted": "Free trips exhausted"
+      "free_trips_exhausted": "Free trips exhausted",
+      "vat_invoice": {
+        "update": "Change VAT invoice support (all vehicles)"
+      }
     },
     "tenant_customer": {
       "create": "Add customer",
@@ -1327,9 +1330,6 @@
       },
       "marketplace_visibility": {
         "update": "Change marketplace visibility"
-      },
-      "vat_invoice": {
-        "update": "Change vehicle VAT invoice support"
       },
       "operation_settings": {
         "update": "Update operation settings"

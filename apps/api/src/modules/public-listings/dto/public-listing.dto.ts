@@ -148,8 +148,8 @@ export class PublicListingQueryDto {
   @ApiPropertyOptional({
     type: Boolean,
     description:
-      'Chỉ xe chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê (thông tin chủ xe công bố — XePrime không ' +
-      'xuất hoá đơn thay chủ xe)',
+      'Chỉ xe của gian hàng/chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê (thiết lập chung của ' +
+      'tenant — XePrime không xuất hoá đơn thay chủ xe)',
   })
   @IsOptional()
   @Transform(toBool)
@@ -436,7 +436,8 @@ export class PublicListingDto {
   @ApiProperty({ description: 'Miễn thế chấp (không cần cọc tài sản)' }) noCollateral!: boolean;
 
   /*
-   * Cam kết của CHỦ XE, không phải dịch vụ của XePrime (ADR 0059): hai bên tự thoả thuận và
+   * Cam kết của CHỦ XE — thiết lập chung của gian hàng, áp cho mọi xe — không phải dịch vụ của
+   * XePrime (ADR 0059): hai bên tự thoả thuận và
    * xác nhận trực tiếp; XePrime không xuất hoá đơn thay chủ xe, và hoá đơn đó chỉ phủ tiền thuê trả
    * cho chủ xe — không phủ khoản khách trả cho XePrime (phí dịch vụ). Giao diện chỉ gắn dấu
    * khi `true` — `false` nghĩa là "chủ xe chưa công bố", không phải "chủ xe từ chối".

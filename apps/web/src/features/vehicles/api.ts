@@ -83,15 +83,6 @@ export const setVehicleMarketplaceVisibility = (
   apiPatch<VehicleDetail>(`/vehicles/${id}/marketplace-visibility`, { enabled });
 
 /**
- * "Có hỗ trợ xuất hoá đơn VAT" của chủ xe (ADR 0059) — thông tin công bố trên chợ, không đụng
- * giá, kiểm duyệt hay hiển thị. Trả về bản ghi xe đã cập nhật.
- */
-export const setVehicleVatInvoiceSupport = (
-  id: string,
-  supported: boolean,
-): Promise<VehicleDetail> => apiPatch<VehicleDetail>(`/vehicles/${id}/vat-invoice`, { supported });
-
-/**
  * Chỉ số cho thẻ xe — gọi RIÊNG, sau khi đã có trang danh sách.
  *
  * Tách khỏi `fetchVehicles` để danh sách hiện ngay: tổng hợp thu/chi chậm hơn truy vấn xe, gộp

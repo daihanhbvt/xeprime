@@ -1107,6 +1107,11 @@ export const ACCOUNT_SECTION = {
   /** Địa chỉ nhận xe (chi nhánh mặc định) + MST/giấy phép tuỳ chọn (chỉ chủ xe hoa hồng). */
   ADDRESS: 'address',
   /**
+   * Hỗ trợ xuất hoá đơn VAT cho mọi xe (chỉ chủ xe hoa hồng — tuyến gói đặt nó ở "Chính sách thuê";
+   * cùng `VatInvoiceSettingCard`, cùng `PATCH /tenants/current/vat-invoice`, ADR 0059).
+   */
+  VAT_INVOICE: 'vat-invoice',
+  /**
    * Thông tin khai thuế — loại chủ thể, tên pháp lý, CCCD/MST của hồ sơ người bán (chỉ chủ xe hoa
    * hồng; trước 07/10/2026 là trang riêng `/tax`). Thuế ĐÃ khấu trừ là chuyện tiền, nên nó ở trang
    * "Số dư & rút tiền", không ở đây.

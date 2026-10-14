@@ -1298,7 +1298,10 @@
       "submit_review": "Gửi duyệt gian hàng",
       "lock": "Khoá gian hàng",
       "unlock": "Mở khoá gian hàng",
-      "free_trips_exhausted": "Hết lượt chuyến miễn phí"
+      "free_trips_exhausted": "Hết lượt chuyến miễn phí",
+      "vat_invoice": {
+        "update": "Đổi hỗ trợ xuất hoá đơn VAT (mọi xe)"
+      }
     },
     "tenant_customer": {
       "create": "Thêm khách vào sổ",
@@ -1327,9 +1330,6 @@
       },
       "marketplace_visibility": {
         "update": "Đổi hiển thị xe trên chợ"
-      },
-      "vat_invoice": {
-        "update": "Đổi hỗ trợ xuất hoá đơn VAT của xe"
       },
       "operation_settings": {
         "update": "Cập nhật cài đặt vận hành xe"

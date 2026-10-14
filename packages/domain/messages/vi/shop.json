@@ -193,6 +193,18 @@
     "appliedTipLabel": "Giải thích phạm vi áp dụng chính sách",
     "dirtyDiscard": "Hủy bỏ"
   },
+  "vatInvoice": {
+    "title": "Hoá đơn VAT",
+    "subtitle": "Một thiết lập cho mọi xe của bạn. Khi bật, khách thấy dấu hiệu trên thẻ xe, trang xe và lọc được các xe này trên chợ.",
+    "label": "Hỗ trợ xuất hoá đơn VAT",
+    "ariaLabel": "Bật hoặc tắt hỗ trợ xuất hoá đơn VAT cho mọi xe",
+    "on": "Đang bật cho mọi xe",
+    "off": "Đang tắt",
+    "note": "Bạn tự xuất hoặc qua doanh nghiệp, đơn vị bạn sắp xếp — hoá đơn cho tiền thuê xe, theo thoả thuận trực tiếp với khách. XePrime không xuất hoá đơn thay bạn, và thiết lập này không đổi giá, phí, thuế hay điều kiện đặt xe.",
+    "enabled": "Đã bật hỗ trợ xuất hoá đơn VAT cho mọi xe",
+    "disabled": "Đã tắt hỗ trợ xuất hoá đơn VAT",
+    "loadError": "Không tải được thiết lập hoá đơn VAT"
+  },
   "paymentSettings": {
     "title": "Thanh toán giữ chỗ qua XePrime",
     "subtitle": "Trong giai đoạn này, mọi chuyến trên XePrime đều thu khoản giữ chỗ của khách trước khi chuyến được xác nhận. Đây KHÔNG phải tiền cọc/thế chấp bạn nhận trực tiếp khi giao xe — khoản đó do bạn tự thu, tự giữ và tự hoàn, và đặt ở phần chính sách theo loại xe bên dưới.",

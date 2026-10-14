@@ -211,7 +211,11 @@ export function buildListingWhere(
   if (exclude !== 'delivery' && query.delivery) and.push({ deliveryEnabled: true });
   if (exclude !== 'noCollateral' && query.noCollateral) and.push({ noCollateral: true });
   if (exclude !== 'discount' && query.discount) and.push({ discountPercent: { gt: 0 } });
-  if (exclude !== 'vatInvoice' && query.vatInvoice) and.push({ vatInvoiceSupported: true });
+  // Thiết lập CỦA GIAN HÀNG (ADR 0059) — join `tenants` như vế trạng thái gian hàng ở scope, không
+  // đọc một bản sao trên snapshot (ADR 0008 §3).
+  if (exclude !== 'vatInvoice' && query.vatInvoice) {
+    and.push({ tenant: { vatInvoiceSupported: true } });
+  }
 
   return { ...publicListingScope(), AND: and };
 }
@@ -319,7 +323,10 @@ export function buildListingWhereSql(
     and.push(Prisma.sql`pl."discount_percent" > 0`);
   }
   if (exclude !== 'vatInvoice' && query.vatInvoice) {
-    and.push(Prisma.sql`pl."vat_invoice_supported" = true`);
+    and.push(Prisma.sql`EXISTS (
+      SELECT 1 FROM "tenants" t
+      WHERE t."id" = pl."tenant_id" AND t."vat_invoice_supported" = true
+    )`);
   }
 
   return Prisma.join(and, ' AND ');

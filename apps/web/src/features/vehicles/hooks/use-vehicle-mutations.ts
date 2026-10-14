@@ -6,7 +6,6 @@ import {
   createVehicle,
   deleteVehicle,
   setVehicleMarketplaceVisibility,
-  setVehicleVatInvoiceSupport,
   repairVehicleListing,
   submitVehiclePublic,
   updateVehicle,
@@ -76,27 +75,6 @@ export function useSetVehicleMarketplaceVisibility(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (enabled: boolean) => setVehicleMarketplaceVisibility(id, enabled),
-    onSuccess: (updated) => {
-      queryClient.setQueryData(queryKeys.vehicles.detail(id), updated);
-      void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.marketplace.all });
-    },
-  });
-}
-
-/**
- * Bật/tắt "Có hỗ trợ xuất hoá đơn VAT" (ADR 0059).
- *
- * Cùng hai nhánh làm mới với công tắc hiển thị: cờ này đi vào thẻ xe, trang xe và bộ lọc ngoài
- * chợ, nên trình duyệt ĐANG thao tác bỏ cache `marketplace` của chính nó (chủ xe mở trang xe của
- * mình ở tab khác thấy ngay). Không có đẩy realtime tới khách khác (ADR 0059 — không cần): họ thấy
- * ở lần tải trang kế tiếp, qua cache công khai mà mọi thông tin xe đang dùng — danh sách + trang xe
- * `PUBLIC_CACHE_SECONDS.listing`, số đếm bộ lọc `PUBLIC_CACHE_SECONDS.facets`.
- */
-export function useSetVehicleVatInvoiceSupport(id: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (supported: boolean) => setVehicleVatInvoiceSupport(id, supported),
     onSuccess: (updated) => {
       queryClient.setQueryData(queryKeys.vehicles.detail(id), updated);
       void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
