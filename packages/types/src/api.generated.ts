@@ -10652,6 +10652,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/vehicles/{id}/vat-invoice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Bật/tắt "Có hỗ trợ xuất hoá đơn VAT" cho một xe (ADR 0059)
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.
+         *
+         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *
+         *     **Quyền yêu cầu:** `vehicles.update` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        patch: operations["VehiclesController_setVatInvoiceSupport"];
+        trace?: never;
+    };
     "/vehicles/alerts": {
         parameters: {
             query?: never;
@@ -10892,6 +10918,8 @@ export interface components {
             noCollateral: number;
             /** @description Xe đang giảm giá */
             discount: number;
+            /** @description Xe chủ xe hỗ trợ xuất hoá đơn VAT */
+            vatInvoice: number;
         };
         ApiErrorBodyDto: {
             /** @example BOOKING_SCHEDULE_CONFLICT */
@@ -16717,6 +16745,8 @@ export interface components {
             deliveryEnabled: boolean;
             /** @description Miễn thế chấp (không cần cọc tài sản) */
             noCollateral: boolean;
+            /** @description Chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê xe theo thoả thuận trực tiếp với khách — XePrime không xuất hoá đơn thay chủ xe */
+            vatInvoiceSupported: boolean;
             /** @description % khuyến mãi trực tiếp cho tiền thuê tự lái (0–100) */
             discountPercent?: number | null;
             /** @description Tên gian hàng */
@@ -16811,6 +16841,8 @@ export interface components {
             deliveryEnabled: boolean;
             /** @description Miễn thế chấp (không cần cọc tài sản) */
             noCollateral: boolean;
+            /** @description Chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê xe theo thoả thuận trực tiếp với khách — XePrime không xuất hoá đơn thay chủ xe */
+            vatInvoiceSupported: boolean;
             /** @description % khuyến mãi trực tiếp cho tiền thuê tự lái (0–100) */
             discountPercent?: number | null;
             /** @description Tên gian hàng */
@@ -17768,6 +17800,10 @@ export interface components {
             /** @description VND string — ADR 0007 */
             amount: string;
             thresholdValue?: number | null;
+        };
+        SetVatInvoiceSupportDto: {
+            /** @description true = chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê xe này; false = không công bố. Không đổi giá, phí, thuế hay điều kiện đặt xe. */
+            supported: boolean;
         };
         SetVehicleApprovalCheckDto: {
             passed: boolean;
@@ -19286,6 +19322,8 @@ export interface components {
             withDriverOneWayPrice?: string | null;
             /** @description Chủ xe hỗ trợ giao xe tận nơi */
             deliveryEnabled: boolean;
+            /** @description Chủ xe cam kết xuất hoá đơn VAT cho tiền thuê xe này — thông tin công bố trên chợ, đổi qua PATCH /vehicles/:id/vat-invoice (ADR 0059) */
+            vatInvoiceSupported: boolean;
             /** @description ISO-8601 UTC */
             createdAt: string;
             /** @description URL ảnh gallery theo thứ tự */
@@ -69024,6 +69062,8 @@ export interface operations {
                 noCollateral?: boolean;
                 /** @description Chỉ xe đang giảm giá */
                 discount?: boolean;
+                /** @description Chỉ xe chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê (thông tin chủ xe công bố — XePrime không xuất hoá đơn thay chủ xe) */
+                vatInvoice?: boolean;
                 /** @description Số chỗ tối thiểu (giữ tương thích cũ — mới dùng `seats`) */
                 minSeats?: number;
                 /** @description Từ khoá — khớp tên xe/hãng/model và TÊN CÔNG KHAI của chủ xe/gian hàng. Không phân biệt dấu và hoa thường; mỗi từ phải là đầu một từ ("vf8" khớp "VinFast VF 8"), không cần đúng thứ tự hay cùng một trường. */
@@ -69601,6 +69641,8 @@ export interface operations {
                 noCollateral?: boolean;
                 /** @description Chỉ xe đang giảm giá */
                 discount?: boolean;
+                /** @description Chỉ xe chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê (thông tin chủ xe công bố — XePrime không xuất hoá đơn thay chủ xe) */
+                vatInvoice?: boolean;
                 /** @description Số chỗ tối thiểu (giữ tương thích cũ — mới dùng `seats`) */
                 minSeats?: number;
                 /** @description Từ khoá — khớp tên xe/hãng/model và TÊN CÔNG KHAI của chủ xe/gian hàng. Không phân biệt dấu và hoa thường; mỗi từ phải là đầu một từ ("vf8" khớp "VinFast VF 8"), không cần đúng thứ tự hay cùng một trường. */
@@ -88757,6 +88799,181 @@ export interface operations {
                      *       "error": {
                      *         "code": "NOT_FOUND",
                      *         "message": "Không tìm thấy dữ liệu"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    VehiclesController_setVatInvoiceSupport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetVatInvoiceSupportDto"];
+            };
+        };
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["VehicleDetailDto"];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Không tìm thấy bản ghi tương ứng.
+             *
+             *     Mã lỗi: `NOT_FOUND`
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Không tìm thấy dữ liệu"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             *
+             *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "CONFLICT",
+                     *         "message": "Dữ liệu đã tồn tại"
                      *       }
                      *     }
                      */

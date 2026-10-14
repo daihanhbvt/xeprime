@@ -12,6 +12,7 @@
     "seats": "{count, plural, other {# chỗ}}",
     "delivery": "Giao tận nơi",
     "noCollateral": "Miễn thế chấp",
+    "vatInvoice": "Xuất hoá đơn VAT",
     "includesDriver": "đã gồm tài xế",
     "contactForQuote": "Liên hệ báo giá",
     "extraServices": "+{count}",
@@ -39,6 +40,12 @@
     "withDriverQuote": "Liên hệ báo giá chuyến có tài xế",
     "delivery": "Giao xe tận nơi",
     "noCollateral": "Miễn thế chấp",
+    "vatInvoice": {
+      "badge": "Hỗ trợ xuất hoá đơn VAT",
+      "title": "Hoá đơn VAT",
+      "body": "Chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê xe trả cho chủ xe. Bạn trao đổi thông tin xuất hoá đơn và xác nhận trực tiếp với chủ xe.",
+      "disclaimer": "Đây là thoả thuận giữa bạn và chủ xe: XePrime không xuất hoá đơn thay chủ xe, và các khoản bạn trả cho XePrime (như phí dịch vụ) không nằm trong hoá đơn này."
+    },
     "description": "Mô tả",
     "descriptionEmpty": "Gian hàng chưa viết mô tả.",
     "serviceSelector": "Chọn dịch vụ thuê",

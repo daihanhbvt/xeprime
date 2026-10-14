@@ -42,13 +42,13 @@ let ownerId: string;
 let customerId: string;
 let tenantId: string;
 let branchId: string;
-/** sedan Toyota 5 chỗ xăng, bluetooth+gps, thuê giờ, giảm 10%, 600k, rating 5.00 (1 review). */
+/** sedan Toyota 5 chỗ xăng, bluetooth+gps, thuê giờ, giảm 10%, hoá đơn VAT, 600k, rating 5.00 (1 review). */
 let vSedan: string;
 /** suv Mazda 7 chỗ dầu, bluetooth+camera_360+sunroof, giao tận nơi, 1.2tr, rating 4.00. */
 let vSuv: string;
 /** mini Kia 4 chỗ xăng, không tính năng, miễn thế chấp + thuê giờ, 400k, chưa có review. */
 let vMini: string;
-/** cuv VinFast 5 chỗ điện, gps+screen, giao tận nơi + miễn thế chấp + giảm 5%, 900k, rating 5.00 (2 review). */
+/** cuv VinFast 5 chỗ điện, gps+screen, giao tận nơi + miễn thế chấp + giảm 5% + hoá đơn VAT, 900k, rating 5.00 (2 review). */
 let vCuv: string;
 
 interface FacetVehicle {
@@ -62,6 +62,7 @@ interface FacetVehicle {
   delivery?: boolean;
   noCollateral?: boolean;
   discount?: number;
+  vatInvoice?: boolean;
   ratings?: readonly number[];
 }
 
@@ -83,6 +84,7 @@ async function seedFacetVehicle(v: FacetVehicle): Promise<string> {
       weekdayPrice: v.price,
       hourlyPrice: v.hourly ?? null,
       deliveryEnabled: v.delivery ?? false,
+      vatInvoiceSupported: v.vatInvoice ?? false,
       discountPercent: v.discount ?? null,
       mainImageUrl: 'https://img.example/x.jpg',
     },
@@ -198,6 +200,7 @@ beforeAll(async () => {
     features: ['bluetooth', 'gps'],
     hourly: '90000',
     discount: 10,
+    vatInvoice: true,
     ratings: [5],
   });
   vSuv = await seedFacetVehicle({
@@ -229,6 +232,7 @@ beforeAll(async () => {
     delivery: true,
     noCollateral: true,
     discount: 5,
+    vatInvoice: true,
     ratings: [5, 5],
   });
 });
@@ -265,7 +269,13 @@ describe('Facets marketplace (đếm theo chiều + filter CSV)', () => {
     expect(countOf(f.fuelType, FUEL_TYPE.GASOLINE)).toBe(2);
     expect(countOf(f.features, 'bluetooth')).toBe(2);
     expect(countOf(f.features, 'gps')).toBe(2);
-    expect(f.amenities).toEqual({ hourly: 2, delivery: 2, noCollateral: 2, discount: 2 });
+    expect(f.amenities).toEqual({
+      hourly: 2,
+      delivery: 2,
+      noCollateral: 2,
+      discount: 2,
+      vatInvoice: 2,
+    });
     // Gọi service trực tiếp thì Decimal chưa qua ResponseInterceptor → so sánh qua String().
     expect(String(f.price.min)).toBe('400000');
     expect(String(f.price.max)).toBe('1200000');
@@ -309,6 +319,32 @@ describe('Facets marketplace (đếm theo chiều + filter CSV)', () => {
     expect(f.total).toBe(2); // vSuv + vCuv
     expect(f.amenities.delivery).toBe(2); // bỏ chính nó → vẫn 2
     expect(f.amenities.noCollateral).toBe(1); // trong tập delivery chỉ vCuv miễn thế chấp
+    expect(f.amenities.vatInvoice).toBe(1); // trong tập delivery chỉ vCuv hỗ trợ hoá đơn VAT
+  });
+
+  maybe('hoá đơn VAT: lọc ở DB trước phân trang + kết hợp với bộ lọc khác', async () => {
+    const only = await service.search(sq({ vatInvoice: true }));
+    expect(only.data.map((v) => v.id).sort()).toEqual([vSedan, vCuv].sort());
+    // `total` đếm cùng điều kiện với trang — bộ lọc chạy trong câu truy vấn, không cắt ở Node.
+    expect(only.meta.total).toBe(2);
+    expect(only.data.every((v) => v.vatInvoiceSupported)).toBe(true);
+
+    const paged = await service.search(sq({ vatInvoice: true, limit: 1 }));
+    expect(paged.data).toHaveLength(1);
+    expect(paged.meta).toMatchObject({ total: 2, hasNext: true });
+
+    // AND với chiều khác: xăng + VAT chỉ còn vSedan.
+    const withFuel = await service.search(sq({ vatInvoice: true, fuelType: [FUEL_TYPE.GASOLINE] }));
+    expect(withFuel.data.map((v) => v.id)).toEqual([vSedan]);
+
+    const f = await service.facets(fq({ vatInvoice: true }));
+    expect(f.total).toBe(2);
+    expect(f.amenities.vatInvoice).toBe(2); // bỏ chính nó → vẫn đếm trên toàn tập
+    expect(f.amenities.delivery).toBe(1); // trong tập VAT chỉ vCuv giao tận nơi
+
+    // `false` không phải một bộ lọc "xe KHÔNG hỗ trợ": tắt toggle là bỏ điều kiện.
+    const off = await service.search(sq({ vatInvoice: false }));
+    expect(off.meta.total).toBe(4);
   });
 
   maybe('multi-brand CSV', async () => {
@@ -352,6 +388,8 @@ describe('Facets marketplace (đếm theo chiều + filter CSV)', () => {
     expect(cuv.deliveryEnabled).toBe(true);
     expect(cuv.noCollateral).toBe(true);
     expect(cuv.discountPercent).toBe(5);
+    expect(cuv.vatInvoiceSupported).toBe(true);
+    expect(res.data.find((v) => v.id === vMini)!.vatInvoiceSupported).toBe(false);
     expect(cuv.bodyType).toBe(BODY_TYPE.CUV);
   });
 
@@ -424,6 +462,8 @@ describe('buildListingWhereSql khớp buildListingWhere (chống lệch hai bả
     ['tiện ích: giao xe', sq({ delivery: true })],
     ['tiện ích: miễn thế chấp', sq({ noCollateral: true })],
     ['tiện ích: đang giảm giá', sq({ discount: true })],
+    ['tiện ích: hoá đơn VAT', sq({ vatInvoice: true })],
+    ['hoá đơn VAT + giao xe', sq({ vatInvoice: true, delivery: true })],
     ['tìm chữ (q)', sq({ q: 'VinFast' })],
     ['tìm chữ không khớp gì', sq({ q: 'khong-ton-tai-xyz' })],
     ['vehicleType', sq({ vehicleType: VEHICLE_TYPE.CAR })],

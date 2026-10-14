@@ -53,6 +53,7 @@ import { vehicleGalleryItems } from '../media';
 import { discountedPriceVnd } from '../pricing';
 import { vehiclePublicationTask } from '../publication';
 import type { Vehicle360Summary, VehicleDetail } from '../types';
+import { VatInvoiceSupportRow } from './VatInvoiceSupportRow';
 import { VehicleAlertList } from './VehicleAlerts';
 import { VehiclePublicationTaskItem } from './VehiclePublicationTaskItem';
 import styles from './Vehicle360Overview.module.css';
@@ -470,6 +471,8 @@ export function PricingCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canE
           <dt>{t('pricing.delivery')}</dt>
           <dd>{vehicle.deliveryEnabled ? t('pricing.deliveryOn') : t('pricing.deliveryOff')}</dd>
         </div>
+        {/* Điều khoản công bố cho khách, cạnh giao xe — và là hàng DUY NHẤT sửa tại chỗ (ADR 0059). */}
+        <VatInvoiceSupportRow vehicle={vehicle} canEdit={canEdit} className={styles.kvRow} />
       </dl>
     </Card>
   );

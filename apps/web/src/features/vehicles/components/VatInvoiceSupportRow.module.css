@@ -1,0 +1,24 @@
+/*
+ * Hàng "Xuất hoá đơn VAT" — nằm trong `.kvRow` của thẻ Giá & chính sách, nên chỉ lo phần bên
+ * trong: nhãn kèm dấu "i", và cụm trạng thái bằng chữ + công tắc ở mép phải.
+ */
+.label {
+  display: inline-flex;
+  align-items: center;
+}
+
+.value {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--xp-space-xs) var(--xp-space-sm);
+}
+
+.state {
+  color: var(--xp-color-text);
+}
+
+.on {
+  color: var(--xp-color-success);
+}

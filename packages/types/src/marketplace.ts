@@ -71,6 +71,8 @@ export interface MarketplaceFilters {
   delivery?: boolean;
   noCollateral?: boolean;
   discount?: boolean;
+  /** Chỉ xe mà chủ xe hỗ trợ xuất hoá đơn VAT (thông tin chủ xe công bố — ADR 0059). */
+  vatInvoice?: boolean;
   minSeats?: number;
   priceMin?: number;
   priceMax?: number;

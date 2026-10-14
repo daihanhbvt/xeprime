@@ -142,6 +142,13 @@
     "fuelType": "Nguồn năng lượng",
     "features": "Tính năng",
     "amenities": "Tiện ích",
+    "amenityDesc": {
+      "hourly": "Xe có giá thuê giờ",
+      "delivery": "Chủ xe hỗ trợ giao nhận",
+      "noCollateral": "Không yêu cầu cọc tài sản",
+      "discount": "Xe có khuyến mãi",
+      "vatInvoice": "Chủ xe xuất hoá đơn cho tiền thuê xe theo thoả thuận trực tiếp với bạn — XePrime không xuất hoá đơn thay chủ xe"
+    },
     "clear": "Xoá bộ lọc",
     "apply": "Áp dụng",
     "priceRangeValue": "{from} – {to}",

@@ -270,7 +270,8 @@
     "hourly": "Thuê theo giờ",
     "delivery": "Giao xe tận nơi",
     "noCollateral": "Miễn thế chấp",
-    "discount": "Đang giảm giá"
+    "discount": "Đang giảm giá",
+    "vatInvoice": "Hỗ trợ xuất hoá đơn VAT"
   },
   "listingSort": {
     "recommended": "Gợi ý",
@@ -1327,6 +1328,9 @@
       "marketplace_visibility": {
         "update": "Đổi hiển thị xe trên chợ"
       },
+      "vat_invoice": {
+        "update": "Đổi hỗ trợ xuất hoá đơn VAT của xe"
+      },
       "operation_settings": {
         "update": "Cập nhật cài đặt vận hành xe"
       },
@@ -1509,6 +1513,7 @@
     "publicStatus": "Trạng thái kiểm duyệt",
     "operationStatus": "Trạng thái vận hành",
     "marketplaceEnabled": "Hiển thị trên chợ",
+    "vatInvoiceSupported": "Hỗ trợ xuất hoá đơn VAT",
     "isActive": "Đang bật",
     "role": "Vai trò",
     "roleCode": "Vai trò",

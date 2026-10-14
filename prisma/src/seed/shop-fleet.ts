@@ -272,6 +272,9 @@ export async function buildFleet(spec: ShopSpec, deps: FleetDeps): Promise<Vehic
       // `noCollateral` KHÔNG ghi ở đây: từ 20/08 nhãn "miễn thế chấp" là hệ quả của chính sách
       // thuê, và `ListingsService` mới là bên suy ra nó (ADR 0008).
       discountPercent: index % 5 === 0 ? 10 : index % 7 === 0 ? 15 : null,
+      // Dữ liệu DEMO: vài xe gian hàng công bố hỗ trợ hoá đơn VAT để bộ lọc chợ có gì để lọc
+      // (ADR 0059). Dữ liệu thật không bao giờ được suy ra cờ này — migration để `false` hết.
+      vatInvoiceSupported: index % 4 === 1,
       publicStatus,
       operationStatus: VEHICLE_OPERATION_STATUS.AVAILABLE,
     };

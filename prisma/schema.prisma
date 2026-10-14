@@ -1330,6 +1330,14 @@ model Vehicle {
   deliveryEnabled                Boolean   @default(false) @map("delivery_enabled")
   /// Không yêu cầu cọc tài sản (miễn thế chấp).
   noCollateral                   Boolean   @default(false) @map("no_collateral")
+  /// Chủ xe CAM KẾT xuất hoá đơn VAT cho khách thuê xe này — THÔNG TIN công bố trên chợ, hai bên
+  /// tự thoả thuận và xác nhận trực tiếp. XePrime không xuất hoá đơn thay chủ xe, tính năng không
+  /// tạo/lưu hoá đơn nào, và cờ không chạm giá/phí/thuế khấu trừ (ADR 0028 §4), duyệt xe hay đặt xe.
+  ///
+  /// `false` mặc định cho cả dữ liệu cũ: không có gì cho phép suy ra một cam kết chủ xe chưa
+  /// từng đưa ra. Chỉ đổi qua `PATCH /vehicles/:id/vat-invoice` (`VehiclesService`), mirror sang
+  /// `public_listings` qua `ListingsService.syncFromVehicle` (ADR 0008 §1).
+  vatInvoiceSupported            Boolean   @default(false) @map("vat_invoice_supported")
   /// % giảm giá đang chạy (0–100, CHECK ở migration) — NULL/0 = không giảm. Chỉ để hiển thị
   /// marketing; giá chốt thật do shop quyết khi duyệt booking request.
   discountPercent                Int?      @map("discount_percent")
@@ -1744,6 +1752,9 @@ model PublicListing {
   withDriverOneWayPrice    Decimal? @map("with_driver_one_way_price") @db.Decimal(14, 2)
   deliveryEnabled          Boolean  @default(false) @map("delivery_enabled")
   noCollateral             Boolean  @default(false) @map("no_collateral")
+  /// Mirror `vehicles.vat_invoice_supported` — bộ lọc "hỗ trợ xuất hoá đơn VAT" của chợ chỉ đọc
+  /// bảng này (ADR 0008). Chỉ ListingsService ghi.
+  vatInvoiceSupported      Boolean  @default(false) @map("vat_invoice_supported")
   /// @xeprime/types → BillingMode — denormalize từ gói HIỆN HÀNH của tenant (ADR 0024 ràng buộc 1):
   /// card chợ phải nói được "giá này chưa gồm phí dịch vụ X%" mà không join subscription.
   /// Chỉ ListingsService ghi (ADR 0008); BillingService gọi `syncBillingForTenant` khi gói đổi.
@@ -1783,6 +1794,9 @@ model PublicListing {
   @@index([status, provinceCode, rankScore])
   /// Cùng truy vấn đó ở bậc "toàn quốc" (khách chưa có tỉnh, hoặc bù cho đủ số ô).
   @@index([status, rankScore])
+  /// Bộ lọc "chỉ xe hỗ trợ xuất hoá đơn VAT" theo sort mặc định: phần lớn xe là `false`, nên
+  /// không có index này thì lọc một tập nhỏ vẫn phải quét theo `rank_score` toàn chợ.
+  @@index([status, vatInvoiceSupported, rankScore])
   @@index([tenantId, status])
   @@index([weekdayPrice])
   @@index([status, bodyType])

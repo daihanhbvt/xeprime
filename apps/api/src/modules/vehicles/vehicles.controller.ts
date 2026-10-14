@@ -39,6 +39,7 @@ import {
   FleetSummaryDto,
   FleetSummaryQueryDto,
   SetMarketplaceVisibilityDto,
+  SetVatInvoiceSupportDto,
   UpdateVehicleDto,
   Vehicle360SummaryDto,
   VehicleDetailDto,
@@ -379,6 +380,29 @@ export class VehiclesController {
     @Body() dto: SetMarketplaceVisibilityDto,
   ): Promise<VehicleDetailDto> {
     return this.vehicles.setMarketplaceVisibility(tenant.tenantId, id, user.id, dto.enabled);
+  }
+
+  /**
+   * Công tắc "Có hỗ trợ xuất hoá đơn VAT" của chủ xe (ADR 0059) — thông tin công bố trên chợ.
+   *
+   * `vehicles.update` vì đây là sửa một thuộc tính của chính chiếc xe, cùng quyền với mọi thông
+   * tin chủ xe công bố cho khách; tenant lấy từ membership, xe phải thuộc chi nhánh người gọi được
+   * giao (`@BranchScoped`). KHÔNG có `@SupportAction`: đây là một cam kết thương mại chủ xe đưa ra
+   * với khách, nên nhân sự nền tảng trong phiên hỗ trợ không bật/tắt thay (ADR 0050 — mặc định
+   * từ chối). Không có `@SubscriptionTrackOnly`: cờ áp như nhau cho cả hai tuyến.
+   */
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.VEHICLE)
+  @Patch(':id/vat-invoice')
+  @RequirePermissions(PERMISSION.VEHICLE_UPDATE)
+  @ApiOperation({ summary: 'Bật/tắt "Có hỗ trợ xuất hoá đơn VAT" cho một xe (ADR 0059)' })
+  @ApiOkResponse({ type: VehicleDetailDto })
+  setVatInvoiceSupport(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: SetVatInvoiceSupportDto,
+  ): Promise<VehicleDetailDto> {
+    return this.vehicles.setVatInvoiceSupport(tenant.tenantId, id, user.id, dto.supported);
   }
 
   /**

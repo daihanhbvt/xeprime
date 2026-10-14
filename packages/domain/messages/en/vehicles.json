@@ -607,7 +607,17 @@
       "publicPrice": "Marketplace price",
       "delivery": "Vehicle delivery",
       "deliveryOn": "Available",
-      "deliveryOff": "Not available"
+      "deliveryOff": "Not available",
+      "vatInvoice": {
+        "label": "VAT invoice",
+        "ariaLabel": "Turn VAT invoice support on or off for {name}",
+        "on": "Available",
+        "off": "Not available",
+        "hintLabel": "About VAT invoice support",
+        "hint": "Turn this on if you can provide a VAT invoice for the rental of this vehicle (yourself, or through your company or a party you arrange): renters see a badge on the listing and can filter by it. You and the renter agree on and confirm the invoice details directly — XePrime does not issue invoices on your behalf, and this setting does not change prices, fees or booking conditions.",
+        "enabled": "VAT invoice support turned on for this vehicle",
+        "disabled": "VAT invoice support turned off for this vehicle"
+      }
     },
     "links": {
       "ariaLabel": "Quick links to this vehicle's sections",

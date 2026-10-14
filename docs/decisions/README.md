@@ -1,6 +1,6 @@
 # Architecture Decision Records — XePrime
 
-> Cập nhật: 08/10/2026
+> Cập nhật: 14/10/2026
 
 ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted mới hơn thắng trong đúng phạm vi phần **Quan hệ với ADR cũ**; không suy rằng toàn bộ ADR cũ mất hiệu lực.
 
@@ -66,6 +66,7 @@ ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted
 | [0056](0056-host-sees-customer-contact.md) | Chủ xe thấy liên hệ của khách theo MỘT luật (`hostSeesCustomerContact`): tuyến gói luôn thấy, tuyến hoa hồng chỉ khi đã có ĐƠN; hộp thư + trang chuyến cùng đi qua cổng; sổ khách chặn tuyến hoa hồng ở server; chặng "Quá hạn phản hồi" tách khỏi "Bị từ chối" | **Accepted; làm rõ 0028 điều 9, mở rộng 0027 điều 1** |
 | [0057](0057-customer-driver-licence-verification.md) | Bằng lái của tài khoản khách: nộp ảnh một lần, máy đọc (Tesseract tại chỗ, không bên thứ ba) tự xác thực GPLX Việt Nam khi đủ điều kiện (còn lại — kể cả bằng quốc tế/nước ngoài — chờ người duyệt), cổng chặn lúc gửi yêu cầu thuê tự lái/dài hạn theo hạng + hạn cho CHÍNH chuyến; khách vãng lai đăng nhập bằng OTP trước bước bằng lái | **Accepted; mở rộng 0044 (thêm điều kiện trước khi gửi) và 0053 điều 7** |
 | [0058](0058-momo-vnpay-payment-gateways.md) | MoMo và VNPAY là phương thức thanh toán BỔ SUNG cho chuyển khoản SePay: sổ riêng `payment_gateway_orders` (không ghi giả vào `bank_transactions`), một đường tiền chung với SePay (`applyBankPaymentWithinTx`), chỉ IPN có chữ ký hoặc truy vấn phía server đổi được tiền, không tự hoàn; mặc định tắt, production từ chối boot khi bật cổng cho bất kỳ luồng nào cho tới khi Accepted | **Proposed; mở rộng 0016/0022 (nhiều nhà cung cấp), không ghi đè ADR nào; còn mở Q1–Q8** |
+| [0059](0059-vehicle-vat-invoice-support-flag.md) | "Có hỗ trợ xuất hoá đơn VAT" là THÔNG TIN chủ xe công bố theo từng xe (`vehicles.vat_invoice_supported`, mặc định `false`, mirror sang `public_listings` qua `ListingsService`): khách lọc + thấy dấu hiệu, hoá đơn do chủ xe xuất cho tiền thuê, XePrime không xuất thay và không đổi giá/phí/thuế/đặt xe; `PATCH /vehicles/:id/vat-invoice` lưu ngay, áp như nhau hai tuyến, không mở cho phiên hỗ trợ | **Accepted; mở rộng 0008 (cột mirror mới), không ghi đè ADR nào** |
 
 ## ADR đã gỡ khỏi repo
 

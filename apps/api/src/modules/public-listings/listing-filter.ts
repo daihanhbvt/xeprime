@@ -37,7 +37,8 @@ export type FacetDimension =
   | 'hourly'
   | 'delivery'
   | 'noCollateral'
-  | 'discount';
+  | 'discount'
+  | 'vatInvoice';
 
 /** Bộ filter dùng chung giữa search và facets (facets không có sort/paging). */
 export type ListingFilterQuery = Omit<PublicListingQueryDto, 'sort' | 'page' | 'limit'> & {
@@ -210,6 +211,7 @@ export function buildListingWhere(
   if (exclude !== 'delivery' && query.delivery) and.push({ deliveryEnabled: true });
   if (exclude !== 'noCollateral' && query.noCollateral) and.push({ noCollateral: true });
   if (exclude !== 'discount' && query.discount) and.push({ discountPercent: { gt: 0 } });
+  if (exclude !== 'vatInvoice' && query.vatInvoice) and.push({ vatInvoiceSupported: true });
 
   return { ...publicListingScope(), AND: and };
 }
@@ -315,6 +317,9 @@ export function buildListingWhereSql(
   }
   if (exclude !== 'discount' && query.discount) {
     and.push(Prisma.sql`pl."discount_percent" > 0`);
+  }
+  if (exclude !== 'vatInvoice' && query.vatInvoice) {
+    and.push(Prisma.sql`pl."vat_invoice_supported" = true`);
   }
 
   return Prisma.join(and, ' AND ');

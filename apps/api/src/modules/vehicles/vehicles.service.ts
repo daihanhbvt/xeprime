@@ -138,6 +138,7 @@ const DETAIL_SELECT = {
   withDriverInterCityPrice: true,
   withDriverOneWayPrice: true,
   deliveryEnabled: true,
+  vatInvoiceSupported: true,
   description: true,
   createdAt: true,
 } satisfies Prisma.VehicleSelect;
@@ -1517,6 +1518,64 @@ export class VehiclesService {
   }
 
   /**
+   * Công tắc "Có hỗ trợ xuất hoá đơn VAT" của chủ xe (ADR 0059).
+   *
+   * Đây là THÔNG TIN chủ xe công bố cho khách, không phải một chức năng hoá đơn: hai bên tự thoả
+   * thuận và xác nhận trực tiếp; XePrime không xuất hoá đơn thay chủ xe, và tính năng này không tạo,
+   * phát hành hay lưu hoá đơn nào. Vì thế không có
+   * cổng nào ngoài quyền và phạm vi (controller): cờ áp như nhau cho cả hai tuyến — không đọc gói,
+   * không đọc `billingMode` — và cho xe ở mọi trạng thái duyệt/hiển thị. Nó cũng không chạm giá,
+   * phí, thuế khấu trừ (ADR 0028 §4), yêu cầu/đơn/lịch bận đang chạy hay luồng duyệt xe.
+   *
+   * Đúng hai thứ đổi, trong CÙNG transaction: cột trên `vehicles`, và bản sao trên
+   * `public_listings` qua writer duy nhất của bảng đó (ADR 0008 §1). Xe chưa ra chợ thì
+   * `syncFromVehicle` chỉ chạm `status` — bản sao được ghi đủ ở lượt sync đưa xe ra chợ.
+   *
+   * Compare-and-set như `setMarketplaceVisibility`: `where` mang giá trị CŨ, nên hai lượt bấm song
+   * song chỉ một lượt ghi được (một dòng audit cho một lần đổi thật), và gửi lại đúng giá trị đang
+   * có là no-op trước transaction.
+   */
+  async setVatInvoiceSupport(
+    tenantId: string,
+    id: string,
+    userId: string,
+    supported: boolean,
+  ): Promise<VehicleDetailDto> {
+    const current = await this.prisma.vehicle.findFirst({
+      where: { id, tenantId, deletedAt: null },
+      select: { vatInvoiceSupported: true },
+    });
+    if (!current) throw notFound();
+    if (current.vatInvoiceSupported === supported) return this.getOne(tenantId, id);
+
+    await this.prisma.$transaction(async (tx) => {
+      const res = await tx.vehicle.updateMany({
+        where: { id, tenantId, deletedAt: null, vatInvoiceSupported: !supported },
+        data: { vatInvoiceSupported: supported },
+      });
+      // Không ghi được nghĩa là ai đó đã đổi trước — trạng thái thật trả ở `getOne` bên dưới.
+      if (res.count !== 1) return;
+
+      await this.listings.syncFromVehicle(id, tx);
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId: userId,
+          actorScope: AUDIT_ACTOR_SCOPE.TENANT,
+          action: 'vehicle.vat_invoice.update',
+          targetType: APPROVAL_TARGET_TYPE.VEHICLE,
+          targetId: id,
+          before: { vatInvoiceSupported: !supported },
+          after: { vatInvoiceSupported: supported },
+        },
+        tx,
+      );
+    });
+
+    return this.getOne(tenantId, id);
+  }
+
+  /**
    * MẶT TIỀN GIAN HÀNG đã đủ để bán chưa — cổng CHỈ áp với tuyến gói (ADR 0040).
    *
    * ## Vì sao chỉ tuyến gói
@@ -2167,6 +2226,7 @@ function toDetail(
     withDriverInterCityPrice: v.withDriverInterCityPrice as unknown as string | null,
     withDriverOneWayPrice: v.withDriverOneWayPrice as unknown as string | null,
     deliveryEnabled: v.deliveryEnabled,
+    vatInvoiceSupported: v.vatInvoiceSupported,
     description: v.description,
     createdAt: v.createdAt as unknown as string,
     images: media.map((m) => m.url),
@@ -2367,6 +2427,7 @@ async function listingSnapshot(
       withDriverDailyPrice: true,
       deliveryEnabled: true,
       noCollateral: true,
+      vatInvoiceSupported: true,
       billingMode: true,
       serviceFeePercent: true,
       discountPercent: true,
