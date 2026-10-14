@@ -84,6 +84,12 @@ interface ResponsiveDialogBaseProps {
    * (`maskClosable` trần đã deprecated).
    */
   maskClosable?: boolean;
+  /**
+   * Hiện nút đóng ở góc. Mặc định `true`. `false` CHỈ cho hộp thoại BẮT BUỘC (vd xác minh SĐT
+   * của tài khoản — ADR 0060): khi đó tắt luôn `closeOnEsc` + `maskClosable`, và nội dung phải tự
+   * cấp một lối ra tường minh (vd "Đăng xuất") — một hộp không đóng được và không có lối ra là bẫy.
+   */
+  closable?: boolean;
   /** Mặc định `true`: mỗi lần mở là state mới. `false` khi cần giữ nội dung đã nhập. */
   destroyOnClose?: boolean;
   /**
@@ -151,6 +157,7 @@ export function ResponsiveDialog({
   confirmLoading = false,
   closeOnEsc = true,
   maskClosable = true,
+  closable = true,
   destroyOnClose = true,
   bodyScroll = 'body',
   className,
@@ -204,6 +211,7 @@ export function ResponsiveDialog({
         title={headerTitle}
         // Quy tắc 6 (Figma): màn toàn trang đọc như một trang mới → mũi tên quay lại, không phải X.
         closeIcon={isSheet ? undefined : <ArrowLeftOutlined />}
+        closable={closable}
         footer={resolvedFooter}
         mask={maskConfig}
         keyboard={escEnabled}
@@ -230,6 +238,7 @@ export function ResponsiveDialog({
       width={MODAL_WIDTH[size]}
       footer={resolvedFooter ?? null}
       centered
+      closable={closable}
       mask={maskConfig}
       keyboard={escEnabled}
       destroyOnHidden={destroyOnClose}

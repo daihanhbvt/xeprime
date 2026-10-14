@@ -12,6 +12,7 @@ import type { CurrentUser } from '@/hooks/use-current-user';
 import { cx } from '@/lib/cx';
 import { useAuthCache } from '../hooks/use-auth-actions';
 import {
+  AUTH_CONTEXT,
   AUTH_MODE,
   resolveCustomerDestination,
   resolveOwnerCtaHref,
@@ -32,15 +33,19 @@ export function AuthModal() {
   const tCommon = useTranslations('Common');
   const router = useRouter();
   const isMobile = useIsMobile();
-  const { isOpen, mode, next, errorCode, close, setMode, takePendingAction } = useAuthModal();
+  const { isOpen, mode, next, errorCode, context, close, setMode, takePendingAction } =
+    useAuthModal();
+  /** Đang dở luồng thuê xe: hộp nói vì sao được hỏi đăng nhập, và xong thì trả khách về luồng đó. */
+  const forBooking = context === AUTH_CONTEXT.BOOKING;
   const { refreshAfterAuth } = useAuthCache();
   const [registered, setRegistered] = useState<CurrentUser | null>(null);
 
   async function handleAuthenticated(user: CurrentUser, ctx: { justRegistered: boolean }) {
     const fresh = (await refreshAfterAuth(user)) ?? user;
 
-    if (ctx.justRegistered) {
-      // Không điều hướng vội: khách vừa tạo tài khoản phải được CHỌN đi đâu tiếp.
+    if (ctx.justRegistered && !forBooking) {
+      // Không điều hướng vội: khách vừa tạo tài khoản phải được CHỌN đi đâu tiếp. Trừ khi họ đang
+      // dở một yêu cầu thuê: khi đó việc tiếp theo đã rõ, và hộp yêu cầu thuê bên dưới tự đi tiếp.
       setRegistered(fresh);
       return;
     }
@@ -99,7 +104,11 @@ export function AuthModal() {
             <span className={styles.brandName}>{APP_NAME}</span>
           </div>
           <div className={styles.sub}>
-            {mode === AUTH_MODE.LOGIN ? t('loginSub') : t('registerSub')}
+            {forBooking
+              ? t('bookingSub')
+              : mode === AUTH_MODE.LOGIN
+                ? t('loginSub')
+                : t('registerSub')}
           </div>
         </div>
       </div>

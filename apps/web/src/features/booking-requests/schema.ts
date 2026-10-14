@@ -94,16 +94,9 @@ export interface RequestFormSchemaOptions {
 export function requestFormSchema(t: FormTranslate, options: RequestFormSchemaOptions) {
   const { canConfirmLocation } = options;
   return yup.object({
-    customerName: yup.string().trim().required(t('errors.customerName')).max(255),
-    customerPhone: yup
-      .string()
-      .trim()
-      .required(t('errors.customerPhone'))
-      .matches(/^(0|\+84)\d{9}$/, t('errors.customerPhoneFormat')),
     /*
-     * KHÔNG hỏi email. Liên hệ của luồng này là SĐT — nó được xác thực bằng OTP ngay tại đây và
-     * là thứ gian hàng dùng để gọi lại. Email từng là một ô "không bắt buộc" mà gần như không ai
-     * điền, còn cột `customerEmail` bên API vẫn nhận (khách có tài khoản đã có sẵn email).
+     * KHÔNG có ô liên hệ nào (ADR 0060): họ tên + SĐT đã xác minh của người thuê đọc từ TÀI KHOẢN
+     * đang đăng nhập ở server, không phải từ form.
      */
     /** Dịch vụ của chuyến (17/08) — component chỉ đưa ra lựa chọn nằm trong serviceTypes của xe. */
     serviceType: yup

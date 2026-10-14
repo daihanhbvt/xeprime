@@ -3,10 +3,8 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
-  Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { createHash, randomBytes } from 'node:crypto';
 import { isUniqueViolation, markBadgesDirty, newId, Prisma } from '@xeprime/prisma';
 import {
@@ -27,9 +25,9 @@ import {
   writeMembershipBranches,
   type ResolvedBranchScope,
 } from './member-branch-scope';
-import { EmailService } from '../email/email.service';
 import { RequestRealmService } from '../auth/request-realm.service';
-import { maskEmail } from '../../common/mask';
+import { maskEmail, maskPhone } from '../../common/mask';
+import { normalizePhone, toLocalPhone } from '../../common/phone';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
 import {
   CreateInviteDto,
@@ -58,8 +56,17 @@ import {
  *     và với refresh token native (ADR 0017). Đọc được database không đồng nghĩa với chiếm được
  *     một chỗ trong gian hàng.
  *  2. **Có hạn.** Một lời mời sống mãi là một cánh cửa mở mãi.
- *  3. **Gắn với ĐÚNG email được mời.** Link đi qua hộp thư và bị chuyển tiếp là chuyện thường;
- *     "ai cầm link thì vào được" biến một email chuyển nhầm thành một tài khoản lạ trong gian hàng.
+ *  3. **Gắn với ĐÚNG số điện thoại được mời** (ADR 0060 — trước đó là email). Link đi qua Zalo /
+ *     tin nhắn và bị chuyển tiếp là chuyện thường; "ai cầm link thì vào được" biến một tin chuyển
+ *     nhầm thành một tài khoản lạ trong gian hàng. Chỉ tài khoản đối tác có ĐÚNG số đó, ĐÃ XÁC MINH
+ *     (đăng ký bằng OTP, hoặc xác minh ở bước hoàn thiện hồ sơ), mới nhận được.
+ *
+ * ## Vì sao không gửi thư nữa
+ *
+ * Tài khoản đối tác đăng ký bằng SĐT và không bắt buộc có email (ADR 0060), nên một lời mời đi
+ * bằng email gắn với email sẽ không bao giờ nhận được. Link trả về cho NGƯỜI MỜI đúng một lần
+ * (`inviteUrl`) để họ tự gửi — không tốn tin nhắn có phí. Lời mời email tạo trước đó vẫn trả lời
+ * được tới khi hết hạn (đường so email giữ nguyên trong `loadAnswerable`).
  */
 
 /** 7 ngày — đủ cho một người bận qua một kỳ nghỉ, không đủ để thành một cánh cửa bỏ quên. */
@@ -67,6 +74,7 @@ const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 const SELECT = {
   id: true,
+  phone: true,
   email: true,
   roleKey: true,
   status: true,
@@ -77,13 +85,9 @@ const SELECT = {
 
 @Injectable()
 export class InvitesService {
-  private readonly logger = new Logger(InvitesService.name);
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
-    private readonly email: EmailService,
-    private readonly config: ConfigService,
     /** Link mời trỏ về SITE PARTNER — nơi duy nhất nhận lời mời được (ADR 0053 điều 6). */
     private readonly realms: RequestRealmService,
   ) {}
@@ -120,9 +124,9 @@ export class InvitesService {
   /**
    * Gửi một lời mời.
    *
-   * Không tiết lộ email đã có tài khoản hay chưa: cùng một phản hồi cho cả hai, vì endpoint này
-   * chỉ cần quyền `members.invite` của MỘT gian hàng bất kỳ, và một danh sách email để dò là
-   * thứ ai cũng có.
+   * Không tiết lộ số đó đã có tài khoản hay chưa: cùng một phản hồi cho cả hai, vì endpoint này
+   * chỉ cần quyền `members.invite` của MỘT gian hàng bất kỳ, và một danh bạ để dò là thứ ai cũng
+   * có. (Đã là thành viên CỦA CHÍNH gian hàng này thì báo — người mời vốn thấy danh sách đó.)
    */
   async create(
     tenantId: string,
@@ -130,7 +134,7 @@ export class InvitesService {
     dto: CreateInviteDto,
     /**
      * Phạm vi chi nhánh của NGƯỜI MỜI — trần của lời mời (ADR 0052). Không có nó, một quản lý
-     * chi nhánh A mời email thứ hai của chính họ với "Tất cả chi nhánh" là có toàn gian hàng.
+     * chi nhánh A mời số thứ hai của chính họ với "Tất cả chi nhánh" là có toàn gian hàng.
      */
     actorAllowed: readonly string[] | null,
   ): Promise<CreateInviteResultDto> {
@@ -141,7 +145,8 @@ export class InvitesService {
       });
     }
 
-    const email = normalizeEmail(dto.email);
+    // Dạng CHUẨN `84…` — cùng dạng `users.phone` lưu, nên so khớp lúc nhận là so chuỗi.
+    const phone = normalizePhone(dto.phone);
 
     // Người đã ở trong gian hàng thì đổi vai trò, không mời lại — mời lại sinh một lời mời
     // không bao giờ nhận được và một dòng rác trong danh sách.
@@ -149,13 +154,9 @@ export class InvitesService {
       where: {
         tenantId,
         status: { not: MEMBERSHIP_STATUS.REMOVED },
-        // `mode: 'insensitive'` chứ không so bằng chuỗi: không ràng buộc nào ép `users.email`
-        // phải là chữ thường (đăng ký đi bằng SĐT; email đến từ social login hoặc nhập tay).
-        // So khớp phân biệt hoa/thường ở đây sẽ bỏ sót một thành viên đang có và sinh ra một
-        // lời mời không bao giờ nhận được — `accept` sẽ chặn, nhưng sau khi đã tốn một email.
-        // Thành viên gian hàng luôn là tài khoản partner (ADR 0053) — tài khoản khách cùng email
-        // là một người lạ với gian hàng, không phải "đã là thành viên".
-        user: { realm: ACCOUNT_REALM.PARTNER, email: { equals: email, mode: 'insensitive' } },
+        // Thành viên gian hàng luôn là tài khoản partner (ADR 0053) — tài khoản khách cùng số là
+        // một người lạ với gian hàng, không phải "đã là thành viên".
+        user: { realm: ACCOUNT_REALM.PARTNER, phone },
       },
       select: { userId: true },
     });
@@ -171,16 +172,18 @@ export class InvitesService {
 
     const row = await this.prisma.$transaction(async (tx) => {
       /*
-       * Lời mời đang chờ trước đó cho cùng email BỊ THU HỒI — đúng khuôn `requestPasswordReset`:
-       * gửi lại nghĩa là link cũ hết giá trị.
+       * Lời mời đang chờ trước đó cho cùng số BỊ THU HỒI — đúng khuôn `requestPasswordReset`:
+       * gửi lại nghĩa là link cũ hết giá trị, và luôn chỉ còn MỘT link sống cho một số.
        *
-       * Đây cũng là chỗ thay cho một unique index bộ phận `(tenant_id, email) WHERE pending`:
-       * hai người cùng bấm mời một lúc thì người sau thu hồi lời mời của người trước, và kết quả
-       * vẫn là đúng MỘT link còn sống. Không có tiền ở đây nên không cần tới ràng buộc DB
-       * (CLAUDE.md mục 5 nói về sổ tiền), nhưng vẫn không được để hai link cùng sống.
+       * Thu hồi-rồi-tạo một mình KHÔNG giữ được điều đó: ở READ COMMITTED hai lượt mời song song
+       * cùng thấy 0 lời mời đang chờ, cùng tạo, và hai link cùng sống — thu hồi một cái ở bảng vẫn
+       * còn cái kia. Khoá tư vấn theo (gian hàng, số) xếp hai lượt đó thành tuần tự: lượt sau chờ
+       * lượt trước commit rồi mới thu hồi, nên thấy và thu hồi đúng lời mời vừa tạo.
        */
+      const lockKey = `tenant-invite:${tenantId}:${phone}`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`;
       await tx.tenantInvite.updateMany({
-        where: { tenantId, email, status: INVITE_STATUS.PENDING },
+        where: { tenantId, phone, status: INVITE_STATUS.PENDING },
         data: { status: INVITE_STATUS.REVOKED },
       });
 
@@ -191,7 +194,7 @@ export class InvitesService {
         data: {
           id: newId(),
           tenantId,
-          email,
+          phone,
           roleKey: dto.roleKey,
           branchScope: scope.branchScope,
           branchIds: scope.branchIds,
@@ -211,9 +214,9 @@ export class InvitesService {
           action: 'member.invite',
           targetType: 'tenant_invite',
           targetId: created.id,
-          // Email là định danh của lời mời nên phải ghi; token thì KHÔNG bao giờ (ADR 0017 —
+          // SĐT là định danh của lời mời nên phải ghi; token thì KHÔNG bao giờ (ADR 0017 —
           // audit là nơi nhiều người đọc được hơn database).
-          after: { email, roleKey: dto.roleKey, ...scope },
+          after: { phone, roleKey: dto.roleKey, ...scope },
         },
         tx,
       );
@@ -221,37 +224,8 @@ export class InvitesService {
       return created;
     });
 
-    // Gửi mail NGOÀI transaction: SMTP chậm và có thể lỗi, và một transaction giữ mở suốt thời
-    // gian đó khoá hàng lâu hơn cần thiết.
-    const tenant = await this.prisma.tenant.findUniqueOrThrow({
-      where: { id: tenantId },
-      select: { name: true },
-    });
-
-    /*
-     * SMTP hỏng KHÔNG được làm hỏng cả thao tác.
-     *
-     * Lời mời đã nằm trong database ở dòng trên và đã hiện ở bảng "Lời mời đang chờ". Để lỗi
-     * gửi thư ném lên là biến một việc ĐÃ XONG MỘT NỬA thành HTTP 500 — người dùng thấy "Máy chủ
-     * gặp sự cố", bấm lại, và mỗi lần bấm lại thu hồi lời mời cũ rồi tạo lời mời mới. Đó đúng là
-     * chuyện đã xảy ra trên staging ngày 04/09/2026 khi SMTP thật vừa được bật.
-     *
-     * Nhưng cũng KHÔNG im lặng nuốt lỗi: `emailSent = false` đi thẳng lên giao diện để người gửi
-     * biết mà bấm Gửi lại, thay vì ngồi chờ một lá thư không bao giờ tới. Nói dối rằng đã gửi
-     * còn tệ hơn báo lỗi.
-     */
-    let emailSent = true;
-    try {
-      await this.email.sendTenantInvite(email, tenant.name, this.inviteUrl(token), expiresAt);
-    } catch (error) {
-      emailSent = false;
-      // Địa chỉ nhận đã che, và KHÔNG log link/token — log là nơi nhiều người đọc được hơn DB.
-      this.logger.error(
-        `Không gửi được thư mời tới ${maskEmail(email)}: ${error instanceof Error ? error.message : 'lỗi không rõ'}`,
-      );
-    }
-
-    return { ...toDto(row), emailSent };
+    // Link chỉ đi ra ĐÚNG một lần, cho người mời — token thô không nằm ở DB, log hay audit nào.
+    return { ...toDto(row), inviteUrl: this.inviteUrl(token) };
   }
 
   async revoke(
@@ -263,7 +237,14 @@ export class InvitesService {
   ): Promise<InviteDto> {
     const current = await this.prisma.tenantInvite.findFirst({
       where: { id: inviteId, tenantId },
-      select: { id: true, status: true, email: true, branchScope: true, branchIds: true },
+      select: {
+        id: true,
+        status: true,
+        phone: true,
+        email: true,
+        branchScope: true,
+        branchIds: true,
+      },
     });
     if (!current) {
       throw new NotFoundException({
@@ -296,7 +277,7 @@ export class InvitesService {
           action: 'member.invite_revoke',
           targetType: 'tenant_invite',
           targetId: inviteId,
-          before: { status: current.status, email: current.email },
+          before: { status: current.status, phone: current.phone, email: current.email },
           after: { status: INVITE_STATUS.REVOKED },
         },
         tx,
@@ -315,7 +296,8 @@ export class InvitesService {
       tenantName: invite.tenant.name,
       roleKey: invite.roleKey,
       invitedByName: invite.creator.displayName,
-      invitedEmailMasked: maskEmail(invite.email) ?? '',
+      invitedPhoneMasked: invite.phone ? maskPhone(invite.phone) : null,
+      invitedEmailMasked: invite.phone ? null : maskEmail(invite.email),
       expiresAt: invite.expiresAt.toISOString(),
     };
   }
@@ -492,6 +474,7 @@ export class InvitesService {
       select: {
         id: true,
         tenantId: true,
+        phone: true,
         email: true,
         roleKey: true,
         branchScope: true,
@@ -531,7 +514,7 @@ export class InvitesService {
 
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { email: true, realm: true },
+      select: { email: true, realm: true, phone: true, phoneVerifiedAt: true },
     });
     // Chỉ tài khoản ĐỐI TÁC vào được gian hàng (ADR 0053 điều 6). Route đã chỉ mở cho realm
     // partner; kiểm lại ở đây để một lời gọi nội bộ sai realm nhận 403 rõ ràng thay vì để trigger
@@ -542,8 +525,24 @@ export class InvitesService {
         message: 'Chỉ tài khoản đối tác mới nhận được lời mời vào gian hàng',
       });
     }
-    // So khớp email đã CHUẨN HOÁ: `Nhan.Vien@Cty.VN` trong thư mời và `nhan.vien@cty.vn` lúc
-    // đăng ký là cùng một người, và bắt họ chịu thua vì chữ hoa là một lỗi sản phẩm.
+    /*
+     * Lời mời theo SĐT (ADR 0060): số ĐÃ XÁC MINH của tài khoản phải đúng số được mời. "Đã xác
+     * minh" là điều kiện, không phải chi tiết: không có nó, ai tự khai số của người khác vào hồ sơ
+     * cũng nhận được chỗ của người đó trong gian hàng.
+     */
+    if (invite.phone) {
+      if (!user?.phone || !user.phoneVerifiedAt || normalizePhone(user.phone) !== invite.phone) {
+        throw new ForbiddenException({
+          code: API_ERROR_CODE.INVITE_PHONE_MISMATCH,
+          message: 'Lời mời này dành cho một số điện thoại khác',
+          details: { invitedPhone: maskPhone(invite.phone) },
+        });
+      }
+      return invite;
+    }
+
+    // Lời mời EMAIL tạo trước ADR 0060 — còn trả lời được tới khi hết hạn. So khớp email đã CHUẨN
+    // HOÁ: `Nhan.Vien@Cty.VN` và `nhan.vien@cty.vn` là cùng một người.
     if (!user?.email || normalizeEmail(user.email) !== invite.email) {
       throw new ForbiddenException({
         code: API_ERROR_CODE.INVITE_EMAIL_MISMATCH,
@@ -594,7 +593,9 @@ type InviteRow = Prisma.TenantInviteGetPayload<{ select: typeof SELECT }>;
 function toDto(row: InviteRow): InviteDto {
   return {
     id: row.id,
-    email: row.email ?? '',
+    // Dạng nội địa `0…` — đúng dạng người mời vừa gõ, không phải dạng lưu `84…`.
+    phone: row.phone ? toLocalPhone(row.phone) : null,
+    email: row.email,
     roleKey: row.roleKey,
     status: row.status,
     expiresAt: (row.expiresAt as unknown as Date).toISOString(),

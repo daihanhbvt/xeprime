@@ -27,6 +27,12 @@ interface ContactVerifyModalProps {
   readonly onClose: () => void;
   /** Giá trị hiện tại — chỉ để nói "đang là X", KHÔNG điền sẵn vào ô nhập (xem docblock). */
   readonly current: string | null;
+  /**
+   * Hộp BẮT BUỘC — tài khoản chưa có SĐT đã xác minh (ADR 0060, `AccountPhoneGate`). Không đóng
+   * được bằng nút X, Esc hay bấm nền; lối ra duy nhất ngoài xác minh là "Đăng xuất". Ô nhập điền
+   * sẵn SĐT hiện có (chưa xác minh) của tài khoản: việc ở đây là CHỨNG MINH số đó, không phải đổi.
+   */
+  readonly required?: { readonly onSignOut: () => void };
 }
 
 /**
@@ -39,7 +45,13 @@ interface ContactVerifyModalProps {
  * Ô nhập luôn RỖNG chứ không điền sẵn giá trị cũ: việc ở đây là nhập một định danh mới, và một ô
  * đã có sẵn nội dung đúng thì mời người dùng bấm "Gửi mã" cho chính cái họ đang có.
  */
-export function ContactVerifyModal({ channel, open, onClose, current }: ContactVerifyModalProps) {
+export function ContactVerifyModal({
+  channel,
+  open,
+  onClose,
+  current,
+  required,
+}: ContactVerifyModalProps) {
   const t = useTranslations('Account.contact');
   const tCommon = useTranslations('Common');
   const { message } = App.useApp();
@@ -55,7 +67,7 @@ export function ContactVerifyModal({ channel, open, onClose, current }: ContactV
   );
   const { control, handleSubmit } = useForm<AccountContactValues>({
     resolver,
-    defaultValues: { identifier: '' },
+    defaultValues: { identifier: required ? (current ?? '') : '' },
   });
 
   /*
@@ -74,13 +86,15 @@ export function ContactVerifyModal({ channel, open, onClose, current }: ContactV
 
   const sendCode = handleSubmit((values) => flow.send(values.identifier));
 
-  const title = isPhone
-    ? current
-      ? t('changePhoneTitle')
-      : t('addPhoneTitle')
-    : current
-      ? t('changeEmailTitle')
-      : t('addEmailTitle');
+  const title = required
+    ? t('requiredTitle')
+    : isPhone
+      ? current
+        ? t('changePhoneTitle')
+        : t('addPhoneTitle')
+      : current
+        ? t('changeEmailTitle')
+        : t('addEmailTitle');
 
   /*
    * Nút chính nằm ở FOOTER của hộp thoại nhưng `<form>` ở trong thân, nên nó nối bằng
@@ -93,9 +107,15 @@ export function ContactVerifyModal({ channel, open, onClose, current }: ContactV
 
   const footer = (
     <div className={styles.footer}>
-      <Button onClick={onClose} disabled={flow.verifying}>
-        {tCommon('actions.cancel')}
-      </Button>
+      {required ? (
+        <Button onClick={required.onSignOut} disabled={flow.verifying}>
+          {t('signOut')}
+        </Button>
+      ) : (
+        <Button onClick={onClose} disabled={flow.verifying}>
+          {tCommon('actions.cancel')}
+        </Button>
+      )}
       {isIdentifierStep ? (
         <Button
           type="primary"
@@ -122,7 +142,11 @@ export function ContactVerifyModal({ channel, open, onClose, current }: ContactV
   return (
     <ResponsiveDialog
       open={open}
-      onClose={onClose}
+      // Hộp bắt buộc: không đường đóng vô ý nào — nút "Đăng xuất" ở footer là lối ra tường minh.
+      onClose={required ? () => undefined : onClose}
+      closable={!required}
+      closeOnEsc={!required}
+      maskClosable={!required}
       title={title}
       size="sm"
       footer={footer}
@@ -131,14 +155,16 @@ export function ContactVerifyModal({ channel, open, onClose, current }: ContactV
       <div className={styles.body}>
         <p className={styles.lead}>
           {isIdentifierStep
-            ? isPhone
-              ? t('phoneLead')
-              : t('emailLead')
+            ? required
+              ? t('requiredLead')
+              : isPhone
+                ? t('phoneLead')
+                : t('emailLead')
             : t('codeSentTo')}{' '}
           {isIdentifierStep ? null : <strong className={styles.strong}>{flow.sentTo}</strong>}
         </p>
 
-        {current && isIdentifierStep ? (
+        {current && isIdentifierStep && !required ? (
           <p className={styles.current}>
             {t('currentValue')} <strong className={styles.strong}>{current}</strong>
           </p>

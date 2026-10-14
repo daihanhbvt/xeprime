@@ -161,6 +161,12 @@ thiếu chỉ là các endpoint **phát phiên** — chúng trả cookie, thứ 
 | Google/Facebook | `GET /auth/social/:provider` → cookie | **`…?client=native` → one-time code → `POST /auth/mobile/social/exchange`** |
 | Khách vãng lai đặt xe | `POST /public/booking-requests` → cookie | **cùng route + `client: "native"` → `receipt.session`** |
 
+> **Sửa 14/10/2026 — ADR 0060.** Dòng "SĐT + OTP" và dòng "Khách vãng lai đặt xe" hết hiệu lực: hai
+> route đăng nhập OTP trả 410 `OTP_LOGIN_RETIRED`; `POST /public/booking-requests` cần phiên tài khoản
+> khách và không phát phiên nữa (`client` bị bỏ qua, `receipt.session` luôn rỗng);
+> `test/mobile-register-and-guest-session.spec.ts` bị gỡ cùng hành vi nó khoá. Dòng "Đăng ký" nhận
+> thêm `code` (OTP purpose `register`). Đọc các đoạn dưới đây như lịch sử.
+
 Hai bước OTP trước đó (`send-otp`, `verify-otp`) dùng chung: chúng trả JSON thuần, không đụng cookie.
 
 Hai dòng cuối là chỗ dễ sót nhất khi rà, vì cả hai **cấp phiên kèm theo một hành động khác** —

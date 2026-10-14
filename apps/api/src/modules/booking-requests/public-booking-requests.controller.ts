@@ -1,15 +1,8 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ACCOUNT_REALM, ACCOUNT_REALM_VALUES } from '@xeprime/types';
-import type { Request, Response } from 'express';
-import { Public, Realms } from '../../common/decorators';
-import { resolveOptionalUserId } from '../../common/optional-user';
-import { PrismaService } from '../../prisma/prisma.service';
-import { AuthService } from '../auth/auth.service';
-import type { MobileDeviceDto } from '../auth/dto/mobile-auth.dto';
-import { NativeSessionService, type NativeDeviceInfo } from '../auth/native-session.service';
-import { RequestRealmService } from '../auth/request-realm.service';
-import { SessionService } from '../auth/session.service';
+import { CurrentUser, Public, Realms } from '../../common/decorators';
+import type { AuthenticatedUser } from '../../common/types/request-context';
 import {
   BookingRequestReceiptDto,
   CheckAvailabilityDto,
@@ -21,89 +14,36 @@ import {
 import { BookingRequestsService } from './booking-requests.service';
 
 /**
- * Gửi yêu cầu thuê từ Marketplace — công khai (@Public), không cần đăng nhập trước.
+ * Yêu cầu thuê từ Marketplace.
  *
- * KHÔNG nhận `tenant_id`: server suy từ xe (chỉ xe đã duyệt của shop đang hoạt động). Rate
- * limit toàn cục (ThrottlerGuard) chặn spam. Không giữ chỗ lịch — mới là yêu cầu.
+ * KHÔNG nhận `tenant_id`: server suy từ xe (chỉ xe đã duyệt của shop đang hoạt động). Không giữ
+ * chỗ lịch — mới là yêu cầu (ADR 0044).
  *
- * Passwordless: khách vãng lai đã xác thực SĐT (OTP purpose=booking) được service tạo/đăng nhập
- * tài khoản theo SĐT, rồi controller cấp phiên để khách vào thẳng /trips + chat mà không phải
- * nhập mật khẩu. Khách đang đăng nhập giữ nguyên phiên.
+ * **Gửi yêu cầu cần TÀI KHOẢN KHÁCH đã đăng nhập** (ADR 0060). Route `POST` không còn `@Public()`:
+ * `AuthGuard` trả 401 khi chưa có phiên (cookie của site khách hoặc Bearer của app XePrime), và
+ * `@Realms(customer)` trả 403 `REALM_NOT_ALLOWED` cho phiên partner/platform. Không còn đường
+ * "khách vãng lai xác thực OTP rồi được tạo tài khoản + cấp phiên" — chỗ cấp phiên duy nhất ngoài
+ * `modules/auth` đã gỡ cùng với nó. Danh tính của yêu cầu đọc từ tài khoản, không từ payload.
  *
- * Phiên đó có HAI dạng, theo `client` trong body: web nhận cookie httpOnly (ADR 0002), app native
- * nhận cặp token trong `receipt.session` (ADR 0017). Đây là chỗ DUY NHẤT ngoài `modules/auth` cấp
- * phiên, và nó cấp vì cùng một lý do: OTP `purpose=booking` đã chứng minh sở hữu SĐT rồi, hỏi lại
- * bằng một vòng OTP `purpose=login` nữa là hỏi cùng một câu hai lần.
+ * Hai route XEM lịch trống ở dưới vẫn công khai và mở cho mọi site: chúng chỉ nói xe bận hay rảnh,
+ * và khách chưa đăng nhập vẫn phải kiểm được khung giờ trước khi được mời đăng nhập.
  */
 @ApiTags('public-booking-requests')
 @Controller('public/booking-requests')
-// Đặt xe là việc của KHÁCH (ADR 0053): site partner/admin gọi tới là 403 `REALM_NOT_ALLOWED`. Hai route
-// XEM lịch trống ở dưới mở cho mọi site — chúng chỉ nói xe bận hay rảnh.
 @Realms(ACCOUNT_REALM.CUSTOMER)
 export class PublicBookingRequestsController {
-  constructor(
-    private readonly requests: BookingRequestsService,
-    private readonly sessions: SessionService,
-    private readonly nativeSessions: NativeSessionService,
-    private readonly auth: AuthService,
-    private readonly realms: RequestRealmService,
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly requests: BookingRequestsService) {}
 
-  @Public()
   @Post()
-  @ApiOperation({ summary: 'Khách gửi yêu cầu thuê một xe trên Marketplace' })
+  @ApiOperation({
+    summary: 'Khách (đã đăng nhập, SĐT đã xác minh) gửi yêu cầu thuê một xe trên Marketplace',
+  })
   @ApiCreatedResponse({ type: BookingRequestReceiptDto })
-  async submit(
+  submit(
     @Body() dto: CreateBookingRequestDto,
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<BookingRequestReceiptDto> {
-    // Chỉ phiên KHÁCH tính là người đặt. Phiên partner (app Partner gọi nhầm) đi tiếp như khách vãng
-    // lai: OTP tìm đúng tài khoản KHÁCH của số đó — và luật chặn tự đặt xe vẫn áp (ADR 0053 điều 7).
-    const customerUserId = await resolveOptionalUserId(
-      req,
-      {
-        sessions: this.sessions,
-        prisma: this.prisma,
-        realms: this.realms,
-        nativeSessions: this.nativeSessions,
-      },
-      ACCOUNT_REALM.CUSTOMER,
-    );
-    const { receipt, loginUserId } = await this.requests.submitPublic(dto, customerUserId);
-    if (!loginUserId) return receipt;
-
-    /*
-     * Khách vãng lai vừa được tạo tài khoản từ SĐT đã xác thực — cấp phiên luôn, và cấp ĐÚNG
-     * LOẠI phiên mà client dùng được.
-     *
-     * Web: cookie httpOnly như trước. Native: cặp token trong body — app không có cookie jar, nên
-     * một `Set-Cookie` ở đây là phiên rơi vào hư không và khách vừa đặt xe xong bị coi như chưa
-     * đăng nhập (ADR 0017).
-     *
-     * Không có nhánh "đoán từ header": ở đúng lời gọi này khách CHƯA có credential nào để mà
-     * đoán. Client phải tự khai bằng `client: 'native'`.
-     */
-    if (dto.client === 'native') {
-      const pair = await this.nativeSessions.issueSession(loginUserId, toDeviceInfo(dto.device));
-      return {
-        ...receipt,
-        session: {
-          tokens: {
-            accessToken: pair.accessToken,
-            accessTokenExpiresIn: pair.accessTokenExpiresIn,
-            refreshToken: pair.refreshToken,
-            refreshTokenExpiresAt: pair.refreshTokenExpiresAt.toISOString(),
-          },
-          user: await this.auth.me(loginUserId),
-        },
-      };
-    }
-
-    const { token } = this.sessions.issue(loginUserId);
-    this.sessions.attach(res, token, ACCOUNT_REALM.CUSTOMER);
-    return receipt;
+    return this.requests.submitPublic(dto, user.id);
   }
 
   @Public()
@@ -130,17 +70,4 @@ export class PublicBookingRequestsController {
   busyDays(@Query() query: VehicleBusyDaysQueryDto): Promise<VehicleBusyDaysDto> {
     return this.requests.listPublicBusyDays(query.vehicleId, query.from, query.to);
   }
-}
-
-/**
- * `exactOptionalPropertyTypes` bật: `{ deviceName: undefined }` KHÔNG gán được vào
- * `{ deviceName?: string }`. Chuyển tường minh thay vì spread để trường vắng mặt là vắng mặt thật.
- */
-function toDeviceInfo(device: MobileDeviceDto | undefined): NativeDeviceInfo {
-  if (!device) return {};
-  return {
-    ...(device.deviceName === undefined ? {} : { deviceName: device.deviceName }),
-    ...(device.devicePlatform === undefined ? {} : { devicePlatform: device.devicePlatform }),
-    ...(device.appVersion === undefined ? {} : { appVersion: device.appVersion }),
-  };
 }

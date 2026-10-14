@@ -24,9 +24,7 @@ import {
 import { sweepBookingHoldExpiry } from '../../worker/src/jobs/booking-hold-expiry';
 import { sweepBookingRequestDeadlines } from '../../worker/src/jobs/booking-request-deadlines';
 import { AuditService } from '../src/modules/audit/audit.service';
-import type { AuthService } from '../src/modules/auth/auth.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
-import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import {
   makeBookingHoldsService,
@@ -36,6 +34,7 @@ import {
   makeNotificationService,
   makePricingService,
 } from './helpers/service-factory';
+import { customerAccountFor } from './helpers/customer-account';
 import { payHoldForRequest } from './helpers/hold-payment';
 
 /**
@@ -68,22 +67,11 @@ const bookings = makeBookingsService(asService, {
   customers: customers,
 });
 
-const phoneVerification = {
-  assertPhoneVerifiedForBooking: async () => {},
-} as unknown as PhoneVerificationService;
-
-let guestUserId: string;
-const auth = {
-  resolveOrCreateUserByPhone: async () => ({ userId: guestUserId }),
-} as unknown as AuthService;
-
 const holds = makeBookingHoldsService(asService);
 const requests = makeBookingRequestsService(asService, {
   bookings: bookings,
   audit: audit,
   notifications: notifications,
-  phoneVerification: phoneVerification,
-  auth: auth,
   occupancy: occupancy,
   pricing: makePricingService(asService),
   customers: customers,
@@ -99,6 +87,18 @@ const DAY = 24 * 60 * MINUTE;
 let phoneSeq = 0;
 /** SĐT khác nhau cho từng ca — index chống trùng một phần chặn cùng (xe, SĐT, khung giờ). */
 const nextPhone = () => `0908${String(700_000 + (phoneSeq += 1)).slice(-6)}`;
+
+/** Tài khoản khách đã gửi yêu cầu trong spec — dọn ở `afterAll`. */
+const customerIds = new Set<string>();
+/**
+ * Người gửi yêu cầu: một tài khoản KHÁCH đã xác minh SĐT (ADR 0060) — mỗi số một người, nên hai
+ * khách cùng hỏi một khung giờ vẫn là hai yêu cầu riêng.
+ */
+async function customer(name = 'Khách', phone = nextPhone()): Promise<string> {
+  const id = await customerAccountFor(asService, phone, name);
+  customerIds.add(id);
+  return id;
+}
 
 let vehicleSeq = 0;
 /**
@@ -139,14 +139,9 @@ function nextWindow(): { pickupAt: string; returnAt: string } {
 
 /** Gửi một yêu cầu thuê qua ĐÚNG đường công khai mà khách đi. */
 async function submit(vehicleId: string): Promise<string> {
-  const { receipt } = await requests.submitPublic(
-    {
-      vehicleId,
-      customerName: 'Nguyễn Văn A',
-      customerPhone: nextPhone(),
-      ...nextWindow(),
-    },
-    null,
+  const receipt = await requests.submitPublic(
+    { vehicleId, ...nextWindow() },
+    await customer('Nguyễn Văn A'),
   );
   return receipt.id;
 }
@@ -210,7 +205,6 @@ beforeAll(async () => {
   }
 
   ownerId = newId();
-  guestUserId = newId();
   tenantId = newId();
 
   await prisma.user.createMany({
@@ -220,12 +214,6 @@ beforeAll(async () => {
         id: ownerId,
         displayName: 'Chủ shop',
         email: `owner-${ownerId}@xeprime.test`,
-      },
-      {
-        realm: ACCOUNT_REALM.CUSTOMER,
-        id: guestUserId,
-        displayName: 'Khách vãng lai',
-        email: `g-${guestUserId}@xeprime.test`,
       },
     ],
   });
@@ -253,7 +241,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (dbAvailable) {
-    await prisma.notification.deleteMany({ where: { userId: { in: [ownerId, guestUserId] } } });
+    await prisma.notification.deleteMany({ where: { userId: { in: [ownerId, ...customerIds] } } });
     await prisma.bookingRequest.deleteMany({ where: { tenantId } });
     await prisma.booking.deleteMany({ where: { tenantId } });
     await prisma.vehicleOccupancy.deleteMany({ where: { tenantId } });
@@ -263,7 +251,7 @@ afterAll(async () => {
     await prisma.vehicle.deleteMany({ where: { tenantId } });
     await prisma.tenantMembership.deleteMany({ where: { tenantId } });
     await prisma.tenant.deleteMany({ where: { id: tenantId } });
-    await prisma.user.deleteMany({ where: { id: { in: [ownerId, guestUserId] } } });
+    await prisma.user.deleteMany({ where: { id: { in: [ownerId, ...customerIds] } } });
   }
   await prisma.$disconnect();
 });
@@ -325,18 +313,14 @@ describe('Gửi yêu cầu: hạn 60 phút, CHƯA giữ chỗ (ADR 0044)', () =>
   maybe('hai khách cùng hỏi một xe: cả hai đều vào hàng chờ, chưa ai mất gì', async () => {
     const vehicleId = await seedVehicle();
     const window = nextWindow();
-    const send = (phone: string) =>
-      requests.submitPublic(
-        { vehicleId, customerName: 'Khách', customerPhone: phone, ...window },
-        null,
-      );
+    const send = async () => requests.submitPublic({ vehicleId, ...window }, await customer());
 
-    const first = await send(nextPhone());
-    const second = await send(nextPhone());
+    const first = await send();
+    const second = await send();
 
     // Không ai bị từ chối ở cửa, và không ai giữ được chỗ trước khi chủ xe quyết định.
-    expect(first.receipt.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
-    expect(second.receipt.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
+    expect(first.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
+    expect(second.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
     expect(await countOccupancyFor(vehicleId)).toBe(0);
   });
 
@@ -350,19 +334,15 @@ describe('Gửi yêu cầu: hạn 60 phút, CHƯA giữ chỗ (ADR 0044)', () =>
   maybe('nhận một yêu cầu ⇒ các yêu cầu trùng khung giờ được đóng bằng `slot_taken`', async () => {
     const vehicleId = await seedVehicle();
     const window = nextWindow();
-    const send = (phone: string) =>
-      requests.submitPublic(
-        { vehicleId, customerName: 'Khách', customerPhone: phone, ...window },
-        null,
-      );
+    const send = async () => requests.submitPublic({ vehicleId, ...window }, await customer());
 
-    const winner = await send(nextPhone());
-    const loser = await send(nextPhone());
+    const winner = await send();
+    const loser = await send();
 
-    await requests.approve(tenantId, ownerId, winner.receipt.id);
+    await requests.approve(tenantId, ownerId, winner.id);
 
     const closed = await prisma.bookingRequest.findUniqueOrThrow({
-      where: { id: loser.receipt.id },
+      where: { id: loser.id },
       select: { status: true, rejectReason: true, decisionSource: true, decidedBy: true },
     });
     expect(closed.status).toBe(BOOKING_REQUEST_STATUS.SLOT_TAKEN);
@@ -384,19 +364,13 @@ describe('Gửi yêu cầu: hạn 60 phút, CHƯA giữ chỗ (ADR 0044)', () =>
     const first = nextWindow();
     const later = nextWindow();
 
-    const winner = await requests.submitPublic(
-      { vehicleId, customerName: 'Khách', customerPhone: nextPhone(), ...first },
-      null,
-    );
-    const other = await requests.submitPublic(
-      { vehicleId, customerName: 'Khách', customerPhone: nextPhone(), ...later },
-      null,
-    );
+    const winner = await requests.submitPublic({ vehicleId, ...first }, await customer('Khách'));
+    const other = await requests.submitPublic({ vehicleId, ...later }, await customer('Khách'));
 
-    await requests.approve(tenantId, ownerId, winner.receipt.id);
+    await requests.approve(tenantId, ownerId, winner.id);
 
     expect(
-      (await prisma.bookingRequest.findUniqueOrThrow({ where: { id: other.receipt.id } })).status,
+      (await prisma.bookingRequest.findUniqueOrThrow({ where: { id: other.id } })).status,
     ).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
   });
 
@@ -413,17 +387,17 @@ describe('Gửi yêu cầu: hạn 60 phút, CHƯA giữ chỗ (ADR 0044)', () =>
       const vehicleId = await seedVehicle();
       const window = nextWindow();
       const winner = await requests.submitPublic(
-        { vehicleId, customerName: 'Khách thắng', customerPhone: nextPhone(), ...window },
-        null,
+        { vehicleId, ...window },
+        await customer('Khách thắng'),
       );
       const loser = await requests.submitPublic(
-        { vehicleId, customerName: 'Khách thua', customerPhone: nextPhone(), ...window },
-        null,
+        { vehicleId, ...window },
+        await customer('Khách thua'),
       );
-      await requests.approve(tenantId, ownerId, winner.receipt.id);
+      await requests.approve(tenantId, ownerId, winner.id);
 
       const closed = await prisma.bookingRequest.findUniqueOrThrow({
-        where: { id: loser.receipt.id },
+        where: { id: loser.id },
         select: { status: true, customerUserId: true, slotReopenedNotifiedAt: true },
       });
       expect(closed.status).toBe(BOOKING_REQUEST_STATUS.SLOT_TAKEN);
@@ -431,7 +405,7 @@ describe('Gửi yêu cầu: hạn 60 phút, CHƯA giữ chỗ (ADR 0044)', () =>
 
       // Người thắng để hết hạn — worker nhả chỗ.
       await prisma.bookingHold.updateMany({
-        where: { bookingRequestId: winner.receipt.id },
+        where: { bookingRequestId: winner.id },
         data: { expiresAt: new Date(Date.now() - 60_000) },
       });
       await sweepBookingHoldExpiry(prisma, new Date());
@@ -440,7 +414,7 @@ describe('Gửi yêu cầu: hạn 60 phút, CHƯA giữ chỗ (ADR 0044)', () =>
 
       // Yêu cầu thua cuộc VẪN đóng — không có đường nào biến nó thành đơn sau lưng hai bên.
       const after = await prisma.bookingRequest.findUniqueOrThrow({
-        where: { id: loser.receipt.id },
+        where: { id: loser.id },
         select: { status: true, bookingId: true, slotReopenedNotifiedAt: true },
       });
       expect(after.status).toBe(BOOKING_REQUEST_STATUS.SLOT_TAKEN);
@@ -469,17 +443,14 @@ describe('Gửi yêu cầu: hạn 60 phút, CHƯA giữ chỗ (ADR 0044)', () =>
     const vehicleId = await seedVehicle();
     const window = nextWindow();
     const winner = await requests.submitPublic(
-      { vehicleId, customerName: 'Khách thắng', customerPhone: nextPhone(), ...window },
-      null,
+      { vehicleId, ...window },
+      await customer('Khách thắng'),
     );
     // Người thua không cần giữ id: bài test này đếm LỜI MỜI theo chiếc xe, không theo yêu cầu.
-    await requests.submitPublic(
-      { vehicleId, customerName: 'Khách thua', customerPhone: nextPhone(), ...window },
-      null,
-    );
-    await requests.approve(tenantId, ownerId, winner.receipt.id);
+    await requests.submitPublic({ vehicleId, ...window }, await customer('Khách thua'));
+    await requests.approve(tenantId, ownerId, winner.id);
     await prisma.bookingHold.updateMany({
-      where: { bookingRequestId: winner.receipt.id },
+      where: { bookingRequestId: winner.id },
       data: { expiresAt: new Date(Date.now() - 60_000) },
     });
 
@@ -487,8 +458,8 @@ describe('Gửi yêu cầu: hạn 60 phút, CHƯA giữ chỗ (ADR 0044)', () =>
     await sweepBookingHoldExpiry(prisma, new Date());
 
     /*
-     * Đếm theo CHIẾC XE, không theo người nhận: cả spec dùng chung một tài khoản khách vãng lai
-     * (`guestUserId`), nên đếm theo `userId` sẽ gộp cả lời mời của những bài test trước. Xe thì
+     * Đếm theo CHIẾC XE, không theo người nhận: người thua là tài khoản do spec dựng, và
+     * đếm theo `userId` dễ gộp nhầm lời mời của những bài test trước. Xe thì
      * mỗi bài một chiếc — và `targetId` của lời mời chính là chiếc xe đó.
      */
     expect(

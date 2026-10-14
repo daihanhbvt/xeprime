@@ -202,7 +202,8 @@ Kéo-thả **tắt** ở mobile: chạm giữ để chọn, rồi dùng bảng h
 **Luật cứng:** không lồng modal trong modal, không lồng sheet trong sheet — luồng cần lồng thì là
 trang hoặc wizard. Sheet: kéo xuống để đóng, có nút đóng rõ, khoá cuộn nền, trả focus về nơi mở.
 
-Mẫu chuẩn cho form dài là luồng gửi yêu cầu thuê của khách (thời gian → còn trống → thông tin → OTP).
+Mẫu chuẩn cho form dài là luồng gửi yêu cầu thuê của khách (chuyến đi → còn trống → [đăng nhập] →
+[bằng lái] → xác nhận; dữ liệu đã nhập giữ nguyên qua lượt đăng nhập — ADR 0060).
 Tạo đơn thủ công ở site partner dùng lại chính giao diện đó (`StaffBookingDialog`); sửa đơn là
 `DialogForm` một cột.
 

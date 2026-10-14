@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import type { PhoneVerificationPurpose } from '@xeprime/types';
-import { getErrorMessage } from '@/services/api-client';
+import { useErrorMessage } from '@/i18n/use-error-message';
 import { sendOtp, verifyOtp } from '../api';
 import { useOtpTestCodeEnabled } from './use-otp-config';
 
@@ -13,7 +13,10 @@ const RESEND_COOLDOWN_SEC = 60;
 
 /**
  * Máy trạng thái xác thực SĐT: idle → code_sent → verified. Quản lý đếm ngược gửi lại (khớp
- * cooldown BE) + `devCode` (dev mock). Dùng chung cho mọi chỗ cần verify SĐT (booking, mở shop…).
+ * cooldown BE) + `devCode` (dev mock). Dùng chung cho mọi chỗ cần mã OTP (đăng ký, quên mật khẩu…).
+ *
+ * `error` là câu ĐÃ DỊCH từ MÃ lỗi (`useErrorMessage`, ADR 0012) — không phải `message` tiếng
+ * Việt của backend.
  */
 export function usePhoneVerify(purpose: PhoneVerificationPurpose) {
   const [status, setStatus] = useState<PhoneVerifyStatus>('idle');
@@ -21,6 +24,7 @@ export function usePhoneVerify(purpose: PhoneVerificationPurpose) {
   const [devCode, setDevCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const testCodeEnabled = useOtpTestCodeEnabled();
+  const errorMessage = useErrorMessage();
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -36,7 +40,7 @@ export function usePhoneVerify(purpose: PhoneVerificationPurpose) {
       setError(null);
       setCooldown(RESEND_COOLDOWN_SEC);
     },
-    onError: (e) => setError(getErrorMessage(e)),
+    onError: (e) => setError(errorMessage(e)),
   });
 
   const verifyMutation = useMutation({
@@ -46,7 +50,7 @@ export function usePhoneVerify(purpose: PhoneVerificationPurpose) {
       setStatus('verified');
       setError(null);
     },
-    onError: (e) => setError(getErrorMessage(e)),
+    onError: (e) => setError(errorMessage(e)),
   });
 
   const reset = useCallback(() => {

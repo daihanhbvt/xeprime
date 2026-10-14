@@ -116,6 +116,11 @@ làm GPLX Việt Nam, và cả bằng quốc tế nếu được.
    không bao giờ thấy bước bằng lái. Trang "Giấy tờ & Xác minh" (`/account/documents`) dùng chung bộ
    xác thực.
 
+   > **Sửa 14/10/2026 — ADR 0060.** Gửi yêu cầu thuê cần tài khoản khách đã đăng nhập, nên câu
+   > cuối điều 4 (soát trước khi tạo tài khoản theo SĐT) và bước OTP đăng nhập ở đây không còn đối
+   > tượng. Luồng web là `Chuyến đi → [Bằng lái] → Xác nhận`; khách chưa đăng nhập được mời đăng nhập
+   > ở "Tiếp tục" của bước Chuyến đi rồi đi tiếp.
+
 6. **Đọc ảnh chạy NỀN.** `complete` kiểm ảnh (kích thước khai báo + chữ ký định dạng) rồi trả về ngay
    ở `processing`; client hỏi lại mỗi 1,5 giây. Lượt đọc kẹt quá 5 phút (tiến trình khởi động lại)
    tự sang hàng đợi duyệt. Ảnh được nén ở trình duyệt về cạnh dài 2000px, mã hoá lại JPEG (bỏ EXIF/

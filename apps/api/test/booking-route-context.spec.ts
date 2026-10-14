@@ -13,12 +13,11 @@ import {
   VEHICLE_TYPE,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
-import type { AuthService } from '../src/modules/auth/auth.service';
 import { BankAccountsService } from '../src/modules/bank-accounts/bank-accounts.service';
 import { ContractsService } from '../src/modules/contracts/contracts.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
-import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { customerAccountFor } from './helpers/customer-account';
 import {
   makeBookingRequestsService,
   makeBookingsService,
@@ -51,27 +50,18 @@ const bookings = makeBookingsService(asService, {
 });
 const contracts = new ContractsService(asService, audit, new BankAccountsService(asService));
 
-const phoneVerification = {
-  assertPhoneVerifiedForBooking: async () => {},
-} as unknown as PhoneVerificationService;
-
-let guestUserId: string;
-const auth = {
-  resolveOrCreateUserByPhone: async () => ({ userId: guestUserId }),
-} as unknown as AuthService;
-
 const requests = makeBookingRequestsService(asService, {
   bookings: bookings,
   audit: audit,
   notifications: notifications,
-  phoneVerification: phoneVerification,
-  auth: auth,
   pricing: pricing,
   customers: makeCustomersService(asService, audit),
 });
 
 let dbAvailable = false;
 let ownerId: string;
+/** Người gửi yêu cầu — tài khoản KHÁCH đã xác minh SĐT (ADR 0060). */
+let customerId: string;
 let tenantId: string;
 let vehicleId: string;
 
@@ -89,7 +79,6 @@ beforeAll(async () => {
   }
 
   ownerId = newId();
-  guestUserId = newId();
   tenantId = newId();
   vehicleId = newId();
 
@@ -101,14 +90,9 @@ beforeAll(async () => {
         displayName: 'Chủ shop',
         email: `owner-${ownerId}@xeprime.test`,
       },
-      {
-        realm: ACCOUNT_REALM.CUSTOMER,
-        id: guestUserId,
-        displayName: 'Khách vãng lai',
-        email: `g-${guestUserId}@xeprime.test`,
-      },
     ],
   });
+  customerId = await customerAccountFor(asService, '0901111222', 'Nguyễn Văn A');
   await prisma.tenant.create({
     data: {
       id: tenantId,
@@ -155,7 +139,7 @@ afterAll(async () => {
     await prisma.vehicle.deleteMany({ where: { tenantId } });
     await prisma.tenantMembership.deleteMany({ where: { tenantId } });
     await prisma.tenant.deleteMany({ where: { id: tenantId } });
-    await prisma.user.deleteMany({ where: { id: { in: [ownerId, guestUserId] } } });
+    await prisma.user.deleteMany({ where: { id: { in: [ownerId, customerId] } } });
   }
   await prisma.$disconnect();
 });
@@ -168,11 +152,9 @@ const maybe = (name: string, fn: () => Promise<void>) =>
 
 describe('Yêu cầu → duyệt → đơn GIỮ nguyên hành trình', () => {
   maybe('with_driver liên tỉnh: route/địa chỉ đón/điểm đến sang đơn không mất', async () => {
-    const { receipt } = await requests.submitPublic(
+    const receipt = await requests.submitPublic(
       {
         vehicleId,
-        customerName: 'Nguyễn Văn A',
-        customerPhone: '0901111222',
         pickupAt: hours(0).toISOString(),
         returnAt: hours(48).toISOString(),
         serviceType: SERVICE_TYPE.WITH_DRIVER,
@@ -180,7 +162,7 @@ describe('Yêu cầu → duyệt → đơn GIỮ nguyên hành trình', () => {
         pickupAddress: '12 Lê Lợi, Q.1, TP.HCM',
         destination: 'TP. Đà Lạt, Lâm Đồng',
       },
-      null,
+      customerId,
     );
 
     const approved = await requests.approve(tenantId, ownerId, receipt.id);

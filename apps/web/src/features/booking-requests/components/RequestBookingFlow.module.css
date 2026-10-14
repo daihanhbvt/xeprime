@@ -300,40 +300,13 @@
   overflow-wrap: anywhere;
 }
 
-/* ── OTP ───────────────────────────────────────────────────────────────── */
+/* ── Tiêu đề của bước chen giữa (bằng lái) ───────────────────────────────── */
 
 .otpTitle {
   margin: 0;
   font-size: var(--xp-font-size-h4);
   font-weight: 700;
   color: var(--xp-color-text);
-}
-
-.devHint {
-  font-size: var(--xp-font-size-sm);
-  color: var(--xp-color-text-tertiary);
-}
-
-.otpLinks {
-  display: flex;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--xp-space-sm);
-}
-
-.linkBtn {
-  background: none;
-  border: none;
-  padding: var(--xp-space-xs) 0;
-  font-size: var(--xp-font-size-sm);
-  font-weight: 600;
-  color: var(--xp-gold-deep);
-  cursor: pointer;
-}
-
-.linkBtn:disabled {
-  color: var(--xp-color-text-tertiary);
-  cursor: not-allowed;
 }
 
 .err {
@@ -770,32 +743,6 @@
   align-self: flex-start;
   margin-bottom: var(--xp-space-sm);
   padding-left: 0;
-}
-
-/* ── Khối liên hệ trong bước Chuyến đi (chỉ dựng khi hệ thống chưa biết khách) ── */
-
-.contactBlock {
-  display: flex;
-  flex-direction: column;
-  gap: var(--xp-space-sm);
-  min-width: 0;
-}
-
-/*
- * Tên + SĐT nằm CÙNG một hàng: hai ô ngắn xếp chồng nhau chiếm hai dòng của một bước vốn đã
- * dài, trong khi mỗi ô chỉ cần nửa cột là đủ đọc.
- *
- * `auto-fit` chứ không phải hai cột cứng + media query: khối này nằm trong CỘT PHẢI của
- * overlay, mà bề rộng cột đó không suy được từ bề rộng màn hình (overlay `xl` bị `100vw` bóp
- * lại ở tablet). Đo theo container thì hai ô tự xuống một cột đúng lúc chúng bắt đầu chật —
- * cùng cách `.packages` của bước dài hạn đang làm.
- *
- * Khoảng cách dọc để 0: `Form.Item` đã tự mang `margin-bottom` (field.module.css).
- */
-.contactFields {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 0 var(--xp-space-md);
 }
 
 /*

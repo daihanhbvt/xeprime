@@ -7,10 +7,8 @@ import {
   VEHICLE_TYPE,
   vnDayStart,
 } from '@xeprime/types';
-import type { AuthService } from '../src/modules/auth/auth.service';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
-import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import {
   makeBookingRequestsService,
@@ -49,8 +47,6 @@ const requests = makeBookingRequestsService(asService, {
   bookings: bookings,
   audit: audit,
   notifications: notifications,
-  phoneVerification: {} as unknown as PhoneVerificationService,
-  auth: {} as unknown as AuthService,
   occupancy: occupancy,
   pricing: pricing,
   customers: customers,

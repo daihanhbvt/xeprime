@@ -16,12 +16,11 @@ import {
   VEHICLE_TYPE,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
-import type { AuthService } from '../src/modules/auth/auth.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
-import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import { VehicleSettingsService } from '../src/modules/vehicle-settings/vehicle-settings.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { giveTenantPlan } from './helpers/billing-fixture';
+import { customerAccountFor } from './helpers/customer-account';
 import { payHoldForRequest } from './helpers/hold-payment';
 import { releaseWalletObligations } from './helpers/wallet-cleanup';
 import {
@@ -65,12 +64,6 @@ const settings = new VehicleSettingsService(asService, audit, occupancy);
 const bookings = makeBookingsService(asService, { audit, notifications, occupancy, settings });
 const holds = makeBookingHoldsService(asService);
 const requests = makeBookingRequestsService(asService, {
-  phoneVerification: {
-    assertPhoneVerifiedForBooking: async () => {},
-  } as unknown as PhoneVerificationService,
-  auth: {
-    resolveOrCreateUserByPhone: async () => ({ userId: null }),
-  } as unknown as AuthService,
   audit,
   notifications,
   occupancy,
@@ -82,6 +75,10 @@ const AWAITING = { preset: BOOKING_LIST_PRESET.AWAITING_PICKUP } as const;
 
 let dbAvailable = false;
 let ownerId: string;
+/**
+ * Người gửi MỌI yêu cầu của spec — tài khoản KHÁCH đã xác minh SĐT (ADR 0060). Một người là đủ:
+ * mỗi yêu cầu nhắm một chiếc xe riêng, nên chặn trùng (xe + SĐT + khung giờ) không đụng nhau.
+ */
 let customerUserId: string;
 let tenantId: string;
 let branchAId: string;
@@ -119,14 +116,12 @@ async function createViaHoldPayment(vehicleIndex: number, dayOffset = 5): Promis
   const submitted = await requests.submitPublic(
     {
       vehicleId: vehicleIds[vehicleIndex]!,
-      customerName: 'Khách Đối Soát',
-      customerPhone: nextPhone(),
       pickupAt: vnAt(dayOffset, 9).toISOString(),
       returnAt: vnAt(dayOffset + 2, 9).toISOString(),
     },
     customerUserId,
   );
-  const requestId = submitted.receipt.id;
+  const requestId = submitted.id;
   await requests.approve(tenantId, ownerId, requestId, {});
   await payHoldForRequest(asService, holds, requestId);
 
@@ -167,7 +162,6 @@ beforeAll(async () => {
   }
 
   ownerId = newId();
-  customerUserId = newId();
   tenantId = newId();
   branchAId = newId();
   branchBId = newId();
@@ -180,14 +174,10 @@ beforeAll(async () => {
         displayName: 'Chủ xe',
         email: `ap-own-${RUN}@xeprime.test`,
       },
-      {
-        realm: ACCOUNT_REALM.CUSTOMER,
-        id: customerUserId,
-        displayName: 'Khách',
-        email: `ap-cus-${RUN}@xeprime.test`,
-      },
     ],
   });
+  // Ngoài dải `nextPhone()` (0933100001…) mà đơn lập tay dùng — khách đặt online là người khác.
+  customerUserId = await customerAccountFor(asService, '0933000001', 'Khách Đối Soát');
   await prisma.tenant.create({
     data: {
       id: tenantId,
@@ -294,8 +284,6 @@ describe('Chờ giao xe — đơn nào có mặt', () => {
     const pending = await requests.submitPublic(
       {
         vehicleId: vehicleIds[4]!,
-        customerName: 'Khách Chờ Duyệt',
-        customerPhone: nextPhone(),
         pickupAt: vnAt(6, 9).toISOString(),
         returnAt: vnAt(8, 9).toISOString(),
       },
@@ -304,18 +292,16 @@ describe('Chờ giao xe — đơn nào có mặt', () => {
     const awaitingHold = await requests.submitPublic(
       {
         vehicleId: vehicleIds[5]!,
-        customerName: 'Khách Chờ Trả Tiền',
-        customerPhone: nextPhone(),
         pickupAt: vnAt(6, 9).toISOString(),
         returnAt: vnAt(8, 9).toISOString(),
       },
       customerUserId,
     );
     // Duyệt xong nhưng KHÔNG trả tiền: yêu cầu đứng ở `awaiting_hold`, chưa có đơn nào.
-    await requests.approve(tenantId, ownerId, awaitingHold.receipt.id, {});
+    await requests.approve(tenantId, ownerId, awaitingHold.id, {});
 
     const statuses = await prisma.bookingRequest.findMany({
-      where: { id: { in: [pending.receipt.id, awaitingHold.receipt.id] } },
+      where: { id: { in: [pending.id, awaitingHold.id] } },
       select: { status: true, bookingId: true },
     });
     expect(statuses.map((r) => r.status).sort()).toEqual(

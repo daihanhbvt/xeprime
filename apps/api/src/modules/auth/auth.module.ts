@@ -11,6 +11,7 @@ import { SocialAuthController } from './social/social-auth.controller';
 import { SocialAuthService } from './social/social-auth.service';
 import { AppleIdentityVerifier } from './social/apple-identity.verifier';
 import { FeePoliciesModule } from '../fee-policies/fee-policies.module';
+import { PhoneVerificationModule } from '../phone-verification/phone-verification.module';
 
 /**
  * Ba controller, ba họ endpoint, MỘT `AuthService`.
@@ -31,8 +32,13 @@ import { FeePoliciesModule } from '../fee-policies/fee-policies.module';
    * `FeePoliciesModule` cho `/auth/me`: nhãn tài khoản của chủ xe tuyến hoa hồng in % phí dịch
    * vụ ĐANG THU, và con số đó chỉ có một nguồn hợp lệ — `FeePoliciesService.findEffective()`.
    * Không nối `PricingModule` hay tự query `fee_policies` ở đây.
+   *
+   * `PhoneVerificationModule` cho đăng ký và quên mật khẩu (ADR 0060): hai luồng đó đối chiếu
+   * mã OTP NGAY trong `AuthService`, ngay trước khi tạo tài khoản / đổi mật khẩu — không client
+   * nào bỏ được bước mã. Không vòng ở mức provider: `PhoneVerificationService` không phụ thuộc gì
+   * của module này (controller của nó dùng `AuthService` qua `@Global`).
    */
-  imports: [FeePoliciesModule],
+  imports: [FeePoliciesModule, PhoneVerificationModule],
   controllers: [AuthController, MobileAuthController, SocialAuthController],
   providers: [
     AuthService,

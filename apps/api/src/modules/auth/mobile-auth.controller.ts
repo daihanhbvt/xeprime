@@ -85,7 +85,8 @@ export class MobileAuthController {
   ) {}
 
   /**
-   * Đăng nhập bằng email/SĐT + mật khẩu.
+   * Đăng nhập bằng SĐT + mật khẩu — cả hai app chỉ phục vụ realm `customer`/`partner`, nên email
+   * bị từ chối bằng `PHONE_LOGIN_REQUIRED` ngay trong `AuthService.loginWithPassword` (ADR 0060).
    *
    * 5 lần/phút: đây là cửa dò mật khẩu duy nhất của app native. `AuthService.loginWithPassword`
    * đã trả cùng một lỗi cho "không có tài khoản" và "sai mật khẩu", nên rate limit là lớp còn lại.
@@ -95,7 +96,7 @@ export class MobileAuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @Throttle(THROTTLE_PER_MINUTE.CREDENTIAL)
-  @ApiOperation({ summary: 'Native: đăng nhập bằng email/SĐT + mật khẩu' })
+  @ApiOperation({ summary: 'Native: đăng nhập bằng số điện thoại + mật khẩu' })
   @ApiOkResponse({ type: MobileSessionDto })
   async login(@Body() dto: MobileLoginDto): Promise<MobileSessionDto> {
     const { userId } = await this.auth.loginWithPassword(
@@ -113,19 +114,19 @@ export class MobileAuthController {
    * cookie. Cùng `AuthService.register`, nên luật mật khẩu, chuẩn hoá SĐT và nhánh `PHONE_TAKEN`
    * chỉ có một bản.
    *
-   * 5 lần/phút, bằng với `login`: đây cũng là một cửa dò — gửi liên tiếp nhiều SĐT để biết số nào
-   * đã có tài khoản (`PHONE_TAKEN`) là việc làm được nếu không siết.
+   * 5 lần/phút, bằng với `login`: băm mật khẩu tốn ~250ms mỗi lượt, và mã OTP sai đã được đếm/khoá
+   * ở `PhoneVerificationService`.
    *
-   * ⚠️ SĐT ở đây CHƯA được xác thực — giống hệt web. Đường có xác thực SĐT là
-   * `POST /auth/mobile/phone/login` (OTP, tự tạo tài khoản nếu chưa có); nếu sản phẩm cần chắc
-   * chắn số là thật thì dùng đường đó, không phải đường này.
+   * Từ ADR 0060 SĐT phải qua OTP `purpose=register` (gửi bằng `POST /auth/phone/send-otp` kèm
+   * `clientApp`) — giống hệt web. Bản app chưa gửi `code` nhận 400 `VALIDATION_FAILED` và KHÔNG
+   * tài khoản nào được tạo.
    */
   @Public()
   @VerifiesCredentials()
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @Throttle(THROTTLE_PER_MINUTE.CREDENTIAL)
-  @ApiOperation({ summary: 'Native: đăng ký bằng số điện thoại + mật khẩu' })
+  @ApiOperation({ summary: 'Native: đăng ký bằng số điện thoại + mật khẩu + mã OTP' })
   @ApiCreatedResponse({ type: MobileSessionDto })
   async register(@Body() dto: MobileRegisterDto): Promise<MobileSessionDto> {
     // App nào đăng ký thì tài khoản thuộc realm của app đó (ADR 0053): XePrime Partner tạo tài

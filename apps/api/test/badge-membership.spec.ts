@@ -10,7 +10,7 @@ import { AuditService } from '../src/modules/audit/audit.service';
 import { InvitesService } from '../src/modules/members/invites.service';
 import { RequestRealmService } from '../src/modules/auth/request-realm.service';
 import { MembersService } from '../src/modules/members/members.service';
-import type { EmailService } from '../src/modules/email/email.service';
+import { normalizePhone } from '../src/common/phone';
 import type { PrismaService } from '../src/prisma/prisma.service';
 
 /**
@@ -27,14 +27,6 @@ import type { PrismaService } from '../src/prisma/prisma.service';
  */
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
-
-const sentMails: Array<{ to: string; url: string }> = [];
-const email = {
-  sendTenantInvite: (to: string, _tenant: string, url: string) => {
-    sentMails.push({ to, url });
-    return Promise.resolve();
-  },
-} as unknown as EmailService;
 
 const SITE_URLS: Record<string, string> = {
   APP_WEB_URL: 'https://web.test',
@@ -53,7 +45,7 @@ const config = {
 const realms = new RequestRealmService(config);
 
 const audit = new AuditService(asService);
-const invites = new InvitesService(asService, audit, email, config, realms);
+const invites = new InvitesService(asService, audit, realms);
 const members = new MembersService(asService, audit);
 
 let dbAvailable = false;
@@ -61,9 +53,19 @@ let ownerId: string;
 let staffId: string;
 let customerId: string;
 let tenantId: string;
-let staffEmail: string;
+/** SĐT ĐÃ XÁC MINH của nhân viên — lời mời đi bằng SĐT từ ADR 0060. Riêng cho lần chạy này. */
+const STAFF_PHONE = `0947${String(Date.now() % 1_000_000).padStart(6, '0')}`;
 
-const lastToken = (): string => sentMails.at(-1)!.url.split('/').pop()!;
+/** Mời nhân viên bằng SĐT rồi trả token thô — lấy từ link trả về cho người mời, như thật. */
+async function inviteStaff(): Promise<string> {
+  const created = await invites.create(
+    tenantId,
+    ownerId,
+    { phone: STAFF_PHONE, roleKey: TENANT_ROLE.SHOP_STAFF },
+    null,
+  );
+  return created.inviteUrl.split('/').pop()!;
+}
 
 const signalOf = (userId: string) =>
   prisma.userBadgeSignal.findUnique({ where: { userId }, select: { revision: true } });
@@ -88,7 +90,6 @@ beforeAll(async () => {
   staffId = newId();
   customerId = newId();
   tenantId = newId();
-  staffEmail = `staff-${staffId.toLowerCase()}@xeprime.test`;
 
   await prisma.user.createMany({
     data: [
@@ -98,7 +99,13 @@ beforeAll(async () => {
         displayName: 'Chủ shop',
         email: `own-${ownerId}@xeprime.test`,
       },
-      { id: staffId, realm: ACCOUNT_REALM.PARTNER, displayName: 'Nhân viên', email: staffEmail },
+      {
+        id: staffId,
+        realm: ACCOUNT_REALM.PARTNER,
+        displayName: 'Nhân viên',
+        phone: normalizePhone(STAFF_PHONE),
+        phoneVerifiedAt: new Date(),
+      },
       {
         realm: ACCOUNT_REALM.CUSTOMER,
         id: customerId,
@@ -152,16 +159,7 @@ describe('Huy hiệu — thay đổi thành viên gian hàng', () => {
   maybe('nhận lời mời: có tín hiệu, và chatShop nhận ngay số chưa đọc sẵn có', async () => {
     await prisma.userBadgeSignal.deleteMany({ where: { userId: staffId } });
 
-    await invites.create(
-      tenantId,
-      ownerId,
-      {
-        email: staffEmail,
-        roleKey: TENANT_ROLE.SHOP_STAFF,
-      },
-      null,
-    );
-    await invites.accept(lastToken(), staffId);
+    await invites.accept(await inviteStaff(), staffId);
 
     expect(await signalOf(staffId)).not.toBeNull();
     const badges = await computeUserBadges(prisma, staffId);
@@ -186,16 +184,7 @@ describe('Huy hiệu — thay đổi thành viên gian hàng', () => {
    * điều kiện — thì số hiệu sẽ nhích lên dù không có thay đổi nào xảy ra, và test này đỏ.
    */
   maybe('accept thất bại thì KHÔNG để lại tín hiệu nào', async () => {
-    await invites.create(
-      tenantId,
-      ownerId,
-      {
-        email: staffEmail,
-        roleKey: TENANT_ROLE.SHOP_STAFF,
-      },
-      null,
-    );
-    const token = lastToken();
+    const token = await inviteStaff();
     await invites.accept(token, staffId);
 
     const before = await signalOf(staffId);
@@ -209,16 +198,7 @@ describe('Huy hiệu — thay đổi thành viên gian hàng', () => {
     await members.remove(tenantId, ownerId, staffId, null);
     await prisma.userBadgeSignal.deleteMany({ where: { userId: staffId } });
 
-    await invites.create(
-      tenantId,
-      ownerId,
-      {
-        email: staffEmail,
-        roleKey: TENANT_ROLE.SHOP_STAFF,
-      },
-      null,
-    );
-    await invites.accept(lastToken(), staffId);
+    await invites.accept(await inviteStaff(), staffId);
 
     expect(await signalOf(staffId)).not.toBeNull();
     expect((await computeUserBadges(prisma, staffId)).chatShop).toBe(5);

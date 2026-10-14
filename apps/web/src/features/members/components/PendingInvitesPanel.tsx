@@ -64,10 +64,11 @@ export function PendingInvitesPanel() {
 
   const columns: DataTableColumn<Invite>[] = [
     {
-      title: t('columns.email'),
-      key: 'email',
+      title: t('columns.invitee'),
+      key: 'invitee',
       width: 260,
-      render: (_, row) => <span className={styles.email}>{row.email}</span>,
+      // SĐT (ADR 0060); lời mời email tạo trước đó vẫn hiện email tới khi hết hạn.
+      render: (_, row) => <span className={styles.email}>{row.phone ?? row.email}</span>,
     },
     {
       title: t('columns.role'),
@@ -108,7 +109,7 @@ export function PendingInvitesPanel() {
         hidden: !canRevoke,
         loading: revoke.isPending && revoke.variables === row.id,
         confirm: {
-          title: t('revokeConfirm'),
+          title: t('revokeConfirmLink'),
           okText: t('revoke'),
           cancelText: tCommon('actions.close'),
         },

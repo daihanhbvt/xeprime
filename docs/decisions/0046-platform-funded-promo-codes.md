@@ -133,6 +133,9 @@ Số khách trả nằm ở `customer_total_amount`.
   khoản (`resolveOrCreateUserByPhone`) TRƯỚC khi giữ lượt. Nên không có đường nào giữ lượt mà
   không có danh tính đã xác thực, và `promo_redemptions.customer_user_id` là `NOT NULL`.
 
+  > **Sửa 14/10/2026 — ADR 0060.** Không còn khách vãng lai: gửi yêu cầu thuê cần phiên tài khoản
+  > khách, nên danh tính khi giữ lượt luôn đến từ phiên (`resolveOrCreateUserByPhone` đã gỡ).
+
 ### 6. Vòng đời lượt dùng: GIỮ → CHỐT → NHẢ
 
 | Mốc | Việc |

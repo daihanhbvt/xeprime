@@ -22,8 +22,9 @@ import styles from './InviteAnswerCard.module.css';
  *     trả lời được. Trang sống ở SITE PARTNER (ADR 0051) và lời mời dành cho tài khoản ĐỐI TÁC
  *     (ADR 0053), nên hai nút dẫn tới đăng nhập / tạo tài khoản đối tác với `next` trỏ về chính
  *     lời mời — xong là quay lại đúng chỗ thay vì mất luôn lời mời.
- *  2. **Đăng nhập nhầm tài khoản** — server trả `INVITE_EMAIL_MISMATCH`; câu lỗi nói rõ phải
- *     dùng hộp thư nào (đã che bớt).
+ *  2. **Đăng nhập nhầm tài khoản** — server trả `INVITE_PHONE_MISMATCH` (lời mời email cũ:
+ *     `INVITE_EMAIL_MISMATCH`); thẻ đã hiện số được mời (đã che bớt) để biết phải dùng tài khoản
+ *     nào. Lời mời đi bằng SĐT từ ADR 0060: tạo tài khoản đối tác ở đây cũng xác minh luôn số đó.
  *  3. **Lời mời đã đóng** (đã trả lời / thu hồi / hết hạn) — không hiện nút nào, chỉ nói thật
  *     là hết hiệu lực. Hiện nút rồi để họ bấm vào một lỗi là tệ hơn.
  */
@@ -124,8 +125,8 @@ export function InviteAnswerCard({ token }: { token: string }) {
           <dd>{domainLabel('tenantRole', invite.roleKey, invite.roleKey)}</dd>
         </div>
         <div className={styles.fact}>
-          <dt>{t('invitedEmail')}</dt>
-          <dd>{invite.invitedEmailMasked}</dd>
+          <dt>{invite.invitedPhoneMasked ? t('invitedPhone') : t('invitedEmail')}</dt>
+          <dd>{invite.invitedPhoneMasked ?? invite.invitedEmailMasked}</dd>
         </div>
         <div className={styles.fact}>
           <dt>{t('expiresAt')}</dt>
@@ -170,7 +171,14 @@ export function InviteAnswerCard({ token }: { token: string }) {
         </div>
       ) : (
         <>
-          <Alert type="info" showIcon title={t('signInPartnerPrompt')} className={styles.prompt} />
+          <Alert
+            type="info"
+            showIcon
+            title={
+              invite.invitedPhoneMasked ? t('signInPartnerPromptPhone') : t('signInPartnerPrompt')
+            }
+            className={styles.prompt}
+          />
           <div className={styles.actions}>
             <Link href={`${ROUTES.MANAGE.LOGIN}?${nextParam}`}>
               <Button type="primary" size="large">

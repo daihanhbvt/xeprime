@@ -1,12 +1,14 @@
 'use client';
 
-import { Alert, App } from 'antd';
+import { Alert, App, Button, Input } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import * as yup from 'yup';
 import { TENANT_ROLE, TENANT_ROLE_VALUES } from '@xeprime/types';
+import { buildRequiredPhoneSchema } from '@xeprime/validators';
+import { CopyButton } from '@/components/data-display/CopyButton';
 import { SelectField } from '@/components/form/SelectField';
 import { TextField } from '@/components/form/TextField';
 import { DialogForm } from '@/components/form/DialogForm';
@@ -21,26 +23,34 @@ import {
   useBranchScopeOptions,
 } from './MemberBranchScopeSelect';
 import { useCreateInvite } from '../hooks/use-member-mutations';
+import type { CreateInviteResult } from '../types';
+import styles from './InviteMemberModal.module.css';
 
 /**
  * GỬI LỜI MỜI vào gian hàng — không phải "thêm thành viên".
  *
  * Tên cũ (`AddMemberModal`) mô tả đúng thứ nó từng làm: `POST /members` tạo thẳng một membership
  * `active` cho một email bất kỳ, và người bị thêm chỉ biết khi đăng nhập lần sau. Endpoint đó đã
- * bị gỡ; ở đây chỉ gửi thư, và người được mời mới là người quyết định.
+ * bị gỡ; ở đây chỉ TẠO LỜI MỜI, và người được mời mới là người quyết định.
  *
- * Vì vậy hộp thoại nói rõ điều gì sẽ xảy ra tiếp theo: hiện tại người được mời CHƯA vào gian
- * hàng. Không nói ra thì người gửi đóng hộp thoại, không thấy ai trong bảng, và tưởng là lỗi.
+ * Từ ADR 0060 lời mời đi bằng SỐ ĐIỆN THOẠI — định danh đăng nhập của site partner — và không gửi
+ * thư: tạo xong, hộp thoại hiện LIÊN KẾT MỜI để người mời sao chép và tự gửi (Zalo, tin nhắn).
+ * Liên kết chỉ có ở phản hồi tạo, đúng một lần; lộ ra cũng không sao vì chỉ tài khoản có đúng số
+ * được mời (đã xác minh) mới nhận được.
+ *
+ * Hộp thoại nói rõ điều gì sẽ xảy ra tiếp theo: hiện tại người được mời CHƯA vào gian hàng.
+ * Không nói ra thì người gửi đóng hộp thoại, không thấy ai trong bảng, và tưởng là lỗi.
  *
  * Remount theo `open` để state form sạch mỗi lần mở.
  */
 export function InviteMemberModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const t = useTranslations('Members');
-  const tCommon = useTranslations('Common');
   const { message } = App.useApp();
   const domainLabel = useDomainLabel();
   const errorMessage = useErrorMessage();
   const invite = useCreateInvite();
+  /** Lời mời vừa tạo — có mặt ⇒ hộp chuyển sang màn "sao chép liên kết". */
+  const [created, setCreated] = useState<CreateInviteResult | null>(null);
   /*
    * Chi nhánh phụ trách giao NGAY TRÊN LỜI MỜI (ADR 0052): người quản lý biết rõ nhân viên mới
    * làm ở đâu ngay lúc mời, và người được mời bước vào đã đúng phạm vi. Ô LUÔN có giá trị —
@@ -54,26 +64,30 @@ export function InviteMemberModal({ open, onClose }: { open: boolean; onClose: (
   const schema = useMemo(
     () =>
       yup.object({
-        email: yup
-          .string()
-          .trim()
-          .required(t('form.errors.emailRequired'))
-          .email(t('form.errors.emailInvalid')),
+        // Cùng luật SĐT với form đăng nhập/đăng ký — người được mời vào bằng đúng số này.
+        phone: buildRequiredPhoneSchema({
+          required: t('form.errors.phoneRequired'),
+          invalid: t('form.errors.phoneInvalid'),
+        }),
         roleKey: yup
           .string()
           .oneOf(TENANT_ROLE_VALUES.filter((r) => r !== TENANT_ROLE.SHOP_OWNER))
           .required(t('form.errors.roleRequired')),
         // Bắt buộc và không bao giờ rỗng: mặc định là ["all"], normalize giữ bất biến đó.
-        branchIds: yup.array().of(yup.string().defined()).min(1, t('form.errors.branchRequired')).defined(),
+        branchIds: yup
+          .array()
+          .of(yup.string().defined())
+          .min(1, t('form.errors.branchRequired'))
+          .defined(),
       }),
     [t],
   );
 
   type FormValues = yup.InferType<typeof schema>;
 
-  const { control, handleSubmit, setValue, getValues } = useForm<FormValues>({
+  const { control, handleSubmit, setValue, getValues, reset } = useForm<FormValues>({
     resolver: yupResolver(schema),
-    defaultValues: { email: '', roleKey: TENANT_ROLE.SHOP_STAFF, branchIds: [ALL_FILTER] },
+    defaultValues: { phone: '', roleKey: TENANT_ROLE.SHOP_STAFF, branchIds: [ALL_FILTER] },
   });
 
   /*
@@ -96,26 +110,61 @@ export function InviteMemberModal({ open, onClose }: { open: boolean; onClose: (
   }));
 
   const onSubmit = handleSubmit((values) => {
+    // Enter trong ô nhập vẫn submit khi nút đang quay — chặn lượt thứ hai ở đây.
+    if (invite.isPending) return;
     invite.mutate(
-      { email: values.email.trim(), roleKey: values.roleKey, ...toBranchScopeInput(values.branchIds) },
       {
-        /*
-         * Lời mời đã tạo, nhưng thư có thể KHÔNG gửi được (SMTP hỏng) — server nói thẳng qua
-         * `emailSent`. Báo "Đã gửi lời mời" trong trường hợp đó là nói dối người gửi và bắt họ
-         * chờ một lá thư không tồn tại; cảnh báo ở lại lâu hơn toast vì nó cần hành động tiếp.
-         */
-        onSuccess: (created) => {
-          if (created.emailSent) {
-            message.success(t('toast.invited'));
-          } else {
-            message.warning(t('toast.invitedNoEmail'), 8);
-          }
-          onClose();
-        },
+        phone: values.phone.trim(),
+        roleKey: values.roleKey,
+        ...toBranchScopeInput(values.branchIds),
+      },
+      {
+        // KHÔNG đóng hộp: liên kết chỉ có ở phản hồi này, đóng là mất. Người mời sao chép xong
+        // mới bấm "Xong".
+        onSuccess: (result) => setCreated(result),
         onError: (err) => message.error(errorMessage(err)),
       },
     );
   });
+
+  /**
+   * Rời màn "đã tạo": về form TRỐNG cho lần mở sau. Nơi gọi không remount hộp theo `open`, nên
+   * không dọn ở đây thì lần mở kế tiếp vẫn hiện liên kết của lời mời trước — và người mời gửi nhầm
+   * link cũ cho người mới.
+   */
+  function finish() {
+    setCreated(null);
+    reset();
+    onClose();
+  }
+
+  if (created) {
+    return (
+      <ResponsiveDialog
+        title={t('created.title')}
+        open={open}
+        onClose={finish}
+        size="sm"
+        footer={
+          <Button type="primary" onClick={finish}>
+            {t('created.done')}
+          </Button>
+        }
+      >
+        <div className={styles.created}>
+          <p className={styles.createdBody}>{t('created.body', { phone: created.phone ?? '' })}</p>
+          <label className={styles.linkLabel} htmlFor="invite-link">
+            {t('created.linkLabel')}
+          </label>
+          <div className={styles.linkRow}>
+            <Input id="invite-link" value={created.inviteUrl} readOnly />
+            <CopyButton value={created.inviteUrl} label={t('created.copy')} />
+          </div>
+          <Alert type="info" showIcon title={t('created.safety')} />
+        </div>
+      </ResponsiveDialog>
+    );
+  }
 
   return (
     <ResponsiveDialog
@@ -123,18 +172,18 @@ export function InviteMemberModal({ open, onClose }: { open: boolean; onClose: (
       open={open}
       onClose={onClose}
       size="sm"
-      okText={tCommon('actions.send')}
+      okText={t('form.submit')}
       onOk={() => void onSubmit()}
       confirmLoading={invite.isPending}
     >
       <DialogForm onSubmit={onSubmit} labelWidth="sm">
-        <Alert type="info" showIcon title={t('form.notice')} />
+        <Alert type="info" showIcon title={t('form.noticePhone')} />
         <TextField
           control={control}
-          name="email"
-          label={t('form.email')}
-          type="email"
-          placeholder={t('form.emailPlaceholder')}
+          name="phone"
+          label={t('form.phone')}
+          type="tel"
+          placeholder={t('form.phonePlaceholder')}
         />
         <SelectField
           control={control}

@@ -60,11 +60,12 @@ export class MobileDeviceDto {
   appVersion?: string;
 }
 
-/** `POST /auth/mobile/login` — email/SĐT + mật khẩu. */
+/** `POST /auth/mobile/login` — SĐT + mật khẩu (email bị từ chối — ADR 0060). */
 export class MobileLoginDto {
   @ApiProperty({
-    description: 'Email, hoặc SĐT Việt Nam dạng 0xxxxxxxxx / +84xxxxxxxxx',
-    example: 'ban@congty.vn',
+    description:
+      'SĐT Việt Nam dạng 0xxxxxxxxx / +84xxxxxxxxx. Email bị từ chối bằng `PHONE_LOGIN_REQUIRED` (ADR 0060).',
+    example: '0901234567',
   })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()

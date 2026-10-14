@@ -6,6 +6,8 @@ export interface RegisterInput {
   displayName: string;
   phone: string;
   password: string;
+  /** Mã OTP `purpose=register` gửi tới `phone` — tài khoản chỉ ra đời khi số đã xác minh (ADR 0060). */
+  code: string;
 }
 
 /**
@@ -35,14 +37,17 @@ export function fetchCurrentUser(): Promise<CurrentUser> {
   return apiGet<CurrentUser>('/auth/me');
 }
 
-// --- Đăng nhập/đăng ký bằng định danh + mật khẩu (độc lập Firebase) ---
+// --- Đăng nhập/đăng ký bằng SĐT + mật khẩu (ADR 0060) ---
 
-/** POST /auth/register — tạo tài khoản rồi backend set cookie luôn (đăng nhập ngay). */
+/** POST /auth/register — đối chiếu mã OTP, tạo tài khoản rồi backend set cookie luôn (đăng nhập ngay). */
 export function registerWithPassword(input: RegisterInput): Promise<CurrentUser> {
   return apiPost<CurrentUser>('/auth/register', input);
 }
 
-/** POST /auth/login — đăng nhập bằng email HOẶC số điện thoại + mật khẩu, backend set cookie httpOnly. */
+/**
+ * POST /auth/login — backend set cookie httpOnly. Site khách / site partner gửi SỐ ĐIỆN THOẠI
+ * (email bị từ chối `PHONE_LOGIN_REQUIRED` — ADR 0060); site quản trị gửi email hoặc SĐT.
+ */
 export function loginWithPassword(identifier: string, password: string): Promise<CurrentUser> {
   return apiPost<CurrentUser>('/auth/login', { identifier, password });
 }
@@ -63,26 +68,9 @@ export function changePassword(currentPassword: string, newPassword: string): Pr
 }
 
 /**
- * POST /auth/phone/login — đăng nhập passwordless bằng SĐT + OTP (purpose=login). BE tự tạo tài
- * khoản nếu SĐT chưa có rồi set cookie httpOnly. Không cần mật khẩu.
- *
- * CỐ Ý không nằm trong `authApi`: endpoint này thuộc `PhoneVerificationController`, và nó là
- * luồng CHỈ-WEB (đặt cookie). Native đăng nhập qua `/auth/mobile/*`.
+ * POST /auth/password/forgot — gửi link đặt lại qua EMAIL. Chỉ site quản trị dùng: site khách và
+ * site partner quên mật khẩu bằng SĐT (`resetPasswordWithOtp`). Luôn thành công (không rò rỉ email).
  */
-export function phoneLogin(
-  phone: string,
-  code: string,
-  /** Chỉ dùng khi số này CHƯA có tài khoản — tên của tài khoản sắp được tạo. */
-  displayName?: string,
-): Promise<CurrentUser> {
-  return apiPost<CurrentUser>('/auth/phone/login', {
-    phone,
-    code,
-    ...(displayName ? { displayName } : {}),
-  });
-}
-
-/** POST /auth/password/forgot — gửi link đặt lại qua email. Luôn thành công (không rò rỉ email). */
 export function forgotPassword(email: string): Promise<void> {
   return apiPost<void>('/auth/password/forgot', { email });
 }
@@ -90,4 +78,17 @@ export function forgotPassword(email: string): Promise<void> {
 /** POST /auth/password/reset — đặt mật khẩu mới từ token trong email. */
 export function resetPassword(token: string, password: string): Promise<void> {
   return apiPost<void>('/auth/password/reset', { token, password });
+}
+
+/**
+ * POST /auth/password/reset-otp — quên mật khẩu bằng SĐT (ADR 0060): mã OTP
+ * `purpose=password_reset` + mật khẩu mới. KHÔNG cấp phiên — người dùng đăng nhập lại bằng mật
+ * khẩu vừa đặt.
+ */
+export function resetPasswordWithOtp(input: {
+  phone: string;
+  code: string;
+  password: string;
+}): Promise<void> {
+  return apiPost<void>('/auth/password/reset-otp', input);
 }
