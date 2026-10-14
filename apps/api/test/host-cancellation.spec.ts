@@ -17,11 +17,10 @@ import {
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_TYPE,
 } from '@xeprime/types';
+import { normalizePhone } from '../src/common/phone';
 import { AuditService } from '../src/modules/audit/audit.service';
-import type { AuthService } from '../src/modules/auth/auth.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { HostMetricsService } from '../src/modules/host-metrics/host-metrics.service';
-import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import { VehicleSettingsService } from '../src/modules/vehicle-settings/vehicle-settings.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { giveTenantPlan } from './helpers/billing-fixture';
@@ -61,16 +60,7 @@ const settings = new VehicleSettingsService(asService, audit, occupancy);
 const holds = makeBookingHoldsService(asService);
 const metrics = new HostMetricsService(asService);
 
-const phoneVerification = {
-  assertPhoneVerifiedForBooking: async () => {},
-} as unknown as PhoneVerificationService;
-const auth = {
-  resolveOrCreateUserByPhone: async () => ({ userId: null }),
-} as unknown as AuthService;
-
 const requests = makeBookingRequestsService(asService, {
-  phoneVerification,
-  auth,
   audit,
   notifications,
   occupancy,
@@ -85,8 +75,11 @@ let staffId: string;
 let customerUserId: string;
 let tenantId: string;
 let vehicleId: string;
-let phoneCounter = 0;
-const nextPhone = () => `0933${String(100000 + ++phoneCounter).slice(-6)}`;
+/**
+ * SĐT ĐÃ XÁC MINH của tài khoản khách — người gửi mọi yêu cầu trong spec (ADR 0060). Riêng theo
+ * lượt chạy: `(realm, phone)` là unique, nên một lượt trước bị ngắt giữa chừng không chặn lượt sau.
+ */
+const CUSTOMER_PHONE = `0942${String(Date.now()).slice(-6)}`;
 
 /** `offsetDays` ngày nữa lúc `hourVn` giờ VN — nằm trong khung giờ giao nhận mặc định 06–22. */
 function vnAt(offsetDays: number, hourVn: number): Date {
@@ -101,15 +94,13 @@ async function acceptedRequest(offsetDays = 6): Promise<string> {
   const submitted = await requests.submitPublic(
     {
       vehicleId,
-      customerName: 'Nguyễn Văn A',
-      customerPhone: nextPhone(),
       pickupAt: vnAt(offsetDays, 9).toISOString(),
       returnAt: vnAt(offsetDays + 2, 9).toISOString(),
     },
     customerUserId,
   );
-  await requests.approve(tenantId, ownerId, submitted.receipt.id, {});
-  return submitted.receipt.id;
+  await requests.approve(tenantId, ownerId, submitted.id, {});
+  return submitted.id;
 }
 
 beforeAll(async () => {
@@ -147,6 +138,8 @@ beforeAll(async () => {
         id: customerUserId,
         displayName: 'Khách',
         email: `hc-cus-${RUN}@xeprime.test`,
+        phone: normalizePhone(CUSTOMER_PHONE),
+        phoneVerifiedAt: new Date(),
       },
     ],
   });
@@ -361,9 +354,10 @@ describe('Huỷ ở `awaiting_hold` — một transaction, năm việc', () => {
     const refund = await prisma.holdRefund.findFirstOrThrow({ where: { holdId: hold.id } });
     expect(refund.amount.toString()).toBe(partial.toString());
     /*
-     * `credited`, không phải `pending`: khách này CÓ tài khoản, nên khoản hoàn vào thẳng ví
-     * điểm ngay trong transaction (ADR 0033 điều 5). Chỉ khách vãng lai mới dừng ở `pending`
-     * chờ admin chuyển tay — và phân biệt đúng hai đường đó chính là điều đáng khoá ở đây.
+     * `credited`, không phải `pending`: khách này CÓ tài khoản (từ ADR 0060 người gửi yêu cầu
+     * luôn có), nên khoản hoàn vào thẳng ví điểm ngay trong transaction (ADR 0033 điều 5). Chỉ
+     * yêu cầu không gắn tài khoản — dữ liệu khách vãng lai trước ADR 0060 — mới dừng ở `pending`
+     * chờ admin chuyển tay; phân biệt đúng hai đường đó chính là điều đáng khoá ở đây.
      */
     expect(refund.status).toBe(HOLD_REFUND_STATUS.CREDITED);
     expect(await prisma.vehicleOccupancy.count({ where: { vehicleId } })).toBe(0);
@@ -425,8 +419,6 @@ describe('Chặng nào KHÔNG huỷ được, và câu trả lời phải có l�
     const submitted = await requests.submitPublic(
       {
         vehicleId,
-        customerName: 'Nguyễn Văn B',
-        customerPhone: nextPhone(),
         pickupAt: vnAt(8, 9).toISOString(),
         returnAt: vnAt(10, 9).toISOString(),
       },
@@ -434,7 +426,7 @@ describe('Chặng nào KHÔNG huỷ được, và câu trả lời phải có l�
     );
 
     await expect(
-      requests.cancelByHost(tenantId, ownerId, submitted.receipt.id, CANCEL),
+      requests.cancelByHost(tenantId, ownerId, submitted.id, CANCEL),
     ).rejects.toMatchObject({
       response: {
         code: API_ERROR_CODE.BOOKING_CANCEL_NOT_ALLOWED,

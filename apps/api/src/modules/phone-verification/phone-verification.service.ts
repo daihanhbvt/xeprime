@@ -2,7 +2,6 @@ import { createHash, randomInt } from 'node:crypto';
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   HttpException,
   HttpStatus,
   Inject,
@@ -11,9 +10,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { newId, Prisma } from '@xeprime/prisma';
 import {
-  ACCOUNT_REALM,
   API_ERROR_CODE,
-  PHONE_VERIFICATION_PURPOSE,
   PHONE_VERIFICATION_STATUS,
   type AccountRealm,
   type PhoneVerificationPurpose,
@@ -23,9 +20,6 @@ import { normalizePhone } from '../../common/phone';
 import { PrismaService } from '../../prisma/prisma.service';
 import { isProductionDeployment, OTP_BYPASS_PROVIDER, resolveOtpBypassCode } from './otp-bypass';
 import { OTP_PROVIDER, type OtpProvider } from './otp-provider';
-
-/** Trong bao lâu sau khi verify thì SĐT còn được coi là đã xác thực cho một hành động. */
-const VERIFIED_WINDOW_MINUTES = 30;
 
 @Injectable()
 export class PhoneVerificationService {
@@ -55,6 +49,13 @@ export class PhoneVerificationService {
      * chiếc máy của người đó, và người đó chỉ có một chiếc máy dù có mấy tài khoản.
      */
     realm: AccountRealm,
+    /**
+     * `deliver: false` ⇒ ghi hàng mã như thường (cooldown + trần gửi tính y hệt) nhưng KHÔNG nhắn
+     * tin. Dùng cho quên mật khẩu với một số không có tài khoản (`AuthService.otpDeliveryFor`):
+     * phản hồi giống hệt nhánh có tài khoản, và không ai trả tiền tin nhắn cho một số lạ. Mã của
+     * hàng đó không bao giờ rời server nên không đối chiếu đúng được.
+     */
+    options: { deliver?: boolean } = {},
   ): Promise<{ expiresAt: Date; devCode: string | null }> {
     const phone = normalizePhone(rawPhone);
     const now = Date.now();
@@ -116,7 +117,7 @@ export class PhoneVerificationService {
       },
     });
 
-    await this.provider.send(phone, code);
+    if (options.deliver !== false) await this.provider.send(phone, code);
 
     /*
      * `devCode` trả mã 6 số THẲNG trong response — chỉ khi đây KHÔNG phải một triển khai
@@ -149,27 +150,23 @@ export class PhoneVerificationService {
    *
    * Mã test (`resolveOtpBypassCode` — dev/staging, KHÔNG BAO GIỜ production) bỏ qua cả ba phép kiểm
    * trên: có mã đang chờ thì đánh dấu chính hàng đó verified, chưa gửi mã nào thì tạo một hàng
-   * verified mới — để `assertPhoneVerifiedForBooking` đọc được như mã thật.
+   * verified mới — để hàng mã luôn phản ánh đúng lượt xác thực vừa xảy ra.
    */
   async verifyOtp(
     rawPhone: string,
     purpose: PhoneVerificationPurpose,
     code: string,
     /**
-     * Realm của luồng — chỉ mã gửi ở CÙNG realm mới đối chiếu được (ADR 0053). Nhận một DANH SÁCH
-     * chỉ để làm cầu tương thích cho app XePrime Partner (xem `MobilePhoneAuthController.login`);
-     * mọi nơi khác truyền đúng một realm. Có `userId` thì phải là đúng realm của tài khoản đó.
+     * Realm của luồng — chỉ mã gửi ở CÙNG realm mới đối chiếu được (ADR 0053). Có `userId` thì
+     * phải là đúng realm của tài khoản đó.
      */
-    realms: AccountRealm | readonly AccountRealm[],
+    realm: AccountRealm,
     userId?: string | null,
   ): Promise<void> {
-    const accepted: readonly AccountRealm[] = typeof realms === 'string' ? [realms] : realms;
-    const realm = accepted[0];
-    if (!realm) throw new Error('verifyOtp cần ít nhất một realm');
     const phone = normalizePhone(rawPhone);
     const row = await this.prisma.phoneVerification.findFirst({
       where: {
-        realm: { in: [...accepted] },
+        realm,
         phone,
         purpose,
         status: PHONE_VERIFICATION_STATUS.PENDING,
@@ -291,33 +288,6 @@ export class PhoneVerificationService {
         throw phoneTaken();
       }
       throw error;
-    }
-  }
-
-  /**
-   * Chặn tạo yêu cầu thuê nếu SĐT chưa xác thực gần đây (§8). Chấp nhận dùng lại mã đã verify
-   * trong cửa sổ ngắn (không "consume") — schema status không có trạng thái consumed, và window
-   * ngắn + re-verify rẻ nên không mở đường replay đáng kể.
-   */
-  async assertPhoneVerifiedForBooking(rawPhone: string): Promise<void> {
-    const phone = normalizePhone(rawPhone);
-    const since = new Date(Date.now() - VERIFIED_WINDOW_MINUTES * 60 * 1000);
-    const ok = await this.prisma.phoneVerification.findFirst({
-      where: {
-        // Đặt xe là việc của KHÁCH (ADR 0053): chỉ mã xác thực ở site/app khách mới mở cửa này.
-        realm: ACCOUNT_REALM.CUSTOMER,
-        phone,
-        purpose: PHONE_VERIFICATION_PURPOSE.BOOKING,
-        status: PHONE_VERIFICATION_STATUS.VERIFIED,
-        verifiedAt: { gte: since },
-      },
-      select: { id: true },
-    });
-    if (!ok) {
-      throw new ForbiddenException({
-        code: API_ERROR_CODE.PHONE_NOT_VERIFIED,
-        message: 'Vui lòng xác thực số điện thoại trước khi gửi yêu cầu thuê',
-      });
     }
   }
 

@@ -15,7 +15,7 @@ import { InvitesService } from './invites.service';
  * chứ không nhét vào `InvitesController`.
  *
  * Cũng **không có `@RequirePermissions`**: quyền ở đây không đến từ vai trong một gian hàng mà
- * từ việc cầm đúng token VÀ đăng nhập đúng email được mời — `InvitesService.loadAnswerable`
+ * từ việc cầm đúng token VÀ đăng nhập đúng tài khoản được mời (SĐT đã xác minh — ADR 0060) — `InvitesService.loadAnswerable`
  * kiểm cả hai. Một `members.*` nào đó ở đây sẽ vô nghĩa: người được mời chưa có vai nào cả.
  */
 @ApiTags('members')
@@ -29,7 +29,7 @@ export class InviteAnswersController {
    * `@Public` có chủ đích: người được mời thường CHƯA có tài khoản, và họ cần biết ai mời, mời
    * làm gì trước khi quyết định có đăng ký hay không.
    *
-   * Cái lộ ra chỉ đủ để quyết định (tên gian hàng, vai trò, hạn, email đã che) và chỉ lộ cho
+   * Cái lộ ra chỉ đủ để quyết định (tên gian hàng, vai trò, hạn, SĐT đã che) và chỉ lộ cho
    * người cầm đúng token 32 byte. Hạn mức chặt để token không dò được bằng cách thử.
    */
   @Get(':token')
@@ -42,7 +42,10 @@ export class InviteAnswersController {
   }
 
   @Post(':token/accept')
-  @ApiOperation({ summary: 'Đồng ý tham gia gian hàng — cần đăng nhập đúng email được mời' })
+  @ApiOperation({
+    summary:
+      'Đồng ý tham gia gian hàng — cần đăng nhập tài khoản có đúng SĐT được mời (đã xác minh)',
+  })
   @ApiOkResponse({ type: InviteAnswerDto })
   accept(
     @Param('token') token: string,
@@ -54,11 +57,11 @@ export class InviteAnswersController {
   /**
    * Từ chối cũng cần đăng nhập, dù nghe có vẻ thừa.
    *
-   * Nếu ai cầm link cũng từ chối được thì một email chuyển tiếp nhầm đủ để huỷ lời mời của
+   * Nếu ai cầm link cũng từ chối được thì một link chuyển tiếp nhầm đủ để huỷ lời mời của
    * người khác — rẻ tiền nhưng vẫn là chiếm quyền quyết định của họ.
    */
   @Post(':token/decline')
-  @ApiOperation({ summary: 'Từ chối lời mời — cần đăng nhập đúng email được mời' })
+  @ApiOperation({ summary: 'Từ chối lời mời — cần đăng nhập tài khoản có đúng SĐT được mời' })
   @ApiOkResponse({ type: InviteAnswerDto })
   decline(
     @Param('token') token: string,

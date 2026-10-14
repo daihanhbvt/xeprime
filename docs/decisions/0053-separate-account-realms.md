@@ -64,6 +64,11 @@ Ranh giới hai TUYẾN bên trong realm `partner` giữ nguyên (`resolveEffect
   mật khẩu qua email. **Không bắt xác thực hai bước** (chỉ đạo 02/10/2026). Đăng nhập social và
   đăng nhập bằng OTP không mở cho `platform` ở đợt này.
 
+> **Sửa 14/10/2026 — ADR 0060.** `customer` và `partner` đăng nhập bằng SĐT + mật khẩu (email ⇒
+> `PHONE_LOGIN_REQUIRED`) hoặc Google/Facebook; đăng ký xác minh OTP ngay; OTP không còn là cách
+> đăng nhập. Nhân viên gian hàng được mời bằng SĐT và nhận lời mời bằng tài khoản `partner` có đúng
+> số đó đã xác minh. Gạch `platform` giữ nguyên.
+
 ### 4. Phiên tách biệt thật
 
 - **Web:** API phục vụ dưới `/api` của chính từng site (ADR 0051 điều 4). Cookie phiên **host-only**

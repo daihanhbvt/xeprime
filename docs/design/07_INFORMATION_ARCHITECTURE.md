@@ -29,7 +29,11 @@ admin.xeprime.vn      realm platform   Nhân sự nền tảng      app/(admin)/
   Trong thiết kế và tài liệu, ghi **site + đường dẫn**, ví dụ "site partner · `/vehicles`".
 - **Mỗi site là một tài khoản riêng.** Cùng SĐT/email/Google đăng ký ở hai site là **hai tài khoản**,
   mật khẩu và phiên riêng, không liên kết, không chuyển đổi. Đăng xuất chỉ áp cho site đó.
-- **Site quản trị** không tự đăng ký (tài khoản do admin tạo), đăng nhập bằng mật khẩu, không social/OTP.
+- **Site khách và site partner** đăng nhập bằng **SĐT + mật khẩu** hoặc Google/Facebook; đăng ký xác
+  minh SĐT bằng OTP; OTP không phải một cách đăng nhập. Tài khoản chưa xác minh SĐT phải xác minh
+  trước khi dùng tiếp. Gửi yêu cầu thuê cần tài khoản khách — khách chưa đăng nhập được mời đăng nhập
+  giữa luồng và quay lại đúng chỗ (ADR 0060).
+- **Site quản trị** không tự đăng ký (tài khoản do admin tạo), đăng nhập bằng email + mật khẩu, không social/OTP.
 - Quyền, tuyến và realm **do server quyết**. Host chỉ là trình bày; ẩn menu không phải kiểm soát quyền.
 
 ### 1.1 Ai làm được gì

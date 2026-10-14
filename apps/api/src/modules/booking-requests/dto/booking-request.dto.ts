@@ -19,7 +19,6 @@ import {
   IsArray,
   IsBoolean,
   IsDateString,
-  IsEmail,
   IsIn,
   IsInt,
   IsLatitude,
@@ -49,7 +48,12 @@ const MAX_LIMIT = 100;
 
 export { DEFAULT_LIMIT as BOOKING_REQUEST_DEFAULT_LIMIT, MAX_LIMIT as BOOKING_REQUEST_MAX_LIMIT };
 
-/** Khách gửi yêu cầu thuê từ Marketplace (công khai). `tenantId` suy từ xe ở server. */
+/**
+ * Khách (đã đăng nhập) gửi yêu cầu thuê từ Marketplace. `tenantId` suy từ xe ở server.
+ *
+ * Danh tính người thuê KHÔNG có trong payload: họ tên, SĐT (đã xác minh) và email (đã xác minh)
+ * đọc từ tài khoản đang đăng nhập (ADR 0060).
+ */
 export class CreateBookingRequestDto {
   @ApiProperty({ description: 'ID xe (ULID) trên marketplace' })
   @IsString()
@@ -57,39 +61,58 @@ export class CreateBookingRequestDto {
   vehicleId!: string;
 
   /*
-   * Client nào đang gửi — quyết định phiên được cấp KIỂU GÌ khi khách vãng lai được tự đăng nhập.
+   * ── Năm trường DƯỚI ĐÂY ĐÃ GỠ khỏi hợp đồng (ADR 0060), giữ khai báo chỉ để không vỡ client cũ ──
    *
-   * Bỏ trống = web: `Set-Cookie` httpOnly như trước, `session` trong receipt để trống. `native` =
-   * app: cặp access/refresh token đi trong `session`, KHÔNG cookie nào được phát (ADR 0017 — app
-   * không có chỗ chứa cookie, và một token trả cho trình duyệt thì mất `httpOnly` bảo vệ).
+   * Server KHÔNG đọc chúng. Chúng còn được khai vì `ValidationPipe` toàn cục chạy với
+   * `forbidNonWhitelisted`: xoá hẳn thì bản app đang phát hành — kể cả khi người dùng ĐÃ đăng
+   * nhập — nhận 400 cho mọi lượt đặt xe chỉ vì gửi thừa một trường. Web không gửi chúng nữa.
+   *
+   *  - `client`/`device`: từng chọn kiểu phiên cấp cho khách vãng lai — không còn phiên nào được
+   *    cấp ở route này.
+   *  - `customerName`/`customerPhone`/`customerEmail`: liên hệ do client tự khai — không được tin.
    */
   @ApiPropertyOptional({
     enum: ['web', 'native'],
-    description: 'Bỏ trống = web (nhận cookie). `native` = app (nhận cặp token trong `session`).',
+    deprecated: true,
+    description: 'ĐÃ GỠ (ADR 0060) — server bỏ qua; không còn phiên nào được cấp ở route này.',
   })
   @IsOptional()
   @IsIn(['web', 'native'])
   client?: string;
 
-  /** Chỉ dùng khi `client = 'native'` — để phiên hiện đúng tên máy ở màn "thiết bị đang đăng nhập". */
-  @ApiPropertyOptional({ type: MobileDeviceDto })
+  @ApiPropertyOptional({
+    type: MobileDeviceDto,
+    deprecated: true,
+    description: 'ĐÃ GỠ (ADR 0060) — server bỏ qua.',
+  })
   @IsOptional()
   @Type(() => MobileDeviceDto)
   device?: MobileDeviceDto;
 
-  @ApiProperty({ example: 'Nguyễn Văn A' })
-  @IsString()
-  @Length(1, 255)
-  customerName!: string;
-
-  @ApiProperty({ example: '0901234567' })
-  @IsString()
-  @Matches(/^(0|\+84)\d{9}$/, { message: 'Số điện thoại không hợp lệ' })
-  customerPhone!: string;
-
-  @ApiPropertyOptional({ example: 'a@example.com' })
+  @ApiPropertyOptional({
+    deprecated: true,
+    description: 'ĐÃ GỠ (ADR 0060) — server bỏ qua; họ tên lấy từ tài khoản.',
+  })
   @IsOptional()
-  @IsEmail({}, { message: 'Email không hợp lệ' })
+  @IsString()
+  @MaxLength(255)
+  customerName?: string;
+
+  @ApiPropertyOptional({
+    deprecated: true,
+    description: 'ĐÃ GỠ (ADR 0060) — server bỏ qua; SĐT đã xác minh lấy từ tài khoản.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  customerPhone?: string;
+
+  @ApiPropertyOptional({
+    deprecated: true,
+    description: 'ĐÃ GỠ (ADR 0060) — server bỏ qua; email đã xác minh lấy từ tài khoản.',
+  })
+  @IsOptional()
+  @IsString()
   @MaxLength(255)
   customerEmail?: string;
 
@@ -759,21 +782,20 @@ export class BookingRequestReceiptDto {
   @ApiProperty({ enum: BOOKING_REQUEST_STATUS_LIVE_VALUES }) status!: string;
   @ApiProperty({
     description:
-      'Sau khi gửi, khách đã có phiên đăng nhập (passwordless qua SĐT) — FE chuyển tới /trips.',
+      'Luôn `true` — người gửi luôn là tài khoản khách đã đăng nhập (ADR 0060). Giữ cho client cũ.',
   })
   authenticated!: boolean;
 
   /**
-   * Phiên vừa cấp cho app native — CHỈ có khi request gửi kèm `client: 'native'`.
-   *
-   * Vì sao một receipt đặt xe lại mang theo phiên: khách vãng lai đã xác thực SĐT bằng OTP
-   * `purpose=booking`, và bước đó vừa chứng minh sở hữu số vừa tạo tài khoản. Bắt họ làm thêm
-   * một vòng OTP `purpose=login` chỉ để lấy token là hỏi cùng một câu hai lần.
-   *
-   * Web nhận đúng thứ này qua `Set-Cookie`; ở đây nó hiện ra trong body vì app không có cookie
-   * jar. Trống ⇒ hoặc client là web, hoặc khách đã đăng nhập sẵn (không cần cấp phiên mới).
+   * ĐÃ GỠ (ADR 0060) — KHÔNG BAO GIỜ có mặt. Từng mang phiên cấp cho khách vãng lai của app
+   * native; nay người gửi đã đăng nhập sẵn nên không có phiên nào để cấp. Khai báo ở lại để kiểu
+   * sinh ra của bản app đang dùng không gãy.
    */
-  @ApiPropertyOptional({ type: MobileSessionDto })
+  @ApiPropertyOptional({
+    type: MobileSessionDto,
+    deprecated: true,
+    description: 'ĐÃ GỠ (ADR 0060) — không bao giờ có mặt.',
+  })
   session?: MobileSessionDto;
 
   /**
@@ -783,6 +805,10 @@ export class BookingRequestReceiptDto {
    */
   @ApiProperty() autoAccepted!: boolean;
 
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Đơn vừa tạo khi tự nhận (không hold)' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Đơn vừa tạo khi tự nhận (không hold)',
+  })
   bookingId!: string | null;
 }

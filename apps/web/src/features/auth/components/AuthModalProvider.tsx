@@ -12,7 +12,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { CurrentUser } from '@/hooks/use-current-user';
-import { AUTH_MODE, isAuthMode, type AuthMode } from '../post-auth-destination';
+import { AUTH_MODE, isAuthMode, type AuthContext, type AuthMode } from '../post-auth-destination';
 import { currentPathWithQuery, isSafeNextPath } from '../safe-next';
 
 /** Tham số URL điều khiển modal. */
@@ -37,6 +37,8 @@ export interface OpenAuthOptions {
    * `next` (nằm trong URL) để ý định không biến mất.
    */
   onSuccess?: (user: CurrentUser) => void;
+  /** Hộp mở giữa một luồng đang dở (vd đặt xe) — xem `AUTH_CONTEXT`. Không lên URL. */
+  context?: AuthContext;
 }
 
 interface AuthModalContextValue {
@@ -45,6 +47,8 @@ interface AuthModalContextValue {
   next: string | null;
   /** Mã lỗi từ `?authError=`, để `AuthPanel` hiện đúng câu theo ngôn ngữ đang dùng. */
   errorCode: string | null;
+  /** Ngữ cảnh của lần mở hiện tại — `null` khi hộp mở thẳng (nút Đăng nhập, link chia sẻ). */
+  context: AuthContext | null;
   open: (options?: OpenAuthOptions) => void;
   close: () => void;
   setMode: (mode: AuthMode) => void;
@@ -77,6 +81,7 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [state, setState] = useState<OpenState | null>(null);
+  const [context, setContext] = useState<AuthContext | null>(null);
   const pendingAction = useRef<((user: CurrentUser) => void) | null>(null);
 
   const buildUrl = useCallback(
@@ -109,6 +114,7 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
   const open = useCallback(
     (options: OpenAuthOptions = {}) => {
       pendingAction.current = options.onSuccess ?? null;
+      setContext(options.context ?? null);
       const mode = options.mode ?? AUTH_MODE.LOGIN;
       const next = options.next ?? null;
       // Mở ngay (không đợi router) để nút bấm phản hồi tức thì; AuthUrlSync sẽ xác nhận lại.
@@ -122,6 +128,7 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
   const close = useCallback(() => {
     pendingAction.current = null;
     setState(null);
+    setContext(null);
     // `replace` để không thêm một mục lịch sử "đã đóng modal".
     router.replace(buildUrl({ auth: null, next: null }), { scroll: false });
   }, [router, buildUrl]);
@@ -165,13 +172,14 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
       mode: state?.mode ?? AUTH_MODE.LOGIN,
       next: state?.next ?? null,
       errorCode: state?.errorCode ?? null,
+      context: state ? context : null,
       open,
       close,
       setMode,
       takePendingAction,
       syncFromUrl,
     }),
-    [state, open, close, setMode, takePendingAction, syncFromUrl],
+    [state, context, open, close, setMode, takePendingAction, syncFromUrl],
   );
 
   return <AuthModalContext.Provider value={value}>{children}</AuthModalContext.Provider>;
@@ -227,8 +235,5 @@ export function useAuthModal(): AuthModalContextValue {
  */
 export function useNextFromCurrentPath(): () => string {
   const pathname = usePathname();
-  return useCallback(
-    () => currentPathWithQuery(pathname, window.location.search),
-    [pathname],
-  );
+  return useCallback(() => currentPathWithQuery(pathname, window.location.search), [pathname]);
 }

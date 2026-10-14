@@ -7,7 +7,6 @@ import {
   CheckCircleFilled,
   CheckOutlined,
   ClockCircleOutlined,
-  EditOutlined,
   EnvironmentOutlined,
   ExclamationOutlined,
   FileTextOutlined,
@@ -35,11 +34,9 @@ import {
   SERVICE_TYPE,
   SERVICE_TYPE_VALUES,
   isRouteType,
-  isSameVnPhone,
   longTermPickupWindow,
   serviceRequiresDriverLicence,
   vnDateKey,
-  PHONE_VERIFICATION_PURPOSE,
   type LongTermPackageMonths,
   type RouteType,
   type ServiceType,
@@ -56,7 +53,6 @@ import { fetchDriverLicenceOverview } from '@/features/driver-licence/api';
 import { DriverLicenceVerifier } from '@/features/driver-licence/components/DriverLicenceVerifier';
 import { useDriverLicence } from '@/features/driver-licence/hooks/use-driver-licence';
 import type { DriverLicenceTrip } from '@/features/driver-licence/types';
-import { phoneLogin } from '@/services/auth.service';
 import type { BookingRequestReceipt } from '../types';
 import { LongTermPackageStep } from './LongTermPackageStep';
 import {
@@ -71,10 +67,8 @@ import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButto
 import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
 import { fetchListingDetailClient } from '@/features/marketplace/api';
 import type { PublicListingDetail } from '@/features/marketplace/types';
-import { verifyOtp } from '@/features/phone-verification/api';
-import { OtpCodeInput } from '@/features/phone-verification/components/OtpCodeInput';
-import { usePhoneVerify } from '@/features/phone-verification/hooks/use-phone-verify';
-import { maskPhone } from '@/features/phone-verification/mask';
+import { useAuthModal } from '@/features/auth/components/AuthModalProvider';
+import { AUTH_CONTEXT, AUTH_MODE } from '@/features/auth/post-auth-destination';
 import { useAddressPreview } from '@/features/locations/hooks/use-address-preview';
 import { fetchDeliveryDistance, fetchPublicQuote } from '@/features/rental-policies/api';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -104,6 +98,7 @@ import {
   fetchVehicleBusyDays,
   submitBookingRequest,
 } from '../api';
+import { clearBookingDraft, readBookingDraft, saveBookingDraft } from '../booking-draft';
 import { PICKUP_METHOD, requestFormSchema, type RequestFormValues } from '../schema';
 import { BookingPriceSummary } from './BookingPriceSummary';
 import { PromoCodeField } from '@/features/promo-codes/components/PromoCodeField';
@@ -162,8 +157,8 @@ interface RequestBookingFlowProps {
   deliveryProvinceCode?: string | null;
   onClose: () => void;
   /**
-   * Báo cho vỏ biết đang có request "không được bỏ dở" (xác minh OTP / gửi yêu cầu) để nó
-   * khoá các đường đóng vô ý. Flow vẫn tự giữ state; đây chỉ là thông báo ra ngoài.
+   * Báo cho vỏ biết đang có request "không được bỏ dở" (gửi yêu cầu) để nó khoá các đường đóng
+   * vô ý. Flow vẫn tự giữ state; đây chỉ là thông báo ra ngoài.
    */
   onBusyChange?: (busy: boolean) => void;
   /**
@@ -181,18 +176,20 @@ interface RequestBookingFlowProps {
  * Cột trái là hồ sơ xe đứng yên (`VehicleSummaryPanel`); cột phải đổi theo bước:
  * `Chuyến đi` → `Xác nhận`.
  *
- * **Vì sao hai bước, không phải ba.** Bản trước tách `Thời gian` và `Liên hệ` thành hai bước
- * riêng, nhưng cả hai đều gần như không có việc để làm: thẻ tìm kiếm ở trang chủ đã hỏi thời
- * gian nên bước đầu chỉ còn một ô điền sẵn và một nút Tiếp tục, còn khách đã đăng nhập với SĐT
- * đã xác thực thì bước Liên hệ chỉ là một thẻ chỉ-đọc. Gộp lại thành MỘT bước "Chuyến đi" —
- * thời gian là một trường, ô liên hệ chỉ hiện với người hệ thống chưa biết — và giữ nguyên bước
- * `Xác nhận` cuối cùng, nơi khách soát lại rồi mới gửi.
+ * **Không có ô liên hệ nào** (ADR 0060). Gửi yêu cầu cần TÀI KHOẢN KHÁCH đã đăng nhập, và họ tên +
+ * SĐT đã xác minh của người thuê đọc từ tài khoản đó ở server — client không gửi, server không tin.
+ * Bước Xác nhận chỉ hiện lại chúng thành một dòng "Người thuê".
  *
- * OTP là một TRẠNG THÁI giữa hai bước chứ không phải bước thứ ba — khách đã đăng nhập với đúng
- * SĐT đã xác thực không đi qua nó bao giờ. **Điều kiện bỏ qua OTP ở đây chỉ để CHỌN MÀN HÌNH.**
- * Cái chặn thật nằm ở `BookingRequestsService.canSkipBookingOtp`; nếu hai bên bất đồng (phiên
- * vừa hết hạn) backend trả `PHONE_NOT_VERIFIED` và flow tự lùi về OTP, giữ nguyên mọi thứ đã
- * nhập.
+ * **Chưa đăng nhập mà bấm "Tiếp tục"** ⇒ kiểm khung giờ trống (công khai) như thường, rồi GIỮ
+ * thứ khách vừa nhập vào bản nháp (`booking-draft.ts`, `sessionStorage`, không lên URL) và mở
+ * hộp đăng nhập / đăng ký ngay trên hộp này. Có phiên rồi thì luồng TỰ ĐI TIẾP từ đúng chỗ đó —
+ * kiểm lại khung giờ, rồi bằng lái (nếu cần), rồi Xác nhận. Đăng nhập Google/Facebook rời trang:
+ * quay về trang xe, `RequestBookingButton` mở lại hộp từ bản nháp và luồng đi tiếp y như vậy.
+ * Không có gì được GỬI trước khi khách tự bấm "Gửi yêu cầu", và chưa đăng nhập thì không có yêu
+ * cầu, không có phiên khách vãng lai, không giữ lịch.
+ *
+ * Tài khoản chưa có SĐT đã xác minh (vừa vào bằng Google/Facebook) xác minh ở `AccountPhoneGate`
+ * của vỏ site; server vẫn là chốt (`PHONE_NOT_VERIFIED`).
  *
  * **Giao xe tận nơi**: chỉ hỏi địa chỉ. Lựa chọn này chỉ hiện khi CHÍNH SÁCH hiệu lực cho phép
  * (`listing.deliveryAvailable`), không phải khi hồ sơ xe gắn chip tiện ích.
@@ -256,7 +253,15 @@ export function RequestBookingFlow({
    * lịch bận (`busyDays`) và giờ giao nhận của chủ xe vẫn được kiểm trước khi cho gửi yêu cầu,
    * và chốt cuối vẫn là constraint chống trùng ở DB (ADR 0006).
    */
+  /*
+   * Bản nháp của CHÍNH xe này — thứ khách đã nhập trước khi được mời đăng nhập (ADR 0060). Đọc MỘT
+   * LẦN lúc dựng, cùng lý do với `seededRange` ngay dưới: flow chỉ được dựng khi hộp đã mở ở client.
+   * Có bản nháp thì nó THẮNG cả URL lẫn bộ nhớ khoảng thuê: đó là thứ khách vừa tự chọn cho xe này.
+   */
+  const [restoredDraft] = useState(() => readBookingDraft(vehicleId));
+
   const [seededRange] = useState(() => {
+    if (restoredDraft) return null;
     // Mốc từ URL luôn THẮNG: một link chia sẻ phải mở ra đúng thứ người gửi nhìn thấy.
     if (pickupAt && returnAt) return null;
     // Dài hạn KHÔNG có khoảng nhận–trả ở bước này (ADR 0011) — khách chọn GÓI, không chọn lịch.
@@ -264,18 +269,23 @@ export function RequestBookingFlow({
     return rememberedOrDefaultRentalRange();
   });
 
-  const [rentalMode, setRentalMode] = useState<RentalMode>(seededRange?.mode ?? 'daily');
-  const [otpPhone, setOtpPhone] = useState('');
-  const [code, setCode] = useState('');
+  const [rentalMode, setRentalMode] = useState<RentalMode>(
+    restoredDraft?.rentalMode ?? seededRange?.mode ?? 'daily',
+  );
   /**
-   * Mã OTP đang chờ là để làm gì.
-   *
-   *  - `booking`: xác minh SĐT cho MỘT yêu cầu (khách đã đăng nhập, hoặc thuê có tài xế).
-   *  - `login`  : khách CHƯA đăng nhập thuê xe tự lái — mã này đăng nhập/tạo tài khoản theo SĐT
-   *    TRƯỚC khi gửi, vì bằng lái gắn với TÀI KHOẢN (ADR 0057) và phải được xác thực trước bước
-   *    Xác nhận. Cùng một SMS, cùng một tài khoản mà bước gửi yêu cầu sẽ tạo ra — chỉ sớm hơn.
+   * Khách đã bấm "Tiếp tục" khi CHƯA đăng nhập và đang ở hộp đăng nhập/đăng ký. Có phiên là luồng
+   * tự đi tiếp (xem khối "quay lại sau đăng nhập" bên dưới). Mở hộp từ một bản nháp (quay về sau
+   * Google/Facebook) thì bắt đầu ở trạng thái này luôn.
    */
-  const [otpMode, setOtpMode] = useState<'booking' | 'login'>('booking');
+  const [awaitingAuth, setAwaitingAuth] = useState(restoredDraft !== null);
+  /**
+   * Mốc mời đăng nhập gần nhất (ms). Chỉ một `/auth/me` NẠP SAU mốc này mới được tính là "đã có
+   * phiên": khi phiên hết hạn giữa chừng (401), cache vẫn còn giữ người dùng CŨ thêm một lúc, và
+   * coi bản cũ đó là "vừa đăng nhập" là đi tiếp ngay sau lưng hộp đăng nhập — rồi lại 401, lại mời,
+   * thành một vòng lặp. Hộp dựng lại từ BẢN NHÁP (quay về sau Google/Facebook, hay quay lại trang
+   * sau một lần 401) thì mốc là lúc GHI bản nháp: phiên nạp sau đó mới là phiên thật.
+   */
+  const [signInRequestedAt, setSignInRequestedAt] = useState(() => restoredDraft?.savedAt ?? 0);
   /** Đang đọc bằng lái để quyết định có cần bước bằng lái không — giữ nút Tiếp tục ở trạng thái chờ. */
   const [checkingLicence, setCheckingLicence] = useState(false);
   const [stepError, setStepError] = useState<string | null>(null);
@@ -300,8 +310,6 @@ export function RequestBookingFlow({
    * thẳng từ `useUnpaidHolds`, xem `holdLimitBlocked`.
    */
   const [submitHitHoldLimit, setSubmitHitHoldLimit] = useState(false);
-  /** Người đã đăng nhập bấm "Đổi" ở bước xác nhận → hiện lại ô nhập liên hệ ở bước Chuyến đi. */
-  const [editingContact, setEditingContact] = useState(false);
   const [requestCode, setRequestCode] = useState<string | null>(null);
   /** Kết quả nhận yêu cầu — biết đơn đã được XÁC NHẬN NGAY (auto-accept) hay còn chờ chủ xe. */
   const [receipt, setReceipt] = useState<BookingRequestReceipt | null>(null);
@@ -315,8 +323,11 @@ export function RequestBookingFlow({
   const [priceExpanded, setPriceExpanded] = useState(false);
   const priceDetailRef = useRef<HTMLDivElement | null>(null);
 
-  // 401 = chưa đăng nhập, là trạng thái hợp lệ ở màn công khai này → coi như khách vãng lai.
-  const { data: me } = useCurrentUser();
+  // 401 = chưa đăng nhập — trạng thái hợp lệ ở màn công khai này: khách vẫn chọn chuyến và kiểm
+  // khung giờ được, chỉ được mời đăng nhập lúc bấm "Tiếp tục".
+  const meQuery = useCurrentUser();
+  const me = meQuery.data;
+  const authModal = useAuthModal();
   /*
    * Khách đang giữ những chuyến nào chưa trả — đọc NGAY khi mở hộp thoại. Đã chạm trần thì server
    * sẽ từ chối mọi yêu cầu mới (`HOLD_LIMIT_REACHED`), nên nói trước khi khách mất công điền form.
@@ -324,8 +335,6 @@ export function RequestBookingFlow({
    * tự mở lại form.
    */
   const unpaidHolds = useUnpaidHolds(Boolean(me));
-  const accountPhone = me?.phone ?? null;
-  const accountPhoneVerified = Boolean(me?.phoneVerified && accountPhone);
 
   /**
    * Hồ sơ xe cho cột trái. Mở từ trang chi tiết thì `providedListing` đã đủ và query TẮT —
@@ -357,9 +366,7 @@ export function RequestBookingFlow({
 
   const { control, trigger, getValues, setValue, formState } = useForm<RequestFormValues>({
     resolver: yupResolver(schema),
-    defaultValues: {
-      customerName: '',
-      customerPhone: '',
+    defaultValues: restoredDraft?.values ?? {
       // Dịch vụ/lộ trình prefill từ ngữ cảnh tìm kiếm; đối chiếu với năng lực xe ở effect dưới.
       serviceType: initialServiceType,
       routeType: isRouteType(routeTypeContext) ? routeTypeContext : ROUTE_TYPE.IN_CITY,
@@ -495,10 +502,13 @@ export function RequestBookingFlow({
    * mà giao diện không còn ô nào để sửa, và backend từ chối ở đúng nút cuối cùng.
    */
   useEffect(() => {
+    // Hồ sơ xe chưa về thì CHƯA BIẾT chính sách — kéo về lúc này là xoá lựa chọn giao xe mà khách
+    // vừa khôi phục từ bản nháp, chỉ vì cột trái tải chậm hơn.
+    if (!listing) return;
     if (!deliveryAvailable && getValues('pickupMethod') === PICKUP_METHOD.DELIVERY) {
       setValue('pickupMethod', PICKUP_METHOD.SELF, { shouldValidate: true });
     }
-  }, [deliveryAvailable, getValues, setValue]);
+  }, [listing, deliveryAvailable, getValues, setValue]);
 
   /**
    * Đổi dịch vụ. Dài hạn và các dịch vụ theo ngày dùng hai bộ input khác hẳn nhau (gói +
@@ -670,20 +680,24 @@ export function RequestBookingFlow({
     return { ...q, breakdown: { ...q.breakdown, fees: promoFees } };
   }, [quoteQ.data, promo.applied]);
 
-  /**
-   * Điền sẵn tên + SĐT của tài khoản. Chạy khi `/auth/me` về (có thể sau lần render đầu), và chỉ
-   * điền vào ô đang trống — không đè lên thứ khách đã tự gõ.
+  /*
+   * Mã khuyến mãi phải được đánh giá lại cho ĐÚNG NGƯỜI sau lượt đăng nhập. Kết quả xem trước phụ
+   * thuộc người đang xem (khách mới, lượt mỗi khách — ADR 0046 điều 5), nên số giảm thấy lúc CHƯA
+   * đăng nhập không phải lời hứa cho tài khoản vừa vào.
+   *
+   * `promoToEvaluate` là mã còn chờ đánh giá: mã của bản nháp lúc dựng, hoặc mã đang áp lúc mời
+   * đăng nhập (ghi trong `requestSignIn`). Đánh giá MỘT lần, khi đã hết chờ đăng nhập và chuyến đủ
+   * để hỏi giá. Không chép số giảm cũ — server đánh giá lại (ADR 0046 điều 7).
    */
+  const promoToEvaluate = useRef<string | null>(restoredDraft?.promoCode ?? null);
+  const promoTripReady = promoTrip !== null;
   useEffect(() => {
-    if (!me) return;
-    if (!getValues('customerName')) setValue('customerName', me.displayName ?? '');
-    if (!getValues('customerPhone') && accountPhone) setValue('customerPhone', accountPhone);
-  }, [me, accountPhone, getValues, setValue]);
-
-  const vpBooking = usePhoneVerify(PHONE_VERIFICATION_PURPOSE.BOOKING);
-  const vpLogin = usePhoneVerify(PHONE_VERIFICATION_PURPOSE.LOGIN);
-  /** Bộ gửi mã của lượt OTP đang hiện — đếm ngược, mã dev, gửi lại đều theo đúng mục đích. */
-  const vp = otpMode === 'login' ? vpLogin : vpBooking;
+    if (awaitingAuth || !promoTripReady) return;
+    const code = promoToEvaluate.current;
+    if (!code) return;
+    promoToEvaluate.current = null;
+    promo.apply(code);
+  }, [awaitingAuth, promoTripReady, promo]);
 
   /**
    * Bằng lái của tài khoản — chỉ nạp khi đang ở bước bằng lái (nút Tiếp tục cần biết bằng đã
@@ -713,16 +727,6 @@ export function RequestBookingFlow({
   useEffect(() => {
     if (licenceAdvances > 0) void message.success(t('licence.verified'));
   }, [licenceAdvances, message, t]);
-
-  /** SĐT đang dùng có phải chính SĐT đã xác thực của tài khoản không (bỏ qua 0/84/+84). */
-  const phoneMatchesAccount = (phone: string) =>
-    accountPhoneVerified && isSameVnPhone(phone, accountPhone);
-
-  /**
-   * Hệ thống đã biết đủ liên hệ chưa. `false` ⇒ bước Chuyến đi dựng ô nhập tên + SĐT; `true`
-   * ⇒ không hỏi lại thứ đã có, chỉ hiện một dòng "Người thuê" ở bước Xác nhận kèm nút Đổi.
-   */
-  const contactKnown = accountPhoneVerified && !editingContact;
 
   /**
    * Đổi bước — MỘT cửa duy nhất, vì bước nào cũng kéo theo hình thái của khối tiền.
@@ -783,6 +787,9 @@ export function RequestBookingFlow({
   useEffect(() => {
     if (deliveryPrefilled.current) return;
     deliveryPrefilled.current = true;
+    // Bản nháp (ADR 0060) đã mang địa chỉ khách vừa nhập cho CHÍNH chuyến này — mới hơn mọi thứ
+    // nhớ từ lần đặt trước, nên không đè.
+    if (restoredDraft) return;
 
     const remembered = readDeliveryAddress();
     if (remembered) {
@@ -814,13 +821,12 @@ export function RequestBookingFlow({
   }, [vehicleProvinceCode, getValues, setValue]);
 
   const submitM = useMutation({
-    mutationFn: (phone: string) => {
+    mutationFn: () => {
       const v = getValues();
       const withDriver = v.serviceType === SERVICE_TYPE.WITH_DRIVER;
       return submitBookingRequest({
         vehicleId,
-        customerName: v.customerName.trim(),
-        customerPhone: phone,
+        // KHÔNG có liên hệ: server đọc họ tên + SĐT đã xác minh từ tài khoản (ADR 0060).
         serviceType: v.serviceType,
         /*
          * Dài hạn KHÔNG gửi lịch: chỉ gói + nguyện vọng. Khoảng "trong 7 ngày tới" do server
@@ -888,6 +894,8 @@ export function RequestBookingFlow({
       });
     },
     onSuccess: async (receipt) => {
+      // Đã gửi — bản nháp (nếu còn) không được mở lại hộp ở lần ghé trang sau.
+      clearBookingDraft();
       setRequestCode(receipt.id ?? null);
       setReceipt(receipt);
       /*
@@ -908,7 +916,7 @@ export function RequestBookingFlow({
           locationSource: v.deliveryLocationSource,
         });
       }
-      // Có thể vừa được cấp phiên mới (passwordless) → làm mới toàn bộ cache để cả app biết.
+      // Chuyến mới phải hiện ngay ở "Chuyến của tôi", huy hiệu và số chuyến chưa khép của `/auth/me`.
       await queryClient.invalidateQueries();
       /*
        * Chuyến được NHẬN NGAY (xe "Đặt ngay") ⇒ khách sang thẳng TRANG THANH TOÁN của chuyến
@@ -956,33 +964,32 @@ export function RequestBookingFlow({
         return;
       }
       /*
-       * Backend nói SĐT chưa xác thực trong khi FE tưởng được bỏ qua OTP — nghĩa là phiên đã hết
-       * hạn hoặc SĐT tài khoản vừa bị đổi. Đây là điểm khôi phục: lùi về bước xác thực, GIỮ
-       * NGUYÊN xe/ngày giờ/liên hệ đã nhập, gửi mã cho chính số đó.
+       * Phiên vừa hết hạn giữa chừng ⇒ mời đăng nhập lại ngay tại đây, GIỮ NGUYÊN mọi thứ đã nhập;
+       * đăng nhập xong luồng tự đi tiếp tới bước Xác nhận để khách bấm gửi lại.
+       */
+      if (isUnauthenticated(e)) {
+        backToTrip();
+        requestSignIn();
+        return;
+      }
+      /*
+       * Server nói SĐT của tài khoản chưa xác minh trong khi `/auth/me` đang giữ bản cũ. Làm mới
+       * nó: `AccountPhoneGate` của vỏ site hiện bước xác minh số ngay trên hộp này, rồi khách bấm
+       * gửi lại.
        */
       if (code === API_ERROR_CODE.PHONE_NOT_VERIFIED) {
-        /*
-         * Thuê tự lái cần PHIÊN (bằng lái gắn với tài khoản), nên lối khôi phục là mã ĐĂNG NHẬP;
-         * thuê có tài xế giữ mã xác minh đơn lẻ như trước.
-         */
-        const phone = getValues('customerPhone').trim();
-        void startOtp(needsLicence ? 'login' : 'booking', phone).then(() =>
-          setStepError(t('otp.sessionExpired')),
-        );
+        void queryClient.invalidateQueries({ queryKey: queryKeys.auth.all });
+        setStepError(errorMessage(e));
         return;
       }
       /*
        * Cổng BẰNG LÁI ở server (ADR 0057) nói "chưa" trong khi giao diện tưởng là "được" — bằng
-       * vừa hết hạn, vừa bị thay, hoặc phiên vừa mất. Lùi về bước bằng lái với dữ liệu MỚI, giữ
-       * nguyên mọi thứ khách đã nhập; mất phiên thì đi lại đường OTP đăng nhập.
+       * vừa hết hạn, vừa bị thay. Lùi về bước bằng lái với dữ liệu MỚI, giữ nguyên mọi thứ khách
+       * đã nhập.
        */
       if (isDriverLicenceGateErrorCode(code)) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.driverLicence.overview });
         setStepError(null);
-        if (!me) {
-          void startOtp('login');
-          return;
-        }
         goToStep('licence');
         return;
       }
@@ -990,34 +997,12 @@ export function RequestBookingFlow({
     },
   });
 
-  const verifyM = useMutation({
-    mutationFn: async () => {
-      if (otpMode === 'login') {
-        // Đăng nhập/tạo tài khoản theo SĐT — phiên mới gắn vào trình duyệt ngay tại đây.
-        // Tên khách vừa nhập chỉ dùng khi số này CHƯA có tài khoản — không thì tài khoản mới mang
-        // tên mặc định "Khách 1234" ở mọi nơi (đầu trang, hàng đợi duyệt, nhật ký).
-        const user = await phoneLogin(
-          otpPhone,
-          code,
-          getValues('customerName').trim() || undefined,
-        );
-        queryClient.setQueryData(queryKeys.auth.me(), user);
-        await queryClient.invalidateQueries({ queryKey: queryKeys.driverLicence.all });
-        return;
-      }
-      await verifyOtp({ phone: otpPhone, purpose: PHONE_VERIFICATION_PURPOSE.BOOKING, code });
-    },
-    onSuccess: () => continueAfterPhone(),
-    onError: (e) => setStepError(errorMessage(e)),
-  });
-
   const submitting = submitM.isPending;
-  const verifying = verifyM.isPending;
 
   // Đẩy trạng thái "đang gửi" ra vỏ để nó khoá Esc/bấm nền trong lúc request đang bay.
   useEffect(() => {
-    onBusyChange?.(submitting || verifying);
-  }, [submitting, verifying, onBusyChange]);
+    onBusyChange?.(submitting);
+  }, [submitting, onBusyChange]);
 
   /*
    * Chạm trần giữ chỗ — chỉ chặn khi còn đang ĐIỀN form: màn "đã gửi" của một yêu cầu vừa thành công
@@ -1025,8 +1010,7 @@ export function RequestBookingFlow({
    * liệu (trả xong là mở lại); chưa có (khách chưa có phiên) thì tin câu trả lời của server.
    */
   const holdLimitBlocked =
-    step !== 'done' &&
-    (unpaidHolds.data ? unpaidHolds.data.limitReached : submitHitHoldLimit);
+    step !== 'done' && (unpaidHolds.data ? unpaidHolds.data.limitReached : submitHitHoldLimit);
 
   const isResult = step === 'done' || duplicate || blocked !== null || holdLimitBlocked;
   useEffect(() => {
@@ -1045,45 +1029,61 @@ export function RequestBookingFlow({
   }, [priceExpanded]);
 
   /**
-   * Rời bước Chuyến đi: SĐT đã xác thực thì đi tiếp (qua bước bằng lái nếu cần), chưa thì OTP.
-   *
-   * Khách CHƯA đăng nhập thuê tự lái nhận mã ĐĂNG NHẬP thay vì mã xác minh đơn lẻ: bằng lái gắn
-   * với tài khoản, nên tài khoản phải có trước bước bằng lái. Thuê có tài xế giữ đường cũ.
+   * Rời bước Chuyến đi. Chưa đăng nhập ⇒ giữ bản nháp + mời đăng nhập (ADR 0060). Đã đăng nhập ⇒
+   * đi tiếp tới bằng lái / Xác nhận.
    */
   async function afterTripStep() {
-    const phone = getValues('customerPhone').trim();
-    if (phoneMatchesAccount(phone)) {
-      await continueAfterPhone();
+    if (!me) {
+      requestSignIn();
       return;
     }
-    await startOtp(needsLicence && !me ? 'login' : 'booking', phone);
+    await continueToReview();
   }
 
   /**
-   * Gửi mã và dựng màn OTP — lỗi gửi mã hiện qua `vp.error` tại bước đang đứng.
+   * Mời đăng nhập / đăng ký NGAY trên hộp này, giữ nguyên thứ khách đã nhập.
    *
-   * Môi trường nhận mã test (dev/staging) KHÔNG tự gửi: vào thẳng màn OTP, khách gõ mã test là
-   * qua, hoặc tự bấm "Gửi mã" để nhận SMS thật — một lượt thử không tốn tin nhắn nào.
+   * Bản nháp ghi TRƯỚC khi mở hộp đăng nhập: nút Google/Facebook rời trang ngay khi bấm, và lúc đó
+   * không còn lượt render nào để ghi kịp. Không có yêu cầu nào được gửi, không có phiên khách
+   * vãng lai nào được cấp ở bước này.
    */
-  async function startOtp(mode: 'booking' | 'login', phone = getValues('customerPhone').trim()) {
-    setOtpMode(mode);
-    const sender = mode === 'login' ? vpLogin : vpBooking;
-    try {
-      if (!sender.testCodeEnabled) await sender.sendAsync(phone);
-      setOtpPhone(phone);
-      setCode('');
-      goToStep('otp');
-    } catch {
-      /* lỗi gửi mã hiển thị qua vp.error */
-    }
+  function requestSignIn() {
+    saveBookingDraft(vehicleId, {
+      values: getValues(),
+      rentalMode,
+      promoCode: promo.appliedCode,
+    });
+    promoToEvaluate.current = promo.appliedCode ?? promoToEvaluate.current;
+    setAwaitingAuth(true);
+    setSignInRequestedAt(Date.now());
+    authModal.open({ mode: AUTH_MODE.LOGIN, context: AUTH_CONTEXT.BOOKING });
+  }
+
+  /*
+   * QUAY LẠI SAU ĐĂNG NHẬP — đang chờ đăng nhập mà phiên đã có ⇒ đi tiếp đúng từ chỗ khách bấm
+   * "Tiếp tục": kiểm lại dữ liệu + khung giờ (có thể đã có người khác giữ trong lúc họ đăng nhập),
+   * rồi bằng lái, rồi Xác nhận. Không TỰ GỬI gì — khách vẫn tự bấm "Gửi yêu cầu", nên đăng nhập
+   * lại hay quay về sau Google/Facebook không bao giờ sinh thêm một yêu cầu.
+   *
+   * Tài khoản chưa có SĐT đã xác minh (vừa vào bằng Google/Facebook) thì ĐỢI: `AccountPhoneGate`
+   * đang hỏi số, và đi tiếp lúc này chỉ để server từ chối ở nút cuối cùng.
+   *
+   * Đổi state NGAY TRONG render (cùng mẫu với bước bằng lái ở trên) để mỗi lượt đăng nhập kích
+   * đúng MỘT lần đi tiếp; effect chỉ chạy phần bất đồng bộ.
+   */
+  const [resumeTick, setResumeTick] = useState(0);
+  if (awaitingAuth && me?.phoneVerified && meQuery.dataUpdatedAt > signInRequestedAt) {
+    setAwaitingAuth(false);
+    setStepError(null);
+    setResumeTick((n) => n + 1);
   }
 
   /**
-   * SĐT đã chắc chắn. Thuê tự lái/dài hạn thì soát bằng lái cho CHÍNH chuyến này trước bước Xác
-   * nhận — đã hợp lệ thì khách không thấy bước bằng lái bao giờ. Đọc mới từ server (không dùng
-   * cache): khách có thể vừa nộp bằng ở một tab khác.
+   * Thuê tự lái/dài hạn thì soát bằng lái cho CHÍNH chuyến này trước bước Xác nhận — đã hợp lệ
+   * thì khách không thấy bước bằng lái bao giờ. Đọc mới từ server (không dùng cache): khách có
+   * thể vừa nộp bằng ở một tab khác.
    */
-  async function continueAfterPhone() {
+  async function continueToReview() {
     if (!needsLicence || !licenceTrip) {
       goToStep('review');
       return;
@@ -1098,10 +1098,9 @@ export function RequestBookingFlow({
       const gate = evaluateDriverLicenceForTrip(overview, licenceTrip);
       goToStep(gate === DRIVER_LICENCE_TRIP_GATE.OK ? 'review' : 'licence');
     } catch (error) {
-      // Mất phiên: bước bằng lái không đọc được gì — đi lại đường OTP đăng nhập thay vì để khách
-      // bấm "Thử lại" vào một lỗi 401 mãi mãi.
+      // Phiên vừa mất: mời đăng nhập lại thay vì để khách bấm "Thử lại" vào một lỗi 401 mãi mãi.
       if (isUnauthenticated(error)) {
-        await startOtp('login');
+        requestSignIn();
         return;
       }
       // Lỗi khác: bộ xác thực tự hiện lỗi tải + nút Thử lại.
@@ -1112,17 +1111,24 @@ export function RequestBookingFlow({
   }
 
   /**
-   * Một nút "Tiếp tục" cho cả bước Chuyến đi — gộp việc của hai bước cũ: kiểm dữ liệu chuyến,
-   * kiểm khung giờ còn trống, rồi mới quyết định đi qua OTP hay thẳng tới Xác nhận.
+   * Một nút "Tiếp tục" cho cả bước Chuyến đi — kiểm dữ liệu chuyến, kiểm khung giờ còn trống, rồi
+   * mới quyết định mời đăng nhập hay đi tiếp tới Xác nhận.
    */
   async function continueFromTrip() {
     setStepError(null);
+    await checkTripAndContinue();
+  }
 
+  /**
+   * Phần kiểm của "Tiếp tục". Không đổi state nào trước lượt `await` đầu tiên — nên lượt quay lại
+   * sau đăng nhập (effect bên dưới) gọi thẳng được mà không thành một vòng render xếp tầng.
+   */
+  async function checkTripAndContinue() {
     const fields: Array<keyof RequestFormValues> = isLongTerm
       ? ['longTermPackageMonths', 'pickupPreference', 'requestedPickupDate']
       : ['pickupAt', 'returnAt'];
     /*
-     * Địa chỉ giao/đón và liên hệ nằm CÙNG bước này — schema tự bỏ qua trường không liên quan.
+     * Địa chỉ giao/đón nằm CÙNG bước này — schema tự bỏ qua trường không liên quan.
      *
      * Cặp TOẠ ĐỘ phải có mặt trong danh sách này, không chỉ phần chữ: đó là chỗ duy nhất chặn
      * một địa chỉ chưa được bản đồ xác nhận. Thiếu nó thì khách gõ tay một dòng chữ, bấm Tiếp
@@ -1137,7 +1143,6 @@ export function RequestBookingFlow({
       'pickupLongitude',
       'destination',
     );
-    if (!contactKnown) fields.push('customerName', 'customerPhone');
 
     if (!(await trigger(fields))) return;
 
@@ -1152,43 +1157,45 @@ export function RequestBookingFlow({
     availabilityM.mutate();
   }
 
-  function confirmOtp() {
-    if (code.length !== 6 || verifying) return;
-    setStepError(null);
-    verifyM.mutate();
-  }
+  // Phần bất đồng bộ của lượt QUAY LẠI SAU ĐĂNG NHẬP (xem `resumeTick` ở trên) — đặt sau
+  // `checkTripAndContinue` vì effect đọc nó.
+  useEffect(() => {
+    if (resumeTick === 0) return;
+    clearBookingDraft();
+    // Lời đồng ý điều khoản là của MỘT người — người vừa đăng nhập tự tick lại ở bước Xác nhận.
+    setValue('acceptedTerms', false);
+    void checkTripAndContinue();
+    // Chỉ chạy cho MỖI lượt quay lại mới; `checkTripAndContinue` đọc form qua `trigger`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resumeTick]);
 
-  function onCodeChange(next: string) {
-    if (stepError) setStepError(null);
-    setCode(next);
-  }
-
-  /** Quay lại bước nhập; `editContact` = khách bấm "Đổi" ở dòng Người thuê. */
-  function backToTrip(editContact = false) {
+  /** Quay lại bước Chuyến đi — mọi thứ đã nhập giữ nguyên. */
+  function backToTrip() {
     goToStep('trip');
-    if (editContact) setEditingContact(true);
     setStepError(null);
-    setCode('');
-    vpBooking.reset();
-    vpLogin.reset();
-    verifyM.reset();
     submitM.reset();
   }
 
-  function resend() {
-    setStepError(null);
-    setCode('');
-    verifyM.reset();
-    vp.send(otpPhone);
-  }
-
+  /**
+   * Khoá gửi ĐỒNG BỘ. `submitting` (= `isPending`) chỉ đổi ở lượt render SAU — TanStack Query báo
+   * cho component qua một nhịp hẹn giờ — nên hai cú bấm trong cùng một nhịp đều thấy `false` và
+   * cùng gửi. Index chống trùng ở DB vẫn là chốt cuối; khoá này để khách không nhận một lỗi
+   * "đã gửi trùng" cho chính cú bấm đúp của mình.
+   */
+  const submitLock = useRef(false);
   function submitRequest() {
+    if (submitLock.current || submitting) return;
     setStepError(null);
     if (requiresTermsAcceptance && !getValues('acceptedTerms')) {
       setStepError(t('review.termsRequired'));
       return;
     }
-    submitM.mutate(getValues('customerPhone').trim());
+    submitLock.current = true;
+    submitM.mutate(undefined, {
+      onSettled: () => {
+        submitLock.current = false;
+      },
+    });
   }
 
   const summaryPanel = (
@@ -1274,7 +1281,7 @@ export function RequestBookingFlow({
       ? {
           label: availabilityM.isPending ? t('actions.checking') : t('actions.continue'),
           onClick: () => void continueFromTrip(),
-          loading: availabilityM.isPending || vp.sending || checkingLicence,
+          loading: availabilityM.isPending || checkingLicence,
           disabled: false,
         }
       : step === 'licence'
@@ -1285,26 +1292,17 @@ export function RequestBookingFlow({
             // Chỉ mở khi bằng đã hợp lệ CHO CHUYẾN NÀY — cùng phép soát với cổng ở server.
             disabled: !licenceReady,
           }
-        : step === 'otp'
-          ? {
-              label: t('actions.verify'),
-              onClick: confirmOtp,
-              loading: verifying || checkingLicence,
-              disabled: code.length !== 6,
-            }
-          : {
-              label: t('actions.submit'),
-              onClick: submitRequest,
-              loading: submitting,
-              disabled: false,
-            };
+        : {
+            label: t('actions.submit'),
+            onClick: submitRequest,
+            loading: submitting,
+            disabled: false,
+          };
 
   const secondaryAction =
     step === 'trip'
       ? { label: t('actions.cancel'), onClick: onClose, disabled: false }
-      : step === 'otp'
-        ? { label: t('actions.back'), onClick: () => backToTrip(), disabled: verifying }
-        : { label: t('actions.back'), onClick: () => backToTrip(), disabled: submitting };
+      : { label: t('actions.back'), onClick: backToTrip, disabled: submitting };
 
   /*
    * --- Tài khoản không đặt xe được: chiếm trọn hộp thoại, có lối đi tiếp --------------------
@@ -1618,13 +1616,10 @@ export function RequestBookingFlow({
 
       <div className={styles.right}>
         {/*
-          OTP và bằng lái nằm GIỮA hai bước nên thanh vẫn sáng ô Chuyến đi — xem docblock
-          `BookingSteps`: không phải ai cũng đi qua chúng.
+          Bằng lái nằm GIỮA hai bước nên thanh vẫn sáng ô Chuyến đi — xem docblock
+          `BookingSteps`: không phải ai cũng đi qua nó.
         */}
-        <BookingSteps
-          steps={steps}
-          current={step === 'otp' || step === 'licence' ? 'trip' : step}
-        />
+        <BookingSteps steps={steps} current={step === 'licence' ? 'trip' : step} />
 
         {/* ── Bước 1 — Chuyến đi ───────────────────────────────────────────── */}
         {step === 'trip' ? (
@@ -1895,41 +1890,6 @@ export function RequestBookingFlow({
               </div>
             ) : null}
 
-            {/*
-              Liên hệ chỉ hỏi khi hệ thống CHƯA biết: khách vãng lai, hoặc người đã đăng nhập vừa
-              bấm "Đổi". Người đã đăng nhập với SĐT đã xác thực không thấy ô nào ở đây — thông tin
-              của họ hiện thành một dòng ở bước Xác nhận.
-            */}
-            {contactKnown ? null : (
-              <div className={styles.contactBlock}>
-                <span className={styles.fieldLabel}>{t('contact.heading')}</span>
-                {/*
-                  Hai ô, một hàng. Gian hàng gọi lại khách qua SĐT (đã xác thực OTP ngay trong
-                  luồng này) nên đó là tất cả những gì cần hỏi — ô email từng đứng đây là một
-                  hàng nữa để khách bỏ qua, và không nơi nào trong luồng duyệt dùng tới nó.
-                */}
-                <div className={styles.contactFields}>
-                  <TextField
-                    control={control}
-                    name="customerName"
-                    label={t('contact.nameLabel')}
-                    placeholder={t('contact.namePlaceholder')}
-                    autoComplete="name"
-                  />
-                  <TextField
-                    control={control}
-                    name="customerPhone"
-                    label={t('contact.phoneLabel')}
-                    placeholder={t('contact.phonePlaceholder')}
-                    autoComplete="tel"
-                  />
-                </div>
-              </div>
-            )}
-
-            {vp.error ? (
-              <Alert type="error" showIcon title={vp.error} className={styles.err} />
-            ) : null}
             {stepError ? (
               <Alert
                 type="warning"
@@ -1951,66 +1911,11 @@ export function RequestBookingFlow({
           </section>
         ) : null}
 
-        {/* ── Trạng thái OTP — giữa hai bước, không chiếm ô trên thanh ─────── */}
-        {step === 'otp' ? (
-          <section className={styles.stepBody}>
-            <h3 className={styles.otpTitle}>{t('otp.title')}</h3>
-            <p className={styles.stepHint}>
-              {t(
-                vp.status !== 'code_sent'
-                  ? 'otp.notSentHint'
-                  : otpMode === 'login'
-                    ? 'otp.loginHint'
-                    : 'otp.hint',
-                { phone: maskPhone(otpPhone) },
-              )}
-            </p>
-            <OtpCodeInput
-              value={code}
-              onChange={onCodeChange}
-              onComplete={confirmOtp}
-              autoFocus
-              disabled={verifying}
-            />
-            {vp.devCode ? (
-              <div className={styles.devHint}>{t('otp.devCode', { code: vp.devCode })}</div>
-            ) : vp.testCodeEnabled && vp.status !== 'code_sent' ? (
-              <div className={styles.devHint}>{t('otp.testCodeHint')}</div>
-            ) : null}
-            {vp.error ? (
-              <Alert type="error" showIcon title={vp.error} className={styles.err} />
-            ) : null}
-            {stepError ? (
-              <Alert type="error" showIcon title={stepError} className={styles.err} role="alert" />
-            ) : null}
-            <div className={styles.otpLinks}>
-              <button type="button" className={styles.linkBtn} onClick={() => backToTrip(true)}>
-                {t('otp.editPhone')}
-              </button>
-              <button
-                type="button"
-                className={styles.linkBtn}
-                disabled={vp.cooldown > 0 || vp.sending}
-                onClick={resend}
-              >
-                {vp.cooldown > 0
-                  ? t('otp.resendIn', { seconds: vp.cooldown })
-                  : vp.status === 'code_sent'
-                    ? t('otp.resend')
-                    : t('otp.send')}
-              </button>
-            </div>
-          </section>
-        ) : null}
-
         {/* ── Trạng thái BẰNG LÁI — giữa hai bước, chỉ khi thuê tự lái/dài hạn (ADR 0057) ─ */}
         {step === 'licence' && licenceTrip ? (
           <section className={styles.stepBody}>
             <h3 className={styles.otpTitle}>{t('licence.title')}</h3>
             <DriverLicenceVerifier trip={licenceTrip} />
-            {vp.error ? (
-              <Alert type="error" showIcon title={vp.error} className={styles.err} />
-            ) : null}
             {stepError ? (
               <Alert type="error" showIcon title={stepError} className={styles.err} role="alert" />
             ) : null}
@@ -2026,28 +1931,23 @@ export function RequestBookingFlow({
                 <dd>{listing?.name ?? vehicleName}</dd>
               </div>
               {/*
-                Người thuê là một DÒNG ở đây, không còn là cả một bước: với người đã đăng nhập thì
-                đây là thứ duy nhất cần soát, và nút Đổi đưa họ về đúng chỗ sửa được.
+                Người thuê là TÀI KHOẢN đang đăng nhập — đúng họ tên + SĐT đã xác minh mà server sẽ
+                ghi vào yêu cầu (ADR 0060). Chỉ đọc: đổi số là việc của trang tài khoản, không phải
+                của một lượt đặt xe.
               */}
-              <div className={styles.reviewRow}>
-                <dt>{t('review.renter')}</dt>
-                <dd className={styles.renterValue}>
-                  <span>{`${getValues('customerName')} · ${getValues('customerPhone')}`}</span>
-                  {accountPhoneVerified ? (
-                    <span className={styles.verifiedTag}>
-                      <CheckCircleFilled /> {t('contact.verified')}
-                    </span>
-                  ) : null}
-                  <button
-                    type="button"
-                    className={styles.linkBtn}
-                    onClick={() => backToTrip(true)}
-                    disabled={submitting}
-                  >
-                    <EditOutlined /> {t('contact.change')}
-                  </button>
-                </dd>
-              </div>
+              {me ? (
+                <div className={styles.reviewRow}>
+                  <dt>{t('review.renter')}</dt>
+                  <dd className={styles.renterValue}>
+                    <span>{me.phone ? `${me.displayName} · ${me.phone}` : me.displayName}</span>
+                    {me.phoneVerified ? (
+                      <span className={styles.verifiedTag}>
+                        <CheckCircleFilled /> {t('contact.verified')}
+                      </span>
+                    ) : null}
+                  </dd>
+                </div>
+              ) : null}
               <div className={styles.reviewRow}>
                 <dt>{t('review.service')}</dt>
                 <dd>
@@ -2216,10 +2116,6 @@ export function RequestBookingFlow({
             {stepError ? (
               <Alert type="error" showIcon title={stepError} className={styles.err} role="alert" />
             ) : null}
-            {/* Lỗi gửi mã khi phiên vừa mất ở bước này (cổng bằng lái → OTP đăng nhập). */}
-            {vp.error ? (
-              <Alert type="error" showIcon title={vp.error} className={styles.err} />
-            ) : null}
 
             {priceDetail}
           </section>
@@ -2234,7 +2130,7 @@ export function RequestBookingFlow({
           trong đúng mạch cuộn của nội dung.
         */}
         <div className={styles.dock}>
-          {step === 'otp' || step === 'licence' ? null : (
+          {step === 'licence' ? null : (
             <BookingPriceSummary
               {...priceProps}
               variant="bar"

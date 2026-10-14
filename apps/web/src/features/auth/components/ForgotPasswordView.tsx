@@ -14,15 +14,28 @@ import { zoneAuthRoutes } from '@/constants/routes';
 import { forgotPassword } from '@/services/auth.service';
 import { useAuthSchemaLabels } from '@/features/auth/hooks/use-auth-schema-labels';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { ZONE } from '@/zones';
 import { useZone } from '@/zones/ZoneProvider';
+import { ForgotPasswordByPhone } from './ForgotPasswordByPhone';
 import styles from './AuthCard.module.css';
 
 /**
- * Quên mật khẩu — MỘT form cho cả ba site; mỗi site đặt nó ở trang CỦA MÌNH (ADR 0051 điều 2: đặt
- * lại mật khẩu là trang của từng site, vì mỗi site là một không gian tài khoản). API gửi link về
- * đúng site của realm (`webUrlFor(realm)`), và đường "Quay lại đăng nhập" đọc theo khu.
+ * Quên mật khẩu — mỗi site đặt nó ở trang CỦA MÌNH (ADR 0051 điều 2: mỗi site là một không gian
+ * tài khoản), và mỗi site một cách khôi phục:
+ *
+ *  - site khách, site partner: bằng SỐ ĐIỆN THOẠI + mã OTP (ADR 0060) — định danh đăng nhập ở hai
+ *    site này là SĐT, và không tài khoản nào bắt buộc có email;
+ *  - site quản trị: link đặt lại qua EMAIL như cũ (ADR 0053 điều 3).
  */
 export function ForgotPasswordView() {
+  return useZone() === ZONE.ADMIN ? <ForgotPasswordByEmail /> : <ForgotPasswordByPhone />;
+}
+
+/**
+ * Quên mật khẩu qua email — site quản trị. API gửi link về đúng site của realm
+ * (`webUrlFor(realm)`), và đường "Quay lại đăng nhập" đọc theo khu.
+ */
+function ForgotPasswordByEmail() {
   const t = useTranslations('Auth');
   const routes = zoneAuthRoutes(useZone());
   const errorMessage = useErrorMessage();
@@ -86,9 +99,7 @@ export function ForgotPasswordView() {
         </div>
       </div>
 
-      {error ? (
-        <Alert type="error" showIcon title={error} className={styles.alert} />
-      ) : null}
+      {error ? <Alert type="error" showIcon title={error} className={styles.alert} /> : null}
 
       <form onSubmit={onSubmit} noValidate>
         <TextField

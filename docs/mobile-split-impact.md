@@ -98,7 +98,8 @@ credentials đã xác minh.
    để tương thích app cũ):
    - `MobileLoginDto`, `MobileRegisterDto`, `MobileSocialExchangeDto`, phone OTP login DTO.
    - Migration: `native_auth_sessions.client_app` text NOT NULL DEFAULT `'customer'` + CHECK.
-   - `POST /auth/mobile/login|register|social/exchange|phone/login` với `clientApp='partner'`:
+   - `POST /auth/mobile/login|register|social/exchange|phone/login` với `clientApp='partner'`
+     (`phone/login` đã gỡ ở ADR 0060 — trả 410 `OTP_LOGIN_RETIRED`):
      sau khi xác thực, nếu `!canUsePartnerApp` → 403 `PARTNER_ACCESS_REQUIRED`.
    - Refresh token vốn buộc vào session (session mang `client_app`) → không dùng chéo app
      được; `rotate` không cần đổi. Logout thu hồi đúng session của app đó (hành vi hiện tại).

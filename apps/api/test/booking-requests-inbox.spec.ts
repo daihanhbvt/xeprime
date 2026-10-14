@@ -18,10 +18,8 @@ import {
   VEHICLE_TYPE,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
-import type { AuthService } from '../src/modules/auth/auth.service';
 import { ChatService } from '../src/modules/chat/chat.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
-import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import {
   makeBookingHoldsService,
@@ -60,20 +58,11 @@ const bookings = makeBookingsService(asService, {
   customers: customers,
 });
 
-const phoneVerification = {
-  assertPhoneVerifiedForBooking: async () => {},
-} as unknown as PhoneVerificationService;
-const auth = {
-  resolveOrCreateUserByPhone: async () => ({ userId: null }),
-} as unknown as AuthService;
-
 const holds = makeBookingHoldsService(asService);
 const requests = makeBookingRequestsService(asService, {
   bookings: bookings,
   audit: audit,
   notifications: notifications,
-  phoneVerification: phoneVerification,
-  auth: auth,
   occupancy: occupancy,
   pricing: pricing,
   customers: customers,
@@ -328,6 +317,11 @@ describe('BookingRequestsService.list — DTO của hộp thư', () => {
     expect(row.decidedAt).toBeNull();
   });
 
+  /*
+   * Từ ADR 0060 đường gửi công khai luôn gắn tài khoản, nhưng hàng không có tài khoản vẫn nằm
+   * trong hộp thư: yêu cầu của khách vãng lai trước đó, và yêu cầu có tài khoản đã bị xoá
+   * (`customer_user_id` là `ON DELETE SET NULL`). Hộp thư phải đọc được chúng.
+   */
   maybe('khách vãng lai: không có tài khoản ⇒ không nhắn tin trong ứng dụng được', async () => {
     const id = await seedRequest({
       tenantId,
@@ -661,6 +655,7 @@ describe('ChatService.getOrCreateConversationForBookingRequest — đường c�
     ).toBe(1);
   });
 
+  // Yêu cầu không gắn tài khoản — dữ liệu trước ADR 0060 hoặc tài khoản đã xoá (xem khối đầu).
   maybe('khách vãng lai chưa có tài khoản ⇒ CHAT_CUSTOMER_UNAVAILABLE', async () => {
     const id = await seedRequest({
       tenantId,

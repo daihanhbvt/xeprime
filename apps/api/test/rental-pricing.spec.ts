@@ -19,8 +19,6 @@ import {
 import { AuditService } from '../src/modules/audit/audit.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import type { SaveRentalPolicyDto } from '../src/modules/pricing/dto/pricing.dto';
-import type { AuthService } from '../src/modules/auth/auth.service';
-import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import {
   makeBookingHoldsService,
@@ -55,16 +53,12 @@ const bookings = makeBookingsService(asService, {
   notifications: makeNotificationService(asService),
   customers: makeCustomersService(asService, audit),
 });
-// Nhánh test chỉ đi qua inbox shop (quote/approve) — không đụng OTP/đăng nhập khách, nên hai
-// dependency đó stub rỗng thay vì dựng cả cây AuthService/Firebase.
 /** Cả sàn thu cọc từ 16/09/2026, nên duyệt xong còn một bước trả tiền mới ra ĐƠN (ADR 0039). */
 const holds = makeBookingHoldsService(asService);
 const requests = makeBookingRequestsService(asService, {
   bookings: bookings,
   audit: audit,
   notifications: makeNotificationService(asService),
-  phoneVerification: undefined as unknown as PhoneVerificationService,
-  auth: undefined as unknown as AuthService,
   pricing: pricing,
   customers: makeCustomersService(asService, audit),
 });
@@ -878,7 +872,7 @@ describe('giá theo DỊCH VỤ (17/08 — dài hạn giá tháng / có tài x�
         routeType: ROUTE_TYPE.INTER_CITY,
       });
 
-      // Seed thẳng yêu cầu (spec này stub OTP/auth rỗng — không đi qua submitPublic).
+      // Seed thẳng yêu cầu — nhánh này kiểm inbox shop (duyệt), không phải đường gửi của khách.
       const requestId = newId();
       await prisma.bookingRequest.create({
         data: {

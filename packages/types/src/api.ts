@@ -60,6 +60,18 @@ export const API_ERROR_CODE = {
   PASSWORD_NOT_SET: 'PASSWORD_NOT_SET',
   /** Mật khẩu mới trùng mật khẩu hiện tại. */
   PASSWORD_UNCHANGED: 'PASSWORD_UNCHANGED',
+  /**
+   * Site khách và site partner chỉ đăng nhập bằng SỐ ĐIỆN THOẠI + mật khẩu (ADR 0060) — ô định
+   * danh nhận một email. Chặn theo HÌNH DẠNG chuỗi, trước khi tra DB, nên không nói gì về việc
+   * email đó có tài khoản hay không. Site quản trị vẫn nhận email.
+   */
+  PHONE_LOGIN_REQUIRED: 'PHONE_LOGIN_REQUIRED',
+  /**
+   * Đăng nhập bằng OTP đã gỡ (ADR 0060). `POST /auth/phone/login`, `POST /auth/mobile/phone/login`
+   * và `send-otp` với `purpose=login` trả 410 kèm mã này — không xác minh mã, không tạo tài khoản,
+   * không cấp phiên. Client cũ hiện câu "đăng nhập bằng mật khẩu / quên mật khẩu".
+   */
+  OTP_LOGIN_RETIRED: 'OTP_LOGIN_RETIRED',
 
   /*
    * Đăng nhập mạng xã hội — ADR 0019.
@@ -109,6 +121,12 @@ export const API_ERROR_CODE = {
    * hộp thư nào mà không lộ nguyên địa chỉ cho người cầm link nhầm.
    */
   INVITE_EMAIL_MISMATCH: 'INVITE_EMAIL_MISMATCH',
+  /**
+   * Lời mời gắn với một SỐ ĐIỆN THOẠI (ADR 0060) mà tài khoản đang đăng nhập không có số đó ĐÃ
+   * XÁC MINH. Cùng lý do với `INVITE_EMAIL_MISMATCH`: link có thể bị chuyển tiếp, nên người cầm
+   * link chưa chắc là người được mời. `details.invitedPhone` đã che bớt.
+   */
+  INVITE_PHONE_MISMATCH: 'INVITE_PHONE_MISMATCH',
   /** Đã là thành viên đang hoạt động của chính gian hàng này — lời mời không còn việc gì để làm. */
   INVITE_ALREADY_MEMBER: 'INVITE_ALREADY_MEMBER',
 

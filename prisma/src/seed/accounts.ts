@@ -17,6 +17,7 @@ import {
   MEMBERSHIP_STATUS,
   PLATFORM_ROLE,
   USER_STATUS,
+  normalizeVnPhone,
   type AccountRealm,
 } from '@xeprime/types';
 import bcrypt from 'bcrypt';
@@ -69,6 +70,12 @@ export async function upsertPasswordUser(input: PasswordUserInput): Promise<stri
   const passwordHash = await bcrypt.hash(input.password, BCRYPT_ROUNDS);
 
   const realm = input.realm;
+  /*
+   * SĐT lưu ở DẠNG CHUẨN `84xxxxxxxxx` — đúng dạng `AuthService.register` ghi và `loginWithPassword`
+   * tra (ADR 0060: SĐT là định danh đăng nhập ở site khách/partner). Bản khai trong seed viết dạng
+   * nội địa `09…` cho dễ đọc; ghi nguyên dạng đó thì tài khoản demo không đăng nhập được bằng SĐT.
+   */
+  const phone = input.phone ? normalizeVnPhone(input.phone) : null;
   const existing = await prisma.user.findUnique({
     where: { realm_email: { realm, email } },
     select: { id: true },
@@ -80,7 +87,7 @@ export async function upsertPasswordUser(input: PasswordUserInput): Promise<stri
       passwordHash,
       displayName: input.displayName,
       status: USER_STATUS.ACTIVE,
-      phone: input.phone ?? null,
+      phone,
       phoneVerifiedAt: input.phoneVerified ? new Date() : null,
       // Bản khai không có ảnh thì GIỮ ảnh đang có thay vì ghi null: người chạy seed có thể đã
       // tự đặt avatar cho một tài khoản demo, và seed chạy lại không nên xoá thứ đó.

@@ -16,9 +16,7 @@ import {
 
 import { giveTenantPlan } from './helpers/billing-fixture';
 import { AuditService } from '../src/modules/audit/audit.service';
-import type { AuthService } from '../src/modules/auth/auth.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
-import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import {
   makeBookingRequestsService,
@@ -29,13 +27,13 @@ import {
 } from './helpers/service-factory';
 
 /**
- * AI ĐƯỢC ĐẶT XE — ADR 0053 điều 2 và 7, trên PostgreSQL thật.
+ * AI ĐƯỢC ĐẶT XE — ADR 0053 điều 2 và 7 + ADR 0060, trên PostgreSQL thật.
  *
  *  1. Tài khoản PARTNER/PLATFORM (mọi vai, mọi tuyến) gọi thẳng đường đặt xe → 403
  *     SHOP_ACCOUNT_CANNOT_BOOK. Route đặt xe chỉ khai realm `customer`; service kiểm lại vì đây là
  *     chỗ cuối cùng trước khi một `customer_user_id` được ghi.
- *  2. Đăng xuất rồi đặt bằng OTP với SĐT của một thành viên gian hàng → luồng tìm/tạo tài khoản
- *     KHÁCH của số đó (không bao giờ là tài khoản partner), nên không có phiên partner nào được cấp.
+ *  2. Tài khoản KHÁCH chưa xác minh SĐT (hoặc chưa có SĐT) → 403 PHONE_NOT_VERIFIED, không ghi gì
+ *     (ADR 0060): không còn khách vãng lai, danh tính của yêu cầu là SĐT ĐÃ XÁC MINH của tài khoản.
  *  3. Tài khoản khách cùng SĐT với một thành viên → đặt xe gian hàng KHÁC được; đặt xe của CHÍNH
  *     gian hàng đó → 409 CANNOT_BOOK_OWN_VEHICLE (chặn tự đặt — quyết định sản phẩm 02/10/2026).
  *  4. Khách thuần, số khác → QUA.
@@ -52,34 +50,10 @@ const occupancy = new OccupancyService(asService);
 const customers = makeCustomersService(asService, audit);
 const bookings = makeBookingsService(asService, { occupancy, audit, notifications, customers });
 
-const phoneVerification = {
-  assertPhoneVerifiedForBooking: async () => {},
-} as unknown as PhoneVerificationService;
-
-/**
- * Khớp SĐT → tài khoản TRONG realm, đúng như `AuthService.resolveOrCreateUserByPhone` làm thật:
- * cùng số ở realm khác là một tài khoản khác, nên tra `(realm, phone)` chứ không chỉ `phone`.
- */
-const auth = {
-  resolveOrCreateUserByPhone: async (rawPhone: string, realm: AccountRealm) => {
-    const phone = rawPhone.startsWith('0') ? `84${rawPhone.slice(1)}` : rawPhone;
-    const found = await prisma.user.findFirst({ where: { realm, phone }, select: { id: true } });
-    if (found) return { userId: found.id, created: false };
-    const id = newId();
-    await prisma.user.create({
-      data: { id, realm, phone, displayName: 'Khách mới', phoneVerifiedAt: new Date() },
-    });
-    createdUserIds.push(id);
-    return { userId: id, created: true };
-  },
-} as unknown as AuthService;
-
 const requests = makeBookingRequestsService(asService, {
   bookings,
   audit,
   notifications,
-  phoneVerification,
-  auth,
   occupancy,
   pricing,
   customers,
@@ -90,7 +64,6 @@ const DAY = 86_400_000;
 
 let dbAvailable = false;
 const userIds: string[] = [];
-const createdUserIds: string[] = [];
 const tenantIds: string[] = [];
 
 /** SĐT của suite — tiền tố riêng để không đụng dữ liệu seed hay spec khác. */
@@ -121,7 +94,16 @@ let liteTwinId: string;
 /** Một tài khoản quản trị nền tảng — cũng không đặt xe. */
 let platformUserId: string;
 
-async function mkUser(tag: string, phone: string, realm: AccountRealm): Promise<string> {
+/**
+ * Mặc định SĐT ĐÃ xác minh. `phoneVerified: false` ⇒ có số nhưng chưa qua OTP; `phone: null` ⇒
+ * tài khoản chưa có số nào (đăng ký bằng Google/Facebook) — hai hình dạng mà ADR 0060 chặn ở cửa.
+ */
+async function mkUser(
+  tag: string,
+  phone: string | null,
+  realm: AccountRealm,
+  phoneVerified = true,
+): Promise<string> {
   const id = newId();
   await prisma.user.create({
     data: {
@@ -129,8 +111,8 @@ async function mkUser(tag: string, phone: string, realm: AccountRealm): Promise<
       realm,
       displayName: `BSG ${tag}`,
       email: `bsg-${tag}-${RUN}@xeprime.test`,
-      phone: stored(phone),
-      phoneVerifiedAt: new Date(),
+      phone: phone === null ? null : stored(phone),
+      phoneVerifiedAt: phone !== null && phoneVerified ? new Date() : null,
     },
   });
   userIds.push(id);
@@ -203,20 +185,17 @@ function nextWindow(): { pickupAt: string; returnAt: string } {
 }
 
 /**
- * Gửi yêu cầu đúng hình dạng mà controller công khai truyền xuống.
- * `customerUserId = undefined` mô phỏng người ĐÃ ĐĂNG XUẤT — danh tính chỉ đến từ SĐT.
+ * Gửi yêu cầu đúng hình dạng mà controller truyền xuống. Người gửi LUÔN là một tài khoản đã đăng
+ * nhập (ADR 0060) — họ tên và SĐT của yêu cầu đọc từ tài khoản đó, không từ payload.
  */
 function submit(
   vehicleId: string,
-  phone: string,
-  customerUserId?: string,
+  customerUserId: string,
   overrides: Record<string, unknown> = {},
 ) {
   return requests.submitPublic(
     {
       vehicleId,
-      customerName: 'Người đặt',
-      customerPhone: phone,
       ...nextWindow(),
       serviceType: SERVICE_TYPE.SELF_DRIVE,
       acceptedTerms: true,
@@ -284,7 +263,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (dbAvailable) {
-    const all = [...userIds, ...createdUserIds];
     await prisma.bookingRequest.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.vehicleOccupancy.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.booking.deleteMany({ where: { tenantId: { in: tenantIds } } });
@@ -295,7 +273,7 @@ afterAll(async () => {
     await prisma.tenantSubscription.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.tenantMembership.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.tenant.deleteMany({ where: { id: { in: tenantIds } } });
-    await prisma.user.deleteMany({ where: { id: { in: all } } });
+    await prisma.user.deleteMany({ where: { id: { in: userIds } } });
   }
   await prisma.$disconnect();
 });
@@ -312,6 +290,9 @@ const shopAccountError = expect.objectContaining({
 const ownVehicleError = expect.objectContaining({
   response: expect.objectContaining({ code: API_ERROR_CODE.CANNOT_BOOK_OWN_VEHICLE }),
 });
+const phoneNotVerifiedError = expect.objectContaining({
+  response: expect.objectContaining({ code: API_ERROR_CODE.PHONE_NOT_VERIFIED }),
+});
 
 describe('ca 1 — tài khoản partner/platform không đặt xe', () => {
   for (const role of [
@@ -322,103 +303,87 @@ describe('ca 1 — tài khoản partner/platform không đặt xe', () => {
   ]) {
     maybe(`${role} tuyến gói: 403 SHOP_ACCOUNT_CANNOT_BOOK`, async () => {
       const member = shopMembers[role]!;
-      await expect(submit(liteVehicleId, member.phone, member.userId)).rejects.toThrow(
-        shopAccountError,
-      );
+      await expect(submit(liteVehicleId, member.userId)).rejects.toThrow(shopAccountError);
     });
   }
 
   maybe(
     'chủ xe tuyến HOA HỒNG bằng tài khoản partner: cũng 403 (đi thuê bằng tài khoản khách)',
     async () => {
-      await expect(submit(shopVehicleId, LITE_PHONE, liteOwnerId)).rejects.toThrow(
-        shopAccountError,
-      );
+      await expect(submit(shopVehicleId, liteOwnerId)).rejects.toThrow(shopAccountError);
     },
   );
 
   maybe('tài khoản quản trị nền tảng: 403', async () => {
-    await expect(submit(shopVehicleId, phoneOf(20), platformUserId)).rejects.toThrow(
-      shopAccountError,
-    );
+    await expect(submit(shopVehicleId, platformUserId)).rejects.toThrow(shopAccountError);
   });
 
   maybe('không yêu cầu nào được tạo — cổng nằm TRƯỚC transaction ghi', async () => {
     const before = await prisma.bookingRequest.count({ where: { tenantId: liteTenantId } });
     const owner = shopMembers[TENANT_ROLE.SHOP_OWNER]!;
-    await expect(submit(liteVehicleId, owner.phone, owner.userId)).rejects.toThrow();
+    await expect(submit(liteVehicleId, owner.userId)).rejects.toThrow();
     expect(await prisma.bookingRequest.count({ where: { tenantId: liteTenantId } })).toBe(before);
   });
 });
 
 /*
- * CA 2 — đăng xuất rồi đặt bằng OTP với SĐT của thành viên.
+ * CA 2 — tài khoản KHÁCH mà SĐT chưa xác minh (ADR 0060).
  *
- * Trước ADR 0053, `users.phone` unique toàn cục nên luồng OTP tìm LẠI tài khoản gian hàng và có
- * thể cấp phiên cho nó. Giờ luồng OTP của site khách tra trong realm `customer`: nó chỉ có thể
- * trả về tài khoản KHÁCH của số đó — tài khoản partner không bao giờ đi ra từ đây.
+ * Không còn đường "đăng xuất rồi đặt bằng OTP": người gửi luôn là một tài khoản khách, và danh
+ * tính của yêu cầu là SĐT ĐÃ XÁC MINH của tài khoản đó — gian hàng liên lạc qua số này, sổ khách
+ * và chống trùng khoá theo nó, cổng tự đặt so trên nó. Một số chưa qua OTP không chứng minh được
+ * gì, nên cổng này đứng TRƯỚC mọi phép kiểm khác và không để lại dấu vết nào.
  */
-describe('ca 2 — đăng xuất rồi đặt bằng OTP với SĐT của thành viên gian hàng', () => {
-  maybe(
-    'đặt xe gian hàng KHÁC: QUA bằng tài khoản KHÁCH của số đó, không phải tài khoản partner',
-    async () => {
-      const manager = shopMembers[TENANT_ROLE.SHOP_MANAGER]!;
-      const result = await submit(liteVehicleId, manager.phone);
-
-      expect(result.receipt.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
-      expect(result.loginUserId).toBeTruthy();
-      expect(result.loginUserId).not.toBe(manager.userId);
-      const account = await prisma.user.findUniqueOrThrow({
-        where: { id: result.loginUserId! },
-        select: { realm: true },
-      });
-      expect(account.realm).toBe(ACCOUNT_REALM.CUSTOMER);
-    },
-  );
-
-  maybe('đặt xe của CHÍNH gian hàng mình bằng OTP: 409, không cấp phiên', async () => {
-    const staff = shopMembers[TENANT_ROLE.SHOP_STAFF]!;
-    await expect(submit(shopVehicleId, staff.phone)).rejects.toThrow(ownVehicleError);
+describe('ca 2 — tài khoản khách chưa xác minh SĐT', () => {
+  maybe('có SĐT nhưng chưa xác minh: 403 PHONE_NOT_VERIFIED, không ghi yêu cầu nào', async () => {
+    const unverifiedId = await mkUser('unverified', phoneOf(30), ACCOUNT_REALM.CUSTOMER, false);
+    await expect(submit(shopVehicleId, unverifiedId)).rejects.toThrow(phoneNotVerifiedError);
+    expect(await prisma.bookingRequest.count({ where: { customerUserId: unverifiedId } })).toBe(0);
   });
 
-  maybe('tài khoản partner không bị nhân bản trong realm của nó', async () => {
-    const owner = shopMembers[TENANT_ROLE.SHOP_OWNER]!;
-    await submit(liteVehicleId, owner.phone).catch(() => undefined);
-    expect(
-      await prisma.user.count({
-        where: { realm: ACCOUNT_REALM.PARTNER, phone: stored(owner.phone) },
-      }),
-    ).toBe(1);
+  maybe('chưa có SĐT nào (đăng ký bằng Google/Facebook): 403 PHONE_NOT_VERIFIED', async () => {
+    const noPhoneId = await mkUser('no-phone', null, ACCOUNT_REALM.CUSTOMER);
+    await expect(submit(liteVehicleId, noPhoneId)).rejects.toThrow(phoneNotVerifiedError);
+    expect(await prisma.bookingRequest.count({ where: { customerUserId: noPhoneId } })).toBe(0);
+  });
+
+  maybe('số chưa xác minh trùng số thành viên: PHONE_NOT_VERIFIED chứ không phải 409', async () => {
+    // Chưa qua OTP thì chưa biết số có phải của người đặt hay không — kết luận "xe của chính bạn"
+    // trên một số như vậy là nói điều hệ thống không biết.
+    const manager = shopMembers[TENANT_ROLE.SHOP_MANAGER]!;
+    const managerTwin = await mkUser('manager-twin', manager.phone, ACCOUNT_REALM.CUSTOMER, false);
+    await expect(submit(shopVehicleId, managerTwin)).rejects.toThrow(phoneNotVerifiedError);
+    expect(await prisma.bookingRequest.count({ where: { customerUserId: managerTwin } })).toBe(0);
   });
 });
 
 describe('ca 3 — tài khoản KHÁCH cùng SĐT với thành viên gian hàng', () => {
   maybe('chủ gian hàng gói (tài khoản khách) thuê xe của gian hàng KHÁC: QUA', async () => {
-    const owner = shopMembers[TENANT_ROLE.SHOP_OWNER]!;
-    const receipt = await submit(liteVehicleId, owner.phone, ownerTwinId);
-    expect(receipt.receipt.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
+    const receipt = await submit(liteVehicleId, ownerTwinId);
+    expect(receipt.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
   });
 
   maybe('chủ gian hàng gói (tài khoản khách) đặt xe của CHÍNH gian hàng mình: 409', async () => {
-    const owner = shopMembers[TENANT_ROLE.SHOP_OWNER]!;
-    await expect(submit(shopVehicleId, owner.phone, ownerTwinId)).rejects.toThrow(ownVehicleError);
+    await expect(submit(shopVehicleId, ownerTwinId)).rejects.toThrow(ownVehicleError);
   });
 
   maybe('nhân viên (tài khoản khách) đặt xe của gian hàng mình làm: 409', async () => {
-    const staff = shopMembers[TENANT_ROLE.SHOP_STAFF]!;
-    await expect(submit(shopVehicleId, staff.phone, staffTwinId)).rejects.toThrow(ownVehicleError);
+    await expect(submit(shopVehicleId, staffTwinId)).rejects.toThrow(ownVehicleError);
   });
 
   maybe('chủ xe hoa hồng (tài khoản khách) đặt xe của chính mình: 409', async () => {
-    await expect(submit(liteVehicleId, LITE_PHONE, liteTwinId)).rejects.toThrow(ownVehicleError);
+    await expect(submit(liteVehicleId, liteTwinId)).rejects.toThrow(ownVehicleError);
   });
 
-  maybe(
-    'gõ một SĐT khác ở form nhưng SĐT TÀI KHOẢN đã xác minh trùng thành viên: vẫn 409',
-    async () => {
-      await expect(submit(liteVehicleId, phoneOf(77), liteTwinId)).rejects.toThrow(ownVehicleError);
-    },
-  );
+  /*
+   * Bản app cũ vẫn gửi `customerPhone` trong payload — server BỎ QUA nó (ADR 0060): SĐT của yêu
+   * cầu là số ĐÃ XÁC MINH của tài khoản, nên gõ một số khác ở form không lách được cổng tự đặt.
+   */
+  maybe('payload mang SĐT khác nhưng SĐT TÀI KHOẢN trùng thành viên: vẫn 409', async () => {
+    await expect(submit(liteVehicleId, liteTwinId, { customerPhone: phoneOf(77) })).rejects.toThrow(
+      ownVehicleError,
+    );
+  });
 
   maybe('thành viên đã RỜI gian hàng thì không còn bị chặn', async () => {
     const viewer = shopMembers[TENANT_ROLE.SHOP_VIEWER]!;
@@ -428,8 +393,8 @@ describe('ca 3 — tài khoản KHÁCH cùng SĐT với thành viên gian hàng'
       data: { status: MEMBERSHIP_STATUS.REMOVED },
     });
     try {
-      const receipt = await submit(shopVehicleId, viewer.phone, viewerTwin);
-      expect(receipt.receipt.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
+      const receipt = await submit(shopVehicleId, viewerTwin);
+      expect(receipt.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
     } finally {
       await prisma.tenantMembership.updateMany({
         where: { tenantId: shopTenantId, userId: viewer.userId },
@@ -441,23 +406,27 @@ describe('ca 3 — tài khoản KHÁCH cùng SĐT với thành viên gian hàng'
 
 describe('ca 4 — khách thuần', () => {
   maybe('khách thuê đặt xe của gian hàng gói ⇒ QUA', async () => {
-    const receipt = await submit(shopVehicleId, RENTER_PHONE, renterId);
+    const receipt = await submit(shopVehicleId, renterId);
     // Qua cổng tài khoản ⇒ yêu cầu vào hàng chờ duyệt (ADR 0044): chưa ai nhận thì chưa thu tiền.
-    expect(receipt.receipt.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
-  });
+    expect(receipt.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
 
-  maybe('khách vãng lai SĐT hoàn toàn mới ⇒ QUA và được cấp phiên tài khoản khách', async () => {
-    const result = await submit(shopVehicleId, phoneOf(123));
-    expect(result.receipt.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
-    expect(result.loginUserId).toBeTruthy();
+    // Danh tính của yêu cầu là của TÀI KHOẢN (ADR 0060) — SĐT lưu dạng nội địa `0xxxxxxxxx`.
+    const row = await prisma.bookingRequest.findUniqueOrThrow({
+      where: { id: receipt.id },
+      select: { customerUserId: true, customerName: true, customerPhone: true },
+    });
+    expect(row).toEqual({
+      customerUserId: renterId,
+      customerName: 'BSG renter',
+      customerPhone: RENTER_PHONE,
+    });
   });
 });
 
 describe('cổng chạy đúng ở cả ba loại dịch vụ', () => {
   maybe('có tài xế', async () => {
-    const owner = shopMembers[TENANT_ROLE.SHOP_OWNER]!;
     await expect(
-      submit(shopVehicleId, owner.phone, ownerTwinId, {
+      submit(shopVehicleId, ownerTwinId, {
         serviceType: SERVICE_TYPE.WITH_DRIVER,
         routeType: 'one_way',
         pickupAddress: '1 Lê Lợi',
@@ -469,7 +438,7 @@ describe('cổng chạy đúng ở cả ba loại dịch vụ', () => {
   maybe('dài hạn theo GÓI THÁNG (không có ngày trả từ client — ADR 0011)', async () => {
     const owner = shopMembers[TENANT_ROLE.SHOP_OWNER]!;
     await expect(
-      submit(liteVehicleId, owner.phone, owner.userId, {
+      submit(liteVehicleId, owner.userId, {
         serviceType: SERVICE_TYPE.LONG_TERM,
         pickupAt: undefined,
         returnAt: undefined,

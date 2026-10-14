@@ -8,7 +8,6 @@ import { DepositPolicyModule } from '../deposit-policy/deposit-policy.module';
 import { DriverLicencesModule } from '../driver-licences/driver-licences.module';
 import { HoldsModule } from '../holds/holds.module';
 import { LocationsModule } from '../locations/locations.module';
-import { PhoneVerificationModule } from '../phone-verification/phone-verification.module';
 import { PricingModule } from '../pricing/pricing.module';
 import { PromoCodesModule } from '../promo-codes/promo-codes.module';
 import { VehicleSettingsModule } from '../vehicle-settings/vehicle-settings.module';
@@ -42,7 +41,6 @@ import { BookingRequestsService } from './booking-requests.service';
     HoldsModule,
     // Địa chỉ đón/giao xe có cấu trúc (14/09/2026) — kiểm danh mục hành chính ở MỘT chỗ.
     LocationsModule,
-    PhoneVerificationModule,
     PricingModule,
     // ADR 0046: giữ lượt mã khuyến mãi lúc gửi, tính lại + chốt/nhả lúc duyệt. Module mã khuyến
     // mãi phụ thuộc PricingModule chứ không ngược lại, nên không có vòng.

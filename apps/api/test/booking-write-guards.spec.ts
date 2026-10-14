@@ -1,6 +1,7 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
   ACCOUNT_REALM,
+  API_ERROR_CODE,
   BOOKING_REQUEST_STATUS,
   BOOKING_STATUS,
   MEMBERSHIP_STATUS,
@@ -10,10 +11,9 @@ import {
   VEHICLE_TYPE,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
-import type { AuthService } from '../src/modules/auth/auth.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
-import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { customerAccountFor } from './helpers/customer-account';
 import {
   makeBookingRequestsService,
   makeBookingsService,
@@ -29,7 +29,9 @@ import {
  *     thái: một chuyến đã hoàn tất, đã quyết toán và đã hoàn cọc vẫn đổi được giờ thuê, tiền
  *     thuê và phí giao nhận — viết lại chính bản ghi mà hai bên đã dựa vào để trả tiền.
  *  2. **Chặn gửi trùng lách được bằng ĐỊNH DẠNG SĐT.** Index unique một phần so khớp chuỗi thô
- *     trên `customer_phone`, trong khi DTO nhận cả `0…` lẫn `+84…`.
+ *     trên `customer_phone`, trong khi DTO từng nhận cả `0…` lẫn `+84…`. Từ ADR 0060 SĐT của yêu
+ *     cầu đọc từ TÀI KHOẢN (luôn ghi dạng nội địa), còn SĐT trong payload bị bỏ qua — spec khoá
+ *     rằng payload không còn là một ngả để lách.
  */
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
@@ -43,25 +45,10 @@ const bookings = makeBookingsService(asService, {
   customers: makeCustomersService(asService, audit),
 });
 
-/**
- * Nhánh test không đi qua OTP hay đăng nhập: SĐT coi như đã xác thực, và khách vãng lai được
- * gán vào một tài khoản dựng sẵn. Hai stub này giữ test bám đúng luật CHẶN TRÙNG.
- */
-const phoneVerification = {
-  assertPhoneVerifiedForBooking: async () => {},
-} as unknown as PhoneVerificationService;
-
-let guestUserId: string;
-const auth = {
-  resolveOrCreateUserByPhone: async () => ({ userId: guestUserId }),
-} as unknown as AuthService;
-
 const requests = makeBookingRequestsService(asService, {
   bookings: bookings,
   audit: audit,
   notifications: notifications,
-  phoneVerification: phoneVerification,
-  auth: auth,
   pricing: pricing,
   customers: makeCustomersService(asService, audit),
 });
@@ -70,6 +57,18 @@ let dbAvailable = false;
 let ownerId: string;
 let tenantId: string;
 let vehicleId: string;
+
+/** Tài khoản khách đã gửi yêu cầu trong spec — dọn ở `afterAll`. */
+const customerIds = new Set<string>();
+/**
+ * Người gửi yêu cầu: một tài khoản KHÁCH đã xác minh SĐT (ADR 0060) — mỗi số một người, nên
+ * chặn trùng (khoá theo SĐT của tài khoản) thấy đúng người đang gửi lại.
+ */
+async function customer(name: string, phone: string): Promise<string> {
+  const id = await customerAccountFor(asService, phone, name);
+  customerIds.add(id);
+  return id;
+}
 
 const BASE = new Date('2027-03-02T02:00:00.000Z');
 const hours = (n: number) => new Date(BASE.getTime() + n * 3_600_000);
@@ -107,7 +106,6 @@ beforeAll(async () => {
   }
 
   ownerId = newId();
-  guestUserId = newId();
   tenantId = newId();
   vehicleId = newId();
 
@@ -118,12 +116,6 @@ beforeAll(async () => {
         id: ownerId,
         displayName: 'Chủ shop',
         email: `owner-${ownerId}@xeprime.test`,
-      },
-      {
-        realm: ACCOUNT_REALM.CUSTOMER,
-        id: guestUserId,
-        displayName: 'Khách vãng lai',
-        email: `g-${guestUserId}@xeprime.test`,
       },
     ],
   });
@@ -170,7 +162,7 @@ afterAll(async () => {
     await prisma.vehicle.deleteMany({ where: { tenantId } });
     await prisma.tenantMembership.deleteMany({ where: { tenantId } });
     await prisma.tenant.deleteMany({ where: { id: tenantId } });
-    await prisma.user.deleteMany({ where: { id: { in: [ownerId, guestUserId] } } });
+    await prisma.user.deleteMany({ where: { id: { in: [ownerId, ...customerIds] } } });
   }
   await prisma.$disconnect();
 });
@@ -231,50 +223,94 @@ describe('Đơn đã khép là CHỈ ĐỌC', () => {
 });
 
 describe('Chặn gửi yêu cầu trùng', () => {
-  const submit = (phone: string, offsetHours: number) =>
+  /**
+   * `payloadPhone` là trường ĐÃ GỠ (ADR 0060) mà bản app cũ vẫn gửi — truyền vào để chứng minh
+   * server bỏ qua nó. Bỏ trống ở mọi ca không nói về chuyện đó.
+   */
+  const submit = (customerUserId: string, offsetHours: number, payloadPhone?: string) =>
     requests.submitPublic(
       {
         vehicleId,
-        customerName: 'Nguyễn Văn A',
-        customerPhone: phone,
+        ...(payloadPhone === undefined ? {} : { customerPhone: payloadPhone }),
         pickupAt: hours(offsetHours).toISOString(),
         returnAt: hours(offsetHours + 24).toISOString(),
       },
-      null,
+      customerUserId,
     );
 
   maybe('gửi lại y hệt → lỗi trùng', async () => {
-    await submit('0901234567', 1000);
-    await expect(submit('0901234567', 1000)).rejects.toMatchObject({ status: 409 });
+    const id = await customer('Nguyễn Văn A', '0901234567');
+    await submit(id, 1000);
+    await expect(submit(id, 1000)).rejects.toMatchObject({ status: 409 });
   });
 
   /**
-   * Lỗ hổng Wave 12: cột `customer_phone` cố ý giữ nguyên như người dùng gõ, còn index unique
-   * một phần so khớp chuỗi thô — nên `+84…` và `0…` là hai dòng khác nhau với DB.
+   * Lỗ hổng Wave 12: index unique một phần so khớp chuỗi thô trên `customer_phone` — nên `+84…`
+   * và `0…` là hai dòng khác nhau với DB.
+   *
+   * Từ ADR 0060 SĐT của yêu cầu là SĐT ĐÃ XÁC MINH của TÀI KHOẢN, luôn ghi dạng nội địa; SĐT
+   * trong payload bị bỏ qua. Đổi định dạng — hay đổi hẳn số — trong payload vì thế không còn là
+   * một ngả lách: cùng tài khoản là cùng một người.
    */
-  maybe('đổi ĐỊNH DẠNG SĐT không lách được — vẫn là cùng một người', async () => {
-    await submit('0902223344', 2000);
-    await expect(submit('+84902223344', 2000)).rejects.toMatchObject({ status: 409 });
+  maybe('đổi SĐT trong payload không lách được — danh tính đọc từ tài khoản', async () => {
+    const id = await customer('Nguyễn Văn A', '0902223344');
+    await submit(id, 2000);
+    await expect(submit(id, 2000, '+84902223344')).rejects.toMatchObject({ status: 409 });
+    await expect(submit(id, 2000, '0911112222')).rejects.toMatchObject({ status: 409 });
 
-    const rows = await prisma.bookingRequest.count({
+    const rows = await prisma.bookingRequest.findMany({
       where: { vehicleId, pickupAt: hours(2000), returnAt: hours(2000 + 24) },
+      select: { customerPhone: true },
     });
-    expect(rows).toBe(1);
+    expect(rows).toHaveLength(1);
+    // Dạng nội địa của số tài khoản (`users.phone` lưu `84…`) — đúng dạng index chống trùng so.
+    expect(rows[0]!.customerPhone).toBe('0902223344');
   });
 
   maybe('khung giờ khác thì vẫn gửi được — không chặn nhầm', async () => {
-    await submit('0903334455', 3000);
-    await expect(submit('0903334455', 3100)).resolves.toBeTruthy();
+    const id = await customer('Nguyễn Văn A', '0903334455');
+    await submit(id, 3000);
+    await expect(submit(id, 3100)).resolves.toBeTruthy();
   });
 
   maybe('yêu cầu cũ đã được xử lý thì không chặn lần sau', async () => {
-    const receipt = await submit('0904445566', 4000);
+    const id = await customer('Nguyễn Văn A', '0904445566');
+    const receipt = await submit(id, 4000);
     // Shop từ chối → khách được phép hỏi lại đúng khung giờ đó.
     await prisma.bookingRequest.update({
-      where: { id: receipt.receipt.id },
+      where: { id: receipt.id },
       data: { status: BOOKING_REQUEST_STATUS.REJECTED_BY_HOST },
     });
 
-    await expect(submit('0904445566', 4000)).resolves.toBeTruthy();
+    await expect(submit(id, 4000)).resolves.toBeTruthy();
+  });
+});
+
+describe('Người gửi phải là tài khoản khách đã xác minh SĐT (ADR 0060)', () => {
+  /**
+   * Tài khoản có số nhưng CHƯA qua OTP (tạo trước ADR 0060): gian hàng sẽ gọi vào số đó, và chặn
+   * trùng/sổ khách khoá theo nó — nên số chưa chứng minh sở hữu thì chưa gửi được. Cổng nằm
+   * TRƯỚC transaction ghi: không có yêu cầu nào sinh ra.
+   */
+  maybe('SĐT chưa xác minh → 403 PHONE_NOT_VERIFIED, không ghi yêu cầu', async () => {
+    const id = await customer('Khách chưa xác minh', '0905556677');
+    await prisma.user.update({ where: { id }, data: { phoneVerifiedAt: null } });
+
+    await expect(
+      requests.submitPublic(
+        {
+          vehicleId,
+          pickupAt: hours(5000).toISOString(),
+          returnAt: hours(5000 + 24).toISOString(),
+        },
+        id,
+      ),
+    ).rejects.toMatchObject({
+      status: 403,
+      response: { code: API_ERROR_CODE.PHONE_NOT_VERIFIED },
+    });
+    expect(await prisma.bookingRequest.count({ where: { vehicleId, pickupAt: hours(5000) } })).toBe(
+      0,
+    );
   });
 });

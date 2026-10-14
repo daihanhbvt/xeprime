@@ -1,6 +1,6 @@
 # XePrime — Completion Roadmap
 
-> Cập nhật: 06/10/2026 (dọn tài liệu · trạng thái staging thật · tiến độ ADR 0043–0053)
+> Cập nhật: 14/10/2026 (ADR 0060 — đăng nhập SĐT, đặt xe cần tài khoản) · 06/10/2026 (dọn tài liệu · trạng thái staging thật · tiến độ ADR 0043–0053)
 > Trạng thái: **Canonical — tiến độ và thứ tự thực hiện**
 > Tầm nhìn: [`design/02_PRODUCT_VISION.md`](design/02_PRODUCT_VISION.md)
 > Khoảng trống chi tiết: [`design/03_PRODUCT_GAP_ANALYSIS.md`](design/03_PRODUCT_GAP_ANALYSIS.md)
@@ -81,6 +81,13 @@ Trạng thái: **Đang đóng gate**. Code hiện tại đã bổ sung dashboard
 - ~~Hoàn thiện dashboard shop: doanh thu, tiền giữ/cọc và việc cần làm bằng dữ liệu thật.~~ Xong 09/10/2026: Tổng quan ba bề mặt (gian hàng gói · chủ xe cá nhân · nền tảng) — việc cần làm + câu trả lời đầu trang, lịch giao/nhận 7 ngày, KPI tháng so cùng kỳ (tỉ lệ lấp đầy), uy tín, gói, ví; API `GET /dashboard/overview` + `GET /platform/dashboard/overview`. Còn chờ: UAT trên dữ liệu pilot.
 - Ẩn dead links và menu placeholder chưa có luồng.
 - Đổi “mời thành viên” thành đúng hành vi hoặc làm invitation thật.
+- **14/10/2026 — ADR 0060:** site khách/partner đăng nhập bằng SĐT + mật khẩu (email bị server từ
+  chối) hoặc Google/Facebook; đăng ký xác minh OTP ngay; OTP thôi là cách đăng nhập (route cũ 410);
+  quên mật khẩu bằng OTP; cổng xác minh SĐT cho tài khoản social/cũ; gửi yêu cầu thuê cần tài khoản
+  khách, bản nháp giữ qua lượt đăng nhập và không tự gửi; mời thành viên bằng SĐT + liên kết cho chủ
+  gian hàng tự gửi; chuẩn hoá `users.phone`. Còn chờ: app native cập nhật theo mục Hệ quả của ADR,
+  UAT, và năm câu hỏi mở (tài khoản chỉ có email, gộp tài khoản khi `PHONE_TAKEN`, thu hồi phiên khi
+  đặt lại mật khẩu, SMS cho lời mời, vai trò tuỳ biến).
 - Hoàn thiện Terms, Privacy, quy chế marketplace, chính sách hủy và kênh support.
 - Cắm production OTP/email/R2/chat; thêm error tracking, uptime monitoring và product events.
 - Rà CSRF, PII reveal, rate limit và audit của hành động nhạy cảm.

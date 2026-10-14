@@ -49,28 +49,21 @@
   margin-bottom: var(--xp-space-md);
 }
 
-.tabs :global(.ant-tabs-nav) {
-  margin-bottom: var(--xp-space-lg);
+/* Đầu bước nhập mã OTP của đăng ký — thay cho tiêu đề modal/trang đang nói "Tạo tài khoản". */
+.stepHead {
+  margin-bottom: var(--xp-space-md);
 }
 
-.tabs :global(.ant-tabs-nav-list) {
-  width: 100%;
+.stepTitle {
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
 }
 
-.tabs :global(.ant-tabs-tab) {
-  flex: 1;
-  justify-content: center;
-  min-height: var(--xp-touch-target-min);
-  margin: 0;
-  padding: var(--xp-space-sm) var(--xp-space-xs);
-  font-weight: var(--xp-font-weight-medium);
-}
-
-.tabLabel {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--xp-space-sm);
+.stepSub {
+  margin-top: var(--xp-space-xs);
+  font-size: var(--xp-font-size-body);
+  color: var(--xp-color-text-secondary);
 }
 
 .rowEnd {

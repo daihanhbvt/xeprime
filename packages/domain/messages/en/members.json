@@ -40,19 +40,33 @@
   },
   "form": {
     "title": "Invite a member",
+    "submit": "Create invitation",
     "notice": "We will email an invitation to this address. They only join the shop once they accept it themselves.",
+    "noticePhone": "The invitee signs in to (or creates) a partner account with exactly this number, and only joins the shop once they accept it themselves. After creating it, copy the invitation link and send it to them (Zalo, text message).",
+    "phone": "Phone number",
+    "phonePlaceholder": "0901234567",
     "email": "Email",
     "emailPlaceholder": "staff@company.com",
     "role": "Role",
     "errors": {
       "emailRequired": "Enter an email",
       "emailInvalid": "That email is not valid",
+      "phoneRequired": "Enter a phone number",
+      "phoneInvalid": "That phone number is not valid",
       "roleRequired": "Pick a role",
       "branchRequired": "Select at least one branch"
     },
     "branches": "Assigned branches",
     "branchesHelp": "Defaults to the whole shop. Picking specific branches limits this member to vehicles, bookings and reports of those branches only.",
     "branchesHelpLimited": "You manage only some branches, so you can assign only within them. The member will see vehicles, bookings and reports of the selected branches only."
+  },
+  "created": {
+    "title": "Invitation created",
+    "body": "Send this link to {phone} via Zalo or text message. The link is shown only ONCE — if you lose it, invite this number again to get a new link.",
+    "linkLabel": "Invitation link",
+    "copy": "Copy link",
+    "safety": "Only the partner account with this exact (verified) number can use the link.",
+    "done": "Done"
   },
   "invites": {
     "title": "Pending invitations",
@@ -62,6 +76,7 @@
     "total": "{count, plural, one {# invitation} other {# invitations}}",
     "columns": {
       "email": "Invited email",
+      "invitee": "Invitee",
       "role": "Role",
       "status": "Status",
       "expiresAt": "Expires",
@@ -69,6 +84,7 @@
     },
     "revoke": "Revoke",
     "revokeConfirm": "Revoke this invitation? The link in the email stops working immediately.",
+    "revokeConfirmLink": "Revoke this invitation? The link you sent stops working immediately.",
     "invitedBy": "Invited by {name}",
     "expiresAtLine": "Expires {at}",
     "expiresIn": "{days, plural, one {# day} other {# days}} left",
@@ -80,6 +96,8 @@
     "invitedBy": "Invited by {name}",
     "role": "Role offered",
     "invitedEmail": "Sent to",
+    "invitedPhone": "Invited number",
+    "signInPartnerPromptPhone": "This invitation is for a PARTNER account — separate from your renter account. Sign in or create a partner account with the invited phone number to respond.",
     "expiresAt": "Expires",
     "loadError": "This invitation could not be opened",
     "signInPrompt": "Sign in with the email address that received this invitation to answer it.",

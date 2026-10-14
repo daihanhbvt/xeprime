@@ -437,9 +437,9 @@ export class BookingHoldsService {
    * Gửi yêu cầu không khoá xe của ai (ADR 0044 điều 1) — chặn ở đó là chặn nhầm người. Chỗ tốn
    * kém là lúc một chiếc xe thật bị giữ, và đó chính là đây.
    *
-   * Khách VÃNG LAI không có `customerUserId`: bỏ qua. Không phải một lỗ hổng — `submitPublic`
-   * luôn quy SĐT về một tài khoản (`resolveOrCreateUserByPhone`) trước khi ghi yêu cầu, nên
-   * đường công khai không sinh ra hold nào thiếu cột này. Nhánh `null` chỉ còn cho dữ liệu cũ.
+   * Yêu cầu không có `customerUserId`: bỏ qua. Không phải một lỗ hổng — `submitPublic` chỉ nhận
+   * tài khoản khách đã đăng nhập (ADR 0060) và luôn ghi cột này, nên đường công khai không sinh
+   * ra hold nào thiếu nó. Nhánh `null` chỉ còn cho dữ liệu cũ.
    */
   private async assertHoldQuotaWithinTx(
     tx: Prisma.TransactionClient,
