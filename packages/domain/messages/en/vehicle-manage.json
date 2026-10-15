@@ -77,7 +77,7 @@
     "addressEdit": "Edit",
     "addressMissing": "This vehicle is not assigned to a branch yet. Pick a branch in the management portal to give it a public location.",
     "addressNoStreet": "The branch has no street address yet — click Edit to add one.",
-    "addressMapPending": "This address could not be located on the map yet. The text address is still used; the map appears once coordinates are resolved.",
+    "addressMapPending": "This address could not be located on the map yet. The text address is still used; the location becomes available once coordinates are resolved.",
     "addressMapTitle": "Vehicle location map",
     "addressSharedTitle": "This branch holds {count, plural, one {# vehicle} other {# vehicles}}",
     "addressSharedBody": "Editing the branch address changes the public location of all of them. To place this vehicle elsewhere, create or pick another branch in the management portal.",

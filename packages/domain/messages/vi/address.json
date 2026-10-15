@@ -16,8 +16,9 @@
   "placeEmpty": "Không tìm thấy địa điểm nào",
   "placeUnavailable": "Bản đồ đang không phản hồi. Bạn nhập địa chỉ bằng tay được.",
   "placeDetailFailed": "Chưa lấy được vị trí của địa điểm này. Hãy chọn lại.",
+  "useTypedAddress": "Không có trong danh sách? Dùng đúng địa chỉ đã nhập",
   "provinceMismatchTitle": "Địa điểm này có vẻ không thuộc tỉnh/thành bạn chọn",
-  "provinceMismatchHint": "Kiểm lại tỉnh/thành, hoặc chỉnh ghim cho đúng.",
+  "provinceMismatchHint": "Kiểm lại tỉnh/thành, hoặc chọn lại địa điểm cho đúng.",
   "mapLabel": "Bản đồ vị trí",
   "map": {
     "pickHint": "Bấm lên bản đồ để đặt ghim.",
@@ -25,7 +26,6 @@
     "readOnlyHint": "Bản đồ chỉ để xem. Chọn một gợi ý địa điểm khác nếu ghim chưa đúng.",
     "pinHint": "Chọn một địa điểm ở ô phía trên để ghim đúng vị trí giao xe.",
     "unavailable": "Chưa hiện được bản đồ. Địa chỉ vẫn lưu bình thường.",
-    "openInMaps": "Mở trên OpenStreetMap",
     "sheetTitle": "Đặt ghim vị trí",
     "editPin": "Chỉnh ghim trên bản đồ",
     "useThisPoint": "Dùng vị trí này",

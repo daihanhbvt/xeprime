@@ -5,7 +5,7 @@ import type { GoogleCalendarEventLike } from '@xeprime/domain';
  *
  * Gọi bằng `fetch` trần, không SDK: một request REST không đáng đánh đổi bằng `googleapis` —
  * một dependency kéo theo cả cây `google-auth-library` cho thứ mà ở đây thậm chí không cần
- * xác thực người dùng. Cùng lý do và cùng khuôn với `apps/api/src/modules/geo/google-geo.provider.ts`.
+ * xác thực người dùng. Cùng lý do và cùng khuôn với `apps/api/src/modules/geo/vietmap-geo.provider.ts`.
  *
  * **API key, không OAuth, không service account.** Lịch nghỉ lễ VN là lịch CÔNG KHAI của
  * Google; đọc nó chỉ cần một key đã bật Calendar API. Dựng OAuth cho dữ liệu ai cũng xem được

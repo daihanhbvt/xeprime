@@ -11,6 +11,10 @@
 > có cấu hình thật trong code — §8b. Đối tác thu hộ/chi hộ và bảo hiểm chuyến đi vẫn nằm trong
 > roadmap, chưa có cấu hình; không tạo key hay viết tên biến đoán trước khi implementation và hợp
 > đồng đối tác được chốt.
+>
+> **Cập nhật 15/10/2026:** §4 viết lại cho Vietmap (ADR 0061 — Geoapify đã gỡ khỏi API và web, web
+> không còn vẽ bản đồ; Google Maps Platform không dùng được cho Việt Nam). Biến cũ
+> `GEOAPIFY_API_KEY` / `NEXT_PUBLIC_GEOAPIFY_MAP_KEY` không còn được đọc.
 
 ## 0. Cần cái nào trước
 
@@ -22,7 +26,7 @@ thiếu thì phần đó suy giảm có kiểm soát chứ không làm sập app
 | 1 | **Cloudflare R2** | Tải ảnh xe, ảnh gian hàng, giấy tờ, đính kèm chat | Mọi endpoint upload trả **503 `UPLOADS_NOT_CONFIGURED`** | Gần như 0 ở mức staging |
 | 2 | **Google OAuth** | Nút "Đăng nhập bằng Google" | Nút trả `SOCIAL_NOT_CONFIGURED`; mật khẩu + OTP vẫn chạy | Miễn phí |
 | 3 | **Facebook Login** | Nút "Đăng nhập bằng Facebook" | như trên | Miễn phí |
-| 4 | **Geoapify** (2 key) | Ước lượng quãng đường + phí giao, bản đồ trên trang | Khối bản đồ **ẩn hẳn**, phí giao không hiện | Có, xem 4.3 |
+| 4 | **Vietmap** (1 key server) | Gợi ý địa chỉ, ước lượng quãng đường + phí giao | Ô địa chỉ nhập tay, phí giao không hiện | Có — tính theo giao dịch, xem 4.6 |
 | 5 | **Google Calendar** | Lớp ngày lễ trên lịch xe | `GET /holidays` trả rỗng | Miễn phí |
 | 6 | **Firebase** | Chat **realtime** | Chat vẫn chạy trên PostgreSQL, chỉ không đẩy tức thì | Miễn phí ở mức này |
 | 7 | **SMTP** | Thư mời thành viên + đặt lại mật khẩu gửi thật | Email **in ra log** container — chạy được nhưng KHÔNG đi qua nodemailer, nên lỗi SMTP/TLS/`From` chỉ lộ ở production. Staging nay gửi thật (§7.2); máy dev dùng Mailpit (§7.1) | Miễn phí ở mức pilot |
@@ -231,103 +235,147 @@ https://api-stg.xeprime.vn/auth/social/facebook/callback
 
 ---
 
-## 4. Geoapify (OpenStreetMap) — **hai key riêng biệt**
+## 4. Vietmap — gợi ý địa chỉ, phí giao xe
 
-Từ **ADR 0037**, bản đồ KHÔNG còn chạy trên Google Maps Platform. Lý do: Google bắt buộc gắn
-billing account hợp lệ trước khi bất kỳ key nào hoạt động, kể cả trong hạn mức miễn phí — một
-rào chắn thật ở giai đoạn pilot. Geoapify cho **3.000 credit/ngày, không cần thẻ tín dụng**.
+Từ **ADR 0061** (15/10/2026) gợi ý địa chỉ và quãng đường giao xe chạy trên **Vietmap Maps API
+v4**. Bản đồ trên web chỉ là **ẢNH TĨNH** (Static Map) do API vẽ hộ bằng chính services key và cache
+theo chi nhánh — xem được, không tương tác; kèm liên kết "Mở bằng Google Maps" để dẫn đường (miễn
+phí, không key). Geoapify/Leaflet đã gỡ. **Không dùng Google Maps Platform**: Việt Nam nằm trong danh
+sách *Prohibited Territories* của Google.
 
-**Không được** dùng chung một key cho cả hai. Key vẽ bản đồ nằm lộ thiên trong bundle mà ai cũng
-xem được; nếu nó cũng gọi được routing thì bất kỳ ai cũng tiêu hạn mức của bạn.
+Chỉ có **MỘT loại key: services key** ("Key API (search, route…)" trong console), và nó chỉ nằm ở
+backend — kể cả ảnh bản đồ tĩnh. **Không dùng Key Tilemap**: nó dành cho bản đồ tương tác chạy
+trong trình duyệt (lộ key, trả tiền theo tile cho mỗi lượt xem), thứ web không dùng.
 
-### 4.1 Đăng ký và tạo project
+Vietmap tính tiền theo **giao dịch**: gợi ý / place / search / reverse = 1 giao dịch mỗi lượt, route
+2 điểm = 1 giao dịch. Gói trial: 60.000 giao dịch (Vietmap quy đổi ≈ 3.000.000đ, tức ~50đ/giao
+dịch), giới hạn 500 lượt/ngày cho mỗi API. Code đã được thiết kế quanh chi phí đó — §4.6.
 
-1. Đăng ký ở <https://myprojects.geoapify.com> (email, không cần thẻ)
-2. **New project** → đặt tên `xeprime` (hoặc `xeprime-staging`)
-3. Mỗi project có sẵn một API key; tạo thêm key thứ hai bằng **Add key**
+### 4.1 Tài khoản
 
-Không có bước "bật API" như Google Cloud: một key Geoapify gọi được mọi API của gói, nên lớp
-phân tách duy nhất là **hạn chế truy cập** ở bước sau. Vì vậy bước đó không phải tuỳ chọn.
+1. Vào <https://maps.vietmap.vn/console-v2/> → đăng ký. Nên dùng tài khoản/email của CÔNG TY
+   (không phải cá nhân một người); hai key được gửi qua email sau khi xác minh.
+2. Trước khi mở cho khách thật: xem bảng giá gói Standard (menu **Thanh toán** / nút **Nâng
+   cấp**), hỏi Vietmap về hoá đơn VAT + hợp đồng và điều khoản lưu cache (ADR 0061 "Còn mở"). Hỗ
+   trợ: Zalo OA Vietmap (nút trong console), hotline 089.616.4567.
 
-### 4.2 Hai key, và **khoá chúng lại**
+### 4.2 Lấy key
 
-**Key A — server** (`GEOAPIFY_API_KEY`)
-- Backend gọi: geocoding, address autocomplete, place details, reverse geocoding, routing
-- Trong **Projects → API keys → Restrictions**: **Allowed IPs** → IP VPS staging (`nslookup api-stg.xeprime.vn`)
-- Không đặt referrer cho key này: API server không gửi HTTP referrer
+- **Tổng quan** → khung "Lấy API key" → **Key API (search, route…)**: đây là services key cần dùng.
+- **Consumers** → mở project → **Detail**: thêm/xoá key, **whitelist IP**, giới hạn domain, đặt hạn
+  mức theo key/IP và theo từng API. (Tài khoản Trial chưa được tự chỉnh hạn mức — cần nâng cấp.)
 
-**Key B — web** (`NEXT_PUBLIC_GEOAPIFY_MAP_KEY`)
-- Trình duyệt gọi: ảnh bản đồ tĩnh (`maps.geoapify.com/v1/staticmap`) và tile của bản đồ kéo-ghim
-  (`maps.geoapify.com/v1/tile/...`)
-- **Allowed origins / HTTP referrers** → `https://stg.xeprime.vn/*`, cộng `http://localhost:3000/*`
-  nếu dùng chung key với máy dev
-- MỘT key lo cả ảnh tĩnh lẫn tile — khác Google, nơi Embed và Maps JavaScript là hai API phải bật
-  riêng. Không cần key thứ ba.
+### 4.3 Dev + staging: HAI services key
 
-| API | Key nào | Code gọi gì |
+| Key | Giới hạn | Dùng ở |
 | --- | --- | --- |
-| Geocoding | server | `api.geoapify.com/v1/geocode/search` — địa chỉ chữ → toạ độ |
-| Address Autocomplete | server | `/v1/geocode/autocomplete` — gợi ý cho ô nhập địa chỉ |
-| Reverse Geocoding | server | `/v1/geocode/reverse` — toạ độ → địa chỉ chữ; cũng là cách giải mã địa điểm đã chọn (ADR 0037 điều 5) |
-| Routing | server | `/v1/routing?mode=drive` — quãng đường đường bộ |
-| Static Maps | web | `maps.geoapify.com/v1/staticmap` — ảnh bản đồ có ghim |
-| Map Tiles | web | `maps.geoapify.com/v1/tile/osm-bright/...` — nền cho Leaflet |
+| `xeprime-server-stg` | **Whitelist IP** = IP mà VPS staging gọi ra ngoài | Secret `VIETMAP_API_KEY` của staging |
+| `xeprime-server-dev` | không giới hạn IP (IP nhà/văn phòng đổi liên tục) | `VIETMAP_API_KEY` trong `.env` máy dev |
 
-| Loại | Tên |
+Nếu tài khoản trial chỉ có MỘT services key và chưa tạo thêm được: tạm dùng một key cho cả hai,
+KHÔNG đặt whitelist IP (đặt thì máy dev bị chặn), và tách thành hai key ngay khi nâng gói.
+
+IP của VPS staging — lấy ngay trên VPS, đừng lấy bằng `nslookup` tên miền (bản ghi DNS đi qua proxy
+Cloudflare trả IP của Cloudflare, không phải IP Vietmap nhìn thấy):
+
+```bash
+ssh xeprime@stg.xeprime.vn 'curl -s -4 ifconfig.me; echo; curl -s -6 ifconfig.me'
+```
+
+### 4.4 Khai biến
+
+| Loại | Tên | Staging (GitHub Environment) | Máy dev (`.env`) |
+| --- | --- | --- | --- |
+| **Secret** | `VIETMAP_API_KEY` | `xeprime-server-stg` | `xeprime-server-dev` |
+| Variable | `GEO_DAILY_CALL_BUDGET` | `3000` (cầu dao — §4.6), bỏ trống = 3000 | để mặc định |
+
+Không có biến `NEXT_PUBLIC_*` nào cho bản đồ: đổi key không cần build lại web, chỉ cần khởi động lại
+API (staging: deploy lại; máy dev: tắt rồi chạy lại `pnpm dev`).
+
+**Xoá biến cũ** ở GitHub Environment — Secret `GEOAPIFY_API_KEY` và Variable
+`NEXT_PUBLIC_GEOAPIFY_MAP_KEY` — **SAU KHI** code ADR 0061 đã deploy lên môi trường đó. Trước mốc
+đó staging vẫn chạy code Geoapify và vẫn đọc hai biến này; khai biến Vietmap trước thì vô hại. Ở
+`.env` máy dev thì xoá ngay khi đã kéo code mới.
+
+Biến **tuỳ chọn**: thiếu key thì ô địa chỉ rơi về nhập tay, phí giao dự kiến không hiện — luồng
+đặt xe chạy y như trước. Không biến nào chặn boot. Dòng khởi động của API ghi
+`Bản đồ (Vietmap): đã cấu hình` khi đọc được key.
+
+### 4.5 Kiểm key bằng vài lệnh (làm NGAY sau khi tạo — đóng ADR 0061 Q3)
+
+Đã đối chiếu một lần trên key thật (15/10/2026 — ADR 0061 Q3). Chạy lại khi đổi key hoặc nghi Vietmap
+đổi API. Chạy trong Git Bash (PowerShell thì gõ `curl.exe` thay cho `curl`):
+
+```bash
+K=<key xeprime-server-dev>
+# 1. Gợi ý: phải ra MẢNG, mỗi dòng có ref_id / name / address (không có lat,lng).
+curl -s "https://maps.vietmap.vn/api/autocomplete/v4?apikey=$K&text=197%20Tran%20Phu&focus=10.76,106.67&display_type=1"
+# 2. Chi tiết: dán ref_id của dòng đầu ở lệnh 1 → phải có lat, lng, city, ward.
+curl -s "https://maps.vietmap.vn/api/place/v4?apikey=$K&refid=<ref_id>"
+# 3. Địa chỉ không có thật → KHÔNG rỗng: Search luôn khớp mờ ra một chỗ khác (code tự lọc — ADR 0061 điều 5).
+curl -s "https://maps.vietmap.vn/api/search/v4?apikey=$K&text=dia%20chi%20khong%20co%20that%20xyz&display_type=1"
+# 4. Quãng đường → "code":"OK" và paths[0].distance (mét).
+curl -s "https://maps.vietmap.vn/api/route/v4?apikey=$K&point=10.7721,106.698&point=10.7743,106.7038&vehicle=car&points_encoded=true"
+# 5. Key SAI → HTTP 401.
+curl -s -w "\nHTTP %{http_code}\n" "https://maps.vietmap.vn/api/autocomplete/v4?apikey=sai-key&text=abc"
+```
+
+Mỗi lệnh đúng key là một giao dịch.
+
+### 4.6 Chi phí — đã chặn sẵn trong code, và việc vận hành còn lại
+
+Các lớp tiết kiệm có sẵn (ADR 0061 điều 3):
+
+| Lớp | Tiết kiệm gì |
 | --- | --- |
-| **Secret** | `GEOAPIFY_API_KEY` |
-| Variable | `NEXT_PUBLIC_GEOAPIFY_MAP_KEY` — nằm trong bundle JS ⇒ **không bao giờ** là Secret |
-| Variable | `EXPO_PUBLIC_GEOAPIFY_MAP_KEY` — app native, Static Maps; nằm trong bundle ⇒ **không bao giờ** là Secret |
+| **Bản đồ là ảnh tĩnh vẽ một lần mỗi chi nhánh** (API cache, trình duyệt giữ 1 ngày) thay vì bản đồ tương tác | chi phí tile (25 tile = 1 giao dịch) cho MỖI lượt xem trang xe |
+| **Cầu dao** `GEO_DAILY_CALL_BUDGET` request/ngày (mặc định 3.000) — chạm trần thì bản đồ coi như "không hỏi được" tới hết ngày, log cảnh báo một lần | chặn một trận quét endpoint `/places/*` công khai biến thành hoá đơn |
+| Debounce 400ms + tối thiểu 3 ký tự + chỉ hỏi khi đã biết tỉnh + `@Throttle` 30/phút/IP | lượt gõ thừa, lưu lượng không thật |
+| Cache gợi ý trong bộ nhớ 10 phút | lượt gõ lặp lại, quay lại ô |
+| Cache Place theo mã địa điểm | chọn lại cùng một chỗ (form sửa, hai khách một địa chỉ) = 0 giao dịch |
+| Báo giá dùng toạ độ đã chọn, không tra lại | 2 giao dịch search + place cho mỗi báo giá |
+| Cache DB **90 ngày** cho geocode/reverse/quãng đường (cả ca "không tìm thấy") | cùng địa chỉ / cùng cặp điểm không gọi lại |
+| Lọc trước bằng đường chim bay | ngoài bán kính giao thì không gọi Route |
 
-Cả hai key đều **tuỳ chọn**: thiếu thì khối bản đồ tự ẩn, ô địa chỉ rơi về nhập tay, phí giao dự
-kiến không hiện — luồng đặt xe chạy y như trước. Không key nào chặn boot.
+Ước tính ở mức pilot, mỗi tháng: 3.000 lượt nhập địa chỉ × ~4 gợi ý = 12.000 · 3.000 lượt chọn =
+3.000 · 2.000 báo giá = 2.000 · ~500 địa chỉ gõ tay × 2 = 1.000 ⇒ **~18.000 giao dịch/tháng**,
+chưa trừ phần trúng cache. Gói trial 60.000 giao dịch đủ ~3 tháng ở mức này; giá gói trả phí lấy
+từ console (Q2).
 
-### 4.3 Hạn mức
+Việc vận hành:
+1. Cầu dao `GEO_DAILY_CALL_BUDGET` là trần của mình; khi đã nâng gói, đặt thêm hạn mức theo key/API
+   trong **Consumers → Detail** làm lớp thứ hai. Log API có dòng `Vietmap chạm trần … lượt/ngày` là
+   dấu hiệu nên xem lại. Xem **Thống kê** / **Lịch sử transactions** mỗi tuần.
+2. Key lộ ⇒ **regenerate** key đó trong console rồi khai lại — key staging/dev tách riêng chính là để
+   làm việc này mà không kéo theo môi trường kia.
 
-3.000 credit/ngày là hạn mức chung cho mọi API. Các lớp chặn đã có trong code:
+### 4.7 Production
 
-- Kết quả geocode cache trong `geocode_cache`, quãng đường cache trong `geo_route_cache` — cùng
-  một địa chỉ hoặc cùng một cặp điểm không gọi lại trong 30 ngày.
-- **Lọc trước bằng đường chim bay**: ngoài bán kính giao thì kết luận ngay, không tốn request
-  routing nào. Đây là chỗ tiết kiệm lớn nhất.
-- Ca "không tìm thấy" cũng được cache — người gõ sai địa chỉ thường thử lại vài lần liền.
-- **Ngưỡng 3 ký tự** + **debounce 400ms** ở client, và chỉ hỏi khi đã chọn tỉnh.
-- `@Throttle` 30 req/phút trên `/places/*`: trần cứng cho phần lưu lượng không thật.
-- Chi tiết địa điểm cache dưới khoá `place:<id>` — mã địa điểm là khoá ỔN ĐỊNH, nên mở lại form
-  sửa không hỏi lại cùng một chỗ.
+Một services key RIÊNG, whitelist IP = IP VPS production, hạn mức theo key đặt trong console.
+**Không** dùng lại key staging/dev.
 
-Ảnh bản đồ tĩnh trên trang xe là khoản tốn nhiều nhất và **không** đi qua cache của mình (trình
-duyệt gọi thẳng Geoapify). Nếu hạn mức chật, lối đi tiếp theo là một route proxy giữ key phía
-server chứ **không** phải bật `next/image` — xem ADR 0037 điều 2.
+### 4.8 "Một key dùng cho cả dev và staging được không?"
 
-### 4.4 Ghi công nguồn dữ liệu — bắt buộc
+| Trường hợp | Trả lời | Vì sao |
+| --- | --- | --- |
+| Dev + staging | **Nên hai key** | Key staging khoá theo IP VPS. Dùng chung với máy dev thì phải bỏ khoá IP, và một file `.env` lộ ra là một key không khoá gọi được dịch vụ tính tiền. Trial chỉ có một key thì tạm dùng chung (§4.3) |
+| Bất kỳ key nào ↔ production | **Không bao giờ** | Hạn mức, hoá đơn và việc thu hồi key của production phải tách khỏi môi trường thử |
 
-Giấy phép ODbL của OpenStreetMap và điều khoản gói miễn phí của Geoapify đều đòi ghi công. Code
-đã có sẵn: `StaticMap` có một dòng `<figcaption>`, bản đồ Leaflet dùng attribution control.
-**Không được gỡ** — đây là điều kiện giấy phép, không phải trang trí.
+### 4.9 App native — CHƯA chuyển (ADR 0061 điều 9)
 
-### 4.5 App native
-
-Hai app native — `apps/mobile/customer` (XePrime) và `apps/mobile/manage` (XePrime Partner),
-ADR 0051 §5 — dùng Geoapify Static Maps qua `EXPO_PUBLIC_GEOAPIFY_MAP_KEY` (16/09/2026 — không
-còn Google), khai trong `.env` của TỪNG app (mẫu ở `.env.example` cùng thư mục). Đây là key RIÊNG
-của app, không dùng chung với `NEXT_PUBLIC_GEOAPIFY_MAP_KEY` của web: hai client hai key thì hạn
-mức tách được, và một key bị moi ra khỏi bundle app không kéo theo web. Hai app mobile dùng chung
-một key cũng được (cùng là bundle app); tách riêng nếu muốn đo hạn mức theo app.
-
-App native không có bản đồ tương tác nên không tiêu thụ Map Tiles — chỉ Static Maps, mỗi lần mở
-khối "Vị trí trên bản đồ" là một lượt. Thiếu key thì khối đó lùi về nút "Mở bản đồ"; luồng không
-gãy chỗ nào.
+Hai app native vẫn VẼ bản đồ bằng Geoapify qua `EXPO_PUBLIC_GEOAPIFY_MAP_KEY` cho tới khi dev mobile
+chuyển — giữ key Geoapify của app như cũ. Gợi ý địa chỉ, chọn địa điểm và quãng đường của app đi qua
+API nên đã là Vietmap. App KHÔNG bao giờ cầm services key.
 
 ---
 
 ## 5. Google Calendar — ngày lễ
 
-Key **thứ ba**, tách khỏi hai key trên (khác API, khác hạn mức, và nó chạy ở worker).
+Key RIÊNG, tách khỏi key bản đồ ở §4 (khác nhà cung cấp, khác hạn mức, và nó chạy ở worker).
 
-1. Cùng project → **Library** → bật **Google Calendar API**
+1. Cùng project với §2 (`XePrime`) → **Library** → bật **Google Calendar API**
 2. **Credentials** → *Create credentials* → **API key**
-   - Application restrictions: **IP addresses** → IP VPS staging (như §4.2)
+   - Application restrictions: **IP addresses** → IP VPS staging (cách lấy IP ở §4.3)
    - API restrictions: chỉ **Google Calendar API**
 
 | Loại | Tên | Giá trị |
@@ -771,7 +819,7 @@ nhanh hơn đi bấm thử trên giao diện.
 | --- | --- |
 | R2 | Vào một xe → thêm ảnh. Lỗi CORS hiện ở Console trình duyệt, không phải ở log server |
 | Google/Facebook | Bấm nút đăng nhập tương ứng. `?authError=SOCIAL_NOT_CONFIGURED` trên URL = chưa nhận biến |
-| Geoapify | Mở chi tiết một xe có địa chỉ — khối bản đồ chỉ hiện khi key web hợp lệ |
+| Vietmap | Gõ địa chỉ ở ô giao xe phải ra gợi ý; chọn một dòng → báo giá giao xe hiện phí dự kiến. Log boot của API có dòng `Bản đồ (Vietmap): đã cấu hình` |
 | Ngày lễ | `curl https://api-stg.xeprime.vn/holidays` — worker chạy mỗi ngày một lần, chờ tới hôm sau |
 | Chat | Mở hội thoại ở hai trình duyệt, gửi tin. Không realtime ⇒ xem `docker compose logs worker` |
 
@@ -784,5 +832,6 @@ nhanh hơn đi bấm thử trên giao diện.
 | Ảnh tải lên xong nhưng không hiện | `R2_PUBLIC_BASE_URL` sai, hoặc bucket công khai chưa bật r2.dev |
 | Ảnh chat bị từ chối `VALIDATION_FAILED` | `R2_PUBLIC_BASE_URL` có dấu `/` thừa ở cuối |
 | API không boot sau khi bật Firebase | `FIRESTORE_ENABLED=true` bắt buộc đủ 6 biến R2 — làm §1 trước |
-| Bản đồ không hiện dù đã khai key | `NEXT_PUBLIC_*` nhúng lúc build — phải **deploy lại**, restart không đủ |
-| Geoapify trả HTTP 401/403 | Key bị khoá theo IP mà IP VPS không nằm trong danh sách, hoặc dùng nhầm key web cho backend |
+| Ô địa chỉ không ra gợi ý, log API có `Autocomplete trả HTTP …` | IP của VPS không nằm trong whitelist IP của key, dán nhầm Key Tilemap vào `VIETMAP_API_KEY` (Map API trả `423`), hoặc hết giao dịch/hạn mức ngày của gói |
+| Phí giao dự kiến không bao giờ hiện, log có `Route trả …` | Như trên, hoặc API Route chưa bật cho gói (trial tắt sẵn một số API) |
+| Log có `Vietmap chạm trần … lượt/ngày` | Cầu dao `GEO_DAILY_CALL_BUDGET` đã chặn — lưu lượng thật thì nâng biến này, bất thường thì xem log truy cập `/places/*` |

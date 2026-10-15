@@ -50,6 +50,9 @@ async function bootstrap(): Promise<void> {
           : ' (KHÔNG gửi SMS — mã in ra log và trả trong response)'),
       config.get<string>('SMTP_HOST') ? 'SMTP: đã cấu hình' : 'SMTP: TRỐNG (email in ra log)',
       config.get<string>('R2_BUCKET') ? 'R2: đã cấu hình' : 'R2: TRỐNG (upload trả 503)',
+      config.get<string>('VIETMAP_API_KEY')
+        ? 'Bản đồ (Vietmap): đã cấu hình'
+        : 'Bản đồ: TRỐNG (không gợi ý địa chỉ, không phí giao dự kiến)',
     ];
     console.warn(
       [

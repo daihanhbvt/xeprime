@@ -28,6 +28,7 @@ import {
   BOOKING_REQUEST_STATUS,
   LONG_TERM_PACKAGE_MONTHS,
   longTermReturnAt,
+  LOCATION_SOURCE,
   PICKUP_PREFERENCE,
   ROUTE_TYPE,
   ROUTE_TYPE_VALUES,
@@ -79,7 +80,6 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { cx } from '@/lib/cx';
-import { isInteractiveMapConfigured } from '@/lib/leaflet-loader';
 import {
   appWallClockToInstant,
   appWallClockToIso,
@@ -359,10 +359,7 @@ export function RequestBookingFlow({
    * hiện cho khách đọc, nên nó phải đi qua `t` (ADR 0012). `t` ổn định theo locale, nên `useMemo`
    * ở đây giữ cho `yupResolver` không nhận một schema mới ở mỗi phím gõ.
    */
-  const schema = useMemo(
-    () => requestFormSchema(tf, { canConfirmLocation: isInteractiveMapConfigured() }),
-    [tf],
-  );
+  const schema = useMemo(() => requestFormSchema(tf), [tf]);
 
   const { control, trigger, getValues, setValue, formState } = useForm<RequestFormValues>({
     resolver: yupResolver(schema),
@@ -562,9 +559,11 @@ export function RequestBookingFlow({
   /*
    * Quãng đường giao xe + phí dự kiến.
    *
-   * Địa chỉ debounce 900ms và phải đủ dài trước khi hỏi: mỗi lượt trượt cache là một request có
-   * tính tiền tới nhà cung cấp bản đồ, và một địa chỉ đang gõ dở ("12 Ng") vừa tốn hạn mức vừa
-   * chắc chắn tra sai. Ba lớp cache xếp chồng nhau — TanStack ở đây, `geocode_cache` và
+   * Chỉ hỏi cho địa chỉ ĐÃ XÁC NHẬN: có toạ độ (khách chọn gợi ý), hoặc là địa chỉ gõ tay khách đã
+   * chủ động chốt (`locationSource = manual`). Chữ đang gõ dở thì KHÔNG: tra một dòng chữ là hai
+   * giao dịch Vietmap (search + place, ADR 0061) cho một thứ mà cú blur sắp trả về mốc cũ, và con
+   * số phí hiện ra lúc đó nói về một chỗ khách chưa chọn. Debounce 900ms vẫn giữ cho lượt gõ đè
+   * rồi quay lại không bắn request nào. Ba lớp cache xếp chồng nhau — TanStack ở đây, `geocode_cache` và
    * `geo_route_cache` ở backend — nên khách sửa qua sửa lại rồi quay về địa chỉ cũ không tốn gì.
    *
    * Query KHÔNG bao giờ ném: mọi ngả không tra được về dưới dạng `status`, nên không có nhánh
@@ -573,6 +572,9 @@ export function RequestBookingFlow({
   const watchedDeliveryLine = useWatch({ control, name: 'deliveryAddressLine' });
   const watchedDeliveryLat = useWatch({ control, name: 'deliveryLatitude' });
   const watchedDeliveryLng = useWatch({ control, name: 'deliveryLongitude' });
+  const watchedDeliverySource = useWatch({ control, name: 'deliveryLocationSource' });
+  /** Địa chỉ gõ tay đã chốt — đường DUY NHẤT báo giá được tra bằng chữ (xem khối trên). */
+  const deliveryManual = watchedDeliverySource === LOCATION_SOURCE.MANUAL;
   const debouncedDeliveryAddress = useDebouncedValue(watchedDeliveryLine?.trim() ?? '', 900);
   /*
    * Ghim khách ĐÃ XÁC NHẬN thắng chuỗi chữ: gửi toạ độ lên thì server dùng thẳng và bỏ qua bước
@@ -613,7 +615,8 @@ export function RequestBookingFlow({
     enabled:
       isDelivery &&
       deliveryAvailable &&
-      (deliveryPin != null || debouncedDeliveryAddress.length >= MIN_DELIVERY_ADDRESS_LENGTH),
+      (deliveryPin != null ||
+        (deliveryManual && debouncedDeliveryAddress.length >= MIN_DELIVERY_ADDRESS_LENGTH)),
     // Vị trí một địa chỉ không đổi trong một phiên đặt xe — không có lý do gì hỏi lại.
     staleTime: 10 * 60_000,
     retry: false,
@@ -628,7 +631,8 @@ export function RequestBookingFlow({
   const deliveryAddressSettled =
     deliveryPin != null || (watchedDeliveryLine?.trim() ?? '') === debouncedDeliveryAddress;
   const deliveryAskable =
-    deliveryPin != null || (watchedDeliveryLine?.trim().length ?? 0) >= MIN_DELIVERY_ADDRESS_LENGTH;
+    deliveryPin != null ||
+    (deliveryManual && (watchedDeliveryLine?.trim().length ?? 0) >= MIN_DELIVERY_ADDRESS_LENGTH);
   /** Kết quả trong tay có đúng là của địa chỉ/ghim ĐANG hiển thị không. */
   const deliveryCurrent = deliveryAskable && deliveryAddressSettled && !deliveryQ.isFetching;
   /** Chỉ "đang tính" khi thật sự có thứ để hỏi — địa chỉ còn quá ngắn thì không treo spinner. */

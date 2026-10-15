@@ -1,4 +1,10 @@
-import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
+import {
+  CallHandler,
+  ExecutionContext,
+  Injectable,
+  NestInterceptor,
+  StreamableFile,
+} from '@nestjs/common';
 import { Prisma } from '@xeprime/prisma';
 import { map, type Observable } from 'rxjs';
 
@@ -18,6 +24,9 @@ export class ResponseInterceptor implements NestInterceptor {
 }
 
 function wrap(payload: unknown): unknown {
+  // File (ảnh bản đồ tĩnh…) đi thẳng ra như bytes — bọc nó vào `{ data }` là gửi một object JSON
+  // cho một thẻ `<img>`.
+  if (payload instanceof StreamableFile) return payload;
   // Handler đã tự trả đúng envelope thì giữ nguyên, tránh bọc hai lần.
   if (payload !== null && typeof payload === 'object' && ('data' in payload || 'error' in payload)) {
     return payload;

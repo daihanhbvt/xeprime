@@ -11,14 +11,15 @@ import {
   requiredIdentityDocuments,
   SERVICE_TYPE,
 } from '@xeprime/types';
-import { LIST_SEPARATOR } from '@xeprime/domain';
+import { LIST_SEPARATOR, toGeoPoint } from '@xeprime/domain';
 import { RequestBookingButton } from '@/features/booking-requests/components/RequestBookingButton';
 import { catalogLabel, type CatalogMap } from '@/features/catalog/types';
 import { ShopChatButton } from '@/features/chat/components/ShopChatButton';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
-import { StaticMap } from '@/components/data-display/StaticMap';
+import { MapLink } from '@/components/data-display/MapLink';
+import { StaticMapImage } from '@/components/data-display/StaticMapImage';
 import { ShopQuickInfoCard } from '@/components/shop/ShopQuickInfoCard';
-import { mapPlaceUrl, toGeoPoint } from '@/lib/map-static';
+import { browserApiHref } from '@/lib/api-href';
 import { applyDiscountPercent } from '@/lib/money';
 import type { PublicListingDetail } from '../types';
 import { ListingGallery } from './ListingGallery';
@@ -51,13 +52,17 @@ export async function ListingDetailView({
   /** Tỉnh đang lọc ở trang tìm xe — prefill ô địa chỉ giao xe của luồng đặt (ADR 0035). */
   searchProvinceCode?: string;
 }) {
-  const [fmt, t, tCard, tDomain] = await Promise.all([
+  const [fmt, t, tCard, tDomain, tAddress] = await Promise.all([
     getAppFormat(),
     getTranslations('Listings.detail'),
     getTranslations('Listings.card'),
     getTranslations('Domain'),
+    getTranslations('Address'),
   ]);
   const domainLabel = createDomainLabel(tDomain as never);
+  const pickupGeo = listing.pickupPoint
+    ? toGeoPoint(listing.pickupPoint.latitude, listing.pickupPoint.longitude)
+    : null;
 
   const brand = catalogLabel(catalog[CATALOG_TYPE.VEHICLE_BRAND], listing.brand);
   // Thẻ thông số 2 cột kèm icon (mockup đợt 4) — key để client island tra icon.
@@ -488,8 +493,9 @@ export async function ListingDetailView({
           <ListingReviews vehicleId={listing.id} />
         </section>
         {/*
-          Điểm nhận xe: địa chỉ là thông tin CHÍNH, bản đồ chỉ minh hoạ. Khối vẫn hiện đầy đủ khi
-          chưa có toạ độ hoặc chưa cấu hình key bản đồ — `StaticMap` tự biến mất, phần chữ ở lại.
+          Điểm nhận xe: địa chỉ là thông tin CHÍNH. Bản đồ là một ẢNH TĨNH do API vẽ hộ và cache
+          theo chi nhánh (ADR 0061 điều 1) — xem được, không tương tác; muốn dẫn đường thì liên kết
+          mở ứng dụng bản đồ của khách. Chưa có toạ độ thì cả hai tự biến mất, phần chữ ở lại.
           Trải hết chiều ngang (`pickupCard`) để không đẻ ra một ô trống cạnh nó trong lưới 2 cột.
         */}
         {listing.pickupPoint ? (
@@ -508,13 +514,20 @@ export async function ListingDetailView({
             {listing.pickupPoint.provinceName ? (
               <p className={styles.pickupMeta}>{listing.pickupPoint.provinceName}</p>
             ) : null}
-            <StaticMap
-              src={mapPlaceUrl(
-                toGeoPoint(listing.pickupPoint.latitude, listing.pickupPoint.longitude),
-              )}
-              title={t('pickupPoint.mapTitle')}
-              height={260}
-            />
+            {pickupGeo ? (
+              <>
+                <StaticMapImage
+                  // `v` = toạ độ: chi nhánh dời đi là một URL mới, ảnh cũ trong cache trình duyệt
+                  // không bao giờ hiện cho vị trí mới.
+                  src={browserApiHref(
+                    `/public/listings/${listing.id}/pickup-map?v=${pickupGeo.lat},${pickupGeo.lng}`,
+                  )}
+                  alt={t('pickupPoint.mapTitle')}
+                  height={260}
+                />
+                <MapLink point={pickupGeo} label={tAddress('map.openInGoogleMaps')} />
+              </>
+            ) : null}
           </section>
         ) : null}
       </div>

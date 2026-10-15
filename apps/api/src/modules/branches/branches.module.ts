@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { BillingModule } from '../billing/billing.module';
+import { GeoModule } from '../geo/geo.module';
 import { LocationsModule } from '../locations/locations.module';
 import { PublicListingsModule } from '../public-listings/public-listings.module';
 import { BranchesController } from './branches.controller';
@@ -15,7 +16,8 @@ import { BranchesService } from './branches.service';
   // hiển thị và chốt toạ độ. Chi nhánh không tự gọi bản đồ nữa.
   // BillingModule cấp `BillingService.branchQuotaFor` — trần chi nhánh của bậc gói (ADR 0041
   // điều 1) in trên bảng giá, nên nó phải CHẶN thật ở đường tạo chứ không chỉ là một ô admin.
-  imports: [BillingModule, LocationsModule, PublicListingsModule],
+  // GeoModule: ảnh bản đồ tĩnh của chi nhánh (`mapPng`, ADR 0061 điều 1).
+  imports: [BillingModule, GeoModule, LocationsModule, PublicListingsModule],
   controllers: [BranchesController],
   providers: [BranchesService],
   exports: [BranchesService],

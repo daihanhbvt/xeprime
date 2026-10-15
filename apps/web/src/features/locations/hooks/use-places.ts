@@ -49,7 +49,7 @@ export function usePlaceSearch(
   const bias = options.biasPoint ?? null;
   const longEnough = debounced.length >= PLACE_SEARCH_MIN_LENGTH;
 
-  return useQuery({
+  const result = useQuery({
     queryKey: queryKeys.places.search(debounced, bias),
     queryFn: async (): Promise<PlaceSearchResult> => {
       const params = new URLSearchParams({ q: debounced });
@@ -65,6 +65,12 @@ export function usePlaceSearch(
     staleTime: 5 * 60_000,
     placeholderData: (previous) => previous,
   });
+  /*
+   * Chuỗi ĐÃ debounce đi kèm kết quả: trong ~400ms giữa phím gõ và lượt hỏi, `isFetching` vẫn là
+   * `false` và `data` là danh sách của chuỗi TRƯỚC — nơi gọi cần biết danh sách trong tay có đúng
+   * là của chữ đang hiện không (xem dòng "dùng đúng địa chỉ đã nhập" ở `ConfirmedPlaceField`).
+   */
+  return { ...result, debouncedQuery: debounced };
 }
 
 /**
@@ -79,23 +85,6 @@ export function usePlaceDetail() {
     mutationFn: async (placeId: string): Promise<PlaceDetailResult> => {
       const res = await apiRequest<PlaceDetailResult>(
         `/places/detail?placeId=${encodeURIComponent(placeId)}`,
-      );
-      return res.data;
-    },
-  });
-}
-
-/**
- * Toạ độ (người dùng vừa kéo/thả ghim) → địa chỉ chữ, để họ đọc lại "chỗ này là đâu".
- *
- * Toạ độ trả về LUÔN là toạ độ đã gửi lên — cái ghim là thứ người dùng chủ động đặt, còn địa chỉ
- * chữ chỉ là chú thích cho nó.
- */
-export function useReverseGeocode() {
-  return useMutation({
-    mutationFn: async (point: { lat: number; lng: number }): Promise<PlaceDetailResult> => {
-      const res = await apiRequest<PlaceDetailResult>(
-        `/places/reverse?lat=${point.lat}&lng=${point.lng}`,
       );
       return res.data;
     },

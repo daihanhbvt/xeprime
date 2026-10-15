@@ -200,7 +200,6 @@ jobs:
             NEXT_PUBLIC_WEB_PARTNER_URL=${{ vars.WEB_PARTNER_URL || format('https://{0}', vars.PARTNER_DOMAIN) }}
             NEXT_PUBLIC_WEB_ADMIN_URL=${{ vars.WEB_ADMIN_URL || format('https://{0}', vars.ADMIN_DOMAIN) }}
             NEXT_PUBLIC_APP_NAME=${{ vars.NEXT_PUBLIC_APP_NAME }}
-            NEXT_PUBLIC_GEOAPIFY_MAP_KEY=${{ vars.NEXT_PUBLIC_GEOAPIFY_MAP_KEY }}
             NEXT_PUBLIC_FIREBASE_API_KEY=${{ vars.NEXT_PUBLIC_FIREBASE_API_KEY }}
             NEXT_PUBLIC_FIREBASE_PROJECT_ID=${{ vars.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
             NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${{ vars.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
@@ -286,7 +285,7 @@ jobs:
           V_R2_PUBLIC_BASE_URL: ${{ vars.R2_PUBLIC_BASE_URL }}
           V_BACKUP_KEEP_DAYS: ${{ vars.BACKUP_KEEP_DAYS }}
           V_NEXT_PUBLIC_APP_NAME: ${{ vars.NEXT_PUBLIC_APP_NAME }}
-          V_NEXT_PUBLIC_GEOAPIFY_MAP_KEY: ${{ vars.NEXT_PUBLIC_GEOAPIFY_MAP_KEY }}
+          V_GEO_DAILY_CALL_BUDGET: ${{ vars.GEO_DAILY_CALL_BUDGET }}
           V_NEXT_PUBLIC_FIREBASE_API_KEY: ${{ vars.NEXT_PUBLIC_FIREBASE_API_KEY }}
           V_NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ vars.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
           V_NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ vars.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
@@ -315,7 +314,7 @@ jobs:
           # Chỉ để KIỂM SỰ TỒN TẠI ở bước này — nội dung được dùng ở step "Đẩy Firestore rules",
           # và nó KHÔNG bao giờ được ghi vào `.env` của môi trường (runtime không cần nó).
           S_FIREBASE_DEPLOY_CREDENTIALS_JSON: ${{ secrets.FIREBASE_DEPLOY_CREDENTIALS_JSON }}
-          S_GEOAPIFY_API_KEY: ${{ secrets.GEOAPIFY_API_KEY }}
+          S_VIETMAP_API_KEY: ${{ secrets.VIETMAP_API_KEY }}
           S_GOOGLE_HOLIDAY_API_KEY: ${{ secrets.GOOGLE_HOLIDAY_API_KEY }}
           S_TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           S_TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -552,7 +551,8 @@ jobs:
           kv FIREBASE_PROJECT_ID "${V_FIREBASE_PROJECT_ID:-}"
           kv FIREBASE_CLIENT_EMAIL "${V_FIREBASE_CLIENT_EMAIL:-}"
           kv FIREBASE_PRIVATE_KEY "${S_FIREBASE_PRIVATE_KEY:-}"
-          kv GEOAPIFY_API_KEY "${S_GEOAPIFY_API_KEY:-}"
+          kv VIETMAP_API_KEY "${S_VIETMAP_API_KEY:-}"
+          kv GEO_DAILY_CALL_BUDGET "${V_GEO_DAILY_CALL_BUDGET:-3000}"
           kv GOOGLE_HOLIDAY_API_KEY "${S_GOOGLE_HOLIDAY_API_KEY:-}"
 
           # Bằng lái của khách (ADR 0057). Đọc ảnh bằng Tesseract tại chỗ — không khoá, không bên
@@ -570,7 +570,6 @@ jobs:
           kv NEXT_PUBLIC_WEB_PARTNER_URL "${V_WEB_PARTNER_URL:-https://${V_PARTNER_DOMAIN}}"
           kv NEXT_PUBLIC_WEB_ADMIN_URL "${V_WEB_ADMIN_URL:-https://${V_ADMIN_DOMAIN}}"
           kv NEXT_PUBLIC_APP_NAME "${V_NEXT_PUBLIC_APP_NAME:-XePrime}"
-          kv NEXT_PUBLIC_GEOAPIFY_MAP_KEY "${V_NEXT_PUBLIC_GEOAPIFY_MAP_KEY:-}"
           kv NEXT_PUBLIC_FIREBASE_API_KEY "${V_NEXT_PUBLIC_FIREBASE_API_KEY:-}"
           kv NEXT_PUBLIC_FIREBASE_PROJECT_ID "${V_NEXT_PUBLIC_FIREBASE_PROJECT_ID:-}"
           kv NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN "${V_NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:-}"

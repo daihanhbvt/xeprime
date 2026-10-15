@@ -11120,6 +11120,140 @@
         "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `branches.manage` (đọc từ DB mỗi request, không nằm trong session)."
       }
     },
+    "/branches/{id}/map": {
+      "get": {
+        "operationId": "BranchesController_map",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `REALM_NOT_ALLOWED` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy bản ghi tương ứng.\n\nMã lỗi: `NOT_FOUND`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy dữ liệu"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Ảnh bản đồ tĩnh (PNG) của một chi nhánh",
+        "tags": [
+          "branches"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Không gian tài khoản (ADR 0053):** `partner` — phiên của realm khác bị từ chối.\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `branches.view` (đọc từ DB mỗi request, không nằm trong session)."
+      }
+    },
     "/branches/{id}/set-default": {
       "post": {
         "operationId": "BranchesController_setDefault",
@@ -24362,6 +24496,89 @@
           }
         },
         "summary": "Chi tiết một địa điểm đã chọn (toạ độ, địa chỉ, tỉnh gợi ý)",
+        "tags": [
+          "places"
+        ],
+        "security": [],
+        "description": "**Truy cập:** công khai — không cần đăng nhập.\n\n**Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối."
+      }
+    },
+    "/places/map": {
+      "get": {
+        "operationId": "PlacesController_map",
+        "parameters": [
+          {
+            "name": "placeId",
+            "required": true,
+            "in": "query",
+            "description": "Mã địa điểm lấy từ `GET /places/search`",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 30 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Ảnh bản đồ tĩnh (PNG) của một địa điểm vừa chọn",
         "tags": [
           "places"
         ],
@@ -49592,6 +49809,104 @@
           }
         },
         "summary": "Khoảng cách giao xe tận nơi + phí dự kiến theo bậc của gian hàng",
+        "tags": [
+          "public-listings"
+        ],
+        "security": [],
+        "description": "**Truy cập:** công khai — không cần đăng nhập.\n\n**Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối."
+      }
+    },
+    "/public/listings/{id}/pickup-map": {
+      "get": {
+        "operationId": "PublicQuoteController_pickupMap",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy bản ghi tương ứng.\n\nMã lỗi: `NOT_FOUND`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy dữ liệu"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 60 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Ảnh bản đồ tĩnh (PNG) của điểm nhận xe",
         "tags": [
           "public-listings"
         ],

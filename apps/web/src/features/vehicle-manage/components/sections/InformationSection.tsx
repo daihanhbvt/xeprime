@@ -4,10 +4,12 @@ import { Alert, App, Button, Col, Form, Row } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
+import { toGeoPoint } from '@xeprime/domain';
 import { VEHICLE_PUBLIC_STATUS } from '@xeprime/types';
 import { vehicleFormSchema, type VehicleFormValues } from '@xeprime/validators';
 
-import { StaticMap } from '@/components/data-display/StaticMap';
+import { MapLink } from '@/components/data-display/MapLink';
+import { StaticMapImage } from '@/components/data-display/StaticMapImage';
 import { NumberField } from '@/components/form/NumberField';
 import { StickyFormActions } from '@/components/form/StickyFormActions';
 import { TextAreaField } from '@/components/form/TextAreaField';
@@ -32,9 +34,9 @@ import {
 import { useUpdateVehicle } from '@/features/vehicles/hooks/use-vehicle-mutations';
 import { manageInformationValuesToInput, vehicleToFormValues } from '@/features/vehicles/mappers';
 import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
+import { browserApiHref } from '@/lib/api-href';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
-import { mapPlaceUrl, toGeoPoint } from '@/lib/map-static';
 
 import { useManagedVehicle } from '../VehicleManageContext';
 import { SectionCard } from '../SectionCard';
@@ -264,12 +266,13 @@ export function InformationSection() {
 
 /**
  * Địa chỉ hiện tại của xe = chi nhánh giữ xe. Đọc từ danh sách chi nhánh (đã có toạ độ và số xe)
- * chứ không gọi endpoint riêng; bản đồ là `StaticMap` với `NEXT_PUBLIC_GEOAPIFY_MAP_KEY` —
- * thiếu key/toạ độ thì chỉ hiện chữ, không bao giờ chặn sửa.
+ * chứ không gọi endpoint riêng; bản đồ là một ẢNH TĨNH API vẽ hộ (`StaticMapImage`, ADR 0061
+ * điều 1) kèm liên kết mở ứng dụng bản đồ — thiếu toạ độ thì chỉ hiện chữ, không bao giờ chặn sửa.
  */
 function AddressCard({ canEdit }: { canEdit: boolean }) {
   const { vehicle } = useManagedVehicle();
   const t = useTranslations('VehicleManage.information');
+  const tAddress = useTranslations('Address');
   const branches = useBranches();
   const [editing, setEditing] = useState(false);
 
@@ -280,7 +283,6 @@ function AddressCard({ canEdit }: { canEdit: boolean }) {
         branch.longitude == null ? null : Number(branch.longitude),
       )
     : null;
-  const mapUrl = mapPlaceUrl(point);
   const addressLine = [branch?.address, branch?.provinceName ?? vehicle.branch?.provinceName]
     .filter(Boolean)
     .join(', ');
@@ -302,8 +304,16 @@ function AddressCard({ canEdit }: { canEdit: boolean }) {
         <>
           <p className={styles.address}>{addressLine || t('addressNoStreet')}</p>
           {branch?.name ? <p className={styles.branchName}>{branch.name}</p> : null}
-          {mapUrl ? (
-            <StaticMap src={mapUrl} title={t('addressMapTitle')} height={220} />
+          {point && branch ? (
+            <>
+              <StaticMapImage
+                // `v` = toạ độ: sửa địa chỉ chi nhánh là một URL mới, không hiện ảnh vị trí cũ.
+                src={browserApiHref(`/branches/${branch.id}/map?v=${point.lat},${point.lng}`)}
+                alt={t('addressMapTitle')}
+                height={220}
+              />
+              <MapLink point={point} label={tAddress('map.openInGoogleMaps')} />
+            </>
           ) : branch?.address ? (
             <p className={styles.mapHint}>{t('addressMapPending')}</p>
           ) : null}

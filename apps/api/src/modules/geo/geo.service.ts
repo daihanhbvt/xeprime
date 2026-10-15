@@ -1,15 +1,19 @@
 import { createHash } from 'node:crypto';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
+  GEO_CACHE_TTL_DAYS,
   haversineKm,
   isValidGeoPoint,
   normalizeAddressKey,
+  provinceNameFromAddress,
   roundCoord,
   type GeoPoint,
 } from '@xeprime/domain';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   GEO_PROVIDER,
+  GeoQuotaExceededError,
+  storablePlaceId,
   type GeocodeResult,
   type GeoProvider,
   type PlaceDetail,
@@ -17,16 +21,36 @@ import {
 } from './geo-provider';
 
 /**
- * Bao lâu thì coi một bản ghi cache là cũ.
- *
- * KHÔNG phải con số tuỳ hứng: điều khoản của nhà cung cấp bản đồ giới hạn thời gian được lưu
- * toạ độ họ trả về, và 30 ngày là mốc quen thuộc của giới hạn đó. Nó cũng vừa đủ để một địa chỉ
- * bị đặt lại tên đường không nằm sai chỗ mãi mãi trong cache của mình.
+ * Bao lâu thì coi một bản ghi cache là cũ — {@link GEO_CACHE_TTL_DAYS} (ADR 0061). Ở đây chỉ THÔI
+ * ĐỌC bản ghi quá hạn; xoá hẳn là việc của job `geo-cache-cleanup` bên worker.
  */
-const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const CACHE_TTL_MS = GEO_CACHE_TTL_DAYS * 24 * 60 * 60 * 1000;
 
 /** Toạ độ làm tròn về lưới ~110m trước khi băm — mọi lần hỏi lại cùng một chuyến đều trúng. */
 const ROUTE_KEY_DECIMALS = 3;
+
+/**
+ * Cache GỢI Ý trong bộ nhớ tiến trình (ADR 0061 điều 3).
+ *
+ * Mỗi lượt gợi ý là một lượt gọi tính tiền. Cùng một chuỗi gõ lặp lại thật sự nhiều hơn tưởng:
+ * TanStack Query hỏi lại khi người dùng quay lại ô, hai người cùng tìm "Nguyễn Văn Linh" ở một
+ * tỉnh, người dùng xoá một ký tự rồi gõ lại. Mười phút đủ để bắt những lần lặp đó mà không giữ
+ * một gợi ý cũ quá lâu; 500 mục là vài trăm KB — không đáng một bảng DB, và mất khi khởi động
+ * lại cũng không sao.
+ */
+const SUGGEST_CACHE_TTL_MS = 10 * 60 * 1000;
+const SUGGEST_CACHE_MAX = 500;
+/** Điểm ưu tiên làm tròn ~1km: tâm tỉnh người dùng chọn — lệch vài trăm mét không đổi gợi ý. */
+const SUGGEST_BIAS_DECIMALS = 2;
+
+/**
+ * Ảnh bản đồ tĩnh giữ trong bộ nhớ (ADR 0061 điều 1). Mỗi ảnh ~50–80KB; 200 ảnh ≈ 16MB — đủ cho
+ * mọi chi nhánh đang có xe trên chợ ở giai đoạn pilot. Khởi động lại thì vẽ lại khi có người xem:
+ * một giao dịch cho mỗi chi nhánh, và trình duyệt còn tự giữ ảnh (Cache-Control ở controller).
+ */
+const STATIC_MAP_CACHE_MAX = 200;
+/** ~1m: hai lần hỏi cùng một chi nhánh luôn trúng một khoá; chi nhánh dời đi thì là ảnh mới. */
+const STATIC_MAP_KEY_DECIMALS = 5;
 
 const sha256 = (input: string): string => createHash('sha256').update(input).digest('hex');
 
@@ -34,6 +58,24 @@ export interface ResolvedAddress extends GeocodeResult {
   /** Địa chỉ này đến từ cache hay vừa hỏi nhà cung cấp — chỉ để log/đo, không lộ ra API. */
   cached: boolean;
 }
+
+/**
+ * Kết quả tra địa chỉ — ba ngả PHÂN BIỆT ĐƯỢC, cùng lý do với {@link RoadDistanceResult}.
+ *
+ * "Không tìm thấy" là lỗi khách sửa được (gõ lại địa chỉ). "Không hỏi được" (key bị từ chối,
+ * billing hết hạn, chạm trần quota) thì không — báo khách "địa chỉ không tìm thấy" lúc đó là đổ
+ * lỗi cho họ về một sự cố của mình.
+ */
+export type GeocodeOutcome =
+  | { outcome: 'ok'; address: ResolvedAddress }
+  | { outcome: 'not_found' }
+  | { outcome: 'unavailable' };
+
+/** Chi tiết một địa điểm đã chọn — cùng ba ngả với {@link GeocodeOutcome}. */
+export type PlaceDetailsOutcome =
+  | { outcome: 'ok'; detail: PlaceDetail }
+  | { outcome: 'not_found' }
+  | { outcome: 'unavailable' };
 
 /**
  * Kết quả đo đường bộ — bốn ngả PHÂN BIỆT ĐƯỢC, không phải một `number | null`.
@@ -59,17 +101,26 @@ export type RoadDistanceResult =
  * Tra cứu vị trí cho luồng giao xe tận nơi.
  *
  * Ba việc, theo đúng thứ tự đắt dần: đọc cache → loại sớm bằng đường chim bay → hỏi nhà cung
- * cấp. Thứ tự đó là toàn bộ lý do hạn mức miễn phí đủ dùng.
+ * cấp. Mỗi lượt hỏi nhà cung cấp là tiền thật (Vietmap tính theo giao dịch — ADR 0061), nên thứ tự đó
+ * là toàn bộ lý do chi phí bản đồ giữ được ở mức thấp.
  *
  * **Không hàm nào ở đây ném ra ngoài.** Lỗi mạng, hết hạn mức, key sai — tất cả thành `null`
  * kèm một dòng log. Người gọi là luồng đặt xe của khách: bản đồ hỏng không được phép trở thành
  * "không đặt được xe".
  *
- * Là writer DUY NHẤT của `geocode_cache` và `geo_route_cache`.
+ * Là writer DUY NHẤT của `geocode_cache` và `geo_route_cache`. Worker chỉ XOÁ bản ghi quá
+ * {@link GEO_CACHE_TTL_DAYS} ngày (`apps/worker/src/jobs/geo-cache-cleanup.ts`) — dọn theo điều
+ * khoản, không ghi nội dung.
  */
 @Injectable()
 export class GeoService {
   private readonly logger = new Logger(GeoService.name);
+  /** Map giữ THỨ TỰ CHÈN — xoá phần tử đầu là bỏ mục cũ nhất. Xem {@link SUGGEST_CACHE_TTL_MS}. */
+  private readonly suggestCache = new Map<string, { at: number; items: PlaceSuggestion[] }>();
+  /** Ảnh bản đồ tĩnh đã vẽ — xem {@link staticMap}. Cùng kiểu LRU theo thứ tự chèn. */
+  private readonly staticMapCache = new Map<string, Buffer>();
+  /** Lượt vẽ ĐANG CHẠY theo khoá — trang xe mới lên chợ mà nhiều người mở cùng lúc chỉ tốn một lượt. */
+  private readonly staticMapInflight = new Map<string, Promise<Buffer | null>>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -79,6 +130,17 @@ export class GeoService {
   /** Có nhà cung cấp bản đồ dùng được không — nơi gọi kiểm trước để trả trạng thái đúng. */
   get enabled(): boolean {
     return this.provider.enabled;
+  }
+
+  /**
+   * Nhà cung cấp không trả lời được. Chạm trần lượt gọi trong ngày là trạng thái CHỦ ĐÍCH (nhà
+   * cung cấp đã cảnh báo một lần) — ghi `debug`, không phải một `warn` cho mỗi lượt của một trận
+   * quét endpoint.
+   */
+  private providerFailed(what: string, err: unknown): void {
+    const line = `${what} (${this.provider.name}): ${String(err)}`;
+    if (err instanceof GeoQuotaExceededError) this.logger.debug(line);
+    else this.logger.warn(line);
   }
 
   private isFresh(fetchedAt: Date): boolean {
@@ -94,21 +156,32 @@ export class GeoService {
    * thật: người gõ sai địa chỉ thường thử lại vài lần liền.
    */
   async geocode(rawAddress: string): Promise<ResolvedAddress | null> {
-    const address = rawAddress.trim();
-    if (!address || !this.provider.enabled) return null;
+    const res = await this.geocodeOutcome(rawAddress);
+    return res.outcome === 'ok' ? res.address : null;
+  }
 
-    const key = normalizeAddressKey(address);
-    if (!key) return null;
+  /**
+   * Như {@link geocode} nhưng nói RÕ vì sao không có toạ độ — cho nơi gọi phải trả lời khách
+   * khác nhau giữa "địa chỉ không tra được" và "hệ thống không hỏi được".
+   */
+  async geocodeOutcome(rawAddress: string): Promise<GeocodeOutcome> {
+    if (!this.provider.enabled) return { outcome: 'unavailable' };
+    const address = rawAddress.trim();
+    const key = address ? normalizeAddressKey(address) : '';
+    if (!key) return { outcome: 'not_found' };
     const hash = sha256(`${this.provider.name}\n${key}`);
 
     const cached = await this.prisma.geocodeCache.findUnique({ where: { addressHash: hash } });
     if (cached && this.isFresh(cached.fetchedAt)) {
-      if (cached.latitude == null || cached.longitude == null) return null;
+      if (cached.latitude == null || cached.longitude == null) return { outcome: 'not_found' };
       return {
-        point: { lat: Number(cached.latitude), lng: Number(cached.longitude) },
-        formattedAddress: cached.formattedAddress,
-        placeId: cached.placeId,
-        cached: true,
+        outcome: 'ok',
+        address: {
+          point: { lat: Number(cached.latitude), lng: Number(cached.longitude) },
+          formattedAddress: cached.formattedAddress,
+          placeId: cached.placeId,
+          cached: true,
+        },
       };
     }
 
@@ -116,14 +189,16 @@ export class GeoService {
     try {
       result = await this.provider.geocode(address);
     } catch (err) {
-      // Không ghi cache ca lỗi: lần sau có thể hỏi được, và nhớ một sự cố tạm thời trong 30
+      // Không ghi cache ca lỗi: lần sau có thể hỏi được, và nhớ một sự cố tạm thời trong 90
       // ngày thì tệ hơn nhiều so với việc tốn thêm một request.
-      this.logger.warn(`Geocode thất bại (${this.provider.name}): ${String(err)}`);
-      return null;
+      this.providerFailed('Geocode thất bại', err);
+      return { outcome: 'unavailable' };
     }
 
     await this.writeGeocodeCache(hash, address, result);
-    return result ? { ...result, cached: false } : null;
+    return result
+      ? { outcome: 'ok', address: { ...result, cached: false } }
+      : { outcome: 'not_found' };
   }
 
   private async writeGeocodeCache(
@@ -137,7 +212,8 @@ export class GeoService {
       latitude: result?.point.lat ?? null,
       longitude: result?.point.lng ?? null,
       formattedAddress: result?.formattedAddress ?? null,
-      placeId: result?.placeId ?? null,
+      // `ref_id` của Vietmap có thể dài hơn cột — khoá băm vẫn là mã đầy đủ, chỉ cột tham chiếu bỏ trống.
+      placeId: storablePlaceId(result?.placeId),
       // Ghi tay thay vì để `@default(now())`: nhánh `update` phải làm tươi lại mốc, nếu không
       // một bản ghi hết hạn sẽ mãi mãi hết hạn và cache thành vô dụng.
       fetchedAt: new Date(),
@@ -155,45 +231,92 @@ export class GeoService {
   }
 
   /**
-   * Gợi ý địa điểm cho ô nhập địa chỉ. Lỗi/chưa cấu hình → mảng RỖNG.
+   * Gợi ý địa điểm cho ô nhập địa chỉ. Mảng RỖNG = không có gợi ý nào (câu trả lời); `null` =
+   * KHÔNG HỎI ĐƯỢC (chưa cấu hình, key bị từ chối, hết hạn mức, lỗi mạng).
    *
-   * KHÔNG cache: gợi ý phụ thuộc từng ký tự người dùng vừa gõ, nên tỉ lệ trúng cache gần bằng
-   * không trong khi mỗi dòng cache là một bản ghi rác. Chỗ tiết kiệm thật nằm ở client —
-   * debounce và độ dài tối thiểu trước khi hỏi.
+   * Hai ca đó phải tách nhau vì client phản ứng ngược nhau: không có gợi ý thì người dùng gõ tiếp
+   * hoặc tự đặt ghim, còn không hỏi được thì ô địa chỉ phải mở cho nhập tay — nếu không, một lần
+   * nhà cung cấp từ chối key là mọi khách kẹt ở bước "chưa xác nhận địa chỉ" (ADR 0035 điều 6).
+   *
+   * Cùng chuỗi + cùng vùng trong 10 phút trả từ bộ nhớ (ADR 0061 điều 3). Chỗ tiết kiệm lớn còn
+   * lại nằm ở client: debounce, độ dài tối thiểu và chỉ hỏi khi đã biết vùng.
    */
-  async searchPlaces(query: string, biasPoint?: GeoPoint | null): Promise<PlaceSuggestion[]> {
+  async searchPlaces(
+    query: string,
+    biasPoint?: GeoPoint | null,
+  ): Promise<PlaceSuggestion[] | null> {
+    if (!this.provider.enabled) return null;
     const q = query.trim();
-    if (!q || !this.provider.enabled) return [];
+    if (!q) return [];
+
+    const bias = biasPoint && isValidGeoPoint(biasPoint) ? biasPoint : null;
+    const cacheKey = [
+      normalizeAddressKey(q),
+      bias ? `${roundCoord(bias.lat, SUGGEST_BIAS_DECIMALS)},${roundCoord(bias.lng, SUGGEST_BIAS_DECIMALS)}` : '',
+    ].join('|');
+    const hit = this.suggestCache.get(cacheKey);
+    if (hit && Date.now() - hit.at < SUGGEST_CACHE_TTL_MS) return hit.items;
+
+    let items: PlaceSuggestion[];
     try {
-      return await this.provider.searchPlaces(q, biasPoint ?? null);
+      items = await this.provider.searchPlaces(q, bias);
     } catch (err) {
-      this.logger.warn(`Tìm địa điểm thất bại (${this.provider.name}): ${String(err)}`);
-      return [];
+      this.providerFailed('Tìm địa điểm thất bại', err);
+      return null;
     }
+
+    this.suggestCache.delete(cacheKey);
+    this.suggestCache.set(cacheKey, { at: Date.now(), items });
+    while (this.suggestCache.size > SUGGEST_CACHE_MAX) {
+      const oldest = this.suggestCache.keys().next().value;
+      if (oldest === undefined) break;
+      this.suggestCache.delete(oldest);
+    }
+    return items;
   }
 
   /**
-   * Chi tiết một địa điểm đã chọn. `null` = không tra được HOẶC không còn tồn tại.
+   * Chi tiết một địa điểm đã chọn. `null` = không tra được HOẶC không còn tồn tại — nơi cần phân
+   * biệt hai ca đó gọi {@link placeDetailsOutcome}.
+   */
+  async placeDetails(placeId: string): Promise<PlaceDetail | null> {
+    const res = await this.placeDetailsOutcome(placeId);
+    return res.outcome === 'ok' ? res.detail : null;
+  }
+
+  /**
+   * Chi tiết một địa điểm đã chọn, nói RÕ vì sao không có — cùng lý do với {@link GeocodeOutcome}:
+   * mã không ra gì thì khách chọn lại được, còn nhà cung cấp không trả lời (hết giao dịch, chạm
+   * trần) thì bắt khách "chọn lại" là một vòng lặp không lối ra — ô địa chỉ phải mở cho nhập tay.
    *
    * Ghi vào `geocode_cache` dưới khoá `place:<id>` — mã địa điểm là khoá ỔN ĐỊNH (khác chuỗi
    * địa chỉ gõ tay), nên đây là chỗ cache thật sự có ích: mở lại form sửa chi nhánh không phải
-   * hỏi lại Google về cùng một địa điểm.
+   * hỏi lại nhà cung cấp về cùng một địa điểm, và hai khách chọn cùng một gợi ý chỉ tốn một lượt
+   * Place (gợi ý của Vietmap không kèm toạ độ — ADR 0061 điều 3). Ca "không ra gì" cũng được nhớ:
+   * một mã hỏng gửi lại nhiều lần không được thành nhiều lượt tính tiền.
    */
-  async placeDetails(placeId: string): Promise<PlaceDetail | null> {
+  async placeDetailsOutcome(placeId: string): Promise<PlaceDetailsOutcome> {
+    if (!this.provider.enabled) return { outcome: 'unavailable' };
     const id = placeId.trim();
-    if (!id || !this.provider.enabled) return null;
+    if (!id) return { outcome: 'not_found' };
 
     const hash = sha256(`${this.provider.name}\nplace:${id}`);
     const cached = await this.prisma.geocodeCache.findUnique({ where: { addressHash: hash } });
-    if (cached && this.isFresh(cached.fetchedAt) && cached.latitude != null && cached.longitude != null) {
+    if (cached && this.isFresh(cached.fetchedAt)) {
+      if (cached.latitude == null || cached.longitude == null) return { outcome: 'not_found' };
       return {
-        placeId: id,
-        point: { lat: Number(cached.latitude), lng: Number(cached.longitude) },
-        formattedAddress: cached.formattedAddress,
-        // Thành phần hành chính KHÔNG cache: chúng chỉ dùng để gợi ý bộ chọn nhảy tới đúng tỉnh
-        // ở ngay lần chọn đó, và thêm hai cột vào bảng cache cho một gợi ý là không đáng.
-        administrativeArea: null,
-        locality: null,
+        outcome: 'ok',
+        detail: {
+          placeId: id,
+          point: { lat: Number(cached.latitude), lng: Number(cached.longitude) },
+          formattedAddress: cached.formattedAddress,
+          /*
+           * Tỉnh đọc lại từ chính địa chỉ đầy đủ (tỉnh đứng cuối, trước tên quốc gia) — không thêm
+           * cột vào bảng cache, và luồng khách thuê vẫn có tỉnh để gợi ý (ADR 0042).
+           */
+          administrativeArea: provinceNameFromAddress(cached.formattedAddress),
+          locality: null,
+        },
       };
     }
 
@@ -201,8 +324,9 @@ export class GeoService {
     try {
       detail = await this.provider.placeDetails(id);
     } catch (err) {
-      this.logger.warn(`Tra chi tiết địa điểm thất bại (${this.provider.name}): ${String(err)}`);
-      return null;
+      // Không ghi cache ca lỗi — xem `geocodeOutcome`.
+      this.providerFailed('Tra chi tiết địa điểm thất bại', err);
+      return { outcome: 'unavailable' };
     }
 
     await this.writeGeocodeCache(
@@ -210,7 +334,7 @@ export class GeoService {
       `place:${id}`,
       detail ? { point: detail.point, formattedAddress: detail.formattedAddress, placeId: id } : null,
     );
-    return detail;
+    return detail ? { outcome: 'ok', detail } : { outcome: 'not_found' };
   }
 
   /** Toạ độ → địa chỉ chữ, để người dùng đọc lại cái ghim vừa kéo. Lỗi → `null`. */
@@ -226,7 +350,9 @@ export class GeoService {
       return {
         point,
         formattedAddress: cached.formattedAddress,
-        placeId: cached.placeId,
+        // Mã do người hỏi ĐẦU TIÊN trong ô lưới để lại — không nói gì về cái ghim của người này.
+        placeId: null,
+        administrativeArea: provinceNameFromAddress(cached.formattedAddress),
         cached: true,
       };
     }
@@ -235,12 +361,18 @@ export class GeoService {
     try {
       result = await this.provider.reverseGeocode(point);
     } catch (err) {
-      this.logger.warn(`Reverse geocode thất bại (${this.provider.name}): ${String(err)}`);
+      this.providerFailed('Reverse geocode thất bại', err);
       return null;
     }
 
     await this.writeGeocodeCache(hash, `reverse:${key}`, result);
-    return result ? { ...result, cached: false } : null;
+    if (!result) return null;
+    return {
+      ...result,
+      administrativeArea:
+        result.administrativeArea ?? provinceNameFromAddress(result.formattedAddress),
+      cached: false,
+    };
   }
 
   /**
@@ -289,7 +421,7 @@ export class GeoService {
     try {
       distanceKm = await this.provider.roadDistanceKm(origin, destination);
     } catch (err) {
-      this.logger.warn(`Tra khoảng cách thất bại (${this.provider.name}): ${String(err)}`);
+      this.providerFailed('Tra khoảng cách thất bại', err);
       return { outcome: 'unavailable' };
     }
 
@@ -314,4 +446,77 @@ export class GeoService {
 
     return distanceKm == null ? { outcome: 'no_route' } : { outcome: 'ok', distanceKm };
   }
+
+  /**
+   * Ảnh bản đồ TĨNH (PNG) quanh một điểm — để XEM, không tương tác. `null` = không vẽ được
+   * (chưa cấu hình, nhà cung cấp lỗi, chạm trần); nơi gọi trả 404 và web ẩn khung ảnh.
+   *
+   * Nơi gọi chỉ được đưa vào toạ độ của một thực thể CÓ THẬT (chi nhánh của một xe trên chợ, chi
+   * nhánh của chính gian hàng) — không bao giờ toạ độ do client gửi lên. Nhờ vậy tập ảnh có thể vẽ
+   * bị chặn bởi số chi nhánh, và cache bên dưới biến chi phí thành một lượt cho mỗi chi nhánh.
+   */
+  /**
+   * Ảnh bản đồ tĩnh của một địa điểm ĐÃ ĐƯỢC CHỌN — ô địa chỉ hiện nó ngay dưới dòng vừa chọn
+   * (ADR 0061 điều 1). `null` = không có gì để vẽ; nơi gọi trả 404 và web ẩn khung ảnh.
+   *
+   * Chỉ vẽ cho mã ĐÃ có toạ độ trong cache (`placeDetailsOutcome` vừa tra cho chính
+   * lượt chọn đó) và KHÔNG tra chi tiết ở đây: mã là thứ client gửi lên, và tra-rồi-vẽ cho mọi mã
+   * là để ai cũng tiêu tiền bằng những mã bịa. Mã quá hạn cache hay mã cũ thời Geoapify thì không có
+   * ảnh — ô địa chỉ vẫn đủ dùng.
+   */
+  async placeMap(placeId: string): Promise<Buffer | null> {
+    const id = placeId.trim();
+    if (!id || !this.provider.enabled) return null;
+    const hash = sha256(`${this.provider.name}\nplace:${id}`);
+    const cached = await this.prisma.geocodeCache.findUnique({ where: { addressHash: hash } });
+    if (
+      !cached ||
+      !this.isFresh(cached.fetchedAt) ||
+      cached.latitude == null ||
+      cached.longitude == null
+    ) {
+      return null;
+    }
+    const point = { lat: Number(cached.latitude), lng: Number(cached.longitude) };
+    return this.staticMap(point, cached.formattedAddress?.trim() || `${point.lat}, ${point.lng}`);
+  }
+
+  async staticMap(point: GeoPoint, label: string): Promise<Buffer | null> {
+    if (!this.provider.enabled || !isValidGeoPoint(point)) return null;
+    const key = [
+      roundCoord(point.lat, STATIC_MAP_KEY_DECIMALS),
+      roundCoord(point.lng, STATIC_MAP_KEY_DECIMALS),
+      label.trim(),
+    ].join('|');
+
+    const hit = this.staticMapCache.get(key);
+    if (hit) {
+      // Đưa xuống cuối: Map giữ thứ tự chèn, mục ở đầu là mục lâu không ai xem nhất.
+      this.staticMapCache.delete(key);
+      this.staticMapCache.set(key, hit);
+      return hit;
+    }
+    const running = this.staticMapInflight.get(key);
+    if (running) return running;
+
+    const job = this.provider
+      .staticMapPng(point, label.trim())
+      .then((png) => {
+        this.staticMapCache.set(key, png);
+        while (this.staticMapCache.size > STATIC_MAP_CACHE_MAX) {
+          const oldest = this.staticMapCache.keys().next().value;
+          if (oldest === undefined) break;
+          this.staticMapCache.delete(oldest);
+        }
+        return png;
+      })
+      .catch((err: unknown) => {
+        this.providerFailed('Vẽ bản đồ tĩnh thất bại', err);
+        return null;
+      })
+      .finally(() => this.staticMapInflight.delete(key));
+    this.staticMapInflight.set(key, job);
+    return job;
+  }
+
 }

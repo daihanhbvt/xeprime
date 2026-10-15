@@ -1,5 +1,11 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Header, Param, Patch, Post, Query, StreamableFile } from '@nestjs/common';
+import {
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiProduces,
+  ApiTags,
+} from '@nestjs/swagger';
 import {
   ACCOUNT_REALM,
   PERMISSION,
@@ -9,6 +15,7 @@ import {
 } from '@xeprime/types';
 import { supportFieldAllowlist } from '../../common/support/support-field-allowlist';
 import { BRANCH_SCOPED_RESOURCE, BranchScoped, CurrentTenant, CurrentUser, Realms, RequirePermissions, RequiresFeature, SubscriptionTrackOnly, SupportAction, TenantScoped } from '../../common/decorators';
+import { PRIVATE_STATIC_MAP_CACHE_CONTROL } from '../../common/http-cache';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { BranchesService } from './branches.service';
 import {
@@ -93,6 +100,29 @@ export class BranchesController {
   @ApiOkResponse({ type: BranchDto })
   get(@CurrentTenant() tenant: TenantContext, @Param('id') id: string): Promise<BranchDto> {
     return this.branches.get(tenant.tenantId, id);
+  }
+
+  /**
+   * Ảnh bản đồ tĩnh của chi nhánh — một thẻ `<img>` ở thẻ hồ sơ xe (ADR 0061 điều 1). Cùng bộ cổng
+   * với "chi tiết một chi nhánh": ai xem được chi nhánh thì xem được bản đồ của nó, không hơn.
+   *
+   * KHÔNG mở cho phiên hỗ trợ (không `@SupportAction`, ADR 0050 mặc định đóng): thẻ `<img>` không gửi
+   * được header phiên hỗ trợ, nên mở ra cũng không ai dùng được — chỉ thêm một cửa vào phiên. Trong
+   * phiên hỗ trợ, ảnh lỗi và web tự ẩn khung ảnh.
+   */
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BRANCH)
+  @Get(':id/map')
+  @RequirePermissions(PERMISSION.BRANCH_VIEW)
+  @Header('Cache-Control', PRIVATE_STATIC_MAP_CACHE_CONTROL)
+  @ApiOperation({ summary: 'Ảnh bản đồ tĩnh (PNG) của một chi nhánh' })
+  @ApiProduces('image/png')
+  @ApiOkResponse({ schema: { type: 'string', format: 'binary' } })
+  async map(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('id') id: string,
+  ): Promise<StreamableFile> {
+    const png = await this.branches.mapPng(tenant.tenantId, id);
+    return new StreamableFile(png, { type: 'image/png', length: png.length });
   }
 
   @BranchScoped(BRANCH_SCOPED_RESOURCE.BRANCH)

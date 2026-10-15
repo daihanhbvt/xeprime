@@ -16,8 +16,9 @@
   "placeEmpty": "No matching place found",
   "placeUnavailable": "The map is not responding. You can type the address by hand.",
   "placeDetailFailed": "Could not get the location of that place. Pick it again.",
+  "useTypedAddress": "Not listed? Use the address exactly as typed",
   "provinceMismatchTitle": "This place looks like it is outside the province you selected",
-  "provinceMismatchHint": "Check the province, or move the pin to the right spot.",
+  "provinceMismatchHint": "Check the province, or pick the right place again.",
   "mapLabel": "Location map",
   "map": {
     "pickHint": "Tap the map to drop a pin.",
@@ -25,7 +26,6 @@
     "readOnlyHint": "This map is view-only. Pick a different suggested place if the pin is wrong.",
     "pinHint": "Pick a place in the field above to pin the exact delivery spot.",
     "unavailable": "The map could not be shown. The address still saves normally.",
-    "openInMaps": "Open in OpenStreetMap",
     "sheetTitle": "Drop the location pin",
     "editPin": "Adjust the pin on the map",
     "useThisPoint": "Use this location",
