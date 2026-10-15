@@ -2,11 +2,14 @@ import { PICKUP_PREFERENCE, ROUTE_TYPE, SERVICE_TYPE } from '@xeprime/types';
 import type { BookingRequestFormValues } from './booking-schema';
 import type { CreateBookingRequestInput } from './api';
 
-export type RequestDevice = CreateBookingRequestInput['device'];
-
+/**
+ * Thân `POST /public/booking-requests`.
+ *
+ * KHÔNG mang danh tính người thuê (ADR 0060): họ tên, SĐT, email đọc từ TÀI KHOẢN của phiên ở
+ * server. `client`/`device` cũng không gửi nữa — lượt gửi không còn cấp phiên nào.
+ */
 export function toRequestBody(
   values: BookingRequestFormValues,
-  device: RequestDevice,
   /**
    * MÃ KHUYẾN MÃI đang áp — ADR 0046.
    *
@@ -25,11 +28,6 @@ export function toRequestBody(
     values.routeType === ROUTE_TYPE.INTER_CITY_ONE_WAY;
 
   return {
-    client: 'native',
-    device,
-    customerName: values.customerName.trim(),
-    customerPhone: values.customerPhone.trim(),
-    ...(values.customerEmail ? { customerEmail: values.customerEmail } : {}),
     serviceType: values.serviceType as CreateBookingRequestInput['serviceType'],
     ...(longTerm
       ? {

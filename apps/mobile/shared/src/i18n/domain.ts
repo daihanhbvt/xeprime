@@ -34,6 +34,13 @@ export function createDomainLabel(t: {
 }): DomainLabel {
   return (group, code, fallback) => {
     if (code === null || code === undefined || code === '') return fallback ?? '';
+    /*
+     * `app<Group>.<code>` thắng `<group>.<code>` (như `appCode.*` của lỗi): vài nhãn nói về GÓI —
+     * app không được mời mua gói (App Store / Google Play), nên app có nhãn trung tính riêng.
+     */
+    const appKey =
+      `app${group.charAt(0).toUpperCase()}${group.slice(1)}.${code}` as never;
+    if (t.has(appKey)) return t(appKey);
     const key = domainMessageKey(group, code) as never;
     return t.has(key) ? t(key) : (fallback ?? code);
   };

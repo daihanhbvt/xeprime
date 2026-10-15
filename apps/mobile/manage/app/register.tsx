@@ -1,15 +1,19 @@
 import { Redirect, useRouter, type Href } from 'expo-router';
 import { useEnterApp } from '@/features/auth/hooks/use-enter-app';
 import { RegisterScreen } from '@/features/auth/RegisterScreen';
+import { PartnerSignupScreen } from '@/features/shop/PartnerSignupScreen';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { registrationTrackOfNext, usePendAuthNext } from '@/features/auth/auth-next';
 import { SESSION_STATUS, useSessionGate } from '@/features/auth/hooks/use-session-gate';
 
 /**
- * Tạo TÀI KHOẢN ĐỐI TÁC — ADR 0053 điều 3: app XePrime Partner tự đăng ký như site partner
- * (`/auth/mobile/register` với `clientApp: partner` ⇒ tài khoản realm `partner`). Xong thì vào
- * app; tài khoản mới chưa có gian hàng nên `ScopeGuard` đưa họ tới màn chọn cách cho thuê.
+ * ĐĂNG KÝ ĐỐI TÁC — ADR 0053 điều 3 (realm `partner`), cùng luồng với site partner `/register`:
+ * chọn tuyến trước, rồi MỘT form gom tài khoản (họ tên, SĐT + OTP, mật khẩu) + hồ sơ của tuyến
+ * (`PartnerSignupScreen`). Hoa hồng xong ⇒ Tổng quan; gói xong ⇒ màn chờ kích hoạt.
+ *
+ * Ngoại lệ: `?next=` trỏ tới một đích KHÔNG phải tuyến (vd. lời mời vào gian hàng) — người đó chỉ
+ * cần TÀI KHOẢN rồi về đúng đích, không mở gian hàng của mình ⇒ form tạo tài khoản như cũ.
  */
 export default function PartnerRegisterRoute() {
   const router = useRouter();
@@ -26,16 +30,23 @@ export default function PartnerRegisterRoute() {
     return <Redirect href={next as Href} />;
   }
 
+  const chosenTrack = registrationTrackOfNext(next);
+  if (next && !chosenTrack) {
+    return (
+      <RegisterScreen
+        onAuthenticated={() => enterApp()}
+        onRegistered={() => enterApp()}
+        onOpenAccount={() => enterApp()}
+        onSwitchToLogin={() => router.replace(ROUTES.account.login())}
+        onCancel={() => goBackOr(router, ROUTES.account.login())}
+      />
+    );
+  }
+
   return (
-    <RegisterScreen
-      onAuthenticated={() => enterApp()}
-      onRegistered={() => enterApp()}
-      // Tài khoản mới chưa có gian hàng: "mở tài khoản" cũng là vào app — `ScopeGuard` đưa tới màn
-      // chọn cách cho thuê, nên không đẩy thêm `/manage/account` (nó bị thay ngay lập tức).
-      onOpenAccount={() => enterApp()}
+    <PartnerSignupScreen
+      initialTrack={chosenTrack}
       onSwitchToLogin={() => router.replace(ROUTES.account.login())}
-      onCancel={() => goBackOr(router, ROUTES.account.login())}
-      chosenTrack={registrationTrackOfNext(next)}
     />
   );
 }

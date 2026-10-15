@@ -2,13 +2,8 @@ import { PICKUP_PREFERENCE, ROUTE_TYPE, SERVICE_TYPE } from '@xeprime/types';
 import type { BookingRequestFormValues } from './booking-schema';
 import { toRequestBody } from './request-body';
 
-const DEVICE = { devicePlatform: 'android', deviceName: 'Pixel 8' };
-
 function values(overrides: Partial<BookingRequestFormValues> = {}): BookingRequestFormValues {
   return {
-    customerName: '  Nguyễn Văn A  ',
-    customerPhone: ' 0901234567 ',
-    customerEmail: '',
     serviceType: SERVICE_TYPE.SELF_DRIVE,
     pickupAt: '2026-09-01T03:00:00.000Z',
     returnAt: '2026-09-03T03:00:00.000Z',
@@ -43,18 +38,19 @@ function values(overrides: Partial<BookingRequestFormValues> = {}): BookingReque
  * chúng có test riêng thay vì chỉ có một docblock.
  */
 describe('toRequestBody', () => {
-  it('LUÔN gửi client native + device — thiếu nó là phiên vừa cấp rơi vào hư không', () => {
-    const body = toRequestBody(values(), DEVICE);
-    expect(body.client).toBe('native');
-    expect(body.device).toEqual(DEVICE);
+  it('KHÔNG mang danh tính người thuê hay client/device — server đọc từ tài khoản (ADR 0060)', () => {
+    const body = toRequestBody(values());
+    for (const key of ['customerName', 'customerPhone', 'customerEmail', 'client', 'device']) {
+      expect(body).not.toHaveProperty(key);
+    }
   });
 
   it('không bao giờ mang tenantId — server suy từ xe', () => {
-    expect(toRequestBody(values(), DEVICE)).not.toHaveProperty('tenantId');
+    expect(toRequestBody(values())).not.toHaveProperty('tenantId');
   });
 
   it('không có trường OTP nào — xác thực SĐT xảy ra TRƯỚC, server tự tra', () => {
-    const body = toRequestBody(values(), DEVICE) as Record<string, unknown>;
+    const body = toRequestBody(values()) as Record<string, unknown>;
     for (const key of Object.keys(body)) {
       expect(key.toLowerCase()).not.toContain('otp');
       expect(key.toLowerCase()).not.toContain('code');
@@ -62,14 +58,8 @@ describe('toRequestBody', () => {
     }
   });
 
-  it('cắt khoảng trắng ở tên và SĐT', () => {
-    const body = toRequestBody(values(), DEVICE);
-    expect(body.customerName).toBe('Nguyễn Văn A');
-    expect(body.customerPhone).toBe('0901234567');
-  });
-
   it('dịch vụ theo ngày gửi khoảng nhận–trả', () => {
-    const body = toRequestBody(values(), DEVICE);
+    const body = toRequestBody(values());
     expect(body.pickupAt).toBe('2026-09-01T03:00:00.000Z');
     expect(body.returnAt).toBe('2026-09-03T03:00:00.000Z');
     expect(body).not.toHaveProperty('longTermPackageMonths');
@@ -83,13 +73,13 @@ describe('toRequestBody', () => {
     });
 
     it('KHÔNG gửi pickupAt/returnAt dù form còn giá trị cũ', () => {
-      const body = toRequestBody(longTerm, DEVICE);
+      const body = toRequestBody(longTerm);
       expect(body).not.toHaveProperty('pickupAt');
       expect(body).not.toHaveProperty('returnAt');
     });
 
     it('gửi gói + nguyện vọng; "trong 7 ngày tới" KHÔNG kèm ngày cụ thể', () => {
-      const body = toRequestBody(longTerm, DEVICE);
+      const body = toRequestBody(longTerm);
       expect(body.longTermPackageMonths).toBe(6);
       expect(body.pickupPreference).toBe(PICKUP_PREFERENCE.WITHIN_7_DAYS);
       expect(body).not.toHaveProperty('requestedPickupDate');
@@ -103,7 +93,6 @@ describe('toRequestBody', () => {
           pickupPreference: PICKUP_PREFERENCE.SPECIFIC_DATE,
           requestedPickupDate: '2026-09-15',
         }),
-        DEVICE,
       );
       expect(body.requestedPickupDate).toBe('2026-09-15');
     });
@@ -120,7 +109,6 @@ describe('toRequestBody', () => {
           pickupAddressLine: '12 Nguyễn Huệ',
           destination: 'Đà Lạt',
         }),
-        DEVICE,
       );
       // Gửi MÃ + phần chi tiết; chuỗi hiển thị do server ghép (ADR 0035 điều 3).
       expect(body.pickupProvinceCode).toBe('79');
@@ -140,7 +128,6 @@ describe('toRequestBody', () => {
           pickupAddressLine: '12 Nguyễn Huệ',
           destination: 'Đà Lạt',
         }),
-        DEVICE,
       );
       expect(body.destination).toBe('Đà Lạt');
     });
@@ -158,7 +145,6 @@ describe('toRequestBody', () => {
           deliveryWardCode: '19789',
           deliveryAddressLine: '5 Lê Lợi',
         }),
-        DEVICE,
       );
       expect(body).not.toHaveProperty('deliveryRequested');
       expect(body).not.toHaveProperty('deliveryProvinceCode');
@@ -167,7 +153,7 @@ describe('toRequestBody', () => {
   });
 
   it('giao tận nơi chỉ gửi khi khách thực sự chọn', () => {
-    expect(toRequestBody(values(), DEVICE)).not.toHaveProperty('deliveryRequested');
+    expect(toRequestBody(values())).not.toHaveProperty('deliveryRequested');
 
     const body = toRequestBody(
       values({
@@ -176,7 +162,6 @@ describe('toRequestBody', () => {
         deliveryWardCode: '19789',
         deliveryAddressLine: '5 Lê Lợi',
       }),
-      DEVICE,
     );
     expect(body.deliveryRequested).toBe(true);
     expect(body.deliveryProvinceCode).toBe('46');
@@ -186,13 +171,12 @@ describe('toRequestBody', () => {
   });
 
   it('trường rỗng không đi lên dây', () => {
-    const body = toRequestBody(values(), DEVICE);
-    expect(body).not.toHaveProperty('customerEmail');
+    const body = toRequestBody(values());
     expect(body).not.toHaveProperty('note');
     expect(body).not.toHaveProperty('acceptedTerms');
   });
 
   it('đã tick điều khoản chủ xe thì gửi acceptedTerms: true — như web', () => {
-    expect(toRequestBody(values({ acceptedTerms: true }), DEVICE).acceptedTerms).toBe(true);
+    expect(toRequestBody(values({ acceptedTerms: true })).acceptedTerms).toBe(true);
   });
 });

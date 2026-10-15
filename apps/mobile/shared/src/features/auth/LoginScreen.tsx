@@ -1,29 +1,25 @@
-import { useState } from 'react';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { MOBILE_CLIENT_APP } from '@xeprime/types';
 import { APP_PROFILE } from '@/app-profile';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { type CurrentUser } from '@/features/auth/api';
-import { LOGIN_METHOD, type LoginMethod } from './post-login-destination';
 import { Screen } from '@/components/layout/Screen';
 import { AppVersion } from '@/components/ui/AppVersion';
 import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
 import { APP_NAME } from '@/lib/app-name';
 import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
-import { AUTH_METHOD, AuthMethodTabs, type AuthMethod } from './components/AuthMethodTabs';
 import { AuthSwitchLink } from './components/AuthSwitchLink';
 import { LoginForm } from './components/LoginForm';
-import { OtpLoginForm } from './components/OtpLoginForm';
 import { SocialButtons } from './components/SocialButtons';
 
 /**
- * Màn đăng nhập (AUTH-01/03/04) — ba đường vào, một tài khoản.
+ * Màn đăng nhập (AUTH-01/04) — SĐT + mật khẩu, hoặc mạng xã hội (ADR 0060: không còn đăng nhập OTP).
  *
  * Web trình bày đăng nhập bằng modal đè lên marketplace; native phải là màn hình độc lập — một
  * hộp thoại có ô nhập trên điện thoại vừa bị bàn phím che vừa không có chỗ cho nút quay lại.
  *
- * Nghiệp vụ KHÔNG đổi so với `AuthPanel` của web: cùng hai tab (mật khẩu / OTP), cùng hai
+ * Nghiệp vụ KHÔNG đổi so với `AuthPanel` của web: định danh CHỈ là SĐT, cùng các
  * provider, cùng quy tắc khoá, cùng mã lỗi. Khác đúng một chỗ và nằm gọn trong
  * `lib/auth-session.ts` — native nhận cặp Bearer (ADR 0017) thay cho session cookie (ADR 0002).
  *
@@ -39,8 +35,8 @@ export function LoginScreen({
   onCancel,
   onContinueAsGuest,
 }: {
-  /** Nhận hồ sơ + đường đã dùng — route quyết định đi đâu, màn này không biết luật đó. */
-  onSuccess: (user: CurrentUser, method: LoginMethod) => void;
+  /** Nhận hồ sơ — route quyết định đi đâu, màn này không biết luật đó. */
+  onSuccess: (user: CurrentUser) => void;
   onForgotPassword: () => void;
   /**
    * Không truyền = ẨN lối "chưa có tài khoản?". Cả hai app đều truyền: từ ADR 0053 app Partner tạo
@@ -65,7 +61,6 @@ export function LoginScreen({
 }) {
   const t = useTranslations('Auth');
   const tNav = useTranslations('Navigation');
-  const [method, setMethod] = useState<AuthMethod>(AUTH_METHOD.PASSWORD);
 
   return (
     <>
@@ -99,21 +94,9 @@ export function LoginScreen({
             </Text>
           </YStack>
 
-          <YStack gap={space.md}>
-            <AuthMethodTabs value={method} onChange={setMethod} />
+          <LoginForm onSuccess={onSuccess} onForgotPassword={onForgotPassword} />
 
-            {/* Đổi tab là dựng lại form: state của tab kia nói về một lần đăng nhập khác. */}
-            {method === AUTH_METHOD.PASSWORD ? (
-              <LoginForm
-                onSuccess={(user) => onSuccess(user, LOGIN_METHOD.PASSWORD)}
-                onForgotPassword={onForgotPassword}
-              />
-            ) : (
-              <OtpLoginForm onSuccess={(user) => onSuccess(user, LOGIN_METHOD.OTP)} />
-            )}
-          </YStack>
-
-          <SocialButtons onSuccess={(user) => onSuccess(user, LOGIN_METHOD.SOCIAL)} />
+          <SocialButtons onSuccess={onSuccess} />
 
           {/*
             Cam kết pháp lý đứng NGAY dưới bộ nút đăng nhập, đúng chỗ web đặt nó trong
@@ -125,7 +108,12 @@ export function LoginScreen({
           {onSwitchToRegister ? (
             <AuthSwitchLink
               prompt={t('switchMode.noAccount')}
-              actionLabel={t('switchMode.toRegister')}
+              actionLabel={
+                // App Partner nói như site partner ("Đăng ký"); app khách giữ "Tạo tài khoản".
+                APP_PROFILE.clientApp === MOBILE_CLIENT_APP.PARTNER
+                  ? t('portal.becomeOwner')
+                  : t('switchMode.toRegister')
+              }
               onPress={onSwitchToRegister}
             />
           ) : null}

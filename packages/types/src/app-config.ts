@@ -22,6 +22,9 @@ export const PARTNER_PLAN_PURCHASE_PATH = '/subscription';
 /** Trang hỗ trợ của site partner — đích nút "Liên hệ tư vấn" của bậc bán bằng tư vấn trong email. */
 export const PARTNER_SUPPORT_PATH = '/support';
 
+/** Trang đăng xe của site partner — đích nút "Đăng xe ngay" trong thư chào mừng chủ xe. */
+export const PARTNER_VEHICLE_NEW_PATH = '/vehicles/new';
+
 /** Thư mục icon PNG dùng trong email, phục vụ tĩnh bởi web (`apps/web/public/email`). */
 export const EMAIL_ASSET_PATH = '/email';
 
@@ -42,6 +45,11 @@ export const EMAIL_OUTBOX_KIND = {
   PLAN_GUIDE: 'plan_guide',
   /** Thư thử của admin — tới CHÍNH email admin, dựng bằng mẫu chỉ định (`payload.templateId`). */
   PLAN_GUIDE_TEST: 'plan_guide_test',
+  /**
+   * Chào mừng chủ xe TUYẾN HOA HỒNG vừa đăng ký — đăng xe, phí theo chuyến, lượt miễn phí. KHÔNG bán
+   * gói nhưng vẫn đi sau cờ `isPlanPromotionEnabled` như mọi thư trong hàng đợi này. Nội dung dựng bằng mã (vi/en), không qua mẫu admin.
+   */
+  PARTNER_WELCOME: 'partner_welcome',
 } as const;
 export type EmailOutboxKind = (typeof EMAIL_OUTBOX_KIND)[keyof typeof EMAIL_OUTBOX_KIND];
 export const EMAIL_OUTBOX_KIND_VALUES = Object.values(EMAIL_OUTBOX_KIND) as EmailOutboxKind[];
@@ -150,6 +158,19 @@ export interface PlanGuideEmailPayload {
   templateId?: string | null;
   /** Chỉ thư thử: nội dung cần dựng; thư thật suy từ `reason` (PLAN_GUIDE_REASON_VARIANT). */
   variant?: PlanGuideVariant | null;
+}
+
+/** Payload của `email_outbox` loại `partner_welcome`. */
+export interface PartnerWelcomeEmailPayload {
+  displayName: string | null;
+  /** Tên hồ sơ chủ xe. */
+  shopName: string | null;
+  tenantId: string;
+}
+
+/** Khoá chống trùng thư chào mừng: MỘT thư mỗi hồ sơ (địa chỉ liên hệ thêm hậu tố `:contact`). */
+export function partnerWelcomeDedupeKey(tenantId: string): string {
+  return `partner_welcome:tenant:${tenantId}`;
 }
 
 // ── Mẫu email hướng dẫn gói do ADMIN quản lý (`plan_guide_email_templates`) ────────────────

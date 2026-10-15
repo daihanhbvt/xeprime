@@ -13,8 +13,8 @@ import { ROUTES } from '@/navigation/routes';
  * `canDismiss()` là nhánh cho trường hợp màn đăng nhập là màn ĐẦU TIÊN (mở app bằng deep link
  * `/login`): lúc đó không có gì để đóng, phải điều hướng thật.
  *
- * Nằm ở `features/auth` chứ không trong file route: hai route dùng chung nó (`login` và
- * `set-password`), và một file trong `app/` xuất thêm hàm lạ là mời expo-router hiểu nhầm.
+ * Nằm ở `features/auth` chứ không trong file route: nhiều route dùng chung nó (đăng nhập,
+ * đăng ký), và một file trong `app/` xuất thêm hàm lạ là mời expo-router hiểu nhầm.
  *
  * Ba đích, theo thứ tự ưu tiên:
  *   1. `next` — deep link người dùng chủ động bấm để tới, thắng mọi mặc định;

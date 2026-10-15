@@ -1554,5 +1554,11 @@
   "subscriptionCancelReason": {
     "manual": "Cancelled by an admin",
     "replaced": "Replaced by a plan change"
+  },
+  "appTenantStatus": {
+    "expired": "Usage period ended"
+  },
+  "appSupportCaseCategory": {
+    "plan_consultation": "Account consultation"
   }
 }

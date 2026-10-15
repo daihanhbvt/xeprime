@@ -16,6 +16,7 @@ import 'react-native-reanimated';
 
 import { AppErrorScreen } from '@/components/state/AppErrorScreen';
 import { AppToastProvider } from '@/components/feedback/AppToast';
+import { AccountPhoneGate } from '@/features/auth/AccountPhoneGate';
 import { SessionBoundary } from '@/features/auth/SessionBoundary';
 import { BadgeRealtimeProvider } from '@/features/badges/BadgeRealtimeProvider';
 import { InAppCameraProvider } from '@/features/camera/InAppCameraProvider';
@@ -141,6 +142,8 @@ export default function RootLayout() {
                   <Stack.Screen name="auth/callback" options={{ animation: 'none' }} />
                   <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
                 </Stack>
+                {/* SAU `Stack` để tấm bắt buộc nằm trên mọi màn — ADR 0060, xem `AccountPhoneGate`. */}
+                <AccountPhoneGate />
                 </BadgeRealtimeProvider>
                 </ChatRealtimeProvider>
               </SessionBoundary>

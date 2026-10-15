@@ -8,6 +8,7 @@ import {
   DEFAULT_LISTING_SORT,
   LISTING_AMENITY_DESC,
   LISTING_AMENITY_LABEL,
+  LISTING_AMENITY,
   LISTING_AMENITY_VALUES,
   SEAT_BUCKET_LABEL,
   SEAT_BUCKET_VALUES,
@@ -339,7 +340,11 @@ export function FilterSheet({
 
               <Group title={t('amenities')}>
                 <YStack>
-                  {LISTING_AMENITY_VALUES.map((amenity, index) => (
+                  {/* Bộ lọc hoá đơn VAT (PR #190) chưa port sang app — FilterDraft chưa có trường đó. */}
+                  {LISTING_AMENITY_VALUES.filter(
+                    (amenity): amenity is Exclude<typeof amenity, typeof LISTING_AMENITY.VAT_INVOICE> =>
+                      amenity !== LISTING_AMENITY.VAT_INVOICE,
+                  ).map((amenity, index) => (
                     <AmenityRow
                       key={amenity}
                       label={domainLabel('listingAmenity', amenity, LISTING_AMENITY_LABEL[amenity])}

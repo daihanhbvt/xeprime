@@ -182,7 +182,7 @@ export function TripGatewayPay({
   /** Hạn của khoản giữ chỗ — còn quá ít thì không mời mở phiên cổng. */
   deadline?: string | null;
 }) {
-  const t = useTranslations('PaymentGateway.options');
+  const t = useTranslations('PaymentGateway.checkout');
   const locale = useLocale() === 'en' ? 'en' : 'vi';
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -231,21 +231,21 @@ export function TripGatewayPay({
   }
 
   return (
-    <YStack gap={space.sm} accessibilityLabel={t('title')}>
+    <YStack gap={space.sm} accessibilityLabel={t('wallet.title')}>
       <XStack ai="center" gap={space.xs} flexWrap="wrap">
         <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-          {t('title')}
+          {t('wallet.title')}
         </Text>
         {sandbox ? (
           <Text col={colors.warning} fos={fontSize.bodySm} fow={fontWeight.medium}>
-            {t('sandbox')}
+            {t('wallet.sandbox')}
           </Text>
         ) : null}
       </XStack>
 
       {isHoldWindowTooShort(deadline) ? (
         <Text col={colors.textMuted} fos={fontSize.bodySm}>
-          {t('windowTooShort')}
+          {t('wallet.windowTooShort')}
         </Text>
       ) : (
         list.map((method) => {
@@ -256,14 +256,14 @@ export function TripGatewayPay({
               <Button
                 block
                 variant="secondary"
-                label={t('payWith', { provider: label })}
+                label={t('pay.withProvider', { provider: label })}
                 loading={busy && chosen === method.provider}
                 disabled={blocked || (busy && chosen !== method.provider)}
                 onPress={() => pay(method.provider)}
               />
               {blocked ? (
                 <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                  {t('outOfRange', {
+                  {t('wallet.outOfRange', {
                     provider: label,
                     min: method.minAmount ? fmt.money(method.minAmount) : '—',
                     max: method.maxAmount ? fmt.money(method.maxAmount) : '—',
@@ -276,10 +276,10 @@ export function TripGatewayPay({
       )}
 
       {start.isError ? <Callout tone="danger">{errorMessage(start.error)}</Callout> : null}
-      {missingLink ? <Callout tone="danger">{t('missingLink')}</Callout> : null}
+      {missingLink ? <Callout tone="danger">{t('wallet.missingLink')}</Callout> : null}
 
       <Text col={colors.textMuted} fos={fontSize.bodySm}>
-        {sandbox ? `${t('redirectNote')} ${t('sandboxHint')}` : t('redirectNote')}
+        {sandbox ? `${t('wallet.redirectNote')} ${t('wallet.sandboxHint')}` : t('wallet.redirectNote')}
       </Text>
     </YStack>
   );

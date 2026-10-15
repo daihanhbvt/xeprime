@@ -1208,21 +1208,42 @@ export function manageOnboardingPath(track: RegistrationTrack): string {
  * `host`. `?track=` chỉ là gợi ý cho bước chọn tuyến; tuyến thật lưu ở `tenants.onboarding_state`
  * khi tạo gian hàng.
  */
-export function partnerRegisterHref(track?: RegistrationTrack): string {
-  const path = track ? `/register?${REGISTRATION_TRACK_PARAM}=${track}` : '/register';
-  return siteHref(ZONE.PARTNER, path);
+export function partnerRegisterHref(
+  track?: RegistrationTrack,
+  options: { fromMarket?: boolean } = {},
+): string {
+  const params = new URLSearchParams();
+  if (track) params.set(REGISTRATION_TRACK_PARAM, track);
+  if (options.fromMarket) params.set(PARTNER_SIGNUP_SOURCE_PARAM, PARTNER_SIGNUP_SOURCE_MARKET);
+  const query = params.toString();
+  return siteHref(ZONE.PARTNER, query ? `/register?${query}` : '/register');
 }
 
 /**
- * Bước ĐẦU của một tuyến, cho tài khoản đối tác CHƯA có gian hàng — đích của hai nút trên trang chọn
- * cách cho thuê, và của `/register?track=…` sau khi tạo tài khoản:
+ * `?from=market` trên form đăng ký partner: người dùng tới từ trang "Trở thành chủ xe" của site
+ * khách, đã chọn tuyến ở đó (tab mới) — form ẩn link "Đổi cách cho thuê". Thiếu tham số thì giữ link.
+ */
+export const PARTNER_SIGNUP_SOURCE_PARAM = 'from';
+export const PARTNER_SIGNUP_SOURCE_MARKET = 'market';
+
+/**
+ * Form đăng ký MỘT TRANG của tuyến đã chọn, NỘI BỘ site partner (`/register?track=`) — đích của hai
+ * thẻ trên trang chọn cách cho thuê.
+ */
+export function partnerSignupHref(track: RegistrationTrack): string {
+  return `${ROUTES.MANAGE.REGISTER}?${REGISTRATION_TRACK_PARAM}=${track}`;
+}
+
+/**
+ * Bước TIẾP THEO của một tuyến, NGAY SAU khi form đăng ký một trang đã tạo tài khoản + gian hàng:
  *
- *  - hoa hồng → wizard đăng xe nhanh: khai hồ sơ chủ xe + chiếc xe đầu tiên, gian hàng mở ở bước lưu;
- *  - gói → onboarding gói: tạo gian hàng trả phí rồi thanh toán (ADR 0040).
+ *  - hoa hồng → thẳng vào Tổng quan của khu quản lý; chủ xe đăng xe từ bên trong (không chạy
+ *    wizard đăng xe giữa lượt đăng ký);
+ *  - gói → onboarding gói: chọn gói rồi thanh toán (ADR 0040).
  */
 export function partnerTrackStartHref(track: RegistrationTrack): string {
   return track === REGISTRATION_TRACK.COMMISSION
-    ? listYourVehicleRegisterPath(VEHICLE_REGISTRATION_SOURCE.MARKETPLACE)
+    ? ROUTES.MANAGE.ROOT
     : manageOnboardingPath(REGISTRATION_TRACK.PACKAGE);
 }
 

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { buildLoginSchema, type LoginValues } from '@xeprime/validators';
+import { compactPhoneInput } from '@xeprime/types';
+import { buildPhoneLoginSchema, type PhoneLoginValues } from '@xeprime/validators';
 import { useAuthSchemaLabels } from '../use-auth-schema-labels';
 import { useForm } from 'react-hook-form';
 import { Pressable, StyleSheet } from 'react-native';
@@ -32,20 +33,21 @@ export function LoginForm({ onSuccess, onForgotPassword }: LoginFormProps) {
    * phím gõ.
    */
   const labels = useAuthSchemaLabels();
-  const schema = useMemo(() => buildLoginSchema(labels), [labels]);
+  const schema = useMemo(() => buildPhoneLoginSchema(labels), [labels]);
 
   const {
     control,
     handleSubmit,
     formState: { isValid },
-  } = useForm<LoginValues>({
+  } = useForm<PhoneLoginValues>({
     mode: 'onChange',
     resolver: yupResolver(schema),
-    defaultValues: { identifier: '', password: '' },
+    defaultValues: { phone: '', password: '' },
   });
 
   const onSubmit = handleSubmit((values) => {
-    login.mutate(values, {
+    // Định danh CHỈ là SĐT (ADR 0060); dấu cách/chấm/gạch chép từ danh bạ bỏ đi như web.
+    login.mutate({ identifier: compactPhoneInput(values.phone), password: values.password }, {
       onSuccess,
       onError: (error) => toast.showError(errorMessage(error)),
     });
@@ -55,14 +57,14 @@ export function LoginForm({ onSuccess, onForgotPassword }: LoginFormProps) {
     <YStack gap={space.md}>
       <TextField
         control={control}
-        name="identifier"
+        name="phone"
         required
-        label={t('login.identifier')}
-        placeholder={t('login.identifierPlaceholder')}
-        icon="person-outline"
+        label={t('login.phone')}
+        placeholder={t('login.phonePlaceholder')}
+        icon="call-outline"
         autoCapitalize="none"
-        autoComplete="username"
-        keyboardType="email-address"
+        autoComplete="tel"
+        keyboardType="phone-pad"
         editable={!login.isPending}
       />
 

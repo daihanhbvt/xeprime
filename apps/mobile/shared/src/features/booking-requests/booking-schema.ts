@@ -8,14 +8,8 @@ import {
   ROUTE_TYPE_VALUES,
   SERVICE_TYPE,
   SERVICE_TYPE_VALUES,
-  VN_PHONE_PATTERN,
 } from '@xeprime/types';
 
-/**
- * Trần độ dài — gương `@MaxLength` của `CreateBookingRequestDto`. Chặn thật ở backend; đây chỉ
- * là lớp báo sớm để khách không gõ xong cả đoạn rồi mới bị trả về.
- */
-export const NAME_MAX = 255;
 /** Điểm đến tối đa — `DESTINATION_MAX` của schema web. */
 export const DESTINATION_MAX = 500;
 const ADDRESS_MAX = DESTINATION_MAX;
@@ -25,11 +19,6 @@ export const NOTE_MAX = 2000;
 
 /** Câu lỗi đã dịch, do màn hình truyền vào — xem chú thích ở `buildBookingRequestSchema`. */
 export interface BookingRequestSchemaLabels {
-  nameRequired: string;
-  nameTooLong: string;
-  phoneRequired: string;
-  phoneInvalid: string;
-  emailInvalid: string;
   serviceRequired: string;
   pickupAtRequired: string;
   returnAtRequired: string;
@@ -84,17 +73,10 @@ export function buildBookingRequestSchema(
 ) {
   const { canConfirmLocation } = options;
   return yup.object({
-    customerName: yup
-      .string()
-      .trim()
-      .required(labels.nameRequired)
-      .max(NAME_MAX, labels.nameTooLong),
-    customerPhone: yup
-      .string()
-      .trim()
-      .required(labels.phoneRequired)
-      .matches(VN_PHONE_PATTERN, { message: labels.phoneInvalid }),
-    customerEmail: yup.string().trim().default('').email(labels.emailInvalid),
+    /*
+     * KHÔNG có ô liên hệ nào (ADR 0060): họ tên + SĐT đã xác minh của người thuê đọc từ TÀI KHOẢN
+     * đang đăng nhập ở server, không phải từ form.
+     */
     /**
      * Khách tick "đã đọc điều khoản của chủ xe" — chỉ BẮT BUỘC khi điều khoản của dịch vụ đang chọn
      * có `requireTermsAcceptance`; phép chặn nằm ở lượt gửi (`submitRequest`), đúng như web.

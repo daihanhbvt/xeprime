@@ -95,8 +95,10 @@ export {
  * worker. Xem docblock `plan-guide-outbox.ts`.
  */
 export {
+  enqueuePartnerWelcomeEmail,
   enqueuePlanGuideEmail,
   enqueuePlanGuideForSubscription,
+  enqueuePlanGuideToOwnerAndContact,
   isPlanPromotionEnabled,
   type EnqueuePlanGuideEmailInput,
 } from './plan-guide-outbox';

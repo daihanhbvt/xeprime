@@ -1,10 +1,50 @@
-/* Màn "Cấu hình ứng dụng" — tab cấu hình app Partner. */
+/* Màn "Cấu hình ứng dụng" — tab "Cấu hình chung": hai nhóm theo phạm vi, hai cột trên màn rộng. */
 
 .form {
   display: flex;
-  max-width: 760px;
+  max-width: 1280px;
+  flex-direction: column;
+  gap: var(--xp-space-lg);
+}
+
+.sections {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: var(--xp-space-lg);
+}
+
+.section {
+  display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: var(--xp-space-md);
+}
+
+.sectionHead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.sectionTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.sectionScope {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+/* Đủ rộng thì hai nhóm đứng cạnh nhau — không để nửa phải màn hình trống. */
+@media (min-width: 1100px) {
+  .sections {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .card {

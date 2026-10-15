@@ -22,6 +22,7 @@ import styles from './PartnerAppConfigForm.module.css';
 
 interface FormValues {
   isPlanPromotionEnabled: boolean;
+  otpSmsEnabled: boolean;
   supportHotline: string;
   supportZalo: string;
 }
@@ -29,6 +30,7 @@ interface FormValues {
 function toFormValues(config: PartnerAppConfigAdmin): FormValues {
   return {
     isPlanPromotionEnabled: config.isPlanPromotionEnabled,
+    otpSmsEnabled: config.otpSmsEnabled,
     supportHotline: config.supportHotline ?? '',
     supportZalo: config.supportZalo ?? '',
   };
@@ -38,7 +40,8 @@ function toFormValues(config: PartnerAppConfigAdmin): FormValues {
 const blankToNull = (value: string): string | null => value.trim() || null;
 
 /**
- * Cấu hình app XePrime Partner do nền tảng bật/tắt từ xa.
+ * Cấu hình nền tảng bật/tắt từ xa, chia hai nhóm theo PHẠM VI: "Toàn hệ thống" (web + hai app —
+ * gửi SMS mã OTP) và "Ứng dụng XePrime Partner" (quảng bá gói, kênh liên hệ tư vấn).
  *
  * Không cache: query đọc lại mỗi lần mở trang (`staleTime: 0`) vì công tắc tác động NGAY tới người
  * dùng đang mở app — admin phải thấy trạng thái thật, kể cả khi đồng nghiệp vừa đổi nó.
@@ -62,6 +65,7 @@ export function PartnerAppConfigForm() {
       .test('phone', t('config.contactInvalid'), (v) => !v || APP_CONFIG_CONTACT_PHONE_PATTERN.test(v));
     return yup.object({
       isPlanPromotionEnabled: yup.boolean().defined(),
+      otpSmsEnabled: yup.boolean().defined(),
       supportHotline: contact,
       supportZalo: contact,
     });
@@ -69,7 +73,7 @@ export function PartnerAppConfigForm() {
 
   const { control, handleSubmit, reset, formState } = useForm<FormValues>({
     resolver: yupResolver(schema),
-    defaultValues: { isPlanPromotionEnabled: false, supportHotline: '', supportZalo: '' },
+    defaultValues: { isPlanPromotionEnabled: false, otpSmsEnabled: true, supportHotline: '', supportZalo: '' },
   });
 
   // Đồng bộ form với bản server mỗi khi bản đó đổi (tải xong, lưu xong, đồng nghiệp vừa đổi).
@@ -95,6 +99,8 @@ export function PartnerAppConfigForm() {
     update.mutate(
       {
         isPlanPromotionEnabled: values.isPlanPromotionEnabled,
+        // Production khoá ở BẬT — không gửi trường này để server khỏi phải từ chối.
+        ...(data.otpSmsLocked ? {} : { otpSmsEnabled: values.otpSmsEnabled }),
         supportHotline: blankToNull(values.supportHotline),
         supportZalo: blankToNull(values.supportZalo),
       },
@@ -109,38 +115,70 @@ export function PartnerAppConfigForm() {
 
   return (
     <form onSubmit={onSubmit} noValidate className={styles.form}>
-      <Card className={styles.card}>
-        <SwitchField
-          control={control}
-          name="isPlanPromotionEnabled"
-          label={t('config.isPlanPromotionEnabled.label')}
-          description={t('config.isPlanPromotionEnabled.description')}
-          disabled={update.isPending}
-        />
-      </Card>
+      <div className={styles.sections}>
+        {/* Toàn hệ thống — áp dụng cho website và cả hai ứng dụng. */}
+        <section className={styles.section} aria-labelledby="app-config-shared">
+          <header className={styles.sectionHead}>
+            <h2 id="app-config-shared" className={styles.sectionTitle}>
+              {t('config.sections.shared.title')}
+            </h2>
+            <p className={styles.sectionScope}>{t('config.sections.shared.scope')}</p>
+          </header>
+          <Card className={styles.card}>
+            <SwitchField
+              control={control}
+              name="otpSmsEnabled"
+              label={t('config.otpSms.label')}
+              description={
+                data.otpSmsLocked ? t('config.otpSms.locked') : t('config.otpSms.description')
+              }
+              disabled={update.isPending || data.otpSmsLocked}
+            />
+          </Card>
+        </section>
 
-      <Card className={styles.card} title={t('config.contactTitle')}>
-        <p className={styles.hint}>{t('config.contactHint')}</p>
-        <div className={styles.contactGrid}>
-          <TextField
-            control={control}
-            name="supportHotline"
-            type="tel"
-            label={t('config.hotline')}
-            placeholder={t('config.hotlinePlaceholder')}
-            disabled={update.isPending}
-          />
-          <TextField
-            control={control}
-            name="supportZalo"
-            type="tel"
-            label={t('config.zalo')}
-            placeholder={t('config.zaloPlaceholder')}
-            help={t('config.zaloHint')}
-            disabled={update.isPending}
-          />
-        </div>
-      </Card>
+        {/* Riêng app XePrime Partner (và email hướng dẫn gói gửi đối tác). */}
+        <section className={styles.section} aria-labelledby="app-config-partner">
+          <header className={styles.sectionHead}>
+            <h2 id="app-config-partner" className={styles.sectionTitle}>
+              {t('config.sections.partner.title')}
+            </h2>
+            <p className={styles.sectionScope}>{t('config.sections.partner.scope')}</p>
+          </header>
+          <Card className={styles.card}>
+            <SwitchField
+              control={control}
+              name="isPlanPromotionEnabled"
+              label={t('config.isPlanPromotionEnabled.label')}
+              description={t('config.isPlanPromotionEnabled.description')}
+              disabled={update.isPending}
+            />
+          </Card>
+
+          <Card className={styles.card} title={t('config.contactTitle')}>
+            <p className={styles.hint}>{t('config.contactHint')}</p>
+            <div className={styles.contactGrid}>
+              <TextField
+                control={control}
+                name="supportHotline"
+                type="tel"
+                label={t('config.hotline')}
+                placeholder={t('config.hotlinePlaceholder')}
+                disabled={update.isPending}
+              />
+              <TextField
+                control={control}
+                name="supportZalo"
+                type="tel"
+                label={t('config.zalo')}
+                placeholder={t('config.zaloPlaceholder')}
+                help={t('config.zaloHint')}
+                disabled={update.isPending}
+              />
+            </div>
+          </Card>
+        </section>
+      </div>
 
       <div className={styles.footer}>
         <span className={styles.meta}>

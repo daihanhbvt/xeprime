@@ -84,7 +84,7 @@ async function pressTrack(view: Awaited<ReturnType<typeof render>>, name: string
 const PERSONAL_CTA = 'Đăng xe đầu tiên';
 const SHOP_CTA = 'Tìm hiểu và tạo gian hàng';
 const SUBTITLE =
-  'Đăng chiếc xe đầu tiên thật đơn giản; khi cần quản lý quy mô lớn hơn, bạn có thể nâng cấp lên gian hàng mà vẫn giữ tài khoản và xe.';
+  'Đăng chiếc xe đầu tiên thật đơn giản; khi cần quản lý quy mô lớn hơn, bạn có thể chuyển sang tài khoản gian hàng mà vẫn giữ tài khoản và xe.';
 
 /**
  * Landing "Đăng ký xe" — cửa vào CÔNG KHAI của chủ xe mới.
@@ -111,7 +111,7 @@ describe('ListYourVehicleScreen', () => {
     expect(await view.findByText(SUBTITLE)).toBeTruthy();
     expect(view.getByText('Đăng xe cá nhân')).toBeTruthy();
     expect(view.getByText('Mở gian hàng cho thuê')).toBeTruthy();
-    expect(view.getByText('Linh hoạt nâng cấp khi cần')).toBeTruthy();
+    expect(view.getByText('Linh hoạt chuyển đổi khi cần')).toBeTruthy();
   });
 
   /*

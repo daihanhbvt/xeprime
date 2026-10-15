@@ -208,6 +208,14 @@ describe('Phone verification OTP (Phase 4)', () => {
 });
 
 describe('Mã OTP test (OTP_BYPASS_CODE — dev/staging)', () => {
+  // Mã test chỉ được nhận khi admin TẮT gửi SMS — nhóm này chạy trong trạng thái đó.
+  beforeEach(() => {
+    jest.spyOn(service, 'isSmsDisabled').mockResolvedValue(true);
+  });
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   const BYPASS = '123456';
 
   /** Chạy `fn` với một bộ env tạm, rồi trả `ENV` về nguyên trạng. */
@@ -235,6 +243,8 @@ describe('Mã OTP test (OTP_BYPASS_CODE — dev/staging)', () => {
 
   maybe('đã gửi mã thật: mã test chốt CHÍNH hàng đang chờ, không sinh hàng thứ hai', async () => {
     const phone = mkPhone();
+    // Lượt gửi chạy lúc SMS còn BẬT (mã thật); sau đó admin tắt SMS ⇒ mã test được nhận.
+    jest.mocked(service.isSmsDisabled).mockResolvedValueOnce(false);
     await service.sendOtp(phone, BOOKING, C);
     await withEnv({ OTP_BYPASS_CODE: BYPASS }, async () => {
       await service.verifyOtp(phone, BOOKING, BYPASS, C);
@@ -249,6 +259,8 @@ describe('Mã OTP test (OTP_BYPASS_CODE — dev/staging)', () => {
   maybe('mã thật vẫn qua khi đang bật mã test', async () => {
     const phone = mkPhone();
     await withEnv({ OTP_BYPASS_CODE: BYPASS }, async () => {
+      // Mã thật gửi lúc SMS BẬT vẫn qua như thường.
+      jest.mocked(service.isSmsDisabled).mockResolvedValueOnce(false);
       const { devCode } = await service.sendOtp(phone, BOOKING, C);
       await expect(service.verifyOtp(phone, BOOKING, devCode!, C)).resolves.toBeUndefined();
     });
@@ -274,5 +286,57 @@ describe('Mã OTP test (OTP_BYPASS_CODE — dev/staging)', () => {
     await withEnv({ NODE_ENV: 'development' }, async () => {
       await expect(service.verifyOtp(phone, BOOKING, BYPASS, C)).resolves.toBeUndefined();
     });
+  });
+});
+
+describe('Công tắc gửi SMS OTP (admin — chỉ dev/staging)', () => {
+  maybe('TẮT: không gọi nhà mạng, không trả devCode, mã 123456 xác thực được', async () => {
+    const off = new PhoneVerificationService(asService, config, provider);
+    jest.spyOn(off, 'isSmsDisabled').mockResolvedValue(true);
+    const phone = mkPhone();
+    const before = provider.sentTo.length;
+
+    const { devCode } = await off.sendOtp(phone, BOOKING, C);
+
+    expect(devCode).toBeNull();
+    expect(provider.sentTo.length).toBe(before);
+    // Hàng mã không tính vào cooldown/trần gửi (provider `bypass`).
+    expect((await latestRow(phone))?.provider).toBe('bypass');
+    await expect(off.verifyOtp(phone, BOOKING, '000000', C)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.OTP_INVALID },
+    });
+    await expect(off.verifyOtp(phone, BOOKING, '123456', C)).resolves.toBeUndefined();
+  });
+
+  maybe('BẬT: gửi qua nhà mạng như thường', async () => {
+    const on = new PhoneVerificationService(asService, config, provider);
+    jest.spyOn(on, 'isSmsDisabled').mockResolvedValue(false);
+    const phone = mkPhone();
+    const before = provider.sentTo.length;
+
+    const { devCode } = await on.sendOtp(phone, BOOKING, C);
+
+    expect(provider.sentTo.length).toBe(before + 1);
+    expect(devCode).toMatch(/^\d{6}$/);
+  });
+
+  it('production LUÔN gửi thật — công tắc không có hiệu lực, không đọc DB', async () => {
+    const prodEnv: Record<string, unknown> = {
+      ...ENV,
+      NODE_ENV: 'production',
+      APP_ENV: 'production',
+    };
+    const prodConfig = {
+      get: (k: string) => prodEnv[k],
+      getOrThrow: (k: string) => prodEnv[k],
+    } as unknown as ConfigService;
+    const prod = new PhoneVerificationService(
+      {
+        platformAppConfig: { findUnique: () => Promise.reject(new Error('không được đọc')) },
+      } as never,
+      prodConfig,
+      provider,
+    );
+    await expect(prod.isSmsDisabled()).resolves.toBe(false);
   });
 });

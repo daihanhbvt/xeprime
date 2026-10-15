@@ -835,6 +835,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/register/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Kiểm thông tin đăng ký (SĐT, mật khẩu, họ tên, SĐT chưa có tài khoản) trước bước nhập mã OTP
+         * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` — phiên của realm khác bị từ chối.
+         */
+        post: operations["AuthController_checkRegistration"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/session": {
         parameters: {
             query?: never;
@@ -14541,6 +14563,16 @@ export interface components {
             supportHotline: string | null;
             /** @example 0901234567 */
             supportZalo: string | null;
+            /**
+             * @description Gửi SMS OTP thật. TẮT (chỉ dev/staging): không gọi nhà mạng, mã cố định 123456 — tránh phí SMS khi phát triển.
+             * @example true
+             */
+            otpSmsEnabled: boolean;
+            /**
+             * @description true ở production: công tắc SMS bị khoá ở BẬT (luôn gửi SMS thật).
+             * @example false
+             */
+            otpSmsLocked: boolean;
             /** @example 2026-10-12T03:00:00.000Z */
             updatedAt: string;
             /** @example Nguyễn Văn A */
@@ -15261,8 +15293,8 @@ export interface components {
              */
             emailQueued: boolean;
             /**
-             * @description Địa chỉ THẬT SỰ nhận email hướng dẫn — email của tài khoản, không phải email liên hệ đã nhập. `null` khi không xếp thư (tài khoản chưa có email, `isPlanPromotionEnabled` tắt, hoặc hôm nay đã gửi).
-             * @example chuxe@example.vn
+             * @description Các địa chỉ THẬT SỰ vừa được xếp email hướng dẫn, cách nhau bởi ", " — email tài khoản (nếu có) và email liên hệ đã nhập (trùng thì một). `null` khi không xếp thư (`isPlanPromotionEnabled` tắt, hoặc hôm nay đã gửi tới các địa chỉ đó).
+             * @example chuxe@example.vn, lienhe@gianhang.vn
              */
             emailedTo: string | null;
         };
@@ -17262,6 +17294,19 @@ export interface components {
             /** @description Thời điểm nhận tiền (ISO); mặc định = bây giờ */
             paidAt?: string;
         };
+        RegisterCheckDto: {
+            /** @example matkhau123 */
+            password: string;
+            /** @example Nguyễn Văn A */
+            displayName: string;
+            /** @example 0901234567 */
+            phone: string;
+            /**
+             * @description Chỉ app native gửi — realm theo app (customer ↔ XePrime, partner ↔ XePrime Partner). Web bỏ trống: realm đến từ site.
+             * @enum {string}
+             */
+            clientApp?: "customer" | "partner";
+        };
         RegisterDto: {
             /** @example matkhau123 */
             password: string;
@@ -18608,6 +18653,11 @@ export interface components {
         UpdatePartnerAppConfigDto: {
             /** @example true */
             isPlanPromotionEnabled?: boolean;
+            /**
+             * @description Bật/tắt gửi SMS OTP thật. Production từ chối tắt (OTP_SMS_REQUIRED_IN_PRODUCTION).
+             * @example true
+             */
+            otpSmsEnabled?: boolean;
             /** @example 1900 1234 */
             supportHotline?: string | null;
             /** @example 0901234567 */
@@ -24962,6 +25012,133 @@ export interface operations {
             };
             /**
              * @description Vượt giới hạn 5 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    AuthController_checkRegistration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterCheckDto"];
+            };
+        };
+        responses: {
+            /** @description Thành công, không có nội dung trả về */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `REALM_NOT_ALLOWED`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "REALM_NOT_ALLOWED",
+                     *         "message": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             *
+             *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "CONFLICT",
+                     *         "message": "Dữ liệu đã tồn tại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 10 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
              */

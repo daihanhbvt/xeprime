@@ -180,7 +180,8 @@
     "REALM_NOT_ALLOWED": "This account can't be used here. Sign in on the site meant for your account.",
     "REALM_LOGIN_METHOD_NOT_ALLOWED": "This sign-in method isn't available here. Sign in with your email and password.",
     "ORIGIN_NOT_ALLOWED": "The request was blocked because it didn't come from a XePrime page. Reload the page and try again.",
-    "MEMBER_ALREADY_IN_OTHER_TENANT": "This account already works for another shop. Each partner account belongs to one shop only."
+    "MEMBER_ALREADY_IN_OTHER_TENANT": "This account already works for another shop. Each partner account belongs to one shop only.",
+    "OTP_SMS_REQUIRED_IN_PRODUCTION": "Production always sends OTP SMS — this switch cannot be turned off."
   },
   "appCode": {
     "PLAN_LIMIT_REACHED": "Your account has reached its limit.",
@@ -190,7 +191,17 @@
     "PARTNER_ACCESS_REQUIRED": "This account is not covered by the XePrime Partner app. If you are a renter or an individual vehicle owner, please use the XePrime app.",
     "TENANT_BILLING_NOT_CONFIGURED": "We could not determine your shop account details, so fees cannot be calculated. Contact XePrime support before taking new bookings.",
     "SUBSCRIPTION_TRACK_ONLY": "This area is not available for your account yet.",
-    "SUBSCRIPTION_INVOICE_PARTIALLY_PAID": "There is an item pending review. Contact XePrime support for guidance."
+    "SUBSCRIPTION_INVOICE_PARTIALLY_PAID": "There is an item pending review. Contact XePrime support for guidance.",
+    "PARTNER_REGISTRATION_NOT_SUPPORTED": "A partner account cannot be created from the app right now. Contact XePrime for help.",
+    "DEPOSIT_ALWAYS_REQUIRED": "Personal owners always collect the hold through XePrime — this switch cannot be turned off.",
+    "PLAN_NOT_SELF_SERVE": "Contact XePrime for advice.",
+    "PLAN_CONSULTATION_DISABLED": "Contacting an advisor through the app is not available yet.",
+    "DEFAULT_COMMISSION_PLAN_MISSING": "We couldn't open your shop due to a configuration issue on XePrime's side. Please contact XePrime support.",
+    "SUBSCRIPTION_LATER_TERM_EXISTS": "This action isn't available right now. Please contact XePrime support.",
+    "PLAN_IN_USE": "This action isn't available right now. Please contact XePrime support.",
+    "DEFAULT_PLAN_PROTECTED": "This action isn't available right now. Please contact XePrime support.",
+    "PLAN_INCENTIVE_INVALID": "This action isn't available right now. Please contact XePrime support.",
+    "BANK_TX_TARGET_NOT_PAYABLE": "This action isn't available right now. Please contact XePrime support."
   },
   "upload": {
     "imageType": "Only JPG, PNG or WebP images are accepted",

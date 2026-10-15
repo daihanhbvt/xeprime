@@ -3,8 +3,6 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import {
   addDateKeyDays,
   API_ERROR_CODE,
-  isSameVnPhone,
-  PHONE_VERIFICATION_PURPOSE,
   SERVICE_TYPE,
   vnDateKey,
 } from '@xeprime/types';
@@ -15,8 +13,6 @@ import {
   type BusyDayIndex,
 } from '@xeprime/domain';
 import { getErrorCode } from '@/lib/api-client';
-import { useCurrentUser } from '@/features/auth/hooks/use-auth';
-import { adoptMobileSession } from '@/features/auth/api';
 import { queryKeys } from '@/queries/query-keys';
 import {
   bookingRequestsApi,
@@ -30,14 +26,15 @@ import {
 } from '../api';
 
 /**
- * Các bước của luồng gửi yêu cầu — cùng tên với web (`trip → otp → licence → review → done`).
+ * Các bước của luồng gửi yêu cầu — cùng tên với web (`trip → licence → review → done`).
+ *
+ * Không còn bước OTP (ADR 0060): gửi yêu cầu cần TÀI KHOẢN KHÁCH đã đăng nhập có SĐT đã xác minh.
  *
  * `licence` (ADR 0057) chỉ có ở thuê tự lái/dài hạn khi bằng lái của tài khoản CHƯA hợp lệ cho
  * chuyến này — bằng đã hợp lệ thì khách không bao giờ thấy bước đó.
  */
 export const REQUEST_STEP = {
   TRIP: 'trip',
-  OTP: 'otp',
   LICENCE: 'licence',
   REVIEW: 'review',
   DONE: 'done',
@@ -128,8 +125,8 @@ export function useDeliveryDistance(
 /**
  * Vì sao yêu cầu thuê bị chặn — nhánh KẾT THÚC riêng, không phải một lỗi đỏ (ADR 0038 điều 6).
  *
- * Chỉ biết được bằng cách THỬ GỬI: không endpoint đọc nào trả cờ này, vì cổng nằm sau cửa OTP và
- * sau điểm hội tụ danh tính (`effectiveUserId`) — mốc duy nhất mà server biết chắc "người gửi
+ * Chỉ biết được bằng cách THỬ GỬI: không endpoint đọc nào trả cờ này, vì cổng nằm ở lượt gửi —
+ * điểm hội tụ danh tính (tài khoản của phiên) — mốc duy nhất mà server biết chắc "người gửi
  * này là ai". Đó cũng là lý do giao diện KHÔNG ẩn nút đặt xe: ẩn nút không phải kiểm soát quyền,
  * và ẩn đi thì chủ gian hàng bấm mãi không được mà không bao giờ biết vì sao.
  */
@@ -142,8 +139,6 @@ export type BookingBlocked = (typeof BOOKING_BLOCKED)[keyof typeof BOOKING_BLOCK
 
 export interface RequestFlowState {
   step: RequestStep;
-  /** SĐT đang chờ nhập mã — giữ riêng để đổi SĐT ở bước Chuyến đi không làm hỏng bước OTP. */
-  otpPhone: string;
   /** Yêu cầu trùng: nhánh RIÊNG, không phải lỗi đỏ. */
   duplicate: boolean;
   /** Tài khoản này không đặt được xe này — nhánh RIÊNG, cũng không phải lỗi đỏ. */
@@ -155,33 +150,16 @@ export interface RequestFlowState {
 /**
  * Máy trạng thái của wizard gửi yêu cầu thuê (BKG-01).
  *
- * Tách khỏi component vì đây là phần dễ lệch với web nhất — thứ tự bước, điều kiện bỏ qua OTP,
- * và ba nhánh kết thúc (thành công / trùng yêu cầu / phiên hết hạn giữa chừng).
- *
- * **Bước OTP là CÓ ĐIỀU KIỆN.** Server bỏ qua OTP khi SĐT của tài khoản ĐANG ĐĂNG NHẬP trùng
- * và đã verify, nên UI phải nhảy thẳng sang `review` — hỏi lại là hỏi cùng một câu hai lần.
+ * Tách khỏi component vì đây là phần dễ lệch với web nhất — thứ tự bước và các nhánh kết thúc
+ * (thành công / trùng yêu cầu / bị chặn). Danh tính người thuê là của TÀI KHOẢN (ADR 0060).
  */
 export function useBookingRequestFlow(vehicleId: string) {
   const queryClient = useQueryClient();
-  const { data: me } = useCurrentUser();
-
   const [step, setStep] = useState<RequestStep>(REQUEST_STEP.TRIP);
-  const [otpPhone, setOtpPhone] = useState('');
   const [duplicate, setDuplicate] = useState(false);
   const [blocked, setBlocked] = useState<BookingBlocked | null>(null);
   const [receipt, setReceipt] = useState<BookingRequestReceipt | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  const accountPhone = me?.phone ?? null;
-  /** Tên hiển thị của tài khoản — điền sẵn ô 'Họ và tên' đúng như web. */
-  const accountName = me?.displayName ?? null;
-  const accountPhoneVerified = Boolean(me?.phoneVerified && accountPhone);
-
-  /** SĐT này đã được hệ thống xác thực cho chính tài khoản đang đăng nhập chưa. */
-  const phoneMatchesAccount = useCallback(
-    (phone: string) => accountPhoneVerified && isSameVnPhone(phone, accountPhone),
-    [accountPhone, accountPhoneVerified],
-  );
 
   const availability = useMutation({
     mutationFn: (input: { pickupAt: string; returnAt: string }) =>
@@ -192,15 +170,8 @@ export function useBookingRequestFlow(vehicleId: string) {
     mutationFn: (body: Omit<CreateBookingRequestInput, 'vehicleId'>) =>
       bookingRequestsApi.submit({ vehicleId, ...body }),
     onSuccess: async (result) => {
-      /*
-       * Khách vãng lai vừa được tạo tài khoản từ SĐT đã xác thực: response mang thẳng cặp token.
-       * Không nạp thì phiên rơi vào hư không và người vừa đặt xe xong bị coi như chưa đăng nhập.
-       * Nạp qua ĐÚNG đường kho token đang dùng — không có đường lưu token thứ hai (ADR 0017).
-       */
-      if (result.session) await adoptMobileSession(result.session);
-
       setReceipt(result);
-      // Vừa có thể được cấp phiên mới → làm mới toàn bộ cache để cả app biết.
+      // Chuyến mới phải hiện ngay ở "Chuyến của tôi", huy hiệu và số chuyến chưa khép của `/auth/me`.
       await queryClient.invalidateQueries();
       setStep(REQUEST_STEP.DONE);
     },
@@ -208,7 +179,6 @@ export function useBookingRequestFlow(vehicleId: string) {
 
   const reset = useCallback(() => {
     setStep(REQUEST_STEP.TRIP);
-    setOtpPhone('');
     setDuplicate(false);
     setBlocked(null);
     setReceipt(null);
@@ -218,20 +188,18 @@ export function useBookingRequestFlow(vehicleId: string) {
   }, [availability, submit]);
 
   return {
-    state: { step, otpPhone, duplicate, blocked, receipt, error } satisfies RequestFlowState,
-    accountPhone,
-    accountName,
-    accountPhoneVerified,
-    phoneMatchesAccount,
+    state: { step, duplicate, blocked, receipt, error } satisfies RequestFlowState,
     availability,
     submit,
     setStep,
-    setOtpPhone,
     setDuplicate,
     setBlocked,
     setError,
     reset,
-    /** Mã lỗi "SĐT chưa xác thực" — nơi gọi lùi về bước OTP và GIỮ NGUYÊN dữ liệu đã nhập. */
+    /**
+     * Server nói SĐT của TÀI KHOẢN chưa xác minh (ADR 0060) — nơi gọi làm mới `/auth/me` để cổng
+     * xác minh số của app hiện ra, rồi khách bấm gửi lại.
+     */
     isPhoneUnverified: (e: unknown) => getErrorCode(e) === API_ERROR_CODE.PHONE_NOT_VERIFIED,
     isDuplicate: (e: unknown) => getErrorCode(e) === API_ERROR_CODE.BOOKING_REQUEST_DUPLICATE,
     /**
@@ -251,7 +219,6 @@ export function useBookingRequestFlow(vehicleId: string) {
       if (code === API_ERROR_CODE.CANNOT_BOOK_OWN_VEHICLE) return BOOKING_BLOCKED.OWN_VEHICLE;
       return null;
     },
-    otpPurpose: PHONE_VERIFICATION_PURPOSE.BOOKING,
     isLongTerm: (serviceType: string) => serviceType === SERVICE_TYPE.LONG_TERM,
   };
 }

@@ -18,7 +18,8 @@
       "art": "Chia sẻ xe của bạn đến hàng nghìn khách hàng",
       "offerTitle": "Phí nền tảng theo chuyến",
       "offerBody": "Phí nền tảng được cộng vào tổng giá khách trả. Mức thí điểm hiện tại là <strong>{percent}% giá thuê</strong>.",
-      "cta": "Đăng xe đầu tiên"
+      "cta": "Đăng xe đầu tiên",
+      "appTagline": "Chủ xe cá nhân · phù hợp khi bắt đầu"
     },
     "shop": {
       "badge": "Dành cho người muốn vận hành chuyên nghiệp",
@@ -32,11 +33,17 @@
       },
       "offerTitle": "0% phí nền tảng theo chuyến",
       "offerBody": "Khi gói có hiệu lực. Nhiều công cụ hỗ trợ vận hành chuyên nghiệp, phù hợp với quy mô lớn.",
-      "cta": "Tìm hiểu và tạo gian hàng"
+      "cta": "Tìm hiểu và tạo gian hàng",
+      "appTagline": "Gian hàng · dành cho người muốn vận hành chuyên nghiệp",
+      "appBody": "Phù hợp cho cá nhân, doanh nghiệp có nhiều xe. Đầy đủ công cụ quản lý nhiều xe, lịch, nhân viên, chi nhánh, tài chính và báo cáo.",
+      "appOfferTitle": "Công cụ vận hành chuyên nghiệp",
+      "appOfferBody": "Tài khoản gian hàng có hạn mức xe và thời hạn sử dụng riêng. XePrime xem xét và kích hoạt tài khoản sau khi bạn đăng ký."
     },
     "upgrade": {
       "title": "Linh hoạt nâng cấp khi cần",
-      "body": "Bạn có thể bắt đầu với đăng xe cá nhân và nâng cấp lên gian hàng sau này. Tài khoản và dữ liệu xe của bạn vẫn được giữ nguyên."
+      "body": "Bạn có thể bắt đầu với đăng xe cá nhân và nâng cấp lên gian hàng sau này. Tài khoản và dữ liệu xe của bạn vẫn được giữ nguyên.",
+      "appTitle": "Linh hoạt chuyển đổi khi cần",
+      "appBody": "Bạn có thể bắt đầu với đăng xe cá nhân và chuyển sang tài khoản gian hàng sau này. Tài khoản và dữ liệu xe của bạn vẫn được giữ nguyên."
     },
     "chooseTitle": "Chọn cách bạn muốn cho thuê",
     "selected": "Đang chọn",
@@ -54,7 +61,8 @@
         "title": "Đăng xe hoặc mở gian hàng",
         "desc": "XePrime duyệt hồ sơ rồi đưa xe lên chợ."
       }
-    }
+    },
+    "appSubtitle": "Đăng chiếc xe đầu tiên thật đơn giản; khi cần quản lý quy mô lớn hơn, bạn có thể chuyển sang tài khoản gian hàng mà vẫn giữ tài khoản và xe."
   },
   "ownerProfile": {
     "step": {

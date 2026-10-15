@@ -1,44 +1,114 @@
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { XStack, YStack } from 'tamagui';
+import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import * as yup from 'yup';
 import { ASSIGNABLE_TENANT_ROLES, TENANT_ROLE } from '@xeprime/types';
+import { buildRequiredPhoneSchema } from '@xeprime/validators';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { SelectField } from '@/components/ui/SelectField';
 import { TextField } from '@/components/ui/TextField';
 import { useAppToast } from '@/components/feedback/use-app-toast';
+import { useCopy } from '@/hooks/use-copy';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
-import { space } from '@/theme/tokens';
-import { inviteMemberSchema, type InviteMemberValues } from '@xeprime/validators';
+import { colors, fontSize, space } from '@/theme/tokens';
+import type { CreateInviteResult } from '../api';
 import { useCreateInvite } from '../hooks/use-members';
 import { toBranchScopeInput, useBranchScopeOptions } from '../branch-scope';
 import { BranchScopePicker } from './BranchScopePicker';
 
 /**
- * GỬI LỜI MỜI vào gian hàng — không phải "thêm thành viên".
+ * GỬI LỜI MỜI vào gian hàng — không phải "thêm thành viên". Bản native của `InviteMemberModal`.
  *
  * `POST /members` đã bị gỡ ở backend: nó tạo thẳng một membership `active` cho một email bất kỳ,
- * tức thêm người vào gian hàng mà không hỏi họ. Ở đây chỉ gửi thư, và người được mời mới là
- * người quyết định — nên tấm trượt nói rõ điều sẽ xảy ra tiếp theo, nếu không người gửi đóng nó
- * lại, không thấy ai trong danh sách, và tưởng là lỗi.
+ * tức thêm người vào gian hàng mà không hỏi họ. Ở đây chỉ TẠO LỜI MỜI, và người được mời mới là
+ * người quyết định — nên tấm trượt nói rõ điều sẽ xảy ra tiếp theo.
+ *
+ * Từ ADR 0060 lời mời đi bằng SỐ ĐIỆN THOẠI và không gửi thư: tạo xong, tấm trượt KHÔNG đóng mà
+ * chuyển sang màn "sao chép liên kết" — liên kết chỉ có ở phản hồi tạo, đúng một lần. Người mời
+ * chép rồi tự gửi qua Zalo/tin nhắn, xong mới bấm "Xong".
  */
 export function InviteMemberSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const t = useTranslations('Members.form');
+  const t = useTranslations('Members');
+  /** Lời mời vừa tạo — có mặt ⇒ tấm trượt chuyển sang màn "sao chép liên kết". */
+  const [created, setCreated] = useState<CreateInviteResult | null>(null);
+
+  // Rời màn "đã tạo" phải dọn kết quả: không thì lần mở sau vẫn hiện liên kết của lời mời trước
+  // và người mời gửi nhầm link cũ cho người mới. Form tự sạch vì chỉ mount khi `open`.
+  function finish() {
+    setCreated(null);
+    onClose();
+  }
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={t('title')}>
-      {open ? <InviteForm onDone={onClose} /> : null}
+    <BottomSheet
+      open={open}
+      onClose={finish}
+      title={created ? t('created.title') : t('form.title')}
+    >
+      {open ? (
+        created ? (
+          <InviteCreated created={created} onDone={finish} />
+        ) : (
+          <InviteForm onDone={finish} onCreated={setCreated} />
+        )
+      ) : null}
     </BottomSheet>
   );
 }
 
-function InviteForm({ onDone }: { onDone: () => void }) {
+/** Message là MÃ — `useValidationResolver` tra `Members.form.errors.*`, cùng khoá với web. */
+const invitePhoneSchema = yup.object({
+  phone: buildRequiredPhoneSchema({ required: 'phoneRequired', invalid: 'phoneInvalid' }),
+  roleKey: yup
+    .string()
+    .oneOf([...ASSIGNABLE_TENANT_ROLES])
+    .required('roleRequired')
+    .default(TENANT_ROLE.SHOP_STAFF),
+});
+type InvitePhoneValues = yup.InferType<typeof invitePhoneSchema>;
+
+function InviteCreated({ created, onDone }: { created: CreateInviteResult; onDone: () => void }) {
+  const t = useTranslations('Members.created');
+  const copy = useCopy();
+
+  return (
+    <YStack gap={space.md}>
+      <Text col={colors.text} fos={fontSize.body}>
+        {t('body', { phone: created.phone ?? '' })}
+      </Text>
+      <YStack gap={space.xs}>
+        <Text col={colors.textMuted} fos={fontSize.bodySm}>
+          {t('linkLabel')}
+        </Text>
+        <Text col={colors.text} fos={fontSize.bodySm} selectable>
+          {created.inviteUrl}
+        </Text>
+      </YStack>
+      <Button
+        label={t('copy')}
+        icon="copy-outline"
+        variant="secondary"
+        onPress={() => void copy(created.inviteUrl)}
+      />
+      <Callout tone="info">{t('safety')}</Callout>
+      <Button label={t('done')} onPress={onDone} />
+    </YStack>
+  );
+}
+
+function InviteForm({
+  onDone,
+  onCreated,
+}: {
+  onDone: () => void;
+  onCreated: (created: CreateInviteResult) => void;
+}) {
   const t = useTranslations('Members.form');
-  const tToast = useTranslations('Members.toast');
   const tActions = useTranslations('Common.actions');
   const toast = useAppToast();
   const domainLabel = useDomainLabel();
@@ -46,8 +116,8 @@ function InviteForm({ onDone }: { onDone: () => void }) {
   const invite = useCreateInvite();
   /*
    * Chi nhánh phụ trách giao NGAY TRÊN LỜI MỜI (ADR 0052). Ô LUÔN có giá trị — mặc định "Tất cả
-   * chi nhánh"; gian hàng chưa có chi nhánh thì ẩn. Giữ ngoài RHF vì `inviteMemberSchema` (gói
-   * dùng chung) chưa có trường này; luật "ít nhất một" kiểm ở `submit` như schema web.
+   * chi nhánh"; gian hàng chưa có chi nhánh thì ẩn. Giữ ngoài RHF; luật "ít nhất một" kiểm ở
+   * `submit` như schema web.
    */
   const branchScope = useBranchScopeOptions();
   // `null` = chưa chạm: giá trị là mặc định SUY RA ("Tất cả", hoặc toàn bộ chi nhánh của người
@@ -58,13 +128,13 @@ function InviteForm({ onDone }: { onDone: () => void }) {
   const [branchError, setBranchError] = useState(false);
   const showBranches = branchScope.count > 0;
 
-  const resolver = useValidationResolver<InviteMemberValues>(
-    inviteMemberSchema,
+  const resolver = useValidationResolver<InvitePhoneValues>(
+    invitePhoneSchema,
     'Members.form.errors',
   );
-  const { control, handleSubmit } = useForm<InviteMemberValues>({
+  const { control, handleSubmit } = useForm<InvitePhoneValues>({
     resolver,
-    defaultValues: { email: '', roleKey: TENANT_ROLE.SHOP_STAFF },
+    defaultValues: { phone: '', roleKey: TENANT_ROLE.SHOP_STAFF },
   });
 
   const roleOptions = useMemo(
@@ -77,27 +147,20 @@ function InviteForm({ onDone }: { onDone: () => void }) {
   );
 
   const submit = handleSubmit((values) => {
+    if (invite.isPending) return;
     if (showBranches && branches.length === 0) {
       setBranchError(true);
       return;
     }
     invite.mutate(
       {
-        email: values.email.trim(),
+        phone: values.phone.trim(),
         roleKey: values.roleKey,
         ...toBranchScopeInput(showBranches ? branches : undefined),
       },
       {
-        /*
-         * Lời mời đã tạo, nhưng thư có thể KHÔNG gửi được (SMTP hỏng) — server nói thẳng qua
-         * `emailSent`. Báo "Đã gửi lời mời" trong trường hợp đó là nói dối người gửi và bắt họ
-         * chờ một lá thư không tồn tại.
-         */
-        onSuccess: (created) => {
-          if (created.emailSent) toast.showSuccess(tToast('invited'));
-          else toast.showInfo(tToast('invitedNoEmail'));
-          onDone();
-        },
+        // KHÔNG đóng: liên kết chỉ có ở phản hồi này, đóng là mất.
+        onSuccess: (created) => onCreated(created),
         onError: (err) => toast.showError(errorMessage(err)),
       },
     );
@@ -105,16 +168,15 @@ function InviteForm({ onDone }: { onDone: () => void }) {
 
   return (
     <YStack gap={space.md}>
-      <Callout tone="info">{t('notice')}</Callout>
+      <Callout tone="info">{t('noticePhone')}</Callout>
 
       <TextField
         control={control}
-        name="email"
-        label={t('email')}
-        placeholder={t('emailPlaceholder')}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        autoComplete="email"
+        name="phone"
+        label={t('phone')}
+        placeholder={t('phonePlaceholder')}
+        keyboardType="phone-pad"
+        autoComplete="tel"
         required
       />
       <SelectField
@@ -158,7 +220,7 @@ function InviteForm({ onDone }: { onDone: () => void }) {
         </YStack>
         <YStack f={1}>
           <Button
-            label={tActions('send')}
+            label={t('submit')}
             icon="send-outline"
             loading={invite.isPending}
             onPress={() => void submit()}

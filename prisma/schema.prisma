@@ -5082,6 +5082,9 @@ model PlatformAppConfig {
   /// Hotline/Zalo in trong email hướng dẫn gói. NULL = không in dòng đó.
   supportHotline         String?  @map("support_hotline") @db.VarChar(30)
   supportZalo            String?  @map("support_zalo") @db.VarChar(30)
+  /// Gửi SMS OTP thật (mặc định BẬT). TẮT chỉ có hiệu lực ở dev/staging: không gọi nhà mạng, mã cố
+  /// định 123456. Production luôn gửi thật dù cột này là false — xem `PhoneVerificationService.sendOtp`.
+  otpSmsEnabled          Boolean  @default(true) @map("otp_sms_enabled")
   updatedBy              String?  @map("updated_by") @db.Char(26)
   createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt              DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)

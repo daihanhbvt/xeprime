@@ -24,6 +24,7 @@ import {
   AUTH_PROVIDER,
   AUTH_PROVIDER_LABEL,
   loginWithPassword,
+  checkRegistration,
   registerWithPassword,
   type AuthProvider,
   type CurrentUser,
@@ -159,11 +160,25 @@ export function AuthPanel({
     setRegisterDraft(values);
     setPending('sendCode');
     try {
+      /*
+       * Kiểm HẾT ở bước này rồi mới sang bước mã: SĐT, mật khẩu, họ tên, và SĐT chưa có tài khoản
+       * ở site này — kể cả ở môi trường nhận mã test (không gửi SMS nên bước gửi mã không kiểm hộ).
+       */
+      try {
+        await checkRegistration({
+          displayName: values.displayName,
+          phone: values.phone.trim(),
+          password: values.password,
+        });
+      } catch (err) {
+        setError(apiErrorMessage(err));
+        return;
+      }
       if (!registerOtp.testCodeEnabled) await registerOtp.sendAsync(values.phone.trim());
       setCode('');
       setRegistration(values);
     } catch {
-      // Lỗi gửi mã (trùng số, cooldown…) hiện qua `registerOtp.error` ngay trên form.
+      // Lỗi gửi mã (cooldown…) hiện qua `registerOtp.error` ngay trên form.
     } finally {
       setPending(null);
     }

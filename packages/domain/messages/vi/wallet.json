@@ -152,7 +152,9 @@
       "ownerIncome": "Thu nhập chủ gian hàng",
       "ownerIncomeHint": "Doanh thu trừ thuế và phí gói — gồm cả phần khách trả trực tiếp.",
       "ownerIncomeCommission": "Thu nhập chủ xe",
-      "ownerIncomeGeneric": "Thu nhập"
+      "ownerIncomeGeneric": "Thu nhập",
+      "appSubscriptionFee": "Phí quản lý & vận hành nền tảng",
+      "appOwnerIncomeHint": "Doanh thu trừ thuế và phí nền tảng — gồm cả phần khách trả trực tiếp."
     }
   },
   "pill": {

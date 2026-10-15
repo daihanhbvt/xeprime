@@ -1,10 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { BILLING_MODE, SHOP_ONBOARDING_STATE, TENANT_ROLE, TENANT_STATUS } from '@xeprime/types';
+import {
+  BILLING_MODE,
+  REGISTRATION_TRACK,
+  SHOP_ONBOARDING_STATE,
+  TENANT_ROLE,
+  TENANT_STATUS,
+} from '@xeprime/types';
 import {
   ACCOUNT_SECTION,
   ROUTES,
   SHOP_SECTION,
   accountSectionPath,
+  partnerTrackStartHref,
   balancePayoutPath,
   shopSectionPath,
   withPlanPurchaseIntent,
@@ -22,6 +29,7 @@ import {
   isPartnerPaymentPage,
   isPartnerPublicPage,
   partnerHomeHref,
+  partnerSignupContinueHref,
   partnerPageRedirect,
   portalLoginWithNext,
   resolveAdminDestination,
@@ -392,8 +400,8 @@ describe('site khách', () => {
     expect(resolveCustomerDestination('https://evil.test')).toBeNull();
   });
 
-  it('CTA chủ xe LUÔN dẫn sang trang đăng ký của site partner', () => {
-    expect(resolveOwnerCtaHref()).toBe(M.REGISTER);
+  it('CTA chủ xe dẫn tới trang chọn cách cho thuê của site khách', () => {
+    expect(resolveOwnerCtaHref()).toBe(ROUTES.LIST_YOUR_VEHICLE.ROOT);
   });
 });
 
@@ -449,5 +457,32 @@ describe('/subscription — bảng quyết định của link email gói', () =>
 
   it('chỉ /subscription mang ý định mua — section gói mở trực tiếp thì không', () => {
     expect(partnerPageRedirect(packageCurrent, shopSectionPath(SHOP_SECTION.PLAN))).toBeNull();
+  });
+});
+
+describe('partnerSignupContinueHref — /register?track= khi đã có gian hàng', () => {
+  it('hoa hồng vừa tạo ⇒ thẳng vào Tổng quan, không chạy wizard đăng xe', () => {
+    expect(partnerSignupContinueHref(commission, REGISTRATION_TRACK.COMMISSION)).toBe(
+      partnerTrackStartHref(REGISTRATION_TRACK.COMMISSION),
+    );
+    expect(partnerTrackStartHref(REGISTRATION_TRACK.COMMISSION)).toBe(M.ROOT);
+    expect(partnerPageRedirect(commission, M.ROOT)).toBeNull();
+  });
+
+  it('gói chờ thanh toán ⇒ bước Gói & thanh toán', () => {
+    expect(partnerSignupContinueHref(packagePending, REGISTRATION_TRACK.PACKAGE)).toBe(
+      partnerTrackStartHref(REGISTRATION_TRACK.PACKAGE),
+    );
+  });
+
+  it('khác tuyến hoặc không chọn tuyến ⇒ trang chủ của tuyến thật', () => {
+    expect(partnerSignupContinueHref(packageCurrent, REGISTRATION_TRACK.COMMISSION)).toBe(M.ROOT);
+    expect(partnerSignupContinueHref(commission, REGISTRATION_TRACK.PACKAGE)).toBe(M.ROOT);
+    expect(partnerSignupContinueHref(commission, null)).toBe(M.ROOT);
+    expect(partnerSignupContinueHref(packagePending, null)).toBe(M.ONBOARDING);
+  });
+
+  it('wizard đăng xe vẫn mở được cho tuyến hoa hồng (F5 không bị đá về trang chủ)', () => {
+    expect(partnerPageRedirect(commission, `${M.VEHICLE_REGISTER}?from=marketplace`)).toBeNull();
   });
 });

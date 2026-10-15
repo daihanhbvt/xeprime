@@ -247,7 +247,7 @@ describe('MemberListScreen — gói dịch vụ tách khỏi quyền (ADR 0027 �
      */
     const inviteButton = await view.findByLabelText('Mời thành viên');
     expect(inviteButton.props.accessibilityState?.disabled).toBe(true);
-    expect(await view.findByText(/Gói đã hết hạn/)).toBeTruthy();
+    expect(await view.findByText(/chế độ chỉ xem/)).toBeTruthy();
     expect(view.queryByText('Đổi vai trò')).toBeNull();
   });
 });
@@ -260,35 +260,46 @@ describe('MemberListScreen — lời mời', () => {
     PERMISSION.MEMBER_REMOVE,
   ];
 
-  it('email sai định dạng: chặn ở client, KHÔNG gọi API', async () => {
+  it('SĐT sai định dạng: chặn ở client, KHÔNG gọi API', async () => {
     const view = await renderScreen(all);
 
     await fireEvent.press(await view.findByLabelText('Mời thành viên'));
-    await fireEvent.changeText(await view.findByLabelText('Email'), 'khong-phai-email');
-    await fireEvent.press(view.getByRole('button', { name: 'Gửi' }));
+    await fireEvent.changeText(await view.findByLabelText('Số điện thoại'), '12345');
+    await fireEvent.press(view.getByRole('button', { name: 'Tạo lời mời' }));
 
-    expect(await view.findByText('Email không hợp lệ')).toBeTruthy();
+    expect(await view.findByText('Số điện thoại không hợp lệ')).toBeTruthy();
     expect(view.createInviteSpy).not.toHaveBeenCalled();
   });
 
-  it('thư KHÔNG gửi được: nói thật, không báo "đã gửi lời mời"', async () => {
+  it('tạo xong: KHÔNG đóng tấm trượt, hiện liên kết mời để sao chép, "Xong" mới đóng', async () => {
     const view = await renderScreen(all);
     view.createInviteSpy.mockResolvedValue({
       id: '01JQZX0000000000000000000I',
-      email: 'nhanvien@congty.vn',
+      phone: '0901234567',
+      email: null,
       roleKey: TENANT_ROLE.SHOP_STAFF,
       status: 'pending',
       expiresAt: '2026-09-30T00:00:00.000Z',
       createdAt: '2026-09-08T00:00:00.000Z',
       createdByName: 'Chủ shop',
-      emailSent: false,
+      inviteUrl: 'https://partner.xeprime.vn/invites/tok123',
     });
 
     await fireEvent.press(await view.findByLabelText('Mời thành viên'));
-    await fireEvent.changeText(await view.findByLabelText('Email'), 'nhanvien@congty.vn');
-    await fireEvent.press(view.getByRole('button', { name: 'Gửi' }));
+    await fireEvent.changeText(await view.findByLabelText('Số điện thoại'), '0901234567');
+    await fireEvent.press(view.getByRole('button', { name: 'Tạo lời mời' }));
 
-    expect(await view.findByText(/CHƯA gửi được thư/)).toBeTruthy();
+    expect(await view.findByText('https://partner.xeprime.vn/invites/tok123')).toBeTruthy();
+    expect(view.getByText('Đã tạo lời mời')).toBeTruthy();
+    expect(view.getByRole('button', { name: 'Sao chép liên kết' })).toBeTruthy();
+    expect(view.createInviteSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ phone: '0901234567', roleKey: TENANT_ROLE.SHOP_STAFF }),
+    );
+
+    await fireEvent.press(view.getByRole('button', { name: 'Xong' }));
+    await waitFor(() =>
+      expect(view.queryByText('https://partner.xeprime.vn/invites/tok123')).toBeNull(),
+    );
   });
 
   it('trùng/đã là thành viên: hiện lỗi của SERVER, không tự đoán', async () => {
@@ -302,12 +313,12 @@ describe('MemberListScreen — lời mời', () => {
     );
 
     await fireEvent.press(await view.findByLabelText('Mời thành viên'));
-    await fireEvent.changeText(await view.findByLabelText('Email'), 'nhanvien@congty.vn');
-    await fireEvent.press(view.getByRole('button', { name: 'Gửi' }));
+    await fireEvent.changeText(await view.findByLabelText('Số điện thoại'), '0901234567');
+    await fireEvent.press(view.getByRole('button', { name: 'Tạo lời mời' }));
 
     await waitFor(() => expect(view.createInviteSpy).toHaveBeenCalled());
     // Tấm trượt KHÔNG đóng khi lỗi — dữ liệu vừa nhập còn nguyên để sửa và gửi lại.
-    expect(view.getByLabelText('Email')).toBeTruthy();
+    expect(view.getByLabelText('Số điện thoại')).toBeTruthy();
   });
 
   it('lời mời đang chờ hiện dưới danh sách, kèm hạn và người mời', async () => {
@@ -317,7 +328,8 @@ describe('MemberListScreen — lời mời', () => {
       [
         {
           id: '01JQZX0000000000000000000I',
-          email: 'nhanvien@congty.vn',
+          phone: '0901234567',
+          email: null,
           roleKey: TENANT_ROLE.SHOP_STAFF,
           status: 'pending',
           expiresAt: '2026-09-30T00:00:00.000Z',
@@ -328,11 +340,11 @@ describe('MemberListScreen — lời mời', () => {
     );
 
     /*
-     * Neo vào EMAIL chứ không vào tiêu đề khối: khi truy vấn lời mời còn đang bay, khối vẫn
+     * Neo vào SĐT chứ không vào tiêu đề khối: khi truy vấn lời mời còn đang bay, khối vẫn
      * render tiêu đề mà chưa có hàng nào (`items.length === 0 && isFetching`). Chờ tiêu đề rồi
-     * đọc email ngay là đọc trúng đúng khoảnh khắc đó — test đỏ ngẫu nhiên tuỳ tải máy.
+     * đọc SĐT ngay là đọc trúng đúng khoảnh khắc đó — test đỏ ngẫu nhiên tuỳ tải máy.
      */
-    expect(await view.findByText('nhanvien@congty.vn')).toBeTruthy();
+    expect(await view.findByText('0901234567')).toBeTruthy();
     expect(view.getByText('Lời mời đang chờ')).toBeTruthy();
     expect(view.getByText('Thu hồi')).toBeTruthy();
   });
@@ -441,16 +453,16 @@ describe('MemberListScreen — chi nhánh phụ trách (ADR 0052)', () => {
 
   it('mời: mặc định "Tất cả chi nhánh" ⇒ gửi branchScope all', async () => {
     const view = await renderScreen(all, [OWNER], [], [], { branches: [BRANCH_A, BRANCH_B] });
-    view.createInviteSpy.mockResolvedValue({ emailSent: true } as never);
+    view.createInviteSpy.mockResolvedValue({ inviteUrl: 'https://partner.xeprime.vn/invites/t' } as never);
 
     await fireEvent.press(await view.findByLabelText('Mời thành viên'));
-    await fireEvent.changeText(await view.findByLabelText('Email'), 'nv@congty.vn');
+    await fireEvent.changeText(await view.findByLabelText('Số điện thoại'), '0901234567');
     expect(await view.findByText(/Chi nhánh phụ trách/)).toBeTruthy();
-    await fireEvent.press(view.getByRole('button', { name: 'Gửi' }));
+    await fireEvent.press(view.getByRole('button', { name: 'Tạo lời mời' }));
 
     await waitFor(() =>
       expect(view.createInviteSpy).toHaveBeenCalledWith({
-        email: 'nv@congty.vn',
+        phone: '0901234567',
         roleKey: TENANT_ROLE.SHOP_STAFF,
         branchScope: MEMBERSHIP_BRANCH_SCOPE.ALL,
       }),
@@ -459,16 +471,16 @@ describe('MemberListScreen — chi nhánh phụ trách (ADR 0052)', () => {
 
   it('mời: chọn một chi nhánh ⇒ gửi limited + branchIds', async () => {
     const view = await renderScreen(all, [OWNER], [], [], { branches: [BRANCH_A, BRANCH_B] });
-    view.createInviteSpy.mockResolvedValue({ emailSent: true } as never);
+    view.createInviteSpy.mockResolvedValue({ inviteUrl: 'https://partner.xeprime.vn/invites/t' } as never);
 
     await fireEvent.press(await view.findByLabelText('Mời thành viên'));
-    await fireEvent.changeText(await view.findByLabelText('Email'), 'nv@congty.vn');
+    await fireEvent.changeText(await view.findByLabelText('Số điện thoại'), '0901234567');
     await fireEvent.press(await view.findByLabelText('Quận 5 · TP HCM'));
-    await fireEvent.press(view.getByRole('button', { name: 'Gửi' }));
+    await fireEvent.press(view.getByRole('button', { name: 'Tạo lời mời' }));
 
     await waitFor(() =>
       expect(view.createInviteSpy).toHaveBeenCalledWith({
-        email: 'nv@congty.vn',
+        phone: '0901234567',
         roleKey: TENANT_ROLE.SHOP_STAFF,
         branchScope: MEMBERSHIP_BRANCH_SCOPE.LIMITED,
         branchIds: [BRANCH_B.id],
@@ -479,7 +491,7 @@ describe('MemberListScreen — chi nhánh phụ trách (ADR 0052)', () => {
   it('mời khi gian hàng chưa có chi nhánh: ẩn ô chi nhánh', async () => {
     const view = await renderScreen(all, [OWNER]);
     await fireEvent.press(await view.findByLabelText('Mời thành viên'));
-    await view.findByLabelText('Email');
+    await view.findByLabelText('Số điện thoại');
     expect(view.queryByText(/Chi nhánh phụ trách/)).toBeNull();
   });
 });

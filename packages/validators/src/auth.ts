@@ -190,6 +190,13 @@ export const buildResetPasswordSchema = (labels: AuthSchemaLabels) =>
     confirmPassword: buildConfirmSchema(labels),
   });
 
+/**
+ * Quên mật khẩu bằng SĐT — MỘT màn (web + app): SĐT · mật khẩu mới · nhập lại. Bấm "Xác nhận" thì gửi
+ * mã `password_reset` và mở popup nhập mã; đúng mã ⇒ `POST /auth/password/reset-otp` (ADR 0060).
+ */
+export const buildResetPasswordByPhoneSchema = (labels: AuthSchemaLabels) =>
+  buildForgotPasswordPhoneSchema(labels).concat(buildResetPasswordSchema(labels));
+
 export const passwordSchema = buildPasswordSchema(VI);
 export const requiredEmailSchema = buildRequiredEmailSchema(VI);
 export const loginIdentifierSchema = buildLoginIdentifierSchema(VI);
@@ -213,4 +220,6 @@ export const forgotPasswordPhoneSchema = buildForgotPasswordPhoneSchema(VI);
 export type ForgotPasswordPhoneValues = yup.InferType<typeof forgotPasswordPhoneSchema>;
 
 export const resetPasswordSchema = buildResetPasswordSchema(VI);
+export const resetPasswordByPhoneSchema = buildResetPasswordByPhoneSchema(VI);
+export type ResetPasswordByPhoneValues = yup.InferType<typeof resetPasswordByPhoneSchema>;
 export type ResetPasswordValues = yup.InferType<typeof resetPasswordSchema>;

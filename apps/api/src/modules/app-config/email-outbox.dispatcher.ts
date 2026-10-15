@@ -6,10 +6,12 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
+  EMAIL_OUTBOX_KIND,
   EMAIL_OUTBOX_MAX_ATTEMPTS,
   EMAIL_OUTBOX_STATUS,
   isAppLocale,
   DEFAULT_LOCALE,
+  type PartnerWelcomeEmailPayload,
   type PlanGuideEmailPayload,
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -99,11 +101,17 @@ export class EmailOutboxDispatcher implements OnApplicationBootstrap, OnApplicat
 
         try {
           const locale = isAppLocale(row.locale) ? row.locale : DEFAULT_LOCALE;
-          const rendered = await this.templates.renderOutbox(
-            row.kind,
-            locale,
-            row.payloadJson as unknown as PlanGuideEmailPayload,
-          );
+          const rendered =
+            row.kind === EMAIL_OUTBOX_KIND.PARTNER_WELCOME
+              ? await this.templates.renderPartnerWelcome(
+                  locale,
+                  row.payloadJson as unknown as PartnerWelcomeEmailPayload,
+                )
+              : await this.templates.renderOutbox(
+                  row.kind,
+                  locale,
+                  row.payloadJson as unknown as PlanGuideEmailPayload,
+                );
           if (!rendered) {
             await this.prisma.emailOutbox.update({
               where: { id: row.id },
