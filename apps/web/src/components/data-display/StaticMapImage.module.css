@@ -1,8 +1,8 @@
 .image {
   display: block;
   width: 100%;
-  /* `--xp-map-height` do nơi gọi truyền (giá trị chỉ biết lúc chạy — ngoại lệ ADR 0003). */
-  height: var(--xp-map-height, 220px);
+  /* Nơi gọi đặt `--static-map-height` trong CSS Module của nó (trang xe cao hơn ô địa chỉ). */
+  height: var(--static-map-height, 220px);
   /*
    * Ảnh API trả ở tỉ lệ 2:1 cố định, còn khung trên trang co theo bề ngang. `cover` cắt đều hai bên
    * và giữ tâm — nơi có ghim.

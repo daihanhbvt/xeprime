@@ -219,6 +219,11 @@
   grid-column: 1 / -1;
 }
 
+/* Bản đồ điểm nhận xe trải hết bề ngang thẻ — cao hơn mặc định của `StaticMapImage`. */
+.pickupMap {
+  --static-map-height: 260px;
+}
+
 .pickupAddress {
   margin: 0 0 2px;
   color: var(--xp-color-text);

@@ -31,25 +31,39 @@ const places = vi.hoisted(() => ({
   lastQuery: '' as string,
   /** Lần render cuối có được phép hỏi bản đồ không — mỗi lượt hỏi là một giao dịch. */
   lastEnabled: undefined as boolean | undefined,
+  /** Lượt hỏi gợi ý trả LỖI HTTP (mạng chập, 429) — khác hẳn `available: false`. */
+  searchError: false,
+  /** Ghi đè `/places/detail` cho ca cần điều khiển thứ tự trả về. */
+  detailImpl: null as null | ((placeId: string) => Promise<unknown>),
 }));
 
 vi.mock('@/features/locations/hooks/use-places', () => ({
   PLACE_SEARCH_MIN_LENGTH: 3,
-  usePlaceSearch: (query: string, options: { enabled?: boolean } = {}) => {
+  placeMapSrc: (placeId: string) => `/api/places/map?placeId=${encodeURIComponent(placeId)}`,
+  usePlaceSearch: (
+    query: string,
+    options: { enabled?: boolean; except?: string } = {},
+  ) => {
     places.lastQuery = query;
-    places.lastEnabled = options.enabled;
+    // Cùng phép tính với hook thật: chuỗi trùng `except` (địa chỉ đã xác nhận) thì không hỏi.
+    const fires = (options.enabled ?? true) && query.trim() !== (options.except ?? '').trim();
+    places.lastEnabled = fires;
     return {
-      data: { items: places.items, available: places.available },
+      // Không hỏi thì TanStack giữ danh sách trước làm dữ liệu GIỮ CHỖ (không phải của chữ này).
+      data: places.searchError ? undefined : { items: places.items, available: places.available },
       isFetching: false,
-      isError: false,
-      isPlaceholderData: false,
+      isError: fires && places.searchError,
+      isSuccess: !places.searchError,
+      isPlaceholderData: !fires,
       // Không mô phỏng debounce: danh sách trong tay luôn là của đúng chữ đang hiện.
       debouncedQuery: query.trim(),
     };
   },
   usePlaceDetail: () => ({
-    mutateAsync: () =>
-      Promise.resolve({ place: places.detail, available: places.detailAvailable }),
+    mutateAsync: (placeId: string) =>
+      places.detailImpl
+        ? places.detailImpl(placeId)
+        : Promise.resolve({ place: places.detail, available: places.detailAvailable }),
   }),
 }));
 
@@ -75,10 +89,14 @@ function Harness({
   onValues,
   externalValue,
   onConfirmedManually,
+  clearOnMount,
+  searchEnabled,
 }: {
   defaults?: Partial<Values>;
   onValues?: (values: Values) => void;
   onConfirmedManually?: () => void;
+  clearOnMount?: boolean;
+  searchEnabled?: boolean;
   /** Giá trị đổ vào SAU khi mount — giả lập nhớ địa chỉ lần trước / form sửa nạp bản ghi muộn. */
   externalValue?: string;
 }) {
@@ -101,6 +119,8 @@ function Harness({
         label="Địa chỉ giao xe"
         placeholder="Ví dụ: 12 Nguyễn Thái Học"
         onConfirmedManually={onConfirmedManually}
+        clearOnMount={clearOnMount}
+        searchEnabled={searchEnabled}
       />
       {externalValue ? (
         <button type="button" onClick={() => setValue('addressLine', externalValue)}>
@@ -129,6 +149,8 @@ beforeEach(() => {
   places.detailAvailable = true;
   places.lastQuery = '';
   places.lastEnabled = undefined;
+  places.searchError = false;
+  places.detailImpl = null;
 });
 
 afterEach(cleanup);
@@ -356,6 +378,99 @@ describe('ConfirmedPlaceField', () => {
     fireEvent.change(input(), { target: { value: '21 Lý Thường Kiệt' } });
 
     await waitFor(() => expect(places.lastQuery).toBe('21 Lý Thường Kiệt'));
+  });
+
+  /**
+   * Đổi tỉnh dựng lại ô với `clearOnMount` trong khi form còn giữ dòng của tỉnh CŨ ở lượt dựng
+   * đó. Dòng đó không được thành mốc đã xác nhận — nếu không, gõ rồi blur là địa chỉ tỉnh cũ quay
+   * về dưới tỉnh mới, kèm cả nhãn `manual` của nó.
+   */
+  it('đổi tỉnh (clearOnMount) → gõ rồi blur về RỖNG, không về địa chỉ của tỉnh cũ', async () => {
+    const onValues = vi.fn();
+    render(
+      <Harness
+        clearOnMount
+        onValues={onValues}
+        defaults={{ addressLine: '12 Lê Lợi, Huế', locationSource: 'manual' }}
+      />,
+    );
+    await waitFor(() => expect((input() as HTMLInputElement).value).toBe(''));
+
+    fireEvent.change(input(), { target: { value: '45 Trần Phú' } });
+    fireEvent.blur(input());
+
+    await waitFor(() => expect((input() as HTMLInputElement).value).toBe(''));
+    expect(await submitted(onValues)).toMatchObject({ addressLine: '', locationSource: null });
+  });
+
+  /**
+   * Lỗi HTTP (429 của `@Throttle` khi cả văn phòng chung một IP) KHÔNG phải "gợi ý hỏng": ô giữ
+   * kỷ luật và mời "dùng đúng địa chỉ đã nhập". Thành ô chữ tự do lúc đó là đóng dấu `manual` lên
+   * từng phím gõ, rồi báo giá tra từng chuỗi dở dang.
+   */
+  it('gợi ý lỗi HTTP → vẫn phải xác nhận, và mời "dùng đúng địa chỉ đã nhập"', async () => {
+    places.searchError = true;
+    const onValues = vi.fn();
+    render(<Harness onValues={onValues} />);
+
+    fireEvent.change(input(), { target: { value: 'Hẻm 25 Nguyễn Công Trứ' } });
+    fireEvent.mouseDown(input());
+    expect(await screen.findByText(USE_TYPED)).toBeTruthy();
+
+    // Gõ rồi bỏ đi thì vẫn về mốc — chữ gõ dở không tự thành địa chỉ.
+    fireEvent.blur(input());
+    await waitFor(() => expect((input() as HTMLInputElement).value).toBe(''));
+    expect(await submitted(onValues)).toMatchObject({ addressLine: '', locationSource: null });
+  });
+
+  it('chưa được hỏi gợi ý (chưa biết vùng) → không mời "dùng đúng địa chỉ"', async () => {
+    render(<Harness searchEnabled={false} />);
+
+    fireEvent.change(input(), { target: { value: '45 Trần Phú' } });
+    fireEvent.mouseDown(input());
+
+    expect(screen.queryByText(USE_TYPED)).toBeNull();
+  });
+
+  /** Mạng không trả theo thứ tự bấm: lượt bấm SAU CÙNG thắng, không phải lượt về sau cùng. */
+  it('bấm hai gợi ý liền nhau, kết quả về ngược thứ tự → giữ địa điểm bấm sau cùng', async () => {
+    places.items = [
+      { placeId: 'auto:a', primaryText: '1 Lê Lợi', secondaryText: 'Huế' },
+      { placeId: 'auto:b', primaryText: '2 Lê Lợi', secondaryText: 'Huế' },
+    ];
+    let releaseFirst: (value: unknown) => void = () => undefined;
+    places.detailImpl = (placeId) =>
+      placeId === 'auto:a'
+        ? new Promise((resolve) => {
+            releaseFirst = resolve;
+          })
+        : Promise.resolve({
+            available: true,
+            place: { placeId: 'auto:b', latitude: '16.2', longitude: '107.2', formattedAddress: null },
+          });
+    const onValues = vi.fn();
+    render(<Harness onValues={onValues} />);
+
+    fireEvent.change(input(), { target: { value: 'Lê Lợi' } });
+    fireEvent.mouseDown(input());
+    fireEvent.click(await screen.findByText('1 Lê Lợi'));
+    // Lượt đầu còn đang tra — mở lại danh sách và bấm dòng khác.
+    fireEvent.mouseDown(input());
+    fireEvent.click(await screen.findByText('2 Lê Lợi'));
+    await waitFor(() => expect((input() as HTMLInputElement).value).toBe('2 Lê Lợi, Huế'));
+
+    // Lượt đầu về MUỘN — không được ghi đè lựa chọn sau.
+    releaseFirst({
+      available: true,
+      place: { placeId: 'auto:a', latitude: '16.1', longitude: '107.1', formattedAddress: null },
+    });
+
+    expect(await submitted(onValues)).toMatchObject({
+      addressLine: '2 Lê Lợi, Huế',
+      placeId: 'auto:b',
+      latitude: 16.2,
+      longitude: 107.2,
+    });
   });
 
   /**

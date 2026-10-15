@@ -8,7 +8,10 @@
   color: var(--xp-color-primary);
 }
 
-/* Mũi tên "mở ra ngoài" — trang trí, nằm ở CSS để không thành chữ phải dịch. */
+/*
+ * Mũi tên "mở ra ngoài" — trang trí, nằm ở CSS để không thành chữ phải dịch. Chữ thay thế rỗng
+ * (`/ ''`): trình đọc màn hình không đọc "mũi tên chéo lên" sau mỗi liên kết.
+ */
 .link::after {
-  content: '↗';
+  content: '↗' / '';
 }

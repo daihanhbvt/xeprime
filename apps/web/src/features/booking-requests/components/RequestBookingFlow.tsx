@@ -578,8 +578,8 @@ export function RequestBookingFlow({
   const debouncedDeliveryAddress = useDebouncedValue(watchedDeliveryLine?.trim() ?? '', 900);
   /*
    * Ghim khách ĐÃ XÁC NHẬN thắng chuỗi chữ: gửi toạ độ lên thì server dùng thẳng và bỏ qua bước
-   * tra địa chỉ — vừa rẻ hơn một request có tính tiền, vừa cho con số khớp với đúng cái điểm
-   * khách đang nhìn thấy trên bản đồ ngay bên cạnh.
+   * tra địa chỉ — vừa rẻ hơn một request có tính tiền, vừa cho con số khớp với đúng địa điểm
+   * khách vừa chọn.
    */
   const deliveryPin =
     watchedDeliveryLat != null && watchedDeliveryLng != null
@@ -606,6 +606,19 @@ export function RequestBookingFlow({
     watchedDeliveryLine,
   );
 
+  /*
+   * Kết quả CŨ phải biến mất trước khi kết quả mới hiện ra.
+   *
+   * Đổi ghim thì khoá query đổi ngay và TanStack Query tự trả `undefined`. Đổi CHỮ thì không:
+   * khoá chỉ đổi sau 900ms debounce, nên trong quãng đó màn hình vẫn trưng quãng đường và phí
+   * của địa chỉ trước — một con số nói về một chỗ khác hẳn chỗ đang gõ.
+   *
+   * Và nó cũng gác chính lượt HỎI: nguồn `manual` đổi ngay (blur trả ô về địa chỉ gõ tay đã chốt,
+   * hay bấm "dùng đúng địa chỉ đã nhập") trong khi chuỗi debounce còn là chữ vừa gõ dở. Không gác
+   * thì báo giá trả tiền tra đúng cái chuỗi không ai xác nhận.
+   */
+  const deliveryAddressSettled =
+    deliveryPin != null || (watchedDeliveryLine?.trim() ?? '') === debouncedDeliveryAddress;
   const deliveryQ = useQuery({
     queryKey: queryKeys.marketplace.deliveryDistance(
       vehicleId,
@@ -616,20 +629,13 @@ export function RequestBookingFlow({
       isDelivery &&
       deliveryAvailable &&
       (deliveryPin != null ||
-        (deliveryManual && debouncedDeliveryAddress.length >= MIN_DELIVERY_ADDRESS_LENGTH)),
+        (deliveryManual &&
+          deliveryAddressSettled &&
+          debouncedDeliveryAddress.length >= MIN_DELIVERY_ADDRESS_LENGTH)),
     // Vị trí một địa chỉ không đổi trong một phiên đặt xe — không có lý do gì hỏi lại.
     staleTime: 10 * 60_000,
     retry: false,
   });
-  /*
-   * Kết quả CŨ phải biến mất trước khi kết quả mới hiện ra.
-   *
-   * Đổi ghim thì khoá query đổi ngay và TanStack Query tự trả `undefined`. Đổi CHỮ thì không:
-   * khoá chỉ đổi sau 900ms debounce, nên trong quãng đó màn hình vẫn trưng quãng đường và phí
-   * của địa chỉ trước — một con số nói về một chỗ khác hẳn chỗ đang gõ.
-   */
-  const deliveryAddressSettled =
-    deliveryPin != null || (watchedDeliveryLine?.trim() ?? '') === debouncedDeliveryAddress;
   const deliveryAskable =
     deliveryPin != null ||
     (deliveryManual && (watchedDeliveryLine?.trim().length ?? 0) >= MIN_DELIVERY_ADDRESS_LENGTH);

@@ -3,6 +3,8 @@ import {
   REVALIDATE_REVIEWS_SECONDS,
   REVALIDATE_SHOP_SECONDS,
 } from '@/constants/cache';
+import type { GeoPoint } from '@xeprime/domain';
+import { staticMapHref } from '@/lib/api-href';
 import { apiGet, apiRequest, getApiBaseUrl } from '@/services/api-client';
 import type { PublicListingDetail, PublicShop, ReviewPage, ShopReviewPage } from './types';
 
@@ -109,4 +111,12 @@ export async function fetchShopReviews(
   );
   if (!res.ok) return null;
   return (await res.json()) as ShopReviewPage;
+}
+
+/**
+ * Ảnh bản đồ tĩnh của điểm nhận xe trên trang xe (ADR 0061 điều 1). `address` là dòng API in lên
+ * ảnh (địa chỉ chi nhánh) — vào phiên bản URL cùng toạ độ.
+ */
+export function pickupMapSrc(listingId: string, point: GeoPoint, address: string): string {
+  return staticMapHref(`/public/listings/${listingId}/pickup-map`, point, address);
 }

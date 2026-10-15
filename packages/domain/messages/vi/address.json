@@ -14,7 +14,7 @@
   "addressLinePlaceholder": "Ví dụ: 12 Nguyễn Thái Học",
   "addressLineHint": "Gõ rồi chọn một địa chỉ trong danh sách gợi ý.",
   "placeEmpty": "Không tìm thấy địa điểm nào",
-  "placeUnavailable": "Bản đồ đang không phản hồi. Bạn nhập địa chỉ bằng tay được.",
+  "placeUnavailable": "Gợi ý địa chỉ đang không phản hồi. Bạn nhập địa chỉ bằng tay được.",
   "placeDetailFailed": "Chưa lấy được vị trí của địa điểm này. Hãy chọn lại.",
   "useTypedAddress": "Không có trong danh sách? Dùng đúng địa chỉ đã nhập",
   "provinceMismatchTitle": "Địa điểm này có vẻ không thuộc tỉnh/thành bạn chọn",
@@ -27,7 +27,6 @@
     "pinHint": "Chọn một địa điểm ở ô phía trên để ghim đúng vị trí giao xe.",
     "unavailable": "Chưa hiện được bản đồ. Địa chỉ vẫn lưu bình thường.",
     "sheetTitle": "Đặt ghim vị trí",
-    "editPin": "Chỉnh ghim trên bản đồ",
     "useThisPoint": "Dùng vị trí này",
     "openInGoogleMaps": "Mở bằng Google Maps",
     "tapToEdit": "Bấm vào bản đồ để chỉnh vị trí."
@@ -35,7 +34,7 @@
   "review": {
     "badge": "Cần cập nhật địa chỉ",
     "title": "Địa chỉ chưa khớp danh mục hành chính hiện hành",
-    "hint": "Từ 01/07/2025 Việt Nam dùng mô hình hai cấp: tỉnh/thành → xã/phường/đặc khu. Hãy mở ra chọn lại xã/phường và xác nhận vị trí trên bản đồ.",
+    "hint": "Từ 01/07/2025 Việt Nam dùng mô hình hai cấp: tỉnh/thành → xã/phường/đặc khu. Hãy mở ra chọn lại xã/phường và xác nhận lại địa chỉ.",
     "legacyValue": "Dữ liệu cũ ghi: {value}"
   }
 }

@@ -98,6 +98,11 @@ export const SUPPORT_HIDDEN_AREA = {
   VAT_INVOICE_TOGGLE: 'vat_invoice_toggle',
   /** Ngưng / mở lại / đặt mặc định chi nhánh — cùng quyền `branches.manage` với tạo/sửa chi nhánh. */
   BRANCH_LIFECYCLE: 'branch_lifecycle',
+  /**
+   * Ảnh bản đồ tĩnh của chi nhánh — thẻ `<img>` không gửi được header phiên hỗ trợ, nên backend
+   * không mở route ảnh cho phiên (ADR 0061). Liên kết "Mở bằng Google Maps" vẫn hiện.
+   */
+  BRANCH_MAP: 'branch_map',
   /** Nhận dạng giấy tờ (OCR — đọc NỘI DUNG file) và lưu trữ giấy tờ. */
   DOCUMENT_PRIVATE: 'document_private',
   /** Giá, giao xe có phí, điều khoản, phụ phí có tài xế trong khu vận hành của xe — tiền và pháp lý. */

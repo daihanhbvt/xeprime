@@ -15,6 +15,8 @@
 
 /* Ảnh bản đồ tĩnh của địa điểm vừa chọn, ngay dưới ô địa chỉ. */
 .placeMap {
+  /* Ảnh dưới ô địa chỉ thấp hơn ảnh trang xe: nó chỉ để nhìn lại "đúng chỗ này chưa". */
+  --static-map-height: 180px;
   margin-bottom: var(--xp-space-md);
 }
 

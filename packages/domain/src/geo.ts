@@ -101,6 +101,9 @@ export function toGeoPoint(
   return isValidGeoPoint(point) ? point : null;
 }
 
+/** Universal link "Maps URLs" của Google — không key, không API, mở ứng dụng bản đồ của người dùng. */
+const GOOGLE_MAPS_SEARCH_URL = 'https://www.google.com/maps/search/?api=1&query=';
+
 /**
  * Mở một toạ độ trên Google Maps (tab mới, hoặc app Google Maps trên điện thoại) — để XEM và DẪN
  * ĐƯỜNG. Đây là thứ thay cho khung bản đồ trên web (ADR 0061 điều 1).
@@ -113,5 +116,5 @@ export function toGeoPoint(
  * của React Native không đủ đầy.
  */
 export function mapExternalUrl(point: GeoPoint): string {
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${point.lat},${point.lng}`)}`;
+  return `${GOOGLE_MAPS_SEARCH_URL}${encodeURIComponent(`${point.lat},${point.lng}`)}`;
 }

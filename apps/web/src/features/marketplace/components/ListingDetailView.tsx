@@ -19,8 +19,8 @@ import { DiscountTag } from '@/components/data-display/DiscountTag';
 import { MapLink } from '@/components/data-display/MapLink';
 import { StaticMapImage } from '@/components/data-display/StaticMapImage';
 import { ShopQuickInfoCard } from '@/components/shop/ShopQuickInfoCard';
-import { browserApiHref } from '@/lib/api-href';
 import { applyDiscountPercent } from '@/lib/money';
+import { pickupMapSrc } from '../api';
 import type { PublicListingDetail } from '../types';
 import { ListingGallery } from './ListingGallery';
 import { ListingReviews } from './ListingReviews';
@@ -494,7 +494,7 @@ export async function ListingDetailView({
         </section>
         {/*
           Điểm nhận xe: địa chỉ là thông tin CHÍNH. Bản đồ là một ẢNH TĨNH do API vẽ hộ và cache
-          theo chi nhánh (ADR 0061 điều 1) — xem được, không tương tác; muốn dẫn đường thì liên kết
+          theo điểm (ADR 0061 điều 1) — xem được, không tương tác; muốn dẫn đường thì liên kết
           mở ứng dụng bản đồ của khách. Chưa có toạ độ thì cả hai tự biến mất, phần chữ ở lại.
           Trải hết chiều ngang (`pickupCard`) để không đẻ ra một ô trống cạnh nó trong lưới 2 cột.
         */}
@@ -517,13 +517,9 @@ export async function ListingDetailView({
             {pickupGeo ? (
               <>
                 <StaticMapImage
-                  // `v` = toạ độ: chi nhánh dời đi là một URL mới, ảnh cũ trong cache trình duyệt
-                  // không bao giờ hiện cho vị trí mới.
-                  src={browserApiHref(
-                    `/public/listings/${listing.id}/pickup-map?v=${pickupGeo.lat},${pickupGeo.lng}`,
-                  )}
+                  src={pickupMapSrc(listing.id, pickupGeo, listing.pickupPoint.address)}
                   alt={t('pickupPoint.mapTitle')}
-                  height={260}
+                  className={styles.pickupMap}
                 />
                 <MapLink point={pickupGeo} label={tAddress('map.openInGoogleMaps')} />
               </>

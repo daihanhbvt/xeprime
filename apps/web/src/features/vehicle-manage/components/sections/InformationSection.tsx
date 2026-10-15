@@ -15,7 +15,8 @@ import { StickyFormActions } from '@/components/form/StickyFormActions';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
 import { BranchFormDialog } from '@/features/branches/components/BranchFormDialog';
-import { useBranches } from '@/features/branches/hooks/use-branches';
+import { branchMapSrc, useBranches } from '@/features/branches/hooks/use-branches';
+import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import { useRouter } from 'next/navigation';
 import { VEHICLE_MANAGE_SECTION } from '@/constants/routes';
 import { useAvailableHref, useSupportSession } from '@/features/tenant-support/support-session';
@@ -34,7 +35,6 @@ import {
 import { useUpdateVehicle } from '@/features/vehicles/hooks/use-vehicle-mutations';
 import { manageInformationValuesToInput, vehicleToFormValues } from '@/features/vehicles/mappers';
 import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
-import { browserApiHref } from '@/lib/api-href';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 
@@ -275,6 +275,7 @@ function AddressCard({ canEdit }: { canEdit: boolean }) {
   const tAddress = useTranslations('Address');
   const branches = useBranches();
   const [editing, setEditing] = useState(false);
+  const hideBranchMap = useSupportHides(SUPPORT_HIDDEN_AREA.BRANCH_MAP);
 
   const branch = branches.data?.items.find((b) => b.id === vehicle.branch?.id) ?? null;
   const point = branch
@@ -306,12 +307,13 @@ function AddressCard({ canEdit }: { canEdit: boolean }) {
           {branch?.name ? <p className={styles.branchName}>{branch.name}</p> : null}
           {point && branch ? (
             <>
-              <StaticMapImage
-                // `v` = toạ độ: sửa địa chỉ chi nhánh là một URL mới, không hiện ảnh vị trí cũ.
-                src={browserApiHref(`/branches/${branch.id}/map?v=${point.lat},${point.lng}`)}
-                alt={t('addressMapTitle')}
-                height={220}
-              />
+              {/* API chỉ vẽ cho chi nhánh có địa chỉ riêng (`branchMapTarget`) — thiếu thì khỏi hỏi. */}
+              {branch.address && !hideBranchMap ? (
+                <StaticMapImage
+                  src={branchMapSrc(branch.id, point, branch.address)}
+                  alt={t('addressMapTitle')}
+                />
+              ) : null}
               <MapLink point={point} label={tAddress('map.openInGoogleMaps')} />
             </>
           ) : branch?.address ? (

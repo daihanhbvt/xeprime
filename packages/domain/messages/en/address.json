@@ -14,7 +14,7 @@
   "addressLinePlaceholder": "For example: 12 Nguyen Thai Hoc",
   "addressLineHint": "Type, then pick an address from the suggestions.",
   "placeEmpty": "No matching place found",
-  "placeUnavailable": "The map is not responding. You can type the address by hand.",
+  "placeUnavailable": "Address suggestions are not responding. You can type the address by hand.",
   "placeDetailFailed": "Could not get the location of that place. Pick it again.",
   "useTypedAddress": "Not listed? Use the address exactly as typed",
   "provinceMismatchTitle": "This place looks like it is outside the province you selected",
@@ -27,7 +27,6 @@
     "pinHint": "Pick a place in the field above to pin the exact delivery spot.",
     "unavailable": "The map could not be shown. The address still saves normally.",
     "sheetTitle": "Drop the location pin",
-    "editPin": "Adjust the pin on the map",
     "useThisPoint": "Use this location",
     "openInGoogleMaps": "Open in Google Maps",
     "tapToEdit": "Tap the map to adjust the location."
@@ -35,7 +34,7 @@
   "review": {
     "badge": "Address needs updating",
     "title": "This address does not match the current administrative catalogue",
-    "hint": "Since 1 July 2025 Vietnam uses a two-tier model: province/city → ward/commune/special zone. Open the form, pick the ward again, and confirm the location on the map.",
+    "hint": "Since 1 July 2025 Vietnam uses a two-tier model: province/city → ward/commune/special zone. Open the form, pick the ward again, and confirm the address.",
     "legacyValue": "The old data says: {value}"
   }
 }

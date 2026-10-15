@@ -15,12 +15,12 @@ import type { GeoPoint } from '@xeprime/domain';
 import { LOCATION_SOURCE } from '@xeprime/types';
 import {
   PLACE_SEARCH_MIN_LENGTH,
+  placeMapSrc,
   usePlaceDetail,
   usePlaceSearch,
 } from '@/features/locations/hooks/use-places';
 import type { PlaceDetail } from '@/features/locations/types';
 import { StaticMapImage } from '@/components/data-display/StaticMapImage';
-import { browserApiHref } from '@/lib/api-href';
 import fieldStyles from './field.module.css';
 import styles from './AddressField.module.css';
 
@@ -106,7 +106,8 @@ export interface ConfirmedPlaceFieldProps<T extends FieldValues> {
  * ## Gợi ý hỏng thì kỷ luật này TẮT
  *
  * Chưa cấu hình khoá, hết hạn mức, nhà cung cấp lỗi — `/places/search` trả `available: false`, và
- * lúc đó ô quay về đúng một ô chữ tự do. Bắt buộc chọn từ một danh sách luôn rỗng nghĩa là không
+ * lúc đó ô quay về đúng một ô chữ tự do. Một lỗi HTTP (mạng chập, 429) KHÔNG tắt kỷ luật — nó chỉ
+ * mời "dùng đúng địa chỉ đã nhập" (xem `placeServiceDown`). Bắt buộc chọn từ một danh sách luôn rỗng nghĩa là không
  * ai lưu nổi địa chỉ nào cho tới khi bản đồ sống lại (ADR 0035 điều 6).
  *
  * ## Ô này KHÔNG biết gì về danh mục hành chính
@@ -165,10 +166,24 @@ export function ConfirmedPlaceField<T extends FieldValues>({
   const confirmedSourceRef = useRef<string | null>(
     clearOnMount ? null : ((locationSource.field.value as string | null) ?? null),
   );
+  /**
+   * Dòng chữ của NGỮ CẢNH CŨ còn nằm trong form lúc ô dựng lại vì đổi tỉnh (`clearOnMount`).
+   *
+   * Effect dọn ô ở cuối component chạy SAU effect "nhận mốc từ bên ngoài" ngay dưới, nên ở lượt
+   * dựng đó effect kia vẫn thấy dòng cũ. Không loại trừ đích danh nó thì địa chỉ của tỉnh cũ thành
+   * mốc đã xác nhận, và cú blur đầu tiên trả nó về dưới tỉnh mới.
+   */
+  const staleLineRef = useRef(clearOnMount ? line : null);
 
   /** Đang tra chi tiết một gợi ý vừa bấm — `onBlur` phải để yên cho tới khi tra xong. */
   const [resolving, setResolving] = useState(false);
   const resolvingRef = useRef(false);
+  /**
+   * Số thứ tự của lượt chọn gợi ý MỚI NHẤT. Mạng không trả theo thứ tự bấm, nên kết quả của một lượt
+   * đã bị thay (bấm dòng khác, gõ tiếp) phải bị bỏ — nếu không, lượt về sau cùng thắng chứ không
+   * phải lượt bấm sau cùng.
+   */
+  const pickSeqRef = useRef(0);
 
   /** Gợi ý bấm được nhưng tra chi tiết hỏng — không có toạ độ thì không tính là đã xác nhận. */
   const [detailFailed, setDetailFailed] = useState(false);
@@ -199,7 +214,14 @@ export function ConfirmedPlaceField<T extends FieldValues>({
    */
   const externalSource = (locationSource.field.value as string | null) ?? null;
   useEffect(() => {
-    if (touchedRef.current || !line.trim() || confirmedRef.current.trim()) return;
+    if (
+      touchedRef.current ||
+      !line.trim() ||
+      confirmedRef.current.trim() ||
+      line === staleLineRef.current
+    ) {
+      return;
+    }
     confirmedRef.current = line;
     // Nguồn đổ vào cùng lượt với chữ (bộ nhớ địa chỉ giao xe ghi cả hai) — nhớ kèm theo mốc.
     confirmedSourceRef.current = externalSource;
@@ -228,9 +250,13 @@ export function ConfirmedPlaceField<T extends FieldValues>({
     /*
      * Chỉ hỏi cho chữ NGƯỜI DÙNG đang gõ. Chữ trùng địa chỉ đã xác nhận — form sửa vừa mở, địa chỉ
      * nhớ từ lần đặt trước vừa điền, dòng gợi ý vừa bấm — không có gì để gợi ý thêm, và mỗi lượt
-     * hỏi là một giao dịch tính tiền.
+     * hỏi là một giao dịch tính tiền. Hook so `except` với chuỗi ĐÃ debounce: so với chữ đang gõ
+     * thì phím gõ đầu tiên đã bật truy vấn trong khi khoá vẫn là chính địa chỉ đã xác nhận.
+     *
+     * Đang tra chi tiết một gợi ý vừa bấm thì cũng không hỏi: chữ trong ô lúc đó là dòng vừa bấm.
      */
-    enabled: !disabled && searchEnabled && placeQuery !== confirmedLine.trim(),
+    enabled: !disabled && searchEnabled && !resolving,
+    except: confirmedLine,
   });
   const placeDetail = usePlaceDetail();
 
@@ -238,27 +264,30 @@ export function ConfirmedPlaceField<T extends FieldValues>({
    * Gợi ý địa chỉ có đang dùng được không.
    *
    * `available: false` là câu trả lời TƯỜNG MINH của backend cho "chưa cấu hình khoá / nhà cung
-   * cấp lỗi" — không phải một lỗi HTTP, nên phải đọc đúng cờ này chứ không đợi `isError`. Chưa
-   * hỏi lần nào thì `data` là `undefined`, và lúc đó mặc định coi như gợi ý SỐNG: ô vẫn đòi xác
-   * nhận, và người dùng chưa gõ đủ ba ký tự thì cũng chưa có gì để mất.
+   * cấp lỗi / chạm trần ngày" — chỉ cờ này tắt kỷ luật. Một lỗi HTTP thì KHÔNG: một 429 của
+   * `@Throttle` (cả văn phòng chung một IP) mà biến ô thành ô chữ tự do là đóng dấu `manual` lên
+   * từng phím gõ, rồi báo giá giao xe tra từng chuỗi dở dang trong khi nhà cung cấp vẫn khoẻ. Lỗi
+   * HTTP chỉ mời "dùng đúng địa chỉ đã nhập" (`offerTyped`). Chưa hỏi lần nào thì `data` là
+   * `undefined`, và lúc đó mặc định coi như gợi ý SỐNG.
    */
-  const placeServiceDown = suggestions.isError || suggestions.data?.available === false;
+  const placeServiceDown = suggestions.data?.available === false;
   /** Kỷ luật "phải xác nhận" có hiệu lực không — xem docblock của component. */
   const strict = !disabled && !placeServiceDown;
 
   /**
    * Có mời "dùng đúng địa chỉ đã nhập" không: chỉ khi kỷ luật đang bật, đã gõ đủ dài để là một
-   * địa chỉ, chữ khác chữ đã xác nhận (không thì chẳng có gì để xác nhận), và danh sách gợi ý của
-   * ĐÚNG chữ đang hiện đã về — không phải trong quãng debounce, không phải danh sách giữ chỗ của
-   * chuỗi trước. Mời lúc đó là mời khách bỏ qua gợi ý trước khi kịp đọc nó.
+   * địa chỉ, chữ khác chữ đã xác nhận (không thì chẳng có gì để xác nhận), và lượt hỏi cho ĐÚNG chữ
+   * đang hiện đã xong — có danh sách thật (không phải danh sách giữ chỗ của chuỗi trước, không
+   * phải trong quãng debounce) hoặc đã lỗi. Mời sớm hơn là mời khách bỏ qua gợi ý trước khi kịp đọc
+   * nó; chưa hề hỏi (chưa biết vùng) thì cũng chưa có gì để bỏ qua.
    */
   const offerTyped =
     strict &&
+    placeQuery.length >= PLACE_SEARCH_MIN_LENGTH &&
+    placeQuery !== confirmedLine.trim() &&
     suggestions.debouncedQuery === placeQuery &&
     !suggestions.isFetching &&
-    !suggestions.isPlaceholderData &&
-    placeQuery.length >= PLACE_SEARCH_MIN_LENGTH &&
-    placeQuery !== confirmedLine.trim();
+    (suggestions.isError || (suggestions.isSuccess && !suggestions.isPlaceholderData));
 
   const setPoint = (next: GeoPoint | null, source: string | null) => {
     latitude.field.onChange((next?.lat ?? null) as PathValue<T, Path<T>>);
@@ -292,9 +321,12 @@ export function ConfirmedPlaceField<T extends FieldValues>({
      * và nếu `onBlur` chạy giữa chừng nó sẽ thấy chữ mới khác chữ đã xác nhận rồi xoá đúng cái
      * địa chỉ người dùng vừa chọn — lỗi chỉ xuất hiện khi mạng chậm, tức là chỉ ở máy người khác.
      */
+    const seq = (pickSeqRef.current += 1);
     resolvingRef.current = true;
     setResolving(true);
     const result = await placeDetail.mutateAsync(id).catch(() => null);
+    // Lượt này đã bị thay trong lúc chờ (bấm dòng khác, gõ tiếp) — kết quả nói về một dòng đã bỏ.
+    if (seq !== pickSeqRef.current) return;
     resolvingRef.current = false;
     setResolving(false);
 
@@ -438,6 +470,12 @@ export function ConfirmedPlaceField<T extends FieldValues>({
             if (value === USE_TYPED_VALUE) return;
             if (suggestions.data?.items.some((s) => s.placeId === value)) return;
             touchedRef.current = true;
+            // Gõ trong lúc đang tra một gợi ý vừa bấm là đổi ý: bỏ lượt tra đó, chữ mới thắng.
+            if (resolvingRef.current) {
+              pickSeqRef.current += 1;
+              resolvingRef.current = false;
+              setResolving(false);
+            }
             // Gõ tiếp là bỏ qua lời nhắc vừa rồi — nó nói về lần gõ trước, không phải lần này.
             if (detailFailed) setDetailFailed(false);
             if (!strict) {
@@ -525,11 +563,7 @@ export function ConfirmedPlaceField<T extends FieldValues>({
       */}
       {mapPlaceId ? (
         <div className={styles.placeMap}>
-          <StaticMapImage
-            src={browserApiHref(`/places/map?placeId=${encodeURIComponent(mapPlaceId)}`)}
-            alt={t('mapLabel')}
-            height={180}
-          />
+          <StaticMapImage src={placeMapSrc(mapPlaceId)} alt={t('mapLabel')} />
         </div>
       ) : null}
     </>

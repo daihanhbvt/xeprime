@@ -1,30 +1,33 @@
 'use client';
 
-import { useState, type CSSProperties } from 'react';
+import { useState } from 'react';
 import styles from './StaticMapImage.module.css';
 
 /**
  * Bản đồ để XEM — một tấm ẢNH tĩnh do API vẽ hộ (ADR 0061 điều 1), không kéo, không phóng.
  *
  * Không có thư viện bản đồ, không có key trong bundle: `src` trỏ vào một endpoint của API, nơi
- * services key nằm và nơi ảnh được cache theo chi nhánh. Nhờ vậy mỗi chi nhánh chỉ tốn một lượt
- * tính tiền, bất kể bao nhiêu người mở trang.
+ * services key nằm và nơi ảnh được cache theo điểm. Nhờ vậy mỗi điểm chỉ tốn một lượt tính tiền,
+ * bất kể bao nhiêu người mở trang.
  *
  * Client component chỉ vì một việc: ẢNH LỖI THÌ ẨN HẲN (chưa cấu hình bản đồ, nhà cung cấp hỏng,
  * chi nhánh chưa có toạ độ — API trả 404). Một khung ảnh vỡ tệ hơn không có khung nào; địa chỉ chữ
  * và liên kết "Mở bằng Google Maps" ở khối bao ngoài vẫn còn.
+ *
+ * Chiều cao khung là biến CSS `--static-map-height` (mặc định 220px), đặt ở CSS Module của nơi gọi
+ * qua `className` hoặc một khối bao — không phải prop số đi qua `style`.
  */
 export function StaticMapImage({
   src,
   alt,
-  height = 220,
+  className,
 }: {
   src: string;
   /** Bắt buộc: đây là nội dung duy nhất trình đọc màn hình có được về tấm bản đồ. */
   alt: string;
-  height?: number;
+  className?: string;
 }) {
-  // Lỗi gắn với ĐÚNG `src` đã hỏng: đổi sang chi nhánh khác (URL khác) thì thử lại từ đầu.
+  // Lỗi gắn với ĐÚNG `src` đã hỏng: đổi sang điểm khác (URL khác) thì thử lại từ đầu.
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   if (failedSrc === src) return null;
   return (
@@ -34,17 +37,19 @@ export function StaticMapImage({
      */
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      className={styles.image}
-      // Chiều cao là giá trị chỉ biết ở nơi gọi — đúng ngoại lệ CSS custom property của ADR 0003.
-      style={{ '--xp-map-height': `${height}px` } as CSSProperties}
+      className={className ? `${styles.image} ${className}` : styles.image}
       src={src}
       alt={alt}
       // Bản đồ hầu như luôn nằm dưới màn hình đầu: không tải (và không tốn lượt vẽ nào) cho tới khi
       // người xem cuộn gần tới.
       loading="lazy"
-      // Tỉ lệ nội tại của ảnh API trả (800×400) — trình duyệt chừa sẵn chỗ, trang không nhảy.
-      width={800}
-      height={400}
+      /*
+       * Ảnh do server render có thể hỏng TRƯỚC khi React gắn `onError` (hydrate muộn), và sự kiện
+       * đó không được phát lại. Ref chạy lúc gắn: ảnh đã tải xong mà không có điểm ảnh nào là ảnh hỏng.
+       */
+      ref={(img) => {
+        if (img?.complete && img.naturalWidth === 0) setFailedSrc(src);
+      }}
       onError={() => setFailedSrc(src)}
     />
   );
