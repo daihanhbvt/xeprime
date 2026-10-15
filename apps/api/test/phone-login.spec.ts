@@ -192,6 +192,56 @@ describe('Đăng ký bằng SĐT + mật khẩu + OTP (ADR 0060)', () => {
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.OTP_INVALID } });
   });
 
+  maybe(
+    'xác thực TRƯỚC (tích xanh của form) rồi đăng ký bằng đúng mã đó → tạo được tài khoản',
+    async () => {
+      for (const realm of [C, P]) {
+        const phone = mkPhone();
+        const code = await otpFor(phone, REGISTER, realm);
+        await phoneVerification.verifyOtp(phone, REGISTER, code, realm, null);
+        const { userId } = await auth.register(
+          { displayName: 'Chủ xe', phone, password: 'matkhau123', code },
+          realm,
+        );
+        const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+        expect(user.realm).toBe(realm);
+        expect(user.phoneVerifiedAt).not.toBeNull();
+      }
+    },
+  );
+
+  maybe('đã xác thực trước nhưng gửi mã KHÁC lúc đăng ký → OTP_INVALID', async () => {
+    const phone = mkPhone();
+    const code = await otpFor(phone, REGISTER, P);
+    await phoneVerification.verifyOtp(phone, REGISTER, code, P, null);
+    await expect(
+      auth.register(
+        { displayName: 'Chủ xe', phone, password: 'matkhau123', code: wrongCode(code) },
+        P,
+      ),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.OTP_INVALID } });
+    expect(await prisma.user.count({ where: { phone: normalizePhone(phone) } })).toBe(0);
+  });
+
+  maybe('mã đã xác thực trước KHÔNG dùng lại được cho lượt đăng ký thứ hai', async () => {
+    const phone = mkPhone();
+    const code = await otpFor(phone, REGISTER, P);
+    await phoneVerification.verifyOtp(phone, REGISTER, code, P, null);
+    await auth.register({ displayName: 'A', phone, password: 'matkhau123', code }, P);
+    await expect(
+      auth.register({ displayName: 'B', phone, password: 'matkhau123', code }, P),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.PHONE_TAKEN } });
+  });
+
+  maybe('mã đã xác thực ở site partner KHÔNG tạo được tài khoản ở site khách', async () => {
+    const phone = mkPhone();
+    const code = await otpFor(phone, REGISTER, P);
+    await phoneVerification.verifyOtp(phone, REGISTER, code, P, null);
+    await expect(
+      auth.register({ displayName: 'Khách', phone, password: 'matkhau123', code }, C),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.OTP_INVALID } });
+  });
+
   maybe('mã xin ở site partner KHÔNG tạo được tài khoản ở site khách', async () => {
     const phone = mkPhone();
     const code = await otpFor(phone, REGISTER, P);
@@ -244,6 +294,29 @@ describe('Đăng ký bằng SĐT + mật khẩu + OTP (ADR 0060)', () => {
         { displayName: 'Giả admin', phone: '0970000000', password: 'matkhau123', code: '123456' },
         ACCOUNT_REALM.PLATFORM,
       ),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.REALM_LOGIN_METHOD_NOT_ALLOWED } });
+  });
+});
+
+describe('Kiểm thông tin đăng ký TRƯỚC bước nhập mã (`register/check`)', () => {
+  maybe('số chưa có tài khoản ⇒ qua, không tạo gì', async () => {
+    const phone = mkPhone();
+    await expect(auth.checkRegistration(phone, C)).resolves.toBeUndefined();
+    expect(await prisma.user.count({ where: { phone: normalizePhone(phone) } })).toBe(0);
+  });
+
+  maybe('số đã có tài khoản trong realm ⇒ PHONE_TAKEN; realm khác vẫn qua', async () => {
+    const phone = mkPhone();
+    await register(phone, C);
+    await expect(auth.checkRegistration(phone, C)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.PHONE_TAKEN },
+    });
+    await expect(auth.checkRegistration(phone, P)).resolves.toBeUndefined();
+  });
+
+  it('realm quản trị không tự đăng ký', async () => {
+    await expect(
+      auth.checkRegistration('0970000000', ACCOUNT_REALM.PLATFORM),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.REALM_LOGIN_METHOD_NOT_ALLOWED } });
   });
 });

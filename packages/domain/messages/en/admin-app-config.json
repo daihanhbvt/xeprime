@@ -1,9 +1,9 @@
 {
   "page": {
     "title": "App configuration",
-    "subtitle": "Toggle XePrime Partner app features and manage the plan guide email templates.",
+    "subtitle": "Platform settings for the website and both apps, plus plan-guide email templates.",
     "tabs": {
-      "config": "Partner app settings",
+      "config": "General settings",
       "templates": "Plan email template sets"
     }
   },
@@ -28,7 +28,22 @@
     "save": "Save configuration",
     "reset": "Undo",
     "saved": "Configuration saved. Open apps will receive the change right away.",
-    "unsaved": "You have unsaved changes."
+    "unsaved": "You have unsaved changes.",
+    "otpSms": {
+      "label": "Send OTP by SMS",
+      "description": "On: send real SMS through the carrier (charged). Off: no SMS is sent and every OTP code is 123456 — for development/testing only, to avoid SMS charges.",
+      "locked": "Production always sends OTP by SMS — this switch only applies to development/testing."
+    },
+    "sections": {
+      "shared": {
+        "title": "Whole platform",
+        "scope": "Applies to the website and both apps, XePrime and XePrime Partner."
+      },
+      "partner": {
+        "title": "XePrime Partner app",
+        "scope": "Applies only to the Partner app and plan-guide emails sent to partners."
+      }
+    }
   },
   "templates": {
     "create": "New template set",

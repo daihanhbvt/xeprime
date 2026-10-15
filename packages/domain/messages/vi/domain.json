@@ -1554,5 +1554,11 @@
   "subscriptionCancelReason": {
     "manual": "Quản trị viên huỷ",
     "replaced": "Bị thay bởi lượt đổi gói ngay"
+  },
+  "appTenantStatus": {
+    "expired": "Hết thời hạn sử dụng"
+  },
+  "appSupportCaseCategory": {
+    "plan_consultation": "Tư vấn tài khoản"
   }
 }

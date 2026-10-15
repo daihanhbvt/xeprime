@@ -218,3 +218,15 @@
     padding: var(--xp-space-xl);
   }
 }
+
+/* Bước đã xong (thông tin gian hàng đã khai ở form đăng ký) — dấu tích trên nền tối như thanh bước của wizard. */
+.stepDone {
+  composes: step;
+  color: var(--xp-color-text);
+}
+
+.stepDone .stepIndex {
+  border-color: transparent;
+  background: var(--xp-color-text);
+  color: var(--xp-color-text-inverse, #fff);
+}

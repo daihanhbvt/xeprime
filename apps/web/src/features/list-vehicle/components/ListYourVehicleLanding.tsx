@@ -47,6 +47,11 @@ export interface ListYourVehicleLandingProps {
    * tắt: ngay sau khi tạo tài khoản đối tác, trang trước là chính form đăng ký.
    */
   showBack?: boolean;
+  /**
+   * Mở hai nút ở TAB MỚI — site khách bật: form đăng ký nằm ở site partner (tài khoản khác), người
+   * dùng giữ nguyên tab chợ xe đang xem.
+   */
+  openInNewTab?: boolean;
 }
 
 /**
@@ -64,7 +69,9 @@ export function ListYourVehicleLanding({
   personalHref,
   shopHref,
   showBack = true,
+  openInNewTab = false,
 }: ListYourVehicleLandingProps) {
+  const linkTarget = openInNewTab ? { target: '_blank', rel: 'noopener noreferrer' } : {};
   const t = useTranslations('ListYourVehicle.landing');
   const router = useRouter();
 
@@ -112,7 +119,7 @@ export function ListYourVehicleLanding({
           strong: (chunks) => <strong>{chunks}</strong>,
         })}
         cta={
-          <Link href={personalHref} className={styles.ctaLink}>
+          <Link href={personalHref} {...linkTarget} className={styles.ctaLink}>
             <Button type="primary" size="large" block icon={<ArrowRightOutlined />} iconPlacement="end">
               {t('personal.cta')}
             </Button>
@@ -139,7 +146,7 @@ export function ListYourVehicleLanding({
         offerTitle={t('shop.offerTitle')}
         offerBody={t('shop.offerBody')}
         cta={
-          <Link href={shopHref} className={styles.ctaLink}>
+          <Link href={shopHref} {...linkTarget} className={styles.ctaLink}>
             <Button size="large" block icon={<ArrowRightOutlined />} iconPlacement="end">
               {t('shop.cta')}
             </Button>

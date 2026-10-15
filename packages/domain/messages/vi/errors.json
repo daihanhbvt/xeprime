@@ -180,7 +180,8 @@
     "REALM_NOT_ALLOWED": "Tài khoản này không dùng được ở đây. Hãy đăng nhập ở đúng trang dành cho tài khoản của bạn.",
     "REALM_LOGIN_METHOD_NOT_ALLOWED": "Cách đăng nhập này không dùng được ở đây. Hãy đăng nhập bằng email và mật khẩu.",
     "ORIGIN_NOT_ALLOWED": "Yêu cầu bị chặn vì không đến từ trang XePrime. Tải lại trang rồi thử lại.",
-    "MEMBER_ALREADY_IN_OTHER_TENANT": "Tài khoản này đang làm việc cho một gian hàng khác. Mỗi tài khoản đối tác chỉ thuộc một gian hàng."
+    "MEMBER_ALREADY_IN_OTHER_TENANT": "Tài khoản này đang làm việc cho một gian hàng khác. Mỗi tài khoản đối tác chỉ thuộc một gian hàng.",
+    "OTP_SMS_REQUIRED_IN_PRODUCTION": "Môi trường thật luôn gửi SMS OTP — không tắt được công tắc này."
   },
   "appCode": {
     "PLAN_LIMIT_REACHED": "Tài khoản của bạn đã đạt giới hạn.",
@@ -190,7 +191,17 @@
     "PARTNER_ACCESS_REQUIRED": "Tài khoản này không thuộc phạm vi ứng dụng XePrime Partner. Nếu bạn là khách thuê hoặc chủ xe cá nhân, hãy dùng ứng dụng XePrime.",
     "TENANT_BILLING_NOT_CONFIGURED": "Chưa xác định được thông tin tài khoản gian hàng nên chưa tính được phí. Liên hệ hỗ trợ XePrime trước khi nhận đơn mới.",
     "SUBSCRIPTION_TRACK_ONLY": "Khu vực này chưa mở cho tài khoản của bạn.",
-    "SUBSCRIPTION_INVOICE_PARTIALLY_PAID": "Có một khoản đang chờ xử lý. Liên hệ hỗ trợ XePrime để được hướng dẫn."
+    "SUBSCRIPTION_INVOICE_PARTIALLY_PAID": "Có một khoản đang chờ xử lý. Liên hệ hỗ trợ XePrime để được hướng dẫn.",
+    "PARTNER_REGISTRATION_NOT_SUPPORTED": "Chưa tạo được tài khoản đối tác từ ứng dụng. Liên hệ XePrime để được hỗ trợ.",
+    "DEPOSIT_ALWAYS_REQUIRED": "Chủ xe cá nhân luôn thu tiền giữ chỗ qua XePrime — không tắt được công tắc này.",
+    "PLAN_NOT_SELF_SERVE": "Liên hệ XePrime để được tư vấn.",
+    "PLAN_CONSULTATION_DISABLED": "Liên hệ tư vấn qua ứng dụng hiện chưa mở.",
+    "DEFAULT_COMMISSION_PLAN_MISSING": "Chưa mở được gian hàng do lỗi cấu hình phía XePrime. Liên hệ hỗ trợ XePrime giúp mình nhé.",
+    "SUBSCRIPTION_LATER_TERM_EXISTS": "Thao tác này chưa thực hiện được. Liên hệ hỗ trợ XePrime để được hướng dẫn.",
+    "PLAN_IN_USE": "Thao tác này chưa thực hiện được. Liên hệ hỗ trợ XePrime để được hướng dẫn.",
+    "DEFAULT_PLAN_PROTECTED": "Thao tác này chưa thực hiện được. Liên hệ hỗ trợ XePrime để được hướng dẫn.",
+    "PLAN_INCENTIVE_INVALID": "Thao tác này chưa thực hiện được. Liên hệ hỗ trợ XePrime để được hướng dẫn.",
+    "BANK_TX_TARGET_NOT_PAYABLE": "Thao tác này chưa thực hiện được. Liên hệ hỗ trợ XePrime để được hướng dẫn."
   },
   "upload": {
     "imageType": "Chỉ nhận ảnh JPG, PNG hoặc WebP",

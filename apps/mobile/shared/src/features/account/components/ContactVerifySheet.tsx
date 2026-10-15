@@ -27,6 +27,12 @@ interface Props {
   readonly onClose: () => void;
   /** Giá trị hiện tại — chỉ để nói "đang là X", KHÔNG điền sẵn vào ô nhập (xem docblock). */
   readonly current: string | null;
+  /**
+   * Tấm BẮT BUỘC — tài khoản chưa có SĐT đã xác minh (ADR 0060, `AccountPhoneGate`). Không đóng
+   * được bằng nút X, vuốt hay bấm nền; lối ra duy nhất ngoài xác minh là "Đăng xuất". Ô nhập điền
+   * sẵn SĐT hiện có (chưa xác minh) của tài khoản: việc ở đây là CHỨNG MINH số đó, không phải đổi.
+   */
+  readonly required?: { readonly onSignOut: () => void };
 }
 
 /**
@@ -40,7 +46,7 @@ interface Props {
  * Ô nhập luôn RỖNG chứ không điền sẵn giá trị cũ: việc ở đây là nhập một định danh mới, và một ô
  * đã có sẵn nội dung đúng thì mời người dùng bấm "Gửi mã" cho chính cái họ đang có.
  */
-export function ContactVerifySheet({ channel, open, onClose, current }: Props) {
+export function ContactVerifySheet({ channel, open, onClose, current, required }: Props) {
   const t = useTranslations('Account.contact');
   const tCommon = useTranslations('Common.actions');
   const toast = useAppToast();
@@ -56,7 +62,7 @@ export function ContactVerifySheet({ channel, open, onClose, current }: Props) {
   );
   const { control, handleSubmit } = useForm<AccountContactValues>({
     resolver,
-    defaultValues: { identifier: '' },
+    defaultValues: { identifier: required ? (current ?? '') : '' },
   });
 
   /*
@@ -76,25 +82,36 @@ export function ContactVerifySheet({ channel, open, onClose, current }: Props) {
 
   const sendCode = handleSubmit((values) => flow.send(values.identifier));
 
-  const title = isPhone
-    ? current
-      ? t('changePhoneTitle')
-      : t('addPhoneTitle')
-    : current
-      ? t('changeEmailTitle')
-      : t('addEmailTitle');
+  const title = required
+    ? t('requiredTitle')
+    : isPhone
+      ? current
+        ? t('changePhoneTitle')
+        : t('addPhoneTitle')
+      : current
+        ? t('changeEmailTitle')
+        : t('addEmailTitle');
 
   const isIdentifierStep = flow.step === 'identifier';
 
   const footer = (
     <XStack gap={space.sm}>
       <YStack flexShrink={0}>
-        <Button
-          label={tCommon('cancel')}
-          variant="ghost"
-          disabled={flow.verifying}
-          onPress={onClose}
-        />
+        {required ? (
+          <Button
+            label={t('signOut')}
+            variant="ghost"
+            disabled={flow.verifying}
+            onPress={required.onSignOut}
+          />
+        ) : (
+          <Button
+            label={tCommon('cancel')}
+            variant="ghost"
+            disabled={flow.verifying}
+            onPress={onClose}
+          />
+        )}
       </YStack>
       {/*
         "Huỷ" co vừa chữ, nút gửi lấy phần còn lại — nhãn tiếng Việt "Gửi mã xác thực" dài 15
@@ -122,10 +139,23 @@ export function ContactVerifySheet({ channel, open, onClose, current }: Props) {
   );
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={title} footer={footer}>
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      title={title}
+      footer={footer}
+      // Tấm bắt buộc: không đường đóng vô ý nào — "Đăng xuất" ở footer là lối ra tường minh.
+      dismissable={!required}
+    >
       <YStack gap={space.md}>
         <Text col={colors.textMuted} fos={fontSize.bodySm}>
-          {isIdentifierStep ? (isPhone ? t('phoneLead') : t('emailLead')) : t('codeSentTo')}
+          {isIdentifierStep
+            ? required
+              ? t('requiredLead')
+              : isPhone
+                ? t('phoneLead')
+                : t('emailLead')
+            : t('codeSentTo')}
           {isIdentifierStep ? null : (
             <Text col={colors.text} fow={fontWeight.semibold}>
               {` ${flow.sentTo}`}
@@ -133,7 +163,7 @@ export function ContactVerifySheet({ channel, open, onClose, current }: Props) {
           )}
         </Text>
 
-        {current && isIdentifierStep ? (
+        {current && isIdentifierStep && !required ? (
           <Text col={colors.placeholder} fos={fontSize.label}>
             {t('currentValue')}
             <Text col={colors.text} fow={fontWeight.semibold}>

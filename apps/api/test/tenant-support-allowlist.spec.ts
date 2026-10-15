@@ -63,7 +63,7 @@ const SUPPORT_ALLOWLIST = [
   'SupportController.list',
   'TenantsController.current',
   'TenantsController.myShop',
-  // Công tắc "Có hỗ trợ xuất hoá đơn VAT" — CHỈ ĐỌC, cùng `tenant_profile.view` (ADR 0059 §4).
+  // ADR 0059 §4 — XEM thiết lập hoá đơn VAT, cùng capability hồ sơ gian hàng (`tenant_profile.view`).
   // `TenantsController.setVatInvoiceSupport` (PATCH) CỐ Ý không vào phiên.
   'TenantsController.vatInvoiceSetting',
   'VehicleBlocksController.getOne',

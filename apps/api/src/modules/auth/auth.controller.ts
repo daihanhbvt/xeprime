@@ -33,6 +33,7 @@ import {
   ForgotPasswordDto,
   LoginDto,
   MeDto,
+  RegisterCheckDto,
   RegisterDto,
   ResetPasswordDto,
   ResetPasswordWithOtpDto,
@@ -89,6 +90,32 @@ export class AuthController {
     const { userId } = await this.auth.register(dto, realm);
     this.issueSession(res, userId, realm);
     return this.auth.me(userId);
+  }
+
+  /**
+   * Bước 1 của đăng ký: kiểm thông tin TRƯỚC khi sang bước nhập mã — form chỉ chuyển bước khi mọi
+   * thứ đã hợp lệ (luật ô của DTO, site có tự đăng ký, SĐT chưa có tài khoản ở site này). Không gửi
+   * mã, không tạo gì.
+   *
+   * Realm: site đang gọi (proxy); request không qua site nào (app native) thì theo `clientApp`.
+   */
+  @Public()
+  @Realms(ACCOUNT_REALM.CUSTOMER, ACCOUNT_REALM.PARTNER)
+  @Post('register/check')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  // 10/phút — bằng `send-otp`: cùng một câu trả lời "số đã có tài khoản", cùng mức chặn dò số.
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({
+    summary:
+      'Kiểm thông tin đăng ký (SĐT, mật khẩu, họ tên, SĐT chưa có tài khoản) trước bước nhập mã OTP',
+  })
+  @ApiNoContentResponse()
+  async checkRegistration(
+    @Body() dto: RegisterCheckDto,
+    @Req() req: RequestContext,
+  ): Promise<void> {
+    const realm = req.realm ?? realmForClientApp(dto.clientApp);
+    await this.auth.checkRegistration(dto.phone, realm);
   }
 
   @Public()

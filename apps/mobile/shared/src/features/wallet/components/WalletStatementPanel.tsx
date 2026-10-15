@@ -210,7 +210,7 @@ export function WalletStatementPanel({
             )}
             {isZeroMoney(totals.subscriptionFeeTotal) ? null : (
               <SummaryRow
-                label={t('totals.subscriptionFee')}
+                label={t('totals.appSubscriptionFee')}
                 value={
                   <Text col={colors.danger} fos={fontSize.bodySm}>
                     {`−${fmt.money(totals.subscriptionFeeTotal)}`}
@@ -237,7 +237,7 @@ export function WalletStatementPanel({
           <YStack px={space.md} py={space.sm} bg={colors.primaryLight}>
             <SummaryRow
               label={t(`totals.${incomeLabelKey}`)}
-              hint={t('totals.ownerIncomeHint')}
+              hint={t('totals.appOwnerIncomeHint')}
               highlight
               value={
                 <Text col={colors.price} fos={fontSize.h4} fow={fontWeight.bold}>

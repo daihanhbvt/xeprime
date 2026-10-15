@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { SelectField } from '@/components/ui/SelectField';
 import { TextField } from '@/components/ui/TextField';
+import { usePlanPromotionEnabledPassive } from '@/features/app-config/use-partner-app-config';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { space } from '@/theme/tokens';
@@ -95,13 +96,20 @@ export function OpenCaseSheet({
   const category = useWatch({ control, name: 'category' });
   const isDispute = category === SUPPORT_CASE_CATEGORY.DISPUTE;
 
+  /*
+   * "Tư vấn gói" là một lối hỏi mua gói — chỉ mở khi admin bật cờ (quy định App Store / Google Play),
+   * như nút "Liên hệ tư vấn" của khối tài khoản & hạn mức. Mặc định ẩn.
+   */
+  const planPromotion = usePlanPromotionEnabledPassive();
   const categoryOptions = useMemo(
     () =>
-      OPENABLE_CATEGORIES.map((value) => ({
+      OPENABLE_CATEGORIES.filter(
+        (value) => planPromotion || value !== SUPPORT_CASE_CATEGORY.PLAN_CONSULTATION,
+      ).map((value) => ({
         value,
         label: domainLabel('supportCaseCategory', value),
       })),
-    [domainLabel],
+    [domainLabel, planPromotion],
   );
 
   const close = () => {

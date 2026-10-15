@@ -18,7 +18,8 @@
       "art": "Share your car with thousands of renters",
       "offerTitle": "Per-trip platform fee",
       "offerBody": "The platform fee is added to the total the renter pays. The current pilot rate is <strong>{percent}% of the rental price</strong>.",
-      "cta": "List your first vehicle"
+      "cta": "List your first vehicle",
+      "appTagline": "Personal owner · a good place to start"
     },
     "shop": {
       "badge": "For a professional operation",
@@ -32,11 +33,17 @@
       },
       "offerTitle": "0% per-trip platform fee",
       "offerBody": "While the plan is active. Plenty of tooling for a professional operation, built for larger fleets.",
-      "cta": "Learn more and create a shop"
+      "cta": "Learn more and create a shop",
+      "appTagline": "Shop · for a professional operation",
+      "appBody": "Suited to individuals and businesses with several vehicles. Full tooling for vehicles, calendar, staff, branches, finance and reports.",
+      "appOfferTitle": "Professional operating tools",
+      "appOfferBody": "A shop account has its own vehicle limit and usage period. XePrime reviews and activates the account after you sign up."
     },
     "upgrade": {
       "title": "Upgrade whenever you need to",
-      "body": "You can start by listing a personal vehicle and upgrade to a shop later. Your account and vehicle data stay exactly as they are."
+      "body": "You can start by listing a personal vehicle and upgrade to a shop later. Your account and vehicle data stay exactly as they are.",
+      "appTitle": "Switch whenever you need to",
+      "appBody": "You can start by listing a personal vehicle and switch to a shop account later. Your account and vehicle data stay exactly as they are."
     },
     "chooseTitle": "Choose how you want to rent out",
     "selected": "Selected",
@@ -54,7 +61,8 @@
         "title": "List a vehicle or open a shop",
         "desc": "XePrime reviews it, then puts it on the marketplace."
       }
-    }
+    },
+    "appSubtitle": "Listing your first car is simple; when you need to run at a larger scale, you can switch to a shop account and keep the same account and vehicles."
   },
   "ownerProfile": {
     "step": {

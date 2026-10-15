@@ -36,7 +36,8 @@ class PasswordField {
   password!: string;
 }
 
-export class RegisterDto extends PasswordField {
+/** Bốn ô của form đăng ký (trừ "nhập lại") — dùng chung cho `register` và `register/check`. */
+class RegisterFields extends PasswordField {
   @ApiProperty({ example: 'Nguyễn Văn A' })
   @IsString()
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
@@ -48,7 +49,25 @@ export class RegisterDto extends PasswordField {
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @Matches(VN_PHONE_PATTERN, { message: 'Số điện thoại không hợp lệ' })
   phone!: string;
+}
 
+/**
+ * `POST /auth/register/check` — kiểm thông tin đăng ký TRƯỚC bước nhập mã: cùng luật ô với
+ * `register` (định dạng SĐT, luật mật khẩu, họ tên) + site có tự đăng ký + SĐT chưa có tài khoản
+ * trong realm. Không cần mã, không tạo gì.
+ */
+export class RegisterCheckDto extends RegisterFields {
+  @ApiPropertyOptional({
+    enum: MOBILE_CLIENT_APP_VALUES,
+    description:
+      'Chỉ app native gửi — realm theo app (customer ↔ XePrime, partner ↔ XePrime Partner). Web bỏ trống: realm đến từ site.',
+  })
+  @IsOptional()
+  @IsIn(MOBILE_CLIENT_APP_VALUES)
+  clientApp?: MobileClientApp;
+}
+
+export class RegisterDto extends RegisterFields {
   /**
    * Mã OTP `purpose=register` gửi tới chính `phone` (`POST /auth/phone/send-otp`) — ADR 0060.
    * Tài khoản chỉ ra đời khi số đã được chứng minh sở hữu; mã sai/hết hạn ⇒ `OTP_*`, không hàng

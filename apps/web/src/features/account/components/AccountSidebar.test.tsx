@@ -64,21 +64,21 @@ describe('AccountSidebar — tài khoản khách', () => {
     expect(screen.queryByText('Hồ sơ đăng ký')).toBeNull();
   });
 
-  it('"Trở thành chủ xe" dẫn sang trang đăng ký của site partner', () => {
+  it('"Trở thành chủ xe" dẫn tới trang giới thiệu đăng xe (mở form đăng ký đối tác)', () => {
     render(<AccountSidebar user={user()} />);
 
     expect(screen.getByRole('link', { name: /Trở thành chủ xe/ }).getAttribute('href')).toBe(
-      ROUTES.MANAGE.REGISTER,
+      ROUTES.LIST_YOUR_VEHICLE.ROOT,
     );
   });
 
-  it('không mục nào khác trỏ vào site partner', () => {
+  it('không mục nào trỏ thẳng vào site partner', () => {
     const { container } = render(<AccountSidebar user={user()} />);
 
     const toPartner = [...container.querySelectorAll('a')]
       .map((a) => a.getAttribute('href') ?? '')
       .filter((href) => href.startsWith(ROUTES.MANAGE.ROOT));
-    expect(toPartner).toEqual([ROUTES.MANAGE.REGISTER]);
+    expect(toPartner).toEqual([]);
   });
 });
 

@@ -40,6 +40,19 @@ export class PartnerAppConfigAdminDto extends PartnerAppConfigDto {
   @ApiProperty({ type: String, nullable: true, example: '0901234567' })
   supportZalo!: string | null;
 
+  @ApiProperty({
+    example: true,
+    description:
+      'Gửi SMS OTP thật. TẮT (chỉ dev/staging): không gọi nhà mạng, mã cố định 123456 — tránh phí SMS khi phát triển.',
+  })
+  otpSmsEnabled!: boolean;
+
+  @ApiProperty({
+    example: false,
+    description: 'true ở production: công tắc SMS bị khoá ở BẬT (luôn gửi SMS thật).',
+  })
+  otpSmsLocked!: boolean;
+
   @ApiProperty({ example: '2026-10-12T03:00:00.000Z' })
   updatedAt!: string;
 
@@ -52,6 +65,14 @@ export class UpdatePartnerAppConfigDto {
   @IsOptional()
   @IsBoolean()
   isPlanPromotionEnabled?: boolean;
+
+  @ApiPropertyOptional({
+    example: true,
+    description: 'Bật/tắt gửi SMS OTP thật. Production từ chối tắt (OTP_SMS_REQUIRED_IN_PRODUCTION).',
+  })
+  @IsOptional()
+  @IsBoolean()
+  otpSmsEnabled?: boolean;
 
   @ApiPropertyOptional({ type: String, nullable: true, example: '1900 1234' })
   @IsOptional()
@@ -116,10 +137,11 @@ export class PlanConsultationResultDto {
   @ApiProperty({
     type: String,
     nullable: true,
-    example: 'chuxe@example.vn',
+    example: 'chuxe@example.vn, lienhe@gianhang.vn',
     description:
-      'Địa chỉ THẬT SỰ nhận email hướng dẫn — email của tài khoản, không phải email liên hệ đã nhập. ' +
-      '`null` khi không xếp thư (tài khoản chưa có email, `isPlanPromotionEnabled` tắt, hoặc hôm nay đã gửi).',
+      'Các địa chỉ THẬT SỰ vừa được xếp email hướng dẫn, cách nhau bởi ", " — email tài khoản (nếu có) và ' +
+      'email liên hệ đã nhập (trùng thì một). `null` khi không xếp thư (`isPlanPromotionEnabled` tắt, ' +
+      'hoặc hôm nay đã gửi tới các địa chỉ đó).',
   })
   emailedTo!: string | null;
 }

@@ -13,7 +13,7 @@ import { ROUTES as BASE_ROUTES, type Tighten } from '@/navigation/routes-base';
  * khoản và còn gọi `ROUTES.account.vehicles/…/tax/registration…`. Ở app này chúng là màn THẬT dưới
  * `/manage/**` (đúng site partner của web), nên các builder đó trỏ về bản `manage.*` tương ứng.
  *
- * Các đích auth (`login`, `set-password`, quên/đặt lại mật khẩu), lời mời, pháp lý và hỗ trợ
+ * Các đích auth (`login`, quên/đặt lại mật khẩu), lời mời, pháp lý và hỗ trợ
  * công khai vẫn là route THẬT — nhân sự gian hàng cần chúng ngay trong app này.
  */
 const NOT_AVAILABLE = '/not-available' as const;
@@ -43,7 +43,6 @@ export const ROUTES = {
     ...allNotAvailable(BASE_ROUTES.account),
     // Nhóm auth là route thật của app này — giữ nguyên bản base.
     login: BASE_ROUTES.account.login,
-    setPassword: BASE_ROUTES.account.setPassword,
     forgotPassword: BASE_ROUTES.account.forgotPassword,
     resetPassword: BASE_ROUTES.account.resetPassword,
     // Hai việc của CON NGƯỜI đăng nhập (không phải của gian hàng) mà `ManageAccountScreen`

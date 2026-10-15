@@ -61,11 +61,11 @@ describe('ACCOUNT_NAV — thành phần', () => {
     expect(ACCOUNT_NAV.filter((item) => item.href === ROUTES.ACCOUNT.ROOT)).toHaveLength(1);
   });
 
-  it('"Đăng xe cho thuê" là lối DUY NHẤT sang site partner — trang đăng ký, đánh dấu external', () => {
-    const toPartner = ACCOUNT_NAV.filter((item) => item.href.startsWith(ROUTES.MANAGE.ROOT));
-    expect(keys(toPartner)).toEqual(['becomeOwner']);
-    expect(toPartner[0]!.href).toBe(ROUTES.MANAGE.REGISTER);
-    expect(toPartner[0]!.external).toBe(true);
+  it('"Đăng xe cho thuê" dẫn tới trang giới thiệu đăng xe (tab mới); không mục nào trỏ thẳng sang site partner', () => {
+    expect(ACCOUNT_NAV.filter((item) => item.href.startsWith(ROUTES.MANAGE.ROOT))).toEqual([]);
+    const owner = ACCOUNT_NAV.find((item) => item.key === 'becomeOwner');
+    expect(owner!.href).toBe(ROUTES.LIST_YOUR_VEHICLE.ROOT);
+    expect(owner!.external).toBe(true);
   });
 
   it('KHÔNG có mục chủ xe nào của Owner Lite cũ (đã sang site partner)', () => {
@@ -161,9 +161,7 @@ describe('matchAccountNavKey', () => {
   });
 
   it('link sang site partner không bao giờ là mục đang mở', () => {
-    // Ở chế độ `host` href là URL tuyệt đối; ở `path` là `/manage/register` — cả hai đều không sáng
-    // trên một trang của site khách.
-    expect(matchAccountNavKey(ROUTES.MANAGE.REGISTER, ACCOUNT_NAV)).toBe('becomeOwner');
+    // Ở chế độ `host` href là URL tuyệt đối — không sáng trên một trang của site khách.
     expect(
       matchAccountNavKey(ROUTES.ACCOUNT.ROOT, [
         { ...ACCOUNT_NAV[1]!, href: 'https://partner.xeprime.vn/register' },

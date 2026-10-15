@@ -1,5 +1,5 @@
 import { App } from 'antd';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   BILLING_MODE,
@@ -20,7 +20,7 @@ import OwnerOnboardingPage from './page';
  * và là thứ đã hỏng.
  *
  * Bốn bất biến:
- *  1. `?track=package` + chưa có gian hàng ⇒ BƯỚC 1, hai chặng hiện rõ.
+ *  1. Chưa có gian hàng ⇒ chuyển sang form đăng ký một trang `/register?track=`.
  *  2. `package_pending` ⇒ BƯỚC 2, và nếu server còn hoá đơn chờ thì hiện lại đúng mã đó (F5).
  *  3. `partially_paid` KHÔNG phải trạng thái kết thúc — vẫn ở bước 2.
  *  4. Gói đã hiệu lực ⇒ `replace('/manage/shop?welcome=1…')`, và chỉ khi SCOPE đã nhận tuyến gói.
@@ -32,6 +32,9 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/manage/onboarding',
   useSearchParams: () => new URLSearchParams(search.value),
 }));
+
+const logout = vi.hoisted(() => vi.fn(async () => undefined));
+vi.mock('@/features/auth/hooks/use-portal-logout', () => ({ usePortalLogout: () => logout }));
 
 const currentUser = vi.hoisted(() => ({ data: undefined as unknown, isLoading: false }));
 vi.mock('@/hooks/use-current-user', () => ({ useCurrentUser: () => currentUser }));
@@ -59,13 +62,6 @@ vi.mock('@/features/subscription/hooks/use-subscription', () => ({
   usePaymentInfo: () => subscription.paymentInfo,
   /* Làm mới scope khi tiền về — hành vi của nó thuộc về hook, không phải trang này. */
   useSyncScopeWhenInvoiceSettles: () => undefined,
-}));
-
-/** Form bước 1 thay bằng một dấu hiệu: hành vi của nó có spec riêng (`ShopRegistration.test`). */
-vi.mock('@/features/shop/components/ShopRegistration', () => ({
-  ShopRegistration: ({ track }: { track?: string }) => (
-    <div data-testid="shop-registration" data-track={track} />
-  ),
 }));
 
 const PLAN = {
@@ -144,38 +140,25 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('Bước 1 — chưa có gian hàng', () => {
-  it('`?track=package`: hiện HAI chặng và form mang đúng tuyến', () => {
-    search.value = 'track=package';
-    signedIn(null);
-    renderPage();
-
-    expect(screen.getByTestId('shop-registration').getAttribute('data-track')).toBe('package');
-    // Chỉ dẫn bước là một `<ol>` có nhãn — hai chặng, bước 1 đang mở.
-    const steps = screen.getByRole('list', { name: /Tiến trình đăng ký gian hàng/ });
-    expect(steps.querySelectorAll('li')).toHaveLength(2);
-    expect(screen.getByText('Thông tin gian hàng')).toBeTruthy();
-    expect(screen.getByText('Gói và thanh toán')).toBeTruthy();
-  });
-
+describe('Bước 1 — chưa có gian hàng: form đăng ký một trang ở /register', () => {
   /*
-   * Tuyến hoa hồng KHÔNG có hai bước: nó là một màn duy nhất rồi vào Owner Lite. Dựng một chỉ dẫn
-   * hai chặng ở đó là hứa một bước thanh toán không tồn tại.
+   * Form tạo hồ sơ không còn sống ở đây: nó gộp với phần tài khoản ở `/register?track=` để họ
+   * tên/SĐT/email chỉ hỏi một lần. Trang này chỉ còn bước 2 của tuyến gói.
    */
-  it('không có `?track=`: tuyến hoa hồng, KHÔNG có chỉ dẫn hai bước', () => {
+  it.each([
+    ['track=package', 'package'],
+    ['', 'commission'],
+    // Tham số rác rơi về cửa mặc định, không dựng một tuyến thứ ba.
+    ['track=vip', 'commission'],
+  ])('`?%s` ⇒ chuyển sang /register?track=%s', async (query, track) => {
+    search.value = query;
     signedIn(null);
     renderPage();
 
-    expect(screen.getByTestId('shop-registration').getAttribute('data-track')).toBe('commission');
-    expect(screen.queryByRole('list', { name: /Tiến trình đăng ký gian hàng/ })).toBeNull();
-  });
-
-  it('`?track=` rác rơi về tuyến hoa hồng — cửa mặc định, không dựng một tuyến thứ ba', () => {
-    search.value = 'track=vip';
-    signedIn(null);
-    renderPage();
-
-    expect(screen.getByTestId('shop-registration').getAttribute('data-track')).toBe('commission');
+    await waitFor(() =>
+      expect(router.replace).toHaveBeenCalledWith(`/manage/register?track=${track}`),
+    );
+    expect(screen.queryByRole('textbox')).toBeNull();
   });
 });
 
@@ -191,10 +174,17 @@ describe('Bước 2 — đã tạo gian hàng, chưa thanh toán', () => {
    * Đây là bất biến quan trọng nhất của cả file: trang được render TỪ ĐẦU (không có cú bấm nào
    * trước đó) và vẫn rơi vào bước 2. Đó là "F5 vẫn quay lại bước chọn gói/thanh toán".
    */
+  it('lối ra là Đăng xuất, không còn "Quay lại marketplace"', () => {
+    renderPage();
+
+    expect(screen.queryByText('Quay lại marketplace')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Đăng xuất/ }));
+    expect(logout).toHaveBeenCalledTimes(1);
+  });
+
   it('chưa có hoá đơn: hiện bộ chọn gói, không hiện form tạo gian hàng', () => {
     renderPage();
 
-    expect(screen.queryByTestId('shop-registration')).toBeNull();
     // Bảng giá BẬC là bước đầu; kỳ hạn chỉ mở ra sau khi chọn bậc (ADR 0041).
     expect(screen.getByRole('radiogroup', { name: /Chọn gói dịch vụ/ })).toBeTruthy();
     expect(screen.getByText('Gói cơ bản')).toBeTruthy();
@@ -315,7 +305,6 @@ describe('Tuyến hoa hồng đã có gian hàng: không thuộc màn này', () 
 
     await waitFor(() => expect(router.replace).toHaveBeenCalledTimes(1));
     expect(router.replace.mock.calls[0]![0]).toBe('/manage');
-    expect(screen.queryByTestId('shop-registration')).toBeNull();
   });
 
   it('đã có xe trên chợ ⇒ danh sách xe', async () => {

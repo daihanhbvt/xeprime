@@ -459,6 +459,8 @@ export const API_ERROR_CODE = {
   SUPPORT_CASE_CATEGORY_NOT_ALLOWED: 'SUPPORT_CASE_CATEGORY_NOT_ALLOWED',
   /** Tư vấn gói từ app chỉ mở khi nền tảng bật `isPlanPromotionEnabled`. */
   PLAN_CONSULTATION_DISABLED: 'PLAN_CONSULTATION_DISABLED',
+  /** Admin tắt gửi SMS OTP trên production — bị chặn: công tắc chỉ dành cho dev/staging. */
+  OTP_SMS_REQUIRED_IN_PRODUCTION: 'OTP_SMS_REQUIRED_IN_PRODUCTION',
   /** Bộ mẫu email hướng dẫn gói đang dùng thì không xoá được — bật bộ khác trước. */
   PLAN_GUIDE_TEMPLATE_ACTIVE: 'PLAN_GUIDE_TEMPLATE_ACTIVE',
   /** Mã mẫu email đã có ở một mẫu chưa xoá. */

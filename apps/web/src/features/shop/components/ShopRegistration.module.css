@@ -192,3 +192,113 @@
   font-size: var(--xp-font-size-body-lg);
   font-weight: var(--xp-font-weight-semibold);
 }
+
+/* Tiêu đề hai khối của form đăng ký đối tác một form: "Tài khoản" và "Hồ sơ". */
+.sectionTitle {
+  grid-column: 1 / -1;
+  margin: var(--xp-space-sm) 0 var(--xp-space-md);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.sectionTitle:first-child {
+  margin-top: 0;
+}
+
+/* Ô mã OTP của đăng ký đối tác: ô nhập mã + nút "Gửi mã" trên cùng một hàng. */
+.otpRow {
+  display: flex;
+  gap: var(--xp-space-sm);
+}
+
+.otpRow > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.otpSend {
+  flex-shrink: 0;
+}
+
+/* SĐT đã xác thực: nhãn tích xanh trong ô SĐT. */
+.verifiedTag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+
+.devHint {
+  display: block;
+  margin-top: var(--xp-space-xs);
+  color: var(--xp-color-text-tertiary);
+}
+
+
+/* Popup nhập mã OTP. */
+.otpDialogBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.otpDialogLead {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 1.6;
+}
+
+.otpDialogLead strong {
+  color: var(--xp-color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.otpDialogResend {
+  display: flex;
+  justify-content: center;
+}
+
+.otpDialogFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--xp-space-sm);
+}
+
+/* SĐT đã xác thực: hiện thành chữ (không còn ô nhập) kèm tích xanh. */
+.verifiedPhone {
+  display: flex;
+  min-height: 40px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.verifiedPhoneIcon {
+  color: var(--xp-color-text-tertiary);
+}
+
+.verifiedPhoneNumber {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * SĐT đứng một mình một hàng (rộng nửa hàng như các ô khác) — để Mật khẩu và Nhập lại mật khẩu
+ * luôn đi cặp với nhau ở hàng dưới.
+ */
+.fieldOwnRow {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 900px) {
+  .fieldOwnRow {
+    max-width: calc((100% - var(--xp-space-lg)) / 2);
+  }
+}

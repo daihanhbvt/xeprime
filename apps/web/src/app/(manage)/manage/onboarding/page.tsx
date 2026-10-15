@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeftOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import { CheckOutlined, LogoutOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { Button, Popover, Spin } from 'antd';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -8,10 +8,15 @@ import { useTranslations } from 'next-intl';
 import { useEffect } from 'react';
 import { REGISTRATION_TRACK, registrationTrackOf, tenantUsesManagePortal } from '@xeprime/types';
 import { Logo } from '@/components/brand/Logo';
-import { REGISTRATION_TRACK_PARAM, ROUTES, shopWelcomePath } from '@/constants/routes';
+import {
+  REGISTRATION_TRACK_PARAM,
+  ROUTES,
+  partnerSignupHref,
+  shopWelcomePath,
+} from '@/constants/routes';
+import { usePortalLogout } from '@/features/auth/hooks/use-portal-logout';
 import { isPackageOnboarding, resolveWorkspaceHref } from '@/features/auth/post-auth-destination';
-import { safeNextPath } from '@/features/auth/safe-next';
-import { ShopRegistration } from '@/features/shop/components/ShopRegistration';
+import { ClientRedirect } from '@/features/partner/components/ClientRedirect';
 import { PackageShopCheckout } from '@/features/subscription/components/PackageShopCheckout';
 import { useSyncScopeWhenInvoiceSettles } from '@/features/subscription/hooks/use-subscription';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -32,8 +37,7 @@ import styles from './onboarding.module.css';
  *
  * | Trạng thái thật | Màn hiện ra |
  * | --- | --- |
- * | chưa có gian hàng, `?track=commission` (mặc định) | form hồ sơ chủ xe → `?next=` |
- * | chưa có gian hàng, `?track=package` | **bước 1**: tạo gian hàng trả phí |
+ * | chưa có gian hàng | chuyển tới form đăng ký một trang `/register?track=` (bước 1) |
  * | `onboardingState = package_pending` | **bước 2**: chọn gói → QR chuyển khoản |
  * | gói đã hiệu lực | chuyển tới `/manage/shop?welcome=1` |
  * | tuyến hoa hồng (đã có gian hàng) | chuyển tới khu của họ (trang chủ Owner Lite) |
@@ -53,6 +57,8 @@ import styles from './onboarding.module.css';
  */
 export default function OwnerOnboardingPage() {
   const t = useTranslations('ShopOnboarding');
+  const tCommon = useTranslations('ManageCommon');
+  const logout = usePortalLogout();
   const router = useRouter();
   const params = useSearchParams();
   const { data: user, isLoading } = useCurrentUser();
@@ -66,26 +72,6 @@ export default function OwnerOnboardingPage() {
   /** Cửa vào, chỉ đọc khi chưa có gian hàng — xem bảng trong docblock. */
   const track = registrationTrackOf(params.get(REGISTRATION_TRACK_PARAM));
   const isPackageTrack = track === REGISTRATION_TRACK.PACKAGE;
-
-  /*
-   * Đích sau khi tạo hồ sơ TUYẾN HOA HỒNG. `safeNextPath` chỉ nhận đường dẫn NỘI BỘ — tham số
-   * này đến từ URL, nên nó là bề mặt open-redirect nếu tin thẳng.
-   *
-   * Mặc định là trang chủ site partner TƯỜNG MINH, không phải `paths.ownerProfile` — ở bậc
-   * `registering` trang chủ Owner Lite CHÍNH LÀ màn tiến trình đăng ký (`OwnerLiteHome`).
-   *
-   * `workspacePaths` mặc định về khu QUẢN LÝ khi chưa biết người dùng thuộc đâu, và ở đúng lúc
-   * hàm này chạy thì họ CHƯA có gian hàng — nên bảng đó trả `/manage/shop`, tức là người vừa tạo
-   * hồ sơ chủ xe bị đẩy vào cổng quản lý rồi bị `AppShell` đá ra. Một tenant tuyến hoa hồng vừa
-   * tạo thì luôn bắt đầu ở trang chủ của tuyến đó; nói thẳng ra rẻ hơn một phép suy đi qua một
-   * bảng không có đủ thông tin để trả lời.
-   *
-   * Tuyến GÓI thì bỏ qua `next` hoàn toàn: sau bước 1 của họ luôn là bước 2 ngay trên trang này,
-   * và tôn trọng một `?next=` ở đó sẽ đưa người vừa tạo gian hàng đi khỏi màn thanh toán.
-   */
-  const commissionNext = safeNextPath(params.get('next'), ROUTES.MANAGE.ROOT);
-  /** Đến từ luồng đăng xe → dùng chữ dành cho chủ xe cá nhân, không phải chữ "mở gian hàng". */
-  const personalWording = commissionNext.startsWith(ROUTES.LIST_YOUR_VEHICLE.ROOT);
 
   useSyncScopeWhenInvoiceSettles(packagePending);
 
@@ -104,6 +90,14 @@ export default function OwnerOnboardingPage() {
       packageReady ? shopWelcomePath() : (resolveWorkspaceHref(user) ?? ROUTES.MANAGE.REGISTER),
     );
   }, [hasTenant, packagePending, packageReady, router, user]);
+
+  /*
+   * CHƯA có gian hàng: form tạo hồ sơ nay là form đăng ký MỘT TRANG ở `/register?track=` (tài
+   * khoản + hồ sơ, không hỏi lại họ tên/SĐT) — trang này chỉ còn bước 2 của tuyến gói.
+   */
+  if (!isLoading && user && !hasTenant) {
+    return <ClientRedirect href={partnerSignupHref(track)} />;
+  }
 
   // Đang nạp scope, hoặc đã có gian hàng và effect ở trên đang điều hướng ra khỏi đây.
   if (isLoading || !user || (hasTenant && !packagePending)) {
@@ -175,11 +169,17 @@ export default function OwnerOnboardingPage() {
             {([1, 2] as const).map((step) => (
               <li
                 key={step}
-                className={step === currentStep ? styles.stepCurrent : styles.step}
+                className={
+                  step === currentStep
+                    ? styles.stepCurrent
+                    : step < currentStep
+                      ? styles.stepDone
+                      : styles.step
+                }
                 aria-current={step === currentStep ? 'step' : undefined}
               >
                 <span className={styles.stepIndex} aria-hidden="true">
-                  {step}
+                  {step < currentStep ? <CheckOutlined /> : step}
                 </span>
                 <span>{t(step === 1 ? 'steps.shopInfo' : 'steps.planPayment')}</span>
               </li>
@@ -187,30 +187,15 @@ export default function OwnerOnboardingPage() {
           </ol>
         ) : null}
 
-        {packagePending ? (
-          <section className={styles.checkout} aria-label={t('steps.planPayment')}>
-            <PackageShopCheckout />
-          </section>
-        ) : (
-          <ShopRegistration
-            track={track}
-            personalWording={!isPackageTrack && personalWording}
-            prefill={{ name: user.displayName, phone: user.phone, email: user.email }}
-            /*
-             * Tuyến GÓI: `useRegisterShop` đã làm mới `/auth/me`, nên scope quay về mang
-             * `package_pending` và trang tự chuyển sang bước 2 — không điều hướng đi đâu.
-             * Tuyến hoa hồng thì đi tiếp đúng chỗ người dùng đang làm dở.
-             */
-            onCreated={isPackageTrack ? undefined : () => router.replace(commissionNext)}
-          />
-        )}
+        <section className={styles.checkout} aria-label={t('steps.planPayment')}>
+          <PackageShopCheckout />
+        </section>
 
         <div className={styles.back}>
-          <Link href={ROUTES.HOME}>
-            <Button type="text" icon={<ArrowLeftOutlined />}>
-              {t('page.back')}
-            </Button>
-          </Link>
+          {/* Bước gói chưa vào được khu quản lý — lối ra duy nhất là đăng xuất (về đăng nhập partner). */}
+          <Button type="text" icon={<LogoutOutlined />} onClick={() => void logout()}>
+            {tCommon('shell.logout')}
+          </Button>
         </div>
       </main>
     </div>

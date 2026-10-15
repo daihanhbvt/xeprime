@@ -1,9 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { API_ERROR_CODE } from '@xeprime/types';
 import type { ReactElement } from 'react';
 import * as authApi from '@/features/auth/api';
+import * as otpApi from '@/features/phone-verification/api';
 import { withIntl } from '@/i18n/test-utils';
-import { ApiClientError, CLIENT_ERROR_CODE } from '@/lib/api-client';
+import { ApiClientError } from '@/lib/api-client';
 import { ForgotPasswordScreen } from './ForgotPasswordScreen';
 
 function renderScreen(onBackToLogin = jest.fn()) {
@@ -16,69 +18,72 @@ function renderScreen(onBackToLogin = jest.fn()) {
   return render(ui);
 }
 
-describe('ForgotPasswordScreen', () => {
-  it('khoá nút khi email chưa hợp lệ', async () => {
-    const request = jest.spyOn(authApi, 'requestPasswordReset');
+type View = Awaited<ReturnType<typeof render>>;
+
+beforeEach(() => {
+  jest.restoreAllMocks();
+  jest
+    .spyOn(otpApi, 'getOtpConfig')
+    .mockResolvedValue({ testCodeEnabled: false } as Awaited<ReturnType<typeof otpApi.getOtpConfig>>);
+  jest
+    .spyOn(otpApi, 'sendOtp')
+    .mockResolvedValue({ expiresAt: '2030-01-01T00:00:00Z', devCode: null } as Awaited<
+      ReturnType<typeof otpApi.sendOtp>
+    >);
+});
+
+async function fillForm(view: View, confirm = 'Abcd1234') {
+  await fireEvent.changeText(view.getByPlaceholderText('Nhập số điện thoại'), '0901234567');
+  await fireEvent.changeText(view.getByPlaceholderText('Nhập mật khẩu mới'), 'Abcd1234');
+  await fireEvent.changeText(view.getByPlaceholderText('Nhập lại mật khẩu'), confirm);
+}
+
+describe('ForgotPasswordScreen — một màn + sheet OTP (ADR 0060, giống web)', () => {
+  it('khoá "Xác nhận" tới khi SĐT + mật khẩu mới + nhập lại đều hợp lệ', async () => {
     const view = await renderScreen();
-    const submit = () => view.getByRole('button', { name: 'Gửi liên kết đặt lại' });
+    const submit = () => view.getByRole('button', { name: 'Xác nhận' });
 
     expect(submit().props.accessibilityState.disabled).toBe(true);
-
-    await fireEvent.changeText(view.getByPlaceholderText('ban@congty.vn'), 'khong-phai-email');
+    await fillForm(view, 'khac9999');
     await waitFor(() => expect(submit().props.accessibilityState.disabled).toBe(true));
-    expect(request).not.toHaveBeenCalled();
-
-    await fireEvent.changeText(view.getByPlaceholderText('ban@congty.vn'), 'ai@xeprime.test');
+    await fireEvent.changeText(view.getByPlaceholderText('Nhập lại mật khẩu'), 'Abcd1234');
     await waitFor(() => expect(submit().props.accessibilityState.disabled).toBe(false));
+    expect(otpApi.sendOtp).not.toHaveBeenCalled();
   });
 
-  it('gửi xong thì hiện màn "kiểm tra email" kèm chính địa chỉ vừa nhập', async () => {
-    const request = jest.spyOn(authApi, 'requestPasswordReset').mockResolvedValue(undefined);
-    const view = await renderScreen();
+  it('"Xác nhận" → gửi mã + sheet → đúng mã thì đặt lại, KHÔNG tự đăng nhập', async () => {
+    const reset = jest.spyOn(authApi, 'resetPasswordWithOtp').mockResolvedValue(undefined);
+    const onBack = jest.fn();
+    const view = await renderScreen(onBack);
 
-    await fireEvent.changeText(view.getByPlaceholderText('ban@congty.vn'), 'ai@xeprime.test');
-    await fireEvent.press(view.getByRole('button', { name: 'Gửi liên kết đặt lại' }));
-
-    await waitFor(() => expect(request).toHaveBeenCalledWith('ai@xeprime.test'));
-    expect(await view.findByText('Kiểm tra email của bạn')).toBeTruthy();
-    // Địa chỉ nằm trong một `Text` LỒNG (in đậm) giữa câu — tìm theo chính chuỗi đó.
-    expect(view.getByText('ai@xeprime.test')).toBeTruthy();
-  });
-
-  it('backend trả 204 cho email KHÔNG có tài khoản — màn vẫn báo đã gửi', async () => {
-    /*
-     * Đây là chống dò tài khoản, không phải thiếu xử lý lỗi: backend cố ý trả như nhau cho mọi
-     * email (`AuthService.requestPasswordReset`). Test khoá hành vi đó lại để lần refactor sau
-     * không "sửa" thành "email không tồn tại".
-     */
-    jest.spyOn(authApi, 'requestPasswordReset').mockResolvedValue(undefined);
-    const view = await renderScreen();
-
-    await fireEvent.changeText(
-      view.getByPlaceholderText('ban@congty.vn'),
-      'khong-ton-tai@xeprime.test',
+    await fillForm(view);
+    await fireEvent.press(view.getByRole('button', { name: 'Xác nhận' }));
+    await waitFor(() =>
+      expect(otpApi.sendOtp).toHaveBeenCalledWith({ phone: '0901234567', purpose: 'password_reset' }),
     );
-    await fireEvent.press(view.getByRole('button', { name: 'Gửi liên kết đặt lại' }));
+    // Câu không khẳng định số có tài khoản — server trả như nhau cho mọi số.
+    expect(await view.findByText(/Nếu .* đã có tài khoản/)).toBeTruthy();
+    expect(reset).not.toHaveBeenCalled();
+    await fireEvent.changeText(view.getByLabelText('Mã xác thực gồm 6 số'), '123456');
 
-    expect(await view.findByText('Kiểm tra email của bạn')).toBeTruthy();
+    await waitFor(() => expect(reset).toHaveBeenCalledWith('0901234567', '123456', 'Abcd1234'));
+    expect(await view.findByText('Đã đặt lại mật khẩu')).toBeTruthy();
+    await fireEvent.press(view.getByRole('button', { name: 'Đăng nhập' }));
+    expect(onBack).toHaveBeenCalled();
   });
 
-  it('lỗi mạng thì ở lại form để thử lại, không nhảy sang màn đã gửi', async () => {
-    jest.spyOn(authApi, 'requestPasswordReset').mockRejectedValue(
-      new ApiClientError({
-        code: CLIENT_ERROR_CODE.NETWORK_ERROR,
-        message: 'Request to /auth/password/forgot failed',
-        status: 0,
-      }),
+  it('mã sai: ở lại sheet, báo theo MÃ lỗi, chưa sang màn xong', async () => {
+    jest.spyOn(authApi, 'resetPasswordWithOtp').mockRejectedValue(
+      new ApiClientError({ code: API_ERROR_CODE.OTP_INVALID, message: 'x', status: 400 }),
     );
     const view = await renderScreen();
 
-    await fireEvent.changeText(view.getByPlaceholderText('ban@congty.vn'), 'ai@xeprime.test');
-    await fireEvent.press(view.getByRole('button', { name: 'Gửi liên kết đặt lại' }));
+    await fillForm(view);
+    await fireEvent.press(view.getByRole('button', { name: 'Xác nhận' }));
+    await fireEvent.changeText(await view.findByLabelText('Mã xác thực gồm 6 số'), '111111');
 
-    expect(
-      await view.findByText('Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.'),
-    ).toBeTruthy();
-    expect(view.queryByText('Kiểm tra email của bạn')).toBeNull();
+    await waitFor(() => expect(authApi.resetPasswordWithOtp).toHaveBeenCalled());
+    expect(view.queryByText('Đã đặt lại mật khẩu')).toBeNull();
+    expect(view.getByLabelText('Mã xác thực gồm 6 số')).toBeTruthy();
   });
 });

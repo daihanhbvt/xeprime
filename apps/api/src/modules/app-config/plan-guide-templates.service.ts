@@ -18,9 +18,12 @@ import {
   EMAIL_ASSET_PATH,
   PARTNER_PLAN_PURCHASE_PATH,
   PARTNER_SUPPORT_PATH,
+  PARTNER_VEHICLE_NEW_PATH,
   PLAN_GUIDE_TEMPLATE_AUDIT_ACTION,
   DEFAULT_LOCALE,
   EMAIL_OUTBOX_KIND,
+  FREE_TRIP_ALLOWANCE,
+  type PartnerWelcomeEmailPayload,
   EMAIL_OUTBOX_STATUS,
   PLAN_GUIDE_REASON_VARIANT,
   PLAN_GUIDE_VARIANT,
@@ -38,11 +41,13 @@ import { AuditService } from '../audit/audit.service';
 import { BillingService } from '../billing/billing.service';
 import { FeePoliciesService } from '../fee-policies/fee-policies.service';
 import {
+  buildPlanTableHtml,
   renderPlanGuideTemplate,
   type PlanGuidePlan,
   type PlanGuideTemplateContent,
   type RenderedEmail,
 } from '../email/plan-guide-email';
+import { renderPartnerWelcomeEmail } from '../email/partner-welcome-email';
 import { AppConfigService } from './app-config.service';
 import {
   PLAN_GUIDE_TEMPLATE_DEFAULT_LIMIT,
@@ -436,6 +441,32 @@ export class PlanGuideTemplatesService {
   }
 
   // ── Dựng thư (dispatcher dùng) ────────────────────────────────────────────
+
+  /**
+   * Dựng thư CHÀO MỪNG chủ xe tuyến hoa hồng (`partner_welcome`) — phí theo chuyến đọc từ chính sách
+   * ĐANG HIỆU LỰC lúc gửi (cùng nguồn với thư gói), không bảng giá gói.
+   */
+  async renderPartnerWelcome(locale: AppLocale, payload: PartnerWelcomeEmailPayload): Promise<RenderedEmail> {
+    // CÙNG ngữ cảnh với thư gói: gói đang bán, % hai tuyến, link, hotline.
+    const ctx = await this.renderContext();
+    return renderPartnerWelcomeEmail({
+      locale,
+      displayName: payload.displayName,
+      shopName: payload.shopName,
+      freeTrips: FREE_TRIP_ALLOWANCE,
+      commissionPercent: ctx.commissionPercent,
+      packageCommissionPercent: ctx.packageCommissionPercent,
+      planTableHtml: buildPlanTableHtml(ctx.plans, locale, 'outline', {
+        purchaseUrl: ctx.purchaseUrl,
+        contactUrl: ctx.contactUrl,
+        assetBaseUrl: ctx.assetBaseUrl,
+      }),
+      purchaseUrl: ctx.purchaseUrl,
+      listVehicleUrl: this.partnerUrl(PARTNER_VEHICLE_NEW_PATH),
+      contactUrl: ctx.contactUrl,
+      hotline: ctx.hotline,
+    });
+  }
 
   /**
    * Dựng một dòng outbox: thư thật dùng bộ ĐANG DÙNG lúc gửi và nội dung theo lý do

@@ -151,29 +151,6 @@ export async function signUpWithPassword(
 }
 
 /**
- * Đăng nhập passwordless bằng SĐT + OTP.
- *
- * Mã đã được gửi trước đó qua `/auth/phone/send-otp` — endpoint DÙNG CHUNG với web, vì bước gửi
- * mã không phát phiên. Chỉ bước cuối này là của riêng native: web đổi mã lấy cookie ở
- * `/auth/phone/login`, app đổi lấy cặp Bearer (ADR 0017).
- */
-/** `displayName` chỉ đặt tên cho tài khoản server TẠO MỚI từ lượt đăng nhập này (form đặt xe). */
-export async function signInWithOtp(
-  phone: string,
-  code: string,
-  displayName?: string,
-): Promise<CurrentUser> {
-  const session = await mobileAuthApi.phoneLogin(authClient, {
-    phone,
-    code,
-    ...(displayName?.trim() ? { displayName: displayName.trim() } : {}),
-    device: describeDevice(),
-  });
-  await storeTokens(session.tokens);
-  return session.user;
-}
-
-/**
  * Đăng nhập Google/Facebook — vòng OAuth chạy ở SERVER, app chỉ mở trình duyệt (ADR 0019).
  *
  * Trả `null` khi người dùng đóng trình duyệt giữa chừng. Huỷ KHÔNG phải lỗi: ném ra ở đây thì

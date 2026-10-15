@@ -4,6 +4,8 @@ import {
   isPackageOnboardingPending,
   resolveWorkspaceTarget,
   tenantUsesManagePortal,
+  REGISTRATION_TRACK,
+  type RegistrationTrack,
   type WorkspaceTarget,
 } from '@xeprime/types';
 
@@ -12,6 +14,7 @@ import {
   ROUTES,
   SHOP_SECTION,
   accountSectionPath,
+  partnerTrackStartHref,
   balancePayoutPath,
   shopSectionPath,
   withPlanPurchaseIntent,
@@ -110,6 +113,27 @@ export function partnerHomeHref(user: AuthScope | null | undefined): string {
       // Một URL, nội dung theo tuyến: dashboard Manage hoặc trang chủ Owner Lite.
       return ROUTES.MANAGE.ROOT;
   }
+}
+
+/**
+ * `/register?track=…` khi tài khoản ĐÃ có gian hàng. Ngay sau form đăng ký một trang, lượt hỏi lại
+ * `/auth/me` (đổi cửa sổ, lượt làm mới sau khi tạo tài khoản…) có thể về TRƯỚC khi form kịp điều
+ * hướng — nếu trang đọc "đã có gian hàng ⇒ về trang chủ" thì chủ xe rơi về `/` thay vì bước đăng
+ * xe. Nên đích suy từ DỮ LIỆU (tuyến trên URL + tuyến của gian hàng), không từ một state tạm:
+ * cùng tuyến ⇒ bước tiếp theo của tuyến đó; khác tuyến ⇒ trang chủ.
+ */
+export function partnerSignupContinueHref(
+  user: AuthScope | null | undefined,
+  chosenTrack: RegistrationTrack | null,
+): string {
+  const track = resolvePartnerTrack(user);
+  if (chosenTrack === REGISTRATION_TRACK.COMMISSION && track === PARTNER_TRACK.COMMISSION) {
+    return partnerTrackStartHref(REGISTRATION_TRACK.COMMISSION);
+  }
+  if (chosenTrack === REGISTRATION_TRACK.PACKAGE && track === PARTNER_TRACK.PACKAGE_PENDING) {
+    return partnerTrackStartHref(REGISTRATION_TRACK.PACKAGE);
+  }
+  return partnerHomeHref(user);
 }
 
 /**
@@ -436,13 +460,13 @@ export function resolveCustomerDestination(next: string | null | undefined): str
 }
 
 /**
- * Đích của CTA chủ xe trên SITE KHÁCH ("Đăng xe cho thuê", "Trở thành chủ xe") — LUÔN là trang đăng
- * ký của site partner (ADR 0051 điều 3: đăng ký cả hai tuyến diễn ra ở đó). Link KHÁC site, nên
- * tuyệt đối ở chế độ `host`. Tài khoản khách không có gian hàng (ADR 0053), nên không còn nhánh
- * "về khu làm việc của bạn".
+ * Đích của CTA chủ xe trên SITE KHÁCH ("Đăng xe cho thuê", "Trở thành chủ xe") — trang chọn cách
+ * cho thuê CỦA SITE KHÁCH (`/list-your-vehicle`: Đăng xe cá nhân / Mở gian hàng), không nhảy thẳng
+ * sang site partner. Hai lựa chọn ở đó mới dẫn sang `partner…/register?track=` (ADR 0051 điều 3:
+ * đăng ký diễn ra ở site partner). Tài khoản khách không có gian hàng (ADR 0053).
  */
 export function resolveOwnerCtaHref(): string {
-  return siteHref(ZONE.PARTNER, zoneRelativePath(ZONE.PARTNER, ROUTES.MANAGE.REGISTER));
+  return siteHref(ZONE.MARKET, zoneRelativePath(ZONE.MARKET, ROUTES.LIST_YOUR_VEHICLE.ROOT));
 }
 
 /** Đích khi phiên hỏng/hết hạn ở site partner: về trang đăng nhập, giữ đường đang mở. */

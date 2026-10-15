@@ -55,7 +55,13 @@ export class PhoneVerificationController {
   @ApiOperation({ summary: 'Cấu hình OTP cho giao diện (có nhận mã test hay không)' })
   @ApiOkResponse({ type: OtpConfigDto })
   otpConfig(): OtpConfigDto {
-    return { testCodeEnabled: this.service.testCodeEnabled() };
+    /*
+     * LUÔN false: giao diện (web + hai app) chạy y như production — luôn gửi mã, luôn qua bước nhập
+     * mã, không có chữ "thử nghiệm". Việc có tốn SMS hay không do SERVER quyết theo công tắc admin
+     * "Gửi SMS mã OTP" (`isSmsDisabled`): tắt (chỉ dev/staging) ⇒ không gọi nhà mạng, mã 123456.
+     * Giữ endpoint để app đã phát hành không lỗi khi gọi.
+     */
+    return { testCodeEnabled: false };
   }
 
   @Public()

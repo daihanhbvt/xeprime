@@ -380,7 +380,7 @@ export function makeTenantsService(prisma: PrismaService): TenantsService {
 
 /** `AppConfigService` — công tắc `isPlanPromotionEnabled` + cửa xếp hàng email hướng dẫn gói. */
 export function makeAppConfigService(prisma: PrismaService): AppConfigService {
-  return new AppConfigService(prisma, new AuditService(prisma));
+  return new AppConfigService(prisma, new AuditService(prisma), new ConfigService());
 }
 
 /** `SellerProfileService` — writer duy nhất của `seller_profiles`, kể cả MST ghi từ hồ sơ gian hàng. */

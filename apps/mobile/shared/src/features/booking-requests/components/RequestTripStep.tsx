@@ -89,7 +89,6 @@ export function RequestTripStep({
   busyDays,
   rentalMode,
   onRentalModeChange,
-  contactKnown,
   onServiceAvailabilityChange,
 }: {
   form: RequestForm;
@@ -98,8 +97,6 @@ export function RequestTripStep({
   busyDays: BusyDayIndex;
   rentalMode: RentalMode;
   onRentalModeChange: (mode: RentalMode) => void;
-  /** Tài khoản đã có SĐT đã xác thực — không hỏi lại thứ hệ thống đã biết. */
-  contactKnown: boolean;
   /** Dịch vụ địa điểm sống hay chết — form dùng để quyết định có đòi toạ độ hay không. */
   onServiceAvailabilityChange?: (available: boolean) => void;
 }) {
@@ -357,28 +354,9 @@ export function RequestTripStep({
       ) : null}
 
       {/*
-        Liên hệ chỉ hỏi khi hệ thống CHƯA biết. Người đã xác thực SĐT không thấy ô nào ở đây —
-        thông tin của họ hiện thành MỘT DÒNG ở bước Xác nhận, kèm nút "Đổi".
+        KHÔNG có ô liên hệ nào (ADR 0060): họ tên + SĐT đã xác minh của người thuê đọc từ TÀI KHOẢN
+        đang đăng nhập — bước Xác nhận hiện lại chúng thành một dòng "Người thuê".
       */}
-      {contactKnown ? null : (
-        <FormSection title={t('contact.heading')} icon="person-outline">
-          <TextField
-            control={form.control}
-            name="customerName"
-            label={t('contact.nameLabel')}
-            placeholder={t('contact.namePlaceholder')}
-            required
-          />
-          <TextField
-            control={form.control}
-            name="customerPhone"
-            label={t('contact.phoneLabel')}
-            placeholder={t('contact.phonePlaceholder')}
-            keyboardType="phone-pad"
-            required
-          />
-        </FormSection>
-      )}
     </YStack>
   );
 }

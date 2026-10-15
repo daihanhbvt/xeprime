@@ -216,7 +216,9 @@ describe('ShopProfileScreen — dải trạng thái chỉ nói về trạng thá
       TENANT_STATUS.EXPIRED,
     );
 
-    expect(await view.findByText('Gói dịch vụ đã hết hạn')).toBeTruthy();
+    expect(await view.findByText('Đã hết thời hạn sử dụng')).toBeTruthy();
+    // App không nói "gói" (App Store / Google Play) — badge trạng thái cũng là nhãn trung tính.
+    expect(view.queryByText('Hết hạn gói')).toBeNull();
     expect(view.getByLabelText('Tên hiển thị')).toBeTruthy();
   });
 });
@@ -284,7 +286,7 @@ describe('ShopProfileScreen — không còn luồng xin xác minh gian hàng', (
 
     expect(await view.findByLabelText('Tên hiển thị')).toBeTruthy();
     expect(view.queryByText('Gian hàng đang bị khoá')).toBeNull();
-    expect(view.queryByText('Gói dịch vụ đã hết hạn')).toBeNull();
+    expect(view.queryByText('Đã hết thời hạn sử dụng')).toBeNull();
   });
 });
 
