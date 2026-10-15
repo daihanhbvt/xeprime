@@ -113,3 +113,10 @@
 		header_up -X-Xp-Proxy-Secret
 	}
 }
+
+# --- Site của dự án KHÁC ở chung VPS (docs/deployment.md §10) ----------------------
+# Mỗi `deploy/sites/<tên>.caddy` là khối site của một app ngoài XePrime (vd landing page công ty)
+# chạy ở compose riêng, trên mạng `xeprime-sites`. Deploy của dự án đó cài file lên VPS — nó KHÔNG
+# nằm trong repo này. Chưa có file nào thì glob không khớp và Caddy chỉ ghi một cảnh báo, nên máy
+# không chạy site ngoài (production) không phải làm gì.
+import /etc/caddy/sites/*.caddy
