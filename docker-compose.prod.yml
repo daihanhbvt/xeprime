@@ -246,11 +246,14 @@ services:
       REALM_PROXY_SECRET: ${REALM_PROXY_SECRET:?REALM_PROXY_SECRET chưa đặt}
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Khối site của app NGOÀI XePrime ở chung VPS — `docs/deployment.md` §10.
+      - ./deploy/sites:/etc/caddy/sites:ro
       - caddy_data:/data # chứng chỉ — MẤT volume này là phải xin lại chứng chỉ
       - caddy_config:/config
     depends_on: [api, web]
     mem_limit: 256m
-    networks: [internal]
+    # `sites` chỉ có Caddy đứng — api/web/db không, nên app ngoài trên mạng đó không chạm được chúng.
+    networks: [internal, sites]
 
 volumes:
   pgdata:
@@ -260,4 +263,12 @@ volumes:
 
 networks:
   internal:
+    driver: bridge
+  # Chỗ Caddy gặp app của dự án KHÁC ở chung VPS (`docs/deployment.md` §10). Tên CỐ ĐỊNH, không
+  # mang tiền tố project, để compose bên kia khai `external: true` trỏ đúng vào nó.
+  #
+  # ⚠️ Service bên kia KHÔNG được trùng tên service ở file này (`web`, `api`…): Caddy đứng trên cả
+  # hai mạng và gọi `web:3000`/`api:4000` theo tên — trùng tên là Docker có thể trả về container lạ.
+  sites:
+    name: xeprime-sites
     driver: bridge

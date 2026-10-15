@@ -1,6 +1,6 @@
 # Triển khai XePrime lên VPS
 
-> Ngày viết: 27/08/2026 · Cập nhật: 06/10/2026 · Trạng thái: đang áp dụng cho staging + production.
+> Ngày viết: 27/08/2026 · Cập nhật: 15/10/2026 · Trạng thái: đang áp dụng cho staging + production.
 > Kiến trúc: **một VPS duy nhất** (CLAUDE.md §3 — "Deploy MVP: 1 VPS").
 > Mọi file nhắc tới ở đây nằm trong `deploy/` và `docker-compose.prod.yml`.
 
@@ -128,6 +128,8 @@ nhau giữa hai môi trường, do biến `APP_ENV` (§2.3):
 - **Web có gọi API phía server — nhưng chỉ endpoint CÔNG KHAI** cho các trang cần SEO (chi tiết xe,
   gian hàng, banner, danh mục), qua mạng nội bộ `API_INTERNAL_URL=http://api:4000`; không cookie,
   không phiên. Mọi màn hình làm việc fetch ở client qua `/api`.
+- **Site của dự án khác** (vd landing page công ty) đi chung Caddy qua mạng `xeprime-sites` và
+  thư mục `deploy/sites/` — §10.
 
 ### 2.1 Bản đồ tên miền và URL
 
@@ -979,3 +981,46 @@ Google Play. Nó chỉ *gọi* tới VPS. Để app dùng được staging cần
    thì đăng nhập Google/Facebook của app Partner dừng ở trang web với `SOCIAL_STATE_INVALID`.
 3. Muốn build tự động thì thêm một workflow riêng gọi `eas build` cho từng app — hiện CI
    (`ci.yml`, `deploy.yml`) chưa có job nào cho mobile.
+
+---
+
+## 10. Site của dự án KHÁC trên cùng VPS
+
+Đang chạy: **`softrent.vn`** — landing page công ty (repo `daihanhbvt/Softrent`, Next.js) trên VPS
+**staging**. Hai dự án độc lập — repo, image, compose, lịch deploy riêng — nhưng một máy chỉ có MỘT
+cặp cổng 80/443, và Caddy của XePrime đang giữ nó. Nên XePrime mở một móc CHUNG, không biết gì về
+site cụ thể nào:
+
+| Thứ | XePrime cung cấp | Dự án kia tự lo |
+| --- | --- | --- |
+| Mạng | `xeprime-sites` — compose của XePrime tạo, tên cố định. **Chỉ Caddy** đứng ở đó; api/web/db không | Compose riêng khai mạng đó `external: true`, KHÔNG publish cổng ra host |
+| Định tuyến | `deploy/Caddyfile` → `import /etc/caddy/sites/*.caddy`; thư mục `deploy/sites/` (file `*.caddy` bị gitignore) | File `<tên>.caddy`: khối site TỰ CHỨA — không dùng snippet của Caddyfile XePrime |
+| TLS | Caddy xin và gia hạn chứng chỉ | Bản ghi A trỏ về IP VPS, mây xám, TRƯỚC khi cài file `.caddy` |
+
+Luật:
+
+1. **Không trùng tên service.** Tên service/alias trên `xeprime-sites` không được là `web`, `api`,
+   `db`, `worker`, `caddy`, `redis`, `migrate`. Caddy đứng trên hai mạng và gọi `web:3000`,
+   `api:4000` theo tên — trùng là Docker có thể trả về container của dự án kia.
+2. **Cài/sửa `.caddy` luôn qua `caddy validate` rồi `caddy reload`**, không restart container. Một
+   khối hỏng lọt vào thì lần Caddy khởi động lại kế tiếp (deploy XePrime đổi cấu hình `caddy`,
+   reboot VPS) sập MỌI site, kể cả XePrime.
+3. **Không viết khối site ngoài vào `deploy/Caddyfile`.** File đó dùng chung cho production.
+4. **Ai ghi được `deploy/sites/` là cấu hình được Caddy** — kể cả đọc `{$REALM_PROXY_SECRET}`. Thư
+   mục chỉ thuộc user deploy (`xeprime`); trao SSH của user này cho CI của dự án khác là trao luôn
+   quyền đó.
+5. Deploy của XePrime **không đụng** app ngoài: `--remove-orphans` chỉ trong project
+   `xeprime-<env>`, `docker image prune` chỉ dọn image mồ côi.
+
+Đánh đổi đã chấp nhận: site ngoài đặt trên máy staging nên **sống theo máy staging** — dựng lại
+VPS hay sự cố Caddy là nó cùng mất.
+
+### 10.1 softrent.vn
+
+| | |
+| --- | --- |
+| Cấu hình deploy | repo Softrent, thư mục `deploy/` (`Dockerfile` · `docker-compose.yml` · `softrent.caddy` · `deploy.sh`) |
+| Deploy | từ máy dev, trong repo Softrent: `bash deploy/deploy.sh` — đóng gói mã nguồn, build + chạy trên VPS, validate rồi reload Caddy, smoke test |
+| Trên VPS | mã nguồn `~/softrent` (`REVISION` ghi commit) · container `softrent-softrent-1` · khối site `/opt/xeprime/deploy/sites/softrent.caddy` |
+| DNS (Cloudflare) | `softrent.vn` và `www.softrent.vn`: A → IP staging, DNS only. `www` chuyển 301 về tên gốc |
+| Gỡ | xoá `deploy/sites/softrent.caddy` → `docker exec xeprime-staging-caddy-1 caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile` → `docker compose -f ~/softrent/deploy/docker-compose.yml down` |
