@@ -93,4 +93,29 @@ describe('KeywordSearch', () => {
     expect(onOpenShop).toHaveBeenCalledWith('nguyen-auto');
     expect(onApply).not.toHaveBeenCalledWith('Nguyễn Auto');
   });
+
+  it('dòng "Xem mọi xe khớp" áp chữ đang gõ làm từ khoá', async () => {
+    jest.useRealTimers();
+    jest.spyOn(marketplaceApi, 'shopSuggestions').mockResolvedValue({
+      items: [
+        {
+          slug: 'nguyen-auto',
+          name: 'Nguyễn Auto',
+          verified: false,
+          vehicleCount: 1,
+          provinceName: null,
+          logoUrl: null,
+        } as never,
+      ],
+      meta: { page: 1, limit: 5, total: 1, hasNext: false },
+    });
+    const { onApply, onOpenShop, view } = await renderSearch();
+    const input = view.getByPlaceholderText(k.placeholder);
+    await fireEvent(input, 'focus');
+    await fireEvent.changeText(input, ' nguyen ');
+    const row = await view.findByLabelText(k.searchAll.replace('{q}', 'nguyen'));
+    await fireEvent.press(row);
+    expect(onApply).toHaveBeenCalledWith('nguyen');
+    expect(onOpenShop).not.toHaveBeenCalled();
+  });
 });

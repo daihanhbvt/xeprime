@@ -3,6 +3,8 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   API_ERROR_CODE,
+  HOLD_POLL_FALLBACK_MS,
+  HOLD_POLL_LIVE_MS,
   isAwaitingPayment,
   type BookingHoldStatus,
   type HandoverPhotoSlot,
@@ -68,9 +70,8 @@ export function useUnpaidHolds(enabled = true) {
  *    hình của khách đổi", đủ thưa để một cửa sổ hai giờ không thành vài nghìn request.
  *
  * TanStack dừng hẳn nhịp này khi cửa sổ mất focus, và hỏi lại ngay khi khách quay lại tab.
+ * Hai con số (`HOLD_POLL_LIVE_MS` / `HOLD_POLL_FALLBACK_MS`) dùng chung với app, ở `@xeprime/types`.
  */
-const HOLD_POLL_LIVE_MS = 120_000;
-const HOLD_POLL_FALLBACK_MS = 20_000;
 
 /**
  * Một chuyến. `id` nhận cả id yêu cầu lẫn id đơn — thông báo trỏ vào cả hai loại.

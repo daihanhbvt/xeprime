@@ -15,6 +15,7 @@
 
 import { BANK_MATCH_TARGET_TYPE } from './status/billing';
 import { STATUS_COLOR, type StatusMeta } from './status/meta';
+import { ULID_PATTERN_SOURCE } from './ulid';
 
 /** Nhà cung cấp cổng thanh toán. */
 export const PAYMENT_GATEWAY_PROVIDER = {
@@ -321,6 +322,42 @@ export const PAYMENT_RETURN_TRIP_PATH = '/trips';
  * `xeprime://trips/<id>` để trình duyệt tự đóng; app tự hỏi server trạng thái lượt sau đó.
  */
 export const PAYMENT_NATIVE_TRIP_RETURN_PATH = '/app-return';
+
+/**
+ * Deep link quay về app của MỘT chuyến: `<scheme>://trips/<tripId>[?paymentOrder=<orderId>]`.
+ *
+ * Tiền tố `<scheme>://trips/<id>` là HỢP ĐỒNG với bản app đã cài: app truyền đúng chuỗi đó (không
+ * kèm lượt) cho `openAuthSessionAsync`, và Android chỉ đóng trình duyệt khi URL BẮT ĐẦU bằng nó.
+ * Trang quay về công khai của web nối thêm lượt cổng; app mới đổi hướng nó sang màn thanh toán.
+ *
+ * `scheme` do app/web truyền vào (`MOBILE_APP_SCHEME[...]`) — package không đọc env. Không tự kiểm
+ * id: nơi gọi nhận id từ URL lạ phải chặn bằng `isUlid` trước.
+ */
+export function buildNativeTripReturnUrl(
+  scheme: string,
+  tripId: string,
+  orderId?: string | null,
+): string {
+  const base = `${scheme}://trips/${encodeURIComponent(tripId)}`;
+  return orderId
+    ? `${base}?${PAYMENT_RETURN_PARAM.TRIP_ORDER}=${encodeURIComponent(orderId)}`
+    : base;
+}
+
+/** `scheme://trips/<id>?…paymentOrder=<id>…` hoặc `/trips/<id>?…` (Expo Router đã bỏ scheme). */
+const NATIVE_TRIP_RETURN = new RegExp(
+  `^(?:[a-z][a-z0-9+.-]*://)?/?trips/(${ULID_PATTERN_SOURCE})\\?(?:.*&)?${PAYMENT_RETURN_PARAM.TRIP_ORDER}=(${ULID_PATTERN_SOURCE})(?:&.*)?$`,
+);
+
+/**
+ * Đọc lại deep link do `buildNativeTripReturnUrl` dựng — CHỈ khi mang lượt cổng hợp lệ (cả hai id là
+ * ULID). Link chuyến thường (không lượt) trả `null`. Không đọc kết quả thanh toán nào từ URL.
+ */
+export function parseNativeTripReturn(url: string): { tripId: string; orderId: string } | null {
+  const match = NATIVE_TRIP_RETURN.exec(url);
+  if (!match) return null;
+  return { tripId: match[1]!, orderId: match[2]! };
+}
 
 /**
  * Một phiên thanh toán qua cổng sống bao lâu trước khi hệ thống mời khách mở phiên mới.

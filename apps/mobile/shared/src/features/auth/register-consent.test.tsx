@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Provider as ReduxProvider } from 'react-redux';
 import { fireEvent, render } from '@testing-library/react-native';
 import * as authApi from '@/features/auth/api';
+import * as otpApi from '@/features/phone-verification/api';
 import { withIntl } from '@/i18n/test-utils';
 import { store } from '@/store';
 import { RegisterScreen } from './RegisterScreen';
@@ -26,7 +27,7 @@ jest.mock('expo-router', () => ({
 const CONSENT_LABEL =
   'Tôi đã đọc và đồng ý với Điều khoản sử dụng và Chính sách bảo mật của XePrime.';
 const SUBMIT_LABEL = 'Tạo tài khoản';
-const GOOGLE_LABEL = 'Tiếp tục với Google';
+const GOOGLE_LABEL = 'Đăng ký với Google';
 
 function wrap(children: ReactNode) {
   const client = new QueryClient({
@@ -60,6 +61,8 @@ function disabledState(element: { props: { accessibilityState?: { disabled?: boo
 
 beforeEach(() => {
   jest.restoreAllMocks();
+  // Form đăng ký đọc cấu hình OTP (ADR 0060) — không để test gọi mạng thật.
+  jest.spyOn(otpApi, 'getOtpConfig').mockResolvedValue({ testCodeEnabled: false });
 });
 
 describe('RegisterScreen — cổng đồng ý điều khoản', () => {

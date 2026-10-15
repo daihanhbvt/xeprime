@@ -90,3 +90,15 @@ describe('isOutOfRange / isHoldWindowTooShort', () => {
     expect(isHoldWindowTooShort(null, NOW)).toBe(false);
   });
 });
+
+describe('noTransaction — cổng xác nhận chưa có giao dịch (khách huỷ ở cổng)', () => {
+  it('không còn hỏi lại lượt đó', () => {
+    expect(shouldPollGatewayOrder(order({ noTransaction: true }), NOW)).toBe(false);
+  });
+
+  it('mời mở phiên mới dù liên kết cũ còn hạn', () => {
+    expect(canStartAnotherCheckout(order({ noTransaction: true }), { failedToLoad: false })).toBe(
+      true,
+    );
+  });
+});

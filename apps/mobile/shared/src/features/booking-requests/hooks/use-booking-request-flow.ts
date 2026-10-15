@@ -3,6 +3,7 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import {
   addDateKeyDays,
   API_ERROR_CODE,
+  BOOKING_REQUEST_STATUS,
   SERVICE_TYPE,
   vnDateKey,
 } from '@xeprime/types';
@@ -137,6 +138,34 @@ export const BOOKING_BLOCKED = {
 
 export type BookingBlocked = (typeof BOOKING_BLOCKED)[keyof typeof BOOKING_BLOCKED];
 
+/** Phiếu gửi cho biết chuyến vừa được hệ thống NHẬN và đang chờ tiền giữ chỗ (ADR 0044). */
+export function isAwaitingHoldReceipt(
+  receipt: { status?: string | null; id?: string | null } | null | undefined,
+): receipt is { status: string; id: string } {
+  return receipt?.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD && Boolean(receipt.id);
+}
+
+/**
+ * Màn chặn "đã giữ đủ trần" chỉ hiện khi khách còn đang ĐIỀN form.
+ *
+ * - Màn "đã gửi" (`DONE`) không bị thay chỉ vì lượt đọc lại sau đó thấy đủ trần.
+ * - Chuyến vừa được NHẬN NGAY (`awaiting_hold`) ⇒ màn đang rời sang thanh toán: lượt đọc lại
+ *   `unpaidHolds` (chạy TRƯỚC lúc điều hướng) đã đếm cả chính chuyến này; nếu nó là chỗ cuối thì
+ *   `limitReached` bật và màn chặn sẽ chớp lên trước khi đi.
+ *
+ * Có dữ liệu lời nhắc thì tin dữ liệu; chưa có thì tin lỗi server của lượt gửi.
+ */
+export function isHoldLimitBlocked(input: {
+  step: RequestStep;
+  receipt: { status?: string | null; id?: string | null } | null | undefined;
+  limitReached: boolean | undefined;
+  submitHitHoldLimit: boolean;
+}): boolean {
+  if (input.step === REQUEST_STEP.DONE) return false;
+  if (isAwaitingHoldReceipt(input.receipt)) return false;
+  return input.limitReached ?? input.submitHitHoldLimit;
+}
+
 export interface RequestFlowState {
   step: RequestStep;
   /** Yêu cầu trùng: nhánh RIÊNG, không phải lỗi đỏ. */
@@ -173,6 +202,11 @@ export function useBookingRequestFlow(vehicleId: string) {
       setReceipt(result);
       // Chuyến mới phải hiện ngay ở "Chuyến của tôi", huy hiệu và số chuyến chưa khép của `/auth/me`.
       await queryClient.invalidateQueries();
+      /*
+       * Chuyến được NHẬN NGAY (xe "Đặt ngay") ⇒ màn gọi chuyển thẳng sang MÀN THANH TOÁN của chuyến
+       * (web PR #183): không dựng bước "đã gửi" nào — nó nói "chưa giữ xe", sai ở chặng này.
+       */
+      if (isAwaitingHoldReceipt(result)) return;
       setStep(REQUEST_STEP.DONE);
     },
   });
@@ -201,6 +235,8 @@ export function useBookingRequestFlow(vehicleId: string) {
      * xác minh số của app hiện ra, rồi khách bấm gửi lại.
      */
     isPhoneUnverified: (e: unknown) => getErrorCode(e) === API_ERROR_CODE.PHONE_NOT_VERIFIED,
+    /** Khách đã giữ đủ trần chuyến chưa trả — server từ chối mọi yêu cầu mới. */
+    isHoldLimit: (e: unknown) => getErrorCode(e) === API_ERROR_CODE.HOLD_LIMIT_REACHED,
     isDuplicate: (e: unknown) => getErrorCode(e) === API_ERROR_CODE.BOOKING_REQUEST_DUPLICATE,
     /**
      * Cổng BẰNG LÁI ở server (ADR 0057) nói "chưa" — nơi gọi lùi về bước bằng lái với dữ liệu MỚI,

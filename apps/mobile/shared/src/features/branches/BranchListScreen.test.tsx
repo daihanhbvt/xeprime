@@ -248,7 +248,7 @@ describe('BranchListScreen — gói dịch vụ (ADR 0027)', () => {
      * Thao tác vòng đời (đặt mặc định / ngừng-bật) trên MỖI thẻ cũng khoá lại kèm lý do —
      * không ẩn đi, và lý do hiện NGAY dưới hàng nút của chính thẻ đó (`BranchCard`).
      */
-    expect((await view.findAllByText(/Gói đã hết hạn/)).length).toBeGreaterThan(0);
+    expect((await view.findAllByText(/chế độ chỉ xem/)).length).toBeGreaterThan(0);
     // Sửa địa chỉ chi nhánh của chính mình thuộc bộ CƠ BẢN — không bị gói khoá.
     expect(view.getAllByText('Sửa').length).toBeGreaterThan(0);
   });

@@ -29,6 +29,9 @@ export function useGatewayOrder(surface: PaymentSurface, orderId: string | null)
       shouldPollGatewayOrder(query.state.data) ? PAYMENT_ORDER_POLL_MS : false,
     retry: (failureCount, error) =>
       getErrorCode(error) !== API_ERROR_CODE.NOT_FOUND && failureCount < 2,
+    // Quay về từ app ví/ngân hàng ⇒ hỏi lại lượt ngay, không đợi hết một nhịp poll
+    // (focusManager nối AppState ở `query-client.ts`).
+    refetchOnWindowFocus: 'always',
   });
 }
 

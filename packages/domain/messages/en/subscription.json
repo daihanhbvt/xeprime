@@ -186,6 +186,7 @@
       "done": "Close",
       "validation": {
         "fullNameRequired": "Please enter your full name",
+        "fullNameTooShort": "Full name must be at least 2 characters",
         "phoneRequired": "Please enter your phone number",
         "phoneInvalid": "Invalid phone number",
         "emailRequired": "Please enter your email",

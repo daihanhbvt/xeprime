@@ -268,7 +268,10 @@ export const bookingRequestsApi = {
     );
   },
 
-  /** Công khai — khách gửi yêu cầu thuê từ marketplace (không cần đăng nhập). */
+  /**
+   * Khách gửi yêu cầu thuê từ marketplace — cần phiên TÀI KHOẢN KHÁCH có SĐT đã xác minh; danh
+   * tính người thuê server đọc từ tài khoản, không từ payload (ADR 0060).
+   */
   submit(body: CreateBookingRequestInput): Promise<BookingRequestReceipt> {
     return getApiClient().post<BookingRequestReceipt>('/public/booking-requests', body);
   },

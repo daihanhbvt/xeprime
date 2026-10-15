@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import { Provider as ReduxProvider } from 'react-redux';
 import { BOOKING_REQUEST_STATUS, type PublicListingDetail } from '@xeprime/types';
 import { withIntl } from '@/i18n/test-utils';
@@ -8,9 +8,13 @@ import type { BookingRequestFormValues } from '../booking-schema';
 import type { BookingRequestReceipt, PublicQuote } from '../api';
 import { RequestResultStep } from './RequestResultStep';
 
+/** Đồng hồ cần điều hướng (`useFocusEffect`) — có test riêng, ở đây chỉ cần nó không vẽ gì. */
+jest.mock('@/components/ui/Countdown', () => ({ Countdown: () => null }));
+
+const mockRouter = { push: jest.fn(), replace: jest.fn(), back: jest.fn() };
 jest.mock('expo-router', () => ({
   useNavigation: () => ({ isFocused: () => true }),
-  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
+  useRouter: () => mockRouter,
 }));
 
 /* Vỏ đầu trang + nút chat cần phiên/chat realtime — không thuộc phạm vi con số ở màn này. */
@@ -88,5 +92,88 @@ describe('RequestResultStep — tổng dự kiến đọc báo giá ĐÃ ÁP MÃ
 
     expect(await view.findByText('Mazda3 2020')).toBeTruthy();
     expect(view.queryByText(/₫/)).toBeNull();
+  });
+});
+
+describe('RequestResultStep — chạm trần giữ chỗ (HOLD_LIMIT_REACHED)', () => {
+  function renderLimit(
+    unpaid?: Parameters<typeof RequestResultStep>[0]['unpaidHolds'],
+    onLeave?: () => void,
+  ) {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    return render(
+      withIntl(
+        <ReduxProvider store={store}>
+          <QueryClientProvider client={queryClient}>
+            <RequestResultStep
+              holdLimit
+              unpaidHolds={unpaid}
+              duplicate={false}
+              receipt={null}
+              values={values}
+              listing={listing}
+              quote={null}
+              onClose={jest.fn()}
+              onLeave={onLeave}
+            />
+          </QueryClientProvider>
+        </ReduxProvider>,
+      ),
+    );
+  }
+
+  it('"Thanh toán" THAY luồng đặt xe bị chặn (replace) — nút lui không quay về form', async () => {
+    mockRouter.push.mockClear();
+    mockRouter.replace.mockClear();
+    const onLeave = jest.fn();
+    const view = await renderLimit(
+      {
+        limit: 1,
+        limitReached: true,
+        items: [
+          {
+            tripId: 'T1',
+            code: 'XPH00000001',
+            vehicleName: 'Xe số 1',
+            vehicleImageUrl: null,
+            pickupAt: null,
+            returnAt: null,
+            remainingAmount: '176000',
+            expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
+          },
+        ],
+      },
+      onLeave,
+    );
+    fireEvent.press(view.getByLabelText('Thanh toán chuyến Xe số 1'));
+    expect(onLeave).toHaveBeenCalledTimes(1);
+    expect(mockRouter.replace).toHaveBeenCalledTimes(1);
+    expect(mockRouter.push).not.toHaveBeenCalled();
+  });
+
+  it('có lời nhắc ⇒ nói trần và liệt kê từng chuyến chờ trả', async () => {
+    const view = await renderLimit({
+      limit: 3,
+      limitReached: true,
+      items: [
+        {
+          tripId: 'T1',
+          code: 'XPH00000001',
+          vehicleName: 'Xe số 1',
+          vehicleImageUrl: null,
+          pickupAt: null,
+          returnAt: null,
+          remainingAmount: '176000',
+          expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
+        },
+      ],
+    });
+    expect(view.getByText('Bạn đã giữ tối đa 3 chuyến chưa thanh toán')).toBeTruthy();
+    expect(view.getByText('Xe số 1')).toBeTruthy();
+  });
+
+  it('không đọc được lời nhắc (chưa có phiên) ⇒ câu dự phòng', async () => {
+    const view = await renderLimit(undefined);
+    expect(view.getByText(/quá nhiều chuyến chờ thanh toán/i)).toBeTruthy();
   });
 });

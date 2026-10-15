@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { queryKeys } from '@/queries/query-keys';
+import { usePullRefresh } from './use-pull-refresh';
 
 /**
  * Kéo-để-làm-mới cho hai màn hồ sơ của site Partner: Cửa hàng (tuyến gói) và Hồ sơ chủ xe (tuyến
@@ -11,19 +12,19 @@ import { queryKeys } from '@/queries/query-keys';
  */
 export function usePartnerProfileRefresh(): { refreshing: boolean; onRefresh: () => void } {
   const queryClient = useQueryClient();
-  const [refreshing, setRefreshing] = useState(false);
 
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    void Promise.all(
-      [
-        queryKeys.auth.all,
-        queryKeys.shop.all,
-        queryKeys.subscription.all,
-        queryKeys.appConfig.all,
-      ].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
-    ).finally(() => setRefreshing(false));
-  }, [queryClient]);
-
-  return { refreshing, onRefresh };
+  return usePullRefresh(
+    useCallback(
+      () =>
+        Promise.all(
+          [
+            queryKeys.auth.all,
+            queryKeys.shop.all,
+            queryKeys.subscription.all,
+            queryKeys.appConfig.all,
+          ].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+        ),
+      [queryClient],
+    ),
+  );
 }

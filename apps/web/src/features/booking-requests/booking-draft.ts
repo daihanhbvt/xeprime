@@ -1,4 +1,5 @@
 import type { RentalMode } from '@xeprime/domain';
+import { BOOKING_DRAFT_TTL_MS } from '@xeprime/types';
 import { appWallClockToIso, toAppTz, type Dayjs } from '@/lib/datetime';
 import type { RequestFormValues } from './schema';
 
@@ -20,12 +21,11 @@ import type { RequestFormValues } from './schema';
  * Không chứa danh tính: họ tên/SĐT của người thuê đọc từ tài khoản, không có trong form. Không
  * chứa ô "đồng ý điều khoản": đó là lời đồng ý của MỘT người, còn người đăng nhập xong trên tab này
  * có thể là người khác — khôi phục xong ô đó luôn trống. Một bản
- * nháp cho một xe, sống {@link DRAFT_TTL_MS}; quá hạn là bỏ — giá và lịch trống đã có thể khác.
+ * nháp cho một xe, sống {@link BOOKING_DRAFT_TTL_MS}; quá hạn là bỏ — giá và lịch trống đã có thể khác.
  * Không bao giờ được dùng để TỰ GỬI yêu cầu: khôi phục xong khách vẫn phải tự bấm "Gửi yêu cầu".
  */
 
 const STORAGE_KEY = 'xp.bookingDraft.v1';
-const DRAFT_TTL_MS = 30 * 60 * 1000;
 
 /** Ba trường ngày giờ của form là `Dayjs` — trên đĩa là ISO của chính giờ VN đã chọn. */
 type DateField = 'pickupAt' | 'returnAt' | 'requestedPickupDate';
@@ -94,7 +94,7 @@ function readStored(): StoredDraft | null {
       store.removeItem(STORAGE_KEY);
       return null;
     }
-    if (Date.now() - parsed.savedAt > DRAFT_TTL_MS) {
+    if (Date.now() - parsed.savedAt > BOOKING_DRAFT_TTL_MS) {
       store.removeItem(STORAGE_KEY);
       return null;
     }

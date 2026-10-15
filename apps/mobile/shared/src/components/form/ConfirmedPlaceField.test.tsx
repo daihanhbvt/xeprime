@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useForm } from 'react-hook-form';
-import { Pressable } from 'react-native';
+import { useForm, useWatch } from 'react-hook-form';
+import { Pressable, Text } from 'react-native';
 import * as yup from 'yup';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { withIntl } from '@/i18n/test-utils';
@@ -63,31 +63,16 @@ const SUGGESTION = {
 
 function Harness({
   initial,
-  requireCoords = false,
+  onConfirmedManually,
 }: {
+  onConfirmedManually?: () => void;
   initial?: Partial<FormValues>;
-  /** Mô phỏng đúng ràng buộc "chưa xác nhận vị trí" mà schema thật gắn lên toạ độ (finding #3). */
-  requireCoords?: boolean;
 }) {
   const schema = yup.object({
     addressLine: yup.string().trim().default(''),
     placeId: yup.string().nullable().default(null),
-    latitude: yup
-      .number()
-      .nullable()
-      .default(null)
-      .when([], {
-        is: () => requireCoords,
-        then: (s) => s.required('Cần xác nhận vị trí trên bản đồ'),
-      }),
-    longitude: yup
-      .number()
-      .nullable()
-      .default(null)
-      .when([], {
-        is: () => requireCoords,
-        then: (s) => s.required('Cần xác nhận vị trí trên bản đồ'),
-      }),
+    latitude: yup.number().nullable().default(null),
+    longitude: yup.number().nullable().default(null),
     locationSource: yup.string().nullable().default(null),
   });
 
@@ -103,9 +88,19 @@ function Harness({
     },
   });
 
+  const values = useWatch({ control });
+
   return (
     <>
-      <ConfirmedPlaceField control={control} addressLineName="addressLine" pin={PIN} required disabled={false} />
+      <ConfirmedPlaceField
+        control={control}
+        addressLineName="addressLine"
+        pin={PIN}
+        required
+        disabled={false}
+        {...(onConfirmedManually ? { onConfirmedManually } : {})}
+      />
+      <Text testID="form-state">{JSON.stringify(values)}</Text>
       {/* Đứng thay cho lượt `trigger()` mà wizard thật chạy trước khi cho đi tiếp. */}
       <Pressable
         accessibilityRole="button"
@@ -188,11 +183,34 @@ describe('ConfirmedPlaceField', () => {
     expect(input.props.value).toBe('');
   });
 
-  it('lỗi "chưa xác nhận vị trí" của schema (gắn ở toạ độ) phải hiện ra thành chữ đọc được', async () => {
-    const view = await renderHarness({ requireCoords: true });
-    await fireEvent.press(view.getByLabelText('validate'));
+  it('"dùng đúng địa chỉ đã nhập" chốt chữ khách gõ, không toạ độ — rời ô không xoá nó (ADR 0061)', async () => {
+    const view = await renderHarness({
+      initial: { addressLine: '', latitude: 16.4, longitude: 107.5, placeId: 'old', locationSource: 'map_pin' },
+    });
+    const input = view.getByLabelText('Địa chỉ');
+    await fireEvent.changeText(input, '12 Hẻm 34 Nguyễn Trãi');
+    const row = await waitFor(() =>
+      view.getByLabelText('Không có trong danh sách? Dùng đúng địa chỉ đã nhập'),
+    );
+    await fireEvent.press(row);
+    await fireEvent(input, 'blur');
+    expect(input.props.value).toBe('12 Hẻm 34 Nguyễn Trãi');
+    expect(mockedPlacesApi.detail).not.toHaveBeenCalled();
+  });
 
-    await waitFor(() => view.getByText('Cần xác nhận vị trí trên bản đồ'));
+  it('tra chi tiết trả `available: false` ⇒ CHỐT dòng vừa bấm như địa chỉ gõ tay, không bảo "chọn lại"', async () => {
+    mockedPlacesApi.detail.mockResolvedValue({ available: false, place: null });
+
+    const view = await renderHarness();
+    const input = view.getByLabelText('Địa chỉ');
+    await fireEvent.changeText(input, '21 Ly Thuong');
+    await waitFor(() => view.getByText(SUGGESTION.primaryText));
+    await fireEvent.press(view.getByText(SUGGESTION.primaryText));
+
+    await waitFor(() => expect(input.props.value).toBe('21 Lý Thường Kiệt, Phường Vĩnh Ninh, Huế'));
+    await fireEvent(input, 'blur');
+    expect(input.props.value).toBe('21 Lý Thường Kiệt, Phường Vĩnh Ninh, Huế');
+    expect(view.queryByText('Chưa lấy được vị trí của địa điểm này. Hãy chọn lại.')).toBeNull();
   });
 
   it('điền sẵn từ BÊN NGOÀI (bộ nhớ địa chỉ giao xe) được coi là đã xác nhận — không tự xoá ở lần rời ô đầu tiên', async () => {
@@ -211,4 +229,92 @@ describe('ConfirmedPlaceField', () => {
     await fireEvent(input, 'blur');
     expect(input.props.value).toBe('12 Nguyễn Thái Học');
   });
+
+  it('"dùng đúng địa chỉ đã nhập" báo onConfirmedManually và ghi nguồn manual, dọn ghim', async () => {
+    const onConfirmedManually = jest.fn();
+    const view = await renderHarness({
+      initial: { latitude: 16.4, longitude: 107.5, placeId: 'old', locationSource: 'map_pin' },
+      onConfirmedManually,
+    });
+    await fireEvent.changeText(view.getByLabelText('Địa chỉ'), '12 Hẻm 34 Nguyễn Trãi');
+    await fireEvent.press(
+      await waitFor(() => view.getByLabelText('Không có trong danh sách? Dùng đúng địa chỉ đã nhập')),
+    );
+    expect(onConfirmedManually).toHaveBeenCalledTimes(1);
+    expect(stateOf(view)).toMatchObject({
+      locationSource: 'manual',
+      latitude: null,
+      longitude: null,
+      placeId: null,
+    });
+  });
+
+  it('dịch vụ gợi ý tắt (available: false) ⇒ gõ là dọn ghim + placeId, nguồn manual', async () => {
+    mockedPlacesApi.search.mockResolvedValue({ items: [], available: false });
+    const view = await renderHarness({
+      initial: { addressLine: '', latitude: 16.4, longitude: 107.5, placeId: 'old', locationSource: 'google_place' },
+    });
+    const input = view.getByLabelText('Địa chỉ');
+    await fireEvent.changeText(input, '12 Nguyễn Trãi');
+    await waitFor(() => expect(mockedPlacesApi.search).toHaveBeenCalled());
+    await fireEvent.changeText(input, '12 Nguyễn Trãi, Huế');
+    expect(stateOf(view)).toMatchObject({
+      locationSource: 'manual',
+      latitude: null,
+      longitude: null,
+      placeId: null,
+    });
+    // Ô chữ tự do: rời ô không trả về mốc.
+    await fireEvent(input, 'blur');
+    expect(input.props.value).toBe('12 Nguyễn Trãi, Huế');
+  });
+
+  it('gõ đè địa chỉ gõ tay đã chốt ⇒ tạm gỡ nhãn manual; gõ về đúng chữ cũ thì nhận lại', async () => {
+    const view = await renderHarness({
+      initial: { addressLine: '12 Hẻm 34', locationSource: 'manual' },
+    });
+    const input = view.getByLabelText('Địa chỉ');
+    await fireEvent.changeText(input, '12 Hẻm 34 sửa');
+    expect(stateOf(view).locationSource).toBeNull();
+    await fireEvent.changeText(input, '12 Hẻm 34');
+    expect(stateOf(view).locationSource).toBe('manual');
+    // Rời ô sau khi gõ đè ⇒ trả về mốc và trả lại nhãn.
+    await fireEvent.changeText(input, '12 Hẻm 34 khác');
+    await fireEvent(input, 'blur');
+    expect(input.props.value).toBe('12 Hẻm 34');
+    expect(stateOf(view).locationSource).toBe('manual');
+  });
+
+  it('kết quả tra chi tiết của một lượt bấm đã bị thay (gõ tiếp) bị bỏ qua', async () => {
+    let resolveDetail: (v: unknown) => void = () => undefined;
+    mockedPlacesApi.detail.mockImplementation(
+      () => new Promise((r) => { resolveDetail = r; }) as never,
+    );
+    const view = await renderHarness();
+    const input = view.getByLabelText('Địa chỉ');
+    await fireEvent.changeText(input, '21 Ly Thuong');
+    await waitFor(() => view.getByText(SUGGESTION.primaryText));
+    await fireEvent.press(view.getByText(SUGGESTION.primaryText));
+    await fireEvent.changeText(input, 'Đổi ý rồi');
+    resolveDetail({
+      available: true,
+      place: { placeId: SUGGESTION.placeId, latitude: '16.46', longitude: '107.59' },
+    });
+    await waitFor(() => expect(mockedPlacesApi.detail).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 0));
+    expect(input.props.value).toBe('Đổi ý rồi');
+    expect(stateOf(view)).toMatchObject({ latitude: null, placeId: null });
+  });
+
+  it('không hỏi gợi ý cho chữ trùng địa chỉ đã xác nhận (except — ADR 0061 §3)', async () => {
+    await renderHarness({
+      initial: { addressLine: '12 Nguyễn Thái Học', latitude: 16.46, longitude: 107.59, locationSource: 'google_place' },
+    });
+    await new Promise((r) => setTimeout(r, 600));
+    expect(mockedPlacesApi.search).not.toHaveBeenCalled();
+  });
 });
+
+function stateOf(view: Awaited<ReturnType<typeof renderHarness>>): FormValues {
+  return JSON.parse(String(view.getByTestId('form-state').props.children)) as FormValues;
+}

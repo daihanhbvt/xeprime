@@ -186,6 +186,7 @@
       "done": "Đóng",
       "validation": {
         "fullNameRequired": "Vui lòng nhập họ và tên",
+        "fullNameTooShort": "Họ và tên tối thiểu 2 ký tự",
         "phoneRequired": "Vui lòng nhập số điện thoại",
         "phoneInvalid": "Số điện thoại không hợp lệ",
         "emailRequired": "Vui lòng nhập email",

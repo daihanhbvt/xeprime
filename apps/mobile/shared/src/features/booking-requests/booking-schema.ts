@@ -35,25 +35,7 @@ export interface BookingRequestSchemaLabels {
   pickupAddressRequired: string;
   destinationRequired: string;
   deliveryAddressRequired: string;
-  /**
-   * Địa chỉ có chữ nhưng CHƯA có toạ độ (ADR 0042).
-   *
-   * Một câu cho cả hai địa chỉ: việc phải làm giống hệt nhau — chọn một dòng gợi ý, hoặc đặt ghim.
-   */
-  addressNotConfirmed: string;
   noteTooLong: string;
-}
-
-export interface BookingRequestSchemaOptions {
-  /**
-   * Người dùng CÓ CÁCH nào để tạo ra một toạ độ không.
-   *
-   * `false` khi `/places/search` trả `available: false` (chưa cấu hình khoá, hoặc nhà cung cấp
-   * lỗi). Trên native cái ghim chỉ sinh ra từ một dòng gợi ý — không có bản đồ tương tác để tự
-   * đặt — nên lúc đó đòi toạ độ là khoá luôn nút "Tiếp tục" bằng một lỗi mà không thao tác nào
-   * sửa được. Bản đồ hỏng không được phép trở thành "không đặt được xe" (ADR 0035 điều 6).
-   */
-  canConfirmLocation: boolean;
 }
 
 /**
@@ -66,12 +48,15 @@ export interface BookingRequestSchemaOptions {
  *
  * Câu lỗi đi VÀO qua `labels` vì chúng phải đổi theo ngôn ngữ đang chọn, mà hằng mức module thì
  * cố định từ lúc nạp bundle.
+ *
+ * ## Toạ độ đi KÈM địa chỉ, nhưng không bắt buộc (ADR 0061 điều 6 — khớp `requestFormSchema` web)
+ *
+ * Chữ trong ô địa chỉ luôn đã được xác nhận (`ConfirmedPlaceField`): dòng gợi ý khách bấm, cái
+ * ghim khách đặt — cả hai kèm toạ độ — hoặc "dùng đúng địa chỉ đã nhập" cho một địa chỉ nhà cung
+ * cấp bản đồ không biết, KHÔNG có toạ độ. Báo giá giao xe khi đó tự tra địa chỉ chữ ở server,
+ * không tra được thì hai bên tự thoả thuận phí (ADR 0018).
  */
-export function buildBookingRequestSchema(
-  labels: BookingRequestSchemaLabels,
-  options: BookingRequestSchemaOptions = { canConfirmLocation: true },
-) {
-  const { canConfirmLocation } = options;
+export function buildBookingRequestSchema(labels: BookingRequestSchemaLabels) {
   return yup.object({
     /*
      * KHÔNG có ô liên hệ nào (ADR 0060): họ tên + SĐT đã xác minh của người thuê đọc từ TÀI KHOẢN
@@ -172,19 +157,11 @@ export function buildBookingRequestSchema(
     pickupLatitude: yup
       .number()
       .nullable()
-      .default(null)
-      .when('serviceType', {
-        is: (v: string) => canConfirmLocation && v === SERVICE_TYPE.WITH_DRIVER,
-        then: (s) => s.required(labels.addressNotConfirmed),
-      }),
+      .default(null),
     pickupLongitude: yup
       .number()
       .nullable()
-      .default(null)
-      .when('serviceType', {
-        is: (v: string) => canConfirmLocation && v === SERVICE_TYPE.WITH_DRIVER,
-        then: (s) => s.required(labels.addressNotConfirmed),
-      }),
+      .default(null),
     pickupLocationSource: yup.string().nullable().default(null),
     /** Điểm đến bắt buộc với lộ trình LIÊN TỈNH — nội thành thì lộ trình tự do. */
     destination: yup
@@ -200,8 +177,8 @@ export function buildBookingRequestSchema(
 
     deliveryRequested: yup.boolean().default(false),
     /*
-     * Địa chỉ giao xe là địa chỉ SINH RA TIỀN (phí giao theo km từ chi nhánh tới GHIM), nên thứ
-     * bắt buộc là CHỮ + TOẠ ĐỘ. Mã tỉnh/xã thì không — xem chú thích ở khối địa chỉ đón.
+     * Địa chỉ giao xe là địa chỉ SINH RA TIỀN (phí giao theo km từ chi nhánh tới điểm đó), nên
+     * CHỮ bắt buộc; toạ độ đi kèm khi khách chọn gợi ý / đặt ghim. Mã tỉnh/xã thì không — xem chú thích ở khối địa chỉ đón.
      */
     deliveryProvinceCode: yup.string().trim().default(''),
     deliveryWardCode: yup.string().trim().default(''),
@@ -218,19 +195,11 @@ export function buildBookingRequestSchema(
     deliveryLatitude: yup
       .number()
       .nullable()
-      .default(null)
-      .when('deliveryRequested', {
-        is: (v: boolean) => canConfirmLocation && v === true,
-        then: (s) => s.required(labels.addressNotConfirmed),
-      }),
+      .default(null),
     deliveryLongitude: yup
       .number()
       .nullable()
-      .default(null)
-      .when('deliveryRequested', {
-        is: (v: boolean) => canConfirmLocation && v === true,
-        then: (s) => s.required(labels.addressNotConfirmed),
-      }),
+      .default(null),
     deliveryLocationSource: yup.string().nullable().default(null),
 
     note: yup.string().trim().max(NOTE_MAX, labels.noteTooLong).default(''),

@@ -50,6 +50,7 @@ export function toListingQueryParams(filters: MarketplaceFilters): QueryParams {
     delivery: filters.delivery ? '1' : null,
     noCollateral: filters.noCollateral ? '1' : null,
     discount: filters.discount ? '1' : null,
+    vatInvoice: filters.vatInvoice ? '1' : null,
     minSeats: filters.minSeats ?? null,
     priceMin: filters.priceMin ?? null,
     priceMax: filters.priceMax ?? null,

@@ -275,3 +275,12 @@ export function countdownSegment(
     remainingInSegment: rest === 0 ? segmentMs : rest,
   };
 }
+
+/**
+ * Nhịp hỏi lại chi tiết chuyến khi khoản giữ chỗ còn CHỜ TIỀN — LƯỚI AN TOÀN của web và app
+ * (PR #183). Đường chính là thông báo `hold_paid` (push / bản chiếu huy hiệu làm mới `trips.all`).
+ *  - Nghe được bản chiếu realtime: hai phút — chỉ bắt ca worker chết hoặc bản chiếu lệch.
+ *  - Không nghe được: hai mươi giây — độ trễ tối đa giữa "ngân hàng báo về" và "màn đổi".
+ */
+export const HOLD_POLL_LIVE_MS = 120_000;
+export const HOLD_POLL_FALLBACK_MS = 20_000;

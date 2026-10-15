@@ -25,6 +25,7 @@ export * from './audit-target';
 export * from './booking-eligibility';
 export * from './holds';
 export * from './payment-gateway';
+export * from './ulid';
 export * from './host-metrics';
 export * from './fee-policy';
 export * from './promo-code';

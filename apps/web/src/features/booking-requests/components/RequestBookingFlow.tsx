@@ -41,6 +41,8 @@ import {
   type LongTermPackageMonths,
   type RouteType,
   type ServiceType,
+  DELIVERY_ADDRESS_DEBOUNCE_MS,
+  MIN_DELIVERY_ADDRESS_LENGTH,
 } from '@xeprime/types';
 import {
   DRIVER_LICENCE_TRIP_GATE,
@@ -107,14 +109,12 @@ import { BookingSteps, type BookingStepItem, type BookingStepKey } from './Booki
 import { VehicleSummaryPanel } from './VehicleSummaryPanel';
 import styles from './RequestBookingFlow.module.css';
 
-/**
- * Chưa đủ dài thì KHÔNG hỏi bản đồ.
- *
- * "12 Ng" vừa tra sai chắc chắn vừa tốn một request có tính tiền. Ngưỡng này cùng với debounce
- * 900ms là hai thứ giữ cho một lần gõ địa chỉ tốn ĐÚNG một lượt tra, không phải một lượt cho
+/*
+ * Chưa đủ dài thì KHÔNG hỏi bản đồ: "12 Ng" vừa tra sai chắc chắn vừa tốn một request có tính
+ * tiền. `MIN_DELIVERY_ADDRESS_LENGTH` cùng `DELIVERY_ADDRESS_DEBOUNCE_MS` (dùng chung với app, ở
+ * `@xeprime/types`) giữ cho một lần gõ địa chỉ tốn ĐÚNG một lượt tra, không phải một lượt cho
  * mỗi ký tự.
  */
-const MIN_DELIVERY_ADDRESS_LENGTH = 12;
 
 /**
  * Tên trường của hai địa chỉ vật lý trong form — xem `RenterAddressBlock`.
@@ -575,7 +575,10 @@ export function RequestBookingFlow({
   const watchedDeliverySource = useWatch({ control, name: 'deliveryLocationSource' });
   /** Địa chỉ gõ tay đã chốt — đường DUY NHẤT báo giá được tra bằng chữ (xem khối trên). */
   const deliveryManual = watchedDeliverySource === LOCATION_SOURCE.MANUAL;
-  const debouncedDeliveryAddress = useDebouncedValue(watchedDeliveryLine?.trim() ?? '', 900);
+  const debouncedDeliveryAddress = useDebouncedValue(
+    watchedDeliveryLine?.trim() ?? '',
+    DELIVERY_ADDRESS_DEBOUNCE_MS,
+  );
   /*
    * Ghim khách ĐÃ XÁC NHẬN thắng chuỗi chữ: gửi toạ độ lên thì server dùng thẳng và bỏ qua bước
    * tra địa chỉ — vừa rẻ hơn một request có tính tiền, vừa cho con số khớp với đúng địa điểm

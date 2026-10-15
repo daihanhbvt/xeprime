@@ -89,3 +89,29 @@ export function useUpdatePaymentSettings() {
     },
   });
 }
+
+/** Hỗ trợ xuất hoá đơn VAT cho mọi xe (ADR 0059). */
+export function useVatInvoiceSetting(enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.shop.vatInvoice(),
+    queryFn: () => tenantsApi.vatInvoiceSetting(),
+    enabled,
+  });
+}
+
+/**
+ * Bật/tắt hỗ trợ xuất hoá đơn VAT cho mọi xe — gương `useUpdateVatInvoiceSetting` của web.
+ *
+ * Làm mới nhánh `marketplace`: thẻ xe, trang xe và bộ lọc chợ đọc cờ qua gian hàng. Cache chỉ ghi
+ * khi server trả thành công, nên lỗi thì công tắc tự đứng nguyên chỗ cũ.
+ */
+export function useUpdateVatInvoiceSetting() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (supported: boolean) => tenantsApi.updateVatInvoiceSetting(supported),
+    onSuccess: (setting) => {
+      queryClient.setQueryData(queryKeys.shop.vatInvoice(), setting);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.marketplace.all });
+    },
+  });
+}

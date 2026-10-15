@@ -48,7 +48,6 @@ export function RenterAddressBlock({
   vehicleProvinceCode,
   vehicleProvinceName,
   vehiclePoint,
-  onServiceAvailabilityChange,
   disabled = false,
 }: {
   control: Control<BookingRequestFormValues>;
@@ -63,13 +62,6 @@ export function RenterAddressBlock({
   vehicleProvinceName: string | null;
   /** Toạ độ điểm nhận xe, nếu chi nhánh đã ghim. Neo tốt hơn hẳn tâm tỉnh. */
   vehiclePoint: GeoPoint | null;
-  /**
-   * Dịch vụ địa điểm sống hay chết — chuyển thẳng lên form.
-   *
-   * Ở luồng khách, cái ghim CHỈ sinh ra từ một dòng gợi ý, nên `/places/search` chết nghĩa là
-   * không còn đường nào tạo ra toạ độ — và schema phải thôi bắt buộc nó (ADR 0035 điều 6).
-   */
-  onServiceAvailabilityChange?: (available: boolean) => void;
   disabled?: boolean;
 }) {
   const t = useTranslations('BookingRequests.flow.address');
@@ -106,7 +98,6 @@ export function RenterAddressBlock({
         searchEnabled={!disabled}
         label={label}
         {...(placeholder === undefined ? {} : { placeholder })}
-        {...(onServiceAvailabilityChange ? { onServiceAvailabilityChange } : {})}
         required
         disabled={disabled}
         onPlaceResolved={(place) => {
@@ -118,6 +109,21 @@ export function RenterAddressBlock({
           if (place.suggestedProvinceCode) {
             province.field.onChange(
               place.suggestedProvinceCode as PathValue<
+                BookingRequestFormValues,
+                Path<BookingRequestFormValues>
+              >,
+            );
+          }
+        }}
+        onConfirmedManually={() => {
+          /*
+           * Địa chỉ gõ tay không mang tỉnh nào: tỉnh của địa điểm chọn TRƯỚC đó (nếu có) nói về một
+           * chỗ khách vừa bỏ. Về lại tỉnh của xe — đúng tỉnh server dùng để tra địa chỉ chữ khi báo
+           * giá (web `RenterAddressBlock`).
+           */
+          if (vehicleProvinceCode) {
+            province.field.onChange(
+              vehicleProvinceCode as PathValue<
                 BookingRequestFormValues,
                 Path<BookingRequestFormValues>
               >,

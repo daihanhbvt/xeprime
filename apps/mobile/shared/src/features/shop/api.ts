@@ -14,5 +14,6 @@ export type {
   ShopProfile,
   UpdatePaymentSettingsInput,
   UpdateShopProfileInput,
+  VatInvoiceSetting,
 } from '@/api/tenants/api';
 export type { UploadMeta, UploadPresign } from '@/api/vehicles/api';

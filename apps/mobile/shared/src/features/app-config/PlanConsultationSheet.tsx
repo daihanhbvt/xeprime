@@ -21,7 +21,8 @@ export const PLAN_CONSULTATION_MESSAGE_MAX = 1000;
 
 /** Message là MÃ, dịch ở `Subscription.mobilePlan.consult.validation`. */
 export const planConsultationSchema = object({
-  fullName: string().trim().required('fullNameRequired'),
+  // Trần dưới khớp `MinLength(2)` của `PlanConsultationDto`.
+  fullName: string().trim().required('fullNameRequired').min(2, 'fullNameTooShort'),
   phone: string()
     .trim()
     .required('phoneRequired')

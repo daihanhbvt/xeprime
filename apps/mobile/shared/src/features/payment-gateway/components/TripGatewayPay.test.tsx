@@ -21,7 +21,12 @@ let mockRouteParams: Record<string, string> = {};
 
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockRouteParams,
-  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn(), setParams: mockSetParams }),
+  useRouter: () => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    back: jest.fn(),
+    setParams: mockSetParams,
+  }),
 }));
 
 const mockOpenAuth = jest.fn(async () => ({ type: 'dismiss' }));
@@ -142,11 +147,7 @@ function Harness({
   return (
     <>
       <TripGatewayNotice gateway={gateway} holdAwaitingPayment={holdAwaitingPayment} />
-      <TripGatewayPay
-        gateway={gateway}
-        amount="300000"
-        deadline={HOLD_DEADLINE}
-      />
+      <TripGatewayPay gateway={gateway} amount="300000" deadline={HOLD_DEADLINE} />
     </>
   );
 }
@@ -159,6 +160,17 @@ function mockMethods() {
 }
 
 describe('TripGatewayPay', () => {
+  it('chưa chọn ví ⇒ nút trả tắt và nhắc chọn ví; không mở phiên nào', async () => {
+    mockMethods();
+    const startSpy = jest.spyOn(paymentGatewayApi, 'startTripCheckout');
+
+    await render(wrap(<Harness />));
+    expect(await screen.findByText('Chọn một ví điện tử để tiếp tục.')).toBeTruthy();
+    fireEvent.press(screen.getByText('Thanh toán'));
+    expect(startSpy).not.toHaveBeenCalled();
+    expect(screen.queryByText('Thanh toán qua Ví MoMo')).toBeNull();
+  });
+
   it('chạm dồn hai lần chỉ mở MỘT phiên cổng', async () => {
     mockMethods();
     const created = makeOrder();
@@ -169,6 +181,8 @@ describe('TripGatewayPay', () => {
     jest.spyOn(paymentGatewayApi, 'order').mockResolvedValue(created);
 
     await render(wrap(<Harness />));
+    // CHỌN ví trước rồi mới trả, như `CheckoutPanel` của web.
+    fireEvent.press(await screen.findByLabelText('Ví MoMo'));
     const button = await screen.findByText('Thanh toán qua Ví MoMo');
     // Hai lần chạm TRONG một lượt act: chạm ngoài act khi mutation còn treo để lại hàng đợi act
     // lệch, và hiệu ứng của các test sau trong file không chạy.
@@ -186,8 +200,8 @@ describe('TripGatewayPay', () => {
     // Lượt được ghi lên route (như `?paymentOrder=` của web) VÀ xuống kho bền theo chuyến.
     expect(mockSetParams).toHaveBeenCalledWith({ paymentOrder: created.id });
     expect(await recallTripOrder(TRIP)).toBe(created.id);
-    // Lượt còn liên kết dùng được ⇒ không mời mở phiên thứ hai.
-    await waitFor(() => expect(screen.queryByText('Thanh toán qua Ví MoMo')).toBeNull());
+    // Như web: lượt còn chờ vẫn để thẻ "Ví điện tử" dưới VietQR — chọn ví khác là mở phiên MỚI.
+    expect(screen.getByLabelText('Ví MoMo')).toBeTruthy();
   });
 
   it('mở lại màn sau khi tiến trình bị giết: đọc lượt đã nhớ, KHÔNG mời trả lần hai', async () => {
@@ -204,7 +218,7 @@ describe('TripGatewayPay', () => {
     await render(wrap(<Harness />));
     // Thông báo của lượt đã nhớ hiện lại, và lối trả không mở thêm phiên nào.
     expect(await screen.findByText(/bị trả trùng/)).toBeTruthy();
-    expect(screen.queryByText('Thanh toán qua Ví MoMo')).toBeNull();
+    expect(screen.queryByLabelText('Ví MoMo')).toBeNull();
   });
 
   it('khoản giữ chỗ đã trả bằng đường khác: lượt cổng còn chờ KHÔNG mời trả tiếp và bị quên', async () => {
@@ -232,5 +246,4 @@ describe('TripGatewayPay', () => {
     ).toBeTruthy();
     expect(await recallTripOrder(TRIP)).toBe(awaiting.id);
   });
-
 });

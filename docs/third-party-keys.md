@@ -362,11 +362,13 @@ Một services key RIÊNG, whitelist IP = IP VPS production, hạn mức theo ke
 | Dev + staging | **Nên hai key** | Key staging khoá theo IP VPS. Dùng chung với máy dev thì phải bỏ khoá IP, và một file `.env` lộ ra là một key không khoá gọi được dịch vụ tính tiền. Trial chỉ có một key thì tạm dùng chung (§4.3) |
 | Bất kỳ key nào ↔ production | **Không bao giờ** | Hạn mức, hoá đơn và việc thu hồi key của production phải tách khỏi môi trường thử |
 
-### 4.9 App native — CHƯA chuyển (ADR 0061 điều 9)
+### 4.9 App native — đã chuyển (ADR 0061 điều 9)
 
-Hai app native vẫn VẼ bản đồ bằng Geoapify qua `EXPO_PUBLIC_GEOAPIFY_MAP_KEY` cho tới khi dev mobile
-chuyển — giữ key Geoapify của app như cũ. Gợi ý địa chỉ, chọn địa điểm và quãng đường của app đi qua
-API nên đã là Vietmap. App KHÔNG bao giờ cầm services key.
+Hai app native vẽ bản đồ bằng ẢNH TĨNH của API (Vietmap), cùng endpoint với web — không còn khoá bản
+đồ nào trong bundle. Xoá `EXPO_PUBLIC_GEOAPIFY_MAP_KEY` khỏi `.env` của `apps/mobile/customer` và
+`apps/mobile/manage` (và khỏi EAS env nếu có), rồi thu hồi key Geoapify của app trên bảng điều khiển
+Geoapify sau khi bản app mới đã lên store (bản app cũ còn đọc key đó). App KHÔNG bao giờ cầm services
+key.
 
 ---
 

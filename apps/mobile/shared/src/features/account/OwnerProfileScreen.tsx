@@ -30,6 +30,7 @@ import { toValues as shopFormValues } from '@/features/shop/ShopProfileScreen';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { ACCOUNT_SECTION, type AccountSection } from '@/navigation/account-section';
+import { VatInvoiceSection } from '@/features/shop/components/VatInvoiceSection';
 import { colors, fontSize, space } from '@/theme/tokens';
 import type { UserProfile } from './api';
 import { AccountIdentityHero } from './components/AccountIdentityHero';
@@ -348,6 +349,22 @@ function OwnerProfileSections({
                 )}
               </YStack>
             </Card>
+          </YStack>
+
+          {/*
+            Hoá đơn VAT — MỘT thiết lập cho mọi xe (ADR 0059). Chủ xe cá nhân không có màn
+            "Chính sách thuê" của gian hàng, nên nó ở đây; lưu ngay khi bấm, không qua nút lưu địa chỉ.
+          */}
+          <YStack
+            onLayout={(event: LayoutChangeEvent) =>
+              onSectionLayout(ACCOUNT_SECTION.VAT_INVOICE, event)
+            }
+          >
+            <VatInvoiceSection
+              canEdit={canEdit}
+              gap={space.sm}
+              renderHead={({ title, subtitle }) => <SectionHead title={title} hint={subtitle} />}
+            />
           </YStack>
 
           {canSeeTax ? (

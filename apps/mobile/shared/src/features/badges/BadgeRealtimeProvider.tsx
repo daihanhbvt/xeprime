@@ -49,6 +49,14 @@ export function useBadgeRealtime(): BadgeRealtime {
 }
 
 /**
+ * Đang nghe được bản chiếu huy hiệu không — bản KHÔNG ném lỗi, để hook dữ liệu dùng chung
+ * (`useTrip`) chạy được ngoài provider (test, màn dựng riêng). Ngoài provider = không nghe được.
+ */
+export function useBadgeRealtimeLive(): boolean {
+  return useContext(BadgeRealtimeCtx)?.live ?? false;
+}
+
+/**
  * Nghe huy hiệu của chính mình từ Firestore và ghi thẳng vào cache TanStack Query.
  *
  * Bản native của `apps/web/src/features/badges/BadgeRealtimeProvider.tsx` — cùng luật, cùng hai
