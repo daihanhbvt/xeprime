@@ -793,7 +793,8 @@ Settings; Secret bị che và không đọc lại được sau khi lưu.
 | `BACKUP_KEEP_DAYS` | `14` | |
 | ~~`NEXT_PUBLIC_API_URL`~~ | **XOÁ** | workflow build cố định `/api` (cùng origin — ADR 0051 điều 4); biến cũ không còn được đọc |
 | `NEXT_PUBLIC_APP_NAME` | `XePrime STG` | nhãn khác giúp không nhầm tab |
-| `NEXT_PUBLIC_FIREBASE_*` (4) · `GEO_DAILY_CALL_BUDGET` | | `NEXT_PUBLIC_*` nằm lộ thiên trong bundle JS ⇒ **không bao giờ** là Secret. Web không còn key bản đồ: xoá `NEXT_PUBLIC_GEOAPIFY_MAP_KEY` cũ sau lần deploy đầu tiên của ADR 0061 |
+| `NEXT_PUBLIC_FIREBASE_*` (4) | | `NEXT_PUBLIC_*` nằm lộ thiên trong bundle JS ⇒ **không bao giờ** là Secret. Web không còn key bản đồ: xoá `NEXT_PUBLIC_GEOAPIFY_MAP_KEY` cũ sau lần deploy đầu tiên của ADR 0061 |
+| `GEO_DAILY_CALL_BUDGET` | trống ⇒ `3000` | cầu dao lượt gọi Vietmap mỗi ngày, mỗi tiến trình API (ADR 0061 điều 3) |
 | `VPS_USER` · `VPS_PATH` · `VPS_SSH_PORT` | `xeprime` · `/opt/xeprime` · `22` | |
 
 **Secrets:**

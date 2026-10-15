@@ -10,7 +10,7 @@ Ghi đè:
 * [ADR 0018](0018-map-delivery-distance.md) ở phần nhà cung cấp + khoá. Mọi quyết định sản phẩm của
   0018 giữ nguyên.
 * [ADR 0035](0035-two-tier-administrative-address.md) điều 6 ở phần bản đồ tương tác: web không còn
-  bản đồ nào.
+  bản đồ tương tác nào, chỉ còn ảnh tĩnh (điều 1).
 * [ADR 0042](0042-confirmed-place-address-for-renters.md) điều 1 (nguồn xác nhận thứ hai "đặt ghim"
   thay bằng "dùng đúng địa chỉ đã nhập" — điều 6 dưới đây), điều 2 (bỏ điều kiện bắt buộc toạ độ),
   và điều 5 ở phần "bản đồ mở ở đâu" (điểm neo nay chỉ còn kéo thứ tự gợi ý).
@@ -31,10 +31,11 @@ Hai lối đã thử trước khi chốt, ghi ở đây để không ai thử l�
   cách, Web SDK bản đồ) nằm trong một commit lưu trữ cục bộ trên nhánh `feature/web-map4d`. Chủ sản
   phẩm chọn Vietmap thay thế (15/10/2026).
 
-Cùng lúc, chủ sản phẩm chốt phạm vi theo CHI PHÍ: **chỉ tìm địa chỉ và đo quãng đường** — không vẽ
-bản đồ. Mọi lượt gọi Vietmap đều tính tiền theo *giao dịch*, kể cả tile bản đồ (25 tile = 1 giao
-dịch), nên một khung bản đồ trên trang xe là tiền cho mỗi lượt xem, trong khi thứ người xem cần chỉ
-là "chỗ này ở đâu".
+Cùng lúc, chủ sản phẩm chốt phạm vi theo CHI PHÍ: **chỉ tìm địa chỉ và đo quãng đường** — không có
+bản đồ tương tác. Mọi lượt gọi Vietmap đều tính tiền theo *giao dịch*, kể cả tile bản đồ (25 tile = 1
+giao dịch), nên một khung bản đồ kéo/zoom được trên trang xe là tiền cho MỖI lượt xem, trong khi thứ
+người xem cần chỉ là "chỗ này ở đâu". Cũng trong ngày, chủ sản phẩm bổ sung: vẫn hiện bản đồ ở chỗ
+phù hợp, nhưng chỉ để xem — một ảnh tĩnh vẽ một lần rồi cache, không tính theo lượt xem.
 
 Vietmap (Maps API v4) có đủ phần còn lại: gợi ý theo chữ gõ, tra chi tiết theo mã, geocode địa chỉ
 đầy đủ, reverse, định tuyến — và trả địa chỉ theo **mô hình hành chính hai cấp** sau 01/07/2025
@@ -42,7 +43,7 @@ Vietmap (Maps API v4) có đủ phần còn lại: gợi ý theo chữ gõ, tra 
 
 ## Quyết định
 
-### 1. Web không vẽ bản đồ; Vietmap chỉ làm hai việc
+### 1. Vietmap tìm địa chỉ, đo quãng đường và vẽ ảnh bản đồ tĩnh; web không có bản đồ tương tác
 
 | Việc | API Vietmap v4 | Giao dịch | Ai gọi |
 | --- | --- | --- | --- |
@@ -51,10 +52,12 @@ Vietmap (Maps API v4) có đủ phần còn lại: gợi ý theo chữ gõ, tra 
 | Địa chỉ GÕ TAY → toạ độ | `/api/search/v4` rồi `/api/place/v4` | 2 | server, lúc lưu / lúc báo giá |
 | Toạ độ → địa chỉ | `GET /api/reverse/v4` | 1 | chỉ app native (qua `/places/reverse`) |
 | Quãng đường giao xe | `GET /api/route/v4` 2 điểm, `vehicle=car` | 1 | server |
-| Xem vị trí (trang xe, thẻ hồ sơ xe) | Static Map `POST /api/maps/statics/tm` — ẢNH, không tương tác | 1 mỗi chi nhánh* | server, qua ảnh của API |
+| Xem vị trí (trang xe, thẻ hồ sơ xe, ô địa chỉ vừa chọn) | Static Map `POST /api/maps/statics/tm` — ẢNH, không tương tác | 1 mỗi điểm* | server, qua ảnh của API |
 | Dẫn đường | **không gọi gì** — liên kết "Mở bằng Google Maps" | 0 | — |
 
-\* Chưa có tài liệu về số giao dịch của Static Map; tính như một lượt. API cache ảnh theo chi nhánh.
+\* Chưa có tài liệu về số giao dịch của Static Map; tính như một lượt. API cache ảnh theo toạ độ
+trong bộ nhớ tiến trình, nên đây là một giao dịch cho mỗi điểm khác nhau sau mỗi lần khởi động/deploy
+API — không theo lượt xem.
 
 **Bản đồ để xem là một ẢNH TĨNH API vẽ hộ** (sửa 15/10/2026 theo chủ sản phẩm: vẫn hiện bản đồ ở chỗ
 phù hợp, chỉ không tương tác). Ba endpoint, cả ba đọc toạ độ từ một thứ CÓ THẬT chứ không
@@ -66,9 +69,9 @@ nhận toạ độ từ request — nếu không thì bất kỳ ai cũng vẽ �
   xe): chỉ vẽ cho mã đã qua `/places/detail` (có toạ độ trong cache), không tra thêm gì; địa chỉ gõ
   tay không có ảnh.
 
-`GeoService.staticMap` giữ ảnh trong bộ nhớ (LRU 200 ảnh ≈ 16MB) và gộp các lượt vẽ đang chạy cho
-cùng một điểm; trình duyệt được giữ ảnh một ngày, URL mang toạ độ (`?v=`) nên chi nhánh dời đi là
-ảnh mới. Ảnh chở dòng địa chỉ của chi nhánh (gửi kèm để Vietmap không phải tự tra ngược). Web hiện
+`GeoService.staticMap` giữ ảnh trong bộ nhớ của tiến trình API (LRU 200 ảnh ≈ 16MB; khởi động lại là
+vẽ lại) và gộp các lượt vẽ đang chạy cho cùng một điểm; trình duyệt được giữ ảnh một ngày, URL mang toạ độ (`?v=`) nên chi nhánh dời đi là
+ảnh mới. Ảnh chở dòng địa chỉ đã biết của điểm đó (gửi kèm để Vietmap không phải tự tra ngược). Web hiện
 bằng `<img>` (`StaticMapImage`) — không thư viện bản đồ, không key trong bundle, `loading="lazy"`,
 lỗi thì ẩn hẳn.
 
@@ -88,13 +91,13 @@ Khớp nối `GeoProvider` của ADR 0018 giữ nguyên: nhà cung cấp là m�
 | `VIETMAP_API_KEY` | **Secret** | services key ("Key API"); IP = IP máy chạy API (máy dev: không giới hạn) |
 | `GEO_DAILY_CALL_BUDGET` | Variable | — (cầu dao phía mình, điều 3) |
 
-Không có khoá nào trong bundle web: không vẽ bản đồ thì không cần "Key Tilemap", và không có gì nằm
-lộ thiên để người khác tiêu tiền của mình. Khoá optional kể cả ở production, đúng như ADR 0018.
+Không có khoá nào trong bundle web: ảnh bản đồ do server vẽ bằng chính services key nên không cần
+"Key Tilemap", và không có gì nằm lộ thiên để người khác tiêu tiền của mình. Khoá optional kể cả ở production, đúng như ADR 0018.
 
 ### 3. Tối ưu chi phí — theo thứ tự lượt gọi bị chặn trước
 
-1. **Không tải tile bản đồ** (điều 1): bản đồ để xem là ảnh tĩnh vẽ MỘT lần cho mỗi chi nhánh rồi
-   cache, không phải tile trả tiền theo mỗi lượt xem.
+1. **Không tải tile bản đồ** (điều 1): bản đồ để xem là ảnh tĩnh vẽ MỘT lần cho mỗi điểm rồi cache
+   (bộ nhớ API + trình duyệt một ngày), không phải tile trả tiền theo mỗi lượt xem.
 2. **Cầu dao theo ngày** — `GEO_DAILY_CALL_BUDGET` (mặc định 3.000 request/ngày giờ VN, mỗi tiến
    trình API; `DailyCallBudget`). `/places/*` là endpoint CÔNG KHAI; `@Throttle` chặn theo IP còn
    một trận quét đổi IP thì không. Chạm trần ⇒ "không hỏi được" tới hết ngày (điều 4), log cảnh
@@ -117,8 +120,9 @@ lộ thiên để người khác tiêu tiền của mình. Khoá optional kể c
    ~110m) và quãng đường (lưới ~110m). Worker dọn mỗi giờ. 90 ngày CHỜ điều khoản lưu trữ của
    Vietmap (Còn mở Q1) — hạ ngay nếu họ yêu cầu.
 
-Ước tính: một yêu cầu thuê có giao tận nơi tốn ~3–5 gợi ý + 1 Place + 1 Route ≈ **5–7 giao dịch**;
-trúng cache thì ít hơn.
+Ước tính: một yêu cầu thuê có giao tận nơi tốn ~3–5 gợi ý + 1 Place + 1 ảnh của địa điểm vừa chọn +
+1 Route ≈ **6–8 giao dịch**; trúng cache thì ít hơn. Ảnh điểm nhận xe trên trang xe là một giao dịch
+cho mỗi xe sau mỗi lần khởi động API, không theo lượt xem.
 
 ### 4. "Không hỏi được" phải đi đường nhập tay
 
@@ -201,12 +205,15 @@ Geoapify (`EXPO_PUBLIC_GEOAPIFY_MAP_KEY`); gợi ý địa chỉ, chọn địa 
 ## Hệ quả
 
 **Được:** dữ liệu địa chỉ Việt Nam của một nhà cung cấp Việt Nam, định dạng hành chính hai cấp; chi
-phí bản đồ chỉ còn ở hai việc có hệ quả tiền (gợi ý địa chỉ, quãng đường); không còn khoá nào trong
-bundle web; build web không còn biến bản đồ.
+phí bản đồ không còn tính theo lượt xem (ảnh tĩnh vẽ một lần mỗi điểm rồi cache); không còn khoá nào
+trong bundle web; build web không còn biến bản đồ.
 
 **Mất:**
 
-* Không còn khung bản đồ trên trang xe và hồ sơ xe — thay bằng một liên kết ra Google Maps.
+* Bản đồ trên trang xe, hồ sơ xe và ô địa chỉ chỉ là ảnh: không kéo, không zoom. Xem rộng hay dẫn
+  đường thì bấm "Mở bằng Google Maps".
+* Cache ảnh nằm trong bộ nhớ tiến trình: mỗi lần deploy/khởi động lại, mỗi điểm được vẽ lại một lần
+  (một giao dịch).
 * Không chỉnh được toạ độ trên web: địa chỉ Vietmap chưa biết đi đường "dùng đúng địa chỉ đã nhập",
   toạ độ do server tra (có thể lệch hoặc không có) thay vì do người dùng ghim.
 * Mỗi lần chọn gợi ý tốn một giao dịch Place (gợi ý không kèm toạ độ), giảm bằng cache theo mã.

@@ -26,7 +26,7 @@ thiếu thì phần đó suy giảm có kiểm soát chứ không làm sập app
 | 1 | **Cloudflare R2** | Tải ảnh xe, ảnh gian hàng, giấy tờ, đính kèm chat | Mọi endpoint upload trả **503 `UPLOADS_NOT_CONFIGURED`** | Gần như 0 ở mức staging |
 | 2 | **Google OAuth** | Nút "Đăng nhập bằng Google" | Nút trả `SOCIAL_NOT_CONFIGURED`; mật khẩu + OTP vẫn chạy | Miễn phí |
 | 3 | **Facebook Login** | Nút "Đăng nhập bằng Facebook" | như trên | Miễn phí |
-| 4 | **Vietmap** (1 key server) | Gợi ý địa chỉ, ước lượng quãng đường + phí giao | Ô địa chỉ nhập tay, phí giao không hiện | Có — tính theo giao dịch, xem 4.6 |
+| 4 | **Vietmap** (1 key server) | Gợi ý địa chỉ, ước lượng quãng đường + phí giao, ảnh bản đồ tĩnh | Ô địa chỉ nhập tay, phí giao không hiện, khung ảnh bản đồ tự ẩn | Có — tính theo giao dịch, xem 4.6 |
 | 5 | **Google Calendar** | Lớp ngày lễ trên lịch xe | `GET /holidays` trả rỗng | Miễn phí |
 | 6 | **Firebase** | Chat **realtime** | Chat vẫn chạy trên PostgreSQL, chỉ không đẩy tức thì | Miễn phí ở mức này |
 | 7 | **SMTP** | Thư mời thành viên + đặt lại mật khẩu gửi thật | Email **in ra log** container — chạy được nhưng KHÔNG đi qua nodemailer, nên lỗi SMTP/TLS/`From` chỉ lộ ở production. Staging nay gửi thật (§7.2); máy dev dùng Mailpit (§7.1) | Miễn phí ở mức pilot |
@@ -328,7 +328,7 @@ Các lớp tiết kiệm có sẵn (ADR 0061 điều 3):
 
 | Lớp | Tiết kiệm gì |
 | --- | --- |
-| **Bản đồ là ảnh tĩnh vẽ một lần mỗi chi nhánh** (API cache, trình duyệt giữ 1 ngày) thay vì bản đồ tương tác | chi phí tile (25 tile = 1 giao dịch) cho MỖI lượt xem trang xe |
+| **Bản đồ là ảnh tĩnh vẽ một lần mỗi điểm** (cache trong bộ nhớ API — mất khi khởi động lại; trình duyệt giữ 1 ngày) thay vì bản đồ tương tác | chi phí tile (25 tile = 1 giao dịch) cho MỖI lượt xem trang xe |
 | **Cầu dao** `GEO_DAILY_CALL_BUDGET` request/ngày (mặc định 3.000) — chạm trần thì bản đồ coi như "không hỏi được" tới hết ngày, log cảnh báo một lần | chặn một trận quét endpoint `/places/*` công khai biến thành hoá đơn |
 | Debounce 400ms + tối thiểu 3 ký tự + chỉ hỏi khi đã biết tỉnh + `@Throttle` 30/phút/IP | lượt gõ thừa, lưu lượng không thật |
 | Cache gợi ý trong bộ nhớ 10 phút | lượt gõ lặp lại, quay lại ô |
@@ -337,9 +337,10 @@ Các lớp tiết kiệm có sẵn (ADR 0061 điều 3):
 | Cache DB **90 ngày** cho geocode/reverse/quãng đường (cả ca "không tìm thấy") | cùng địa chỉ / cùng cặp điểm không gọi lại |
 | Lọc trước bằng đường chim bay | ngoài bán kính giao thì không gọi Route |
 
-Ước tính ở mức pilot, mỗi tháng: 3.000 lượt nhập địa chỉ × ~4 gợi ý = 12.000 · 3.000 lượt chọn =
-3.000 · 2.000 báo giá = 2.000 · ~500 địa chỉ gõ tay × 2 = 1.000 ⇒ **~18.000 giao dịch/tháng**,
-chưa trừ phần trúng cache. Gói trial 60.000 giao dịch đủ ~3 tháng ở mức này; giá gói trả phí lấy
+Ước tính ở mức pilot, mỗi tháng: 3.000 lượt nhập địa chỉ × ~4 gợi ý = 12.000 · 3.000 lượt chọn ×
+(1 Place + 1 ảnh địa điểm vừa chọn) = 6.000 · 2.000 báo giá = 2.000 · ~500 địa chỉ gõ tay × 2 = 1.000
+· ảnh trang xe/chi nhánh ≈ số xe × số lần deploy (vài trăm) ⇒ **~21.000 giao dịch/tháng**, chưa trừ
+phần trúng cache. Gói trial 60.000 giao dịch đủ ~3 tháng ở mức này; giá gói trả phí lấy
 từ console (Q2).
 
 Việc vận hành:
