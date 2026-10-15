@@ -64,11 +64,12 @@ const PER_ROUTE: Readonly<Record<string, Readonly<Record<string, PlanFeature>>>>
  * NGOẠI LỆ có tên và có lý do — không phải "chưa làm tới".
  *
  * Bậc cơ bản luôn có đúng MỘT chi nhánh mặc định do `registerShop` tạo, và địa chỉ của nó là địa
- * chỉ công khai của gian hàng trên chợ. Khoá ba route này là khoá một thứ thuộc bộ cơ bản
+ * chỉ công khai của gian hàng trên chợ. Khoá bốn route này là khoá một thứ thuộc bộ cơ bản
  * (ADR 0027 điều 1) — và khoá đọc thì `PATCH` cũng vô dụng vì không có form nào load được.
+ * `map` là ảnh bản đồ của chính chi nhánh đó (ADR 0061): cùng cổng với `get`, không hơn.
  */
 const INTENTIONALLY_UNGATED: Readonly<Record<string, readonly string[]>> = {
-  BranchesController: ['list', 'get', 'update'],
+  BranchesController: ['list', 'get', 'map', 'update'],
 };
 
 /**
@@ -224,7 +225,7 @@ describe('phủ cổng chặn năng lực — bất biến chung', () => {
       .filter((r) => !r.trackOnly && r.feature === null)
       .map((r) => r.handler)
       .sort();
-    expect(open).toEqual(['get', 'list', 'update']);
+    expect(open).toEqual(['get', 'list', 'map', 'update']);
   });
 
   it('escrow_hold chỉ gác đường GHI công tắc thu cọc — đường ĐỌC luôn mở (Phase 6)', () => {

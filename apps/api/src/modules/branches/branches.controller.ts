@@ -42,9 +42,10 @@ import {
  * lấy xe, và điểm xuất phát của mọi phép tính phí giao tận nơi. Khoá lại là khoá một thứ thuộc
  * bộ cơ bản (ADR 0027 điều 1).
  *
- * Nên ba route dưới đây CỐ Ý không có cổng nào:
+ * Nên bốn route dưới đây CỐ Ý không có cổng nào:
  *   GET /branches · GET /branches/:id — không đọc được thì không có form nào để sửa;
- *   PATCH /branches/:id              — sửa địa chỉ chi nhánh của chính mình.
+ *   GET /branches/:id/map             — ảnh bản đồ của chính chi nhánh đó (ADR 0061);
+ *   PATCH /branches/:id               — sửa địa chỉ chi nhánh của chính mình.
  *
  * ⚠️ Tới 17/09/2026 `@SubscriptionTrackOnly()` còn nằm ở CLASS, và nó khoá luôn ba route trên
  * với tuyến hoa hồng. Hậu quả không phải một menu bị ẩn: `POST /vehicles` BẮT BUỘC `branchId`,
@@ -53,7 +54,7 @@ import {
  * tuyến là bộ quản lý NHIỀU chi nhánh, không phải địa chỉ của chính mình (ADR 0038 điều 4).
  *
  * Ngoại lệ nằm ở METADATA chứ không giấu trong service: nó hiện trong `route-access`, và
- * `plan-feature-coverage.spec.ts` khai đúng ba route này thành danh sách chờ cho CẢ HAI cổng —
+ * `plan-feature-coverage.spec.ts` khai đúng bốn route này thành danh sách chờ cho CẢ HAI cổng —
  * thêm bớt một route ở đây là đỏ CI, không phải một thay đổi im lặng.
  */
 @ApiTags('branches')
