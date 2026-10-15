@@ -63,6 +63,9 @@ const SUPPORT_ALLOWLIST = [
   'SupportController.list',
   'TenantsController.current',
   'TenantsController.myShop',
+  // Công tắc "Có hỗ trợ xuất hoá đơn VAT" — CHỈ ĐỌC, cùng `tenant_profile.view` (ADR 0059 §4).
+  // `TenantsController.setVatInvoiceSupport` (PATCH) CỐ Ý không vào phiên.
+  'TenantsController.vatInvoiceSetting',
   'VehicleBlocksController.getOne',
   'VehiclesController.getPricing',
   // ── Đợt 2B: GHI hẹp, mỗi thao tác một capability (ADR 0050 §13) ──
