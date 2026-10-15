@@ -6,12 +6,15 @@ import { renderWithIntl } from '@/i18n/test-utils';
 import { InviteMemberModal } from './InviteMemberModal';
 
 /**
- * Hộp thoại GỬI LỜI MỜI (đổi tên từ `AddMemberModal` ngày 03/09/2026 cùng lúc endpoint
- * `POST /members` bị gỡ).
+ * Hộp thoại TẠO LỜI MỜI (đổi tên từ `AddMemberModal` ngày 03/09/2026 cùng lúc endpoint
+ * `POST /members` bị gỡ; đổi sang mời bằng SĐT ở ADR 0060).
  *
- * Ngoài payload/thông báo/thời điểm đóng như trước, bộ này khoá thêm MỘT điều mới và quan
- * trọng hơn cả: hộp thoại phải nói rõ người được mời CHƯA vào gian hàng. Người bấm gửi mà
- * tưởng đã thêm xong sẽ đi tìm họ trong bảng thành viên và báo là lỗi.
+ * Bộ này khoá ba điều:
+ * - hộp thoại nói rõ người được mời CHƯA vào gian hàng — người bấm tạo mà tưởng đã thêm xong sẽ
+ *   đi tìm họ trong bảng thành viên và báo là lỗi;
+ * - mời bằng SỐ ĐIỆN THOẠI (định danh đăng nhập của site partner), không phải email;
+ * - tạo xong KHÔNG đóng: liên kết mời chỉ có ở phản hồi tạo, đóng là mất — người mời sao chép
+ *   rồi mới bấm "Xong".
  */
 const mutation = vi.hoisted(() => ({
   mutate: vi.fn(),
@@ -37,6 +40,8 @@ vi.mock('@/hooks/use-media-query', () => ({
   useMediaQuery: () => false,
 }));
 
+const INVITE_URL = 'https://partner.xeprime.test/invites/tok_abc';
+
 function renderModal(props: Partial<{ open: boolean; onClose: () => void }> = {}) {
   const onClose = props.onClose ?? vi.fn();
   const utils = renderWithIntl(
@@ -47,8 +52,22 @@ function renderModal(props: Partial<{ open: boolean; onClose: () => void }> = {}
   return { ...utils, onClose };
 }
 
-function fillForm(email = 'nhanvien@congty.vn') {
-  fireEvent.change(screen.getByLabelText('Email'), { target: { value: email } });
+function fillForm(phone = '0901234567') {
+  fireEvent.change(screen.getByLabelText('Số điện thoại'), { target: { value: phone } });
+}
+
+/** Điền, bấm tạo, rồi cho server trả lời mời vừa tạo. */
+async function createInvite() {
+  fillForm();
+  fireEvent.click(screen.getByRole('button', { name: 'Tạo lời mời' }));
+  await waitFor(() => expect(mutation.mutate).toHaveBeenCalledTimes(1));
+  mutation.mutate.mock.calls[0]![1].onSuccess({
+    id: 'inv_1',
+    phone: '0901234567',
+    email: null,
+    roleKey: 'shop_staff',
+    inviteUrl: INVITE_URL,
+  });
 }
 
 beforeEach(() => {
@@ -58,7 +77,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('InviteMemberModal — hành vi hiện tại', () => {
+describe('InviteMemberModal', () => {
   it('tiêu đề nói MỜI, không phải THÊM', () => {
     renderModal();
     expect(screen.getByText('Mời thành viên')).toBeTruthy();
@@ -70,90 +89,107 @@ describe('InviteMemberModal — hành vi hiện tại', () => {
     expect(screen.getByText(/chỉ vào gian hàng sau khi họ tự bấm đồng ý/)).toBeTruthy();
   });
 
-  it('vai trò mặc định là shop_staff và không cho chọn shop_owner', () => {
+  it('mời bằng số điện thoại, không còn ô email', () => {
+    renderModal();
+    expect(screen.getByLabelText('Số điện thoại')).toBeTruthy();
+    expect(screen.queryByLabelText('Email')).toBeNull();
+  });
+
+  it('vai trò mặc định là shop_staff', () => {
     renderModal();
     // Giá trị mặc định hiển thị trên Select.
     expect(screen.getByText('Nhân viên gian hàng')).toBeTruthy();
   });
 
-  it('email rỗng thì không gọi mutation', async () => {
+  it('số điện thoại rỗng thì không gọi mutation', async () => {
     renderModal();
-    fireEvent.click(screen.getByRole('button', { name: 'Gửi' }));
-    await waitFor(() => expect(screen.getByText('Nhập email')).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo lời mời' }));
+    await waitFor(() => expect(screen.getByText('Nhập số điện thoại')).toBeTruthy());
     expect(mutation.mutate).not.toHaveBeenCalled();
   });
 
-  it('email sai định dạng thì không gọi mutation', async () => {
+  it('số điện thoại sai định dạng (kể cả một email) thì không gọi mutation', async () => {
     renderModal();
-    fillForm('khong-phai-email');
-    fireEvent.click(screen.getByRole('button', { name: 'Gửi' }));
-    await waitFor(() => expect(screen.getByText('Email không hợp lệ')).toBeTruthy());
+    fillForm('nhanvien@congty.vn');
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo lời mời' }));
+    await waitFor(() => expect(screen.getByText('Số điện thoại không hợp lệ')).toBeTruthy());
     expect(mutation.mutate).not.toHaveBeenCalled();
   });
 
-  it('gửi email đã trim kèm roleKey', async () => {
+  it('gửi số điện thoại đã trim kèm roleKey', async () => {
     renderModal();
-    fillForm('  nhanvien@congty.vn  ');
-    fireEvent.click(screen.getByRole('button', { name: 'Gửi' }));
+    fillForm('  0901234567  ');
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo lời mời' }));
 
     await waitFor(() => expect(mutation.mutate).toHaveBeenCalledTimes(1));
     expect(mutation.mutate.mock.calls[0]![0]).toEqual({
-      email: 'nhanvien@congty.vn',
+      phone: '0901234567',
       roleKey: 'shop_staff',
       // Không chọn chi nhánh nào = mời vào TOÀN gian hàng (ADR 0052).
       branchScope: 'all',
     });
   });
 
-  it('thành công: báo đã GỬI LỜI MỜI rồi đóng', async () => {
+  it('tạo xong: hiện liên kết mời + nút sao chép, và KHÔNG tự đóng', async () => {
     const { onClose } = renderModal();
-    fillForm();
-    fireEvent.click(screen.getByRole('button', { name: 'Gửi' }));
+    await createInvite();
 
-    await waitFor(() => expect(mutation.mutate).toHaveBeenCalled());
-    mutation.mutate.mock.calls[0]![1].onSuccess({ emailSent: true });
+    expect(await screen.findByText('Đã tạo lời mời')).toBeTruthy();
+    expect(screen.getByLabelText<HTMLInputElement>('Liên kết mời').value).toBe(INVITE_URL);
+    expect(screen.getByRole('button', { name: 'Sao chép liên kết' })).toBeTruthy();
+    expect(screen.getByText(/Gửi liên kết này cho 0901234567/)).toBeTruthy();
+    expect(onClose).not.toHaveBeenCalled();
 
-    expect(await screen.findByText('Đã gửi lời mời')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Xong' }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   /**
-   * SMTP hỏng: lời mời ĐÃ tạo nhưng thư không đi được. Server trả `emailSent: false` thay vì
-   * ném 500 (staging 04/09/2026), và màn hình phải nói thật — báo "Đã gửi lời mời" ở đây là để
-   * người gửi ngồi chờ một lá thư không tồn tại.
+   * Nơi gọi không remount hộp theo `open`. Không dọn khi bấm "Xong" thì lần mở kế tiếp vẫn hiện
+   * liên kết của lời mời TRƯỚC — người mời gửi nhầm link cũ cho người mới.
    */
-  it('tạo được nhưng thư hỏng: cảnh báo CHƯA gửi được, không nói đã gửi', async () => {
-    const { onClose } = renderModal();
-    fillForm();
-    fireEvent.click(screen.getByRole('button', { name: 'Gửi' }));
+  it('bấm Xong rồi mở lại: về form trống, không còn liên kết cũ', async () => {
+    const onClose = vi.fn();
+    const { rerender } = renderModal({ onClose });
+    await createInvite();
+    fireEvent.click(await screen.findByRole('button', { name: 'Xong' }));
 
-    await waitFor(() => expect(mutation.mutate).toHaveBeenCalled());
-    mutation.mutate.mock.calls[0]![1].onSuccess({ emailSent: false });
+    rerender(
+      <App>
+        <InviteMemberModal open={false} onClose={onClose} />
+      </App>,
+    );
+    rerender(
+      <App>
+        <InviteMemberModal open onClose={onClose} />
+      </App>,
+    );
 
-    expect(await screen.findByText(/CHƯA gửi được thư/)).toBeTruthy();
-    expect(screen.queryByText('Đã gửi lời mời')).toBeNull();
-    // Vẫn đóng: lời mời có thật và đã nằm ở bảng "Lời mời đang chờ".
-    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('Đã tạo lời mời')).toBeNull();
+    expect(screen.getByLabelText<HTMLInputElement>('Số điện thoại').value).toBe('');
   });
 
   it('lỗi: hiện thông báo lỗi và KHÔNG đóng', async () => {
     const { onClose } = renderModal();
     fillForm();
-    fireEvent.click(screen.getByRole('button', { name: 'Gửi' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo lời mời' }));
 
     await waitFor(() => expect(mutation.mutate).toHaveBeenCalled());
-    mutation.mutate.mock.calls[0]![1].onError(new Error('Email đã là thành viên'));
+    mutation.mutate.mock.calls[0]![1].onError(new Error('Số này đã là thành viên'));
 
     // ADR 0012: message tiếng Việt của backend KHÔNG lên màn hình — lỗi dịch từ MÃ, và một
     // Error trần không có mã nên rơi về câu chung.
     expect(await screen.findByText('Đã có lỗi xảy ra. Vui lòng thử lại.')).toBeTruthy();
+    expect(screen.queryByText('Đã tạo lời mời')).toBeNull();
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it('đang gửi thì nút Gửi ở trạng thái loading', () => {
+  it('đang tạo thì nút ở trạng thái loading', () => {
     mutation.isPending = true;
     renderModal();
-    expect(screen.getByRole('button', { name: /Gửi/ }).className).toContain('ant-btn-loading');
+    expect(screen.getByRole('button', { name: /Tạo lời mời/ }).className).toContain(
+      'ant-btn-loading',
+    );
   });
 
   it('nút Huỷ gọi onClose', () => {
@@ -163,13 +199,12 @@ describe('InviteMemberModal — hành vi hiện tại', () => {
   });
 
   /**
-   * Hành vi ĐANG CÓ, cố ý khoá lại: docstring của component nói "remount theo `open`", nhưng
-   * caller không truyền `key`, nên `useForm` sống sót qua lần đóng — mở lại vẫn thấy email cũ.
-   * Không sửa ở batch này; chỉ ghi nhận để lần thay vỏ không vô tình đổi.
+   * Hành vi ĐANG CÓ, cố ý khoá lại: caller không truyền `key`, nên `useForm` sống sót qua lần
+   * đóng bằng "Huỷ" — mở lại vẫn thấy số đã nhập dở. Chỉ "Xong" (sau khi đã tạo) mới dọn form.
    */
-  it('đóng rồi mở lại vẫn giữ email đã nhập', () => {
+  it('huỷ rồi mở lại vẫn giữ số đã nhập dở', () => {
     const { rerender } = renderModal();
-    fillForm('giu-lai@congty.vn');
+    fillForm('0912345678');
 
     rerender(
       <App>
@@ -182,6 +217,6 @@ describe('InviteMemberModal — hành vi hiện tại', () => {
       </App>,
     );
 
-    expect(screen.getByLabelText<HTMLInputElement>('Email').value).toBe('giu-lai@congty.vn');
+    expect(screen.getByLabelText<HTMLInputElement>('Số điện thoại').value).toBe('0912345678');
   });
 });

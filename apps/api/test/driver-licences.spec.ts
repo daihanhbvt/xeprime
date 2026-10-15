@@ -3,6 +3,7 @@ import {
   ACCOUNT_REALM,
   API_ERROR_CODE,
   BILLING_MODE,
+  BOOKING_REQUEST_STATUS,
   DRIVER_LICENCE_DECISION_SOURCE,
   DRIVER_LICENCE_KIND,
   DRIVER_LICENCE_REJECT_REASON,
@@ -15,7 +16,6 @@ import {
   VEHICLE_TYPE,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
-import type { AuthService } from '../src/modules/auth/auth.service';
 import type { DriverLicencesService } from '../src/modules/driver-licences/driver-licences.service';
 import {
   DriverLicenceReaderError,
@@ -23,10 +23,10 @@ import {
   type DriverLicenceReader,
   type DriverLicenceReading,
 } from '../src/modules/driver-licences/reader/driver-licence-reader';
-import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import type { R2Service } from '../src/modules/storage/r2.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { giveTenantPlan } from './helpers/billing-fixture';
+import { customerAccountFor } from './helpers/customer-account';
 import { makeBookingRequestsService, makeDriverLicencesService } from './helpers/service-factory';
 
 /**
@@ -659,7 +659,11 @@ describe('Cổng đặt xe', () => {
     await expect(serviceOff.assertCanDriveForTrip({ ...trip, userId })).resolves.toBeUndefined();
   });
 
-  maybe('khách vãng lai chưa có bằng bị chặn TRƯỚC khi tạo tài khoản theo SĐT', async () => {
+  /*
+   * Cổng ở ĐƯỜNG GỬI YÊU CẦU. Từ ADR 0060 người gửi luôn là một tài khoản khách đã đăng nhập, nên
+   * cổng soát bằng lái của CHÍNH tài khoản đó — không còn lượt soát trước cho khách vãng lai.
+   */
+  maybe('tài khoản chưa có bằng bị chặn ở đường gửi yêu cầu; có bằng hợp lệ thì qua', async () => {
     const ownerId = newId();
     const tenantId = newId();
     const vehicleId = newId();
@@ -706,37 +710,36 @@ describe('Cổng đặt xe', () => {
       },
     });
 
-    let created = 0;
-    const requests = makeBookingRequestsService(asService, {
-      phoneVerification: {
-        assertPhoneVerifiedForBooking: async () => {},
-      } as unknown as PhoneVerificationService,
-      auth: {
-        resolveOrCreateUserByPhone: async () => {
-          created += 1;
-          return { userId: newId() };
-        },
-      } as unknown as AuthService,
-      driverLicences: service,
-    });
+    const requests = makeBookingRequestsService(asService, { driverLicences: service });
+    // SĐT riêng theo lượt chạy — `(realm, phone)` là khoá tìm-hoặc-tạo của tài khoản khách.
+    const customerId = await customerAccountFor(
+      asService,
+      `0947${String(Date.now()).slice(-6)}`,
+      'Khách bằng lái',
+    );
+    userIds.push(customerId);
+    // 09:00 giờ VN — trong khung giao nhận mặc định, để thứ duy nhất chặn lượt gửi là bằng lái.
     const pickup = new Date(Date.now() + 5 * 86_400_000);
+    pickup.setUTCHours(2, 0, 0, 0);
+    const dto = {
+      vehicleId,
+      pickupAt: pickup.toISOString(),
+      returnAt: new Date(pickup.getTime() + 2 * 86_400_000).toISOString(),
+    };
     try {
       await expectCode(
-        requests.submitPublic(
-          {
-            vehicleId,
-            customerName: 'Khách lạ',
-            customerPhone: '0977000111',
-            pickupAt: pickup.toISOString(),
-            returnAt: new Date(pickup.getTime() + 2 * 86_400_000).toISOString(),
-          },
-          null,
-        ),
+        requests.submitPublic(dto, customerId),
         API_ERROR_CODE.DRIVER_LICENCE_REQUIRED,
       );
-      expect(created).toBe(0);
       expect(await prisma.bookingRequest.count({ where: { vehicleId } })).toBe(0);
+
+      // Cùng tài khoản nộp bằng (máy tự xác thực) ⇒ đúng lượt gửi đó đi qua.
+      await submit(service, customerId);
+      const receipt = await requests.submitPublic(dto, customerId);
+      expect(receipt.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
     } finally {
+      await prisma.bookingRequest.deleteMany({ where: { tenantId } });
+      await prisma.notification.deleteMany({ where: { tenantId } });
       await prisma.tenantCustomer.deleteMany({ where: { tenantId } });
       await prisma.vehicle.deleteMany({ where: { tenantId } });
       await prisma.tenantSubscription.deleteMany({ where: { tenantId } });

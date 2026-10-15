@@ -14,7 +14,9 @@
     "CURRENT_PASSWORD_INCORRECT": "Your current password is incorrect.",
     "PASSWORD_NOT_SET": "This account doesn't have a password yet. Set one for the first time instead of changing it.",
     "PASSWORD_UNCHANGED": "Your new password must be different from the current one.",
-    "SOCIAL_NOT_CONFIGURED": "This sign-in method isn't available yet. Try your email, phone number or password instead.",
+    "PHONE_LOGIN_REQUIRED": "Please sign in with your phone number and password.",
+    "OTP_LOGIN_RETIRED": "Signing in with a one-time code is no longer supported. Sign in with your phone number and password, or use \"Forgot password\".",
+    "SOCIAL_NOT_CONFIGURED": "This sign-in option is not available yet. Please sign in with your phone number and password.",
     "SOCIAL_STATE_INVALID": "That sign-in attempt has expired. Please start again.",
     "SOCIAL_CANCELLED": "You cancelled at the permission step, so you weren't signed in.",
     "SOCIAL_EXCHANGE_FAILED": "We couldn't reach the sign-in provider. Please try again in a moment.",
@@ -86,6 +88,7 @@
     "INVITE_INVALID": "This invitation does not exist, was already answered, or has been revoked.",
     "INVITE_EXPIRED": "This invitation has expired. Ask the shop to send a new one.",
     "INVITE_EMAIL_MISMATCH": "This invitation is for a different email address. Sign in with the address that received it.",
+    "INVITE_PHONE_MISMATCH": "This invitation is for a different phone number. Sign in with the account that has the invited number.",
     "INVITE_ALREADY_MEMBER": "You are already a member of this shop.",
     "BANK_TX_ALREADY_HANDLED": "This transaction has already been handled. Reload the list to see its current state.",
     "BANK_TX_TARGET_NOT_PAYABLE": "The selected invoice can no longer accept payment. Ask the shop to issue a new invoice and match against the new code.",
@@ -177,7 +180,8 @@
     "REALM_NOT_ALLOWED": "This account can't be used here. Sign in on the site meant for your account.",
     "REALM_LOGIN_METHOD_NOT_ALLOWED": "This sign-in method isn't available here. Sign in with your email and password.",
     "ORIGIN_NOT_ALLOWED": "The request was blocked because it didn't come from a XePrime page. Reload the page and try again.",
-    "MEMBER_ALREADY_IN_OTHER_TENANT": "This account already works for another shop. Each partner account belongs to one shop only."
+    "MEMBER_ALREADY_IN_OTHER_TENANT": "This account already works for another shop. Each partner account belongs to one shop only.",
+    "OTP_SMS_REQUIRED_IN_PRODUCTION": "Production always sends OTP SMS — this switch cannot be turned off."
   },
   "appCode": {
     "PLAN_LIMIT_REACHED": "Your account has reached its limit.",
@@ -187,7 +191,17 @@
     "PARTNER_ACCESS_REQUIRED": "This account is not covered by the XePrime Partner app. If you are a renter or an individual vehicle owner, please use the XePrime app.",
     "TENANT_BILLING_NOT_CONFIGURED": "We could not determine your shop account details, so fees cannot be calculated. Contact XePrime support before taking new bookings.",
     "SUBSCRIPTION_TRACK_ONLY": "This area is not available for your account yet.",
-    "SUBSCRIPTION_INVOICE_PARTIALLY_PAID": "There is an item pending review. Contact XePrime support for guidance."
+    "SUBSCRIPTION_INVOICE_PARTIALLY_PAID": "There is an item pending review. Contact XePrime support for guidance.",
+    "PARTNER_REGISTRATION_NOT_SUPPORTED": "A partner account cannot be created from the app right now. Contact XePrime for help.",
+    "DEPOSIT_ALWAYS_REQUIRED": "Personal owners always collect the hold through XePrime — this switch cannot be turned off.",
+    "PLAN_NOT_SELF_SERVE": "Contact XePrime for advice.",
+    "PLAN_CONSULTATION_DISABLED": "Contacting an advisor through the app is not available yet.",
+    "DEFAULT_COMMISSION_PLAN_MISSING": "We couldn't open your shop due to a configuration issue on XePrime's side. Please contact XePrime support.",
+    "SUBSCRIPTION_LATER_TERM_EXISTS": "This action isn't available right now. Please contact XePrime support.",
+    "PLAN_IN_USE": "This action isn't available right now. Please contact XePrime support.",
+    "DEFAULT_PLAN_PROTECTED": "This action isn't available right now. Please contact XePrime support.",
+    "PLAN_INCENTIVE_INVALID": "This action isn't available right now. Please contact XePrime support.",
+    "BANK_TX_TARGET_NOT_PAYABLE": "This action isn't available right now. Please contact XePrime support."
   },
   "upload": {
     "imageType": "Only JPG, PNG or WebP images are accepted",

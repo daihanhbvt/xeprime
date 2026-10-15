@@ -1,6 +1,6 @@
 # ADR 0042 — Địa chỉ CÓ GHIM là một địa điểm ĐÃ ĐƯỢC BẢN ĐỒ XÁC NHẬN, không phải một ô chữ
 
-Ngày: 17/09/2026 · Trạng thái: **Accepted; ghi đè [ADR 0035](0035-two-tier-administrative-address.md) điều 3 (phần xã/phường) và điều 5**
+Ngày: 17/09/2026 · Trạng thái: **Accepted; ghi đè [ADR 0035](0035-two-tier-administrative-address.md) điều 3 (phần xã/phường) và điều 5. Điều 1 (nguồn "đặt ghim"), điều 2 (bắt buộc toạ độ) và điều 5 (bản đồ mở ở đâu) bị [ADR 0061](0061-vietmap-geo-provider.md) ghi đè** — web không còn bản đồ; nguồn xác nhận thứ hai là "dùng đúng địa chỉ đã nhập", và toạ độ không còn bắt buộc (server tra địa chỉ chữ khi cần).
 
 Liên quan: [ADR 0018](0018-map-delivery-distance.md) (quãng đường giao xe đo từ toạ độ; khoá server
 không ra client), [ADR 0037](0037-geoapify-osm-map-provider.md) (nhà cung cấp bản đồ),
@@ -66,7 +66,8 @@ khối địa chỉ của khách đều dùng nó.
 
 `/places/search` trả `available: false` ⇒ ô quay về một ô chữ tự do, không xoá gì. Và điều kiện
 **bắt buộc có toạ độ** chỉ áp khi người dùng thật sự tạo ra được một toạ độ — tức khi trình duyệt
-dựng được bản đồ tương tác (`NEXT_PUBLIC_GEOAPIFY_MAP_KEY`). Thiếu khoá thì không có gợi ý để chọn
+dựng được bản đồ tương tác (từ ADR 0061 web không còn bản đồ, nên điều kiện này không còn áp ở
+web — xem ADR 0061 điều 6). Thiếu khoá thì không có gợi ý để chọn
 và cũng không có bản đồ để ghim, nên đòi toạ độ là khoá nút "Tiếp tục" bằng một lỗi không thao tác
 nào sửa được. Đây là ADR 0035 điều 6 áp dụng đúng chữ.
 

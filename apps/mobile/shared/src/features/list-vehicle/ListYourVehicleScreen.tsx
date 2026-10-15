@@ -64,7 +64,13 @@ function strong(chunks: ReactNode): ReactNode {
 export function ListYourVehicleScreen({
   showBack = true,
   footer,
+  onChoose,
 }: {
+  /**
+   * Thay đích mặc định của nút chính: màn đăng ký đối tác của app Partner dùng lựa chọn này để mở
+   * form đăng ký một trang của đúng tuyến (như web `/register?track=`).
+   */
+  onChoose?: (track: RegistrationTrack) => void;
   /**
    * `false` = màn chọn cách cho thuê của app XePrime Partner cho tài khoản đối tác CHƯA có gian hàng
    * (web `PartnerRegisterView` → `showBack={false}`): không có nơi nào để lui về.
@@ -86,12 +92,17 @@ export function ListYourVehicleScreen({
    * Partner (ADR 0053); ở app Partner chúng là bước đầu THẬT của hai tuyến — wizard đăng xe nhanh
    * và onboarding gói.
    */
-  const go = () =>
+  const go = () => {
+    if (onChoose) {
+      onChoose(track);
+      return;
+    }
     navigateOnce(
       isPersonal
         ? ROUTES.listYourVehicle.register(VEHICLE_REGISTRATION_SOURCE.MARKETPLACE)
         : ROUTES.manage.onboarding(REGISTRATION_TRACK.PACKAGE),
     );
+  };
 
   return (
     <>
@@ -119,7 +130,7 @@ export function ListYourVehicleScreen({
           <Hero
             eyebrow={t('metaTitle')}
             title={t('title')}
-            subtitle={t('subtitle')}
+            subtitle={t('appSubtitle')}
             stepsTitle={t('how.title')}
             steps={[
               { key: 'account', title: t('how.account.title'), desc: t('how.account.desc') },
@@ -136,7 +147,7 @@ export function ListYourVehicleScreen({
               icon="car-sport-outline"
               badge={t('personal.badge')}
               title={t('personal.title')}
-              tagline={t('personal.tagline')}
+              tagline={t('personal.appTagline')}
               selected={isPersonal}
               selectedLabel={t('selected')}
               onSelect={() => setTrack(REGISTRATION_TRACK.COMMISSION)}
@@ -144,7 +155,7 @@ export function ListYourVehicleScreen({
             <TrackOption
               icon="storefront-outline"
               title={t('shop.title')}
-              tagline={t('shop.tagline')}
+              tagline={t('shop.appTagline')}
               selected={!isPersonal}
               selectedLabel={t('selected')}
               onSelect={() => setTrack(REGISTRATION_TRACK.PACKAGE)}
@@ -181,7 +192,7 @@ export function ListYourVehicleScreen({
             />
           ) : (
             <TrackDetail
-              body={t.rich('shop.body', { strong })}
+              body={t('shop.appBody')}
               features={[
                 { key: 'fleet', icon: 'git-network-outline', label: t('shop.features.fleet') },
                 {
@@ -194,8 +205,8 @@ export function ListYourVehicleScreen({
               art={images.ownerShopShowroom}
               artRatio={OWNER_SHOP_SHOWROOM_RATIO}
               offerIcon="ribbon-outline"
-              offerTitle={t('shop.offerTitle')}
-              offerBody={t('shop.offerBody')}
+              offerTitle={t('shop.appOfferTitle')}
+              offerBody={t('shop.appOfferBody')}
             />
           )}
 
@@ -204,10 +215,10 @@ export function ListYourVehicleScreen({
               <Ionicons name="sync-outline" size={iconSize.md} color={colors.primaryActive} />
               <YStack f={1} minWidth={0} gap={2}>
                 <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-                  {t('upgrade.title')}
+                  {t('upgrade.appTitle')}
                 </Text>
                 <Text col={colors.textMuted} fos={fontSize.label}>
-                  {t('upgrade.body')}
+                  {t('upgrade.appBody')}
                 </Text>
               </YStack>
             </XStack>

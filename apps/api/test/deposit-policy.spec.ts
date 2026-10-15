@@ -23,11 +23,10 @@ import {
   VEHICLE_TYPE,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
-import type { AuthService } from '../src/modules/auth/auth.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
-import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import { VehicleSettingsService } from '../src/modules/vehicle-settings/vehicle-settings.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { customerAccountFor } from './helpers/customer-account';
 import {
   makeBookingHoldsService,
   makeBookingRequestsService,
@@ -72,16 +71,7 @@ const holds = makeBookingHoldsService(asService);
  */
 const twoAxis = makeDepositPolicyService(asService, { platformMandatory: false });
 
-const phoneVerification = {
-  assertPhoneVerifiedForBooking: async () => {},
-} as unknown as PhoneVerificationService;
-const auth = {
-  resolveOrCreateUserByPhone: async () => ({ userId: null }),
-} as unknown as AuthService;
-
 const requests = makeBookingRequestsService(asService, {
-  phoneVerification,
-  auth,
   audit,
   notifications,
   occupancy,
@@ -97,8 +87,6 @@ const requests = makeBookingRequestsService(asService, {
  * production, và một spec xanh vì lý do sai.
  */
 const twoAxisRequests = makeBookingRequestsService(asService, {
-  phoneVerification,
-  auth,
   audit,
   notifications,
   occupancy,
@@ -121,6 +109,18 @@ const DAY = 24 * 3600_000;
 let dbAvailable = false;
 let phoneCounter = 0;
 const nextPhone = () => `0977${String(100000 + ++phoneCounter).slice(-6)}`;
+
+/** Tài khoản khách đã gửi yêu cầu trong spec — dọn ở `afterAll`. */
+const customerIds = new Set<string>();
+/**
+ * Người gửi yêu cầu: một tài khoản KHÁCH đã xác minh SĐT (ADR 0060) — mỗi lượt gửi một số mới,
+ * tức một người mới, nên trần chỗ giữ chưa trả của một khách không dính vào chính sách cọc.
+ */
+async function customer(name: string, phone: string): Promise<string> {
+  const id = await customerAccountFor(asService, phone, name);
+  customerIds.add(id);
+  return id;
+}
 
 interface Shop {
   owner: string;
@@ -242,12 +242,10 @@ async function submit(shop: Shop, offsetDays = 5, via = requests) {
   return via.submitPublic(
     {
       vehicleId: shop.vehicle,
-      customerName: 'Nguyễn Văn A',
-      customerPhone: nextPhone(),
       pickupAt: vnAt(offsetDays, 9).toISOString(),
       returnAt: vnAt(offsetDays + 2, 9).toISOString(),
     },
-    null,
+    await customer('Nguyễn Văn A', nextPhone()),
   );
 }
 
@@ -296,6 +294,7 @@ afterAll(async () => {
       await prisma.tenant.deleteMany({ where: { id: shop.tenant } });
       await prisma.user.deleteMany({ where: { id: shop.owner } });
     }
+    await prisma.user.deleteMany({ where: { id: { in: [...customerIds] } } });
   }
   await prisma.$disconnect();
 });
@@ -481,7 +480,7 @@ describe('PATCH /shop/payment-settings — chặn thật ở service (khi giai �
  */
 describe('Duyệt TAY áp đúng chính sách (khi giai đoạn kết thúc)', () => {
   maybe('gói + TẮT cọc → đơn ra đời ngay, không hold, mode = direct', async () => {
-    const { receipt } = await submit(packagePlus, 5, twoAxisRequests);
+    const receipt = await submit(packagePlus, 5, twoAxisRequests);
     const approved = await twoAxisRequests.approve(
       packagePlus.tenant,
       packagePlus.owner,
@@ -498,7 +497,7 @@ describe('Duyệt TAY áp đúng chính sách (khi giai đoạn kết thúc)', (
   maybe('gói + BẬT cọc → duyệt ra awaiting_hold, hold sinh ra, CHƯA có đơn', async () => {
     await setToggle(packagePlus.tenant, true);
     // Có thu tiền giữ chỗ ⇒ hold sinh lúc DUYỆT (ADR 0044 điều 2), không phải lúc gửi.
-    const { receipt } = await submit(packagePlus, 8, twoAxisRequests);
+    const receipt = await submit(packagePlus, 8, twoAxisRequests);
     const approved = await twoAxisRequests.approve(
       packagePlus.tenant,
       packagePlus.owner,
@@ -527,7 +526,7 @@ describe('Duyệt TAY áp đúng chính sách (khi giai đoạn kết thúc)', (
 
   maybe('hoa hồng → luôn có hold, kể cả khi công tắc bị đặt tắt', async () => {
     await setToggle(commission.tenant, false);
-    const { receipt } = await submit(commission, 11, twoAxisRequests);
+    const receipt = await submit(commission, 11, twoAxisRequests);
     const approved = await twoAxisRequests.approve(commission.tenant, commission.owner, receipt.id);
 
     expect(approved.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
@@ -543,7 +542,7 @@ describe('Duyệt TAY áp đúng chính sách (khi giai đoạn kết thúc)', (
 
   maybe('gói THIẾU cờ → không thu, mode = direct (gian hàng tự thoả thuận)', async () => {
     await setToggle(packageBasic.tenant, true); // bật lén: không có hiệu lực
-    const { receipt } = await submit(packageBasic, 14, twoAxisRequests);
+    const receipt = await submit(packageBasic, 14, twoAxisRequests);
     const approved = await twoAxisRequests.approve(
       packageBasic.tenant,
       packageBasic.owner,
@@ -569,7 +568,7 @@ describe('TỰ NHẬN đơn áp CÙNG chính sách với duyệt tay (khi giai �
     );
     await setToggle(packagePlus.tenant, true);
 
-    const { receipt } = await submit(packagePlus, 17, twoAxisRequests);
+    const receipt = await submit(packagePlus, 17, twoAxisRequests);
     const row = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: receipt.id } });
 
     expect(row.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
@@ -586,7 +585,7 @@ describe('TỰ NHẬN đơn áp CÙNG chính sách với duyệt tay (khi giai �
       HIDDEN_FEATURES,
     );
 
-    const { receipt } = await submit(packagePlus, 20, twoAxisRequests);
+    const receipt = await submit(packagePlus, 20, twoAxisRequests);
     const row = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: receipt.id } });
 
     expect(row.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
@@ -597,7 +596,7 @@ describe('TỰ NHẬN đơn áp CÙNG chính sách với duyệt tay (khi giai �
 
 describe('Đóng băng — ADR 0025 ràng buộc 4 (khi giai đoạn kết thúc)', () => {
   maybe('bật công tắc SAU khi đơn đã tạo không viết lại đơn đó', async () => {
-    const { receipt } = await submit(packagePlus, 23, twoAxisRequests);
+    const receipt = await submit(packagePlus, 23, twoAxisRequests);
     const approved = await twoAxisRequests.approve(
       packagePlus.tenant,
       packagePlus.owner,
@@ -630,7 +629,7 @@ describe('Công tắc đổi SAU khi hold đã sinh — đường tiền không 
     async () => {
       await setToggle(packagePlus.tenant, true);
       // Hold sinh lúc gian hàng NHẬN chuyến (ADR 0044) — từ đó khách cầm mã và đồng hồ chạy.
-      const { receipt } = await submit(packagePlus, 26);
+      const receipt = await submit(packagePlus, 26);
       const accepted = await requests.approve(packagePlus.tenant, packagePlus.owner, receipt.id);
       expect(accepted.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
 

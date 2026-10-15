@@ -40,19 +40,33 @@
   },
   "form": {
     "title": "Mời thành viên",
+    "submit": "Tạo lời mời",
     "notice": "Chúng tôi gửi thư mời tới địa chỉ này. Người được mời chỉ vào gian hàng sau khi họ tự bấm đồng ý.",
+    "noticePhone": "Người được mời đăng nhập (hoặc tạo) tài khoản đối tác bằng đúng số này, và chỉ vào gian hàng sau khi họ tự bấm đồng ý. Tạo xong, bạn sao chép liên kết mời và gửi cho họ (Zalo, tin nhắn).",
+    "phone": "Số điện thoại",
+    "phonePlaceholder": "0901234567",
     "email": "Email",
     "emailPlaceholder": "nhanvien@congty.vn",
     "role": "Vai trò",
     "errors": {
       "emailRequired": "Nhập email",
       "emailInvalid": "Email không hợp lệ",
+      "phoneRequired": "Nhập số điện thoại",
+      "phoneInvalid": "Số điện thoại không hợp lệ",
       "roleRequired": "Chọn vai trò",
       "branchRequired": "Chọn ít nhất một chi nhánh"
     },
     "branches": "Chi nhánh phụ trách",
     "branchesHelp": "Mặc định thấy toàn bộ gian hàng. Chọn chi nhánh cụ thể thì thành viên chỉ thấy xe, đơn và số liệu của các chi nhánh đó.",
     "branchesHelpLimited": "Bạn chỉ phụ trách một số chi nhánh nên chỉ giao được trong phạm vi đó. Thành viên chỉ thấy xe, đơn và số liệu của các chi nhánh được chọn."
+  },
+  "created": {
+    "title": "Đã tạo lời mời",
+    "body": "Gửi liên kết này cho {phone} qua Zalo hoặc tin nhắn. Liên kết chỉ hiện MỘT lần — nếu mất, hãy mời lại số này để tạo liên kết mới.",
+    "linkLabel": "Liên kết mời",
+    "copy": "Sao chép liên kết",
+    "safety": "Chỉ tài khoản đối tác có đúng số này (đã xác minh) mới dùng được liên kết.",
+    "done": "Xong"
   },
   "invites": {
     "title": "Lời mời đang chờ",
@@ -62,6 +76,7 @@
     "total": "{count, plural, other {# lời mời}}",
     "columns": {
       "email": "Email được mời",
+      "invitee": "Người được mời",
       "role": "Vai trò",
       "status": "Trạng thái",
       "expiresAt": "Hết hạn",
@@ -69,6 +84,7 @@
     },
     "revoke": "Thu hồi",
     "revokeConfirm": "Thu hồi lời mời này? Liên kết trong email sẽ hết giá trị ngay.",
+    "revokeConfirmLink": "Thu hồi lời mời này? Liên kết đã gửi sẽ hết giá trị ngay.",
     "invitedBy": "Mời bởi {name}",
     "expiresAtLine": "Hết hạn {at}",
     "expiresIn": "Còn {days, plural, other {# ngày}}",
@@ -80,6 +96,8 @@
     "invitedBy": "Người mời: {name}",
     "role": "Vai trò được mời",
     "invitedEmail": "Gửi tới",
+    "invitedPhone": "Số được mời",
+    "signInPartnerPromptPhone": "Lời mời này dành cho tài khoản ĐỐI TÁC — tách riêng với tài khoản thuê xe. Đăng nhập hoặc tạo tài khoản đối tác bằng đúng số điện thoại được mời để trả lời.",
     "expiresAt": "Hết hạn",
     "loadError": "Không mở được lời mời này",
     "signInPrompt": "Đăng nhập bằng địa chỉ email đã nhận thư mời để trả lời.",

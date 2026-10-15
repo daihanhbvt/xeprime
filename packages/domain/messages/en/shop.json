@@ -193,6 +193,18 @@
     "appliedTipLabel": "How this policy applies",
     "dirtyDiscard": "Discard"
   },
+  "vatInvoice": {
+    "title": "VAT invoice",
+    "subtitle": "One setting for all your vehicles. When on, renters see a badge on the vehicle card and page, and can filter for these vehicles on the marketplace.",
+    "label": "VAT invoice support",
+    "ariaLabel": "Turn VAT invoice support on or off for all vehicles",
+    "on": "On for all vehicles",
+    "off": "Off",
+    "note": "You issue the invoice for the rental — yourself, or through your company or a party you arrange — under a direct agreement with the renter. XePrime does not issue invoices on your behalf, and this setting does not change prices, fees, taxes or booking conditions.",
+    "enabled": "VAT invoice support turned on for all vehicles",
+    "disabled": "VAT invoice support turned off",
+    "loadError": "Could not load the VAT invoice setting"
+  },
   "paymentSettings": {
     "title": "Reservation payment through XePrime",
     "subtitle": "During this phase, every trip on XePrime collects the reservation amount from the customer before the trip is confirmed. This is NOT the security deposit you take at handover — that one you collect, hold and refund yourself, and it lives in the per-vehicle policy below.",

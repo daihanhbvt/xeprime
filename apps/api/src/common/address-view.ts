@@ -1,3 +1,4 @@
+import { isValidGeoPoint, type GeoPoint } from '@xeprime/domain';
 import type { AddressViewDto, GeoPinDto } from '../modules/locations/dto/address.dto';
 
 /** Toạ độ đọc lên từ Prisma — `Decimal` hoặc `number`, cả hai đều `toString()` được. */
@@ -73,4 +74,28 @@ export function pinOf(
     longitude: longitude.toString(),
     placeId: placeId ?? null,
   };
+}
+
+export interface BranchMapSource {
+  address: string | null;
+  latitude: DecimalLike;
+  longitude: DecimalLike;
+}
+
+/**
+ * Điểm ghim của một chi nhánh trên bản đồ, kèm dòng địa chỉ in lên ảnh — `null` khi không có gì
+ * để ghim. MỘT quy tắc cho toạ độ trên trang xe công khai, ảnh điểm nhận xe và ảnh chi nhánh ở hồ
+ * sơ xe (ADR 0061 điều 1); ba bản chép tay đã từng lệch nhau.
+ *
+ * Chỉ khi chi nhánh có ĐỊA CHỈ của chính nó: trang xe rơi về địa chỉ hồ sơ gian hàng khi chi
+ * nhánh chưa điền, và ghim toạ độ chi nhánh dưới một dòng địa chỉ khác là chỉ khách tới sai chỗ.
+ * Thiếu một trong hai toạ độ cũng là không có điểm — `Number(null)` là 0, không phải "chưa biết".
+ */
+export function branchMapTarget(
+  branch: BranchMapSource | null | undefined,
+): { point: GeoPoint; label: string } | null {
+  const address = branch?.address?.trim();
+  if (!address || branch?.latitude == null || branch.longitude == null) return null;
+  const point = { lat: Number(branch.latitude.toString()), lng: Number(branch.longitude.toString()) };
+  return isValidGeoPoint(point) ? { point, label: address } : null;
 }

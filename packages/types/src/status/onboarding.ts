@@ -21,15 +21,25 @@ export const PHONE_VERIFICATION_STATUS_VALUES = Object.values(
 ) as PhoneVerificationStatus[];
 
 /**
- * Thời điểm bắt xác thực SĐT (user_flow: chỉ bắt khi đặt xe / mở shop / public xe).
- * `login` = passwordless: OTP vừa xác thực SĐT vừa là phương thức đăng nhập (tạo/đăng nhập
- * tài khoản theo SĐT). OTP của mục đích này KHÔNG dùng chéo cho mục đích khác.
+ * Mục đích của một mã OTP. Mã của mục đích này KHÔNG dùng chéo cho mục đích khác (verify lọc
+ * theo `purpose`).
+ *
+ * Từ ADR 0060 OTP CHỈ chứng minh sở hữu số điện thoại — không mục đích nào tạo tài khoản hay cấp
+ * phiên đăng nhập. Đăng nhập là SĐT + mật khẩu (hoặc Google/Facebook).
  */
 export const PHONE_VERIFICATION_PURPOSE = {
   BOOKING: 'booking',
+  /**
+   * ⚠️ ĐÃ GỠ (ADR 0060): đăng nhập bằng OTP không còn. Server từ chối gửi mã cho mục đích này
+   * (`OTP_LOGIN_RETIRED`); hằng số ở lại vì DB còn hàng cũ mang giá trị này và bản app đang phát
+   * hành còn biên dịch theo nó.
+   */
   LOGIN: 'login',
+  /** Xác minh SĐT TRƯỚC khi tạo tài khoản bằng SĐT + mật khẩu (`POST /auth/register`). */
+  REGISTER: 'register',
   SHOP_REGISTER: 'shop_register',
   VEHICLE_PUBLIC: 'vehicle_public',
+  /** Quên mật khẩu bằng SĐT — mã chỉ mở quyền đặt mật khẩu mới, KHÔNG cấp phiên. */
   PASSWORD_RESET: 'password_reset',
   /**
    * Đổi/thêm SĐT trong trang tài khoản. Tách khỏi `login` vì hệ quả khác hẳn: `login` cấp phiên

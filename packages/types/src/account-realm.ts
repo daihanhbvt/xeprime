@@ -60,7 +60,20 @@ export function realmAllowsSelfRegistration(realm: AccountRealm): boolean {
   return realm !== ACCOUNT_REALM.PLATFORM;
 }
 
-/** Realm nào mở đăng nhập bằng OTP và bằng Google/Facebook. `platform` chỉ có mật khẩu. */
+/**
+ * Realm nào mở đăng nhập bằng Google/Facebook (và Apple trên iOS). `platform` chỉ có mật khẩu.
+ *
+ * Tên giữ nguyên vì app native còn import nó; từ ADR 0060 không còn đăng nhập bằng OTP ở realm
+ * nào, nên "passwordless" ở đây chỉ còn nghĩa là mạng xã hội.
+ */
 export function realmAllowsPasswordlessLogin(realm: AccountRealm): boolean {
+  return realm !== ACCOUNT_REALM.PLATFORM;
+}
+
+/**
+ * Realm nào chỉ đăng nhập bằng SỐ ĐIỆN THOẠI + mật khẩu — ADR 0060. `customer` và `partner`: định
+ * danh là SĐT, email không còn là cửa đăng nhập. `platform` giữ email + mật khẩu (ADR 0053 điều 3).
+ */
+export function realmRequiresPhoneLogin(realm: AccountRealm): boolean {
   return realm !== ACCOUNT_REALM.PLATFORM;
 }

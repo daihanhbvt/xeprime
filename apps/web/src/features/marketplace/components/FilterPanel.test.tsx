@@ -28,7 +28,7 @@ const FACETS: PublicListingFacets = {
   ],
   fuelType: [{ key: 'gasoline', count: 8 }],
   features: [{ key: 'bluetooth', count: 4 }],
-  amenities: { hourly: 13, delivery: 14, noCollateral: 2, discount: 1 },
+  amenities: { hourly: 13, delivery: 14, noCollateral: 2, discount: 1, vatInvoice: 5 },
 };
 
 const state = vi.hoisted(() => ({
@@ -100,6 +100,35 @@ describe('FilterPanel', () => {
     expect(patch.discount).toBe(false);
     // Ngữ cảnh tìm kiếm (tab dịch vụ) không thuộc panel — giữ nguyên.
     expect('serviceType' in patch).toBe(false);
+  });
+
+  it('toggle hoá đơn VAT: nhãn rõ, số xe thật, nói rõ XePrime không xuất thay; Áp dụng ghi URL', async () => {
+    render(<FilterPanel open onClose={vi.fn()} />);
+
+    const row = screen.getByText('Hỗ trợ xuất hoá đơn VAT').closest('label') as HTMLElement;
+    expect(row.textContent).toContain('(5)');
+    expect(row.textContent).toContain('XePrime không xuất hoá đơn thay chủ xe');
+
+    const vatSwitch = row.querySelector('[role="switch"]') as HTMLElement;
+    expect(vatSwitch.getAttribute('aria-checked')).toBe('false');
+    fireEvent.click(vatSwitch);
+    expect(state.setFilters).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: /Áp dụng/ }));
+    await waitFor(() => expect(state.setFilters).toHaveBeenCalledTimes(1));
+    expect(state.setFilters).toHaveBeenCalledWith(expect.objectContaining({ vatInvoice: true }));
+  });
+
+  it('Xoá bộ lọc tắt luôn toggle hoá đơn VAT đang bật từ URL', async () => {
+    state.filters = { vatInvoice: true };
+    render(<FilterPanel open onClose={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Xoá bộ lọc/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Áp dụng/ }));
+
+    await waitFor(() => expect(state.setFilters).toHaveBeenCalledTimes(1));
+    const patch = state.setFilters.mock.calls[0]?.[0] as Partial<MarketplaceFilters>;
+    expect(patch.vatInvoice).toBe(false);
   });
 
   it('ẩn mục Loại xe khi đang tab xe máy (body type chỉ có nghĩa với ô tô)', () => {

@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  GoneException,
   Injectable,
   Logger,
   UnauthorizedException,
@@ -12,13 +13,17 @@ import {
   API_ERROR_CODE,
   BILLING_MODE,
   MEMBERSHIP_STATUS,
+  PHONE_VERIFICATION_PURPOSE,
   USER_STATUS,
   OPEN_CUSTOMER_TRIP_STATUSES,
   VEHICLE_PUBLIC_STATUS,
+  compactPhoneInput,
   realmAllowsPasswordlessLogin,
   realmAllowsSelfRegistration,
+  realmRequiresPhoneLogin,
   type AccountRealm,
   type Permission,
+  type PhoneVerificationPurpose,
 } from '@xeprime/types';
 /*
  * `bcrypt` NATIVE chứ không phải `bcryptjs`: bản JS thuần băm ngay trên event loop — mỗi phép
@@ -43,6 +48,7 @@ import {
 } from '../../common/storefront/storefront-identity';
 import { EmailService } from '../email/email.service';
 import { FeePoliciesService } from '../fee-policies/fee-policies.service';
+import { PhoneVerificationService } from '../phone-verification/phone-verification.service';
 import { RequestRealmService } from './request-realm.service';
 import type { CurrentTenantSummaryDto, MeDto } from './dto/auth.dto';
 import type { VerifiedIdentity } from './social/identity';
@@ -76,10 +82,15 @@ export class AuthService {
     private readonly feePolicies: FeePoliciesService,
     /** URL site của từng realm — link trong email trỏ về đúng site của tài khoản (ADR 0053). */
     private readonly realms: RequestRealmService,
+    /**
+     * OTP chỉ để CHỨNG MINH SỞ HỮU SĐT trước khi tạo tài khoản hoặc đặt lại mật khẩu (ADR 0060).
+     * Nó không bao giờ là một cách đăng nhập: không hàm nào ở đây phát phiên vì một mã đúng.
+     */
+    private readonly phoneVerification: PhoneVerificationService,
   ) {}
 
   /**
-   * Realm `platform` không tự đăng ký và không vào bằng OTP/Google/Facebook — ADR 0053 điều 3.
+   * Realm `platform` không tự đăng ký và không vào bằng Google/Facebook — ADR 0053 điều 3.
    * Kiểm TRƯỚC khi chạm DB: không có hàng nào được ghi cho một lượt chắc chắn hỏng.
    */
   private assertSelfRegistration(realm: AccountRealm): void {
@@ -91,7 +102,7 @@ export class AuthService {
     }
   }
 
-  private assertPasswordlessLogin(realm: AccountRealm): void {
+  private assertSocialLogin(realm: AccountRealm): void {
     if (!realmAllowsPasswordlessLogin(realm)) {
       throw new BadRequestException({
         code: API_ERROR_CODE.REALM_LOGIN_METHOD_NOT_ALLOWED,
@@ -106,31 +117,39 @@ export class AuthService {
    * Đăng ký bằng SĐT + mật khẩu, TRONG một realm (ADR 0053). SĐT được chuẩn hoá về dạng
    * `84xxxxxxxxx` trước khi lưu. Cùng số đó ở realm khác là một tài khoản khác, không phải trùng.
    * Tạo user + identity(provider='password') trong một transaction.
+   *
+   * Từ ADR 0060 SĐT phải được CHỨNG MINH SỞ HỮU bằng OTP `purpose=register` (mã gửi qua
+   * `POST /auth/phone/send-otp`) — tài khoản ra đời với `phone_verified_at` đã đặt, nên không ai
+   * chiếm được số của người khác, và luật chặn tự đặt xe (ADR 0053 điều 7) đọc được số này.
+   *
+   * Thứ tự cố ý: MÃ trước, TRÙNG sau. Kiểm trùng trước mã thì endpoint này thành máy dò "số nào
+   * đã có tài khoản" mà không cần cầm điện thoại của ai (`send-otp` đã báo trùng sớm cho người
+   * dùng thật, dưới cùng mức chặn tần suất).
    */
   async register(
     input: {
       phone: string;
       password: string;
       displayName: string;
+      code: string;
     },
     realm: AccountRealm,
   ): Promise<{ userId: string }> {
     this.assertSelfRegistration(realm);
     const phone = normalizePhone(input.phone);
 
+    // Nhận cả mã vừa gửi lẫn mã đã qua bước "Xác thực" của form (tích xanh) — xem service.
+    await this.phoneVerification.verifyRegistrationOtp(input.phone, input.code, realm);
+
     const existing = await this.prisma.user.findFirst({
       where: { realm, phone, deletedAt: null },
       select: { id: true },
     });
-    if (existing) {
-      throw new ConflictException({
-        code: API_ERROR_CODE.PHONE_TAKEN,
-        message: 'Số điện thoại này đã được đăng ký',
-      });
-    }
+    if (existing) throw phoneTaken();
 
     const passwordHash = await bcrypt.hash(input.password, BCRYPT_ROUNDS);
     const userId = newId();
+    const now = new Date();
 
     try {
       await this.prisma.$transaction(async (tx) => {
@@ -139,10 +158,11 @@ export class AuthService {
             id: userId,
             realm,
             phone,
+            phoneVerifiedAt: now,
             displayName: input.displayName.trim(),
             passwordHash,
             status: USER_STATUS.ACTIVE,
-            lastLoginAt: new Date(),
+            lastLoginAt: now,
           },
         });
         await tx.userIdentity.create({
@@ -160,10 +180,7 @@ export class AuthService {
       // Hai request cùng SĐT có thể cùng vượt qua pre-check. Unique constraint là chốt thật;
       // đổi P2002 thành lỗi nghiệp vụ ổn định thay vì để lộ lỗi DB 500.
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-        throw new ConflictException({
-          code: API_ERROR_CODE.PHONE_TAKEN,
-          message: 'Số điện thoại này đã được đăng ký',
-        });
+        throw phoneTaken();
       }
       throw err;
     }
@@ -172,12 +189,18 @@ export class AuthService {
   }
 
   /**
-   * Đăng nhập bằng **email HOẶC số điện thoại** + mật khẩu. Có `@` → tra email (lowercase);
-   * ngược lại chuẩn hoá SĐT rồi tra `users.phone` (unique TRONG realm, lưu dạng `84...`).
+   * Đăng nhập bằng định danh + mật khẩu, TRONG realm của site/app đang gọi.
+   *
+   *  - `customer` · `partner`: định danh CHỈ là số điện thoại (ADR 0060). Một chuỗi có `@` bị từ
+   *    chối bằng `PHONE_LOGIN_REQUIRED` TRƯỚC khi chạm DB — luật chặn theo HÌNH DẠNG, nên nó không
+   *    nói gì về việc email đó có tài khoản hay không. Ẩn ô email ở giao diện thôi thì một client
+   *    tự gọi API vẫn đăng nhập bằng email được — chỗ chặn thật là ở đây.
+   *  - `platform`: email HOẶC số điện thoại như trước (ADR 0053 điều 3 — không đổi).
    *
    * Lỗi luôn chung chung (INVALID_CREDENTIALS) dù sai định danh hay sai mật khẩu — không tiết lộ
    * tài khoản nào tồn tại. So khớp bcrypt kể cả khi không có user (giảm timing attack). Tài khoản
-   * tạo bằng SĐT/OTP có `passwordHash` null → chưa đặt mật khẩu thì không đăng nhập kiểu này được.
+   * không có mật khẩu (tạo bằng Google/Facebook, hay bằng OTP thời trước ADR 0060) không đăng
+   * nhập kiểu này được — lối của họ là "Quên mật khẩu" bằng SĐT, hoặc mạng xã hội đã nối.
    */
   async loginWithPassword(
     rawIdentifier: string,
@@ -185,10 +208,18 @@ export class AuthService {
     realm: AccountRealm,
   ): Promise<{ userId: string }> {
     const identifier = rawIdentifier.trim();
+    const isEmail = identifier.includes('@');
+    if (isEmail && realmRequiresPhoneLogin(realm)) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.PHONE_LOGIN_REQUIRED,
+        message: 'Hãy đăng nhập bằng số điện thoại',
+      });
+    }
     // Tra TRONG realm (ADR 0053): cùng số/email ở site khác là một tài khoản khác, mật khẩu khác.
-    const where = identifier.includes('@')
+    // `compactPhoneInput` bỏ dấu cách/chấm/gạch/ngoặc — cùng phép bỏ mà ô nhập ở client đã cho qua.
+    const where = isEmail
       ? { realm, email: identifier.toLowerCase(), deletedAt: null }
-      : { realm, phone: normalizePhone(identifier), deletedAt: null };
+      : { realm, phone: normalizePhone(compactPhoneInput(identifier)), deletedAt: null };
     const user = await this.prisma.user.findFirst({
       where,
       select: { id: true, passwordHash: true, status: true },
@@ -379,6 +410,121 @@ export class AuthService {
     });
   }
 
+  // ---- OTP theo mục đích (ADR 0060) ------------------------------------------
+
+  /**
+   * Luật của AUTH cho một lần GỬI mã — gọi trước `PhoneVerificationService.sendOtp`.
+   *
+   *  - `login` → 410 `OTP_LOGIN_RETIRED`. Đăng nhập bằng OTP đã gỡ; gửi tiếp một tin nhắn có phí
+   *    cho một mã không còn đổi được ra thứ gì là lãng phí của cả hai bên.
+   *  - `register` → số đã có tài khoản TRONG realm ⇒ `PHONE_TAKEN` ngay, trước khi tốn tin nhắn —
+   *    cùng kỷ luật với `POST /users/me/phone/send-otp`. Đây cũng là mức lộ thông tin mà
+   *    `POST /auth/register` cũ vẫn có, dưới cùng mức chặn tần suất.
+   *  - `password_reset` → KHÔNG nói số có tài khoản hay không: luôn trả như nhau, nhưng chỉ THẬT
+   *    SỰ nhắn tin khi có một tài khoản đang hoạt động mang số đó (`deliver`). Hàng mã vẫn được
+   *    ghi để cooldown/trần gửi tính như nhau ở cả hai nhánh — khác nhau ở cooldown là một máy dò.
+   *  - mục đích khác: như trước.
+   */
+  /**
+   * Kiểm một lượt đăng ký TRƯỚC bước nhập mã (`POST /auth/register/check` và bước gửi mã
+   * `register`): site có tự đăng ký + SĐT chưa có tài khoản trong realm. Định dạng ô đã do DTO kiểm.
+   * Không lộ thêm gì so với `send-otp` — cùng câu trả lời, cùng mức chặn tần suất. Lượt
+   * `register` thật vẫn kiểm lại (unique DB là chốt cuối).
+   */
+  async checkRegistration(rawPhone: string, realm: AccountRealm): Promise<void> {
+    this.assertSelfRegistration(realm);
+    const taken = await this.prisma.user.findFirst({
+      where: { realm, phone: normalizePhone(rawPhone), deletedAt: null },
+      select: { id: true },
+    });
+    if (taken) throw phoneTaken();
+  }
+
+  async otpDeliveryFor(
+    purpose: PhoneVerificationPurpose,
+    rawPhone: string,
+    realm: AccountRealm,
+  ): Promise<{ deliver: boolean }> {
+    if (purpose === PHONE_VERIFICATION_PURPOSE.LOGIN) throw otpLoginRetired();
+
+    const phone = normalizePhone(rawPhone);
+    if (purpose === PHONE_VERIFICATION_PURPOSE.REGISTER) {
+      await this.checkRegistration(phone, realm);
+      return { deliver: true };
+    }
+    if (purpose === PHONE_VERIFICATION_PURPOSE.PASSWORD_RESET) {
+      return { deliver: (await this.findResettableAccount(phone, realm)) !== null };
+    }
+    return { deliver: true };
+  }
+
+  /**
+   * Quên mật khẩu bằng SĐT — đặt mật khẩu mới từ mã OTP `purpose=password_reset` (ADR 0060).
+   *
+   * KHÔNG cấp phiên: mã chứng minh sở hữu số để ĐỔI MẬT KHẨU, không phải để vào tài khoản — người
+   * dùng đăng nhập lại bằng mật khẩu vừa đặt. Biến bước này thành một lần đăng nhập là mở lại
+   * đúng cửa "đăng nhập bằng OTP" vừa đóng.
+   *
+   * Không tài khoản nào mang số đó ⇒ CÙNG lỗi `OTP_INVALID` với mã sai: ở production mã cho một
+   * số không có tài khoản không bao giờ được gửi đi, nên đây đúng là thứ người dò sẽ nhận.
+   *
+   * Mã đúng còn là bằng chứng sở hữu số ⇒ đóng dấu `phone_verified_at` nếu chưa có (tài khoản cũ
+   * đăng ký trước khi đăng ký bắt OTP). Link đặt lại qua email đang lơ lửng mất hiệu lực, như ở
+   * `resetPassword`.
+   */
+  async resetPasswordWithOtp(
+    rawPhone: string,
+    code: string,
+    newPassword: string,
+    realm: AccountRealm,
+  ): Promise<void> {
+    if (!realmRequiresPhoneLogin(realm)) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.REALM_LOGIN_METHOD_NOT_ALLOWED,
+        message: 'Tài khoản quản trị đặt lại mật khẩu qua email',
+      });
+    }
+    await this.phoneVerification.verifyOtp(
+      rawPhone,
+      PHONE_VERIFICATION_PURPOSE.PASSWORD_RESET,
+      code,
+      realm,
+      null,
+    );
+
+    const account = await this.findResettableAccount(normalizePhone(rawPhone), realm);
+    if (!account) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.OTP_INVALID,
+        message: 'Mã xác thực không đúng',
+      });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    const now = new Date();
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: account.id },
+        data: { passwordHash, ...(account.phoneVerifiedAt ? {} : { phoneVerifiedAt: now }) },
+      });
+      await tx.passwordResetToken.updateMany({
+        where: { userId: account.id, usedAt: null },
+        data: { usedAt: now },
+      });
+    });
+  }
+
+  /** Tài khoản ĐANG HOẠT ĐỘNG mang SĐT đó trong realm — cùng điều kiện với quên mật khẩu qua email. */
+  private findResettableAccount(
+    normalizedPhone: string,
+    realm: AccountRealm,
+  ): Promise<{ id: string; phoneVerifiedAt: Date | null } | null> {
+    return this.prisma.user.findFirst({
+      where: { realm, phone: normalizedPhone, deletedAt: null, status: USER_STATUS.ACTIVE },
+      select: { id: true, phoneVerifiedAt: true },
+    });
+  }
+
   /**
    * Tìm hoặc tạo user từ một danh tính ĐÃ được nhà cung cấp xác minh — ADR 0002 bước 2.
    *
@@ -394,7 +540,7 @@ export class AuthService {
     identity: VerifiedIdentity,
     realm: AccountRealm,
   ): Promise<{ userId: string }> {
-    this.assertPasswordlessLogin(realm);
+    this.assertSocialLogin(realm);
     const providerEmail = identity.email?.trim().toLowerCase() ?? null;
 
     // Khoá tra cứu có realm (ADR 0053 điều 1): cùng một tài khoản Google là một tài khoản XePrime
@@ -486,85 +632,6 @@ export class AuthService {
     return { userId };
   }
 
-  /**
-   * Passwordless: tìm hoặc tạo user theo SĐT đã xác thực (OTP) — dùng cho đăng nhập bằng SĐT và
-   * cho luồng đặt xe của khách vãng lai. KHÔNG tự kiểm OTP: người gọi phải chứng minh sở hữu SĐT
-   * trước (verifyOtp cho login, assertPhoneVerifiedForBooking cho đặt xe).
-   *
-   * Idempotent theo `users.phone` (@unique). Chống đua khi nhiều request cùng SĐT vào cùng lúc:
-   * bắt P2002 rồi đọc lại. User tạo bằng SĐT có `passwordHash = null` (như tài khoản Google/FB) —
-   * sau này người dùng có thể tự đặt mật khẩu / liên kết Google mà không chặn luồng đặt xe.
-   */
-  async resolveOrCreateUserByPhone(
-    rawPhone: string,
-    realm: AccountRealm,
-    displayNameFallback?: string | null,
-  ): Promise<{ userId: string; created: boolean }> {
-    this.assertPasswordlessLogin(realm);
-    const phone = normalizePhone(rawPhone);
-    const now = new Date();
-
-    const existing = await this.prisma.user.findFirst({
-      where: { realm, phone, deletedAt: null },
-      select: { id: true, status: true, phoneVerifiedAt: true },
-    });
-    if (existing) {
-      if (existing.status !== USER_STATUS.ACTIVE) {
-        throw new UnauthorizedException({
-          code: API_ERROR_CODE.ACCOUNT_LOCKED,
-          message: 'Tài khoản đã bị khoá',
-        });
-      }
-      await this.prisma.user.update({
-        where: { id: existing.id },
-        data: {
-          lastLoginAt: now,
-          ...(existing.phoneVerifiedAt ? {} : { phoneVerifiedAt: now }),
-        },
-      });
-      return { userId: existing.id, created: false };
-    }
-
-    const userId = newId();
-    const displayName = (displayNameFallback ?? '').trim() || defaultPhoneName(phone);
-    try {
-      await this.prisma.$transaction(async (tx) => {
-        await tx.user.create({
-          data: {
-            id: userId,
-            realm,
-            phone,
-            phoneVerifiedAt: now,
-            displayName,
-            status: USER_STATUS.ACTIVE,
-            lastLoginAt: now,
-          },
-        });
-        await tx.userIdentity.create({
-          data: {
-            id: newId(),
-            userId,
-            realm,
-            provider: 'phone_otp',
-            providerUserId: phone,
-            providerPhone: phone,
-          },
-        });
-      });
-      return { userId, created: true };
-    } catch (err) {
-      // Đua unique(phone): một request khác vừa tạo user cùng SĐT — đọc lại và dùng chung.
-      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-        const raced = await this.prisma.user.findFirst({
-          where: { realm, phone, deletedAt: null },
-          select: { id: true },
-        });
-        if (raced) return { userId: raced.id, created: false };
-      }
-      throw err;
-    }
-  }
-
   async me(userId: string): Promise<MeDto> {
     const user = await this.prisma.user.findFirstOrThrow({
       where: { id: userId, deletedAt: null },
@@ -592,46 +659,50 @@ export class AuthService {
 
     const now = new Date();
     const [membership, platformMembership] = await Promise.all([
-      !isPartner ? null : this.prisma.tenantMembership.findFirst({
-        where: { userId, status: MEMBERSHIP_STATUS.ACTIVE },
-        select: {
-          roleKey: true,
-          roleId: true,
-          // Phạm vi chi nhánh (ADR 0052) — web cần nó để KHÔNG đưa "Tất cả chi nhánh" cho người
-          // bị giới hạn ở modal mời và ô phân quyền. Backend vẫn chặn (`BRANCH_SCOPE_EXCEEDED`).
-          branchScope: true,
-          // Trục năng lực (ADR 0027) đi kèm luôn — `select` phải khớp `TenantScopeGuard`, vì cả
-          // hai gọi cùng `resolveTenantFeatures`. Menu của web đọc từ đây ở LẦN VẼ ĐẦU, nên tách
-          // ra một query riêng là menu nhấp nháy.
-          tenant: {
+      !isPartner
+        ? null
+        : this.prisma.tenantMembership.findFirst({
+            where: { userId, status: MEMBERSHIP_STATUS.ACTIVE },
             select: {
-              /*
-               * Tên khu làm việc theo tuyến HIỆU LỰC (ADR 0054): chủ xe cá nhân là chính họ — vỏ
-               * site partner hiện họ tên trên tài khoản, không phải tên gian hàng cũ từ thời có
-               * gói. `subscriptions` của fragment trùng khít bản bên dưới (cùng where/args).
-               */
-              ...storefrontTenantSelect(now),
-              id: true,
-              slug: true,
-              status: true,
-              // Trục ĐĂNG KÝ (ADR 0040) — web chọn KHU làm việc từ đây trước cả `billingMode`:
-              // gian hàng chưa trả tiền phải về màn onboarding, không về Owner Lite.
-              onboardingState: true,
-              usedFeatures: true,
-              // Logo cho vỏ portal — xem `CurrentTenantSummaryDto.logoUrl`.
-              profile: { select: { logoUrl: true } },
-              subscriptions: {
-                where: effectiveSubscriptionWhere(now),
-                ...EFFECTIVE_SUBSCRIPTION_ARGS,
+              roleKey: true,
+              roleId: true,
+              // Phạm vi chi nhánh (ADR 0052) — web cần nó để KHÔNG đưa "Tất cả chi nhánh" cho người
+              // bị giới hạn ở modal mời và ô phân quyền. Backend vẫn chặn (`BRANCH_SCOPE_EXCEEDED`).
+              branchScope: true,
+              // Trục năng lực (ADR 0027) đi kèm luôn — `select` phải khớp `TenantScopeGuard`, vì cả
+              // hai gọi cùng `resolveTenantFeatures`. Menu của web đọc từ đây ở LẦN VẼ ĐẦU, nên tách
+              // ra một query riêng là menu nhấp nháy.
+              tenant: {
+                select: {
+                  /*
+                   * Tên khu làm việc theo tuyến HIỆU LỰC (ADR 0054): chủ xe cá nhân là chính họ — vỏ
+                   * site partner hiện họ tên trên tài khoản, không phải tên gian hàng cũ từ thời có
+                   * gói. `subscriptions` của fragment trùng khít bản bên dưới (cùng where/args).
+                   */
+                  ...storefrontTenantSelect(now),
+                  id: true,
+                  slug: true,
+                  status: true,
+                  // Trục ĐĂNG KÝ (ADR 0040) — web chọn KHU làm việc từ đây trước cả `billingMode`:
+                  // gian hàng chưa trả tiền phải về màn onboarding, không về Owner Lite.
+                  onboardingState: true,
+                  usedFeatures: true,
+                  // Logo cho vỏ portal — xem `CurrentTenantSummaryDto.logoUrl`.
+                  profile: { select: { logoUrl: true } },
+                  subscriptions: {
+                    where: effectiveSubscriptionWhere(now),
+                    ...EFFECTIVE_SUBSCRIPTION_ARGS,
+                  },
+                },
               },
             },
-          },
-        },
-      }),
-      !isPlatform ? null : this.prisma.platformMembership.findFirst({
-        where: { userId, status: MEMBERSHIP_STATUS.ACTIVE },
-        select: { roleKey: true, roleId: true },
-      }),
+          }),
+      !isPlatform
+        ? null
+        : this.prisma.platformMembership.findFirst({
+            where: { userId, status: MEMBERSHIP_STATUS.ACTIVE },
+            select: { roleKey: true, roleId: true },
+          }),
     ]);
 
     /*
@@ -806,8 +877,23 @@ function toTenantSummary(
   };
 }
 
-/** Tên hiển thị mặc định cho tài khoản tạo bằng SĐT (chưa nhập tên): "Khách 4567". */
-function defaultPhoneName(normalizedPhone: string): string {
-  const last4 = normalizedPhone.slice(-4);
-  return `Khách ${last4}`;
+/** SĐT đã có tài khoản TRONG realm — một mã, một câu, ở mọi đường tạo/gắn số. */
+function phoneTaken(): ConflictException {
+  return new ConflictException({
+    code: API_ERROR_CODE.PHONE_TAKEN,
+    message: 'Số điện thoại này đã được đăng ký',
+  });
+}
+
+/**
+ * 410 cho mọi cửa của đăng nhập bằng OTP đã gỡ (ADR 0060) — gửi mã `purpose=login`, và hai route
+ * `…/phone/login` của web và app. 410 chứ không 404: route vẫn còn để client cũ nhận được một MÃ
+ * đọc được ("hãy đăng nhập bằng mật khẩu / quên mật khẩu") thay vì một lỗi mơ hồ.
+ */
+export function otpLoginRetired(): GoneException {
+  return new GoneException({
+    code: API_ERROR_CODE.OTP_LOGIN_RETIRED,
+    message:
+      'Đăng nhập bằng mã OTP không còn hỗ trợ. Hãy đăng nhập bằng số điện thoại và mật khẩu.',
+  });
 }

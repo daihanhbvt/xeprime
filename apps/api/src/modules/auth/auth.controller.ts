@@ -1,7 +1,22 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Post, Req, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+  Res,
+} from '@nestjs/common';
 import { ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { ACCOUNT_REALM_VALUES, type AccountRealm } from '@xeprime/types';
+import {
+  ACCOUNT_REALM,
+  ACCOUNT_REALM_VALUES,
+  realmForClientApp,
+  type AccountRealm,
+} from '@xeprime/types';
 import type { Response } from 'express';
 import {
   CurrentUser,
@@ -18,8 +33,10 @@ import {
   ForgotPasswordDto,
   LoginDto,
   MeDto,
+  RegisterCheckDto,
   RegisterDto,
   ResetPasswordDto,
+  ResetPasswordWithOtpDto,
   SetPasswordDto,
 } from './dto/auth.dto';
 
@@ -57,11 +74,12 @@ export class AuthController {
   @Public()
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
-  // 5/phút — bằng `POST /auth/mobile/register`. Gửi liên tiếp nhiều SĐT để xem số nào trả
-  // `PHONE_TAKEN` là cách dò danh bạ người dùng; đây là chỗ duy nhất hãm được nó.
+  // 5/phút — bằng `POST /auth/mobile/register`. Mã OTP sai được đếm và khoá ở
+  // `PhoneVerificationService`; mức này hãm phần còn lại (băm mật khẩu tốn ~250ms mỗi lượt).
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @ApiOperation({
-    summary: 'Đăng ký bằng số điện thoại + mật khẩu — tài khoản thuộc realm của site đang gọi',
+    summary:
+      'Đăng ký bằng số điện thoại + mật khẩu + mã OTP `purpose=register` — tài khoản thuộc realm của site đang gọi',
   })
   @ApiOkResponse({ type: MeDto })
   async register(
@@ -74,6 +92,32 @@ export class AuthController {
     return this.auth.me(userId);
   }
 
+  /**
+   * Bước 1 của đăng ký: kiểm thông tin TRƯỚC khi sang bước nhập mã — form chỉ chuyển bước khi mọi
+   * thứ đã hợp lệ (luật ô của DTO, site có tự đăng ký, SĐT chưa có tài khoản ở site này). Không gửi
+   * mã, không tạo gì.
+   *
+   * Realm: site đang gọi (proxy); request không qua site nào (app native) thì theo `clientApp`.
+   */
+  @Public()
+  @Realms(ACCOUNT_REALM.CUSTOMER, ACCOUNT_REALM.PARTNER)
+  @Post('register/check')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  // 10/phút — bằng `send-otp`: cùng một câu trả lời "số đã có tài khoản", cùng mức chặn dò số.
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({
+    summary:
+      'Kiểm thông tin đăng ký (SĐT, mật khẩu, họ tên, SĐT chưa có tài khoản) trước bước nhập mã OTP',
+  })
+  @ApiNoContentResponse()
+  async checkRegistration(
+    @Body() dto: RegisterCheckDto,
+    @Req() req: RequestContext,
+  ): Promise<void> {
+    const realm = req.realm ?? realmForClientApp(dto.clientApp);
+    await this.auth.checkRegistration(dto.phone, realm);
+  }
+
   @Public()
   @VerifiesCredentials()
   @Post('login')
@@ -81,7 +125,10 @@ export class AuthController {
   // 5/phút — bằng `POST /auth/mobile/login`. Xem docblock của controller: không có bộ đếm sai
   // mật khẩu nào phía sau, nên đây là lớp duy nhất hãm tốc độ đoán.
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
-  @ApiOperation({ summary: 'Đăng nhập bằng email hoặc số điện thoại + mật khẩu' })
+  @ApiOperation({
+    summary:
+      'Đăng nhập bằng số điện thoại + mật khẩu (site quản trị: email hoặc số điện thoại) — ADR 0060',
+  })
   @ApiOkResponse({ type: MeDto })
   async login(
     @Body() dto: LoginDto,
@@ -95,7 +142,9 @@ export class AuthController {
 
   @Post('password/set')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Đặt mật khẩu lần đầu cho tài khoản chưa có (vd tạo bằng SĐT/OTP)' })
+  @ApiOperation({
+    summary: 'Đặt mật khẩu lần đầu cho tài khoản chưa có (vd tạo bằng Google/Facebook)',
+  })
   @ApiNoContentResponse()
   async setPassword(
     @CurrentUser() user: AuthenticatedUser,
@@ -110,7 +159,9 @@ export class AuthController {
   // phiên đang đăng nhập (máy bỏ quên, cookie bị lấy). Không hãm thì kẻ có phiên đoán được mật
   // khẩu cũ để đổi sang mật khẩu của họ và chiếm hẳn tài khoản.
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
-  @ApiOperation({ summary: 'Đổi mật khẩu — cần mật khẩu hiện tại; tài khoản chưa có thì dùng password/set' })
+  @ApiOperation({
+    summary: 'Đổi mật khẩu — cần mật khẩu hiện tại; tài khoản chưa có thì dùng password/set',
+  })
   @ApiNoContentResponse()
   async changePassword(
     @CurrentUser() user: AuthenticatedUser,
@@ -147,6 +198,36 @@ export class AuthController {
     @WebRealm() realm: AccountRealm,
   ): Promise<void> {
     await this.auth.resetPassword(dto.token, dto.password, realm);
+  }
+
+  /**
+   * Quên mật khẩu bằng SỐ ĐIỆN THOẠI (ADR 0060) — site khách, site partner và hai app.
+   *
+   * Bước trước: `POST /auth/phone/send-otp { purpose: 'password_reset' }` — luôn trả như nhau dù số
+   * có tài khoản hay không. Bước này: mã đúng ⇒ đặt mật khẩu mới, 204. KHÔNG phát cookie hay token —
+   * OTP ở đây mở quyền đổi mật khẩu, không phải một cách đăng nhập.
+   *
+   * Realm: site đang gọi (proxy); request không qua site nào (app native gọi host API riêng) thì
+   * theo `clientApp`. Site quản trị bị chặn bởi `@Realms` — tài khoản `platform` đặt lại qua email.
+   */
+  @Public()
+  @Realms(ACCOUNT_REALM.CUSTOMER, ACCOUNT_REALM.PARTNER)
+  @Post('password/reset-otp')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  // 10/phút — bằng `verify-otp`: mã 6 số là cửa dò, và `verifyOtp` còn tự khoá mã sau
+  // `OTP_POLICY.MAX_ATTEMPTS` lần sai.
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({
+    summary:
+      'Quên mật khẩu bằng SĐT: mã OTP `purpose=password_reset` + mật khẩu mới (không cấp phiên)',
+  })
+  @ApiNoContentResponse()
+  async resetPasswordWithOtp(
+    @Body() dto: ResetPasswordWithOtpDto,
+    @Req() req: RequestContext,
+  ): Promise<void> {
+    const realm = req.realm ?? realmForClientApp(dto.clientApp);
+    await this.auth.resetPasswordWithOtp(dto.phone, dto.code, dto.password, realm);
   }
 
   @Public()

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { applyFilterPatch, parseFilters, toListingQueryParams } from './filter-params';
+import {
+  applyFilterPatch,
+  FACET_FILTER_KEYS,
+  parseFilters,
+  toListingQueryParams,
+} from './filter-params';
 
 describe('parseFilters — URL searchParams → MarketplaceFilters', () => {
   it('đọc đủ kiểu: CSV → mảng, "1" → boolean, số → number, string giữ nguyên', () => {
@@ -102,6 +107,21 @@ describe('toListingQueryParams — filter → query API', () => {
     expect(q.priceMin).toBe(500000);
     expect(q.brand).toBeNull();
     expect(q.hourly).toBeNull();
+  });
+
+  it('hoá đơn VAT (ADR 0059): sống trên URL, gửi đúng tham số, "Xoá bộ lọc" xoá được', () => {
+    const filters = parseFilters(new URLSearchParams('vatInvoice=1&provinceCode=48'));
+    expect(filters).toEqual({ vatInvoice: true, provinceCode: '48' });
+    expect(toListingQueryParams(filters).vatInvoice).toBe('1');
+    expect(toListingQueryParams({}).vatInvoice).toBeNull();
+    // Chỉ "1" là bật — giống mọi toggle tiện ích khác.
+    expect(parseFilters(new URLSearchParams('vatInvoice=true'))).toEqual({});
+
+    expect(FACET_FILTER_KEYS).toContain('vatInvoice');
+    const params = new URLSearchParams('vatInvoice=1&provinceCode=48');
+    applyFilterPatch(params, { vatInvoice: false });
+    expect(params.has('vatInvoice')).toBe(false);
+    expect(params.get('provinceCode')).toBe('48');
   });
 
   it('round-trip với parseFilters: URL → filters → query khớp wire format', () => {

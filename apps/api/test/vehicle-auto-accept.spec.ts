@@ -29,9 +29,7 @@ import {
   VEHICLE_TYPE,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
-import type { AuthService } from '../src/modules/auth/auth.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
-import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import { VehicleSettingsService } from '../src/modules/vehicle-settings/vehicle-settings.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import {
@@ -39,6 +37,7 @@ import {
   makeBookingRequestsService,
   makeNotificationService,
 } from './helpers/service-factory';
+import { customerAccountFor } from './helpers/customer-account';
 
 /**
  * TỰ ĐỘNG NHẬN CHUYẾN — đường đi thật của một yêu cầu công khai, trên PostgreSQL THẬT.
@@ -65,17 +64,8 @@ const notifications = makeNotificationService(asService);
 const occupancy = new OccupancyService(asService);
 const settings = new VehicleSettingsService(asService, audit, occupancy);
 
-const phoneVerification = {
-  assertPhoneVerifiedForBooking: async () => {},
-} as unknown as PhoneVerificationService;
-const auth = {
-  resolveOrCreateUserByPhone: async () => ({ userId: null }),
-} as unknown as AuthService;
-
 const holds = makeBookingHoldsService(asService);
 const requests = makeBookingRequestsService(asService, {
-  phoneVerification,
-  auth,
   audit,
   notifications,
   occupancy,
@@ -105,7 +95,26 @@ let planId: string;
 let feePolicyActive: { id: string } | null = null;
 let phoneCounter = 0;
 
-const nextPhone = () => `0988${String(100000 + ++phoneCounter).slice(-6)}`;
+/**
+ * SĐT của spec: tiền tố riêng + gốc theo lượt chạy. Số của tài khoản khách là khoá tìm-hoặc-tạo
+ * (`customerAccountFor`), nên nó không được trùng với spec chạy song song hay với dữ liệu sót của
+ * một lượt trước bị ngắt — dùng chung tài khoản là dùng chung trần chỗ chưa thanh toán.
+ */
+const PHONE_BASE = (Date.now() % 9_000) * 100;
+const nextPhone = () => `0946${String(PHONE_BASE + ++phoneCounter).padStart(6, '0')}`;
+
+/** Tài khoản khách đã gửi yêu cầu trong spec — dọn ở `afterAll`. */
+const customerIds = new Set<string>();
+/**
+ * Người gửi yêu cầu: một tài khoản KHÁCH đã xác minh SĐT (ADR 0060). Mỗi lượt gửi một số mới —
+ * tức một người mới — nên hai yêu cầu trùng giờ là hai khách tranh một chỗ, không phải một yêu
+ * cầu bị gửi lặp.
+ */
+async function customer(name = 'Nguyễn Văn A', phone = nextPhone()): Promise<string> {
+  const id = await customerAccountFor(asService, phone, name);
+  customerIds.add(id);
+  return id;
+}
 
 /** `offsetDays` ngày nữa lúc `hourVn` giờ Việt Nam — mọi mốc nằm trong khung giờ mặc định 06–22. */
 function vnAt(offsetDays: number, hourVn: number): Date {
@@ -248,12 +257,13 @@ async function submitAndPay(
   overrides: Partial<Parameters<typeof requests.submitPublic>[0]> = {},
   vehicle = vehicleId,
 ) {
-  const { receipt } = await submit(overrides, vehicle);
+  const receipt = await submit(overrides, vehicle);
   const paid = await payHold(receipt.id);
   const row = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: receipt.id } });
   return { receipt, paid, row };
 }
 
+/** Gửi yêu cầu bằng một tài khoản khách MỚI — mỗi lượt gửi là một người khác. */
 async function submit(
   overrides: Partial<Parameters<typeof requests.submitPublic>[0]> = {},
   vehicle = vehicleId,
@@ -261,13 +271,11 @@ async function submit(
   return requests.submitPublic(
     {
       vehicleId: vehicle,
-      customerName: 'Nguyễn Văn A',
-      customerPhone: nextPhone(),
       pickupAt: vnAt(5, 9).toISOString(),
       returnAt: vnAt(7, 9).toISOString(),
       ...overrides,
     },
-    null,
+    await customer(),
   );
 }
 
@@ -325,7 +333,9 @@ afterAll(async () => {
     await prisma.vehicle.deleteMany({ where: { tenantId: tenants } });
     await prisma.tenantMembership.deleteMany({ where: { tenantId: tenants } });
     await prisma.tenant.deleteMany({ where: { id: tenants } });
-    await prisma.user.deleteMany({ where: { id: { in: [ownerId, holdOwnerId] } } });
+    await prisma.user.deleteMany({
+      where: { id: { in: [ownerId, holdOwnerId, ...customerIds] } },
+    });
   }
   await prisma.$disconnect();
 });
@@ -349,7 +359,7 @@ const maybe = (name: string, fn: () => Promise<void>) =>
 describe('Đủ điều kiện — hệ thống nhận ngay lúc khách gửi', () => {
   maybe('tự lái: gửi xong là CHỜ TIỀN và đã chiếm lịch, chưa có đơn', async () => {
     await enableAutoAccept(tenantId, vehicleId, ownerId, SERVICE_TYPE.SELF_DRIVE);
-    const { receipt } = await submit();
+    const receipt = await submit();
 
     /*
      * Hệ thống đã NHẬN chuyến (ADR 0044): lịch chốt, xe bị giữ, QR đã phát. Nhưng đơn thuê thì
@@ -422,7 +432,7 @@ describe('Đủ điều kiện — hệ thống nhận ngay lúc khách gửi', 
    */
   maybe('gian hàng im lặng cho tới khi tiền về, rồi nhận đúng MỘT thông báo', async () => {
     await enableAutoAccept(tenantId, vehicleId, ownerId, SERVICE_TYPE.SELF_DRIVE);
-    const { receipt } = await submit();
+    const receipt = await submit();
 
     expect(
       await prisma.notification.count({
@@ -498,7 +508,7 @@ describe('Không đủ điều kiện — về hàng chờ, không tự từ ch�
   });
 
   maybe('chưa bật tự nhận: ở lại hàng chờ, chưa thu tiền và chưa giữ chỗ', async () => {
-    const { receipt } = await submit();
+    const receipt = await submit();
     const row = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: receipt.id } });
     expect(row.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
     expect(row.bookingId).toBeNull();
@@ -527,16 +537,14 @@ describe('Không đủ điều kiện — về hàng chờ, không tự từ ch�
     });
     await enableAutoAccept(tenantId, vehicleId, ownerId, SERVICE_TYPE.SELF_DRIVE);
     try {
-      const { receipt } = await requests.submitPublic(
+      const receipt = await requests.submitPublic(
         {
           vehicleId,
-          customerName: 'Khách dài hạn',
-          customerPhone: nextPhone(),
           serviceType: SERVICE_TYPE.LONG_TERM,
           longTermPackageMonths: 3,
           pickupPreference: 'within_7_days',
         },
-        null,
+        await customer('Khách dài hạn'),
       );
       /*
        * Dài hạn là NGOẠI LỆ của ADR 0039 điều 4: khách mới nêu nguyện vọng ngày nhận, gian hàng
@@ -589,7 +597,7 @@ describe('Khung giờ và điều khoản — chặn ngay lúc gửi, ở SERVER
         response: { code: API_ERROR_CODE.RENTAL_TERMS_ACCEPTANCE_REQUIRED },
       });
 
-      const { receipt } = await submit({ acceptedTerms: true });
+      const receipt = await submit({ acceptedTerms: true });
       const row = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: receipt.id } });
       const terms = row.rentalTerms as { termsText?: string; termsAcceptedAt?: string } | null;
       expect(terms?.termsText).toBe('Không hút thuốc trong xe.');
@@ -648,7 +656,7 @@ describe('Có tài xế — không tự nhận khi chuyến có thu tiền giữ
       });
       await enableAutoAccept(tenantId, vehicleId, ownerId, SERVICE_TYPE.WITH_DRIVER, withDrivers);
 
-      const { receipt } = await submit({
+      const receipt = await submit({
         serviceType: SERVICE_TYPE.WITH_DRIVER,
         routeType: 'in_city',
         pickupAddress: '12 Lê Lợi, Q.1',
@@ -674,7 +682,7 @@ describe('Có tài xế — không tự nhận khi chuyến có thu tiền giữ
     await prisma.driver.create({
       data: { id: newId(), tenantId, name: 'Tài xế 9', phone: '0900000009', status: 'active' },
     });
-    const { receipt } = await submit({
+    const receipt = await submit({
       serviceType: SERVICE_TYPE.WITH_DRIVER,
       routeType: 'in_city',
       pickupAddress: '12 Lê Lợi, Q.1',
@@ -697,7 +705,7 @@ describe('Có tài xế — không tự nhận khi chuyến có thu tiền giữ
     // Tài xế duy nhất bị vô hiệu hoá SAU khi bật — cấu hình còn bật, năng lực thì không.
     await prisma.driver.updateMany({ where: { tenantId }, data: { status: 'inactive' } });
 
-    const { receipt } = await submit({
+    const receipt = await submit({
       serviceType: SERVICE_TYPE.WITH_DRIVER,
       routeType: 'in_city',
       pickupAddress: '12 Lê Lợi, Q.1',
@@ -721,7 +729,7 @@ describe('Đua nhau — constraint DB là trọng tài', () => {
     const window = { pickupAt: vnAt(8, 9).toISOString(), returnAt: vnAt(10, 9).toISOString() };
 
     const results = await Promise.all([submit(window), submit(window)]);
-    const held = results.filter((r) => r.receipt.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD);
+    const held = results.filter((r) => r.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD);
     expect(held).toHaveLength(1);
 
     // Đúng MỘT khoản giữ chỗ và đúng MỘT ô lịch — constraint DB là trọng tài (ADR 0006).
@@ -735,8 +743,8 @@ describe('Đua nhau — constraint DB là trọng tài', () => {
      * TRƯỚC khi người thắng kịp đóng nó (`pending_host_approval`), hoặc sau (`slot_taken`).
      * Thứ KHÔNG hợp lệ là một kết cục lai — một yêu cầu thứ hai cũng giữ được chỗ.
      */
-    const loser = results.find((r) => r.receipt.status !== BOOKING_REQUEST_STATUS.AWAITING_HOLD)!;
-    const row = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: loser.receipt.id } });
+    const loser = results.find((r) => r.status !== BOOKING_REQUEST_STATUS.AWAITING_HOLD)!;
+    const row = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: loser.id } });
     expect([
       BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
       BOOKING_REQUEST_STATUS.SLOT_TAKEN,
@@ -751,7 +759,7 @@ describe('Đua nhau — constraint DB là trọng tài', () => {
     expect(first.row.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
 
     const second = await submit(window);
-    expect(second.receipt.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
+    expect(second.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
     expect(await prisma.bookingHold.count({ where: { tenantId } })).toBe(1);
     expect(await prisma.booking.count({ where: { tenantId } })).toBe(1);
   });
@@ -772,15 +780,15 @@ describe('Tuyến hoa hồng — phí dịch vụ nằm trong khoản giữ ch�
      * tuyến, không về ai bấm nút.
      */
     const commission = await submit({}, holdVehicleId);
-    await requests.approve(holdTenantId, holdOwnerId, commission.receipt.id);
+    await requests.approve(holdTenantId, holdOwnerId, commission.id);
     const shop = await submit();
-    await requests.approve(tenantId, ownerId, shop.receipt.id);
+    await requests.approve(tenantId, ownerId, shop.id);
 
     const commissionHold = await prisma.bookingHold.findFirstOrThrow({
-      where: { bookingRequestId: commission.receipt.id },
+      where: { bookingRequestId: commission.id },
     });
     const shopHold = await prisma.bookingHold.findFirstOrThrow({
-      where: { bookingRequestId: shop.receipt.id },
+      where: { bookingRequestId: shop.id },
     });
 
     // `S` — phí dịch vụ phía khách: 10% ở tuyến hoa hồng, 0 ở tuyến gói (ADR 0028 điều 1).
@@ -817,7 +825,7 @@ describe('Tuyến hoa hồng — phí dịch vụ nằm trong khoản giữ ch�
       SERVICE_TYPE.WITH_DRIVER,
       withDrivers,
     );
-    const { receipt } = await submit(
+    const receipt = await submit(
       {
         serviceType: SERVICE_TYPE.WITH_DRIVER,
         routeType: 'in_city',
@@ -840,7 +848,7 @@ describe('Tuyến hoa hồng — phí dịch vụ nằm trong khoản giữ ch�
  */
 describe('Duyệt tay: nhận chuyến trước, tiền về sau', () => {
   maybe('chủ xe bấm duyệt: nguồn quyết định là HOST và người ký là chủ xe', async () => {
-    const { receipt } = await submit();
+    const receipt = await submit();
 
     const accepted = await requests.approve(tenantId, ownerId, receipt.id);
     expect(accepted.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
@@ -876,7 +884,7 @@ describe('Duyệt tay: nhận chuyến trước, tiền về sau', () => {
    * hàng sẽ liên hệ thu một khoản, mà ở đây không ai từng tính ra khoản đó.
    */
   maybe('báo giá còn TẠM TÍNH: duyệt ra ĐƠN ngay, không hold, mode = none', async () => {
-    const { receipt } = await submit({
+    const receipt = await submit({
       serviceType: SERVICE_TYPE.WITH_DRIVER,
       routeType: 'inter_city',
       pickupAddress: '12 Lê Lợi, Q.1',
@@ -900,7 +908,7 @@ describe('Duyệt tay: nhận chuyến trước, tiền về sau', () => {
    * không còn chạm tới đường tiền.
    */
   maybe('từ chối khi chưa duyệt: đóng yêu cầu, không sinh khoản hoàn nào', async () => {
-    const { receipt } = await submit();
+    const receipt = await submit();
 
     await requests.reject(tenantId, ownerId, receipt.id, 'Xe bận');
 

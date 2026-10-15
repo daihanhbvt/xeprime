@@ -27,8 +27,13 @@ const VI: PhoneSchemaLabels = {
 export const buildPhoneSchema = (labels: PhoneSchemaLabels) =>
   yup.string().trim().matches(VN_PHONE_PATTERN, labels.invalid);
 
+/**
+ * Bắt buộc: `required` đứng TRƯỚC phép so mẫu. Yup dừng ở phép kiểm đầu tiên hỏng theo thứ tự khai
+ * báo, và chuỗi rỗng cũng trượt mẫu — để `matches` đứng trước thì ô bỏ trống báo "không hợp lệ"
+ * thay vì "vui lòng nhập". Tập số hợp lệ không đổi.
+ */
 export const buildRequiredPhoneSchema = (labels: PhoneSchemaLabels) =>
-  buildPhoneSchema(labels).required(labels.required);
+  yup.string().trim().required(labels.required).matches(VN_PHONE_PATTERN, labels.invalid);
 
 export const phoneSchema = buildPhoneSchema(VI);
 

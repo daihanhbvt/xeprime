@@ -1,5 +1,11 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Header, Param, Patch, Post, Query, StreamableFile } from '@nestjs/common';
+import {
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiProduces,
+  ApiTags,
+} from '@nestjs/swagger';
 import {
   ACCOUNT_REALM,
   PERMISSION,
@@ -9,6 +15,7 @@ import {
 } from '@xeprime/types';
 import { supportFieldAllowlist } from '../../common/support/support-field-allowlist';
 import { BRANCH_SCOPED_RESOURCE, BranchScoped, CurrentTenant, CurrentUser, Realms, RequirePermissions, RequiresFeature, SubscriptionTrackOnly, SupportAction, TenantScoped } from '../../common/decorators';
+import { PRIVATE_STATIC_MAP_CACHE_CONTROL } from '../../common/http-cache';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { BranchesService } from './branches.service';
 import {
@@ -35,9 +42,10 @@ import {
  * lấy xe, và điểm xuất phát của mọi phép tính phí giao tận nơi. Khoá lại là khoá một thứ thuộc
  * bộ cơ bản (ADR 0027 điều 1).
  *
- * Nên ba route dưới đây CỐ Ý không có cổng nào:
+ * Nên bốn route dưới đây CỐ Ý không có cổng nào:
  *   GET /branches · GET /branches/:id — không đọc được thì không có form nào để sửa;
- *   PATCH /branches/:id              — sửa địa chỉ chi nhánh của chính mình.
+ *   GET /branches/:id/map             — ảnh bản đồ của chính chi nhánh đó (ADR 0061);
+ *   PATCH /branches/:id               — sửa địa chỉ chi nhánh của chính mình.
  *
  * ⚠️ Tới 17/09/2026 `@SubscriptionTrackOnly()` còn nằm ở CLASS, và nó khoá luôn ba route trên
  * với tuyến hoa hồng. Hậu quả không phải một menu bị ẩn: `POST /vehicles` BẮT BUỘC `branchId`,
@@ -46,7 +54,7 @@ import {
  * tuyến là bộ quản lý NHIỀU chi nhánh, không phải địa chỉ của chính mình (ADR 0038 điều 4).
  *
  * Ngoại lệ nằm ở METADATA chứ không giấu trong service: nó hiện trong `route-access`, và
- * `plan-feature-coverage.spec.ts` khai đúng ba route này thành danh sách chờ cho CẢ HAI cổng —
+ * `plan-feature-coverage.spec.ts` khai đúng bốn route này thành danh sách chờ cho CẢ HAI cổng —
  * thêm bớt một route ở đây là đỏ CI, không phải một thay đổi im lặng.
  */
 @ApiTags('branches')
@@ -93,6 +101,29 @@ export class BranchesController {
   @ApiOkResponse({ type: BranchDto })
   get(@CurrentTenant() tenant: TenantContext, @Param('id') id: string): Promise<BranchDto> {
     return this.branches.get(tenant.tenantId, id);
+  }
+
+  /**
+   * Ảnh bản đồ tĩnh của chi nhánh — một thẻ `<img>` ở thẻ hồ sơ xe (ADR 0061 điều 1). Cùng bộ cổng
+   * với "chi tiết một chi nhánh": ai xem được chi nhánh thì xem được bản đồ của nó, không hơn.
+   *
+   * KHÔNG mở cho phiên hỗ trợ (không `@SupportAction`, ADR 0050 mặc định đóng): thẻ `<img>` không gửi
+   * được header phiên hỗ trợ, nên mở ra cũng không ai dùng được — chỉ thêm một cửa vào phiên. Trong
+   * phiên hỗ trợ, ảnh lỗi và web tự ẩn khung ảnh.
+   */
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BRANCH)
+  @Get(':id/map')
+  @RequirePermissions(PERMISSION.BRANCH_VIEW)
+  @Header('Cache-Control', PRIVATE_STATIC_MAP_CACHE_CONTROL)
+  @ApiOperation({ summary: 'Ảnh bản đồ tĩnh (PNG) của một chi nhánh' })
+  @ApiProduces('image/png')
+  @ApiOkResponse({ schema: { type: 'string', format: 'binary' } })
+  async map(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('id') id: string,
+  ): Promise<StreamableFile> {
+    const png = await this.branches.mapPng(tenant.tenantId, id);
+    return new StreamableFile(png, { type: 'image/png', length: png.length });
   }
 
   @BranchScoped(BRANCH_SCOPED_RESOURCE.BRANCH)

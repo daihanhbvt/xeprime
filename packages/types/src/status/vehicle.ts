@@ -601,15 +601,18 @@ export const SEAT_BUCKET_RANGE: Readonly<Record<SeatBucket, { min?: number; max?
 };
 
 /**
- * Tiện ích listing — 4 toggle trong bộ lọc marketplace. Key trùng tên query param của
+ * Tiện ích listing — các toggle trong bộ lọc marketplace. Key trùng tên query param của
  * `/public/listings`: hourly = có giá thuê giờ, delivery = giao xe tận nơi,
- * noCollateral = miễn thế chấp, discount = đang giảm giá.
+ * noCollateral = miễn thế chấp, discount = đang giảm giá, vatInvoice = chủ xe hỗ trợ xuất hoá
+ * đơn VAT cho tiền thuê (thông tin chủ xe tự công bố — XePrime không xuất hoá đơn thay chủ xe,
+ * ADR 0059).
  */
 export const LISTING_AMENITY = {
   HOURLY: 'hourly',
   DELIVERY: 'delivery',
   NO_COLLATERAL: 'noCollateral',
   DISCOUNT: 'discount',
+  VAT_INVOICE: 'vatInvoice',
 } as const;
 
 export type ListingAmenity = (typeof LISTING_AMENITY)[keyof typeof LISTING_AMENITY];
@@ -620,12 +623,21 @@ export const LISTING_AMENITY_LABEL: Readonly<Record<ListingAmenity, string>> = {
   [LISTING_AMENITY.DELIVERY]: 'Giao xe tận nơi',
   [LISTING_AMENITY.NO_COLLATERAL]: 'Miễn thế chấp',
   [LISTING_AMENITY.DISCOUNT]: 'Đang giảm giá',
+  [LISTING_AMENITY.VAT_INVOICE]: 'Hỗ trợ xuất hoá đơn VAT',
 };
 
-/** Dòng mô tả phụ dưới mỗi toggle tiện ích (theo mockup bộ lọc). */
+/**
+ * Dòng mô tả phụ dưới mỗi toggle tiện ích (theo mockup bộ lọc).
+ *
+ * @deprecated Web đọc `Marketplace.filterPanel.amenityDesc.<key>` ở bó message dùng chung
+ * (`packages/domain/messages`, có bản tiếng Anh). Bảng tiếng Việt này chỉ còn cho app native tới khi
+ * màn lọc của nó chuyển sang cùng khoá — giữ câu chữ hai nơi KHỚP nhau cho tới lúc đó.
+ */
 export const LISTING_AMENITY_DESC: Readonly<Record<ListingAmenity, string>> = {
   [LISTING_AMENITY.HOURLY]: 'Xe có giá thuê giờ',
   [LISTING_AMENITY.DELIVERY]: 'Chủ xe hỗ trợ giao nhận',
   [LISTING_AMENITY.NO_COLLATERAL]: 'Không yêu cầu cọc tài sản',
   [LISTING_AMENITY.DISCOUNT]: 'Xe có khuyến mãi',
+  [LISTING_AMENITY.VAT_INVOICE]:
+    'Chủ xe xuất hoá đơn cho tiền thuê xe theo thoả thuận trực tiếp với bạn — XePrime không xuất hoá đơn thay chủ xe',
 };

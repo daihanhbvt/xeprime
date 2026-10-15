@@ -21,9 +21,7 @@ import {
   VEHICLE_TYPE,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
-import type { AuthService } from '../src/modules/auth/auth.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
-import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import { PromoCodeEvaluatorService } from '../src/modules/promo-codes/promo-code-evaluator.service';
 import { PromoCodesService } from '../src/modules/promo-codes/promo-codes.service';
 import { PromoQuoteService } from '../src/modules/promo-codes/promo-quote.service';
@@ -35,6 +33,7 @@ import {
   makeNotificationService,
   makePricingService,
 } from './helpers/service-factory';
+import { customerAccountFor } from './helpers/customer-account';
 
 /**
  * MÃ KHUYẾN MÃI NỀN TẢNG — vòng đời và dòng tiền, trên PostgreSQL THẬT (ADR 0046).
@@ -65,21 +64,16 @@ const evaluator = new PromoCodeEvaluatorService(asService);
 const promoQuote = new PromoQuoteService(pricing, evaluator);
 const admin = new PromoCodesService(asService, audit);
 
-const phoneVerification = {
-  assertPhoneVerifiedForBooking: async () => {},
-} as unknown as PhoneVerificationService;
-
-/** Danh tính khách — đường công khai LUÔN quy SĐT đã qua OTP về một tài khoản (ADR 0046 điều 5). */
+/**
+ * Danh tính khách — người gửi mặc định của `submit()` và của các lượt xem trước. Luôn là một tài
+ * khoản KHÁCH đã xác minh SĐT (ADR 0060), vì "khách hàng mới" và trần lượt mỗi người đo theo tài
+ * khoản (ADR 0046 điều 5).
+ */
 let currentCustomer: string;
 /** SĐT của chủ gian hàng — tài khoản khách SONG SINH dùng lại nó để kiểm luật chặn tự đặt. */
 const OWNER_PHONE = `8493${String(Date.now()).slice(-7)}`;
-const auth = {
-  resolveOrCreateUserByPhone: async () => ({ userId: currentCustomer }),
-} as unknown as AuthService;
 
 const requests = makeBookingRequestsService(asService, {
-  phoneVerification,
-  auth,
   audit,
   notifications,
   occupancy,
@@ -123,7 +117,13 @@ let phoneCounter = 0;
 const promoIds: string[] = [];
 const customerIds: string[] = [];
 
-const nextPhone = () => `0966${String(100000 + ++phoneCounter).slice(-6)}`;
+/**
+ * SĐT của spec: tiền tố riêng + gốc theo lượt chạy. Số của tài khoản khách là khoá tìm-hoặc-tạo
+ * (`customerAccountFor`), nên nó không được trùng với spec chạy song song hay với dữ liệu sót của
+ * một lượt trước bị ngắt — dùng chung tài khoản là dùng chung lịch sử đơn và lượt mã.
+ */
+const PHONE_BASE = (Date.now() % 9_000) * 100;
+const nextPhone = () => `0945${String(PHONE_BASE + ++phoneCounter).padStart(6, '0')}`;
 
 /** `offsetDays` ngày nữa lúc `hourVn` giờ VN — trong khung giao nhận mặc định 06–22. */
 function vnAt(offsetDays: number, hourVn: number): Date {
@@ -133,16 +133,9 @@ function vnAt(offsetDays: number, hourVn: number): Date {
   return base;
 }
 
+/** Một khách — tài khoản KHÁCH có SĐT ĐÃ XÁC MINH, đủ điều kiện gửi yêu cầu (ADR 0060). */
 async function makeCustomer(label: string): Promise<string> {
-  const id = newId();
-  await prisma.user.create({
-    data: {
-      realm: ACCOUNT_REALM.CUSTOMER,
-      id,
-      displayName: `Khách ${label}`,
-      email: `promo-${label}-${RUN}@xeprime.test`,
-    },
-  });
+  const id = await customerAccountFor(asService, nextPhone(), `Khách ${label}`);
   customerIds.push(id);
   return id;
 }
@@ -202,25 +195,24 @@ async function seedPromo(input: PromoInput): Promise<string> {
   return id;
 }
 
+/** Gửi yêu cầu — người gửi là `opts.customerUserId`, bỏ trống thì `currentCustomer`. */
 async function submit(
   opts: {
     promoCode?: string;
     offsetDays?: number;
     vehicle?: string;
-    customerUserId?: string | null;
+    customerUserId?: string;
   } = {},
 ) {
   const offsetDays = opts.offsetDays ?? 5;
   return requests.submitPublic(
     {
       vehicleId: opts.vehicle ?? vehicleId,
-      customerName: 'Nguyễn Văn A',
-      customerPhone: nextPhone(),
       pickupAt: vnAt(offsetDays, 9).toISOString(),
       returnAt: vnAt(offsetDays + 2, 9).toISOString(),
       ...(opts.promoCode === undefined ? {} : { promoCode: opts.promoCode }),
     },
-    opts.customerUserId === undefined ? null : opts.customerUserId,
+    opts.customerUserId ?? currentCustomer,
   );
 }
 
@@ -372,9 +364,9 @@ beforeAll(async () => {
 });
 
 /*
- * `currentCustomer` là trạng thái CHIA SẺ (stub `resolveOrCreateUserByPhone` đọc nó). Vài ca cố
- * ý đổi nó để dựng "một người khác"; không trả về mặc định thì ca SAU chạy với danh tính của ca
- * TRƯỚC — và một spec xanh vì lý do sai là thứ tệ hơn một spec đỏ.
+ * `currentCustomer` là trạng thái CHIA SẺ (người gửi mặc định của `submit()`). Vài ca cố ý đổi nó
+ * để dựng "một người khác"; không trả về mặc định thì ca SAU chạy với danh tính của ca TRƯỚC — và
+ * một spec xanh vì lý do sai là thứ tệ hơn một spec đỏ.
  */
 beforeEach(() => {
   currentCustomer = mainCustomer;
@@ -523,8 +515,8 @@ describe('Xem trước mã — ĐỌC THUẦN, không giữ lượt', () => {
     async () => {
       /*
        * Endpoint công khai không được trả lời câu "số này đã từng thuê xe chưa" cho một người chưa
-       * chứng minh mình là ai (ADR 0046 điều 9). Trả một lý do TRUNG TÍNH và để bước gửi (đã qua
-       * OTP) kiểm thật.
+       * chứng minh mình là ai (ADR 0046 điều 9). Trả một lý do TRUNG TÍNH và để bước gửi (tài khoản
+       * đã đăng nhập, SĐT đã xác minh — ADR 0060) kiểm thật.
        */
       const code = `NEW${RUN.slice(0, 3)}`.toUpperCase();
       await seedPromo({ code, audience: PROMO_AUDIENCE.NEW_CUSTOMER });
@@ -621,7 +613,7 @@ describe('Gửi yêu cầu — GIỮ lượt trong cùng transaction', () => {
     const code = `SUB${RUN.slice(0, 3)}`.toUpperCase();
     const id = await seedPromo({ code, totalUsageLimit: 5, discountAmount: '100000' });
 
-    const { receipt } = await submit({ promoCode: code });
+    const receipt = await submit({ promoCode: code });
     const req = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: receipt.id } });
     expect(req.promoCodeId).toBe(id);
     expect((req.promoSnapshot as Record<string, unknown>).code).toBe(code);
@@ -659,7 +651,7 @@ describe('Gửi yêu cầu — GIỮ lượt trong cùng transaction', () => {
   maybe('mã gõ chữ thường / có khoảng trắng vẫn áp được — server chuẩn hoá', async () => {
     const code = `NRM${RUN.slice(0, 3)}`.toUpperCase();
     await seedPromo({ code });
-    const { receipt } = await submit({ promoCode: `  ${code.toLowerCase()} ` });
+    const receipt = await submit({ promoCode: `  ${code.toLowerCase()} ` });
     const redemption = await prisma.promoRedemption.findUniqueOrThrow({
       where: { bookingRequestId: receipt.id },
     });
@@ -686,7 +678,7 @@ describe('Gửi yêu cầu — GIỮ lượt trong cùng transaction', () => {
     await submit({ promoCode: code, offsetDays: 5 });
     currentCustomer = other;
     const second = await submit({ promoCode: code, offsetDays: 20 });
-    expect(second.receipt.id).toBeTruthy();
+    expect(second.id).toBeTruthy();
   });
 
   maybe('TRANH CHẤP LƯỢT CUỐI: hai yêu cầu song song, đúng MỘT bên thắng', async () => {
@@ -702,10 +694,8 @@ describe('Gửi yêu cầu — GIỮ lượt trong cùng transaction', () => {
     const a = await makeCustomer('racea');
     const b = await makeCustomer('raceb');
 
-    const runOne = async (customer: string, offsetDays: number) => {
-      currentCustomer = customer;
-      return submit({ promoCode: code, offsetDays, customerUserId: customer });
-    };
+    const runOne = (customer: string, offsetDays: number) =>
+      submit({ promoCode: code, offsetDays, customerUserId: customer });
     const results = await Promise.allSettled([runOne(a, 5), runOne(b, 25)]);
     const fulfilled = results.filter((r) => r.status === 'fulfilled');
     const rejected = results.filter((r) => r.status === 'rejected');
@@ -731,7 +721,7 @@ describe('Chốt giá lúc duyệt — dòng tiền khép kín', () => {
   maybe('hold mang QUYỀN LỢI đầy đủ + cột tài trợ; số khách chuyển đã trừ', async () => {
     const code = `HLD${RUN.slice(0, 3)}`.toUpperCase();
     await seedPromo({ code, discountAmount: '100000' });
-    const { receipt } = await submit({ promoCode: code });
+    const receipt = await submit({ promoCode: code });
     await requests.approve(tenantId, ownerId, receipt.id);
 
     const hold = await prisma.bookingHold.findUniqueOrThrow({
@@ -757,7 +747,7 @@ describe('Chốt giá lúc duyệt — dòng tiền khép kín', () => {
   maybe('ĐƠN: doanh thu gian hàng KHÔNG bị bớt, chỉ số KHÁCH TRẢ giảm', async () => {
     const code = `BKG${RUN.slice(0, 3)}`.toUpperCase();
     const promoId = await seedPromo({ code, discountAmount: '100000' });
-    const { receipt } = await submit({ promoCode: code });
+    const receipt = await submit({ promoCode: code });
     await requests.approve(tenantId, ownerId, receipt.id);
     const hold = await prisma.bookingHold.findUniqueOrThrow({
       where: { bookingRequestId: receipt.id },
@@ -818,7 +808,7 @@ describe('Chốt giá lúc duyệt — dòng tiền khép kín', () => {
     });
     await prisma.vehicle.update({ where: { id: vehicleId }, data: { discountPercent: 10 } });
     try {
-      const { receipt } = await submit({ promoCode: code });
+      const receipt = await submit({ promoCode: code });
       await requests.approve(tenantId, ownerId, receipt.id);
       const booking = await payHoldOf(receipt.id);
 
@@ -845,7 +835,7 @@ describe('Chốt giá lúc duyệt — dòng tiền khép kín', () => {
       },
     });
 
-    const { receipt } = await submit({ promoCode: code });
+    const receipt = await submit({ promoCode: code });
     const hold = await prisma.bookingHold.findUniqueOrThrow({
       where: { bookingRequestId: receipt.id },
     });
@@ -861,7 +851,7 @@ describe('Chốt giá lúc duyệt — dòng tiền khép kín', () => {
      */
     const code = `CAP${RUN.slice(0, 3)}`.toUpperCase();
     await seedPromo({ code, discountAmount: '9000000' });
-    const { receipt } = await submit({ promoCode: code });
+    const receipt = await submit({ promoCode: code });
     await requests.approve(tenantId, ownerId, receipt.id);
 
     const hold = await prisma.bookingHold.findUniqueOrThrow({
@@ -875,7 +865,7 @@ describe('Chốt giá lúc duyệt — dòng tiền khép kín', () => {
   });
 
   maybe('KHÔNG có mã: mọi cột tài trợ bằng 0 — hành vi y như trước ADR 0046', async () => {
-    const { receipt } = await submit();
+    const receipt = await submit();
     await requests.approve(tenantId, ownerId, receipt.id);
     const hold = await prisma.bookingHold.findUniqueOrThrow({
       where: { bookingRequestId: receipt.id },
@@ -895,7 +885,7 @@ describe('Chốt giá lúc duyệt — dòng tiền khép kín', () => {
        */
       const code = `DRP${RUN.slice(0, 3)}`.toUpperCase();
       const promoId = await seedPromo({ code, minOrderAmount: '1300000' });
-      const { receipt } = await submit({ promoCode: code });
+      const receipt = await submit({ promoCode: code });
 
       await prisma.vehicle.update({
         where: { id: vehicleId },
@@ -948,7 +938,7 @@ describe('Chốt giá lúc duyệt — dòng tiền khép kín', () => {
   maybe('SNAPSHOT: admin sửa mức giảm sau khi khách áp mã KHÔNG viết lại giá của họ', async () => {
     const code = `SNP${RUN.slice(0, 3)}`.toUpperCase();
     const promoId = await seedPromo({ code, discountAmount: '100000' });
-    const { receipt } = await submit({ promoCode: code });
+    const receipt = await submit({ promoCode: code });
 
     // Admin đổi mức giảm và TẮT chiến dịch — hai việc bình thường của vận hành.
     await prisma.promoCode.update({
@@ -973,7 +963,7 @@ describe('NHẢ lượt — yêu cầu chết trước khi thành đơn', () => 
   maybe('gian hàng TỪ CHỐI ⇒ lượt về kho với lý do đúng', async () => {
     const code = `REJ${RUN.slice(0, 3)}`.toUpperCase();
     const promoId = await seedPromo({ code, totalUsageLimit: 1 });
-    const { receipt } = await submit({ promoCode: code });
+    const receipt = await submit({ promoCode: code });
 
     await requests.reject(tenantId, ownerId, receipt.id, 'Xe đang bảo dưỡng');
 
@@ -993,16 +983,20 @@ describe('NHẢ lượt — yêu cầu chết trước khi thành đơn', () => 
     const promoId = await seedPromo({ code, totalUsageLimit: 5 });
     const loserCustomer = await makeCustomer('loser');
 
-    currentCustomer = loserCustomer;
+    /*
+     * Hai KHÁCH khác nhau cùng hỏi một khung giờ. Người thắng là khách mặc định: từ ADR 0060 SĐT
+     * của yêu cầu là SĐT tài khoản, nên cùng một tài khoản gửi hai lần cùng khung giờ là yêu cầu
+     * TRÙNG, không phải hai người tranh một chỗ.
+     */
     const loser = await submit({ promoCode: code, offsetDays: 8, customerUserId: loserCustomer });
-    const winner = await submit({ offsetDays: 8, customerUserId: currentCustomer });
+    const winner = await submit({ offsetDays: 8 });
 
-    await requests.approve(tenantId, ownerId, winner.receipt.id);
+    await requests.approve(tenantId, ownerId, winner.id);
 
-    const req = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: loser.receipt.id } });
+    const req = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: loser.id } });
     expect(req.status).toBe(BOOKING_REQUEST_STATUS.SLOT_TAKEN);
     const redemption = await prisma.promoRedemption.findUniqueOrThrow({
-      where: { bookingRequestId: loser.receipt.id },
+      where: { bookingRequestId: loser.id },
     });
     expect(redemption.status).toBe(PROMO_REDEMPTION_STATUS.RELEASED);
     expect(redemption.releaseReason).toBe(PROMO_RELEASE_REASON.SLOT_TAKEN);
@@ -1020,7 +1014,7 @@ describe('NHẢ lượt — yêu cầu chết trước khi thành đơn', () => 
      */
     const code = `FIN${RUN.slice(0, 3)}`.toUpperCase();
     const promoId = await seedPromo({ code, totalUsageLimit: 1 });
-    const { receipt } = await submit({ promoCode: code });
+    const receipt = await submit({ promoCode: code });
     await requests.approve(tenantId, ownerId, receipt.id);
     const hold = await prisma.bookingHold.findUniqueOrThrow({
       where: { bookingRequestId: receipt.id },
@@ -1237,7 +1231,7 @@ describe('Quản trị mã — quyền và trường bị khoá', () => {
   maybe('lượt sử dụng: tên khách ĐÃ CHE, và tổng tài trợ chỉ đếm lượt đã CHỐT', async () => {
     const code = `USE${RUN.slice(0, 3)}`.toUpperCase();
     const promoId = await seedPromo({ code, discountAmount: '100000' });
-    const { receipt } = await submit({ promoCode: code });
+    const receipt = await submit({ promoCode: code });
 
     const reserved = await admin.getOne(promoId);
     // Lượt đang GIỮ chưa tiêu đồng nào — yêu cầu còn có thể bị từ chối.
@@ -1287,7 +1281,6 @@ describe('Mã khuyến mãi không nới một luật nào khác', () => {
   maybe('tài khoản partner đặt xe vẫn bị chặn dù có mã', async () => {
     const code = `OWN${RUN.slice(0, 3)}`.toUpperCase();
     await seedPromo({ code });
-    currentCustomer = ownerId;
     await expect(submit({ promoCode: code, customerUserId: ownerId })).rejects.toMatchObject({
       response: { code: API_ERROR_CODE.SHOP_ACCOUNT_CANNOT_BOOK },
     });
@@ -1309,14 +1302,9 @@ describe('Mã khuyến mãi không nới một luật nào khác', () => {
         },
       });
       customerIds.push(twinId);
-      currentCustomer = twinId;
-      try {
-        await expect(submit({ promoCode: code, customerUserId: twinId })).rejects.toMatchObject({
-          response: { code: API_ERROR_CODE.CANNOT_BOOK_OWN_VEHICLE },
-        });
-      } finally {
-        currentCustomer = mainCustomer;
-      }
+      await expect(submit({ promoCode: code, customerUserId: twinId })).rejects.toMatchObject({
+        response: { code: API_ERROR_CODE.CANNOT_BOOK_OWN_VEHICLE },
+      });
     },
   );
 });
@@ -1372,7 +1360,7 @@ describe('Báo giá lại yêu cầu đang chờ — phải mang theo mã đã �
   maybe('yêu cầu CÓ mã: ước tính trừ đúng số đã hứa, không phải nguyên giá', async () => {
     const code = `RQ1${RUN.slice(0, 4)}`.toUpperCase();
     await seedPromo({ code, discountAmount: '100000' });
-    const { receipt } = await submit({ promoCode: code });
+    const receipt = await submit({ promoCode: code });
 
     const est = await estimateOf(receipt.id);
     expect(est?.fees?.promoDiscountAmount).toBe('100000');
@@ -1383,7 +1371,7 @@ describe('Báo giá lại yêu cầu đang chờ — phải mang theo mã đã �
   });
 
   maybe('yêu cầu KHÔNG mã: ước tính giữ nguyên giá, không tự sinh khoản giảm', async () => {
-    const { receipt } = await submit();
+    const receipt = await submit();
     const est = await estimateOf(receipt.id);
     expect(Number(est?.fees?.promoDiscountAmount ?? 0)).toBe(0);
     expect(est?.fees?.customerTotalAmount).toBe(String(CUSTOMER_TOTAL));
@@ -1397,7 +1385,7 @@ describe('Báo giá lại yêu cầu đang chờ — phải mang theo mã đã �
      */
     const code = `RQ3${RUN.slice(0, 4)}`.toUpperCase();
     await seedPromo({ code, discountAmount: '100000' });
-    const { receipt } = await submit({ promoCode: code });
+    const receipt = await submit({ promoCode: code });
 
     const est = await estimateOf(receipt.id);
     await requests.approve(tenantId, ownerId, receipt.id);

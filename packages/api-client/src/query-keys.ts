@@ -46,6 +46,8 @@ export const queryKeys = {
     current: () => ['shop', 'current'] as const,
     /** Công tắc thu cọc của gian hàng — `GET /shop/payment-settings` (Phase 6). */
     paymentSettings: () => ['shop', 'payment-settings'] as const,
+    /** Hỗ trợ xuất hoá đơn VAT cho mọi xe — `GET /tenants/current/vat-invoice` (ADR 0059). */
+    vatInvoice: () => ['shop', 'vat-invoice'] as const,
   },
   /** Màn "Duyệt xe" của nền tảng — `/platform/vehicle-approvals` (chỉ phiếu xe). */
   vehicleApprovals: {

@@ -1,0 +1,22 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: var(--xp-space-lg) var(--xp-space-md);
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  color: var(--xp-color-text-secondary);
+}
+
+.loginHint {
+  margin: var(--xp-space-md) 0;
+  text-align: center;
+}

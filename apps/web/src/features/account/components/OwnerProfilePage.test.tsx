@@ -61,6 +61,9 @@ const updateShop = vi.hoisted(() => ({ mutate: vi.fn(), mutateAsync: vi.fn(), is
 vi.mock('@/features/shop/hooks/use-shop', () => ({
   useMyShop: () => shop,
   useUpdateShopProfile: () => updateShop,
+  // Hoá đơn VAT (ADR 0059) — hành vi riêng ở `VatInvoiceSetting.test.tsx`; ở đây chỉ cần trang dựng được.
+  useVatInvoiceSetting: () => ({ data: { vatInvoiceSupported: false }, isError: false, refetch: vi.fn() }),
+  useUpdateVatInvoiceSetting: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 const user = vi.hoisted(() => ({ value: null as unknown }));
@@ -318,13 +321,15 @@ describe('/manage/account — một URL, bản theo tuyến', () => {
 });
 
 describe('Hồ sơ chủ xe — bố cục', () => {
-  it('bảy section theo thứ tự — không còn "Trang chủ xe" riêng, không chữ "gian hàng"', () => {
+  it('tám section theo thứ tự — không còn "Trang chủ xe" riêng, không chữ "gian hàng"', () => {
     renderRoute();
 
     const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
     expect(headings).toEqual([
       'Thông tin chủ xe',
       'Địa chỉ nhận xe',
+      // Hoá đơn VAT cho mọi xe (ADR 0059) — chủ xe cá nhân không có trang Chính sách thuê.
+      'Hoá đơn VAT',
       'Thông tin khai thuế',
       'Gói dịch vụ',
       'Thông tin đăng nhập',

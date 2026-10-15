@@ -58,21 +58,6 @@ export const PICKUP_METHOD = {
 } as const;
 export type PickupMethod = (typeof PICKUP_METHOD)[keyof typeof PICKUP_METHOD];
 
-export interface RequestFormSchemaOptions {
-  /**
-   * Người dùng CÓ CÁCH nào để tạo ra một toạ độ không.
-   *
-   * `false` khi trình duyệt không dựng được bản đồ tương tác (chưa cấu hình
-   * `NEXT_PUBLIC_GEOAPIFY_MAP_KEY`) — lúc đó không có gợi ý để chọn và cũng không có bản đồ để
-   * đặt ghim, nên đòi toạ độ là khoá luôn nút "Tiếp tục" bằng một lỗi mà không thao tác nào sửa
-   * được. Bản đồ hỏng không được phép trở thành "không đặt được xe" (ADR 0035 điều 6).
-   *
-   * Chú ý: `/places/search` chết mà khoá bản đồ vẫn còn thì cờ này VẪN `true`, và đúng như vậy —
-   * khách hết gợi ý nhưng vẫn tự đặt được ghim, tức là vẫn có đường đi tới một toạ độ thật.
-   */
-  canConfirmLocation: boolean;
-}
-
 /**
  * Schema form "Yêu cầu thuê" trên marketplace (yup — báo lỗi sớm; validate thật ở BE).
  * Ngày là `Dayjs` (AntD DatePicker); bắt buộc qua `.test()` để giữ type `Dayjs | null`.
@@ -82,28 +67,20 @@ export interface RequestFormSchemaOptions {
  * đang dùng — bản trước viết thẳng tiếng Việt vào đây, nên khách đang xem giao diện tiếng Anh
  * nhận câu báo lỗi tiếng Việt đúng lúc họ đang mắc kẹt giữa luồng đặt xe. Nơi gọi bọc `useMemo`.
  *
- * ## Toạ độ là điều kiện BẮT BUỘC của một địa chỉ, không phải phần thêm
+ * ## Toạ độ đi KÈM địa chỉ, nhưng không bắt buộc
  *
- * `pickupLatitude`/`deliveryLatitude` (và cặp kinh độ) bắt buộc ở những luồng cần địa chỉ, và
- * chỉ khi người dùng thật sự tạo ra được một toạ độ ({@link RequestFormSchemaOptions}). Đó là
- * chỗ kỷ luật "địa chỉ phải được bản đồ xác nhận" trở thành một cái CHẶN thật: ô chữ có thể còn
- * chữ do người dùng gõ tay, nhưng không có toạ độ thì quãng đường giao xe không tính được
- * (ADR 0018) và tài xế không có chỗ nào để lái tới. Lỗi hiện ngay dưới bản đồ, nơi người dùng
- * thao tác để sửa — xem `ConfirmedPlaceField`.
+ * Chữ trong ô địa chỉ luôn đã được xác nhận (`ConfirmedPlaceField`): hoặc là dòng gợi ý khách
+ * bấm — kèm toạ độ — hoặc là khách chủ động chọn "dùng đúng địa chỉ đã nhập" cho một địa chỉ mà
+ * nhà cung cấp bản đồ không biết. Ca thứ hai KHÔNG có toạ độ, và web không vẽ bản đồ để đặt ghim
+ * (ADR 0061 điều 1), nên đòi toạ độ ở đây là khoá nút "Tiếp tục" bằng một lỗi không thao tác nào
+ * sửa được (ADR 0035 điều 6). Báo giá giao xe khi đó tự tra địa chỉ chữ ở server, không tra được
+ * thì hai bên tự thoả thuận phí (ADR 0018).
  */
-export function requestFormSchema(t: FormTranslate, options: RequestFormSchemaOptions) {
-  const { canConfirmLocation } = options;
+export function requestFormSchema(t: FormTranslate) {
   return yup.object({
-    customerName: yup.string().trim().required(t('errors.customerName')).max(255),
-    customerPhone: yup
-      .string()
-      .trim()
-      .required(t('errors.customerPhone'))
-      .matches(/^(0|\+84)\d{9}$/, t('errors.customerPhoneFormat')),
     /*
-     * KHÔNG hỏi email. Liên hệ của luồng này là SĐT — nó được xác thực bằng OTP ngay tại đây và
-     * là thứ gian hàng dùng để gọi lại. Email từng là một ô "không bắt buộc" mà gần như không ai
-     * điền, còn cột `customerEmail` bên API vẫn nhận (khách có tài khoản đã có sẵn email).
+     * KHÔNG có ô liên hệ nào (ADR 0060): họ tên + SĐT đã xác minh của người thuê đọc từ TÀI KHOẢN
+     * đang đăng nhập ở server, không phải từ form.
      */
     /** Dịch vụ của chuyến (17/08) — component chỉ đưa ra lựa chọn nằm trong serviceTypes của xe. */
     serviceType: yup
@@ -127,14 +104,8 @@ export function requestFormSchema(t: FormTranslate, options: RequestFormSchemaOp
         then: (s) => s.required(t('errors.pickupAddressLine')),
       }),
     pickupPlaceId: addressFields().placeId,
-    pickupLatitude: addressFields().latitude.when('serviceType', {
-      is: (v: string) => canConfirmLocation && v === SERVICE_TYPE.WITH_DRIVER,
-      then: (s) => s.required(t('errors.addressNotConfirmed')),
-    }),
-    pickupLongitude: addressFields().longitude.when('serviceType', {
-      is: (v: string) => canConfirmLocation && v === SERVICE_TYPE.WITH_DRIVER,
-      then: (s) => s.required(t('errors.addressNotConfirmed')),
-    }),
+    pickupLatitude: addressFields().latitude,
+    pickupLongitude: addressFields().longitude,
     pickupLocationSource: addressFields().locationSource,
     /**
      * Điểm đến — bắt buộc khi lộ trình liên tỉnh (khứ hồi hoặc 1 chiều).
@@ -213,9 +184,8 @@ export function requestFormSchema(t: FormTranslate, options: RequestFormSchemaOp
       .oneOf([PICKUP_METHOD.SELF, PICKUP_METHOD.DELIVERY])
       .default(PICKUP_METHOD.SELF),
     /**
-     * Địa chỉ giao xe. Đây là địa chỉ SINH RA TIỀN (phí giao theo km từ chi nhánh tới đúng cái
-     * ghim), nên chữ VÀ toạ độ đều bắt buộc khi khách chọn giao tận nơi — khác hẳn những ô địa
-     * chỉ chỉ để liên hệ.
+     * Địa chỉ giao xe. Đây là địa chỉ SINH RA TIỀN (phí giao theo km từ chi nhánh tới đúng điểm
+     * đó), nên chữ bắt buộc khi khách chọn giao tận nơi; toạ độ đi kèm khi khách chọn gợi ý.
      */
     deliveryProvinceCode: addressFields().provinceCode,
     deliveryWardCode: addressFields().wardCode,
@@ -226,14 +196,8 @@ export function requestFormSchema(t: FormTranslate, options: RequestFormSchemaOp
         then: (s) => s.required(t('errors.deliveryAddressLine')),
       }),
     deliveryPlaceId: addressFields().placeId,
-    deliveryLatitude: addressFields().latitude.when('pickupMethod', {
-      is: (v: string) => canConfirmLocation && v === PICKUP_METHOD.DELIVERY,
-      then: (s) => s.required(t('errors.addressNotConfirmed')),
-    }),
-    deliveryLongitude: addressFields().longitude.when('pickupMethod', {
-      is: (v: string) => canConfirmLocation && v === PICKUP_METHOD.DELIVERY,
-      then: (s) => s.required(t('errors.addressNotConfirmed')),
-    }),
+    deliveryLatitude: addressFields().latitude,
+    deliveryLongitude: addressFields().longitude,
     deliveryLocationSource: addressFields().locationSource,
     /**
      * Khách đồng ý điều khoản riêng của chủ xe (08/09/2026). Bắt buộc hay không phụ thuộc vào

@@ -28,6 +28,7 @@ export const TEST_PROVINCE = {
   MARKET_PRICE: { code: 'Y3', name: 'Zone Price' },
   MARKET_PRICE_OTHER: { code: 'Y4', name: 'Zone Price Khac' },
   MARKETPLACE_KEYWORD: { code: 'Y5', name: 'Zone Keyword' },
+  TENANT_VAT_INVOICE: { code: 'Y6', name: 'Zone Vat Invoice' },
 } as const;
 
 // Chặn ngay lúc nạp module: thêm một dòng trùng mã/tên là MỌI spec dùng bảng này đỏ ngay, thay vì

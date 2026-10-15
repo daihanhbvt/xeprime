@@ -3,8 +3,15 @@
 import { CarOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import type { PublicListingDetail } from '@/features/marketplace/types';
+import { useCurrentUser } from '@/hooks/use-current-user';
+import {
+  bookingDraftSavedAt,
+  clearBookingDraft,
+  serverBookingDraftSavedAt,
+  subscribeBookingDraft,
+} from '../booking-draft';
 import { RequestBookingModal } from './RequestBookingModal';
 
 /**
@@ -25,6 +32,11 @@ import { RequestBookingModal } from './RequestBookingModal';
  * Icon để `aria-hidden`: `@ant-design/icons` render ra `<span role="img" aria-label="car">`, và
  * nếu không ẩn thì tên khả truy cập của nút thành `car Chọn thuê` — trình đọc màn hình đọc thừa
  * một từ vô nghĩa, và mọi truy vấn theo nhãn nút đều trượt.
+ *
+ * **Quay về sau đăng nhập** (ADR 0060). Khách chưa đăng nhập bấm "Tiếp tục" thì luồng giữ bản
+ * nháp cho xe này (`booking-draft.ts`) rồi mời đăng nhập. Google/Facebook RỜI TRANG và quay về
+ * đúng trang xe — có bản nháp của xe này + đã có phiên thì hộp tự mở lại, và luồng bên trong đi
+ * tiếp từ bản nháp. Khách tự đóng hộp ⇒ bỏ bản nháp: lần ghé trang sau không bị hộp bật lên.
  */
 export function RequestBookingButton({
   vehicleId,
@@ -57,6 +69,32 @@ export function RequestBookingButton({
 }) {
   const t = useTranslations('BookingRequests.flow');
   const [open, setOpen] = useState(false);
+  const meQuery = useCurrentUser();
+  const me = meQuery.data;
+  /*
+   * `useSyncExternalStore` chứ không đọc `sessionStorage` trong render: HTML dựng ở server không có
+   * bản nháp nào (`serverBookingDraftSavedAt`), nên lần hydrate đầu luôn khớp; client đọc bản thật
+   * ngay sau đó.
+   */
+  const draftSavedAt = useSyncExternalStore(
+    subscribeBookingDraft,
+    () => bookingDraftSavedAt(vehicleId),
+    serverBookingDraftSavedAt,
+  );
+  // Mở lại NGAY TRONG render (mẫu "điều chỉnh state theo dữ liệu") — không có nhịp nào nút hiện
+  // ra rồi hộp mới bật lên. Chỉ khi đã có phiên: chưa đăng nhập thì khách tự bấm "Chọn thuê" và
+  // luồng tự điền lại từ bản nháp.
+  //
+  // "Đã có phiên" = `/auth/me` nạp SAU lúc ghi bản nháp. Bản nháp ghi lúc phiên vừa chết (401) mà
+  // cache còn giữ người dùng CŨ thì bản cũ đó không được tính — nếu không, hộp tự mở rồi đi tiếp
+  // sau lưng hộp đăng nhập bằng một phiên không còn (ADR 0060 §7).
+  if (draftSavedAt !== null && me && meQuery.dataUpdatedAt > draftSavedAt && !open) setOpen(true);
+
+  function close() {
+    clearBookingDraft();
+    setOpen(false);
+  }
+
   return (
     <>
       <Button
@@ -80,7 +118,7 @@ export function RequestBookingButton({
         routeType={routeType}
         deliveryProvinceCode={deliveryProvinceCode}
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={close}
       />
     </>
   );

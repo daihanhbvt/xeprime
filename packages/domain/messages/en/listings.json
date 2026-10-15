@@ -12,6 +12,7 @@
     "seats": "{count, plural, one {# seat} other {# seats}}",
     "delivery": "Delivery",
     "noCollateral": "No collateral",
+    "vatInvoice": "VAT invoice",
     "includesDriver": "driver included",
     "contactForQuote": "Contact for a quote",
     "extraServices": "+{count}",
@@ -39,6 +40,12 @@
     "withDriverQuote": "Contact for a chauffeured quote",
     "delivery": "Vehicle delivery",
     "noCollateral": "No collateral",
+    "vatInvoice": {
+      "badge": "VAT invoice available",
+      "title": "VAT invoice",
+      "body": "The owner can issue a VAT invoice for the rental paid to the owner. Share your invoicing details and confirm them directly with the owner.",
+      "disclaimer": "This is an arrangement between you and the owner: XePrime does not issue invoices on the owner's behalf, and amounts you pay to XePrime (such as the service fee) are not covered by this invoice."
+    },
     "description": "Description",
     "descriptionEmpty": "This shop has not written a description.",
     "serviceSelector": "Choose a rental service",

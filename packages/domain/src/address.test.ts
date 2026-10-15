@@ -1,5 +1,31 @@
 import { describe, expect, it } from 'vitest';
-import { addressGeocodeQuery, formatAddress, guessAddressLine } from './address';
+import {
+  addressGeocodeQuery,
+  formatAddress,
+  guessAddressLine,
+  provinceNameFromAddress,
+} from './address';
+
+describe('provinceNameFromAddress', () => {
+  it('đọc tỉnh ở đoạn cuối, bỏ tên quốc gia', () => {
+    expect(
+      provinceNameFromAddress('271 Trần Hưng Đạo, An Hải Bắc, Sơn Trà, Đà Nẵng, Việt Nam'),
+    ).toBe('Đà Nẵng');
+    expect(provinceNameFromAddress('12 Nguyễn Huệ, Bến Nghé, Hồ Chí Minh, Vietnam')).toBe(
+      'Hồ Chí Minh',
+    );
+  });
+
+  it('không có tên quốc gia thì đoạn cuối chính là tỉnh', () => {
+    expect(provinceNameFromAddress('Phường Vĩnh Ninh, Huế')).toBe('Huế');
+  });
+
+  it('rỗng hoặc chỉ có quốc gia → null', () => {
+    expect(provinceNameFromAddress(null)).toBeNull();
+    expect(provinceNameFromAddress('')).toBeNull();
+    expect(provinceNameFromAddress('Việt Nam')).toBeNull();
+  });
+});
 
 describe('formatAddress', () => {
   it('ghép từ NHỎ tới LỚN: số nhà → xã/phường → tỉnh', () => {

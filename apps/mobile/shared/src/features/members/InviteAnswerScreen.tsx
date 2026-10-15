@@ -173,7 +173,11 @@ export function InviteAnswerScreen({ token }: { token: string }) {
                 label={t('role')}
                 value={domainLabel('tenantRole', invite.roleKey, invite.roleKey)}
               />
-              <DataRow label={t('invitedEmail')} value={invite.invitedEmailMasked} />
+              {/* Lời mời SĐT (ADR 0060); lời mời email cũ vẫn hiện email đã che. */}
+              <DataRow
+                label={invite.invitedPhoneMasked ? t('invitedPhone') : t('invitedEmail')}
+                value={invite.invitedPhoneMasked ?? invite.invitedEmailMasked ?? ''}
+              />
               <DataRow label={t('expiresAt')} value={fmt.dateTime(invite.expiresAt)} />
               {invite.invitedByName ? (
                 <Text col={colors.textMuted} fos={fontSize.bodySm}>
@@ -205,7 +209,11 @@ export function InviteAnswerScreen({ token }: { token: string }) {
                 Chưa đăng nhập thì vẫn ĐỌC được lời mời — chỉ không trả lời được. Giấu hẳn nội dung
                 sau cổng đăng nhập là bắt người ta đăng nhập để biết mình đang được mời làm gì.
               */}
-              <Callout tone="info">{t('signInPartnerPrompt')}</Callout>
+              <Callout tone="info">
+                {invite.invitedPhoneMasked
+                  ? t('signInPartnerPromptPhone')
+                  : t('signInPartnerPrompt')}
+              </Callout>
               <Button
                 label={t('signIn')}
                 size="lg"

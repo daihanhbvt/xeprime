@@ -1,5 +1,5 @@
 import { App } from 'antd';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DEPOSIT_POLICY_REASON, PERMISSION, type Permission } from '@xeprime/types';
@@ -57,6 +57,9 @@ vi.mock('@/hooks/use-tenant-scope', () => ({
 vi.mock('@/features/shop/hooks/use-shop', () => ({
   usePaymentSettings: () => paymentQuery,
   useUpdatePaymentSettings: () => updatePayment,
+  // Hoá đơn VAT (ADR 0059) — hành vi riêng ở `VatInvoiceSetting.test.tsx`; ở đây chỉ cần trang dựng được.
+  useVatInvoiceSetting: () => ({ data: { vatInvoiceSupported: false }, isError: false, refetch: vi.fn() }),
+  useUpdateVatInvoiceSetting: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 function paymentFixture(over: Partial<PaymentSettings> = {}): PaymentSettings {
@@ -147,6 +150,16 @@ describe('/manage/shop/policies — quyền và trạng thái tải', () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'Thử lại' }));
     expect(query.refetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('/manage/shop/policies — hoá đơn VAT (ADR 0059)', () => {
+  it('một section cho MỌI xe, đứng ngoài tabs theo loại xe, có công tắc', () => {
+    renderPage();
+    const heading = screen.getByRole('heading', { level: 2, name: 'Hoá đơn VAT' });
+    const vat = heading.closest('section') as HTMLElement;
+    expect(within(vat).getByRole('switch', { name: /hỗ trợ xuất hoá đơn VAT cho mọi xe/ })).toBeTruthy();
+    expect(within(vat).queryByRole('tab')).toBeNull();
   });
 });
 

@@ -43,9 +43,6 @@ vi.mock('@/hooks/use-media-query', () => ({
   useIsMobile: () => false,
   useMediaQuery: () => false,
 }));
-vi.mock('@/features/phone-verification/components/PhoneLoginForm', () => ({
-  PhoneLoginForm: () => null,
-}));
 
 function renderModal(search: string) {
   nav.search = search;
@@ -101,9 +98,7 @@ describe('AuthPanel — lỗi mang về từ ?authError=', () => {
     renderModal('auth=login&authError=SOCIAL_CANCELLED');
 
     await waitFor(() =>
-      expect(
-        screen.getByText('Bạn đã huỷ ở bước cấp quyền nên chưa đăng nhập được.'),
-      ).toBeTruthy(),
+      expect(screen.getByText('Bạn đã huỷ ở bước cấp quyền nên chưa đăng nhập được.')).toBeTruthy(),
     );
     expect(screen.queryByText('SOCIAL_CANCELLED')).toBeNull();
   });

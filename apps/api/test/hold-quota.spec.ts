@@ -13,10 +13,9 @@ import {
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_TYPE,
 } from '@xeprime/types';
+import { normalizePhone } from '../src/common/phone';
 import { AuditService } from '../src/modules/audit/audit.service';
-import type { AuthService } from '../src/modules/auth/auth.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
-import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import { VehicleSettingsService } from '../src/modules/vehicle-settings/vehicle-settings.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { giveTenantPlan } from './helpers/billing-fixture';
@@ -54,16 +53,7 @@ const notifications = makeNotificationService(asService);
 const occupancy = new OccupancyService(asService);
 const settings = new VehicleSettingsService(asService, audit, occupancy);
 
-const phoneVerification = {
-  assertPhoneVerifiedForBooking: async () => {},
-} as unknown as PhoneVerificationService;
-const auth = {
-  resolveOrCreateUserByPhone: async () => ({ userId: null }),
-} as unknown as AuthService;
-
 const requests = makeBookingRequestsService(asService, {
-  phoneVerification,
-  auth,
   audit,
   notifications,
   occupancy,
@@ -78,8 +68,11 @@ let customerUserId: string;
 let tenantId: string;
 /** Mỗi chuyến một CHIẾC XE riêng — trần là về KHÁCH, không phải về lịch của một chiếc xe. */
 let vehicleIds: string[] = [];
-let phoneCounter = 0;
-const nextPhone = () => `0922${String(100000 + ++phoneCounter).slice(-6)}`;
+/**
+ * SĐT ĐÃ XÁC MINH của tài khoản khách — người gửi mọi yêu cầu trong spec (ADR 0060). Riêng theo
+ * lượt chạy: `(realm, phone)` là unique, nên một lượt trước bị ngắt giữa chừng không chặn lượt sau.
+ */
+const CUSTOMER_PHONE = `0941${String(Date.now()).slice(-6)}`;
 
 function vnAt(offsetDays: number, hourVn: number): Date {
   const base = new Date();
@@ -90,17 +83,15 @@ function vnAt(offsetDays: number, hourVn: number): Date {
 
 /** Gửi yêu cầu cho xe thứ `index` — KHÔNG duyệt. */
 async function submit(index: number): Promise<string> {
-  const res = await requests.submitPublic(
+  const receipt = await requests.submitPublic(
     {
       vehicleId: vehicleIds[index]!,
-      customerName: 'Nguyễn Văn A',
-      customerPhone: nextPhone(),
       pickupAt: vnAt(6 + index, 9).toISOString(),
       returnAt: vnAt(8 + index, 9).toISOString(),
     },
     customerUserId,
   );
-  return res.receipt.id;
+  return receipt.id;
 }
 
 beforeAll(async () => {
@@ -130,6 +121,8 @@ beforeAll(async () => {
         id: customerUserId,
         displayName: 'Khách',
         email: `hq-cus-${RUN}@xeprime.test`,
+        phone: normalizePhone(CUSTOMER_PHONE),
+        phoneVerifiedAt: new Date(),
       },
     ],
   });

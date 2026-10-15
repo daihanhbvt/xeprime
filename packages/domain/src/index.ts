@@ -118,10 +118,13 @@ export {
 export { TEL_SCHEME, ZALO_PROFILE_BASE_URL, telHref, zaloHref } from './contact';
 
 export {
+  GEO_CACHE_TTL_DAYS,
   haversineKm,
   isValidGeoPoint,
+  mapExternalUrl,
   normalizeAddressKey,
   roundCoord,
+  toGeoPoint,
   type GeoPoint,
 } from './geo';
 
@@ -137,6 +140,7 @@ export {
   addressGeocodeQuery,
   formatAddress,
   guessAddressLine,
+  provinceNameFromAddress,
   provinceSelectLabel,
   type AddressParts,
 } from './address';

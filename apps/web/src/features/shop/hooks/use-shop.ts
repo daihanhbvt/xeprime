@@ -5,9 +5,11 @@ import { queryKeys } from '@/services/query-keys';
 import {
   fetchMyShop,
   fetchPaymentSettings,
+  fetchVatInvoiceSetting,
   registerShop,
   updatePaymentSettings,
   updateShopProfile,
+  updateVatInvoiceSetting,
 } from '../api';
 import type { RegisterShopInput, UpdatePaymentSettingsInput, UpdateProfileInput } from '../types';
 
@@ -94,6 +96,33 @@ export function useUpdatePaymentSettings() {
     mutationFn: (body: UpdatePaymentSettingsInput) => updatePaymentSettings(body),
     onSuccess: (settings) => {
       queryClient.setQueryData(queryKeys.shop.paymentSettings(), settings);
+    },
+  });
+}
+
+/** Hỗ trợ xuất hoá đơn VAT cho mọi xe (ADR 0059). */
+export function useVatInvoiceSetting(enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.shop.vatInvoice(),
+    queryFn: fetchVatInvoiceSetting,
+    enabled,
+  });
+}
+
+/**
+ * Bật/tắt hỗ trợ xuất hoá đơn VAT cho mọi xe.
+ *
+ * Làm mới nhánh `marketplace` của CHÍNH trình duyệt này: thẻ xe, trang xe và bộ lọc chợ đều đọc cờ
+ * qua gian hàng, nên chủ xe mở trang xe của mình ở tab khác thấy ngay. Khách khác thấy ở lần tải
+ * trang kế tiếp — không có đẩy realtime (ADR 0059, không cần).
+ */
+export function useUpdateVatInvoiceSetting() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (supported: boolean) => updateVatInvoiceSetting(supported),
+    onSuccess: (setting) => {
+      queryClient.setQueryData(queryKeys.shop.vatInvoice(), setting);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.marketplace.all });
     },
   });
 }

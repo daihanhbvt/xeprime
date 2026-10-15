@@ -1,0 +1,30 @@
+/* Phần thân của thiết lập hoá đơn VAT — khung section là của trang chứa nó. */
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+/* Nhãn bên trái, trạng thái + công tắc bám mép phải — cùng nhịp hàng cài đặt khác. */
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-xs) var(--xp-space-sm);
+}
+
+.label {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.control {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.note {
+  margin-bottom: 0 !important;
+}

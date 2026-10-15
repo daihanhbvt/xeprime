@@ -1,8 +1,10 @@
 import * as yup from 'yup';
 import {
+  compactPhoneInput,
   detectLoginIdentifierKind,
   isValidLoginIdentifier,
   LOGIN_IDENTIFIER_KIND,
+  VN_PHONE_PATTERN,
 } from '@xeprime/types';
 import { buildRequiredPhoneSchema, type PhoneSchemaLabels } from './phone';
 
@@ -140,6 +142,27 @@ export const buildLoginSchema = (labels: AuthSchemaLabels) =>
     password: yup.string().required(labels.passwordRequired),
   });
 
+/**
+ * Ô "Số điện thoại" của màn đăng nhập site khách / site partner — ADR 0060: định danh đăng nhập
+ * CHỈ là SĐT. Nhận dấu cách/chấm/gạch/ngoặc như ô định danh cũ (`compactPhoneInput`) — đó là
+ * cách người ta chép số từ danh bạ, không phải một số khác; backend bỏ chúng cùng một cách.
+ */
+export const buildLoginPhoneSchema = (labels: AuthSchemaLabels) =>
+  yup
+    .string()
+    .trim()
+    .required(labels.required)
+    .test('login-phone', labels.invalid, (value) =>
+      value ? VN_PHONE_PATTERN.test(compactPhoneInput(value)) : true,
+    );
+
+/** Đăng nhập site khách / site partner: SĐT + mật khẩu (ADR 0060). Site quản trị dùng `buildLoginSchema`. */
+export const buildPhoneLoginSchema = (labels: AuthSchemaLabels) =>
+  yup.object({
+    phone: buildLoginPhoneSchema(labels),
+    password: yup.string().required(labels.passwordRequired),
+  });
+
 export const buildOtpLoginSchema = (labels: AuthSchemaLabels) =>
   yup.object({ phone: buildRequiredPhoneSchema(labels) });
 
@@ -154,11 +177,25 @@ export const buildRegisterSchema = (labels: AuthSchemaLabels) =>
 export const buildForgotPasswordSchema = (labels: AuthSchemaLabels) =>
   yup.object({ email: buildRequiredEmailSchema(labels) });
 
+/**
+ * Quên mật khẩu bằng SĐT (ADR 0060) — bước 1, số nhận mã. Bước 2 là mã 6 số (ô OTP riêng) +
+ * `buildResetPasswordSchema`. Không giả định tài khoản có email.
+ */
+export const buildForgotPasswordPhoneSchema = (labels: AuthSchemaLabels) =>
+  yup.object({ phone: buildRequiredPhoneSchema(labels) });
+
 export const buildResetPasswordSchema = (labels: AuthSchemaLabels) =>
   yup.object({
     password: buildPasswordSchema(labels),
     confirmPassword: buildConfirmSchema(labels),
   });
+
+/**
+ * Quên mật khẩu bằng SĐT — MỘT màn (web + app): SĐT · mật khẩu mới · nhập lại. Bấm "Xác nhận" thì gửi
+ * mã `password_reset` và mở popup nhập mã; đúng mã ⇒ `POST /auth/password/reset-otp` (ADR 0060).
+ */
+export const buildResetPasswordByPhoneSchema = (labels: AuthSchemaLabels) =>
+  buildForgotPasswordPhoneSchema(labels).concat(buildResetPasswordSchema(labels));
 
 export const passwordSchema = buildPasswordSchema(VI);
 export const requiredEmailSchema = buildRequiredEmailSchema(VI);
@@ -166,6 +203,9 @@ export const loginIdentifierSchema = buildLoginIdentifierSchema(VI);
 
 export const loginSchema = buildLoginSchema(VI);
 export type LoginValues = yup.InferType<typeof loginSchema>;
+
+export const phoneLoginSchema = buildPhoneLoginSchema(VI);
+export type PhoneLoginValues = yup.InferType<typeof phoneLoginSchema>;
 
 export const otpLoginSchema = buildOtpLoginSchema(VI);
 export type OtpLoginValues = yup.InferType<typeof otpLoginSchema>;
@@ -176,5 +216,10 @@ export type RegisterValues = yup.InferType<typeof registerSchema>;
 export const forgotPasswordSchema = buildForgotPasswordSchema(VI);
 export type ForgotPasswordValues = yup.InferType<typeof forgotPasswordSchema>;
 
+export const forgotPasswordPhoneSchema = buildForgotPasswordPhoneSchema(VI);
+export type ForgotPasswordPhoneValues = yup.InferType<typeof forgotPasswordPhoneSchema>;
+
 export const resetPasswordSchema = buildResetPasswordSchema(VI);
+export const resetPasswordByPhoneSchema = buildResetPasswordByPhoneSchema(VI);
+export type ResetPasswordByPhoneValues = yup.InferType<typeof resetPasswordByPhoneSchema>;
 export type ResetPasswordValues = yup.InferType<typeof resetPasswordSchema>;

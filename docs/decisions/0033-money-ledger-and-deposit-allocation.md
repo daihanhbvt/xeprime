@@ -158,6 +158,9 @@ nền tảng" với "nghĩa vụ đổi hình thức". Gộp hai cái là mất 
 Đường chuyển khoản tay **không phải legacy và không bị loại bỏ**: XePrime cho đặt xe không cần tài
 khoản, nên luôn tồn tại người được hoàn tiền mà không có ví để ghi có.
 
+> **Sửa 14/10/2026 — ADR 0060.** Gửi yêu cầu thuê nay cần tài khoản khách, nên mọi hold MỚI có
+> `customer_user_id` và hoàn về ví. `bank_transfer` vẫn giữ (không gỡ) cho hold cũ không có tài khoản.
+
 ### 6. Chống cộng đôi: khoá bốn cột, không phải ba
 
 ADR 0023 điều 5 đặt

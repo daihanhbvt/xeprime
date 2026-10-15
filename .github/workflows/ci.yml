@@ -308,7 +308,6 @@ jobs:
             NEXT_PUBLIC_WEB_PARTNER_URL=${{ vars.WEB_PARTNER_URL || format('https://{0}', vars.PARTNER_DOMAIN || 'partner-stg.xeprime.vn') }}
             NEXT_PUBLIC_WEB_ADMIN_URL=${{ vars.WEB_ADMIN_URL || format('https://{0}', vars.ADMIN_DOMAIN || 'admin-stg.xeprime.vn') }}
             NEXT_PUBLIC_APP_NAME=${{ vars.NEXT_PUBLIC_APP_NAME || 'XePrime' }}
-            NEXT_PUBLIC_GEOAPIFY_MAP_KEY=${{ vars.NEXT_PUBLIC_GEOAPIFY_MAP_KEY }}
             NEXT_PUBLIC_FIREBASE_API_KEY=${{ vars.NEXT_PUBLIC_FIREBASE_API_KEY }}
             NEXT_PUBLIC_FIREBASE_PROJECT_ID=${{ vars.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
             NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${{ vars.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}

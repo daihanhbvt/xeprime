@@ -1,17 +1,30 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsEmail,
+  IsIn,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 import { Transform } from 'class-transformer';
 import {
   ACCOUNT_REALM_VALUES,
   FEATURE_STATE_VALUES,
   MEMBERSHIP_BRANCH_SCOPE_VALUES,
+  MOBILE_CLIENT_APP_VALUES,
   PLAN_FEATURE_VALUES,
   VN_PHONE_PATTERN,
   type AccountRealm,
+  type MobileClientApp,
 } from '@xeprime/types';
 import { IsLoginIdentifier } from '../../../common/login-identifier';
 
 const PASSWORD_MIN = 8;
+
+/** Mã OTP 6 chữ số — ô của `register` và `password/reset-otp` (ADR 0060). */
+const OTP_CODE_PATTERN = /^\d{6}$/;
 
 /** Mật khẩu: ≥8 ký tự, có cả chữ và số — khớp yup `passwordSchema` ở @xeprime/validators. */
 class PasswordField {
@@ -23,7 +36,8 @@ class PasswordField {
   password!: string;
 }
 
-export class RegisterDto extends PasswordField {
+/** Bốn ô của form đăng ký (trừ "nhập lại") — dùng chung cho `register` và `register/check`. */
+class RegisterFields extends PasswordField {
   @ApiProperty({ example: 'Nguyễn Văn A' })
   @IsString()
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
@@ -37,10 +51,44 @@ export class RegisterDto extends PasswordField {
   phone!: string;
 }
 
+/**
+ * `POST /auth/register/check` — kiểm thông tin đăng ký TRƯỚC bước nhập mã: cùng luật ô với
+ * `register` (định dạng SĐT, luật mật khẩu, họ tên) + site có tự đăng ký + SĐT chưa có tài khoản
+ * trong realm. Không cần mã, không tạo gì.
+ */
+export class RegisterCheckDto extends RegisterFields {
+  @ApiPropertyOptional({
+    enum: MOBILE_CLIENT_APP_VALUES,
+    description:
+      'Chỉ app native gửi — realm theo app (customer ↔ XePrime, partner ↔ XePrime Partner). Web bỏ trống: realm đến từ site.',
+  })
+  @IsOptional()
+  @IsIn(MOBILE_CLIENT_APP_VALUES)
+  clientApp?: MobileClientApp;
+}
+
+export class RegisterDto extends RegisterFields {
+  /**
+   * Mã OTP `purpose=register` gửi tới chính `phone` (`POST /auth/phone/send-otp`) — ADR 0060.
+   * Tài khoản chỉ ra đời khi số đã được chứng minh sở hữu; mã sai/hết hạn ⇒ `OTP_*`, không hàng
+   * nào được ghi.
+   */
+  @ApiProperty({
+    example: '123456',
+    minLength: 6,
+    maxLength: 6,
+    description: 'Mã OTP 6 số đã gửi tới `phone` với `purpose=register`',
+  })
+  @IsString()
+  @Matches(OTP_CODE_PATTERN, { message: 'Mã xác thực gồm 6 chữ số' })
+  code!: string;
+}
+
 export class LoginDto {
   @ApiProperty({
-    description: 'Email, hoặc SĐT Việt Nam dạng 0xxxxxxxxx / +84xxxxxxxxx',
-    example: 'ban@congty.vn',
+    description:
+      'Site khách / site partner / app: CHỈ SĐT Việt Nam dạng 0xxxxxxxxx / +84xxxxxxxxx — email bị từ chối bằng `PHONE_LOGIN_REQUIRED` (ADR 0060). Site quản trị: email hoặc SĐT.',
+    example: '0901234567',
   })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
@@ -89,6 +137,40 @@ export class ResetPasswordDto extends PasswordField {
   @IsString()
   @MinLength(1)
   token!: string;
+}
+
+/**
+ * `POST /auth/password/reset-otp` — quên mật khẩu bằng SĐT (ADR 0060). Mã `purpose=password_reset`
+ * gửi qua `POST /auth/phone/send-otp`. Trả 204 và KHÔNG cấp phiên — đăng nhập lại bằng mật khẩu mới.
+ *
+ * Một DTO cho cả web lẫn app native: endpoint không phát phiên nên không có gì phải tách theo
+ * kiểu phiên. Realm của web đến từ site (proxy); `clientApp` chỉ được đọc khi request KHÔNG đi qua
+ * một site (app gọi host API riêng).
+ */
+export class ResetPasswordWithOtpDto extends PasswordField {
+  @ApiProperty({ example: '0901234567' })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Matches(VN_PHONE_PATTERN, { message: 'Số điện thoại không hợp lệ' })
+  phone!: string;
+
+  @ApiProperty({
+    example: '123456',
+    minLength: 6,
+    maxLength: 6,
+    description: 'Mã OTP 6 số đã gửi tới `phone` với `purpose=password_reset`',
+  })
+  @IsString()
+  @Matches(OTP_CODE_PATTERN, { message: 'Mã xác thực gồm 6 chữ số' })
+  code!: string;
+
+  @ApiPropertyOptional({
+    enum: MOBILE_CLIENT_APP_VALUES,
+    description:
+      'Chỉ app native gửi — realm của tài khoản theo app (customer ↔ XePrime, partner ↔ XePrime Partner). Web bỏ trống: realm đến từ site.',
+  })
+  @IsOptional()
+  @IsIn(MOBILE_CLIENT_APP_VALUES)
+  clientApp?: MobileClientApp;
 }
 
 /**
@@ -280,7 +362,8 @@ export class MeDto {
   phoneVerified!: boolean;
 
   @ApiProperty({
-    description: 'Đã có mật khẩu chưa — false với tài khoản tạo bằng SĐT/OTP (gợi ý đặt mật khẩu)',
+    description:
+      'Đã có mật khẩu chưa — false với tài khoản tạo bằng Google/Facebook (hoặc bằng OTP trước ADR 0060): họ đặt mật khẩu qua "Quên mật khẩu" bằng SĐT hoặc POST /auth/password/set',
   })
   hasPassword!: boolean;
 

@@ -147,14 +147,14 @@ describe('MarketHeader — chỉ của tài khoản khách', () => {
     expect(screen.getByRole('link', { name: 'Chuyến của tôi' })).toBeTruthy();
   });
 
-  it('menu tài khoản: hồ sơ, chuyến, tin nhắn và lối "Trở thành chủ xe" sang site partner', async () => {
+  it('menu tài khoản: hồ sơ, chuyến, tin nhắn và lối "Trở thành chủ xe" tới trang giới thiệu đăng xe', async () => {
     await openMenu();
 
     expect(screen.getByRole('link', { name: /Tài khoản của tôi/ }).getAttribute('href')).toBe(
       '/account',
     );
     expect(screen.getByRole('link', { name: /Trở thành chủ xe/ }).getAttribute('href')).toBe(
-      '/manage/register',
+      '/list-your-vehicle',
     );
     expect(screen.queryByRole('link', { name: /Xe của tôi/ })).toBeNull();
     expect(screen.queryByText('Hồ sơ gian hàng')).toBeNull();

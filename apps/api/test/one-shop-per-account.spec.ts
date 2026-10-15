@@ -10,9 +10,9 @@ import {
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { RequestRealmService } from '../src/modules/auth/request-realm.service';
-import type { EmailService } from '../src/modules/email/email.service';
 import { InvitesService } from '../src/modules/members/invites.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { normalizePhone } from '../src/common/phone';
 import { makeTenantsService } from './helpers/service-factory';
 
 /**
@@ -33,13 +33,6 @@ import { makeTenantsService } from './helpers/service-factory';
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 
-const sentMails: { to: string; url: string }[] = [];
-const email = {
-  sendTenantInvite: (to: string, _tenant: string, url: string) => {
-    sentMails.push({ to, url });
-    return Promise.resolve();
-  },
-} as unknown as EmailService;
 const SITE_URLS: Record<string, string> = {
   APP_WEB_URL: 'https://web.test',
   WEB_PARTNER_URL: 'https://partner.web.test',
@@ -56,8 +49,6 @@ const config = {
 const invites = new InvitesService(
   asService,
   new AuditService(asService),
-  email,
-  config,
   new RequestRealmService(config),
 );
 const tenants = makeTenantsService(asService);
@@ -70,12 +61,32 @@ const tenantIds: string[] = [];
 async function mkUser(tag: string, realm: AccountRealm = ACCOUNT_REALM.PARTNER): Promise<string> {
   const id = newId();
   await prisma.user.create({
-    data: { id, realm, displayName: `OSP ${tag}`, email: emailOf(tag) },
+    // SĐT ĐÃ XÁC MINH — lời mời đi bằng SĐT từ ADR 0060, và chỉ số đã xác minh mới nhận được.
+    data: {
+      id,
+      realm,
+      displayName: `OSP ${tag}`,
+      email: emailOf(tag),
+      phone: normalizePhone(phoneOf(tag)),
+      phoneVerifiedAt: new Date(),
+    },
   });
   userIds.push(id);
   return id;
 }
 const emailOf = (tag: string) => `osp-${tag}-${RUN}@xeprime.test`;
+
+/** Một SĐT riêng cho mỗi `tag` trong lần chạy này — `users.phone` unique theo realm. */
+const PHONE_BASE = (Date.now() % 10_000) * 100;
+const phones = new Map<string, string>();
+function phoneOf(tag: string): string {
+  let phone = phones.get(tag);
+  if (!phone) {
+    phone = `0946${String((PHONE_BASE + phones.size) % 1_000_000).padStart(6, '0')}`;
+    phones.set(tag, phone);
+  }
+  return phone;
+}
 
 async function mkTenant(tag: string): Promise<{ tenantId: string; ownerId: string }> {
   const ownerId = await mkUser(`owner-${tag}`);
@@ -117,12 +128,15 @@ async function addMember(tenantId: string, userId: string): Promise<void> {
   });
 }
 
-/** Mời rồi trả token thô — lấy từ URL trong thư, đúng như người dùng thật. */
-async function inviteToken(tenantId: string, ownerId: string, to: string): Promise<string> {
-  await invites.create(tenantId, ownerId, { email: to, roleKey: TENANT_ROLE.SHOP_STAFF }, null);
-  const mail = sentMails.at(-1);
-  if (!mail) throw new Error('Chưa có thư mời');
-  return mail.url.split('/').pop()!;
+/** Mời theo SĐT rồi trả token thô — lấy từ link trả về cho người mời, đúng như người dùng thật. */
+async function inviteToken(tenantId: string, ownerId: string, phone: string): Promise<string> {
+  const created = await invites.create(
+    tenantId,
+    ownerId,
+    { phone, roleKey: TENANT_ROLE.SHOP_STAFF },
+    null,
+  );
+  return created.inviteUrl.split('/').pop()!;
 }
 
 const memberInOther = {
@@ -171,12 +185,12 @@ describe('một tài khoản đối tác chỉ thuộc một gian hàng', () => 
     const staffId = await mkUser('staff1');
     await addMember(a.tenantId, staffId);
 
-    const token = await inviteToken(b.tenantId, b.ownerId, emailOf('staff1'));
+    const token = await inviteToken(b.tenantId, b.ownerId, phoneOf('staff1'));
     await expect(invites.accept(token, staffId)).rejects.toMatchObject(memberInOther);
 
     // Không có gì nửa vời: lời mời còn chờ, không membership nào ở B.
     const invite = await prisma.tenantInvite.findFirstOrThrow({
-      where: { tenantId: b.tenantId, email: emailOf('staff1') },
+      where: { tenantId: b.tenantId, phone: normalizePhone(phoneOf('staff1')) },
       select: { status: true },
     });
     expect(invite.status).toBe(INVITE_STATUS.PENDING);
@@ -208,8 +222,8 @@ describe('một tài khoản đối tác chỉ thuộc một gian hàng', () => 
     const a = await mkTenant('a4');
     const b = await mkTenant('b4');
     const staffId = await mkUser('staff4');
-    const tokenA = await inviteToken(a.tenantId, a.ownerId, emailOf('staff4'));
-    const tokenB = await inviteToken(b.tenantId, b.ownerId, emailOf('staff4'));
+    const tokenA = await inviteToken(a.tenantId, a.ownerId, phoneOf('staff4'));
+    const tokenB = await inviteToken(b.tenantId, b.ownerId, phoneOf('staff4'));
 
     const results = await Promise.allSettled([
       invites.accept(tokenA, staffId),
@@ -228,7 +242,7 @@ describe('một tài khoản đối tác chỉ thuộc một gian hàng', () => 
   maybe('5: tài khoản KHÁCH cùng email không nhận được lời mời vào gian hàng', async () => {
     const a = await mkTenant('a5');
     const customerId = await mkUser('khach5', ACCOUNT_REALM.CUSTOMER);
-    const token = await inviteToken(a.tenantId, a.ownerId, emailOf('khach5'));
+    const token = await inviteToken(a.tenantId, a.ownerId, phoneOf('khach5'));
 
     await expect(invites.accept(token, customerId)).rejects.toMatchObject({
       response: { code: API_ERROR_CODE.REALM_NOT_ALLOWED },

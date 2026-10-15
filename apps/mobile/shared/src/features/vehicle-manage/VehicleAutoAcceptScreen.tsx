@@ -208,7 +208,7 @@ function AutoAcceptForm({
             ? t('autoAccept.capabilityOk', { count: capability.activeDrivers })
             : capability.driversFeatureEnabled
               ? t('autoAccept.capabilityNoDriver')
-              : t('autoAccept.capabilityNoFeature')}
+              : t('autoAccept.appCapabilityNoFeature')}
         </Callout>
       ) : null}
       {withDriver && capability?.driversFeatureEnabled ? (
@@ -307,7 +307,7 @@ function AutoAcceptForm({
                 {`• ${t('autoAccept.rules.driver')}`}
               </Text>
               <Text col={colors.textMuted} fos={fontSize.label}>
-                {`• ${t('autoAccept.rules.hold')}`}
+                {`• ${t('autoAccept.rules.appHold')}`}
               </Text>
             </>
           ) : null}

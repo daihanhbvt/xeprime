@@ -42,7 +42,6 @@ import {
   FEE_LINE,
   SERVICE_TYPE,
   TENANT_CUSTOMER_SOURCE,
-  USER_STATUS,
   type AutoAcceptBlocker,
   type CancellationReasonCategory,
   type BookingRequestDecisionSource,
@@ -55,7 +54,7 @@ import {
   type ServiceType,
 } from '@xeprime/types';
 import { fromDateOnly, toDateOnly } from '../../common/date-only';
-import { normalizePhone, phoneLookupVariants } from '../../common/phone';
+import { normalizePhone, phoneLookupVariants, toLocalPhone } from '../../common/phone';
 import { piiSearch } from '../../common/support/support-search';
 import { marketplaceVehicleWhere } from '../../common/marketplace-vehicle-scope';
 import { normalizeRouteContext } from '../../common/route-context';
@@ -68,7 +67,6 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AddressService } from '../locations/address.service';
 import { CancellationsService } from '../cancellations/cancellations.service';
 import { AuditService } from '../audit/audit.service';
-import { AuthService } from '../auth/auth.service';
 import { OccupancyService } from '../calendar/occupancy.service';
 import { NotificationService } from '../notification/notification.service';
 import { BookingsService } from '../bookings/bookings.service';
@@ -78,7 +76,6 @@ import {
   DepositPolicyService,
   type DepositPolicyResolution,
 } from '../deposit-policy/deposit-policy.service';
-import { PhoneVerificationService } from '../phone-verification/phone-verification.service';
 import { PricingService } from '../pricing/pricing.service';
 import { PromoCodeEvaluatorService } from '../promo-codes/promo-code-evaluator.service';
 import { VehicleSettingsService } from '../vehicle-settings/vehicle-settings.service';
@@ -249,8 +246,6 @@ export class BookingRequestsService {
     private readonly bookings: BookingsService,
     private readonly audit: AuditService,
     private readonly notifications: NotificationService,
-    private readonly phoneVerification: PhoneVerificationService,
-    private readonly auth: AuthService,
     private readonly occupancy: OccupancyService,
     private readonly pricing: PricingService,
     private readonly customers: CustomersService,
@@ -405,28 +400,25 @@ export class BookingRequestsService {
   }
 
   /**
-   * Khách gửi yêu cầu từ Marketplace (công khai). `tenantId` suy từ xe — chỉ nhận nếu xe đã
+   * Khách gửi yêu cầu từ Marketplace. `tenantId` suy từ xe — chỉ nhận nếu xe đã
    * `approved_public` thuộc shop `active`. KHÔNG giữ chỗ lịch (còn pending), chỉ ghi yêu cầu —
    * chủ xe duyệt mới thành đơn (mô hình marketplace: hai bên tự thương lượng).
    *
-   * Passwordless: khách vãng lai đã xác thực SĐT (OTP) được **tạo/đăng nhập tài khoản** theo SĐT
-   * và gắn vào yêu cầu — trả `loginUserId` để controller cấp session cookie. Khách đang đăng nhập
-   * (`customerUserId`) giữ nguyên phiên. Không bao giờ bắt nhập mật khẩu.
-   *
-   * `loginUserId` != null ⇔ cần cấp session mới cho phiên hiện tại.
+   * Người gửi LUÔN là một tài khoản KHÁCH đã đăng nhập (ADR 0060): controller không còn
+   * `@Public()`, và không còn đường "khách vãng lai xác thực OTP rồi được tạo tài khoản". Danh tính
+   * của yêu cầu — họ tên, SĐT, email — đọc từ TÀI KHOẢN đó; `customerName`/`customerPhone`/
+   * `customerEmail` trong payload (bản app cũ còn gửi) bị BỎ QUA, không được tin.
    */
   async submitPublic(
     dto: CreateBookingRequestDto,
-    customerUserId?: string | null,
-  ): Promise<{ receipt: BookingRequestReceiptDto; loginUserId: string | null }> {
+    customerUserId: string,
+  ): Promise<BookingRequestReceiptDto> {
     const vehicle = await this.loadBookableVehicle(dto.vehicleId);
 
-    // §8: phải có bằng chứng sở hữu SĐT trước khi gửi yêu cầu — hoặc OTP vừa xác thực, hoặc
-    // SĐT đã verify sẵn trên chính tài khoản đang đăng nhập. Quyết định ở ĐÂY, không ở client:
-    // FE chỉ chọn hiển thị bước OTP hay không, còn cái chặn thật nằm ở dòng dưới.
-    if (!(await this.canSkipBookingOtp(customerUserId, dto.customerPhone))) {
-      await this.phoneVerification.assertPhoneVerifiedForBooking(dto.customerPhone);
-    }
+    // Danh tính + SĐT ĐÃ XÁC MINH của tài khoản — cùng chỗ đứng với cổng OTP cũ: trước mọi phép
+    // kiểm chuyến, trước mọi tác dụng phụ. Chưa xác minh ⇒ `PHONE_NOT_VERIFIED`, web mở bước xác
+    // minh SĐT của tài khoản rồi gửi lại.
+    const customer = await this.loadBookingCustomer(customerUserId);
 
     /*
      * Dịch vụ của chuyến — kiểm ở SERVER, FE chỉ là preview:
@@ -573,88 +565,44 @@ export class BookingRequestsService {
     /*
      * Gian hàng từ chối phục vụ SĐT này (S-01)?
      *
-     * Đặt SAU cửa OTP là có chủ đích: người gửi phải chứng minh sở hữu SĐT trước khi biết kết
-     * quả, nên không dò được "số nào đang bị chặn ở gian hàng nào". Đặt TRƯỚC mọi tác dụng phụ
-     * (tạo tài khoản theo SĐT, ghi yêu cầu, bắn thông báo cho shop) để một yêu cầu chắc chắn bị
-     * từ chối không để lại rác. Thông điệp trả về TRUNG TÍNH — xem `blockedCustomer('public')`.
+     * SĐT là số ĐÃ XÁC MINH của tài khoản (`loadBookingCustomer`), nên không dò được "số nào đang
+     * bị chặn ở gian hàng nào" bằng một số không phải của mình. Đặt TRƯỚC mọi tác dụng phụ (ghi
+     * yêu cầu, giữ lượt mã, bắn thông báo cho shop) để một yêu cầu chắc chắn bị từ chối không để
+     * lại rác. Thông điệp trả về TRUNG TÍNH — xem `blockedCustomer('public')`.
      */
-    await this.customers.assertNotBlocked(vehicle.tenantId, dto.customerPhone, 'public');
+    await this.customers.assertNotBlocked(vehicle.tenantId, customer.phone, 'public');
 
     /*
-     * BẰNG LÁI (ADR 0057) — thuê tự lái / dài hạn phải có bằng đã xác thực, còn hạn tới hết ngày
-     * cuối của chuyến và đúng hạng cho loại xe. Thuê có tài xế: cổng tự bỏ qua.
-     *
-     * Khách CHƯA đăng nhập soát ở ĐÂY, trước khi tạo tài khoản theo SĐT: một yêu cầu chắc chắn bị
-     * từ chối không được để lại một tài khoản rỗng. SĐT đã qua OTP ở trên nên tra tài khoản sẵn
-     * có theo số đó không mở thêm đường dò nào. Khách ĐANG đăng nhập soát sau cổng tài khoản bên
-     * dưới — "xe của chính bạn" là câu trả lời đúng hơn "chưa có bằng lái".
+     * CỔNG TÀI KHOẢN — ADR 0053 điều 7: SĐT ĐÃ XÁC MINH của tài khoản khách trùng SĐT của một
+     * thành viên gian hàng sở hữu xe ⇒ không đặt được xe của chính mình, kể cả bằng tài khoản
+     * khách cùng số.
      */
-    const licenceTrip = {
+    await this.assertNotOwnVehicle(vehicle.tenantId, customer.phone);
+    /*
+     * Khách đang giữ đủ số chỗ chưa trả (\`HOLD_MAX_OPEN_PER_CUSTOMER\`) ⇒ KHÔNG gửi thêm (13/10/2026).
+     * Cùng chỗ đứng với cổng tài khoản ở trên: chưa có tác dụng phụ nào (yêu cầu, lượt mã, thông
+     * báo cho gian hàng) để phải dọn.
+     */
+    await this.holds.assertBelowHoldQuota(customerUserId);
+    /*
+     * BẰNG LÁI (ADR 0057) — thuê tự lái / dài hạn phải có bằng đã xác thực, còn hạn tới hết ngày
+     * cuối của chuyến và đúng hạng cho loại xe. Thuê có tài xế: cổng tự bỏ qua. Soát SAU cổng tài
+     * khoản — "xe của chính bạn" là câu trả lời đúng hơn "chưa có bằng lái".
+     */
+    await this.driverLicences.assertCanDriveForTrip({
+      userId: customerUserId,
       serviceType,
       vehicleType: vehicle.vehicleType,
       lastDayKey: this.tripLastDayKey(returnAt, longTerm),
-    };
-    if (!customerUserId) {
-      await this.driverLicences.assertCanDriveForTrip({
-        userId: await this.findCustomerAccountId(dto.customerPhone),
-        ...licenceTrip,
-      });
-    }
+    });
 
-    // Khách vãng lai đã verify SĐT → tạo/đăng nhập tài khoản KHÁCH theo SĐT, gắn yêu cầu vào đó.
-    // Luôn realm `customer` (ADR 0053): người đặt xe là khách, kể cả khi cùng số đó có một tài
-    // khoản partner — đó là một tài khoản khác, không được kéo vào đơn này.
-    let effectiveUserId = customerUserId ?? null;
-    let loginUserId: string | null = null;
-    if (!effectiveUserId) {
-      const { userId } = await this.auth.resolveOrCreateUserByPhone(
-        dto.customerPhone,
-        ACCOUNT_REALM.CUSTOMER,
-        dto.customerName,
-      );
-      effectiveUserId = userId;
-      loginUserId = userId;
-    }
-
-    /*
-     * CỔNG TÀI KHOẢN — đặt ở ĐÚNG đây, không sớm hơn và không muộn hơn.
-     *
-     * Muộn hơn thì đã có `booking_requests` hoặc đã cấp phiên. Sớm hơn thì chưa biết người đặt
-     * là ai: khách vãng lai chỉ khai SĐT, và danh tính chỉ xuất hiện SAU
-     * `resolveOrCreateUserByPhone` ngay trên. Vì `effectiveUserId` là điểm HỘI TỤ của cả hai
-     * đường (đang đăng nhập / vừa khớp lại tài khoản bằng OTP), một cổng ở đây phủ cả hai.
-     *
-     * ADR 0053 điều 7: cổng này so SĐT ĐÃ XÁC MINH của tài khoản khách với SĐT của mọi thành viên
-     * gian hàng sở hữu xe — chủ xe dùng tài khoản khách cùng số để đặt xe của chính mình bị chặn.
-     *
-     * Nằm SAU cửa OTP cũng là chủ đích, cùng lý do với `assertNotBlocked` ở trên: người gửi phải
-     * chứng minh sở hữu SĐT trước khi biết kết quả, nếu không đây thành một cách dò "số nào là
-     * tài khoản gian hàng".
-     */
-    await this.assertCanBook(effectiveUserId, vehicle.tenantId, dto.customerPhone);
-    /*
-     * Khách đang giữ đủ số chỗ chưa trả (\`HOLD_MAX_OPEN_PER_CUSTOMER\`) ⇒ KHÔNG gửi thêm (13/10/2026).
-     * Cùng chỗ đứng với cổng tài khoản ở trên vì cùng lý do: chỉ ở đây mới biết người gửi là ai, và
-     * chưa có tác dụng phụ nào (yêu cầu, lượt mã, thông báo cho gian hàng) để phải dọn.
-     */
-    await this.holds.assertBelowHoldQuota(effectiveUserId);
-    if (customerUserId) {
-      await this.driverLicences.assertCanDriveForTrip({ userId: customerUserId, ...licenceTrip });
-    }
-
-    await this.assertNoPendingDuplicate(
-      vehicle.id,
-      dto.customerPhone,
-      pickupAt,
-      returnAt,
-      longTerm,
-    );
+    await this.assertNoPendingDuplicate(vehicle.id, customer.phone, pickupAt, returnAt, longTerm);
 
     /*
      * MÃ KHUYẾN MÃI — cửa kiểm THỨ HAI của ba cửa (ADR 0046 điều 7).
      *
-     * Đặt ở ĐÚNG đây: sau `resolveOrCreateUserByPhone` (nên đã có danh tính đã xác thực để gác
-     * "khách hàng mới" và trần lượt mỗi người — điều 5) và sau `assertCanBook`/duplicate (nên một
+     * Đặt ở ĐÚNG đây: sau `loadBookingCustomer` (danh tính đã xác thực để gác "khách hàng mới"
+     * và trần lượt mỗi người — điều 5) và sau `assertNotOwnVehicle`/duplicate (nên một
      * yêu cầu chắc chắn bị từ chối không giữ lượt của ai). Việc GIỮ lượt thì nằm trong transaction
      * ghi yêu cầu ở dưới — hai việc đó là một việc hoặc không việc nào.
      *
@@ -662,7 +610,7 @@ export class BookingRequestsService {
      * số họ vừa đồng ý, và họ chỉ phát hiện ra lúc nhìn mã QR.
      */
     const promo = dto.promoCode?.trim()
-      ? await this.evaluateSubmittedPromo(dto, vehicle.id, effectiveUserId, serviceType)
+      ? await this.evaluateSubmittedPromo(dto, vehicle.id, customerUserId, serviceType)
       : null;
 
     const id = newId();
@@ -673,10 +621,10 @@ export class BookingRequestsService {
         // Khi duyệt, id này được COPY sang đơn — không tra lại theo SĐT (SĐT trên hồ sơ có thể
         // đã được sửa giữa chừng, tra lại sẽ đẻ ra một khách thứ hai).
         const tenantCustomerId = await this.customers.resolveWithinTx(tx, vehicle.tenantId, {
-          fullName: dto.customerName,
-          phone: dto.customerPhone,
-          email: dto.customerEmail,
-          customerUserId: effectiveUserId,
+          fullName: customer.name,
+          phone: customer.phone,
+          email: customer.email ?? undefined,
+          customerUserId,
           source: TENANT_CUSTOMER_SOURCE.MARKETPLACE,
           mode: 'public',
         });
@@ -688,10 +636,10 @@ export class BookingRequestsService {
             tenantCustomerId,
             vehicleId: vehicle.id,
             status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
-            customerName: dto.customerName,
-            customerPhone: dto.customerPhone,
-            customerEmail: dto.customerEmail ?? null,
-            customerUserId: effectiveUserId,
+            customerName: customer.name,
+            customerPhone: customer.phone,
+            customerEmail: customer.email,
+            customerUserId,
             pickupAt,
             returnAt,
             serviceType,
@@ -769,7 +717,7 @@ export class BookingRequestsService {
         if (promo) {
           await this.promos.reserveWithinTx(tx, {
             snapshot: promo,
-            customerUserId: effectiveUserId,
+            customerUserId,
             bookingRequestId: id,
             perCustomerLimit: promo.perCustomerLimit,
           });
@@ -783,7 +731,7 @@ export class BookingRequestsService {
         if (!autoCandidate) {
           await this.notifications.emitToTenantMembers(
             vehicle.tenantId,
-            submittedNotification(dto.customerName, vehicle.name, id),
+            submittedNotification(customer.name, vehicle.name, id),
             tx,
           );
         }
@@ -811,7 +759,7 @@ export class BookingRequestsService {
      */
     if (!autoCandidate) {
       // Tin "có yêu cầu mới" đã đi TRONG transaction ghi yêu cầu ở trên — không bắn lần hai.
-      return submittedReceipt(id, null, loginUserId);
+      return submittedReceipt(id, null);
     }
 
     const auto = await this.tryAutoAccept(vehicle.tenantId, id);
@@ -824,11 +772,11 @@ export class BookingRequestsService {
        */
       await this.notifications.emitToTenantMembers(
         vehicle.tenantId,
-        submittedNotification(dto.customerName, vehicle.name, id),
+        submittedNotification(customer.name, vehicle.name, id),
       );
     }
 
-    return submittedReceipt(id, auto, loginUserId);
+    return submittedReceipt(id, auto);
   }
 
   /**
@@ -1258,47 +1206,34 @@ export class BookingRequestsService {
   }
 
   /**
-   * Được phép BỎ QUA OTP đặt xe hay không — cả ba điều kiện phải cùng đúng:
+   * Danh tính người gửi yêu cầu — đọc từ TÀI KHOẢN đã đăng nhập, không từ payload (ADR 0060).
    *
-   *   1. có phiên đăng nhập hợp lệ (`customerUserId` do controller giải mã từ cookie, không do
-   *      client tự khai);
-   *   2. SĐT gửi lên TRÙNG SĐT của chính tài khoản đó sau khi chuẩn hoá (`0901…` ≡ `+84901…` ≡
-   *      `84901…` — nếu so chuỗi thô thì cùng một số vẫn trượt và người dùng bị hỏi OTP vô cớ);
-   *   3. SĐT đó đã được đánh dấu verify trên tài khoản.
+   *   • Chỉ tài khoản realm `customer` đặt được xe (ADR 0053 điều 2). Tài khoản partner/platform
+   *     đã bị ranh giới realm chặn ở route; kiểm lại ở đây vì đây là chỗ cuối cùng trước khi một
+   *     `customer_user_id` được ghi xuống. Mã cũ `SHOP_ACCOUNT_CANNOT_BOOK` giữ cho tương thích.
+   *   • SĐT của tài khoản phải ĐÃ XÁC MINH (`PHONE_NOT_VERIFIED` nếu chưa): gian hàng liên lạc với
+   *     khách qua số này (ADR 0056), sổ khách và chống trùng yêu cầu khoá theo nó, và luật chặn tự
+   *     đặt xe (ADR 0053 điều 7) chỉ có nghĩa khi số là của chính người đặt. Tài khoản đăng ký từ
+   *     ADR 0060 đã xác minh sẵn; tài khoản Google/Facebook (chưa có số) và tài khoản cũ xác minh
+   *     một lần qua `POST /users/me/phone/*`.
    *
-   * Sai một điều kiện là quay về OTP. Đặc biệt: đăng nhập rồi nhưng gõ SĐT KHÁC thì vẫn phải OTP
-   * cho số mới — nếu không, một tài khoản bất kỳ sẽ gắn được SĐT của người khác vào yêu cầu thuê.
-   * Và ở đây KHÔNG bao giờ tra ngược SĐT ra tài khoản: danh tính đến từ cookie, SĐT chỉ được
-   * đem đi đối chiếu.
+   * SĐT trả về ở dạng nội địa `0xxxxxxxxx` — đúng dạng web vẫn gửi trước đây, nên cột
+   * `booking_requests.customer_phone` và index chống trùng của nó không đổi ngữ nghĩa. Email chỉ
+   * đi kèm khi ĐÃ XÁC MINH: gian hàng không được nhận một địa chỉ chưa ai chứng minh là của khách.
    */
-  /**
-   * Tài khoản này gửi được yêu cầu thuê cho chiếc xe này không — ADR 0053 điều 2 và 7.
-   *
-   *   • Chỉ tài khoản realm `customer` đặt được xe. Tài khoản partner/platform là ranh giới
-   *     realm (route đặt xe chỉ khai `customer`); kiểm lại ở đây vì đây là chỗ cuối cùng trước khi
-   *     một `customer_user_id` được ghi xuống. Mã cũ `SHOP_ACCOUNT_CANNOT_BOOK` giữ cho tương thích.
-   *   • KHÔNG ai đặt được xe của gian hàng gắn với SỐ ĐIỆN THOẠI của chính mình — kể cả bằng một
-   *     tài khoản khách riêng cùng số. So SĐT ĐÃ XÁC MINH của người đặt (SĐT tài khoản đã xác minh,
-   *     và SĐT đặt xe vừa qua OTP) với SĐT của MỌI thành viên `active` của gian hàng sở hữu xe.
-   *
-   * Lý do của luật thứ hai: chuyến tự đặt thổi phồng chỉ số uy tín và điểm xếp hạng (ADR 0045),
-   * mở đường tự đánh giá, và đặt một người vào hai vai trên một đơn (lỗi kế toán ADR 0038 điều 6).
-   * Giới hạn đã chấp nhận: hai SĐT khác nhau thì không phát hiện được.
-   *
-   * Không đòi SĐT của THÀNH VIÊN phải đã xác minh: chủ xe đăng ký bằng mật khẩu (số chưa qua OTP)
-   * vẫn phải bị chặn khi họ xác minh chính số đó ở phía khách. Cái giá là một người lạ trùng số
-   * mà thành viên gõ nhầm không đặt được xe của MỘT gian hàng đó — hẹp và có lối ra (đổi số).
-   */
-  private async assertCanBook(
-    userId: string | null,
-    vehicleTenantId: string,
-    customerPhone: string,
-  ): Promise<void> {
-    if (!userId) return;
-
+  private async loadBookingCustomer(
+    userId: string,
+  ): Promise<{ name: string; phone: string; email: string | null }> {
     const account = await this.prisma.user.findFirst({
       where: { id: userId, deletedAt: null },
-      select: { realm: true, phone: true, phoneVerifiedAt: true },
+      select: {
+        realm: true,
+        displayName: true,
+        phone: true,
+        phoneVerifiedAt: true,
+        email: true,
+        emailVerifiedAt: true,
+      },
     });
     if (!account || account.realm !== ACCOUNT_REALM.CUSTOMER) {
       throw new ForbiddenException({
@@ -1306,21 +1241,44 @@ export class BookingRequestsService {
         message: 'Tài khoản này không đặt thuê xe được — hãy dùng tài khoản khách thuê.',
       });
     }
+    if (!account.phone || !account.phoneVerifiedAt) {
+      throw new ForbiddenException({
+        code: API_ERROR_CODE.PHONE_NOT_VERIFIED,
+        message: 'Vui lòng xác minh số điện thoại của tài khoản trước khi gửi yêu cầu thuê',
+      });
+    }
+    return {
+      name: account.displayName,
+      phone: toLocalPhone(account.phone),
+      email: account.emailVerifiedAt ? account.email : null,
+    };
+  }
 
+  /**
+   * KHÔNG ai đặt được xe của gian hàng gắn với SỐ ĐIỆN THOẠI của chính mình — ADR 0053 điều 7, kể
+   * cả bằng một tài khoản khách riêng cùng số. So SĐT ĐÃ XÁC MINH của tài khoản đặt
+   * (`loadBookingCustomer`) với SĐT của MỌI thành viên `active` của gian hàng sở hữu xe.
+   *
+   * Lý do: chuyến tự đặt thổi phồng chỉ số uy tín và điểm xếp hạng (ADR 0045), mở đường tự đánh
+   * giá, và đặt một người vào hai vai trên một đơn (lỗi kế toán ADR 0038 điều 6). Giới hạn đã
+   * chấp nhận: hai SĐT khác nhau thì không phát hiện được.
+   *
+   * Không đòi SĐT của THÀNH VIÊN phải đã xác minh: chủ xe đăng ký bằng mật khẩu trước ADR 0060
+   * (số chưa qua OTP) vẫn phải bị chặn khi họ xác minh chính số đó ở phía khách. Cái giá là một
+   * người lạ trùng số mà thành viên gõ nhầm không đặt được xe của MỘT gian hàng đó — hẹp và có
+   * lối ra (đổi số).
+   */
+  private async assertNotOwnVehicle(vehicleTenantId: string, verifiedPhone: string): Promise<void> {
     // Mọi biến thể lưu được của cùng một số — cột `users.phone` lưu dạng `84…` nhưng không phải
     // mọi đường ghi xưa đều chuẩn hoá, nên tra theo biến thể chứ không so một chuỗi.
-    const verifiedPhones = new Set<string>(phoneLookupVariants(normalizePhone(customerPhone)));
-    if (account.phone && account.phoneVerifiedAt) {
-      for (const variant of phoneLookupVariants(normalizePhone(account.phone))) {
-        verifiedPhones.add(variant);
-      }
-    }
-
     const ownMember = await this.prisma.tenantMembership.findFirst({
       where: {
         tenantId: vehicleTenantId,
         status: MEMBERSHIP_STATUS.ACTIVE,
-        user: { deletedAt: null, phone: { in: [...verifiedPhones] } },
+        user: {
+          deletedAt: null,
+          phone: { in: phoneLookupVariants(normalizePhone(verifiedPhone)) },
+        },
       },
       select: { tenantId: true },
     });
@@ -1335,9 +1293,9 @@ export class BookingRequestsService {
   }
 
   /**
-   * Người quyết định không được là người gửi yêu cầu — cổng THỨ HAI, độc lập với `assertCanBook`.
+   * Người quyết định không được là người gửi yêu cầu — cổng THỨ HAI, độc lập với `assertNotOwnVehicle`.
    *
-   * Vì sao cần cả hai: `assertCanBook` chặn lúc TẠO, nhưng dữ liệu có trước 15/09/2026 có thể đã
+   * Vì sao cần cả hai: `assertNotOwnVehicle` chặn lúc TẠO, nhưng dữ liệu có trước 15/09/2026 có thể đã
    * chứa yêu cầu tự đặt, và chúng không được phép đi tiếp thành đơn. Một cổng ở lúc tạo không
    * dọn được quá khứ.
    */
@@ -1455,34 +1413,6 @@ export class BookingRequestsService {
       latestPickupDateKey: fromDateOnly(latestPickup) ?? vnDateKey(new Date()),
       packageMonths: longTerm?.packageMonths ?? 0,
     });
-  }
-
-  /**
-   * Tài khoản KHÁCH sẵn có của một SĐT (khách chưa đăng nhập) — không tạo mới. Tra ĐÚNG cách
-   * `resolveOrCreateUserByPhone` tra (SĐT đã chuẩn hoá, khớp chính xác), nếu không cổng bằng lái
-   * soát tài khoản A trong khi yêu cầu lại gắn vào tài khoản B vừa được tạo.
-   */
-  private async findCustomerAccountId(rawPhone: string): Promise<string | null> {
-    const account = await this.prisma.user.findFirst({
-      where: { realm: ACCOUNT_REALM.CUSTOMER, phone: normalizePhone(rawPhone), deletedAt: null },
-      select: { id: true },
-    });
-    return account?.id ?? null;
-  }
-
-  private async canSkipBookingOtp(
-    customerUserId: string | null | undefined,
-    rawPhone: string,
-  ): Promise<boolean> {
-    if (!customerUserId) return false;
-
-    const user = await this.prisma.user.findFirst({
-      where: { id: customerUserId, deletedAt: null, status: USER_STATUS.ACTIVE },
-      select: { phone: true, phoneVerifiedAt: true },
-    });
-    if (!user?.phone || !user.phoneVerifiedAt) return false;
-
-    return normalizePhone(user.phone) === normalizePhone(rawPhone);
   }
 
   /**
@@ -2733,20 +2663,14 @@ function toDto(r: BookingRequestRow, packageTrack: boolean): BookingRequestDto {
  * (ADR 0044 điều 1). Có `auto` thì `status` nói tiếp chuyện gì đã xảy ra — `awaiting_hold` (đã
  * nhận, khách cần thanh toán) hoặc `converted_to_booking` (chuyến không thu tiền giữ chỗ).
  */
-function submittedReceipt(
-  id: string,
-  auto: AutoAcceptOutcome | null,
-  loginUserId: string | null,
-): { receipt: BookingRequestReceiptDto; loginUserId: string | null } {
+function submittedReceipt(id: string, auto: AutoAcceptOutcome | null): BookingRequestReceiptDto {
   return {
-    receipt: {
-      id,
-      status: auto?.status ?? BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
-      authenticated: true,
-      autoAccepted: auto != null,
-      bookingId: auto?.bookingId ?? null,
-    },
-    loginUserId,
+    id,
+    status: auto?.status ?? BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
+    // Người gửi luôn là tài khoản đã đăng nhập (ADR 0060) — trường ở lại cho client cũ đọc nó.
+    authenticated: true,
+    autoAccepted: auto != null,
+    bookingId: auto?.bookingId ?? null,
   };
 }
 

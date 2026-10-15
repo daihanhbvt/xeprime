@@ -1,0 +1,24 @@
+/* Màn "đã tạo lời mời" — liên kết để người mời sao chép và tự gửi (ADR 0060). */
+.created {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.createdBody {
+  margin: 0;
+  color: var(--xp-color-text);
+}
+
+.linkLabel {
+  font-weight: var(--xp-font-weight-medium);
+  color: var(--xp-color-text-secondary);
+}
+
+/* Ô liên kết co giãn, nút sao chép giữ nguyên bề rộng cạnh nó. */
+.linkRow {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}

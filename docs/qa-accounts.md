@@ -1,6 +1,6 @@
 # Tài khoản demo và QA
 
-> Cập nhật: 06/10/2026 · Phạm vi: **dev và staging**. Không tồn tại ở production.
+> Cập nhật: 14/10/2026 · Phạm vi: **dev và staging**. Không tồn tại ở production.
 > Nguồn: `prisma/src/seed/shops.ts`, `prisma/src/seed/commission-owners.ts`,
 > `prisma/src/seed/identities.ts` — sửa ở đó, không sửa tay trong database.
 
@@ -10,6 +10,12 @@ dữ liệu mẫu.
 
 Mỗi site là một không gian tài khoản riêng (ADR 0053): cùng email/SĐT ở site khác là tài khoản
 KHÁC. Đăng nhập ở đúng site của tài khoản.
+
+**Site khách và site partner đăng nhập bằng SỐ ĐIỆN THOẠI + mật khẩu** (ADR 0060) — gõ email ở hai
+site này bị từ chối. Cột "SĐT đăng nhập" bên dưới là số dùng để vào; email ở cột "Tài khoản" chỉ còn
+là tên gọi để tra. Site quản trị vẫn đăng nhập bằng email. Máy đã seed trước 14/10/2026 cần chạy
+migration `20261014180000_normalize_user_phones` (`pnpm --filter @xeprime/prisma migrate:deploy`)
+hoặc seed lại, không thì SĐT demo còn ở dạng cũ và không đăng nhập được.
 
 ## Dành cho designer và người mới
 
@@ -46,23 +52,24 @@ buộc của phương án thiết kế mới. Việc còn dở: [`completion-roa
 
 ## Bảng tra
 
-| Site | Tài khoản | Là gì |
-| --- | --- | --- |
-| Quản trị | `admin@xeprime.vn` (env `PLATFORM_ADMIN_EMAIL`) | `platform_admin` — có ở CẢ `SEED_MODE=system` |
-| Quản trị | `reviewer@xeprime.test` | duyệt hồ sơ gian hàng / xe |
-| Quản trị | `finance@xeprime.test` | đối soát tiền vào, duyệt rút tiền |
-| Đối tác | `owner.saigon@xeprime.test` | gian hàng **12 xe · 2 chi nhánh · bậc Chuyên nghiệp**, đủ dữ liệu vận hành (tài xế, giấy tờ, bảo dưỡng, bàn giao, thu chi, đánh giá); 1 xe nháp + 1 xe chờ duyệt |
-| Đối tác | `manager.saigon@` · `staff.saigon@` · `ketoan.saigon@xeprime.test` | nhân viên của gian hàng trên: quản lý · nhân viên · người xem |
-| Đối tác | `owner.hanoi@xeprime.test` | gian hàng **5 xe · 2 chi nhánh · bậc Nâng cao** |
-| Đối tác | `owner.danang@xeprime.test` | gian hàng **2 xe · 1 chi nhánh · bậc Cơ bản** |
-| Đối tác | `chuxe.huong@xeprime.test` | chủ xe cá nhân tuyến hoa hồng, **1 xe** |
-| Đối tác | `chuxe.tuan@xeprime.test` | chủ xe cá nhân tuyến hoa hồng, **2 xe** |
-| Đối tác | `chuxe.son@xeprime.test` | chủ xe cá nhân tuyến hoa hồng, **3 xe** = 2 ô tô + 1 xe máy (chạm trần Owner Lite); 1 xe nháp |
-| Khách | `khach.an@xeprime.test` | khách quen, nhiều chuyến đã xong, có đánh giá; **bằng lái B2 đã xác thực** |
-| Khách | `khach.binh@xeprime.test` | đang thuê dài hạn theo gói tháng; **bằng lái A1 + B2 đã xác thực** |
-| Khách | `khach.cuong@xeprime.test` | thuê có tài xế; bị gian hàng Sài Gòn đưa vào danh sách chặn (chỉ ở gian hàng đó); **chưa có bằng lái** — tài khoản để thử luồng nộp/xác thực bằng lái (ADR 0057) |
+| Site | Tài khoản | SĐT đăng nhập | Là gì |
+| --- | --- | --- | --- |
+| Quản trị | `admin@xeprime.vn` (env `PLATFORM_ADMIN_EMAIL`) | — (đăng nhập bằng email) | `platform_admin` — có ở CẢ `SEED_MODE=system` |
+| Quản trị | `reviewer@xeprime.test` | — (email) | duyệt hồ sơ gian hàng / xe |
+| Quản trị | `finance@xeprime.test` | — (email) | đối soát tiền vào, duyệt rút tiền |
+| Đối tác | `owner.saigon@xeprime.test` | `0902000001` | gian hàng **12 xe · 2 chi nhánh · bậc Chuyên nghiệp**, đủ dữ liệu vận hành (tài xế, giấy tờ, bảo dưỡng, bàn giao, thu chi, đánh giá); 1 xe nháp + 1 xe chờ duyệt |
+| Đối tác | `manager.saigon@` · `staff.saigon@` · `ketoan.saigon@xeprime.test` | `0902000011` · `0902000012` · `0902000013` | nhân viên của gian hàng trên: quản lý · nhân viên · người xem |
+| Đối tác | `owner.hanoi@xeprime.test` | `0903000001` | gian hàng **5 xe · 2 chi nhánh · bậc Nâng cao** |
+| Đối tác | `owner.danang@xeprime.test` | `0904000001` | gian hàng **2 xe · 1 chi nhánh · bậc Cơ bản** |
+| Đối tác | `chuxe.huong@xeprime.test` | `0913000002` | chủ xe cá nhân tuyến hoa hồng, **1 xe** |
+| Đối tác | `chuxe.tuan@xeprime.test` | `0913000001` | chủ xe cá nhân tuyến hoa hồng, **2 xe** |
+| Đối tác | `chuxe.son@xeprime.test` | `0913000004` | chủ xe cá nhân tuyến hoa hồng, **3 xe** = 2 ô tô + 1 xe máy (chạm trần Owner Lite); 1 xe nháp |
+| Khách | `khach.an@xeprime.test` | `0901000001` | khách quen, nhiều chuyến đã xong, có đánh giá; **bằng lái B2 đã xác thực** |
+| Khách | `khach.binh@xeprime.test` | `0901000002` | đang thuê dài hạn theo gói tháng; **bằng lái A1 + B2 đã xác thực** |
+| Khách | `khach.cuong@xeprime.test` | `0901000003` | thuê có tài xế; bị gian hàng Sài Gòn đưa vào danh sách chặn (chỉ ở gian hàng đó); **chưa có bằng lái** — tài khoản để thử luồng nộp/xác thực bằng lái (ADR 0057) |
 
-**Tài khoản song sinh** (cùng email + SĐT, khác site, mật khẩu như nhau ở seed):
+**Tài khoản song sinh** (cùng email + SĐT, khác site, mật khẩu như nhau ở seed — nên cùng một SĐT
+đăng nhập được ở cả hai site, vào HAI tài khoản khác nhau):
 `owner.saigon@` và `chuxe.son@` có thêm tài khoản **khách** — chủ xe đi thuê xe bằng tài khoản
 khách và bị chặn đặt xe của chính mình; `khach.an@` có thêm tài khoản **đối tác** chưa có gian hàng
 — ca "đăng ký đối tác xong ⇒ chọn tuyến".

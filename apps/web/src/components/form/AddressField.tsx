@@ -23,15 +23,6 @@ import { readRememberedProvince, rememberProvince } from '@/lib/province-memory'
 import styles from './AddressField.module.css';
 
 /**
- * Thu phóng khi bản đồ mở ở TÂM MỘT TỈNH — rộng hơn hẳn mức mặc định "một phường".
- *
- * Tâm tỉnh là một điểm neo, không phải một phỏng đoán về chỗ người dùng muốn tới. Mở ở mức
- * phường tại đó là trình ra một khu phố ngẫu nhiên và bắt họ thu nhỏ lại trước khi làm được gì;
- * mức này cho thấy hình dạng của cả vùng để họ phóng vào đúng hướng.
- */
-const PROVINCE_ZOOM = 11;
-
-/**
  * Tên ba trường HÀNH CHÍNH + chi tiết của một địa chỉ trong form.
  *
  * Nhận TÊN chứ không nhận object giá trị: một payload có thể mang nhiều địa chỉ (yêu cầu thuê có
@@ -53,7 +44,7 @@ export type { AddressPinNames };
 interface AddressFieldProps<T extends FieldValues> {
   control: Control<T>;
   names: AddressFieldNames<T>;
-  /** Bỏ trống = địa chỉ này không lưu toạ độ: không gợi ý địa điểm, không bản đồ. */
+  /** Bỏ trống = địa chỉ này không lưu toạ độ: không gợi ý địa điểm. */
   pin?: AddressPinNames<T>;
   /** Tiêu đề khối — bỏ trống thì không hiện, dùng khi form đã có tiêu đề bao ngoài. */
   title?: string;
@@ -103,7 +94,8 @@ interface AddressFieldProps<T extends FieldValues> {
  * 1. **Tỉnh/thành** và 2. **xã/phường/đặc khu** chọn từ DANH MỤC NHÀ NƯỚC (mô hình hai cấp, hiệu
  *    lực 01/07/2025 — không có quận/huyện). Cả hai đều có ô tìm; danh mục cấp xã lọc ở server
  *    theo khoá đã bỏ dấu nên gõ `"ba dinh"` ra `"Phường Ba Đình"`.
- * 3. **Số nhà, đường** thì GÕ, và phải được BẢN ĐỒ XÁC NHẬN — chọn một gợi ý, hoặc tự đặt ghim.
+ * 3. **Số nhà, đường** thì GÕ, và phải được XÁC NHẬN — chọn một gợi ý (kèm toạ độ), hoặc chủ
+ *    động chọn "dùng đúng địa chỉ đã nhập" khi nhà cung cấp bản đồ không biết địa chỉ đó.
  *    Kỷ luật đó sống ở `ConfirmedPlaceField`, cùng một bản dùng chung với luồng đặt xe của khách.
  *    Không danh mục nhà nước nào phát hành số nhà và tên đường, nên ép chọn từ một dropdown danh
  *    mục là bịa ra một danh mục không tồn tại — nhưng gõ tự do thì để lại một địa chỉ không có
@@ -156,8 +148,8 @@ export function AddressField<T extends FieldValues>({
    * Xoá xã ngay thay vì để backend từ chối lúc lưu: FK tổ hợp `(ward_code, province_code)` sẽ
    * chặn, nhưng người dùng nhận một lỗi không giải thích được.
    *
-   * `pinResetKey` nhích lên để dựng lại phần ghim: state cục bộ của nó (địa chỉ đã đọc ngược,
-   * cảnh báo lệch tỉnh) sạch theo, và nó tự dọn bốn trường ghim trong form. Khởi đầu là `0` nên
+   * `pinResetKey` nhích lên để dựng lại ô địa chỉ: state cục bộ của nó (mốc đã xác nhận, cảnh
+   * báo lệch tỉnh) sạch theo, và nó tự dọn bốn trường ghim trong form. Khởi đầu là `0` nên
    * lần mở đầu tiên KHÔNG dọn gì — đúng thứ form ở chế độ sửa cần.
    */
   const [pinResetKey, setPinResetKey] = useState(0);
@@ -325,13 +317,11 @@ export function AddressField<T extends FieldValues>({
             label={t('addressLineLabel')}
             placeholder={t('addressLinePlaceholder')}
             /*
-             * Neo vào TÂM TỈNH đang chọn. Thiếu nó thì mọi form địa chỉ trong sản phẩm mở bản đồ
-             * ở cùng một chỗ giữa Đà Nẵng — kể cả khi người dùng vừa chọn Bắc Ninh ngay phía
-             * trên. Tham chiếu ổn định theo mã tỉnh (bảng hằng ở `@xeprime/domain`), nên truyền
-             * thẳng xuống không làm bản đồ dời khung nhìn ở mỗi lần render.
+             * Neo vào TÂM TỈNH đang chọn: gợi ý cho "Nguyễn Huệ" kéo về đúng tỉnh người dùng vừa
+             * chọn thay vì ra TP.HCM mọi lúc. Tham chiếu ổn định theo mã tỉnh (bảng hằng ở
+             * `@xeprime/domain`), nên truyền thẳng xuống không đổi khoá truy vấn ở mỗi lần render.
              */
             anchor={provinceCenter(provinceCode)}
-            anchorZoom={PROVINCE_ZOOM}
             // Chưa chọn tỉnh thì chưa hỏi bản đồ: gợi ý lúc đó rải khắp cả nước và chẳng giúp
             // được ai, trong khi mỗi lượt hỏi là một request có tính tiền.
             searchEnabled={Boolean(provinceCode)}
@@ -343,6 +333,8 @@ export function AddressField<T extends FieldValues>({
                   place.suggestedProvinceCode !== provinceCode,
               )
             }
+            // Lời nhắc lệch tỉnh nói về địa điểm vừa bị thay bằng một địa chỉ gõ tay — gỡ đi.
+            onConfirmedManually={() => setProvinceMismatch(false)}
           />
         </>
       ) : (

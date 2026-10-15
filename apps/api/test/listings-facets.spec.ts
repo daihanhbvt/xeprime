@@ -265,7 +265,14 @@ describe('Facets marketplace (đếm theo chiều + filter CSV)', () => {
     expect(countOf(f.fuelType, FUEL_TYPE.GASOLINE)).toBe(2);
     expect(countOf(f.features, 'bluetooth')).toBe(2);
     expect(countOf(f.features, 'gps')).toBe(2);
-    expect(f.amenities).toEqual({ hourly: 2, delivery: 2, noCollateral: 2, discount: 2 });
+    // Gian hàng của spec này không bật hoá đơn VAT — bộ lọc đó có spec riêng (`tenant-vat-invoice`).
+    expect(f.amenities).toEqual({
+      hourly: 2,
+      delivery: 2,
+      noCollateral: 2,
+      discount: 2,
+      vatInvoice: 0,
+    });
     // Gọi service trực tiếp thì Decimal chưa qua ResponseInterceptor → so sánh qua String().
     expect(String(f.price.min)).toBe('400000');
     expect(String(f.price.max)).toBe('1200000');
@@ -424,6 +431,7 @@ describe('buildListingWhereSql khớp buildListingWhere (chống lệch hai bả
     ['tiện ích: giao xe', sq({ delivery: true })],
     ['tiện ích: miễn thế chấp', sq({ noCollateral: true })],
     ['tiện ích: đang giảm giá', sq({ discount: true })],
+    ['tiện ích: hoá đơn VAT (gian hàng chưa bật → rỗng ở cả hai bản)', sq({ vatInvoice: true })],
     ['tìm chữ (q)', sq({ q: 'VinFast' })],
     ['tìm chữ không khớp gì', sq({ q: 'khong-ton-tai-xyz' })],
     ['vehicleType', sq({ vehicleType: VEHICLE_TYPE.CAR })],

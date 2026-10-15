@@ -2,7 +2,6 @@
   "page": {
     "title": "Become a host",
     "subtitle": "Create a host profile to list and manage your rental vehicles. XePrime reviews each vehicle before it goes live on the marketplace.",
-    "back": "Back to marketplace",
     "homeAriaLabel": "Go to the XePrime home page"
   },
   "guide": {
@@ -78,7 +77,16 @@
     "wardInvalid": "Invalid ward",
     "addressLineRequired": "Enter your shop's address",
     "addressLineMax": "Address is too long",
-    "phoneRequired": "Enter your shop's contact phone number"
+    "phoneRequired": "Enter your shop's contact phone number",
+    "displayNameRequired": "Please enter your full name",
+    "displayNameMax": "Name is too long",
+    "passwordRequired": "Please enter a password",
+    "passwordTooShort": "Password must be at least 8 characters",
+    "passwordNeedsLetter": "Password must contain a letter",
+    "passwordNeedsDigit": "Password must contain a number",
+    "confirmRequired": "Please re-enter your password",
+    "confirmMismatch": "Passwords do not match",
+    "emailRequired": "Please enter your email"
   },
   "created": "Shop created. Complete the profile, then submit it for review.",
   "ownerVariant": {
@@ -112,5 +120,72 @@
       "notify": "You will be notified as soon as your account is approved.",
       "refresh": "This screen updates automatically once your account is approved."
     }
+  },
+  "signup": {
+    "title": {
+      "commission": "Register as a car owner",
+      "package": "Register a shop"
+    },
+    "subtitle": {
+      "commission": "One form for your partner account and owner profile. Then list your first car.",
+      "package": "One form for your partner account and shop details."
+    },
+    "accountSection": "Account details",
+    "profileSection": {
+      "commission": "Rental area",
+      "package": "Shop details"
+    },
+    "accountReady": "Your partner account is ready — just complete the profile below.",
+    "fields": {
+      "displayName": {
+        "label": "Full name",
+        "placeholder": "Enter your full name"
+      },
+      "ownerName": {
+        "label": "Full name",
+        "placeholder": "Enter your full name"
+      },
+      "phone": {
+        "label": "Phone number",
+        "placeholder": "0901234567",
+        "help": "Used to sign in and for customers to reach you."
+      },
+      "otpCode": {
+        "label": "Verification code",
+        "placeholder": "Enter the 6-digit code",
+        "help": "Tap “Verify” to get a 6-digit code by SMS.",
+        "sendCode": "Send code",
+        "resend": "Resend code",
+        "resendIn": "Resend ({seconds}s)",
+        "sent": "Code sent to {phone}.",
+        "phoneFirst": "Enter a valid phone number before requesting a code.",
+        "verify": "Verify",
+        "verified": "Verified",
+        "verifiedHelp": "Phone number {phone} is verified.",
+        "dialogTitle": "Verify phone number",
+        "codeSentTo": "Enter the 6-digit code sent by SMS to",
+        "cancel": "Cancel"
+      },
+      "email": {
+        "label": "Contact email",
+        "placeholder": "you@company.com"
+      },
+      "password": {
+        "label": "Password",
+        "placeholder": "At least 8 characters, letters and numbers"
+      },
+      "confirmPassword": {
+        "label": "Confirm password",
+        "placeholder": "Re-enter your password"
+      }
+    },
+    "submit": {
+      "commission": "Register and continue",
+      "package": "Register shop"
+    },
+    "changeTrack": "Change rental option",
+    "hasAccount": "Already have a partner account?",
+    "login": "Sign in",
+    "backToRegister": "Back to registration"
   }
 }

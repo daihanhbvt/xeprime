@@ -77,7 +77,7 @@
     "addressEdit": "Edit",
     "addressMissing": "This vehicle is not assigned to a branch yet. Pick a branch in the management portal to give it a public location.",
     "addressNoStreet": "The branch has no street address yet — click Edit to add one.",
-    "addressMapPending": "This address could not be located on the map yet. The text address is still used; the map appears once coordinates are resolved.",
+    "addressMapPending": "This address could not be located on the map yet. The text address is still used; the location becomes available once coordinates are resolved.",
     "addressMapTitle": "Vehicle location map",
     "addressSharedTitle": "This branch holds {count, plural, one {# vehicle} other {# vehicles}}",
     "addressSharedBody": "Editing the branch address changes the public location of all of them. To place this vehicle elsewhere, create or pick another branch in the management portal.",
@@ -167,7 +167,8 @@
       "quote": "The price is final — estimates still wait for you.",
       "longTerm": "Long-term rentals are never auto-accepted: you always confirm the schedule.",
       "driver": "An active driver with a valid licence is free for the window.",
-      "hold": "Chauffeured trips on the commission track still wait for your approval before the renter pays the hold."
+      "hold": "Chauffeured trips on the commission track still wait for your approval before the renter pays the hold.",
+      "appHold": "Chauffeured trips of personal owners still wait for your approval before the customer pays the hold."
     },
     "policyTitle": "* Cancellation policy note for auto-accepted trips:",
     "policyBody": "Auto-confirmed requests follow the standard Xe Prime cancellation policy. Cancelling a trip after it was auto-confirmed may lower your reliability score or limit your vehicle's visibility.",
@@ -175,7 +176,8 @@
     "capabilityNoDriver": "No active drivers yet. Add a driver in the management portal before enabling.",
     "capabilityOk": "{count, plural, one {# active driver} other {# active drivers}} — the system assigns a free driver on acceptance.",
     "openDrivers": "Manage drivers",
-    "saved": "Instant booking settings saved"
+    "saved": "Instant booking settings saved",
+    "appCapabilityNoFeature": "Your account does not include the Drivers feature yet — auto-accept for chauffeured trips cannot be turned on."
   },
   "delivery": {
     "title": "Home delivery",

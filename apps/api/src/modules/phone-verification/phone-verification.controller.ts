@@ -1,27 +1,23 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Res } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, HttpCode, HttpStatus, Post, Req, Body } from '@nestjs/common';
+import { ApiGoneResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import {
   ACCOUNT_REALM,
-  PHONE_VERIFICATION_PURPOSE,
   realmForClientApp,
   type AccountRealm,
   type MobileClientApp,
   type PhoneVerificationPurpose,
 } from '@xeprime/types';
-import type { Response } from 'express';
-import { Public, Realms, VerifiesCredentials, WebRealm } from '../../common/decorators';
+import { Public, Realms } from '../../common/decorators';
 import { resolveOptionalUser, type OptionalUser } from '../../common/optional-user';
 import type { RequestContext } from '../../common/types/request-context';
 import { PrismaService } from '../../prisma/prisma.service';
-import { AuthService } from '../auth/auth.service';
+import { AuthService, otpLoginRetired } from '../auth/auth.service';
 import { NativeSessionService } from '../auth/native-session.service';
 import { RequestRealmService } from '../auth/request-realm.service';
 import { SessionService } from '../auth/session.service';
-import { MeDto } from '../auth/dto/auth.dto';
 import {
   OtpConfigDto,
-  PhoneLoginDto,
   SendOtpDto,
   SendOtpResultDto,
   VerifyOtpDto,
@@ -34,12 +30,12 @@ import { PhoneVerificationService } from './phone-verification.service';
  * chọn qua OTP_MODE. `@Throttle` siết riêng để hãm brute-force mã 6 số (ngoài rate-limit trong
  * service tính theo SĐT). Best-effort gắn userId để stamp `phone_verified_at` khi đã đăng nhập.
  *
- * `POST login` là passwordless (ADR 0002): OTP purpose=login vừa xác thực SĐT vừa cấp session
- * httpOnly — tái dùng `SessionService` như mọi luồng đăng nhập khác, không nhét quyền vào token.
+ * Từ ADR 0060 OTP CHỈ chứng minh sở hữu số điện thoại — không route nào ở đây tạo tài khoản hay
+ * cấp phiên. Mã `register` được đối chiếu trong `POST /auth/register`, mã `password_reset` trong
+ * `POST /auth/password/reset-otp`; `POST login` (đăng nhập bằng OTP cũ) chỉ còn trả 410.
  *
  * Mỗi mã thuộc MỘT realm (ADR 0053): site web gọi thì realm của site; app native gọi thẳng (không
- * qua site) thì realm theo `clientApp`. Realm `platform` không có OTP — tài khoản quản trị chỉ đăng
- * nhập bằng mật khẩu.
+ * qua site) thì realm theo `clientApp`. Realm `platform` không có OTP.
  */
 @ApiTags('phone-verification')
 @Controller('auth/phone')
@@ -59,22 +55,36 @@ export class PhoneVerificationController {
   @ApiOperation({ summary: 'Cấu hình OTP cho giao diện (có nhận mã test hay không)' })
   @ApiOkResponse({ type: OtpConfigDto })
   otpConfig(): OtpConfigDto {
-    return { testCodeEnabled: this.service.testCodeEnabled() };
+    /*
+     * LUÔN false: giao diện (web + hai app) chạy y như production — luôn gửi mã, luôn qua bước nhập
+     * mã, không có chữ "thử nghiệm". Việc có tốn SMS hay không do SERVER quyết theo công tắc admin
+     * "Gửi SMS mã OTP" (`isSmsDisabled`): tắt (chỉ dev/staging) ⇒ không gọi nhà mạng, mã 123456.
+     * Giữ endpoint để app đã phát hành không lỗi khi gọi.
+     */
+    return { testCodeEnabled: false };
   }
 
   @Public()
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('send-otp')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Gửi mã OTP tới số điện thoại' })
+  @ApiOperation({
+    summary:
+      'Gửi mã OTP tới số điện thoại. `register`: số đã có tài khoản ⇒ PHONE_TAKEN. `password_reset`: luôn trả như nhau. `login`: 410 OTP_LOGIN_RETIRED (ADR 0060)',
+  })
   @ApiOkResponse({ type: SendOtpResultDto })
+  @ApiGoneResponse({
+    description: '`purpose=login` — đăng nhập bằng OTP đã gỡ (`OTP_LOGIN_RETIRED`).',
+  })
   async sendOtp(@Body() dto: SendOtpDto, @Req() req: RequestContext): Promise<SendOtpResultDto> {
     const { realm } = await this.otpContext(req, dto.clientApp);
-    const { expiresAt, devCode } = await this.service.sendOtp(
-      dto.phone,
-      dto.purpose as PhoneVerificationPurpose,
-      realm,
-    );
+    const purpose = dto.purpose as PhoneVerificationPurpose;
+    // Luật theo MỤC ĐÍCH thuộc về auth (có tài khoản chưa, có được tự đăng ký không) — xem
+    // `AuthService.otpDeliveryFor`. Service OTP chỉ lo mã, cooldown và nhà mạng.
+    const { deliver } = await this.auth.otpDeliveryFor(purpose, dto.phone, realm);
+    const { expiresAt, devCode } = await this.service.sendOtp(dto.phone, purpose, realm, {
+      deliver,
+    });
     return { expiresAt: expiresAt.toISOString(), devCode };
   }
 
@@ -99,36 +109,21 @@ export class PhoneVerificationController {
     return { verified: true };
   }
 
+  /**
+   * ĐÃ GỠ (ADR 0060) — đăng nhập bằng SĐT + OTP. Route ở lại chỉ để client cũ nhận một MÃ đọc
+   * được (`OTP_LOGIN_RETIRED`, 410) thay vì 404 mơ hồ. Không đọc body, không đối chiếu mã, không
+   * tạo tài khoản, không cấp phiên — kể cả khi mã gửi lên là đúng.
+   */
   @Public()
-  @VerifiesCredentials()
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('login')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Đăng nhập passwordless bằng SĐT + OTP (tự tạo tài khoản nếu chưa có)' })
-  @ApiOkResponse({ type: MeDto })
-  async login(
-    @Body() dto: PhoneLoginDto,
-    @WebRealm() realm: AccountRealm,
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<MeDto> {
-    // Verify OTP purpose=login (đúng mục đích, không dùng chéo) → tìm/tạo tài khoản theo SĐT TRONG
-    // realm của site → cấp session cookie của realm đó. Tất cả sau khi khách đã chứng minh sở hữu
-    // SĐT bằng mã đúng.
-    await this.service.verifyOtp(
-      dto.phone,
-      PHONE_VERIFICATION_PURPOSE.LOGIN,
-      dto.code,
-      realm,
-      null,
-    );
-    const { userId } = await this.auth.resolveOrCreateUserByPhone(
-      dto.phone,
-      realm,
-      dto.displayName,
-    );
-    const { token } = this.sessions.issue(userId);
-    this.sessions.attach(res, token, realm);
-    return this.auth.me(userId);
+  @HttpCode(HttpStatus.GONE)
+  @ApiOperation({
+    summary: 'ĐÃ GỠ — đăng nhập bằng OTP. Luôn 410 OTP_LOGIN_RETIRED (ADR 0060)',
+    deprecated: true,
+  })
+  @ApiGoneResponse({ description: 'Đăng nhập bằng OTP đã gỡ — dùng SĐT + mật khẩu.' })
+  login(): never {
+    throw otpLoginRetired();
   }
 
   /**

@@ -4,6 +4,8 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { LONG_TERM_PACKAGE_MONTHS, SERVICE_TYPE } from '@xeprime/types';
+import { AUTH_CONTEXT, AUTH_MODE } from '@/features/auth/post-auth-destination';
+import { readBookingDraft } from '../booking-draft';
 import { RequestBookingModal } from './RequestBookingModal';
 
 /**
@@ -12,22 +14,39 @@ import { RequestBookingModal } from './RequestBookingModal';
  * Những gì phải KHÔNG còn: ô chọn khoảng ngày, ngày trả do khách nhập, badge phần trăm nổi trên
  * gói, giá tự lái và khuyến mãi tự lái trong panel, dòng "tiết kiệm so với thuê theo ngày".
  * Những gì phải CÓ: đúng sáu gói kèm tiền thật, hai nguyện vọng nhận xe, và payload gửi lên
- * mang gói + nguyện vọng chứ không mang lịch.
+ * mang gói + nguyện vọng chứ không mang lịch — cũng không mang họ tên/SĐT (ADR 0060).
  */
 const nav = vi.hoisted(() => ({ push: vi.fn() }));
 const api = vi.hoisted(() => ({
   checkAvailability: vi.fn(),
   fetchVehicleBusyDays: vi.fn(),
   submitBookingRequest: vi.fn(),
-  verifyOtp: vi.fn(),
-  phoneLogin: vi.fn(),
   fetchDriverLicenceOverview: vi.fn(),
-  sendAsync: vi.fn(),
-  send: vi.fn(),
-  reset: vi.fn(),
 }));
 
-vi.mock('@/hooks/use-current-user', () => ({ useCurrentUser: () => ({ data: undefined }) }));
+/**
+ * Gửi yêu cầu cần TÀI KHOẢN KHÁCH đã đăng nhập (ADR 0060) — mặc định của spec này. Đổi `me.data`
+ * rồi vẽ lại cùng cây là mô phỏng cú đăng nhập xong.
+ */
+const LOGGED_IN_ME = {
+  id: 'U1',
+  displayName: 'Nguyễn Văn A',
+  phone: '0901234567',
+  phoneVerified: true,
+};
+const me = vi.hoisted(() => ({ data: undefined as unknown }));
+// `dataUpdatedAt`: có người dùng ⇒ coi như vừa nạp (xem bản đầy đủ ở RequestBookingModal.test).
+vi.mock('@/hooks/use-current-user', () => ({
+  useCurrentUser: () => ({
+    data: me.data,
+    dataUpdatedAt: me.data ? Number.MAX_SAFE_INTEGER : 0,
+  }),
+}));
+/** Có phiên thì flow đọc lời nhắc thanh toán — spec này không khoá nó, nên cho rỗng. */
+vi.mock('@/features/trips/hooks', () => ({ useUnpaidHolds: () => ({ data: undefined }) }));
+/** Hook thật ném lỗi khi nằm ngoài `AuthModalProvider` — flow chỉ cần biết hộp được MỞ. */
+const authModal = vi.hoisted(() => ({ open: vi.fn() }));
+vi.mock('@/features/auth/components/AuthModalProvider', () => ({ useAuthModal: () => authModal }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: nav.push }) }));
 vi.mock('@/hooks/use-media-query', () => ({
   useIsMobile: () => false,
@@ -186,18 +205,10 @@ vi.mock('@/features/rental-policies/api', () => ({
 vi.mock('@/features/chat/components/ChatWithShopButton', () => ({
   ChatWithShopButton: () => <button type="button">Liên hệ</button>,
 }));
-vi.mock('@/features/phone-verification/api', () => ({
-  verifyOtp: (...a: unknown[]) => api.verifyOtp(...a),
-  sendOtp: vi.fn(),
-}));
 /*
- * Dài hạn là thuê TỰ LÁI (ADR 0057): khách vãng lai đăng nhập bằng OTP rồi mới soát bằng lái.
+ * Dài hạn là thuê TỰ LÁI (ADR 0057): có phiên rồi mới soát bằng lái của tài khoản.
  * Bằng mặc định đã hợp lệ — spec này khoá gói + nguyện vọng, không phải bước bằng lái.
  */
-vi.mock('@/services/auth.service', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@/services/auth.service')>()),
-  phoneLogin: (...a: unknown[]) => api.phoneLogin(...a),
-}));
 vi.mock('@/features/driver-licence/api', () => ({
   fetchDriverLicenceOverview: (...a: unknown[]) => api.fetchDriverLicenceOverview(...a),
   fetchDriverLicenceImage: vi.fn(),
@@ -211,29 +222,11 @@ const VALID_LICENCE = {
   coversCar: true,
   coversMotorbike: false,
 };
-vi.mock('@/features/phone-verification/hooks/use-phone-verify', () => ({
-  usePhoneVerify: () => ({
-    status: 'idle',
-    cooldown: 0,
-    devCode: null,
-    error: null,
-    sending: false,
-    sendAsync: api.sendAsync,
-    send: api.send,
-    reset: api.reset,
-  }),
-}));
-vi.mock('@/features/phone-verification/components/OtpCodeInput', () => ({
-  OtpCodeInput: ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
-    <input aria-label="Mã OTP" value={value} onChange={(e) => onChange(e.target.value)} />
-  ),
-}));
-
 function renderModal() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
+  const tree = () => (
     <QueryClientProvider client={queryClient}>
       <App>
         <RequestBookingModal
@@ -243,27 +236,34 @@ function renderModal() {
           onClose={vi.fn()}
         />
       </App>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const utils = render(tree());
+  /** Vẽ lại CÙNG cây — flow giữ nguyên state, chỉ đọc lại `me.data` (đăng nhập xong). */
+  return { ...utils, rerenderTree: () => utils.rerender(tree()) };
 }
 
 /** Chờ hồ sơ xe về rồi chuyển sang tab Thuê dài hạn. */
 async function openLongTerm() {
-  renderModal();
+  const utils = renderModal();
   const tab = await screen.findByText('Thuê dài hạn');
   fireEvent.click(tab);
   await screen.findByRole('radiogroup', { name: 'Gói thuê dài hạn' });
+  return utils;
 }
 
 beforeEach(() => {
   nav.push.mockReset();
   quoteCalls.length = 0;
   Object.values(api).forEach((fn) => fn.mockReset());
+  me.data = LOGGED_IN_ME;
+  authModal.open.mockReset();
+  // Bản nháp chờ đăng nhập sống ở `sessionStorage` — không được rò từ test này sang test khác.
+  window.sessionStorage.clear();
   api.fetchDriverLicenceOverview.mockResolvedValue({
     verified: VALID_LICENCE,
     latest: VALID_LICENCE,
   });
-  api.phoneLogin.mockResolvedValue({ id: 'U1' });
   api.fetchVehicleBusyDays.mockResolvedValue({ days: [], from: '2026-01-01', to: '2026-01-01' });
 });
 
@@ -390,21 +390,14 @@ describe('Thuê dài hạn — nguyện vọng nhận xe', () => {
 
   it('gửi yêu cầu: payload mang GÓI + nguyện vọng, KHÔNG mang ngày nhận/trả', async () => {
     api.submitBookingRequest.mockResolvedValue({ id: 'R1', status: 'pending_host_approval' });
-    api.sendAsync.mockResolvedValue(undefined);
-    api.verifyOtp.mockResolvedValue({});
     await openLongTerm();
 
     fireEvent.click(screen.getByRole('radio', { name: /6 tháng/ }));
-    // Gói và liên hệ nằm cùng MỘT bước — một cú Tiếp tục là sang thẳng xác thực.
-    fireEvent.change(screen.getByLabelText('Họ và tên'), { target: { value: 'Nguyễn Văn A' } });
-    fireEvent.change(screen.getByLabelText('Số điện thoại'), { target: { value: '0901234567' } });
+    // Đã đăng nhập: một cú Tiếp tục là sang thẳng Xác nhận (bằng lái mặc định đã hợp lệ).
     fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
-
-    fireEvent.change(await screen.findByLabelText('Mã OTP'), { target: { value: '123456' } });
+    await screen.findByRole('button', { name: 'Gửi yêu cầu thuê' });
     // Dài hạn KHÔNG gọi check-availability: chưa có khung giờ nào để kiểm (ADR 0006).
     expect(api.checkAvailability).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Xác thực' }));
-    await screen.findByRole('button', { name: 'Gửi yêu cầu thuê' });
 
     // Bước xác nhận nói GÓI và NGUYỆN VỌNG, không hiện một lịch giả.
     expect(screen.getByText('Gói thuê')).toBeTruthy();
@@ -426,6 +419,43 @@ describe('Thuê dài hạn — nguyện vọng nhận xe', () => {
     expect(payload.returnAt).toBeUndefined();
     expect(payload.pickupWindowStartDate).toBeUndefined();
     expect(payload.pickupWindowEndDate).toBeUndefined();
+    // Danh tính người thuê do server đọc từ tài khoản (ADR 0060).
+    expect(payload).not.toHaveProperty('customerName');
+    expect(payload).not.toHaveProperty('customerPhone');
+  });
+
+  /**
+   * Chưa đăng nhập (ADR 0060): dài hạn không có khung giờ nào để kiểm, nên "Tiếp tục" đi thẳng tới
+   * việc GIỮ bản nháp và mời đăng nhập. Thứ phải sống qua lượt đăng nhập là GÓI khách vừa chọn —
+   * không phải gói mặc định 1 tháng.
+   */
+  it('chưa đăng nhập: giữ GÓI vào bản nháp, mời đăng nhập — đăng nhập xong đi tiếp với đúng gói', async () => {
+    me.data = undefined;
+    const { rerenderTree } = await openLongTerm();
+
+    fireEvent.click(screen.getByRole('radio', { name: /6 tháng/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+
+    await waitFor(() =>
+      expect(authModal.open).toHaveBeenCalledWith({
+        mode: AUTH_MODE.LOGIN,
+        context: AUTH_CONTEXT.BOOKING,
+      }),
+    );
+    expect(readBookingDraft('V1')?.values).toMatchObject({
+      serviceType: SERVICE_TYPE.LONG_TERM,
+      longTermPackageMonths: 6,
+    });
+    expect(api.submitBookingRequest).not.toHaveBeenCalled();
+
+    me.data = LOGGED_IN_ME;
+    rerenderTree();
+
+    await screen.findByRole('button', { name: 'Gửi yêu cầu thuê' });
+    expect(screen.getByText('Gói thuê').closest('div')?.textContent).toContain('6 tháng');
+    // Không có lịch để kiểm ở CẢ hai lượt — trước và sau đăng nhập.
+    expect(api.checkAvailability).not.toHaveBeenCalled();
+    expect(api.submitBookingRequest).not.toHaveBeenCalled();
   });
 
   it('gói 1 tháng được chọn sẵn — mở ra là đã có giá thật để so', async () => {

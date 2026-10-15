@@ -90,6 +90,7 @@ export function makeBranchesService(prisma: PrismaService): BranchesService {
     // Trần chi nhánh của bậc gói đọc qua đây (ADR 0041 điều 1) — `BillingService` thật trên
     // cùng database, không phải một stub: luật snapshot-thắng-bậc-gói là thứ cần được kiểm.
     makeBillingService(prisma),
+    makeDisabledGeoService(prisma),
   );
 }
 
@@ -170,15 +171,13 @@ export function makeBookingHoldsService(prisma: PrismaService): BookingHoldsServ
 }
 
 /**
- * `BookingRequestsService` — mười dependency, dựng tay ở sáu spec. `phoneVerification`/`auth`
- * là hai chỗ spec BẮT BUỘC thay bằng stub (không đi qua OTP/đăng nhập thật), nên chúng là tham
- * số; phần còn lại factory tự lo.
+ * `BookingRequestsService` — dựng đủ dependency thật trên Postgres thật; spec chỉ truyền phần cần
+ * thay. Từ ADR 0060 người gửi yêu cầu luôn là một tài khoản khách đã đăng nhập (spec tạo nó bằng
+ * `customerAccountFor`), nên không còn stub OTP/đăng nhập nào phải truyền vào.
  */
 export function makeBookingRequestsService(
   prisma: PrismaService,
   stubs: {
-    phoneVerification: ConstructorParameters<typeof BookingRequestsService>[4];
-    auth: ConstructorParameters<typeof BookingRequestsService>[5];
     bookings?: BookingsService;
     audit?: AuditService;
     notifications?: NotificationService;
@@ -197,7 +196,7 @@ export function makeBookingRequestsService(
      * nghĩa là mỗi spec phải dựng một bằng đã xác thực cho khách. Spec của cổng truyền bản BẬT.
      */
     driverLicences?: DriverLicencesService;
-  },
+  } = {},
 ): BookingRequestsService {
   const audit = stubs.audit ?? new AuditService(prisma);
   const notifications = stubs.notifications ?? makeNotificationService(prisma);
@@ -206,8 +205,6 @@ export function makeBookingRequestsService(
     stubs.bookings ?? makeBookingsService(prisma),
     audit,
     notifications,
-    stubs.phoneVerification,
-    stubs.auth,
     stubs.occupancy ?? new OccupancyService(prisma),
     stubs.pricing ?? makePricingService(prisma),
     stubs.customers ?? makeCustomersService(prisma, audit),
@@ -383,7 +380,7 @@ export function makeTenantsService(prisma: PrismaService): TenantsService {
 
 /** `AppConfigService` — công tắc `isPlanPromotionEnabled` + cửa xếp hàng email hướng dẫn gói. */
 export function makeAppConfigService(prisma: PrismaService): AppConfigService {
-  return new AppConfigService(prisma, new AuditService(prisma));
+  return new AppConfigService(prisma, new AuditService(prisma), new ConfigService());
 }
 
 /** `SellerProfileService` — writer duy nhất của `seller_profiles`, kể cả MST ghi từ hồ sơ gian hàng. */

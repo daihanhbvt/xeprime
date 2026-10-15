@@ -1,6 +1,6 @@
 # Tài liệu XePrime
 
-> Cập nhật: 06/10/2026
+> Cập nhật: 14/10/2026
 > Trạng thái: nguồn điều hướng chính thức của tài liệu dự án.
 
 XePrime là chợ đăng và thuê xe kết hợp giải pháp quản lý cho thuê xe. Bộ tài liệu được giữ gọn theo ba câu hỏi: **đang xây gì**, **đang ở đâu**, và **vì sao chọn cách này**.
@@ -37,7 +37,7 @@ Tài liệu chuyên đề không tự mở rộng scope; mâu thuẫn với ngu�
 | [`third-party-keys.md`](third-party-keys.md) | OAuth, SMS, SMTP, R2, Maps, Firebase và SePay |
 | [`push-notifications.md`](push-notifications.md) | FCM, loại thông báo và đích điều hướng |
 | [`realtime-runbook.md`](realtime-runbook.md) | Vận hành huy hiệu/chat realtime và cách chẩn đoán |
-| [`guest-booking-passwordless.md`](guest-booking-passwordless.md) | Đặt xe không mật khẩu bằng OTP |
+| [`phone-auth-and-booking.md`](phone-auth-and-booking.md) | Đăng nhập SĐT + mật khẩu, đăng ký có OTP, quên mật khẩu bằng OTP, đặt xe cần tài khoản (bản nháp qua lượt đăng nhập), mời thành viên bằng SĐT — ADR 0060 |
 | [`git-workflow.md`](git-workflow.md) | Quy ước branch/commit và lệnh `/commit` |
 | [`qa-accounts.md`](qa-accounts.md) | Tài khoản demo theo site/realm và đường dẫn staging (không chứa mật khẩu) |
 

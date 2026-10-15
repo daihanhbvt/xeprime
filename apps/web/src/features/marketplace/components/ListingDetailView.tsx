@@ -11,15 +11,16 @@ import {
   requiredIdentityDocuments,
   SERVICE_TYPE,
 } from '@xeprime/types';
-import { LIST_SEPARATOR } from '@xeprime/domain';
+import { LIST_SEPARATOR, toGeoPoint } from '@xeprime/domain';
 import { RequestBookingButton } from '@/features/booking-requests/components/RequestBookingButton';
 import { catalogLabel, type CatalogMap } from '@/features/catalog/types';
 import { ShopChatButton } from '@/features/chat/components/ShopChatButton';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
-import { StaticMap } from '@/components/data-display/StaticMap';
+import { MapLink } from '@/components/data-display/MapLink';
+import { StaticMapImage } from '@/components/data-display/StaticMapImage';
 import { ShopQuickInfoCard } from '@/components/shop/ShopQuickInfoCard';
-import { mapPlaceUrl, toGeoPoint } from '@/lib/map-static';
 import { applyDiscountPercent } from '@/lib/money';
+import { pickupMapSrc } from '../api';
 import type { PublicListingDetail } from '../types';
 import { ListingGallery } from './ListingGallery';
 import { ListingReviews } from './ListingReviews';
@@ -51,13 +52,17 @@ export async function ListingDetailView({
   /** Tỉnh đang lọc ở trang tìm xe — prefill ô địa chỉ giao xe của luồng đặt (ADR 0035). */
   searchProvinceCode?: string;
 }) {
-  const [fmt, t, tCard, tDomain] = await Promise.all([
+  const [fmt, t, tCard, tDomain, tAddress] = await Promise.all([
     getAppFormat(),
     getTranslations('Listings.detail'),
     getTranslations('Listings.card'),
     getTranslations('Domain'),
+    getTranslations('Address'),
   ]);
   const domainLabel = createDomainLabel(tDomain as never);
+  const pickupGeo = listing.pickupPoint
+    ? toGeoPoint(listing.pickupPoint.latitude, listing.pickupPoint.longitude)
+    : null;
 
   const brand = catalogLabel(catalog[CATALOG_TYPE.VEHICLE_BRAND], listing.brand);
   // Thẻ thông số 2 cột kèm icon (mockup đợt 4) — key để client island tra icon.
@@ -215,13 +220,16 @@ export async function ListingDetailView({
             </div>
           )}
 
-          {listing.deliveryEnabled || listing.noCollateral ? (
+          {listing.deliveryEnabled || listing.noCollateral || listing.vatInvoiceSupported ? (
             <div className={styles.amenities}>
               {listing.deliveryEnabled ? (
                 <span className={styles.amenityBadge}>{t('delivery')}</span>
               ) : null}
               {listing.noCollateral ? (
                 <span className={styles.amenityBadge}>{t('noCollateral')}</span>
+              ) : null}
+              {listing.vatInvoiceSupported ? (
+                <span className={styles.amenityBadge}>{t('vatInvoice.badge')}</span>
               ) : null}
             </div>
           ) : null}
@@ -382,6 +390,23 @@ export async function ListingDetailView({
             </section>
           ) : null}
 
+          {/*
+            HOÁ ĐƠN VAT (ADR 0059) — chỉ khi chủ xe đã công bố hỗ trợ. `false` nghĩa là "chưa công
+            bố", không phải "từ chối", nên không có câu phủ định nào cho xe còn lại.
+
+            Câu chữ phải nói rõ AI làm gì và cho KHOẢN NÀO: chủ xe xuất cho tiền thuê trả cho chủ
+            xe, hai bên tự thống nhất; XePrime không xuất thay, và khoản khách trả cho XePrime (phí
+            dịch vụ) không nằm trong hoá đơn đó. Một dòng mơ hồ ở đây là khách doanh nghiệp tưởng
+            một hoá đơn phủ mọi thứ họ đã trả, hoặc tưởng nền tảng sẽ gửi hoá đơn sau chuyến.
+          */}
+          {listing.vatInvoiceSupported ? (
+            <section className={styles.collateral} aria-label={t('vatInvoice.title')}>
+              <h2 className={styles.collateralTitle}>{t('vatInvoice.title')}</h2>
+              <p className={styles.collateralLine}>{t('vatInvoice.body')}</p>
+              <p className={styles.collateralLine}>{t('vatInvoice.disclaimer')}</p>
+            </section>
+          ) : null}
+
           <ListingSpecsCard specs={specs} />
 
           {listing.features.length > 0 ? (
@@ -468,8 +493,9 @@ export async function ListingDetailView({
           <ListingReviews vehicleId={listing.id} />
         </section>
         {/*
-          Điểm nhận xe: địa chỉ là thông tin CHÍNH, bản đồ chỉ minh hoạ. Khối vẫn hiện đầy đủ khi
-          chưa có toạ độ hoặc chưa cấu hình key bản đồ — `StaticMap` tự biến mất, phần chữ ở lại.
+          Điểm nhận xe: địa chỉ là thông tin CHÍNH. Bản đồ là một ẢNH TĨNH do API vẽ hộ và cache
+          theo điểm (ADR 0061 điều 1) — xem được, không tương tác; muốn dẫn đường thì liên kết
+          mở ứng dụng bản đồ của khách. Chưa có toạ độ thì cả hai tự biến mất, phần chữ ở lại.
           Trải hết chiều ngang (`pickupCard`) để không đẻ ra một ô trống cạnh nó trong lưới 2 cột.
         */}
         {listing.pickupPoint ? (
@@ -488,13 +514,16 @@ export async function ListingDetailView({
             {listing.pickupPoint.provinceName ? (
               <p className={styles.pickupMeta}>{listing.pickupPoint.provinceName}</p>
             ) : null}
-            <StaticMap
-              src={mapPlaceUrl(
-                toGeoPoint(listing.pickupPoint.latitude, listing.pickupPoint.longitude),
-              )}
-              title={t('pickupPoint.mapTitle')}
-              height={260}
-            />
+            {pickupGeo ? (
+              <>
+                <StaticMapImage
+                  src={pickupMapSrc(listing.id, pickupGeo, listing.pickupPoint.address)}
+                  alt={t('pickupPoint.mapTitle')}
+                  className={styles.pickupMap}
+                />
+                <MapLink point={pickupGeo} label={tAddress('map.openInGoogleMaps')} />
+              </>
+            ) : null}
           </section>
         ) : null}
       </div>

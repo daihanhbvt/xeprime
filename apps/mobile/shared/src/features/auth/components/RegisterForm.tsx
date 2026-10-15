@@ -1,56 +1,60 @@
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { YStack } from 'tamagui';
+import { Text, YStack } from 'tamagui';
 import { buildRegisterSchema, type RegisterValues } from '@xeprime/validators';
 import { useAuthSchemaLabels } from '../use-auth-schema-labels';
 import { useForm } from 'react-hook-form';
 import { useTranslations } from 'use-intl';
+import { PHONE_VERIFICATION_PURPOSE } from '@xeprime/types';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { Button } from '@/components/ui/Button';
+import { Callout } from '@/components/ui/Callout';
 import { TextField } from '@/components/ui/TextField';
-import { type CurrentUser } from '@/features/auth/api';
+import { checkRegistration, type CurrentUser } from '@/features/auth/api';
 import { useRegister } from '@/features/auth/hooks/use-auth';
+import { OtpCodeStep } from '@/features/phone-verification/components/OtpCodeStep';
+import { usePhoneVerify } from '@/features/phone-verification/hooks/use-phone-verify';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { space } from '@/theme/tokens';
+import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
 
 /**
- * Bốn ô của `RegisterForm` bên web (`AuthPanel.tsx`), cùng `registerSchema`, cùng endpoint —
- * chỉ khác envelope phiên (ADR 0017).
+ * Đăng ký tài khoản — bản native của nhánh đăng ký trong `AuthPanel` của web, CÙNG luồng (ADR 0060):
  *
- * `confirmPassword` KHÔNG được gửi lên: nó là ràng buộc của form, không phải của API. Web cũng
- * cắt nó ở đúng chỗ này.
+ *  1. Bốn ô: SĐT · họ tên · mật khẩu · nhập lại (cùng `registerSchema`).
+ *  2. "Tạo tài khoản" → gửi mã `purpose=register` tới SĐT. Số đã có tài khoản ở app này ⇒ server từ
+ *     chối ngay (`PHONE_TAKEN`), trước khi tốn tin nhắn. Môi trường nhận mã test thì không gửi SMS.
+ *  3. Bước "Xác minh số điện thoại": nhập 6 số → `POST /auth/mobile/register { …, code }`. "Sửa thông
+ *     tin" quay lại form, giữ nguyên thứ đã điền.
+ *
+ * `confirmPassword` KHÔNG được gửi lên: nó là ràng buộc của form, không phải của API.
  */
 export function RegisterForm({
   onSuccess,
   consent,
   blocked = false,
+  onStepChange,
 }: {
   onSuccess: (user: CurrentUser) => void;
   /**
-   * Khối cam kết đặt NGAY TRÊN nút gửi — màn đăng ký nhét ô tick điều khoản vào đây.
-   *
-   * Là một khe nhận nội dung chứ không phải một ô tick dựng sẵn: state của nó thuộc về MÀN, vì
-   * cùng cái tick đó còn chặn hai nút mạng xã hội nằm ngoài form (xem {@link blocked}). Form chỉ
-   * biết chỗ ĐẶT nó — sát nút bấm, nơi người dùng nhìn khi tự hỏi vì sao nút chưa sáng.
+   * Khối cam kết đặt NGAY TRÊN nút gửi — màn đăng ký nhét ô tick điều khoản vào đây. State của nó
+   * thuộc về MÀN, vì cùng cái tick đó còn chặn hai nút mạng xã hội nằm ngoài form.
    */
   consent?: ReactNode;
-  /**
-   * Chặn gửi vì một điều kiện NGOÀI form — hiện có đúng một: chưa tick đồng ý điều khoản.
-   *
-   * Ô tick sống ở MÀN chứ không ở đây, và đó là chủ đích: nó chặn cả đăng ký bằng mạng xã hội,
-   * thứ cũng tạo tài khoản. Để ô tick bên trong form thì hai nút Google/Facebook ngay dưới thành
-   * một đường vòng tạo tài khoản mà không đồng ý gì cả.
-   *
-   * KHÔNG đưa vào `registerSchema`: schema là hợp đồng dùng chung với web
-   * (`@xeprime/validators`), mà web cố ý không có ô tick — nhét vào đó một trường chỉ app mới có
-   * là bắt web mang theo một luật nó không dùng.
-   */
+  /** Chặn gửi vì một điều kiện NGOÀI form — hiện có đúng một: chưa tick đồng ý điều khoản. */
   blocked?: boolean;
+  /** Báo màn biết form đang ở bước nhập mã — màn ẩn phần mạng xã hội như web. */
+  onStepChange?: (inCodeStep: boolean) => void;
 }) {
   const t = useTranslations('Auth');
   const errorMessage = useErrorMessage();
   const toast = useAppToast();
   const register = useRegister();
+  const registerOtp = usePhoneVerify(PHONE_VERIFICATION_PURPOSE.REGISTER);
+
+  /** Thông tin đăng ký ĐANG CHỜ MÃ. `null` ⇒ còn ở bước điền form. Chỉ sống trong bộ nhớ. */
+  const [registration, setRegistration] = useState<RegisterValues | null>(null);
+  const [code, setCode] = useState('');
+  const [sending, setSending] = useState(false);
 
   /*
    * Dựng lại schema khi ngôn ngữ đổi — LUẬT ở `@xeprime/validators`, chỉ câu chữ đi vào từ đây.
@@ -70,40 +74,116 @@ export function RegisterForm({
     defaultValues: { displayName: '', phone: '', password: '', confirmPassword: '' },
   });
 
-  const onSubmit = handleSubmit((values) => {
+  const toCodeStep = (values: RegisterValues | null) => {
+    setRegistration(values);
+    onStepChange?.(values !== null);
+  };
+
+  /** Bước 1: gửi mã rồi sang bước nhập mã. */
+  const startRegistration = async (values: RegisterValues) => {
+    if (sending) return;
+    setSending(true);
+    try {
+      // Kiểm HẾT ở bước này rồi mới sang bước mã — kể cả ở môi trường nhận mã test (không gửi SMS).
+      await checkRegistration({
+        displayName: values.displayName,
+        phone: values.phone.trim(),
+        password: values.password,
+      });
+      if (!registerOtp.testCodeEnabled) await registerOtp.sendAsync(values.phone.trim());
+      setCode('');
+      toCodeStep(values);
+    } catch (error) {
+      // Trùng số, gửi SMS lỗi, cooldown… — báo ngay, ở lại form.
+      toast.showError(errorMessage(error));
+    } finally {
+      setSending(false);
+    }
+  };
+  // `handleSubmit` gọi lúc bấm — không dựng callback đọc state lúc render.
+  const onSubmit = () => void handleSubmit(startRegistration)();
+
+  /** Bước 2: tạo tài khoản kèm mã. Sai mã thì ở lại bước mã. */
+  const confirmRegistration = (submitted: string) => {
+    if (!registration || register.isPending) return;
     register.mutate(
-      { displayName: values.displayName, phone: values.phone, password: values.password },
+      {
+        displayName: registration.displayName,
+        phone: registration.phone.trim(),
+        password: registration.password,
+        code: submitted,
+      },
       {
         onSuccess,
-        onError: (error) => toast.showError(errorMessage(error)),
+        onError: (error) => {
+          setCode('');
+          toast.showError(errorMessage(error));
+        },
       },
     );
-  });
+  };
+
+  /** Quay lại form — giữ nguyên thứ đã điền; mã đã gửi vẫn tính cooldown ở server. */
+  const editRegistration = () => {
+    toCodeStep(null);
+    setCode('');
+    registerOtp.reset();
+  };
+
+  if (registration) {
+    return (
+      <YStack gap={space.md}>
+        <YStack gap={space.xs}>
+          <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.semibold}>
+            {t('register.verifyTitle')}
+          </Text>
+          <Text col={colors.textMuted} fos={fontSize.bodySm}>
+            {t('register.verifySub')}
+          </Text>
+        </YStack>
+        {registerOtp.error ? (
+          <Callout tone="danger">{errorMessage(registerOtp.error)}</Callout>
+        ) : null}
+        <OtpCodeStep
+          phone={registration.phone.trim()}
+          verify={registerOtp}
+          code={code}
+          onCodeChange={setCode}
+          onSubmit={confirmRegistration}
+          submitLabel={t('register.verifySubmit')}
+          submitting={register.isPending}
+          onEdit={editRegistration}
+          editLabel={t('register.editInfo')}
+        />
+      </YStack>
+    );
+  }
 
   return (
     <YStack gap={space.md}>
-      <TextField
-        control={control}
-        name="displayName"
-        required
-        label={t('register.fullName')}
-        placeholder={t('register.fullNamePlaceholder')}
-        icon="person-outline"
-        autoComplete="name"
-        editable={!register.isPending}
-      />
-
       <TextField
         control={control}
         name="phone"
         required
         label={t('register.phone')}
         placeholder={t('register.phonePlaceholder')}
+        hint={t('register.phoneHint')}
         icon="call-outline"
         autoCapitalize="none"
         autoComplete="tel"
         keyboardType="phone-pad"
-        editable={!register.isPending}
+        editable={!sending}
+      />
+
+      <TextField
+        control={control}
+        name="displayName"
+        required
+        label={t('register.displayName')}
+        placeholder={t('register.fullNamePlaceholder')}
+        icon="person-outline"
+        autoComplete="name"
+        editable={!sending}
       />
 
       <TextField
@@ -117,7 +197,7 @@ export function RegisterForm({
         secureTextEntry
         autoCapitalize="none"
         autoComplete="new-password"
-        editable={!register.isPending}
+        editable={!sending}
       />
 
       <TextField
@@ -132,7 +212,7 @@ export function RegisterForm({
         autoComplete="new-password"
         returnKeyType="go"
         onSubmitEditing={onSubmit}
-        editable={!register.isPending}
+        editable={!sending}
       />
 
       {consent}
@@ -141,7 +221,7 @@ export function RegisterForm({
         label={t('register.submit')}
         icon="person-add-outline"
         onPress={onSubmit}
-        loading={register.isPending}
+        loading={sending}
         disabled={!isValid || blocked}
       />
     </YStack>

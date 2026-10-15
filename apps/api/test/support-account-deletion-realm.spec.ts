@@ -1,3 +1,4 @@
+import { ConfigService } from '@nestjs/config';
 import {
   type CanActivate,
   type ExecutionContext,
@@ -127,7 +128,7 @@ beforeAll(async () => {
       { provide: PrismaServiceToken, useValue: asService },
       { provide: AuditService, useValue: audit },
       { provide: NotificationService, useValue: silentNotifications },
-      { provide: AppConfigService, useValue: new AppConfigService(asService, audit) },
+      { provide: AppConfigService, useValue: new AppConfigService(asService, audit, new ConfigService()) },
       SupportService,
       { provide: APP_GUARD, useClass: HeaderAuthGuard },
       { provide: APP_GUARD, useClass: RealmGuard },

@@ -2,7 +2,6 @@
   "page": {
     "title": "Trở thành chủ xe",
     "subtitle": "Tạo hồ sơ chủ xe để đăng và quản lý xe cho thuê. Từng chiếc xe sẽ được XePrime duyệt trước khi xuất hiện công khai trên marketplace.",
-    "back": "Quay lại marketplace",
     "homeAriaLabel": "Về trang chủ XePrime"
   },
   "guide": {
@@ -78,7 +77,16 @@
     "wardInvalid": "Xã/phường không hợp lệ",
     "addressLineRequired": "Nhập địa chỉ của gian hàng",
     "addressLineMax": "Địa chỉ quá dài",
-    "phoneRequired": "Nhập số điện thoại liên hệ của gian hàng"
+    "phoneRequired": "Nhập số điện thoại liên hệ của gian hàng",
+    "displayNameRequired": "Vui lòng nhập họ và tên",
+    "displayNameMax": "Họ tên quá dài",
+    "passwordRequired": "Vui lòng nhập mật khẩu",
+    "passwordTooShort": "Mật khẩu tối thiểu 8 ký tự",
+    "passwordNeedsLetter": "Mật khẩu cần có chữ",
+    "passwordNeedsDigit": "Mật khẩu cần có số",
+    "confirmRequired": "Vui lòng nhập lại mật khẩu",
+    "confirmMismatch": "Mật khẩu nhập lại không khớp",
+    "emailRequired": "Vui lòng nhập email"
   },
   "created": "Đã tạo gian hàng. Hoàn thiện hồ sơ rồi gửi duyệt.",
   "ownerVariant": {
@@ -112,5 +120,72 @@
       "notify": "Bạn sẽ nhận được thông báo ngay khi tài khoản được duyệt.",
       "refresh": "Màn này tự cập nhật khi tài khoản được duyệt."
     }
+  },
+  "signup": {
+    "title": {
+      "commission": "Đăng ký chủ xe",
+      "package": "Đăng ký gian hàng"
+    },
+    "subtitle": {
+      "commission": "Một form duy nhất: tài khoản đối tác và hồ sơ chủ xe. Xong là đăng được chiếc xe đầu tiên.",
+      "package": "Một form duy nhất: tài khoản đối tác và thông tin gian hàng."
+    },
+    "accountSection": "Thông tin tài khoản",
+    "profileSection": {
+      "commission": "Khu vực cho thuê",
+      "package": "Thông tin gian hàng"
+    },
+    "accountReady": "Tài khoản đối tác của bạn đã sẵn sàng — chỉ cần hoàn tất phần hồ sơ bên dưới.",
+    "fields": {
+      "displayName": {
+        "label": "Họ và tên",
+        "placeholder": "Nhập họ và tên"
+      },
+      "ownerName": {
+        "label": "Họ và tên",
+        "placeholder": "Nhập họ và tên"
+      },
+      "phone": {
+        "label": "Số điện thoại",
+        "placeholder": "0901234567",
+        "help": "Dùng để đăng nhập và để khách liên hệ với bạn."
+      },
+      "otpCode": {
+        "label": "Mã xác thực",
+        "placeholder": "Nhập mã 6 số",
+        "help": "Bấm “Xác thực” để nhận mã 6 số qua SMS.",
+        "sendCode": "Gửi mã",
+        "resend": "Gửi lại mã",
+        "resendIn": "Gửi lại ({seconds}s)",
+        "sent": "Đã gửi mã tới {phone}.",
+        "phoneFirst": "Nhập số điện thoại hợp lệ trước khi gửi mã.",
+        "verify": "Xác thực",
+        "verified": "Đã xác thực",
+        "verifiedHelp": "Số điện thoại {phone} đã được xác thực.",
+        "dialogTitle": "Xác thực số điện thoại",
+        "codeSentTo": "Nhập mã 6 số đã gửi qua SMS tới",
+        "cancel": "Huỷ"
+      },
+      "email": {
+        "label": "Email liên hệ",
+        "placeholder": "ban@congty.vn"
+      },
+      "password": {
+        "label": "Mật khẩu",
+        "placeholder": "Tối thiểu 8 ký tự, có chữ và số"
+      },
+      "confirmPassword": {
+        "label": "Nhập lại mật khẩu",
+        "placeholder": "Nhập lại mật khẩu"
+      }
+    },
+    "submit": {
+      "commission": "Đăng ký và tiếp tục",
+      "package": "Đăng ký gian hàng"
+    },
+    "changeTrack": "Đổi cách cho thuê",
+    "hasAccount": "Đã có tài khoản đối tác?",
+    "login": "Đăng nhập",
+    "backToRegister": "Quay lại đăng ký"
   }
 }

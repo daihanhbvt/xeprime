@@ -1,13 +1,17 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ACCOUNT_REALM, PERMISSION, PLAN_FEATURE, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
-  ACCOUNT_REALM,
-  PERMISSION,
-  PLAN_FEATURE,
-  SUPPORT_CAPABILITY,
-} from '@xeprime/types';
-import { CurrentTenant, CurrentUser, Realms, RequirePermissions, RequiresFeature, SubscriptionTrackOnly, SupportAction, TenantScoped } from '../../common/decorators';
+  CurrentTenant,
+  CurrentUser,
+  Realms,
+  RequirePermissions,
+  RequiresFeature,
+  SubscriptionTrackOnly,
+  SupportAction,
+  TenantScoped,
+} from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import {
   CreateInviteDto,
@@ -48,14 +52,17 @@ export class InvitesController {
   }
 
   /**
-   * Hạn mức chặt hơn mức chung 120/phút: mỗi lời gọi ở đây GỬI MỘT EMAIL tới địa chỉ do người
-   * gọi tự nhập. Không giới hạn riêng thì một tài khoản gian hàng hợp lệ là một máy phát thư
-   * rác mang tên miền XePrime, và cái mất là danh tiếng gửi thư của cả hệ thống.
+   * Hạn mức chặt hơn mức chung 120/phút: mỗi lời gọi ở đây sinh một token mời mới (và thu hồi
+   * token cũ của cùng số). Không gửi thư hay SMS nữa (ADR 0060), nhưng một vòng lặp gọi không giới
+   * hạn vẫn là cách đổ đầy bảng lời mời và nhật ký audit của gian hàng.
    */
   @Post()
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @RequirePermissions(PERMISSION.MEMBER_INVITE)
-  @ApiOperation({ summary: 'Gửi thư mời tham gia gian hàng (email + vai trò)' })
+  @ApiOperation({
+    summary:
+      'Tạo lời mời tham gia gian hàng (SĐT + vai trò) — trả link một lần để người mời tự gửi (ADR 0060)',
+  })
   @ApiCreatedResponse({ type: CreateInviteResultDto })
   create(
     @CurrentTenant() tenant: TenantContext,
@@ -67,7 +74,7 @@ export class InvitesController {
 
   @Post(':id/revoke')
   @RequirePermissions(PERMISSION.MEMBER_INVITE)
-  @ApiOperation({ summary: 'Thu hồi một lời mời đang chờ — link trong email hết giá trị ngay' })
+  @ApiOperation({ summary: 'Thu hồi một lời mời đang chờ — link đã gửi hết giá trị ngay' })
   @ApiOkResponse({ type: InviteDto })
   revoke(
     @CurrentTenant() tenant: TenantContext,

@@ -3,7 +3,7 @@
 import { Button, Select, Slider, Switch } from 'antd';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  CATALOG_TYPE, DEFAULT_LISTING_SORT, LISTING_AMENITY_DESC, LISTING_AMENITY_LABEL, LISTING_AMENITY_VALUES, LISTING_SORT_LABEL, LISTING_SORT_VALUES, MOTORBIKE_CATEGORY_VALUES, SEAT_BUCKET_LABEL, SEAT_BUCKET_VALUES, VEHICLE_TYPE, vehicleFuelTypesFor, type ListingAmenity, } from '@xeprime/types';
+  CATALOG_TYPE, DEFAULT_LISTING_SORT, LISTING_AMENITY_LABEL, LISTING_AMENITY_VALUES, LISTING_SORT_LABEL, LISTING_SORT_VALUES, MOTORBIKE_CATEGORY_VALUES, SEAT_BUCKET_LABEL, SEAT_BUCKET_VALUES, VEHICLE_TYPE, vehicleFuelTypesFor, type ListingAmenity, } from '@xeprime/types';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { CatalogCardPicker } from '@/features/catalog/components/CatalogCardPicker';
 import { useCatalog, useCatalogLabels } from '@/features/catalog/use-catalog';
@@ -22,8 +22,21 @@ const PRICE_STEP = 50_000;
 /** Trần fallback khi chưa có dữ liệu giá (facets đang tải / chưa có xe). */
 const PRICE_FALLBACK_MAX = 3_000_000;
 
+/** Bật/tắt của MỌI toggle tiện ích — khoá lấy từ `LISTING_AMENITY`, không liệt kê tay. */
+type AmenityFlags = Record<ListingAmenity, boolean>;
+
+/**
+ * Đọc bộ toggle tiện ích từ một nguồn filter. Một chỗ cho cả nạp draft, ghi patch và hỏi facet:
+ * thêm một tiện ích vào `LISTING_AMENITY` là panel có ngay, không phải sửa bốn danh sách tay.
+ */
+function amenityFlags(source: Partial<Record<ListingAmenity, boolean>>): AmenityFlags {
+  return Object.fromEntries(
+    LISTING_AMENITY_VALUES.map((key) => [key, source[key] ?? false]),
+  ) as AmenityFlags;
+}
+
 /** Phần filter mà panel sở hữu — draft cục bộ, chỉ ghi ra URL khi bấm "Áp dụng". */
-interface FilterDraft {
+interface FilterDraft extends AmenityFlags {
   sort: ListingSort;
   priceMin?: number;
   priceMax?: number;
@@ -33,10 +46,6 @@ interface FilterDraft {
   seats: string[];
   fuelType: string[];
   features: string[];
-  hourly: boolean;
-  delivery: boolean;
-  noCollateral: boolean;
-  discount: boolean;
 }
 
 function draftFromFilters(filters: MarketplaceFilters): FilterDraft {
@@ -50,10 +59,7 @@ function draftFromFilters(filters: MarketplaceFilters): FilterDraft {
     seats: filters.seats ?? [],
     fuelType: filters.fuelType ?? [],
     features: filters.features ?? [],
-    hourly: filters.hourly ?? false,
-    delivery: filters.delivery ?? false,
-    noCollateral: filters.noCollateral ?? false,
-    discount: filters.discount ?? false,
+    ...amenityFlags(filters),
   };
 }
 
@@ -71,10 +77,7 @@ function draftToPatch(draft: FilterDraft): Partial<MarketplaceFilters> {
     seats: draft.seats,
     fuelType: draft.fuelType,
     features: draft.features,
-    hourly: draft.hourly,
-    delivery: draft.delivery,
-    noCollateral: draft.noCollateral,
-    discount: draft.discount,
+    ...amenityFlags(draft),
   };
 }
 
@@ -133,10 +136,7 @@ export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => v
       seats: debouncedDraft.seats,
       fuelType: debouncedDraft.fuelType,
       features: debouncedDraft.features,
-      hourly: debouncedDraft.hourly,
-      delivery: debouncedDraft.delivery,
-      noCollateral: debouncedDraft.noCollateral,
-      discount: debouncedDraft.discount,
+      ...amenityFlags(debouncedDraft),
     }),
     [filters, debouncedDraft],
   );
@@ -206,12 +206,11 @@ export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => v
   const showMotorbikeCategory = filters.vehicleType !== VEHICLE_TYPE.CAR;
   // Số chỗ là chiều của ô tô: hỏi "5 chỗ" khi khách đang lọc xe máy là hỏi một câu vô nghĩa.
   const showSeats = filters.vehicleType !== VEHICLE_TYPE.MOTORBIKE;
-  const amenityCount: Record<ListingAmenity, number | null> = {
-    hourly: facets ? facets.amenities.hourly : null,
-    delivery: facets ? facets.amenities.delivery : null,
-    noCollateral: facets ? facets.amenities.noCollateral : null,
-    discount: facets ? facets.amenities.discount : null,
-  };
+  // `facets.amenities[key]` gõ theo contract sinh từ API: thiếu một tiện ích ở `AmenityFacetsDto`
+  // là lỗi biên dịch ở đây, không phải một con số im lặng biến mất khỏi panel.
+  const amenityCount = Object.fromEntries(
+    LISTING_AMENITY_VALUES.map((key) => [key, facets ? facets.amenities[key] : null]),
+  ) as Record<ListingAmenity, number | null>;
 
   function apply() {
     setFilters(draftToPatch(draft));
@@ -373,7 +372,7 @@ export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => v
                     <span className={styles.amenityCount}> ({amenityCount[key]})</span>
                   ) : null}
                 </span>
-                <span className={styles.amenityDesc}>{LISTING_AMENITY_DESC[key]}</span>
+                <span className={styles.amenityDesc}>{t(`amenityDesc.${key}`)}</span>
               </span>
               <Switch
                 checked={draft[key]}

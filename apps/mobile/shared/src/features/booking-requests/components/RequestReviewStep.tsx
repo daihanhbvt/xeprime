@@ -52,7 +52,7 @@ export function RequestReviewStep({
   form,
   listing,
   rentalMode,
-  accountPhoneVerified,
+  renter,
 }: {
   values: BookingRequestFormValues;
   /** Cùng form của bước Chuyến đi — `DeliveryEstimate` theo dõi địa chỉ giao qua `control`. */
@@ -60,7 +60,11 @@ export function RequestReviewStep({
   listing: PublicListingDetail;
   /** Cách tính thời gian đang chọn — vào dòng "Hình thức", đúng như web. */
   rentalMode: RentalMode;
-  accountPhoneVerified: boolean;
+  /**
+   * Người thuê = TÀI KHOẢN đang đăng nhập (ADR 0060) — server đọc đúng họ tên + SĐT đó để ghi vào
+   * yêu cầu. Chỉ đọc: đổi số là việc của màn tài khoản, không phải của một lượt đặt xe.
+   */
+  renter: { name: string; phone: string | null; verified: boolean } | null;
 }) {
   const t = useTranslations('BookingRequests.flow');
   const fmt = useAppFormat();
@@ -112,11 +116,9 @@ export function RequestReviewStep({
         <YStack gap={space.sm}>
           <DataRow label={t('review.vehicle')} value={listing.name} />
 
-          <RenterRow
-            name={values.customerName}
-            phone={values.customerPhone}
-            verified={accountPhoneVerified}
-          />
+          {renter ? (
+            <RenterRow name={renter.name} phone={renter.phone} verified={renter.verified} />
+          ) : null}
 
           <DataRow
             label={t('review.service')}
@@ -321,7 +323,15 @@ export function RequestReviewStep({
  *
  * Không dùng `DataRow` được vì cột phải còn có chip trạng thái, mà `DataRow` chỉ nhận chuỗi.
  */
-function RenterRow({ name, phone, verified }: { name: string; phone: string; verified: boolean }) {
+function RenterRow({
+  name,
+  phone,
+  verified,
+}: {
+  name: string;
+  phone: string | null;
+  verified: boolean;
+}) {
   const t = useTranslations('BookingRequests.flow');
 
   return (
@@ -338,7 +348,7 @@ function RenterRow({ name, phone, verified }: { name: string; phone: string; ver
       </Text>
       <YStack f={1} ai="flex-end" gap={2}>
         <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold} ta="right">
-          {`${name} · ${phone}`}
+          {phone ? `${name} · ${phone}` : name}
         </Text>
         {verified ? (
           <XStack ai="center" gap={2}>

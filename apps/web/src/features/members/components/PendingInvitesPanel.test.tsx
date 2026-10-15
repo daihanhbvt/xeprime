@@ -153,7 +153,7 @@ describe('Bảng lời mời đang chờ', () => {
     expect(revoke.mutate).not.toHaveBeenCalled();
 
     const confirmTitle = await screen.findByText(
-      /Thu hồi lời mời này\? Liên kết trong email sẽ hết giá trị ngay\./,
+      /Thu hồi lời mời này\? Liên kết đã gửi sẽ hết giá trị ngay\./,
     );
 
     /*

@@ -169,14 +169,13 @@ describe('ShopEntryCard', () => {
     expect(screen.queryByRole('link')).toBeNull();
   });
 
-  it('chưa có gian hàng → mời đăng xe, dẫn tới trang ĐĂNG KÝ của site partner', () => {
+  it('chưa có gian hàng → mời đăng xe, dẫn tới trang giới thiệu đăng xe của site khách', () => {
     user.value = { platformRole: null, tenant: null };
     render(<ShopEntryCard />);
 
     expect(screen.getByText('Đăng xe cho thuê')).toBeTruthy();
-    // Đăng ký chủ xe diễn ra ở site partner bằng tài khoản đối tác riêng (ADR 0051 · 0053), không
-    // ném thẳng vào form tạo gian hàng.
-    expect(screen.getByRole('link').getAttribute('href')).toBe('/manage/register');
+    // Trang giới thiệu mở form đăng ký đối tác (site partner) ở tab mới.
+    expect(screen.getByRole('link').getAttribute('href')).toBe('/list-your-vehicle');
   });
 
   it('nhân sự nền tảng → dẫn tới trang quản trị', () => {

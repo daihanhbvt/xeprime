@@ -16,9 +16,7 @@ import {
   vnDateKey,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
-import type { AuthService } from '../src/modules/auth/auth.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
-import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import {
   makeBookingHoldsService,
@@ -28,6 +26,7 @@ import {
   makeNotificationService,
   makePricingService,
 } from './helpers/service-factory';
+import { customerAccountFor } from './helpers/customer-account';
 import { settleIfAwaitingHold } from './helpers/hold-payment';
 
 /**
@@ -54,15 +53,6 @@ const bookings = makeBookingsService(asService, {
   customers: makeCustomersService(asService, audit),
 });
 
-const phoneVerification = {
-  assertPhoneVerifiedForBooking: async () => {},
-} as unknown as PhoneVerificationService;
-
-let guestUserId: string;
-const auth = {
-  resolveOrCreateUserByPhone: async () => ({ userId: guestUserId }),
-} as unknown as AuthService;
-
 /**
  * Thuê dài hạn là NGOẠI LỆ của ADR 0039 điều 4: chưa chốt lịch thì chưa có giá, nên hold sinh
  * lúc gian hàng DUYỆT chứ không lúc khách gửi. Nhưng cọc thì vẫn thu (cả sàn thu từ
@@ -73,8 +63,6 @@ const requests = makeBookingRequestsService(asService, {
   bookings: bookings,
   audit: audit,
   notifications: notifications,
-  phoneVerification: phoneVerification,
-  auth: auth,
   occupancy: occupancy,
   pricing: pricing,
   customers: makeCustomersService(asService, audit),
@@ -84,6 +72,18 @@ let dbAvailable = false;
 let ownerId: string;
 let tenantId: string;
 let vehicleId: string;
+
+/** Tài khoản khách đã gửi yêu cầu trong spec — dọn ở `afterAll`. */
+const customerIds = new Set<string>();
+/**
+ * Người gửi yêu cầu: một tài khoản KHÁCH đã xác minh SĐT (ADR 0060) — họ tên và SĐT của yêu cầu
+ * đọc từ tài khoản này. Mỗi số một người, nên các ca dùng số khác nhau vẫn là những khách khác nhau.
+ */
+async function customer(name: string, phone: string): Promise<string> {
+  const id = await customerAccountFor(asService, phone, name);
+  customerIds.add(id);
+  return id;
+}
 
 /** Ngày lịch VN cách hôm nay `n` ngày — nguyện vọng nhận xe luôn nằm ở tương lai. */
 const dayFromToday = (n: number): string => vnDateKey(new Date(Date.now() + n * 86_400_000));
@@ -101,7 +101,6 @@ beforeAll(async () => {
   }
 
   ownerId = newId();
-  guestUserId = newId();
   tenantId = newId();
   vehicleId = newId();
 
@@ -112,12 +111,6 @@ beforeAll(async () => {
         id: ownerId,
         displayName: 'Chủ shop',
         email: `owner-${ownerId}@xeprime.test`,
-      },
-      {
-        realm: ACCOUNT_REALM.CUSTOMER,
-        id: guestUserId,
-        displayName: 'Khách dài hạn',
-        email: `g-${guestUserId}@xeprime.test`,
       },
     ],
   });
@@ -182,7 +175,7 @@ afterAll(async () => {
     await prisma.vehicle.deleteMany({ where: { tenantId } });
     await prisma.tenantMembership.deleteMany({ where: { tenantId } });
     await prisma.tenant.deleteMany({ where: { id: tenantId } });
-    await prisma.user.deleteMany({ where: { id: { in: [ownerId, guestUserId] } } });
+    await prisma.user.deleteMany({ where: { id: { in: [ownerId, ...customerIds] } } });
   }
   await prisma.$disconnect();
 });
@@ -198,11 +191,9 @@ describe('khách gửi yêu cầu thuê dài hạn bằng GÓI', () => {
     'specific_date: lưu đúng ngày mong muốn, KHÔNG có lịch chốt và không chiếm chỗ',
     async () => {
       const wanted = dayFromToday(3);
-      const { receipt } = await requests.submitPublic(
+      const receipt = await requests.submitPublic(
         {
           vehicleId,
-          customerName: 'Trần Thị B',
-          customerPhone: '0902000001',
           serviceType: SERVICE_TYPE.LONG_TERM,
           longTermPackageMonths: 3,
           pickupPreference: PICKUP_PREFERENCE.SPECIFIC_DATE,
@@ -211,7 +202,7 @@ describe('khách gửi yêu cầu thuê dài hạn bằng GÓI', () => {
           pickupAt: new Date().toISOString(),
           returnAt: new Date(Date.now() + 999 * 86_400_000).toISOString(),
         },
-        null,
+        await customer('Trần Thị B', '0943000001'),
       );
 
       const row = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: receipt.id } });
@@ -230,18 +221,16 @@ describe('khách gửi yêu cầu thuê dài hạn bằng GÓI', () => {
   );
 
   maybe('within_7_days: SERVER tính khoảng, client không khai được', async () => {
-    const { receipt } = await requests.submitPublic(
+    const receipt = await requests.submitPublic(
       {
         vehicleId,
-        customerName: 'Lê Văn C',
-        customerPhone: '0902000002',
         serviceType: SERVICE_TYPE.LONG_TERM,
         longTermPackageMonths: 6,
         pickupPreference: PICKUP_PREFERENCE.WITHIN_7_DAYS,
         // Ngày cụ thể gửi kèm phải bị bỏ, vì nguyện vọng là khoảng linh hoạt.
         requestedPickupDate: dayFromToday(40),
       },
-      null,
+      await customer('Lê Văn C', '0943000002'),
     );
 
     const row = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: receipt.id } });
@@ -255,13 +244,11 @@ describe('khách gửi yêu cầu thuê dài hạn bằng GÓI', () => {
       requests.submitPublic(
         {
           vehicleId,
-          customerName: 'X',
-          customerPhone: '0902000003',
           serviceType: SERVICE_TYPE.LONG_TERM,
           longTermPackageMonths: 4,
           pickupPreference: PICKUP_PREFERENCE.WITHIN_7_DAYS,
         },
-        null,
+        await customer('X', '0943000003'),
       ),
     ).rejects.toMatchObject({ status: 400 });
 
@@ -269,14 +256,12 @@ describe('khách gửi yêu cầu thuê dài hạn bằng GÓI', () => {
       requests.submitPublic(
         {
           vehicleId,
-          customerName: 'X',
-          customerPhone: '0902000004',
           serviceType: SERVICE_TYPE.LONG_TERM,
           longTermPackageMonths: 3,
           pickupPreference: PICKUP_PREFERENCE.SPECIFIC_DATE,
           requestedPickupDate: dayFromToday(-1),
         },
-        null,
+        await customer('X', '0943000004'),
       ),
     ).rejects.toMatchObject({
       response: { message: expect.stringContaining('từ ngày mai') },
@@ -289,17 +274,15 @@ describe('duyệt yêu cầu dài hạn — gian hàng chốt giờ nhận, serv
   const wanted = dayFromToday(4);
 
   maybe('thiếu giờ nhận hoặc chốt lệch nguyện vọng đều bị từ chối', async () => {
-    const { receipt } = await requests.submitPublic(
+    const receipt = await requests.submitPublic(
       {
         vehicleId,
-        customerName: 'Phạm Thị D',
-        customerPhone: '0902000005',
         serviceType: SERVICE_TYPE.LONG_TERM,
         longTermPackageMonths: 3,
         pickupPreference: PICKUP_PREFERENCE.SPECIFIC_DATE,
         requestedPickupDate: wanted,
       },
-      null,
+      await customer('Phạm Thị D', '0943000005'),
     );
     requestId = receipt.id;
 
@@ -374,18 +357,16 @@ describe('duyệt yêu cầu dài hạn — gian hàng chốt giờ nhận, serv
   });
 
   maybe('trùng lịch → 409 và yêu cầu thứ hai VẪN chờ duyệt', async () => {
-    const { receipt } = await requests.submitPublic(
+    const receipt = await requests.submitPublic(
       {
         vehicleId,
-        customerName: 'Hoàng Văn E',
-        customerPhone: '0902000006',
         serviceType: SERVICE_TYPE.LONG_TERM,
         longTermPackageMonths: 1,
         pickupPreference: PICKUP_PREFERENCE.SPECIFIC_DATE,
         // Cùng ngày nhận với đơn vừa tạo → chắc chắn chồng lịch.
         requestedPickupDate: wanted,
       },
-      null,
+      await customer('Hoàng Văn E', '0943000006'),
     );
 
     // Constraint DB là thứ chặn thật (ADR 0006); AllExceptionsFilter đổi 23P01 thành 409 ở

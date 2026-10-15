@@ -21,6 +21,11 @@ const mockReplace = jest.fn();
 /* Đổi khu đi bằng `dismissTo` (POP_TO) — không dựng `(tabs)` thứ hai trên ngăn xếp gốc. */
 const mockDismissTo = jest.fn();
 
+// Màn chờ kích hoạt nghe số chưa đọc của bản chiếu huy hiệu (`usePackageActivationWatch`).
+jest.mock('@/features/badges/hooks/use-badges', () => ({
+  useBadges: jest.fn(() => ({ chatCustomer: 0, chatShop: 0, notificationsUnread: 0 })),
+}));
+
 jest.mock('expo-router', () => ({
   useNavigation: () => ({ isFocused: () => true }),
   useRouter: () => ({
@@ -164,31 +169,22 @@ describe('ShopOnboardingScreen (SHP-01)', () => {
     const view = await renderScreen(PENDING_TENANT);
 
     expect(await view.findByText('Đăng ký gian hàng thành công!')).toBeTruthy();
-    expect(
-      view.getByText('Tài khoản Gian hàng Đà Nẵng đã được tạo và đang chờ kích hoạt.'),
-    ).toBeTruthy();
-    expect(
-      view.getByText(
-        'XePrime sẽ liên hệ với bạn qua 0903333333 và gửi hướng dẫn tới khach@xeprime.test trong thời gian sớm nhất.',
-      ),
-    ).toBeTruthy();
-    expect(view.getByRole('button', { name: 'Về trang chính' })).toBeTruthy();
-    expect(view.getByRole('button', { name: 'Làm mới trạng thái' })).toBeTruthy();
+    expect(view.getByText('Đang chờ kích hoạt')).toBeTruthy();
+    expect(view.getByText('XePrime đang xem xét thông tin gian hàng của bạn.')).toBeTruthy();
+    expect(view.getByText('Bạn sẽ nhận được thông báo ngay khi tài khoản được duyệt.')).toBeTruthy();
+    expect(view.getByText('Màn này tự cập nhật khi tài khoản được duyệt.')).toBeTruthy();
+    // Footer chỉ còn Đăng xuất — không có nút làm mới / về trang chính.
+    expect(view.queryByRole('button', { name: 'Về trang chính' })).toBeNull();
+    expect(view.queryByRole('button', { name: 'Làm mới trạng thái' })).toBeNull();
     // Không có một bước thanh toán nào.
     expect(view.queryByText(/hoá đơn|QR|chuyển khoản/i)).toBeNull();
     expect(view.queryByRole('button', { name: 'Tạo gian hàng' })).toBeNull();
-    // Cờ tắt (mặc định) ⇒ không có "Liên hệ tư vấn".
+    // Không còn "Liên hệ tư vấn" ở màn chờ.
     expect(view.queryByRole('button', { name: 'Liên hệ tư vấn' })).toBeNull();
     expect(view.getByRole('button', { name: new RegExp('Đăng xuất$') })).toBeTruthy();
   });
 
-  it('bước 2 + isPlanPromotionEnabled bật: có nút "Liên hệ tư vấn"', async () => {
-    const view = await renderScreen(PENDING_TENANT, { isPlanPromotionEnabled: true });
-
-    expect(await view.findByRole('button', { name: 'Liên hệ tư vấn' })).toBeTruthy();
-  });
-
-  it('Làm mới trạng thái: gói đã kích hoạt trên web ⇒ vào Manage', async () => {
+  it('tự cập nhật: gói đã kích hoạt trên web ⇒ vào Manage', async () => {
     const view = await renderScreen(PENDING_TENANT);
     await view.findByText('Đăng ký gian hàng thành công!');
 
@@ -201,7 +197,7 @@ describe('ShopOnboardingScreen (SHP-01)', () => {
         billingPhase: 'current',
       } as unknown as authApi.CurrentUser['tenant']),
     );
-    await fireEvent.press(view.getByRole('button', { name: 'Làm mới trạng thái' }));
+    await view.queryClient.invalidateQueries();
 
     await waitFor(() =>
       expect(mockDismissTo).toHaveBeenCalledWith({

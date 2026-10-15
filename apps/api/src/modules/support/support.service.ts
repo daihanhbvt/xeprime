@@ -240,7 +240,7 @@ export class SupportService {
       ...(dto.message ? ['', dto.message] : []),
     ].join('\n');
 
-    const emailQueued = await this.prisma.$transaction(async (tx) => {
+    const emailedTo = await this.prisma.$transaction(async (tx) => {
       await tx.supportCase.create({
         data: {
           id,
@@ -270,14 +270,14 @@ export class SupportService {
         tx,
       );
       /*
-       * Thư hướng dẫn đi tới email CỦA TÀI KHOẢN (đã gắn với phiên), không tới `dto.email` do
-       * client gõ — nhận địa chỉ tuỳ ý là biến endpoint này thành máy gửi thư hộ. `dto.email` chỉ
-       * là thông tin liên hệ trên case. Khoá chống trùng theo tài khoản + ngày VN: DB chặn ở mức
-       * MỘT thư mỗi tài khoản mỗi ngày dù gửi bao nhiêu yêu cầu.
+       * Thư hướng dẫn đi tới email CỦA TÀI KHOẢN (nếu có) VÀ email liên hệ gõ ở form — trùng nhau
+       * thì một thư. Khoá chống trùng theo tài khoản + ngày VN, riêng cho từng địa chỉ: DB chặn ở
+       * mức MỘT thư mỗi địa chỉ mỗi tài khoản mỗi ngày dù gửi bao nhiêu yêu cầu — nên endpoint
+       * không thành máy gửi thư hộ tới địa chỉ tuỳ ý.
        */
-      if (!accountEmail) return false;
-      return this.appConfig.enqueuePlanGuide(tx, {
-        to: accountEmail,
+      return this.appConfig.enqueuePlanGuideToOwnerAndContact(tx, {
+        accountEmail,
+        contactEmail: dto.email,
         locale,
         reason: PLAN_GUIDE_REASON.CONSULTATION,
         displayName: dto.fullName,
@@ -289,7 +289,12 @@ export class SupportService {
         }),
       });
     });
-    return { caseId: id, code, emailQueued, emailedTo: emailQueued ? accountEmail : null };
+    return {
+      caseId: id,
+      code,
+      emailQueued: emailedTo.length > 0,
+      emailedTo: emailedTo.length > 0 ? emailedTo.join(', ') : null,
+    };
   }
 
   /**

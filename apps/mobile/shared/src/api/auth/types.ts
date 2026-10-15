@@ -12,11 +12,15 @@ type Schemas = components['schemas'];
 export type CurrentUser = Schemas['MeDto'];
 export type LoginInput = Schemas['LoginDto'];
 export type RegisterInput = Schemas['RegisterDto'];
+/** `POST /auth/register/check` — kiểm thông tin đăng ký TRƯỚC bước nhập mã (ADR 0060). */
+export type RegisterCheckInput = Schemas['RegisterCheckDto'];
 export type SetPasswordInput = Schemas['SetPasswordDto'];
 /** `POST /auth/password/change` — đổi mật khẩu khi đã đăng nhập, cần mật khẩu hiện tại. */
 export type ChangePasswordInput = Schemas['ChangePasswordDto'];
 export type ForgotPasswordInput = Schemas['ForgotPasswordDto'];
 export type ResetPasswordInput = Schemas['ResetPasswordDto'];
+/** `POST /auth/password/reset-otp` — quên mật khẩu bằng SĐT + mã OTP `password_reset` (ADR 0060). */
+export type ResetPasswordWithOtpInput = Schemas['ResetPasswordWithOtpDto'];
 
 /* ── Native (Bearer) — ADR 0017 ─────────────────────────────────────────────────────────── */
 
@@ -36,8 +40,5 @@ export type MobileSocialExchangeInput = Schemas['MobileSocialExchangeDto'];
 /** `POST /auth/mobile/apple` — "Sign in with Apple" trên iOS (identityToken + nonce thô). */
 export type MobileAppleLoginInput = Schemas['MobileAppleLoginDto'];
 
-/** `POST /auth/mobile/phone/login` — SĐT + OTP, bản trả token thay vì cookie. */
-export type MobilePhoneLoginInput = Schemas['MobilePhoneLoginDto'];
-
-/** `POST /auth/mobile/register` — SĐT + mật khẩu, bản trả token thay vì cookie. */
+/** `POST /auth/mobile/register` — SĐT + mật khẩu + mã OTP `register` (ADR 0060), bản trả token thay vì cookie. */
 export type MobileRegisterInput = Schemas['MobileRegisterDto'];

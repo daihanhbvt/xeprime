@@ -176,7 +176,7 @@
       "intro": "Leave your details and the XePrime team will get in touch to help.",
       "fullName": "Full name",
       "phone": "Phone number",
-      "email": "Email",
+      "email": "Contact email",
       "message": "Message",
       "messagePlaceholder": "E.g. I have 5 vehicles and need help with my account",
       "submit": "Send request",
@@ -197,7 +197,7 @@
     "commissionSummary": "You are a personal owner. A service fee applies to each completed trip.",
     "termGrace": "Usage period ending soon",
     "termLapsed": "Usage period ended"
-    },
+  },
   "checkout": {
     "back": "Back",
     "title": "Pay for your plan",

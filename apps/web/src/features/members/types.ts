@@ -9,7 +9,7 @@ export type UpdateMemberRoleInput = Schemas['UpdateMemberRoleDto'];
 /** Lời mời nhìn từ phía gian hàng — KHÔNG mang token (xem `InviteDto` ở backend). */
 export type Invite = Schemas['InviteDto'];
 export type CreateInviteInput = Schemas['CreateInviteDto'];
-/** Kết quả TẠO lời mời — thêm `emailSent`, cờ nói thư có thật sự đi được không. */
+/** Kết quả TẠO lời mời — thêm `inviteUrl`, liên kết chỉ trả về đúng một lần (ADR 0060). */
 export type CreateInviteResult = Schemas['CreateInviteResultDto'];
 /** Lời mời nhìn từ phía người được mời, trước khi họ quyết định. */
 export type InvitePreview = Schemas['InvitePreviewDto'];
