@@ -55,6 +55,8 @@ export function RegisterScreen({
   const partner = APP_PROFILE.clientApp === MOBILE_CLIENT_APP.PARTNER;
   const [registered, setRegistered] = useState(false);
   const [consented, setConsented] = useState(false);
+  /** Đang ở bước nhập mã của đăng ký — ẩn phần mạng xã hội như web (`AuthPanel`). */
+  const [inCodeStep, setInCodeStep] = useState(false);
 
   return (
     <>
@@ -83,7 +85,7 @@ export function RegisterScreen({
                 {partner ? t('partnerRegister.subtitle') : t('modal.registerSub')}
               </Text>
               {partner && chosenTrack ? (
-                <Callout tone="info">{t(`partnerRegister.chosen.${chosenTrack}`)}</Callout>
+                <Callout tone="info">{t(`partnerRegister.appChosen.${chosenTrack}`)}</Callout>
               ) : null}
             </YStack>
 
@@ -97,6 +99,7 @@ export function RegisterScreen({
             */}
             <RegisterForm
               onSuccess={() => setRegistered(true)}
+              onStepChange={setInCodeStep}
               blocked={!consented}
               consent={
                 <LegalConsentCheckbox
@@ -106,13 +109,17 @@ export function RegisterScreen({
               }
             />
 
-            <SocialButtons onSuccess={onAuthenticated} blocked={!consented} />
+            {inCodeStep ? null : (
+              <>
+                <SocialButtons onSuccess={onAuthenticated} blocked={!consented} />
 
-            <AuthSwitchLink
-              prompt={t('switchMode.hasAccount')}
-              actionLabel={t('switchMode.toLogin')}
-              onPress={onSwitchToLogin}
-            />
+                <AuthSwitchLink
+                  prompt={t('switchMode.hasAccount')}
+                  actionLabel={t('switchMode.toLogin')}
+                  onPress={onSwitchToLogin}
+                />
+              </>
+            )}
           </YStack>
         </Screen>
       )}

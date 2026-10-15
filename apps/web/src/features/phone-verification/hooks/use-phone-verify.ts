@@ -78,6 +78,8 @@ export function usePhoneVerify(purpose: PhoneVerificationPurpose) {
     /** Gửi mã và chờ kết quả — để bước sau chỉ chuyển khi mã đã gửi thành công. */
     sendAsync: (phone: string) => sendMutation.mutateAsync(phone),
     verify: (phone: string, code: string) => verifyMutation.mutate({ phone, code }),
+    /** Xác thực và chờ kết quả — nơi gọi tự hiện lỗi cạnh ô mã (form đăng ký đối tác). */
+    verifyAsync: (phone: string, code: string) => verifyMutation.mutateAsync({ phone, code }),
     reset,
   };
 }

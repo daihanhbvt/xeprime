@@ -28,6 +28,7 @@ const nav = vi.hoisted(() => ({
 
 const api = vi.hoisted(() => ({
   register: vi.fn(),
+  check: vi.fn(),
   login: vi.fn(),
   sendOtp: vi.fn(),
   testCodeEnabled: false,
@@ -44,6 +45,7 @@ vi.mock('@/services/auth.service', async () => {
   return {
     ...actual,
     registerWithPassword: (...args: unknown[]) => api.register(...args),
+    checkRegistration: (...args: unknown[]) => api.check(...args),
     loginWithPassword: (...args: unknown[]) => api.login(...args),
   };
 });
@@ -131,6 +133,7 @@ beforeEach(() => {
   nav.push.mockReset();
   nav.replace.mockReset();
   api.register.mockReset().mockResolvedValue(CUSTOMER);
+  api.check.mockReset().mockResolvedValue(undefined);
   api.login.mockReset().mockResolvedValue(CUSTOMER);
   api.sendOtp
     .mockReset()
@@ -287,8 +290,8 @@ describe('AuthModal — đăng ký có xác minh SĐT bằng OTP', () => {
     expect(screen.queryByText('Tạo gian hàng')).toBeNull();
   });
 
-  it('số đã có tài khoản → báo ngay ở form, không sang bước mã', async () => {
-    api.sendOtp.mockRejectedValue(
+  it('số đã có tài khoản → báo ngay ở form (bước kiểm tra), không gửi mã, không sang bước mã', async () => {
+    api.check.mockRejectedValue(
       new ApiClientError({ code: API_ERROR_CODE.PHONE_TAKEN, message: 'x', status: 409 }),
     );
     renderModal('auth=register');
@@ -296,6 +299,20 @@ describe('AuthModal — đăng ký có xác minh SĐT bằng OTP', () => {
 
     fillRegister();
     expect(await screen.findByText('Số điện thoại này đã có tài khoản.')).toBeTruthy();
+    expect(screen.queryByText('Xác minh số điện thoại')).toBeNull();
+    expect(api.register).not.toHaveBeenCalled();
+    expect(api.sendOtp).not.toHaveBeenCalled();
+  });
+
+  it('gửi SMS lỗi / không lấy được mã → báo ngay ở form, KHÔNG sang bước mã', async () => {
+    api.sendOtp.mockRejectedValue(
+      new ApiClientError({ code: API_ERROR_CODE.OTP_TOO_MANY, message: 'x', status: 429 }),
+    );
+    renderModal('auth=register');
+    await waitFor(() => expect(visibleTitle('Tạo tài khoản XePrime')).toBeTruthy());
+
+    fillRegister();
+    await waitFor(() => expect(api.sendOtp).toHaveBeenCalled());
     expect(screen.queryByText('Xác minh số điện thoại')).toBeNull();
     expect(api.register).not.toHaveBeenCalled();
   });
@@ -359,12 +376,12 @@ describe('AuthModal — sau khi đăng ký', () => {
     expect(nav.push).not.toHaveBeenCalledWith('/manage/shop');
   });
 
-  it('"Trở thành chủ xe" mở trang ĐĂNG KÝ của site partner, KHÔNG tự tạo gian hàng', async () => {
+  it('"Trở thành chủ xe" mở trang CHỌN cách cho thuê của site khách, KHÔNG tự tạo gian hàng', async () => {
     await registered();
     fireEvent.click(screen.getByRole('button', { name: /Trở thành chủ xe/ }));
     // Đăng ký chủ xe là một tài khoản ĐỐI TÁC riêng ở site partner (ADR 0051 · 0053) — chế độ
     // `path` của vitest nên đích là đường dẫn tương đối của khu partner.
-    expect(nav.push).toHaveBeenCalledWith('/manage/register');
+    expect(nav.push).toHaveBeenCalledWith('/list-your-vehicle');
     expect(nav.push).not.toHaveBeenCalledWith('/manage/onboarding');
   });
 

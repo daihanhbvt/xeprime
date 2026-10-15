@@ -6,6 +6,7 @@
  * lớp chặn thật. Bỏ lớp backend vì "frontend đã validate rồi" là lỗ bảo mật.
  */
 import * as yup from 'yup';
+import { PASSWORD_RULES } from './auth';
 import { missingVehicleImageTypes, VEHICLE_IMAGE_TYPE_VALUES } from '@xeprime/types';
 import {
   ADDRESS_LINE_MAX_LENGTH,
@@ -881,6 +882,91 @@ export const registerShopSchema = yup.object({
 });
 
 export type RegisterShopValues = yup.InferType<typeof registerShopSchema>;
+
+/**
+ * ĐĂNG KÝ ĐỐI TÁC MỘT FORM — tài khoản + hồ sơ người cho thuê trong cùng một lần điền (site
+ * partner `/register` và app XePrime Partner). Người dùng chọn tuyến TRƯỚC, rồi điền đúng một form:
+ * họ tên và SĐT chỉ hỏi MỘT lần và đi vào cả tài khoản lẫn hồ sơ gian hàng/chủ xe.
+ *
+ * `withAccount` KHÔNG phải ô nhập: `true` khi chưa có phiên (form tạo luôn tài khoản), `false` khi
+ * tài khoản đã có (đăng nhập rồi, hoặc lượt trước tạo xong tài khoản nhưng `POST /tenants` hỏng) —
+ * lúc đó chỉ còn phần hồ sơ, điền sẵn từ tài khoản. Điều kiện là DỮ LIỆU (`.when`) vì cùng lý do
+ * của `registerShopSchema`: RHF giữ resolver của lần dựng đầu.
+ *
+ * | Trường | Luật |
+ * | --- | --- |
+ * | `displayName` · `password` · `confirmPassword` | bắt buộc khi `withAccount` |
+ * | `name` | tên gian hàng (tuyến gói) — bắt buộc; tuyến hoa hồng tạo tài khoản mới thì lấy luôn họ tên, không hỏi lại |
+ * | `phoneVerified` · `otpCode` | trạng thái bước xác thực SĐT — KHÔNG chặn ở schema: chưa xác thực thì bấm đăng ký mở popup OTP rồi tự gửi tiếp; server đối chiếu mã (ADR 0060) |
+ * | `phone` · `email` | BẮT BUỘC ở cả hai tuyến — `email` là email LIÊN HỆ của gian hàng (chỉ vào `POST /tenants`, không gắn vào tài khoản); bắt buộc ở FORM, server để tuỳ chọn như cũ |
+ * | địa chỉ | tỉnh/thành + số nhà/đường bắt buộc ở CẢ HAI tuyến (như `ownerProfileSchema`) |
+ *
+ * Message là MÃ, tra trong `ShopOnboarding.validation` — bốn mã mật khẩu trùng tên khoá của
+ * `PASSWORD_RULES` để luật mật khẩu chỉ có một bản.
+ */
+export const partnerSignupSchema = yup.object({
+  withAccount: yup.boolean().default(false),
+  registrationTrack: yup
+    .string()
+    .oneOf(REGISTRATION_TRACK_VALUES)
+    .default(REGISTRATION_TRACK.COMMISSION),
+  displayName: yup
+    .string()
+    .trim()
+    .default('')
+    .max(255, 'displayNameMax')
+    .when('withAccount', {
+      is: true,
+      then: (schema) => schema.required('displayNameRequired'),
+    }),
+  password: yup
+    .string()
+    .default('')
+    .when('withAccount', {
+      is: true,
+      then: (schema) =>
+        PASSWORD_RULES.reduce(
+          (acc, rule) => acc.test(rule.key, rule.key, (value) => rule.test(value ?? '')),
+          schema.required('passwordRequired'),
+        ),
+    }),
+  confirmPassword: yup
+    .string()
+    .default('')
+    .when('withAccount', {
+      is: true,
+      then: (schema) =>
+        schema.required('confirmRequired').oneOf([yup.ref('password')], 'confirmMismatch'),
+    }),
+  name: yup
+    .string()
+    .trim()
+    .default('')
+    .when(['registrationTrack', 'withAccount'], ([track, withAccount], schema) =>
+      track === REGISTRATION_TRACK.PACKAGE || !withAccount
+        ? schema.required('nameRequired').min(2, 'nameMin').max(255)
+        : schema,
+    ),
+  ...addressShape,
+  /*
+   * Số nhà/đường BẮT BUỘC ở cả hai tuyến: tuyến gói vì cổng đăng xe đòi nó ngay sau thanh toán;
+   * tuyến hoa hồng vì đó là nơi khách tới nhận xe — đúng luật `ownerProfileSchema` mà bước hồ sơ
+   * chủ xe của wizard đang đòi (form một trang thay bước đó, không được hỏi ít hơn).
+   */
+  addressLine: addressShape.addressLine.required('addressLineRequired'),
+  phone: contactPhoneRule.required('phoneRequired'),
+  email: yup.string().trim().default('').required('emailRequired').email('emailInvalid'),
+  /** Mã OTP đã xác thực — gửi kèm `POST /auth/register` (ADR 0060). */
+  otpCode: yup.string().trim().default(''),
+  /*
+   * SĐT đã qua bước "Xác thực" (`verify-otp`, purpose `register`). KHÔNG là luật chặn gửi: chưa xác
+   * thực thì nút đăng ký mở popup nhập mã, đúng mã là form tự gửi tiếp. Server đối chiếu lại chính mã
+   * đó trong lượt đăng ký (ADR 0060), nên gọi API thẳng cũng không lách được.
+   */
+  phoneVerified: yup.boolean().default(false),
+});
+
+export type PartnerSignupValues = yup.InferType<typeof partnerSignupSchema>;
 
 /*
  * Message là MÃ — `useValidationResolver` tra `ListYourVehicle.ownerProfile.validation.*`.

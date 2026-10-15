@@ -187,7 +187,7 @@ export function PendingInvitesPanel({ enabled }: { enabled: boolean }) {
 
       <AlertDialog
         open={revoking !== null}
-        title={t('revokeConfirm')}
+        title={t('revokeConfirmLink')}
         confirmLabel={t('revoke')}
         cancelLabel={tActions('close')}
         destructive
@@ -272,7 +272,7 @@ function InviteCard({
           <YStack p={space.sm} gap={space.xs}>
             <XStack ai="center" gap={space.sm}>
               <IconDisc
-                icon="mail-outline"
+                icon={invite.phone ? 'call-outline' : 'mail-outline'}
                 tone={colors.primaryActive}
                 surface={colors.primaryLight}
                 size={DISC_SIZE}
@@ -285,7 +285,8 @@ function InviteCard({
                   fow={fontWeight.semibold}
                   numberOfLines={1}
                 >
-                  {invite.email}
+                  {/* SĐT (ADR 0060); lời mời email cũ vẫn hiện email tới khi hết hạn. */}
+                  {invite.phone ?? invite.email}
                 </Text>
                 {/* Người mời chỉ hiện khi CÓ — một dòng "Người mời: —" không nói được gì. */}
                 {invite.createdByName ? (

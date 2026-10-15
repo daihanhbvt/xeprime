@@ -152,7 +152,9 @@
       "ownerIncome": "Shop owner income",
       "ownerIncomeHint": "Revenue minus tax and plan fee — includes what the customer paid you directly.",
       "ownerIncomeCommission": "Car owner income",
-      "ownerIncomeGeneric": "Income"
+      "ownerIncomeGeneric": "Income",
+      "appSubscriptionFee": "Platform management & operation fee",
+      "appOwnerIncomeHint": "Revenue minus tax and platform fees — including what customers paid you directly."
     }
   },
   "pill": {

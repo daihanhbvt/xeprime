@@ -51,8 +51,8 @@ describe('LoginForm', () => {
     expect(login).not.toHaveBeenCalled();
 
     await fireEvent.changeText(
-      view.getByPlaceholderText('Nhập email hoặc số điện thoại'),
-      'owner@xeprime.test',
+      view.getByPlaceholderText('Nhập số điện thoại'),
+      '0901234567',
     );
     await fireEvent.changeText(view.getByPlaceholderText('Nhập mật khẩu'), 'Abcd1234');
 
@@ -69,14 +69,14 @@ describe('LoginForm', () => {
     const view = await renderLoginForm(onSuccess);
 
     await fireEvent.changeText(
-      view.getByPlaceholderText('Nhập email hoặc số điện thoại'),
-      '  owner@xeprime.test  ',
+      view.getByPlaceholderText('Nhập số điện thoại'),
+      ' 090 123 4567 ',
     );
     await fireEvent.changeText(view.getByPlaceholderText('Nhập mật khẩu'), 'Abcd1234');
     await fireEvent.press(view.getByRole('button', { name: 'Đăng nhập' }));
 
-    // Schema trim `identifier` — server không phải nhận khoảng trắng thừa của bàn phím ảo.
-    await waitFor(() => expect(login).toHaveBeenCalledWith('owner@xeprime.test', 'Abcd1234'));
+    // Dấu cách chép từ danh bạ bị bỏ như web (`compactPhoneInput`) — chỉ còn số (ADR 0060).
+    await waitFor(() => expect(login).toHaveBeenCalledWith('0901234567', 'Abcd1234'));
     await waitFor(() => expect(onSuccess).toHaveBeenCalled());
   });
 
@@ -87,7 +87,7 @@ describe('LoginForm', () => {
      * Chuỗi so sánh gồm cả dấu sao: nó là một `Text` LỒNG bên trong nhãn, nên nội dung phẳng ra
      * thành "Mật khẩu *" chứ không phải hai node rời.
      */
-    expect(view.getByText('Email hoặc số điện thoại *')).toBeTruthy();
+    expect(view.getByText('Số điện thoại *')).toBeTruthy();
     expect(view.getByText('Mật khẩu *')).toBeTruthy();
 
     // `TextField` từng gọi `toLocaleUpperCase()` lên chuỗi dịch — đây là chốt chặn cho việc đó.
@@ -110,8 +110,8 @@ describe('LoginForm', () => {
     const view = await renderLoginForm();
 
     await fireEvent.changeText(
-      view.getByPlaceholderText('Nhập email hoặc số điện thoại'),
-      'owner@xeprime.test',
+      view.getByPlaceholderText('Nhập số điện thoại'),
+      '0901234567',
     );
     await fireEvent.changeText(view.getByPlaceholderText('Nhập mật khẩu'), 'Abcd1234');
     await fireEvent.press(view.getByRole('button', { name: 'Đăng nhập' }));
@@ -133,8 +133,8 @@ describe('LoginForm', () => {
     const view = await renderLoginForm();
 
     await fireEvent.changeText(
-      view.getByPlaceholderText('Nhập email hoặc số điện thoại'),
-      'owner@xeprime.test',
+      view.getByPlaceholderText('Nhập số điện thoại'),
+      '0901234567',
     );
     await fireEvent.changeText(view.getByPlaceholderText('Nhập mật khẩu'), 'saibet123');
     await fireEvent.press(view.getByRole('button', { name: 'Đăng nhập' }));

@@ -2,11 +2,9 @@ import { useLocalSearchParams } from 'expo-router';
 import { RequestBookingScreen } from '@/features/booking-requests/RequestBookingScreen';
 
 /**
- * Gửi yêu cầu thuê (BKG-01) — CÔNG KHAI, không bọc `RequireSession`.
- *
- * Khách vãng lai đặt được: xác thực SĐT bằng OTP là đủ, và server tạo tài khoản rồi trả luôn
- * cặp token trong biên nhận (mục 1.1 của kế hoạch). Dựng tường đăng nhập ở đây là chặn đúng
- * nhóm khách đông nhất.
+ * Gửi yêu cầu thuê (BKG-01) — route CÔNG KHAI, không bọc `RequireSession`: khách chọn chuyến và
+ * xem giá khi chưa đăng nhập. Lượt GỬI cần tài khoản khách có SĐT đã xác minh (ADR 0060) — màn
+ * tự mời đăng nhập ở nút "Tiếp tục" và giữ bản nháp trong bộ nhớ.
  */
 export default function RequestBookingRoute() {
   const { id, serviceType, provinceCode } = useLocalSearchParams<{

@@ -12,7 +12,6 @@ import { resetSessionScopedCache } from '@/queries/reset-session-cache';
 import {
   destroySession,
   fetchCurrentUser,
-  loginWithOtp,
   loginWithPassword,
   loginWithApple,
   loginWithSocial,
@@ -51,16 +50,6 @@ export function useRegister() {
 
   return useMutation({
     mutationFn: (values: RegisterInput) => registerWithPassword(values),
-    onSuccess: (user) => seedSession(queryClient, user),
-  });
-}
-
-export function useOtpLogin() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (values: { phone: string; code: string; displayName?: string }) =>
-      loginWithOtp(values.phone, values.code, values.displayName),
     onSuccess: (user) => seedSession(queryClient, user),
   });
 }

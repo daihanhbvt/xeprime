@@ -1,9 +1,9 @@
 {
   "page": {
     "title": "Cấu hình ứng dụng",
-    "subtitle": "Bật/tắt tính năng của app XePrime Partner và quản lý mẫu email hướng dẫn gói.",
+    "subtitle": "Cấu hình nền tảng cho website và hai ứng dụng, và mẫu email hướng dẫn gói.",
     "tabs": {
-      "config": "Cấu hình app Partner",
+      "config": "Cấu hình chung",
       "templates": "Bộ mẫu email gói"
     }
   },
@@ -28,7 +28,22 @@
     "save": "Lưu cấu hình",
     "reset": "Hoàn tác",
     "saved": "Đã lưu cấu hình. Ứng dụng đang mở sẽ nhận thay đổi ngay.",
-    "unsaved": "Có thay đổi chưa lưu."
+    "unsaved": "Có thay đổi chưa lưu.",
+    "otpSms": {
+      "label": "Gửi SMS mã OTP",
+      "description": "Bật: gửi SMS thật qua nhà mạng (tính phí). Tắt: không gửi SMS, mọi mã OTP là 123456 — chỉ dùng khi phát triển/kiểm thử để tránh phí SMS.",
+      "locked": "Môi trường thật luôn gửi SMS mã OTP — công tắc này chỉ dùng ở môi trường phát triển/kiểm thử."
+    },
+    "sections": {
+      "shared": {
+        "title": "Toàn hệ thống",
+        "scope": "Áp dụng cho website và cả hai ứng dụng XePrime, XePrime Partner."
+      },
+      "partner": {
+        "title": "Ứng dụng XePrime Partner",
+        "scope": "Chỉ áp dụng cho app Partner và email hướng dẫn gói gửi đối tác."
+      }
+    }
   },
   "templates": {
     "create": "Tạo bộ mẫu",

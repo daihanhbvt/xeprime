@@ -45,6 +45,14 @@ export function registerWithPassword(input: RegisterInput): Promise<CurrentUser>
 }
 
 /**
+ * POST /auth/register/check — kiểm thông tin đăng ký TRƯỚC bước nhập mã (SĐT, mật khẩu, họ tên, SĐT
+ * chưa có tài khoản ở site này). 204 = hợp lệ; không gửi mã, không tạo gì.
+ */
+export function checkRegistration(input: Omit<RegisterInput, 'code'>): Promise<void> {
+  return apiPost<void>('/auth/register/check', input);
+}
+
+/**
  * POST /auth/login — backend set cookie httpOnly. Site khách / site partner gửi SỐ ĐIỆN THOẠI
  * (email bị từ chối `PHONE_LOGIN_REQUIRED` — ADR 0060); site quản trị gửi email hoặc SĐT.
  */

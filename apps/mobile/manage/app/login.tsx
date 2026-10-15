@@ -4,7 +4,6 @@ import { useAppToast } from '@/components/feedback/use-app-toast';
 import type { CurrentUser } from '@/features/auth/api';
 import { useEnterApp } from '@/features/auth/hooks/use-enter-app';
 import { LoginScreen } from '@/features/auth/LoginScreen';
-import { postLoginDestination, type LoginMethod } from '@/features/auth/post-login-destination';
 import { ROUTES } from '@/navigation/routes';
 import { usePendAuthNext } from '@/features/auth/auth-next';
 import { SESSION_STATUS, useSessionGate } from '@/features/auth/hooks/use-session-gate';
@@ -33,15 +32,8 @@ export default function LoginRoute() {
     return <Redirect href={next as Href} />;
   }
 
-  function finish(user: CurrentUser, method: LoginMethod) {
+  function finish(user: CurrentUser) {
     toast.showSuccess(t('login.success'));
-
-    const destination = postLoginDestination(user, method);
-    if (destination) {
-      router.replace(destination);
-      return;
-    }
-
     enterApp(user);
   }
 

@@ -8,14 +8,15 @@ import type {
   MobileLoginInput,
   MobileLogoutInput,
   MobileRefreshInput,
-  MobilePhoneLoginInput,
   MobileRegisterInput,
   MobileAppleLoginInput,
   MobileSession,
   MobileSocialExchangeInput,
   MobileTokenPair,
+  RegisterCheckInput,
   RegisterInput,
   ResetPasswordInput,
+  ResetPasswordWithOtpInput,
   SetPasswordInput,
 } from './types';
 
@@ -60,6 +61,19 @@ export const authApi = {
     apiPost<void>('/auth/password/forgot', body),
   resetPassword: (body: ResetPasswordInput): Promise<void> =>
     apiPost<void>('/auth/password/reset', body),
+  /**
+   * Kiểm thông tin đăng ký TRƯỚC bước nhập mã: luật ô, app có tự đăng ký, SĐT chưa có tài khoản ở
+   * app này. 204 = hợp lệ; không gửi mã, không tạo gì. `clientApp` để server suy realm.
+   */
+  checkRegistration: (body: Omit<RegisterCheckInput, 'clientApp'>): Promise<void> =>
+    apiPost<void>('/auth/register/check', { ...body, clientApp: APP_PROFILE.clientApp }),
+  /**
+   * Quên mật khẩu bằng SĐT (ADR 0060): mã `password_reset` + mật khẩu mới → 204. KHÔNG cấp phiên —
+   * người dùng đăng nhập lại bằng mật khẩu mới. `clientApp` để server suy realm khi request không
+   * đi qua site web (khác hai hàm qua email ở trên, DTO này khai trường đó).
+   */
+  resetPasswordWithOtp: (body: Omit<ResetPasswordWithOtpInput, 'clientApp'>): Promise<void> =>
+    apiPost<void>('/auth/password/reset-otp', { ...body, clientApp: APP_PROFILE.clientApp }),
 };
 
 /**
@@ -78,27 +92,15 @@ export const mobileAuthApi = {
    * để gác phạm vi app (403 `PARTNER_ACCESS_REQUIRED`) và buộc phiên vào app (ADR 0017 mở rộng
    * 25/09/2026).
    */
-  /** Đăng nhập bằng email/SĐT + mật khẩu. */
+  /** Đăng nhập bằng SĐT + mật khẩu — email bị server từ chối (`PHONE_LOGIN_REQUIRED`, ADR 0060). */
   login: (client: ApiClient, body: MobileLoginInput): Promise<MobileSession> =>
     client.post<MobileSession>('/auth/mobile/login', { ...body, clientApp: APP_PROFILE.clientApp }),
   /**
-   * Đăng ký bằng SĐT + mật khẩu.
-   *
-   * ⚠️ SĐT ở đây CHƯA được xác thực. Muốn chắc số là thật thì dùng `phoneLogin` — nó tự tạo tài
-   * khoản khi SĐT chưa có, và người dùng đặt mật khẩu sau bằng `POST /auth/password/set`
-   * (`MeDto.hasPassword` cho biết có nên hỏi hay không).
+   * Đăng ký bằng SĐT + mật khẩu + mã OTP `register` (ADR 0060): server đối chiếu mã rồi mới tạo
+   * tài khoản, nên tài khoản ra đời với SĐT ĐÃ xác minh.
    */
   register: (client: ApiClient, body: MobileRegisterInput): Promise<MobileSession> =>
     client.post<MobileSession>('/auth/mobile/register', {
-      ...body,
-      clientApp: APP_PROFILE.clientApp,
-    }),
-  /**
-   * Đăng nhập bằng SĐT + OTP. Hai bước trước đó (`/auth/phone/send-otp`, `verify-otp`) dùng
-   * chung với web — chúng trả JSON thuần, không đụng cookie.
-   */
-  phoneLogin: (client: ApiClient, body: MobilePhoneLoginInput): Promise<MobileSession> =>
-    client.post<MobileSession>('/auth/mobile/phone/login', {
       ...body,
       clientApp: APP_PROFILE.clientApp,
     }),

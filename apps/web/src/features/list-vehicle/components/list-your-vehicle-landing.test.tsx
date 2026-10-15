@@ -29,8 +29,8 @@ vi.mock('next/navigation', () => ({
  * Dùng lại hàm dựng đường dẫn nghĩa là một lần đổi mặc định sẽ làm cả hai nút trỏ về một tuyến mà
  * test vẫn xanh — đúng bug ADR 0040 sửa, chỉ là không ai thấy nữa.
  */
-const PERSONAL_HREF = '/manage/register?track=commission';
-const SHOP_HREF = '/manage/register?track=package';
+const PERSONAL_HREF = '/manage/register?track=commission&from=market';
+const SHOP_HREF = '/manage/register?track=package&from=market';
 
 function personalCta(): HTMLElement {
   return screen.getByRole('link', { name: /Đăng xe đầu tiên/ });
@@ -59,6 +59,9 @@ describe('Site khách — /list-your-vehicle', () => {
 
     expect(personalCta().getAttribute('href')).toBe(PERSONAL_HREF);
     expect(shopCta().getAttribute('href')).toBe(SHOP_HREF);
+    // Form đăng ký là site KHÁC (tài khoản khác) — mở tab mới, giữ tab chợ xe.
+    expect(personalCta().getAttribute('target')).toBe('_blank');
+    expect(shopCta().getAttribute('rel')).toContain('noopener');
   });
 
   it('chế độ path: mọi đích đều là đường dẫn nội bộ của khu partner', () => {

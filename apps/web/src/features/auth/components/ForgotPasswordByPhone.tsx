@@ -5,19 +5,18 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { Alert, Button } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useMemo, useState } from 'react';
+import { type FormEvent, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { PHONE_VERIFICATION_PURPOSE } from '@xeprime/types';
 import {
-  buildForgotPasswordPhoneSchema,
-  buildResetPasswordSchema,
-  type ForgotPasswordPhoneValues,
-  type ResetPasswordValues,
+  buildResetPasswordByPhoneSchema,
+  type ResetPasswordByPhoneValues,
 } from '@xeprime/validators';
 import { Logo } from '@/components/brand/Logo';
 import { TextField } from '@/components/form/TextField';
+import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { zoneAuthRoutes } from '@/constants/routes';
-import { OtpCodeStep } from '@/features/phone-verification/components/OtpCodeStep';
+import { OtpCodeInput } from '@/features/phone-verification/components/OtpCodeInput';
 import { usePhoneVerify } from '@/features/phone-verification/hooks/use-phone-verify';
 import { maskPhone } from '@/features/phone-verification/mask';
 import { useErrorMessage } from '@/i18n/use-error-message';
@@ -25,88 +24,96 @@ import { resetPasswordWithOtp } from '@/services/auth.service';
 import { useZone } from '@/zones/ZoneProvider';
 import { useAuthSchemaLabels } from '../hooks/use-auth-schema-labels';
 import styles from './AuthCard.module.css';
+import otpStyles from './ForgotPasswordByPhone.module.css';
 
-type Step = 'phone' | 'code' | 'done';
+const isOtpCodeComplete = (code: string): boolean => /^[0-9]{6}$/.test(code);
 
 /**
- * Quên mật khẩu bằng SỐ ĐIỆN THOẠI — site khách và site partner (ADR 0060).
+ * Quên mật khẩu bằng SỐ ĐIỆN THOẠI — site khách và site partner (ADR 0060). MỘT màn, giống hệt app
+ * native (`ForgotPasswordScreen`):
  *
- * Ba bước: SĐT → mã OTP `password_reset` + mật khẩu mới → xong. Không giả định tài khoản có
- * email; tài khoản Google/Facebook hay tài khoản cũ chưa có mật khẩu cũng đặt được mật khẩu ở đây.
+ *   SĐT · mật khẩu mới · nhập lại → "Xác nhận" → gửi mã `password_reset` + popup nhập mã →
+ *   đúng mã ⇒ `POST /auth/password/reset-otp` → "Đã đặt lại mật khẩu".
  *
  * Hai điều cố ý:
- *  - Câu ở bước mã nói "NẾU số này có tài khoản…": server trả như nhau dù số có tài khoản hay
- *    không (và chỉ thật sự nhắn tin khi có), nên giao diện cũng không được khẳng định điều đó.
+ *  - Câu trong popup nói "NẾU số này có tài khoản…": server trả như nhau dù số có tài khoản hay
+ *    không (và chỉ thật sự nhắn tin khi có), nên giao diện cũng không được khẳng định điều đó. Số
+ *    không có tài khoản thì lượt đặt lại trả `OTP_INVALID`, y như sai mã.
  *  - Xong là XONG, không tự đăng nhập: mã chỉ mở quyền đổi mật khẩu. Người dùng đăng nhập lại
- *    bằng SĐT + mật khẩu vừa đặt — đúng cái cửa duy nhất mà sản phẩm còn mở.
+ *    bằng SĐT + mật khẩu vừa đặt.
  */
 export function ForgotPasswordByPhone() {
   const t = useTranslations('Auth');
+  const tCommon = useTranslations('Common.actions');
   const routes = zoneAuthRoutes(useZone());
   const errorMessage = useErrorMessage();
   const labels = useAuthSchemaLabels();
   const otp = usePhoneVerify(PHONE_VERIFICATION_PURPOSE.PASSWORD_RESET);
 
-  const [step, setStep] = useState<Step>('phone');
-  const [phone, setPhone] = useState('');
+  /** Giá trị form của lượt đang chờ mã — popup mở khi khác null. */
+  const [draft, setDraft] = useState<ResetPasswordByPhoneValues | null>(null);
   const [code, setCode] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
   const [sending, setSending] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [otpError, setOtpError] = useState<string | null>(null);
 
-  const phoneSchema = useMemo(() => buildForgotPasswordPhoneSchema(labels), [labels]);
-  const phoneForm = useForm<ForgotPasswordPhoneValues>({
-    resolver: yupResolver(phoneSchema),
-    defaultValues: { phone: '' },
-  });
-  const passwordSchema = useMemo(() => buildResetPasswordSchema(labels), [labels]);
-  const passwordForm = useForm<ResetPasswordValues>({
-    resolver: yupResolver(passwordSchema),
-    defaultValues: { password: '', confirmPassword: '' },
+  const schema = useMemo(() => buildResetPasswordByPhoneSchema(labels), [labels]);
+  const { control, handleSubmit } = useForm<ResetPasswordByPhoneValues>({
+    resolver: yupResolver(schema),
+    defaultValues: { phone: '', password: '', confirmPassword: '' },
   });
 
-  const sendCode = phoneForm.handleSubmit(async (values) => {
+  /** "Xác nhận": gửi mã rồi mở popup. Môi trường nhận mã test thì không tốn SMS. */
+  const confirm = async (values: ResetPasswordByPhoneValues) => {
     if (sending) return;
-    const target = values.phone.trim();
     setSending(true);
-    setError(null);
     try {
-      // Môi trường nhận mã test: sang thẳng bước mã, không tốn SMS (bấm "Gửi mã" để nhận mã thật).
-      if (!otp.testCodeEnabled) await otp.sendAsync(target);
-      setPhone(target);
+      if (!otp.testCodeEnabled) await otp.sendAsync(values.phone.trim());
       setCode('');
-      setStep('code');
+      setOtpError(null);
+      setDraft(values);
     } catch {
-      // Lỗi gửi (cooldown, quá số lần) hiện qua `otp.error` ngay trên form.
+      // Cooldown, quá số lần gửi… hiện qua `otp.error` ngay trên form.
     } finally {
       setSending(false);
     }
-  });
+  };
+  const onSubmit = (event: FormEvent<HTMLFormElement>) => void handleSubmit(confirm)(event);
 
-  function submitReset(submitted: string) {
-    void passwordForm.handleSubmit(async (values) => {
-      if (submitting) return;
-      setSubmitting(true);
-      setError(null);
-      try {
-        await resetPasswordWithOtp({ phone, code: submitted, password: values.password });
-        setStep('done');
-      } catch (err) {
-        setError(errorMessage(err));
-      } finally {
-        setSubmitting(false);
-      }
-    })();
-  }
+  const reset = async (value: string) => {
+    if (!draft || submitting || !isOtpCodeComplete(value)) return;
+    setSubmitting(true);
+    setOtpError(null);
+    try {
+      await resetPasswordWithOtp({
+        phone: draft.phone.trim(),
+        code: value,
+        password: draft.password,
+      });
+      setDraft(null);
+      setDone(true);
+    } catch (err) {
+      // Sai/hết hạn mã: ở lại popup cho nhập lại.
+      setOtpError(errorMessage(err));
+      setCode('');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-  function editPhone() {
-    setStep('phone');
-    setCode('');
-    setError(null);
-    otp.reset();
-  }
+  const resend = async () => {
+    if (!draft) return;
+    setOtpError(null);
+    try {
+      await otp.sendAsync(draft.phone.trim());
+      setCode('');
+    } catch (err) {
+      setOtpError(errorMessage(err));
+    }
+  };
 
-  if (step === 'done') {
+  if (done) {
     return (
       <div className={styles.box}>
         <div className={styles.success}>
@@ -129,84 +136,110 @@ export function ForgotPasswordByPhone() {
       <div className={styles.head}>
         <Logo size="lg" />
         <div>
-          <div className={styles.title}>
-            {step === 'phone' ? t('forgotPassword.title') : t('forgotPhone.codeTitle')}
-          </div>
-          <div className={styles.sub}>
-            {step === 'phone' ? t('forgotPhone.subtitle') : t('forgotPhone.codeSubtitle')}
-          </div>
+          <div className={styles.title}>{t('forgotPassword.title')}</div>
+          <div className={styles.sub}>{t('forgotPhone.subtitle')}</div>
         </div>
       </div>
 
-      {step === 'phone' ? (
-        <>
-          {otp.error ? (
-            <Alert type="error" showIcon title={otp.error} className={styles.alert} role="alert" />
-          ) : null}
-          <form onSubmit={sendCode} noValidate>
-            <TextField
-              control={phoneForm.control}
-              name="phone"
-              label={t('login.phone')}
-              type="tel"
-              placeholder={t('login.phonePlaceholder')}
-              autoComplete="tel"
-              prefix={<PhoneOutlined />}
-              autoFocus
-            />
-            <Button
-              type="primary"
-              htmlType="submit"
-              block
-              size="large"
-              className={styles.submit}
-              loading={sending}
-            >
-              {t('forgotPhone.sendCode')}
-            </Button>
-          </form>
-        </>
-      ) : (
-        <OtpCodeStep
-          phone={phone}
-          verify={otp}
-          code={code}
-          onCodeChange={(next) => {
-            if (error) setError(null);
-            setCode(next);
-          }}
-          onSubmit={submitReset}
-          submitLabel={t('resetPassword.submit')}
-          submitting={submitting}
-          onEdit={editPhone}
-          editLabel={t('otp.editPhone')}
-          sentHint={t('forgotPhone.sentHint', { phone: maskPhone(phone) })}
-          error={error}
+      {otp.error && !draft ? (
+        <Alert type="error" showIcon title={otp.error} className={styles.alert} role="alert" />
+      ) : null}
+      <form onSubmit={onSubmit} noValidate>
+        <TextField
+          control={control}
+          name="phone"
+          label={t('login.phone')}
+          type="tel"
+          placeholder={t('login.phonePlaceholder')}
+          autoComplete="tel"
+          prefix={<PhoneOutlined />}
+          autoFocus
+        />
+        <TextField
+          control={control}
+          name="password"
+          label={t('resetPassword.newPassword')}
+          type="password"
+          placeholder={t('resetPassword.newPasswordPlaceholder')}
+          autoComplete="new-password"
+          prefix={<LockOutlined />}
+        />
+        <TextField
+          control={control}
+          name="confirmPassword"
+          label={t('resetPassword.confirmPassword')}
+          type="password"
+          placeholder={t('resetPassword.confirmPasswordPlaceholder')}
+          autoComplete="new-password"
+          prefix={<LockOutlined />}
+        />
+        <Button
+          type="primary"
+          htmlType="submit"
+          block
+          size="large"
+          className={styles.submit}
+          loading={sending}
         >
-          <TextField
-            control={passwordForm.control}
-            name="password"
-            label={t('resetPassword.newPassword')}
-            type="password"
-            placeholder={t('resetPassword.newPasswordPlaceholder')}
-            autoComplete="new-password"
-            prefix={<LockOutlined />}
-          />
-          <TextField
-            control={passwordForm.control}
-            name="confirmPassword"
-            label={t('resetPassword.confirmPassword')}
-            type="password"
-            placeholder={t('resetPassword.confirmPasswordPlaceholder')}
-            autoComplete="new-password"
-            prefix={<LockOutlined />}
-          />
-        </OtpCodeStep>
-      )}
+          {tCommon('confirm')}
+        </Button>
+      </form>
 
       <div className={styles.footer}>
         <Link href={routes.login}>{t('links.backToLogin')}</Link>
       </div>
+
+      <ResponsiveDialog
+        open={draft !== null}
+        onClose={() => setDraft(null)}
+        title={t('register.verifyTitle')}
+        size="sm"
+        footer={
+          <div className={otpStyles.otpFooter}>
+            <Button onClick={() => setDraft(null)} disabled={submitting}>
+              {tCommon('cancel')}
+            </Button>
+            <Button
+              type="primary"
+              loading={submitting}
+              disabled={!isOtpCodeComplete(code)}
+              onClick={() => void reset(code)}
+            >
+              {t('resetPassword.submit')}
+            </Button>
+          </div>
+        }
+      >
+        <div className={otpStyles.otpBody}>
+          <p className={otpStyles.otpLead}>
+            {t('forgotPhone.sentHint', { phone: maskPhone(draft?.phone.trim() ?? '') })}
+          </p>
+          <OtpCodeInput
+            value={code}
+            onChange={(next) => {
+              if (otpError) setOtpError(null);
+              setCode(next);
+            }}
+            onComplete={(full) => void reset(full)}
+            disabled={submitting}
+            autoFocus
+          />
+          {otpError ? <Alert type="error" showIcon title={otpError} /> : null}
+          <div className={otpStyles.otpResend}>
+            <Button
+              type="link"
+              size="small"
+              loading={otp.sending}
+              disabled={otp.cooldown > 0 || submitting}
+              onClick={() => void resend()}
+            >
+              {otp.cooldown > 0
+                ? t('otp.resendIn', { seconds: otp.cooldown })
+                : t('otp.resend')}
+            </Button>
+          </div>
+        </div>
+      </ResponsiveDialog>
     </div>
   );
 }

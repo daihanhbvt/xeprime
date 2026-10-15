@@ -138,13 +138,8 @@ export class AuthService {
     this.assertSelfRegistration(realm);
     const phone = normalizePhone(input.phone);
 
-    await this.phoneVerification.verifyOtp(
-      input.phone,
-      PHONE_VERIFICATION_PURPOSE.REGISTER,
-      input.code,
-      realm,
-      null,
-    );
+    // Nhận cả mã vừa gửi lẫn mã đã qua bước "Xác thực" của form (tích xanh) — xem service.
+    await this.phoneVerification.verifyRegistrationOtp(input.phone, input.code, realm);
 
     const existing = await this.prisma.user.findFirst({
       where: { realm, phone, deletedAt: null },
@@ -430,6 +425,21 @@ export class AuthService {
    *    ghi để cooldown/trần gửi tính như nhau ở cả hai nhánh — khác nhau ở cooldown là một máy dò.
    *  - mục đích khác: như trước.
    */
+  /**
+   * Kiểm một lượt đăng ký TRƯỚC bước nhập mã (`POST /auth/register/check` và bước gửi mã
+   * `register`): site có tự đăng ký + SĐT chưa có tài khoản trong realm. Định dạng ô đã do DTO kiểm.
+   * Không lộ thêm gì so với `send-otp` — cùng câu trả lời, cùng mức chặn tần suất. Lượt
+   * `register` thật vẫn kiểm lại (unique DB là chốt cuối).
+   */
+  async checkRegistration(rawPhone: string, realm: AccountRealm): Promise<void> {
+    this.assertSelfRegistration(realm);
+    const taken = await this.prisma.user.findFirst({
+      where: { realm, phone: normalizePhone(rawPhone), deletedAt: null },
+      select: { id: true },
+    });
+    if (taken) throw phoneTaken();
+  }
+
   async otpDeliveryFor(
     purpose: PhoneVerificationPurpose,
     rawPhone: string,
@@ -439,12 +449,7 @@ export class AuthService {
 
     const phone = normalizePhone(rawPhone);
     if (purpose === PHONE_VERIFICATION_PURPOSE.REGISTER) {
-      this.assertSelfRegistration(realm);
-      const taken = await this.prisma.user.findFirst({
-        where: { realm, phone, deletedAt: null },
-        select: { id: true },
-      });
-      if (taken) throw phoneTaken();
+      await this.checkRegistration(phone, realm);
       return { deliver: true };
     }
     if (purpose === PHONE_VERIFICATION_PURPOSE.PASSWORD_RESET) {

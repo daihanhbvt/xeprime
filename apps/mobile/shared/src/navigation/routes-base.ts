@@ -343,7 +343,6 @@ export const ROUTES = {
     supportCase: (id: string): Href => ({ pathname: '/account/support/[id]', params: { id } }),
     login: (): Href => '/login',
     register: (): Href => '/register',
-    setPassword: (): Href => '/set-password',
     forgotPassword: (): Href => '/forgot-password',
     resetPassword: (token?: string): Href =>
       token ? { pathname: '/reset-password', params: { token } } : '/reset-password',

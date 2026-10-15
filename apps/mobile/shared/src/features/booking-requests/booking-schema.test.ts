@@ -9,9 +9,6 @@ const LABELS = new Proxy({} as BookingRequestSchemaLabels, {
 const schema = buildBookingRequestSchema(LABELS, { canConfirmLocation: false });
 
 const BASE = {
-  customerName: 'Nguyễn Văn An',
-  customerPhone: '0901234567',
-  customerEmail: '',
   serviceType: SERVICE_TYPE.SELF_DRIVE,
   pickupAt: '2026-10-01T02:00:00.000Z',
   returnAt: '2026-10-03T02:00:00.000Z',

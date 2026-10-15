@@ -4,7 +4,6 @@ import type { AuthProvider } from '@xeprime/types';
 import {
   isAppleSignInAvailable,
   signInWithApple,
-  signInWithOtp,
   signInWithPassword,
   signInWithSocial,
   signOut,
@@ -18,7 +17,10 @@ export type { CurrentUser };
 
 export type RegisterInput = Omit<MobileRegisterInput, 'device'>;
 
-/** `identifier` là email HOẶC số điện thoại. Token đi thẳng vào Keychain/Keystore, không qua đây. */
+/**
+ * `identifier` là SỐ ĐIỆN THOẠI (ADR 0060 — server từ chối email bằng `PHONE_LOGIN_REQUIRED`).
+ * Token đi thẳng vào Keychain/Keystore, không qua đây.
+ */
 export function loginWithPassword(identifier: string, password: string): Promise<CurrentUser> {
   return signInWithPassword(identifier, password);
 }
@@ -27,12 +29,9 @@ export function registerWithPassword(input: RegisterInput): Promise<CurrentUser>
   return signUpWithPassword(input);
 }
 
-export function loginWithOtp(
-  phone: string,
-  code: string,
-  displayName?: string,
-): Promise<CurrentUser> {
-  return signInWithOtp(phone, code, displayName);
+/** Kiểm thông tin đăng ký TRƯỚC bước nhập mã (SĐT trùng, luật mật khẩu…) — không gửi mã. */
+export function checkRegistration(input: Omit<RegisterInput, 'code'>): Promise<void> {
+  return authApi.checkRegistration(input);
 }
 
 /** `null` = người dùng đóng trình duyệt giữa chừng, KHÔNG phải lỗi — xem `signInWithSocial`. */
@@ -50,6 +49,7 @@ export function loginWithApple(): Promise<CurrentUser | null> {
 
 export { isAppleSignInAvailable };
 
+/** Đặt mật khẩu LẦN ĐẦU cho tài khoản chưa có (vào bằng Google/Facebook/Apple) — màn đổi mật khẩu. */
 export function setAccountPassword(password: string): Promise<void> {
   return authApi.setPassword({ password });
 }
@@ -63,12 +63,13 @@ export function changeAccountPassword(currentPassword: string, newPassword: stri
   return authApi.changePassword({ currentPassword, newPassword });
 }
 
-export function requestPasswordReset(email: string): Promise<void> {
-  return authApi.forgotPassword({ email });
-}
-
 export function resetPasswordWithToken(token: string, password: string): Promise<void> {
   return authApi.resetPassword({ token, password });
+}
+
+/** Quên mật khẩu bằng SĐT (ADR 0060) — mã `password_reset` + mật khẩu mới. Không cấp phiên. */
+export function resetPasswordWithOtp(phone: string, code: string, password: string): Promise<void> {
+  return authApi.resetPasswordWithOtp({ phone, code, password });
 }
 
 /**

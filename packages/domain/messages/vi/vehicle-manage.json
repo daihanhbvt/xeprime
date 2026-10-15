@@ -167,7 +167,8 @@
       "quote": "Giá đã chốt — báo giá còn tạm tính thì vẫn chờ bạn.",
       "longTerm": "Thuê dài hạn không tự nhận: bạn luôn chốt lịch tay.",
       "driver": "Có tài xế đang hoạt động, GPLX còn hạn và rảnh trong khung giờ.",
-      "hold": "Chuyến có tài xế trên tuyến hoa hồng vẫn chờ bạn duyệt trước khi khách chuyển giữ chỗ."
+      "hold": "Chuyến có tài xế trên tuyến hoa hồng vẫn chờ bạn duyệt trước khi khách chuyển giữ chỗ.",
+      "appHold": "Chuyến có tài xế của chủ xe cá nhân vẫn chờ bạn duyệt trước khi khách chuyển giữ chỗ."
     },
     "policyTitle": "* Lưu ý chính sách huỷ chuyến khi tự động nhận:",
     "policyBody": "Yêu cầu được tự động xác nhận vẫn tuân thủ chính sách huỷ chuyến chuẩn của Xe Prime. Chủ xe chủ động huỷ chuyến sau khi đã tự động xác nhận có thể dẫn đến điểm uy tín thấp hoặc hạn chế hiển thị xe.",
@@ -175,7 +176,8 @@
     "capabilityNoDriver": "Chưa có tài xế đang hoạt động. Thêm tài xế ở cổng quản lý trước khi bật.",
     "capabilityOk": "{count, plural, other {# tài xế}} đang hoạt động — hệ thống gán tài xế rảnh ngay khi nhận chuyến.",
     "openDrivers": "Quản lý tài xế",
-    "saved": "Đã lưu thiết lập nhận chuyến"
+    "saved": "Đã lưu thiết lập nhận chuyến",
+    "appCapabilityNoFeature": "Tài khoản hiện tại chưa có tính năng Tài xế — chưa bật được tự động nhận chuyến có tài xế."
   },
   "delivery": {
     "title": "Giao nhận xe tận nơi",

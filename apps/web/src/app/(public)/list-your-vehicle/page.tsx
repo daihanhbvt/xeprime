@@ -20,8 +20,9 @@ export async function generateMetadata(): Promise<Metadata> {
 export default function ListYourVehiclePage() {
   return (
     <ListYourVehicleLanding
-      personalHref={partnerRegisterHref(REGISTRATION_TRACK.COMMISSION)}
-      shopHref={partnerRegisterHref(REGISTRATION_TRACK.PACKAGE)}
+      personalHref={partnerRegisterHref(REGISTRATION_TRACK.COMMISSION, { fromMarket: true })}
+      shopHref={partnerRegisterHref(REGISTRATION_TRACK.PACKAGE, { fromMarket: true })}
+      openInNewTab
     />
   );
 }

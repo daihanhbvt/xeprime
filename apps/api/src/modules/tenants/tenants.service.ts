@@ -5,7 +5,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { isUniqueViolation, markBadgesDirty, newId, Prisma } from '@xeprime/prisma';
+import {
+  enqueuePartnerWelcomeEmail,
+  isUniqueViolation,
+  markBadgesDirty,
+  newId,
+  Prisma,
+} from '@xeprime/prisma';
 import {
   APPROVAL_ACTION,
   APPROVAL_STATUS,
@@ -301,23 +307,34 @@ export class TenantsService {
          * transaction — chỉ khi nền tảng bật `isPlanPromotionEnabled` (đọc trong tx), trùng thì DB bỏ qua
          * (`email_outbox.dedupe_key`). Thư GỬI ở `EmailOutboxDispatcher`, không ở request này.
          */
-        if (isPackageTrack) {
-          const owner = await tx.user.findUnique({
-            where: { id: userId },
-            select: { email: true, displayName: true },
+        const owner = await tx.user.findUnique({
+          where: { id: userId },
+          select: { email: true, displayName: true },
+        });
+        /*
+         * Tuyến HOA HỒNG: thư CHÀO MỪNG (đăng xe, phí theo chuyến, lượt miễn phí) tới email tài khoản +
+         * email liên hệ (trùng ⇒ một). Chỉ khi nền tảng bật `isPlanPromotionEnabled` (đọc trong tx).
+         */
+        if (!isPackageTrack) {
+          await enqueuePartnerWelcomeEmail(tx, {
+            accountEmail: owner?.email,
+            contactEmail: dto.email,
+            displayName: owner?.displayName ?? null,
+            shopName: dto.name,
+            tenantId: id,
           });
-          // CHỈ email của TÀI KHOẢN chủ gian hàng (như `SupportService.openPlanConsultation`) — email liên hệ của hồ sơ có thể là của người khác.
+        }
+        if (isPackageTrack) {
+          // Email TÀI KHOẢN chủ VÀ email liên hệ gõ ở form — chủ đăng ký bằng SĐT chỉ có email liên hệ.
           // RegisterShopDto không mang locale ⇒ bỏ trống, outbox mặc định `vi`.
-          const to = owner?.email?.trim() || null;
-          if (to) {
-            await this.appConfig.enqueuePlanGuide(tx, {
-              to,
-              reason: PLAN_GUIDE_REASON.REGISTERED,
-              displayName: owner?.displayName ?? null,
-              shopName: dto.name,
-              tenantId: id,
-            });
-          }
+          await this.appConfig.enqueuePlanGuideToOwnerAndContact(tx, {
+            accountEmail: owner?.email,
+            contactEmail: dto.email,
+            reason: PLAN_GUIDE_REASON.REGISTERED,
+            displayName: owner?.displayName ?? null,
+            shopName: dto.name,
+            tenantId: id,
+          });
         }
 
         /*

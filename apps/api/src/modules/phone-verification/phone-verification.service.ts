@@ -11,6 +11,8 @@ import { ConfigService } from '@nestjs/config';
 import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
+  APP_CONFIG_KEY,
+  PHONE_VERIFICATION_PURPOSE,
   PHONE_VERIFICATION_STATUS,
   type AccountRealm,
   type PhoneVerificationPurpose,
@@ -18,8 +20,19 @@ import {
 } from '@xeprime/types';
 import { normalizePhone } from '../../common/phone';
 import { PrismaService } from '../../prisma/prisma.service';
-import { isProductionDeployment, OTP_BYPASS_PROVIDER, resolveOtpBypassCode } from './otp-bypass';
+import {
+  DEV_OTP_BYPASS_CODE,
+  isProductionDeployment,
+  OTP_BYPASS_PROVIDER,
+  resolveOtpBypassCode,
+} from './otp-bypass';
 import { OTP_PROVIDER, type OtpProvider } from './otp-provider';
+
+/**
+ * Mã `register` đã qua bước "Xác thực" của form (tích xanh) còn được lượt đăng ký nhận trong bao lâu.
+ * Đủ cho người dùng điền nốt form, không đủ để giữ một mã cũ qua ngày.
+ */
+const REGISTER_VERIFIED_WINDOW_MINUTES = 30;
 
 @Injectable()
 export class PhoneVerificationService {
@@ -99,7 +112,16 @@ export class PhoneVerificationService {
       data: { status: PHONE_VERIFICATION_STATUS.EXPIRED },
     });
 
-    const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
+    /*
+     * Admin TẮT gửi SMS (Cấu hình ứng dụng) — chỉ có hiệu lực ngoài production: luồng chạy y hệt
+     * (kiểm trùng, hàng mã, hết hạn, đếm sai) nhưng KHÔNG gọi nhà mạng và mã cố định `123456`, để dev
+     * và test không tốn phí SMS. Hàng mang provider `bypass` nên không tính vào cooldown/trần gửi.
+     * Giao diện không biết gì về chế độ này (`devCode` = null).
+     */
+    const smsOff = await this.isSmsDisabled();
+    const code = smsOff
+      ? DEV_OTP_BYPASS_CODE
+      : randomInt(0, 1_000_000).toString().padStart(6, '0');
     const ttlMin = OTP_POLICY.TTL_MINUTES;
     const expiresAt = new Date(now + ttlMin * 60 * 1000);
 
@@ -109,7 +131,7 @@ export class PhoneVerificationService {
         realm,
         phone,
         purpose,
-        provider: this.config.get<string>('OTP_MODE') ?? 'mock',
+        provider: smsOff ? OTP_BYPASS_PROVIDER : (this.config.get<string>('OTP_MODE') ?? 'mock'),
         otpHash: this.hash(code, phone),
         status: PHONE_VERIFICATION_STATUS.PENDING,
         sentCount: 1,
@@ -117,7 +139,7 @@ export class PhoneVerificationService {
       },
     });
 
-    if (options.deliver !== false) await this.provider.send(phone, code);
+    if (!smsOff && options.deliver !== false) await this.provider.send(phone, code);
 
     /*
      * `devCode` trả mã 6 số THẲNG trong response — chỉ khi đây KHÔNG phải một triển khai
@@ -138,8 +160,51 @@ export class PhoneVerificationService {
     const isMockProvider = this.config.get<string>('OTP_MODE') !== 'esms';
     return {
       expiresAt,
-      devCode: isMockProvider && !isProductionDeployment(this.config) ? code : null,
+      devCode: !smsOff && isMockProvider && !isProductionDeployment(this.config) ? code : null,
     };
+  }
+
+  /**
+   * Admin đã TẮT gửi SMS OTP (`platform_app_configs.otp_sms_enabled = false`)? Production LUÔN trả
+   * false — công tắc chỉ dành cho dev/staging, để không ai lỡ tay mở cửa "123456" trên hệ thống thật.
+   * Thiếu dòng cấu hình ⇒ coi như BẬT (gửi thật), không bao giờ đoán tắt.
+   */
+  async isSmsDisabled(): Promise<boolean> {
+    if (isProductionDeployment(this.config)) return false;
+    const row = await this.prisma.platformAppConfig.findUnique({
+      where: { key: APP_CONFIG_KEY.PARTNER },
+      select: { otpSmsEnabled: true },
+    });
+    return row?.otpSmsEnabled === false;
+  }
+
+  /**
+   * Chứng minh sở hữu SĐT cho lượt TẠO TÀI KHOẢN (ADR 0060). Nhận một trong hai:
+   *
+   *  - mã đang chờ (`pending`) — form gửi mã rồi đăng ký luôn: đối chiếu như `verifyOtp`;
+   *  - mã đã qua bước "Xác thực" của form (tích xanh, `verify-otp` purpose `register`) trong
+   *    `REGISTER_VERIFIED_WINDOW_MINUTES`: CÙNG realm, CÙNG SĐT, và băm của `code` khớp đúng hàng đó.
+   *
+   * Nhánh thứ hai không mở đường dùng lại mã: lượt đăng ký thành công thì SĐT đã có tài khoản ở
+   * realm này, mọi lượt sau với cùng số đều dừng ở `PHONE_TAKEN`. Mã test (dev/staging) đã được
+   * `verifyOtp` nhận như thường.
+   */
+  async verifyRegistrationOtp(rawPhone: string, code: string, realm: AccountRealm): Promise<void> {
+    const phone = normalizePhone(rawPhone);
+    const since = new Date(Date.now() - REGISTER_VERIFIED_WINDOW_MINUTES * 60 * 1000);
+    const verified = await this.prisma.phoneVerification.findFirst({
+      where: {
+        realm,
+        phone,
+        purpose: PHONE_VERIFICATION_PURPOSE.REGISTER,
+        status: PHONE_VERIFICATION_STATUS.VERIFIED,
+        verifiedAt: { gte: since },
+        otpHash: this.hash(code, phone),
+      },
+      select: { id: true },
+    });
+    if (verified) return;
+    await this.verifyOtp(rawPhone, PHONE_VERIFICATION_PURPOSE.REGISTER, code, realm, null);
   }
 
   /**
@@ -175,8 +240,12 @@ export class PhoneVerificationService {
       select: { id: true, otpHash: true, expiresAt: true, attemptCount: true },
     });
 
+    /*
+     * Mã 123456 CHỈ được nhận khi admin TẮT gửi SMS (dev/staging). Bật SMS = kiểm thử thật: phải nhập
+     * đúng mã trong tin nhắn, kể cả ở dev/staging.
+     */
     const bypassCode = resolveOtpBypassCode(this.config);
-    if (bypassCode !== null && code === bypassCode) {
+    if (bypassCode !== null && code === bypassCode && (await this.isSmsDisabled())) {
       await this.markVerified({ rowId: row?.id ?? null, realm, phone, purpose, userId });
       return;
     }

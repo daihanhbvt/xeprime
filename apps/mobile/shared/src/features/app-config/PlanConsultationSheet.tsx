@@ -65,7 +65,7 @@ export function PlanConsultationSheet({ open, onClose }: { open: boolean; onClos
 
   /**
    * Gửi xong ⇒ tấm chuyển sang lời cảm ơn. Địa chỉ hiện ra là địa chỉ SERVER thật sự gửi
-   * (`emailedTo` — email của tài khoản), không phải ô email vừa gõ; `null` ⇒ không nhắc email.
+   * (`emailedTo` — email tài khoản và/hoặc email liên hệ vừa gõ); `null` ⇒ không nhắc email.
    */
   const result = submitMutation.isSuccess ? submitMutation.data : null;
   const sent = result !== null;

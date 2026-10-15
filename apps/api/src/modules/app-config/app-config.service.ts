@@ -1,10 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   enqueuePlanGuideEmail,
+  enqueuePlanGuideToOwnerAndContact,
   Prisma,
   type EnqueuePlanGuideEmailInput,
 } from '@xeprime/prisma';
 import {
+  API_ERROR_CODE,
   APP_CONFIG_AUDIT_ACTION,
   APP_CONFIG_KEY,
   AUDIT_ACTOR_SCOPE,
@@ -12,6 +15,7 @@ import {
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { isProductionDeployment } from '../phone-verification/otp-bypass';
 import type {
   PartnerAppConfigAdminDto,
   PartnerAppConfigDto,
@@ -25,6 +29,7 @@ const ADMIN_SELECT = {
   version: true,
   supportHotline: true,
   supportZalo: true,
+  otpSmsEnabled: true,
   updatedAt: true,
   updater: { select: { displayName: true } },
 } satisfies Prisma.PlatformAppConfigSelect;
@@ -43,6 +48,7 @@ export class AppConfigService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly config: ConfigService,
   ) {}
 
   async getPartner(db: Db = this.prisma): Promise<PartnerAppConfigDto> {
@@ -56,13 +62,21 @@ export class AppConfigService {
 
   async getPartnerAdmin(): Promise<PartnerAppConfigAdminDto> {
     const row = await this.ensureRow(this.prisma);
-    return toAdmin(row);
+    return toAdmin(row, isProductionDeployment(this.config));
   }
 
   async updatePartner(
     actorUserId: string,
     dto: UpdatePartnerAppConfigDto,
   ): Promise<PartnerAppConfigAdminDto> {
+    const production = isProductionDeployment(this.config);
+    // Công tắc SMS chỉ dành cho dev/staging — production luôn gửi thật, không ai tắt được.
+    if (production && dto.otpSmsEnabled === false) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.OTP_SMS_REQUIRED_IN_PRODUCTION,
+        message: 'Môi trường thật luôn gửi SMS OTP',
+      });
+    }
     const row = await this.prisma.$transaction(async (tx) => {
       await this.ensureRow(tx);
       // Khoá dòng: hai admin PATCH cùng lúc không được cùng đọc một `version`.
@@ -75,6 +89,9 @@ export class AppConfigService {
       const data: Prisma.PlatformAppConfigUpdateInput = {};
       if (dto.isPlanPromotionEnabled !== undefined && dto.isPlanPromotionEnabled !== before.isPlanPromotionEnabled) {
         data.isPlanPromotionEnabled = dto.isPlanPromotionEnabled;
+      }
+      if (dto.otpSmsEnabled !== undefined && dto.otpSmsEnabled !== before.otpSmsEnabled) {
+        data.otpSmsEnabled = dto.otpSmsEnabled;
       }
       if (dto.supportHotline !== undefined && dto.supportHotline !== before.supportHotline) {
         data.supportHotline = dto.supportHotline;
@@ -104,7 +121,7 @@ export class AppConfigService {
       );
       return after;
     });
-    return toAdmin(row);
+    return toAdmin(row, production);
   }
 
   /** Hotline/Zalo cho nội dung email. */
@@ -125,6 +142,14 @@ export class AppConfigService {
     return enqueuePlanGuideEmail(db, input);
   }
 
+  /** Như `enqueuePlanGuide`, gửi tới email tài khoản chủ VÀ email liên hệ gian hàng (bỏ trùng). */
+  enqueuePlanGuideToOwnerAndContact(
+    db: Db,
+    input: Parameters<typeof enqueuePlanGuideToOwnerAndContact>[1],
+  ): Promise<string[]> {
+    return enqueuePlanGuideToOwnerAndContact(db, input);
+  }
+
   private async ensureRow(db: Db): Promise<AdminRow> {
     return db.platformAppConfig.upsert({
       where: { key: APP_CONFIG_KEY.PARTNER },
@@ -141,15 +166,19 @@ function snapshot(row: AdminRow) {
     version: row.version,
     supportHotline: row.supportHotline,
     supportZalo: row.supportZalo,
+    otpSmsEnabled: row.otpSmsEnabled,
   };
 }
 
-function toAdmin(row: AdminRow): PartnerAppConfigAdminDto {
+function toAdmin(row: AdminRow, production: boolean): PartnerAppConfigAdminDto {
   return {
     isPlanPromotionEnabled: row.isPlanPromotionEnabled,
     version: row.version,
     supportHotline: row.supportHotline,
     supportZalo: row.supportZalo,
+    // Production: luôn gửi thật dù cột nói gì — hiện đúng hành vi đang chạy.
+    otpSmsEnabled: production ? true : row.otpSmsEnabled,
+    otpSmsLocked: production,
     updatedAt: row.updatedAt.toISOString(),
     updatedByName: row.updater?.displayName ?? null,
   };

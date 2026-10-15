@@ -176,7 +176,7 @@
       "intro": "Để lại thông tin, đội ngũ XePrime sẽ liên hệ hỗ trợ bạn.",
       "fullName": "Họ và tên",
       "phone": "Số điện thoại",
-      "email": "Email",
+      "email": "Email liên hệ",
       "message": "Nội dung",
       "messagePlaceholder": "Ví dụ: tôi có 5 xe, cần hỗ trợ về tài khoản",
       "submit": "Gửi yêu cầu",
@@ -197,7 +197,7 @@
     "commissionSummary": "Bạn đang là chủ xe cá nhân. Phí dịch vụ tính theo từng chuyến hoàn thành.",
     "termGrace": "Sắp hết thời hạn sử dụng",
     "termLapsed": "Đã hết thời hạn sử dụng"
-    },
+  },
   "checkout": {
     "back": "Quay lại",
     "title": "Thanh toán gói dịch vụ",
