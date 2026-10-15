@@ -702,10 +702,23 @@ describe('Gửi yêu cầu — GIỮ lượt trong cùng transaction', () => {
 
     expect(fulfilled).toHaveLength(1);
     expect(rejected).toHaveLength(1);
-    expect((rejected[0] as PromiseRejectedResult).reason).toBeInstanceOf(ConflictException);
-    expect((rejected[0] as PromiseRejectedResult).reason.response.code).toBe(
-      API_ERROR_CODE.PROMO_CODE_EXHAUSTED,
-    );
+    const loser = (rejected[0] as PromiseRejectedResult).reason as ConflictException;
+    expect(loser).toBeInstanceOf(ConflictException);
+    /*
+     * Bên thua bị từ chối vì HẾT LƯỢT, theo một trong hai đường — tuỳ hai yêu cầu chạm DB theo thứ
+     * tự nào, nên test không được giả định thứ tự (CI 15/10/2026 đỏ chập chờn vì giả định đó):
+     *   - cả hai cùng qua bước đánh giá rồi mới giữ lượt ⇒ bên sau trượt `UPDATE … WHERE` của bộ
+     *     đếm ⇒ `PROMO_CODE_EXHAUSTED`;
+     *   - một bên đã GHI XONG trước khi bên kia đánh giá ⇒ bên kia thấy mã hết lượt ngay ở bước
+     *     đánh giá ⇒ `PROMO_CODE_NOT_APPLICABLE` với lý do `exhausted`.
+     * Bất biến thật sự nằm ở bộ đếm và số dòng lượt dùng ngay dưới.
+     */
+    const response = loser.getResponse() as { code: string; details?: { reason?: string } };
+    expect(
+      response.code === API_ERROR_CODE.PROMO_CODE_EXHAUSTED ||
+        (response.code === API_ERROR_CODE.PROMO_CODE_NOT_APPLICABLE &&
+          response.details?.reason === PROMO_INELIGIBLE_REASON.EXHAUSTED),
+    ).toBe(true);
 
     const row = await prisma.promoCode.findUniqueOrThrow({ where: { id } });
     expect(row.reservedCount).toBe(1);
