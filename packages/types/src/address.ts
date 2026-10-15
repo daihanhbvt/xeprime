@@ -10,7 +10,7 @@
  *      tại. Luôn GÕ.
  *
  * Cộng thêm phần **vị trí** (`placeId` + `latitude`/`longitude`): cái ghim trên bản đồ. Nó không
- * thay được hai phần trên — Google thường trả tên đơn vị hành chính CŨ (trước 01/07/2025) và đôi
+ * thay được hai phần trên — nhà cung cấp bản đồ có thể trả tên đơn vị hành chính CŨ (trước 01/07/2025) và đôi
  * khi ghim lệch cả cây số — nên toạ độ là thứ để TÍNH (khoảng cách, chỉ đường), còn mã hành
  * chính mới là thứ để LỌC. Hai đường độc lập, không suy ra nhau.
  */
@@ -23,13 +23,23 @@ import type { WardAdministrativeType } from './ward';
  * boolean thì gộp mất `google_place` (chính xác) với `geocoded` (máy đoán từ chuỗi chữ).
  */
 export const LOCATION_SOURCE = {
-  /** Người dùng chọn một địa điểm từ Google Places — toạ độ và `placeId` của chính địa điểm đó. */
+  /**
+   * Người dùng chọn một địa điểm từ gợi ý của nhà cung cấp bản đồ — toạ độ và `placeId` của chính
+   * địa điểm đó. Tên `google_place` là mã trên dây và trong DB, giữ nguyên qua mọi lần đổi nhà cung
+   * cấp (hiện là Vietmap — ADR 0061).
+   */
   GOOGLE_PLACE: 'google_place',
-  /** Người dùng tự kéo ghim trên bản đồ — toạ độ do CHÍNH CHỦ xác nhận, đáng tin nhất. */
+  /**
+   * Người dùng tự kéo ghim trên bản đồ — toạ độ do CHÍNH CHỦ xác nhận, đáng tin nhất. Chỉ app
+   * native còn bản đồ kéo ghim; web chỉ có ảnh tĩnh (ADR 0061 điều 1).
+   */
   MAP_PIN: 'map_pin',
   /** Server tra từ chuỗi địa chỉ (geocoding). Gần đúng — phải cho người dùng soát lại. */
   GEOCODED: 'geocoded',
-  /** Không có toạ độ: người dùng chỉ gõ chữ và bỏ qua bước ghim. */
+  /**
+   * Không có toạ độ: người dùng chốt đúng địa chỉ đã gõ ("dùng đúng địa chỉ đã nhập", hoặc gợi ý
+   * đang hỏng). Server tự tra toạ độ khi cần — lúc lưu, lúc báo giá giao xe.
+   */
   MANUAL: 'manual',
 } as const;
 

@@ -7,6 +7,16 @@
  * có mặt trong package dùng chung (CLAUDE.md §5).
  */
 
+/**
+ * Kết quả tra bản đồ (toạ độ, quãng đường) được giữ trong cache tối đa bấy nhiêu ngày.
+ *
+ * Mỗi lượt hỏi nhà cung cấp là tiền (Vietmap tính theo giao dịch — ADR 0061), và quãng đường
+ * giữa hai điểm cố định gần như không đổi trong vài tháng — nên giữ lâu là tiết kiệm thật. 90 ngày vẫn đủ
+ * ngắn để một con đường mới mở hay một địa chỉ đổi tên không nằm sai mãi trong cache. Một con số
+ * dùng ở hai nơi — API thôi đọc bản ghi quá hạn, worker xoá hẳn nó — nên nó sống ở đây.
+ */
+export const GEO_CACHE_TTL_DAYS = 90;
+
 /** Một điểm trên bản đồ. Luôn là độ thập phân WGS84, không phải độ-phút-giây. */
 export interface GeoPoint {
   readonly lat: number;
@@ -74,4 +84,37 @@ export function isValidGeoPoint(point: GeoPoint | null | undefined): point is Ge
     // (0,0) là Vịnh Guinea. Ở một sản phẩm chỉ chạy ở Việt Nam, nó luôn là dữ liệu hỏng.
     !(point.lat === 0 && point.lng === 0)
   );
+}
+
+/**
+ * Toạ độ từ hai giá trị rời (API trả `latitude`/`longitude` tách nhau, có thể null).
+ *
+ * Gom vào một chỗ vì mọi nơi trỏ ra bản đồ đều phải làm đúng phép kiểm này, và một chỗ quên kiểm
+ * là một liên kết dẫn khách tới Vịnh Guinea.
+ */
+export function toGeoPoint(
+  lat: number | null | undefined,
+  lng: number | null | undefined,
+): GeoPoint | null {
+  if (lat == null || lng == null) return null;
+  const point = { lat, lng };
+  return isValidGeoPoint(point) ? point : null;
+}
+
+/** Universal link "Maps URLs" của Google — không key, không API, mở ứng dụng bản đồ của người dùng. */
+const GOOGLE_MAPS_SEARCH_URL = 'https://www.google.com/maps/search/?api=1&query=';
+
+/**
+ * Mở một toạ độ trên Google Maps (tab mới, hoặc app Google Maps trên điện thoại) — để XEM và DẪN
+ * ĐƯỜNG. Đây là thứ thay cho khung bản đồ trên web (ADR 0061 điều 1).
+ *
+ * Một LIÊN KẾT tới ứng dụng bản đồ người dùng đã có, không phải một API bản đồ: không key, không
+ * tính tiền, không nằm trong phạm vi Google Maps Platform (thứ không dùng được ở Việt Nam). Dạng
+ * `maps/search/?api=1` là dạng Google cam kết giữ ổn định cho liên kết từ bên ngoài.
+ *
+ * Ghép chuỗi tay thay vì `URL.searchParams`: package này chạy cả trên Metro, nơi `URLSearchParams`
+ * của React Native không đủ đầy.
+ */
+export function mapExternalUrl(point: GeoPoint): string {
+  return `${GOOGLE_MAPS_SEARCH_URL}${encodeURIComponent(`${point.lat},${point.lng}`)}`;
 }

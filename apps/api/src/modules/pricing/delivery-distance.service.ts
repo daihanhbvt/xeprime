@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { isValidGeoPoint, type GeoPoint } from '@xeprime/domain';
+import { addressGeocodeQuery, isValidGeoPoint, type GeoPoint } from '@xeprime/domain';
 import {
   API_ERROR_CODE,
   DELIVERY_DISTANCE_STATUS,
@@ -75,7 +75,9 @@ export class DeliveryDistanceService {
       select: {
         id: true,
         tenantId: true,
-        branch: { select: { latitude: true, longitude: true } },
+        branch: {
+          select: { latitude: true, longitude: true, province: { select: { name: true } } },
+        },
       },
     });
     if (!vehicle) {
@@ -101,16 +103,35 @@ export class DeliveryDistanceService {
     if (!isValidGeoPoint(origin) || !this.geo.enabled) return UNAVAILABLE;
     if (!pinned && !address) return UNAVAILABLE;
 
-    const resolved = pinned
-      ? { point: pinned, formattedAddress: address || null }
-      : await this.geo.geocode(address);
-    if (!resolved) {
-      // Phân biệt hai ca giống hệt nhau ở bề ngoài nhưng khác hẳn ở lối đi tiếp: nhà cung cấp
-      // còn sống nghĩa là địa chỉ thật sự không tra được → khách sửa được. Nhà cung cấp hỏng
-      // thì im lặng, vì đó không phải lỗi của khách.
-      return this.geo.enabled
-        ? { ...UNAVAILABLE, status: DELIVERY_DISTANCE_STATUS.ADDRESS_NOT_FOUND }
-        : UNAVAILABLE;
+    let resolved: { point: GeoPoint; formattedAddress: string | null };
+    if (pinned) {
+      resolved = { point: pinned, formattedAddress: address || null };
+    } else {
+      /*
+       * Phân biệt hai ca giống hệt nhau ở bề ngoài nhưng khác hẳn ở lối đi tiếp: nhà cung cấp
+       * trả lời "không có" nghĩa là địa chỉ thật sự không tra được → khách sửa được. Nhà cung cấp
+       * không trả lời được (key bị từ chối, hết hạn mức, lỗi mạng) thì im lặng, vì đó không phải
+       * lỗi của khách — chỉ xét `geo.enabled` là bỏ sót ca có key mà nhà cung cấp vẫn từ chối.
+       */
+      /*
+       * Hỏi bằng ĐÚNG chuỗi mà `AddressService` sẽ hỏi lúc khách gửi yêu cầu (dòng địa chỉ + tỉnh +
+       * "Việt Nam", không có xã — luồng khách không hỏi xã, ADR 0042): hai lượt dùng chung MỘT bản
+       * ghi `geocode_cache`, nên lần gửi không tốn thêm lượt nào và điểm lưu xuống đúng là điểm đã
+       * báo giá. Tỉnh là tỉnh của chi nhánh — cũng là tỉnh luồng khách gửi lên cho một địa chỉ gõ
+       * tay. Nó còn khoanh vùng: "12 Lê Lợi" trơ trọi khớp cả chục tỉnh.
+       */
+      const query =
+        addressGeocodeQuery({
+          addressLine: address,
+          wardName: null,
+          provinceName: vehicle.branch?.province?.name ?? null,
+        }) ?? address;
+      const looked = await this.geo.geocodeOutcome(query);
+      if (looked.outcome === 'unavailable') return UNAVAILABLE;
+      if (looked.outcome === 'not_found') {
+        return { ...UNAVAILABLE, status: DELIVERY_DISTANCE_STATUS.ADDRESS_NOT_FOUND };
+      }
+      resolved = looked.address;
     }
 
     const maxRadiusKm = policy.values.deliveryMaxRadiusKm;

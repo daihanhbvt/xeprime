@@ -55,9 +55,7 @@ vi.mock('@/features/locations/hooks/use-places', () => ({
   PLACE_SEARCH_MIN_LENGTH: 3,
   usePlaceSearch: () => ({ data: { items: [], available: false }, isFetching: false }),
   usePlaceDetail: () => ({ mutateAsync: vi.fn() }),
-  useReverseGeocode: () => ({ mutateAsync: vi.fn() }),
 }));
-vi.mock('@/components/form/MapPinPicker', () => ({ MapPinPicker: () => null }));
 
 interface Values {
   provinceCode: string;

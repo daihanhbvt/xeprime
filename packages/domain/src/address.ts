@@ -120,6 +120,31 @@ export function guessAddressLine(legacyAddress: string | null | undefined): stri
   return kept.join(PART_SEPARATOR);
 }
 
+/** Đoạn cuối "quốc gia" của địa chỉ do nhà cung cấp bản đồ dựng — bỏ đi trước khi đọc tỉnh. */
+const COUNTRY_SEGMENT = /^(việt nam|viet nam|vietnam)$/i;
+
+/**
+ * Tên cấp TỈNH đọc từ một địa chỉ đầy đủ do nhà cung cấp bản đồ dựng
+ * (`"271 Trần Hưng Đạo, An Hải Bắc, Sơn Trà, Đà Nẵng, Việt Nam"` → `"Đà Nẵng"`).
+ *
+ * Quy ước của địa chỉ Việt Nam là tỉnh đứng CUỐI, ngay trước tên quốc gia — đọc được mà không
+ * tốn thêm một lượt gọi bản đồ (ADR 0061). `null` khi chuỗi rỗng hoặc chỉ có tên quốc gia.
+ *
+ * **Chỉ là GỢI Ý**: giá trị đi tiếp vào `ProvincesService.resolveCode` qua bảng bí danh, quy
+ * không được thì bộ chọn tỉnh để trống cho người dùng chọn — không bao giờ lưu thẳng.
+ */
+export function provinceNameFromAddress(formatted: string | null | undefined): string | null {
+  if (!formatted) return null;
+  const segments = formatted
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  while (segments.length > 0 && COUNTRY_SEGMENT.test(segments[segments.length - 1]!)) {
+    segments.pop();
+  }
+  return segments.at(-1) ?? null;
+}
+
 /** Tiền tố loại đơn vị hành chính, cả mô hình hiện hành lẫn mô hình trước 01/07/2025. */
 const ADMIN_PREFIX = /^(phường|xã|thị trấn|đặc khu|quận|huyện|thị xã|tp\.?|thành phố|tỉnh)\b/i;
 

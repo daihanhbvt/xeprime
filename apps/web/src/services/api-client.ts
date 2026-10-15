@@ -6,6 +6,8 @@ import {
 } from '@xeprime/api-client';
 import { SUPPORT_CONTEXT_HEADER } from '@xeprime/types';
 import { tenantSupportContextIdFromPath } from '@/constants/routes';
+// Gốc API của TRÌNH DUYỆT — một nguồn duy nhất, dùng chung với URL ảnh/tải file (`lib/api-href`).
+import { BROWSER_API_URL } from '@/lib/api-href';
 import { activeSupportContextId } from './active-support-context';
 import { recoverSupportReason } from './support-reason';
 
@@ -24,12 +26,6 @@ import { recoverSupportReason } from './support-reason';
  * 143 chỗ `import … from '@/services/api-client'` không phải sửa: mọi ký hiệu cũ vẫn xuất ra từ
  * đây với đúng chữ ký cũ.
  */
-/**
- * Gốc API của TRÌNH DUYỆT: `/api` cùng origin — một image chạy được trên mọi host, mọi request mang
- * cookie host-only của đúng site, không còn CORS cho web. Máy dev: `proxy.ts` chuyển `/api/*` sang
- * API local và gắn realm theo khu của trang.
- */
-const BROWSER_API_URL = process.env.NEXT_PUBLIC_API_URL?.trim() || '/api';
 
 /**
  * Gốc API cho fetch PHÍA SERVER (các trang công khai cần SEO: chi tiết xe, gian hàng, banner, danh

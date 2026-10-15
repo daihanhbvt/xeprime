@@ -15,9 +15,11 @@ import {
 } from '@xeprime/types';
 import { AuditService } from '../audit/audit.service';
 import { BillingService } from '../billing/billing.service';
+import { GeoService } from '../geo/geo.service';
 import { AddressService, type ResolvedAddress } from '../locations/address.service';
 import { ListingsService } from '../public-listings/listings.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { branchMapTarget } from '../../common/address-view';
 import { currentSupportScope } from '../../common/support/support-request.store';
 import { assertNoOpenTrips } from '../../common/support/support-open-trips';
 import {
@@ -73,6 +75,7 @@ export class BranchesService {
     private readonly audit: AuditService,
     private readonly address: AddressService,
     private readonly billing: BillingService,
+    private readonly geo: GeoService,
   ) {}
 
   async list(
@@ -140,6 +143,23 @@ export class BranchesService {
     const row = await this.findOwned(tenantId, id);
     const counts = await this.vehicleCounts(tenantId, [row.id]);
     return toDto(row, counts.get(row.id) ?? 0);
+  }
+
+  /**
+   * Ảnh bản đồ tĩnh (PNG) của một chi nhánh CỦA gian hàng này — thẻ hồ sơ xe hiện nó thay cho
+   * khung bản đồ (ADR 0061 điều 1). Toạ độ đọc từ bản ghi, không nhận từ request; chi nhánh của
+   * gian hàng khác là 404 như mọi route ở đây.
+   */
+  async mapPng(tenantId: string, id: string): Promise<Buffer> {
+    const target = branchMapTarget(await this.findOwned(tenantId, id));
+    const png = target ? await this.geo.staticMap(target.point, target.label) : null;
+    if (!png) {
+      throw new NotFoundException({
+        code: API_ERROR_CODE.NOT_FOUND,
+        message: 'Không có bản đồ cho chi nhánh này',
+      });
+    }
+    return png;
   }
 
   /**

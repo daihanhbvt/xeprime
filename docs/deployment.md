@@ -84,7 +84,7 @@ nhau giữa hai môi trường, do biến `APP_ENV` (§2.3):
 | **SMTP** (Zoho / Google Workspace / Amazon SES) | ⬜ | ✅ | staging bỏ trống: email in ra log |
 | **Cloudflare R2**: 2 bucket (public + private) | ⬜ | ✅ | staging bỏ trống: endpoint upload trả 503 |
 | Google/Facebook OAuth client | ⬜ | ⬜ | thiếu thì nút social trả `SOCIAL_NOT_CONFIGURED`; mật khẩu và OTP vẫn chạy |
-| Geoapify: **2 key RIÊNG** (server + web) | ⬜ | ⬜ | thiếu thì phí giao dự kiến không hiện (ADR 0018/0037) |
+| Vietmap: **1 key server** (`VIETMAP_API_KEY`, giới hạn IP) | ⬜ | ⬜ | thiếu thì ô địa chỉ không gợi ý, phí giao dự kiến không hiện (ADR 0018/0061) |
 | Google Calendar API key | ⬜ | ⬜ | thiếu thì lịch không có lớp ngày lễ |
 
 ---
@@ -793,7 +793,8 @@ Settings; Secret bị che và không đọc lại được sau khi lưu.
 | `BACKUP_KEEP_DAYS` | `14` | |
 | ~~`NEXT_PUBLIC_API_URL`~~ | **XOÁ** | workflow build cố định `/api` (cùng origin — ADR 0051 điều 4); biến cũ không còn được đọc |
 | `NEXT_PUBLIC_APP_NAME` | `XePrime STG` | nhãn khác giúp không nhầm tab |
-| `NEXT_PUBLIC_GEOAPIFY_MAP_KEY` · `NEXT_PUBLIC_FIREBASE_*` (4) | | nằm lộ thiên trong bundle JS ⇒ **không bao giờ** là Secret |
+| `NEXT_PUBLIC_FIREBASE_*` (4) | | `NEXT_PUBLIC_*` nằm lộ thiên trong bundle JS ⇒ **không bao giờ** là Secret. Web không còn key bản đồ: xoá `NEXT_PUBLIC_GEOAPIFY_MAP_KEY` cũ sau lần deploy đầu tiên của ADR 0061 |
+| `GEO_DAILY_CALL_BUDGET` | trống ⇒ `3000` | cầu dao lượt gọi Vietmap mỗi ngày, mỗi tiến trình API (ADR 0061 điều 3) |
 | `VPS_USER` · `VPS_PATH` · `VPS_SSH_PORT` | `xeprime` · `/opt/xeprime` · `22` | |
 
 **Secrets:**
@@ -812,7 +813,7 @@ Settings; Secret bị che và không đọc lại được sau khi lưu.
 | `R2_ACCESS_KEY_ID` · `R2_SECRET_ACCESS_KEY` | trống ⇒ endpoint upload trả 503, phần còn lại vẫn chạy |
 | `FIREBASE_PRIVATE_KEY` | một dòng, xuống dòng viết `\n`. Đây là credential **lúc chạy** (ký custom token, ghi bản chiếu) — không dùng để đẩy rules |
 | `FIREBASE_DEPLOY_CREDENTIALS_JSON` | **Bắt buộc khi `FIRESTORE_ENABLED=true`.** Nguyên file JSON của một service account RIÊNG có quyền quản trị Firestore rules (`roles/firebaserules.admin`). Workflow dùng nó ở step "Đẩy Firestore rules" và **không bao giờ** ghi nó vào `.env` của môi trường. Tách khỏi credential runtime để một lần rò rỉ `.env` không kèm theo quyền sửa rules |
-| `GEOAPIFY_API_KEY` · `GOOGLE_HOLIDAY_API_KEY` | key **server** ⇒ Secret, khác hẳn key web ở bảng trên |
+| `VIETMAP_API_KEY` · `GOOGLE_HOLIDAY_API_KEY` | key **server** ⇒ Secret. Xoá Secret `GEOAPIFY_API_KEY` cũ sau lần deploy đầu tiên của ADR 0061 |
 | `VPS_HOST` | IP VPS — Secret cho đỡ bị quét, không phải vì nó bí mật thật |
 | `VPS_SSH_KEY` | private key cặp khoá deploy (§3.2) |
 | `VPS_KNOWN_HOSTS` | `ssh-keyscan -H <ip>` |

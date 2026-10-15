@@ -3,6 +3,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { App } from 'antd';
 import { useTranslations } from 'next-intl';
+import type { GeoPoint } from '@xeprime/domain';
+import { staticMapHref } from '@/lib/api-href';
 import { apiRequest, type QueryParams } from '@/services/api-client';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { queryKeys } from '@/services/query-keys';
@@ -115,4 +117,12 @@ export function useBranchAction() {
     // là tiếng Việt và không bao giờ lên màn hình tiếng Anh.
     onError: (error) => message.error(errorMessage(error)),
   });
+}
+
+/**
+ * Ảnh bản đồ tĩnh của một chi nhánh của gian hàng (ADR 0061 điều 1). `address` là dòng API in lên
+ * ảnh — vào phiên bản URL cùng toạ độ, nên sửa địa chỉ chi nhánh là một ảnh mới.
+ */
+export function branchMapSrc(branchId: string, point: GeoPoint, address: string): string {
+  return staticMapHref(`/branches/${branchId}/map`, point, address);
 }

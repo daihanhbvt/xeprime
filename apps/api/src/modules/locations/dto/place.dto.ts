@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsLatitude, IsLongitude, IsOptional, IsString, Length, MaxLength } from 'class-validator';
+import { PLACE_REF_MAX_LENGTH } from '../../geo/geo-provider';
 
 const trimmed = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
@@ -43,7 +44,9 @@ export class PlaceDetailQueryDto {
   @ApiProperty({ description: 'Mã địa điểm lấy từ `GET /places/search`' })
   @Transform(trimmed)
   @IsString()
-  @MaxLength(255)
+  // `ref_id` của Vietmap là chuỗi mã hoá dài theo địa chỉ — rộng hơn hẳn cột lưu (255). Vẫn có trần
+  // để một query string khổng lồ không đi thẳng tới nhà cung cấp tính tiền.
+  @MaxLength(PLACE_REF_MAX_LENGTH)
   placeId!: string;
 }
 

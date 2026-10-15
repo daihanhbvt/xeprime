@@ -132,13 +132,24 @@ vi.mock('@/features/locations/hooks/use-wards', () => ({
     refetch: vi.fn(),
   }),
 }));
+/**
+ * Gợi ý địa chỉ. Mặc định HỎNG (`available: false` — môi trường không có key), nên ô địa chỉ là ô
+ * chữ tự do. Ca cần kỷ luật xác nhận (gợi ý sống, rỗng) thì bật `places.available`.
+ */
+const places = vi.hoisted(() => ({ available: false }));
 vi.mock('@/features/locations/hooks/use-places', () => ({
   PLACE_SEARCH_MIN_LENGTH: 3,
-  usePlaceSearch: () => ({ data: { items: [], available: false }, isFetching: false }),
+  placeMapSrc: (placeId: string) => `/api/places/map?placeId=${placeId}`,
+  usePlaceSearch: (query: string) => ({
+    data: { items: [], available: places.available },
+    isFetching: false,
+    isError: false,
+    isSuccess: true,
+    isPlaceholderData: false,
+    debouncedQuery: query.trim(),
+  }),
   usePlaceDetail: () => ({ mutateAsync: vi.fn() }),
-  useReverseGeocode: () => ({ mutateAsync: vi.fn() }),
 }));
-vi.mock('@/components/form/MapPinPicker', () => ({ MapPinPicker: () => null }));
 
 vi.mock('@/hooks/use-media-query', () => ({
   useIsMobile: () => media.isMobile,
@@ -722,6 +733,46 @@ describe('RequestBookingModal — luồng đặt xe', () => {
 
       expect(deliveryDistance.fn).not.toHaveBeenCalled();
     });
+
+    /**
+     * Báo giá chỉ tra chữ ĐÃ ỔN ĐỊNH. Gõ đè lên địa chỉ gõ tay đã chốt rồi bấm ra ngoài: ô quay về
+     * địa chỉ cũ và nguồn `manual` quay lại NGAY, trong khi chuỗi debounce còn là chữ vừa gõ dở —
+     * tra lúc đó là trả tiền cho đúng cái chuỗi không ai xác nhận.
+     */
+    it('gõ đè địa chỉ gõ tay đã chốt rồi bỏ đi → KHÔNG tra chữ gõ dở', async () => {
+      places.available = true;
+      const fn = vi.fn((..._args: unknown[]) =>
+        Promise.resolve({
+          status: 'unavailable',
+          distanceKm: null,
+          fee: null,
+          origin: null,
+          destination: null,
+          formattedAddress: null,
+        }),
+      );
+      deliveryDistance.fn = fn as unknown as (...args: unknown[]) => Promise<unknown>;
+      try {
+        renderModal();
+        await chooseDelivery();
+        const field = screen.getByLabelText(/Địa chỉ giao xe/);
+
+        fireEvent.change(field, { target: { value: 'Hẻm 25 Nguyễn Công Trứ' } });
+        fireEvent.mouseDown(field);
+        fireEvent.click(await screen.findByText(/Dùng đúng địa chỉ đã nhập/));
+        await waitFor(() => expect(fn).toHaveBeenCalledTimes(1), { timeout: 2000 });
+
+        fireEvent.change(field, { target: { value: 'Hẻm 25 Nguyễn Công Trứ, P' } });
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        fireEvent.blur(field);
+        await waitFor(() => expect((field as HTMLInputElement).value).toBe('Hẻm 25 Nguyễn Công Trứ'));
+        await new Promise((resolve) => setTimeout(resolve, 1100));
+
+        expect(fn.mock.calls.map((call) => call[1])).toEqual(['Hẻm 25 Nguyễn Công Trứ']);
+      } finally {
+        places.available = false;
+      }
+    }, 15_000);
 
     it('trong bán kính → hiện quãng đường một chiều và phí DỰ KIẾN', async () => {
       deliveryDistance.fn = vi.fn(() =>

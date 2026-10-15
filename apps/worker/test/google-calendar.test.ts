@@ -12,7 +12,7 @@ import { fetchHolidayEvents } from '../src/lib/google-calendar';
  * không khoá ở đây thì cách phát hiện duy nhất là một lịch trống trơn không ai giải thích được.
  *
  * `fetch` bị chặn hoàn toàn: **không một byte nào rời khỏi máy**, kể cả khi ai đó lỡ để key
- * thật trong `.env`. Cùng khuôn với `apps/api/test/google-geo-provider.spec.ts`.
+ * thật trong `.env`. Cùng khuôn với `apps/api/test/vietmap-geo-provider.spec.ts`.
  */
 const PARAMS = {
   calendarId: 'vi.vietnamese#holiday@group.v.calendar.google.com',

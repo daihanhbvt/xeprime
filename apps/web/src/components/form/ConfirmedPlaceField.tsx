@@ -1,6 +1,6 @@
 'use client';
 
-import { EnvironmentOutlined } from '@ant-design/icons';
+import { EditOutlined, EnvironmentOutlined } from '@ant-design/icons';
 import { Alert, AutoComplete, Form, Spin } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
@@ -13,23 +13,29 @@ import {
 } from 'react-hook-form';
 import type { GeoPoint } from '@xeprime/domain';
 import { LOCATION_SOURCE } from '@xeprime/types';
-import { MapPinPicker } from '@/components/form/MapPinPicker';
 import {
   PLACE_SEARCH_MIN_LENGTH,
+  placeMapSrc,
   usePlaceDetail,
   usePlaceSearch,
-  useReverseGeocode,
 } from '@/features/locations/hooks/use-places';
 import type { PlaceDetail } from '@/features/locations/types';
+import { StaticMapImage } from '@/components/data-display/StaticMapImage';
 import fieldStyles from './field.module.css';
 import styles from './AddressField.module.css';
+
+/**
+ * Giá trị của dòng "dùng đúng địa chỉ đã nhập" trong danh sách gợi ý. Không đụng được mã địa
+ * điểm thật: mã của Vietmap luôn mang tiền tố `auto:`/`geocode:`.
+ */
+const USE_TYPED_VALUE = '__xp:use-typed-address__';
 
 /**
  * Tên bốn trường GHIM. Truyền hay không là một quyết định sản phẩm, không phải tuỳ tiện:
  *
  * - CÓ ghim ở những địa chỉ mà toạ độ có hệ quả — chi nhánh (điểm xuất phát tính phí giao xe),
- *   địa chỉ giao xe, điểm đón khách. Ở đó cái ghim phải được người dùng nhìn và xác nhận.
- * - KHÔNG ghim ở địa chỉ chỉ để liên hệ (sổ khách). Bắt người ta xác nhận một cái ghim mà hệ
+ *   địa chỉ giao xe, điểm đón khách. Ở đó địa chỉ phải được người dùng xác nhận.
+ * - KHÔNG ghim ở địa chỉ chỉ để liên hệ (sổ khách). Bắt người ta xác nhận một vị trí mà hệ
  *   thống không dùng tới là thêm một bước vô nghĩa, và mỗi lượt tra bản đồ là một request có
  *   tính tiền.
  *
@@ -50,16 +56,14 @@ export interface ConfirmedPlaceFieldProps<T extends FieldValues> {
   pin: AddressPinNames<T>;
   label: string;
   placeholder?: string;
-  /** Mở bản đồ ở đâu khi chưa có ghim, và kéo gợi ý về gần đó. */
+  /** Kéo gợi ý về gần điểm này khi chưa có toạ độ (tâm tỉnh, điểm nhận xe). */
   anchor?: GeoPoint | null;
-  /** Thu phóng khi mở ở `anchor`. Bỏ trống = mặc định của `MapPinPicker`. */
-  anchorZoom?: number;
   /**
    * Có được phép hỏi bản đồ chưa. `false` khi chưa biết vùng nào cả — gợi ý lúc đó rải khắp cả
    * nước và chẳng giúp được ai, trong khi mỗi lượt hỏi là một request có tính tiền.
    */
   searchEnabled?: boolean;
-  /** Lần dựng này đến từ một cú đổi NGỮ CẢNH (đổi tỉnh) — dọn cả ghim lẫn chữ. */
+  /** Lần dựng này đến từ một cú đổi NGỮ CẢNH (đổi tỉnh) — dọn cả toạ độ lẫn chữ. */
   clearOnMount?: boolean;
   required?: boolean;
   disabled?: boolean;
@@ -68,33 +72,42 @@ export interface ConfirmedPlaceFieldProps<T extends FieldValues> {
    * tỉnh lệch, luồng khách lấy `suggestedProvinceCode` làm tỉnh của địa chỉ.
    */
   onPlaceResolved?: (place: PlaceDetail) => void;
+  /**
+   * Khách vừa chốt một địa chỉ GÕ TAY (không có địa điểm nào đi kèm). Mọi thứ nơi gọi suy ra từ
+   * địa điểm chọn TRƯỚC đó — tỉnh gợi ý, cảnh báo lệch tỉnh — giờ nói về một chỗ đã bị bỏ, và phải
+   * được dọn.
+   */
+  onConfirmedManually?: () => void;
 }
 
 /**
- * Ô ĐỊA CHỈ mà chữ trong đó luôn ĐÃ ĐƯỢC BẢN ĐỒ XÁC NHẬN.
+ * Ô ĐỊA CHỈ mà chữ trong đó luôn ĐÃ ĐƯỢC XÁC NHẬN.
  *
  * ## Vì sao ô này tồn tại
  *
  * Trước đây đây là một ô chữ tự do có kèm gợi ý: gõ gì cũng lưu được, và chỉ những người bấm vào
  * một gợi ý mới có toạ độ. Hệ quả nằm ở chỗ khác hẳn — phí giao xe tận nơi tính bằng quãng đường
- * từ chi nhánh tới CÁI GHIM, nên một địa chỉ không ghim là một đơn không tính được phí, và điều
- * đó chỉ lộ ra ở bước báo giá, sau khi người ta đã điền xong mọi thứ.
+ * từ chi nhánh tới ĐỊA CHỈ ĐÓ, nên một địa chỉ gõ dở là một đơn không tính được phí, và điều đó
+ * chỉ lộ ra ở bước báo giá, sau khi người ta đã điền xong mọi thứ.
  *
  * Nên chữ trong ô luôn là một trong hai thứ, không có thứ ba:
- *   1. dòng người dùng BẤM trong danh sách gợi ý của bản đồ; hoặc
- *   2. chữ đang có tại thời điểm họ tự ĐẶT GHIM trên bản đồ — ghim tay cũng là một lời xác nhận
- *      vị trí, và với dữ liệu OpenStreetMap ở Việt Nam (hẻm, số nhà mới còn thưa) đó là lối ra
- *      duy nhất cho những địa chỉ mà không nhà cung cấp nào biết.
+ *   1. dòng người dùng BẤM trong danh sách gợi ý — kèm toạ độ của chính địa điểm đó; hoặc
+ *   2. chữ họ đã gõ, khi họ CHỦ ĐỘNG chọn dòng "dùng đúng địa chỉ đã nhập" ở cuối danh sách.
+ *      Đây là lối ra cho những địa chỉ nhà cung cấp chưa biết (hẻm, số nhà mới). Không có toạ độ:
+ *      server tự tra địa chỉ chữ lúc lưu / lúc báo giá, tra không ra thì phí giao do hai bên
+ *      thoả thuận (ADR 0018). Web không vẽ bản đồ để đặt ghim tay (ADR 0061 điều 1), nên không có
+ *      lối này thì "phải chọn từ gợi ý" biến thành "không lưu được".
  *
  * Gõ mà không xác nhận thì khi rời ô, chữ quay về giá trị đã xác nhận GẦN NHẤT — với form tạo
  * mới đó là rỗng, nên ô trống và schema chặn Lưu. Cố ý không xoá về rỗng một cách máy móc: ở form
  * SỬA, giá trị đã xác nhận gần nhất là chính địa chỉ đang lưu trong DB, và xoá nó vì người dùng
  * lỡ gõ thêm một ký tự rồi bấm ra ngoài là phá dữ liệu có thật (ADR 0035 điều 7).
  *
- * ## Bản đồ hỏng thì kỷ luật này TẮT
+ * ## Gợi ý hỏng thì kỷ luật này TẮT
  *
  * Chưa cấu hình khoá, hết hạn mức, nhà cung cấp lỗi — `/places/search` trả `available: false`, và
- * lúc đó ô quay về đúng một ô chữ tự do. Bắt buộc chọn từ một danh sách luôn rỗng nghĩa là không
+ * lúc đó ô quay về đúng một ô chữ tự do. Một lỗi HTTP (mạng chập, 429) KHÔNG tắt kỷ luật — nó chỉ
+ * mời "dùng đúng địa chỉ đã nhập" (xem `placeServiceDown`). Bắt buộc chọn từ một danh sách luôn rỗng nghĩa là không
  * ai lưu nổi địa chỉ nào cho tới khi bản đồ sống lại (ADR 0035 điều 6).
  *
  * ## Ô này KHÔNG biết gì về danh mục hành chính
@@ -111,12 +124,12 @@ export function ConfirmedPlaceField<T extends FieldValues>({
   label,
   placeholder,
   anchor = null,
-  anchorZoom,
   searchEnabled = true,
   clearOnMount = false,
   required,
   disabled,
   onPlaceResolved,
+  onConfirmedManually,
 }: ConfirmedPlaceFieldProps<T>) {
   const t = useTranslations('Address');
 
@@ -145,16 +158,39 @@ export function ConfirmedPlaceField<T extends FieldValues>({
    */
   const [confirmedLine, setConfirmedLine] = useState(clearOnMount ? '' : line);
   const confirmedRef = useRef(confirmedLine);
+  /**
+   * Nguồn của địa chỉ đã xác nhận đó. Chỉ một giá trị có hệ quả: `manual` — địa chỉ gõ tay đã chốt
+   * là thứ DUY NHẤT báo giá giao xe được phép tra bằng chữ (mỗi lượt tra là tiền), nên gõ đè lên nó
+   * phải tạm gỡ nhãn đó, và ô quay về mốc thì trả lại.
+   */
+  const confirmedSourceRef = useRef<string | null>(
+    clearOnMount ? null : ((locationSource.field.value as string | null) ?? null),
+  );
+  /**
+   * Dòng chữ của NGỮ CẢNH CŨ còn nằm trong form lúc ô dựng lại vì đổi tỉnh (`clearOnMount`).
+   *
+   * Effect dọn ô ở cuối component chạy SAU effect "nhận mốc từ bên ngoài" ngay dưới, nên ở lượt
+   * dựng đó effect kia vẫn thấy dòng cũ. Không loại trừ đích danh nó thì địa chỉ của tỉnh cũ thành
+   * mốc đã xác nhận, và cú blur đầu tiên trả nó về dưới tỉnh mới.
+   */
+  const staleLineRef = useRef(clearOnMount ? line : null);
 
   /** Đang tra chi tiết một gợi ý vừa bấm — `onBlur` phải để yên cho tới khi tra xong. */
   const [resolving, setResolving] = useState(false);
   const resolvingRef = useRef(false);
+  /**
+   * Số thứ tự của lượt chọn gợi ý MỚI NHẤT. Mạng không trả theo thứ tự bấm, nên kết quả của một lượt
+   * đã bị thay (bấm dòng khác, gõ tiếp) phải bị bỏ — nếu không, lượt về sau cùng thắng chứ không
+   * phải lượt bấm sau cùng.
+   */
+  const pickSeqRef = useRef(0);
 
   /** Gợi ý bấm được nhưng tra chi tiết hỏng — không có toạ độ thì không tính là đã xác nhận. */
   const [detailFailed, setDetailFailed] = useState(false);
 
-  const confirm = (next: string) => {
+  const confirm = (next: string, source: string | null) => {
     confirmedRef.current = next;
+    confirmedSourceRef.current = source;
     setConfirmedLine(next);
     setDetailFailed(false);
   };
@@ -176,10 +212,22 @@ export function ConfirmedPlaceField<T extends FieldValues>({
    * Chỉ nhận MỘT lần và chỉ khi chưa có mốc: sau khi người dùng gõ, mốc phải đứng yên cho tới
    * một lần xác nhận thật, nếu không mọi thứ họ gõ đều tự phong là đã xác nhận.
    */
+  const externalSource = (locationSource.field.value as string | null) ?? null;
   useEffect(() => {
-    if (touchedRef.current || !line.trim() || confirmedRef.current.trim()) return;
+    if (
+      touchedRef.current ||
+      !line.trim() ||
+      confirmedRef.current.trim() ||
+      line === staleLineRef.current
+    ) {
+      return;
+    }
     confirmedRef.current = line;
+    // Nguồn đổ vào cùng lượt với chữ (bộ nhớ địa chỉ giao xe ghi cả hai) — nhớ kèm theo mốc.
+    confirmedSourceRef.current = externalSource;
     setConfirmedLine(line);
+    // Chỉ chạy theo CHỮ: nguồn đổi một mình (khách gõ đè địa chỉ gõ tay) không phải giá trị ngoài.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [line]);
 
   /**
@@ -190,31 +238,56 @@ export function ConfirmedPlaceField<T extends FieldValues>({
    * phải khớp — và `"TP Huế"` là NHÃN giao diện, không phải tên trong dữ liệu bản đồ. Kết quả đo
    * được: `q=21 Lý Thường, TP Huế` trả về rỗng trong khi chính chuỗi `21 Lý Thường` ra đúng chỗ.
    *
-   * Việc khoanh vùng đã có `bias` lo: backend gửi `proximity` + `circle` quanh điểm neo, thứ KÉO
+   * Việc khoanh vùng đã có `bias` lo: backend gửi điểm ưu tiên (`focus`) quanh điểm neo, thứ KÉO
    * thứ tự kết quả mà không loại bỏ gì — đúng cái cần, vì giao xe tận nơi được phép qua ranh giới
    * tỉnh.
    */
   const placeQuery = line.trim();
   const suggestions = usePlaceSearch(placeQuery, {
-    // Chưa có ghim thì kéo về điểm neo: gợi ý cho "Nguyễn Huệ" ra đúng vùng đang nói tới thay vì
+    // Chưa có toạ độ thì kéo về điểm neo: gợi ý cho "Nguyễn Huệ" ra đúng vùng đang nói tới thay vì
     // ra TP.HCM mọi lúc, và không tốn thêm request nào để biết vùng đó ở đâu.
     biasPoint: point ?? anchor,
-    enabled: !disabled && searchEnabled,
+    /*
+     * Chỉ hỏi cho chữ NGƯỜI DÙNG đang gõ. Chữ trùng địa chỉ đã xác nhận — form sửa vừa mở, địa chỉ
+     * nhớ từ lần đặt trước vừa điền, dòng gợi ý vừa bấm — không có gì để gợi ý thêm, và mỗi lượt
+     * hỏi là một giao dịch tính tiền. Hook so `except` với chuỗi ĐÃ debounce: so với chữ đang gõ
+     * thì phím gõ đầu tiên đã bật truy vấn trong khi khoá vẫn là chính địa chỉ đã xác nhận.
+     *
+     * Đang tra chi tiết một gợi ý vừa bấm thì cũng không hỏi: chữ trong ô lúc đó là dòng vừa bấm.
+     */
+    enabled: !disabled && searchEnabled && !resolving,
+    except: confirmedLine,
   });
   const placeDetail = usePlaceDetail();
-  const reverse = useReverseGeocode();
 
   /**
-   * Bản đồ có đang dùng được không.
+   * Gợi ý địa chỉ có đang dùng được không.
    *
    * `available: false` là câu trả lời TƯỜNG MINH của backend cho "chưa cấu hình khoá / nhà cung
-   * cấp lỗi" — không phải một lỗi HTTP, nên phải đọc đúng cờ này chứ không đợi `isError`. Chưa
-   * hỏi lần nào thì `data` là `undefined`, và lúc đó mặc định coi như bản đồ SỐNG: ô vẫn đòi xác
-   * nhận, và người dùng chưa gõ đủ ba ký tự thì cũng chưa có gì để mất.
+   * cấp lỗi / chạm trần ngày" — chỉ cờ này tắt kỷ luật. Một lỗi HTTP thì KHÔNG: một 429 của
+   * `@Throttle` (cả văn phòng chung một IP) mà biến ô thành ô chữ tự do là đóng dấu `manual` lên
+   * từng phím gõ, rồi báo giá giao xe tra từng chuỗi dở dang trong khi nhà cung cấp vẫn khoẻ. Lỗi
+   * HTTP chỉ mời "dùng đúng địa chỉ đã nhập" (`offerTyped`). Chưa hỏi lần nào thì `data` là
+   * `undefined`, và lúc đó mặc định coi như gợi ý SỐNG.
    */
-  const placeServiceDown = suggestions.isError || suggestions.data?.available === false;
+  const placeServiceDown = suggestions.data?.available === false;
   /** Kỷ luật "phải xác nhận" có hiệu lực không — xem docblock của component. */
   const strict = !disabled && !placeServiceDown;
+
+  /**
+   * Có mời "dùng đúng địa chỉ đã nhập" không: chỉ khi kỷ luật đang bật, đã gõ đủ dài để là một
+   * địa chỉ, chữ khác chữ đã xác nhận (không thì chẳng có gì để xác nhận), và lượt hỏi cho ĐÚNG chữ
+   * đang hiện đã xong — có danh sách thật (không phải danh sách giữ chỗ của chuỗi trước, không
+   * phải trong quãng debounce) hoặc đã lỗi. Mời sớm hơn là mời khách bỏ qua gợi ý trước khi kịp đọc
+   * nó; chưa hề hỏi (chưa biết vùng) thì cũng chưa có gì để bỏ qua.
+   */
+  const offerTyped =
+    strict &&
+    placeQuery.length >= PLACE_SEARCH_MIN_LENGTH &&
+    placeQuery !== confirmedLine.trim() &&
+    suggestions.debouncedQuery === placeQuery &&
+    !suggestions.isFetching &&
+    (suggestions.isError || (suggestions.isSuccess && !suggestions.isPlaceholderData));
 
   const setPoint = (next: GeoPoint | null, source: string | null) => {
     latitude.field.onChange((next?.lat ?? null) as PathValue<T, Path<T>>);
@@ -232,7 +305,6 @@ export function ConfirmedPlaceField<T extends FieldValues>({
      *
      * Đủ nghĩa là cả hai phần của dòng gợi ý (`"21 Lý Thường Kiệt"` + `"Phường Vĩnh Ninh, Huế"`),
      * không phải mỗi phần đậm: người dùng chọn cái họ ĐỌC được, nên ô phải hiện lại đúng cái đó.
-     * Nhờ vậy cũng không cần thêm một dòng "Ghim đang ở: …" bên dưới để nói cùng một chuyện.
      *
      * Điền tại đây chứ không để `onChange` của AntD tự xử: nó phát `value` của lựa chọn — tức MÃ
      * ĐỊA ĐIỂM — nên bất kỳ lỗi nào sau đó là người dùng nhìn thấy một dãy ký tự vô nghĩa trong ô
@@ -249,11 +321,25 @@ export function ConfirmedPlaceField<T extends FieldValues>({
      * và nếu `onBlur` chạy giữa chừng nó sẽ thấy chữ mới khác chữ đã xác nhận rồi xoá đúng cái
      * địa chỉ người dùng vừa chọn — lỗi chỉ xuất hiện khi mạng chậm, tức là chỉ ở máy người khác.
      */
+    const seq = (pickSeqRef.current += 1);
     resolvingRef.current = true;
     setResolving(true);
     const result = await placeDetail.mutateAsync(id).catch(() => null);
+    // Lượt này đã bị thay trong lúc chờ (bấm dòng khác, gõ tiếp) — kết quả nói về một dòng đã bỏ.
+    if (seq !== pickSeqRef.current) return;
     resolvingRef.current = false;
     setResolving(false);
+
+    /*
+     * Nhà cung cấp KHÔNG TRẢ LỜI (hết giao dịch, chạm trần ngày) — khác hẳn "mã không ra gì". Bảo
+     * khách chọn lại lúc đó là một vòng lặp: gợi ý còn đến từ cache trong khi mọi lượt tra đều hỏng.
+     * Dòng khách vừa bấm là một địa chỉ thật, nên chốt nó như địa chỉ gõ tay; server tự tra toạ độ
+     * khi nhà cung cấp sống lại.
+     */
+    if (result?.available === false && pickedText) {
+      confirmManual(pickedText);
+      return;
+    }
 
     const place = result?.place;
     /*
@@ -272,41 +358,31 @@ export function ConfirmedPlaceField<T extends FieldValues>({
       { lat: Number(place.latitude), lng: Number(place.longitude) },
       LOCATION_SOURCE.GOOGLE_PLACE,
     );
-    // Chốt ĐÚNG dòng người dùng đã bấm. `formattedAddress` do server suy lại từ toạ độ có thể ra
-    // nhà bên cạnh, nên nó chỉ là bản dự phòng khi dòng gợi ý không còn trong danh sách.
-    confirm(pickedText || (place.formattedAddress ?? ''));
+    // Chốt ĐÚNG dòng người dùng đã bấm. `formattedAddress` do server suy lại có thể viết khác đi
+    // một chút, nên nó chỉ là bản dự phòng khi dòng gợi ý không còn trong danh sách.
+    confirm(pickedText || (place.formattedAddress ?? ''), LOCATION_SOURCE.GOOGLE_PLACE);
     onPlaceResolved?.(place);
   };
 
-  const onMovePin = (next: GeoPoint) => {
-    setPoint(next, LOCATION_SOURCE.MAP_PIN);
-    // Ghim tự đặt thì `placeId` cũ không còn mô tả đúng chỗ này nữa — giữ lại là nói dối về
-    // nguồn gốc của toạ độ.
+  /**
+   * Chốt một địa chỉ GÕ TAY — không có địa điểm nào đi kèm.
+   *
+   * Toạ độ và mã địa điểm cũ bị DỌN: chúng thuộc về địa chỉ trước đó, và giữ lại là để form gửi đi
+   * một dòng chữ mô tả chỗ này cùng một toạ độ trỏ chỗ khác. Nguồn ghi `manual` cho đúng sự thật;
+   * server tự tra địa chỉ chữ khi cần toạ độ (lúc lưu, lúc báo giá giao xe).
+   */
+  const confirmManual = (text: string) => {
     placeId.field.onChange(null as PathValue<T, Path<T>>);
-    /*
-     * Đặt ghim tay LÀ một lời xác nhận vị trí, nên chữ đang có trong ô được chốt lại ngay — kể cả
-     * khi tra ngược hỏng sau đó. Đây là lối ra cho những địa chỉ mà nhà cung cấp bản đồ không
-     * biết (hẻm, số nhà mới); không có nó thì "phải chọn từ gợi ý" biến thành "không lưu được".
-     */
-    confirm((addressLine.field.value as string | null) ?? '');
-    /*
-     * Rồi ĐỔ địa chỉ tra ngược được vào chính ô đó, đè lên chữ cũ.
-     *
-     * Ghim mới là thứ vừa được đặt, nên nó là sự thật mới — giữ lại dòng chữ của vị trí trước đó
-     * là để ô nói một chỗ trong khi toạ độ trỏ một chỗ khác. Bản trước chỉ điền khi ô đang TRỐNG,
-     * và đó là cách chắc chắn nhất để hai thứ lệch nhau mà không ai thấy.
-     */
-    void reverse
-      .mutateAsync(next)
-      .then((r) => {
-        const resolved = r.place?.formattedAddress ?? r.place?.suggestedAddressLine ?? '';
-        if (!resolved) return;
-        setLine(resolved);
-        confirm(resolved);
-      })
-      .catch(() => {
-        // Tra ngược hỏng không làm hỏng cái ghim: toạ độ đã vào form và đã được chốt ở trên.
-      });
+    setPoint(null, LOCATION_SOURCE.MANUAL);
+    setLine(text);
+    confirm(text, LOCATION_SOURCE.MANUAL);
+    onConfirmedManually?.();
+  };
+
+  /** Khách chủ động chọn "dùng đúng địa chỉ đã nhập" — lối ra cho địa chỉ nhà cung cấp chưa biết. */
+  const onUseTyped = () => {
+    const typed = ((addressLine.field.value as string | null) ?? '').trim();
+    if (typed) confirmManual(typed);
   };
 
   /**
@@ -315,8 +391,8 @@ export function ConfirmedPlaceField<T extends FieldValues>({
    * Không kèm lời nhắc nào: dòng chú thích dưới ô đã nói trước phải làm gì, và một cảnh báo hiện
    * ra sau khi chữ biến mất chỉ giải thích một cơ chế nội bộ đúng lúc người dùng đang muốn đi tiếp.
    *
-   * Không đụng tới cái ghim: nếu đang có ghim thì nó vẫn đúng với chữ đã xác nhận, còn nếu chưa
-   * có thì chẳng có gì để dọn.
+   * Không đụng tới toạ độ: nếu đang có thì nó vẫn đúng với chữ đã xác nhận, còn nếu chưa có thì
+   * chẳng có gì để dọn.
    */
   const onAddressBlur = () => {
     addressLine.field.onBlur();
@@ -324,11 +400,15 @@ export function ConfirmedPlaceField<T extends FieldValues>({
     const current = (addressLine.field.value as string | null) ?? '';
     if (current.trim() === confirmedRef.current.trim()) return;
     setLine(confirmedRef.current);
+    // Về lại địa chỉ gõ tay đã chốt ⇒ nhận lại nhãn đã tạm gỡ lúc gõ đè (xem `onChange`).
+    if (confirmedSourceRef.current === LOCATION_SOURCE.MANUAL) {
+      locationSource.field.onChange(LOCATION_SOURCE.MANUAL as PathValue<T, Path<T>>);
+    }
   };
 
   /*
-   * Ngữ cảnh đổi (người dùng đổi tỉnh) nghĩa là ghim cũ nằm ở tỉnh khác và dòng chữ cũ mô tả một
-   * con đường ở tỉnh khác. Bỏ cả hai thay vì mang theo một địa chỉ chắc chắn sai.
+   * Ngữ cảnh đổi (người dùng đổi tỉnh) nghĩa là toạ độ cũ nằm ở tỉnh khác và dòng chữ cũ mô tả
+   * một con đường ở tỉnh khác. Bỏ cả hai thay vì mang theo một địa chỉ chắc chắn sai.
    *
    * `key` ở nơi gọi đã dựng lại component này, nên state CỤC BỘ sạch sẵn — kể cả `confirmedLine`,
    * thứ được khởi tạo thẳng bằng rỗng khi `clearOnMount` (nếu không nó nhận địa chỉ của ngữ cảnh
@@ -346,12 +426,24 @@ export function ConfirmedPlaceField<T extends FieldValues>({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /**
-   * Lỗi "chưa xác nhận vị trí" đến từ schema và được gắn lên trường TOẠ ĐỘ, thứ không có ô nhập
-   * nào để hiện nó. Không kéo lên đây thì người dùng bấm Gửi, không có gì xảy ra, và không có
-   * dòng chữ nào nói vì sao.
-   */
-  const pinError = latitude.fieldState.error?.message ?? longitude.fieldState.error?.message;
+  /** Mã của địa điểm đang được chọn — có thì hiện ảnh bản đồ của nó dưới ô (xem phần render). */
+  const mapPlaceId =
+    point && locationSource.field.value === LOCATION_SOURCE.GOOGLE_PLACE
+      ? ((placeId.field.value as string | null) ?? null)
+      : null;
+
+  const suggestionOptions = (suggestions.data?.items ?? []).map((s) => ({
+    value: s.placeId,
+    label: (
+      <span className={styles.suggestion}>
+        <EnvironmentOutlined className={styles.suggestionIcon} />
+        <span className={styles.suggestionText}>
+          <strong>{s.primaryText}</strong>
+          {s.secondaryText ? <em>{s.secondaryText}</em> : null}
+        </span>
+      </span>
+    ),
+  }));
 
   return (
     <>
@@ -368,20 +460,52 @@ export function ConfirmedPlaceField<T extends FieldValues>({
           value={line}
           disabled={disabled}
           /*
-           * Bấm một gợi ý làm AntD phát `onChange` với `value` của lựa chọn — tức MÃ ĐỊA ĐIỂM,
-           * không phải chữ. Chặn ngay tại đây thay vì trông chờ `onSelect` ghi đè sau: thứ tự
-           * hai sự kiện đó là chi tiết nội bộ của rc-select, và đặt cược vào nó nghĩa là một
-           * bản nâng cấp AntD có thể lặng lẽ dán một dãy hash vào ô địa chỉ của khách.
+           * Bấm một dòng làm AntD phát `onChange` với `value` của lựa chọn — tức MÃ ĐỊA ĐIỂM (hoặc
+           * mã của dòng "dùng đúng địa chỉ đã nhập"), không phải chữ. Chặn ngay tại đây thay vì
+           * trông chờ `onSelect` ghi đè sau: thứ tự hai sự kiện đó là chi tiết nội bộ của
+           * rc-select, và đặt cược vào nó nghĩa là một bản nâng cấp AntD có thể lặng lẽ dán một
+           * dãy mã vào ô địa chỉ của khách.
            */
           onChange={(value: string) => {
+            if (value === USE_TYPED_VALUE) return;
             if (suggestions.data?.items.some((s) => s.placeId === value)) return;
             touchedRef.current = true;
+            // Gõ trong lúc đang tra một gợi ý vừa bấm là đổi ý: bỏ lượt tra đó, chữ mới thắng.
+            if (resolvingRef.current) {
+              pickSeqRef.current += 1;
+              resolvingRef.current = false;
+              setResolving(false);
+            }
             // Gõ tiếp là bỏ qua lời nhắc vừa rồi — nó nói về lần gõ trước, không phải lần này.
             if (detailFailed) setDetailFailed(false);
+            if (!strict) {
+              /*
+               * Gợi ý không dùng được ⇒ ô là ô chữ tự do, và chữ gõ tay CHÍNH LÀ địa chỉ: nguồn
+               * `manual`, toạ độ/mã của địa điểm cũ (nếu có) bị dọn vì chúng tả một dòng chữ khác.
+               * Báo giá vẫn tra được — lúc nhà cung cấp hỏng thì server cũng không gọi ra ngoài.
+               */
+              if (locationSource.field.value !== LOCATION_SOURCE.MANUAL || point) {
+                placeId.field.onChange(null as PathValue<T, Path<T>>);
+                setPoint(null, LOCATION_SOURCE.MANUAL);
+              }
+            } else if (confirmedSourceRef.current === LOCATION_SOURCE.MANUAL) {
+              /*
+               * Gõ đè lên một địa chỉ gõ tay ĐÃ CHỐT thì nó thôi là địa chỉ đã xác nhận: báo giá
+               * giao xe tra bằng chữ đúng khi nguồn là `manual`, và không được trả tiền tra một
+               * dòng gõ dở. Gõ về đúng chữ cũ thì nhận lại nhãn.
+               */
+              const back = value.trim() === confirmedRef.current.trim();
+              locationSource.field.onChange(
+                (back ? LOCATION_SOURCE.MANUAL : null) as PathValue<T, Path<T>>,
+              );
+            }
             setLine(value);
           }}
           onBlur={onAddressBlur}
-          onSelect={(value: string) => void onPickSuggestion(value)}
+          onSelect={(value: string) => {
+            if (value === USE_TYPED_VALUE) onUseTyped();
+            else void onPickSuggestion(value);
+          }}
           placeholder={placeholder}
           // Lọc phía client TẮT: danh sách đến từ bản đồ theo đúng chữ vừa gõ, lọc lần nữa sẽ
           // giấu mất chính kết quả vừa tìm được.
@@ -391,22 +515,29 @@ export function ConfirmedPlaceField<T extends FieldValues>({
               <Spin size="small" />
             ) : placeServiceDown ? (
               t('placeUnavailable')
-            ) : line.trim().length >= PLACE_SEARCH_MIN_LENGTH ? (
+            ) : placeQuery.length >= PLACE_SEARCH_MIN_LENGTH ? (
               t('placeEmpty')
             ) : null
           }
-          options={(suggestions.data?.items ?? []).map((s) => ({
-            value: s.placeId,
-            label: (
-              <span className={styles.suggestion}>
-                <EnvironmentOutlined className={styles.suggestionIcon} />
-                <span className={styles.suggestionText}>
-                  <strong>{s.primaryText}</strong>
-                  {s.secondaryText ? <em>{s.secondaryText}</em> : null}
-                </span>
-              </span>
-            ),
-          }))}
+          options={
+            offerTyped
+              ? [
+                  ...suggestionOptions,
+                  {
+                    value: USE_TYPED_VALUE,
+                    label: (
+                      <span className={styles.suggestion}>
+                        <EditOutlined className={styles.suggestionIcon} />
+                        <span className={styles.suggestionText}>
+                          <strong>{t('useTypedAddress')}</strong>
+                          <em>{placeQuery}</em>
+                        </span>
+                      </span>
+                    ),
+                  },
+                ]
+              : suggestionOptions
+          }
           status={addressLine.fieldState.error ? 'error' : undefined}
         />
       </Form.Item>
@@ -415,30 +546,25 @@ export function ConfirmedPlaceField<T extends FieldValues>({
         Ở đây từng có ba dòng nữa: "đã trả ô về địa chỉ đã xác nhận", "vị trí này do hệ thống tra
         tự động, hãy xem lại ghim", và "ghim đang ở: …".
 
-        Cả ba đều là GIẢI THÍCH CƠ CHẾ, không phải thông tin để hành động — và chúng đứng chen
-        giữa ô nhập với bản đồ, đúng chỗ mắt người dùng đang đi. Ô gõ dở giờ tự về rỗng, im lặng;
-        địa chỉ đã chọn thì nằm ngay trong ô, nên không cần một dòng thứ hai nhắc lại nó.
+        Cả ba đều là GIẢI THÍCH CƠ CHẾ, không phải thông tin để hành động. Ô gõ dở giờ tự về rỗng,
+        im lặng; địa chỉ đã chọn thì nằm ngay trong ô, nên không cần một dòng thứ hai nhắc lại nó.
 
-        Thứ ở lại là hai thứ người dùng PHẢI làm gì đó: một cú bấm gợi ý không ra toạ độ, và lỗi
-        "chưa có vị trí" của schema.
+        Thứ ở lại là thứ người dùng PHẢI làm gì đó: một cú bấm gợi ý không ra toạ độ.
       */}
       {detailFailed ? (
         <Alert type="warning" showIcon className={styles.alert} title={t('placeDetailFailed')} />
       ) : null}
 
-      <MapPinPicker
-        value={point}
-        onChange={onMovePin}
-        fallbackCenter={anchor}
-        fallbackZoom={anchorZoom}
-        label={t('mapLabel')}
-        disabled={disabled}
-      />
-
-      {pinError ? (
-        <p className={styles.pinError} role="alert">
-          {pinError}
-        </p>
+      {/*
+        Ảnh bản đồ TĨNH của địa điểm vừa chọn — để người dùng nhìn lại "đúng chỗ này chưa", không
+        kéo không phóng (ADR 0061 điều 1). Chỉ cho địa điểm chọn từ gợi ý: API chỉ vẽ cho mã đã tra
+        xong, còn địa chỉ gõ tay thì không có toạ độ nào để vẽ. Ảnh lỗi (mã cũ, quá hạn cache, bản đồ
+        hỏng) thì `StaticMapImage` tự ẩn.
+      */}
+      {mapPlaceId ? (
+        <div className={styles.placeMap}>
+          <StaticMapImage src={placeMapSrc(mapPlaceId)} alt={t('mapLabel')} />
+        </div>
       ) : null}
     </>
   );

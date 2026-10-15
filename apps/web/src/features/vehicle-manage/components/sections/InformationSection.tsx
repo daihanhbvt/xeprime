@@ -4,16 +4,19 @@ import { Alert, App, Button, Col, Form, Row } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
+import { toGeoPoint } from '@xeprime/domain';
 import { VEHICLE_PUBLIC_STATUS } from '@xeprime/types';
 import { vehicleFormSchema, type VehicleFormValues } from '@xeprime/validators';
 
-import { StaticMap } from '@/components/data-display/StaticMap';
+import { MapLink } from '@/components/data-display/MapLink';
+import { StaticMapImage } from '@/components/data-display/StaticMapImage';
 import { NumberField } from '@/components/form/NumberField';
 import { StickyFormActions } from '@/components/form/StickyFormActions';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
 import { BranchFormDialog } from '@/features/branches/components/BranchFormDialog';
-import { useBranches } from '@/features/branches/hooks/use-branches';
+import { branchMapSrc, useBranches } from '@/features/branches/hooks/use-branches';
+import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import { useRouter } from 'next/navigation';
 import { VEHICLE_MANAGE_SECTION } from '@/constants/routes';
 import { useAvailableHref, useSupportSession } from '@/features/tenant-support/support-session';
@@ -34,7 +37,6 @@ import { manageInformationValuesToInput, vehicleToFormValues } from '@/features/
 import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
-import { mapPlaceUrl, toGeoPoint } from '@/lib/map-static';
 
 import { useManagedVehicle } from '../VehicleManageContext';
 import { SectionCard } from '../SectionCard';
@@ -264,14 +266,16 @@ export function InformationSection() {
 
 /**
  * Địa chỉ hiện tại của xe = chi nhánh giữ xe. Đọc từ danh sách chi nhánh (đã có toạ độ và số xe)
- * chứ không gọi endpoint riêng; bản đồ là `StaticMap` với `NEXT_PUBLIC_GEOAPIFY_MAP_KEY` —
- * thiếu key/toạ độ thì chỉ hiện chữ, không bao giờ chặn sửa.
+ * chứ không gọi endpoint riêng; bản đồ là một ẢNH TĨNH API vẽ hộ (`StaticMapImage`, ADR 0061
+ * điều 1) kèm liên kết mở ứng dụng bản đồ — thiếu toạ độ thì chỉ hiện chữ, không bao giờ chặn sửa.
  */
 function AddressCard({ canEdit }: { canEdit: boolean }) {
   const { vehicle } = useManagedVehicle();
   const t = useTranslations('VehicleManage.information');
+  const tAddress = useTranslations('Address');
   const branches = useBranches();
   const [editing, setEditing] = useState(false);
+  const hideBranchMap = useSupportHides(SUPPORT_HIDDEN_AREA.BRANCH_MAP);
 
   const branch = branches.data?.items.find((b) => b.id === vehicle.branch?.id) ?? null;
   const point = branch
@@ -280,7 +284,6 @@ function AddressCard({ canEdit }: { canEdit: boolean }) {
         branch.longitude == null ? null : Number(branch.longitude),
       )
     : null;
-  const mapUrl = mapPlaceUrl(point);
   const addressLine = [branch?.address, branch?.provinceName ?? vehicle.branch?.provinceName]
     .filter(Boolean)
     .join(', ');
@@ -302,8 +305,17 @@ function AddressCard({ canEdit }: { canEdit: boolean }) {
         <>
           <p className={styles.address}>{addressLine || t('addressNoStreet')}</p>
           {branch?.name ? <p className={styles.branchName}>{branch.name}</p> : null}
-          {mapUrl ? (
-            <StaticMap src={mapUrl} title={t('addressMapTitle')} height={220} />
+          {point && branch ? (
+            <>
+              {/* API chỉ vẽ cho chi nhánh có địa chỉ riêng (`branchMapTarget`) — thiếu thì khỏi hỏi. */}
+              {branch.address && !hideBranchMap ? (
+                <StaticMapImage
+                  src={branchMapSrc(branch.id, point, branch.address)}
+                  alt={t('addressMapTitle')}
+                />
+              ) : null}
+              <MapLink point={point} label={tAddress('map.openInGoogleMaps')} />
+            </>
           ) : branch?.address ? (
             <p className={styles.mapHint}>{t('addressMapPending')}</p>
           ) : null}

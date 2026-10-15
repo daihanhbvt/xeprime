@@ -5,6 +5,7 @@ import { GeoModule } from '../geo/geo.module';
 import { ListingsSyncModule } from '../public-listings/listings-sync.module';
 import { VehicleSettingsModule } from '../vehicle-settings/vehicle-settings.module';
 import { DeliveryDistanceService } from './delivery-distance.service';
+import { PickupMapService } from './pickup-map.service';
 import { PricingService } from './pricing.service';
 import { PublicQuoteController } from './public-quote.controller';
 import { ShopPoliciesController } from './shop-policies.controller';
@@ -37,7 +38,7 @@ import { VehicleDailyPricesController } from './vehicle-daily-prices.controller'
   // `VehicleDailyPricesController`: giá riêng theo ngày — writer là chính PricingService,
   // để mọi báo giá và bản ghi đè cùng một chủ (không lặp lại writer thứ hai ở VehiclesService).
   controllers: [ShopPoliciesController, PublicQuoteController, VehicleDailyPricesController],
-  providers: [PricingService, DeliveryDistanceService],
+  providers: [PricingService, DeliveryDistanceService, PickupMapService],
   exports: [PricingService],
 })
 export class PricingModule {}

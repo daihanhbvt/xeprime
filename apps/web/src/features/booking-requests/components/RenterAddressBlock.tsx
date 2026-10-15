@@ -11,13 +11,6 @@ import {
 import type { RequestFormValues } from '../schema';
 import styles from './RenterAddressBlock.module.css';
 
-/**
- * Thu phóng khi bản đồ mở ở TÂM MỘT TỈNH — chỉ dùng khi chính chiếc xe chưa có toạ độ. Neo vào
- * điểm nhận xe thì giữ mức mặc định của `MapPinPicker` (mức phường), vì lúc đó điểm neo đã là
- * một địa chỉ thật chứ không phải một vùng.
- */
-const PROVINCE_ZOOM = 11;
-
 interface RenterAddressBlockProps {
   control: Control<RequestFormValues>;
   /** Trường giữ mã tỉnh — KHÔNG có ô nhập, giá trị do địa điểm khách chọn quyết định. */
@@ -26,7 +19,7 @@ interface RenterAddressBlockProps {
   pin: AddressPinNames<RequestFormValues>;
   label: string;
   placeholder: string;
-  /** Tỉnh nơi xe đang đỗ — ngữ cảnh hiển thị, điểm neo bản đồ, và giá trị dự phòng. */
+  /** Tỉnh nơi xe đang đỗ — ngữ cảnh hiển thị, điểm neo gợi ý, và giá trị dự phòng. */
   vehicleProvinceCode: string | null;
   vehicleProvinceName: string | null;
   /** Toạ độ điểm nhận xe, nếu chi nhánh đã ghim. Neo tốt hơn hẳn tâm tỉnh. */
@@ -49,14 +42,13 @@ interface RenterAddressBlockProps {
  * thanh toán, để đổi lấy một mã mà hệ thống KHÔNG dùng tới ở đây: quãng đường giao xe tính từ
  * TOẠ ĐỘ (ADR 0018), không phải từ mã xã.
  *
- * Nên ở đây chỉ còn đúng thứ có hệ quả: một địa chỉ mà bản đồ xác nhận được, kèm cái ghim.
+ * Nên ở đây chỉ còn đúng thứ có hệ quả: một địa chỉ đã xác nhận, kèm toạ độ khi khách chọn gợi ý.
  * Backend đã nhận địa chỉ giao xe thiếu mã xã từ đầu (`resolveOptional(..., requireSelectable:
  * false)`), nên đây không phải một ngoại lệ mới mở ra cho luồng này.
  *
  * ## Tỉnh là NGỮ CẢNH, không phải một ô để điền
  *
- * Tỉnh nơi xe đang đỗ hiện thành một dòng chữ: nó cho khách biết bản đồ đang mở ở đâu và vì sao
- * gợi ý lại ra khu vực đó. Giá trị THẬT gửi lên lấy từ chính địa điểm khách chọn
+ * Tỉnh nơi xe đang đỗ hiện thành một dòng chữ: nó cho khách biết vì sao gợi ý lại ra khu vực đó. Giá trị THẬT gửi lên lấy từ chính địa điểm khách chọn
  * (`suggestedProvinceCode`, quy qua bảng bí danh tỉnh ở server nên tên trước sáp nhập vẫn ra mã
  * đúng — ADR 0035 điều 4), và chỉ rơi về tỉnh của xe khi bản đồ không nói được.
  *
@@ -80,9 +72,8 @@ export function RenterAddressBlock({
   const province = useController({ control, name: provinceCodeName });
 
   /*
-   * Neo ưu tiên ĐIỂM NHẬN XE thật, rồi mới tới tâm tỉnh. Chi nhánh đã ghim thì bản đồ mở ngay ở
-   * khu vực khách sẽ nhận xe và gợi ý bám vào đó; chưa ghim thì tâm tỉnh vẫn hơn hẳn một hằng số
-   * cố định ở giữa Đà Nẵng — thứ mà mọi form địa chỉ trong sản phẩm từng mở ra bất kể xe ở đâu.
+   * Neo ưu tiên ĐIỂM NHẬN XE thật, rồi mới tới tâm tỉnh: gợi ý bám vào khu vực khách sẽ nhận
+   * xe. Chi nhánh chưa có toạ độ thì tâm tỉnh vẫn hơn hẳn không neo gì.
    */
   const anchor = vehiclePoint ?? provinceCenter(vehicleProvinceCode);
 
@@ -102,7 +93,6 @@ export function RenterAddressBlock({
         label={label}
         placeholder={placeholder}
         anchor={anchor}
-        anchorZoom={vehiclePoint ? undefined : PROVINCE_ZOOM}
         searchEnabled={!disabled}
         required
         disabled={disabled}
@@ -118,6 +108,18 @@ export function RenterAddressBlock({
                 RequestFormValues,
                 Path<RequestFormValues>
               >,
+            );
+          }
+        }}
+        onConfirmedManually={() => {
+          /*
+           * Địa chỉ gõ tay không mang tỉnh nào: tỉnh của địa điểm chọn TRƯỚC đó (nếu có) nói về một
+           * chỗ khách vừa bỏ. Về lại tỉnh của xe — đúng tỉnh server dùng để tra địa chỉ chữ khi báo
+           * giá, nên lúc gửi yêu cầu dùng lại đúng kết quả đã tra.
+           */
+          if (vehicleProvinceCode) {
+            province.field.onChange(
+              vehicleProvinceCode as PathValue<RequestFormValues, Path<RequestFormValues>>,
             );
           }
         }}

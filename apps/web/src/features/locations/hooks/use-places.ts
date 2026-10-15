@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { browserApiHref } from '@/lib/api-href';
 import { apiRequest } from '@/services/api-client';
 import { queryKeys } from '@/services/query-keys';
 import type { PlaceDetail, PlaceSuggestion } from '../types';
@@ -32,24 +33,33 @@ interface PlaceDetailResult {
 /**
  * Gợi ý địa điểm khi người dùng gõ số nhà/tên đường.
  *
- * Đi qua backend (`/places/search`) chứ KHÔNG gọi thẳng Google: khoá bản đồ có tính tiền theo
- * request, và một khoá nhúng trong bundle web là một khoá ai cũng sao chép được (ADR 0018).
+ * Đi qua backend (`/places/search`) chứ KHÔNG gọi thẳng nhà cung cấp bản đồ: khoá có tính tiền
+ * theo request, và một khoá nhúng trong bundle web là một khoá ai cũng sao chép được (ADR 0061).
  *
- * `biasPoint` kéo kết quả về gần một điểm — truyền ghim hiện tại để `"Nguyễn Huệ"` ra đúng vùng
- * người dùng đang khai báo thay vì ra TP.HCM mọi lúc.
+ * `biasPoint` kéo kết quả về gần một điểm — truyền toạ độ đang có (hoặc tâm tỉnh) để
+ * `"Nguyễn Huệ"` ra đúng vùng người dùng đang khai báo thay vì ra TP.HCM mọi lúc.
+ *
+ * `except` là chuỗi KHÔNG cần hỏi (địa chỉ đã xác nhận) — so với chuỗi ĐÃ debounce, cùng chuỗi
+ * làm khoá truy vấn. So ở nơi gọi bằng chữ đang gõ thì phím gõ đầu tiên đã bật truy vấn trong khi
+ * khoá vẫn là chính địa chỉ đó: một giao dịch tính tiền cho thứ không ai hỏi.
  *
  * Bản đồ hỏng KHÔNG phải lỗi của người đang điền form: query trả `available: false` và ô nhập
  * vẫn hoạt động như một ô chữ bình thường.
  */
 export function usePlaceSearch(
   query: string,
-  options: { biasPoint?: { lat: number; lng: number } | null; enabled?: boolean } = {},
+  options: {
+    biasPoint?: { lat: number; lng: number } | null;
+    enabled?: boolean;
+    except?: string;
+  } = {},
 ) {
   const debounced = useDebouncedValue(query.trim(), SEARCH_DEBOUNCE_MS);
   const bias = options.biasPoint ?? null;
   const longEnough = debounced.length >= PLACE_SEARCH_MIN_LENGTH;
+  const skipped = debounced === options.except?.trim();
 
-  return useQuery({
+  const result = useQuery({
     queryKey: queryKeys.places.search(debounced, bias),
     queryFn: async (): Promise<PlaceSearchResult> => {
       const params = new URLSearchParams({ q: debounced });
@@ -60,11 +70,28 @@ export function usePlaceSearch(
       const res = await apiRequest<PlaceSearchResult>(`/places/search?${params.toString()}`);
       return res.data;
     },
-    enabled: (options.enabled ?? true) && longEnough,
+    enabled: (options.enabled ?? true) && longEnough && !skipped,
     // Gợi ý cũ 5 phút vẫn dùng được cho cùng một chuỗi — người dùng hay xoá rồi gõ lại.
     staleTime: 5 * 60_000,
+    // Gợi ý hỏng thì hỏi lại cũng không giúp người đang gõ — họ đã gõ tiếp, và một 429 hỏi lại là
+    // thêm lượt bị chặn. Ô địa chỉ mời "dùng đúng địa chỉ đã nhập" ngay.
+    retry: false,
     placeholderData: (previous) => previous,
   });
+  /*
+   * Chuỗi ĐÃ debounce đi kèm kết quả: trong ~400ms giữa phím gõ và lượt hỏi, `isFetching` vẫn là
+   * `false` và `data` là danh sách của chuỗi TRƯỚC — nơi gọi cần biết danh sách trong tay có đúng
+   * là của chữ đang hiện không (xem dòng "dùng đúng địa chỉ đã nhập" ở `ConfirmedPlaceField`).
+   */
+  return { ...result, debouncedQuery: debounced };
+}
+
+/**
+ * URL ảnh bản đồ tĩnh của một địa điểm VỪA CHỌN (ADR 0061 điều 1). API chỉ vẽ cho mã đã qua
+ * `/places/detail`; mã là danh tính của điểm nên không cần tham số phiên bản.
+ */
+export function placeMapSrc(placeId: string): string {
+  return browserApiHref(`/places/map?placeId=${encodeURIComponent(placeId)}`);
 }
 
 /**
@@ -79,23 +106,6 @@ export function usePlaceDetail() {
     mutationFn: async (placeId: string): Promise<PlaceDetailResult> => {
       const res = await apiRequest<PlaceDetailResult>(
         `/places/detail?placeId=${encodeURIComponent(placeId)}`,
-      );
-      return res.data;
-    },
-  });
-}
-
-/**
- * Toạ độ (người dùng vừa kéo/thả ghim) → địa chỉ chữ, để họ đọc lại "chỗ này là đâu".
- *
- * Toạ độ trả về LUÔN là toạ độ đã gửi lên — cái ghim là thứ người dùng chủ động đặt, còn địa chỉ
- * chữ chỉ là chú thích cho nó.
- */
-export function useReverseGeocode() {
-  return useMutation({
-    mutationFn: async (point: { lat: number; lng: number }): Promise<PlaceDetailResult> => {
-      const res = await apiRequest<PlaceDetailResult>(
-        `/places/reverse?lat=${point.lat}&lng=${point.lng}`,
       );
       return res.data;
     },

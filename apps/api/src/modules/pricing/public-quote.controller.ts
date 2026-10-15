@@ -1,8 +1,10 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Header, Param, Query, StreamableFile } from '@nestjs/common';
+import { ApiOkResponse, ApiOperation, ApiProduces, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { Public, Realms } from '../../common/decorators';
+import { STATIC_MAP_CACHE_CONTROL } from '../../common/http-cache';
 import { DeliveryDistanceService } from './delivery-distance.service';
+import { PickupMapService } from './pickup-map.service';
 import {
   DeliveryDistanceDto,
   DeliveryDistanceQueryDto,
@@ -30,6 +32,7 @@ export class PublicQuoteController {
     private readonly pricing: PricingService,
     private readonly distance: DeliveryDistanceService,
     private readonly settings: VehicleSettingsService,
+    private readonly pickupMaps: PickupMapService,
   ) {}
 
   @Public()
@@ -85,5 +88,24 @@ export class PublicQuoteController {
       query.address,
       query.lat != null && query.lng != null ? { lat: query.lat, lng: query.lng } : null,
     );
+  }
+
+  /**
+   * Ảnh bản đồ tĩnh của điểm nhận xe — một thẻ `<img>` trên trang xe, không tương tác (ADR 0061
+   * điều 1). Toạ độ đọc từ chính chi nhánh của xe, không nhận từ request.
+   *
+   * Lượt đầu mỗi chi nhánh là một lượt tính tiền; các lượt sau trúng cache của API hoặc của trình
+   * duyệt (giữ một ngày — URL mang toạ độ nên chi nhánh dời đi là một ảnh mới).
+   */
+  @Public()
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
+  @Get(':id/pickup-map')
+  @Header('Cache-Control', STATIC_MAP_CACHE_CONTROL)
+  @ApiOperation({ summary: 'Ảnh bản đồ tĩnh (PNG) của điểm nhận xe' })
+  @ApiProduces('image/png')
+  @ApiOkResponse({ schema: { type: 'string', format: 'binary' } })
+  async pickupMap(@Param('id') id: string): Promise<StreamableFile> {
+    const png = await this.pickupMaps.forListing(id);
+    return new StreamableFile(png, { type: 'image/png', length: png.length });
   }
 }

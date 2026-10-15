@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { haversineKm, isValidGeoPoint, normalizeAddressKey, roundCoord } from './geo';
+import {
+  haversineKm,
+  isValidGeoPoint,
+  mapExternalUrl,
+  normalizeAddressKey,
+  roundCoord,
+  toGeoPoint,
+} from './geo';
 
 /** Hai điểm thật, khoảng cách đã biết — để test bắt được lỗi công thức chứ không chỉ lỗi kiểu. */
 const HCM_BEN_THANH = { lat: 10.7721, lng: 106.698 };
@@ -71,5 +78,28 @@ describe('isValidGeoPoint', () => {
 
   it('loại (0,0) — luôn là dữ liệu hỏng với một sản phẩm chỉ chạy ở Việt Nam', () => {
     expect(isValidGeoPoint({ lat: 0, lng: 0 })).toBe(false);
+  });
+});
+
+describe('toGeoPoint', () => {
+  it('ghép hai giá trị rời thành một điểm hợp lệ', () => {
+    expect(toGeoPoint(10.7721, 106.698)).toEqual(HCM_BEN_THANH);
+  });
+
+  it('thiếu một nửa, sai dải hoặc (0,0) → null', () => {
+    expect(toGeoPoint(null, 106.698)).toBeNull();
+    expect(toGeoPoint(10.7721, undefined)).toBeNull();
+    expect(toGeoPoint(0, 0)).toBeNull();
+    expect(toGeoPoint(91, 106)).toBeNull();
+  });
+});
+
+describe('mapExternalUrl', () => {
+  it('link phổ quát của Google Maps — không key, lat TRƯỚC lng', () => {
+    // Đảo nhầm thứ tự ở Việt Nam là một điểm giữa Ấn Độ Dương. So nguyên chuỗi chứ không dựng
+    // `URL`: package này không có lib DOM, đúng như môi trường Metro nó phải chạy.
+    expect(mapExternalUrl(HCM_BEN_THANH)).toBe(
+      'https://www.google.com/maps/search/?api=1&query=10.7721%2C106.698',
+    );
   });
 });

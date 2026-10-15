@@ -1,6 +1,11 @@
 # ADR 0037 — Chuyển nhà cung cấp bản đồ sang Geoapify (OpenStreetMap)
 
-Ngày: 15/09/2026 · Trạng thái: Accepted
+Ngày: 15/09/2026 · Trạng thái: **Superseded bởi [ADR 0061](0061-vietmap-geo-provider.md)** (15/10/2026)
+— nhà cung cấp là Vietmap, Geoapify/Leaflet đã gỡ khỏi API và web, web không còn vẽ bản đồ (app
+native vẫn dùng Geoapify để vẽ bản đồ cho tới khi chuyển — ADR 0061 điều 9). Ý định của điều 6
+(không tự chốt toạ độ ở tâm tỉnh) được ADR 0061 điều 5 giữ lại; mã `gp1:` của điều 5 vẫn giải
+được. Lối đi "Google" ghi ở mục Hệ quả đã thử và **loại**: Việt Nam nằm trong Prohibited
+Territories của Google Maps Platform.
 
 Ghi đè: [ADR 0018](0018-map-delivery-distance.md) ở **phần nhà cung cấp và khoá** (mọi quyết định
 sản phẩm của 0018 giữ nguyên) · [ADR 0035](0035-two-tier-administrative-address.md) điều 6 ở phần

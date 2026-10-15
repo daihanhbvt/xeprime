@@ -1,6 +1,6 @@
 import type { ConfigService } from '@nestjs/config';
 import { createPrismaClient, newId } from '@xeprime/prisma';
-import type { GeoPoint } from '@xeprime/domain';
+import { addressGeocodeQuery, type GeoPoint } from '@xeprime/domain';
 import {
   ACCOUNT_REALM,
   DELIVERY_DISTANCE_STATUS,
@@ -11,9 +11,15 @@ import {
   VEHICLE_TYPE,
 } from '@xeprime/types';
 import { GeoService } from '../src/modules/geo/geo.service';
-import { GeoNotConfiguredProvider, type GeoProvider } from '../src/modules/geo/geo-provider';
-import { GeoapifyGeoProvider } from '../src/modules/geo/geoapify-geo.provider';
+import {
+  GeoNotConfiguredProvider,
+  type GeoProvider,
+  type PlaceDetail,
+  type PlaceSuggestion,
+} from '../src/modules/geo/geo-provider';
+import { VietmapGeoProvider } from '../src/modules/geo/vietmap-geo.provider';
 import { DeliveryDistanceService } from '../src/modules/pricing/delivery-distance.service';
+import { PickupMapService } from '../src/modules/pricing/pickup-map.service';
 import type { SaveRentalPolicyDto } from '../src/modules/pricing/dto/pricing.dto';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { makePricingService, makeVehiclesService, vehicleCreator } from './helpers/service-factory';
@@ -29,9 +35,9 @@ import { makePricingService, makeVehiclesService, vehicleCreator } from './helpe
  *      lần người dùng bấm lại);
  *   3. lọc trước bằng đường chim bay kết luận "ngoài bán kính" mà KHÔNG gọi Routes API.
  *
- * Ba điều đó là toàn bộ lý do 3.000 credit/ngày của gói Geoapify miễn phí đủ dùng, nên chúng
- * phải có test — nếu không, một lần refactor vô tình bỏ cache sẽ chỉ lộ ra khi hạn mức cạn giữa
- * ban ngày.
+ * Vietmap tính tiền theo giao dịch (ADR 0061), nên ba điều đó — cộng hai lớp tiết kiệm ở ô gợi ý
+ * địa chỉ — là toàn bộ lý do chi phí bản đồ giữ ở mức thấp. Chúng phải có test: nếu không, một lần
+ * refactor vô tình bỏ cache sẽ chỉ lộ ra ở hoá đơn cuối tháng.
  */
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
@@ -59,6 +65,8 @@ class FakeGeoProvider implements GeoProvider {
   readonly enabled = true;
   geocodeCalls = 0;
   routeCalls = 0;
+  /** Chuỗi cuối cùng được gửi đi tra — khoá luật "cùng chuỗi với lúc gửi yêu cầu". */
+  lastGeocodeQuery: string | null = null;
 
   geocode(address: string): Promise<{
     point: GeoPoint;
@@ -66,6 +74,7 @@ class FakeGeoProvider implements GeoProvider {
     placeId: string | null;
   } | null> {
     this.geocodeCalls += 1;
+    this.lastGeocodeQuery = address;
     if (address.includes('Nguyễn Huệ')) {
       return Promise.resolve({
         point: NEAR_POINT,
@@ -95,16 +104,24 @@ class FakeGeoProvider implements GeoProvider {
    * `GeoService` nuốt lỗi thành `null` ở mọi nhánh, nên một provider giả biết ném sẽ che mất
    * sự khác nhau giữa "không có kết quả" và "hỏi không được".
    */
-  searchPlaces(): Promise<[]> {
+  searchPlaces(): Promise<PlaceSuggestion[]> {
     return Promise.resolve([]);
   }
 
-  placeDetails(): Promise<null> {
+  placeDetails(_placeId: string): Promise<PlaceDetail | null> {
     return Promise.resolve(null);
   }
 
   reverseGeocode(): Promise<null> {
     return Promise.resolve(null);
+  }
+
+  staticMapCalls = 0;
+  lastStaticLabel: string | null = null;
+  staticMapPng(_point: GeoPoint, label: string): Promise<Buffer> {
+    this.staticMapCalls += 1;
+    this.lastStaticLabel = label;
+    return Promise.resolve(Buffer.from('png'));
   }
 }
 
@@ -142,12 +159,12 @@ function policyDto(over: Partial<SaveRentalPolicyDto> = {}): SaveRentalPolicyDto
  * Xoá sạch cache giữa các test — mỗi test tự quyết định trạng thái cache nó cần.
  *
  * Dọn CẢ hai tên nhà cung cấp, không chỉ `fake`: suite cuối file chạy provider thật (tên
- * `geoapify`), và nếu một assertion ở đó fail thì bước dọn cuối của nó không bao giờ chạy. Lần
+ * `vietmap`), và nếu một assertion ở đó fail thì bước dọn cuối của nó không bao giờ chạy. Lần
  * chạy kế tiếp sẽ đọc trúng cache còn sót, thấy 0 request, rồi fail ở một chỗ KHÁC hẳn nguyên
  * nhân — kiểu hỏng tốn cả buổi để lần ra.
  */
 async function clearGeoCache(): Promise<void> {
-  const providers = { in: ['fake', 'geoapify'] };
+  const providers = { in: ['fake', 'vietmap'] };
   await prisma.geocodeCache.deleteMany({ where: { provider: providers } });
   await prisma.geoRouteCache.deleteMany({ where: { provider: providers } });
 }
@@ -316,7 +333,7 @@ describe('GeoService — cache là thứ giữ hạn mức miễn phí đủ dù
     const res = await geo.roadDistance(BRANCH_POINT, NEAR_POINT, 10);
 
     expect(res.outcome).toBe('unavailable');
-    // Nhớ một sự cố tạm thời trong 30 ngày tệ hơn nhiều so với tốn thêm một request.
+    // Nhớ một sự cố tạm thời trong 90 ngày tệ hơn nhiều so với tốn thêm một request.
     expect(await prisma.geoRouteCache.count({ where: { provider: 'fake' } })).toBe(0);
   });
 
@@ -353,10 +370,253 @@ describe('GeoService — cache là thứ giữ hạn mức miễn phí đủ dù
     expect(await prisma.geoRouteCache.count({ where: { provider: 'fake' } })).toBe(1);
   });
 
+  /**
+   * Danh sách rỗng và `null` là hai câu trả lời khác nhau: rỗng = gõ tiếp hoặc dùng địa chỉ đã gõ,
+   * `null` = ô địa chỉ phải mở cho nhập tay (controller trả `available: false`).
+   */
+  maybe('gợi ý địa điểm: không có kết quả → [], nhà cung cấp hỏng → null', async () => {
+    await expect(geo.searchPlaces('Nguyễn Huệ')).resolves.toEqual([]);
+
+    provider.searchPlaces = () => Promise.reject(new Error('Autocomplete: OVER_DAILY_LIMIT'));
+    // Chuỗi KHÁC — chuỗi trên đã nằm trong cache gợi ý 10 phút.
+    await expect(geo.searchPlaces('Lê Lợi')).resolves.toBeNull();
+  });
+
+  /**
+   * Gợi ý của Vietmap KHÔNG kèm toạ độ, nên "chọn gợi ý" là một lượt Place thật (ADR 0061 điều 3).
+   * Cache theo mã địa điểm: mở lại form sửa, hay hai khách chọn cùng một chỗ, chỉ tốn MỘT lượt.
+   */
+  maybe('chọn cùng một địa điểm hai lần → nhà cung cấp chỉ bị hỏi MỘT lần', async () => {
+    await clearGeoCache();
+    let detailCalls = 0;
+    provider.placeDetails = (placeId: string) => {
+      detailCalls += 1;
+      return Promise.resolve({
+        placeId,
+        point: NEAR_POINT,
+        formattedAddress: '12 Nguyễn Huệ, Phường Sài Gòn, Thành Phố Hồ Chí Minh',
+        administrativeArea: 'Thành Phố Hồ Chí Minh',
+        locality: 'Phường Sài Gòn',
+      });
+    };
+
+    const first = await geo.placeDetailsOutcome('auto:near');
+    const second = await geo.placeDetailsOutcome('auto:near');
+
+    expect(detailCalls).toBe(1);
+    expect(first.outcome === 'ok' && first.detail.point).toEqual(NEAR_POINT);
+    expect(second.outcome === 'ok' && second.detail).toEqual({
+      placeId: 'auto:near',
+      point: NEAR_POINT,
+      formattedAddress: '12 Nguyễn Huệ, Phường Sài Gòn, Thành Phố Hồ Chí Minh',
+      // Tỉnh đọc lại từ chính địa chỉ đầy đủ — luồng khách thuê vẫn có tỉnh để gợi ý (ADR 0042).
+      administrativeArea: 'Thành Phố Hồ Chí Minh',
+      locality: null,
+    });
+  });
+
+  /**
+   * `ref_id` của Vietmap dài theo địa chỉ và có thể vượt cột `place_id VarChar(255)`. Bản ghi cache
+   * vẫn phải ghi được (khoá là mã băm) — nếu không, mỗi lần chọn lại địa điểm đó là một lượt tiền.
+   */
+  maybe('mã địa điểm dài hơn cột vẫn được cache; cột tham chiếu để trống', async () => {
+    await clearGeoCache();
+    const longId = `geocode:${'x'.repeat(400)}`;
+    let detailCalls = 0;
+    provider.placeDetails = (placeId: string) => {
+      detailCalls += 1;
+      return Promise.resolve({
+        placeId,
+        point: NEAR_POINT,
+        formattedAddress: '12 Nguyễn Huệ, Phường Sài Gòn, Thành Phố Hồ Chí Minh',
+        administrativeArea: 'Thành Phố Hồ Chí Minh',
+        locality: null,
+      });
+    };
+
+    await geo.placeDetailsOutcome(longId);
+    const again = await geo.placeDetailsOutcome(longId);
+
+    expect(detailCalls).toBe(1);
+    expect(again.outcome === 'ok' && again.detail.placeId).toBe(longId);
+    const row = await prisma.geocodeCache.findFirst({
+      where: { provider: 'fake', query: `place:${longId}` },
+    });
+    expect(row).not.toBeNull();
+    expect(row?.placeId).toBeNull();
+  });
+
+  /**
+   * "Nhà cung cấp không trả lời" và "mã không ra gì" là hai câu khác nhau với khách: cái thứ nhất
+   * mở ô cho nhập tay, cái thứ hai bảo chọn lại. Ca "không ra gì" được nhớ — một mã hỏng gửi lại
+   * nhiều lần không được thành nhiều lượt tính tiền.
+   */
+  maybe('chi tiết địa điểm: unavailable ≠ not_found, và "không ra gì" được cache', async () => {
+    await clearGeoCache();
+    let detailCalls = 0;
+    provider.placeDetails = () => {
+      detailCalls += 1;
+      return Promise.reject(new Error('Place: OVER_DAILY_LIMIT'));
+    };
+    await expect(geo.placeDetailsOutcome('auto:x')).resolves.toEqual({ outcome: 'unavailable' });
+    // Lỗi KHÔNG được ghi cache — lần sau có thể hỏi được.
+    await expect(geo.placeDetailsOutcome('auto:x')).resolves.toEqual({ outcome: 'unavailable' });
+    expect(detailCalls).toBe(2);
+
+    provider.placeDetails = () => {
+      detailCalls += 1;
+      return Promise.resolve(null);
+    };
+    await expect(geo.placeDetailsOutcome('auto:x')).resolves.toEqual({ outcome: 'not_found' });
+    await expect(geo.placeDetailsOutcome('auto:x')).resolves.toEqual({ outcome: 'not_found' });
+    expect(detailCalls).toBe(3);
+  });
+
+  /** Lớp tiết kiệm thứ hai: cùng chuỗi + cùng vùng (làm tròn ~1km) trong 10 phút → một lượt gọi. */
+  maybe('gõ lại cùng chuỗi trong cùng vùng → nhà cung cấp chỉ bị hỏi MỘT lần', async () => {
+    let searchCalls = 0;
+    provider.searchPlaces = () => {
+      searchCalls += 1;
+      return Promise.resolve([]);
+    };
+
+    await geo.searchPlaces('Trần Hưng Đạo', { lat: 16.0544, lng: 108.2022 });
+    await geo.searchPlaces('  trần hưng   đạo ', { lat: 16.0539, lng: 108.2018 });
+    expect(searchCalls).toBe(1);
+
+    // Vùng khác hẳn (tỉnh khác) là câu hỏi khác.
+    await geo.searchPlaces('Trần Hưng Đạo', { lat: 10.7721, lng: 106.698 });
+    expect(searchCalls).toBe(2);
+  });
+
+  maybe('tra địa chỉ: phân biệt not_found với unavailable', async () => {
+    await clearGeoCache();
+
+    await expect(geo.geocodeOutcome('địa chỉ không tồn tại xyz')).resolves.toEqual({
+      outcome: 'not_found',
+    });
+
+    provider.geocode = () => Promise.reject(new Error('HTTP 429'));
+    await expect(geo.geocodeOutcome(NEAR_ADDRESS)).resolves.toEqual({ outcome: 'unavailable' });
+  });
+
+  /**
+   * Ảnh bản đồ tĩnh (ADR 0061 điều 1): mỗi lần vẽ là một lượt tính tiền, còn một trang xe được mở
+   * hàng trăm lần. Cache theo điểm + nhãn, và các lượt mở CÙNG LÚC dùng chung một lượt vẽ.
+   */
+  maybe('bản đồ tĩnh: vẽ MỘT lần cho một điểm, kể cả khi nhiều người mở cùng lúc', async () => {
+    const point = { lat: 21.004941, lng: 105.804331 };
+    const label = 'Đường Lê Văn Lương, Hà Nội';
+
+    const [a, b] = await Promise.all([geo.staticMap(point, label), geo.staticMap(point, label)]);
+    const c = await geo.staticMap(point, label);
+
+    expect(provider.staticMapCalls).toBe(1);
+    expect(a).toBe(b);
+    expect(c).toBe(a);
+
+    // Chi nhánh dời đi (toạ độ khác) là một ảnh khác.
+    await geo.staticMap({ lat: 21.01, lng: 105.81 }, label);
+    expect(provider.staticMapCalls).toBe(2);
+  });
+
+  /**
+   * `/places/map` nhận MÃ từ client. Chỉ mã đã qua `placeDetails` (đã có toạ độ trong cache) mới
+   * được vẽ — vẽ cho mọi mã là để ai cũng tiêu tiền bằng những mã bịa, mỗi mã một lượt.
+   */
+  maybe('bản đồ của địa điểm vừa chọn: chỉ vẽ cho mã đã tra, mã lạ không tốn lượt nào', async () => {
+    await clearGeoCache();
+    provider.placeDetails = (placeId: string) =>
+      Promise.resolve({
+        placeId,
+        point: NEAR_POINT,
+        formattedAddress: '12 Nguyễn Huệ, Phường Sài Gòn, Thành Phố Hồ Chí Minh',
+        administrativeArea: 'Thành Phố Hồ Chí Minh',
+        locality: null,
+      });
+
+    await expect(geo.placeMap('auto:chua-ai-chon')).resolves.toBeNull();
+    expect(provider.staticMapCalls).toBe(0);
+
+    await geo.placeDetailsOutcome('auto:near-map');
+    await expect(geo.placeMap('auto:near-map')).resolves.toEqual(Buffer.from('png'));
+    expect(provider.staticMapCalls).toBe(1);
+    // Ảnh chở đúng dòng địa chỉ đã tra — Vietmap không phải tự tra ngược thêm một lượt.
+    expect(provider.lastStaticLabel).toBe('12 Nguyễn Huệ, Phường Sài Gòn, Thành Phố Hồ Chí Minh');
+  });
+
+  /**
+   * Mã `gp1:` cũ mang sẵn toạ độ. Nó được giải tại chỗ nhưng KHÔNG được vào cache — nếu không,
+   * `gp1:<toạ độ bịa>` rồi `/places/map` là cách vẽ bản đồ bất kỳ đâu bằng tiền của mình.
+   */
+  maybe('mã gp1: cũ giải tại chỗ, không hỏi nhà cung cấp, không ghi cache, không có ảnh', async () => {
+    await clearGeoCache();
+    let detailCalls = 0;
+    provider.placeDetails = () => {
+      detailCalls += 1;
+      return Promise.resolve(null);
+    };
+    const legacyId = 'gp1:16.0544,108.2022';
+
+    const res = await geo.placeDetailsOutcome(legacyId);
+
+    expect(res.outcome === 'ok' && res.detail.point).toEqual({ lat: 16.0544, lng: 108.2022 });
+    expect(detailCalls).toBe(0);
+    await expect(
+      prisma.geocodeCache.count({ where: { query: `place:${legacyId}` } }),
+    ).resolves.toBe(0);
+    await expect(geo.placeMap(legacyId)).resolves.toBeNull();
+    expect(provider.staticMapCalls).toBe(0);
+  });
+
+  /**
+   * Lỗi trả `no-store`: không nhớ lỗi thì mỗi lượt mở trang xe lúc nhà cung cấp trục trặc là một
+   * lượt tính tiền nữa cho cùng một tấm ảnh trang trí.
+   */
+  maybe('bản đồ tĩnh: nhà cung cấp lỗi → null, và NHỚ lỗi một lúc rồi mới thử lại', async () => {
+    let calls = 0;
+    provider.staticMapPng = () => {
+      calls += 1;
+      return Promise.reject(new Error('Static map trả HTTP 503'));
+    };
+    const point = { lat: 16.0544, lng: 108.2022 };
+    const now = jest.spyOn(Date, 'now');
+    try {
+      now.mockReturnValue(Date.parse('2026-10-15T03:00:00Z'));
+      await expect(geo.staticMap(point, 'Đà Nẵng')).resolves.toBeNull();
+      await expect(geo.staticMap(point, 'Đà Nẵng')).resolves.toBeNull();
+      expect(calls).toBe(1);
+
+      // Hết thời gian nhớ lỗi → thử lại đúng một lần.
+      now.mockReturnValue(Date.parse('2026-10-15T03:11:00Z'));
+      await expect(geo.staticMap(point, 'Đà Nẵng')).resolves.toBeNull();
+      expect(calls).toBe(2);
+    } finally {
+      now.mockRestore();
+    }
+  });
+
+  maybe('bản đồ tĩnh: cache có trần — ảnh lâu không ai xem bị đẩy ra, mở lại thì vẽ lại', async () => {
+    const first = { lat: 10.5, lng: 106.5 };
+    await geo.staticMap(first, 'Điểm đầu');
+    for (let i = 1; i <= 200; i += 1) {
+      await geo.staticMap({ lat: 10.5 + i / 1000, lng: 106.5 }, 'Điểm khác');
+    }
+    expect(provider.staticMapCalls).toBe(201);
+
+    await geo.staticMap(first, 'Điểm đầu');
+    expect(provider.staticMapCalls).toBe(202);
+  });
+
   maybe('chưa cấu hình nhà cung cấp → không ném lỗi ra luồng đặt xe', async () => {
     const offline = new GeoService(asService, new GeoNotConfiguredProvider());
 
     await expect(offline.geocode(NEAR_ADDRESS)).resolves.toBeNull();
+    await expect(offline.geocodeOutcome(NEAR_ADDRESS)).resolves.toEqual({
+      outcome: 'unavailable',
+    });
+    await expect(offline.searchPlaces('Nguyễn Huệ')).resolves.toBeNull();
+    await expect(offline.staticMap(NEAR_POINT, 'Nguyễn Huệ')).resolves.toBeNull();
     await expect(offline.roadDistance(BRANCH_POINT, NEAR_POINT)).resolves.toEqual({
       outcome: 'unavailable',
     });
@@ -365,6 +625,29 @@ describe('GeoService — cache là thứ giữ hạn mức miễn phí đủ dù
 });
 
 describe('DeliveryDistanceService — năm trạng thái, không trạng thái nào là lỗi', () => {
+  /**
+   * Địa chỉ GÕ TAY được tra bằng ĐÚNG chuỗi `AddressService` sẽ tra lúc khách gửi yêu cầu (dòng
+   * địa chỉ + tỉnh + "Việt Nam"): hai lượt dùng chung một bản ghi cache, nên lần gửi không tốn thêm
+   * giao dịch nào — và "12 Lê Lợi" trơ trọi không khớp nhầm sang tỉnh khác.
+   */
+  maybe('địa chỉ gõ tay → tra kèm tỉnh của chi nhánh, đúng chuỗi lúc gửi yêu cầu', async () => {
+    await clearGeoCache();
+    const branch = await prisma.tenantBranch.findFirst({
+      where: { tenantId },
+      select: { province: { select: { name: true } } },
+    });
+
+    await distance.forListing(vehicleId, NEAR_ADDRESS);
+
+    expect(provider.lastGeocodeQuery).toBe(
+      addressGeocodeQuery({
+        addressLine: NEAR_ADDRESS,
+        wardName: null,
+        provinceName: branch?.province?.name ?? null,
+      }),
+    );
+  });
+
   maybe('trong bán kính → auto, kèm phí đúng bậc và địa chỉ bản đồ hiểu ra', async () => {
     await clearGeoCache();
 
@@ -464,6 +747,25 @@ describe('DeliveryDistanceService — năm trạng thái, không trạng thái n
     expect(res.distanceKm).toBeNull();
   });
 
+  /**
+   * Có key nhưng nhà cung cấp không trả lời được (key bị từ chối, hết hạn mức, lỗi mạng). Bản trước chỉ xét `geo.enabled` nên ca này rơi vào `address_not_found` — báo khách
+   * gõ sai địa chỉ về một sự cố của chính hệ thống.
+   */
+  maybe('nhà cung cấp hỏng khi tra địa chỉ → unavailable, KHÔNG đổ lỗi cho địa chỉ', async () => {
+    await clearGeoCache();
+    provider.geocode = () => {
+      provider.geocodeCalls += 1;
+      return Promise.reject(new Error('Geocoding API: REQUEST_DENIED billing'));
+    };
+
+    const res = await distance.forListing(vehicleId, NEAR_ADDRESS);
+
+    expect(res.status).toBe(DELIVERY_DISTANCE_STATUS.UNAVAILABLE);
+    expect(res.fee).toBeNull();
+    // Ca hỏng không được nhớ: lần sau hỏi lại được ngay khi billing được nối lại.
+    expect(await prisma.geocodeCache.count({ where: { provider: 'fake' } })).toBe(0);
+  });
+
   maybe('chính sách tắt giao nhận → unsupported, và KHÔNG hỏi bản đồ lần nào', async () => {
     await clearGeoCache();
     await pricing.saveShopPolicy(
@@ -529,52 +831,111 @@ describe('DeliveryDistanceService — năm trạng thái, không trạng thái n
 });
 
 /**
- * Toàn chuỗi với NHÀ CUNG CẤP THẬT — trả lời đúng câu "cắm key vào thì có chạy không".
+ * Ảnh điểm nhận xe trên trang xe công khai (ADR 0061 điều 1). Endpoint công khai, nên mọi nhánh
+ * "không có ảnh" phải trả 404 TRƯỚC khi chạm tới nhà cung cấp tính tiền.
+ */
+describe('PickupMapService — ảnh điểm nhận xe chỉ cho xe trên chợ, đúng quy tắc toạ độ của trang xe', () => {
+  let maps: PickupMapService;
+  let originalAddress: string | null;
+
+  beforeEach(async () => {
+    if (!dbAvailable) return;
+    maps = new PickupMapService(asService, geo);
+    const branch = await prisma.tenantBranch.findFirst({ where: { tenantId }, select: { address: true } });
+    originalAddress = branch?.address ?? null;
+  });
+
+  afterEach(async () => {
+    if (!dbAvailable) return;
+    await prisma.tenantBranch.updateMany({ where: { tenantId }, data: { address: originalAddress } });
+  });
+
+  maybe('chi nhánh có địa chỉ + toạ độ → ảnh, nhãn là địa chỉ chi nhánh', async () => {
+    await prisma.tenantBranch.updateMany({
+      where: { tenantId },
+      data: { address: '1 Lê Lợi, Phường Sài Gòn, Thành Phố Hồ Chí Minh' },
+    });
+
+    await expect(maps.forListing(vehicleId)).resolves.toEqual(Buffer.from('png'));
+    expect(provider.lastStaticLabel).toBe('1 Lê Lợi, Phường Sài Gòn, Thành Phố Hồ Chí Minh');
+  });
+
+  maybe('chi nhánh có toạ độ nhưng KHÔNG có địa chỉ → 404, không vẽ (trang xe cũng ẩn toạ độ)', async () => {
+    await prisma.tenantBranch.updateMany({ where: { tenantId }, data: { address: null } });
+
+    await expect(maps.forListing(vehicleId)).rejects.toMatchObject({
+      response: { code: 'NOT_FOUND' },
+    });
+    expect(provider.staticMapCalls).toBe(0);
+  });
+
+  maybe('xe không trên chợ → 404, không vẽ', async () => {
+    await prisma.tenantBranch.updateMany({ where: { tenantId }, data: { address: '1 Lê Lợi, Hồ Chí Minh' } });
+    await prisma.vehicle.update({ where: { id: vehicleId }, data: { publicStatus: 'draft' } });
+    try {
+      await expect(maps.forListing(vehicleId)).rejects.toMatchObject({
+        response: { code: 'NOT_FOUND' },
+      });
+      expect(provider.staticMapCalls).toBe(0);
+    } finally {
+      await prisma.vehicle.update({ where: { id: vehicleId }, data: { publicStatus: 'approved_public' } });
+    }
+  });
+});
+
+/**
+ * Toàn chuỗi với NHÀ CUNG CẤP THẬT — trả lời đúng câu 'cắm key vào thì có chạy không'.
  *
- * Khác mọi test ở trên: `GeoapifyGeoProvider` thật, `GeoService` thật, `PricingService` thật,
- * dữ liệu trên PostgreSQL thật. Thứ DUY NHẤT bị thay là máy chủ của Geoapify — `fetch` trả về
- * đúng hình response mà API của họ trả (hình đó được khoá riêng ở `geoapify-geo-provider.spec.ts`).
+ * Khác mọi test ở trên: `VietmapGeoProvider` thật, `GeoService` thật, `PricingService` thật,
+ * dữ liệu trên PostgreSQL thật. Thứ DUY NHẤT bị thay là máy chủ của Vietmap — `fetch` trả về
+ * đúng hình response mà API của họ trả (hình đó được khoá riêng ở `vietmap-geo-provider.spec.ts`).
  *
  * Nói cách khác: nếu suite này xanh, phần còn thiếu để tính năng chạy thật đúng bằng một chuỗi
  * ký tự trong `.env`.
  */
-describe('cắm nhà cung cấp thật vào — chuỗi đầy đủ, chỉ máy chủ Geoapify là giả', () => {
+describe('cắm nhà cung cấp thật vào — chuỗi đầy đủ, chỉ máy chủ Vietmap là giả', () => {
   const FAKE_KEY = 'e2e-test-key';
   const realFetch = global.fetch;
   let fetchCalls = 0;
+  const urls: string[] = [];
 
-  /** Trả response theo ĐÚNG hình của Geocoding API và Routing API (`format=json`). */
-  function stubGeoapify(): void {
+  const json = (body: unknown): Promise<Response> =>
+    Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) } as Response);
+
+  /** Trả response theo ĐÚNG hình của Search v4, Place v4 và Route v4 (Vietmap Maps API). */
+  function stubVietmap(): void {
     fetchCalls = 0;
+    urls.length = 0;
     global.fetch = ((url: string | URL) => {
       fetchCalls += 1;
       const href = String(url);
-      if (href.includes('/geocode/search')) {
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          json: () =>
-            Promise.resolve({
-              results: [
-                {
-                  lat: NEAR_POINT.lat,
-                  lon: NEAR_POINT.lng,
-                  formatted: '12 Nguyễn Huệ, Bến Nghé, Quận 1, TP.HCM',
-                  place_id: '51abc_e2e',
-                  // Trên ngưỡng `MIN_GEOCODE_CONFIDENCE` — dưới ngưỡng thì provider trả null và
-                  // cả chuỗi này rơi về MANUAL, đó là một ca riêng ở spec của provider.
-                  rank: { confidence: 0.9 },
-                },
-              ],
-            }),
-        } as Response);
+      urls.push(href);
+      if (href.includes('/search/v4')) {
+        // Search KHÔNG có toạ độ — chỉ `ref_id` để tra tiếp bằng Place.
+        return json([
+          {
+            ref_id: 'geocode:near',
+            name: '12 Nguyễn Huệ',
+            address: 'Phường Sài Gòn,Thành Phố Hồ Chí Minh',
+            display: '12 Nguyễn Huệ Phường Sài Gòn,Thành Phố Hồ Chí Minh',
+            boundaries: [
+              { type: 2, name: 'Sài Gòn', full_name: 'Phường Sài Gòn' },
+              { type: 0, name: 'Hồ Chí Minh', full_name: 'Thành Phố Hồ Chí Minh' },
+            ],
+          },
+        ]);
       }
-      // Routing API: 3421 m → 3.42 km → rơi vào bậc >3–5 km = 30.000₫.
-      return Promise.resolve({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve({ results: [{ distance: 3421 }] }),
-      } as Response);
+      if (href.includes('/place/v4')) {
+        return json({
+          display: '12 Nguyễn Huệ,Phường Sài Gòn,Thành Phố Hồ Chí Minh',
+          city: 'Thành Phố Hồ Chí Minh',
+          ward: 'Phường Sài Gòn',
+          lat: NEAR_POINT.lat,
+          lng: NEAR_POINT.lng,
+        });
+      }
+      // Route v4: 3421 m → 3.42 km → rơi vào bậc >3–5 km = 30.000₫.
+      return json({ code: 'OK', paths: [{ distance: 3421, time: 600000 }] });
     }) as typeof fetch;
   }
 
@@ -586,13 +947,13 @@ describe('cắm nhà cung cấp thật vào — chuỗi đầy đủ, chỉ máy
     'địa chỉ khách → toạ độ → km đường bộ → đúng bậc phí, và ghi cả hai bảng cache',
     async () => {
       await clearGeoCache();
-      stubGeoapify();
+      stubVietmap();
 
       const config = {
-        get: () => FAKE_KEY,
+        get: (name: string) => (name === 'GEO_DAILY_CALL_BUDGET' ? undefined : FAKE_KEY),
         getOrThrow: () => FAKE_KEY,
       } as unknown as ConfigService;
-      const liveGeo = new GeoService(asService, new GeoapifyGeoProvider(config));
+      const liveGeo = new GeoService(asService, new VietmapGeoProvider(config));
       const liveDistance = new DeliveryDistanceService(asService, pricing, liveGeo);
 
       const res = await liveDistance.forListing(vehicleId, NEAR_ADDRESS);
@@ -604,26 +965,27 @@ describe('cắm nhà cung cấp thật vào — chuỗi đầy đủ, chỉ máy
       expect(res.fee).toBe('30000');
       expect(res.origin).toEqual(BRANCH_POINT);
       expect(res.destination).toEqual(NEAR_POINT);
-      expect(res.formattedAddress).toContain('Bến Nghé');
+      expect(res.formattedAddress).toContain('Phường Sài Gòn');
 
-      // Đúng hai lượt gọi ra ngoài cho một lần tra: 1 geocode + 1 routes.
-      expect(fetchCalls).toBe(2);
+      // Ba lượt gọi ra ngoài cho một địa chỉ GÕ TAY: search + place (gợi ý của Vietmap không có
+      // toạ độ) + route. Khách chọn gợi ý thì báo giá gửi kèm toạ độ và chỉ còn lượt route.
+      expect(fetchCalls).toBe(3);
+      expect(urls.some((u) => u.includes('/route/v4'))).toBe(true);
 
-      const geocodeRow = await prisma.geocodeCache.findFirst({ where: { provider: 'geoapify' } });
-      // Mã địa điểm là TOẠ ĐỘ (xem `placeToken`), không phải `place_id` thô của Geoapify.
-      expect(geocodeRow?.placeId).toBe('gp1:10.7743,106.7038');
-      const routeRow = await prisma.geoRouteCache.findFirst({ where: { provider: 'geoapify' } });
+      const geocodeRow = await prisma.geocodeCache.findFirst({ where: { provider: 'vietmap' } });
+      expect(geocodeRow?.placeId).toBe('geocode:near');
+      const routeRow = await prisma.geoRouteCache.findFirst({ where: { provider: 'vietmap' } });
       expect(Number(routeRow?.distanceKm)).toBe(3.42);
 
-      // Lần thứ hai đọc sạch từ cache — KHÔNG một request nào nữa. Đây là thứ quyết định hạn mức
-      // 3.000 credit/ngày có đủ dùng hay không, nên nó phải đúng với provider thật chứ không chỉ provider giả.
+      // Lần thứ hai đọc sạch từ cache — KHÔNG một request nào nữa. Mỗi request là tiền, nên điều
+      // này phải đúng với provider thật chứ không chỉ provider giả.
       const again = await liveDistance.forListing(vehicleId, NEAR_ADDRESS);
       expect(again.status).toBe(DELIVERY_DISTANCE_STATUS.AUTO);
       expect(again.fee).toBe('30000');
-      expect(fetchCalls).toBe(2);
+      expect(fetchCalls).toBe(3);
 
-      await prisma.geocodeCache.deleteMany({ where: { provider: 'geoapify' } });
-      await prisma.geoRouteCache.deleteMany({ where: { provider: 'geoapify' } });
+      await prisma.geocodeCache.deleteMany({ where: { provider: 'vietmap' } });
+      await prisma.geoRouteCache.deleteMany({ where: { provider: 'vietmap' } });
     },
   );
 });
