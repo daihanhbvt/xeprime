@@ -49,22 +49,14 @@ const PLACES_MAX_SUGGESTIONS = 6;
 /** Phương tiện đo quãng đường giao xe: ô tô — đúng thứ chạy trên đường khi giao xe tận nơi. */
 const ROUTE_VEHICLE = 'car';
 
-const DEFAULT_DAILY_CALL_BUDGET = 3000;
-
 /**
- * Mã địa điểm thời Geoapify (`gp1:<lat>,<lng>`, ADR 0037 điều 5) còn nằm trong dữ liệu cũ. Toạ độ
- * nằm sẵn trong mã nên giải ngay tại chỗ — gửi nó sang Vietmap chỉ tốn một lượt để nhận "không có".
+ * Phần quỹ lượt gọi trong ngày mà ảnh bản đồ tĩnh được dùng (ADR 0061 điều 3). Ảnh chỉ để XEM; gợi
+ * ý địa chỉ, tra địa chỉ lúc lưu và báo giá giao xe mới là đường có hệ quả tiền. Một sự cố vẽ ảnh
+ * hay một trận quét trang xe chỉ ăn được tới phần này — phần còn lại luôn để dành cho báo giá.
  */
-const LEGACY_PLACE_TOKEN_PREFIX = 'gp1:';
+const STATIC_MAP_BUDGET_SHARE = 0.2;
 
 const latLng = (p: GeoPoint): string => `${p.lat},${p.lng}`;
-
-function parseLegacyToken(token: string): GeoPoint | null {
-  if (!token.startsWith(LEGACY_PLACE_TOKEN_PREFIX)) return null;
-  const [lat, lng] = token.slice(LEGACY_PLACE_TOKEN_PREFIX.length).split(',');
-  const point = { lat: Number(lat), lng: Number(lng) };
-  return isValidGeoPoint(point) ? point : null;
-}
 
 interface VietmapBoundary {
   /** 0 = tỉnh/thành, 1 = quận/huyện (chỉ định dạng cũ), 2 = xã/phường. */
@@ -214,13 +206,19 @@ function toPoint(src: { lat?: number; lng?: number } | null | undefined): GeoPoi
 export class VietmapGeoProvider implements GeoProvider {
   readonly name = 'vietmap';
   private readonly logger = new Logger(VietmapGeoProvider.name);
+  /** Mọi request tới Vietmap, kể cả ảnh tĩnh. */
   private readonly budget: DailyCallBudget;
+  /** Riêng ảnh tĩnh — trần con {@link STATIC_MAP_BUDGET_SHARE} nằm TRONG `budget`. */
+  private readonly staticMapBudget: DailyCallBudget;
 
   constructor(private readonly config: ConfigService) {
-    this.budget = new DailyCallBudget(
-      () => Number(this.config.get('GEO_DAILY_CALL_BUDGET')) || DEFAULT_DAILY_CALL_BUDGET,
+    // Mặc định do `env.schema.ts` đặt — ConfigModule đã validate, ở đây chỉ đọc.
+    const dailyLimit = () => this.config.getOrThrow<number>('GEO_DAILY_CALL_BUDGET');
+    this.budget = new DailyCallBudget(dailyLimit, this.logger, 'Vietmap');
+    this.staticMapBudget = new DailyCallBudget(
+      () => Math.floor(dailyLimit() * STATIC_MAP_BUDGET_SHARE),
       this.logger,
-      'Vietmap',
+      'Vietmap (ảnh bản đồ tĩnh)',
     );
   }
 
@@ -374,18 +372,8 @@ export class VietmapGeoProvider implements GeoProvider {
     return suggestions;
   }
 
-  /** Một gợi ý đã chọn → toạ độ (Place v4). Mã `gp1:` cũ giải tại chỗ, không gọi mạng. */
+  /** Một gợi ý đã chọn → toạ độ (Place v4). Mã `gp1:` cũ không tới đây — `GeoService` giải trước. */
   placeDetails(placeId: string): Promise<PlaceDetail | null> {
-    const legacy = parseLegacyToken(placeId);
-    if (legacy) {
-      return Promise.resolve({
-        placeId,
-        point: legacy,
-        formattedAddress: null,
-        administrativeArea: null,
-        locality: null,
-      });
-    }
     return this.place(placeId);
   }
 
@@ -422,8 +410,8 @@ export class VietmapGeoProvider implements GeoProvider {
    * Ảnh bản đồ tĩnh (Static Map) — POST multipart, trả PNG có ghim ở tâm và khung địa chỉ `label`.
    *
    * Gửi kèm `address` thay vì để Vietmap tự tra ngược toạ độ ra chữ: dòng đó nơi gọi đã có sẵn.
-   * Gọi qua `GeoService.staticMap` — có cache theo điểm, nên mỗi chi nhánh chỉ tốn một lượt cho
-   * mỗi lần tiến trình API khởi động.
+   * Gọi qua `GeoService.staticMap` — có cache theo điểm, nên mỗi điểm chỉ tốn một lượt cho mỗi
+   * lần tiến trình API khởi động. Lấy lượt từ phần quỹ riêng của ảnh TRƯỚC, rồi mới từ quỹ chung.
    */
   async staticMapPng(point: GeoPoint, label: string): Promise<Buffer> {
     const form = new FormData();
@@ -434,6 +422,7 @@ export class VietmapGeoProvider implements GeoProvider {
     form.set('size', STATIC_MAP_SIZE);
     form.set('address', label);
 
+    this.staticMapBudget.take('Static map');
     this.budget.take('Static map');
     const res = await fetch(STATIC_MAP_URL, {
       method: 'POST',

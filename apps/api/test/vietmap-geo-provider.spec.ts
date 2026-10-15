@@ -18,7 +18,15 @@ const KEY = 'test-services-key';
 const BEN_THANH = { lat: 10.7721, lng: 106.698 };
 const NGUYEN_HUE = { lat: 10.7743, lng: 106.7038 };
 
-const config = { get: () => KEY, getOrThrow: () => KEY } as unknown as ConfigService;
+/** ConfigService giả theo TÊN biến — trần lượt gọi là số như sau khi env schema đã validate. */
+function configWith(budget: number): ConfigService {
+  const values: Record<string, unknown> = { VIETMAP_API_KEY: KEY, GEO_DAILY_CALL_BUDGET: budget };
+  return {
+    get: (name: string) => values[name],
+    getOrThrow: (name: string) => values[name],
+  } as unknown as ConfigService;
+}
+const config = configWith(3000);
 const emptyConfig = {
   get: () => undefined,
   getOrThrow: () => {
@@ -238,14 +246,6 @@ describe('Place v4 — chọn một gợi ý → toạ độ', () => {
     await expect(provider.placeDetails('auto:1')).rejects.toThrow(/HTTP 401/);
   });
 
-  it('mã gp1: thời Geoapify (dữ liệu cũ) giải tại chỗ, KHÔNG gọi mạng', async () => {
-    stubFetch({ body: housePlace });
-
-    const res = await provider.placeDetails('gp1:10.7743,106.7038');
-
-    expect(res!.point).toEqual(NGUYEN_HUE);
-    expect(urls).toHaveLength(0);
-  });
 });
 
 describe('Geocode — địa chỉ chữ → toạ độ (Search v4 rồi Place v4)', () => {
@@ -461,6 +461,23 @@ describe('Static map — ảnh bản đồ tĩnh để XEM (ADR 0061 điều 1)'
     stubImage(200, 'application/json', { code: 'OVER_DAILY_LIMIT' });
     await expect(provider.staticMapPng(BEN_THANH, 'x')).rejects.toThrow(/OVER_DAILY_LIMIT/);
   });
+
+  /**
+   * Ảnh chỉ để xem; báo giá giao xe mới là đường có hệ quả tiền. Ảnh dùng tới phần của nó (20% quỹ
+   * ngày) thì thôi vẽ, còn gợi ý/tra địa chỉ/báo giá vẫn còn lượt (ADR 0061 điều 3).
+   */
+  it('ảnh tĩnh chỉ dùng một PHẦN quỹ ngày — hết phần đó thì gợi ý vẫn còn lượt', async () => {
+    const limited = new VietmapGeoProvider(configWith(10));
+    stubImage(200, 'image/png', null);
+    await limited.staticMapPng(BEN_THANH, 'a');
+    await limited.staticMapPng(BEN_THANH, 'b');
+    await expect(limited.staticMapPng(BEN_THANH, 'c')).rejects.toBeInstanceOf(GeoQuotaExceededError);
+    expect(urls).toHaveLength(2);
+
+    stubFetch({ body: [] });
+    await expect(limited.searchPlaces('Lê Lợi')).resolves.toEqual([]);
+    expect(urls).toHaveLength(3);
+  });
 });
 
 /**
@@ -469,10 +486,7 @@ describe('Static map — ảnh bản đồ tĩnh để XEM (ADR 0061 điều 1)'
  * geocode gồm search + place là hai lượt.
  */
 describe('Trần lượt gọi trong ngày', () => {
-  const budgetConfig = {
-    get: (name: string) => (name === 'GEO_DAILY_CALL_BUDGET' ? 3 : KEY),
-    getOrThrow: () => KEY,
-  } as unknown as ConfigService;
+  const budgetConfig = configWith(3);
 
   it('chạm trần → ném GeoQuotaExceededError và KHÔNG gọi mạng', async () => {
     const limited = new VietmapGeoProvider(budgetConfig);

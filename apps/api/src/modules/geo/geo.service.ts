@@ -13,6 +13,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import {
   GEO_PROVIDER,
   GeoQuotaExceededError,
+  parseLegacyPlaceToken,
   storablePlaceId,
   type GeocodeResult,
   type GeoProvider,
@@ -46,11 +47,17 @@ const SUGGEST_BIAS_DECIMALS = 2;
 /**
  * Ảnh bản đồ tĩnh giữ trong bộ nhớ (ADR 0061 điều 1). Mỗi ảnh ~50–80KB; 200 ảnh ≈ 16MB — đủ cho
  * mọi chi nhánh đang có xe trên chợ ở giai đoạn pilot. Khởi động lại thì vẽ lại khi có người xem:
- * một giao dịch cho mỗi chi nhánh, và trình duyệt còn tự giữ ảnh (Cache-Control ở controller).
+ * một giao dịch cho mỗi điểm, và trình duyệt còn tự giữ ảnh (Cache-Control ở controller).
  */
 const STATIC_MAP_CACHE_MAX = 200;
 /** ~1m: hai lần hỏi cùng một chi nhánh luôn trúng một khoá; chi nhánh dời đi thì là ảnh mới. */
 const STATIC_MAP_KEY_DECIMALS = 5;
+/**
+ * Một điểm vừa vẽ HỎNG thì chừng này không thử lại. Lỗi trả `no-store`, nên không nhớ lỗi thì mỗi
+ * lượt mở trang xe trong lúc nhà cung cấp trục trặc lại là một lượt gọi tính tiền (và chờ tới hết
+ * timeout) — cho một tấm ảnh trang trí.
+ */
+const STATIC_MAP_FAILURE_TTL_MS = 10 * 60 * 1000;
 
 const sha256 = (input: string): string => createHash('sha256').update(input).digest('hex');
 
@@ -121,6 +128,8 @@ export class GeoService {
   private readonly staticMapCache = new Map<string, Buffer>();
   /** Lượt vẽ ĐANG CHẠY theo khoá — trang xe mới lên chợ mà nhiều người mở cùng lúc chỉ tốn một lượt. */
   private readonly staticMapInflight = new Map<string, Promise<Buffer | null>>();
+  /** Điểm vẽ hỏng gần đây → lúc hỏng — xem {@link STATIC_MAP_FAILURE_TTL_MS}. */
+  private readonly staticMapFailedAt = new Map<string, number>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -276,15 +285,6 @@ export class GeoService {
   }
 
   /**
-   * Chi tiết một địa điểm đã chọn. `null` = không tra được HOẶC không còn tồn tại — nơi cần phân
-   * biệt hai ca đó gọi {@link placeDetailsOutcome}.
-   */
-  async placeDetails(placeId: string): Promise<PlaceDetail | null> {
-    const res = await this.placeDetailsOutcome(placeId);
-    return res.outcome === 'ok' ? res.detail : null;
-  }
-
-  /**
    * Chi tiết một địa điểm đã chọn, nói RÕ vì sao không có — cùng lý do với {@link GeocodeOutcome}:
    * mã không ra gì thì khách chọn lại được, còn nhà cung cấp không trả lời (hết giao dịch, chạm
    * trần) thì bắt khách "chọn lại" là một vòng lặp không lối ra — ô địa chỉ phải mở cho nhập tay.
@@ -296,8 +296,20 @@ export class GeoService {
    * một mã hỏng gửi lại nhiều lần không được thành nhiều lượt tính tiền.
    */
   async placeDetailsOutcome(placeId: string): Promise<PlaceDetailsOutcome> {
-    if (!this.provider.enabled) return { outcome: 'unavailable' };
     const id = placeId.trim();
+    /*
+     * Mã `gp1:` thời Geoapify (ADR 0037 điều 5): toạ độ nằm sẵn trong mã — giải tại chỗ, KHÔNG
+     * hỏi nhà cung cấp và KHÔNG ghi cache. Ghi cache là mở cửa cho bất kỳ ai gửi `gp1:<toạ độ bịa>`
+     * rồi xin `/places/map` vẽ chỗ đó bằng tiền của mình (ADR 0061 điều 1).
+     */
+    const legacy = parseLegacyPlaceToken(id);
+    if (legacy) {
+      return {
+        outcome: 'ok',
+        detail: { placeId: id, point: legacy, formattedAddress: null, administrativeArea: null, locality: null },
+      };
+    }
+    if (!this.provider.enabled) return { outcome: 'unavailable' };
     if (!id) return { outcome: 'not_found' };
 
     const hash = sha256(`${this.provider.name}\nplace:${id}`);
@@ -448,14 +460,6 @@ export class GeoService {
   }
 
   /**
-   * Ảnh bản đồ TĨNH (PNG) quanh một điểm — để XEM, không tương tác. `null` = không vẽ được
-   * (chưa cấu hình, nhà cung cấp lỗi, chạm trần); nơi gọi trả 404 và web ẩn khung ảnh.
-   *
-   * Nơi gọi chỉ được đưa vào toạ độ của một thực thể CÓ THẬT (chi nhánh của một xe trên chợ, chi
-   * nhánh của chính gian hàng) — không bao giờ toạ độ do client gửi lên. Nhờ vậy tập ảnh có thể vẽ
-   * bị chặn bởi số chi nhánh, và cache bên dưới biến chi phí thành một lượt cho mỗi chi nhánh.
-   */
-  /**
    * Ảnh bản đồ tĩnh của một địa điểm ĐÃ ĐƯỢC CHỌN — ô địa chỉ hiện nó ngay dưới dòng vừa chọn
    * (ADR 0061 điều 1). `null` = không có gì để vẽ; nơi gọi trả 404 và web ẩn khung ảnh.
    *
@@ -481,6 +485,15 @@ export class GeoService {
     return this.staticMap(point, cached.formattedAddress?.trim() || `${point.lat}, ${point.lng}`);
   }
 
+  /**
+   * Ảnh bản đồ TĨNH (PNG) quanh một điểm — để XEM, không tương tác. `null` = không vẽ được
+   * (chưa cấu hình, nhà cung cấp lỗi, chạm trần); nơi gọi trả 404 và web ẩn khung ảnh.
+   *
+   * Nơi gọi chỉ được đưa vào toạ độ của một thực thể CÓ THẬT (chi nhánh của một xe trên chợ, chi
+   * nhánh của chính gian hàng, địa điểm vừa tra) — không bao giờ toạ độ do client gửi lên. Nhờ vậy
+   * tập ảnh có thể vẽ bị chặn bởi dữ liệu thật, và cache bên dưới biến chi phí thành một lượt cho
+   * mỗi điểm. Vẽ hỏng thì nhớ {@link STATIC_MAP_FAILURE_TTL_MS}.
+   */
   async staticMap(point: GeoPoint, label: string): Promise<Buffer | null> {
     if (!this.provider.enabled || !isValidGeoPoint(point)) return null;
     const key = [
@@ -495,6 +508,11 @@ export class GeoService {
       this.staticMapCache.delete(key);
       this.staticMapCache.set(key, hit);
       return hit;
+    }
+    const failedAt = this.staticMapFailedAt.get(key);
+    if (failedAt !== undefined) {
+      if (Date.now() - failedAt < STATIC_MAP_FAILURE_TTL_MS) return null;
+      this.staticMapFailedAt.delete(key);
     }
     const running = this.staticMapInflight.get(key);
     if (running) return running;
@@ -512,6 +530,12 @@ export class GeoService {
       })
       .catch((err: unknown) => {
         this.providerFailed('Vẽ bản đồ tĩnh thất bại', err);
+        this.staticMapFailedAt.set(key, Date.now());
+        while (this.staticMapFailedAt.size > STATIC_MAP_CACHE_MAX) {
+          const oldest = this.staticMapFailedAt.keys().next().value;
+          if (oldest === undefined) break;
+          this.staticMapFailedAt.delete(oldest);
+        }
         return null;
       })
       .finally(() => this.staticMapInflight.delete(key));

@@ -1,9 +1,6 @@
 import type { Logger } from '@nestjs/common';
+import { vnDateKey } from '../../common/day-range';
 import { GeoQuotaExceededError } from './geo-provider';
-
-/** Việt Nam không có giờ mùa hè — "ngày" của trần lượt gọi là ngày theo UTC+7 cố định. */
-const VN_OFFSET_MS = 7 * 60 * 60 * 1000;
-const vnDayKey = (now: number): string => new Date(now + VN_OFFSET_MS).toISOString().slice(0, 10);
 
 /**
  * Cầu dao chi phí theo ngày cho một nhà cung cấp bản đồ tính tiền theo lượt (ADR 0061 điều 3).
@@ -29,7 +26,7 @@ export class DailyCallBudget {
 
   /** Lấy một lượt, hoặc ném {@link GeoQuotaExceededError} — TRƯỚC khi gọi mạng. */
   take(api: string): void {
-    const day = vnDayKey(Date.now());
+    const day = vnDateKey(new Date(Date.now()));
     if (this.usage.day !== day) this.usage = { day, calls: 0, warned: false };
     const limit = this.limit();
     if (this.usage.calls >= limit) {

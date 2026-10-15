@@ -46,6 +46,7 @@ import type {
   PublicShopSummaryDto,
   ShopListingQueryDto,
 } from './dto/public-listing.dto';
+import { branchMapTarget } from '../../common/address-view';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
 import { stableCacheKey, TtlCache } from '../../common/ttl-cache';
 import { searchTokens } from '@xeprime/domain';
@@ -1128,6 +1129,7 @@ export class PublicListingsService {
     const storefront = resolveStorefront(v.tenant, now);
 
     const pickupAddress = v.branch?.address?.trim() || v.tenant.profile?.address?.trim() || null;
+    const pickupMapTarget = branchMapTarget(v.branch);
     const pickupPoint = pickupAddress
       ? {
           // Tên chi nhánh chỉ có nghĩa khi địa chỉ ĐẾN TỪ chi nhánh đó.
@@ -1141,18 +1143,12 @@ export class PublicListingsService {
            */
           phone: storefront.kind === STOREFRONT_KIND.SHOP ? (v.branch?.phone ?? null) : null,
           /*
-           * Toạ độ CHỈ đi kèm khi địa chỉ đến từ chính chi nhánh đó. Địa chỉ rơi về hồ sơ gian
-           * hàng mà vẫn ghim toạ độ chi nhánh là ghim sai chỗ — trang xe sẽ chỉ khách tới một
-           * điểm không phải nơi ghi trong dòng địa chỉ ngay bên trên.
+           * Toạ độ CHỈ đi kèm khi địa chỉ đến từ chính chi nhánh đó — cùng một quy tắc với ảnh
+           * `/public/listings/:id/pickup-map` (`branchMapTarget`). Địa chỉ rơi về hồ sơ gian hàng
+           * mà vẫn ghim toạ độ chi nhánh là ghim sai chỗ.
            */
-          latitude:
-            v.branch?.address?.trim() && v.branch.latitude != null
-              ? Number(v.branch.latitude)
-              : null,
-          longitude:
-            v.branch?.address?.trim() && v.branch.longitude != null
-              ? Number(v.branch.longitude)
-              : null,
+          latitude: pickupMapTarget?.point.lat ?? null,
+          longitude: pickupMapTarget?.point.lng ?? null,
         }
       : null;
 

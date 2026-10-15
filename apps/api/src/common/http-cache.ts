@@ -43,9 +43,10 @@ export const NO_STORE_CACHE_CONTROL = 'no-store';
  * vì URL ảnh mang toạ độ (`?v=`) nên chi nhánh dời đi là một URL mới, bản cũ không bao giờ hiện sai
  * chỗ. Đặt bằng `@Header` là an toàn: nhánh lỗi đi qua `AllExceptionsFilter`, nơi ép `no-store`.
  */
-export const STATIC_MAP_CACHE_CONTROL = 'public, max-age=86400, stale-while-revalidate=604800';
+const STATIC_MAP_MAX_AGE_SECONDS = 24 * 60 * 60;
+export const STATIC_MAP_CACHE_CONTROL = `public, max-age=${STATIC_MAP_MAX_AGE_SECONDS}, stale-while-revalidate=${STATIC_MAP_MAX_AGE_SECONDS * 7}`;
 /** Như trên cho ảnh sau đăng nhập (chi nhánh của gian hàng) — proxy dùng chung không được giữ. */
-export const PRIVATE_STATIC_MAP_CACHE_CONTROL = 'private, max-age=86400';
+export const PRIVATE_STATIC_MAP_CACHE_CONTROL = `private, max-age=${STATIC_MAP_MAX_AGE_SECONDS}`;
 
 /** Đánh dấu route công khai được cache dùng chung `sMaxAgeSeconds` giây (chỉ khi thành công). */
 export function PublicCache(sMaxAgeSeconds: number): MethodDecorator & ClassDecorator {

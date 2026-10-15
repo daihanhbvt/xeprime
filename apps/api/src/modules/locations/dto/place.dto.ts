@@ -1,9 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsLatitude, IsLongitude, IsOptional, IsString, Length, MaxLength } from 'class-validator';
-
-/** Độ dài tối đa của mã địa điểm khi TRA (không phải khi lưu — xem `storablePlaceId`). */
-const PLACE_REF_MAX_LENGTH = 1024;
+import { PLACE_REF_MAX_LENGTH } from '../../geo/geo-provider';
 
 const trimmed = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;

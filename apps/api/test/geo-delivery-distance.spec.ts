@@ -19,6 +19,7 @@ import {
 } from '../src/modules/geo/geo-provider';
 import { VietmapGeoProvider } from '../src/modules/geo/vietmap-geo.provider';
 import { DeliveryDistanceService } from '../src/modules/pricing/delivery-distance.service';
+import { PickupMapService } from '../src/modules/pricing/pickup-map.service';
 import type { SaveRentalPolicyDto } from '../src/modules/pricing/dto/pricing.dto';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { makePricingService, makeVehiclesService, vehicleCreator } from './helpers/service-factory';
@@ -399,12 +400,12 @@ describe('GeoService — cache là thứ giữ hạn mức miễn phí đủ dù
       });
     };
 
-    const first = await geo.placeDetails('auto:near');
-    const second = await geo.placeDetails('auto:near');
+    const first = await geo.placeDetailsOutcome('auto:near');
+    const second = await geo.placeDetailsOutcome('auto:near');
 
     expect(detailCalls).toBe(1);
-    expect(first?.point).toEqual(NEAR_POINT);
-    expect(second).toEqual({
+    expect(first.outcome === 'ok' && first.detail.point).toEqual(NEAR_POINT);
+    expect(second.outcome === 'ok' && second.detail).toEqual({
       placeId: 'auto:near',
       point: NEAR_POINT,
       formattedAddress: '12 Nguyễn Huệ, Phường Sài Gòn, Thành Phố Hồ Chí Minh',
@@ -433,11 +434,11 @@ describe('GeoService — cache là thứ giữ hạn mức miễn phí đủ dù
       });
     };
 
-    await geo.placeDetails(longId);
-    const again = await geo.placeDetails(longId);
+    await geo.placeDetailsOutcome(longId);
+    const again = await geo.placeDetailsOutcome(longId);
 
     expect(detailCalls).toBe(1);
-    expect(again?.placeId).toBe(longId);
+    expect(again.outcome === 'ok' && again.detail.placeId).toBe(longId);
     const row = await prisma.geocodeCache.findFirst({
       where: { provider: 'fake', query: `place:${longId}` },
     });
@@ -544,17 +545,67 @@ describe('GeoService — cache là thứ giữ hạn mức miễn phí đủ dù
     expect(provider.lastStaticLabel).toBe('12 Nguyễn Huệ, Phường Sài Gòn, Thành Phố Hồ Chí Minh');
   });
 
-  maybe('bản đồ tĩnh: nhà cung cấp lỗi → null, KHÔNG nhớ lỗi', async () => {
+  /**
+   * Mã `gp1:` cũ mang sẵn toạ độ. Nó được giải tại chỗ nhưng KHÔNG được vào cache — nếu không,
+   * `gp1:<toạ độ bịa>` rồi `/places/map` là cách vẽ bản đồ bất kỳ đâu bằng tiền của mình.
+   */
+  maybe('mã gp1: cũ giải tại chỗ, không hỏi nhà cung cấp, không ghi cache, không có ảnh', async () => {
+    await clearGeoCache();
+    let detailCalls = 0;
+    provider.placeDetails = () => {
+      detailCalls += 1;
+      return Promise.resolve(null);
+    };
+    const legacyId = 'gp1:16.0544,108.2022';
+
+    const res = await geo.placeDetailsOutcome(legacyId);
+
+    expect(res.outcome === 'ok' && res.detail.point).toEqual({ lat: 16.0544, lng: 108.2022 });
+    expect(detailCalls).toBe(0);
+    await expect(
+      prisma.geocodeCache.count({ where: { query: `place:${legacyId}` } }),
+    ).resolves.toBe(0);
+    await expect(geo.placeMap(legacyId)).resolves.toBeNull();
+    expect(provider.staticMapCalls).toBe(0);
+  });
+
+  /**
+   * Lỗi trả `no-store`: không nhớ lỗi thì mỗi lượt mở trang xe lúc nhà cung cấp trục trặc là một
+   * lượt tính tiền nữa cho cùng một tấm ảnh trang trí.
+   */
+  maybe('bản đồ tĩnh: nhà cung cấp lỗi → null, và NHỚ lỗi một lúc rồi mới thử lại', async () => {
     let calls = 0;
     provider.staticMapPng = () => {
       calls += 1;
       return Promise.reject(new Error('Static map trả HTTP 503'));
     };
     const point = { lat: 16.0544, lng: 108.2022 };
+    const now = jest.spyOn(Date, 'now');
+    try {
+      now.mockReturnValue(Date.parse('2026-10-15T03:00:00Z'));
+      await expect(geo.staticMap(point, 'Đà Nẵng')).resolves.toBeNull();
+      await expect(geo.staticMap(point, 'Đà Nẵng')).resolves.toBeNull();
+      expect(calls).toBe(1);
 
-    await expect(geo.staticMap(point, 'Đà Nẵng')).resolves.toBeNull();
-    await expect(geo.staticMap(point, 'Đà Nẵng')).resolves.toBeNull();
-    expect(calls).toBe(2);
+      // Hết thời gian nhớ lỗi → thử lại đúng một lần.
+      now.mockReturnValue(Date.parse('2026-10-15T03:11:00Z'));
+      await expect(geo.staticMap(point, 'Đà Nẵng')).resolves.toBeNull();
+      expect(calls).toBe(2);
+    } finally {
+      now.mockRestore();
+    }
+  });
+
+  maybe('bản đồ tĩnh: cache có trần — ảnh lâu không ai xem bị đẩy ra, mở lại thì vẽ lại', async () => {
+    const first = { lat: 10.5, lng: 106.5 };
+    await geo.staticMap(first, 'Điểm đầu');
+    for (let i = 1; i <= 200; i += 1) {
+      await geo.staticMap({ lat: 10.5 + i / 1000, lng: 106.5 }, 'Điểm khác');
+    }
+    expect(provider.staticMapCalls).toBe(201);
+
+    await geo.staticMap(first, 'Điểm đầu');
+    expect(provider.staticMapCalls).toBe(202);
   });
 
   maybe('chưa cấu hình nhà cung cấp → không ném lỗi ra luồng đặt xe', async () => {
@@ -776,6 +827,59 @@ describe('DeliveryDistanceService — năm trạng thái, không trạng thái n
       where: { id: vehicleId },
       data: { publicStatus: 'approved_public' },
     });
+  });
+});
+
+/**
+ * Ảnh điểm nhận xe trên trang xe công khai (ADR 0061 điều 1). Endpoint công khai, nên mọi nhánh
+ * "không có ảnh" phải trả 404 TRƯỚC khi chạm tới nhà cung cấp tính tiền.
+ */
+describe('PickupMapService — ảnh điểm nhận xe chỉ cho xe trên chợ, đúng quy tắc toạ độ của trang xe', () => {
+  let maps: PickupMapService;
+  let originalAddress: string | null;
+
+  beforeEach(async () => {
+    if (!dbAvailable) return;
+    maps = new PickupMapService(asService, geo);
+    const branch = await prisma.tenantBranch.findFirst({ where: { tenantId }, select: { address: true } });
+    originalAddress = branch?.address ?? null;
+  });
+
+  afterEach(async () => {
+    if (!dbAvailable) return;
+    await prisma.tenantBranch.updateMany({ where: { tenantId }, data: { address: originalAddress } });
+  });
+
+  maybe('chi nhánh có địa chỉ + toạ độ → ảnh, nhãn là địa chỉ chi nhánh', async () => {
+    await prisma.tenantBranch.updateMany({
+      where: { tenantId },
+      data: { address: '1 Lê Lợi, Phường Sài Gòn, Thành Phố Hồ Chí Minh' },
+    });
+
+    await expect(maps.forListing(vehicleId)).resolves.toEqual(Buffer.from('png'));
+    expect(provider.lastStaticLabel).toBe('1 Lê Lợi, Phường Sài Gòn, Thành Phố Hồ Chí Minh');
+  });
+
+  maybe('chi nhánh có toạ độ nhưng KHÔNG có địa chỉ → 404, không vẽ (trang xe cũng ẩn toạ độ)', async () => {
+    await prisma.tenantBranch.updateMany({ where: { tenantId }, data: { address: null } });
+
+    await expect(maps.forListing(vehicleId)).rejects.toMatchObject({
+      response: { code: 'NOT_FOUND' },
+    });
+    expect(provider.staticMapCalls).toBe(0);
+  });
+
+  maybe('xe không trên chợ → 404, không vẽ', async () => {
+    await prisma.tenantBranch.updateMany({ where: { tenantId }, data: { address: '1 Lê Lợi, Hồ Chí Minh' } });
+    await prisma.vehicle.update({ where: { id: vehicleId }, data: { publicStatus: 'draft' } });
+    try {
+      await expect(maps.forListing(vehicleId)).rejects.toMatchObject({
+        response: { code: 'NOT_FOUND' },
+      });
+      expect(provider.staticMapCalls).toBe(0);
+    } finally {
+      await prisma.vehicle.update({ where: { id: vehicleId }, data: { publicStatus: 'approved_public' } });
+    }
   });
 });
 

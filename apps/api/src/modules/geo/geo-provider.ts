@@ -1,4 +1,4 @@
-import type { GeoPoint } from '@xeprime/domain';
+import { isValidGeoPoint, type GeoPoint } from '@xeprime/domain';
 
 /**
  * Khớp nối bản đồ trung lập nhà cung cấp (24/08/2026).
@@ -56,6 +56,28 @@ export const PLACE_ID_STORAGE_MAX_LENGTH = 255;
 /** Mã địa điểm nếu lưu được, ngược lại `null` — xem {@link PLACE_ID_STORAGE_MAX_LENGTH}. */
 export function storablePlaceId(placeId: string | null | undefined): string | null {
   return placeId && placeId.length <= PLACE_ID_STORAGE_MAX_LENGTH ? placeId : null;
+}
+
+/**
+ * Độ dài tối đa của một mã địa điểm khi TRA (`/places/detail`, `/places/map`) — rộng hơn hẳn cột
+ * lưu ({@link PLACE_ID_STORAGE_MAX_LENGTH}), vẫn có trần để một query string khổng lồ không đi
+ * thẳng tới nhà cung cấp tính tiền.
+ */
+export const PLACE_REF_MAX_LENGTH = 1024;
+
+/** Mã địa điểm thời Geoapify (`gp1:<lat>,<lng>`, ADR 0037 điều 5) — còn nằm trong dữ liệu cũ. */
+const LEGACY_PLACE_TOKEN_PREFIX = 'gp1:';
+
+/**
+ * Toạ độ nằm sẵn trong một mã `gp1:` cũ, hoặc `null` nếu không phải mã cũ. Định dạng của DỮ LIỆU
+ * chứ không của nhà cung cấp nào, nên giải ở `GeoService` — gửi nó sang nhà cung cấp hiện hành
+ * chỉ tốn một lượt để nhận "không có".
+ */
+export function parseLegacyPlaceToken(placeId: string): GeoPoint | null {
+  if (!placeId.startsWith(LEGACY_PLACE_TOKEN_PREFIX)) return null;
+  const [lat, lng] = placeId.slice(LEGACY_PLACE_TOKEN_PREFIX.length).split(',');
+  const point = { lat: Number(lat), lng: Number(lng) };
+  return isValidGeoPoint(point) ? point : null;
 }
 
 /**

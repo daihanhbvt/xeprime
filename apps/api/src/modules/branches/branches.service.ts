@@ -13,13 +13,13 @@ import {
   BRANCH_STATUS,
   type BranchStatus,
 } from '@xeprime/types';
-import { isValidGeoPoint } from '@xeprime/domain';
 import { AuditService } from '../audit/audit.service';
 import { BillingService } from '../billing/billing.service';
 import { GeoService } from '../geo/geo.service';
 import { AddressService, type ResolvedAddress } from '../locations/address.service';
 import { ListingsService } from '../public-listings/listings.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { branchMapTarget } from '../../common/address-view';
 import { currentSupportScope } from '../../common/support/support-request.store';
 import { assertNoOpenTrips } from '../../common/support/support-open-trips';
 import {
@@ -151,15 +151,8 @@ export class BranchesService {
    * gian hàng khác là 404 như mọi route ở đây.
    */
   async mapPng(tenantId: string, id: string): Promise<Buffer> {
-    const row = await this.findOwned(tenantId, id);
-    const point = { lat: Number(row.latitude), lng: Number(row.longitude) };
-    const png =
-      row.latitude != null && row.longitude != null && isValidGeoPoint(point)
-        ? await this.geo.staticMap(
-            point,
-            row.address?.trim() || [row.name, row.province?.name].filter(Boolean).join(', '),
-          )
-        : null;
+    const target = branchMapTarget(await this.findOwned(tenantId, id));
+    const png = target ? await this.geo.staticMap(target.point, target.label) : null;
     if (!png) {
       throw new NotFoundException({
         code: API_ERROR_CODE.NOT_FOUND,
