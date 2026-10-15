@@ -58,3 +58,7 @@ XePrime_Project_Tracking.xlsx
 
 # Bản dump DB tạo tay trước khi migrate — chứa DỮ LIỆU THẬT, không bao giờ vào git.
 backups/
+
+# Khối site của app ngoài XePrime — deploy của dự án đó cài lên VPS (docs/deployment.md §10).
+/deploy/sites/*.caddy
+/deploy/sites/*.bak
