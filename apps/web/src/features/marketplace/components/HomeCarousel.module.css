@@ -172,3 +172,18 @@
     transition: none;
   }
 }
+
+/* ── Giao diện tối (Dark Mode - Figma `19879:66213`) ──────────────────────── */
+
+:global([data-theme="dark"]) .dot {
+  background: #717680;
+}
+
+:global([data-theme="dark"]) .dot:hover {
+  background: #a4a7ae;
+}
+
+:global([data-theme="dark"]) .dotActive {
+  background: #fff5e5;
+}
+

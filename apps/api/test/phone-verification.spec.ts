@@ -106,7 +106,9 @@ describe('Phone verification OTP (Phase 4)', () => {
     const phone = mkPhone();
     const { devCode } = await service.sendOtp(phone, BOOKING, C);
     expect(devCode).toMatch(/^\d{6}$/);
-    await expect(service.verifyOtp(phone, BOOKING, devCode!, C)).resolves.toBeUndefined();
+    await expect(service.verifyOtp(phone, BOOKING, devCode!, C)).resolves.toEqual(
+      expect.any(String),
+    );
     expect((await latestRow(phone))?.status).toBe(PHONE_VERIFICATION_STATUS.VERIFIED);
   });
 
@@ -169,7 +171,7 @@ describe('Phone verification OTP (Phase 4)', () => {
     // Mã vẫn còn nguyên cho đúng mục đích của nó.
     await expect(
       service.verifyOtp(phone, PHONE_VERIFICATION_PURPOSE.REGISTER, devCode!, C),
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual(expect.any(String));
   });
 
   maybe(
@@ -233,7 +235,9 @@ describe('Mã OTP test (OTP_BYPASS_CODE — dev/staging)', () => {
   maybe('chưa gửi mã nào: gõ mã test là xác thực xong, ghi một hàng verified', async () => {
     const phone = mkPhone();
     await withEnv({ OTP_BYPASS_CODE: BYPASS }, async () => {
-      await expect(service.verifyOtp(phone, BOOKING, BYPASS, C)).resolves.toBeUndefined();
+      await expect(service.verifyOtp(phone, BOOKING, BYPASS, C)).resolves.toEqual(
+        expect.any(String),
+      );
     });
     expect((await latestRow(phone))?.status).toBe(PHONE_VERIFICATION_STATUS.VERIFIED);
 
@@ -262,7 +266,9 @@ describe('Mã OTP test (OTP_BYPASS_CODE — dev/staging)', () => {
       // Mã thật gửi lúc SMS BẬT vẫn qua như thường.
       jest.mocked(service.isSmsDisabled).mockResolvedValueOnce(false);
       const { devCode } = await service.sendOtp(phone, BOOKING, C);
-      await expect(service.verifyOtp(phone, BOOKING, devCode!, C)).resolves.toBeUndefined();
+      await expect(service.verifyOtp(phone, BOOKING, devCode!, C)).resolves.toEqual(
+        expect.any(String),
+      );
     });
   });
 
@@ -284,7 +290,9 @@ describe('Mã OTP test (OTP_BYPASS_CODE — dev/staging)', () => {
       response: { code: API_ERROR_CODE.OTP_INVALID },
     });
     await withEnv({ NODE_ENV: 'development' }, async () => {
-      await expect(service.verifyOtp(phone, BOOKING, BYPASS, C)).resolves.toBeUndefined();
+      await expect(service.verifyOtp(phone, BOOKING, BYPASS, C)).resolves.toEqual(
+        expect.any(String),
+      );
     });
   });
 });
@@ -305,7 +313,9 @@ describe('Công tắc gửi SMS OTP (admin — chỉ dev/staging)', () => {
     await expect(off.verifyOtp(phone, BOOKING, '000000', C)).rejects.toMatchObject({
       response: { code: API_ERROR_CODE.OTP_INVALID },
     });
-    await expect(off.verifyOtp(phone, BOOKING, '123456', C)).resolves.toBeUndefined();
+    await expect(off.verifyOtp(phone, BOOKING, '123456', C)).resolves.toEqual(
+      expect.any(String),
+    );
   });
 
   maybe('BẬT: gửi qua nhà mạng như thường', async () => {

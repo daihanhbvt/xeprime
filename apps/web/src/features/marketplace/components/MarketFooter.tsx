@@ -11,6 +11,7 @@ import { AppStoreQr } from '@/features/content-page/components/AppStoreQr';
 import { SUPPORTED_LOCALES } from '@/i18n/config';
 import { isActivePath } from '@/lib/active-path';
 import { cx } from '@/lib/cx';
+import { useTheme } from '@/lib/theme';
 import { FOOTER_COLUMNS, FOOTER_SERVICE_LINKS } from '../constants';
 import styles from './MarketFooter.module.css';
 
@@ -60,6 +61,9 @@ export function MarketFooter() {
   const tLocale = useTranslations('Common.locale');
   const pathname = usePathname();
   const localeChoice = useLocaleChoice();
+  const { theme } = useTheme();
+  const footerLogoSrc =
+    theme === 'dark' ? '/home/logo-gold-footer-dark.svg' : '/home/logo-gold-footer.svg';
 
   /*
    * Mục ĐANG XEM: chữ vàng + `aria-current="page"`. Ba mục dịch vụ (`/search?serviceType=…`)
@@ -95,7 +99,7 @@ export function MarketFooter() {
           <div className={styles.about}>
             <Link href={ROUTES.HOME} className={styles.brand} aria-label={APP_NAME}>
               <Image
-                src="/home/logo-gold-footer.svg"
+                src={footerLogoSrc}
                 alt=""
                 width={167}
                 height={52}

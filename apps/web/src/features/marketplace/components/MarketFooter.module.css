@@ -6,26 +6,15 @@
 .footer {
   position: relative;
   overflow: hidden;
-  background: var(--xp-market-footer-bg);
-  color: var(--xp-color-text-on-dark);
+  background: var(--xp-color-bg);
+  color: var(--xp-color-text);
+  border-top: 1px solid var(--xp-color-border);
   isolation: isolate;
 }
 
-/*
- * Vệt sáng: ảnh dọc xoay −90° (rồi lật dọc) thành một dải ngang phủ cả chân trang. Khung xoay phải
- * có cạnh = cạnh ĐẢO của chân trang, nên đo bằng đơn vị container (`cqw`/`cqh`) — chân trang cao
- * bao nhiêu thì dải sáng phủ đúng bấy nhiêu.
- */
+/* Bản sáng dùng nền sáng sạch, ẩn vệt sáng tối cũ */
 .glow {
-  position: absolute;
-  z-index: -1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  container-type: size;
-  inset: 0;
-  mix-blend-mode: screen;
-  pointer-events: none;
+  display: none;
 }
 
 .glowInner {
@@ -65,7 +54,7 @@
   align-items: flex-start;
   justify-content: space-between;
   padding-bottom: var(--xp-space-20);
-  border-bottom: 1px solid var(--xp-color-bg-inverse);
+  border-bottom: 1px solid var(--xp-color-border);
   gap: var(--xp-space-40);
 }
 
@@ -96,7 +85,7 @@
 
 .tagline {
   margin: 0;
-  color: var(--xp-color-text-on-dark);
+  color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body);
   font-weight: var(--xp-font-weight-medium);
   line-height: var(--xp-line-height-body);
@@ -129,7 +118,7 @@
 
 .colTitle {
   margin: 0;
-  color: var(--xp-color-primary-bright);
+  color: var(--xp-color-primary);
   font-size: var(--xp-font-size-body-lg);
   font-weight: var(--xp-font-weight-semibold);
   line-height: var(--xp-line-height-body-lg);
@@ -146,7 +135,7 @@
 }
 
 .link {
-  color: var(--xp-color-text-on-dark-muted);
+  color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body);
   line-height: var(--xp-line-height-body);
   transition: color 0.15s ease;
@@ -155,7 +144,7 @@
 
 .link:hover,
 .linkActive {
-  color: var(--xp-color-primary-bright);
+  color: var(--xp-color-primary);
 }
 
 .link:focus-visible {
@@ -175,13 +164,13 @@
 
 .copyright {
   margin: 0;
-  color: var(--xp-color-text-on-dark-muted);
+  color: var(--xp-color-text-placeholder);
   font-size: var(--xp-font-size-body);
   line-height: var(--xp-line-height-body);
 }
 
 .copyrightBrand {
-  color: var(--xp-color-primary-pale);
+  color: var(--xp-color-primary-bright);
 }
 
 .locales {
@@ -198,7 +187,7 @@
   width: 1px;
   height: 12px;
   margin: 0 var(--xp-space-12);
-  background: var(--xp-color-text-secondary);
+  background: var(--xp-color-border);
 }
 
 .localeButton {
@@ -271,3 +260,53 @@
     transition: none;
   }
 }
+
+/* ── Giao diện tối (Dark Mode - Figma `19879:66325`) ──────────────────────── */
+
+:global([data-theme="dark"]) .footer {
+  background: #000000;
+  border-top-color: #333741;
+  color: #ffffff;
+}
+
+:global([data-theme="dark"]) .glow {
+  position: absolute;
+  z-index: -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  container-type: size;
+  inset: 0;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+:global([data-theme="dark"]) .colTitle {
+  color: #e9ac29;
+}
+
+:global([data-theme="dark"]) .link {
+  color: #a4a7ae;
+}
+
+:global([data-theme="dark"]) .link:hover,
+:global([data-theme="dark"]) .linkActive {
+  color: #edbb4f;
+}
+
+:global([data-theme="dark"]) .top {
+  border-bottom-color: #333741;
+}
+
+:global([data-theme="dark"]) .divider {
+  background: #333741;
+}
+
+:global([data-theme="dark"]) .tagline {
+  color: #d5d7da;
+}
+
+:global([data-theme="dark"]) .copyright {
+  color: #a4a7ae;
+}
+

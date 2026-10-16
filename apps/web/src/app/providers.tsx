@@ -2,7 +2,7 @@
 
 import { AntdRegistry } from '@ant-design/nextjs-registry';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { App as AntdApp, ConfigProvider } from 'antd';
+import { App as AntdApp, ConfigProvider, theme as antdThemeEngine } from 'antd';
 import enUS from 'antd/locale/en_US';
 import viVN from 'antd/locale/vi_VN';
 import type { Locale as AntdLocale } from 'antd/lib/locale';
@@ -16,6 +16,7 @@ import { BadgeRealtimeProvider } from '@/features/badges/BadgeRealtimeProvider';
 import type { AppLocale } from '@/i18n/config';
 import { useZoneQueryClient } from '@/lib/query-client';
 import type { NavPreferences } from '@/lib/ui-preferences';
+import { ThemeProvider, useTheme, type ThemeMode } from '@/lib/theme';
 import { WorkspaceProvider } from '@/hooks/use-workspace';
 import { makeStore } from '@/store/make-store';
 import { antdTheme } from '@/styles/theme';
@@ -38,19 +39,6 @@ const ANTD_LOCALE: Readonly<Record<AppLocale, AntdLocale>> = {
   en: enUS,
 };
 
-/**
- * Thứ tự bọc có ý nghĩa:
- *   AntdRegistry  — thu style CSS-in-JS của AntD lúc SSR, phải nằm ngoài cùng
- *   ConfigProvider — design token + locale AntD theo ngôn ngữ đang dùng
- *   ReduxProvider  — UI state
- *   QueryClient    — server data
- *
- * `NextIntlClientProvider` nằm NGOÀI cụm này (ở `layout.tsx`, phía server) nên `useLocale()`
- * dùng được ở đây, và bó message không phải đi qua một client boundary thừa.
- *
- * ADR 0003: không có StyledComponentsRegistry ở đây. Style riêng dùng CSS Modules,
- * nên chỉ còn đúng một cơ chế thu style SSR.
- */
 export interface ProvidersProps {
   children: ReactNode;
   /**
@@ -64,10 +52,29 @@ export interface ProvidersProps {
    * của khu (`useZoneQueryClient`); chế độ `path` đọc khu từ đường dẫn.
    */
   hostZone: Zone;
+  /**
+   * Tuỳ chọn giao diện sáng/tối từ cookie phía server.
+   */
+  initialTheme?: ThemeMode;
 }
 
-export function Providers({ children, navPreferences, hostZone }: ProvidersProps) {
+export function Providers({ children, navPreferences, hostZone, initialTheme }: ProvidersProps) {
+  return (
+    <ThemeProvider initialTheme={initialTheme}>
+      <ProvidersInner navPreferences={navPreferences} hostZone={hostZone}>
+        {children}
+      </ProvidersInner>
+    </ThemeProvider>
+  );
+}
+
+function ProvidersInner({
+  children,
+  navPreferences,
+  hostZone,
+}: Omit<ProvidersProps, 'initialTheme'>) {
   const locale = useLocale();
+  const { theme: currentTheme } = useTheme();
 
   // makeStore tạo trong state chứ không phải module scope: module scope là singleton dùng chung
   // giữa các request trên server, tức là rò dữ liệu giữa người dùng.
@@ -75,21 +82,20 @@ export function Providers({ children, navPreferences, hostZone }: ProvidersProps
   // MỘT QueryClient cho MỖI khu — mỗi site là một tài khoản riêng (ADR 0053), xem `useZoneQueryClient`.
   const queryClient = useZoneQueryClient(hostZone);
 
+  const activeTheme = {
+    ...antdTheme,
+    algorithm:
+      currentTheme === 'dark'
+        ? antdThemeEngine.darkAlgorithm
+        : antdThemeEngine.defaultAlgorithm,
+  };
+
   return (
     <AntdRegistry>
-      <ConfigProvider theme={antdTheme} locale={ANTD_LOCALE[locale]}>
+      <ConfigProvider theme={activeTheme} locale={ANTD_LOCALE[locale]}>
         <ReduxProvider store={store}>
           <QueryClientProvider client={queryClient}>
             <AntdApp>
-              {/*
-                BadgeRealtimeProvider nằm TRONG ChatRealtimeProvider: nó nghe Firestore bằng chính
-                phiên Firebase mà chat đã mở, nên phải có context đó trước.
-              */}
-              {/*
-                WorkspaceProvider nằm TRONG QueryClientProvider (nó đọc `/auth/me`) và NGOÀI cả
-                hai vỏ: `AppShell` vừa đọc khu làm việc vừa là cổng chặn của nó nên không tự cấp
-                được, còn `AccountShell` cũng cần đúng giá trị đó.
-              */}
               <WorkspaceProvider>
                 <ChatRealtimeProvider>
                   <BadgeRealtimeProvider>{children}</BadgeRealtimeProvider>
