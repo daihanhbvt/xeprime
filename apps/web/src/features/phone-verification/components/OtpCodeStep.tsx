@@ -3,12 +3,13 @@
 import { Alert, Button, Form } from 'antd';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
+import { OTP_POLICY } from '@xeprime/types';
 import type { usePhoneVerify } from '../hooks/use-phone-verify';
 import { maskPhone } from '../mask';
 import { OtpCodeInput } from './OtpCodeInput';
 import styles from './OtpCodeStep.module.css';
 
-const OTP_LENGTH = 6;
+const OTP_LENGTH = OTP_POLICY.CODE_LENGTH;
 
 interface OtpCodeStepProps {
   /** Số đã (hoặc sẽ) nhận mã — hiện ở dạng che. */

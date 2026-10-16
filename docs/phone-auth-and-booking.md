@@ -1,6 +1,6 @@
 # Đăng nhập bằng SĐT, đăng ký có OTP và đặt xe cần tài khoản
 
-> Cập nhật: 14/10/2026 · Quyết định: [ADR 0060](decisions/0060-phone-login-and-account-required-booking.md)
+> Cập nhật: 16/10/2026 (hộp tài khoản site khách theo design v2) · Quyết định: [ADR 0060](decisions/0060-phone-login-and-account-required-booking.md)
 > (thay bản "đặt xe không mật khẩu" 06/10/2026 — trước đây file này tên
 > `guest-booking-passwordless.md`).
 >
@@ -15,20 +15,32 @@ của từng luật nằm ở ADR 0060.
 
 | Site | Realm | Đăng nhập | Đăng ký | Quên mật khẩu |
 | --- | --- | --- | --- | --- |
-| Khách `xeprime.vn` | `customer` | **SĐT + mật khẩu** · Google · Facebook — modal `?auth=login` | SĐT · tên hiển thị · mật khẩu · nhập lại → **mã OTP** | SĐT → mã OTP → mật khẩu mới |
+| Khách `xeprime.vn` | `customer` | **SĐT + mật khẩu** · Google · Facebook — modal `?auth=login` | SĐT · tên hiển thị · mật khẩu · xác nhận → **mã OTP** (popup) → đã đăng nhập | SĐT → mã OTP → mật khẩu mới — ba bước ngay trong hộp `?auth=forgot` |
 | Partner `partner.xeprime.vn` | `partner` | như trên — trang `/login` của site partner | như trên (rồi onboarding chọn tuyến — ADR 0040) | như trên |
 | Quản trị `admin.xeprime.vn` | `platform` | email (hoặc SĐT) + mật khẩu, `passwordOnly` | không tự đăng ký | qua email |
 
 - Site khách/partner gõ email vào ô SĐT ⇒ form báo sai định dạng; gọi thẳng API ⇒
   **400 `PHONE_LOGIN_REQUIRED`**. SĐT nhận cả dấu cách/chấm/gạch.
 - Cùng một SĐT ở site khách và site partner là HAI tài khoản, mật khẩu riêng (ADR 0053).
+- "Ghi nhớ tài khoản" (hộp site khách): đăng nhập THÀNH CÔNG với ô được tick thì nhớ SĐT ở
+  `localStorage` (`xp.auth.rememberedPhone`) để lần sau điền sẵn; bỏ tick rồi đăng nhập thì quên.
+  Không bao giờ lưu mật khẩu/token, không đổi thời hạn phiên.
 - **Không còn đăng nhập bằng OTP.** OTP chỉ xác minh SĐT: lúc đăng ký, lúc quên mật khẩu, và ở cổng
   xác minh (§4).
 - Đăng nhập/đăng ký KHÔNG tạo gian hàng; site partner đi tiếp qua onboarding như cũ.
 
 ## 2. Đăng ký
 
-`AuthPanel` → `RegisterForm`:
+Logic đăng nhập/đăng ký là MỘT hook `useAuthFlow` (`features/auth/hooks/use-auth-flow.ts`); hai bề mặt
+chỉ khác phần nhìn:
+
+- **Site khách** — hộp tài khoản design v2 (`AuthModal` → `MarketAuthForms`): bấm "Đăng ký" mở popup
+  **"Xác minh tài khoản"** (`VerifyAccountDialog`, sáu ô mã, "Gửi lại mã (00:58)"). Mã đúng ⇒ tài khoản
+  ra đời VÀ đã đăng nhập: hộp đóng thẳng, chạy tiếp hành động bị chặn hoặc đi tới `next` — không có
+  màn "Tạo tài khoản thành công". Đóng popup ⇒ về form, thứ đã điền còn nguyên.
+- **Site partner** — `AuthPanel` → `RegisterForm` + bước mã `OtpCodeStep` như dưới đây.
+
+Các bước (chung):
 
 1. Nhập SĐT (gợi ý: dùng để đăng nhập), tên hiển thị, mật khẩu, nhập lại.
 2. "Đăng ký" → `POST /auth/phone/send-otp { phone, purpose: "register" }`. SĐT đã có tài khoản trong
@@ -42,8 +54,19 @@ Môi trường có **mã test** (dev/staging — §8) thì bỏ qua bước gử
 
 ## 3. Quên mật khẩu
 
-`ForgotPasswordView` → `ForgotPasswordByPhone` ở site khách/partner (site quản trị giữ
-`ForgotPasswordByEmail`):
+**Site khách** — ba bước ngay trong hộp (`?auth=forgot`, `MarketForgotPassword`; `/forgot-password` cũ
+chuyển về đây):
+
+1. SĐT → `send-otp { purpose: "password_reset" }` (như bước 1 dưới đây).
+2. "Nhập mã OTP": sáu ô → `POST /auth/phone/verify-otp { purpose: "password_reset" }` — mã sai báo NGAY
+   ở bước này. Vạch tiến trình của bước đã qua bấm được để quay lại sửa số.
+3. "Đặt lại mật khẩu": mật khẩu mới + xác nhận → `reset-otp { phone, code, password }` với mã đã xác
+   minh (server nhận trong 10 phút, vẫn đếm lần đoán sai, rồi TIÊU nó — ADR 0060 §4 bổ sung 16/10). Mã chết giữa chừng ⇒ về
+   bước 2 kèm câu lỗi.
+4. Popup "Thành công!" → "Đăng nhập" về form đăng nhập, số vừa đặt lại điền sẵn. **Không tự đăng nhập.**
+
+**Site partner** — `ForgotPasswordView` → `ForgotPasswordByPhone` (một màn + popup mã; site quản trị
+giữ `ForgotPasswordByEmail`):
 
 1. Nhập SĐT → `send-otp { purpose: "password_reset" }`. Phản hồi **giống hệt** dù số có tài khoản
    hay không; số không có tài khoản thì không có SMS nào đi (`deliver: false`) nhưng cooldown vẫn

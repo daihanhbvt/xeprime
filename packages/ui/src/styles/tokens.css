@@ -64,6 +64,7 @@
   /* ─── Trạng thái nghiệp vụ (tách khỏi gold thương hiệu) ───────────────── */
   --xp-color-success: #039855;
   --xp-color-success-bg: #ecfdf3;
+  --xp-color-success-subtle: #f6fef9;
   /* Cặp warning chưa đổi: v2 đã đọc chưa có bậc chữ/nền cảnh báo (ADR 0062 điều 5). */
   --xp-color-warning: #e07b26;
   --xp-color-warning-bg: #fff7ed;
@@ -155,6 +156,8 @@
   --xp-line-height-h1: 38px;
   --xp-font-size-h2: 24px;
   --xp-line-height-h2: 32px;
+  --xp-font-size-lead: 20px;
+  --xp-line-height-lead: 30px;
   --xp-font-size-h3: 18px;
   --xp-line-height-h3: 28px;
   --xp-font-size-h4: 16px;
@@ -231,6 +234,7 @@
   --xp-elevation-glow: 0 4px 12px 0 rgba(253, 178, 38, 0.16);
   --xp-elevation-ambient: 0 0 8px 0 rgba(10, 13, 18, 0.04);
   --xp-elevation-header: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 25px 50px -12px rgba(0, 0, 0, 0.05);
+  --xp-elevation-xl: 0 20px 24px -4px rgba(10, 13, 18, 0.08), 0 8px 8px -4px rgba(10, 13, 18, 0.03);
   --xp-border-radius-chip: 8px;
   --xp-border-radius-control: 12px;
   --xp-border-radius-card: 16px;

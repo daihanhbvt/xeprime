@@ -3,6 +3,7 @@ import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
   ACCOUNT_REALM,
   API_ERROR_CODE,
+  OTP_POLICY,
   PHONE_VERIFICATION_PURPOSE,
   USER_STATUS,
   type AccountRealm,
@@ -433,6 +434,104 @@ describe('Quên mật khẩu bằng SĐT (ADR 0060)', () => {
       expect(await prisma.passwordResetToken.count({ where: { userId, usedAt: null } })).toBe(0);
     },
   );
+
+  maybe('mã đã dùng để đặt lại một lần thì không đặt lại được lần nữa', async () => {
+    const phone = mkPhone();
+    await register(phone, C, 'matkhau-cu-1');
+    const code = await otpFor(phone, RESET, C);
+    await auth.resetPasswordWithOtp(phone, code, 'matkhau-moi-2', C);
+
+    await expect(auth.resetPasswordWithOtp(phone, code, 'matkhau-moi-3', C)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.OTP_INVALID },
+    });
+    expect(await auth.loginWithPassword(phone, 'matkhau-moi-2', C)).toBeDefined();
+  });
+
+  maybe(
+    'web hai bước: xác minh mã ở màn "Nhập mã OTP" rồi đặt mật khẩu bằng CÙNG mã — một lần duy nhất',
+    async () => {
+      const phone = mkPhone();
+      const userId = await register(phone, C, 'matkhau-cu-1');
+      const code = await otpFor(phone, RESET, C);
+
+      await phoneVerification.verifyOtp(phone, RESET, code, C, null);
+      await auth.resetPasswordWithOtp(phone, code, 'matkhau-moi-2', C);
+      expect((await auth.loginWithPassword(phone, 'matkhau-moi-2', C)).userId).toBe(userId);
+
+      await expect(
+        auth.resetPasswordWithOtp(phone, code, 'matkhau-moi-3', C),
+      ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.OTP_INVALID } });
+    },
+  );
+
+  maybe('mã đã xác minh quá cửa sổ 10 phút: OTP_EXPIRED (gửi lại mã), mật khẩu không đổi', async () => {
+    const phone = mkPhone();
+    await register(phone, C, 'matkhau-cu-1');
+    const code = await otpFor(phone, RESET, C);
+    await phoneVerification.verifyOtp(phone, RESET, code, C, null);
+    await prisma.phoneVerification.updateMany({
+      where: { phone: normalizePhone(phone), purpose: RESET },
+      data: { verifiedAt: new Date(Date.now() - 11 * 60_000) },
+    });
+
+    await expect(auth.resetPasswordWithOtp(phone, code, 'matkhau-moi-2', C)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.OTP_EXPIRED },
+    });
+    expect(await auth.loginWithPassword(phone, 'matkhau-cu-1', C)).toBeDefined();
+  });
+
+  maybe(
+    'mã ĐÃ xác minh vẫn bị đếm lần đoán sai: chạm trần thì khoá, mã đúng cũng hết dùng được',
+    async () => {
+      const phone = mkPhone();
+      await register(phone, C, 'matkhau-cu-1');
+      const code = await otpFor(phone, RESET, C);
+      await phoneVerification.verifyOtp(phone, RESET, code, C, null);
+
+      const wrong = wrongCode(code);
+      for (let i = 1; i < OTP_POLICY.MAX_ATTEMPTS; i++) {
+        await expect(
+          auth.resetPasswordWithOtp(phone, wrong, 'matkhau-moi-2', C),
+        ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.OTP_INVALID } });
+      }
+      await expect(auth.resetPasswordWithOtp(phone, wrong, 'matkhau-moi-2', C)).rejects.toMatchObject(
+        { response: { code: API_ERROR_CODE.OTP_LOCKED } },
+      );
+
+      await expect(auth.resetPasswordWithOtp(phone, code, 'matkhau-moi-2', C)).rejects.toMatchObject({
+        response: { code: API_ERROR_CODE.OTP_INVALID },
+      });
+      expect(await auth.loginWithPassword(phone, 'matkhau-cu-1', C)).toBeDefined();
+    },
+  );
+
+  maybe('đã xác minh một mã rồi xin mã MỚI: mã mới (đang chờ) vẫn đặt lại được', async () => {
+    const phone = mkPhone();
+    const userId = await register(phone, C, 'matkhau-cu-1');
+    const first = await otpFor(phone, RESET, C);
+    await phoneVerification.verifyOtp(phone, RESET, first, C, null);
+    let second = await otpFor(phone, RESET, C);
+    // Hai mã ngẫu nhiên trùng nhau thì xin lại — test cần hai mã KHÁC nhau.
+    while (second === first) second = await otpFor(phone, RESET, C);
+
+    await auth.resetPasswordWithOtp(phone, second, 'matkhau-moi-2', C);
+    expect((await auth.loginWithPassword(phone, 'matkhau-moi-2', C)).userId).toBe(userId);
+  });
+
+  maybe('hai lượt đặt lại song song với cùng một mã đã xác minh: đúng MỘT lượt thắng', async () => {
+    const phone = mkPhone();
+    await register(phone, C, 'matkhau-cu-1');
+    const code = await otpFor(phone, RESET, C);
+    await phoneVerification.verifyOtp(phone, RESET, code, C, null);
+
+    const results = await Promise.allSettled([
+      auth.resetPasswordWithOtp(phone, code, 'matkhau-moi-a1', C),
+      auth.resetPasswordWithOtp(phone, code, 'matkhau-moi-b2', C),
+    ]);
+    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+    const rejected = results.find((r) => r.status === 'rejected') as PromiseRejectedResult;
+    expect(rejected.reason).toMatchObject({ response: { code: API_ERROR_CODE.OTP_INVALID } });
+  });
 
   maybe(
     'tài khoản cũ chưa có mật khẩu / chưa xác minh SĐT: đặt mật khẩu + đóng dấu xác minh',

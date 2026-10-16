@@ -166,6 +166,11 @@ Hai hệ quả ngoài token, cùng đợt:
   được bằng chuột và không có chế độ thẻ-ở-giữa.
 - **Mobile (≤ 640px)**: mọi tiêu đề khối canh giữa, có gạch vàng; nút "Xem tất cả" chuyển xuống
   dưới slider.
+- **Icon của bản vẽ v2 trên bề mặt chợ** (16/10/2026): trang chủ và hộp tài khoản dùng đúng VECTOR
+  GỐC của Figma — tệp `public/home/*.svg`, hoặc component SVG nội tuyến tô `currentColor` khi icon cần
+  đổi màu theo trạng thái (`features/auth/components/AuthIcons.tsx`: ô nhập, nút đóng, dấu tích).
+  Đây là tài sản của bản vẽ, không phải thư viện icon thứ hai: không cài gói icon nào mới, và khu
+  quản lý/quản trị vẫn chỉ dùng `@ant-design/icons` (CLAUDE.md §4).
 - **Trần banner hiển thị cùng lúc có mã lỗi riêng** `BANNER_VISIBLE_LIMIT_EXCEEDED` (`details.max`)
   thay vì `VALIDATION_FAILED` — màn quản trị nói đúng lý do thay vì đoán.
 - **API thêm trường cho thẻ** (chỉ THÊM, không đổi trường cũ): `PublicListingDto` có

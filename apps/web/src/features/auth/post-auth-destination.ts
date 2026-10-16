@@ -427,20 +427,30 @@ export const AUTH_INTENT = {
 
 export type AuthIntent = (typeof AUTH_INTENT)[keyof typeof AUTH_INTENT];
 
-/** Chế độ của form auth. */
+/**
+ * Chế độ của form auth.
+ *
+ * `forgot` chỉ có ở hộp đăng nhập của SITE KHÁCH (quên mật khẩu ba bước ngay trong hộp, design v2).
+ * Site partner/quản trị quên mật khẩu ở trang riêng (`zoneAuthRoutes(zone).forgotPassword`), nên
+ * `AuthPanel` dùng chung của hai site đó chỉ nhận `PanelAuthMode`.
+ */
 export const AUTH_MODE = {
   LOGIN: 'login',
   REGISTER: 'register',
+  FORGOT: 'forgot',
 } as const;
 
 export type AuthMode = (typeof AUTH_MODE)[keyof typeof AUTH_MODE];
+
+/** Hai chế độ của form đăng nhập/đăng ký dùng chung (`AuthPanel`). */
+export type PanelAuthMode = Exclude<AuthMode, typeof AUTH_MODE.FORGOT>;
 
 /**
  * Hộp đăng nhập mở GIỮA một luồng đang dở — chỉ sống trong bộ nhớ, không lên URL.
  *
  * `booking`: khách bấm "Tiếp tục" ở hộp yêu cầu thuê khi chưa đăng nhập (ADR 0060). Hộp nói rõ vì
- * sao được hỏi đăng nhập, và đăng ký xong thì đóng thẳng để luồng thuê đi tiếp — không chen màn
- * "Tạo tài khoản thành công" với các lối rẽ sang trang tài khoản / trở thành chủ xe.
+ * sao được hỏi đăng nhập (phụ đề riêng). Đăng nhập hay đăng ký xong đều đóng thẳng để luồng thuê
+ * đi tiếp — như mọi lần mở hộp từ design v2.
  */
 export const AUTH_CONTEXT = {
   BOOKING: 'booking',
@@ -449,7 +459,9 @@ export const AUTH_CONTEXT = {
 export type AuthContext = (typeof AUTH_CONTEXT)[keyof typeof AUTH_CONTEXT];
 
 export function isAuthMode(value: string | null | undefined): value is AuthMode {
-  return value === AUTH_MODE.LOGIN || value === AUTH_MODE.REGISTER;
+  return (
+    value === AUTH_MODE.LOGIN || value === AUTH_MODE.REGISTER || value === AUTH_MODE.FORGOT
+  );
 }
 
 /**

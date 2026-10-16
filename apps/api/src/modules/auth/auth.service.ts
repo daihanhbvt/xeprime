@@ -471,6 +471,10 @@ export class AuthService {
    * Mã đúng còn là bằng chứng sở hữu số ⇒ đóng dấu `phone_verified_at` nếu chưa có (tài khoản cũ
    * đăng ký trước khi đăng ký bắt OTP). Link đặt lại qua email đang lơ lửng mất hiệu lực, như ở
    * `resetPassword`.
+   *
+   * Mã nhận ở dạng đang chờ (app gửi mã + mật khẩu cùng lúc) HOẶC đã qua bước "Nhập mã OTP" của web
+   * (`verify-otp` trước, mật khẩu mới ở màn sau) — và bị TIÊU trong cùng transaction đổi mật khẩu,
+   * nên mỗi mã chỉ đổi được mật khẩu một lần.
    */
   async resetPasswordWithOtp(
     rawPhone: string,
@@ -484,13 +488,7 @@ export class AuthService {
         message: 'Tài khoản quản trị đặt lại mật khẩu qua email',
       });
     }
-    await this.phoneVerification.verifyOtp(
-      rawPhone,
-      PHONE_VERIFICATION_PURPOSE.PASSWORD_RESET,
-      code,
-      realm,
-      null,
-    );
+    const verificationId = await this.phoneVerification.verifyPasswordResetOtp(rawPhone, code, realm);
 
     const account = await this.findResettableAccount(normalizePhone(rawPhone), realm);
     if (!account) {
@@ -503,6 +501,7 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
     const now = new Date();
     await this.prisma.$transaction(async (tx) => {
+      await this.phoneVerification.consumePasswordResetWithinTx(tx, verificationId);
       await tx.user.update({
         where: { id: account.id },
         data: { passwordHash, ...(account.phoneVerifiedAt ? {} : { phoneVerifiedAt: now }) },

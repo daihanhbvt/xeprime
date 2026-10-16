@@ -34,6 +34,12 @@ import { OTP_PROVIDER, type OtpProvider } from './otp-provider';
  */
 const REGISTER_VERIFIED_WINDOW_MINUTES = 30;
 
+/**
+ * Mã `password_reset` đã qua bước "Nhập mã OTP" của web (verify-otp) còn được lượt đặt mật khẩu mới
+ * nhận trong bao lâu. Đủ để gõ hai ô mật khẩu, không đủ để giữ một mã mở cửa tài khoản qua buổi.
+ */
+const PASSWORD_RESET_VERIFIED_WINDOW_MINUTES = 10;
+
 @Injectable()
 export class PhoneVerificationService {
   constructor(
@@ -208,6 +214,97 @@ export class PhoneVerificationService {
   }
 
   /**
+   * Chứng minh sở hữu SĐT cho lượt ĐẶT LẠI MẬT KHẨU (ADR 0060 §4) — trả id hàng mã đã chứng minh,
+   * để nơi gọi tiêu ĐÚNG hàng đó. Nhận một trong hai:
+   *
+   *  - mã đang chờ (`pending`) — app native gửi mã cùng mật khẩu mới trong MỘT lượt;
+   *  - mã đã qua bước "Nhập mã OTP" của web (`verify-otp` purpose `password_reset`) trong
+   *    `PASSWORD_RESET_VERIFIED_WINDOW_MINUTES`: CÙNG realm, CÙNG SĐT, băm của `code` khớp đúng hàng.
+   *
+   * Mã đã xác minh vẫn bị ĐẾM LẦN ĐOÁN SAI như lúc còn chờ: mỗi lượt gửi sai khi đang có mã đã xác
+   * minh trong cửa sổ làm tăng `attempt_count` của chính hàng đó, chạm `OTP_POLICY.MAX_ATTEMPTS` thì
+   * hàng thành `failed` (`OTP_LOCKED`). Thiếu phép đếm này, mã đã qua bước 2 đứng yên cho dò cả cửa sổ
+   * — chỉ còn throttle theo IP chặn. Lần đếm tính dồn với những lần sai trước khi xác minh.
+   *
+   * Mã đúng nhưng đã quá cửa sổ ⇒ `OTP_EXPIRED` (gửi lại mã), không phải "sai mã" — khách gõ đúng mã
+   * của mình mà bị báo sai thì không biết phải làm gì tiếp.
+   *
+   * Khác `verifyRegistrationOtp`, ở đây không có gì tự chặn lượt thứ hai (đặt lại xong, số vẫn có
+   * tài khoản) — nên nơi gọi PHẢI tiêu mã bằng `consumePasswordResetWithinTx` trong CÙNG transaction
+   * đổi mật khẩu.
+   */
+  async verifyPasswordResetOtp(rawPhone: string, code: string, realm: AccountRealm): Promise<string> {
+    const phone = normalizePhone(rawPhone);
+    const since = new Date(Date.now() - PASSWORD_RESET_VERIFIED_WINDOW_MINUTES * 60 * 1000);
+    const latest = await this.prisma.phoneVerification.findFirst({
+      where: {
+        realm,
+        phone,
+        purpose: PHONE_VERIFICATION_PURPOSE.PASSWORD_RESET,
+        status: PHONE_VERIFICATION_STATUS.VERIFIED,
+      },
+      orderBy: { verifiedAt: 'desc' },
+      select: { id: true, otpHash: true, verifiedAt: true, attemptCount: true },
+    });
+
+    if (latest) {
+      const fresh = latest.verifiedAt !== null && latest.verifiedAt >= since;
+      if (latest.otpHash === this.hash(code, phone)) {
+        if (fresh) return latest.id;
+        throw new BadRequestException({
+          code: API_ERROR_CODE.OTP_EXPIRED,
+          message: 'Mã đã hết hạn — hãy gửi lại mã mới',
+        });
+      }
+      if (fresh) {
+        const attemptCount = latest.attemptCount + 1;
+        if (attemptCount >= OTP_POLICY.MAX_ATTEMPTS) {
+          await this.prisma.phoneVerification.update({
+            where: { id: latest.id },
+            data: { status: PHONE_VERIFICATION_STATUS.FAILED, attemptCount },
+          });
+          throw new BadRequestException({
+            code: API_ERROR_CODE.OTP_LOCKED,
+            message: 'Bạn đã nhập sai quá nhiều lần — hãy gửi lại mã mới',
+          });
+        }
+        await this.prisma.phoneVerification.update({
+          where: { id: latest.id },
+          data: { attemptCount },
+        });
+      }
+    }
+
+    // Không khớp mã đã xác minh: có thể là mã MỚI đang chờ (gửi lại, hoặc app một lượt) — đối chiếu
+    // như thường, kể cả mã test ở dev/staging. Không có mã chờ ⇒ `OTP_INVALID`, như mọi lần sai mã.
+    return this.verifyOtp(rawPhone, PHONE_VERIFICATION_PURPOSE.PASSWORD_RESET, code, realm, null);
+  }
+
+  /**
+   * Tiêu ĐÚNG hàng mã vừa chứng minh: một mã mở quyền đổi mật khẩu đúng MỘT lần.
+   *
+   * Chạy trong transaction đổi mật khẩu của nơi gọi. Hai lượt song song cùng một mã thì lượt sau
+   * chờ khoá hàng, đọc lại thấy mã đã tiêu, nhận `OTP_INVALID` — và transaction của nó (kèm hash
+   * mật khẩu nó định ghi) rollback. Không có trạng thái "đã dùng" riêng: `expired` đã đúng nghĩa
+   * "không còn mở được gì".
+   */
+  async consumePasswordResetWithinTx(
+    tx: Prisma.TransactionClient,
+    verificationId: string,
+  ): Promise<void> {
+    const { count } = await tx.phoneVerification.updateMany({
+      where: { id: verificationId, status: PHONE_VERIFICATION_STATUS.VERIFIED },
+      data: { status: PHONE_VERIFICATION_STATUS.EXPIRED },
+    });
+    if (count !== 1) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.OTP_INVALID,
+        message: 'Mã xác thực không đúng',
+      });
+    }
+  }
+
+  /**
    * Đối chiếu mã. Đúng → đánh dấu verified; nếu khách đang đăng nhập (`userId`) thì stamp luôn
    * `users.phone` + `phone_verified_at` để lần sau khỏi verify lại. Sai/hết hạn → lỗi typed.
    * Nhập sai được đếm (`attempt_count`); chạm OTP_MAX_ATTEMPTS → khoá mã (status=failed) và trả
@@ -216,6 +313,8 @@ export class PhoneVerificationService {
    * Mã test (`resolveOtpBypassCode` — dev/staging, KHÔNG BAO GIỜ production) bỏ qua cả ba phép kiểm
    * trên: có mã đang chờ thì đánh dấu chính hàng đó verified, chưa gửi mã nào thì tạo một hàng
    * verified mới — để hàng mã luôn phản ánh đúng lượt xác thực vừa xảy ra.
+   *
+   * Trả id của hàng mã đã được đánh dấu verified.
    */
   async verifyOtp(
     rawPhone: string,
@@ -227,7 +326,7 @@ export class PhoneVerificationService {
      */
     realm: AccountRealm,
     userId?: string | null,
-  ): Promise<void> {
+  ): Promise<string> {
     const phone = normalizePhone(rawPhone);
     const row = await this.prisma.phoneVerification.findFirst({
       where: {
@@ -246,8 +345,7 @@ export class PhoneVerificationService {
      */
     const bypassCode = resolveOtpBypassCode(this.config);
     if (bypassCode !== null && code === bypassCode && (await this.isSmsDisabled())) {
-      await this.markVerified({ rowId: row?.id ?? null, realm, phone, purpose, userId });
-      return;
+      return this.markVerified({ rowId: row?.id ?? null, realm, phone, purpose, userId });
     }
 
     if (!row) {
@@ -293,12 +391,13 @@ export class PhoneVerificationService {
       });
     }
 
-    await this.markVerified({ rowId: row.id, realm, phone, purpose, userId });
+    return this.markVerified({ rowId: row.id, realm, phone, purpose, userId });
   }
 
   /**
    * Chốt một lượt xác thực đúng: đánh dấu hàng mã verified (hoặc tạo hàng verified khi mã test
    * được gõ mà chưa gửi mã nào), và nếu có `userId` thì gắn SĐT vào tài khoản — cùng MỘT transaction.
+   * Trả id của hàng mã đó.
    */
   private async markVerified(args: {
     rowId: string | null;
@@ -306,9 +405,10 @@ export class PhoneVerificationService {
     phone: string;
     purpose: PhoneVerificationPurpose;
     userId?: string | null;
-  }): Promise<void> {
+  }): Promise<string> {
     const { rowId, realm, phone, purpose, userId } = args;
     const now = new Date();
+    const verificationId = rowId ?? newId();
     try {
       await this.prisma.$transaction(async (tx) => {
         const verified = {
@@ -321,7 +421,7 @@ export class PhoneVerificationService {
         } else {
           await tx.phoneVerification.create({
             data: {
-              id: newId(),
+              id: verificationId,
               realm,
               phone,
               purpose,
@@ -358,6 +458,7 @@ export class PhoneVerificationService {
       }
       throw error;
     }
+    return verificationId;
   }
 
   private hash(code: string, phone: string): string {

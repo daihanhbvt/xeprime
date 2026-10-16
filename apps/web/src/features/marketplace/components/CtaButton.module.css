@@ -69,6 +69,18 @@
   filter: brightness(0.92);
 }
 
+/* ─── Nút xám: nền trắng, viền xám, chữ xám đậm (đăng nhập Google/Facebook) ── */
+.neutral {
+  border-color: var(--xp-color-border-strong);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-secondary);
+}
+
+.neutral:hover {
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+}
+
 /* ─── Nút viền: nền trắng, viền vàng nhạt ─────────────────────────────────── */
 .outline {
   border-color: var(--xp-color-primary-muted);
@@ -96,6 +108,35 @@
   color: var(--xp-color-primary-hover);
 }
 
+/*
+ * Nút gửi của hộp thoại (hộp đăng nhập v2): cao 48, đệm 20, chữ 16/24. Đặt SAU `.gradient` để
+ * bỏ bóng phát sáng — bản vẽ hộp không có nó (cùng độ đặc hiệu, thứ tự trong file quyết định).
+ */
+.form {
+  min-height: 48px;
+  padding: var(--xp-space-12) var(--xp-space-20);
+  box-shadow: none;
+  font-size: var(--xp-font-size-body-lg);
+  gap: var(--xp-space-sm);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+.block {
+  display: flex;
+  width: 100%;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  filter: none;
+  opacity: var(--xp-disabled-opacity);
+}
+
+.button[aria-busy='true'] {
+  cursor: progress;
+  opacity: 1;
+}
+
 .icon {
   display: inline-flex;
   flex: none;
@@ -107,8 +148,29 @@
   min-width: 0;
 }
 
+/* Vòng quay "đang gửi" — CSS thuần để nút vẫn render được trong Server Component. */
+.spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: spin 0.8s linear infinite;
+  border-radius: var(--xp-border-radius-pill);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .button {
     transition: none;
+  }
+
+  .spinner {
+    animation-duration: 2.4s;
   }
 }
