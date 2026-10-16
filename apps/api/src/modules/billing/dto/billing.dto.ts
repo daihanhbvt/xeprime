@@ -452,7 +452,7 @@ export class PlanInvoiceLineDto {
 }
 
 /**
- * Thông tin nhận chuyển khoản của NỀN TẢNG — web dựng ảnh VietQR quicklink từ đây.
+ * Thông tin nhận chuyển khoản của NỀN TẢNG — web dựng ảnh VietQR (của SePay, `qr.sepay.vn`) từ đây.
  *
  * `configured: false` khi nhóm SEPAY_* chưa khai: màn thanh toán rơi về mã + số tiền như
  * trước R2, không hiện một QR trỏ vào tài khoản rỗng. Đây là thông tin CÔNG KHAI của nền tảng
