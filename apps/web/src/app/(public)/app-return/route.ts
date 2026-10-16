@@ -1,4 +1,5 @@
 import { PAYMENT_RETURN_PARAM } from '@xeprime/types';
+import { HTTP_STATUS } from '@/constants/http-status';
 import { nativeTripHref } from '@/features/payment-gateway/native-trip-return';
 
 /**
@@ -19,7 +20,8 @@ export function GET(request: Request): Response {
     params.get(PAYMENT_RETURN_PARAM.TRIP_ORDER),
   );
   return new Response(null, {
-    status: 302,
+    // 302, không phải 307: đích là deep link, không có phương thức hay body nào cần giữ.
+    status: HTTP_STATUS.FOUND,
     headers: {
       Location: href ?? '/',
       // Mỗi lượt một đích riêng — không để proxy/trình duyệt dùng lại lượt chuyển hướng cũ.
