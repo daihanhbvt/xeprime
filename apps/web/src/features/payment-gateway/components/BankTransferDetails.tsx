@@ -54,7 +54,7 @@ export function BankTransferDetails({
             src={qrUrl}
             alt={t('qrAlt')}
             width={220}
-            height={260}
+            height={220}
             className={styles.qr}
             loading="lazy"
             onError={() => setQrFailed(true)}

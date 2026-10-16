@@ -368,7 +368,7 @@ export const envSchema = z
       (value) => (value === '' ? undefined : value),
       z.string().min(16).optional(),
     ),
-    /** Mã ngân hàng theo chuẩn VietQR (vd `VCB`, `TCB`) — dùng dựng ảnh QR quicklink. */
+    /** Mã ngân hàng theo chuẩn VietQR (vd `VCB`, `TCB`) — dùng dựng ảnh VietQR của SePay (`qr.sepay.vn`). */
     SEPAY_BANK_CODE: z.string().optional(),
     SEPAY_ACCOUNT_NUMBER: z.string().optional(),
     /** Tên chủ tài khoản in trên QR — người chuyển đối chiếu trước khi bấm gửi. */

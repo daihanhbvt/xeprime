@@ -663,7 +663,7 @@ duy nhất là `SepayService` (`apps/api/src/modules/sepay/`).
 | Loại | Tên | Giá trị | Ghi chú |
 | --- | --- | --- | --- |
 | **Secret** | `SEPAY_API_KEY` | khoá **webhook** đặt trong bảng điều khiển SePay | **≥ 16 ký tự** (`z.string().min(16)`). SePay gửi kèm `Authorization: Apikey <key>`, API so time-safe. KHÔNG phải khoá gọi API của SePay |
-| Variable | `SEPAY_BANK_CODE` | mã ngân hàng chuẩn VietQR, vd `VCB`, `TCB` | dựng ảnh QR quicklink |
+| Variable | `SEPAY_BANK_CODE` | mã ngân hàng chuẩn VietQR, vd `VCB`, `TCB` | dựng ảnh VietQR của SePay (`qr.sepay.vn`) |
 | Variable | `SEPAY_ACCOUNT_NUMBER` | số tài khoản nhận | in vào QR ⇒ công khai theo bản chất |
 | Variable | `SEPAY_ACCOUNT_NAME` | tên chủ tài khoản | in trên QR để người chuyển đối chiếu |
 

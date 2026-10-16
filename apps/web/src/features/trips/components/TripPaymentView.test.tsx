@@ -88,7 +88,7 @@ describe('TripPaymentView', () => {
     expect(screen.getAllByText('XPH23456789').length).toBeGreaterThan(0);
     const src = container.querySelector('img')!.getAttribute('src')!;
     expect(src).toContain('amount=140800');
-    expect(src).toContain('addInfo=XPH23456789');
+    expect(src).toContain('des=XPH23456789');
     // Không có nút tự khai đã trả — tiền về thì realtime tự lật trang.
     expect(screen.queryByRole('button', { name: /đã chuyển khoản/i })).toBeNull();
     // Quay lại là về CHUYẾN này.

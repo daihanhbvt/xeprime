@@ -87,10 +87,10 @@ describe('InvoiceCheckoutView', () => {
     expect(screen.getByText('Gói nâng cao')).toBeTruthy();
     expect(screen.getAllByText('XPGWYZZ8TZY').length).toBeGreaterThan(0);
     const qr = Array.from(container.querySelectorAll('img')).find((img) =>
-      img.getAttribute('src')?.includes('vietqr'),
+      img.getAttribute('src')?.includes('qr.sepay.vn'),
     );
     expect(qr?.getAttribute('src')).toContain('amount=650000');
-    expect(qr?.getAttribute('src')).toContain('addInfo=XPGWYZZ8TZY');
+    expect(qr?.getAttribute('src')).toContain('des=XPGWYZZ8TZY');
     // Hoá đơn gói KHÔNG có nút tự khai đã trả — gói chỉ bật khi tiền về.
     expect(screen.queryByRole('button', { name: /đã chuyển khoản/i })).toBeNull();
   });
@@ -104,7 +104,7 @@ describe('InvoiceCheckoutView', () => {
 
     expect(screen.getByText('Còn phải chuyển')).toBeTruthy();
     const qr = Array.from(container.querySelectorAll('img')).find((img) =>
-      img.getAttribute('src')?.includes('vietqr'),
+      img.getAttribute('src')?.includes('qr.sepay.vn'),
     );
     expect(qr?.getAttribute('src')).toContain('amount=500000');
   });

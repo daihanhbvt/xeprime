@@ -74,9 +74,10 @@ describe('CheckoutPanel — chuyển khoản VietQR', () => {
 
     const src = container.querySelector('img')!.getAttribute('src')!;
     // QR phải mang SẴN số tiền và nội dung — khách không gõ gì (ADR 0016 điều 5).
-    expect(src).toContain('VCB-0123456789');
+    expect(src).toContain('acc=0123456789');
+    expect(src).toContain('bank=VCB');
     expect(src).toContain('amount=140800');
-    expect(src).toContain('addInfo=XPH23456789');
+    expect(src).toContain('des=XPH23456789');
     // Một lần trong bảng chuyển khoản, một lần ở "Mã thanh toán" của thẻ tóm tắt.
     expect(screen.getAllByText('XPH23456789')).toHaveLength(2);
   });
