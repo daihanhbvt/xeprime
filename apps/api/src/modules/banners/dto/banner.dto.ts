@@ -1,8 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { BANNER_PLACEMENT, BANNER_PLACEMENT_VALUES, type BannerPlacement } from '@xeprime/types';
 import { Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
+  IsIn,
   IsInt,
   IsISO8601,
   IsOptional,
@@ -11,12 +13,19 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { SAFE_URL_PATTERN } from '../../../common/safe-url';
 
-/**
- * URL hợp lệ cho ảnh/đích đến của banner: http(s) tuyệt đối hoặc path nội bộ bắt đầu bằng `/`.
- * Chặn `javascript:` và mọi scheme lạ — banner render thẳng ra trang công khai.
- */
-const SAFE_URL_PATTERN = /^(https?:\/\/|\/)\S+$/;
+/** Lọc theo vị trí — bỏ trống = dải banner đầu trang (`hero`), đúng hành vi trước khi có vị trí. */
+export class BannerPlacementQueryDto {
+  @ApiPropertyOptional({
+    enum: BANNER_PLACEMENT_VALUES,
+    default: BANNER_PLACEMENT.HERO,
+    description: 'hero = dải banner đầu trang · promo = banner khuyến mãi giữa trang',
+  })
+  @IsOptional()
+  @IsIn(BANNER_PLACEMENT_VALUES)
+  placement?: BannerPlacement;
+}
 
 /** Banner như KHÁCH nhìn thấy — chỉ các trường cần để render, không lộ metadata quản trị. */
 export class PublicBannerDto {
@@ -46,6 +55,8 @@ export class PublicBannerDto {
 /** Banner ở màn quản trị — đủ metadata + cờ "đang hiển thị thật" đã tính sẵn theo lịch. */
 export class AdminBannerDto extends PublicBannerDto {
   @ApiProperty({ description: 'Tên nội bộ' }) title!: string;
+  @ApiProperty({ enum: BANNER_PLACEMENT_VALUES, description: 'Vị trí trên trang chủ' })
+  placement!: BannerPlacement;
   @ApiProperty() sortOrder!: number;
   @ApiProperty() active!: boolean;
   @ApiProperty({ type: String, nullable: true, description: 'ISO-8601 UTC' })
@@ -62,6 +73,15 @@ export class AdminBannerDto extends PublicBannerDto {
 }
 
 export class CreateBannerDto {
+  @ApiPropertyOptional({
+    enum: BANNER_PLACEMENT_VALUES,
+    default: BANNER_PLACEMENT.HERO,
+    description: 'Vị trí — đặt lúc tạo, KHÔNG đổi được về sau (mỗi vị trí một bộ khổ ảnh)',
+  })
+  @IsOptional()
+  @IsIn(BANNER_PLACEMENT_VALUES)
+  placement?: BannerPlacement;
+
   @ApiProperty({
     example: 'Chiến dịch hè 2026',
     description: 'Tên nội bộ — không hiển thị công khai',
@@ -80,7 +100,7 @@ export class CreateBannerDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'URL ảnh tablet 1024×320 — bỏ trống dùng ảnh desktop',
+    description: 'URL ảnh tablet 1024×320 (chỉ banner đầu trang) — bỏ trống dùng ảnh desktop',
   })
   @IsOptional()
   @IsString()
@@ -212,7 +232,19 @@ export class UpdateBannerDto {
 
 /** Kéo-thả/mũi tên sắp xếp: gửi TRỌN thứ tự mới — tránh nhiều PATCH lẻ lệch nhau. */
 export class ReorderBannersDto {
-  @ApiProperty({ type: [String], description: 'Toàn bộ id banner theo thứ tự hiển thị mới' })
+  @ApiPropertyOptional({
+    enum: BANNER_PLACEMENT_VALUES,
+    default: BANNER_PLACEMENT.HERO,
+    description: 'Vị trí đang sắp — thứ tự tính riêng từng vị trí',
+  })
+  @IsOptional()
+  @IsIn(BANNER_PLACEMENT_VALUES)
+  placement?: BannerPlacement;
+
+  @ApiProperty({
+    type: [String],
+    description: 'Toàn bộ id banner CỦA VỊ TRÍ ĐÓ theo thứ tự hiển thị mới',
+  })
   @IsArray()
   @IsString({ each: true })
   ids!: string[];

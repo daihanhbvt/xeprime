@@ -32,6 +32,7 @@ import { AuditService } from '../src/modules/audit/audit.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { buildVehicleReviewSnapshot } from '../src/modules/vehicles/vehicle-review-snapshot';
 import { VehicleSettingsService } from '../src/modules/vehicle-settings/vehicle-settings.service';
+import { ListingsService } from '../src/modules/public-listings/listings.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { makeBookingsService, makePricingService } from './helpers/service-factory';
 
@@ -53,7 +54,7 @@ const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 
 const audit = new AuditService(asService);
-const settings = new VehicleSettingsService(asService, audit, new OccupancyService(asService));
+const settings = new VehicleSettingsService(asService, audit, new OccupancyService(asService), new ListingsService(asService));
 const bookings = makeBookingsService(asService);
 
 const RUN = newId().slice(-8).toLowerCase();

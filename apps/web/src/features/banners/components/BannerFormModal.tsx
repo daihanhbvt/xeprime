@@ -3,8 +3,9 @@
 import { DesktopOutlined, MobileOutlined, TabletOutlined } from '@ant-design/icons';
 import { App, Button } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
+import { useTranslations } from 'next-intl';
 import { appWallClockToIso, toAppTz, type Dayjs } from '@/lib/datetime';
-import { useEffect, useId, useRef } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import * as yup from 'yup';
 import { DateTimeField } from '@/components/form/DateTimeField';
@@ -12,43 +13,64 @@ import { ImageUploadField } from '@/components/form/ImageUploadField';
 import { SwitchField } from '@/components/form/SwitchField';
 import { TextField } from '@/components/form/TextField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
-import { getErrorMessage } from '@/services/api-client';
 import { presignBannerImage } from '@/services/upload';
-import { bannerRatioValidator, BANNER_SLOTS } from '../banner-media';
-import { useCreateBanner, useUpdateBanner } from '../use-admin-banners';
+import { BANNER_PLACEMENT, isBannerPlacement, type BannerPlacement } from '@xeprime/types';
+import {
+  bannerRatioValidator,
+  bannerSlotsFor,
+  formatBannerSize,
+  type BannerRatioIssue,
+  type BannerSlot,
+} from '../banner-media';
+import { useBannerSaveErrorMessage, useCreateBanner, useUpdateBanner } from '../use-admin-banners';
 import type { AdminBanner } from '../types';
 import styles from './BannerFormModal.module.css';
 
-const schema = yup.object({
-  title: yup.string().trim().required('Nhập tên banner').max(150),
-  imageUrl: yup
-    .string()
-    .nullable()
-    .defined()
-    .test('required', 'Tải lên ảnh desktop', (v) => Boolean(v)),
-  tabletImageUrl: yup.string().nullable().defined(),
-  mobileImageUrl: yup.string().nullable().defined(),
-  altText: yup.string().trim().required('Nhập mô tả ảnh (alt)').max(255),
-  linkUrl: yup
-    .string()
-    .trim()
-    .defined()
-    .test('safe-url', 'Chỉ nhận http(s) hoặc đường dẫn nội bộ bắt đầu bằng /', (v) =>
-      !v ? true : /^(https?:\/\/|\/)\S+$/.test(v),
-    ),
-  active: yup.boolean().default(true),
-  startsAt: yup.mixed<Dayjs>().nullable().defined(),
-  endsAt: yup
-    .mixed<Dayjs>()
-    .nullable()
-    .defined()
-    .test('after-start', 'Thời điểm ngừng phải sau thời điểm bắt đầu', (value, ctx) => {
-      const start = ctx.parent.startsAt as Dayjs | null;
-      return !value || !start || value.isAfter(start);
-    }),
-});
+/** Cùng biên với `CreateBannerDto` ở API. */
+const TITLE_MAX = 150;
+const ALT_MAX = 255;
 
-type FormValues = yup.InferType<typeof schema>;
+type FormErrorsT = ReturnType<typeof useTranslations<'AdminBanners.form.errors'>>;
+type CommonT = ReturnType<typeof useTranslations<'Common'>>;
+
+function buildSchema(t: FormErrorsT, tCommon: CommonT) {
+  return yup.object({
+    title: yup
+      .string()
+      .trim()
+      .required(t('titleRequired'))
+      .max(TITLE_MAX, tCommon('validation.maxLength', { max: TITLE_MAX })),
+    imageUrl: yup
+      .string()
+      .nullable()
+      .defined()
+      .test('required', t('imageRequired'), (v) => Boolean(v)),
+    tabletImageUrl: yup.string().nullable().defined(),
+    mobileImageUrl: yup.string().nullable().defined(),
+    altText: yup
+      .string()
+      .trim()
+      .required(t('altRequired'))
+      .max(ALT_MAX, tCommon('validation.maxLength', { max: ALT_MAX })),
+    linkUrl: yup
+      .string()
+      .trim()
+      .defined()
+      .test('safe-url', t('linkInvalid'), (v) => (!v ? true : /^(https?:\/\/|\/)\S+$/.test(v))),
+    active: yup.boolean().default(true),
+    startsAt: yup.mixed<Dayjs>().nullable().defined(),
+    endsAt: yup
+      .mixed<Dayjs>()
+      .nullable()
+      .defined()
+      .test('after-start', t('endBeforeStart'), (value, ctx) => {
+        const start = ctx.parent.startsAt as Dayjs | null;
+        return !value || !start || value.isAfter(start);
+      }),
+  });
+}
+
+type FormValues = yup.InferType<ReturnType<typeof buildSchema>>;
 
 function formValuesFromBanner(banner: AdminBanner | null): FormValues {
   if (!banner) {
@@ -82,18 +104,32 @@ function formValuesFromBanner(banner: AdminBanner | null): FormValues {
 /**
  * Tạo/sửa banner trang chủ. Ảnh upload theo pattern R2 chung (presign → PUT thẳng); alt bắt
  * buộc vì banner là nội dung marketing hiện với mọi khách. Lịch để trống = hiển thị vô hạn.
+ *
+ * Banner tự mang thông điệp, không chữ nào đè lên ảnh; riêng ảnh PC bị thẻ tìm kiếm trang chủ đè
+ * lên phần dưới — form nhắc admin giữ chữ và chủ thể ở phần trên ảnh.
  */
 export function BannerFormModal({
   open,
+  placement: tabPlacement,
   banner,
   onClose,
 }: {
   open: boolean;
+  /** Vị trí của banner TẠO MỚI (tab đang mở). Banner đang sửa giữ vị trí của chính nó. */
+  placement: BannerPlacement;
   /** null = tạo mới. */
   banner: AdminBanner | null;
   onClose: () => void;
 }) {
+  const placement = banner && isBannerPlacement(banner.placement) ? banner.placement : tabPlacement;
+  const isPromo = placement === BANNER_PLACEMENT.PROMO;
+  // Mỗi vị trí một bộ khổ ảnh — banner khuyến mãi không có ô tablet (tablet hiện như máy tính).
+  const slots = bannerSlotsFor(placement);
+  const t = useTranslations('AdminBanners');
+  const tErrors = useTranslations('AdminBanners.form.errors');
+  const tCommon = useTranslations('Common');
   const { message } = App.useApp();
+  const saveErrorMessage = useBannerSaveErrorMessage();
   const create = useCreateBanner();
   const update = useUpdateBanner();
   const isEdit = Boolean(banner);
@@ -102,6 +138,7 @@ export function BannerFormModal({
   const wasOpen = useRef(false);
   const previousBannerId = useRef<string | null>(null);
 
+  const schema = useMemo(() => buildSchema(tErrors, tCommon), [tErrors, tCommon]);
   const { control, handleSubmit, reset } = useForm<FormValues>({
     resolver: yupResolver(schema),
     defaultValues: formValuesFromBanner(banner),
@@ -120,12 +157,51 @@ export function BannerFormModal({
     previousBannerId.current = bannerId;
   }, [banner, open, reset]);
 
+  const describeRatioIssue = useCallback(
+    (issue: BannerRatioIssue) =>
+      issue.kind === 'unreadable'
+        ? t('media.errors.unreadable')
+        : t('media.errors.ratio', {
+            slot: issue.slot,
+            size: formatBannerSize(issue.expected),
+            size2x: formatBannerSize(issue.expected, 2),
+            actual: formatBannerSize(issue.actual),
+          }),
+    [t],
+  );
+
+  /** Một validator cho mỗi slot của vị trí — giữ nguyên tham chiếu giữa các lần render. */
+  const validators = useMemo(
+    () => ({
+      desktop: bannerRatioValidator('desktop', slots.desktop, describeRatioIssue),
+      tablet: slots.tablet
+        ? bannerRatioValidator('tablet', slots.tablet, describeRatioIssue)
+        : undefined,
+      mobile: slots.mobile
+        ? bannerRatioValidator('mobile', slots.mobile, describeRatioIssue)
+        : undefined,
+    }),
+    [describeRatioIssue, slots],
+  );
+
+  const sizeHelp = (slot: BannerSlot) => {
+    const size = slots[slot];
+    return size
+      ? t('media.sizeHelp', {
+          size: formatBannerSize(size),
+          size2x: formatBannerSize(size, 2),
+        })
+      : null;
+  };
+
   const onSubmit = handleSubmit((values) => {
     const body = {
       title: values.title.trim(),
+      // Vị trí chỉ đi kèm lượt TẠO — API không cho đổi vị trí của banner đã có.
+      ...(banner ? {} : { placement }),
       // Schema đã chặn null (test 'required') — tới đây chắc chắn có URL.
       imageUrl: values.imageUrl as string,
-      tabletImageUrl: values.tabletImageUrl || null,
+      tabletImageUrl: slots.tablet ? values.tabletImageUrl || null : null,
       mobileImageUrl: values.mobileImageUrl || null,
       altText: values.altText.trim(),
       linkUrl: values.linkUrl?.trim() || null,
@@ -135,10 +211,10 @@ export function BannerFormModal({
     };
     const done = {
       onSuccess: () => {
-        message.success(isEdit ? 'Đã cập nhật banner' : 'Đã tạo banner');
+        message.success(isEdit ? t('toast.updated') : t('toast.created'));
         onClose();
       },
-      onError: (err: unknown) => message.error(getErrorMessage(err)),
+      onError: (err: unknown) => message.error(saveErrorMessage(err)),
     };
     if (banner) update.mutate({ id: banner.id, ...body }, done);
     else create.mutate(body, done);
@@ -146,7 +222,9 @@ export function BannerFormModal({
 
   return (
     <ResponsiveDialog
-      title={isEdit ? 'Sửa banner trang chủ' : 'Tạo banner trang chủ'}
+      title={
+        isEdit ? t('form.titleEdit') : isPromo ? t('form.titleCreatePromo') : t('form.titleCreate')
+      }
       open={open}
       onClose={onClose}
       size="xl"
@@ -155,10 +233,10 @@ export function BannerFormModal({
       footer={
         <>
           <Button onClick={onClose} disabled={pending}>
-            Huỷ
+            {tCommon('actions.cancel')}
           </Button>
           <Button type="primary" htmlType="submit" form={formId} loading={pending}>
-            {isEdit ? 'Lưu thay đổi' : 'Tạo banner'}
+            {isEdit ? tCommon('actions.saveChanges') : t('page.create')}
           </Button>
         </>
       }
@@ -166,31 +244,32 @@ export function BannerFormModal({
       <form id={formId} className={styles.form} onSubmit={onSubmit} noValidate>
         <div className={styles.intro}>
           <div>
-            <span className={styles.eyebrow}>{isEdit ? 'Đang chỉnh sửa' : 'Banner mới'}</span>
-            <p className={styles.introText}>
-              Tạo một bộ ảnh responsive cho hero trang chủ. Ảnh đúng tỉ lệ sẽ được hiển thị trọn
-              vẹn, không bị cắt trên từng thiết bị.
-            </p>
+            <span className={styles.eyebrow}>
+              {isEdit ? t('form.eyebrowEdit') : t('form.eyebrowCreate')}
+            </span>
+            <p className={styles.introText}>{isPromo ? t('form.introPromo') : t('form.intro')}</p>
           </div>
-          <span className={styles.responsiveBadge}>3 kích thước</span>
+          <span className={styles.responsiveBadge}>
+            {t('form.sizesBadge', { count: Object.keys(slots).length })}
+          </span>
         </div>
 
         <section className={styles.section} aria-labelledby={`${formId}-basic`}>
           <div className={styles.sectionHeading}>
             <div>
               <h3 id={`${formId}-basic`} className={styles.sectionTitle}>
-                Thông tin nội bộ
+                {t('form.sections.basic.title')}
               </h3>
-              <p className={styles.sectionDescription}>Giúp đội vận hành nhận diện chiến dịch.</p>
+              <p className={styles.sectionDescription}>{t('form.sections.basic.description')}</p>
             </div>
           </div>
           <div className={styles.singleField}>
             <TextField
               control={control}
               name="title"
-              label="Tên banner"
-              placeholder="VD: Chiến dịch hè 2026"
-              help="Chỉ admin nhìn thấy, không xuất hiện ngoài trang chủ."
+              label={t('form.fields.title.label')}
+              placeholder={t('form.fields.title.placeholder')}
+              help={t('form.fields.title.help')}
               required
             />
           </div>
@@ -200,10 +279,10 @@ export function BannerFormModal({
           <div className={styles.sectionHeading}>
             <div>
               <h3 id={`${formId}-media`} className={styles.sectionTitle}>
-                Ảnh responsive
+                {t('form.sections.media.title')}
               </h3>
               <p className={styles.sectionDescription}>
-                Nên dùng file @2x để ảnh sắc nét. Tablet và mobile bỏ trống sẽ tự dùng ảnh lớn hơn.
+                {isPromo ? t('form.mediaDescriptionPromo') : t('form.sections.media.description')}
               </p>
             </div>
           </div>
@@ -217,36 +296,45 @@ export function BannerFormModal({
                 label={
                   <span className={styles.mediaLabel}>
                     <DesktopOutlined aria-hidden="true" />
-                    Máy tính
-                    <span className={styles.requiredBadge}>Bắt buộc</span>
+                    {t('media.slots.desktop')}
+                    <span className={styles.requiredBadge}>{tCommon('labels.required')}</span>
                   </span>
                 }
                 presign={presignBannerImage}
-                validate={bannerRatioValidator('desktop')}
-                help={`${BANNER_SLOTS.desktop.width}×${BANNER_SLOTS.desktop.height} · Khuyên dùng ${BANNER_SLOTS.desktop.width * 2}×${BANNER_SLOTS.desktop.height * 2}`}
+                validate={validators.desktop}
+                help={
+                  <>
+                    {sizeHelp('desktop')}
+                    <span className={styles.helpNote}>
+                      {isPromo ? t('media.promoComposition') : t('media.desktopComposition')}
+                    </span>
+                  </>
+                }
                 variant="card"
-                previewAspectRatio={BANNER_SLOTS.desktop.width / BANNER_SLOTS.desktop.height}
+                previewAspectRatio={slots.desktop.width / slots.desktop.height}
                 required
               />
             </div>
-            <div className={styles.mediaCard}>
-              <ImageUploadField
-                control={control}
-                name="tabletImageUrl"
-                label={
-                  <span className={styles.mediaLabel}>
-                    <TabletOutlined aria-hidden="true" />
-                    Tablet
-                    <span className={styles.optionalBadge}>Tuỳ chọn</span>
-                  </span>
-                }
-                presign={presignBannerImage}
-                validate={bannerRatioValidator('tablet')}
-                help={`${BANNER_SLOTS.tablet.width}×${BANNER_SLOTS.tablet.height} · Khuyên dùng ${BANNER_SLOTS.tablet.width * 2}×${BANNER_SLOTS.tablet.height * 2}`}
-                variant="card"
-                previewAspectRatio={BANNER_SLOTS.tablet.width / BANNER_SLOTS.tablet.height}
-              />
-            </div>
+            {slots.tablet ? (
+              <div className={styles.mediaCard}>
+                <ImageUploadField
+                  control={control}
+                  name="tabletImageUrl"
+                  label={
+                    <span className={styles.mediaLabel}>
+                      <TabletOutlined aria-hidden="true" />
+                      {t('media.slots.tablet')}
+                      <span className={styles.optionalBadge}>{t('media.optional')}</span>
+                    </span>
+                  }
+                  presign={presignBannerImage}
+                  validate={validators.tablet}
+                  help={sizeHelp('tablet')}
+                  variant="card"
+                  previewAspectRatio={slots.tablet.width / slots.tablet.height}
+                />
+              </div>
+            ) : null}
             <div className={styles.mediaCard}>
               <ImageUploadField
                 control={control}
@@ -254,15 +342,17 @@ export function BannerFormModal({
                 label={
                   <span className={styles.mediaLabel}>
                     <MobileOutlined aria-hidden="true" />
-                    Mobile
-                    <span className={styles.optionalBadge}>Tuỳ chọn</span>
+                    {t('media.slots.mobile')}
+                    <span className={styles.optionalBadge}>{t('media.optional')}</span>
                   </span>
                 }
                 presign={presignBannerImage}
-                validate={bannerRatioValidator('mobile')}
-                help={`${BANNER_SLOTS.mobile.width}×${BANNER_SLOTS.mobile.height} · Khuyên dùng ${BANNER_SLOTS.mobile.width * 2}×${BANNER_SLOTS.mobile.height * 2}`}
+                validate={validators.mobile}
+                help={sizeHelp('mobile')}
                 variant="card"
-                previewAspectRatio={BANNER_SLOTS.mobile.width / BANNER_SLOTS.mobile.height}
+                previewAspectRatio={
+                  slots.mobile ? slots.mobile.width / slots.mobile.height : undefined
+                }
               />
             </div>
           </div>
@@ -272,28 +362,26 @@ export function BannerFormModal({
           <div className={styles.sectionHeading}>
             <div>
               <h3 id={`${formId}-content`} className={styles.sectionTitle}>
-                Nội dung và điều hướng
+                {t('form.sections.content.title')}
               </h3>
-              <p className={styles.sectionDescription}>
-                Mô tả ảnh hỗ trợ khả năng truy cập; đường dẫn quyết định nơi mở khi bấm banner.
-              </p>
+              <p className={styles.sectionDescription}>{t('form.sections.content.description')}</p>
             </div>
           </div>
           <div className={styles.fieldGrid}>
             <TextField
               control={control}
               name="altText"
-              label="Mô tả ảnh (alt)"
-              placeholder="VD: Đăng xe dễ dàng cùng XePrime"
-              help="Screen reader sẽ đọc nội dung này."
+              label={t('form.fields.altText.label')}
+              placeholder={t('form.fields.altText.placeholder')}
+              help={t('form.fields.altText.help')}
               required
             />
             <TextField
               control={control}
               name="linkUrl"
-              label="Đường dẫn khi bấm"
-              placeholder="/search hoặc https://…"
-              help="Không bắt buộc. Hỗ trợ đường dẫn nội bộ hoặc URL đầy đủ."
+              label={t('form.fields.linkUrl.label')}
+              placeholder={t('form.fields.linkUrl.placeholder')}
+              help={t('form.fields.linkUrl.help')}
             />
           </div>
         </section>
@@ -302,10 +390,10 @@ export function BannerFormModal({
           <div className={styles.sectionHeading}>
             <div>
               <h3 id={`${formId}-visibility`} className={styles.sectionTitle}>
-                Lịch và trạng thái
+                {t('form.sections.visibility.title')}
               </h3>
               <p className={styles.sectionDescription}>
-                Để trống lịch nếu banner cần hiển thị ngay và không giới hạn thời gian.
+                {t('form.sections.visibility.description')}
               </p>
             </div>
           </div>
@@ -313,22 +401,22 @@ export function BannerFormModal({
             <DateTimeField
               control={control}
               name="startsAt"
-              label="Bắt đầu hiển thị"
-              placeholder="Ngay lập tức"
+              label={t('form.fields.startsAt.label')}
+              placeholder={t('form.fields.startsAt.placeholder')}
             />
             <DateTimeField
               control={control}
               name="endsAt"
-              label="Ngừng hiển thị"
-              placeholder="Vô hạn"
+              label={t('form.fields.endsAt.label')}
+              placeholder={t('form.fields.endsAt.placeholder')}
             />
           </div>
           <div className={styles.statusCard}>
             <SwitchField
               control={control}
               name="active"
-              label="Đang bật"
-              description="Tắt để ẩn banner khỏi trang chủ mà không cần xoá."
+              label={tCommon('labels.enabled')}
+              description={t('form.fields.active.description')}
             />
           </div>
         </section>

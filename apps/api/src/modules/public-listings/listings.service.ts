@@ -1,5 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { newId, Prisma, refreshListingRankScore } from '@xeprime/prisma';
+import {
+  newId,
+  Prisma,
+  readListingCardExtras,
+  refreshListingRankScore,
+  selfDriveDailyPrice,
+} from '@xeprime/prisma';
 import {
   BILLING_MODE,
   COLLATERAL_MODE,
@@ -80,6 +86,8 @@ export class ListingsService {
       // Xe đã duyệt → tạo/cập nhật snapshot đầy đủ, đưa về hiển thị. Rating tính lại từ review
       // trong CÙNG transaction — snapshot luôn tự nhất quán, không lệ thuộc lần refresh trước.
       const rating = await aggregateRating(tx, vehicleId);
+      // Số ảnh, hộp số, tự động nhận, xã/phường — CÙNG hàm với bản sao seed (@xeprime/prisma).
+      const extras = await readListingCardExtras(tx, vehicleId, v.serviceTypes);
       const snapshot = {
         shopSlug: v.tenant.slug,
         title: v.name,
@@ -101,8 +109,13 @@ export class ListingsService {
         // thà không thấy còn hơn thấy ở sai tỉnh.
         provinceCode: v.branch?.provinceCode ?? null,
         provinceName: v.branch?.province?.name ?? null,
+        wardName: extras.wardName,
         mainImageUrl: v.mainImageUrl,
+        imageCount: extras.imageCount,
+        transmission: extras.transmission,
+        instantBookServiceTypes: extras.instantBookServiceTypes,
         weekdayPrice: v.weekdayPrice,
+        selfDriveDailyPrice: selfDriveDailyPrice(v.weekdayPrice, v.discountPercent, v.serviceTypes),
         weekendPrice: v.weekendPrice,
         hourlyPrice: v.hourlyPrice,
         monthlyPrice: v.monthlyPrice,
@@ -225,8 +238,9 @@ export class ListingsService {
    * đổi tỉnh.
    *
    * Một câu UPDATE theo `branch_id` thay vì lặp `syncFromVehicle` từng xe: một chi nhánh có thể
-   * giữ hàng trăm xe, và ở đây chỉ có đúng ba cột phụ thuộc chi nhánh — chạy lại toàn bộ snapshot
-   * (giá, tiện ích, rating) là việc thừa và là N+1 thật sự.
+   * giữ hàng trăm xe, và ở đây chỉ có đúng ba cột phụ thuộc chi nhánh (mã tỉnh, tên tỉnh, tên
+   * xã/phường) — chạy lại toàn bộ snapshot (giá, tiện ích, rating) là việc thừa và là N+1 thật sự.
+   * Gọi cả khi chỉ đổi xã/phường: thẻ xe hiện tên xã, nên nó phải theo kịp.
    */
   async syncBranchLocation(
     branchId: string,
@@ -234,7 +248,11 @@ export class ListingsService {
   ): Promise<number> {
     const branch = await tx.tenantBranch.findUnique({
       where: { id: branchId },
-      select: { provinceCode: true, province: { select: { name: true } } },
+      select: {
+        provinceCode: true,
+        province: { select: { name: true } },
+        ward: { select: { name: true } },
+      },
     });
     if (!branch) return 0;
 
@@ -243,6 +261,7 @@ export class ListingsService {
       data: {
         provinceCode: branch.provinceCode,
         provinceName: branch.province?.name ?? null,
+        wardName: branch.ward?.name ?? null,
       },
     });
     return result.count;

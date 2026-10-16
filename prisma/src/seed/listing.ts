@@ -15,6 +15,7 @@ import {
   REVIEW_STATUS,
   VEHICLE_PUBLIC_STATUS,
 } from '@xeprime/types';
+import { readListingCardExtras, selfDriveDailyPrice } from '../listing-card';
 import { prisma, seedId } from './context';
 
 /** "Miễn thế chấp" = chính sách hiệu lực của xe ở chế độ `none`. Precedence: xe → loại xe → chung. */
@@ -84,6 +85,9 @@ export async function syncListing(vehicleId: string): Promise<boolean> {
     _count: { _all: true },
   });
 
+  // Cùng hàm với ListingsService — số ảnh, hộp số, tự động nhận, xã/phường không được lệch.
+  const extras = await readListingCardExtras(prisma, vehicleId, v.serviceTypes);
+
   const snapshot = {
     shopSlug: v.tenant.slug,
     title: v.name,
@@ -98,8 +102,13 @@ export async function syncListing(vehicleId: string): Promise<boolean> {
     branchId: v.branchId,
     provinceCode: v.branch?.provinceCode ?? null,
     provinceName: v.branch?.province?.name ?? null,
+    wardName: extras.wardName,
     mainImageUrl: v.mainImageUrl,
+    imageCount: extras.imageCount,
+    transmission: extras.transmission,
+    instantBookServiceTypes: extras.instantBookServiceTypes,
     weekdayPrice: v.weekdayPrice,
+    selfDriveDailyPrice: selfDriveDailyPrice(v.weekdayPrice, v.discountPercent, v.serviceTypes),
     weekendPrice: v.weekendPrice,
     hourlyPrice: v.hourlyPrice,
     monthlyPrice: v.monthlyPrice,

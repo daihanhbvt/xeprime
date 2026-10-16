@@ -2,6 +2,7 @@
 
 import { AndroidFilled, AppleFilled } from '@ant-design/icons';
 import { QRCode } from 'antd';
+import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { cx } from '@/lib/cx';
 import { APP_DOWNLOAD_QR } from '../app-download';
@@ -9,6 +10,9 @@ import styles from './AppStoreQr.module.css';
 
 /** Biểu tượng nền tảng của từng mã — khoá khớp `APP_DOWNLOAD_QR[].key`. */
 const STORE_ICON = { ios: AppleFilled, android: AndroidFilled } as const;
+
+/** Biểu tượng cửa hàng của chân trang v2 — logo màu của chính cửa hàng (Figma), không phải icon AntD. */
+const STORE_LOGO = { ios: '/home/apple-16.svg', android: '/home/google-play-16.svg' } as const;
 
 /** Từ cỡ này trở lên mới có chỗ cho dòng "Tải trên" phía trên tên cửa hàng. */
 const SIZE_WITH_CAPTION = 100;
@@ -18,6 +22,11 @@ export interface AppStoreQrProps {
   readonly size?: number;
   /** `dark` cho chân trang nền tối, `light` cho trang nội dung nền sáng. */
   readonly tone?: 'dark' | 'light';
+  /**
+   * `footer` — chân trang design v2 (ADR 0062): ô mã 100px bo 8px, dưới là logo cửa hàng 16px +
+   * tên cửa hàng, không có dòng "Tải trên". `size` khi đó là cạnh của chính mã, không tính đệm.
+   */
+  readonly variant?: 'default' | 'footer';
   readonly className?: string;
 }
 
@@ -35,12 +44,25 @@ export interface AppStoreQrProps {
  * Nền của ô mã luôn TRẮNG, kể cả trên chân trang tối: mã QR cần module tối trên nền sáng, đảo
  * màu là hỏng mã trên phần lớn camera điện thoại. Chỉ phần chữ đổi theo `tone`.
  */
-export function AppStoreQr({ size = 72, tone = 'dark', className }: AppStoreQrProps) {
+export function AppStoreQr({
+  size = 72,
+  tone = 'dark',
+  variant = 'default',
+  className,
+}: AppStoreQrProps) {
   const t = useTranslations('AppPromo');
-  const withCaption = size >= SIZE_WITH_CAPTION;
+  const isFooter = variant === 'footer';
+  const withCaption = !isFooter && size >= SIZE_WITH_CAPTION;
 
   return (
-    <ul className={cx(styles.list, tone === 'light' && styles.light, className)}>
+    <ul
+      className={cx(
+        styles.list,
+        tone === 'light' && styles.light,
+        isFooter && styles.footer,
+        className,
+      )}
+    >
       {APP_DOWNLOAD_QR.map(({ key, store, value }) => {
         const Icon = STORE_ICON[key];
         return (
@@ -54,7 +76,11 @@ export function AppStoreQr({ size = 72, tone = 'dark', className }: AppStoreQrPr
               <QRCode value={value} size={size} type="svg" bordered={false} />
             </span>
             <span className={styles.store}>
-              <Icon className={styles.storeIcon} aria-hidden="true" />
+              {isFooter ? (
+                <Image src={STORE_LOGO[key]} alt="" width={16} height={16} unoptimized />
+              ) : (
+                <Icon className={styles.storeIcon} aria-hidden="true" />
+              )}
               <span className={styles.storeText}>
                 {withCaption && <small>{t('download.downloadOn')}</small>}
                 {store}

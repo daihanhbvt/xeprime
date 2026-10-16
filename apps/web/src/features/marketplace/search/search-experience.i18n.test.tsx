@@ -38,6 +38,7 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('../hooks/use-destinations', () => ({
   useDestinations: () => ({ data: DESTINATIONS, isLoading: false, error: null }),
+  useAllDestinations: () => ({ data: DESTINATIONS, isLoading: false, error: null }),
 }));
 
 vi.mock('@/hooks/use-media-query', () => ({ useIsMobile: () => false }));
@@ -77,12 +78,12 @@ const UI = {
     sticky: 'Tìm kiếm nhanh',
     vehicleTabs: 'Loại xe',
     serviceTabs: 'Loại dịch vụ thuê xe',
-    submit: 'Tìm xe',
+    submit: 'Tìm kiếm',
     car: 'Ô tô',
     motorbike: 'Xe máy',
     selfDrive: 'Xe tự lái',
     longTerm: 'Thuê xe dài hạn',
-    rentalLabel: 'Thời gian thuê',
+    rentalLabel: 'Thời gian nhận/trả',
     locationLabel: 'Địa điểm',
   },
   en: {
@@ -95,7 +96,7 @@ const UI = {
     motorbike: 'Motorbike',
     selfDrive: 'Self-drive',
     longTerm: 'Long-term rental',
-    rentalLabel: 'Rental period',
+    rentalLabel: 'Pick-up/return time',
     locationLabel: 'Location',
   },
 } as const;
@@ -141,7 +142,7 @@ describe('tham số tìm kiếm KHÔNG đổi theo ngôn ngữ', () => {
     async (locale) => {
       const ui = await renderAt(locale);
 
-      fireEvent.click(within(heroCard(ui.heroSearch)).getByRole('tab', { name: ui.motorbike }));
+      fireEvent.click(within(heroCard(ui.heroSearch)).getByRole('radio', { name: ui.motorbike }));
       fireEvent.click(within(heroCard(ui.heroSearch)).getByRole('tab', { name: ui.longTerm }));
       fireEvent.click(within(heroCard(ui.heroSearch)).getByRole('button', { name: ui.submit }));
 
@@ -157,7 +158,7 @@ describe('tham số tìm kiếm KHÔNG đổi theo ngôn ngữ', () => {
     const queries: string[] = [];
     for (const locale of ['vi', 'en'] as const) {
       const ui = await renderAt(locale);
-      fireEvent.click(within(heroCard(ui.heroSearch)).getByRole('tab', { name: ui.motorbike }));
+      fireEvent.click(within(heroCard(ui.heroSearch)).getByRole('radio', { name: ui.motorbike }));
       fireEvent.click(within(heroCard(ui.heroSearch)).getByRole('button', { name: ui.submit }));
       queries.push(submittedQuery().toString());
       screen.getByRole('search', { name: ui.heroSearch });
@@ -172,7 +173,7 @@ describe('hero ↔ thanh thu gọn vẫn là MỘT trạng thái ở cả hai ng
   it.each(['vi', 'en'] as const)('%s: đổi ở hero thì thanh thu gọn nói theo', async (locale) => {
     const ui = await renderAt(locale);
 
-    fireEvent.click(within(heroCard(ui.heroSearch)).getByRole('tab', { name: ui.motorbike }));
+    fireEvent.click(within(heroCard(ui.heroSearch)).getByRole('radio', { name: ui.motorbike }));
     await scrollHeroOutOfView();
 
     const bar = screen.getByRole('search', { name: ui.sticky });

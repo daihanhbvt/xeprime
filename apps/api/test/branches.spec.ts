@@ -387,6 +387,29 @@ describe('Vị trí công khai bám theo chi nhánh', () => {
     expect(after?.provinceCode).toBe(HCM);
     expect(after?.provinceName).toBe('Hồ Chí Minh');
 
+    // Đổi RIÊNG xã/phường (cùng tỉnh) cũng đồng bộ lại — thẻ xe v2 hiện tên phường (ADR 0062).
+    const [wardA, wardB] = await prisma.ward.findMany({
+      where: { provinceCode: HCM },
+      orderBy: { code: 'asc' },
+      take: 2,
+      select: { code: true, name: true },
+    });
+    if (wardA && wardB) {
+      await branches.update(tenantId, danang.id, ownerId, {
+        provinceCode: HCM,
+        wardCode: wardA.code,
+      });
+      await branches.update(tenantId, danang.id, ownerId, {
+        provinceCode: HCM,
+        wardCode: wardB.code,
+      });
+      const wardOnly = await prisma.publicListing.findUnique({
+        where: { vehicleId: v.id },
+        select: { wardName: true },
+      });
+      expect(wardOnly?.wardName).toBe(wardB.name);
+    }
+
     await prisma.publicListing.deleteMany({ where: { vehicleId: v.id } });
     await prisma.vehicle.delete({ where: { id: v.id } });
     await prisma.tenantBranch.delete({ where: { id: danang.id } });
@@ -614,7 +637,10 @@ describe('Chi nhánh phải có tỉnh mới lên chợ được', () => {
         fuelConsumptionCombined: 7.5,
         // Đủ GÓC ảnh bắt buộc (07/10/2026) — `images` trần không nói được góc nào, và spec này
         // kiểm TỈNH của chi nhánh nên không được lẫn một lý do từ chối thứ hai.
-        media: requiredVehicleMedia(VEHICLE_TYPE.CAR, (type) => `https://img.example/branch-${type}.jpg`),
+        media: requiredVehicleMedia(
+          VEHICLE_TYPE.CAR,
+          (type) => `https://img.example/branch-${type}.jpg`,
+        ),
       },
       null,
     );

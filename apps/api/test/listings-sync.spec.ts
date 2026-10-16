@@ -4,13 +4,20 @@ import {
   APPROVAL_STATUS,
   APPROVAL_TARGET_TYPE,
   COLLATERAL_MODE,
+  FEATURE_STATE,
   LISTING_STATUS,
   MEMBERSHIP_STATUS,
+  PLAN_FEATURE_VALUES,
+  SERVICE_TYPE,
   TENANT_ROLE,
   TENANT_STATUS,
   VEHICLE_TYPE,
+  type FeatureState,
+  type PlanFeature,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
+import { OccupancyService } from '../src/modules/calendar/occupancy.service';
+import { VehicleSettingsService } from '../src/modules/vehicle-settings/vehicle-settings.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
 import { passVehicleReviewChecks } from './helpers/vehicle-review-fixture';
 import { PlatformApprovalService } from '../src/modules/platform-admin/platform-approval.service';
@@ -41,6 +48,12 @@ const vehicles = makeVehiclesService(asService);
 const pricing = makePricingService(asService, { listings });
 const approvals = new PlatformApprovalService(asService, audit, notifications, listings);
 const publicListings = makePublicListingsService(asService);
+const vehicleSettings = new VehicleSettingsService(
+  asService,
+  audit,
+  new OccupancyService(asService),
+  listings,
+);
 
 /**
  * Tỉnh riêng của spec này (mã ngoài danh mục chính thức) — cô lập bằng MÃ, vì bộ lọc marketplace
@@ -226,6 +239,7 @@ describe('public_listings sync (ADR 0008)', () => {
           status: true,
           title: true,
           weekdayPrice: true,
+          selfDriveDailyPrice: true,
           provinceCode: true,
           provinceName: true,
           branchId: true,
@@ -237,11 +251,16 @@ describe('public_listings sync (ADR 0008)', () => {
           features: true,
           ratingAvg: true,
           ratingCount: true,
+          imageCount: true,
+          transmission: true,
+          instantBookServiceTypes: true,
         },
       });
       expect(listing.status).toBe(LISTING_STATUS.ACTIVE);
       expect(listing.title).toBe('Toyota Vios');
       expect(String(listing.weekdayPrice)).toBe('600000');
+      // Giá ngày khách thực trả (đã trừ 10% khuyến mãi trực tiếp) — nguồn của "chỉ từ …".
+      expect(String(listing.selfDriveDailyPrice)).toBe('540000');
       // Vị trí trên snapshot đến từ CHI NHÁNH: mã để lọc, tên chuẩn để hiển thị.
       expect(listing.branchId).toBe(branchId);
       expect(listing.provinceCode).toBe(PROV);
@@ -254,7 +273,49 @@ describe('public_listings sync (ADR 0008)', () => {
       expect(listing.features).toEqual(['bluetooth']);
       expect(listing.ratingAvg).toBeNull();
       expect(listing.ratingCount).toBe(0);
+      // Thẻ xe v2 (ADR 0062): số ảnh + hộp số mirror từ xe; chưa bật tự động nhận thì mảng rỗng.
+      expect(listing.imageCount).toBe(
+        await prisma.vehicleImage.count({ where: { vehicleId: vApprove } }),
+      );
+      expect(listing.imageCount).toBeGreaterThan(0);
+      expect(listing.transmission).toBe('automatic');
+      expect(listing.instantBookServiceTypes).toEqual([]);
       expect(await inSearch(vApprove)).toBe(true);
+    },
+  );
+
+  maybe(
+    'bật tự động nhận chuyến → thẻ xe mang cờ "Không cần xác nhận" của đúng dịch vụ',
+    async () => {
+      const featureMap = Object.fromEntries(
+        PLAN_FEATURE_VALUES.map((f) => [f, FEATURE_STATE.HIDDEN]),
+      ) as Record<PlanFeature, FeatureState>;
+      const toggle = (autoAcceptEnabled: boolean) =>
+        vehicleSettings.patchServiceSetting(
+          tenantId,
+          vApprove,
+          SERVICE_TYPE.SELF_DRIVE,
+          ownerId,
+          { autoAcceptEnabled },
+          featureMap,
+        );
+      const flags = async () =>
+        (
+          await prisma.publicListing.findUniqueOrThrow({
+            where: { vehicleId: vApprove },
+            select: { instantBookServiceTypes: true },
+          })
+        ).instantBookServiceTypes;
+
+      await toggle(true);
+      expect(await flags()).toEqual([SERVICE_TYPE.SELF_DRIVE]);
+      const card = (
+        await publicListings.search({ provinceCode: PROV, limit: 48 } as never)
+      ).data.find((v) => v.id === vApprove);
+      expect(card?.instantBookServiceTypes).toEqual([SERVICE_TYPE.SELF_DRIVE]);
+
+      await toggle(false);
+      expect(await flags()).toEqual([]);
     },
   );
 

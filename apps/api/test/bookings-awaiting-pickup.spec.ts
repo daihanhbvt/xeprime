@@ -18,6 +18,7 @@ import {
 import { AuditService } from '../src/modules/audit/audit.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { VehicleSettingsService } from '../src/modules/vehicle-settings/vehicle-settings.service';
+import { ListingsService } from '../src/modules/public-listings/listings.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { giveTenantPlan } from './helpers/billing-fixture';
 import { customerAccountFor } from './helpers/customer-account';
@@ -59,7 +60,7 @@ const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
 const notifications = makeNotificationService(asService);
 const occupancy = new OccupancyService(asService);
-const settings = new VehicleSettingsService(asService, audit, occupancy);
+const settings = new VehicleSettingsService(asService, audit, occupancy, new ListingsService(asService));
 
 const bookings = makeBookingsService(asService, { audit, notifications, occupancy, settings });
 const holds = makeBookingHoldsService(asService);

@@ -140,6 +140,12 @@ export const API_ERROR_CODE = {
   VALIDATION_FAILED: 'VALIDATION_FAILED',
   NOT_FOUND: 'NOT_FOUND',
   CONFLICT: 'CONFLICT',
+  /**
+   * Lưu/bật banner trang chủ làm vượt trần số banner HIỂN THỊ CÙNG LÚC (`details.max`). Mã riêng
+   * thay vì `VALIDATION_FAILED`: dữ liệu banner hợp lệ, thứ sai là lịch chồng lên các banner khác
+   * — màn quản trị nói đúng chuyện đó thay vì đoán từ mã chung.
+   */
+  BANNER_VISIBLE_LIMIT_EXCEEDED: 'BANNER_VISIBLE_LIMIT_EXCEEDED',
 
   // Nghiệp vụ lịch (ADR 0006)
   BOOKING_SCHEDULE_CONFLICT: 'BOOKING_SCHEDULE_CONFLICT',

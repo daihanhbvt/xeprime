@@ -1,4 +1,4 @@
-import { ACCOUNT_REALM } from '@xeprime/types';
+import { ACCOUNT_REALM, BANNER_PLACEMENT, type BannerPlacement } from '@xeprime/types';
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { BannersService } from '../src/modules/banners/banners.service';
@@ -74,6 +74,7 @@ const maybe = (name: string, fn: () => Promise<void>) =>
 
 async function make(input: {
   title: string;
+  placement?: BannerPlacement;
   active?: boolean;
   sortOrder?: number;
   startsAt?: string | null;
@@ -81,6 +82,7 @@ async function make(input: {
 }) {
   const banner = await banners.create(adminId, {
     title: input.title,
+    placement: input.placement,
     imageUrl: 'https://example.com/banner.jpg',
     altText: `Alt của ${input.title}`,
     sortOrder: input.sortOrder,
@@ -224,4 +226,42 @@ describe('Banner trang chủ', () => {
     expect(actions.has('banner.create')).toBe(true);
     expect(actions.has('banner.delete')).toBe(true);
   });
+
+  /**
+   * Banner khuyến mãi giữa trang chủ dùng chung bảng nhưng là một VỊ TRÍ riêng: trần hiển thị cùng
+   * lúc, thứ tự và danh sách công khai không lẫn với dải banner đầu trang.
+   */
+  maybe(
+    'banner khuyến mãi: trần, thứ tự và danh sách công khai tách khỏi banner đầu trang',
+    async () => {
+      // Test đầu đã để 10 banner đầu trang cùng hiển thị — banner khuyến mãi vẫn tạo được.
+      const promoA = await make({ title: 'KM A', placement: BANNER_PLACEMENT.PROMO });
+      const promoB = await make({ title: 'KM B', placement: BANNER_PLACEMENT.PROMO });
+      expect(promoA.placement).toBe(BANNER_PLACEMENT.PROMO);
+      expect(promoB.sortOrder).toBe(promoA.sortOrder + 1);
+
+      const promos = await banners.publicList(BANNER_PLACEMENT.PROMO);
+      expect(promos.map((b) => b.id)).toEqual(expect.arrayContaining([promoA.id, promoB.id]));
+      // Gọi không kèm vị trí (app native cũ) vẫn chỉ nhận banner đầu trang.
+      const heroes = await banners.publicList();
+      expect(heroes.some((b) => b.id === promoA.id || b.id === promoB.id)).toBe(false);
+
+      // Sắp lại trong ĐÚNG vị trí khuyến mãi; lẫn một banner đầu trang vào là sai.
+      const promoIds = (await banners.listForAdmin(BANNER_PLACEMENT.PROMO)).map((b) => b.id);
+      const reversed = [...promoIds].reverse();
+      const reordered = await banners.reorder(adminId, {
+        placement: BANNER_PLACEMENT.PROMO,
+        ids: reversed,
+      });
+      expect(reordered.map((b) => b.id)).toEqual(reversed);
+
+      const hero = await make({ title: 'Đầu trang (tắt)', active: false });
+      await expect(
+        banners.reorder(adminId, {
+          placement: BANNER_PLACEMENT.PROMO,
+          ids: [...promoIds, hero.id],
+        }),
+      ).rejects.toThrow(/đủ toàn bộ banner/);
+    },
+  );
 });

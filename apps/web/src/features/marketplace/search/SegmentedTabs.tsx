@@ -23,15 +23,26 @@ interface SegmentedTabsProps<T extends string> {
   items: ReadonlyArray<SegmentedTabItem<T>>;
   /** Tên khả truy cập của cả nhóm — bắt buộc: một tablist không tên là một nhóm nút vô danh. */
   ariaLabel: string;
-  /** `id` của vùng form mà nhóm này điều khiển (`aria-controls`). */
+  /** `id` của vùng form mà nhóm này điều khiển (`aria-controls`) — chỉ có nghĩa với `tabs`. */
   controls?: string;
+  /**
+   * Ngữ nghĩa:
+   *   · `tabs` (mặc định) — `tablist`/`tab`, khi nhóm đổi vùng form bên dưới;
+   *   · `radio` — `radiogroup`/`radio`, khi nhóm là một LỰA CHỌN nằm ngay trong vùng form đó
+   *     (Ô tô · Xe máy trong hàng ô nhập). Một tab không được nằm trong chính tabpanel nó điều khiển.
+   * Bàn phím giống nhau ở cả hai: một điểm dừng Tab, mũi tên để đổi.
+   */
+  semantics?: 'tabs' | 'radio';
   /** `md` cho hero, `sm` cho panel thu gọn. */
   size?: 'md' | 'sm';
   /**
-   * Nền của rãnh chứa các tab: `plain` (trong suốt — hai tầng của thẻ tìm kiếm, vốn đã ngồi
-   * trên mặt thẻ trắng) · `muted` (mặc định, cho panel đứng trên nền khác).
+   * Hình dạng (design v2 — ADR 0062):
+   *   · `pill` (mặc định) — rãnh chìm + viên nổi, dùng trong panel thu gọn;
+   *   · `tabs` — dải TAB của thẻ tìm kiếm trang chủ (Thuê xe tự lái · Xe có tài xế · Dài hạn);
+   *   · `segment` — nhóm nút "Loại xe" trong hàng ô nhập (Ô tô · Xe máy).
+   * Chỉ là hình — hành vi bàn phím và ngữ nghĩa tab giữ nguyên ở cả ba.
    */
-  tone?: 'muted' | 'plain';
+  appearance?: 'pill' | 'tabs' | 'segment';
   className?: string;
 }
 
@@ -50,12 +61,15 @@ export function SegmentedTabs<T extends string>({
   items,
   ariaLabel,
   controls,
+  semantics = 'tabs',
   size = 'md',
-  tone = 'muted',
+  appearance = 'pill',
   className,
 }: SegmentedTabsProps<T>) {
   const listRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
+  const isRadio = semantics === 'radio';
+  const itemRole = isRadio ? 'radio' : 'tab';
 
   /** Mũi tên đi trong nhóm (cuộn vòng), Home/End về hai đầu — hành vi tab chuẩn WAI-ARIA. */
   function handleKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
@@ -76,18 +90,19 @@ export function SegmentedTabs<T extends string>({
     if (!target) return;
     onChange(target.value);
     // Focus đi theo lựa chọn, nếu không người dùng bàn phím mất dấu mình đang ở đâu.
-    listRef.current?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
+    listRef.current?.querySelectorAll<HTMLButtonElement>(`[role="${itemRole}"]`)[next]?.focus();
   }
 
   return (
     <div
       ref={listRef}
-      role="tablist"
+      role={isRadio ? 'radiogroup' : 'tablist'}
       aria-label={ariaLabel}
       className={cx(
         styles.list,
         size === 'sm' && styles.listSm,
-        tone === 'plain' && styles.listPlain,
+        appearance === 'tabs' && styles.listTabs,
+        appearance === 'segment' && styles.listSegment,
         className,
       )}
       onKeyDown={handleKeyDown}
@@ -98,21 +113,25 @@ export function SegmentedTabs<T extends string>({
           <button
             key={item.value}
             type="button"
-            role="tab"
-            aria-selected={selected}
-            aria-controls={controls}
+            role={itemRole}
+            aria-selected={isRadio ? undefined : selected}
+            aria-checked={isRadio ? selected : undefined}
+            aria-controls={isRadio ? undefined : controls}
             // Roving tabindex: cả nhóm là MỘT điểm dừng Tab, đi trong nhóm bằng mũi tên.
             tabIndex={selected ? 0 : -1}
             className={cx(styles.tab, selected && styles.tabActive)}
             onClick={() => onChange(item.value)}
           >
-            {item.icon ? (
-              <span className={styles.icon} aria-hidden="true">
-                {item.icon}
+            {/* Một khối bọc icon + nhãn: gạch chân của dạng `tabs` chạy liền dưới cả hai. */}
+            <span className={styles.tabInner}>
+              {item.icon ? (
+                <span className={styles.icon} aria-hidden="true">
+                  {item.icon}
+                </span>
+              ) : null}
+              <span className={styles.label}>
+                {isMobile && item.shortLabel ? item.shortLabel : item.label}
               </span>
-            ) : null}
-            <span className={styles.label}>
-              {isMobile && item.shortLabel ? item.shortLabel : item.label}
             </span>
           </button>
         );

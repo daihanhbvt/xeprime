@@ -4261,7 +4261,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Toàn bộ banner (kèm cờ đang-hiển-thị theo lịch)
+         * Toàn bộ banner của một vị trí (kèm cờ đang-hiển-thị theo lịch) — mặc định đầu trang
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
          *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
@@ -4619,6 +4619,32 @@ export interface paths {
         get: operations["PlatformCatalogController_modelBrandSummary"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/catalog/presign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Presign upload ảnh danh mục lên R2 (prefix catalog/ dựng server-side)
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Không gian tài khoản (ADR 0053):** `platform` — phiên của realm khác bị từ chối.
+         *
+         *     **Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.
+         *
+         *     **Quyền yêu cầu:** `platform.catalog.manage` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        post: operations["PlatformCatalogController_presign"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7617,7 +7643,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Toàn bộ banner đang hiển thị cho hero trang chủ
+         * Toàn bộ banner đang hiển thị của một vị trí trang chủ (mặc định dải banner đầu trang)
          * @description **Truy cập:** công khai — không cần đăng nhập.
          *
          *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
@@ -7955,6 +7981,28 @@ export interface paths {
          *     **Không gian tài khoản (ADR 0053):** `customer` — phiên của realm khác bị từ chối.
          */
         post: operations["PublicPromoCodesController_preview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/reviews/featured": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Đánh giá nổi bật toàn sàn (mới nhất, từ 4 sao, có lời nhận xét)
+         * @description **Truy cập:** công khai — không cần đăng nhập.
+         *
+         *     **Không gian tài khoản (ADR 0053):** `customer` · `partner` · `platform` — phiên của realm khác bị từ chối.
+         */
+        get: operations["PublicFeaturedReviewController_featured"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -11022,6 +11070,11 @@ export interface components {
             linkUrl: string | null;
             /** @description Tên nội bộ */
             title: string;
+            /**
+             * @description Vị trí trên trang chủ
+             * @enum {string}
+             */
+            placement: "hero" | "promo";
             sortOrder: number;
             active: boolean;
             /** @description ISO-8601 UTC */
@@ -11930,6 +11983,18 @@ export interface components {
             description: string | null;
             /** @example /body-types/suv.png */
             iconUrl: string | null;
+            /** @description Chỉ kiểu dáng: hiện ở khối "Loại xe" trang chủ */
+            showOnHome: boolean;
+            /**
+             * @description Chỉ kiểu dáng: ảnh LỚN của thẻ trang chủ (xe tách nền)
+             * @example /home/type-suv.webp
+             */
+            showcaseImageUrl: string | null;
+            /**
+             * @description Chỉ kiểu dáng: dòng mẫu xe ví dụ dưới tên trên thẻ trang chủ
+             * @example Mazda CX-5, Ford Territory
+             */
+            showcaseExamples: string | null;
             sortOrder: number;
             active: boolean;
             /** @description Loại xe mục này áp dụng. MẢNG RỖNG = mọi loại. */
@@ -11949,6 +12014,18 @@ export interface components {
             description: string | null;
             /** @example /body-types/suv.png */
             iconUrl: string | null;
+            /** @description Chỉ kiểu dáng: hiện ở khối "Loại xe" trang chủ */
+            showOnHome: boolean;
+            /**
+             * @description Chỉ kiểu dáng: ảnh LỚN của thẻ trang chủ (xe tách nền)
+             * @example /home/type-suv.webp
+             */
+            showcaseImageUrl: string | null;
+            /**
+             * @description Chỉ kiểu dáng: dòng mẫu xe ví dụ dưới tên trên thẻ trang chủ
+             * @example Mazda CX-5, Ford Territory
+             */
+            showcaseExamples: string | null;
             sortOrder: number;
             active: boolean;
             /** @description Loại xe mục này áp dụng. MẢNG RỖNG = mọi loại. */
@@ -12277,13 +12354,19 @@ export interface components {
         };
         CreateBannerDto: {
             /**
+             * @description Vị trí — đặt lúc tạo, KHÔNG đổi được về sau (mỗi vị trí một bộ khổ ảnh)
+             * @default hero
+             * @enum {string}
+             */
+            placement: "hero" | "promo";
+            /**
              * @description Tên nội bộ — không hiển thị công khai
              * @example Chiến dịch hè 2026
              */
             title: string;
             /** @description URL ảnh desktop (upload qua presign R2) */
             imageUrl: string;
-            /** @description URL ảnh tablet 1024×320 — bỏ trống dùng ảnh desktop */
+            /** @description URL ảnh tablet 1024×320 (chỉ banner đầu trang) — bỏ trống dùng ảnh desktop */
             tabletImageUrl?: string | null;
             /** @description URL ảnh mobile — bỏ trống dùng ảnh desktop */
             mobileImageUrl?: string | null;
@@ -12492,6 +12575,12 @@ export interface components {
             description?: Record<string, never>;
             /** @example /body-types/coupe.png */
             iconUrl?: Record<string, never>;
+            /** @description Chỉ kiểu dáng — bật thì bắt buộc có showcaseImageUrl */
+            showOnHome?: boolean;
+            /** @description Chỉ kiểu dáng */
+            showcaseImageUrl?: string | null;
+            /** @description Chỉ kiểu dáng */
+            showcaseExamples?: string | null;
             /** @default 0 */
             sortOrder: number;
             /** @description Bỏ trống = áp dụng mọi loại xe */
@@ -13575,6 +13664,22 @@ export interface components {
             key: string;
             /** @description Số listing khớp nếu chọn option này */
             count: number;
+        };
+        FeaturedReviewDto: {
+            id: string;
+            rating: number;
+            /** @description Lời nhận xét (luôn có nội dung) */
+            comment: string;
+            /** @description Tên khách (đã rút gọn) */
+            customerName: string;
+            /** @description Số chuyến người viết đã hoàn thành trên XePrime — "Đã thuê N lần" */
+            customerTripCount: number;
+            /** @description Xe đã thuê — để mở trang chi tiết từ đánh giá */
+            vehicleId: string;
+            /** @description Tên xe đã thuê */
+            vehicleName: string;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
         };
         FeeLineDto: {
             /** @enum {string} */
@@ -16854,6 +16959,8 @@ export interface components {
             vehicleCount: number;
             /** @description Ảnh đại diện lấy từ một xe */
             imageUrl?: string | null;
+            /** @description Giá thuê TỰ LÁI theo ngày thấp nhất (đã trừ khuyến mãi của chủ xe), string — ADR 0007. Null khi tỉnh không có xe tự lái nào có giá ngày. */
+            minDailyPrice?: string | null;
         };
         PublicListingDetailDto: {
             id: string;
@@ -16873,6 +16980,15 @@ export interface components {
              */
             motorbikeCategory: "scooter" | "underbone" | "naked" | "sport" | "cruiser" | "adventure" | "touring" | "offroad" | "other" | null;
             mainImageUrl?: string | null;
+            /** @description Tổng số ảnh của xe — thẻ hiện "+N" ảnh */
+            imageCount: number;
+            /**
+             * @description Hộp số (TRANSMISSION_TYPE_EXT — cùng bộ mã với hồ sơ xe) — null khi chủ xe chưa khai
+             * @enum {string|null}
+             */
+            transmission: "automatic" | "manual" | "cvt" | "e_cvt" | "dct" | "amt" | "direct_drive" | "automatic_cvt" | "semi_automatic" | "manual_clutch" | "other" | null;
+            /** @description Dịch vụ đang bật tự động nhận chuyến — thẻ hiện "Không cần xác nhận" khi dịch vụ khách đang xem nằm trong mảng này */
+            instantBookServiceTypes: ("self_drive" | "with_driver" | "long_term")[];
             /** @description Tiền dạng string — ADR 0007 */
             weekdayPrice?: string | null;
             weekendPrice?: string | null;
@@ -16908,6 +17024,8 @@ export interface components {
             completedTripCount: number;
             /** @description Mã tỉnh nơi xe đang đỗ (theo chi nhánh) — dùng để lọc/điều hướng */
             provinceCode?: string | null;
+            /** @description Tên xã/phường của chi nhánh đang giữ xe — chỉ để HIỂN THỊ */
+            wardName?: string | null;
             /** @description Điểm đánh giá trung bình CỦA XE (review published). Null khi chưa có đánh giá. */
             ratingAvg?: string | null;
             /** @description Số lượt đánh giá của xe */
@@ -16948,8 +17066,6 @@ export interface components {
             batteryCapacityKwh?: string | null;
             /** @description kWh/100km */
             electricConsumptionKwhPer100Km?: string | null;
-            /** @description @xeprime/types → TransmissionType */
-            transmission?: string | null;
         };
         PublicListingDto: {
             id: string;
@@ -16969,6 +17085,15 @@ export interface components {
              */
             motorbikeCategory: "scooter" | "underbone" | "naked" | "sport" | "cruiser" | "adventure" | "touring" | "offroad" | "other" | null;
             mainImageUrl?: string | null;
+            /** @description Tổng số ảnh của xe — thẻ hiện "+N" ảnh */
+            imageCount: number;
+            /**
+             * @description Hộp số (TRANSMISSION_TYPE_EXT — cùng bộ mã với hồ sơ xe) — null khi chủ xe chưa khai
+             * @enum {string|null}
+             */
+            transmission: "automatic" | "manual" | "cvt" | "e_cvt" | "dct" | "amt" | "direct_drive" | "automatic_cvt" | "semi_automatic" | "manual_clutch" | "other" | null;
+            /** @description Dịch vụ đang bật tự động nhận chuyến — thẻ hiện "Không cần xác nhận" khi dịch vụ khách đang xem nằm trong mảng này */
+            instantBookServiceTypes: ("self_drive" | "with_driver" | "long_term")[];
             /** @description Tiền dạng string — ADR 0007 */
             weekdayPrice?: string | null;
             weekendPrice?: string | null;
@@ -17004,6 +17129,8 @@ export interface components {
             completedTripCount: number;
             /** @description Mã tỉnh nơi xe đang đỗ (theo chi nhánh) — dùng để lọc/điều hướng */
             provinceCode?: string | null;
+            /** @description Tên xã/phường của chi nhánh đang giữ xe — chỉ để HIỂN THỊ */
+            wardName?: string | null;
             /** @description Điểm đánh giá trung bình CỦA XE (review published). Null khi chưa có đánh giá. */
             ratingAvg?: string | null;
             /** @description Số lượt đánh giá của xe */
@@ -17075,6 +17202,12 @@ export interface components {
             ratingCount: number;
             /** @description Gian hàng tuyến gói — đeo dấu xác thực XePrime (hasVerifiedStorefront). Cùng phép suy với `shopVerified` của thẻ xe: false là mặt tiền chủ xe cá nhân. */
             verified: boolean;
+            /** @description Lời giới thiệu ngắn của gian hàng (hồ sơ) — null khi chưa viết */
+            bio?: string | null;
+            /** @description Số chuyến đã hoàn thành của cả gian hàng */
+            completedTripCount: number;
+            /** @description Ảnh của xe xếp hạng cao nhất đang hiển thị công khai — ảnh đại diện trên thẻ */
+            featuredVehicleImageUrl?: string | null;
         };
         PurchaseSubscriptionDto: {
             /** @description ID gói (ULID) */
@@ -17498,7 +17631,13 @@ export interface components {
             updatedAt: string;
         };
         ReorderBannersDto: {
-            /** @description Toàn bộ id banner theo thứ tự hiển thị mới */
+            /**
+             * @description Vị trí đang sắp — thứ tự tính riêng từng vị trí
+             * @default hero
+             * @enum {string}
+             */
+            placement: "hero" | "promo";
+            /** @description Toàn bộ id banner CỦA VỊ TRÍ ĐÓ theo thứ tự hiển thị mới */
             ids: string[];
         };
         ReorderCatalogDto: {
@@ -18661,6 +18800,12 @@ export interface components {
             label?: string;
             description?: string | null;
             iconUrl?: string | null;
+            /** @description Chỉ kiểu dáng — bật thì bắt buộc có showcaseImageUrl */
+            showOnHome?: boolean;
+            /** @description Chỉ kiểu dáng */
+            showcaseImageUrl?: string | null;
+            /** @description Chỉ kiểu dáng */
+            showcaseExamples?: string | null;
             sortOrder?: number;
             vehicleTypes?: ("car" | "motorbike")[];
             active?: boolean;
@@ -47305,7 +47450,10 @@ export interface operations {
     };
     PlatformBannersController_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description hero = dải banner đầu trang · promo = banner khuyến mãi giữa trang */
+                placement?: "hero" | "promo";
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -47321,6 +47469,27 @@ export interface operations {
                     "application/json": {
                         data: components["schemas"]["AdminBannerDto"][];
                     };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
             /**
@@ -50010,6 +50179,158 @@ export interface operations {
                      *       "error": {
                      *         "code": "MISSING_PERMISSION",
                      *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PlatformCatalogController_presign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PresignImageDto"];
+            };
+        };
+        responses: {
+            /** @description Đã tạo */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["UploadPresignDto"];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `REALM_NOT_ALLOWED` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             *
+             *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "CONFLICT",
+                     *         "message": "Dữ liệu đã tồn tại"
                      *       }
                      *     }
                      */
@@ -69135,7 +69456,10 @@ export interface operations {
     };
     PublicBannersController_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description hero = dải banner đầu trang · promo = banner khuyến mãi giữa trang */
+                placement?: "hero" | "promo";
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -69151,6 +69475,27 @@ export interface operations {
                     "application/json": {
                         data: components["schemas"]["PublicBannerDto"][];
                     };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
             /**
@@ -70846,6 +71191,93 @@ export interface operations {
             };
             /**
              * @description Vượt giới hạn 20 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PublicFeaturedReviewController_featured: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["FeaturedReviewDto"][];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
              */

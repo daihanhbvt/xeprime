@@ -11,7 +11,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
-import { PROVINCE_CODES, type RouteType, type ServiceType, type VehicleType } from '@xeprime/types';
+import { type RouteType, type ServiceType, type VehicleType } from '@xeprime/types';
 import type { RentalMode, RentalRange } from '@/components/form/RentalDateTimeRangeField';
 import { ROUTES } from '@/constants/routes';
 import {
@@ -28,7 +28,7 @@ import {
 } from '@/lib/rental-range-memory';
 import { XP_TOKENS } from '@/styles/theme';
 import { applyFilterPatch } from '../filter-params';
-import { useDestinations } from '../hooks/use-destinations';
+import { useAllDestinations } from '../hooks/use-destinations';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import { provinceLabelOf } from '../province-options';
 import type { PublicDestination } from '../types';
@@ -40,16 +40,6 @@ import {
   searchContextSignature,
   type SearchDraft,
 } from './search-draft';
-
-/**
- * Bộ chọn địa điểm lấy TRỌN danh mục tỉnh/thành, không phải top-N.
- *
- * Panel lọc ở client, nên một danh sách bị cắt sẽ báo "Không có tỉnh/thành nào khớp" cho đúng
- * những tỉnh ít xe nhất — trong khi chúng vẫn có xe. Trần của endpoint là 63; danh mục hiện có
- * {@link PROVINCE_CODES}.length mục và endpoint chỉ trả tỉnh THỰC SỰ có xe, nên đây là "tất cả",
- * không phải một con số cao cho chắc.
- */
-const PROVINCE_OPTIONS_LIMIT = PROVINCE_CODES.length;
 
 /**
  * Neo `IntersectionObserver` của hero: trừ đi phần bị header dính che, nên hero coi như "khuất"
@@ -101,11 +91,15 @@ export function SearchExperienceProvider({ children }: { children: ReactNode }) 
    * còn "Tìm xe" mới điều hướng sang kết quả.
    */
   const isResultsPage = pathname === ROUTES.SEARCH;
+  /*
+   * Bộ chọn địa điểm lấy TRỌN danh mục tỉnh có xe, không phải top-N: panel lọc ở client, một
+   * danh sách bị cắt sẽ báo "không có tỉnh nào khớp" cho đúng những tỉnh ít xe nhất.
+   */
   const {
     data: destinations,
     isLoading: destinationsLoading,
     error: destinationsError,
-  } = useDestinations(PROVINCE_OPTIONS_LIMIT);
+  } = useAllDestinations();
 
   const [draft, setDraft] = useState<SearchDraft>(() => draftFromFilters(filters));
 
@@ -239,7 +233,9 @@ export function SearchExperienceProvider({ children }: { children: ReactNode }) 
   ) {
     setRestoredProvince(true);
     if (provinceLabelOf(destinations, rememberedProvince)) {
-      setDraft((prev) => (prev.provinceCode ? prev : { ...prev, provinceCode: rememberedProvince }));
+      setDraft((prev) =>
+        prev.provinceCode ? prev : { ...prev, provinceCode: rememberedProvince },
+      );
     }
   }
 

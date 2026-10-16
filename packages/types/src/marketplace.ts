@@ -27,6 +27,8 @@ export type ReviewPage = Schemas['ReviewPageDto'];
 /** Đánh giá trên trang gian hàng — như `ReviewItem` + chiếc xe khách đã thuê. */
 export type ShopReviewItem = Schemas['ShopReviewDto'];
 export type ShopReviewPage = Schemas['ShopReviewPageDto'];
+/** Đánh giá nổi bật toàn sàn — "Khách hàng nói gì về Xe Prime" ở trang chủ. */
+export type FeaturedReview = Schemas['FeaturedReviewDto'];
 
 export type { ListingSort };
 
@@ -79,4 +81,23 @@ export interface MarketplaceFilters {
   sort?: ListingSort;
   page?: number;
   limit?: number;
+}
+
+/**
+ * Vị trí của một banner trang chủ (`marketplace_banners.placement`):
+ *   · `hero` — dải banner đầu trang (PC 1440×300 · tablet 1024×320 · mobile 780×390);
+ *   · `promo` — banner khuyến mãi giữa trang (PC 1168×360, mobile tuỳ chọn 680×400).
+ * Hai vị trí dùng chung một bảng, một đường ghi (`BannersService`); trần banner hiển thị cùng lúc,
+ * thứ tự và lịch tính RIÊNG cho từng vị trí.
+ */
+export const BANNER_PLACEMENT = {
+  HERO: 'hero',
+  PROMO: 'promo',
+} as const;
+export type BannerPlacement = (typeof BANNER_PLACEMENT)[keyof typeof BANNER_PLACEMENT];
+export const BANNER_PLACEMENT_VALUES = Object.values(BANNER_PLACEMENT) as BannerPlacement[];
+
+/** Đọc vị trí từ URL/đầu vào không tin cậy — giá trị lạ không bao giờ lọt thành một vị trí. */
+export function isBannerPlacement(value: unknown): value is BannerPlacement {
+  return (BANNER_PLACEMENT_VALUES as readonly unknown[]).includes(value);
 }

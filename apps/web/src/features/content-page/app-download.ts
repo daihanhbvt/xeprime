@@ -26,6 +26,9 @@ const MARKETING_SITE_URL = 'https://xeprime.vn';
  * không phục vụ chợ xe. Để nó ở `marketplace/constants.ts` là bắt một component của khu nội
  * dung phải import ngược sang khu chợ cho một hằng chẳng liên quan gì tới chợ.
  *
+ * Thứ tự Google Play → App Store theo design v2 (ADR 0062) — chân trang, banner trang chủ và trang
+ * `/app` cùng đọc mảng này nên cùng một thứ tự.
+ *
  * Tên cửa hàng là DANH TỪ RIÊNG, không dịch và không cần khoá message — cùng lý do với danh
  * sách mạng xã hội trong chân trang.
  */
@@ -34,6 +37,6 @@ export const APP_DOWNLOAD_QR: ReadonlyArray<{
   store: string;
   value: string;
 }> = [
-  { key: 'ios', store: 'App Store', value: `${MARKETING_SITE_URL}/?app=ios` },
   { key: 'android', store: 'Google Play', value: `${MARKETING_SITE_URL}/?app=android` },
+  { key: 'ios', store: 'App Store', value: `${MARKETING_SITE_URL}/?app=ios` },
 ];

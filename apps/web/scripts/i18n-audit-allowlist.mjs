@@ -39,6 +39,10 @@ export const AUDIT_ALLOWLIST = [
     reason: 'Tên mạng xã hội — danh từ riêng, không dịch.',
   },
   {
+    text: 'X (Twitter)',
+    reason: 'Tên mạng xã hội — danh từ riêng, không dịch (biểu tượng ở chân trang design v2).',
+  },
+  {
     text: 'TikTok',
     reason: 'Tên mạng xã hội — danh từ riêng, không dịch.',
   },

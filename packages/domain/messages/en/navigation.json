@@ -16,7 +16,11 @@
     "platformAdmin": "Platform admin",
     "mainNavLabel": "Main navigation",
     "quickNavLabel": "Quick navigation",
-    "shopProfile": "Shop profile"
+    "shopProfile": "Shop profile",
+    "searchCars": "Find a car",
+    "aboutXePrime": "About Xe Prime",
+    "contact": "Contact",
+    "loginOrRegister": "Sign in/<br></br>Sign up"
   },
   "account": {
     "menuLabel": "Account menu",

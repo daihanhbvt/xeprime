@@ -20,6 +20,10 @@ import { NotificationService } from '../notification/notification.service';
 import { ListingsService } from '../public-listings/listings.service';
 import {
   CreateReviewDto,
+  FEATURED_REVIEW_DEFAULT_LIMIT,
+  FEATURED_REVIEW_MAX_LIMIT,
+  FeaturedReviewDto,
+  FeaturedReviewQueryDto,
   REVIEW_DEFAULT_LIMIT,
   REVIEW_MAX_LIMIT,
   ReviewDto,
@@ -28,6 +32,15 @@ import {
   ShopReviewDto,
 } from './dto/review.dto';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
+
+/** Đánh giá nổi bật phải từ 4 sao — khối này trích lời khen, không phải mọi lời nhận xét. */
+const FEATURED_REVIEW_MIN_RATING = 4;
+/** Lời nhận xét ngắn hơn ("ok", "tốt") không có gì để trích dẫn. */
+const FEATURED_REVIEW_MIN_COMMENT_LENGTH = 20;
+/** Bội số lấy dư trước khi lọc độ dài — trần cứng cho tập ứng viên. */
+const FEATURED_REVIEW_OVERFETCH = 4;
+/** Mỗi gian hàng góp tối đa từng ấy lời khen — một gian hàng nhiều đánh giá không chiếm cả băng chuyền. */
+const FEATURED_REVIEW_PER_TENANT = 2;
 
 const PUBLIC_SELECT = {
   id: true,
@@ -218,6 +231,89 @@ export class ReviewService {
       })),
       meta: paginationMeta(paging, total),
     };
+  }
+
+  /**
+   * Đánh giá NỔI BẬT toàn sàn — "Khách hàng nói gì về Xe Prime" ở trang chủ.
+   *
+   * Luật chọn (không ai được "chọn tay" lời khen để đăng):
+   *   · review `published`, chưa xoá; gian hàng đang hoạt động và xe chưa xoá — cùng điều kiện
+   *     với trang gian hàng, nên không trích một đánh giá dẫn về trang 404;
+   *   · từ `FEATURED_REVIEW_MIN_RATING` sao trở lên và có lời nhận xét đủ dài để trích
+   *     (`FEATURED_REVIEW_MIN_COMMENT_LENGTH` ký tự sau khi cắt khoảng trắng);
+   *   · mới nhất trước — index `(status, created_at DESC)` phục vụ đúng câu này;
+   *   · mỗi gian hàng tối đa `FEATURED_REVIEW_PER_TENANT` lời — "khách hàng nói gì về XePrime"
+   *     là tiếng nói của CẢ chợ, không phải trang quảng cáo của một gian hàng.
+   *
+   * Độ dài lời nhận xét không lọc được trong Prisma, nên lấy dư một bội số CÓ TRẦN rồi lọc ở Node
+   * — tập ứng viên không bao giờ quá `limit × FEATURED_REVIEW_OVERFETCH` dòng.
+   *
+   * "Đã thuê N lần" đếm chuyến ĐÃ HOÀN THÀNH của người viết qua yêu cầu thuê của TÀI KHOẢN đó —
+   * một phép gộp cho cả trang, không N+1.
+   */
+  async listFeatured(query: FeaturedReviewQueryDto): Promise<FeaturedReviewDto[]> {
+    const limit = Math.min(
+      FEATURED_REVIEW_MAX_LIMIT,
+      Math.max(1, query.limit ?? FEATURED_REVIEW_DEFAULT_LIMIT),
+    );
+
+    const candidates = await this.prisma.review.findMany({
+      where: {
+        status: REVIEW_STATUS.PUBLISHED,
+        deletedAt: null,
+        rating: { gte: FEATURED_REVIEW_MIN_RATING },
+        comment: { not: null },
+        tenant: { status: TENANT_STATUS.ACTIVE, deletedAt: null },
+        vehicle: { deletedAt: null },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit * FEATURED_REVIEW_OVERFETCH,
+      select: {
+        id: true,
+        rating: true,
+        comment: true,
+        createdAt: true,
+        customerId: true,
+        tenantId: true,
+        customer: { select: { displayName: true } },
+        vehicle: { select: { id: true, name: true } },
+      },
+    });
+
+    const perTenant = new Map<string, number>();
+    const picked = candidates
+      .map((r) => ({ ...r, comment: r.comment?.trim() ?? '' }))
+      .filter((r) => {
+        if (r.comment.length < FEATURED_REVIEW_MIN_COMMENT_LENGTH) return false;
+        const taken = perTenant.get(r.tenantId) ?? 0;
+        if (taken >= FEATURED_REVIEW_PER_TENANT) return false;
+        perTenant.set(r.tenantId, taken + 1);
+        return true;
+      })
+      .slice(0, limit);
+    if (picked.length === 0) return [];
+
+    const customerIds = [...new Set(picked.map((r) => r.customerId))];
+    const trips = await this.prisma.bookingRequest.groupBy({
+      by: ['customerUserId'],
+      where: {
+        customerUserId: { in: customerIds },
+        booking: { status: BOOKING_STATUS.COMPLETED, deletedAt: null },
+      },
+      _count: { _all: true },
+    });
+    const tripsBy = new Map(trips.map((t) => [t.customerUserId, t._count._all]));
+
+    return picked.map((r) => ({
+      id: r.id,
+      rating: r.rating,
+      comment: r.comment,
+      customerName: maskName(r.customer.displayName),
+      customerTripCount: tripsBy.get(r.customerId) ?? 0,
+      vehicleId: r.vehicle.id,
+      vehicleName: r.vehicle.name,
+      createdAt: r.createdAt as unknown as string,
+    }));
   }
 
   /**

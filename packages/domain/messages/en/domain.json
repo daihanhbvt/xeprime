@@ -908,7 +908,7 @@
   },
   "catalogTypeHint": {
     "vehicle_brand": "Shown in the \"Brand\" field when adding a vehicle, and in marketplace filters.",
-    "body_type": "Shown as picture cards when adding a vehicle, and in the marketplace \"Type\" filter.",
+    "body_type": "Shown as picture cards when adding a vehicle, in the marketplace \"Type\" filter and — when \"Show on home page\" is on — in the home page \"Vehicle types\" section.",
     "fuel_type": "Shown in the \"Energy source\" field when adding a vehicle, and in filters.",
     "vehicle_feature": "Shown under \"Features\" when adding a vehicle, and in marketplace filters.",
     "vehicle_model": "Shown in the \"Model\" field once a brand is picked. Each model belongs to one brand and one vehicle type."

@@ -26,6 +26,7 @@ import { PromoCodeEvaluatorService } from '../src/modules/promo-codes/promo-code
 import { PromoCodesService } from '../src/modules/promo-codes/promo-codes.service';
 import { PromoQuoteService } from '../src/modules/promo-codes/promo-quote.service';
 import { VehicleSettingsService } from '../src/modules/vehicle-settings/vehicle-settings.service';
+import { ListingsService } from '../src/modules/public-listings/listings.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import {
   makeBookingHoldsService,
@@ -57,7 +58,7 @@ const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
 const notifications = makeNotificationService(asService);
 const occupancy = new OccupancyService(asService);
-const settings = new VehicleSettingsService(asService, audit, occupancy);
+const settings = new VehicleSettingsService(asService, audit, occupancy, new ListingsService(asService));
 const holds = makeBookingHoldsService(asService);
 const pricing = makePricingService(asService);
 const evaluator = new PromoCodeEvaluatorService(asService);

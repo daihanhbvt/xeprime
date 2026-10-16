@@ -36,6 +36,7 @@ vi.mock('../hooks/use-marketplace-filters', () => ({
 
 vi.mock('../hooks/use-destinations', () => ({
   useDestinations: () => ({ data: DESTINATIONS, isLoading: false, error: null }),
+  useAllDestinations: () => ({ data: DESTINATIONS, isLoading: false, error: null }),
 }));
 
 vi.mock('@/hooks/use-media-query', () => ({ useIsMobile: () => false }));

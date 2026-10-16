@@ -1,54 +1,41 @@
 'use client';
 
-import {
-  BarChartOutlined,
-  DashboardOutlined,
-  EnvironmentOutlined,
-  HeartOutlined,
-  StarFilled,
-  TeamOutlined,
-} from '@ant-design/icons';
+import Image from 'next/image';
 import Link from 'next/link';
-import { SERVICE_TYPE, VEHICLE_TYPE, VEHICLE_TYPE_LABEL, type VehicleType } from '@xeprime/types';
+import { SERVICE_TYPE, VEHICLE_TYPE, transmissionFamily, type VehicleType } from '@xeprime/types';
 import { listingPath, shopPath } from '@/constants/routes';
 import { cx } from '@/lib/cx';
-import { DiscountTag } from '@/components/data-display/DiscountTag';
-import { VerifiedMark } from '@/components/common/VerifiedMark';
 import { applyDiscountPercent } from '@/lib/money';
 import { initialOf } from '@/lib/initials';
+import { DiscountTag } from '@/components/data-display/DiscountTag';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import type { PublicListing } from '../types';
 import styles from './VehicleCard.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useTranslations } from 'next-intl';
-import { useDomainLabel } from '@/i18n/use-domain-label';
 
 /**
- * Một thẻ xe trên marketplace. Chỉ hiển thị trường backend thật sự có — thiếu thì ẩn dòng đó.
+ * Một thẻ xe trên marketplace — design v2 (Figma "Vehicle Card", ADR 0062). Chỉ hiển thị trường
+ * backend thật sự có — thiếu thì ẩn phần đó.
  *
  * KHÔNG có nút thuê ở đây (Wave 11.1). Thẻ chỉ mang dữ liệu tóm tắt, trong khi quyết định thuê
  * cần giá theo ngày, chính sách cọc, điều kiện giao nhận và đánh giá — tức là trang chi tiết.
  * Mở thẳng luồng thuê từ một thẻ trong lưới là mời khách cam kết trước khi đọc.
  *
  * Cả thẻ là một liên kết tới trang chi tiết; CTA `Chọn thuê` sống ở đó.
+ *
+ * Một khác biệt có chủ đích so với bản vẽ: hàng nhãn tiện ích (giao tận nơi · miễn thế chấp ·
+ * xuất hoá đơn VAT) vẫn hiện khi xe có — ADR 0059 bắt buộc thẻ xe mang nhãn hoá đơn VAT, và hai
+ * nhãn kia là chiều lọc khách đang dùng ở trang kết quả.
  */
 export function VehicleCard({ listing }: { listing: PublicListing }) {
   const t = useTranslations('Listings.card');
-  const domainLabel = useDomainLabel();
   const fmt = useAppFormat();
 
   const { filters } = useMarketplaceFilters();
-  // Thẻ xe lưu key hãng/nhiên liệu — nhãn tra từ danh mục chung với bộ lọc bên cạnh.
-  const { brandLabel, fuelTypeLabel } = useCatalogLabels();
-
-  const typeLabel = domainLabel(
-    'vehicleType',
-    listing.vehicleType,
-    VEHICLE_TYPE_LABEL[listing.vehicleType as VehicleType] ?? listing.vehicleType,
-  );
-  const brandLine = [brandLabel(listing.brand), listing.model].filter(Boolean).join(' ');
-  const specs = brandLine || typeLabel;
+  // Thẻ xe lưu key nhiên liệu — nhãn tra từ danh mục chung với bộ lọc bên cạnh.
+  const { fuelTypeLabel } = useCatalogLabels();
 
   /*
    * MỘT `activeService` duy nhất cho cả thẻ (17/08) — badge, giá, đơn vị, ghi chú và link
@@ -66,16 +53,14 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
   const fuel = fuelTypeLabel(listing.fuelType);
   const rating = Number(listing.ratingAvg);
   const hasRating = listing.ratingCount > 0 && Number.isFinite(rating);
-  const completedTripCount = listing.completedTripCount ?? 0;
 
   /*
    * HAI TUYẾN trên một chợ (ADR 0028) và khách phải đọc được mình đang xem xe của ai. Backend
-   * đã chấm tuyến thu tiền hiệu lực; thẻ chỉ dựng lại điều đó bằng ba tín hiệu cùng nói một
-   * điều — chữ ("Gian hàng" thay cho "Chủ xe"), dấu xác thực, và tông vàng cam ở tên + vành
-   * avatar. Ba tín hiệu vì một mình dấu tick thì quá nhỏ ở cỡ 34px của footer thẻ.
+   * đã chấm tuyến thu tiền hiệu lực; thẻ dựng lại điều đó bằng ba tín hiệu cùng nói một điều —
+   * chữ ("Gian hàng" thay cho "Chủ xe"), dấu xác thực ở góc avatar, và tông vàng ở tên + vành
+   * avatar.
    *
    * `?? false` chứ không `?? true`: một backend chưa có trường này phải cho ra thẻ THƯỜNG.
-   * Mặc định ngược lại là gắn dấu xác thực cho mọi chủ xe cá nhân trong suốt lần deploy lệch.
    */
   const isShopTrack = listing.shopVerified ?? false;
 
@@ -105,11 +90,24 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
   const showStrikethrough = selfDriveContext && discount > 0;
 
   /*
-   * Tiền RÚT GỌN trên thẻ — `600k/ngày` thay cho `600.000 ₫/ngày` (16/09/2026).
-   *
-   * Chân thẻ chỉ có một hàng cho hai thứ cùng muốn rộng: tên gian hàng bên trái và giá bên
-   * phải. Dạng đầy đủ chiếm quá nửa hàng đó, nên tên bị cắt còn `XePrime Sà…` ngay cả trên
-   * màn hình rộng. Rút gọn trả lại khoảng một nửa bề rộng cho bên trái.
+   * "Không cần xác nhận" theo ĐÚNG dịch vụ đang xem: một xe tự động nhận chuyến tự lái nhưng
+   * duyệt tay chuyến có tài xế không được mang nhãn đó ở ngữ cảnh có tài xế.
+   */
+  const instantBook = Boolean(
+    activeService && (listing.instantBookServiceTypes ?? []).some((type) => type === activeService),
+  );
+
+  // "+N" là số ảnh THÊM ngoài ảnh đang hiện; một ảnh thì không có gì để hứa.
+  const extraPhotos = Math.max(0, (listing.imageCount ?? 0) - 1);
+
+  const location = listing.shopProvince
+    ? listing.wardName
+      ? t('locationLine', { ward: listing.wardName, province: listing.shopProvince })
+      : listing.shopProvince
+    : null;
+
+  /*
+   * Tiền RÚT GỌN trên thẻ — `870k/ngày` thay cho `870.000 ₫/ngày` (16/09/2026).
    *
    * `price: true`: ở bậc triệu, một chữ số lẻ biến `1.050.000` thành `1tr`. Trên một cái thẻ
    * mà việc duy nhất của nó là giúp khách SO GIÁ giữa các xe, sai 50.000đ là sai ở đúng chỗ
@@ -134,6 +132,39 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
     ? `${listingPath.detail(listing.id)}?${dateQs.toString()}`
     : listingPath.detail(listing.id);
 
+  const amenities = [
+    listing.deliveryEnabled ? t('delivery') : null,
+    listing.noCollateral ? t('noCollateral') : null,
+    // Nhãn ngắn trên thẻ là yêu cầu của ADR 0059; câu "ai xuất, cho khoản nào" ở trang xe.
+    listing.vatInvoiceSupported ? t('vatInvoice') : null,
+  ].filter((label): label is string => label !== null);
+
+  const specs = [
+    listing.seatCount
+      ? {
+          key: 'seats',
+          icon: '/home/card-seats.svg',
+          width: 12,
+          height: 11,
+          label: t('seats', { count: listing.seatCount }),
+        }
+      : null,
+    listing.transmission
+      ? {
+          key: 'transmission',
+          icon: '/home/card-transmission.svg',
+          width: 13,
+          height: 13,
+          label: t(`transmissionFamily.${transmissionFamily(listing.transmission)}`),
+        }
+      : null,
+    fuel ? { key: 'fuel', icon: '/home/card-fuel.svg', width: 16, height: 16, label: fuel } : null,
+    // Kích thước là của NÉT VẼ (SVG Figma không giãn được) — đặt nguyên cỡ trong ô 16px.
+  ].filter(
+    (spec): spec is { key: string; icon: string; width: number; height: number; label: string } =>
+      spec !== null,
+  );
+
   return (
     <article className={styles.card}>
       {/* Stretched-link: cả thẻ dẫn tới trang chi tiết, trừ các nút z-index cao hơn. */}
@@ -155,110 +186,133 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
         ) : (
           <CarGlyph type={listing.vehicleType as VehicleType} />
         )}
-        {discount > 0 ? <DiscountTag percent={discount} className={styles.discountBadge} /> : null}
-        <button className={styles.fav} type="button" aria-label={t('save')}>
-          <HeartOutlined />
-        </button>
+
+        <div className={styles.badges}>
+          {/* % giảm là của giá TỰ LÁI — ngữ cảnh khác (dài hạn, có tài xế) không mang nó (ADR 0011). */}
+          {showStrikethrough ? <DiscountTag percent={discount} variant="badge" /> : null}
+          {instantBook ? (
+            <span className={cx(styles.badge, styles.badgeInstant)}>{t('instantBook')}</span>
+          ) : null}
+        </div>
+
+        {/*
+          Nút "Lưu xe" (trái tim) của bản vẽ CỐ Ý chưa có: tính năng xe yêu thích chưa mở (trang
+          `/account/favorites` còn là chỗ giữ chỗ). Một nút bấm không làm gì tệ hơn không có nút.
+        */}
+
+        {extraPhotos > 0 ? (
+          <span className={styles.photoCount}>
+            {/* `aria-label` trên `<span>` trần bị trình đọc màn hình bỏ qua — dùng chữ ẩn. */}
+            <span className={styles.srOnly}>
+              {t('photoCountAria', { count: listing.imageCount ?? 0 })}
+            </span>
+            <span className={styles.icon14}>
+              <Image src="/home/card-photos.svg" alt="" width={11} height={11} unoptimized />
+            </span>
+            <span aria-hidden="true">{t('photoCount', { count: extraPhotos })}</span>
+          </span>
+        ) : null}
       </div>
 
       <div className={styles.body}>
-        <div className={styles.heading}>
-          <h3 className={styles.title}>{listing.name}</h3>
-          <p className={styles.specs}>{specs}</p>
-        </div>
-
-        <div className={styles.metaRow}>
-          {listing.shopProvince ? (
-            <span className={styles.metaItem}>
-              <EnvironmentOutlined /> {listing.shopProvince}
-            </span>
+        <div className={styles.info}>
+          <div className={styles.nameRow}>
+            <h3 className={styles.title}>{listing.name}</h3>
+            {/* Chưa có đánh giá nào = xe mới lên chợ — cùng luật với bản trước. */}
+            {!hasRating ? <span className={styles.newBadge}>{t('newVehicle')}</span> : null}
+          </div>
+          {location ? (
+            <p className={styles.location}>
+              <span className={styles.icon20}>
+                <Image src="/home/card-location.svg" alt="" width={15} height={19} unoptimized />
+              </span>
+              <span className={styles.locationText}>{location}</span>
+            </p>
           ) : null}
-          {fuel ? (
-            <span className={styles.metaItem}>
-              <DashboardOutlined /> {fuel}
-            </span>
-          ) : null}
-          {listing.seatCount ? (
-            <span className={styles.metaItem}>
-              <TeamOutlined /> {t('seats', { count: listing.seatCount })}
-            </span>
-          ) : null}
-        </div>
-
-        <div className={styles.amenityRow}>
-          {listing.deliveryEnabled ? (
-            <span className={styles.amenityTag}>{t('delivery')}</span>
-          ) : null}
-          {listing.noCollateral ? (
-            <span className={styles.amenityTag}>{t('noCollateral')}</span>
-          ) : null}
-          {/*
-            Thẻ chỉ có chỗ cho một nhãn ngắn — câu "ai xuất hoá đơn, cho khoản nào" nằm ở trang xe
-            (ADR 0059). Không nhét nó vào `title`: chạm và bàn phím không bao giờ thấy được.
-          */}
-          {listing.vatInvoiceSupported ? (
-            <span className={styles.amenityTag}>{t('vatInvoice')}</span>
+          {amenities.length > 0 ? (
+            <div className={styles.amenityRow}>
+              {amenities.map((label) => (
+                <span key={label} className={styles.amenityTag}>
+                  {label}
+                </span>
+              ))}
+            </div>
           ) : null}
         </div>
 
-        <div className={styles.reputationRow}>
+        {specs.length > 0 ? (
+          <ul className={styles.specs} aria-label={t('specsLabel')}>
+            {specs.map((spec) => (
+              <li key={spec.key} className={styles.spec}>
+                <span className={styles.icon16}>
+                  <Image
+                    src={spec.icon}
+                    alt=""
+                    width={spec.width}
+                    height={spec.height}
+                    unoptimized
+                  />
+                </span>
+                <span>{spec.label}</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
+        <Link
+          href={shopPath.detail(listing.shopSlug)}
+          className={styles.shop}
+          title={listing.shopName}
+          /*
+            `aria-label` trên liên kết THAY THẾ mọi chữ bên trong khi trình đọc màn hình đọc nó —
+            nên nhãn xác thực phải ghép vào đây. Ghép ở tầng BẢN DỊCH, không nối chuỗi.
+          */
+          aria-label={
+            isShopTrack ? t('shopVerifiedAria', { name: listing.shopName }) : listing.shopName
+          }
+        >
+          <span
+            className={cx(styles.shopAvatar, isShopTrack && styles.shopAvatarShop)}
+            aria-hidden="true"
+          >
+            {listing.shopLogoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- logo gian hàng từ storage ngoài
+              <img src={listing.shopLogoUrl} alt="" loading="lazy" className={styles.shopLogo} />
+            ) : (
+              initialOf(listing.shopName)
+            )}
+            {isShopTrack ? (
+              <span className={styles.shopMark}>
+                <Image src="/home/card-verified.svg" alt="" width={10} height={10} unoptimized />
+              </span>
+            ) : null}
+          </span>
+          <span className={styles.shopCopy}>
+            <span className={styles.shopCaption}>{t(isShopTrack ? 'shop' : 'owner')}</span>
+            <span className={cx(styles.shopName, isShopTrack && styles.shopNameShop)}>
+              {listing.shopName}
+            </span>
+          </span>
+        </Link>
+
+        <div className={styles.footer}>
           {hasRating ? (
             <span
               className={styles.rating}
               title={t('ratingCount', { count: listing.ratingCount })}
             >
-              <StarFilled className={styles.star} /> {fmt.rating(rating)}
-            </span>
-          ) : (
-            <span className={styles.newVehicle}>{t('newVehicle')}</span>
-          )}
-          <span className={styles.reputationDivider} aria-hidden="true" />
-          <span className={styles.tripCount}>
-            <BarChartOutlined /> {t('completedTrips', { count: completedTripCount })}
-          </span>
-        </div>
-
-        <div className={styles.footer}>
-          <Link
-            href={shopPath.detail(listing.shopSlug)}
-            className={styles.shop}
-            title={listing.shopName}
-            /*
-              `aria-label` trên liên kết THAY THẾ mọi chữ bên trong khi trình đọc màn hình đọc
-              nó — nên nhãn của dấu xác thực bên dưới sẽ không bao giờ tới tai người dùng nếu
-              nhãn này chỉ có mỗi tên. Ghép ở tầng BẢN DỊCH, không nối chuỗi: dấu nối và thứ tự
-              hai vế là quyết định của từng ngôn ngữ.
-            */
-            aria-label={
-              isShopTrack
-                ? t('shopVerifiedAria', { name: listing.shopName })
-                : listing.shopName
-            }
-          >
-            <span
-              className={cx(styles.shopAvatar, isShopTrack && styles.shopAvatarShop)}
-              aria-hidden="true"
-            >
-              {listing.shopLogoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element -- logo gian hàng từ storage ngoài
-                <img src={listing.shopLogoUrl} alt="" loading="lazy" />
-              ) : (
-                initialOf(listing.shopName)
-              )}
-            </span>
-            <span className={styles.shopCopy}>
-              <span className={styles.shopCaption}>{t(isShopTrack ? 'shop' : 'owner')}</span>
-              <span className={styles.shopNameRow}>
-                <span className={cx(styles.shopName, isShopTrack && styles.shopNameShop)}>
-                  {listing.shopName}
-                </span>
-                {/* Dấu nằm NGOÀI phần tử cắt chữ: tên dài bị ellipsis thì dấu vẫn còn. */}
-                {isShopTrack ? (
-                  <VerifiedMark label={t('shopVerified')} size={13} className={styles.shopMark} />
-                ) : null}
+              <Image src="/home/star-16.svg" alt="" width={16} height={16} unoptimized />
+              <span>
+                {t.rich('ratingValue', {
+                  rating: fmt.rating(rating),
+                  count: listing.ratingCount,
+                  muted: (chunks) => <span className={styles.ratingCount}>{chunks}</span>,
+                })}
               </span>
             </span>
-          </Link>
+          ) : (
+            <span />
+          )}
 
           <div className={styles.price}>
             {displayPrice ? (
@@ -267,9 +321,9 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
                   <s className={styles.oldPrice}>{compactPrice(listing.weekdayPrice)}</s>
                 ) : null}
                 {/*
-                  Số tiền và ĐƠN VỊ là hai phần tử có style riêng (đơn vị nhỏ và mờ hơn).
-                  Dựng bằng rich text của ICU thay vì nối hai chuỗi đã dịch: mỗi ngôn ngữ tự
-                  quyết đơn vị đứng đâu, mà thẻ `<b>`/`<span>` vẫn đúng như thiết kế.
+                  Số tiền và ĐƠN VỊ là hai phần tử có style riêng (đơn vị nhỏ và mờ hơn). Dựng
+                  bằng rich text của ICU thay vì nối hai chuỗi đã dịch: mỗi ngôn ngữ tự quyết đơn
+                  vị đứng đâu, mà thẻ `<b>`/`<span>` vẫn đúng như thiết kế.
                 */}
                 <span className={styles.currentPrice}>
                   {t.rich(priceMessage, {
@@ -294,6 +348,7 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
   );
 }
 
+/** Xe chưa có ảnh — hình minh hoạ theo loại xe. Liên kết của thẻ đã mang tên xe nên glyph câm. */
 function CarGlyph({ type }: { type: VehicleType }) {
   return (
     <span className={styles.glyph} aria-hidden="true">

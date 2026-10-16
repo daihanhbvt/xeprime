@@ -1,33 +1,65 @@
 /* --- Nút mở: hai hình thái của CÙNG một ô ---------------------------------------------- */
 
 /*
- * `field` — VIÊN bo tròn trong thẻ tìm kiếm: cùng chiều cao, cùng nền chìm và cùng cách bo với
- * ô thời gian bên cạnh. Không viền ở trạng thái nghỉ; viền chỉ dùng để báo focus/đang mở.
+ * `field` — ô nhập của thẻ tìm kiếm trang chủ v2 (Figma "Input - Select", ADR 0062): nền trắng,
+ * viền xám, bo 12px, chữ 16px, icon ở cuối. Cùng hình với ô thời gian bên cạnh
+ * (`SearchCard.module.css` › `.box`) — hai ô của một hàng không được trông như hai bộ control.
  */
 .field {
   display: flex;
   width: 100%;
   min-width: 0;
-  height: 52px;
+  height: 44px;
   align-items: center;
-  padding: 0 var(--xp-space-md);
-  border: 1px solid transparent;
-  border-radius: var(--xp-border-radius-pill);
-  background: var(--xp-color-bg-muted);
+  padding: 10px 14px;
+  border: 1px solid var(--xp-color-border-strong);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-elevation-xs);
   color: var(--xp-color-text);
   cursor: pointer;
   font: inherit;
-  gap: 10px;
+  gap: var(--xp-space-sm);
   text-align: left;
 }
 
 .field:hover {
-  background: var(--xp-color-bg-selected);
+  border-color: var(--xp-color-primary);
 }
 
 .field[aria-expanded='true'] {
   border-color: var(--xp-color-border-focus);
-  background: var(--xp-color-bg-selected);
+  box-shadow: 0 0 0 var(--xp-focus-ring-width) var(--xp-color-focus-ring);
+}
+
+.triggerPlaceholder {
+  overflow: hidden;
+  min-width: 0;
+  flex: 1;
+  color: var(--xp-color-text-placeholder);
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Ô icon 20px — nét vẽ SVG đặt nguyên cỡ ở giữa (SVG Figma không giãn được). */
+.triggerSuffix {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+}
+
+/* Giá trị đã chọn trong ô v2: chữ thường 16px, chiếm hết chỗ trước icon. */
+.field .triggerValue {
+  flex: 1;
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-regular);
+  line-height: var(--xp-line-height-body-lg);
 }
 
 /* `chip` — viên gọn trong thanh tìm kiếm thu gọn; hình dáng dùng chung ở `search-chip`. */

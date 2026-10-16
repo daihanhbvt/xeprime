@@ -6,14 +6,35 @@ interface DiscountTagProps {
   percent: number;
   /** `sm` dùng trong tab/gói nhỏ; mặc định dùng cho card, chi tiết và màn quản lý. */
   size?: 'sm' | 'md';
+  /**
+   * `badge` — huy hiệu trên ảnh thẻ xe của design v2 (ADR 0062): nền gold nhạt, chữ "10% off".
+   * Mặc định là viên `-10%` của các màn còn lại.
+   */
+  variant?: 'pill' | 'badge';
   /** Chỉ dùng cho bố trí như ghim tag lên ảnh/góc gói; màu và chữ vẫn do common sở hữu. */
   className?: string;
 }
 
 /** Tag phần trăm giảm giá duy nhất của web — màu, typography và nội dung không trôi giữa màn. */
-export function DiscountTag({ percent, size = 'md', className }: DiscountTagProps) {
+export function DiscountTag({
+  percent,
+  size = 'md',
+  variant = 'pill',
+  className,
+}: DiscountTagProps) {
   const tCommon = useTranslations('Common');
   const normalized = Math.abs(percent);
+
+  if (variant === 'badge') {
+    return (
+      <span
+        className={cx(styles.badge, className)}
+        aria-label={tCommon('components.discount', { percent: normalized })}
+      >
+        {tCommon('components.discountBadge', { percent: normalized })}
+      </span>
+    );
+  }
 
   return (
     <span

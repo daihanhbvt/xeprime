@@ -7,40 +7,70 @@ import {
   EditOutlined,
   PlusOutlined,
 } from '@ant-design/icons';
-import { App, Button, Tag } from 'antd';
+import { App, Button, Tabs, Tag } from 'antd';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
-import { STATUS_COLOR } from '@xeprime/types';
+import {
+  BANNER_PLACEMENT,
+  STATUS_COLOR,
+  isBannerPlacement,
+  type BannerPlacement,
+} from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
-import { getErrorMessage } from '@/services/api-client';
+import {
+  BANNER_SLOTS,
+  PROMO_BANNER_SLOTS,
+  formatBannerSize,
+} from '@/features/banners/banner-media';
 import { BannerFormModal } from '@/features/banners/components/BannerFormModal';
 import {
+  MAX_CONCURRENT_VISIBLE_BANNERS,
   useAdminBanners,
+  useBannerSaveErrorMessage,
   useDeleteBanner,
   useReorderBanners,
   useUpdateBanner,
 } from '@/features/banners/use-admin-banners';
 import type { AdminBanner } from '@/features/banners/types';
 import { PreviewImage } from '@/components/data-display/PreviewImage';
+import { useUrlFilters } from '@/hooks/use-url-filters';
+import { useErrorMessage } from '@/i18n/use-error-message';
 import styles from './banners-page.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 
 const MIN_TABLE_WIDTH = 960;
 
+/** Tham số URL của tab vị trí — F5/chia sẻ link giữ đúng tab. */
+const PLACEMENT_PARAM = 'placement';
+
 /**
- * Quản lý banner hero trang chủ — nơi DUY NHẤT tạo/sửa nội dung carousel công khai.
+ * Quản lý banner trang chủ — nơi DUY NHẤT tạo/sửa banner công khai, cho cả HAI vị trí: dải banner
+ * đầu trang và banner khuyến mãi giữa trang (`placement`). Mỗi tab một danh sách, một thứ tự và
+ * một trần hiển thị riêng; vị trí của banner đặt lúc tạo theo tab đang mở.
  *
  * Trang chủ lấy toàn bộ banner "đang hiển thị" theo thứ tự; cột "Trạng thái" phân biệt
  * rõ đã tắt / chờ tới lịch / hết lịch để admin không phải tự nhẩm.
  */
 export default function AdminBannersPage() {
+  const t = useTranslations('AdminBanners');
+  const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
+  const errorMessage = useErrorMessage();
+  const saveErrorMessage = useBannerSaveErrorMessage();
+
+  const { filters, setFilters } = useUrlFilters<{ placement: BannerPlacement }>((sp) => {
+    const placement = sp.get(PLACEMENT_PARAM);
+    return { placement: isBannerPlacement(placement) ? placement : BANNER_PLACEMENT.HERO };
+  });
+  const placement = filters.placement;
+  const isPromo = placement === BANNER_PLACEMENT.PROMO;
 
   const { message } = App.useApp();
-  const { data, isError, refetch, isFetching } = useAdminBanners();
+  const { data, isError, refetch, isFetching } = useAdminBanners(placement);
   const update = useUpdateBanner();
   const remove = useDeleteBanner();
-  const reorder = useReorderBanners();
+  const reorder = useReorderBanners(placement);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<AdminBanner | null>(null);
@@ -66,24 +96,24 @@ export default function AdminBannersPage() {
     if (target < 0 || target >= items.length) return;
     const ids = items.map((b) => b.id);
     [ids[index], ids[target]] = [ids[target]!, ids[index]!];
-    reorder.mutate(ids, { onError: (err) => message.error(getErrorMessage(err)) });
+    reorder.mutate(ids, { onError: (err) => message.error(errorMessage(err)) });
   }
 
   const createButton = (
     <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-      Tạo banner
+      {t('page.create')}
     </Button>
   );
 
   const columns: DataTableColumn<AdminBanner>[] = [
     {
-      title: 'Ảnh',
+      title: t('columns.preview'),
       key: 'preview',
       width: 150,
       render: (_, b) => <PreviewImage src={b.imageUrl} alt={b.altText} className={styles.thumb} />,
     },
     {
-      title: 'Banner',
+      title: t('columns.banner'),
       key: 'title',
       width: 300,
       render: (_, b) => (
@@ -95,32 +125,32 @@ export default function AdminBannersPage() {
       ),
     },
     {
-      title: 'Lịch hiển thị',
+      title: t('columns.schedule'),
       key: 'schedule',
       width: 210,
       render: (_, b) =>
         b.startsAt || b.endsAt ? (
           <div className={styles.schedule}>
-            <div>{b.startsAt ? fmt.dateTime(b.startsAt) : 'Ngay lập tức'}</div>
-            <div>→ {b.endsAt ? fmt.dateTime(b.endsAt) : 'vô hạn'}</div>
+            <div>{b.startsAt ? fmt.dateTime(b.startsAt) : t('schedule.startNow')}</div>
+            <div>→ {b.endsAt ? fmt.dateTime(b.endsAt) : t('schedule.endNever')}</div>
           </div>
         ) : (
-          'Không giới hạn'
+          t('schedule.unlimited')
         ),
     },
     {
-      title: 'Trạng thái',
+      title: tCommon('labels.status'),
       key: 'status',
       width: 140,
       render: (_, b) => {
-        if (!b.active) return <Tag color={STATUS_COLOR.NEUTRAL}>Đã tắt</Tag>;
-        if (b.visibleNow) return <Tag color={STATUS_COLOR.SUCCESS}>Đang hiển thị</Tag>;
+        if (!b.active) return <Tag color={STATUS_COLOR.NEUTRAL}>{t('status.off')}</Tag>;
+        if (b.visibleNow) return <Tag color={STATUS_COLOR.SUCCESS}>{t('status.live')}</Tag>;
         // active nhưng ngoài khung lịch — nói rõ vì sao không thấy ngoài trang chủ.
         const upcoming = b.startsAt && new Date(b.startsAt).getTime() > Date.now();
         return upcoming ? (
-          <Tag color={STATUS_COLOR.WAITING}>Chờ tới lịch</Tag>
+          <Tag color={STATUS_COLOR.WAITING}>{t('status.upcoming')}</Tag>
         ) : (
-          <Tag color={STATUS_COLOR.WARNING}>Hết lịch</Tag>
+          <Tag color={STATUS_COLOR.WARNING}>{t('status.ended')}</Tag>
         );
       },
     },
@@ -130,52 +160,53 @@ export default function AdminBannersPage() {
         return [
           {
             key: 'edit',
-            label: 'Chỉnh sửa',
+            label: tCommon('actions.edit'),
             icon: <EditOutlined />,
             onClick: () => openEdit(b),
           },
           {
             key: 'up',
-            label: 'Đưa lên trên',
+            label: t('actions.moveUp'),
             icon: <ArrowUpOutlined />,
             disabled: index <= 0 || reorder.isPending,
             onClick: () => move(index, -1),
           },
           {
             key: 'down',
-            label: 'Đưa xuống dưới',
+            label: t('actions.moveDown'),
             icon: <ArrowDownOutlined />,
             disabled: index >= items.length - 1 || reorder.isPending,
             onClick: () => move(index, 1),
           },
           {
             key: 'toggle',
-            label: b.active ? 'Tắt' : 'Bật',
+            label: b.active ? t('actions.disable') : t('actions.enable'),
             loading: update.isPending && update.variables?.id === b.id,
             onClick: () =>
               update.mutate(
                 { id: b.id, active: !b.active },
                 {
-                  onSuccess: () => message.success(b.active ? 'Đã tắt banner' : 'Đã bật banner'),
-                  onError: (err) => message.error(getErrorMessage(err)),
+                  onSuccess: () =>
+                    message.success(b.active ? t('toast.disabled') : t('toast.enabled')),
+                  onError: (err) => message.error(saveErrorMessage(err)),
                 },
               ),
           },
           {
             key: 'delete',
-            label: 'Xoá',
+            label: tCommon('actions.delete'),
             icon: <DeleteOutlined />,
             danger: true,
             loading: remove.isPending && remove.variables === b.id,
             confirm: {
-              title: 'Xoá banner này? Ảnh vẫn còn trên kho lưu trữ, tạo lại được từ URL cũ.',
-              okText: 'Xoá',
-              cancelText: 'Đóng',
+              title: t('actions.deleteConfirm'),
+              okText: tCommon('actions.delete'),
+              cancelText: tCommon('actions.close'),
             },
             onClick: () =>
               remove.mutate(b.id, {
-                onSuccess: () => message.success('Đã xoá banner'),
-                onError: (err) => message.error(getErrorMessage(err)),
+                onSuccess: () => message.success(t('toast.deleted')),
+                onError: (err) => message.error(errorMessage(err)),
               }),
           },
         ];
@@ -186,36 +217,66 @@ export default function AdminBannersPage() {
 
   return (
     <div>
-      <ManagePageHeader title="Banner trang chủ" />
-      <p className={styles.hint}>
-        Có thể tạo không giới hạn; trang chủ hiển thị đầy đủ theo thứ tự từ trên xuống, nhưng tối đa
-        10 banner được phép trùng thời gian hiển thị. Mỗi cỡ màn một ảnh đúng tỉ lệ: PC 1440×300 ·
-        tablet 1024×320 · mobile 780×390 (hoặc @2x) — sai tỉ lệ sẽ bị chặn lúc tải lên. Chừa trống
-        ~15% mép dưới: thẻ tìm kiếm của trang chủ đè lên đó.
-      </p>
+      <ManagePageHeader title={t('page.title')} />
+      <Tabs
+        activeKey={placement}
+        onChange={(key) => {
+          if (isBannerPlacement(key)) setFilters({ placement: key }, { resetPage: false });
+        }}
+        aria-label={t('tabs.label')}
+        items={[
+          { key: BANNER_PLACEMENT.HERO, label: t('tabs.hero') },
+          { key: BANNER_PLACEMENT.PROMO, label: t('tabs.promo') },
+        ]}
+      />
+      {isPromo ? (
+        <>
+          <p className={styles.hint}>
+            {t('page.promoHint', {
+              max: MAX_CONCURRENT_VISIBLE_BANNERS,
+              desktop: formatBannerSize(PROMO_BANNER_SLOTS.desktop),
+              mobile: formatBannerSize(PROMO_BANNER_SLOTS.mobile),
+            })}
+          </p>
+          <p className={styles.hint}>{t('page.promoComposition')}</p>
+        </>
+      ) : (
+        <>
+          <p className={styles.hint}>
+            {t('page.hint', {
+              max: MAX_CONCURRENT_VISIBLE_BANNERS,
+              desktop: formatBannerSize(BANNER_SLOTS.desktop),
+              tablet: formatBannerSize(BANNER_SLOTS.tablet),
+              mobile: formatBannerSize(BANNER_SLOTS.mobile),
+            })}
+          </p>
+          <p className={styles.hint}>
+            {t('page.composition', { desktop: formatBannerSize(BANNER_SLOTS.desktop) })}
+          </p>
+        </>
+      )}
       <div className={styles.toolbar}>{createButton}</div>
 
       <DataTable<AdminBanner>
-        label="Banner trang chủ"
+        label={t('page.title')}
         columns={columns}
         items={items}
         onRowClick={openEdit}
         minWidth={MIN_TABLE_WIDTH}
         loading={isFetching}
         error={
-          isError && !data
-            ? { title: 'Không tải được danh sách banner', onRetry: () => void refetch() }
-            : null
+          isError && !data ? { title: t('page.loadError'), onRetry: () => void refetch() } : null
         }
         empty={{
-          title: 'Chưa có banner nào — trang chủ đang dùng hero mặc định',
+          title: isPromo ? t('page.emptyPromo') : t('page.empty'),
           action: createButton,
         }}
       />
 
       <BannerFormModal
-        key={`${editing?.id ?? 'new'}-${formSession}`}
+        key={`${placement}-${editing?.id ?? 'new'}-${formSession}`}
         open={formOpen}
+        placement={placement}
         banner={editing}
         onClose={() => setFormOpen(false)}
       />

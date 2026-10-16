@@ -25,6 +25,7 @@
     "MISSING_PERMISSION": "You don't have permission to do this.",
     "NO_TENANT_SCOPE": "This account doesn't belong to a shop yet.",
     "TENANT_NOT_ACTIVE": "This shop is not active yet.",
+    "BANNER_VISIBLE_LIMIT_EXCEEDED": "Too many banners would show at the same time. Turn off or reschedule another banner first.",
     "VALIDATION_FAILED": "Some details aren't valid. Please review the form.",
     "NOT_FOUND": "We couldn't find that.",
     "CONFLICT": "This changed somewhere else. Reload and try again.",

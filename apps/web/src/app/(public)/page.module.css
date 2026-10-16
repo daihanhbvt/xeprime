@@ -1,10 +1,105 @@
-.sections {
-  display: flex;
-  max-width: var(--xp-container-max-width);
-  flex-direction: column;
-  padding: 40px 16px 24px;
+/*
+ * Trang chủ design v2 (ADR 0062): nền trắng, mọi khối canh trong khung 1200px, đệm trên/dưới 80px.
+ * Dải đối tác và dải đánh giá (nền xám nhạt) tràn hết bề ngang — khung nằm BÊN TRONG chúng.
+ */
+.page {
+  background: var(--xp-color-bg-container);
+}
+
+.container {
+  max-width: calc(var(--xp-market-container-max-width) + 2 * var(--xp-space-md));
+  box-sizing: border-box;
+  padding-inline: var(--xp-space-md);
   margin: 0 auto;
-  gap: 48px;
+}
+
+.block {
+  padding-block: var(--xp-space-80);
+}
+
+/* Khối khuyến mãi dính vào khối "Xe nổi bật" phía trên — chỉ đệm dưới (Figma: pt 0, pb 80). */
+.blockBottom {
+  padding-bottom: var(--xp-space-80);
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-40);
+}
+
+.discover {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-64);
+}
+
+.testimonialsBand {
+  background: var(--xp-color-bg);
+}
+
+/* Bản vẽ mobile v2: khối "Loại xe" nằm trên một dải nền xám nhạt; desktop nền trắng như trang. */
+@media (max-width: 640px) {
+  .typesBand {
+    background: var(--xp-color-bg);
+  }
+}
+
+/* Cột đánh giá 722px + banner ứng dụng chiếm phần còn lại, cách nhau 20px, cùng chiều cao. */
+.testimonials {
+  display: flex;
+  align-items: stretch;
+  gap: var(--xp-space-20);
+}
+
+.reviews {
+  width: 722px;
+  max-width: 100%;
+  flex: 0 1 722px;
+}
+
+.appBanner {
+  min-width: 0;
+  flex: 1 1 0;
+}
+
+@media (max-width: 1024px) {
+  .block {
+    padding-block: var(--xp-space-64);
+  }
+
+  .blockBottom {
+    padding-bottom: var(--xp-space-64);
+  }
+
+  .testimonials {
+    flex-direction: column;
+    gap: var(--xp-space-40);
+  }
+
+  .reviews,
+  .appBanner {
+    width: 100%;
+    flex: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .block {
+    padding-block: var(--xp-space-40);
+  }
+
+  .blockBottom {
+    padding-bottom: var(--xp-space-40);
+  }
+
+  .intro {
+    gap: var(--xp-space-xl);
+  }
+
+  .discover {
+    gap: var(--xp-space-40);
+  }
 }
 
 /*
@@ -14,18 +109,18 @@
 .searchFallback {
   position: relative;
   z-index: 2;
-  max-width: var(--xp-container-max-width);
+  max-width: calc(var(--xp-market-container-max-width) + 2 * var(--xp-space-md));
   padding: 0 var(--xp-space-md);
-  margin: -119px auto 0;
+  margin: -102px auto 0;
 }
 
 /* Shimmer thuần CSS — fallback này render trong Server Component nên không dùng Skeleton antd. */
 .searchFallbackInner {
-  height: 222px;
-  border-radius: var(--xp-border-radius);
+  height: 170px;
+  border-radius: var(--xp-border-radius-card);
   animation: search-fallback-pulse 1.4s ease-in-out infinite;
   background: var(--xp-color-bg-container);
-  box-shadow: var(--xp-shadow-overlay);
+  box-shadow: var(--xp-elevation-panel);
 }
 
 @keyframes search-fallback-pulse {
@@ -39,13 +134,25 @@
   }
 }
 
-@media (max-width: 760px) {
+/* Từ tablet trở xuống thẻ không còn đè lên hero (chữ hero xếp dưới ảnh) — khung chờ cũng vậy. */
+@media (max-width: 1024px) {
   .searchFallback {
-    margin-top: -40px;
+    margin-top: 0;
   }
 
-  /* Mobile xếp dọc: ba tầng chiếm trọn bề ngang, ô nhập nằm dọc — cao hơn bậc thang desktop. */
+  /* Tablet: dải tab + loại xe một hàng, địa điểm | thời gian một hàng, nút tìm một hàng. */
   .searchFallbackInner {
-    height: 358px;
+    height: 312px;
+  }
+}
+
+@media (max-width: 640px) {
+  .searchFallback {
+    padding: 0 var(--xp-space-12);
+  }
+
+  /* Mobile xếp dọc: mọi ô nhập một hàng riêng. */
+  .searchFallbackInner {
+    height: 370px;
   }
 }

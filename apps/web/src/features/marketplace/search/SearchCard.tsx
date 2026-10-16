@@ -1,7 +1,7 @@
 'use client';
 
-import { CalendarOutlined, SearchOutlined } from '@ant-design/icons';
-import { Button, Radio } from 'antd';
+import { Radio } from 'antd';
+import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { useId, useMemo } from 'react';
 import {
@@ -16,6 +16,7 @@ import {
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { RentalDateTimeRangeField } from '@/components/form/RentalDateTimeRangeField';
 import { cx } from '@/lib/cx';
+import { CtaButton } from '../components/CtaButton';
 import { LocationPicker } from './LocationPicker';
 import { SegmentedTabs } from './SegmentedTabs';
 import { useSearchExperience } from './search-context';
@@ -24,15 +25,13 @@ import { serviceItems, vehicleItems } from './search-items';
 import styles from './SearchCard.module.css';
 
 /**
- * Thẻ tìm kiếm của trang chủ — hai tầng lựa chọn, rồi mới tới tiêu chí:
+ * Thẻ tìm kiếm của trang chủ theo design v2 (Figma "Search Panel", ADR 0062):
  *
- *   Ô tô | Xe máy
- *   Xe tự lái | Xe có tài xế | Thuê xe dài hạn
- *   ‹form của riêng dịch vụ đang chọn›
+ *   [Thuê xe tự lái | Xe có tài xế | Thuê xe dài hạn]      ← dải tab dịch vụ
+ *   Loại xe [Ô tô | Xe máy] · Địa điểm · Thời gian nhận/trả · [Tìm kiếm]
  *
- * Loại xe và dịch vụ là hai chiều ĐỘC LẬP (một trạng thái mỗi chiều), nên chúng không nằm chung
- * hàng với Địa điểm/Thời gian: nhét chúng vào hàng ô nhập là ngụ ý "loại xe cũng chỉ là một
- * tiêu chí lọc như mọi tiêu chí khác", trong khi nó quyết định cả tập xe đang xét.
+ * Loại xe và dịch vụ vẫn là hai chiều ĐỘC LẬP (một trạng thái mỗi chiều) — chỉ vị trí đổi theo
+ * bản vẽ: dịch vụ thành tab của cả thẻ, loại xe thành nhóm nút đầu hàng ô nhập.
  *
  * Form theo từng dịch vụ, KHÔNG phải một form gộp mọi trường rồi ẩn bớt:
  *   - **Tự lái**: Địa điểm · Thời gian thuê · Tìm xe.
@@ -66,7 +65,10 @@ export function SearchCard({
     () => serviceItems(draft.vehicleType, true, tService),
     [draft.vehicleType, tService],
   );
-  const vehicleOptions = useMemo(() => vehicleItems(domainLabel), [domainLabel]);
+  const vehicleOptions = useMemo(
+    () => vehicleItems(domainLabel, draft.serviceType),
+    [domainLabel, draft.serviceType],
+  );
 
   const withDriver = draft.serviceType === SERVICE_TYPE.WITH_DRIVER;
   const longTerm = draft.serviceType === SERVICE_TYPE.LONG_TERM;
@@ -76,40 +78,27 @@ export function SearchCard({
     <div className={styles.cardOuter} ref={observerRef}>
       <div role="search" aria-label={t('card.searchLabel')} className={styles.card}>
         {/*
-          Ba TẦNG xếp chồng, mỗi tầng rộng hơn tầng trên và cùng canh giữa — hình bậc thang này
-          chính là thứ nói ra thứ tự quyết định: chọn loại xe → chọn dịch vụ → mới tới tiêu chí.
-          Tầng trên đè lên tầng dưới vài pixel nên ba khối trắng đọc như MỘT thẻ liền mạch.
+          Dải tab dịch vụ CHỈ rộng bằng các tab của nó (Figma): phần còn lại của hàng trên cùng
+          để lộ ảnh hero phía sau. Bảng ô nhập bên dưới vì thế chỉ bo góc PHẢI ở trên.
         */}
-        <div className={cx(styles.tier, styles.tierVehicle)}>
-          <SegmentedTabs
-            value={draft.vehicleType}
-            onChange={setVehicleType}
-            items={vehicleOptions}
-            ariaLabel={t('card.vehicleTypeLabel')}
-            controls={formId}
-            tone="plain"
-          />
-        </div>
-
-        <div className={cx(styles.tier, styles.tierService)}>
+        <div className={styles.tabs}>
           <SegmentedTabs
             value={draft.serviceType}
             onChange={setServiceType}
             items={serviceOptions}
             ariaLabel={t('card.serviceTypeLabel')}
             controls={formId}
-            tone="plain"
+            appearance="tabs"
           />
         </div>
 
         {/*
           KHÔNG `key` theo dịch vụ, và KHÔNG hoạt cảnh vào ở tầng này.
 
-          Đổi dịch vụ chỉ đổi MỘT PHẦN của form: ô địa điểm và nút "Tìm xe" là chung cho cả ba
-          dịch vụ. Gắn `key` là ép React dựng lại cả khối, nên hai thứ không hề đổi cũng bị tháo
-          rồi dựng lại — cộng thêm một lần fade-in nữa là ra đúng cái chớp nháy khó chịu khi bấm
-          qua lại giữa các tab. Bỏ `key` thì các nút được giữ nguyên; chỉ hàng lộ trình, ô thời
-          gian và dòng ghi chú xuất hiện/biến mất, và chúng đổi TỨC THÌ.
+          Đổi dịch vụ chỉ đổi MỘT PHẦN của form: ô địa điểm và nút tìm là chung cho cả ba dịch
+          vụ. Gắn `key` là ép React dựng lại cả khối, nên hai thứ không hề đổi cũng bị tháo rồi
+          dựng lại — đúng cái chớp nháy khó chịu khi bấm qua lại giữa các tab. Bỏ `key` thì các
+          nút được giữ nguyên; chỉ hàng lộ trình, ô thời gian và dòng ghi chú đổi TỨC THÌ.
         */}
         <div
           id={formId}
@@ -120,10 +109,18 @@ export function SearchCard({
            * một câu tiếng Anh sẽ hạ cả danh từ riêng.
            */
           aria-label={t('card.panelLabel', {
-            vehicle: domainLabel('vehicleType', draft.vehicleType, VEHICLE_TYPE_LABEL[draft.vehicleType]),
-            service: domainLabel('serviceType', draft.serviceType, SERVICE_TYPE_LABEL[draft.serviceType]),
+            vehicle: domainLabel(
+              'vehicleType',
+              draft.vehicleType,
+              VEHICLE_TYPE_LABEL[draft.vehicleType],
+            ),
+            service: domainLabel(
+              'serviceType',
+              draft.serviceType,
+              SERVICE_TYPE_LABEL[draft.serviceType],
+            ),
           })}
-          className={cx(styles.tier, styles.tierFields)}
+          className={styles.panel}
         >
           {withDriver ? (
             <div className={styles.routeRow}>
@@ -147,6 +144,18 @@ export function SearchCard({
           ) : null}
 
           <div className={cx(styles.fields, longTerm && styles.fieldsCompact)}>
+            <div className={cx(styles.cell, styles.cellVehicle)}>
+              <span className={styles.cellLabel}>{t('card.vehicleTypeLabel')}</span>
+              <SegmentedTabs
+                value={draft.vehicleType}
+                onChange={setVehicleType}
+                items={vehicleOptions}
+                ariaLabel={t('card.vehicleTypeLabel')}
+                semantics="radio"
+                appearance="segment"
+              />
+            </div>
+
             <div className={styles.cell}>
               <span className={styles.cellLabel}>{t('location.label')}</span>
               <LocationPicker />
@@ -154,32 +163,44 @@ export function SearchCard({
 
             {usesRange ? (
               <div className={styles.cell}>
-                <span className={styles.cellLabel}>{t('rental.label')}</span>
+                <span className={styles.cellLabel}>{t('rental.pickupReturnLabel')}</span>
                 <RentalDateTimeRangeField
                   value={draft.rental}
                   onChange={setRentalRange}
                   mode={draft.rental.mode}
                   onModeChange={setRentalMode}
-                  prefix={<CalendarOutlined className={styles.boxIcon} aria-hidden="true" />}
+                  placeholder={t('rental.placeholder')}
+                  suffix={
+                    <span className={styles.boxIcon}>
+                      <Image
+                        src="/home/field-calendar.svg"
+                        alt=""
+                        width={16}
+                        height={18}
+                        unoptimized
+                      />
+                    </span>
+                  }
                   className={styles.box}
                 />
               </div>
             ) : null}
 
-            <Button
-              type="primary"
-              size="large"
-              icon={<SearchOutlined aria-hidden="true" />}
+            <CtaButton
+              size="lg"
               className={styles.submit}
               onClick={submit}
+              iconStart={
+                <span className={styles.boxIcon}>
+                  <Image src="/home/btn-search.svg" alt="" width={19} height={19} unoptimized />
+                </span>
+              }
             >
-              {t('card.submit')}
-            </Button>
+              {t('card.searchAction')}
+            </CtaButton>
           </div>
 
-          {longTerm ? (
-            <p className={styles.hint}>{t('card.longTermHint')}</p>
-          ) : null}
+          {longTerm ? <p className={styles.hint}>{t('card.longTermHint')}</p> : null}
         </div>
       </div>
     </div>

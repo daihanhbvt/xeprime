@@ -29,6 +29,7 @@ vi.mock('../hooks/use-marketplace-filters', () => ({
 
 vi.mock('../hooks/use-destinations', () => ({
   useDestinations: () => ({ data: DESTINATIONS, isLoading: false, error: null }),
+  useAllDestinations: () => ({ data: DESTINATIONS, isLoading: false, error: null }),
 }));
 
 const api = vi.hoisted(() => ({ request: vi.fn() }));
@@ -137,7 +138,9 @@ describe('Xe phù hợp với bạn', () => {
 
     await waitFor(() => expect(api.request).toHaveBeenCalled());
     expect(lastQuery().nearProvinceCode).toBe('01');
-    expect(await screen.findByText('Ưu tiên xe ở Hà Nội')).toBeTruthy();
+    // Design v2: đủ xe trong tỉnh thì KHÔNG có dòng ghi chú — chỉ lên tiếng khi phải bù tỉnh khác.
+    expect(await screen.findByText(HANOI.name)).toBeTruthy();
+    expect(screen.queryByText(/Ưu tiên xe ở/)).toBeNull();
   });
 
   it('không nhớ gì và URL trống thì xếp theo cả nước, không nói về tỉnh nào', async () => {

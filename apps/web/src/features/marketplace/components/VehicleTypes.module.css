@@ -1,0 +1,102 @@
+/*
+ * "Loại xe" — Figma `19695:40768` (ADR 0062): ảnh xe cắt nền 160px, tên + ví dụ canh giữa. Dữ liệu
+ * từ danh mục kiểu dáng (admin quản lý).
+ */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-40);
+}
+
+.card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  border-radius: var(--xp-border-radius-card);
+  color: inherit;
+  transition: background-color 0.18s ease;
+}
+
+.card:hover {
+  background: var(--xp-color-primary-subtle);
+}
+
+.card:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.media {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  height: 160px;
+}
+
+/* Ảnh xe tách nền nằm gọn trong khung 160px, giữ nguyên tỉ lệ ảnh admin tải lên. */
+.image {
+  position: absolute;
+  display: block;
+  width: 100%;
+  height: 100%;
+  inset: 0;
+  object-fit: contain;
+  transition: transform 0.25s ease;
+}
+
+.card:hover .image {
+  transform: scale(1.04);
+}
+
+.details {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--xp-space-md) 36px;
+  gap: var(--xp-space-xs);
+  text-align: center;
+}
+
+.name {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
+}
+
+.examples {
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobileAction {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .section {
+    gap: var(--xp-space-lg);
+  }
+
+  .details {
+    padding-inline: var(--xp-space-md);
+  }
+
+  .mobileAction {
+    display: flex;
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .image {
+    transition: none;
+  }
+}

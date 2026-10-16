@@ -1,0 +1,112 @@
+/*
+ * "Khách hàng nói gì về XePrime" (Figma `19695:40832`, ADR 0062): thẻ trắng bo 16px, đệm 16px,
+ * các hàng cách nhau 12px — 5 sao 24px, dấu trích dẫn 20px, lời nhận xét, người đánh giá.
+ */
+.section {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-lg);
+}
+
+.skeletonRow {
+  display: grid;
+  gap: var(--xp-space-20);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.card {
+  display: flex;
+  min-width: 0;
+  height: 100%;
+  box-sizing: border-box;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--xp-space-md);
+  margin: 0;
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-elevation-soft);
+  gap: var(--xp-space-12);
+}
+
+.stars {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+}
+
+.star {
+  display: block;
+}
+
+/* Sao chưa đạt: cùng hình, nhạt màu — đánh giá nổi bật từ 4 sao nên nhiều nhất một sao nhạt. */
+.starEmpty {
+  filter: grayscale(1);
+  opacity: 0.35;
+}
+
+/* Lời nhận xét: tối đa 5 dòng để các thẻ cùng cao; phần dài hơn cắt bằng dấu ba chấm. */
+.comment {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  -webkit-box-orient: vertical;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  -webkit-line-clamp: 5;
+  line-clamp: 5;
+  line-height: var(--xp-line-height-body);
+  overflow-wrap: anywhere;
+}
+
+.reviewer {
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+  align-items: center;
+  margin-top: auto;
+  gap: var(--xp-space-12);
+}
+
+.avatar {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-primary-muted);
+  color: var(--xp-color-primary-strong);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.reviewerText {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.name {
+  overflow: hidden;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trips {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+@media (max-width: 640px) {
+  .skeletonRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

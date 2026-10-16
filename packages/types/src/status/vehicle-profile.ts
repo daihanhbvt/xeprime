@@ -121,6 +121,43 @@ export const TRANSMISSION_TYPE_EXT_LABEL: Readonly<Record<TransmissionTypeExt, s
   [TRANSMISSION_TYPE_EXT.OTHER]: 'Khác',
 };
 
+/**
+ * Nhóm hộp số để hiện NGẮN trên thẻ chợ ("Số tự động" / "Số sàn" / "Tay ga"…). Mười một mã chi
+ * tiết gom về sáu nhóm khách hiểu ngay; trang chi tiết xe vẫn hiện mã chi tiết qua `Domain`.
+ */
+export const TRANSMISSION_FAMILY = {
+  AUTOMATIC: 'automatic',
+  MANUAL: 'manual',
+  SCOOTER: 'scooter',
+  SEMI_AUTOMATIC: 'semi_automatic',
+  MANUAL_CLUTCH: 'manual_clutch',
+  OTHER: 'other',
+} as const;
+export type TransmissionFamily = (typeof TRANSMISSION_FAMILY)[keyof typeof TRANSMISSION_FAMILY];
+
+/** `Record` trên TOÀN BỘ mã: thêm một mã hộp số mới mà quên xếp nhóm là lỗi biên dịch. */
+const TRANSMISSION_FAMILY_OF: Readonly<Record<TransmissionTypeExt, TransmissionFamily>> = {
+  [TRANSMISSION_TYPE_EXT.AUTOMATIC]: TRANSMISSION_FAMILY.AUTOMATIC,
+  [TRANSMISSION_TYPE_EXT.CVT]: TRANSMISSION_FAMILY.AUTOMATIC,
+  [TRANSMISSION_TYPE_EXT.E_CVT]: TRANSMISSION_FAMILY.AUTOMATIC,
+  [TRANSMISSION_TYPE_EXT.DCT]: TRANSMISSION_FAMILY.AUTOMATIC,
+  [TRANSMISSION_TYPE_EXT.AMT]: TRANSMISSION_FAMILY.AUTOMATIC,
+  [TRANSMISSION_TYPE_EXT.DIRECT_DRIVE]: TRANSMISSION_FAMILY.AUTOMATIC,
+  [TRANSMISSION_TYPE_EXT.MANUAL]: TRANSMISSION_FAMILY.MANUAL,
+  [TRANSMISSION_TYPE_EXT.AUTOMATIC_CVT]: TRANSMISSION_FAMILY.SCOOTER,
+  [TRANSMISSION_TYPE_EXT.SEMI_AUTOMATIC]: TRANSMISSION_FAMILY.SEMI_AUTOMATIC,
+  [TRANSMISSION_TYPE_EXT.MANUAL_CLUTCH]: TRANSMISSION_FAMILY.MANUAL_CLUTCH,
+  [TRANSMISSION_TYPE_EXT.OTHER]: TRANSMISSION_FAMILY.OTHER,
+};
+
+/** Mã lạ (dữ liệu cũ, client mới hơn server) rơi về `other` thay vì vỡ nhãn. */
+export function transmissionFamily(code: string): TransmissionFamily {
+  return (
+    (TRANSMISSION_FAMILY_OF as Record<string, TransmissionFamily>)[code] ??
+    TRANSMISSION_FAMILY.OTHER
+  );
+}
+
 export function transmissionTypeExtLabel(key: string): string {
   return (TRANSMISSION_TYPE_EXT_LABEL as Record<string, string>)[key] ?? key;
 }

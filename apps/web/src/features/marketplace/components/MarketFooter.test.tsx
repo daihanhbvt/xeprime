@@ -1,48 +1,14 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { BILLING_MODE, BILLING_PHASE, TENANT_ROLE } from '@xeprime/types';
 
 import { MarketFooter } from './MarketFooter';
 
 /**
- * Chân trang khu khách — nằm trên MỌI trang công khai, nên một mục sai ở đây nhân lên khắp sản
- * phẩm. Hai điều được khoá ở đây, và cả hai đều là thứ mắt không bắt được khi xem trang:
- *
- *  1. **Lời mời "Đăng xe cho thuê" biến mất với người ĐÃ cho thuê xe.** Nhánh này chỉ chạy ở
- *     client sau khi `/auth/me` trả lời, nên mở trình duyệt bằng tài khoản khách sẽ không bao
- *     giờ thấy nó — chỉ có test mới đi qua được cả hai nhánh.
- *  2. **Không mục nào trỏ vào hư không.** `constants/legal.test.ts` khoá phần dữ liệu; ở đây
- *     khoá phần đã RENDER, tức là cả những liên kết dựng thẳng trong JSX.
+ * Chân trang khu khách (design v2, ADR 0062) — nằm trên MỌI trang công khai, nên một mục sai ở
+ * đây nhân lên khắp sản phẩm. Khoá phần đã RENDER: cột, đích liên kết, mục đang xem, mạng xã hội
+ * không bấm được và bộ đổi ngôn ngữ VI | EN (`constants/legal.test.ts` khoá phần dữ liệu).
  */
 const state = vi.hoisted(() => ({ user: undefined as unknown, pathname: '/' }));
-
-/** Gian hàng tuyến gói — `/auth/me` trả về hình dạng này cho một tài khoản đã có gian hàng. */
-function shopUser() {
-  return {
-    id: 'U9',
-    displayName: 'XePrime Sài Gòn',
-    tenant: {
-      id: 'T1',
-      roleKey: TENANT_ROLE.SHOP_OWNER,
-      billingMode: BILLING_MODE.PACKAGE,
-      billingPhase: BILLING_PHASE.CURRENT,
-    },
-  };
-}
-
-/** Chủ xe TUYẾN HOA HỒNG — cũng là chủ xe, dù không vào được cổng quản lý (ADR 0027/0028). */
-function commissionOwner() {
-  return {
-    id: 'U8',
-    displayName: 'Anh Ba',
-    tenant: {
-      id: 'T2',
-      roleKey: TENANT_ROLE.SHOP_OWNER,
-      billingMode: BILLING_MODE.COMMISSION,
-      publicVehicleCount: 2,
-    },
-  };
-}
 
 vi.mock('@/hooks/use-current-user', () => ({ useCurrentUser: () => ({ data: state.user }) }));
 
@@ -61,50 +27,32 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('MarketFooter — lời mời đăng xe', () => {
-  it('khách CHƯA đăng nhập thấy lời mời đăng xe cho thuê', () => {
-    render(<MarketFooter />);
-    expect(screen.getByRole('link', { name: /Đăng xe cho thuê/ }).getAttribute('href')).toBe(
-      '/list-your-vehicle',
-    );
-  });
-
+describe('MarketFooter — không còn dải mời đăng xe', () => {
   /**
-   * Người đã có gian hàng không cần được mời làm một việc họ làm xong rồi — và nút đó dẫn tới
-   * landing giới thiệu, không phải chỗ họ cần.
+   * Design v2 gỡ dải CTA khỏi chân trang: trang chủ đã có khối "Đăng ký trở thành đối tác" và
+   * header có nút "Trở thành chủ xe" trên mọi trang. Một lời mời thứ ba ở chân trang là lặp.
    */
-  it('gian hàng tuyến gói KHÔNG thấy lời mời', () => {
-    state.user = shopUser();
+  it('không có liên kết "Đăng xe cho thuê" và không có nút lên đầu trang', () => {
     render(<MarketFooter />);
     expect(screen.queryByRole('link', { name: /Đăng xe cho thuê/ })).toBeNull();
-  });
-
-  /**
-   * Tuyến hoa hồng cũng là chủ xe. Nhánh này dễ sót vì họ KHÔNG vào cổng quản lý, nên một phép
-   * kiểm kiểu `canUseManagePortal` sẽ trả `false` và mời họ đăng xe lần nữa.
-   */
-  it('chủ xe tuyến hoa hồng cũng KHÔNG thấy lời mời', () => {
-    state.user = commissionOwner();
-    render(<MarketFooter />);
-    expect(screen.queryByRole('link', { name: /Đăng xe cho thuê/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Lên đầu trang' })).toBeNull();
   });
 });
 
 describe('MarketFooter — điều hướng', () => {
-  /**
-   * Khẳng định trên TIÊU ĐỀ CỘT, không phải trên chữ bất kỳ trong chân trang.
-   *
-   * "Dành cho chủ xe" vẫn còn một lần nữa trong chân trang — là nhãn dẫn của dải CTA
-   * (`cta.eyebrow`), và nó đúng ở đó. Một phép `queryByText` trần sẽ bắt nhầm nó và đòi gỡ một
-   * dòng chữ hoàn toàn hợp lệ.
-   */
+  /** Khẳng định trên TIÊU ĐỀ CỘT (h2), không phải trên chữ bất kỳ trong chân trang. */
   function columnTitles(container: HTMLElement) {
-    return Array.from(container.querySelectorAll('summary')).map((s) => s.textContent?.trim());
+    return Array.from(container.querySelectorAll('h2')).map((h) => h.textContent?.trim());
   }
 
-  it('đúng ba cột: Khám phá · XePrime · Pháp lý', () => {
+  it('đúng bốn cột của design v2: Khám phá · Về XePrime · Pháp lý · Ứng dụng XePrime', () => {
     const { container } = render(<MarketFooter />);
-    expect(columnTitles(container)).toEqual(['Khám phá', 'XePrime', 'Pháp lý']);
+    expect(columnTitles(container)).toEqual([
+      'Khám phá',
+      'Về XePrime',
+      'Pháp lý',
+      'Ứng dụng XePrime',
+    ]);
   });
 
   /** Cột "Dành cho chủ xe" đã gỡ (23/09/2026) — mục đầu của nó lặp đúng cái nút CTA. */
@@ -138,15 +86,15 @@ describe('MarketFooter — điều hướng', () => {
 
 describe('MarketFooter — mạng xã hội chưa có kênh thật', () => {
   /**
-   * Ba biểu tượng là NHÃN, không phải liên kết. Nếu một ngày chúng thành `<a href="#">` thì đây
-   * là chỗ bắt được: một vòng tròn bấm được mà không đi đâu là lời hứa hão.
+   * Bốn biểu tượng là HÌNH có tên, không phải liên kết. Nếu một ngày chúng thành `<a href="#">`
+   * thì đây là chỗ bắt được: một biểu tượng bấm được mà không đi đâu là lời hứa hão.
    */
   it('không phải liên kết, và có tên đọc được', () => {
     render(<MarketFooter />);
-    for (const name of ['Facebook', 'Instagram', 'TikTok']) {
+    for (const name of ['Facebook', 'Instagram', 'X (Twitter)', 'TikTok']) {
       const el = screen.getByRole('img', { name });
-      expect(el.tagName).toBe('SPAN');
       expect(el.closest('a')).toBeNull();
+      expect(el.closest('button')).toBeNull();
     }
   });
 });
@@ -170,21 +118,16 @@ describe('MarketFooter — mục đang xem', () => {
     expect(currentLinks(container)).toEqual(['Điều khoản sử dụng']);
   });
 
-  it('ở /about, đúng mục "Giới thiệu XePrime" được đánh dấu', () => {
+  it('ở /about, đúng mục "Giới thiệu" được đánh dấu', () => {
     state.pathname = '/about';
     const { container } = render(<MarketFooter />);
-    expect(currentLinks(container)).toEqual(['Giới thiệu XePrime']);
+    expect(currentLinks(container)).toEqual(['Giới thiệu']);
   });
 
-  /**
-   * `/app` xuất hiện HAI lần trong chân trang: một mục trong cột XePrime và tiêu đề vùng ứng
-   * dụng. Cả hai phải cùng nói "đang xem" — đánh dấu một cái và bỏ cái kia là mâu thuẫn ngay
-   * trên cùng một màn hình.
-   */
-  it('ở /app, cả mục điều hướng lẫn tiêu đề vùng ứng dụng đều được đánh dấu', () => {
+  it('ở /app, đúng mục "Tải ứng dụng" được đánh dấu', () => {
     state.pathname = '/app';
     const { container } = render(<MarketFooter />);
-    expect(currentLinks(container)).toEqual(['Tải ứng dụng', 'Ứng dụng XePrime']);
+    expect(currentLinks(container)).toEqual(['Tải ứng dụng']);
   });
 
   /**
@@ -195,5 +138,20 @@ describe('MarketFooter — mục đang xem', () => {
     state.pathname = '/search';
     const { container } = render(<MarketFooter />);
     expect(currentLinks(container)).toEqual([]);
+  });
+});
+
+describe('MarketFooter — đổi ngôn ngữ VI | EN', () => {
+  /**
+   * Header v2 không còn nút ngôn ngữ cho khách chưa đăng nhập — hai chữ ở chân trang là lối DUY
+   * NHẤT của họ, nên nó phải là nút thật và nói được ngôn ngữ nào đang chọn.
+   */
+  it('hai nút thật, ngôn ngữ đang dùng được đánh dấu', () => {
+    render(<MarketFooter />);
+    const group = screen.getByRole('group', { name: 'Ngôn ngữ' });
+    const vi = within(group).getByRole('button', { name: 'VI' });
+    const en = within(group).getByRole('button', { name: 'EN' });
+    expect(vi.getAttribute('aria-pressed')).toBe('true');
+    expect(en.getAttribute('aria-pressed')).toBe('false');
   });
 });

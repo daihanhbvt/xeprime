@@ -1,43 +1,86 @@
+/*
+ * Dải banner đầu trang chủ — khổ của slot banner (`BANNER_SLOTS`): PC 1440×300, tablet 1024×320,
+ * mobile 780×390. Khối mặc định (chưa có banner) mang CÙNG tỉ lệ để trang không đổi hình dạng.
+ * KHÔNG đặt max-height — lý do ở BannerCarousel.module.css.
+ */
 .hero {
   position: relative;
 }
 
-/* Fallback khi không có banner — cùng CHIỀU CAO với carousel để layout không đổi. */
-/* Cùng aspect-ratio với carousel — có hay không có banner, trang không đổi hình dạng.
-   Cũng KHÔNG đặt max-height, vì lý do đã ghi ở BannerCarousel.module.css. */
+/* Thẻ tìm kiếm desktop đè lên 102px dưới cùng của dải — chấm chuyển banner nằm trên nó. */
+@media (min-width: 1025px) {
+  .hero {
+    --banner-dots-offset: 102px;
+  }
+}
+
 .fallback {
+  position: relative;
+  overflow: hidden;
   aspect-ratio: 1440 / 300;
-  background:
-    radial-gradient(80% 120% at 70% 20%, rgba(214, 160, 44, 0.35), transparent 60%),
-    var(--xp-hero-backdrop);
+  background: var(--xp-color-bg-muted);
+}
+
+/* Chủ thể ảnh nền đứng lệch phải — cắt thì cắt mép trái, chữ nằm ở nửa trái. */
+.fallbackImage {
+  object-fit: cover;
+  object-position: 70% center;
+}
+
+.fog {
+  position: absolute;
+  inset: 0;
+  background: var(--xp-hero-fog);
+  pointer-events: none;
 }
 
 .overlay {
   position: absolute;
   inset: 0;
   display: flex;
+  max-width: calc(var(--xp-market-container-max-width) + 2 * var(--xp-space-md));
+  box-sizing: border-box;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
-  padding: 0 var(--xp-space-lg) var(--xp-space-xl);
+  padding: 0 var(--xp-space-md);
+  margin: 0 auto;
+  gap: var(--xp-space-sm);
   pointer-events: none;
-  text-align: center;
 }
 
 .title {
+  display: flex;
   margin: 0;
-  color: #fff;
-  font-size: clamp(26px, 3.4vw, 44px);
-  font-weight: var(--xp-font-weight-bold, 700);
+  flex-direction: column;
+  font-size: clamp(24px, 3.4vw, 48px);
+  font-weight: var(--xp-font-weight-semibold);
+  letter-spacing: var(--xp-letter-spacing-display);
   line-height: 1.2;
-  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.45);
+}
+
+.titleLead {
+  color: var(--xp-color-text);
+}
+
+.titleAccent {
+  background: var(--xp-gradient-text-hero);
+  background-clip: text;
+  color: transparent;
+  font-weight: var(--xp-font-weight-bold);
 }
 
 .subtitle {
-  margin: 10px 0 0;
-  color: rgba(255, 255, 255, 0.85);
-  font-size: clamp(13px, 1.2vw, 16px);
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45);
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: clamp(13px, 1.3vw, 18px);
+  line-height: 1.4;
+}
+
+@media (min-width: 1025px) {
+  /* Chữ nằm trong phần dải KHÔNG bị thẻ tìm kiếm che. */
+  .overlay {
+    padding-bottom: 102px;
+  }
 }
 
 @media (max-width: 1024px) {
@@ -50,15 +93,19 @@
   .fallback {
     aspect-ratio: 780 / 390;
   }
+
+  .subtitle {
+    display: none;
+  }
 }
 
-/* h1 chỉ cho SEO/screen reader khi banner thật đang chiếm hero. */
+/* h1 cho SEO/trình đọc màn hình — banner tự mang thông điệp nên không hiện chữ đè lên ảnh. */
 .srTitle {
   position: absolute;
   overflow: hidden;
   width: 1px;
   height: 1px;
   margin: 0;
-  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
   white-space: nowrap;
 }

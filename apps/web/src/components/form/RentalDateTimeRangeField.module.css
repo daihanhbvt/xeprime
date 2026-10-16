@@ -41,6 +41,24 @@
   color: var(--xp-color-text-tertiary);
 }
 
+/* Chữ gợi ý khi chưa chọn gì — cùng màu placeholder với mọi ô nhập v2. */
+.placeholder {
+  overflow: hidden;
+  min-width: 0;
+  flex: 1;
+  color: var(--xp-color-text-placeholder);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Icon cuối ô — đẩy về mép phải. */
+.suffix {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  margin-left: auto;
+}
+
 /* --- Biến thể `labelled`: mỗi đầu có nhãn riêng + viên thời lượng --- */
 
 .triggerLabelled {

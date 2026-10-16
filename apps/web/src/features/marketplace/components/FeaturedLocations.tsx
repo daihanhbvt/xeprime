@@ -1,97 +1,132 @@
 'use client';
 
-import { PictureOutlined, RightOutlined } from '@ant-design/icons';
-import { Alert, Skeleton } from 'antd';
-import { useState } from 'react';
-import { getErrorMessage } from '@/services/api-client';
-import { useDestinations } from '../hooks/use-destinations';
-import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
-import styles from './FeaturedLocations.module.css';
+import Image from 'next/image';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-
-/** Số ô hiện ban đầu; "Xem tất cả" mở hết phần đã tải. */
-const PREVIEW_COUNT = 5;
-const FETCH_LIMIT = 12;
+import { useAppFormat } from '@/i18n/use-app-format';
+import { cx } from '@/lib/cx';
+import { marketplaceSearchHref } from '../filter-params';
+import { useAllDestinations } from '../hooks/use-destinations';
+import { HomeCarousel } from './HomeCarousel';
+import { SectionHeading } from './SectionHeading';
+import styles from './FeaturedLocations.module.css';
 
 /**
- * "Địa điểm nổi bật" — tỉnh/thành ĐANG có xe, số xe đếm thật ở backend (`/public/destinations`).
- * Bấm một địa điểm sẽ lọc danh sách gợi ý theo tỉnh đó rồi cuộn xuống.
+ * Bốn điểm đến của bản vẽ v2 (Figma `19695:40795`) — mỗi thành phố là một mã tỉnh THẬT (danh mục
+ * 34 tỉnh sau sáp nhập) và một ô cắt của tranh minh hoạ chung. Vị trí cắt nằm ở CSS (`.city*`),
+ * không ở đây: đó là chi tiết trình bày của cùng một tấm tranh.
+ */
+const CITIES = [
+  { key: 'danang', provinceCode: '48', className: styles.cityDanang },
+  { key: 'hanoi', provinceCode: '01', className: styles.cityHanoi },
+  { key: 'hcm', provinceCode: '79', className: styles.cityHcm },
+  { key: 'hue', provinceCode: '46', className: styles.cityHue },
+] as const;
+
+/**
+ * "Địa điểm nổi bật — Khám phá xe thuê tại các điểm đến phổ biến" (design v2, ADR 0062).
+ *
+ * Số xe và giá "chỉ từ" là số THẬT của `/public/destinations` (giá tự lái theo ngày thấp nhất,
+ * đã trừ khuyến mãi). Thành phố chưa có xe nào vẫn hiện thẻ — đây là khối giới thiệu điểm đến —
+ * nhưng không bịa số: dòng số liệu chỉ hiện khi API trả về tỉnh đó.
  */
 export function FeaturedLocations() {
-  const t = useTranslations('Marketplace.locations');
-  const { setFilters } = useMarketplaceFilters();
-  const { data, isLoading, isError, error } = useDestinations(FETCH_LIMIT);
-  const [expanded, setExpanded] = useState(false);
-
-  function pick(provinceCode: string) {
-    // Lọc theo MÃ tỉnh (khớp chính xác). Xoá luôn tham số tên cũ nếu URL đang mang nó.
-    setFilters({ provinceCode, province: undefined });
-    document.getElementById('recommendations')?.scrollIntoView({ behavior: 'smooth' });
-  }
-
-  const all = data ?? [];
-  const shown = expanded ? all : all.slice(0, PREVIEW_COUNT);
-
-  // Chưa có xe nào công khai → ẩn hẳn khối, không hiện khung rỗng vô nghĩa.
-  if (!isLoading && !isError && all.length === 0) return null;
+  const t = useTranslations('Home.destinations');
+  const fmt = useAppFormat();
+  const { data } = useAllDestinations();
+  const byCode = new Map((data ?? []).map((d) => [d.provinceCode, d]));
 
   return (
-    <section className={styles.section} aria-labelledby="loc-title">
-      <header className={styles.head}>
-        <div>
-          <h2 id="loc-title" className={styles.title}>
-            {t('title')}
-          </h2>
-          <p className={styles.sub}>{t('subtitle')}</p>
-        </div>
-        {all.length > PREVIEW_COUNT ? (
-          <button type="button" className={styles.seeAll} onClick={() => setExpanded((v) => !v)}>
-            {expanded ? t('collapse') : t('expand')} <RightOutlined />
-          </button>
-        ) : null}
-      </header>
-
-      {isError ? (
-        <Alert
-          type="error"
-          showIcon
-          title={t('loadError')}
-          description={getErrorMessage(error)}
-        />
-      ) : isLoading ? (
-        <div className={styles.grid}>
-          {Array.from({ length: PREVIEW_COUNT }).map((_, i) => (
-            <div key={i} className={styles.tile}>
-              <Skeleton.Node active className={styles.skeleton} />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className={styles.grid}>
-          {shown.map((loc) => (
-            <button
-              key={loc.provinceCode}
-              type="button"
-              className={styles.tile}
-              onClick={() => pick(loc.provinceCode)}
+    <section className={styles.section} aria-labelledby="home-destinations">
+      <SectionHeading
+        id="home-destinations"
+        kicker={t('kicker')}
+        title={t('title')}
+        align="center"
+        divider
+      />
+      {/* Lưới 4 thẻ từ tablet trở lên; mobile là slider thẻ-ở-giữa (bản vẽ mobile v2). */}
+      <HomeCarousel ariaLabel={t('title')} perView={4} layout="grid" gap={24}>
+        {CITIES.map((city) => {
+          const name = t(`cities.${city.key}`);
+          const stats = byCode.get(city.provinceCode);
+          return (
+            <Link
+              key={city.key}
+              href={marketplaceSearchHref({ provinceCode: city.provinceCode })}
+              className={styles.card}
+              aria-label={t('exploreAria', { city: name })}
             >
-              {loc.imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element -- ảnh từ storage ngoài, chưa qua next/image
-                <img src={loc.imageUrl} alt="" className={styles.photo} />
-              ) : (
-                <span className={styles.placeholder} aria-hidden="true">
-                  <PictureOutlined />
+              <span className={styles.art} aria-hidden="true">
+                <span className={styles.backdrop}>
+                  <Image
+                    src="/home/dest-bg.webp"
+                    alt=""
+                    fill
+                    sizes="470px"
+                    className={styles.layer}
+                  />
                 </span>
-              )}
-              <span className={styles.shade} aria-hidden="true" />
-              <span className={styles.meta}>
-                <span className={styles.name}>{loc.provinceName}</span>
-                <span className={styles.count}>{t('available', { count: loc.vehicleCount })}</span>
+                <span className={cx(styles.illustration, city.className)}>
+                  <Image
+                    src="/home/dest-cities.webp"
+                    alt=""
+                    fill
+                    sizes="1300px"
+                    className={styles.layer}
+                  />
+                </span>
               </span>
-            </button>
-          ))}
-        </div>
-      )}
+
+              <span className={styles.details}>
+                <span className={styles.city}>{name}</span>
+                {stats ? (
+                  <span className={styles.meta}>
+                    <span>{t('available', { count: stats.vehicleCount })}</span>
+                    {stats.minDailyPrice ? (
+                      <span>
+                        {t.rich('fromPrice', {
+                          price: fmt.moneyCompact(stats.minDailyPrice, { price: true }),
+                          strong: (chunks) => <b>{chunks}</b>,
+                        })}
+                      </span>
+                    ) : null}
+                  </span>
+                ) : null}
+              </span>
+
+              <span className={styles.footer} aria-hidden="true">
+                <Image
+                  src="/home/dest-wave-1.svg"
+                  alt=""
+                  width={282}
+                  height={128}
+                  unoptimized
+                  className={styles.waveBack}
+                />
+                <Image
+                  src="/home/dest-wave-2.svg"
+                  alt=""
+                  width={270}
+                  height={65}
+                  unoptimized
+                  className={styles.waveFront}
+                />
+                <span className={styles.explore}>
+                  {t('explore')}
+                  <Image
+                    src="/home/arrow-right-dark.svg"
+                    alt=""
+                    width={5}
+                    height={10}
+                    unoptimized
+                  />
+                </span>
+              </span>
+            </Link>
+          );
+        })}
+      </HomeCarousel>
     </section>
   );
 }

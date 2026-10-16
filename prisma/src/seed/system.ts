@@ -9,6 +9,7 @@
  */
 import { seedPlanGuideTemplates } from './plan-guide-templates';
 import {
+  BANNER_PLACEMENT,
   DEFAULT_COMMISSION_PLAN_CODE,
   RETIRED_PER_VEHICLE_PLAN_CODE,
   SHOP_PLAN_CODE,
@@ -521,6 +522,43 @@ const BANNERS = [
     sortOrder: 2,
   },
 ] as const;
+
+/**
+ * Hai banner KHUYẾN MÃI demo (giữa trang chủ) — ảnh dựng lại từ bản vẽ design v2, phục vụ
+ * `/public/home/`. Chỉ ở chế độ demo: nội dung là chương trình MẪU ("Giảm 20%"), đổ vào production
+ * là hứa một ưu đãi không có thật.
+ */
+const DEMO_PROMO_BANNERS = [
+  {
+    key: 'promo-sale',
+    title: 'Tuần lễ siêu sale — Giảm 20% (mẫu)',
+    imageUrl: '/home/promo-demo-sale.webp',
+    altText: 'Tuần lễ siêu sale — Giảm 20%',
+    linkUrl: '/search',
+    sortOrder: 0,
+  },
+  {
+    key: 'promo-vf3',
+    title: 'Đặt ngay VF3+ (mẫu)',
+    imageUrl: '/home/promo-demo-vf3.webp',
+    altText: 'Tuần lễ siêu sale — Đặt ngay VF3+',
+    linkUrl: '/search',
+    sortOrder: 1,
+  },
+] as const;
+
+/** `update: {}` như banner đầu trang: admin sửa rồi chạy lại seed thì bản sửa phải còn. */
+export async function seedDemoPromoBanners(): Promise<void> {
+  for (const banner of DEMO_PROMO_BANNERS) {
+    const { key, ...fields } = banner;
+    const id = seedId(`banner:${key}`);
+    await prisma.marketplaceBanner.upsert({
+      where: { id },
+      update: {},
+      create: { id, ...fields, placement: BANNER_PLACEMENT.PROMO, active: true },
+    });
+  }
+}
 
 async function seedBanners(): Promise<void> {
   for (const banner of BANNERS) {

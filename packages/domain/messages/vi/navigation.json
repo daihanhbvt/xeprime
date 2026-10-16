@@ -16,7 +16,11 @@
     "platformAdmin": "Quản trị nền tảng",
     "mainNavLabel": "Điều hướng chính",
     "quickNavLabel": "Điều hướng nhanh",
-    "shopProfile": "Hồ sơ gian hàng"
+    "shopProfile": "Hồ sơ gian hàng",
+    "searchCars": "Tìm xe",
+    "aboutXePrime": "Về Xe Prime",
+    "contact": "Liên hệ",
+    "loginOrRegister": "Đăng nhập/<br></br>Đăng ký"
   },
   "account": {
     "menuLabel": "Menu tài khoản",

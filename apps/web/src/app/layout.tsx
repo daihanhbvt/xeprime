@@ -1,36 +1,30 @@
 import type { Metadata, Viewport } from 'next';
-import { Be_Vietnam_Pro, Playfair_Display } from 'next/font/google';
+import { Google_Sans_Flex } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getTranslations } from 'next-intl/server';
 import { headers } from 'next/headers';
 import { getServerLocale } from '@/i18n/locale';
 import { getServerNavPreferences } from '@/lib/ui-preferences.server';
+import { XP_TOKENS } from '@/styles/theme';
 import { ZONE, zoneForHost } from '@/zones';
 import { Providers } from './providers';
 import '@xeprime/ui/styles.css';
 import '@/styles/globals.css';
 
 /**
- * Be Vietnam Pro — font hình học thiết kế cho tiếng Việt, giống app cũ đang chạy.
+ * Google Sans Flex — họ chữ DUY NHẤT của design v2 (biến Figma `font-googlesan`, ADR 0062).
  * next/font tự host (không gọi CDN), nên không vướng CSP và không nhấp nháy font.
- * Biến `--font-be-vietnam` được `tokens.css` dùng làm `--xp-font-family` (ADR 0003).
+ * Biến `--font-google-sans` được `tokens.css` dùng làm `--xp-font-family` (ADR 0003).
+ *
+ * Không khai `weight` ⇒ tải bản VARIABLE: một file phủ cả 400/500/600/700 mà thang chữ v2 dùng.
+ * Chỉ trục `wght` — các trục khác (opsz, wdth…) làm file nặng thêm mà design không đổi tới.
  *
  * Subset `vietnamese` giữ nguyên cho cả hai ngôn ngữ: font là một, chỉ nội dung đổi — tải hai
  * bộ font theo ngôn ngữ là đổi layout lấy vài KB.
  */
-const beVietnam = Be_Vietnam_Pro({
+const googleSans = Google_Sans_Flex({
   subsets: ['latin', 'vietnamese'],
-  weight: ['300', '400', '500', '600', '700'],
-  variable: '--font-be-vietnam',
-  display: 'swap',
-});
-
-/** Playfair Display — chỉ dùng cho nhấn nghiêng ở hero marketplace (giống xeprime.vn). */
-const playfair = Playfair_Display({
-  subsets: ['latin', 'vietnamese'],
-  weight: ['500', '600'],
-  style: ['italic', 'normal'],
-  variable: '--font-playfair',
+  variable: '--font-google-sans',
   display: 'swap',
 });
 
@@ -76,8 +70,9 @@ export const dynamic = 'force-dynamic';
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  // Nền kem để thanh địa chỉ trình duyệt mobile hoà với brand.
-  themeColor: '#fbf1dc',
+  // Nền gold nhạt nhất để thanh địa chỉ trình duyệt mobile hoà với brand — đi theo token, không
+  // gõ mã màu (bản gõ tay `#fbf1dc` cũ đã lệch khỏi bảng màu v2).
+  themeColor: XP_TOKENS['color-primary-subtle'],
 };
 
 /**
@@ -97,7 +92,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const hostZone = zoneForHost(requestHeaders.get('host')) ?? ZONE.MARKET;
 
   return (
-    <html lang={locale} className={`${beVietnam.variable} ${playfair.variable}`}>
+    <html lang={locale} className={googleSans.variable}>
       <body>
         <NextIntlClientProvider>
           <Providers navPreferences={navPreferences} hostZone={hostZone}>

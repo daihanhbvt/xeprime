@@ -128,6 +128,12 @@
   font-size: 17px;
 }
 
+/* Dòng bố cục dưới cỡ ảnh PC — banner PC là nền hero, tiêu đề đè nửa trái (ADR 0062). */
+.helpNote {
+  display: block;
+  margin-top: 2px;
+}
+
 .requiredBadge,
 .optionalBadge {
   margin-inline-start: var(--xp-space-xs);

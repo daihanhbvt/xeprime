@@ -306,11 +306,15 @@ export class BranchesService {
         })
       : null;
 
-    const provinceChanged = Boolean(
-      nextAddress && nextAddress.provinceCode !== before.provinceCode,
+    // Tỉnh HOẶC xã đổi: snapshot chợ mang cả tên xã/phường (thẻ xe hiện nó), nên đổi riêng xã
+    // cũng phải đồng bộ lại — không chỉ khi đổi tỉnh.
+    const locationChanged = Boolean(
+      nextAddress &&
+        (nextAddress.provinceCode !== before.provinceCode ||
+          (nextAddress.wardCode ?? null) !== (before.wardCode ?? null)),
     );
 
-    return { id, dto, before, nextAddress, provinceChanged };
+    return { id, dto, before, nextAddress, locationChanged };
   }
 
   /** Bước 2 của `update`: ghi + đồng bộ listing/hồ sơ + audit, trong transaction của người gọi. */
@@ -320,7 +324,7 @@ export class BranchesService {
     userId: string,
     plan: BranchUpdatePlan,
   ): Promise<BranchRow> {
-    const { id, dto, before, nextAddress, provinceChanged } = plan;
+    const { id, dto, before, nextAddress, locationChanged } = plan;
     /*
      * Phiên hỗ trợ (ADR 0050 §13): đổi ĐỊA CHỈ một chi nhánh đang có chuyến mở là đổi nơi giao xe
      * của khách đã hẹn — từ chối. Đổi tên/số điện thoại thì không chạm tới chuyến nào.
@@ -338,7 +342,7 @@ export class BranchesService {
       select: BRANCH_SELECT,
     });
 
-    if (provinceChanged) {
+    if (locationChanged) {
       await this.listings.syncBranchLocation(id, tx);
     }
     // Chi nhánh MẶC ĐỊNH đổi địa chỉ (kể cả chỉ đổi xã) thì hồ sơ gian hàng phải theo — hai
@@ -773,5 +777,6 @@ export interface BranchUpdatePlan {
   dto: UpdateBranchDto;
   before: BranchRow;
   nextAddress: ResolvedAddress | null;
-  provinceChanged: boolean;
+  /** Tỉnh hoặc xã/phường đổi — snapshot chợ phải đồng bộ lại vị trí. */
+  locationChanged: boolean;
 }

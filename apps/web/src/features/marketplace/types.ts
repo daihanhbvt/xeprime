@@ -4,6 +4,7 @@
  * File này chỉ là lối vào quen thuộc cho code web.
  */
 export type {
+  FeaturedReview,
   ListingSort,
   MarketplaceFilters,
   PublicDestination,

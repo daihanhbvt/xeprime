@@ -1,8 +1,8 @@
 'use client';
 
-import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { cx } from '@/lib/cx';
+import { BannerLink } from '@/features/banners/components/BannerLink';
 import type { PublicBanner } from '@/features/banners/types';
 import styles from './BannerCarousel.module.css';
 import { useTranslations } from 'next-intl';
@@ -19,9 +19,16 @@ const ROTATE_MS = 6000;
  * nhằng trên slider có sẵn.
  *
  * Ảnh hỏng bị LOẠI khỏi vòng quay (không bao giờ hiện khung trống); hỏng hết thì component trả
- * null để vỏ ngoài rơi về hero mặc định.
+ * `fallback` (trang chủ truyền khối hero mặc định) — không có thì null.
  */
-export function BannerCarousel({ banners }: { banners: PublicBanner[] }) {
+export function BannerCarousel({
+  banners,
+  fallback = null,
+}: {
+  banners: PublicBanner[];
+  /** Hiện thay carousel khi MỌI banner đều hỏng ảnh — vỏ ngoài không phải tự đoán chuyện đó. */
+  fallback?: ReactNode;
+}) {
   const t = useTranslations('Marketplace.banner');
   const [index, setIndex] = useState(0);
   const [broken, setBroken] = useState<ReadonlySet<string>>(new Set());
@@ -47,7 +54,7 @@ export function BannerCarousel({ banners }: { banners: PublicBanner[] }) {
     return () => window.clearInterval(timer);
   }, [count, paused]);
 
-  if (count === 0) return null;
+  if (count === 0) return <>{fallback}</>;
 
   function onTouchEnd(clientX: number) {
     if (touchStartX.current == null) return;
@@ -102,29 +109,13 @@ export function BannerCarousel({ banners }: { banners: PublicBanner[] }) {
             className={cx(styles.slide, i === current && styles.slideActive)}
             aria-hidden={i !== current}
           >
-            {banner.linkUrl ? (
-              banner.linkUrl.startsWith('/') ? (
-                <Link
-                  href={banner.linkUrl}
-                  className={styles.slideLink}
-                  tabIndex={i === current ? 0 : -1}
-                >
-                  {img}
-                </Link>
-              ) : (
-                <a
-                  href={banner.linkUrl}
-                  className={styles.slideLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  tabIndex={i === current ? 0 : -1}
-                >
-                  {img}
-                </a>
-              )
-            ) : (
-              img
-            )}
+            <BannerLink
+              href={banner.linkUrl}
+              className={styles.slideLink}
+              tabIndex={i === current ? 0 : -1}
+            >
+              {img}
+            </BannerLink>
           </div>
         );
       })}

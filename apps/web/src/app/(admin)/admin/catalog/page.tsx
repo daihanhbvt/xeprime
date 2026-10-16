@@ -20,7 +20,6 @@ import {
 import { useTranslations } from 'next-intl';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
-import { getErrorMessage } from '@/services/api-client';
 import { CatalogItemFormModal } from '@/features/catalog/components/CatalogItemFormModal';
 import type { CatalogItemAdmin } from '@/features/catalog/types';
 import {
@@ -30,6 +29,7 @@ import {
 } from '@/features/catalog/use-admin-catalog';
 import { CatalogModelsPanel } from '@/features/catalog/components/CatalogModelsPanel';
 import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useErrorMessage } from '@/i18n/use-error-message';
 import { PreviewImage } from '@/components/data-display/PreviewImage';
 import styles from './catalog-page.module.css';
 
@@ -45,6 +45,7 @@ const MIN_TABLE_WIDTH = 900;
 export default function AdminCatalogPage() {
   const t = useTranslations('AdminCatalog.page');
   const tCol = useTranslations('AdminCatalog.columns');
+  const errorMessage = useErrorMessage();
   const tStatus = useTranslations('AdminCatalog.status');
   const tActions = useTranslations('AdminCatalog.actions');
   const domainLabel = useDomainLabel();
@@ -80,7 +81,7 @@ export default function AdminCatalogPage() {
   function handleDelete(item: CatalogItemAdmin) {
     remove.mutate(item.id, {
       onSuccess: () => message.success(tActions('deleted')),
-      onError: (err) => message.error(getErrorMessage(err)),
+      onError: (err) => message.error(errorMessage(err)),
     });
   }
 
@@ -97,7 +98,7 @@ export default function AdminCatalogPage() {
     // luôn là một chiều của `catalog_items`.
     reorder.mutate(
       { type: type as CatalogItemType, ids },
-      { onError: (err) => message.error(getErrorMessage(err)) },
+      { onError: (err) => message.error(errorMessage(err)) },
     );
   }
 
@@ -154,6 +155,18 @@ export default function AdminCatalogPage() {
           ? tCol('allVehicleTypes')
           : item.vehicleTypes.map((v) => domainLabel('vehicleType', v)).join(' · '),
     },
+    // Kiểu dáng: có thẻ ở khối "Loại xe" trang chủ hay không (công tắc trong form sửa).
+    ...(type === CATALOG_TYPE.BODY_TYPE
+      ? [
+          {
+            title: tCol('home'),
+            key: 'home',
+            width: 110,
+            render: (_: unknown, item: CatalogItemAdmin) =>
+              item.showOnHome ? <Tag color={STATUS_COLOR.SUCCESS}>{tCol('onHome')}</Tag> : '—',
+          } satisfies DataTableColumn<CatalogItemAdmin>,
+        ]
+      : []),
     {
       title: tCol('status'),
       key: 'active',
@@ -227,19 +240,19 @@ export default function AdminCatalogPage() {
       </div>
       <p className={styles.hint}>{domainLabel('catalogTypeHint', type)}</p>
 
-      {isModelTab ? <CatalogModelsPanel /> : (
-      <DataTable<CatalogItemAdmin>
-        label={domainLabel('catalogType', type)}
-        columns={columns}
-        items={items}
-        onRowClick={openEdit}
-        minWidth={MIN_TABLE_WIDTH}
-        loading={isFetching}
-        error={
-          isError && !data ? { title: t('loadError'), onRetry: () => void refetch() } : null
-        }
-        empty={{ title: t('empty'), action: createButton }}
-      />
+      {isModelTab ? (
+        <CatalogModelsPanel />
+      ) : (
+        <DataTable<CatalogItemAdmin>
+          label={domainLabel('catalogType', type)}
+          columns={columns}
+          items={items}
+          onRowClick={openEdit}
+          minWidth={MIN_TABLE_WIDTH}
+          loading={isFetching}
+          error={isError && !data ? { title: t('loadError'), onRetry: () => void refetch() } : null}
+          empty={{ title: t('empty'), action: createButton }}
+        />
       )}
 
       <CatalogItemFormModal
