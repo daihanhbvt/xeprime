@@ -114,6 +114,7 @@ Gradient của nút chính (`Gradient/Brand/600 -> 500 (90deg)`) chưa thành to
 | Token | Giá trị | Figma | AntD |
 | --- | --- | --- | --- |
 | `--xp-color-success` / `-bg` | `#039855` / `#ecfdf3` | v2 `Status/success-high` / `-low` | `colorSuccess` / `colorSuccessBg` |
+| `--xp-color-success-subtle` | `#f6fef9` | v2 `Status/success-25` | — (vành ngoài icon thành công) |
 | `--xp-color-warning` / `-bg` | `#e07b26` / `#fff7ed` | *chưa chuyển* (`14:67` / `14:71`) — v2 đã đọc chỉ có `warning-300/500` | `colorWarning` / `colorWarningBg` |
 | `--xp-color-error` / `-bg` | `#d92d20` / `#fef3f2` | v2 `Status/error-high` / `BG/destructive-low` | `colorError` / `colorErrorBg` |
 | `--xp-color-info` / `-bg` | `#2563eb` / `#eff6ff` | *chưa có trong v2* (`14:83` / `14:87`) | `colorInfo` / `colorInfoBg` |
@@ -166,6 +167,7 @@ Thang v2 có 8 bậc, tên style Figma dạng `<size>px/<weight>`: 12/18 · 14/2
 | `display-sm` | 36 / 44 | `36px/Medium` (−2%) · `36px/Bold` (−1%) | **Mới** — tiêu đề lớn của section marketing |
 | `h1` | 30 / 38 | `30px/Semibold` · `30px/Bold` | Tiêu đề trang (bộ cũ 32/40) |
 | `h2` | 24 / 32 | `24px/Semibold` · `24px/Medium` | Tiêu đề section |
+| `lead` | 20 / 30 | `20px/Medium` · `20px/Semibold` | **Mới** — chữ trên nền ảnh: cột trái hộp đăng nhập (dòng giới thiệu, tên cửa hàng ứng dụng). Không phải bậc tiêu đề, không vào `fontSizeHeading*` của AntD |
 | `h3` | 18 / 28 | `18px/Semibold` | Tiêu đề card / modal (bộ cũ 20/28) |
 | `h4` | 16 / 24 | `16px/Semibold` | Subsection, header bảng |
 | `body-lg` | 16 / 24 | `16px/Regular` | Body lớn |
@@ -499,6 +501,7 @@ code của màn trang chủ Figma `19695:40693`.
 | Bóng | `--xp-elevation-{xs,sm,lg}` | bóng v2 tông `#0A0D12` | ô nhập, thẻ xe |
 | | `--xp-elevation-{soft,panel}` | xám `#7d7d7d` 15% | thẻ gian hàng/đánh giá, bảng tìm kiếm |
 | | `--xp-elevation-{glow,ambient,header}` | — | nút gradient, header |
+| | `--xp-elevation-xl` | v2 `Shadow/xl` | popup nổi trên hộp thoại khác (xác minh OTP, đặt lại mật khẩu xong) |
 | Kính mờ | `--xp-color-glass` / `-strong` / `-faint` / `-gold`, `--xp-color-scrim-light` | trắng 10/32/5%, kem 20% | chip hero, huy hiệu store, dấu tích |
 | Bo góc | `--xp-border-radius-chip` / `-control` / `-card` | 8 / 12 / 16 | huy hiệu · ô nhập, nút · thẻ |
 | Khoảng cách | `--xp-space-{2,6,12,20,40,48,64,80}` | px | bậc mịn của v2 (§9) |

@@ -115,7 +115,10 @@ function withNoIndex(response: NextResponse): NextResponse {
   return response;
 }
 
-/** `/login` `/register` CŨ của site khách: đăng nhập khách là modal — về trang chủ, mở sẵn modal. */
+/**
+ * `/login` `/register` `/forgot-password` CŨ của site khách: tài khoản khách sống trong HỘP (cả quên
+ * mật khẩu, design v2) — về trang chủ, mở sẵn hộp ở đúng chế độ.
+ */
 function legacyCustomerAuth(request: NextRequest, hasSession: boolean): NextResponse | null {
   const { pathname } = request.nextUrl;
   const mode =
@@ -123,7 +126,9 @@ function legacyCustomerAuth(request: NextRequest, hasSession: boolean): NextResp
       ? AUTH_MODE.LOGIN
       : pathname === ROUTES.REGISTER
         ? AUTH_MODE.REGISTER
-        : null;
+        : pathname === ROUTES.FORGOT_PASSWORD
+          ? AUTH_MODE.FORGOT
+          : null;
   if (!mode) return null;
   const rawNext = request.nextUrl.searchParams.get('next');
   const url = new URL(ROUTES.HOME, request.url);

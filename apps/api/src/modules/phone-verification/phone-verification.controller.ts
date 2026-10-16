@@ -3,6 +3,7 @@ import { ApiGoneResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/s
 import { Throttle } from '@nestjs/throttler';
 import {
   ACCOUNT_REALM,
+  PHONE_VERIFICATION_PURPOSE,
   realmForClientApp,
   type AccountRealm,
   type MobileClientApp,
@@ -32,7 +33,8 @@ import { PhoneVerificationService } from './phone-verification.service';
  *
  * Từ ADR 0060 OTP CHỈ chứng minh sở hữu số điện thoại — không route nào ở đây tạo tài khoản hay
  * cấp phiên. Mã `register` được đối chiếu trong `POST /auth/register`, mã `password_reset` trong
- * `POST /auth/password/reset-otp`; `POST login` (đăng nhập bằng OTP cũ) chỉ còn trả 410.
+ * `POST /auth/password/reset-otp` — web có thể `verify-otp` trước để tách màn nhập mã khỏi màn đặt
+ * mật khẩu, mã vẫn chỉ đổi được mật khẩu một lần; `POST login` (đăng nhập bằng OTP cũ) chỉ còn trả 410.
  *
  * Mỗi mã thuộc MỘT realm (ADR 0053): site web gọi thì realm của site; app native gọi thẳng (không
  * qua site) thì realm theo `clientApp`. Realm `platform` không có OTP.
@@ -99,12 +101,15 @@ export class PhoneVerificationController {
     @Req() req: RequestContext,
   ): Promise<VerifyOtpResultDto> {
     const { realm, current } = await this.otpContext(req, dto.clientApp);
+    const purpose = dto.purpose as PhoneVerificationPurpose;
     await this.service.verifyOtp(
       dto.phone,
-      dto.purpose as PhoneVerificationPurpose,
+      purpose,
       dto.code,
       realm,
-      current?.userId ?? null,
+      // Mã quên mật khẩu chứng minh số của tài khoản ĐANG ĐẶT LẠI, không phải của người đang đăng
+      // nhập (hộp quên mật khẩu mở được cả khi có phiên) — không gắn số đó vào tài khoản của phiên.
+      purpose === PHONE_VERIFICATION_PURPOSE.PASSWORD_RESET ? null : (current?.userId ?? null),
     );
     return { verified: true };
   }

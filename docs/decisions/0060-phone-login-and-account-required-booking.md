@@ -88,6 +88,17 @@ native.
   `password_reset`; không có tài khoản ⇒ `OTP_INVALID` (y như sai mã); có ⇒ MỘT transaction: thay
   hash, đóng `phone_verified_at` nếu còn trống (vừa chứng minh xong), vô hiệu mọi token đặt lại qua
   email đang mở. **Không cấp phiên** — người dùng đăng nhập lại bằng mật khẩu mới.
+- *Bổ sung 16/10/2026 (hộp tài khoản site khách, design v2 — ba bước SĐT → mã → mật khẩu mới):*
+  web xác minh mã ở màn "Nhập mã OTP" bằng `verify-otp` purpose `password_reset` TRƯỚC khi hỏi mật
+  khẩu, để mã sai bị báo ngay ở bước mã. `reset-otp` vì thế nhận mã ở dạng đang chờ (app: mã + mật
+  khẩu cùng lúc) HOẶC đã xác minh trong 10 phút (cùng realm, cùng số, đúng băm của mã), và **tiêu**
+  ĐÚNG hàng mã đó ngay trong transaction đổi mật khẩu (`verified` → `expired`): một mã đổi mật khẩu
+  đúng một lần, hai lượt song song cùng mã chỉ một lượt thắng. Mã đã xác minh vẫn bị **đếm lần đoán
+  sai** (dồn với số lần sai trước khi xác minh, chạm `OTP_POLICY.MAX_ATTEMPTS` ⇒ `failed`,
+  `OTP_LOCKED`) — không có phép đếm này thì mã đã qua bước 2 đứng yên cho dò suốt cửa sổ. Mã đúng
+  mà quá cửa sổ ⇒ `OTP_EXPIRED` (gửi lại mã). `verify-otp` purpose `password_reset` KHÔNG gắn số vào
+  tài khoản của phiên đang đăng nhập. Bước `verify-otp` không lộ thêm gì — `reset-otp` vốn đã gọi
+  đúng phép đối chiếu đó, và số không có tài khoản không bao giờ nhận được mã.
 - Route chỉ khai `customer` · `partner`. `POST /auth/password/forgot` (qua email) vẫn sống cho mọi
   realm (site quản trị, app cũ); nó không mở được cửa nào mới vì đăng nhập vẫn đòi SĐT (điều 1).
 - Đã biết: đặt lại mật khẩu chưa thu hồi phiên native đang mở (xem Câu hỏi còn mở).

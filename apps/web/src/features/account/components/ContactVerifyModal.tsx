@@ -5,6 +5,7 @@ import { App, Alert, Button } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useEffect, useId, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { OTP_POLICY } from '@xeprime/types';
 import {
   accountEmailChangeSchema,
   accountPhoneChangeSchema,
@@ -19,7 +20,7 @@ import { useContactVerify } from '../hooks/use-contact-verify';
 import { CONTACT_CHANNEL, type ContactChannel } from '../types';
 import styles from './ContactVerifyModal.module.css';
 
-const OTP_LENGTH = 6;
+const OTP_LENGTH = OTP_POLICY.CODE_LENGTH;
 
 interface ContactVerifyModalProps {
   readonly channel: ContactChannel;

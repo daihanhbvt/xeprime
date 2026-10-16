@@ -14,12 +14,17 @@ import { useTranslations } from 'next-intl';
 /**
  * Bề rộng modal desktop — Figma `125:1611` (SM 400 · MD 560 · LG 720), token hoá ở Wave 1A.
  * `xl` thêm ở Wave 9 cho overlay HAI CỘT (hồ sơ xe bên trái, luồng thao tác bên phải).
+ *
+ * `fit`: hộp ôm đúng bề rộng NỘI DUNG — cho overlay có khung bản vẽ riêng không nằm trên thang
+ * 400/560/720 (hộp đăng nhập 1100px hai cột, popup OTP 450px). Nội dung tự đặt `width` và trần
+ * `max-width`; AntD vẫn giữ `max-width: calc(100vw - 32px)` của hộp.
  */
 const MODAL_WIDTH = {
   sm: XP_TOKENS['modal-width-sm'],
   md: XP_TOKENS['modal-width'],
   lg: XP_TOKENS['modal-width-lg'],
   xl: XP_TOKENS['modal-width-xl'],
+  fit: 'fit-content',
 } as const;
 
 /**
@@ -47,6 +52,7 @@ const DEFAULT_MOBILE_MODE: Record<DialogSize, DialogMobileMode> = {
   md: 'fullscreen',
   lg: 'fullscreen',
   xl: 'fullscreen',
+  fit: 'fullscreen',
 };
 
 interface ResponsiveDialogBaseProps {
@@ -90,6 +96,17 @@ interface ResponsiveDialogBaseProps {
    * cấp một lối ra tường minh (vd "Đăng xuất") — một hộp không đóng được và không có lối ra là bẫy.
    */
   closable?: boolean;
+  /**
+   * Icon của nút đóng ở góc, khi bản vẽ dùng icon riêng. Không áp cho màn toàn trang trên mobile:
+   * ở đó nút đóng luôn là mũi tên quay lại (quy tắc 6 của Figma `130:1563`).
+   */
+  closeIcon?: ReactNode;
+  /**
+   * Gọi khi hiệu ứng mở/đóng chạy xong. Dùng để focus một ô trong hộp CHỒNG lên hộp khác: AntD 6
+   * giữ một chồng khoá focus, và ô tự focus lúc mount (trước khi hộp mới đăng ký khoá của nó) bị
+   * khoá của hộp bên dưới kéo focus về.
+   */
+  afterOpenChange?: (open: boolean) => void;
   /** Mặc định `true`: mỗi lần mở là state mới. `false` khi cần giữ nội dung đã nhập. */
   destroyOnClose?: boolean;
   /**
@@ -158,6 +175,8 @@ export function ResponsiveDialog({
   closeOnEsc = true,
   maskClosable = true,
   closable = true,
+  closeIcon,
+  afterOpenChange,
   destroyOnClose = true,
   bodyScroll = 'body',
   className,
@@ -210,8 +229,9 @@ export function ResponsiveDialog({
         size={isSheet ? 'auto' : '100%'}
         title={headerTitle}
         // Quy tắc 6 (Figma): màn toàn trang đọc như một trang mới → mũi tên quay lại, không phải X.
-        closeIcon={isSheet ? undefined : <ArrowLeftOutlined />}
+        closeIcon={isSheet ? closeIcon : <ArrowLeftOutlined />}
         closable={closable}
+        afterOpenChange={afterOpenChange}
         footer={resolvedFooter}
         mask={maskConfig}
         keyboard={escEnabled}
@@ -239,6 +259,8 @@ export function ResponsiveDialog({
       footer={resolvedFooter ?? null}
       centered
       closable={closable}
+      closeIcon={closeIcon}
+      afterOpenChange={afterOpenChange}
       mask={maskConfig}
       keyboard={escEnabled}
       destroyOnHidden={destroyOnClose}

@@ -28,6 +28,11 @@ interface TextFieldProps<T extends FieldValues> {
    * Người dùng thấy đúng thứ sẽ được lưu, thay vì gõ xong mới bị báo sai định dạng.
    */
   normalize?: (value: string) => string;
+  /**
+   * Icon nút ẩn/hiện của ô `password`, khi bản vẽ dùng icon riêng thay cho mắt mặc định của AntD.
+   * `visible` = mật khẩu đang hiện chữ.
+   */
+  visibilityIcon?: (visible: boolean) => ReactNode;
 }
 
 /**
@@ -49,6 +54,7 @@ export function TextField<T extends FieldValues>({
   required,
   help,
   normalize,
+  visibilityIcon,
 }: TextFieldProps<T>) {
   const { field, fieldState } = useController({ control, name });
   // `Form.Item` chỉ tự nối label ↔ input khi nằm trong `<Form>` của AntD. Các form ở đây dùng
@@ -84,7 +90,7 @@ export function TextField<T extends FieldValues>({
       className={styles.item}
     >
       {type === 'password' ? (
-        <Input.Password {...shared} />
+        <Input.Password {...shared} iconRender={visibilityIcon} />
       ) : (
         <Input {...shared} type={type === 'email' ? 'email' : type === 'tel' ? 'tel' : 'text'} />
       )}

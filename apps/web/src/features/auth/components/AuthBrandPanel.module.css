@@ -1,0 +1,161 @@
+/*
+ * Cột ảnh 580×782 của hộp tài khoản (Figma `19786:79192`). Toạ độ là của bản vẽ, neo theo mép
+ * TRÊN-TRÁI: khi hộp thấp hơn 782 (màn laptop thấp), phần bị cắt là chân điện thoại — đúng như
+ * khung đã cắt sẵn ở mép phải.
+ */
+.panel {
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+  height: 100%;
+  background: var(--xp-color-primary-strong);
+  color: var(--xp-color-text-on-dark);
+  isolation: isolate;
+}
+
+.fill {
+  object-fit: fill;
+}
+
+/*
+ * Ảnh nền vàng-đen (cùng ảnh với banner đối tác/ứng dụng ở trang chủ) phóng 903% × 143% và lùi
+ * trái 484% — bản vẽ chỉ lấy dải có vệt sáng chéo và mép mui xe.
+ */
+.backdrop {
+  position: absolute;
+  z-index: -2;
+  top: 0.03%;
+  left: -484.36%;
+  width: 903.05%;
+  height: 143.14%;
+}
+
+.glow {
+  position: absolute;
+  z-index: -1;
+  top: 50%;
+  left: 0;
+  display: flex;
+  width: 580px;
+  height: 782px;
+  align-items: center;
+  justify-content: center;
+  mix-blend-mode: screen;
+  transform: translateY(-50%);
+}
+
+.glowInner {
+  position: relative;
+  overflow: hidden;
+  width: 782px;
+  height: 580px;
+  flex: none;
+  filter: blur(10px);
+  transform: rotate(-90deg) scaleY(-1);
+}
+
+.glowCrop {
+  position: absolute;
+  top: -65.6%;
+  left: -8.48%;
+  width: 121.05%;
+  height: 202.77%;
+}
+
+.info {
+  position: absolute;
+  top: 92px;
+  left: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--xp-space-md);
+}
+
+.logo {
+  display: block;
+  width: 304px;
+  height: auto;
+}
+
+.title {
+  margin: 0;
+  color: var(--xp-color-text-on-dark);
+  font-size: var(--xp-font-size-lead);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-lead);
+  white-space: nowrap;
+}
+
+.badges {
+  position: absolute;
+  z-index: 1;
+  top: 320px;
+  left: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0;
+  margin: 0;
+  gap: 18px;
+  list-style: none;
+}
+
+.badge {
+  display: inline-flex;
+  min-width: 213px;
+  align-items: center;
+  padding: var(--xp-space-12) var(--xp-space-20);
+  border: 1px solid var(--xp-color-text-on-dark);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-glass-faint);
+  backdrop-filter: blur(6px);
+  color: var(--xp-color-text-on-dark);
+  gap: var(--xp-space-sm);
+  transition: background-color 0.15s ease;
+}
+
+.badge:hover {
+  background: var(--xp-color-glass);
+  color: var(--xp-color-text-on-dark);
+}
+
+.badge:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.badgeText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.badgeCaption {
+  margin-bottom: -4px;
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
+  white-space: nowrap;
+}
+
+.badgeStore {
+  font-size: var(--xp-font-size-lead);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-lead);
+  white-space: nowrap;
+}
+
+/* Mockup 545 × 662 (khung ảnh 545 × 635, ảnh dôi 4,26% xuống dưới, lùi trái 1,06%). */
+.phone {
+  position: absolute;
+  top: 147px;
+  left: 123px;
+  width: 545px;
+  height: 662px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .badge {
+    transition: none;
+  }
+}

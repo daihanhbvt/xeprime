@@ -204,8 +204,10 @@ export class AuthController {
    * Quên mật khẩu bằng SỐ ĐIỆN THOẠI (ADR 0060) — site khách, site partner và hai app.
    *
    * Bước trước: `POST /auth/phone/send-otp { purpose: 'password_reset' }` — luôn trả như nhau dù số
-   * có tài khoản hay không. Bước này: mã đúng ⇒ đặt mật khẩu mới, 204. KHÔNG phát cookie hay token —
-   * OTP ở đây mở quyền đổi mật khẩu, không phải một cách đăng nhập.
+   * có tài khoản hay không. Web xác minh mã riêng ở màn "Nhập mã OTP" (`POST /auth/phone/verify-otp`)
+   * rồi mới hỏi mật khẩu mới; app gửi mã + mật khẩu cùng lúc — route này nhận cả hai, và TIÊU mã.
+   * Bước này: mã đúng ⇒ đặt mật khẩu mới, 204. KHÔNG phát cookie hay token — OTP ở đây mở quyền đổi
+   * mật khẩu, không phải một cách đăng nhập.
    *
    * Realm: site đang gọi (proxy); request không qua site nào (app native gọi host API riêng) thì
    * theo `clientApp`. Site quản trị bị chặn bởi `@Realms` — tài khoản `platform` đặt lại qua email.
@@ -214,8 +216,8 @@ export class AuthController {
   @Realms(ACCOUNT_REALM.CUSTOMER, ACCOUNT_REALM.PARTNER)
   @Post('password/reset-otp')
   @HttpCode(HttpStatus.NO_CONTENT)
-  // 10/phút — bằng `verify-otp`: mã 6 số là cửa dò, và `verifyOtp` còn tự khoá mã sau
-  // `OTP_POLICY.MAX_ATTEMPTS` lần sai.
+  // 10/phút — bằng `verify-otp`: mã 6 số là cửa dò. Lần đoán sai được đếm trên CHÍNH hàng mã (đang
+  // chờ hay đã qua bước "Nhập mã OTP"), chạm `OTP_POLICY.MAX_ATTEMPTS` là mã bị khoá.
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({
     summary:

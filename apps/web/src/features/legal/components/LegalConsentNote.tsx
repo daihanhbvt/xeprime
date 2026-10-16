@@ -5,8 +5,11 @@ import { cx } from '@/lib/cx';
 import { LEGAL_DOC, legalPath, type LegalDoc } from '@/constants/legal';
 import styles from './LegalConsentNote.module.css';
 
-/** Bốn thời điểm người dùng thật sự cam kết một điều gì đó. */
-export type LegalConsentPlace = 'auth' | 'booking' | 'subscription' | 'shop';
+/**
+ * Những thời điểm người dùng thật sự cam kết một điều gì đó. `marketAuth` là câu của hộp tài khoản
+ * site khách theo design v2 — cùng hai văn bản với `auth`, khác câu chữ.
+ */
+export type LegalConsentPlace = 'auth' | 'marketAuth' | 'booking' | 'subscription' | 'shop';
 
 /**
  * Khoá message viết THÀNH CHỮ, không ghép từ `place` lúc chạy.
@@ -17,6 +20,7 @@ export type LegalConsentPlace = 'auth' | 'booking' | 'subscription' | 'shop';
  */
 const CONSENT_KEY = {
   auth: 'consent.auth',
+  marketAuth: 'consent.marketAuth',
   booking: 'consent.booking',
   subscription: 'consent.subscription',
   shop: 'consent.shop',

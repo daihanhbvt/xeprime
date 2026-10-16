@@ -1,0 +1,118 @@
+/*
+ * Sáu ô mã OTP — design v2 ("OTP Input", Figma `19836:40496` / `19836:34995`): hàng cao 50, khe 12,
+ * mỗi ô viền xám bo 12, chữ 16/24 medium; ô trống hiện "-" xám nhạt; ô đang nhập nền vàng nhạt,
+ * viền vàng, chữ vàng.
+ */
+.row {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 50px;
+  gap: var(--xp-space-12);
+}
+
+/* Ô nhập thật: phủ kín hàng ô để bấm vào đâu cũng focus, nhưng không vẽ gì. */
+.input {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  margin: 0;
+  background: transparent;
+  caret-color: transparent;
+  color: transparent;
+  cursor: text;
+  /* Không dùng `opacity: 0`: vài trình duyệt di động không gợi ý mã SMS cho ô "vô hình". */
+  -webkit-text-fill-color: transparent;
+  font-size: var(--xp-font-size-body-lg);
+  letter-spacing: 0;
+  outline: none;
+}
+
+/* Viền focus do ô ĐANG NHẬP (vàng) đảm nhận — không vẽ thêm khung quanh cả hàng (nhân đôi lớp: thắng
+ * quy tắc :focus-visible chung). */
+.input.input:focus,
+.input.input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.input::selection {
+  background: transparent;
+}
+
+.input:disabled {
+  cursor: not-allowed;
+}
+
+.box {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--xp-color-border-strong);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-elevation-xs);
+  color: var(--xp-color-text-placeholder);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-lg);
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.filled {
+  color: var(--xp-color-text);
+}
+
+.active {
+  border-color: var(--xp-color-primary-bright);
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-primary);
+}
+
+.caret {
+  display: inline-block;
+  width: 1px;
+  height: var(--xp-font-size-body-lg);
+  margin-inline-start: 2px;
+  animation: blink 1s step-end infinite;
+  background: currentColor;
+}
+
+.invalid .box {
+  border-color: var(--xp-color-error);
+}
+
+.disabled .box {
+  background: var(--xp-color-bg-muted);
+  opacity: var(--xp-disabled-opacity);
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caret {
+    animation: none;
+  }
+
+  .box {
+    transition: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .row {
+    gap: var(--xp-space-sm);
+  }
+}

@@ -104,6 +104,7 @@ export const XP_TOKENS = {
   // success/warning/error (CLAUDE.md §5, quy tắc Wave 1A §8).
   'color-success': '#039855', // v2 Status/success-high
   'color-success-bg': '#ecfdf3', // v2 Status/success-low
+  'color-success-subtle': '#f6fef9', // v2 Status/success-25 — vành ngoài icon thành công (popup đặt lại mật khẩu)
   // Ba frame v2 đã đọc chỉ có warning-300/500 (chấm, icon), chưa có bậc chữ/nền như success và
   // error. `#f79009` làm chữ trên nền nhạt chỉ đạt ~2.2:1 nên không lấy — giữ cặp cũ tới khi đọc
   // được màn có cảnh báo (ADR 0062 điều 5).
@@ -236,6 +237,8 @@ export const XP_TOKENS = {
   'line-height-h1': '38px',
   'font-size-h2': '24px', // v2 24px/Semibold · 24px/Medium · tiêu đề section
   'line-height-h2': '32px',
+  'font-size-lead': '20px', // v2 20px/Medium · 20px/Semibold · chữ trên nền ảnh (cột trái hộp đăng nhập)
+  'line-height-lead': '30px',
   'font-size-h3': '18px', // v2 18px/Semibold · tiêu đề card / modal
   'line-height-h3': '28px',
   'font-size-h4': '16px', // v2 16px/Semibold · subsection, header bảng
@@ -336,6 +339,8 @@ export const XP_TOKENS = {
   'elevation-glow': '0 4px 12px 0 rgba(253, 178, 38, 0.16)',
   'elevation-ambient': '0 0 8px 0 rgba(10, 13, 18, 0.04)',
   'elevation-header': '0 0 0 1px rgba(0, 0, 0, 0.05), 0 25px 50px -12px rgba(0, 0, 0, 0.05)',
+  // v2 Shadow/xl — popup nổi trên một hộp thoại khác (xác minh OTP, đặt lại mật khẩu thành công).
+  'elevation-xl': '0 20px 24px -4px rgba(10, 13, 18, 0.08), 0 8px 8px -4px rgba(10, 13, 18, 0.03)',
   // Bo góc v2: badge 8 · ô nhập/nút 12 · thẻ/khung 16.
   'border-radius-chip': '8px',
   'border-radius-control': '12px',

@@ -1,71 +1,90 @@
-.body {
-  padding: var(--xp-space-lg);
+/*
+ * Vỏ hộp tài khoản site khách — design v2 (Figma `19786:74738` "Container" 1100 × 782): cột ảnh 580
+ * + cột form 520, bo 16, nút đóng 20px cách mép trên/phải 20.
+ *
+ * Lớp nhân đôi: AntD 6 tiêm style `.ant-modal .ant-modal-container` (0,2,0) LÚC CHẠY, sau sheet của CSS
+ * Module — hoà độ đặc hiệu thì AntD thắng và đệm 20/24 của nó viền trắng quanh hai cột.
+ */
+.dialog.dialog :global(.ant-modal-container) {
+  overflow: hidden;
+  padding: 0;
+  border-radius: var(--xp-border-radius-card);
+  box-shadow: var(--xp-elevation-xl);
 }
 
-.head {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: start;
-  gap: var(--xp-space-md);
-  margin-bottom: var(--xp-space-lg);
+/* Header chỉ còn tiêu đề chỉ-đọc-màn-hình — bỏ lề dưới 8px AntD để hai cột sát mép trên. */
+.dialog.dialog :global(.ant-modal-header) {
+  padding: 0;
+  margin: 0;
 }
 
-.registerHead {
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--xp-space-sm);
+.dialog.dialog :global(.ant-modal-close) {
+  z-index: 2;
+  top: var(--xp-space-20);
+  width: 20px;
+  height: 20px;
+  color: var(--xp-color-text-tertiary);
+  inset-inline-end: var(--xp-space-20);
 }
 
-.title {
-  font-size: var(--xp-font-size-h3);
-  font-weight: var(--xp-font-weight-bold);
-  line-height: var(--xp-line-height-h3);
+.dialog.dialog :global(.ant-modal-close:hover) {
+  background: transparent;
   color: var(--xp-color-text);
 }
 
-.brandName {
-  color: var(--xp-color-primary-active);
+/* Thân tự bỏ trần cao/đệm của `ResponsiveDialog` — khung dưới tự quyết chiều cao và vùng cuộn. */
+.body.body {
+  max-height: none;
+  padding: 0;
+  overflow: visible;
 }
 
-.sub {
-  margin-top: var(--xp-space-xs);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
-  color: var(--xp-color-text-secondary);
+/* Hộp thấp hơn 782 khi màn thấp — chỉ cột form cuộn, cột ảnh đứng yên. */
+.frame {
+  display: grid;
+  width: 1100px;
+  max-width: 100%;
+  height: min(782px, calc(100dvh - var(--xp-space-48)));
+  grid-template-columns: minmax(0, 580px) 520px;
+  grid-template-rows: minmax(0, 1fr);
 }
 
-.dialog :global(.ant-modal-content) {
-  overflow: hidden;
-  border: 1px solid var(--xp-color-border-subtle);
-  border-radius: var(--xp-border-radius);
-  box-shadow: var(--xp-shadow-overlay);
+.content {
+  min-width: 0;
+  min-height: 0;
+  background: var(--xp-color-bg-container);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
-.dialog :global(.ant-modal-close) {
-  width: var(--xp-touch-target-min);
-  height: var(--xp-touch-target-min);
-  border: 1px solid var(--xp-color-border-subtle);
-  border-radius: var(--xp-border-radius-pill);
-  background: var(--xp-color-bg-elevated);
-  box-shadow: var(--xp-shadow-card);
+/* Hẹp hơn tablet ngang: không đủ chỗ cho cột ảnh — hộp chỉ còn cột form 520. */
+@media (max-width: 1023px) {
+  .frame {
+    width: 520px;
+    height: auto;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+  }
+
+  .brand {
+    display: none;
+  }
+
+  .content {
+    max-height: calc(100dvh - var(--xp-space-48));
+  }
 }
 
-/*
- * Bo góc trên, trần chiều cao và safe-area của bottom sheet đã chuyển sang `ResponsiveDialog`
- * (Wave 1B) — dùng token thay cho 18px/84vh viết tay. Không lặp lại ở đây.
- */
-
+/* Mobile: `ResponsiveDialog` thành màn toàn trang — thân drawer tự cuộn. */
 @media (max-width: 640px) {
-  .body {
-    padding-top: var(--xp-space-sm);
+  .frame {
+    display: block;
+    width: 100%;
+    height: auto;
   }
 
-  .head {
-    gap: var(--xp-space-sm);
-    margin-bottom: var(--xp-space-md);
-  }
-
-  .title {
-    font-size: var(--xp-font-size-h4);
-    line-height: var(--xp-line-height-h4);
+  .content {
+    max-height: none;
+    overflow: visible;
   }
 }

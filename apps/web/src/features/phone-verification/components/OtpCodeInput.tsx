@@ -3,8 +3,9 @@
 import { Input, type InputRef } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef } from 'react';
+import { OTP_POLICY } from '@xeprime/types';
 
-const OTP_LEN = 6;
+const OTP_LEN = OTP_POLICY.CODE_LENGTH;
 
 interface OtpCodeInputProps {
   value: string;
