@@ -5,8 +5,10 @@ import {
   DownOutlined,
   LogoutOutlined,
   MessageOutlined,
+  MoonOutlined,
   RightOutlined,
   ShopOutlined,
+  SunOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 import { Avatar, Badge, Dropdown, type MenuProps } from 'antd';
@@ -27,6 +29,7 @@ import { CHAT_SIDE } from '@xeprime/types';
 import { ChatMenu } from '@/features/chat/components/ChatMenu';
 import { useChatBadge } from '@/features/chat/hooks/use-chat-badge';
 import { useCurrentUser, type CurrentUser } from '@/hooks/use-current-user';
+import { useTheme, type ThemeMode } from '@/lib/theme';
 import { CtaButton } from './CtaButton';
 import styles from './MarketHeader.module.css';
 
@@ -57,8 +60,11 @@ const NAV = [
   { key: 'contact', labelKey: 'contact', href: ROUTES.SUPPORT },
 ] as const;
 
-/** Logo vàng của design v2 — tỉ lệ 128 × 40 của artwork trong Figma. */
-const LOGO = { src: '/home/logo-gold.svg', width: 128, height: 40 } as const;
+/** Logo theo chế độ sáng/tối — tỉ lệ 128 × 40 của artwork trong Figma. */
+const LOGO = {
+  light: { src: '/home/logo-gold.svg', width: 128, height: 40 },
+  dark: { src: '/home/logo-gold-dark.svg', width: 128, height: 40 },
+} as const;
 
 export function MarketHeader() {
   const t = useTranslations('Navigation.public');
@@ -70,15 +76,17 @@ export function MarketHeader() {
   const localeGroup = useLocaleMenuGroup();
   // Số chưa đọc dùng CHUNG với biểu tượng chat, không đếm lại — và cùng đích hộp thư.
   const chat = useChatBadge(CHAT_SIDE.CUSTOMER);
+  const { theme, toggleTheme } = useTheme();
+  const currentLogo = theme === 'dark' ? LOGO.dark : LOGO.light;
 
   return (
     <header className={styles.header}>
       <div className={styles.inner}>
         <Link href={ROUTES.HOME} className={styles.brand} aria-label={APP_NAME}>
           <Image
-            src={LOGO.src}
-            width={LOGO.width}
-            height={LOGO.height}
+            src={currentLogo.src}
+            width={currentLogo.width}
+            height={currentLogo.height}
             alt=""
             priority
             unoptimized
@@ -111,6 +119,19 @@ export function MarketHeader() {
         </nav>
 
         <div className={styles.right}>
+          <button
+            type="button"
+            className={styles.themeToggle}
+            onClick={toggleTheme}
+            aria-label={t('toggleTheme')}
+            title={theme === 'dark' ? t('themeLight') : t('themeDark')}
+          >
+            {theme === 'dark' ? (
+              <SunOutlined className={styles.themeIcon} aria-hidden="true" />
+            ) : (
+              <MoonOutlined className={styles.themeIcon} aria-hidden="true" />
+            )}
+          </button>
           {user ? (
             <>
               <ChatMenu side={CHAT_SIDE.CUSTOMER} />
@@ -130,6 +151,8 @@ export function MarketHeader() {
                     t,
                     localeGroup,
                     chat,
+                    theme,
+                    toggleTheme,
                   }),
                   className: styles.menu,
                 }}
@@ -202,6 +225,8 @@ function accountMenu({
   t,
   localeGroup,
   chat,
+  theme,
+  toggleTheme,
 }: {
   user: CurrentUser;
   onLogout: () => void;
@@ -209,6 +234,8 @@ function accountMenu({
   localeGroup: NonNullable<MenuProps['items']>[number];
   /** Đích hộp thư + số chưa đọc, lấy từ `useChatBadge` — xem docblock ở `MarketHeader`. */
   chat: { href: string; count: number };
+  theme: ThemeMode;
+  toggleTheme: () => void;
 }): MenuProps['items'] {
   /**
    * Một dòng điều hướng: nhãn bên trái, huy hiệu (nếu có), mũi tên bên phải.
@@ -264,6 +291,19 @@ function accountMenu({
     row('become-owner', <ShopOutlined />, resolveOwnerCtaHref(), t('becomeOwner')),
     { type: 'divider' },
     localeGroup,
+    { type: 'divider' },
+    {
+      key: 'theme-toggle',
+      icon: theme === 'dark' ? <SunOutlined /> : <MoonOutlined />,
+      label: (
+        <div className={styles.row}>
+          <span className={styles.rowLabel}>
+            {theme === 'dark' ? t('themeLight') : t('themeDark')}
+          </span>
+        </div>
+      ),
+      onClick: toggleTheme,
+    },
     { type: 'divider' },
     { key: 'logout', icon: <LogoutOutlined />, label: t('logout'), onClick: onLogout },
   ];

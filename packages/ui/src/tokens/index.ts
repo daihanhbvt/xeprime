@@ -56,7 +56,7 @@ export const XP_TOKENS = {
   'color-primary-light': '#fff5e5', // v2 BG/primary-low — nền gold nhạt (mục chọn, nút phụ)
   'color-primary-subtle': '#fff9f0', // v2 BG/primary-25 — nền gold nhạt nhất (ô icon, mảng nền)
   'color-primary-muted': '#f6ebd5', // v2 BG/primary-100 · Stroke/primary-100 — hover nền gold nhạt, viền gold nhạt
-  'color-primary-contrast': '#101828', // v2 Text/Gray/high — chữ ĐEN trên nền gold, không phải trắng
+  'color-primary-contrast': '#0e0f12', // v2 Text/Gray/high — chữ ĐEN trên nền gold, không phải trắng
 
   // ─── Bề mặt ───────────────────────────────────────────────────────────────
   'color-bg': '#fafafa', // v2 BG/gray-50 — nền trang
@@ -67,7 +67,7 @@ export const XP_TOKENS = {
   'color-bg-overlay': 'rgba(26, 26, 26, 0.45)', // lớp phủ sau modal/drawer — chưa có trong v2
 
   // ─── Chữ ──────────────────────────────────────────────────────────────────
-  'color-text': '#101828', // v2 Text/Gray/high
+  'color-text': '#0e0f12', // v2 Text/Gray/high
   'color-text-secondary': '#414651', // v2 Text/Gray/medium
   'color-text-tertiary': '#717680', // v2 Text/Gray/low
   'color-text-placeholder': '#a4a7ae', // v2 Text/Gray/very-low — placeholder, icon mờ trong ô nhập
@@ -77,7 +77,7 @@ export const XP_TOKENS = {
    * cho GIÁ TRỊ ô nhập bị khoá, ngày ngoài tháng của DatePicker (vẫn bấm được) và bước chờ của
    * Steps: #d5d7da chỉ 1.46:1 trên trắng, mờ hơn bộ cũ. Chờ designer nói rõ phạm vi (ADR 0062 Q8).
    */
-  'color-text-disabled': 'rgba(16, 24, 40, 0.25)',
+  'color-text-disabled': 'rgba(14, 15, 18, 0.25)',
   'color-text-inverse': '#e8e4dd', // chữ trên bề mặt tối (= sidebar-text) — chưa có trong v2
   // v2 chưa định nghĩa màu link. Hai token này soi lại đúng giá trị AntD đang dẫn xuất từ
   // `colorInfo` — tức hành vi hiện tại, không phải quyết định thiết kế mới.
@@ -309,7 +309,7 @@ export const XP_TOKENS = {
   // ─── Design v2 — bề mặt chợ (trang chủ, header, footer) ───────────────────
   // Đọc từ các frame trang chủ v2 ngày 15/10/2026 (ADR 0062). App native KHÔNG đọc nhóm này (bộ
   // chuyển đổi native chỉ gỡ đúng các khoá nó liệt kê), nên gradient/bóng nhiều lớp an toàn ở đây.
-  'color-bg-inverse': '#101828', // v2 BG/gray-high — header chợ, nhãn trên ảnh
+  'color-bg-inverse': '#0e0f12', // v2 BG/gray-high — header chợ, nhãn trên ảnh
   'color-text-on-dark': '#ffffff', // v2 Text/Gray/white
   'color-text-on-dark-muted': '#d5d7da', // v2 Text/Gray/disable trên nền tối (footer, banner)
   'color-primary-bright': '#edbb4f', // v2 Text/Brand/low — tiêu đề cột footer trên nền tối

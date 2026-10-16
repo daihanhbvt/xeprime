@@ -13,9 +13,9 @@
   display: block;
   overflow: hidden;
   height: 520px;
-  border: 1px solid var(--xp-color-destination-border);
+  border: 1px solid #cf8f0f;
   border-radius: 120px 40px 120px 40px;
-  background: var(--xp-market-footer-bg);
+  background: #fdf6ec;
   color: inherit;
   isolation: isolate;
 }
@@ -44,6 +44,7 @@
 
 /* Nền tối dùng chung (Figma: rộng 165.56%, cao 110.77%, lùi trái 48.15%). */
 .backdrop {
+  display: none;
   top: -0.01%;
   left: -48.15%;
   width: 165.56%;
@@ -90,13 +91,14 @@
   flex-direction: column;
   align-items: flex-end;
   padding: 36px var(--xp-space-20) var(--xp-space-md);
-  background: var(--xp-gradient-destination-shade);
+  background: linear-gradient(180deg, #fcf0df 31.784%, rgba(253, 246, 236, 0) 100%);
   gap: var(--xp-space-sm);
 }
 
 .city {
-  background: var(--xp-gradient-text-destination);
+  background: linear-gradient(90deg, #d58413 0%, #fac20b 100%);
   background-clip: text;
+  -webkit-background-clip: text;
   color: transparent;
   font-size: var(--xp-font-size-h1);
   font-weight: var(--xp-font-weight-bold);
@@ -109,7 +111,7 @@
   display: flex;
   width: 100%;
   justify-content: space-between;
-  color: var(--xp-color-text-on-dark-muted);
+  color: #717680;
   font-size: var(--xp-font-size-label);
   gap: var(--xp-space-sm);
   line-height: var(--xp-line-height-label);
@@ -117,7 +119,7 @@
 }
 
 .meta b {
-  color: var(--xp-color-text-on-dark);
+  color: #414651;
   font-weight: var(--xp-font-weight-medium);
 }
 
@@ -194,3 +196,27 @@
     transition: none;
   }
 }
+
+/* ── Giao diện tối (Dark Mode - Figma `19879:66241`) ──────────────────────── */
+
+:global([data-theme="dark"]) .card {
+  background: #060403;
+  border-color: #cf8f0f;
+}
+
+:global([data-theme="dark"]) .backdrop {
+  display: block;
+}
+
+:global([data-theme="dark"]) .details {
+  background: linear-gradient(180deg, #171207 31.784%, rgba(23, 18, 7, 0) 100%);
+}
+
+:global([data-theme="dark"]) .meta {
+  color: #a4a7ae;
+}
+
+:global([data-theme="dark"]) .meta b {
+  color: #ffffff;
+}
+

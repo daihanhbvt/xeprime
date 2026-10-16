@@ -100,3 +100,19 @@
     transition: none;
   }
 }
+
+/* ── Giao diện tối (Dark Mode - Figma `19879:66213`) ──────────────────────── */
+
+:global([data-theme="dark"]) .card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+:global([data-theme="dark"]) .name {
+  color: #ffffff;
+}
+
+:global([data-theme="dark"]) .examples {
+  color: #d5d7da;
+}
+

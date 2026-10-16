@@ -25,7 +25,7 @@
   --xp-color-primary-light: #fff5e5;
   --xp-color-primary-subtle: #fff9f0;
   --xp-color-primary-muted: #f6ebd5;
-  --xp-color-primary-contrast: #101828;
+  --xp-color-primary-contrast: #0e0f12;
 
   /* ─── Bề mặt ──────────────────────────────────────────────────────────── */
   --xp-color-bg: #fafafa;
@@ -36,13 +36,13 @@
   --xp-color-bg-overlay: rgba(26, 26, 26, 0.45);
 
   /* ─── Chữ ─────────────────────────────────────────────────────────────── */
-  --xp-color-text: #101828;
+  --xp-color-text: #0e0f12;
   --xp-color-text-secondary: #414651;
   --xp-color-text-tertiary: #717680;
   --xp-color-text-placeholder: #a4a7ae;
   /* Công thức AntD (25% của chữ chính) — v2 `Text/Gray/disable` chờ designer chốt phạm vi
      (ADR 0062 Q8). */
-  --xp-color-text-disabled: rgba(16, 24, 40, 0.25);
+  --xp-color-text-disabled: rgba(14, 15, 18, 0.25);
   --xp-color-text-inverse: #e8e4dd;
   /* v2 chưa định nghĩa màu link — hai token này soi lại giá trị AntD dẫn xuất từ
      `colorInfo` (hành vi hiện tại). Xem `docs/design-token-map.md` §21 (P19 nằm trong bộ implementation/ đã nghỉ hưu 21/08/2026). */
@@ -206,7 +206,7 @@
 
   /* ─── Design v2 — bề mặt chợ (trang chủ, header, footer) — ADR 0062 ─────
      App native không đọc nhóm này nên gradient/bóng nhiều lớp an toàn ở đây. */
-  --xp-color-bg-inverse: #101828;
+  --xp-color-bg-inverse: #0e0f12;
   --xp-color-text-on-dark: #ffffff;
   --xp-color-text-on-dark-muted: #d5d7da;
   --xp-color-primary-bright: #edbb4f;
@@ -381,3 +381,41 @@
     --xp-line-height-h3: 24px;
   }
 }
+
+/*
+ * ─── Chế độ tối (Dark Mode) ─────────────────────────────────────────────────
+ *
+ * Đồng bộ với Figma `19879:66136`.
+ * Đảo các token bề mặt, chữ và viền khi thẻ <html> có data-theme="dark".
+ */
+:root[data-theme="dark"],
+[data-theme="dark"] {
+  /* Bề mặt tối */
+  --xp-color-bg: #080c10;
+  --xp-color-bg-container: #0f1620;
+  --xp-color-bg-elevated: #161f2c;
+  --xp-color-bg-muted: #1a2230;
+  --xp-color-bg-selected: rgba(233, 172, 41, 0.15);
+  --xp-color-bg-hover: rgba(255, 255, 255, 0.06);
+  --xp-color-bg-active: rgba(255, 255, 255, 0.1);
+  --xp-color-primary-subtle: rgba(233, 172, 41, 0.12);
+
+  /* Chữ sáng trên nền tối */
+  --xp-color-text: #ffffff;
+  --xp-color-text-secondary: #d5d7da;
+  --xp-color-text-tertiary: #a4a7ae;
+  --xp-color-text-placeholder: #717680;
+  --xp-color-text-disabled: rgba(255, 255, 255, 0.25);
+  --xp-color-text-inverse: #0e0f12;
+
+  /* Viền trên nền tối */
+  --xp-color-border: #333741;
+  --xp-color-border-strong: #414651;
+  --xp-color-border-subtle: #1f242f;
+
+  /* Đổ bóng trên nền tối */
+  --xp-elevation-header: 0 4px 20px rgba(0, 0, 0, 0.5);
+  --xp-elevation-card: 0 1px 3px rgba(10, 13, 18, 0.3), 0 1px 2px rgba(10, 13, 18, 0.2);
+  --xp-elevation-panel: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+

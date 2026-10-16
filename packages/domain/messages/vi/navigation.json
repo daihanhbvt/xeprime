@@ -20,7 +20,10 @@
     "searchCars": "Tìm xe",
     "aboutXePrime": "Về Xe Prime",
     "contact": "Liên hệ",
-    "loginOrRegister": "Đăng nhập/<br></br>Đăng ký"
+    "loginOrRegister": "Đăng nhập/<br></br>Đăng ký",
+    "themeLight": "Giao diện sáng",
+    "themeDark": "Giao diện tối",
+    "toggleTheme": "Đổi giao diện sáng/tối"
   },
   "account": {
     "menuLabel": "Menu tài khoản",

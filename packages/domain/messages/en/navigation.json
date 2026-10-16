@@ -20,7 +20,10 @@
     "searchCars": "Find a car",
     "aboutXePrime": "About Xe Prime",
     "contact": "Contact",
-    "loginOrRegister": "Sign in/<br></br>Sign up"
+    "loginOrRegister": "Sign in/<br></br>Sign up",
+    "themeLight": "Light mode",
+    "themeDark": "Dark mode",
+    "toggleTheme": "Toggle light/dark theme"
   },
   "account": {
     "menuLabel": "Account menu",

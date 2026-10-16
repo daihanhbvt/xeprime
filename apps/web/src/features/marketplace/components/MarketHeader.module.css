@@ -1,15 +1,17 @@
 /*
- * Header chợ v2 (Figma `19759:43270`, ADR 0062): nền tối `BG/gray-high`, cao 68px, logo vàng,
- * menu chữ trắng — mục đang xem chữ vàng + gạch chân vàng — và cụm đăng nhập + nút "Trở thành chủ
+ * Header chợ v2 (Figma `19836:44977`, ADR 0062): nền gradient kem nhẹ, cao 68px, logo vàng,
+ * menu chữ đen #0e0f12 — mục đang xem chữ vàng + gạch chân vàng — và cụm đăng nhập + nút "Trở thành chủ
  * xe" bên phải. Nội dung canh trong khung 1200px như mọi khối của trang chủ.
  */
 .header {
   position: sticky;
   top: 0;
   z-index: var(--xp-z-topbar);
-  background: var(--xp-color-bg-inverse);
+  background: linear-gradient(90deg, #fefbf6 0%, #fefdfb 50%, #fefbf6 100%);
   backdrop-filter: blur(12px);
-  box-shadow: var(--xp-elevation-header);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.05),
+    0 25px 50px -12px rgba(0, 0, 0, 0.05);
 }
 
 .inner {
@@ -63,7 +65,7 @@
   align-items: center;
   padding: var(--xp-space-sm) 0;
   border-bottom: 1px solid transparent;
-  color: var(--xp-color-text-on-dark);
+  color: var(--xp-color-text);
   font-size: var(--xp-font-size-body);
   font-weight: var(--xp-font-weight-medium);
   line-height: var(--xp-line-height-body);
@@ -120,7 +122,7 @@
 }
 
 .login:hover {
-  color: var(--xp-color-primary-bright);
+  color: var(--xp-color-primary-hover);
 }
 
 .login:focus-visible {
@@ -198,8 +200,7 @@
  */
 .avatarCaret {
   font-size: 10px;
-  /* Header v2 nền tối — mũi tên đi theo chữ mờ trên nền tối. */
-  color: var(--xp-color-text-on-dark-muted);
+  color: var(--xp-color-text-tertiary);
 }
 
 .avatarTrigger:hover .avatarCaret {
@@ -334,3 +335,63 @@
 .row:hover .rowChevron {
   color: var(--xp-color-primary);
 }
+
+/* ── Nút chuyển giao diện Sáng / Tối ─────────────────────────────────────── */
+
+.themeToggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--xp-color-border);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-secondary);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.themeToggle:hover {
+  background-color: var(--xp-color-bg-hover);
+  border-color: var(--xp-color-primary);
+  color: var(--xp-color-primary);
+}
+
+.themeToggle:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.themeIcon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* ── Ghi đè giao diện tối (Dark Mode - Figma `19879:66138`) ─────────────────── */
+
+:global([data-theme="dark"]) .header {
+  background: rgba(14, 15, 18, 0.95);
+  backdrop-filter: blur(12px);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 20px 40px -15px rgba(0, 0, 0, 0.7);
+}
+
+:global([data-theme="dark"]) .themeToggle {
+  background: #161f2c;
+  border-color: #333741;
+  color: #edbb4f;
+}
+
+:global([data-theme="dark"]) .themeToggle:hover {
+  background: #1f2a3a;
+  border-color: #edbb4f;
+  color: #f7dd91;
+}
+

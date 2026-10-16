@@ -97,6 +97,18 @@ describe('MarketHeader', () => {
     expect(screen.getByText('English')).toBeTruthy();
   });
 
+  it('nút đổi giao diện sáng/tối hiển thị trên thanh header cho cả khách vãng lai', () => {
+    state.user = null;
+    render(<MarketHeader />);
+    expect(screen.getByRole('button', { name: 'Đổi giao diện sáng/tối' })).toBeTruthy();
+  });
+
+  it('đổi giao diện sáng/tối có trong menu tài khoản khi đã đăng nhập', async () => {
+    render(<MarketHeader />);
+    fireEvent.click(screen.getByRole('button', { name: 'Tài khoản' }));
+    await waitFor(() => expect(screen.getByText('Giao diện tối')).toBeTruthy());
+  });
+
   /**
    * Khách chưa đăng nhập: cụm "Đăng nhập/Đăng ký" mở modal tại chỗ. Đổi ngôn ngữ của họ nằm ở
    * chân trang (VI | EN) theo design v2 — `MarketFooter.test` khoá phần đó.
