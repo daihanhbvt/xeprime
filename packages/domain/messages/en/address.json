@@ -21,15 +21,7 @@
   "provinceMismatchHint": "Check the province, or pick the right place again.",
   "mapLabel": "Location map",
   "map": {
-    "pickHint": "Tap the map to drop a pin.",
-    "adjustHint": "Drag the pin or tap the map to move it.",
-    "readOnlyHint": "This map is view-only. Pick a different suggested place if the pin is wrong.",
-    "pinHint": "Pick a place in the field above to pin the exact delivery spot.",
-    "unavailable": "The map could not be shown. The address still saves normally.",
-    "sheetTitle": "Drop the location pin",
-    "useThisPoint": "Use this location",
-    "openInGoogleMaps": "Open in Google Maps",
-    "tapToEdit": "Tap the map to adjust the location."
+    "openInGoogleMaps": "Open in Google Maps"
   },
   "review": {
     "badge": "Address needs updating",

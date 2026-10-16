@@ -299,7 +299,7 @@ describe('ReceiptDetailSheet — duyệt và huỷ', () => {
 
     expect(await findByText('− 450.000 ₫')).toBeTruthy();
     expect(
-      await findByText('Gói đã hết hạn nên tính năng này chỉ xem được. Gia hạn để thao tác tiếp.'),
+      await findByText('Tính năng này đang ở chế độ chỉ xem. Liên hệ XePrime để tiếp tục thao tác.'),
     ).toBeTruthy();
   });
 

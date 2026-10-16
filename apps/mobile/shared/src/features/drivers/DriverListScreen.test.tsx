@@ -150,7 +150,7 @@ describe('DriverListScreen — quyền và gói', () => {
     expect(addButton.props.accessibilityState?.disabled).toBe(true);
     const editAction = await view.findByLabelText('Sửa');
     expect(editAction.props.accessibilityState?.disabled).toBe(true);
-    expect(await view.findByText(/Gói đã hết hạn/)).toBeTruthy();
+    expect(await view.findByText(/chế độ chỉ xem/)).toBeTruthy();
   });
 });
 

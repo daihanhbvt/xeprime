@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { ACCOUNT_REALM_HEADER, resolveSessionCookieName } from '@xeprime/types';
+import { HTTP_STATUS } from '@/constants/http-status';
 import { ROUTES } from '@/constants/routes';
 import {
   AUTH_INTENT,
@@ -81,7 +82,7 @@ function redirectTo(request: NextRequest, location: string): NextResponse {
   const url = new URL(location, request.url);
   // Giữ NGUYÊN query của URL cũ (B2): bộ lọc, `?c=` của hộp thư, `?token=`…
   if (!url.search) url.search = request.nextUrl.search;
-  return NextResponse.redirect(url, 307);
+  return NextResponse.redirect(url, HTTP_STATUS.TEMPORARY_REDIRECT);
 }
 
 /** URL đích của một URL cũ — tuyệt đối khi khác host (chế độ `host`), tương đối khi cùng origin. */

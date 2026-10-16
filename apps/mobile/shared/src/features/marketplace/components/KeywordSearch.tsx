@@ -142,6 +142,32 @@ export function KeywordSearch({
               }}
             />
           ))}
+          {/* Như web: dòng cuối danh sách áp chữ đang gõ làm từ khoá cho lưới (= phím "Tìm"). */}
+          <Pressable
+            onPress={() => {
+              applyIfChanged(text);
+              Keyboard.dismiss();
+              setFocused(false);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={t('searchAll', { q: text.trim() })}
+          >
+            <XStack
+              ai="center"
+              gap={space.sm}
+              px={space.sm}
+              minHeight={sizing.touchTarget}
+              py={space.xs}
+              borderTopWidth={1}
+              borderTopColor={colors.border}
+            >
+              <Ionicons name="search" size={iconSize.sm} color={colors.textMuted} />
+              <Text f={1} numberOfLines={1} col={colors.text} fos={fontSize.body}>
+                {t('searchAll', { q: text.trim() })}
+              </Text>
+              <Ionicons name="return-down-back" size={iconSize.sm} color={colors.textMuted} />
+            </XStack>
+          </Pressable>
         </YStack>
       ) : null}
     </YStack>

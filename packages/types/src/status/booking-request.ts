@@ -317,3 +317,16 @@ export function bookingRequestRemainingMs(
   const due = respondBy instanceof Date ? respondBy : new Date(respondBy);
   return Math.max(0, due.getTime() - now.getTime());
 }
+
+/**
+ * Bản nháp đặt xe (khách chưa đăng nhập ở bước Chuyến đi — ADR 0060) sống bấy lâu; quá hạn là bỏ,
+ * vì giá và lịch trống đã có thể khác. Web (`sessionStorage`) và app dùng chung con số.
+ */
+export const BOOKING_DRAFT_TTL_MS = 30 * 60 * 1000;
+
+/**
+ * Hai số giữ cho một lần gõ địa chỉ giao xe tốn ĐÚNG một lượt tra bản đồ có tính tiền (ADR 0061):
+ * chưa đủ dài thì không hỏi, và chờ khách gõ xong mới hỏi. Web và app dùng chung.
+ */
+export const MIN_DELIVERY_ADDRESS_LENGTH = 12;
+export const DELIVERY_ADDRESS_DEBOUNCE_MS = 900;

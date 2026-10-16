@@ -188,6 +188,11 @@ export const ROUTES = {
      */
     detail: (tripId: string): Href => ({ pathname: '/trips/[id]', params: { id: tripId } }),
     /**
+     * Màn THANH TOÁN tiền giữ chỗ của một chuyến đã được nhận — cùng địa chỉ `/payment/:tripId`
+     * với web (`paymentPath.trip`). Chuyển khoản VietQR và ví điện tử ở cùng một chỗ.
+     */
+    payment: (tripId: string): Href => ({ pathname: '/payment/[id]', params: { id: tripId } }),
+    /**
      * Wizard gửi yêu cầu thuê một chiếc xe (BKG-01) — CÔNG KHAI, khách vãng lai vào được.
      *
      * `provinceCode` là tỉnh khách đang LỌC ở màn tìm xe — điền sẵn ô địa chỉ giao xe (ADR 0035).

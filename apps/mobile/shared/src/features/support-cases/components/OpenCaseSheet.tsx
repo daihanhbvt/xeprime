@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { SelectField } from '@/components/ui/SelectField';
 import { TextField } from '@/components/ui/TextField';
-import { usePlanPromotionEnabledPassive } from '@/features/app-config/use-partner-app-config';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { space } from '@/theme/tokens';
@@ -29,9 +28,15 @@ const DESCRIPTION_MAX = 5000;
  * Xoá tài khoản có luồng riêng ở `/account/delete-account`: ô đánh dấu xác nhận, và DB chỉ cho
  * một yêu cầu còn mở mỗi người. Để nó trong danh sách này là mở đường cho yêu cầu thứ hai mà
  * server sẽ từ chối — đúng lý do web cũng loại nó ra.
+ *
+ * Tư vấn gói cũng vậy: chỉ đi qua `POST /support/plan-consultation` (`PlanConsultationSheet`, có
+ * cổng `isPlanPromotionEnabled`); `POST /support/cases` từ chối nó bằng
+ * `SUPPORT_CASE_CATEGORY_NOT_ALLOWED`.
  */
 const OPENABLE_CATEGORIES = SUPPORT_CASE_CATEGORY_VALUES.filter(
-  (value) => value !== SUPPORT_CASE_CATEGORY.ACCOUNT_DELETION,
+  (value) =>
+    value !== SUPPORT_CASE_CATEGORY.ACCOUNT_DELETION &&
+    value !== SUPPORT_CASE_CATEGORY.PLAN_CONSULTATION,
 );
 
 /** Mở một yêu cầu hỗ trợ — bản native của `OpenCaseModal`. */
@@ -96,20 +101,13 @@ export function OpenCaseSheet({
   const category = useWatch({ control, name: 'category' });
   const isDispute = category === SUPPORT_CASE_CATEGORY.DISPUTE;
 
-  /*
-   * "Tư vấn gói" là một lối hỏi mua gói — chỉ mở khi admin bật cờ (quy định App Store / Google Play),
-   * như nút "Liên hệ tư vấn" của khối tài khoản & hạn mức. Mặc định ẩn.
-   */
-  const planPromotion = usePlanPromotionEnabledPassive();
   const categoryOptions = useMemo(
     () =>
-      OPENABLE_CATEGORIES.filter(
-        (value) => planPromotion || value !== SUPPORT_CASE_CATEGORY.PLAN_CONSULTATION,
-      ).map((value) => ({
+      OPENABLE_CATEGORIES.map((value) => ({
         value,
         label: domainLabel('supportCaseCategory', value),
       })),
-    [domainLabel, planPromotion],
+    [domainLabel],
   );
 
   const close = () => {

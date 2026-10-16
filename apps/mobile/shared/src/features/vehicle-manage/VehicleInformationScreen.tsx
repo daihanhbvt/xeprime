@@ -4,6 +4,7 @@ import { Linking, Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { CATALOG_TYPE, VEHICLE_PUBLIC_STATUS, vehicleFeatureAppliesTo } from '@xeprime/types';
+import { mapExternalUrl, toGeoPoint } from '@xeprime/domain';
 import { vehicleFormSchema, type VehicleFormValues } from '@xeprime/validators';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { MapPreview } from '@/components/map/MapPreview';
@@ -26,7 +27,8 @@ import {
 import { VehicleIdentityFields } from '@/features/vehicles/components/VehicleIdentityFields';
 import { useUpdateVehicle } from '@/features/vehicles/hooks/use-vehicle';
 import { manageInformationValuesToInput, vehicleToFormValues } from '@/features/vehicles/mappers';
-import { mapAppUrl, mapPreviewUrl, toGeoPoint } from '@/lib/map-static';
+import { branchMapUri } from '@/lib/map-static';
+import { useAuthImageHeaders } from '@/lib/use-auth-image-headers';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
@@ -333,8 +335,13 @@ function AddressCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: bo
    * Toạ độ chỉ đến từ CHI NHÁNH đã tải về được — `vehicle.branch` rút gọn không mang lat/lng.
    * Không có thì khối bản đồ tự vắng mặt, y như `StaticMap` bên web.
    */
-  const mapGeo = toGeoPoint(branch?.latitude ?? null, branch?.longitude ?? null);
-  const mapUri = mapPreviewUrl(mapGeo);
+  const mapGeo = toGeoPoint(
+    branch?.latitude != null ? Number(branch.latitude) : null,
+    branch?.longitude != null ? Number(branch.longitude) : null,
+  );
+  const mapUri = branch && mapGeo ? branchMapUri(branch.id, mapGeo, branch.address ?? '') : null;
+  // `/branches/:id/map` cần phiên: native gửi Bearer (web dùng cookie của site).
+  const mapHeaders = useAuthImageHeaders(mapUri !== null);
   const shared = (branch?.vehicleCount ?? 0) > 1;
 
   return (
@@ -363,27 +370,30 @@ function AddressCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: bo
               </Text>
             ) : null}
             {/*
-              Bản đồ vị trí xe — cùng khối `StaticMap` mà `InformationSection` bên web dựng, qua
-              ảnh tĩnh Geoapify (ADR 0037). Chú thích cũ ở đây nói native "không có bản đồ nhúng"
-              và web dùng `EmbedMap` + khoá Google: cả hai vế đều đã hết đúng.
+              Bản đồ vị trí xe — cùng khối `StaticMapImage` mà `InformationSection` bên web dựng:
+              ảnh tĩnh do API vẽ (`/branches/:id/map`, Vietmap — ADR 0061 điều 1). Ảnh lỗi thì tự
+              ẩn, liên kết mở Google Maps ở lại.
 
               Chưa tra được toạ độ thì câu "chưa định vị được" ở lại nguyên chỗ cũ — đó vẫn là
               thứ cần nói, và nó phân biệt "chưa có gì để chỉ" với "bản đồ hỏng".
             */}
             {mapGeo && mapUri ? (
               <YStack gap={space.xs}>
-                <MapPreview
-                  uri={mapUri}
-                  unavailableLabel={tStates('imageUnavailable')}
-                  busyLabel={tStates('loading')}
-                  onOpen={() => void Linking.openURL(mapAppUrl(mapGeo))}
-                  openLabel={t('addressMapTitle')}
-                />
+                {mapHeaders ? (
+                  <MapPreview
+                    uri={mapUri}
+                    headers={mapHeaders}
+                    accessibilityLabel={t('addressMapTitle')}
+                    busyLabel={tStates('loading')}
+                    onOpen={() => void Linking.openURL(mapExternalUrl(mapGeo))}
+                    openLabel={t('addressMapTitle')}
+                  />
+                ) : null}
                 {/* Nhắc ra thành chữ: một tấm ảnh bản đồ không tự nói rằng nó bấm được. */}
                 <Pressable
                   accessibilityRole="link"
                   accessibilityLabel={tAddress('map.openInGoogleMaps')}
-                  onPress={() => void Linking.openURL(mapAppUrl(mapGeo))}
+                  onPress={() => void Linking.openURL(mapExternalUrl(mapGeo))}
                 >
                   <Text col={colors.primaryActive} fos={fontSize.label}>
                     {tAddress('map.openInGoogleMaps')}

@@ -3,17 +3,19 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useLocale } from 'next-intl';
 import { useState } from 'react';
-import { isNegativeMoney, subtractMoney } from '@xeprime/domain';
+import {
+  canStartAnotherCheckout,
+  isNegativeMoney,
+  shouldPollGatewayOrder,
+  subtractMoney,
+} from '@xeprime/domain';
 import {
   API_ERROR_CODE,
-  isPaymentOrderViewStateSettling,
   PAYMENT_GATEWAY_CLIENT,
   PAYMENT_GATEWAY_MIN_HOLD_WINDOW_MINUTES,
   PAYMENT_ORDER_POLL_MS,
-  PAYMENT_ORDER_VIEW_STATE,
   PERMISSION,
   type PaymentGatewayProvider,
-  type PaymentOrderViewState,
 } from '@xeprime/types';
 import { useNow } from '@/hooks/use-now';
 import { usePermissions } from '@/hooks/use-permissions';
@@ -25,16 +27,9 @@ import {
   surfaceOf,
   type GatewayTarget,
   type PaymentGatewayMethod,
-  type PaymentOrder,
   type PaymentSurface,
   type StartGatewayCheckoutInput,
 } from './types';
-
-/**
- * Còn hỏi lại bao lâu sau khi liên kết đã hết hạn dùng lại: một khoản trả ở phút cuối có IPN tới trễ
- * vài phút, và người đang nhìn màn hình đó xứng đáng thấy nó đổi mà không phải F5.
- */
-const POLL_GRACE_AFTER_EXPIRY_MS = 5 * 60_000;
 
 /** Cấu hình cổng gần như không đổi trong một phiên làm việc — đọc một lần là đủ. */
 export function useGatewayMethods(surface: PaymentSurface, enabled = true) {
@@ -46,46 +41,8 @@ export function useGatewayMethods(surface: PaymentSurface, enabled = true) {
   });
 }
 
-/** Lượt này còn đáng hỏi lại không — còn đang chờ cổng/đang ghi nhận, và chưa quá hạn quá lâu. */
-export function shouldPollGatewayOrder(order: PaymentOrder | undefined, now: number = Date.now()) {
-  if (!order) return false;
-  const state = order.viewState as PaymentOrderViewState;
-  if (!isPaymentOrderViewStateSettling(state)) return false;
-  /*
-   * Cổng đã xác nhận không có giao dịch (khách huỷ ở cổng): không còn gì để chờ trên lượt này. Nếu
-   * tiền vẫn về, đích (khoản giữ chỗ / hoá đơn) đổi và trang biết qua thông báo realtime của nó.
-   */
-  if (order.noTransaction) return false;
-  if (state === PAYMENT_ORDER_VIEW_STATE.AWAITING) {
-    return now < new Date(order.expiresAt).getTime() + POLL_GRACE_AFTER_EXPIRY_MS;
-  }
-  return true;
-}
-
-/**
- * Có nên mời mở một phiên cổng MỚI khi trang đang nói về lượt `order` không.
- *
- * Không, khi lượt đó còn liên kết dùng được (nút "Tiếp tục thanh toán" ở thông báo đã làm việc đó),
- * đang ghi nhận, đã xong, hay đang chờ người xử lý — mở phiên mới lúc ấy là mời khách trả HAI lần.
- * Có, khi lượt đã thất bại/huỷ/hết hạn, hoặc liên kết đã quá hạn dùng lại. Đang tải thì chưa vẽ gì
- * để không chớp nút rồi tắt.
- */
-export function canStartAnotherCheckout(
-  order: PaymentOrder | undefined,
-  { failedToLoad }: { failedToLoad: boolean },
-): boolean {
-  // Không đọc được lượt (ID gõ tay, lượt của người khác): server vẫn là chốt chặn trả trùng.
-  if (!order) return failedToLoad;
-  switch (order.viewState as PaymentOrderViewState) {
-    case PAYMENT_ORDER_VIEW_STATE.FAILED:
-      return true;
-    case PAYMENT_ORDER_VIEW_STATE.AWAITING:
-      // Liên kết đã hết hạn dùng, hoặc cổng xác nhận phiên này không có giao dịch (khách đã huỷ).
-      return order.noTransaction || order.checkoutUrl === null;
-    default:
-      return false;
-  }
-}
+/** Luật đọc lượt cổng dùng chung với app — `@xeprime/domain` (`payment-order.ts`). */
+export { canStartAnotherCheckout, shouldPollGatewayOrder };
 
 /**
  * Một lượt thanh toán qua cổng, TỰ HỎI LẠI khi còn chờ.

@@ -1,5 +1,7 @@
 import { useState, type ComponentProps } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { LIST_SEPARATOR } from '@xeprime/domain';
@@ -19,10 +21,13 @@ import { SkeletonText } from '@/components/ui/Skeleton';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { driverLicenceApi } from '@/api/driver-licence/api';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { resolveVerifierView, type DriverLicenceTrip } from '../driver-licence-view';
-import { useDriverLicence, useRequestDriverLicenceReview } from '../hooks/use-driver-licence';
+import {
+  useDriverLicence,
+  useDriverLicenceImage,
+  useRequestDriverLicenceReview,
+} from '../hooks/use-driver-licence';
 import { DriverLicenceUploader } from './DriverLicenceUploader';
 
 const ACCEPTED_KEYS = ['vn', 'idp', 'foreign'] as const;
@@ -346,45 +351,123 @@ export function DriverLicenceDetails({ licence }: { licence: DriverLicence }) {
           {t('fields.foreignNote')}
         </Text>
       ) : null}
-      <LicenceImageButton licenceId={licence.id} />
+      <LicencePhoto licenceId={licence.id} />
     </YStack>
   );
 }
 
 /**
- * Mở ảnh đã nộp. URL ký sống 120 giây nên chỉ xin LÚC BẤM, không xin sẵn khi màn mở.
+ * ẢNH BẰNG đã nộp, hiện NGAY dưới dạng ảnh thu nhỏ — bản native của `LicencePhoto` (web, PR #183).
+ *
+ * URL ký sống 120 giây ở server; `useDriverLicenceImage` giữ cache 90 giây. Chạm ảnh ⇒ mở trình
+ * xem; URL đã cũ thì xin lại TRƯỚC khi mở (không mở một trình xem trống). Ảnh không tải được — lỗi
+ * xin URL, hay chính ảnh báo hỏng — thì khung chuyển sang trạng thái lỗi với nút "Thử lại"; lỗi
+ * gắn với CHÍNH URL hỏng, nên URL mới tự xoá trạng thái đó.
  */
-function LicenceImageButton({ licenceId }: { licenceId: string }) {
+export function LicencePhoto({ licenceId }: { licenceId: string }) {
   const t = useTranslations('DriverLicence.image');
-  const toast = useAppToast();
-  const [url, setUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const image = useDriverLicenceImage(licenceId);
+  const [open, setOpen] = useState(false);
+  const [opening, setOpening] = useState(false);
+  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
 
-  async function open() {
-    if (loading) return;
-    setLoading(true);
-    try {
-      setUrl((await driverLicenceApi.image(licenceId)).url);
-    } catch {
-      toast.showError(t('loadFailed'));
-    } finally {
-      setLoading(false);
+  const url = image.data?.url ?? null;
+  const failed = image.isError || (url !== null && url === brokenUrl);
+  const busy = image.isPending || opening;
+
+  async function reveal() {
+    if (busy) return;
+    if (failed) {
+      setBrokenUrl(null);
+      void image.refetch();
+      return;
     }
+    if (!image.isStale) {
+      setOpen(true);
+      return;
+    }
+    setOpening(true);
+    const fresh = await image.refetch();
+    setOpening(false);
+    if (fresh.isSuccess) setOpen(true);
   }
 
   return (
     <>
-      <Button
-        label={t('view')}
-        icon="eye-outline"
-        variant="ghost"
-        loading={loading}
-        onPress={() => void open()}
+      <Pressable
+        onPress={() => void reveal()}
+        accessibilityRole="button"
+        accessibilityLabel={failed ? t('retryLabel') : t('viewLabel')}
+        accessibilityState={{ busy }}
+      >
+        <YStack
+          h={PHOTO_HEIGHT}
+          br={radius.md}
+          ov="hidden"
+          bg={colors.surfaceMuted}
+          bw={1}
+          bc={failed ? colors.warning : colors.border}
+          ai="center"
+          jc="center"
+        >
+          {url && !failed ? (
+            <Image
+              testID="licence-photo-thumb"
+              source={{ uri: url }}
+              style={[StyleSheet.absoluteFill, thumbStyles.blurred]}
+              contentFit="cover"
+              /*
+               * Ảnh thu nhỏ NHOÈ, như web (`.photoImage { filter: blur(10px) }`): giấy tờ tuỳ thân
+               * không hiện rõ trên màn ai cũng liếc được; chạm mới mở bản rõ trong `PhotoViewer`.
+               */
+              blurRadius={10}
+              accessible={false}
+              onError={() => setBrokenUrl(url)}
+            />
+          ) : null}
+          <YStack ai="center" gap={space.xs}>
+            {failed ? (
+              <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                {t('loadFailed')}
+              </Text>
+            ) : null}
+            <XStack
+              ai="center"
+              gap={space.xs}
+              px={space.sm}
+              py={space.xs}
+              br={radius.pill}
+              bg={colors.surface}
+            >
+              {busy ? (
+                <ActivityIndicator size="small" color={colors.textMuted} />
+              ) : (
+                <Ionicons
+                  name={failed ? 'refresh' : 'eye-outline'}
+                  size={iconSize.sm}
+                  color={colors.text}
+                />
+              )}
+              {busy ? null : (
+                <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
+                  {failed ? t('retry') : t('view')}
+                </Text>
+              )}
+            </XStack>
+          </YStack>
+        </YStack>
+      </Pressable>
+      <PhotoViewer
+        url={open ? url : null}
+        unavailableLabel={t('loadFailed')}
+        onClose={() => setOpen(false)}
       />
-      <PhotoViewer url={url} unavailableLabel={t('loadFailed')} onClose={() => setUrl(null)} />
     </>
   );
 }
+
+/** Chiều cao khung ảnh thu nhỏ — đủ đọc ra đó là bằng nào mà không chiếm cả màn. */
+const PHOTO_HEIGHT = 160;
 
 function AcceptedDocuments() {
   const t = useTranslations('DriverLicence.accepted');
@@ -401,3 +484,6 @@ function AcceptedDocuments() {
     </YStack>
   );
 }
+
+/* `scale` đẩy viền nhoè ra ngoài khung — không có nó, mép ảnh lộ một quầng sáng (khớp web). */
+const thumbStyles = StyleSheet.create({ blurred: { transform: [{ scale: 1.15 }] } });

@@ -218,7 +218,7 @@ describe('ReceiptListScreen — gói hết hạn (read_only)', () => {
     expect(await findByText(/PT-0001/)).toBeTruthy();
     // Lý do 'chỉ xem' do dải `ManageShellNotices` (trong `ManageHeader`) nói — không lặp ở màn.
     expect(
-      queryByText('Gói đã hết hạn nên tính năng này chỉ xem được. Gia hạn để thao tác tiếp.'),
+      queryByText(/chế độ chỉ xem/),
     ).toBeNull();
 
     const create = await findByLabelText('Tạo phiếu');

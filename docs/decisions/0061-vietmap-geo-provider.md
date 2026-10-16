@@ -194,13 +194,14 @@ Web không còn ghim để kéo. Reverse trả tỉnh gợi ý (`boundaries` lo�
 thiết bị, và KHÔNG trả mã địa điểm (`placeId: null`): kết quả cache theo ô lưới ~110m và trả cho
 người khác ở gần — mã của dòng gần nhất lúc người đầu tiên hỏi nói sai về điểm của người sau.
 
-### 9. App native chưa chuyển
+### 9. App native
 
-`apps/mobile` do dev mobile phụ trách và không đổi trong thay đổi này. App vẫn vẽ bản đồ bằng
-Geoapify (`EXPO_PUBLIC_GEOAPIFY_MAP_KEY`); gợi ý địa chỉ, chọn địa điểm và quãng đường đi qua API nên
-đã là Vietmap. Muốn bỏ hẳn chi phí bản đồ ở app thì làm như web: thay `map-static.ts` /
-`map-interactive.ts` / `MapPinSheet.tsx` bằng liên kết mở ứng dụng bản đồ + dòng "dùng đúng địa chỉ
-đã nhập".
+**Đã chuyển (15/10/2026, nhánh `feat/mobile-web-parity-20261015`).** Hai app native không còn
+Geoapify: mọi bản đồ là ảnh tĩnh từ cùng ba endpoint của API như web (`/places/map`,
+`/public/listings/:id/pickup-map`, `/branches/:id/map` — cái cuối cần phiên nên app gửi Bearer qua
+`source.headers` của `expo-image`). Tấm chỉnh ghim (`MapPinSheet` + Leaflet trong WebView) đã gỡ như
+web gỡ `MapPinPicker`; địa chỉ nhà cung cấp không biết chốt bằng "dùng đúng địa chỉ đã nhập". App
+không cầm khoá bản đồ nào — `EXPO_PUBLIC_GEOAPIFY_MAP_KEY` không còn được đọc.
 
 ## Hệ quả
 

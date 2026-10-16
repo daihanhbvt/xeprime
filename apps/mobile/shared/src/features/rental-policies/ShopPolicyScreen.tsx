@@ -14,6 +14,7 @@ import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { DepositSettingsSection } from '@/features/shop/components/DepositSettingsSection';
+import { VatInvoiceSection } from '@/features/shop/components/VatInvoiceSection';
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
 import { useDomainLabel } from '@/i18n/domain';
@@ -197,6 +198,12 @@ function PolicyWorkspace({
             Tự im lặng khi thiếu quyền `seller_profile.view`, nên không cần rào ở đây.
           */}
           <DepositSettingsSection />
+
+          {/*
+            Hoá đơn VAT — MỘT thiết lập cho mọi xe (ADR 0059), nên đứng NGOÀI dải chip theo loại
+            xe như công tắc thu cọc. Cùng component với Hồ sơ chủ xe của tuyến hoa hồng.
+          */}
+          <VatInvoiceSection canEdit={canEdit} />
 
           <YStack gap={layout.inline}>
             {/*

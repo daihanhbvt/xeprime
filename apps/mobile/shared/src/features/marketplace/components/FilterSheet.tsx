@@ -6,9 +6,7 @@ import { useTranslations } from 'use-intl';
 import {
   CATALOG_TYPE,
   DEFAULT_LISTING_SORT,
-  LISTING_AMENITY_DESC,
   LISTING_AMENITY_LABEL,
-  LISTING_AMENITY,
   LISTING_AMENITY_VALUES,
   SEAT_BUCKET_LABEL,
   SEAT_BUCKET_VALUES,
@@ -53,6 +51,7 @@ interface FilterDraft {
   delivery: boolean;
   noCollateral: boolean;
   discount: boolean;
+  vatInvoice: boolean;
 }
 
 function draftFromFilters(filters: MarketplaceFilters): FilterDraft {
@@ -69,6 +68,7 @@ function draftFromFilters(filters: MarketplaceFilters): FilterDraft {
     delivery: filters.delivery ?? false,
     noCollateral: filters.noCollateral ?? false,
     discount: filters.discount ?? false,
+    vatInvoice: filters.vatInvoice ?? false,
   };
 }
 
@@ -87,6 +87,7 @@ function draftToPatch(draft: FilterDraft): Partial<MarketplaceFilters> {
     delivery: draft.delivery,
     noCollateral: draft.noCollateral,
     discount: draft.discount,
+    vatInvoice: draft.vatInvoice,
   };
 }
 
@@ -163,6 +164,7 @@ export function FilterSheet({
       delivery: debounced.delivery,
       noCollateral: debounced.noCollateral,
       discount: debounced.discount,
+      vatInvoice: debounced.vatInvoice,
     }),
     [filters, debounced],
   );
@@ -340,17 +342,11 @@ export function FilterSheet({
 
               <Group title={t('amenities')}>
                 <YStack>
-                  {/* Bộ lọc hoá đơn VAT (PR #190) chưa port sang app — FilterDraft chưa có trường đó. */}
-                  {LISTING_AMENITY_VALUES.filter(
-                    (amenity): amenity is Exclude<typeof amenity, typeof LISTING_AMENITY.VAT_INVOICE> =>
-                      amenity !== LISTING_AMENITY.VAT_INVOICE,
-                  ).map((amenity, index) => (
+                  {LISTING_AMENITY_VALUES.map((amenity, index) => (
                     <AmenityRow
                       key={amenity}
                       label={domainLabel('listingAmenity', amenity, LISTING_AMENITY_LABEL[amenity])}
-                      // Mô tả tiện ích chưa có trong bó message — web cũng in thẳng hằng này.
-                      // Đưa nó vào `Domain` là việc của một đợt i18n riêng, cho CẢ HAI client.
-                      hint={LISTING_AMENITY_DESC[amenity]}
+                      hint={t(`amenityDesc.${amenity}`)}
                       count={facets?.amenities[amenity] ?? null}
                       value={draft[amenity]}
                       first={index === 0}

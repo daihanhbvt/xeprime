@@ -46,6 +46,8 @@
     "loading": "Checking the payment status…",
     "loadError": "Could not load the payment status.",
     "awaitingTitle": "Waiting for {provider} to confirm the payment of {amount}",
+    "awaitingHeading": "Waiting for {provider} to confirm the payment",
+    "awaitingBadge": "Pending",
     "awaitingBody": "If you have finished paying, this page updates itself once {provider} reports the result — no need to pay again.",
     "noTransactionTitle": "No payment made via {provider}",
     "noTransactionBody": "{provider} reports this attempt was not paid — you may have cancelled or not finished. Please choose a payment method below.",
@@ -72,11 +74,5 @@
     "title": "Payment result",
     "missingOrder": "This link does not carry a payment.",
     "continue": "Continue"
-  },
-  "appReturn": {
-    "title": "Returning to the XePrime app",
-    "detail": "The payment result will show in the app. If the app does not open automatically, tap the button below.",
-    "invalid": "This app return link is not valid.",
-    "home": "Back to home"
   }
 }

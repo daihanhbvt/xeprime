@@ -9,7 +9,10 @@ export type UpdateMemberRoleInput = Schemas['UpdateMemberRoleDto'];
 /** Lời mời nhìn từ phía GIAN HÀNG — cố ý KHÔNG mang token (xem `InviteDto` ở backend). */
 export type Invite = Schemas['InviteDto'];
 export type CreateInviteInput = Schemas['CreateInviteDto'];
-/** Kết quả TẠO lời mời — thêm `emailSent`, cờ nói thư có thật sự đi được không. */
+/**
+ * Kết quả TẠO lời mời — thêm `inviteUrl` (ADR 0060): liên kết chỉ xuất hiện MỘT lần, ở đây, để
+ * người mời tự gửi (Zalo, tin nhắn). Không còn thư nào được gửi.
+ */
 export type CreateInviteResult = Schemas['CreateInviteResultDto'];
 /** Lời mời nhìn từ phía NGƯỜI ĐƯỢC MỜI, trước khi họ quyết định. */
 export type InvitePreview = Schemas['InvitePreviewDto'];
@@ -98,8 +101,9 @@ export const membersApi = {
 /**
  * Phía NGƯỜI ĐƯỢC MỜI — `/invites/:token`, một controller khác hẳn.
  *
- * `preview` không cần đăng nhập (mở được từ liên kết trong thư); `accept`/`decline` thì cần, và
- * cần đúng tài khoản mang email được mời. Quyền ở đây không đến từ vai trong một gian hàng, nên
+ * `preview` không cần đăng nhập (mở được từ liên kết mời); `accept`/`decline` thì cần, và cần
+ * đúng tài khoản đối tác có SĐT ĐÃ XÁC MINH trùng số được mời (ADR 0060 — sai ⇒
+ * `INVITE_PHONE_MISMATCH`; lời mời email cũ: `INVITE_EMAIL_MISMATCH`). Quyền ở đây không đến từ vai trong một gian hàng, nên
  * không có `RequirePermissions` nào để gương lại ở client.
  */
 export const inviteAnswersApi = {

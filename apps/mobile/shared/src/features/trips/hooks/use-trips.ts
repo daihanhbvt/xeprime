@@ -7,8 +7,14 @@ import {
   useQueryClient,
   type UseQueryResult,
 } from '@tanstack/react-query';
-import { isAwaitingPayment, type BookingHoldStatus } from '@xeprime/types';
+import {
+  HOLD_POLL_FALLBACK_MS,
+  HOLD_POLL_LIVE_MS,
+  isAwaitingPayment,
+  type BookingHoldStatus,
+} from '@xeprime/types';
 import { useAppActive, useRefetchOnForeground } from '@/hooks/use-app-active';
+import { useBadgeRealtimeLive } from '@/features/badges/BadgeRealtimeProvider';
 import { queryKeys } from '@/queries/query-keys';
 import {
   reviewsApi,
@@ -57,11 +63,37 @@ export function useTripsInfinite(filter: string, role?: string, enabled = true) 
      */
     placeholderData: keepPreviousData,
     enabled,
+    /*
+     * Quay lại app ⇒ đọc lại danh sách ngay, KHÔNG điều kiện (`always` bỏ qua `staleTime`).
+     *
+     * Trong lúc app nằm nền, chuyến có thể đổi chặng mà thông báo không tới được máy: tiền giữ chỗ
+     * về (IPN cổng, VietQR từ máy khác), chủ xe duyệt/huỷ, hold hết hạn. Thiếu bước này thẻ giữ
+     * chặng cũ cho tới khi khách tự kéo làm mới. `focusManager` đã nối vào `AppState` ở
+     * `query-client.ts`, nên "focus" ở đây chính là app quay về tiền cảnh; chỉ query đang có người
+     * quan sát (màn danh sách đang gắn) và đang `enabled` mới chạy. Một query vô hạn đọc lại TỪNG
+     * trang đã tải, lần lượt — mỗi trang một request, không phải một lượt đọc gộp.
+     */
+    refetchOnWindowFocus: 'always',
   });
 }
 
-/** Nhịp hỏi lại trong lúc chờ tiền giữ chỗ về — cùng 8 giây với hoá đơn gói (ADR 0039). */
-const HOLD_POLL_MS = 8_000;
+/**
+ * Lời nhắc thanh toán — chuyến khách đang giữ mà chưa trả, và đã chạm trần chưa (web:
+ * `useUnpaidHolds`).
+ *
+ * Không tự hỏi lại theo nhịp: khoá nằm dưới nhánh `trips`, nên push/huy hiệu tiền về / hết hạn làm
+ * mới `trips.all` kéo nó theo; quay lại app là một lượt đọc mới. `enabled` tắt hẳn khi chưa có
+ * phiên khách — endpoint chỉ mở cho realm khách.
+ */
+export function useUnpaidHolds(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.trips.unpaidHolds(),
+    queryFn: () => tripsApi.unpaidHolds(),
+    enabled,
+    // Quay về tiền cảnh ⇒ đọc lại (focusManager nối AppState ở `query-client.ts`).
+    refetchOnWindowFocus: 'always',
+  });
+}
 
 /**
  * Hold còn có thể nhận thêm tiền ⇒ còn đáng hỏi lại.
@@ -87,26 +119,29 @@ function isAwaitingHold(trip: CustomerTripDetail | null | undefined): boolean {
  *   2. Huy hiệu Firestore đổi số (ADR 0009, kênh KHÔNG phụ thuộc quyền push) → làm mới RỘNG mọi
  *      nhánh (`BadgeRealtimeProvider`), có nhịp hỏi lại dự phòng 2 phút nếu mất kết nối Firestore.
  *
- * Nhịp 8 giây ở đây không thay hai đường trên — nó SIẾT lại đúng khoảnh khắc rủi ro nhất: khách
- * đang nhìn một đồng hồ đếm ngược và tiền đang trên đường về, mà cả push (cần quyền, có thể trễ
- * do Doze/OS) lẫn Firestore (nhịp dự phòng tới 2 phút) đều không hứa tới NGAY. Chỉ chạy khi hold
- * còn ở trạng thái chờ — không tốn nhịp nào trên một chuyến đã xong việc hay không có hold nào.
+ * Nhịp hỏi lại ở đây là LƯỚI AN TOÀN cho hai đường trên, cùng hai nhịp với web (PR #183): hai phút
+ * khi đang nghe được bản chiếu, hai mươi giây khi không. Trước đây mobile hỏi 8 giây; đổi về nhịp
+ * web vì không đổi kết cục nào (đơn chỉ ra đời ở server lúc đối soát đủ tiền) — chỉ đổi độ trễ hiển
+ * thị trong ca hiếm cả push lẫn bản chiếu cùng hỏng, và quay về app luôn hỏi lại ngay
+ * (`useRefetchOnForeground`). Hai nhịp là `HOLD_POLL_*` ở `@xeprime/types`, chung với web. Chỉ chạy khi hold còn ở trạng thái chờ.
  *
  * `refetchInterval` là HÀM vì lý do đó: tắt ngay khi hold hết cửa nhận tiền (đã `paid`, hết hạn,
  * đã huỷ…), không chạy mãi trên một màn đã xong việc.
  *
  * `useAppActive` bắt buộc, khác web: React Native không có `document.visibilityState` để
- * `focusManager` tự dừng nhịp khi app xuống nền — thiếu nó, nhịp 8 giây chạy cả khi máy nằm
+ * `focusManager` tự dừng nhịp khi app xuống nền — thiếu nó, nhịp hỏi lại chạy cả khi máy nằm
  * trong túi. `useRefetchOnForeground` lo nửa còn lại: quay về từ app ngân hàng phải thấy kết quả
  * NGAY tại khoảnh khắc đó, không đợi hết một nhịp poll lẫn một đường tín hiệu nào khác.
  */
 export function useTrip(id: string): UseQueryResult<CustomerTripDetail> {
   const appActive = useAppActive();
+  const live = useBadgeRealtimeLive();
+  const pollMs = live ? HOLD_POLL_LIVE_MS : HOLD_POLL_FALLBACK_MS;
   const query = useQuery({
     queryKey: queryKeys.trips.detail(id),
     queryFn: () => tripsApi.detail(id),
     enabled: Boolean(id),
-    refetchInterval: (q) => (appActive && isAwaitingHold(q.state.data) ? HOLD_POLL_MS : false),
+    refetchInterval: (q) => (appActive && isAwaitingHold(q.state.data) ? pollMs : false),
   });
 
   const { refetch } = query;

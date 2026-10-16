@@ -46,6 +46,8 @@
     "loading": "Đang kiểm tra trạng thái thanh toán…",
     "loadError": "Chưa tải được trạng thái thanh toán.",
     "awaitingTitle": "Đang chờ {provider} xác nhận thanh toán {amount}",
+    "awaitingHeading": "Đang chờ {provider} xác nhận thanh toán",
+    "awaitingBadge": "Đang chờ",
     "awaitingBody": "Nếu bạn đã thanh toán xong, trang này tự cập nhật khi {provider} báo kết quả — bạn không cần thanh toán lại.",
     "noTransactionTitle": "Chưa có giao dịch nào qua {provider}",
     "noTransactionBody": "{provider} cho biết lượt này chưa được thanh toán — có thể bạn đã huỷ hoặc chưa hoàn tất. Hãy chọn lại phương thức thanh toán bên dưới.",
@@ -72,11 +74,5 @@
     "title": "Kết quả thanh toán",
     "missingOrder": "Đường dẫn này không mang lượt thanh toán nào.",
     "continue": "Tiếp tục"
-  },
-  "appReturn": {
-    "title": "Đang quay lại ứng dụng XePrime",
-    "detail": "Kết quả thanh toán sẽ hiện trong ứng dụng. Nếu ứng dụng chưa tự mở, hãy bấm nút bên dưới.",
-    "invalid": "Đường dẫn quay về ứng dụng không hợp lệ.",
-    "home": "Về trang chủ"
   }
 }

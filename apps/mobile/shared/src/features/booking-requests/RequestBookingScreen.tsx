@@ -57,6 +57,8 @@ import { RequestTripStep } from './components/RequestTripStep';
 import { RequestReviewStep } from './components/RequestReviewStep';
 import { RequestResultStep } from './components/RequestResultStep';
 import {
+  isAwaitingHoldReceipt,
+  isHoldLimitBlocked,
   REQUEST_STEP,
   useBookingRequestFlow,
   usePublicQuote,
@@ -65,6 +67,7 @@ import {
 } from './hooks/use-booking-request-flow';
 import { toQuoteParams } from './quote-params';
 import { toRequestBody } from './request-body';
+import { useUnpaidHolds } from '@/features/trips/hooks/use-trips';
 
 /**
  * Hình dạng form của wizard, suy từ chính `useForm` thay vì viết tay `UseFormReturn<...>`:
@@ -196,19 +199,9 @@ function RequestBookingBody({
         ? SERVICE_TYPE.SELF_DRIVE
         : (services[0] ?? SERVICE_TYPE.SELF_DRIVE);
 
-  /**
-   * Dịch vụ địa điểm còn sống không — quyết định có ĐÒI toạ độ hay không.
-   *
-   * Khởi tạo `true` (coi như sống): ô địa chỉ vẫn đòi xác nhận, và khách chưa gõ gì thì chưa có
-   * gì để mất. Chỉ một câu trả lời tường minh `available: false` từ `/places/search` mới hạ cờ,
-   * và lúc đó schema dựng lại mà không còn ràng buộc toạ độ — bản đồ hỏng không được phép trở
-   * thành "không đặt được xe" (ADR 0035 điều 6).
-   */
-  const [canConfirmLocation, setCanConfirmLocation] = useState(true);
-
   /*
-   * Dựng lại schema khi ngôn ngữ hoặc cờ trên đổi — `t` đổi định danh theo locale. Dựng mỗi lần
-   * render thì `yupResolver` nhận một object mới mỗi nhịp và RHF phải xác thực lại toàn form sau
+   * Dựng lại schema khi ngôn ngữ đổi — `t` đổi định danh theo locale. Dựng mỗi lần render thì
+   * `yupResolver` nhận một object mới mỗi nhịp và RHF phải xác thực lại toàn form sau
    * từng phím gõ.
    */
   const schema = useMemo(
@@ -234,12 +227,10 @@ function RequestBookingBody({
           deliveryAddressRequired: tFormErrors('deliveryAddressLine'),
           addressLineMax: tFormErrors('addressLineMax', { max: ADDRESS_LINE_MAX_LENGTH }),
           destinationMax: tFormErrors('destinationMax', { max: DESTINATION_MAX }),
-          addressNotConfirmed: tFormErrors('addressNotConfirmed'),
           noteTooLong: t('validation.noteTooLong', { max: NOTE_MAX }),
         },
-        { canConfirmLocation },
       ),
-    [canConfirmLocation, t, tFormErrors],
+    [t, tFormErrors],
   );
 
   const form = useForm<BookingRequestFormValues>({
@@ -430,6 +421,17 @@ function RequestBookingBody({
   const queryClient = useQueryClient();
   const meQuery = useCurrentUser();
   const me = meQuery.data;
+  /*
+   * Khách đang giữ những chuyến nào chưa trả — đọc NGAY khi mở luồng (web `useUnpaidHolds`). Đã
+   * chạm trần thì server từ chối mọi yêu cầu mới (`HOLD_LIMIT_REACHED`), nên nói trước khi khách
+   * mất công điền form. Trả xong thì lời nhắc làm mới và luồng tự mở lại.
+   */
+  const unpaidHolds = useUnpaidHolds(Boolean(me));
+  /**
+   * Server vừa từ chối lượt gửi vì đã chạm trần — nguồn DỰ PHÒNG khi chưa đọc được lời nhắc; có
+   * dữ liệu thì tin `unpaidHolds`.
+   */
+  const [submitHitHoldLimit, setSubmitHitHoldLimit] = useState(false);
 
   /*
    * BẰNG LÁI — ADR 0057. Tự lái / dài hạn ⇒ khách phải có bằng hợp lệ cho CHÍNH chuyến này (đúng
@@ -602,6 +604,12 @@ function RequestBookingBody({
     setError(null);
   }, [setError, setStep]);
 
+  /**
+   * Khoá gửi ĐỒNG BỘ: `isPending` chỉ đổi ở lượt render SAU, nên hai cú bấm trong cùng một nhịp
+   * đều thấy `false` và cùng gửi. Index chống trùng ở DB vẫn là chốt cuối.
+   */
+  const submitLock = useRef(false);
+
   const submitRequest = useCallback(() => {
     setError(null);
     // Xe bắt đồng ý điều khoản cho dịch vụ này mà khách chưa tick ⇒ dừng lại, như web.
@@ -609,7 +617,12 @@ function RequestBookingBody({
       setError(t('review.termsRequired'));
       return;
     }
+    if (submitLock.current) return;
+    submitLock.current = true;
     flow.submit.mutate(toRequestBody(form.getValues(), promo.appliedCode), {
+      onSettled: () => {
+        submitLock.current = false;
+      },
       /*
        * Nhớ địa chỉ giao xe CHỈ khi đã gửi thành công — đúng chỗ web gọi
        * `rememberDeliveryAddress`.
@@ -617,7 +630,7 @@ function RequestBookingBody({
        * Ghi lúc đang gõ dở sẽ đóng dấu một địa chỉ chưa hoàn chỉnh lên mọi lần đặt sau; ghi khi
        * gửi hỏng thì nhớ đúng cái địa chỉ vừa bị từ chối.
        */
-      onSuccess: () => {
+      onSuccess: (receipt) => {
         // Đã gửi — bản nháp (nếu còn) không được dựng lại ở lần mở màn sau.
         clearBookingDraft();
         const v = form.getValues();
@@ -632,8 +645,23 @@ function RequestBookingBody({
             locationSource: v.deliveryLocationSource,
           });
         }
+        /*
+         * Chuyến được NHẬN NGAY ⇒ sang thẳng MÀN THANH TOÁN của chuyến (web: `paymentPath.trip`):
+         * chuyển khoản VietQR và ví điện tử ở cùng một chỗ, đồng hồ đang chạy. Luồng đặt xe được
+         * THAY bằng chi tiết chuyến rồi mới đẩy màn thanh toán lên trên, để nút lui (cả phím lui
+         * Android) về "Chi tiết chuyến" như web — không về một luồng đặt xe đã xong.
+         */
+        if (isAwaitingHoldReceipt(receipt)) {
+          router.replace(ROUTES.booking.detail(receipt.id));
+          router.push(ROUTES.booking.payment(receipt.id));
+        }
       },
       onError: (error) => {
+        if (flow.isHoldLimit(error)) {
+          setSubmitHitHoldLimit(true);
+          void queryClient.invalidateQueries({ queryKey: queryKeys.trips.unpaidHolds() });
+          return;
+        }
         // Trùng yêu cầu là một NHÁNH riêng, không phải lỗi đỏ: khách đã gửi yêu cầu này rồi.
         if (flow.isDuplicate(error)) {
           setDuplicate(true);
@@ -700,6 +728,7 @@ function RequestBookingBody({
     queryClient,
     quote,
     requestSignIn,
+    router,
     setBlocked,
     setDuplicate,
     setError,
@@ -739,10 +768,19 @@ function RequestBookingBody({
     goBackOr(router, ROUTES.explore.listingDetail(listing.id));
   }, [listing.id, router]);
 
-  /** Bốn nhánh KẾT THÚC dùng chung một màn kết quả — ba trong số đó không phải lỗi. */
-  if (state.blocked || state.duplicate || state.step === REQUEST_STEP.DONE) {
+  const holdLimitBlocked = isHoldLimitBlocked({
+    step: state.step,
+    receipt: state.receipt,
+    limitReached: unpaidHolds.data?.limitReached,
+    submitHitHoldLimit,
+  });
+
+  /** Các nhánh KẾT THÚC dùng chung một màn kết quả — không nhánh nào là lỗi đỏ. */
+  if (holdLimitBlocked || state.blocked || state.duplicate || state.step === REQUEST_STEP.DONE) {
     return (
       <RequestResultStep
+        holdLimit={holdLimitBlocked}
+        unpaidHolds={unpaidHolds.data}
         blocked={state.blocked}
         duplicate={state.duplicate}
         receipt={state.receipt}
@@ -750,6 +788,7 @@ function RequestBookingBody({
         listing={listing}
         quote={quoteWithPromo}
         onClose={closeFlow}
+        onLeave={clearBookingDraft}
       />
     );
   }
@@ -857,7 +896,11 @@ function RequestBookingBody({
         subtitle={t('stepsLabel')}
         onBack={state.step === REQUEST_STEP.TRIP ? closeFlow : () => backToTrip()}
       />
-      <Screen edges={['left', 'right', 'bottom']} {...(footer ? { footer } : {})}>
+      <Screen
+        edges={['left', 'right', 'bottom']}
+        hideFooterWhileTyping
+        {...(footer ? { footer } : {})}
+      >
         <YStack gap={layout.section}>
           {/* Hồ sơ xe đứng ĐẦU và không đổi theo bước — mốc "mình đang đặt xe nào". */}
           <VehicleSummaryCard
@@ -870,7 +913,6 @@ function RequestBookingBody({
 
           {state.step === REQUEST_STEP.TRIP ? (
             <RequestTripStep
-              onServiceAvailabilityChange={setCanConfirmLocation}
               form={form}
               listing={listing}
               services={services}

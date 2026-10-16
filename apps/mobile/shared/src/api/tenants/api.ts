@@ -29,6 +29,8 @@ export type CurrentTenant = Schemas['CurrentTenantDto'];
  */
 export type PaymentSettings = Schemas['PaymentSettingsDto'];
 export type UpdatePaymentSettingsInput = Schemas['UpdatePaymentSettingsDto'];
+/** Hỗ trợ xuất hoá đơn VAT cho MỌI xe của gian hàng / chủ xe — ADR 0059. */
+export type VatInvoiceSetting = Schemas['VatInvoiceSettingDto'];
 
 export const tenantsApi = {
   register(body: RegisterShopInput): Promise<MyShop> {
@@ -59,5 +61,17 @@ export const tenantsApi = {
 
   updatePaymentSettings(body: UpdatePaymentSettingsInput): Promise<PaymentSettings> {
     return getApiClient().patch<PaymentSettings>('/shop/payment-settings', body);
+  },
+
+  /**
+   * Hỗ trợ xuất hoá đơn VAT cho MỌI xe (ADR 0059) — áp như nhau hai tuyến. Thông tin công bố cho
+   * khách: không đổi giá, phí, thuế hay điều kiện đặt xe. Đọc cần `tenant.view`, ghi `tenant.update`.
+   */
+  vatInvoiceSetting(): Promise<VatInvoiceSetting> {
+    return getApiClient().get<VatInvoiceSetting>('/tenants/current/vat-invoice');
+  },
+
+  updateVatInvoiceSetting(supported: boolean): Promise<VatInvoiceSetting> {
+    return getApiClient().patch<VatInvoiceSetting>('/tenants/current/vat-invoice', { supported });
   },
 };

@@ -9,6 +9,8 @@ import { APP_NAME } from '@/lib/app-name';
 import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 const APP_HEADER_HEIGHT = 56;
+/** Nhãn cạnh tiêu đề chiếm tối đa ngần này bề ngang hàng tiêu đề — phần còn lại luôn để cho tên. */
+const BADGE_MAX_WIDTH = '60%';
 
 /**
  * Nét VẠCH THƯƠNG HIỆU đóng đáy thanh trên.
@@ -184,7 +186,16 @@ export function AppHeader({
                 >
                   {title}
                 </Text>
-                {badge}
+                {/*
+                  Nhãn không co trước tiêu đề, nhưng có TRẦN bề rộng: chặng dài (vd. "Chờ khách
+                  thanh toán tiền giữ chỗ") vượt trần thì tự cắt bằng "…" thay vì đẩy tràn thanh.
+                  Trần là bề rộng XÁC ĐỊNH mà `StatusBadge` cần để `maxWidth: '100%'` quy được.
+                */}
+                {badge ? (
+                  <XStack flexShrink={0} maxWidth={BADGE_MAX_WIDTH}>
+                    {badge}
+                  </XStack>
+                ) : null}
               </XStack>
               {context ??
                 (subtitle ? (

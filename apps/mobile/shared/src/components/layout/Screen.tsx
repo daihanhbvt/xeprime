@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 import { Dimensions, Keyboard, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, {
   KeyboardState,
@@ -9,7 +17,13 @@ import Animated, {
   useSharedValue,
 } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets, type Edge } from 'react-native-safe-area-context';
-import { FocusRevealProvider, revealFocusedInput } from './focus-reveal';
+import {
+  FocusRevealProvider,
+  KeyboardHoldProvider,
+  revealFocusedInput,
+  revealNodeAboveKeyboard,
+  type KeyboardHold,
+} from './focus-reveal';
 import { layout } from '@/theme/layout';
 import { colors, space } from '@/theme/tokens';
 
@@ -97,6 +111,12 @@ interface ScreenProps {
    * `Screen` giữ. Bỏ qua khi `scroll={false}`.
    */
   scrollRef?: RefObject<ScrollView | null>;
+  /**
+   * Ẩn `footer` trong lúc bàn phím đang mở. Bật cho màn có thanh dưới CAO (tạm tính + nút đi
+   * tiếp) chứa ô nhập kèm danh sách gợi ý: thanh đó nổi lên trên bàn phím và che mất danh sách.
+   * Opt-in vì ở màn khác thanh dưới CHÍNH LÀ thứ phải đi cùng bàn phím (thanh soạn tin, nút Lưu).
+   */
+  hideFooterWhileTyping?: boolean;
 }
 
 /**
@@ -114,6 +134,7 @@ export function Screen({
   refreshing = false,
   onRefresh,
   scrollRef,
+  hideFooterWhileTyping = false,
 }: ScreenProps) {
   /**
    * Chiều cao bàn phím đọc từ WINDOW INSET, không từ sự kiện `keyboardDidShow`.
@@ -175,6 +196,8 @@ export function Screen({
   });
   /** Đệm đuôi nội dung khi bàn phím đang mở — xem {@link KEYBOARD_TAIL}. */
   const [keyboardTail, setKeyboardTail] = useState(0);
+  /** Bàn phím đang mở — chỉ để ẩn `footer` khi màn xin (`hideFooterWhileTyping`). */
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
 
   /**
    * Bàn phím mở lên KHÔNG tự kéo ô đang gõ vào tầm nhìn — đây là việc phải tự làm.
@@ -229,6 +252,30 @@ export function Screen({
     requestAnimationFrame(() => reveal(top));
   }, [reveal]);
 
+  /** Khối (ô + danh sách gợi ý) đang xin giữ bàn phím — xem `KeyboardHold`. */
+  const heldNode = useRef<View | null>(null);
+  const [holding, setHolding] = useState(false);
+  const revealHeld = useCallback(() => {
+    const top = keyboardTop.current;
+    if (top === null) return;
+    revealNodeAboveKeyboard(scroller.current, scrollY.current, top, heldNode.current);
+  }, []);
+  const keyboardHold = useMemo<KeyboardHold>(
+    () => ({
+      hold: (node) => {
+        heldNode.current = node;
+        setHolding(true);
+        // Đợi danh sách vừa đổi dựng xong khung rồi mới đo.
+        requestAnimationFrame(() => revealHeld());
+      },
+      release: () => {
+        heldNode.current = null;
+        setHolding(false);
+      },
+    }),
+    [revealHeld],
+  );
+
   /*
    * ĐO LẠI mỗi lần bàn phím bật lên: `onLayout` chỉ bắn lúc dựng và `measureInWindow` trả về bất
    * đồng bộ, nên màn mở bàn phím ngay lúc mount (ô OTP `autoFocus`) chạy lần tránh đầu tiên với
@@ -257,18 +304,22 @@ export function Screen({
        * cây, đúng vào khung hình bàn phím vừa mở xong, để ghi một giá trị không ai đọc.
        */
       if (scroll) setKeyboardTail(KEYBOARD_TAIL);
-      reveal(top);
+      if (hideFooterWhileTyping) setKeyboardOpen(true);
       keyboardTop.current = top;
+      // Có khối đang xin giữ (ô + gợi ý) thì kéo cả khối — đợi một khung cho footer ẩn xong.
+      if (heldNode.current) requestAnimationFrame(() => revealHeld());
+      else reveal(top);
     });
     const hide = Keyboard.addListener('keyboardDidHide', () => {
       if (scroll) setKeyboardTail(0);
+      setKeyboardOpen(false);
       keyboardTop.current = null;
     });
     return () => {
       show.remove();
       hide.remove();
     };
-  }, [reveal, scroll]);
+  }, [reveal, revealHeld, scroll, hideFooterWhileTyping]);
 
   /*
    * Chiều cao bàn phím ĐỔI trong lúc nó đang mở: đổi bộ gõ, bật dải gợi ý, xoay máy. Sự kiện
@@ -294,7 +345,8 @@ export function Screen({
         keyboardTail > 0 ? { paddingBottom: (padded ? space.lg : 0) + keyboardTail } : null,
       ]}
       keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="on-drag"
+      // Đang giữ bàn phím cho danh sách gợi ý: kéo trang KHÔNG được làm ô mất tiêu điểm.
+      keyboardDismissMode={holding ? 'none' : 'on-drag'}
       // Ghi vào ref, không vào state — vị trí cuộn chỉ cần cho lần cuộn tới ô đang gõ.
       onScroll={(event) => {
         scrollY.current = event.nativeEvent.contentOffset.y;
@@ -336,8 +388,12 @@ export function Screen({
           dưới lên, và dải trống sinh ra nằm SAU bàn phím nên không ai nhìn thấy.
         */}
         <FocusRevealProvider reveal={revealOnFocus}>
-          {body}
-          {footer ? <View style={styles.footer}>{footer}</View> : null}
+          <KeyboardHoldProvider value={keyboardHold}>
+            {body}
+            {footer && !(hideFooterWhileTyping && keyboardOpen) ? (
+              <View style={styles.footer}>{footer}</View>
+            ) : null}
+          </KeyboardHoldProvider>
         </FocusRevealProvider>
       </Animated.View>
     </SafeAreaView>

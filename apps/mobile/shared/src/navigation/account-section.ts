@@ -11,6 +11,8 @@ export const ACCOUNT_SECTION_PARAM = 'section';
 export const ACCOUNT_SECTION = {
   PROFILE: 'profile',
   ADDRESS: 'address',
+  /** Hỗ trợ xuất hoá đơn VAT cho mọi xe (chỉ chủ xe hoa hồng — tuyến gói ở "Chính sách thuê", ADR 0059). */
+  VAT_INVOICE: 'vat-invoice',
   TAX: 'tax',
   PLAN: 'plan',
   LOGIN: 'login',

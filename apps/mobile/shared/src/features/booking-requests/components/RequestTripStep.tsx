@@ -8,6 +8,7 @@ import type { components } from '@xeprime/types';
 import {
   DELIVERY_DISTANCE_STATUS,
   DELIVERY_MANUAL_REASON,
+  LOCATION_SOURCE,
   PICKUP_PREFERENCE,
   PICKUP_PREFERENCE_VALUES,
   ROUTE_TYPE,
@@ -42,7 +43,7 @@ import { useDomainLabel } from '@/i18n/domain';
 import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 
 import type { DeliveryDistance } from '../api';
-import { deliveryEstimateState } from '../delivery-estimate-state';
+import { DELIVERY_ADDRESS_DEBOUNCE_MS, deliveryEstimateState } from '../delivery-estimate-state';
 import { useDeliveryDistance } from '../hooks/use-booking-request-flow';
 import type { RequestForm } from '../RequestBookingScreen';
 
@@ -89,7 +90,6 @@ export function RequestTripStep({
   busyDays,
   rentalMode,
   onRentalModeChange,
-  onServiceAvailabilityChange,
 }: {
   form: RequestForm;
   listing: PublicListingDetail;
@@ -97,8 +97,6 @@ export function RequestTripStep({
   busyDays: BusyDayIndex;
   rentalMode: RentalMode;
   onRentalModeChange: (mode: RentalMode) => void;
-  /** Dịch vụ địa điểm sống hay chết — form dùng để quyết định có đòi toạ độ hay không. */
-  onServiceAvailabilityChange?: (available: boolean) => void;
 }) {
   const t = useTranslations('BookingRequests.flow');
   const domainLabel = useDomainLabel();
@@ -214,7 +212,6 @@ export function RequestTripStep({
             vehicleProvinceCode={vehicleProvinceCode}
             vehicleProvinceName={vehicleProvinceName}
             vehiclePoint={vehiclePoint}
-            {...(onServiceAvailabilityChange ? { onServiceAvailabilityChange } : {})}
           />
           {interCity ? (
             <TextField
@@ -304,8 +301,6 @@ export function RequestTripStep({
                   vehicleProvinceCode={vehicleProvinceCode}
                   vehicleProvinceName={vehicleProvinceName}
                   vehiclePoint={vehiclePoint}
-                  {...(onServiceAvailabilityChange ? { onServiceAvailabilityChange } : {})}
-                  {...(onServiceAvailabilityChange ? { onServiceAvailabilityChange } : {})}
                 />
                 <DeliveryEstimate form={form} vehicleId={listing.id} />
               </YStack>
@@ -441,9 +436,6 @@ function pickupPointLabel(listing: PublicListingDetail): string | null {
   return listing.pickupPoint?.address ?? null;
 }
 
-/** Chờ khách gõ xong địa chỉ rồi mới tra — mỗi phím một lượt gọi bản đồ là đốt hạn mức. */
-const ADDRESS_DEBOUNCE_MS = 600;
-
 /**
  * Ước lượng khoảng cách và phí giao xe.
  *
@@ -468,7 +460,8 @@ export function DeliveryEstimate({ form, vehicleId }: { form: RequestForm; vehic
   const address = useWatch({ control: form.control, name: 'deliveryAddressLine' });
   const lat = useWatch({ control: form.control, name: 'deliveryLatitude' });
   const lng = useWatch({ control: form.control, name: 'deliveryLongitude' });
-  const debounced = useDebouncedValue(address ?? '', ADDRESS_DEBOUNCE_MS);
+  const source = useWatch({ control: form.control, name: 'deliveryLocationSource' });
+  const debounced = useDebouncedValue(address ?? '', DELIVERY_ADDRESS_DEBOUNCE_MS);
   // Ghim khách đã xác nhận THẮNG chuỗi chữ — xem `deliveryDistance` ở tầng api.
   const pin = lat != null && lng != null ? { lat, lng } : null;
   const typed = address?.trim() ?? '';
@@ -478,6 +471,7 @@ export function DeliveryEstimate({ form, vehicleId }: { form: RequestForm; vehic
     typed,
     debounced: settledAddress,
     hasPin: pin != null,
+    manual: source === LOCATION_SOURCE.MANUAL,
     fetching: false,
   });
   const query = useDeliveryDistance(vehicleId, settledAddress, pin, queryable);

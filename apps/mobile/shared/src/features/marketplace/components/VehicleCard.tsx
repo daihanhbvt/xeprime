@@ -148,7 +148,20 @@ function VehicleCardImpl({ listing, onPress }: VehicleCardProps) {
           />
         ) : null}
 
-        <XStack pos="absolute" top={space.sm} left={space.sm} gap={space.xs}>
+        {/*
+          Hàng nhãn có MÉP PHẢI chừa chỗ cho mũi tên chi tiết, và XUỐNG DÒNG khi hết chỗ: bốn nhãn
+          (giảm giá · giao tận nơi · miễn thế chấp · hoá đơn VAT) dài hơn bề ngang thẻ trên máy
+          411dp — trước đây nhãn cuối tràn khỏi mép ảnh và đè lên mũi tên.
+        */}
+        <XStack
+          pos="absolute"
+          top={space.sm}
+          left={space.sm}
+          right={space.sm + iconSize.md + space.md}
+          gap={space.xs}
+          rowGap={space.xs}
+          flexWrap="wrap"
+        >
           {discount > 0 ? (
             <XStack bg={colors.discount} br={radius.sm} px={space.sm} py={2}>
               <Text col={colors.onDiscount} fos={fontSize.label} fow={fontWeight.bold}>
@@ -158,6 +171,8 @@ function VehicleCardImpl({ listing, onPress }: VehicleCardProps) {
           ) : null}
           {listing.deliveryEnabled ? <Badge label={t('delivery')} /> : null}
           {listing.noCollateral ? <Badge label={t('noCollateral')} /> : null}
+          {/* Thẻ chỉ có chỗ cho nhãn ngắn — câu "ai xuất, cho khoản nào" ở trang xe (ADR 0059). */}
+          {listing.vatInvoiceSupported ? <Badge label={t('vatInvoice')} /> : null}
         </XStack>
       </YStack>
 
