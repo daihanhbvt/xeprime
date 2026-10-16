@@ -1,0 +1,114 @@
+/* Bảng nút v2 (Figma `8636:8263`) — ADR 0062. */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px var(--xp-space-md);
+  border: 1px solid transparent;
+  border-radius: var(--xp-border-radius-control);
+  cursor: pointer;
+  font: inherit;
+  font-weight: var(--xp-font-weight-semibold);
+  gap: var(--xp-space-6);
+  text-decoration: none;
+  transition:
+    filter 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+  white-space: nowrap;
+}
+
+.button:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.md {
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.lg {
+  min-height: 44px;
+  padding-inline: 18px;
+  font-size: var(--xp-font-size-body-lg);
+  gap: var(--xp-space-sm);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+.xl {
+  min-height: 56px;
+  padding: var(--xp-space-sm) var(--xp-space-sm) var(--xp-space-sm) var(--xp-space-20);
+  font-size: var(--xp-font-size-h3);
+  gap: var(--xp-space-12);
+  line-height: var(--xp-line-height-h3);
+}
+
+.pill {
+  border-radius: var(--xp-border-radius-pill);
+}
+
+/* ─── Nút chính: gradient vàng, chữ tối, bóng phát sáng ───────────────────── */
+.gradient {
+  background: var(--xp-gradient-primary);
+  box-shadow: var(--xp-elevation-glow);
+  color: var(--xp-color-primary-contrast);
+}
+
+/*
+ * v2 chưa vẽ trạng thái rê/nhấn riêng cho nút gradient (ADR 0062 Q1): sẫm nhẹ cả dải thay vì
+ * thay sang một màu đặc tự chế — giữ đúng hình dạng gradient của thiết kế.
+ */
+.gradient:hover {
+  color: var(--xp-color-primary-contrast);
+  filter: brightness(0.96);
+}
+
+.gradient:active {
+  filter: brightness(0.92);
+}
+
+/* ─── Nút viền: nền trắng, viền vàng nhạt ─────────────────────────────────── */
+.outline {
+  border-color: var(--xp-color-primary-muted);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-primary);
+}
+
+.outline:hover {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-primary-hover);
+}
+
+/* ─── Nút chữ ─────────────────────────────────────────────────────────────── */
+.link {
+  padding: 0;
+  border: none;
+  border-radius: var(--xp-border-radius-chip);
+  background: none;
+  color: var(--xp-color-primary);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.link:hover {
+  color: var(--xp-color-primary-hover);
+}
+
+.icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.label {
+  min-width: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    transition: none;
+  }
+}

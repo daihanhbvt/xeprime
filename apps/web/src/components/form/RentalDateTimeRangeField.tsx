@@ -32,6 +32,13 @@ interface RentalDateTimeRangeFieldProps {
   ariaLabel?: string;
   /** Icon nằm trong cùng vùng bấm; dùng để toàn bộ viền control đều mở lịch. */
   prefix?: ReactNode;
+  /** Icon ở CUỐI ô (thẻ tìm kiếm trang chủ v2 đặt lịch bên phải) — cùng vùng bấm như prefix. */
+  suffix?: ReactNode;
+  /**
+   * Chữ gợi ý khi CHƯA chọn đầu nào (biến thể `compact`) — thay cho cặp nhãn "Nhận xe → Trả xe".
+   * Chọn được một đầu thì ô hiện lại hai đầu như cũ.
+   */
+  placeholder?: string;
   /** Sàn số ngày thuê (17/08 — dài hạn truyền LONG_TERM_MIN_DAYS); xuyên xuống RentalRangePanel. */
   minDays?: number;
   /**
@@ -85,6 +92,8 @@ export function RentalDateTimeRangeField({
   className,
   ariaLabel,
   prefix,
+  suffix,
+  placeholder,
   minDays,
   busyDays,
   busyLoading,
@@ -177,11 +186,20 @@ export function RentalDateTimeRangeField({
         aria-label={ariaValue}
       >
         {prefix ? <span className={styles.prefix}>{prefix}</span> : null}
-        <span className={styles.endpoint}>{pointText(value.pickupAt, endpointLabels.start)}</span>
-        <span className={styles.sep} aria-hidden>
-          →
-        </span>
-        <span className={styles.endpoint}>{pointText(value.returnAt, endpointLabels.end)}</span>
+        {placeholder && !value.pickupAt && !value.returnAt ? (
+          <span className={styles.placeholder}>{placeholder}</span>
+        ) : (
+          <>
+            <span className={styles.endpoint}>
+              {pointText(value.pickupAt, endpointLabels.start)}
+            </span>
+            <span className={styles.sep} aria-hidden>
+              →
+            </span>
+            <span className={styles.endpoint}>{pointText(value.returnAt, endpointLabels.end)}</span>
+          </>
+        )}
+        {suffix ? <span className={styles.suffix}>{suffix}</span> : null}
       </button>
     );
 

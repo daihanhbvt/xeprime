@@ -47,6 +47,7 @@ import { AuditService } from '../audit/audit.service';
 import { currentSupportScope } from '../../common/support/support-request.store';
 import { assertSupportServiceSettingPinned } from './service-setting-support-policy';
 import { OccupancyService } from '../calendar/occupancy.service';
+import { ListingsService } from '../public-listings/listings.service';
 // HÀM THUẦN, không phải service: không tạo cạnh DI nào nên module lá này vẫn là lá.
 import { refreshPendingApprovalSnapshot } from '../vehicles/refresh-pending-approval-snapshot';
 import {
@@ -129,6 +130,8 @@ export class VehicleSettingsService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly occupancy: OccupancyService,
+    /** Writer duy nhất của snapshot chợ (ADR 0008) — thẻ xe mang cờ tự động nhận chuyến. */
+    private readonly listings: ListingsService,
   ) {}
 
   // ── Thời gian chết + khung giờ ───────────────────────────────────────────
@@ -392,6 +395,12 @@ export class VehicleSettingsService {
        * `VehicleSettingsModule`).
        */
       await refreshPendingApprovalSnapshot(tx, { vehicleId, actorUserId: userId, policy: 'unchanged' });
+      /*
+       * Thẻ xe ở chợ hiện "Không cần xác nhận" theo cờ tự động nhận của TỪNG dịch vụ — cờ đó
+       * mirror vào snapshot `public_listings`, nên mỗi lượt lưu phải đồng bộ lại trong CÙNG
+       * transaction. Xe chưa có listing (chưa duyệt) thì đây là no-op.
+       */
+      await this.listings.syncFromVehicle(vehicleId, tx);
       await this.audit.record(
         {
           tenantId,

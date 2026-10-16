@@ -7,9 +7,8 @@
  * cố định — ảnh đúng slot thì mọi bề rộng chỉ SCALE, không crop.
  *
  * KHÔNG đặt max-height ở đây: khung có aspect-ratio mà bề rộng để auto thì max-height được
- * CHUYỂN NGƯỢC qua tỉ lệ thành max-width (400px × 1440/300 = 1920px). Viewport rộng hơn 1920px
- * (màn 2K trở lên, hoặc thu nhỏ zoom trình duyệt) làm banner co lại còn 1920px và chừa một
- * mảng trắng bên phải. Hero chạy hết bề ngang, cao theo đúng tỉ lệ ảnh admin upload.
+ * CHUYỂN NGƯỢC qua tỉ lệ thành max-width — viewport rộng hơn mức đó làm banner co lại và chừa
+ * một mảng trắng bên phải. Hero chạy hết bề ngang, cao theo đúng tỉ lệ ảnh admin upload.
  */
 .carousel {
   position: relative;
@@ -51,11 +50,14 @@
   object-position: left center;
 }
 
-/* Chấm chuyển slide — Figma đặt góc dưới trái vùng hero. */
+/*
+ * Chấm chuyển slide — góc dưới trái, canh theo khung nội dung 1200px. Trang đặt thứ gì đè lên mép
+ * dưới banner (thẻ tìm kiếm trang chủ) thì khai `--banner-dots-offset` để chấm nằm trên nó.
+ */
 .dots {
   position: absolute;
-  bottom: 18px;
-  left: 64px;
+  bottom: calc(var(--banner-dots-offset, 0px) + 18px);
+  left: max(var(--xp-space-md), calc((100% - var(--xp-market-container-max-width)) / 2));
   display: flex;
   gap: 8px;
 }

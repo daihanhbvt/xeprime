@@ -1,72 +1,147 @@
+/*
+ * "Các bước thuê xe" v2 (Figma `19695:40905`, ADR 0062): bốn bước 240px cách nhau 80px (đúng 1200px),
+ * mũi tên 40 × 40 nằm giữa khe, ngang tâm hình minh hoạ 240 × 213.
+ */
 .section {
   display: flex;
   flex-direction: column;
-  gap: var(--xp-space-md);
+  align-items: center;
+  gap: var(--xp-space-40);
 }
 
-.title {
-  margin: 0;
-  color: var(--xp-color-text);
-  font-size: 20px;
-  font-weight: var(--xp-font-weight-bold, 700);
-}
-
-/* MỘT thẻ chia cột bằng vạch dọc — Figma `18:4`, không phải bốn thẻ rời. */
-.card {
+.steps {
   display: grid;
-  padding: var(--xp-space-lg) 0;
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius);
+  width: 100%;
+  padding: 0;
   margin: 0;
-  background: var(--xp-color-bg-container);
-  grid-template-columns: 1fr;
+  column-gap: var(--xp-space-80);
+  grid-template-columns: repeat(4, minmax(0, 240px));
+  justify-content: center;
   list-style: none;
+  row-gap: var(--xp-space-40);
 }
 
 .step {
-  padding: 10px var(--xp-space-lg);
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--xp-space-md);
+  text-align: center;
 }
 
-.stepHead {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+/* Khung hình: co theo cột, giữ tỉ lệ 240 × 213 để ô cắt sprite (tính theo %) luôn đúng chỗ. */
+.artFrame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 240 / 213;
 }
 
-.no {
+.art {
+  position: absolute;
+  overflow: hidden;
+  inset: 0;
+}
+
+/* Mũi tên ở giữa khe 80px phía trước bước: lùi 60px = nửa khe + nửa mũi tên. */
+.arrow {
+  position: absolute;
+  top: calc(50% - 20px);
+  left: -60px;
+  overflow: hidden;
+  width: 40px;
+  height: 40px;
+}
+
+.sprite {
+  position: absolute;
+}
+
+.spriteImage {
+  object-fit: fill;
+}
+
+.artSearch {
+  top: -21.02%;
+  left: -13.72%;
+  width: 470.23%;
+  height: 190.68%;
+}
+
+.artRequest {
+  top: -32.86%;
+  left: -153.98%;
+  width: 528.8%;
+  height: 214.43%;
+}
+
+.artPickup {
+  top: -25.38%;
+  left: -257.5%;
+  width: 491.69%;
+  height: 199.38%;
+}
+
+.artReturn {
+  top: -23.18%;
+  left: -369.12%;
+  width: 483.34%;
+  height: 196%;
+}
+
+.artArrow {
+  top: -319.16%;
+  left: -665.34%;
+  width: 2711.35%;
+  height: 977.75%;
+}
+
+.copy {
   display: flex;
-  width: 26px;
-  height: 26px;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: var(--xp-color-primary);
-  color: var(--xp-color-primary-contrast);
-  font-size: var(--xp-font-size-body-sm);
-  font-weight: var(--xp-font-weight-bold, 700);
+  flex-direction: column;
+  gap: var(--xp-space-xs);
 }
 
 .stepTitle {
   margin: 0;
   color: var(--xp-color-text);
-  font-size: 15px;
-  font-weight: var(--xp-font-weight-semibold, 600);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
 }
 
 .desc {
-  margin: 8px 0 0 36px;
+  margin: 0;
   color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
 }
 
-@media (min-width: 760px) {
-  .card {
-    grid-template-columns: repeat(4, 1fr);
+/* Desktop hẹp: khe nhỏ lại, mũi tên vẫn ở giữa khe. */
+@media (min-width: 1025px) and (max-width: 1199px) {
+  .steps {
+    column-gap: var(--xp-space-64);
   }
 
-  .step + .step {
-    border-left: 1px solid var(--xp-color-border-secondary);
+  .arrow {
+    left: -52px;
+  }
+}
+
+/* Tablet: lưới 2 × 2, không còn một hàng để nối — bỏ mũi tên. */
+@media (max-width: 1024px) {
+  .steps {
+    column-gap: var(--xp-space-lg);
+    grid-template-columns: repeat(2, minmax(0, 240px));
+  }
+
+  .arrow {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .steps {
+    grid-template-columns: minmax(0, 240px);
   }
 }

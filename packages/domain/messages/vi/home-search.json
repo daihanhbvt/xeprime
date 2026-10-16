@@ -6,7 +6,8 @@
     "serviceTypeLabel": "Loại dịch vụ thuê xe",
     "panelLabel": "Tìm {vehicle} {service}",
     "submit": "Tìm xe",
-    "longTermHint": "Chọn xe trước, sau đó chọn gói thuê và nguyện vọng ngày nhận. Gian hàng xác nhận ngày giờ nhận chính xác khi duyệt yêu cầu."
+    "longTermHint": "Chọn xe trước, sau đó chọn gói thuê và nguyện vọng ngày nhận. Gian hàng xác nhận ngày giờ nhận chính xác khi duyệt yêu cầu.",
+    "searchAction": "Tìm kiếm"
   },
   "service": {
     "selfDrive": "Xe tự lái",
@@ -26,7 +27,9 @@
     "triggerLabel": "Lộ trình: {value}"
   },
   "rental": {
-    "label": "Thời gian thuê"
+    "label": "Thời gian thuê",
+    "pickupReturnLabel": "Thời gian nhận/trả",
+    "placeholder": "Chọn khoảng thời gian"
   },
   "location": {
     "label": "Địa điểm",
@@ -41,6 +44,7 @@
     "unavailable": "Địa điểm không còn khả dụng",
     "loadError": "Không tải được danh sách địa điểm",
     "vehicleCount": "{count, plural, other {# xe}}",
-    "noMatch": "Không có tỉnh/thành nào khớp “{query}”. Thử tên khác hoặc chọn Toàn quốc."
+    "noMatch": "Không có tỉnh/thành nào khớp “{query}”. Thử tên khác hoặc chọn Toàn quốc.",
+    "placeholder": "Nhập điểm đón"
   }
 }

@@ -13,6 +13,7 @@ import {
   SEAT_BUCKET_VALUES,
   SERVICE_TYPE_VALUES,
   STOREFRONT_KIND_VALUES,
+  TRANSMISSION_TYPE_EXT_VALUES,
   VEHICLE_FEATURE_KEYS,
   VEHICLE_TYPE_VALUES,
   type ListingSort,
@@ -391,6 +392,27 @@ export class PublicListingDto {
   motorbikeCategory!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) mainImageUrl!: string | null;
 
+  @ApiProperty({ description: 'Tổng số ảnh của xe — thẻ hiện "+N" ảnh', minimum: 0 })
+  imageCount!: number;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    enum: TRANSMISSION_TYPE_EXT_VALUES,
+    description:
+      'Hộp số (TRANSMISSION_TYPE_EXT — cùng bộ mã với hồ sơ xe) — null khi chủ xe chưa khai',
+  })
+  transmission!: string | null;
+
+  @ApiProperty({
+    enum: SERVICE_TYPE_VALUES,
+    isArray: true,
+    description:
+      'Dịch vụ đang bật tự động nhận chuyến — thẻ hiện "Không cần xác nhận" khi dịch vụ khách ' +
+      'đang xem nằm trong mảng này',
+  })
+  instantBookServiceTypes!: string[];
+
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Tiền dạng string — ADR 0007' })
   weekdayPrice!: string | null;
 
@@ -500,6 +522,13 @@ export class PublicListingDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
+    description: 'Tên xã/phường của chi nhánh đang giữ xe — chỉ để HIỂN THỊ',
+  })
+  wardName!: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
     description: 'Điểm đánh giá trung bình CỦA XE (review published). Null khi chưa có đánh giá.',
   })
   ratingAvg!: string | null;
@@ -560,13 +589,21 @@ export class ListingRentalTermsDto {
   @ApiProperty({ enum: SERVICE_TYPE_VALUES }) serviceType!: string;
   @ApiProperty({ type: [String], description: 'CUSTOMER_DOCUMENT_TYPE — bộ HIỆU LỰC' })
   requiredDocuments!: string[];
-  @ApiProperty({ description: 'IDENTITY_VERIFY_METHOD — đối chiếu TAY, kể cả qua app VNeID của khách' })
+  @ApiProperty({
+    description: 'IDENTITY_VERIFY_METHOD — đối chiếu TAY, kể cả qua app VNeID của khách',
+  })
   identityVerifyMethod!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) termsText!: string | null;
   @ApiProperty() requireTermsAcceptance!: boolean;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'DRIVER_DEPOSIT_MODE — chỉ with_driver' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'DRIVER_DEPOSIT_MODE — chỉ with_driver',
+  })
   depositMode!: string | null;
-  @ApiProperty({ description: 'Xe bật tự động nhận cho dịch vụ này (điều kiện cụ thể do báo giá trả)' })
+  @ApiProperty({
+    description: 'Xe bật tự động nhận cho dịch vụ này (điều kiện cụ thể do báo giá trả)',
+  })
   instantBookEnabled!: boolean;
   @ApiPropertyOptional({ type: Number, nullable: true }) minRentalMinutes!: number | null;
 }
@@ -712,14 +749,17 @@ export class PublicListingDetailDto extends PublicListingDto {
   /** Thông số NĂNG LƯỢNG đúng theo loại xe: lít/100km với xe xăng, km mỗi lần sạc với xe điện. */
   @ApiPropertyOptional({ type: String, nullable: true, description: 'L/100km (xăng/dầu/hybrid)' })
   fuelConsumptionCombined!: string | null;
-  @ApiPropertyOptional({ type: Number, nullable: true, description: 'Km mỗi lần sạc đầy (xe điện)' })
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: 'Km mỗi lần sạc đầy (xe điện)',
+  })
   electricRangeKm!: number | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Dung lượng pin (kWh)' })
   batteryCapacityKwh!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'kWh/100km' })
   electricConsumptionKwhPer100Km!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: '@xeprime/types → TransmissionType' })
-  transmission!: string | null;
+  // `transmission` khai ở `PublicListingDto` (thẻ xe cũng mang nó từ design v2) — không khai lại.
 }
 
 export class PublicListingPageMetaDto {
@@ -922,7 +962,6 @@ export class PublicShopDto {
   deliveryAvailable!: boolean;
 }
 
-
 /**
  * Một tỉnh/thành có xe đang cho thuê — "Địa điểm nổi bật" ở trang chủ. Số liệu tính từ snapshot
  * `public_listings` (không hardcode danh sách tỉnh ở FE).
@@ -939,6 +978,15 @@ export class PublicDestinationDto {
 
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Ảnh đại diện lấy từ một xe' })
   imageUrl!: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Giá thuê TỰ LÁI theo ngày thấp nhất (đã trừ khuyến mãi của chủ xe), string — ADR 0007. ' +
+      'Null khi tỉnh không có xe tự lái nào có giá ngày.',
+  })
+  minDailyPrice!: string | null;
 }
 
 /** Query "địa điểm nổi bật" — chỉ cần giới hạn số lượng (63 tỉnh/thành là trần tự nhiên). */
@@ -971,6 +1019,23 @@ export class PublicShopSummaryDto {
       'với `shopVerified` của thẻ xe: false là mặt tiền chủ xe cá nhân.',
   })
   verified!: boolean;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Lời giới thiệu ngắn của gian hàng (hồ sơ) — null khi chưa viết',
+  })
+  bio!: string | null;
+
+  @ApiProperty({ description: 'Số chuyến đã hoàn thành của cả gian hàng' })
+  completedTripCount!: number;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Ảnh của xe xếp hạng cao nhất đang hiển thị công khai — ảnh đại diện trên thẻ',
+  })
+  featuredVehicleImageUrl!: string | null;
 }
 
 export class PublicShopPageDto {

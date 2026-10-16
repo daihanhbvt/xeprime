@@ -1,170 +1,196 @@
+/*
+ * "Địa điểm nổi bật" — Figma `19695:40783` (ADR 0062): bốn thẻ 282 × 520 cách nhau 24px, bo góc
+ * bất đối xứng (120 ở chéo trái-trên/phải-dưới, 40 ở hai góc kia), viền vàng 1px.
+ */
 .section {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--xp-space-64);
 }
 
-.head {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.title {
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--xp-color-text);
-}
-
-.sub {
-  font-size: 13px;
-  color: var(--xp-color-text-secondary);
-  margin-top: 2px;
-}
-
-.seeAll {
-  flex: none;
-  background: none;
-  border: none;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--xp-gold-deep);
-  padding: 4px 0;
-}
-.seeAll:hover {
-  color: var(--xp-color-primary);
-}
-
-/*
- * Mobile: danh sách hàng ngang (ảnh nhỏ bên trái) — dễ lướt bằng ngón tay.
- * Desktop: dải ô ảnh lớn nằm ngang.
- */
-.grid {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.tile {
+.card {
   position: relative;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  border: 1px solid var(--xp-color-border);
-  background: var(--xp-color-bg-container);
-  border-radius: var(--xp-border-radius);
+  display: block;
   overflow: hidden;
-  padding: 0;
-  height: 72px;
-  cursor: pointer;
-  text-align: left;
-  transition:
-    transform 0.14s ease,
-    box-shadow 0.14s ease;
-}
-.tile:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--xp-shadow-md);
+  height: 520px;
+  border: 1px solid var(--xp-color-destination-border);
+  border-radius: 120px 40px 120px 40px;
+  background: var(--xp-market-footer-bg);
+  color: inherit;
+  isolation: isolate;
 }
 
-.photo,
-.placeholder {
-  width: 96px;
-  height: 100%;
-  flex: none;
-  object-fit: cover;
+.card:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 3px;
 }
 
-.placeholder {
-  display: grid;
-  place-items: center;
-  font-size: 22px;
-  color: var(--xp-gold-deep);
-  background: linear-gradient(135deg, var(--xp-color-bg-sand), var(--xp-gold-soft));
+/* ─── Tranh minh hoạ: nền chung + ô cắt của từng thành phố trên một tấm sprite ─── */
+.art {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
 }
 
-/* Lớp phủ chỉ dùng ở bố cục desktop (ảnh nền tràn ô). */
-.shade {
-  display: none;
+.backdrop,
+.illustration {
+  position: absolute;
+}
+
+/* Khung đã đúng tỉ lệ ảnh (Figma) — ảnh phủ đúng khung, không cắt thêm. */
+.layer {
+  object-fit: fill;
+}
+
+/* Nền tối dùng chung (Figma: rộng 165.56%, cao 110.77%, lùi trái 48.15%). */
+.backdrop {
+  top: -0.01%;
+  left: -48.15%;
+  width: 165.56%;
+  height: 110.77%;
+}
+
+/* Sprite bốn thành phố (Figma: rộng 459.91%, cao 166.28%); mỗi thành phố một vị trí cắt. */
+.illustration {
+  width: 459.91%;
+  height: 166.28%;
+  transition: transform 0.4s ease;
+}
+
+.cityDanang {
+  top: 7.92%;
+  left: -35.12%;
+}
+
+.cityHanoi {
+  top: 5.69%;
+  left: -254.47%;
+}
+
+.cityHcm {
+  top: -66.31%;
+  left: -68.27%;
+}
+
+/* Huế trong Figma không có lớp nền riêng — ô cắt phủ kín thẻ. */
+.cityHue {
+  top: -69.26%;
+  left: -347.67%;
+}
+
+/* ─── Khối chữ phía trên: tên thành phố gradient + số liệu ─── */
+.details {
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  display: flex;
+  width: calc(100% + 2px);
+  height: 297px;
+  box-sizing: border-box;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: 36px var(--xp-space-20) var(--xp-space-md);
+  background: var(--xp-gradient-destination-shade);
+  gap: var(--xp-space-sm);
+}
+
+.city {
+  background: var(--xp-gradient-text-destination);
+  background-clip: text;
+  color: transparent;
+  font-size: var(--xp-font-size-h1);
+  font-weight: var(--xp-font-weight-bold);
+  line-height: var(--xp-line-height-h1);
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .meta {
   display: flex;
-  flex-direction: column;
-  min-width: 0;
-  padding-right: 12px;
-}
-
-.name {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--xp-color-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
+  width: 100%;
+  justify-content: space-between;
+  color: var(--xp-color-text-on-dark-muted);
+  font-size: var(--xp-font-size-label);
+  gap: var(--xp-space-sm);
+  line-height: var(--xp-line-height-label);
   white-space: nowrap;
 }
 
-.count {
-  font-size: 12.5px;
-  color: var(--xp-color-text-secondary);
+.meta b {
+  color: var(--xp-color-text-on-dark);
+  font-weight: var(--xp-font-weight-medium);
 }
 
-.skeleton {
-  width: 100% !important;
-  height: 100% !important;
+/* ─── Chân thẻ: hai lớp sóng + nút "Khám phá" ─── */
+.footer {
+  position: absolute;
+  top: 398px;
+  left: -1px;
+  width: calc(100% + 2px);
+  height: 128px;
 }
 
-@media (min-width: 760px) {
-  /* LƯỚI 5 cột cố định (Figma 18:4) thay vì flex — chỉ có 1-2 tỉnh thì tile vẫn giữ đúng cỡ
-     một cột, không phình ra chiếm cả hàng. */
-  .grid {
-    display: grid;
-    gap: 12px;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
+.waveBack,
+.waveFront {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+}
 
-  .tile {
-    min-width: 0;
-    height: 150px;
-    display: block;
-    border: none;
-  }
+.waveBack {
+  width: 100%;
+  height: 128px;
+}
 
-  .photo,
-  .placeholder {
-    width: 100%;
-    height: 100%;
-  }
+.waveFront {
+  width: 95.57%;
+  height: 64.593px;
+}
 
-  .shade {
-    display: block;
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(180deg, transparent 35%, rgba(20, 16, 10, 0.72));
-  }
+.explore {
+  position: absolute;
+  top: 56px;
+  left: calc(50% - 37.76px);
+  display: inline-flex;
+  align-items: center;
+  padding: 10px var(--xp-space-lg);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-gradient-primary);
+  box-shadow: var(--xp-elevation-glow);
+  color: var(--xp-color-primary-contrast);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  gap: var(--xp-space-6);
+  line-height: var(--xp-line-height-body);
+  transform: translateX(-50%);
+  transition: filter 0.15s ease;
+  white-space: nowrap;
+}
 
-  .meta {
-    position: absolute;
-    left: 14px;
-    right: 14px;
-    bottom: 12px;
-    padding-right: 0;
-  }
+/* Ô icon 20px của mũi tên — nét vẽ đặt nguyên cỡ ở giữa. */
+.explore img {
+  display: block;
+  margin: 0 7.5px;
+}
 
-  .name {
-    font-size: 17px;
-    color: #fff;
-    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.45);
-  }
+.card:hover .illustration {
+  transform: scale(1.02);
+}
 
-  .count {
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.9);
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+.card:hover .explore {
+  filter: brightness(0.96);
+}
+
+@media (max-width: 640px) {
+  .section {
+    gap: var(--xp-space-lg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .illustration,
+  .explore {
+    transition: none;
   }
 }

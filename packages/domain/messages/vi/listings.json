@@ -19,7 +19,21 @@
     "priceDaily": "<amount>{value}</amount><unit>/ngày</unit>",
     "priceMonthly": "<amount>{value}</amount><unit>/tháng</unit>",
     "perDayUnit": "/ngày",
-    "perMonthUnit": "/tháng"
+    "perMonthUnit": "/tháng",
+    "instantBook": "Không cần xác nhận",
+    "photoCount": "+{count}",
+    "photoCountAria": "{count, plural, other {Xe có # ảnh}}",
+    "locationLine": "{ward}, {province}",
+    "specsLabel": "Thông số xe",
+    "ratingValue": "{rating} <muted>({count})</muted>",
+    "transmissionFamily": {
+      "automatic": "Số tự động",
+      "manual": "Số sàn",
+      "scooter": "Tay ga",
+      "semi_automatic": "Xe số",
+      "manual_clutch": "Côn tay",
+      "other": "Khác"
+    }
   },
   "detail": {
     "specs": {

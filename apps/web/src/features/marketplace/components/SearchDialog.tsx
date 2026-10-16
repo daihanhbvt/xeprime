@@ -22,10 +22,7 @@ import {
 } from '@/components/form/RentalDateTimeRangeField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { buildProvinceOptions } from '../province-options';
-import {
-  rememberRentalRange,
-  rememberedOrDefaultRentalRange,
-} from '@/lib/rental-range-memory';
+import { rememberRentalRange, rememberedOrDefaultRentalRange } from '@/lib/rental-range-memory';
 import { useDestinations } from '../hooks/use-destinations';
 import type { MarketplaceFilters } from '../types';
 import styles from './SearchDialog.module.css';
@@ -77,7 +74,10 @@ export function SearchDialog({
   const longTerm = initial.serviceType === SERVICE_TYPE.LONG_TERM;
   const withDriver = initial.serviceType === SERVICE_TYPE.WITH_DRIVER;
 
-  const [vehicleType, setVehicleType] = useState<string>(initial.vehicleType ?? VEHICLE_TYPE.CAR);
+  // Có tài xế chỉ phục vụ ô tô — một URL cũ mang "xe máy + có tài xế" mở ra đúng lựa chọn còn lại.
+  const [vehicleType, setVehicleType] = useState<string>(
+    withDriver ? VEHICLE_TYPE.CAR : (initial.vehicleType ?? VEHICLE_TYPE.CAR),
+  );
   const [province, setProvince] = useState(initial.provinceCode ?? '');
   const [routeType, setRouteType] = useState<RouteType>(() =>
     isRouteType(initial.routeType) ? initial.routeType : ROUTE_TYPE.IN_CITY,
@@ -173,10 +173,15 @@ export function SearchDialog({
             onChange={(v) => setVehicleType(v as string)}
             options={[
               { value: VEHICLE_TYPE.CAR, label: domainLabel('vehicleType', VEHICLE_TYPE.CAR) },
-              {
-                value: VEHICLE_TYPE.MOTORBIKE,
-                label: domainLabel('vehicleType', VEHICLE_TYPE.MOTORBIKE),
-              },
+              // Xe máy không có dịch vụ có tài xế — đang tìm dịch vụ đó thì chỉ còn "Ô tô".
+              ...(withDriver
+                ? []
+                : [
+                    {
+                      value: VEHICLE_TYPE.MOTORBIKE,
+                      label: domainLabel('vehicleType', VEHICLE_TYPE.MOTORBIKE),
+                    },
+                  ]),
             ]}
           />
         </div>

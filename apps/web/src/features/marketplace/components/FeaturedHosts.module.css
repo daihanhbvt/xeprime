@@ -1,132 +1,263 @@
+/*
+ * "Gian hàng nổi bật" v2 (Figma `19695:40850`, ADR 0062): băng chuyền 3 thẻ, thẻ trắng bo 16px,
+ * đệm 16px, các hàng cách nhau 12px; ảnh xe đại diện 130 × 71 nhô lên 15px khỏi mép trên thẻ.
+ */
 .section {
   display: flex;
+  min-width: 0;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--xp-space-40);
 }
 
-.head {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.title {
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--xp-color-text);
-}
-
-.sub {
-  font-size: 13px;
-  color: var(--xp-color-text-secondary);
-  margin-top: 2px;
-}
-
-/* minmax(0,…): tên shop dài không được đẩy cột vượt viewport (tràn ngang 320px đã dính). */
-.grid {
+.skeletonRow {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 12px;
-}
-@media (min-width: 640px) {
-  .grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-@media (min-width: 960px) {
-  .grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
+  gap: var(--xp-space-20);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .card {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  height: 100%;
+  box-sizing: border-box;
+  flex-direction: column;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-bg-container);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-elevation-soft);
+  color: inherit;
+  gap: var(--xp-space-12);
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease;
+}
+
+.card:hover,
+.card:focus-visible {
+  border-color: var(--xp-color-primary-accent);
+  background: var(--xp-gradient-card-highlight), var(--xp-color-bg-container);
+  color: inherit;
+}
+
+.card:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+/* ─── Đầu thẻ: avatar 48 + tên + "N xe • tỉnh". Chừa bên phải cho ảnh xe nhô lên. ─── */
+.head {
   display: flex;
   min-width: 0;
   align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  background: var(--xp-color-bg-container);
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius);
-  box-shadow: var(--xp-shadow-sm);
-  transition:
-    transform 0.14s ease,
-    box-shadow 0.14s ease;
-}
-.card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--xp-shadow-md);
+  padding-inline-end: 112px;
+  gap: var(--xp-space-12);
 }
 
-.logo,
-.logoFallback {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
+.avatar {
+  position: relative;
+  display: inline-flex;
+  width: 48px;
+  height: 48px;
   flex: none;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-primary-strong);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.avatarVerified {
+  border-color: var(--xp-color-primary-glow);
+}
+
+.logo {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--xp-border-radius-pill);
   object-fit: cover;
 }
 
-.logoFallback {
-  display: grid;
-  place-items: center;
-  background: linear-gradient(150deg, var(--xp-color-primary), var(--xp-gold-deep));
-  color: #fff;
-  font-weight: 700;
-  font-size: 15px;
-  letter-spacing: 0.02em;
+/* Dấu xác thực — vòng trắng 14px ở góc phải dưới avatar (cùng dấu với thẻ xe). */
+.mark {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  display: inline-flex;
+  width: 14px;
+  height: 14px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
 }
 
-.body {
+.identity {
   display: flex;
-  flex-direction: column;
   min-width: 0;
-  flex: 1;
+  flex-direction: column;
 }
 
 .name {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--xp-color-text);
   overflow: hidden;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
   text-overflow: ellipsis;
+  transition: color 0.18s ease;
   white-space: nowrap;
 }
 
-.meta {
-  font-size: 12.5px;
-  color: var(--xp-color-text-tertiary);
-}
-
-.rating {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--xp-color-text);
-  font-variant-numeric: tabular-nums;
-}
-
-/* Hai class là CỐ Ý — phải thắng `.anticon { color: inherit }` mà AntD nhúng sau stylesheet. */
-.rating .star {
+.card:hover .name {
   color: var(--xp-color-primary);
 }
 
-.newTag {
-  flex: none;
-  font-size: 11.5px;
-  font-weight: 600;
-  padding: 2px 9px;
-  border-radius: 999px;
-  background: var(--xp-gold-wash);
-  color: var(--xp-gold-deep);
+.meta {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  gap: var(--xp-space-6);
+  line-height: var(--xp-line-height-body);
+  white-space: nowrap;
 }
 
-.chevron {
+.dot {
+  width: 4px;
+  height: 4px;
   flex: none;
-  font-size: 12px;
+  border-radius: var(--xp-border-radius-pill);
+  background: currentcolor;
+}
+
+.province {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--xp-space-2);
+}
+
+.provinceText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.icon16 {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Ảnh xe đại diện: 130 × 71, đỉnh ở −15px so với mép thẻ (Figma). */
+.vehicle {
+  position: absolute;
+  top: -15px;
+  right: 0;
+  width: 130px;
+  height: 71px;
+  border-radius: var(--xp-border-radius-chip);
+  object-fit: cover;
+  pointer-events: none;
+}
+
+/* Giới thiệu: hai dòng, giữ chỗ hai dòng kể cả khi trống để chân các thẻ thẳng hàng. */
+.bio {
+  display: -webkit-box;
+  min-height: calc(2 * var(--xp-line-height-body));
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  line-height: var(--xp-line-height-body);
+  overflow-wrap: anywhere;
+}
+
+/* ─── Chân thẻ: điểm + số chuyến | "Xem gian hàng" ─── */
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--xp-space-12);
+  border-top: 1px solid var(--xp-color-bg);
+  margin-top: auto;
+  gap: var(--xp-space-12);
+}
+
+.stats {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  gap: var(--xp-space-xs) var(--xp-space-md);
+  line-height: var(--xp-line-height-body);
+}
+
+.rating {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+}
+
+.rentals {
+  white-space: nowrap;
+}
+
+.muted {
   color: var(--xp-color-text-tertiary);
+  font-weight: var(--xp-font-weight-regular);
+}
+
+.viewShop {
+  flex: none;
+  color: var(--xp-color-primary-hover);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body);
+  white-space: nowrap;
+}
+
+.card:hover .viewShop {
+  text-decoration: underline;
+}
+
+@media (max-width: 1024px) {
+  .skeletonRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .skeletonRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .head {
+    padding-inline-end: 96px;
+  }
+
+  .vehicle {
+    width: 104px;
+    height: 57px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .name {
+    transition: none;
+  }
 }

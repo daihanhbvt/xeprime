@@ -18,7 +18,9 @@
     "brand": "Hãng xe",
     "marketStatus": "Thị trường",
     "source": "Nguồn",
-    "retiredOption": "{key} (đã ngừng dùng)"
+    "retiredOption": "{key} (đã ngừng dùng)",
+    "home": "Trang chủ",
+    "onHome": "Đang hiện"
   },
   "status": {
     "active": "Đang bật",
@@ -53,14 +55,22 @@
     "description": "Dòng mô tả phụ",
     "descriptionPlaceholder": "vd: 2 chỗ · thể thao",
     "descriptionHelp": "Hiện nhỏ dưới tên ở thẻ chọn và bộ lọc. Bỏ trống cũng được.",
-    "iconUrl": "Đường dẫn ảnh",
-    "iconUrlPlaceholder": "/body-types/coupe.png",
-    "iconUrlHelp": "Ảnh đặt trong thư mục public của web, hoặc URL đầy đủ.",
-    "preview": "Xem trước",
+    "iconUrl": "Icon / logo",
+    "iconUrlHelp": "Ảnh nhỏ nền trong suốt hiện ở thẻ chọn và bộ lọc (PNG hoặc WebP). Bỏ trống thì chỉ hiện chữ.",
     "active": "Đang bật",
     "activeHelp": "Tắt thì mục biến khỏi form tạo xe và bộ lọc; xe cũ vẫn hiển thị đúng tên.",
     "vehicleTypes": "Áp dụng cho loại xe",
-    "vehicleTypesHelp": "Bỏ trống = mọi loại xe. Chọn để mục này chỉ hiện đúng chỗ nó có nghĩa."
+    "vehicleTypesHelp": "Bỏ trống = mọi loại xe. Chọn để mục này chỉ hiện đúng chỗ nó có nghĩa.",
+    "homeSection": "Trang chủ — khối \"Loại xe\"",
+    "homeSectionHelp": "Thẻ trên trang chủ dùng tên hiển thị ở trên và theo thứ tự của danh mục này; bấm vào là danh sách xe đã lọc theo kiểu dáng.",
+    "showOnHome": "Hiện ở trang chủ",
+    "showOnHomeHelp": "Bật thì kiểu dáng này có một thẻ ở khối \"Loại xe\" trang chủ. Cần có ảnh trang chủ.",
+    "showcaseImage": "Ảnh trang chủ",
+    "showcaseImageHelp": "Ảnh xe tách nền (PNG hoặc WebP nền trong suốt), khung ngang khoảng 16:9, rộng từ 960px.",
+    "showcaseImageRequired": "Tải ảnh trang chủ để hiện kiểu dáng này ở trang chủ",
+    "showcaseExamples": "Dòng ví dụ",
+    "showcaseExamplesPlaceholder": "vd: Toyota Vios, Honda City",
+    "showcaseExamplesHelp": "Vài mẫu xe tiêu biểu, hiện nhỏ dưới tên trên thẻ trang chủ. Bỏ trống cũng được."
   },
   "models": {
     "title": "Mẫu xe",

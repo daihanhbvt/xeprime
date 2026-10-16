@@ -25,6 +25,7 @@
     "MISSING_PERMISSION": "Bạn không có quyền thực hiện thao tác này.",
     "NO_TENANT_SCOPE": "Tài khoản chưa thuộc gian hàng nào.",
     "TENANT_NOT_ACTIVE": "Gian hàng chưa được kích hoạt.",
+    "BANNER_VISIBLE_LIMIT_EXCEEDED": "Đã đủ số banner được hiển thị cùng lúc. Tắt hoặc dời lịch một banner khác trước.",
     "VALIDATION_FAILED": "Dữ liệu chưa hợp lệ. Kiểm tra lại các ô đã nhập.",
     "NOT_FOUND": "Không tìm thấy dữ liệu.",
     "CONFLICT": "Dữ liệu vừa thay đổi ở nơi khác. Tải lại rồi thử lại.",

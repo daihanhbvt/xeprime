@@ -91,3 +91,45 @@ export class ShopReviewPageDto {
   @ApiProperty({ type: [ShopReviewDto] }) data!: ShopReviewDto[];
   @ApiProperty({ type: PaginationMetaDto }) meta!: PaginationMetaDto;
 }
+
+/** Trần số đánh giá nổi bật một lượt — trang chủ chỉ hiện một băng chuyền ngắn. */
+export const FEATURED_REVIEW_DEFAULT_LIMIT = 6;
+export const FEATURED_REVIEW_MAX_LIMIT = 12;
+
+/** Query "Khách hàng nói gì về Xe Prime" — chỉ cần trần số lượng. */
+export class FeaturedReviewQueryDto {
+  @ApiPropertyOptional({
+    default: FEATURED_REVIEW_DEFAULT_LIMIT,
+    minimum: 1,
+    maximum: FEATURED_REVIEW_MAX_LIMIT,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(FEATURED_REVIEW_MAX_LIMIT)
+  limit?: number;
+}
+
+/**
+ * Một đánh giá NỔI BẬT toàn sàn — khối "Khách hàng nói gì về Xe Prime" ở trang chủ.
+ *
+ * Cùng lớp che danh tính với đánh giá trên trang gian hàng: tên đã rút gọn, KHÔNG có ảnh khách
+ * (FE dựng avatar chữ cái đầu — lý do ở `ShopReviewDto`). `comment` luôn có nội dung: khối này
+ * trích lời khách, một đánh giá chỉ có sao thì không có gì để trích.
+ */
+export class FeaturedReviewDto {
+  @ApiProperty() id!: string;
+  @ApiProperty({ minimum: RATING_MIN, maximum: RATING_MAX }) rating!: number;
+  @ApiProperty({ description: 'Lời nhận xét (luôn có nội dung)' }) comment!: string;
+  @ApiProperty({ description: 'Tên khách (đã rút gọn)' }) customerName!: string;
+
+  @ApiProperty({ description: 'Số chuyến người viết đã hoàn thành trên XePrime — "Đã thuê N lần"' })
+  customerTripCount!: number;
+
+  @ApiProperty({ description: 'Xe đã thuê — để mở trang chi tiết từ đánh giá' })
+  vehicleId!: string;
+
+  @ApiProperty({ description: 'Tên xe đã thuê' }) vehicleName!: string;
+  @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
+}

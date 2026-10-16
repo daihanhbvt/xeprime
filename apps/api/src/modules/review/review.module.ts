@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { PublicListingsModule } from '../public-listings/public-listings.module';
+import { PublicFeaturedReviewController } from './public-featured-review.controller';
 import { PublicReviewController } from './public-review.controller';
 import { PublicShopReviewController } from './public-shop-review.controller';
 import { ReviewController } from './review.controller';
@@ -13,7 +14,12 @@ import { ReviewService } from './review.service';
  */
 @Module({
   imports: [PublicListingsModule],
-  controllers: [ReviewController, PublicReviewController, PublicShopReviewController],
+  controllers: [
+    ReviewController,
+    PublicReviewController,
+    PublicShopReviewController,
+    PublicFeaturedReviewController,
+  ],
   providers: [ReviewService],
   exports: [ReviewService],
 })

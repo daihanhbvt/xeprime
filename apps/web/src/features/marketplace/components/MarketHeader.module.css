@@ -1,63 +1,173 @@
+/*
+ * Header chợ v2 (Figma `19759:43270`, ADR 0062): nền tối `BG/gray-high`, cao 68px, logo vàng,
+ * menu chữ trắng — mục đang xem chữ vàng + gạch chân vàng — và cụm đăng nhập + nút "Trở thành chủ
+ * xe" bên phải. Nội dung canh trong khung 1200px như mọi khối của trang chủ.
+ */
 .header {
   position: sticky;
   top: 0;
   z-index: var(--xp-z-topbar);
-  background: color-mix(in srgb, var(--xp-color-bg-layout) 88%, transparent);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--xp-color-border-secondary);
+  background: var(--xp-color-bg-inverse);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--xp-elevation-header);
 }
 
 .inner {
-  max-width: var(--xp-container-max-width);
-  margin: 0 auto;
-  height: var(--xp-market-header-height);
-  padding: 0 16px;
   display: flex;
+  max-width: calc(var(--xp-market-container-max-width) + 2 * var(--xp-space-md));
+  height: var(--xp-market-header-height);
   align-items: center;
-  gap: 16px;
+  justify-content: space-between;
+  padding: var(--xp-space-12) var(--xp-space-md);
+  margin: 0 auto;
+  gap: var(--xp-space-md);
 }
 
 .brand {
+  display: inline-flex;
   flex: none;
+}
+
+.logo {
+  display: block;
+  width: 128px;
+  height: 40px;
 }
 
 .nav {
   display: none;
+  height: 40px;
   align-items: center;
-  gap: 6px;
-  flex: 1;
+  gap: 28px;
 }
-@media (min-width: 720px) {
+
+/*
+ * Menu hiện từ 761px — đúng chỗ thanh tab dưới đáy (`MobileTabBar`, ≤ 760px) thôi phục vụ. Tablet
+ * dọc (761–1024) không có thanh tab nên menu PHẢI có ở đây, chỉ là khít hơn.
+ */
+@media (min-width: 761px) {
   .nav {
     display: flex;
   }
 }
 
+@media (min-width: 761px) and (max-width: 1024px) {
+  .nav {
+    gap: var(--xp-space-20);
+  }
+}
+
 .navLink,
 .navActive {
-  font-size: 14px;
-  font-weight: 600;
-  padding: 8px 16px;
-  border-radius: 999px;
-  color: var(--xp-color-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  padding: var(--xp-space-sm) 0;
+  border-bottom: 1px solid transparent;
+  color: var(--xp-color-text-on-dark);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body);
   transition:
-    color 0.13s,
-    background 0.13s;
+    color 0.15s ease,
+    border-color 0.15s ease;
+  white-space: nowrap;
 }
+
 .navLink:hover {
-  color: var(--xp-color-text);
-  background: var(--xp-color-bg-hover);
+  color: var(--xp-color-primary);
 }
-.navActive {
-  background: var(--xp-color-primary);
-  color: #fff;
+
+.navActive,
+.navActive:hover {
+  border-bottom-color: var(--xp-color-primary);
+  color: var(--xp-color-primary);
+}
+
+.navLink:focus-visible,
+.navActive:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
 }
 
 .right {
-  margin-left: auto;
   display: flex;
+  min-width: 0;
   align-items: center;
-  gap: 12px;
+  justify-content: flex-end;
+  gap: var(--xp-space-md);
+}
+
+@media (min-width: 1025px) {
+  /* Cùng bề rộng với cụm logo bên trái trong Figma (320px) để menu nằm đúng giữa thanh. */
+  .right {
+    width: 320px;
+  }
+}
+
+/* Cụm "Đăng nhập/Đăng ký" — icon + hai dòng chữ vàng, không phải nút đặc. */
+.login {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--xp-color-primary);
+  cursor: pointer;
+  font: inherit;
+  gap: var(--xp-space-sm);
+  text-align: left;
+}
+
+.login:hover {
+  color: var(--xp-color-primary-bright);
+}
+
+.login:focus-visible {
+  border-radius: var(--xp-border-radius-chip);
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+/* Ô 26px; nét vẽ xuất từ Figma nằm dọc — bản vẽ xoay nó −90° thành mũi tên đi vào. */
+.loginIcon {
+  display: inline-flex;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.loginIcon img {
+  display: block;
+  transform: rotate(-90deg);
+}
+
+.loginText {
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body);
+}
+
+.ownerCta {
+  flex: none;
+}
+
+@media (max-width: 1024px) {
+  /*
+   * Dưới desktop: nhường chỗ cho menu chính. Nút "Trở thành chủ xe" lùi vào menu tài khoản và dải
+   * "Đăng ký trở thành đối tác" của trang chủ (đều dẫn sang trang chọn cách cho thuê).
+   */
+  .ownerCta {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .loginText br {
+    display: none;
+  }
 }
 
 .avatarTrigger {
@@ -88,7 +198,8 @@
  */
 .avatarCaret {
   font-size: 10px;
-  color: var(--xp-color-text-tertiary);
+  /* Header v2 nền tối — mũi tên đi theo chữ mờ trên nền tối. */
+  color: var(--xp-color-text-on-dark-muted);
 }
 
 .avatarTrigger:hover .avatarCaret {

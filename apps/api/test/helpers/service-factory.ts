@@ -62,7 +62,7 @@ import type { PrismaService } from '../../src/prisma/prisma.service';
  * và chính hành vi của nó là thứ các spec giữ chỗ/yêu cầu thuê đang kiểm.
  */
 export function makeVehicleSettingsService(prisma: PrismaService): VehicleSettingsService {
-  return new VehicleSettingsService(prisma, new AuditService(prisma), new OccupancyService(prisma));
+  return new VehicleSettingsService(prisma, new AuditService(prisma), new OccupancyService(prisma), new ListingsService(prisma));
 }
 
 /**

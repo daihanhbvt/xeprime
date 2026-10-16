@@ -1581,8 +1581,16 @@ model CatalogItem {
   label        String   @db.VarChar(120)
   /// Dòng phụ dưới nhãn ở picker/bộ lọc ("5 chỗ · gầm cao").
   description  String?  @db.VarChar(255)
-  /// Kiểu dáng dùng `/body-types/*.png`, hãng xe dùng logo `/brands/*.svg`.
+  /// Icon NHỎ ở picker/bộ lọc (kiểu dáng, logo hãng). Admin upload lên R2; dữ liệu nền cũ trỏ file
+  /// tĩnh `/body-types/*.png`, `/brands/*.svg`.
   iconUrl      String?  @map("icon_url") @db.Text
+  /// Chỉ KIỂU DÁNG: hiện ở khối "Loại xe" trang chủ. Bật thì BẮT BUỘC có `showcaseImageUrl` — CHECK ở
+  /// migration, trang chủ không bao giờ dựng một thẻ thiếu ảnh.
+  showOnHome       Boolean @default(false) @map("show_on_home")
+  /// Ảnh LỚN (xe tách nền) cho thẻ trang chủ — khác icon nhỏ của bộ lọc. Chỉ kiểu dáng.
+  showcaseImageUrl String? @map("showcase_image_url") @db.Text
+  /// Dòng mẫu xe ví dụ dưới tên trên thẻ trang chủ ("Toyota Vios, Honda City"). Chỉ kiểu dáng.
+  showcaseExamples String? @map("showcase_examples") @db.VarChar(255)
   sortOrder    Int      @default(0) @map("sort_order")
   /// Loại phương tiện mục này áp dụng — MẢNG RỖNG = áp dụng cho mọi loại.
   ///
@@ -1691,6 +1699,9 @@ model MarketplaceBanner {
   altText        String    @map("alt_text") @db.VarChar(255)
   /// Đường dẫn khi bấm vào — http(s) hoặc path nội bộ; NULL = banner không bấm được.
   linkUrl        String?   @map("link_url") @db.Text
+  /// @xeprime/types → BannerPlacement (hero | promo). Đặt lúc tạo, không đổi được: mỗi vị trí một
+  /// bộ khổ ảnh. CHECK ở migration.
+  placement      String    @default("hero") @db.VarChar(20)
   sortOrder      Int       @default(0) @map("sort_order")
   active         Boolean   @default(true)
   /// Khung lịch hiển thị — NULL = không giới hạn đầu đó. CHECK ends > starts ở migration.
@@ -1700,7 +1711,7 @@ model MarketplaceBanner {
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  @@index([active, sortOrder])
+  @@index([placement, active, sortOrder])
   @@map("marketplace_banners")
 }
 
@@ -1742,8 +1753,20 @@ model PublicListing {
   provinceCode             String?  @map("province_code") @db.Char(2)
   /// Tên tỉnh chuẩn đã denormalize để hiển thị; KHÔNG dùng để lọc (dùng `provinceCode`).
   provinceName             String?  @map("province_name") @db.VarChar(100)
+  /// Tên xã/phường của chi nhánh giữ xe — chỉ để HIỂN THỊ trên thẻ (lọc vẫn theo `provinceCode`).
+  /// Bốn cột dưới cùng nguồn `readListingCardExtras` (@xeprime/prisma), chỉ ListingsService ghi.
+  wardName                 String?  @map("ward_name") @db.VarChar(150)
   mainImageUrl             String?  @map("main_image_url") @db.Text
+  /// Tổng số ảnh của xe — thẻ chợ hiện "+N". CHECK ≥ 0 ở migration.
+  imageCount               Int      @default(0) @map("image_count")
+  /// @xeprime/types → TransmissionTypeExt — mirror `vehicles.transmission`.
+  transmission             String?  @db.VarChar(30)
+  /// @xeprime/types → ServiceType[] — dịch vụ đang bật tự động nhận chuyến ("Không cần xác nhận").
+  instantBookServiceTypes  String[] @default([]) @map("instant_book_service_types") @db.VarChar(50)
   weekdayPrice             Decimal? @map("weekday_price") @db.Decimal(14, 2)
+  /// Giá tự lái/ngày SAU khuyến mãi trực tiếp (`selfDriveDailyPrice` ở `listing-card.ts`) — NULL khi
+  /// xe không nhận tự lái hoặc chưa có giá ngày. Gộp "chỉ từ …" của thẻ địa điểm đọc cột này.
+  selfDriveDailyPrice      Decimal? @map("self_drive_daily_price") @db.Decimal(14, 2)
   weekendPrice             Decimal? @map("weekend_price") @db.Decimal(14, 2)
   hourlyPrice              Decimal? @map("hourly_price") @db.Decimal(14, 2)
   /// Giá tháng tham chiếu thuê dài hạn — card marketplace hiện "X/tháng" ở ngữ cảnh dài hạn.
@@ -1795,6 +1818,7 @@ model PublicListing {
   @@index([status, rankScore])
   @@index([tenantId, status])
   @@index([weekdayPrice])
+  @@index([provinceCode, selfDriveDailyPrice])
   @@index([status, bodyType])
   @@index([status, motorbikeCategory])
   @@index([status, fuelType])
@@ -3328,6 +3352,8 @@ model Review {
   @@index([vehicleId, status, createdAt])
   @@index([tenantId, status])
   @@index([customerId])
+  /// "Khách hàng nói gì" ở trang chủ — đánh giá published mới nhất TOÀN SÀN (GET /public/reviews/featured).
+  @@index([status, createdAt(sort: Desc)])
   @@map("reviews")
 }
 

@@ -7,6 +7,7 @@ import {
   SearchOutlined,
 } from '@ant-design/icons';
 import { Alert, Input, Skeleton, type InputRef } from 'antd';
+import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { normalizeProvinceAlias } from '@xeprime/types';
@@ -66,10 +67,28 @@ export function LocationPicker({
       triggerLabel={t('triggerLabel', { value: selectedLabel })}
       triggerClassName={cx(variant === 'chip' ? styles.chip : styles.field, className)}
       trigger={
-        <>
-          <EnvironmentOutlined className={styles.triggerIcon} aria-hidden="true" />
-          <span className={styles.triggerValue}>{selectedLabel}</span>
-        </>
+        variant === 'field' ? (
+          /*
+           * Ô của thẻ tìm kiếm trang chủ v2 (ADR 0062): chữ trước, icon địa điểm ở CUỐI. Chưa chọn
+           * tỉnh nào thì hiện chữ gợi ý — "Toàn quốc" vẫn là một lựa chọn trong bảng, chỉ là ô
+           * mở đầu bằng một lời mời thay vì một giá trị không ai chọn.
+           */
+          <>
+            {draft.provinceCode ? (
+              <span className={styles.triggerValue}>{selectedLabel}</span>
+            ) : (
+              <span className={styles.triggerPlaceholder}>{t('placeholder')}</span>
+            )}
+            <span className={styles.triggerSuffix}>
+              <Image src="/home/field-location.svg" alt="" width={15} height={19} unoptimized />
+            </span>
+          </>
+        ) : (
+          <>
+            <EnvironmentOutlined className={styles.triggerIcon} aria-hidden="true" />
+            <span className={styles.triggerValue}>{selectedLabel}</span>
+          </>
+        )
       }
     >
       {(close) => (
@@ -144,12 +163,7 @@ function LocationPanel({
       />
 
       {error ? (
-        <Alert
-          type="error"
-          showIcon
-          title={t('loadError')}
-          description={errorMessage(error)}
-        />
+        <Alert type="error" showIcon title={t('loadError')} description={errorMessage(error)} />
       ) : loading ? (
         <Skeleton active paragraph={{ rows: 4 }} title={false} />
       ) : (

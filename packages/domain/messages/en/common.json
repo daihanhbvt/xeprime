@@ -157,6 +157,7 @@
     "loadingNamed": "Loading {label}…",
     "moreActions": "More actions",
     "discount": "{percent}% off",
+    "discountBadge": "{percent}% off",
     "rating": "{value} out of {max} stars",
     "revealContact": "Reveal in full — this action is recorded in the audit log",
     "imageUpload": {

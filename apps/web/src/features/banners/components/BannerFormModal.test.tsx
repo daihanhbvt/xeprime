@@ -1,7 +1,9 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { Control, FieldValues } from 'react-hook-form';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { BANNER_PLACEMENT, type BannerPlacement } from '@xeprime/types';
+import { renderWithIntl } from '@/i18n/test-utils';
 import type { AdminBanner } from '../types';
 import { BannerFormModal } from './BannerFormModal';
 
@@ -25,7 +27,8 @@ vi.mock('@ant-design/icons', () => ({
   TabletOutlined: () => null,
 }));
 
-vi.mock('../use-admin-banners', () => ({
+vi.mock('../use-admin-banners', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../use-admin-banners')>()),
   useCreateBanner: () => mutations.create,
   useUpdateBanner: () => mutations.update,
 }));
@@ -45,7 +48,13 @@ vi.mock('@/components/overlay/ResponsiveDialog', () => ({
     open: boolean;
     children: React.ReactNode;
     footer?: React.ReactNode;
-  }) => (open ? <div role="dialog">{children}{footer}</div> : null),
+  }) =>
+    open ? (
+      <div role="dialog">
+        {children}
+        {footer}
+      </div>
+    ) : null,
 }));
 
 vi.mock('@/components/form/ImageUploadField', async () => {
@@ -77,15 +86,7 @@ vi.mock('@/components/form/ImageUploadField', async () => {
 vi.mock('@/components/form/TextField', async () => {
   const { useController } = await import('react-hook-form');
   return {
-    TextField: ({
-      control,
-      name,
-      label,
-    }: {
-      control: unknown;
-      name: string;
-      label: ReactNode;
-    }) => {
+    TextField: ({ control, name, label }: { control: unknown; name: string; label: ReactNode }) => {
       const { field } = useController({
         control: control as Control<FieldValues>,
         name,
@@ -111,6 +112,7 @@ const oldBanner: AdminBanner = {
   mobileImageUrl: 'https://example.com/mobile.jpg',
   altText: 'Nội dung cũ',
   linkUrl: '/old',
+  placement: BANNER_PLACEMENT.HERO,
   sortOrder: 0,
   active: true,
   startsAt: null,
@@ -120,8 +122,12 @@ const oldBanner: AdminBanner = {
   updatedAt: '2026-09-01T00:00:00.000Z',
 };
 
-function modal(open: boolean, banner: AdminBanner | null) {
-  return <BannerFormModal open={open} banner={banner} onClose={vi.fn()} />;
+function modal(
+  open: boolean,
+  banner: AdminBanner | null,
+  placement: BannerPlacement = BANNER_PLACEMENT.HERO,
+) {
+  return <BannerFormModal open={open} placement={placement} banner={banner} onClose={vi.fn()} />;
 }
 
 beforeEach(() => {
@@ -131,7 +137,7 @@ beforeEach(() => {
 
 describe('BannerFormModal', () => {
   it('mở phiên tạo mới không giữ thông tin và ảnh của phiên sửa trước', async () => {
-    const view = render(modal(true, oldBanner));
+    const view = renderWithIntl(modal(true, oldBanner));
 
     expect((screen.getByLabelText('Tên banner') as HTMLInputElement).value).toBe('Banner cũ');
     expect(screen.getByAltText('Ảnh imageUrl')).toBeTruthy();
@@ -149,5 +155,37 @@ describe('BannerFormModal', () => {
     expect(screen.queryByAltText('Ảnh mobileImageUrl')).toBeNull();
     expect((screen.getByLabelText('Mô tả ảnh (alt)') as HTMLInputElement).value).toBe('');
     expect((screen.getByLabelText('Đường dẫn khi bấm') as HTMLInputElement).value).toBe('');
+  });
+
+  /**
+   * Banner khuyến mãi: không có ô tablet (tablet hiện như máy tính), và lượt SỬA không gửi lại vị
+   * trí — vị trí đặt lúc tạo, API không cho đổi.
+   */
+  it('banner khuyến mãi: không có ô tablet; sửa không gửi vị trí và luôn bỏ ảnh tablet', async () => {
+    const promo: AdminBanner = {
+      ...oldBanner,
+      id: 'promo-banner',
+      placement: BANNER_PLACEMENT.PROMO,
+      tabletImageUrl: null,
+    };
+    const view = renderWithIntl(modal(true, null, BANNER_PLACEMENT.PROMO));
+    // Hộp thoại giả không vẽ tiêu đề — câu giới thiệu là dấu hiệu form đang ở vị trí khuyến mãi.
+    expect(screen.getByText(/Tạo banner khuyến mãi cho giữa trang chủ/)).toBeTruthy();
+    expect(screen.queryByText('Tablet')).toBeNull();
+    expect(screen.getByText('Mobile')).toBeTruthy();
+
+    view.rerender(modal(false, null, BANNER_PLACEMENT.PROMO));
+    view.rerender(modal(true, promo, BANNER_PLACEMENT.HERO));
+    await waitFor(() =>
+      expect((screen.getByLabelText('Tên banner') as HTMLInputElement).value).toBe('Banner cũ'),
+    );
+    // Banner đang sửa giữ vị trí của CHÍNH nó, không theo tab đang mở.
+    expect(screen.queryByText('Tablet')).toBeNull();
+
+    fireEvent.submit(screen.getByRole('dialog').querySelector('form') as HTMLFormElement);
+    await waitFor(() => expect(mutations.update.mutate).toHaveBeenCalled());
+    const [body] = mutations.update.mutate.mock.calls[0] as [Record<string, unknown>];
+    expect(body).not.toHaveProperty('placement');
+    expect(body.tabletImageUrl).toBeNull();
   });
 });

@@ -18,7 +18,9 @@
     "brand": "Brand",
     "marketStatus": "Market",
     "source": "Source",
-    "retiredOption": "{key} (retired)"
+    "retiredOption": "{key} (retired)",
+    "home": "Home page",
+    "onHome": "Shown"
   },
   "status": {
     "active": "Enabled",
@@ -53,14 +55,22 @@
     "description": "Secondary line",
     "descriptionPlaceholder": "e.g. 2 seats · sporty",
     "descriptionHelp": "Shown in small print under the name in pickers and filters. Optional.",
-    "iconUrl": "Image path",
-    "iconUrlPlaceholder": "/body-types/coupe.png",
-    "iconUrlHelp": "A file in the web app's public folder, or a full URL.",
-    "preview": "Preview",
+    "iconUrl": "Icon / logo",
+    "iconUrlHelp": "Small transparent image shown on pickers and filters (PNG or WebP). Leave empty to show text only.",
     "active": "Enabled",
     "activeHelp": "Disabling hides it from the vehicle form and filters; existing vehicles still show the right name.",
     "vehicleTypes": "Applies to vehicle types",
-    "vehicleTypesHelp": "Leave empty for all vehicle types. Pick some to show this entry only where it makes sense."
+    "vehicleTypesHelp": "Leave empty for all vehicle types. Pick some to show this entry only where it makes sense.",
+    "homeSection": "Home page — \"Vehicle types\" section",
+    "homeSectionHelp": "The home page card uses the display name above and follows this catalog's order; tapping it opens the car list filtered by this body type.",
+    "showOnHome": "Show on home page",
+    "showOnHomeHelp": "When on, this body type gets a card in the home page \"Vehicle types\" section. A home image is required.",
+    "showcaseImage": "Home image",
+    "showcaseImageHelp": "A cut-out car photo (PNG or WebP with transparent background), landscape around 16:9, at least 960px wide.",
+    "showcaseImageRequired": "Upload a home image to show this body type on the home page",
+    "showcaseExamples": "Example line",
+    "showcaseExamplesPlaceholder": "e.g. Toyota Vios, Honda City",
+    "showcaseExamplesHelp": "A few typical models, shown small under the name on the home card. Optional."
   },
   "models": {
     "title": "Vehicle models",

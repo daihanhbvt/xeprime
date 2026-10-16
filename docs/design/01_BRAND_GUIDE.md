@@ -1,6 +1,6 @@
 # 01 — Brand Guide
 
-> Ngày: 04/08/2026 · Cập nhật: 06/10/2026 · Chủ sở hữu: Creative Director
+> Ngày: 04/08/2026 · Cập nhật: 15/10/2026 (design v2 — ADR 0062) · Chủ sở hữu: Creative Director
 > Nguồn sự thật kỹ thuật của token: `packages/ui/src/tokens/index.ts` (`XP_TOKENS`) ↔
 > `packages/ui/src/styles/tokens.css` (`@xeprime/ui`, dùng chung web + app native — ADR 0003).
 > `apps/web/src/styles/theme.ts` chỉ ánh xạ token sang AntD; `theme.test.ts` giữ ba nơi khớp nhau.
@@ -56,7 +56,7 @@ cần nhìn**.
 | Thân thiện đúng chỗ (site khách) | Cợt nhả, emoji trong màn tiền |
 | Nghiêm túc đúng chỗ (khu vận hành) | Lạnh lùng, thuật ngữ kỹ thuật |
 
-**Hai nhịp, một thương hiệu**: site khách ấm và mời gọi (ảnh lớn, khoảng thở, Playfair ở hero); site
+**Hai nhịp, một thương hiệu**: site khách ấm và mời gọi (ảnh lớn, khoảng thở, tiêu đề hero cỡ display); site
 partner và quản trị điềm tĩnh, hiệu quả (mật độ cao, gold tiết chế, không font trang trí). Cùng token,
 cùng giọng, khác nhịp.
 
@@ -104,19 +104,26 @@ Partner hay cho site quản trị, không đổi màu thương hiệu theo site.
 
 ### 3.1 Bảng màu thương hiệu
 
+Design v2 từ 15/10/2026 ([ADR 0062](../decisions/0062-design-system-v2.md)): giá trị đọc từ biến
+Figma trên màn hình của file "Xe Prime", không từ trang bảng màu thư viện. Bảng đầy đủ:
+[`design-token-map.md`](../design-token-map.md).
+
 | Vai trò | HEX | Token | Dùng cho |
 | --- | --- | --- | --- |
-| Gold — màu chính | `#d6a02c` | `--xp-color-primary` | CTA chính, mục đang chọn, nhấn số liệu |
-| Gold đậm | `#a9761a` | `--xp-gold-deep` | Hover/pressed, chữ gold trên nền kem |
-| Gold nhạt | `#f1dba4` | `--xp-gold-soft` | Viền nhấn, scrollbar, chip nhẹ |
-| Kem | `#f7f1de` | `--xp-gold-wash` | Nền menu đang chọn, ô icon |
-| Cát | `#f5ead2` | `--xp-color-bg-sand` | Mảng nền lớn trang marketing |
-| Nền trang | `#f6f5f1` | `--xp-color-bg-layout` | Nền app — trắng **ấm**, không phải xám trung tính |
+| Gold — màu chính | `#e9ac29` | `--xp-color-primary` | CTA chính, mục đang chọn, nền nhấn |
+| Gold hover | `#cb9115` | `--xp-color-primary-hover` | Hover của phần tử gold |
+| Gold nhấn | `#a9761a` | `--xp-color-primary-active` | Trạng thái nhấn, vạch chỉ báo (chưa có trong v2 — giữ bộ cũ) |
+| Gold đậm | `#6e5117` | `--xp-color-primary-strong` | **Chữ, giá, icon gold** trên nền sáng — không làm nền dưới chữ tối |
+| Gold nhạt | `#fff5e5` | `--xp-color-primary-light` | Nền mục đang chọn, nút phụ |
+| Gold nhạt nhất | `#fff9f0` | `--xp-color-primary-subtle` | Ô icon, mảng nền lớn |
+| Gold nhạt đậm hơn | `#f6ebd5` | `--xp-color-primary-muted` | Hover trên nền gold nhạt, viền gold nhạt |
+| Nền trang | `#fafafa` | `--xp-color-bg` | Nền app — xám rất nhạt |
 | Bề mặt | `#ffffff` | `--xp-color-bg-container` | Card, bảng, drawer |
-| Chữ | `#2a2318` | `--xp-color-text` | Đen ấm — **không dùng `#000`** |
-| Chữ phụ | `#6f6450` | `--xp-color-text-secondary` | Nhãn, mô tả |
-| Chữ mờ | `#9a8d74` | `--xp-color-text-tertiary` | Placeholder, meta |
-| Viền | `#ebddbf` | `--xp-color-border` | Kẻ bảng, viền card |
+| Chữ | `#101828` | `--xp-color-text` | **Không dùng `#000`** |
+| Chữ phụ | `#414651` | `--xp-color-text-secondary` | Nhãn, mô tả |
+| Chữ mờ | `#717680` | `--xp-color-text-tertiary` | Meta |
+| Placeholder | `#a4a7ae` | `--xp-color-text-placeholder` | Chữ gợi ý trong ô nhập |
+| Viền | `#e9eaeb` | `--xp-color-border` | Kẻ bảng, viền card |
 
 ### 3.2 Màu ngữ nghĩa — không bao giờ là gold
 
@@ -124,9 +131,9 @@ Gold là màu thương hiệu, nên nó **không được mang nghĩa trạng th
 
 | Nghĩa | HEX | Token |
 | --- | --- | --- |
-| Thành công / đã thu đủ | `#16a34a` | `--xp-color-success` |
-| Cảnh báo / sắp đến hạn | `#e07b26` (cam, **tách khỏi gold**) | `--xp-color-warning` |
-| Lỗi / quá hạn / huỷ | `#dc2626` | `--xp-color-error` |
+| Thành công / đã thu đủ | `#039855` | `--xp-color-success` |
+| Cảnh báo / sắp đến hạn | `#e07b26` (cam, **tách khỏi gold**; chưa chuyển sang v2) | `--xp-color-warning` |
+| Lỗi / quá hạn / huỷ | `#d92d20` | `--xp-color-error` |
 | Thông tin / đang thuê | `#2563eb` | `--xp-color-info` |
 
 > Đây chính là lý do warning là **cam**: một cảnh báo màu vàng trên nền thương hiệu vàng thì không còn là cảnh báo.
@@ -140,7 +147,7 @@ Gold là màu thương hiệu, nên nó **không được mang nghĩa trạng th
 ### 3.4 Tương phản
 
 Chuẩn tối thiểu **WCAG AA**: chữ thường ≥ 4.5:1; chữ ≥ 18px hoặc bold ≥ 3:1; viền/icon mang nghĩa ≥ 3:1.
-Cụ thể: **gold `#d6a02c` không đạt 4.5:1 với chữ trắng** → chữ trên nút gold phải là `--xp-color-text`, không phải trắng. Chữ gold trên nền kem phải dùng `--xp-gold-deep`.
+Cụ thể: **gold `#e9ac29` chỉ đạt 2.0:1 với chữ trắng** → chữ trên nút gold là `--xp-color-primary-contrast` (`#101828`, 8.8:1), không phải trắng. Gold chính làm CHỮ trên nền sáng cũng chỉ 2.0:1 → chữ gold dùng `--xp-color-primary-strong` (7.4:1), trừ chỗ design vẽ rõ gold chính (ADR 0062 điều 6).
 
 ---
 
@@ -148,20 +155,22 @@ Cụ thể: **gold `#d6a02c` không đạt 4.5:1 với chữ trắng** → chữ
 
 | Vai trò | Font | Vì sao |
 | --- | --- | --- |
-| Toàn hệ thống | **Be Vietnam Pro** (300–700, self-host qua `next/font`) | Font hình học thiết kế cho tiếng Việt — dấu không đè, không lệch baseline |
-| Nhấn cảm xúc | **Playfair Display Italic** | **CHỈ** hero marketplace + trang thương hiệu. Không vào khu vận hành, không vào bảng, không vào nút |
-| Số liệu / tiền | Be Vietnam Pro + `font-variant-numeric: tabular-nums` | Cột tiền phải thẳng hàng — đây là lỗi hiện có ở các bảng tài chính |
+| Toàn hệ thống | **Google Sans Flex** (variable 400–700, self-host qua `next/font`, subset tiếng Việt) | Họ chữ DUY NHẤT của design v2 — kể cả hero (ADR 0062 điều 7) |
+| Số liệu / tiền | Google Sans Flex + `font-variant-numeric: tabular-nums` | Cột tiền phải thẳng hàng — đây là lỗi hiện có ở các bảng tài chính |
 
 ### Thang chữ
 
+Thang v2 (token `--xp-font-size-*` / `--xp-line-height-*`, chi tiết ở `design-token-map.md` §8):
+
 | Bậc | Size / Line | Weight | Dùng |
 | --- | --- | --- | --- |
-| Display | 44 / 1.15 (mobile 32) | 600 | Hero marketplace |
-| H1 | 28 / 1.25 | 600 | Tiêu đề trang |
-| H2 | 20 / 1.3 | 600 | Tiêu đề section, drawer |
-| H3 | 16 / 1.4 | 600 | Tiêu đề card |
-| Body | 14 / 1.5714 | 400 | Mặc định (`--xp-font-size`) |
-| Small | 12 / 1.5 | 400 | Meta, nhãn phụ |
+| Display | 48 / 60, −2% (mobile 32) | 600 | Hero marketplace |
+| Display nhỏ | 36 / 44 | 500–700 | Tiêu đề lớn của section marketing |
+| H1 | 30 / 38 | 600 | Tiêu đề trang |
+| H2 | 24 / 32 | 500–600 | Tiêu đề section, drawer |
+| H3 | 18 / 28 | 600 | Tiêu đề card |
+| Body | 14 / 20 | 400 | Mặc định (`--xp-font-size`; AntD còn chạy cao dòng 1.5714) |
+| Small | 12 / 18 | 400–500 | Meta, nhãn phụ, kicker |
 | Số | 14 | 500 + tabular | Tiền, mã đơn, biển số |
 
 **Quy tắc**: tối đa 2 weight trên một màn vận hành. Không ALL-CAPS cho tiếng Việt dài hơn 3 từ (dấu viết hoa toàn phần khó đọc); nhãn cột dạng caps chỉ ≤ 2 từ.
@@ -262,8 +271,8 @@ Bắt buộc tôn trọng `prefers-reduced-motion`.
 | Bề mặt | Quy tắc |
 | --- | --- |
 | App icon / favicon | Mark trắng trên gold đặc, bo góc theo nền tảng |
-| Site khách (chợ xe) | Nền kem/trắng ấm, gold ở CTA, Playfair chỉ ở hero |
-| Site partner · site quản trị | Trung tính hơn: nền `--xp-color-bg-layout`, gold **chỉ** ở mục menu đang chọn + nút hành động chính. Đây là chỗ làm việc, không phải trang bán hàng |
+| Site khách (chợ xe) | Nền trắng/xám rất nhạt, gold ở CTA và điểm nhấn, chữ nhấn gradient gold chỉ ở hero |
+| Site partner · site quản trị | Trung tính hơn: nền `--xp-color-bg`, gold **chỉ** ở mục menu đang chọn + nút hành động chính. Đây là chỗ làm việc, không phải trang bán hàng |
 | Hợp đồng in | Đen trắng + lockup ngang; print CSS đã có ở `[data-print-root]`. Không in nền màu |
 | Email / thông báo | Lockup ngang trên nền trắng, một CTA gold duy nhất |
 | Ảnh OG | Lockup dọc + tagline trên nền cát, hoặc ảnh xe với lớp phủ tối |
@@ -273,8 +282,8 @@ Bắt buộc tôn trọng `prefers-reduced-motion`.
 ## 11. Kiểm tra trước khi phát hành
 
 - [ ] Không có HEX viết tay trong `.module.css` — tất cả qua `var(--xp-*)`
-- [ ] Chữ trên nền gold là đen ấm, không phải trắng
-- [ ] Không có Playfair ngoài hero
+- [ ] Chữ trên nền gold là `--xp-color-primary-contrast`, không phải trắng
+- [ ] Một họ chữ duy nhất (Google Sans Flex) — không thêm font trang trí
 - [ ] Mọi ảnh xe đúng tỉ lệ, có xe trong khung
 - [ ] Từ vựng khớp bảng §9 trên mọi nhãn mới
 - [ ] Tương phản AA ở mặc định, hover và disabled

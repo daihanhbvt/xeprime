@@ -30,6 +30,7 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('../hooks/use-destinations', () => ({
   useDestinations: () => ({ data: DESTINATIONS, isLoading: false, error: null }),
+  useAllDestinations: () => ({ data: DESTINATIONS, isLoading: false, error: null }),
 }));
 
 vi.mock('@/hooks/use-media-query', () => ({ useIsMobile: () => true }));
@@ -83,10 +84,10 @@ describe('hero mobile', () => {
   it('giữ nguyên phân tầng: hai nhóm chọn rồi mới tới tiêu chí', async () => {
     await renderExperience();
 
-    expect(screen.getByRole('tablist', { name: 'Loại xe' })).toBeTruthy();
+    expect(within(hero()).getByRole('radiogroup', { name: 'Loại xe' })).toBeTruthy();
     expect(screen.getByRole('tablist', { name: 'Loại dịch vụ thuê xe' })).toBeTruthy();
     expect(within(hero()).getByRole('button', { name: /Địa điểm nhận xe/ })).toBeTruthy();
-    expect(within(hero()).getByRole('button', { name: 'Tìm xe' })).toBeTruthy();
+    expect(within(hero()).getByRole('button', { name: 'Tìm kiếm' })).toBeTruthy();
   });
 
   it('nhãn dịch vụ dùng bản NGẮN — không nhồi chữ dài rồi cắt cụt', async () => {
@@ -105,7 +106,7 @@ describe('hero mobile', () => {
     fireEvent.click(within(sheet).getByRole('button', { name: 'Đà Nẵng' }));
 
     expect(within(hero()).getByRole('button', { name: 'Địa điểm nhận xe: Đà Nẵng' })).toBeTruthy();
-    fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm xe' }));
+    fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm kiếm' }));
     const href = nav.push.mock.calls.at(-1)?.[0] as string;
     expect(new URLSearchParams(href.split('?')[1]).get('provinceCode')).toBe('48');
   });

@@ -16,7 +16,8 @@ export const queryKeys = {
     planGuideTemplateLists: ['app-config', 'plan-guide-templates', 'list'] as const,
     planGuideTemplates: (params: QueryParams) =>
       ['app-config', 'plan-guide-templates', 'list', params] as const,
-    planGuideTemplate: (id: string) => ['app-config', 'plan-guide-templates', 'detail', id] as const,
+    planGuideTemplate: (id: string) =>
+      ['app-config', 'plan-guide-templates', 'detail', id] as const,
   },
   auth: {
     all: ['auth'] as const,
@@ -155,7 +156,8 @@ export const queryKeys = {
   banners: {
     all: ['banners'] as const,
     list: () => ['banners', 'public'] as const,
-    admin: () => ['banners', 'admin'] as const,
+    /** Danh sách quản trị của MỘT vị trí (`hero` | `promo`) — mặc định dải banner đầu trang. */
+    admin: (placement: string = 'hero') => ['banners', 'admin', placement] as const,
   },
   /** Danh mục lọc dùng chung (hãng/kiểu dáng/nhiên liệu/tiện ích) — một key cho cả app. */
   catalog: {
@@ -434,6 +436,8 @@ export const queryKeys = {
       ['marketplace', 'delivery-distance', vehicleId, address] as const,
     destinations: (params: QueryParams) => ['marketplace', 'destinations', params] as const,
     shops: (params: QueryParams) => ['marketplace', 'shops', params] as const,
+    /** Đánh giá nổi bật toàn sàn ở trang chủ (`/public/reviews/featured`). */
+    featuredReviews: (limit: number) => ['marketplace', 'featured-reviews', limit] as const,
     /**
      * Gợi ý chủ xe của ô từ khoá (`/public/shops?q=`). Khoá RIÊNG dù cùng endpoint với `shops`:
      * hai bên cất hai hình dữ liệu khác nhau trong cache (trang + meta ↔ mảng gợi ý).

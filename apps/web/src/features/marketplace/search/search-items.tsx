@@ -23,11 +23,22 @@ import type { SegmentedTabItem } from './SegmentedTabs';
  * nơi gọi đã memo hoá theo `vehicleType` — truyền vào giữ chúng thuần và test được.
  */
 
-/** Loại xe. Biểu tượng lấy từ `VEHICLE_TYPE_ICON` — kho chỉ có MỘT nơi vẽ ô tô và xe máy. */
+/**
+ * Loại xe phục vụ được dịch vụ đang chọn. Biểu tượng lấy từ `VEHICLE_TYPE_ICON` — kho chỉ có MỘT
+ * nơi vẽ ô tô và xe máy.
+ *
+ * Chiều ngược của {@link serviceItems}: xe máy không có "có tài xế" ({@link vehicleServiceTypesFor}),
+ * nên đang ở dịch vụ đó thì lựa chọn "Xe máy" biến mất — chỉ còn "Ô tô". Hai chiều cùng đọc một
+ * bảng nên không bao giờ dựng ra được một tổ hợp không tồn tại.
+ */
 export function vehicleItems(
   domainLabel: DomainLabel,
+  serviceType?: ServiceType,
 ): ReadonlyArray<SegmentedTabItem<VehicleType>> {
-  return VEHICLE_TYPE_VALUES.map((value) => {
+  const values = serviceType
+    ? VEHICLE_TYPE_VALUES.filter((value) => vehicleServiceTypesFor(value).includes(serviceType))
+    : VEHICLE_TYPE_VALUES;
+  return values.map((value) => {
     const IconComponent = VEHICLE_TYPE_ICON[value];
     return {
       value,

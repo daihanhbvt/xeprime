@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BILLING_MODE, BILLING_PHASE, TENANT_ROLE } from '@xeprime/types';
 
@@ -73,11 +73,19 @@ describe('MarketHeader', () => {
     expect(unnamed).toHaveLength(0);
   });
 
-  it('vẫn dẫn tới các đích quen thuộc của khu khách', () => {
+  /** Bốn mục điều hướng của design v2, đúng thứ tự và đúng đích có thật. */
+  it('menu chính: Trang chủ · Tìm xe · Về XePrime · Liên hệ', () => {
     render(<MarketHeader />);
-    expect(screen.getByRole('link', { name: 'Chuyến của tôi' }).getAttribute('href')).toBe(
-      '/trips',
-    );
+    const nav = screen.getByRole('navigation', { name: 'Điều hướng chính' });
+    const links = within(nav)
+      .getAllByRole('link')
+      .map((a) => [a.textContent, a.getAttribute('href')]);
+    expect(links).toEqual([
+      ['Trang chủ', '/'],
+      ['Tìm xe', '/search'],
+      ['Về Xe Prime', '/about'],
+      ['Liên hệ', '/support'],
+    ]);
   });
 
   it('đổi ngôn ngữ nằm TRONG menu tài khoản khi đã đăng nhập', async () => {
@@ -90,14 +98,15 @@ describe('MarketHeader', () => {
   });
 
   /**
-   * Chọn ngôn ngữ là việc người ta làm TRƯỚC khi làm bất cứ việc gì khác. Dọn nó vào menu tài
-   * khoản mà quên nhánh chưa đăng nhập thì khách vãng lai bị nhốt trong tiếng Việt.
+   * Khách chưa đăng nhập: cụm "Đăng nhập/Đăng ký" mở modal tại chỗ. Đổi ngôn ngữ của họ nằm ở
+   * chân trang (VI | EN) theo design v2 — `MarketFooter.test` khoá phần đó.
    */
-  it('khách CHƯA đăng nhập vẫn có nút đổi ngôn ngữ riêng trên thanh', () => {
+  it('khách CHƯA đăng nhập thấy nút "Đăng nhập/Đăng ký", không có menu tài khoản', () => {
     state.user = null;
     render(<MarketHeader />);
 
-    expect(screen.getByRole('button', { name: /Đổi ngôn ngữ giao diện/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Đăng nhập\/\s*Đăng ký$/ })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Tài khoản' })).toBeNull();
   });
 });
 
@@ -129,12 +138,9 @@ describe('MarketHeader — chỉ của tài khoản khách', () => {
     await waitFor(() => expect(screen.getByText('Đăng xuất')).toBeTruthy());
   }
 
-  it('khách thấy chuyến, tin nhắn và chuông thông báo', () => {
+  it('khách thấy tin nhắn và chuông thông báo trên thanh', () => {
     render(<MarketHeader />);
 
-    expect(screen.getByRole('link', { name: 'Chuyến của tôi' }).getAttribute('href')).toBe(
-      '/trips',
-    );
     expect(screen.getByRole('link', { name: 'Tin nhắn' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Thông báo' })).toBeTruthy();
   });
@@ -144,7 +150,7 @@ describe('MarketHeader — chỉ của tài khoản khách', () => {
     render(<MarketHeader />);
 
     expect(screen.queryByRole('link', { name: 'Quản lý gian hàng' })).toBeNull();
-    expect(screen.getByRole('link', { name: 'Chuyến của tôi' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Thông báo' })).toBeTruthy();
   });
 
   it('menu tài khoản: hồ sơ, chuyến, tin nhắn và lối "Trở thành chủ xe" tới trang giới thiệu đăng xe', async () => {
@@ -153,9 +159,13 @@ describe('MarketHeader — chỉ của tài khoản khách', () => {
     expect(screen.getByRole('link', { name: /Tài khoản của tôi/ }).getAttribute('href')).toBe(
       '/account',
     );
-    expect(screen.getByRole('link', { name: /Trở thành chủ xe/ }).getAttribute('href')).toBe(
-      '/list-your-vehicle',
+    expect(screen.getByRole('link', { name: /Chuyến của tôi/ }).getAttribute('href')).toBe(
+      '/trips',
     );
+    // Hai lối "Trở thành chủ xe" — nút trên thanh và dòng trong menu — cùng một đích.
+    const ownerLinks = screen.getAllByRole('link', { name: /Trở thành chủ xe/ });
+    expect(ownerLinks).toHaveLength(2);
+    for (const link of ownerLinks) expect(link.getAttribute('href')).toBe('/list-your-vehicle');
     expect(screen.queryByRole('link', { name: /Xe của tôi/ })).toBeNull();
     expect(screen.queryByText('Hồ sơ gian hàng')).toBeNull();
   });

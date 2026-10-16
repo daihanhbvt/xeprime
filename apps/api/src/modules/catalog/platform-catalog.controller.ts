@@ -9,14 +9,20 @@ import {
   Patch,
   Post,
   Query,
+  ServiceUnavailableException,
 } from '@nestjs/common';
-import { ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
-  ACCOUNT_REALM,
-  PERMISSION,
-} from '@xeprime/types';
+  ApiCreatedResponse,
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
+import { ACCOUNT_REALM, API_ERROR_CODE, PERMISSION } from '@xeprime/types';
 import { CurrentUser, PlatformOnly, Realms, RequirePermissions } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
+import { PresignImageDto, UploadPresignDto } from '../storage/dto/storage.dto';
+import { R2Service } from '../storage/r2.service';
 import { CatalogModelService } from './catalog-model.service';
 import { CatalogService } from './catalog.service';
 import {
@@ -50,7 +56,33 @@ export class PlatformCatalogController {
   constructor(
     private readonly catalog: CatalogService,
     private readonly models: CatalogModelService,
+    private readonly r2: R2Service,
   ) {}
+
+  /**
+   * Ảnh danh mục (icon kiểu dáng/logo hãng, ảnh lớn trang chủ) — presign lên R2, prefix `catalog/`
+   * dựng ở server. Đúng mẫu banner: client PUT thẳng lên R2 rồi lưu URL công khai vào mục danh mục.
+   * Route tĩnh — phải đứng trước mọi route `:id`.
+   */
+  @Post('presign')
+  @ApiOperation({
+    summary: 'Presign upload ảnh danh mục lên R2 (prefix catalog/ dựng server-side)',
+  })
+  @ApiCreatedResponse({ type: UploadPresignDto })
+  presign(@Body() dto: PresignImageDto): Promise<UploadPresignDto> {
+    if (!this.r2.enabled) {
+      throw new ServiceUnavailableException({
+        code: API_ERROR_CODE.UPLOADS_NOT_CONFIGURED,
+        message: 'Chưa cấu hình R2 — không upload được ảnh danh mục',
+      });
+    }
+    return this.r2.presignUpload({
+      prefix: 'catalog',
+      fileName: dto.fileName,
+      contentType: dto.contentType,
+      contentLength: dto.fileSize,
+    });
+  }
 
   /*
    * MẪU XE — route tĩnh 'models' phải đứng trước mọi route ':id' bên dưới, nếu không 'models'
@@ -65,7 +97,9 @@ export class PlatformCatalogController {
   }
 
   @Get('models/brands')
-  @ApiOperation({ summary: 'Số mẫu xe theo hãng của một loại phương tiện (kèm số mẫu thiếu thông số)' })
+  @ApiOperation({
+    summary: 'Số mẫu xe theo hãng của một loại phương tiện (kèm số mẫu thiếu thông số)',
+  })
   @ApiOkResponse({ type: [CatalogModelBrandSummaryDto] })
   modelBrandSummary(
     @Query() query: CatalogModelBrandSummaryQueryDto,

@@ -1,3 +1,4 @@
+import { API_ERROR_CODE } from '@xeprime/types';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { BannersService } from '../src/modules/banners/banners.service';
@@ -49,7 +50,9 @@ describe('BannersService — giới hạn hiển thị', () => {
     };
     const { service } = serviceWith(transaction);
 
-    await expect(service.create('admin', input)).rejects.toThrow(/tối đa 10 banner/);
+    await expect(service.create('admin', input)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.BANNER_VISIBLE_LIMIT_EXCEEDED, details: { max: 10 } },
+    });
     expect(transaction.marketplaceBanner.create).not.toHaveBeenCalled();
   });
 

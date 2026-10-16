@@ -1,5 +1,6 @@
 import { SEARCH_QUERY_MAX_LENGTH } from '@xeprime/domain';
 import { LISTING_AMENITY_VALUES, LISTING_SORT_VALUES, type ListingAmenity } from '@xeprime/types';
+import { ROUTES } from '@/constants/routes';
 import type { QueryParams } from '@/services/api-client';
 import type { ListingSort, MarketplaceFilters } from './types';
 
@@ -159,4 +160,16 @@ export function applyFilterPatch(
     }
   }
   if (!('page' in patch)) params.delete('page');
+}
+
+/**
+ * URL trang kết quả `/search` mang sẵn một bộ lọc — MỘT chỗ dựng cho mọi lối vào chợ (chân trang,
+ * "Loại xe", "Địa điểm nổi bật", "Xem tất cả xe"). Dùng chính `applyFilterPatch` mà `/search` đọc
+ * ngược lại, nên không nơi nào giữ bản sao thứ hai của contract URL. Không tham số ⇒ `/search` trần.
+ */
+export function marketplaceSearchHref(patch: Partial<MarketplaceFilters>): string {
+  const params = new URLSearchParams();
+  applyFilterPatch(params, patch);
+  const qs = params.toString();
+  return qs ? `${ROUTES.SEARCH}?${qs}` : ROUTES.SEARCH;
 }

@@ -1,0 +1,80 @@
+/* Tiêu đề khối trang chủ v2 — Figma "Section Heading" / "Solution Wrapper" (ADR 0062). */
+.heading {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+}
+
+.center {
+  align-items: center;
+  text-align: center;
+}
+
+.kicker {
+  margin: 0;
+  color: var(--xp-color-primary-hover);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body);
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h1);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h1);
+}
+
+.divider {
+  display: block;
+  width: 68px;
+  height: 2px;
+  background: var(--xp-color-primary);
+}
+
+.row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+}
+
+.action {
+  flex: none;
+}
+
+.dividerMobileOnly {
+  display: none;
+}
+
+/*
+ * Mobile (bản vẽ mobile v2): mọi tiêu đề khối canh giữa, có gạch vàng; nút "Xem tất cả" của hàng
+ * tiêu đề ẩn đi vì khối đặt nút đó dưới nội dung.
+ */
+@media (max-width: 640px) {
+  .heading {
+    align-items: center;
+    text-align: center;
+  }
+
+  .title {
+    font-size: var(--xp-font-size-h2);
+    line-height: var(--xp-line-height-h2);
+  }
+
+  .dividerMobileOnly {
+    display: block;
+  }
+
+  .row {
+    justify-content: center;
+  }
+
+  .action {
+    display: none;
+  }
+}

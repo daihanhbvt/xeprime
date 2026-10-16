@@ -1,0 +1,116 @@
+{
+  "hero": {
+    "title": "Thị trường xe cao cấp",
+    "titleAccent": "Trong tầm tay bạn!",
+    "subtitle": "Tìm ô tô, SUV và mô tô chỉ trong vài bước!"
+  },
+  "why": {
+    "kicker": "Tại sao lại chọn XePrime",
+    "title": "Không chỉ đơn thuần là dịch vụ thuê xe",
+    "items": {
+      "price": {
+        "title": "Cam kết giá tốt",
+        "desc": "Chúng tôi cung cấp mức giá cạnh tranh, không phát sinh chi phí ẩn"
+      },
+      "fleet": {
+        "title": "Đội xe cao cấp",
+        "desc": "Xe đời mới, sạch sẽ & được bảo dưỡng, đáp ứng mọi nhu cầu"
+      },
+      "time": {
+        "title": "Tiết kiệm thời gian",
+        "desc": "Đón xe nhanh chóng tại sân bay và đặt xe trực tuyến dễ dàng"
+      },
+      "support": {
+        "title": "Hỗ trợ 24/7",
+        "desc": "Đội ngũ của chúng tôi luôn sẵn sàng hỗ trợ bạn mọi lúc, mọi nơi"
+      }
+    }
+  },
+  "featured": {
+    "kicker": "Xe tiêu biểu",
+    "title": "Xe phù hợp cho mọi hành trình",
+    "viewAll": "Xem tất cả xe"
+  },
+  "promos": {
+    "label": "Ưu đãi nổi bật"
+  },
+  "types": {
+    "kicker": "Loại xe",
+    "title": "Phù hợp cho mọi nhu cầu của bạn",
+    "viewAll": "Xem tất cả"
+  },
+  "destinations": {
+    "kicker": "Địa điểm nổi bật",
+    "title": "Khám phá xe thuê tại các điểm đến phổ biến",
+    "available": "{count, plural, other {# xe có sẵn}}",
+    "fromPrice": "chỉ từ <strong>{price}</strong>",
+    "explore": "Khám phá",
+    "exploreAria": "Khám phá xe thuê tại {city}",
+    "cities": {
+      "danang": "Đà Nẵng",
+      "hanoi": "Hà Nội",
+      "hcm": "Hồ Chí Minh",
+      "hue": "Huế"
+    }
+  },
+  "owners": {
+    "kicker": "Gian hàng nổi bật",
+    "title": "Những chủ xe được khách đánh giá cao",
+    "vehicleCount": "{count, plural, other {# xe}}",
+    "rentals": "<label>Đã thuê:</label> {count}",
+    "viewShop": "Xem gian hàng",
+    "viewShopAria": "Xem gian hàng {name}",
+    "loadError": "Không tải được danh sách gian hàng"
+  },
+  "partner": {
+    "titleLead": "Đăng ký trở thành",
+    "titleAccent": "Đối tác độc quyền",
+    "cta": "Đăng ký ngay",
+    "benefitsLabel": "Quyền lợi đối tác",
+    "benefits": {
+      "income": "Tăng thu nhập",
+      "support": "Đồng hành toàn diện",
+      "customers": "Khách hàng chất lượng"
+    },
+    "help": "Bạn cần hỗ trợ? Liên hệ ngay: <tel>{phone}</tel>"
+  },
+  "steps": {
+    "kicker": "Các bước thuê xe",
+    "title": "Thuê xe đơn giản chỉ với 4 bước",
+    "items": {
+      "search": {
+        "title": "Tìm xe",
+        "desc": "Chọn mẫu xe, địa điểm và thời gian phù hợp với hành trình"
+      },
+      "request": {
+        "title": "Gửi yêu cầu",
+        "desc": "Xem thông tin, kiểm tra giá và gửi yêu cầu thuê xe"
+      },
+      "pickup": {
+        "title": "Nhận xe",
+        "desc": "Nhận xe tại điểm hẹn hoặc sử dụng dịch vụ giao xe"
+      },
+      "return": {
+        "title": "Trả xe",
+        "desc": "Hoàn tất chuyến đi và trả xe theo thời gian đã thống nhất"
+      }
+    }
+  },
+  "reviews": {
+    "kicker": "Đánh giá",
+    "title": "Khách hàng nói gì về Xe Prime",
+    "rentedTimes": "{count, plural, other {Đã thuê # lần}}",
+    "ratingAria": "{rating} trên 5 sao",
+    "loadError": "Không tải được đánh giá"
+  },
+  "app": {
+    "title": "Hiện đã có mặt trên<br></br>GooglePlay & App Store",
+    "googlePlayCaption": "Get it on",
+    "appStoreCaption": "Download on the",
+    "previewAlt": "Ứng dụng XePrime trên điện thoại"
+  },
+  "carousel": {
+    "pagesLabel": "Chọn trang",
+    "pageLabel": "Trang {page}"
+  }
+}

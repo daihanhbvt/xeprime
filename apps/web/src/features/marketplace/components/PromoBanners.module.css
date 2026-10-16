@@ -1,0 +1,49 @@
+/*
+ * Banner khuyến mãi giữa trang chủ (design v2, ADR 0062) — ô 584×180 của bản vẽ, ảnh do admin
+ * upload theo `PROMO_BANNER_SLOTS` (PC 1168×360 · mobile tuỳ chọn 680×400). Khung mang ĐÚNG tỉ lệ
+ * slot nên ảnh đúng cỡ chỉ scale, không bị cắt; chữ nằm sẵn trong ảnh.
+ */
+.link {
+  display: block;
+  border-radius: var(--xp-border-radius-card);
+}
+
+.link:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.card {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  aspect-ratio: 1168 / 360;
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-muted);
+  box-shadow: var(--xp-elevation-ambient);
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.link:hover .image {
+  transform: scale(1.02);
+}
+
+/* Mobile: banner có ảnh mobile riêng thì khung theo tỉ lệ ảnh đó; không có thì giữ khung máy tính. */
+@media (max-width: 640px) {
+  .hasMobile {
+    aspect-ratio: 680 / 400;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .image {
+    transition: none;
+  }
+}

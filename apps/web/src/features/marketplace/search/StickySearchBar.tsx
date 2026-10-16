@@ -130,7 +130,10 @@ function ModePicker({ popupContainer }: { popupContainer: () => HTMLElement }) {
     () => serviceItems(draft.vehicleType, false, tService),
     [draft.vehicleType, tService],
   );
-  const vehicleOptions = useMemo(() => vehicleItems(domainLabel), [domainLabel]);
+  const vehicleOptions = useMemo(
+    () => vehicleItems(domainLabel, draft.serviceType),
+    [domainLabel, draft.serviceType],
+  );
 
   return (
     <SearchPopover

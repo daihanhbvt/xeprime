@@ -1,0 +1,117 @@
+/* "Tại sao lại chọn XePrime" — Figma `19695:40724` (ADR 0062). */
+.section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--xp-space-40);
+}
+
+/* Bốn cột chia đều, ngăn bằng vạch đứng #FAFAFA, đáy có đường kẻ cùng màu và đệm 40px. */
+.list {
+  display: grid;
+  width: 100%;
+  padding: 0 0 var(--xp-space-40);
+  border-bottom: 1px solid var(--xp-color-bg);
+  margin: 0;
+  gap: var(--xp-space-lg);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  list-style: none;
+}
+
+.item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--xp-space-lg);
+  text-align: center;
+}
+
+/* Vạch ngăn nằm giữa hai cột (gap 24 = 12 mỗi bên) — chỉ giữa các cột, không ở mép ngoài. */
+.item + .item::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(-1 * var(--xp-space-12));
+  width: 1px;
+  background: var(--xp-color-bg);
+  content: '';
+}
+
+.iconWrap {
+  display: inline-flex;
+  padding: var(--xp-space-md);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-primary-subtle);
+}
+
+/* Ô icon 48px — nét vẽ đặt nguyên cỡ ở giữa. */
+.iconBox {
+  display: inline-flex;
+  width: 48px;
+  height: 48px;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconBox img {
+  display: block;
+}
+
+.copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-6);
+}
+
+.title {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
+}
+
+.desc {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+@media (max-width: 1024px) {
+  .list {
+    gap: var(--xp-space-xl) var(--xp-space-lg);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Hai cột: vạch ngăn chỉ còn ở cột phải của mỗi hàng. */
+  .item + .item::before {
+    display: none;
+  }
+
+  .item:nth-child(even)::before {
+    display: block;
+  }
+}
+
+@media (max-width: 640px) {
+  .list {
+    gap: var(--xp-space-lg) var(--xp-space-md);
+  }
+
+  .iconWrap {
+    padding: var(--xp-space-12);
+  }
+
+  /* Thu cả ô lẫn nét theo cùng tỉ lệ — không giãn riêng từng chiều. */
+  .iconBox {
+    transform: scale(0.75);
+    margin: -6px;
+  }
+
+  .desc {
+    font-size: var(--xp-font-size-body);
+    line-height: var(--xp-line-height-body);
+  }
+}

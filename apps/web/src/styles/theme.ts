@@ -22,7 +22,8 @@ export { XP_TOKENS, XP_METRICS, XP_BREAKPOINTS, cssVar, toPx, type XpTokenName }
  * nội bộ của từng component AntD là thứ vỡ qua mỗi lần nâng cấp.
  *
  * Token nào Figma KHÔNG định nghĩa thì để AntD tự dẫn xuất từ seed (`colorTextBase`,
- * `colorBgBase`) — đó là lý do `colorTextDisabled` không có mặt ở đây.
+ * `colorBgBase`, `colorPrimary`) — đó là lý do `colorLink`, `colorPrimaryActive` và
+ * `colorTextDisabled` không có mặt ở đây.
  */
 export const antdTheme: ThemeConfig = {
   token: {
@@ -33,7 +34,13 @@ export const antdTheme: ThemeConfig = {
     // Thương hiệu
     colorPrimary: XP_TOKENS['color-primary'],
     colorPrimaryHover: XP_TOKENS['color-primary-hover'],
-    colorPrimaryActive: XP_TOKENS['color-primary-active'],
+    // `colorPrimaryActive` KHÔNG set: v2 chưa vẽ trạng thái nhấn, và `color-primary-active` (bậc
+    // nhấn của bộ cũ, giữ cho CSS Module + native) chỉ đạt 4.47:1 với chữ v2 trên nút. Bậc AntD
+    // tự dẫn xuất từ gold mới đậm hơn hover và đạt ~5.7:1 (ADR 0062 điều 6).
+    // Nền của mục đang chọn (option, hàng bảng, menu, khoảng ngày) và lúc rê chuột lên nó — chung
+    // MỘT token với nền "đang chọn" của CSS Module, để hai nơi không trôi khỏi nhau.
+    colorPrimaryBg: XP_TOKENS['color-bg-selected'],
+    colorPrimaryBgHover: XP_TOKENS['color-primary-muted'],
     // `colorLink` KHÔNG set: Figma chưa định nghĩa màu link, để AntD dẫn xuất từ `colorInfo`
     // như hiện tại. Đổi link sang gold là quyết định thiết kế, không phải ánh xạ token (P19).
 
@@ -51,6 +58,10 @@ export const antdTheme: ThemeConfig = {
     colorText: XP_TOKENS['color-text'],
     colorTextSecondary: XP_TOKENS['color-text-secondary'],
     colorTextTertiary: XP_TOKENS['color-text-tertiary'],
+    // v2 Text/Gray/very-low. `colorTextDisabled` thì KHÔNG set: AntD dùng nó cả cho giá trị ô
+    // nhập bị khoá và ngày ngoài tháng (vẫn bấm được) — v2 Text/Gray/disable quá mờ cho các chỗ
+    // đó, nên giữ bậc AntD dẫn xuất 25% từ `colorTextBase` (= token `color-text-disabled`).
+    colorTextPlaceholder: XP_TOKENS['color-text-placeholder'],
 
     // Bề mặt
     colorBgLayout: XP_TOKENS['color-bg'],
@@ -84,7 +95,7 @@ export const antdTheme: ThemeConfig = {
     boxShadowTertiary: XP_TOKENS['shadow-card'],
     boxShadowSecondary: XP_TOKENS['shadow-raised'],
 
-    // Focus — vòng 3px gold 25% (Figma 14:197) thay cho vòng mặc định của AntD.
+    // Focus — vòng 2px gold 25% thay cho vòng mặc định của AntD.
     controlOutline: XP_TOKENS['color-focus-ring'],
     controlOutlineWidth: toPx(XP_TOKENS['focus-ring-width']),
 
@@ -102,9 +113,9 @@ export const antdTheme: ThemeConfig = {
    * Ngoại lệ DUY NHẤT của quy tắc "chỉ seed token" — có kiểm chứng, không phải tiện tay.
    *
    * Nút primary của AntD lấy màu chữ từ `colorTextLightSolid` (= `#fff`) cho mọi nền đặc.
-   * Trên nền gold `#d6a02c` của XePrime, chữ trắng chỉ đạt **2.35:1** — trượt cả ngưỡng
-   * 4.5:1 lẫn 3:1 của WCAG. Figma `125:1571` (Variant=Primary) vẽ **chữ tối** trên nền gold,
-   * và Wave 1A đã có sẵn token cho đúng vai trò này (`color-primary-contrast`, 6.60:1).
+   * Trên nền gold `#e9ac29` của XePrime, chữ trắng chỉ đạt **2.0:1** — trượt cả ngưỡng
+   * 4.5:1 lẫn 3:1 của WCAG. Bảng nút v2 vẽ **chữ tối** trên nền gold, và hệ đã có sẵn token cho
+   * đúng vai trò này (`color-primary-contrast`, 8.8:1).
    *
    * Không sửa được bằng seed token: `colorTextLightSolid` dùng chung cho Tag/Badge/Steps…,
    * đổi nó sẽ kéo theo những component không liên quan. Nên khoanh đúng vào Button.

@@ -199,4 +199,69 @@ describe('Danh mục lọc dùng chung', () => {
       catalog.create(adminId, { type: CATALOG_TYPE.VEHICLE_FEATURE, key, label: 'Tiện ích B' }),
     ).rejects.toThrow(/đã tồn tại/);
   });
+
+  /**
+   * Khối "Loại xe" trang chủ đọc thẳng danh mục kiểu dáng: chỉ KIỂU DÁNG có trường trang chủ, và
+   * bật hiện thì phải có ảnh lớn — trang chủ không bao giờ dựng một thẻ thiếu ảnh.
+   */
+  maybe('trang chủ: chỉ kiểu dáng có trường trang chủ, bật hiện thì phải có ảnh lớn', async () => {
+    await expect(
+      catalog.create(adminId, {
+        type: CATALOG_TYPE.FUEL_TYPE,
+        key: `${PREFIX}-nl`,
+        label: 'Nhiên liệu',
+        showcaseExamples: 'Không thuộc chỗ này',
+      }),
+    ).rejects.toThrow(/Chỉ kiểu dáng/);
+
+    await expect(
+      catalog.create(adminId, {
+        type: CATALOG_TYPE.BODY_TYPE,
+        key: `${PREFIX}-thieu-anh`,
+        label: 'Bật mà thiếu ảnh',
+        showOnHome: true,
+      }),
+    ).rejects.toThrow(/phải tải ảnh/);
+
+    const item = await catalog.create(adminId, {
+      type: CATALOG_TYPE.BODY_TYPE,
+      key: `${PREFIX}-trang-chu`,
+      label: 'Coupe',
+      showOnHome: true,
+      showcaseImageUrl: 'https://cdn.example.com/catalog/coupe.webp',
+      showcaseExamples: 'Mazda MX-5',
+    });
+    expect(item.showOnHome).toBe(true);
+
+    // Sửa phần khác giữ nguyên trang chủ; gỡ ảnh khi đang bật thì bị chặn; tắt rồi gỡ thì được.
+    const renamed = await catalog.update(adminId, item.id, { label: 'Coupe 2 cửa' });
+    expect(renamed.showcaseImageUrl).toBe('https://cdn.example.com/catalog/coupe.webp');
+    await expect(catalog.update(adminId, item.id, { showcaseImageUrl: null })).rejects.toThrow(
+      /phải tải ảnh/,
+    );
+    const hidden = await catalog.update(adminId, item.id, {
+      showOnHome: false,
+      showcaseImageUrl: null,
+    });
+    expect(hidden.showOnHome).toBe(false);
+    expect(hidden.showcaseImageUrl).toBeNull();
+    expect(hidden.showcaseExamples).toBe('Mazda MX-5');
+
+    // Danh sách công khai mang trường trang chủ — trang chủ lọc đúng mục đang bật.
+    const publicList = await catalog.list({ type: CATALOG_TYPE.BODY_TYPE });
+    expect(publicList.find((i) => i.key === item.key)?.showOnHome).toBe(false);
+  });
+
+  maybe('ảnh danh mục chỉ nhận http(s) hoặc đường dẫn nội bộ', async () => {
+    const { validate } = await import('class-validator');
+    const { plainToInstance } = await import('class-transformer');
+    const { UpdateCatalogItemDto } = await import('../src/modules/catalog/dto/catalog.dto');
+    for (const [field, value] of [
+      ['iconUrl', 'javascript:alert(1)'],
+      ['showcaseImageUrl', 'data:image/png;base64,AAAA'],
+    ] as const) {
+      const errors = await validate(plainToInstance(UpdateCatalogItemDto, { [field]: value }));
+      expect(errors.map((e) => e.property)).toContain(field);
+    }
+  });
 });
