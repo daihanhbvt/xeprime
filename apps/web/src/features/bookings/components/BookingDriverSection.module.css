@@ -53,3 +53,22 @@
   min-width: 260px;
   flex: 1;
 }
+
+/* Một dòng trong bộ chọn: tên · SĐT bên trái, trạng thái bằng lái + "Bận" bên phải. */
+.option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.optionTags {
+  display: inline-flex;
+  gap: 4px;
+}
+
+/* Lịch sử gán tài xế — tách khỏi phần tài xế hiện tại bằng một vạch mảnh. */
+.history {
+  margin-top: 10px;
+  border-top: 1px solid var(--xp-color-border-secondary, var(--xp-color-border));
+}

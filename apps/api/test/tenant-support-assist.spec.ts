@@ -89,6 +89,7 @@ import {
   makeVehiclesService,
   seedBranch,
   vehicleCreator,
+  makeDriversService,
 } from './helpers/service-factory';
 
 /**
@@ -383,7 +384,7 @@ beforeAll(async () => {
       },
       {
         provide: VehicleSettingsService,
-        useValue: new VehicleSettingsService(asService, audit, occupancy, new ListingsService(asService)),
+        useValue: new VehicleSettingsService(asService, audit, occupancy, new ListingsService(asService), makeDriversService(asService)),
       },
       { provide: VehicleTripHistoryService, useValue: {} },
       { provide: BranchesService, useValue: makeBranchesService(asService) },

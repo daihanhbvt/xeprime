@@ -1,0 +1,7 @@
+/* Ghi chú + lỗi đầu form mời tài xế — đọc trước khi gõ SĐT. */
+.hints {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  margin-bottom: var(--xp-space-lg);
+}

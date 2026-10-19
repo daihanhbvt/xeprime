@@ -29,6 +29,18 @@ import {
 type Href = string | { pathname: string; params?: Record<string, string> };
 
 /**
+ * Tab của "Chuyến của tôi" (ADR 0063) — cùng tham số `?tab=` với web (`TRIPS_TAB` ở
+ * `apps/web/src/constants/routes.ts`) và với đích thông báo `/trips?tab=driving` của
+ * `@xeprime/domain`.
+ */
+export const TRIPS_TAB_PARAM = 'tab';
+export const TRIPS_TAB = {
+  RENTING: 'renting',
+  DRIVING: 'driving',
+} as const;
+export type TripsTab = (typeof TRIPS_TAB)[keyof typeof TRIPS_TAB];
+
+/**
  * Siết bản đồ route đã overlay về `Href` THẬT của app đang build — xem docblock `Href` trên.
  * Giữ nguyên chữ ký từng builder, chỉ đổi kiểu TRẢ VỀ.
  */
@@ -214,6 +226,20 @@ export const ROUTES = {
         ...(context?.serviceType ? { serviceType: context.serviceType } : {}),
         ...(context?.provinceCode ? { provinceCode: context.provinceCode } : {}),
       },
+    }),
+  },
+
+  /**
+   * Phía TÀI XẾ của tài khoản khách (ADR 0063) — cùng địa chỉ với web: lời mời/liên kết ở
+   * `/account/driving`, danh sách là tab "Chuyến tôi lái" của `/trips?tab=driving`, chi tiết ở
+   * `/trips/driving/:id` (id ĐƠN THUÊ). Chỉ app khách có các màn này.
+   */
+  driving: {
+    links: (): Href => '/account/driving',
+    trips: (): Href => ({ pathname: '/trips', params: { [TRIPS_TAB_PARAM]: TRIPS_TAB.DRIVING } }),
+    tripDetail: (bookingId: string): Href => ({
+      pathname: '/trips/driving/[id]',
+      params: { id: bookingId },
     }),
   },
 

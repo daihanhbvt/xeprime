@@ -25,6 +25,7 @@ import {
   makeBookingHoldsService,
   makeBookingRequestsService,
   makeNotificationService,
+  makeDriversService,
 } from './helpers/service-factory';
 
 /**
@@ -52,7 +53,7 @@ const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
 const notifications = makeNotificationService(asService);
 const occupancy = new OccupancyService(asService);
-const settings = new VehicleSettingsService(asService, audit, occupancy, new ListingsService(asService));
+const settings = new VehicleSettingsService(asService, audit, occupancy, new ListingsService(asService), makeDriversService(asService));
 
 const requests = makeBookingRequestsService(asService, {
   audit,

@@ -108,6 +108,18 @@ export function useAssignDriver(id: string) {
 }
 
 /**
+ * Lịch sử gán tài xế — khoá nằm DƯỚI `detail(id)` để mọi lượt làm mới chi tiết đơn kéo theo nó.
+ * `enabled`: chỉ tải khi người dùng mở khối lịch sử.
+ */
+export function useBookingDriverHistory(id: string, enabled: boolean) {
+  return useQuery({
+    queryKey: [...queryKeys.bookings.detail(id), 'driver-history'] as const,
+    queryFn: () => bookingsApi.driverHistory(id),
+    enabled,
+  });
+}
+
+/**
  * Tài xế gán được cho MỘT khung giờ.
  *
  * Cửa sổ nằm trong khoá vì đổi cửa sổ là đổi câu trả lời — không phải cùng một kết quả cắt nhỏ.

@@ -168,7 +168,8 @@ function toItem(r: HistoryRow): VehicleTripHistoryItemDto {
   const bookingStatus = (r.booking_status as BookingStatus | null) ?? null;
   // Đơn tự lập không có yêu cầu: trạng thái yêu cầu chỉ là chỗ đứng — `customerTripStage` ưu tiên đơn.
   const requestStatus =
-    (r.request_status as BookingRequestStatus | null) ?? BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING;
+    (r.request_status as BookingRequestStatus | null) ??
+    BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING;
   return {
     key: `${r.kind}:${r.id}`,
     kind: r.kind,

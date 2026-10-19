@@ -146,6 +146,18 @@ export const queryKeys = {
     assignable: (window: { pickupAt: string; returnAt: string; excludeBookingId?: string }) =>
       ['drivers', 'assignable', window] as const,
   },
+  /**
+   * Phía TÀI XẾ ở tài khoản khách (`/driver/*`, ADR 0063) — lời mời/liên kết, huy hiệu chờ trả
+   * lời và chuyến được gán. Mọi thao tác tài xế làm mới cả nhánh `all`.
+   */
+  driving: {
+    all: ['driving'] as const,
+    links: (scope: string, page: number) => ['driving', 'links', scope, page] as const,
+    hasLinks: ['driving', 'has-links'] as const,
+    pendingCounts: ['driving', 'pending-counts'] as const,
+    trips: (tab: string, page: number) => ['driving', 'trips', tab, page] as const,
+    trip: (id: string) => ['driving', 'trip', id] as const,
+  },
   /** Chi nhánh gian hàng — mọi màn có bộ chọn chi nhánh đọc chung nhánh này. */
   branches: {
     all: ['branches'] as const,

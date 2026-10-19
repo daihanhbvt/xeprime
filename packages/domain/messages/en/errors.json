@@ -182,7 +182,19 @@
     "REALM_LOGIN_METHOD_NOT_ALLOWED": "This sign-in method isn't available here. Sign in with your email and password.",
     "ORIGIN_NOT_ALLOWED": "The request was blocked because it didn't come from a XePrime page. Reload the page and try again.",
     "MEMBER_ALREADY_IN_OTHER_TENANT": "This account already works for another shop. Each partner account belongs to one shop only.",
-    "OTP_SMS_REQUIRED_IN_PRODUCTION": "Production always sends OTP SMS — this switch cannot be turned off."
+    "OTP_SMS_REQUIRED_IN_PRODUCTION": "Production always sends OTP SMS — this switch cannot be turned off.",
+    "DRIVER_ACCOUNT_NOT_FOUND": "This phone number has no verified XePrime account. Ask the driver to sign up with this number, then invite again.",
+    "DRIVER_ALREADY_LINKED": "This account already has an invitation or is already your driver.",
+    "DRIVER_LINK_STATE_CONFLICT": "This driver link just changed. Please reload.",
+    "DRIVER_BUSY": "This driver already has another trip at this time. Choose another driver.",
+    "DRIVER_ASSIGN_SERVICE_NOT_SUPPORTED": "Only trips with a driver can have a driver assigned.",
+    "DRIVER_IS_TRIP_CUSTOMER": "This driver is the customer of this trip. Choose another driver.",
+    "DRIVER_NOT_ASSIGNABLE": "This driver is not available yet (invitation pending or suspended).",
+    "DRIVER_ASSIGNMENT_STATE_CONFLICT": "This trip is no longer waiting for your answer.",
+    "DRIVER_ASSIGNMENT_LOCKED": "The car has been handed over or the booking has ended — the driver can no longer be changed.",
+    "DRIVER_HAS_ACTIVE_TRIP": "This driver is on a trip. End the link after the vehicle is returned.",
+    "VEHICLE_SERVICE_IN_USE": "This service can not be removed while the vehicle still has unfinished trips using it. Complete or cancel those trips first.",
+    "DRIVER_HAS_ACCEPTED_TRIPS": "You still have accepted trips that have not started. Ask the employer to reassign them before you stop driving for them."
   },
   "appCode": {
     "PLAN_LIMIT_REACHED": "Your account has reached its limit.",

@@ -4,21 +4,20 @@ import Animated from 'react-native-reanimated';
 import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
-  DRIVER_STATUS,
-  DRIVER_STATUS_VALUES,
+  DRIVER_LINK_STATUS,
+  DRIVER_LINK_STATUS_FILTER_ANY,
+  DRIVER_LINK_STATUS_VALUES,
+  DRIVER_TYPE_VALUES,
   PERMISSION,
-  PLAN_FEATURE,
-  type DriverStatus,
 } from '@xeprime/types';
+import type { InviteDriverValues } from '@xeprime/validators';
 import { Screen } from '@/components/layout/Screen';
-import { FeatureReadOnlyNotice } from '@/components/feedback/FeatureReadOnlyNotice';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { IconButton } from '@/components/ui/IconButton';
 import { ActionCardSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
-import { useFeature } from '@/features/auth/hooks/use-feature';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManageListShell } from '@/features/shell/ManageListShell';
@@ -33,29 +32,35 @@ import { LIST_TUNING } from '@/theme/list-tuning';
 import { scrollThrottle } from '@/theme/motion';
 import { colors } from '@/theme/tokens';
 import type { Driver } from './api';
-import { DriverCard } from './components/DriverCard';
-import { DriverFormSheet } from './components/DriverFormSheet';
-import { useDeleteDriver, useDriversPage, useUpdateDriver } from './hooks/use-drivers';
+import { DriverCard, type DriverCardIntent } from './components/DriverCard';
+import { EditDriverSheet, InviteDriverSheet } from './components/DriverFormSheet';
+import {
+  useDriversPage,
+  useEndDriver,
+  useResumeDriver,
+  useSuspendDriver,
+} from './hooks/use-drivers';
 
 const SKELETON_ROWS = 3;
 const SEARCH_DEBOUNCE_MS = 300;
 
-/** Sentinel "mọi trạng thái" — của giao diện, không xuống API. */
-const STATUS_ALL = 'all';
+/**
+ * Sentinel "không tham số" — của giao diện, không xuống API. Với trạng thái nó nghĩa là "các
+ * liên kết CÒN MỞ" (mặc định của server), với loại tài xế là "mọi loại".
+ */
+const FILTER_ALL = 'all';
+
+type ToastKey = 'toast.suspended' | 'toast.resumed' | 'toast.ended' | 'toast.revoked';
 
 // Ở module scope, không inline: FlatList coi `keyExtractor` mới là prop đổi và dựng lại cây con.
 const keyOf = (driver: Driver) => driver.id;
 
 /**
- * Tài xế của gian hàng (SHP-06) — bản native của `/manage/drivers`.
+ * Tài xế của bên thuê (ADR 0063) — bản native của `/manage/drivers` (`DriversPage` của web).
  *
- * Cùng nguồn dữ liệu với bộ chọn "gán tài xế" ở màn đơn thuê (`drivers.assignable`), nên mọi
- * thay đổi ở đây làm mới luôn bộ chọn đó: tài xế vừa tạo xuất hiện được ngay, còn người vừa bị
- * ngừng thì biến khỏi danh sách gán. Khả dụng theo khung giờ do SERVER chấm — client không tự
- * tính lịch bận.
- *
- * Tài xế là tính năng của GÓI (ADR 0027): hết hạn thì vẫn xem lại hồ sơ, không thêm/sửa được.
- * Lớp chặn thật là `@RequiresFeature(DRIVERS)` ở backend.
+ * Mỗi dòng là một LIÊN KẾT với một tài khoản khách: mời bằng SĐT, tài xế đồng ý ở app khách. Mở
+ * cho CẢ gian hàng tuyến gói lẫn chủ xe tuyến hoa hồng, không sau cờ gói — chỉ gác bằng quyền.
+ * Bên thuê chỉ thấy TRẠNG THÁI bằng lái của tài xế, không ảnh, không số bằng.
  */
 export function DriverListScreen() {
   const t = useTranslations('Drivers');
@@ -65,36 +70,34 @@ export function DriverListScreen() {
   const domainLabel = useDomainLabel();
   const errorMessage = useErrorMessage();
   const permissions = usePermissions();
-  const driversFeature = useFeature(PLAN_FEATURE.DRIVERS);
 
   const canView = permissions.has(PERMISSION.DRIVER_VIEW);
-  /*
-   * QUYỀN và GÓI là hai trục độc lập (ADR 0027 điều 2): `canManage` chỉ quyết định các thao tác
-   * có HIỆN không; gói hết hạn không ẩn chúng, chỉ khoá lại kèm dòng lý do (điều 3 — read_only,
-   * không phải hidden) — xem `FeatureReadOnlyNotice` + `DriverCard`'s prop `readOnly`.
-   */
   const canManage = permissions.has(PERMISSION.DRIVER_MANAGE);
 
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState<string>(STATUS_ALL);
+  const [linkStatus, setLinkStatus] = useState<string>(FILTER_ALL);
+  const [driverType, setDriverType] = useState<string>(FILTER_ALL);
   const [page, setPage] = useState(FIRST_PAGE);
-  const [formOpen, setFormOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [reinviteFrom, setReinviteFrom] = useState<InviteDriverValues | null>(null);
   const [editing, setEditing] = useState<Driver | null>(null);
-  const [deleting, setDeleting] = useState<Driver | null>(null);
-  const [deactivating, setDeactivating] = useState<Driver | null>(null);
+  const [suspending, setSuspending] = useState<Driver | null>(null);
+  const [ending, setEnding] = useState<Driver | null>(null);
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
   const trimmedSearch = debouncedSearch.trim();
 
   const query = useDriversPage(
     {
       ...(trimmedSearch ? { q: trimmedSearch } : {}),
-      ...(status === STATUS_ALL ? {} : { status }),
+      ...(linkStatus === FILTER_ALL ? {} : { linkStatus }),
+      ...(driverType === FILTER_ALL ? {} : { driverType }),
       page,
     },
     canView,
   );
-  const update = useUpdateDriver();
-  const remove = useDeleteDriver();
+  const suspend = useSuspendDriver();
+  const resume = useResumeDriver();
+  const end = useEndDriver();
 
   const items = query.data?.items ?? [];
   const meta = query.data?.meta;
@@ -106,90 +109,106 @@ export function DriverListScreen() {
     setPage(FIRST_PAGE);
   }, []);
 
-  const changeFilter = useCallback((_groupKey: string, value: string) => {
-    setStatus(value);
+  const changeFilter = useCallback((groupKey: string, value: string) => {
+    if (groupKey === 'linkStatus') setLinkStatus(value);
+    else setDriverType(value);
     setPage(FIRST_PAGE);
   }, []);
 
   const groups = useMemo<readonly FilterGroup[]>(
     () => [
       {
-        key: 'status',
+        key: 'linkStatus',
         label: t('filters.status'),
-        value: status,
-        resetValue: STATUS_ALL,
+        value: linkStatus,
+        resetValue: FILTER_ALL,
         options: [
-          { value: STATUS_ALL, label: t('filters.allStatuses') },
-          ...DRIVER_STATUS_VALUES.map((value) => ({
+          { value: FILTER_ALL, label: t('filters.openLinks') },
+          { value: DRIVER_LINK_STATUS_FILTER_ANY, label: t('filters.allStatuses') },
+          ...DRIVER_LINK_STATUS_VALUES.map((value) => ({
             value,
-            label: domainLabel('driverStatus', value),
+            label: domainLabel('driverLinkStatus', value),
+          })),
+        ],
+      },
+      {
+        key: 'driverType',
+        label: t('filters.type'),
+        value: driverType,
+        resetValue: FILTER_ALL,
+        options: [
+          { value: FILTER_ALL, label: t('filters.allTypes') },
+          ...DRIVER_TYPE_VALUES.map((value) => ({
+            value,
+            label: domainLabel('driverType', value),
           })),
         ],
       },
     ],
-    [domainLabel, status, t],
+    [domainLabel, driverType, linkStatus, t],
   );
 
-  const setStatusOf = useCallback(
-    (driver: Driver, next: DriverStatus) => {
-      update.mutate(
-        { id: driver.id, body: { status: next } },
-        {
-          onSuccess: () =>
-            toast.showSuccess(
-              next === DRIVER_STATUS.ACTIVE ? t('toast.activated') : t('toast.deactivated'),
-            ),
-          onError: (err) => toast.showError(errorMessage(err)),
-        },
-      );
+  const feedback = useCallback(
+    (successKey: ToastKey) => ({
+      onSuccess: () => toast.showSuccess(t(successKey)),
+      onError: (err: unknown) => toast.showError(errorMessage(err)),
+    }),
+    [errorMessage, t, toast],
+  );
+
+  /* Tạm khoá và kết thúc HỎI LẠI (đúng `confirm` của web); mở khoá thì không. */
+  const onIntent = useCallback(
+    (driver: Driver, intent: DriverCardIntent) => {
+      switch (intent) {
+        case 'reinvite':
+          setReinviteFrom({
+            phone: driver.phone,
+            name: driver.name,
+            driverType: driver.driverType,
+            note: driver.note ?? '',
+          });
+          setInviteOpen(true);
+          return;
+        case 'edit':
+          setEditing(driver);
+          return;
+        case 'suspend':
+          setSuspending(driver);
+          return;
+        case 'resume':
+          resume.mutate(driver.id, feedback('toast.resumed'));
+          return;
+        case 'end':
+          setEnding(driver);
+          return;
+      }
     },
-    [errorMessage, t, toast, update],
+    [feedback, resume],
   );
 
-  /*
-   * NGỪNG hoạt động cần xác nhận (tài xế sẽ không gán được vào đơn mới), BẬT LẠI thì không —
-   * đúng cặp `confirm` mà web đặt cho hai nhánh của cùng một nút.
-   */
-  const toggleStatus = useCallback(
-    (driver: Driver) => {
-      if (driver.status === DRIVER_STATUS.ACTIVE) setDeactivating(driver);
-      else setStatusOf(driver, DRIVER_STATUS.ACTIVE);
-    },
-    [setStatusOf],
-  );
-
-  const openEdit = useCallback((driver: Driver) => {
-    setEditing(driver);
-    setFormOpen(true);
-  }, []);
-
-  const openCreate = useCallback(() => {
-    setEditing(null);
-    setFormOpen(true);
-  }, []);
-
-  const pendingId = update.isPending
-    ? update.variables?.id
-    : remove.isPending
-      ? remove.variables
-      : null;
+  const pendingId = suspend.isPending
+    ? suspend.variables
+    : resume.isPending
+      ? resume.variables
+      : end.isPending
+        ? end.variables
+        : null;
 
   const renderItem = useCallback<ListRenderItem<Driver>>(
     ({ item }) => (
       <DriverCard
         driver={item}
         canManage={canManage}
-        readOnly={!driversFeature.canWrite}
         pending={pendingId === item.id}
-        onEdit={openEdit}
-        onToggleStatus={toggleStatus}
-        onDelete={setDeleting}
+        onIntent={onIntent}
       />
     ),
-    [canManage, driversFeature.canWrite, openEdit, pendingId, toggleStatus],
+    [canManage, onIntent, pendingId],
   );
 
-  const filtered = status !== STATUS_ALL || trimmedSearch.length > 0;
+  const filtered =
+    linkStatus !== FILTER_ALL || driverType !== FILTER_ALL || trimmedSearch.length > 0;
+  const endingInvite = ending?.linkStatus === DRIVER_LINK_STATUS.INVITED;
 
   if (!permissions.isLoading && !canView) {
     return (
@@ -206,13 +225,15 @@ export function DriverListScreen() {
     );
   }
 
-  const addButton = canManage ? (
+  const inviteButton = canManage ? (
     <IconButton
-      icon="add"
-      label={t('actions.add')}
+      icon="person-add-outline"
+      label={t('actions.invite')}
       tone="primary"
-      disabled={!driversFeature.canWrite}
-      onPress={openCreate}
+      onPress={() => {
+        setReinviteFrom(null);
+        setInviteOpen(true);
+      }}
     />
   ) : null;
 
@@ -223,8 +244,7 @@ export function DriverListScreen() {
         <ManageListShell
           title={t('page.title')}
           {...(meta === undefined ? {} : { total: t('page.total', { count: meta.total }) })}
-          action={addButton}
-          summary={<FeatureReadOnlyNotice show={canManage && !driversFeature.canWrite} />}
+          action={inviteButton}
           searchValue={search}
           searchLabel={t('filters.search')}
           searchPlaceholder={t('filters.searchPlaceholder')}
@@ -271,17 +291,14 @@ export function DriverListScreen() {
                     title={tLabels('none')}
                     actionLabel={tActions('clear')}
                     onAction={() => {
-                      setStatus(STATUS_ALL);
+                      setLinkStatus(FILTER_ALL);
+                      setDriverType(FILTER_ALL);
                       setSearch('');
                       setPage(FIRST_PAGE);
                     }}
                   />
                 ) : (
-                  /*
-                    KHÔNG có nút "thêm" ở đây: nó đã nằm ở hàng tiêu đề (`ManageListShell action`),
-                    và danh sách rỗng thì không có gì để cuộn nên hàng đó đứng nguyên trên màn —
-                    hai nút cùng một việc trong cùng một khung hình.
-                  */
+                  /* Nút "mời" đã ở hàng tiêu đề — không lặp lại ở đây. */
                   <ScreenMessage
                     icon="id-card-outline"
                     title={t('page.empty')}
@@ -313,44 +330,51 @@ export function DriverListScreen() {
         </ManageListShell>
       </Screen>
 
-      <DriverFormSheet open={formOpen} driver={editing} onClose={() => setFormOpen(false)} />
+      <InviteDriverSheet
+        open={inviteOpen}
+        prefill={reinviteFrom}
+        onClose={() => {
+          setInviteOpen(false);
+          setReinviteFrom(null);
+        }}
+      />
+      <EditDriverSheet driver={editing} onClose={() => setEditing(null)} />
 
       <AlertDialog
-        open={deactivating !== null}
-        title={t('actions.deactivateConfirm')}
-        confirmLabel={t('actions.deactivateOk')}
+        open={suspending !== null}
+        title={t('actions.suspendConfirm')}
+        confirmLabel={t('actions.suspend')}
         cancelLabel={tActions('close')}
-        loading={update.isPending}
+        loading={suspend.isPending}
         onConfirm={() => {
-          const driver = deactivating;
-          setDeactivating(null);
-          if (driver) setStatusOf(driver, DRIVER_STATUS.INACTIVE);
+          const driver = suspending;
+          setSuspending(null);
+          if (driver) suspend.mutate(driver.id, feedback('toast.suspended'));
         }}
-        onCancel={() => setDeactivating(null)}
+        onCancel={() => setSuspending(null)}
       />
 
       <AlertDialog
-        open={deleting !== null}
-        title={t('actions.removeConfirm')}
-        confirmLabel={tActions('delete')}
+        open={ending !== null}
+        title={
+          endingInvite
+            ? t('actions.revokeConfirm')
+            : ending && ending.activeBookingCount > 0
+              ? t('actions.endConfirmWithTrips', { count: ending.activeBookingCount })
+              : t('actions.endConfirm')
+        }
+        confirmLabel={endingInvite ? t('actions.revoke') : t('actions.end')}
         cancelLabel={tActions('close')}
         destructive
-        loading={remove.isPending}
+        loading={end.isPending}
         onConfirm={() => {
-          const driver = deleting;
+          const driver = ending;
+          setEnding(null);
           if (!driver) return;
-          remove.mutate(driver.id, {
-            onSuccess: () => {
-              setDeleting(null);
-              toast.showSuccess(t('toast.removed'));
-            },
-            onError: (err) => {
-              setDeleting(null);
-              toast.showError(errorMessage(err));
-            },
-          });
+          const invited = driver.linkStatus === DRIVER_LINK_STATUS.INVITED;
+          end.mutate(driver.id, feedback(invited ? 'toast.revoked' : 'toast.ended'));
         }}
-        onCancel={() => setDeleting(null)}
+        onCancel={() => setEnding(null)}
       />
     </>
   );

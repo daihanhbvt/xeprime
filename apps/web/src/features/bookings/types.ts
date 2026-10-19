@@ -8,6 +8,7 @@ type Schemas = components['schemas'];
 
 export type BookingListItem = Schemas['BookingListItemDto'];
 export type BookingDetail = Schemas['BookingDetailDto'];
+export type BookingDriverHistoryItem = Schemas['BookingDriverHistoryItemDto'];
 export type CreateBookingInput = Schemas['CreateBookingDto'];
 export type UpdateBookingInput = Schemas['UpdateBookingDto'];
 export type TransitionInput = Schemas['TransitionBookingDto'];
@@ -33,6 +34,8 @@ export interface BookingFilters {
    */
   preset?: BookingListPreset;
   vehicleId?: string;
+  /** Loại dịch vụ của ĐƠN — ô "Loại dịch vụ" của hai bảng đơn, sống trên URL. */
+  serviceType?: string;
   /** Chi nhánh của XE trong đơn — ô "Chi nhánh" của trang, sống trên URL (ADR 0052). */
   branchId?: string;
   returnFrom?: string;

@@ -1,20 +1,33 @@
 'use client';
 
-import { App, Button, Select } from 'antd';
+import { App, Button, Popconfirm, Select, Tag } from 'antd';
 import { useState } from 'react';
-import { SERVICE_TYPE, routeTypeLabel } from '@xeprime/types';
-import { getErrorMessage } from '@/services/api-client';
+import { useTranslations } from 'next-intl';
+import {
+  DRIVER_ASSIGNMENT_STATUS_META,
+  isDriverReassignable,
+  PERMISSION,
+  SERVICE_TYPE,
+} from '@xeprime/types';
+import { StatusTag } from '@/components/data-display/StatusTag';
+import { DriverLicenceStateTag } from '@/features/drivers/components/DriverLicenceStateTag';
 import { useAssignableDrivers } from '@/features/drivers/hooks/use-drivers';
+import { useAppFormat } from '@/i18n/use-app-format';
+import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useErrorMessage } from '@/i18n/use-error-message';
+import { usePermissions } from '@/hooks/use-permissions';
 import { useAssignBookingDriver } from '../hooks/use-booking-mutations';
 import type { BookingDetail } from '../types';
+import { BookingDriverHistory } from './BookingDriverHistory';
 import styles from './BookingDriverSection.module.css';
 
 /**
- * Khối "Tài xế" trên chi tiết đơn (17/08 — nghiệp vụ xe có tài xế, mức tối thiểu).
+ * Khối "Tài xế" trên chi tiết đơn (ADR 0063).
  *
- * Hiện với MỌI đơn (shop muốn cắt tài xế đưa xe cho chuyến tự lái vẫn được), nhưng chỉ đơn
- * `with_driver` chưa phân công mới bị nhắc — đó là đơn mà thiếu tài xế nghĩa là chưa chạy được.
- * Danh sách chọn chỉ gồm tài xế ĐANG hoạt động; server + composite FK ở DB validate lại.
+ * CHỈ đơn `with_driver` mới có tài xế: đơn khác ẩn hẳn khối, trừ khi còn một tài xế gán từ trước
+ * (dữ liệu cũ) — khi đó hiện chỉ-đọc để không ai mất dấu người đang cầm xe. Gán xong là `pending`
+ * cho tới khi tài xế nhận ở site khách; tài xế từ chối thì đơn quay về chưa có tài xế.
+ * Bộ chọn hiện cả người BẬN (disable, nhãn "Bận" — không bao giờ nói bận ở đâu).
  */
 export function BookingDriverSection({
   booking,
@@ -23,105 +36,143 @@ export function BookingDriverSection({
   booking: BookingDetail;
   canUpdate: boolean;
 }) {
+  const t = useTranslations('Drivers.booking');
   const { message } = App.useApp();
+  const domainLabel = useDomainLabel();
+  const errorMessage = useErrorMessage();
+  const { has } = usePermissions();
+  const fmt = useAppFormat();
   const [selecting, setSelecting] = useState(false);
   const assign = useAssignBookingDriver(booking.id);
-  // Chỉ tải danh sách khi thật sự mở bộ chọn — theo KHUNG GIỜ của đơn (17/08): người bận
-  // hoặc GPLX hết hạn vẫn hiện nhưng bị disable kèm lý do; backend kiểm lại trong transaction.
-  const driversQ = useAssignableDrivers(
-    {
-      pickupAt: booking.pickupAt,
-      returnAt: booking.returnAt,
-      excludeBookingId: booking.id,
-    },
-    selecting,
-  );
 
   const isWithDriver = booking.serviceType === SERVICE_TYPE.WITH_DRIVER;
   const driver = booking.driver ?? null;
 
+  // Chỉ tải danh sách khi thật sự mở bộ chọn — theo KHUNG GIỜ của đơn.
+  const driversQ = useAssignableDrivers(
+    { pickupAt: booking.pickupAt, returnAt: booking.returnAt, excludeBookingId: booking.id },
+    selecting && isWithDriver,
+  );
+
+  if (!isWithDriver && !driver) return null;
+  // Đã giao xe / đã khép ⇒ người cầm lái đã chốt: chỉ đọc (server cũng chặn — DRIVER_ASSIGNMENT_LOCKED).
+  // Bộ chọn đọc `/drivers/assignable` (DRIVER_VIEW) — thiếu quyền thì không bày nút, như app native.
+  const editable =
+    canUpdate &&
+    isWithDriver &&
+    isDriverReassignable(booking.status) &&
+    has(PERMISSION.DRIVER_VIEW);
+
   function submit(driverId: string | null) {
+    if (assign.isPending) return;
     assign.mutate(driverId, {
       onSuccess: () => {
-        message.success(driverId ? 'Đã gán tài xế' : 'Đã bỏ gán tài xế');
+        message.success(driverId ? t('assigned') : t('unassignedToast'));
         setSelecting(false);
       },
-      onError: (err) => message.error(getErrorMessage(err)),
+      onError: (err) => message.error(errorMessage(err)),
     });
   }
 
   return (
     <section className={styles.panel}>
-      <h3 className={styles.blockTitle}>Tài xế</h3>
+      <h3 className={styles.blockTitle}>{t('title')}</h3>
+
+      {!isWithDriver ? <p className={styles.meta}>{t('legacyHint')}</p> : null}
 
       {/* Tài xế cần biết mình chạy đâu — hành trình nằm ngay cạnh việc phân công. */}
       {isWithDriver && booking.routeType ? (
         <p className={styles.meta}>
-          {routeTypeLabel(booking.routeType)}
-          {booking.pickupAddress ? ` · Đón: ${booking.pickupAddress}` : ''}
-          {booking.destination ? ` → ${booking.destination}` : ''}
+          {domainLabel('routeType', booking.routeType)}
+          {booking.pickupAddress ? ` · ${t('pickup', { address: booking.pickupAddress })}` : ''}
+          {booking.destination ? ` ${t('destination', { destination: booking.destination })}` : ''}
         </p>
       ) : null}
 
-      {driver && !selecting ? (
-        <div className={styles.row}>
-          <div className={styles.stack}>
-            <span className={styles.strong}>{driver.name}</span>
-            <a href={`tel:${driver.phone}`} className={styles.link}>
-              {driver.phone}
-            </a>
-          </div>
-          {canUpdate ? (
-            <div className={styles.actions}>
-              <Button size="small" onClick={() => setSelecting(true)}>
-                Đổi
-              </Button>
-              <Button size="small" loading={assign.isPending} onClick={() => submit(null)}>
-                Bỏ gán
-              </Button>
-            </div>
-          ) : null}
-        </div>
-      ) : selecting ? (
+      {selecting ? (
         <div className={styles.row}>
           <Select
             className={styles.select}
-            placeholder="Chọn tài xế khả dụng trong khung giờ đơn"
+            placeholder={t('pickerPlaceholder')}
             loading={driversQ.isLoading}
             showSearch
-            optionFilterProp="label"
+            optionFilterProp="title"
             options={(driversQ.data ?? []).map((d) => ({
               value: d.id,
-              // Người không khả dụng vẫn hiện kèm LÝ DO — disable, không giấu.
-              label: d.busy
-                ? `${d.name} · ${d.phone} — bận khung giờ này`
-                : d.licenseExpired
-                  ? `${d.name} · ${d.phone} — GPLX hết hạn`
-                  : `${d.name} · ${d.phone}`,
-              disabled: d.busy || d.licenseExpired,
+              title: `${d.name} ${d.phone}`,
+              disabled: d.busy,
+              label: (
+                <span className={styles.option}>
+                  <span>
+                    {d.name} · {d.phone}
+                  </span>
+                  <span className={styles.optionTags}>
+                    <DriverLicenceStateTag licence={{ state: d.licenceState }} compact />
+                    {d.busy ? <Tag>{t('busy')}</Tag> : null}
+                  </span>
+                </span>
+              ),
             }))}
-            // 0 tài xế không phải lỗi — nói thẳng và trỏ tới trang tạo hồ sơ.
-            notFoundContent={driversQ.isLoading ? 'Đang tải…' : 'Chưa có tài xế nào đang hoạt động'}
+            notFoundContent={
+              driversQ.isLoading
+                ? null
+                : driversQ.isError
+                  ? errorMessage(driversQ.error)
+                  : t('pickerEmpty')
+            }
             onChange={(value: string) => submit(value)}
             disabled={assign.isPending}
-            aria-label="Chọn tài xế cho đơn"
+            aria-label={t('pickerLabel')}
           />
           <Button size="small" onClick={() => setSelecting(false)}>
-            Đóng
+            {t('close')}
           </Button>
+        </div>
+      ) : driver ? (
+        <div className={styles.row}>
+          <div className={styles.stack}>
+            <span className={styles.strong}>
+              {driver.name}{' '}
+              <StatusTag
+                value={driver.assignmentStatus}
+                meta={DRIVER_ASSIGNMENT_STATUS_META}
+                group="driverAssignmentStatus"
+              />
+            </span>
+            <a href={`tel:${driver.phone}`} className={styles.link}>
+              {driver.phone}
+            </a>
+            <span className={styles.meta}>
+              {driver.respondedAt
+                ? t('respondedAt', { time: fmt.dateTime(driver.respondedAt) })
+                : t('assignedAt', { time: fmt.dateTime(driver.assignedAt) })}
+            </span>
+          </div>
+          {editable ? (
+            <div className={styles.actions}>
+              <Button size="small" onClick={() => setSelecting(true)}>
+                {t('change')}
+              </Button>
+              <Popconfirm title={t('unassignConfirm')} onConfirm={() => submit(null)}>
+                <Button size="small" loading={assign.isPending}>
+                  {t('unassign')}
+                </Button>
+              </Popconfirm>
+            </div>
+          ) : null}
         </div>
       ) : (
         <div className={styles.row}>
-          <span className={isWithDriver ? styles.missing : styles.meta}>
-            {isWithDriver ? 'Đơn có tài xế — chưa phân công' : 'Chưa phân công'}
-          </span>
-          {canUpdate ? (
-            <Button size="small" type={isWithDriver ? 'primary' : 'default'} onClick={() => setSelecting(true)}>
-              Gán tài xế
+          {/* Đơn có tài xế chưa phân công nghĩa là chưa chạy được — nhắc bằng màu cảnh báo. */}
+          <span className={styles.missing}>{t('unassigned')}</span>
+          {editable ? (
+            <Button size="small" type="primary" onClick={() => setSelecting(true)}>
+              {t('assign')}
             </Button>
           ) : null}
         </div>
       )}
+      {isWithDriver ? <BookingDriverHistory bookingId={booking.id} /> : null}
     </section>
   );
 }

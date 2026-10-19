@@ -12,6 +12,7 @@ export type UpdateDeliveryFeeInput = Schemas['UpdateBookingDeliveryFeeDto'];
 export type CheckConflictInput = Schemas['CheckConflictDto'];
 export type CheckConflictResult = Schemas['CheckConflictResultDto'];
 export type BookingDriverSummary = Schemas['BookingDriverSummaryDto'];
+export type BookingDriverHistoryItem = Schemas['BookingDriverHistoryItemDto'];
 
 /** Khớp `BOOKING_SORT` ở backend DTO. */
 export type BookingSort = 'newest' | 'pickup_asc' | 'pickup_desc' | 'return_asc';
@@ -31,6 +32,8 @@ export interface BookingFilters {
    */
   preset?: BookingListPreset;
   vehicleId?: string;
+  /** Loại dịch vụ của ĐƠN — ô "Loại dịch vụ" (19/10/2026), cùng bộ lọc của web. */
+  serviceType?: string;
   /** Chi nhánh của XE trong đơn. */
   branchId?: string;
   /** Lọc theo ngày TRẢ — nuôi các panel "sắp trả" / "quá hạn". */
@@ -49,6 +52,7 @@ export function bookingFiltersToParams(filters: BookingFilters): QueryParams {
     status: filters.status ?? null,
     preset: filters.preset ?? null,
     vehicleId: filters.vehicleId ?? null,
+    serviceType: filters.serviceType ?? null,
     branchId: filters.branchId ?? null,
     returnFrom: filters.returnFrom ?? null,
     returnTo: filters.returnTo ?? null,
@@ -125,6 +129,13 @@ export const bookingsApi = {
     return getApiClient().patch<BookingDetail>(`/bookings/${encodeURIComponent(id)}/driver`, {
       driverId,
     });
+  },
+
+  /** Lịch sử gán tài xế của đơn (ADR 0063) — đọc sổ `booking_driver_assignments`. */
+  driverHistory(id: string): Promise<BookingDriverHistoryItem[]> {
+    return getApiClient().get<BookingDriverHistoryItem[]>(
+      `/bookings/${encodeURIComponent(id)}/driver-history`,
+    );
   },
 
   /** Preview trùng lịch — chỉ để cảnh báo sớm cho UX, KHÔNG phải lớp bảo vệ (ADR 0006). */

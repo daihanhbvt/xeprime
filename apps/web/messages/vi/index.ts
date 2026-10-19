@@ -58,6 +58,7 @@ import subscription from '@xeprime/domain/messages/vi/subscription.json';
 import paymentGateway from '@xeprime/domain/messages/vi/payment-gateway.json';
 import members from '@xeprime/domain/messages/vi/members.json';
 import drivers from '@xeprime/domain/messages/vi/drivers.json';
+import driving from '@xeprime/domain/messages/vi/driving.json';
 import maintenance from '@xeprime/domain/messages/vi/maintenance.json';
 import bankAccounts from '@xeprime/domain/messages/vi/bank-accounts.json';
 import driverLicence from '@xeprime/domain/messages/vi/driver-licence.json';
@@ -123,6 +124,7 @@ const messages = {
   PaymentGateway: paymentGateway,
   Members: members,
   Drivers: drivers,
+  Driving: driving,
   Maintenance: maintenance,
   BankAccounts: bankAccounts,
   DriverLicence: driverLicence,

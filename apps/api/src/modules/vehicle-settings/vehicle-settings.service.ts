@@ -9,19 +9,15 @@ import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
   AUTO_ACCEPT_BLOCKER,
-  BOOKING_STATUS_OCCUPYING,
   CUSTOMER_DOCUMENT_TYPE,
   DRIVER_DEPOSIT_MODE,
   DRIVER_DEPOSIT_MODE_SUPPORTED,
-  DRIVER_STATUS,
   DRIVER_SURCHARGE_KIND_SPEC,
   DRIVER_SURCHARGE_KIND_VALUES,
   DRIVER_SURCHARGE_THRESHOLD_KIND,
-  FEATURE_STATE,
   HANDOVER_WINDOW_KIND,
   HANDOVER_WINDOW_MAX_MINUTE,
   IDENTITY_VERIFY_METHOD,
-  PLAN_FEATURE,
   SERVICE_TYPE,
   effectiveRequiredDocuments,
   handoverTimeToMinute,
@@ -35,14 +31,13 @@ import {
   type DriverDepositMode,
   type DriverSurchargeKind,
   type DriverSurchargeRuleSnapshot,
-  type FeatureState,
   type HandoverWindow,
   type HandoverWindowKind,
-  type PlanFeature,
   type RentalTermsSnapshot,
   type ServiceType,
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
+import { DriversService } from '../drivers/drivers.service';
 import { AuditService } from '../audit/audit.service';
 import { currentSupportScope } from '../../common/support/support-request.store';
 import { assertSupportServiceSettingPinned } from './service-setting-support-policy';
@@ -132,6 +127,8 @@ export class VehicleSettingsService {
     private readonly occupancy: OccupancyService,
     /** Writer duy nhất của snapshot chợ (ADR 0008) — thẻ xe mang cờ tự động nhận chuyến. */
     private readonly listings: ListingsService,
+    /** Writer duy nhất của liên kết + lượt gán tài xế (ADR 0063). */
+    private readonly drivers: DriversService,
   ) {}
 
   // ── Thời gian chết + khung giờ ───────────────────────────────────────────
@@ -244,7 +241,10 @@ export class VehicleSettingsService {
     const of = (kind: HandoverWindowKind) =>
       rows
         .filter((r) => r.kind === kind)
-        .map((r) => ({ start: minuteToHandoverTime(r.startMinute), end: minuteToHandoverTime(r.endMinute) }));
+        .map((r) => ({
+          start: minuteToHandoverTime(r.startMinute),
+          end: minuteToHandoverTime(r.endMinute),
+        }));
     return { pickup: of(HANDOVER_WINDOW_KIND.PICKUP), return: of(HANDOVER_WINDOW_KIND.RETURN) };
   }
 
@@ -277,13 +277,12 @@ export class VehicleSettingsService {
   async listServiceSettings(
     tenantId: string,
     vehicleId: string,
-    features: Readonly<Record<PlanFeature, FeatureState>>,
   ): Promise<VehicleServiceSettingDto[]> {
     await this.assertOwned(this.prisma, tenantId, vehicleId);
     const [selfDrive, withDriver, capability] = await Promise.all([
       this.serviceSettingFor(this.prisma, vehicleId, SERVICE_TYPE.SELF_DRIVE),
       this.serviceSettingFor(this.prisma, vehicleId, SERVICE_TYPE.WITH_DRIVER),
-      this.withDriverCapability(tenantId, features),
+      this.withDriverCapability(tenantId),
     ]);
     return [toServiceDto(selfDrive, null), toServiceDto(withDriver, capability)];
   }
@@ -294,16 +293,20 @@ export class VehicleSettingsService {
     serviceType: string,
     userId: string,
     dto: PatchVehicleServiceSettingDto,
-    features: Readonly<Record<PlanFeature, FeatureState>>,
   ): Promise<VehicleServiceSettingDto> {
     if (!hasVehicleServiceSettings(serviceType)) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Chỉ dịch vụ tự lái và có tài xế có thiết lập riêng — thuê dài hạn luôn do gian hàng chốt lịch',
+        message:
+          'Chỉ dịch vụ tự lái và có tài xế có thiết lập riêng — thuê dài hạn luôn do gian hàng chốt lịch',
       });
     }
     await this.assertOwned(this.prisma, tenantId, vehicleId);
-    const current = await this.serviceSettingFor(this.prisma, vehicleId, serviceType as ServiceType);
+    const current = await this.serviceSettingFor(
+      this.prisma,
+      vehicleId,
+      serviceType as ServiceType,
+    );
     // Phiên hỗ trợ (ADR 0050 §13): tự nhận chuyến / điều khoản / cọc có mặt thì phải giữ nguyên.
     if (currentSupportScope()) assertSupportServiceSettingPinned(current, dto);
 
@@ -311,14 +314,20 @@ export class VehicleSettingsService {
       ...current,
       ...(dto.autoAcceptEnabled !== undefined ? { autoAcceptEnabled: dto.autoAcceptEnabled } : {}),
       ...(dto.minRentalMinutes !== undefined ? { minRentalMinutes: dto.minRentalMinutes } : {}),
-      ...(dto.preferredRouteTypes !== undefined ? { preferredRouteTypes: dto.preferredRouteTypes } : {}),
+      ...(dto.preferredRouteTypes !== undefined
+        ? { preferredRouteTypes: dto.preferredRouteTypes }
+        : {}),
       ...(dto.requiredDocuments !== undefined ? { requiredDocuments: dto.requiredDocuments } : {}),
-      ...(dto.identityVerifyMethod !== undefined ? { identityVerifyMethod: dto.identityVerifyMethod } : {}),
+      ...(dto.identityVerifyMethod !== undefined
+        ? { identityVerifyMethod: dto.identityVerifyMethod }
+        : {}),
       ...(dto.termsText !== undefined ? { termsText: dto.termsText?.trim() || null } : {}),
       ...(dto.requireTermsAcceptance !== undefined
         ? { requireTermsAcceptance: dto.requireTermsAcceptance }
         : {}),
-      ...(dto.depositMode !== undefined ? { depositMode: dto.depositMode as DriverDepositMode } : {}),
+      ...(dto.depositMode !== undefined
+        ? { depositMode: dto.depositMode as DriverDepositMode }
+        : {}),
     };
 
     if (serviceType === SERVICE_TYPE.SELF_DRIVE) {
@@ -328,7 +337,9 @@ export class VehicleSettingsService {
       next.depositMode = DRIVER_DEPOSIT_MODE.NONE;
     }
     if (!isDriverDepositModeSupported(next.depositMode)) {
-      throw invalid('Chế độ đặt cọc này chưa được hệ thống thu — chỉ "không yêu cầu đặt cọc" đang dùng được');
+      throw invalid(
+        'Chế độ đặt cọc này chưa được hệ thống thu — chỉ "không yêu cầu đặt cọc" đang dùng được',
+      );
     }
     if (next.requiredDocuments.includes(CUSTOMER_DOCUMENT_TYPE.OTHER)) {
       throw invalid('"Giấy tờ khác" không định danh được khách — không dùng làm yêu cầu bắt buộc');
@@ -342,7 +353,7 @@ export class VehicleSettingsService {
      * bật lên mà không bao giờ tác dụng là toggle giả.
      */
     if (serviceType === SERVICE_TYPE.WITH_DRIVER && next.autoAcceptEnabled) {
-      const capability = await this.withDriverCapability(tenantId, features);
+      const capability = await this.withDriverCapability(tenantId);
       if (!capability.available) {
         throw new ConflictException({
           code: API_ERROR_CODE.CONFLICT,
@@ -394,7 +405,11 @@ export class VehicleSettingsService {
        * bắt module lá này phải có `PricingService`, thứ nó cố ý không import (docblock của
        * `VehicleSettingsModule`).
        */
-      await refreshPendingApprovalSnapshot(tx, { vehicleId, actorUserId: userId, policy: 'unchanged' });
+      await refreshPendingApprovalSnapshot(tx, {
+        vehicleId,
+        actorUserId: userId,
+        policy: 'unchanged',
+      });
       /*
        * Thẻ xe ở chợ hiện "Không cần xác nhận" theo cờ tự động nhận của TỪNG dịch vụ — cờ đó
        * mirror vào snapshot `public_listings`, nên mỗi lượt lưu phải đồng bộ lại trong CÙNG
@@ -419,9 +434,7 @@ export class VehicleSettingsService {
     const saved = await this.serviceSettingFor(this.prisma, vehicleId, serviceType as ServiceType);
     return toServiceDto(
       saved,
-      serviceType === SERVICE_TYPE.WITH_DRIVER
-        ? await this.withDriverCapability(tenantId, features)
-        : null,
+      serviceType === SERVICE_TYPE.WITH_DRIVER ? await this.withDriverCapability(tenantId) : null,
     );
   }
 
@@ -459,7 +472,11 @@ export class VehicleSettingsService {
       minRentalMinutes: row.minRentalMinutes,
       preferredRouteTypes: row.preferredRouteTypes,
       requiredDocuments: row.requiredDocuments,
-      effectiveRequiredDocuments: effectiveRequiredDocuments(serviceType, row.requiredDocuments, legal),
+      effectiveRequiredDocuments: effectiveRequiredDocuments(
+        serviceType,
+        row.requiredDocuments,
+        legal,
+      ),
       identityVerifyMethod: row.identityVerifyMethod,
       termsText: row.termsText,
       requireTermsAcceptance: row.requireTermsAcceptance,
@@ -506,7 +523,8 @@ export class VehicleSettingsService {
     windows: HandoverWindows,
     input: AutoAcceptInput,
   ): AutoAcceptBlocker | null {
-    if (!hasVehicleServiceSettings(input.serviceType)) return AUTO_ACCEPT_BLOCKER.SERVICE_NOT_SUPPORTED;
+    if (!hasVehicleServiceSettings(input.serviceType))
+      return AUTO_ACCEPT_BLOCKER.SERVICE_NOT_SUPPORTED;
     if (!setting.autoAcceptEnabled) return AUTO_ACCEPT_BLOCKER.DISABLED;
     if (!input.pickupAt || !input.returnAt) return AUTO_ACCEPT_BLOCKER.SERVICE_NOT_SUPPORTED;
     /*
@@ -528,10 +546,8 @@ export class VehicleSettingsService {
     }
     if (input.quoteIsEstimate) return AUTO_ACCEPT_BLOCKER.QUOTE_ESTIMATE;
     /*
-     * Có tài xế + có thu tiền giữ chỗ: đơn chỉ sinh khi tiền về (webhook), mà tài xế phải được
-     * gán TRONG transaction tạo đơn để `bookings_driver_schedule_excl` gác. Tự nhận ở đây sẽ
-     * nhận một chuyến mà hai giờ sau mới biết có tài xế rảnh hay không — và lúc đó khách đã trả
-     * tiền. Để chủ xe duyệt tay và tự chọn người (ADR 0044 điều 2).
+     * Có tài xế + có thu tiền giữ chỗ: đơn chỉ sinh khi tiền về (webhook), tức hai giờ sau mới
+     * biết tài xế còn rảnh và còn chịu nhận hay không — và lúc đó khách đã trả tiền. Để chủ xe duyệt tay và tự chọn người (ADR 0044 điều 2).
      */
     if (input.serviceType === SERVICE_TYPE.WITH_DRIVER && input.holdRequired) {
       return AUTO_ACCEPT_BLOCKER.HOLD_REQUIRED_WITH_DRIVER;
@@ -568,66 +584,44 @@ export class VehicleSettingsService {
       const busy = await this.occupancy.findOverlapping(vehicleId, input.pickupAt, input.returnAt);
       if (busy.length > 0) return { eligible: false, blocker: AUTO_ACCEPT_BLOCKER.SCHEDULE_BUSY };
       if (input.serviceType === SERVICE_TYPE.WITH_DRIVER) {
-        const driver = await this.pickAssignableDriver(this.prisma, tenantId, {
+        const hasDriver = await this.hasAvailableDriver(this.prisma, tenantId, {
           pickupAt: input.pickupAt,
           returnAt: input.returnAt,
         });
-        if (!driver) return { eligible: false, blocker: AUTO_ACCEPT_BLOCKER.NO_DRIVER };
+        if (!hasDriver) return { eligible: false, blocker: AUTO_ACCEPT_BLOCKER.NO_DRIVER };
       }
     }
     return { eligible: true, blocker: null };
   }
 
   /**
-   * Tài xế ĐẦU TIÊN gán được cho khung giờ — cùng ba điều kiện của `DriversService.findAssignable`
-   * (active · GPLX còn hạn tới lúc trả · không đơn giao nhau). Đây là bước CHỌN ứng viên; chốt
-   * chặn thật là `bookings_driver_schedule_excl` lúc INSERT đơn cùng transaction.
+   * Có ít nhất MỘT tài xế liên kết rảnh khung giờ này không — điều kiện tự nhận chuyến có tài xế
+   * (ADR 0063). Đơn tự nhận được gán sẵn một tài xế rảnh ở trạng thái chờ nhận; tài xế vẫn phải nhận.
    */
-  async pickAssignableDriver(
+  hasAvailableDriver(
     db: Db,
     tenantId: string,
     window: { pickupAt: Date; returnAt: Date },
-  ): Promise<{ id: string; name: string } | null> {
-    const busy = await db.booking.findMany({
-      where: {
-        tenantId,
-        driverId: { not: null },
-        deletedAt: null,
-        status: { in: [...BOOKING_STATUS_OCCUPYING] },
-        pickupAt: { lt: window.returnAt },
-        returnAt: { gt: window.pickupAt },
-      },
-      select: { driverId: true },
-    });
-    const busyIds = new Set(busy.map((b) => b.driverId).filter((id): id is string => id != null));
-    const drivers = await db.driver.findMany({
-      where: {
-        tenantId,
-        deletedAt: null,
-        status: DRIVER_STATUS.ACTIVE,
-        ...(busyIds.size > 0 ? { id: { notIn: [...busyIds] } } : {}),
-        OR: [{ licenseExpiresAt: null }, { licenseExpiresAt: { gte: window.returnAt } }],
-      },
-      orderBy: { name: 'asc' },
-      take: 1,
-      select: { id: true, name: true },
-    });
-    return drivers[0] ?? null;
+  ): Promise<boolean> {
+    return this.drivers.hasAvailableDriver(db, tenantId, window);
   }
 
-  private async withDriverCapability(
+  /** Tài xế để tự gán khi tự nhận chuyến có tài xế — xem `DriversService.pickForAutoAssign`. */
+  pickDriverForAutoAssign(
+    db: Db,
     tenantId: string,
-    features: Readonly<Record<PlanFeature, FeatureState>>,
-  ): Promise<WithDriverAutoAcceptCapabilityDto> {
-    const driversFeatureEnabled = features[PLAN_FEATURE.DRIVERS] === FEATURE_STATE.ENABLED;
-    const activeDrivers = await this.prisma.driver.count({
-      where: { tenantId, deletedAt: null, status: DRIVER_STATUS.ACTIVE },
-    });
-    return {
-      available: driversFeatureEnabled && activeDrivers > 0,
-      activeDrivers,
-      driversFeatureEnabled,
-    };
+    window: { pickupAt: Date; returnAt: Date; excludeUserId?: string | null },
+  ): Promise<{ id: string; userId: string } | null> {
+    return this.drivers.pickForAutoAssign(db, tenantId, window);
+  }
+
+  /**
+   * Bật tự nhận chuyến có tài xế cần ít nhất một tài xế ĐANG LIÊN KẾT. Module tài xế mở cho cả
+   * hai tuyến (ADR 0063) nên `driversFeatureEnabled` luôn đúng — giữ trường cho client cũ.
+   */
+  private async withDriverCapability(tenantId: string): Promise<WithDriverAutoAcceptCapabilityDto> {
+    const activeDrivers = await this.drivers.countActiveLinks(tenantId);
+    return { available: activeDrivers > 0, activeDrivers, driversFeatureEnabled: true };
   }
 
   // ── Phụ phí mặc định có tài xế ──────────────────────────────────────────
@@ -785,7 +779,8 @@ function normalizeWindows(windows: HandoverWindowDto[]): MinuteWindow[] {
   const parsed = windows.map((w) => {
     const startMinute = handoverTimeToMinute(w.start);
     const endMinute = handoverTimeToMinute(w.end);
-    if (startMinute == null || endMinute == null) throw invalid('Giờ giao nhận không hợp lệ (HH:mm)');
+    if (startMinute == null || endMinute == null)
+      throw invalid('Giờ giao nhận không hợp lệ (HH:mm)');
     if (startMinute >= endMinute) {
       throw invalid('Giờ kết thúc phải sau giờ bắt đầu — một khung không qua nửa đêm');
     }

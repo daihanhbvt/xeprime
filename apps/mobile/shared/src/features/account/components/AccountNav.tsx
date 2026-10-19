@@ -15,7 +15,10 @@ import { useShellScope } from '@/features/shell/use-shell-scope';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAccountIdentityLabel } from '../use-account-identity-label';
 import { colors, fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
+import { CountBadge } from '@/components/ui/CountBadge';
+import { useDriverPendingCounts } from '@/features/driving/hooks';
 import {
+  ACCOUNT_NAV_BADGE,
   NAV_TARGET,
   flattenAccountNav,
   matchAccountNavKey,
@@ -53,7 +56,15 @@ export function AccountNav() {
   const [confirmingLogout, setConfirmingLogout] = useState(false);
   const identityLabel = useAccountIdentityLabel();
 
-  const groups = useMemo(() => resolveAccountNav(user), [user]);
+  // Lời mời tài xế (huy hiệu) + cờ `hasLinks` — chưa từng được mời làm tài xế thì ẩn mục tài xế.
+  const driverCounts = useDriverPendingCounts(Boolean(user));
+  const hasDriverLinks = driverCounts.data?.hasLinks ?? false;
+  const groups = useMemo(
+    () => resolveAccountNav(user, { hasDriverLinks }),
+    [user, hasDriverLinks],
+  );
+  const badgeCount = (item: AccountNavItem): number =>
+    item.badge === ACCOUNT_NAV_BADGE.DRIVER_INVITES ? (driverCounts.data?.invites ?? 0) : 0;
   const activeKey = matchAccountNavKey(pathname ?? '', flattenAccountNav(groups));
 
   /*
@@ -84,52 +95,57 @@ export function AccountNav() {
           để thấy. Cùng lý do mà mọi thứ bấm được trong app giữ một `Pressable` bao ngoài.
         */}
         <View accessibilityRole="menu" accessibilityLabel={t('account.menuLabel')}>
-        <YStack py={space.xs}>
-          {groups.map((group, index) => (
-            <Fragment key={group.key}>
-              {index > 0 ? <Divider /> : null}
-              {group.labelKey ? (
-                <Text
-                  col={colors.placeholder}
-                  fos={fontSize.meta}
-                  fow={fontWeight.semibold}
-                  letterSpacing={0.8}
-                  px={space.md}
-                  pb={space.xs}
-                >
-                  {t(group.labelKey).toLocaleUpperCase()}
-                </Text>
-              ) : null}
-              {group.items.map((item) => (
-                <AccountNavRow key={item.key} item={item} active={item.key === activeKey} />
-              ))}
-            </Fragment>
-          ))}
+          <YStack py={space.xs}>
+            {groups.map((group, index) => (
+              <Fragment key={group.key}>
+                {index > 0 ? <Divider /> : null}
+                {group.labelKey ? (
+                  <Text
+                    col={colors.placeholder}
+                    fos={fontSize.meta}
+                    fow={fontWeight.semibold}
+                    letterSpacing={0.8}
+                    px={space.md}
+                    pb={space.xs}
+                  >
+                    {t(group.labelKey).toLocaleUpperCase()}
+                  </Text>
+                ) : null}
+                {group.items.map((item) => (
+                  <AccountNavRow
+                    key={item.key}
+                    item={item}
+                    active={item.key === activeKey}
+                    badge={badgeCount(item)}
+                  />
+                ))}
+              </Fragment>
+            ))}
 
-          <Divider />
-          <Pressable
-            onPress={() => setConfirmingLogout(true)}
-            accessibilityRole="menuitem"
-            accessibilityLabel={t('public.logout')}
-            style={({ pressed }) => (pressed ? { backgroundColor: colors.dangerSurface } : null)}
-          >
-            <XStack
-              ai="center"
-              gap={space.sm}
-              minHeight={sizing.touchTarget}
-              px={space.md}
-              py={space.xs}
-              borderLeftWidth={RAIL_WIDTH}
-              borderLeftColor="transparent"
+            <Divider />
+            <Pressable
+              onPress={() => setConfirmingLogout(true)}
+              accessibilityRole="menuitem"
+              accessibilityLabel={t('public.logout')}
+              style={({ pressed }) => (pressed ? { backgroundColor: colors.dangerSurface } : null)}
             >
-              <Ionicons name="log-out-outline" size={iconSize.md} color={colors.danger} />
-              <Text f={1} col={colors.danger} fos={fontSize.body} fow={fontWeight.medium}>
-                {t('public.logout')}
-              </Text>
-            </XStack>
-          </Pressable>
+              <XStack
+                ai="center"
+                gap={space.sm}
+                minHeight={sizing.touchTarget}
+                px={space.md}
+                py={space.xs}
+                borderLeftWidth={RAIL_WIDTH}
+                borderLeftColor="transparent"
+              >
+                <Ionicons name="log-out-outline" size={iconSize.md} color={colors.danger} />
+                <Text f={1} col={colors.danger} fos={fontSize.body} fow={fontWeight.medium}>
+                  {t('public.logout')}
+                </Text>
+              </XStack>
+            </Pressable>
 
-          {/*
+            {/*
             Thẻ NGƯỜI DÙNG đóng menu lại, đúng chỗ web đặt nó (dưới "Đăng xuất" trong cột trái).
             Nó trả lời "tôi đang đăng nhập bằng tài khoản nào, với vai gì" — câu hỏi có thật khi
             một người vừa là khách thuê vừa là nhân viên của một gian hàng (ADR 0014).
@@ -137,34 +153,34 @@ export function AccountNav() {
             Cố ý KHÔNG hiện email/SĐT: chúng đã nằm ở thẻ hồ sơ ngay bên dưới, và lặp lại chúng
             trong menu chỉ làm dày thêm một khối vốn để điều hướng.
           */}
-          {user ? (
-            <>
-              <Divider />
-              <XStack
-                ai="center"
-                gap={space.sm}
-                px={space.md}
-                py={space.sm}
-                accessibilityLabel={tAccount('sidebar.userCard')}
-              >
-                {/*
+            {user ? (
+              <>
+                <Divider />
+                <XStack
+                  ai="center"
+                  gap={space.sm}
+                  px={space.md}
+                  py={space.sm}
+                  accessibilityLabel={tAccount('sidebar.userCard')}
+                >
+                  {/*
                   Đúng ĐỊNH DẠNG NHẬN DIỆN chuẩn: ảnh viền gold có dấu, tên màu chữ thường, dấu
                   thứ hai ngay sau tên.
                 */}
-                <Avatar
-                  name={userName}
-                  url={user.avatarUrl}
-                  size={40}
-                  verifiedLabel={isShopOwner ? tAccount('trackBadge.verifiedHint') : undefined}
-                />
-                <YStack f={1} minWidth={0} gap={2}>
-                  <VerifiedName
+                  <Avatar
                     name={userName}
+                    url={user.avatarUrl}
+                    size={40}
                     verifiedLabel={isShopOwner ? tAccount('trackBadge.verifiedHint') : undefined}
-                    markSize={14}
-                    decorativeMark
                   />
-                  {/*
+                  <YStack f={1} minWidth={0} gap={2}>
+                    <VerifiedName
+                      name={userName}
+                      verifiedLabel={isShopOwner ? tAccount('trackBadge.verifiedHint') : undefined}
+                      markSize={14}
+                      decorativeMark
+                    />
+                    {/*
                     Chỉ VAI, KHÔNG nhãn tuyến.
 
                     "Chủ gian hàng · Gói Gian hàng tiêu chuẩn" đã nằm ở đầu màn, ngay dưới tên
@@ -172,14 +188,14 @@ export function AccountNav() {
                     trong một khối vốn để điều hướng. Cấu hình gói hỏng vẫn lộ ra đúng chỗ của nó:
                     `AccountTrackNotice` dựng hẳn một callout đỏ (ADR 0038 điều 11).
                   */}
-                  <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
-                    {userRole}
-                  </Text>
-                </YStack>
-              </XStack>
-            </>
-          ) : null}
-        </YStack>
+                    <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
+                      {userRole}
+                    </Text>
+                  </YStack>
+                </XStack>
+              </>
+            ) : null}
+          </YStack>
         </View>
       </Card>
 
@@ -208,7 +224,16 @@ function Divider() {
   return <YStack h={1} bg={colors.borderSubtle} my={space.xs} />;
 }
 
-function AccountNavRow({ item, active }: { item: AccountNavItem; active: boolean }) {
+function AccountNavRow({
+  item,
+  active,
+  badge = 0,
+}: {
+  item: AccountNavItem;
+  active: boolean;
+  /** Việc cần làm ở mục này — 0 thì không vẽ viên. */
+  badge?: number;
+}) {
   const t = useTranslations('Navigation');
   const router = useRouter();
   const navigateOnce = useNavigateOnce();
@@ -267,6 +292,7 @@ function AccountNavRow({ item, active }: { item: AccountNavItem; active: boolean
         >
           {label}
         </Text>
+        {badge > 0 ? <CountBadge count={badge} tone="danger" /> : null}
         {/* Mục đang mở không có mũi tên: nó không dẫn đi đâu nữa. */}
         {active ? null : (
           <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.placeholder} />

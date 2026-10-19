@@ -41,12 +41,22 @@ export type NavTarget = (typeof NAV_TARGET)[keyof typeof NAV_TARGET];
  * một gian hàng — không có quyền nào để kiểm. Cái quyết định thấy hay không là *đã đăng nhập hay
  * chưa* (`RequireSession` gác một lần cho cả tab) và *có phải chủ xe không* (`resolveAccountNav`).
  */
+/** Chỗ ĐƯỢC PHÉP mang huy hiệu trong menu tài khoản. */
+export const ACCOUNT_NAV_BADGE = {
+  /** Lời mời làm tài xế chờ trả lời (`GET /driver/pending-counts`, ADR 0063). */
+  DRIVER_INVITES: 'driverInvites',
+} as const;
+
+export type AccountNavBadge = (typeof ACCOUNT_NAV_BADGE)[keyof typeof ACCOUNT_NAV_BADGE];
+
 export interface AccountNavItem {
   readonly key: string;
   readonly labelKey: AccountNavLabelKey;
   readonly href: Href;
   readonly icon: IconName;
   readonly target: NavTarget;
+  /** Huy hiệu việc CẦN LÀM — đếm do server trả, chỉ mục khai mới gắn. */
+  readonly badge?: AccountNavBadge;
 }
 
 export interface AccountNavGroup {
@@ -79,6 +89,16 @@ const TRIPS: AccountNavItem = {
   href: ROUTES.booking.list(),
   icon: 'car-outline',
   target: NAV_TARGET.TAB,
+};
+
+/** "Nơi tôi làm tài xế" — lời mời + liên kết tài xế của tài khoản này (ADR 0063). */
+const DRIVING: AccountNavItem = {
+  key: 'driving',
+  labelKey: 'account.driving',
+  href: ROUTES.driving.links(),
+  icon: 'id-card-outline',
+  target: NAV_TARGET.SCREEN,
+  badge: ACCOUNT_NAV_BADGE.DRIVER_INVITES,
 };
 
 const CHANGE_PASSWORD: AccountNavItem = {
@@ -137,13 +157,14 @@ const BECOME_OWNER: AccountNavItem = {
   target: NAV_TARGET.SCREEN,
 };
 
-/** Menu tài khoản KHÁCH — cùng chín mục, cùng thứ tự với `ACCOUNT_NAV` bên web. */
+/** Menu tài khoản KHÁCH — cùng mười mục, cùng thứ tự với `ACCOUNT_NAV` bên web. */
 export const ACCOUNT_NAV: readonly AccountNavItem[] = [
   PROFILE,
   // Giấy tờ & Xác minh — bằng lái, điều kiện đặt xe tự lái (ADR 0057).
   DOCUMENTS,
   BECOME_OWNER,
   TRIPS,
+  DRIVING,
   PAYMENTS,
   // Khách thuê CÓ số dư: tiền hoàn khoản giữ chỗ chảy vào ví điểm của họ (ADR 0033 điều 5), và tài
   // khoản nhận tiền là nơi khai số để rút nó ra.
@@ -168,8 +189,13 @@ export function canUseManagePortal(user: Pick<CurrentUser, 'tenant'> | null | un
 }
 
 /** Menu tài khoản — MỘT nhóm, như `resolveAccountNav()` của web (ADR 0053 bỏ menu Owner Lite ở đây). */
-export function resolveAccountNav(_user?: CurrentUser | null): AccountNavGroup[] {
-  return [{ key: 'account', items: ACCOUNT_NAV }];
+export function resolveAccountNav(
+  _user?: CurrentUser | null,
+  opts: { hasDriverLinks?: boolean } = {},
+): AccountNavGroup[] {
+  // Mục tài xế chỉ khi tài khoản đã từng được mời/liên kết làm tài xế (ADR 0063), như web.
+  const items = opts.hasDriverLinks ? ACCOUNT_NAV : ACCOUNT_NAV.filter((i) => i !== DRIVING);
+  return [{ key: 'account', items }];
 }
 
 /**

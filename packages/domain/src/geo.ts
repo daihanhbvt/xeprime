@@ -118,3 +118,12 @@ const GOOGLE_MAPS_SEARCH_URL = 'https://www.google.com/maps/search/?api=1&query=
 export function mapExternalUrl(point: GeoPoint): string {
   return `${GOOGLE_MAPS_SEARCH_URL}${encodeURIComponent(`${point.lat},${point.lng}`)}`;
 }
+
+/**
+ * Mở một ĐỊA CHỈ CHỮ trên Google Maps khi không có toạ độ — cùng dạng `maps/search/?api=1` với
+ * `mapExternalUrl`. Rỗng/chỉ khoảng trắng trả `null`: không có gì để tìm thì không có nút.
+ */
+export function mapSearchUrl(text: string | null | undefined): string | null {
+  const query = text?.trim();
+  return query ? `${GOOGLE_MAPS_SEARCH_URL}${encodeURIComponent(query)}` : null;
+}

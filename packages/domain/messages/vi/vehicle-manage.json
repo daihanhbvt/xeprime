@@ -47,7 +47,13 @@
     "priceLossTitle": "Tắt dịch vụ này sẽ xoá giá chuyên biệt của nó",
     "priceLossBody": "Bật lại về sau sẽ phải nhập giá lại. Các đơn đã chốt không bị ảnh hưởng.",
     "enabled": "Đã bật {service}",
-    "disabled": "Đã tắt {service}"
+    "disabled": "Đã tắt {service}",
+    "inUse": {
+      "title": "Chưa tắt được dịch vụ",
+      "bookings": "Đơn đang dùng dịch vụ này:",
+      "requests": "{count, plural, other {# yêu cầu đặt xe đang chờ}} cũng dùng dịch vụ này.",
+      "close": "Đã hiểu"
+    }
   },
   "disabledSection": {
     "title": "Dịch vụ {service} đang tắt",

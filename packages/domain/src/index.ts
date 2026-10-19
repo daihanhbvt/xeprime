@@ -122,6 +122,7 @@ export {
   haversineKm,
   isValidGeoPoint,
   mapExternalUrl,
+  mapSearchUrl,
   normalizeAddressKey,
   roundCoord,
   toGeoPoint,
@@ -372,3 +373,10 @@ export {
   POLL_GRACE_AFTER_EXPIRY_MS,
   shouldPollGatewayOrder,
 } from './payment-order';
+
+export {
+  readServiceInUseDetails,
+  type ServiceInUseBooking,
+  type ServiceInUseDetails,
+} from './service-in-use';
+export { holderNameDiffers, normalizeHolderName } from './licence-holder-name';

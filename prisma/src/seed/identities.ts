@@ -70,6 +70,29 @@ export const CUSTOMER_ACCOUNTS = [
 
 export type CustomerKey = (typeof CUSTOMER_ACCOUNTS)[number]['key'];
 
+/**
+ * Tài xế là TÀI KHOẢN KHÁCH được bên thuê mời liên kết (ADR 0063). Bốn tài khoản riêng — không
+ * dùng lại khách thuê ở trên, để một tài xế không bao giờ là khách của chính chuyến mình lái.
+ * Mỗi bên thuê có tài xế lấy một đoạn KHÔNG chồng nhau của danh sách này
+ * (`ShopSpec.driverPoolOffset`): chống trùng lịch theo NGƯỜI xuyên mọi bên thuê.
+ */
+export const DRIVER_ACCOUNTS = [
+  {
+    key: 'dung',
+    email: 'taixe.dung@xeprime.test',
+    displayName: 'Nguyễn Văn Dũng',
+    phone: '0921000001',
+  },
+  {
+    key: 'phuoc',
+    email: 'taixe.phuoc@xeprime.test',
+    displayName: 'Trần Hữu Phước',
+    phone: '0921000002',
+  },
+  { key: 'tri', email: 'taixe.tri@xeprime.test', displayName: 'Lê Minh Trí', phone: '0921000003' },
+  { key: 'loc', email: 'taixe.loc@xeprime.test', displayName: 'Phạm Văn Lộc', phone: '0921000004' },
+] as const;
+
 /** Gian hàng / khách có tài khoản SONG SINH ở realm thứ hai — xem `CROSS_REALM_TWINS`. */
 const TWIN_SHOP_OWNER_EMAILS = ['owner.saigon@xeprime.test', 'chuxe.son@xeprime.test'] as const;
 const TWIN_CUSTOMER_KEYS: readonly CustomerKey[] = ['an'];
@@ -122,6 +145,7 @@ export const CROSS_REALM_TWINS: readonly CrossRealmTwin[] = [
 export const SEED_OWNED_EMAILS: readonly string[] = [
   ...PLATFORM_ACCOUNTS.map((a) => a.email),
   ...CUSTOMER_ACCOUNTS.map((a) => a.email),
+  ...DRIVER_ACCOUNTS.map((a) => a.email),
   ...SHOP_SPECS.flatMap((s) => [s.owner.email, ...s.staff.map((st) => st.email)]),
 ];
 

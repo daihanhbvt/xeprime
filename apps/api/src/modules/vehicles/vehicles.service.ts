@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { isUniqueViolation, newId, Prisma } from '@xeprime/prisma';
+import { assertRemovedServicesNotInUse } from './vehicle-service-in-use';
 import {
   APPROVAL_ACTION,
   APPROVAL_STATUS,
@@ -698,6 +699,16 @@ export class VehiclesService {
      * Mọi trường còn lại — kể cả GIÁ và ảnh — sửa tự do và hiệu lực ngay ngoài chợ.
      */
     assertNoLockedFieldChange(current, dto);
+
+    /*
+     * Bỏ một loại dịch vụ khi xe còn chuyến ĐANG MỞ dùng loại đó ⇒ từ chối, kèm danh sách chuyến
+     * vướng (19/10/2026). Đơn đã chốt loại dịch vụ lúc khách đặt; tắt nó ở xe không được làm
+     * chuyến đang chạy mất chỗ dựa.
+     */
+    if (dto.serviceTypes !== undefined) {
+      const removed = current.serviceTypes.filter((t) => !dto.serviceTypes!.includes(t));
+      await assertRemovedServicesNotInUse(tx, { tenantId, vehicleId: current.id, removed });
+    }
 
     /*
      * Phiên hỗ trợ của nhân sự nền tảng (ADR 0050): guard đã lọc TÊN trường; ở đây — sau khi khoá

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
-import { BOOKING_STATUS_META, type BookingStatus } from '@xeprime/types';
+import { BOOKING_STATUS_META, SERVICE_TYPE, type BookingStatus } from '@xeprime/types';
 import { DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { bookingPath } from '@/constants/routes';
@@ -15,8 +15,9 @@ import type { CustomerBooking } from '../types';
 import styles from './CustomerBookingHistory.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
+import { BookingDriverCell } from '@/features/bookings/components/BookingDriverCell';
 
-const MIN_TABLE_WIDTH = 900;
+const MIN_TABLE_WIDTH = 1100;
 
 /**
  * Lịch sử thuê của một khách — phân trang SERVER, không tải hết rồi cắt ở client: một khách
@@ -35,6 +36,7 @@ export function CustomerBookingHistory({
   canOpenBooking: boolean;
 }) {
   const t = useTranslations('Customers.history');
+  const tDriver = useTranslations('Bookings.driver');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
 
@@ -89,6 +91,12 @@ export function CustomerBookingHistory({
       render: (_, row) => domainLabel('serviceType', row.serviceType),
     },
     {
+      title: tDriver('title'),
+      key: 'driver',
+      width: 200,
+      render: (_, row) => <BookingDriverCell booking={row} />,
+    },
+    {
       title: t('status'),
       key: 'status',
       width: 140,
@@ -107,9 +115,7 @@ export function CustomerBookingHistory({
             key: 'total',
             width: 150,
             align: 'right',
-            render: (_, row) => (
-              <span className={styles.money}>{fmt.money(row.totalAmount)}</span>
-            ),
+            render: (_, row) => <span className={styles.money}>{fmt.money(row.totalAmount)}</span>,
           },
           {
             title: t('debt'),
@@ -146,6 +152,11 @@ export function CustomerBookingHistory({
       <div className={styles.meta}>
         {fmt.shortDateTime(row.pickupAt)} → {fmt.shortDateTime(row.returnAt)}
       </div>
+      {row.driver || row.serviceType === SERVICE_TYPE.WITH_DRIVER ? (
+        <div className={styles.meta}>
+          {tDriver('title')}: <BookingDriverCell booking={row} />
+        </div>
+      ) : null}
       {canViewFinance ? (
         <div className={styles.cardMoney}>
           <span>{fmt.money(row.totalAmount)}</span>

@@ -28,6 +28,14 @@ describe('allowlist thông báo (customer)', () => {
     expect(notificationHref('/listings/01J00000000000000000000A')).not.toBeNull();
   });
 
+  it('đích tài xế (ADR 0063): chuyến tôi lái mở ĐÚNG màn chi tiết lái, lời mời mở /account/driving', () => {
+    expect(notificationHref('/trips/driving/01J00000000000000000000A')).toEqual({
+      pathname: '/trips/driving/[id]',
+      params: { id: '01J00000000000000000000A' },
+    });
+    expect(notificationHref('/account/driving')).toBe('/account/driving');
+  });
+
   it('TỪ CHỐI đích /manage/** và đích Owner Lite cũ — chúng thuộc app XePrime Partner', () => {
     expect(notificationHref('/account/vehicles')).toBeNull();
     expect(notificationHref('/manage/requests')).toBeNull();

@@ -33,6 +33,7 @@ import {
   makeBookingRequestsService,
   makeNotificationService,
   makePricingService,
+  makeDriversService,
 } from './helpers/service-factory';
 import { customerAccountFor } from './helpers/customer-account';
 
@@ -58,7 +59,7 @@ const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
 const notifications = makeNotificationService(asService);
 const occupancy = new OccupancyService(asService);
-const settings = new VehicleSettingsService(asService, audit, occupancy, new ListingsService(asService));
+const settings = new VehicleSettingsService(asService, audit, occupancy, new ListingsService(asService), makeDriversService(asService));
 const holds = makeBookingHoldsService(asService);
 const pricing = makePricingService(asService);
 const evaluator = new PromoCodeEvaluatorService(asService);

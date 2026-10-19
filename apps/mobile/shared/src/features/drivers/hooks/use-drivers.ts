@@ -4,15 +4,15 @@ import { queryKeys } from '@/queries/query-keys';
 import {
   driverFiltersToParams,
   driversApi,
-  type CreateDriverInput,
   type DriverFilters,
+  type InviteDriverInput,
   type UpdateDriverInput,
 } from '../api';
 
 /** Số tài xế mỗi trang — cùng con số với sổ khách và nhân sự (xem `LIST_TUNING`). */
 export const DRIVERS_PAGE_SIZE = 10;
 
-/** MỘT trang tài xế. Tìm kiếm, lọc và cắt trang đều ở SERVER. */
+/** MỘT trang liên kết tài xế. Tìm kiếm, lọc và cắt trang đều ở SERVER. */
 export function useDriversPage(filters: DriverFilters, enabled = true) {
   const withLimit = { ...filters, limit: DRIVERS_PAGE_SIZE };
   const params = driverFiltersToParams(withLimit);
@@ -26,38 +26,25 @@ export function useDriversPage(filters: DriverFilters, enabled = true) {
 }
 
 /**
- * Làm mới MỌI bề mặt tài xế sau một thay đổi.
- *
- * Nhánh `drivers` bao CẢ danh sách hồ sơ lẫn bộ chọn gán đơn (`drivers.assignable`) — hai bề mặt
- * của cùng một tập dữ liệu. Bỏ sót bộ chọn thì tài xế vừa tạo không xuất hiện ở màn gán, còn
- * người vừa bị ngừng vẫn gán được — đúng hai lỗi mà SHP-06 phải đóng.
+ * Mọi thao tác trên liên kết làm mới CẢ nhánh `drivers` — danh sách lẫn bộ chọn gán đơn
+ * (`drivers.assignable`): người vừa bị tạm khoá phải biến khỏi bộ chọn ngay.
  */
-function useInvalidateDrivers() {
+function useDriverMutation<TVars>(fn: (vars: TVars) => Promise<unknown>) {
   const queryClient = useQueryClient();
-  return () => queryClient.invalidateQueries({ queryKey: queryKeys.drivers.all });
-}
-
-export function useCreateDriver() {
-  const invalidate = useInvalidateDrivers();
   return useMutation({
-    mutationFn: (body: CreateDriverInput) => driversApi.create(body),
-    onSuccess: invalidate,
+    mutationFn: fn,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.drivers.all }),
   });
 }
 
-export function useUpdateDriver() {
-  const invalidate = useInvalidateDrivers();
-  return useMutation({
-    mutationFn: ({ id, body }: { id: string; body: UpdateDriverInput }) =>
-      driversApi.update(id, body),
-    onSuccess: invalidate,
-  });
-}
+export const useInviteDriver = () =>
+  useDriverMutation((body: InviteDriverInput) => driversApi.invite(body));
 
-export function useDeleteDriver() {
-  const invalidate = useInvalidateDrivers();
-  return useMutation({
-    mutationFn: (id: string) => driversApi.remove(id),
-    onSuccess: invalidate,
-  });
-}
+export const useUpdateDriver = () =>
+  useDriverMutation(({ id, body }: { id: string; body: UpdateDriverInput }) =>
+    driversApi.update(id, body),
+  );
+
+export const useSuspendDriver = () => useDriverMutation((id: string) => driversApi.suspend(id));
+export const useResumeDriver = () => useDriverMutation((id: string) => driversApi.resume(id));
+export const useEndDriver = () => useDriverMutation((id: string) => driversApi.end(id));

@@ -98,6 +98,8 @@ export const ROUTES = {
     ADDRESSES: '/account/addresses',
     /** Kho giấy tờ tuỳ thân của khách (GPLX/CCCD) — ADR 0014: gian hàng đối chiếu tay. */
     DOCUMENTS: '/account/documents',
+    /** "Nơi tôi làm tài xế" — lời mời + liên kết tài xế của tài khoản khách (ADR 0063). */
+    DRIVING: '/account/driving',
     NOTIFICATIONS: '/account/notifications',
     SUPPORT: '/account/support',
     SETTINGS: '/account/settings',
@@ -1266,3 +1268,21 @@ export function shopWelcomePath(): string {
  * hash là hai chỗ để nó trôi khỏi nhau.
  */
 export const SHOP_POLICIES_DEPOSIT_ANCHOR = 'deposit-collection';
+
+/**
+ * "Chuyến tôi lái" của tài khoản khách làm tài xế (ADR 0063).
+ *
+ * Danh sách là MỘT tab của "Chuyến của tôi" (`/trips?tab=driving`) — cùng chuỗi với đích thông báo ở
+ * `@xeprime/domain` (`notification-delivery.ts`); chi tiết ở `/trips/driving/:id` (id ĐƠN THUÊ).
+ */
+export const TRIPS_TAB_PARAM = 'tab';
+export const TRIPS_TAB = {
+  RENTING: 'renting',
+  DRIVING: 'driving',
+} as const;
+export type TripsTab = (typeof TRIPS_TAB)[keyof typeof TRIPS_TAB];
+
+export const drivingTripPath = {
+  list: `${ROUTES.TRIPS}?${TRIPS_TAB_PARAM}=${TRIPS_TAB.DRIVING}`,
+  detail: (bookingId: string): string => `${ROUTES.TRIPS}/driving/${encodeURIComponent(bookingId)}`,
+};

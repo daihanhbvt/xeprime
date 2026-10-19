@@ -62,5 +62,7 @@ export const NOTIFICATION_ALLOWED: readonly AllowedDeepLink[] = [
     resolve: listOrDetail(ROUTES.manage.vehicles, ROUTES.manage.vehicleDetail),
   },
   { prefix: 'manage/shop', resolve: exact(ROUTES.manage.shop) },
+  // Tài xế chấp nhận/từ chối/rời liên kết (ADR 0063).
+  { prefix: 'manage/drivers', resolve: exact(ROUTES.manage.drivers) },
   { prefix: 'manage/chat', resolve: listOrDetail(ROUTES.manage.chat, ROUTES.manage.chatThread) },
 ];

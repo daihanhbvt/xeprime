@@ -1,98 +1,68 @@
 'use client';
 
-import { Alert, App, Form } from 'antd';
+import { Alert, App, Form, Select, Tag } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useId, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { useController, useForm, useWatch, type Control } from 'react-hook-form';
-import { API_ERROR_CODE, ROUTE_TYPE, ROUTE_TYPE_VALUES, SERVICE_TYPE } from '@xeprime/types';
+import { useId, useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { useTranslations } from 'next-intl';
+import * as yup from 'yup';
+import {
+  DRIVER_ASSIGNMENT_STATUS_META,
+  isDriverReassignable,
+  PERMISSION,
+  SERVICE_TYPE,
+  VN_PHONE_PATTERN,
+} from '@xeprime/types';
+import { moneySchema } from '@xeprime/validators';
 import { DialogForm } from '@/components/form/DialogForm';
-import { SelectField } from '@/components/form/SelectField';
 import { TextField } from '@/components/form/TextField';
 import { NumberField } from '@/components/form/NumberField';
 import { TextAreaField } from '@/components/form/TextAreaField';
-import {
-  RentalDateTimeRangeField,
-  type RentalMode,
-} from '@/components/form/RentalDateTimeRangeField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
-import { useDomainLabel } from '@/i18n/use-domain-label';
-import { useVehicles } from '@/features/vehicles/hooks/use-vehicles';
-import { appWallClockToIso, toAppTz } from '@/lib/datetime';
-import { getErrorCode, getErrorMessage } from '@/services/api-client';
-import { SERVICE_TYPE_OPTIONS } from '../constants';
-import { checkConflict } from '../api';
-import { useCreateBooking, useUpdateBooking } from '../hooks/use-booking-mutations';
-import { bookingFormSchema, type BookingFormValues } from '../schema';
-import type { BookingDetail, CreateBookingInput, UpdateBookingInput } from '../types';
-import styles from './BookingFormDialog.module.css';
+import { StatusTag } from '@/components/data-display/StatusTag';
+import { DriverLicenceStateTag } from '@/features/drivers/components/DriverLicenceStateTag';
+import { useAssignableDrivers } from '@/features/drivers/hooks/use-drivers';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useErrorMessage } from '@/i18n/use-error-message';
+import { usePermissions } from '@/hooks/use-permissions';
+import { useAssignBookingDriver, useUpdateBooking } from '../hooks/use-booking-mutations';
+import type { BookingDetail, UpdateBookingInput } from '../types';
+import styles from './BookingFormDialog.module.css';
 
-function numOrNull(value: string | null | undefined): number | null {
-  return value === null || value === undefined || value === '' ? null : Number(value);
-}
+const NOTE_MAX = 2000;
+/** Giá trị Select cho "không gán" — `null` không phải một value hợp lệ của AntD Select. */
+const NO_DRIVER = '';
 
-function toDefaults(editing: BookingDetail | null): BookingFormValues {
-  if (!editing) {
-    return {
-      vehicleId: '',
-      customerName: '',
-      customerPhone: '',
-      serviceType: SERVICE_TYPE.SELF_DRIVE,
-      routeType: ROUTE_TYPE.IN_CITY,
-      pickupAddress: '',
-      destination: '',
-      pickupAt: null,
-      returnAt: null,
-      baseAmount: null,
-      deliveryFee: null,
-      discountAmount: null,
-      depositAmount: null,
-      note: '',
-    };
-  }
-  return {
-    vehicleId: editing.vehicleId,
-    customerName: editing.customerName,
-    customerPhone: editing.customerPhone ?? '',
-    serviceType: editing.serviceType as BookingFormValues['serviceType'],
-    routeType: (editing.routeType ?? ROUTE_TYPE.IN_CITY) as BookingFormValues['routeType'],
-    pickupAddress: editing.pickupAddress ?? '',
-    destination: editing.destination ?? '',
-    // Mốc UTC từ API → giờ VIỆT NAM cho ô chọn (CLAUDE.md §9). `dayjs(iso)` trần sẽ hiện giờ
-    // của máy đang mở trình duyệt, và người sửa đơn tưởng lịch đã đổi.
-    pickupAt: toAppTz(editing.pickupAt),
-    returnAt: toAppTz(editing.returnAt),
-    baseAmount: numOrNull(editing.baseAmount),
-    // Phí giao nhận KHÔNG sửa ở form này — xem docblock component. Giữ nguyên giá trị đang lưu.
-    deliveryFee: numOrNull(editing.deliveryFee),
-    discountAmount: numOrNull(editing.discountAmount),
-    depositAmount: numOrNull(editing.depositAmount),
-    note: editing.note ?? '',
-  };
+function buildEditSchema(labels: { name: string; phone: string }) {
+  return yup.object({
+    customerName: yup.string().trim().required(labels.name).max(255),
+    customerPhone: yup
+      .string()
+      .trim()
+      .default('')
+      .matches(VN_PHONE_PATTERN, { message: labels.phone, excludeEmptyString: true }),
+    depositAmount: moneySchema
+      .transform((v, orig) => (orig === '' || orig === null ? null : v))
+      .nullable()
+      .default(null),
+    note: yup.string().trim().max(NOTE_MAX).default(''),
+  });
 }
+type EditFormValues = yup.InferType<ReturnType<typeof buildEditSchema>>;
 
 /**
- * SỬA đơn thuê.
+ * SỬA đơn thuê — chỉ còn BỐN trường (quyết định sản phẩm 19/10/2026): tên khách, SĐT, tiền cọc,
+ * ghi chú. Loại dịch vụ, thời gian, lộ trình và giá đóng băng lúc tạo (ADR 0024) — server từ chối
+ * mọi trường khác (`forbidNonWhitelisted`). Chúng hiện ở đây chỉ-đọc để người sửa biết vì sao
+ * không đổi được. Phí giao nhận có lối riêng (`UpdateDeliveryFeeModal`, kèm lý do vào audit).
  *
- * TẠO đơn KHÔNG đi qua đây: mọi lối tạo thủ công (lịch · danh sách đơn · hồ sơ khách) dùng
- * `StaffBookingDialog` — cùng giao diện với luồng thuê xe của khách, kèm báo giá từ server. Form
- * này ở lại cho việc SỬA một đơn đã có, nơi xe và khách đã cố định.
+ * TẠO đơn không đi qua đây — mọi lối tạo thủ công dùng `StaffBookingDialog`.
  *
- * **Khổ `lg` một cột, dựng trên `DialogForm` (20/08).** Bản trước là modal `xl` hai cột tự dựng
- * lấy: nó vừa lạc lõng (10 hộp CRUD khác trong kho đều dùng `DialogForm`), vừa HỎNG — thân của
- * `xl` là `overflow: hidden` vì khổ đó sinh ra cho bố cục hai cột tự cuộn riêng, nên ở màn thấp
- * phần dưới của form (ghi chú, tổng tiền, cả hàng nút Lưu) bị cắt cụt và không cuộn tới được.
- *
- * **Phí giao nhận cố ý KHÔNG có ở đây.** Nó là con số hai bên thoả thuận ngoài ứng dụng rồi ghi
- * lại, và việc ghi lại đi kèm ghi chú nội bộ vào audit (`UpdateDeliveryFeeModal`). Để nó thành
- * một ô lẫn giữa các ô khác là mở đường ghi thứ hai cho cùng một cột, và đường đó mất lý do sửa.
- * Chỗ sửa đứng ngay cạnh con số ở khối "Tổng hợp chi phí".
- *
- * Khoảng thuê là MỘT giá trị đi qua `RentalDateTimeRangeField` — cùng control với luồng đặt xe
- * của khách, nên chủ xe và khách chọn thời gian bằng cùng một cách. Form remount theo `key` để
- * mỗi lần mở là state sạch. Trùng lịch do exclusion constraint quyết (ADR 0006) — preview ở đây
- * chỉ là cảnh báo sớm.
+ * Đơn `with_driver` kèm ô "Tài xế" (ADR 0063): lưu = PATCH bốn trường, rồi NẾU lựa chọn tài xế
+ * đổi thì gọi `PATCH /bookings/:id/driver`. Hai lệnh, hai lỗi riêng: thông tin đơn đã lưu thì
+ * không bị "mất" vì lượt gán tài xế hỏng (người bận, không còn liên kết…) — hộp ở lại để chọn
+ * người khác.
  */
 export function BookingFormDialog({
   open,
@@ -100,254 +70,211 @@ export function BookingFormDialog({
   onClose,
 }: {
   open: boolean;
-  editing: BookingDetail | null;
+  editing: BookingDetail;
   onClose: () => void;
 }) {
   // Chỉ dựng khi mở → mỗi lần mở là state sạch, không cần reset trong effect.
   if (!open) return null;
-  return <BookingForm key={editing?.id ?? 'new'} editing={editing} onDone={onClose} />;
+  return <BookingEditForm key={editing.id} booking={editing} onDone={onClose} />;
 }
 
-/** Cầu RHF ↔ RentalDateTimeRangeField: hai field pickupAt/returnAt là MỘT khoảng trên UI. */
-function RentalRangeFormField({ control }: { control: Control<BookingFormValues> }) {
-  const pickup = useController({ control, name: 'pickupAt' });
-  const ret = useController({ control, name: 'returnAt' });
-  const [mode, setMode] = useState<RentalMode>('daily');
-
-  const error = pickup.fieldState.error?.message ?? ret.fieldState.error?.message;
-
-  return (
-    <Form.Item label="Thời gian thuê" required validateStatus={error ? 'error' : ''} help={error}>
-      <RentalDateTimeRangeField
-        value={{ pickupAt: pickup.field.value, returnAt: ret.field.value }}
-        onChange={(next) => {
-          pickup.field.onChange(next.pickupAt);
-          ret.field.onChange(next.returnAt);
-        }}
-        mode={mode}
-        onModeChange={setMode}
-        variant="labelled"
-      />
-    </Form.Item>
-  );
-}
-
-function BookingForm({ editing, onDone }: { editing: BookingDetail | null; onDone: () => void }) {
+function BookingEditForm({ booking, onDone }: { booking: BookingDetail; onDone: () => void }) {
+  const t = useTranslations('Bookings.edit');
+  const tCreate = useTranslations('Bookings.create');
+  const tDriver = useTranslations('Drivers.booking');
   const fmt = useAppFormat();
   const dl = useDomainLabel();
-
+  const errorMessage = useErrorMessage();
+  const { has } = usePermissions();
   const { message } = App.useApp();
   const formId = useId();
-  const [conflict, setConflict] = useState(false);
-  const { data: vehiclesData } = useVehicles({ limit: 100 });
-  const create = useCreateBooking();
-  const update = useUpdateBooking(editing?.id ?? '');
+  const update = useUpdateBooking(booking.id);
+  const assign = useAssignBookingDriver(booking.id);
 
-  const { control, handleSubmit } = useForm<BookingFormValues>({
-    resolver: yupResolver(bookingFormSchema),
-    defaultValues: toDefaults(editing),
+  const withDriver = booking.serviceType === SERVICE_TYPE.WITH_DRIVER;
+  // Bộ chọn tài xế chỉ có khi đơn CHƯA giao xe — sau bàn giao tài xế đã chốt (ADR 0063).
+  const driverEditable =
+    withDriver && isDriverReassignable(booking.status) && has(PERMISSION.DRIVER_VIEW);
+  const currentDriverId = booking.driver?.id ?? NO_DRIVER;
+  const [driverId, setDriverId] = useState<string>(currentDriverId);
+  /** Thông tin đơn đã lưu, chỉ còn tài xế hỏng — lần bấm sau chỉ thử lại phần tài xế. */
+  const [detailsSaved, setDetailsSaved] = useState(false);
+
+  const driversQ = useAssignableDrivers(
+    { pickupAt: booking.pickupAt, returnAt: booking.returnAt, excludeBookingId: booking.id },
+    driverEditable,
+  );
+
+  const schema = useMemo(
+    () => buildEditSchema({ name: t('nameRequired'), phone: t('phoneInvalid') }),
+    [t],
+  );
+  const { control, handleSubmit } = useForm<EditFormValues>({
+    resolver: yupResolver(schema),
+    defaultValues: {
+      customerName: booking.customerName,
+      customerPhone: booking.customerPhone ?? '',
+      depositAmount:
+        booking.depositAmount === null || booking.depositAmount === undefined
+          ? null
+          : Number(booking.depositAmount),
+      note: booking.note ?? '',
+    },
   });
 
-  const [base, delivery, discount] = useWatch({
-    control,
-    name: ['baseAmount', 'deliveryFee', 'discountAmount'],
-  });
-  const total = (base ?? 0) + (delivery ?? 0) - (discount ?? 0);
-  const [watchedServiceType, watchedRouteType] = useWatch({
-    control,
-    name: ['serviceType', 'routeType'],
-  });
+  const pending = update.isPending || assign.isPending;
+  const driverChanged = driverEditable && driverId !== currentDriverId;
 
-  // Preview trùng lịch (ADR 0006: chỉ cảnh báo sớm cho UX, KHÔNG chặn submit — chốt thật là
-  // exclusion constraint ở DB). useQuery tự dedupe/cache theo khoá; khi sửa thì bỏ qua chính đơn.
-  const [vehicleId, pickupAt, returnAt] = useWatch({
-    control,
-    name: ['vehicleId', 'pickupAt', 'returnAt'],
-  });
-  const canCheck = Boolean(vehicleId && pickupAt && returnAt && returnAt.isAfter(pickupAt));
-  const conflictPreview = useQuery({
-    queryKey: [
-      'check-conflict',
-      vehicleId,
-      pickupAt ? appWallClockToIso(pickupAt) : null,
-      returnAt ? appWallClockToIso(returnAt) : null,
-      editing?.id ?? null,
-    ],
-    queryFn: () =>
-      checkConflict({
-        vehicleId,
-        startAt: appWallClockToIso(pickupAt!),
-        endAt: appWallClockToIso(returnAt!),
-        ...(editing?.id ? { excludeSourceId: editing.id } : {}),
-      }),
-    enabled: canCheck,
-    staleTime: 10_000,
-  });
-  const previewConflict = canCheck && conflictPreview.data?.hasConflict === true;
+  async function saveDriver(): Promise<boolean> {
+    if (!driverChanged) return true;
+    try {
+      await assign.mutateAsync(driverId === NO_DRIVER ? null : driverId);
+      return true;
+    } catch (err) {
+      message.error(t('driverFailed', { error: errorMessage(err) }));
+      return false;
+    }
+  }
 
-  const vehicleOptions = (vehiclesData?.items ?? []).map((v) => ({
-    value: v.id,
-    label: v.plateNumber ? `${v.name} · ${v.plateNumber}` : v.name,
-  }));
-
-  const pending = create.isPending || update.isPending;
-
-  const onSubmit = handleSubmit((values) => {
-    setConflict(false);
-    const withDriver = values.serviceType === SERVICE_TYPE.WITH_DRIVER;
-    const shared = {
-      customerName: values.customerName.trim(),
-      customerPhone: values.customerPhone || undefined,
-      serviceType: values.serviceType,
-      // Giờ trên ô chọn LÀ giờ Việt Nam — xem `appWallClockToIso`. Cùng phép quy đổi với
-      // preview trùng lịch ngay trên, nên hai lần hỏi server nói về đúng một khoảng.
-      pickupAt: appWallClockToIso(values.pickupAt!),
-      returnAt: appWallClockToIso(values.returnAt!),
-      baseAmount: values.baseAmount === null ? undefined : String(values.baseAmount),
-      deliveryFee: values.deliveryFee === null ? undefined : String(values.deliveryFee),
-      discountAmount: values.discountAmount === null ? undefined : String(values.discountAmount),
-      depositAmount: values.depositAmount === null ? undefined : String(values.depositAmount),
-      note: values.note?.trim() || undefined,
-      ...(withDriver
-        ? {
-            routeType: values.routeType,
-            pickupAddress: values.pickupAddress?.trim() || undefined,
-            ...(values.routeType !== ROUTE_TYPE.IN_CITY && values.destination?.trim()
-              ? { destination: values.destination.trim() }
-              : {}),
-          }
-        : {}),
-    };
-
-    const onError = (err: unknown) => {
-      if (getErrorCode(err) === API_ERROR_CODE.BOOKING_SCHEDULE_CONFLICT) {
-        setConflict(true);
+  const onSubmit = handleSubmit(async (values) => {
+    if (!detailsSaved) {
+      const body: UpdateBookingInput = {
+        customerName: values.customerName.trim(),
+        ...(values.customerPhone ? { customerPhone: values.customerPhone } : {}),
+        // Để trống = không đổi (PATCH chỉ đổi trường có mặt); "0" mới là bỏ cọc.
+        ...(values.depositAmount === null ? {} : { depositAmount: String(values.depositAmount) }),
+        note: values.note?.trim() ?? '',
+      };
+      try {
+        await update.mutateAsync(body);
+      } catch (err) {
+        message.error(errorMessage(err));
         return;
       }
-      message.error(getErrorMessage(err));
-    };
-
-    if (editing) {
-      update.mutate(shared as UpdateBookingInput, {
-        onSuccess: () => {
-          message.success('Đã cập nhật đơn');
-          onDone();
-        },
-        onError,
-      });
-    } else {
-      create.mutate({ vehicleId: values.vehicleId, ...shared } as CreateBookingInput, {
-        onSuccess: () => {
-          message.success('Đã tạo đơn thuê');
-          onDone();
-        },
-        onError,
-      });
+      setDetailsSaved(true);
     }
+    if (!(await saveDriver())) return;
+    message.success(t('success'));
+    onDone();
   });
+
+  const driver = booking.driver ?? null;
 
   return (
     <ResponsiveDialog
-      title={editing ? `Sửa đơn ${editing.code}` : 'Tạo đơn thuê'}
+      title={`${t('title')} ${booking.code}`}
       size="lg"
       open
       onClose={onDone}
-      okText={editing ? 'Lưu thay đổi' : 'Tạo đơn'}
+      okText={t('save')}
       onOk={() => void onSubmit()}
       confirmLoading={pending}
     >
       <DialogForm id={formId} onSubmit={onSubmit} labelWidth="md">
-        {conflict ? (
-          <Alert
-            type="error"
-            showIcon
-            className={styles.alert}
-            title="Xe đã bận trong khung giờ này"
-            description="Chọn xe khác hoặc đổi thời gian nhận/trả."
-          />
-        ) : previewConflict ? (
-          <Alert
-            type="warning"
-            showIcon
-            className={styles.alert}
-            title="Xe có thể đã bận khung giờ này"
-            description="Cảnh báo sớm — hệ thống vẫn kiểm tra lại khi lưu."
-          />
-        ) : null}
+        <Alert type="info" showIcon className={styles.alert} title={t('frozenNote')} />
 
-        <SelectField
-          control={control}
-          name="vehicleId"
-          label="Xe"
-          options={vehicleOptions}
-          placeholder="Chọn xe"
-          disabled={Boolean(editing)}
-          showSearch
-        />
+        {/* Phần đã chốt — đọc, không sửa. */}
+        <Form.Item label={t('vehicleLabel')}>
+          {booking.vehiclePlate
+            ? `${booking.vehicleName} · ${booking.vehiclePlate}`
+            : booking.vehicleName}
+        </Form.Item>
+        <Form.Item label={t('serviceTypeLabel')}>
+          {dl('serviceType', booking.serviceType)}
+          {withDriver && booking.routeType ? ` · ${dl('routeType', booking.routeType)}` : ''}
+        </Form.Item>
+        <Form.Item label={t('scheduleLabel')}>
+          {fmt.shortDateTimeRange(booking.pickupAt, booking.returnAt)}
+        </Form.Item>
+        <Form.Item label={t('total')}>
+          <strong>{fmt.money(booking.totalAmount)}</strong>
+        </Form.Item>
+
         <TextField
           control={control}
           name="customerName"
-          label="Tên khách"
-          placeholder="Nguyễn Văn A"
+          label={tCreate('customer.nameLabel')}
+          placeholder={tCreate('customer.namePlaceholder')}
         />
         <TextField
           control={control}
           name="customerPhone"
-          label="Số điện thoại"
-          placeholder="0901234567"
+          label={tCreate('customer.phoneLabel')}
+          placeholder={tCreate('customer.phonePlaceholder')}
         />
-        <SelectField
+        <NumberField
           control={control}
-          name="serviceType"
-          label="Loại dịch vụ"
-          options={SERVICE_TYPE_OPTIONS}
+          name="depositAmount"
+          label={tCreate('price.depositAmount')}
+          money
+          min={0}
         />
 
-        {/* Hành trình chuyến CÓ TÀI XẾ — server validate lại cùng bộ luật (route-context). */}
-        {watchedServiceType === SERVICE_TYPE.WITH_DRIVER ? (
-          <>
-            <SelectField
-              control={control}
-              name="routeType"
-              label="Lộ trình"
-              options={ROUTE_TYPE_VALUES.map((value) => ({
-                value,
-                label: dl('routeType', value),
-              }))}
-            />
-            <TextField
-              control={control}
-              name="pickupAddress"
-              label="Địa chỉ đón khách"
-              placeholder="123 Lê Lợi, Q.1, TP.HCM"
-            />
-            {watchedRouteType !== ROUTE_TYPE.IN_CITY ? (
-              <TextField
-                control={control}
-                name="destination"
-                label="Điểm đến"
-                placeholder="TP. Đà Lạt, Lâm Đồng"
+        {driverEditable ? (
+          <Form.Item
+            label={t('driverLabel')}
+            help={driverChanged && driverId !== NO_DRIVER ? t('driverPendingNote') : undefined}
+          >
+            <div className={styles.driverRow}>
+              <Select
+                className={styles.driverSelect}
+                value={driverId}
+                onChange={setDriverId}
+                loading={driversQ.isLoading}
+                showSearch
+                optionFilterProp="title"
+                placeholder={t('driverPlaceholder')}
+                aria-label={t('driverLabel')}
+                disabled={pending}
+                notFoundContent={
+                  driversQ.isError ? errorMessage(driversQ.error) : tDriver('pickerEmpty')
+                }
+                options={[
+                  { value: NO_DRIVER, title: t('driverNone'), label: t('driverNone') },
+                  /*
+                   * Người đang gán có thể không còn trong danh sách khả dụng (liên kết đã tạm
+                   * ngưng) — vẫn giữ một option để ô hiện đúng tên, không hiện mã thô.
+                   */
+                  ...(driver && !(driversQ.data ?? []).some((d) => d.id === driver.id)
+                    ? [{ value: driver.id, title: driver.name, label: driver.name }]
+                    : []),
+                  ...(driversQ.data ?? []).map((d) => ({
+                    value: d.id,
+                    title: `${d.name} ${d.phone}`,
+                    disabled: d.busy,
+                    label: (
+                      <span className={styles.driverOption}>
+                        <span>
+                          {d.name} · {d.phone}
+                        </span>
+                        <span className={styles.driverTags}>
+                          <DriverLicenceStateTag licence={{ state: d.licenceState }} compact />
+                          {d.busy ? <Tag>{tDriver('busy')}</Tag> : null}
+                        </span>
+                      </span>
+                    ),
+                  })),
+                ]}
               />
-            ) : null}
-          </>
+              {/* Trạng thái lượt gán HIỆN TẠI — gán mới vẫn chờ tài xế nhận. */}
+              {driver && driverId === driver.id ? (
+                <StatusTag
+                  value={driver.assignmentStatus}
+                  meta={DRIVER_ASSIGNMENT_STATUS_META}
+                  group="driverAssignmentStatus"
+                />
+              ) : null}
+            </div>
+          </Form.Item>
         ) : null}
 
-        <RentalRangeFormField control={control} />
-
-        <NumberField control={control} name="baseAmount" label="Tiền thuê" money min={0} />
-        <NumberField control={control} name="discountAmount" label="Giảm giá" money min={0} />
-        <NumberField control={control} name="depositAmount" label="Tiền cọc" money min={0} />
-
-        {/*
-          Tổng là số SUY RA, không phải một ô nhập — nên nó là một hàng tổng kết, không đứng
-          trong hàng nhãn/ô của form. Server vẫn tính lại khi lưu (ADR 0007).
-        */}
-        <div className={styles.total}>
-          <span>Tổng tiền</span>
-          <strong>{fmt.money(String(Math.max(0, total)))}</strong>
-        </div>
-
-        <TextAreaField control={control} name="note" label="Ghi chú" rows={3} maxLength={2000} />
+        <TextAreaField
+          control={control}
+          name="note"
+          label={tCreate('customer.noteLabel')}
+          rows={3}
+          maxLength={NOTE_MAX}
+        />
       </DialogForm>
     </ResponsiveDialog>
   );

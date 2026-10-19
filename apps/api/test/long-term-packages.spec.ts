@@ -457,14 +457,11 @@ describe('đơn thuê dài hạn lập tay', () => {
       ),
     );
 
-    // Đổi ngày trả trực tiếp trên đơn dài hạn là không hợp lệ — độ dài do gói quyết định.
-    await expect(
-      bookings.update(tenantId, booking.id, {
-        returnAt: new Date(Date.now() + 400 * 86_400_000).toISOString(),
-      }),
-    ).rejects.toMatchObject({
-      response: { message: expect.stringContaining('tính theo gói') },
-    });
+    // Sửa đơn không đụng được lịch (19/10/2026): ngày trả gửi kèm bị bỏ qua, độ dài vẫn theo gói.
+    const after = await bookings.update(tenantId, booking.id, {
+      returnAt: new Date(Date.now() + 400 * 86_400_000).toISOString(),
+    } as never);
+    expect(new Date(after.returnAt).getTime()).toBe(new Date(booking.returnAt).getTime());
   });
 
   maybe('đơn dài hạn thiếu gói bị chặn', async () => {

@@ -36,6 +36,7 @@ import { resolvePaging, paginationMeta } from '../../common/pagination';
 import { addressViewOf } from '../../common/address-view';
 import { AddressService } from '../locations/address.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { BOOKING_DRIVER_SELECT, toBookingDriverSummary } from '../drivers/booking-driver-summary';
 import { AuditService } from '../audit/audit.service';
 import {
   CUSTOMER_DEFAULT_LIMIT,
@@ -964,7 +965,8 @@ function searchSql(raw: string | undefined): Prisma.Sql | null {
   const pii = piiSearch(q);
   if (!pii.substring) {
     const exact: Prisma.Sql[] = [Prisma.sql`c.full_name ILIKE ${like}`];
-    for (const phone of pii.phones) exact.push(Prisma.sql`c.normalized_phone = ${normalizePhone(phone)}`);
+    for (const phone of pii.phones)
+      exact.push(Prisma.sql`c.normalized_phone = ${normalizePhone(phone)}`);
     if (pii.email) exact.push(Prisma.sql`lower(c.email) = ${pii.email}`);
     return Prisma.sql`(${Prisma.join(exact, ' OR ')})`;
   }
@@ -1047,6 +1049,7 @@ const BOOKING_SELECT = {
   totalAmount: true,
   paidAmount: true,
   vehicle: { select: { name: true, plateNumber: true } },
+  ...BOOKING_DRIVER_SELECT,
 } satisfies Prisma.BookingSelect;
 
 type BookingRow = Prisma.BookingGetPayload<{ select: typeof BOOKING_SELECT }>;
@@ -1066,6 +1069,7 @@ function toBookingItem(row: BookingRow, canViewFinance: boolean): CustomerBookin
     debtAmount: canViewFinance
       ? Prisma.Decimal.max(0, row.totalAmount.minus(row.paidAmount)).toString()
       : null,
+    driver: toBookingDriverSummary(row),
   };
 }
 

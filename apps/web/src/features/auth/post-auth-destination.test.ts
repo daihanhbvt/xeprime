@@ -192,7 +192,7 @@ describe('B1 — partner đăng nhập xong vào đâu', () => {
         M.DEBTS,
         M.MEMBERS,
         `${M.SHOP}/branches`,
-        M.DRIVERS,
+        // M.DRIVERS không còn ở đây — tài xế mở cho cả chủ xe tuyến hoa hồng (ADR 0063).
         M.MAINTENANCE,
         M.VEHICLE_NEW,
         `${M.VEHICLES}/01V/edit`,

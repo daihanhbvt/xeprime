@@ -3,10 +3,13 @@ import { useMemo, useState } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { LIST_SEPARATOR } from '@xeprime/domain';
+import { STATUS_COLOR } from '@xeprime/types';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { DriverLicenceStateBadge } from '@/features/drivers/components/DriverLicenceStateBadge';
+import { useErrorMessage } from '@/i18n/use-error-message';
 import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { useAssignableDrivers } from '../hooks/use-bookings';
 import type { AssignableDriver, BookingDetail } from '../api';
@@ -15,29 +18,27 @@ import type { AssignableDriver, BookingDetail } from '../api';
 const SEARCH_THRESHOLD = 5;
 
 /**
- * Gán tài xế cho một đơn (BKG-12).
+ * Gán tài xế cho một đơn `with_driver` (ADR 0063) — bản native của bộ chọn trong
+ * `BookingDriverSection` của web.
  *
  * Cửa sổ hỏi là khoảng thuê của CHÍNH đơn này, và `excludeBookingId` trừ nó ra — nếu không,
- * tài xế đang gán cho đơn này tự báo là "đang bận" và không đổi lại được.
+ * tài xế đang gán cho đơn này tự báo là "bận".
  *
- * Hai cờ cảnh báo đến từ server, không suy ở client: `busy` (có đơn sống giao nhau với khung
- * giờ) và `licenseExpired` (GPLX hết hạn trước ngày trả). Cả hai chỉ CẢNH BÁO — gian hàng vẫn
- * gán được, vì họ biết chuyện mà hệ thống không biết (tài xế đã đổi lịch, bằng vừa gia hạn).
+ * Server trả CẢ người BẬN trong khung giờ (ở bất kỳ bên thuê nào): hiện kèm nhãn "Bận", không bấm
+ * được, không bao giờ nói bận ở đâu. Kèm trạng thái bằng lái của tài khoản tài xế. Backend vẫn
+ * kiểm lại trong transaction lúc gán; gán xong là "chờ tài xế nhận".
  *
- * Tấm này CHỈ chọn người. "Bỏ gán" nằm ở hàng tài xế trên màn đơn, cùng chỗ với "Đổi" — đúng
- * như web, và vì đó là hai việc khác nhau: bỏ gán không cần mở danh sách nào cả. Có ở cả hai
- * nơi thì cùng một việc có hai lối, và lối trong tấm chọn là lối không ai tìm tới.
+ * Tấm này CHỈ chọn người. "Bỏ gán" nằm ở hàng tài xế trên màn đơn, cùng chỗ với "Đổi".
  *
- * Lọc bằng ô tìm ngay TRONG danh sách đã tải, không gọi lại API: đây là bản native của
- * `showSearch` + `optionFilterProp="label"` trên `Select` của web, vốn cũng lọc trên đúng bộ
- * option đã nạp. `/drivers/assignable` trả trọn danh sách đang hoạt động nên không có trang
- * nào để tải thêm — hỏi lại server chỉ tốn một vòng mạng cho cùng một câu trả lời.
+ * Lọc bằng ô tìm ngay TRONG danh sách đã tải (gương `showSearch` của web): `/drivers/assignable`
+ * trả trọn danh sách nên không có trang nào để tải thêm.
  */
 export function AssignDriverSheet({
   open,
   onClose,
   booking,
   pending = false,
+  selectedId,
   onSelect,
 }: {
   open: boolean;
@@ -45,9 +46,13 @@ export function AssignDriverSheet({
   booking: BookingDetail;
   /** `assignDriver.isPending` — khoá cả danh sách trong lúc PATCH đang chạy, chống bấm đúp. */
   pending?: boolean;
+  /** Người đang được CHỌN (form sửa đơn giữ lựa chọn tạm) — mặc định là tài xế đang gán. */
+  selectedId?: string | null;
   onSelect: (driverId: string) => void;
 }) {
   const t = useTranslations('Bookings.driver');
+  const tDrivers = useTranslations('Drivers.booking');
+  const errorMessage = useErrorMessage();
   const [search, setSearch] = useState('');
 
   const query = useAssignableDrivers(
@@ -73,10 +78,6 @@ export function AssignDriverSheet({
 
   return (
     <BottomSheet open={open} onClose={onClose} title={t('sheetTitle')}>
-      {/*
-        Ô tìm chỉ có nghĩa khi danh sách đủ dài để phải tìm. Một gian hàng ba tài xế mà vẫn bắt
-        đọc qua một ô nhập trước khi thấy ba cái tên là thêm một bước cho không.
-      */}
       {total > SEARCH_THRESHOLD ? (
         <SearchInput
           value={search}
@@ -94,14 +95,14 @@ export function AssignDriverSheet({
         </YStack>
       ) : query.isError ? (
         <Text col={colors.textMuted} fos={fontSize.bodySm}>
-          {t('errorTitle')}
+          {errorMessage(query.error)}
         </Text>
       ) : total === 0 ? (
         <Text col={colors.textMuted} fos={fontSize.bodySm}>
-          {t('empty')}
+          {tDrivers('pickerEmpty')}
         </Text>
       ) : drivers.length === 0 ? (
-        /* Tìm hụt KHÁC gian hàng chưa có tài xế nào — hai câu, không gộp. */
+        /* Tìm hụt KHÁC chưa có tài xế nào — hai câu, không gộp. */
         <Text col={colors.textMuted} fos={fontSize.bodySm}>
           {t('searchEmpty', { query: search.trim() })}
         </Text>
@@ -110,7 +111,7 @@ export function AssignDriverSheet({
           <DriverRow
             key={driver.id}
             driver={driver}
-            selected={booking.driver?.id === driver.id}
+            selected={(selectedId !== undefined ? selectedId : booking.driver?.id) === driver.id}
             disabled={pending}
             onPress={() => onSelect(driver.id)}
           />
@@ -132,20 +133,13 @@ function DriverRow({
   disabled?: boolean;
   onPress: () => void;
 }) {
-  const t = useTranslations('Bookings.driver');
-  const warnings = [
-    driver.busy ? t('busy') : null,
-    driver.licenseExpired ? t('licenseExpired') : null,
-  ].filter(Boolean);
+  const tDrivers = useTranslations('Drivers.booking');
 
   /*
-   * Người không khả dụng vẫn HIỆN kèm lý do, nhưng KHÔNG bấm được — đúng như web
-   * (`disabled: d.busy || d.licenseExpired`).
-   *
-   * Giấu đi thì người phân công tưởng tài xế đó không tồn tại và đi tìm mãi; để bấm được thì
-   * hoặc ăn 409, hoặc tệ hơn là gán trúng một người đang bận xe khác.
+   * Người BẬN vẫn HIỆN kèm nhãn, nhưng KHÔNG bấm được — đúng `disabled: d.busy` của web. Giấu đi
+   * thì người phân công tưởng tài xế đó không tồn tại; để bấm được thì ăn 409.
    */
-  const unavailable = driver.busy || driver.licenseExpired || disabled;
+  const unavailable = driver.busy || disabled;
 
   return (
     <Pressable
@@ -176,11 +170,12 @@ function DriverRow({
           <Text col={colors.textMuted} fos={fontSize.label}>
             {driver.phone}
           </Text>
-          {warnings.length > 0 ? (
-            <Text col={colors.warning} fos={fontSize.label} numberOfLines={2}>
-              {warnings.join(LIST_SEPARATOR)}
-            </Text>
-          ) : null}
+          <XStack gap={space.xs} flexWrap="wrap">
+            <DriverLicenceStateBadge state={driver.licenceState} />
+            {driver.busy ? (
+              <StatusBadge label={tDrivers('busy')} color={STATUS_COLOR.NEUTRAL} size="sm" />
+            ) : null}
+          </XStack>
         </YStack>
         {selected ? (
           <Ionicons name="checkmark-circle" size={iconSize.lg} color={colors.primaryActive} />

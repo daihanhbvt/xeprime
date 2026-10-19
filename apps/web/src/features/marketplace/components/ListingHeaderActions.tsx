@@ -1,6 +1,6 @@
 'use client';
 
-import { HeartOutlined, ShareAltOutlined } from '@ant-design/icons';
+import { ShareAltOutlined } from '@ant-design/icons';
 import styles from './ListingDetailView.module.css';
 
 /**

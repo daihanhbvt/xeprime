@@ -8,6 +8,7 @@ import {
   canHostDecideTrip,
   isCustomerTripClosed,
   CUSTOMER_TRIP_STAGE_META,
+  DRIVER_ASSIGNMENT_STATUS_META,
   SERVICE_TYPE,
   STATUS_COLOR,
   TRIP_ROLE,
@@ -48,6 +49,38 @@ interface TripCardProps {
     /** Quyết định đang chạy cho CHÍNH thẻ này — khoá cả ba nút (web `TripCard` `pending`). */
     pending: 'approve' | 'reject' | 'cancel' | null;
   };
+}
+
+/** Tài xế của chuyến (ADR 0063): tên + trạng thái lượt gán, hoặc "chưa phân công". */
+function TripDriverLine({ trip }: { trip: CustomerTrip }) {
+  const t = useTranslations('Trips.card');
+  const tDriver = useTranslations('Bookings.driver');
+  const domainLabel = useDomainLabel();
+  const driver = trip.driver ?? null;
+  const meta = driver ? DRIVER_ASSIGNMENT_STATUS_META[driver.assignmentStatus] : null;
+  return (
+    <XStack ai="center" gap={space.xs} flexWrap="wrap">
+      <Text col={colors.textMuted} fos={fontSize.label}>
+        {`${t('driver')}:`}
+      </Text>
+      {driver && meta ? (
+        <>
+          <Text col={colors.text} fos={fontSize.label} numberOfLines={1} flexShrink={1}>
+            {driver.name}
+          </Text>
+          <StatusBadge
+            label={domainLabel('driverAssignmentStatus', driver.assignmentStatus, meta.label)}
+            color={meta.color}
+            size="sm"
+          />
+        </>
+      ) : (
+        <Text col={colors.warning} fos={fontSize.label} fow={fontWeight.medium}>
+          {tDriver('none')}
+        </Text>
+      )}
+    </XStack>
+  );
 }
 
 /**
@@ -172,6 +205,10 @@ function TripCardImpl({ trip, onPress, decisions }: TripCardProps) {
                   ? `${t('card.renter')}: ${trip.renter?.name ?? t('card.renterUnknown')}`
                   : `${t('card.owner')}: ${trip.shop.name}`}
               </Text>
+              {/* Chủ xe theo dõi tài xế của chuyến có tài xế ngay trên thẻ — gương cột "Tài xế" của bảng đơn. */}
+              {isHost && trip.bookingId && trip.serviceType === SERVICE_TYPE.WITH_DRIVER ? (
+                <TripDriverLine trip={trip} />
+              ) : null}
               {/*
               Biển số và mã đơn — hai mẩu chỉ tồn tại SAU khi chuyến được nhận, và là thứ duy nhất
               phân biệt hai chiếc cùng đời trong một danh sách.

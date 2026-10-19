@@ -9,6 +9,7 @@ import {
 } from '@/services/api-client';
 import type {
   BookingDetail,
+  BookingDriverHistoryItem,
   BookingFilters,
   BookingListItem,
   CheckConflictInput,
@@ -30,6 +31,7 @@ export function filtersToParams(filters: BookingFilters): QueryParams {
     status: filters.status ?? null,
     preset: filters.preset ?? null,
     vehicleId: filters.vehicleId ?? null,
+    serviceType: filters.serviceType ?? null,
     branchId: filters.branchId ?? null,
     returnFrom: filters.returnFrom ?? null,
     returnTo: filters.returnTo ?? null,
@@ -68,6 +70,10 @@ export const updateBookingDeliveryFee = (
 /** Gán/bỏ gán tài xế cho đơn (17/08) — `driverId: null` là bỏ gán tường minh; server có audit. */
 export const assignBookingDriver = (id: string, driverId: string | null): Promise<BookingDetail> =>
   apiPatch<BookingDetail>(`/bookings/${id}/driver`, { driverId });
+
+/** Lịch sử gán tài xế của đơn (ADR 0063) — mỗi lượt một dòng, cũ nhất trước. */
+export const fetchBookingDriverHistory = (id: string): Promise<BookingDriverHistoryItem[]> =>
+  apiGet<BookingDriverHistoryItem[]>(`/bookings/${id}/driver-history`);
 
 /** Preview trùng lịch — chỉ để cảnh báo sớm cho UX, không phải lớp bảo vệ (ADR 0006). */
 export const checkConflict = (body: CheckConflictInput): Promise<CheckConflictResult> =>

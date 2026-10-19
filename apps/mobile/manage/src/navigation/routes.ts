@@ -29,6 +29,8 @@ export const ROUTES = {
   ...BASE_ROUTES,
   explore: allNotAvailable(BASE_ROUTES.explore),
   booking: allNotAvailable(BASE_ROUTES.booking),
+  // Phía tài xế là của TÀI KHOẢN KHÁCH (ADR 0063) — chỉ app XePrime có.
+  driving: allNotAvailable(BASE_ROUTES.driving),
   chat: allNotAvailable(BASE_ROUTES.chat),
   listYourVehicle: {
     ...allNotAvailable(BASE_ROUTES.listYourVehicle),

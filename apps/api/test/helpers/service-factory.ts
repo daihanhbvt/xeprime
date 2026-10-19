@@ -62,7 +62,25 @@ import type { PrismaService } from '../../src/prisma/prisma.service';
  * và chính hành vi của nó là thứ các spec giữ chỗ/yêu cầu thuê đang kiểm.
  */
 export function makeVehicleSettingsService(prisma: PrismaService): VehicleSettingsService {
-  return new VehicleSettingsService(prisma, new AuditService(prisma), new OccupancyService(prisma), new ListingsService(prisma));
+  return new VehicleSettingsService(
+    prisma,
+    new AuditService(prisma),
+    new OccupancyService(prisma),
+    new ListingsService(prisma),
+    makeDriversService(prisma),
+  );
+}
+
+/** `DriversService` (ADR 0063) — writer liên kết tài xế + lượt gán; báo tin qua NotificationService. */
+export function makeDriversService(
+  prisma: PrismaService,
+  overrides: { audit?: AuditService; notifications?: NotificationService } = {},
+): DriversService {
+  return new DriversService(
+    prisma,
+    overrides.audit ?? new AuditService(prisma),
+    overrides.notifications ?? makeNotificationService(prisma),
+  );
 }
 
 /**
@@ -313,7 +331,7 @@ export function makeBookingsService(
     overrides.occupancy ?? new OccupancyService(prisma),
     audit,
     notifications,
-    new DriversService(prisma, audit),
+    makeDriversService(prisma, { audit, notifications }),
     overrides.customers ?? makeCustomersService(prisma, audit),
     new HoldSettlementService(prisma, audit, notifications, new WalletService(prisma)),
     overrides.settings ?? makeVehicleSettingsService(prisma),

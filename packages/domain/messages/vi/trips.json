@@ -42,7 +42,8 @@
     "reject": "Từ chối",
     "estimated": "Tạm tính · chốt khi duyệt",
     "estimatedClosed": "Báo giá lúc gửi yêu cầu",
-    "cancel": "Huỷ chuyến"
+    "cancel": "Huỷ chuyến",
+    "driver": "Tài xế"
   },
   "pickup": {
     "delivery": "Giao xe tận nơi",

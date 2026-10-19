@@ -1,9 +1,12 @@
 'use client';
 
-import { App } from 'antd';
+import { App, Button } from 'antd';
 import { useTranslations } from 'next-intl';
+import Link from 'next/link';
 import { useState, type ReactNode } from 'react';
+import { readServiceInUseDetails, type ServiceInUseDetails } from '@xeprime/domain';
 import {
+  API_ERROR_CODE,
   SERVICE_TYPE,
   isServiceType,
   isVehicleServiceTypeAllowed,
@@ -14,6 +17,9 @@ import { useUpdateVehicle } from '@/features/vehicles/hooks/use-vehicle-mutation
 import type { VehicleDetail } from '@/features/vehicles/types';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { bookingPath } from '@/constants/routes';
+import { getErrorCode, getErrorDetails } from '@/services/api-client';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 export interface ServiceToggleState {
   /** Vì sao KHÔNG bật/tắt được — `null` = được. Nhãn đã dịch để tooltip dùng thẳng. */
@@ -44,6 +50,14 @@ export function useServiceToggle(vehicle: VehicleDetail, canEdit: boolean): Serv
     enabled: boolean;
     next: ServiceType[];
   } | null>(null);
+  /*
+   * Tắt dịch vụ khi còn chuyến đang mở dùng nó ⇒ 409 `VEHICLE_SERVICE_IN_USE` kèm danh sách
+   * chuyến vướng. Toast một dòng không chứa nổi "mở đơn nào" — hiện hộp có link tới từng đơn.
+   */
+  const [inUse, setInUse] = useState<{ message: string; details: ServiceInUseDetails } | null>(
+    null,
+  );
+  const fmt = useAppFormat();
 
   // Mã lạ trong dữ liệu cũ không được kéo theo vào lệnh ghi — lọc về đúng union rồi mới gửi.
   const current = (vehicle.serviceTypes ?? []).filter(isServiceType);
@@ -80,7 +94,12 @@ export function useServiceToggle(vehicle: VehicleDetail, canEdit: boolean): Serv
         }),
       );
     } catch (err) {
-      message.error(errorMessage(err));
+      const details =
+        getErrorCode(err) === API_ERROR_CODE.VEHICLE_SERVICE_IN_USE
+          ? readServiceInUseDetails(getErrorDetails(err))
+          : null;
+      if (details) setInUse({ message: errorMessage(err), details });
+      else message.error(errorMessage(err));
     } finally {
       setPendingChange(null);
     }
@@ -105,23 +124,61 @@ export function useServiceToggle(vehicle: VehicleDetail, canEdit: boolean): Serv
   }
 
   const dialog = (
-    <ResponsiveDialog
-      open={pendingChange !== null}
-      title={t('serviceToggle.priceLossTitle')}
-      size="sm"
-      confirmLoading={update.isPending}
-      onClose={() => setPendingChange(null)}
-      onOk={() =>
-        pendingChange &&
-        void commit(pendingChange.service, pendingChange.enabled, pendingChange.next)
-      }
-      okText={t('serviceToggle.confirmOk')}
-      destructive={Boolean(pendingChange && !pendingChange.enabled)}
-    >
-      {pendingChange && !pendingChange.enabled && priceLoss(pendingChange.service) ? (
-        <p>{t('serviceToggle.priceLossBody')}</p>
-      ) : null}
-    </ResponsiveDialog>
+    <>
+      <ResponsiveDialog
+        open={pendingChange !== null}
+        title={t('serviceToggle.priceLossTitle')}
+        size="sm"
+        confirmLoading={update.isPending}
+        onClose={() => setPendingChange(null)}
+        onOk={() =>
+          pendingChange &&
+          void commit(pendingChange.service, pendingChange.enabled, pendingChange.next)
+        }
+        okText={t('serviceToggle.confirmOk')}
+        destructive={Boolean(pendingChange && !pendingChange.enabled)}
+      >
+        {pendingChange && !pendingChange.enabled && priceLoss(pendingChange.service) ? (
+          <p>{t('serviceToggle.priceLossBody')}</p>
+        ) : null}
+      </ResponsiveDialog>
+      <ResponsiveDialog
+        open={inUse !== null}
+        title={t('serviceToggle.inUse.title')}
+        size="sm"
+        onClose={() => setInUse(null)}
+        footer={
+          <Button type="primary" onClick={() => setInUse(null)}>
+            {t('serviceToggle.inUse.close')}
+          </Button>
+        }
+      >
+        {inUse ? (
+          <>
+            <p>{inUse.message}</p>
+            {inUse.details.bookings.length > 0 ? (
+              <>
+                <p>{t('serviceToggle.inUse.bookings')}</p>
+                <ul>
+                  {inUse.details.bookings.map((b) => (
+                    <li key={b.id}>
+                      <Link href={bookingPath.detail(b.id)}>{b.code}</Link>
+                      {' · '}
+                      {domainLabel('serviceType', b.serviceType)}
+                      {' · '}
+                      {fmt.shortDateTime(b.pickupAt)}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
+            {inUse.details.requestCount > 0 ? (
+              <p>{t('serviceToggle.inUse.requests', { count: inUse.details.requestCount })}</p>
+            ) : null}
+          </>
+        ) : null}
+      </ResponsiveDialog>
+    </>
   );
 
   return { blockedReason, toggle, pending: update.isPending, dialog };
