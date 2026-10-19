@@ -39,12 +39,13 @@ export function HomeCarousel({
   gap = 20,
   overhang = false,
   peek = false,
+  responsiveGrid = false,
   children,
   className,
 }: {
   ariaLabel: string;
   /** Số thẻ mỗi trang ở desktop (≥ 1025px). */
-  perView: 2 | 3 | 4;
+  perView: 2 | 3 | 4 | 5 | 6;
   /** Số thẻ mỗi trang ở tablet (641–1024px). */
   tabletPerView?: 1 | 2;
   /** `carousel` — slider ở mọi bề rộng. `grid` — lưới tĩnh từ 641px, slider trên mobile. */
@@ -61,6 +62,8 @@ export function HomeCarousel({
    * nói gì": thẻ 387px trong cột 722px). Ghi đè `perView` ở desktop.
    */
   peek?: boolean;
+  /** Tự động mở rộng lên 5 hoặc 6 cột trên màn hình lớn khi layout="grid". */
+  responsiveGrid?: boolean;
   children: ReactNode[];
   className?: string;
 }) {
@@ -121,6 +124,7 @@ export function HomeCarousel({
         tabletPerView === 1 && styles.tablet1,
         styles[`gap${gap}`],
         layout === 'grid' && styles.gridLayout,
+        responsiveGrid && styles.responsiveGrid,
         overhang && styles.overhang,
         peek && styles.peek,
         className,

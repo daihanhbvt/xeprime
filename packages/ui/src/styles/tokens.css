@@ -383,6 +383,25 @@
 }
 
 /*
+ * ─── Màn hình lớn (≥2000px, ≥2400px — màn 27" 2K/4K) ──────────────────────
+ * Màn 24" Full HD (1920px) giữ nguyên khung chuẩn 1200px (4 cột vừa đẹp).
+ * Màn 27" 2K (≥2000px) và 4K (≥2400px) mới nới rộng khung và tăng số cột.
+ */
+@media (min-width: 2000px) {
+  :root {
+    --xp-market-container-max-width: 1440px;
+    --xp-container-max-width: 1440px;
+  }
+}
+
+@media (min-width: 2400px) {
+  :root {
+    --xp-market-container-max-width: 1720px;
+    --xp-container-max-width: 1720px;
+  }
+}
+
+/*
  * ─── Chế độ tối (Dark Mode) ─────────────────────────────────────────────────
  *
  * Đồng bộ với Figma `19879:66136`.

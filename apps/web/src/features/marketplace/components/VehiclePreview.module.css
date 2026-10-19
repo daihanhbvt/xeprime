@@ -54,10 +54,41 @@
   border-radius: var(--xp-border-radius-card) var(--xp-border-radius-card) 0 0 !important;
 }
 
+@media (min-width: 2000px) {
+  .grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 2400px) {
+  .grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 1024px) {
   .grid {
     gap: var(--xp-space-lg) var(--xp-space-md);
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Luôn giữ đúng 2 hàng cho khung chờ skeleton khớp với thẻ thật */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .grid > li:nth-child(n + 5) {
+    display: none;
+  }
+}
+
+@media (min-width: 1025px) and (max-width: 1999px) {
+  .grid > li:nth-child(n + 9) {
+    display: none;
+  }
+}
+
+@media (min-width: 2000px) and (max-width: 2399px) {
+  .grid > li:nth-child(n + 11) {
+    display: none;
   }
 }
 
