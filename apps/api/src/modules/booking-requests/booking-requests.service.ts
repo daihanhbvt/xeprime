@@ -673,7 +673,9 @@ export class BookingRequestsService {
             destinationPlaceId: route.destination ? (dto.destinationPlaceId ?? null) : null,
             destinationLatitude: route.destination ? (dto.destinationLatitude ?? null) : null,
             destinationLongitude: route.destination ? (dto.destinationLongitude ?? null) : null,
-            note: dto.note ?? null,
+            // Chỉ có khoảng trắng là KHÔNG có lời nhắn: hộp thư của chủ xe dựng khung ghi chú
+            // theo có/không, lưu `'   '` là một khung rỗng nằm giữa thẻ yêu cầu.
+            note: dto.note?.trim() || null,
             deliveryRequested,
             /*
              * Chuỗi hiển thị do SERVER ghép khi có mã hành chính; không quy được tỉnh thì giữ

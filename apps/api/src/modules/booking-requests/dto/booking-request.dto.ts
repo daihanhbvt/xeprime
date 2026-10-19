@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   ADDRESS_LINE_MAX_LENGTH,
   BOOKING_REQUEST_DECISION_SOURCE_VALUES,
+  BOOKING_REQUEST_NOTE_MAX_LENGTH,
   BOOKING_REQUEST_STATUS_LIVE_VALUES,
   BOOKING_REQUEST_STATUS_VALUES,
   CANCELLATION_REASON_CATEGORY_VALUES,
@@ -253,10 +254,14 @@ export class CreateBookingRequestDto {
   @IsLongitude()
   destinationLongitude?: number;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description:
+      'Lời nhắn của khách cho chủ xe — server cắt khoảng trắng hai đầu, chỉ có khoảng trắng thì lưu null',
+    maxLength: BOOKING_REQUEST_NOTE_MAX_LENGTH,
+  })
   @IsOptional()
   @IsString()
-  @MaxLength(2000)
+  @MaxLength(BOOKING_REQUEST_NOTE_MAX_LENGTH)
   note?: string;
 
   @ApiPropertyOptional({

@@ -1,0 +1,61 @@
+.sectionCard {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+}
+
+.sectionTitle {
+  margin: 0 0 16px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--xp-color-text, #0e0f12);
+  border-left: 4px solid #d6a439;
+  padding-left: 12px;
+  line-height: 24px;
+}
+
+.descBody {
+  margin: 0;
+  font-size: 15px;
+  line-height: 24px;
+  color: var(--xp-color-text-secondary, #414651);
+  white-space: pre-line;
+  word-break: break-word;
+}
+
+.descClamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.toggleBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-top: 10px;
+  color: #d6a439;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.toggleBtn:hover {
+  opacity: 0.8;
+}
+
+.icon {
+  transition: transform 0.2s ease;
+}
+
+.iconRotate {
+  transform: rotate(180deg);
+}
+

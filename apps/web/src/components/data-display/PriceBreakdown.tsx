@@ -3,8 +3,9 @@
 import { DownOutlined, UpOutlined } from '@ant-design/icons';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
-import { subtractMoney } from '@xeprime/domain';
+import { isZeroMoney } from '@xeprime/domain';
 import { FEE_BEARER, FEE_LINE, PRICE_ROW } from '@xeprime/types';
+import { payAtPickupAmount, visibleFeeLines, visiblePriceRows } from '@/lib/customer-price-view';
 import { InfoHint } from './InfoHint';
 import styles from './PriceBreakdown.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -138,27 +139,19 @@ export function PriceBreakdown({
   const showItems = !collapsible || expanded;
 
   /*
-   * Dòng do CHỦ XE chịu chỉ vẽ cho chủ xe. Với khách, thuế khấu trừ là một con số lạ nằm giữa
-   * hoá đơn của họ mà họ không trả — nó không cộng vào tổng (ADR 0032 điều 3), nên hiện ra chỉ
-   * làm người ta tưởng mình đang gánh thuế của người khác.
+   * Dòng nào vẽ do `lib/customer-price-view` quyết — CÙNG luật với thẻ chi phí ở màn Xem lại yêu
+   * cầu thuê:
+   *   - Dòng do CHỦ XE chịu chỉ vẽ cho chủ xe. Với khách, thuế khấu trừ là một con số lạ nằm giữa
+   *     hoá đơn của họ mà họ không trả — nó không cộng vào tổng (ADR 0032 điều 3).
+   *   - DÒNG 0đ KHÔNG VẼ. `buildDailyQuote` cố ý sinh "Phí phát sinh ngoài giờ" và "Dịch vụ cộng
+   *     thêm" bằng 0 để snapshot của đơn có chỗ cho chúng về sau (chúng phát sinh lúc trả xe). Đúng
+   *     cho DỮ LIỆU, sai cho MÀN HÌNH: một bảng đầy "0 ₫" làm những dòng có tiền thật khó tìm hơn.
+   *     Chỉ ẩn ở UI — và TỔNG thì không bao giờ ẩn, kể cả khi bằng 0.
    */
-  const feeLines = (fees?.lines ?? []).filter(
-    (line) => audience === 'owner' || line.bearer !== FEE_BEARER.OWNER,
-  );
-  /*
-   * DÒNG 0đ KHÔNG VẼ.
-   *
-   * `buildDailyQuote` cố ý sinh "Phí phát sinh ngoài giờ" và "Dịch vụ cộng thêm" bằng 0 để
-   * snapshot của đơn có chỗ cho chúng về sau (chúng phát sinh lúc trả xe). Đó là đúng cho DỮ
-   * LIỆU và sai cho MÀN HÌNH: một bảng giá đầy dòng "0 ₫" bắt khách đọc hết mới biết không có
-   * gì ở đó, và nó làm những dòng có tiền thật khó tìm hơn.
-   *
-   * Chỉ ẩn ở UI. Không dòng nào bị bỏ khỏi snapshot, khỏi `totalAmount`, khỏi sổ kế toán — và
-   * TỔNG thì không bao giờ ẩn, kể cả khi bằng 0.
-   */
-  const visibleRows = rows.filter((row) => Number(row.amount) !== 0);
-  const visibleFeeLines = feeLines.filter((line) => Number(line.amount) !== 0);
-  const promoDiscount = Number(fees?.promoDiscountAmount ?? 0);
+  const visibleRows = visiblePriceRows(rows);
+  const feeLinesShown = visibleFeeLines(fees?.lines ?? [], audience);
+  const promoDiscount = fees?.promoDiscountAmount ?? '0';
+  const hasPromo = !isZeroMoney(promoDiscount);
   /*
    * Có khối phụ phí ⇒ `totalAmount` (giá thuê) KHÔNG còn là số cuối cùng khách phải chuẩn bị —
    * `fees.customerTotalAmount` mới là. Vẽ to-đậm CẢ HAI bằng cùng kiểu chữ (bản trước) khiến
@@ -169,10 +162,8 @@ export function PriceBreakdown({
    * nhưng có mã thì `customerTotalAmount` vẫn khác `totalAmount`, và giấu khối đi sẽ hiện tiền
    * thuê như số phải trả.
    */
-  const hasFees = Boolean(fees) && (visibleFeeLines.length > 0 || promoDiscount > 0);
-  const payAtHandoverAmount =
-    fees?.payAtPickupAmount ??
-    (fees?.holdAmount ? subtractMoney(fees.customerTotalAmount, fees.holdAmount) : null);
+  const hasFees = Boolean(fees) && (feeLinesShown.length > 0 || hasPromo);
+  const payAtHandoverAmount = payAtPickupAmount(fees);
 
   return (
     <section className={styles.card} aria-label={titleText}>
@@ -188,7 +179,9 @@ export function PriceBreakdown({
           onClick={() => setExpanded((v) => !v)}
           aria-expanded={expanded}
         >
-          {expanded ? tCommon('components.price.collapse') : tCommon('components.price.viewDetails')}
+          {expanded
+            ? tCommon('components.price.collapse')
+            : tCommon('components.price.viewDetails')}
           {expanded ? <UpOutlined aria-hidden="true" /> : <DownOutlined aria-hidden="true" />}
         </button>
       ) : null}
@@ -256,7 +249,7 @@ export function PriceBreakdown({
           <h4 className={styles.feesTitle}>{tCommon('components.price.feesTitle')}</h4>
           {showItems ? (
             <dl className={styles.rows}>
-              {visibleFeeLines.map((line) => (
+              {feeLinesShown.map((line) => (
                 <div key={line.key} className={styles.row}>
                   <dt className={styles.rowLabel}>
                     <span>{domainLabel('feeLine', line.key)}</span>
@@ -297,7 +290,7 @@ export function PriceBreakdown({
             gấp đôi. Màn chỉ ĐỌC (chi tiết chuyến, hộp thư gian hàng) không có ô nhập nào, và ở
             đó dòng này là nơi duy nhất mã hiện ra.
           */}
-          {promoDiscount > 0 && !promoSlot ? (
+          {hasPromo && !promoSlot ? (
             <div className={styles.row}>
               <dt className={styles.rowLabel}>
                 <span className={styles.discountText}>
@@ -311,7 +304,7 @@ export function PriceBreakdown({
                 ) : null}
               </dt>
               <dd className={[styles.rowAmount, styles.discountText].join(' ')}>
-                −{fmt.money(String(promoDiscount))}
+                −{fmt.money(promoDiscount)}
               </dd>
             </div>
           ) : null}
@@ -321,7 +314,9 @@ export function PriceBreakdown({
             đây mới là con số họ cần biết trước khi bấm gửi/chuyển khoản.
           */}
           <div className={styles.grandTotalRow}>
-            <span className={styles.grandTotalLabel}>{tCommon('components.price.customerTotal')}</span>
+            <span className={styles.grandTotalLabel}>
+              {tCommon('components.price.customerTotal')}
+            </span>
             <span className={styles.grandTotalAmount}>{fmt.money(fees.customerTotalAmount)}</span>
           </div>
 

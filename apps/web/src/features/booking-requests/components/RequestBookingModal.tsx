@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import type { PublicListingDetail } from '@/features/marketplace/types';
+import type { RequestBookingPrefill } from '../types';
 import { RequestBookingFlow } from './RequestBookingFlow';
 
 interface RequestBookingModalProps {
@@ -19,19 +20,22 @@ interface RequestBookingModalProps {
   routeType?: string | null;
   /** Tỉnh gợi ý cho ô địa chỉ giao xe — địa chỉ khách đã nhớ vẫn THẮNG nó (ADR 0035). */
   deliveryProvinceCode?: string | null;
+  /** Thứ khách đã chọn ở thẻ đặt xe — xem `RequestBookingPrefill`. */
+  prefill?: RequestBookingPrefill | null;
   open: boolean;
   onClose: () => void;
 }
 
 /**
- * Vỏ đựng luồng đặt xe. Toàn bộ nghiệp vụ (kiểm tra khung giờ trống, OTP, gửi yêu cầu) nằm
- * trong `RequestBookingFlow`; ở đây chỉ còn hình thái overlay.
+ * Vỏ đựng luồng đặt xe. Toàn bộ nghiệp vụ (kiểm tra khung giờ trống, mời đăng nhập, bằng lái, gửi
+ * yêu cầu) nằm trong `RequestBookingFlow`; ở đây chỉ còn hình thái overlay.
  *
  * Chỉ render flow khi mở → mỗi lần mở là state mới (không mang theo bước dở của lần trước).
  *
  * `size="xl"` (Wave 9) → desktop modal rộng, đủ chỗ cho HAI cột (hồ sơ xe · luồng thao tác);
  * mobile vẫn **toàn màn hình** theo Figma `130:1563` quy tắc 5 ("Form overlays → Full-Screen —
- * cần chỗ cho bàn phím"). Đúng thứ luồng này cần: có lịch, họ tên, SĐT và 6 ô OTP.
+ * cần chỗ cho bàn phím"). Đúng thứ luồng này cần: có lịch, bản đồ địa chỉ và màn Xem lại hai cột
+ * (Figma `19727:55409`).
  *
  * `footer={null}`: mỗi bước có bộ nút riêng ngay cuối cột phải, nên footer chung của dialog sẽ
  * là hàng nút thứ hai không ai bấm.
@@ -46,6 +50,7 @@ export function RequestBookingModal({
   serviceType,
   routeType,
   deliveryProvinceCode,
+  prefill,
   open,
   onClose,
 }: RequestBookingModalProps) {
@@ -88,6 +93,7 @@ export function RequestBookingModal({
           serviceType={serviceType}
           routeType={routeType}
           deliveryProvinceCode={deliveryProvinceCode}
+          prefill={prefill}
           onClose={onClose}
           onBusyChange={setBusy}
           onResultChange={setResult}

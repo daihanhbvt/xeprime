@@ -183,6 +183,34 @@ describe('Yêu cầu → duyệt → đơn GIỮ nguyên hành trình', () => {
   });
 });
 
+describe('Lời nhắn của khách cho chủ xe', () => {
+  const submitWithNote = (note: string, startHour: number) =>
+    requests.submitPublic(
+      {
+        vehicleId,
+        pickupAt: hours(startHour).toISOString(),
+        returnAt: hours(startHour + 48).toISOString(),
+        serviceType: SERVICE_TYPE.WITH_DRIVER,
+        routeType: ROUTE_TYPE.IN_CITY,
+        pickupAddress: '12 Lê Lợi, Q.1, TP.HCM',
+        note,
+      },
+      customerId,
+    );
+
+  maybe('lưu lời nhắn đã cắt khoảng trắng hai đầu', async () => {
+    const receipt = await submitWithNote('  Cần ghế trẻ em cho bé 2 tuổi  ', 300);
+    const saved = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: receipt.id } });
+    expect(saved.note).toBe('Cần ghế trẻ em cho bé 2 tuổi');
+  });
+
+  maybe('chỉ có khoảng trắng ⇒ không có lời nhắn (null), không phải chuỗi rỗng', async () => {
+    const receipt = await submitWithNote('   \n  ', 400);
+    const saved = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: receipt.id } });
+    expect(saved.note).toBeNull();
+  });
+});
+
 describe('Đơn lập tay: hành trình theo đúng điều kiện dịch vụ', () => {
   maybe('with_driver thiếu lộ trình/địa chỉ đón → 400', async () => {
     await expect(

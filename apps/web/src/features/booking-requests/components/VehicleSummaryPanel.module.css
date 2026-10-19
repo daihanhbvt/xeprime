@@ -11,21 +11,22 @@
 }
 
 .hero {
-  border-radius: var(--xp-border-radius);
+  border-radius: var(--xp-border-radius-card);
   overflow: hidden;
   background: var(--xp-color-bg-muted);
 }
 
+/* Khung ảnh xe 285×160 của design v2 (Figma `19727:56173`). */
 .heroImg {
   display: block;
   width: 100%;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 285 / 160;
   object-fit: cover;
 }
 
 .heroPlaceholder {
   width: 100%;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 285 / 160;
   background: linear-gradient(135deg, var(--xp-color-bg-muted), var(--xp-color-border-subtle));
 }
 
@@ -56,12 +57,20 @@
 
 .name {
   margin: 0;
-  font-size: var(--xp-font-size-h4);
-  font-weight: 700;
-  line-height: 1.3;
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
   color: var(--xp-color-text);
   /* Tên xe dài không được đẩy cột rộng ra và tạo cuộn ngang. */
   overflow-wrap: anywhere;
+}
+
+/* "4 chỗ · Số tự động · Điện" — cùng dòng với thẻ chuyến ở màn Xem lại. */
+.specLine {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
 }
 
 .meta {
@@ -174,4 +183,49 @@
   gap: var(--xp-space-xs);
   color: var(--xp-color-success);
   font-weight: 600;
+}
+
+/* Điểm nhận xe — icon tròn nền vàng nhạt như khối lịch của màn Xem lại (Figma `19727:56163`). */
+.pickupPoint {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  padding: var(--xp-space-12);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg);
+}
+
+.pickupIcon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-selected);
+  color: var(--xp-color-primary);
+  font-size: 20px;
+}
+
+.pickupText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-2);
+  min-width: 0;
+}
+
+.pickupLabel {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body);
+}
+
+.pickupAddress {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  overflow-wrap: anywhere;
 }
