@@ -1,0 +1,43 @@
+Bạn là Lead Coder & Backend Analyst của XePrime.
+
+NHIỆM VỤ: TRIỂN KHAI MODAL 2 - ĐÃ GỬI YÊU CẦU THUÊ XE THÀNH CÔNG
+- Figma File: "RHDyFsURFZQ9BC5JCLQzeE"
+- Node ID: "19759:21680" (URL: https://www.figma.com/design/RHDyFsURFZQ9BC5JCLQzeE/Xe-Prime--Copy-?node-id=19759-21680)
+
+HÃY THỰC HIỆN CÁC BƯỚC SAU:
+
+BƯỚC 1: ĐỌC THIẾT KẾ FIGMA
+- Dùng Figma MCP `get_design_context` (hoặc `get_metadata`) với fileKey "RHDyFsURFZQ9BC5JCLQzeE" và nodeId "19759:21680".
+- Chú ý: Quota Figma có hạn (~20 calls/tháng), chỉ gọi trực tiếp node "19759:21680".
+- Bóc tách chi tiết:
+  + Biểu tượng thành công (Success badge, checkmark, illustration, styling).
+  + Tiêu đề và mô tả trạng thái (VD: "Đã gửi yêu cầu thuê xe", thời gian chờ chủ xe phản hồi).
+  + Khối hiển thị mã yêu cầu (Request code) kèm nút sao chép (copy).
+  + Thẻ tóm tắt thông tin chuyến (Xe, thời gian, hình thức nhận xe, chi phí / tiền cọc nếu có).
+  + Lưu ý cảnh báo: Yêu cầu này chưa phải giữ chỗ thành công (chờ chủ xe duyệt) trừ khi autoAccepted.
+  + Các nút hành động (CTAs): Nút chính "Xem chuyến đi của tôi" (`/trips`), nút phụ "Nhắn tin cho chủ xe" (`ChatWithShopButton`), nút đóng/về trang chủ.
+
+BƯỚC 2: PHÂN TÍCH BACKEND & CONTRACT (apps/api)
+- Kiểm tra dữ liệu trả về từ `submitBookingRequest` / `POST /public/listings/:id/booking-requests`:
+  + DTO trả về: `BookingRequestReceiptDto` (`apps/api/src/modules/booking-requests/dto/booking-request.dto.ts`).
+  + Các trường có trong receipt: `id`, `code`, `status`, `expiresAt`, `autoAccepted`, `shop`, `vehicle`, `fees`.
+  + Đảm bảo Frontend nhận đủ các trường cần thiết để hiển thị đúng thiết kế node 19759:21680.
+
+BƯỚC 3: IMPLEMENT FRONTEND & REFACTOR (apps/web)
+- Tương tự như đã tách `BookingReviewStep.tsx` ở Modal 1, hãy tách khối hiển thị thành công (`step === 'done'`) thành:
+  + `apps/web/src/features/booking-requests/components/BookingSuccessStep.tsx`
+  + `apps/web/src/features/booking-requests/components/BookingSuccessStep.module.css`
+  + Tích hợp vào `apps/web/src/features/booking-requests/components/RequestBookingFlow.tsx`.
+  + Đảm bảo `RequestBookingModal.tsx` điều chỉnh `size` phù hợp (ví dụ `size="md"` hoặc theo layout Figma).
+- Quy chuẩn thiết kế:
+  + Tuyệt đối không hardcode mã màu hex; dùng CSS tokens từ `@xeprime/ui` (ADR 0003, ADR 0062).
+  + Chuỗi giao diện đưa vào `packages/domain/messages/vi/booking-requests.json` và `en/booking-requests.json`.
+  + Đảm bảo các tương tác: Copy mã yêu cầu, bấm "Xem chuyến đi" chuyển hướng tới trang `/trips`, bấm "Nhắn tin chủ xe" mở hộp thoại chat với shop qua `ChatWithShopButton`.
+
+BƯỚC 4: KIỂM THỬ & BÁO CÁO
+- Chạy vitest cho booking-requests: `pnpm --filter @xeprime/web test booking-requests`
+- Báo cáo chi tiết:
+  1. Những gì đọc được từ Figma node 19759:21680.
+  2. Cấu trúc component mới (`BookingSuccessStep.tsx` và `.module.css`).
+  3. Kết quả chạy test và xác nhận các tính năng.
+

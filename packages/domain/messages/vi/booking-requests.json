@@ -294,22 +294,25 @@
     },
     "done": {
       "title": "Đã gửi yêu cầu",
+      "confirmedTitle": "Chuyến đã được xác nhận",
       "requestCode": "Mã yêu cầu: {code}",
+      "requestCodeLabel": "Mã yêu cầu:",
       "body": "Chủ xe đang xem xét. Bạn sẽ nhận thông báo ngay khi có phản hồi.",
+      "pendingBody": "Chủ xe đang xem xét và có {minutes} phút để phản hồi. Bạn sẽ nhận được thông báo ngay khi có kết quả!",
       "time": "Thời gian",
       "pickupMethod": "Nhận xe",
       "driverPickup": "Đón tại: {address}",
       "notReserved": "Xe chưa được giữ chỗ — chủ xe cần duyệt yêu cầu trước.",
       "myTrips": "Chuyến của tôi",
       "chatShop": "Nhắn chủ xe",
+      "chatHost": "Nhắn tin cho chủ xe",
       "close": "Quay lại",
       "autoAccepted": "Chuyến đã được xác nhận tự động — lịch xe đã giữ cho bạn.",
       "openHold": "Thanh toán giữ chỗ",
       "holdLoadFailed": "Chưa tải được mã thanh toán. Mở chuyến trong mục Chuyến của tôi để lấy mã — chỗ của bạn vẫn đang được giữ.",
       "heldTitle": "Chủ xe đã nhận chuyến của bạn",
       "heldSubtitle": "Thanh toán tiền giữ chỗ trước khi hết giờ để chốt chuyến.",
-      "copyRequestCode": "Sao chép mã yêu cầu",
-      "tripInfo": "Thông tin chuyến thuê"
+      "copyRequestCode": "Sao chép mã yêu cầu"
     },
     "duplicate": {
       "title": "Yêu cầu trùng lặp",

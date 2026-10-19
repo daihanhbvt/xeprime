@@ -1,0 +1,203 @@
+/**
+ * Hộp "Đã gửi yêu cầu" — Figma `19759:22026`: rộng 600, đệm 24/32, các khối cách 16, hàng nút
+ * dính đáy sau một đường kẻ.
+ *
+ * Hộp tự lo việc cuộn (vỏ overlay bỏ đệm và trần chiều cao của nó — `RequestBookingModal`): thân
+ * cuộn, hàng nút đứng yên. Màn laptop 768px cao không chứa hết 878px của bản vẽ, và hàng nút trôi
+ * xuống dưới mép là hàng nút không ai thấy.
+ */
+.success {
+  display: flex;
+  flex-direction: column;
+  width: 600px;
+  max-width: 100%;
+  max-height: calc(100dvh - var(--xp-space-xl) * 2);
+  min-height: 0;
+}
+
+.content {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-height: 0;
+  padding: var(--xp-space-lg) var(--xp-space-xl);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* ── Trạng thái: huy hiệu · tiêu đề · lời dẫn · mã yêu cầu (Figma `19759:22159`) ── */
+.status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--xp-space-12);
+  text-align: center;
+}
+
+.badge {
+  display: block;
+  width: 120px;
+  height: 120px;
+}
+
+.title {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h2);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h2);
+}
+
+.lead {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+/*
+ * Mã yêu cầu — một Ô giá trị (viền + bóng nhẹ như ô nhập), không phải một dòng chữ mờ: khách đọc
+ * nó cho tổng đài, và cái khung là thứ nói cho mắt biết "đây là một giá trị chép được".
+ */
+.code {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  max-width: 100%;
+  padding: var(--xp-space-xs) var(--xp-space-xs) var(--xp-space-xs) var(--xp-space-12);
+  border: 1px solid var(--xp-color-border-strong);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-elevation-xs);
+}
+
+.codeText {
+  min-width: 0;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  text-align: left;
+}
+
+.codeLabel {
+  color: var(--xp-color-text-placeholder);
+}
+
+/* ULID 26 ký tự không có chỗ ngắt — cho phép gãy ở bất kỳ đâu thay vì tràn khỏi hộp hẹp. */
+.codeValue {
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* ── Dòng tổng trong thẻ chuyến (Figma `19759:22246`) ─────────────────────── */
+.total {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-xs) var(--xp-space-md);
+}
+
+.totalLabel {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+/* `30px/Semibold` màu `Text/Brand/primary 2` — số tiền lớn nhất của hộp. */
+.totalAmount {
+  color: var(--xp-color-primary-hover);
+  font-size: var(--xp-font-size-h1);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h1);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Lời nhắc "xe chưa được giữ chỗ" — cùng sắc với lời nhắc giấy tờ ở màn Xem lại. */
+.note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  padding: var(--xp-space-12);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+/* Icon cao đúng một dòng chữ ⇒ đứng ngang dòng đầu dù lời nhắc xuống mấy dòng. */
+.note :global(.anticon) {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  height: var(--xp-line-height-body);
+  color: var(--xp-color-warning);
+}
+
+/* ── Hàng nút (Figma `19759:22057` "Footer cố định") ───────────────────────── */
+.footer {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--xp-space-12);
+  padding: var(--xp-space-20) var(--xp-space-xl);
+  border-top: 1px solid var(--xp-color-border);
+}
+
+/*
+ * Nút phụ 48px, bo 12, chữ 16/Semibold xám đậm. Lặp class để thắng style runtime của AntD — nó
+ * tiêm SAU stylesheet của CSS Module và bộ chọn `.ant-btn-color-default.ant-btn-variant-outlined`
+ * của nó đã là (0,2,0).
+ */
+.footer .secondary.secondary {
+  flex: none;
+  height: 48px;
+  padding: var(--xp-space-12) var(--xp-space-20);
+  border-color: var(--xp-color-border-strong);
+  border-radius: var(--xp-border-radius-control);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+.primary {
+  flex: 1 1 160px;
+  min-width: 160px;
+}
+
+/**
+ * 640px = `--xp-bp-mobile` (CSS custom property không dùng được trong `@media`). Trên điện thoại
+ * hộp là màn toàn trang của Drawer — thân Drawer đã có đệm riêng, và ba nút cạnh nhau không đủ
+ * chỗ: xếp dọc, nút chính lên trên cho ngón cái.
+ */
+@media (max-width: 640px) {
+  .success {
+    width: auto;
+    height: 100%;
+    max-height: none;
+  }
+
+  .content {
+    padding: 0 0 var(--xp-space-md);
+  }
+
+  .footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    padding: var(--xp-space-md) 0 0;
+  }
+
+  .footer .secondary.secondary,
+  .primary {
+    flex: none;
+    width: 100%;
+    min-width: 0;
+  }
+}

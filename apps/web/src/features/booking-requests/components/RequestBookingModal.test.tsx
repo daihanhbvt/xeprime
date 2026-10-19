@@ -6,6 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   addDateKeyDays,
   API_ERROR_CODE,
+  BOOKING_REQUEST_RESPOND_WINDOW_MINUTES,
+  BOOKING_REQUEST_STATUS,
   LONG_TERM_PACKAGE_MONTHS,
   PICKUP_PREFERENCE,
   ROUTE_TYPE,
@@ -212,7 +214,7 @@ const deliveryDistance = {
 };
 
 /**
- * Nút "Nhắn chủ xe" thật cần `AuthModalProvider` (nó tự mở modal đăng nhập khi khách chưa
+ * Nút "Nhắn tin cho chủ xe" thật cần `AuthModalProvider` (nó tự mở modal đăng nhập khi khách chưa
  * đăng nhập) và tự điều hướng sang khu tin nhắn. Overlay này chỉ mở từ route group `(public)`
  * — nơi provider luôn có — nên ở test thay bằng nút giả, đủ để khoá việc nó CÓ MẶT và gọi
  * `onNavigate` để đóng overlay trước khi rời trang.
@@ -1354,6 +1356,61 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       expect(screen.getByText(/Xe chưa được giữ chỗ/)).toBeTruthy();
     });
 
+    /*
+     * Hạn phản hồi là HẰNG SỐ dùng chung với server (`respond_by` tính từ nó) — hộp nói độ dài cửa
+     * sổ, không tự tính một mốc giờ.
+     */
+    it('nói hạn phản hồi của chủ xe theo hằng số dùng chung', async () => {
+      renderModal();
+      await advanceToReview();
+      await reachDone();
+
+      expect(
+        screen.getByText(new RegExp(`có ${BOOKING_REQUEST_RESPOND_WINDOW_MINUTES} phút để phản hồi`)),
+      ).toBeTruthy();
+    });
+
+    it('mã yêu cầu chép được', async () => {
+      renderModal();
+      await advanceToReview();
+      await reachDone();
+
+      expect(screen.getByRole('button', { name: 'Sao chép mã yêu cầu' })).toBeTruthy();
+    });
+
+    it('kể lại chuyến vừa gửi bằng cùng thẻ "Thông tin chuyến đi" của màn Xem lại', async () => {
+      renderModal();
+      await advanceToReview();
+      await reachDone();
+
+      const trip = screen.getByRole('region', { name: 'Thông tin chuyến đi' });
+      expect(within(trip).getByText('Nhận xe')).toBeTruthy();
+      expect(within(trip).getByText('Trả xe')).toBeTruthy();
+      // Thẻ của hộp đã gửi KHÔNG còn lối "Chỉnh sửa" — yêu cầu đã đi rồi.
+      expect(within(trip).queryByRole('button', { name: /Chỉnh sửa/ })).toBeNull();
+    });
+
+    /*
+     * Hệ thống tự nhận và tạo đơn ngay (chuyến không thu tiền giữ chỗ): gọi đó là "đã gửi yêu cầu"
+     * kèm lời nhắc "xe chưa được giữ chỗ" là nói sai với khách.
+     */
+    it('tự nhận + có đơn ngay ⇒ "Chuyến đã được xác nhận", không có lời nhắc chưa giữ chỗ', async () => {
+      api.submitBookingRequest.mockResolvedValue({
+        id: 'R2',
+        status: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING,
+        autoAccepted: true,
+        bookingId: 'B2',
+      });
+      renderModal();
+      await advanceToReview();
+      submitFromReview();
+
+      expect(await screen.findByText('Chuyến đã được xác nhận')).toBeTruthy();
+      expect(screen.queryByText('Đã gửi yêu cầu')).toBeNull();
+      expect(screen.queryByText(/Xe chưa được giữ chỗ/)).toBeNull();
+      expect(screen.getByText(/R2/)).toBeTruthy();
+    });
+
     /**
      * ĐƯỜNG MẶC ĐỊNH KHÔNG CÓ QR — ADR 0044 điều 1.
      *
@@ -1375,7 +1432,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       await advanceToReview();
       await reachDone();
 
-      fireEvent.click(screen.getByRole('button', { name: 'Nhắn chủ xe' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Nhắn tin cho chủ xe' }));
       expect(onClose).toHaveBeenCalled();
     });
 

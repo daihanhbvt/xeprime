@@ -1,19 +1,15 @@
 'use client';
 
 import {
-  ArrowLeftOutlined,
   CalendarOutlined,
   CarOutlined,
-  CheckOutlined,
   ClockCircleOutlined,
   EnvironmentOutlined,
   ExclamationOutlined,
-  FileTextOutlined,
 } from '@ant-design/icons';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Radio, Segmented, Spin } from 'antd';
-import { CopyButton } from '@/components/data-display/CopyButton';
 
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -62,7 +58,6 @@ import { DeliveryEstimate } from './DeliveryEstimate';
 import { RenterAddressBlock } from './RenterAddressBlock';
 import { TextField } from '@/components/form/TextField';
 import { ROUTES, paymentPath } from '@/constants/routes';
-import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
 import { fetchListingDetailClient } from '@/features/marketplace/api';
 import type { PublicListingDetail } from '@/features/marketplace/types';
 import { useAuthModal } from '@/features/auth/components/AuthModalProvider';
@@ -73,7 +68,6 @@ import { useCurrentUser } from '@/hooks/use-current-user';
 import { UnpaidHoldList } from '@/features/trips/components/UnpaidHoldList';
 import { useUnpaidHolds } from '@/features/trips/hooks';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
-import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { cx } from '@/lib/cx';
@@ -96,6 +90,8 @@ import { PromoCodeField } from '@/features/promo-codes/components/PromoCodeField
 import { usePromoCode } from '@/features/promo-codes/use-promo-code';
 import { BookingJourney } from './BookingJourney';
 import { BookingReviewStep, type BookingReviewNextStep } from './BookingReviewStep';
+import { BookingSuccessStep } from './BookingSuccessStep';
+import type { BookingTrip } from './BookingTripCard';
 import type { BookingStepKey } from './BookingSteps';
 import { VehicleSummaryPanel } from './VehicleSummaryPanel';
 import styles from './RequestBookingFlow.module.css';
@@ -158,13 +154,23 @@ interface RequestBookingFlowProps {
    */
   onBusyChange?: (busy: boolean) => void;
   /**
-   * Đã sang màn KẾT QUẢ hay chưa — vỏ overlay thu bề rộng theo tín hiệu này: giữ khung hai cột
-   * rộng 1180px cho một thẻ xác nhận vài dòng thì phần lớn hộp thoại là chỗ trống.
+   * Đang ở màn KẾT QUẢ nào (`null` = còn đang điền) — vỏ overlay đổi hình theo tín hiệu này: giữ
+   * khung hai cột rộng 1180px cho một thẻ xác nhận vài dòng thì phần lớn hộp thoại là chỗ trống.
    *
    * Không còn kiểu kết quả "thanh toán": chuyến được nhận ngay thì khách sang trang `/payment/:id`.
    */
-  onResultChange?: (isResult: boolean) => void;
+  onResultChange?: (result: RequestBookingResult | null) => void;
 }
+
+/**
+ * Hai loại màn kết quả, vì chúng cần hai vỏ khác nhau:
+ *
+ *  - `sent` — hộp "Đã gửi yêu cầu" (`BookingSuccessStep`, Figma `19759:22026`): khung 600 riêng,
+ *    không tiêu đề hộp, tự cuộn và tự dựng hàng nút.
+ *  - `notice` — trùng lặp / tài khoản không được đặt / chạm trần giữ chỗ: một lời báo ngắn trong
+ *    hộp `md` thường.
+ */
+export type RequestBookingResult = 'sent' | 'notice';
 
 /**
  * Luồng "Yêu cầu thuê xe" của khách — **hai bước**: `Chuyến đi` → `Xem lại`.
@@ -228,7 +234,6 @@ export function RequestBookingFlow({
   /** Chữ của các câu báo lỗi validation — namespace riêng, dùng bởi `requestFormSchema`. */
   const tf = useTranslations('BookingRequests.form');
   const dl = useDomainLabel();
-  const fmt = useAppFormat();
   const errorMessage = useErrorMessage();
   const { message } = App.useApp();
 
@@ -314,7 +319,6 @@ export function RequestBookingFlow({
    * thẳng từ `useUnpaidHolds`, xem `holdLimitBlocked`.
    */
   const [submitHitHoldLimit, setSubmitHitHoldLimit] = useState(false);
-  const [requestCode, setRequestCode] = useState<string | null>(null);
   /** Kết quả nhận yêu cầu — biết đơn đã được XÁC NHẬN NGAY (auto-accept) hay còn chờ chủ xe. */
   const [receipt, setReceipt] = useState<BookingRequestReceipt | null>(null);
   /**
@@ -961,7 +965,6 @@ export function RequestBookingFlow({
     onSuccess: async (receipt) => {
       // Đã gửi — bản nháp (nếu còn) không được mở lại hộp ở lần ghé trang sau.
       clearBookingDraft();
-      setRequestCode(receipt.id ?? null);
       setReceipt(receipt);
       /*
        * Nhớ địa chỉ giao xe CHỈ khi đã gửi thành công.
@@ -1077,10 +1080,15 @@ export function RequestBookingFlow({
   const holdLimitBlocked =
     step !== 'done' && (unpaidHolds.data ? unpaidHolds.data.limitReached : submitHitHoldLimit);
 
-  const isResult = step === 'done' || duplicate || blocked !== null || holdLimitBlocked;
+  const result: RequestBookingResult | null =
+    step === 'done' && receipt
+      ? 'sent'
+      : duplicate || blocked !== null || holdLimitBlocked
+        ? 'notice'
+        : null;
   useEffect(() => {
-    onResultChange?.(isResult);
-  }, [isResult, onResultChange]);
+    onResultChange?.(result);
+  }, [result, onResultChange]);
 
   /**
    * Vừa mở bảng chi tiết thì đưa nó vào tầm mắt. Bảng nằm cuối thân bước nên với một bước dài
@@ -1567,184 +1575,40 @@ export function RequestBookingFlow({
     );
   }
 
-  // --- Đã gửi xong: kết quả, không phải một bước biểu mẫu -----------------------------------
-  if (step === 'done') {
-    const v = getValues();
+  /** Chuyến đang chọn — MỘT bản cho màn Xem lại và hộp "Đã gửi yêu cầu" (`BookingTripCard`). */
+  const tripSummary: BookingTrip = {
+    serviceType: watchedService,
+    routeType: watchedRoute,
+    rentalMode,
+    pickupAt: watchedPickup ?? null,
+    returnAt: watchedReturn ?? null,
+    packageMonths: watchedPackage ?? null,
+    pickupPreference: watchedPreference,
+    requestedPickupDate: watchedRequestedDate ?? null,
+    expectedReturnDate,
+    isDelivery,
+    deliveryAddress: deliveryAddressPreview ?? null,
+    driverPickupAddress: pickupAddressPreview ?? null,
+    destination: getValues('destination')?.trim() || null,
+  };
+
+  // --- Đã gửi xong (Figma `19759:22026`): kết quả, không phải một bước biểu mẫu ----------------
+  if (step === 'done' && receipt) {
     /*
-     * Màn này chỉ còn cho yêu cầu CHƯA được nhận (chờ chủ xe duyệt). Chuyến được nhận ngay đã
-     * sang trang thanh toán `/payment/:id` từ `onSuccess` — không có chặng chờ tiền nào ở đây.
+     * Màn này chỉ còn cho yêu cầu KHÔNG cần trả tiền giữ chỗ ngay: chuyến được nhận ngay mà có tiền
+     * giữ chỗ đã sang trang thanh toán `/payment/:id` từ `onSuccess`.
      */
     return (
-      <div className={styles.resultWrap}>
-        <div className={styles.centered}>
-          {/*
-            Vòng tròn XANH tự vẽ thay vì để `CheckCircleFilled` tự tô: màu của glyph đến từ
-            `currentColor`, mà style runtime của AntD tiêm SAU stylesheet của CSS Module nên một
-            class đơn (0,1,0) không chắc thắng — dấu tích ra màu chữ (gần đen) đúng như đã thấy.
-            Ở đây màu là NỀN của thẻ bọc, không phụ thuộc thừa kế nào.
-          */}
-          {/*
-            Ánh sao quanh huy hiệu là TRANG TRÍ thuần — `aria-hidden` cả cụm để trình đọc màn
-            hình không đọc ra một chuỗi ký tự vô nghĩa giữa tiêu đề và nội dung.
-          */}
-          <span className={styles.doneBadgeWrap} aria-hidden>
-            <span className={styles.sparkle} />
-            <span className={styles.sparkle} />
-            <span className={styles.sparkle} />
-            <span className={styles.sparkle} />
-            <span className={styles.doneBadge}>
-              <CheckOutlined />
-            </span>
-          </span>
-          <h3 className={styles.doneTitle}>{t('done.title')}</h3>
-          {/*
-            Mã yêu cầu là thứ khách đọc cho tổng đài khi gọi hỗ trợ, nên nó phải CHÉP ĐƯỢC —
-            một chuỗi 26 ký tự đọc qua điện thoại là một chuỗi đọc sai.
-          */}
-          {requestCode ? (
-            <p className={styles.requestCode}>
-              <span>{t('done.requestCode', { code: requestCode })}</span>
-              <CopyButton value={requestCode} label={t('done.copyRequestCode')} />
-            </p>
-          ) : null}
-          <p className={styles.doneText}>{t('done.body')}</p>
-
-          <section className={styles.doneSummary}>
-            {/*
-              XE lên ĐẦU THẺ chứ không nằm thành một dòng như mọi thuộc tính khác: nó là thứ
-              khách nhận diện chuyến bằng mắt, và một cái tên xe nằm lẫn giữa "Dịch vụ" và
-              "Nhận xe" thì phải đọc mới thấy.
-
-            */}
-            <header className={styles.summaryHead}>
-              <span className={styles.summaryHeadLabel}>
-                <CarOutlined aria-hidden />
-                {t('done.tripInfo')}
-              </span>
-              <span className={styles.summaryVehicle}>
-                <span className={styles.summaryVehicleText}>
-                  <b>{listing?.name ?? vehicleName}</b>
-                </span>
-                {vehicleThumbUrl ? (
-                  /* Ảnh xe từ storage ngoài, 56×40 và TRANG TRÍ (alt rỗng). `PreviewImage` sẽ
-                     thêm cú bấm phóng to mà ô này không cần — cùng tiền lệ với logo gian hàng ở
-                     `VehicleSummaryPanel`. */
-                  // eslint-disable-next-line @next/next/no-img-element -- lý do ngay trên
-                  <img
-                    className={styles.summaryVehicleImg}
-                    src={vehicleThumbUrl}
-                    alt=""
-                    loading="lazy"
-                  />
-                ) : null}
-              </span>
-            </header>
-
-            <dl className={styles.doneRows}>
-              <div className={styles.doneRow}>
-                <dt>
-                  <CalendarOutlined aria-hidden />
-                  {t('done.time')}
-                </dt>
-                <dd>
-                  {v.pickupAt ? fmt.rentalPoint(v.pickupAt) : '—'} →{' '}
-                  {v.returnAt ? fmt.rentalPoint(v.returnAt) : '—'}
-                </dd>
-              </div>
-              <div className={styles.doneRow}>
-                <dt>
-                  <CarOutlined aria-hidden />
-                  {t('review.service')}
-                </dt>
-                <dd>
-                  {dl('serviceType', v.serviceType)}
-                  {v.serviceType === SERVICE_TYPE.WITH_DRIVER
-                    ? ` · ${dl('routeType', v.routeType)}`
-                    : ''}
-                </dd>
-              </div>
-              <div className={styles.doneRow}>
-                <dt>
-                  <EnvironmentOutlined aria-hidden />
-                  {t('done.pickupMethod')}
-                </dt>
-                <dd>
-                  {v.serviceType === SERVICE_TYPE.WITH_DRIVER
-                    ? t('done.driverPickup', { address: pickupAddressPreview ?? '—' })
-                    : isDelivery
-                      ? t('pickup.delivery')
-                      : t('pickup.self')}
-                </dd>
-              </div>
-              {quoteWithPromo ? (
-                <div className={styles.doneRow}>
-                  {/* Còn phụ phí chưa tính (estimateNote) thì KHÔNG gọi "Tổng dự kiến" — 17/08. */}
-                  <dt>
-                    <FileTextOutlined aria-hidden />
-                    {quoteWithPromo.breakdown.estimateNote ? t('price.subtotal') : t('price.total')}
-                  </dt>
-                  {/*
-                  Số khách PHẢI CHUẨN BỊ, không phải tiền thuê. `totalAmount` là `B` — nó bỏ cả
-                  phụ phí lẫn mã khuyến mãi, nên màn xác nhận từng hiện một con số thứ ba khác
-                  với bảng giá vừa bấm qua (24/09/2026). Tiền LUÔN qua bộ format.
-                */}
-                  <dd className={styles.doneMoney}>
-                    {fmt.money(
-                      quoteWithPromo.breakdown.fees?.customerTotalAmount ??
-                        quoteWithPromo.breakdown.totalAmount,
-                    )}
-                  </dd>
-                </div>
-              ) : null}
-            </dl>
-          </section>
-
-          {receipt?.autoAccepted ? (
-            <Alert
-              type="success"
-              showIcon
-              className={styles.doneNote}
-              title={t('done.autoAccepted')}
-            />
-          ) : (
-            <Alert
-              type="warning"
-              showIcon
-              className={styles.doneNote}
-              title={t('done.notReserved')}
-            />
-          )}
-
-          <div className={cx(styles.doneActions, styles.doneActionsRow)}>
-            <Button
-              type="primary"
-              size="large"
-              block
-              onClick={() => {
-                onClose();
-                router.push(ROUTES.TRIPS);
-              }}
-            >
-              {t('done.myTrips')}
-            </Button>
-            {/*
-              Hỏi thêm chủ xe là việc RẤT hay xảy ra ngay sau khi gửi (giao xe ở đâu, có giao
-              được sớm hơn không). Dùng lại nút nhắn shop sẵn có — nó tự lo cả trường hợp khách
-              chưa đăng nhập — và đóng overlay trước khi rời sang khu tin nhắn.
-            */}
-            <ChatWithShopButton
-              vehicleId={vehicleId}
-              label={t('done.chatShop')}
-              size="large"
-              block
-              onNavigate={onClose}
-            />
-            <Button size="large" block icon={<ArrowLeftOutlined aria-hidden />} onClick={onClose}>
-              {t('done.close')}
-            </Button>
-          </div>
-        </div>
-      </div>
+      <BookingSuccessStep
+        vehicleId={vehicleId}
+        listing={listing}
+        vehicleName={vehicleName}
+        vehicleImageUrl={vehicleThumbUrl}
+        trip={tripSummary}
+        receipt={receipt}
+        breakdown={quoteWithPromo?.breakdown ?? null}
+        onClose={onClose}
+      />
     );
   }
 
@@ -1765,21 +1629,7 @@ export function RequestBookingFlow({
         listing={listing}
         vehicleName={vehicleName}
         vehicleImageUrl={vehicleThumbUrl}
-        trip={{
-          serviceType: watchedService,
-          routeType: watchedRoute,
-          rentalMode,
-          pickupAt: watchedPickup ?? null,
-          returnAt: watchedReturn ?? null,
-          packageMonths: watchedPackage ?? null,
-          pickupPreference: watchedPreference,
-          requestedPickupDate: watchedRequestedDate ?? null,
-          expectedReturnDate,
-          isDelivery,
-          deliveryAddress: deliveryAddressPreview ?? null,
-          driverPickupAddress: pickupAddressPreview ?? null,
-          destination: getValues('destination')?.trim() || null,
-        }}
+        trip={tripSummary}
         /*
           Quãng đường + phí giao DỰ KIẾN nhắc lại ở lần soát cuối: con số này KHÔNG nằm trong tổng
           (ADR 0018, chủ xe chốt lúc duyệt), nên nếu nó biến mất ở đây thì khách gửi mà không còn

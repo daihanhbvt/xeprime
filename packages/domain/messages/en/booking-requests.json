@@ -294,22 +294,25 @@
     },
     "done": {
       "title": "Request sent",
+      "confirmedTitle": "Trip confirmed",
       "requestCode": "Request code: {code}",
+      "requestCodeLabel": "Request code:",
       "body": "The host is reviewing it. You'll get a notification as soon as they reply.",
+      "pendingBody": "The host is reviewing it and has {minutes} minutes to reply. You'll get a notification as soon as there's an answer!",
       "time": "Period",
       "pickupMethod": "Getting the car",
       "driverPickup": "Pick-up at: {address}",
       "notReserved": "The car is not held yet — the host has to accept your request first.",
       "myTrips": "My trips",
       "chatShop": "Message the host",
+      "chatHost": "Message the host",
       "close": "Back",
       "autoAccepted": "Your trip was accepted automatically — the vehicle is reserved for you.",
       "openHold": "Pay the reservation",
       "holdLoadFailed": "Could not load the payment code. Open the trip under My trips to get it — your slot is still held.",
       "heldTitle": "The host accepted your trip",
       "heldSubtitle": "Pay the reservation amount before the timer runs out to lock it in.",
-      "copyRequestCode": "Copy request code",
-      "tripInfo": "Trip details"
+      "copyRequestCode": "Copy request code"
     },
     "duplicate": {
       "title": "Duplicate request",
