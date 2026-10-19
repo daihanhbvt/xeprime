@@ -75589,7 +75589,9 @@
             "description": "Kinh độ ghim điểm đến"
           },
           "note": {
-            "type": "string"
+            "type": "string",
+            "description": "Lời nhắn của khách cho chủ xe — server cắt khoảng trắng hai đầu, chỉ có khoảng trắng thì lưu null",
+            "maxLength": 2000
           },
           "deliveryRequested": {
             "type": "boolean",

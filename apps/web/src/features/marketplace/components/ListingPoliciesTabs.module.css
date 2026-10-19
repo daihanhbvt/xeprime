@@ -1,0 +1,121 @@
+.wrap {
+  background: var(--xp-color-bg-container, #ffffff);
+  border: 1px solid var(--xp-color-border, #e9eaeb);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.04);
+}
+
+.title {
+  margin: 0 0 16px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--xp-color-text, #0e0f12);
+  border-left: 4px solid #d6a439;
+  padding-left: 12px;
+  line-height: 24px;
+}
+
+.tabList {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--xp-color-border, #e9eaeb);
+  margin-bottom: 20px;
+  overflow-x: auto;
+}
+
+.tabButton {
+  padding: 10px 16px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--xp-color-text-secondary, #717680);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.tabButton:hover {
+  color: var(--xp-color-primary, #e9ac29);
+}
+
+.tabActive {
+  color: var(--xp-color-primary, #e9ac29) !important;
+  font-weight: 600;
+  border-bottom-color: var(--xp-color-primary, #e9ac29);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ruleItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--xp-color-text, #0e0f12);
+}
+
+.bullet {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--xp-color-primary, #e9ac29);
+  margin-top: 8px;
+  flex-shrink: 0;
+}
+
+.noteBox {
+  margin-top: 8px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: var(--xp-color-primary-subtle, #fff9f0);
+  border: 1px solid var(--xp-color-primary-muted, #f6ebd5);
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--xp-color-text, #0e0f12);
+}
+
+.subSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--xp-color-border, #e9eaeb);
+}
+
+.subSectionTitle {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--xp-color-text, #0e0f12);
+}
+
+.instantBadge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--xp-color-primary-subtle, #fff9f0);
+  color: var(--xp-color-primary, #e9ac29);
+  border: 1px solid var(--xp-color-primary, #e9ac29);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  margin-right: 6px;
+}
+
+.surchargeList {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+

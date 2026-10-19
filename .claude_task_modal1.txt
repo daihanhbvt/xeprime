@@ -1,0 +1,47 @@
+Bạn là Lead Coder & Backend Analyst của XePrime.
+
+NHIỆM VỤ: TRIỂN KHAI MODAL 1 - GỬI YÊU CẦU THUÊ XE
+- Figma File: "RHDyFsURFZQ9BC5JCLQzeE"
+- Node ID: "19727:55409" (URL: https://www.figma.com/design/RHDyFsURFZQ9BC5JCLQzeE/Xe-Prime--Copy-?node-id=19727-55409)
+
+HÃY THỰC HIỆN CÁC BƯỚC SAU:
+
+BƯỚC 1: ĐỌC THIẾT KẾ FIGMA
+- Dùng Figma MCP `get_design_context` (hoặc `get_metadata` trước nếu cần) với fileKey "RHDyFsURFZQ9BC5JCLQzeE" và nodeId "19727:55409".
+- Chú ý: Quota Figma có hạn (~20 calls/tháng), chỉ gọi trực tiếp node "19727:55409".
+- Xác định rõ:
+  + Layout 2 cột (Cột trái: Tóm tắt xe, hình ảnh, biển số, giá thuê, địa chỉ nhận xe, thông tin chủ xe / Cột phải: Form nhập thông tin thuê xe, chọn gói dịch vụ, ngày giờ, địa điểm giao nhận, mã giảm giá, tóm tắt chi phí, cọc giữ chỗ).
+  + Typography, spacing, colors (map sang `@xeprime/ui` tokens).
+
+BƯỚC 2: PHÂN TÍCH & HOÀN THIỆN BACKEND (apps/api)
+- Kiểm tra `apps/api/src/modules/booking-requests`:
+  + Controller, Service, DTO (`CreateBookingRequestDto`).
+  + Các trường dữ liệu: `note` (ghi chú cho chủ xe), `pickupMethod`, `deliveryAddress`, `serviceType`, `routeType`, `packageMonths`, `voucherCode`, `destinationPlaceId`, etc.
+  + Đảm bảo API `POST /public/booking-requests` hoặc `POST /public/listings/:id/booking-requests` hỗ trợ đầy đủ các trường mà UI cần gửi. Sửa code trong `apps/api` nếu phát hiện thiếu sót.
+- Kiểm tra logic xác thực GPLX:
+  + Module `driver-licences`: kiểm tra `DRIVER_LICENCE_TRIP_GATE`. Đảm bảo luồng xe tự lái (SELF_DRIVE) kiểm tra bằng lái hợp lệ, còn xe có tài xế (WITH_DRIVER) cho phép bỏ qua.
+- Kiểm tra logic giữ chỗ & cọc xe (`holds` module).
+
+BƯỚC 3: IMPLEMENT FRONTEND & REFACTOR (apps/web)
+- Target files:
+  + `apps/web/src/features/booking-requests/components/RequestBookingModal.tsx`
+  + `apps/web/src/features/booking-requests/components/RequestBookingFlow.tsx`
+  + `apps/web/src/features/booking-requests/components/RequestBookingFlow.module.css`
+  + `apps/web/src/features/booking-requests/components/VehicleSummaryPanel.tsx` (và module.css)
+  + `apps/web/src/features/booking-requests/components/BookingPriceSummary.tsx` (và module.css)
+  + `apps/web/src/features/booking-requests/schema.ts`
+- Đảm bảo xử lý chuẩn tất cả các ca biên (Edge cases):
+  1. Khách chưa đăng nhập: Tích hợp với `useAuthModal` và `booking-draft.ts` (lưu draft vào sessionStorage, mở modal login OTP/Social, sau khi login quay lại tự động load lại dữ liệu đang nhập).
+  2. Khách chưa xác minh GPLX: Tích hợp `DriverLicenceVerifier` cho xe tự lái, hiển thị thông báo hướng dẫn hoặc mở modal xác minh GPLX; đối với xe có tài xế thì không bắt buộc.
+  3. Chọn phương thức nhận xe: Tự đến lấy xe (hiển thị địa chỉ xe) HOẶC Giao xe tận nơi (chọn địa chỉ, tự động tính khoảng cách km và phí giao xe).
+  4. Chọn dịch vụ: Thuê tự lái, Có tài xế (nội thành/liên tỉnh), Thuê dài hạn (chọn gói tháng).
+  5. Mã khuyến mãi (Voucher / Promo Code): Nhập mã hoặc mở modal chọn mã (`usePromoCode`), áp dụng giảm trừ vào giá.
+  6. Ghi chú cho chủ xe (`note`): Cho phép khách nhập lời nhắn cho chủ xe.
+  7. Không được hardcode chuỗi hiển thị hay màu sắc: Dùng token CSS từ `@xeprime/ui` và i18n messages (`packages/domain/messages/vi/`).
+
+BƯỚC 4: BÁO CÁO KẾT QUẢ
+- Trình bày tóm tắt:
+  1. Những gì đã đọc được từ Figma node 19727:55409.
+  2. Phân tích backend và các chỉnh sửa (nếu có) trong `apps/api`.
+  3. Các thay đổi và refactor trong `apps/web/src/features/booking-requests`.
+  4. Cách xử lý các ca biên (Auth, Driver License, Delivery, Draft).

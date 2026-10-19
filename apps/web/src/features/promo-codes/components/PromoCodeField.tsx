@@ -197,7 +197,7 @@ export function PromoCodeField({
  * `enabled: open` — danh sách chỉ hỏi server khi hộp thoại mở, không hỏi sẵn cho một hộp thoại
  * mà phần lớn khách không bao giờ bấm vào.
  */
-function PromoPicker({
+export function PromoPicker({
   open,
   trip,
   appliedCode,

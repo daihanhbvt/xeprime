@@ -41,6 +41,34 @@ vi.mock('./ListingReviews', () => ({
   ListingReviews: () => <div>Đánh giá</div>,
 }));
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  usePathname: () => '/',
+  useSearchParams: () => new URLSearchParams(),
+}));
+
+vi.mock('@/features/promo-codes/use-promo-code', () => ({
+  usePromoCode: () => ({
+    appliedCode: null,
+    applied: null,
+    checking: false,
+    reason: null,
+    droppedCode: null,
+    apply: vi.fn(),
+    remove: vi.fn(),
+    rejectByServer: vi.fn(),
+  }),
+}));
+
+vi.mock('@/features/promo-codes/components/PromoCodeField', () => ({
+  PromoPicker: () => null,
+  PromoCodeField: () => null,
+}));
+
+vi.mock('./DeliveryAddressModal', () => ({
+  DeliveryAddressModal: () => null,
+}));
+
 vi.mock('./ListingServiceSelector', () => ({
   ListingServiceSelector: () => <div>Dịch vụ</div>,
 }));

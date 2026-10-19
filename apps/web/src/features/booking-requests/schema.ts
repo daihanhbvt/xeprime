@@ -1,4 +1,5 @@
 import {
+  BOOKING_REQUEST_NOTE_MAX_LENGTH,
   LONG_TERM_PACKAGE_MONTHS,
   PICKUP_PREFERENCE,
   PICKUP_PREFERENCE_VALUES,
@@ -200,11 +201,25 @@ export function requestFormSchema(t: FormTranslate) {
     deliveryLongitude: addressFields().longitude,
     deliveryLocationSource: addressFields().locationSource,
     /**
-     * Khách đồng ý điều khoản riêng của chủ xe (08/09/2026). Bắt buộc hay không phụ thuộc vào
-     * `rentalTerms.requireTermsAcceptance` của xe — dữ liệu server, nên luồng kiểm ở bước Xác nhận
-     * thay vì trong schema; server kiểm lại (`RENTAL_TERMS_ACCEPTANCE_REQUIRED`).
+     * Ô "Tôi đã đọc và đồng ý…" ở màn Xem lại (Figma `19727:55409`) — khách tick mới gửi được.
+     * Cùng một lời đồng ý phủ cả điều khoản riêng của chủ xe khi xe bắt buộc (08/09/2026), nên
+     * payload mang `acceptedTerms: true` và server kiểm lại (`RENTAL_TERMS_ACCEPTANCE_REQUIRED`).
+     * Kiểm ở bước Xác nhận thay vì trong schema: đây là lời đồng ý của MỘT người, không bao giờ
+     * khôi phục từ bản nháp.
      */
     acceptedTerms: yup.boolean().default(false),
+    /**
+     * Lời nhắn cho chủ xe (không bắt buộc) — chủ xe đọc nó ở hộp thư yêu cầu. Trần dùng chung với
+     * DTO bên API; server cắt khoảng trắng và lưu chuỗi rỗng thành `null`.
+     */
+    note: yup
+      .string()
+      .trim()
+      .max(
+        BOOKING_REQUEST_NOTE_MAX_LENGTH,
+        t('errors.noteMax', { max: BOOKING_REQUEST_NOTE_MAX_LENGTH }),
+      )
+      .default(''),
   });
 }
 

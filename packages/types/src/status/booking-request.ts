@@ -325,6 +325,12 @@ export function bookingRequestRemainingMs(
 export const BOOKING_DRAFT_TTL_MS = 30 * 60 * 1000;
 
 /**
+ * Trần độ dài lời nhắn khách gửi chủ xe kèm yêu cầu thuê (`booking_requests.note`). DTO bên API và
+ * form của web/app đọc CÙNG con số — lệch nhau là khách gõ xong mới bị server từ chối.
+ */
+export const BOOKING_REQUEST_NOTE_MAX_LENGTH = 2000;
+
+/**
  * Hai số giữ cho một lần gõ địa chỉ giao xe tốn ĐÚNG một lượt tra bản đồ có tính tiền (ADR 0061):
  * chưa đủ dài thì không hỏi, và chờ khách gõ xong mới hỏi. Web và app dùng chung.
  */

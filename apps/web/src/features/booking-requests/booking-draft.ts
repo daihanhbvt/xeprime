@@ -7,7 +7,7 @@ import type { RequestFormValues } from './schema';
  * BẢN NHÁP yêu cầu thuê đang chờ khách đăng nhập — ADR 0060.
  *
  * Gửi yêu cầu thuê cần tài khoản khách đã đăng nhập. Khách chưa đăng nhập bấm "Tiếp tục" thì
- * thứ họ vừa nhập (thời gian, dịch vụ, địa chỉ giao/đón, gói dài hạn, mã khuyến mãi) được giữ
+ * thứ họ vừa nhập (thời gian, dịch vụ, địa chỉ giao/đón, gói dài hạn, lời nhắn, mã khuyến mãi) được giữ
  * ở đây trong lúc họ đăng nhập hoặc đăng ký. Đăng nhập bằng mật khẩu diễn ra NGAY TRÊN trang nên
  * hộp yêu cầu thuê vẫn còn mở; Google/Facebook thì RỜI TRANG (ADR 0019) — quay về đúng trang xe,
  * bản nháp này là thứ dựng lại hộp và đưa khách đi tiếp.
@@ -154,6 +154,8 @@ export function readBookingDraft(vehicleId: string): RestoredBookingDraft | null
   return {
     values: {
       ...rest,
+      // Bản nháp ghi trước khi form có ô lời nhắn thì không mang trường này — ô điều khiển cần chuỗi.
+      note: typeof rest.note === 'string' ? rest.note : '',
       acceptedTerms: false,
       pickupAt: fromWire(pickupAt),
       returnAt: fromWire(returnAt),

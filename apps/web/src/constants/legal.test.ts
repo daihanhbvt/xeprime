@@ -121,7 +121,7 @@ describe('văn bản pháp lý — code và bản dịch phải khớp', () => {
  */
 describe('câu cam kết pháp lý cạnh nút hành động', () => {
   const KNOWN_TAGS = ['terms', 'privacy', 'rules', 'cancellation'];
-  const PLACES = ['auth', 'booking', 'subscription', 'shop'];
+  const PLACES = ['auth', 'booking', 'bookingCheck', 'bookingCheckHost', 'subscription', 'shop'];
 
   const consent = (bundle: typeof viLegal) =>
     (bundle as unknown as { consent: Record<string, string> }).consent;

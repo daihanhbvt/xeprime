@@ -54,8 +54,10 @@ interface RentalDateTimeRangeFieldProps {
    * `labelled`: mỗi đầu mang nhãn riêng ("Nhận xe: …") ngăn bằng vạch đứng, kèm viên thời lượng
    * bên phải. Dùng ở chỗ rộng, khi ô này là control chính của màn và không được phép mơ hồ đầu
    * nào là nhận / đầu nào là trả.
+   *
+   * `stacked`: nhãn đưa lên trên ("Nhận xe" / "Trả xe"), giá trị ngày giờ ở dưới (Thứ, Ngày/tháng - Giờ:Phút).
    */
-  variant?: 'compact' | 'labelled';
+  variant?: 'compact' | 'labelled' | 'stacked';
   /**
    * Bỏ THỨ trong tuần ở trạng thái đóng: `19/08 10:00` thay vì `T4, 19/08 · 10:00`.
    *
@@ -149,7 +151,36 @@ export function RentalDateTimeRangeField({
   });
 
   const trigger =
-    variant === 'labelled' ? (
+    variant === 'stacked' ? (
+      <button
+        type="button"
+        className={cx(styles.trigger, styles.triggerStacked, className)}
+        disabled={disabled}
+        onClick={openPanel}
+        aria-label={ariaValue}
+      >
+        <span className={styles.endpointStacked}>
+          <span className={styles.stackedLabel}>{endpointLabels.start}</span>
+          <span className={styles.stackedValue}>
+            {pointText(value.pickupAt, t('components.rentalRange.pickDateTime'))}
+          </span>
+        </span>
+        <span className={styles.stackedDivider} aria-hidden>
+          -
+        </span>
+        <span className={styles.endpointStacked}>
+          <span className={styles.stackedLabel}>{endpointLabels.end}</span>
+          <span className={styles.stackedValue}>
+            {pointText(value.returnAt, t('components.rentalRange.pickDateTime'))}
+          </span>
+        </span>
+        {complete ? (
+          <span className={styles.durationPill}>
+            {fmt.rentalDuration(value.pickupAt!, value.returnAt!)}
+          </span>
+        ) : null}
+      </button>
+    ) : variant === 'labelled' ? (
       <button
         type="button"
         className={cx(styles.trigger, styles.triggerLabelled, className)}

@@ -13,6 +13,7 @@ import type { PublicListingDetail } from '@/features/marketplace/types';
 import type { PublicQuote } from '@/features/rental-policies/types';
 import { cx } from '@/lib/cx';
 import { applyDiscountPercent } from '@/lib/money';
+import { BookingReviewCosts } from './BookingReviewCosts';
 import styles from './BookingPriceSummary.module.css';
 
 interface BookingPriceSummaryProps {
@@ -28,8 +29,10 @@ interface BookingPriceSummaryProps {
   /**
    * `bar` — một dòng tổng, dính đáy cột cùng hàng nút.
    * `detail` — bảng đầy đủ, nằm TRONG mạch cuộn của bước; không render gì khi chưa mở.
+   * `review` — hai thẻ "Chi phí thuê xe" + "Các khoản khác" của màn Xem lại (Figma `19727:56092`,
+   * `19727:56117`); luôn hiện, không theo `expanded`.
    */
-  variant: 'bar' | 'detail';
+  variant: 'bar' | 'detail' | 'review';
   /** Trạng thái mở do luồng giữ: hai hình thái LOẠI TRỪ nhau, không bao giờ cùng hiện. */
   expanded: boolean;
   onExpandedChange?: (next: boolean) => void;
@@ -44,7 +47,7 @@ interface BookingPriceSummaryProps {
 }
 
 /** Một dòng đơn giá khi CHƯA có báo giá — bảng niêm yết, không phải breakdown. */
-interface UnitRow {
+export interface ListedPriceRow {
   key: string;
   label: string;
   amount: string;
@@ -68,6 +71,10 @@ interface UnitRow {
  *
  * Vì sao dòng tổng BIẾN MẤT khi bảng mở: bảng đã có hàng "TỔNG DỰ KIẾN" của riêng nó, giữ
  * thêm dòng dính đáy là cùng một con số hiện hai lần cách nhau vài chục pixel.
+ *
+ * Màn Xem lại (`variant="review"`) là hình thái thứ ba, đứng riêng: hai thẻ "Chi phí thuê xe" và
+ * "Các khoản khác" (tiền giữ chỗ + cọc khi nhận xe) của design v2. Cùng báo giá, cùng quy tắc ẩn
+ * dòng 0đ và dòng do CHỦ XE chịu — chỉ khác hình dạng.
  *
  * Component KHÔNG cộng trừ gì: có báo giá thì mọi con số đến từ `PricingService` qua
  * `/public/listings/:id/quote`; chưa có thì chỉ đọc lại giá NIÊM YẾT của xe cho đúng dịch vụ
@@ -124,7 +131,7 @@ export function BookingPriceSummary({
   const headline = unitRows[0];
   const isDetail = variant === 'detail';
 
-  function buildUnitRows(): UnitRow[] {
+  function buildUnitRows(): ListedPriceRow[] {
     if (!listing) return [];
     if (isLongTerm) {
       return listing.monthlyPrice
@@ -139,7 +146,7 @@ export function BookingPriceSummary({
         : [];
     }
     if (isWithDriver) {
-      const rows: UnitRow[] = [];
+      const rows: ListedPriceRow[] = [];
       if (listing.withDriverDailyPrice) {
         rows.push({
           key: 'inCity',
@@ -166,7 +173,7 @@ export function BookingPriceSummary({
       }
       return rows;
     }
-    const rows: UnitRow[] = [];
+    const rows: ListedPriceRow[] = [];
     if (listing.weekdayPrice) {
       rows.push({
         key: 'weekday',
@@ -225,6 +232,20 @@ export function BookingPriceSummary({
       >
         {t('price.collapse')} <UpOutlined aria-hidden />
       </button>
+    );
+  }
+
+  /* ── Màn Xem lại: hai thẻ tiền riêng — cùng báo giá, cùng bảng niêm yết dự phòng ─────────── */
+  if (variant === 'review') {
+    return (
+      <BookingReviewCosts
+        listing={listing}
+        breakdown={hasSelection ? breakdown : null}
+        loading={hasSelection && quoteLoading}
+        isDelivery={isDelivery}
+        listedRows={unitRows}
+        promoSlot={promoSlot}
+      />
     );
   }
 

@@ -35,7 +35,7 @@ vi.mock('./RequestBookingModal', () => ({
   RequestBookingModal: ({ open, onClose }: { open: boolean; onClose: () => void }) =>
     open ? (
       <div role="dialog" aria-label="Yêu cầu thuê xe">
-        <button type="button">Gửi yêu cầu thuê</button>
+        <button type="button">Gửi yêu cầu thuê xe</button>
         <button type="button" onClick={onClose}>
           Huỷ
         </button>
@@ -90,7 +90,7 @@ describe('RequestBookingButton', () => {
   it('nút gửi cuối cùng vẫn nói rõ là GỬI YÊU CẦU', () => {
     renderCta();
     fireEvent.click(screen.getByRole('button', { name: 'Chọn thuê' }));
-    expect(screen.getByRole('button', { name: 'Gửi yêu cầu thuê' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Gửi yêu cầu thuê xe' })).toBeTruthy();
   });
 });
 

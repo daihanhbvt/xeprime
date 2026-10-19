@@ -8,8 +8,13 @@ import styles from './LegalConsentNote.module.css';
 /**
  * Những thời điểm người dùng thật sự cam kết một điều gì đó. `marketAuth` là câu của hộp tài khoản
  * site khách theo design v2 — cùng hai văn bản với `auth`, khác câu chữ.
+ *
+ * `bookingCheck` / `bookingCheckHost` là câu NHÃN của ô tick "Tôi đã đọc và đồng ý…" ở màn Xem lại
+ * yêu cầu thuê (Figma `19727:55409`); bản `Host` dùng khi xe bắt buộc đồng ý điều khoản riêng của
+ * chủ xe — một ô tick phủ cả hai, không phải hai ô cạnh nhau.
  */
-export type LegalConsentPlace = 'auth' | 'marketAuth' | 'booking' | 'subscription' | 'shop';
+export type LegalConsentPlace =
+  'auth' | 'marketAuth' | 'booking' | 'bookingCheck' | 'bookingCheckHost' | 'subscription' | 'shop';
 
 /**
  * Khoá message viết THÀNH CHỮ, không ghép từ `place` lúc chạy.
@@ -22,6 +27,8 @@ const CONSENT_KEY = {
   auth: 'consent.auth',
   marketAuth: 'consent.marketAuth',
   booking: 'consent.booking',
+  bookingCheck: 'consent.bookingCheck',
+  bookingCheckHost: 'consent.bookingCheckHost',
   subscription: 'consent.subscription',
   shop: 'consent.shop',
 } as const satisfies Record<LegalConsentPlace, string>;
@@ -33,9 +40,10 @@ const CONSENT_KEY = {
  * thoại đặt xe hay ở cổng quản lý không nhìn thấy chân trang marketplace, và đây mới là lúc họ
  * có lý do để đọc.
  *
- * Cố ý KHÔNG phải ô tick: luồng đặt xe đã bỏ ô tick ngày 20/08 vì nó chặn nút gửi bằng một thao
- * tác không ai đọc. Một câu có liên kết thật, luôn hiện, nói đúng thứ đang ràng buộc thì trung
- * thực hơn — và vẫn là "thông báo trước khi giao kết".
+ * Mặc định KHÔNG phải ô tick: một câu có liên kết thật, luôn hiện, nói đúng thứ đang ràng buộc —
+ * "thông báo trước khi giao kết". Riêng màn Xem lại yêu cầu thuê của design v2 đặt lại ô tick
+ * (ngược quyết định bỏ ô tick ngày 20/08): ở đó câu này là NHÃN của ô, dựng với `as="span"` vì
+ * `<p>` không được nằm trong `<label>`.
  *
  * Liên kết luôn mở TAB MỚI: cả bốn chỗ đều nằm giữa một luồng dở dang (biểu mẫu, hộp thoại),
  * rời trang là mất những gì đã nhập.
@@ -43,9 +51,12 @@ const CONSENT_KEY = {
 export function LegalConsentNote({
   place,
   className,
+  as: Tag = 'p',
 }: {
   place: LegalConsentPlace;
   className?: string;
+  /** `span` khi câu là nhãn của một ô tick — đoạn văn không hợp lệ bên trong `<label>`. */
+  as?: 'p' | 'span';
 }) {
   const t = useTranslations('Legal');
 
@@ -64,13 +75,13 @@ export function LegalConsentNote({
    * không phải sửa kèm component — `legal.test.ts` giữ cho thẻ mới không lọt ra ngoài bộ này.
    */
   return (
-    <p className={cx(styles.note, className)}>
+    <Tag className={cx(styles.note, className)}>
       {t.rich(CONSENT_KEY[place], {
         terms: link(LEGAL_DOC.TERMS),
         privacy: link(LEGAL_DOC.PRIVACY),
         rules: link(LEGAL_DOC.MARKETPLACE_RULES),
         cancellation: link(LEGAL_DOC.CANCELLATION),
       })}
-    </p>
+    </Tag>
   );
 }

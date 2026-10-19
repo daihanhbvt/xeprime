@@ -1,0 +1,124 @@
+/* Gallery chi tiết xe theo Figma v2 (node 19707:83366): 1200 × 309px */
+.wrap {
+  width: 100%;
+  max-width: var(--xp-market-container-max-width, 1200px);
+  margin: 0 auto 32px;
+}
+
+.galleryGrid {
+  display: flex;
+  height: 309px;
+  gap: 8px;
+  align-items: stretch;
+  width: 100%;
+}
+
+.mainPhotoWrapper {
+  flex: 0 0 650px;
+  height: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--xp-color-bg-muted, #f5f5f5);
+  position: relative;
+}
+
+.mainPhoto {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.mainPhoto:hover {
+  transform: scale(1.015);
+}
+
+.thumbCol {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+}
+
+.thumbItem {
+  flex: 1;
+  min-height: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--xp-color-bg-muted, #f5f5f5);
+  position: relative;
+  cursor: pointer;
+}
+
+.thumbImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+  transition: transform 0.2s ease;
+}
+
+.thumbItem:hover .thumbImg {
+  transform: scale(1.02);
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 500;
+  border-radius: 12px;
+  user-select: none;
+  backdrop-filter: blur(2px);
+  transition: background 0.2s ease;
+}
+
+.thumbItem:hover .overlay {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, var(--xp-color-primary-subtle, #fff9f0), var(--xp-color-bg-muted, #f5f5f5));
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--xp-color-text-tertiary, #8c8c8c);
+}
+
+@media (max-width: 1024px) {
+  .galleryGrid {
+    height: 240px;
+  }
+  .mainPhotoWrapper {
+    flex: 0 0 55%;
+  }
+}
+
+@media (max-width: 768px) {
+  .galleryGrid {
+    flex-direction: column;
+    height: auto;
+  }
+  .mainPhotoWrapper {
+    flex: none;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    height: auto;
+  }
+  .thumbCol {
+    display: none;
+  }
+}
+

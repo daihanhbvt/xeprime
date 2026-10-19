@@ -12503,6 +12503,7 @@ export interface components {
             destinationLatitude?: number;
             /** @description Kinh độ ghim điểm đến */
             destinationLongitude?: number;
+            /** @description Lời nhắn của khách cho chủ xe — server cắt khoảng trắng hai đầu, chỉ có khoảng trắng thì lưu null */
             note?: string;
             /** @description Yêu cầu giao xe tận nơi — chỉ nhận khi chính sách giao nhận của xe đang bật */
             deliveryRequested?: boolean;

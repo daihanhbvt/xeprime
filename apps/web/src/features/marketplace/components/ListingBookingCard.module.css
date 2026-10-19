@@ -1,0 +1,782 @@
+/* Thẻ đặt xe và chi phí cột phải theo Figma v2 (node 19707:84080): 440px */
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+.card {
+  background: var(--xp-color-bg-container, #ffffff);
+  border: 1px solid var(--xp-color-border, #e9eaeb);
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(10, 13, 18, 0.04);
+  overflow: hidden;
+}
+
+/* Thanh tab dịch vụ */
+.tabHeader {
+  display: flex;
+  background: var(--xp-color-bg, #fafafa);
+  border-bottom: 1px solid var(--xp-color-border, #e9eaeb);
+  height: 50px;
+}
+
+.serviceTab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--xp-color-text-secondary, #414651);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0 8px;
+}
+
+.serviceTab:hover {
+  color: var(--xp-color-primary, #e9ac29);
+}
+
+.serviceTabActive {
+  background: var(--xp-color-bg-container, #ffffff);
+  color: var(--xp-color-primary-dark, #cb9115) !important;
+  font-weight: 600;
+  border-bottom: 2px solid #d3a94d;
+}
+
+.body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Dòng giá */
+.priceRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.priceGroup {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.oldPrice {
+  font-size: 16px;
+  color: var(--xp-color-text-disabled, #d5d7da);
+  text-decoration: line-through;
+}
+
+.mainPrice {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--xp-color-primary, #e9ac29);
+  line-height: 1;
+  letter-spacing: -0.5px;
+}
+
+.unit {
+  font-size: 16px;
+  color: var(--xp-color-text-secondary, #717680);
+}
+
+.discountBadge {
+  background: #ecfdf3;
+  color: #039855;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid #d1fadf;
+}
+
+/* Khung thời gian */
+.timeFrame {
+  border: 1px solid var(--xp-color-border, #e9eaeb);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--xp-color-bg-container, #ffffff);
+}
+
+.timeCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.timeLabel {
+  font-size: 12px;
+  color: var(--xp-color-text-secondary, #717680);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.timeValue {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--xp-color-text, #0e0f12);
+}
+
+.timeDivider {
+  color: #a4a7ae;
+  font-weight: bold;
+  padding: 0 12px;
+}
+
+/* Vị trí nhận xe */
+.locationSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--xp-color-text, #0e0f12);
+}
+
+.deliveryToggle {
+  display: flex;
+  gap: 8px;
+  background: var(--xp-color-bg, #fafafa);
+  padding: 4px;
+  border-radius: 12px;
+}
+
+.toggleBtn {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.toggleBtnActive {
+  background: #ffffff;
+  border-color: var(--xp-color-primary, #e9ac29);
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
+}
+
+.toggleLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--xp-color-text, #0e0f12);
+}
+
+.toggleSub {
+  font-size: 12px;
+  font-style: italic;
+  color: #039855;
+}
+
+.toggleSubDanger {
+  font-size: 12px;
+  font-style: italic;
+  color: #d92d20;
+}
+
+.addressBox {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--xp-color-text-secondary, #414651);
+  line-height: 18px;
+}
+
+.deliveryAddressCard {
+  background: #fbfbfc;
+  border: 1px solid #eaecf0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.deliveryHeaderRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.deliveryAddressTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: #344054;
+}
+
+.changeAddressBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--xp-color-primary-dark, #cb9115);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.changeAddressBtn:hover {
+  color: var(--xp-color-primary, #e9ac29);
+}
+
+.deliveryDistanceInfo {
+  font-size: 12px;
+  color: #667085;
+}
+
+.chooseAddressBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px dashed var(--xp-color-primary, #e9ac29);
+  background: var(--xp-color-primary-subtle, #fffbf0);
+  color: var(--xp-color-primary-dark, #cb9115);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.chooseAddressBtn:hover {
+  background: #fff8e6;
+  border-color: #cb9115;
+}
+
+.addressIcon {
+  color: var(--xp-color-primary, #e9ac29);
+  margin-top: 2px;
+}
+
+.addressNote {
+  margin: 0;
+  font-size: 12px;
+  color: var(--xp-color-text-tertiary, #717680);
+  font-style: italic;
+}
+
+/* Tiện ích bổ sung */
+.extraSection {
+  background: var(--xp-color-bg-container, #ffffff);
+  border: 1px solid var(--xp-color-border, #e9eaeb);
+  border-radius: 16px;
+  padding: 16px 20px;
+  box-shadow: 0 0 8px rgba(10, 13, 18, 0.04);
+}
+
+.extraTitleWrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.extraBar {
+  width: 4px;
+  height: 20px;
+  background: #d6a439;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.extraTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--xp-color-text, #0e0f12);
+}
+
+/* Thẻ Thành tiền */
+.breakdownCard {
+  background: var(--xp-color-bg-container, #ffffff);
+  border: 1px solid var(--xp-color-border, #e9eaeb);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 0 8px rgba(10, 13, 18, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.breakdownTitle {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--xp-color-text, #0e0f12);
+}
+
+.dashedDivider {
+  border-top: 1px dashed var(--xp-color-border, #e9eaeb);
+  margin: 2px 0;
+}
+
+.solidDivider {
+  border-top: 1px solid var(--xp-color-border, #e9eaeb);
+  margin: 4px 0;
+}
+
+.promoGroupTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--xp-color-text, #0e0f12);
+  margin-top: 2px;
+}
+
+.promoCodeButton {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f6fef9;
+  border: 1px solid #039855;
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: #039855;
+  cursor: pointer;
+  width: 100%;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.promoCodeButton:hover {
+  background: #ecfdf3;
+}
+
+.promoCodeLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.promoGiftIcon {
+  font-size: 18px;
+}
+
+.promoArrowIcon {
+  font-size: 14px;
+}
+
+.priceLine {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.priceLineTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  font-size: 14px;
+  line-height: 20px;
+  gap: 16px;
+}
+
+.priceLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--xp-color-text, #0e0f12);
+}
+
+.priceSubLabel {
+  font-size: 12px;
+  color: var(--xp-color-text-tertiary, #717680);
+  max-width: 260px;
+  line-height: 16px;
+}
+
+.priceValue {
+  font-weight: 600;
+  color: var(--xp-color-text, #0e0f12);
+  white-space: nowrap;
+}
+
+.discountValue {
+  color: #12b76a;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.totalRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding-top: 12px;
+  border-top: 1px solid var(--xp-color-border, #e9eaeb);
+  margin-top: 4px;
+}
+
+.totalLabel {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--xp-color-text, #0e0f12);
+}
+
+.totalAmount {
+  font-size: 24px;
+  font-weight: 800;
+  background: linear-gradient(90deg, #d6a439, #ba8b26);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.ctaBtnWrapper {
+  margin-top: 6px;
+}
+
+.ctaBtnWrapper :global(.ant-btn) {
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #e9c336 0%, #e8c664 48.08%, #e3b012 100%) !important;
+  color: #0e0f12 !important;
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.08);
+  transition: all 0.2s ease;
+}
+
+.ctaBtnWrapper :global(.ant-btn:hover) {
+  filter: brightness(1.04);
+  transform: translateY(-1px);
+}
+
+.chatBtnWrapper {
+  margin-top: 6px;
+}
+
+.chatBtnWrapper :global(.ant-btn) {
+  width: 100%;
+}
+
+/* Lộ trình (Có tài xế) */
+.routeGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.routeLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--xp-color-text, #0e0f12);
+}
+
+.routeOptions {
+  display: flex;
+  gap: 8px;
+  background: var(--xp-color-bg, #fafafa);
+  padding: 4px;
+  border-radius: 10px;
+}
+
+.routeBtn {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--xp-color-text-secondary, #717680);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.routeBtnActive {
+  background: #ffffff;
+  color: var(--xp-color-text, #0e0f12);
+  border-color: var(--xp-color-primary, #e9ac29);
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
+}
+
+/* Gói dài hạn */
+.packageGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.packageOptions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.packageBtn {
+  padding: 8px 6px;
+  border-radius: 8px;
+  border: 1px solid var(--xp-color-border, #e9eaeb);
+  background: var(--xp-color-bg-container, #ffffff);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--xp-color-text-secondary, #717680);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.packageBtnActive {
+  border-color: var(--xp-color-primary, #e9ac29);
+  color: var(--xp-color-primary, #e9ac29);
+  background: var(--xp-color-primary-subtle, #fff9f0);
+}
+
+/* Áp dụng mã khuyến mãi */
+.promoAppliedRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #f6fef9;
+  border: 1px solid #d1fadf;
+  border-radius: 10px;
+}
+
+.promoAppliedLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.promoTag {
+  background: #ecfdf3;
+  color: #039855;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.promoDiscountText {
+  font-size: 13px;
+  font-weight: 600;
+  color: #039855;
+}
+
+.promoRemoveBtn {
+  background: none;
+  border: none;
+  color: #717680;
+  cursor: pointer;
+  padding: 4px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+
+.promoRemoveBtn:hover {
+  color: #d92d20;
+}
+
+/* Badge giảm giá gói dài hạn */
+.packageDiscountBadge {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #039855;
+  background: #ecfdf3;
+  border-radius: 4px;
+  padding: 1px 4px;
+  margin-top: 2px;
+}
+
+/* Lộ trình có tài xế: điểm đến & phụ phí */
+.destinationSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.inputLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--xp-color-text, #0e0f12);
+}
+
+.inputSubLabel {
+  font-size: 12px;
+  color: var(--xp-color-text-secondary, #717680);
+}
+
+.textInput {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--xp-color-border, #e9eaeb);
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--xp-color-text, #0e0f12);
+  background: var(--xp-color-bg-container, #ffffff);
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.textInput:focus {
+  border-color: var(--xp-color-primary, #e9ac29);
+}
+
+.driverRulesBox {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--xp-color-bg-subtle, #f9fafb);
+  border: 1px solid var(--xp-color-border, #e9eaeb);
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.rulesTitle {
+  font-weight: 600;
+  color: var(--xp-color-text, #0e0f12);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.rulesList {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--xp-color-text-secondary, #717680);
+}
+
+/* Thuê dài hạn: thời gian & nguyện vọng nhận xe */
+.longTermTimeSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.longTermPrefOptions {
+  display: flex;
+  gap: 8px;
+}
+
+.longTermPrefBtn {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--xp-color-border, #e9eaeb);
+  background: var(--xp-color-bg-container, #ffffff);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--xp-color-text-secondary, #717680);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.longTermPrefBtnActive {
+  border-color: var(--xp-color-primary, #e9ac29);
+  color: var(--xp-color-primary, #e9ac29);
+  background: var(--xp-color-primary-subtle, #fff9f0);
+}
+
+.specificDatePickerWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.datePickerInput {
+  width: 100% !important;
+  height: 40px !important;
+  border-radius: 8px !important;
+}
+
+.expectedReturnBox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--xp-color-bg-subtle, #f9fafb);
+  border-radius: 8px;
+  border: 1px solid var(--xp-color-border, #e9eaeb);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.calendarIcon {
+  color: var(--xp-color-primary, #e9ac29);
+  font-size: 15px;
+}
+
+.expectedReturnLabel {
+  color: var(--xp-color-text-secondary, #717680);
+  margin-right: 4px;
+}
+
+.expectedReturnValue {
+  font-weight: 600;
+  color: var(--xp-color-text, #0e0f12);
+}
+
+.longTermBenefits {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: #f6fef9;
+  border: 1px solid #d1fadf;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.benefitItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #039855;
+  font-weight: 500;
+}
+
+.benefitIcon {
+  font-size: 13px;
+  flex: none;
+}
+
+
+/* Tùy biến RentalDateTimeRangeField trong booking card */
+.bookingRangeField {
+  border: 1px solid var(--xp-color-border, #e9eaeb) !important;
+  border-radius: 12px !important;
+  padding: 12px 16px !important;
+  background: var(--xp-color-bg-container, #ffffff) !important;
+  transition: all 0.15s ease;
+  width: 100%;
+}
+
+.bookingRangeField:hover {
+  border-color: var(--xp-color-primary, #e9ac29) !important;
+}
+
+
