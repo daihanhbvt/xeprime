@@ -131,7 +131,12 @@ export function BookingSuccessStep({
           Hai nút phụ cùng là `Button` AntD với CÙNG một class: nút nhắn shop sẵn có là `Button`, nên
           dựng "Quay lại" bằng thứ khác thì hai nút đứng cạnh nhau sẽ phản hồi rê chuột hai kiểu.
         */}
-        <Button size="large" icon={<LeftOutlined />} onClick={onClose} className={styles.secondary}>
+        <Button
+          size="large"
+          icon={<LeftOutlined aria-hidden />}
+          onClick={onClose}
+          className={styles.secondary}
+        >
           {t('done.close')}
         </Button>
         {/*
