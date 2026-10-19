@@ -29,6 +29,14 @@
   --per-view: 4;
 }
 
+.per5 {
+  --per-view: 5;
+}
+
+.per6 {
+  --per-view: 6;
+}
+
 /* 1.823 thẻ mỗi khung = thẻ 387px trong cột 722px (Figma); co theo tỉ lệ ở màn hẹp hơn. */
 .peek {
   --per-view: 1.823;
@@ -137,9 +145,49 @@
   }
 }
 
+/* Khi bật responsiveGrid: mở rộng 5 cột (≥2000px) và 6 cột (≥2400px) cho màn 27" 2K/4K */
+@media (min-width: 2000px) {
+  .responsiveGrid.gridLayout .container {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 2400px) {
+  .responsiveGrid.gridLayout .container {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+/*
+ * Khi bật responsiveGrid: luôn giữ đúng 2 HÀNG NGANG theo số cột khả dụng:
+ * - Tablet (641px - 1024px): 2 cột × 2 hàng = 4 xe (ẩn từ thẻ 5)
+ * - Desktop thường & 24" Full HD (1025px - 1999px): 4 cột × 2 hàng = 8 xe (ẩn từ thẻ 9)
+ * - Màn hình 27" 2K (2000px - 2399px): 5 cột × 2 hàng = 10 xe (ẩn từ thẻ 11)
+ * - Màn hình 27" 2K 100% / 4K (≥2400px): 6 cột × 2 hàng = 12 xe (hiện đủ 12)
+ */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .responsiveGrid.gridLayout .slide:nth-child(n + 5) {
+    display: none;
+  }
+}
+
+@media (min-width: 1025px) and (max-width: 1999px) {
+  .responsiveGrid.gridLayout .slide:nth-child(n + 9) {
+    display: none;
+  }
+}
+
+@media (min-width: 2000px) and (max-width: 2399px) {
+  .responsiveGrid.gridLayout .slide:nth-child(n + 11) {
+    display: none;
+  }
+}
+
 @media (max-width: 1024px) {
   .per3,
-  .per4 {
+  .per4,
+  .per5,
+  .per6 {
     --per-view: 2;
   }
 
@@ -161,6 +209,8 @@
   .per2,
   .per3,
   .per4,
+  .per5,
+  .per6,
   .peek,
   .tablet1 {
     --per-view: 1.3;

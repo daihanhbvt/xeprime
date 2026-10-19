@@ -129,8 +129,8 @@ export function VehiclePreview() {
           description={serviceLabel ? t('emptyForService', { service: serviceLabel }) : t('empty')}
         />
       ) : (
-        // Lưới 4 cột từ tablet trở lên; mobile là slider thẻ-ở-giữa (bản vẽ mobile v2).
-        <HomeCarousel ariaLabel={tHome('title')} perView={4} layout="grid">
+        // Lưới responsive (4-6 cột tuỳ màn hình); mobile là slider thẻ-ở-giữa (bản vẽ mobile v2).
+        <HomeCarousel ariaLabel={tHome('title')} perView={4} layout="grid" responsiveGrid>
           {items.map((listing) => (
             <VehicleCard key={listing.id} listing={listing} />
           ))}
