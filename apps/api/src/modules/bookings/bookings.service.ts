@@ -44,6 +44,7 @@ import {
 } from '@xeprime/types';
 import { bookingMoney, emptyMoneySides, loadBookingMoneySides } from '../../common/booking-money';
 import { bookingDebt } from '../../common/money';
+import { accountPhoneIfDifferent } from '../../common/phone';
 import { piiSearch } from '../../common/support/support-search';
 import { addressViewOf, pinOf } from '../../common/address-view';
 import { normalizeRouteContext } from '../../common/route-context';
@@ -116,7 +117,13 @@ const LIST_SELECT = {
    * `request_booking` thay vì thêm cột thứ hai để rồi phải giữ hai cột đồng bộ.
    */
   bookingRequest: {
-    select: { deliveryRequested: true, deliveryAddress: true, deliveryAddressLine: true },
+    select: {
+      deliveryRequested: true,
+      deliveryAddress: true,
+      deliveryAddressLine: true,
+      // SĐT tài khoản của khách — hiện cạnh SĐT liên hệ của đơn khi hai số khác nhau (ADR 0063).
+      customer: { select: { phone: true } },
+    },
   },
 } satisfies Prisma.BookingSelect;
 
@@ -1311,6 +1318,11 @@ function toListItem(b: BookingListRow): BookingListItemDto {
     longTermPackageMonths: b.longTermPackageMonths,
     customerName: b.customerName,
     customerPhone: b.customerPhone,
+    // Đơn của gian hàng luôn được thấy liên hệ (đã có đơn — ADR 0056), nên không gác thêm ở đây.
+    customerAccountPhone: accountPhoneIfDifferent(
+      b.bookingRequest?.customer?.phone,
+      b.customerPhone,
+    ),
     status: b.status,
     serviceType: b.serviceType,
     pickupAt: b.pickupAt as unknown as string,

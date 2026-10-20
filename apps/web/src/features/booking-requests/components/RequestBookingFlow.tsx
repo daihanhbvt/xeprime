@@ -20,7 +20,6 @@ import {
   API_ERROR_CODE,
   BOOKING_REQUEST_STATUS,
   LONG_TERM_PACKAGE_MONTHS,
-  longTermReturnAt,
   LOCATION_SOURCE,
   PICKUP_PREFERENCE,
   ROUTE_TYPE,
@@ -42,6 +41,7 @@ import {
   evaluateDriverLicenceForTrip,
   isDriverLicenceGateErrorCode,
   licenceTripLastDayKey,
+  longTermReturnFromWallClock,
   type GeoPoint,
 } from '@xeprime/domain';
 import { fetchDriverLicenceOverview } from '@/features/driver-licence/api';
@@ -58,7 +58,7 @@ import { DeliveryEstimate } from './DeliveryEstimate';
 import { RenterAddressBlock } from './RenterAddressBlock';
 import { TextField } from '@/components/form/TextField';
 import { ROUTES, paymentPath } from '@/constants/routes';
-import { fetchListingDetailClient } from '@/features/marketplace/api';
+import { useListingDetail } from '@/features/marketplace/hooks/use-listing-detail';
 import type { PublicListingDetail } from '@/features/marketplace/types';
 import { useAuthModal } from '@/features/auth/components/AuthModalProvider';
 import { AUTH_CONTEXT, AUTH_MODE } from '@/features/auth/post-auth-destination';
@@ -71,6 +71,7 @@ import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { cx } from '@/lib/cx';
+import { hasHoldStage as hasHoldStageOf } from '@/lib/customer-price-view';
 import { appWallClockToInstant, appWallClockToIso, toAppTz, type Dayjs } from '@/lib/datetime';
 import { buildBusyDayIndex } from '@/lib/rental-busy';
 import { readDeliveryAddress, rememberDeliveryAddress } from '@/lib/delivery-address-memory';
@@ -348,12 +349,7 @@ export function RequestBookingFlow({
    * Hồ sơ xe cho cột trái. Mở từ trang chi tiết thì `providedListing` đã đủ và query TẮT —
    * không có lý do gọi lại thứ vừa render xong.
    */
-  const listingQ = useQuery({
-    queryKey: queryKeys.marketplace.listing(vehicleId),
-    queryFn: () => fetchListingDetailClient(vehicleId),
-    enabled: !providedListing,
-    staleTime: 5 * 60_000,
-  });
+  const listingQ = useListingDetail(vehicleId, { enabled: !providedListing });
   const listing = providedListing ?? listingQ.data ?? null;
 
   /**
@@ -422,6 +418,8 @@ export function RequestBookingFlow({
           : LOCATION_SOURCE.MANUAL
         : null,
       note: '',
+      customerName: me?.displayName ?? '',
+      customerPhone: me?.phone ?? '',
     },
   });
 
@@ -545,6 +543,21 @@ export function RequestBookingFlow({
       setValue('pickupMethod', PICKUP_METHOD.SELF, { shouldValidate: true });
     }
   }, [listing, deliveryAvailable, getValues, setValue]);
+
+  /**
+   * Đồng bộ tên và số điện thoại liên hệ từ tài khoản người dùng (`me`) khi nạp xong.
+   * Nếu người dùng chưa tự sửa và form chưa có giá trị, điền sẵn thông tin tài khoản.
+   */
+  useEffect(() => {
+    if (me) {
+      if (!getValues('customerName') && me.displayName) {
+        setValue('customerName', me.displayName, { shouldValidate: false });
+      }
+      if (!getValues('customerPhone') && me.phone) {
+        setValue('customerPhone', me.phone, { shouldValidate: false });
+      }
+    }
+  }, [me, getValues, setValue]);
 
   /**
    * Đổi dịch vụ. Dài hạn và các dịch vụ theo ngày dùng hai bộ input khác hẳn nhau (gói +
@@ -955,6 +968,8 @@ export function RequestBookingFlow({
         ...(v.acceptedTerms && agreementCoversHostTerms ? { acceptedTerms: true } : {}),
         // Lời nhắn chỉ gửi khi có chữ — server cũng cắt khoảng trắng, đây là để payload sạch.
         ...(v.note.trim() ? { note: v.note.trim() } : {}),
+        ...(v.customerName?.trim() ? { customerName: v.customerName.trim() } : {}),
+        ...(v.customerPhone?.trim() ? { customerPhone: v.customerPhone.trim() } : {}),
         /*
          * Gửi CHUỖI MÃ, không gửi số giảm: server đánh giá lại và giữ lượt ở cửa kiểm thứ hai
          * (ADR 0046 điều 7). Một client gửi lên "giảm 5.000.000đ" thì không có gì phản đối nó.
@@ -1324,8 +1339,8 @@ export function RequestBookingFlow({
     }
     // Khoá TRƯỚC lượt chờ kiểm lời nhắn — cú bấm thứ hai trong lúc chờ không được lọt qua.
     submitLock.current = true;
-    // Lời nhắn là ô nhập duy nhất của màn này — quá trần thì báo ngay dưới ô, không gửi.
-    if (!(await trigger('note'))) {
+    // Lời nhắn + liên hệ người thuê (họ tên, SĐT) — lỗi thì báo dưới ô, không gửi.
+    if (!(await trigger(['note', 'customerName', 'customerPhone']))) {
       submitLock.current = false;
       return;
     }
@@ -1399,18 +1414,15 @@ export function RequestBookingFlow({
   /** Ngày trả DỰ KIẾN của gói khi khách đã chọn ngày nhận cụ thể — giờ chốt khi gian hàng duyệt. */
   const expectedReturnDate =
     watchedPackage != null && watchedRequestedDate
-      ? toAppTz(
-          longTermReturnAt(appWallClockToInstant(watchedRequestedDate).toDate(), watchedPackage),
-        )
+      ? longTermReturnFromWallClock(watchedRequestedDate, watchedPackage)
       : null;
 
   /*
    * Chuyến này có khoản thu trước (tiền giữ chỗ) không — đọc từ báo giá SERVER (ADR 0044 điều 4).
-   * Chưa có báo giá thì coi như có: đa số chuyến có, và thanh tiến trình nhảy từ 3 lên 4 chặng khi
-   * báo giá về là lời hứa bị rút lại giữa chừng.
+   * Luật "chưa có báo giá thì coi như có" nằm ở `hasHoldStage`, dùng chung với màn chuyến chờ duyệt.
    */
   const quoteHasHold = quoteQ.data?.breakdown.fees?.holdAmount != null;
-  const hasHoldStage = quoteQ.data ? quoteHasHold : true;
+  const hasHoldStage = hasHoldStageOf(quoteQ.data?.breakdown);
   /*
    * Chuyện xảy ra sau khi gửi — "Đặt ngay" do server xem trước (`quote.autoAccept`), không suy theo
    * dịch vụ. Đặt ngay mà KHÔNG có tiền giữ chỗ (có tài xế, gian hàng tắt thu cọc…) thì đơn ra đời

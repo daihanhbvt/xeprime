@@ -5,8 +5,8 @@ import { useState } from 'react';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import type { PublicListingDetail } from '@/features/marketplace/types';
 import type { RequestBookingPrefill } from '../types';
+import { bookingResultDialogClassNames } from './BookingResult';
 import { RequestBookingFlow, type RequestBookingResult } from './RequestBookingFlow';
-import styles from './RequestBookingModal.module.css';
 
 interface RequestBookingModalProps {
   vehicleId: string;
@@ -90,8 +90,8 @@ export function RequestBookingModal({
       bodyScroll="content"
       footer={null}
       confirmLoading={busy}
-      className={sent ? styles.sentDialog : undefined}
-      bodyClassName={sent ? styles.sentBody : undefined}
+      className={sent ? bookingResultDialogClassNames.className : undefined}
+      bodyClassName={sent ? bookingResultDialogClassNames.bodyClassName : undefined}
     >
       {open ? (
         <RequestBookingFlow

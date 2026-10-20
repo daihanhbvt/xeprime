@@ -1,0 +1,429 @@
+/*
+ * Trang thanh toán tiền giữ chỗ — Figma `19759:22346` (VietQR) · `19759:37582` (ví điện tử). Khung
+ * hai cột là của chung (`TripColumns`); ở đây là thẻ phương thức (trái) và thẻ "Thông tin thanh
+ * toán" (phải).
+ */
+
+/* ── Cột trái: "Chọn phương thức thanh toán" (Figma `19759:22425`) — đệm 20, cách 16 ── */
+.methods {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+  padding: var(--xp-space-20);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+}
+
+/* `20px/Semibold`. */
+.methodsTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-lead);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-lead);
+}
+
+/* Một thẻ phương thức: đệm 16, bo 16; mở thì viền `Stroke/primary-300`. */
+.method {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+}
+
+.methodOpen {
+  border-color: var(--xp-color-primary-border);
+}
+
+.methodHead {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-12);
+  width: 100%;
+  min-width: 0;
+  padding: var(--xp-space-md);
+  border: 0;
+  border-radius: inherit;
+  background: none;
+  color: var(--xp-color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.methodHead:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: -2px;
+}
+
+/* Icon 24 — vàng khi thẻ mở, xám khi gập (đối chiếu hai bản vẽ). */
+.methodIcon {
+  display: inline-flex;
+  flex: none;
+  color: var(--xp-color-text-secondary);
+  font-size: 24px;
+}
+
+.methodOpen .methodIcon {
+  color: var(--xp-color-primary);
+}
+
+.methodTitle {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+.methodTag {
+  margin: 0;
+}
+
+.chevron {
+  display: inline-flex;
+  flex: none;
+  color: var(--xp-color-text-tertiary);
+  font-size: 14px;
+}
+
+/* Thân thẻ: chữ dẫn sát tiêu đề (cách 8 kể từ hàng tiêu đề), nội dung cách 24. */
+.methodBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-lg);
+  min-width: 0;
+  margin-top: calc(var(--xp-space-sm) - var(--xp-space-md));
+  padding: 0 var(--xp-space-md) var(--xp-space-md);
+}
+
+.methodHint {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.methodHint b {
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* Lời dẫn ngay dưới tiêu đề — khoảng 8, phần sau (QR, danh sách ví) cách 24. */
+.methodBody > .methodHint:first-child {
+  margin-bottom: calc(var(--xp-space-sm) - var(--xp-space-lg));
+}
+
+/* ── Ví điện tử (Figma `19759:37937`): hai ô chọn cạnh nhau, cách 12 ─────── */
+.wallets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--xp-space-12);
+}
+
+/* Một ô: đệm 16, bo 12, radio · logo 56 · tên + khẩu hiệu. */
+.wallet {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-12);
+  min-width: 0;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-container);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.wallet:hover {
+  border-color: var(--xp-color-primary-border);
+}
+
+/* Đang chọn: viền `Stroke/primary-400`, nền kem rất nhạt. */
+.walletChecked {
+  border-color: var(--xp-color-primary-bright);
+  background: color-mix(in srgb, var(--xp-color-primary) 6%, var(--xp-color-bg-container));
+}
+
+.walletDisabled {
+  cursor: progress;
+  opacity: var(--xp-disabled-opacity);
+}
+
+/* Radio 20 — viền xám, chọn thì chấm vàng (Figma "_Checkbox base" kiểu Radio). */
+.walletRadio {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--xp-color-primary);
+  cursor: inherit;
+}
+
+.walletRadio:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.walletLogo {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+}
+
+.walletLogo img {
+  width: auto;
+  max-width: 56px;
+  height: auto;
+  max-height: 56px;
+}
+
+.walletText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.walletName {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+.walletTagline {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.walletLimit {
+  color: var(--xp-color-warning);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+/* ── Cột phải: "Thông tin thanh toán" (Figma `19759:22461`) — đệm 24, cách 16 ── */
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+  padding: var(--xp-space-lg);
+  border: 1px solid var(--xp-color-primary-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+}
+
+.summaryTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
+}
+
+/* Xe: ảnh 114×64 bo 8 · tên `18px/Semibold` · thông số `14px/Regular`. */
+.vehicle {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+.vehicleImage {
+  display: block;
+  flex: none;
+  width: 114px;
+  height: 64px;
+  border-radius: var(--xp-border-radius-chip);
+  background: var(--xp-color-bg-muted);
+  object-fit: cover;
+}
+
+.vehicleText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.vehicleName {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
+  overflow-wrap: anywhere;
+}
+
+.vehicleSpecs {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.divider {
+  height: 1px;
+  background: var(--xp-color-border);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  margin: 0;
+}
+
+.rowGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+/* Một hàng: nhãn `14px/Regular` trái · giá trị `16px/Semibold` phải. */
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-12);
+  min-width: 0;
+}
+
+.row dt {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.row dd {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* "Trả chủ xe" — `Status/success-high`. */
+.row .payOwner {
+  color: var(--xp-color-success);
+}
+
+.rowNote {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+/* Số tiền giữ chỗ (Figma `19759:22481`): nhãn `16px/Semibold` · số `30px/Semibold` vàng sẫm. */
+.total {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.totalLabel {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+.totalAmount {
+  color: var(--xp-color-primary-hover);
+  font-size: var(--xp-font-size-h1);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h1);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * Đồng hồ (Figma `19759:37521`): icon 16 · nhãn `14px` `Text/Gray/low`. Lặp class để thắng sắc
+ * "bình thường" của `Countdown` (cùng độ đặc hiệu, thứ tự nạp CSS không bảo đảm).
+ */
+.countdown.countdown {
+  gap: var(--xp-space-6);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.action {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.actionHint {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  text-align: center;
+}
+
+/* Lưu ý (Figma `19759:37562`): nền `Status/warning-low`, đệm 16, bo 12, chữ `14px` xám đậm. */
+.notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-md);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-warning-subtle);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.notes p {
+  margin: 0;
+}
+
+.noteList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  padding-inline-start: 1.5em;
+  list-style: disc;
+}
+
+.noteList b {
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.safety {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+/* Khiên 18 — vàng thương hiệu, như bản vẽ. */
+.safetyIcon {
+  flex: none;
+  color: var(--xp-color-primary);
+  font-size: 18px;
+}
+
+/* Mobile (≤640px = `--xp-bp-mobile`): đệm thẻ hẹp lại. */
+@media (max-width: 640px) {
+  .methods,
+  .summary {
+    padding: var(--xp-space-md);
+  }
+}

@@ -1,12 +1,11 @@
 'use client';
 
-import { CheckCircleFilled, InfoCircleOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import { InfoCircleOutlined } from '@ant-design/icons';
 import { Alert, Form } from 'antd';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import type { Control } from 'react-hook-form';
 import { BOOKING_REQUEST_NOTE_MAX_LENGTH, HOLD_PAYMENT_WINDOW_MINUTES } from '@xeprime/types';
-import { LIST_SEPARATOR } from '@xeprime/domain';
 import { CheckboxField } from '@/components/form/CheckboxField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import type { DriverLicence } from '@/features/driver-licence/types';
@@ -14,10 +13,10 @@ import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
 import { CtaButton } from '@/features/marketplace/components/CtaButton';
 import type { PublicListingDetail } from '@/features/marketplace/types';
 import type { CurrentUser } from '@/hooks/use-current-user';
-import { useAppFormat } from '@/i18n/use-app-format';
-import { useDomainLabel } from '@/i18n/use-domain-label';
 import { cx } from '@/lib/cx';
 import type { RequestFormValues } from '../schema';
+import { BookingRenterCard } from './BookingRenterCard';
+import { BookingRequirementsCard } from './BookingRequirementsCard';
 import { BookingTripCard, type BookingTrip } from './BookingTripCard';
 import styles from './BookingReviewStep.module.css';
 
@@ -92,28 +91,6 @@ export function BookingReviewStep({
   onEdit,
 }: BookingReviewStepProps) {
   const t = useTranslations('BookingRequests.flow');
-  const dl = useDomainLabel();
-  const fmt = useAppFormat();
-
-  const verifiedLicence = licence.required ? licence.current : null;
-  const licenceMeta = verifiedLicence
-    ? [
-        verifiedLicence.classes.length
-          ? t('reviewPage.requirements.licenceClasses', {
-              classes: verifiedLicence.classes.join(', '),
-            })
-          : null,
-        verifiedLicence.noExpiry
-          ? t('reviewPage.requirements.licenceNoExpiry')
-          : verifiedLicence.expiresOn
-            ? t('reviewPage.requirements.licenceExpires', {
-                date: fmt.dateKey(verifiedLicence.expiresOn),
-              })
-            : null,
-      ]
-        .filter(Boolean)
-        .join(LIST_SEPARATOR)
-    : '';
 
   return (
     <div className={styles.review}>
@@ -150,40 +127,11 @@ export function BookingReviewStep({
             {deliveryEstimate}
           </BookingTripCard>
 
-          <section className={styles.card} aria-label={t('reviewPage.renter.title')}>
-            <h3 className={styles.cardTitle}>{t('reviewPage.renter.title')}</h3>
-            <p className={styles.cardLead}>{t('reviewPage.renter.description')}</p>
-            {/*
-              Màn này chỉ tới được khi đã có phiên; phiên mất giữa chừng (đăng xuất ở tab khác) thì
-              lượt gửi trả 401 và luồng mời đăng nhập lại — không dựng một khung chờ không bao giờ xong.
-            */}
-            {renter ? (
-              <dl className={styles.contactGrid}>
-                <div className={styles.contactField}>
-                  <dt>{t('reviewPage.renter.name')}</dt>
-                  <dd className={styles.contactValue}>{renter.displayName}</dd>
-                </div>
-                <div className={styles.contactField}>
-                  <dt>{t('reviewPage.renter.phone')}</dt>
-                  <dd className={styles.contactValue}>
-                    <span className={styles.contactText}>{renter.phone ?? '—'}</span>
-                    {renter.phoneVerified ? (
-                      <span className={styles.verifiedTag}>
-                        <CheckCircleFilled aria-hidden /> {t('contact.verified')}
-                      </span>
-                    ) : null}
-                  </dd>
-                </div>
-                {renter.email ? (
-                  <div className={styles.contactField}>
-                    <dt>{t('reviewPage.renter.email')}</dt>
-                    <dd className={styles.contactValue}>
-                      <span className={styles.contactText}>{renter.email}</span>
-                    </dd>
-                  </div>
-                ) : null}
-              </dl>
-            ) : null}
+          {/*
+            Màn này chỉ tới được khi đã có phiên; phiên mất giữa chừng (đăng xuất ở tab khác) thì
+            lượt gửi trả 401 và luồng mời đăng nhập lại — thẻ không dựng khung chờ cho `renter`.
+          */}
+          <BookingRenterCard renter={renter} control={control}>
             {/* Nhãn nằm TRÊN ô như thiết kế — `Form.Item` đứng một mình mặc định đặt nhãn bên trái. */}
             <Form component={false} layout="vertical" colon={false}>
               <TextAreaField
@@ -195,53 +143,9 @@ export function BookingReviewStep({
                 maxLength={BOOKING_REQUEST_NOTE_MAX_LENGTH}
               />
             </Form>
-          </section>
+          </BookingRenterCard>
 
-          <section className={styles.card} aria-label={t('reviewPage.requirements.title')}>
-            <div className={styles.requirementHead}>
-              <span className={styles.requirementIcon} aria-hidden>
-                <SafetyCertificateOutlined />
-              </span>
-              <h3 className={styles.cardTitle}>{t('reviewPage.requirements.title')}</h3>
-            </div>
-            <div className={styles.requirementBlock}>
-              <p className={styles.requirementTitle}>
-                {licence.required
-                  ? t('reviewPage.requirements.licenceTitle')
-                  : t('reviewPage.requirements.driverTitle')}
-              </p>
-              <p className={styles.requirementBody}>
-                {licence.required
-                  ? t('reviewPage.requirements.licenceBody')
-                  : t('reviewPage.requirements.driverBody')}
-              </p>
-            </div>
-            {verifiedLicence ? (
-              <p className={styles.licenceOk}>
-                <CheckCircleFilled aria-hidden />
-                <span>
-                  <strong>{t('reviewPage.requirements.licenceVerified')}</strong>
-                  {licenceMeta ? `${LIST_SEPARATOR}${licenceMeta}` : ''}
-                </span>
-              </p>
-            ) : null}
-            {hostTerms && hostTerms.documents.length > 0 ? (
-              <p className={styles.requirementBody}>
-                {t('reviewPage.requirements.documents', {
-                  documents: hostTerms.documents
-                    .map((doc) => dl('customerDocumentType', doc, doc))
-                    .join(', '),
-                })}
-              </p>
-            ) : null}
-            {hostTerms?.text ? (
-              <div className={styles.hostTerms}>
-                <p className={styles.requirementTitle}>{t('reviewPage.requirements.hostTerms')}</p>
-                <p className={styles.hostTermsText}>{hostTerms.text}</p>
-              </div>
-            ) : null}
-            <p className={styles.reminder}>{t('reviewPage.requirements.reminder')}</p>
-          </section>
+          <BookingRequirementsCard licence={licence} hostTerms={hostTerms} />
         </div>
 
         {/* ── Cột phải: tiền · đồng ý + gửi · sau khi gửi ─────────────────────────────── */}

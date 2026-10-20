@@ -78,7 +78,7 @@
 }
 
 .badgeNew {
-  background: #ecfdf3;
+  background: var(--xp-color-success-bg);
   color: #12b76a;
   font-size: 12px;
   font-weight: 600;
@@ -300,4 +300,30 @@
   .featuresGrid {
     grid-template-columns: repeat(2, 1fr);
   }
+}
+
+/* ── Giao diện tối ─────────────────────────────────────────────────────────
+   Chỉ những màu KHÔNG có token tương đương ở bản sáng (xám `#475467`/`#344054`, viền xanh/xám
+   nhạt) — phần còn lại đã đi qua `--xp-*` nên tự đổi theo khối tối của tokens.css. Icon ghim là
+   SVG có `stroke` viết thẳng trong JSX; thuộc tính trình bày đó thua mọi luật CSS nên đè được ở đây. */
+:global([data-theme="dark"]) .badgeNew {
+  border-color: color-mix(in srgb, #12b76a 35%, transparent);
+}
+
+:global([data-theme="dark"]) .locationRow,
+:global([data-theme="dark"]) .pickupAddress {
+  color: var(--xp-color-text-secondary);
+}
+
+:global([data-theme="dark"]) .locationPinIcon,
+:global([data-theme="dark"]) .addressPinIcon {
+  stroke: var(--xp-color-text-tertiary);
+}
+
+:global([data-theme="dark"]) .headerDivider {
+  border-top-color: var(--xp-color-border);
+}
+
+:global([data-theme="dark"]) .featureIcon {
+  color: var(--xp-color-text-secondary);
 }

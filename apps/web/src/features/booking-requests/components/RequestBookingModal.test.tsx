@@ -316,6 +316,8 @@ function draftValues(): RequestFormValues {
     deliveryLocationSource: null,
     acceptedTerms: false,
     note: '',
+    customerName: LOGGED_IN_ME.displayName,
+    customerPhone: LOGGED_IN_ME.phone,
   };
 }
 
@@ -726,9 +728,11 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       // Chủ xe không có điều khoản riêng ⇒ ô đồng ý chỉ là văn bản của XePrime: KHÔNG khai
       // `acceptedTerms` (server hiểu nó là "đã đồng ý điều khoản thuê của chủ xe").
       expect(payload).not.toHaveProperty('acceptedTerms');
-      // Danh tính người thuê do SERVER đọc từ tài khoản — client không gửi, server không tin (ADR 0060).
-      expect(payload).not.toHaveProperty('customerName');
-      expect(payload).not.toHaveProperty('customerPhone');
+      // Danh tính người thuê mặc định từ tài khoản (ADR 0063).
+      expect(payload).toMatchObject({
+        customerName: LOGGED_IN_ME.displayName,
+        customerPhone: LOGGED_IN_ME.phone,
+      });
       // Không gõ lời nhắn ⇒ không có trường `note`, không phải chuỗi rỗng.
       expect(payload).not.toHaveProperty('note');
     });
@@ -794,19 +798,44 @@ describe('RequestBookingModal — luồng đặt xe', () => {
     });
 
     /**
-     * Người thuê là TÀI KHOẢN đang đăng nhập — một dòng CHỈ ĐỌC. Đổi số là việc của trang tài
-     * khoản, không phải của một lượt đặt xe, nên không còn nút "Đổi" mở lại ô liên hệ.
+     * Người thuê mặc định là TÀI KHOẢN đang đăng nhập (ADR 0063), cho phép sửa họ tên và SĐT
+     * liên hệ cho chuyến mà không cần OTP.
      */
-    it('thẻ người thuê đọc từ tài khoản — chỉ đọc; ô nhập DUY NHẤT là lời nhắn', async () => {
+    it('thẻ người thuê điền sẵn từ tài khoản, cho phép sửa họ tên và SĐT liên hệ', async () => {
       renderModal();
       await advanceToReview();
       const renter = screen.getByRole('region', { name: 'Thông tin người thuê' });
-      expect(within(renter).getByText('Nguyễn Văn A')).toBeTruthy();
-      expect(within(renter).getByText('0901234567')).toBeTruthy();
+      expect(within(renter).getByDisplayValue('Nguyễn Văn A')).toBeTruthy();
+      expect(within(renter).getByDisplayValue('0901234567')).toBeTruthy();
       expect(within(renter).getByText('Đã xác thực')).toBeTruthy();
-      // Họ tên + SĐT không sửa được ở đây (ADR 0060) — chỉ có ô lời nhắn cho chủ xe.
-      expect(within(renter).getAllByRole('textbox')).toHaveLength(1);
-      expect(screen.queryByRole('button', { name: /Đổi/ })).toBeNull();
+      // Có 3 ô nhập: họ tên, SĐT liên hệ, lời nhắn cho chủ xe
+      expect(within(renter).getAllByRole('textbox')).toHaveLength(3);
+    });
+
+    it('khách sửa họ tên và SĐT khác số tài khoản (không cần OTP) → gửi đúng thông tin mới', async () => {
+      renderModal();
+      await advanceToReview();
+      const renter = screen.getByRole('region', { name: 'Thông tin người thuê' });
+
+      fireEvent.change(within(renter).getByDisplayValue('Nguyễn Văn A'), {
+        target: { value: 'Lê Thuỳ Trang' },
+      });
+      fireEvent.change(within(renter).getByDisplayValue('0901234567'), {
+        target: { value: '0988776655' },
+      });
+
+      // Hiện gợi ý số tài khoản khi nhập số khác
+      expect(
+        within(renter).getByText(/Chủ xe sẽ liên hệ số này và thấy thêm số tài khoản/i),
+      ).toBeTruthy();
+
+      submitFromReview();
+      await screen.findByText('Đã gửi yêu cầu');
+      const payload = api.submitBookingRequest.mock.calls[0]![0];
+      expect(payload).toMatchObject({
+        customerName: 'Lê Thuỳ Trang',
+        customerPhone: '0988776655',
+      });
     });
 
     /**
@@ -1492,17 +1521,19 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       renderModal();
       await advanceToReview();
 
-      // Người thuê là MỘT THẺ chỉ đọc ở màn Xem lại, không còn là cả một bước.
+      // Người thuê là THẺ có thể sửa thông tin người liên hệ cho chuyến (ADR 0063).
       const renter = screen.getByRole('region', { name: 'Thông tin người thuê' });
       expect(within(renter).getByText('Đã xác thực')).toBeTruthy();
-      expect(within(renter).getByText('Trần Minh Tuấn')).toBeTruthy();
-      expect(within(renter).getByText('0901234567')).toBeTruthy();
+      expect(within(renter).getByDisplayValue('Trần Minh Tuấn')).toBeTruthy();
+      expect(within(renter).getByDisplayValue('0901234567')).toBeTruthy();
 
       submitFromReview();
       await screen.findByText('Đã gửi yêu cầu');
       const payload = api.submitBookingRequest.mock.calls[0]![0];
-      expect(payload).not.toHaveProperty('customerName');
-      expect(payload).not.toHaveProperty('customerPhone');
+      expect(payload).toMatchObject({
+        customerName: 'Trần Minh Tuấn',
+        customerPhone: '0901234567',
+      });
     });
 
     /**
@@ -1516,7 +1547,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       await advanceToReview();
 
       const renter = screen.getByRole('region', { name: 'Thông tin người thuê' });
-      expect(within(renter).getByText('Trần Minh Tuấn')).toBeTruthy();
+      expect(within(renter).getByDisplayValue('Trần Minh Tuấn')).toBeTruthy();
       expect(within(renter).queryByText('Đã xác thực')).toBeNull();
     });
   });
@@ -1609,7 +1640,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       // Luồng đã đi tiếp — bản nháp không được mở lại hộp ở lần ghé trang sau.
       expect(hasBookingDraft('V1')).toBe(false);
       const renter = screen.getByRole('region', { name: 'Thông tin người thuê' });
-      expect(within(renter).getByText('Nguyễn Văn A')).toBeTruthy();
+      expect(within(renter).getByDisplayValue('Nguyễn Văn A')).toBeTruthy();
     });
 
     /**

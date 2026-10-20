@@ -29,9 +29,9 @@ import {
  *     thái: một chuyến đã hoàn tất, đã quyết toán và đã hoàn cọc vẫn đổi được giờ thuê, tiền
  *     thuê và phí giao nhận — viết lại chính bản ghi mà hai bên đã dựa vào để trả tiền.
  *  2. **Chặn gửi trùng lách được bằng ĐỊNH DẠNG SĐT.** Index unique một phần so khớp chuỗi thô
- *     trên `customer_phone`, trong khi DTO từng nhận cả `0…` lẫn `+84…`. Từ ADR 0060 SĐT của yêu
- *     cầu đọc từ TÀI KHOẢN (luôn ghi dạng nội địa), còn SĐT trong payload bị bỏ qua — spec khoá
- *     rằng payload không còn là một ngả để lách.
+ *     trên `customer_phone`, trong khi DTO từng nhận cả `0…` lẫn `+84…`. Từ ADR 0063 SĐT trong
+ *     payload là SĐT LIÊN HỆ của chuyến (khách khai, không OTP), còn "cùng một người" là cùng
+ *     TÀI KHOẢN — spec khoá rằng đổi số liên hệ không phải một ngả để gửi lại cùng chuyến.
  */
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
@@ -224,8 +224,8 @@ describe('Đơn đã khép là CHỈ ĐỌC', () => {
 
 describe('Chặn gửi yêu cầu trùng', () => {
   /**
-   * `payloadPhone` là trường ĐÃ GỠ (ADR 0060) mà bản app cũ vẫn gửi — truyền vào để chứng minh
-   * server bỏ qua nó. Bỏ trống ở mọi ca không nói về chuyện đó.
+   * `payloadPhone` là SĐT LIÊN HỆ của chuyến (ADR 0063) — truyền vào để chứng minh nó không tách
+   * được một người thành hai. Bỏ trống ở mọi ca không nói về chuyện đó.
    */
   const submit = (customerUserId: string, offsetHours: number, payloadPhone?: string) =>
     requests.submitPublic(
@@ -248,11 +248,11 @@ describe('Chặn gửi yêu cầu trùng', () => {
    * Lỗ hổng Wave 12: index unique một phần so khớp chuỗi thô trên `customer_phone` — nên `+84…`
    * và `0…` là hai dòng khác nhau với DB.
    *
-   * Từ ADR 0060 SĐT của yêu cầu là SĐT ĐÃ XÁC MINH của TÀI KHOẢN, luôn ghi dạng nội địa; SĐT
-   * trong payload bị bỏ qua. Đổi định dạng — hay đổi hẳn số — trong payload vì thế không còn là
-   * một ngả lách: cùng tài khoản là cùng một người.
+   * Từ ADR 0063 SĐT trong payload là SĐT LIÊN HỆ của chuyến, còn chống trùng khoá theo TÀI
+   * KHOẢN. Đổi định dạng — hay đổi hẳn số liên hệ — vì thế không phải một ngả lách: cùng tài
+   * khoản là cùng một người.
    */
-  maybe('đổi SĐT trong payload không lách được — danh tính đọc từ tài khoản', async () => {
+  maybe('đổi SĐT liên hệ không lách được — trùng tính theo tài khoản', async () => {
     const id = await customer('Nguyễn Văn A', '0902223344');
     await submit(id, 2000);
     await expect(submit(id, 2000, '+84902223344')).rejects.toMatchObject({ status: 409 });
@@ -283,6 +283,81 @@ describe('Chặn gửi yêu cầu trùng', () => {
     });
 
     await expect(submit(id, 4000)).resolves.toBeTruthy();
+  });
+});
+
+describe('Liên hệ của chuyến khác tài khoản (ADR 0063)', () => {
+  const submitWith = (
+    customerUserId: string,
+    offsetHours: number,
+    contact: { customerName?: string; customerPhone?: string },
+  ) =>
+    requests.submitPublic(
+      {
+        vehicleId,
+        ...contact,
+        pickupAt: hours(offsetHours).toISOString(),
+        returnAt: hours(offsetHours + 24).toISOString(),
+      },
+      customerUserId,
+    );
+
+  const readRow = (id: string) =>
+    prisma.bookingRequest.findUniqueOrThrow({
+      where: { id },
+      select: {
+        customerUserId: true,
+        customerName: true,
+        customerPhone: true,
+        tenantCustomer: { select: { fullName: true, normalizedPhone: true } },
+      },
+    });
+
+  /**
+   * SĐT liên hệ không qua OTP — được lưu, nhưng KHÔNG đổi người gửi và KHÔNG khớp sổ khách: gõ số
+   * của người khác không được gắn mình vào hồ sơ (lịch sử, mức rủi ro) của người đó ở gian hàng.
+   */
+  maybe('lưu họ tên + SĐT liên hệ đã khai; tài khoản và sổ khách vẫn theo tài khoản', async () => {
+    const id = await customer('Chủ tài khoản', '0906667788');
+    const receipt = await submitWith(id, 6000, {
+      customerName: '  Người nhà  ',
+      customerPhone: '+84912345678',
+    });
+
+    const row = await readRow(receipt.id);
+    expect(row.customerUserId).toBe(id);
+    expect(row.customerName).toBe('Người nhà');
+    // Cùng dạng nội địa với số tài khoản — hai số của cùng một người không thành "khác nhau".
+    expect(row.customerPhone).toBe('0912345678');
+    expect(row.tenantCustomer).toEqual({
+      fullName: 'Chủ tài khoản',
+      normalizedPhone: '84906667788',
+    });
+  });
+
+  maybe('bỏ trống liên hệ ⇒ họ tên + SĐT của tài khoản', async () => {
+    const id = await customer('Khách mặc định', '0907778899');
+    const receipt = await submitWith(id, 6100, { customerName: '   ', customerPhone: '' });
+
+    const row = await readRow(receipt.id);
+    expect(row.customerName).toBe('Khách mặc định');
+    expect(row.customerPhone).toBe('0907778899');
+  });
+
+  /*
+   * Gian hàng này không có gói (tuyến hoa hồng) và yêu cầu chưa có đơn ⇒ chủ xe CHƯA được thấy
+   * liên hệ (ADR 0056). SĐT tài khoản đi cùng cổng: giấu số liên hệ mà lộ số tài khoản là để
+   * nguyên đường chốt ngoài sàn.
+   */
+  maybe('hộp thư: chưa được thấy liên hệ thì cả SĐT liên hệ lẫn SĐT tài khoản đều giấu', async () => {
+    const id = await customer('Khách giấu số', '0908889900');
+    const receipt = await submitWith(id, 6200, { customerPhone: '0913000111' });
+
+    const page = await requests.list(tenantId, { page: 1, limit: 100 }, null);
+    const item = page.data.find((r) => r.id === receipt.id);
+    expect(item).toBeDefined();
+    expect(item!.customerPhone).toBeNull();
+    expect(item!.customerAccountPhone).toBeNull();
   });
 });
 

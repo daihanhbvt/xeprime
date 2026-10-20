@@ -10,7 +10,7 @@
   margin: 0 0 16px;
   font-size: 18px;
   font-weight: 700;
-  color: #0e0f12;
+  color: var(--xp-color-text);
 }
 
 .list {
@@ -28,14 +28,14 @@
   gap: 10px;
   font-size: 14px;
   line-height: 20px;
-  color: #414651;
+  color: var(--xp-color-text-secondary);
 }
 
 .checkIconWrap {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #ecfdf3;
+  background: var(--xp-color-success-bg);
   color: #12b76a;
   display: flex;
   align-items: center;
@@ -67,4 +67,12 @@
 
 .arrowIcon {
   font-size: 12px;
+}
+
+/* ── Giao diện tối ─────────────────────────────────────────────────────────
+   Bản sáng là thẻ kem viền vàng nhạt; giữ ý "thẻ viền vàng" nhưng trên bề mặt tối của trang. */
+:global([data-theme="dark"]) .card {
+  background: var(--xp-color-bg-container);
+  border-color: var(--xp-color-primary-muted);
+  box-shadow: none;
 }

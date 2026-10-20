@@ -1,4 +1,4 @@
-import { normalizeVnPhone, toLocalVnPhone } from '@xeprime/types';
+import { isSameVnPhone, normalizeVnPhone, toLocalVnPhone } from '@xeprime/types';
 
 /**
  * Chuẩn hoá và hiển thị số điện thoại Việt Nam.
@@ -33,4 +33,21 @@ export function phoneLookupVariants(raw: string): string[] {
   const trimmed = raw.trim();
   if (!trimmed) return [];
   return [...new Set([trimmed, normalizePhone(trimmed), toLocalPhone(trimmed)])];
+}
+
+/**
+ * SĐT TÀI KHOẢN của khách để hiện CẠNH SĐT liên hệ của một chuyến — `null` khi hai số là một.
+ *
+ * Từ ADR 0063 khách để lại được một SĐT liên hệ khác số tài khoản mà không qua OTP; chủ xe phải
+ * thấy cả số đã xác minh. So bằng `isSameVnPhone` (`users.phone` lưu `84…`, liên hệ lưu `0…`) để
+ * cùng một số viết hai kiểu không bị hiện thành hai số. Trả về dạng hiển thị `0xxxxxxxxx`.
+ *
+ * Gác quyền xem KHÔNG nằm ở đây: nơi gọi chỉ gọi khi chủ xe đã được thấy liên hệ (ADR 0056).
+ */
+export function accountPhoneIfDifferent(
+  accountPhone: string | null | undefined,
+  contactPhone: string | null | undefined,
+): string | null {
+  if (!accountPhone || isSameVnPhone(accountPhone, contactPhone)) return null;
+  return toLocalPhone(accountPhone);
 }

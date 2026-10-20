@@ -1,4 +1,8 @@
-import { PAYMENT_GATEWAY_PROVIDER, type AppLocale, type PaymentGatewayProvider } from '@xeprime/types';
+import {
+  PAYMENT_GATEWAY_PROVIDER,
+  type AppLocale,
+  type PaymentGatewayProvider,
+} from '@xeprime/types';
 
 /** Một file logo trong `public/payment-methods/` và kích thước THẬT của nó (giữ tỉ lệ, không méo). */
 export interface ProviderLogo {
@@ -38,4 +42,26 @@ const LOGOS: Readonly<Record<PaymentGatewayProvider, Readonly<Record<AppLocale, 
 /** Logo của một cổng theo ngôn ngữ giao diện — `null` với mã cổng lạ (dữ liệu mới hơn bản web). */
 export function paymentProviderLogo(provider: string, locale: AppLocale): ProviderLogo | null {
   return LOGOS[provider as PaymentGatewayProvider]?.[locale] ?? null;
+}
+
+/**
+ * BIỂU TƯỢNG vuông của từng cổng — cho ô chọn ví 56×56 của trang thanh toán tiền giữ chỗ (Figma
+ * `19759:37876` · `19759:37935`). Logo chữ dài (`LOGOS`) thu vào ô vuông thì chỉ còn một dải mỏng.
+ *
+ *  - **MoMo** — chính "Primary logo on app icon" ở trên (đã vuông).
+ *  - **VNPAY** — biểu tượng vuông lấy từ bản vẽ (Figma `19759:37935`, tải 19/10/2026, thu về 168px =
+ *    3× ô 56). Không đổi màu, không cắt; đổi thương hiệu thì lấy lại từ đúng node đó.
+ */
+const MARKS: Readonly<Record<PaymentGatewayProvider, ProviderLogo>> = {
+  [PAYMENT_GATEWAY_PROVIDER.MOMO]: { src: '/payment-methods/momo.png', width: 144, height: 144 },
+  [PAYMENT_GATEWAY_PROVIDER.VNPAY]: {
+    src: '/payment-methods/vnpay-mark.png',
+    width: 168,
+    height: 131,
+  },
+};
+
+/** Biểu tượng vuông của một cổng — `null` với mã cổng lạ. */
+export function paymentProviderMark(provider: string): ProviderLogo | null {
+  return MARKS[provider as PaymentGatewayProvider] ?? null;
 }

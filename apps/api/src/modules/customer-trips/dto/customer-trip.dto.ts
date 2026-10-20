@@ -26,7 +26,11 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { CustomerHoldDto } from '../../holds/dto/hold.dto';
-import { CustomerFeeBreakdownDto, PriceBreakdownRowDto } from '../../pricing/dto/pricing.dto';
+import {
+  CustomerFeeBreakdownDto,
+  LongTermPackageOptionDto,
+  PriceBreakdownRowDto,
+} from '../../pricing/dto/pricing.dto';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
 
 const DEFAULT_LIMIT = 10;
@@ -133,6 +137,27 @@ export class CustomerSurchargeDto {
 }
 
 /**
+ * Bảng kê ĐÃ ĐÓNG BĂNG lúc tạo đơn (ADR 0024) — đúng những dòng khách đọc ở màn chờ giữ chỗ
+ * (`estimate` của chính chuyến đó, chụp từ khoản giữ chỗ — ADR 0039), để màn chuyến đã xác nhận kể
+ * lại cùng một bảng tiền thay vì một bảng thứ hai trông gần giống.
+ */
+export class CustomerTripFinanceBreakdownDto {
+  @ApiProperty({ type: [PriceBreakdownRowDto], description: 'Các dòng của giá THUÊ' })
+  rows!: PriceBreakdownRowDto[];
+
+  @ApiProperty({ description: 'Cọc thế chấp hoàn trả — KHÔNG nằm trong tổng' })
+  depositAmount!: string;
+
+  /** Phụ phí phía khách đã chốt. `null` khi đơn ra đời lúc sàn chưa có chính sách phí. */
+  @ApiPropertyOptional({ type: CustomerFeeBreakdownDto, nullable: true })
+  fees!: CustomerFeeBreakdownDto | null;
+
+  /** Cấu tạo giá gói dài hạn đã chốt (ADR 0011). `null` với dịch vụ khác. */
+  @ApiPropertyOptional({ type: LongTermPackageOptionDto, nullable: true })
+  longTerm!: LongTermPackageOptionDto | null;
+}
+
+/**
  * Toàn bộ tiền của một chuyến, tính MỘT LẦN ở server.
  *
  * Mọi số ở đây là chuỗi thập phân (ADR 0007) và đã tính xong — client chỉ hiển thị. Lý do đóng
@@ -200,6 +225,15 @@ export class CustomerTripFinanceDto {
    */
   @ApiProperty({ description: 'Thiếu snapshot giá — chỉ còn tổng, không có chi tiết' })
   legacyPricing!: boolean;
+
+  /**
+   * Bảng kê đóng băng của đơn — CHỈ khi nó còn khớp từng đồng với số trên đơn. `null` khi đơn cũ
+   * không có snapshot (`legacyPricing`), hoặc khi tiền thuê đã đổi sau lúc tạo (chủ xe chốt lại phí
+   * giao nhận): trưng bảng cũ lúc đó là kể một con số đã không còn đúng — giao diện quay về các
+   * trường tổng ở trên.
+   */
+  @ApiPropertyOptional({ type: CustomerTripFinanceBreakdownDto, nullable: true })
+  breakdown!: CustomerTripFinanceBreakdownDto | null;
 }
 
 /** Khách thuê, nhìn từ phía CHỦ XE. SĐT gác theo `canContact` — xem `CustomerTripListItemDto`. */
@@ -207,6 +241,25 @@ export class CustomerTripRenterDto {
   @ApiProperty() name!: string;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'null khi chưa được liên hệ' })
   phone!: string | null;
+  /**
+   * SĐT ĐÃ XÁC MINH của tài khoản khách — chỉ khi khách để lại một SĐT liên hệ KHÁC nó cho chuyến
+   * này (ADR 0063). Gác cùng `canContact` với `phone`.
+   */
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'SĐT tài khoản khách — null khi chưa được liên hệ hoặc trùng SĐT liên hệ',
+  })
+  accountPhone!: string | null;
+}
+
+/**
+ * Liên hệ NGƯỜI ĐI THUÊ đã để lại cho chuyến (ADR 0063) — chính họ đọc lại ở màn chuyến. Có thể
+ * khác họ tên/SĐT của tài khoản.
+ */
+export class CustomerTripContactDto {
+  @ApiProperty() name!: string;
+  @ApiProperty() phone!: string;
 }
 
 export class CustomerTripListItemDto {
@@ -348,6 +401,19 @@ export class CustomerTripEstimateDto {
    */
   @ApiPropertyOptional({ type: CustomerFeeBreakdownDto, nullable: true })
   fees!: CustomerFeeBreakdownDto | null;
+
+  /**
+   * Khác `null` ⇒ tổng chỉ là TẠM TÍNH ở mức sâu hơn (giá lộ trình / giá dịch vụ chưa niêm yết,
+   * báo giá rơi về bậc gần nhất) — cùng nghĩa với `QuoteBreakdownDto.estimateNote`. Màn chuyến
+   * phải nói đúng điều khách đã đọc ở màn Xem lại, không trưng con số đó như giá chốt.
+   * `null` với snapshot đã đóng băng trên khoản giữ chỗ (ADR 0039): số đó đã là số thu.
+   */
+  @ApiPropertyOptional({ type: String, nullable: true })
+  estimateNote!: string | null;
+
+  /** Cấu tạo giá gói dài hạn (ưu đãi cam kết thời hạn — ADR 0011). `null` với dịch vụ khác. */
+  @ApiPropertyOptional({ type: LongTermPackageOptionDto, nullable: true })
+  longTerm!: LongTermPackageOptionDto | null;
 }
 
 export class CustomerTripPageDto {
@@ -367,6 +433,12 @@ export class CustomerTripReviewDto {
 export class CustomerTripDetailDto extends CustomerTripListItemDto {
   /** Ghi chú KHÁCH tự nhập lúc gửi yêu cầu. Ghi chú nội bộ của shop KHÔNG bao giờ ra đây. */
   @ApiPropertyOptional({ type: String, nullable: true }) customerNote!: string | null;
+  /**
+   * Họ tên + SĐT liên hệ người thuê đã để lại lúc gửi yêu cầu (ADR 0063). CHỈ có ở phía người đi
+   * thuê (`role = renter`) — phía chủ xe đọc `renter`, đã gác theo cổng liên hệ.
+   */
+  @ApiPropertyOptional({ type: CustomerTripContactDto, nullable: true })
+  contact!: CustomerTripContactDto | null;
   @ApiPropertyOptional({ type: String, nullable: true }) rejectReason!: string | null;
 
   @ApiPropertyOptional({ type: String, nullable: true }) actualPickupAt!: string | null;
@@ -469,7 +541,9 @@ export class CustomerUnpaidHoldDto {
  * Chạm trần (`limitReached`) thì server từ chối mọi yêu cầu đặt xe mới bằng `HOLD_LIMIT_REACHED`.
  */
 export class CustomerUnpaidHoldsDto {
-  @ApiProperty({ description: 'Số chỗ chưa trả tối đa được giữ cùng lúc (HOLD_MAX_OPEN_PER_CUSTOMER)' })
+  @ApiProperty({
+    description: 'Số chỗ chưa trả tối đa được giữ cùng lúc (HOLD_MAX_OPEN_PER_CUSTOMER)',
+  })
   limit!: number;
   @ApiProperty({ description: 'Đã giữ đủ trần — không đặt thêm xe được tới khi trả hoặc huỷ bớt' })
   limitReached!: boolean;

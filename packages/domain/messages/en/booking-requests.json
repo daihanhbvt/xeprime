@@ -45,7 +45,9 @@
   "customer": {
     "heading": "Customer",
     "noProfile": "Not in your customer book yet",
-    "riskWarning": "{level} — double-check before approving"
+    "riskWarning": "{level} — double-check before approving",
+    "accountPhone": "Account phone: {phone}",
+    "accountPhoneAria": "Call {name} on their account number {phone}"
   },
   "schedule": {
     "heading": "Rental request",
@@ -97,7 +99,8 @@
     "openCustomer": "View customer profile",
     "phone": "Phone number",
     "createdAt": "Submitted at",
-    "decidedAt": "Handled at"
+    "decidedAt": "Handled at",
+    "accountPhone": "Account phone"
   },
   "actions": {
     "approve": "Approve & hold vehicle",
@@ -269,6 +272,7 @@
       "packageTitle": "Price details · {months, plural, one {# month} other {# months}} package",
       "subtotal": "Estimate",
       "total": "Estimated total",
+      "totalFrozen": "Rental total",
       "rentalTotal": "Rental price",
       "expand": "Details",
       "collapse": "Hide",
@@ -406,7 +410,7 @@
         "trip": "Choose trip",
         "request": "Send request",
         "payment": "Pay to hold",
-        "confirmed": "Done"
+        "confirmed": "Confirmed"
       }
     },
     "preparing": "Checking the car's availability…",
@@ -432,12 +436,16 @@
       },
       "renter": {
         "title": "Renter details",
-        "description": "Your name and phone number come from your account and are used to contact you about this trip.",
+        "description": "Filled in from your account — you can change the name or contact phone for this trip.",
         "name": "Full name",
         "phone": "Phone number",
         "email": "Email",
         "noteLabel": "Message to the owner (optional)",
-        "notePlaceholder": "E.g. I need directions for picking up the car"
+        "notePlaceholder": "E.g. I need directions for picking up the car",
+        "readonlyDescription": "The name and phone number the owner uses to contact you about this trip.",
+        "namePlaceholder": "Enter the renter's full name",
+        "phonePlaceholder": "Enter a contact phone number",
+        "phoneDifferent": "This contact number is not verified — the owner will also see your account number {accountPhone}."
       },
       "requirements": {
         "title": "Documents & pick-up conditions",
@@ -512,7 +520,8 @@
       "returnAfterPickup": "The return time has to be after the pickup time",
       "longTermPackage": "Choose a rental package",
       "requestedPickupDate": "Choose the date you want the car",
-      "noteMax": "Up to {max} characters"
+      "noteMax": "Up to {max} characters",
+      "customerNameMax": "Up to {max} characters"
     }
   },
   "cancel": {
@@ -541,5 +550,8 @@
   "stats": {
     "pending": "Pending",
     "converted": "Completed"
+  },
+  "contactNote": {
+    "differentPhone": "The renter left a contact number that differs from their account number. The account number {phone} is verified; the contact number is not."
   }
 }

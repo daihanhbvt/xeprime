@@ -14,6 +14,8 @@ import {
   SERVICE_TYPE_VALUES,
   TENANT_CUSTOMER_RISK_LEVEL_VALUES,
   VEHICLE_TYPE_VALUES,
+  VN_PHONE_PATTERN,
+  compactPhoneInput,
 } from '@xeprime/types';
 import { Transform, Type } from 'class-transformer';
 import {
@@ -50,10 +52,31 @@ const MAX_LIMIT = 100;
 export { DEFAULT_LIMIT as BOOKING_REQUEST_DEFAULT_LIMIT, MAX_LIMIT as BOOKING_REQUEST_MAX_LIMIT };
 
 /**
+ * Chuỗi rỗng / toàn khoảng trắng ⇒ `undefined`, để `@IsOptional` bỏ qua nó.
+ *
+ * `@IsOptional` chỉ bỏ qua `null`/`undefined`: một ô liên hệ khách xoá trắng (hay bản app cũ gửi
+ * `''`) sẽ đi vào `@Matches` và nhận 400 cho một trường KHÔNG bắt buộc. Rỗng ở đây nghĩa là "dùng
+ * của tài khoản" — đúng như lúc không gửi.
+ */
+const optionalTrimmedText = ({ value }: { value: unknown }) => {
+  if (typeof value !== 'string') return value;
+  const trimmed = value.trim();
+  return trimmed === '' ? undefined : trimmed;
+};
+
+/** Như trên, và bỏ dấu cách/chấm/gạch của SĐT chép từ danh bạ (`090 123 4567`) trước khi so mẫu. */
+const optionalPhoneInput = ({ value }: { value: unknown }) => {
+  const text = optionalTrimmedText({ value });
+  return typeof text === 'string' ? compactPhoneInput(text) : text;
+};
+
+/**
  * Khách (đã đăng nhập) gửi yêu cầu thuê từ Marketplace. `tenantId` suy từ xe ở server.
  *
- * Danh tính người thuê KHÔNG có trong payload: họ tên, SĐT (đã xác minh) và email (đã xác minh)
- * đọc từ tài khoản đang đăng nhập (ADR 0060).
+ * DANH TÍNH người thuê không có trong payload: tài khoản, SĐT đã xác minh (dùng cho danh sách chặn,
+ * chặn tự đặt xe, chống trùng) và email đã xác minh đọc từ phiên (ADR 0060). Thứ payload mang được
+ * là LIÊN HỆ của chuyến — họ tên + SĐT người thuê muốn chủ xe gọi — mặc định là của tài khoản,
+ * khác số thì không cần OTP (ADR 0063).
  */
 export class CreateBookingRequestDto {
   @ApiProperty({ description: 'ID xe (ULID) trên marketplace' })
@@ -61,8 +84,40 @@ export class CreateBookingRequestDto {
   @Length(26, 26)
   vehicleId!: string;
 
+  /**
+   * Họ tên người thuê cho chuyến này. Bỏ trống ⇒ tên hiển thị của tài khoản. Chỉ là LIÊN HỆ — không
+   * đổi tài khoản nào, không đi vào sổ khách của gian hàng (ADR 0063).
+   */
+  @ApiPropertyOptional({
+    maxLength: 255,
+    description: 'Họ tên người thuê — bỏ trống thì dùng tên tài khoản (ADR 0063)',
+  })
+  @IsOptional()
+  @Transform(optionalTrimmedText)
+  @IsString()
+  @MaxLength(255)
+  customerName?: string;
+
+  /**
+   * SĐT liên hệ của chuyến. Bỏ trống ⇒ SĐT đã xác minh của tài khoản. Khác số tài khoản thì KHÔNG
+   * cần OTP: nó chỉ là số chủ xe gọi, mọi phép kiểm danh tính vẫn chạy trên số của tài khoản, và chủ
+   * xe thấy CẢ HAI số (`customerAccountPhone` — ADR 0063).
+   */
+  @ApiPropertyOptional({
+    maxLength: 32,
+    pattern: VN_PHONE_PATTERN.source,
+    description:
+      'SĐT liên hệ `0xxxxxxxxx`/`+84xxxxxxxxx` — bỏ trống thì dùng SĐT tài khoản; khác số không cần OTP (ADR 0063)',
+  })
+  @IsOptional()
+  @Transform(optionalPhoneInput)
+  @IsString()
+  @MaxLength(32)
+  @Matches(VN_PHONE_PATTERN, { message: 'Số điện thoại không hợp lệ' })
+  customerPhone?: string;
+
   /*
-   * ── Năm trường DƯỚI ĐÂY ĐÃ GỠ khỏi hợp đồng (ADR 0060), giữ khai báo chỉ để không vỡ client cũ ──
+   * ── Ba trường DƯỚI ĐÂY ĐÃ GỠ khỏi hợp đồng (ADR 0060), giữ khai báo chỉ để không vỡ client cũ ──
    *
    * Server KHÔNG đọc chúng. Chúng còn được khai vì `ValidationPipe` toàn cục chạy với
    * `forbidNonWhitelisted`: xoá hẳn thì bản app đang phát hành — kể cả khi người dùng ĐÃ đăng
@@ -70,7 +125,7 @@ export class CreateBookingRequestDto {
    *
    *  - `client`/`device`: từng chọn kiểu phiên cấp cho khách vãng lai — không còn phiên nào được
    *    cấp ở route này.
-   *  - `customerName`/`customerPhone`/`customerEmail`: liên hệ do client tự khai — không được tin.
+   *  - `customerEmail`: email chủ xe nhận là email ĐÃ XÁC MINH của tài khoản, không phải chữ tự khai.
    */
   @ApiPropertyOptional({
     enum: ['web', 'native'],
@@ -89,24 +144,6 @@ export class CreateBookingRequestDto {
   @IsOptional()
   @Type(() => MobileDeviceDto)
   device?: MobileDeviceDto;
-
-  @ApiPropertyOptional({
-    deprecated: true,
-    description: 'ĐÃ GỠ (ADR 0060) — server bỏ qua; họ tên lấy từ tài khoản.',
-  })
-  @IsOptional()
-  @IsString()
-  @MaxLength(255)
-  customerName?: string;
-
-  @ApiPropertyOptional({
-    deprecated: true,
-    description: 'ĐÃ GỠ (ADR 0060) — server bỏ qua; SĐT đã xác minh lấy từ tài khoản.',
-  })
-  @IsOptional()
-  @IsString()
-  @MaxLength(32)
-  customerPhone?: string;
 
   @ApiPropertyOptional({
     deprecated: true,
@@ -613,6 +650,17 @@ export class BookingRequestDto {
     description: 'SĐT khách — null với chủ xe tuyến hoa hồng khi chuyến chưa có đơn',
   })
   customerPhone!: string | null;
+  /**
+   * SĐT ĐÃ XÁC MINH của tài khoản khách — CHỈ có khi khách để lại một SĐT liên hệ KHÁC nó cho chuyến
+   * này (ADR 0063). Gác cùng cổng với `customerPhone`: chưa được thấy liên hệ thì cũng `null`.
+   */
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'SĐT tài khoản khách — chỉ trả về khi chủ xe được xem liên hệ và SĐT liên hệ khác SĐT tài khoản',
+  })
+  customerAccountPhone!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) customerEmail!: string | null;
   /**
    * Hồ sơ khách trong SỔ KHÁCH của gian hàng — móc để mở hồ sơ 360 từ inbox. `null` với yêu

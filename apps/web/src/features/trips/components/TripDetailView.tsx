@@ -34,11 +34,13 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { ROUTES, listingPath, shopPath } from '@/constants/routes';
 import { useAuthModal, useNextFromCurrentPath } from '@/features/auth/components/AuthModalProvider';
 import { AUTH_MODE } from '@/features/auth/post-auth-destination';
+import { useListingSpecSummary } from '@/features/booking-requests/hooks/use-listing-spec-summary';
 import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
 import { TripGatewayReturn } from '@/features/payment-gateway/components/TripGatewayReturn';
 import { ReviewModal } from '@/features/reviews/components/ReviewModal';
 import { dayjs } from '@/lib/datetime';
 import { useDomainLabel } from '@/i18n/use-domain-label';
+import { cx } from '@/lib/cx';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { getErrorCode, isUnauthenticated } from '@/services/api-client';
 import { useTrip } from '../hooks';
@@ -50,6 +52,9 @@ import { TripFinanceCard } from './TripFinanceCard';
 import { TripHoldPanel } from './TripHoldPanel';
 import { TripHostDecisions } from './TripHostDecisions';
 import { TripHandoverEvidence } from './TripHandoverEvidence';
+import { TripAwaitingHoldView } from './TripAwaitingHoldView';
+import { TripConfirmedView } from './TripConfirmedView';
+import { TripPendingApprovalView } from './TripPendingApprovalView';
 import styles from './TripDetailView.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useTranslations } from 'next-intl';
@@ -62,6 +67,13 @@ import { useTranslations } from 'next-intl';
  * phải sửa ba nơi, và chúng sẽ trôi khỏi nhau.
  *
  * Phân nhánh dựa trên `stage` (view-model từ `@xeprime/types`), không đọc thẳng trạng thái đơn.
+ *
+ * Ngoại lệ có chủ đích (19/10/2026): hành trình đặt xe của khách tới ngày nhận xe — chờ chủ xe phản
+ * hồi (`TripPendingApprovalView`, Figma `19727:60694`), đã được nhận, chờ giữ chỗ
+ * (`TripAwaitingHoldView`, Figma `19737:23904`) và đã xác nhận (`TripConfirmedView`, Figma
+ * `19879:72913`) — dựng theo design v2: chúng là các màn kế tiếp của luồng đặt xe, nên dùng lại thẻ
+ * của màn "Xem lại yêu cầu" (khung chung `TripRequestLayout`) thay vì bộ khối bên dưới. Vỏ trang
+ * (tải, lỗi, 404, hết phiên) vẫn là MỘT, ở đây.
  *
  * **Hai phía, một màn** (08/09/2026): chủ gian hàng mở được chi tiết chuyến trên xe của mình.
  * Phần MÔ TẢ chuyến giống hệt nhau — cùng xe, cùng lịch, cùng giá — nên không có màn thứ hai.
@@ -91,6 +103,7 @@ export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailVi
   const { open } = useAuthModal();
   const nextFromHere = useNextFromCurrentPath();
   const { data, isLoading, isError, error, refetch } = useTrip(tripId);
+  const vehicleSpecs = useListingSpecSummary(data?.vehicle ?? null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
 
@@ -161,6 +174,34 @@ export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailVi
   /** Người đang xem là CHỦ XE của chuyến này — server đã quyết, client không suy lại. */
   const isHost = data.role === TRIP_ROLE.HOST;
 
+  /** Lối về danh sách — MỘT phần tử cho cả hai bố cục bên dưới. */
+  const backLink = (
+    <Link href={backHref} className={styles.back}>
+      <ArrowLeftOutlined aria-hidden="true" /> {t('detail.back')}
+    </Link>
+  );
+
+  /*
+   * Hành trình đặt xe của KHÁCH, tới ngày nhận xe: màn design v2 riêng cho từng chặng, dựng từ chính
+   * các thẻ của màn "Xem lại yêu cầu" trên khung chung (`TripRequestLayout`):
+   *   · chờ chủ xe phản hồi — `TripPendingApprovalView` (Figma `19727:60694`);
+   *   · chủ xe đã đồng ý, chờ giữ chỗ — `TripAwaitingHoldView` (Figma `19737:23904`);
+   *   · đã xác nhận, chờ ngày nhận xe — `TripConfirmedView` (Figma `19879:72913`).
+   * Chủ xe mở cùng chuyến vẫn ở bố cục dưới, nơi có cụm Duyệt/Từ chối/Huỷ của họ; các chặng sau
+   * ngày nhận xe (đang thuê, hoàn thành, kết cục hỏng) cũng vậy.
+   */
+  const flowView = isHost ? null : stage === CUSTOMER_TRIP_STAGE.PENDING_APPROVAL ? (
+    <TripPendingApprovalView trip={data} backHref={backHref} />
+  ) : stage === CUSTOMER_TRIP_STAGE.AWAITING_HOLD ? (
+    <TripAwaitingHoldView trip={data} backHref={backHref} />
+  ) : stage === CUSTOMER_TRIP_STAGE.READY ? (
+    <TripConfirmedView trip={data} backHref={backHref} />
+  ) : null;
+  if (flowView) {
+    // Đầu trang của các màn này (`TripPageHeader`) mang sẵn nút quay lại + đường dẫn.
+    return <div className={cx(styles.page, styles.flowPage)}>{flowView}</div>;
+  }
+
   /*
    * Nhãn + địa chỉ của hình thức nhận xe — tính MỘT LẦN ở đây để hàng "Hình thức nhận xe" trong
    * `dl` lịch trình không phải lặp lại nhánh CÓ TÀI XẾ / giao tận nơi / tự đến đại lý ngay trong
@@ -230,16 +271,12 @@ export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailVi
               <Link href={listingPath.detail(data.vehicle.id)} className={styles.vehicleName}>
                 {data.vehicle.name}
               </Link>
+              {/*
+                Cùng dòng thông số với thẻ xe ngoài chợ và luồng đặt xe ("Số tự động", "Xăng") —
+                trước đây in thẳng MÃ của hộp số/nhiên liệu ("cvt · gasoline").
+              */}
               <p className={styles.vehicleSpecs}>
-                {[
-                  data.vehicle.seatCount
-                    ? t('detail.seatCount', { count: data.vehicle.seatCount })
-                    : null,
-                  data.vehicle.transmission,
-                  data.vehicle.fuelType,
-                ]
-                  .filter(Boolean)
-                  .join(LIST_SEPARATOR) || t('detail.specsEmpty')}
+                {vehicleSpecs.join(LIST_SEPARATOR) || t('detail.specsEmpty')}
               </p>
               {/* Biển số chỉ có sau khi chủ xe nhận chuyến — server quyết định, không phải UI. */}
               {data.vehicle.plateNumber ? (
@@ -361,9 +398,7 @@ export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailVi
   return (
     <div className={styles.page}>
       <div className={styles.topBar}>
-        <Link href={backHref} className={styles.back}>
-          <ArrowLeftOutlined aria-hidden="true" /> {t('detail.back')}
-        </Link>
+        {backLink}
         {timeline.visible ? (
           <CustomerTripTimeline
             confirmedDone={timeline.confirmedDone}
@@ -534,48 +569,48 @@ export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailVi
             Chủ xe nhìn vào đó sẽ thấy ba lối liên hệ với chính mình.
           */}
           {isHost ? null : (
-          <section className={styles.support}>
-            <h2 className={styles.supportTitle}>{t('actions.title')}</h2>
-            {/*
+            <section className={styles.support}>
+              <h2 className={styles.supportTitle}>{t('actions.title')}</h2>
+              {/*
               Chưa duyệt thì CHƯA mở kênh liên hệ — trên tuyến hoa hồng, một yêu cầu gửi rồi tự
               huỷ không được phép trở thành cách lấy số của gian hàng rồi chốt ngoài sàn
               (ADR 0028 điều 9). Server quyết định bằng `canContact`; ở đây chỉ nói lý do, vì
               một nút biến mất không giải thích gì trông như lỗi.
             */}
-            {data.canContact ? (
-              <>
-            <ChatWithShopButton
-              vehicleId={data.vehicle.id}
-              type="primary"
-              size="large"
-              block
-              label={t('actions.contactShop')}
-            />
-            <div className={styles.supportRow}>
-              {data.shop.phone ? (
-                <a className={styles.supportAction} href={`tel:${data.shop.phone}`}>
-                  <PhoneOutlined aria-hidden="true" />
-                  <span className={styles.supportLabel}>{t('actions.call')}</span>
-                  <span className={styles.supportMeta}>{data.shop.phone}</span>
-                </a>
-              ) : null}
-              {data.canReview ? (
-                <button
-                  type="button"
-                  className={styles.supportAction}
-                  onClick={() => setReviewOpen(true)}
-                >
-                  <StarOutlined aria-hidden="true" />
-                  <span className={styles.supportLabel}>{t('actions.review')}</span>
-                  <span className={styles.supportMeta}>{data.vehicle.name}</span>
-                </button>
-              ) : null}
-            </div>
-              </>
-            ) : (
-              <p className={styles.hostHint}>{t('actions.contactLocked')}</p>
-            )}
-          </section>
+              {data.canContact ? (
+                <>
+                  <ChatWithShopButton
+                    vehicleId={data.vehicle.id}
+                    type="primary"
+                    size="large"
+                    block
+                    label={t('actions.contactShop')}
+                  />
+                  <div className={styles.supportRow}>
+                    {data.shop.phone ? (
+                      <a className={styles.supportAction} href={`tel:${data.shop.phone}`}>
+                        <PhoneOutlined aria-hidden="true" />
+                        <span className={styles.supportLabel}>{t('actions.call')}</span>
+                        <span className={styles.supportMeta}>{data.shop.phone}</span>
+                      </a>
+                    ) : null}
+                    {data.canReview ? (
+                      <button
+                        type="button"
+                        className={styles.supportAction}
+                        onClick={() => setReviewOpen(true)}
+                      >
+                        <StarOutlined aria-hidden="true" />
+                        <span className={styles.supportLabel}>{t('actions.review')}</span>
+                        <span className={styles.supportMeta}>{data.vehicle.name}</span>
+                      </button>
+                    ) : null}
+                  </div>
+                </>
+              ) : (
+                <p className={styles.hostHint}>{t('actions.contactLocked')}</p>
+              )}
+            </section>
           )}
 
           <div className={styles.actions}>
@@ -614,7 +649,6 @@ export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailVi
       {cancelOpen ? (
         <CancelTripDialog trip={data} open onClose={() => setCancelOpen(false)} />
       ) : null}
-
     </div>
   );
 }
@@ -650,9 +684,7 @@ function TerminalNotice({ trip, stage }: { trip: CustomerTripDetail; stage: Cust
    * sẽ là một lời nói dối.
    */
   if (stage === CUSTOMER_TRIP_STAGE.EXPIRED) {
-    return (
-      <Alert type="info" showIcon title={t('expiredTitle')} description={t('expiredBody')} />
-    );
+    return <Alert type="info" showIcon title={t('expiredTitle')} description={t('expiredBody')} />;
   }
 
   if (stage === CUSTOMER_TRIP_STAGE.CANCELLED) {

@@ -31,10 +31,25 @@ export const PAYMENT_GATEWAY_PROVIDER_VALUES = Object.values(
 ) as PaymentGatewayProvider[];
 
 export function isPaymentGatewayProvider(value: unknown): value is PaymentGatewayProvider {
-  return (
-    typeof value === 'string' && (PAYMENT_GATEWAY_PROVIDER_VALUES as string[]).includes(value)
-  );
+  return typeof value === 'string' && (PAYMENT_GATEWAY_PROVIDER_VALUES as string[]).includes(value);
 }
+
+/**
+ * KÊNH tiền đã vào một khoản giữ chỗ — chuyển khoản VietQR (đối soát SePay hoặc admin khớp tay) hay
+ * một cổng ví. Chỉ để KỂ LẠI cho khách ("Hệ thống đã ghi nhận 500.000đ qua VNPAY"); không quyết định
+ * gì về tiền. Server suy từ sổ `payment_gateway_orders` (ADR 0058), client không tự đoán.
+ */
+export const HOLD_PAYMENT_CHANNEL = {
+  BANK_TRANSFER: 'bank_transfer',
+  MOMO: PAYMENT_GATEWAY_PROVIDER.MOMO,
+  VNPAY: PAYMENT_GATEWAY_PROVIDER.VNPAY,
+} as const;
+
+export type HoldPaymentChannel = (typeof HOLD_PAYMENT_CHANNEL)[keyof typeof HOLD_PAYMENT_CHANNEL];
+
+export const HOLD_PAYMENT_CHANNEL_VALUES = Object.values(
+  HOLD_PAYMENT_CHANNEL,
+) as HoldPaymentChannel[];
 
 /**
  * Lượt thanh toán trả cho CÁI GÌ — cùng không gian giá trị với `BANK_MATCH_TARGET_TYPE` để một
@@ -130,6 +145,17 @@ export const PAYMENT_ORDER_APPLIED_OUTCOMES: readonly PaymentOrderApplyOutcome[]
 ];
 
 /**
+ * Kết cục mà khoản tiền của lượt đã được CỘNG vào `paid_amount` của đích — khác
+ * `PAYMENT_ORDER_APPLIED_OUTCOMES` ở đúng `already_paid`: tiền trả trùng vẫn được cộng (rồi ghi yêu
+ * cầu hoàn). Dùng khi cần biết số đã nhận đến từ kênh nào (`CustomerHoldDto.paidVia`).
+ */
+export const PAYMENT_ORDER_CREDITED_OUTCOMES: readonly PaymentOrderApplyOutcome[] = [
+  PAYMENT_ORDER_APPLY_OUTCOME.ACTIVATED,
+  PAYMENT_ORDER_APPLY_OUTCOME.PARTIAL,
+  PAYMENT_ORDER_APPLY_OUTCOME.ALREADY_PAID,
+];
+
+/**
  * Hàng đợi NGƯỜI XỬ LÝ — trục độc lập với trạng thái cổng.
  *
  * `open` = tiền đã (hoặc có thể đã) về mà hệ thống không tự kết luận được; chỉ admin đóng được nó,
@@ -221,7 +247,9 @@ export const PAYMENT_ORDER_VIEW_STATE_VALUES = Object.values(
 
 /** Chặng còn đổi được — client hỏi lại theo nhịp khi đang ở một trong hai chặng này. */
 export function isPaymentOrderViewStateSettling(state: PaymentOrderViewState): boolean {
-  return state === PAYMENT_ORDER_VIEW_STATE.AWAITING || state === PAYMENT_ORDER_VIEW_STATE.CONFIRMING;
+  return (
+    state === PAYMENT_ORDER_VIEW_STATE.AWAITING || state === PAYMENT_ORDER_VIEW_STATE.CONFIRMING
+  );
 }
 
 /** Kết quả của cổng đến từ đâu — IPN (cổng gọi vào) hay truy vấn chủ động phía server. */
@@ -268,9 +296,7 @@ export const PAYMENT_ORDER_QUEUE_VIEW_VALUES = Object.values(
 ) as PaymentOrderQueueView[];
 
 export function isPaymentOrderQueueView(value: unknown): value is PaymentOrderQueueView {
-  return (
-    typeof value === 'string' && (PAYMENT_ORDER_QUEUE_VIEW_VALUES as string[]).includes(value)
-  );
+  return typeof value === 'string' && (PAYMENT_ORDER_QUEUE_VIEW_VALUES as string[]).includes(value);
 }
 
 /**

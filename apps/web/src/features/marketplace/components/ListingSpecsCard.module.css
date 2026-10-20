@@ -40,7 +40,7 @@
 
 .label {
   font-size: 13px;
-  color: #717680;
+  color: var(--xp-color-text-tertiary);
   line-height: 18px;
   white-space: nowrap;
 }
@@ -48,7 +48,7 @@
 .value {
   font-size: 15px;
   font-weight: 700;
-  color: #0e0f12;
+  color: var(--xp-color-text);
   line-height: 22px;
   white-space: nowrap;
 }
@@ -59,4 +59,10 @@
     grid-template-columns: repeat(2, 1fr);
     gap: 16px;
   }
+}
+
+/* ── Giao diện tối ─────────────────────────────────────────────────────────
+   Vòng icon kem `#fef6ee` thành một đốm sáng chói trên nền tối — đổi sang vàng pha trong suốt. */
+:global([data-theme="dark"]) .iconWrapper {
+  background: var(--xp-color-primary-light);
 }

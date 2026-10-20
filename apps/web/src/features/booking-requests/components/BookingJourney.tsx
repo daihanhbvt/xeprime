@@ -16,6 +16,11 @@ interface BookingJourneyProps {
    * có chặng "Thanh toán giữ chỗ" — vẽ nó ra là hứa một bước không bao giờ tới (ADR 0044 điều 4).
    */
   hasHoldStage: boolean;
+  /**
+   * Cả hành trình đã xong (chuyến đã xác nhận — Figma `19759:40232` "Bước 4 / 4 · Đã xác nhận"):
+   * mọi chấm thành dấu tích, kể cả chấm cuối. Không có cờ này thì chặng cuối luôn là "đang đứng".
+   */
+  complete?: boolean;
 }
 
 /**
@@ -28,14 +33,15 @@ interface BookingJourneyProps {
  * Chữ chú thích là thứ duy nhất đọc được bằng mắt; các chấm là hình minh hoạ cho nó, nên nhãn từng
  * chấm chỉ dành cho trình đọc màn hình.
  */
-export function BookingJourney({ current, hasHoldStage }: BookingJourneyProps) {
+export function BookingJourney({ current, hasHoldStage, complete = false }: BookingJourneyProps) {
   const t = useTranslations('BookingRequests.flow');
   const stages: BookingJourneyStage[] = hasHoldStage
     ? ['trip', 'request', 'payment', 'confirmed']
     : ['trip', 'request', 'confirmed'];
   // Chặng không có trên thanh (vd 'payment' của chuyến không thu trước) ⇒ đứng ở chặng đầu.
   const currentStage: BookingJourneyStage = stages.includes(current) ? current : 'trip';
-  const currentIndex = stages.indexOf(currentStage);
+  const currentIndex = complete ? stages.length - 1 : stages.indexOf(currentStage);
+  const captionStage = complete ? stages[stages.length - 1]! : currentStage;
 
   return (
     <div className={styles.journey}>
@@ -43,13 +49,13 @@ export function BookingJourney({ current, hasHoldStage }: BookingJourneyProps) {
         {t('journey.caption', {
           current: currentIndex + 1,
           total: stages.length,
-          label: t(`journey.steps.${currentStage}`),
+          label: t(`journey.steps.${captionStage}`),
         })}
       </p>
       <ol className={styles.dots} aria-label={t('journey.label')}>
         {stages.map((stage, index) => {
-          const done = index < currentIndex;
-          const active = index === currentIndex;
+          const done = complete || index < currentIndex;
+          const active = !complete && index === currentIndex;
           return (
             <li
               key={stage}

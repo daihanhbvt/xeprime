@@ -73,6 +73,7 @@ export {
 } from './datetime';
 
 export {
+  longTermReturnFromWallClock,
   pickupWishParts,
   type PickupWish,
   type PickupWishKind,

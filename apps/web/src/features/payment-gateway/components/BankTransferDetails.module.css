@@ -121,3 +121,119 @@
   font-family: var(--xp-font-mono, monospace);
   letter-spacing: 0.08em;
 }
+
+/*
+ * ── Bố cục `card` — trang thanh toán tiền giữ chỗ design v2 (Figma `19759:37320`) ─────────────
+ *
+ * Ô QR 270 × ~296 viền `Stroke/gray-low200` bo 16 (nền trắng cố định như trên), cách bảng 20; bảng
+ * nhãn 130 `14px/Regular` `Text/Gray/medium` · giá trị `16px/Semibold`, các hàng cách 16. Nằm trong
+ * thẻ phương thức nên co theo bề ngang của KHỐI: hẹp thì ô QR lên trên bảng.
+ */
+.cardRoot {
+  container-type: inline-size;
+  min-width: 0;
+}
+
+.cardLayout {
+  grid-template-columns: 270px minmax(0, 1fr);
+  align-items: center;
+}
+
+/* Ô QR 270 + 20 + bảng (nhãn 130 + số tài khoản ~230) ≈ 660 — hẹp hơn thì xếp chồng. */
+@container (max-width: 660px) {
+  .cardLayout {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: stretch;
+  }
+
+  .cardLayout .qrWrap,
+  .cardLayout .qrFallback {
+    justify-self: center;
+  }
+}
+
+.cardLayout .qrWrap {
+  justify-content: center;
+  width: 270px;
+  max-width: 100%;
+  min-height: 296px;
+  padding: var(--xp-space-md) var(--xp-space-12);
+  border-color: var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+}
+
+.cardLayout .qr {
+  width: 224px;
+  height: 224px;
+}
+
+.cardLayout .qrFallback {
+  width: 270px;
+  min-height: 296px;
+  border-radius: var(--xp-border-radius-card);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+/* Chủ + số tài khoản dưới QR — chữ tối trên nền trắng cố định của ô, ở mọi giao diện. */
+.qrAccount {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  color: var(--xp-color-primary-contrast);
+}
+
+.qrAccountName {
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body);
+}
+
+.qrAccountNumber {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.cardLayout .fields {
+  gap: var(--xp-space-md);
+}
+
+.cardLayout .row {
+  align-items: center;
+}
+
+.cardLayout .row dt {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.cardLayout .row dd {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+.cardLayout .row dd b {
+  font-weight: inherit;
+}
+
+/* Tên ngân hàng viết hoa như bản vẽ ("VIETCOMBANK"). */
+.cardLayout .bank {
+  text-transform: uppercase;
+}
+
+/* Số tiền — `Text/Brand/primary 2`. */
+.cardLayout .amount {
+  color: var(--xp-color-primary-hover);
+}
+
+/* Bản vẽ để mã cùng kiểu chữ với các giá trị khác — vẫn giữ số đều chiều để đọc từng ký tự. */
+.cardLayout .code {
+  font-family: inherit;
+  letter-spacing: normal;
+  font-variant-numeric: tabular-nums;
+}

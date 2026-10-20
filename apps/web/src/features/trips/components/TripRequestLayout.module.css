@@ -1,0 +1,262 @@
+/*
+ * Khung chung của các màn chuyến phía khách (design v2) — chờ chủ xe phản hồi (Figma `19727:60694`),
+ * chờ giữ chỗ (`19737:23904`), thanh toán (`19759:22346`) và đã xác nhận (`19879:72913`). Cùng một
+ * bố cục: cột trái `Booking information` (748 rộng), cột phải `Costs and actions` (420 rộng).
+ *
+ * Hai cột co về một theo BỀ RỘNG CỦA KHỐI (container query), không theo viewport: cùng khung được
+ * dùng ở trang chuyến (`/trips/:id`) lẫn trang thanh toán (`/payment/:id`).
+ * Thẻ chuyến, người thuê, giấy tờ và hai thẻ tiền mang khung của chính chúng (màn Xem lại); ở đây
+ * là khung cho các thẻ riêng của hai màn này, cùng số đo với chúng.
+ */
+.view {
+  container-type: inline-size;
+  min-width: 0;
+}
+
+/*
+ * Đầu trang → hai cột: đầu trang đã đệm dưới 20, thân trang (Figma `Why Choose Us Section`) đệm trên
+ * 40. Mobile chỉ còn một khoảng thẻ.
+ */
+.view > header + .columns {
+  margin-top: var(--xp-space-40);
+}
+
+@media (max-width: 640px) {
+  .view > header + .columns {
+    margin-top: 0;
+  }
+}
+
+/*
+ * ── Hai cột: nội dung 1fr · chi phí + hành động ──────────────────────────────
+ *
+ * Thiết kế vẽ cột phải 420px, cách cột trái 32, trên khung 1200 của chợ. Hẹp hơn 820px thì xếp một
+ * cột — việc chính (nhắn tin / thanh toán) và chi phí vẫn nằm ngay dưới thẻ trạng thái. Thẻ chuyến tự
+ * xếp ảnh lên trên lịch khi cột trái hẹp (container query của `BookingTripCard`).
+ */
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 420px;
+  gap: var(--xp-space-xl);
+  align-items: start;
+}
+
+.main,
+.aside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-20);
+  min-width: 0;
+}
+
+@container (max-width: 820px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--xp-space-20);
+  }
+}
+
+/* ── Khung thẻ (Figma "Information card": viền `Stroke/gray-low200`, bo 16, đệm 24) ── */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+  padding: var(--xp-space-lg);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+}
+
+.cardTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
+}
+
+.cardLead {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+/* ── Thẻ trạng thái (Figma `19727:61071` · `19737:23919` · `19759:40235`) ────── */
+
+/* Chuyến đã xác nhận: nền `Status/success-25`, viền NÉT ĐỨT `Status/success-500`, đệm 24. */
+.statusConfirmed {
+  border: 1px dashed var(--xp-color-success-accent);
+  background: var(--xp-color-success-subtle);
+}
+.statusHead {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-12);
+  min-width: 0;
+}
+
+.statusBadge {
+  flex: none;
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+}
+
+.statusCopy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+.statusTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h2);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h2);
+  overflow-wrap: anywhere;
+}
+
+/*
+ * ── Nhãn viên thuốc (Figma "Request status": đệm 2/8, viền 1px, bo 16, chữ 14 Medium) ──
+ *
+ * Bốn sắc thái của thiết kế: cam (chờ phản hồi), xanh lá (chủ xe đã đồng ý), vàng (chưa cần thanh
+ * toán), xanh dương (cần thanh toán). Viền dẫn xuất từ màu chữ trên nền thẻ nên tự tối theo nền ở
+ * giao diện tối.
+ */
+.pill {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  padding: var(--xp-space-2) var(--xp-space-sm);
+  border: 1px solid;
+  border-radius: var(--xp-border-radius-card);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body);
+}
+
+.warning {
+  border-color: color-mix(in srgb, var(--xp-color-warning) 45%, var(--xp-color-bg-container));
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning);
+}
+
+.success {
+  border-color: var(--xp-color-success-border);
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+}
+
+.primary {
+  border-color: var(--xp-color-primary-border);
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-strong);
+}
+
+.info {
+  border-color: color-mix(in srgb, var(--xp-color-info) 45%, var(--xp-color-bg-container));
+  background: var(--xp-color-info-bg);
+  color: var(--xp-color-info);
+}
+
+/* Nhãn đứng dưới số tiền trong thẻ "Các khoản khác" — tách khỏi dòng chữ trên/dưới nó. */
+.inlinePill {
+  margin-block: var(--xp-space-xs);
+}
+
+/* ── Lời nhắn cho chủ xe — giá trị chỉ-đọc trong thẻ người thuê (Figma `19727:61240`) ── */
+.noteField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-6);
+  min-width: 0;
+}
+
+.noteLabel {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body);
+}
+
+.noteValue {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-lg);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+/* ── Cần thay đổi kế hoạch? (Figma `19879:73335` · `19879:73321`) — không khung, đệm 8 ── */
+.policy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+  padding: var(--xp-space-sm);
+}
+
+.policyCopy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.policyTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body);
+}
+
+.policyBody {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.hotline {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  font-style: italic;
+  line-height: var(--xp-line-height-body);
+  text-align: center;
+}
+
+.hotlineLink {
+  color: var(--xp-color-text-secondary);
+  font-weight: var(--xp-font-weight-medium);
+  white-space: nowrap;
+}
+
+.hotlineLink:hover {
+  color: var(--xp-color-primary-hover);
+}
+
+/* Mobile (≤640px = `--xp-bp-mobile`): đệm thẻ hẹp lại như màn Xem lại, tiêu đề nhỏ một bậc. */
+@media (max-width: 640px) {
+  .card {
+    padding: var(--xp-space-md);
+  }
+
+  .statusBadge {
+    width: 48px;
+    height: 48px;
+  }
+
+  .statusTitle {
+    font-size: var(--xp-font-size-h3);
+    line-height: var(--xp-line-height-h3);
+  }
+}

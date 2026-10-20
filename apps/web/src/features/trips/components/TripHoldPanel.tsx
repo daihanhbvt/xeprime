@@ -9,7 +9,9 @@ import { useState } from 'react';
 import {
   BOOKING_HOLD_STATUS,
   HOLD_COUNTDOWN_SEGMENT_MINUTES,
+  HOLD_COUNTDOWN_URGENT_MINUTES,
   HOLD_REFUND_STATUS,
+  isFreeCancelWindowShort,
 } from '@xeprime/types';
 import { Countdown } from '@/components/data-display/Countdown';
 import { InfoHint } from '@/components/data-display/InfoHint';
@@ -62,12 +64,8 @@ export function TripHoldPanel({
     hold.status === BOOKING_HOLD_STATUS.PENDING || hold.status === BOOKING_HOLD_STATUS.UNDERPAID;
   const underpaid = hold.status === BOOKING_HOLD_STATUS.UNDERPAID;
 
-  /*
-   * Cửa sổ huỷ miễn phí hẹp hơn cửa sổ trả tiền nghĩa là nó đã bị kẹp bởi giờ nhận xe — chuyến
-   * sát giờ. So hai MỐC ĐÃ LƯU của server, không tính lại từ giờ máy khách.
-   */
-  const freeCancelIsShort =
-    new Date(hold.freeCancelUntil).getTime() <= new Date(hold.expiresAt).getTime();
+  // Chuyến sát giờ: cửa sổ huỷ miễn phí bị kẹp bởi giờ nhận xe (ADR 0032 điều 5).
+  const freeCancelIsShort = isFreeCancelWindowShort(hold);
 
   /*
    * Bức tranh đầy đủ, CÙNG chữ dùng ở bảng "Chi tiết giá" (`PriceBreakdown`) — khách hỏi hoài
@@ -104,7 +102,7 @@ export function TripHoldPanel({
         <p className={styles.headAmount}>{fmt.money(hold.remainingAmount)}</p>
         <Countdown
           deadline={hold.expiresAt}
-          urgentMs={HOLD_COUNTDOWN_SEGMENT_MINUTES * 60_000}
+          urgentMs={HOLD_COUNTDOWN_URGENT_MINUTES * 60_000}
           segmentMs={HOLD_COUNTDOWN_SEGMENT_MINUTES * 60_000}
           labels={{
             remaining: t('countdownRemaining'),
@@ -197,9 +195,9 @@ function HoldOutcome({
           }
         />
         {/*
-          * Chỉ mount khi ĐÃ MỞ: dialog đọc danh sách tài khoản của khách, và một màn chuyến
-          * bất kỳ có khoản hoàn không nên kéo thêm một lượt gọi API mà người dùng chưa xin.
-          */}
+         * Chỉ mount khi ĐÃ MỞ: dialog đọc danh sách tài khoản của khách, và một màn chuyến
+         * bất kỳ có khoản hoàn không nên kéo thêm một lượt gọi API mà người dùng chưa xin.
+         */}
         {needsAccount && accountOpen ? (
           <RefundAccountDialog
             tripId={tripId}

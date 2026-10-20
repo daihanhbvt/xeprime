@@ -317,6 +317,11 @@ export const XP_TOKENS = {
   'color-primary-accent': '#d3a94d', // gạch tab đang chọn, viền thẻ khi rê chuột (điểm đầu gradient chữ)
   'color-primary-glow': '#e9c336', // vành avatar gian hàng — điểm đầu gradient nút chính
   'color-destination-border': '#e9bb68', // viền thẻ điểm đến
+  // Luồng đặt xe v2 (Figma `RHDyFsURFZQ9BC5JCLQzeE`, đọc 19/10/2026) — bốn bậc màn đó đặt tên rõ.
+  'color-primary-border': '#e8ca8d', // v2 Stroke/primary-300 — viền thẻ tiền, phương thức đang mở
+  'color-success-accent': '#12b76a', // v2 Status/success-500 — viền nét đứt thẻ "đã xác nhận"
+  'color-success-border': '#6ce9a6', // v2 Status/success-300 — viền nhãn trạng thái xanh
+  'color-warning-subtle': '#fffaeb', // v2 Status/warning-low — nền hộp lưu ý trang thanh toán
   'market-footer-bg': '#060403', // nền footer chợ — đen ấm, đi cùng lớp ánh vàng phía trên
   // Nút chính v2 ("Tìm kiếm", "Trở thành chủ xe", "Đăng ký ngay"…) — ADR 0062 Q1 đã có điểm màu.
   'gradient-primary': 'linear-gradient(90deg, #e9c336 0%, #e8c664 48.077%, #e3b012 100%)',

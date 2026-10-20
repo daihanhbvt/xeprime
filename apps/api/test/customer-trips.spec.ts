@@ -21,6 +21,7 @@ import {
   PAYMENT_KIND,
   PAYMENT_METHOD,
   PAYMENT_STATUS,
+  PRICE_ROW,
   PRIVATE_FILE_PURPOSE,
   PRIVATE_FILE_STATUS,
   REFUND_METHOD,
@@ -120,6 +121,8 @@ interface SeedOptions {
   discountAmount?: string;
   deliveryFee?: string;
   depositAmount?: string;
+  /** Bảng kê đóng băng của đơn (ADR 0024) — vắng ⇒ đơn cũ không có snapshot. */
+  priceSnapshot?: Prisma.InputJsonValue;
 }
 
 /**
@@ -161,6 +164,7 @@ async function seedTrip(
         deliveryFee: delivery,
         totalAmount: base.minus(discount).plus(delivery),
         depositAmount: new Prisma.Decimal(opts.depositAmount ?? '0'),
+        ...(opts.priceSnapshot ? { priceSnapshot: opts.priceSnapshot } : {}),
       },
     });
   }
@@ -870,6 +874,52 @@ describe('Chiếu tiền — không đếm trùng', () => {
     finance = (await trips.detail(customerId, requestId)).finance!;
     expect(finance.deliveryFee).toBe('120000.00');
     expect(finance.finalTotal).toBe('1120000.00');
+  });
+
+  maybe('bảng kê đóng băng: chỉ trả khi còn khớp số trên đơn', async () => {
+    const snapshot = {
+      calculatedAt: '2026-10-01T00:00:00.000Z',
+      source: 'quote',
+      currency: 'VND',
+      days: 2,
+      rows: [{ key: PRICE_ROW.BASE, label: 'Giá thuê', amount: '1000000' }],
+      totalAmount: '1000000',
+      depositAmount: '3000000',
+    };
+    const { requestId, bookingId } = await seedTrip({
+      bookingStatus: BOOKING_STATUS.RESERVED,
+      baseAmount: '1000000',
+      priceSnapshot: snapshot,
+    });
+
+    let finance = (await trips.detail(customerId, requestId)).finance!;
+    expect(finance.legacyPricing).toBe(false);
+    expect(finance.breakdown).toEqual({
+      // `sublabel` vắng trong JSON ⇒ `null` trên dây, không phải thiếu trường.
+      rows: [{ key: PRICE_ROW.BASE, label: 'Giá thuê', sublabel: null, amount: '1000000' }],
+      depositAmount: '3000000',
+      fees: null,
+      longTerm: null,
+    });
+
+    // Chủ xe chốt lại phí giao nhận ⇒ tổng trên đơn đổi, bảng chụp lúc tạo đơn không còn đúng.
+    await prisma.booking.update({
+      where: { id: bookingId! },
+      data: {
+        deliveryFee: new Prisma.Decimal('150000'),
+        totalAmount: new Prisma.Decimal('1150000'),
+      },
+    });
+    finance = (await trips.detail(customerId, requestId)).finance!;
+    expect(finance.breakdown).toBeNull();
+    expect(finance.finalTotal).toBe('1150000.00');
+  });
+
+  maybe('đơn cũ không có snapshot ⇒ không có bảng kê', async () => {
+    const { requestId } = await seedTrip({ bookingStatus: BOOKING_STATUS.RESERVED });
+    const finance = (await trips.detail(customerId, requestId)).finance!;
+    expect(finance.legacyPricing).toBe(true);
+    expect(finance.breakdown).toBeNull();
   });
 });
 

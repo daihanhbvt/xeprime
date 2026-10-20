@@ -1,13 +1,12 @@
 'use client';
 
-import { LIST_SEPARATOR } from '@xeprime/domain';
+import { LIST_SEPARATOR, longTermReturnFromWallClock } from '@xeprime/domain';
 import { useQuery } from '@tanstack/react-query';
 import { Alert, DatePicker, Modal, Select, Skeleton } from 'antd';
 import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   LONG_TERM_PACKAGE_MONTHS,
-  longTermReturnAt,
   PICKUP_PREFERENCE,
   SERVICE_TYPE,
   type LongTermPackageMonths,
@@ -16,7 +15,6 @@ import { PriceBreakdown } from '@/components/data-display/PriceBreakdown';
 import { fetchCalendarQuote } from '@/features/calendar/api';
 import { useAppFormat, useDatePickerPattern } from '@/i18n/use-app-format';
 import {
-  appWallClockToInstant,
   appWallClockToIso,
   nowInAppTz,
   startOfAppDay,
@@ -88,7 +86,7 @@ function ApproveLongTermForm({
   const returnAt = useMemo(
     () =>
       pickupAt && effectivePackage != null
-        ? toAppTz(longTermReturnAt(appWallClockToInstant(pickupAt).toDate(), effectivePackage))
+        ? longTermReturnFromWallClock(pickupAt, effectivePackage)
         : null,
     [pickupAt, effectivePackage],
   );
@@ -166,6 +164,9 @@ function ApproveLongTermForm({
             <dt>{t('longTerm.customer')}</dt>
             <dd>
               {[request.customerName, request.customerPhone].filter(Boolean).join(LIST_SEPARATOR)}
+              {request.customerAccountPhone
+                ? ` (${t('customer.accountPhone', { phone: request.customerAccountPhone })})`
+                : ''}
             </dd>
           </div>
           <div className={styles.row}>

@@ -4,8 +4,20 @@ import { useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 import { VEHICLE_TYPE, transmissionFamily } from '@xeprime/types';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
-import type { PublicListingDetail } from '@/features/marketplace/types';
 import { useDomainLabel } from '@/i18n/use-domain-label';
+
+/**
+ * Những trường làm nên dòng thông số — tin đăng công khai (`PublicListingDetail`) có đủ, xe của một
+ * chuyến đã gửi (`CustomerTripVehicleDto`) thì không có loại xe: thiếu `vehicleType` ⇒ đọc như ô tô
+ * (số chỗ), không bịa ra dòng xe máy.
+ */
+export interface ListingSpecSource {
+  vehicleType?: string | null;
+  motorbikeCategory?: string | null;
+  seatCount?: number | null;
+  transmission?: string | null;
+  fuelType?: string | null;
+}
 
 /**
  * Dòng thông số GỌN dưới tên xe — "4 chỗ · Số tự động · Điện" (Figma `19727:56178`).
@@ -18,26 +30,26 @@ import { useDomainLabel } from '@/i18n/use-domain-label';
  * Chỉ ba thứ khách dùng để nhận ra "đúng chiếc mình chọn": số chỗ (ô tô) hoặc dòng xe (xe máy),
  * hộp số, năng lượng. Thiếu mục nào thì bỏ mục đó — không in "—" giữa một dòng mô tả.
  */
-export function useListingSpecSummary(listing: PublicListingDetail | null): string[] {
+export function useListingSpecSummary(source: ListingSpecSource | null): string[] {
   const t = useTranslations('Listings.card');
   const dl = useDomainLabel();
   const { fuelTypeLabel } = useCatalogLabels();
 
   return useMemo(() => {
-    if (!listing) return [];
+    if (!source) return [];
     const parts: Array<string | null> = [
-      listing.vehicleType === VEHICLE_TYPE.MOTORBIKE
-        ? listing.motorbikeCategory
-          ? dl('motorbikeCategory', listing.motorbikeCategory)
+      source.vehicleType === VEHICLE_TYPE.MOTORBIKE
+        ? source.motorbikeCategory
+          ? dl('motorbikeCategory', source.motorbikeCategory)
           : null
-        : listing.seatCount
-          ? t('seats', { count: listing.seatCount })
+        : source.seatCount
+          ? t('seats', { count: source.seatCount })
           : null,
-      listing.transmission
-        ? t(`transmissionFamily.${transmissionFamily(listing.transmission)}`)
+      source.transmission
+        ? t(`transmissionFamily.${transmissionFamily(source.transmission)}`)
         : null,
-      fuelTypeLabel(listing.fuelType),
+      fuelTypeLabel(source.fuelType),
     ];
     return parts.filter((part): part is string => Boolean(part));
-  }, [listing, t, dl, fuelTypeLabel]);
+  }, [source, t, dl, fuelTypeLabel]);
 }

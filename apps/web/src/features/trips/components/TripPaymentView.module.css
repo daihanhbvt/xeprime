@@ -1,85 +1,20 @@
-.details {
+/*
+ * Vỏ trang thanh toán — NỘI DUNG rộng đúng 1200 như lưới của chợ (header, Figma khung 1440 lề 120),
+ * đệm hai bên cộng thêm ngoài con số đó. Không đệm trên: đường dẫn của đầu trang (Figma "Search
+ * Fields") đứng ngay dưới header, như bản vẽ.
+ */
+.page {
   display: flex;
   flex-direction: column;
   gap: var(--xp-space-md);
-}
-
-.vehicle {
-  display: flex;
-  align-items: center;
-  gap: var(--xp-space-sm);
+  width: 100%;
   min-width: 0;
+  max-width: calc(var(--xp-market-container-max-width, 1200px) + 2 * var(--xp-space-md));
+  margin-inline: auto;
+  padding: 0 var(--xp-space-md) var(--xp-space-xl);
 }
 
-.vehicleImg {
-  flex: none;
-  width: 64px;
-  height: 44px;
-  border-radius: var(--xp-border-radius-sm);
-  object-fit: cover;
-}
-
-.vehicleText {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.vehicleText b {
-  overflow-wrap: anywhere;
-  font-size: var(--xp-font-size-body);
-}
-
-.vehicleText small {
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-sm);
-}
-
-.rows {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: 0;
-}
-
-.row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--xp-space-sm);
-  font-size: var(--xp-font-size-body-sm);
-}
-
-.row dt {
-  flex: none;
-  color: var(--xp-color-text-secondary);
-}
-
-.row dd {
-  min-width: 0;
-  margin: 0;
-  font-weight: var(--xp-font-weight-semibold);
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-  overflow-wrap: anywhere;
-}
-
-/* Điều kiện của khoản — danh sách chấm thật để trình đọc màn hình đọc ra "danh sách N mục". */
-.notes {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: 0;
-  padding-left: 18px;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
-}
-
-.notes li::marker {
-  color: var(--xp-color-warning);
-}
-
+/* Kết cục của một khoản đã khép (hết hạn, huỷ, có hoàn) — một cột vừa đọc. */
 .settled {
   display: flex;
   flex-direction: column;

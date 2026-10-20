@@ -420,10 +420,11 @@ describe('Thuê dài hạn — nguyện vọng nhận xe', () => {
     expect(payload.pickupAt).toBeUndefined();
     expect(payload.returnAt).toBeUndefined();
     expect(payload.pickupWindowStartDate).toBeUndefined();
-    expect(payload.pickupWindowEndDate).toBeUndefined();
-    // Danh tính người thuê do server đọc từ tài khoản (ADR 0060).
-    expect(payload).not.toHaveProperty('customerName');
-    expect(payload).not.toHaveProperty('customerPhone');
+    // Danh tính người thuê mặc định từ tài khoản (ADR 0063).
+    expect(payload).toMatchObject({
+      customerName: LOGGED_IN_ME.displayName,
+      customerPhone: LOGGED_IN_ME.phone,
+    });
   });
 
   /**
