@@ -146,6 +146,10 @@ export const presignReceiptAttachment = (file: File): Promise<UploadPresign> =>
 export const presignBannerImage = (file: File): Promise<UploadPresign> =>
   apiPost<UploadPresign>('/platform/banners/presign', presignBody(file));
 
+/** Presign ảnh danh mục (icon, logo hãng, ảnh trang chủ) — cần quyền `platform.catalog.manage`. */
+export const presignCatalogImage = (file: File): Promise<UploadPresign> =>
+  apiPost<UploadPresign>('/platform/catalog/presign', presignBody(file));
+
 /** Presign 1 file ảnh rồi PUT lên R2, trả URL công khai để lưu vào form/API. */
 export async function uploadImage(
   file: File,

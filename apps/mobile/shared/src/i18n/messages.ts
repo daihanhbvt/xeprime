@@ -34,6 +34,7 @@ import enMaintenance from '@xeprime/domain/messages/en/maintenance.json';
 import enDashboard from '@xeprime/domain/messages/en/dashboard.json';
 import enDrivers from '@xeprime/domain/messages/en/drivers.json';
 import enDriverLicence from '@xeprime/domain/messages/en/driver-licence.json';
+import enDriving from '@xeprime/domain/messages/en/driving.json';
 import enLegal from '@xeprime/domain/messages/en/legal.json';
 import enMembers from '@xeprime/domain/messages/en/members.json';
 import enShop from '@xeprime/domain/messages/en/shop.json';
@@ -76,6 +77,7 @@ import viMaintenance from '@xeprime/domain/messages/vi/maintenance.json';
 import viDashboard from '@xeprime/domain/messages/vi/dashboard.json';
 import viDrivers from '@xeprime/domain/messages/vi/drivers.json';
 import viDriverLicence from '@xeprime/domain/messages/vi/driver-licence.json';
+import viDriving from '@xeprime/domain/messages/vi/driving.json';
 import viLegal from '@xeprime/domain/messages/vi/legal.json';
 import viMembers from '@xeprime/domain/messages/vi/members.json';
 import viShop from '@xeprime/domain/messages/vi/shop.json';
@@ -138,6 +140,7 @@ export const MESSAGES = {
     Dashboard: viDashboard,
     Drivers: viDrivers,
     DriverLicence: viDriverLicence,
+    Driving: viDriving,
     Legal: viLegal,
     Members: viMembers,
     Shop: viShop,
@@ -182,6 +185,7 @@ export const MESSAGES = {
     Dashboard: enDashboard,
     Drivers: enDrivers,
     DriverLicence: enDriverLicence,
+    Driving: enDriving,
     Legal: enLegal,
     Members: enMembers,
     Shop: enShop,

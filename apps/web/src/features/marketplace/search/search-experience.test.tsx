@@ -32,6 +32,7 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('../hooks/use-destinations', () => ({
   useDestinations: () => ({ data: DESTINATIONS, isLoading: false, error: null }),
+  useAllDestinations: () => ({ data: DESTINATIONS, isLoading: false, error: null }),
 }));
 
 // Desktop: Popover thay vì Drawer. Test mobile riêng ở phần cuối.
@@ -136,8 +137,14 @@ function homeUrlQuery(): URLSearchParams {
   return new URLSearchParams(window.location.search);
 }
 
+/**
+ * Bấm một lựa chọn trong nhóm — `tab` (nhóm dịch vụ, thanh thu gọn) hoặc `radio` (Ô tô · Xe máy
+ * trong hàng ô nhập của thẻ hero: một lựa chọn trong form, không phải tab điều khiển form).
+ */
 function clickTab(scope: HTMLElement, name: string) {
-  fireEvent.click(within(scope).getByRole('tab', { name }));
+  const option =
+    within(scope).queryByRole('tab', { name }) ?? within(scope).getByRole('radio', { name });
+  fireEvent.click(option);
 }
 
 /** Mở panel địa điểm của một bề mặt rồi chọn một tỉnh. */
@@ -152,10 +159,10 @@ describe('phân tầng: loại xe → dịch vụ → form', () => {
   it('hai nhóm chọn đứng TRƯỚC hàng ô nhập, không trộn vào cùng một hàng với địa điểm/ngày', async () => {
     await renderExperience();
 
-    const vehicleGroup = within(heroCard()).getByRole('tablist', { name: 'Loại xe' });
+    const vehicleGroup = within(heroCard()).getByRole('radiogroup', { name: 'Loại xe' });
     const serviceGroup = within(heroCard()).getByRole('tablist', { name: 'Loại dịch vụ thuê xe' });
 
-    expect(within(vehicleGroup).getAllByRole('tab')).toHaveLength(2);
+    expect(within(vehicleGroup).getAllByRole('radio')).toHaveLength(2);
     expect(within(serviceGroup).getAllByRole('tab')).toHaveLength(3);
     // Ô địa điểm nằm trong vùng form, KHÔNG nằm trong nhóm chọn loại xe.
     expect(within(vehicleGroup).queryByRole('button', { name: /Địa điểm nhận xe/ })).toBeNull();
@@ -181,7 +188,7 @@ describe('tự lái', () => {
   it('Ô tô → Tự lái → Đà Nẵng → Tìm xe: đủ loại xe, dịch vụ, địa điểm và khoảng thuê', async () => {
     await renderExperience();
     pickProvince(hero(), /Địa điểm nhận xe/, 'Đà Nẵng');
-    fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm xe' }));
+    fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm kiếm' }));
 
     const query = submittedQuery();
     expect(query.get('vehicleType')).toBe(VEHICLE_TYPE.CAR);
@@ -195,11 +202,11 @@ describe('tự lái', () => {
   it('đổi sang Xe máy GIỮ NGUYÊN địa điểm và khoảng thuê đã chọn', async () => {
     await renderExperience();
     pickProvince(hero(), /Địa điểm nhận xe/, 'TP. Hồ Chí Minh');
-    fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm xe' }));
+    fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm kiếm' }));
     const before = submittedQuery();
 
-    clickTab(within(heroCard()).getByRole('tablist', { name: 'Loại xe' }), 'Xe máy');
-    fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm xe' }));
+    clickTab(within(heroCard()).getByRole('radiogroup', { name: 'Loại xe' }), 'Xe máy');
+    fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm kiếm' }));
     const after = submittedQuery();
 
     expect(after.get('vehicleType')).toBe(VEHICLE_TYPE.MOTORBIKE);
@@ -216,27 +223,35 @@ describe('xe máy không có dịch vụ CÓ TÀI XẾ', () => {
       within(heroCard()).getByRole('tablist', { name: 'Loại dịch vụ thuê xe' });
     expect(within(services()).getAllByRole('tab')).toHaveLength(3);
 
-    clickTab(within(heroCard()).getByRole('tablist', { name: 'Loại xe' }), 'Xe máy');
+    clickTab(within(heroCard()).getByRole('radiogroup', { name: 'Loại xe' }), 'Xe máy');
 
     expect(within(services()).queryByRole('tab', { name: 'Xe có tài xế' })).toBeNull();
     expect(within(services()).getByRole('tab', { name: 'Xe tự lái' })).toBeTruthy();
     expect(within(services()).getByRole('tab', { name: 'Thuê xe dài hạn' })).toBeTruthy();
   });
 
-  it('đang ở tab Có tài xế mà đổi sang Xe máy thì rơi về Tự lái, không để lại tab chết', async () => {
+  /**
+   * Chiều ngược lại của luật trên: đang tìm "Xe có tài xế" thì lựa chọn "Xe máy" biến mất — chỉ còn
+   * "Ô tô" — thay vì để khách chọn một tổ hợp không tồn tại rồi lặng lẽ đổi dịch vụ của họ.
+   */
+  it('chọn Xe có tài xế thì loại xe chỉ còn Ô tô; quay lại Tự lái thì Xe máy trở lại', async () => {
     await renderExperience();
+    const vehicles = () => within(heroCard()).getByRole('radiogroup', { name: 'Loại xe' });
     clickTab(
       within(heroCard()).getByRole('tablist', { name: 'Loại dịch vụ thuê xe' }),
       'Xe có tài xế',
     );
-    clickTab(within(heroCard()).getByRole('tablist', { name: 'Loại xe' }), 'Xe máy');
+    expect(
+      within(vehicles())
+        .getAllByRole('radio')
+        .map((r) => r.textContent),
+    ).toEqual(['Ô tô']);
 
-    fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm xe' }));
-    const query = submittedQuery();
-    expect(query.get('vehicleType')).toBe(VEHICLE_TYPE.MOTORBIKE);
-    expect(query.get('serviceType')).toBe(SERVICE_TYPE.SELF_DRIVE);
-    // Lộ trình là ngữ cảnh của dịch vụ vừa rời — không được nằm lại trên URL.
-    expect(query.has('routeType')).toBe(false);
+    clickTab(
+      within(heroCard()).getByRole('tablist', { name: 'Loại dịch vụ thuê xe' }),
+      'Xe tự lái',
+    );
+    expect(within(vehicles()).getByRole('radio', { name: 'Xe máy' })).toBeTruthy();
   });
 });
 
@@ -249,7 +264,7 @@ describe('có tài xế', () => {
     );
 
     fireEvent.click(within(hero()).getByRole('radio', { name: ROUTE_TYPE_LABEL.inter_city }));
-    fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm xe' }));
+    fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm kiếm' }));
 
     const query = submittedQuery();
     expect(query.get('serviceType')).toBe(SERVICE_TYPE.WITH_DRIVER);
@@ -297,7 +312,7 @@ describe('thuê dài hạn — chỉ tìm XE (ADR 0011)', () => {
   it('URL tìm kiếm mang địa điểm nhưng KHÔNG mang lịch, gói hay nguyện vọng', async () => {
     await openLongTerm();
     pickProvince(hero(), /Địa điểm nhận xe/, 'Đà Nẵng');
-    fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm xe' }));
+    fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm kiếm' }));
 
     const query = submittedQuery();
     expect(query.get('vehicleType')).toBe(VEHICLE_TYPE.CAR);
@@ -330,14 +345,14 @@ describe('thuê dài hạn — chỉ tìm XE (ADR 0011)', () => {
 describe('đổi dịch vụ giữ ngữ cảnh tương thích', () => {
   it('tự lái → dài hạn giữ loại xe và địa điểm; quay lại tự lái có ngay khoảng thuê cũ', async () => {
     await renderExperience();
-    clickTab(within(heroCard()).getByRole('tablist', { name: 'Loại xe' }), 'Xe máy');
+    clickTab(within(heroCard()).getByRole('radiogroup', { name: 'Loại xe' }), 'Xe máy');
     pickProvince(hero(), /Địa điểm nhận xe/, 'Hà Nội');
-    fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm xe' }));
+    fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm kiếm' }));
     const selfDrive = submittedQuery();
 
     const services = within(heroCard()).getByRole('tablist', { name: 'Loại dịch vụ thuê xe' });
     clickTab(services, 'Thuê xe dài hạn');
-    fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm xe' }));
+    fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm kiếm' }));
     const longTerm = submittedQuery();
 
     expect(longTerm.get('vehicleType')).toBe(VEHICLE_TYPE.MOTORBIKE);
@@ -345,7 +360,7 @@ describe('đổi dịch vụ giữ ngữ cảnh tương thích', () => {
     expect(longTerm.has('pickupAt')).toBe(false);
 
     clickTab(services, 'Xe tự lái');
-    fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm xe' }));
+    fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm kiếm' }));
     const back = submittedQuery();
 
     // Khoảng thuê quay lại ĐÚNG giá trị cũ — không suy ra từ gói thuê dài hạn nào cả.
@@ -377,9 +392,9 @@ describe('hero ↔ thanh thu gọn — một trạng thái, hai trình bày', ()
     );
 
     // Hero (đang ngoài màn hình) phản ánh ngay: nhóm chọn của nó cũng đổi theo.
-    const heroVehicle = within(heroCard()).getByRole('tablist', { name: 'Loại xe' });
-    expect(within(heroVehicle).getByRole('tab', { name: 'Xe máy' })).toHaveProperty(
-      'ariaSelected',
+    const heroVehicle = within(heroCard()).getByRole('radiogroup', { name: 'Loại xe' });
+    expect(within(heroVehicle).getByRole('radio', { name: 'Xe máy' })).toHaveProperty(
+      'ariaChecked',
       'true',
     );
     expect(within(hero()).getByText(/Chọn xe trước, sau đó chọn gói thuê/)).toBeTruthy();
@@ -403,7 +418,7 @@ describe('hero ↔ thanh thu gọn — một trạng thái, hai trình bày', ()
     fireEvent.click(within(sticky()).getByRole('button', { name: /Thời gian thuê/ }));
     fireEvent.click(screen.getByRole('tab', { name: 'Thuê theo giờ' }));
 
-    fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm xe' }));
+    fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm kiếm' }));
     expect(submittedQuery().get('hourly')).toBe('1');
   });
 
@@ -569,11 +584,11 @@ describe('URL bị KHỐI KHÁC trên trang chủ đổi', () => {
 
   it('đổi URL từ bên ngoài KHÔNG làm mất khoảng thuê đang có trong nháp', async () => {
     const { changeUrlExternally } = await renderExperience();
-    fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm xe' }));
+    fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm kiếm' }));
     const before = submittedQuery();
 
     changeUrlExternally('provinceCode=48');
-    fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm xe' }));
+    fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm kiếm' }));
 
     const after = submittedQuery();
     expect(after.get('provinceCode')).toBe('48');

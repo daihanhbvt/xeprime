@@ -4,8 +4,10 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   BOOKING_STATUS_META,
+  DRIVER_ASSIGNMENT_STATUS_META,
   HANDOVER_STATUS,
   HANDOVER_STATUS_META,
+  SERVICE_TYPE,
   STATUS_COLOR,
   type BookingStatus,
   type StatusColor,
@@ -162,6 +164,13 @@ function BookingCardImpl({
               ) : null}
             </FactLine>
 
+            {/* Loại dịch vụ của ĐƠN (đóng băng lúc tạo) — cùng cột "Loại dịch vụ" ở bảng web. */}
+            <Text col={colors.textMuted} fos={fontSize.bodySm}>
+              {domainLabel('serviceType', booking.serviceType)}
+            </Text>
+
+            <DriverLine booking={booking} />
+
             {awaitingPickup ? (
               <>
                 {/*
@@ -270,6 +279,40 @@ function HandoverPlaceLine({ booking }: { booking: BookingListItem }) {
         </Text>
         {booking.handoverPlace ?? t('awaitingPickup.placeUnknown')}
       </Text>
+    </FactLine>
+  );
+}
+
+/**
+ * Tài xế của đơn (ADR 0063) — gương cột "Tài xế" của `BookingTable` bên web. Đơn không phải
+ * `with_driver` (và không còn tài xế cũ) thì bỏ hẳn dòng: một dòng "—" trên thẻ là nhiễu.
+ * Chưa phân công ⇒ chữ màu cảnh báo, vì đơn đó chưa chạy được.
+ */
+function DriverLine({ booking }: { booking: BookingListItem }) {
+  const t = useTranslations('Bookings.driver');
+  const domainLabel = useDomainLabel();
+  const driver = booking.driver ?? null;
+  if (!driver && booking.serviceType !== SERVICE_TYPE.WITH_DRIVER) return null;
+  if (!driver) {
+    return (
+      <FactLine icon="person-outline">
+        <Text col={colors.warning} fos={fontSize.bodySm} fow={fontWeight.medium} f={1}>
+          {t('noneWithDriver')}
+        </Text>
+      </FactLine>
+    );
+  }
+  const meta = DRIVER_ASSIGNMENT_STATUS_META[driver.assignmentStatus];
+  return (
+    <FactLine icon="person-outline">
+      <Text col={colors.text} fos={fontSize.bodySm} numberOfLines={1} f={1}>
+        {driver.name}
+      </Text>
+      <StatusBadge
+        label={domainLabel('driverAssignmentStatus', driver.assignmentStatus, meta.label)}
+        color={meta.color}
+        size="sm"
+      />
     </FactLine>
   );
 }

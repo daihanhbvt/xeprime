@@ -60,6 +60,9 @@ function ApproveForm({ request, submitting, error, onCancel, onConfirm }: Props 
             <dt>{t('approve.customer')}</dt>
             <dd>
               {[request.customerName, request.customerPhone].filter(Boolean).join(LIST_SEPARATOR)}
+              {request.customerAccountPhone
+                ? ` (${t('customer.accountPhone', { phone: request.customerAccountPhone })})`
+                : ''}
             </dd>
           </div>
           {pickup && dropoff ? (

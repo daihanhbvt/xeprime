@@ -1,92 +1,112 @@
+/*
+ * "Xe tiêu biểu" — Figma `19695:40732` (ADR 0062): tiêu đề + nút viền, lưới 4 cột cách 20px, hàng
+ * cách 40px (`HomeCarousel layout="grid"`). Mobile: slider thẻ-ở-giữa + nút "Xem tất cả" phía dưới.
+ * `.grid` còn lại chỉ cho khung chờ.
+ */
 .section {
   display: flex;
   flex-direction: column;
-  gap: var(--xp-space-md);
-}
-
-.head {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--xp-space-sm);
-}
-
-.title {
-  margin: 0;
-  color: var(--xp-color-text);
-  font-size: var(--xp-font-size-h2);
-  font-weight: var(--xp-font-weight-bold, 700);
-  line-height: var(--xp-line-height-h2);
-}
-
-.count {
-  margin-left: 6px;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  font-weight: var(--xp-font-weight-regular, 400);
+  gap: var(--xp-space-40);
 }
 
 .sub {
-  margin: 4px 0 0;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-}
-
-.seeAll {
-  display: inline-flex;
-  align-items: center;
-  color: var(--xp-color-primary-active);
+  margin: calc(-1 * var(--xp-space-lg)) 0 0;
+  color: var(--xp-color-text-tertiary);
   font-size: var(--xp-font-size-body);
-  gap: 6px;
-  white-space: nowrap;
+  line-height: var(--xp-line-height-body);
 }
 
-/* Cùng thang cột với lưới kết quả ở /search — thẻ xe trông giống nhau ở cả hai trang. */
 .grid {
   display: grid;
-  gap: 14px;
-  grid-template-columns: minmax(0, 1fr);
-  list-style: none;
-  margin: 0;
   padding: 0;
+  margin: 0;
+  gap: var(--xp-space-40) var(--xp-space-20);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  list-style: none;
 }
 
-@media (min-width: 480px) {
+.mobileAction {
+  display: none;
+}
+
+.mobileActionButton {
+  width: 100%;
+}
+
+.skeletonCard {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: var(--xp-space-md);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-elevation-sm);
+  gap: var(--xp-space-md);
+}
+
+.skeletonCard :global(.ant-skeleton) {
+  padding: 0 var(--xp-space-md);
+}
+
+.skeletonImg,
+.skeletonImg :global(.ant-skeleton-image) {
+  width: 100% !important;
+  height: 180px !important;
+  border-radius: var(--xp-border-radius-card) var(--xp-border-radius-card) 0 0 !important;
+}
+
+@media (min-width: 2000px) {
   .grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 2400px) {
+  .grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .grid {
+    gap: var(--xp-space-lg) var(--xp-space-md);
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (min-width: 900px) {
-  .grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+/* Luôn giữ đúng 2 hàng cho khung chờ skeleton khớp với thẻ thật */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .grid > li:nth-child(n + 5) {
+    display: none;
   }
 }
 
-/*
- * Ô chờ cao xấp xỉ thẻ thật (ảnh 16/10 + hai dòng chữ) — mục đích duy nhất là để lúc dữ liệu về
- * trang không nhảy.
- */
-.skeletonCard {
-  padding: 12px;
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius);
-  background: var(--xp-color-bg-container);
+@media (min-width: 1025px) and (max-width: 1999px) {
+  .grid > li:nth-child(n + 9) {
+    display: none;
+  }
 }
 
-.skeletonImg {
-  width: 100%;
-  height: 140px;
-  margin-bottom: 12px;
+@media (min-width: 2000px) and (max-width: 2399px) {
+  .grid > li:nth-child(n + 11) {
+    display: none;
+  }
 }
 
-.skeletonImg :global(.ant-skeleton-image) {
-  width: 100%;
-  height: 140px;
-}
+@media (max-width: 640px) {
+  .section {
+    gap: var(--xp-space-lg);
+  }
 
-.footer {
-  display: flex;
-  justify-content: center;
-  margin-top: var(--xp-space-xs);
+  /* Khung chờ trên mobile: MỘT thẻ — đúng thứ slider sẽ hiện, không phải tám thẻ xếp dọc. */
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .grid > li:nth-child(n + 2) {
+    display: none;
+  }
+
+  .mobileAction {
+    display: block;
+  }
 }

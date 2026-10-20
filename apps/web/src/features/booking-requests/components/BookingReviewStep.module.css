@@ -1,0 +1,406 @@
+/**
+ * Màn "Xem lại yêu cầu thuê xe" — Figma `19727:55409` (khung PC 1440, thân `19727:55428`).
+ *
+ * Trong overlay `xl` thân hộp thoại cao cố định (`bodyScroll="content"`), nên khối này tự cuộn —
+ * MỘT vùng cuộn cho cả hai cột. Không ghim cột phải: nó cao hơn một màn hình laptop, ghim lại thì
+ * nút gửi nằm dưới mép và không cuộn tới được.
+ *
+ * Hai cột co về một theo BỀ RỘNG CỦA HỘP (container query), không theo viewport: cùng một bề
+ * rộng màn hình, hộp thoại có thể hẹp hơn nhiều so với trang.
+ */
+.review {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-lg);
+  height: 100%;
+  min-width: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Chừa chỗ cho thanh cuộn để nội dung không nhảy khi nó xuất hiện. */
+  padding-right: var(--xp-space-xs);
+}
+
+/* ── Tiêu đề trang + tiến trình (Figma `19727:55955`) ─────────────────────── */
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+}
+
+.headCopy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-2);
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h1);
+  font-weight: var(--xp-font-weight-bold);
+  line-height: var(--xp-line-height-h1);
+}
+
+.lead {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+/* ── Hai cột: nội dung 1fr · tiền 420px ───────────────────────────────────── */
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 420px;
+  gap: var(--xp-space-xl);
+  align-items: start;
+}
+
+.main,
+.aside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-20);
+  min-width: 0;
+}
+
+@container (max-width: 880px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--xp-space-20);
+  }
+}
+
+/* ── Thẻ dùng chung ───────────────────────────────────────────────────────── */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+  padding: var(--xp-space-20);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+}
+
+.cardTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
+}
+
+.cardLead {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.divider {
+  height: 1px;
+  background: var(--xp-color-border);
+}
+
+/* "Chỉnh sửa" — nút chữ vàng sẫm (`Text/Brand/primary 2`), không phải liên kết rời trang. */
+.editLink {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--xp-color-primary-hover);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body);
+}
+
+.editLink:hover {
+  text-decoration: underline;
+}
+
+.editLink:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+  border-radius: var(--xp-border-radius-sm);
+}
+
+.editLink:disabled {
+  cursor: not-allowed;
+  opacity: var(--xp-disabled-opacity);
+}
+
+/* Thẻ chuyến đi (Figma `19727:55974`) dùng chung với hộp "Đã gửi yêu cầu" — `BookingTripCard`. */
+
+/* ── Người thuê (Figma `19727:56002`) ─────────────────────────────────────── */
+.contactInputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--xp-space-md);
+  margin-bottom: var(--xp-space-md);
+}
+
+.contactHint {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.contactGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--xp-space-md);
+  margin: 0;
+}
+
+.contactField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-6);
+  min-width: 0;
+}
+
+.contactField dt {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body);
+}
+
+/*
+ * Giá trị CHỈ ĐỌC của tài khoản — cùng khuôn với ô nhập của thiết kế (bo 12, đệm 10/14) nhưng nền
+ * xám và không viền nhấn: nhìn là biết không gõ vào được.
+ */
+.contactValue {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-xs) var(--xp-space-sm);
+  min-height: 44px;
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+/*
+ * Giá trị đã GHI trên một yêu cầu (các màn chuyến): chữ trơn `16px/Medium` — không khung, không nền.
+ * Khung xám ở trên chỉ dành cho giá trị đứng giữa các ô nhập của màn Xem lại.
+ */
+.contactPlain {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.contactText {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.verifiedTag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+/* ── Giấy tờ & điều kiện (Figma `19727:56011`) ───────────────────────────── */
+.requirementHead {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-12);
+}
+
+.requirementIcon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-primary);
+  font-size: 24px;
+}
+
+.requirementBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.requirementTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body);
+}
+
+.requirementBody {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.licenceOk {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  padding: var(--xp-space-12);
+  border-radius: var(--xp-border-radius-control);
+  /* Dẫn xuất từ token: `--xp-color-success-bg` không có bản tối, pha trên nền thẻ thì có. */
+  background: color-mix(in srgb, var(--xp-color-success) 10%, var(--xp-color-bg-container));
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.licenceOk :global(.anticon) {
+  margin-top: 3px;
+  color: var(--xp-color-success);
+}
+
+.licenceOk strong {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.hostTerms {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.hostTermsText {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  white-space: pre-wrap;
+}
+
+/* Lời nhắc nền vàng nhạt, chữ cam cảnh báo (Figma `19727:56019`). */
+.reminder {
+  margin: 0;
+  padding: var(--xp-space-12);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-warning);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+/* ── Đồng ý + gửi (Figma `19727:56133`) ──────────────────────────────────── */
+.submitCard {
+  gap: var(--xp-space-md);
+}
+
+/* Ô tick bám DÒNG ĐẦU của câu đồng ý ba dòng (Figma `19727:56135`), không canh giữa khối chữ. */
+.submitCard :global(.ant-form-item.ant-form-item) {
+  margin-bottom: 0;
+}
+
+.submitCard :global(.ant-checkbox-wrapper) {
+  align-items: flex-start;
+}
+
+.submitCard :global(.ant-checkbox) {
+  align-self: flex-start;
+  margin-top: 2px;
+}
+
+/* Câu đồng ý là nhãn của ô tick: canh trái, cỡ chữ thân bài, không phải chú thích canh giữa. */
+.agreement {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  text-align: left;
+}
+
+.agreement :global(a) {
+  color: var(--xp-color-primary-hover);
+}
+
+.agreementError {
+  margin: 0;
+  color: var(--xp-color-error);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.submitHint {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  text-align: center;
+}
+
+/* ── Sau khi gửi (Figma "What happens next") ────────────────────────────── */
+.next {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-6);
+}
+
+.nextTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body);
+}
+
+.nextTitle :global(.anticon) {
+  color: var(--xp-color-primary);
+  font-size: 20px;
+}
+
+.nextBody {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+/*
+ * Mobile (≤640px = `--xp-bp-mobile`): overlay là màn toàn phần do ngăn kéo cuộn — khối này thôi tự
+ * cuộn, để không thành hai vùng cuộn lồng nhau.
+ */
+@media (max-width: 640px) {
+  .review {
+    height: auto;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .title {
+    font-size: var(--xp-font-size-h2);
+    line-height: var(--xp-line-height-h2);
+  }
+
+  .card {
+    padding: var(--xp-space-md);
+  }
+}

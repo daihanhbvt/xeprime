@@ -86,6 +86,26 @@ export const HOLD_MIN_USABLE_WINDOW_MINUTES = 15;
 export const HOLD_COUNTDOWN_SEGMENT_MINUTES = 60;
 
 /**
+ * Đồng hồ hạn thanh toán đổi sắc CẢNH BÁO khi còn bấy nhiêu phút — đúng mốc nhắc CUỐI của worker
+ * (`HOLD_PAYMENT_REMINDER_REMAINING_MINUTES.FINAL`), để màu cam và lượt nhắc tới cùng lúc. Một sắc
+ * cam suốt cả chặng 60 phút thứ hai là báo động giả (design v2 vẽ đồng hồ xám ở "59:49").
+ */
+export const HOLD_COUNTDOWN_URGENT_MINUTES = HOLD_PAYMENT_REMINDER_REMAINING_MINUTES.FINAL;
+
+/**
+ * Cửa sổ huỷ miễn phí của khoản giữ chỗ đã bị KẸP bởi giờ nhận xe (chuyến sát giờ) — tức là nó đóng
+ * không muộn hơn hạn thanh toán. ADR 0032 điều 5 buộc báo khách điều này TRƯỚC khi trả.
+ *
+ * So hai MỐC ĐÃ LƯU của server, không tính lại từ giờ nhận xe.
+ */
+export function isFreeCancelWindowShort(hold: {
+  freeCancelUntil: Date | string;
+  expiresAt: Date | string;
+}): boolean {
+  return new Date(hold.freeCancelUntil).getTime() <= new Date(hold.expiresAt).getTime();
+}
+
+/**
  * Sàn số tiền giữ chỗ. Dưới mức này thì phí chuyển khoản và công đối soát vượt khoản thu.
  *
  * **Đây là SÀN, không phải làm tròn** (ADR 0021 ràng buộc 3): VietQR mang sẵn số tiền, khách
@@ -201,8 +221,7 @@ export function isWithinFreeCancel(
   now: Date = new Date(),
 ): boolean {
   if (!freeCancelUntil) return false;
-  const until =
-    freeCancelUntil instanceof Date ? freeCancelUntil : new Date(freeCancelUntil);
+  const until = freeCancelUntil instanceof Date ? freeCancelUntil : new Date(freeCancelUntil);
   return now.getTime() < until.getTime();
 }
 
@@ -275,3 +294,12 @@ export function countdownSegment(
     remainingInSegment: rest === 0 ? segmentMs : rest,
   };
 }
+
+/**
+ * Nhịp hỏi lại chi tiết chuyến khi khoản giữ chỗ còn CHỜ TIỀN — LƯỚI AN TOÀN của web và app
+ * (PR #183). Đường chính là thông báo `hold_paid` (push / bản chiếu huy hiệu làm mới `trips.all`).
+ *  - Nghe được bản chiếu realtime: hai phút — chỉ bắt ca worker chết hoặc bản chiếu lệch.
+ *  - Không nghe được: hai mươi giây — độ trễ tối đa giữa "ngân hàng báo về" và "màn đổi".
+ */
+export const HOLD_POLL_LIVE_MS = 120_000;
+export const HOLD_POLL_FALLBACK_MS = 20_000;

@@ -1,6 +1,8 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { FlatList, RefreshControl, StyleSheet, type ListRenderItemInfo } from 'react-native';
 import type { Href } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/queries/query-keys';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -28,6 +30,7 @@ import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
 import { colors, space } from '@/theme/tokens';
 import { TripCard } from './components/TripCard';
+import { UnpaidHoldsReminder } from './components/UnpaidHoldsReminder';
 import { useTripsInfinite } from './hooks/use-trips';
 import type { CustomerTrip, CustomerTripCounts } from './api';
 
@@ -71,6 +74,7 @@ export const STAGE_FILTER_MIN_ROWS = 6;
 export function TripsScreen({
   detailHref = ROUTES.booking.detail,
   heading = false,
+  header,
 }: {
   /** Đích của một thẻ chuyến. */
   detailHref?: (id: string) => Href;
@@ -80,6 +84,8 @@ export function TripsScreen({
    * khác nói người dùng đang ở đâu.
    */
   heading?: boolean;
+  /** Khối đứng trên cùng màn — bộ chuyển "thuê / lái" của app khách (ADR 0063). */
+  header?: ReactNode;
 } = {}) {
   const t = useTranslations('Trips');
   const domainLabel = useDomainLabel();
@@ -130,17 +136,26 @@ export function TripsScreen({
    * ở đầu danh sách, và cử chỉ kéo-để-làm-mới đang dở bị huỷ giữa chừng.
    */
   const { isRefetching, refetch } = query;
+  const queryClient = useQueryClient();
+  /*
+   * Kéo để làm mới cũng nạp lại dải "chuyến chờ thanh toán" phía trên danh sách — nó là một truy
+   * vấn RIÊNG, và khách kéo màn chính là để xem tiền đã về chưa.
+   */
+  const onRefresh = useCallback(() => {
+    void refetch();
+    void queryClient.invalidateQueries({ queryKey: queryKeys.trips.unpaidHolds() });
+  }, [queryClient, refetch]);
   const refreshControl = useMemo(
     () => (
       <RefreshControl
         // `isRefetching` chứ không phải `isFetching`: `isFetching` cũng bật khi đang tải TRANG SAU,
         // và vòng xoay ở đầu danh sách lúc đó đọc như trang đang tự nạp lại.
         refreshing={isRefetching}
-        onRefresh={() => void refetch()}
+        onRefresh={onRefresh}
         tintColor={colors.primaryActive}
       />
     ),
-    [isRefetching, refetch],
+    [isRefetching, onRefresh],
   );
 
   /*
@@ -166,6 +181,17 @@ export function TripsScreen({
     [openTrip],
   );
 
+  /*
+   * Có danh sách thì nhắc chuyến chưa trả cuộn CÙNG danh sách (ListHeaderComponent): ghim nó trên
+   * một màn không cuộn là ăn mất nửa chiều cao điện thoại nhỏ khi có vài chuyến chờ tiền. Các
+   * trạng thái khác (đang tải / lỗi / rỗng) còn chỗ thừa, nên nó đứng trên như web `TripsView`.
+   */
+  const rendersList =
+    !query.isPending &&
+    !query.isError &&
+    !(visibleItems.length === 0 && stage !== null) &&
+    items.length > 0;
+
   return (
     <>
       {/*
@@ -176,7 +202,14 @@ export function TripsScreen({
         một dải trống đứng im ngay trên thanh tab, và danh sách không bao giờ chạm tới đáy.
       */}
       <Screen edges={['left', 'right']} scroll={false} padded={false}>
+        {header}
         {heading ? <ManagePageTitle title={t('list.heading')} subtitle={t('list.sub')} /> : null}
+        {/* Chuyến đang giữ chưa trả — việc phải làm NGAY, nên đứng trên mọi tab (web `TripsView`). */}
+        {rendersList ? null : (
+          <YStack px={layout.screenX}>
+            <UnpaidHoldsReminder />
+          </YStack>
+        )}
         <TripFilterTabs
           value={filter}
           counts={counts}
@@ -254,6 +287,7 @@ export function TripsScreen({
               ở mỗi lần render, nên `VirtualizedList` coi chân danh sách là đã đổi và dựng lại nó
               suốt. Tham chiếu hàm thì bền.
             */
+            ListHeaderComponent={UnpaidHoldsReminder}
             ListFooterComponent={query.isFetchingNextPage ? TripCardSkeleton : null}
             {...LIST_TUNING}
           />

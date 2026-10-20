@@ -1,0 +1,305 @@
+/**
+ * Thẻ "Thông tin chuyến đi" — màn Xem lại (Figma `19727:55974`) và hộp "Đã gửi yêu cầu"
+ * (Figma `19759:22185`). Phần chung ở trên; hai khối `.review` / `.receipt` ở dưới chỉ đổi BỐ CỤC.
+ *
+ * Co cột theo BỀ RỘNG CỦA THẺ (container query), không theo viewport: thẻ nằm trong hộp thoại, và
+ * cùng một màn hình hộp có thể hẹp hơn nhiều so với trang.
+ */
+.card {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+  padding: var(--xp-space-20);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+}
+
+.title {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
+}
+
+.body {
+  display: grid;
+  grid-template-columns: 285px minmax(0, 1fr);
+  gap: var(--xp-space-lg);
+  align-items: start;
+}
+
+.vehicle {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.vehicleImage,
+.vehiclePlaceholder {
+  display: block;
+  width: 100%;
+  aspect-ratio: 285 / 160;
+  border-radius: var(--xp-border-radius-card);
+  object-fit: cover;
+}
+
+.vehiclePlaceholder {
+  background: var(--xp-color-bg-muted);
+}
+
+.vehicleInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+  padding: var(--xp-space-12) 0;
+  text-align: center;
+}
+
+.vehicleName {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
+  overflow-wrap: anywhere;
+}
+
+.vehicleSpecs {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+/* Khung lịch nền xám (`BG/gray-50`) — mốc nhận/trả + nơi nhận xe. */
+.schedule {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+  min-width: 0;
+  padding: var(--xp-space-md);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg);
+}
+
+.times {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+  min-width: 0;
+}
+
+.scheduleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-12);
+  min-width: 0;
+}
+
+/* Dòng địa điểm: chữ nhiều dòng, icon bám đầu dòng thay vì giữa khối. */
+.placeRow {
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+}
+
+.scheduleIcon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-selected);
+  color: var(--xp-color-primary);
+  font-size: 20px;
+}
+
+.scheduleText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.scheduleLabel {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.scheduleValue {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+.placeTitle {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body);
+}
+
+.placeBody {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
+  overflow-wrap: anywhere;
+}
+
+.divider {
+  height: 1px;
+  background: var(--xp-color-border);
+}
+
+/* Chủ xe · thời lượng (Figma `19727:55998` · `19759:22217`). */
+.ownerRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-12);
+}
+
+/* Chủ xe + lối liên hệ cạnh tên (Figma `19879:73257`: cách 24). */
+.ownerGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-lg);
+  min-width: 0;
+}
+
+.ownerAction {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.owner {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-12);
+  min-width: 0;
+}
+
+.ownerAvatar {
+  flex: none;
+  border: 1px solid var(--xp-color-border);
+}
+
+.ownerText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ownerCaption {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.ownerName {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body);
+  overflow-wrap: anywhere;
+}
+
+/* Tên chủ xe là liên kết tới mặt tiền — giữ đúng chữ của bản vẽ, chỉ đổi sắc khi rê chuột. */
+.ownerLink:hover {
+  color: var(--xp-color-primary-hover);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* `Text/Brand/primary 2` — vàng sẫm, đọc được trên nền trắng. */
+.tripSummary {
+  color: var(--xp-color-primary-hover);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body);
+}
+
+/* ── Màn Xem lại: ảnh lớn bên trái, lịch xếp dọc bên phải ─────────────────── */
+
+/* Khung lịch cao bằng cột ảnh + tên xe (Figma `Rental schedule` `self-stretch`). */
+.review .schedule {
+  align-self: stretch;
+}
+@container (max-width: 600px) {
+  .review .body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--xp-space-md);
+  }
+}
+
+/* ── Hộp "Đã gửi yêu cầu": một cột, ảnh nhỏ cạnh tên, nhận/trả chung một hàng ── */
+.receipt .head {
+  padding-bottom: var(--xp-space-12);
+  border-bottom: 1px solid var(--xp-color-border);
+}
+
+.receipt .body {
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--xp-space-md);
+}
+
+.receipt .vehicle {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--xp-space-12);
+}
+
+.receipt .vehicleImage,
+.receipt .vehiclePlaceholder {
+  flex: none;
+  width: 135px;
+  aspect-ratio: 135 / 76;
+  border-radius: var(--xp-border-radius-control);
+}
+
+.receipt .vehicleInfo {
+  align-items: flex-start;
+  text-align: left;
+}
+
+.receipt .times {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Nhận/trả cạnh nhau cần ~2×180px; hẹp hơn thì xếp dọc như màn Xem lại. */
+@container (max-width: 420px) {
+  .receipt .times {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .receipt .vehicleImage,
+  .receipt .vehiclePlaceholder {
+    width: 96px;
+  }
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: var(--xp-space-md);
+  }
+}

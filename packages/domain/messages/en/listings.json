@@ -19,7 +19,21 @@
     "priceDaily": "<amount>{value}</amount><unit>/day</unit>",
     "priceMonthly": "<amount>{value}</amount><unit>/month</unit>",
     "perDayUnit": "/day",
-    "perMonthUnit": "/month"
+    "perMonthUnit": "/month",
+    "instantBook": "No confirmation needed",
+    "photoCount": "+{count}",
+    "photoCountAria": "{count, plural, one {# photo} other {# photos}}",
+    "locationLine": "{ward}, {province}",
+    "specsLabel": "Car specs",
+    "ratingValue": "{rating} <muted>({count})</muted>",
+    "transmissionFamily": {
+      "automatic": "Automatic",
+      "manual": "Manual",
+      "scooter": "Scooter",
+      "semi_automatic": "Semi-auto",
+      "manual_clutch": "Manual clutch",
+      "other": "Other"
+    }
   },
   "detail": {
     "specs": {

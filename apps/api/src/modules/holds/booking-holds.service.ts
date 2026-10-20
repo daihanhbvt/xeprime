@@ -14,12 +14,14 @@ import {
   FEE_BEARER,
   FEE_BENEFICIARY,
   FEE_LINE,
+  HOLD_PAYMENT_CHANNEL,
   HOLD_REFUND_REASON,
   HOLD_REFUND_STATUS,
   INSURANCE_POLICY_STATUS,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
   OCCUPANCY_SOURCE_TYPE,
+  PAYMENT_ORDER_CREDITED_OUTCOMES,
   PRICE_ROW,
   SUPPORT_CASE_CATEGORY,
   SUPPORT_CASE_STATUS_OPEN,
@@ -35,6 +37,7 @@ import {
   type AuditActorScope,
   type BookingPriceSnapshot,
   type FeeLineKey,
+  type HoldPaymentChannel,
   type RentalTermsSnapshot,
   type PaginationMeta,
 } from '@xeprime/types';
@@ -966,6 +969,7 @@ export class BookingHoldsService {
       expiresAt: row.expiresAt.toISOString(),
       freeCancelUntil: row.freeCancelUntil.toISOString(),
       paidAt: row.paidAt?.toISOString() ?? null,
+      paidVia: await this.paidVia(row.id, row.paidAmount),
       allocation: (row.allocationJson as unknown as CustomerHoldDto['allocation']) ?? [],
       paymentInfo: this.billing.paymentInfo(),
       refund: row.refund
@@ -981,6 +985,49 @@ export class BookingHoldsService {
           }
         : null,
     };
+  }
+
+  /**
+   * Kênh tiền đã vào một khoản giữ chỗ — chỉ để KỂ cho khách, không quyết định gì về tiền.
+   *
+   * Hai đường cộng `paid_amount` là chuyển khoản (SePay / admin khớp tay) và lượt cổng (ADR 0058),
+   * và cả hai đi qua CÙNG `applyBankPaymentWithinTx`. Sổ cổng ghi rõ lượt nào ĐÃ được áp (`applied_at`
+   * + kết cục có cộng tiền), nên phần còn lại của `paid_amount` là chuyển khoản. Suy theo phép trừ thay
+   * vì đọc `bank_transactions`: bảng đó không có chỉ mục theo đích khớp, còn sổ cổng có
+   * (`booking_hold_id, created_at`).
+   *
+   * Không bao giờ đoán: chưa có đồng nào ⇒ `null`; tiền đến từ hai kênh trở lên ⇒ `null`.
+   */
+  private async paidVia(
+    holdId: string,
+    paidAmount: Prisma.Decimal,
+  ): Promise<HoldPaymentChannel | null> {
+    if (paidAmount.lte(0)) return null;
+
+    const orders = await this.prisma.paymentGatewayOrder.findMany({
+      where: {
+        bookingHoldId: holdId,
+        appliedAt: { not: null },
+        // Các kết cục ĐÃ cộng tiền vào hold (kể cả tiền thừa) — đích đóng/không thấy thì không.
+        applyOutcome: { in: [...PAYMENT_ORDER_CREDITED_OUTCOMES] },
+      },
+      select: { provider: true, amount: true, paidAmount: true },
+    });
+    if (orders.length === 0) return HOLD_PAYMENT_CHANNEL.BANK_TRANSFER;
+
+    const providers = new Set(orders.map((order) => order.provider));
+    const viaGateway = orders.reduce(
+      (sum, order) => sum.plus(order.paidAmount ?? order.amount),
+      new Prisma.Decimal(0),
+    );
+    // Một cổng duy nhất và cổng đó gánh trọn số đã nhận — còn dư ⇒ có thêm chuyển khoản.
+    if (providers.size === 1 && viaGateway.gte(paidAmount)) {
+      const [provider] = providers;
+      return provider === HOLD_PAYMENT_CHANNEL.MOMO || provider === HOLD_PAYMENT_CHANNEL.VNPAY
+        ? provider
+        : null;
+    }
+    return null;
   }
 
   // ── Đọc: admin (money operations) ────────────────────────────────────────

@@ -5,6 +5,7 @@ import { Button } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useState, useSyncExternalStore } from 'react';
 import type { PublicListingDetail } from '@/features/marketplace/types';
+import type { RequestBookingPrefill } from '../types';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import {
   bookingDraftSavedAt,
@@ -48,6 +49,7 @@ export function RequestBookingButton({
   serviceType,
   routeType,
   deliveryProvinceCode,
+  prefill,
   block,
   size,
   className,
@@ -63,6 +65,11 @@ export function RequestBookingButton({
   routeType?: string | null;
   /** Tỉnh gợi ý cho ô địa chỉ giao xe — địa chỉ khách đã nhớ vẫn THẮNG nó (ADR 0035). */
   deliveryProvinceCode?: string | null;
+  /**
+   * Thứ khách đã chọn ở thẻ đặt xe (cách nhận xe, địa chỉ giao, gói, mã khuyến mãi) — mang sang hộp
+   * để không phải chọn lại. `autoContinue` cho hộp tự đi thẳng tới màn Xem lại.
+   */
+  prefill?: RequestBookingPrefill | null;
   block?: boolean;
   size?: 'small' | 'middle' | 'large';
   className?: string;
@@ -117,6 +124,7 @@ export function RequestBookingButton({
         serviceType={serviceType}
         routeType={routeType}
         deliveryProvinceCode={deliveryProvinceCode}
+        prefill={prefill}
         open={open}
         onClose={close}
       />

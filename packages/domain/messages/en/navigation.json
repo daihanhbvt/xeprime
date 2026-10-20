@@ -16,7 +16,14 @@
     "platformAdmin": "Platform admin",
     "mainNavLabel": "Main navigation",
     "quickNavLabel": "Quick navigation",
-    "shopProfile": "Shop profile"
+    "shopProfile": "Shop profile",
+    "searchCars": "Find a car",
+    "aboutXePrime": "About Xe Prime",
+    "contact": "Contact",
+    "loginOrRegister": "Sign in/<br></br>Sign up",
+    "themeLight": "Light mode",
+    "themeDark": "Dark mode",
+    "toggleTheme": "Toggle light/dark theme"
   },
   "account": {
     "menuLabel": "Account menu",
@@ -27,6 +34,7 @@
     "favorites": "Saved vehicles",
     "addresses": "My addresses",
     "documents": "Documents & verification",
+    "driving": "Where I drive",
     "notifications": "Notifications",
     "support": "Support",
     "settings": "Settings",

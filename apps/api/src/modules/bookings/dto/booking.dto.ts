@@ -84,6 +84,12 @@ export class BookingListQueryDto {
   @Length(26, 26)
   vehicleId?: string;
 
+  /** Lọc theo loại dịch vụ của ĐƠN (đóng băng lúc tạo) — ô "Loại dịch vụ" của hai bảng đơn. */
+  @ApiPropertyOptional({ enum: SERVICE_TYPE_VALUES })
+  @IsOptional()
+  @IsIn(SERVICE_TYPE_VALUES)
+  serviceType?: string;
+
   /** Lọc theo chi nhánh của XE trong đơn — ô "Chi nhánh" trong thanh bộ lọc của danh sách đơn. */
   @BranchIdQuery()
   branchId?: string;
@@ -130,6 +136,17 @@ export class BookingListItemDto {
   @ApiPropertyOptional({ type: String, nullable: true }) vehiclePlate!: string | null;
   @ApiProperty() customerName!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) customerPhone!: string | null;
+  /**
+   * SĐT ĐÃ XÁC MINH của tài khoản khách đặt đơn này — CHỈ có khi nó khác `customerPhone` (khách để
+   * lại số liên hệ khác lúc gửi yêu cầu, hoặc gian hàng đã sửa số trên đơn — ADR 0063). `null` với
+   * đơn gian hàng tự lập (không có tài khoản khách).
+   */
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'SĐT tài khoản khách — chỉ khi khác SĐT liên hệ của đơn',
+  })
+  customerAccountPhone!: string | null;
   @ApiProperty({ enum: BOOKING_STATUS_VALUES }) status!: string;
   @ApiProperty({ enum: SERVICE_TYPE_VALUES }) serviceType!: string;
   @ApiPropertyOptional({
@@ -408,8 +425,14 @@ export class CreateBookingDto {
 }
 
 /**
- * Sửa đơn. Mọi trường optional. Đổi `pickupAt/returnAt` sẽ reschedule lịch (OccupancyService).
- * KHÔNG cho đổi `status` ở đây — chuyển trạng thái đi qua endpoint transition (validate riêng).
+ * Sửa đơn — CHỈ thông tin liên hệ, cọc tài sản và ghi chú (quyết định sản phẩm 19/10/2026).
+ *
+ * Loại dịch vụ, lịch, lộ trình và tiền thuê ĐÓNG BĂNG lúc tạo đơn (ADR 0024): sửa chúng sau khi
+ * khách đã đặt (có thể đã trả giữ chỗ) là viết lại thoả thuận một phía — và từng mở đường đổi đơn
+ * sang một dịch vụ xe không chào, hay gỡ ngầm tài xế đã nhận chuyến. Muốn khác thì huỷ đơn theo
+ * luồng huỷ có trách nhiệm rồi lập lại. Phí giao nhận có endpoint riêng (`PATCH …/delivery-fee`),
+ * phát sinh ghi ở mục Phát sinh, tài xế gán ở `PATCH …/driver`. Trường lạ bị pipe từ chối.
+ * KHÔNG cho đổi `status` ở đây — chuyển trạng thái đi qua endpoint transition.
  */
 export class UpdateBookingDto {
   @ApiPropertyOptional({ example: 'Nguyễn Văn A' })
@@ -424,116 +447,12 @@ export class UpdateBookingDto {
   @MaxLength(30)
   customerPhone?: string;
 
-  @ApiPropertyOptional({ enum: SERVICE_TYPE_VALUES })
-  @IsOptional()
-  @IsIn(SERVICE_TYPE_VALUES)
-  serviceType?: string;
-
-  /** Sửa hành trình (with_driver). Đổi dịch vụ khỏi with_driver thì service tự clear cả ba. */
-  @ApiPropertyOptional({ enum: ROUTE_TYPE_VALUES })
-  @IsOptional()
-  @IsIn(ROUTE_TYPE_VALUES)
-  routeType?: string;
-
-  @ApiPropertyOptional({ description: 'Địa chỉ đón khách (with_driver)' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(500)
-  pickupAddress?: string;
-
-  @ApiPropertyOptional({ description: 'Điểm đến (with_driver liên tỉnh)' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(500)
-  destination?: string;
-
-  /**
-   * Phần CÓ CẤU TRÚC của địa chỉ đón. Tuỳ chọn: đơn gian hàng lập tay cho khách quen thường chỉ
-   * có một dòng địa chỉ, và bắt chọn xã/phường ở đó là cản trở việc lập đơn nhanh. Có mã thì
-   * server dựng lại chuỗi hiển thị; không có thì chuỗi gõ tay được giữ nguyên.
-   */
-  @ApiPropertyOptional({ description: 'Mã tỉnh/thành của điểm đón (GET /provinces)' })
-  @IsOptional()
-  @IsString()
-  @Length(2, 2)
-  pickupProvinceCode?: string;
-
-  @ApiPropertyOptional({ description: 'Mã xã/phường/đặc khu của điểm đón' })
-  @IsOptional()
-  @IsString()
-  @Length(5, 5)
-  pickupWardCode?: string;
-
-  @ApiPropertyOptional({ description: 'Số nhà, đường của điểm đón' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(ADDRESS_LINE_MAX_LENGTH)
-  pickupAddressLine?: string;
-
-  @ApiPropertyOptional({ description: 'Mã địa điểm Google của điểm đón' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(255)
-  pickupPlaceId?: string;
-
-  @ApiPropertyOptional({ description: 'Vĩ độ ghim điểm đón' })
-  @IsOptional()
-  @IsLatitude()
-  pickupLatitude?: number;
-
-  @ApiPropertyOptional({ description: 'Kinh độ ghim điểm đón' })
-  @IsOptional()
-  @IsLongitude()
-  pickupLongitude?: number;
-
-  @ApiPropertyOptional({ description: 'Mã địa điểm Google của điểm đến' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(255)
-  destinationPlaceId?: string;
-
-  @ApiPropertyOptional({ description: 'Vĩ độ ghim điểm đến' })
-  @IsOptional()
-  @IsLatitude()
-  destinationLatitude?: number;
-
-  @ApiPropertyOptional({ description: 'Kinh độ ghim điểm đến' })
-  @IsOptional()
-  @IsLongitude()
-  destinationLongitude?: number;
-
-  @ApiPropertyOptional({ description: 'Nhận xe (ISO-8601)' })
-  @IsOptional()
-  @IsDateString()
-  pickupAt?: string;
-
-  @ApiPropertyOptional({ description: 'Trả xe (ISO-8601)' })
-  @IsOptional()
-  @IsDateString()
-  returnAt?: string;
-
-  @ApiPropertyOptional({ example: '600000' })
-  @IsOptional()
-  @Matches(MONEY_PATTERN, { message: 'baseAmount phải là số tiền hợp lệ' })
-  baseAmount?: string;
-
-  @ApiPropertyOptional({ example: '0' })
-  @IsOptional()
-  @Matches(MONEY_PATTERN, { message: 'deliveryFee phải là số tiền hợp lệ' })
-  deliveryFee?: string;
-
-  @ApiPropertyOptional({ example: '0' })
-  @IsOptional()
-  @Matches(MONEY_PATTERN, { message: 'discountAmount phải là số tiền hợp lệ' })
-  discountAmount?: string;
-
-  @ApiPropertyOptional({ example: '0' })
+  @ApiPropertyOptional({ example: '0', description: 'Cọc tài sản thu khi giao xe (VND, chuỗi)' })
   @IsOptional()
   @Matches(MONEY_PATTERN, { message: 'depositAmount phải là số tiền hợp lệ' })
   depositAmount?: string;
 
-  // KHÔNG có `paidAmount`: số đã trả chỉ đổi qua PaymentsService (ghi payment) để giữ 1-writer
-  // và tránh lost-update. Client không set trực tiếp (ADR chống trùng số liệu tiền — Phase 6).
+  // KHÔNG có `paidAmount`: số đã trả chỉ đổi qua PaymentsService (ghi payment) để giữ 1-writer.
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -571,9 +490,9 @@ export class UpdateBookingDeliveryFeeDto {
 }
 
 /**
- * Gán/bỏ gán tài xế cho đơn (17/08). `driverId = null` là BỎ GÁN tường minh — field bắt buộc
- * để không lẫn "không gửi gì" với "gỡ tài xế". Tài xế phải cùng tenant + đang hoạt động
- * (DriversService.findAssignable; composite FK ở DB chặn nốt trường hợp service quên).
+ * Gán/bỏ gán tài xế cho đơn (ADR 0063). `driverId` là id LIÊN KẾT tài xế (`drivers.id`);
+ * `null` là BỎ GÁN tường minh — field bắt buộc để không lẫn "không gửi gì" với "gỡ tài xế".
+ * Luật gán ở `DriversService.assignWithinTx`; FK tổ hợp ở DB chặn nốt trường hợp service quên.
  */
 export class AssignBookingDriverDto {
   @ApiProperty({ type: String, nullable: true, description: 'ID tài xế (ULID) — null để bỏ gán' })

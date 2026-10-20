@@ -12,14 +12,9 @@ import {
   DRIVER_SURCHARGE_KIND,
   DRIVER_SURCHARGE_KIND_VALUES,
   DRIVER_SURCHARGE_UNIT,
-  FEATURE_STATE,
-  type FeatureState,
   HANDOVER_WINDOW_KIND,
   IDENTITY_VERIFY_METHOD,
   MEMBERSHIP_STATUS,
-  PLAN_FEATURE,
-  PLAN_FEATURE_VALUES,
-  type PlanFeature,
   ROUTE_TYPE,
   SERVICE_TYPE,
   SURCHARGE_CATEGORY,
@@ -27,13 +22,16 @@ import {
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_TYPE,
+  DRIVER_LINK_STATUS,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { buildVehicleReviewSnapshot } from '../src/modules/vehicles/vehicle-review-snapshot';
 import { VehicleSettingsService } from '../src/modules/vehicle-settings/vehicle-settings.service';
+import { ListingsService } from '../src/modules/public-listings/listings.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeBookingsService, makePricingService } from './helpers/service-factory';
+import { makeBookingsService, makeDriversService, makePricingService } from './helpers/service-factory';
+import { cleanupDriverAccounts, seedDriverLink } from './helpers/driver-link';
 
 /**
  * THIẾT LẬP VẬN HÀNH THEO XE — không gian "Quản lý xe" (08/09/2026), trên PostgreSQL THẬT.
@@ -53,19 +51,12 @@ const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 
 const audit = new AuditService(asService);
-const settings = new VehicleSettingsService(asService, audit, new OccupancyService(asService));
+const settings = new VehicleSettingsService(asService, audit, new OccupancyService(asService), new ListingsService(asService), makeDriversService(asService));
 const bookings = makeBookingsService(asService);
 
 const RUN = newId().slice(-8).toLowerCase();
 
 /** Gói bật/tắt tính năng — `listServiceSettings`/`patchServiceSetting` nhận map này từ guard. */
-function features(overrides: Partial<Record<PlanFeature, FeatureState>> = {}) {
-  const all = Object.fromEntries(
-    PLAN_FEATURE_VALUES.map((f) => [f, FEATURE_STATE.HIDDEN]),
-  ) as Record<PlanFeature, FeatureState>;
-  return { ...all, ...overrides };
-}
-const withDrivers = features({ [PLAN_FEATURE.DRIVERS]: FEATURE_STATE.ENABLED });
 
 let dbAvailable = false;
 let ownerA: string;
@@ -170,6 +161,7 @@ afterEach(async () => {
 
 afterAll(async () => {
   if (dbAvailable) {
+    await cleanupDriverAccounts(asService);
     const tenants = { in: [tenantA, tenantB] };
     await prisma.vehicle.deleteMany({ where: { tenantId: tenants } });
     await prisma.tenantMembership.deleteMany({ where: { tenantId: tenants } });
@@ -203,7 +195,7 @@ describe('Phạm vi gian hàng — thiết lập của xe không rò sang gian h
         returnWindows: [],
       }),
     ).rejects.toMatchObject({ status: 404 });
-    await expect(settings.listServiceSettings(tenantB, vehicleA, features())).rejects.toMatchObject(
+    await expect(settings.listServiceSettings(tenantB, vehicleA)).rejects.toMatchObject(
       {
         status: 404,
       },
@@ -215,7 +207,6 @@ describe('Phạm vi gian hàng — thiết lập của xe không rò sang gian h
         SERVICE_TYPE.SELF_DRIVE,
         ownerB,
         {},
-        features(),
       ),
     ).rejects.toMatchObject({ status: 404 });
     await expect(settings.listSurchargeRules(tenantB, vehicleA)).rejects.toMatchObject({
@@ -432,7 +423,6 @@ describe('Thiết lập theo dịch vụ — ràng buộc chéo ở server', () 
         SERVICE_TYPE.SELF_DRIVE,
         ownerA,
         { requireTermsAcceptance: true },
-        features(),
       ),
     ).rejects.toMatchObject({ status: 400 });
 
@@ -442,7 +432,6 @@ describe('Thiết lập theo dịch vụ — ràng buộc chéo ở server', () 
       SERVICE_TYPE.SELF_DRIVE,
       ownerA,
       { requireTermsAcceptance: true, termsText: 'Không hút thuốc trong xe.' },
-      features(),
     );
     expect(ok.requireTermsAcceptance).toBe(true);
   });
@@ -455,7 +444,6 @@ describe('Thiết lập theo dịch vụ — ràng buộc chéo ở server', () 
         SERVICE_TYPE.SELF_DRIVE,
         ownerA,
         { requiredDocuments: [CUSTOMER_DOCUMENT_TYPE.OTHER] },
-        features(),
       ),
     ).rejects.toMatchObject({ status: 400 });
   });
@@ -467,7 +455,6 @@ describe('Thiết lập theo dịch vụ — ràng buộc chéo ở server', () 
       SERVICE_TYPE.SELF_DRIVE,
       ownerA,
       { requiredDocuments: [CUSTOMER_DOCUMENT_TYPE.PASSPORT] },
-      features(),
     );
     expect(saved.effectiveRequiredDocuments).toContain(CUSTOMER_DOCUMENT_TYPE.PASSPORT);
     expect(saved.effectiveRequiredDocuments).toContain(CUSTOMER_DOCUMENT_TYPE.DRIVER_LICENCE);
@@ -480,7 +467,6 @@ describe('Thiết lập theo dịch vụ — ràng buộc chéo ở server', () 
       SERVICE_TYPE.SELF_DRIVE,
       ownerA,
       { minRentalMinutes: 720, preferredRouteTypes: [ROUTE_TYPE.INTER_CITY] },
-      features(),
     );
     expect(saved.minRentalMinutes).toBeNull();
     expect(saved.preferredRouteTypes).toEqual([]);
@@ -495,7 +481,6 @@ describe('Thiết lập theo dịch vụ — ràng buộc chéo ở server', () 
         SERVICE_TYPE.LONG_TERM,
         ownerA,
         { autoAcceptEnabled: true },
-        features(),
       ),
     ).rejects.toMatchObject({ status: 400 });
   });
@@ -508,13 +493,12 @@ describe('Thiết lập theo dịch vụ — ràng buộc chéo ở server', () 
         SERVICE_TYPE.WITH_DRIVER,
         ownerA,
         { depositMode: DRIVER_DEPOSIT_MODE.PERCENT_30 },
-        withDrivers,
       ),
     ).rejects.toMatchObject({ status: 400 });
   });
 
-  maybe('bật tự nhận CÓ TÀI XẾ đòi gói có tính năng Tài xế VÀ tài xế đang hoạt động', async () => {
-    // Gói chưa mở tính năng Tài xế.
+  maybe('bật tự nhận CÓ TÀI XẾ đòi một tài xế đang liên kết (không còn gác theo gói — ADR 0063)', async () => {
+    // Chưa có tài xế nào.
     await expect(
       settings.patchServiceSetting(
         tenantA,
@@ -522,38 +506,16 @@ describe('Thiết lập theo dịch vụ — ràng buộc chéo ở server', () 
         SERVICE_TYPE.WITH_DRIVER,
         ownerA,
         { autoAcceptEnabled: true },
-        features(),
       ),
     ).rejects.toMatchObject({ status: 409 });
 
-    // Có tính năng nhưng chưa có tài xế nào.
-    await expect(
-      settings.patchServiceSetting(
-        tenantA,
-        vehicleA,
-        SERVICE_TYPE.WITH_DRIVER,
-        ownerA,
-        { autoAcceptEnabled: true },
-        withDrivers,
-      ),
-    ).rejects.toMatchObject({ status: 409 });
-
-    await prisma.driver.create({
-      data: {
-        id: newId(),
-        tenantId: tenantA,
-        name: 'Tài xế A',
-        phone: '0900000001',
-        status: 'active',
-      },
-    });
+    await seedDriverLink(asService, { tenantId: tenantA, name: 'Tài xế A' });
     const saved = await settings.patchServiceSetting(
       tenantA,
       vehicleA,
       SERVICE_TYPE.WITH_DRIVER,
       ownerA,
       { autoAcceptEnabled: true },
-      withDrivers,
     );
     expect(saved.autoAcceptEnabled).toBe(true);
     expect(saved.withDriverAutoAccept?.available).toBe(true);
@@ -570,7 +532,6 @@ describe('Thiết lập theo dịch vụ — ràng buộc chéo ở server', () 
         identityVerifyMethod: IDENTITY_VERIFY_METHOD.VNEID,
         termsText: 'Điều khoản gốc',
       },
-      features(),
     );
     const patched = await settings.patchServiceSetting(
       tenantA,
@@ -578,7 +539,6 @@ describe('Thiết lập theo dịch vụ — ràng buộc chéo ở server', () 
       SERVICE_TYPE.SELF_DRIVE,
       ownerA,
       { autoAcceptEnabled: true },
-      features(),
     );
     expect(patched.autoAcceptEnabled).toBe(true);
     expect(patched.identityVerifyMethod).toBe(IDENTITY_VERIFY_METHOD.VNEID);
@@ -592,7 +552,6 @@ describe('Thiết lập theo dịch vụ — ràng buộc chéo ở server', () 
       SERVICE_TYPE.SELF_DRIVE,
       ownerA,
       { autoAcceptEnabled: true },
-      features(),
     );
     const log = await prisma.auditLog.findFirst({
       where: { tenantId: tenantA, action: 'vehicle.service_settings.update' },
@@ -697,7 +656,6 @@ describe('Đánh giá tự nhận — hàm thuần, mã chặn nói đúng lý d
       SERVICE_TYPE.SELF_DRIVE,
       ownerA,
       { autoAcceptEnabled: true },
-      features(),
     );
     const pickupAt = vnDay(12, 8);
     const returnAt = vnDay(13, 8);
@@ -727,57 +685,38 @@ describe('Đánh giá tự nhận — hàm thuần, mã chặn nói đúng lý d
     });
   });
 
-  maybe('tài xế hết hạn GPLX hoặc đang bận không được chọn', async () => {
+  maybe('hasAvailableDriver: tài xế đang bận hoặc tạm khoá không tính là rảnh', async () => {
     const pickupAt = vnDay(14, 8);
     const returnAt = vnDay(15, 8);
+    const window = { pickupAt, returnAt };
+    expect(await settings.hasAvailableDriver(prisma, tenantA, window)).toBe(false);
 
-    // GPLX hết hạn TRƯỚC lúc trả xe.
-    const expired = newId();
-    await prisma.driver.create({
-      data: {
-        id: expired,
-        tenantId: tenantA,
-        name: 'Tài xế hết hạn',
-        phone: '0900000010',
-        status: 'active',
-        licenseExpiresAt: vnDay(14, 12),
-      },
+    // Tạm khoá không được gán → không rảnh.
+    await seedDriverLink(asService, {
+      tenantId: tenantA,
+      name: 'Tài xế tạm khoá',
+      linkStatus: DRIVER_LINK_STATUS.SUSPENDED,
     });
-    expect(await settings.pickAssignableDriver(prisma, tenantA, { pickupAt, returnAt })).toBeNull();
+    expect(await settings.hasAvailableDriver(prisma, tenantA, window)).toBe(false);
 
-    // Tài xế còn hạn nhưng đã có đơn giao nhau.
-    const busy = newId();
-    await prisma.driver.create({
-      data: {
-        id: busy,
-        tenantId: tenantA,
-        name: 'Tài xế bận',
-        phone: '0900000002',
-        status: 'active',
-      },
-    });
+    // Tài xế đang liên kết nhưng đã có đơn giao nhau (kể cả lượt gán còn chờ nhận).
+    const busy = await seedDriverLink(asService, { tenantId: tenantA, name: 'Tài xế bận' });
     const overlapping = await bookings.create(tenantA, ownerA, {
       vehicleId: vehicleA,
       customerName: 'Khách của tài xế bận',
+      serviceType: SERVICE_TYPE.WITH_DRIVER,
+      routeType: 'in_city',
+      pickupAddress: '1 Lê Lợi',
       pickupAt: pickupAt.toISOString(),
       returnAt: returnAt.toISOString(),
       baseAmount: '700000',
     });
-    await prisma.booking.update({ where: { id: overlapping.id }, data: { driverId: busy } });
-    expect(await settings.pickAssignableDriver(prisma, tenantA, { pickupAt, returnAt })).toBeNull();
+    await bookings.assignDriver(tenantA, overlapping.id, ownerA, busy.driverId);
+    expect(await settings.hasAvailableDriver(prisma, tenantA, window)).toBe(false);
 
-    // Thêm một tài xế rảnh → chọn được.
-    await prisma.driver.create({
-      data: {
-        id: newId(),
-        tenantId: tenantA,
-        name: 'Aa tài xế rảnh',
-        phone: '0900000003',
-        status: 'active',
-      },
-    });
-    const picked = await settings.pickAssignableDriver(prisma, tenantA, { pickupAt, returnAt });
-    expect(picked?.name).toBe('Aa tài xế rảnh');
+    // Thêm một tài xế rảnh → có.
+    await seedDriverLink(asService, { tenantId: tenantA, name: 'Tài xế rảnh' });
+    expect(await settings.hasAvailableDriver(prisma, tenantA, window)).toBe(true);
   });
 });
 
@@ -914,7 +853,6 @@ describe('Phụ phí công bố ≠ phụ phí đã ghi', () => {
       SERVICE_TYPE.SELF_DRIVE,
       ownerA,
       { termsText: 'Bản A', identityVerifyMethod: IDENTITY_VERIFY_METHOD.IN_PERSON },
-      features(),
     );
     const frozen = await settings.rentalTermsSnapshotFor(
       prisma,
@@ -930,7 +868,6 @@ describe('Phụ phí công bố ≠ phụ phí đã ghi', () => {
       SERVICE_TYPE.SELF_DRIVE,
       ownerA,
       { termsText: 'Bản B' },
-      features(),
     );
     // Bản đã lấy ra vẫn là "Bản A" — snapshot là dữ liệu, không phải con trỏ tới cấu hình.
     expect(frozen?.termsText).toBe('Bản A');
@@ -1010,7 +947,6 @@ describe('Sửa thiết lập dịch vụ khi phiếu duyệt còn chờ', () =>
       SERVICE_TYPE.SELF_DRIVE,
       ownerA,
       { termsText: `Không hút thuốc trong xe ${RUN}` },
-      features(),
     );
 
     const task = await prisma.approvalTask.findUniqueOrThrow({

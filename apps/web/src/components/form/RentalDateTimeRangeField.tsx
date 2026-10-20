@@ -32,6 +32,13 @@ interface RentalDateTimeRangeFieldProps {
   ariaLabel?: string;
   /** Icon nằm trong cùng vùng bấm; dùng để toàn bộ viền control đều mở lịch. */
   prefix?: ReactNode;
+  /** Icon ở CUỐI ô (thẻ tìm kiếm trang chủ v2 đặt lịch bên phải) — cùng vùng bấm như prefix. */
+  suffix?: ReactNode;
+  /**
+   * Chữ gợi ý khi CHƯA chọn đầu nào (biến thể `compact`) — thay cho cặp nhãn "Nhận xe → Trả xe".
+   * Chọn được một đầu thì ô hiện lại hai đầu như cũ.
+   */
+  placeholder?: string;
   /** Sàn số ngày thuê (17/08 — dài hạn truyền LONG_TERM_MIN_DAYS); xuyên xuống RentalRangePanel. */
   minDays?: number;
   /**
@@ -47,8 +54,10 @@ interface RentalDateTimeRangeFieldProps {
    * `labelled`: mỗi đầu mang nhãn riêng ("Nhận xe: …") ngăn bằng vạch đứng, kèm viên thời lượng
    * bên phải. Dùng ở chỗ rộng, khi ô này là control chính của màn và không được phép mơ hồ đầu
    * nào là nhận / đầu nào là trả.
+   *
+   * `stacked`: nhãn đưa lên trên ("Nhận xe" / "Trả xe"), giá trị ngày giờ ở dưới (Thứ, Ngày/tháng - Giờ:Phút).
    */
-  variant?: 'compact' | 'labelled';
+  variant?: 'compact' | 'labelled' | 'stacked';
   /**
    * Bỏ THỨ trong tuần ở trạng thái đóng: `19/08 10:00` thay vì `T4, 19/08 · 10:00`.
    *
@@ -85,6 +94,8 @@ export function RentalDateTimeRangeField({
   className,
   ariaLabel,
   prefix,
+  suffix,
+  placeholder,
   minDays,
   busyDays,
   busyLoading,
@@ -140,7 +151,36 @@ export function RentalDateTimeRangeField({
   });
 
   const trigger =
-    variant === 'labelled' ? (
+    variant === 'stacked' ? (
+      <button
+        type="button"
+        className={cx(styles.trigger, styles.triggerStacked, className)}
+        disabled={disabled}
+        onClick={openPanel}
+        aria-label={ariaValue}
+      >
+        <span className={styles.endpointStacked}>
+          <span className={styles.stackedLabel}>{endpointLabels.start}</span>
+          <span className={styles.stackedValue}>
+            {pointText(value.pickupAt, t('components.rentalRange.pickDateTime'))}
+          </span>
+        </span>
+        <span className={styles.stackedDivider} aria-hidden>
+          -
+        </span>
+        <span className={styles.endpointStacked}>
+          <span className={styles.stackedLabel}>{endpointLabels.end}</span>
+          <span className={styles.stackedValue}>
+            {pointText(value.returnAt, t('components.rentalRange.pickDateTime'))}
+          </span>
+        </span>
+        {complete ? (
+          <span className={styles.durationPill}>
+            {fmt.rentalDuration(value.pickupAt!, value.returnAt!)}
+          </span>
+        ) : null}
+      </button>
+    ) : variant === 'labelled' ? (
       <button
         type="button"
         className={cx(styles.trigger, styles.triggerLabelled, className)}
@@ -177,11 +217,20 @@ export function RentalDateTimeRangeField({
         aria-label={ariaValue}
       >
         {prefix ? <span className={styles.prefix}>{prefix}</span> : null}
-        <span className={styles.endpoint}>{pointText(value.pickupAt, endpointLabels.start)}</span>
-        <span className={styles.sep} aria-hidden>
-          →
-        </span>
-        <span className={styles.endpoint}>{pointText(value.returnAt, endpointLabels.end)}</span>
+        {placeholder && !value.pickupAt && !value.returnAt ? (
+          <span className={styles.placeholder}>{placeholder}</span>
+        ) : (
+          <>
+            <span className={styles.endpoint}>
+              {pointText(value.pickupAt, endpointLabels.start)}
+            </span>
+            <span className={styles.sep} aria-hidden>
+              →
+            </span>
+            <span className={styles.endpoint}>{pointText(value.returnAt, endpointLabels.end)}</span>
+          </>
+        )}
+        {suffix ? <span className={styles.suffix}>{suffix}</span> : null}
       </button>
     );
 

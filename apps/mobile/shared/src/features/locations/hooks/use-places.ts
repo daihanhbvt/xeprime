@@ -23,19 +23,39 @@ const SEARCH_DEBOUNCE_MS = 400;
  */
 export function usePlaceSearch(
   query: string,
-  options: { biasPoint?: { lat: number; lng: number } | null; enabled?: boolean } = {},
+  options: {
+    biasPoint?: { lat: number; lng: number } | null;
+    enabled?: boolean;
+    /**
+     * Chuỗi KHÔNG cần hỏi (địa chỉ đã xác nhận, dòng vừa bấm) — so với chuỗi ĐÃ debounce, cùng
+     * chuỗi làm khoá truy vấn (web `usePlaceSearch`, ADR 0061 §3). So với chữ đang gõ thì phím gõ
+     * đầu tiên đã bật một giao dịch tính tiền cho thứ không ai hỏi.
+     */
+    except?: string;
+  } = {},
 ) {
   const debounced = useDebouncedValue(query.trim(), SEARCH_DEBOUNCE_MS);
   const bias = options.biasPoint ?? null;
+  const skipped = debounced === options.except?.trim();
 
-  return useQuery({
+  const result = useQuery({
     queryKey: queryKeys.places.search(debounced, bias),
     queryFn: () => placesApi.search(debounced, bias),
-    enabled: (options.enabled ?? true) && debounced.length >= PLACE_SEARCH_MIN_LENGTH,
+    enabled:
+      (options.enabled ?? true) && debounced.length >= PLACE_SEARCH_MIN_LENGTH && !skipped,
     // Gợi ý cũ 5 phút vẫn dùng được cho cùng một chuỗi — người dùng hay xoá rồi gõ lại.
     staleTime: 5 * 60_000,
+    // Gợi ý hỏng thì hỏi lại cũng không giúp người đang gõ — họ đã gõ tiếp, và một 429 hỏi lại là
+    // thêm lượt bị chặn (web `usePlaceSearch`, ADR 0061).
+    retry: false,
     placeholderData: (previous) => previous,
   });
+  /*
+   * Chuỗi ĐÃ debounce đi kèm kết quả: trong ~400ms giữa phím gõ và lượt hỏi, `isFetching` vẫn là
+   * `false` và `data` là danh sách của chuỗi TRƯỚC — nơi gọi cần biết danh sách trong tay có đúng
+   * là của chữ đang hiện không (dòng "dùng đúng địa chỉ đã nhập" ở `ConfirmedPlaceField`).
+   */
+  return { ...result, debouncedQuery: debounced };
 }
 
 /**

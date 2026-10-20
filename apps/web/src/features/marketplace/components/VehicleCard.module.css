@@ -1,452 +1,450 @@
+/*
+ * Thẻ xe v2 (Figma "Vehicle Card" `19625:43910`, ADR 0062): ảnh 180px, khối chi tiết đệm 16px,
+ * hai đường kẻ mảnh ngăn ba phần (tên + vị trí · thông số · gian hàng + giá). Rê chuột: phủ vàng
+ * rất nhạt, viền vàng, bóng sâu hơn; tên và giá chuyển sang vàng.
+ */
 .card {
   position: relative;
   display: flex;
-  overflow: hidden;
-  width: 100%;
-  height: 100%;
   min-width: 0;
+  height: 100%;
   flex-direction: column;
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius);
+  overflow: hidden;
+  border: 1px solid var(--xp-color-bg-container);
+  border-radius: var(--xp-border-radius-card);
   background: var(--xp-color-bg-container);
-  box-shadow: var(--xp-shadow-sm);
-  container-type: inline-size;
+  box-shadow: var(--xp-elevation-sm);
   transition:
+    box-shadow 0.18s ease,
     border-color 0.18s ease,
-    transform 0.18s ease,
-    box-shadow 0.18s ease;
+    background 0.18s ease;
 }
 
-/* Link phủ cả thẻ; nút lưu và liên kết gian hàng có z-index cao hơn nên vẫn bấm độc lập. */
+.card:hover,
+.card:focus-within {
+  border-color: var(--xp-color-primary-accent);
+  background: var(--xp-gradient-card-highlight), var(--xp-color-bg-container);
+  box-shadow: var(--xp-elevation-lg);
+}
+
+/* Stretched-link: phủ cả thẻ; các nút/link con nằm trên nó nhờ z-index. */
 .stretch {
   position: absolute;
   z-index: 1;
   inset: 0;
 }
 
-.card:hover {
-  border-color: var(--xp-color-border-secondary);
-  box-shadow: var(--xp-shadow-md);
-  transform: translateY(-3px);
+.stretch:focus-visible {
+  border-radius: var(--xp-border-radius-card);
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: -2px;
 }
 
-.card:focus-within {
-  outline: 2px solid var(--xp-color-border-focus);
-  outline-offset: 2px;
-}
-
+/* ─── Ảnh ─────────────────────────────────────────────────────────────────── */
 .media {
   position: relative;
-  display: grid;
-  overflow: hidden;
+  height: 180px;
   flex: none;
-  aspect-ratio: 16 / 9;
-  background: linear-gradient(135deg, var(--xp-color-bg-sand), var(--xp-gold-soft));
-  color: var(--xp-gold-deep);
-  place-items: center;
+  background: var(--xp-color-bg-muted);
 }
 
-/* Absolute giữ mọi ảnh trong cùng một khung, bất kể tỉ lệ file nguồn. */
 .photo {
-  position: absolute;
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  inset: 0;
-  transition: transform 0.3s ease;
 }
 
-.card:hover .photo {
-  transform: scale(1.025);
+.glyph {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  color: var(--xp-color-text-placeholder);
 }
 
 .glyph svg {
-  width: 46%;
-  height: 46%;
-  opacity: 0.5;
+  width: 56px;
+  height: 56px;
 }
 
-.discountBadge {
+/* Huy hiệu góc trái: giảm giá trên cùng, "Không cần xác nhận" ngay dưới (Figma top 8 / top 39). */
+.badges {
   position: absolute;
-  bottom: 10px;
-  left: 10px;
+  top: var(--xp-space-sm);
+  left: var(--xp-space-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
 }
 
-.fav {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 2;
-  display: grid;
-  width: 38px;
-  height: 38px;
-  padding: 0;
-  border: 1px solid color-mix(in srgb, var(--xp-color-border) 80%, transparent);
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--xp-color-bg-container) 94%, transparent);
-  box-shadow: var(--xp-shadow-sm);
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--xp-space-xs) var(--xp-space-6);
+  border-radius: var(--xp-border-radius-chip);
   color: var(--xp-color-text);
-  cursor: pointer;
-  font-size: 18px;
-  place-items: center;
-  transition:
-    color 0.15s ease,
-    transform 0.15s ease;
+  font-size: var(--xp-font-size-label);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-label);
+  white-space: nowrap;
 }
 
-.fav:hover {
-  color: var(--xp-color-error);
-  transform: scale(1.06);
+.badgeInstant {
+  background: var(--xp-gradient-instant-badge);
 }
 
+/* "+N" ảnh — góc phải dưới ảnh. */
+.photoCount {
+  position: absolute;
+  right: var(--xp-space-sm);
+  bottom: var(--xp-space-6);
+  display: inline-flex;
+  align-items: center;
+  padding: var(--xp-space-2) var(--xp-space-xs);
+  border-radius: var(--xp-border-radius-sm);
+  backdrop-filter: blur(6px);
+  background: var(--xp-color-bg-inverse);
+  color: var(--xp-color-text-on-dark);
+  font-size: var(--xp-font-size-label);
+  gap: var(--xp-space-2);
+  line-height: var(--xp-line-height-label);
+}
+
+/*
+ * Ô icon — SVG xuất từ Figma chỉ là phần NÉT VẼ và không giãn được (preserveAspectRatio="none"),
+ * nên nét đặt nguyên cỡ, canh giữa trong ô đúng kích thước của bản vẽ.
+ */
+.icon14,
+.icon16,
+.icon20 {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon14 {
+  width: 14px;
+  height: 14px;
+}
+
+.icon16 {
+  width: 16px;
+  height: 16px;
+}
+
+.icon20 {
+  width: 20px;
+  height: 20px;
+}
+
+.icon14 img,
+.icon16 img,
+.icon20 img {
+  display: block;
+}
+
+/* ─── Chi tiết ────────────────────────────────────────────────────────────── */
 .body {
   display: flex;
-  min-width: 0;
-  min-height: 226px;
   flex: 1;
   flex-direction: column;
-  padding: 14px 14px 16px;
-  gap: 9px;
+  padding: var(--xp-space-md);
+  gap: var(--xp-space-sm);
 }
 
-.heading {
+.info {
+  display: flex;
   min-width: 0;
-  min-height: 47px;
+  flex-direction: column;
+  padding-bottom: var(--xp-space-sm);
+  border-bottom: 1px solid var(--xp-color-bg);
+  gap: var(--xp-space-xs);
+}
+
+.nameRow {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--xp-space-6);
 }
 
 .title {
-  display: -webkit-box;
   overflow: hidden;
+  min-width: 0;
   margin: 0;
   color: var(--xp-color-text);
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1.35;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.specs {
-  overflow: hidden;
-  margin: 5px 0 0;
-  color: var(--xp-color-text-secondary);
-  font-size: 12.5px;
-  line-height: 1.35;
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
   text-overflow: ellipsis;
+  transition: color 0.18s ease;
   white-space: nowrap;
 }
 
-.metaRow {
-  display: flex;
-  overflow: hidden;
-  min-width: 0;
-  min-height: 20px;
-  align-items: center;
-  color: var(--xp-color-text-secondary);
-  font-size: 12.5px;
-  gap: 10px;
-  white-space: nowrap;
+.card:hover .title {
+  color: var(--xp-color-primary);
 }
 
-.metaItem {
-  display: inline-flex;
-  overflow: hidden;
-  min-width: 0;
+.newBadge {
   flex: none;
-  align-items: center;
-  gap: 4px;
-  text-overflow: ellipsis;
+  padding: var(--xp-space-2) var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-label);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-label);
+  white-space: nowrap;
 }
 
-.metaItem:first-child {
-  flex: 1 1 auto;
+.location {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  gap: var(--xp-space-sm);
+  line-height: var(--xp-line-height-body);
+}
+
+.location img {
+  flex: none;
+}
+
+.locationText {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .amenityRow {
   display: flex;
-  overflow: hidden;
-  min-height: 24px;
-  align-items: center;
-  gap: 7px;
-  white-space: nowrap;
+  flex-wrap: wrap;
+  margin-top: var(--xp-space-2);
+  gap: var(--xp-space-xs);
 }
 
 .amenityTag {
-  overflow: hidden;
-  padding: 2px 8px;
-  border: 1px solid var(--xp-color-border-secondary);
-  border-radius: var(--xp-border-radius-pill);
-  background: var(--xp-color-bg-hover);
+  padding: var(--xp-space-2) var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-bg-muted);
   color: var(--xp-color-text-secondary);
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 18px;
-  text-overflow: ellipsis;
-}
-
-.reputationRow {
-  display: flex;
-  min-height: 22px;
-  align-items: center;
-  color: var(--xp-color-text);
-  font-size: 12.5px;
-  font-weight: 500;
-  gap: 8px;
-}
-
-.rating,
-.tripCount {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+  font-size: var(--xp-font-size-label);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-label);
   white-space: nowrap;
 }
 
-/* Hai class là CỐ Ý — phải thắng `.anticon { color: inherit }` mà AntD nhúng sau stylesheet. */
-.rating .star {
-  color: var(--xp-color-primary);
+/* Thông số: ba cột icon-trên-chữ, đệm ngang 12px, kẻ dưới #FAFAFA. */
+.specs {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 0 var(--xp-space-12) var(--xp-space-sm);
+  border-bottom: 1px solid var(--xp-color-bg);
+  margin: 0;
+  list-style: none;
 }
 
-.tripCount {
-  color: var(--xp-color-text-secondary);
+.card:hover .info,
+.card:hover .specs {
+  border-bottom-color: var(--xp-color-primary-muted);
 }
 
-.tripCount :global(.anticon) {
-  color: var(--xp-color-success);
-}
-
-.newVehicle {
-  color: var(--xp-gold-deep);
-  font-weight: 600;
-}
-
-.reputationDivider {
-  width: 1px;
-  height: 13px;
-  background: var(--xp-color-border);
-}
-
-.footer {
+.spec {
   display: flex;
   min-width: 0;
-  min-height: 54px;
-  align-items: flex-end;
-  justify-content: space-between;
-  padding-top: 11px;
-  border-top: 1px solid var(--xp-color-border-secondary);
-  margin-top: auto;
-  gap: 8px;
+  flex-direction: column;
+  align-items: center;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  gap: var(--xp-space-xs);
+  line-height: var(--xp-line-height-body);
+  white-space: nowrap;
 }
 
+/* ─── Gian hàng ───────────────────────────────────────────────────────────── */
 .shop {
   position: relative;
   z-index: 2;
   display: flex;
-  overflow: hidden;
   min-width: 0;
-  flex: 1 1 auto;
   align-items: center;
-  color: var(--xp-color-text);
-  gap: 8px;
-  text-decoration: none;
+  border-radius: var(--xp-border-radius-chip);
+  color: inherit;
+  gap: var(--xp-space-12);
 }
 
-.shop:hover .shopName {
-  color: var(--xp-color-primary-active);
-  text-decoration: underline;
+.shop:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
 }
 
 .shopAvatar {
-  display: grid;
-  overflow: hidden;
-  width: 34px;
-  height: 34px;
+  position: relative;
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
   flex: none;
-  border: 1px solid var(--xp-color-border-secondary);
-  border-radius: 50%;
-  background: var(--xp-gold-wash);
-  color: var(--xp-gold-deep);
-  font-size: 13px;
-  font-weight: 700;
-  place-items: center;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-primary-active);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
 }
 
-/*
- * Vành vàng của gian hàng tuyến gói. `border` chứ không `box-shadow` như `ShopHeader`: ở đây
- * `.shop` có `overflow: hidden` để cắt tên dài, và bóng ngoài sẽ bị cắt mất một bên.
- */
 .shopAvatarShop {
-  border: 2px solid var(--xp-color-primary);
-  background: var(--xp-color-primary-light);
+  border-color: var(--xp-color-primary-glow);
 }
 
-.shopAvatar img {
+.shopLogo {
   width: 100%;
   height: 100%;
+  border-radius: var(--xp-border-radius-pill);
   object-fit: cover;
+}
+
+/* Dấu xác thực — vòng trắng 12px ở góc phải dưới avatar. */
+.shopMark {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  display: inline-flex;
+  width: 12px;
+  height: 12px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
 }
 
 .shopCopy {
   display: flex;
-  overflow: hidden;
   min-width: 0;
   flex-direction: column;
-  line-height: 1.25;
 }
 
 .shopCaption {
   color: var(--xp-color-text-tertiary);
-  font-size: 10.5px;
-}
-
-/* Tên + dấu là một hàng riêng: chỉ TÊN được co và cắt, dấu luôn giữ nguyên kích thước. */
-.shopNameRow {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 3px;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
 }
 
 .shopName {
   overflow: hidden;
-  color: var(--xp-color-text);
-  font-size: 12px;
-  font-weight: 600;
+  min-width: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body);
   text-overflow: ellipsis;
   white-space: nowrap;
-  transition: color 0.15s ease;
 }
 
 .shopNameShop {
-  color: var(--xp-color-primary-active);
-  font-weight: 700;
+  color: var(--xp-color-primary-hover);
 }
 
-.shopMark {
+/* ─── Chân thẻ: điểm đánh giá + giá ───────────────────────────────────────── */
+.footer {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  gap: var(--xp-space-sm);
+}
+
+.rating {
+  display: inline-flex;
   flex: none;
+  align-items: center;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  gap: var(--xp-space-xs);
+  line-height: var(--xp-line-height-body);
+}
+
+.ratingCount {
+  color: var(--xp-color-text-placeholder);
 }
 
 .price {
   display: flex;
-  min-width: 62px;
-  max-width: 40%;
-  flex: none;
-  flex-direction: column;
-  align-items: flex-end;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: flex-end;
+  column-gap: var(--xp-space-xs);
   text-align: right;
-  gap: 1px;
 }
 
 .oldPrice {
-  color: var(--xp-color-text-tertiary);
-  font-size: 11.5px;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.2;
+  color: var(--xp-color-text-disabled);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
 }
 
 .currentPrice {
-  display: inline-flex;
-  align-items: baseline;
-  justify-content: flex-end;
-  gap: 4px;
-  white-space: nowrap;
-}
-
-.currentPrice b {
-  color: var(--xp-color-price);
-  font-size: 15px;
-  font-variant-numeric: tabular-nums;
-  font-weight: 750;
-  line-height: 1.2;
-}
-
-.currentPrice span,
-.priceNote {
   color: var(--xp-color-text-tertiary);
-  font-size: 11.5px;
-  line-height: 1.2;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  white-space: nowrap;
+}
+
+/* Số tiền — 20/30 SemiBold vàng; rê chuột thì đậm thêm một bậc (Figma thẻ đang rê). */
+.currentPrice b {
+  color: var(--xp-color-primary);
+  font-size: 20px;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 30px;
+  transition: color 0.18s ease;
+}
+
+.card:hover .currentPrice b {
+  color: var(--xp-color-primary-hover);
 }
 
 .priceNote {
-  white-space: nowrap;
+  flex-basis: 100%;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
 }
 
 .priceContact {
-  max-width: 120px;
-  color: var(--xp-color-price);
-  font-size: 13px;
-  font-weight: 650;
-  line-height: 1.25;
-}
-
-/* Hai cột ở tablet có thể chỉ rộng khoảng 220–250px: giữ footer gọn mà không tràn ngang. */
-@container (max-width: 260px) {
-  .body {
-    min-height: 218px;
-    padding: 12px;
-    gap: 8px;
-  }
-
-  .heading {
-    min-height: 44px;
-  }
-
-  .metaRow {
-    gap: 7px;
-  }
-
-  .shopAvatar {
-    width: 30px;
-    height: 30px;
-  }
-
-  .shopCaption {
-    display: none;
-  }
-
-  .shopName {
-    max-width: 96px;
-  }
-
-  .price {
-    min-width: 58px;
-  }
-
-  /*
-   * Ở dạng đầy đủ, `1.350.000 ₫` + `/ngày` không nằm chung một dòng nổi trong hai cột hẹp nên
-   * phải xếp chồng. Dạng rút gọn (`1,35tr/ngày`) thì vừa — bỏ xếp chồng, chân thẻ thấp lại và
-   * số tiền không còn trôi khỏi đơn vị của nó.
-   */
-  .currentPrice b {
-    font-size: 13.5px;
-  }
-}
-
-@media (max-width: 479px) {
-  .body {
-    min-height: 218px;
-  }
-
-  .title {
-    font-size: 16px;
-  }
-
-  .currentPrice b {
-    font-size: 15px;
-  }
-}
-
-@media (hover: none) {
-  .card:hover,
-  .card:hover .photo {
-    transform: none;
-  }
+  color: var(--xp-color-primary-strong);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .card,
-  .photo,
-  .fav {
+  .title,
+  .currentPrice b {
     transition: none;
   }
+}
+
+/* Chữ chỉ dành cho trình đọc màn hình. */
+.srOnly {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  border: 0;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

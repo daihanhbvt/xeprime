@@ -1,4 +1,5 @@
 import {
+  BOOKING_REQUEST_NOTE_MAX_LENGTH,
   LONG_TERM_PACKAGE_MONTHS,
   PICKUP_PREFERENCE,
   PICKUP_PREFERENCE_VALUES,
@@ -6,11 +7,13 @@ import {
   ROUTE_TYPE_VALUES,
   SERVICE_TYPE,
   SERVICE_TYPE_VALUES,
+  compactPhoneInput,
   type LongTermPackageMonths,
   type PickupPreference,
   type RouteType,
   type ServiceType,
 } from '@xeprime/types';
+import { buildRequiredPhoneSchema } from '@xeprime/validators';
 import type { Dayjs } from 'dayjs';
 import type { useTranslations } from 'next-intl';
 import * as yup from 'yup';
@@ -24,6 +27,8 @@ type FormTranslate = ReturnType<typeof useTranslations<'BookingRequests.form'>>;
 
 /** Số ký tự tối đa của phần "số nhà, đường" — khớp `ADDRESS_LINE_MAX_LENGTH` bên API. */
 const ADDRESS_LINE_MAX = 255;
+/** Họ tên người thuê — khớp `@MaxLength(255)` của `CreateBookingRequestDto.customerName`. */
+const CUSTOMER_NAME_MAX = 255;
 /** Điểm đến của chuyến có tài xế là chuỗi tự do; trần khớp cột `destination` bên API. */
 const DESTINATION_MAX = 500;
 
@@ -79,9 +84,23 @@ export type PickupMethod = (typeof PICKUP_METHOD)[keyof typeof PICKUP_METHOD];
 export function requestFormSchema(t: FormTranslate) {
   return yup.object({
     /*
-     * KHÔNG có ô liên hệ nào (ADR 0060): họ tên + SĐT đã xác minh của người thuê đọc từ TÀI KHOẢN
-     * đang đăng nhập ở server, không phải từ form.
+     * LIÊN HỆ của chuyến (ADR 0063) — họ tên + SĐT chủ xe sẽ gọi, sửa ở màn Xem lại. Mặc định là
+     * của TÀI KHOẢN (flow điền khi `/auth/me` về); SĐT khác số tài khoản KHÔNG cần OTP. Danh tính
+     * (danh sách chặn, tự đặt xe, chống trùng) vẫn đọc từ tài khoản ở server, không từ hai ô này.
      */
+    customerName: yup
+      .string()
+      .trim()
+      .required(t('errors.customerName'))
+      .max(CUSTOMER_NAME_MAX, t('errors.customerNameMax', { max: CUSTOMER_NAME_MAX }))
+      .default(''),
+    /** Cùng luật SĐT với API (`VN_PHONE_PATTERN`); dấu cách/chấm/gạch chép từ danh bạ được bỏ qua. */
+    customerPhone: buildRequiredPhoneSchema({
+      required: t('errors.customerPhone'),
+      invalid: t('errors.customerPhoneFormat'),
+    })
+      .transform((value: unknown) => (typeof value === 'string' ? compactPhoneInput(value) : value))
+      .default(''),
     /** Dịch vụ của chuyến (17/08) — component chỉ đưa ra lựa chọn nằm trong serviceTypes của xe. */
     serviceType: yup
       .mixed<ServiceType>()
@@ -200,11 +219,25 @@ export function requestFormSchema(t: FormTranslate) {
     deliveryLongitude: addressFields().longitude,
     deliveryLocationSource: addressFields().locationSource,
     /**
-     * Khách đồng ý điều khoản riêng của chủ xe (08/09/2026). Bắt buộc hay không phụ thuộc vào
-     * `rentalTerms.requireTermsAcceptance` của xe — dữ liệu server, nên luồng kiểm ở bước Xác nhận
-     * thay vì trong schema; server kiểm lại (`RENTAL_TERMS_ACCEPTANCE_REQUIRED`).
+     * Ô "Tôi đã đọc và đồng ý…" ở màn Xem lại (Figma `19727:55409`) — khách tick mới gửi được.
+     * Cùng một lời đồng ý phủ cả điều khoản riêng của chủ xe khi xe bắt buộc (08/09/2026), nên
+     * payload mang `acceptedTerms: true` và server kiểm lại (`RENTAL_TERMS_ACCEPTANCE_REQUIRED`).
+     * Kiểm ở bước Xác nhận thay vì trong schema: đây là lời đồng ý của MỘT người, không bao giờ
+     * khôi phục từ bản nháp.
      */
     acceptedTerms: yup.boolean().default(false),
+    /**
+     * Lời nhắn cho chủ xe (không bắt buộc) — chủ xe đọc nó ở hộp thư yêu cầu. Trần dùng chung với
+     * DTO bên API; server cắt khoảng trắng và lưu chuỗi rỗng thành `null`.
+     */
+    note: yup
+      .string()
+      .trim()
+      .max(
+        BOOKING_REQUEST_NOTE_MAX_LENGTH,
+        t('errors.noteMax', { max: BOOKING_REQUEST_NOTE_MAX_LENGTH }),
+      )
+      .default(''),
   });
 }
 

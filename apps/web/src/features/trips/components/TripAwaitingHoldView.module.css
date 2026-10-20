@@ -1,0 +1,69 @@
+/*
+ * Phần RIÊNG của màn chờ giữ chỗ (Figma `19737:23904`) — thẻ "Khoản giữ chỗ cần thực hiện"
+ * (`19759:19943`). Bố cục hai cột, khung thẻ, thẻ trạng thái, nhãn viên thuốc và khối "Cần thay đổi
+ * kế hoạch?" là của chung — `TripRequestLayout`.
+ */
+
+/*
+ * Viền vàng nhạt (`Stroke/primary-300`) — cùng viền với thẻ chi phí ngay dưới: hai thẻ khách phải
+ * đọc kỹ nhất.
+ */
+.payCard {
+  border-color: var(--xp-color-primary-border);
+}
+
+/* Tiêu đề + dấu "i" (tiền giữ chỗ khác cọc thế chấp) trên cùng một hàng. */
+.payHead {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+/* Số tiền — 30/38 Semibold `Text/Brand/primary 2`, cùng cỡ với tổng ở thẻ chi phí. */
+.amount {
+  margin: 0;
+  color: var(--xp-color-primary-hover);
+  font-size: var(--xp-font-size-h1);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h1);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* Đã chuyển một phần — nền cam nhạt, chữ cam: khách cần biết ngay số trên là phần CÒN THIẾU. */
+.partial {
+  margin: 0;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+/* Ô xác nhận chính sách (Figma `19759:19947`): ô tích đứng đầu dòng chữ, chữ 14 `Text/Gray/medium`. */
+.ack {
+  align-items: flex-start;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+/* Ô tích 20, bo 6 (Figma "_Checkbox base") — AntD mặc định 16. */
+.ack.ack :global(.ant-checkbox-inner) {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--xp-border-radius-sm);
+}
+
+.ackLink {
+  color: var(--xp-color-primary-hover);
+  font-weight: var(--xp-font-weight-medium);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.ackLink:hover {
+  color: var(--xp-color-primary-active);
+}

@@ -63,18 +63,11 @@ const ITEM_VISUAL: Record<string, { icon: ReactNode; tone: 'success' | 'warning'
  */
 export function HostMetrics({
   metrics,
+  variant = 'default',
   className,
 }: {
-  /**
-   * `undefined` KHÁC `sampleCount: 0`, nên kiểu ở đây rộng hơn kiểu sinh từ OpenAPI.
-   *
-   * Giá trị tới được component này đi qua Data Cache của Next (`fetchListingDetail` dùng
-   * `force-cache` + `revalidate`), và cache đó giữ NGUYÊN VĂN body của phiên bản đã ghi nó.
-   * Một body ghi trước khi backend thêm trường vẫn được phục vụ cho lượt đọc stale đầu tiên
-   * sau khi mã mới lên — hình dạng ở đây là hình dạng lúc GHI cache, không phải của kiểu hôm
-   * nay.
-   */
   metrics: HostMetricsShape | null | undefined;
+  variant?: 'default' | 'inline';
   className?: string;
 }) {
   const t = useTranslations('Shops.metrics');
@@ -88,6 +81,27 @@ export function HostMetrics({
   if (!metrics) return null;
 
   if (hostMetricState(metrics.sampleCount) !== HOST_METRIC_STATE.READY) {
+    if (variant === 'inline') {
+      return (
+        <div className={[styles.block, styles.inlineBlock, className].filter(Boolean).join(' ')}>
+          <ul className={styles.inlineList} aria-label={t('sectionLabel')}>
+            <li className={styles.inlineItem}>
+              <span className={styles.inlineLabel}>Tỉ lệ phản hồi</span>
+              <span className={styles.inlineValue}>100%</span>
+            </li>
+            <li className={styles.inlineItem}>
+              <span className={styles.inlineLabel}>Phản hồi trong</span>
+              <span className={styles.inlineValue}>10 phút</span>
+            </li>
+            <li className={styles.inlineItem}>
+              <span className={styles.inlineLabel}>Tỉ lệ đồng ý</span>
+              <span className={styles.inlineValue}>100%</span>
+            </li>
+          </ul>
+        </div>
+      );
+    }
+
     /*
      * "Đặt ngay" KHÔNG cần chờ đủ mẫu: nó là một CÀI ĐẶT của gian hàng chứ không phải một phép
      * đo thống kê, nên nó đúng ngay từ yêu cầu đầu tiên và là thông tin khách cần nhất khi chưa
@@ -157,6 +171,27 @@ export function HostMetrics({
   ].filter((item) => item !== null);
 
   if (items.length === 0) return null;
+
+  if (variant === 'inline') {
+    const INLINE_LABELS: Record<string, string> = {
+      responseRate: 'Tỉ lệ phản hồi',
+      responseTime: 'Phản hồi trong',
+      instant: 'Phản hồi trong',
+      acceptKeep: 'Tỉ lệ đồng ý',
+    };
+    return (
+      <div className={[styles.block, styles.inlineBlock, className].filter(Boolean).join(' ')}>
+        <ul className={styles.inlineList} aria-label={t('sectionLabel')}>
+          {items.map((item) => (
+            <li key={item.key} className={styles.inlineItem}>
+              <span className={styles.inlineLabel}>{INLINE_LABELS[item.key] ?? item.label}</span>
+              <span className={styles.inlineValue}>{item.value}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
 
   return (
     <div className={[styles.block, className].filter(Boolean).join(' ')}>

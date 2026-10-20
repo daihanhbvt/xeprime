@@ -1,49 +1,68 @@
-/* Thẻ thông số 2 cột (mỗi cột: nhãn trái, giá trị phải) — theo mockup chi tiết xe 17/08. */
+/* Thẻ 4 thông số chính theo Figma v2 (node 19707:83377): hàng ngang phẳng, không đóng khung viền */
 .card {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px 32px;
-  margin: 0;
-  padding: 18px 20px;
-  background: var(--xp-color-bg-container);
-  border: 1px solid var(--xp-color-border-secondary);
-  border-radius: 14px;
-}
-
-.row {
   display: flex;
-  align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
-  font-size: 14px;
-  min-width: 0;
+  align-items: center;
+  gap: 16px;
+  margin: 0;
+  padding: 6px 0 16px;
 }
 
-.row dt {
-  display: inline-flex;
+.item {
+  display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 0;
+  gap: 12px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+.iconWrapper {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #fef6ee;
+  color: #d6a439;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.label {
+  font-size: 13px;
   color: var(--xp-color-text-tertiary);
+  line-height: 18px;
   white-space: nowrap;
 }
 
-.icon {
-  color: var(--xp-color-text-tertiary);
+.value {
   font-size: 15px;
-}
-
-.row dd {
-  min-width: 0;
-  margin: 0;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--xp-color-text);
-  text-align: right;
-  overflow-wrap: anywhere;
+  line-height: 22px;
+  white-space: nowrap;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .card {
-    grid-template-columns: 1fr;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
   }
+}
+
+/* ── Giao diện tối ─────────────────────────────────────────────────────────
+   Vòng icon kem `#fef6ee` thành một đốm sáng chói trên nền tối — đổi sang vàng pha trong suốt. */
+:global([data-theme="dark"]) .iconWrapper {
+  background: var(--xp-color-primary-light);
 }

@@ -6,8 +6,9 @@ export { driversApi, driverFiltersToParams, DRIVERS_DEFAULT_LIMIT } from '@/api/
 export type {
   AssignableDriver,
   AssignableWindow,
-  CreateDriverInput,
   Driver,
   DriverFilters,
+  DriverLicenceSummary,
+  InviteDriverInput,
   UpdateDriverInput,
 } from '@/api/drivers/api';

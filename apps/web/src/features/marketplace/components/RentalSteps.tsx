@@ -1,33 +1,66 @@
-'use client';
-
-import { useTranslations } from 'next-intl';
-import { RENTAL_STEPS } from '../constants';
+import Image from 'next/image';
+import { getTranslations } from 'next-intl/server';
+import { cx } from '@/lib/cx';
+import { SectionHeading } from './SectionHeading';
 import styles from './RentalSteps.module.css';
 
 /**
- * "Thuê xe chỉ với 4 bước" — Figma `18:4`: MỘT thẻ trắng chia bốn cột bằng vạch dọc, mỗi cột
- * là chấm số vàng + tên bước trên một hàng, mô tả ngắn bên dưới. Bản trước là bốn thẻ rời có
- * icon — Figma không có icon nên bỏ, không tự chế thêm hoạ tiết.
- *
- * Nội dung tĩnh nhưng vẫn render sẵn ra HTML ở server (Client Component chỉ vì cây cha).
+ * Bốn bước theo thứ tự đặt xe thật (ADR 0044: gửi yêu cầu → duyệt → giữ chỗ → nhận xe). Hình minh
+ * hoạ là các ô cắt của MỘT tấm sprite — vị trí cắt nằm ở CSS (`.art*`), cùng tấm với mũi tên nối.
  */
-export function RentalSteps() {
-  const t = useTranslations('Marketplace.steps');
+const STEPS = [
+  { key: 'search', artClass: styles.artSearch },
+  { key: 'request', artClass: styles.artRequest },
+  { key: 'pickup', artClass: styles.artPickup },
+  { key: 'return', artClass: styles.artReturn },
+] as const;
+
+/** Một ô cắt của sprite các bước — ảnh phủ đúng khung lớn hơn ô, ô cắt phần cần thấy. */
+function SpriteCrop({ className, sizes }: { className: string | undefined; sizes: string }) {
+  return (
+    <span className={cx(styles.sprite, className)}>
+      <Image
+        src="/home/steps-sprite.webp"
+        alt=""
+        fill
+        sizes={sizes}
+        className={styles.spriteImage}
+      />
+    </span>
+  );
+}
+
+/** "Các bước thuê xe — Thuê xe đơn giản chỉ với 4 bước" (design v2 `19695:40905`, ADR 0062). */
+export async function RentalSteps() {
+  const t = await getTranslations('Home.steps');
 
   return (
-    <section className={styles.section} aria-labelledby="steps-title">
-      <h2 id="steps-title" className={styles.title}>
-        {t('title')}
-      </h2>
-
-      <ol className={styles.card}>
-        {RENTAL_STEPS.map((step) => (
-          <li key={step.no} className={styles.step}>
-            <div className={styles.stepHead}>
-              <span className={styles.no}>{step.no}</span>
-              <h3 className={styles.stepTitle}>{t(`${step.key}.title`)}</h3>
+    <section className={styles.section} aria-labelledby="home-steps">
+      <SectionHeading
+        id="home-steps"
+        kicker={t('kicker')}
+        title={t('title')}
+        align="center"
+        divider
+      />
+      <ol className={styles.steps}>
+        {STEPS.map((step, index) => (
+          <li key={step.key} className={styles.step}>
+            <span className={styles.artFrame} aria-hidden="true">
+              <span className={styles.art}>
+                <SpriteCrop className={step.artClass} sizes="1300px" />
+              </span>
+              {/* Mũi tên nối từ bước trước — trang trí, nằm giữa khe hai bước. */}
+              {index > 0 ? (
+                <span className={styles.arrow}>
+                  <SpriteCrop className={styles.artArrow} sizes="1100px" />
+                </span>
+              ) : null}
+            </span>
+            <div className={styles.copy}>
+              <h3 className={styles.stepTitle}>{t(`items.${step.key}.title`)}</h3>
+              <p className={styles.desc}>{t(`items.${step.key}.desc`)}</p>
             </div>
-            <p className={styles.desc}>{t(`${step.key}.desc`)}</p>
           </li>
         ))}
       </ol>

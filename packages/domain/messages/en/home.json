@@ -1,0 +1,116 @@
+{
+  "hero": {
+    "title": "The premium car marketplace",
+    "titleAccent": "Right at your fingertips!",
+    "subtitle": "Find cars, SUVs and motorbikes in just a few steps!"
+  },
+  "why": {
+    "kicker": "Why choose XePrime",
+    "title": "More than just a car rental service",
+    "items": {
+      "price": {
+        "title": "Fair prices, guaranteed",
+        "desc": "Competitive prices with no hidden costs"
+      },
+      "fleet": {
+        "title": "A premium fleet",
+        "desc": "Recent, clean and well-maintained cars for every need"
+      },
+      "time": {
+        "title": "Save time",
+        "desc": "Quick airport pick-ups and easy online booking"
+      },
+      "support": {
+        "title": "24/7 support",
+        "desc": "Our team is ready to help you anytime, anywhere"
+      }
+    }
+  },
+  "featured": {
+    "kicker": "Featured cars",
+    "title": "The right car for every journey",
+    "viewAll": "View all cars"
+  },
+  "promos": {
+    "label": "Featured offers"
+  },
+  "types": {
+    "kicker": "Car types",
+    "title": "A fit for every need",
+    "viewAll": "View all"
+  },
+  "destinations": {
+    "kicker": "Top destinations",
+    "title": "Find rental cars at popular destinations",
+    "available": "{count, plural, one {# car available} other {# cars available}}",
+    "fromPrice": "from <strong>{price}</strong>",
+    "explore": "Explore",
+    "exploreAria": "Explore rental cars in {city}",
+    "cities": {
+      "danang": "Da Nang",
+      "hanoi": "Hanoi",
+      "hcm": "Ho Chi Minh City",
+      "hue": "Hue"
+    }
+  },
+  "owners": {
+    "kicker": "Featured shops",
+    "title": "Owners our guests rate highly",
+    "vehicleCount": "{count, plural, one {# car} other {# cars}}",
+    "rentals": "<label>Rentals:</label> {count}",
+    "viewShop": "View shop",
+    "viewShopAria": "View the {name} shop",
+    "loadError": "Couldn't load the shops"
+  },
+  "partner": {
+    "titleLead": "Sign up to become an",
+    "titleAccent": "Exclusive partner",
+    "cta": "Sign up now",
+    "benefitsLabel": "Partner benefits",
+    "benefits": {
+      "income": "Earn more",
+      "support": "End-to-end support",
+      "customers": "Quality customers"
+    },
+    "help": "Need help? Call us: <tel>{phone}</tel>"
+  },
+  "steps": {
+    "kicker": "How renting works",
+    "title": "Rent a car in just 4 steps",
+    "items": {
+      "search": {
+        "title": "Find a car",
+        "desc": "Pick the model, place and time that suit your trip"
+      },
+      "request": {
+        "title": "Send a request",
+        "desc": "Check the details and price, then send your rental request"
+      },
+      "pickup": {
+        "title": "Pick it up",
+        "desc": "Collect the car at the meeting point or have it delivered"
+      },
+      "return": {
+        "title": "Return it",
+        "desc": "Finish your trip and return the car at the agreed time"
+      }
+    }
+  },
+  "reviews": {
+    "kicker": "Reviews",
+    "title": "What guests say about Xe Prime",
+    "rentedTimes": "{count, plural, one {Rented # time} other {Rented # times}}",
+    "ratingAria": "{rating} out of 5 stars",
+    "loadError": "Couldn't load the reviews"
+  },
+  "app": {
+    "title": "Now available on<br></br>Google Play & App Store",
+    "googlePlayCaption": "Get it on",
+    "appStoreCaption": "Download on the",
+    "previewAlt": "The XePrime app on a phone"
+  },
+  "carousel": {
+    "pagesLabel": "Choose a page",
+    "pageLabel": "Page {page}"
+  }
+}

@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { theme } from 'antd';
 import { describe, expect, it } from 'vitest';
 
-import { XP_BREAKPOINTS, XP_TOKENS, antdTheme } from './theme';
+import { XP_BREAKPOINTS, XP_DARK_TOKENS, XP_TOKENS, antdDarkTokens, antdTheme } from './theme';
 
 /**
  * ADR 0003: `theme.ts` và `tokens.css` là hai bản của cùng một bộ token. Không có test này
@@ -79,6 +79,25 @@ function readCssTokens(): Map<string, string> {
   return tokens;
 }
 
+/** Khối `[data-theme="dark"] { … }` của tokens.css — khai báo ĐẦU TIÊN có selector đó. */
+function readDarkCssTokens(): Map<string, string> {
+  const css = readFileSync(CSS_PATH, 'utf8');
+  const start = css.indexOf('[data-theme="dark"] {');
+  expect(start, 'tokens.css không còn khối giao diện tối').toBeGreaterThan(-1);
+  const block = css.slice(start, css.indexOf('\n}', start));
+  const tokens = new Map<string, string>();
+
+  for (const match of block.matchAll(DECLARATION_RE)) {
+    const name = match[1];
+    const value = match[2];
+    if (name && value) {
+      tokens.set(name, normalize(value));
+    }
+  }
+
+  return tokens;
+}
+
 describe('design token', () => {
   const cssTokens = readCssTokens();
 
@@ -115,6 +134,7 @@ describe('design token', () => {
       'shadow-sm',
       'shadow-md',
       'shadow-lg',
+      'font-family-display',
     ] as const;
 
     for (const alias of aliases) {
@@ -146,10 +166,20 @@ describe('design token', () => {
 
   it('AntD dẫn xuất được token từ seed mà không lỗi', () => {
     const derived = theme.getDesignToken(antdTheme);
-    // `colorTextDisabled` cố tình KHÔNG set tay: nó phải sinh ra từ `colorTextBase`.
+    // `colorTextDisabled` cố tình KHÔNG set tay: nó phải sinh ra từ `colorTextBase` (ADR 0062 Q8).
+    expect(antdTheme.token?.colorTextDisabled).toBeUndefined();
     expect(derived.colorTextDisabled).toBeTruthy();
     expect(derived.colorPrimary).toBe(XP_TOKENS['color-primary']);
     expect(derived.controlHeight).toBe(32);
+  });
+
+  it('nút đang nhấn lấy bậc AntD dẫn xuất từ gold v2, không phải bậc nhấn của bộ cũ', () => {
+    // `color-primary-active` (bộ cũ) chỉ đạt 4.47:1 với chữ v2 — ADR 0062 điều 6.
+    expect(antdTheme.token?.colorPrimaryActive).toBeUndefined();
+    const derived = theme.getDesignToken(antdTheme);
+    expect(
+      contrastRatio(String(derived.colorPrimaryActive), XP_TOKENS['color-primary-contrast']),
+    ).toBeGreaterThanOrEqual(4.5);
   });
 
   /**
@@ -210,14 +240,15 @@ describe('design token', () => {
     });
 
     /**
-     * Các cặp CHƯA đạt AA, đã đo và ghi nhận (xem docs/design-token-map.md §21 P18).
-     * `color-text-tertiary` vốn đã trượt từ trước Wave 1A (bản cũ 2.99). Ngưỡng dưới ở đây
-     * là chốt chặn: giảm thêm là test đỏ.
+     * Các cặp CHƯA đạt AA, đã đo và ghi nhận (xem docs/design-token-map.md §17 và §21 P18).
+     * Ngưỡng dưới ở đây là chốt chặn ở mức v2 (15/10/2026): giảm thêm là test đỏ.
+     * `text-tertiary` lên 4.37 với dải xám v2 (bộ cũ 2.72) — sát AA nhưng chưa qua trên nền trang;
+     * trên nền trắng nó đạt 4.56.
      */
     it.each([
-      ['text-tertiary trên nền trang', 'color-bg', 'color-text-tertiary', 2.7],
+      ['text-tertiary trên nền trang', 'color-bg', 'color-text-tertiary', 4.3],
       ['warning trên warning-bg', 'color-warning-bg', 'color-warning', 2.8],
-      ['success trên success-bg', 'color-success-bg', 'color-success', 3.1],
+      ['success trên success-bg', 'color-success-bg', 'color-success', 3.5],
       ['error trên error-bg', 'color-error-bg', 'color-error', 4.4],
     ] as const)('%s giữ nguyên mức đã ghi nhận (chưa đạt AA)', (_label, bg, fg, floor) => {
       const value = contrast(XP_TOKENS[bg], XP_TOKENS[fg]);
@@ -231,7 +262,7 @@ describe('design token', () => {
      * ước lượng. Đây là chỗ đo.
      *
      * Có thật một cái bẫy ở đây: bộ token nền sáng KHÔNG dùng lại được trên nền tối.
-     * `--xp-color-text-secondary` chỉ đạt 2.99 và `--xp-gold-deep` 4.33 trên
+     * `--xp-color-text-secondary` chỉ đạt 1.81 (v2; bộ cũ 2.99) và `--xp-gold-deep` 4.33 trên
      * `--xp-shell-sidebar-bg` — cả hai từng là màu chữ menu trước Wave 1D-B.
      */
     describe('sidebar tối — bậc trạng thái dẫn xuất', () => {
@@ -287,10 +318,10 @@ describe('design token', () => {
      * Vỏ portal cũng có bề mặt SÁNG (topbar, thanh tab dưới đáy). Đo tương phản ở 1D-C phát
      * hiện ba cặp trượt AA tại đây — không phải trên nền tối như dự đoán.
      *
-     * Bài học ghi lại kèm số: **gold không dùng làm màu CHỮ nhỏ trên nền sáng được.**
-     * `--xp-gold-deep` chỉ đạt 3.97 trên trắng và 3.68 trên `--xp-gold-wash`. Nó hợp lệ khi
-     * là NỀN (chữ `--xp-color-primary-contrast` lên trên: 6.60) hoặc khi là thành phần đồ hoạ
-     * như vạch chỉ báo (ngưỡng 3:1).
+     * Bài học ghi lại kèm số: **gold không dùng làm màu CHỮ nhỏ trên nền sáng được** — trừ bậc
+     * `--xp-color-primary-strong` (v2 Brand/high), bậc duy nhất của dải gold đạt AA ở đó. Gold v2
+     * `#e9ac29` chỉ 2.02 trên trắng, hover 2.76, bậc nhấn `--xp-gold-deep` 3.97. Chúng hợp lệ khi
+     * là NỀN (chữ `--xp-color-primary-contrast` lên trên) hoặc thành phần đồ hoạ (ngưỡng 3:1).
      */
     describe('vỏ portal — bề mặt sáng', () => {
       const WHITE = XP_TOKENS['color-bg-container'];
@@ -312,14 +343,29 @@ describe('design token', () => {
         expect(contrast(XP_TOKENS['color-primary-active'], WHITE)).toBeGreaterThanOrEqual(3);
       });
 
-      it('ba cặp bị THAY ở 1D-C thật sự trượt — nên việc thay là cần thiết', () => {
-        // tab thường cũ: text-tertiary trên trắng
-        expect(contrast(XP_TOKENS['color-text-tertiary'], WHITE)).toBeLessThan(4.5);
-        // tab đang chọn cũ + ô gian hàng cũ: gold-deep trên trắng / trên gold-wash
+      it('gold chính, hover và bậc nhấn thật sự trượt AA khi làm chữ trên nền sáng', () => {
+        expect(contrast(XP_TOKENS['color-primary'], WHITE)).toBeLessThan(4.5);
+        expect(contrast(XP_TOKENS['color-primary-hover'], WHITE)).toBeLessThan(4.5);
         expect(contrast(XP_TOKENS['color-primary-active'], WHITE)).toBeLessThan(4.5);
+      });
+
+      it.each([
+        ['trên trắng', WHITE],
+        ['trên nền gold nhạt', XP_TOKENS['color-primary-light']],
+        ['trên nền gold nhạt nhất', XP_TOKENS['color-primary-subtle']],
+      ] as const)('chữ gold (primary-strong) %s đạt AA', (_label, bg) => {
+        expect(contrast(XP_TOKENS['color-primary-strong'], bg)).toBeGreaterThanOrEqual(4.5);
+      });
+
+      it('primary-strong KHÔNG làm nền dưới chữ tối — lý do bậc nhấn không đổi sang nó', () => {
+        // Nếu ai đó trỏ `color-primary-active` (đang là nền dưới chữ tối ở web + native) về
+        // Brand/high, chữ trên nền đó rơi xuống ~2.4:1.
         expect(
-          contrast(XP_TOKENS['color-primary-active'], XP_TOKENS['color-primary-light']),
-        ).toBeLessThan(4.5);
+          contrast(XP_TOKENS['color-primary-strong'], XP_TOKENS['color-primary-contrast']),
+        ).toBeLessThan(3);
+        expect(
+          contrast(XP_TOKENS['color-primary-active'], XP_TOKENS['color-primary-contrast']),
+        ).toBeGreaterThan(4.4);
       });
     });
   });
@@ -347,6 +393,57 @@ describe('design token', () => {
       expect(
         contrastRatio(XP_TOKENS['color-primary'], XP_TOKENS['color-primary-contrast']),
       ).toBeGreaterThanOrEqual(4.5);
+    });
+  });
+
+  /**
+   * Giao diện tối: khối `[data-theme="dark"]` của tokens.css (CSS Module đọc) và `XP_DARK_TOKENS`
+   * (AntD đọc) là hai bản của cùng một bộ màu — lệch nhau là nút AntD một màu, thẻ bên cạnh
+   * một màu.
+   */
+  describe('giao diện tối', () => {
+    const darkCss = readDarkCssTokens();
+    const dark = XP_DARK_TOKENS as Readonly<Record<string, string>>;
+
+    it('mọi token MÀU của khối tối đều có trong XP_DARK_TOKENS, và ngược lại', () => {
+      const fromCss = [...darkCss.keys()].filter((name) => name.startsWith('--xp-color-')).sort();
+      const fromTs = Object.keys(dark)
+        .map((key) => `--xp-${key}`)
+        .sort();
+      expect(fromTs).toEqual(fromCss);
+    });
+
+    it('giá trị khớp nhau', () => {
+      for (const [key, value] of Object.entries(dark)) {
+        expect(darkCss.get(`--xp-${key}`), `token tối --xp-${key}`).toBe(normalize(value));
+      }
+    });
+
+    it('chỉ ghi đè token đã có ở khối sáng', () => {
+      for (const key of Object.keys(dark)) {
+        expect(cssTokens.has(`--xp-${key}`), `--xp-${key} không có ở :root`).toBe(true);
+      }
+    });
+
+    it.each([
+      ['text trên nền trang', 'color-bg', 'color-text'],
+      ['text trên container', 'color-bg-container', 'color-text'],
+      ['text-secondary trên container', 'color-bg-container', 'color-text-secondary'],
+      ['text-tertiary trên container', 'color-bg-container', 'color-text-tertiary'],
+      ['text-secondary trên nền nổi', 'color-bg-elevated', 'color-text-secondary'],
+    ] as const)('%s đạt AA', (_label, bg, fg) => {
+      expect(contrastRatio(XP_DARK_TOKENS[bg], XP_DARK_TOKENS[fg])).toBeGreaterThanOrEqual(4.5);
+    });
+
+    it('AntD tối dẫn xuất được và dùng đúng màu của khối tối', () => {
+      const derived = theme.getDesignToken({
+        ...antdTheme,
+        algorithm: theme.darkAlgorithm,
+        token: { ...antdTheme.token, ...antdDarkTokens },
+      });
+      expect(derived.colorBgContainer).toBe(XP_DARK_TOKENS['color-bg-container']);
+      expect(derived.colorText).toBe(XP_DARK_TOKENS['color-text']);
+      expect(derived.colorBorder).toBe(XP_DARK_TOKENS['color-border']);
     });
   });
 

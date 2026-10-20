@@ -29,8 +29,9 @@ import otpStyles from './ForgotPasswordByPhone.module.css';
 const isOtpCodeComplete = (code: string): boolean => /^[0-9]{6}$/.test(code);
 
 /**
- * Quên mật khẩu bằng SỐ ĐIỆN THOẠI — site khách và site partner (ADR 0060). MỘT màn, giống hệt app
- * native (`ForgotPasswordScreen`):
+ * Quên mật khẩu bằng SỐ ĐIỆN THOẠI — site PARTNER (ADR 0060). MỘT màn, giống hệt app native
+ * (`ForgotPasswordScreen`). Site khách quên mật khẩu ba bước ngay trong hộp tài khoản
+ * (`MarketForgotPassword`, design v2) — cùng endpoint, `/forgot-password` của site khách chuyển về đó:
  *
  *   SĐT · mật khẩu mới · nhập lại → "Xác nhận" → gửi mã `password_reset` + popup nhập mã →
  *   đúng mã ⇒ `POST /auth/password/reset-otp` → "Đã đặt lại mật khẩu".

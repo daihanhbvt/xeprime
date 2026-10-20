@@ -232,3 +232,103 @@
     line-height: var(--xp-line-height-body-lg);
   }
 }
+
+/* Biến thể inline theo chuẩn Figma v2 (node 19707:83357 - Khối "Chủ xe") */
+.card.inlineCard {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  gap: 0;
+  box-shadow: none;
+}
+
+.inlineMainRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.avatarWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.inlineCard .avatar {
+  width: 56px;
+  height: 56px;
+  font-size: 22px;
+}
+
+.verifiedBadgeInline {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+}
+
+.shopTypeLabel {
+  font-size: 13px;
+  color: var(--xp-color-text-secondary, #717680);
+  line-height: 18px;
+  display: block;
+}
+
+.inlineCard .name {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 24px;
+  color: var(--xp-color-text, #0e0f12);
+}
+
+.inlineCard .summary {
+  margin-top: 4px;
+  gap: 16px;
+  font-size: 14px;
+  color: var(--xp-color-text, #0e0f12);
+}
+
+.inlineCard .divider {
+  display: none;
+}
+
+.inlineCard .rating {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--xp-color-text, #0e0f12);
+}
+
+.inlineCard .rating .star {
+  color: #f79009;
+  font-size: 15px;
+}
+
+.ratingCount {
+  font-weight: 400;
+  color: var(--xp-color-text-secondary, #717680);
+}
+
+.inlineCard .trips {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--xp-color-text, #0e0f12);
+}
+
+.tripsIcon {
+  flex-shrink: 0;
+}
+
+.inlineMetrics {
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .inlineMainRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+}

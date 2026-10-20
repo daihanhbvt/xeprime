@@ -35,6 +35,8 @@ const SUPPORT_ALLOWLIST = [
   'BookingHandoversController.context',
   'BookingRequestsController.getOne',
   'BookingRequestsController.list',
+  // Lịch sử gán tài xế của đơn (ADR 0063) — chỉ đọc, cùng capability xem đơn.
+  'BookingsController.driverHistory',
   'BookingsController.getOne',
   'BookingsController.list',
   'BranchesController.get',

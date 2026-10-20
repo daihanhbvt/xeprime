@@ -1,0 +1,239 @@
+/*
+ * Băng chuyền trang chủ v2 (Embla) — bề rộng thẻ là CSS thuần, Embla chỉ dịch `.container`.
+ *
+ * Khoảng cách giữa hai thẻ là ĐỆM HAI BÊN của mỗi thẻ (mỗi bên nửa khoảng) + lề âm nửa khoảng ở
+ * hai bên KHUNG NHÌN. Nhờ vậy khung nhìn rộng đúng bằng tổng các thẻ của một trang: Embla không
+ * thấy "thừa" nội dung (thừa 1 khoảng là thêm một trang ma — hai banner vừa khít vẫn hiện 2 chấm),
+ * và thẻ-ở-giữa trên mobile canh giữa đúng tâm. Dùng `gap` của flex thì phép tính vị trí của
+ * Embla lệch đúng bằng khoảng đó ở mỗi bước trượt.
+ */
+.root {
+  --per-view: 4;
+  --gap: 20px;
+
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.per2 {
+  --per-view: 2;
+}
+
+.per3 {
+  --per-view: 3;
+}
+
+.per4 {
+  --per-view: 4;
+}
+
+.per5 {
+  --per-view: 5;
+}
+
+.per6 {
+  --per-view: 6;
+}
+
+/* 1.823 thẻ mỗi khung = thẻ 387px trong cột 722px (Figma); co theo tỉ lệ ở màn hẹp hơn. */
+.peek {
+  --per-view: 1.823;
+}
+
+.gap20 {
+  --gap: 20px;
+}
+
+.gap24 {
+  --gap: 24px;
+}
+
+.gap32 {
+  --gap: 32px;
+}
+
+/* Chừa chỗ cho bóng thẻ: khung trượt cắt mất bóng tràn ra ngoài nếu không có đệm. */
+.viewport {
+  overflow: hidden;
+  padding-block: 4px 10px;
+  margin: -4px calc(var(--gap) / -2) -10px;
+}
+
+/* Đệm cho phần nhô lên 15px của thẻ (+ chút bóng) — bù lại bằng lề âm để vị trí khối không đổi. */
+.overhang .viewport {
+  padding-top: 20px;
+  margin-top: -20px;
+}
+
+.container {
+  display: flex;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  touch-action: pan-y pinch-zoom;
+}
+
+.slide {
+  display: flex;
+  min-width: 0;
+  box-sizing: border-box;
+  flex: 0 0 calc(100% / var(--per-view));
+  padding-inline: calc(var(--gap) / 2);
+}
+
+.slide > * {
+  width: 100%;
+}
+
+/* Kéo bằng chuột: không để trình duyệt kéo ảnh/liên kết ra thành "bóng ma". */
+.slide img,
+.slide a {
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+.dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--xp-space-sm);
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border: none;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-border-strong);
+  cursor: pointer;
+  transition:
+    width 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.dotActive {
+  width: 32px;
+  background: var(--xp-color-bg-inverse);
+}
+
+.dot:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+/* Lưới tĩnh từ tablet trở lên (Embla tắt ở dải này): hàng cách nhau 40px như bản vẽ. */
+@media (min-width: 641px) {
+  .gridLayout .viewport {
+    margin-inline: 0;
+  }
+
+  .gridLayout .container {
+    display: grid;
+    gap: var(--xp-space-40) var(--gap);
+    grid-template-columns: repeat(var(--per-view), minmax(0, 1fr));
+  }
+
+  .gridLayout .slide {
+    padding-inline: 0;
+  }
+
+  .gridLayout .dots {
+    display: none;
+  }
+}
+
+/* Khi bật responsiveGrid: mở rộng 5 cột (≥2000px) và 6 cột (≥2400px) cho màn 27" 2K/4K */
+@media (min-width: 2000px) {
+  .responsiveGrid.gridLayout .container {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 2400px) {
+  .responsiveGrid.gridLayout .container {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+/*
+ * Khi bật responsiveGrid: luôn giữ đúng 2 HÀNG NGANG theo số cột khả dụng:
+ * - Tablet (641px - 1024px): 2 cột × 2 hàng = 4 xe (ẩn từ thẻ 5)
+ * - Desktop thường & 24" Full HD (1025px - 1999px): 4 cột × 2 hàng = 8 xe (ẩn từ thẻ 9)
+ * - Màn hình 27" 2K (2000px - 2399px): 5 cột × 2 hàng = 10 xe (ẩn từ thẻ 11)
+ * - Màn hình 27" 2K 100% / 4K (≥2400px): 6 cột × 2 hàng = 12 xe (hiện đủ 12)
+ */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .responsiveGrid.gridLayout .slide:nth-child(n + 5) {
+    display: none;
+  }
+}
+
+@media (min-width: 1025px) and (max-width: 1999px) {
+  .responsiveGrid.gridLayout .slide:nth-child(n + 9) {
+    display: none;
+  }
+}
+
+@media (min-width: 2000px) and (max-width: 2399px) {
+  .responsiveGrid.gridLayout .slide:nth-child(n + 11) {
+    display: none;
+  }
+}
+
+@media (max-width: 1024px) {
+  .per3,
+  .per4,
+  .per5,
+  .per6 {
+    --per-view: 2;
+  }
+
+  .tablet1 {
+    --per-view: 1;
+  }
+}
+
+/*
+ * Mobile: thẻ ở GIỮA, hai thẻ kề ló ra hai bên (bản vẽ mobile v2) — 1.3 thẻ mỗi khung, cách 16px.
+ * Áp cho mọi khối kể cả `peek`.
+ */
+@media (max-width: 640px) {
+  .root {
+    --per-view: 1.3;
+    --gap: 16px;
+  }
+
+  .per2,
+  .per3,
+  .per4,
+  .per5,
+  .per6,
+  .peek,
+  .tablet1 {
+    --per-view: 1.3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot {
+    transition: none;
+  }
+}
+
+/* ── Giao diện tối (Dark Mode - Figma `19879:66213`) ──────────────────────── */
+
+:global([data-theme="dark"]) .dot {
+  background: #717680;
+}
+
+:global([data-theme="dark"]) .dot:hover {
+  background: #a4a7ae;
+}
+
+:global([data-theme="dark"]) .dotActive {
+  background: #fff5e5;
+}
+

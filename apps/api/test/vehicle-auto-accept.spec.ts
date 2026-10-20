@@ -11,32 +11,31 @@ import {
   BOOKING_REQUEST_STATUS,
   BOOKING_STATUS,
   DEPOSIT_COLLECTION_MODE,
-  FEATURE_STATE,
-  type FeatureState,
   FEE_POLICY_STATUS,
   MEMBERSHIP_STATUS,
   NOTIFICATION_TYPE,
   OCCUPANCY_SOURCE_TYPE,
-  PLAN_FEATURE,
-  PLAN_FEATURE_VALUES,
   PLAN_STATUS,
-  type PlanFeature,
   SERVICE_TYPE,
   SUBSCRIPTION_STATUS,
   TENANT_ROLE,
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_TYPE,
+  DRIVER_LINK_STATUS,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { VehicleSettingsService } from '../src/modules/vehicle-settings/vehicle-settings.service';
+import { ListingsService } from '../src/modules/public-listings/listings.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import {
   makeBookingHoldsService,
   makeBookingRequestsService,
   makeNotificationService,
+  makeDriversService,
 } from './helpers/service-factory';
+import { cleanupDriverAccounts, seedDriverLink } from './helpers/driver-link';
 import { customerAccountFor } from './helpers/customer-account';
 
 /**
@@ -62,7 +61,7 @@ const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
 const notifications = makeNotificationService(asService);
 const occupancy = new OccupancyService(asService);
-const settings = new VehicleSettingsService(asService, audit, occupancy);
+const settings = new VehicleSettingsService(asService, audit, occupancy, new ListingsService(asService), makeDriversService(asService));
 
 const holds = makeBookingHoldsService(asService);
 const requests = makeBookingRequestsService(asService, {
@@ -75,13 +74,6 @@ const requests = makeBookingRequestsService(asService, {
 const RUN = newId().slice(-8).toLowerCase();
 const DAY = 24 * 3600_000;
 
-function features(overrides: Partial<Record<PlanFeature, FeatureState>> = {}) {
-  const all = Object.fromEntries(
-    PLAN_FEATURE_VALUES.map((f) => [f, FEATURE_STATE.HIDDEN]),
-  ) as Record<PlanFeature, FeatureState>;
-  return { ...all, ...overrides };
-}
-const withDrivers = features({ [PLAN_FEATURE.DRIVERS]: FEATURE_STATE.ENABLED });
 
 let dbAvailable = false;
 let ownerId: string;
@@ -218,7 +210,6 @@ async function enableAutoAccept(
   vehicle: string,
   owner: string,
   serviceType: string,
-  featureMap = features(),
 ) {
   await settings.patchServiceSetting(
     tenant,
@@ -226,7 +217,6 @@ async function enableAutoAccept(
     serviceType,
     owner,
     { autoAcceptEnabled: true },
-    featureMap,
   );
 }
 
@@ -327,6 +317,8 @@ afterEach(async () => {
 
 afterAll(async () => {
   if (dbAvailable) {
+    await prisma.booking.deleteMany({ where: { tenantId: { in: [tenantId, holdTenantId] } } });
+    await cleanupDriverAccounts(asService);
     const tenants = { in: [tenantId, holdTenantId] };
     await prisma.tenantSubscription.deleteMany({ where: { tenantId: tenants } });
     await prisma.plan.deleteMany({ where: { id: planId } });
@@ -590,7 +582,6 @@ describe('Khung giờ và điều khoản — chặn ngay lúc gửi, ở SERVER
         SERVICE_TYPE.SELF_DRIVE,
         ownerId,
         { requireTermsAcceptance: true, termsText: 'Không hút thuốc trong xe.' },
-        features(),
       );
 
       await expect(submit()).rejects.toMatchObject({
@@ -606,16 +597,13 @@ describe('Khung giờ và điều khoản — chặn ngay lúc gửi, ở SERVER
   );
 
   maybe('thời lượng dưới mức tối thiểu của chuyến có tài xế bị từ chối', async () => {
-    await prisma.driver.create({
-      data: { id: newId(), tenantId, name: 'Tài xế 1', phone: '0900000001', status: 'active' },
-    });
+    await seedDriverLink(asService, { tenantId: tenantId, name: 'Tài xế 1' });
     await settings.patchServiceSetting(
       tenantId,
       vehicleId,
       SERVICE_TYPE.WITH_DRIVER,
       ownerId,
       { minRentalMinutes: 720 },
-      withDrivers,
     );
     await expect(
       submit({
@@ -644,17 +632,8 @@ describe('Có tài xế — không tự nhận khi chuyến có thu tiền giữ
   maybe(
     'có tài xế rảnh vẫn KHÔNG tự nhận: về hàng chờ với lý do HOLD_REQUIRED_WITH_DRIVER',
     async () => {
-      const driverId = newId();
-      await prisma.driver.create({
-        data: {
-          id: driverId,
-          tenantId,
-          name: 'Tài xế rảnh',
-          phone: '0900000003',
-          status: 'active',
-        },
-      });
-      await enableAutoAccept(tenantId, vehicleId, ownerId, SERVICE_TYPE.WITH_DRIVER, withDrivers);
+      await seedDriverLink(asService, { tenantId: tenantId, name: 'Tài xế rảnh' });
+      await enableAutoAccept(tenantId, vehicleId, ownerId, SERVICE_TYPE.WITH_DRIVER);
 
       const receipt = await submit({
         serviceType: SERVICE_TYPE.WITH_DRIVER,
@@ -679,9 +658,7 @@ describe('Có tài xế — không tự nhận khi chuyến có thu tiền giữ
    * màn đơn sau khi tiền về, không phải tự động.
    */
   maybe('duyệt TAY chuyến có tài xế: chốt lịch, phát QR, tiền về thì mở đơn', async () => {
-    await prisma.driver.create({
-      data: { id: newId(), tenantId, name: 'Tài xế 9', phone: '0900000009', status: 'active' },
-    });
+    await seedDriverLink(asService, { tenantId: tenantId, name: 'Tài xế 9' });
     const receipt = await submit({
       serviceType: SERVICE_TYPE.WITH_DRIVER,
       routeType: 'in_city',
@@ -698,12 +675,13 @@ describe('Có tài xế — không tự nhận khi chuyến có thu tiền giữ
   });
 
   maybe('không có tài xế rảnh: về hàng chờ, không có QR nào được phát', async () => {
-    await prisma.driver.create({
-      data: { id: newId(), tenantId, name: 'Tài xế 1', phone: '0900000002', status: 'active' },
-    });
-    await enableAutoAccept(tenantId, vehicleId, ownerId, SERVICE_TYPE.WITH_DRIVER, withDrivers);
+    await seedDriverLink(asService, { tenantId: tenantId, name: 'Tài xế 1' });
+    await enableAutoAccept(tenantId, vehicleId, ownerId, SERVICE_TYPE.WITH_DRIVER);
     // Tài xế duy nhất bị vô hiệu hoá SAU khi bật — cấu hình còn bật, năng lực thì không.
-    await prisma.driver.updateMany({ where: { tenantId }, data: { status: 'inactive' } });
+    await prisma.driver.updateMany({
+      where: { tenantId },
+      data: { linkStatus: DRIVER_LINK_STATUS.SUSPENDED },
+    });
 
     const receipt = await submit({
       serviceType: SERVICE_TYPE.WITH_DRIVER,
@@ -809,21 +787,12 @@ describe('Tuyến hoa hồng — phí dịch vụ nằm trong khoản giữ ch�
    */
   maybe('có tài xế + cần giữ chỗ: KHÔNG tự nhận, chuyến về hàng chờ duyệt tay', async () => {
     if (!feePolicyActive) throw new Error('Thiếu chính sách phí ACTIVE — migration R3 chưa chạy?');
-    await prisma.driver.create({
-      data: {
-        id: newId(),
-        tenantId: holdTenantId,
-        name: 'Tài xế hoa hồng',
-        phone: '0900000005',
-        status: 'active',
-      },
-    });
+    await seedDriverLink(asService, { tenantId: holdTenantId, name: 'Tài xế hoa hồng' });
     await enableAutoAccept(
       holdTenantId,
       holdVehicleId,
       holdOwnerId,
       SERVICE_TYPE.WITH_DRIVER,
-      withDrivers,
     );
     const receipt = await submit(
       {

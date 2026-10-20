@@ -2,8 +2,7 @@ import { SERVICE_TYPE, type ServiceType } from '@xeprime/types';
 import { LEGAL_DOC, legalPath } from '@/constants/legal';
 import { ROUTES } from '@/constants/routes';
 import type { FooterKey, ServiceLabelKey } from '@/i18n/keys';
-import { applyFilterPatch } from './filter-params';
-import type { MarketplaceFilters } from './types';
+import { marketplaceSearchHref } from './filter-params';
 
 /**
  * Cấu trúc TĨNH của marketplace: thứ tự tab, thứ tự bước, cột chân trang.
@@ -40,17 +39,6 @@ export const SERVICE_TABS: ReadonlyArray<{
   { key: SERVICE_TYPE.LONG_TERM, labelKey: 'longTerm', shortLabelKey: 'longTermShort' },
 ];
 
-/** "Thuê xe chỉ với 4 bước" — nội dung TĨNH (không phải dữ liệu nghiệp vụ), bố cục theo Figma 18:4. */
-export const RENTAL_STEPS: ReadonlyArray<{
-  no: string;
-  key: 'search' | 'request' | 'pickup' | 'return';
-}> = [
-  { no: '1', key: 'search' },
-  { no: '2', key: 'request' },
-  { no: '3', key: 'pickup' },
-  { no: '4', key: 'return' },
-];
-
 /**
  * Cột liên kết ở chân trang — HAI cột khai ở đây, cột thứ ba (dịch vụ) dựng từ
  * `FOOTER_SERVICE_LINKS` vì nhãn của nó đến từ một namespace khác.
@@ -79,9 +67,9 @@ export const FOOTER_COLUMNS: ReadonlyArray<{
 }> = [
   {
     key: 'company',
-    titleKey: 'columns.company.title',
+    titleKey: 'columns.company.heading',
     links: [
-      { key: 'columns.company.about', href: ROUTES.ABOUT },
+      { key: 'columns.company.aboutShort', href: ROUTES.ABOUT },
       { key: 'columns.company.app', href: ROUTES.APP },
       /*
        * Trung tâm hỗ trợ là trang CÔNG KHAI, không cần đăng nhập — người mắc kẹt giữa chuyến
@@ -101,7 +89,8 @@ export const FOOTER_COLUMNS: ReadonlyArray<{
         key: 'columns.legal.marketplaceRules',
         href: legalPath.doc(LEGAL_DOC.MARKETPLACE_RULES),
       },
-      { key: 'columns.legal.cancellation', href: legalPath.doc(LEGAL_DOC.CANCELLATION) },
+      // Nhãn ngắn của design v2 ("Chính sách huỷ & hoàn tiền") — cột hẹp, không xuống dòng.
+      { key: 'columns.legal.cancellationShort', href: legalPath.doc(LEGAL_DOC.CANCELLATION) },
     ],
   },
 ];
@@ -120,7 +109,7 @@ export const FOOTER_COLUMNS: ReadonlyArray<{
  * NHÃN không khai ở đây: nó dùng lại `HomeSearch.service.*`, đúng bộ chữ mà tab tìm kiếm trang
  * chủ đang dùng. Chân trang và hero không bao giờ được gọi một dịch vụ bằng hai cái tên.
  *
- * Query string dựng bằng `applyFilterPatch` — cùng bộ serialize mà `/search` dùng để đọc ngược
+ * Query string dựng bằng `marketplaceSearchHref` — cùng bộ serialize (`applyFilterPatch`) mà `/search` dùng để đọc ngược
  * lại. Tự nối chuỗi `?serviceType=...` ở đây là đặt một bản sao thứ hai của contract URL.
  */
 export const FOOTER_SERVICE_LINKS: ReadonlyArray<{
@@ -130,11 +119,5 @@ export const FOOTER_SERVICE_LINKS: ReadonlyArray<{
 }> = SERVICE_TABS.map((tab) => ({
   key: tab.key,
   labelKey: tab.labelKey,
-  href: searchHref({ serviceType: tab.key }),
+  href: marketplaceSearchHref({ serviceType: tab.key }),
 }));
-
-function searchHref(filters: Partial<MarketplaceFilters>): string {
-  const params = new URLSearchParams();
-  applyFilterPatch(params, filters);
-  return `${ROUTES.SEARCH}?${params.toString()}`;
-}

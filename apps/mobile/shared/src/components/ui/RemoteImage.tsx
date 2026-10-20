@@ -2,7 +2,6 @@ import { useState, type ReactNode } from 'react';
 import { Image, type ImageContentFit } from 'expo-image';
 import { StyleSheet } from 'react-native';
 import { YStack } from 'tamagui';
-import { mapDebug } from '@/lib/map-debug';
 import { colors } from '@/theme/tokens';
 import { duration } from '@/theme/motion';
 import { Skeleton } from './Skeleton';
@@ -56,8 +55,14 @@ export function RemoteImage({
   radius,
   accessibilityLabel,
   pendingOverlay,
+  headers,
+  onError,
 }: {
   uri?: string | null;
+  /** Header gửi kèm lượt tải (vd. Bearer cho ảnh cần phiên — `useAuthImageHeaders`). */
+  headers?: Record<string, string>;
+  /** Báo nơi gọi khi ảnh tải hỏng (vd. ảnh bản đồ tự ẩn hẳn, khớp web). */
+  onError?: () => void;
   recyclingKey?: string;
   /** Vẽ khi KHÔNG có URL, và khi tải hỏng. */
   fallback: ReactNode;
@@ -122,7 +127,7 @@ export function RemoteImage({
       {phase === 'pending' ? <Skeleton fill /> : null}
 
       <Image
-        source={{ uri }}
+        source={headers ? { uri, headers } : { uri }}
         style={styles.fill}
         contentFit={contentFit}
         cachePolicy="memory-disk"
@@ -133,15 +138,9 @@ export function RemoteImage({
           setShown(true);
           setPhase('ready');
         }}
-        /*
-         * Một ảnh hỏng chỉ để lại `fallback` trên màn — không mã lỗi, không URL, không gì để
-         * lần. Ghi lại ở mức DEV: đây là nửa thứ hai của chẩn đoán bản đồ (nửa đầu là
-         * `mapDebug.urlNull`), và nó phân biệt "app không dựng nổi URL" với "URL đúng nhưng
-         * mạng/khoá từ chối" — hai nguyên nhân sửa bằng hai cách hoàn toàn khác nhau.
-         */
         onError={() => {
-          mapDebug.imageFailed(uri);
           setPhase('failed');
+          onError?.();
         }}
       />
 

@@ -33,8 +33,11 @@
     "authCheck": "I have read and agree to XePrime's <terms>Terms of Use</terms> and <privacy>Privacy Policy</privacy>.",
     "authCheckPlain": "I have read and agree to XePrime's Terms of Use and Privacy Policy.",
     "booking": "Sending this request means you agree to the <terms>Terms of Service</terms> and the <cancellation>Cancellation and Refund Policy</cancellation>.",
+    "bookingCheck": "I have read and agree to XePrime's <terms>Terms of Service</terms>, <cancellation>Cancellation & Refund Policy</cancellation> and <privacy>Privacy Policy</privacy>.",
+    "bookingCheckHost": "I have read and agree to the owner's rental terms and XePrime's <terms>Terms of Service</terms>, <cancellation>Cancellation & Refund Policy</cancellation> and <privacy>Privacy Policy</privacy>.",
     "subscription": "Buying a plan means you agree to the <terms>Terms of Service</terms> and the <rules>Marketplace Operating Rules</rules>.",
-    "shop": "Creating a shop means you agree to the <rules>Marketplace Operating Rules</rules> and the <terms>Terms of Service</terms>."
+    "shop": "Creating a shop means you agree to the <rules>Marketplace Operating Rules</rules> and the <terms>Terms of Service</terms>.",
+    "marketAuth": "By continuing, you agree to XePrime's <terms>Terms of Service</terms> and <privacy>Privacy Policy</privacy>."
   },
   "docs": {
     "terms": {

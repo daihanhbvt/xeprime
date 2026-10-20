@@ -42,6 +42,7 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
+import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { CancelTripSheet } from './components/CancelTripSheet';
@@ -51,7 +52,6 @@ import { TripEstimateCard } from './components/TripEstimateCard';
 import { TripFinanceCard } from './components/TripFinanceCard';
 import {
   TripGatewayNotice,
-  TripGatewayPay,
   useTripGateway,
 } from '@/features/payment-gateway/components/TripGatewayPay';
 import { TripHoldPanel } from './components/TripHoldPanel';
@@ -87,6 +87,8 @@ export function TripDetailScreen({
   const t = useTranslations('Trips');
   const router = useRouter();
   const query = useTrip(tripId);
+  // Vòng quay chỉ khi KHÁCH kéo — `isRefetching` bật cả ở nhịp poll hold và lượt quay về tiền cảnh.
+  const pull = usePullRefresh(query.refetch);
 
   if (query.isPending) {
     return (
@@ -94,8 +96,8 @@ export function TripDetailScreen({
         <AppHeader title={t('detail.heading')} onBack={() => goBackOr(router, listHref)} />
         <Screen
           edges={['left', 'right', 'bottom']}
-          refreshing={query.isRefetching}
-          onRefresh={() => void query.refetch()}
+          refreshing={pull.refreshing}
+          onRefresh={pull.onRefresh}
         >
           <TripDetailSkeleton />
         </Screen>
@@ -138,10 +140,28 @@ export function TripDetailScreen({
     );
   }
 
-  return <TripDetailBody trip={query.data} listHref={listHref} />;
+  return (
+    <TripDetailBody
+      trip={query.data}
+      listHref={listHref}
+      refreshing={pull.refreshing}
+      onRefresh={pull.onRefresh}
+    />
+  );
 }
 
-function TripDetailBody({ trip, listHref }: { trip: CustomerTripDetail; listHref: Href }) {
+function TripDetailBody({
+  trip,
+  listHref,
+  refreshing,
+  onRefresh,
+}: {
+  trip: CustomerTripDetail;
+  listHref: Href;
+  /** Vuốt xuống ⇒ đọc lại chuyến (chặng, tiền giữ chỗ, quyết định của chủ xe). */
+  refreshing: boolean;
+  onRefresh: () => void;
+}) {
   const t = useTranslations('Trips');
   const router = useRouter();
   const fmt = useAppFormat();
@@ -163,7 +183,10 @@ function TripDetailBody({ trip, listHref }: { trip: CustomerTripDetail; listHref
    */
   const [approved, setApproved] = useState<BookingRequestDecisionTarget | null>(null);
   const cancelTrip = useCancelTrip(trip.id);
-  /** Lượt MoMo/VNPAY — thông báo đứng NGOÀI panel giữ chỗ (web: `TripGatewayReturn`), nút ở trong. */
+  /**
+   * Lượt MoMo/VNPAY đã mở trước đó — thông báo đứng NGOÀI panel giữ chỗ (web: `TripGatewayReturn`).
+   * Nút trả đã chuyển sang màn thanh toán riêng (`TripPaymentScreen`, 13/10/2026).
+   */
   const gateway = useTripGateway(trip.id);
 
   const stage = trip.stage as CustomerTripStage;
@@ -207,7 +230,7 @@ function TripDetailBody({ trip, listHref }: { trip: CustomerTripDetail; listHref
           />
         }
       />
-      <Screen edges={['left', 'right', 'bottom']}>
+      <Screen edges={['left', 'right', 'bottom']} refreshing={refreshing} onRefresh={onRefresh}>
         <YStack gap={layout.section}>
           {/*
             Thẻ còn đúng việc của nó: vẽ chuyến đang ở chặng nào trên cả hành trình.
@@ -325,13 +348,6 @@ function TripDetailBody({ trip, listHref }: { trip: CustomerTripDetail; listHref
               tripId={trip.id}
               tripTotalAmount={trip.estimate?.fees?.customerTotalAmount ?? null}
               payAtHandoverAmount={trip.estimate?.fees?.payAtPickupAmount ?? null}
-              gatewayOptions={
-                <TripGatewayPay
-                  gateway={gateway}
-                  amount={trip.hold.remainingAmount}
-                  deadline={trip.hold.expiresAt}
-                />
-              }
             />
           ) : null}
 

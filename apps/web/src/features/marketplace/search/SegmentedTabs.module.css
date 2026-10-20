@@ -13,14 +13,6 @@
   gap: 2px;
 }
 
-/*
- * Rãnh TRONG SUỐT: hai tầng chọn của thẻ tìm kiếm đã ngồi thẳng trên mặt thẻ trắng, vẽ thêm một
- * nền xám nữa là hai lớp nền chồng nhau và lộ ra ngay ở mối nối giữa các tầng.
- */
-.listPlain {
-  background: none;
-}
-
 .tab {
   display: inline-flex;
   min-height: 36px;
@@ -56,6 +48,14 @@
   background: var(--xp-color-primary);
   color: var(--xp-color-primary-contrast);
   box-shadow: var(--xp-shadow-card);
+}
+
+/* Icon + nhãn đi chung một khối (xem SegmentedTabs.tsx) — khoảng cách bằng đúng gap của tab. */
+.tabInner {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: inherit;
 }
 
 .icon {
@@ -107,5 +107,117 @@
 @media (prefers-reduced-motion: reduce) {
   .tab {
     transition: none;
+  }
+}
+
+/* --- Design v2 (ADR 0062) ------------------------------------------------------------- */
+
+/*
+ * `tabs` — dải tab dịch vụ của thẻ tìm kiếm trang chủ (Figma "Rental Type Tabs"): rãnh xám nhạt
+ * bo trên 16px, tab đang chọn là nền trắng bo trên 12px + gạch chân vàng 2px dưới chữ.
+ */
+.listTabs {
+  display: inline-flex;
+  padding: 0;
+  border-radius: var(--xp-border-radius-card) var(--xp-border-radius-card) 0 0;
+  background: var(--xp-color-bg-muted);
+  gap: 0;
+}
+
+.listTabs .tab {
+  height: 50px;
+  min-height: 0;
+  padding: 0 var(--xp-space-20);
+  border-radius: var(--xp-border-radius-control) var(--xp-border-radius-control) 0 0;
+  box-shadow: none;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-medium);
+  gap: var(--xp-space-sm);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+.listTabs .tab:hover {
+  color: var(--xp-color-primary-hover);
+}
+
+.listTabs .tabActive,
+.listTabs .tabActive:hover {
+  background: var(--xp-color-bg-container);
+  box-shadow: none;
+  color: var(--xp-color-primary-hover);
+}
+
+/* Gạch vàng 2px nằm dưới CẢ icon lẫn chữ, chạm đáy tab — đúng khối con có gạch chân 2px của Figma. */
+.listTabs .tab .tabInner {
+  height: 100%;
+  border-bottom: 2px solid transparent;
+}
+
+.listTabs .tabActive .tabInner {
+  border-bottom-color: var(--xp-color-primary-accent);
+}
+
+.listTabs .icon {
+  font-size: 22px;
+}
+
+/*
+ * `segment` — "Loại xe" trong hàng ô nhập (Figma "Horizontal tabs - Home"): khung xám rất nhạt
+ * viền 1px, mục đang chọn là nút trắng viền xám, cao 44px như các ô nhập bên cạnh.
+ */
+.listSegment {
+  padding: 0;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg);
+  box-shadow: var(--xp-elevation-xs);
+  gap: var(--xp-space-2);
+}
+
+.listSegment .tab {
+  height: 44px;
+  min-height: 0;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid transparent;
+  border-radius: var(--xp-border-radius-control);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-medium);
+  gap: var(--xp-space-sm);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+.listSegment .tab:hover {
+  color: var(--xp-color-primary-hover);
+}
+
+.listSegment .tabActive,
+.listSegment .tabActive:hover {
+  border-color: var(--xp-color-border-strong);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-elevation-xs);
+  color: var(--xp-color-primary-hover);
+}
+
+.listSegment .icon {
+  font-size: 18px;
+}
+
+@media (max-width: 640px) {
+  .listTabs {
+    display: flex;
+    width: 100%;
+  }
+
+  .listTabs .tab {
+    height: 46px;
+    padding: 0 var(--xp-space-sm);
+    font-size: var(--xp-font-size-body);
+  }
+
+  .listSegment {
+    display: flex;
+    width: 100%;
   }
 }

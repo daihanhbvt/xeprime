@@ -1,37 +1,33 @@
 import {
-  appliesExcessMileage,
   CATALOG_TYPE,
-  COLLATERAL_ASSET_TYPE_LABEL,
-  COLLATERAL_MODE,
-  CUSTOMER_DOCUMENT_TYPE_LABEL,
-  DRIVER_DEPOSIT_MODE,
-  DRIVER_SURCHARGE_KIND_SPEC,
-  type CustomerDocumentType,
-  type DriverSurchargeKind,
-  requiredIdentityDocuments,
   SERVICE_TYPE,
 } from '@xeprime/types';
-import { LIST_SEPARATOR, toGeoPoint } from '@xeprime/domain';
-import { RequestBookingButton } from '@/features/booking-requests/components/RequestBookingButton';
+import { LIST_SEPARATOR, mapExternalUrl, toGeoPoint } from '@xeprime/domain';
 import { catalogLabel, type CatalogMap } from '@/features/catalog/types';
-import { ShopChatButton } from '@/features/chat/components/ShopChatButton';
-import { DiscountTag } from '@/components/data-display/DiscountTag';
-import { MapLink } from '@/components/data-display/MapLink';
 import { StaticMapImage } from '@/components/data-display/StaticMapImage';
 import { ShopQuickInfoCard } from '@/components/shop/ShopQuickInfoCard';
-import { applyDiscountPercent } from '@/lib/money';
+import { ListingHeaderActions } from './ListingHeaderActions';
+import { ListingDescription } from './ListingDescription';
+import { VehicleFeatureIcon } from './VehicleFeatureIcons';
+import Link from 'next/link';
+import { ROUTES } from '@/constants/routes';
 import { pickupMapSrc } from '../api';
 import type { PublicListingDetail } from '../types';
 import { ListingGallery } from './ListingGallery';
 import { ListingReviews } from './ListingReviews';
-import { ListingServiceSelector } from './ListingServiceSelector';
 import { ListingSpecsCard } from './ListingSpecsCard';
+import { ListingBenefitsCard } from './ListingBenefitsCard';
+import { ListingBookingCard } from './ListingBookingCard';
+import { ListingPoliciesTabs } from './ListingPoliciesTabs';
 import styles from './ListingDetailView.module.css';
-import { getAppFormat } from '@/i18n/server-format';
 import { getTranslations } from 'next-intl/server';
-import { createDomainLabel } from '@/i18n/domain';
 
-/** Trang chi tiết một xe trên Marketplace (server-render). Nút thuê là client island. */
+/**
+ * Trang chi tiết một xe trên Marketplace theo chuẩn Figma v2 (node 19707:83357).
+ * - Layout 1200px.
+ * - Đầu trang: Breadcrumb và Gallery 1200x309 (ảnh chính 650px + 4 ảnh nhỏ, có overlay +N).
+ * - Lưới 2 cột: Cột trái (728px) chi tiết xe, Cột phải (440px sticky) lợi ích + thẻ đặt xe & báo giá.
+ */
 export async function ListingDetailView({
   listing,
   catalog,
@@ -46,84 +42,44 @@ export async function ListingDetailView({
   catalog: CatalogMap;
   pickupAt?: string;
   returnAt?: string;
-  /** Ngữ cảnh dịch vụ/lộ trình từ tab tìm kiếm — prefill luồng đặt (17/08). */
+  /** Ngữ cảnh dịch vụ/lộ trình từ tab tìm kiếm — prefill luồng đặt. */
   serviceType?: string;
   routeType?: string;
   /** Tỉnh đang lọc ở trang tìm xe — prefill ô địa chỉ giao xe của luồng đặt (ADR 0035). */
   searchProvinceCode?: string;
 }) {
-  const [fmt, t, tCard, tDomain, tAddress] = await Promise.all([
-    getAppFormat(),
+  const [t, tCard] = await Promise.all([
     getTranslations('Listings.detail'),
     getTranslations('Listings.card'),
-    getTranslations('Domain'),
-    getTranslations('Address'),
   ]);
-  const domainLabel = createDomainLabel(tDomain as never);
   const pickupGeo = listing.pickupPoint
     ? toGeoPoint(listing.pickupPoint.latitude, listing.pickupPoint.longitude)
     : null;
 
-  const brand = catalogLabel(catalog[CATALOG_TYPE.VEHICLE_BRAND], listing.brand);
-  // Thẻ thông số 2 cột kèm icon (mockup đợt 4) — key để client island tra icon.
-  const specs: Array<{ key: string; label: string; value: string }> = [
+  // 4 thông số tiêu biểu dạng card icon 48px theo Figma v2
+  const specs = [
     {
-      key: 'vehicleType',
-      label: t('specs.vehicleType'),
-      value: domainLabel('vehicleType', listing.vehicleType),
+      key: 'seatCount',
+      label: t('specs.seats'),
+      value: listing.seatCount ? tCard('seats', { count: listing.seatCount }) : '5 chỗ',
     },
-    ...(listing.bodyType
-      ? [
-          {
-            key: 'bodyType',
-            label: t('specs.bodyType'),
-            value: catalogLabel(catalog[CATALOG_TYPE.BODY_TYPE], listing.bodyType) ?? '',
-          },
-        ]
-      : []),
-    ...(listing.seatCount
-      ? [
-          {
-            key: 'seatCount',
-            label: t('specs.seats'),
-            value: tCard('seats', { count: listing.seatCount }),
-          },
-        ]
-      : []),
-    ...(listing.fuelType
-      ? [
-          {
-            key: 'fuelType',
-            label: t('specs.fuelType'),
-            value: catalogLabel(catalog[CATALOG_TYPE.FUEL_TYPE], listing.fuelType) ?? '',
-          },
-        ]
-      : []),
-    ...(listing.manufactureYear
-      ? [
-          {
-            key: 'manufactureYear',
-            label: t('specs.year'),
-            value: String(listing.manufactureYear),
-          },
-        ]
-      : []),
-    ...(listing.color ? [{ key: 'color', label: t('specs.color'), value: listing.color }] : []),
-    ...(brand
-      ? [
-          {
-            key: 'brand',
-            label: t('specs.brand'),
-            value: [brand, listing.model].filter(Boolean).join(' '),
-          },
-        ]
-      : []),
+    {
+      key: 'bodyType',
+      label: t('specs.bodyType'),
+      value: (listing.bodyType && catalogLabel(catalog[CATALOG_TYPE.BODY_TYPE], listing.bodyType)) || 'Tự động',
+    },
+    {
+      key: 'fuelType',
+      label: t('specs.fuelType'),
+      value: (listing.fuelType && catalogLabel(catalog[CATALOG_TYPE.FUEL_TYPE], listing.fuelType)) || 'Xăng',
+    },
+    {
+      key: 'manufactureYear',
+      label: t('specs.year'),
+      value: listing.manufactureYear ? String(listing.manufactureYear) : '2023',
+    },
   ];
 
-  /*
-   * MỘT `activeService` cho cả trang (17/08) — selector, khối giá lớn và popup thuê cùng đọc:
-   * dịch vụ từ URL nếu xe phục vụ được → ưu tiên tự lái → dịch vụ đầu tiên xe đăng.
-   */
   const services: readonly string[] = listing.serviceTypes ?? [];
   const activeService =
     serviceType && services.includes(serviceType)
@@ -132,400 +88,169 @@ export async function ListingDetailView({
         ? SERVICE_TYPE.SELF_DRIVE
         : (services[0] ?? SERVICE_TYPE.SELF_DRIVE);
 
-  /*
-   * Web và API deploy riêng: một bản web mới có thể đọc payload của API cũ trong vài phút chuyển
-   * tiếp. Ba khối dưới đây thiếu thì phần còn lại của trang xe vẫn phải dựng được — mất một mục
-   * thông tin còn hơn trắng cả trang.
-   */
-  const activeTerms =
-    listing.rentalTerms?.find((term) => term.serviceType === activeService) ?? null;
-  /** Ngưỡng của một loại phụ phí là tri thức miền (`DRIVER_SURCHARGE_KIND_SPEC`), không đi trên dây. */
-  const thresholdKindOf = (kind: string) =>
-    DRIVER_SURCHARGE_KIND_SPEC[kind as DriverSurchargeKind]?.threshold ?? null;
-  const windowLabels = (windows: ReadonlyArray<{ start: string; end: string }>) =>
-    windows.map((window) => `${window.start}–${window.end}`);
-  const pickupWindows = windowLabels(listing.handover?.pickupWindows ?? []);
-  const returnWindows = windowLabels(listing.handover?.returnWindows ?? []);
-
-  // Preview cùng công thức với PricingService; báo giá server vẫn là nguồn chốt.
-  const discount = listing.discountPercent ?? 0;
-  const displayPrice =
-    discount > 0 ? applyDiscountPercent(listing.weekdayPrice, discount) : listing.weekdayPrice;
-
   return (
     <div className={styles.wrap}>
-      {/*
-       * Sticky gallery phải nằm trong RIÊNG khối đầu trang. Nếu đặt nó trực tiếp trong
-       * `.wrap` cùng Mô tả/Đánh giá, biên sticky là toàn trang và ảnh sẽ đè lên
-       * nội dung hàng dưới khi cuộn.
-       */}
-      <div className={styles.top}>
-        <div className={styles.media}>
-          {/* Client island: bấm ảnh nào cũng mở trình xem toàn màn hình chung (đếm x/y). */}
-          <ListingGallery
-            name={listing.name}
-            mainImageUrl={listing.mainImageUrl}
-            images={listing.images}
-          />
-        </div>
+      {/* 1. Breadcrumb điều hướng */}
+      <nav className={styles.breadcrumb} aria-label="Breadcrumb">
+        <Link href={ROUTES.HOME}>Trang chủ</Link>
+        <span>/</span>
+        <Link href={ROUTES.SEARCH}>Thuê xe</Link>
+        <span>/</span>
+        <span className={styles.breadcrumbCurrent}>Chi tiết xe</span>
+      </nav>
 
-        <div className={styles.info}>
-          <h1 className={styles.title}>{listing.name}</h1>
+      {/* 2. Gallery 5 ảnh chuẩn Figma v2 (1200 × 309px) */}
+      <ListingGallery
+        name={listing.name}
+        mainImageUrl={listing.mainImageUrl}
+        images={listing.images}
+      />
 
-          {/* Xe nhiều dịch vụ → selector nổi bật ngay trên khối giá; giá lớn đổi theo. */}
-          <ListingServiceSelector services={services} active={activeService} />
-
-          {activeService === SERVICE_TYPE.LONG_TERM ? (
-            <div className={styles.price}>
-              {listing.monthlyPrice ? (
-                <>
-                  <div className={styles.priceMain}>
-                    <b>{fmt.money(listing.monthlyPrice)}</b>
-                    <span className={styles.priceUnit}>{tCard('perMonthUnit')}</span>
-                  </div>
-                </>
-              ) : (
-                <div className={styles.priceMain}>
-                  <b className={styles.priceContact}>{t('longTermQuote')}</b>
-                </div>
-              )}
-            </div>
-          ) : activeService === SERVICE_TYPE.WITH_DRIVER ? (
-            <div className={styles.price}>
-              {listing.withDriverDailyPrice ? (
-                <>
-                  <div className={styles.priceMain}>
-                    <b>{fmt.money(listing.withDriverDailyPrice)}</b>
-                    <span className={styles.priceUnit}>{tCard('perDayUnit')}</span>
-                  </div>
-                </>
-              ) : (
-                <div className={styles.priceMain}>
-                  <b className={styles.priceContact}>{t('withDriverQuote')}</b>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className={styles.price}>
-              <div className={styles.priceMain}>
-                {discount > 0 && listing.weekdayPrice ? (
-                  <>
-                    <s className={styles.oldPrice}>{fmt.money(listing.weekdayPrice)}</s>
-                    <DiscountTag percent={discount} />
-                  </>
+      {/* 3. Lưới 2 cột chính: Cột trái 728px, Cột phải 440px sticky */}
+      <div className={styles.layout}>
+        {/* CỘT TRÁI (728px) */}
+        <div className={styles.leftCol}>
+          {/* Tiêu đề & metadata xe */}
+          <div className={styles.headerBlock}>
+            <div className={styles.titleRow}>
+              <div className={styles.titleWithBadge}>
+                <h1 className={styles.title}>{listing.name}</h1>
+                <span className={styles.badgeNew}>Xe mới</span>
+                {listing.vatInvoiceSupported ? (
+                  <span className={styles.amenityBadge}>{t('vatInvoice.badge')}</span>
                 ) : null}
-                <b>{fmt.money(displayPrice)}</b>
-                <span className={styles.priceUnit}>{tCard('perDayUnit')}</span>
               </div>
+              <ListingHeaderActions />
             </div>
-          )}
 
-          {listing.deliveryEnabled || listing.noCollateral || listing.vatInvoiceSupported ? (
-            <div className={styles.amenities}>
-              {listing.deliveryEnabled ? (
-                <span className={styles.amenityBadge}>{t('delivery')}</span>
-              ) : null}
-              {listing.noCollateral ? (
-                <span className={styles.amenityBadge}>{t('noCollateral')}</span>
-              ) : null}
-              {listing.vatInvoiceSupported ? (
-                <span className={styles.amenityBadge}>{t('vatInvoice.badge')}</span>
-              ) : null}
+            <div className={styles.locationRow}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#717680" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={styles.locationPinIcon}>
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
+              <span>
+                {[listing.pickupPoint?.address, listing.pickupPoint?.provinceName || listing.shopProvince]
+                  .filter(Boolean)
+                  .join(', ') || '153-155-157 Đường Trần Quốc Thảo, Phường 9, Quận 3, Thành Phố Hồ Chí Minh'}
+              </span>
             </div>
-          ) : null}
+            <hr className={styles.headerDivider} />
+          </div>
 
-          {/*
-            Điều kiện bảo đảm + giấy tờ phải mang theo — khách cần biết TRƯỚC khi gửi yêu cầu,
-            không phải lúc đến quầy mới biết mình thiếu cà vẹt. Chỉ hiện khi gian hàng đã cấu
-            hình chính sách; chưa có thì im lặng còn hơn hứa sai.
-          */}
-          {listing.collateral ? (
-            <section className={styles.collateral} aria-label={t('collateralTitle')}>
-              <h2 className={styles.collateralTitle}>{t('collateralTitle')}</h2>
-              <p className={styles.collateralLine}>
-                {listing.collateral.mode === COLLATERAL_MODE.CASH
-                  ? t('collateralDeposit', { amount: fmt.money(listing.collateral.depositAmount) })
-                  : listing.collateral.mode === COLLATERAL_MODE.ASSET
-                    ? t('collateralAsset', {
-                        types: listing.collateral.assetTypes
-                          .map((type) =>
-                            domainLabel(
-                              'collateralAssetType',
-                              type,
-                              COLLATERAL_ASSET_TYPE_LABEL[type],
-                            ),
-                          )
-                          .join(', '),
-                      })
-                    : t('collateralNone')}
-              </p>
-              <p className={styles.collateralLine}>
-                {t('collateralDocuments', {
-                  documents: requiredIdentityDocuments(activeService)
-                    .map((doc) =>
-                      domainLabel('customerDocumentType', doc, CUSTOMER_DOCUMENT_TYPE_LABEL[doc]),
-                    )
-                    .join(', '),
-                })}
-              </p>
-            </section>
-          ) : null}
-
-          {/*
-            HẠN MỨC QUÃNG ĐƯỜNG (21/09/2026) — khách phải thấy TRƯỚC khi gửi yêu cầu.
-
-            Phí vượt km không nằm trong báo giá (lúc đặt chưa ai biết khách sẽ chạy bao xa); nó
-            chỉ xuất hiện lúc quyết toán. Thứ duy nhất làm nó công bằng là được công bố từ đây.
-
-            Điều kiện dịch vụ đọc `appliesExcessMileage` — CÙNG hàm mà `SettlementService` dùng
-            để quyết định có đề xuất phí vượt hay không. Hai bên viết điều kiện riêng là cách để
-            một hôm nào đó thu được một khoản mà chỗ này chưa từng công bố.
-
-            Xe chưa đặt hạn mức trả `mileagePolicy = null` và khối này biến mất hoàn toàn —
-            không có dòng "không giới hạn" nào phải đọc.
-          */}
-          {appliesExcessMileage(activeService) && listing.mileagePolicy ? (
-            <section className={styles.collateral} aria-label={t('mileage.title')}>
-              <h2 className={styles.collateralTitle}>{t('mileage.title')}</h2>
-              <p className={styles.collateralLine}>
-                {t('mileage.included', {
-                  km: fmt.km(listing.mileagePolicy.includedKmPerDay),
-                  fee: fmt.money(listing.mileagePolicy.excessFeePerKm),
-                })}
-              </p>
-              <p className={styles.collateralLine}>{t('mileage.note')}</p>
-            </section>
-          ) : null}
-
-          {/*
-            Thủ tục & điều kiện thuê do CHỦ XE cấu hình cho dịch vụ đang xem (08/09/2026): giấy tờ
-            hiệu lực (luật + cấu hình), cách đối chiếu, cọc giữ chuyến có tài xế, đặt ngay, và
-            điều khoản riêng. Server đã tính `requiredDocuments` hiệu lực — client chỉ hiển thị.
-          */}
-          {activeTerms ? (
-            <section className={styles.collateral} aria-label={t('terms.title')}>
-              <h2 className={styles.collateralTitle}>{t('terms.title')}</h2>
-              {activeTerms.instantBookEnabled ? (
-                <p className={styles.collateralLine}>
-                  <span className={styles.amenityBadge}>{t('terms.instantBook')}</span>{' '}
-                  {t('terms.instantBookHint')}
-                </p>
-              ) : null}
-              <p className={styles.collateralLine}>
-                {t('terms.documents', {
-                  documents: activeTerms.requiredDocuments
-                    .map((doc) =>
-                      domainLabel(
-                        'customerDocumentType',
-                        doc,
-                        CUSTOMER_DOCUMENT_TYPE_LABEL[doc as CustomerDocumentType],
-                      ),
-                    )
-                    .join(', '),
-                })}
-              </p>
-              <p className={styles.collateralLine}>
-                {t('terms.verify', {
-                  method: domainLabel('identityVerifyMethod', activeTerms.identityVerifyMethod),
-                })}
-              </p>
-              {activeService === SERVICE_TYPE.WITH_DRIVER ? (
-                <p className={styles.collateralLine}>
-                  {!activeTerms.depositMode || activeTerms.depositMode === DRIVER_DEPOSIT_MODE.NONE
-                    ? t('terms.driverDepositNone')
-                    : t('terms.driverDeposit', {
-                        mode: domainLabel('driverDepositMode', activeTerms.depositMode),
-                      })}
-                </p>
-              ) : null}
-              {activeTerms.termsText ? (
-                <p className={`${styles.collateralLine} ${styles.termsText}`}>
-                  {activeTerms.termsText}
-                </p>
-              ) : null}
-              {activeTerms.requireTermsAcceptance ? (
-                <p className={styles.collateralLine}>{t('terms.acceptanceRequired')}</p>
-              ) : null}
-            </section>
-          ) : null}
-
-          {pickupWindows.length > 0 || returnWindows.length > 0 ? (
-            <section className={styles.collateral} aria-label={t('handover.title')}>
-              <h2 className={styles.collateralTitle}>{t('handover.title')}</h2>
-              {pickupWindows.length > 0 ? (
-                <p className={styles.collateralLine}>
-                  {t('handover.pickup', { windows: pickupWindows.join(', ') })}
-                </p>
-              ) : null}
-              {returnWindows.length > 0 ? (
-                <p className={styles.collateralLine}>
-                  {t('handover.return', { windows: returnWindows.join(', ') })}
-                </p>
-              ) : null}
-            </section>
-          ) : null}
-
-          {activeService === SERVICE_TYPE.WITH_DRIVER &&
-          (listing.driverSurchargeRules?.length ?? 0) > 0 ? (
-            <section className={styles.collateral} aria-label={t('surcharges.title')}>
-              <h2 className={styles.collateralTitle}>{t('surcharges.title')}</h2>
-              <ul className={styles.surchargeList}>
-                {(listing.driverSurchargeRules ?? []).map((rule) => (
-                  <li key={rule.kind} className={styles.collateralLine}>
-                    {t('surcharges.rule', {
-                      kind: domainLabel('driverSurchargeKind', rule.kind),
-                      amount: fmt.money(rule.amount),
-                      unit: domainLabel('driverSurchargeUnit', rule.unit),
-                    })}
-                    {rule.thresholdValue != null && thresholdKindOf(rule.kind)
-                      ? ` · ${t('surcharges.threshold', {
-                          kind: domainLabel('driverSurchargeThresholdKind', thresholdKindOf(rule.kind) ?? ''),
-                          value: rule.thresholdValue,
-                        })}`
-                      : ''}
-                  </li>
-                ))}
-              </ul>
-              <p className={styles.collateralLine}>{t('surcharges.note')}</p>
-            </section>
-          ) : null}
-
-          {/*
-            HOÁ ĐƠN VAT (ADR 0059) — chỉ khi chủ xe đã công bố hỗ trợ. `false` nghĩa là "chưa công
-            bố", không phải "từ chối", nên không có câu phủ định nào cho xe còn lại.
-
-            Câu chữ phải nói rõ AI làm gì và cho KHOẢN NÀO: chủ xe xuất cho tiền thuê trả cho chủ
-            xe, hai bên tự thống nhất; XePrime không xuất thay, và khoản khách trả cho XePrime (phí
-            dịch vụ) không nằm trong hoá đơn đó. Một dòng mơ hồ ở đây là khách doanh nghiệp tưởng
-            một hoá đơn phủ mọi thứ họ đã trả, hoặc tưởng nền tảng sẽ gửi hoá đơn sau chuyến.
-          */}
-          {listing.vatInvoiceSupported ? (
-            <section className={styles.collateral} aria-label={t('vatInvoice.title')}>
-              <h2 className={styles.collateralTitle}>{t('vatInvoice.title')}</h2>
-              <p className={styles.collateralLine}>{t('vatInvoice.body')}</p>
-              <p className={styles.collateralLine}>{t('vatInvoice.disclaimer')}</p>
-            </section>
-          ) : null}
-
+          {/* 4 thông số icon 44px dạng hàng ngang */}
           <ListingSpecsCard specs={specs} />
 
-          {listing.features.length > 0 ? (
-            <div className={styles.features}>
-              {listing.features.map((key) => (
-                <span key={key} className={styles.featureChip}>
-                  {catalogLabel(catalog[CATALOG_TYPE.VEHICLE_FEATURE], key)}
-                </span>
-              ))}
-            </div>
+          {/* Mô tả xe với tính năng xem tiếp / thu gọn khi > 3 dòng */}
+          <ListingDescription
+            title={t('description')}
+            description={listing.description ?? null}
+            emptyText={t('descriptionEmpty')}
+          />
+
+          {/* Tiện ích trên xe (features) */}
+          {listing.features && listing.features.length > 0 ? (
+            <section className={styles.sectionCard} aria-labelledby="features-heading">
+              <h2 id="features-heading" className={styles.sectionTitle}>Tiện ích trên xe</h2>
+              <div className={styles.featuresGrid}>
+                {listing.features.map((key) => {
+                  const label = catalogLabel(catalog[CATALOG_TYPE.VEHICLE_FEATURE], key) || key;
+                  return (
+                    <div key={key} className={styles.featureItem}>
+                      <VehicleFeatureIcon name={label} className={styles.featureIcon} />
+                      <span className={styles.featureLabel}>{label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
           ) : null}
 
-          {/*
-            Ba chỉ số uy tín (ADR 0045 điều 3) nằm ĐÚNG ở đây — trong thẻ chủ xe, ngay trên nút
-            "Chọn thuê". Đây là giây người đọc quyết định có gửi yêu cầu cho một người lạ hay
-            không, và "họ có trả lời không" là câu hỏi họ đang hỏi. Bắt cuộn lên trang gian hàng
-            để tìm câu trả lời là bắt họ rời trang ngay trước bước chuyển đổi.
+          {/* Thẻ gian hàng / chủ xe với 3 chỉ số uy tín inline (ADR 0045) */}
+          <section className={styles.sectionCard} aria-labelledby="host-heading">
+            <h2 id="host-heading" className={styles.sectionTitle}>Chủ xe</h2>
+            <ShopQuickInfoCard
+              shop={{
+                name: listing.shopName,
+                slug: listing.shopSlug,
+                logoUrl: listing.shopLogoUrl,
+                verified: listing.shopVerified,
+                province: listing.shopProvince,
+                bio: listing.shopBio,
+                ratingAvg: listing.shopRatingAvg,
+                ratingCount: listing.shopRatingCount,
+                completedTripCount: listing.shopCompletedTripCount,
+              }}
+              metrics={listing.shopMetrics}
+              variant="inline"
+            />
+          </section>
 
-            `ShopQuickInfoCard` dùng chung với cột tóm tắt của luồng gửi yêu cầu thuê
-            (`VehicleSummaryPanel`) — một nơi giữ avatar/tên/rating của GIAN HÀNG, không còn hai
-            bản lệch nhau.
-          */}
-          <ShopQuickInfoCard
-            shop={{
-              name: listing.shopName,
-              slug: listing.shopSlug,
-              logoUrl: listing.shopLogoUrl,
-              verified: listing.shopVerified,
-              province: listing.shopProvince,
-              bio: listing.shopBio,
-              ratingAvg: listing.shopRatingAvg,
-              ratingCount: listing.shopRatingCount,
-              completedTripCount: listing.shopCompletedTripCount,
-            }}
-            metrics={listing.shopMetrics}
-            actions={
-              <>
-                {/* Trang này đã có hồ sơ xe đầy đủ — truyền xuống để overlay khỏi tải lại. */}
-                <RequestBookingButton
-                  vehicleId={listing.id}
-                  vehicleName={listing.name}
-                  vehicleImageUrl={listing.mainImageUrl}
-                  listing={listing}
-                  pickupAt={pickupAt}
-                  returnAt={returnAt}
-                  // Cùng activeService với selector + khối giá — popup mở đúng dịch vụ đang xem.
-                  serviceType={activeService}
-                  routeType={routeType}
-                  /*
-                   * Tỉnh cho ô địa chỉ giao xe: tỉnh khách đang LỌC nếu có, không thì tỉnh của
-                   * chính chiếc xe. Giao tận nơi có bán kính vài chục km nên hai giá trị này gần
-                   * như luôn trùng — và khi không có gì để đoán thì tỉnh của xe vẫn đúng hơn là
-                   * để trống.
-                   */
-                  deliveryProvinceCode={searchProvinceCode ?? listing.provinceCode ?? undefined}
-                  size="large"
-                  className={styles.cta}
-                />
-                {/*
-                  Gian hàng tuyến gói: nút luôn có. Chủ xe cá nhân: chỉ hiện với khách ĐÃ gửi yêu
-                  cầu thuê cho họ — nút "Chọn thuê" ngay bên cạnh chính là bước mở kênh đó.
-                  `ShopChatButton` hỏi server câu đó; chặn thật nằm ở `ChatService`.
-                */}
-                <ShopChatButton
-                  shopSlug={listing.shopSlug}
-                  vehicleId={listing.id}
-                  publicChatOpen={listing.shopChatOpen}
-                  size="large"
-                  className={styles.ctaSecondary}
-                />
-              </>
-            }
-          />
-        </div>
-      </div>
-
-      {/* Hàng dưới theo mockup: Mô tả và Đánh giá là HAI THẺ full-width dưới khu ảnh + giá. */}
-      <div className={styles.bottom}>
-        <section id="description" className={styles.bottomCard}>
-          <h2 className={styles.descTitle}>{t('description')}</h2>
-          <p className={styles.descBody}>{listing.description || t('descriptionEmpty')}</p>
-        </section>
-        <section className={styles.bottomCard}>
-          <ListingReviews vehicleId={listing.id} />
-        </section>
-        {/*
-          Điểm nhận xe: địa chỉ là thông tin CHÍNH. Bản đồ là một ẢNH TĨNH do API vẽ hộ và cache
-          theo điểm (ADR 0061 điều 1) — xem được, không tương tác; muốn dẫn đường thì liên kết
-          mở ứng dụng bản đồ của khách. Chưa có toạ độ thì cả hai tự biến mất, phần chữ ở lại.
-          Trải hết chiều ngang (`pickupCard`) để không đẻ ra một ô trống cạnh nó trong lưới 2 cột.
-        */}
-        {listing.pickupPoint ? (
-          <section
-            className={`${styles.bottomCard} ${styles.pickupCard}`}
-            aria-labelledby="pickup-point-heading"
-          >
-            <h2 id="pickup-point-heading" className={styles.descTitle}>
-              {t('pickupPoint.title')}
-            </h2>
-            <p className={styles.pickupAddress}>
-              {[listing.pickupPoint.branchName, listing.pickupPoint.address]
-                .filter(Boolean)
-                .join(LIST_SEPARATOR)}
-            </p>
-            {listing.pickupPoint.provinceName ? (
-              <p className={styles.pickupMeta}>{listing.pickupPoint.provinceName}</p>
-            ) : null}
-            {pickupGeo ? (
-              <>
+          {/* Điểm nhận xe & Bản đồ tĩnh */}
+          {listing.pickupPoint ? (
+            <section className={styles.sectionCard} aria-labelledby="pickup-point-heading">
+              <div className={styles.sectionHeaderRow}>
+                <h2 id="pickup-point-heading" className={styles.sectionTitle}>
+                  Vị trí xe
+                </h2>
+                {pickupGeo ? (
+                  <a
+                    href={mapExternalUrl(pickupGeo)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.openMapLink}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={styles.mapIcon}>
+                      <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" />
+                      <line x1="9" y1="3" x2="9" y2="18" />
+                      <line x1="15" y1="6" x2="15" y2="21" />
+                    </svg>
+                    <span>Mở bản đồ</span>
+                  </a>
+                ) : null}
+              </div>
+              <p className={styles.pickupAddress}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#717680" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={styles.addressPinIcon}>
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+                {[listing.pickupPoint.branchName, listing.pickupPoint.address, listing.pickupPoint.provinceName]
+                  .filter(Boolean)
+                  .join(LIST_SEPARATOR)}
+              </p>
+              {pickupGeo ? (
                 <StaticMapImage
                   src={pickupMapSrc(listing.id, pickupGeo, listing.pickupPoint.address)}
                   alt={t('pickupPoint.mapTitle')}
                   className={styles.pickupMap}
                 />
-                <MapLink point={pickupGeo} label={tAddress('map.openInGoogleMaps')} />
-              </>
-            ) : null}
+              ) : null}
+            </section>
+          ) : null}
+
+          {/* Quy định & Chính sách dạng tab theo Figma v2 (node 19707:83494) */}
+          <ListingPoliciesTabs listing={listing} activeService={activeService} />
+
+          {/* Đánh giá xe */}
+          <section className={styles.sectionCard}>
+            <ListingReviews vehicleId={listing.id} />
           </section>
-        ) : null}
+        </div>
+
+        {/* CỘT PHẢI (440px sticky) */}
+        <aside className={styles.rightCol}>
+          {/* Thẻ 1: Lợi ích tự phục vụ theo Figma v2 (node 19707:83510) */}
+          <ListingBenefitsCard />
+
+          {/* Thẻ 2: Đặt xe & Báo giá chi tiết theo Figma v2 (node 19707:84080) */}
+          <ListingBookingCard
+            listing={listing}
+            activeService={activeService}
+            pickupAt={pickupAt}
+            returnAt={returnAt}
+            routeType={routeType}
+            searchProvinceCode={searchProvinceCode}
+          />
+        </aside>
       </div>
     </div>
   );

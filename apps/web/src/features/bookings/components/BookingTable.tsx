@@ -16,6 +16,7 @@ import { DataTable, actionColumn, type DataTableColumn } from '@/components/data
 import { StatusTag } from '@/components/data-display/StatusTag';
 import type { BookingListItem } from '../types';
 import styles from './BookingTable.module.css';
+import { BookingDriverCell } from './BookingDriverCell';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useTranslations } from 'next-intl';
@@ -45,8 +46,12 @@ interface BookingTableProps {
   onPageChange: (page: number, pageSize: number) => void;
 }
 
-/** Figma `127:1725` ghi 1050px cho bảng Bookings (10 cột); code có 6 cột. */
-const MIN_TABLE_WIDTH = 1060;
+/**
+ * Sàn bề rộng = tổng cột (19/10/2026: thêm Loại dịch vụ + Tài xế, các cột khác thu hẹp lại). Giữ
+ * dưới bề rộng vùng nội dung ở màn 1440px để cột Trạng thái không nằm dưới cột Thao tác cố định;
+ * hẹp hơn thì cuộn ngang như mọi bảng (Figma `127:2097` R1–R2).
+ */
+const MIN_TABLE_WIDTH = 1150;
 
 /** Màu của mức khẩn — quá giờ là việc phải xử lý ngay, không phải một lỗi của khách. */
 const URGENCY_COLOR: Readonly<Record<PickupUrgency, string>> = {
@@ -96,7 +101,7 @@ export function BookingTable({
   const customerColumn: DataTableColumn<BookingListItem> = {
     title: t('card.customer'),
     key: 'customer',
-    width: 240,
+    width: 180,
     render: (_, row) => (
       <div>
         <div className={styles.name}>{row.customerName}</div>
@@ -111,7 +116,7 @@ export function BookingTable({
   const vehicleColumn: DataTableColumn<BookingListItem> = {
     title: t('card.vehicle'),
     key: 'vehicle',
-    width: 220,
+    width: 170,
     render: (_, row) => (
       <div className={styles.cell}>
         <CarOutlined className={styles.carIcon} aria-hidden="true" />
@@ -126,7 +131,7 @@ export function BookingTable({
   const statusColumn: DataTableColumn<BookingListItem> = {
     title: t('card.status'),
     key: 'status',
-    width: 140,
+    width: 130,
     render: (_, row) => (
       <StatusTag
         value={row.status as BookingStatus}
@@ -136,12 +141,28 @@ export function BookingTable({
     ),
   };
 
+  /** Loại dịch vụ của ĐƠN (đóng băng lúc tạo) — đi cạnh cột Tài xế: đơn có tài xế mới cần người lái. */
+  const serviceColumn: DataTableColumn<BookingListItem> = {
+    title: t('card.service'),
+    key: 'serviceType',
+    width: 110,
+    render: (_, row) => label('serviceType', row.serviceType),
+  };
+
+  /** Tài xế (ADR 0063) — có ở CẢ hai chế độ bảng: người trực cần biết chuyến nào chưa có ai lái. */
+  const driverColumn: DataTableColumn<BookingListItem> = {
+    title: t('driver.title'),
+    key: 'driver',
+    width: 150,
+    render: (_, row) => <BookingDriverCell booking={row} />,
+  };
+
   /** Cột riêng của hàng đợi giao xe: giờ hẹn + mức khẩn, nơi giao, trạng thái biên bản. */
   const awaitingColumns: DataTableColumn<BookingListItem>[] = [
     {
       title: t('awaitingPickup.whenColumn'),
       key: 'pickupAt',
-      width: 220,
+      width: 190,
       render: (_, row) => {
         const urgency = pickupUrgency(row.pickupAt);
         return (
@@ -157,7 +178,7 @@ export function BookingTable({
     {
       title: t('awaitingPickup.placeColumn'),
       key: 'handoverPlace',
-      width: 260,
+      width: 220,
       render: (_, row) =>
         row.handoverPlaceKind ? (
           <div>
@@ -202,7 +223,7 @@ export function BookingTable({
     {
       title: t('card.period'),
       key: 'period',
-      width: 260,
+      width: 190,
       render: (_, row) => (
         <span className={styles.period}>{fmt.shortDateTimeRange(row.pickupAt, row.returnAt)}</span>
       ),
@@ -211,7 +232,7 @@ export function BookingTable({
       title: t('card.total'),
       key: 'total',
       align: 'right',
-      width: 140,
+      width: 110,
       render: (_, row) => <span className={styles.price}>{fmt.money(row.totalAmount)}</span>,
     },
   ];
@@ -219,6 +240,8 @@ export function BookingTable({
   const columns: DataTableColumn<BookingListItem>[] = [
     customerColumn,
     vehicleColumn,
+    serviceColumn,
+    driverColumn,
     ...(awaitingPickup ? awaitingColumns : [...browseColumns, statusColumn]),
     /*
      * Hàng đợi vẫn đi qua TRANG CHI TIẾT để bàn giao — ở đó mới có biên bản, số KM, ảnh hiện

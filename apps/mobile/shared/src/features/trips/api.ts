@@ -15,6 +15,8 @@ export type {
   CustomerTripHandoverEvidence,
   CustomerTripHandoverEvidencePhoto,
   CustomerTripReview,
+  CustomerUnpaidHold,
+  CustomerUnpaidHolds,
   PrivateFileTicket,
   ProvideRefundAccountInput,
   TripsResult,

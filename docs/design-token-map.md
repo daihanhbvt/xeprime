@@ -1,6 +1,6 @@
 # Design Token Map — hợp đồng token của XePrime
 
-> Cập nhật: 06/10/2026 · Trạng thái: **hợp đồng token đang hiệu lực**, được
+> Cập nhật: 15/10/2026 (design v2 — [ADR 0062](decisions/0062-design-system-v2.md)) · Trạng thái: **hợp đồng token đang hiệu lực**, được
 > [`theme.test.ts`](../apps/web/src/styles/theme.test.ts) cưỡng chế (lệch một token giữa
 > `tokens.css` và `tokens/index.ts` là test đỏ). §21 dưới cùng giữ ba quyết định mà mã nguồn còn
 > dẫn chiếu (`packages/ui/src/tokens/index.ts`, `packages/ui/src/styles/tokens.css`, `theme.test.ts`).
@@ -10,8 +10,23 @@
 > (`@xeprime/ui`), giữ đồng bộ bởi [theme.test.ts](../apps/web/src/styles/theme.test.ts).
 > Web ánh xạ sang AntD ở [theme.ts](../apps/web/src/styles/theme.ts) (`antdTheme` + re-export API cũ).
 >
-> **Nguồn Figma**: section 01 “XePrime Foundations” (`14:2`), đọc ở cấp node. File **không dùng
-> Figma Variables** (`get_variable_defs` trên `14:2` trả `{}`) — giá trị nằm trong fill/text của swatch.
+> **Nguồn Figma (v2, từ 15/10/2026)**: file **"Xe Prime"**, đọc bằng Figma Variables
+> (`get_variable_defs`) trên chính các MÀN và bảng component. Trang "Primary colors" của file là thư
+> viện Untitled UI CHƯA chỉnh (thang Brand màu tím) — **không đọc giá trị từ trang đó**. Ba frame đã
+> đọc: trang chủ desktop `19695:40693` · bảng màu `1525:271581` · bảng nút `8636:8263`. Bộ
+> "XePrime Foundations" `14:*` của file cũ (không dùng Variables) đã nghỉ hưu. Cột "Figma" ở các
+> bảng dưới ghi tên biến v2; mã `14:*` còn lại là token CHƯA chuyển (ADR 0062 điều 5).
+>
+> **Cách đọc Figma v2 (vận hành)**:
+> * Figma MCP đòi quyền **edit** trên file. Tài khoản dự án chỉ có quyền xem file gốc, nên đọc trên
+>   **bản sao trong drafts**: fileKey `IcfZAFg9vO2Jt2cn77Bhv7`. Bản sao không tự cập nhật — designer
+>   sửa file gốc thì phải sao lại.
+> * Seat View gói Starter: **20 lượt đọc/tháng**. Chỉ gọi `get_variable_defs` theo FRAME (rẻ, trả tên
+>   + giá trị). `get_design_context` cả trang rất tốn — đọc theo section khi ráp màn.
+> * Link phải trỏ một **frame** (chuột phải → *Copy link to selection*). Link copy lúc không chọn gì
+>   mang id của PAGE và tool báo "nothing selected". Đừng dò bằng `get_metadata` trên page: nó dump
+>   cả cây.
+> * Gradient chỉ trả TÊN (`Gradient/Brand/600 -> 500 (90deg)`), không trả điểm màu.
 >
 > **Lịch sử (chỉ để đọc ngữ cảnh).** File này ra đời là `docs/implementation/02_DESIGN_TOKEN_MAP.md`
 > của bộ kế hoạch migration Figma→code; bộ `docs/implementation/` đã nghỉ hưu ngày 21/08/2026 và
@@ -21,59 +36,68 @@
 
 ## 0. Hợp đồng
 
-1. **Foundations `14:*` là nguồn GIÁ TRỊ token duy nhất.** Xem §21 (P15) về bộ giá trị thứ hai trong cùng file Figma.
-2. **Mọi thay đổi token sửa cả `packages/ui/src/styles/tokens.css` và `XP_TOKENS` ở `packages/ui/src/tokens/index.ts` trong cùng commit (AntD ở `theme.ts` đọc từ `XP_TOKENS`).** `theme.test.ts` so key-set và value; lệch một token là test đỏ.
+1. **Biến Figma trên MÀN HÌNH của file "Xe Prime" là nguồn GIÁ TRỊ token** (ADR 0062 điều 1). Trang bảng màu thư viện không phải nguồn; màn mâu thuẫn với trang thư viện thì màn thắng.
+2. **Mọi thay đổi token sửa cả `packages/ui/src/styles/tokens.css` và `XP_TOKENS` ở `packages/ui/src/tokens/index.ts` trong cùng commit (AntD ở `theme.ts` đọc từ `XP_TOKENS`).** `theme.test.ts` so key-set và value; lệch một token là test đỏ. Sau khi sửa, build lại `@xeprime/ui` (app đọc `dist`) và chạy `tokens.test.ts` + `sidebar.test.ts` của app native — native đọc cùng token.
 3. **Không nhân đôi nguồn.** Bí danh deprecated trỏ `var()` về token canonical — có test chặn việc gán giá trị thật cho bí danh.
-4. **Token nào Figma không định nghĩa thì để AntD dẫn xuất**, không tự chế (vì thế `colorTextDisabled` và `colorLink` vắng mặt trong `antdTheme`).
+4. **Token nào Figma không định nghĩa thì để AntD dẫn xuất**, không tự chế (vì thế `colorLink`, `colorPrimaryActive` và `colorTextDisabled` vắng mặt trong `antdTheme`).
+5. **Giữ TÊN token ngữ nghĩa, đổi GIÁ TRỊ; không dựng tầng thang thô** (`--xp-gray-25…`). Token mới chỉ thêm khi v2 có vai trò chưa có tên (ADR 0062 điều 3).
+6. **Không đổi NGHĨA của một token đang có.** Cùng một token có chỗ làm chữ, có chỗ làm nền dưới chữ tối, ở cả web lẫn native. v2 không có vai trò tương ứng thì giữ giá trị cũ và ghi vào ADR 0062 điều 5, không ghép nó vào một màu v2 "gần giống".
 
 ---
 
 ## 1. Màu — thương hiệu ✅
 
-| Token canonical | Giá trị | Figma | AntD | Ghi chú |
+| Token canonical | Giá trị | Figma v2 | AntD | Ghi chú |
 | --- | --- | --- | --- | --- |
-| `--xp-color-primary` | `#d6a02c` | `14:9` | `colorPrimary` | Không đổi so với trước Wave 1A |
-| `--xp-color-primary-hover` | `#c4920f` | `14:13` | `colorPrimaryHover` | **Mới** — trước đây AntD tự tính ra `#e3ba54` (sáng hơn); giờ hover **đậm hơn** theo Figma |
-| `--xp-color-primary-active` | `#a9761a` | — | `colorPrimaryActive` | Tái dùng `gold-deep` đã có, không chế màu mới |
-| `--xp-color-primary-light` | `#fdf6e3` | `14:17` | — | Nền gold rất nhạt |
-| `--xp-color-primary-contrast` | `#2a2318` | `14:21` | — | **Chữ tối trên nền gold** (Figma `125:1571` xác nhận), không phải trắng |
+| `--xp-color-primary` | `#e9ac29` | `BG/primary` · `Text/Brand/primary` · `Stroke/primary` | `colorPrimary` | Bộ cũ `#d6a02c` |
+| `--xp-color-primary-hover` | `#cb9115` | `Text/Brand/primary 2` | `colorPrimaryHover` | Hover **đậm hơn**, như trước |
+| `--xp-color-primary-active` | `#a9761a` | *chưa có trong v2* — giữ bộ cũ | *(không set — AntD dẫn xuất)* | Bậc NHẤN. Đang làm nền dưới chữ tối ở web + native nên không đổi nghĩa (ADR 0062 điều 5–6). Bí danh `gold-deep` trỏ về đây |
+| `--xp-color-primary-strong` | `#6e5117` | `BG/primary-high` · `Text/Brand/high` | — | **Mới** — gold đọc được làm CHỮ/giá/icon (7.4:1 trên trắng); `color-price` trỏ về đây. Không làm nền dưới chữ tối (2.4:1) |
+| `--xp-color-primary-light` | `#fff5e5` | `BG/primary-low` | — | Nền gold nhạt: mục đang chọn, nút phụ |
+| `--xp-color-primary-subtle` | `#fff9f0` | `BG/primary-25` | — | **Mới** — nền gold nhạt nhất: ô icon, mảng nền |
+| `--xp-color-primary-muted` | `#f6ebd5` | `BG/primary-100` · `Stroke/primary-100` | `colorPrimaryBgHover` | **Mới** — hover trên nền gold nhạt, viền gold nhạt |
+| `--xp-color-primary-contrast` | `#101828` | `Text/Gray/high` | `Button.primaryColor` | **Chữ tối trên nền gold**, không phải trắng (8.8:1) |
+
+Gradient của nút chính (`Gradient/Brand/600 -> 500 (90deg)`) chưa thành token: Variables chỉ trả tên
+— chốt khi ráp nút (ADR 0062 Q1).
 
 ## 2. Màu — bề mặt ✅
 
-| Token canonical | Giá trị | Figma | AntD |
+| Token canonical | Giá trị | Figma v2 | AntD |
 | --- | --- | --- | --- |
-| `--xp-color-bg` | `#faf9f7` | `14:26` | `colorBgLayout` |
-| `--xp-color-bg-container` | `#ffffff` | — | `colorBgContainer` |
-| `--xp-color-bg-elevated` | `#ffffff` | `14:30` | `colorBgElevated` + seed `colorBgBase` |
-| `--xp-color-bg-muted` | `#f5f3ef` | `14:34` | — |
-| `--xp-color-bg-selected` | `#fdf6e3` | = `primary-light` | — |
-| `--xp-color-bg-overlay` | `rgba(26,26,26,.45)` | — | `colorBgMask` |
+| `--xp-color-bg` | `#fafafa` | `BG/gray-50` | `colorBgLayout` |
+| `--xp-color-bg-container` | `#ffffff` | `BG/white` | `colorBgContainer` |
+| `--xp-color-bg-elevated` | `#ffffff` | `BG/white` | `colorBgElevated` + seed `colorBgBase` |
+| `--xp-color-bg-muted` | `#f5f5f5` | `BG/gray-100` | — |
+| `--xp-color-bg-selected` | `#fff5e5` | = `primary-light` (`BG/primary-low`) | `colorPrimaryBg` — AntD và CSS Module chung một nền "đang chọn" |
+| `--xp-color-bg-overlay` | `rgba(26,26,26,.45)` | *chưa có trong v2* | `colorBgMask` |
 
-> `colorBgBase` ánh xạ về **`#ffffff`** (bề mặt container), không phải nền trang. Đặt nền trang làm base sẽ nhuộm ấm mọi bề mặt trắng — nền trang thuộc `colorBgLayout`.
+> `colorBgBase` ánh xạ về **`#ffffff`** (bề mặt container), không phải nền trang. Đặt nền trang làm base sẽ nhuộm mọi bề mặt trắng — nền trang thuộc `colorBgLayout`.
 
 ## 3. Màu — chữ ✅
 
-| Token canonical | Giá trị | Figma | AntD |
+| Token canonical | Giá trị | Figma v2 | AntD |
 | --- | --- | --- | --- |
-| `--xp-color-text` | `#1a1a1a` | `14:46` | `colorText` + seed `colorTextBase` |
-| `--xp-color-text-secondary` | `#6b6560` | `14:50` | `colorTextSecondary` |
-| `--xp-color-text-tertiary` | `#9e9890` | `14:54` | `colorTextTertiary` |
-| `--xp-color-text-disabled` | `rgba(26,26,26,.25)` | — | *(không set — AntD dẫn xuất từ `colorTextBase`, ra đúng giá trị này)* |
-| `--xp-color-text-inverse` | `#e8e4dd` | `14:96` | — |
+| `--xp-color-text` | `#101828` | `Text/Gray/high` | `colorText` + seed `colorTextBase` |
+| `--xp-color-text-secondary` | `#414651` | `Text/Gray/medium` | `colorTextSecondary` |
+| `--xp-color-text-tertiary` | `#717680` | `Text/Gray/low` | `colorTextTertiary` |
+| `--xp-color-text-placeholder` | `#a4a7ae` | `Text/Gray/very-low` | `colorTextPlaceholder` — **mới** |
+| `--xp-color-text-disabled` | `rgba(16,24,40,.25)` | *công thức* — v2 `Text/Gray/disable` `#d5d7da` chờ chốt phạm vi (ADR 0062 Q8) | *(không set — AntD dẫn xuất 25% từ `colorTextBase`, ra đúng giá trị này)*. AntD dùng nó cả cho giá trị ô nhập bị khoá và ngày ngoài tháng — `#d5d7da` (1.46:1) quá mờ cho các chỗ đó |
+| `--xp-color-text-inverse` | `#e8e4dd` | *chưa có trong v2* (`14:96`) | — |
 | `--xp-color-link` | `#2563eb` | — | *(không set — xem P19)* |
 | `--xp-color-link-hover` | `#7aadff` | — | *(không set)* |
 
 ## 4. Màu — viền ✅
 
-| Token canonical | Giá trị | Figma | AntD |
+| Token canonical | Giá trị | Figma v2 | AntD |
 | --- | --- | --- | --- |
-| `--xp-color-border` | `#e8e4dd` | `14:38` | `colorBorder` |
-| `--xp-color-border-strong` | `#d4cfc6` | `14:42` | — |
-| `--xp-color-border-subtle` | `#f5f3ef` | *dẫn xuất* | `colorBorderSecondary` |
-| `--xp-color-border-focus` | `#d6a02c` | `14:196` | — |
-| `--xp-color-border-disabled` | `#e8e4dd` | — | — |
+| `--xp-color-border` | `#e9eaeb` | `Stroke/gray-low200` | `colorBorder` |
+| `--xp-color-border-strong` | `#d5d7da` | `Stroke/gray-low300` | — |
+| `--xp-color-border-subtle` | `#f5f5f5` | *dẫn xuất* (= `bg-muted`, Gray/100) | `colorBorderSecondary` |
+| `--xp-color-border-focus` | `#e9ac29` | `Stroke/primary` | — |
+| `--xp-color-border-disabled` | `#e9eaeb` | = `border` | — |
 
-> **`border-subtle` là giá trị dẫn xuất, không phải token Figma.** Foundations chỉ có 2 bậc viền (default + strong), không có bậc mảnh hơn. Thay vì chế màu mới, token này tái dùng tông `color-bg-muted` (`14:34`). Ghi nhận ở **P17**.
+> **`border-subtle` là giá trị dẫn xuất, không phải token Figma.** v2 không có bậc viền mảnh hơn `gray-low200` mà còn thấy được trên nền trắng (`Stroke/gray-50` = `#fafafa` gần như vô hình). Token này tiếp tục tái dùng tông `color-bg-muted`. Ghi nhận ở **P17**.
 
 ## 5. Màu — tương tác ✅
 
@@ -89,11 +113,15 @@
 
 | Token | Giá trị | Figma | AntD |
 | --- | --- | --- | --- |
-| `--xp-color-success` / `-bg` | `#16a34a` / `#f0fdf4` | `14:59` / `14:63` | `colorSuccess` / `colorSuccessBg` |
-| `--xp-color-warning` / `-bg` | `#e07b26` / `#fff7ed` | `14:67` / `14:71` | `colorWarning` / `colorWarningBg` |
-| `--xp-color-error` / `-bg` | `#dc2626` / `#fef2f2` | `14:75` / `14:79` | `colorError` / `colorErrorBg` |
-| `--xp-color-info` / `-bg` | `#2563eb` / `#eff6ff` | `14:83` / `14:87` | `colorInfo` / `colorInfoBg` |
-| `--xp-color-neutral` / `-bg` | `#6b6560` / `#f5f3ef` | tái dùng | — |
+| `--xp-color-success` / `-bg` | `#039855` / `#ecfdf3` | v2 `Status/success-high` / `-low` | `colorSuccess` / `colorSuccessBg` |
+| `--xp-color-success-subtle` | `#f6fef9` | v2 `Status/success-25` | — (vành ngoài icon thành công) |
+| `--xp-color-warning` / `-bg` | `#e07b26` / `#fff7ed` | *chưa chuyển* (`14:67` / `14:71`) — v2 đã đọc chỉ có `warning-300/500` | `colorWarning` / `colorWarningBg` |
+| `--xp-color-error` / `-bg` | `#d92d20` / `#fef3f2` | v2 `Status/error-high` / `BG/destructive-low` | `colorError` / `colorErrorBg` |
+| `--xp-color-info` / `-bg` | `#2563eb` / `#eff6ff` | *chưa có trong v2* (`14:83` / `14:87`) | `colorInfo` / `colorInfoBg` |
+| `--xp-color-neutral` / `-bg` | `#414651` / `#f5f5f5` | tái dùng `text-secondary` / `bg-muted` | — |
+
+v2 còn có `BG/destructive-hover` `#b42318`, `BG/destructive-low100` `#fee4e2`, `-low200` `#fecdca`
+cho nút huỷ/xoá — thêm token khi ráp nút destructive.
 
 > `StatusTag` **vẫn dùng AntD preset color** qua `StatusMeta.color` ([status/meta.ts](../packages/types/src/status/meta.ts)) — Wave 1A không đổi hợp đồng đó. Bốn token `*-bg` nay đã có consumer trong CSS Module (~69 lượt `var(--xp-color-{success,warning,error,info}-bg)`, đếm 06/10/2026). Xem **P5** (lịch sử).
 
@@ -105,8 +133,12 @@
 | `--xp-shell-sidebar-text` | `#e8e4dd` | `14:96` |
 | `--xp-shell-sidebar-active` | `#d6a02c` | `14:100` |
 | `--xp-shell-sidebar-hover` · `-selected-bg` · `-muted` · `-border` | `color-mix` từ ba token trên | *dẫn xuất* |
-| `--xp-shell-topbar-bg` | `#ffffff` | `14:104` |
-| `--xp-shell-topbar-border` | `#e8e4dd` | `14:108` |
+| `--xp-shell-topbar-bg` | `#ffffff` | v2 `BG/white` |
+| `--xp-shell-topbar-border` | `#e9eaeb` | = `border` (v2 `Stroke/gray-low200`) |
+
+⚠️ Ba màu sidebar **chưa chuyển sang v2**: chưa đọc màn partner/admin nào, và
+`apps/mobile/shared/src/theme/sidebar.test.ts` chốt cứng ba giá trị gốc. Đổi cùng dev mobile
+(ADR 0062 điều 5).
 
 **P1 đã chốt "tối"** và áp dụng ở đợt 1D-B (ghi chú trong `tokens.css`). Vỏ portal đọc các token
 này trực tiếp: [Sidebar.module.css](../apps/web/src/components/layout/Sidebar.module.css) (nền, chữ,
@@ -122,24 +154,31 @@ chỉ định nghĩa 3 màu sidebar, nền tối cần thêm bậc, nên chúng 
 
 ## 8. Typography ✅
 
-Font: `--xp-font-family` (Be Vietnam Pro) · `--xp-font-family-display` (Playfair Display, `14:112` “hero only”). **Mới**: trước Wave 1A `--font-playfair` được 3 CSS Module dùng trực tiếp mà không có token.
+Font: `--xp-font-family` = **Google Sans Flex** (v2 `font-googlesan`), tự host qua `next/font`
+(`--font-google-sans`, bản variable trục `wght`, subset `latin` + `vietnamese`). Một họ chữ cho
+mọi chỗ — Playfair đã bỏ; `--xp-font-family-display` là bí danh deprecated (§16).
 
-| Bậc | size / line-height | Weight | Figma | Dùng cho |
-| --- | --- | --- | --- | --- |
-| `display` | 48 / 56 | Bold | `14:113` | Hero |
-| `h1` | 32 / 40 | Bold | `14:116` | Tiêu đề trang |
-| `h2` | 24 / 32 | SemiBold | `14:119` | Tiêu đề section |
-| `h3` | 20 / 28 | SemiBold | `14:122` | Tiêu đề card / modal |
-| `h4` | 16 / 24 | SemiBold | `14:125` | Subsection, header bảng |
-| `body-lg` | 16 / 24 | Regular | `14:128` | Body mặc định |
-| `body` | 14 / 20 | Regular | `14:131` | Ô bảng, label form |
-| `body-sm` | 12 / 16 | Regular | `14:134` | Caption, help text |
-| `label` | 12 / 16 | Medium | `14:137` | Badge, chip, tag |
-| `overline` | 11 / 16 | Medium | `14:140` | Section kicker |
+Thang v2 có 8 bậc, tên style Figma dạng `<size>px/<weight>`: 12/18 · 14/20 · 16/24 · 18/28 · 24/32 ·
+30/38 · 36/44 · 48/60. Mỗi bậc có nhiều weight; weight do component chọn, token chỉ giữ size/cao dòng.
 
-Weight: `--xp-font-weight-{regular,medium,semibold,bold}` = 400/500/600/700.
+| Bậc | size / line-height | Figma v2 | Dùng cho |
+| --- | --- | --- | --- |
+| `display` | 48 / 60, `letter-spacing-display` −0.02em | `48px/Semibold` (−2%) | Hero |
+| `display-sm` | 36 / 44 | `36px/Medium` (−2%) · `36px/Bold` (−1%) | **Mới** — tiêu đề lớn của section marketing |
+| `h1` | 30 / 38 | `30px/Semibold` · `30px/Bold` | Tiêu đề trang (bộ cũ 32/40) |
+| `h2` | 24 / 32 | `24px/Semibold` · `24px/Medium` | Tiêu đề section |
+| `lead` | 20 / 30 | `20px/Medium` · `20px/Semibold` | **Mới** — chữ trên nền ảnh: cột trái hộp đăng nhập (dòng giới thiệu, tên cửa hàng ứng dụng). Không phải bậc tiêu đề, không vào `fontSizeHeading*` của AntD |
+| `h3` | 18 / 28 | `18px/Semibold` | Tiêu đề card / modal (bộ cũ 20/28) |
+| `h4` | 16 / 24 | `16px/Semibold` | Subsection, header bảng |
+| `body-lg` | 16 / 24 | `16px/Regular` | Body lớn |
+| `body` | 14 / 20 | `14px/Regular` | Ô bảng, label form |
+| `body-sm` | 12 / 18 | `12px/Regular` | Caption, help text (bộ cũ cao dòng 16) |
+| `label` | 12 / 18 | `12px/Medium` | Badge, chip, tag |
+| `overline` | 11 / 16 | *chưa chuyển* — v2 không có 11px | App native đọc bậc này cho dòng meta dày đặc (43 chỗ), 12px bị cắt trên máy 360dp → đổi cùng dev mobile. Kicker web v2 (`12px/Medium`) dùng bậc `label` khi ráp màn |
 
-AntD: `fontSizeHeading1..5` ← 32/24/20/16/14 · `fontSizeLG` ← 16 · `fontSizeSM` ← 12 · `fontSize` ← 14.
+Weight: `--xp-font-weight-{regular,medium,semibold,bold}` = 400/500/600/700 (v2 dùng đúng bốn mức này).
+
+AntD: `fontSizeHeading1..5` ← 30/24/18/16/14 · `fontSizeLG` ← 16 · `fontSizeSM` ← 12 · `fontSize` ← 14.
 Ảnh hưởng thực tế nhỏ: lúc Wave 1A chỉ **2 chỗ** dùng `Typography.Title`. Hiện trạng 06/10/2026: [ManagePageHeader](../apps/web/src/components/layout/ManagePageHeader.tsx) `level={1}` và [ShopPoliciesPage](../apps/web/src/features/rental-policies/components/ShopPoliciesPage.tsx) `level={2}`, cả hai kèm `className` CSS Module riêng.
 
 ### ⚠️ Nợ: `--xp-line-height` toàn cục
@@ -148,6 +187,11 @@ AntD: `fontSizeHeading1..5` ← 32/24/20/16/14 · `fontSizeLG` ← 16 · `fontSi
 ## 9. Spacing ✅ — không đổi
 
 `--xp-space-{xs,sm,md,lg,xl}` = 4/8/16/24/32. Khớp Figma `14:144`–`14:156` (“4 · 8 · 16 · 24 · 32 px only”) từ trước Wave 1A. **Việc còn lại không phải đổi token mà là ép dùng** — vẫn còn số trần trong `.module.css` (`padding: 6px 8px 10px`, `0 14px`…). Dời dần khi chạm file.
+
+**v2** dùng thang mịn hơn (`Num/*`: 2 · 4 · 6 · 8 · 12 · 16 · 20 · 24 · 32 · 36 · 40 · 48 · 56 · 64 ·
+80). Bậc mới thêm khi màn đầu tiên cần tới (ADR 0062 điều 4). ⚠️ **Tên khoảng cách của Figma KHÁC
+nghĩa**: `spacing-xxs` = 2, `spacing-md` = **8** ở Figma, trong khi `--xp-space-md` = **16**. Đọc Figma
+theo con số px, không theo tên.
 
 ## 10. Radius ✅
 
@@ -160,6 +204,8 @@ AntD: `fontSizeHeading1..5` ← 32/24/20/16/14 · `fontSizeLG` ← 16 · `fontSi
 
 ⚠️ **Thay đổi nhìn thấy được**: AntD `borderRadiusLG` trước đây tự dẫn xuất ra **12px**; giờ là **10px** vì Figma nói card/modal = 10. Card và modal bo tròn ít hơn một chút.
 
+**v2**: bo góc gắn theo từng component (nút, ô nhập, thẻ) — chốt khi ráp component đó (ADR 0062 Q6).
+
 ## 11. Shadow ✅ — giá trị mới từ Figma
 
 | Token | Giá trị | Figma | Dùng cho | AntD |
@@ -170,16 +216,22 @@ AntD: `fontSizeHeading1..5` ← 32/24/20/16/14 · `fontSizeLG` ← 16 · `fontSi
 
 **Giải quyết P7 (hai hệ đổ bóng song song).** Trước Wave 1A: CSS Module dùng bóng nâu ấm, AntD dùng bóng xám ba lớp — hai hệ khác nhau cạnh nhau. Giờ cả hai lấy từ Elevation 1/2/3 của Figma.
 
+⚠️ **Chưa chuyển sang v2** (ADR 0062 điều 5). Bóng v2 tông đen lạnh `#0A0D12`:
+`Shadow/xs` `0 1 2 #0A0D120D` · `Shadow/sm` `0 1 2 #0A0D120F` + `0 1 3 #0A0D121A` · `Shadow/lg`
+`0 4 6 -2 #0A0D1208` + `0 12 16 -4 #0A0D1214` · `Header Blur Effect` (hai bóng + blur nền 24).
+Bậc sm/lg có HAI lớp, trong khi `apps/mobile/shared/src/theme/elevation.ts` chỉ parse một lớp và
+`tokens.test.ts` của native chốt cứng `shadow-card` — đổi cùng dev mobile.
+
 ## 12. Focus ✅
 
 | Token | Giá trị | Figma |
 | --- | --- | --- |
 | `--xp-focus-outline-width` | 2px | `14:197` |
-| `--xp-focus-ring-width` | 3px | `14:197` |
-| `--xp-color-focus-ring` | `rgba(214,160,44,.25)` | `14:197` |
+| `--xp-focus-ring-width` | 2px | `14:197` vẽ 3px; hạ 2px theo review UI 12/08/2026 |
+| `--xp-color-focus-ring` | `rgba(233,172,41,.25)` | gold v2 ở 25% — cùng công thức với bộ cũ |
 
-- **Phần tử thường**: [globals.css](../apps/web/src/styles/globals.css) `:focus-visible` = `outline` 2px gold + `box-shadow` ring 3px 25%. Giữ `outline` làm lớp chính để không bị `overflow:hidden` của bảng cắt mất.
-- **Control AntD**: `controlOutline` = ring 25%, `controlOutlineWidth` = 3 (trước là `rgba(255,222,5,.06)` / 2px — vòng focus cũ gần như vô hình).
+- **Phần tử thường**: [globals.css](../apps/web/src/styles/globals.css) `:focus-visible` = `outline` 2px gold + `box-shadow` ring 25%. Giữ `outline` làm lớp chính để không bị `overflow:hidden` của bảng cắt mất.
+- **Control AntD**: `controlOutline` = ring 25%, `controlOutlineWidth` = 2 (trước Wave 1A là `rgba(255,222,5,.06)` — vòng focus cũ gần như vô hình).
 
 ## 13. Breakpoint ✅ — token + JS, KHÔNG viết lại CSS hàng loạt
 
@@ -230,6 +282,7 @@ Mỗi bí danh trỏ `var()` về token canonical → **không có giá trị n�
 | `--xp-shadow-sm` | `--xp-shadow-card` | 8 | 3x |
 | `--xp-shadow-md` | `--xp-shadow-raised` | 8 | 3x |
 | `--xp-shadow-lg` | `--xp-shadow-overlay` | 0 | 3x |
+| `--xp-font-family-display` | `--xp-font-family` | 5 lượt / 4 file (đếm 15/10/2026) | khi ráp màn của chúng (ADR 0062 điều 7) |
 | `--xp-gold-soft` | *(chưa có canonical)* | 16 | — |
 
 `--xp-gold-soft` `#f1dba4` (thanh cuộn, [globals.css](../apps/web/src/styles/globals.css)) **không có** đối ứng Figma → giữ nguyên, chưa deprecate.
@@ -242,19 +295,25 @@ Khi chạm file, thay bằng token canonical ở cột giữa.
 
 Brief 00 §16 ghi *“contrast ratios unverified”* và mức tuân thủ WCAG là `Unknown` (Q7). Wave 1A đã đo và **chốt bằng test** ([theme.test.ts](../apps/web/src/styles/theme.test.ts) › `tương phản`).
 
-| Cặp | Tỉ lệ | AA (4.5) |
-| --- | --- | --- |
-| `text` trên `bg` | **16.54** | ✅ |
-| `text` trên container | **17.40** | ✅ |
-| `text-secondary` trên `bg` | **5.46** | ✅ |
-| `text-secondary` trên container | **5.74** | ✅ |
-| `primary-contrast` trên `primary` | **6.60** | ✅ |
-| `sidebar-text` trên `sidebar-bg` | **13.54** | ✅ |
-| `sidebar-active` trên `sidebar-bg` | **7.29** | ✅ |
-| **`text-tertiary` trên `bg`** | **2.72** | ❌ *(bản cũ 2.99 — cũng trượt)* |
-| **`warning` trên `warning-bg`** | **2.81** | ❌ |
-| **`success` trên `success-bg`** | **3.15** | ❌ |
-| **`error` trên `error-bg`** | **4.41** | ❌ |
+Đo lại với giá trị v2 ngày 15/10/2026 (cột "Bộ cũ" là Wave 1A):
+
+| Cặp | Tỉ lệ v2 | Bộ cũ | AA (4.5) |
+| --- | --- | --- | --- |
+| `text` trên `bg` | **17.00** | 16.54 | ✅ |
+| `text` trên container | **17.75** | 17.40 | ✅ |
+| `text-secondary` trên `bg` | **9.06** | 5.46 | ✅ |
+| `text-secondary` trên container | **9.46** | 5.74 | ✅ |
+| `primary-contrast` trên `primary` | **8.79** | 6.60 | ✅ |
+| `primary-strong` (chữ gold, mới) trên trắng | **7.36** | — | ✅ |
+| `price` trên trắng | **7.36** | 3.97 (trỏ `primary-active`) | ✅ |
+| `primary-active` (bậc nhấn) trên trắng | **3.97** | = | ❌ chữ — ✅ vạch/icon (3:1) |
+| `sidebar-text` trên `sidebar-bg` | **13.54** | = | ✅ |
+| `sidebar-active` trên `sidebar-bg` | **7.29** | = | ✅ |
+| **`text-tertiary` trên `bg`** | **4.37** (trắng: 4.56 ✅) | 2.72 | ❌ |
+| **`warning` trên `warning-bg`** | **2.81** | = | ❌ |
+| **`success` trên `success-bg`** | **3.54** | 3.15 | ❌ |
+| **`error` trên `error-bg`** | **4.44** | 4.41 | ❌ |
+| **`primary` (gold chính) làm chữ trên trắng** | **2.02** | 2.4 | ❌ — chỉ làm NỀN; xem ADR 0062 điều 6 |
 
 **Không tự sửa** giá trị Figma để đạt AA: brief 00 §16 nói mức tuân thủ là câu hỏi mở (Q7), nên ép AA là quyết định thay thiết kế. Bốn cặp trượt được **pin bằng test** để không tệ thêm. Ghi ở **P18**.
 
@@ -310,27 +369,33 @@ custom property **set lúc chạy** — ngoại lệ hợp lệ theo ADR 0003, k
 | --- | --- | --- |
 | `colorTextBase` (seed) | `color-text` | Gốc dẫn xuất bậc chữ |
 | `colorBgBase` (seed) | `color-bg-elevated` | `#ffffff` |
-| `colorPrimary` / `Hover` / `Active` | `color-primary` / `-hover` / `-active` | |
+| `colorPrimary` / `Hover` | `color-primary` / `-hover` | |
+| ~~`colorPrimaryActive`~~ | *(không set)* | AntD dẫn xuất từ gold v2 (~5.7:1 với chữ trên nút); bậc nhấn cũ chỉ 4.47:1 (ADR 0062 điều 6) |
+| `colorPrimaryBg` / `BgHover` | `color-bg-selected` / `color-primary-muted` | **Mới** — nền mục đang chọn (option, hàng bảng, menu, khoảng ngày) và lúc rê chuột |
 | `colorSuccess` / `Bg` | `color-success` / `-bg` | |
 | `colorWarning` / `Bg` | `color-warning` / `-bg` | |
 | `colorError` / `Bg` | `color-error` / `-bg` | |
 | `colorInfo` / `Bg` | `color-info` / `-bg` | |
 | `colorText` / `Secondary` / `Tertiary` | `color-text` / `-secondary` / `-tertiary` | |
+| `colorTextPlaceholder` | `color-text-placeholder` | **Mới** — v2 `Text/Gray/very-low` |
+| ~~`colorTextDisabled`~~ | *(không set)* | AntD dẫn xuất từ `colorTextBase` — ADR 0062 Q8 |
 | `colorBgLayout` / `Container` / `Elevated` | `color-bg` / `-container` / `-elevated` | |
 | `colorBgMask` | `color-bg-overlay` | |
 | `colorBorder` / `Secondary` | `color-border` / `color-border-subtle` | |
 | `borderRadius` / `SM` / `LG` | `border-radius` / `-sm` / `-lg` | LG: 12 → **10** |
 | `fontFamily`, `fontSize`, `fontSizeSM`, `fontSizeLG` | tương ứng | |
-| `fontSizeHeading1..5` | `font-size-h1..h4` + `font-size` | 38/30/24/20/16 → **32/24/20/16/14** |
+| `fontSizeHeading1..5` | `font-size-h1..h4` + `font-size` | 38/30/24/20/16 → 32/24/20/16/14 → **30/24/18/16/14** (v2) |
 | `boxShadow`, `boxShadowTertiary` | `shadow-card` | |
 | `boxShadowSecondary` | `shadow-raised` | |
 | `controlOutline` / `Width` | `color-focus-ring` / `focus-ring-width` | |
 | `controlHeight` / `SM` / `LG` | `control-height` / `-sm` / `-lg` | 32/24/40, **không đổi hành vi** |
 | `zIndexPopupBase` | `z-popup-base` | 1000 |
-| ~~`colorTextDisabled`~~ | *(không set)* | AntD dẫn xuất từ `colorTextBase` |
 | ~~`colorLink`~~ / ~~`colorLinkHover`~~ | *(không set)* | Figma chưa định nghĩa — P19 |
 
-**Không set `components: {...}`.** Chỉ seed/alias token, để không bám tên token nội bộ của từng component AntD qua mỗi lần nâng cấp.
+**`components: {...}` chỉ có một ngoại lệ** (`Button.primaryColor` = `color-primary-contrast`, có test
+khoá). Còn lại chỉ seed/alias token, để không bám tên token nội bộ của từng component AntD qua mỗi lần
+nâng cấp. Khi ráp nút/ô nhập v2 (gradient, 4 cỡ nút) mà seed token không diễn đạt được, mở rộng
+ngoại lệ có chủ đích cùng test — không bám tên token nội bộ tuỳ tiện.
 
 ---
 
@@ -358,7 +423,11 @@ trị token nào thắng; P8 — cơ chế breakpoint) và
 
 **Chặn**: phần breakpoint của Wave 1A. **Nếu không trả lời**: làm phần token màu/typo/radius/focus trước, hoãn breakpoint.
 
-### P15 — Hai bộ giá trị token trong cùng file Figma 🟠 MỞ — không còn chặn
+### P15 — Hai bộ giá trị token trong cùng file Figma ✅ ĐÓNG (15/10/2026)
+
+> **Đóng bởi [ADR 0062](decisions/0062-design-system-v2.md):** cả Hệ A lẫn Hệ B của file Figma cũ
+> đều bị thay bằng biến Figma trên màn hình của file "Xe Prime" (design v2). Phần dưới giữ để đọc
+> lịch sử.
 
 **Phát hiện khi inspect cấp node.** File Figma chứa **hai hệ giá trị mạch lạc và mâu thuẫn nhau**, không phải sai lệch ngẫu nhiên:
 
@@ -406,3 +475,42 @@ trị token nào thắng; P8 — cơ chế breakpoint) và
 **Cần chốt**: (a) mức tuân thủ mục tiêu (A / AA / AAA) — chính là brief 00 Q7; (b) nếu AA thì làm đậm `text-tertiary` và 3 cặp status.
 
 **Nếu không trả lời**: giữ giá trị Figma, không dùng `text-tertiary` cho chữ bắt buộc đọc được.
+
+## 22. Bề mặt chợ v2 — trang chủ, header, footer ✅ (15/10/2026)
+
+Nhóm CHỈ WEB đọc (ADR 0062 điều 8) — app native không resolve gradient/bóng nhiều lớp, nên các
+giá trị này không bao giờ đi vào khoá mà `apps/mobile/shared/src/theme/tokens.ts` đọc. Nguồn:
+code của màn trang chủ Figma `19695:40693`.
+
+| Nhóm | Token | Giá trị | Dùng ở |
+| --- | --- | --- | --- |
+| Nền tối | `--xp-color-bg-inverse` | `#101828` | header, chấm carousel đang chọn, kẻ footer |
+| | `--xp-market-footer-bg` | `#060403` | footer, nền thẻ địa điểm |
+| Chữ trên nền tối | `--xp-color-text-on-dark` / `-muted` | `#fff` / `#d5d7da` | header, dải đối tác, footer |
+| Gold phụ | `--xp-color-primary-bright` | `#edbb4f` | tiêu đề cột footer |
+| | `--xp-color-primary-pale` | `#f0ddb7` | chữ "XePrime" ở bản quyền |
+| | `--xp-color-primary-accent` | `#d3a94d` | viền thẻ khi hover, gạch tab |
+| | `--xp-color-primary-glow` | `#e9c336` | viền avatar gian hàng đã xác thực |
+| | `--xp-color-destination-border` | `#e9bb68` | viền thẻ địa điểm |
+| Luồng đặt xe v2 | `--xp-color-primary-border` | `#e8ca8d` (`Stroke/primary-300`; tối `#946e1f`) | viền thẻ tiền, thẻ giữ chỗ, phương thức thanh toán đang mở |
+| | `--xp-color-success-accent` | `#12b76a` (`Status/success-500`) | viền nét đứt thẻ "chuyến đã xác nhận" |
+| | `--xp-color-success-border` | `#6ce9a6` (`Status/success-300`) | viền nhãn trạng thái xanh |
+| | `--xp-color-warning-subtle` | `#fffaeb` (`Status/warning-low`) | nền hộp lưu ý của trang thanh toán |
+| Gradient | `--xp-gradient-primary` | `#e9c336 → #e8c664 → #e3b012` (90°) | nút chính, pill "Khám phá" |
+| | `--xp-gradient-text-hero` / `-text-gold` / `-text-destination` | — | chữ nhấn hero / dải đối tác / tên thành phố |
+| | `--xp-gradient-gold-soft` | `#edd3a4 → #d6a439` | huy hiệu giảm giá |
+| | `--xp-gradient-instant-badge` | `#a4dded → #dfe7f1` | huy hiệu "Không cần xác nhận" |
+| | `--xp-gradient-card-highlight` | gold 20% | nền thẻ khi hover |
+| | `--xp-gradient-promo-{dark,light}`, `--xp-gradient-destination-shade`, `--xp-hero-fog` | — | lớp phủ ảnh |
+| Bóng | `--xp-elevation-{xs,sm,lg}` | bóng v2 tông `#0A0D12` | ô nhập, thẻ xe |
+| | `--xp-elevation-{soft,panel}` | xám `#7d7d7d` 15% | thẻ gian hàng/đánh giá, bảng tìm kiếm |
+| | `--xp-elevation-{glow,ambient,header}` | — | nút gradient, header |
+| | `--xp-elevation-xl` | v2 `Shadow/xl` | popup nổi trên hộp thoại khác (xác minh OTP, đặt lại mật khẩu xong) |
+| Kính mờ | `--xp-color-glass` / `-strong` / `-faint` / `-gold`, `--xp-color-scrim-light` | trắng 10/32/5%, kem 20% | chip hero, huy hiệu store, dấu tích |
+| Bo góc | `--xp-border-radius-chip` / `-control` / `-card` | 8 / 12 / 16 | huy hiệu · ô nhập, nút · thẻ |
+| Khoảng cách | `--xp-space-{2,6,12,20,40,48,64,80}` | px | bậc mịn của v2 (§9) |
+| Khung chợ | `--xp-market-container-max-width` / `--xp-market-gutter` / `--xp-market-header-height` | 1200 / 120 / 68 | mọi khối trang chủ |
+| Chữ | `--xp-letter-spacing-snug` | `-0.01em` | tiêu đề khối |
+
+Banner admin (không phải token nhưng cùng hợp đồng kích thước): giữ khổ dải cũ — PC **1440×300** ·
+tablet 1024×320 · mobile 780×390 (`apps/web/src/features/banners/banner-media.ts`, ADR 0062 điều 8).

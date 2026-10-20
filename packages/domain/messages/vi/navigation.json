@@ -16,7 +16,14 @@
     "platformAdmin": "Quản trị nền tảng",
     "mainNavLabel": "Điều hướng chính",
     "quickNavLabel": "Điều hướng nhanh",
-    "shopProfile": "Hồ sơ gian hàng"
+    "shopProfile": "Hồ sơ gian hàng",
+    "searchCars": "Tìm xe",
+    "aboutXePrime": "Về Xe Prime",
+    "contact": "Liên hệ",
+    "loginOrRegister": "Đăng nhập/<br></br>Đăng ký",
+    "themeLight": "Giao diện sáng",
+    "themeDark": "Giao diện tối",
+    "toggleTheme": "Đổi giao diện sáng/tối"
   },
   "account": {
     "menuLabel": "Menu tài khoản",
@@ -27,6 +34,7 @@
     "favorites": "Xe yêu thích",
     "addresses": "Địa chỉ của tôi",
     "documents": "Giấy tờ & Xác minh",
+    "driving": "Nơi tôi làm tài xế",
     "notifications": "Thông báo",
     "support": "Hỗ trợ",
     "settings": "Cài đặt",

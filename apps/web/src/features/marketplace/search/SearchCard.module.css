@@ -1,78 +1,40 @@
 /*
- * Thẻ tìm kiếm trang chủ — BA TẦNG xếp chồng như bậc thang, cùng canh giữa:
+ * Thẻ tìm kiếm trang chủ v2 (Figma "Search Panel" `19694:26192`, ADR 0062).
  *
- *        ┌───────── Ô tô · Xe máy ─────────┐          hẹp nhất, trên cùng
- *   ┌──── Tự lái · Có tài xế · Dài hạn ────────┐      rộng hơn
- * ┌──── Địa điểm · Thời gian thuê · Tìm xe ────────┐  rộng nhất, dưới cùng
- *
- * Hình bậc thang KHÔNG phải trang trí: nó nói ra thứ tự quyết định (loại xe → dịch vụ → tiêu
- * chí), thứ mà một hàng ngang phẳng làm mất. Ba tầng cùng màu trắng, khít nhau và chỉ có MỘT
- * viền bóng bao ngoài, nên đọc như một thẻ liền chứ không phải ba hộp chồng lên nhau.
+ * Desktop: thẻ rộng 1200px, đè lên 102px dưới cùng của dải banner đầu trang (như Figma). Dải tab
+ * dịch vụ chỉ rộng bằng các tab của nó và để lộ ảnh hero ở bên phải; bảng ô nhập trắng bên dưới
+ * bo góc 16px ở ba góc còn lại.
  */
 .cardOuter {
   position: relative;
   z-index: 2;
-  max-width: var(--xp-container-max-width);
+  max-width: calc(var(--xp-market-container-max-width) + 2 * var(--xp-space-md));
   padding: 0 var(--xp-space-md);
-  /* Hai tầng chọn (60px + 59px) nằm TRỌN trên banner; tầng tiêu chí bắt đầu ngay dưới mép banner. */
-  margin: -119px auto 0;
+  margin: 0 auto;
 }
 
-/*
- * Đổ bóng đặt ở ĐÂY, không phải ở từng tầng.
- *
- * `drop-shadow` bám theo SILHOUETTE thật của cả cụm (hợp của ba khối), nên chỉ có một viền bóng
- * chạy quanh hình bậc thang. Cho bóng vào từng tầng thì tầng trên hắt một vệt tối ngang mặt tầng
- * dưới — đúng cái làm ba tầng trông như đang đè lên nhau thay vì liền một khối.
- */
 .card {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  filter: drop-shadow(0 8px 12px rgba(41, 31, 15, 0.14));
+  align-items: flex-start;
 }
 
-/* Nền dùng chung của cả ba tầng — khác nhau ở bề rộng, bo góc và tầng z. */
-.tier {
+.tabs {
   position: relative;
-  background: var(--xp-color-bg-container);
-}
-
-/*
- * Hai tầng trên bo góc **CHỈ Ở TRÊN**, đáy cắt thẳng.
- *
- * Đây là thứ biến ba khối rời thành một bậc thang liền: đáy bo tròn thì mỗi tầng đọc như một
- * thẻ riêng đang trôi, còn đáy thẳng thì nó "đứng" trên mặt tầng dưới. Góc bo của tầng dưới
- * vẫn thấy vì tầng dưới RỘNG HƠN — chính chỗ thừa ra hai bên tạo ra bậc.
- *
- * Hai tầng dùng CÙNG một khoảng đệm nên khoảng thở trên–dưới đều nhau; chúng chỉ chồng lên nhau
- * đúng 1px — vừa đủ để mối nối không hở một đường tóc do làm tròn sub-pixel (nền hero lọt qua),
- * và không đủ để thành một tầng đè lên tầng kia.
- */
-.tierVehicle {
-  z-index: 3;
-  padding: var(--xp-space-xs);
-  border-radius: 24px 24px 0 0;
-  border-bottom: 1px solid var(--xp-color-border);
-}
-
-.tierService {
-  z-index: 2;
-  padding: var(--xp-space-xs);
-  border-radius: 24px 24px 0 0;
-  /* border-bottom: 1px solid var(--xp-color-border); */
-}
-
-.tierFields {
   z-index: 1;
+  max-width: 100%;
+}
+
+.panel {
   display: flex;
   width: 100%;
   flex-direction: column;
-  padding: 20px 20px 22px;
-  border-radius: 28px;
-  margin-top: -1px;
-  gap: 14px;
-  margin-top: -16px;
+  padding: var(--xp-space-lg) var(--xp-space-20);
+  border-radius: 0 var(--xp-border-radius-card) var(--xp-border-radius-card)
+    var(--xp-border-radius-card);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-elevation-panel);
+  gap: var(--xp-space-md);
 }
 
 /* Hàng Lộ trình (dịch vụ Có tài xế) — chiếm trọn bề ngang, đứng trên các ô nhập. */
@@ -85,25 +47,40 @@
 
 .routeHint {
   flex-basis: 100%;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
 }
 
 .fields {
   display: grid;
   align-items: end;
-  gap: 14px;
+  gap: var(--xp-space-md);
 }
 
-@media (min-width: 760px) {
-  /* Địa điểm | Thời gian thuê | nút — cột co được nhờ `min-width: 0` ở .cell. */
+@media (min-width: 1025px) {
+  /* Loại xe (vừa nội dung) | Địa điểm | Thời gian | Tìm kiếm — hai ô nhập chia đều phần còn lại. */
   .fields {
-    grid-template-columns: 1.1fr 1.6fr auto;
+    grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto;
   }
 
   /* Dài hạn không có ô thời gian: địa điểm nở ra, KHÔNG chừa một cột trống giữ chỗ. */
   .fieldsCompact {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .fields {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .cellVehicle {
+    grid-column: 1 / -1;
+  }
+
+  .submit {
+    grid-column: 1 / -1;
   }
 }
 
@@ -111,106 +88,86 @@
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--xp-space-6);
 }
 
 .cellLabel {
   color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-overline);
-  font-weight: var(--xp-font-weight-semibold);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body);
 }
 
-/*
- * Ô thời gian: KHÔNG viền, KHÔNG nền — giống hệt ô địa điểm bên cạnh (xem `LocationPicker`).
- * `min-width: 0` bắt buộc: control của AntD có min-width riêng, thiếu nó cột grid bị đẩy rộng
- * và nút "Tìm xe" rớt xuống hàng dưới.
- */
+/* Ô thời gian — cùng hình với ô địa điểm (`LocationPicker.module.css` › `.field`). */
 .box {
-  display: flex;
-  min-width: 0;
-  height: 52px;
-  align-items: center;
-  padding: 0 var(--xp-space-md);
-  border: 1px solid transparent;
-  border-radius: var(--xp-border-radius-pill);
-  background: var(--xp-color-bg-muted);
-  gap: 10px;
+  height: 44px;
+  padding: 10px 14px !important;
+  border: 1px solid var(--xp-color-border-strong) !important;
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-container) !important;
+  box-shadow: var(--xp-elevation-xs);
+  font-size: var(--xp-font-size-body-lg);
+  gap: var(--xp-space-sm) !important;
+  line-height: var(--xp-line-height-body-lg);
 }
 
-/* Ô không còn viền nên vòng focus phải đứng RỘNG ra ngoài chữ mới thấy được. */
+.box:hover {
+  border-color: var(--xp-color-primary) !important;
+}
+
 .box:focus-visible {
-  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
-  outline-offset: 4px;
+  outline: none;
+  border-color: var(--xp-color-border-focus) !important;
+  box-shadow: 0 0 0 var(--xp-focus-ring-width) var(--xp-color-focus-ring);
 }
 
+/* Ô icon 20px — nét vẽ SVG đặt nguyên cỡ ở giữa (SVG Figma không giãn được). */
 .boxIcon {
-  flex: none;
-  color: var(--xp-color-text);
-  font-size: 17px;
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
 }
 
 .submit {
-  height: 52px !important;
-  padding-inline: var(--xp-space-xl) !important;
-  border-radius: var(--xp-border-radius-pill) !important;
-  font-size: 16px !important;
-  font-weight: var(--xp-font-weight-bold) !important;
+  height: 44px;
 }
 
 /* Ghi chú dài hạn — nói rõ gói thuê chọn ở BƯỚC SAU, không phải ở đây. */
 .hint {
   margin: 0;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
 }
 
-@media (max-width: 760px) {
-  /*
-   * Màn hẹp không đủ chỗ cho bậc thang: ba tầng cùng chiếm trọn bề ngang. Cùng bề rộng thì
-   * không còn bậc để bo góc, nên chỉ MÉP NGOÀI của cả cụm được bo — trên cùng và dưới cùng —
-   * và ba tầng đọc thành MỘT thẻ liền. Thứ tự trên–dưới giữ nguyên nên phân tầng vẫn rõ.
-   */
-  .tier {
-    width: 100%;
-  }
-
-  .tierVehicle {
-    border-radius: 24px 24px 0 0;
-  }
-
-  .tierService {
-    border-radius: 0;
-  }
-
-  .tierFields {
-    padding: 18px var(--xp-space-md);
-    border-radius: 0 0 24px 24px;
-  }
-
-  /* Banner mobile thấp hơn nhiều — đè 119px sẽ nuốt gần hết nó. */
+/* Desktop: thẻ đè lên 102px cuối của dải banner (chấm chuyển banner khai cùng con số, HomeHero). */
+@media (min-width: 1025px) {
   .cardOuter {
-    margin-top: -40px;
+    margin-top: -102px;
   }
 }
 
 @media (max-width: 640px) {
   .cardOuter {
-    padding: 0 12px;
-    margin-top: -32px;
+    padding: 0 var(--xp-space-12);
   }
 
-  .tierFields {
-    gap: 12px;
+  .tabs {
+    width: 100%;
+  }
+
+  .panel {
+    padding: var(--xp-space-md);
+    border-radius: 0 0 var(--xp-border-radius-card) var(--xp-border-radius-card);
   }
 
   .fields {
-    gap: 12px;
+    gap: var(--xp-space-12);
   }
 
   .submit {
     width: 100%;
-    height: 48px !important;
   }
 }

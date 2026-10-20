@@ -1,7 +1,14 @@
 import { deliveryEstimateState } from './delivery-estimate-state';
 
 const S = (over: Partial<Parameters<typeof deliveryEstimateState>[0]> = {}) =>
-  deliveryEstimateState({ typed: '', debounced: '', hasPin: false, fetching: false, ...over });
+  deliveryEstimateState({
+    typed: '',
+    debounced: '',
+    hasPin: false,
+    manual: true,
+    fetching: false,
+    ...over,
+  });
 
 const LONG = '12 Lê Lợi, Quận 1'; // 17 ký tự
 const SHORT = '12 Lê Lợi'; // 9 ký tự
@@ -14,13 +21,9 @@ describe('deliveryEstimateState', () => {
   });
 
   it('LỆCH MỘT NHỊP: gõ tới ký tự thứ 12 nhưng debounce còn giữ chuỗi 11 ⇒ CHƯA gửi', () => {
-    /*
-     * Đây là ca mà một phép kiểm trên `typed` sẽ bật query và gửi đi chuỗi NGẮN — đúng thứ
-     * ngưỡng sinh ra để chặn. Dựng bằng cách cho `typed` dài hơn `debounced`.
-     */
     const s = S({ typed: LONG, debounced: SHORT });
     expect(s.queryable).toBe(false);
-    // Giao diện vẫn phải nói "đang tính" — im lặng 600ms đọc ra như app đơ.
+    // Giao diện vẫn phải nói "đang tính" — im lặng suốt quãng debounce đọc ra như app đơ.
     expect(s.askable).toBe(true);
     expect(s.current).toBe(false);
   });
@@ -32,7 +35,6 @@ describe('deliveryEstimateState', () => {
   });
 
   it('SỬA địa chỉ sau khi đã có kết quả ⇒ kết quả cũ hết hiệu lực ngay', () => {
-    // `typed` đã đổi, `debounced` còn là địa chỉ trước — số cũ nói về một chỗ khác.
     const s = S({ typed: LONG + ' B', debounced: LONG });
     expect(s.settled).toBe(false);
     expect(s.current).toBe(false);
@@ -42,10 +44,24 @@ describe('deliveryEstimateState', () => {
     expect(S({ typed: LONG, debounced: LONG, fetching: true }).current).toBe(false);
   });
 
-  it('có GHIM ⇒ bỏ qua cả ngưỡng lẫn debounce', () => {
-    // Ghim làm khoá query đổi ngay, và toạ độ không cần tra chuỗi — xem `deliveryDistance`.
-    const s = S({ typed: '', debounced: '', hasPin: true });
+  it('có GHIM ⇒ bỏ qua cả ngưỡng, debounce lẫn nguồn', () => {
+    const s = S({ typed: '', debounced: '', hasPin: true, manual: false });
     expect(s.queryable).toBe(true);
     expect(s.current).toBe(true);
+  });
+
+  it('CHỮ CHƯA CHỐT (nguồn khác manual, không ghim) ⇒ không hỏi, không spinner — y như web', () => {
+    // Tra một dòng chữ chưa xác nhận là hai giao dịch Vietmap có tính tiền (ADR 0061).
+    const s = S({ typed: LONG, debounced: LONG, manual: false });
+    expect(s.queryable).toBe(false);
+    expect(s.askable).toBe(false);
+    expect(s.current).toBe(false);
+  });
+
+  it('vừa CHỐT manual trong khi debounce còn chuỗi gõ dở ⇒ chưa gửi chuỗi đó', () => {
+    // Nguồn đổi ngay, chuỗi debounce chưa bắt kịp — gửi lúc này là tra chuỗi không ai xác nhận.
+    const s = S({ typed: LONG, debounced: LONG.slice(0, 14) });
+    expect(s.queryable).toBe(false);
+    expect(s.askable).toBe(true);
   });
 });

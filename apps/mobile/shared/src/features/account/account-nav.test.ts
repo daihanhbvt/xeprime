@@ -47,8 +47,8 @@ function tenant(overrides: Partial<NonNullable<CurrentUser['tenant']>> = {}) {
 }
 
 describe('resolveAccountNav — MỘT menu khách', () => {
-  it('chín mục, cùng thứ tự với ACCOUNT_NAV bên web', () => {
-    const groups = resolveAccountNav(user());
+  it('mười mục, cùng thứ tự với ACCOUNT_NAV bên web', () => {
+    const groups = resolveAccountNav(user(), { hasDriverLinks: true });
     expect(groups.map((g) => g.key)).toEqual(['account']);
     expect(groups[0]?.items.map((i) => i.key)).toEqual([
       'profile',
@@ -56,12 +56,20 @@ describe('resolveAccountNav — MỘT menu khách', () => {
       'documents',
       'becomeOwner',
       'trips',
+      // Nơi tôi làm tài xế (ADR 0063).
+      'driving',
       'payments',
       'balance',
       'bankAccounts',
       'changePassword',
       'deleteAccount',
     ]);
+  });
+
+  it('chưa từng được mời làm tài xế thì ẩn mục "Nơi tôi làm tài xế"', () => {
+    const keys = flattenAccountNav(resolveAccountNav(user())).map((i) => i.key);
+    expect(keys).not.toContain('driving');
+    expect(keys).toContain('trips');
   });
 
   it('không phụ thuộc vai hay tuyến — kể cả khi một API cũ còn trả tenant', () => {
@@ -71,7 +79,7 @@ describe('resolveAccountNav — MỘT menu khách', () => {
       user({ tenant: tenant({ billingMode: BILLING_MODE.PACKAGE }) }),
       user({ tenant: tenant({ roleKey: TENANT_ROLE.SHOP_STAFF }) }),
     ]) {
-      expect(flattenAccountNav(resolveAccountNav(u))).toEqual(ACCOUNT_NAV);
+      expect(flattenAccountNav(resolveAccountNav(u, { hasDriverLinks: true }))).toEqual(ACCOUNT_NAV);
     }
   });
 
@@ -133,7 +141,7 @@ describe('resolveWorkspaceHref / canUseManagePortal', () => {
 });
 
 describe('matchAccountNavKey', () => {
-  const items = flattenAccountNav(resolveAccountNav(user()));
+  const items = flattenAccountNav(resolveAccountNav(user(), { hasDriverLinks: true }));
 
   it('khớp tuyệt đối', () => {
     expect(matchAccountNavKey('/account/change-password', items)).toBe('changePassword');

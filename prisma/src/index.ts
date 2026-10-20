@@ -69,6 +69,12 @@ export {
 } from './listing-rank';
 
 /**
+ * Bốn trường thẻ xe mirror vào snapshot chợ (số ảnh, hộp số, tự động nhận, xã/phường) — dùng
+ * chung cho `ListingsService` và bản sao seed. Xem docblock `listing-card.ts`.
+ */
+export { readListingCardExtras, selfDriveDailyPrice, type ListingCardExtras } from './listing-card';
+
+/**
  * Hàng đợi đẩy thông báo — dùng chung cho API và worker, hai tiến trình cùng phát thông báo.
  * Xem docblock của `push-outbox.ts` để biết vì sao nó ở đây chứ không ở `apps/api`.
  */

@@ -31,8 +31,7 @@
     "unknown": "Chưa có thông tin",
     "noteBlock": "Ghi chú",
     "cardTitle": "Chi tiết đơn đặt xe",
-    "pageSubtitle": "Quản lý chuyến đi và quá trình cho thuê hiện tại",
-    "backToList": "Về danh sách đơn"
+    "pageSubtitle": "Quản lý chuyến đi và quá trình cho thuê hiện tại"
   },
   "actionBar": {
     "contract": "Hợp đồng",
@@ -100,7 +99,9 @@
     "statusLabel": "Trạng thái",
     "tableLabel": "Danh sách đơn thuê",
     "create": "Tạo đơn",
-    "createFirst": "Tạo đơn đầu tiên"
+    "createFirst": "Tạo đơn đầu tiên",
+    "serviceLabel": "Loại dịch vụ",
+    "serviceAll": "Tất cả dịch vụ"
   },
   "awaitingPickup": {
     "title": "Chờ giao xe",
@@ -129,7 +130,8 @@
     "period": "Thời gian thuê",
     "total": "Tổng tiền",
     "status": "Trạng thái",
-    "customer": "Khách hàng"
+    "customer": "Khách hàng",
+    "service": "Loại dịch vụ"
   },
   "money": {
     "baseAmount": "Tiền thuê",
@@ -160,11 +162,6 @@
     "change": "Đổi",
     "unassign": "Bỏ gán",
     "sheetTitle": "Chọn tài xế khả dụng trong khung giờ đơn",
-    "busy": "bận khung giờ này",
-    "licenseExpired": "GPLX hết hạn",
-    "empty": "Chưa có tài xế nào đang hoạt động",
-    "errorTitle": "Không tải được danh sách tài xế",
-    "assignSuccess": "Đã gán tài xế cho đơn",
     "unassignSuccess": "Đã bỏ gán tài xế",
     "call": "Gọi",
     "noneWithDriver": "Đơn có tài xế — chưa phân công",
@@ -492,7 +489,17 @@
     "scheduleLabel": "Thời gian thuê",
     "deliveryFeeNote": "Phí giao nhận sửa ở khối \"Tổng hợp chi phí\" — sửa ở đó mới ghi được lý do vào nhật ký.",
     "conflictTitle": "Xe đã bận trong khung giờ này",
-    "conflictBody": "Chọn xe khác hoặc đổi thời gian nhận/trả."
+    "conflictBody": "Chọn xe khác hoặc đổi thời gian nhận/trả.",
+    "frozenNote": "Loại dịch vụ, thời gian thuê, lộ trình và giá đã chốt lúc tạo đơn nên không sửa được nữa. Phí giao nhận chốt ở khối \"Tổng hợp chi phí\".",
+    "driverLabel": "Tài xế",
+    "driverPlaceholder": "Chọn tài xế cho khung giờ của đơn",
+    "driverNone": "Không gán tài xế",
+    "driverPendingNote": "Tài xế mới gán cần nhận chuyến thì phân công mới có hiệu lực.",
+    "driverFailed": "Đã lưu thông tin đơn nhưng chưa đổi được tài xế: {error}",
+    "nameRequired": "Nhập tên khách",
+    "phoneInvalid": "Số điện thoại không hợp lệ",
+    "save": "Lưu thay đổi",
+    "vehicleLabel": "Xe"
   },
   "trip": {
     "title": "Quản lý chuyến đi",
@@ -508,7 +515,6 @@
     "doneAt": "{action} lúc {when}",
     "forbiddenTitle": "Không có quyền xem bàn giao",
     "forbiddenBody": "Liên hệ quản trị viên nếu bạn cần theo dõi việc giao/nhận xe.",
-    "loadError": "Không tải được thông tin bàn giao",
     "confirmForbiddenTitle": "Bạn không có quyền xác nhận bàn giao",
     "confirmForbiddenBody": "Cần quyền handovers.confirm để chốt việc giao/nhận xe."
   },

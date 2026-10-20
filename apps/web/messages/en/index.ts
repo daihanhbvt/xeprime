@@ -21,6 +21,7 @@ import errors from '@xeprime/domain/messages/en/errors.json';
 import auth from '@xeprime/domain/messages/en/auth.json';
 import homeSearch from '@xeprime/domain/messages/en/home-search.json';
 import marketplace from '@xeprime/domain/messages/en/marketplace.json';
+import home from '@xeprime/domain/messages/en/home.json';
 import listings from '@xeprime/domain/messages/en/listings.json';
 import shops from '@xeprime/domain/messages/en/shops.json';
 import chat from '@xeprime/domain/messages/en/chat.json';
@@ -57,6 +58,7 @@ import subscription from '@xeprime/domain/messages/en/subscription.json';
 import paymentGateway from '@xeprime/domain/messages/en/payment-gateway.json';
 import members from '@xeprime/domain/messages/en/members.json';
 import drivers from '@xeprime/domain/messages/en/drivers.json';
+import driving from '@xeprime/domain/messages/en/driving.json';
 import maintenance from '@xeprime/domain/messages/en/maintenance.json';
 import bankAccounts from '@xeprime/domain/messages/en/bank-accounts.json';
 import driverLicence from '@xeprime/domain/messages/en/driver-licence.json';
@@ -73,6 +75,7 @@ import adminAppConfig from '@xeprime/domain/messages/en/admin-app-config.json';
 import adminStaff from '@xeprime/domain/messages/en/admin-staff.json';
 import adminAccounts from '@xeprime/domain/messages/en/admin-accounts.json';
 import adminAudit from '@xeprime/domain/messages/en/admin-audit.json';
+import adminBanners from '@xeprime/domain/messages/en/admin-banners.json';
 
 const messages = {
   Common: common,
@@ -84,6 +87,7 @@ const messages = {
   Auth: auth,
   HomeSearch: homeSearch,
   Marketplace: marketplace,
+  Home: home,
   Listings: listings,
   Shops: shops,
   Chat: chat,
@@ -120,6 +124,7 @@ const messages = {
   PaymentGateway: paymentGateway,
   Members: members,
   Drivers: drivers,
+  Driving: driving,
   Maintenance: maintenance,
   BankAccounts: bankAccounts,
   DriverLicence: driverLicence,
@@ -136,6 +141,7 @@ const messages = {
   AdminStaff: adminStaff,
   AdminAccounts: adminAccounts,
   AdminAudit: adminAudit,
+  AdminBanners: adminBanners,
 };
 
 export default messages;

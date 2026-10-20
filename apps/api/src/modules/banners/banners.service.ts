@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { newId } from '@xeprime/prisma';
-import { API_ERROR_CODE } from '@xeprime/types';
+import { API_ERROR_CODE, BANNER_PLACEMENT, type BannerPlacement } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import type {
@@ -42,6 +42,7 @@ const SELECT = {
   mobileImageUrl: true,
   altText: true,
   linkUrl: true,
+  placement: true,
   sortOrder: true,
   active: true,
   startsAt: true,
@@ -58,6 +59,7 @@ type Row = {
   mobileImageUrl: string | null;
   altText: string;
   linkUrl: string | null;
+  placement: string;
   sortOrder: number;
   active: boolean;
   startsAt: Date | null;
@@ -80,11 +82,16 @@ export class BannersService {
     private readonly audit: AuditService,
   ) {}
 
-  /** Trả TOÀN BỘ banner đang hiển thị; giới hạn 10 được chặn ở đường ghi, không cắt âm thầm ở đây. */
-  async publicList(): Promise<PublicBannerDto[]> {
+  /**
+   * Trả TOÀN BỘ banner đang hiển thị của MỘT vị trí; giới hạn 10 được chặn ở đường ghi, không cắt
+   * âm thầm ở đây. Mặc định `hero` — client cũ (app native) gọi không kèm vị trí vẫn nhận đúng dải
+   * banner đầu trang như trước.
+   */
+  async publicList(placement: BannerPlacement = BANNER_PLACEMENT.HERO): Promise<PublicBannerDto[]> {
     const now = new Date();
     const rows = await this.prisma.marketplaceBanner.findMany({
       where: {
+        placement,
         active: true,
         OR: [{ startsAt: null }, { startsAt: { lte: now } }],
         AND: [{ OR: [{ endsAt: null }, { endsAt: { gt: now } }] }],
@@ -102,8 +109,11 @@ export class BannersService {
     return rows;
   }
 
-  async listForAdmin(): Promise<AdminBannerDto[]> {
+  async listForAdmin(
+    placement: BannerPlacement = BANNER_PLACEMENT.HERO,
+  ): Promise<AdminBannerDto[]> {
     const rows = await this.prisma.marketplaceBanner.findMany({
+      where: { placement },
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
       select: SELECT,
     });
@@ -116,10 +126,11 @@ export class BannersService {
     const row = await this.prisma.$transaction(async (tx) => {
       await lockBannerVisibility(tx);
 
+      const placement = dto.placement ?? BANNER_PLACEMENT.HERO;
       const active = dto.active ?? true;
       const startsAt = dto.startsAt ? new Date(dto.startsAt) : null;
       const endsAt = dto.endsAt ? new Date(dto.endsAt) : null;
-      if (active) await this.assertVisibilityCapacity(tx, { startsAt, endsAt });
+      if (active) await this.assertVisibilityCapacity(tx, placement, { startsAt, endsAt });
 
       const created = await tx.marketplaceBanner.create({
         data: {
@@ -130,7 +141,8 @@ export class BannersService {
           mobileImageUrl: dto.mobileImageUrl?.trim() || null,
           altText: dto.altText.trim(),
           linkUrl: dto.linkUrl?.trim() || null,
-          sortOrder: dto.sortOrder ?? (await this.nextSortOrder(tx)),
+          placement,
+          sortOrder: dto.sortOrder ?? (await this.nextSortOrder(tx, placement)),
           active,
           startsAt,
           endsAt,
@@ -145,7 +157,12 @@ export class BannersService {
           action: 'banner.create',
           targetType: 'marketplace_banner',
           targetId: created.id,
-          after: { title: created.title, imageUrl: created.imageUrl, active: created.active },
+          after: {
+            title: created.title,
+            placement: created.placement,
+            imageUrl: created.imageUrl,
+            active: created.active,
+          },
         },
         tx,
       );
@@ -169,7 +186,12 @@ export class BannersService {
 
       const visibilityChanged = 'active' in dto || 'startsAt' in dto || 'endsAt' in dto;
       if (active && visibilityChanged) {
-        await this.assertVisibilityCapacity(tx, { startsAt, endsAt }, id);
+        await this.assertVisibilityCapacity(
+          tx,
+          current.placement as BannerPlacement,
+          { startsAt, endsAt },
+          id,
+        );
       }
 
       const updated = await tx.marketplaceBanner.update({
@@ -232,7 +254,12 @@ export class BannersService {
 
   /** Ghi lại TRỌN thứ tự trong một transaction — gửi thiếu là từ chối, không lệch số âm thầm. */
   async reorder(actorUserId: string, dto: ReorderBannersDto): Promise<AdminBannerDto[]> {
-    const rows = await this.prisma.marketplaceBanner.findMany({ select: { id: true } });
+    const placement = dto.placement ?? BANNER_PLACEMENT.HERO;
+    // Thứ tự tính RIÊNG từng vị trí: phải gửi đủ banner của đúng vị trí đó, không lẫn vị trí khác.
+    const rows = await this.prisma.marketplaceBanner.findMany({
+      where: { placement },
+      select: { id: true },
+    });
     const known = new Set(rows.map((r) => r.id));
     const unknown = dto.ids.filter((id) => !known.has(id));
     if (unknown.length > 0 || dto.ids.length !== rows.length) {
@@ -252,12 +279,12 @@ export class BannersService {
           actorScope: 'platform',
           action: 'banner.reorder',
           targetType: 'marketplace_banner',
-          after: { ids: dto.ids },
+          after: { placement, ids: dto.ids },
         },
         tx,
       );
     });
-    return this.listForAdmin();
+    return this.listForAdmin(placement);
   }
 
   private async load(
@@ -289,11 +316,14 @@ export class BannersService {
    */
   private async assertVisibilityCapacity(
     db: Pick<PrismaService, 'marketplaceBanner'>,
+    placement: BannerPlacement,
     candidate: { startsAt: Date | null; endsAt: Date | null },
     excludeId?: string,
   ): Promise<void> {
+    // Trần tính RIÊNG từng vị trí: 10 banner đầu trang không chặn banner khuyến mãi và ngược lại.
     const rows = await db.marketplaceBanner.findMany({
       where: {
+        placement,
         active: true,
         ...(excludeId ? { id: { not: excludeId } } : {}),
       },
@@ -326,16 +356,21 @@ export class BannersService {
       concurrent += event.delta;
       if (concurrent >= MAX_CONCURRENT_VISIBLE_BANNERS) {
         throw new BadRequestException({
-          code: API_ERROR_CODE.VALIDATION_FAILED,
+          code: API_ERROR_CODE.BANNER_VISIBLE_LIMIT_EXCEEDED,
           message:
             'Chỉ được phép tối đa 10 banner hiển thị cùng thời điểm. Hãy tắt hoặc điều chỉnh lịch của banner khác trước.',
+          details: { max: MAX_CONCURRENT_VISIBLE_BANNERS },
         });
       }
     }
   }
 
-  private async nextSortOrder(tx: Pick<PrismaService, 'marketplaceBanner'>): Promise<number> {
+  private async nextSortOrder(
+    tx: Pick<PrismaService, 'marketplaceBanner'>,
+    placement: BannerPlacement,
+  ): Promise<number> {
     const last = await tx.marketplaceBanner.findFirst({
+      where: { placement },
       orderBy: { sortOrder: 'desc' },
       select: { sortOrder: true },
     });
@@ -352,6 +387,7 @@ export class BannersService {
       mobileImageUrl: row.mobileImageUrl,
       altText: row.altText,
       linkUrl: row.linkUrl,
+      placement: row.placement as BannerPlacement,
       sortOrder: row.sortOrder,
       active: row.active,
       startsAt: row.startsAt?.toISOString() ?? null,

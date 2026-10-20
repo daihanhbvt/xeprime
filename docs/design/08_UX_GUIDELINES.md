@@ -381,8 +381,8 @@ diễn đạt theo cách rẻ hơn nhiều lần. Hệ công nghệ đầy đủ
 ### 13.1 Hệ UI
 
 Ant Design 6 + CSS Modules + token `--xp-*` (ADR 0003). Component AntD đã có thì dùng nguyên hình dạng
-của nó — vẽ một select "đẹp hơn" là viết lại từ đầu. Icon **chỉ** `@ant-design/icons`. Font Be Vietnam
-Pro (+ Playfair chỉ ở hero). Không inline style (ngoại lệ: CSS custom property cho giá trị chỉ biết lúc
+của nó — vẽ một select "đẹp hơn" là viết lại từ đầu. Icon **chỉ** `@ant-design/icons`. Font Google Sans
+Flex, một họ chữ cho mọi chỗ (ADR 0062). Không inline style (ngoại lệ: CSS custom property cho giá trị chỉ biết lúc
 chạy, như vị trí thanh sự kiện trên lịch). Lịch là component tự dựng — không thư viện lịch trả phí.
 
 ### 13.2 Bảo đảm nghiệp vụ thiết kế không được đè lên

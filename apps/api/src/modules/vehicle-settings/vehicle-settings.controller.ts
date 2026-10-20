@@ -1,11 +1,16 @@
 import { Body, Controller, Get, Param, Patch, Put, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ACCOUNT_REALM, PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
-  ACCOUNT_REALM,
-  PERMISSION,
-  SUPPORT_CAPABILITY,
-} from '@xeprime/types';
-import { BRANCH_SCOPED_RESOURCE, BranchScoped, CurrentTenant, CurrentUser, Realms, RequirePermissions, SupportAction, TenantScoped } from '../../common/decorators';
+  BRANCH_SCOPED_RESOURCE,
+  BranchScoped,
+  CurrentTenant,
+  CurrentUser,
+  Realms,
+  RequirePermissions,
+  SupportAction,
+  TenantScoped,
+} from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import {
   DriverSurchargeRulesDto,
@@ -78,7 +83,7 @@ export class VehicleSettingsController {
     @CurrentTenant() tenant: TenantContext,
     @Param('id') id: string,
   ): Promise<VehicleServiceSettingsDto> {
-    return { items: await this.settings.listServiceSettings(tenant.tenantId, id, tenant.features) };
+    return { items: await this.settings.listServiceSettings(tenant.tenantId, id) };
   }
 
   @Patch(':id/service-settings/:serviceType')
@@ -101,7 +106,6 @@ export class VehicleSettingsController {
       serviceType,
       user.id,
       dto,
-      tenant.features,
     );
   }
 
@@ -132,7 +136,8 @@ export class VehicleSettingsController {
   @Get(':id/trip-history')
   @RequirePermissions(PERMISSION.BOOKING_VIEW, PERMISSION.BOOKING_REQUEST_VIEW)
   @ApiOperation({
-    summary: 'Lịch sử chuyến của một xe — đơn thuê + yêu cầu chưa thành đơn, trộn và phân trang ở DB',
+    summary:
+      'Lịch sử chuyến của một xe — đơn thuê + yêu cầu chưa thành đơn, trộn và phân trang ở DB',
   })
   @ApiOkResponse({ type: VehicleTripHistoryPageDto })
   tripHistory(

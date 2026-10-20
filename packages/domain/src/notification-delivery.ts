@@ -128,6 +128,11 @@ export function notificationDeepLink(
    */
   if (audience !== NOTIFICATION_AUDIENCE.MANAGE) {
     switch (target.targetType) {
+      // Tài xế là TÀI KHOẢN KHÁCH (ADR 0063): chuyến được gán có màn riêng, khác chuyến đi thuê.
+      case NOTIFICATION_TARGET_TYPE.DRIVER_TRIP:
+        return id ? `/trips/driving/${id}` : '/trips?tab=driving';
+      case NOTIFICATION_TARGET_TYPE.DRIVER_LINK:
+        return '/account/driving';
       // Backend nhận CẢ id yêu cầu lẫn id đơn cho `/trips/:id` — một chuyến, hai giai đoạn.
       case NOTIFICATION_TARGET_TYPE.BOOKING:
       case NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST:
@@ -163,6 +168,8 @@ export function notificationDeepLink(
       return id ? `/manage/vehicles/${id}` : '/manage/vehicles';
     case NOTIFICATION_TARGET_TYPE.TENANT:
       return '/manage/shop';
+    case NOTIFICATION_TARGET_TYPE.DRIVER_LINK:
+      return '/manage/drivers';
     default:
       return null;
   }

@@ -69,6 +69,7 @@ import { TenantsController } from '../src/modules/tenants/tenants.controller';
 import { TenantsService } from '../src/modules/tenants/tenants.service';
 import { VehicleSettingsController } from '../src/modules/vehicle-settings/vehicle-settings.controller';
 import { VehicleSettingsService } from '../src/modules/vehicle-settings/vehicle-settings.service';
+import { ListingsService } from '../src/modules/public-listings/listings.service';
 import { VehicleTripHistoryService } from '../src/modules/vehicle-settings/vehicle-trip-history.service';
 import { VEHICLE_DOCUMENT_OCR_PROVIDER } from '../src/modules/vehicles/documents/ocr-provider';
 import { VehicleDocumentsController } from '../src/modules/vehicles/documents/vehicle-documents.controller';
@@ -88,6 +89,7 @@ import {
   makeVehiclesService,
   seedBranch,
   vehicleCreator,
+  makeDriversService,
 } from './helpers/service-factory';
 
 /**
@@ -382,7 +384,7 @@ beforeAll(async () => {
       },
       {
         provide: VehicleSettingsService,
-        useValue: new VehicleSettingsService(asService, audit, occupancy),
+        useValue: new VehicleSettingsService(asService, audit, occupancy, new ListingsService(asService), makeDriversService(asService)),
       },
       { provide: VehicleTripHistoryService, useValue: {} },
       { provide: BranchesService, useValue: makeBranchesService(asService) },

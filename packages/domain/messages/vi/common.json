@@ -157,6 +157,7 @@
     "loadingNamed": "Đang tải {label}…",
     "moreActions": "Thêm thao tác",
     "discount": "Giảm {percent}%",
+    "discountBadge": "{percent}% off",
     "rating": "{value} trên {max} sao",
     "revealContact": "Xem đầy đủ — thao tác này được ghi vào nhật ký hệ thống",
     "imageUpload": {

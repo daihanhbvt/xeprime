@@ -1,0 +1,190 @@
+.dialogBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 8px 0;
+}
+
+.contextAlert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background-color: var(--xp-color-primary-subtle, #fffbf0);
+  border: 1px solid var(--xp-color-primary-muted, #fbe8c0);
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--xp-color-text-secondary, #414651);
+}
+
+.contextIcon {
+  color: var(--xp-color-primary-dark, #c08210);
+  font-size: 16px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.searchSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.searchLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--xp-color-text, #0e0f12);
+}
+
+.autoComplete {
+  width: 100%;
+}
+
+.suggestionItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+.suggestionIcon {
+  color: var(--xp-color-text-tertiary, #717680);
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.suggestionText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.suggestionPrimary {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--xp-color-text, #0e0f12);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.suggestionSecondary {
+  font-size: 12px;
+  color: var(--xp-color-text-tertiary, #717680);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.useTypedOption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--xp-color-primary-dark, #c08210);
+  font-weight: 500;
+  font-size: 13px;
+  padding: 4px 0;
+}
+
+.mapPreviewWrap {
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--xp-color-border, #e9eaeb);
+  background: #f9fafb;
+}
+
+.mapImage {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  display: block;
+}
+
+.estimateCard {
+  background: #fafafa;
+  border: 1px solid #eaecf0;
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.estimateRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+
+.estimateLabel {
+  color: var(--xp-color-text-secondary, #414651);
+}
+
+.estimateFee {
+  font-weight: 700;
+  color: var(--xp-color-primary-dark, #c08210);
+  font-size: 16px;
+}
+
+.freeFee {
+  color: #12b76a;
+}
+
+.estimateMeta {
+  font-size: 13px;
+  color: var(--xp-color-text-tertiary, #717680);
+}
+
+.footerActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f2f4f7;
+}
+
+.cancelBtn {
+  min-width: 90px;
+}
+
+.confirmBtn {
+  min-width: 140px;
+  background-color: var(--xp-color-primary, #e9ac29) !important;
+  border-color: var(--xp-color-primary, #e9ac29) !important;
+  color: #1a1a1a !important;
+  font-weight: 600;
+}
+
+.confirmBtn:disabled {
+  opacity: 0.5;
+  background-color: #f2f4f7 !important;
+  border-color: #eaecf0 !important;
+  color: #98a2b3 !important;
+}
+
+
+/* ── Giao diện tối ─────────────────────────────────────────────────────────
+   Hộp thoại AntD đã tối theo theme; đây là các mảng nền/viền xám nhạt viết thẳng ở trên. */
+:global([data-theme="dark"]) .mapPreviewWrap,
+:global([data-theme="dark"]) .estimateCard {
+  background: var(--xp-color-bg-muted);
+}
+
+:global([data-theme="dark"]) .estimateCard {
+  border-color: var(--xp-color-border);
+}
+
+:global([data-theme="dark"]) .footerActions {
+  border-top-color: var(--xp-color-border);
+}
+
+:global([data-theme="dark"]) .confirmBtn:disabled {
+  background-color: var(--xp-color-bg-muted) !important;
+  border-color: var(--xp-color-border) !important;
+  color: var(--xp-color-text-placeholder) !important;
+}

@@ -15,6 +15,7 @@
 
 import { BANK_MATCH_TARGET_TYPE } from './status/billing';
 import { STATUS_COLOR, type StatusMeta } from './status/meta';
+import { ULID_PATTERN_SOURCE } from './ulid';
 
 /** Nhà cung cấp cổng thanh toán. */
 export const PAYMENT_GATEWAY_PROVIDER = {
@@ -30,10 +31,25 @@ export const PAYMENT_GATEWAY_PROVIDER_VALUES = Object.values(
 ) as PaymentGatewayProvider[];
 
 export function isPaymentGatewayProvider(value: unknown): value is PaymentGatewayProvider {
-  return (
-    typeof value === 'string' && (PAYMENT_GATEWAY_PROVIDER_VALUES as string[]).includes(value)
-  );
+  return typeof value === 'string' && (PAYMENT_GATEWAY_PROVIDER_VALUES as string[]).includes(value);
 }
+
+/**
+ * KÊNH tiền đã vào một khoản giữ chỗ — chuyển khoản VietQR (đối soát SePay hoặc admin khớp tay) hay
+ * một cổng ví. Chỉ để KỂ LẠI cho khách ("Hệ thống đã ghi nhận 500.000đ qua VNPAY"); không quyết định
+ * gì về tiền. Server suy từ sổ `payment_gateway_orders` (ADR 0058), client không tự đoán.
+ */
+export const HOLD_PAYMENT_CHANNEL = {
+  BANK_TRANSFER: 'bank_transfer',
+  MOMO: PAYMENT_GATEWAY_PROVIDER.MOMO,
+  VNPAY: PAYMENT_GATEWAY_PROVIDER.VNPAY,
+} as const;
+
+export type HoldPaymentChannel = (typeof HOLD_PAYMENT_CHANNEL)[keyof typeof HOLD_PAYMENT_CHANNEL];
+
+export const HOLD_PAYMENT_CHANNEL_VALUES = Object.values(
+  HOLD_PAYMENT_CHANNEL,
+) as HoldPaymentChannel[];
 
 /**
  * Lượt thanh toán trả cho CÁI GÌ — cùng không gian giá trị với `BANK_MATCH_TARGET_TYPE` để một
@@ -129,6 +145,17 @@ export const PAYMENT_ORDER_APPLIED_OUTCOMES: readonly PaymentOrderApplyOutcome[]
 ];
 
 /**
+ * Kết cục mà khoản tiền của lượt đã được CỘNG vào `paid_amount` của đích — khác
+ * `PAYMENT_ORDER_APPLIED_OUTCOMES` ở đúng `already_paid`: tiền trả trùng vẫn được cộng (rồi ghi yêu
+ * cầu hoàn). Dùng khi cần biết số đã nhận đến từ kênh nào (`CustomerHoldDto.paidVia`).
+ */
+export const PAYMENT_ORDER_CREDITED_OUTCOMES: readonly PaymentOrderApplyOutcome[] = [
+  PAYMENT_ORDER_APPLY_OUTCOME.ACTIVATED,
+  PAYMENT_ORDER_APPLY_OUTCOME.PARTIAL,
+  PAYMENT_ORDER_APPLY_OUTCOME.ALREADY_PAID,
+];
+
+/**
  * Hàng đợi NGƯỜI XỬ LÝ — trục độc lập với trạng thái cổng.
  *
  * `open` = tiền đã (hoặc có thể đã) về mà hệ thống không tự kết luận được; chỉ admin đóng được nó,
@@ -220,7 +247,9 @@ export const PAYMENT_ORDER_VIEW_STATE_VALUES = Object.values(
 
 /** Chặng còn đổi được — client hỏi lại theo nhịp khi đang ở một trong hai chặng này. */
 export function isPaymentOrderViewStateSettling(state: PaymentOrderViewState): boolean {
-  return state === PAYMENT_ORDER_VIEW_STATE.AWAITING || state === PAYMENT_ORDER_VIEW_STATE.CONFIRMING;
+  return (
+    state === PAYMENT_ORDER_VIEW_STATE.AWAITING || state === PAYMENT_ORDER_VIEW_STATE.CONFIRMING
+  );
 }
 
 /** Kết quả của cổng đến từ đâu — IPN (cổng gọi vào) hay truy vấn chủ động phía server. */
@@ -267,9 +296,7 @@ export const PAYMENT_ORDER_QUEUE_VIEW_VALUES = Object.values(
 ) as PaymentOrderQueueView[];
 
 export function isPaymentOrderQueueView(value: unknown): value is PaymentOrderQueueView {
-  return (
-    typeof value === 'string' && (PAYMENT_ORDER_QUEUE_VIEW_VALUES as string[]).includes(value)
-  );
+  return typeof value === 'string' && (PAYMENT_ORDER_QUEUE_VIEW_VALUES as string[]).includes(value);
 }
 
 /**
@@ -321,6 +348,42 @@ export const PAYMENT_RETURN_TRIP_PATH = '/trips';
  * `xeprime://trips/<id>` để trình duyệt tự đóng; app tự hỏi server trạng thái lượt sau đó.
  */
 export const PAYMENT_NATIVE_TRIP_RETURN_PATH = '/app-return';
+
+/**
+ * Deep link quay về app của MỘT chuyến: `<scheme>://trips/<tripId>[?paymentOrder=<orderId>]`.
+ *
+ * Tiền tố `<scheme>://trips/<id>` là HỢP ĐỒNG với bản app đã cài: app truyền đúng chuỗi đó (không
+ * kèm lượt) cho `openAuthSessionAsync`, và Android chỉ đóng trình duyệt khi URL BẮT ĐẦU bằng nó.
+ * Trang quay về công khai của web nối thêm lượt cổng; app mới đổi hướng nó sang màn thanh toán.
+ *
+ * `scheme` do app/web truyền vào (`MOBILE_APP_SCHEME[...]`) — package không đọc env. Không tự kiểm
+ * id: nơi gọi nhận id từ URL lạ phải chặn bằng `isUlid` trước.
+ */
+export function buildNativeTripReturnUrl(
+  scheme: string,
+  tripId: string,
+  orderId?: string | null,
+): string {
+  const base = `${scheme}://trips/${encodeURIComponent(tripId)}`;
+  return orderId
+    ? `${base}?${PAYMENT_RETURN_PARAM.TRIP_ORDER}=${encodeURIComponent(orderId)}`
+    : base;
+}
+
+/** `scheme://trips/<id>?…paymentOrder=<id>…` hoặc `/trips/<id>?…` (Expo Router đã bỏ scheme). */
+const NATIVE_TRIP_RETURN = new RegExp(
+  `^(?:[a-z][a-z0-9+.-]*://)?/?trips/(${ULID_PATTERN_SOURCE})\\?(?:.*&)?${PAYMENT_RETURN_PARAM.TRIP_ORDER}=(${ULID_PATTERN_SOURCE})(?:&.*)?$`,
+);
+
+/**
+ * Đọc lại deep link do `buildNativeTripReturnUrl` dựng — CHỈ khi mang lượt cổng hợp lệ (cả hai id là
+ * ULID). Link chuyến thường (không lượt) trả `null`. Không đọc kết quả thanh toán nào từ URL.
+ */
+export function parseNativeTripReturn(url: string): { tripId: string; orderId: string } | null {
+  const match = NATIVE_TRIP_RETURN.exec(url);
+  if (!match) return null;
+  return { tripId: match[1]!, orderId: match[2]! };
+}
 
 /**
  * Một phiên thanh toán qua cổng sống bao lâu trước khi hệ thống mời khách mở phiên mới.

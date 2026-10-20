@@ -30,7 +30,7 @@ import {
   isPartnerInvitePage,
   partnerSignupContinueHref,
   resolvePartnerTrack,
-  type AuthMode,
+  type PanelAuthMode,
 } from '../post-auth-destination';
 import type { CurrentUser } from '@/services/auth.service';
 import { AuthPanel } from './AuthPanel';
@@ -59,7 +59,7 @@ export function PartnerRegisterView() {
   const search = useSearchParams();
   const { refreshAfterAuth } = useAuthCache();
   const { data: user, isLoading, dataUpdatedAt, errorUpdatedAt } = useCurrentUser();
-  const [mode, setMode] = useState<AuthMode>(AUTH_MODE.REGISTER);
+  const [mode, setMode] = useState<PanelAuthMode>(AUTH_MODE.REGISTER);
   /** Đích sau khi form vừa tạo gian hàng — thắng phép suy "đã có gian hàng ⇒ về trang chủ". */
   const [doneHref, setDoneHref] = useState<string | null>(null);
 

@@ -1,0 +1,65 @@
+/* Tiến trình hành trình đặt xe — Figma `19727:55959` ("Bước 2 / 4 · Gửi yêu cầu"). */
+.journey {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-12);
+  min-width: 0;
+}
+
+.caption {
+  margin: 0;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  color: var(--xp-color-text-secondary);
+}
+
+.dots {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-12);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Chấm CHƯA tới: nền trắng, viền xám, số xám nhạt. */
+.dot {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-placeholder);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+/* Chấm ĐANG đứng: nền vàng nhạt, viền vàng, số vàng sẫm. */
+.active {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-bg-selected);
+  color: var(--xp-color-primary-hover);
+}
+
+/* Chấm ĐÃ qua: nền vàng đặc, dấu tích chữ tối. */
+.done {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+}
+
+.srOnly {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

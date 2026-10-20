@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
+import { AccountShell } from '@/features/account/components/AccountShell';
 import { TripsView } from '@/features/trips/components/TripsView';
 import { getTranslations } from 'next-intl/server';
 
@@ -10,16 +11,17 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /**
  * Khu khách hàng — "Chuyến của tôi", MỘT danh sách cho cả hai phía: chuyến tôi cho thuê và
- * chuyến tôi đi thuê. Server trộn hai phía trong cùng một truy vấn (xem `CustomerTripsService`),
- * nên trang chỉ có một view. Dữ liệu cá nhân nên không cần SEO; client island.
+ * chuyến tôi đi thuê. Nằm trong vỏ tài khoản khách (`AccountShell`) có menu trái.
  *
  * `Suspense` là bắt buộc: `TripsView` đọc `useSearchParams` (tab + trang sống ở URL, ADR 0004),
  * và Next bắt mọi cây có nó phải nằm trong một ranh giới Suspense.
  */
 export default function TripsPage() {
   return (
-    <Suspense fallback={null}>
-      <TripsView />
-    </Suspense>
+    <AccountShell>
+      <Suspense fallback={null}>
+        <TripsView />
+      </Suspense>
+    </AccountShell>
   );
 }

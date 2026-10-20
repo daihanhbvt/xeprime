@@ -140,7 +140,11 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
       },
       { name: 'vehicle-maintenance', description: 'Phiếu bảo dưỡng/sửa chữa của một xe.' },
       { name: 'maintenance', description: 'Bảng bảo dưỡng toàn đội xe — việc đến hạn và quá hạn.' },
-      { name: 'drivers', description: 'Tài xế của gian hàng cho dịch vụ có lái.' },
+      {
+        name: 'drivers',
+        description:
+          'Tài xế liên kết của bên thuê (gian hàng / chủ xe) — mời theo SĐT tài khoản khách, gán vào chuyến có tài xế (ADR 0063).',
+      },
     ],
   },
   {
@@ -176,6 +180,11 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
       { name: 'contracts', description: 'Hợp đồng thuê sinh từ đơn và trạng thái ký.' },
       { name: 'customers', description: 'Khách hàng của gian hàng và giấy tờ tuỳ thân đã thu.' },
       { name: 'customer-trips', description: 'Chuyến xe nhìn từ phía tài khoản khách.' },
+      {
+        name: 'driver-self',
+        description:
+          'Tài khoản khách trong vai TÀI XẾ: lời mời liên kết, nơi mình lái, chuyến được gán và nhận/từ chối (ADR 0063).',
+      },
     ],
   },
   {

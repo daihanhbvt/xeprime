@@ -1,4 +1,4 @@
-import { cleanup, screen } from '@testing-library/react';
+import { cleanup, screen, fireEvent } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { EMPTY_CATALOG } from '@/features/catalog/types';
@@ -39,6 +39,34 @@ vi.mock('./ListingGallery', () => ({
 
 vi.mock('./ListingReviews', () => ({
   ListingReviews: () => <div>Đánh giá</div>,
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  usePathname: () => '/',
+  useSearchParams: () => new URLSearchParams(),
+}));
+
+vi.mock('@/features/promo-codes/use-promo-code', () => ({
+  usePromoCode: () => ({
+    appliedCode: null,
+    applied: null,
+    checking: false,
+    reason: null,
+    droppedCode: null,
+    apply: vi.fn(),
+    remove: vi.fn(),
+    rejectByServer: vi.fn(),
+  }),
+}));
+
+vi.mock('@/features/promo-codes/components/PromoCodeField', () => ({
+  PromoPicker: () => null,
+  PromoCodeField: () => null,
+}));
+
+vi.mock('./DeliveryAddressModal', () => ({
+  DeliveryAddressModal: () => null,
 }));
 
 vi.mock('./ListingServiceSelector', () => ({
@@ -190,9 +218,16 @@ describe('ListingDetailView — điều kiện thuê công bố', () => {
 
   it('tự lái: hiện giấy tờ, cách đối chiếu, điều khoản và nhãn Đặt ngay', async () => {
     renderWithIntl(await ListingDetailView({ listing: WITH_TERMS, catalog: EMPTY_CATALOG }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Giấy tờ thuê xe' }));
 
     expect(screen.getByText('Thủ tục & điều kiện thuê')).toBeTruthy();
-    expect(screen.getByText(/Giấy tờ cần có: Giấy phép lái xe/)).toBeTruthy();
+    // Nhãn đậm (`<strong>`) tách dòng thành hai nút chữ — so theo chữ của cả dòng.
+    expect(
+      screen.getByText(
+        (_, el) =>
+          el?.tagName === 'SPAN' && /Giấy tờ cần có: Giấy phép lái xe/.test(el.textContent ?? ''),
+      ),
+    ).toBeTruthy();
     expect(screen.getByText('Đặt ngay')).toBeTruthy();
     expect(screen.getByText('Không hút thuốc trong xe.')).toBeTruthy();
     // "Đối chiếu VNeID" là người xem app của khách — không hứa gọi API định danh.
@@ -223,6 +258,7 @@ describe('ListingDetailView — điều kiện thuê công bố', () => {
     );
     expect(screen.getByText('Phụ phí có thể phát sinh')).toBeTruthy();
     expect(screen.getByText(/Phụ phí chờ đợi/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('tab', { name: 'Tài sản thế chấp' }));
     expect(screen.getByText(/Không cần cọc giữ chuyến/)).toBeTruthy();
   });
 

@@ -38,6 +38,8 @@ export const MESSAGE_NAMESPACES = [
   { file: 'auth', namespace: 'Auth' },
   { file: 'home-search', namespace: 'HomeSearch' },
   { file: 'marketplace', namespace: 'Marketplace' },
+  // Trang chủ chợ theo design v2 (ADR 0062) — copy riêng của các khối trang chủ web.
+  { file: 'home', namespace: 'Home' },
   { file: 'listings', namespace: 'Listings' },
   { file: 'shops', namespace: 'Shops' },
   { file: 'chat', namespace: 'Chat' },
@@ -91,6 +93,7 @@ export const MESSAGE_NAMESPACES = [
   { file: 'bank-transactions', namespace: 'BankTransactions' },
   { file: 'members', namespace: 'Members' },
   { file: 'drivers', namespace: 'Drivers' },
+  { file: 'driving', namespace: 'Driving' },
   { file: 'maintenance', namespace: 'Maintenance' },
   // "Gói của tôi" phía gian hàng — W2 (ADR 0015/0026).
   { file: 'subscription', namespace: 'Subscription' },
@@ -125,6 +128,9 @@ export const MESSAGE_NAMESPACES = [
   // Nhật ký hệ thống của admin nền tảng — chuyển sang t() ngày 08/10/2026 cùng đợt dựng lại trang
   // (nhãn hành động/đối tượng/trường nằm ở `Domain.auditAction` · `auditTargetType` · `auditField`).
   { file: 'admin-audit', namespace: 'AdminAudit' },
+  // Banner trang chủ của admin nền tảng — chuyển sang t() ngày 15/10/2026 cùng đợt đổi banner PC
+  // thành nền hero design v2 (ADR 0062).
+  { file: 'admin-banners', namespace: 'AdminBanners' },
   { file: 'admin-accounts', namespace: 'AdminAccounts' },
   // ⚠️ `mobile-shell` là VỎ app native (màn lỗi cấp app, not-found, điều hướng gốc), KHÔNG
   // phải "mọi chữ của mobile". Namespace vẫn chia theo TÍNH NĂNG, không theo client: màn

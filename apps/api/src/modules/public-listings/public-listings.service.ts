@@ -136,6 +136,10 @@ const listingCardSelect = (now: Date) =>
     bodyType: true,
     motorbikeCategory: true,
     mainImageUrl: true,
+    imageCount: true,
+    transmission: true,
+    instantBookServiceTypes: true,
+    wardName: true,
     weekdayPrice: true,
     weekendPrice: true,
     hourlyPrice: true,
@@ -173,11 +177,7 @@ interface VehicleRating {
  * denormalize trên snapshot (ListingsService.refreshRating nuôi) — hiển thị 1 chữ số thập phân
  * như UI (4.9).
  */
-function toListingCard(
-  l: ListingCardRow,
-  completedTripCount: number,
-  now: Date,
-): PublicListingDto {
+function toListingCard(l: ListingCardRow, completedTripCount: number, now: Date): PublicListingDto {
   // MỘT lần chấm tuyến cho mọi thứ thẻ xe cần nói về gian hàng: tên, ảnh, dấu tick. Ba lời gọi
   // riêng là ba cơ hội để thẻ tự mâu thuẫn với chính nó.
   const storefront = resolveStorefront(l.tenant, now);
@@ -194,6 +194,9 @@ function toListingCard(
     bodyType: l.bodyType,
     motorbikeCategory: l.motorbikeCategory,
     mainImageUrl: l.mainImageUrl,
+    imageCount: l.imageCount,
+    transmission: l.transmission,
+    instantBookServiceTypes: l.instantBookServiceTypes,
     weekdayPrice: l.weekdayPrice as unknown as string | null,
     weekendPrice: l.weekendPrice as unknown as string | null,
     hourlyPrice: l.hourlyPrice as unknown as string | null,
@@ -213,6 +216,7 @@ function toListingCard(
     shopVerified: hasVerifiedStorefront(storefront.billingMode),
     provinceCode: l.provinceCode,
     shopProvince: l.provinceName,
+    wardName: l.wardName,
     completedTripCount,
     ratingAvg: l.ratingAvg != null ? l.ratingAvg.toFixed(1) : null,
     ratingCount: l.ratingCount,
@@ -354,7 +358,10 @@ export class PublicListingsService {
    */
   async recommended(query: RecommendedListingQueryDto): Promise<RecommendedListingsDto> {
     const now = new Date();
-    const limit = Math.min(MAX_RECOMMENDED_LIMIT, Math.max(1, query.limit ?? DEFAULT_RECOMMENDED_LIMIT));
+    const limit = Math.min(
+      MAX_RECOMMENDED_LIMIT,
+      Math.max(1, query.limit ?? DEFAULT_RECOMMENDED_LIMIT),
+    );
     const near = query.nearProvinceCode ?? null;
     const peers = near ? provinceRegionPeers(near) : [];
 
@@ -723,7 +730,7 @@ export class PublicListingsService {
 
     // Ảnh đại diện + tên chuẩn: `distinct` để DB trả đúng một dòng mỗi tỉnh (không kéo cả bảng),
     // tên lấy từ bảng `provinces` chứ không từ cột denormalize — tên chuẩn chỉ có một nguồn.
-    const [covers, provinces] = await Promise.all([
+    const [covers, provinces, minPrices] = await Promise.all([
       this.prisma.publicListing.findMany({
         where: { ...scope, provinceCode: { in: codes }, mainImageUrl: { not: null } },
         distinct: ['provinceCode'],
@@ -733,6 +740,7 @@ export class PublicListingsService {
         where: { code: { in: codes } },
         select: { code: true, name: true },
       }),
+      this.minDailyPriceByProvince(scope, codes),
     ]);
     const coverBy = new Map(covers.map((c) => [c.provinceCode, c.mainImageUrl]));
     const nameBy = new Map(provinces.map((p) => [p.code, p.name]));
@@ -744,7 +752,34 @@ export class PublicListingsService {
         provinceName: nameBy.get(g.provinceCode) ?? g.provinceCode,
         vehicleCount: g._count._all,
         imageUrl: coverBy.get(g.provinceCode) ?? null,
+        minDailyPrice: minPrices.get(g.provinceCode) ?? null,
       }));
+  }
+
+  /**
+   * Giá thuê TỰ LÁI theo ngày thấp nhất mỗi tỉnh — "chỉ từ …" trên thẻ địa điểm.
+   *
+   * Đọc cột snapshot `self_drive_daily_price` (giá ngày đã trừ khuyến mãi trực tiếp, cùng phép làm
+   * tròn với thẻ xe — `selfDriveDailyPrice` ở `@xeprime/prisma`), nên gộp được bằng `_min` trên
+   * CHÍNH phạm vi công khai mà danh sách địa điểm dùng — không chép tay phạm vi đó vào SQL thô.
+   */
+  private async minDailyPriceByProvince(
+    scope: Prisma.PublicListingWhereInput,
+    codes: string[],
+  ): Promise<Map<string, string>> {
+    if (codes.length === 0) return new Map();
+    const rows = await this.prisma.publicListing.groupBy({
+      by: ['provinceCode'],
+      where: { ...scope, provinceCode: { in: codes }, selfDriveDailyPrice: { not: null } },
+      _min: { selfDriveDailyPrice: true },
+    });
+    return new Map(
+      rows.flatMap((r) =>
+        r.provinceCode && r._min.selfDriveDailyPrice
+          ? [[r.provinceCode, r._min.selfDriveDailyPrice.toFixed(0)] as const]
+          : [],
+      ),
+    );
   }
 
   /**
@@ -782,13 +817,20 @@ export class PublicListingsService {
         take: paging.take,
         select: {
           ...storefrontTenantSelect(now),
+          id: true,
           slug: true,
           ratingAvg: true,
           ratingCount: true,
-          profile: { select: { provinceName: true, logoUrl: true } },
+          profile: { select: { provinceName: true, logoUrl: true, bio: true } },
           _count: { select: { publicListings: { where: visibleListing } } },
         },
       }),
+    ]);
+
+    const tenantIds = rows.map((t) => t.id);
+    const [tripsByTenant, coverByTenant] = await Promise.all([
+      this.completedTripsByTenant(tenantIds),
+      this.featuredVehicleImageByTenant(tenantIds, visibleListing),
     ]);
 
     return {
@@ -804,10 +846,50 @@ export class PublicListingsService {
           ratingAvg: t.ratingAvg as unknown as string,
           ratingCount: t.ratingCount,
           verified: hasVerifiedStorefront(storefront.billingMode),
+          bio: t.profile?.bio?.trim() || null,
+          completedTripCount: tripsByTenant.get(t.id) ?? 0,
+          featuredVehicleImageUrl: coverByTenant.get(t.id) ?? null,
         };
       }),
       meta: paginationMeta(paging, total),
     };
+  }
+
+  /**
+   * Số chuyến đã hoàn thành của MỖI gian hàng trên một trang — một phép gộp cho cả trang, cùng
+   * điều kiện với `shopStats` (đơn `completed`, chưa xoá) để thẻ và trang gian hàng nói một số.
+   */
+  private async completedTripsByTenant(tenantIds: string[]): Promise<Map<string, number>> {
+    if (tenantIds.length === 0) return new Map();
+    const groups = await this.prisma.booking.groupBy({
+      by: ['tenantId'],
+      where: { tenantId: { in: tenantIds }, status: BOOKING_STATUS.COMPLETED, deletedAt: null },
+      _count: { _all: true },
+    });
+    return new Map(groups.map((g) => [g.tenantId, g._count._all]));
+  }
+
+  /**
+   * Ảnh một chiếc xe ĐẠI DIỆN cho mỗi gian hàng — xe xếp hạng cao nhất đang hiển thị công khai
+   * (cùng `publicListingScope` với chợ, nên không bao giờ khoe một xe khách không mở được).
+   * Một truy vấn `distinct` cho cả trang, cùng cách `listDestinations` chọn ảnh đại diện tỉnh.
+   */
+  private async featuredVehicleImageByTenant(
+    tenantIds: string[],
+    visibleListing: Prisma.PublicListingWhereInput,
+  ): Promise<Map<string, string>> {
+    if (tenantIds.length === 0) return new Map();
+    const rows = await this.prisma.publicListing.findMany({
+      where: { ...visibleListing, tenantId: { in: tenantIds }, mainImageUrl: { not: null } },
+      distinct: ['tenantId'],
+      orderBy: [{ rankScore: 'desc' }, { createdAt: 'desc' }],
+      select: { tenantId: true, mainImageUrl: true },
+    });
+    return new Map(
+      rows
+        .filter((r): r is typeof r & { mainImageUrl: string } => r.mainImageUrl != null)
+        .map((r) => [r.tenantId, r.mainImageUrl]),
+    );
   }
 
   /**
@@ -898,32 +980,31 @@ export class PublicListingsService {
   > {
     const visibleListing: Prisma.PublicListingWhereInput = { ...publicListingScope(), tenantId };
 
-    const [byProvince, deliveryRow, completedTripCount, branchCount, metrics] =
-      await Promise.all([
-        // Gộp theo tỉnh trả CẢ HAI thứ cần: danh sách tỉnh phục vụ (sắp theo số xe) và tổng số xe.
-        this.prisma.publicListing.groupBy({
-          by: ['provinceName'],
-          where: visibleListing,
-          _count: { _all: true },
-          orderBy: { _count: { provinceName: 'desc' } },
-        }),
-        this.prisma.publicListing.findFirst({
-          where: { ...visibleListing, deliveryEnabled: true },
-          select: { vehicleId: true },
-        }),
-        this.prisma.booking.count({
-          where: { tenantId, status: BOOKING_STATUS.COMPLETED, deletedAt: null },
-        }),
-        this.prisma.tenantBranch.count({
-          where: { tenantId, status: BRANCH_STATUS.ACTIVE, deletedAt: null },
-        }),
-        /*
-         * Ba chỉ số đi qua MỘT nguồn (ADR 0045 điều 2). Trước đợt này chỗ này tự cộng lấy hai
-         * mảng trạng thái, và bản của sổ ví đã trôi khỏi nó — hai con số khác nhau về cùng một
-         * gian hàng là cách nhanh nhất để không ai tin con số nào.
-         */
-        this.hostMetrics.forTenant(tenantId),
-      ]);
+    const [byProvince, deliveryRow, completedTripCount, branchCount, metrics] = await Promise.all([
+      // Gộp theo tỉnh trả CẢ HAI thứ cần: danh sách tỉnh phục vụ (sắp theo số xe) và tổng số xe.
+      this.prisma.publicListing.groupBy({
+        by: ['provinceName'],
+        where: visibleListing,
+        _count: { _all: true },
+        orderBy: { _count: { provinceName: 'desc' } },
+      }),
+      this.prisma.publicListing.findFirst({
+        where: { ...visibleListing, deliveryEnabled: true },
+        select: { vehicleId: true },
+      }),
+      this.prisma.booking.count({
+        where: { tenantId, status: BOOKING_STATUS.COMPLETED, deletedAt: null },
+      }),
+      this.prisma.tenantBranch.count({
+        where: { tenantId, status: BRANCH_STATUS.ACTIVE, deletedAt: null },
+      }),
+      /*
+       * Ba chỉ số đi qua MỘT nguồn (ADR 0045 điều 2). Trước đợt này chỗ này tự cộng lấy hai
+       * mảng trạng thái, và bản của sổ ví đã trôi khỏi nó — hai con số khác nhau về cùng một
+       * gian hàng là cách nhanh nhất để không ai tin con số nào.
+       */
+      this.hostMetrics.forTenant(tenantId),
+    ]);
 
     return {
       vehicleCount: byProvince.reduce((total, row) => total + row._count._all, 0),
@@ -1001,6 +1082,7 @@ export class PublicListingsService {
             latitude: true,
             longitude: true,
             province: { select: { code: true, name: true } },
+            ward: { select: { name: true } },
           },
         },
         vehicleType: true,
@@ -1073,44 +1155,48 @@ export class PublicListingsService {
       rentalTerms,
       shopMetrics,
     ] = await Promise.all([
-        this.ratingsByVehicle([v.id]).then((ratings) => ratings.get(v.id)),
-        this.prisma.booking.count({
-          where: { vehicleId: v.id, status: BOOKING_STATUS.COMPLETED, deletedAt: null },
-        }),
-        // Cùng phép đếm với `shopStats` dùng cho trang gian hàng, nhưng theo TENANT thay vì xe —
-        // thẻ gian hàng ở trang chi tiết xe nói về người bán, không phải riêng chiếc xe đang xem.
-        this.prisma.booking.count({
-          where: { tenantId: v.tenantId, status: BOOKING_STATUS.COMPLETED, deletedAt: null },
-        }),
-        this.pricing.effectivePolicy(v.tenantId, v.id),
-        this.settings.handoverWindowsFor(this.prisma, v.id),
-        // Chỉ chuyến có tài xế mới có phụ phí mặc định; chỉ khoản đang bật mới công bố.
-        v.serviceTypes.includes(SERVICE_TYPE.WITH_DRIVER)
-          ? this.settings.surchargeRulesFor(this.prisma, v.id)
-          : Promise.resolve([]),
-        Promise.all(
-          v.serviceTypes
-            .filter((s) => hasVehicleServiceSettings(s))
-            .map(async (s): Promise<ListingRentalTermsDto> => {
-              const setting = await this.settings.serviceSettingFor(this.prisma, v.id, s as ServiceType);
-              return {
-                serviceType: s,
-                requiredDocuments: setting.effectiveRequiredDocuments,
-                identityVerifyMethod: setting.identityVerifyMethod,
-                termsText: setting.termsText,
-                requireTermsAcceptance: setting.requireTermsAcceptance,
-                depositMode: s === SERVICE_TYPE.WITH_DRIVER ? setting.depositMode : null,
-                instantBookEnabled: setting.autoAcceptEnabled,
-                minRentalMinutes: setting.minRentalMinutes,
-              };
-            }),
-        ),
-        /*
-         * Ba chỉ số của CHỦ XE, ngay tại trang này (ADR 0045 điều 2) — một truy vấn gộp cho MỘT
-         * tenant, chạy song song với phần còn lại. Không có N+1: trang chi tiết chỉ có một chủ xe.
-         */
-        this.hostMetrics.forTenant(v.tenantId),
-      ]);
+      this.ratingsByVehicle([v.id]).then((ratings) => ratings.get(v.id)),
+      this.prisma.booking.count({
+        where: { vehicleId: v.id, status: BOOKING_STATUS.COMPLETED, deletedAt: null },
+      }),
+      // Cùng phép đếm với `shopStats` dùng cho trang gian hàng, nhưng theo TENANT thay vì xe —
+      // thẻ gian hàng ở trang chi tiết xe nói về người bán, không phải riêng chiếc xe đang xem.
+      this.prisma.booking.count({
+        where: { tenantId: v.tenantId, status: BOOKING_STATUS.COMPLETED, deletedAt: null },
+      }),
+      this.pricing.effectivePolicy(v.tenantId, v.id),
+      this.settings.handoverWindowsFor(this.prisma, v.id),
+      // Chỉ chuyến có tài xế mới có phụ phí mặc định; chỉ khoản đang bật mới công bố.
+      v.serviceTypes.includes(SERVICE_TYPE.WITH_DRIVER)
+        ? this.settings.surchargeRulesFor(this.prisma, v.id)
+        : Promise.resolve([]),
+      Promise.all(
+        v.serviceTypes
+          .filter((s) => hasVehicleServiceSettings(s))
+          .map(async (s): Promise<ListingRentalTermsDto> => {
+            const setting = await this.settings.serviceSettingFor(
+              this.prisma,
+              v.id,
+              s as ServiceType,
+            );
+            return {
+              serviceType: s,
+              requiredDocuments: setting.effectiveRequiredDocuments,
+              identityVerifyMethod: setting.identityVerifyMethod,
+              termsText: setting.termsText,
+              requireTermsAcceptance: setting.requireTermsAcceptance,
+              depositMode: s === SERVICE_TYPE.WITH_DRIVER ? setting.depositMode : null,
+              instantBookEnabled: setting.autoAcceptEnabled,
+              minRentalMinutes: setting.minRentalMinutes,
+            };
+          }),
+      ),
+      /*
+       * Ba chỉ số của CHỦ XE, ngay tại trang này (ADR 0045 điều 2) — một truy vấn gộp cho MỘT
+       * tenant, chạy song song với phần còn lại. Không có N+1: trang chi tiết chỉ có một chủ xe.
+       */
+      this.hostMetrics.forTenant(v.tenantId),
+    ]);
 
     /*
      * Giá SÁU gói thuê dài hạn (ADR 0011): bảng chọn gói phải hiện TIỀN THẬT ngay khi mở, nên
@@ -1152,7 +1238,6 @@ export class PublicListingsService {
         }
       : null;
 
-
     return {
       id: v.id,
       name: v.name,
@@ -1189,6 +1274,12 @@ export class PublicListingsService {
       // hai xe cùng shop hoàn toàn có thể ở hai tỉnh khác nhau.
       provinceCode: v.branch?.province?.code ?? null,
       shopProvince: v.branch?.province?.name ?? null,
+      wardName: v.branch?.ward?.name ?? null,
+      imageCount: v.images.length,
+      // Cùng nghĩa với cột snapshot của thẻ: dịch vụ đang bật tự động nhận chuyến.
+      instantBookServiceTypes: rentalTerms
+        .filter((term) => term.instantBookEnabled)
+        .map((term) => term.serviceType),
       description: v.description,
       color: v.color,
       manufactureYear: v.manufactureYear,
@@ -1217,7 +1308,12 @@ export class PublicListingsService {
       handover: { pickupWindows: handover.pickup, returnWindows: handover.return },
       driverSurchargeRules: surchargeRules
         .filter((r) => r.enabled)
-        .map((r) => ({ kind: r.kind, unit: r.unit, amount: r.amount, thresholdValue: r.thresholdValue })),
+        .map((r) => ({
+          kind: r.kind,
+          unit: r.unit,
+          amount: r.amount,
+          thresholdValue: r.thresholdValue,
+        })),
       mileagePolicy:
         policy?.values.includedDistanceKmPerDay != null &&
         policy.values.excessDistanceFeePerKm != null

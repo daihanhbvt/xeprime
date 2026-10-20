@@ -1,4 +1,5 @@
 import type { RentalMode } from '@xeprime/domain';
+import { BOOKING_DRAFT_TTL_MS } from '@xeprime/types';
 import { appWallClockToIso, toAppTz, type Dayjs } from '@/lib/datetime';
 import type { RequestFormValues } from './schema';
 
@@ -6,7 +7,7 @@ import type { RequestFormValues } from './schema';
  * BẢN NHÁP yêu cầu thuê đang chờ khách đăng nhập — ADR 0060.
  *
  * Gửi yêu cầu thuê cần tài khoản khách đã đăng nhập. Khách chưa đăng nhập bấm "Tiếp tục" thì
- * thứ họ vừa nhập (thời gian, dịch vụ, địa chỉ giao/đón, gói dài hạn, mã khuyến mãi) được giữ
+ * thứ họ vừa nhập (thời gian, dịch vụ, địa chỉ giao/đón, gói dài hạn, lời nhắn, mã khuyến mãi) được giữ
  * ở đây trong lúc họ đăng nhập hoặc đăng ký. Đăng nhập bằng mật khẩu diễn ra NGAY TRÊN trang nên
  * hộp yêu cầu thuê vẫn còn mở; Google/Facebook thì RỜI TRANG (ADR 0019) — quay về đúng trang xe,
  * bản nháp này là thứ dựng lại hộp và đưa khách đi tiếp.
@@ -20,12 +21,11 @@ import type { RequestFormValues } from './schema';
  * Không chứa danh tính: họ tên/SĐT của người thuê đọc từ tài khoản, không có trong form. Không
  * chứa ô "đồng ý điều khoản": đó là lời đồng ý của MỘT người, còn người đăng nhập xong trên tab này
  * có thể là người khác — khôi phục xong ô đó luôn trống. Một bản
- * nháp cho một xe, sống {@link DRAFT_TTL_MS}; quá hạn là bỏ — giá và lịch trống đã có thể khác.
+ * nháp cho một xe, sống {@link BOOKING_DRAFT_TTL_MS}; quá hạn là bỏ — giá và lịch trống đã có thể khác.
  * Không bao giờ được dùng để TỰ GỬI yêu cầu: khôi phục xong khách vẫn phải tự bấm "Gửi yêu cầu".
  */
 
 const STORAGE_KEY = 'xp.bookingDraft.v1';
-const DRAFT_TTL_MS = 30 * 60 * 1000;
 
 /** Ba trường ngày giờ của form là `Dayjs` — trên đĩa là ISO của chính giờ VN đã chọn. */
 type DateField = 'pickupAt' | 'returnAt' | 'requestedPickupDate';
@@ -94,7 +94,7 @@ function readStored(): StoredDraft | null {
       store.removeItem(STORAGE_KEY);
       return null;
     }
-    if (Date.now() - parsed.savedAt > DRAFT_TTL_MS) {
+    if (Date.now() - parsed.savedAt > BOOKING_DRAFT_TTL_MS) {
       store.removeItem(STORAGE_KEY);
       return null;
     }
@@ -154,6 +154,8 @@ export function readBookingDraft(vehicleId: string): RestoredBookingDraft | null
   return {
     values: {
       ...rest,
+      // Bản nháp ghi trước khi form có ô lời nhắn thì không mang trường này — ô điều khiển cần chuỗi.
+      note: typeof rest.note === 'string' ? rest.note : '',
       acceptedTerms: false,
       pickupAt: fromWire(pickupAt),
       returnAt: fromWire(returnAt),

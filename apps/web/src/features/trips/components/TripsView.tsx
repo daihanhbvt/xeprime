@@ -1,11 +1,13 @@
 'use client';
 
 import { Button } from 'antd';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { CUSTOMER_TRIP_FILTER, TRIP_ROLE } from '@xeprime/types';
 import { EmptyState } from '@/components/feedback/EmptyState';
-import { ROUTES } from '@/constants/routes';
+import { ROUTES, TRIPS_TAB, TRIPS_TAB_PARAM } from '@/constants/routes';
+import { DrivingTabSwitch } from '@/features/driving/components/DrivingTabSwitch';
+import { DrivingTripsList } from '@/features/driving/components/DrivingTripsList';
 import { useAuthModal, useNextFromCurrentPath } from '@/features/auth/components/AuthModalProvider';
 import { AUTH_MODE } from '@/features/auth/post-auth-destination';
 import { useErrorMessage } from '@/i18n/use-error-message';
@@ -35,12 +37,28 @@ export function TripsView() {
   const { open } = useAuthModal();
   const nextFromHere = useNextFromCurrentPath();
 
+  const searchParams = useSearchParams();
+  // "Chuyến tôi lái" (ADR 0063) là một tab của cùng trang — `?tab=driving`, đích thông báo dùng chuỗi này.
+  const driving = searchParams?.get(TRIPS_TAB_PARAM) === TRIPS_TAB.DRIVING;
+
   const { filter, page, navigate } = useTripListUrl(ROUTES.TRIPS);
   const { data, isLoading, isError, error, refetch, isFetching } = useTrips(
     filter,
     page,
     TRIP_ROLE.RENTER,
   );
+
+  if (driving) {
+    return (
+      <div className={styles.page}>
+        <header className={styles.header}>
+          <h1 className={styles.heading}>{t('list.heading')}</h1>
+        </header>
+        <DrivingTabSwitch driving />
+        <DrivingTripsList />
+      </div>
+    );
+  }
 
   if (isError) {
     // Hết phiên là chuyện của đăng nhập, không phải lỗi tải dữ liệu — hai thứ cần hai lối thoát
@@ -88,6 +106,8 @@ export function TripsView() {
         <h1 className={styles.heading}>{t('list.heading')}</h1>
         <p className={styles.sub}>{t('list.sub')}</p>
       </header>
+
+      <DrivingTabSwitch driving={false} />
 
       {/* Chuyến đang giữ chưa trả — việc phải làm NGAY, nên đứng trên mọi tab. */}
       <UnpaidHoldsReminder />

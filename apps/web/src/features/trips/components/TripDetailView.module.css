@@ -10,10 +10,22 @@
   flex-direction: column;
   gap: var(--xp-space-md);
   width: 100%;
-  max-width: var(--xp-container-max-width);
+  max-width: var(--xp-market-container-max-width, 1200px);
   margin-inline: auto;
   padding: var(--xp-space-lg) var(--xp-space-md);
   min-width: 0;
+}
+
+/*
+ * Màn hành trình đặt xe (design v2): đầu trang `TripPageHeader` đứng ngay dưới header site — Figma
+ * "Search Fields" chỉ đệm trên 8 — và nó tự lo khoảng cách tới hai cột.
+ */
+.flowPage {
+  /* Nội dung rộng đúng 1200 như lưới của chợ (header, Figma khung 1440 lề 120) — đệm nằm ngoài. */
+  max-width: calc(var(--xp-market-container-max-width, 1200px) + 2 * var(--xp-space-md));
+  gap: 0;
+  padding-top: 0;
+  padding-bottom: var(--xp-space-xl);
 }
 
 .topBar {

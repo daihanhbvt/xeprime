@@ -1,0 +1,543 @@
+/*
+ * Phần chữ/biểu mẫu của hộp tài khoản site khách — design v2 (Figma "Xe Prime": `19786:74740`
+ * Đăng nhập · `19786:77643` Đăng ký · `19836:39519…40598` Quên mật khẩu · `19836:34990` popup xác
+ * minh · `19836:42218` popup thành công). Số đo là của bản vẽ; màu/khoảng cách đi qua token v2.
+ */
+
+/* ─── Khung cột phải ─────────────────────────────────────────────────────── */
+
+/* Đăng nhập: đệm 48/64/24, các khối cách nhau 32. */
+.panel {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  padding: var(--xp-space-48) var(--xp-space-64) var(--xp-space-lg);
+  gap: var(--xp-space-xl);
+}
+
+/* Đăng ký: bốn ô nên các khối khít hơn — cách nhau 24. */
+.panelCompact {
+  gap: var(--xp-space-lg);
+}
+
+/* Quên mật khẩu: đệm trên 64, nội dung ở trên, thanh tiến trình neo đáy. */
+.stepPanel {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: var(--xp-space-64) var(--xp-space-64) var(--xp-space-lg);
+  gap: var(--xp-space-xl);
+}
+
+.stepBody {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--xp-space-xl);
+}
+
+/* ─── Đầu khối ───────────────────────────────────────────────────────────── */
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-6);
+}
+
+.title {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h2);
+  font-weight: var(--xp-font-weight-bold);
+  line-height: var(--xp-line-height-h2);
+}
+
+/* Bản vẽ viết hoa các tiêu đề chính ("ĐĂNG NHẬP", "NHẬP MÃ OTP"…) — chữ gốc giữ thường để dịch. */
+.caps {
+  text-transform: uppercase;
+}
+
+.sub {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+/* Đầu bước quên mật khẩu / popup: minh hoạ 120 trên cùng, chữ căn giữa, phụ đề 16/24. */
+.centerHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  text-align: center;
+}
+
+.centerHeader .sub {
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+.illustration {
+  display: block;
+  width: 120px;
+  height: 120px;
+  flex: none;
+  align-self: center;
+  object-fit: contain;
+}
+
+/* Số điện thoại đã che trong câu dẫn — đậm hơn phần chữ quanh nó. */
+.phone {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+  white-space: nowrap;
+}
+
+/* ─── Ô nhập (TextField + AntD) theo bản vẽ ────────────────────────────── */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: inherit;
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+/* Khoảng cách giữa các ô do `gap` lo — bỏ lề dưới của `Form.Item` (nhân đôi lớp: xem field.module.css). */
+.fields.fields :global(.ant-form-item) {
+  margin-bottom: 0;
+}
+
+.fields :global(.ant-form-item-row) {
+  display: block;
+}
+
+.fields :global(.ant-form-item-row > .ant-form-item-label) {
+  display: block;
+  flex: none;
+  width: 100%;
+  max-width: none;
+  padding-bottom: var(--xp-space-6);
+  text-align: start;
+  white-space: normal;
+}
+
+.fields :global(.ant-form-item-control) {
+  max-width: none;
+}
+
+.fields :global(.ant-form-item-label > label) {
+  height: auto;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body);
+}
+
+.fields :global(.ant-form-item-label > label::after) {
+  display: none;
+}
+
+/* Ô cao 44 (đệm 10 + chữ 24, viền nằm trong): viền xám, bo 12, bóng xs, chữ 16. */
+.fields :global(.ant-input-affix-wrapper) {
+  min-height: 44px;
+  padding: 9px 13px;
+  border-color: var(--xp-color-border-strong);
+  border-radius: var(--xp-border-radius-control);
+  box-shadow: var(--xp-elevation-xs);
+  gap: var(--xp-space-sm);
+}
+
+.fields :global(.ant-input-affix-wrapper > input.ant-input) {
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+.fields :global(.ant-input-affix-wrapper > input.ant-input::placeholder) {
+  color: var(--xp-color-text-placeholder);
+}
+
+.fields :global(.ant-input-affix-wrapper > .ant-input-prefix) {
+  margin-inline-end: 0;
+}
+
+.fields :global(.ant-input-affix-wrapper > .ant-input-suffix) {
+  margin-inline-start: 0;
+}
+
+.fieldIcon {
+  display: block;
+  flex: none;
+  color: var(--xp-color-text-tertiary);
+}
+
+/* Nút ẩn/hiện mật khẩu của AntD bọc icon trong span có màu riêng — cho nó theo màu icon. */
+.fields :global(.ant-input-password-icon) {
+  display: inline-flex;
+  color: var(--xp-color-text-tertiary);
+}
+
+.fields :global(.ant-input-password-icon:hover) {
+  color: var(--xp-color-text-secondary);
+}
+
+/* Ô không có nhãn hiện (bước nhập SĐT của quên mật khẩu): nhãn vẫn còn cho trình đọc màn hình. */
+.bareLabel :global(.ant-form-item-row > .ant-form-item-label) {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ─── Hàng "Ghi nhớ tài khoản · Quên mật khẩu?" ─────────────────────────── */
+
+.formAction {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+}
+
+.remember:global(.ant-checkbox-wrapper) {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  gap: var(--xp-space-sm);
+  line-height: var(--xp-line-height-body);
+}
+
+.remember :global(.ant-checkbox-inner) {
+  border-color: var(--xp-color-border-strong);
+  border-radius: var(--xp-border-radius-sm);
+}
+
+/* ─── Nút chữ vàng ("Quên mật khẩu?", "Đăng ký ngay!", "Gửi lại mã OTP") ─── */
+
+.textLink {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--xp-color-primary);
+  cursor: pointer;
+  font: inherit;
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.textLink:hover:not(:disabled) {
+  color: var(--xp-color-primary-hover);
+}
+
+.textLink:focus-visible {
+  border-radius: var(--xp-border-radius-sm);
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.textLink:disabled {
+  color: var(--xp-color-text-disabled);
+  cursor: not-allowed;
+}
+
+.smallLink {
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+/* ─── Khối nút gửi: nút 48 + dòng chuyển chế độ, cách 8 ─────────────────── */
+
+.submitBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+/* Bước 2/3 quên mật khẩu và popup: nút gửi lùi thêm 16 dưới ô nhập. */
+.submitBlockSpaced {
+  padding-top: var(--xp-space-md);
+}
+
+.switchLine {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
+  text-align: center;
+}
+
+.switchLine .textLink {
+  margin-inline-start: var(--xp-space-xs);
+}
+
+/* ─── "hoặc đăng nhập bằng" ──────────────────────────────────────────────── */
+
+.divider {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  color: var(--xp-color-text-placeholder);
+  font-size: var(--xp-font-size-body);
+  gap: var(--xp-space-12);
+  line-height: var(--xp-line-height-body);
+}
+
+.divider::before,
+.divider::after {
+  height: 1px;
+  flex: 1 1 0;
+  background: var(--xp-color-border-subtle);
+  content: '';
+}
+
+/* ─── Google / Facebook + câu đồng ý ─────────────────────────────────────── */
+
+.social {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-12);
+}
+
+.socialRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--xp-space-md);
+}
+
+.socialLogo {
+  display: block;
+  width: 26px;
+  height: 26px;
+}
+
+.consent {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.consent a {
+  color: inherit;
+}
+
+/* ─── Thông báo lỗi / gợi ý ──────────────────────────────────────────────── */
+
+.alert {
+  border-radius: var(--xp-border-radius-control);
+}
+
+.fieldError {
+  margin: 0;
+  color: var(--xp-color-error);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  text-align: center;
+}
+
+/* ─── Thanh tiến trình 3 bước (neo đáy cột) ──────────────────────────────── */
+
+.progress {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.progressStep {
+  height: 8px;
+  flex: 1 1 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-muted);
+}
+
+.progressDone {
+  background: var(--xp-color-primary);
+}
+
+/* Bước đã qua bấm được để quay lại (sửa số điện thoại, nhập lại mã). */
+button.progressStep {
+  cursor: pointer;
+}
+
+button.progressStep:hover {
+  background: var(--xp-color-primary-hover);
+}
+
+button.progressStep:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+/* ─── Popup nổi trên hộp (xác minh tài khoản, đặt lại xong) ──────────────── */
+
+.popup.popup :global(.ant-modal-container) {
+  overflow: hidden;
+  padding: 0;
+  border-radius: var(--xp-border-radius-card);
+  box-shadow: var(--xp-elevation-xl);
+}
+
+.popup.popup :global(.ant-modal-header) {
+  padding: 0;
+  margin: 0;
+}
+
+.popup.popup :global(.ant-modal-close) {
+  top: var(--xp-space-20);
+  width: 24px;
+  height: 24px;
+  color: var(--xp-color-text-tertiary);
+  inset-inline-end: var(--xp-space-20);
+}
+
+.popup.popup :global(.ant-modal-close:hover) {
+  background: transparent;
+  color: var(--xp-color-text);
+}
+
+.popupBody.popupBody {
+  max-height: none;
+  padding: 0;
+}
+
+/* Popup "Xác minh tài khoản": rộng 450, đệm 48/32/24, các khối cách 16. */
+.verify {
+  display: flex;
+  width: 450px;
+  max-width: 100%;
+  flex-direction: column;
+  align-items: stretch;
+  padding: var(--xp-space-48) var(--xp-space-xl) var(--xp-space-lg);
+  gap: var(--xp-space-md);
+}
+
+.resendLine {
+  margin: 0;
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
+  text-align: center;
+}
+
+.resendButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--xp-color-text);
+  cursor: pointer;
+  font: inherit;
+  font-weight: var(--xp-font-weight-medium);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.resendButton:disabled {
+  color: var(--xp-color-border-strong);
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+.resendButton:focus-visible {
+  border-radius: var(--xp-border-radius-sm);
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+/* Popup "Thành công!": rộng 400, icon 56 có vành, tiêu đề 18/28, nút 44. */
+.done {
+  display: flex;
+  width: 400px;
+  max-width: 100%;
+  flex-direction: column;
+  padding: var(--xp-space-20);
+  gap: var(--xp-space-xl);
+}
+
+.doneHead {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--xp-space-md);
+  text-align: center;
+}
+
+.doneIcon {
+  display: flex;
+  width: 56px;
+  height: 56px;
+  align-items: center;
+  justify-content: center;
+  border: 6px solid var(--xp-color-success-subtle);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+}
+
+.doneText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-2);
+}
+
+.doneTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h3);
+}
+
+.doneBody {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+/* Nút 44 của bản vẽ không phát sáng (nhân đôi lớp: thắng `.gradient` của CtaButton bất kể thứ tự nạp CSS). */
+.doneButton.doneButton {
+  box-shadow: none;
+}
+
+.doneBody strong {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+/* ─── Mobile: hộp thành màn toàn trang / sheet — bỏ đệm rộng của khung desktop ─ */
+@media (max-width: 640px) {
+  .panel,
+  .stepPanel {
+    padding: var(--xp-space-sm) var(--xp-space-md) var(--xp-space-lg);
+  }
+
+  .panel {
+    gap: var(--xp-space-lg);
+  }
+
+  .panelCompact {
+    gap: var(--xp-space-md);
+  }
+
+  .verify {
+    width: 100%;
+    padding: var(--xp-space-lg) var(--xp-space-md);
+  }
+
+  .done {
+    width: 100%;
+  }
+
+  .formAction {
+    flex-wrap: wrap;
+  }
+}

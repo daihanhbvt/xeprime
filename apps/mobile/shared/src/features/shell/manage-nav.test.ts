@@ -153,6 +153,8 @@ describe('manageNavForTrack — menu theo tuyến', () => {
       'booking-requests',
       'bookings',
       'chat',
+      // Tài xế mở cho cả chủ xe tuyến hoa hồng (ADR 0063).
+      'drivers',
       'balance',
       'owner-profile',
       'host-guide',

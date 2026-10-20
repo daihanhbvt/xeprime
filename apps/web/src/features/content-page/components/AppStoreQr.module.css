@@ -89,3 +89,28 @@
   color: var(--xp-color-text-tertiary);
   opacity: 1;
 }
+
+/* ─── Chân trang design v2 (ADR 0062): ô mã 100px bo 8px, tên cửa hàng 12/18 chữ trắng ─── */
+.footer {
+  gap: var(--xp-space-12);
+}
+
+.footer .item {
+  gap: var(--xp-space-xs);
+}
+
+.footer .code {
+  padding: 6px;
+  border-radius: var(--xp-border-radius-chip);
+}
+
+.footer .store {
+  color: var(--xp-color-text);
+}
+
+.footer .storeText {
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-regular);
+  line-height: var(--xp-line-height-body-sm);
+  white-space: nowrap;
+}

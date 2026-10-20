@@ -45,7 +45,9 @@
   "customer": {
     "heading": "Customer",
     "noProfile": "Not in your customer book yet",
-    "riskWarning": "{level} — double-check before approving"
+    "riskWarning": "{level} — double-check before approving",
+    "accountPhone": "Account phone: {phone}",
+    "accountPhoneAria": "Call {name} on their account number {phone}"
   },
   "schedule": {
     "heading": "Rental request",
@@ -97,7 +99,8 @@
     "openCustomer": "View customer profile",
     "phone": "Phone number",
     "createdAt": "Submitted at",
-    "decidedAt": "Handled at"
+    "decidedAt": "Handled at",
+    "accountPhone": "Account phone"
   },
   "actions": {
     "approve": "Approve & hold vehicle",
@@ -172,10 +175,6 @@
   },
   "flow": {
     "title": "Rental request",
-    "steps": {
-      "trip": "Your trip",
-      "review": "Review"
-    },
     "service": {
       "label": "Service",
       "routeLabel": "Route"
@@ -273,6 +272,7 @@
       "packageTitle": "Price details · {months, plural, one {# month} other {# months}} package",
       "subtotal": "Estimate",
       "total": "Estimated total",
+      "totalFrozen": "Rental total",
       "rentalTotal": "Rental price",
       "expand": "Details",
       "collapse": "Hide",
@@ -298,22 +298,25 @@
     },
     "done": {
       "title": "Request sent",
+      "confirmedTitle": "Trip confirmed",
       "requestCode": "Request code: {code}",
+      "requestCodeLabel": "Request code:",
       "body": "The host is reviewing it. You'll get a notification as soon as they reply.",
+      "pendingBody": "The host is reviewing it and has {minutes} minutes to reply. You'll get a notification as soon as there's an answer!",
       "time": "Period",
       "pickupMethod": "Getting the car",
       "driverPickup": "Pick-up at: {address}",
       "notReserved": "The car is not held yet — the host has to accept your request first.",
       "myTrips": "My trips",
       "chatShop": "Message the host",
+      "chatHost": "Message the host",
       "close": "Back",
       "autoAccepted": "Your trip was accepted automatically — the vehicle is reserved for you.",
       "openHold": "Pay the reservation",
       "holdLoadFailed": "Could not load the payment code. Open the trip under My trips to get it — your slot is still held.",
       "heldTitle": "The host accepted your trip",
       "heldSubtitle": "Pay the reservation amount before the timer runs out to lock it in.",
-      "copyRequestCode": "Copy request code",
-      "tripInfo": "Trip details"
+      "copyRequestCode": "Copy request code"
     },
     "duplicate": {
       "title": "Duplicate request",
@@ -327,7 +330,8 @@
       "seatCount": "{count, plural, one {# seat} other {# seats}}",
       "specBody": "Body type",
       "specFuel": "Fuel",
-      "viewShop": "View host"
+      "viewShop": "View host",
+      "pickupPoint": "Pick-up point"
     },
     "actions": {
       "cancel": "Cancel",
@@ -398,6 +402,87 @@
     "licence": {
       "title": "Verify your driving licence",
       "verified": "Your driving licence is valid for this trip"
+    },
+    "journey": {
+      "label": "Booking progress",
+      "caption": "Step {current} / {total} · {label}",
+      "steps": {
+        "trip": "Choose trip",
+        "request": "Send request",
+        "payment": "Pay to hold",
+        "confirmed": "Confirmed"
+      }
+    },
+    "preparing": "Checking the car's availability…",
+    "reviewPage": {
+      "title": "Review your rental request",
+      "description": "Check your trip and contact details before sending the request.",
+      "trip": {
+        "title": "Trip details",
+        "edit": "Edit",
+        "editLabel": "Edit trip details",
+        "pickupAt": "Pick-up",
+        "returnAt": "Return",
+        "package": "Package",
+        "pickupWish": "Preferred pick-up",
+        "expectedReturn": "Expected return",
+        "selfPickup": "Pick up and return the car at the owner's location",
+        "selfPickupPending": "The owner sends the exact pick-up address when confirming the trip.",
+        "delivery": "Delivered to you",
+        "driverPickup": "Driver picks you up at",
+        "destination": "Destination",
+        "owner": "Owner",
+        "summary": "{service} · {duration}"
+      },
+      "renter": {
+        "title": "Renter details",
+        "description": "Filled in from your account — you can change the name or contact phone for this trip.",
+        "name": "Full name",
+        "phone": "Phone number",
+        "email": "Email",
+        "noteLabel": "Message to the owner (optional)",
+        "notePlaceholder": "E.g. I need directions for picking up the car",
+        "readonlyDescription": "The name and phone number the owner uses to contact you about this trip.",
+        "namePlaceholder": "Enter the renter's full name",
+        "phonePlaceholder": "Enter a contact phone number",
+        "phoneDifferent": "This contact number is not verified — the owner will also see your account number {accountPhone}."
+      },
+      "requirements": {
+        "title": "Documents & pick-up conditions",
+        "licenceTitle": "Valid driving licence",
+        "licenceBody": "The driver needs a valid licence that covers this vehicle type. Bring your licence and an ID so the owner can check them at hand-over.",
+        "licenceVerified": "Your licence is valid for this trip",
+        "licenceClasses": "Class {classes}",
+        "licenceExpires": "Valid until {date}",
+        "licenceNoExpiry": "No expiry",
+        "driverTitle": "Car with driver",
+        "driverBody": "The owner's driver does the driving, so you don't need a driving licence. Bring an ID for the check at pick-up.",
+        "documents": "Documents the owner requires: {documents}",
+        "hostTerms": "Owner's rental terms",
+        "reminder": "Verification and the exact documents required are explained under the current policy before pick-up."
+      },
+      "costs": {
+        "title": "Rental cost",
+        "totalNote": "Includes the items above. The holding payment is deducted from this total; the security deposit is paid separately at pick-up.",
+        "listedNote": "We couldn't load the price for this trip — these are the listed rates. The owner confirms the price when approving the request."
+      },
+      "others": {
+        "title": "Other payments",
+        "assetBody": "Leave one of the following at pick-up: {assets}. Returned when you bring the car back.",
+        "noDepositBody": "This car needs no security deposit at pick-up."
+      },
+      "submit": {
+        "cta": "Send rental request",
+        "hint": "Complete your details and accept the terms to send. Nothing is charged at this step.",
+        "agreementRequired": "Please accept the terms before sending your request."
+      },
+      "next": {
+        "title": "After you send the request",
+        "instant": "This car supports Instant Book: your request is accepted automatically and you go straight to paying the holding amount to lock in the trip.",
+        "instantConfirmed": "This car supports Instant Book: your request is accepted automatically and the trip is confirmed as soon as you send it — there is no online payment step.",
+        "hold": "The owner reviews and responds to your request. Once they accept, you have {minutes} minutes to pay the holding amount — the trip is confirmed only when XePrime receives it in full.",
+        "general": "XePrime or the owner will contact you to check your details, confirm the car's condition and guide you through the next step. The trip is confirmed only after those steps are completed."
+      }
     }
   },
   "approved": {
@@ -434,7 +519,9 @@
       "returnAt": "Choose when you return the car",
       "returnAfterPickup": "The return time has to be after the pickup time",
       "longTermPackage": "Choose a rental package",
-      "requestedPickupDate": "Choose the date you want the car"
+      "requestedPickupDate": "Choose the date you want the car",
+      "noteMax": "Up to {max} characters",
+      "customerNameMax": "Up to {max} characters"
     }
   },
   "cancel": {
@@ -463,5 +550,8 @@
   "stats": {
     "pending": "Pending",
     "converted": "Completed"
+  },
+  "contactNote": {
+    "differentPhone": "The renter left a contact number that differs from their account number. The account number {phone} is verified; the contact number is not."
   }
 }

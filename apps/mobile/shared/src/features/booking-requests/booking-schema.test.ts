@@ -6,7 +6,7 @@ const LABELS = new Proxy({} as BookingRequestSchemaLabels, {
   get: (_target, key) => String(key),
 });
 
-const schema = buildBookingRequestSchema(LABELS, { canConfirmLocation: false });
+const schema = buildBookingRequestSchema(LABELS);
 
 const BASE = {
   serviceType: SERVICE_TYPE.SELF_DRIVE,
@@ -36,6 +36,29 @@ async function firstError(values: Record<string, unknown>): Promise<string | nul
 describe('buildBookingRequestSchema — khớp schema web', () => {
   it('hợp lệ với giá trị mặc định mà web chọn sẵn (7 ngày · nội thành)', async () => {
     expect(await firstError({})).toBeNull();
+  });
+
+  it('địa chỉ giao xe / đón chỉ có CHỮ, không toạ độ ("dùng đúng địa chỉ đã nhập") vẫn hợp lệ — ADR 0061 điều 6', async () => {
+    expect(
+      await firstError({
+        deliveryRequested: true,
+        deliveryAddressLine: '12 Hẻm 34 Nguyễn Trãi',
+        deliveryLatitude: null,
+        deliveryLongitude: null,
+      }),
+    ).toBeNull();
+    expect(
+      await firstError({
+        serviceType: SERVICE_TYPE.WITH_DRIVER,
+        pickupAddressLine: '12 Hẻm 34 Nguyễn Trãi',
+        pickupLatitude: null,
+        pickupLongitude: null,
+      }),
+    ).toBeNull();
+    // Chữ vẫn bắt buộc.
+    expect(await firstError({ deliveryRequested: true, deliveryAddressLine: '' })).toBe(
+      'deliveryAddressRequired',
+    );
   });
 
   it('trả xe phải SAU nhận xe (`after-pickup`)', async () => {

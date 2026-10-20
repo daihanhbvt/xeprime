@@ -30,6 +30,7 @@ const HOST: PublicShopSummary = {
   vehicleCount: 3,
   ratingAvg: '4.80',
   ratingCount: 12,
+  completedTripCount: 0,
   verified: false,
 };
 
@@ -44,7 +45,8 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-const input = () => screen.getByRole('combobox', { name: 'Tìm xe theo tên xe, chủ xe hoặc gian hàng' });
+const input = () =>
+  screen.getByRole('combobox', { name: 'Tìm xe theo tên xe, chủ xe hoặc gian hàng' });
 
 function type(value: string) {
   fireEvent.focus(input());
@@ -109,7 +111,9 @@ describe('KeywordSearch', () => {
     expect(screen.getByText('Tuấn', { selector: 'mark' })).toBeTruthy();
     expect(screen.getByText(/Chủ xe · 3 xe · Hà Nội/)).toBeTruthy();
 
-    const option = screen.getByText('Tuấn', { selector: 'mark' }).closest('.ant-select-item-option');
+    const option = screen
+      .getByText('Tuấn', { selector: 'mark' })
+      .closest('.ant-select-item-option');
     expect(option).not.toBeNull();
     fireEvent.click(option as Element);
 

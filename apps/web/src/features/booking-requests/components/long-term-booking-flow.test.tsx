@@ -159,10 +159,9 @@ vi.mock('@/features/marketplace/api', () => ({
   fetchListingDetailClient: () => Promise.resolve(LISTING),
   fetchListingReviewsClient: () => Promise.reject(new Error('reviews off')),
 }));
-vi.mock('@/features/catalog/use-catalog', async () => {
-  const { EMPTY_CATALOG } = await import('@/features/catalog/types');
-  return { useCatalog: () => ({ catalog: EMPTY_CATALOG, isLoading: false }) };
-});
+vi.mock('@/features/catalog/use-catalog', async () =>
+  (await import('@/features/catalog/test-catalog')).catalogModuleMock(),
+);
 
 /** Quote gói 9 tháng — breakdown thật của server, dùng để khoá phần hiển thị ưu đãi. */
 const quoteCalls: unknown[] = [];
@@ -217,6 +216,8 @@ vi.mock('@/features/driver-licence/api', () => ({
 }));
 const VALID_LICENCE = {
   status: 'verified',
+  // Hạng có mặt như hợp đồng thật — màn Xem lại hiện hạng + hạn của bằng đã xác thực.
+  classes: ['B2'],
   expiresOn: '2099-01-01',
   noExpiry: false,
   coversCar: true,
@@ -395,7 +396,7 @@ describe('Thuê dài hạn — nguyện vọng nhận xe', () => {
     fireEvent.click(screen.getByRole('radio', { name: /6 tháng/ }));
     // Đã đăng nhập: một cú Tiếp tục là sang thẳng Xác nhận (bằng lái mặc định đã hợp lệ).
     fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
-    await screen.findByRole('button', { name: 'Gửi yêu cầu thuê' });
+    await screen.findByRole('button', { name: 'Gửi yêu cầu thuê xe' });
     // Dài hạn KHÔNG gọi check-availability: chưa có khung giờ nào để kiểm (ADR 0006).
     expect(api.checkAvailability).not.toHaveBeenCalled();
 
@@ -404,7 +405,8 @@ describe('Thuê dài hạn — nguyện vọng nhận xe', () => {
     expect(screen.getByText('Nguyện vọng nhận xe')).toBeTruthy();
     expect(screen.queryByText('Trả xe')).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Gửi yêu cầu thuê' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /Tôi đã đọc và đồng ý/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gửi yêu cầu thuê xe' }));
 
     await waitFor(() => expect(api.submitBookingRequest).toHaveBeenCalled());
     const payload = api.submitBookingRequest.mock.calls[0]![0] as Record<string, unknown>;
@@ -418,10 +420,11 @@ describe('Thuê dài hạn — nguyện vọng nhận xe', () => {
     expect(payload.pickupAt).toBeUndefined();
     expect(payload.returnAt).toBeUndefined();
     expect(payload.pickupWindowStartDate).toBeUndefined();
-    expect(payload.pickupWindowEndDate).toBeUndefined();
-    // Danh tính người thuê do server đọc từ tài khoản (ADR 0060).
-    expect(payload).not.toHaveProperty('customerName');
-    expect(payload).not.toHaveProperty('customerPhone');
+    // Danh tính người thuê mặc định từ tài khoản (ADR 0063).
+    expect(payload).toMatchObject({
+      customerName: LOGGED_IN_ME.displayName,
+      customerPhone: LOGGED_IN_ME.phone,
+    });
   });
 
   /**
@@ -451,7 +454,7 @@ describe('Thuê dài hạn — nguyện vọng nhận xe', () => {
     me.data = LOGGED_IN_ME;
     rerenderTree();
 
-    await screen.findByRole('button', { name: 'Gửi yêu cầu thuê' });
+    await screen.findByRole('button', { name: 'Gửi yêu cầu thuê xe' });
     expect(screen.getByText('Gói thuê').closest('div')?.textContent).toContain('6 tháng');
     // Không có lịch để kiểm ở CẢ hai lượt — trước và sau đăng nhập.
     expect(api.checkAvailability).not.toHaveBeenCalled();

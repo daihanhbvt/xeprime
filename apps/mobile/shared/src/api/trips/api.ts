@@ -9,6 +9,9 @@ export type CustomerTripFinance = Schemas['CustomerTripFinanceDto'];
 /** Bảng kê giá TẠM TÍNH của chuyến chưa có đơn — xem `CustomerTripEstimateDto`. */
 export type CustomerTripEstimate = Schemas['CustomerTripEstimateDto'];
 export type CustomerTripCounts = Schemas['CustomerTripCountsDto'];
+/** Lời nhắc thanh toán: chuyến đang giữ chưa trả + đã chạm trần giữ chỗ chưa. */
+export type CustomerUnpaidHolds = Schemas['CustomerUnpaidHoldsDto'];
+export type CustomerUnpaidHold = Schemas['CustomerUnpaidHoldDto'];
 export type CustomerSurcharge = Schemas['CustomerSurchargeDto'];
 export type CustomerTripReview = Schemas['CustomerTripReviewDto'];
 export type ProvideRefundAccountInput = Schemas['ProvideRefundAccountDto'];
@@ -74,6 +77,14 @@ export const tripsApi = {
       },
       counts: res.counts ?? EMPTY_COUNTS,
     };
+  },
+
+  /**
+   * Chuyến khách đang GIỮ mà chưa trả, gấp nhất trước, và đã chạm trần chưa — chạm trần thì server
+   * từ chối mọi yêu cầu đặt xe mới (`HOLD_LIMIT_REACHED`). Bản native của `fetchUnpaidHolds` (web).
+   */
+  unpaidHolds(): Promise<CustomerUnpaidHolds> {
+    return getApiClient().get<CustomerUnpaidHolds>('/trips/unpaid-holds');
   },
 
   /** Nhận CẢ id yêu cầu lẫn id đơn — một màn phục vụ hai giai đoạn của cùng một chuyến. */

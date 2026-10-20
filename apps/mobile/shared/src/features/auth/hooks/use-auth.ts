@@ -26,6 +26,8 @@ export function useCurrentUser(): UseQueryResult<CurrentUser> {
     queryFn: fetchCurrentUser,
     // 401 = chưa đăng nhập, là trạng thái hợp lệ chứ không phải lỗi cần retry.
     retry: false,
+    // Một 401 đã trả lời "chưa đăng nhập" thì mỗi màn mới mount không hỏi lại (khớp web).
+    retryOnMount: false,
     staleTime: STALE_TIME.STANDARD,
   });
 }

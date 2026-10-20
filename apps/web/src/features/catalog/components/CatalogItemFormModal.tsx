@@ -7,40 +7,60 @@ import { useForm, useWatch } from 'react-hook-form';
 import * as yup from 'yup';
 import {
   CATALOG_KEY_PATTERN,
+  CATALOG_TYPE,
   CATALOG_TYPES_WITH_ICON,
   VEHICLE_TYPE_VALUES,
   type CatalogItemType,
 } from '@xeprime/types';
 import { DialogForm } from '@/components/form/DialogForm';
+import { ImageUploadField } from '@/components/form/ImageUploadField';
 import { SelectField } from '@/components/form/SelectField';
 import { SwitchField } from '@/components/form/SwitchField';
 import { TextField } from '@/components/form/TextField';
 import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
-import { getErrorMessage } from '@/services/api-client';
+import { presignCatalogImage } from '@/services/upload';
 import { useCreateCatalogItem, useUpdateCatalogItem } from '../use-admin-catalog';
 import type { CatalogItemAdmin } from '../types';
-import { PreviewImage } from '@/components/data-display/PreviewImage';
 import styles from './CatalogItemFormModal.module.css';
+
+/** Tỉ lệ khung xem trước ảnh trang chủ — thẻ "Loại xe" hiện xe tách nền trong khung ngang. */
+const SHOWCASE_PREVIEW_RATIO = 16 / 9;
 
 const schema = yup.object({
   key: yup.string().trim().required('keyRequired').matches(CATALOG_KEY_PATTERN, 'keyPattern'),
   label: yup.string().trim().required('labelRequired').max(120),
   description: yup.string().trim().max(255).default(''),
-  iconUrl: yup.string().trim().max(2000).default(''),
+  iconUrl: yup.string().nullable().default(null),
   /** Rỗng = áp dụng cho MỌI loại xe — xem `catalog_items.vehicle_types` trong schema. */
   vehicleTypes: yup.array(yup.string().oneOf(VEHICLE_TYPE_VALUES).required()).default([]),
   active: yup.boolean().default(true),
+  // Khối "Loại xe" trang chủ — chỉ kiểu dáng có. Bật hiện thì phải có ảnh (API chặn cùng luật).
+  showOnHome: yup.boolean().default(false),
+  showcaseImageUrl: yup
+    .string()
+    .nullable()
+    .default(null)
+    .when('showOnHome', {
+      is: true,
+      then: (s) => s.required('showcaseImageRequired'),
+    }),
+  showcaseExamples: yup.string().trim().max(255).default(''),
 });
 
 type FormValues = yup.InferType<typeof schema>;
 
 /**
- * Thêm/sửa một mục danh mục.
+ * Thêm/sửa một mục danh mục lọc.
  *
- * `key` chỉ nhập được lúc TẠO: nó là giá trị đã lưu trên hàng nghìn xe và nằm trong URL bộ lọc,
- * đổi là mồ côi toàn bộ. Đổi cách gọi thì sửa `label` — không đụng dữ liệu xe nào.
+ * Ảnh (icon kiểu dáng, logo hãng, ảnh lớn trang chủ) TẢI LÊN R2 qua `ImageUploadField` — không còn
+ * ô gõ đường dẫn tới file tĩnh trong repo: thêm một kiểu dáng mới không cần dev chép ảnh vào mã.
+ * Mục cũ trỏ file tĩnh (`/body-types/*.png`) vẫn hiện và giữ nguyên tới khi admin thay ảnh.
+ *
+ * Riêng KIỂU DÁNG có phần "Trang chủ": công tắc hiện ở khối "Loại xe", ảnh lớn và dòng ví dụ. Tên
+ * và thứ tự trên trang chủ là tên và thứ tự của chính danh mục — một nguồn cho mọi nơi.
  */
 export function CatalogItemFormModal({
   open,
@@ -56,6 +76,7 @@ export function CatalogItemFormModal({
 }) {
   const t = useTranslations('AdminCatalog.form');
   const domainLabel = useDomainLabel();
+  const errorMessage = useErrorMessage();
   const resolver = useValidationResolver<FormValues>(schema, 'AdminCatalog.form');
   const { message } = App.useApp();
   const create = useCreateCatalogItem();
@@ -63,6 +84,7 @@ export function CatalogItemFormModal({
   const isEdit = Boolean(item);
   const pending = create.isPending || update.isPending;
   const withIcon = CATALOG_TYPES_WITH_ICON.includes(type);
+  const withShowcase = type === CATALOG_TYPE.BODY_TYPE;
 
   const { control, handleSubmit } = useForm<FormValues>({
     resolver,
@@ -71,40 +93,54 @@ export function CatalogItemFormModal({
           key: item.key,
           label: item.label,
           description: item.description ?? '',
-          iconUrl: item.iconUrl ?? '',
+          iconUrl: item.iconUrl ?? null,
           vehicleTypes: item.vehicleTypes as FormValues['vehicleTypes'],
           active: item.active,
+          showOnHome: item.showOnHome,
+          showcaseImageUrl: item.showcaseImageUrl ?? null,
+          showcaseExamples: item.showcaseExamples ?? '',
         }
       : {
           key: '',
           label: '',
           description: '',
-          iconUrl: '',
+          iconUrl: null,
           vehicleTypes: [],
           active: true,
+          showOnHome: false,
+          showcaseImageUrl: null,
+          showcaseExamples: '',
         },
   });
+  const showOnHome = useWatch({ control, name: 'showOnHome' });
   const vehicleTypeOptions = useMemo(
-    () =>
-      VEHICLE_TYPE_VALUES.map((value) => ({ value, label: domainLabel('vehicleType', value) })),
+    () => VEHICLE_TYPE_VALUES.map((value) => ({ value, label: domainLabel('vehicleType', value) })),
     [domainLabel],
   );
-  const iconUrl = useWatch({ control, name: 'iconUrl' });
 
   const onSubmit = handleSubmit((values) => {
+    if (pending) return;
     const shared = {
       label: values.label.trim(),
       description: values.description?.trim() || null,
-      iconUrl: withIcon ? values.iconUrl?.trim() || null : null,
+      iconUrl: withIcon ? values.iconUrl || null : null,
       vehicleTypes: values.vehicleTypes ?? [],
       active: values.active,
+      // Mục không phải kiểu dáng không gửi trường trang chủ — API chỉ nhận chúng ở kiểu dáng.
+      ...(withShowcase
+        ? {
+            showOnHome: values.showOnHome,
+            showcaseImageUrl: values.showcaseImageUrl || null,
+            showcaseExamples: values.showcaseExamples?.trim() || null,
+          }
+        : {}),
     };
     const done = {
       onSuccess: () => {
         message.success(isEdit ? t('updated') : t('created'));
         onClose();
       },
-      onError: (err: unknown) => message.error(getErrorMessage(err)),
+      onError: (err: unknown) => message.error(errorMessage(err)),
     };
     if (item) update.mutate({ id: item.id, ...shared }, done);
     else create.mutate({ type, key: values.key.trim(), ...shared }, done);
@@ -159,21 +195,13 @@ export function CatalogItemFormModal({
           mode="multiple"
         />
         {withIcon ? (
-          <>
-            <TextField
-              control={control}
-              name="iconUrl"
-              label={t('iconUrl')}
-              placeholder={t('iconUrlPlaceholder')}
-              help={t('iconUrlHelp')}
-            />
-            {iconUrl ? (
-              <div className={styles.preview}>
-                <span className={styles.previewLabel}>{t('preview')}</span>
-                <PreviewImage src={iconUrl} alt="" className={styles.previewImage} />
-              </div>
-            ) : null}
-          </>
+          <ImageUploadField
+            control={control}
+            name="iconUrl"
+            label={t('iconUrl')}
+            presign={presignCatalogImage}
+            help={t('iconUrlHelp')}
+          />
         ) : null}
         <SwitchField
           control={control}
@@ -181,6 +209,38 @@ export function CatalogItemFormModal({
           label={t('active')}
           description={t('activeHelp')}
         />
+
+        {withShowcase ? (
+          <section className={styles.showcase} aria-labelledby="catalog-showcase-title">
+            <h3 id="catalog-showcase-title" className={styles.showcaseTitle}>
+              {t('homeSection')}
+            </h3>
+            <p className={styles.showcaseHelp}>{t('homeSectionHelp')}</p>
+            <SwitchField
+              control={control}
+              name="showOnHome"
+              label={t('showOnHome')}
+              description={t('showOnHomeHelp')}
+            />
+            <ImageUploadField
+              control={control}
+              name="showcaseImageUrl"
+              label={t('showcaseImage')}
+              presign={presignCatalogImage}
+              help={t('showcaseImageHelp')}
+              variant="card"
+              previewAspectRatio={SHOWCASE_PREVIEW_RATIO}
+              required={Boolean(showOnHome)}
+            />
+            <TextField
+              control={control}
+              name="showcaseExamples"
+              label={t('showcaseExamples')}
+              placeholder={t('showcaseExamplesPlaceholder')}
+              help={t('showcaseExamplesHelp')}
+            />
+          </section>
+        ) : null}
       </DialogForm>
     </ResponsiveDialog>
   );

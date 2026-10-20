@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import {
@@ -17,11 +18,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import {
-  ACCOUNT_REALM,
-  API_ERROR_CODE,
-  PERMISSION,
-} from '@xeprime/types';
+import { ACCOUNT_REALM, API_ERROR_CODE, PERMISSION } from '@xeprime/types';
 import { CurrentUser, PlatformOnly, Realms, RequirePermissions } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import { PresignImageDto, UploadPresignDto } from '../storage/dto/storage.dto';
@@ -29,6 +26,7 @@ import { R2Service } from '../storage/r2.service';
 import { BannersService } from './banners.service';
 import {
   AdminBannerDto,
+  BannerPlacementQueryDto,
   CreateBannerDto,
   ReorderBannersDto,
   UpdateBannerDto,
@@ -53,10 +51,12 @@ export class PlatformBannersController {
   ) {}
 
   @Get()
-  @ApiOperation({ summary: 'Toàn bộ banner (kèm cờ đang-hiển-thị theo lịch)' })
+  @ApiOperation({
+    summary: 'Toàn bộ banner của một vị trí (kèm cờ đang-hiển-thị theo lịch) — mặc định đầu trang',
+  })
   @ApiOkResponse({ type: [AdminBannerDto] })
-  list(): Promise<AdminBannerDto[]> {
-    return this.banners.listForAdmin();
+  list(@Query() query: BannerPlacementQueryDto): Promise<AdminBannerDto[]> {
+    return this.banners.listForAdmin(query.placement);
   }
 
   @Post()

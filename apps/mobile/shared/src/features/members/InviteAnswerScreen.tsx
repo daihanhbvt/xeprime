@@ -35,8 +35,8 @@ import { useAnswerInvite, useInvitePreview } from './hooks/use-members';
  *
  *  1. **Chưa đăng nhập** — ĐỌC được nội dung lời mời (ai mời, vai gì, hạn bao giờ) nhưng chưa trả
  *     lời được. Nút dẫn sang đăng nhập; quay lại là màn này vẫn ở trong ngăn xếp.
- *  2. **Đăng nhập nhầm tài khoản** — server trả `INVITE_EMAIL_MISMATCH`, và câu lỗi của nó nói rõ
- *     phải dùng hộp thư nào (đã che bớt). Không đoán hộ ở client.
+ *  2. **Đăng nhập nhầm tài khoản** — server trả `INVITE_PHONE_MISMATCH` (SĐT đã xác minh của tài khoản
+ *     khác số được mời — ADR 0060; lời mời email cũ: `INVITE_EMAIL_MISMATCH`). Không đoán hộ ở client.
  *  3. **Lời mời đã đóng** (đã trả lời · bị thu hồi · hết hạn) — KHÔNG hiện nút nào. Bày nút ra rồi
  *     để họ bấm vào một lỗi thì tệ hơn là nói thẳng nó đã hết hiệu lực.
  *  4. **Vừa trả lời xong** — kết quả giữ ở state màn, không đọc lại từ query: một lượt refetch nền

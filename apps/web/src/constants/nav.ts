@@ -427,7 +427,7 @@ export const SHOP_NAV: readonly NavSection[] = [
         href: ROUTES.MANAGE.DRIVERS,
         permission: PERMISSION.DRIVER_VIEW,
         icon: SolutionOutlined,
-        feature: PLAN_FEATURE.DRIVERS,
+        // Không gác bằng cờ gói: tài xế mở cho cả hai tuyến (ADR 0063).
       },
       {
         key: 'members',
@@ -836,6 +836,14 @@ export const OWNER_LITE_NAV: readonly NavSection[] = [
         permission: PERMISSION.BOOKING_VIEW,
         icon: FileDoneOutlined,
         memberOnly: true,
+      },
+      {
+        // Chủ xe cá nhân cũng mời tài xế cho chuyến có tài xế (ADR 0063).
+        key: 'drivers',
+        labelKey: 'manage.drivers',
+        href: ROUTES.MANAGE.DRIVERS,
+        permission: PERMISSION.DRIVER_VIEW,
+        icon: SolutionOutlined,
       },
     ],
   },

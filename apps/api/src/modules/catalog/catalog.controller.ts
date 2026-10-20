@@ -1,9 +1,6 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import {
-  ACCOUNT_REALM_VALUES,
-  PUBLIC_CACHE_SECONDS,
-} from '@xeprime/types';
+import { ACCOUNT_REALM_VALUES, PUBLIC_CACHE_SECONDS } from '@xeprime/types';
 import { Public, Realms } from '../../common/decorators';
 import { PublicCache } from '../../common/http-cache';
 import { CatalogModelService } from './catalog-model.service';

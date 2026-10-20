@@ -71,6 +71,22 @@ describe('booking-draft', () => {
     expect(window.sessionStorage.getItem('xp.bookingDraft.v1')).toBeNull();
   });
 
+  it('giữ LỜI NHẮN cho chủ xe qua lượt đăng nhập', () => {
+    saveBookingDraft('V1', {
+      values: values({ note: 'Tôi cần hướng dẫn nhận xe' }),
+      rentalMode: 'daily',
+      promoCode: null,
+    });
+    expect(readBookingDraft('V1')?.values.note).toBe('Tôi cần hướng dẫn nhận xe');
+  });
+
+  it('bản nháp ghi trước khi form có ô lời nhắn ⇒ khôi phục với lời nhắn rỗng, không `undefined`', () => {
+    // Đúng hình dạng một bản nháp cũ trong sessionStorage: không có khoá `note`.
+    saveBookingDraft('V1', { values: values(), rentalMode: 'daily', promoCode: null });
+    expect(window.sessionStorage.getItem('xp.bookingDraft.v1')).not.toContain('"note"');
+    expect(readBookingDraft('V1')?.values.note).toBe('');
+  });
+
   it('xoá là xoá hẳn', () => {
     saveBookingDraft('V1', { values: values(), rentalMode: 'daily', promoCode: null });
     clearBookingDraft();

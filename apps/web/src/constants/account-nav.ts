@@ -4,6 +4,7 @@ import {
   CreditCardOutlined,
   DeleteOutlined,
   IdcardOutlined,
+  SolutionOutlined,
   LockOutlined,
   ShopOutlined,
   UserOutlined,
@@ -64,6 +65,14 @@ const DOCUMENTS: AccountNavItem = {
   labelKey: 'account.documents',
   href: ROUTES.ACCOUNT.DOCUMENTS,
   icon: IdcardOutlined,
+};
+
+/** "Nơi tôi làm tài xế" — lời mời + liên kết tài xế của tài khoản này (ADR 0063). */
+const DRIVING: AccountNavItem = {
+  key: 'driving',
+  labelKey: 'account.driving',
+  href: ROUTES.ACCOUNT.DRIVING,
+  icon: SolutionOutlined,
 };
 
 const TRIPS: AccountNavItem = {
@@ -140,6 +149,7 @@ export const ACCOUNT_NAV: readonly AccountNavItem[] = [
   DOCUMENTS,
   BECOME_OWNER,
   TRIPS,
+  DRIVING,
   PAYMENTS,
   BALANCE,
   BANK_ACCOUNTS,
@@ -160,9 +170,13 @@ export function isCommissionOwner(user: Pick<CurrentUser, 'tenant'> | null | und
   return isCommissionTrack(user?.tenant ?? null);
 }
 
-/** Menu tài khoản khách — một nhóm (giữ dạng nhóm để `AccountSidebar` không phải đổi). */
-export function resolveAccountNav(): AccountNavGroup[] {
-  return [{ key: 'account', items: ACCOUNT_NAV }];
+/**
+ * Menu tài khoản khách — một nhóm (giữ dạng nhóm để `AccountSidebar` không phải đổi). Mục tài xế chỉ
+ * hiện khi tài khoản đã từng có liên kết tài xế (ADR 0063) — đa số khách không bao giờ lái thuê.
+ */
+export function resolveAccountNav(opts: { hasDriverLinks?: boolean } = {}): AccountNavGroup[] {
+  const items = opts.hasDriverLinks ? ACCOUNT_NAV : ACCOUNT_NAV.filter((i) => i !== DRIVING);
+  return [{ key: 'account', items }];
 }
 
 /**

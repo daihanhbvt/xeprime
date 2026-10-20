@@ -1,11 +1,13 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator } from 'react-native';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { ActivityIndicator, Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useLocale, useTranslations } from 'use-intl';
 import {
+  buildNativeTripReturnUrl,
   isPaymentOrderViewStateSettling,
   MOBILE_APP_SCHEME,
   MOBILE_CLIENT_APP,
@@ -14,6 +16,7 @@ import {
   PAYMENT_ORDER_TARGET,
   PAYMENT_ORDER_VIEW_STATE,
   PAYMENT_RETURN_PARAM,
+  STATUS_COLOR,
   type PaymentOrderViewState,
 } from '@xeprime/types';
 import {
@@ -23,18 +26,28 @@ import {
 } from '@/api/payment-gateway/api';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
+import { Card } from '@/components/ui/Card';
 import { useDomainLabel } from '@/i18n/domain';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { queryKeys } from '@/queries/query-keys';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { layout } from '@/theme/layout';
+import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { useGatewayMethods, useGatewayOrder, useStartTripGatewayCheckout } from '../hooks';
 import { canStartAnotherCheckout, isHoldWindowTooShort, isOutOfRange } from '../order-state';
+import { PaymentMethodHeader } from './PaymentMethodHeader';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { paymentProviderLogo } from '../provider-logos';
+import { ProviderLogoFrame } from '../ProviderLogoFrame';
 import { forgetTripOrder, recallTripOrder, rememberTripOrder } from '../trip-order-memory';
 
-/** Deep link quay về đúng chuyến — trùng với nút "Mở lại ứng dụng" mà trang quay về (server dựng) hiện. */
+/**
+ * TIỀN TỐ deep link mà trình duyệt phải gặp để tự đóng — trùng tiền tố của nút "Mở lại ứng dụng" ở
+ * trang quay về `/app-return` (giữ `trips/<id>` cho các bản app cũ). Trang nối thêm `paymentOrder`;
+ * `+native-intent` của app khách đổi hướng link đó sang màn thanh toán `/payment/<id>`.
+ */
 export function tripReturnUrl(tripId: string): string {
-  return `${MOBILE_APP_SCHEME[MOBILE_CLIENT_APP.CUSTOMER]}://trips/${encodeURIComponent(tripId)}`;
+  return buildNativeTripReturnUrl(MOBILE_APP_SCHEME[MOBILE_CLIENT_APP.CUSTOMER], tripId);
 }
 
 function firstParam(value: string | string[] | undefined): string | null {
@@ -155,6 +168,7 @@ export function TripGatewayNotice({
       order={order.data}
       loading={order.isPending}
       failed={order.isError}
+      busy={gateway.browsing}
       onRetry={() => void order.refetch()}
       onContinue={(url) => void openCheckout(url)}
       onSettled={refreshTrips}
@@ -163,13 +177,16 @@ export function TripGatewayNotice({
 }
 
 /**
- * Các nút MoMo / VNPAY cho TIỀN GIỮ CHỖ — bản native của `TripGatewayOptions` (ADR 0058: BỔ SUNG
- * dưới VietQR, mặc định TẮT).
+ * Ví điện tử MoMo / VNPAY cho TIỀN GIỮ CHỖ — bản native của nhóm "Ví điện tử" trong `CheckoutPanel`
+ * + `useGatewayCheckout` (web, ADR 0058: BỔ SUNG dưới VietQR, mặc định TẮT).
+ *
+ * CHỌN rồi mới TRẢ, như web: danh sách ví (logo chính thức + tên; kênh vượt hạn mức nói vì sao) →
+ * nút "Thanh toán qua {ví}". Chưa chọn thì nút tắt kèm lời nhắc chọn ví.
  *
  * Không vẽ gì khi server không mở phương thức nào (chưa cấu hình, luồng chưa bật, đang tải, lỗi),
- * hay khi lượt đang theo dõi còn dùng được / đã xong (mở thêm là mời trả HAI lần). Bấm ⇒ server mở
- * phiên (số tiền/mã đọc từ DB) ⇒ mở trang cổng bằng trình duyệt hệ thống. Không có gì ở đây nói
- * "đã thanh toán".
+ * hay khi lượt đang theo dõi còn dùng được / đang ghi nhận (mở thêm là mời trả HAI lần). Bấm ⇒
+ * server mở phiên (số tiền/mã đọc từ DB) ⇒ mở trang cổng bằng trình duyệt hệ thống. Không có gì ở
+ * đây nói "đã thanh toán".
  */
 export function TripGatewayPay({
   gateway,
@@ -189,7 +206,7 @@ export function TripGatewayPay({
   const errorMessage = useErrorMessage();
   const methods = useGatewayMethods(PAYMENT_SURFACE.CUSTOMER);
   const start = useStartTripGatewayCheckout(gateway.tripId);
-  const [chosen, setChosen] = useState<string | null>(null);
+  const [chosen, setChosen] = useState<PaymentGatewayMethod['provider'] | null>(null);
   const [missingLink, setMissingLink] = useState(false);
   /**
    * Chốt chống BẤM DỒN: `busy` là state, hai lần chạm trong cùng một khung hình đều đọc giá trị cũ
@@ -203,14 +220,26 @@ export function TripGatewayPay({
   const { orderId, order, browsing, track, openCheckout } = gateway;
   const sandbox = methods.data?.sandbox === true;
   const busy = start.isPending || browsing;
+  /*
+   * Như web (`/payment/:id`): thẻ "Ví điện tử" luôn nằm dưới VietQR, kể cả khi một lượt còn CHỜ —
+   * thẻ trạng thái phía trên đã nói rõ lượt đó, và khách chọn ví khác là mở phiên MỚI (server cấp,
+   * lượt cũ vẫn được IPN ghi nhận nếu lỡ trả). Chỉ ẩn khi lượt đang GHI NHẬN / đã có kết quả cần đọc.
+   */
   const showOptions =
-    !orderId || canStartAnotherCheckout(order.data, { failedToLoad: order.isError });
+    !orderId ||
+    canStartAnotherCheckout(order.data, { failedToLoad: order.isError }) ||
+    order.data?.viewState === PAYMENT_ORDER_VIEW_STATE.AWAITING;
   if (!showOptions) return null;
+
+  const tooShort = isHoldWindowTooShort(deadline);
+  // Kênh đã chọn biến mất khỏi danh sách (server tắt) ⇒ lựa chọn mất theo, không suy từ state cũ.
+  const picked = list.find((method) => method.provider === chosen) ?? null;
+  const pickedBlocked = picked ? isOutOfRange(picked, amount) : false;
+  const label = (provider: string) => domainLabel('paymentGatewayProvider', provider);
 
   function pay(provider: PaymentGatewayMethod['provider']) {
     if (inFlight.current || busy) return;
     inFlight.current = true;
-    setChosen(provider);
     setMissingLink(false);
     start.mutate(
       { provider, client: PAYMENT_GATEWAY_CLIENT.NATIVE, locale },
@@ -231,57 +260,195 @@ export function TripGatewayPay({
   }
 
   return (
-    <YStack gap={space.sm} accessibilityLabel={t('wallet.title')}>
-      <XStack ai="center" gap={space.xs} flexWrap="wrap">
-        <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-          {t('wallet.title')}
-        </Text>
-        {sandbox ? (
-          <Text col={colors.warning} fos={fontSize.bodySm} fow={fontWeight.medium}>
-            {t('wallet.sandbox')}
-          </Text>
-        ) : null}
-      </XStack>
+    <Card>
+      <YStack gap={layout.block} accessibilityLabel={t('wallet.title')}>
+        <PaymentMethodHeader
+          icon="wallet-outline"
+          title={t('wallet.title')}
+          badge={sandbox ? { label: t('wallet.sandbox'), color: STATUS_COLOR.WARNING } : null}
+        />
 
-      {isHoldWindowTooShort(deadline) ? (
-        <Text col={colors.textMuted} fos={fontSize.bodySm}>
-          {t('wallet.windowTooShort')}
-        </Text>
-      ) : (
-        list.map((method) => {
-          const label = domainLabel('paymentGatewayProvider', method.provider);
-          const blocked = isOutOfRange(method, amount);
-          return (
-            <YStack key={method.provider} gap={space.xs}>
-              <Button
-                block
-                variant="secondary"
-                label={t('pay.withProvider', { provider: label })}
-                loading={busy && chosen === method.provider}
-                disabled={blocked || (busy && chosen !== method.provider)}
-                onPress={() => pay(method.provider)}
-              />
-              {blocked ? (
-                <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                  {t('wallet.outOfRange', {
-                    provider: label,
-                    min: method.minAmount ? fmt.money(method.minAmount) : '—',
-                    max: method.maxAmount ? fmt.money(method.maxAmount) : '—',
-                  })}
-                </Text>
-              ) : null}
+        {tooShort ? (
+          <Callout tone="warning">{t('wallet.windowTooShort')}</Callout>
+        ) : (
+          <>
+            <YStack gap={space.sm} accessibilityRole="radiogroup">
+              {list.map((method) => {
+                const name = label(method.provider);
+                const blocked = isOutOfRange(method, amount);
+                const checked = chosen === method.provider;
+                const logo = paymentProviderLogo(method.provider, locale);
+                return (
+                  <Pressable
+                    key={method.provider}
+                    accessibilityRole="radio"
+                    accessibilityLabel={name}
+                    accessibilityState={{ checked, disabled: busy }}
+                    disabled={busy}
+                    onPress={() => setChosen(method.provider)}
+                  >
+                    {/*
+                      Một THẺ cho mỗi ví: logo trong khung ÔM theo tỉ lệ của chính nó (MoMo vuông,
+                      VNPAY ngang) — khung rộng chung từng để logo vuông lọt thỏm giữa khoảng trắng.
+                      Viền giữ 1px ở cả hai trạng thái để thẻ không nhảy khi chọn — trạng thái chọn
+                      đọc bằng màu viền, nền và dấu tick.
+                    */}
+                    <XStack
+                      ai="center"
+                      gap={space.md}
+                      px={space.md}
+                      py={space.sm}
+                      minHeight={sizing.touchTarget + space.md}
+                      bw={1}
+                      br={radius.lg}
+                      bc={checked ? colors.primary : colors.border}
+                      bg={checked ? colors.surfaceSelected : colors.surface}
+                    >
+                      {logo ? (
+                        <ProviderLogoFrame logo={logo} dimmed={blocked} />
+                      ) : null}
+                      <YStack f={1} gap={2}>
+                        <Text
+                          col={blocked ? colors.textMuted : colors.text}
+                          fos={fontSize.body}
+                          fow={fontWeight.semibold}
+                        >
+                          {name}
+                        </Text>
+                        {blocked ? (
+                          <Text col={colors.warning} fos={fontSize.bodySm}>
+                            {t('wallet.outOfRange', {
+                              provider: name,
+                              min: method.minAmount ? fmt.money(method.minAmount) : '—',
+                              max: method.maxAmount ? fmt.money(method.maxAmount) : '—',
+                            })}
+                          </Text>
+                        ) : null}
+                      </YStack>
+                      <Ionicons
+                        name={checked ? 'checkmark-circle' : 'ellipse-outline'}
+                        size={iconSize.lg}
+                        color={checked ? colors.primary : colors.borderInput}
+                      />
+                    </XStack>
+                  </Pressable>
+                );
+              })}
             </YStack>
-          );
-        })
-      )}
 
-      {start.isError ? <Callout tone="danger">{errorMessage(start.error)}</Callout> : null}
-      {missingLink ? <Callout tone="danger">{t('wallet.missingLink')}</Callout> : null}
+            {picked ? null : (
+              <Text col={colors.textMuted} fos={fontSize.bodySm} ta="center">
+                {t('pay.pickWallet')}
+              </Text>
+            )}
+            <Button
+              block
+              size="lg"
+              icon="wallet-outline"
+              label={
+                picked
+                  ? t('pay.withProvider', { provider: label(picked.provider) })
+                  : t('pay.submit')
+              }
+              loading={busy}
+              disabled={!picked || pickedBlocked}
+              onPress={() => {
+                if (picked) pay(picked.provider);
+              }}
+            />
+          </>
+        )}
 
-      <Text col={colors.textMuted} fos={fontSize.bodySm}>
-        {sandbox ? `${t('wallet.redirectNote')} ${t('wallet.sandboxHint')}` : t('wallet.redirectNote')}
-      </Text>
-    </YStack>
+        {start.isError ? <Callout tone="danger">{errorMessage(start.error)}</Callout> : null}
+        {missingLink ? <Callout tone="danger">{t('wallet.missingLink')}</Callout> : null}
+
+        <Text col={colors.textMuted} fos={fontSize.bodySm}>
+          {sandbox
+            ? `${t('wallet.redirectNote')} ${t('wallet.sandboxHint')}`
+            : t('wallet.redirectNote')}
+        </Text>
+      </YStack>
+    </Card>
+  );
+}
+
+type NoticeTone = 'info' | 'success' | 'warning' | 'danger';
+
+const TONE_ICON: Record<NoticeTone, { icon: keyof typeof Ionicons.glyphMap; color: string }> = {
+  info: { icon: 'information-circle', color: colors.info },
+  success: { icon: 'checkmark-circle', color: colors.success },
+  warning: { icon: 'alert-circle', color: colors.warning },
+  danger: { icon: 'close-circle', color: colors.danger },
+};
+
+/**
+ * Khung thẻ của MỘT lượt cổng — cùng ngôn ngữ với thẻ phương thức (`PaymentMethodHeader` và hàng
+ * ví): logo chính thức trong khung cố định · tiêu đề · số tiền màu giá · chỉ báo trạng thái, rồi
+ * lời giải thích nhạt và các nút. Mọi `viewState` dùng chung khung này để đọc ra là CÙNG một lượt
+ * đi qua các chặng, không phải mỗi chặng một kiểu hộp.
+ */
+function GatewayStatusCard({
+  providerCode,
+  title,
+  amount,
+  tone,
+  live,
+  badge,
+  sandbox,
+  body,
+  children,
+}: {
+  providerCode: string;
+  title: string;
+  amount?: string;
+  tone: NoticeTone;
+  live?: boolean;
+  badge?: string;
+  sandbox?: boolean;
+  body: string;
+  children?: ReactNode;
+}) {
+  const t = useTranslations('PaymentGateway.order');
+  const locale = useLocale() === 'en' ? 'en' : 'vi';
+  const logo = paymentProviderLogo(providerCode, locale);
+  const mark = TONE_ICON[tone];
+  return (
+    <Card>
+      <YStack gap={layout.block}>
+        <XStack ai="center" gap={space.md}>
+          {logo ? (
+            <ProviderLogoFrame logo={logo} />
+          ) : null}
+          <YStack f={1} gap={2}>
+            <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold}>
+              {title}
+            </Text>
+            {amount ? (
+              <Text col={colors.price} fos={fontSize.h4} fow={fontWeight.bold}>
+                {amount}
+              </Text>
+            ) : null}
+          </YStack>
+          {live ? (
+            <ActivityIndicator size="small" color={colors.info} />
+          ) : (
+            <Ionicons name={mark.icon} size={iconSize.lg} color={mark.color} />
+          )}
+        </XStack>
+        {badge || sandbox ? (
+          <XStack gap={space.xs} flexWrap="wrap">
+            {badge ? <StatusBadge label={badge} color={STATUS_COLOR.PROCESSING} size="sm" /> : null}
+            {sandbox ? (
+              <StatusBadge label={t('sandbox')} color={STATUS_COLOR.WARNING} size="sm" />
+            ) : null}
+          </XStack>
+        ) : null}
+        <Text col={colors.textMuted} fos={fontSize.bodySm}>
+          {body}
+        </Text>
+        {children ? <YStack gap={space.xs}>{children}</YStack> : null}
+      </YStack>
+    </Card>
   );
 }
 
@@ -290,6 +457,7 @@ export function GatewayOrderNotice({
   order,
   loading,
   failed,
+  busy = false,
   onRetry,
   onContinue,
   onSettled,
@@ -297,6 +465,8 @@ export function GatewayOrderNotice({
   order: PaymentOrder | undefined;
   loading: boolean;
   failed: boolean;
+  /** Trình duyệt cổng đang mở — khoá các nút để không mở chồng phiên. */
+  busy?: boolean;
   onRetry: () => void;
   onContinue: (checkoutUrl: string) => void;
   /** Gọi MỘT lần mỗi khi lượt rời các chặng còn chờ — nơi gọi làm mới dữ liệu đích. */
@@ -325,7 +495,12 @@ export function GatewayOrderNotice({
       return (
         <YStack gap={space.xs}>
           <Callout tone="danger">{t('loadError')}</Callout>
-          <Button variant="secondary" label={tCommon('actions.retry')} onPress={onRetry} />
+          <Button
+            variant="secondary"
+            icon="refresh-outline"
+            label={tCommon('actions.retry')}
+            onPress={onRetry}
+          />
         </YStack>
       );
     }
@@ -343,58 +518,100 @@ export function GatewayOrderNotice({
 
   const provider = domainLabel('paymentGatewayProvider', order.provider);
   const amount = fmt.money(order.amount);
-  const sandbox = order.sandbox ? ` (${t('sandbox')})` : '';
+  const card = {
+    providerCode: order.provider,
+    sandbox: order.sandbox,
+  };
 
   switch (order.viewState as PaymentOrderViewState) {
     case PAYMENT_ORDER_VIEW_STATE.AWAITING:
+      /*
+       * Cổng đã KÝ XÁC NHẬN chưa có giao dịch nào — thường là khách vừa bấm Huỷ ở trang cổng. Không
+       * quay "đang chờ" nữa và không mời mở lại liên kết vừa bị huỷ; các kênh trả ở ngay bên dưới
+       * (server mở phiên MỚI). Tiền vẫn về trên phiên này thì màn tự đổi như thường.
+       */
+      if (order.noTransaction) {
+        return (
+          <GatewayStatusCard
+            {...card}
+            tone="warning"
+            title={t('noTransactionTitle', { provider })}
+            body={t('noTransactionBody', { provider })}
+          />
+        );
+      }
       return order.checkoutUrl ? (
-        <YStack gap={space.xs}>
-          <Callout tone="info" title={t('awaitingTitle', { provider, amount })}>
-            {`${t('awaitingBody')}${sandbox}`}
-          </Callout>
+        <GatewayStatusCard
+          {...card}
+          tone="info"
+          live
+          badge={t('awaitingBadge')}
+          title={t('awaitingHeading', { provider })}
+          amount={amount}
+          body={t('awaitingBody', { provider })}
+        >
           <Button
-            variant="secondary"
+            block
             label={t('continue')}
+            icon="open-outline"
+            loading={busy}
             onPress={() => onContinue(order.checkoutUrl as string)}
           />
-        </YStack>
+        </GatewayStatusCard>
       ) : (
-        <Callout tone="warning" title={t('expiredTitle', { provider })}>
-          {t('expiredBody')}
-        </Callout>
+        <GatewayStatusCard
+          {...card}
+          tone="warning"
+          title={t('expiredTitle', { provider })}
+          body={t('expiredBody')}
+        />
       );
     case PAYMENT_ORDER_VIEW_STATE.CONFIRMING:
       return (
-        <Callout tone="info" title={t('confirmingTitle', { provider, amount })}>
-          {t('confirmingBody')}
-        </Callout>
+        <GatewayStatusCard
+          {...card}
+          tone="info"
+          live
+          title={t('confirmingTitle', { provider, amount })}
+          body={t('confirmingBody')}
+        />
       );
     case PAYMENT_ORDER_VIEW_STATE.COMPLETED:
       return (
-        <Callout tone="success" title={t('completedTitle', { amount, provider })}>
-          {`${
+        <GatewayStatusCard
+          {...card}
+          tone="success"
+          title={t('completedTitle', { amount, provider })}
+          body={
             order.targetType === PAYMENT_ORDER_TARGET.SUBSCRIPTION_INVOICE
               ? t('completedInvoice', { code: order.targetCode })
               : t('completedHold', { code: order.targetCode })
-          }${sandbox}`}
-        </Callout>
+          }
+        />
       );
     case PAYMENT_ORDER_VIEW_STATE.DUPLICATE_REFUNDED:
       return (
-        <Callout tone="info" title={t('duplicateRefundedTitle', { amount, provider })}>
-          {t('duplicateRefundedBody', { code: order.targetCode })}
-        </Callout>
+        <GatewayStatusCard
+          {...card}
+          tone="info"
+          title={t('duplicateRefundedTitle', { amount, provider })}
+          body={t('duplicateRefundedBody', { code: order.targetCode })}
+        />
       );
     case PAYMENT_ORDER_VIEW_STATE.NEEDS_SUPPORT:
       return (
-        <Callout tone="warning" title={t('needsSupportTitle', { amount })}>
-          {t('needsSupportBody', { code: order.id })}
-        </Callout>
+        <GatewayStatusCard
+          {...card}
+          tone="warning"
+          title={t('needsSupportTitle', { amount })}
+          body={t('needsSupportBody', { code: order.id })}
+        />
       );
     default:
       return (
-        <Callout
-          tone="warning"
+        <GatewayStatusCard
+          {...card}
+          tone="danger"
           title={
             order.status === PAYMENT_ORDER_STATUS.CANCELLED
               ? t('cancelledTitle', { provider })
@@ -402,9 +619,8 @@ export function GatewayOrderNotice({
                 ? t('expiredResultTitle', { provider })
                 : t('failedTitle', { provider })
           }
-        >
-          {t('failedBody', { code: order.id })}
-        </Callout>
+          body={t('failedBody', { code: order.id })}
+        />
       );
   }
 }

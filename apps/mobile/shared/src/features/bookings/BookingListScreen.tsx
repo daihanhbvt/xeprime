@@ -8,6 +8,7 @@ import {
   BOOKING_STATUS_SELECTABLE_VALUES,
   PERMISSION,
   type BookingListPreset,
+  SERVICE_TYPE_VALUES,
 } from '@xeprime/types';
 import { IconButton } from '@/components/ui/IconButton';
 import { Screen } from '@/components/layout/Screen';
@@ -100,6 +101,7 @@ export function BookingListScreen({
     routeSort ?? (awaitingPickup ? 'pickup_asc' : DEFAULT_SORT),
   );
   const [search, setSearch] = useState('');
+  const [serviceType, setServiceType] = useState<string>(STATUS_ALL);
   const [page, setPage] = useState(FIRST_PAGE);
   useListParamChange('status', routeStatus, (next) => {
     setStatus(next);
@@ -117,6 +119,7 @@ export function BookingListScreen({
   const query = useBookingsPage({
     ...(branchId ? { branchId } : {}),
     ...(status === STATUS_ALL ? {} : { status }),
+    ...(serviceType === STATUS_ALL ? {} : { serviceType }),
     ...(preset ? { preset } : {}),
     // Lọc theo xe đến từ ĐƯỜNG DẪN, không phải tấm lọc: nó là ngữ cảnh của lối đi từ hồ sơ xe,
     // giống hệt `?vehicleId=` bên web.
@@ -148,6 +151,7 @@ export function BookingListScreen({
 
   const changeFilter = useCallback((groupKey: string, value: string) => {
     if (groupKey === 'status') setStatus(value);
+    else if (groupKey === 'serviceType') setServiceType(value);
     else setSort(value as BookingSort);
     setPage(FIRST_PAGE);
   }, []);
@@ -188,6 +192,20 @@ export function BookingListScreen({
               ],
             },
           ]),
+      // Loại dịch vụ của ĐƠN — có ở CẢ hai nhóm việc (19/10/2026), cùng ô lọc bên web.
+      {
+        key: 'serviceType',
+        label: t('serviceLabel'),
+        value: serviceType,
+        resetValue: STATUS_ALL,
+        options: [
+          { value: STATUS_ALL, label: t('serviceAll') },
+          ...SERVICE_TYPE_VALUES.map((value) => ({
+            value,
+            label: domainLabel('serviceType', value),
+          })),
+        ],
+      },
       {
         key: 'sort',
         label: t('sortLabel'),
@@ -196,7 +214,7 @@ export function BookingListScreen({
         options: BOOKING_SORT_VALUES.map((value) => ({ value, label: sortLabel(t, value) })),
       },
     ],
-    [t, domainLabel, status, sort, awaitingPickup],
+    [t, domainLabel, status, serviceType, sort, awaitingPickup],
   );
 
   const openBooking = useCallback(
@@ -211,7 +229,8 @@ export function BookingListScreen({
     [openBooking, awaitingPickup],
   );
 
-  const filtered = status !== STATUS_ALL || debouncedSearch.trim().length > 0;
+  const filtered =
+    status !== STATUS_ALL || serviceType !== STATUS_ALL || debouncedSearch.trim().length > 0;
 
   /**
    * Gỡ hai chiều LỌC, giữ nguyên cách SẮP XẾP — cùng phạm vi `onClearFilters` của web.
@@ -221,6 +240,7 @@ export function BookingListScreen({
    */
   const clearFilters = useCallback(() => {
     setStatus(STATUS_ALL);
+    setServiceType(STATUS_ALL);
     setSearch('');
     setPage(FIRST_PAGE);
   }, []);

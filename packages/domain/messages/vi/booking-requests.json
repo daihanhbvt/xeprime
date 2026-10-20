@@ -45,7 +45,9 @@
   "customer": {
     "heading": "Khách hàng",
     "noProfile": "Chưa có hồ sơ trong sổ khách",
-    "riskWarning": "{level} — kiểm tra lại trước khi duyệt"
+    "riskWarning": "{level} — kiểm tra lại trước khi duyệt",
+    "accountPhone": "SĐT tài khoản: {phone}",
+    "accountPhoneAria": "Gọi số tài khoản {phone} của {name}"
   },
   "schedule": {
     "heading": "Yêu cầu thuê",
@@ -97,7 +99,8 @@
     "openCustomer": "Xem hồ sơ khách",
     "phone": "Số điện thoại",
     "createdAt": "Khách gửi lúc",
-    "decidedAt": "Xử lý lúc"
+    "decidedAt": "Xử lý lúc",
+    "accountPhone": "SĐT tài khoản"
   },
   "actions": {
     "approve": "Duyệt & giữ xe",
@@ -172,10 +175,6 @@
   },
   "flow": {
     "title": "Yêu cầu thuê xe",
-    "steps": {
-      "trip": "Chuyến đi",
-      "review": "Xác nhận"
-    },
     "service": {
       "label": "Dịch vụ",
       "routeLabel": "Lộ trình"
@@ -273,6 +272,7 @@
       "packageTitle": "Chi tiết giá gói {months, plural, other {# tháng}}",
       "subtotal": "Tạm tính",
       "total": "Tổng dự kiến",
+      "totalFrozen": "Tổng tiền thuê",
       "rentalTotal": "Tiền thuê",
       "expand": "Chi tiết",
       "collapse": "Thu gọn",
@@ -298,22 +298,25 @@
     },
     "done": {
       "title": "Đã gửi yêu cầu",
+      "confirmedTitle": "Chuyến đã được xác nhận",
       "requestCode": "Mã yêu cầu: {code}",
+      "requestCodeLabel": "Mã yêu cầu:",
       "body": "Chủ xe đang xem xét. Bạn sẽ nhận thông báo ngay khi có phản hồi.",
+      "pendingBody": "Chủ xe đang xem xét và có {minutes} phút để phản hồi. Bạn sẽ nhận được thông báo ngay khi có kết quả!",
       "time": "Thời gian",
       "pickupMethod": "Nhận xe",
       "driverPickup": "Đón tại: {address}",
       "notReserved": "Xe chưa được giữ chỗ — chủ xe cần duyệt yêu cầu trước.",
       "myTrips": "Chuyến của tôi",
       "chatShop": "Nhắn chủ xe",
+      "chatHost": "Nhắn tin cho chủ xe",
       "close": "Quay lại",
       "autoAccepted": "Chuyến đã được xác nhận tự động — lịch xe đã giữ cho bạn.",
       "openHold": "Thanh toán giữ chỗ",
       "holdLoadFailed": "Chưa tải được mã thanh toán. Mở chuyến trong mục Chuyến của tôi để lấy mã — chỗ của bạn vẫn đang được giữ.",
       "heldTitle": "Chủ xe đã nhận chuyến của bạn",
       "heldSubtitle": "Thanh toán tiền giữ chỗ trước khi hết giờ để chốt chuyến.",
-      "copyRequestCode": "Sao chép mã yêu cầu",
-      "tripInfo": "Thông tin chuyến thuê"
+      "copyRequestCode": "Sao chép mã yêu cầu"
     },
     "duplicate": {
       "title": "Yêu cầu trùng lặp",
@@ -327,7 +330,8 @@
       "seatCount": "{count, plural, other {# chỗ}}",
       "specBody": "Kiểu dáng",
       "specFuel": "Năng lượng",
-      "viewShop": "Xem gian hàng"
+      "viewShop": "Xem gian hàng",
+      "pickupPoint": "Điểm nhận xe"
     },
     "actions": {
       "cancel": "Huỷ",
@@ -398,6 +402,87 @@
     "licence": {
       "title": "Xác thực bằng lái",
       "verified": "Bằng lái hợp lệ cho chuyến này"
+    },
+    "journey": {
+      "label": "Tiến trình đặt xe",
+      "caption": "Bước {current} / {total} · {label}",
+      "steps": {
+        "trip": "Chọn chuyến",
+        "request": "Gửi yêu cầu",
+        "payment": "Thanh toán giữ chỗ",
+        "confirmed": "Đã xác nhận"
+      }
+    },
+    "preparing": "Đang kiểm tra lịch xe…",
+    "reviewPage": {
+      "title": "Xem lại yêu cầu thuê xe",
+      "description": "Kiểm tra chuyến đi và thông tin liên hệ trước khi gửi yêu cầu.",
+      "trip": {
+        "title": "Thông tin chuyến đi",
+        "edit": "Chỉnh sửa",
+        "editLabel": "Chỉnh sửa thông tin chuyến đi",
+        "pickupAt": "Nhận xe",
+        "returnAt": "Trả xe",
+        "package": "Gói thuê",
+        "pickupWish": "Nguyện vọng nhận xe",
+        "expectedReturn": "Dự kiến trả xe",
+        "selfPickup": "Tự nhận và trả xe tại chủ xe",
+        "selfPickupPending": "Chủ xe gửi địa chỉ nhận xe cụ thể khi xác nhận chuyến.",
+        "delivery": "Giao xe tận nơi",
+        "driverPickup": "Tài xế đón tại",
+        "destination": "Điểm đến",
+        "owner": "Chủ xe",
+        "summary": "{service} · {duration}"
+      },
+      "renter": {
+        "title": "Thông tin người thuê",
+        "description": "Mặc định lấy từ tài khoản của bạn — đổi được họ tên hoặc số điện thoại liên hệ cho chuyến này.",
+        "name": "Họ và tên",
+        "phone": "Số điện thoại",
+        "email": "Email",
+        "noteLabel": "Lời nhắn cho chủ xe (không bắt buộc)",
+        "notePlaceholder": "Ví dụ: Tôi cần hướng dẫn nhận xe",
+        "readonlyDescription": "Họ tên và số điện thoại chủ xe dùng để liên hệ về chuyến đi này.",
+        "namePlaceholder": "Nhập họ tên người thuê",
+        "phonePlaceholder": "Nhập số điện thoại liên hệ",
+        "phoneDifferent": "Số liên hệ chưa xác thực — chủ xe sẽ thấy thêm số tài khoản {accountPhone} của bạn."
+      },
+      "requirements": {
+        "title": "Giấy tờ & điều kiện nhận xe",
+        "licenceTitle": "Giấy phép lái xe hợp lệ",
+        "licenceBody": "Người lái cần có GPLX còn hiệu lực, phù hợp với loại xe thuê. Mang theo GPLX và giấy tờ tuỳ thân để chủ xe đối chiếu khi giao xe.",
+        "licenceVerified": "Bằng lái của bạn hợp lệ cho chuyến này",
+        "licenceClasses": "Hạng {classes}",
+        "licenceExpires": "Có giá trị đến {date}",
+        "licenceNoExpiry": "Không thời hạn",
+        "driverTitle": "Xe có tài xế",
+        "driverBody": "Tài xế của chủ xe cầm lái nên bạn không cần giấy phép lái xe. Mang theo giấy tờ tuỳ thân để đối chiếu khi đón xe.",
+        "documents": "Giấy tờ chủ xe yêu cầu: {documents}",
+        "hostTerms": "Điều khoản thuê của chủ xe",
+        "reminder": "Việc xác minh và yêu cầu giấy tờ cụ thể được hướng dẫn theo chính sách hiện hành trước khi nhận xe."
+      },
+      "costs": {
+        "title": "Chi phí thuê xe",
+        "totalNote": "Đã gồm các khoản trên. Tiền giữ chỗ được trừ vào tổng này; cọc xe nộp riêng khi nhận xe.",
+        "listedNote": "Chưa tải được giá cho chuyến này — đây là giá niêm yết. Chủ xe xác nhận giá khi duyệt yêu cầu."
+      },
+      "others": {
+        "title": "Các khoản khác",
+        "assetBody": "Để lại một trong các tài sản sau khi nhận xe: {assets}. Nhận lại khi trả xe.",
+        "noDepositBody": "Xe này không yêu cầu cọc khi nhận xe."
+      },
+      "submit": {
+        "cta": "Gửi yêu cầu thuê xe",
+        "hint": "Hoàn tất thông tin và xác nhận điều khoản để gửi. Không thu tiền tại bước này.",
+        "agreementRequired": "Bạn cần đồng ý điều khoản trước khi gửi yêu cầu."
+      },
+      "next": {
+        "title": "Sau khi gửi yêu cầu",
+        "instant": "Xe này hỗ trợ Đặt ngay: yêu cầu được nhận tự động khi gửi và bạn chuyển thẳng tới bước thanh toán tiền giữ chỗ để chốt chuyến.",
+        "instantConfirmed": "Xe này hỗ trợ Đặt ngay: yêu cầu được nhận tự động và chuyến đi được xác nhận ngay khi gửi — không có bước thanh toán online.",
+        "hold": "Chủ xe xem và phản hồi yêu cầu của bạn. Khi chủ xe nhận chuyến, bạn có {minutes} phút để thanh toán tiền giữ chỗ — chuyến đi chỉ được xác nhận khi XePrime nhận đủ khoản này.",
+        "general": "XePrime hoặc chủ xe sẽ liên hệ để kiểm tra thông tin, xác nhận tình trạng xe và hướng dẫn bước tiếp theo. Chuyến đi chỉ được xác nhận sau khi hoàn tất các bước được hướng dẫn."
+      }
     }
   },
   "approved": {
@@ -434,7 +519,9 @@
       "returnAt": "Chọn thời gian trả xe",
       "returnAfterPickup": "Thời gian trả phải sau thời gian nhận",
       "longTermPackage": "Chọn gói thuê",
-      "requestedPickupDate": "Chọn ngày muốn nhận xe"
+      "requestedPickupDate": "Chọn ngày muốn nhận xe",
+      "noteMax": "Tối đa {max} ký tự",
+      "customerNameMax": "Tối đa {max} ký tự"
     }
   },
   "cancel": {
@@ -463,5 +550,8 @@
   "stats": {
     "pending": "Chờ duyệt",
     "converted": "Hoàn thành"
+  },
+  "contactNote": {
+    "differentPhone": "Khách để lại số liên hệ khác số đăng ký tài khoản. Số tài khoản {phone} đã xác thực; số liên hệ thì chưa."
   }
 }

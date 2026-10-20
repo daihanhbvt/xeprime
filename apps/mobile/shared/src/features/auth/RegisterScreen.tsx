@@ -111,7 +111,7 @@ export function RegisterScreen({
 
             {inCodeStep ? null : (
               <>
-                <SocialButtons onSuccess={onAuthenticated} blocked={!consented} />
+                <SocialButtons intent="register" onSuccess={onAuthenticated} blocked={!consented} />
 
                 <AuthSwitchLink
                   prompt={t('switchMode.hasAccount')}

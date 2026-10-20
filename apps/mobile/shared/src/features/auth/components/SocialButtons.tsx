@@ -40,8 +40,11 @@ const PROVIDERS = [AUTH_PROVIDER.GOOGLE, AUTH_PROVIDER.FACEBOOK] as const;
 export function SocialButtons({
   onSuccess,
   blocked = false,
+  intent = 'login',
 }: {
   onSuccess: (user: CurrentUser) => void;
+  /** Nhãn nút theo màn — "Đăng nhập với …" hay "Đăng ký với …", như `AuthPanel` web (ADR 0060). */
+  intent?: 'login' | 'register';
   /**
    * Chặn vì một điều kiện NGOÀI hai nút — màn đăng ký truyền vào khi chưa tick đồng ý điều
    * khoản. Đăng nhập mạng xã hội LẦN ĐẦU cũng là tạo tài khoản, nên nó phải qua đúng cửa đó.
@@ -121,7 +124,9 @@ export function SocialButtons({
       <XStack gap={space.sm}>
         {PROVIDERS.map((provider) => {
           const busy = pending === provider;
-          const label = t('social.continueWith', { provider: AUTH_PROVIDER_LABEL[provider] });
+          const label = t(intent === 'register' ? 'social.registerWith' : 'social.loginWith', {
+            provider: AUTH_PROVIDER_LABEL[provider],
+          });
           return (
             <Pressable
               key={provider}

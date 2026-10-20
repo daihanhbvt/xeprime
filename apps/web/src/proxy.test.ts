@@ -122,10 +122,12 @@ describe('proxy — chế độ path (máy dev, ba khu chung localhost:3000)', (
     }
   });
 
-  it('/login /register cũ của site khách → trang chủ mở modal; đã đăng nhập → next an toàn', async () => {
+  it('/login /register /forgot-password cũ của site khách → trang chủ mở modal; đã đăng nhập → next an toàn', async () => {
     const run = await loadProxy('path');
     expect(run('/login').location).toBe(`${L}/?auth=login`);
     expect(run('/register?next=%2Ftrips').location).toBe(`${L}/?auth=register&next=%2Ftrips`);
+    expect(run('/forgot-password').location).toBe(`${L}/?auth=forgot`);
+    expect(run('/forgot-password', { cookies: ['customer'] }).location).toBe(`${L}/`);
     expect(run('/login', { cookies: ['customer'] }).location).toBe(`${L}/`);
     expect(run('/login?next=%2Ftrips', { cookies: ['customer'] }).location).toBe(`${L}/trips`);
     expect(run('/login?next=https%3A%2F%2Fevil.test', { cookies: ['customer'] }).location).toBe(

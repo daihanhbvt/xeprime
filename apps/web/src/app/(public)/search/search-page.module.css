@@ -28,3 +28,15 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
+
+@media (min-width: 2000px) {
+  .fallbackGrid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 2400px) {
+  .fallbackGrid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}

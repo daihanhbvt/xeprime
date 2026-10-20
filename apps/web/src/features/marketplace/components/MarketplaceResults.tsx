@@ -10,7 +10,25 @@ import {
 import { Badge, Button, Select, Skeleton } from 'antd';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
-  DEFAULT_LISTING_SORT, LISTING_AMENITY_LABEL, LISTING_AMENITY_VALUES, LISTING_SORT_LABEL, LISTING_SORT_VALUES, ROUTE_TYPE_LABEL, SEAT_BUCKET_LABEL, SERVICE_TYPE, SERVICE_TYPE_LABEL, VEHICLE_TYPE, VEHICLE_TYPE_LABEL, VEHICLE_TYPE_VALUES, vehicleFuelTypesFor, type ListingSort, type RouteType, type SeatBucket, type ServiceType, type VehicleType, } from '@xeprime/types';
+  DEFAULT_LISTING_SORT,
+  LISTING_AMENITY_LABEL,
+  LISTING_AMENITY_VALUES,
+  LISTING_SORT_LABEL,
+  LISTING_SORT_VALUES,
+  ROUTE_TYPE_LABEL,
+  SEAT_BUCKET_LABEL,
+  SERVICE_TYPE,
+  SERVICE_TYPE_LABEL,
+  VEHICLE_TYPE,
+  VEHICLE_TYPE_LABEL,
+  VEHICLE_TYPE_VALUES,
+  vehicleFuelTypesFor,
+  type ListingSort,
+  type RouteType,
+  type SeatBucket,
+  type ServiceType,
+  type VehicleType,
+} from '@xeprime/types';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
 import { cx } from '@/lib/cx';
 import { toAppTz } from '@/lib/datetime';
@@ -18,7 +36,7 @@ import { useDomainLabel } from '@/i18n/use-domain-label';
 import { SERVICE_CHIPS } from '../constants';
 import { FACET_FILTER_KEYS } from '../filter-params';
 import { provinceLabelOf } from '../province-options';
-import { useDestinations } from '../hooks/use-destinations';
+import { useAllDestinations } from '../hooks/use-destinations';
 import { useInfinitePublicListings } from '../hooks/use-infinite-listings';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import type { MarketplaceFilters } from '../types';
@@ -57,7 +75,7 @@ export function MarketplaceResults() {
 
   const { filters, setFilters } = useMarketplaceFilters();
   // Cùng nguồn với các bộ chọn địa điểm khác — dùng để dịch mã tỉnh sang tên hiển thị.
-  const { data: destinations } = useDestinations(34);
+  const { data: destinations } = useAllDestinations();
   const [filterOpen, setFilterOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const { brandLabel, bodyTypeLabel, fuelTypeLabel, featureLabel } = useCatalogLabels();
@@ -139,7 +157,16 @@ export function MarketplaceResults() {
         onRemove: () => setFilters({ priceMin: undefined, priceMax: undefined }),
       });
     return chips;
-  }, [filters, setFilters, brandLabel, bodyTypeLabel, fuelTypeLabel, featureLabel, fmt, domainLabel]);
+  }, [
+    filters,
+    setFilters,
+    brandLabel,
+    bodyTypeLabel,
+    fuelTypeLabel,
+    featureLabel,
+    fmt,
+    domainLabel,
+  ]);
 
   /** Xoá đúng nhóm chip của panel Bộ lọc — giữ ngữ cảnh tìm kiếm (tỉnh/ngày/loại xe/dịch vụ). */
   function clearFacets() {
@@ -160,20 +187,34 @@ export function MarketplaceResults() {
   // --- Thanh ngữ cảnh tìm kiếm (Figma: "Ô tô · TP. Hồ Chí Minh · 09/08 – 12/08" + Chỉnh sửa) --
   const contextSummary = [
     filters.vehicleType
-      ? domainLabel('vehicleType', filters.vehicleType, VEHICLE_TYPE_LABEL[filters.vehicleType as VehicleType])
+      ? domainLabel(
+          'vehicleType',
+          filters.vehicleType,
+          VEHICLE_TYPE_LABEL[filters.vehicleType as VehicleType],
+        )
       : t('allVehicles'),
     // Dịch vụ vào summary — người đến từ tab trang chủ đọc được ngay mình đang tìm gì.
     filters.serviceType
-      ? domainLabel('serviceType', filters.serviceType, SERVICE_TYPE_LABEL[filters.serviceType as ServiceType])
+      ? domainLabel(
+          'serviceType',
+          filters.serviceType,
+          SERVICE_TYPE_LABEL[filters.serviceType as ServiceType],
+        )
       : null,
     // Lộ trình (ngữ cảnh có tài xế) đi kèm ngay sau dịch vụ.
     filters.serviceType === SERVICE_TYPE.WITH_DRIVER && filters.routeType
-      ? domainLabel('routeType', filters.routeType, ROUTE_TYPE_LABEL[filters.routeType as RouteType])
+      ? domainLabel(
+          'routeType',
+          filters.routeType,
+          ROUTE_TYPE_LABEL[filters.routeType as RouteType],
+        )
       : null,
     // Địa điểm hiện TÊN tra từ danh sách điểm đến; mã không phải thứ để người dùng đọc. Lựa chọn
     // cũ không còn khả dụng thì nói thẳng, KHÔNG âm thầm hiện "Toàn quốc" trong khi vẫn đang lọc.
     provinceLabelOf(destinations, filters.provinceCode) ??
-      (filters.provinceCode || filters.province ? tLocation('unavailable') : tLocation('nationwide')),
+      (filters.provinceCode || filters.province
+        ? tLocation('unavailable')
+        : tLocation('nationwide')),
     /*
      * NGÀY + GIỜ của cả hai đầu, viết y hệt ô thời gian thuê (`fmt.rentalPointCompact`):
      * `14/09 17:00 → 15/09 17:00 (1 ngày)`.

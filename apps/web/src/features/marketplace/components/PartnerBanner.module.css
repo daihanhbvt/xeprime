@@ -1,0 +1,215 @@
+/*
+ * Dải "Đăng ký trở thành đối tác" (Figma `19695:40878`, ADR 0062) — tràn hết bề ngang, cao 312px.
+ *
+ * Desktop dựng lại đúng toạ độ của bản vẽ trong khung 1200px: logo ở x=0, tiêu đề ở x=430, nút và
+ * quyền lợi ở x=971. Ba cột 342 | 1fr | 229 cách nhau 88px cho đúng ba mốc đó ở 1200px và vẫn co
+ * được ở màn hẹp hơn; mọi khối nằm chung một hàng lưới, mốc dọc là `margin-top` của chính nó.
+ */
+.banner {
+  position: relative;
+  overflow: hidden;
+  background: var(--xp-color-bg-inverse);
+  color: var(--xp-color-text-on-dark);
+  isolation: isolate;
+}
+
+/* Ảnh nền: rộng 102.09%, cao 157.43%, lùi lên 27.71% (Figma) — cùng tỉ lệ ảnh, nên cover = khớp. */
+.backdrop {
+  position: absolute;
+  z-index: -1;
+  top: -27.71%;
+  left: -1.045%;
+  width: 102.09%;
+  height: 157.43%;
+}
+
+.backdropImage {
+  object-fit: cover;
+}
+
+.inner {
+  display: grid;
+  max-width: calc(var(--xp-market-container-max-width) + 2 * var(--xp-space-md));
+  min-height: 312px;
+  box-sizing: border-box;
+  padding: 0 var(--xp-space-md);
+  margin: 0 auto;
+  column-gap: 88px;
+  grid-template-columns: 342px minmax(0, 1fr) 229px;
+  grid-template-rows: 312px;
+}
+
+.inner > * {
+  grid-row: 1;
+  align-self: start;
+}
+
+.logo {
+  display: block;
+  width: 342px;
+  height: 107px;
+  margin-top: 48.83px;
+  grid-column: 1;
+}
+
+.title {
+  display: flex;
+  flex-direction: column;
+  margin: 35.83px 0 0;
+  font-size: 42px;
+  font-weight: var(--xp-font-weight-semibold);
+  grid-column: 2;
+  letter-spacing: var(--xp-letter-spacing-display);
+  line-height: 60px;
+}
+
+.titleLead {
+  color: var(--xp-color-text-on-dark);
+}
+
+.titleAccent {
+  background: var(--xp-gradient-text-gold);
+  background-clip: text;
+  color: transparent;
+  font-weight: var(--xp-font-weight-bold);
+  text-transform: uppercase;
+}
+
+.cta {
+  margin-top: 60px;
+  grid-column: 3;
+  justify-self: start;
+}
+
+/* Vòng trắng 40px ôm mũi tên ở đầu phải nút. */
+.ctaIcon {
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
+}
+
+.benefits {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 176.83px 0 0;
+  gap: var(--xp-space-md);
+  grid-column: 3;
+  list-style: none;
+}
+
+.benefit {
+  display: flex;
+  align-items: center;
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-medium);
+  gap: var(--xp-space-sm);
+  line-height: var(--xp-line-height-body-lg);
+  white-space: nowrap;
+}
+
+/* Dấu tích trong ô kính vàng 24px. */
+.check {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--xp-color-glass-strong);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-glass-gold);
+  backdrop-filter: blur(4px);
+}
+
+.help {
+  margin: 278.83px 0 0;
+  color: var(--xp-color-text-on-dark-muted);
+  font-size: var(--xp-font-size-body);
+  grid-column: 1 / 3;
+  line-height: var(--xp-line-height-body);
+}
+
+.phone {
+  color: var(--xp-color-text-on-dark);
+  font-weight: var(--xp-font-weight-semibold);
+  white-space: nowrap;
+}
+
+.phone:hover {
+  color: var(--xp-color-primary-bright);
+}
+
+.phone:focus-visible {
+  border-radius: var(--xp-border-radius-chip);
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+/* Desktop hẹp (1025–1279): logo nhỏ lại, khoảng cách hẹp lại — tiêu đề không bị ép xuống ba dòng. */
+@media (min-width: 1025px) and (max-width: 1279px) {
+  .inner {
+    column-gap: 48px;
+    grid-template-columns: 260px minmax(0, 1fr) 229px;
+  }
+
+  .logo {
+    width: 260px;
+    height: auto;
+    margin-top: 60px;
+  }
+
+  .title {
+    font-size: 34px;
+    line-height: 48px;
+    margin-top: 48px;
+  }
+}
+
+/* Tablet/mobile: các khối xếp dọc, giữ đúng thứ tự đọc logo → tiêu đề → quyền lợi → nút → trợ giúp. */
+@media (max-width: 1024px) {
+  .backdrop {
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .inner {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: var(--xp-space-40) var(--xp-space-md);
+    gap: var(--xp-space-lg);
+  }
+
+  .inner > * {
+    margin: 0;
+  }
+
+  .logo {
+    width: 220px;
+    height: auto;
+  }
+
+  .title {
+    font-size: var(--xp-font-size-h1);
+    line-height: var(--xp-line-height-h1);
+  }
+
+  .benefits {
+    order: 1;
+  }
+
+  .cta {
+    order: 2;
+  }
+
+  .help {
+    order: 3;
+  }
+}

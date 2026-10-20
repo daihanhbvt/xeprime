@@ -3,22 +3,19 @@ import { useRouter } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
-  BOOKING_REQUEST_STATUS,
   PICKUP_PREFERENCE,
   SERVICE_TYPE,
   type PublicListingDetail,
 } from '@xeprime/types';
-import { dayjs, LIST_SEPARATOR } from '@xeprime/domain';
+import { dayjs } from '@xeprime/domain';
 import type { BookingRequestFormValues } from '../booking-schema';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { HeaderActions } from '@/components/layout/HeaderActions';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
-import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { DataRow } from '@/components/ui/DataRow';
 import { IconButton } from '@/components/ui/IconButton';
-import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { StatusIcon, STATUS_TONE } from '@/components/ui/StatusIcon';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
@@ -27,8 +24,8 @@ import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
-import { TripHoldPanel } from '@/features/trips/components/TripHoldPanel';
-import { useTrip } from '@/features/trips/hooks/use-trips';
+import { UnpaidHoldList } from '@/features/trips/components/UnpaidHoldList';
+import type { CustomerUnpaidHolds } from '@/features/trips/api';
 import { useCopy } from '@/hooks/use-copy';
 import { type BookingBlocked } from '../hooks/use-booking-request-flow';
 import type { BookingRequestReceipt, PublicQuote } from '../api';
@@ -47,22 +44,28 @@ import type { BookingRequestReceipt, PublicQuote } from '../api';
  * lịch (ADR 0006), nhiều khách được phép cùng hỏi một xe cùng khung giờ, ai được duyệt trước
  * thì được xe. Bỏ câu này đi là để khách tưởng xe đã là của mình.
  *
- * `done` + `awaiting_hold`: **chặng thứ tư** — xe bật "Đặt ngay" nên hệ thống vừa NHẬN chuyến
- * (ADR 0044 điều 2). Chỗ đã được giữ, đồng hồ đang chạy, và việc tiếp theo thuộc về KHÁCH chứ
- * không phải chủ xe. Màn này vì thế đổi tiêu đề, bỏ câu "chưa giữ xe", dựng MÃ QR ngay tại đây và
- * đổi nút chính thành đường về chính chuyến đó. Nói "chủ xe sẽ phản hồi" ở chặng này là lý do
- * khách đóng app rồi mất chuyến — và mất luôn khoản tiền họ chưa kịp chuyển.
+ * `holdLimit`: khách đã giữ đủ trần chuyến chưa trả (`HOLD_LIMIT_REACHED`) — liệt kê các chuyến đó
+ * kèm lối trả thẳng, như màn chặn của hộp thoại đặt xe bên web.
+ *
+ * Chặng `awaiting_hold` (xe "Đặt ngay" vừa được hệ thống NHẬN) KHÔNG tới màn này: luồng chuyển
+ * thẳng sang màn thanh toán của chuyến (web PR #183, 13/10/2026).
  */
 export function RequestResultStep({
   blocked,
+  holdLimit = false,
+  unpaidHolds,
   duplicate,
   receipt,
   values,
   listing,
   quote,
   onClose,
+  onLeave,
 }: {
   blocked?: BookingBlocked | null;
+  /** Đã chạm trần giữ chỗ — `unpaidHolds` là dữ liệu lời nhắc nếu đọc được (khách có phiên). */
+  holdLimit?: boolean;
+  unpaidHolds?: CustomerUnpaidHolds | undefined;
   duplicate: boolean;
   receipt: BookingRequestReceipt | null;
   values: BookingRequestFormValues;
@@ -74,11 +77,51 @@ export function RequestResultStep({
    */
   quote: PublicQuote | null;
   onClose: () => void;
+  /** Rời luồng sang màn thanh toán một chuyến đang giữ (`replace`) — dọn bản nháp. */
+  onLeave?: () => void;
 }) {
   const t = useTranslations('BookingRequests.flow');
   const router = useRouter();
 
+  const tTrips = useTranslations('Trips');
   const goToTrips = () => router.replace(ROUTES.booking.list());
+
+  if (holdLimit) {
+    return (
+      <>
+        <AppHeader right={<HeaderActions />} />
+        <Screen edges={['left', 'right', 'bottom']}>
+          <YStack gap={layout.block} pt={layout.section}>
+            <YStack ai="center" gap={space.xs}>
+              <StatusIcon icon="time" tone={STATUS_TONE.WARNING} />
+              <Text col={colors.text} fos={fontSize.h3} fow={fontWeight.bold} ta="center">
+                {unpaidHolds
+                  ? tTrips('unpaid.limitTitle', { limit: unpaidHolds.limit })
+                  : tTrips('unpaid.limitTitleFallback')}
+              </Text>
+              <Text col={colors.textMuted} fos={fontSize.body} ta="center">
+                {unpaidHolds
+                  ? tTrips('unpaid.limitBodyBooking', { limit: unpaidHolds.limit })
+                  : tTrips('unpaid.limitBodyFallback')}
+              </Text>
+            </YStack>
+            {unpaidHolds && unpaidHolds.items.length > 0 ? (
+              <UnpaidHoldList items={unpaidHolds.items} onNavigate={onLeave} replace />
+            ) : null}
+            <YStack gap={space.sm}>
+              <Button
+                label={tTrips('unpaid.viewTrips')}
+                size="lg"
+                variant="secondary"
+                onPress={goToTrips}
+              />
+              <Button label={t('blocked.close')} variant="ghost" onPress={onClose} />
+            </YStack>
+          </YStack>
+        </Screen>
+      </>
+    );
+  }
 
   if (blocked) {
     return (
@@ -146,7 +189,7 @@ export function RequestResultStep({
  * Nhánh "đã gửi xong" — năm dòng tóm tắt cùng thứ tự với web: Xe · Thời gian · Dịch vụ · Nhận xe
  * · Tổng dự kiến.
  *
- * Là component riêng vì nó gọi `useTrip`/`useCopy`, mà hook không đặt được trong thân
+ * Là component riêng vì nó gọi `useCopy`, mà hook không đặt được trong thân
  * `RequestResultStep` do nhánh `duplicate` return sớm.
  */
 function DoneResult({
@@ -166,20 +209,6 @@ function DoneResult({
   const domainLabel = useDomainLabel();
 
   const copy = useCopy();
-
-  /*
-   * Chặng CHỜ TIỀN quyết định cả bốn thứ ở màn này: tiêu đề, có mã QR hay không, dải cảnh báo
-   * nào, và nút chính dẫn đi đâu. Tính MỘT lần ở đây thay vì so lại `receipt.status` ở bốn chỗ —
-   * bốn chỗ là bốn cơ hội để một chỗ bị quên và màn hình nói hai điều trái nhau.
-   */
-  const awaitingHold = receipt?.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD;
-
-  /*
-   * Chuyến vừa tạo — chỉ nạp khi ĐANG chờ tiền. Một lượt đọc phục vụ hai chỗ: thẻ tóm tắt cần
-   * biển số (phiếu gửi yêu cầu không mang nó) và khối QR cần khoản giữ chỗ. Truyền chuỗi rỗng khi
-   * chưa tới chặng đó thì `useTrip` tự tắt — không có request nào cho chuyến chưa cần.
-   */
-  const holdTrip = useTrip(awaitingHold && receipt ? receipt.id : '');
 
   const longTerm = values.serviceType === SERVICE_TYPE.LONG_TERM;
   const withDriver = values.serviceType === SERVICE_TYPE.WITH_DRIVER;
@@ -212,14 +241,8 @@ function DoneResult({
                 phản hồi": chuyến đã được nhận, đồng hồ đang chạy, việc tiếp theo thuộc về KHÁCH.
               */}
               <Text col={colors.text} fos={fontSize.h3} fow={fontWeight.bold} ta="center">
-                {t(awaitingHold ? 'done.heldTitle' : 'done.title')}
+                {t('done.title')}
               </Text>
-              {/* Tiêu đề nói chỗ đã giữ; dòng này nói vì sao CHƯA xong — hai ý khác nhau. */}
-              {awaitingHold ? (
-                <Text col={colors.textMuted} fos={fontSize.bodySm} ta="center">
-                  {t('done.heldSubtitle')}
-                </Text>
-              ) : null}
               {/*
                 Mã yêu cầu là thứ khách đọc cho tổng đài khi gọi hỗ trợ, nên nó phải CHÉP ĐƯỢC —
                 một chuỗi 26 ký tự đọc qua điện thoại là một chuỗi đọc sai.
@@ -236,34 +259,16 @@ function DoneResult({
                   />
                 </XStack>
               ) : null}
-              {/*
-                Chặng chờ tiền KHÔNG có đoạn mô tả ở đây: tiêu đề đã nói chỗ được giữ, và khối QR
-                ngay dưới nói phải làm gì cùng hệ quả khi hết giờ. Thêm một đoạn nữa là nói lại
-                lần thứ ba và đẩy mã QR xuống dưới nếp gấp.
-              */}
-              {awaitingHold ? null : (
-                <Text col={colors.textMuted} fos={fontSize.bodySm} ta="center">
-                  {t('done.body')}
-                </Text>
-              )}
+              <Text col={colors.textMuted} fos={fontSize.bodySm} ta="center">
+                {t('done.body')}
+              </Text>
             </YStack>
           </YStack>
 
           <YStack alignSelf="stretch">
             <Card>
               <YStack gap={space.sm}>
-                <DataRow
-                  label={t('review.vehicle')}
-                  /*
-                    Biển số chỉ tồn tại khi chỗ đã THẬT SỰ được giữ — phiếu gửi yêu cầu không mang
-                    nó, và ở chặng chờ duyệt thì chưa có chiếc xe cụ thể nào được gán.
-                  */
-                  value={
-                    holdTrip.data?.vehicle.plateNumber
-                      ? `${listing.name}${LIST_SEPARATOR}${holdTrip.data.vehicle.plateNumber}`
-                      : listing.name
-                  }
-                />
+                <DataRow label={t('review.vehicle')} value={listing.name} />
 
                 {/* Dài hạn CHƯA có khung giờ (ADR 0011) — thay bằng gói thuê và nguyện vọng nhận xe. */}
                 {longTerm ? (
@@ -327,107 +332,43 @@ function DoneResult({
           </YStack>
 
           {/*
-            Ba nhánh LOẠI TRỪ nhau:
-
-            - chờ tiền ⇒ KHÔNG có dải nào, vì `TripHoldPanel` ngay dưới đã mở đầu bằng đúng câu
-              đó, và hai khối nói cùng một điều chỉ đẩy mã QR xuống dưới nếp gấp;
-            - tự nhận ⇒ lịch đã giữ, nói mừng;
-            - còn lại ⇒ CHƯA GIỮ XE, lời quan trọng nhất của màn này (ADR 0006).
+            Hai nhánh: tự nhận ⇒ lịch đã giữ, nói mừng; còn lại ⇒ CHƯA GIỮ XE, lời quan trọng nhất
+            của màn này (ADR 0006). Chặng CHỜ TIỀN không tới màn này: luồng đã chuyển thẳng sang màn
+            thanh toán của chuyến (web PR #183).
           */}
-          {awaitingHold ? null : (
-            <XStack
-              alignSelf="stretch"
-              ai="flex-start"
-              gap={space.sm}
-              bg={receipt?.autoAccepted ? colors.successSurface : colors.warningSurface}
-              bw={1}
-              bc={receipt?.autoAccepted ? colors.success : colors.warning}
-              p={space.md}
-              br={radius.md}
-            >
-              <Ionicons
-                name={receipt?.autoAccepted ? 'checkmark-circle' : 'alert-circle'}
-                size={iconSize.md}
-                color={receipt?.autoAccepted ? colors.success : colors.warning}
-              />
-              <Text f={1} col={colors.text} fos={fontSize.bodySm}>
-                {t(receipt?.autoAccepted ? 'done.autoAccepted' : 'done.notReserved')}
-              </Text>
-            </XStack>
-          )}
-
-          {/*
-            MÃ QR NGAY TẠI ĐÂY — chỉ khi hệ thống vừa TỰ NHẬN chuyến (ADR 0044 điều 2).
-
-            Dùng lại `TripHoldPanel` của màn chi tiết chuyến chứ không vẽ QR lần thứ hai: đó là nơi
-            đã có đồng hồ đếm ngược, nút sao chép và mọi trạng thái hoàn tiền. Hai bản QR là hai
-            chỗ để số tiền hoặc nội dung chuyển khoản trôi khỏi nhau — và một nội dung sai là một
-            khoản tiền không khớp được.
-          */}
-          {awaitingHold && receipt ? (
-            <YStack alignSelf="stretch">
-              <HoldBlock tripId={receipt.id} trip={holdTrip} />
-            </YStack>
-          ) : null}
+          <XStack
+            alignSelf="stretch"
+            ai="flex-start"
+            gap={space.sm}
+            bg={receipt?.autoAccepted ? colors.successSurface : colors.warningSurface}
+            bw={1}
+            bc={receipt?.autoAccepted ? colors.success : colors.warning}
+            p={space.md}
+            br={radius.md}
+          >
+            <Ionicons
+              name={receipt?.autoAccepted ? 'checkmark-circle' : 'alert-circle'}
+              size={iconSize.md}
+              color={receipt?.autoAccepted ? colors.success : colors.warning}
+            />
+            <Text f={1} col={colors.text} fos={fontSize.bodySm}>
+              {t(receipt?.autoAccepted ? 'done.autoAccepted' : 'done.notReserved')}
+            </Text>
+          </XStack>
 
           {/*
             Hai lối đi, đúng cặp web bày ở đây: sang Chuyến của tôi, hoặc nhắn thẳng chủ xe.
-
-            Hỏi thêm chủ xe (giao xe ở đâu, có giao sớm hơn được không) là việc RẤT hay xảy ra
-            ngay sau khi gửi. Nút "Quay lại" thứ ba của web đưa ngược về trang chi tiết chiếc xe
-            vừa gửi yêu cầu — ở app thì cử chỉ lui và nút lui của Android đã làm đúng việc đó.
           */}
           <YStack alignSelf="stretch" gap={space.sm}>
-            {/*
-              Đang chờ tiền thì đích là CHUYẾN NÀY, không phải danh sách: khách cần chỗ có mã QR và
-              đồng hồ, và họ sẽ quay lại đó sau khi mở app ngân hàng xong.
-            */}
             <Button
-              label={t(awaitingHold ? 'done.openHold' : 'done.myTrips')}
+              label={t('done.myTrips')}
               size="lg"
-              {...(awaitingHold ? { icon: 'time-outline' as const } : {})}
-              onPress={() =>
-                router.replace(
-                  awaitingHold && receipt
-                    ? ROUTES.booking.detail(receipt.id)
-                    : ROUTES.booking.list(),
-                )
-              }
+              onPress={() => router.replace(ROUTES.booking.list())}
             />
             <ChatWithShopButton vehicleId={listing.id} label={t('done.chatShop')} size="lg" />
           </YStack>
         </YStack>
       </Screen>
     </>
-  );
-}
-
-/**
- * Khối mã QR ở bước cuối — ba trạng thái, và KHÔNG trạng thái nào im lặng.
- *
- * Khách vừa được báo là chỗ đã giữ và đồng hồ đang chạy, nên một khoảng trống ở đây là cách chắc
- * chắn để họ bỏ đi mà không trả tiền. Nạp hỏng thì chỉ đường sang màn chuyến, nơi đúng khối này
- * được nạp lại.
- */
-function HoldBlock({
-  tripId,
-  trip,
-}: {
-  tripId: string;
-  /** Kết quả nạp do màn truyền xuống — một lượt đọc dùng cho cả thẻ tóm tắt lẫn khối này. */
-  trip: ReturnType<typeof useTrip>;
-}) {
-  const t = useTranslations('BookingRequests.flow');
-
-  if (trip.isPending) return <MiniRowsSkeleton rows={6} />;
-  if (!trip.data?.hold) return <Callout tone="warning">{t('done.holdLoadFailed')}</Callout>;
-
-  return (
-    <TripHoldPanel
-      hold={trip.data.hold}
-      tripId={tripId}
-      tripTotalAmount={trip.data.estimate?.fees?.customerTotalAmount ?? null}
-      payAtHandoverAmount={trip.data.estimate?.fees?.payAtPickupAmount ?? null}
-    />
   );
 }

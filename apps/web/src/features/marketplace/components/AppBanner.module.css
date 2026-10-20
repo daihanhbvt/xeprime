@@ -1,0 +1,177 @@
+/*
+ * Banner tải ứng dụng (Figma `19695:40877`, ADR 0062): nền nâu vàng đậm + ảnh nền vàng, logo,
+ * hai huy hiệu cửa hàng kính mờ và mockup điện thoại 332 × 382 bị khung cắt ở mép trên/phải.
+ * Toạ độ là của bản vẽ (khung rộng 458px, cao 342px); điện thoại neo theo mép PHẢI để khung rộng
+ * hơn (tablet, hay khi chưa có đánh giá) vẫn giữ đúng bố cục.
+ */
+.banner {
+  position: relative;
+  overflow: hidden;
+  min-height: 342px;
+  border-radius: var(--xp-border-radius-card);
+  background: var(--xp-color-primary-strong);
+  color: var(--xp-color-text-on-dark);
+  isolation: isolate;
+}
+
+.fill {
+  object-fit: fill;
+}
+
+/* Ảnh nền: rộng 337.73%, cao 127.35%, lùi trái 46.04%, lùi lên 3.12% (Figma). */
+.backdrop {
+  position: absolute;
+  z-index: -2;
+  top: -3.12%;
+  left: -46.04%;
+  width: 337.73%;
+  height: 127.35%;
+}
+
+.glow {
+  position: absolute;
+  z-index: -1;
+  top: 50%;
+  left: 0;
+  display: flex;
+  width: 458px;
+  height: 342px;
+  align-items: center;
+  justify-content: center;
+  mix-blend-mode: screen;
+  transform: translateY(-50%);
+}
+
+.glowInner {
+  position: relative;
+  overflow: hidden;
+  width: 342px;
+  height: 458px;
+  flex: none;
+  filter: blur(10px);
+  transform: rotate(-90deg) scaleY(-1);
+}
+
+.glowCrop {
+  position: absolute;
+  top: -10.96%;
+  left: -8.48%;
+  width: 121.05%;
+  height: 128.03%;
+}
+
+.logo {
+  position: absolute;
+  top: 36px;
+  left: 20px;
+  width: 216px;
+  height: 68px;
+}
+
+.title {
+  position: absolute;
+  top: 120px;
+  left: 19px;
+  margin: 0;
+  color: var(--xp-color-text-on-dark);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-lg);
+  white-space: nowrap;
+}
+
+.badges {
+  position: absolute;
+  z-index: 1;
+  top: 209.83px;
+  left: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0;
+  margin: 0;
+  gap: var(--xp-space-md);
+  list-style: none;
+}
+
+.badge {
+  display: inline-flex;
+  overflow: hidden;
+  align-items: center;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-text-on-dark);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-glass-faint);
+  backdrop-filter: blur(6px);
+  color: var(--xp-color-text-on-dark);
+  gap: var(--xp-space-6);
+  transition: background-color 0.15s ease;
+}
+
+.badge:hover {
+  background: var(--xp-color-glass);
+  color: var(--xp-color-text-on-dark);
+}
+
+.badge:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.badgeText {
+  display: flex;
+  width: 93px;
+  flex-direction: column;
+}
+
+.badgeCaption {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 12px;
+  white-space: nowrap;
+}
+
+.badgeStore {
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+/* Mockup 332 × 382, đỉnh ở −14px; trong khung 458px thì lề trái 181px = mép phải lố ra 55px. */
+.device {
+  position: absolute;
+  top: -14px;
+  right: -55px;
+  overflow: hidden;
+  width: 332px;
+  height: 382px;
+}
+
+.frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 99.86%;
+  height: 110.07%;
+}
+
+.screen {
+  position: absolute;
+  top: 1.34%;
+  right: 2.92%;
+  bottom: -5.28%;
+  left: 0.15%;
+}
+
+/* Màn hẹp: không đủ chỗ cho điện thoại cạnh hai huy hiệu — bỏ mockup, giữ lời mời tải app. */
+@media (max-width: 640px) {
+  .device {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .badge {
+    transition: none;
+  }
+}

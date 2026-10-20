@@ -1,16 +1,19 @@
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
+import { NotificationModule } from '../notification/notification.module';
+import { DriverSelfController } from './driver-self.controller';
+import { DriverSelfService } from './driver-self.service';
 import { DriversController } from './drivers.controller';
 import { DriversService } from './drivers.service';
 
 /**
- * `DriversService` export cho module bookings: gán tài xế vào đơn phải đi qua
- * `findAssignable` — một nơi định nghĩa "tài xế gán được" (cùng tenant, active, chưa xoá).
+ * Tài xế liên kết (ADR 0063). `DriversService` export cho bookings / booking-requests /
+ * vehicle-settings: mọi lượt gán, gỡ, báo tài xế đi qua MỘT writer.
  */
 @Module({
-  imports: [AuditModule],
-  controllers: [DriversController],
-  providers: [DriversService],
+  imports: [AuditModule, NotificationModule],
+  controllers: [DriversController, DriverSelfController],
+  providers: [DriversService, DriverSelfService],
   exports: [DriversService],
 })
 export class DriversModule {}

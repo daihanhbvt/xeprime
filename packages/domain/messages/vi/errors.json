@@ -25,6 +25,7 @@
     "MISSING_PERMISSION": "Bạn không có quyền thực hiện thao tác này.",
     "NO_TENANT_SCOPE": "Tài khoản chưa thuộc gian hàng nào.",
     "TENANT_NOT_ACTIVE": "Gian hàng chưa được kích hoạt.",
+    "BANNER_VISIBLE_LIMIT_EXCEEDED": "Đã đủ số banner được hiển thị cùng lúc. Tắt hoặc dời lịch một banner khác trước.",
     "VALIDATION_FAILED": "Dữ liệu chưa hợp lệ. Kiểm tra lại các ô đã nhập.",
     "NOT_FOUND": "Không tìm thấy dữ liệu.",
     "CONFLICT": "Dữ liệu vừa thay đổi ở nơi khác. Tải lại rồi thử lại.",
@@ -181,7 +182,19 @@
     "REALM_LOGIN_METHOD_NOT_ALLOWED": "Cách đăng nhập này không dùng được ở đây. Hãy đăng nhập bằng email và mật khẩu.",
     "ORIGIN_NOT_ALLOWED": "Yêu cầu bị chặn vì không đến từ trang XePrime. Tải lại trang rồi thử lại.",
     "MEMBER_ALREADY_IN_OTHER_TENANT": "Tài khoản này đang làm việc cho một gian hàng khác. Mỗi tài khoản đối tác chỉ thuộc một gian hàng.",
-    "OTP_SMS_REQUIRED_IN_PRODUCTION": "Môi trường thật luôn gửi SMS OTP — không tắt được công tắc này."
+    "OTP_SMS_REQUIRED_IN_PRODUCTION": "Môi trường thật luôn gửi SMS OTP — không tắt được công tắc này.",
+    "DRIVER_ACCOUNT_NOT_FOUND": "Số điện thoại này chưa có tài khoản XePrime đã xác minh. Nhờ tài xế đăng ký tài khoản bằng đúng số này rồi mời lại.",
+    "DRIVER_ALREADY_LINKED": "Tài khoản này đã có lời mời hoặc đang là tài xế của bạn.",
+    "DRIVER_LINK_STATE_CONFLICT": "Liên kết tài xế vừa đổi trạng thái. Vui lòng tải lại.",
+    "DRIVER_BUSY": "Tài xế đã có chuyến khác trong khung giờ này. Chọn tài xế khác.",
+    "DRIVER_ASSIGN_SERVICE_NOT_SUPPORTED": "Chỉ đơn thuê có tài xế mới gán tài xế được.",
+    "DRIVER_IS_TRIP_CUSTOMER": "Tài xế này là khách của chính chuyến này. Chọn tài xế khác.",
+    "DRIVER_NOT_ASSIGNABLE": "Tài xế chưa sẵn sàng (đang chờ đồng ý hoặc bị tạm khoá).",
+    "DRIVER_ASSIGNMENT_STATE_CONFLICT": "Chuyến này không còn chờ bạn xác nhận.",
+    "DRIVER_ASSIGNMENT_LOCKED": "Đơn đã giao xe hoặc đã kết thúc — không đổi tài xế được nữa.",
+    "DRIVER_HAS_ACTIVE_TRIP": "Tài xế đang chạy chuyến. Chờ trả xe xong rồi mới kết thúc liên kết.",
+    "VEHICLE_SERVICE_IN_USE": "Không bỏ được dịch vụ này vì xe còn chuyến chưa xong dùng dịch vụ đó. Hoàn tất hoặc huỷ các chuyến đó trước.",
+    "DRIVER_HAS_ACCEPTED_TRIPS": "Bạn còn chuyến đã nhận chưa giao xe. Liên hệ bên thuê để họ đổi tài xế trước khi ngừng làm tài xế."
   },
   "appCode": {
     "PLAN_LIMIT_REACHED": "Tài khoản của bạn đã đạt giới hạn.",

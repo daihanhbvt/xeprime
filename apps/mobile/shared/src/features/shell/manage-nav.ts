@@ -305,7 +305,7 @@ const SHOP_NAV: readonly ManageNavSection[] = [
         labelKey: 'manage.drivers',
         icon: 'id-card-outline',
         permission: PERMISSION.DRIVER_VIEW,
-        feature: PLAN_FEATURE.DRIVERS,
+        // Không gác bằng cờ gói: tài xế mở cho cả hai tuyến (ADR 0063).
         href: ROUTES.manage.drivers(),
       },
       {
@@ -435,6 +435,14 @@ const OWNER_LITE_NAV: readonly ManageNavSection[] = [
         permission: PERMISSION.TENANT_VIEW,
         href: ROUTES.manage.chat(),
         badge: MANAGE_NAV_BADGE.CHAT_UNREAD,
+      },
+      {
+        // Chủ xe cá nhân cũng mời tài xế cho chuyến có tài xế (ADR 0063) — gương web `OWNER_LITE_NAV`.
+        key: 'drivers',
+        labelKey: 'manage.drivers',
+        icon: 'id-card-outline',
+        permission: PERMISSION.DRIVER_VIEW,
+        href: ROUTES.manage.drivers(),
       },
     ],
   },

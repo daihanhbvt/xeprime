@@ -8,13 +8,9 @@ import {
   BOOKING_REQUEST_STATUS,
   DEPOSIT_COLLECTION_MODE,
   DEPOSIT_POLICY_REASON,
-  FEATURE_STATE,
-  type FeatureState,
   MEMBERSHIP_STATUS,
   PLAN_FEATURE,
-  PLAN_FEATURE_VALUES,
   PLAN_STATUS,
-  type PlanFeature,
   SERVICE_TYPE,
   SUBSCRIPTION_STATUS,
   TENANT_ROLE,
@@ -25,6 +21,7 @@ import {
 import { AuditService } from '../src/modules/audit/audit.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { VehicleSettingsService } from '../src/modules/vehicle-settings/vehicle-settings.service';
+import { ListingsService } from '../src/modules/public-listings/listings.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { customerAccountFor } from './helpers/customer-account';
 import {
@@ -33,6 +30,7 @@ import {
   makeDepositPolicyService,
   makeNotificationService,
   makePricingService,
+  makeDriversService,
 } from './helpers/service-factory';
 
 /**
@@ -58,7 +56,7 @@ const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
 const notifications = makeNotificationService(asService);
 const occupancy = new OccupancyService(asService);
-const settings = new VehicleSettingsService(asService, audit, occupancy);
+const settings = new VehicleSettingsService(asService, audit, occupancy, new ListingsService(asService), makeDriversService(asService));
 const depositPolicy = makeDepositPolicyService(asService);
 /** Đường tiền THẬT của khoản giữ chỗ — dùng để chứng minh hold cũ vẫn chốt được sau khi công tắc đổi. */
 const holds = makeBookingHoldsService(asService);
@@ -94,14 +92,6 @@ const twoAxisRequests = makeBookingRequestsService(asService, {
   depositPolicy: twoAxis,
   pricing: makePricingService(asService, { depositPolicy: twoAxis }),
 });
-
-/*
- * Tự động nhận chuyến KHÔNG nằm sau cờ gói nào — nó thuộc bộ cơ bản (ADR 0027 điều 1). Truyền
- * bản đồ toàn `hidden` để chứng minh điều đó: nếu một ngày ai đó gác nó sau một cờ, spec này đỏ.
- */
-const HIDDEN_FEATURES = Object.fromEntries(
-  PLAN_FEATURE_VALUES.map((f) => [f, FEATURE_STATE.HIDDEN]),
-) as Record<PlanFeature, FeatureState>;
 
 const RUN = newId().slice(-8).toLowerCase();
 const DAY = 24 * 3600_000;
@@ -564,7 +554,6 @@ describe('TỰ NHẬN đơn áp CÙNG chính sách với duyệt tay (khi giai �
       SERVICE_TYPE.SELF_DRIVE,
       packagePlus.owner,
       { autoAcceptEnabled: true },
-      HIDDEN_FEATURES,
     );
     await setToggle(packagePlus.tenant, true);
 
@@ -582,7 +571,6 @@ describe('TỰ NHẬN đơn áp CÙNG chính sách với duyệt tay (khi giai �
       SERVICE_TYPE.SELF_DRIVE,
       packagePlus.owner,
       { autoAcceptEnabled: true },
-      HIDDEN_FEATURES,
     );
 
     const receipt = await submit(packagePlus, 20, twoAxisRequests);

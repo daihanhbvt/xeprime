@@ -25,10 +25,61 @@ const SELECT = {
   label: true,
   description: true,
   iconUrl: true,
+  showOnHome: true,
+  showcaseImageUrl: true,
+  showcaseExamples: true,
   sortOrder: true,
   active: true,
   vehicleTypes: true,
 } as const;
+
+/** Ba trường của khối "Loại xe" trang chủ — có mặt trong payload tạo/sửa thì mới đụng tới. */
+type ShowcaseInput = Pick<
+  CreateCatalogItemDto,
+  'showOnHome' | 'showcaseImageUrl' | 'showcaseExamples'
+>;
+
+/**
+ * Trạng thái trang chủ SAU lượt ghi — ghép giá trị gửi lên với giá trị đang lưu (lượt sửa chỉ
+ * gửi phần đổi), rồi kiểm hai luật trước khi chạm DB (CHECK ở migration là chốt chặn cuối):
+ *   · chỉ KIỂU DÁNG có khối trang chủ;
+ *   · bật "hiện ở trang chủ" thì phải có ảnh lớn — trang chủ không dựng thẻ thiếu ảnh.
+ */
+function resolveShowcase(
+  type: string,
+  dto: ShowcaseInput,
+  current?: {
+    showOnHome: boolean;
+    showcaseImageUrl: string | null;
+    showcaseExamples: string | null;
+  },
+) {
+  const next = {
+    showOnHome: dto.showOnHome ?? current?.showOnHome ?? false,
+    showcaseImageUrl:
+      'showcaseImageUrl' in dto
+        ? dto.showcaseImageUrl?.trim() || null
+        : (current?.showcaseImageUrl ?? null),
+    showcaseExamples:
+      'showcaseExamples' in dto
+        ? dto.showcaseExamples?.trim() || null
+        : (current?.showcaseExamples ?? null),
+  };
+  const touchesShowcase = next.showOnHome || next.showcaseImageUrl || next.showcaseExamples;
+  if (type !== CATALOG_TYPE.BODY_TYPE && touchesShowcase) {
+    throw new BadRequestException({
+      code: API_ERROR_CODE.VALIDATION_FAILED,
+      message: 'Chỉ kiểu dáng xe mới có khối "Loại xe" ở trang chủ',
+    });
+  }
+  if (next.showOnHome && !next.showcaseImageUrl) {
+    throw new BadRequestException({
+      code: API_ERROR_CODE.VALIDATION_FAILED,
+      message: 'Bật hiện ở trang chủ thì phải tải ảnh trang chủ',
+    });
+  }
+  return next;
+}
 
 /**
  * Mục áp dụng cho loại xe đang hỏi.
@@ -102,6 +153,8 @@ export class CatalogService {
       throw new ConflictException(`Mã "${dto.key}" đã tồn tại trong danh mục này`);
     }
 
+    const showcase = resolveShowcase(dto.type, dto);
+
     const row = await this.prisma.$transaction(async (tx) => {
       const created = await tx.catalogItem.create({
         data: {
@@ -111,6 +164,7 @@ export class CatalogService {
           label: dto.label.trim(),
           description: dto.description?.trim() || null,
           iconUrl: dto.iconUrl?.trim() || null,
+          ...showcase,
           sortOrder: dto.sortOrder ?? (await this.nextSortOrder(dto.type)),
           vehicleTypes: dto.vehicleTypes ?? [],
           active: dto.active ?? true,
@@ -124,7 +178,12 @@ export class CatalogService {
           action: 'catalog.create',
           targetType: 'catalog_item',
           targetId: created.id,
-          after: { type: dto.type, key: dto.key, label: created.label },
+          after: {
+            type: dto.type,
+            key: dto.key,
+            label: created.label,
+            showOnHome: created.showOnHome,
+          },
         },
         tx,
       );
@@ -139,6 +198,7 @@ export class CatalogService {
     dto: UpdateCatalogItemDto,
   ): Promise<CatalogItemDto> {
     const current = await this.load(id);
+    const showcase = resolveShowcase(current.type, dto, current);
 
     const row = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.catalogItem.update({
@@ -147,6 +207,7 @@ export class CatalogService {
           ...(dto.label !== undefined ? { label: dto.label.trim() } : {}),
           ...('description' in dto ? { description: dto.description?.trim() || null } : {}),
           ...('iconUrl' in dto ? { iconUrl: dto.iconUrl?.trim() || null } : {}),
+          ...showcase,
           ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
           ...(dto.vehicleTypes !== undefined ? { vehicleTypes: dto.vehicleTypes } : {}),
           ...(dto.active !== undefined ? { active: dto.active } : {}),
@@ -160,8 +221,20 @@ export class CatalogService {
           action: 'catalog.update',
           targetType: 'catalog_item',
           targetId: id,
-          before: { label: current.label, active: current.active, iconUrl: current.iconUrl },
-          after: { label: updated.label, active: updated.active, iconUrl: updated.iconUrl },
+          before: {
+            label: current.label,
+            active: current.active,
+            iconUrl: current.iconUrl,
+            showOnHome: current.showOnHome,
+            showcaseImageUrl: current.showcaseImageUrl,
+          },
+          after: {
+            label: updated.label,
+            active: updated.active,
+            iconUrl: updated.iconUrl,
+            showOnHome: updated.showOnHome,
+            showcaseImageUrl: updated.showcaseImageUrl,
+          },
         },
         tx,
       );

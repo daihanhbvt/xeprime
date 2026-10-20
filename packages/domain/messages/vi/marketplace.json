@@ -17,14 +17,17 @@
         "title": "XePrime",
         "about": "Giới thiệu XePrime",
         "app": "Tải ứng dụng",
-        "support": "Trung tâm trợ giúp"
+        "support": "Trung tâm trợ giúp",
+        "heading": "Về XePrime",
+        "aboutShort": "Giới thiệu"
       },
       "legal": {
         "title": "Pháp lý",
         "terms": "Điều khoản sử dụng",
         "privacy": "Chính sách bảo mật",
         "marketplaceRules": "Quy chế hoạt động sàn",
-        "cancellation": "Chính sách huỷ và hoàn tiền"
+        "cancellation": "Chính sách huỷ và hoàn tiền",
+        "cancellationShort": "Chính sách huỷ & hoàn tiền"
       }
     },
     "apps": {
@@ -32,7 +35,9 @@
     },
     "backToTop": "Lên đầu trang",
     "copyright": "© {year} XePrime",
-    "country": "Nền tảng cho thuê xe tại Việt Nam"
+    "country": "Nền tảng cho thuê xe tại Việt Nam",
+    "copyrightCompany": "© {year} <brand>XePrime</brand>. Bảo lưu mọi quyền.",
+    "localeLabel": "Ngôn ngữ"
   },
   "steps": {
     "title": "Thuê xe chỉ với 4 bước",
@@ -155,11 +160,6 @@
     "countSuffix": "xe",
     "applyWithCount": "Áp dụng ({count, plural, other {# xe}})",
     "motorbikeCategory": "Phân khúc xe máy"
-  },
-  "ownerCta": {
-    "title": "Đăng xe cho thuê",
-    "desc": "Bạn có xe nhàn rỗi? Tạo thu nhập thụ động từ xe của bạn trên XePrime.",
-    "action": "Tìm hiểu thêm"
   },
   "searchDialog": {
     "title": "Tìm kiếm",

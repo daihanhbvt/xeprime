@@ -223,6 +223,18 @@
   }
 }
 
+@media (min-width: 2000px) {
+  .grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 2400px) {
+  .grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
 .cell {
   min-width: 0;
 }

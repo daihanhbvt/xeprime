@@ -34,6 +34,7 @@ import {
 import {
   CROSS_REALM_TWINS,
   CUSTOMER_ACCOUNTS,
+  DRIVER_ACCOUNTS,
   PLATFORM_ACCOUNTS,
   type CustomerKey,
 } from './identities';
@@ -225,6 +226,26 @@ export async function seedCustomerAccounts(): Promise<CustomerAccounts> {
 
   log(`  tài khoản khách: ${CUSTOMER_ACCOUNTS.length}`);
   return accounts;
+}
+
+/** Tài khoản KHÁCH của tài xế (ADR 0063) — theo vị trí trong `DRIVER_ACCOUNTS`. */
+export type DriverAccounts = readonly { userId: string; name: string; phone: string }[];
+
+export async function seedDriverAccounts(): Promise<DriverAccounts> {
+  const out: { userId: string; name: string; phone: string }[] = [];
+  for (const driver of DRIVER_ACCOUNTS) {
+    const userId = await upsertPasswordUser({
+      realm: ACCOUNT_REALM.CUSTOMER,
+      email: driver.email,
+      password: DEMO_PASSWORD,
+      displayName: driver.displayName,
+      phone: driver.phone,
+      phoneVerified: true,
+    });
+    out.push({ userId, name: driver.displayName, phone: driver.phone });
+  }
+  log(`  tài khoản tài xế: ${DRIVER_ACCOUNTS.length}`);
+  return out;
 }
 
 // ---------------------------------------------------------------------------

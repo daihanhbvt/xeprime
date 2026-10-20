@@ -254,6 +254,56 @@ describe('ReviewService — tạo đánh giá + recompute rating', () => {
    * slug lạ phải cho ra một trang RỖNG — không phải một ngoại lệ làm hỏng cả trang vì một lý do
    * mà trang đã xử lý xong.
    */
+  /*
+   * "Khách hàng nói gì về Xe Prime" (trang chủ, ADR 0062): chỉ trích lời khen có nội dung, của
+   * gian hàng đang hoạt động; "Đã thuê N lần" đếm chuyến HOÀN THÀNH của tài khoản người viết.
+   * Review của spec này mới nhất toàn sàn (vừa tạo) nên nằm trong cửa sổ `limit` lớn nhất.
+   */
+  maybe('đánh giá nổi bật: lấy ≥4 sao có lời nhận xét, đếm chuyến của người viết', async () => {
+    const featured = await reviews.listFeatured({ limit: 12 });
+    const mine = featured.filter((r) => r.vehicleId === vehicleId);
+    // Review 5 sao có lời nhận xét lọt vào; review 3 sao (không lời) thì không.
+    expect(mine).toHaveLength(1);
+    expect(mine[0]?.rating).toBe(5);
+    expect(mine[0]?.comment).toBe('Xe sạch, chủ nhiệt tình');
+    expect(mine[0]?.customerName).toBe('Nguyễn Văn A.');
+    expect(mine[0]?.vehicleName).toBe('Xe demo');
+    // Hai đơn COMPLETED qua yêu cầu thuê của chính tài khoản đó; đơn RESERVED không tính.
+    expect(mine[0]?.customerTripCount).toBe(2);
+  });
+
+  /** Một gian hàng nhiều đánh giá không được chiếm cả băng chuyền "Khách hàng nói gì". */
+  maybe('đánh giá nổi bật: mỗi gian hàng góp tối đa 2 lời', async () => {
+    const featured = await reviews.listFeatured({ limit: 12 });
+    const vehicles = await prisma.vehicle.findMany({
+      where: { id: { in: featured.map((r) => r.vehicleId) } },
+      select: { id: true, tenantId: true },
+    });
+    const tenantOf = new Map(vehicles.map((v) => [v.id, v.tenantId]));
+    const perTenant = new Map<string, number>();
+    for (const r of featured) {
+      const tenant = tenantOf.get(r.vehicleId) ?? '';
+      perTenant.set(tenant, (perTenant.get(tenant) ?? 0) + 1);
+    }
+    expect(Math.max(0, ...perTenant.values())).toBeLessThanOrEqual(2);
+  });
+
+  maybe('đánh giá nổi bật: gian hàng bị khoá thì lời khen của nó rút khỏi trang chủ', async () => {
+    await prisma.tenant.update({
+      where: { id: tenantId },
+      data: { status: TENANT_STATUS.SUSPENDED },
+    });
+    try {
+      const featured = await reviews.listFeatured({ limit: 12 });
+      expect(featured.some((r) => r.vehicleId === vehicleId)).toBe(false);
+    } finally {
+      await prisma.tenant.update({
+        where: { id: tenantId },
+        data: { status: TENANT_STATUS.ACTIVE },
+      });
+    }
+  });
+
   maybe('list theo gian hàng với slug không tồn tại → rỗng, không ném', async () => {
     const res = await reviews.listForShop('khong-ton-tai-xyz', {});
     expect(res.meta.total).toBe(0);

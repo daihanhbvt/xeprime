@@ -46,6 +46,8 @@ export const SESSION_TTL_DAYS = 7;
  * cho đồng hồ "Gửi lại" — gửi sớm hơn là chắc chắn bị server từ chối.
  */
 export const OTP_POLICY = {
+  /** Số chữ số của mã — ô nhập mã (một dòng hay sáu ô) và phép tự gửi khi gõ đủ đều đọc từ đây. */
+  CODE_LENGTH: 6,
   TTL_MINUTES: 5,
   RESEND_COOLDOWN_SECONDS: 60,
   MAX_SENDS_PER_HOUR: 5,

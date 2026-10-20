@@ -140,6 +140,12 @@ export const API_ERROR_CODE = {
   VALIDATION_FAILED: 'VALIDATION_FAILED',
   NOT_FOUND: 'NOT_FOUND',
   CONFLICT: 'CONFLICT',
+  /**
+   * Lưu/bật banner trang chủ làm vượt trần số banner HIỂN THỊ CÙNG LÚC (`details.max`). Mã riêng
+   * thay vì `VALIDATION_FAILED`: dữ liệu banner hợp lệ, thứ sai là lịch chồng lên các banner khác
+   * — màn quản trị nói đúng chuyện đó thay vì đoán từ mã chung.
+   */
+  BANNER_VISIBLE_LIMIT_EXCEEDED: 'BANNER_VISIBLE_LIMIT_EXCEEDED',
 
   // Nghiệp vụ lịch (ADR 0006)
   BOOKING_SCHEDULE_CONFLICT: 'BOOKING_SCHEDULE_CONFLICT',
@@ -579,6 +585,38 @@ export const API_ERROR_CODE = {
   DRIVER_LICENCE_IMAGE_INVALID: 'DRIVER_LICENCE_IMAGE_INVALID',
   /** Chạm trần lượt nộp trong 24 giờ (`details.limit`) — mỗi lượt chiếm vài giây CPU của máy chủ. */
   DRIVER_LICENCE_SUBMISSION_LIMIT: 'DRIVER_LICENCE_SUBMISSION_LIMIT',
+
+  /**
+   * Xe bỏ một loại dịch vụ khi còn chuyến ĐANG MỞ dùng loại đó (19/10/2026). `details.bookings`
+   * / `details.requests` liệt kê chuyến vướng (tối đa 20), `details.serviceTypes` loại bị bỏ.
+   */
+  VEHICLE_SERVICE_IN_USE: 'VEHICLE_SERVICE_IN_USE',
+
+  // Tài xế liên kết (ADR 0063)
+  /** SĐT được mời chưa có tài khoản KHÁCH đã xác minh — bên thuê không mời được. */
+  DRIVER_ACCOUNT_NOT_FOUND: 'DRIVER_ACCOUNT_NOT_FOUND',
+  /** Tài khoản này đã có lời mời / liên kết đang mở với bên thuê này. */
+  DRIVER_ALREADY_LINKED: 'DRIVER_ALREADY_LINKED',
+  /** Liên kết không ở trạng thái cho phép thao tác (vd chấp nhận một lời mời đã thu hồi). */
+  DRIVER_LINK_STATE_CONFLICT: 'DRIVER_LINK_STATE_CONFLICT',
+  /** Tài xế bận khung giờ này — có chuyến khác (ở bất kỳ bên thuê nào). Không nói bận việc gì. */
+  DRIVER_BUSY: 'DRIVER_BUSY',
+  /** Chỉ đơn CÓ TÀI XẾ (`with_driver`) mới gán tài xế được. */
+  DRIVER_ASSIGN_SERVICE_NOT_SUPPORTED: 'DRIVER_ASSIGN_SERVICE_NOT_SUPPORTED',
+  /** Tài xế chính là khách của chuyến này — không tự lái đơn mình thuê. */
+  DRIVER_IS_TRIP_CUSTOMER: 'DRIVER_IS_TRIP_CUSTOMER',
+  /** Liên kết chưa `active` (đang chờ đồng ý / tạm khoá) — chưa gán được. */
+  DRIVER_NOT_ASSIGNABLE: 'DRIVER_NOT_ASSIGNABLE',
+  /** Lượt gán không còn chờ tài xế trả lời (đã nhận / đã bị gỡ / đổi người). */
+  DRIVER_ASSIGNMENT_STATE_CONFLICT: 'DRIVER_ASSIGNMENT_STATE_CONFLICT',
+  DRIVER_ASSIGNMENT_LOCKED: 'DRIVER_ASSIGNMENT_LOCKED',
+  /**
+   * Tài xế xin ngừng khi còn chuyến ĐÃ NHẬN chưa giao xe — bên thuê phải đổi người trước.
+   * `details.count`, `details.trips: [{ id, code, pickupAt }]` (tối đa 20).
+   */
+  DRIVER_HAS_ACCEPTED_TRIPS: 'DRIVER_HAS_ACCEPTED_TRIPS',
+  /** Còn chuyến đang chạy — chưa chấm dứt liên kết được. `details.count`. */
+  DRIVER_HAS_ACTIVE_TRIP: 'DRIVER_HAS_ACTIVE_TRIP',
 
   // OCR giấy tờ xe (Wave 5)
   /** Chưa cấu hình nhà cung cấp OCR — trích xuất tự động không khả dụng, mời nhập tay. */

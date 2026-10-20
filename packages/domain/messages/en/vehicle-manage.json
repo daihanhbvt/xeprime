@@ -47,7 +47,13 @@
     "priceLossTitle": "Turning this service off clears its dedicated prices",
     "priceLossBody": "You will have to enter prices again when you re-enable it. Confirmed bookings are not affected.",
     "enabled": "{service} enabled",
-    "disabled": "{service} disabled"
+    "disabled": "{service} disabled",
+    "inUse": {
+      "title": "Service cannot be turned off yet",
+      "bookings": "Bookings using this service:",
+      "requests": "{count, plural, one {# pending booking request} other {# pending booking requests}} also use this service.",
+      "close": "Got it"
+    }
   },
   "disabledSection": {
     "title": "{service} is turned off",

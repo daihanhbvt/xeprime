@@ -187,6 +187,17 @@ function DetailBody({
               {phoneLink ? <a href={phoneLink}>{request.customerPhone}</a> : request.customerPhone}
             </Fact>
           ) : null}
+          {request.customerAccountPhone ? (
+            <Fact label={t('detail.accountPhone')}>
+              {telHref(request.customerAccountPhone) ? (
+                <a href={telHref(request.customerAccountPhone)!}>
+                  {request.customerAccountPhone}
+                </a>
+              ) : (
+                request.customerAccountPhone
+              )}
+            </Fact>
+          ) : null}
           {zaloLink ? (
             <Fact label={t('actions.zalo')}>
               <a href={zaloLink} target="_blank" rel="noopener noreferrer">

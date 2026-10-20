@@ -3,6 +3,8 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   API_ERROR_CODE,
+  HOLD_POLL_FALLBACK_MS,
+  HOLD_POLL_LIVE_MS,
   isAwaitingPayment,
   type BookingHoldStatus,
   type HandoverPhotoSlot,
@@ -68,9 +70,8 @@ export function useUnpaidHolds(enabled = true) {
  *    hình của khách đổi", đủ thưa để một cửa sổ hai giờ không thành vài nghìn request.
  *
  * TanStack dừng hẳn nhịp này khi cửa sổ mất focus, và hỏi lại ngay khi khách quay lại tab.
+ * Hai con số (`HOLD_POLL_LIVE_MS` / `HOLD_POLL_FALLBACK_MS`) dùng chung với app, ở `@xeprime/types`.
  */
-const HOLD_POLL_LIVE_MS = 120_000;
-const HOLD_POLL_FALLBACK_MS = 20_000;
 
 /**
  * Một chuyến. `id` nhận cả id yêu cầu lẫn id đơn — thông báo trỏ vào cả hai loại.
@@ -183,9 +184,14 @@ export function useCancelTrip(id: string) {
      * gian hàng vừa duyệt, hoặc vừa bấm giao xe. Màn đang cầm dữ liệu cũ, nên ngoài việc báo
      * lỗi phải kéo lại trạng thái thật: nút "Huỷ chuyến" tự biến mất thay vì mời bấm lại một
      * việc chắc chắn hỏng.
+     *
+     * `CONFLICT` cùng nghĩa, chỉ khác lúc xảy ra: gian hàng duyệt xen vào ĐÚNG lúc khách bấm huỷ
+     * (server claim theo trạng thái vừa đọc và được 0 dòng). Kéo lại chặng thật để màn đổi sang
+     * "đã được nhận" thay vì giữ khách ở màn chờ duyệt với một lỗi "vừa thay đổi".
      */
     onError: (error) => {
-      if (getErrorCode(error) === API_ERROR_CODE.TRIP_CANCEL_NOT_ALLOWED) {
+      const code = getErrorCode(error);
+      if (code === API_ERROR_CODE.TRIP_CANCEL_NOT_ALLOWED || code === API_ERROR_CODE.CONFLICT) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.trips.all });
       }
     },

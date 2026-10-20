@@ -19,6 +19,7 @@ import { refreshListingRankScore } from './listing-rank';
 import {
   seedCrossRealmTwins,
   seedCustomerAccounts,
+  seedDriverAccounts,
   seedCustomerDriverLicences,
   seedPlatformAccounts,
   seedPlatformAdmin,
@@ -35,7 +36,7 @@ import { CROSS_REALM_TWINS, CUSTOMER_ACCOUNTS, PLATFORM_ACCOUNTS } from './seed/
 import { buildShop } from './seed/shop';
 import { SHOP_SPECS } from './seed/shops';
 import { seedVehicleCatalog } from './seed/catalog-sync';
-import { seedSystemData } from './seed/system';
+import { seedDemoPromoBanners, seedSystemData } from './seed/system';
 
 /**
  * Gian hàng và tài khoản của SEED ĐỜI TRƯỚC (một gian hàng `xeprime-demo` duy nhất).
@@ -111,7 +112,9 @@ async function main(): Promise<void> {
   await cleanupLegacySeedData();
   const platform = await seedPlatformAccounts(adminUserId);
   const customers = await seedCustomerAccounts();
+  const drivers = await seedDriverAccounts();
   await seedCustomerDriverLicences(customers, adminUserId);
+  await seedDemoPromoBanners();
 
   log('\nGian hàng:');
   const brandLabels = await loadBrandLabels();
@@ -121,6 +124,7 @@ async function main(): Promise<void> {
       await buildShop(spec, {
         platform,
         customers,
+        drivers,
         financeCategoryIds: system.financeCategoryIds,
         planIds: system.planIds,
         brandLabels,

@@ -1,13 +1,11 @@
 import type { ReactNode } from 'react';
 
-import { AccountShell } from '@/features/account/components/AccountShell';
-
 /**
- * `/trips` và `/trips/[id]` mang CÙNG vỏ với khu tài khoản (menu trái + cổng đăng nhập) — URL
- * giữ nguyên để thông báo và link cũ không gãy; `TripsView`/`TripDetailView` không đổi một dòng.
+ * Layout của nhánh `/trips`.
  *
- * `AccountShell` không mang tiêu đề chung, nên `h1` của `TripsView` vẫn là `h1` duy nhất của trang.
+ * Vỏ `AccountShell` (menu trái) áp dụng cho trang danh sách `/trips` (trong `trips/page.tsx`).
+ * Chi tiết chuyến `/trips/[id]` hiển thị độc lập không có menu trái theo đúng chuẩn thiết kế Figma v2.
  */
 export default function TripsLayout({ children }: { children: ReactNode }) {
-  return <AccountShell>{children}</AccountShell>;
+  return children;
 }

@@ -1,0 +1,128 @@
+{
+  "page": {
+    "title": "Banner trang chủ",
+    "create": "Tạo banner",
+    "hint": "Có thể tạo không giới hạn; trang chủ hiển thị đầy đủ theo thứ tự từ trên xuống, nhưng tối đa {max} banner được phép trùng thời gian hiển thị. Mỗi cỡ màn một ảnh đúng tỉ lệ: PC {desktop} · tablet {tablet} · mobile {mobile} (hoặc @2x) — sai tỉ lệ sẽ bị chặn lúc tải lên.",
+    "composition": "Banner tự mang thông điệp — trang chủ không đặt chữ nào đè lên ảnh. Riêng ảnh PC ({desktop}) bị thẻ tìm kiếm đè lên khoảng 1/3 phía dưới, nên đặt chữ và chủ thể ở phần trên ảnh.",
+    "loadError": "Không tải được danh sách banner",
+    "empty": "Chưa có banner đầu trang nào — trang chủ đang dùng dải mặc định",
+    "promoHint": "Banner khuyến mãi nằm giữa trang chủ, ngay sau mục \"Xe tiêu biểu\". Có thể tạo không giới hạn, nhưng tối đa {max} banner được phép trùng thời gian hiển thị. Ảnh máy tính {desktop} (bắt buộc) · ảnh mobile {mobile} (tuỳ chọn) — sai tỉ lệ sẽ bị chặn lúc tải lên.",
+    "promoComposition": "Chữ, giá và hình nằm sẵn trong ảnh — trang chủ không đặt gì đè lên. Máy tính và tablet hiện hai banner một hàng; mobile trượt từng banner. Không có banner khuyến mãi nào đang hiển thị thì khối này ẩn hẳn khỏi trang chủ.",
+    "emptyPromo": "Chưa có banner khuyến mãi nào — khối khuyến mãi đang ẩn trên trang chủ"
+  },
+  "columns": {
+    "preview": "Ảnh",
+    "banner": "Banner",
+    "schedule": "Lịch hiển thị"
+  },
+  "schedule": {
+    "startNow": "Ngay lập tức",
+    "endNever": "vô hạn",
+    "unlimited": "Không giới hạn"
+  },
+  "status": {
+    "off": "Đã tắt",
+    "live": "Đang hiển thị",
+    "upcoming": "Chờ tới lịch",
+    "ended": "Hết lịch"
+  },
+  "actions": {
+    "moveUp": "Đưa lên trên",
+    "moveDown": "Đưa xuống dưới",
+    "enable": "Bật",
+    "disable": "Tắt",
+    "deleteConfirm": "Xoá banner này? Ảnh vẫn còn trên kho lưu trữ, tạo lại được từ URL cũ."
+  },
+  "toast": {
+    "created": "Đã tạo banner",
+    "updated": "Đã cập nhật banner",
+    "enabled": "Đã bật banner",
+    "disabled": "Đã tắt banner",
+    "deleted": "Đã xoá banner",
+    "capacityExceeded": "Chưa lưu được: tối đa {max} banner được hiển thị cùng thời điểm. Hãy tắt hoặc điều chỉnh lịch của banner khác trước."
+  },
+  "form": {
+    "titleCreate": "Tạo banner trang chủ",
+    "titleEdit": "Sửa banner trang chủ",
+    "eyebrowCreate": "Banner mới",
+    "eyebrowEdit": "Đang chỉnh sửa",
+    "intro": "Tạo một bộ ảnh responsive cho dải banner đầu trang chủ. Banner tự mang thông điệp và hiển thị trọn vẹn khi đúng tỉ lệ; riêng ảnh máy tính có thẻ tìm kiếm đè lên phần dưới.",
+    "sizesBadge": "{count, plural, other {# kích thước}}",
+    "sections": {
+      "basic": {
+        "title": "Thông tin nội bộ",
+        "description": "Giúp đội vận hành nhận diện chiến dịch."
+      },
+      "media": {
+        "title": "Ảnh responsive",
+        "description": "Nên dùng file @2x để ảnh sắc nét. Tablet và mobile bỏ trống sẽ tự dùng ảnh lớn hơn."
+      },
+      "content": {
+        "title": "Nội dung và điều hướng",
+        "description": "Mô tả ảnh hỗ trợ khả năng truy cập; đường dẫn quyết định nơi mở khi bấm banner."
+      },
+      "visibility": {
+        "title": "Lịch và trạng thái",
+        "description": "Để trống lịch nếu banner cần hiển thị ngay và không giới hạn thời gian."
+      }
+    },
+    "fields": {
+      "title": {
+        "label": "Tên banner",
+        "placeholder": "VD: Chiến dịch hè 2026",
+        "help": "Chỉ admin nhìn thấy, không xuất hiện ngoài trang chủ."
+      },
+      "altText": {
+        "label": "Mô tả ảnh (alt)",
+        "placeholder": "VD: Đăng xe dễ dàng cùng XePrime",
+        "help": "Screen reader sẽ đọc nội dung này."
+      },
+      "linkUrl": {
+        "label": "Đường dẫn khi bấm",
+        "placeholder": "/search hoặc https://…",
+        "help": "Không bắt buộc. Hỗ trợ đường dẫn nội bộ hoặc URL đầy đủ."
+      },
+      "startsAt": {
+        "label": "Bắt đầu hiển thị",
+        "placeholder": "Ngay lập tức"
+      },
+      "endsAt": {
+        "label": "Ngừng hiển thị",
+        "placeholder": "Vô hạn"
+      },
+      "active": {
+        "description": "Tắt để ẩn banner khỏi trang chủ mà không cần xoá."
+      }
+    },
+    "errors": {
+      "titleRequired": "Nhập tên banner",
+      "imageRequired": "Tải lên ảnh desktop",
+      "altRequired": "Nhập mô tả ảnh (alt)",
+      "linkInvalid": "Chỉ nhận http(s) hoặc đường dẫn nội bộ bắt đầu bằng /",
+      "endBeforeStart": "Thời điểm ngừng phải sau thời điểm bắt đầu"
+    },
+    "introPromo": "Tạo banner khuyến mãi cho giữa trang chủ. Chữ và hình nằm sẵn trong ảnh; máy tính và tablet hiện hai banner một hàng, mobile trượt từng banner.",
+    "titleCreatePromo": "Tạo banner khuyến mãi",
+    "mediaDescriptionPromo": "Nên dùng đúng cỡ hoặc lớn hơn để ảnh sắc nét. Mobile bỏ trống sẽ hiện ảnh máy tính."
+  },
+  "media": {
+    "slots": {
+      "desktop": "Máy tính",
+      "tablet": "Tablet",
+      "mobile": "Mobile"
+    },
+    "optional": "Tuỳ chọn",
+    "sizeHelp": "{size} · Khuyên dùng {size2x}",
+    "desktopComposition": "Thẻ tìm kiếm trang chủ đè lên khoảng 1/3 phía dưới ảnh PC — đặt chữ và chủ thể ở phần trên.",
+    "errors": {
+      "unreadable": "Không đọc được file ảnh — file có thể bị hỏng",
+      "ratio": "Ảnh {slot, select, desktop {PC} tablet {tablet} other {mobile}} phải theo tỉ lệ {size} (ảnh đang {actual}). Xuất đúng cỡ hoặc @2x ({size2x})."
+    },
+    "promoComposition": "Hiện nguyên khung trên máy tính và tablet — không có gì đè lên ảnh."
+  },
+  "tabs": {
+    "hero": "Banner đầu trang",
+    "promo": "Banner khuyến mãi",
+    "label": "Vị trí banner"
+  }
+}

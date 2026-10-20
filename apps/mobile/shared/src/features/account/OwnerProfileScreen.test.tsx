@@ -139,6 +139,7 @@ async function renderScreen(
     ]);
   const shopSpy = jest.spyOn(tenantsApi, 'myShop').mockResolvedValue(SHOP);
   const updateShopSpy = jest.spyOn(tenantsApi, 'updateProfile').mockResolvedValue(SHOP);
+  jest.spyOn(tenantsApi, 'vatInvoiceSetting').mockResolvedValue({ vatInvoiceSupported: false });
   const updateMeSpy = jest.spyOn(accountApi, 'updateMe').mockResolvedValue(PROFILE);
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -226,7 +227,7 @@ describe('OwnerProfileScreen — "Hồ sơ chủ xe" của chủ xe tuyến hoa 
     await without.findByText(HUB.sections.profile);
     expect(without.queryByText(HUB.sections.appPlan)).toBeNull();
     expect(without.queryByText(viAccount.tax.title)).toBeNull();
-    without.unmount();
+    await without.unmount();
 
     const withAll = await renderScreen(
       [...OWNER, PERMISSION.SELLER_PROFILE_VIEW, PERMISSION.SUBSCRIPTION_VIEW],
@@ -236,6 +237,9 @@ describe('OwnerProfileScreen — "Hồ sơ chủ xe" của chủ xe tuyến hoa 
     );
     expect((await withAll.findAllByText(HUB.sections.appPlan)).length).toBeGreaterThan(0);
     expect(withAll.getAllByText(viAccount.tax.title).length).toBeGreaterThan(0);
+    // `unmount` của RNTL 13 là async: không await thì act() của nó chồng lên lần dựng của test
+    // kế ("overlapping act() calls") và test đó không bao giờ thấy màn.
+    await withAll.unmount();
   });
 
   it('cờ isPlanPromotionEnabled tắt: không có khối tài khoản & hạn mức dù có quyền', async () => {

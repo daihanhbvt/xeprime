@@ -75,10 +75,29 @@ describe('VehicleCard', () => {
     expect(screen.queryByText('Yêu cầu thuê xe')).toBeNull();
   });
 
-  it('nút duy nhất còn lại là lưu xe — không phải hành động thuê', () => {
+  /**
+   * Không có nút nào trong thẻ: không hành động thuê, và nút "Lưu xe" của bản vẽ chờ tới khi tính
+   * năng xe yêu thích mở — một trái tim bấm không làm gì là lời hứa hão.
+   */
+  it('không có nút nào trong thẻ — cả thẻ là một liên kết', () => {
     render(<VehicleCard listing={LISTING} />);
-    const labels = screen.getAllByRole('button').map((btn) => btn.getAttribute('aria-label'));
-    expect(labels).toEqual(['Lưu xe']);
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+  });
+
+  /** ADR 0011: % giảm là của giá TỰ LÁI — ngữ cảnh dài hạn/có tài xế không mang huy hiệu đó. */
+  it('huy hiệu giảm giá chỉ hiện ở ngữ cảnh tự lái', () => {
+    const discounted = {
+      ...LISTING,
+      discountPercent: 10,
+      serviceTypes: ['self_drive', 'long_term'],
+      monthlyPrice: '12000000',
+    } as unknown as PublicListing;
+    const { rerender } = render(<VehicleCard listing={discounted} />);
+    expect(screen.getByLabelText('Giảm 10%')).toBeTruthy();
+
+    filters.value = { serviceType: 'long_term' } as typeof filters.value;
+    rerender(<VehicleCard listing={discounted} />);
+    expect(screen.queryByLabelText('Giảm 10%')).toBeNull();
   });
 
   it('cả thẻ dẫn tới trang chi tiết xe, mang theo dịch vụ đang active (17/08)', () => {
@@ -106,10 +125,12 @@ describe('VehicleCard', () => {
     );
   });
 
-  it('hiển thị điểm xe, số chuyến thật và nhận diện gian hàng ở chân thẻ', () => {
-    render(<VehicleCard listing={LISTING} />);
-    expect(screen.getByText('4,8')).toBeTruthy();
-    expect(screen.getByText('27 chuyến')).toBeTruthy();
+  /** Thẻ v2 (ADR 0062) bỏ số chuyến đã chạy — chân thẻ là điểm sao (số lượt) + giá. */
+  it('hiển thị điểm xe kèm số lượt đánh giá và nhận diện gian hàng', () => {
+    const { container } = render(<VehicleCard listing={LISTING} />);
+    expect(screen.getByText('(12)')).toBeTruthy();
+    expect(container.textContent).toContain('4,8');
+    expect(screen.queryByText('27 chuyến')).toBeNull();
     expect(screen.getByText('Chủ xe')).toBeTruthy();
     expect(screen.getByText('Gian hàng Minh Tuấn')).toBeTruthy();
   });
@@ -196,8 +217,8 @@ describe('VehicleCard', () => {
     render(<VehicleCard listing={{ ...LISTING, shopVerified: true } as PublicListing} />);
     expect(screen.getByText('Gian hàng')).toBeTruthy();
     expect(screen.queryByText('Chủ xe')).toBeNull();
-    expect(screen.getByRole('img', { name: 'Gian hàng đã được XePrime xác minh' })).toBeTruthy();
-    // `aria-label` của liên kết nuốt mọi chữ bên trong — nên nó phải tự mang nghĩa của dấu.
+    // Dấu xác thực là hình trang trí trong avatar; `aria-label` của liên kết nuốt mọi chữ bên
+    // trong — nên chính nó phải mang nghĩa của dấu.
     expect(
       screen.getByRole('link', {
         name: 'Gian hàng Minh Tuấn — gian hàng đã được XePrime xác minh',
@@ -227,7 +248,7 @@ describe('VehicleCard', () => {
         }
       />,
     );
-    const mark = container.querySelector('svg[role="img"]');
+    const mark = container.querySelector('img[src*="card-verified"]');
     const clipped = screen.getByText('XePrime Sài Gòn Cho Thuê Xe Tự Lái Giá Rẻ');
     expect(mark).toBeTruthy();
     expect(clipped.contains(mark)).toBe(false);
@@ -243,10 +264,10 @@ describe('VehicleCard', () => {
 
   it('không để lại vùng hành động rỗng ở chân thẻ', () => {
     const { container } = render(<VehicleCard listing={LISTING} />);
-    // Phần tử cuối trong thân thẻ phải là hàng giá + gian hàng, không phải một khối trống nơi
-    // nút thuê từng đứng.
+    // Phần tử cuối trong thân thẻ phải là hàng điểm + giá, không phải một khối trống nơi nút
+    // thuê từng đứng.
     const body = container.querySelector('article > div:last-child');
     const last = body?.lastElementChild;
-    expect(last?.textContent).toContain('Gian hàng Minh Tuấn');
+    expect(last?.textContent).toContain('1,05tr');
   });
 });

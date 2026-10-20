@@ -4,7 +4,9 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import type { PublicListingDetail } from '@/features/marketplace/types';
-import { RequestBookingFlow } from './RequestBookingFlow';
+import type { RequestBookingPrefill } from '../types';
+import { bookingResultDialogClassNames } from './BookingResult';
+import { RequestBookingFlow, type RequestBookingResult } from './RequestBookingFlow';
 
 interface RequestBookingModalProps {
   vehicleId: string;
@@ -19,22 +21,29 @@ interface RequestBookingModalProps {
   routeType?: string | null;
   /** Tỉnh gợi ý cho ô địa chỉ giao xe — địa chỉ khách đã nhớ vẫn THẮNG nó (ADR 0035). */
   deliveryProvinceCode?: string | null;
+  /** Thứ khách đã chọn ở thẻ đặt xe — xem `RequestBookingPrefill`. */
+  prefill?: RequestBookingPrefill | null;
   open: boolean;
   onClose: () => void;
 }
 
 /**
- * Vỏ đựng luồng đặt xe. Toàn bộ nghiệp vụ (kiểm tra khung giờ trống, OTP, gửi yêu cầu) nằm
- * trong `RequestBookingFlow`; ở đây chỉ còn hình thái overlay.
+ * Vỏ đựng luồng đặt xe. Toàn bộ nghiệp vụ (kiểm tra khung giờ trống, mời đăng nhập, bằng lái, gửi
+ * yêu cầu) nằm trong `RequestBookingFlow`; ở đây chỉ còn hình thái overlay.
  *
  * Chỉ render flow khi mở → mỗi lần mở là state mới (không mang theo bước dở của lần trước).
  *
  * `size="xl"` (Wave 9) → desktop modal rộng, đủ chỗ cho HAI cột (hồ sơ xe · luồng thao tác);
  * mobile vẫn **toàn màn hình** theo Figma `130:1563` quy tắc 5 ("Form overlays → Full-Screen —
- * cần chỗ cho bàn phím"). Đúng thứ luồng này cần: có lịch, họ tên, SĐT và 6 ô OTP.
+ * cần chỗ cho bàn phím"). Đúng thứ luồng này cần: có lịch, bản đồ địa chỉ và màn Xem lại hai cột
+ * (Figma `19727:55409`).
  *
  * `footer={null}`: mỗi bước có bộ nút riêng ngay cuối cột phải, nên footer chung của dialog sẽ
  * là hàng nút thứ hai không ai bấm.
+ *
+ * Gửi xong thì hộp ĐỔI HÌNH (`RequestBookingResult`): "Đã gửi yêu cầu" là popup 600px riêng của
+ * thiết kế (Figma `19759:22026`) — không thanh tiêu đề, không đệm của vỏ, tự cuộn và tự dựng hàng
+ * nút; các lời báo khác (trùng lặp, bị chặn) là hộp `md` thường.
  */
 export function RequestBookingModal({
   vehicleId,
@@ -46,6 +55,7 @@ export function RequestBookingModal({
   serviceType,
   routeType,
   deliveryProvinceCode,
+  prefill,
   open,
   onClose,
 }: RequestBookingModalProps) {
@@ -57,25 +67,31 @@ export function RequestBookingModal({
   const t = useTranslations('BookingRequests.flow');
   const [busy, setBusy] = useState(false);
   /**
-   * Đã gửi xong (hoặc trùng lặp) → overlay THU lại vừa nội dung.
+   * Đã sang màn kết quả → overlay THU lại vừa nội dung.
    *
    * Khung `xl` hai cột rộng 1180px và cao hết màn là để chứa biểu mẫu; giữ nguyên nó cho một
    * thẻ xác nhận vài dòng thì phần lớn hộp thoại là chỗ trống, và mắt phải đi rất xa mới tới
    * hàng nút. Kết quả là một thông báo, không phải một không gian làm việc.
    */
-  const [result, setResult] = useState(false);
+  const [result, setResult] = useState<RequestBookingResult | null>(null);
+  const sent = result === 'sent';
 
   return (
     <ResponsiveDialog
-      title={t('title')}
+      // Hộp "Đã gửi yêu cầu" tự có tiêu đề lớn — tên hộp vẫn còn cho trình đọc màn hình.
+      {...(sent
+        ? { hideHeaderTitle: true as const, ariaLabel: t('title') }
+        : { title: t('title') })}
       open={open}
       onClose={onClose}
-      size={result ? 'md' : 'xl'}
+      size={sent ? 'fit' : result ? 'md' : 'xl'}
       // Bố cục hai cột tự cuộn từng bên (RequestBookingFlow `.left`/`.right`, StaffVehiclePicker
       // `.scroller`) — thân overlay phải khoá cuộn để không thành hai lớp lồng nhau.
       bodyScroll="content"
       footer={null}
       confirmLoading={busy}
+      className={sent ? bookingResultDialogClassNames.className : undefined}
+      bodyClassName={sent ? bookingResultDialogClassNames.bodyClassName : undefined}
     >
       {open ? (
         <RequestBookingFlow
@@ -88,6 +104,7 @@ export function RequestBookingModal({
           serviceType={serviceType}
           routeType={routeType}
           deliveryProvinceCode={deliveryProvinceCode}
+          prefill={prefill}
           onClose={onClose}
           onBusyChange={setBusy}
           onResultChange={setResult}

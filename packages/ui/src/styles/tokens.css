@@ -5,45 +5,56 @@
  * `apps/web/src/styles/theme.test.ts` là thứ giữ hai file không trôi khỏi nhau.
  * Web nạp file này qua export `@xeprime/ui/styles.css` (app/layout.tsx).
  *
- * Giá trị lấy từ Figma section 01 “XePrime Foundations” (`14:2`) — mã node ghi cạnh từng
- * token. Lý do chọn Foundations thay vì bộ giá trị của các component `XePrime/*`:
- * `docs/design-token-map.md` §21 P15.
+ * Giá trị lấy từ design v2 — file Figma "Xe Prime", đọc bằng Figma Variables trên chính các màn
+ * đã thiết kế (ADR 0062). Tên biến Figma ghi cạnh từng token ở `XP_TOKENS`. KHÔNG đọc giá trị từ
+ * trang "Primary colors" của file: đó là thư viện Untitled UI chưa chỉnh theo dự án.
  *
  * Light-first; dark theme sẽ thêm ở increment sau (kiến trúc token đã sẵn sàng).
  */
 :root {
-  /* ─── Thương hiệu ─────────────────────────────────────────────────────── */
-  --xp-color-primary: #d6a02c;
-  --xp-color-primary-hover: #c4920f;
+  /* ─── Thương hiệu (gold v2 — đậm dần: subtle → light → muted → primary → hover → active
+     → strong) ─────────────────────────────────────────────────────────── */
+  --xp-color-primary: #e9ac29;
+  --xp-color-primary-hover: #cb9115;
+  /* Trạng thái nhấn — chưa có trong v2, giữ bộ cũ: đang làm NỀN dưới chữ tối ở web lẫn native
+     (ADR 0062 điều 5). AntD tự dẫn xuất `colorPrimaryActive` từ gold mới. */
   --xp-color-primary-active: #a9761a;
-  --xp-color-primary-light: #fdf6e3;
-  --xp-color-primary-contrast: #2a2318;
+  /* Gold đọc được làm CHỮ trên nền sáng (v2 Brand/high, 7.4:1) — giá, chữ/icon gold. Không làm
+     nền dưới chữ tối. */
+  --xp-color-primary-strong: #6e5117;
+  --xp-color-primary-light: #fff5e5;
+  --xp-color-primary-subtle: #fff9f0;
+  --xp-color-primary-muted: #f6ebd5;
+  --xp-color-primary-contrast: #0e0f12;
 
   /* ─── Bề mặt ──────────────────────────────────────────────────────────── */
-  --xp-color-bg: #faf9f7;
+  --xp-color-bg: #fafafa;
   --xp-color-bg-container: #ffffff;
   --xp-color-bg-elevated: #ffffff;
-  --xp-color-bg-muted: #f5f3ef;
-  --xp-color-bg-selected: #fdf6e3;
+  --xp-color-bg-muted: #f5f5f5;
+  --xp-color-bg-selected: #fff5e5;
   --xp-color-bg-overlay: rgba(26, 26, 26, 0.45);
 
   /* ─── Chữ ─────────────────────────────────────────────────────────────── */
-  --xp-color-text: #1a1a1a;
-  --xp-color-text-secondary: #6b6560;
-  --xp-color-text-tertiary: #9e9890;
-  --xp-color-text-disabled: rgba(26, 26, 26, 0.25);
+  --xp-color-text: #0e0f12;
+  --xp-color-text-secondary: #414651;
+  --xp-color-text-tertiary: #717680;
+  --xp-color-text-placeholder: #a4a7ae;
+  /* Công thức AntD (25% của chữ chính) — v2 `Text/Gray/disable` chờ designer chốt phạm vi
+     (ADR 0062 Q8). */
+  --xp-color-text-disabled: rgba(14, 15, 18, 0.25);
   --xp-color-text-inverse: #e8e4dd;
-  /* Figma chưa định nghĩa màu link — hai token này soi lại giá trị AntD dẫn xuất từ
+  /* v2 chưa định nghĩa màu link — hai token này soi lại giá trị AntD dẫn xuất từ
      `colorInfo` (hành vi hiện tại). Xem `docs/design-token-map.md` §21 (P19 nằm trong bộ implementation/ đã nghỉ hưu 21/08/2026). */
   --xp-color-link: #2563eb;
   --xp-color-link-hover: #7aadff;
 
   /* ─── Viền ────────────────────────────────────────────────────────────── */
-  --xp-color-border: #e8e4dd;
-  --xp-color-border-strong: #d4cfc6;
-  --xp-color-border-subtle: #f5f3ef;
-  --xp-color-border-focus: #d6a02c;
-  --xp-color-border-disabled: #e8e4dd;
+  --xp-color-border: #e9eaeb;
+  --xp-color-border-strong: #d5d7da;
+  --xp-color-border-subtle: #f5f5f5;
+  --xp-color-border-focus: #e9ac29;
+  --xp-color-border-disabled: #e9eaeb;
 
   /* ─── Tương tác ───────────────────────────────────────────────────────── */
   --xp-color-bg-hover: rgba(120, 90, 20, 0.05);
@@ -51,19 +62,21 @@
   --xp-disabled-opacity: 0.6;
 
   /* ─── Trạng thái nghiệp vụ (tách khỏi gold thương hiệu) ───────────────── */
-  --xp-color-success: #16a34a;
-  --xp-color-success-bg: #f0fdf4;
+  --xp-color-success: #039855;
+  --xp-color-success-bg: #ecfdf3;
+  --xp-color-success-subtle: #f6fef9;
+  /* Cặp warning chưa đổi: v2 đã đọc chưa có bậc chữ/nền cảnh báo (ADR 0062 điều 5). */
   --xp-color-warning: #e07b26;
   --xp-color-warning-bg: #fff7ed;
-  --xp-color-error: #dc2626;
-  --xp-color-error-bg: #fef2f2;
+  --xp-color-error: #d92d20;
+  --xp-color-error-bg: #fef3f2;
   --xp-color-info: #2563eb;
   --xp-color-info-bg: #eff6ff;
   /* Bậc "đang chạy" (STATUS_COLOR.PROCESSING) — lý do chọn màu ở XP_TOKENS. */
   --xp-color-processing: #0e7490;
   --xp-color-processing-bg: #ecfeff;
-  --xp-color-neutral: #6b6560;
-  --xp-color-neutral-bg: #f5f3ef;
+  --xp-color-neutral: #414651;
+  --xp-color-neutral-bg: #f5f5f5;
 
   /* Khuyến mãi: cam san hô theo mẫu UI 17/08; tách khỏi error vì giảm giá không phải lỗi. */
   --xp-color-discount: #ff5a2c;
@@ -73,7 +86,7 @@
    * Màu của SỐ TIỀN khách phải trả — MỘT màu cho mọi giá cuối cùng (tổng dự kiến, giá xe,
    * tổng đơn). Lý do và phạm vi không áp dụng: xem `XP_TOKENS['color-price']` ở theme.ts.
    */
-  --xp-color-price: var(--xp-color-primary-active);
+  --xp-color-price: var(--xp-color-primary-strong);
 
   /* ─── Màu dữ liệu (data-viz) ──────────────────────────────────────────────
      Tách hẳn khỏi màu ngữ nghĩa: cột "Chi phí" màu đỏ sẽ bị đọc thành "có lỗi".
@@ -88,10 +101,11 @@
   --xp-color-viz-revenue: var(--xp-color-viz-1);
   --xp-color-viz-cost: var(--xp-color-viz-3);
   --xp-color-viz-profit: var(--xp-color-viz-2);
-  --xp-color-viz-grid: #ece8e1;
-  --xp-color-viz-axis: #9e9890;
+  --xp-color-viz-grid: #e9eaeb;
+  --xp-color-viz-axis: #a4a7ae;
 
-  /* ─── Vỏ portal (sidebar tối — P1 chốt "tối", áp dụng ở Wave 1D-B) ───── */
+  /* ─── Vỏ portal (sidebar tối — P1 chốt "tối", áp dụng ở Wave 1D-B) ─────
+     Ba màu sidebar chưa chuyển sang v2 — test native chốt cứng (ADR 0062 điều 5). */
   --xp-shell-sidebar-bg: #1e1b16;
   --xp-shell-sidebar-text: #e8e4dd;
   --xp-shell-sidebar-active: #d6a02c;
@@ -120,27 +134,31 @@
     var(--xp-shell-sidebar-bg)
   );
   --xp-shell-topbar-bg: #ffffff;
-  --xp-shell-topbar-border: #e8e4dd;
+  --xp-shell-topbar-border: #e9eaeb;
 
   /* ─── Màu riêng của thanh event trên lịch ─────────────────────────────── */
   --xp-color-event-booking: #2563eb;
-  --xp-color-event-request: #d6a02c;
+  --xp-color-event-request: #e9ac29;
   --xp-color-event-blocked: #8c8069;
   --xp-color-event-maintenance: #7c3aed;
 
-  /* ─── Typography ──────────────────────────────────────────────────────── */
+  /* ─── Typography (v2: một họ chữ Google Sans Flex, thang 12 → 48) ────── */
   --xp-font-family:
-    var(--font-be-vietnam), 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial,
+    var(--font-google-sans), 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial,
     sans-serif;
-  --xp-font-family-display: var(--font-playfair), Georgia, 'Times New Roman', serif;
 
   --xp-font-size-display: 48px;
-  --xp-line-height-display: 56px;
-  --xp-font-size-h1: 32px;
-  --xp-line-height-h1: 40px;
+  --xp-line-height-display: 60px;
+  --xp-font-size-display-sm: 36px;
+  --xp-line-height-display-sm: 44px;
+  --xp-letter-spacing-display: -0.02em;
+  --xp-font-size-h1: 30px;
+  --xp-line-height-h1: 38px;
   --xp-font-size-h2: 24px;
   --xp-line-height-h2: 32px;
-  --xp-font-size-h3: 20px;
+  --xp-font-size-lead: 20px;
+  --xp-line-height-lead: 30px;
+  --xp-font-size-h3: 18px;
   --xp-line-height-h3: 28px;
   --xp-font-size-h4: 16px;
   --xp-line-height-h4: 24px;
@@ -149,9 +167,10 @@
   --xp-font-size-body: 14px;
   --xp-line-height-body: 20px;
   --xp-font-size-body-sm: 12px;
-  --xp-line-height-body-sm: 16px;
+  --xp-line-height-body-sm: 18px;
   --xp-font-size-label: 12px;
-  --xp-line-height-label: 16px;
+  --xp-line-height-label: 18px;
+  /* Chưa chuyển (v2 không có 11px): native đọc bậc này cho dòng meta — đổi cùng dev mobile. */
   --xp-font-size-overline: 11px;
   --xp-line-height-overline: 16px;
 
@@ -185,12 +204,84 @@
   /* ─── Nền hero trang chủ (dùng chung HomeHero + BannerCarousel) ────────── */
   --xp-hero-backdrop: linear-gradient(120deg, #241d12, #3a2f1a);
 
+  /* ─── Design v2 — bề mặt chợ (trang chủ, header, footer) — ADR 0062 ─────
+     App native không đọc nhóm này nên gradient/bóng nhiều lớp an toàn ở đây. */
+  --xp-color-bg-inverse: #0e0f12;
+  --xp-color-text-on-dark: #ffffff;
+  --xp-color-text-on-dark-muted: #d5d7da;
+  --xp-color-primary-bright: #edbb4f;
+  --xp-color-primary-pale: #f0ddb7;
+  --xp-color-primary-accent: #d3a94d;
+  --xp-color-primary-glow: #e9c336;
+  --xp-color-destination-border: #e9bb68;
+  /* Luồng đặt xe v2 (Figma `RHDyFsURFZQ9BC5JCLQzeE`, 19/10/2026) — các bậc màn đó đặt tên rõ. */
+  --xp-color-primary-border: #e8ca8d;
+  --xp-color-success-accent: #12b76a;
+  --xp-color-success-border: #6ce9a6;
+  --xp-color-warning-subtle: #fffaeb;
+  --xp-market-footer-bg: #060403;
+  --xp-gradient-primary: linear-gradient(90deg, #e9c336 0%, #e8c664 48.077%, #e3b012 100%);
+  --xp-gradient-text-hero: linear-gradient(90deg, #eeb924 0%, #ba8b26 100%);
+  --xp-gradient-text-gold: linear-gradient(90deg, #d3a94d 0%, #cb9c03 100%);
+  --xp-gradient-gold-soft: linear-gradient(90deg, #edd3a4 0.89%, #d6a439 100.89%);
+  --xp-gradient-text-destination: linear-gradient(90deg, #fded9d 0%, #f7dd91 52.404%, #f1a940 100%);
+  --xp-gradient-instant-badge: linear-gradient(90deg, #a4dded 0.89%, #dfe7f1 100.89%);
+  --xp-gradient-card-highlight: linear-gradient(
+    145deg,
+    rgba(220, 192, 148, 0.2) 24.208%,
+    rgba(237, 233, 219, 0.2) 88.612%
+  );
+  --xp-elevation-xs: 0 1px 2px 0 rgba(10, 13, 18, 0.05);
+  --xp-elevation-sm: 0 1px 3px 0 rgba(10, 13, 18, 0.1), 0 1px 2px 0 rgba(10, 13, 18, 0.06);
+  --xp-elevation-lg: 0 12px 16px -4px rgba(10, 13, 18, 0.08), 0 4px 6px -2px rgba(10, 13, 18, 0.03);
+  --xp-elevation-soft: 0 4px 9px 0 rgba(125, 125, 125, 0.15), 0 1px 1px 0 rgba(0, 0, 0, 0.03);
+  --xp-elevation-panel: 0 12px 29px 0 rgba(125, 125, 125, 0.15), 0 1px 1px 0 rgba(0, 0, 0, 0.03);
+  --xp-elevation-glow: 0 4px 12px 0 rgba(253, 178, 38, 0.16);
+  --xp-elevation-ambient: 0 0 8px 0 rgba(10, 13, 18, 0.04);
+  --xp-elevation-header: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 25px 50px -12px rgba(0, 0, 0, 0.05);
+  --xp-elevation-xl: 0 20px 24px -4px rgba(10, 13, 18, 0.08), 0 8px 8px -4px rgba(10, 13, 18, 0.03);
+  --xp-border-radius-chip: 8px;
+  --xp-border-radius-control: 12px;
+  --xp-border-radius-card: 16px;
+  --xp-space-2: 2px;
+  --xp-space-6: 6px;
+  --xp-space-12: 12px;
+  --xp-space-20: 20px;
+  --xp-space-40: 40px;
+  --xp-space-48: 48px;
+  --xp-space-64: 64px;
+  --xp-space-80: 80px;
+  --xp-market-gutter: 120px;
+  --xp-market-container-max-width: 1200px;
+  --xp-letter-spacing-snug: -0.01em;
+  --xp-hero-fog: linear-gradient(
+    to left,
+    rgba(204, 218, 231, 0) 0%,
+    rgba(251, 251, 252, 0.4) 67.093%
+  );
+  --xp-color-glass: rgba(255, 255, 255, 0.1);
+  --xp-color-glass-strong: rgba(255, 255, 255, 0.32);
+  --xp-color-glass-faint: rgba(255, 255, 255, 0.05);
+  --xp-color-glass-gold: rgba(254, 237, 210, 0.2);
+  --xp-color-scrim-light: rgba(16, 24, 40, 0.1);
+  --xp-gradient-promo-dark: linear-gradient(to left, rgba(0, 0, 0, 0) 0%, #000000 100%);
+  --xp-gradient-promo-light: linear-gradient(to left, rgba(255, 255, 255, 0) 0%, #ffffff 100%);
+  --xp-gradient-destination-shade:
+    linear-gradient(
+      180deg,
+      rgb(26, 21, 14) 0%,
+      rgba(36, 26, 15, 0) 40.385%,
+      rgba(23, 20, 13, 0) 65.385%,
+      rgba(34, 24, 13, 0) 100%
+    ),
+    linear-gradient(180deg, rgb(26, 21, 14) 31.784%, rgba(50, 35, 0, 0) 100%);
+
   /* ─── Focus ───────────────────────────────────────────────────────────── */
   --xp-focus-outline-width: 2px;
   /* Figma `14:197` vẽ ring 3px; hạ xuống 2px theo góp ý review UI 12/08/2026 — giữ khớp
      `XP_TOKENS['focus-ring-width']` ở theme.ts (AntD `controlOutlineWidth` đọc từ đó). */
   --xp-focus-ring-width: 2px;
-  --xp-color-focus-ring: rgba(214, 160, 44, 0.25);
+  --xp-color-focus-ring: rgba(233, 172, 41, 0.25);
 
   /* ─── Breakpoint (KHÔNG dùng được trong @media — xem XP_BREAKPOINTS) ──── */
   --xp-bp-mobile: 640px;
@@ -231,7 +322,7 @@
   --xp-shell-topbar-height: 56px;
   /* Header marketplace công khai (MarketHeader) — cao hơn topbar portal. Thanh tìm kiếm thu gọn
      của trang chủ neo ngay dưới nó, nên con số này phải nằm ở đúng MỘT chỗ. */
-  --xp-market-header-height: 60px;
+  --xp-market-header-height: 68px;
   --xp-shell-sidebar-width: 232px;
   --xp-shell-sidebar-collapsed-width: 64px;
   --xp-shell-bottom-nav-height: 64px;
@@ -261,6 +352,8 @@
   --xp-shadow-sm: var(--xp-shadow-card);
   --xp-shadow-md: var(--xp-shadow-raised);
   --xp-shadow-lg: var(--xp-shadow-overlay);
+  /* v2 một họ chữ — Playfair đã bỏ (ADR 0062). */
+  --xp-font-family-display: var(--xp-font-family);
 }
 
 /*
@@ -292,4 +385,88 @@
     --xp-font-size-h3: 18px;
     --xp-line-height-h3: 24px;
   }
+}
+
+/*
+ * ─── Màn hình lớn (≥2000px, ≥2400px — màn 27" 2K/4K) ──────────────────────
+ * Màn 24" Full HD (1920px) giữ nguyên khung chuẩn 1200px (4 cột vừa đẹp).
+ * Màn 27" 2K (≥2000px) và 4K (≥2400px) mới nới rộng khung và tăng số cột.
+ */
+@media (min-width: 2000px) {
+  :root {
+    --xp-market-container-max-width: 1440px;
+    --xp-container-max-width: 1440px;
+  }
+}
+
+@media (min-width: 2400px) {
+  :root {
+    --xp-market-container-max-width: 1720px;
+    --xp-container-max-width: 1720px;
+  }
+}
+
+/*
+ * ─── Chế độ tối (Dark Mode) ─────────────────────────────────────────────────
+ *
+ * Đồng bộ với Figma `19879:66136`.
+ * Đảo các token bề mặt, chữ và viền khi thẻ <html> có data-theme="dark".
+ */
+:root[data-theme="dark"],
+[data-theme="dark"] {
+  /* Bề mặt tối */
+  --xp-color-bg: #080c10;
+  --xp-color-bg-container: #0f1620;
+  --xp-color-bg-elevated: #161f2c;
+  --xp-color-bg-muted: #1a2230;
+  --xp-color-bg-selected: rgba(233, 172, 41, 0.15);
+  --xp-color-bg-hover: rgba(255, 255, 255, 0.06);
+  --xp-color-bg-active: rgba(255, 255, 255, 0.1);
+  --xp-color-primary-subtle: rgba(233, 172, 41, 0.12);
+
+  /*
+   * Nền nhạt dưới chữ — bản sáng là màu pastel đặc, đặt lên nền tối thì thành mảng sáng chói
+   * với chữ trắng ở trên không đọc được. Bản tối là CHÍNH sắc đó pha trong suốt, để nó ăn theo
+   * mọi bậc nền (`bg` · `bg-container` · `bg-elevated`) mà không phải khai ba màu.
+   * `primary-muted` (viền/hover vàng) lấy từ Figma tối: `Stroke/primary-100` = #946e1f.
+   */
+  --xp-color-primary-light: rgba(233, 172, 41, 0.16);
+  --xp-color-primary-muted: #946e1f;
+  --xp-color-success-bg: rgba(3, 152, 85, 0.16);
+  --xp-color-success-subtle: rgba(3, 152, 85, 0.08);
+  --xp-color-warning-bg: rgba(224, 123, 38, 0.16);
+  --xp-color-error-bg: rgba(217, 45, 32, 0.16);
+  --xp-color-info-bg: rgba(37, 99, 235, 0.18);
+  --xp-color-processing-bg: rgba(14, 116, 144, 0.2);
+  --xp-color-neutral: #d5d7da;
+  --xp-color-neutral-bg: #1a2230;
+
+  /* Giá khách trả: `primary-strong` (#6e5117) là vàng đọc được trên nền SÁNG, trên nền tối thì
+     chìm hẳn. Figma tối tô giá bằng gold chính. KHÔNG đảo `primary-strong` — nó còn làm nền
+     (AppBanner, AuthBrandPanel) ở chính trang chủ tối. */
+  --xp-color-price: var(--xp-color-primary);
+
+  /* Luồng đặt xe v2: viền vàng nhạt (`Stroke/primary-300`) thành vàng tối của bản tối
+     (`Stroke/primary-100` tối); hai nền pastel thành chính sắc đó pha trong suốt. */
+  --xp-color-primary-border: #946e1f;
+  --xp-color-success-border: rgba(108, 233, 166, 0.45);
+  --xp-color-warning-subtle: rgba(247, 144, 9, 0.1);
+
+  /* Chữ sáng trên nền tối */
+  --xp-color-text: #ffffff;
+  --xp-color-text-secondary: #d5d7da;
+  --xp-color-text-tertiary: #a4a7ae;
+  --xp-color-text-placeholder: #717680;
+  --xp-color-text-disabled: rgba(255, 255, 255, 0.25);
+  --xp-color-text-inverse: #0e0f12;
+
+  /* Viền trên nền tối */
+  --xp-color-border: #333741;
+  --xp-color-border-strong: #414651;
+  --xp-color-border-subtle: #1f242f;
+
+  /* Đổ bóng trên nền tối */
+  --xp-elevation-header: 0 4px 20px rgba(0, 0, 0, 0.5);
+  --xp-elevation-card: 0 1px 3px rgba(10, 13, 18, 0.3), 0 1px 2px rgba(10, 13, 18, 0.2);
+  --xp-elevation-panel: 0 4px 16px rgba(0, 0, 0, 0.4);
 }

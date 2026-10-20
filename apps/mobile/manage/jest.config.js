@@ -45,6 +45,8 @@ module.exports = {
   testPathIgnorePatterns: [
     '/shared/src/features/account/account-nav\\.test\\.ts$',
     '/shared/src/features/account/AccountScreen\\.test\\.tsx$',
+    // Nhắc tiền giữ chỗ chỉ sống ở app khách: Partner không có `/payment/[id]` (ra `/not-available`).
+    '/shared/src/features/trips/components/UnpaidHoldsReminder\\.test\\.tsx$',
   ],
   // jest-expo tự đọc `paths` của tsconfig cho moduleNameMapper — đừng khai lại, sẽ mất alias.
   restoreMocks: true,

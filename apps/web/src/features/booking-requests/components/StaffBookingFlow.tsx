@@ -11,7 +11,8 @@ import {
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Alert, Button, Radio, Skeleton } from 'antd';
-import { appWallClockToInstant, appWallClockToIso, toAppTz, type Dayjs } from '@/lib/datetime';
+import { longTermReturnFromWallClock } from '@xeprime/domain';
+import { appWallClockToIso, toAppTz, type Dayjs } from '@/lib/datetime';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
@@ -24,7 +25,6 @@ import {
   ROUTE_TYPE_VALUES,
   LONG_TERM_PACKAGE_MONTHS,
   longTermPackageLabel,
-  longTermReturnAt,
   SERVICE_TYPE,
   routeTypeLabel,
   serviceTypeLabel,
@@ -47,7 +47,7 @@ import { checkConflict } from '@/features/bookings/api';
 import { useCreateBooking } from '@/features/bookings/hooks/use-booking-mutations';
 import { fetchCalendarQuote } from '@/features/calendar/api';
 import type { CalendarQuote } from '@/features/calendar/types/calendar.types';
-import { fetchListingDetailClient } from '@/features/marketplace/api';
+import { useListingDetail } from '@/features/marketplace/hooks/use-listing-detail';
 import { cx } from '@/lib/cx';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
 import { queryKeys } from '@/services/query-keys';
@@ -213,12 +213,7 @@ export function StaffBookingFlow({
    * Hồ sơ xe cho cột trái — CHỈ có với xe đang công khai; xe nội bộ thì panel dùng fallback
    * (tên + ảnh từ hàng lịch). 404 ở đây là trạng thái hợp lệ, không phải lỗi.
    */
-  const listingQ = useQuery({
-    queryKey: queryKeys.marketplace.listing(vehicleId),
-    queryFn: () => fetchListingDetailClient(vehicleId),
-    staleTime: 5 * 60_000,
-    retry: false,
-  });
+  const listingQ = useListingDetail(vehicleId);
   const listing = listingQ.data ?? null;
   const vehicleServices: string[] = listing?.serviceTypes ?? [];
 
@@ -259,7 +254,7 @@ export function StaffBookingFlow({
   /** Ngày trả suy từ gói — chỉ để HIỂN THỊ; con số ghi vào đơn do server tính lại. */
   const derivedReturnAt =
     isLongTerm && packageMonths != null && watchedPickup
-      ? toAppTz(longTermReturnAt(appWallClockToInstant(watchedPickup).toDate(), packageMonths))
+      ? longTermReturnFromWallClock(watchedPickup, packageMonths)
       : null;
   // Chuyến có tài xế: xe đến ĐÓN khách — "giao xe tận nơi" không có nghĩa.
   const isDelivery = !isWithDriver && pickupMethod === PICKUP_METHOD.DELIVERY;

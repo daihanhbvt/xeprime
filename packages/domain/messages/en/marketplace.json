@@ -17,14 +17,17 @@
         "title": "XePrime",
         "about": "About XePrime",
         "app": "Get the app",
-        "support": "Help centre"
+        "support": "Help centre",
+        "heading": "About XePrime",
+        "aboutShort": "About us"
       },
       "legal": {
         "title": "Legal",
         "terms": "Terms of Service",
         "privacy": "Privacy Policy",
         "marketplaceRules": "Marketplace Operating Rules",
-        "cancellation": "Cancellation and Refund Policy"
+        "cancellation": "Cancellation and Refund Policy",
+        "cancellationShort": "Cancellation & refund policy"
       }
     },
     "apps": {
@@ -32,7 +35,9 @@
     },
     "backToTop": "Back to top",
     "copyright": "© {year} XePrime",
-    "country": "A car rental platform in Vietnam"
+    "country": "A car rental platform in Vietnam",
+    "copyrightCompany": "© {year} <brand>XePrime</brand>. All rights reserved.",
+    "localeLabel": "Language"
   },
   "steps": {
     "title": "Rent a car in 4 steps",
@@ -155,11 +160,6 @@
     "countSuffix": "vehicles",
     "applyWithCount": "Apply ({count, plural, one {# vehicle} other {# vehicles}})",
     "motorbikeCategory": "Motorbike category"
-  },
-  "ownerCta": {
-    "title": "List your vehicle",
-    "desc": "Got a vehicle sitting idle? Turn it into passive income on XePrime.",
-    "action": "Learn more"
   },
   "searchDialog": {
     "title": "Search",

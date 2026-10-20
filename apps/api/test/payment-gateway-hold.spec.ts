@@ -7,6 +7,7 @@ import {
   BOOKING_REQUEST_STATUS,
   type BookingPriceSnapshot,
   FEE_POLICY_STATUS,
+  HOLD_PAYMENT_CHANNEL,
   HOLD_REFUND_REASON,
   PAYMENT_GATEWAY_EXPIRY_MARGIN_MINUTES,
   PAYMENT_ORDER_APPLY_OUTCOME,
@@ -102,7 +103,13 @@ function snapshotOf(): BookingPriceSnapshot {
       },
       baseAmount: BASE,
       lines: [
-        { key: 'service_fee', beneficiary: 'platform', bearer: 'customer', percent: 10, amount: hold },
+        {
+          key: 'service_fee',
+          beneficiary: 'platform',
+          bearer: 'customer',
+          percent: 10,
+          amount: hold,
+        },
       ],
       customerFeeTotal: hold,
       customerTotalAmount: '1100000',
@@ -381,9 +388,11 @@ describe('Mở phiên cho tiền giữ chỗ', () => {
       where: { id: holdId },
       data: { expiresAt: new Date(Date.now() + 5 * 60_000) },
     });
-    await expect(service.startHoldCheckout(customerId, requestId, request())).rejects.toMatchObject({
-      response: expect.objectContaining({ code: API_ERROR_CODE.PAYMENT_HOLD_WINDOW_TOO_SHORT }),
-    });
+    await expect(service.startHoldCheckout(customerId, requestId, request())).rejects.toMatchObject(
+      {
+        response: expect.objectContaining({ code: API_ERROR_CODE.PAYMENT_HOLD_WINDOW_TOO_SHORT }),
+      },
+    );
     expect(momo.created).toHaveLength(0);
   });
 
@@ -400,6 +409,16 @@ describe('Mở phiên cho tiền giữ chỗ', () => {
 });
 
 describe('Tiền về qua cổng', () => {
+  maybe('kênh đã trả: chưa nhận đồng nào ⇒ null; chỉ chuyển khoản ⇒ bank_transfer', async () => {
+    const { requestId, code } = await makeHold();
+    expect((await holds.findForTrip(requestId, customerId))?.paidVia).toBeNull();
+
+    await payByBank(code, HOLD_AMOUNT);
+    expect((await holds.findForTrip(requestId, customerId))?.paidVia).toBe(
+      HOLD_PAYMENT_CHANNEL.BANK_TRANSFER,
+    );
+  });
+
   maybe('đủ tiền ⇒ đơn thuê ra đời đúng MỘT lần; IPN gửi lại không tạo đơn thứ hai', async () => {
     const { requestId, holdId } = await makeHold();
     const order = await service.startHoldCheckout(customerId, requestId, request());
@@ -414,6 +433,10 @@ describe('Tiền về qua cổng', () => {
     expect(hold.paidAmount.toFixed(0)).toBe(String(HOLD_AMOUNT));
     const req = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: requestId } });
     expect(req.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
+    // Màn "Thanh toán thành công" kể đúng kênh: trọn số đã nhận đến từ MỘT cổng.
+    expect((await holds.findForTrip(requestId, customerId))?.paidVia).toBe(
+      HOLD_PAYMENT_CHANNEL.MOMO,
+    );
 
     const view = await service.orderForCustomer(customerId, order.id);
     expect(view.viewState).toBe(PAYMENT_ORDER_VIEW_STATE.COMPLETED);
@@ -467,6 +490,8 @@ describe('Tiền về qua cổng', () => {
       // sẽ liên hệ" mà không hàng đợi nào thực hiện.
       const view = await service.orderForCustomer(customerId, order.id);
       expect(view.viewState).toBe(PAYMENT_ORDER_VIEW_STATE.DUPLICATE_REFUNDED);
+      // Tiền đến từ HAI kênh ⇒ không gọi tên kênh nào.
+      expect((await holds.findForTrip(requestId, customerId))?.paidVia).toBeNull();
     },
   );
 

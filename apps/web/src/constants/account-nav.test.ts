@@ -48,6 +48,7 @@ describe('ACCOUNT_NAV — thành phần', () => {
       'documents',
       'becomeOwner',
       'trips',
+      'driving',
       'payments',
       'balance',
       'bankAccounts',
@@ -109,9 +110,15 @@ describe('ACCOUNT_NAV — thành phần', () => {
 
 describe('resolveAccountNav', () => {
   it('MỘT nhóm, mọi tài khoản khách như nhau', () => {
-    const groups = resolveAccountNav();
+    const groups = resolveAccountNav({ hasDriverLinks: true });
     expect(groups).toHaveLength(1);
     expect(flattenAccountNav(groups)).toEqual([...ACCOUNT_NAV]);
+  });
+
+  it('chưa từng được mời làm tài xế thì ẩn mục "Nơi tôi làm tài xế" (ADR 0063)', () => {
+    const keys = flattenAccountNav(resolveAccountNav()).map((item) => item.key);
+    expect(keys).not.toContain('driving');
+    expect(keys).toContain('trips');
   });
 });
 

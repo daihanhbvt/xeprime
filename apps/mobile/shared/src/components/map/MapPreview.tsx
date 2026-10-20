@@ -1,8 +1,9 @@
+import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
-import { Text, YStack } from 'tamagui';
+import { YStack } from 'tamagui';
 import { RemoteImage } from '@/components/ui/RemoteImage';
 import { MAP_PREVIEW_RATIO } from '@/lib/map-static';
-import { colors, fontSize, radius } from '@/theme/tokens';
+import { colors, radius } from '@/theme/tokens';
 
 const styles = StyleSheet.create({
   frame: { width: '100%', aspectRatio: MAP_PREVIEW_RATIO },
@@ -11,50 +12,50 @@ const styles = StyleSheet.create({
 });
 
 /**
- * Khung ẢNH BẢN ĐỒ TĨNH — bản native của `StaticMap` bên web, và là chỗ DUY NHẤT dựng khung đó.
+ * Khung ẢNH BẢN ĐỒ TĨNH — bản native của `StaticMapImage` bên web, và là chỗ DUY NHẤT dựng khung đó.
  *
- * Mọi bề mặt chỉ để XEM một vị trí đều đi qua đây: ô địa chỉ trong form (`AddressFields`) và
- * khối "Điểm nhận xe" ở trang xe. Lặp khối ảnh ở từng nơi là từng đó chỗ để bo góc, viền, tỉ lệ
- * và nhánh ảnh hỏng trôi khỏi nhau — đúng thứ đã xảy ra khi trang xe không có bản đồ nào cả.
+ * Ảnh do API vẽ hộ (Vietmap — ADR 0061 điều 1), không kéo, không phóng. Mọi bề mặt XEM một vị trí
+ * đều đi qua đây: ô địa chỉ trong form (`ConfirmedPlaceField`), khối "Điểm nhận xe" ở trang xe và
+ * khối địa chỉ xe ở Partner.
  *
- * Chạm được CHỈ KHI nơi gọi đưa `onOpen` — tức chỉ khi có một vị trí THẬT để mở tới. Một vùng
- * chạm dẫn tới tâm tỉnh là hứa sai về thứ người dùng vừa chạm.
+ * ẢNH LỖI THÌ ẨN HẲN — khớp web: chưa cấu hình bản đồ, nhà cung cấp hỏng, mã địa điểm quá hạn
+ * cache (API trả 404). Một khung ảnh vỡ tệ hơn không có khung nào; địa chỉ chữ và liên kết "Mở bằng
+ * Google Maps" ở khối bao ngoài vẫn còn. Lỗi gắn với ĐÚNG `uri` đã hỏng: đổi sang điểm khác thì thử
+ * lại từ đầu.
+ *
+ * Chạm được CHỈ KHI nơi gọi đưa `onOpen` (mở app bản đồ của máy để chỉ đường).
  *
  * ## Vì sao có một lớp PHỦ thay vì một khung chờ
  *
- * Bấm một gợi ý địa chỉ xong, ghim không nhảy ngay: trước nó còn một lượt `/places/detail` lấy
- * toạ độ, rồi một lượt tải ảnh bản đồ mới — cộng lại là hai ba giây trên mạng 3G. Suốt quãng đó
- * ảnh CŨ vẫn nằm đó trọn vẹn (`expo-image` giữ khung cũ tới byte cuối của khung mới), nên khung
- * bản đồ trông y như đã xong việc trong khi nó chưa: người dùng đọc ra là cú chạm bị trượt, và
- * bấm lại.
- *
- * Thay ảnh bằng khung chờ thì mất luôn bản đồ — ô trắng giữa form, tệ hơn hẳn. Nên bản đồ ở lại
- * và chỉ bị mờ đi dưới một lớp phủ có vòng xoay: thấy rõ là "đang đổi", mà vẫn còn thứ để đối
- * chiếu khi nó đổi xong.
+ * Bấm một gợi ý địa chỉ xong, ảnh không đổi ngay: trước nó còn một lượt `/places/detail`, rồi một
+ * lượt tải ảnh mới. Suốt quãng đó ảnh CŨ vẫn nằm đó (`expo-image` giữ khung cũ tới byte cuối của
+ * khung mới), nên bản đồ chỉ bị mờ đi dưới một lớp phủ có vòng xoay: thấy rõ là "đang đổi".
  */
 export function MapPreview({
   uri,
-  unavailableLabel,
+  headers,
   busy = false,
   busyLabel,
   onOpen,
   openLabel,
+  accessibilityLabel,
 }: {
   uri: string;
-  unavailableLabel: string;
-  /**
-   * Đang có một lượt gọi MẠNG sẽ dời ghim (tra chi tiết địa điểm) — `uri` còn là của vị trí cũ,
-   * nên không có gì trong tấm ảnh nói được rằng có việc đang chạy.
-   */
+  /** Header gửi kèm (Bearer cho `/branches/:id/map`). */
+  headers?: Record<string, string>;
+  /** Đang có một lượt gọi MẠNG sẽ đổi ảnh (tra chi tiết địa điểm). */
   busy?: boolean;
   busyLabel: string;
   onOpen?: () => void;
   openLabel?: string;
+  /** Nội dung duy nhất trình đọc màn hình có được về tấm bản đồ. */
+  accessibilityLabel?: string;
 }) {
+  const [failedUri, setFailedUri] = useState<string | null>(null);
+  if (failedUri === uri) return null;
+
   /*
    * MỘT node cho cả hai chặng đợi — lượt gọi mạng (`busy`) rồi lượt tải ảnh (`pendingOverlay`).
-   * Hai chặng nối nhau liền mạch nên chúng phải trông giống nhau; hai node riêng là hai chỗ để
-   * độ mờ và cỡ vòng xoay trôi khỏi nhau.
    */
   const busyOverlay = (
     <YStack
@@ -74,16 +75,11 @@ export function MapPreview({
       <RemoteImage
         uri={uri}
         radius={radius.md}
-        /*
-         * Đang chờ mạng thì lớp phủ đã do `MapPreview` vẽ — đưa thêm một bản vào `RemoteImage`
-         * là hai lớp cùng nằm đó và nền tối gấp đôi ở đúng nhịp giao giữa hai chặng.
-         */
+        {...(headers ? { headers } : {})}
+        {...(accessibilityLabel === undefined ? {} : { accessibilityLabel })}
+        onError={() => setFailedUri(uri)}
         {...(busy ? {} : { pendingOverlay: busyOverlay })}
-        fallback={
-          <Text col={colors.textMuted} fos={fontSize.label}>
-            {unavailableLabel}
-          </Text>
-        }
+        fallback={null}
       />
       {busy ? busyOverlay : null}
     </YStack>

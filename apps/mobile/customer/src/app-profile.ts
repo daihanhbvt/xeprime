@@ -53,10 +53,14 @@ export function guestHome(): Href {
  * lạc/giả trỏ `/manage` sẽ rơi về màn mặc định thay vì một màn trắng.
  */
 export const NOTIFICATION_ALLOWED: readonly AllowedDeepLink[] = [
+  // Chuyến tôi LÁI (ADR 0063) — prefix dài đứng TRƯỚC `trips`. Bắt buộc có id (id đơn thuê).
+  { prefix: 'trips/driving', resolve: singleDetail((id) => ROUTES.driving.tripDetail(id)) },
   { prefix: 'trips', resolve: listOrDetail(ROUTES.booking.list, ROUTES.booking.detail) },
   { prefix: 'chat', resolve: listOrDetail(ROUTES.chat.list, ROUTES.chat.thread) },
   // `/account` (khu tài khoản của khách). Đích Owner Lite cũ (`/account/vehicles`) KHÔNG còn: tài
   // khoản khách không có gian hàng (ADR 0053), `exact` nên đường con rơi về màn mặc định.
+  // "Nơi tôi làm tài xế" (ADR 0063) — đứng TRƯỚC `account`.
+  { prefix: 'account/driving', resolve: exact(ROUTES.driving.links) },
   { prefix: 'account', resolve: exact(ROUTES.account.home) },
   // Trang xe công khai — "xe bạn hỏi đã rảnh lại" (ADR 0045 điều 6). Bắt buộc có id.
   { prefix: 'listings', resolve: singleDetail((id) => ROUTES.explore.listingDetail(id)) },

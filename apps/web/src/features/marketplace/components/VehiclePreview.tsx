@@ -1,12 +1,11 @@
 'use client';
 
-import { RightOutlined } from '@ant-design/icons';
 import { Alert, Button, Empty, Skeleton } from 'antd';
 import Link from 'next/link';
 import { serviceTypeLabel } from '@xeprime/types';
 import { ROUTES } from '@/constants/routes';
-import { applyFilterPatch } from '../filter-params';
-import { useDestinations } from '../hooks/use-destinations';
+import { marketplaceSearchHref } from '../filter-params';
+import { useAllDestinations } from '../hooks/use-destinations';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import {
   RECOMMENDED_LIMIT,
@@ -14,14 +13,14 @@ import {
   useRecommendedListings,
 } from '../hooks/use-recommended-listings';
 import { provinceLabelOf } from '../province-options';
+import { CtaButton } from './CtaButton';
+import { HomeCarousel } from './HomeCarousel';
+import { SectionHeading } from './SectionHeading';
 import { VehicleCard } from './VehicleCard';
 import styles from './VehiclePreview.module.css';
 import { useTranslations } from 'next-intl';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
-
-/** Đủ 34 tỉnh — chỉ để tra TÊN của tỉnh đang ưu tiên; danh sách này đã được cache dùng chung. */
-const ALL_DESTINATIONS = 34;
 
 /**
  * Khối "Xe phù hợp với bạn" ở trang chủ.
@@ -49,9 +48,10 @@ export function VehiclePreview() {
   const errorMessage = useErrorMessage();
   const domainLabel = useDomainLabel();
   const t = useTranslations('Marketplace.available');
+  const tHome = useTranslations('Home.featured');
   const { filters } = useMarketplaceFilters();
   const nearProvinceCode = useNearProvinceCode(filters);
-  const { data: destinations } = useDestinations(ALL_DESTINATIONS);
+  const { data: destinations } = useAllDestinations();
 
   const { data, isLoading, isError, error } = useRecommendedListings({
     vehicleType: filters.vehicleType,
@@ -72,8 +72,7 @@ export function VehiclePreview() {
 
   // "Khám phá xe" giữ nguyên ngữ cảnh đang xem (kể cả routeType — key URL, không gửi API). Tỉnh
   // đi kèm ở dạng BỘ LỌC: sang trang kết quả thì khách đang thật sự tìm, không còn là xem lướt.
-  const exploreQs = new URLSearchParams();
-  applyFilterPatch(exploreQs, {
+  const exploreHref = marketplaceSearchHref({
     serviceType: filters.serviceType,
     routeType: filters.routeType,
     vehicleType: filters.vehicleType,
@@ -82,33 +81,26 @@ export function VehiclePreview() {
     returnAt: filters.returnAt,
     hourly: filters.hourly,
   });
-  const exploreHref = exploreQs.toString()
-    ? `${ROUTES.SEARCH}?${exploreQs.toString()}`
-    : ROUTES.SEARCH;
 
   return (
-    // id="recommendations": đích scroll của FeaturedLocations (bấm địa điểm → lọc + cuộn tới đây).
-    <section id="recommendations" className={styles.section} aria-labelledby="home-vehicles">
-      <div className={styles.head}>
-        <div>
-          <h2 id="home-vehicles" className={styles.title}>
-            {serviceLabel ? t('titleWithService', { service: serviceLabel }) : t('title')}{' '}
-            {data ? (
-              <span className={styles.count}>{t('count', { count: data.meta.total })}</span>
-            ) : null}
-          </h2>
-          {nearProvinceName ? (
-            <p className={styles.sub}>
-              {data?.meta.mixedProvinces
-                ? t('nearProvinceMixed', { province: nearProvinceName })
-                : t('nearProvince', { province: nearProvinceName })}
-            </p>
-          ) : null}
-        </div>
-        <Link href={exploreHref} className={styles.seeAll}>
-          {t('exploreAll')} <RightOutlined />
-        </Link>
-      </div>
+    <section className={styles.section} aria-labelledby="home-vehicles">
+      <SectionHeading
+        id="home-vehicles"
+        kicker={tHome('kicker')}
+        title={serviceLabel ? t('titleWithService', { service: serviceLabel }) : tHome('title')}
+        action={
+          <CtaButton href={exploreHref} variant="outline">
+            {tHome('viewAll')}
+          </CtaButton>
+        }
+      />
+      {/*
+        Khi phải bù xe ở tỉnh khác, khối NÓI RA điều đó — hứa "xe ở Hà Nội" rồi hiện xe An Giang là
+        cách nhanh nhất mất lòng tin. Trường hợp thường (đủ xe đúng tỉnh) thì im lặng như bản vẽ.
+      */}
+      {nearProvinceName && data?.meta.mixedProvinces ? (
+        <p className={styles.sub}>{t('nearProvinceMixed', { province: nearProvinceName })}</p>
+      ) : null}
 
       {isLoading ? (
         <ul className={styles.grid} aria-busy="true">
@@ -133,16 +125,24 @@ export function VehiclePreview() {
           }
         />
       ) : items.length === 0 ? (
-        <Empty description={serviceLabel ? t('emptyForService', { service: serviceLabel }) : t('empty')} />
+        <Empty
+          description={serviceLabel ? t('emptyForService', { service: serviceLabel }) : t('empty')}
+        />
       ) : (
-        <ul className={styles.grid}>
+        // Lưới responsive (4-6 cột tuỳ màn hình); mobile là slider thẻ-ở-giữa (bản vẽ mobile v2).
+        <HomeCarousel ariaLabel={tHome('title')} perView={4} layout="grid" responsiveGrid>
           {items.map((listing) => (
-            <li key={listing.id}>
-              <VehicleCard listing={listing} />
-            </li>
+            <VehicleCard key={listing.id} listing={listing} />
           ))}
-        </ul>
+        </HomeCarousel>
       )}
+
+      {/* Mobile: "Xem tất cả xe" xuống dưới slider, trải hết bề ngang (nút ở tiêu đề ẩn đi). */}
+      <div className={styles.mobileAction}>
+        <CtaButton href={exploreHref} variant="outline" className={styles.mobileActionButton}>
+          {tHome('viewAll')}
+        </CtaButton>
+      </div>
     </section>
   );
 }

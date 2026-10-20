@@ -25,6 +25,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { SAFE_URL_PATTERN } from '../../../common/safe-url';
 
 /** Một mục danh mục như FE nhìn thấy. `key` là thứ lưu xuống xe, `label` chỉ để hiển thị. */
 export class CatalogItemDto {
@@ -45,6 +46,25 @@ export class CatalogItemDto {
 
   @ApiProperty({ type: String, nullable: true, example: '/body-types/suv.png' })
   iconUrl!: string | null;
+
+  @ApiProperty({ description: 'Chỉ kiểu dáng: hiện ở khối "Loại xe" trang chủ' })
+  showOnHome!: boolean;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: '/home/type-suv.webp',
+    description: 'Chỉ kiểu dáng: ảnh LỚN của thẻ trang chủ (xe tách nền)',
+  })
+  showcaseImageUrl!: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: 'Mazda CX-5, Ford Territory',
+    description: 'Chỉ kiểu dáng: dòng mẫu xe ví dụ dưới tên trên thẻ trang chủ',
+  })
+  showcaseExamples!: string | null;
 
   @ApiProperty()
   sortOrder!: number;
@@ -123,8 +143,27 @@ export class CreateCatalogItemDto {
   @ApiPropertyOptional({ example: '/body-types/coupe.png' })
   @IsOptional()
   @IsString()
+  @Matches(SAFE_URL_PATTERN, { message: 'iconUrl phải là http(s) hoặc path nội bộ' })
   @MaxLength(2000)
   iconUrl?: string | null;
+
+  @ApiPropertyOptional({ description: 'Chỉ kiểu dáng — bật thì bắt buộc có showcaseImageUrl' })
+  @IsOptional()
+  @IsBoolean()
+  showOnHome?: boolean;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Chỉ kiểu dáng' })
+  @IsOptional()
+  @IsString()
+  @Matches(SAFE_URL_PATTERN, { message: 'showcaseImageUrl phải là http(s) hoặc path nội bộ' })
+  @MaxLength(2000)
+  showcaseImageUrl?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Chỉ kiểu dáng' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  showcaseExamples?: string | null;
 
   @ApiPropertyOptional({ default: 0 })
   @IsOptional()
@@ -167,8 +206,27 @@ export class UpdateCatalogItemDto {
   @ApiPropertyOptional({ type: String, nullable: true })
   @IsOptional()
   @IsString()
+  @Matches(SAFE_URL_PATTERN, { message: 'iconUrl phải là http(s) hoặc path nội bộ' })
   @MaxLength(2000)
   iconUrl?: string | null;
+
+  @ApiPropertyOptional({ description: 'Chỉ kiểu dáng — bật thì bắt buộc có showcaseImageUrl' })
+  @IsOptional()
+  @IsBoolean()
+  showOnHome?: boolean;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Chỉ kiểu dáng' })
+  @IsOptional()
+  @IsString()
+  @Matches(SAFE_URL_PATTERN, { message: 'showcaseImageUrl phải là http(s) hoặc path nội bộ' })
+  @MaxLength(2000)
+  showcaseImageUrl?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Chỉ kiểu dáng' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  showcaseExamples?: string | null;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -265,7 +323,11 @@ export class CatalogModelDto {
 
 /** Bản quản trị: kèm nguồn tra cứu để người rà danh mục biết dữ liệu đến từ đâu. */
 export class CatalogModelAdminDto extends CatalogModelDto {
-  @ApiProperty({ type: String, nullable: true, description: 'Trang sản phẩm chính hãng đã đối chiếu' })
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Trang sản phẩm chính hãng đã đối chiếu',
+  })
   sourceUrl!: string | null;
 
   @ApiProperty({ type: String, nullable: true, format: 'date-time' })

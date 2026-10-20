@@ -1,4 +1,5 @@
 import type { RentalMode } from '@xeprime/domain';
+import { BOOKING_DRAFT_TTL_MS } from '@xeprime/types';
 import type { BookingRequestFormValues } from './booking-schema';
 
 /**
@@ -32,6 +33,7 @@ export function saveBookingDraft(
 }
 
 export function readBookingDraft(vehicleId: string): BookingDraft | null {
+  if (draft && Date.now() - draft.savedAt > BOOKING_DRAFT_TTL_MS) draft = null;
   return draft && draft.vehicleId === vehicleId ? draft : null;
 }
 

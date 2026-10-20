@@ -16,7 +16,9 @@ export const CATALOG_ITEMS: CatalogItem[] = [
   item(CATALOG_TYPE.VEHICLE_BRAND, 'kia', 'Kia', 1, null, null, true, ['car']),
   item(CATALOG_TYPE.VEHICLE_BRAND, 'vinfast', 'VinFast', 2, null, null, true, ['car', 'motorbike']),
   item(CATALOG_TYPE.VEHICLE_BRAND, 'yamaha', 'Yamaha', 3, null, null, true, ['motorbike']),
-  item(CATALOG_TYPE.BODY_TYPE, 'sedan', 'Sedan', 0, '4 chỗ', '/body-types/sedan.png', true, ['car']),
+  item(CATALOG_TYPE.BODY_TYPE, 'sedan', 'Sedan', 0, '4 chỗ', '/body-types/sedan.png', true, [
+    'car',
+  ]),
   item(CATALOG_TYPE.BODY_TYPE, 'suv', 'SUV', 1, '7 chỗ · gầm cao', '/body-types/suv.png', true, [
     'car',
   ]),
@@ -48,6 +50,10 @@ function item(
     label,
     description,
     iconUrl,
+    // Trang chủ: tắt mặc định — test khối "Loại xe" tự dựng mục riêng.
+    showOnHome: false,
+    showcaseImageUrl: null,
+    showcaseExamples: null,
     sortOrder,
     active,
     vehicleTypes,
@@ -77,7 +83,10 @@ export function catalogModuleMock() {
 
   return {
     useCatalog: () => ({ catalog: CATALOG_FIXTURE, isLoading: false }),
-    useCatalogItems: (type: CatalogItemType) => ({ items: CATALOG_FIXTURE[type], isLoading: false }),
+    useCatalogItems: (type: CatalogItemType) => ({
+      items: CATALOG_FIXTURE[type],
+      isLoading: false,
+    }),
     useCatalogLabels: () => labels,
     useCatalogOptions: (type: CatalogItemType, current?: string | null) => {
       const options = CATALOG_FIXTURE[type].map((i) => ({ value: i.key, label: i.label }));
@@ -99,7 +108,15 @@ export const CATALOG_MODELS_FIXTURE = [
   model('m-toyota-vios', 'toyota-vios', 'Vios', 'toyota', 'car'),
   model('m-toyota-innova-cross', 'toyota-innova-cross', 'Innova Cross', 'toyota', 'car'),
   model('m-toyota-innova', 'toyota-innova', 'Innova', 'toyota', 'car', 'legacy'),
-  model('m-yamaha-sirius', 'yamaha-sirius', 'Sirius', 'yamaha', 'motorbike', 'current', 'underbone'),
+  model(
+    'm-yamaha-sirius',
+    'yamaha-sirius',
+    'Sirius',
+    'yamaha',
+    'motorbike',
+    'current',
+    'underbone',
+  ),
   model('m-yamaha-janus', 'yamaha-janus', 'Janus', 'yamaha', 'motorbike', 'current', 'scooter'),
 ];
 
@@ -146,7 +163,9 @@ export function catalogModelsModuleMock() {
       ),
       isLoading: false,
     }),
-    useCatalogModelGroups: (models: readonly { id: string; label: string; marketStatus: string }[]) =>
+    useCatalogModelGroups: (
+      models: readonly { id: string; label: string; marketStatus: string }[],
+    ) =>
       ['current', 'legacy']
         .map((marketStatus) => ({
           marketStatus,

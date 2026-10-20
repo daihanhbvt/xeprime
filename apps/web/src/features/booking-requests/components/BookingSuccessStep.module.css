@@ -1,0 +1,59 @@
+/**
+ * Phần RIÊNG của hộp "Đã gửi yêu cầu" — Figma `19759:22026`. Khung hộp (rộng 600, cuộn thân, ô mã,
+ * dòng tổng, hàng nút dính đáy) là của chung với hộp "Thanh toán thành công" — `BookingResult`.
+ */
+
+/* Lời nhắc "xe chưa được giữ chỗ" — cùng sắc với lời nhắc giấy tờ ở màn Xem lại. */
+.note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  padding: var(--xp-space-12);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+/* Icon cao đúng một dòng chữ ⇒ đứng ngang dòng đầu dù lời nhắc xuống mấy dòng. */
+.note :global(.anticon) {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  height: var(--xp-line-height-body);
+  color: var(--xp-color-warning);
+}
+
+/*
+ * Nút phụ 48px, bo 12, chữ 16/Semibold xám đậm. Lặp class để thắng style runtime của AntD — nó
+ * tiêm SAU stylesheet của CSS Module và bộ chọn `.ant-btn-color-default.ant-btn-variant-outlined`
+ * của nó đã là (0,2,0).
+ */
+.secondary.secondary.secondary {
+  flex: none;
+  height: 48px;
+  padding: var(--xp-space-12) var(--xp-space-20);
+  border-color: var(--xp-color-border-strong);
+  border-radius: var(--xp-border-radius-control);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+.primary {
+  flex: 1 1 160px;
+  min-width: 160px;
+}
+
+/* 640px = `--xp-bp-mobile`: hàng nút xếp dọc (`BookingResult`), mỗi nút rộng hết hàng. */
+@media (max-width: 640px) {
+  .secondary.secondary.secondary,
+  .primary {
+    flex: none;
+    width: 100%;
+    min-width: 0;
+  }
+}

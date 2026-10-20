@@ -1345,31 +1345,28 @@ export const inviteMemberSchema = yup.object({
 export type InviteMemberValues = yup.InferType<typeof inviteMemberSchema>;
 
 /**
- * Hồ sơ tài xế — MỘT schema cho cả thêm lẫn sửa, vì hai màn nhập đúng cùng một bộ trường.
- *
- * Đổi trạng thái hoạt động và xoá đi bằng ENDPOINT riêng, không phải input của form: nhét chúng
- * vào đây là để một lần bấm Lưu vô tình bật lại một tài xế vừa bị ngừng.
- *
- * `licenseExpiresAt` là NGÀY LỊCH `YYYY-MM-DD` (cột `@db.Date`), không phải mốc thời gian — hết
- * hạn thì server chặn gán vào đơn mới.
+ * MỜI tài xế (ADR 0063) — tài xế là một TÀI KHOẢN KHÁCH đã xác minh SĐT; server mới là nơi quyết
+ * định (`DRIVER_ACCOUNT_NOT_FOUND`). Tạm khoá / mở khoá / kết thúc đi bằng ENDPOINT riêng.
  *
  * Message là MÃ — `useValidationResolver` tra `Drivers.form.errors.*`.
  */
-export const driverFormSchema = yup.object({
-  name: yup.string().trim().required('nameRequired').max(255),
+export const inviteDriverSchema = yup.object({
   phone: yup.string().trim().required('phoneRequired').matches(VN_PHONE_PATTERN, 'phoneInvalid'),
+  name: yup.string().trim().required('nameRequired').max(255),
   driverType: yup
     .mixed<DriverType>()
     .oneOf(DRIVER_TYPE_VALUES)
     .required()
     .default(DRIVER_TYPE.STAFF),
-  licenseNo: yup.string().trim().max(50).default(''),
-  licenseExpiresAt: yup.string().nullable().defined().default(null),
-  idNo: yup.string().trim().max(50).default(''),
   note: yup.string().trim().max(2000).default(''),
 });
 
-export type DriverFormValues = yup.InferType<typeof driverFormSchema>;
+export type InviteDriverValues = yup.InferType<typeof inviteDriverSchema>;
+
+/** SỬA một liên kết tài xế — SĐT không đổi được (mời lại là một liên kết mới). */
+export const editDriverSchema = inviteDriverSchema.pick(['name', 'driverType', 'note']);
+
+export type EditDriverValues = yup.InferType<typeof editDriverSchema>;
 
 // ---------------------------------------------------------------------------
 // Chính sách thuê + giá theo xe (SHP-04 · VEH-05)

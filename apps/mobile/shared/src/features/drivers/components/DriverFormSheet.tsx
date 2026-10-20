@@ -1,168 +1,252 @@
 import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import { XStack, YStack } from 'tamagui';
+import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { DRIVER_TYPE, DRIVER_TYPE_VALUES } from '@xeprime/types';
-import { driverFormSchema, type DriverFormValues } from '@xeprime/validators';
+import {
+  editDriverSchema,
+  inviteDriverSchema,
+  type EditDriverValues,
+  type InviteDriverValues,
+} from '@xeprime/validators';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
-import { DateField } from '@/components/ui/DateField';
+import { Callout } from '@/components/ui/Callout';
 import { SelectField } from '@/components/ui/SelectField';
 import { TextField } from '@/components/ui/TextField';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
-import { space } from '@/theme/tokens';
+import { colors, fontSize, space } from '@/theme/tokens';
 import type { Driver } from '../api';
-import { useCreateDriver, useUpdateDriver } from '../hooks/use-drivers';
+import { useInviteDriver, useUpdateDriver } from '../hooks/use-drivers';
 
-const EMPTY: DriverFormValues = {
-  name: '',
+const EMPTY_INVITE: InviteDriverValues = {
   phone: '',
+  name: '',
   driverType: DRIVER_TYPE.STAFF,
-  licenseNo: '',
-  licenseExpiresAt: null,
-  idNo: '',
   note: '',
 };
 
-function toValues(driver: Driver): DriverFormValues {
-  return {
-    name: driver.name,
-    phone: driver.phone,
-    driverType: driver.driverType,
-    licenseNo: driver.licenseNo ?? '',
-    licenseExpiresAt: driver.licenseExpiresAt ?? null,
-    idNo: driver.idNo ?? '',
-    note: driver.note ?? '',
-  };
+function useTypeOptions() {
+  const domainLabel = useDomainLabel();
+  return useMemo(
+    () => DRIVER_TYPE_VALUES.map((value) => ({ value, label: domainLabel('driverType', value) })),
+    [domainLabel],
+  );
+}
+
+/** Hàng nút cuối form: lối thoát bên TRÁI co vừa chữ, hành động chính bên PHẢI lấy phần còn lại. */
+function FormActions({
+  saving,
+  submitLabel,
+  onClose,
+  onSubmit,
+}: {
+  saving: boolean;
+  submitLabel: string;
+  onClose: () => void;
+  onSubmit: () => void;
+}) {
+  const tActions = useTranslations('Common.actions');
+  return (
+    <XStack gap={space.sm}>
+      <YStack flexShrink={0}>
+        <Button label={tActions('close')} variant="ghost" disabled={saving} onPress={onClose} />
+      </YStack>
+      <YStack f={1}>
+        <Button label={submitLabel} icon="checkmark-outline" loading={saving} onPress={onSubmit} />
+      </YStack>
+    </XStack>
+  );
 }
 
 /**
- * Hồ sơ tài xế — MỘT tấm trượt cho cả thêm lẫn sửa (bản native của `DriverFormModal`).
- *
- * Đổi trạng thái hoạt động và xoá nằm ở hàng thao tác của THẺ, không nhét vào form: chúng là
- * hành động vòng đời đi bằng endpoint riêng, và trộn vào form nghĩa là một lần bấm Lưu vô tình
- * bật lại một tài xế vừa bị ngừng.
+ * MỜI tài xế bằng SĐT (ADR 0063) — bản native của `InviteDriverModal`. Tài xế là TÀI KHOẢN KHÁCH
+ * đã xác minh; chưa có thì server trả `DRIVER_ACCOUNT_NOT_FOUND` và câu lỗi hiện NGAY trong tấm
+ * (không chỉ toast) — nó nói rõ việc cần làm: nhờ tài xế đăng ký bằng đúng số đó.
  */
-export function DriverFormSheet({
+export function InviteDriverSheet({
   open,
-  driver,
   onClose,
+  prefill,
 }: {
   open: boolean;
-  /** `null` = thêm mới; có giá trị = sửa hồ sơ đó. */
-  driver: Driver | null;
   onClose: () => void;
+  /** "Mời lại" một liên kết đã đóng — điền sẵn SĐT/tên/loại/ghi chú của liên kết cũ. */
+  prefill?: InviteDriverValues | null;
 }) {
   const t = useTranslations('Drivers.form');
-
   return (
-    <BottomSheet open={open} onClose={onClose} title={driver ? t('titleEdit') : t('titleCreate')}>
-      {open ? <DriverForm key={driver?.id ?? 'new'} driver={driver} onDone={onClose} /> : null}
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      title={prefill ? t('titleReinvite') : t('titleInvite')}
+    >
+      {/* Mount theo `open`: mỗi lần mở là một form mới, lỗi của lần mời trước không ở lại. */}
+      {open ? <InviteForm onDone={onClose} defaults={prefill ?? EMPTY_INVITE} /> : null}
     </BottomSheet>
   );
 }
 
-function DriverForm({ driver, onDone }: { driver: Driver | null; onDone: () => void }) {
+function InviteForm({
+  onDone,
+  defaults,
+}: {
+  onDone: () => void;
+  defaults: InviteDriverValues;
+}) {
   const t = useTranslations('Drivers');
-  const tForm = useTranslations('Drivers.form');
-  const tActions = useTranslations('Common.actions');
   const toast = useAppToast();
-  const domainLabel = useDomainLabel();
   const errorMessage = useErrorMessage();
-  const create = useCreateDriver();
-  const update = useUpdateDriver();
-  const saving = create.isPending || update.isPending;
+  const invite = useInviteDriver();
+  const typeOptions = useTypeOptions();
 
-  const resolver = useValidationResolver<DriverFormValues>(driverFormSchema, 'Drivers.form.errors');
-  const { control, handleSubmit } = useForm<DriverFormValues>({
+  const resolver = useValidationResolver<InviteDriverValues>(
+    inviteDriverSchema,
+    'Drivers.form.errors',
+  );
+  const { control, handleSubmit } = useForm<InviteDriverValues>({
     resolver,
-    defaultValues: driver ? toValues(driver) : EMPTY,
+    defaultValues: defaults,
   });
 
-  const typeOptions = useMemo(
-    () => DRIVER_TYPE_VALUES.map((value) => ({ value, label: domainLabel('driverType', value) })),
-    [domainLabel],
-  );
-
   const submit = handleSubmit((values) => {
-    const body = {
-      name: values.name.trim(),
-      phone: values.phone.trim(),
-      driverType: values.driverType,
-      licenseNo: values.licenseNo.trim() || null,
-      licenseExpiresAt: values.licenseExpiresAt || null,
-      idNo: values.idNo.trim() || null,
-      note: values.note.trim() || null,
-    };
-    const done = {
-      onSuccess: () => {
-        toast.showSuccess(driver ? t('toast.updated') : t('toast.created'));
-        onDone();
+    if (invite.isPending) return;
+    invite.mutate(
+      {
+        phone: values.phone.trim(),
+        name: values.name.trim(),
+        driverType: values.driverType,
+        ...(values.note.trim() ? { note: values.note.trim() } : {}),
       },
-      onError: (err: unknown) => toast.showError(errorMessage(err)),
-    };
-    if (driver) update.mutate({ id: driver.id, body }, done);
-    else create.mutate(body, done);
+      {
+        onSuccess: () => {
+          toast.showSuccess(t('toast.invited'));
+          onDone();
+        },
+      },
+    );
   });
 
   return (
     <YStack gap={space.md}>
+      <Text col={colors.textMuted} fos={fontSize.bodySm}>
+        {t('form.inviteHint')}
+      </Text>
+      {invite.isError ? <Callout tone="danger">{errorMessage(invite.error)}</Callout> : null}
       <TextField
         control={control}
-        name="name"
-        label={tForm('name')}
-        placeholder={tForm('namePlaceholder')}
+        name="phone"
+        label={t('form.phone')}
+        placeholder={t('form.phonePlaceholder')}
+        keyboardType="phone-pad"
+        autoComplete="tel"
         required
       />
       <TextField
         control={control}
-        name="phone"
-        label={tForm('phone')}
-        placeholder={tForm('phonePlaceholder')}
-        keyboardType="phone-pad"
-        autoComplete="tel"
+        name="name"
+        label={t('form.name')}
+        placeholder={t('form.namePlaceholder')}
         required
       />
       <SelectField
         control={control}
         name="driverType"
-        label={tForm('type')}
+        label={t('form.type')}
         required
         options={typeOptions}
       />
-      <TextField control={control} name="licenseNo" label={tForm('licenseNo')} />
-      <DateField
-        control={control}
-        name="licenseExpiresAt"
-        label={tForm('licenseExpiresAt')}
-        hint={tForm('licenseExpiresAtPlaceholder')}
+      <TextField control={control} name="note" label={t('form.note')} multiline rows={3} />
+      <FormActions
+        saving={invite.isPending}
+        submitLabel={t('actions.sendInvite')}
+        onClose={onDone}
+        onSubmit={() => void submit()}
       />
-      <TextField control={control} name="idNo" label={tForm('idNo')} />
-      <TextField control={control} name="note" label={tForm('note')} multiline rows={3} />
+    </YStack>
+  );
+}
 
-      <XStack gap={space.sm}>
-        {/*
-          Lối thoát bên TRÁI, hành động chính bên PHẢI — xếp dọc thì hàng dưới đọc ra là một
-          bước tiếp theo chứ không phải một lựa chọn thay thế.
-        
-          "Đóng" co vừa chữ, nút chính lấy phần còn lại — xem luật ở `Button.tsx`. Chia đôi thì
-          nửa hàng bên trái bỏ trống quá nửa cho một từ bốn chữ, còn nút chính thiếu chỗ.
-        */}
-        <YStack flexShrink={0}>
-          <Button label={tActions('close')} variant="ghost" disabled={saving} onPress={onDone} />
-        </YStack>
-        <YStack f={1}>
-          <Button
-            label={driver ? tActions('save') : tActions('add')}
-            icon="checkmark-outline"
-            loading={saving}
-            onPress={() => void submit()}
-          />
-        </YStack>
-      </XStack>
+/** SỬA một liên kết — SĐT không đổi được (mời lại là một liên kết mới). Bản native `EditDriverModal`. */
+export function EditDriverSheet({
+  driver,
+  onClose,
+}: {
+  driver: Driver | null;
+  onClose: () => void;
+}) {
+  const t = useTranslations('Drivers.form');
+  return (
+    <BottomSheet open={driver !== null} onClose={onClose} title={t('titleEdit')}>
+      {driver ? <EditForm key={driver.id} driver={driver} onDone={onClose} /> : null}
+    </BottomSheet>
+  );
+}
+
+function EditForm({ driver, onDone }: { driver: Driver; onDone: () => void }) {
+  const t = useTranslations('Drivers');
+  const tActions = useTranslations('Common.actions');
+  const toast = useAppToast();
+  const errorMessage = useErrorMessage();
+  const update = useUpdateDriver();
+  const typeOptions = useTypeOptions();
+
+  const resolver = useValidationResolver<EditDriverValues>(editDriverSchema, 'Drivers.form.errors');
+  const { control, handleSubmit } = useForm<EditDriverValues>({
+    resolver,
+    defaultValues: { name: driver.name, driverType: driver.driverType, note: driver.note ?? '' },
+  });
+
+  const submit = handleSubmit((values) => {
+    if (update.isPending) return;
+    update.mutate(
+      {
+        id: driver.id,
+        body: {
+          name: values.name.trim(),
+          driverType: values.driverType,
+          note: values.note.trim() || null,
+        },
+      },
+      {
+        onSuccess: () => {
+          toast.showSuccess(t('toast.updated'));
+          onDone();
+        },
+      },
+    );
+  });
+
+  return (
+    <YStack gap={space.md}>
+      {update.isError ? <Callout tone="danger">{errorMessage(update.error)}</Callout> : null}
+      <Text col={colors.textMuted} fos={fontSize.bodySm}>
+        {driver.phone}
+      </Text>
+      <TextField
+        control={control}
+        name="name"
+        label={t('form.name')}
+        placeholder={t('form.namePlaceholder')}
+        required
+      />
+      <SelectField
+        control={control}
+        name="driverType"
+        label={t('form.type')}
+        required
+        options={typeOptions}
+      />
+      <TextField control={control} name="note" label={t('form.note')} multiline rows={3} />
+      <FormActions
+        saving={update.isPending}
+        submitLabel={tActions('save')}
+        onClose={onDone}
+        onSubmit={() => void submit()}
+      />
     </YStack>
   );
 }

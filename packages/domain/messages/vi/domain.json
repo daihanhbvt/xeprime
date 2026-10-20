@@ -202,6 +202,34 @@
     "collaborator": "Cộng tác viên",
     "temporary": "Thời vụ"
   },
+  "driverLinkStatus": {
+    "invited": "Chờ tài xế đồng ý",
+    "active": "Đang liên kết",
+    "suspended": "Tạm khoá",
+    "declined": "Đã từ chối",
+    "ended": "Đã kết thúc"
+  },
+  "driverAssignmentStatus": {
+    "pending": "Chờ tài xế nhận",
+    "accepted": "Tài xế đã nhận"
+  },
+  "driverAssignmentOutcome": {
+    "open": "Đang giao",
+    "declined": "Tài xế từ chối",
+    "unassigned": "Đã gỡ tài xế",
+    "cancelled": "Đơn đã huỷ",
+    "no_show": "Khách không đến",
+    "completed": "Hoàn thành"
+  },
+  "driverLicenceState": {
+    "verified": "Bằng lái đã xác thực",
+    "pending": "Bằng lái chờ xác thực",
+    "none": "Chưa có bằng lái"
+  },
+  "driverEmployerKind": {
+    "personal": "Chủ xe cá nhân",
+    "shop": "Gian hàng"
+  },
   "financeCategoryType": {
     "income": "Thu",
     "expense": "Chi"
@@ -357,7 +385,16 @@
     "hold_refunded": "Chuyến không thành — đã hoàn",
     "hold_refund_paid": "Đã hoàn tiền giữ chỗ",
     "booking_request_slot_reopened": "Xe bạn hỏi đã rảnh lại",
-    "booking_cancelled_by_host": "Chủ xe đã huỷ chuyến"
+    "booking_cancelled_by_host": "Chủ xe đã huỷ chuyến",
+    "driver_invited": "Lời mời làm tài xế",
+    "driver_invite_accepted": "Tài xế đã đồng ý liên kết",
+    "driver_invite_declined": "Tài xế từ chối liên kết",
+    "driver_link_ended": "Liên kết tài xế đã kết thúc",
+    "driver_trip_assigned": "Chuyến mới cần xác nhận",
+    "driver_trip_unassigned": "Chuyến đã được gỡ khỏi bạn",
+    "driver_trip_completed": "Chuyến đã hoàn thành",
+    "driver_trip_accepted": "Tài xế đã nhận chuyến",
+    "driver_trip_declined": "Tài xế từ chối chuyến"
   },
   "occupancySourceType": {
     "booking": "Đơn thuê",
@@ -908,7 +945,7 @@
   },
   "catalogTypeHint": {
     "vehicle_brand": "Hiện ở ô \"Hãng xe\" khi tạo/sửa xe và ở bộ lọc ngoài chợ.",
-    "body_type": "Hiện thành thẻ có ảnh khi tạo/sửa xe và ở bộ lọc \"Loại xe\" ngoài chợ.",
+    "body_type": "Hiện thành thẻ có ảnh khi tạo/sửa xe, ở bộ lọc \"Loại xe\" ngoài chợ, và — khi bật \"Hiện ở trang chủ\" — ở khối \"Loại xe\" trang chủ.",
     "fuel_type": "Hiện ở ô \"Nguồn năng lượng\" khi tạo/sửa xe và ở bộ lọc ngoài chợ.",
     "vehicle_feature": "Hiện ở phần \"Tiện ích\" khi tạo/sửa xe và ở bộ lọc ngoài chợ.",
     "vehicle_model": "Hiện ở ô \"Mẫu xe\" sau khi chọn hãng. Mỗi mẫu thuộc một hãng và một loại xe."
@@ -1141,7 +1178,9 @@
         "create": "Thêm phụ phí đơn thuê",
         "update": "Cập nhật phụ phí đơn thuê",
         "void": "Huỷ phụ phí đơn thuê"
-      }
+      },
+      "driver_accept": "Tài xế nhận chuyến",
+      "driver_decline": "Tài xế từ chối chuyến"
     },
     "booking_hold": {
       "create": "Tạo khoản giữ chỗ",
@@ -1196,7 +1235,13 @@
     "driver": {
       "create": "Thêm tài xế",
       "update": "Cập nhật tài xế",
-      "delete": "Xoá tài xế"
+      "delete": "Xoá tài xế",
+      "invite": "Mời tài xế",
+      "accept_invite": "Tài xế đồng ý lời mời",
+      "decline_invite": "Tài xế từ chối lời mời",
+      "suspend": "Tạm khoá tài xế",
+      "resume": "Mở khoá tài xế",
+      "end": "Kết thúc liên kết tài xế"
     },
     "fee_policy": {
       "create_draft": "Tạo bản nháp chính sách phí",
@@ -1560,5 +1605,10 @@
   },
   "appSupportCaseCategory": {
     "plan_consultation": "Tư vấn tài khoản"
+  },
+  "holdPaymentChannel": {
+    "bank_transfer": "chuyển khoản",
+    "momo": "Ví MoMo",
+    "vnpay": "VNPAY"
   }
 }

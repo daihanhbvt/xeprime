@@ -72,6 +72,8 @@ export const PARTNER_PATH = {
   /** "Chuyến cho thuê" — chỉ CHỦ xe tuyến hoa hồng (PR #158). */
   TRIPS: '/manage/trips',
   CHAT: '/manage/chat',
+  /** Tài xế — mở cho cả chủ xe tuyến hoa hồng (ADR 0063). */
+  DRIVERS: '/manage/drivers',
   BALANCE: '/manage/balance',
   TAX: '/manage/tax',
   BANK_ACCOUNTS: '/manage/bank-accounts',
@@ -126,6 +128,8 @@ const COMMISSION_PAGES: readonly PageRule[] = [
   { href: PARTNER_PATH.TRIPS },
   { href: PARTNER_PATH.CHAT },
   { href: PARTNER_PATH.BALANCE },
+  // Tài xế mở cho cả chủ xe tuyến hoa hồng (ADR 0063) — web `post-auth-destination.ts`.
+  { href: PARTNER_PATH.DRIVERS },
   { href: PARTNER_PATH.TAX },
   { href: PARTNER_PATH.BANK_ACCOUNTS },
   { href: PARTNER_PATH.HOST_GUIDE },
@@ -182,10 +186,7 @@ function packageEquivalent(pathname: string): string | null {
 }
 
 /** Hai trang tiền/thuế của CHỦ — với thành viên gian hàng chúng là alias về trang tài khoản. */
-const OWNER_MONEY_ALIASES: readonly string[] = [
-  PARTNER_PATH.TAX,
-  PARTNER_PATH.BANK_ACCOUNTS,
-];
+const OWNER_MONEY_ALIASES: readonly string[] = [PARTNER_PATH.TAX, PARTNER_PATH.BANK_ACCOUNTS];
 
 /**
  * Thành viên (không phải chủ) của một gian hàng ĐÃ vào khu quản lý mở `/manage/tax`

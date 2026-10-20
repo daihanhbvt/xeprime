@@ -1,5 +1,6 @@
 'use client';
 
+import { EnvironmentOutlined } from '@ant-design/icons';
 import { Skeleton } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -13,6 +14,8 @@ import { applyDiscountPercent } from '@/lib/money';
 import { PreviewImage } from '@/components/data-display/PreviewImage';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
 import { ShopQuickInfoCard } from '@/components/shop/ShopQuickInfoCard';
+import { useListingSpecSummary } from '../hooks/use-listing-spec-summary';
+import { pickupPointText } from '../pickup-point';
 import styles from './VehicleSummaryPanel.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
@@ -59,6 +62,8 @@ export function VehicleSummaryPanel({
   const dl = useDomainLabel();
   const fmt = useAppFormat();
   const { catalog } = useCatalog();
+  /* Số chỗ · hộp số · năng lượng — CÙNG dòng với thẻ chuyến ở màn Xem lại (Figma `19727:56178`). */
+  const specLine = useListingSpecSummary(listing);
 
   const name = listing?.name ?? fallbackName;
   const mainImage = listing?.mainImageUrl ?? fallbackImageUrl ?? null;
@@ -94,16 +99,14 @@ export function VehicleSummaryPanel({
 
   const location = [listing?.shopProvince].filter(Boolean).join(LIST_SEPARATOR);
 
+  /*
+   * Số chỗ và năng lượng đã nằm trên dòng thông số dưới tên xe — bảng chỉ còn những thứ dòng đó
+   * không nói: đời xe, kiểu dáng.
+   */
   const specs = listing
     ? ([
         listing.manufactureYear
           ? { label: t('panel.specYear'), value: String(listing.manufactureYear) }
-          : null,
-        listing.seatCount
-          ? {
-              label: t('panel.specSeats'),
-              value: t('panel.seatCount', { count: listing.seatCount }),
-            }
           : null,
         listing.bodyType
           ? {
@@ -111,14 +114,10 @@ export function VehicleSummaryPanel({
               value: catalogLabel(catalog[CATALOG_TYPE.BODY_TYPE], listing.bodyType) ?? '—',
             }
           : null,
-        listing.fuelType
-          ? {
-              label: t('panel.specFuel'),
-              value: catalogLabel(catalog[CATALOG_TYPE.FUEL_TYPE], listing.fuelType) ?? '—',
-            }
-          : null,
       ].filter(Boolean) as Array<{ label: string; value: string }>)
     : [];
+  /** Chỗ khách tới lấy xe khi tự nhận — chi nhánh giữ xe (backend đã lo phần dự phòng). */
+  const pickupPoint = listing?.pickupPoint ?? null;
 
   const pending = loading && !listing;
 
@@ -147,9 +146,14 @@ export function VehicleSummaryPanel({
           {discount > 0 ? <DiscountTag percent={discount} size="sm" /> : null}
         </div>
         <h3 className={styles.name}>{name}</h3>
+        {specLine.length > 0 ? (
+          <p className={styles.specLine}>{specLine.join(LIST_SEPARATOR)}</p>
+        ) : null}
         {listing ? (
           <p className={styles.meta}>
-            {[dl('vehicleType', listing.vehicleType), location].filter(Boolean).join(LIST_SEPARATOR)}
+            {[dl('vehicleType', listing.vehicleType), location]
+              .filter(Boolean)
+              .join(LIST_SEPARATOR)}
           </p>
         ) : null}
 
@@ -182,6 +186,18 @@ export function VehicleSummaryPanel({
 
       {listing ? (
         <div className={styles.details}>
+          {pickupPoint ? (
+            <p className={styles.pickupPoint}>
+              <span className={styles.pickupIcon} aria-hidden>
+                <EnvironmentOutlined />
+              </span>
+              <span className={styles.pickupText}>
+                <span className={styles.pickupLabel}>{t('panel.pickupPoint')}</span>
+                <span className={styles.pickupAddress}>{pickupPointText(pickupPoint)}</span>
+              </span>
+            </p>
+          ) : null}
+
           {specs.length > 0 ? (
             <dl className={styles.specs}>
               {specs.map((s) => (
@@ -234,7 +250,6 @@ export function VehicleSummaryPanel({
           </div>
         </div>
       ) : null}
-
     </aside>
   );
 }

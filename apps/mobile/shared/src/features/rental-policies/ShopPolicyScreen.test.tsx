@@ -11,6 +11,7 @@ import * as authApi from '@/features/auth/api';
 import { queryKeys } from '@/queries/query-keys';
 import { withIntl } from '@/i18n/test-utils';
 import { store } from '@/store';
+import { tenantsApi } from '@/features/shop/api';
 import { shopPoliciesApi, type ShopRentalPolicy } from './api';
 import { ShopPolicyScreen } from './ShopPolicyScreen';
 
@@ -82,6 +83,7 @@ async function renderScreen(permissions: Permission[], data: ShopRentalPolicy = 
   jest.spyOn(authApi, 'fetchCurrentUser').mockResolvedValue(currentUser(permissions));
   const getSpy = jest.spyOn(shopPoliciesApi, 'get').mockResolvedValue(data);
   const saveSpy = jest.spyOn(shopPoliciesApi, 'save').mockResolvedValue(data);
+  jest.spyOn(tenantsApi, 'vatInvoiceSetting').mockResolvedValue({ vatInvoiceSupported: false });
 
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },

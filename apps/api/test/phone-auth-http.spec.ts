@@ -367,20 +367,58 @@ describe('Cửa vào tài khoản qua HTTP (ADR 0060)', () => {
       expect(res.headers['set-cookie']).toBeUndefined();
     });
 
-    it('bản app cũ còn gửi liên hệ/`client`/`device` vẫn qua được (trường bị bỏ qua, không 400)', async () => {
+    it('bản app cũ còn gửi `customerEmail`/`client`/`device` vẫn qua được (trường bị bỏ qua, không 400)', async () => {
       const res = await http()
         .post('/public/booking-requests')
         .set(site(ACCOUNT_REALM.CUSTOMER))
         .set('Cookie', cookieOf('U_CUSTOMER', ACCOUNT_REALM.CUSTOMER))
         .send({
           ...BODY,
-          customerName: 'Tên tự khai',
-          customerPhone: '0909999999',
+          customerEmail: 'tu-khai@example.com',
           client: 'native',
           device: { deviceName: 'iPhone' },
         });
       expect(res.status).toBe(201);
       expect(nativeSessions.issueSession).not.toHaveBeenCalled();
+    });
+
+    /*
+     * Liên hệ của chuyến (ADR 0063): khách sửa được họ tên + SĐT, số khác tài khoản không cần OTP.
+     * SĐT chép từ danh bạ (có dấu cách) được gọn lại trước khi so mẫu; ô xoá trắng nghĩa là "dùng
+     * của tài khoản" — không phải một lỗi 400 cho trường không bắt buộc.
+     */
+    it('liên hệ của chuyến: cắt khoảng trắng, gọn SĐT, rỗng ⇒ bỏ trường', async () => {
+      const edited = await http()
+        .post('/public/booking-requests')
+        .set(site(ACCOUNT_REALM.CUSTOMER))
+        .set('Cookie', cookieOf('U_CUSTOMER', ACCOUNT_REALM.CUSTOMER))
+        .send({ ...BODY, customerName: '  Người nhà  ', customerPhone: '091 234 5678' });
+      expect(edited.status).toBe(201);
+      expect(requests.submitPublic).toHaveBeenLastCalledWith(
+        expect.objectContaining({ customerName: 'Người nhà', customerPhone: '0912345678' }),
+        'U_CUSTOMER',
+      );
+
+      const blank = await http()
+        .post('/public/booking-requests')
+        .set(site(ACCOUNT_REALM.CUSTOMER))
+        .set('Cookie', cookieOf('U_CUSTOMER', ACCOUNT_REALM.CUSTOMER))
+        .send({ ...BODY, customerName: '   ', customerPhone: '' });
+      expect(blank.status).toBe(201);
+      const dto = (requests.submitPublic as jest.Mock).mock.lastCall?.[0] as Record<string, unknown>;
+      expect(dto.customerName).toBeUndefined();
+      expect(dto.customerPhone).toBeUndefined();
+    });
+
+    it('SĐT liên hệ không phải số Việt Nam ⇒ 400, không gọi service', async () => {
+      const res = await http()
+        .post('/public/booking-requests')
+        .set(site(ACCOUNT_REALM.CUSTOMER))
+        .set('Cookie', cookieOf('U_CUSTOMER', ACCOUNT_REALM.CUSTOMER))
+        .send({ ...BODY, customerPhone: '12345' });
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe(API_ERROR_CODE.VALIDATION_FAILED);
+      expect(requests.submitPublic).not.toHaveBeenCalled();
     });
 
     it('phiên partner gọi qua site partner ⇒ 403 REALM_NOT_ALLOWED', async () => {

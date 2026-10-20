@@ -3,16 +3,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/services/query-keys';
 import {
-  createDriver,
-  deleteDriver,
+  endDriver,
   fetchAssignableDrivers,
   fetchDrivers,
   filtersToParams,
+  inviteDriver,
+  resumeDriver,
+  suspendDriver,
   updateDriver,
 } from '../api';
-import type { CreateDriverInput, DriverFilters, UpdateDriverInput } from '../types';
+import type { DriverFilters, InviteDriverInput, UpdateDriverInput } from '../types';
 
-/** Danh sách tài xế (phân trang/tìm kiếm server-side). */
+/** Danh sách liên kết tài xế (phân trang/tìm kiếm server-side). */
 export function useDrivers(filters: DriverFilters) {
   return useQuery({
     queryKey: queryKeys.drivers.list(filtersToParams(filters)),
@@ -22,9 +24,8 @@ export function useDrivers(filters: DriverFilters) {
 }
 
 /**
- * Bộ chọn "gán tài xế vào đơn" (17/08): server trả CẢ người không khả dụng trong khung giờ
- * của đơn kèm lý do (bận / GPLX hết hạn) — UI disable với giải thích, backend vẫn kiểm lại
- * trong transaction (không tin FE).
+ * Bộ chọn "gán tài xế vào đơn": server trả CẢ người bận trong khung giờ (disable, không nói bận
+ * ở đâu) kèm trạng thái bằng lái; backend vẫn kiểm lại trong transaction.
  */
 export function useAssignableDrivers(
   window: { pickupAt: string; returnAt: string; excludeBookingId?: string },
@@ -38,26 +39,22 @@ export function useAssignableDrivers(
   });
 }
 
-export function useCreateDriver() {
+function useDriverMutation<TVars>(fn: (vars: TVars) => Promise<unknown>) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body: CreateDriverInput) => createDriver(body),
+    mutationFn: fn,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.drivers.all }),
   });
 }
 
-export function useUpdateDriver() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, body }: { id: string; body: UpdateDriverInput }) => updateDriver(id, body),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.drivers.all }),
-  });
-}
+export const useInviteDriver = () =>
+  useDriverMutation((body: InviteDriverInput) => inviteDriver(body));
 
-export function useDeleteDriver() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => deleteDriver(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.drivers.all }),
-  });
-}
+export const useUpdateDriver = () =>
+  useDriverMutation(({ id, body }: { id: string; body: UpdateDriverInput }) =>
+    updateDriver(id, body),
+  );
+
+export const useSuspendDriver = () => useDriverMutation((id: string) => suspendDriver(id));
+export const useResumeDriver = () => useDriverMutation((id: string) => resumeDriver(id));
+export const useEndDriver = () => useDriverMutation((id: string) => endDriver(id));

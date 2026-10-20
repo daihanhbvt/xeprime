@@ -23,7 +23,7 @@ import {
   SERVICE_TYPE,
   type ServiceType,
 } from '@xeprime/types';
-import { applyDiscountPercent, LIST_SEPARATOR } from '@xeprime/domain';
+import { applyDiscountPercent, LIST_SEPARATOR, mapExternalUrl, toGeoPoint } from '@xeprime/domain';
 import { catalogLabel } from '@/api/catalog';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { MapPreview } from '@/components/map/MapPreview';
@@ -44,7 +44,7 @@ import { elevation } from '@/theme/elevation';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { scrollThrottle } from '@/theme/motion';
-import { mapAppUrl, mapPreviewUrl, toGeoPoint } from '@/lib/map-static';
+import { pickupMapUri } from '@/lib/map-static';
 import { ROUTES } from '@/navigation/routes';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useListing, useListingReviews } from './hooks/use-marketplace-data';
@@ -459,10 +459,11 @@ function DetailBody({
               displayPrice={displayPrice}
             />
 
-            {listing.deliveryEnabled || listing.noCollateral ? (
+            {listing.deliveryEnabled || listing.noCollateral || listing.vatInvoiceSupported ? (
               <XStack gap={space.xs} rowGap={space.xs} flexWrap="wrap">
                 {listing.deliveryEnabled ? <Badge label={t('delivery')} /> : null}
                 {listing.noCollateral ? <Badge label={t('noCollateral')} /> : null}
+                {listing.vatInvoiceSupported ? <Badge label={t('vatInvoice.badge')} /> : null}
               </XStack>
             ) : null}
           </YStack>
@@ -473,6 +474,27 @@ function DetailBody({
           không phải lúc đến quầy mới biết mình thiếu cà vẹt. Chưa cấu hình thì im lặng còn hơn
           hứa sai.
         */}
+
+        {/*
+          HOÁ ĐƠN VAT (ADR 0059) — chỉ khi chủ xe đã công bố. `false` = "chưa công bố", không phải
+          "từ chối", nên không có câu phủ định. Câu chữ nói rõ ai xuất và cho khoản nào.
+        */}
+        {listing.vatInvoiceSupported ? (
+          <Card lift="flat" accessibilityLabel={t('vatInvoice.title')}>
+            <YStack gap={space.sm}>
+              <XStack ai="center" gap={space.xs}>
+                <Ionicons name="receipt-outline" size={iconSize.md} color={colors.primaryActive} />
+                <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+                  {t('vatInvoice.title')}
+                </Text>
+              </XStack>
+              <YStack gap={space.xs}>
+                <BulletLine text={t('vatInvoice.body')} />
+                <BulletLine text={t('vatInvoice.disclaimer')} />
+              </YStack>
+            </YStack>
+          </Card>
+        ) : null}
 
         {listing.collateral ? (
           <Card lift="flat">
@@ -639,7 +661,7 @@ function DetailBody({
 
         <Reviews vehicleId={listing.id} />
 
-        {listing.pickupPoint ? <PickupPointCard point={listing.pickupPoint} /> : null}
+        {listing.pickupPoint ? <PickupPointCard listingId={listing.id} point={listing.pickupPoint} /> : null}
       </YStack>
     </ScrollView>
   );
@@ -883,22 +905,25 @@ function Reviews({ vehicleId }: { vehicleId: string }) {
  * (`ListingDetailView`).
  *
  * Trước đợt này native cố ý bỏ trống phần bản đồ vì "cần một thư viện map riêng". Lý do đó đã
- * hết hiệu lực: ảnh tĩnh Geoapify (`lib/map-static.ts`, ADR 0037) là một tấm `<Image>` — cùng
- * thứ mà ô địa chỉ trong form đang dùng, không thêm một dòng JavaScript của bên thứ ba nào.
+ * hết hiệu lực: ảnh tĩnh do API vẽ hộ (`/public/listings/:id/pickup-map`, Vietmap — ADR 0061
+ * điều 1) là một tấm `<Image>`, không khoá nào trong bundle.
  *
- * Bản đồ TỰ BIẾN MẤT khi thiếu toạ độ hoặc chưa cấu hình khoá; phần chữ ở lại nguyên vẹn — cùng
- * cách xử lý với `StaticMap` bên web, để một điểm nhận chưa được ghim không thành một ô vỡ.
- *
- * Chạm vào ảnh mở GOOGLE MAPS để khách chỉ đường: đó là việc native làm được mà web không —
- * ảnh ở đây chỉ để XEM, không có ghim nào để kéo.
+ * Bản đồ TỰ BIẾN MẤT khi thiếu toạ độ hoặc ảnh lỗi; phần chữ và liên kết "Mở bằng Google Maps" ở
+ * lại — cùng cách xử lý với `StaticMapImage` + `MapLink` bên web.
  */
-function PickupPointCard({ point }: { point: NonNullable<PublicListingDetail['pickupPoint']> }) {
+function PickupPointCard({
+  listingId,
+  point,
+}: {
+  listingId: string;
+  point: NonNullable<PublicListingDetail['pickupPoint']>;
+}) {
   const t = useTranslations('Listings.detail');
   const tAddress = useTranslations('Address');
   const tStates = useTranslations('Common.states');
 
   const geo = toGeoPoint(point.latitude, point.longitude);
-  const mapUri = mapPreviewUrl(geo);
+  const mapUri = geo ? pickupMapUri(listingId, geo, point.address ?? '') : null;
 
   return (
     <Card lift="flat">
@@ -914,16 +939,16 @@ function PickupPointCard({ point }: { point: NonNullable<PublicListingDetail['pi
           <YStack gap={space.xs} mt={space.xs}>
             <MapPreview
               uri={mapUri}
-              unavailableLabel={tStates('imageUnavailable')}
+              accessibilityLabel={t('pickupPoint.mapTitle')}
               busyLabel={tStates('loading')}
-              onOpen={() => void Linking.openURL(mapAppUrl(geo))}
+              onOpen={() => void Linking.openURL(mapExternalUrl(geo))}
               openLabel={t('pickupPoint.mapTitle')}
             />
             {/* Nhắc ra thành chữ: một tấm ảnh bản đồ không tự nói rằng nó bấm được. */}
             <Pressable
               accessibilityRole="link"
               accessibilityLabel={tAddress('map.openInGoogleMaps')}
-              onPress={() => void Linking.openURL(mapAppUrl(geo))}
+              onPress={() => void Linking.openURL(mapExternalUrl(geo))}
             >
               <XStack ai="center" gap={space.xs}>
                 <Ionicons name="open-outline" size={iconSize.sm} color={colors.primaryActive} />

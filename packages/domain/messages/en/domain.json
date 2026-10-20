@@ -202,6 +202,34 @@
     "collaborator": "Contractor",
     "temporary": "Casual"
   },
+  "driverLinkStatus": {
+    "invited": "Awaiting driver",
+    "active": "Linked",
+    "suspended": "Suspended",
+    "declined": "Declined",
+    "ended": "Ended"
+  },
+  "driverAssignmentStatus": {
+    "pending": "Awaiting driver",
+    "accepted": "Driver accepted"
+  },
+  "driverAssignmentOutcome": {
+    "open": "Assigned",
+    "declined": "Declined by driver",
+    "unassigned": "Driver removed",
+    "cancelled": "Booking cancelled",
+    "no_show": "Customer no-show",
+    "completed": "Completed"
+  },
+  "driverLicenceState": {
+    "verified": "Licence verified",
+    "pending": "Licence pending",
+    "none": "No licence"
+  },
+  "driverEmployerKind": {
+    "personal": "Individual owner",
+    "shop": "Shop"
+  },
   "financeCategoryType": {
     "income": "Income",
     "expense": "Expense"
@@ -357,7 +385,16 @@
     "hold_refunded": "Trip fell through — refunded",
     "hold_refund_paid": "Reservation payment refunded",
     "booking_request_slot_reopened": "That car is free again",
-    "booking_cancelled_by_host": "Host cancelled the trip"
+    "booking_cancelled_by_host": "Host cancelled the trip",
+    "driver_invited": "Driver invitation",
+    "driver_invite_accepted": "Driver accepted the link",
+    "driver_invite_declined": "Driver declined the link",
+    "driver_link_ended": "Driver link ended",
+    "driver_trip_assigned": "New trip to confirm",
+    "driver_trip_unassigned": "Trip removed from you",
+    "driver_trip_completed": "Trip completed",
+    "driver_trip_accepted": "Driver accepted the trip",
+    "driver_trip_declined": "Driver declined the trip"
   },
   "occupancySourceType": {
     "booking": "Booking",
@@ -908,7 +945,7 @@
   },
   "catalogTypeHint": {
     "vehicle_brand": "Shown in the \"Brand\" field when adding a vehicle, and in marketplace filters.",
-    "body_type": "Shown as picture cards when adding a vehicle, and in the marketplace \"Type\" filter.",
+    "body_type": "Shown as picture cards when adding a vehicle, in the marketplace \"Type\" filter and — when \"Show on home page\" is on — in the home page \"Vehicle types\" section.",
     "fuel_type": "Shown in the \"Energy source\" field when adding a vehicle, and in filters.",
     "vehicle_feature": "Shown under \"Features\" when adding a vehicle, and in marketplace filters.",
     "vehicle_model": "Shown in the \"Model\" field once a brand is picked. Each model belongs to one brand and one vehicle type."
@@ -1141,7 +1178,9 @@
         "create": "Add booking surcharge",
         "update": "Update booking surcharge",
         "void": "Void booking surcharge"
-      }
+      },
+      "driver_accept": "Driver accepted trip",
+      "driver_decline": "Driver declined trip"
     },
     "booking_hold": {
       "create": "Create booking hold",
@@ -1196,7 +1235,13 @@
     "driver": {
       "create": "Add driver",
       "update": "Update driver",
-      "delete": "Delete driver"
+      "delete": "Delete driver",
+      "invite": "Invite driver",
+      "accept_invite": "Driver accepted invitation",
+      "decline_invite": "Driver declined invitation",
+      "suspend": "Suspend driver",
+      "resume": "Resume driver",
+      "end": "End driver link"
     },
     "fee_policy": {
       "create_draft": "Create fee policy draft",
@@ -1560,5 +1605,10 @@
   },
   "appSupportCaseCategory": {
     "plan_consultation": "Account consultation"
+  },
+  "holdPaymentChannel": {
+    "bank_transfer": "bank transfer",
+    "momo": "MoMo wallet",
+    "vnpay": "VNPAY"
   }
 }

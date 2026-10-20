@@ -31,8 +31,7 @@
     "unknown": "Not provided",
     "noteBlock": "Note",
     "cardTitle": "Booking details",
-    "pageSubtitle": "Manage the trip and the current rental",
-    "backToList": "Back to bookings"
+    "pageSubtitle": "Manage the trip and the current rental"
   },
   "actionBar": {
     "contract": "Contract",
@@ -100,7 +99,9 @@
     "statusLabel": "Status",
     "tableLabel": "Booking list",
     "create": "New booking",
-    "createFirst": "Create the first booking"
+    "createFirst": "Create the first booking",
+    "serviceLabel": "Service",
+    "serviceAll": "All services"
   },
   "awaitingPickup": {
     "title": "Awaiting pickup",
@@ -129,7 +130,8 @@
     "period": "Rental period",
     "total": "Total",
     "status": "Status",
-    "customer": "Customer"
+    "customer": "Customer",
+    "service": "Service"
   },
   "money": {
     "baseAmount": "Rental",
@@ -160,11 +162,6 @@
     "change": "Change",
     "unassign": "Unassign",
     "sheetTitle": "Pick a driver available for this booking window",
-    "busy": "busy in this window",
-    "licenseExpired": "licence expired",
-    "empty": "No active drivers yet",
-    "errorTitle": "Could not load drivers",
-    "assignSuccess": "Driver assigned",
     "unassignSuccess": "Driver unassigned",
     "call": "Call",
     "noneWithDriver": "Chauffeured booking — no driver assigned yet",
@@ -492,11 +489,21 @@
     "scheduleLabel": "Rental period",
     "deliveryFeeNote": "Edit the delivery fee in the \"Cost summary\" block — only there can the reason be written to the audit log.",
     "conflictTitle": "This vehicle is already booked for that window",
-    "conflictBody": "Pick another vehicle, or change the pickup/return time."
+    "conflictBody": "Pick another vehicle, or change the pickup/return time.",
+    "frozenNote": "Service type, rental period, route and prices were fixed when the booking was created and can no longer be edited. Set the delivery fee in the \"Cost summary\" block.",
+    "driverLabel": "Driver",
+    "driverPlaceholder": "Pick a driver for this booking window",
+    "driverNone": "No driver",
+    "driverPendingNote": "A newly assigned driver must accept the trip before the assignment takes effect.",
+    "driverFailed": "Booking details saved, but the driver could not be changed: {error}",
+    "nameRequired": "Enter the customer name",
+    "phoneInvalid": "Invalid phone number",
+    "save": "Save changes",
+    "vehicleLabel": "Vehicle"
   },
   "trip": {
     "title": "Trip management",
-    "loadError": "Couldn't load handover details",
+    "loadError": "Could not load handover information",
     "notStarted": "Trip has not started. Tap “Confirm handover” when you give the vehicle to the customer.",
     "inProgress": "The customer has the vehicle. Tap “Confirm return” when they bring it back.",
     "ended": "This booking ended early — the handover history is read-only.",
@@ -508,7 +515,6 @@
     "doneAt": "{action} at {when}",
     "forbiddenTitle": "You cannot view handovers",
     "forbiddenBody": "Contact an administrator if you need to follow vehicle handovers.",
-    "loadError": "Could not load handover information",
     "confirmForbiddenTitle": "You cannot confirm handovers",
     "confirmForbiddenBody": "The handovers.confirm permission is required to confirm a pickup or return."
   },

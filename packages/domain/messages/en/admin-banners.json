@@ -1,0 +1,128 @@
+{
+  "page": {
+    "title": "Home page banners",
+    "create": "Create banner",
+    "hint": "There's no limit on how many you create; the home page shows them all in order from top to bottom, but at most {max} banners may overlap in display time. Each screen size takes one image at the right ratio: desktop {desktop} · tablet {tablet} · mobile {mobile} (or @2x) — images at the wrong ratio are blocked on upload.",
+    "composition": "Banners carry their own message — the home page puts no text over the image. Only the desktop image ({desktop}) has the search card over roughly its bottom third, so keep text and subject in the upper part.",
+    "loadError": "Couldn't load the banner list",
+    "empty": "No top banners yet — the home page is showing the default strip",
+    "promoHint": "Promo banners sit in the middle of the home page, right after \"Featured cars\". Create as many as you like, but at most {max} banners can show at the same time. Desktop image {desktop} (required) · mobile image {mobile} (optional) — a wrong ratio is blocked at upload.",
+    "promoComposition": "Text, price and artwork live inside the image — the home page puts nothing on top. Desktop and tablet show two banners per row; mobile swipes one at a time. With no promo banner currently showing, the section is hidden from the home page.",
+    "emptyPromo": "No promo banners yet — the promo section is hidden on the home page"
+  },
+  "columns": {
+    "preview": "Image",
+    "banner": "Banner",
+    "schedule": "Display schedule"
+  },
+  "schedule": {
+    "startNow": "Immediately",
+    "endNever": "no end date",
+    "unlimited": "No time limit"
+  },
+  "status": {
+    "off": "Turned off",
+    "live": "Showing",
+    "upcoming": "Scheduled",
+    "ended": "Schedule ended"
+  },
+  "actions": {
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "enable": "Turn on",
+    "disable": "Turn off",
+    "deleteConfirm": "Delete this banner? The images stay in storage, so it can be recreated from the old URLs."
+  },
+  "toast": {
+    "created": "Banner created",
+    "updated": "Banner updated",
+    "enabled": "Banner turned on",
+    "disabled": "Banner turned off",
+    "deleted": "Banner deleted",
+    "capacityExceeded": "Not saved: at most {max} banners can be shown at the same time. Turn off or reschedule another banner first."
+  },
+  "form": {
+    "titleCreate": "Create home page banner",
+    "titleEdit": "Edit home page banner",
+    "eyebrowCreate": "New banner",
+    "eyebrowEdit": "Editing",
+    "intro": "Create a responsive image set for the home page top banner strip. Banners carry their own message and show in full when the ratio is right; only the desktop image has the search card over its lower part.",
+    "sizesBadge": "{count, plural, one {# size} other {# sizes}}",
+    "sections": {
+      "basic": {
+        "title": "Internal details",
+        "description": "Helps the operations team recognise the campaign."
+      },
+      "media": {
+        "title": "Responsive images",
+        "description": "Use @2x files for sharp images. If tablet or mobile is left empty, the next larger image is used."
+      },
+      "content": {
+        "title": "Content and link",
+        "description": "The image description supports accessibility; the link decides where a click on the banner goes."
+      },
+      "visibility": {
+        "title": "Schedule and status",
+        "description": "Leave the schedule empty if the banner should show right away with no time limit."
+      }
+    },
+    "fields": {
+      "title": {
+        "label": "Banner name",
+        "placeholder": "e.g. Summer 2026 campaign",
+        "help": "Only admins see this; it never appears on the home page."
+      },
+      "altText": {
+        "label": "Image description (alt)",
+        "placeholder": "e.g. List your car easily with XePrime",
+        "help": "Screen readers read this text aloud."
+      },
+      "linkUrl": {
+        "label": "Link on click",
+        "placeholder": "/search or https://…",
+        "help": "Optional. Accepts an internal path or a full URL."
+      },
+      "startsAt": {
+        "label": "Start showing",
+        "placeholder": "Immediately"
+      },
+      "endsAt": {
+        "label": "Stop showing",
+        "placeholder": "No end date"
+      },
+      "active": {
+        "description": "Turn off to hide the banner from the home page without deleting it."
+      }
+    },
+    "errors": {
+      "titleRequired": "Enter a banner name",
+      "imageRequired": "Upload the desktop image",
+      "altRequired": "Enter an image description (alt)",
+      "linkInvalid": "Only http(s) URLs or internal paths starting with / are accepted",
+      "endBeforeStart": "The end time must be after the start time"
+    },
+    "introPromo": "Create a promo banner for the middle of the home page. Text and artwork live inside the image; desktop and tablet show two banners per row, mobile swipes one at a time.",
+    "titleCreatePromo": "Create promo banner",
+    "mediaDescriptionPromo": "Use the exact size or larger for a sharp image. Leave mobile empty to show the desktop image."
+  },
+  "media": {
+    "slots": {
+      "desktop": "Desktop",
+      "tablet": "Tablet",
+      "mobile": "Mobile"
+    },
+    "optional": "Optional",
+    "sizeHelp": "{size} · Recommended {size2x}",
+    "desktopComposition": "The home search card covers roughly the bottom third of the desktop image — keep text and subject in the upper part.",
+    "errors": {
+      "unreadable": "Couldn't read the image file — it may be corrupted",
+      "ratio": "The {slot, select, desktop {desktop} tablet {tablet} other {mobile}} image must have a {size} ratio (this one is {actual}). Export it at that size or @2x ({size2x})."
+    },
+    "promoComposition": "Shown in full on desktop and tablet — nothing covers the image."
+  },
+  "tabs": {
+    "hero": "Top banners",
+    "promo": "Promo banners",
+    "label": "Banner placement"
+  }
+}

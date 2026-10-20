@@ -539,7 +539,20 @@ function ResultsBody({ onBack }: { onBack: () => void }) {
             ))}
           </YStack>
         ) : results.listings.length === 0 ? (
-          <YStack f={1} pt={filterHeight}>
+          /*
+           * Khung cuộn `flexGrow: 1` + căn giữa: lời nhắn nằm GIỮA phần trống dưới khối lọc. Khối
+           * lọc cao thấp theo số chip, nên phần trống có lúc rất ngắn — khi đó cuộn được chứ không
+           * cắt mất nút "Xoá tất cả" ở đáy như một hộp `f={1}` cố định.
+           */
+          <ScrollView
+            contentContainerStyle={{
+              flexGrow: 1,
+              justifyContent: 'center',
+              paddingTop: filterHeight,
+              paddingBottom: insets.bottom,
+            }}
+            keyboardShouldPersistTaps="handled"
+          >
             <Empty
               keyword={filters.q}
               onClearKeyword={() => setFilters({ q: undefined })}
@@ -549,7 +562,7 @@ function ResultsBody({ onBack }: { onBack: () => void }) {
               }
               onChangeContext={() => setLocationOpen(true)}
             />
-          </YStack>
+          </ScrollView>
         ) : (
           <Animated.FlatList
             data={results.listings}
@@ -653,7 +666,7 @@ function Empty({
 
   if (keyword) {
     return (
-      <YStack f={1} ai="center" jc="center" gap={space.md} p={layout.screenX}>
+      <YStack flexGrow={1} ai="center" jc="center" gap={space.md} p={layout.screenX}>
         <ScreenMessage
           icon="search-outline"
           title={t('emptyKeywordTitle', { q: keyword })}
@@ -674,16 +687,18 @@ function Empty({
 
   if (!filtered) {
     return (
-      <ScreenMessage
-        icon="car-outline"
-        title={t('emptySystemTitle')}
-        description={t('emptySystemDesc')}
-      />
+      <YStack flexGrow={1} jc="center">
+        <ScreenMessage
+          icon="car-outline"
+          title={t('emptySystemTitle')}
+          description={t('emptySystemDesc')}
+        />
+      </YStack>
     );
   }
 
   return (
-    <YStack f={1} ai="center" jc="center" gap={space.md} p={layout.screenX}>
+    <YStack flexGrow={1} ai="center" jc="center" gap={space.md} p={layout.screenX}>
       <ScreenMessage
         icon="funnel-outline"
         title={t('emptyFilteredTitle')}

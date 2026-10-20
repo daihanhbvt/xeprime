@@ -1,71 +1,78 @@
 'use client';
 
-import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
+import {
+  DeleteOutlined,
+  EditOutlined,
+  PauseCircleOutlined,
+  PlayCircleOutlined,
+  UserAddOutlined,
+} from '@ant-design/icons';
 import { App, Button, Tag } from 'antd';
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
-  DRIVER_STATUS,
-  DRIVER_STATUS_META,
-  DRIVER_STATUS_VALUES,
+  DRIVER_LINK_OPEN_STATUSES,
+  DRIVER_LINK_END_PARTY,
+  DRIVER_LINK_STATUS,
+  DRIVER_LINK_STATUS_FILTER_ANY,
+  DRIVER_LINK_STATUS_META,
+  DRIVER_LINK_STATUS_VALUES,
+  DRIVER_TYPE_VALUES,
   PERMISSION,
-  PLAN_FEATURE,
-  type DriverStatus,
+  isDriverLinkStatus,
 } from '@xeprime/types';
-import { LIST_SEPARATOR } from '@xeprime/domain';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
-import { FeatureWriteTooltip } from '@/components/feedback/FeatureWriteTooltip';
 import { FilterBar, type FilterField } from '@/components/filter/FilterBar';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { usePermissions } from '@/hooks/use-permissions';
-import { useAppFormat } from '@/i18n/use-app-format';
+import { useUrlFilters } from '@/hooks/use-url-filters';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { nowInAppTz, startOfAppDay } from '@/lib/datetime';
-import { DRIVERS_DEFAULT_LIMIT } from '@/features/drivers/api';
-import { DriverFormModal } from '@/features/drivers/components/DriverFormModal';
-import { useDeleteDriver, useDrivers, useUpdateDriver } from '@/features/drivers/hooks/use-drivers';
-import type { Driver, DriverFilters } from '@/features/drivers/types';
+import { DRIVERS_DEFAULT_LIMIT } from '../api';
+import { useDrivers, useEndDriver, useResumeDriver, useSuspendDriver } from '../hooks/use-drivers';
+import type { Driver, DriverFilters } from '../types';
+import { DriverLicenceStateTag } from './DriverLicenceStateTag';
+import { EditDriverModal } from './EditDriverModal';
+import { InviteDriverModal } from './InviteDriverModal';
+import type { InviteDriverFormValues } from '../schema';
 import styles from './DriversPage.module.css';
 
-const MIN_TABLE_WIDTH = 920;
+const MIN_TABLE_WIDTH = 1040;
 
-/** Ngưỡng nhắc GPLX sắp hết hạn (ngày) — đủ thời gian đi gia hạn, không nhắc quá sớm. */
-const LICENSE_WARN_DAYS = 30;
+type ToastKey = 'toast.suspended' | 'toast.resumed' | 'toast.ended' | 'toast.revoked';
 
-/**
- * Tag hạn GPLX: hết hạn (đỏ — không gán vào đơn mới được) · sắp hết hạn ≤30 ngày (vàng) ·
- * còn hạn dài thì chỉ hiện ngày. Chưa khai hạn thì không bịa tag.
- */
-function LicenseExpiryTag({ licenseExpiresAt }: { licenseExpiresAt: string | null }) {
-  const t = useTranslations('Drivers');
-  const fmt = useAppFormat();
-  if (!licenseExpiresAt) return null;
-
-  /*
-   * `licenseExpiresAt` là NGÀY LỊCH `YYYY-MM-DD` (cột `@db.Date`, API trả qua `fromDateOnly`),
-   * không phải mốc thời gian. Đưa nó qua `dayjs(value)` là mượn nửa đêm THEO MÁY rồi in lại
-   * theo giờ VN — trên máy đặt ở UTC, hạn 03/09 hiện thành 04/09.
-   *
-   * Ranh giới "hết hạn" thì phải là mốc thật để đếm ngày còn lại: hết ngày đó theo giờ VN.
-   */
-  const expiry = startOfAppDay(licenseExpiresAt).endOf('day');
-  const daysLeft = expiry.diff(nowInAppTz(), 'day');
-  // Ngày qua `useAppFormat` — định dạng theo ngôn ngữ, không format cứng ở call site.
-  const date = fmt.dateKey(licenseExpiresAt);
-
-  if (daysLeft < 0) return <Tag color="red">{t('license.expired', { date })}</Tag>;
-  if (daysLeft <= LICENSE_WARN_DAYS)
-    return <Tag color="orange">{t('license.expired', { date })}</Tag>;
-  return <span className={styles.meta}>{t('license.validUntil', { date })}</span>;
+function parseFilters(params: URLSearchParams): DriverFilters {
+  const linkStatus = params.get('linkStatus');
+  const driverType = params.get('driverType') ?? '';
+  const page = Number(params.get('page'));
+  return {
+    q: params.get('q') ?? undefined,
+    linkStatus:
+      isDriverLinkStatus(linkStatus) || linkStatus === DRIVER_LINK_STATUS_FILTER_ANY
+        ? linkStatus
+        : undefined,
+    driverType: (DRIVER_TYPE_VALUES as string[]).includes(driverType) ? driverType : undefined,
+    page: page > 1 ? page : undefined,
+    limit: Number(params.get('limit')) || undefined,
+  };
 }
 
 /**
- * Hồ sơ tài xế của gian hàng (17/08 — nghiệp vụ xe có tài xế, mức tối thiểu: hồ sơ + gán vào
- * đơn ở màn chi tiết đơn thuê). Giấy tờ tài xế / lịch bận / chấm công: đợt sau.
+ * Tài xế của bên thuê (ADR 0063) — mỗi dòng là một LIÊN KẾT với một tài khoản khách: mời bằng
+ * SĐT, tài xế đồng ý ở site khách. Mở cho cả gian hàng tuyến gói lẫn chủ xe tuyến hoa hồng, không
+ * sau cờ gói. Bên thuê chỉ thấy TRẠNG THÁI bằng lái của tài xế — không ảnh, không số bằng.
  */
 export function DriversPage() {
+  // `useUrlFilters` đọc `useSearchParams` — Next bắt buộc một ranh giới Suspense.
+  return (
+    <Suspense fallback={null}>
+      <DriversPageInner />
+    </Suspense>
+  );
+}
+
+function DriversPageInner() {
   const t = useTranslations('Drivers');
   const tCommon = useTranslations('Common');
   const { message } = App.useApp();
@@ -73,14 +80,17 @@ export function DriversPage() {
   const domainLabel = useDomainLabel();
   const errorMessage = useErrorMessage();
 
-  // Bộ lọc là state cục bộ — cùng hình thái các trang danh sách manage khác (members).
-  const [filters, setFilters] = useState<DriverFilters>({});
-  const [formOpen, setFormOpen] = useState(false);
+  // Bộ lọc + trang sống trên URL (ADR 0004).
+  const { filters, setFilters } = useUrlFilters(parseFilters);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  // "Mời lại" mở cùng modal mời, điền sẵn từ dòng cũ.
+  const [reinviteFrom, setReinviteFrom] = useState<InviteDriverFormValues | null>(null);
   const [editing, setEditing] = useState<Driver | null>(null);
 
   const { data, isError, refetch, isFetching } = useDrivers(filters);
-  const update = useUpdateDriver();
-  const remove = useDeleteDriver();
+  const suspend = useSuspendDriver();
+  const resume = useResumeDriver();
+  const end = useEndDriver();
 
   const canManage = has(PERMISSION.DRIVER_MANAGE);
 
@@ -96,74 +106,57 @@ export function DriversPage() {
     },
     {
       kind: 'select',
-      key: 'status',
+      key: 'linkStatus',
       label: t('filters.status'),
+      // Không tham số = các liên kết CÒN MỞ (mặc định của server) — `all` chỉ là "xoá tham số";
+      // `any` = mọi trạng thái, gồm cả đã từ chối / đã kết thúc.
       options: [
-        { value: 'all', label: t('filters.allStatuses') },
-        ...DRIVER_STATUS_VALUES.map((value) => ({
+        { value: 'all', label: t('filters.openLinks') },
+        { value: DRIVER_LINK_STATUS_FILTER_ANY, label: t('filters.allStatuses') },
+        ...DRIVER_LINK_STATUS_VALUES.map((value) => ({
           value,
-          label: domainLabel('driverStatus', value),
+          label: domainLabel('driverLinkStatus', value),
         })),
+      ],
+      allowClear: false,
+    },
+    {
+      kind: 'select',
+      key: 'driverType',
+      label: t('filters.type'),
+      options: [
+        { value: 'all', label: t('filters.allTypes') },
+        ...DRIVER_TYPE_VALUES.map((value) => ({ value, label: domainLabel('driverType', value) })),
       ],
       allowClear: false,
     },
   ];
 
-  function patch(next: Partial<DriverFilters>) {
-    setFilters((prev) => ({ ...prev, ...next, ...('page' in next ? {} : { page: 1 }) }));
-  }
+  const feedback = (successKey: ToastKey) => ({
+    onSuccess: () => message.success(t(successKey)),
+    onError: (err: unknown) => message.error(errorMessage(err)),
+  });
 
-  function toggleStatus(row: Driver) {
-    const next =
-      row.status === DRIVER_STATUS.ACTIVE ? DRIVER_STATUS.INACTIVE : DRIVER_STATUS.ACTIVE;
-    update.mutate(
-      { id: row.id, body: { status: next } },
-      {
-        onSuccess: () =>
-          message.success(
-            next === DRIVER_STATUS.ACTIVE ? t('toast.activated') : t('toast.deactivated'),
-          ),
-        onError: (err) => message.error(errorMessage(err)),
-      },
-    );
-  }
-
-  function handleRemove(row: Driver) {
-    remove.mutate(row.id, {
-      onSuccess: () => message.success(t('toast.removed')),
-      onError: (err) => message.error(errorMessage(err)),
-    });
-  }
-
-  // Tài xế là tính năng của GÓI (ADR 0027): hết hạn thì xem lại hồ sơ được, không thêm được
-  // người mới. Lớp chặn thật là `PlanFeatureGuard` ở backend.
-  const addButton = canManage ? (
-    <FeatureWriteTooltip feature={PLAN_FEATURE.DRIVERS}>
-      {(disabled) => (
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          disabled={disabled}
-          onClick={() => {
-            setEditing(null);
-            setFormOpen(true);
-          }}
-        >
-          {t('actions.add')}
-        </Button>
-      )}
-    </FeatureWriteTooltip>
+  const inviteButton = canManage ? (
+    <Button type="primary" icon={<UserAddOutlined />} onClick={() => setInviteOpen(true)}>
+      {t('actions.invite')}
+    </Button>
   ) : null;
 
   const columns: DataTableColumn<Driver>[] = [
     {
       title: t('columns.driver'),
       key: 'driver',
-      width: 240,
+      width: 260,
       render: (_, row) => (
         <div>
           <div className={styles.name}>{row.name}</div>
           <div className={styles.meta}>{row.phone}</div>
+          {row.account.displayName && row.account.displayName !== row.name ? (
+            <div className={styles.meta}>
+              {t('columns.accountName', { name: row.account.displayName })}
+            </div>
+          ) : null}
         </div>
       ),
     },
@@ -174,17 +167,10 @@ export function DriversPage() {
       render: (_, row) => <Tag>{domainLabel('driverType', row.driverType, row.driverType)}</Tag>,
     },
     {
-      title: t('columns.papers'),
-      key: 'papers',
-      width: 240,
-      render: (_, row) => (
-        <div>
-          <span className={styles.meta}>
-            {[row.licenseNo, row.idNo].filter(Boolean).join(LIST_SEPARATOR) || tCommon('labels.emptyValue')}
-          </span>
-          <LicenseExpiryTag licenseExpiresAt={row.licenseExpiresAt ?? null} />
-        </div>
-      ),
+      title: t('columns.licence'),
+      key: 'licence',
+      width: 220,
+      render: (_, row) => <DriverLicenceStateTag licence={row.licence} invitedName={row.name} />,
     },
     {
       title: t('columns.activeBookings'),
@@ -200,57 +186,96 @@ export function DriversPage() {
     {
       title: t('columns.status'),
       key: 'status',
-      width: 150,
+      width: 170,
       render: (_, row) => (
-        <StatusTag
-          value={row.status as DriverStatus}
-          meta={DRIVER_STATUS_META}
-          group="driverStatus"
-        />
+        <div>
+          <StatusTag value={row.linkStatus} meta={DRIVER_LINK_STATUS_META} group="driverLinkStatus" />
+          {row.linkStatus === DRIVER_LINK_STATUS.ENDED && row.endedByParty ? (
+            <div className={styles.meta}>
+              {row.endedByParty === DRIVER_LINK_END_PARTY.DRIVER
+                ? t('endedBy.driver')
+                : t('endedBy.employer')}
+            </div>
+          ) : null}
+          {/* Dòng cũ của một tài khoản đã có liên kết MỚI còn mở: nói rõ thay vì cho mời lần nữa. */}
+          {row.currentOpenLinkStatus ? (
+            <div className={styles.meta}>
+              {row.currentOpenLinkStatus === DRIVER_LINK_STATUS.INVITED
+                ? t('reinvite.alreadyInvited')
+                : t('reinvite.alreadyLinked')}
+            </div>
+          ) : null}
+        </div>
       ),
     },
-    actionColumn<Driver>((row) => [
-      {
-        key: 'edit',
-        label: tCommon('actions.edit'),
-        icon: <EditOutlined />,
-        hidden: !canManage,
-        onClick: () => {
-          setEditing(row);
-          setFormOpen(true);
+    actionColumn<Driver>((row) => {
+      const open = DRIVER_LINK_OPEN_STATUSES.includes(row.linkStatus);
+      const invited = row.linkStatus === DRIVER_LINK_STATUS.INVITED;
+      const closed = !open;
+      return [
+        {
+          key: 'reinvite',
+          label: t('actions.reinvite'),
+          icon: <UserAddOutlined />,
+          hidden: !canManage || !closed || Boolean(row.currentOpenLinkStatus),
+          onClick: () => {
+            setReinviteFrom({
+              phone: row.phone,
+              name: row.name,
+              driverType: row.driverType,
+              note: row.note ?? '',
+            });
+            setInviteOpen(true);
+          },
         },
-      },
-      {
-        key: 'toggle',
-        label:
-          row.status === DRIVER_STATUS.ACTIVE ? t('actions.deactivate') : t('actions.activate'),
-        hidden: !canManage,
-        loading: update.isPending && update.variables?.id === row.id,
-        confirm:
-          row.status === DRIVER_STATUS.ACTIVE
-            ? {
-                title: t('actions.deactivateConfirm'),
-                okText: t('actions.deactivateOk'),
-                cancelText: tCommon('actions.close'),
-              }
-            : undefined,
-        onClick: () => toggleStatus(row),
-      },
-      {
-        key: 'remove',
-        label: tCommon('actions.delete'),
-        icon: <DeleteOutlined />,
-        danger: true,
-        hidden: !canManage,
-        loading: remove.isPending && remove.variables === row.id,
-        confirm: {
-          title: t('actions.removeConfirm'),
-          okText: tCommon('actions.delete'),
-          cancelText: tCommon('actions.close'),
+        {
+          key: 'edit',
+          label: tCommon('actions.edit'),
+          icon: <EditOutlined />,
+          hidden: !canManage || !open,
+          onClick: () => setEditing(row),
         },
-        onClick: () => handleRemove(row),
-      },
-    ]),
+        {
+          key: 'suspend',
+          label: t('actions.suspend'),
+          icon: <PauseCircleOutlined />,
+          hidden: !canManage || row.linkStatus !== DRIVER_LINK_STATUS.ACTIVE,
+          loading: suspend.isPending && suspend.variables === row.id,
+          confirm: {
+            title: t('actions.suspendConfirm'),
+            okText: t('actions.suspend'),
+            cancelText: tCommon('actions.close'),
+          },
+          onClick: () => suspend.mutate(row.id, feedback('toast.suspended')),
+        },
+        {
+          key: 'resume',
+          label: t('actions.resume'),
+          icon: <PlayCircleOutlined />,
+          hidden: !canManage || row.linkStatus !== DRIVER_LINK_STATUS.SUSPENDED,
+          loading: resume.isPending && resume.variables === row.id,
+          onClick: () => resume.mutate(row.id, feedback('toast.resumed')),
+        },
+        {
+          key: 'end',
+          label: invited ? t('actions.revoke') : t('actions.end'),
+          icon: <DeleteOutlined />,
+          danger: true,
+          hidden: !canManage || !open,
+          loading: end.isPending && end.variables === row.id,
+          confirm: {
+            title: invited
+              ? t('actions.revokeConfirm')
+              : row.activeBookingCount > 0
+                ? t('actions.endConfirmWithTrips', { count: row.activeBookingCount })
+                : t('actions.endConfirm'),
+            okText: invited ? t('actions.revoke') : t('actions.end'),
+            cancelText: tCommon('actions.close'),
+          },
+          onClick: () => end.mutate(row.id, feedback(invited ? 'toast.revoked' : 'toast.ended')),
+        },
+      ];
+    }),
   ];
 
   return (
@@ -259,11 +284,14 @@ export function DriversPage() {
 
       <FilterBar
         fields={filterFields}
-        values={{ q: filters.q, status: filters.status ?? 'all' }}
-        onChange={(next) =>
-          patch({ q: next.q, status: next.status === 'all' ? undefined : next.status })
-        }
-        actions={addButton}
+        values={{
+          q: filters.q,
+          linkStatus: filters.linkStatus ?? 'all',
+          driverType: filters.driverType ?? 'all',
+        }}
+        // `onChange` gửi đúng trường vừa đổi — ghi thẳng làm patch.
+        onChange={(patch) => setFilters(patch as unknown as Partial<DriverFilters>)}
+        actions={inviteButton}
       />
 
       <DataTable<Driver>
@@ -279,16 +307,24 @@ export function DriversPage() {
         empty={{
           title: t('page.empty'),
           description: t('page.emptyHint'),
-          action: addButton ?? undefined,
+          action: inviteButton ?? undefined,
         }}
         pagination={{
           meta,
-          onChange: (page, pageSize) => patch({ page, limit: pageSize }),
+          onChange: (page, pageSize) => setFilters({ page, limit: pageSize }),
           totalLabel: (total) => t('page.total', { count: total }),
         }}
       />
 
-      <DriverFormModal open={formOpen} driver={editing} onClose={() => setFormOpen(false)} />
+      <InviteDriverModal
+        open={inviteOpen}
+        prefill={reinviteFrom}
+        onClose={() => {
+          setInviteOpen(false);
+          setReinviteFrom(null);
+        }}
+      />
+      <EditDriverModal driver={editing} onClose={() => setEditing(null)} />
     </div>
   );
 }

@@ -5,17 +5,18 @@ import {
   DownOutlined,
   LogoutOutlined,
   MessageOutlined,
+  MoonOutlined,
   RightOutlined,
   ShopOutlined,
+  SunOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { Avatar, Badge, Button, Dropdown, type MenuProps } from 'antd';
+import { Avatar, Badge, Dropdown, type MenuProps } from 'antd';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
-import { Logo } from '@/components/brand/Logo';
-import { LocaleSwitcher } from '@/components/i18n/LocaleSwitcher';
 import { isActivePath } from '@/lib/active-path';
 import { useLocaleMenuGroup } from '@/components/i18n/locale-menu';
 import { APP_NAME } from '@/constants/app-name';
@@ -28,28 +29,42 @@ import { CHAT_SIDE } from '@xeprime/types';
 import { ChatMenu } from '@/features/chat/components/ChatMenu';
 import { useChatBadge } from '@/features/chat/hooks/use-chat-badge';
 import { useCurrentUser, type CurrentUser } from '@/hooks/use-current-user';
+import { useTheme, type ThemeMode } from '@/lib/theme';
+import { CtaButton } from './CtaButton';
 import styles from './MarketHeader.module.css';
 
 /**
- * Điều hướng chính — thứ tự và đích cố định, nhãn theo ngôn ngữ. Site khách chỉ phục vụ tài khoản
- * KHÁCH (ADR 0053), nên mục thứ ba luôn là "Chuyến của tôi".
+ * Điều hướng chính theo design v2 (ADR 0062) — thứ tự và đích cố định, nhãn theo ngôn ngữ.
+ *
+ * "Cẩm nang" của bản thiết kế CỐ Ý không có: chưa có trang nào cho khách ở đích đó, và một mục
+ * menu dẫn tới chỗ trống tệ hơn là không có mục. "Chuyến của tôi" nằm trong menu tài khoản và
+ * thanh tab dưới đáy (mobile) — nó là lối của người ĐÃ đăng nhập, không phải của mọi khách.
  */
 const NAV = [
+  // Đúng trang chủ — `isActivePath('/')` chỉ khớp chính nó, không khớp mọi đường dẫn.
+  { key: 'home', labelKey: 'home', href: ROUTES.HOME },
   {
-    key: 'explore',
-    labelKey: 'explore',
-    href: ROUTES.HOME,
+    key: 'search',
+    labelKey: 'searchCars',
+    href: ROUTES.SEARCH,
     /*
-     * "Khám phá" bao trùm cả việc TÌM và việc XEM một chiếc xe hay một gian hàng — người dùng
-     * ở `/search` hay `/listings/abc` vẫn đang khám phá chợ. Không có danh sách này thì mục
-     * sáng lên đúng ở trang chủ rồi tắt ngay khi bấm Tìm xe, trông như menu bị hỏng.
+     * "Tìm xe" bao trùm cả việc TÌM và việc XEM một chiếc xe hay một gian hàng — người dùng ở
+     * `/listings/abc` vẫn đang trong luồng tìm xe. Không có danh sách này thì mục tắt ngay khi
+     * mở một thẻ xe, trông như menu bị hỏng.
      */
-    activeWhen: [ROUTES.HOME, ROUTES.SEARCH, '/listings', '/shops'],
+    activeWhen: [ROUTES.SEARCH, '/listings', '/shops'],
   },
   // Đích thật là `/about` (`ROUTES.ABOUT`), trang duy nhất nói sàn này là gì và tiền đi đâu.
-  { key: 'about', labelKey: 'about', href: ROUTES.ABOUT },
-  { key: 'trips', labelKey: 'trips', href: ROUTES.TRIPS },
+  { key: 'about', labelKey: 'aboutXePrime', href: ROUTES.ABOUT },
+  // Trung tâm trợ giúp CÔNG KHAI là nơi liên hệ duy nhất hiện có của sàn.
+  { key: 'contact', labelKey: 'contact', href: ROUTES.SUPPORT },
 ] as const;
+
+/** Logo theo chế độ sáng/tối — tỉ lệ 128 × 40 của artwork trong Figma. */
+const LOGO = {
+  light: { src: '/home/logo-gold.svg', width: 128, height: 40 },
+  dark: { src: '/home/logo-gold-dark.svg', width: 128, height: 40 },
+} as const;
 
 export function MarketHeader() {
   const t = useTranslations('Navigation.public');
@@ -61,12 +76,22 @@ export function MarketHeader() {
   const localeGroup = useLocaleMenuGroup();
   // Số chưa đọc dùng CHUNG với biểu tượng chat, không đếm lại — và cùng đích hộp thư.
   const chat = useChatBadge(CHAT_SIDE.CUSTOMER);
+  const { theme, toggleTheme } = useTheme();
+  const currentLogo = theme === 'dark' ? LOGO.dark : LOGO.light;
 
   return (
     <header className={styles.header}>
       <div className={styles.inner}>
         <Link href={ROUTES.HOME} className={styles.brand} aria-label={APP_NAME}>
-          <Logo size="sm" />
+          <Image
+            src={currentLogo.src}
+            width={currentLogo.width}
+            height={currentLogo.height}
+            alt=""
+            priority
+            unoptimized
+            className={styles.logo}
+          />
         </Link>
 
         <nav className={styles.nav} aria-label={t('mainNavLabel')}>
@@ -94,6 +119,19 @@ export function MarketHeader() {
         </nav>
 
         <div className={styles.right}>
+          <button
+            type="button"
+            className={styles.themeToggle}
+            onClick={toggleTheme}
+            aria-label={t('toggleTheme')}
+            title={theme === 'dark' ? t('themeLight') : t('themeDark')}
+          >
+            {theme === 'dark' ? (
+              <SunOutlined className={styles.themeIcon} aria-hidden="true" />
+            ) : (
+              <MoonOutlined className={styles.themeIcon} aria-hidden="true" />
+            )}
+          </button>
           {user ? (
             <>
               <ChatMenu side={CHAT_SIDE.CUSTOMER} />
@@ -101,8 +139,8 @@ export function MarketHeader() {
               {/*
                 Đổi ngôn ngữ nằm TRONG menu tài khoản (nhóm cuối), không phải một nút riêng trên
                 thanh: nó là việc làm một lần rồi thôi, còn chỗ trên thanh thì dành cho những thứ
-                người ta bấm hằng ngày. Khách CHƯA đăng nhập không có menu này nên vẫn được một
-                nút riêng ở nhánh dưới — chọn ngôn ngữ không được nằm sau một cổng đăng nhập.
+                người ta bấm hằng ngày. Khách CHƯA đăng nhập đổi ngôn ngữ ở chân trang (VI | EN) —
+                chọn ngôn ngữ không được nằm sau một cổng đăng nhập.
               */}
               <Dropdown
                 trigger={['click']}
@@ -113,6 +151,8 @@ export function MarketHeader() {
                     t,
                     localeGroup,
                     chat,
+                    theme,
+                    toggleTheme,
                   }),
                   className: styles.menu,
                 }}
@@ -131,18 +171,30 @@ export function MarketHeader() {
               </Dropdown>
             </>
           ) : (
-            <>
-              <LocaleSwitcher />
-              {/* Đăng nhập của KHÁCH mở modal ngay tại trang đang xem — không rời marketplace. */}
-              <Button
-                type="primary"
-                icon={<UserOutlined />}
-                onClick={() => open({ mode: AUTH_MODE.LOGIN, next: nextFromHere() })}
-              >
-                {t('login')}
-              </Button>
-            </>
+            /*
+             * Đăng nhập của KHÁCH mở modal ngay tại trang đang xem — không rời marketplace. Đổi
+             * ngôn ngữ của khách chưa đăng nhập nằm ở chân trang (VI | EN) theo design v2.
+             */
+            <button
+              type="button"
+              className={styles.login}
+              onClick={() => open({ mode: AUTH_MODE.LOGIN, next: nextFromHere() })}
+            >
+              <span className={styles.loginIcon} aria-hidden="true">
+                <Image src="/home/icon-login.svg" width={20} height={21} alt="" unoptimized />
+              </span>
+              <span className={styles.loginText}>
+                {t.rich('loginOrRegister', { br: () => <br /> })}
+              </span>
+            </button>
           )}
+          {/*
+            Lối sang SITE PARTNER (ADR 0051 điều 3) — đăng ký cho thuê xe là một tài khoản riêng ở
+            đó (ADR 0053). Hiện cho cả khách đã đăng nhập: một khách thuê vẫn có thể muốn cho thuê.
+          */}
+          <CtaButton href={resolveOwnerCtaHref()} className={styles.ownerCta}>
+            {t('becomeOwner')}
+          </CtaButton>
         </div>
       </div>
     </header>
@@ -173,6 +225,8 @@ function accountMenu({
   t,
   localeGroup,
   chat,
+  theme,
+  toggleTheme,
 }: {
   user: CurrentUser;
   onLogout: () => void;
@@ -180,6 +234,8 @@ function accountMenu({
   localeGroup: NonNullable<MenuProps['items']>[number];
   /** Đích hộp thư + số chưa đọc, lấy từ `useChatBadge` — xem docblock ở `MarketHeader`. */
   chat: { href: string; count: number };
+  theme: ThemeMode;
+  toggleTheme: () => void;
 }): MenuProps['items'] {
   /**
    * Một dòng điều hướng: nhãn bên trái, huy hiệu (nếu có), mũi tên bên phải.
@@ -235,6 +291,19 @@ function accountMenu({
     row('become-owner', <ShopOutlined />, resolveOwnerCtaHref(), t('becomeOwner')),
     { type: 'divider' },
     localeGroup,
+    { type: 'divider' },
+    {
+      key: 'theme-toggle',
+      icon: theme === 'dark' ? <SunOutlined /> : <MoonOutlined />,
+      label: (
+        <div className={styles.row}>
+          <span className={styles.rowLabel}>
+            {theme === 'dark' ? t('themeLight') : t('themeDark')}
+          </span>
+        </div>
+      ),
+      onClick: toggleTheme,
+    },
     { type: 'divider' },
     { key: 'logout', icon: <LogoutOutlined />, label: t('logout'), onClick: onLogout },
   ];

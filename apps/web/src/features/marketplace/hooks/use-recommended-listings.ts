@@ -12,8 +12,8 @@ import { apiRequest } from '@/services/api-client';
 import { queryKeys } from '@/services/query-keys';
 import type { MarketplaceFilters } from '../types';
 
-/** Trang chủ xem TRƯỚC — tám ô. Trần thật nằm ở backend; đây chỉ là con số mặc định. */
-export const RECOMMENDED_LIMIT = 8;
+/** Trang chủ xem TRƯỚC — mười hai ô (chia đều cho lưới 2, 3, 4, 6 cột). */
+export const RECOMMENDED_LIMIT = 12;
 
 /**
  * Tỉnh dùng để ƯU TIÊN xếp hạng ở trang chủ.

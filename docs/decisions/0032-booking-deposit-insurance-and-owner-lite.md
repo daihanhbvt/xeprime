@@ -80,7 +80,7 @@ Product owner đã chốt lại hai tuyến kinh doanh, thời điểm phát hà
 - Owner Lite nằm trong `/account`, dùng cho chủ xe tuyến hoa hồng: xe, lịch, chuyến, giá/cấu hình cho thuê cơ bản, thuế/chứng từ, số dư/rút tiền, tài khoản và hỗ trợ.
 - Không bắt buộc biên bản bàn giao, ảnh tình trạng, odometer hoặc nhiên liệu/pin. Hệ thống có thể tự chuyển sang bắt đầu/kết thúc theo lịch; chủ xe cập nhật khi thực tế thay đổi.
 - Manage là bộ công cụ nâng cao của gian hàng: tài chính, công nợ, bảo trì, biên bản/bằng chứng tùy chọn, khách hàng, chi nhánh, thành viên, tài xế dạng bản ghi, hợp đồng và báo cáo.
-- Tài xế không có tài khoản/app. Tuyến hoa hồng mặc định chủ xe là tài xế; gian hàng chỉ lưu và phân công bản ghi tài xế.
+- ~~Tài xế không có tài khoản/app. Tuyến hoa hồng mặc định chủ xe là tài xế; gian hàng chỉ lưu và phân công bản ghi tài xế.~~ *Bị [ADR 0063](0063-linked-driver-accounts.md) thay — tài xế là tài khoản khách được mời liên kết, cả hai tuyến thuê được.*
 - ~~Admin được vào Manage của bất kỳ gian hàng nào với quyền như chủ gian hàng. Shell phải hiện banner ngữ cảnh và mọi thay đổi phải có audit.~~ *Bị [ADR 0050](0050-platform-tenant-support-context.md) thay — phiên hỗ trợ có lý do, hạn và capability; không quyền chủ gian hàng.*
 
 ## Ví dụ tiền — VF5 một ngày

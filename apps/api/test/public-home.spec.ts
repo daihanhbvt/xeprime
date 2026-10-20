@@ -225,6 +225,8 @@ describe('Dữ liệu trang chủ marketplace', () => {
     expect(byCode.get(PROV_BIG)?.imageUrl).toBe('https://img.example/vios.jpg');
     // Tên trả về là tên CHUẨN từ danh mục, không phải chuỗi tự do của gian hàng.
     expect(byCode.get(PROV_BIG)?.provinceName).toBe(PROV_BIG_NAME);
+    // "Chỉ từ …" = giá tự lái theo ngày thấp nhất của tỉnh (ADR 0062), money string.
+    expect(byCode.get(PROV_BIG)?.minDailyPrice).toBe('600000');
 
     // Shop bị khoá → xe không hiện trên marketplace, tỉnh đó cũng không được đếm (ADR 0008).
     expect(byCode.has(PROV_LOCKED)).toBe(false);
@@ -252,6 +254,23 @@ describe('Dữ liệu trang chủ marketplace', () => {
     }
   });
 
+  maybe('địa điểm nổi bật: "chỉ từ" đã trừ khuyến mãi, làm tròn như thẻ xe', async () => {
+    const target = await prisma.publicListing.findFirstOrThrow({
+      where: { provinceCode: PROV_BIG },
+      select: { vehicleId: true },
+    });
+    // 600 000 × (100 − 15) / 100 = 510 000 — đúng phép `applyDiscountPercent` của thẻ xe.
+    await prisma.vehicle.update({ where: { id: target.vehicleId }, data: { discountPercent: 15 } });
+    await listings.syncFromVehicle(target.vehicleId);
+    try {
+      const all = await service.listDestinations({ limit: 34 });
+      expect(all.find((d) => d.provinceCode === PROV_BIG)?.minDailyPrice).toBe('510000');
+    } finally {
+      await prisma.vehicle.update({ where: { id: target.vehicleId }, data: { discountPercent: null } });
+      await listings.syncFromVehicle(target.vehicleId);
+    }
+  });
+
   maybe('địa điểm nổi bật: tôn trọng limit và sắp theo số xe giảm dần', async () => {
     const all = await service.listDestinations({ limit: 34 });
     const counts = all.map((d) => d.vehicleCount);
@@ -268,6 +287,9 @@ describe('Dữ liệu trang chủ marketplace', () => {
     const big = res.data.find((s) => s.name === `Shop ${PROV_BIG_NAME}`);
     expect(big?.vehicleCount).toBe(3);
     expect(big?.provinceName).toBe(PROV_BIG_NAME);
+    // Thẻ gian hàng v2: số chuyến HOÀN THÀNH của cả gian hàng + ảnh một xe đang hiển thị.
+    expect(big?.completedTripCount).toBe(1);
+    expect(big?.featuredVehicleImageUrl).toBe('https://img.example/vios.jpg');
 
     // Shop không có xe / shop bị khoá đều không lọt vào danh sách.
     const emptySlug = (await prisma.tenant.findUniqueOrThrow({ where: { id: tenantEmpty } })).slug;
