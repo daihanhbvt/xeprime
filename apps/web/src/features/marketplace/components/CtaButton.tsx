@@ -9,6 +9,7 @@ import styles from './CtaButton.module.css';
  *   · `gradient` — nút chính vàng gradient, chữ tối ("Tìm kiếm", "Trở thành chủ xe", "Khám phá").
  *   · `outline`  — nền trắng, viền vàng nhạt, chữ vàng ("Xem tất cả xe").
  *   · `neutral`  — nền trắng, viền xám, chữ xám đậm ("Google", "Facebook" ở hộp đăng nhập).
+ *   · `danger`   — nền trắng, viền đỏ nhạt, chữ đỏ ("Huỷ chuyến" ở chuyến chờ chủ xe phản hồi).
  *   · `link`     — chữ vàng trơn ("Xem gian hàng").
  *
  * Vì sao không dùng `Button` của AntD: gradient + bóng phát sáng + bo 12px không biểu diễn được
@@ -43,7 +44,7 @@ export function CtaButton({
   children: ReactNode;
   href?: string;
   onClick?: () => void;
-  variant?: 'gradient' | 'outline' | 'neutral' | 'link';
+  variant?: 'gradient' | 'outline' | 'neutral' | 'danger' | 'link';
   /** `md`: chữ 14px (header, "Xem tất cả") · `lg`: chữ 16px, cao 44px (nút "Tìm kiếm"). */
   /** `xl` — nút 56px của khối đối tác: chữ 18/28, đệm phải hẹp để vòng icon ôm sát mép. */
   /** `form` — nút gửi của hộp thoại: cao 48px, chữ 16px, không phát sáng (hộp đăng nhập v2). */

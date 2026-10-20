@@ -1,0 +1,18 @@
+/*
+ * Phần RIÊNG của màn chờ chủ xe phản hồi (Figma `19727:60694`). Bố cục hai cột, khung thẻ, thẻ
+ * trạng thái, nhãn viên thuốc và khối "Cần thay đổi kế hoạch?" là của chung — `TripRequestLayout`.
+ */
+
+/*
+ * Lời nhắc nền vàng nhạt (`BG/primary-25`), chữ cam cảnh báo — cùng khuôn lời nhắc của màn Xem lại:
+ * yêu cầu chờ duyệt CHƯA giữ xe (ADR 0044 điều 1).
+ */
+.guidance {
+  margin: 0;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-warning);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}

@@ -51,6 +51,7 @@ import {
   type TripRole,
 } from '@xeprime/types';
 import { fromDateOnly } from '../../common/date-only';
+import { accountPhoneIfDifferent } from '../../common/phone';
 import {
   EFFECTIVE_SUBSCRIPTION_ARGS,
   effectiveSubscriptionWhere,
@@ -81,6 +82,7 @@ import {
   CustomerTripCountsDto,
   CustomerTripDetailDto,
   CustomerTripEstimateDto,
+  CustomerTripFinanceBreakdownDto,
   CustomerTripFinanceDto,
   CustomerTripListItemDto,
   CustomerTripListQueryDto,
@@ -392,6 +394,11 @@ export class CustomerTripsService {
     return {
       ...base,
       customerNote: row.note,
+      // Liên hệ CHÍNH người thuê đã khai — phía chủ xe không cần (đã có `renter`, có gác).
+      contact:
+        base.role === TRIP_ROLE.RENTER
+          ? { name: row.customerName, phone: row.customerPhone }
+          : null,
       rejectReason: row.rejectReason,
       actualPickupAt: booking?.actualPickupAt?.toISOString() ?? null,
       actualReturnAt: booking?.actualReturnAt?.toISOString() ?? null,
@@ -862,6 +869,7 @@ export class CustomerTripsService {
       refundedAt: settlement.refund?.refundedAt ?? null,
       refundReference: settlement.refund?.reference ?? null,
       legacyPricing: booking.priceSnapshot === null,
+      breakdown: frozenBreakdown(snapshot, rentalTotal),
     };
   }
 
@@ -1002,6 +1010,8 @@ const listSelect = (now: Date) =>
     customerUserId: true,
     customerName: true,
     customerPhone: true,
+    // SĐT tài khoản — chủ xe thấy cả hai số khi liên hệ của chuyến khác nó (ADR 0063).
+    customer: { select: { phone: true } },
     respondBy: true,
     vehicle: {
       select: {
@@ -1089,7 +1099,13 @@ function toListItem(
     role,
     renter:
       role === TRIP_ROLE.HOST
-        ? { name: row.customerName, phone: canContact ? row.customerPhone : null }
+        ? {
+            name: row.customerName,
+            phone: canContact ? row.customerPhone : null,
+            accountPhone: canContact
+              ? accountPhoneIfDifferent(row.customer?.phone, row.customerPhone)
+              : null,
+          }
         : null,
     // Hạn trả lời chỉ còn nghĩa khi yêu cầu ĐANG chờ chủ xe; qua bước đó nó là một mốc đã chết.
     respondBy:
@@ -1193,12 +1209,14 @@ function toListItem(
  *
  * Kiểu thu về đúng những trường hai bên cùng có và `toEstimate` thật sự đọc. Lấy nguyên kiểu trả
  * về của `estimateQuote` thì snapshot không khớp: nó không mang `policySource`/`estimateNote` —
- * những thứ chỉ có nghĩa với một lượt báo giá vừa chạy.
+ * những thứ chỉ có nghĩa với một lượt báo giá vừa chạy. `estimateNote`/`longTerm` vì thế là TUỲ
+ * CHỌN: báo giá mới mang chúng, snapshot thì không (số đã thu không còn gì để "tạm tính").
  */
 type QuotedEstimate = NonNullable<Awaited<ReturnType<PricingService['estimateQuote']>>>;
 
 type TripEstimate = {
-  breakdown: Pick<QuotedEstimate['breakdown'], 'rows' | 'totalAmount' | 'depositAmount'>;
+  breakdown: Pick<QuotedEstimate['breakdown'], 'rows' | 'totalAmount' | 'depositAmount'> &
+    Partial<Pick<QuotedEstimate['breakdown'], 'estimateNote' | 'longTerm'>>;
   fees: QuotedEstimate['fees'];
 };
 
@@ -1215,6 +1233,33 @@ function toEstimate(estimate: TripEstimate | undefined): CustomerTripEstimateDto
     rentalTotal: estimate.breakdown.totalAmount,
     depositAmount: estimate.breakdown.depositAmount,
     fees: estimate.fees,
+    estimateNote: estimate.breakdown.estimateNote ?? null,
+    longTerm: estimate.breakdown.longTerm ?? null,
+  };
+}
+
+/**
+ * Bảng kê đóng băng của một ĐƠN — chỉ khi nó còn kể đúng số trên đơn.
+ *
+ * Snapshot chụp lúc tạo đơn (ADR 0024) và không bao giờ được viết lại; còn `bookings.total_amount`
+ * đổi được về sau (chủ xe chốt lại phí giao nhận — `BookingsService.updateDeliveryFee`). Lúc hai số
+ * đó lệch nhau, trưng bảng cũ là kể một khoản phí đã không còn đúng ⇒ `null`, và giao diện quay về
+ * các trường tổng của `CustomerTripFinanceDto`. So trên `Decimal`, không qua `Number` (ADR 0007).
+ *
+ * `sublabel` chuẩn hoá về `null` như ở `estimateQuotes`: JSON lưu trường TUỲ CHỌN, DTO khai
+ * `string | null`.
+ */
+function frozenBreakdown(
+  snapshot: BookingPriceSnapshot | null,
+  rentalTotal: Prisma.Decimal,
+): CustomerTripFinanceBreakdownDto | null {
+  if (!snapshot) return null;
+  if (!new Prisma.Decimal(snapshot.totalAmount).equals(rentalTotal)) return null;
+  return {
+    rows: snapshot.rows.map((line) => ({ ...line, sublabel: line.sublabel ?? null })),
+    depositAmount: snapshot.depositAmount,
+    fees: snapshot.fees ?? null,
+    longTerm: snapshot.longTerm ?? null,
   };
 }
 

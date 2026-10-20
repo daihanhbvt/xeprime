@@ -136,6 +136,17 @@ export class BookingListItemDto {
   @ApiPropertyOptional({ type: String, nullable: true }) vehiclePlate!: string | null;
   @ApiProperty() customerName!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) customerPhone!: string | null;
+  /**
+   * SĐT ĐÃ XÁC MINH của tài khoản khách đặt đơn này — CHỈ có khi nó khác `customerPhone` (khách để
+   * lại số liên hệ khác lúc gửi yêu cầu, hoặc gian hàng đã sửa số trên đơn — ADR 0063). `null` với
+   * đơn gian hàng tự lập (không có tài khoản khách).
+   */
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'SĐT tài khoản khách — chỉ khi khác SĐT liên hệ của đơn',
+  })
+  customerAccountPhone!: string | null;
   @ApiProperty({ enum: BOOKING_STATUS_VALUES }) status!: string;
   @ApiProperty({ enum: SERVICE_TYPE_VALUES }) serviceType!: string;
   @ApiPropertyOptional({

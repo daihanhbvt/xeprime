@@ -154,6 +154,9 @@
     "title": "Huỷ chuyến đi?",
     "leadPending": "Yêu cầu thuê sẽ được rút lại và chủ xe nhận được thông báo. Bạn vẫn có thể gửi yêu cầu mới cho xe này bất cứ lúc nào.",
     "leadReady": "Đơn thuê sẽ bị huỷ và xe được mở lại cho khách khác đặt. Thao tác này không hoàn tác được.",
+    "leadAwaitingHold": "Chủ xe đang giữ xe cho bạn. Huỷ thì xe được mở lại cho khách khác đặt. Thao tác này không hoàn tác được.",
+    "holdPaidTitle": "Bạn đã chuyển {amount} tiền giữ chỗ",
+    "holdPaidBody": "Khoản này được hoàn đủ sau khi huỷ — XePrime chuyển trả về tài khoản ngân hàng bạn khai ở trang chuyến.",
     "paidTitle": "Bạn đã thanh toán cho chuyến này",
     "rentalPaid": "Tiền thuê đã trả: {amount}",
     "depositPaid": "Tiền cọc đã đưa: {amount}",
@@ -325,7 +328,42 @@
     "noHoldTitle": "Chuyến này chưa cần thanh toán",
     "noHoldBody": "Khoản giữ chỗ chỉ phát sinh khi chủ xe nhận chuyến. Bạn sẽ được báo ngay khi đến lượt thanh toán.",
     "paidTitle": "Đặt xe thành công",
-    "paidBody": "Đã nhận {amount} cho khoản giữ chỗ {code}. Chuyến của bạn đã được xác nhận."
+    "paidBody": "Đã nhận {amount} cho khoản giữ chỗ {code}. Chuyến của bạn đã được xác nhận.",
+    "methods": {
+      "transferHint": "Quét mã bằng ứng dụng ngân hàng bất kỳ - <b>KHÔNG</b> thay đổi số tiền hoặc nội dung chuyển khoản!",
+      "wallet": {
+        "taglineMomo": "Thanh toán nhanh, tiện lợi",
+        "taglineVnpay": "Dễ dàng, quét QR nhanh"
+      }
+    },
+    "summary": {
+      "pickupAt": "Nhận xe",
+      "returnAt": "Trả xe",
+      "package": "Gói thuê",
+      "pickupWish": "Nguyện vọng nhận xe",
+      "point": "{weekday}, {dateTime}",
+      "customerTotal": "Tổng bạn trả",
+      "payOwner": "Trả chủ xe",
+      "payOwnerNote": "Khoản tiền cần trả cho chủ xe sau khi đã trừ hết các khoản cần thanh toán.",
+      "amountLabel": "Tiền giữ chỗ cần thanh toán",
+      "remainingLabel": "Tiền giữ chỗ còn thiếu",
+      "countdown": "Thời gian thanh toán còn lại:",
+      "notes": {
+        "auto": "Hệ thống tự động xác nhận sau khi nhận thanh toán thành công.",
+        "expires": "Sau thời gian trên, nếu chưa hoàn tất thanh toán, giữ chỗ sẽ tự động bị hủy.",
+        "freeCancel": "Miễn phí hủy chuyến và hoàn tiền <b>100%</b> trước {time}.",
+        "safety": "Vui lòng chỉ chuyển khoản đúng thông tin tài khoản được hiển thị để giao dịch được xử lý chính xác."
+      }
+    },
+    "success": {
+      "title": "Thanh toán thành công",
+      "lead": "Hệ thống đã ghi nhận {amount} qua {channel}!",
+      "leadNoChannel": "Hệ thống đã ghi nhận {amount}!",
+      "payOwner": "Cần thanh toán cho chủ xe",
+      "payOwnerNote": "Khoản tiền cần trả cho chủ xe sau khi đã trừ hết các khoản cần thanh toán.",
+      "myTrips": "Chuyến đi của tôi",
+      "viewTrip": "Xem chi tiết chuyến"
+    }
   },
   "unpaid": {
     "listLabel": "Chuyến chờ thanh toán",
@@ -340,5 +378,147 @@
     "limitTitleFallback": "Bạn đang có quá nhiều chuyến chờ thanh toán",
     "limitBodyFallback": "Thanh toán hoặc huỷ bớt một chuyến ở mục Chuyến của tôi, rồi quay lại đặt xe này.",
     "viewTrips": "Xem chuyến của tôi"
+  },
+  "requestView": {
+    "noteLabel": "Lời nhắn cho chủ xe",
+    "policy": {
+      "title": "Cần thay đổi kế hoạch?",
+      "view": "Xem chính sách áp dụng",
+      "cancel": "Huỷ chuyến đi",
+      "hotline": "Hoặc liên hệ hotline hỗ trợ: <tel>{phone}</tel>"
+    }
+  },
+  "pending": {
+    "status": {
+      "title": "Yêu cầu của bạn đã được tiếp nhận",
+      "body": "Chủ xe có {minutes} phút để phản hồi yêu cầu. XePrime sẽ báo cho bạn ngay khi chủ xe nhận chuyến hoặc từ chối.",
+      "guidanceHold": "Xe chưa được giữ cho bạn. Chuyến đi chỉ được xác nhận khi chủ xe nhận chuyến và XePrime nhận đủ tiền giữ chỗ.",
+      "guidance": "Xe chưa được giữ cho bạn. Chuyến đi chỉ được xác nhận khi chủ xe nhận yêu cầu."
+    },
+    "track": {
+      "title": "Theo dõi yêu cầu",
+      "bodyHold": "Chưa có khoản nào cần thanh toán. Khi chủ xe nhận chuyến, bạn có {minutes} phút để thanh toán tiền giữ chỗ.",
+      "body": "Chưa có khoản nào cần thanh toán. XePrime sẽ báo cho bạn ngay khi chủ xe phản hồi.",
+      "findOther": "Tìm xe khác"
+    },
+    "costs": {
+      "holdTag": "Chưa cần thanh toán"
+    },
+    "policyBody": "Bạn có thể huỷ yêu cầu trong lúc chủ xe chưa phản hồi — chưa có khoản tiền nào được thu. Xem chính sách huỷ & hoàn tiền để biết điều kiện ở các bước sau.",
+    "page": {
+      "title": "Đã gửi yêu cầu thuê xe",
+      "description": "Theo dõi phản hồi của chủ xe tại đây — chưa có khoản nào cần thanh toán."
+    }
+  },
+  "awaitingHold": {
+    "status": {
+      "title": "Sẵn sàng cho bước giữ chỗ",
+      "body": "{owner} đã đồng ý với yêu cầu thuê xe của bạn và đang giữ xe cho bạn tới {time}. Chuyến đi được xác nhận ngay khi XePrime nhận đủ tiền giữ chỗ.",
+      "bodyClosed": "{owner} đã đồng ý với yêu cầu thuê xe của bạn. Xem tình trạng khoản giữ chỗ ở cột bên cạnh."
+    },
+    "pay": {
+      "title": "Khoản giữ chỗ cần thực hiện",
+      "body": "Chỉ là tiền giữ chỗ, được trừ vào tổng chuyến. Phần còn lại {amount} trả trực tiếp chủ xe khi nhận xe; cọc xe (nếu có) nộp riêng lúc nhận xe.",
+      "bodyNoRest": "Chỉ là tiền giữ chỗ, được trừ vào tổng chuyến. Cọc xe (nếu có) nộp riêng lúc nhận xe.",
+      "acknowledge": "Tôi đã đọc <policy>chính sách giữ chỗ, huỷ & hoàn tiền</policy> áp dụng cho yêu cầu này.",
+      "submit": "Thanh toán giữ chỗ · {amount}"
+    },
+    "costs": {
+      "holdTag": "Cần thanh toán"
+    },
+    "policy": {
+      "body": "Huỷ lúc chưa thanh toán đủ thì xe được mở lại cho khách khác và khoản bạn đã chuyển (nếu có) được hoàn đủ. Sau khi thanh toán, huỷ trước {time} vẫn được hoàn 100% số đã thanh toán.",
+      "bodySoon": "Huỷ lúc chưa thanh toán đủ thì xe được mở lại cho khách khác và khoản bạn đã chuyển (nếu có) được hoàn đủ. Chuyến này nhận xe sát giờ nên sau khi thanh toán, hết {time} là không hoàn nữa.",
+      "bodyClosed": "Huỷ lúc này thì xe được mở lại cho khách khác. Xem chính sách huỷ & hoàn tiền để biết khoản nào được hoàn."
+    },
+    "page": {
+      "title": "Chủ xe đã đồng ý",
+      "description": "Thanh toán tiền giữ chỗ trước khi hết hạn để chủ xe giữ xe và xác nhận chuyến đi cho bạn."
+    }
+  },
+  "requestProgress": {
+    "title": "Tiến trình yêu cầu",
+    "steps": {
+      "sent": {
+        "title": "Đã gửi yêu cầu",
+        "body": "Thông tin chuyến đi đã được gửi đến XePrime và chủ xe."
+      },
+      "response": {
+        "title": "Chờ chủ xe phản hồi",
+        "body": "Chủ xe kiểm tra thông tin người thuê và tình trạng xe trước khi nhận chuyến."
+      },
+      "hold": {
+        "title": "Hoàn tất giữ chỗ theo hướng dẫn",
+        "body": "Chỉ thanh toán khi chủ xe đã nhận chuyến và XePrime gửi hướng dẫn cho bạn.",
+        "bodyCurrent": "Chủ xe đã nhận chuyến. Thanh toán tiền giữ chỗ trước khi hết hạn để giữ xe cho bạn."
+      },
+      "confirmed": {
+        "title": "Xác nhận chuyến đi",
+        "body": "Bạn sẽ nhận được thông báo khi các bước cần thiết đã hoàn tất."
+      }
+    },
+    "state": {
+      "done": "đã xong",
+      "current": "đang ở bước này",
+      "todo": "chưa tới"
+    }
+  },
+  "pageHeader": {
+    "breadcrumbLabel": "Đường dẫn",
+    "home": "Trang chủ",
+    "vehicle": "Chi tiết xe",
+    "request": "Gửi yêu cầu thuê xe"
+  },
+  "confirmed": {
+    "page": {
+      "title": "Chuyến đi đã được xác nhận",
+      "description": "Chuyến đi của bạn đã sẵn sàng. Hãy chuẩn bị cho ngày nhận xe."
+    },
+    "status": {
+      "tag": "Đã xác nhận chuyến đi",
+      "title": "Hẹn bạn vào ngày nhận xe",
+      "body": "Yêu cầu thuê {vehicle} với chủ xe {owner} đã được xác nhận!",
+      "guide": "Xem hướng dẫn nhận xe"
+    },
+    "chatOwner": "Nhắn tin cho chủ xe",
+    "callOwner": "Gọi chủ xe {phone}",
+    "checklist": {
+      "title": "Checklist nhận xe",
+      "lead": "Đối chiếu từng mục cùng chủ xe khi nhận bàn giao. Các mục bên dưới chưa được đánh dấu hoàn tất.",
+      "licence": {
+        "title": "Mang GPLX hợp lệ",
+        "body": "GPLX còn hiệu lực, phù hợp với loại xe thuê; xuất trình để đối chiếu."
+      },
+      "identity": {
+        "title": "Chuẩn bị giấy tờ định danh",
+        "body": "Mang giấy tờ để đối chiếu theo hướng dẫn và chính sách hiện hành.",
+        "bodyDocuments": "Chủ xe yêu cầu đối chiếu: {documents}."
+      },
+      "inspect": {
+        "title": "Kiểm tra xe cùng chủ xe",
+        "body": "Ghi nhận hiện trạng, {energy, select, electric {mức pin} other {mức nhiên liệu}} và trang bị trước khi nhận bàn giao."
+      },
+      "sign": {
+        "title": "Ký biên bản nhận xe",
+        "body": "Kiểm tra thông tin và thống nhất hiện trạng xe trong biên bản."
+      },
+      "deposit": {
+        "title": "Nộp cọc xe {amount}",
+        "body": "Tách riêng tiền thuê; hoàn cọc theo chính sách và thỏa thuận nhận xe."
+      },
+      "asset": {
+        "title": "Để lại tài sản thế chấp",
+        "body": "Một trong các tài sản sau: {assets}. Nhận lại khi trả xe."
+      },
+      "guidance": "Yêu cầu giấy tờ cụ thể và việc xác minh sẽ được hướng dẫn theo chính sách hiện hành trước khi nhận xe."
+    },
+    "costs": {
+      "holdTag": "Đã thanh toán"
+    },
+    "policy": {
+      "bodyFree": "Huỷ trước {time} vẫn được hoàn 100% tiền giữ chỗ đã thanh toán. Sau mốc đó, khoản hoàn theo chính sách huỷ & hoàn tiền của chuyến.",
+      "bodyAfter": "Đã qua mốc huỷ miễn phí ({time}). Huỷ lúc này thì khoản hoàn theo chính sách huỷ & hoàn tiền của chuyến.",
+      "bodyNoHold": "Bạn có thể huỷ chuyến trước giờ nhận xe. Xem chính sách huỷ & hoàn tiền để biết điều kiện áp dụng."
+    }
   }
 }

@@ -64,6 +64,22 @@ export function payAtPickupAmount(fees: FeesLike | null | undefined): MoneyStrin
   return fees.holdAmount ? subtractMoney(fees.customerTotalAmount, fees.holdAmount) : null;
 }
 
+/**
+ * Chuyến có chặng "thanh toán tiền giữ chỗ" không — đọc `fees.holdAmount` của báo giá / bảng kê
+ * SERVER (ADR 0044 điều 4). Một luật cho thanh tiến trình của luồng đặt xe và của chuyến đang chờ
+ * chủ xe phản hồi: hai màn kể cùng một hành trình thì không được hứa hai số chặng khác nhau.
+ *
+ *  - Có báo giá ⇒ có chặng khi và chỉ khi server tính ra khoản giữ chỗ (`holdAmount != null`).
+ *    Không có chính sách phí, tuyến gói tắt thu cọc, hay báo giá còn tạm tính ⇒ không.
+ *  - CHƯA có báo giá (đang tải, lỗi, xe thiếu giá) ⇒ coi như CÓ: đa số chuyến có, và thanh tiến
+ *    trình nhảy từ 3 lên 4 chặng khi báo giá về là lời hứa bị rút lại giữa chừng.
+ */
+export function hasHoldStage(
+  breakdown: { fees?: Pick<FeesLike, 'holdAmount'> | null } | null | undefined,
+): boolean {
+  return breakdown ? breakdown.fees?.holdAmount != null : true;
+}
+
 interface QuoteFeesLike extends FeesLike {
   lines: readonly FeeLineLike[];
   promoDiscountAmount?: string | null;

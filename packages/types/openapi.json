@@ -74264,6 +74264,11 @@
             "type": "string",
             "nullable": true
           },
+          "customerAccountPhone": {
+            "type": "string",
+            "nullable": true,
+            "description": "SĐT tài khoản khách — chỉ khi khác SĐT liên hệ của đơn"
+          },
           "status": {
             "type": "string",
             "enum": [
@@ -74616,6 +74621,11 @@
             "type": "string",
             "nullable": true
           },
+          "customerAccountPhone": {
+            "type": "string",
+            "nullable": true,
+            "description": "SĐT tài khoản khách — chỉ khi khác SĐT liên hệ của đơn"
+          },
           "status": {
             "type": "string",
             "enum": [
@@ -74908,6 +74918,11 @@
             "type": "string",
             "nullable": true,
             "description": "SĐT khách — null với chủ xe tuyến hoa hồng khi chuyến chưa có đơn"
+          },
+          "customerAccountPhone": {
+            "type": "string",
+            "nullable": true,
+            "description": "SĐT tài khoản khách — chỉ trả về khi chủ xe được xem liên hệ và SĐT liên hệ khác SĐT tài khoản"
           },
           "customerEmail": {
             "type": "string",
@@ -77334,6 +77349,17 @@
             "type": "string",
             "description": "ID xe (ULID) trên marketplace"
           },
+          "customerName": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "Họ tên người thuê — bỏ trống thì dùng tên tài khoản (ADR 0063)"
+          },
+          "customerPhone": {
+            "type": "string",
+            "maxLength": 32,
+            "pattern": "^(0|\\+84)\\d{9}$",
+            "description": "SĐT liên hệ `0xxxxxxxxx`/`+84xxxxxxxxx` — bỏ trống thì dùng SĐT tài khoản; khác số không cần OTP (ADR 0063)"
+          },
           "client": {
             "type": "string",
             "enum": [
@@ -77351,16 +77377,6 @@
                 "$ref": "#/components/schemas/MobileDeviceDto"
               }
             ]
-          },
-          "customerName": {
-            "type": "string",
-            "deprecated": true,
-            "description": "ĐÃ GỠ (ADR 0060) — server bỏ qua; họ tên lấy từ tài khoản."
-          },
-          "customerPhone": {
-            "type": "string",
-            "deprecated": true,
-            "description": "ĐÃ GỠ (ADR 0060) — server bỏ qua; SĐT đã xác minh lấy từ tài khoản."
           },
           "customerEmail": {
             "type": "string",
@@ -79097,6 +79113,15 @@
             "type": "string",
             "nullable": true
           },
+          "paidVia": {
+            "type": "string",
+            "enum": [
+              "bank_transfer",
+              "momo",
+              "vnpay"
+            ],
+            "nullable": true
+          },
           "allocation": {
             "type": "array",
             "items": {
@@ -79320,6 +79345,21 @@
           "recordedAt"
         ]
       },
+      "CustomerTripContactDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "phone"
+        ]
+      },
       "CustomerTripCountsDto": {
         "type": "object",
         "properties": {
@@ -79486,6 +79526,15 @@
             "type": "string",
             "nullable": true
           },
+          "contact": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CustomerTripContactDto"
+              }
+            ]
+          },
           "rejectReason": {
             "type": "string",
             "nullable": true
@@ -79585,11 +79634,62 @@
                 "$ref": "#/components/schemas/CustomerFeeBreakdownDto"
               }
             ]
+          },
+          "estimateNote": {
+            "type": "string",
+            "nullable": true
+          },
+          "longTerm": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LongTermPackageOptionDto"
+              }
+            ]
           }
         },
         "required": [
           "rows",
           "rentalTotal",
+          "depositAmount"
+        ]
+      },
+      "CustomerTripFinanceBreakdownDto": {
+        "type": "object",
+        "properties": {
+          "rows": {
+            "description": "Các dòng của giá THUÊ",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PriceBreakdownRowDto"
+            }
+          },
+          "depositAmount": {
+            "type": "string",
+            "description": "Cọc thế chấp hoàn trả — KHÔNG nằm trong tổng"
+          },
+          "fees": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CustomerFeeBreakdownDto"
+              }
+            ]
+          },
+          "longTerm": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LongTermPackageOptionDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "rows",
           "depositAmount"
         ]
       },
@@ -79704,6 +79804,15 @@
           "legacyPricing": {
             "type": "boolean",
             "description": "Thiếu snapshot giá — chỉ còn tổng, không có chi tiết"
+          },
+          "breakdown": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CustomerTripFinanceBreakdownDto"
+              }
+            ]
           }
         },
         "required": [
@@ -79999,6 +80108,11 @@
             "type": "string",
             "nullable": true,
             "description": "null khi chưa được liên hệ"
+          },
+          "accountPhone": {
+            "type": "string",
+            "nullable": true,
+            "description": "SĐT tài khoản khách — null khi chưa được liên hệ hoặc trùng SĐT liên hệ"
           }
         },
         "required": [

@@ -1,8 +1,6 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import { fetchListingDetailClient } from '@/features/marketplace/api';
-import { queryKeys } from '@/services/query-keys';
+import { useListingDetail } from '@/features/marketplace/hooks/use-listing-detail';
 
 export interface PendingVehicleContext {
   id: string;
@@ -18,18 +16,12 @@ export interface PendingVehicleContext {
  * `conversation.vehicleName` là "xe được nhắc gần nhất" — có thể là chiếc khác hẳn chiếc người
  * dùng đang xem. Và chỉ mang `?v=<id>` qua URL thì không có tên lẫn ảnh để vẽ thẻ.
  *
- * Dùng lại `fetchListingDetailClient` + đúng query key của nó: người dùng vừa đứng ở trang xe đó,
+ * Dùng lại `useListingDetail` — đúng khoá cache của trang xe: người dùng vừa đứng ở trang xe đó,
  * nên trong phần lớn trường hợp dữ liệu đã nằm sẵn trong cache và không phát sinh request nào.
+ * Hỏng thì chỉ mất cái thẻ, không mất khả năng nhắn tin.
  */
 export function useVehicleContext(vehicleId: string | null): PendingVehicleContext | null {
-  const { data } = useQuery({
-    queryKey: queryKeys.marketplace.listing(vehicleId ?? ''),
-    queryFn: () => fetchListingDetailClient(vehicleId as string),
-    enabled: Boolean(vehicleId),
-    // Tin đăng không đổi trong lúc người ta gõ một câu — và hỏng thì chỉ mất cái thẻ, không mất
-    // khả năng nhắn tin, nên không thử lại.
-    retry: false,
-  });
+  const { data } = useListingDetail(vehicleId);
 
   if (!vehicleId || !data) return null;
   return { id: vehicleId, name: data.name, imageUrl: data.mainImageUrl ?? null };

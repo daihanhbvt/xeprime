@@ -94,6 +94,22 @@
   color: var(--xp-color-primary-hover);
 }
 
+/*
+ * ─── Nút huỷ: nền trắng, viền đỏ nhạt, chữ đỏ (Figma "Secondary action" bản destructive) ──
+ * Viền `Status/error-300` dẫn xuất từ token đỏ trên nền thẻ — tự tối theo nền ở giao diện tối.
+ */
+.danger {
+  border-color: color-mix(in srgb, var(--xp-color-error) 45%, var(--xp-color-bg-container));
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-error);
+}
+
+.danger:hover {
+  border-color: var(--xp-color-error);
+  background: color-mix(in srgb, var(--xp-color-error) 8%, var(--xp-color-bg-container));
+  color: var(--xp-color-error);
+}
+
 /* ─── Nút chữ ─────────────────────────────────────────────────────────────── */
 .link {
   padding: 0;

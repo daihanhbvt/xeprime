@@ -3,12 +3,20 @@
  * thẻ, tiêu đề và đường kẻ dùng chung `BookingReviewStep.module.css`; ở đây chỉ phần hàng tiền.
  */
 
-/*
- * Thẻ chi phí viền vàng nhạt (`Stroke/primary-300`) — thẻ khách đọc kỹ nhất trước khi gửi. Màu viền
- * dẫn xuất từ token nên tự tối theo nền ở giao diện tối.
- */
+/* Thẻ chi phí viền vàng nhạt (`Stroke/primary-300`) — thẻ khách đọc kỹ nhất trước khi gửi. */
 .accent {
-  border-color: color-mix(in srgb, var(--xp-color-primary) 50%, var(--xp-color-bg-container));
+  border-color: var(--xp-color-primary-border);
+}
+
+/* Các màn chuyến sau khi gửi: hai thẻ đệm 24 (Figma `19727:61104` · `19759:40335`). */
+.tripCard {
+  padding: var(--xp-space-lg);
+}
+
+@media (max-width: 640px) {
+  .tripCard {
+    padding: var(--xp-space-md);
+  }
 }
 
 .rows {

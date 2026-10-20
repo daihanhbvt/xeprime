@@ -154,6 +154,9 @@
     "title": "Cancel this trip?",
     "leadPending": "Your request will be withdrawn and the host will be notified. You can send a new request for this car at any time.",
     "leadReady": "The booking will be cancelled and the car opens up for other renters. This cannot be undone.",
+    "leadAwaitingHold": "The owner is holding the car for you. If you cancel, the car opens up for other renters. This cannot be undone.",
+    "holdPaidTitle": "You have transferred {amount} as a reservation payment",
+    "holdPaidBody": "It is refunded in full after you cancel — XePrime sends it back to the bank account you provide on the trip page.",
     "paidTitle": "You have already paid for this trip",
     "rentalPaid": "Rent paid: {amount}",
     "depositPaid": "Deposit paid: {amount}",
@@ -325,7 +328,42 @@
     "noHoldTitle": "Nothing to pay for this trip yet",
     "noHoldBody": "A booking hold is only created once the owner accepts the trip. You will be notified as soon as it is time to pay.",
     "paidTitle": "Booking confirmed",
-    "paidBody": "We received {amount} for booking hold {code}. Your trip is confirmed."
+    "paidBody": "We received {amount} for booking hold {code}. Your trip is confirmed.",
+    "methods": {
+      "transferHint": "Scan with any banking app - do <b>NOT</b> change the amount or the transfer note!",
+      "wallet": {
+        "taglineMomo": "Fast and convenient",
+        "taglineVnpay": "Easy, quick QR scan"
+      }
+    },
+    "summary": {
+      "pickupAt": "Pickup",
+      "returnAt": "Return",
+      "package": "Package",
+      "pickupWish": "Preferred pickup",
+      "point": "{weekday}, {dateTime}",
+      "customerTotal": "Your total",
+      "payOwner": "Pay the owner",
+      "payOwnerNote": "What you pay the owner after every amount due online is deducted.",
+      "amountLabel": "Reservation amount due",
+      "remainingLabel": "Reservation amount still due",
+      "countdown": "Time left to pay:",
+      "notes": {
+        "auto": "The system confirms automatically once the payment is received.",
+        "expires": "If payment is not completed within this time, the reservation is cancelled automatically.",
+        "freeCancel": "Free cancellation with a <b>100%</b> refund before {time}.",
+        "safety": "Only transfer to the account details shown here so your payment is processed correctly."
+      }
+    },
+    "success": {
+      "title": "Payment successful",
+      "lead": "We have received {amount} via {channel}!",
+      "leadNoChannel": "We have received {amount}!",
+      "payOwner": "To pay the owner",
+      "payOwnerNote": "What you pay the owner after every amount due online is deducted.",
+      "myTrips": "My trips",
+      "viewTrip": "View trip details"
+    }
   },
   "unpaid": {
     "listLabel": "Trips awaiting payment",
@@ -340,5 +378,147 @@
     "limitTitleFallback": "You have too many trips awaiting payment",
     "limitBodyFallback": "Pay for or cancel a trip in My trips, then come back to book this car.",
     "viewTrips": "View my trips"
+  },
+  "requestView": {
+    "noteLabel": "Message to the owner",
+    "policy": {
+      "title": "Need to change your plans?",
+      "view": "View the applicable policy",
+      "cancel": "Cancel trip",
+      "hotline": "Or call our support hotline: <tel>{phone}</tel>"
+    }
+  },
+  "pending": {
+    "status": {
+      "title": "Your request has been received",
+      "body": "The owner has {minutes} minutes to respond. XePrime will notify you as soon as they accept or decline the trip.",
+      "guidanceHold": "The car is not held for you yet. Your trip is only confirmed once the owner accepts it and XePrime receives the full reservation payment.",
+      "guidance": "The car is not held for you yet. Your trip is only confirmed once the owner accepts the request."
+    },
+    "track": {
+      "title": "Track your request",
+      "bodyHold": "Nothing to pay yet. Once the owner accepts the trip, you will have {minutes} minutes to pay the reservation amount.",
+      "body": "Nothing to pay yet. XePrime will notify you as soon as the owner responds.",
+      "findOther": "Find another car"
+    },
+    "costs": {
+      "holdTag": "No payment needed yet"
+    },
+    "policyBody": "You can cancel the request while the owner has not responded — nothing has been charged. Read the cancellation & refund policy for the conditions at later steps.",
+    "page": {
+      "title": "Rental request sent",
+      "description": "Follow the owner's response here — nothing needs to be paid yet."
+    }
+  },
+  "awaitingHold": {
+    "status": {
+      "title": "Ready for the reservation step",
+      "body": "{owner} accepted your rental request and is holding the car for you until {time}. Your trip is confirmed as soon as XePrime receives the full reservation payment.",
+      "bodyClosed": "{owner} accepted your rental request. See the status of the reservation payment in the next column."
+    },
+    "pay": {
+      "title": "Reservation payment due",
+      "body": "This is only the reservation amount and it counts towards your trip total. The remaining {amount} is paid directly to the owner at pickup; any security deposit is handed over separately at pickup.",
+      "bodyNoRest": "This is only the reservation amount and it counts towards your trip total. Any security deposit is handed over separately at pickup.",
+      "acknowledge": "I have read the <policy>reservation, cancellation & refund policy</policy> that applies to this request.",
+      "submit": "Pay reservation · {amount}"
+    },
+    "costs": {
+      "holdTag": "Payment due"
+    },
+    "policy": {
+      "body": "If you cancel before paying in full, the car reopens for other renters and anything you have already transferred is refunded in full. After you pay, cancelling before {time} still refunds 100% of what you paid.",
+      "bodySoon": "If you cancel before paying in full, the car reopens for other renters and anything you have already transferred is refunded in full. This trip starts soon, so after you pay there is no refund past {time}.",
+      "bodyClosed": "If you cancel now, the car reopens for other renters. Read the cancellation & refund policy to see what is refunded."
+    },
+    "page": {
+      "title": "The owner accepted",
+      "description": "Pay the reservation amount before it expires so the owner holds the vehicle and your trip is confirmed."
+    }
+  },
+  "requestProgress": {
+    "title": "Request progress",
+    "steps": {
+      "sent": {
+        "title": "Request sent",
+        "body": "Your trip details have been sent to XePrime and the owner."
+      },
+      "response": {
+        "title": "Awaiting owner response",
+        "body": "The owner checks the renter details and the car condition before accepting the trip."
+      },
+      "hold": {
+        "title": "Complete the reservation as instructed",
+        "body": "Only pay once the owner has accepted the trip and XePrime has sent you instructions.",
+        "bodyCurrent": "The owner has accepted the trip. Pay the reservation amount before the deadline to keep the car."
+      },
+      "confirmed": {
+        "title": "Trip confirmed",
+        "body": "You will be notified once all required steps are complete."
+      }
+    },
+    "state": {
+      "done": "done",
+      "current": "current step",
+      "todo": "not reached yet"
+    }
+  },
+  "pageHeader": {
+    "breadcrumbLabel": "Breadcrumb",
+    "home": "Home",
+    "vehicle": "Vehicle details",
+    "request": "Send rental request"
+  },
+  "confirmed": {
+    "page": {
+      "title": "Your trip is confirmed",
+      "description": "Your trip is all set. Get ready for pickup day."
+    },
+    "status": {
+      "tag": "Trip confirmed",
+      "title": "See you on pickup day",
+      "body": "Your request to rent {vehicle} from {owner} has been confirmed!",
+      "guide": "View pickup guide"
+    },
+    "chatOwner": "Message the owner",
+    "callOwner": "Call the owner {phone}",
+    "checklist": {
+      "title": "Pickup checklist",
+      "lead": "Go through each item with the owner at handover. The items below are not marked as done yet.",
+      "licence": {
+        "title": "Bring a valid driving licence",
+        "body": "A licence that is still valid and covers this vehicle; show it for verification."
+      },
+      "identity": {
+        "title": "Prepare your ID documents",
+        "body": "Bring documents for verification as guided and under the current policy.",
+        "bodyDocuments": "The owner will check: {documents}."
+      },
+      "inspect": {
+        "title": "Inspect the vehicle with the owner",
+        "body": "Record the condition, {energy, select, electric {battery level} other {fuel level}} and equipment before taking the handover."
+      },
+      "sign": {
+        "title": "Sign the pickup record",
+        "body": "Check the details and agree on the vehicle's condition in the record."
+      },
+      "deposit": {
+        "title": "Pay the {amount} vehicle deposit",
+        "body": "Kept separate from the rental; refunded under the policy and the pickup agreement."
+      },
+      "asset": {
+        "title": "Leave a collateral item",
+        "body": "One of the following: {assets}. You get it back when you return the vehicle."
+      },
+      "guidance": "Specific document requirements and verification will be explained under the current policy before pickup."
+    },
+    "costs": {
+      "holdTag": "Paid"
+    },
+    "policy": {
+      "bodyFree": "Cancel before {time} and you still get 100% of the reservation amount back. After that, refunds follow the trip's cancellation & refund policy.",
+      "bodyAfter": "The free cancellation deadline ({time}) has passed. Cancelling now is refunded under the trip's cancellation & refund policy.",
+      "bodyNoHold": "You can cancel before pickup time. See the cancellation & refund policy for the conditions."
+    }
   }
 }

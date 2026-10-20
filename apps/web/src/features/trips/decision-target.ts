@@ -25,6 +25,7 @@ export function tripToDecisionTarget(trip: CustomerTrip): BookingRequestDecision
     vehiclePlate: trip.vehicle.plateNumber,
     customerName: trip.renter?.name ?? '',
     customerPhone: trip.renter?.phone ?? null,
+    customerAccountPhone: trip.renter?.accountPhone ?? null,
     serviceType: trip.serviceType,
     pickupAt: trip.pickupAt,
     returnAt: trip.returnAt,

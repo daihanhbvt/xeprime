@@ -11746,6 +11746,8 @@ export interface components {
             vehiclePlate?: string | null;
             customerName: string;
             customerPhone?: string | null;
+            /** @description SĐT tài khoản khách — chỉ khi khác SĐT liên hệ của đơn */
+            customerAccountPhone?: string | null;
             /** @enum {string} */
             status: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
             /** @enum {string} */
@@ -11848,6 +11850,8 @@ export interface components {
             vehiclePlate?: string | null;
             customerName: string;
             customerPhone?: string | null;
+            /** @description SĐT tài khoản khách — chỉ khi khác SĐT liên hệ của đơn */
+            customerAccountPhone?: string | null;
             /** @enum {string} */
             status: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
             /** @enum {string} */
@@ -11931,6 +11935,8 @@ export interface components {
             customerName: string;
             /** @description SĐT khách — null với chủ xe tuyến hoa hồng khi chuyến chưa có đơn */
             customerPhone: string | null;
+            /** @description SĐT tài khoản khách — chỉ trả về khi chủ xe được xem liên hệ và SĐT liên hệ khác SĐT tài khoản */
+            customerAccountPhone?: string | null;
             customerEmail?: string | null;
             tenantCustomerId?: string | null;
             /** @description Ảnh đại diện tài khoản khách */
@@ -12747,6 +12753,10 @@ export interface components {
         CreateBookingRequestDto: {
             /** @description ID xe (ULID) trên marketplace */
             vehicleId: string;
+            /** @description Họ tên người thuê — bỏ trống thì dùng tên tài khoản (ADR 0063) */
+            customerName?: string;
+            /** @description SĐT liên hệ `0xxxxxxxxx`/`+84xxxxxxxxx` — bỏ trống thì dùng SĐT tài khoản; khác số không cần OTP (ADR 0063) */
+            customerPhone?: string;
             /**
              * @deprecated
              * @description ĐÃ GỠ (ADR 0060) — server bỏ qua; không còn phiên nào được cấp ở route này.
@@ -12758,16 +12768,6 @@ export interface components {
              * @description ĐÃ GỠ (ADR 0060) — server bỏ qua.
              */
             device?: components["schemas"]["MobileDeviceDto"];
-            /**
-             * @deprecated
-             * @description ĐÃ GỠ (ADR 0060) — server bỏ qua; họ tên lấy từ tài khoản.
-             */
-            customerName?: string;
-            /**
-             * @deprecated
-             * @description ĐÃ GỠ (ADR 0060) — server bỏ qua; SĐT đã xác minh lấy từ tài khoản.
-             */
-            customerPhone?: string;
             /**
              * @deprecated
              * @description ĐÃ GỠ (ADR 0060) — server bỏ qua; email đã xác minh lấy từ tài khoản.
@@ -13398,6 +13398,8 @@ export interface components {
             /** @description ISO — huỷ trước mốc này được hoàn toàn bộ */
             freeCancelUntil: string;
             paidAt?: string | null;
+            /** @enum {string|null} */
+            paidVia?: "bank_transfer" | "momo" | "vnpay" | null;
             allocation: components["schemas"]["HoldAllocationLineDto"][];
             refund?: components["schemas"]["CustomerHoldRefundDto"] | null;
             paymentInfo: components["schemas"]["HoldPaymentInfoDto"];
@@ -13455,6 +13457,10 @@ export interface components {
             /** @description ISO-8601 UTC */
             recordedAt: string;
         };
+        CustomerTripContactDto: {
+            name: string;
+            phone: string;
+        };
         CustomerTripCountsDto: {
             /** @description Chuyến chưa khép: chờ duyệt · chờ giữ chỗ · sắp tới · đang thuê */
             current: number;
@@ -13508,6 +13514,7 @@ export interface components {
             /** @description ISO-8601 UTC */
             createdAt: string;
             customerNote?: string | null;
+            contact?: components["schemas"]["CustomerTripContactDto"] | null;
             rejectReason?: string | null;
             actualPickupAt?: string | null;
             actualReturnAt?: string | null;
@@ -13526,6 +13533,16 @@ export interface components {
             /** @description Cọc thế chấp hoàn trả — KHÔNG nằm trong tổng */
             depositAmount: string;
             fees?: components["schemas"]["CustomerFeeBreakdownDto"] | null;
+            estimateNote?: string | null;
+            longTerm?: components["schemas"]["LongTermPackageOptionDto"] | null;
+        };
+        CustomerTripFinanceBreakdownDto: {
+            /** @description Các dòng của giá THUÊ */
+            rows: components["schemas"]["PriceBreakdownRowDto"][];
+            /** @description Cọc thế chấp hoàn trả — KHÔNG nằm trong tổng */
+            depositAmount: string;
+            fees?: components["schemas"]["CustomerFeeBreakdownDto"] | null;
+            longTerm?: components["schemas"]["LongTermPackageOptionDto"] | null;
         };
         CustomerTripFinanceDto: {
             /** @example VND */
@@ -13569,6 +13586,7 @@ export interface components {
             refundReference?: string | null;
             /** @description Thiếu snapshot giá — chỉ còn tổng, không có chi tiết */
             legacyPricing: boolean;
+            breakdown?: components["schemas"]["CustomerTripFinanceBreakdownDto"] | null;
         };
         CustomerTripHandoverEvidenceDto: {
             /**
@@ -13658,6 +13676,8 @@ export interface components {
             name: string;
             /** @description null khi chưa được liên hệ */
             phone?: string | null;
+            /** @description SĐT tài khoản khách — null khi chưa được liên hệ hoặc trùng SĐT liên hệ */
+            accountPhone?: string | null;
         };
         CustomerTripReviewDto: {
             id: string;

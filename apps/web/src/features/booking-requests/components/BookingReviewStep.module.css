@@ -138,6 +138,19 @@
 /* Thẻ chuyến đi (Figma `19727:55974`) dùng chung với hộp "Đã gửi yêu cầu" — `BookingTripCard`. */
 
 /* ── Người thuê (Figma `19727:56002`) ─────────────────────────────────────── */
+.contactInputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--xp-space-md);
+  margin-bottom: var(--xp-space-md);
+}
+
+.contactHint {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
 .contactGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -177,6 +190,18 @@
   color: var(--xp-color-text);
   font-size: var(--xp-font-size-body-lg);
   line-height: var(--xp-line-height-body-lg);
+}
+
+/*
+ * Giá trị đã GHI trên một yêu cầu (các màn chuyến): chữ trơn `16px/Medium` — không khung, không nền.
+ * Khung xám ở trên chỉ dành cho giá trị đứng giữa các ô nhập của màn Xem lại.
+ */
+.contactPlain {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-weight: var(--xp-font-weight-medium);
 }
 
 .contactText {

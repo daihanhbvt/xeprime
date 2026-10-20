@@ -45,7 +45,9 @@
   "customer": {
     "heading": "Khách hàng",
     "noProfile": "Chưa có hồ sơ trong sổ khách",
-    "riskWarning": "{level} — kiểm tra lại trước khi duyệt"
+    "riskWarning": "{level} — kiểm tra lại trước khi duyệt",
+    "accountPhone": "SĐT tài khoản: {phone}",
+    "accountPhoneAria": "Gọi số tài khoản {phone} của {name}"
   },
   "schedule": {
     "heading": "Yêu cầu thuê",
@@ -97,7 +99,8 @@
     "openCustomer": "Xem hồ sơ khách",
     "phone": "Số điện thoại",
     "createdAt": "Khách gửi lúc",
-    "decidedAt": "Xử lý lúc"
+    "decidedAt": "Xử lý lúc",
+    "accountPhone": "SĐT tài khoản"
   },
   "actions": {
     "approve": "Duyệt & giữ xe",
@@ -269,6 +272,7 @@
       "packageTitle": "Chi tiết giá gói {months, plural, other {# tháng}}",
       "subtotal": "Tạm tính",
       "total": "Tổng dự kiến",
+      "totalFrozen": "Tổng tiền thuê",
       "rentalTotal": "Tiền thuê",
       "expand": "Chi tiết",
       "collapse": "Thu gọn",
@@ -406,7 +410,7 @@
         "trip": "Chọn chuyến",
         "request": "Gửi yêu cầu",
         "payment": "Thanh toán giữ chỗ",
-        "confirmed": "Hoàn tất"
+        "confirmed": "Đã xác nhận"
       }
     },
     "preparing": "Đang kiểm tra lịch xe…",
@@ -422,7 +426,7 @@
         "package": "Gói thuê",
         "pickupWish": "Nguyện vọng nhận xe",
         "expectedReturn": "Dự kiến trả xe",
-        "selfPickup": "Tự nhận và trả xe tại điểm hẹn của chủ xe",
+        "selfPickup": "Tự nhận và trả xe tại chủ xe",
         "selfPickupPending": "Chủ xe gửi địa chỉ nhận xe cụ thể khi xác nhận chuyến.",
         "delivery": "Giao xe tận nơi",
         "driverPickup": "Tài xế đón tại",
@@ -432,12 +436,16 @@
       },
       "renter": {
         "title": "Thông tin người thuê",
-        "description": "Họ tên và số điện thoại lấy từ tài khoản của bạn, dùng để liên hệ về chuyến đi này.",
+        "description": "Mặc định lấy từ tài khoản của bạn — đổi được họ tên hoặc số điện thoại liên hệ cho chuyến này.",
         "name": "Họ và tên",
         "phone": "Số điện thoại",
         "email": "Email",
         "noteLabel": "Lời nhắn cho chủ xe (không bắt buộc)",
-        "notePlaceholder": "Ví dụ: Tôi cần hướng dẫn nhận xe"
+        "notePlaceholder": "Ví dụ: Tôi cần hướng dẫn nhận xe",
+        "readonlyDescription": "Họ tên và số điện thoại chủ xe dùng để liên hệ về chuyến đi này.",
+        "namePlaceholder": "Nhập họ tên người thuê",
+        "phonePlaceholder": "Nhập số điện thoại liên hệ",
+        "phoneDifferent": "Số liên hệ chưa xác thực — chủ xe sẽ thấy thêm số tài khoản {accountPhone} của bạn."
       },
       "requirements": {
         "title": "Giấy tờ & điều kiện nhận xe",
@@ -512,7 +520,8 @@
       "returnAfterPickup": "Thời gian trả phải sau thời gian nhận",
       "longTermPackage": "Chọn gói thuê",
       "requestedPickupDate": "Chọn ngày muốn nhận xe",
-      "noteMax": "Tối đa {max} ký tự"
+      "noteMax": "Tối đa {max} ký tự",
+      "customerNameMax": "Tối đa {max} ký tự"
     }
   },
   "cancel": {
@@ -541,5 +550,8 @@
   "stats": {
     "pending": "Chờ duyệt",
     "converted": "Hoàn thành"
+  },
+  "contactNote": {
+    "differentPhone": "Khách để lại số liên hệ khác số đăng ký tài khoản. Số tài khoản {phone} đã xác thực; số liên hệ thì chưa."
   }
 }

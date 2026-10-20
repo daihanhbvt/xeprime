@@ -376,10 +376,10 @@ describe('ca 3 — tài khoản KHÁCH cùng SĐT với thành viên gian hàng'
   });
 
   /*
-   * Bản app cũ vẫn gửi `customerPhone` trong payload — server BỎ QUA nó (ADR 0060): SĐT của yêu
-   * cầu là số ĐÃ XÁC MINH của tài khoản, nên gõ một số khác ở form không lách được cổng tự đặt.
+   * `customerPhone` trong payload là SĐT LIÊN HỆ của chuyến (ADR 0063) — không qua OTP, nên cổng tự
+   * đặt xe so SĐT ĐÃ XÁC MINH của tài khoản, không so nó: gõ một số khác ở form không lách được.
    */
-  maybe('payload mang SĐT khác nhưng SĐT TÀI KHOẢN trùng thành viên: vẫn 409', async () => {
+  maybe('payload mang SĐT liên hệ khác nhưng SĐT TÀI KHOẢN trùng thành viên: vẫn 409', async () => {
     await expect(submit(liteVehicleId, liteTwinId, { customerPhone: phoneOf(77) })).rejects.toThrow(
       ownVehicleError,
     );

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { API_ERROR_CODE, BOOKING_HOLD_STATUS } from '@xeprime/types';
@@ -23,9 +23,18 @@ const trip = vi.hoisted(() => ({
 }));
 
 vi.mock('../hooks', () => ({ useTrip: () => trip }));
+// Tin đăng của xe — chỉ hộp "Thanh toán thành công" đọc (thẻ chuyến); tin đã ẩn thì thẻ đọc từ chuyến.
+vi.mock('@/features/marketplace/hooks/use-listing-detail', () => ({
+  useListingDetail: () => ({ data: undefined, isLoading: false }),
+}));
 vi.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams() }));
+const gatewayMethods = vi.hoisted(() => ({ methods: [] as unknown[] }));
 vi.mock('@/features/payment-gateway/api', () => ({
-  fetchGatewayMethods: vi.fn().mockResolvedValue({ target: 'booking_hold', sandbox: false, methods: [] }),
+  fetchGatewayMethods: vi.fn(async () => ({
+    target: 'booking_hold',
+    sandbox: false,
+    methods: gatewayMethods.methods,
+  })),
   fetchGatewayOrder: vi.fn(),
   startGatewayCheckout: vi.fn(),
 }));
@@ -41,6 +50,7 @@ const HOLD: NonNullable<CustomerTripDetail['hold']> = {
   expiresAt: new Date(Date.now() + 60 * 60_000).toISOString(),
   freeCancelUntil: new Date(Date.now() + 4 * 3600_000).toISOString(),
   paidAt: null,
+  paidVia: null,
   allocation: [],
   refund: null,
   paymentInfo: {
@@ -55,6 +65,7 @@ function makeTrip(over: Partial<CustomerTripDetail> = {}): CustomerTripDetail {
   return {
     id: '01TRIP',
     vehicle: { id: 'V1', name: 'Hyundai Accent 2021', imageUrl: null, plateNumber: '51H-123.45' },
+    shop: { name: 'Anh Kiên', slug: 'anh-kien', ratingAvg: 0, ratingCount: 0, phone: null },
     pickupAt: '2026-10-21T10:00:00.000Z',
     returnAt: '2026-10-22T03:00:00.000Z',
     serviceType: 'self_drive',
@@ -73,6 +84,7 @@ function renderPage() {
 }
 
 beforeEach(() => {
+  gatewayMethods.methods = [];
   trip.data = undefined;
   trip.isPending = false;
   trip.isError = false;
@@ -99,27 +111,139 @@ describe('TripPaymentView', () => {
 
   it('đã chuyển thiếu ⇒ QR và số lớn nói phần CÒN THIẾU', () => {
     trip.data = makeTrip({
-      hold: { ...HOLD, status: BOOKING_HOLD_STATUS.UNDERPAID, paidAmount: '40800', remainingAmount: '100000' },
+      hold: {
+        ...HOLD,
+        status: BOOKING_HOLD_STATUS.UNDERPAID,
+        paidAmount: '40800',
+        remainingAmount: '100000',
+      },
     });
     const { container } = renderPage();
 
     expect(container.querySelector('img')!.getAttribute('src')).toContain('amount=100000');
-    expect(screen.getByText('Còn phải chuyển')).toBeTruthy();
+    expect(screen.getByText('Tiền giữ chỗ còn thiếu')).toBeTruthy();
     expect(screen.getByText(/Đã nhận/)).toBeTruthy();
   });
 
   it('khoản đã trả đủ ⇒ ĐẶT XE THÀNH CÔNG, không còn kênh trả nào', () => {
     trip.data = makeTrip({
-      hold: { ...HOLD, status: BOOKING_HOLD_STATUS.PAID, paidAmount: '140800', remainingAmount: '0' },
+      hold: {
+        ...HOLD,
+        status: BOOKING_HOLD_STATUS.PAID,
+        paidAmount: '140800',
+        remainingAmount: '0',
+        // Vừa trả xong (realtime vừa lật trang) ⇒ hộp chúc mừng mở.
+        paidAt: new Date().toISOString(),
+      },
     });
     const { container } = renderPage();
 
     expect(screen.getByText('Đặt xe thành công')).toBeTruthy();
     expect(container.querySelector('img')).toBeNull();
     expect(screen.queryByText(/chuyển khoản nhanh/i)).toBeNull();
-    expect(screen.getByRole('link', { name: /xem chi tiết chuyến/i }).getAttribute('href')).toBe(
-      '/trips/01TRIP',
-    );
+
+    // Hộp "Thanh toán thành công" (Figma `19759:38196`) mở sẵn đè lên trang.
+    const dialog = screen.getByRole('dialog', { name: 'Thanh toán thành công' });
+    // Không biết kênh (dữ liệu cũ / nhiều kênh) ⇒ không gọi tên kênh nào.
+    expect(within(dialog).getByText(/Hệ thống đã ghi nhận 140.800.*!/)).toBeTruthy();
+    expect(within(dialog).queryByText(/ qua /)).toBeNull();
+    expect(within(dialog).getByText('01TRIP')).toBeTruthy();
+    expect(
+      within(dialog).getByRole('link', { name: 'Xem chi tiết chuyến' }).getAttribute('href'),
+    ).toBe('/trips/01TRIP');
+    expect(
+      within(dialog).getByRole('link', { name: 'Chuyến đi của tôi' }).getAttribute('href'),
+    ).toBe('/trips');
+  });
+
+  it('đã trả đủ qua một cổng ⇒ hộp thành công gọi đúng tên kênh, kèm phần trả chủ xe', () => {
+    trip.data = makeTrip({
+      hold: {
+        ...HOLD,
+        status: BOOKING_HOLD_STATUS.PAID,
+        paidAmount: '140800',
+        remainingAmount: '0',
+        // Vừa trả xong (realtime vừa lật trang) ⇒ hộp chúc mừng mở.
+        paidAt: new Date().toISOString(),
+        paidVia: 'vnpay',
+      },
+      finance: { payAtPickupAmount: '1000000' },
+    } as Partial<CustomerTripDetail>);
+    renderPage();
+
+    const dialog = screen.getByRole('dialog', { name: 'Thanh toán thành công' });
+    expect(within(dialog).getByText(/Hệ thống đã ghi nhận 140.800.* qua VNPAY!/)).toBeTruthy();
+    expect(within(dialog).getByText('Cần thanh toán cho chủ xe')).toBeTruthy();
+    expect(within(dialog).getByText(/1.000.000/)).toBeTruthy();
+  });
+
+  it('có cổng ví đang mở ⇒ thẻ "Ví điện tử"; chọn ví thì nút trả đổi theo ví', async () => {
+    gatewayMethods.methods = [{ provider: 'momo', minAmount: '1000', maxAmount: '50000000' }];
+    trip.data = makeTrip();
+    renderPage();
+
+    // VietQR mở sẵn; ví gập lại cho tới khi khách mở.
+    const walletToggle = await screen.findByRole('button', { name: /Ví điện tử/ });
+    expect(walletToggle.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(walletToggle);
+    expect(walletToggle.getAttribute('aria-expanded')).toBe('true');
+    // Chỉ một thẻ mở một lúc.
+    expect(
+      screen.getByRole('button', { name: /Chuyển khoản nhanh/ }).getAttribute('aria-expanded'),
+    ).toBe('false');
+
+    expect(screen.getByText('Thanh toán nhanh, tiện lợi')).toBeTruthy();
+    fireEvent.click(screen.getByRole('radio'));
+    expect(screen.getByRole('button', { name: 'Thanh toán qua Ví MoMo' })).toBeTruthy();
+  });
+
+  it('không có cổng ví nào ⇒ không có thẻ "Ví điện tử" (ẩn hẳn, không phải nút xám)', () => {
+    trip.data = makeTrip();
+    renderPage();
+    expect(screen.queryByRole('button', { name: /Ví điện tử/ })).toBeNull();
+    expect(screen.getByText('Thông tin thanh toán')).toBeTruthy();
+  });
+
+  it('mở lại trang của một khoản đã trả từ lâu ⇒ chỉ còn kết cục, KHÔNG chúc mừng lần hai', () => {
+    trip.data = makeTrip({
+      hold: {
+        ...HOLD,
+        status: BOOKING_HOLD_STATUS.PAID,
+        paidAmount: '140800',
+        remainingAmount: '0',
+        paidAt: new Date(Date.now() - 3 * 86400_000).toISOString(),
+      },
+    });
+    renderPage();
+
+    expect(screen.getByText('Đặt xe thành công')).toBeTruthy();
+    expect(screen.queryByRole('dialog', { name: 'Thanh toán thành công' })).toBeNull();
+  });
+
+  it('chuyển THỪA ⇒ khoản hoàn + lối khai tài khoản nhận, cả trên trang lẫn trong hộp', () => {
+    trip.data = makeTrip({
+      hold: {
+        ...HOLD,
+        status: BOOKING_HOLD_STATUS.PAID,
+        paidAmount: '281600',
+        remainingAmount: '0',
+        paidAt: new Date().toISOString(),
+        refund: {
+          id: '01REFUND',
+          status: 'pending',
+          reason: 'overpaid',
+          amount: '140800',
+          hasAccount: false,
+          accountHint: null,
+          paidAt: null,
+          bankReference: null,
+        },
+      },
+    });
+    renderPage();
+
+    // Một lời trên trang + một lời trong hộp thành công.
+    expect(screen.getAllByText(/Có 140.800.* chờ hoàn/).length).toBe(2);
   });
 
   it('khoản đã hết hạn ⇒ nói kết cục, không mời trả', () => {

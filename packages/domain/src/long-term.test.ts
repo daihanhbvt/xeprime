@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { pickupWishParts } from './long-term';
+import { dayjs } from './datetime';
+import { longTermReturnFromWallClock, pickupWishParts } from './long-term';
 
 /**
  * Nguyện vọng nhận xe của khách thuê dài hạn — ADR 0011.
@@ -60,5 +61,19 @@ describe('pickupWishParts', () => {
     expect(
       pickupWishParts({ pickupPreference: 'asap', requestedPickupDate: '2026-09-01' }),
     ).toEqual({ kind: 'shopDecides' });
+  });
+});
+
+/**
+ * Ngày trả của gói tính từ MẶT ĐỒNG HỒ ô chọn ngày (giờ VN) — N tháng LỊCH, không phải N × 30 ngày.
+ */
+describe('longTermReturnFromWallClock', () => {
+  it('cộng tháng lịch và kẹp về ngày cuối tháng (31/01 + 1 tháng = 28/02)', () => {
+    expect(longTermReturnFromWallClock(dayjs('2026-01-31'), 1).format('YYYY-MM-DD')).toBe('2026-02-28');
+  });
+
+  it('giữ nguyên giờ nhận xe theo giờ Việt Nam', () => {
+    const back = longTermReturnFromWallClock(dayjs('2026-03-10T09:30:00'), 3);
+    expect(back.format('YYYY-MM-DD HH:mm')).toBe('2026-06-10 09:30');
   });
 });

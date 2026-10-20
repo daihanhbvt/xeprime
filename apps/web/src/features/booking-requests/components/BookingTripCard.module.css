@@ -176,6 +176,21 @@
   gap: var(--xp-space-12);
 }
 
+/* Chủ xe + lối liên hệ cạnh tên (Figma `19879:73257`: cách 24). */
+.ownerGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-lg);
+  min-width: 0;
+}
+
+.ownerAction {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
 .owner {
   display: flex;
   align-items: center;
@@ -208,6 +223,13 @@
   overflow-wrap: anywhere;
 }
 
+/* Tên chủ xe là liên kết tới mặt tiền — giữ đúng chữ của bản vẽ, chỉ đổi sắc khi rê chuột. */
+.ownerLink:hover {
+  color: var(--xp-color-primary-hover);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 /* `Text/Brand/primary 2` — vàng sẫm, đọc được trên nền trắng. */
 .tripSummary {
   color: var(--xp-color-primary-hover);
@@ -217,6 +239,11 @@
 }
 
 /* ── Màn Xem lại: ảnh lớn bên trái, lịch xếp dọc bên phải ─────────────────── */
+
+/* Khung lịch cao bằng cột ảnh + tên xe (Figma `Rental schedule` `self-stretch`). */
+.review .schedule {
+  align-self: stretch;
+}
 @container (max-width: 600px) {
   .review .body {
     grid-template-columns: minmax(0, 1fr);

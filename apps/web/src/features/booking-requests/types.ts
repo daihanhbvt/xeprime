@@ -28,6 +28,7 @@ export type BookingRequestDecisionTarget = Omit<
     | 'vehiclePlate'
     | 'customerName'
     | 'customerPhone'
+    | 'customerAccountPhone'
     | 'serviceType'
     | 'pickupAt'
     | 'returnAt'

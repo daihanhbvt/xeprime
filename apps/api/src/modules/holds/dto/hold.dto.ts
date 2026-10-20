@@ -3,8 +3,10 @@ import {
   BOOKING_HOLD_OUTCOME_VALUES,
   BOOKING_HOLD_PURPOSE_VALUES,
   BOOKING_HOLD_STATUS_VALUES,
+  HOLD_PAYMENT_CHANNEL_VALUES,
   HOLD_REFUND_REASON_VALUES,
   HOLD_REFUND_STATUS_VALUES,
+  type HoldPaymentChannel,
 } from '@xeprime/types';
 import { Type } from 'class-transformer';
 import {
@@ -73,6 +75,13 @@ export class CustomerHoldDto {
   @ApiProperty({ description: 'ISO — huỷ trước mốc này được hoàn toàn bộ' })
   freeCancelUntil!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) paidAt!: string | null;
+  /**
+   * Tiền đã vào bằng KÊNH nào — để màn "Thanh toán thành công" kể đúng ("…qua VNPAY"). Suy từ sổ
+   * cổng (ADR 0058): không có lượt cổng nào đã áp ⇒ chuyển khoản. `null` khi chưa nhận đồng nào,
+   * hoặc khi tiền đến từ HAI kênh trở lên — gọi tên một kênh lúc đó là kể sai.
+   */
+  @ApiPropertyOptional({ enum: HOLD_PAYMENT_CHANNEL_VALUES, nullable: true, type: String })
+  paidVia!: HoldPaymentChannel | null;
   @ApiProperty({ type: [HoldAllocationLineDto] }) allocation!: HoldAllocationLineDto[];
   @ApiPropertyOptional({ type: CustomerHoldRefundDto, nullable: true })
   refund!: CustomerHoldRefundDto | null;

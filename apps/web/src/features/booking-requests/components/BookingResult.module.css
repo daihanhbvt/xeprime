@@ -1,0 +1,200 @@
+/**
+ * Hộp KẾT QUẢ của hành trình đặt xe — Figma `19759:22026` ("Đã gửi yêu cầu") và `19759:38196`
+ * ("Thanh toán thành công"): rộng 600, đệm 24/32, các khối cách 16, hàng nút dính đáy sau một
+ * đường kẻ.
+ */
+.result {
+  display: flex;
+  flex-direction: column;
+  width: 600px;
+  max-width: 100%;
+  max-height: calc(100dvh - var(--xp-space-xl) * 2);
+  min-height: 0;
+}
+
+.content {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-height: 0;
+  padding: var(--xp-space-lg) var(--xp-space-xl);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* ── Trạng thái: huy hiệu · tiêu đề · lời dẫn · mã (Figma `19759:22159` · `19759:38198`) ── */
+.status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--xp-space-12);
+  text-align: center;
+}
+
+.badge {
+  display: block;
+  width: 120px;
+  height: 120px;
+}
+
+.title {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h2);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h2);
+}
+
+.lead {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+/*
+ * Mã — một Ô giá trị (viền + bóng nhẹ như ô nhập), không phải một dòng chữ mờ: khách đọc nó cho
+ * tổng đài, và cái khung là thứ nói cho mắt biết "đây là một giá trị chép được".
+ */
+.code {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  max-width: 100%;
+  padding: var(--xp-space-xs) var(--xp-space-xs) var(--xp-space-xs) var(--xp-space-12);
+  border: 1px solid var(--xp-color-border-strong);
+  border-radius: var(--xp-border-radius-control);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-elevation-xs);
+}
+
+.codeText {
+  min-width: 0;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  text-align: left;
+}
+
+.codeLabel {
+  color: var(--xp-color-text-placeholder);
+}
+
+/* ULID 26 ký tự không có chỗ ngắt — cho phép gãy ở bất kỳ đâu thay vì tràn khỏi hộp hẹp. */
+.codeValue {
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* ── Dòng tổng trong thẻ chuyến (Figma `19759:22246` · `19759:38232`) ─────── */
+.total {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-xs) var(--xp-space-md);
+}
+
+.totalText {
+  display: flex;
+  flex: 1 1 200px;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.totalLabel {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+/* Câu giải thích dưới nhãn — `12px/Regular` `Text/Gray/low`. */
+.totalNote {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+/* `30px/Semibold` màu `Text/Brand/primary 2` — số tiền lớn nhất của hộp. */
+.totalAmount {
+  color: var(--xp-color-primary-hover);
+  font-size: var(--xp-font-size-h1);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h1);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ── Hàng nút (Figma "Footer cố định") ─────────────────────────────────────── */
+.footer {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: var(--xp-space-12);
+  padding: var(--xp-space-20) var(--xp-space-xl);
+  border-top: 1px solid var(--xp-color-border);
+}
+
+/*
+ * Vỏ modal trên desktop: bỏ đệm + thanh tiêu đề của AntD, bo 16 và bóng `Shadow/xl` như bản vẽ.
+ *
+ * Lặp class để thắng style runtime của AntD (tiêm SAU CSS Module) — cùng cách hộp xác minh tài
+ * khoản (`MarketAuth.module.css` `.popup`). Trên điện thoại hộp là Drawer toàn trang, các bộ chọn
+ * `.ant-modal-*` không chạm tới nó.
+ */
+.dialog.dialog :global(.ant-modal-container) {
+  overflow: hidden;
+  padding: 0;
+  border-radius: var(--xp-border-radius-card);
+  box-shadow: var(--xp-elevation-xl);
+}
+
+.dialog.dialog :global(.ant-modal-header) {
+  margin: 0;
+  padding: 0;
+}
+
+.dialog.dialog :global(.ant-modal-close) {
+  top: var(--xp-space-md);
+  inset-inline-end: var(--xp-space-md);
+}
+
+/* 641px = ngay trên `--xp-bp-mobile`: dưới mốc này thân là thân Drawer, giữ đệm của Drawer. */
+@media (min-width: 641px) {
+  .dialogBody.dialogBody {
+    max-height: none;
+    padding: 0;
+    overflow: visible;
+  }
+}
+
+/**
+ * 640px = `--xp-bp-mobile` (CSS custom property không dùng được trong `@media`). Trên điện thoại
+ * hộp là màn toàn trang của Drawer — thân Drawer đã có đệm riêng, và các nút cạnh nhau không đủ
+ * chỗ: xếp dọc, nút chính lên trên cho ngón cái.
+ */
+@media (max-width: 640px) {
+  .result {
+    width: auto;
+    height: 100%;
+    max-height: none;
+  }
+
+  .content {
+    padding: 0 0 var(--xp-space-md);
+  }
+
+  .footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    padding: var(--xp-space-md) 0 0;
+  }
+
+  .footer > * {
+    width: 100%;
+  }
+}

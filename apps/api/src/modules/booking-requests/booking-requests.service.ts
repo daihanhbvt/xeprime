@@ -28,6 +28,7 @@ import {
   resolveEffectiveBilling,
   tenantUsesManagePortal,
   isLongTermPackageMonths,
+  isSameVnPhone,
   vnDateKey,
   vnDayStart,
   longTermPickupWindow,
@@ -54,7 +55,12 @@ import {
   type ServiceType,
 } from '@xeprime/types';
 import { fromDateOnly, toDateOnly } from '../../common/date-only';
-import { normalizePhone, phoneLookupVariants, toLocalPhone } from '../../common/phone';
+import {
+  accountPhoneIfDifferent,
+  normalizePhone,
+  phoneLookupVariants,
+  toLocalPhone,
+} from '../../common/phone';
 import { piiSearch } from '../../common/support/support-search';
 import { marketplaceVehicleWhere } from '../../common/marketplace-vehicle-scope';
 import { normalizeRouteContext } from '../../common/route-context';
@@ -177,7 +183,8 @@ const SELECT = {
       discountPercent: true,
     },
   },
-  customer: { select: { avatarUrl: true } },
+  // `phone` — SĐT tài khoản, để chủ xe thấy CẢ HAI số khi liên hệ của chuyến khác nó (ADR 0063).
+  customer: { select: { avatarUrl: true, phone: true } },
   tenantCustomer: { select: { riskLevel: true } },
   /*
    * Tiền của yêu cầu (`resolvePricing`) — ĐÚNG một quan hệ 1-1 mỗi loại, cùng một truy vấn với
@@ -405,9 +412,14 @@ export class BookingRequestsService {
    * chủ xe duyệt mới thành đơn (mô hình marketplace: hai bên tự thương lượng).
    *
    * Người gửi LUÔN là một tài khoản KHÁCH đã đăng nhập (ADR 0060): controller không còn
-   * `@Public()`, và không còn đường "khách vãng lai xác thực OTP rồi được tạo tài khoản". Danh tính
-   * của yêu cầu — họ tên, SĐT, email — đọc từ TÀI KHOẢN đó; `customerName`/`customerPhone`/
-   * `customerEmail` trong payload (bản app cũ còn gửi) bị BỎ QUA, không được tin.
+   * `@Public()`, và không còn đường "khách vãng lai xác thực OTP rồi được tạo tài khoản". DANH TÍNH
+   * của yêu cầu — tài khoản, SĐT đã xác minh, email đã xác minh — đọc từ TÀI KHOẢN đó; `customerEmail`
+   * trong payload (bản app cũ còn gửi) bị BỎ QUA.
+   *
+   * LIÊN HỆ của chuyến (ADR 0063) thì khách khai được: `customerName`/`customerPhone` trong payload,
+   * bỏ trống là của tài khoản. SĐT liên hệ khác số tài khoản không cần OTP — vì thế nó KHÔNG BAO GIỜ
+   * thay số tài khoản ở các phép kiểm danh tính bên dưới (danh sách chặn, tự đặt xe, sổ khách, chống
+   * trùng), và chủ xe thấy cả hai số (`customerAccountPhone`).
    */
   async submitPublic(
     dto: CreateBookingRequestDto,
@@ -419,6 +431,17 @@ export class BookingRequestsService {
     // kiểm chuyến, trước mọi tác dụng phụ. Chưa xác minh ⇒ `PHONE_NOT_VERIFIED`, web mở bước xác
     // minh SĐT của tài khoản rồi gửi lại.
     const customer = await this.loadBookingCustomer(customerUserId);
+    /*
+     * Liên hệ của CHUYẾN (ADR 0063) — mặc định của tài khoản. SĐT lưu ở dạng nội địa như số tài
+     * khoản (`loadBookingCustomer`), để hai số cùng một người không bao giờ bị coi là "khác nhau"
+     * chỉ vì một bên viết `+84`. DTO đã so mẫu SĐT Việt Nam; cắt khoảng trắng lại ở đây vì service
+     * còn được gọi thẳng (worker, spec) không qua `ValidationPipe`.
+     */
+    const contactPhone = dto.customerPhone?.trim();
+    const contact = {
+      name: dto.customerName?.trim() || customer.name,
+      phone: contactPhone ? toLocalPhone(contactPhone) : customer.phone,
+    };
 
     /*
      * Dịch vụ của chuyến — kiểm ở SERVER, FE chỉ là preview:
@@ -599,7 +622,13 @@ export class BookingRequestsService {
       lastDayKey: this.tripLastDayKey(returnAt, longTerm),
     });
 
-    await this.assertNoPendingDuplicate(vehicle.id, customer.phone, pickupAt, returnAt, longTerm);
+    await this.assertNoPendingDuplicate(
+      vehicle.id,
+      { customerUserId, phone: customer.phone },
+      pickupAt,
+      returnAt,
+      longTerm,
+    );
 
     /*
      * MÃ KHUYẾN MÃI — cửa kiểm THỨ HAI của ba cửa (ADR 0046 điều 7).
@@ -623,6 +652,9 @@ export class BookingRequestsService {
         // Sổ khách (S-01): yêu cầu gắn về một hồ sơ khách ngay khi nhận, trong cùng transaction.
         // Khi duyệt, id này được COPY sang đơn — không tra lại theo SĐT (SĐT trên hồ sơ có thể
         // đã được sửa giữa chừng, tra lại sẽ đẻ ra một khách thứ hai).
+        // Hồ sơ khoá theo TÀI KHOẢN (tên + SĐT đã xác minh), KHÔNG theo liên hệ của chuyến: SĐT
+        // liên hệ chưa qua OTP, khớp theo nó là để một người gõ số người khác và được gắn vào hồ
+        // sơ — kèm lịch sử, mức rủi ro — của người đó ở gian hàng này (ADR 0063).
         const tenantCustomerId = await this.customers.resolveWithinTx(tx, vehicle.tenantId, {
           fullName: customer.name,
           phone: customer.phone,
@@ -639,8 +671,9 @@ export class BookingRequestsService {
             tenantCustomerId,
             vehicleId: vehicle.id,
             status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
-            customerName: customer.name,
-            customerPhone: customer.phone,
+            // Liên hệ của chuyến (ADR 0063); tài khoản gốc vẫn là `customerUserId`.
+            customerName: contact.name,
+            customerPhone: contact.phone,
             customerEmail: customer.email,
             customerUserId,
             pickupAt,
@@ -736,7 +769,7 @@ export class BookingRequestsService {
         if (!autoCandidate) {
           await this.notifications.emitToTenantMembers(
             vehicle.tenantId,
-            submittedNotification(customer.name, vehicle.name, id),
+            submittedNotification(contact.name, vehicle.name, id),
             tx,
           );
         }
@@ -777,7 +810,7 @@ export class BookingRequestsService {
        */
       await this.notifications.emitToTenantMembers(
         vehicle.tenantId,
-        submittedNotification(customer.name, vehicle.name, id),
+        submittedNotification(contact.name, vehicle.name, id),
       );
     }
 
@@ -1329,10 +1362,14 @@ export class BookingRequestsService {
    * Kiểm ở đây phủ mọi biến thể lưu được của cùng một số. Index vẫn giữ nguyên vai trò chốt
    * chặn cuối cho hai request chạy song song — kiểm trước là để báo lỗi đúng, không phải để
    * thay thế ràng buộc DB.
+   *
+   * "Cùng một người" là cùng TÀI KHOẢN, hoặc — với yêu cầu LEGACY chưa gắn tài khoản — cùng SĐT
+   * đã xác minh của tài khoản. Từ ADR 0063 cột `customer_phone` là SĐT LIÊN HỆ khách tự khai cho
+   * từng chuyến: chỉ so theo nó thì đổi một chữ số liên hệ là gửi lại được đúng chuyến vừa gửi.
    */
   private async assertNoPendingDuplicate(
     vehicleId: string,
-    rawPhone: string,
+    identity: { customerUserId: string; phone: string },
     pickupAt: Date | null,
     returnAt: Date | null,
     longTerm: LongTermIntent | null,
@@ -1340,7 +1377,10 @@ export class BookingRequestsService {
     const existing = await this.prisma.bookingRequest.findFirst({
       where: {
         vehicleId,
-        customerPhone: { in: phoneLookupVariants(rawPhone) },
+        OR: [
+          { customerUserId: identity.customerUserId },
+          { customerUserId: null, customerPhone: { in: phoneLookupVariants(identity.phone) } },
+        ],
         status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
         // Dài hạn không có lịch để so — trùng nghĩa là cùng gói VÀ cùng nguyện vọng nhận xe.
         ...(longTerm
@@ -1587,6 +1627,13 @@ export class BookingRequestsService {
      * Giao diện có ẩn nút duyệt hay không không liên quan: chặn thật nằm ở đây.
      */
     await this.customers.assertNotBlocked(tenantId, req.customerPhone, 'internal');
+    /*
+     * SĐT liên hệ của chuyến có thể KHÁC số tài khoản (ADR 0063). Gian hàng chặn khách theo số nào
+     * thì lượt duyệt cũng phải dừng — kể cả khi người bị chặn để lại một số liên hệ khác.
+     */
+    if (req.customer?.phone && !isSameVnPhone(req.customer.phone, req.customerPhone)) {
+      await this.customers.assertNotBlocked(tenantId, req.customer.phone, 'internal');
+    }
 
     const policy = await this.pricing.effectivePolicy(tenantId, req.vehicleId);
     const schedule = this.resolveApprovalSchedule(req, dto);
@@ -2529,6 +2576,8 @@ const PENDING_SELECT = {
   customerName: true,
   customerPhone: true,
   customerUserId: true,
+  /// SĐT tài khoản — lượt duyệt soát danh sách chặn theo CẢ số này lẫn SĐT liên hệ (ADR 0063).
+  customer: { select: { phone: true } },
   /// Hồ sơ sổ khách đã gắn lúc nhận yêu cầu — duyệt COPY nguyên id này sang đơn (S-01).
   tenantCustomerId: true,
   pickupAt: true,
@@ -2605,6 +2654,9 @@ function toDto(r: BookingRequestRow, packageTrack: boolean): BookingRequestDto {
     status: r.status,
     customerName: r.customerName,
     customerPhone: showContact ? r.customerPhone : null,
+    customerAccountPhone: showContact
+      ? accountPhoneIfDifferent(r.customer?.phone, r.customerPhone)
+      : null,
     customerEmail: showContact ? r.customerEmail : null,
     tenantCustomerId: r.tenantCustomerId,
     customerAvatarUrl: r.customer?.avatarUrl ?? null,

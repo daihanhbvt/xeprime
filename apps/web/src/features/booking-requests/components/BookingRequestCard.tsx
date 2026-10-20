@@ -303,6 +303,14 @@ export function BookingRequestCard({
               )
             }
           />
+          {request.customerAccountPhone ? (
+            <p
+              className={styles.accountPhone}
+              title={t('customer.accountPhone', { phone: request.customerAccountPhone })}
+            >
+              {t('customer.accountPhone', { phone: request.customerAccountPhone })}
+            </p>
+          ) : null}
           {request.customerEmail ? <p className={styles.email}>{request.customerEmail}</p> : null}
           {!request.tenantCustomerId ? (
             <p className={styles.hint}>{t('customer.noProfile')}</p>

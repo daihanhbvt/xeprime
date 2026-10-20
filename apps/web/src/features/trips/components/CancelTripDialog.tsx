@@ -19,7 +19,8 @@ import styles from './CancelTripDialog.module.css';
  * chắc chắn để có những cú huỷ nhầm.
  *
  * Chữ đổi theo chặng vì hệ quả khác nhau thật: rút một yêu cầu chưa ai duyệt gần như không mất
- * gì, còn huỷ một đơn đã chốt là nhả mất chỗ đã giữ.
+ * gì, huỷ lúc chủ xe đã nhận và đang giữ xe là nhả chỗ đó (chưa có đơn nào để "huỷ đơn"), còn huỷ
+ * một đơn đã chốt là nhả mất chỗ đã giữ.
  */
 export function CancelTripDialog({
   trip,
@@ -36,6 +37,16 @@ export function CancelTripDialog({
   const cancel = useCancelTrip(trip.id);
 
   const pending = trip.stage === (CUSTOMER_TRIP_STAGE.PENDING_APPROVAL as CustomerTripStage);
+  /** Đã được nhận, chờ giữ chỗ — chưa có ĐƠN nào để "huỷ đơn", nhưng xe đang được giữ. */
+  const awaitingHold = trip.stage === (CUSTOMER_TRIP_STAGE.AWAITING_HOLD as CustomerTripStage);
+
+  /*
+   * Đã chuyển MỘT PHẦN tiền giữ chỗ rồi huỷ ⇒ server ghi yêu cầu hoàn ĐỦ phần đã chuyển trong cùng
+   * transaction huỷ (`BookingHoldsService.cancelForRequestWithinTx`, lý do `early_cancel`). Khác hẳn
+   * tiền đưa thẳng cho chủ xe ở dưới: khoản này nằm ở XePrime, nên XePrime trả lại.
+   */
+  const holdPaid =
+    awaitingHold && trip.hold && !isZeroMoney(trip.hold.paidAmount) ? trip.hold.paidAmount : null;
 
   /*
    * Tiền khách đã đưa cho gian hàng — tiền thuê đã trả cộng cọc đã thu. XePrime KHÔNG có cổng
@@ -65,8 +76,17 @@ export function CancelTripDialog({
     >
       <div className={styles.body}>
         <p className={styles.lead}>
-          {pending ? t('leadPending') : t('leadReady')}
+          {pending ? t('leadPending') : awaitingHold ? t('leadAwaitingHold') : t('leadReady')}
         </p>
+
+        {holdPaid ? (
+          <Alert
+            type="info"
+            showIcon
+            title={t('holdPaidTitle', { amount: fmt.money(holdPaid) })}
+            description={t('holdPaidBody')}
+          />
+        ) : null}
 
         {hasPaid ? (
           <Alert

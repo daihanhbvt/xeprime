@@ -1,4 +1,6 @@
-import { PICKUP_PREFERENCE } from '@xeprime/types';
+import type { Dayjs } from 'dayjs';
+import { PICKUP_PREFERENCE, longTermReturnAt } from '@xeprime/types';
+import { appWallClockToInstant, toAppTz } from './datetime';
 
 /** Phần nguyện vọng nhận xe của một yêu cầu thuê dài hạn (shape chung của DTO yêu cầu/chuyến). */
 export interface PickupWish {
@@ -50,4 +52,16 @@ export function pickupWishParts(wish: PickupWish): PickupWishParts {
     };
   }
   return { kind: 'shopDecides' };
+}
+
+/**
+ * Ngày trả của gói dài hạn tính từ một MẶT ĐỒNG HỒ nhận xe (giá trị ô chọn ngày, giờ Việt Nam) —
+ * trả về `Dayjs` đã gắn múi giờ ứng dụng, sẵn để hiển thị hoặc đặt lại vào ô chọn.
+ *
+ * Gói là N THÁNG LỊCH (`longTermReturnAt`), không phải N × 30 ngày (ADR 0011). Bốn màn từng tự
+ * ghép `toAppTz(longTermReturnAt(appWallClockToInstant(x).toDate(), n))` — một chỗ quên bước
+ * `appWallClockToInstant` là ngày trả lệch một ngày trên máy không đặt ở giờ Việt Nam.
+ */
+export function longTermReturnFromWallClock(pickup: Dayjs, packageMonths: number): Dayjs {
+  return toAppTz(longTermReturnAt(appWallClockToInstant(pickup).toDate(), packageMonths));
 }

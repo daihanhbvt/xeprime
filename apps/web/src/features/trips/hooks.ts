@@ -184,9 +184,14 @@ export function useCancelTrip(id: string) {
      * gian hàng vừa duyệt, hoặc vừa bấm giao xe. Màn đang cầm dữ liệu cũ, nên ngoài việc báo
      * lỗi phải kéo lại trạng thái thật: nút "Huỷ chuyến" tự biến mất thay vì mời bấm lại một
      * việc chắc chắn hỏng.
+     *
+     * `CONFLICT` cùng nghĩa, chỉ khác lúc xảy ra: gian hàng duyệt xen vào ĐÚNG lúc khách bấm huỷ
+     * (server claim theo trạng thái vừa đọc và được 0 dòng). Kéo lại chặng thật để màn đổi sang
+     * "đã được nhận" thay vì giữ khách ở màn chờ duyệt với một lỗi "vừa thay đổi".
      */
     onError: (error) => {
-      if (getErrorCode(error) === API_ERROR_CODE.TRIP_CANCEL_NOT_ALLOWED) {
+      const code = getErrorCode(error);
+      if (code === API_ERROR_CODE.TRIP_CANCEL_NOT_ALLOWED || code === API_ERROR_CODE.CONFLICT) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.trips.all });
       }
     },
