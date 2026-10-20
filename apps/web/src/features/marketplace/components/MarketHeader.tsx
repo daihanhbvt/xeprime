@@ -16,7 +16,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { cx } from '@/lib/cx';
 import { isActivePath } from '@/lib/active-path';
 import { useLocaleMenuGroup } from '@/components/i18n/locale-menu';
 import { APP_NAME } from '@/constants/app-name';
@@ -79,8 +80,24 @@ export function MarketHeader() {
   const { theme, toggleTheme } = useTheme();
   const currentLogo = theme === 'dark' ? LOGO.dark : LOGO.light;
 
+  const isSearchPage = pathname === ROUTES.SEARCH;
+  const [hiddenOnScroll, setHiddenOnScroll] = useState(false);
+
+  useEffect(() => {
+    if (!isSearchPage) {
+      setHiddenOnScroll(false);
+      return;
+    }
+    const onScroll = () => {
+      setHiddenOnScroll(window.scrollY > 140);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [isSearchPage]);
+
   return (
-    <header className={styles.header}>
+    <header className={cx(styles.header, hiddenOnScroll && styles.headerHidden)}>
       <div className={styles.inner}>
         <Link href={ROUTES.HOME} className={styles.brand} aria-label={APP_NAME}>
           <Image

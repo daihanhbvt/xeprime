@@ -40,7 +40,6 @@ import {
   PROMO_RELEASE_REASON,
   normalizePromoCode,
   promoEligibleAmount,
-  FEE_LINE,
   SERVICE_TYPE,
   TENANT_CUSTOMER_SOURCE,
   type AutoAcceptBlocker,
@@ -87,6 +86,7 @@ import { PromoCodeEvaluatorService } from '../promo-codes/promo-code-evaluator.s
 import { VehicleSettingsService } from '../vehicle-settings/vehicle-settings.service';
 import { DriverLicencesService } from '../driver-licences/driver-licences.service';
 import type { EffectivePolicy } from '../pricing/pricing.service';
+import type { QuoteBreakdownDto } from '../pricing/dto/pricing.dto';
 import {
   ApproveBookingRequestDto,
   BOOKING_REQUEST_DEFAULT_LIMIT,
@@ -115,6 +115,9 @@ const SELECT = {
   /// Mã đã đóng băng lúc khách áp — `resolvePricing` phải mang nó vào ước tính, nếu không thẻ
   /// trong hộp thư gian hàng hiện nguyên giá cho một chuyến đã được hứa giảm (ADR 0046 điều 7).
   promoSnapshot: true,
+  /// Lựa chọn bảo hiểm khách đã gửi — ước tạm tính của inbox phải tính đúng như lượt chốt giá.
+  vehicleProtectionSelected: true,
+  personalAccidentSelected: true,
   customerName: true,
   customerPhone: true,
   customerEmail: true,
@@ -712,6 +715,9 @@ export class BookingRequestsService {
             // Chỉ có khoảng trắng là KHÔNG có lời nhắn: hộp thư của chủ xe dựng khung ghi chú
             // theo có/không, lưu `'   '` là một khung rỗng nằm giữa thẻ yêu cầu.
             note: dto.note?.trim() || null,
+            // Lựa chọn bảo hiểm (luồng tiền v2) — lượt chốt giá đọc lại đúng hai cột này.
+            vehicleProtectionSelected: dto.vehicleProtectionSelected === true,
+            personalAccidentSelected: dto.personalAccidentSelected === true,
             deliveryRequested,
             /*
              * Chuỗi hiển thị do SERVER ghép khi có mã hành chính; không quy được tỉnh thì giữ
@@ -890,9 +896,12 @@ export class BookingRequestsService {
    *
    * ## Hai lượt tính, và vì sao
    *
-   * Số giảm cần biết khoản online (`D + S + IV + IP`), mà con số đó là kết quả của chính bảng
+   * Số giảm cần biết khoản online (`D + S + H + IV + IP`), mà con số đó là kết quả của chính bảng
    * phí. Nên: lượt MỘT không mã để lấy mẫu số, rồi tính số giảm, rồi lượt HAI có mã. Vì
-   * `S`/`T`/`IV`/`IP`/`D` không phụ thuộc mã, lượt hai không bao giờ ra một cơ sở tính khác.
+   * `S`/`H`/`T`/`IV`/`IP`/`D` không phụ thuộc mã, lượt hai không bao giờ ra một cơ sở tính khác.
+   *
+   * Lựa chọn bảo hiểm đọc từ YÊU CẦU (`req.*Selected`), không từ ai khác: đó là thứ khách đã thấy
+   * và đồng ý lúc gửi. `schedule` chỉ dài hạn cần — số ngày lịch thật của gói vừa chốt.
    *
    * ## Mã hết đủ điều kiện lúc chốt giá
    *
@@ -904,45 +913,33 @@ export class BookingRequestsService {
   private async resolveFeesWithPromo(
     tenantId: string,
     req: PendingRequestRow,
-    breakdown: {
-      totalAmount: string;
-      rows: { key: string; amount: string }[];
-      estimateNote: string | null;
-    },
+    breakdown: QuoteBreakdownDto,
     deposit: DepositPolicyResolution,
+    schedule: ApprovalSchedule,
   ): Promise<{ fees: CustomerFeeBreakdown | null; promoDropped: boolean }> {
     const quoteIsEstimate = breakdown.estimateNote != null;
-    const feeOpts = { depositRequired: deposit.required };
+    const trip = { vehicleType: req.vehicle.vehicleType, breakdown, schedule };
+    const feeOpts = {
+      depositRequired: deposit.required,
+      vehicleProtectionSelected: req.vehicleProtectionSelected,
+      personalAccidentSelected: req.personalAccidentSelected,
+    };
 
     const frozen = this.promos.frozenTermsOf(req);
     if (!frozen) {
-      const fees = await this.pricing.customerFeesFor(
-        tenantId,
-        breakdown.totalAmount,
-        quoteIsEstimate,
-        feeOpts,
-      );
+      const fees = await this.pricing.customerFeesFor(tenantId, trip, quoteIsEstimate, feeOpts);
       return { fees, promoDropped: false };
     }
 
-    const baseFees = await this.pricing.customerFeesFor(
-      tenantId,
-      breakdown.totalAmount,
-      quoteIsEstimate,
-      feeOpts,
-    );
+    const baseFees = await this.pricing.customerFeesFor(tenantId, trip, quoteIsEstimate, feeOpts);
     const applied = this.promos.applyFrozenTerms({
       snapshot: frozen,
       money: {
         eligibleAmount: promoEligibleAmount(breakdown.rows),
         // Cùng một luật với lúc xem trước: không có khoản giữ chỗ nào thì không có gì để tài trợ.
         grossOnlineAmount: baseFees?.holdAmount != null ? baseFees.grossOnlineAmount : null,
-        sponsorableAmount: baseFees
-          ? String(
-              Number(baseFees.depositAmount) +
-                Number(baseFees.lines.find((l) => l.key === FEE_LINE.SERVICE_FEE)?.amount ?? 0),
-            )
-          : '0',
+        // `D + S + H` từ chính bảng phí — một định nghĩa, không cộng tay lại ở đây.
+        sponsorableAmount: baseFees?.sponsorableAmount ?? '0',
         holdMinAmount: baseFees?.policy.holdMinAmount ?? '0',
       },
     });
@@ -953,12 +950,10 @@ export class BookingRequestsService {
       return { fees: baseFees, promoDropped: true };
     }
 
-    const fees = await this.pricing.customerFeesFor(
-      tenantId,
-      breakdown.totalAmount,
-      quoteIsEstimate,
-      { ...feeOpts, promo: applied.snapshot },
-    );
+    const fees = await this.pricing.customerFeesFor(tenantId, trip, quoteIsEstimate, {
+      ...feeOpts,
+      promo: applied.snapshot,
+    });
     /*
      * `computeCustomerFees` kẹp lại một lần nữa và có thể đưa `promo` về `null` (snapshot cũ,
      * hoặc trần tụt xuống 0). Khi đó lượt mã coi như KHÔNG áp — nhả lượt, đừng để một yêu cầu
@@ -991,6 +986,9 @@ export class BookingRequestsService {
       ...(dto.longTermPackageMonths === undefined
         ? {}
         : { packageMonths: dto.longTermPackageMonths }),
+      // Bảo hiểm đổi khoản online — mẫu số của trần tài trợ — nên phải là lựa chọn THẬT khách gửi.
+      vehicleProtectionSelected: dto.vehicleProtectionSelected === true,
+      personalAccidentSelected: dto.personalAccidentSelected === true,
     });
     if (!context) {
       throw promoNotApplicable(dto.promoCode ?? '', PROMO_INELIGIBLE_REASON.NO_ONLINE_PAYMENT);
@@ -1042,6 +1040,7 @@ export class BookingRequestsService {
         req,
         breakdown,
         deposit,
+        schedule,
       );
       const terms = req.rentalTerms as unknown as RentalTermsSnapshot | null;
       const blocker = this.settings.evaluateAutoAccept(setting, windows, {
@@ -1228,9 +1227,13 @@ export class BookingRequestsService {
       const frozen = this.promos.frozenTermsOf(r);
       const fees = await this.pricing.customerFeesFor(
         tenantId,
-        breakdown.totalAmount,
+        { vehicleType: r.vehicle.vehicleType, breakdown },
         breakdown.estimateNote != null,
-        frozen ? { promo: frozen } : {},
+        {
+          vehicleProtectionSelected: r.vehicleProtectionSelected,
+          personalAccidentSelected: r.personalAccidentSelected,
+          ...(frozen ? { promo: frozen } : {}),
+        },
       );
       return {
         isEstimate: true,
@@ -1691,6 +1694,7 @@ export class BookingRequestsService {
       req,
       breakdown,
       deposit,
+      schedule,
     );
     const snapshot = this.pricing.buildSnapshot(breakdown, policy, fees);
 
@@ -2608,6 +2612,9 @@ const PENDING_SELECT = {
   /// tính lại từ snapshot này, KHÔNG từ chiến dịch đang hiệu lực hôm nay.
   promoCodeId: true,
   promoSnapshot: true,
+  /// Lựa chọn bảo hiểm của khách lúc gửi (luồng tiền v2) — lượt chốt giá tính đúng theo nó.
+  vehicleProtectionSelected: true,
+  personalAccidentSelected: true,
   vehicle: {
     select: {
       name: true,
@@ -2714,6 +2721,8 @@ function toDto(r: BookingRequestRow, packageTrack: boolean): BookingRequestDto {
     decisionSource: r.decisionSource ?? null,
     // Hạn của KHÁCH, không phải của gian hàng — xem docblock ở DTO.
     holdExpiresAt: (r.hold?.expiresAt as unknown as string | null) ?? null,
+    vehicleProtectionSelected: r.vehicleProtectionSelected,
+    personalAccidentSelected: r.personalAccidentSelected,
   };
 }
 

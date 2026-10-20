@@ -1,11 +1,14 @@
 .page {
   width: 100%;
-  max-width: var(--xp-container-max-width);
-  padding: var(--xp-space-lg) var(--xp-space-md) var(--xp-space-xl);
-  margin-inline: auto;
+  margin: 0;
+  padding: 0;
 }
 
 .fallback {
+  width: 100%;
+  max-width: calc(var(--xp-market-container-max-width) + 2 * var(--xp-space-md));
+  padding: var(--xp-space-lg) var(--xp-space-md) var(--xp-space-xl);
+  margin-inline: auto;
   display: flex;
   flex-direction: column;
   gap: var(--xp-space-lg);

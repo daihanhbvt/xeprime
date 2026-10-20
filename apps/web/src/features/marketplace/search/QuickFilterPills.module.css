@@ -1,0 +1,163 @@
+.container {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  flex-wrap: wrap;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 9999px;
+  border: 1px solid var(--xp-color-border);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-label);
+  font-weight: var(--xp-font-weight-medium);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.16s ease;
+  user-select: none;
+}
+
+.pill:hover {
+  border-color: var(--xp-color-primary);
+  color: var(--xp-color-text);
+  background: var(--xp-color-bg-hover);
+}
+
+.pillActive {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-primary-strong);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.pillIcon {
+  font-size: 14px;
+  color: var(--xp-color-text-tertiary);
+  display: inline-flex;
+  align-items: center;
+}
+
+.pillActive .pillIcon {
+  color: var(--xp-color-primary-hover);
+}
+
+.pillArrow {
+  font-size: 10px;
+  color: var(--xp-color-text-placeholder);
+  margin-left: 2px;
+}
+
+.filterBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 9999px;
+  border: 1px solid var(--xp-color-border-strong);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-label);
+  font-weight: var(--xp-font-weight-semibold);
+  cursor: pointer;
+  margin-left: auto;
+  transition: all 0.16s ease;
+}
+
+.filterBtn:hover {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-primary-strong);
+}
+
+.filterBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9999px;
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Popover Content */
+.popoverBody {
+  min-width: 220px;
+  max-width: 300px;
+  padding: var(--xp-space-xs) 0;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-label);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.14s ease;
+}
+
+.menuItem:hover {
+  background: var(--xp-color-bg-muted);
+}
+
+.menuItemActive {
+  background: var(--xp-color-primary-subtle);
+  color: var(--xp-color-primary-strong);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.checkIcon {
+  color: var(--xp-color-success);
+  font-size: 14px;
+}
+
+.checkboxItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: var(--xp-font-size-label);
+  color: var(--xp-color-text);
+  user-select: none;
+  transition: background 0.14s ease;
+}
+
+.checkboxItem:hover {
+  background: var(--xp-color-bg-muted);
+}
+
+.priceRangeInputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px 12px;
+}
+
+.priceInput {
+  flex: 1;
+}
+
+.applyRow {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 16px 4px;
+  border-top: 1px solid var(--xp-color-border-subtle);
+  margin-top: 4px;
+}

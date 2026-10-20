@@ -46,9 +46,7 @@ export const PROMO_DISCOUNT_TYPE = {
 } as const;
 
 export type PromoDiscountType = (typeof PROMO_DISCOUNT_TYPE)[keyof typeof PROMO_DISCOUNT_TYPE];
-export const PROMO_DISCOUNT_TYPE_VALUES = Object.values(
-  PROMO_DISCOUNT_TYPE,
-) as PromoDiscountType[];
+export const PROMO_DISCOUNT_TYPE_VALUES = Object.values(PROMO_DISCOUNT_TYPE) as PromoDiscountType[];
 
 export function isPromoDiscountType(value: unknown): value is PromoDiscountType {
   return typeof value === 'string' && (PROMO_DISCOUNT_TYPE_VALUES as string[]).includes(value);
@@ -102,9 +100,7 @@ export const PROMO_VEHICLE_SCOPE = {
 } as const;
 
 export type PromoVehicleScope = (typeof PROMO_VEHICLE_SCOPE)[keyof typeof PROMO_VEHICLE_SCOPE];
-export const PROMO_VEHICLE_SCOPE_VALUES = Object.values(
-  PROMO_VEHICLE_SCOPE,
-) as PromoVehicleScope[];
+export const PROMO_VEHICLE_SCOPE_VALUES = Object.values(PROMO_VEHICLE_SCOPE) as PromoVehicleScope[];
 
 export function isPromoVehicleScope(value: unknown): value is PromoVehicleScope {
   return typeof value === 'string' && (PROMO_VEHICLE_SCOPE_VALUES as string[]).includes(value);
@@ -492,9 +488,7 @@ function roundHalfUp(value: number): number {
  * Với thuê dài hạn, `base − |discount|` đúng bằng `finalPackageAmount` — cùng một công thức, nên
  * không có nhánh riêng nào phải nhớ (ADR 0011).
  */
-export function promoEligibleAmount(
-  rows: ReadonlyArray<{ key: string; amount: string }>,
-): string {
+export function promoEligibleAmount(rows: ReadonlyArray<{ key: string; amount: string }>): string {
   const of = (key: string) => Math.abs(Number(rows.find((r) => r.key === key)?.amount ?? 0));
   return String(Math.max(0, of(PRICE_ROW.BASE) - of(PRICE_ROW.DISCOUNT)));
 }
@@ -506,10 +500,10 @@ export interface PromoDiscountInput {
    * nhận, phụ phí, bảo hiểm hay cọc thế chấp (ADR 0046 điều 3).
    */
   eligibleAmount: string;
-  /** `D + S + IV + IP` trước tài trợ. `'0'`/null = chuyến không thu online. */
+  /** Cọc online trước tài trợ (`D + S + H + IV + IP`). `'0'`/null = chuyến không thu online. */
   grossOnlineAmount: string | null;
   /**
-   * `D + S` — phần khoản online TÀI TRỢ ĐƯỢC.
+   * `D + S + H` — phần khoản online TÀI TRỢ ĐƯỢC (`CustomerFeeBreakdown.sponsorableAmount`).
    *
    * Cố ý loại `IV + IP`: hai dòng đó là tiền GIỮ HỘ hãng bảo hiểm (ADR 0033 điều 4). XePrime vẫn
    * phải chuyển đủ phí bảo hiểm cho đối tác dù nó có giảm giá cho khách hay không, nên một mã ăn
@@ -534,7 +528,7 @@ export type PromoDiscountResult =
  *  1. **Trần của chính mã** — `maxDiscountAmount` với mã phần trăm.
  *  2. **Tiền thuê đủ điều kiện** — không ai được giảm nhiều hơn thứ đang được giảm.
  *  3. **`grossOnline − holdMinAmount`** — phần XePrime thật sự cầm, trừ đi sàn đối soát.
- *  4. **`sponsorableAmount` (`D + S`)** — phần tài trợ được, không lấn vào tiền giữ hộ bảo hiểm.
+ *  4. **`sponsorableAmount` (`D + S + H`)** — phần tài trợ được, không lấn vào tiền giữ hộ bảo hiểm.
  *
  * Ba trần cuối có thể làm mã thành vô dụng, và khi chúng về 0 thì hàm trả
  * `DISCOUNT_BELOW_FLOOR` thay vì trả `0` — một mã "giảm 0đ" là một nút bấm được mà không có tác
@@ -639,6 +633,8 @@ export function promoTripKey(trip: {
   returnAt?: string | null;
   packageMonths?: number | null;
   routeType?: string | null;
+  /** `IV` — tuỳ chọn từ luồng tiền v2; tích/bỏ đổi khoản online như `IP`. */
+  vehicleProtectionSelected?: boolean | null;
   personalAccidentSelected?: boolean | null;
 }): string {
   return [
@@ -648,6 +644,7 @@ export function promoTripKey(trip: {
     trip.returnAt ?? '',
     trip.packageMonths ?? '',
     trip.routeType ?? '',
+    trip.vehicleProtectionSelected ? '1' : '0',
     trip.personalAccidentSelected ? '1' : '0',
   ].join('|');
 }

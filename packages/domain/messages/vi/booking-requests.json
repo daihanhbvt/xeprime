@@ -119,6 +119,8 @@
     "vehicle": "Xe",
     "customer": "Khách",
     "schedule": "Lịch thuê",
+    "rentalTotal": "Tiền thuê",
+    "customerTotal": "Tổng tiền chuyến",
     "effect": "Duyệt sẽ giữ lịch xe và chốt giá. Đơn thuê được tạo khi khách thanh toán đủ; chuyến không thu tiền giữ chỗ được tạo ngay.",
     "deliveryNote": "Yêu cầu có giao xe tận nơi. Phí giao nhận để 0₫ khi tạo đơn — cập nhật lại trên đơn sau khi thoả thuận với khách.",
     "confirm": "Duyệt & giữ xe",
@@ -221,6 +223,16 @@
       "destinationLabel": "Điểm đến",
       "destinationPlaceholder": "VD: TP. Đà Lạt, Lâm Đồng",
       "note": "Lộ trình: {route} — {description}. Phụ phí (nếu có) do chủ xe trao đổi trước khi chốt đơn."
+    },
+    "insurance": {
+      "title": "Bảo hiểm chuyến đi (MIC)",
+      "vehicleProtection": "Bảo hiểm vật chất xe MIC",
+      "vehicleProtectionHintCar": "+50.000 đ/ngày",
+      "vehicleProtectionHintMoto": "+15.000 đ/ngày",
+      "personalAccident": "Bảo hiểm tai nạn người ngồi trên xe MIC",
+      "personalAccidentHintCar": "+20.000 đ/ngày",
+      "personalAccidentHintMoto": "+5.000 đ/ngày",
+      "note": "Bảo hiểm tự nguyện bảo vệ toàn diện trong suốt chuyến đi."
     },
     "contact": {
       "heading": "Thông tin liên hệ",

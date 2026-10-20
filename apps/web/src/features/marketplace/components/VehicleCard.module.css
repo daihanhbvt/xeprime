@@ -40,6 +40,310 @@
   outline-offset: -2px;
 }
 
+/* ─── Nút yêu thích (Heart) ───────────────────────────────────────────────── */
+.favoriteBtn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--xp-color-text-secondary);
+  font-size: 15px;
+  transition: all 0.16s ease;
+}
+
+.favoriteBtn:hover {
+  background: #ffffff;
+  color: #ef4444;
+  transform: scale(1.08);
+}
+
+.heartActive {
+  color: #ef4444;
+}
+
+/* ─── Dạng danh sách (List View - Thẻ ngang 1200px) ────────────────────────── */
+.listCard {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: 206px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid var(--xp-color-border);
+  box-shadow: var(--xp-elevation-sm);
+  overflow: hidden;
+  transition: all 0.18s ease;
+}
+
+.listCard:hover,
+.listCard:focus-within {
+  border-color: var(--xp-color-primary-accent);
+  box-shadow: var(--xp-elevation-lg);
+}
+
+.listMedia {
+  position: relative;
+  width: 280px;
+  min-width: 280px;
+  height: 100%;
+  padding: 10px;
+  box-sizing: border-box;
+  flex: none;
+}
+
+.listPhoto {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.listMedia .photoCount {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  z-index: 2;
+}
+
+.listBody {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1;
+  padding: 14px 20px;
+  min-width: 0;
+}
+
+.listTopRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.listTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.listTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--xp-color-text);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.badgeInstantBlue {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #e0f2fe;
+  color: #0284c7;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badgeNewGreen {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #dcfce7;
+  color: #16a34a;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.listPriceAndRating {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.listRating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--xp-color-text);
+}
+
+.starIcon {
+  color: #eab308;
+  font-size: 14px;
+}
+
+.listRatingCount {
+  color: var(--xp-color-text-tertiary);
+  font-weight: 400;
+}
+
+.listPrice {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.listOldPrice {
+  font-size: 13px;
+  color: var(--xp-color-text-placeholder);
+  text-decoration: line-through;
+}
+
+.listCurrentPrice {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--xp-color-primary-strong);
+}
+
+.priceUnit {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--xp-color-primary-strong);
+}
+
+.listFavoriteBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--xp-color-text-secondary);
+  font-size: 15px;
+  transition: all 0.16s ease;
+  z-index: 2;
+}
+
+.listFavoriteBtn:hover {
+  background: #ffffff;
+  color: #ef4444;
+  border-color: #ef4444;
+  transform: scale(1.08);
+}
+
+.listLocation {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--xp-color-text-secondary);
+  margin: 4px 0 0;
+}
+
+.listSpecsRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+  flex-wrap: wrap;
+}
+
+.specBox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: #fbfbfa;
+  border: 1px solid #f0f0ee;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--xp-color-text);
+}
+
+.specBoxIcon {
+  font-size: 14px;
+  color: var(--xp-color-primary-hover);
+}
+
+.listBottomRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--xp-color-border-subtle);
+  padding-top: 10px;
+  margin-top: auto;
+}
+
+.listShopInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  z-index: 2;
+}
+
+.listMetrics {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  font-size: 12px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.metricItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.metricVal {
+  font-weight: 700;
+  color: var(--xp-color-text);
+}
+
+.listDetailBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--xp-color-primary-strong);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  z-index: 2;
+  transition: color 0.16s ease;
+}
+
+.listDetailBtn:hover {
+  color: var(--xp-color-primary-hover);
+}
+
+@media (max-width: 860px) {
+  .listCard {
+    flex-direction: column;
+    height: auto;
+  }
+  .listMedia {
+    width: 100%;
+    height: 180px;
+  }
+  .listMetrics {
+    display: none;
+  }
+}
+
 /* ─── Ảnh ─────────────────────────────────────────────────────────────────── */
 .media {
   position: relative;

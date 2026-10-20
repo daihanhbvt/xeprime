@@ -9,7 +9,7 @@ import {
 } from '@ant-design/icons';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, App, Button, Radio, Segmented, Spin } from 'antd';
+import { Alert, App, Button, Checkbox, Radio, Segmented, Spin } from 'antd';
 
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -421,6 +421,8 @@ export function RequestBookingFlow({
       note: '',
       customerName: me?.displayName ?? '',
       customerPhone: me?.phone ?? '',
+      vehicleProtectionSelected: prefill?.vehicleProtectionSelected ?? false,
+      personalAccidentSelected: prefill?.personalAccidentSelected ?? false,
     },
   });
 
@@ -433,6 +435,8 @@ export function RequestBookingFlow({
   const watchedPreference = useWatch({ control, name: 'pickupPreference' });
   const watchedRequestedDate = useWatch({ control, name: 'requestedPickupDate' });
   const watchedAccepted = useWatch({ control, name: 'acceptedTerms' });
+  const watchedVehicleProtection = useWatch({ control, name: 'vehicleProtectionSelected' });
+  const watchedPersonalAccident = useWatch({ control, name: 'personalAccidentSelected' });
   const isLongTerm = watchedService === SERVICE_TYPE.LONG_TERM;
   const isWithDriver = watchedService === SERVICE_TYPE.WITH_DRIVER;
   /** Tự lái / dài hạn ⇒ khách phải có bằng lái hợp lệ cho chuyến (ADR 0057). */
@@ -582,6 +586,8 @@ export function RequestBookingFlow({
     returnAt: watchedReturn,
     routeType: watchedRoute,
     packageMonths: watchedPackage,
+    vehicleProtectionSelected: watchedVehicleProtection,
+    personalAccidentSelected: watchedPersonalAccident,
   });
   /**
    * Lịch bận của xe — nạp MỘT lần cho cả năm khi mở luồng, không phải mỗi lần lật tháng.
@@ -943,6 +949,8 @@ export function RequestBookingFlow({
             }
           : {}),
         ...(v.acceptedTerms && agreementCoversHostTerms ? { acceptedTerms: true } : {}),
+        ...(v.vehicleProtectionSelected ? { vehicleProtectionSelected: true } : {}),
+        ...(v.personalAccidentSelected ? { personalAccidentSelected: true } : {}),
         // Lời nhắn chỉ gửi khi có chữ — server cũng cắt khoảng trắng, đây là để payload sạch.
         ...(v.note.trim() ? { note: v.note.trim() } : {}),
         ...(v.customerName?.trim() ? { customerName: v.customerName.trim() } : {}),
@@ -1929,6 +1937,50 @@ export function RequestBookingFlow({
                 */}
               </div>
             ) : null}
+
+            {/* ── Tuỳ chọn bảo hiểm MIC ─────────────────────────────────── */}
+            <div className={styles.insuranceBlock}>
+              <span className={styles.rangeFieldLabel}>{t('insurance.title')}</span>
+              <div className={styles.insuranceList}>
+                <label className={styles.insuranceItem}>
+                  <Checkbox
+                    checked={watchedVehicleProtection}
+                    onChange={(e) =>
+                      setValue('vehicleProtectionSelected', e.target.checked, { shouldValidate: true })
+                    }
+                  />
+                  <div className={styles.insuranceText}>
+                    <div className={styles.insuranceNameRow}>
+                      <span className={styles.insuranceName}>{t('insurance.vehicleProtection')}</span>
+                      <span className={styles.insuranceRate}>
+                        {listing?.vehicleType === 'motorbike'
+                          ? t('insurance.vehicleProtectionHintMoto')
+                          : t('insurance.vehicleProtectionHintCar')}
+                      </span>
+                    </div>
+                  </div>
+                </label>
+
+                <label className={styles.insuranceItem}>
+                  <Checkbox
+                    checked={watchedPersonalAccident}
+                    onChange={(e) =>
+                      setValue('personalAccidentSelected', e.target.checked, { shouldValidate: true })
+                    }
+                  />
+                  <div className={styles.insuranceText}>
+                    <div className={styles.insuranceNameRow}>
+                      <span className={styles.insuranceName}>{t('insurance.personalAccident')}</span>
+                      <span className={styles.insuranceRate}>
+                        {listing?.vehicleType === 'motorbike'
+                          ? t('insurance.personalAccidentHintMoto')
+                          : t('insurance.personalAccidentHintCar')}
+                      </span>
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
 
             {stepError ? (
               <Alert

@@ -11996,6 +11996,8 @@ export interface components {
             decisionSource?: "host" | "system" | null;
             /** @description ISO-8601 UTC — hạn khách chuyển tiền giữ chỗ; null khi chuyến không thu */
             holdExpiresAt?: string | null;
+            vehicleProtectionSelected: boolean;
+            personalAccidentSelected: boolean;
             /** @description Tiền của yêu cầu này — xem docblock BookingRequestPricingDto cho nguồn theo trạng thái. Luôn có mặt (kể cả `null`) ở danh sách và chi tiết; VẮNG MẶT ở phiếu trả về của các thao tác duyệt/từ chối/huỷ — client đọc lại danh sách/chi tiết để thấy số mới. */
             pricing?: components["schemas"]["BookingRequestPricingDto"] | null;
         };
@@ -12851,6 +12853,10 @@ export interface components {
             acceptedTerms?: boolean;
             /** @description Mã khuyến mãi nền tảng (server tự chuẩn hoá) */
             promoCode?: string;
+            /** @description Thêm bảo hiểm vật chất xe (IV) — tính theo ngày */
+            vehicleProtectionSelected?: boolean;
+            /** @description Thêm bảo hiểm tai nạn người trên xe (IP) — tính theo ngày */
+            personalAccidentSelected?: boolean;
         };
         CreateBranchDto: {
             /** @example Chi nhánh Đà Nẵng */
@@ -13378,30 +13384,43 @@ export interface components {
             /** @enum {string} */
             billingMode: "commission" | "package";
             policy: components["schemas"]["FeePolicySnapshotDto"];
-            /** @description Mẫu số = tổng bảng kê giá thuê */
+            /**
+             * @description Loại xe — quyết định mức S và biểu phí bảo hiểm
+             * @enum {string}
+             */
+            vehicleType: "car" | "motorbike";
+            /** @description Số ngày thuê tính phí — nhân biểu phí bảo hiểm, chia nấc hoa hồng */
+            rentalDays: number;
+            /** @description B — tổng bảng kê giá thuê (gồm giao nhận) */
             baseAmount: string;
             lines: components["schemas"]["FeeLineDto"][];
-            /** @description Tổng phụ phí KHÁCH gánh */
+            /** @description Tổng phụ phí KHÁCH gánh (S + IV + IP) */
             customerFeeTotal: string;
             /** @description Số KHÁCH TRẢ cả chuyến (chưa gồm cọc thế chấp) */
             customerTotalAmount: string;
-            /** @description D — cọc trả online cho XePrime; "0" khi chuyến không thu cọc */
+            /** @description D — phần của CHỦ XE trong cọc online; "0" khi chuyến không thu online */
             depositAmount: string;
-            /** @description D + S + IV + IP TRƯỚC tài trợ mã khuyến mãi — con số phân bổ quyền lợi làm việc trên */
+            /** @description H — hoa hồng lũy tiến trừ vào tiền chủ xe (tính trên tiền thuê, KHÔNG trên phí giao xe). "0" ở tuyến gói */
+            ownerCommissionAmount: string;
+            /** @description S + H — phần XePrime giữ lại từ cọc online (trước tài trợ mã) */
+            platformRetainedAmount: string;
+            /** @description Cọc online TRƯỚC tài trợ mã khuyến mãi = D + S + H + IV + IP — con số phân bổ quyền lợi làm việc trên */
             grossOnlineAmount: string;
+            /** @description D + S + H — phần cọc online XePrime được phép tài trợ bằng mã (không gồm bảo hiểm) */
+            sponsorableAmount: string;
             /** @description P — số XePrime TÀI TRỢ qua mã khuyến mãi (ADR 0046). "0" khi không có mã. Không đụng tiền gian hàng. */
             promoDiscountAmount: string;
             /** @description Mã đã áp + điều kiện đóng băng. null khi chuyến không dùng mã. */
             promo?: components["schemas"]["PromoCodeSnapshotDto"] | null;
-            /** @description D + S + IV + IP − P — số quét QR trả ngay */
+            /** @description Cọc online − P — số quét QR trả ngay */
             onlineAmount: string;
-            /** @description B − D — khách trả TRỰC TIẾP chủ xe lúc nhận xe */
+            /** @description Tổng khách trả trước mã − cọc online — khách trả TRỰC TIẾP chủ xe lúc nhận xe */
             payAtPickupAmount: string;
             /** @description T — thuế khấu trừ khỏi tiền chủ xe, KHÔNG cộng vào tổng khách */
             taxAmount: string;
-            /** @description D − T — khoản XePrime phải trả chủ xe khi chuyến hoàn thành */
+            /** @description D − T — khoản XePrime chuyển vào ví chủ xe khi chuyến hoàn thành */
             ownerPayableAmount: string;
-            /** @description Chủ xe THỰC NHẬN cả chuyến = B − T */
+            /** @description Chủ xe THỰC NHẬN cả chuyến = B − H − T */
             ownerNetAmount: string;
             /** @description Khoản giữ chỗ khách chuyển XePrime — null khi không cần (tuyến gói, báo giá tạm tính) */
             holdAmount?: string | null;
@@ -14139,13 +14158,17 @@ export interface components {
         };
         FeeLineDto: {
             /** @enum {string} */
-            key: "service_fee" | "tax" | "trip_insurance" | "vehicle_protection" | "deposit" | "promo";
+            key: "service_fee" | "owner_commission" | "tax" | "trip_insurance" | "vehicle_protection" | "deposit" | "promo";
             /** @example platform */
             beneficiary: string;
             /** @example customer */
             bearer: string;
-            percent: number;
-            /** @description VND string */
+            percent: number | null;
+            /** @description Đơn giá MỖI NGÀY (VND) — dòng tính theo ngày */
+            unitAmount?: string;
+            /** @description Số ngày đã nhân với `unitAmount` */
+            quantity?: number;
+            /** @description VND string, bội 1.000đ */
             amount: string;
             partnerName?: string;
         };
@@ -14156,6 +14179,7 @@ export interface components {
             status: "draft" | "active" | "archived";
             name: string;
             note?: string | null;
+            /** @description LEGACY — luồng tiền v2 không đọc trường này */
             serviceFeePercent: number;
             holdMinAmount: string;
             holdPaymentWindowMinutes: number;
@@ -14171,6 +14195,10 @@ export interface components {
             vehicleProtectionEnabled: boolean;
             vehicleProtectionPercent?: number | null;
             insurancePartnerName?: string | null;
+            customerPlatformFee: components["schemas"]["PerVehicleTypeAmountDto"];
+            ownerCommissionTiers: components["schemas"]["OwnerCommissionTierDto"][];
+            vehicleProtectionDailyAmount: components["schemas"]["PerVehicleTypeAmountDto"];
+            tripInsuranceDailyAmount: components["schemas"]["PerVehicleTypeAmountDto"];
             effectiveFrom?: string | null;
             effectiveTo?: string | null;
             activatedByName?: string | null;
@@ -14183,9 +14211,12 @@ export interface components {
         FeePolicySnapshotDto: {
             policyId: string;
             version: number;
+            /** @description LEGACY — luồng tiền v2 không đọc trường này */
             serviceFeePercent: number;
             holdMinAmount: string;
+            /** @description Cửa sổ thanh toán khi đặt xa — trần của cửa sổ động */
             holdPaymentWindowMinutes: number;
+            /** @description Cửa sổ huỷ miễn phí (giờ) khi đặt xa — trần của cửa sổ động */
             freeCancelHours: number;
             taxEnabled: boolean;
             taxPercent?: number | null;
@@ -14195,12 +14226,20 @@ export interface components {
             vehicleProtectionEnabled: boolean;
             vehicleProtectionPercent?: number | null;
             insurancePartnerName?: string | null;
-            /** @description D — % cọc trên giá thuê gốc */
+            /** @description % cọc online trên TỔNG KHÁCH TRẢ trước mã */
             depositPercent: number;
             /** @description Sàn tiền cọc (VND) */
             depositMinAmount: string;
             /** @description Trần % cọc của chính sách này */
             depositMaxPercent: number;
+            /** @description `S` — phí sàn cố định mỗi đơn */
+            customerPlatformFee: components["schemas"]["PerVehicleTypeAmountDto"];
+            /** @description `H` — nấc hoa hồng lũy tiến */
+            ownerCommissionTiers: components["schemas"]["OwnerCommissionTierDto"][];
+            /** @description `IV` — biểu phí mỗi ngày */
+            vehicleProtectionDailyAmount: components["schemas"]["PerVehicleTypeAmountDto"];
+            /** @description `IP` — biểu phí mỗi ngày */
+            tripInsuranceDailyAmount: components["schemas"]["PerVehicleTypeAmountDto"];
         };
         FinanceCategoryBreakdownDto: {
             /** @description Tổng của cả chiều tiền — khớp `revenue`/`cost` ở summary */
@@ -15178,6 +15217,18 @@ export interface components {
             /** @description Diễn giải công thức */
             formula?: string | null;
         };
+        OwnerCommissionTierDto: {
+            /**
+             * @description Ngày thuê bắt đầu áp nấc này (tính từ 1)
+             * @example 1
+             */
+            fromDay: number;
+            /**
+             * @description % giá thuê của ngày đó (0–30)
+             * @example 10
+             */
+            percent: number;
+        };
         PaginationMetaDto: {
             /** @example 1 */
             page: number;
@@ -15888,6 +15939,18 @@ export interface components {
             /** @description Hoá đơn còn nhận được tiền (issued | partially_paid); null khi không có */
             invoice: components["schemas"]["SubscriptionInvoiceDto"] | null;
         };
+        PerVehicleTypeAmountDto: {
+            /**
+             * @description Ô tô — VND, bội 1.000đ
+             * @example 50000
+             */
+            car: string;
+            /**
+             * @description Xe máy — VND, bội 1.000đ
+             * @example 30000
+             */
+            motorbike: string;
+        };
         PickupPointDto: {
             /** @description Tên chi nhánh giữ xe. Null khi địa chỉ rơi về hồ sơ gian hàng. */
             branchName?: string | null;
@@ -16475,10 +16538,12 @@ export interface components {
             createdAt: string;
             /** @enum {string} */
             purpose: "commission" | "escrow";
-            /** @description `D` — cọc, phần giá thuê của chủ xe */
+            /** @description `D` — phần của chủ xe trong cọc online */
             depositAmount: string;
-            /** @description `S` — phí dịch vụ phía khách */
+            /** @description `S` — phí sàn phía khách */
             serviceFeeAmount: string;
+            /** @description `H` — hoa hồng lũy tiến sàn giữ lại từ phần của chủ xe */
+            ownerCommissionAmount: string;
             /** @description `IV` — bảo hiểm xe */
             vehicleInsuranceAmount: string;
             /** @description `IP` — bảo hiểm người */
@@ -17246,7 +17311,9 @@ export interface components {
             packageMonths?: number;
             /** @enum {string} */
             routeType?: "inner_city" | "inter_city" | "inter_city_one_way";
-            /** @description Khách có giữ lựa chọn bảo hiểm tai nạn người không */
+            /** @description Khách có giữ lựa chọn bảo hiểm vật chất xe (IV) không */
+            vehicleProtectionSelected?: boolean;
+            /** @description Khách có giữ lựa chọn bảo hiểm tai nạn người (IP) không */
             personalAccidentSelected?: boolean;
         };
         PriceBoundsDto: {
@@ -17741,6 +17808,7 @@ export interface components {
             /** @description updatedAt của chính sách hiệu lực */
             policyUpdatedAt?: string | null;
             estimateNote?: string | null;
+            dayAmounts?: string[] | null;
             fees?: components["schemas"]["CustomerFeeBreakdownDto"] | null;
         };
         ReceiptBookingOptionDto: {
@@ -19568,32 +19636,32 @@ export interface components {
             expiresIn: number;
         };
         UpsertFeePolicyDto: {
-            /** @example Pilot — phí dịch vụ 10% */
+            /** @example Luồng tiền v2 — phí sàn cố định, hoa hồng lũy tiến */
             name: string;
             note?: string | null;
             /**
-             * @description % phí dịch vụ XePrime áp cho tuyến hoa hồng (0–30). Tuyến gói luôn 0.
-             * @example 10
+             * @description LEGACY — % phí dịch vụ của mô hình cũ (0–30). Luồng tiền v2 không đọc trường này; vắng mặt ⇒ tạo nháp 0, sửa nháp giữ số cũ.
+             * @example 0
              */
-            serviceFeePercent: number;
+            serviceFeePercent?: number;
             /**
              * @description Sàn khoản giữ chỗ (VND string)
              * @example 20000
              */
             holdMinAmount: string;
             /**
-             * @description Phút khách có để chuyển cọc, tính từ lúc chủ xe duyệt (ADR 0032 điều 2)
+             * @description Phút khách có để chuyển cọc khi đặt XA (giờ nhận cách lúc duyệt ≥ 24 giờ) — đồng thời là trần của cửa sổ động khi đặt cận ngày (ΔT × 40%, sàn 15 phút)
              * @example 120
              */
             holdPaymentWindowMinutes: number;
             /**
-             * @description Huỷ trong bấy nhiêu giờ KỂ TỪ khi duyệt thì hoàn 100% (ADR 0032 điều 5)
+             * @description Giờ huỷ miễn phí KỂ TỪ khi duyệt khi đặt XA (≥ 24 giờ) — đồng thời là trần của cửa sổ động (ΔT × 30%; dưới 2 giờ thì không có huỷ miễn phí)
              * @example 4
              */
             freeCancelHours: number;
             /**
-             * @description D — % cọc trên giá thuê gốc
-             * @example 20
+             * @description % cọc online trên TỔNG KHÁCH TRẢ trước mã khuyến mãi
+             * @example 30
              */
             depositPercent: number;
             /**
@@ -19610,11 +19678,21 @@ export interface components {
             taxPercent?: number | null;
             taxLabel?: string | null;
             tripInsuranceEnabled: boolean;
+            /** @description LEGACY — bảo hiểm tính theo NGÀY từ luồng tiền v2 (`tripInsuranceDailyAmount`) */
             tripInsurancePercent?: number | null;
             vehicleProtectionEnabled: boolean;
+            /** @description LEGACY — bảo hiểm tính theo NGÀY từ luồng tiền v2 (`vehicleProtectionDailyAmount`) */
             vehicleProtectionPercent?: number | null;
             /** @description Đối tác bảo hiểm THẬT — chỉ điền khi đã có hợp đồng (ADR 0028 điều 5) */
             insurancePartnerName?: string | null;
+            /** @description `S` — phí sàn CỐ ĐỊNH mỗi đơn, phía khách, theo loại xe. Áp cho cả hai tuyến. */
+            customerPlatformFee?: components["schemas"]["PerVehicleTypeAmountDto"];
+            /** @description `H` — nấc hoa hồng lũy tiến theo ngày của tuyến hoa hồng, `fromDay` tăng dần từ 1 */
+            ownerCommissionTiers?: components["schemas"]["OwnerCommissionTierDto"][];
+            /** @description `IV` — biểu phí bảo hiểm vật chất xe MỖI NGÀY theo loại xe (khách tích chọn mới tính) */
+            vehicleProtectionDailyAmount?: components["schemas"]["PerVehicleTypeAmountDto"];
+            /** @description `IP` — biểu phí bảo hiểm tai nạn người MỖI NGÀY theo loại xe (khách tích chọn mới tính) */
+            tripInsuranceDailyAmount?: components["schemas"]["PerVehicleTypeAmountDto"];
         };
         UpsertPromoCodeDto: {
             /**
@@ -72322,6 +72400,8 @@ export interface operations {
                 fuelType?: string;
                 /** @description Tiện ích xe — CSV (VEHICLE_FEATURE_LABEL); xe phải có ĐỦ các key đã chọn */
                 features?: string;
+                /** @description Hộp số — CSV (TRANSMISSION_TYPE_EXT_VALUES) */
+                transmission?: string;
                 /** @description Chỉ xe có giá thuê giờ */
                 hourly?: boolean;
                 /** @description Chỉ xe giao tận nơi */
@@ -72774,6 +72854,8 @@ export interface operations {
                 packageMonths?: 1 | 2 | 3 | 6 | 9 | 12;
                 serviceType?: "self_drive" | "with_driver" | "long_term";
                 routeType?: "in_city" | "inter_city" | "inter_city_one_way";
+                vehicleProtectionSelected?: boolean;
+                personalAccidentSelected?: boolean;
             };
             header?: never;
             path: {
@@ -73007,6 +73089,8 @@ export interface operations {
                 fuelType?: string;
                 /** @description Tiện ích xe — CSV (VEHICLE_FEATURE_LABEL); xe phải có ĐỦ các key đã chọn */
                 features?: string;
+                /** @description Hộp số — CSV (TRANSMISSION_TYPE_EXT_VALUES) */
+                transmission?: string;
                 /** @description Chỉ xe có giá thuê giờ */
                 hourly?: boolean;
                 /** @description Chỉ xe giao tận nơi */
@@ -73320,6 +73404,9 @@ export interface operations {
                 returnAt?: string;
                 packageMonths?: number;
                 routeType?: "inner_city" | "inter_city" | "inter_city_one_way";
+                /** @description Khách có giữ lựa chọn bảo hiểm vật chất xe (IV) không */
+                vehicleProtectionSelected?: boolean;
+                /** @description Khách có giữ lựa chọn bảo hiểm tai nạn người (IP) không */
                 personalAccidentSelected?: boolean;
             };
             header?: never;

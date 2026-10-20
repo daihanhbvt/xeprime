@@ -9,7 +9,7 @@ import {
   GiftOutlined,
   RightOutlined,
 } from '@ant-design/icons';
-import { DatePicker, Skeleton } from 'antd';
+import { Checkbox, DatePicker, Skeleton } from 'antd';
 import { useTranslations } from 'next-intl';
 import {
   addCalendarMonthsVn,
@@ -233,6 +233,10 @@ export function ListingBookingCard({
   const pickupIso = range.pickupAt ? appWallClockToIso(range.pickupAt) : (pickupAt ?? undefined);
   const returnIso = range.returnAt ? appWallClockToIso(range.returnAt) : (returnAt ?? undefined);
 
+  // 6. Tuỳ chọn bảo hiểm MIC (vật chất xe / tai nạn người trên xe)
+  const [vehicleProtectionSelected, setVehicleProtectionSelected] = useState(false);
+  const [personalAccidentSelected, setPersonalAccidentSelected] = useState(false);
+
   const tripParams: PromoTripParams = useMemo(
     () => ({
       vehicleId: listing.id,
@@ -242,8 +246,19 @@ export function ListingBookingCard({
       routeType: activeService === SERVICE_TYPE.WITH_DRIVER ? currentRouteType : undefined,
       packageMonths:
         activeService === SERVICE_TYPE.LONG_TERM ? (selectedMonths ?? undefined) : undefined,
+      vehicleProtectionSelected,
+      personalAccidentSelected,
     }),
-    [listing.id, activeService, pickupIso, returnIso, currentRouteType, selectedMonths],
+    [
+      listing.id,
+      activeService,
+      pickupIso,
+      returnIso,
+      currentRouteType,
+      selectedMonths,
+      vehicleProtectionSelected,
+      personalAccidentSelected,
+    ],
   );
 
   const promo = usePromoCode(tripParams);
@@ -260,6 +275,8 @@ export function ListingBookingCard({
     returnAt: range.returnAt,
     routeType: currentRouteType,
     packageMonths: selectedMonths,
+    vehicleProtectionSelected,
+    personalAccidentSelected,
   });
   const quoteQ = usePublicQuote(listing.id, quoteParams);
   const quote = useQuoteWithPromo(quoteQ.data, promo.applied?.fees);
@@ -584,6 +601,47 @@ export function ListingBookingCard({
               <p className={styles.addressNote}>{t('pickup.note')}</p>
             </div>
           )}
+
+          {/* Tuỳ chọn bảo hiểm MIC */}
+          <div className={styles.insuranceSection}>
+            <h4 className={styles.sectionTitle}>{t('insurance.title')}</h4>
+            <div className={styles.insuranceOptions}>
+              <label className={styles.insuranceItem}>
+                <Checkbox
+                  checked={vehicleProtectionSelected}
+                  onChange={(e) => setVehicleProtectionSelected(e.target.checked)}
+                />
+                <div className={styles.insuranceItemContent}>
+                  <div className={styles.insuranceItemRow}>
+                    <span className={styles.insuranceItemName}>{t('insurance.vehicleProtection')}</span>
+                    <span className={styles.insuranceItemRate}>
+                      {listing.vehicleType === 'motorbike'
+                        ? t('insurance.vehicleProtectionHintMoto')
+                        : t('insurance.vehicleProtectionHintCar')}
+                    </span>
+                  </div>
+                </div>
+              </label>
+
+              <label className={styles.insuranceItem}>
+                <Checkbox
+                  checked={personalAccidentSelected}
+                  onChange={(e) => setPersonalAccidentSelected(e.target.checked)}
+                />
+                <div className={styles.insuranceItemContent}>
+                  <div className={styles.insuranceItemRow}>
+                    <span className={styles.insuranceItemName}>{t('insurance.personalAccident')}</span>
+                    <span className={styles.insuranceItemRate}>
+                      {listing.vehicleType === 'motorbike'
+                        ? t('insurance.personalAccidentHintMoto')
+                        : t('insurance.personalAccidentHintCar')}
+                    </span>
+                  </div>
+                </div>
+              </label>
+            </div>
+            <p className={styles.insuranceNote}>{t('insurance.note')}</p>
+          </div>
         </div>
       </div>
 
@@ -633,9 +691,16 @@ export function ListingBookingCard({
                 <div className={styles.priceLabel}>
                   <span>{dl('feeLine', line.key)}</span>
                   <span className={styles.priceSubLabel}>
-                    {line.partnerName
-                      ? `${line.percent}% · ${line.partnerName}`
-                      : `${line.percent}%`}
+                    {[
+                      line.percent != null
+                        ? `${line.percent}%`
+                        : line.unitAmount && line.quantity
+                          ? `${line.quantity} ngày × ${fmt.money(line.unitAmount)}`
+                          : null,
+                      line.partnerName,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
                   </span>
                 </div>
                 <span className={styles.priceValue}>{fmt.money(line.amount)}</span>
@@ -789,6 +854,8 @@ export function ListingBookingCard({
                     : null,
               packageMonths: activeService === SERVICE_TYPE.LONG_TERM ? selectedMonths : null,
               promoCode: promo.appliedCode,
+              vehicleProtectionSelected,
+              personalAccidentSelected,
               autoContinue:
                 activeService === SERVICE_TYPE.LONG_TERM
                   ? selectedMonths != null &&

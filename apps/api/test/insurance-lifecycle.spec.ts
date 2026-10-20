@@ -190,7 +190,7 @@ describe('Giữ chỗ hợp đồng lúc tạo đơn', () => {
     expect(await prisma.bookingInsurancePolicy.count({ where: { bookingId } })).toBe(0);
   });
 
-  maybe('IV bắt buộc + IP có bằng chứng chọn → hai dòng `reserved`, CHƯA tới hạn', async () => {
+  maybe('IV + IP (cả hai tuỳ chọn) có bằng chứng chọn → hai dòng `reserved`, CHƯA tới hạn', async () => {
     const bookingId = await makeBooking();
     const consentAt = new Date();
     await prisma.$transaction((tx) =>
@@ -220,13 +220,13 @@ describe('Giữ chỗ hợp đồng lúc tạo đơn', () => {
     expect(ip.premiumAmount.toFixed(0)).toBe('14000');
 
     /*
-     * `IV` BẮT BUỘC nên không có gì để đồng ý; `IP` TUỲ CHỌN nên phải có bằng chứng khách chọn
-     * (ADR 0028 điều 5). Gắn consent cho cả hai sẽ làm bằng chứng của `IP` mất giá trị — không
-     * phân biệt được "khách chọn" với "hệ thống điền sẵn".
+     * Luồng tiền v2: `IV` và `IP` đều TUỲ CHỌN — khách tích thì mới có dòng phí, nên CẢ HAI hợp
+     * đồng phải mang bằng chứng khách đã chọn (ADR 0028 điều 5).
      */
-    expect(iv.consentAt).toBeNull();
-    expect(ip.consentAt?.toISOString()).toBe(consentAt.toISOString());
-    expect(ip.consentSource).toBe(INSURANCE_CONSENT_SOURCE.WEB_BOOKING_FORM);
+    for (const policy of [iv, ip]) {
+      expect(policy.consentAt?.toISOString()).toBe(consentAt.toISOString());
+      expect(policy.consentSource).toBe(INSURANCE_CONSENT_SOURCE.WEB_BOOKING_FORM);
+    }
   });
 
   maybe('chạy lại (webhook retry) KHÔNG mua hai lần', async () => {

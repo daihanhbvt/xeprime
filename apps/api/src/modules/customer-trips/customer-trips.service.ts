@@ -326,6 +326,10 @@ export class CustomerTripsService {
           returnAt: row.returnAt,
           longTermPackageMonths: row.longTermPackageMonths,
           vehicle: row.vehicle,
+          insurance: {
+            vehicleProtectionSelected: row.vehicleProtectionSelected,
+            personalAccidentSelected: row.personalAccidentSelected,
+          },
           /*
            * Mã khuyến mãi đã chốt lúc GỬI yêu cầu phải đi cùng báo giá lại, nếu không màn
            * "Chuyến của tôi" hiện nguyên giá cho một chuyến khách đã được hứa giảm — lỗi thấy
@@ -1006,6 +1010,9 @@ const listSelect = (now: Date) =>
     tenantId: true,
     // Mã khuyến mãi đã đóng băng lúc gửi — báo giá lại phải mang nó theo (ADR 0046 điều 7).
     promoSnapshot: true,
+    // Lựa chọn bảo hiểm lúc gửi — báo giá lại phải tính đúng như lượt chốt giá sẽ tính.
+    vehicleProtectionSelected: true,
+    personalAccidentSelected: true,
     // Ba trường dưới đây phục vụ PHÍA CHỦ XE: ai đang thuê, và còn bao lâu phải trả lời.
     customerUserId: true,
     customerName: true,
@@ -1023,7 +1030,9 @@ const listSelect = (now: Date) =>
         transmission: true,
         fuelType: true,
         // Bảng giá của xe — để báo giá TẠM TÍNH cho yêu cầu chưa duyệt không phải đọc lại
-        // bảng xe một lượt cho mỗi dòng (xem `PricingService.estimateCustomerTotal`).
+        // bảng xe một lượt cho mỗi dòng (xem `PricingService.estimateQuote`). Loại xe quyết định
+        // mức phí sàn và biểu phí bảo hiểm (luồng tiền v2).
+        vehicleType: true,
         weekdayPrice: true,
         weekendPrice: true,
         monthlyPrice: true,

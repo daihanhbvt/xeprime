@@ -16,9 +16,9 @@ import { STATUS_COLOR, type StatusMeta } from './meta';
 // ── Sản phẩm ────────────────────────────────────────────────────────────────
 
 export const INSURANCE_PRODUCT_KIND = {
-  /** `IV` — bảo hiểm xe cho chuyến đi. Bắt buộc khi cổng bảo hiểm mở. */
+  /** `IV` — bảo hiểm vật chất xe cho chuyến đi. Tuỳ chọn từ luồng tiền v2 (khách tích chọn). */
   VEHICLE_TRIP: 'vehicle_trip',
-  /** `IP` — tai nạn người ngồi trên xe. Tuỳ chọn, cần bằng chứng khách đã chọn. */
+  /** `IP` — tai nạn người ngồi trên xe. Tuỳ chọn (khách tích chọn). */
   PERSONAL_ACCIDENT: 'personal_accident',
 } as const;
 

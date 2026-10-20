@@ -209,6 +209,111 @@ export function holdExpiresAt(
   return new Date(from.getTime() + windowMinutes * MS_PER_MINUTE);
 }
 
+// ── Cửa sổ ĐỘNG theo khoảng cách tới giờ nhận xe — luồng tiền v2 (20/10/2026) ─────────────────
+
+/**
+ * Ngưỡng và tỷ lệ của cửa sổ động. Gọi `ΔT = pickupAt − acceptedAt`:
+ *
+ * | ΔT              | Huỷ miễn phí                      | Hạn thanh toán                           |
+ * | --------------- | --------------------------------- | ---------------------------------------- |
+ * | `≥ 24 giờ`      | trọn `freeCancelHours` (4 giờ)    | trọn `holdPaymentWindowMinutes` (120′)   |
+ * | `2 giờ – 24 giờ`| `min(4 giờ, ΔT × 30%)`            | `min(120′, max(15′, ΔT × 40%))`          |
+ * | `< 2 giờ`       | **0** — đặt gấp thì cọc là chốt   | `min(120′, max(15′, ΔT × 40%))`          |
+ *
+ * Vì sao: cửa sổ cố định 4 giờ / 120 phút của ADR 0032 · 0044 cho khách đặt xe nhận sau 3 giờ
+ * quyền huỷ miễn phí tới tận lúc nhận xe — chủ xe giữ chỗ suốt buổi rồi mất khách sát giờ mà
+ * không được đền đồng nào. Cửa sổ tỉ lệ với ΔT giữ đúng tinh thần "huỷ sớm thì miễn phí" cho cả
+ * chuyến xa lẫn chuyến gần.
+ *
+ * Hai mốc vẫn đếm XUÔI từ `acceptedAt` và được LƯU một lần lúc tạo hold — không có đường nào tính
+ * lại lúc đọc (ADR 0032 điều 5 giữ nguyên).
+ *
+ * ⚠️ Khi ΔT < 24 giờ, hạn thanh toán (40%) DÀI HƠN cửa sổ huỷ miễn phí (30%): khách trả ở cuối hạn
+ * đã qua mốc huỷ miễn phí. Đó là chủ đích của bản thiết kế — UI phải nói rõ mốc huỷ TRƯỚC khi
+ * khách trả (`isFreeCancelWindowShort`).
+ */
+export const HOLD_DYNAMIC_WINDOW = {
+  /** Từ ngần này giờ trở lên là đặt XA — dùng nguyên hai cửa sổ của chính sách phí. */
+  FAR_LEAD_HOURS: 24,
+  /** Dưới ngần này giờ là đặt GẤP — không có huỷ miễn phí. */
+  URGENT_LEAD_HOURS: 2,
+  /** Phần của ΔT dành cho huỷ miễn phí khi đặt cận ngày. */
+  FREE_CANCEL_SHARE: 0.3,
+  /** Phần của ΔT dành cho thanh toán khi đặt cận ngày. */
+  PAYMENT_SHARE: 0.4,
+} as const;
+
+/** `ΔT` tính bằng phút, không âm — giờ nhận đã qua thì coi như 0 (đặt gấp nhất có thể). */
+function leadMinutesOf(acceptedAt: Date, pickupAt: Date): number {
+  return Math.max(0, (pickupAt.getTime() - acceptedAt.getTime()) / MS_PER_MINUTE);
+}
+
+/**
+ * Số phút huỷ miễn phí cho một chuyến có `ΔT = leadMinutes`. `maxHours` là cửa sổ của chính sách
+ * phí (`freeCancelHours`) — vừa là giá trị khi đặt xa, vừa là trần khi đặt cận ngày.
+ */
+export function holdFreeCancelMinutes(leadMinutes: number, maxHours: number): number {
+  const max = Math.max(0, maxHours) * 60;
+  if (leadMinutes >= HOLD_DYNAMIC_WINDOW.FAR_LEAD_HOURS * 60) return max;
+  if (leadMinutes < HOLD_DYNAMIC_WINDOW.URGENT_LEAD_HOURS * 60) return 0;
+  return Math.min(max, Math.round(leadMinutes * HOLD_DYNAMIC_WINDOW.FREE_CANCEL_SHARE));
+}
+
+/**
+ * Số phút khách có để chuyển tiền giữ chỗ cho một chuyến có `ΔT = leadMinutes`. `maxMinutes` là
+ * cửa sổ của chính sách phí (`holdPaymentWindowMinutes`).
+ *
+ * Sàn là `HOLD_MIN_USABLE_WINDOW_MINUTES` — CÙNG ngưỡng mà lượt tạo hold dùng để từ chối một cửa
+ * sổ quá ngắn. Hai con số khác nhau thì sẽ có chuyến được hứa một cửa sổ mà lượt tạo hold không
+ * chấp nhận.
+ */
+export function holdPaymentWindowMinutes(leadMinutes: number, maxMinutes: number): number {
+  if (leadMinutes >= HOLD_DYNAMIC_WINDOW.FAR_LEAD_HOURS * 60) return maxMinutes;
+  const proportional = Math.round(leadMinutes * HOLD_DYNAMIC_WINDOW.PAYMENT_SHARE);
+  return Math.min(maxMinutes, Math.max(HOLD_MIN_USABLE_WINDOW_MINUTES, proportional));
+}
+
+/** Hai mốc của một hold mới, đã kẹp — kèm số phút để audit giải thích được con số. */
+export interface HoldWindows {
+  /** `ΔT = pickupAt − acceptedAt`, phút (không âm). */
+  leadMinutes: number;
+  freeCancelMinutes: number;
+  paymentWindowMinutes: number;
+  freeCancelUntil: Date;
+  /**
+   * Hạn chuyển tiền — KẸP bởi giờ nhận xe: một hold còn "chờ tiền" sau khi xe đáng lẽ đã giao là
+   * một chỗ bị khoá vô nghĩa. Caller vẫn phải từ chối cửa sổ còn lại quá ngắn
+   * (`HOLD_MIN_USABLE_WINDOW_MINUTES`).
+   */
+  expiresAt: Date;
+}
+
+/**
+ * Hai mốc của một hold — MỘT phép tính cho mọi nơi tạo hold. SERVER tính và lưu vào cột; client
+ * đọc mốc đã lưu, không tự tính lại.
+ */
+export function holdWindowsFor(input: {
+  acceptedAt: Date;
+  pickupAt: Date;
+  /** `FeePolicyValues.freeCancelHours` — cửa sổ khi đặt xa. */
+  freeCancelHours: number;
+  /** `FeePolicyValues.holdPaymentWindowMinutes` — cửa sổ khi đặt xa. */
+  paymentWindowMinutes: number;
+}): HoldWindows {
+  const leadMinutes = leadMinutesOf(input.acceptedAt, input.pickupAt);
+  const freeCancelMinutes = holdFreeCancelMinutes(leadMinutes, input.freeCancelHours);
+  const paymentWindowMinutes = holdPaymentWindowMinutes(leadMinutes, input.paymentWindowMinutes);
+  const pickupMs = input.pickupAt.getTime();
+  const from = input.acceptedAt.getTime();
+  return {
+    leadMinutes,
+    freeCancelMinutes,
+    paymentWindowMinutes,
+    freeCancelUntil: new Date(Math.min(from + freeCancelMinutes * MS_PER_MINUTE, pickupMs)),
+    expiresAt: new Date(Math.min(from + paymentWindowMinutes * MS_PER_MINUTE, pickupMs)),
+  };
+}
+
 /**
  * Còn được huỷ miễn phí không — so MỐC ĐÃ LƯU, không bao giờ tính lại.
  *

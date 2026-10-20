@@ -49,5 +49,6 @@ export interface PromoTripParams {
   returnAt?: string | undefined;
   packageMonths?: number | undefined;
   routeType?: string | undefined;
+  vehicleProtectionSelected?: boolean | undefined;
   personalAccidentSelected?: boolean | undefined;
 }

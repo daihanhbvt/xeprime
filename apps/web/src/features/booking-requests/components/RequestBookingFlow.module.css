@@ -253,6 +253,62 @@
   color: var(--xp-color-text-tertiary);
 }
 
+/* ── Bảo hiểm chuyến đi MIC ─────────────────────────────────────────── */
+
+.insuranceBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.insuranceList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.insuranceItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  cursor: pointer;
+  transition: border-color var(--xp-motion-duration-fast);
+}
+
+.insuranceItem:hover {
+  border-color: var(--xp-color-primary);
+}
+
+.insuranceText {
+  flex: 1;
+  min-width: 0;
+}
+
+.insuranceNameRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.insuranceName {
+  font-size: var(--xp-font-size-base);
+  font-weight: 500;
+  color: var(--xp-color-text);
+}
+
+.insuranceRate {
+  font-size: var(--xp-font-size-sm);
+  font-weight: 600;
+  color: var(--xp-color-primary);
+  white-space: nowrap;
+}
+
 .deliveryFootnote {
   color: var(--xp-color-text-tertiary);
   font-size: var(--xp-font-size-sm);

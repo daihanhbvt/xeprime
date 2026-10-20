@@ -230,6 +230,16 @@
         "note": "* The exact location and the owner's phone number are shown once the reservation fee is paid.",
         "distanceFeeLater": "Estimated distance: ~{distance} · Delivery fee: the owner confirms it when accepting"
       },
+      "insurance": {
+        "title": "Trip Insurance (MIC)",
+        "vehicleProtection": "MIC Vehicle damage insurance",
+        "vehicleProtectionHintCar": "+50,000 đ/day",
+        "vehicleProtectionHintMoto": "+15,000 đ/day",
+        "personalAccident": "MIC Personal accident insurance",
+        "personalAccidentHintCar": "+20,000 đ/day",
+        "personalAccidentHintMoto": "+5,000 đ/day",
+        "note": "Optional comprehensive protection for your trip."
+      },
       "costs": {
         "title": "Total",
         "discountGroup": "Discounts/Promotions",

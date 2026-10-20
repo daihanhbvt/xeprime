@@ -69,6 +69,7 @@ export interface MarketplaceFilters {
   seats?: string[];
   fuelType?: string[];
   features?: string[];
+  transmission?: string[];
   hourly?: boolean;
   delivery?: boolean;
   noCollateral?: boolean;

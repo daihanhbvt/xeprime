@@ -166,6 +166,7 @@ export class HoldSettlementService {
         customerUserId: true,
         depositAmount: true,
         serviceFeeAmount: true,
+        ownerCommissionAmount: true,
         vehicleInsuranceAmount: true,
         personalInsuranceAmount: true,
       },
@@ -186,6 +187,7 @@ export class HoldSettlementService {
     const allowed = adminSettleOutcomes(hold.purpose as BookingHoldPurpose, {
       deposit: hold.depositAmount.toFixed(0),
       serviceFee: hold.serviceFeeAmount.toFixed(0),
+      ownerCommission: hold.ownerCommissionAmount.toFixed(0),
       vehicleInsurance: hold.vehicleInsuranceAmount.toFixed(0),
       personalInsurance: hold.personalInsuranceAmount.toFixed(0),
     });
@@ -523,6 +525,7 @@ export class HoldSettlementService {
       select: {
         depositAmount: true,
         serviceFeeAmount: true,
+        ownerCommissionAmount: true,
         vehicleInsuranceAmount: true,
         personalInsuranceAmount: true,
         promoDiscountAmount: true,
@@ -543,6 +546,12 @@ export class HoldSettlementService {
       {
         deposit: hold.depositAmount.toFixed(0),
         serviceFee: hold.serviceFeeAmount.toFixed(0),
+        /*
+         * `H` — hoa hồng lũy tiến (luồng tiền v2). Quyết toán: về doanh thu nền tảng, nên ví chủ
+         * xe nhận `D − T` = `cọc − phí sàn − hoa hồng − bảo hiểm − thuế`. Huỷ muộn: nằm trong phần
+         * chia đôi. Huỷ sớm: hoàn khách. Hold trước v2 có cột này bằng 0.
+         */
+        ownerCommission: hold.ownerCommissionAmount.toFixed(0),
         vehicleInsurance: hold.vehicleInsuranceAmount.toFixed(0),
         personalInsurance: hold.personalInsuranceAmount.toFixed(0),
         /*
@@ -734,7 +743,7 @@ export function decideOutcome(input: {
               refundReason: HOLD_REFUND_REASON.EARLY_CANCEL,
             }
           : {
-              // Huỷ muộn: D + S chia đôi, IV + IP hoàn 100% (bảo hiểm chưa mua).
+              // Huỷ muộn: D + S + H chia đôi, IV + IP hoàn 100% (bảo hiểm chưa mua).
               outcome: BOOKING_HOLD_OUTCOME.SPLIT_LATE_CANCEL,
               refundReason: HOLD_REFUND_REASON.ADMIN_DECISION,
             };

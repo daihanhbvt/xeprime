@@ -3,32 +3,92 @@ import {
   DEPOSIT_PERCENT_MAX,
   DEPOSIT_PERCENT_MIN,
   FEE_POLICY_STATUS_VALUES,
+  OWNER_COMMISSION_PERCENT_MAX,
   SERVICE_FEE_PERCENT_MAX,
   SERVICE_FEE_PERCENT_MIN,
 } from '@xeprime/types';
+import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
   IsBoolean,
   IsInt,
   IsNumber,
   IsNumberString,
   IsOptional,
   IsString,
+  Matches,
   Max,
   MaxLength,
   Min,
   ValidateIf,
+  ValidateNested,
 } from 'class-validator';
 
 /**
- * Bộ số của MỘT phiên bản chính sách phí — ADR 0028 điều 2–3, ADR 0029 (R3).
+ * Số tiền cấu hình của luồng tiền v2: `0` hoặc một bội của 1.000đ, không phần thập phân.
+ *
+ * Kiểm ở MÉP chứ không chỉ ở cổng kích hoạt: CHECK `fee_policies_v2_amounts_thousand_step_check`
+ * áp cho MỌI dòng kể cả bản nháp, nên một số lẻ lọt qua DTO sẽ thành lỗi 500 lúc lưu nháp thay
+ * vì một câu 400 nói rõ ô nào sai.
+ */
+const THOUSAND_STEP_PATTERN = /^(0|[1-9]\d{0,8}000)$/;
+const THOUSAND_STEP_MESSAGE = '$property phải là 0 hoặc bội của 1.000đ (chuỗi số nguyên)';
+
+/** Trần số nấc hoa hồng — chặn payload phình; nghiệp vụ thực tế 3–5 nấc. */
+const MAX_COMMISSION_TIERS = 12;
+
+/**
+ * Một số tiền cho TỪNG loại xe — `PerVehicleTypeAmount` ở `@xeprime/types`. Hai trường bắt buộc:
+ * thiếu một loại là lỗi, không phải 0đ (một loại xe "quên" khai phí sàn là thu 0đ trên cả loại).
+ */
+export class PerVehicleTypeAmountDto {
+  @ApiProperty({ description: 'Ô tô — VND, bội 1.000đ', example: '50000' })
+  @Matches(THOUSAND_STEP_PATTERN, { message: THOUSAND_STEP_MESSAGE })
+  car!: string;
+
+  @ApiProperty({ description: 'Xe máy — VND, bội 1.000đ', example: '30000' })
+  @Matches(THOUSAND_STEP_PATTERN, { message: THOUSAND_STEP_MESSAGE })
+  motorbike!: string;
+}
+
+/**
+ * MỘT nấc hoa hồng lũy tiến — áp `percent` cho mọi ngày thuê từ `fromDay` tới ngày liền trước
+ * `fromDay` của nấc kế tiếp (`OwnerCommissionTier`). Thứ tự và "bắt đầu từ ngày 1" do
+ * `feePolicyActivationBlockers` canh ở cổng kích hoạt — bản nháp được phép dở dang.
+ */
+export class OwnerCommissionTierDto {
+  @ApiProperty({ description: 'Ngày thuê bắt đầu áp nấc này (tính từ 1)', example: 1 })
+  @IsInt()
+  @Min(1)
+  @Max(3650)
+  fromDay!: number;
+
+  @ApiProperty({ description: `% giá thuê của ngày đó (0–${OWNER_COMMISSION_PERCENT_MAX})`, example: 10 })
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(OWNER_COMMISSION_PERCENT_MAX)
+  percent!: number;
+}
+
+/**
+ * Bộ số của MỘT phiên bản chính sách phí — ADR 0028 điều 2–3, luồng tiền v2 (20/10/2026).
  *
  * `*Enabled = false` là một CỔNG chưa mở, không phải tỷ lệ 0. DTO chỉ kiểm HÌNH DẠNG; điều kiện
- * "bật cổng phải có căn cứ" (thuế có tên loại thuế, bảo hiểm có đối tác thật) chặn ở
- * `FeePoliciesService.activate` bằng `feePolicyActivationBlockers` — cùng hàm web dùng để báo
- * sớm — và chặn lần cuối bằng CHECK ở DB.
+ * "bật cổng phải có căn cứ" (thuế có tên loại thuế, bảo hiểm có đối tác thật và biểu phí cho mọi
+ * loại xe) chặn ở `FeePoliciesService.activate` bằng `feePolicyActivationBlockers` — cùng hàm web
+ * dùng để báo sớm — và chặn lần cuối bằng CHECK ở DB.
+ *
+ * ## Bốn trường của luồng tiền v2 là TUỲ CHỌN trên dây
+ *
+ * `customerPlatformFee`, `ownerCommissionTiers`, `vehicleProtectionDailyAmount`,
+ * `tripInsuranceDailyAmount`: vắng mặt ⇒ tạo nháp lấy `FEE_SCHEDULE_DEFAULTS`, sửa nháp GIỮ số
+ * đang có. Form quản trị đời trước không gửi chúng, và nó không được phép xoá trắng bộ số v2 của
+ * một bản nháp chỉ vì nó chưa biết chúng tồn tại.
  */
 export class UpsertFeePolicyDto {
-  @ApiProperty({ example: 'Pilot — phí dịch vụ 10%' })
+  @ApiProperty({ example: 'Luồng tiền v2 — phí sàn cố định, hoa hồng lũy tiến' })
   @IsString()
   @MaxLength(120)
   name!: string;
@@ -39,21 +99,26 @@ export class UpsertFeePolicyDto {
   @MaxLength(2000)
   note?: string | null;
 
-  @ApiProperty({
-    description: `% phí dịch vụ XePrime áp cho tuyến hoa hồng (${SERVICE_FEE_PERCENT_MIN}–${SERVICE_FEE_PERCENT_MAX}). Tuyến gói luôn 0.`,
-    example: 10,
+  @ApiPropertyOptional({
+    description:
+      `LEGACY — % phí dịch vụ của mô hình cũ (${SERVICE_FEE_PERCENT_MIN}–${SERVICE_FEE_PERCENT_MAX}). ` +
+      'Luồng tiền v2 không đọc trường này; vắng mặt ⇒ tạo nháp 0, sửa nháp giữ số cũ.',
+    example: 0,
   })
+  @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(SERVICE_FEE_PERCENT_MIN)
   @Max(SERVICE_FEE_PERCENT_MAX)
-  serviceFeePercent!: number;
+  serviceFeePercent?: number;
 
   @ApiProperty({ description: 'Sàn khoản giữ chỗ (VND string)', example: '20000' })
   @IsNumberString()
   holdMinAmount!: string;
 
   @ApiProperty({
-    description: 'Phút khách có để chuyển cọc, tính từ lúc chủ xe duyệt (ADR 0032 điều 2)',
+    description:
+      'Phút khách có để chuyển cọc khi đặt XA (giờ nhận cách lúc duyệt ≥ 24 giờ) — đồng thời là trần ' +
+      'của cửa sổ động khi đặt cận ngày (ΔT × 40%, sàn 15 phút)',
     example: 120,
   })
   @IsInt()
@@ -62,7 +127,9 @@ export class UpsertFeePolicyDto {
   holdPaymentWindowMinutes!: number;
 
   @ApiProperty({
-    description: 'Huỷ trong bấy nhiêu giờ KỂ TỪ khi duyệt thì hoàn 100% (ADR 0032 điều 5)',
+    description:
+      'Giờ huỷ miễn phí KỂ TỪ khi duyệt khi đặt XA (≥ 24 giờ) — đồng thời là trần của cửa sổ động ' +
+      '(ΔT × 30%; dưới 2 giờ thì không có huỷ miễn phí)',
     example: 4,
   })
   @IsInt()
@@ -70,7 +137,7 @@ export class UpsertFeePolicyDto {
   @Max(24 * 30)
   freeCancelHours!: number;
 
-  @ApiProperty({ description: 'D — % cọc trên giá thuê gốc', example: 20 })
+  @ApiProperty({ description: '% cọc online trên TỔNG KHÁCH TRẢ trước mã khuyến mãi', example: 30 })
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(DEPOSIT_PERCENT_MIN)
   @Max(DEPOSIT_PERCENT_MAX)
@@ -100,16 +167,24 @@ export class UpsertFeePolicyDto {
   taxLabel?: string | null;
 
   @ApiProperty() @IsBoolean() tripInsuranceEnabled!: boolean;
-  @ApiPropertyOptional({ type: Number, nullable: true })
-  @ValidateIf((o: UpsertFeePolicyDto) => o.tripInsuranceEnabled)
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: 'LEGACY — bảo hiểm tính theo NGÀY từ luồng tiền v2 (`tripInsuranceDailyAmount`)',
+  })
+  @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   @Max(50)
   tripInsurancePercent?: number | null;
 
   @ApiProperty() @IsBoolean() vehicleProtectionEnabled!: boolean;
-  @ApiPropertyOptional({ type: Number, nullable: true })
-  @ValidateIf((o: UpsertFeePolicyDto) => o.vehicleProtectionEnabled)
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: 'LEGACY — bảo hiểm tính theo NGÀY từ luồng tiền v2 (`vehicleProtectionDailyAmount`)',
+  })
+  @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   @Max(50)
@@ -124,6 +199,45 @@ export class UpsertFeePolicyDto {
   @IsString()
   @MaxLength(120)
   insurancePartnerName?: string | null;
+
+  @ApiPropertyOptional({
+    type: PerVehicleTypeAmountDto,
+    description: '`S` — phí sàn CỐ ĐỊNH mỗi đơn, phía khách, theo loại xe. Áp cho cả hai tuyến.',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PerVehicleTypeAmountDto)
+  customerPlatformFee?: PerVehicleTypeAmountDto;
+
+  @ApiPropertyOptional({
+    type: [OwnerCommissionTierDto],
+    description: '`H` — nấc hoa hồng lũy tiến theo ngày của tuyến hoa hồng, `fromDay` tăng dần từ 1',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(MAX_COMMISSION_TIERS)
+  @ValidateNested({ each: true })
+  @Type(() => OwnerCommissionTierDto)
+  ownerCommissionTiers?: OwnerCommissionTierDto[];
+
+  @ApiPropertyOptional({
+    type: PerVehicleTypeAmountDto,
+    description: '`IV` — biểu phí bảo hiểm vật chất xe MỖI NGÀY theo loại xe (khách tích chọn mới tính)',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PerVehicleTypeAmountDto)
+  vehicleProtectionDailyAmount?: PerVehicleTypeAmountDto;
+
+  @ApiPropertyOptional({
+    type: PerVehicleTypeAmountDto,
+    description: '`IP` — biểu phí bảo hiểm tai nạn người MỖI NGÀY theo loại xe (khách tích chọn mới tính)',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PerVehicleTypeAmountDto)
+  tripInsuranceDailyAmount?: PerVehicleTypeAmountDto;
 }
 
 export class FeePolicyDto {
@@ -132,7 +246,8 @@ export class FeePolicyDto {
   @ApiProperty({ enum: FEE_POLICY_STATUS_VALUES }) status!: string;
   @ApiProperty() name!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) note!: string | null;
-  @ApiProperty() serviceFeePercent!: number;
+  @ApiProperty({ description: 'LEGACY — luồng tiền v2 không đọc trường này' })
+  serviceFeePercent!: number;
   @ApiProperty() holdMinAmount!: string;
   @ApiProperty() holdPaymentWindowMinutes!: number;
   @ApiProperty() freeCancelHours!: number;
@@ -147,6 +262,12 @@ export class FeePolicyDto {
   @ApiProperty() vehicleProtectionEnabled!: boolean;
   @ApiPropertyOptional({ type: Number, nullable: true }) vehicleProtectionPercent!: number | null;
   @ApiPropertyOptional({ type: String, nullable: true }) insurancePartnerName!: string | null;
+  @ApiProperty({ type: PerVehicleTypeAmountDto }) customerPlatformFee!: PerVehicleTypeAmountDto;
+  @ApiProperty({ type: [OwnerCommissionTierDto] })
+  ownerCommissionTiers!: readonly OwnerCommissionTierDto[];
+  @ApiProperty({ type: PerVehicleTypeAmountDto })
+  vehicleProtectionDailyAmount!: PerVehicleTypeAmountDto;
+  @ApiProperty({ type: PerVehicleTypeAmountDto }) tripInsuranceDailyAmount!: PerVehicleTypeAmountDto;
   @ApiPropertyOptional({ type: String, nullable: true }) effectiveFrom!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) effectiveTo!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) activatedByName!: string | null;

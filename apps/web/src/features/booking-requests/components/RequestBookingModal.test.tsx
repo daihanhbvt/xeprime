@@ -315,6 +315,8 @@ function draftValues(): RequestFormValues {
     deliveryLongitude: null,
     deliveryLocationSource: null,
     acceptedTerms: false,
+    vehicleProtectionSelected: false,
+    personalAccidentSelected: false,
     note: '',
     customerName: LOGGED_IN_ME.displayName,
     customerPhone: LOGGED_IN_ME.phone,

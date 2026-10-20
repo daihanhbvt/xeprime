@@ -34,7 +34,14 @@ export const saveVehiclePricing = (
  */
 export type PublicQuoteParams =
   | { serviceType: 'long_term'; packageMonths: number }
-  | { pickupAt: string; returnAt: string; serviceType?: string; routeType?: string };
+  | {
+      pickupAt: string;
+      returnAt: string;
+      serviceType?: string;
+      routeType?: string;
+      vehicleProtectionSelected?: boolean;
+      personalAccidentSelected?: boolean;
+    };
 
 export const fetchPublicQuote = (
   vehicleId: string,

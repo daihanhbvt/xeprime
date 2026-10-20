@@ -727,9 +727,10 @@
   },
   "feeLine": {
     "service_fee": "XePrime service fee",
+    "owner_commission": "XePrime commission",
     "tax": "Withheld / remitted tax",
-    "trip_insurance": "Trip insurance",
-    "vehicle_protection": "Vehicle protection",
+    "trip_insurance": "Passenger accident insurance",
+    "vehicle_protection": "Vehicle damage insurance",
     "deposit": "Booking deposit",
     "promo": "XePrime promo code"
   },
@@ -803,10 +804,15 @@
     "service_fee_out_of_range": "Service fee % is out of the allowed range",
     "tax_requires_rate_and_label": "Tax needs both a rate and a tax name",
     "insurance_requires_partner": "Insurance needs a real partner name",
-    "trip_insurance_requires_rate": "Trip insurance needs a rate",
-    "vehicle_protection_requires_rate": "Vehicle protection needs a rate",
+    "trip_insurance_requires_rate": "Passenger accident insurance needs a daily rate for every vehicle type",
+    "vehicle_protection_requires_rate": "Vehicle damage insurance needs a daily rate for every vehicle type",
+    "amount_not_thousand_step": "Configured amounts must be non-negative multiples of 1,000 VND",
+    "owner_commission_tiers_invalid": "Commission tiers must start on day 1, increase, and stay between 0% and 30%",
     "hold_window_out_of_range": "Payment window is out of the allowed range",
-    "free_cancel_out_of_range": "Free-cancel hours is out of the allowed range"
+    "free_cancel_out_of_range": "Free-cancel hours is out of the allowed range",
+    "deposit_percent_out_of_range": "Deposit % is out of range or above the policy cap",
+    "deposit_percent_below_tax_percent": "Deposit % must not be lower than the tax %",
+    "free_cancel_shorter_than_payment_window": "Free-cancel window must not be shorter than the payment window"
   },
   "bookingHoldStatus": {
     "pending": "Awaiting payment",

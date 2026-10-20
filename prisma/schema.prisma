@@ -1902,6 +1902,9 @@ model Booking {
   serviceFeePercent      Decimal?  @map("service_fee_percent") @db.Decimal(5, 2)
   /// Phí dịch vụ XePrime — KHÁCH gánh, KHÔNG nằm trong `total_amount` (doanh thu gian hàng).
   serviceFeeAmount       Decimal   @default(0) @map("service_fee_amount") @db.Decimal(14, 2)
+  /// `H` — hoa hồng lũy tiến XePrime giữ lại từ phần của CHỦ XE (luồng tiền v2). 0 ở tuyến gói
+  /// và ở đơn trước luồng tiền v2. Cột phẳng để báo cáo doanh thu không phải giải jsonb từng đơn.
+  ownerCommissionAmount  Decimal   @default(0) @map("owner_commission_amount") @db.Decimal(14, 2)
   /// Tổng KHÁCH TRẢ = total_amount + Σ phụ phí phía khách. NULL khi không có phí (như billing_mode).
   customerTotalAmount    Decimal?  @map("customer_total_amount") @db.Decimal(14, 2)
   /// ── Cọc / thuế / khoản phải trả chủ xe — ADR 0032 điều 2–3, ADR 0033. Đóng băng lúc tạo. ──
@@ -2114,6 +2117,12 @@ model BookingRequest {
   /// lực hôm nay: admin sửa mã giữa chừng không được viết lại lời hứa với khách, và mã đã bị xoá
   /// mềm vẫn phải giải thích được (ADR 0046 điều 7).
   promoSnapshot          Json?     @map("promo_snapshot_json") @db.JsonB
+  /// ── LỰA CHỌN BẢO HIỂM của khách lúc gửi — luồng tiền v2 (20/10/2026). ──
+  /// Cả `IV` lẫn `IP` đều TUỲ CHỌN: tích thì tính, không thì 0đ. Lượt CHỐT GIÁ (duyệt/tự nhận)
+  /// đọc hai cột này — không đọc thì khách thấy bảo hiểm trong báo giá rồi bị bỏ mất lúc duyệt.
+  /// Cổng ở chính sách phí vẫn thắng: chính sách tắt bảo hiểm thì lựa chọn không sinh dòng nào.
+  vehicleProtectionSelected Boolean  @default(false) @map("vehicle_protection_selected")
+  personalAccidentSelected  Boolean  @default(false) @map("personal_accident_selected")
   createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -4351,13 +4360,15 @@ model FeePolicy {
   name    String  @db.VarChar(120)
   note    String? @db.Text
 
-  /// % phí dịch vụ áp cho TUYẾN HOA HỒNG. Tuyến gói luôn 0 (quy tắc trong code, không có cột).
+  /// ⚠️ LEGACY từ luồng tiền v2 — % phí dịch vụ của mô hình cũ. Phép tính không còn đọc cột này
+  /// (`customer_platform_fee_*` + `owner_commission_tiers` thay nó); giữ để đơn cũ đọc lại được.
   serviceFeePercent        Decimal @map("service_fee_percent") @db.Decimal(5, 2)
   holdMinAmount            Decimal @default(20000) @map("hold_min_amount") @db.Decimal(14, 2)
-  /// Cửa sổ thanh toán tiền giữ chỗ — **120 PHÚT** (ADR 0044 điều 3), hiển thị thành hai chặng
-  /// 60 phút. Hết hạn là HẾT: không còn lượt tự gia hạn nào, khách được nhắc ở mốc còn 60 và 15
-  /// phút. Bản chính sách cũ giữ nguyên số của nó — bản `active` là BẤT BIẾN (ADR 0028 điều 2).
+  /// Cửa sổ thanh toán tiền giữ chỗ khi đặt XA (`ΔT ≥ 24 giờ`) — **120 PHÚT** (ADR 0044 điều 3),
+  /// đồng thời là TRẦN của cửa sổ động khi đặt cận ngày (`holdWindowsFor`, luồng tiền v2). Hết hạn
+  /// là HẾT: không tự gia hạn. Bản `active` là BẤT BIẾN (ADR 0028 điều 2).
   holdPaymentWindowMinutes Int     @default(120) @map("hold_payment_window_minutes")
+  /// Cửa sổ huỷ miễn phí khi đặt XA — đồng thời là trần của cửa sổ động (`holdWindowsFor`).
   freeCancelHours          Int     @default(4) @map("free_cancel_hours")
 
   /// `D` — % CỌC trên giá thuê gốc. NỀN TẢNG đặt, không phải gian hàng (ADR 0033 điều 7).
@@ -4373,11 +4384,32 @@ model FeePolicy {
   taxLabel   String?  @map("tax_label") @db.VarChar(120)
 
   tripInsuranceEnabled     Boolean  @default(false) @map("trip_insurance_enabled")
+  /// ⚠️ LEGACY từ luồng tiền v2 — bảo hiểm tính theo NGÀY (`trip_insurance_daily_*`).
   tripInsurancePercent     Decimal? @map("trip_insurance_percent") @db.Decimal(5, 2)
   vehicleProtectionEnabled Boolean  @default(false) @map("vehicle_protection_enabled")
+  /// ⚠️ LEGACY từ luồng tiền v2 — bảo hiểm tính theo NGÀY (`vehicle_protection_daily_*`).
   vehicleProtectionPercent Decimal? @map("vehicle_protection_percent") @db.Decimal(5, 2)
   /// Đối tác bảo hiểm THẬT — bắt buộc khi một dòng bảo hiểm bật. Không điền trước khi có hợp đồng.
   insurancePartnerName     String?  @map("insurance_partner_name") @db.VarChar(120)
+
+  /// ── LUỒNG TIỀN v2 (20/10/2026) — `@xeprime/types` `FeePolicyValues`. ──
+  ///
+  /// Số tiền theo LOẠI XE là hai CỘT chứ không một jsonb `{car, motorbike}`: CHECK ở DB gác được
+  /// "không âm, bội 1.000đ" — bước giá bắt đầu từ chính số cấu hình, vì phí sàn và biểu phí bảo
+  /// hiểm đi thẳng vào mã QR. Thêm loại xe là thêm cột, cùng nhịp với `VEHICLE_TYPE`.
+  ///
+  /// `S` — PHÍ SÀN cố định MỖI ĐƠN, phía khách, áp cho cả hai tuyến (thay `service_fee_percent`).
+  customerPlatformFeeCar          Decimal @default(0) @map("customer_platform_fee_car") @db.Decimal(14, 2)
+  customerPlatformFeeMotorbike    Decimal @default(0) @map("customer_platform_fee_motorbike") @db.Decimal(14, 2)
+  /// `H` — nấc hoa hồng lũy tiến theo NGÀY của tuyến hoa hồng: `[{fromDay, percent}]`, `fromDay`
+  /// tăng nghiêm ngặt từ 1. Hình dạng do `feePolicyActivationBlockers` canh (DB chỉ canh "là mảng").
+  ownerCommissionTiers            Json    @default("[]") @map("owner_commission_tiers") @db.JsonB
+  /// `IV` — biểu phí bảo hiểm vật chất xe MỖI NGÀY (thay `vehicle_protection_percent`).
+  vehicleProtectionDailyCar       Decimal @default(0) @map("vehicle_protection_daily_car") @db.Decimal(14, 2)
+  vehicleProtectionDailyMotorbike Decimal @default(0) @map("vehicle_protection_daily_motorbike") @db.Decimal(14, 2)
+  /// `IP` — biểu phí bảo hiểm tai nạn người MỖI NGÀY (thay `trip_insurance_percent`).
+  tripInsuranceDailyCar           Decimal @default(0) @map("trip_insurance_daily_car") @db.Decimal(14, 2)
+  tripInsuranceDailyMotorbike     Decimal @default(0) @map("trip_insurance_daily_motorbike") @db.Decimal(14, 2)
 
   effectiveFrom DateTime? @map("effective_from") @db.Timestamptz(3)
   effectiveTo   DateTime? @map("effective_to") @db.Timestamptz(3)
@@ -4573,7 +4605,8 @@ model BookingHold {
   amount           Decimal @db.Decimal(14, 2)
   paidAmount       Decimal @default(0) @map("paid_amount") @db.Decimal(14, 2)
 
-  /// BỐN DÒNG TIỀN của khoản giữ chỗ — `D + S + IV + IP`, CHECK tổng đúng bằng `amount`.
+  /// NĂM DÒNG TIỀN của khoản giữ chỗ — `D + S + H + IV + IP` (luồng tiền v2 thêm `H`), CHECK
+  /// tổng trừ tài trợ đúng bằng `amount`.
   ///
   /// Vì sao là CỘT chứ không chỉ `allocation_json`: một hold nay chứa tiền của NHIỀU người
   /// (`S` của XePrime, `D` của chủ xe, `IV`/`IP` giữ hộ hãng bảo hiểm), nên `purpose` không còn
@@ -4582,6 +4615,10 @@ model BookingHold {
   /// `allocation_json` vẫn giữ để GIẢI THÍCH từng dòng (người hưởng, người chịu, tỷ lệ).
   depositAmount           Decimal @default(0) @map("deposit_amount") @db.Decimal(14, 2)
   serviceFeeAmount        Decimal @default(0) @map("service_fee_amount") @db.Decimal(14, 2)
+  /// `H` — hoa hồng lũy tiến XePrime GIỮ LẠI từ phần của chủ xe trong khoản cọc (luồng tiền v2).
+  /// Tiền của nền tảng như `S`, nhưng do CHỦ XE chịu — tách cột để báo cáo doanh thu phân biệt
+  /// phí phía khách với hoa hồng phía chủ xe. 0 ở tuyến gói và hold trước luồng tiền v2.
+  ownerCommissionAmount   Decimal @default(0) @map("owner_commission_amount") @db.Decimal(14, 2)
   vehicleInsuranceAmount  Decimal @default(0) @map("vehicle_insurance_amount") @db.Decimal(14, 2)
   personalInsuranceAmount Decimal @default(0) @map("personal_insurance_amount") @db.Decimal(14, 2)
 

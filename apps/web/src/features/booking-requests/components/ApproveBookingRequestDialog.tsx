@@ -74,6 +74,20 @@ function ApproveForm({ request, submitting, error, onCancel, onConfirm }: Props 
               </dd>
             </div>
           ) : null}
+          {request.pricing ? (
+            <>
+              <div className={styles.row}>
+                <dt>{t('approve.rentalTotal')}</dt>
+                <dd>{fmt.money(request.pricing.rentalTotal)}</dd>
+              </div>
+              <div className={styles.row}>
+                <dt>{t('approve.customerTotal')}</dt>
+                <dd>
+                  <strong>{fmt.money(request.pricing.customerTotalAmount)}</strong>
+                </dd>
+              </div>
+            </>
+          ) : null}
         </dl>
 
         <p className={styles.effect}>{t('approve.effect')}</p>

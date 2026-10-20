@@ -33,6 +33,7 @@ export type FacetDimension =
   | 'seats'
   | 'fuelType'
   | 'features'
+  | 'transmission'
   | 'price'
   | 'hourly'
   | 'delivery'
@@ -199,6 +200,9 @@ export function buildListingWhere(
   if (exclude !== 'fuelType' && query.fuelType?.length) {
     and.push({ fuelType: { in: query.fuelType } });
   }
+  if (exclude !== 'transmission' && query.transmission?.length) {
+    and.push({ transmission: { in: query.transmission } });
+  }
   // Tính năng là AND (xe phải có ĐỦ các tiện ích đã chọn) — GIN index phục vụ hasEvery.
   if (exclude !== 'features' && query.features?.length) {
     and.push({ features: { hasEvery: query.features } });
@@ -305,6 +309,9 @@ export function buildListingWhereSql(
   }
   if (exclude !== 'fuelType' && query.fuelType?.length) {
     and.push(Prisma.sql`pl."fuel_type" IN (${Prisma.join(query.fuelType)})`);
+  }
+  if (exclude !== 'transmission' && query.transmission?.length) {
+    and.push(Prisma.sql`pl."transmission" IN (${Prisma.join(query.transmission)})`);
   }
   // Tính năng là AND (xe phải có ĐỦ) — `@>` là toán tử mà GIN index phục vụ, khớp `hasEvery`.
   if (exclude !== 'features' && query.features?.length) {

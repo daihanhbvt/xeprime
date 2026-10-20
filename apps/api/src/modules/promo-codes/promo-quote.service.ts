@@ -130,11 +130,11 @@ export class PromoQuoteService {
   }
 
   private applyToFees(context: PromoQuoteContext, promo: PromoCodeSnapshot) {
-    return this.pricing.applyPromoToFees(context.tenantId, context.breakdown.totalAmount, {
-      quoteIsEstimate: context.quoteIsEstimate,
-      promo,
-      personalAccidentSelected: context.personalAccidentSelected,
-    });
+    return this.pricing.applyPromoToFees(
+      context.tenantId,
+      { vehicleType: context.scope.vehicleType, breakdown: context.breakdown },
+      { quoteIsEstimate: context.quoteIsEstimate, promo, ...context.insurance },
+    );
   }
 }
 
