@@ -14,7 +14,7 @@ import {
   requireEnv,
 } from './lib/env';
 import { createAdvisoryLocks } from './lib/advisory-lock';
-import { WorkerHealth, startHealthServer } from './lib/health';
+import { RecentEventCounter, WorkerHealth, startHealthServer } from './lib/health';
 import { firestoreBadgeWriter } from './lib/firestore';
 import { pumpOutbox } from './jobs/outbox-pump';
 import { projectBadges } from './jobs/badge-projection';
@@ -101,6 +101,17 @@ const LOCK_PUSH = 4_208;
  * mà phần lớn thời gian rỗng (index một phần lo phần còn lại).
  */
 const PUSH_INTERVAL_MS = 5_000;
+
+/**
+ * Cửa sổ đếm thông báo hỏng vì CẤU HÌNH nhà cung cấp (`provider_auth`). Một lượt trong giờ qua
+ * là đủ để báo `degraded`: lỗi này không bao giờ lẻ tẻ — khoá APNs thiếu/thu hồi thì MỌI thông
+ * báo tới iOS đều mất, và không lần thử lại nào cứu được. Trước số đo này, push iOS trên staging
+ * hỏng 100% suốt nhiều ngày trong khi `/health` vẫn báo `ok`.
+ *
+ * `degraded` chứ không `unhealthy`: cổng deploy không được khoá vì một cấu hình nằm ngoài mã
+ * nguồn (xem `HealthStatus`).
+ */
+const PUSH_CONFIG_FAILURE_WINDOW_MS = 60 * 60 * 1_000;
 
 const LOCK_BADGES = 4_209;
 
@@ -332,6 +343,10 @@ async function main(): Promise<void> {
    * lặng nghĩa là `push_deliveries` chất đống mà không ai biết vì sao máy không rung.
    */
   if (PUSH_ENABLED) {
+    const pushConfigFailures = new RecentEventCounter(PUSH_CONFIG_FAILURE_WINDOW_MS);
+    health.limitGauge('pushConfigFailures1h', 0);
+    health.setGauge('pushConfigFailures1h', 0);
+
     jobs.push(
       loop(
         'đẩy thông báo',
@@ -344,6 +359,16 @@ async function main(): Promise<void> {
             console.log(
               `push: gửi ${result.sent}, thử lại ${result.retried}, hỏng ${result.failed}, ` +
                 `quá hạn ${result.expired}, tắt ${result.devicesDisabled} thiết bị`,
+            );
+          }
+
+          pushConfigFailures.record(result.providerAuthFailed);
+          health.setGauge('pushConfigFailures1h', pushConfigFailures.total());
+          if (result.providerAuthFailed > 0) {
+            console.error(
+              `push: ${result.providerAuthFailed} thông báo MẤT vì nhà cung cấp từ chối xác thực ` +
+                '(provider_auth) — không phải lỗi thiết bị, thử lại không cứu được. Kiểm khoá APNs ' +
+                '(.p8) của từng app iOS ở Firebase Console → Cloud Messaging, hoặc quyền của service account.',
             );
           }
         },
@@ -405,7 +430,8 @@ async function main(): Promise<void> {
         await pumpOutbox(prisma);
       }, { critical: true }),
       loop('retention', LOCK_RETENTION, RETENTION_INTERVAL_MS, async () => {
-        await runRetention(prisma);
+        const trimmed = await runRetention(prisma);
+        if (trimmed > 0) console.log(`retention: dọn ${trimmed} tin cũ khỏi Firestore`);
       }),
       loop(
         'chiếu huy hiệu',

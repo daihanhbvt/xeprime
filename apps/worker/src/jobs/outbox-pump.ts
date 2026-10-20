@@ -26,14 +26,22 @@ export async function pumpOutbox(
   for (const row of pending) {
     try {
       await pushMessage(prisma, writer, row.messageId);
-      await prisma.messageOutbox.update({
-        where: { id: row.id },
-        data: { status: OUTBOX_STATUS.DONE, lastError: null },
-      });
-      await prisma.message.update({
-        where: { id: row.messageId },
-        data: { firebaseMessageId: row.messageId },
-      });
+      /*
+       * Hai câu trong MỘT transaction: retention đọc `firebase_message_id` để biết document nào
+       * đang nằm trên Firestore. Tiến trình bị giết giữa hai câu rời (SIGKILL lúc deploy) sẽ để
+       * lại outbox `done` mà dấu NULL — document đó không bao giờ được dọn. Chết TRƯỚC transaction
+       * thì dòng còn `pending`, lượt sau ghi đè đúng document cũ (doc id = messageId).
+       */
+      await prisma.$transaction([
+        prisma.messageOutbox.update({
+          where: { id: row.id },
+          data: { status: OUTBOX_STATUS.DONE, lastError: null },
+        }),
+        prisma.message.update({
+          where: { id: row.messageId },
+          data: { firebaseMessageId: row.messageId },
+        }),
+      ]);
       done++;
     } catch (err) {
       const attempts = row.attempts + 1;

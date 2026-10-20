@@ -250,6 +250,23 @@ maybe('token đã gỡ app → TẮT thiết bị, và mọi tin sau đó không
   assert.equal(laterRow.status, PUSH_DELIVERY_STATUS.FAILED);
 });
 
+maybe('khoá APNs hỏng → failed provider_auth, đếm riêng, KHÔNG tắt thiết bị', async () => {
+  const { deliveryId } = await seedDelivery({});
+  const { sender } = fakeSender({ code: 'messaging/third-party-auth-error' });
+
+  const result = await dispatchPushDeliveries(prisma, sender);
+
+  assert.equal(result.failed, 1);
+  // Con số health dùng để báo `degraded` — lỗi cấu hình, không phải lỗi của máy này.
+  assert.equal(result.providerAuthFailed, 1);
+  assert.equal(result.devicesDisabled, 0);
+  const row = await prisma.pushDelivery.findUniqueOrThrow({ where: { id: deliveryId } });
+  assert.equal(row.status, PUSH_DELIVERY_STATUS.FAILED);
+  assert.equal(row.lastErrorCode, PUSH_ERROR_CODE.PROVIDER_AUTH);
+  const device = await prisma.pushDevice.findUniqueOrThrow({ where: { id: deviceId } });
+  assert.equal(device.enabled, true);
+});
+
 maybe('delivery đã hết hạn KHÔNG được gửi muộn', async () => {
   const { deliveryId } = await seedDelivery({ expiresAt: new Date(Date.now() - 60_000) });
   const { sender, sent } = fakeSender();

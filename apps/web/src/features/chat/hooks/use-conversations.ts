@@ -6,7 +6,7 @@ import type { ConversationListResult } from '../types';
 import { CHAT_INBOX, type ChatInbox } from '@xeprime/types';
 import { queryKeys } from '@/services/query-keys';
 import { useBadgeRealtime } from '@/features/badges/BadgeRealtimeProvider';
-import { useOnBadgeChange } from '@/features/badges/hooks/use-on-badge-change';
+import { useOnBadgeSignal } from '@/features/badges/hooks/use-on-badge-signal';
 
 /**
  * Nhịp làm mới danh sách — chỉ còn là LƯỚI AN TOÀN.
@@ -36,7 +36,7 @@ export interface ConversationListFilters {
  * giờ nối lại được.
  */
 export function useConversationsInfinite(side: ChatInbox, filters: ConversationListFilters = {}) {
-  const { counts, live } = useBadgeRealtime();
+  const { live } = useBadgeRealtime();
   const queryClient = useQueryClient();
   const params = {
     ...(filters.q ? { q: filters.q } : {}),
@@ -52,7 +52,7 @@ export function useConversationsInfinite(side: ChatInbox, filters: ConversationL
    * Tín hiệu làm mới phải bao TRỌN phạm vi đang xem. Hộp thư hợp nhất chứa cả hai vế, nên chỉ
    * theo dõi một con số nghĩa là tin mới của vế kia nằm im cho tới lần tải trang sau.
    */
-  useOnBadgeChange(unreadSignalOf(side, counts), () => {
+  useOnBadgeSignal((counts) => unreadSignalOf(side, counts), () => {
     void queryClient.invalidateQueries({ queryKey: queryKeys.chat.conversations(side) });
   });
 

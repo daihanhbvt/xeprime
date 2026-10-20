@@ -1,7 +1,7 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { AddressInfo } from 'node:net';
-import { WorkerHealth, startHealthServer } from '../src/lib/health';
+import { RecentEventCounter, WorkerHealth, startHealthServer } from '../src/lib/health';
 
 /**
  * Sức khoẻ worker — thuần logic, không cần database.
@@ -111,4 +111,32 @@ test('endpoint trả 200 khi ok/degraded, và 503 CHỈ khi unhealthy', async ()
 
   // Đường dẫn khác trả 404 — không phục vụ gì ngoài `/health`.
   assert.equal((await fetch(`http://127.0.0.1:${port}/`)).status, 404);
+});
+
+test('bộ đếm cửa sổ trượt: sự cố đã qua thì con số tự về 0', () => {
+  const counter = new RecentEventCounter(60_000);
+  counter.record(2, 1_000);
+  counter.record(0, 2_000); // lượt không có lỗi không chiếm chỗ
+  counter.record(1, 30_000);
+
+  assert.equal(counter.total(30_000), 3);
+  // Lượt đầu ra khỏi cửa sổ, lượt sau vẫn còn.
+  assert.equal(counter.total(61_001), 1);
+  assert.equal(counter.total(90_001), 0);
+});
+
+test('push hỏng vì cấu hình trong giờ qua → degraded (200), tự gỡ khi cửa sổ trôi qua', () => {
+  const health = new WorkerHealth();
+  health.register('đẩy thông báo', { critical: true, staleAfterMs: 60_000 });
+  health.markSuccess('đẩy thông báo');
+  health.limitGauge('pushConfigFailures1h', 0);
+
+  health.setGauge('pushConfigFailures1h', 0);
+  assert.equal(health.snapshot().status, 'ok');
+
+  health.setGauge('pushConfigFailures1h', 3);
+  assert.equal(health.snapshot().status, 'degraded');
+
+  health.setGauge('pushConfigFailures1h', 0);
+  assert.equal(health.snapshot().status, 'ok');
 });

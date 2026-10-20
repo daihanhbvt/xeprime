@@ -12,7 +12,7 @@ import { useOnBadgeChange } from './use-on-badge-change';
  * Hai bẫy ở hai đầu: bỏ qua lần đầu (nếu không thì mỗi lần mount sinh một request thừa ở MỌI
  * trang), và không chạy khi con số không đổi (render lại vì lý do khác không phải là sự kiện).
  */
-function Probe({ value, onChange }: { value: number; onChange: () => void }) {
+function Probe({ value, onChange }: { value: number | null; onChange: () => void }) {
   useOnBadgeChange(value, onChange);
   return null;
 }
@@ -52,6 +52,28 @@ describe('useOnBadgeChange', () => {
 
     view.rerender(<Probe value={0} onChange={onChange} />);
     expect(onChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('null → con số ĐẦU TIÊN biết được là mốc, không phải thay đổi', () => {
+    // Đúng lỗi đã gặp: lúc tải trang con số là "chưa biết"; lượt REST đầu tiên của người còn 3
+    // thông báo chưa đọc từng bị coi là 0 → 3 và tải lại mọi danh sách vừa tải xong.
+    const onChange = vi.fn();
+    const view = render(<Probe value={null} onChange={onChange} />);
+
+    view.rerender(<Probe value={3} onChange={onChange} />);
+    expect(onChange).not.toHaveBeenCalled();
+
+    view.rerender(<Probe value={4} onChange={onChange} />);
+    expect(onChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('về null (đăng xuất) rồi có con số mới: tài khoản sau lập mốc riêng', () => {
+    const onChange = vi.fn();
+    const view = render(<Probe value={2} onChange={onChange} />);
+
+    view.rerender(<Probe value={null} onChange={onChange} />);
+    view.rerender(<Probe value={9} onChange={onChange} />);
+    expect(onChange).not.toHaveBeenCalled();
   });
 
   it('luôn gọi bản callback MỚI NHẤT, không phải bản lúc mount', () => {

@@ -72,17 +72,35 @@ export interface OutboxWriter {
 /** Writer thật (Firestore Admin) — mặc định của pump ở production. */
 export const firestoreWriter: OutboxWriter = { upsertConversation, writeMessage };
 
-/** Xoá tin cũ, giữ `keep` tin mới nhất. Trả số tin đã xoá. */
-export async function trimMessages(convId: string, keep: number): Promise<number> {
+/** Trần số thao tác của MỘT `WriteBatch` Firestore. */
+const FIRESTORE_BATCH_LIMIT = 500;
+
+/**
+ * Xoá đúng những document tin nhắn đã biết id — KHÔNG truy vấn Firestore.
+ *
+ * Danh sách id do Postgres trả (`messages.firebase_message_id IS NOT NULL`), nên chi phí chỉ là
+ * lượt XOÁ. Bản cũ tìm tin cần xoá bằng `offset(keep).get()`, mà Firestore tính một lượt đọc cho
+ * mỗi document bị offset bỏ qua. Xoá một document không còn tồn tại là no-op hợp lệ, nên chạy
+ * lại sau một lần dừng giữa chừng là an toàn.
+ */
+export async function deleteMessages(convId: string, messageIds: readonly string[]): Promise<void> {
+  if (messageIds.length === 0) return;
   const db = await getDb();
   const col = db.collection('conversations').doc(convId).collection('messages');
-  const snap = await col.orderBy('sentAt', 'desc').offset(keep).get();
-  if (snap.empty) return 0;
-  const batch = db.batch();
-  snap.docs.forEach((d) => batch.delete(d.ref));
-  await batch.commit();
-  return snap.size;
+  for (let i = 0; i < messageIds.length; i += FIRESTORE_BATCH_LIMIT) {
+    const batch = db.batch();
+    for (const id of messageIds.slice(i, i + FIRESTORE_BATCH_LIMIT)) batch.delete(col.doc(id));
+    await batch.commit();
+  }
 }
+
+/** Phần xoá mà retention cần — tách interface để test bằng fake, không cần Firestore thật. */
+export interface RetentionDeleter {
+  deleteMessages(convId: string, messageIds: readonly string[]): Promise<void>;
+}
+
+/** Deleter thật (Firestore Admin) — mặc định của retention ở production. */
+export const firestoreRetentionDeleter: RetentionDeleter = { deleteMessages };
 
 /**
  * Bản chiếu HUY HIỆU của một người — document `user_badges/{uid}` (ADR 0009 mở rộng cho badge).
