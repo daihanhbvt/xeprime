@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   computeCustomerFees,
   FEE_LINE,
+  FEE_SCHEDULE_DEFAULTS,
   resolveHoldAllocation,
   ALLOCATION_TARGET,
   allocationTotals,
@@ -41,13 +42,13 @@ import { SERVICE_TYPE, VEHICLE_TYPE } from './status/vehicle';
 
 /** Chính sách phí của mọi ca dưới đây — cùng bộ số với bản `active` ở môi trường dev. */
 const POLICY: FeePolicySnapshot = {
+  ...FEE_SCHEDULE_DEFAULTS,
   policyId: '01PROMOTESTPOLICY00000001',
   version: 1,
   serviceFeePercent: 10,
   holdMinAmount: '20000',
   holdPaymentWindowMinutes: 120,
   freeCancelHours: 4,
-  depositPercent: 20,
   depositMinAmount: '50000',
   depositMaxPercent: 30,
   taxEnabled: false,
@@ -104,10 +105,13 @@ function snapshotOf(terms: PromoCodeTerms, applied: string): PromoCodeSnapshot {
   };
 }
 
-/** Bốn con số tiền của một chuyến 1.400.000đ trên chính sách ở trên — dùng lại ở mọi ca. */
+/**
+ * Bốn con số tiền ĐẦU VÀO của `computePromoDiscount` cho một chuyến 1.400.000đ — dùng lại ở mọi
+ * ca của hàm đó. Gõ tay, không suy từ `POLICY`: hàm đánh giá mã chỉ đọc bốn con số này, nên khoá
+ * nó bằng số cố định giữ ca kiểm thử độc lập với công thức phí.
+ */
 const TRIP = {
   eligibleAmount: '1400000',
-  /** D(280.000) + S(140.000) */
   grossOnlineAmount: '420000',
   sponsorableAmount: '420000',
   holdMinAmount: '20000',
@@ -315,9 +319,9 @@ describe('promoCodeState — trạng thái SUY RA, không phải cột', () => {
   });
 
   it('trần lượt NULL không bao giờ thành "hết lượt" dù đã dùng nhiều', () => {
-    expect(
-      promoCodeState({ ...base, totalUsageLimit: null, reservedCount: 9999 }, now),
-    ).toBe(PROMO_CODE_STATE.ACTIVE);
+    expect(promoCodeState({ ...base, totalUsageLimit: null, reservedCount: 9999 }, now)).toBe(
+      PROMO_CODE_STATE.ACTIVE,
+    );
   });
 });
 
@@ -350,9 +354,9 @@ describe('promoCodeConfigBlockers — cấu hình admin', () => {
   });
 
   it('ngày kết thúc không sau ngày bắt đầu bị chặn', () => {
-    expect(
-      promoCodeConfigBlockers({ ...ok, endsAt: '2026-09-22T00:00:00.000Z' }),
-    ).toContain('end_before_start');
+    expect(promoCodeConfigBlockers({ ...ok, endsAt: '2026-09-22T00:00:00.000Z' })).toContain(
+      'end_before_start',
+    );
   });
 
   it('mã TIỀN mang thêm trần giảm bị chặn — hai con số cùng nói về một giới hạn', () => {
@@ -387,19 +391,26 @@ describe('promoCodeConfigBlockers — cấu hình admin', () => {
 });
 
 describe('computeCustomerFees + mã khuyến mãi — BẤT BIẾN TIỀN', () => {
+  /**
+   * Ô tô 2 ngày × 700.000đ, tuyến hoa hồng: S = 50.000, H = 140.000 (10% × 2 ngày), tổng khách
+   * trả 1.450.000 ⇒ cọc online 30% = 435.000, trong đó phần của chủ xe D = 245.000.
+   */
   const feeInput = {
     billingMode: BILLING_MODE.COMMISSION,
     policy: POLICY,
+    vehicleType: VEHICLE_TYPE.CAR,
     baseAmount: '1400000',
+    rentalDays: 2,
   } as const;
 
   it('KHÔNG có mã: grossOnline == online, và không có dòng promo nào', () => {
     const fees = computeCustomerFees(feeInput);
-    expect(fees.grossOnlineAmount).toBe('420000');
-    expect(fees.onlineAmount).toBe('420000');
+    expect(fees.grossOnlineAmount).toBe('435000');
+    expect(fees.onlineAmount).toBe('435000');
+    expect(fees.sponsorableAmount).toBe('435000');
     expect(fees.promoDiscountAmount).toBe('0');
     expect(fees.promo).toBeNull();
-    expect(fees.customerTotalAmount).toBe('1540000');
+    expect(fees.customerTotalAmount).toBe('1450000');
   });
 
   it('CÓ mã: chỉ `onlineAmount` và `customerTotalAmount` giảm — mọi số khác GIỮ NGUYÊN', () => {
@@ -409,13 +420,17 @@ describe('computeCustomerFees + mã khuyến mãi — BẤT BIẾN TIỀN', () =
 
     /*
      * Đây là bất biến trung tâm của ADR 0046: mã do XePrime tài trợ, nên không một con số nào
-     * thuộc về gian hàng, ngân sách hay hãng bảo hiểm được đổi.
+     * thuộc về gian hàng, ngân sách hay hãng bảo hiểm được đổi. Cọc 30% tính trên tổng TRƯỚC mã
+     * chính là để giữ được điều đó — tính trên tổng sau mã thì phần trả tay của chủ xe tụt theo.
      */
     expect(after.baseAmount).toBe(before.baseAmount);
     expect(after.lines).toEqual(before.lines);
     expect(after.customerFeeTotal).toBe(before.customerFeeTotal);
     expect(after.depositAmount).toBe(before.depositAmount);
+    expect(after.ownerCommissionAmount).toBe(before.ownerCommissionAmount);
+    expect(after.platformRetainedAmount).toBe(before.platformRetainedAmount);
     expect(after.grossOnlineAmount).toBe(before.grossOnlineAmount);
+    expect(after.sponsorableAmount).toBe(before.sponsorableAmount);
     expect(after.payAtPickupAmount).toBe(before.payAtPickupAmount);
     expect(after.taxAmount).toBe(before.taxAmount);
     expect(after.ownerPayableAmount).toBe(before.ownerPayableAmount);
@@ -423,9 +438,9 @@ describe('computeCustomerFees + mã khuyến mãi — BẤT BIẾN TIỀN', () =
 
     // Và đúng hai con số của KHÁCH giảm, đúng bằng phần tài trợ.
     expect(after.promoDiscountAmount).toBe('100000');
-    expect(after.onlineAmount).toBe('320000');
-    expect(after.holdAmount).toBe('320000');
-    expect(after.customerTotalAmount).toBe('1440000');
+    expect(after.onlineAmount).toBe('335000');
+    expect(after.holdAmount).toBe('335000');
+    expect(after.customerTotalAmount).toBe('1350000');
     expect(Number(before.onlineAmount) - Number(after.onlineAmount)).toBe(100000);
     expect(Number(before.customerTotalAmount) - Number(after.customerTotalAmount)).toBe(100000);
   });
@@ -433,17 +448,17 @@ describe('computeCustomerFees + mã khuyến mãi — BẤT BIẾN TIỀN', () =
   it('KẸP LẠI một lần nữa ở máy giá: snapshot đòi nhiều hơn trần thì chỉ được tới trần', () => {
     /*
      * Bất biến "online không xuống dưới sàn" không được phép phụ thuộc vào việc mọi caller đều
-     * nhớ kẹp. Đưa vào một snapshot đòi 10.000.000đ và kỳ vọng máy giá tự kẹp về 400.000đ.
+     * nhớ kẹp. Đưa vào một snapshot đòi 10.000.000đ và kỳ vọng máy giá tự kẹp về 415.000đ.
      */
     const fees = computeCustomerFees({
       ...feeInput,
       promo: snapshotOf(fixedTerms('10000000'), '10000000'),
     });
-    expect(fees.promoDiscountAmount).toBe('400000');
+    expect(fees.promoDiscountAmount).toBe('415000');
     expect(fees.onlineAmount).toBe('20000');
     expect(Number(fees.onlineAmount)).toBeGreaterThanOrEqual(Number(POLICY.holdMinAmount));
     // Snapshot đi kèm số ĐÃ KẸP, không phải số mã hứa — mọi màn hình đọc lại phải thấy số thật.
-    expect(fees.promo?.discountApplied).toBe('400000');
+    expect(fees.promo?.discountApplied).toBe('415000');
   });
 
   it('snapshot có số giảm 0 ⇒ `promo` về null, không để một mã "giảm 0đ" đi tiếp', () => {
@@ -452,30 +467,27 @@ describe('computeCustomerFees + mã khuyến mãi — BẤT BIẾN TIỀN', () =
     expect(fees.promoDiscountAmount).toBe('0');
   });
 
-  it('chuyến KHÔNG thu cọc: snapshot mã lọt vào cũng KHÔNG trừ được đồng nào', () => {
+  it('chuyến KHÔNG thu cọc: mã chỉ trừ được vào phí sàn XePrime đang cầm, tiền trả tay giữ nguyên', () => {
     /*
-     * Tuyến gói tắt công tắc thu cọc: `D = 0`, `S = 0`, nên `holdAmount` là null — XePrime không
-     * thu đồng nào của chuyến này. Một snapshot mã lọt vào đây phải bị vô hiệu hoá HOÀN TOÀN, nếu
-     * không phần chênh rơi xuống tiền mặt chủ xe nhận tận tay (ADR 0046 điều 2).
-     *
-     * Tầng đánh giá đã chặn ca này; đây là lớp chặn thứ hai, ở chính máy giá.
+     * Tuyến gói tắt công tắc thu cọc: khoản online chỉ còn phí sàn 50.000đ — tiền của chính
+     * XePrime. Mã được tài trợ từ đó (trừ sàn đối soát 20.000đ), và không một đồng nào được rơi
+     * xuống phần tiền mặt chủ xe nhận tận tay (ADR 0046 điều 2).
      */
     const fees = computeCustomerFees({
+      ...feeInput,
       billingMode: BILLING_MODE.PACKAGE,
-      policy: POLICY,
-      baseAmount: '1400000',
       depositRequired: false,
       promo: snapshotOf(fixedTerms('100000'), '100000'),
     });
-    expect(fees.holdAmount).toBeNull();
-    expect(fees.promoDiscountAmount).toBe('0');
-    expect(fees.promo).toBeNull();
-    // Số khách trả KHÔNG bị trừ, và tiền chủ xe nhận tận tay giữ nguyên.
-    expect(fees.customerTotalAmount).toBe('1400000');
+    expect(fees.grossOnlineAmount).toBe('50000');
+    expect(fees.promoDiscountAmount).toBe('30000');
+    expect(fees.holdAmount).toBe('20000');
+    expect(fees.customerTotalAmount).toBe('1420000');
     expect(fees.payAtPickupAmount).toBe('1400000');
+    expect(fees.ownerNetAmount).toBe('1400000');
   });
 
-  it('BÁO GIÁ TẠM TÍNH: không thu cọc ⇒ không có khoản giữ chỗ để tài trợ vào', () => {
+  it('BÁO GIÁ TẠM TÍNH: không thu online ⇒ không có khoản giữ chỗ để tài trợ vào', () => {
     const fees = computeCustomerFees({
       ...feeInput,
       quoteIsEstimate: true,
@@ -484,6 +496,8 @@ describe('computeCustomerFees + mã khuyến mãi — BẤT BIẾN TIỀN', () =
     // `holdAmount = null` là tín hiệu mà `promoContextFor` dùng để trả `NO_ONLINE_PAYMENT`.
     expect(fees.holdAmount).toBeNull();
     expect(fees.depositAmount).toBe('0');
+    expect(fees.promoDiscountAmount).toBe('0');
+    expect(fees.promo).toBeNull();
   });
 
   it('cộng dồn với khuyến mãi TRỰC TIẾP của xe — mã tính trên tiền thuê SAU khi chủ xe bớt', () => {
@@ -503,50 +517,42 @@ describe('computeCustomerFees + mã khuyến mãi — BẤT BIẾN TIỀN', () =
     const eligible = promoEligibleAmount(rows);
     expect(eligible).toBe('720000');
 
-    const feesNoPromo = computeCustomerFees({
-      billingMode: BILLING_MODE.COMMISSION,
-      policy: POLICY,
-      baseAmount: '720000',
-    });
+    const tripInput = { ...feeInput, baseAmount: '720000', rentalDays: 1 } as const;
+    const feesNoPromo = computeCustomerFees(tripInput);
     const discount = computePromoDiscount({
       terms: percentTerms(10, null),
       eligibleAmount: eligible,
       grossOnlineAmount: feesNoPromo.grossOnlineAmount,
-      sponsorableAmount: String(
-        Number(feesNoPromo.depositAmount) +
-          Number(feesNoPromo.lines.find((l) => l.key === FEE_LINE.SERVICE_FEE)?.amount ?? 0),
-      ),
+      sponsorableAmount: feesNoPromo.sponsorableAmount,
       holdMinAmount: POLICY.holdMinAmount,
     });
     expect(discount).toEqual({ ok: true, discountAmount: '72000', clamped: false });
 
     const fees = computeCustomerFees({
-      billingMode: BILLING_MODE.COMMISSION,
-      policy: POLICY,
-      baseAmount: '720000',
+      ...tripInput,
       promo: snapshotOf(percentTerms(10, null), '72000'),
     });
-    // Doanh thu gian hàng vẫn là 720.000đ — mã không bớt thêm đồng nào của họ.
+    // Doanh thu gian hàng vẫn là 720.000đ, và phần chủ xe nhận (trừ hoa hồng) không đổi vì mã.
     expect(fees.baseAmount).toBe('720000');
-    expect(fees.ownerNetAmount).toBe('720000');
-    expect(fees.customerTotalAmount).toBe(String(720000 + 72000 - 72000));
+    expect(fees.ownerNetAmount).toBe(feesNoPromo.ownerNetAmount);
+    expect(fees.ownerNetAmount).toBe('648000');
+    expect(fees.customerTotalAmount).toBe(String(770000 - 72000));
   });
 
-  it('tuyến GÓI (S = 0) vẫn tài trợ được — phần tài trợ lấy từ CỌC', () => {
+  it('tuyến GÓI (H = 0) vẫn tài trợ được — chủ xe vẫn nhận đủ phần cọc của mình', () => {
     const fees = computeCustomerFees({
+      ...feeInput,
       billingMode: BILLING_MODE.PACKAGE,
-      policy: POLICY,
-      baseAmount: '1400000',
       depositRequired: true,
       promo: snapshotOf(fixedTerms('100000'), '100000'),
     });
-    // Không có dòng phí dịch vụ nào ở tuyến gói (ADR 0029 điều 2).
-    expect(fees.lines).toEqual([]);
-    // D = 280.000 ⇒ grossOnline = 280.000, online = 180.000.
-    expect(fees.grossOnlineAmount).toBe('280000');
-    expect(fees.onlineAmount).toBe('180000');
-    // Chủ xe VẪN được nhận đủ cọc: nền tảng bù phần chênh.
-    expect(fees.ownerPayableAmount).toBe('280000');
+    // Tuyến gói chỉ có phí sàn, không có dòng hoa hồng.
+    expect(fees.lines.map((l) => l.key)).toEqual([FEE_LINE.SERVICE_FEE]);
+    // 30% × 1.450.000 = 435.000 ⇒ online 335.000; phần của chủ xe D = 435.000 − 50.000.
+    expect(fees.grossOnlineAmount).toBe('435000');
+    expect(fees.onlineAmount).toBe('335000');
+    // Chủ xe VẪN được nhận đủ phần cọc: nền tảng bù phần chênh.
+    expect(fees.ownerPayableAmount).toBe('385000');
   });
 });
 

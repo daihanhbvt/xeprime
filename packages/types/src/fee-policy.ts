@@ -1,18 +1,26 @@
 /**
- * CHÍNH SÁCH PHÍ có phiên bản — ADR 0028 điều 2–3, ADR 0029 điều 1–2 (R3).
+ * CHÍNH SÁCH PHÍ có phiên bản — LUỒNG TIỀN v2 (20/10/2026, bản thiết kế "New Financial
+ * Architecture" v2.0), dựng trên nền ADR 0028 · 0032 · 0033 · 0046.
  *
- * Ba dòng phụ phí chuyến, mỗi dòng MỘT cổng bật riêng và MỘT người hưởng riêng:
+ * Năm dòng tiền của một chuyến, mỗi dòng MỘT người chịu và MỘT người hưởng:
  *
- *   | Dòng                    | Người hưởng          | Cổng bật                                   |
- *   | ----------------------- | -------------------- | ------------------------------------------ |
- *   | Phí dịch vụ XePrime     | XePrime              | bật được ngay (pilot 10%, tuyến gói 0%)    |
- *   | Thuế khấu trừ/nộp thay  | ngân sách            | tư vấn thuế chốt phân loại + tỷ lệ         |
- *   | Bảo hiểm chuyến đi      | doanh nghiệp bảo hiểm| hợp đồng + policy + chứng nhận (PVI dự kiến)|
+ *   | Dòng                        | Người chịu | Người hưởng   | Cách tính                            |
+ *   | --------------------------- | ---------- | ------------- | ------------------------------------ |
+ *   | `S`  Phí sàn                | khách      | XePrime       | cố định MỖI ĐƠN theo loại xe         |
+ *   | `H`  Hoa hồng chủ xe        | chủ xe     | XePrime       | lũy tiến theo ngày, chỉ tuyến hoa hồng |
+ *   | `IV` Bảo hiểm vật chất xe   | khách      | hãng bảo hiểm | theo ngày, khách TÍCH CHỌN mới tính  |
+ *   | `IP` Bảo hiểm tai nạn người | khách      | hãng bảo hiểm | theo ngày, khách TÍCH CHỌN mới tính  |
+ *   | `T`  Thuế khấu trừ/nộp thay | chủ xe     | ngân sách     | % trên giá thuê, cổng tư vấn thuế    |
  *
- * Phí nằm **PHÍA KHÁCH** (ADR 0029 điều 1): báo giá khách = giá thuê chủ xe + các dòng này.
- * KHÔNG khấu trừ vào tiền thuê của chủ xe — `ownerNetAmount` của một chuyến luôn bằng
- * `totalAmount` của bảng kê giá thuê, trừ khi một dòng có `bearer = owner` (bảo vệ xe — chưa
- * bật ở R3).
+ * ⚠️ So với ADR đang Accepted, v2 đổi hai điều: phí XePrime không còn chỉ nằm phía khách (ADR 0029
+ * điều 1 — nay có `H` trừ vào tiền chủ xe), và cọc online tính trên TỔNG KHÁCH TRẢ thay vì trên
+ * giá thuê (ADR 0032 điều 2). Bất biến của ADR 0046 giữ nguyên: mã khuyến mãi chỉ trừ vào phần
+ * khách chuyển online, không đổi một đồng nào của chủ xe, hãng bảo hiểm hay ngân sách.
+ *
+ * **Bước giá 1.000đ.** Mọi phép chia tỷ lệ đi qua `roundToThousand`; số cấu hình (phí sàn, biểu
+ * phí bảo hiểm, các sàn tiền) phải là bội 1.000đ — `feePolicyActivationBlockers` chặn ở cổng kích
+ * hoạt. Số khách trả tay là PHẦN CÒN LẠI của phép trừ, không bao giờ làm tròn riêng, nên không có
+ * đường nào lệch 1.000đ.
  *
  * Mọi giá trị ở đây là DỮ LIỆU của một dòng `fee_policies`; số cụ thể do admin cấu hình, có
  * phiên bản, có ngày hiệu lực, có audit. Booking snapshot toàn bộ lúc tạo (ADR 0024) — đổi
@@ -24,6 +32,7 @@
 import { HOLD_MIN_USABLE_WINDOW_MINUTES } from './holds';
 import { STATUS_COLOR, type StatusMeta } from './status/meta';
 import { BILLING_MODE, type BillingMode } from './status/billing';
+import { VEHICLE_TYPE, VEHICLE_TYPE_VALUES, type VehicleType } from './status/vehicle';
 import {
   BOOKING_HOLD_OUTCOME,
   BOOKING_HOLD_OUTCOME_VALUES,
@@ -70,8 +79,23 @@ export const FEE_POLICY_STATUS_META: Readonly<Record<FeePolicyStatus, StatusMeta
  * ngân sách, hãng bảo hiểm) và không được lẫn vào doanh thu của gian hàng.
  */
 export const FEE_LINE = {
-  /** `S` — phí dịch vụ chuyến đi, XePrime hưởng. Tuyến hoa hồng 10%; tuyến gói 0. */
+  /**
+   * `S` — PHÍ SÀN phía khách, XePrime hưởng: một số CỐ ĐỊNH mỗi đơn theo loại xe
+   * (`customerPlatformFee`), áp cho CẢ HAI tuyến, không phụ thuộc số ngày thuê.
+   *
+   * Giữ khoá cũ `service_fee` dù cách tính đổi từ % sang cố định: người chịu (khách) và người hưởng
+   * (XePrime) không đổi, cột `booking_holds.service_fee_amount` vẫn là cột của nó, và đổi khoá là
+   * làm hỏng mọi snapshot đã ghi.
+   */
   SERVICE_FEE: 'service_fee',
+  /**
+   * `H` — HOA HỒNG chủ xe, XePrime hưởng, **CHỦ XE chịu**: lũy tiến theo từng ngày thuê
+   * (`computeTieredOwnerCommission`), chỉ tuyến hoa hồng. Tuyến gói 0% và không sinh dòng.
+   *
+   * Như thuế, dòng này KHÔNG cộng vào tổng khách: nó được giữ lại từ phần cọc online thuộc về chủ
+   * xe, nên `ownerNetAmount = B − H − T`.
+   */
+  OWNER_COMMISSION: 'owner_commission',
   /**
    * `T` — thuế khấu trừ/nộp thay, ngân sách hưởng.
    *
@@ -80,7 +104,8 @@ export const FEE_LINE = {
    */
   TAX: 'tax',
   /**
-   * `IP` — bảo hiểm tai nạn con người, **tuỳ chọn**, KHÁCH trả (ADR 0032 điều 2/4).
+   * `IP` — bảo hiểm tai nạn người ngồi trên xe, **tuỳ chọn**, KHÁCH trả (ADR 0032 điều 2/4).
+   * Biểu phí theo NGÀY và theo loại xe (`tripInsuranceDailyAmount`).
    *
    * Giữ khoá cũ `trip_insurance` thay vì đẻ khoá mới: cơ chế trùng khít (tuỳ chọn, khách trả,
    * bỏ chọn được trước khi thanh toán), và đổi khoá là làm hỏng mọi snapshot đã ghi.
@@ -88,16 +113,18 @@ export const FEE_LINE = {
    */
   TRIP_INSURANCE: 'trip_insurance',
   /**
-   * `IV` — bảo hiểm xe/chuyến, **bắt buộc**, KHÁCH trả (ADR 0032 điều 2/4).
+   * `IV` — bảo hiểm vật chất xe, **tuỳ chọn** từ luồng tiền v2 (trước đó bắt buộc), KHÁCH trả.
+   * Biểu phí theo NGÀY và theo loại xe (`vehicleProtectionDailyAmount`). Chỉ tính khi khách GIỮ
+   * lựa chọn — `vehicleProtectionSelected`.
    *
    * ⚠️ Đổi người chịu so với ADR 0028: trước đây `bearer = owner` (trừ vào tiền chủ xe), nay là
    * `customer`. ADR 0032 mới hơn và thắng trong phạm vi này.
    */
   VEHICLE_PROTECTION: 'vehicle_protection',
   /**
-   * `D` — CỌC đặt chuyến. **Không phải phụ phí**: nó là một PHẦN của giá thuê gốc `B`, nên không
-   * cộng vào tổng khách và **không bao giờ xuất hiện trong `lines`**
-   * (xem `CustomerFeeBreakdown.depositAmount`).
+   * `D` — PHẦN CỦA CHỦ XE trong khoản cọc online: `cọc online − S − H − IV − IP`. **Không phải
+   * phụ phí**: nó là tiền thuê khách trả trước, nên không cộng vào tổng khách và **không bao giờ
+   * xuất hiện trong `lines`** (xem `CustomerFeeBreakdown.depositAmount`).
    *
    * Khoá này tồn tại để `allocation_json` của hold và sổ ví gọi tên được dòng tiền đó.
    */
@@ -142,12 +169,90 @@ export interface FeeLine {
   key: FeeLineKey;
   beneficiary: FeeBeneficiary;
   bearer: FeeBearer;
-  /** % áp lên `baseAmount` — giữ để giải thích con số. */
-  percent: number;
-  /** VND string, đã làm tròn HALF_UP tới đồng. */
+  /**
+   * % áp lên `baseAmount` — giữ để giải thích con số. `null` khi dòng KHÔNG tính bằng một tỷ lệ
+   * duy nhất: phí sàn cố định, bảo hiểm theo ngày, hoa hồng lũy tiến (nấc nằm ở `policy`).
+   */
+  percent: number | null;
+  /** Đơn giá MỖI NGÀY — chỉ dòng tính theo ngày (bảo hiểm). */
+  unitAmount?: string;
+  /** Số ngày đã nhân với `unitAmount`. */
+  quantity?: number;
+  /** VND string, bội của 1.000đ. */
   amount: string;
   /** Tên đối tác thật (hãng bảo hiểm) — chỉ có khi dòng đó bật. */
   partnerName?: string;
+}
+
+// ── Bước giá & hoa hồng lũy tiến ────────────────────────────────────────────
+
+/** Bước giá của mọi khoản tiền XePrime tính ra. */
+export const MONEY_STEP_VND = 1000;
+
+/**
+ * Làm tròn tới bước giá 1.000đ — hàm chuẩn của luồng tiền v2: `Math.round(n / 1000) * 1000`.
+ * Nửa bước làm tròn LÊN (`1.500 → 2.000`).
+ */
+export function roundToThousand(n: number): number {
+  return Math.round(n / MONEY_STEP_VND) * MONEY_STEP_VND;
+}
+
+/** `n` là một bội không âm của 1.000đ — điều kiện của mọi số tiền cấu hình. */
+function isThousandStep(n: number): boolean {
+  return Number.isFinite(n) && n >= 0 && n % MONEY_STEP_VND === 0;
+}
+
+/**
+ * Một NẤC hoa hồng: áp `percent` cho mọi ngày từ `fromDay` (tính từ 1) tới ngày liền trước
+ * `fromDay` của nấc kế tiếp; nấc cuối kéo dài vô hạn.
+ *
+ * Chỉ khai mốc BẮT ĐẦU, không khai cặp `from–to`: dữ liệu như vậy không biểu diễn được một khoảng
+ * hở hay hai nấc chồng nhau, nên không có cấu hình nào khiến một ngày thuê "không thuộc nấc nào".
+ */
+export interface OwnerCommissionTier {
+  fromDay: number;
+  percent: number;
+}
+
+/** Trần % của MỘT nấc — hàng rào chống gõ nhầm, không phải con số kinh doanh. */
+export const OWNER_COMMISSION_PERCENT_MAX = 30;
+
+/** % hoa hồng của ngày thứ `day` (tính từ 1). Không có nấc nào phủ ngày đó ⇒ 0. */
+export function ownerCommissionPercentForDay(
+  day: number,
+  tiers: readonly OwnerCommissionTier[],
+): number {
+  let percent = 0;
+  for (const tier of tiers) {
+    if (tier.fromDay <= day) percent = tier.percent;
+  }
+  return percent;
+}
+
+/**
+ * HOA HỒNG chủ xe lũy tiến theo từng ngày thuê — `Σ giá ngày i × % nấc của ngày i`.
+ *
+ * `dayAmounts[i]` là giá thuê của ngày thứ `i + 1`, nên giá ngày thường/cuối tuần khác nhau vẫn
+ * tính đúng "% giá thuê ngày đó". Làm tròn 1.000đ MỘT lần trên tổng, không làm tròn từng ngày:
+ * 3 ngày × 333.333đ ở 10/10/7% ra 89.999,9đ ⇒ 90.000đ, còn tròn từng ngày sẽ ra 89.000đ — lệch
+ * 1.000đ chỉ vì thứ tự phép tính.
+ *
+ * `tiers` phải theo thứ tự `fromDay` tăng dần (`feePolicyActivationBlockers` chặn bản lộn xộn).
+ */
+export function computeTieredOwnerCommission(
+  dayAmounts: readonly (string | number)[],
+  tiers: readonly OwnerCommissionTier[],
+): string {
+  let weighted = 0;
+  dayAmounts.forEach((raw, index) => {
+    const amount = Number(raw);
+    if (!Number.isFinite(amount) || amount < 0) {
+      throw new Error(`Giá thuê ngày ${index + 1} không hợp lệ: ${raw}`);
+    }
+    // Nhân trước, chia 100 sau cùng: giữ phép cộng trên số nguyên chừng nào đầu vào còn nguyên.
+    weighted += amount * ownerCommissionPercentForDay(index + 1, tiers);
+  });
+  return String(roundToThousand(weighted / 100));
 }
 
 // ── Chính sách (dạng đọc) ───────────────────────────────────────────────────
@@ -160,35 +265,79 @@ export interface FeeLine {
  * là vi phạm ADR 0028 điều 4–5 — `FeePoliciesService.activate` chặn ở server.
  */
 export interface FeePolicyValues {
-  /** % phí dịch vụ áp cho TUYẾN HOA HỒNG. Tuyến gói luôn 0 — không phải trường cấu hình. */
+  /**
+   * @deprecated Luồng tiền v2 thay % phí dịch vụ bằng phí sàn cố định (`customerPlatformFee`)
+   * cộng hoa hồng lũy tiến (`ownerCommissionTiers`). `computeCustomerFees` không còn đọc trường
+   * này; nó chỉ còn sống tới khi cột DB và form admin được gỡ.
+   */
   serviceFeePercent: number;
-  /** Sàn khoản giữ chỗ (VND). Dưới sàn thì phí chuyển khoản + công đối soát vượt khoản thu. */
+  /**
+   * Sàn khoản khách chuyển online SAU tài trợ mã khuyến mãi (VND). Dưới sàn thì phí chuyển khoản
+   * + công đối soát vượt khoản thu.
+   */
   holdMinAmount: string;
   /** Khách có bấy nhiêu phút để chuyển giữ chỗ sau khi chủ xe duyệt. */
   holdPaymentWindowMinutes: number;
   /** Huỷ trước mốc nhận xe bấy nhiêu giờ thì hoàn toàn bộ khoản giữ chỗ. */
   freeCancelHours: number;
   /**
-   * `D` — % CỌC trên giá thuê gốc. **Nền tảng đặt, không phải gian hàng** (ADR 0033 điều 7):
-   * cọc nay là một phần giá thuê, để mỗi shop tự đặt thì cùng một hạng xe lại có mức trả trước
-   * khác nhau mà khách không giải thích được.
+   * % CỌC ONLINE trên TỔNG KHÁCH TRẢ trước mã khuyến mãi (`B + S + IV + IP`) — 30% ở luồng tiền
+   * v2. **Nền tảng đặt, không phải gian hàng** (ADR 0033 điều 7): để mỗi shop tự đặt thì cùng
+   * một hạng xe lại có mức trả trước khác nhau mà khách không giải thích được.
    */
   depositPercent: number;
-  /** Sàn tiền cọc (VND) — cọc quá nhỏ thì công đối soát vượt giá trị giữ chỗ. */
+  /** Sàn cọc online (VND) — cọc quá nhỏ thì công đối soát vượt giá trị giữ chỗ. */
   depositMinAmount: string;
   /** Trần % cọc — chặn "cọc giữ chỗ" biến thành thu tiền thuê trước (ADR 0025 điều 3). */
   depositMaxPercent: number;
+  /** `S` — phí sàn CỐ ĐỊNH mỗi đơn, phía khách, theo loại xe. Áp cho cả hai tuyến. */
+  customerPlatformFee: PerVehicleTypeAmount;
+  /** `H` — nấc hoa hồng lũy tiến theo ngày của TUYẾN HOA HỒNG, `fromDay` tăng dần từ 1. */
+  ownerCommissionTiers: readonly OwnerCommissionTier[];
   taxEnabled: boolean;
   taxPercent: number | null;
   /** Tên loại thuế do tư vấn thuế chốt — bắt buộc khi `taxEnabled`. */
   taxLabel: string | null;
   tripInsuranceEnabled: boolean;
+  /** @deprecated Bảo hiểm tính theo ngày — xem `tripInsuranceDailyAmount`. */
   tripInsurancePercent: number | null;
+  /** `IP` — biểu phí bảo hiểm tai nạn người MỖI NGÀY, theo loại xe. */
+  tripInsuranceDailyAmount: PerVehicleTypeAmount;
   vehicleProtectionEnabled: boolean;
+  /** @deprecated Bảo hiểm tính theo ngày — xem `vehicleProtectionDailyAmount`. */
   vehicleProtectionPercent: number | null;
+  /** `IV` — biểu phí bảo hiểm vật chất xe MỖI NGÀY, theo loại xe. */
+  vehicleProtectionDailyAmount: PerVehicleTypeAmount;
   /** Đối tác bảo hiểm THẬT — bắt buộc khi một dòng bảo hiểm bật. Không điền trước khi có hợp đồng. */
   insurancePartnerName: string | null;
 }
+
+/** Một số tiền (VND string) cho TỪNG loại xe — thiếu một loại là lỗi biên dịch, không phải 0đ. */
+export type PerVehicleTypeAmount = Readonly<Record<VehicleType, string>>;
+
+/**
+ * Bộ số mặc định của luồng tiền v2 — giá trị khởi tạo cho bản chính sách đầu tiên (seed/migration)
+ * và form admin. Chính sách đang hiệu lực mới là nguồn sự thật; đừng đọc hằng này lúc tính tiền.
+ */
+export const FEE_SCHEDULE_DEFAULTS = {
+  depositPercent: 30,
+  customerPlatformFee: { [VEHICLE_TYPE.CAR]: '50000', [VEHICLE_TYPE.MOTORBIKE]: '30000' },
+  ownerCommissionTiers: [
+    { fromDay: 1, percent: 10 },
+    { fromDay: 3, percent: 7 },
+    { fromDay: 8, percent: 3 },
+    { fromDay: 31, percent: 0 },
+  ],
+  vehicleProtectionDailyAmount: { [VEHICLE_TYPE.CAR]: '50000', [VEHICLE_TYPE.MOTORBIKE]: '15000' },
+  tripInsuranceDailyAmount: { [VEHICLE_TYPE.CAR]: '20000', [VEHICLE_TYPE.MOTORBIKE]: '5000' },
+} as const satisfies Pick<
+  FeePolicyValues,
+  | 'depositPercent'
+  | 'customerPlatformFee'
+  | 'ownerCommissionTiers'
+  | 'vehicleProtectionDailyAmount'
+  | 'tripInsuranceDailyAmount'
+>;
 
 /** Snapshot chính sách đóng băng lên đơn/hold — đủ để giải thích số tiền không cần join. */
 export interface FeePolicySnapshot extends FeePolicyValues {
@@ -201,32 +350,51 @@ export interface FeePolicySnapshot extends FeePolicyValues {
 /**
  * Kết quả tính tiền cho MỘT chuyến — snapshot vào `bookings.price_snapshot_json.fees`.
  *
- * Bốn con số khách cần, theo đúng thứ tự họ hỏi (ADR 0032 điều 2):
+ * Luồng tiền v2, theo đúng thứ tự khách và chủ xe hỏi:
  *
  * ```text
- *   customerTotalAmount  = baseAmount + Σ(lines bearer = customer) − P  ← tổng cả chuyến
- *   grossOnlineAmount    = D + S + IV + IP                              ← quyền lợi, để phân bổ
- *   onlineAmount         = D + S + IV + IP − P                          ← trả NGAY qua QR
- *   payAtPickupAmount    = baseAmount − D                               ← trả TRỰC TIẾP chủ xe
- *   ownerPayableAmount   = D − T                                        ← XePrime nợ chủ xe
+ *   grossCustomerTotal     = B + S + IV + IP                           ← tổng trước mã
+ *   grossOnlineAmount      = roundToThousand(depositPercent% × grossCustomerTotal),
+ *                            nâng lên đủ S + H + IV + IP + T            ← cọc online trước mã
+ *   onlineAmount           = grossOnlineAmount − P                     ← trả NGAY qua QR
+ *   payAtPickupAmount      = grossCustomerTotal − grossOnlineAmount    ← trả TRỰC TIẾP chủ xe
+ *   customerTotalAmount    = grossCustomerTotal − P                    ← tổng cả chuyến
+ *   depositAmount (D)      = grossOnlineAmount − S − H − IV − IP       ← phần chủ xe trong cọc
+ *   platformRetainedAmount = S + H                                     ← "sàn giữ lại"
+ *   ownerPayableAmount     = D − T                                     ← sàn chuyển ví chủ xe
+ *   ownerNetAmount         = B − H − T = payAtPickup + ownerPayable     ← chủ xe nhận cả đơn
  * ```
  *
+ * Ba đẳng thức bảo toàn đúng ở MỌI đầu vào, nên không có đường nào lệch 1.000đ:
+ * `onlineAmount + payAtPickupAmount = customerTotalAmount`,
+ * `grossOnlineAmount = D + S + H + IV + IP`, `payAtPickupAmount + ownerPayableAmount = ownerNetAmount`.
+ *
  * `P` là TÀI TRỢ mã khuyến mãi của XePrime (ADR 0046). Nó chỉ trừ vào `onlineAmount` và
- * `customerTotalAmount`; `B`, `S`, `T`, `IV`, `IP`, `D`, `payAtPickupAmount`, `ownerPayableAmount`
- * và `ownerNetAmount` KHÔNG đổi một đồng — đó là điều làm nó khác `PRICE_ROW.DISCOUNT`, khuyến
- * mãi trực tiếp mà CHỦ XE tự bớt vào doanh thu của mình.
+ * `customerTotalAmount`; cọc được tính trên tổng TRƯỚC mã, nên `B`, `S`, `H`, `T`, `IV`, `IP`,
+ * `D`, `payAtPickupAmount`, `ownerPayableAmount` và `ownerNetAmount` KHÔNG đổi một đồng — đó là
+ * điều làm nó khác `PRICE_ROW.DISCOUNT`, khuyến mãi trực tiếp mà CHỦ XE tự bớt vào doanh thu.
  *
- * Hai quy tắc không có núm xoay:
+ * Ba quy tắc không có núm xoay:
  *
- * 1. **Cọc `D` là một PHẦN của `baseAmount`, không phải phụ phí.** Nó không nằm trong `lines`
- *    và không cộng vào `customerTotalAmount` — cộng vào là tính tiền thuê hai lần.
- * 2. **Thuế `T` do CHỦ XE chịu** (ADR 0032 điều 3) nên không vào `customerTotalAmount`; nó trừ
- *    khỏi khoản XePrime phải trả. `IV`/`IP` thì ngược lại: KHÁCH trả, cộng vào tổng khách.
+ * 1. **`D` là tiền thuê trả trước, không phải phụ phí.** Nó không nằm trong `lines` và không cộng
+ *    vào `customerTotalAmount` — cộng vào là tính tiền thuê hai lần.
+ * 2. **`H` và `T` do CHỦ XE chịu** nên không vào `customerTotalAmount`; chúng được giữ lại từ phần
+ *    cọc thuộc về chủ xe. `S`/`IV`/`IP` thì ngược lại: KHÁCH trả, cộng vào tổng khách.
+ * 3. **Cọc online luôn đủ trả mọi thứ không phải của chủ xe** (`S + H + IV + IP + T`). XePrime không
+ *    thu hộ phần trả tay, nên một khoản cọc nhỏ hơn số đó sẽ để lại một món nợ ngược từ chủ xe mà
+ *    không có chỗ nào để đòi — `ownerPayableAmount` vì thế không âm chừng nào `H + T ≤ B`.
+ *
+ * Ba đẳng thức chỉ là cam kết khi chuyến CÓ thu online (`holdAmount ≠ null`). Báo giá tạm tính
+ * không thu đồng nào: các con số của nó là "dự kiến" và sẽ được tính lại khi giá được chốt.
  */
 export interface CustomerFeeBreakdown {
-  /** Chế độ thu phí đã đóng băng — quyết định `serviceFee` có áp hay không. */
+  /** Chế độ thu phí đã đóng băng — quyết định `H` có áp hay không. */
   billingMode: BillingMode;
   policy: FeePolicySnapshot;
+  /** Loại xe đã đóng băng — quyết định mức `S` và biểu phí bảo hiểm. */
+  vehicleType: VehicleType;
+  /** Số ngày thuê tính phí — nhân biểu phí bảo hiểm và chia nấc hoa hồng. */
+  rentalDays: number;
   /** Mẫu số `B`: `totalAmount` của bảng kê giá thuê (sau giảm, gồm giao nhận). */
   baseAmount: string;
   /** Các dòng PHỤ PHÍ. Không bao giờ chứa `DEPOSIT` — xem `depositAmount`. */
@@ -235,15 +403,28 @@ export interface CustomerFeeBreakdown {
   customerFeeTotal: string;
   /** Số KHÁCH TRẢ cả chuyến (chưa gồm cọc thế chấp của gian hàng). */
   customerTotalAmount: string;
-  /** `D` — cọc khách chuyển cho XePrime. `'0'` khi chuyến không thu cọc. */
+  /** `D` — phần của CHỦ XE trong cọc online. `'0'` khi chuyến không thu online. */
   depositAmount: string;
+  /** `H` — hoa hồng lũy tiến trừ vào tiền chủ xe. `'0'` ở tuyến gói. */
+  ownerCommissionAmount: string;
   /**
-   * `D + S + IV + IP` TRƯỚC tài trợ mã khuyến mãi, đã kẹp sàn `holdMinAmount`.
+   * `S + H` — phần XePrime GIỮ LẠI từ cọc online. Tính trước tài trợ mã: doanh thu thật của nền
+   * tảng là con số này trừ `promoDiscountAmount`, và nó được phép âm (chi phí marketing thật).
+   */
+  platformRetainedAmount: string;
+  /**
+   * Cọc online TRƯỚC tài trợ mã khuyến mãi = `D + S + H + IV + IP`, đã nâng đủ các sàn.
    *
    * Đây là con số phân bổ (`resolveHoldAllocation`) làm việc trên: quyền lợi của chủ xe, hãng
    * bảo hiểm và ngân sách KHÔNG đổi vì XePrime giảm giá cho khách (ADR 0046 điều 2).
    */
   grossOnlineAmount: string;
+  /**
+   * Phần cọc online XePrime được phép TÀI TRỢ bằng mã khuyến mãi = `D + S + H` — mọi thứ trừ tiền
+   * giữ hộ hãng bảo hiểm. `'0'` khi chuyến không thu online. Một nguồn cho trần tài trợ của
+   * `computePromoDiscount`, thay vì để mỗi caller tự cộng các dòng.
+   */
+  sponsorableAmount: string;
   /**
    * `P` — số giảm của MÃ KHUYẾN MÃI nền tảng, đã áp cho chuyến này. `'0'` khi không có mã.
    *
@@ -253,15 +434,18 @@ export interface CustomerFeeBreakdown {
   promoDiscountAmount: string;
   /** Mã đã áp + điều kiện đóng băng. `null` khi chuyến không dùng mã. */
   promo: PromoCodeSnapshot | null;
-  /** `D + S + IV + IP − P` — số quét QR trả ngay. Bằng `holdAmount` khi có giữ chỗ. */
+  /** `grossOnlineAmount − P` — số quét QR trả ngay. Bằng `holdAmount` khi có giữ chỗ. */
   onlineAmount: string;
-  /** `B − D` — khách trả TRỰC TIẾP chủ xe lúc nhận xe. XePrime không thu hộ, không đối soát. */
+  /**
+   * `grossCustomerTotal − grossOnlineAmount` — khách trả TRỰC TIẾP chủ xe lúc nhận xe. XePrime
+   * không thu hộ, không đối soát. Là phần còn lại của phép trừ, không bao giờ làm tròn riêng.
+   */
   payAtPickupAmount: string;
   /** `T` — thuế khấu trừ khỏi tiền chủ xe. `'0'` khi cổng thuế chưa mở. */
   taxAmount: string;
-  /** `D − T` — khoản XePrime phải trả chủ xe khi chuyến hoàn thành (ADR 0033 điều 2). */
+  /** `D − T` — khoản XePrime chuyển vào ví chủ xe khi chuyến hoàn thành (ADR 0033 điều 2). */
   ownerPayableAmount: string;
-  /** Số CHỦ XE thực nhận từ chuyến = `B − T` (gồm cả phần khách trả tay). */
+  /** Số CHỦ XE thực nhận từ chuyến = `B − H − T` (gồm cả phần khách trả tay). */
   ownerNetAmount: string;
   /**
    * Khoản giữ chỗ khách chuyển online = `onlineAmount`, đã kẹp sàn.
@@ -270,21 +454,39 @@ export interface CustomerFeeBreakdown {
   holdAmount: string | null;
 }
 
-/** Làm tròn HALF_UP tới đồng — cùng quy tắc với `@xeprime/domain` money. */
-function roundHalfUp(value: number): number {
-  return Math.round(value + Number.EPSILON);
-}
-
+/** Phần trăm của một số tiền, làm tròn tới bước giá 1.000đ. */
 function percentOf(base: number, percent: number): number {
-  return roundHalfUp((base * percent) / 100);
+  return roundToThousand((base * percent) / 100);
 }
 
 /**
- * % phí dịch vụ XePrime mỗi chuyến của MỘT tuyến: tuyến hoa hồng dùng `service_fee_percent` của
- * chính sách phí đang hiệu lực, tuyến GÓI luôn 0 (ADR 0029 điều 2). Luật duy nhất — báo giá
- * (`computeCustomerFees`) và nội dung hiển thị (email hướng dẫn gói) cùng đọc nó.
+ * Số tiền của một loại xe trong một bảng cấu hình. Ném khi thiếu hoặc rác: `vehicleType` thường
+ * đến từ một cột chuỗi của DB, và `Number(undefined)` là `NaN` — rơi vào nhánh "không thu" và
+ * biến phí sàn hay bảo hiểm thành 0đ mà không ai thấy.
  */
-export function tripServiceFeePercent(billingMode: BillingMode, policyServiceFeePercent: number): number {
+function amountFor(amounts: PerVehicleTypeAmount, vehicleType: VehicleType, field: string): number {
+  const amount = Number(amounts[vehicleType]);
+  if (!Number.isFinite(amount) || amount < 0) {
+    throw new Error(`Chính sách phí thiếu ${field} hợp lệ cho loại xe ${vehicleType}`);
+  }
+  return amount;
+}
+
+/** `base` chia đều cho `days` ngày — mẫu số hoa hồng khi caller không có giá từng ngày. */
+function evenDayAmounts(base: number, days: number): number[] {
+  return Array.from({ length: days }, () => base / days);
+}
+
+/**
+ * @deprecated Luồng tiền v2 không còn % phí dịch vụ: khách trả phí sàn cố định
+ * (`customerPlatformFee`), chủ xe tuyến hoa hồng chịu hoa hồng lũy tiến
+ * (`computeTieredOwnerCommission`), tuyến gói 0%. Hàm này chỉ còn phục vụ nội dung hiển thị cũ
+ * (email hướng dẫn gói) cho tới khi chúng được viết lại theo mô hình mới.
+ */
+export function tripServiceFeePercent(
+  billingMode: BillingMode,
+  policyServiceFeePercent: number,
+): number {
   return billingMode === BILLING_MODE.COMMISSION ? policyServiceFeePercent : 0;
 }
 
@@ -293,26 +495,41 @@ export function tripServiceFeePercent(billingMode: BillingMode, policyServiceFee
  *
  * `baseAmount` là chuỗi VND nguyên (không thập phân) — bảng kê giá thuê đã làm tròn.
  *
- * Tuyến GÓI: `serviceFee` = 0 và **không sinh dòng** (ADR 0029 điều 2) — bảng kê của khách thuê
- * gian hàng không có dòng "phí dịch vụ 0đ" lấp lửng. Thuế/bảo hiểm (khi bật) áp cho cả hai
- * tuyến như nhau.
+ * Phí sàn `S` áp cho CẢ HAI tuyến; hoa hồng `H` chỉ tuyến hoa hồng — tuyến gói **không sinh dòng**
+ * "hoa hồng 0đ" lấp lửng. Thuế/bảo hiểm (khi bật) áp cho cả hai tuyến như nhau.
  *
- * `quoteIsEstimate = true` ⇒ **không thu cọc**: không thu tiền trên một con số chưa chốt. Các
+ * `quoteIsEstimate = true` ⇒ **không thu online**: không thu tiền trên một con số chưa chốt. Các
  * dòng phí vẫn tính để hiển thị "dự kiến", nhưng `holdAmount = null` và `depositAmount = '0'`.
  */
 export function computeCustomerFees(input: {
   billingMode: BillingMode;
   policy: FeePolicySnapshot;
+  vehicleType: VehicleType;
   baseAmount: string;
+  /**
+   * Số ngày thuê TÍNH PHÍ (nguyên, ≥ 1): nhân biểu phí bảo hiểm theo ngày và chọn nấc hoa hồng.
+   * Đơn dài hạn truyền số ngày lịch của gói.
+   */
+  rentalDays: number;
+  /**
+   * Giá thuê TỪNG ngày, ngày 1 trước — mẫu số của hoa hồng lũy tiến. Bỏ trống ⇒ chia đều
+   * `baseAmount` cho `rentalDays` ngày. Có thì độ dài phải đúng bằng `rentalDays`.
+   */
+  dayAmounts?: readonly string[];
   quoteIsEstimate?: boolean;
   /**
-   * Chuyến này có thu cọc qua XePrime không.
+   * Chuyến này có thu CỌC qua XePrime không.
    *
    * Mặc định suy từ tuyến vì đó là QUY TẮC, không phải lựa chọn: tuyến hoa hồng **luôn** thu cọc
    * (ADR 0032 điều 2, không tắt được). Tuyến gói chỉ thu khi gian hàng bật công tắc, nên caller
-   * của tuyến đó phải truyền tường minh (`DepositPolicyService` — Phase 6).
+   * của tuyến đó phải truyền tường minh (`DepositPolicyService`).
+   *
+   * `false` KHÔNG có nghĩa là không thu gì: phí sàn, bảo hiểm và thuế không phải tiền của chủ xe,
+   * và XePrime không thu hộ phần trả tay — nên khoản online khi đó đúng bằng chừng ấy.
    */
   depositRequired?: boolean;
+  /** Khách có GIỮ lựa chọn bảo hiểm vật chất xe (`IV`) không. Mặc định: không. */
+  vehicleProtectionSelected?: boolean;
   /** Khách có GIỮ lựa chọn bảo hiểm tai nạn người (`IP`) không. Mặc định: không. */
   personalAccidentSelected?: boolean;
   /**
@@ -330,18 +547,49 @@ export function computeCustomerFees(input: {
   if (!Number.isFinite(base) || base < 0) {
     throw new Error(`baseAmount không hợp lệ: ${input.baseAmount}`);
   }
+  const days = input.rentalDays;
+  if (!Number.isInteger(days) || days < 1) {
+    throw new Error(`rentalDays không hợp lệ: ${input.rentalDays}`);
+  }
+  if (input.dayAmounts && input.dayAmounts.length !== days) {
+    throw new Error(
+      `dayAmounts có ${input.dayAmounts.length} ngày trong khi rentalDays là ${days}`,
+    );
+  }
+  const vehicleType = input.vehicleType;
+  if (!VEHICLE_TYPE_VALUES.includes(vehicleType)) {
+    throw new Error(`vehicleType không hợp lệ: ${vehicleType}`);
+  }
   const p = input.policy;
+  const insurer = p.insurancePartnerName ? { partnerName: p.insurancePartnerName } : {};
   const lines: FeeLine[] = [];
 
-  const serviceFeePercent = tripServiceFeePercent(input.billingMode, p.serviceFeePercent);
-  if (serviceFeePercent > 0) {
+  /* S — phí sàn cố định, cả hai tuyến. Admin đặt 0 cho một loại xe ⇒ không sinh dòng 0đ. */
+  const platformFee = amountFor(p.customerPlatformFee, vehicleType, 'phí sàn');
+  if (platformFee > 0) {
     lines.push({
       key: FEE_LINE.SERVICE_FEE,
       beneficiary: FEE_BENEFICIARY.PLATFORM,
       bearer: FEE_BEARER.CUSTOMER,
-      percent: serviceFeePercent,
-      amount: String(percentOf(base, serviceFeePercent)),
+      percent: null,
+      amount: String(platformFee),
     });
+  }
+  /* H — hoa hồng lũy tiến, chỉ tuyến hoa hồng; tuyến gói 0% (không phải một nấc cấu hình). */
+  if (input.billingMode === BILLING_MODE.COMMISSION) {
+    const commission = computeTieredOwnerCommission(
+      input.dayAmounts ?? evenDayAmounts(base, days),
+      p.ownerCommissionTiers,
+    );
+    if (Number(commission) > 0) {
+      lines.push({
+        key: FEE_LINE.OWNER_COMMISSION,
+        beneficiary: FEE_BENEFICIARY.PLATFORM,
+        bearer: FEE_BEARER.OWNER,
+        percent: null,
+        amount: commission,
+      });
+    }
   }
   /*
    * Thuế: bearer = OWNER (ADR 0032 điều 3). Trước ADR 0032 dòng này mang bearer = customer —
@@ -357,95 +605,100 @@ export function computeCustomerFees(input: {
       amount: String(percentOf(base, p.taxPercent)),
     });
   }
-  /* IV — bắt buộc, KHÁCH trả (ADR 0032 điều 4). Trước đây bearer = owner. */
-  if (
-    p.vehicleProtectionEnabled &&
-    p.vehicleProtectionPercent != null &&
-    p.vehicleProtectionPercent > 0
-  ) {
+  /*
+   * IV và IP — tuỳ chọn, theo ngày. Chỉ tính khi khách GIỮ lựa chọn VÀ cổng ở chính sách đang mở:
+   * cổng thắng lựa chọn, vì chưa có hợp đồng bảo hiểm thật thì không được thu đồng nào (ADR 0028).
+   */
+  const vehicleDaily = amountFor(
+    p.vehicleProtectionDailyAmount,
+    vehicleType,
+    'biểu phí bảo hiểm vật chất xe',
+  );
+  if (input.vehicleProtectionSelected && p.vehicleProtectionEnabled && vehicleDaily > 0) {
     lines.push({
       key: FEE_LINE.VEHICLE_PROTECTION,
       beneficiary: FEE_BENEFICIARY.INSURER,
       bearer: FEE_BEARER.CUSTOMER,
-      percent: p.vehicleProtectionPercent,
-      amount: String(percentOf(base, p.vehicleProtectionPercent)),
-      ...(p.insurancePartnerName ? { partnerName: p.insurancePartnerName } : {}),
+      percent: null,
+      unitAmount: String(vehicleDaily),
+      quantity: days,
+      amount: String(vehicleDaily * days),
+      ...insurer,
     });
   }
-  /* IP — tuỳ chọn: chỉ tính khi khách GIỮ lựa chọn, và lựa chọn đó được lưu vào snapshot. */
-  if (
-    input.personalAccidentSelected &&
-    p.tripInsuranceEnabled &&
-    p.tripInsurancePercent != null &&
-    p.tripInsurancePercent > 0
-  ) {
+  const personalDaily = amountFor(
+    p.tripInsuranceDailyAmount,
+    vehicleType,
+    'biểu phí bảo hiểm tai nạn người',
+  );
+  if (input.personalAccidentSelected && p.tripInsuranceEnabled && personalDaily > 0) {
     lines.push({
       key: FEE_LINE.TRIP_INSURANCE,
       beneficiary: FEE_BENEFICIARY.INSURER,
       bearer: FEE_BEARER.CUSTOMER,
-      percent: p.tripInsurancePercent,
-      amount: String(percentOf(base, p.tripInsurancePercent)),
-      ...(p.insurancePartnerName ? { partnerName: p.insurancePartnerName } : {}),
+      percent: null,
+      unitAmount: String(personalDaily),
+      quantity: days,
+      amount: String(personalDaily * days),
+      ...insurer,
     });
   }
 
-  const customerFeeTotal = lines
-    .filter((l) => l.bearer === FEE_BEARER.CUSTOMER)
-    .reduce((sum, l) => sum + Number(l.amount), 0);
-  const ownerDeductions = lines
-    .filter((l) => l.bearer === FEE_BEARER.OWNER)
-    .reduce((sum, l) => sum + Number(l.amount), 0);
-  const taxAmount = Number(lines.find((l) => l.key === FEE_LINE.TAX)?.amount ?? 0);
+  const lineAmount = (key: FeeLineKey): number =>
+    Number(lines.find((l) => l.key === key)?.amount ?? 0);
+  const serviceFee = lineAmount(FEE_LINE.SERVICE_FEE);
+  const commission = lineAmount(FEE_LINE.OWNER_COMMISSION);
+  const taxAmount = lineAmount(FEE_LINE.TAX);
+  const insuranceTotal =
+    lineAmount(FEE_LINE.VEHICLE_PROTECTION) + lineAmount(FEE_LINE.TRIP_INSURANCE);
+  const customerFeeTotal = serviceFee + insuranceTotal;
+  const grossCustomerTotal = base + customerFeeTotal;
 
   /*
-   * CỌC. Tuyến hoa hồng luôn thu; tuyến gói theo công tắc của gian hàng. Báo giá tạm tính thì
-   * không thu đồng nào — CLAUDE.md cấm thu phần trăm trên một con số chưa chốt.
+   * CỌC ONLINE. Báo giá tạm tính thì không thu đồng nào — CLAUDE.md cấm thu phần trăm trên một con
+   * số chưa chốt.
    *
-   * Kẹp trần bằng `base`: một policy cấu hình sai (sàn cọc lớn hơn cả giá thuê một chuyến ngắn)
-   * không được phép sinh ra `payAtPickupAmount` âm.
+   * Sàn của nó là mọi thứ KHÔNG phải tiền của chủ xe (`S + H + IV + IP + T`): XePrime không thu
+   * hộ phần trả tay, nên đó là lần duy nhất nó cầm được tiền của chính mình, của hãng bảo hiểm và
+   * của ngân sách. Một chuyến xe máy một ngày 100.000đ có hai gói bảo hiểm ra 30% = 45.000đ, nhỏ
+   * hơn 60.000đ phải giữ lại — không có sàn này thì ví chủ xe nhận một khoản âm.
+   *
+   * Không thu cọc (tuyến gói tắt công tắc) thì khoản online đúng bằng phần đó và không hơn. Kẹp
+   * trần bằng tổng khách trả: một policy cấu hình sai (sàn cọc lớn hơn cả chuyến) không được phép
+   * sinh `payAtPickupAmount` âm.
    */
+  const collectsOnline = !input.quoteIsEstimate;
   const depositRequired =
-    (input.depositRequired ?? input.billingMode === BILLING_MODE.COMMISSION) &&
-    !input.quoteIsEstimate;
-  const deposit = depositRequired
-    ? Math.min(base, Math.max(percentOf(base, p.depositPercent), Number(p.depositMinAmount)))
-    : 0;
-
-  const insuranceTotal = lines
-    .filter((l) => l.key === FEE_LINE.VEHICLE_PROTECTION || l.key === FEE_LINE.TRIP_INSURANCE)
-    .reduce((sum, l) => sum + Number(l.amount), 0);
-  const serviceFee = Number(lines.find((l) => l.key === FEE_LINE.SERVICE_FEE)?.amount ?? 0);
-
-  /*
-   * Số quét QR = D + S + IV + IP. Sàn `holdMinAmount` áp lên TỔNG này, không lên riêng `D`:
-   * sàn tồn tại để một lần chuyển khoản đáng công đối soát, và công đó tính trên cả giao dịch.
-   */
-  const onlineRaw = deposit + serviceFee + insuranceTotal;
-  const grossOnline = onlineRaw > 0 ? Math.max(onlineRaw, Number(p.holdMinAmount)) : 0;
+    (input.depositRequired ?? input.billingMode === BILLING_MODE.COMMISSION) && collectsOnline;
+  const notOwnersMoney = serviceFee + commission + insuranceTotal + taxAmount;
+  let grossOnline = 0;
+  if (collectsOnline) {
+    const floor = depositRequired
+      ? Math.max(
+          percentOf(grossCustomerTotal, p.depositPercent),
+          Number(p.depositMinAmount),
+          notOwnersMoney,
+        )
+      : notOwnersMoney;
+    grossOnline =
+      floor > 0 ? Math.min(grossCustomerTotal, Math.max(floor, Number(p.holdMinAmount))) : 0;
+  }
+  const deposit = grossOnline > 0 ? grossOnline - serviceFee - commission - insuranceTotal : 0;
 
   /*
    * TÀI TRỢ của XePrime (ADR 0046 điều 2). Kẹp bằng `grossOnline − holdMinAmount`, không bằng
    * `grossOnline`: một mã ăn hết khoản online sẽ sinh ra mã QR 0đ — tức là một chuyến không ai
-   * phải chuyển đồng nào mà vẫn chiếm chỗ hai giờ, đúng thứ ADR 0044 điều 4 cấm.
+   * phải chuyển đồng nào mà vẫn chiếm chỗ hai giờ, đúng thứ ADR 0044 điều 4 cấm. Kẹp cả bằng phần
+   * tài trợ được (`D + S + H`): tiền giữ hộ hãng bảo hiểm không phải chỗ để giảm giá.
    *
-   * Kẹp cả về 0 ở dưới: một snapshot cũ/hỏng không được phép làm `onlineAmount` lớn hơn
-   * `grossOnlineAmount`.
+   * Chuyến KHÔNG thu online (báo giá tạm tính) có `grossOnline = 0` nên trần về 0: một snapshot mã
+   * lọt vào đây không trừ được `customerTotalAmount` khi XePrime không cầm đồng nào — phần chênh
+   * sẽ rơi xuống tiền mặt chủ xe nhận tận tay, đúng thứ ADR 0046 điều 2 cấm. Tầng đánh giá
+   * (`promoContextFor`) đã chặn ca này; chặn LẠI ở đây vì bất biến không được phụ thuộc vào việc
+   * mọi caller đều nhớ làm đúng.
    */
-  /*
-   * `depositRequired` là điều kiện ĐẦU TIÊN, không phải điều kiện phụ.
-   *
-   * Không có nó thì một chuyến KHÔNG sinh khoản giữ chỗ (tuyến gói tắt công tắc, hoặc báo giá tạm
-   * tính) vẫn có `grossOnline > 0` nhờ `S`/`IV`/`IP`, và một snapshot mã lọt vào đây sẽ trừ
-   * `customerTotalAmount` trong khi XePrime không thu đồng nào — phần chênh rơi xuống tiền mặt
-   * chủ xe nhận tận tay, đúng thứ ADR 0046 điều 2 cấm.
-   *
-   * Tầng đánh giá (`promoContextFor` → `computePromoDiscount`) đã chặn ca này bằng cách truyền
-   * `grossOnlineAmount = null`. Chặn LẠI ở đây vì bất biến "mã chỉ trừ vào tiền XePrime thật sự
-   * cầm" không được phép phụ thuộc vào việc mọi caller đều nhớ làm đúng.
-   */
-  const promoRoom = depositRequired
-    ? Math.max(0, Math.min(grossOnline - Number(p.holdMinAmount), deposit + serviceFee))
-    : 0;
+  const sponsorable = grossOnline > 0 ? grossOnline - insuranceTotal : 0;
+  const promoRoom = Math.max(0, Math.min(grossOnline - Number(p.holdMinAmount), sponsorable));
   const promoDiscount = input.promo
     ? Math.max(0, Math.min(Number(input.promo.discountApplied), promoRoom))
     : 0;
@@ -454,12 +707,17 @@ export function computeCustomerFees(input: {
   return {
     billingMode: input.billingMode,
     policy: p,
+    vehicleType,
+    rentalDays: days,
     baseAmount: String(base),
     lines,
     customerFeeTotal: String(customerFeeTotal),
-    customerTotalAmount: String(base + customerFeeTotal - promoDiscount),
+    customerTotalAmount: String(grossCustomerTotal - promoDiscount),
     depositAmount: String(deposit),
+    ownerCommissionAmount: String(commission),
+    platformRetainedAmount: String(serviceFee + commission),
     grossOnlineAmount: String(grossOnline),
+    sponsorableAmount: String(sponsorable),
     promoDiscountAmount: String(promoDiscount),
     /*
      * Snapshot đi kèm số đã KẸP, không phải số mã hứa: mọi màn hình đọc lại đơn cũ phải thấy
@@ -470,20 +728,21 @@ export function computeCustomerFees(input: {
         ? { ...input.promo, discountApplied: String(promoDiscount) }
         : null,
     onlineAmount: String(online),
-    payAtPickupAmount: String(base - deposit),
+    payAtPickupAmount: String(grossCustomerTotal - grossOnline),
     taxAmount: String(taxAmount),
     ownerPayableAmount: String(deposit - taxAmount),
-    ownerNetAmount: String(base - ownerDeductions),
-    holdAmount: depositRequired && online > 0 ? String(online) : null,
+    ownerNetAmount: String(base - commission - taxAmount),
+    holdAmount: grossOnline > 0 ? String(online) : null,
   };
 }
 
 /** Nhãn hiển thị mặc định — web/mobile dịch qua `Domain.feeLine`, đây là bản tiếng Việt gốc. */
 export const FEE_LINE_LABEL: Readonly<Record<FeeLineKey, string>> = {
   [FEE_LINE.SERVICE_FEE]: 'Phí dịch vụ XePrime',
+  [FEE_LINE.OWNER_COMMISSION]: 'Hoa hồng XePrime',
   [FEE_LINE.TAX]: 'Thuế khấu trừ/nộp thay',
   [FEE_LINE.TRIP_INSURANCE]: 'Bảo hiểm tai nạn người ngồi trên xe',
-  [FEE_LINE.VEHICLE_PROTECTION]: 'Bảo hiểm xe cho chuyến đi',
+  [FEE_LINE.VEHICLE_PROTECTION]: 'Bảo hiểm vật chất xe',
   [FEE_LINE.DEPOSIT]: 'Cọc đặt chuyến',
   [FEE_LINE.PROMO]: 'Mã khuyến mãi XePrime',
 };
@@ -522,11 +781,34 @@ export function feePolicyActivationBlockers(values: FeePolicyValues): string[] {
   if (insuranceOn && !values.insurancePartnerName?.trim()) {
     blockers.push('insurance_requires_partner');
   }
-  if (values.tripInsuranceEnabled && values.tripInsurancePercent == null) {
+  /* Cổng bảo hiểm mở thì MỌI loại xe phải có biểu phí — thiếu một loại là thu 0đ mà vẫn hứa bảo hiểm. */
+  const hasEveryRate = (amounts: PerVehicleTypeAmount) =>
+    VEHICLE_TYPE_VALUES.every((type) => Number(amounts[type]) > 0);
+  if (values.tripInsuranceEnabled && !hasEveryRate(values.tripInsuranceDailyAmount)) {
     blockers.push('trip_insurance_requires_rate');
   }
-  if (values.vehicleProtectionEnabled && values.vehicleProtectionPercent == null) {
+  if (values.vehicleProtectionEnabled && !hasEveryRate(values.vehicleProtectionDailyAmount)) {
     blockers.push('vehicle_protection_requires_rate');
+  }
+  /*
+   * Bước giá 1.000đ bắt đầu từ SỐ CẤU HÌNH: phép tính chỉ làm tròn phần nó chia tỷ lệ, còn phí
+   * sàn, biểu phí bảo hiểm và các sàn tiền đi thẳng vào mã QR — một số lẻ ở đây là một số lẻ trên
+   * mọi đơn.
+   */
+  const configuredAmounts = [
+    ...VEHICLE_TYPE_VALUES.flatMap((type) => [
+      values.customerPlatformFee[type],
+      values.vehicleProtectionDailyAmount[type],
+      values.tripInsuranceDailyAmount[type],
+    ]),
+    values.holdMinAmount,
+    values.depositMinAmount,
+  ];
+  if (!configuredAmounts.every((amount) => isThousandStep(Number(amount)))) {
+    blockers.push('amount_not_thousand_step');
+  }
+  if (!ownerCommissionTiersValid(values.ownerCommissionTiers)) {
+    blockers.push('owner_commission_tiers_invalid');
   }
   /*
    * Sàn là `HOLD_MIN_USABLE_WINDOW_MINUTES`, KHÔNG phải một con số gõ tay.
@@ -553,10 +835,10 @@ export function feePolicyActivationBlockers(values: FeePolicyValues): string[] {
     blockers.push('deposit_percent_out_of_range');
   }
   /*
-   * Thuế tính trên GIÁ THUÊ `B` nhưng chỉ khấu trừ được từ phần XePrime đang cầm là `D`. Nếu
-   * `D < T` thì `ownerPayableAmount` âm: nền tảng đã nhận nghĩa vụ nộp thay một khoản lớn hơn
-   * số tiền nó giữ, và không có chỗ nào lấy phần chênh. Chặn ở cổng kích hoạt, không để phát
-   * hiện ra lúc quyết toán chuyến đầu tiên.
+   * Thuế tính trên GIÁ THUÊ `B` nhưng chỉ khấu trừ được từ phần XePrime đang cầm. Phép tính đã
+   * nâng cọc lên đủ giữ `T` (`computeCustomerFees`), nhưng một chính sách có % cọc dưới % thuế thì
+   * sàn đó kích hoạt trên mọi đơn và "cọc 30%" công bố với khách không còn đúng ở đơn nào. Chặn ở
+   * cổng kích hoạt, không để phát hiện ra lúc quyết toán chuyến đầu tiên.
    */
   if (values.taxEnabled && values.taxPercent != null && values.depositPercent < values.taxPercent) {
     blockers.push('deposit_percent_below_tax_percent');
@@ -569,6 +851,23 @@ export function feePolicyActivationBlockers(values: FeePolicyValues): string[] {
     blockers.push('free_cancel_shorter_than_payment_window');
   }
   return blockers;
+}
+
+/**
+ * Nấc hoa hồng hợp lệ: bắt đầu từ ngày 1, `fromDay` nguyên và TĂNG NGHIÊM NGẶT, mỗi % trong
+ * `[0, OWNER_COMMISSION_PERCENT_MAX]`. Không bắt % giảm dần — "lũy tiến" là chính sách kinh
+ * doanh của bản hiện hành, không phải ràng buộc của phép tính.
+ */
+function ownerCommissionTiersValid(tiers: readonly OwnerCommissionTier[]): boolean {
+  if (tiers.length === 0 || tiers[0]!.fromDay !== 1) return false;
+  return tiers.every(
+    (tier, index) =>
+      Number.isInteger(tier.fromDay) &&
+      (index === 0 || tier.fromDay > tiers[index - 1]!.fromDay) &&
+      Number.isFinite(tier.percent) &&
+      tier.percent >= 0 &&
+      tier.percent <= OWNER_COMMISSION_PERCENT_MAX,
+  );
 }
 
 // ── Phân bổ khoản giữ chỗ khi chốt kết cục ──────────────────────────────────
@@ -602,8 +901,16 @@ export type AllocationTarget = (typeof ALLOCATION_TARGET)[keyof typeof ALLOCATIO
 
 /** Bốn dòng tiền của một hold — đọc từ CỘT, không suy từ `purpose` (ADR 0033 điều 4). */
 export interface HoldMoneyLines {
-  /** `D` */ deposit: string;
-  /** `S` */ serviceFee: string;
+  /** `D` — phần của chủ xe trong cọc online, gồm cả `T` sẽ khấu trừ khi quyết toán. */
+  deposit: string;
+  /** `S` — phí sàn phía khách. */
+  serviceFee: string;
+  /**
+   * `H` — hoa hồng lũy tiến XePrime giữ lại từ phần của chủ xe (luồng tiền v2).
+   *
+   * Bỏ trống ⇒ `'0'`: hold sinh trước luồng tiền v2 không có hoa hồng, và hold tuyến gói cũng vậy.
+   */
+  ownerCommission?: string;
   /** `IV` */ vehicleInsurance: string;
   /** `IP` */ personalInsurance: string;
   /**
@@ -625,7 +932,7 @@ export interface AllocationEntry {
 export type HoldSettlementKind =
   /** Huỷ trong cửa sổ miễn phí · chủ xe huỷ · hold hết hạn còn tiền — hoàn tất cả. */
   | 'refund_all'
-  /** Huỷ muộn hoặc no-show — `D + S` chia đôi, `IV + IP` hoàn đủ. */
+  /** Huỷ muộn hoặc no-show — `D + S + H` chia đôi, `IV + IP` hoàn đủ. */
   | 'split_late_cancel'
   /** Chuyến hoàn thành — mỗi dòng về đúng người hưởng. */
   | 'settled';
@@ -656,11 +963,15 @@ export function holdSettlementKindFor(outcome: BookingHoldOutcome): HoldSettleme
  */
 export function adminSettleOutcomes(
   purpose: BookingHoldPurpose,
-  lines: Pick<HoldMoneyLines, 'deposit' | 'serviceFee' | 'vehicleInsurance' | 'personalInsurance'>,
+  lines: Pick<
+    HoldMoneyLines,
+    'deposit' | 'serviceFee' | 'ownerCommission' | 'vehicleInsurance' | 'personalInsurance'
+  >,
 ): BookingHoldOutcome[] {
   const hasMoneyLines = [
     lines.deposit,
     lines.serviceFee,
+    lines.ownerCommission ?? '0',
     lines.vehicleInsurance,
     lines.personalInsurance,
   ].some((value) => Number(value) > 0);
@@ -675,9 +986,17 @@ export function adminSettleOutcomes(
  * Chia một khoản giữ chỗ thành các bút toán — hàm THUẦN, dùng chung api/worker/preview admin.
  *
  * Vì sao là hàm chứ không phải bảng tra: nhánh `split_late_cancel` cần một phép chia đôi có
- * **phần dư xác định**. Chia `D + S` cho 2 rồi làm tròn hai lần độc lập sẽ làm tổng lệch 1đ so
- * với số đã thu — và một đồng lệch trên sổ cái là một đồng không ai đối chiếu được. Ở đây phần
- * của nền tảng lấy phần dư (`total − nửa của chủ xe`), nên tổng luôn khớp tuyệt đối.
+ * **phần dư xác định**. Chia `D + S + H` cho 2 rồi làm tròn hai lần độc lập sẽ làm tổng lệch so
+ * với số đã thu — và một đồng lệch trên sổ cái là một đồng không ai đối chiếu được. Ở đây nửa của
+ * chủ xe làm tròn XUỐNG bước 1.000đ và nền tảng lấy phần dư (`total − nửa của chủ xe`), nên tổng
+ * luôn khớp tuyệt đối và ví chủ xe không bao giờ nhận một số lẻ.
+ *
+ * Ba kết cục của luồng tiền v2:
+ *  - `refund_all` — hoàn 100% số khách đã chuyển (huỷ trong cửa sổ miễn phí, chủ xe huỷ).
+ *  - `split_late_cancel` — `IV + IP` hoàn đủ (chưa phát hành bảo hiểm), phần còn lại của cọc chia
+ *    đôi chủ xe / XePrime.
+ *  - `settled` — chủ xe nhận `D − T`, XePrime giữ `S + H − P`, ngân sách nhận `T`, hãng bảo hiểm
+ *    nhận `IV + IP`.
  *
  * `taxAmount` chỉ dùng ở nhánh `settled`: thuế khấu trừ khỏi phần chủ xe nhận (ADR 0032 điều 3),
  * và chỉ phát sinh khi chuyến đã bắt đầu — hai nhánh huỷ không bao giờ có thuế.
@@ -689,10 +1008,11 @@ export function resolveHoldAllocation(
 ): AllocationEntry[] {
   const d = Number(lines.deposit);
   const s = Number(lines.serviceFee);
+  const h = Number(lines.ownerCommission ?? 0);
   const iv = Number(lines.vehicleInsurance);
   const ip = Number(lines.personalInsurance);
   /*
-   * TÀI TRỢ mã khuyến mãi (ADR 0046 điều 4). Kẹp `min(d + s, …)` để bất biến "tổng phân bổ =
+   * TÀI TRỢ mã khuyến mãi (ADR 0046 điều 4). Kẹp `min(d + s + h, …)` để bất biến "tổng phân bổ =
    * tiền mặt đã nhận" không phụ thuộc vào dữ liệu của một bảng khác — cùng lý do `tax` ở dưới
    * kẹp bằng `d`.
    *
@@ -701,7 +1021,7 @@ export function resolveHoldAllocation(
    * `PLATFORM_REVENUE` ÂM ĐƯỢC khi khoản tài trợ lớn hơn phí dịch vụ của chuyến — đó là một
    * khoản chi marketing thật, không phải một lỗi làm tròn.
    */
-  const promo = Math.max(0, Math.min(Number(lines.promoDiscount ?? 0), d + s));
+  const promo = Math.max(0, Math.min(Number(lines.promoDiscount ?? 0), d + s + h));
   const out: AllocationEntry[] = [];
   const push = (key: FeeLineKey, target: AllocationTarget, amount: number) => {
     if (amount > 0) out.push({ key, target, amount: String(amount) });
@@ -714,16 +1034,22 @@ export function resolveHoldAllocation(
 
   if (kind === 'refund_all') {
     /*
-     * Khách chỉ được hoàn ĐÚNG số họ đã chuyển (`D + S + IV + IP − P`), không phải quyền lợi
+     * Khách chỉ được hoàn ĐÚNG số họ đã chuyển (`D + S + H + IV + IP − P`), không phải quyền lợi
      * gộp. Hoàn cả `P` là biến một mã khuyến mãi thành tiền mặt: đặt xe, huỷ trong cửa sổ miễn
      * phí, và rút phần XePrime tài trợ về ví.
      *
-     * Trừ theo thứ tự CỌC → PHÍ DỊCH VỤ và không bao giờ trừ vào bảo hiểm, đúng thứ tự mà
-     * `computePromoDiscount` đã dùng để tính trần — nên mọi dòng ở đây luôn ≥ 0.
+     * Trừ theo thứ tự CỌC → HOA HỒNG → PHÍ SÀN và không bao giờ trừ vào bảo hiểm, đúng phần
+     * `sponsorableAmount` đã dùng để tính trần — nên mọi dòng ở đây luôn ≥ 0.
      */
     const fromDeposit = Math.min(promo, d);
+    const fromCommission = Math.min(promo - fromDeposit, h);
     push(FEE_LINE.DEPOSIT, ALLOCATION_TARGET.CUSTOMER_BALANCE, d - fromDeposit);
-    push(FEE_LINE.SERVICE_FEE, ALLOCATION_TARGET.CUSTOMER_BALANCE, s - (promo - fromDeposit));
+    push(FEE_LINE.OWNER_COMMISSION, ALLOCATION_TARGET.CUSTOMER_BALANCE, h - fromCommission);
+    push(
+      FEE_LINE.SERVICE_FEE,
+      ALLOCATION_TARGET.CUSTOMER_BALANCE,
+      s - (promo - fromDeposit - fromCommission),
+    );
     push(FEE_LINE.VEHICLE_PROTECTION, ALLOCATION_TARGET.CUSTOMER_BALANCE, iv);
     push(FEE_LINE.TRIP_INSURANCE, ALLOCATION_TARGET.CUSTOMER_BALANCE, ip);
     return out;
@@ -733,8 +1059,12 @@ export function resolveHoldAllocation(
     // Bảo hiểm chưa mua ⇒ hoàn 100%, không phụ thuộc khả năng hoàn của đối tác (ADR 0032 điều 4).
     push(FEE_LINE.VEHICLE_PROTECTION, ALLOCATION_TARGET.CUSTOMER_BALANCE, iv);
     push(FEE_LINE.TRIP_INSURANCE, ALLOCATION_TARGET.CUSTOMER_BALANCE, ip);
-    const splittable = d + s;
-    const toOwner = Math.floor(splittable / 2);
+    /*
+     * Hoa hồng nằm trong phần chia đôi: chuyến không diễn ra nên không có hoa hồng nào được
+     * "kiếm", và khoản đền giữ lịch của chủ xe là nửa của toàn bộ cọc ngoài bảo hiểm.
+     */
+    const splittable = d + s + h;
+    const toOwner = Math.floor(splittable / 2 / MONEY_STEP_VND) * MONEY_STEP_VND;
     push(FEE_LINE.DEPOSIT, ALLOCATION_TARGET.OWNER_BALANCE, toOwner);
     /*
      * Chủ xe nhận đủ NỬA QUYỀN LỢI, không phải nửa tiền mặt: khoản họ được đền vì khách huỷ
@@ -755,8 +1085,13 @@ export function resolveHoldAllocation(
    * thuộc vào một CHECK ở bảng khác.
    */
   push(FEE_LINE.TAX, ALLOCATION_TARGET.TAX_LEDGER, tax);
-  // Phí dịch vụ TRỪ tài trợ — chủ xe, ngân sách và hãng bảo hiểm ở trên/dưới nhận đủ quyền lợi.
+  /*
+   * "Sàn giữ lại" = phí sàn + hoa hồng, TRỪ tài trợ vào dòng phí sàn — chủ xe, ngân sách và hãng
+   * bảo hiểm ở trên/dưới nhận đủ quyền lợi. Hai dòng nền tảng giữ khoá riêng để báo cáo doanh thu
+   * tách được phí phía khách khỏi hoa hồng phía chủ xe.
+   */
   pushPlatform(FEE_LINE.SERVICE_FEE, s - promo);
+  push(FEE_LINE.OWNER_COMMISSION, ALLOCATION_TARGET.PLATFORM_REVENUE, h);
   push(FEE_LINE.VEHICLE_PROTECTION, ALLOCATION_TARGET.INSURER_PAYABLE, iv);
   push(FEE_LINE.TRIP_INSURANCE, ALLOCATION_TARGET.INSURER_PAYABLE, ip);
   return out;
@@ -765,10 +1100,9 @@ export function resolveHoldAllocation(
 /**
  * Tổng phân bổ theo TỪNG đích — đúng thứ đối soát ba vế cần đóng băng lên `booking_holds`.
  *
- * Bất biến: tổng năm đích LUÔN bằng `D + S + IV + IP − P` = số tiền mặt hold đã nhận (ADR 0046
- * điều 4 — trước khi có mã khuyến mãi thì `P = 0` và con số đó đúng bằng bốn dòng tiền). Không
- * có đường nào cho một đồng biến mất
- * giữa chừng, và đó là điều khiến phép đối soát có nghĩa.
+ * Bất biến: tổng năm đích LUÔN bằng `D + S + H + IV + IP − P` = số tiền mặt hold đã nhận (ADR
+ * 0046 điều 4 — không có mã khuyến mãi thì `P = 0` và con số đó đúng bằng các dòng tiền). Không
+ * có đường nào cho một đồng biến mất giữa chừng, và đó là điều khiến phép đối soát có nghĩa.
  */
 export function allocationTotals(allocation: AllocationEntry[]): Record<AllocationTarget, string> {
   const totals: Record<AllocationTarget, number> = {

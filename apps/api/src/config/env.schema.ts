@@ -344,6 +344,17 @@ export const envSchema = z
     DRIVER_LICENCE_ENFORCEMENT: z.enum(['off', 'on']).default('on'),
 
     /*
+     * Đối tác phát hành bảo hiểm chuyến `IV`/`IP` (ADR 0032 điều 4 · luồng tiền v2).
+     *
+     *   none     — MẶC ĐỊNH: chưa có đối tác — hợp đồng dừng ở `failed/partner_not_configured`, phí
+     *              đã thu nằm ở vế GIỮ HỘ. Không bao giờ có số chứng nhận bịa.
+     *   mic_mock — GIẢ LẬP MIC cho dev/staging: phát GCN `MIC-VCX-…`/`MIC-NNTX-…` kèm link tra cứu
+     *              để chạy trọn luồng bàn giao → phát hành. **Production từ chối boot** — GCN giả là
+     *              khẳng định với khách rằng họ có bảo hiểm thật (ADR 0028 điều 5).
+     */
+    INSURANCE_PARTNER: z.enum(['none', 'mic_mock']).default('none'),
+
+    /*
      * --- SePay: đối soát tiền VÀO tài khoản nền tảng (ADR 0016/0022, R2) ---
      *
      * BỐN biến là MỘT nhóm bật/tắt: khai một nửa là cấu hình gõ thiếu và fail lúc boot
@@ -718,6 +729,16 @@ export const envSchema = z
     // thư, endpoint upload trả 503 `UPLOADS_NOT_CONFIGURED`. Ở production đó là ba sự cố; ở
     // staging đó là ba khoản chi phí không có lý do tồn tại.
     if (env.APP_ENV !== 'production') return;
+
+    // Adapter bảo hiểm GIẢ LẬP ở production = phát GCN không tồn tại cho khách thật đã trả phí.
+    if (env.INSURANCE_PARTNER === 'mic_mock') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['INSURANCE_PARTNER'],
+        message:
+          'INSURANCE_PARTNER=mic_mock chỉ dành cho dev/staging — production phải dùng none cho tới khi có adapter đối tác thật',
+      });
+    }
 
     // OTP_MODE=mock ở production nghĩa là KHÔNG có SMS nào được gửi và mã 6 số chỉ nằm trong
     // log server — vừa hỏng luồng đăng nhập vừa là rò rỉ mã.

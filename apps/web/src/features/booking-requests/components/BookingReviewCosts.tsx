@@ -144,9 +144,16 @@ export function BookingReviewCosts({
                   <dt>
                     <span className={styles.label}>{dl('feeLine', line.key)}</span>
                     <span className={styles.sub}>
-                      {line.partnerName
-                        ? `${line.percent}% · ${line.partnerName}`
-                        : `${line.percent}%`}
+                      {[
+                        line.percent != null
+                          ? `${line.percent}%`
+                          : line.unitAmount && line.quantity
+                            ? `${line.quantity} ngày × ${fmt.money(line.unitAmount)}`
+                            : null,
+                        line.partnerName,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
                     </span>
                   </dt>
                   <dd className={styles.amount}>{fmt.money(line.amount)}</dd>

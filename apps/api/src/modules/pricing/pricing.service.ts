@@ -3,7 +3,7 @@ import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   COLLATERAL_MODE,
-  FEE_LINE,
+  addCalendarMonthsVn,
   promoEligibleAmount,
   discountTierFromStored,
   legacyDiscountTierFromStored,
@@ -68,7 +68,29 @@ const POLICY_SELECT = {
 
 type PolicyRow = Prisma.RentalPolicyGetPayload<{ select: typeof POLICY_SELECT }>;
 
-/** Chính sách hiệu lực của một xe: bản ghi đè thắng mặc định gian hàng. */
+/**
+ * Lựa chọn bảo hiểm của khách cho MỘT chuyến — luồng tiền v2: cả `IV` lẫn `IP` đều TUỲ CHỌN,
+ * tích thì tính theo ngày, không tích thì 0đ. Vắng mặt = không chọn.
+ */
+export interface InsuranceSelection {
+  vehicleProtectionSelected?: boolean;
+  personalAccidentSelected?: boolean;
+}
+
+/**
+ * MỘT chuyến cần tính phí — bảng kê giá thuê đã dựng, loại xe, và lịch đã chốt (dài hạn).
+ *
+ * Nhận cả bảng kê chứ không chỉ `totalAmount` vì phí v2 cần ba thứ mà một con số không mang:
+ * số ngày tính phí (nhân biểu phí bảo hiểm), giá TỪNG ngày (mẫu số hoa hồng lũy tiến), và tiền
+ * thuê TÁCH khỏi phí giao xe (chủ xe hưởng trọn phí giao, sàn không thu hoa hồng trên nó).
+ */
+export interface FeeTrip {
+  vehicleType: string;
+  breakdown: Pick<QuoteBreakdownDto, 'totalAmount' | 'rows' | 'days' | 'longTerm' | 'dayAmounts'>;
+  /** Lịch đã chốt — chỉ dài hạn cần, để đếm số ngày lịch thật của gói. */
+  schedule?: { pickupAt: Date; returnAt: Date } | null;
+}
+
 /**
  * Ngữ cảnh áp mã khuyến mãi của MỘT chuyến — mọi thứ `PromoCodeEvaluatorService` cần, dựng từ
  * đúng một lượt báo giá (ADR 0046).
@@ -76,7 +98,7 @@ type PolicyRow = Prisma.RentalPolicyGetPayload<{ select: typeof POLICY_SELECT }>
 export interface PromoQuoteContext {
   tenantId: string;
   quoteIsEstimate: boolean;
-  personalAccidentSelected: boolean;
+  insurance: InsuranceSelection;
   scope: { vehicleType: VehicleType; serviceType: ServiceType; provinceCode: string | null };
   breakdown: QuoteBreakdownDto;
   fees: CustomerFeeBreakdown | null;
@@ -129,7 +151,11 @@ export class PricingService {
   // -------------------------------------------------------------------------
 
   /**
-   * Phụ phí của một chuyến trên xe của `tenantId`, tính trên `baseAmount` = tổng bảng kê giá thuê.
+   * Bảng tiền của một chuyến trên xe của `tenantId` — luồng tiền v2 (`computeCustomerFees`).
+   *
+   * `B` = tổng bảng kê giá thuê (gồm phí giao xe). Hoa hồng `H` tính trên giá thuê TỪNG NGÀY
+   * (`feeDaysOf`) — KHÔNG trên phí giao xe: chủ xe hưởng trọn phí giao, sàn chỉ cầm hộ phần nằm
+   * trong cọc rồi giải ngân lại.
    *
    * `null` khi chưa có chính sách phí nào hiệu lực: báo giá vẫn hiện, chỉ không có dòng phụ phí
    * — và không có hold nào sinh ra (`BookingRequestsService.approve` xử lý nhánh đó).
@@ -139,9 +165,9 @@ export class PricingService {
    */
   async customerFeesFor(
     tenantId: string,
-    baseAmount: string,
+    trip: FeeTrip,
     quoteIsEstimate: boolean,
-    opts: {
+    opts: InsuranceSelection & {
       /**
        * Chuyến này có thu cọc qua XePrime không.
        *
@@ -150,8 +176,6 @@ export class PricingService {
        * làm vậy vì nó còn cần `reason` để đóng băng `deposit_collection_mode`.
        */
       depositRequired?: boolean;
-      /** Khách có GIỮ lựa chọn bảo hiểm tai nạn người không (`IP` — tuỳ chọn). */
-      personalAccidentSelected?: boolean;
       /**
        * MÃ KHUYẾN MÃI nền tảng ĐÃ ĐÁNH GIÁ (ADR 0046).
        *
@@ -183,15 +207,18 @@ export class PricingService {
      * ra cho tới lúc đối soát cuối tháng.
      */
     if (!deposit.billingMode) return null;
+    const { rentalDays, dayAmounts } = feeDaysOf(trip);
     return computeCustomerFees({
       billingMode: deposit.billingMode,
       policy,
-      baseAmount,
+      vehicleType: trip.vehicleType as VehicleType,
+      baseAmount: trip.breakdown.totalAmount,
+      rentalDays,
+      dayAmounts,
       quoteIsEstimate,
       depositRequired: opts.depositRequired ?? deposit.required,
-      ...(opts.personalAccidentSelected === undefined
-        ? {}
-        : { personalAccidentSelected: opts.personalAccidentSelected }),
+      vehicleProtectionSelected: opts.vehicleProtectionSelected === true,
+      personalAccidentSelected: opts.personalAccidentSelected === true,
       ...(opts.promo === undefined ? {} : { promo: opts.promo }),
     });
   }
@@ -211,13 +238,12 @@ export class PricingService {
    */
   async promoContextFor(
     vehicleId: string,
-    query: {
+    query: InsuranceSelection & {
       pickupAt?: string;
       returnAt?: string;
       serviceType?: string;
       routeType?: string;
       packageMonths?: number;
-      personalAccidentSelected?: boolean;
     },
   ): Promise<PromoQuoteContext | null> {
     const vehicle = await this.prisma.vehicle.findFirst({
@@ -255,7 +281,10 @@ export class PricingService {
     return {
       tenantId: vehicle.tenantId,
       quoteIsEstimate: breakdown.estimateNote != null,
-      personalAccidentSelected: query.personalAccidentSelected === true,
+      insurance: {
+        vehicleProtectionSelected: query.vehicleProtectionSelected === true,
+        personalAccidentSelected: query.personalAccidentSelected === true,
+      },
       scope: {
         vehicleType: vehicle.vehicleType as VehicleType,
         serviceType: (query.serviceType ?? SERVICE_TYPE.SELF_DRIVE) as ServiceType,
@@ -276,12 +305,11 @@ export class PricingService {
          * tài trợ ở đó là hứa một khoản giảm trên một con số chưa chốt (ADR 0044 điều 4).
          */
         grossOnlineAmount: fees?.holdAmount != null ? fees.grossOnlineAmount : null,
-        sponsorableAmount: fees
-          ? String(
-              Number(fees.depositAmount) +
-                Number(fees.lines.find((l) => l.key === FEE_LINE.SERVICE_FEE)?.amount ?? 0),
-            )
-          : '0',
+        /*
+         * `D + S + H` — đọc thẳng từ bảng phí, không tự cộng lại: định nghĩa "phần tài trợ được"
+         * chỉ có MỘT nơi (`computeCustomerFees`), và luồng tiền v2 vừa thêm `H` vào nó.
+         */
+        sponsorableAmount: fees?.sponsorableAmount ?? '0',
         holdMinAmount: fees?.policy.holdMinAmount ?? '0',
       },
     };
@@ -291,25 +319,23 @@ export class PricingService {
    * Bảng phí TÍNH LẠI với mã đã áp — lượt thứ hai của phép tính hai lượt (ADR 0046).
    *
    * Hai lượt là hệ quả của một vòng phụ thuộc thật: số giảm cần biết `grossOnlineAmount`, mà con
-   * số đó là kết quả của chính bảng phí. Vì `S`/`T`/`IV`/`IP`/`D` KHÔNG phụ thuộc mã, lượt hai
+   * số đó là kết quả của chính bảng phí. Vì `S`/`H`/`T`/`IV`/`IP`/`D` KHÔNG phụ thuộc mã, lượt hai
    * chỉ trừ thêm một con số — nó không bao giờ ra một cơ sở tính khác với lượt một.
    */
   applyPromoToFees(
     tenantId: string,
-    baseAmount: string,
-    opts: {
+    trip: FeeTrip,
+    opts: InsuranceSelection & {
       quoteIsEstimate: boolean;
       promo: PromoCodeSnapshot | null;
       depositRequired?: boolean;
-      personalAccidentSelected?: boolean;
     },
   ): Promise<CustomerFeeBreakdown | null> {
-    return this.customerFeesFor(tenantId, baseAmount, opts.quoteIsEstimate, {
+    return this.customerFeesFor(tenantId, trip, opts.quoteIsEstimate, {
       promo: opts.promo,
       ...(opts.depositRequired === undefined ? {} : { depositRequired: opts.depositRequired }),
-      ...(opts.personalAccidentSelected === undefined
-        ? {}
-        : { personalAccidentSelected: opts.personalAccidentSelected }),
+      vehicleProtectionSelected: opts.vehicleProtectionSelected,
+      personalAccidentSelected: opts.personalAccidentSelected,
     });
   }
 
@@ -809,6 +835,8 @@ export class PricingService {
     let driverRate: Prisma.Decimal | null = null;
     let driverRouteLabel: string | null = null;
     let estimateNote: string | null = null;
+    /** Giá TỪNG ngày tính tiền, ngày 1 trước — mẫu số hoa hồng lũy tiến (luồng tiền v2). */
+    let dayRates: Prisma.Decimal[];
     if (serviceType === SERVICE_TYPE.WITH_DRIVER && input.withDriverDailyPrice) {
       const basePrice = new Prisma.Decimal(input.withDriverDailyPrice);
       const interCity = input.withDriverInterCityPrice
@@ -840,7 +868,9 @@ export class PricingService {
     let baseSublabel: string;
 
     if (driverRate) {
-      base = driverRate.mul(days);
+      const rate = driverRate;
+      base = rate.mul(days);
+      dayRates = Array.from({ length: days }, () => rate);
       baseSublabel = `${days} ngày × ${vnd(driverRate)}/ngày · đã gồm tài xế${
         driverRouteLabel ? ` · ${driverRouteLabel}` : ''
       }`;
@@ -860,19 +890,20 @@ export class PricingService {
       // (`vehicle_daily_prices`) lấy ĐÚNG giá đó — thay cả giá thường lẫn cuối tuần của ngày ấy.
       let weekendDays = 0;
       let overrideDays = 0;
-      base = new Prisma.Decimal(0);
+      dayRates = [];
       for (let i = 0; i < days; i++) {
         const override = input.dailyOverrides?.get(localDayKey(input.pickupAt, i));
         if (override != null) {
           overrideDays += 1;
-          base = base.plus(new Prisma.Decimal(override));
+          dayRates.push(new Prisma.Decimal(override));
           continue;
         }
         const dow = new Date(input.pickupAt.getTime() + i * MS_PER_DAY + TZ_OFFSET_MS).getUTCDay();
         const isWeekend = dow === 0 || dow === 6;
         if (isWeekend) weekendDays += 1;
-        base = base.plus(isWeekend ? weekend : weekday);
+        dayRates.push(isWeekend ? weekend : weekday);
       }
+      base = dayRates.reduce((sum, rate) => sum.plus(rate), new Prisma.Decimal(0));
       const weekdayDays = days - weekendDays - overrideDays;
       const splitRates = weekendDays > 0 && !weekend.equals(weekday);
 
@@ -955,6 +986,7 @@ export class PricingService {
       // Khác null = tổng chỉ là TẠM TÍNH (giá chuyên biệt/giá route chưa niêm yết) — FE đổi
       // nhãn tổng và hiện ghi chú, không trưng như giá chốt.
       estimateNote,
+      dayAmounts: spreadRentOverDays(dayRates, base, base.minus(discount)),
     };
   }
 
@@ -1086,6 +1118,8 @@ export class PricingService {
       policySource: input.policy?.source ?? null,
       policyUpdatedAt: policy?.updatedAt ?? null,
       estimateNote: null,
+      // Giá gói không có cấu tạo theo ngày — `feeDaysOf` chia đều trên số ngày lịch của gói.
+      dayAmounts: null,
     };
   }
 
@@ -1145,12 +1179,6 @@ export class PricingService {
   // -------------------------------------------------------------------------
 
   /**
-   * Báo giá công khai cho một xe đã duyệt — CHƯA gồm phí giao nhận (phụ thuộc khoảng cách).
-   *
-   * Dài hạn đi nhánh GÓI: chỉ cần `packageMonths`, KHÔNG cần (và không tin) ngày trả do client
-   * gửi lên. Dịch vụ khác giữ nguyên hợp đồng ngày nhận–ngày trả.
-   */
-  /**
    * Bảng kê giá cho một yêu cầu thuê CHƯA được duyệt — giá thuê + phụ phí phía khách
    * (ADR 0029: phí dịch vụ · thuế · bảo hiểm, mỗi dòng chỉ bật khi có căn cứ thật).
    *
@@ -1174,6 +1202,7 @@ export class PricingService {
     returnAt: Date | null;
     longTermPackageMonths: number | null;
     vehicle: {
+      vehicleType: string;
       weekdayPrice: Prisma.Decimal | null;
       weekendPrice: Prisma.Decimal | null;
       monthlyPrice: Prisma.Decimal | null;
@@ -1182,6 +1211,8 @@ export class PricingService {
       withDriverOneWayPrice: Prisma.Decimal | null;
       discountPercent: number | null;
     };
+    /** Lựa chọn bảo hiểm khách đã gửi kèm yêu cầu (`booking_requests.*_selected`). */
+    insurance?: InsuranceSelection;
     /**
      * Snapshot mã khuyến mãi ĐÃ ĐÓNG BĂNG trên yêu cầu (`promo_snapshot_json`), nếu có.
      *
@@ -1247,9 +1278,9 @@ export class PricingService {
        */
       const fees = await this.customerFeesFor(
         input.tenantId,
-        breakdown.totalAmount,
+        { vehicleType: vehicle.vehicleType, breakdown },
         breakdown.estimateNote != null,
-        { ...(input.promo ? { promo: input.promo } : {}) },
+        { ...input.insurance, ...(input.promo ? { promo: input.promo } : {}) },
       );
       return { breakdown, fees };
     } catch {
@@ -1262,9 +1293,17 @@ export class PricingService {
     }
   }
 
+  /**
+   * Báo giá công khai cho một xe đã duyệt — CHƯA gồm phí giao nhận (phụ thuộc khoảng cách).
+   *
+   * Dài hạn đi nhánh GÓI: chỉ cần `packageMonths`, KHÔNG cần (và không tin) ngày trả do client
+   * gửi lên. Có tài xế tính theo LỘ TRÌNH (`routeType`: nội thành · liên tỉnh 2 chiều · liên tỉnh
+   * 1 chiều). Hai ô bảo hiểm (`IV`/`IP`) là lựa chọn của khách — tích thì bảng phí có dòng theo
+   * ngày, bỏ tích thì 0đ.
+   */
   async publicQuote(
     vehicleId: string,
-    query: {
+    query: InsuranceSelection & {
       pickupAt?: string;
       returnAt?: string;
       serviceType?: string;
@@ -1273,6 +1312,10 @@ export class PricingService {
     },
   ): Promise<PublicQuoteDto> {
     const { serviceType, routeType } = query;
+    const insurance: InsuranceSelection = {
+      vehicleProtectionSelected: query.vehicleProtectionSelected === true,
+      personalAccidentSelected: query.personalAccidentSelected === true,
+    };
     const vehicle = await this.prisma.vehicle.findFirst({
       /*
        * Báo giá công khai chỉ cho chiếc xe ĐANG THẬT SỰ nằm ngoài chợ (`marketplaceVehicleWhere`
@@ -1284,6 +1327,7 @@ export class PricingService {
       select: {
         id: true,
         tenantId: true,
+        vehicleType: true,
         weekdayPrice: true,
         weekendPrice: true,
         serviceTypes: true,
@@ -1328,7 +1372,12 @@ export class PricingService {
         breakdown: {
           ...longTermBreakdown,
           // Dài hạn chưa chốt giờ nhận ⇒ như báo giá tạm tính: hiện phí dự kiến, không thu giữ chỗ.
-          fees: await this.customerFeesFor(vehicle.tenantId, longTermBreakdown.totalAmount, true),
+          fees: await this.customerFeesFor(
+            vehicle.tenantId,
+            { vehicleType: vehicle.vehicleType, breakdown: longTermBreakdown },
+            true,
+            insurance,
+          ),
         },
         delivery,
       };
@@ -1368,13 +1417,81 @@ export class PricingService {
         ...breakdown,
         fees: await this.customerFeesFor(
           vehicle.tenantId,
-          breakdown.totalAmount,
+          { vehicleType: vehicle.vehicleType, breakdown },
           breakdown.estimateNote != null,
+          insurance,
         ),
       },
       delivery,
     };
   }
+}
+
+/**
+ * Số ngày tính phí và giá TỪNG ngày của một chuyến — đầu vào `rentalDays`/`dayAmounts` của
+ * `computeCustomerFees`.
+ *
+ * Mẫu số luôn là TIỀN THUÊ (`BASE − |DISCOUNT|`), không phải `totalAmount`: phí giao xe nằm trong
+ * `totalAmount` nhưng chủ xe hưởng trọn nó và sàn không thu hoa hồng trên nó. Để `computeCustomerFees`
+ * tự chia đều `baseAmount` là lặng lẽ thu hoa hồng trên phí giao.
+ *
+ *   - Theo NGÀY: `breakdown.days` + `breakdown.dayAmounts` (giá thật từng ngày — cuối tuần, ngày
+ *     giá riêng). Bảng kê thiếu `dayAmounts` (snapshot cũ) ⇒ chia đều tiền thuê.
+ *   - Dài hạn: số ngày LỊCH của gói — đếm trên lịch đã chốt, chưa chốt thì ước từ hôm nay (báo giá
+ *     dài hạn lúc đó vốn là tạm tính, không thu tiền). Không bao giờ `tháng × 30` (ADR 0011).
+ */
+export function feeDaysOf(trip: FeeTrip): { rentalDays: number; dayAmounts: string[] } {
+  const { breakdown } = trip;
+  const rent = new Prisma.Decimal(promoEligibleAmount(breakdown.rows));
+
+  if (breakdown.longTerm) {
+    const pickupAt = trip.schedule?.pickupAt ?? new Date();
+    const returnAt =
+      trip.schedule?.returnAt ?? addCalendarMonthsVn(pickupAt, breakdown.longTerm.packageMonths);
+    const rentalDays = Math.max(
+      1,
+      Math.round((returnAt.getTime() - pickupAt.getTime()) / MS_PER_DAY),
+    );
+    return { rentalDays, dayAmounts: splitEvenly(rent, rentalDays) };
+  }
+
+  const rentalDays = Math.max(1, breakdown.days ?? 1);
+  const dayAmounts =
+    breakdown.dayAmounts && breakdown.dayAmounts.length === rentalDays
+      ? breakdown.dayAmounts
+      : splitEvenly(rent, rentalDays);
+  return { rentalDays, dayAmounts };
+}
+
+/** Chia `amount` thành `parts` phần VND nguyên; ngày cuối nhận phần dư — `Σ` đúng bằng `amount`. */
+function splitEvenly(amount: Prisma.Decimal, parts: number): string[] {
+  const each = amount.div(parts).toDecimalPlaces(0, Prisma.Decimal.ROUND_DOWN);
+  return Array.from({ length: parts }, (_, i) =>
+    i === parts - 1 ? amount.minus(each.mul(parts - 1)).toFixed(0) : each.toFixed(0),
+  );
+}
+
+/**
+ * Giá thuê TỪNG ngày SAU khuyến mãi trực tiếp — phân `rent` theo tỷ trọng giá gốc của từng ngày,
+ * VND nguyên, ngày cuối nhận phần dư làm tròn để `Σ = rent` tuyệt đối.
+ *
+ * Phân theo tỷ trọng chứ không trừ cùng một % từng ngày rồi làm tròn từng ngày: làm tròn N lần độc
+ * lập là N cơ hội để tổng lệch khỏi dòng "Giá sau khuyến mãi" khách đang nhìn.
+ */
+function spreadRentOverDays(
+  dayRates: readonly Prisma.Decimal[],
+  base: Prisma.Decimal,
+  rent: Prisma.Decimal,
+): string[] {
+  if (dayRates.length === 0) return [];
+  if (base.isZero()) return dayRates.map(() => '0');
+  let allocated = new Prisma.Decimal(0);
+  return dayRates.map((rate, i) => {
+    if (i === dayRates.length - 1) return rent.minus(allocated).toFixed(0);
+    const share = rate.mul(rent).div(base).toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP);
+    allocated = allocated.plus(share);
+    return share.toFixed(0);
+  });
 }
 
 // ---------------------------------------------------------------------------

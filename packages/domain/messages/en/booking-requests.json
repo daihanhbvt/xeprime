@@ -119,6 +119,8 @@
     "vehicle": "Vehicle",
     "customer": "Customer",
     "schedule": "Schedule",
+    "rentalTotal": "Rental amount",
+    "customerTotal": "Trip total",
     "effect": "Approving holds the vehicle calendar and locks in the price. The booking is created once the customer pays in full; a trip with no hold payment is created right away.",
     "deliveryNote": "This request asks for delivery. The booking starts with a 0₫ delivery fee — update it on the booking once you agree with the guest.",
     "confirm": "Approve & hold vehicle",
@@ -221,6 +223,16 @@
       "destinationLabel": "Destination",
       "destinationPlaceholder": "e.g. Da Lat, Lam Dong",
       "note": "Route: {route} — {description}. Any surcharge is agreed with the host before the booking is confirmed."
+    },
+    "insurance": {
+      "title": "Trip Insurance (MIC)",
+      "vehicleProtection": "MIC Vehicle damage insurance",
+      "vehicleProtectionHintCar": "+50,000 đ/day",
+      "vehicleProtectionHintMoto": "+15,000 đ/day",
+      "personalAccident": "MIC Personal accident insurance",
+      "personalAccidentHintCar": "+20,000 đ/day",
+      "personalAccidentHintMoto": "+5,000 đ/day",
+      "note": "Optional comprehensive protection for your trip."
     },
     "contact": {
       "heading": "Contact details",

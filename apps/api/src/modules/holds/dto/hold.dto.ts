@@ -178,13 +178,15 @@ export class PlatformHoldDto {
   refundStatus!: string | null;
   @ApiProperty() createdAt!: string;
   /*
-   * Mục đích + bốn dòng tiền + tài trợ + thuế: đủ để màn chốt kết cục chỉ mời những kết cục hợp
+   * Mục đích + năm dòng tiền + tài trợ + thuế: đủ để màn chốt kết cục chỉ mời những kết cục hợp
    * lệ (`isOutcomeAllowed`) và XEM TRƯỚC ai nhận bao nhiêu bằng đúng `resolveHoldAllocation` mà
    * server dùng lúc chốt — không phải một phép tính thứ hai ở client.
    */
   @ApiProperty({ enum: BOOKING_HOLD_PURPOSE_VALUES }) purpose!: string;
-  @ApiProperty({ description: '`D` — cọc, phần giá thuê của chủ xe' }) depositAmount!: string;
-  @ApiProperty({ description: '`S` — phí dịch vụ phía khách' }) serviceFeeAmount!: string;
+  @ApiProperty({ description: '`D` — phần của chủ xe trong cọc online' }) depositAmount!: string;
+  @ApiProperty({ description: '`S` — phí sàn phía khách' }) serviceFeeAmount!: string;
+  @ApiProperty({ description: '`H` — hoa hồng lũy tiến sàn giữ lại từ phần của chủ xe' })
+  ownerCommissionAmount!: string;
   @ApiProperty({ description: '`IV` — bảo hiểm xe' }) vehicleInsuranceAmount!: string;
   @ApiProperty({ description: '`IP` — bảo hiểm người' }) personalInsuranceAmount!: string;
   @ApiProperty({ description: '`P` — nền tảng tài trợ qua mã khuyến mãi' })

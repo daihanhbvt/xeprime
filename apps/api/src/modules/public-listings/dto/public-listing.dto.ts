@@ -122,6 +122,16 @@ export class PublicListingQueryDto {
   @IsIn(VEHICLE_FEATURE_KEYS, { each: true })
   features?: string[];
 
+  @ApiPropertyOptional({
+    type: String,
+    description: 'Hộp số — CSV (TRANSMISSION_TYPE_EXT_VALUES)',
+  })
+  @IsOptional()
+  @Transform(splitCsv)
+  @IsArray()
+  @IsIn(TRANSMISSION_TYPE_EXT_VALUES, { each: true })
+  transmission?: string[];
+
   @ApiPropertyOptional({ type: Boolean, description: 'Chỉ xe có giá thuê giờ' })
   @IsOptional()
   @Transform(toBool)

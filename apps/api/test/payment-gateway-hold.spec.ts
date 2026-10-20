@@ -20,9 +20,11 @@ import {
   SUBSCRIPTION_STATUS,
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
+  VEHICLE_TYPE,
 } from '@xeprime/types';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { buildGateway, gatewayEnv, momoIpn, SPEC_WEB } from './helpers/payment-gateway-fixture';
+import { FEE_POLICY_V2_OFF } from './helpers/fee-snapshot';
 import { releaseWalletObligations } from './helpers/wallet-cleanup';
 
 /**
@@ -100,7 +102,10 @@ function snapshotOf(): BookingPriceSnapshot {
         vehicleProtectionEnabled: false,
         vehicleProtectionPercent: null,
         insurancePartnerName: null,
+        ...FEE_POLICY_V2_OFF,
       },
+      vehicleType: VEHICLE_TYPE.CAR,
+      rentalDays: 2,
       baseAmount: BASE,
       lines: [
         {
@@ -114,6 +119,9 @@ function snapshotOf(): BookingPriceSnapshot {
       customerFeeTotal: hold,
       customerTotalAmount: '1100000',
       depositAmount: '0',
+      ownerCommissionAmount: '0',
+      platformRetainedAmount: hold,
+      sponsorableAmount: hold,
       grossOnlineAmount: hold,
       promoDiscountAmount: '0',
       promo: null,

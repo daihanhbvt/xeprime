@@ -23,6 +23,8 @@ export function publicQuoteParams(trip: {
   returnAt?: Dayjs | null;
   routeType?: string | null;
   packageMonths?: number | null;
+  vehicleProtectionSelected?: boolean;
+  personalAccidentSelected?: boolean;
 }): PublicQuoteParams | null {
   if (trip.serviceType === SERVICE_TYPE.LONG_TERM) {
     return trip.packageMonths != null
@@ -36,6 +38,12 @@ export function publicQuoteParams(trip: {
     serviceType: trip.serviceType,
     ...(trip.serviceType === SERVICE_TYPE.WITH_DRIVER && trip.routeType
       ? { routeType: trip.routeType }
+      : {}),
+    ...(trip.vehicleProtectionSelected !== undefined
+      ? { vehicleProtectionSelected: trip.vehicleProtectionSelected }
+      : {}),
+    ...(trip.personalAccidentSelected !== undefined
+      ? { personalAccidentSelected: trip.personalAccidentSelected }
       : {}),
   };
 }

@@ -51452,6 +51452,15 @@
             }
           },
           {
+            "name": "transmission",
+            "required": false,
+            "in": "query",
+            "description": "Hộp số — CSV (TRANSMISSION_TYPE_EXT_VALUES)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "hourly",
             "required": false,
             "in": "query",
@@ -52084,6 +52093,22 @@
                 "inter_city_one_way"
               ]
             }
+          },
+          {
+            "name": "vehicleProtectionSelected",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "personalAccidentSelected",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -52390,6 +52415,15 @@
             "required": false,
             "in": "query",
             "description": "Tiện ích xe — CSV (VEHICLE_FEATURE_LABEL); xe phải có ĐỦ các key đã chọn",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "transmission",
+            "required": false,
+            "in": "query",
+            "description": "Hộp số — CSV (TRANSMISSION_TYPE_EXT_VALUES)",
             "schema": {
               "type": "string"
             }
@@ -52948,9 +52982,19 @@
             }
           },
           {
+            "name": "vehicleProtectionSelected",
+            "required": false,
+            "in": "query",
+            "description": "Khách có giữ lựa chọn bảo hiểm vật chất xe (IV) không",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "name": "personalAccidentSelected",
             "required": false,
             "in": "query",
+            "description": "Khách có giữ lựa chọn bảo hiểm tai nạn người (IP) không",
             "schema": {
               "type": "boolean"
             }
@@ -75109,6 +75153,12 @@
             "nullable": true,
             "description": "ISO-8601 UTC — hạn khách chuyển tiền giữ chỗ; null khi chuyến không thu"
           },
+          "vehicleProtectionSelected": {
+            "type": "boolean"
+          },
+          "personalAccidentSelected": {
+            "type": "boolean"
+          },
           "pricing": {
             "nullable": true,
             "description": "Tiền của yêu cầu này — xem docblock BookingRequestPricingDto cho nguồn theo trạng thái. Luôn có mặt (kể cả `null`) ở danh sách và chi tiết; VẮNG MẶT ở phiếu trả về của các thao tác duyệt/từ chối/huỷ — client đọc lại danh sách/chi tiết để thấy số mới.",
@@ -75131,7 +75181,9 @@
           "serviceType",
           "deliveryRequested",
           "createdAt",
-          "respondBy"
+          "respondBy",
+          "vehicleProtectionSelected",
+          "personalAccidentSelected"
         ]
       },
       "BookingRequestPageDto": {
@@ -77545,6 +77597,14 @@
           "promoCode": {
             "type": "string",
             "description": "Mã khuyến mãi nền tảng (server tự chuẩn hoá)"
+          },
+          "vehicleProtectionSelected": {
+            "type": "boolean",
+            "description": "Thêm bảo hiểm vật chất xe (IV) — tính theo ngày"
+          },
+          "personalAccidentSelected": {
+            "type": "boolean",
+            "description": "Thêm bảo hiểm tai nạn người trên xe (IP) — tính theo ngày"
           }
         },
         "required": [
@@ -79012,9 +79072,21 @@
           "policy": {
             "$ref": "#/components/schemas/FeePolicySnapshotDto"
           },
+          "vehicleType": {
+            "type": "string",
+            "enum": [
+              "car",
+              "motorbike"
+            ],
+            "description": "Loại xe — quyết định mức S và biểu phí bảo hiểm"
+          },
+          "rentalDays": {
+            "type": "number",
+            "description": "Số ngày thuê tính phí — nhân biểu phí bảo hiểm, chia nấc hoa hồng"
+          },
           "baseAmount": {
             "type": "string",
-            "description": "Mẫu số = tổng bảng kê giá thuê"
+            "description": "B — tổng bảng kê giá thuê (gồm giao nhận)"
           },
           "lines": {
             "type": "array",
@@ -79024,7 +79096,7 @@
           },
           "customerFeeTotal": {
             "type": "string",
-            "description": "Tổng phụ phí KHÁCH gánh"
+            "description": "Tổng phụ phí KHÁCH gánh (S + IV + IP)"
           },
           "customerTotalAmount": {
             "type": "string",
@@ -79032,11 +79104,23 @@
           },
           "depositAmount": {
             "type": "string",
-            "description": "D — cọc trả online cho XePrime; \"0\" khi chuyến không thu cọc"
+            "description": "D — phần của CHỦ XE trong cọc online; \"0\" khi chuyến không thu online"
+          },
+          "ownerCommissionAmount": {
+            "type": "string",
+            "description": "H — hoa hồng lũy tiến trừ vào tiền chủ xe (tính trên tiền thuê, KHÔNG trên phí giao xe). \"0\" ở tuyến gói"
+          },
+          "platformRetainedAmount": {
+            "type": "string",
+            "description": "S + H — phần XePrime giữ lại từ cọc online (trước tài trợ mã)"
           },
           "grossOnlineAmount": {
             "type": "string",
-            "description": "D + S + IV + IP TRƯỚC tài trợ mã khuyến mãi — con số phân bổ quyền lợi làm việc trên"
+            "description": "Cọc online TRƯỚC tài trợ mã khuyến mãi = D + S + H + IV + IP — con số phân bổ quyền lợi làm việc trên"
+          },
+          "sponsorableAmount": {
+            "type": "string",
+            "description": "D + S + H — phần cọc online XePrime được phép tài trợ bằng mã (không gồm bảo hiểm)"
           },
           "promoDiscountAmount": {
             "type": "string",
@@ -79054,11 +79138,11 @@
           },
           "onlineAmount": {
             "type": "string",
-            "description": "D + S + IV + IP − P — số quét QR trả ngay"
+            "description": "Cọc online − P — số quét QR trả ngay"
           },
           "payAtPickupAmount": {
             "type": "string",
-            "description": "B − D — khách trả TRỰC TIẾP chủ xe lúc nhận xe"
+            "description": "Tổng khách trả trước mã − cọc online — khách trả TRỰC TIẾP chủ xe lúc nhận xe"
           },
           "taxAmount": {
             "type": "string",
@@ -79066,11 +79150,11 @@
           },
           "ownerPayableAmount": {
             "type": "string",
-            "description": "D − T — khoản XePrime phải trả chủ xe khi chuyến hoàn thành"
+            "description": "D − T — khoản XePrime chuyển vào ví chủ xe khi chuyến hoàn thành"
           },
           "ownerNetAmount": {
             "type": "string",
-            "description": "Chủ xe THỰC NHẬN cả chuyến = B − T"
+            "description": "Chủ xe THỰC NHẬN cả chuyến = B − H − T"
           },
           "holdAmount": {
             "type": "string",
@@ -79081,12 +79165,17 @@
         "required": [
           "billingMode",
           "policy",
+          "vehicleType",
+          "rentalDays",
           "baseAmount",
           "lines",
           "customerFeeTotal",
           "customerTotalAmount",
           "depositAmount",
+          "ownerCommissionAmount",
+          "platformRetainedAmount",
           "grossOnlineAmount",
+          "sponsorableAmount",
           "promoDiscountAmount",
           "onlineAmount",
           "payAtPickupAmount",
@@ -81593,6 +81682,7 @@
             "type": "string",
             "enum": [
               "service_fee",
+              "owner_commission",
               "tax",
               "trip_insurance",
               "vehicle_protection",
@@ -81609,11 +81699,20 @@
             "example": "customer"
           },
           "percent": {
-            "type": "number"
+            "type": "number",
+            "nullable": true
+          },
+          "unitAmount": {
+            "type": "string",
+            "description": "Đơn giá MỖI NGÀY (VND) — dòng tính theo ngày"
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Số ngày đã nhân với `unitAmount`"
           },
           "amount": {
             "type": "string",
-            "description": "VND string"
+            "description": "VND string, bội 1.000đ"
           },
           "partnerName": {
             "type": "string"
@@ -81652,7 +81751,8 @@
             "nullable": true
           },
           "serviceFeePercent": {
-            "type": "number"
+            "type": "number",
+            "description": "LEGACY — luồng tiền v2 không đọc trường này"
           },
           "holdMinAmount": {
             "type": "string"
@@ -81700,6 +81800,21 @@
           "insurancePartnerName": {
             "type": "string",
             "nullable": true
+          },
+          "customerPlatformFee": {
+            "$ref": "#/components/schemas/PerVehicleTypeAmountDto"
+          },
+          "ownerCommissionTiers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OwnerCommissionTierDto"
+            }
+          },
+          "vehicleProtectionDailyAmount": {
+            "$ref": "#/components/schemas/PerVehicleTypeAmountDto"
+          },
+          "tripInsuranceDailyAmount": {
+            "$ref": "#/components/schemas/PerVehicleTypeAmountDto"
           },
           "effectiveFrom": {
             "type": "string",
@@ -81749,6 +81864,10 @@
           "taxEnabled",
           "tripInsuranceEnabled",
           "vehicleProtectionEnabled",
+          "customerPlatformFee",
+          "ownerCommissionTiers",
+          "vehicleProtectionDailyAmount",
+          "tripInsuranceDailyAmount",
           "createdAt",
           "updatedAt",
           "activationBlockers"
@@ -81764,16 +81883,19 @@
             "type": "number"
           },
           "serviceFeePercent": {
-            "type": "number"
+            "type": "number",
+            "description": "LEGACY — luồng tiền v2 không đọc trường này"
           },
           "holdMinAmount": {
             "type": "string"
           },
           "holdPaymentWindowMinutes": {
-            "type": "number"
+            "type": "number",
+            "description": "Cửa sổ thanh toán khi đặt xa — trần của cửa sổ động"
           },
           "freeCancelHours": {
-            "type": "number"
+            "type": "number",
+            "description": "Cửa sổ huỷ miễn phí (giờ) khi đặt xa — trần của cửa sổ động"
           },
           "taxEnabled": {
             "type": "boolean"
@@ -81806,7 +81928,7 @@
           },
           "depositPercent": {
             "type": "number",
-            "description": "D — % cọc trên giá thuê gốc"
+            "description": "% cọc online trên TỔNG KHÁCH TRẢ trước mã"
           },
           "depositMinAmount": {
             "type": "string",
@@ -81815,6 +81937,37 @@
           "depositMaxPercent": {
             "type": "number",
             "description": "Trần % cọc của chính sách này"
+          },
+          "customerPlatformFee": {
+            "description": "`S` — phí sàn cố định mỗi đơn",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PerVehicleTypeAmountDto"
+              }
+            ]
+          },
+          "ownerCommissionTiers": {
+            "description": "`H` — nấc hoa hồng lũy tiến",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OwnerCommissionTierDto"
+            }
+          },
+          "vehicleProtectionDailyAmount": {
+            "description": "`IV` — biểu phí mỗi ngày",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PerVehicleTypeAmountDto"
+              }
+            ]
+          },
+          "tripInsuranceDailyAmount": {
+            "description": "`IP` — biểu phí mỗi ngày",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PerVehicleTypeAmountDto"
+              }
+            ]
           }
         },
         "required": [
@@ -81829,7 +81982,11 @@
           "vehicleProtectionEnabled",
           "depositPercent",
           "depositMinAmount",
-          "depositMaxPercent"
+          "depositMaxPercent",
+          "customerPlatformFee",
+          "ownerCommissionTiers",
+          "vehicleProtectionDailyAmount",
+          "tripInsuranceDailyAmount"
         ]
       },
       "FinanceCategoryBreakdownDto": {
@@ -85023,6 +85180,25 @@
           "chargedHours"
         ]
       },
+      "OwnerCommissionTierDto": {
+        "type": "object",
+        "properties": {
+          "fromDay": {
+            "type": "number",
+            "description": "Ngày thuê bắt đầu áp nấc này (tính từ 1)",
+            "example": 1
+          },
+          "percent": {
+            "type": "number",
+            "description": "% giá thuê của ngày đó (0–30)",
+            "example": 10
+          }
+        },
+        "required": [
+          "fromDay",
+          "percent"
+        ]
+      },
       "PaginationMetaDto": {
         "type": "object",
         "properties": {
@@ -87355,6 +87531,25 @@
           "invoice"
         ]
       },
+      "PerVehicleTypeAmountDto": {
+        "type": "object",
+        "properties": {
+          "car": {
+            "type": "string",
+            "description": "Ô tô — VND, bội 1.000đ",
+            "example": "50000"
+          },
+          "motorbike": {
+            "type": "string",
+            "description": "Xe máy — VND, bội 1.000đ",
+            "example": "30000"
+          }
+        },
+        "required": [
+          "car",
+          "motorbike"
+        ]
+      },
       "PickupPointDto": {
         "type": "object",
         "properties": {
@@ -89249,11 +89444,15 @@
           },
           "depositAmount": {
             "type": "string",
-            "description": "`D` — cọc, phần giá thuê của chủ xe"
+            "description": "`D` — phần của chủ xe trong cọc online"
           },
           "serviceFeeAmount": {
             "type": "string",
-            "description": "`S` — phí dịch vụ phía khách"
+            "description": "`S` — phí sàn phía khách"
+          },
+          "ownerCommissionAmount": {
+            "type": "string",
+            "description": "`H` — hoa hồng lũy tiến sàn giữ lại từ phần của chủ xe"
           },
           "vehicleInsuranceAmount": {
             "type": "string",
@@ -89290,6 +89489,7 @@
           "purpose",
           "depositAmount",
           "serviceFeeAmount",
+          "ownerCommissionAmount",
           "vehicleInsuranceAmount",
           "personalInsuranceAmount",
           "promoDiscountAmount",
@@ -91919,9 +92119,13 @@
               "inter_city_one_way"
             ]
           },
+          "vehicleProtectionSelected": {
+            "type": "boolean",
+            "description": "Khách có giữ lựa chọn bảo hiểm vật chất xe (IV) không"
+          },
           "personalAccidentSelected": {
             "type": "boolean",
-            "description": "Khách có giữ lựa chọn bảo hiểm tai nạn người không"
+            "description": "Khách có giữ lựa chọn bảo hiểm tai nạn người (IP) không"
           }
         },
         "required": [
@@ -93554,6 +93758,13 @@
           "estimateNote": {
             "type": "string",
             "nullable": true
+          },
+          "dayAmounts": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "fees": {
             "nullable": true,
@@ -99109,7 +99320,7 @@
         "properties": {
           "name": {
             "type": "string",
-            "example": "Pilot — phí dịch vụ 10%"
+            "example": "Luồng tiền v2 — phí sàn cố định, hoa hồng lũy tiến"
           },
           "note": {
             "type": "string",
@@ -99117,8 +99328,8 @@
           },
           "serviceFeePercent": {
             "type": "number",
-            "description": "% phí dịch vụ XePrime áp cho tuyến hoa hồng (0–30). Tuyến gói luôn 0.",
-            "example": 10
+            "description": "LEGACY — % phí dịch vụ của mô hình cũ (0–30). Luồng tiền v2 không đọc trường này; vắng mặt ⇒ tạo nháp 0, sửa nháp giữ số cũ.",
+            "example": 0
           },
           "holdMinAmount": {
             "type": "string",
@@ -99127,18 +99338,18 @@
           },
           "holdPaymentWindowMinutes": {
             "type": "number",
-            "description": "Phút khách có để chuyển cọc, tính từ lúc chủ xe duyệt (ADR 0032 điều 2)",
+            "description": "Phút khách có để chuyển cọc khi đặt XA (giờ nhận cách lúc duyệt ≥ 24 giờ) — đồng thời là trần của cửa sổ động khi đặt cận ngày (ΔT × 40%, sàn 15 phút)",
             "example": 120
           },
           "freeCancelHours": {
             "type": "number",
-            "description": "Huỷ trong bấy nhiêu giờ KỂ TỪ khi duyệt thì hoàn 100% (ADR 0032 điều 5)",
+            "description": "Giờ huỷ miễn phí KỂ TỪ khi duyệt khi đặt XA (≥ 24 giờ) — đồng thời là trần của cửa sổ động (ΔT × 30%; dưới 2 giờ thì không có huỷ miễn phí)",
             "example": 4
           },
           "depositPercent": {
             "type": "number",
-            "description": "D — % cọc trên giá thuê gốc",
-            "example": 20
+            "description": "% cọc online trên TỔNG KHÁCH TRẢ trước mã khuyến mãi",
+            "example": 30
           },
           "depositMinAmount": {
             "type": "string",
@@ -99166,24 +99377,56 @@
           },
           "tripInsurancePercent": {
             "type": "number",
-            "nullable": true
+            "nullable": true,
+            "description": "LEGACY — bảo hiểm tính theo NGÀY từ luồng tiền v2 (`tripInsuranceDailyAmount`)"
           },
           "vehicleProtectionEnabled": {
             "type": "boolean"
           },
           "vehicleProtectionPercent": {
             "type": "number",
-            "nullable": true
+            "nullable": true,
+            "description": "LEGACY — bảo hiểm tính theo NGÀY từ luồng tiền v2 (`vehicleProtectionDailyAmount`)"
           },
           "insurancePartnerName": {
             "type": "string",
             "nullable": true,
             "description": "Đối tác bảo hiểm THẬT — chỉ điền khi đã có hợp đồng (ADR 0028 điều 5)"
+          },
+          "customerPlatformFee": {
+            "description": "`S` — phí sàn CỐ ĐỊNH mỗi đơn, phía khách, theo loại xe. Áp cho cả hai tuyến.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PerVehicleTypeAmountDto"
+              }
+            ]
+          },
+          "ownerCommissionTiers": {
+            "description": "`H` — nấc hoa hồng lũy tiến theo ngày của tuyến hoa hồng, `fromDay` tăng dần từ 1",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OwnerCommissionTierDto"
+            }
+          },
+          "vehicleProtectionDailyAmount": {
+            "description": "`IV` — biểu phí bảo hiểm vật chất xe MỖI NGÀY theo loại xe (khách tích chọn mới tính)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PerVehicleTypeAmountDto"
+              }
+            ]
+          },
+          "tripInsuranceDailyAmount": {
+            "description": "`IP` — biểu phí bảo hiểm tai nạn người MỖI NGÀY theo loại xe (khách tích chọn mới tính)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PerVehicleTypeAmountDto"
+              }
+            ]
           }
         },
         "required": [
           "name",
-          "serviceFeePercent",
           "holdMinAmount",
           "holdPaymentWindowMinutes",
           "freeCancelHours",

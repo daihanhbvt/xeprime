@@ -12,8 +12,11 @@ import {
   HOLD_PAYMENT_WINDOW_MINUTES,
   WITHDRAWAL_TERMS,
   holdExpiresAt,
+  holdFreeCancelMinutes,
   holdFreeCancelUntil,
+  holdPaymentWindowMinutes,
   holdRemainingMs,
+  holdWindowsFor,
   clockText,
   countdownSegment,
   countdownState,
@@ -169,6 +172,64 @@ describe('quyền huỷ miễn phí', () => {
   it('không có mốc thì KHÔNG được hoàn — mặc định an toàn', () => {
     expect(isWithinFreeCancel(null)).toBe(false);
     expect(isWithinFreeCancel(undefined)).toBe(false);
+  });
+});
+
+describe('cửa sổ động theo khoảng cách tới giờ nhận xe (luồng tiền v2)', () => {
+  const acceptedAt = new Date('2026-10-20T02:00:00.000Z');
+  const windowsAt = (leadHours: number) =>
+    holdWindowsFor({
+      acceptedAt,
+      pickupAt: new Date(acceptedAt.getTime() + leadHours * 3_600_000),
+      freeCancelHours: 4,
+      paymentWindowMinutes: 120,
+    });
+
+  /** Năm dòng của bảng tình huống trong bản thiết kế §7.2 — số phút, không phải mốc. */
+  it.each([
+    { lead: 72, cancel: 240, pay: 120 },
+    { lead: 24, cancel: 240, pay: 120 },
+    { lead: 10, cancel: 180, pay: 120 },
+    { lead: 4, cancel: 72, pay: 96 },
+    // §7.1: ΔT × 40% = 36′ (bảng §7.2 ghi tròn "30 phút"); công thức là nguồn sự thật.
+    { lead: 1.5, cancel: 0, pay: 36 },
+  ])('ΔT = $lead giờ ⇒ huỷ miễn phí $cancel′, thanh toán $pay′', ({ lead, cancel, pay }) => {
+    const w = windowsAt(lead);
+    expect(w.freeCancelMinutes).toBe(cancel);
+    expect(w.paymentWindowMinutes).toBe(pay);
+    expect(w.freeCancelUntil.getTime() - acceptedAt.getTime()).toBe(cancel * 60_000);
+    expect(w.expiresAt.getTime() - acceptedAt.getTime()).toBe(pay * 60_000);
+  });
+
+  it('ngay dưới 2 giờ là KHÔNG huỷ miễn phí; đúng 2 giờ thì có 36 phút', () => {
+    expect(holdFreeCancelMinutes(119, 4)).toBe(0);
+    expect(holdFreeCancelMinutes(120, 4)).toBe(36);
+  });
+
+  it('cửa sổ thanh toán không bao giờ dưới ngưỡng tạo hold — cùng một hằng', () => {
+    expect(holdPaymentWindowMinutes(10, 120)).toBe(HOLD_MIN_USABLE_WINDOW_MINUTES);
+    expect(holdPaymentWindowMinutes(0, 120)).toBe(HOLD_MIN_USABLE_WINDOW_MINUTES);
+  });
+
+  it('cả hai cửa sổ KHÔNG vượt chính sách phí, kể cả khi ΔT × tỷ lệ lớn hơn', () => {
+    expect(holdFreeCancelMinutes(23 * 60, 4)).toBe(240);
+    expect(holdPaymentWindowMinutes(23 * 60, 120)).toBe(120);
+    expect(holdPaymentWindowMinutes(23 * 60, 90)).toBe(90);
+  });
+
+  it('chuyến sát giờ: mốc hết hạn bị kẹp về giờ nhận xe, không vượt qua nó', () => {
+    const pickupAt = new Date(acceptedAt.getTime() + 10 * 60_000);
+    const w = holdWindowsFor({ acceptedAt, pickupAt, freeCancelHours: 4, paymentWindowMinutes: 120 });
+    expect(w.paymentWindowMinutes).toBe(HOLD_MIN_USABLE_WINDOW_MINUTES);
+    expect(w.expiresAt).toEqual(pickupAt);
+    expect(w.freeCancelUntil).toEqual(acceptedAt);
+  });
+
+  it('giờ nhận đã qua ⇒ ΔT = 0, không có mốc nào ở tương lai của giờ nhận', () => {
+    const pickupAt = new Date(acceptedAt.getTime() - 60_000);
+    const w = holdWindowsFor({ acceptedAt, pickupAt, freeCancelHours: 4, paymentWindowMinutes: 120 });
+    expect(w.leadMinutes).toBe(0);
+    expect(w.expiresAt.getTime()).toBeLessThanOrEqual(pickupAt.getTime());
   });
 });
 

@@ -383,6 +383,21 @@ export class CreateBookingRequestDto {
   @IsString()
   @MaxLength(64)
   promoCode?: string;
+
+  /**
+   * Lựa chọn bảo hiểm của khách — luồng tiền v2: cả hai TUỲ CHỌN, tích thì tính theo ngày. Đóng
+   * băng vào yêu cầu; lượt chốt giá (duyệt/tự nhận) đọc lại đúng lựa chọn này. Chính sách phí tắt
+   * cổng bảo hiểm thì lựa chọn không sinh dòng tiền nào. Bỏ trống = không chọn.
+   */
+  @ApiPropertyOptional({ description: 'Thêm bảo hiểm vật chất xe (IV) — tính theo ngày' })
+  @IsOptional()
+  @IsBoolean()
+  vehicleProtectionSelected?: boolean;
+
+  @ApiPropertyOptional({ description: 'Thêm bảo hiểm tai nạn người trên xe (IP) — tính theo ngày' })
+  @IsOptional()
+  @IsBoolean()
+  personalAccidentSelected?: boolean;
 }
 
 /** Khách kiểm tra nhanh khung giờ của một xe có trống không (preview — ADR 0006). */
@@ -788,6 +803,11 @@ export class BookingRequestDto {
     description: 'ISO-8601 UTC — hạn khách chuyển tiền giữ chỗ; null khi chuyến không thu',
   })
   holdExpiresAt!: string | null;
+
+  /** Khách đã tích bảo hiểm vật chất xe (`IV`) lúc gửi — lượt chốt giá tính theo lựa chọn này. */
+  @ApiProperty() vehicleProtectionSelected!: boolean;
+  /** Khách đã tích bảo hiểm tai nạn người (`IP`) lúc gửi. */
+  @ApiProperty() personalAccidentSelected!: boolean;
 
   @ApiPropertyOptional({
     type: BookingRequestPricingDto,

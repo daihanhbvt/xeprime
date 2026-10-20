@@ -33,9 +33,11 @@ export interface PriceBreakdownFees {
   lines: ReadonlyArray<{
     key: string;
     bearer: string;
-    percent: number;
+    percent: number | null;
     amount: string;
     partnerName?: string | null;
+    unitAmount?: string | null;
+    quantity?: number | null;
   }>;
   customerTotalAmount: string;
   /**
@@ -260,7 +262,11 @@ export function PriceBreakdown({
                     <span className={styles.sublabel}>
                       {line.bearer === FEE_BEARER.OWNER
                         ? tCommon('components.price.ownerNet')
-                        : `${line.percent}%`}
+                        : line.percent != null
+                          ? `${line.percent}%`
+                          : line.unitAmount && line.quantity
+                            ? `${line.quantity} ngày × ${fmt.money(line.unitAmount)}`
+                            : ''}
                       {line.partnerName ? ` · ${line.partnerName}` : ''}
                     </span>
                   </dt>

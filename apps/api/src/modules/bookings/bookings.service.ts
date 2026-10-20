@@ -1273,12 +1273,21 @@ type BookingDetailRow = Prisma.BookingGetPayload<{ select: typeof DETAIL_SELECT 
 function feeColumns(snapshot: BookingPriceSnapshot) {
   const fees = snapshot.fees;
   if (!fees) return {};
+  const serviceFeeLine = fees.lines.find((l) => l.key === FEE_LINE.SERVICE_FEE);
   return {
     billingMode: fees.billingMode,
-    serviceFeePercent: fees.policy.serviceFeePercent,
-    serviceFeeAmount: new Prisma.Decimal(
-      fees.lines.find((l) => l.key === FEE_LINE.SERVICE_FEE)?.amount ?? '0',
-    ),
+    /*
+     * "% phí dịch vụ ĐÃ ÁP" — đọc từ CHÍNH dòng phí, không từ chính sách. Luồng tiền v2 thu phí sàn
+     * CỐ ĐỊNH (`percent: null`), nên đơn mới ghi NULL thay vì chép `policy.serviceFeePercent` —
+     * con số legacy đó không còn được áp cho đơn nào, ghi nó vào đơn là ghi một lời nói dối.
+     */
+    serviceFeePercent: serviceFeeLine?.percent ?? null,
+    serviceFeeAmount: new Prisma.Decimal(serviceFeeLine?.amount ?? '0'),
+    /*
+     * `H` — hoa hồng lũy tiến XePrime giữ lại từ phần của chủ xe (luồng tiền v2). Snapshot trước v2
+     * không có trường này ⇒ 0, đúng với đơn đời đó.
+     */
+    ownerCommissionAmount: new Prisma.Decimal(fees.ownerCommissionAmount ?? '0'),
     customerTotalAmount: new Prisma.Decimal(fees.customerTotalAmount),
     /*
      * `D` và `D − T` đọc từ CHÍNH snapshot (ADR 0032 điều 2, ADR 0033 điều 2) — một nguồn, không

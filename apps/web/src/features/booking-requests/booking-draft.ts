@@ -157,6 +157,8 @@ export function readBookingDraft(vehicleId: string): RestoredBookingDraft | null
       // Bản nháp ghi trước khi form có ô lời nhắn thì không mang trường này — ô điều khiển cần chuỗi.
       note: typeof rest.note === 'string' ? rest.note : '',
       acceptedTerms: false,
+      vehicleProtectionSelected: Boolean(rest.vehicleProtectionSelected),
+      personalAccidentSelected: Boolean(rest.personalAccidentSelected),
       pickupAt: fromWire(pickupAt),
       returnAt: fromWire(returnAt),
       requestedPickupDate: fromWire(requestedPickupDate),

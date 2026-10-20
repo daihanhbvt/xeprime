@@ -227,6 +227,11 @@ export function requestFormSchema(t: FormTranslate) {
      */
     acceptedTerms: yup.boolean().default(false),
     /**
+     * Lựa chọn bảo hiểm MIC (vật chất xe / tai nạn người ngồi trên xe) — tùy chọn, tính theo ngày.
+     */
+    vehicleProtectionSelected: yup.boolean().default(false),
+    personalAccidentSelected: yup.boolean().default(false),
+    /**
      * Lời nhắn cho chủ xe (không bắt buộc) — chủ xe đọc nó ở hộp thư yêu cầu. Trần dùng chung với
      * DTO bên API; server cắt khoảng trắng và lưu chuỗi rỗng thành `null`.
      */

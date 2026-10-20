@@ -14,7 +14,7 @@ import {
   PROMO_VEHICLE_SCOPE_VALUES,
   SERVICE_TYPE_VALUES,
 } from '@xeprime/types';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
@@ -31,6 +31,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
+import { toQueryBool } from '../../../common/dto/query-transforms';
 import { CustomerFeeBreakdownDto } from '../../pricing/dto/pricing.dto';
 
 const DEFAULT_LIMIT = 10;
@@ -392,7 +393,12 @@ export class PreviewPromoCodeDto {
   @MaxLength(30)
   routeType?: string;
 
-  @ApiPropertyOptional({ description: 'Khách có giữ lựa chọn bảo hiểm tai nạn người không' })
+  @ApiPropertyOptional({ description: 'Khách có giữ lựa chọn bảo hiểm vật chất xe (IV) không' })
+  @IsOptional()
+  @IsBoolean()
+  vehicleProtectionSelected?: boolean;
+
+  @ApiPropertyOptional({ description: 'Khách có giữ lựa chọn bảo hiểm tai nạn người (IP) không' })
   @IsOptional()
   @IsBoolean()
   personalAccidentSelected?: boolean;
@@ -491,9 +497,19 @@ export class AvailablePromoQueryDto {
   @MaxLength(30)
   routeType?: string;
 
-  @ApiPropertyOptional()
+  /*
+   * Query string chỉ có CHUỖI: `@Type(() => Boolean)` đọc `'false'` thành `true`, nên một khách
+   * bỏ tích bảo hiểm vẫn được tính như đang tích. `toQueryBool` đọc đúng hai giá trị chữ.
+   */
+  @ApiPropertyOptional({ description: 'Khách có giữ lựa chọn bảo hiểm vật chất xe (IV) không' })
   @IsOptional()
-  @Type(() => Boolean)
+  @Transform(toQueryBool)
+  @IsBoolean()
+  vehicleProtectionSelected?: boolean;
+
+  @ApiPropertyOptional({ description: 'Khách có giữ lựa chọn bảo hiểm tai nạn người (IP) không' })
+  @IsOptional()
+  @Transform(toQueryBool)
   @IsBoolean()
   personalAccidentSelected?: boolean;
 }

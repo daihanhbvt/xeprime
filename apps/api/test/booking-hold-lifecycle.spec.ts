@@ -29,6 +29,9 @@ import {
   SUPPORT_PARTY,
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
+  VEHICLE_TYPE,
+  holdFreeCancelMinutes,
+  holdPaymentWindowMinutes,
 } from '@xeprime/types';
 import { sweepBookingHoldExpiry } from '../../worker/src/jobs/booking-hold-expiry';
 import { SepayService } from '../src/modules/sepay/sepay.service';
@@ -43,6 +46,7 @@ import {
   makeBookingsService,
   makeBookingRequestsService,
 } from './helpers/service-factory';
+import { FEE_POLICY_V2_OFF } from './helpers/fee-snapshot';
 import { releaseWalletObligations } from './helpers/wallet-cleanup';
 
 /**
@@ -154,7 +158,10 @@ function snapshotOf(): BookingPriceSnapshot {
         vehicleProtectionEnabled: false,
         vehicleProtectionPercent: null,
         insurancePartnerName: null,
+        ...FEE_POLICY_V2_OFF,
       },
+      vehicleType: VEHICLE_TYPE.CAR,
+      rentalDays: 2,
       baseAmount: BASE,
       lines: [
         {
@@ -170,6 +177,10 @@ function snapshotOf(): BookingPriceSnapshot {
       // Chính sách của spec này để cọc = 0 ⇒ toàn bộ khoản giữ chỗ là phí dịch vụ, đúng như
       // trước ADR 0032. Công thức D + S + IV + IP được khoá ở fee-policy.test.ts.
       depositAmount: '0',
+      // Snapshot đời trước luồng tiền v2: không có hoa hồng `H`, sàn giữ lại đúng bằng `S`.
+      ownerCommissionAmount: '0',
+      platformRetainedAmount: HOLD_AMOUNT,
+      sponsorableAmount: HOLD_AMOUNT,
       // Không có mã khuyến mãi ⇒ `grossOnlineAmount === onlineAmount` (ADR 0046). Spec này khoá
       // vòng đời hold, nên nó cố ý giữ trạng thái "không tài trợ" làm đường đối chiếu.
       grossOnlineAmount: HOLD_AMOUNT,
@@ -445,16 +456,35 @@ describe('Nhận chuyến ⇒ tạo hold: chiếm lịch, phát QR, CHƯA có đ
   );
 
   /**
-   * Chuyến sát giờ: cửa sổ bị kẹp về giờ nhận. Quyền huỷ miễn phí không thể sống qua thời điểm
-   * khách đã cầm xe — và vì thế UI phải cảnh báo TRƯỚC khi họ trả tiền (ADR 0032 điều 5).
+   * Chuyến CẬN NGÀY (2–24 giờ): hai cửa sổ co theo `ΔT = pickupAt − acceptedAt` (luồng tiền v2 —
+   * `holdWindowsFor`): huỷ miễn phí `ΔT × 30%`, thanh toán `ΔT × 40%` — cả hai vẫn đếm XUÔI từ
+   * `decided_at` và không vượt giờ nhận xe.
    */
-  maybe('chuyến nhận xe sát giờ ⇒ cửa sổ huỷ miễn phí bị kẹp về giờ nhận', async () => {
-    // Nhận xe sau 2 giờ — ngắn hơn cả cửa sổ huỷ miễn phí 4 giờ.
-    const { holdId } = await makeHold(2 / 24);
+  maybe('chuyến nhận xe cận ngày ⇒ hai cửa sổ co theo khoảng cách tới giờ nhận', async () => {
+    const { holdId } = await makeHold(3 / 24);
     const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
     const req = await prisma.bookingRequest.findFirstOrThrow({ where: { tenantId } });
 
-    expect(hold.freeCancelUntil.getTime()).toBe(req.pickupAt!.getTime());
+    const accepted = req.decidedAt!.getTime();
+    const leadMinutes = (req.pickupAt!.getTime() - accepted) / 60_000;
+    expect(hold.freeCancelUntil.getTime()).toBe(
+      accepted + holdFreeCancelMinutes(leadMinutes, 4) * 60_000,
+    );
+    expect(hold.expiresAt.getTime()).toBe(
+      accepted + holdPaymentWindowMinutes(leadMinutes, 1440) * 60_000,
+    );
+    // ~3 giờ ⇒ ~54 phút huỷ miễn phí, ~72 phút thanh toán — ngắn hơn hẳn 4 giờ / 1440 phút.
+    expect(hold.freeCancelUntil.getTime() - accepted).toBeLessThan(60 * 60_000);
+    expect(hold.expiresAt.getTime()).toBeLessThan(req.pickupAt!.getTime());
+  });
+
+  /** Đặt GẤP (< 2 giờ): không có huỷ miễn phí — mốc trùng `decided_at`, cọc là chốt. */
+  maybe('chuyến nhận xe dưới 2 giờ ⇒ KHÔNG có huỷ miễn phí', async () => {
+    const { holdId } = await makeHold(1.5 / 24);
+    const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
+    const req = await prisma.bookingRequest.findFirstOrThrow({ where: { tenantId } });
+
+    expect(hold.freeCancelUntil.getTime()).toBe(req.decidedAt!.getTime());
   });
 });
 

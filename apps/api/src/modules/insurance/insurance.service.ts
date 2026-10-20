@@ -74,7 +74,7 @@ export class InsuranceService {
     const premiums = premiumsFromSnapshot(input.snapshot);
     const rows: Prisma.BookingInsurancePolicyCreateManyInput[] = [];
 
-    const push = (kind: InsuranceProductKind, amount: Prisma.Decimal, needsConsent: boolean) => {
+    const push = (kind: InsuranceProductKind, amount: Prisma.Decimal) => {
       if (amount.lte(0)) return;
       rows.push({
         id: newId(),
@@ -90,15 +90,15 @@ export class InsuranceService {
          * phải gửi ĐÚNG khoá cũ, nếu không đối tác coi đó là một hợp đồng mới và khách bị mua đôi.
          */
         idempotencyKey: `${input.bookingId}:${kind}`,
-        // Bằng chứng khách chọn — chỉ có nghĩa với `IP`; `IV` bắt buộc nên không có gì để chọn.
-        ...(needsConsent && input.consent
+        // Bằng chứng khách chọn — từ luồng tiền v2 CẢ HAI sản phẩm đều tuỳ chọn, nên cả hai cần nó.
+        ...(input.consent
           ? { consentAt: input.consent.at, consentSource: input.consent.source }
           : {}),
       });
     };
 
-    push(INSURANCE_PRODUCT_KIND.VEHICLE_TRIP, premiums.vehicleTrip, false);
-    push(INSURANCE_PRODUCT_KIND.PERSONAL_ACCIDENT, premiums.personalAccident, true);
+    push(INSURANCE_PRODUCT_KIND.VEHICLE_TRIP, premiums.vehicleTrip);
+    push(INSURANCE_PRODUCT_KIND.PERSONAL_ACCIDENT, premiums.personalAccident);
     if (rows.length === 0) return;
 
     await tx.bookingInsurancePolicy.createMany({ data: rows, skipDuplicates: true });
