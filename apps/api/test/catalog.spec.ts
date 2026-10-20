@@ -7,8 +7,10 @@ import {
   TENANT_STATUS,
   VEHICLE_TYPE,
 } from '@xeprime/types';
+import { createValidationPipe } from '../src/bootstrap';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { CatalogService } from '../src/modules/catalog/catalog.service';
+import { UpdateCatalogItemDto } from '../src/modules/catalog/dto/catalog.dto';
 import type { PrismaService } from '../src/prisma/prisma.service';
 
 /**
@@ -263,5 +265,99 @@ describe('Danh mục lọc dùng chung', () => {
       const errors = await validate(plainToInstance(UpdateCatalogItemDto, { [field]: value }));
       expect(errors.map((e) => e.property)).toContain(field);
     }
+  });
+
+  /*
+   * Nhãn hai ngôn ngữ (ADR 0012) — migration `20261020150000_catalog_item_english_labels`. Bản tiếng
+   * Anh ĐI KÈM, không thay: NULL nghĩa là "chưa dịch / tên riêng", client rơi về `label`.
+   */
+  maybe(
+    'migration nạp sẵn tiếng Anh cho kiểu dáng/nhiên liệu/tiện nghi; hãng xe để trống',
+    async () => {
+      const items = await catalog.list({});
+      const find = (type: string, key: string) =>
+        items.find((i) => i.type === type && i.key === key);
+
+      expect(find(CATALOG_TYPE.FUEL_TYPE, 'gasoline')?.labelEn).toBe('Petrol');
+      expect(find(CATALOG_TYPE.VEHICLE_FEATURE, 'backup_camera')?.labelEn).toBe('Reversing camera');
+      expect(find(CATALOG_TYPE.BODY_TYPE, 'suv')?.labelEn).toBe('SUV');
+      // Tên riêng: không có bản dịch.
+      expect(
+        items.filter((i) => i.type === CATALOG_TYPE.VEHICLE_BRAND).every((i) => i.labelEn === null),
+      ).toBe(true);
+    },
+  );
+
+  maybe(
+    'nhãn tiếng Anh: tạo kèm, sửa bằng chuỗi trắng thì gỡ về NULL, DB chặn chuỗi trắng',
+    async () => {
+      const created = await catalog.create(adminId, {
+        type: CATALOG_TYPE.VEHICLE_FEATURE,
+        key: `${PREFIX}-en`,
+        label: 'Sạc không dây',
+        labelEn: '  Wireless charging  ',
+        description: 'Cho điện thoại',
+        descriptionEn: 'For phones',
+      });
+      expect(created.labelEn).toBe('Wireless charging');
+      expect(created.descriptionEn).toBe('For phones');
+
+      const cleared = await catalog.update(adminId, created.id, {
+        labelEn: '   ',
+        descriptionEn: null,
+      });
+      expect(cleared.labelEn).toBeNull();
+      expect(cleared.descriptionEn).toBeNull();
+      // Sửa trường khác không đụng bản dịch.
+      const kept = await catalog.update(adminId, created.id, { labelEn: 'Wireless charging' });
+      const renamed = await catalog.update(adminId, kept.id, { label: 'Sạc không dây Qi' });
+      expect(renamed.labelEn).toBe('Wireless charging');
+
+      // Chốt chặn cuối ở DB: một lượt ghi đi vòng service vẫn không lưu được chuỗi trắng.
+      await expect(
+        prisma.catalogItem.update({ where: { id: created.id }, data: { labelEn: '  ' } }),
+      ).rejects.toThrow(/catalog_items_label_en_not_blank/);
+    },
+  );
+
+  /*
+   * PATCH qua ĐÚNG pipe của HTTP: `ValidationPipe({ transform: true })` dựng instance DTO có đủ mọi
+   * khoá (trường không gửi = `undefined`). Bài này gọi service bằng chính instance đó — gọi bằng object
+   * literal thì không thấy lỗi.
+   */
+  maybe('PATCH chỉ { active } không xoá mô tả, icon, ảnh trang chủ hay bản dịch', async () => {
+    const created = await catalog.create(adminId, {
+      type: CATALOG_TYPE.BODY_TYPE,
+      key: `${PREFIX}-patch`,
+      label: 'Coupe',
+      labelEn: 'Coupe',
+      description: '2 chỗ · thể thao',
+      descriptionEn: '2 seats · sporty',
+      iconUrl: '/body-types/coupe.png',
+      showOnHome: true,
+      showcaseImageUrl: '/home/type-coupe.webp',
+      showcaseExamples: 'Mazda MX-5',
+    });
+
+    const asHttp = async (body: Record<string, unknown>) =>
+      (await createValidationPipe().transform(body, {
+        type: 'body',
+        metatype: UpdateCatalogItemDto,
+      })) as UpdateCatalogItemDto;
+
+    const toggled = await catalog.update(adminId, created.id, await asHttp({ active: false }));
+    expect(toggled.active).toBe(false);
+    expect(toggled.description).toBe('2 chỗ · thể thao');
+    expect(toggled.descriptionEn).toBe('2 seats · sporty');
+    expect(toggled.labelEn).toBe('Coupe');
+    expect(toggled.iconUrl).toBe('/body-types/coupe.png');
+    expect(toggled.showOnHome).toBe(true);
+    expect(toggled.showcaseImageUrl).toBe('/home/type-coupe.webp');
+    expect(toggled.showcaseExamples).toBe('Mazda MX-5');
+
+    // null qua HTTP vẫn là "xoá giá trị".
+    const cleared = await catalog.update(adminId, created.id, await asHttp({ labelEn: null }));
+    expect(cleared.labelEn).toBeNull();
+    expect(cleared.description).toBe('2 chỗ · thể thao');
   });
 });

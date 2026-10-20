@@ -229,3 +229,50 @@
   line-height: var(--xp-line-height-body);
   overflow-wrap: anywhere;
 }
+
+/*
+ * Mobile (≤640px = `--xp-bp-mobile`), chỉ khi nơi gọi bật `compactOnMobile` (luồng của KHÁCH): thẻ GỌN
+ * ở đầu bước — ảnh nhỏ cạnh tên, thông số dòng, giá; hàng gian hàng trải bên dưới. Khách vừa rời trang
+ * chi tiết xe (đã thấy ảnh lớn, điểm nhận, bảng thông số) — lặp lại nguyên khối đó đẩy biểu mẫu của
+ * bước xuống dưới cả một màn hình. Điểm nhận xe vẫn nằm ngay trong lựa chọn "Hình thức nhận xe".
+ * Nhãn giảm giá GIỮ — nó là lý do giá dưới đó thấp hơn; chỉ bỏ dòng liệt kê dịch vụ.
+ */
+@media (max-width: 640px) {
+  .compactMobile {
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr);
+    align-items: start;
+    gap: var(--xp-space-12);
+  }
+
+  .compactMobile .hero {
+    border-radius: var(--xp-border-radius);
+  }
+
+  .compactMobile .heroImg,
+  .compactMobile .heroPlaceholder {
+    aspect-ratio: 4 / 3;
+  }
+
+  .compactMobile .badge {
+    display: none;
+  }
+
+  .compactMobile .name {
+    font-size: var(--xp-font-size-body-lg);
+    line-height: var(--xp-line-height-body-lg);
+  }
+
+  .compactMobile .price {
+    margin-top: 0;
+  }
+
+  .compactMobile .details {
+    grid-column: 1 / -1;
+  }
+
+  .compactMobile .pickupPoint,
+  .compactMobile .specs {
+    display: none;
+  }
+}

@@ -168,13 +168,12 @@ export function PromoCodeField({
         </div>
       )}
 
-      {checking ? <p className={styles.note}>{t('field.checking')}</p> : null}
-      {!checking && reason && !hasApplied ? (
-        <p className={styles.error}>{reasonText(t, reason)}</p>
-      ) : null}
-      {droppedCode ? (
-        <p className={styles.warn}>{t('field.dropped', { code: droppedCode })}</p>
-      ) : null}
+      <PromoStatusNote
+        checking={checking}
+        reason={reason}
+        hasApplied={hasApplied}
+        droppedCode={droppedCode}
+      />
 
       <PromoPicker
         open={pickerOpen}
@@ -340,6 +339,36 @@ function PickerRow({
         </Button>
       </div>
     </div>
+  );
+}
+
+/**
+ * Ba lời báo trạng thái của mã khuyến mãi — đang kiểm tra · không áp được (lý do) · vừa bị bỏ vì
+ * chuyến đổi. Dùng chung cho ô áp mã của hộp đặt xe và thẻ đặt xe ở trang chi tiết: `usePromoCode`
+ * hứa "giao diện phải nói ra", và mỗi nơi tự viết lại là mỗi nơi có thể quên một ca (ADR 0046 §7).
+ */
+export function PromoStatusNote({
+  checking,
+  reason,
+  hasApplied,
+  droppedCode,
+}: {
+  checking: boolean;
+  reason: string | null;
+  hasApplied: boolean;
+  droppedCode: string | null;
+}) {
+  const t = useTranslations('PromoCodes');
+  return (
+    <>
+      {checking ? <p className={styles.note}>{t('field.checking')}</p> : null}
+      {!checking && reason && !hasApplied ? (
+        <p className={styles.error}>{reasonText(t, reason)}</p>
+      ) : null}
+      {droppedCode ? (
+        <p className={styles.warn}>{t('field.dropped', { code: droppedCode })}</p>
+      ) : null}
+    </>
   );
 }
 

@@ -12291,8 +12291,18 @@ export interface components {
             key: string;
             /** @example SUV */
             label: string;
+            /**
+             * @description Nhãn tiếng Anh (ADR 0012). NULL = chưa dịch hoặc là tên riêng (hãng xe) — client dùng `label`.
+             * @example SUV
+             */
+            labelEn: string | null;
             /** @example 7 chỗ · gầm cao */
             description: string | null;
+            /**
+             * @description Dòng phụ tiếng Anh. NULL = client dùng `description`.
+             * @example 7 seats · high clearance
+             */
+            descriptionEn: string | null;
             /** @example /body-types/suv.png */
             iconUrl: string | null;
             /** @description Chỉ kiểu dáng: hiện ở khối "Loại xe" trang chủ */
@@ -12322,8 +12332,18 @@ export interface components {
             key: string;
             /** @example SUV */
             label: string;
+            /**
+             * @description Nhãn tiếng Anh (ADR 0012). NULL = chưa dịch hoặc là tên riêng (hãng xe) — client dùng `label`.
+             * @example SUV
+             */
+            labelEn: string | null;
             /** @example 7 chỗ · gầm cao */
             description: string | null;
+            /**
+             * @description Dòng phụ tiếng Anh. NULL = client dùng `description`.
+             * @example 7 seats · high clearance
+             */
+            descriptionEn: string | null;
             /** @example /body-types/suv.png */
             iconUrl: string | null;
             /** @description Chỉ kiểu dáng: hiện ở khối "Loại xe" trang chủ */
@@ -12878,8 +12898,15 @@ export interface components {
             key: string;
             /** @example Coupe */
             label: string;
+            /**
+             * @description Nhãn tiếng Anh — bỏ trống thì giao diện tiếng Anh dùng `label`
+             * @example Coupe
+             */
+            labelEn?: string | null;
             /** @example 2 chỗ · thể thao */
             description?: Record<string, never>;
+            /** @example 2 seats · sporty */
+            descriptionEn?: string | null;
             /** @example /body-types/coupe.png */
             iconUrl?: Record<string, never>;
             /** @description Chỉ kiểu dáng — bật thì bắt buộc có showcaseImageUrl */
@@ -19232,7 +19259,10 @@ export interface components {
         };
         UpdateCatalogItemDto: {
             label?: string;
+            /** @description Nhãn tiếng Anh — chuỗi rỗng/null = bỏ bản dịch, dùng lại `label` */
+            labelEn?: string | null;
             description?: string | null;
+            descriptionEn?: string | null;
             iconUrl?: string | null;
             /** @description Chỉ kiểu dáng — bật thì bắt buộc có showcaseImageUrl */
             showOnHome?: boolean;

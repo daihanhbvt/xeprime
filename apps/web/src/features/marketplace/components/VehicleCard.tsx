@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { isNewListing } from '@xeprime/domain';
 import { SERVICE_TYPE, VEHICLE_TYPE, transmissionFamily, type VehicleType } from '@xeprime/types';
 import { listingPath, shopPath } from '@/constants/routes';
 import { cx } from '@/lib/cx';
@@ -52,7 +53,8 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
     (serviceTypes.includes(SERVICE_TYPE.SELF_DRIVE) ? SERVICE_TYPE.SELF_DRIVE : serviceTypes[0]);
   const fuel = fuelTypeLabel(listing.fuelType);
   const rating = Number(listing.ratingAvg);
-  const hasRating = listing.ratingCount > 0 && Number.isFinite(rating);
+  // Cùng một luật "xe mới" với trang chi tiết xe (`isNewListing` — `@xeprime/domain`).
+  const hasRating = !isNewListing(listing);
 
   /*
    * HAI TUYẾN trên một chợ (ADR 0028) và khách phải đọc được mình đang xem xe của ai. Backend

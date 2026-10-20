@@ -1610,5 +1610,13 @@
     "bank_transfer": "bank transfer",
     "momo": "MoMo wallet",
     "vnpay": "VNPAY"
+  },
+  "priceRow": {
+    "base": "Base rental",
+    "discount": "Direct discount",
+    "subtotal": "Subtotal",
+    "delivery": "Delivery fee",
+    "overtime": "Overtime fee",
+    "extras": "Extras"
   }
 }

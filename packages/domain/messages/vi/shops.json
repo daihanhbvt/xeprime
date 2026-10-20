@@ -32,6 +32,10 @@
       "instantBook": "Xe bật Đặt ngay — yêu cầu của bạn được nhận tự động, không phải chờ duyệt.",
       "experienced": "Chủ xe đã hoàn thành {count, plural, other {# chuyến}} cho khách trên XePrime.",
       "newHost": "Chủ xe mới trên XePrime — bạn có thể là một trong những khách đầu tiên."
+    },
+    "type": {
+      "shop": "Gian hàng",
+      "owner": "Chủ xe"
     }
   },
   "stats": {
@@ -79,6 +83,11 @@
       "hour": "Trong 1 giờ",
       "hours": "Vài giờ",
       "day": "Trong ngày"
+    },
+    "inlineLabel": {
+      "responseRate": "Tỉ lệ phản hồi",
+      "responseTime": "Phản hồi trong",
+      "acceptKeep": "Tỉ lệ đồng ý"
     }
   }
 }

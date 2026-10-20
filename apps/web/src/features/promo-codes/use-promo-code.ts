@@ -43,6 +43,12 @@ export interface PromoCodeState {
 export function usePromoCode(trip: PromoTripParams | null): PromoCodeState {
   const [appliedCode, setAppliedCode] = useState<string | null>(null);
   const [applied, setApplied] = useState<PromoPreview | null>(null);
+  /**
+   * Chuyến (`promoTripKey`) mà `applied` được tính cho. Khách đổi ngày/dịch vụ thì báo giá mới có
+   * thể về TRƯỚC lượt xác minh lại mã — lúc đó `applied.fees` là bảng phí của chuyến CŨ, và ghép nó
+   * vào báo giá mới là hiện tiền thuê mới với tổng/tiền giữ chỗ cũ. Chỉ trả `applied` khi khớp.
+   */
+  const [appliedFor, setAppliedFor] = useState<string | null>(null);
   const [reason, setReason] = useState<string | null>(null);
   const [droppedCode, setDroppedCode] = useState<string | null>(null);
 
@@ -63,6 +69,7 @@ export function usePromoCode(trip: PromoTripParams | null): PromoCodeState {
             if (result.applicable) {
               setAppliedCode(result.code);
               setApplied(result);
+              setAppliedFor(promoTripKey(trip));
               setReason(null);
               return;
             }
@@ -151,6 +158,7 @@ export function usePromoCode(trip: PromoTripParams | null): PromoCodeState {
           if (result.applicable) {
             // Số giảm có thể ĐỔI theo chuyến mới — ghi lại bằng con số vừa nhận, không giữ số cũ.
             setApplied(result);
+            setAppliedFor(tripKey);
             setDroppedCode(null);
             return;
           }
@@ -182,7 +190,8 @@ export function usePromoCode(trip: PromoTripParams | null): PromoCodeState {
 
   return {
     appliedCode: hasTrip ? appliedCode : null,
-    applied: hasTrip ? applied : null,
+    // Đang xác minh lại cho chuyến mới ⇒ chưa có kết quả nào đúng với chuyến này (`checking`).
+    applied: hasTrip && appliedFor === tripKey ? applied : null,
     checking: previewM.isPending,
     reason: hasTrip ? reason : null,
     /* Mã đang áp mà chuyến biến mất ⇒ nói cho khách biết mã đang tạm không áp vào đâu cả. */

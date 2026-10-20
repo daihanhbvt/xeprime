@@ -93,6 +93,171 @@
       "title": "Hạn mức quãng đường",
       "included": "Bao gồm {km}/ngày. Phụ phí {fee} cho mỗi km vượt giới hạn.",
       "note": "Hạn mức tính theo số ngày thuê có tính phí. Phí vượt km chỉ được ghi nhận khi quyết toán chuyến, không nằm trong giá hiển thị."
+    },
+    "breadcrumb": {
+      "label": "Đường dẫn",
+      "home": "Trang chủ",
+      "search": "Thuê xe",
+      "current": "Chi tiết xe",
+      "back": "Quay lại danh sách xe"
+    },
+    "featuresTitle": "Tiện ích trên xe",
+    "hostTitle": "Chủ xe",
+    "location": {
+      "title": "Vị trí xe",
+      "openMap": "Mở bản đồ"
+    },
+    "attributes": {
+      "brand": "Hãng: <strong>{value}</strong>",
+      "color": "Màu sắc: <strong>{value}</strong>"
+    },
+    "descriptionToggle": {
+      "more": "Xem tiếp",
+      "less": "Thu gọn"
+    },
+    "gallery": {
+      "photoAlt": "{name} — ảnh {index}",
+      "pager": "Chọn ảnh xe",
+      "goTo": "Ảnh {index} / {total}",
+      "counter": "{index} / {total}"
+    },
+    "benefits": {
+      "title": "Tự nhận xe",
+      "items": {
+        "hourly": "Tối ưu chi phí khi thuê gói theo giờ",
+        "noWait": "Đặt xe nhanh, không cần chờ chủ xe duyệt đơn"
+      },
+      "howItWorks": "Cách thức hoạt động"
+    },
+    "share": {
+      "label": "Chia sẻ xe",
+      "title": "Chia sẻ"
+    },
+    "policies": {
+      "label": "Quy định thuê xe",
+      "title": "Quy định & Chính sách",
+      "tabs": {
+        "general": "Quy định chung",
+        "documents": "Giấy tờ thuê xe",
+        "collateral": "Tài sản thế chấp",
+        "cancellation": "Điều khoản huỷ"
+      },
+      "general": {
+        "purpose": "Sử dụng xe đúng mục đích, không vận chuyển hàng cấm, chất cháy nổ hoặc gia súc, gia cầm.",
+        "noSmoking": "Nghiêm cấm hút thuốc, kẹo cao su hoặc xả rác bừa bãi trong khoang xe (phụ phí vệ sinh nếu vi phạm).",
+        "handover": "Bàn giao và trả xe đúng khung giờ đã thỏa thuận, giữ gìn xe trong tình trạng ban đầu.",
+        "tip": "Mẹo: Chụp ảnh tình trạng xe (ngoại thất & công tơ mét) lúc nhận và trả xe để đối chiếu minh bạch."
+      },
+      "surcharge": {
+        "rule": "{kind}: {amount}{per}",
+        "withThreshold": "{rule} · {threshold}",
+        "per": {
+          "perHour": "/giờ",
+          "per30Minutes": "/30 phút",
+          "perKm": "/km",
+          "perNight": "/đêm"
+        },
+        "threshold": {
+          "minuteOfDay": "tính sau {time}",
+          "graceMinutes": "tính sau {count, plural, other {# phút}} chờ miễn phí",
+          "kmPerDay": "tính phần vượt {km}/ngày"
+        }
+      },
+      "documents": {
+        "licenceRequired": "Dịch vụ này cần bằng lái đã xác thực trên tài khoản của bạn trước khi gửi yêu cầu thuê.",
+        "empty": "Chủ xe chưa công bố thủ tục riêng cho dịch vụ này — giấy tờ cần mang sẽ được nhắc khi bạn gửi yêu cầu."
+      },
+      "collateral": {
+        "none": "<strong>Không yêu cầu đặt cọc hay thế chấp tài sản:</strong> xe này không cần thế chấp tài sản hay cọc khi nhận xe.",
+        "mode": "<strong>Hình thức thế chấp:</strong> {mode}.",
+        "modeCash": "tiền mặt",
+        "modeAsset": "xe máy hoặc tài sản có giá trị tương đương",
+        "modeAssetTypes": "xe máy hoặc tài sản có giá trị tương đương ({types})",
+        "amount": "<strong>Giá trị thế chấp yêu cầu:</strong> {amount}",
+        "unknown": "Không yêu cầu thế chấp tài sản, hoặc trao đổi trực tiếp với chủ xe khi nhận bàn giao.",
+        "note": "Tiền thế chấp (cọc nhận xe) được giao trực tiếp cho chủ xe khi nhận xe và hoàn trả 100% khi trả xe nguyên vẹn."
+      },
+      "cancellation": {
+        "title": "Chính sách huỷ chuyến & giữ chỗ",
+        "free": "<strong>Huỷ miễn phí:</strong> trong {hours} giờ kể từ lúc chủ xe nhận chuyến (không quá giờ nhận xe), bạn được hoàn 100% số đã thanh toán.",
+        "hold": "<strong>Thời gian giữ chỗ:</strong> sau khi chủ xe nhận chuyến, bạn có {minutes} phút để thanh toán tiền giữ chỗ.",
+        "release": "Quá thời gian giữ chỗ mà chưa thanh toán đủ, yêu cầu tự đóng và lịch xe được mở lại cho khách khác.",
+        "protection": "Chính sách bảo vệ người thuê: nếu chủ xe huỷ chuyến sau khi bạn đã thanh toán tiền giữ chỗ, bạn được hoàn 100% số đã thanh toán."
+      }
+    },
+    "booking": {
+      "tabsLabel": "Hình thức thuê",
+      "tabs": {
+        "selfDrive": "Thuê theo ngày",
+        "withDriver": "Có tài xế",
+        "longTerm": "Thuê dài hạn"
+      },
+      "change": "Thay đổi",
+      "route": {
+        "label": "Lộ trình di chuyển:"
+      },
+      "package": {
+        "label": "Thời hạn thuê:"
+      },
+      "longTerm": {
+        "wishLabel": "Nguyện vọng ngày nhận xe:",
+        "asap": "Càng sớm càng tốt (trong 7 ngày tới)",
+        "dateLabel": "Ngày bạn muốn nhận xe:",
+        "datePlaceholder": "Chọn ngày nhận xe",
+        "expectedReturn": "Ngày trả xe dự kiến:",
+        "expectedReturnValue": "{date} ({duration})"
+      },
+      "driver": {
+        "pickupTitle": "Địa chỉ đón khách",
+        "pickupAt": "Tài xế đón tại:",
+        "choosePickup": "Chọn địa chỉ đón khách & xem bản đồ",
+        "pickupModalTitle": "Chọn địa chỉ đón khách",
+        "destinationLabel": "Điểm đến (Tỉnh/thành hoặc địa chỉ đến):",
+        "destinationPlaceholder": "Ví dụ: TP. Hội An, Quảng Nam",
+        "surchargesTitle": "Phụ phí tài xế (nếu phát sinh trong chuyến):"
+      },
+      "pickup": {
+        "title": "Vị trí nhận xe",
+        "self": "Khách tự nhận xe",
+        "selfHint": "Miễn phí",
+        "delivery": "Giao xe tận nơi",
+        "deliveryHint": "Phụ phí tính theo km",
+        "addressFallback": "Địa chỉ bàn giao của gian hàng",
+        "deliveryAddress": "Địa chỉ giao xe tận nơi:",
+        "distance": "Khoảng cách dự kiến: ~{distance} · Phí giao: <b>{fee}</b>",
+        "free": "Miễn phí",
+        "chooseDelivery": "Chọn địa chỉ giao xe & xem bản đồ",
+        "note": "* Địa điểm cụ thể và số điện thoại chủ xe sẽ hiển thị sau khi hoàn tất thanh toán giữ chỗ.",
+        "distanceFeeLater": "Khoảng cách dự kiến: ~{distance} · Phí giao: chủ xe báo khi duyệt yêu cầu"
+      },
+      "costs": {
+        "title": "Thành tiền",
+        "discountGroup": "Giảm giá/Khuyến mãi",
+        "promoRemove": "Gỡ mã khuyến mãi",
+        "promoApply": "Áp dụng mã khuyến mãi / giới thiệu"
+      }
+    },
+    "deliveryModal": {
+      "title": "Địa chỉ giao xe tận nơi",
+      "useTyped": "Sử dụng đúng địa chỉ đã nhập: “{query}”",
+      "pickupPointFallback": "Chi nhánh bàn giao xe",
+      "ownerPoint": "<strong>Điểm giao xe của chủ:</strong> {address}",
+      "maxRadius": "<strong>Bán kính giao tối đa:</strong> {distance}",
+      "searchLabel": "Nhập địa chỉ nhận xe của bạn:",
+      "searchPlaceholder": "Số nhà, tên đường, phường/xã, quận/huyện...",
+      "locating": "Đang định vị địa chỉ và tính toán quãng đường...",
+      "mapAlt": "Bản đồ vị trí giao xe",
+      "feeLabel": "Phí giao xe dự kiến:",
+      "free": "Miễn phí",
+      "distance": "Khoảng cách đường bộ dự kiến: ~{distance}",
+      "confirmedPlace": "Địa điểm xác nhận: {address}",
+      "manualTitle": "Cần thỏa thuận phí giao xe",
+      "manualOutsideRadius": "Địa chỉ này nằm ngoài bán kính tự động báo giá ({distance}). Chủ xe sẽ báo phí giao cụ thể sau khi nhận yêu cầu.",
+      "manualOutsideRadiusUnknown": "Địa chỉ này nằm ngoài bán kính tự động báo giá. Chủ xe sẽ báo phí giao cụ thể sau khi nhận yêu cầu.",
+      "manualDefault": "Phí giao xe sẽ được chủ xe xác nhận trực tiếp khi duyệt yêu cầu thuê.",
+      "notFoundTitle": "Không tra được tuyến đường tự động",
+      "notFoundBody": "Hệ thống không tính được cự ly tự động cho địa chỉ này. Phí giao xe sẽ do chủ xe thông báo sau.",
+      "confirm": "Xác nhận địa chỉ"
     }
   },
   "reviews": {

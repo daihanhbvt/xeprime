@@ -129,28 +129,31 @@ export function TripAwaitingHoldView({
           }
         />
       }
+      priority={
+        <>
+          {/*
+            Quay về từ MoMo/VNPAY (ADR 0058) bằng liên kết CŨ `/trips/:id?paymentOrder=` — lượt mở
+            trước 13/10/2026. Không có tham số thì khối tự im lặng.
+          */}
+          <TripGatewayReturn tripId={trip.id} />
+
+          {awaitingHold ? (
+            <HoldPaymentCard
+              tripId={trip.id}
+              hold={awaitingHold}
+              payAtPickup={payAtPickupAmount(fees)}
+            />
+          ) : hold ? (
+            <TripHoldPanel
+              hold={hold}
+              tripId={trip.id}
+              tripTotalAmount={fees?.customerTotalAmount ?? null}
+              payAtHandoverAmount={fees?.payAtPickupAmount ?? null}
+            />
+          ) : null}
+        </>
+      }
     >
-      {/*
-        Quay về từ MoMo/VNPAY (ADR 0058) bằng liên kết CŨ `/trips/:id?paymentOrder=` — lượt mở trước
-        13/10/2026. Không có tham số thì khối tự im lặng.
-      */}
-      <TripGatewayReturn tripId={trip.id} />
-
-      {awaitingHold ? (
-        <HoldPaymentCard
-          tripId={trip.id}
-          hold={awaitingHold}
-          payAtPickup={payAtPickupAmount(fees)}
-        />
-      ) : hold ? (
-        <TripHoldPanel
-          hold={hold}
-          tripId={trip.id}
-          tripTotalAmount={fees?.customerTotalAmount ?? null}
-          payAtHandoverAmount={fees?.payAtPickupAmount ?? null}
-        />
-      ) : null}
-
       {/*
         Số ở đây là số ĐÃ CHỐT lúc chủ xe nhận chuyến (snapshot trên khoản giữ chỗ — ADR 0024), nên
         thẻ không còn gì "tạm tính". Nhãn "Cần thanh toán" chỉ đứng cạnh tiền giữ chỗ khi khoản đó

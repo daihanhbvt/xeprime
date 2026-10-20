@@ -294,7 +294,8 @@
       "savings": "You save {amount} with the {months, plural, one {# month} other {# months}} commitment discount.",
       "finalNote": "The final price is confirmed by the host when they approve your request.",
       "deliveryNote": "The delivery fee is not included in the total above.",
-      "loadError": "We couldn't load the estimate. You can still continue; the host will confirm the price."
+      "loadError": "We couldn't load the estimate. You can still continue; the host will confirm the price.",
+      "durationDiscount": "Commitment discount"
     },
     "done": {
       "title": "Request sent",

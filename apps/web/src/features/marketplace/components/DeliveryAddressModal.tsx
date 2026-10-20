@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   EnvironmentOutlined,
   InfoCircleOutlined,
@@ -8,6 +8,7 @@ import {
   EditOutlined,
 } from '@ant-design/icons';
 import { Alert, AutoComplete, Button, Input, Spin } from 'antd';
+import { useTranslations } from 'next-intl';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { StaticMapImage } from '@/components/data-display/StaticMapImage';
 import { placeMapSrc, usePlaceDetail, usePlaceSearch } from '@/features/locations/hooks/use-places';
@@ -19,7 +20,8 @@ import {
 } from '@/lib/delivery-address-memory';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { isZeroMoney } from '@/lib/money';
-import { LOCATION_SOURCE } from '@xeprime/types';
+import { DELIVERY_DISTANCE_STATUS, DELIVERY_MANUAL_REASON, LOCATION_SOURCE } from '@xeprime/types';
+import { cx } from '@/lib/cx';
 import type { PublicListingDetail } from '../types';
 import styles from './DeliveryAddressModal.module.css';
 
@@ -32,7 +34,12 @@ export interface ConfirmedDeliveryInfo {
   lng: number | null;
   provinceCode: string | null;
   distanceKm: number | null;
-  fee: number;
+  /**
+   * Phí giao DỰ KIẾN do server báo (chuỗi tiền — ADR 0007); `null` khi chưa có con số tự động
+   * (ngoài bán kính, không tra được đường) — chủ xe báo phí khi duyệt. KHÔNG bao giờ quy về 0:
+   * "chưa biết" mà hiện "Miễn phí" là một lời hứa sai.
+   */
+  fee: string | null;
 }
 
 interface DeliveryAddressModalProps {
@@ -52,6 +59,8 @@ export function DeliveryAddressModal({
   initialAddress,
   onConfirm,
 }: DeliveryAddressModalProps) {
+  const t = useTranslations('Listings.detail.deliveryModal');
+  const tCommon = useTranslations('Common.actions');
   const fmt = useAppFormat();
   const [query, setQuery] = useState(initialAddress ?? '');
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
@@ -86,10 +95,7 @@ export function DeliveryAddressModal({
   }
 
   // Hàm tính toán khoảng cách và phí giao xe dự kiến
-  const calculateDistance = async (
-    addr: string,
-    pin?: { lat: number; lng: number } | null,
-  ) => {
+  const calculateDistance = async (addr: string, pin?: { lat: number; lng: number } | null) => {
     if (!addr.trim()) return;
     setCalculatingDistance(true);
     try {
@@ -131,9 +137,7 @@ export function DeliveryAddressModal({
         const latNum = Number(detailRes.place.latitude);
         const lngNum = Number(detailRes.place.longitude);
         const coords =
-          !Number.isNaN(latNum) && !Number.isNaN(lngNum)
-            ? { lat: latNum, lng: lngNum }
-            : null;
+          !Number.isNaN(latNum) && !Number.isNaN(lngNum) ? { lat: latNum, lng: lngNum } : null;
         setSelectedCoords(coords);
         setSuggestedProvinceCode(
           detailRes.place.suggestedProvinceCode ?? listing.provinceCode ?? null,
@@ -152,11 +156,6 @@ export function DeliveryAddressModal({
   const handleConfirm = () => {
     if (!selectedAddress.trim()) return;
 
-    let computedFee = 0;
-    if (deliveryResult?.fee) {
-      computedFee = Number(deliveryResult.fee) || 0;
-    }
-
     const info: ConfirmedDeliveryInfo = {
       address: selectedAddress,
       placeId: selectedPlaceId,
@@ -164,7 +163,10 @@ export function DeliveryAddressModal({
       lng: selectedCoords?.lng ?? null,
       provinceCode: suggestedProvinceCode ?? listing.provinceCode ?? null,
       distanceKm: deliveryResult?.distanceKm ?? null,
-      fee: computedFee,
+      fee:
+        deliveryResult?.status === DELIVERY_DISTANCE_STATUS.AUTO
+          ? (deliveryResult.fee ?? null)
+          : null,
     };
 
     // Lưu vào bộ nhớ local để prefill cho các lần đặt sau
@@ -193,9 +195,7 @@ export function DeliveryAddressModal({
         <EnvironmentOutlined className={styles.suggestionIcon} />
         <div className={styles.suggestionText}>
           <div className={styles.suggestionPrimary}>{s.primaryText}</div>
-          {s.secondaryText && (
-            <div className={styles.suggestionSecondary}>{s.secondaryText}</div>
-          )}
+          {s.secondaryText && <div className={styles.suggestionSecondary}>{s.secondaryText}</div>}
         </div>
       </div>
     ),
@@ -206,34 +206,32 @@ export function DeliveryAddressModal({
       value: USE_TYPED_VALUE,
       label: (
         <div className={styles.useTypedOption}>
-          <EditOutlined />
-          <span>Sử dụng đúng địa chỉ đã nhập: &quot;{query}&quot;</span>
+          <EditOutlined aria-hidden="true" />
+          <span>{t('useTyped', { query })}</span>
         </div>
       ),
     });
   }
 
+  const strong = (chunks: ReactNode) => <strong>{chunks}</strong>;
+
   const pickupPointAddr =
-    listing.pickupPoint?.address || listing.shopProvince || 'Chi nhánh bàn giao xe';
+    listing.pickupPoint?.address || listing.shopProvince || t('pickupPointFallback');
 
   return (
-    <ResponsiveDialog
-      open={open}
-      onClose={onClose}
-      title={title || 'Địa chỉ giao xe tận nơi'}
-      size="md"
-    >
+    <ResponsiveDialog open={open} onClose={onClose} title={title || t('title')} size="md">
       <div className={styles.dialogBody}>
         {/* Banner thông tin điểm giao xe của chủ xe & bán kính */}
         <div className={styles.contextAlert}>
-          <InfoCircleOutlined className={styles.contextIcon} />
+          <InfoCircleOutlined className={styles.contextIcon} aria-hidden="true" />
           <div>
-            <div>
-              <strong>Điểm giao xe của chủ:</strong> {pickupPointAddr}
-            </div>
+            <div>{t.rich('ownerPoint', { strong, address: pickupPointAddr })}</div>
             {deliveryResult?.maxRadiusKm ? (
               <div>
-                <strong>Bán kính giao tối đa:</strong> {deliveryResult.maxRadiusKm} km
+                {t.rich('maxRadius', {
+                  strong,
+                  distance: fmt.distanceKm(deliveryResult.maxRadiusKm),
+                })}
               </div>
             ) : null}
           </div>
@@ -242,7 +240,7 @@ export function DeliveryAddressModal({
         {/* Ô tìm kiếm địa chỉ */}
         <div className={styles.searchSection}>
           <label className={styles.searchLabel} htmlFor="delivery-address-input">
-            Nhập địa chỉ nhận xe của bạn:
+            {t('searchLabel')}
           </label>
           <AutoComplete
             id="delivery-address-input"
@@ -251,10 +249,10 @@ export function DeliveryAddressModal({
             onChange={(val) => setQuery(val)}
             onSelect={handleSelectPlace}
             options={suggestionOptions}
-            placeholder="Số nhà, tên đường, phường/xã, quận/huyện..."
+            placeholder={t('searchPlaceholder')}
           >
             <Input
-              prefix={<SearchOutlined style={{ color: '#98a2b3' }} />}
+              prefix={<SearchOutlined className={styles.searchIcon} aria-hidden="true" />}
               allowClear
               size="large"
             />
@@ -263,8 +261,8 @@ export function DeliveryAddressModal({
 
         {/* Trạng thái đang tải toạ độ hoặc đang tính khoảng cách */}
         {(placeDetailMutation.isPending || calculatingDistance) && (
-          <div style={{ textAlign: 'center', padding: '16px 0' }}>
-            <Spin tip="Đang định vị địa chỉ và tính toán quãng đường..." />
+          <div className={styles.locating}>
+            <Spin tip={t('locating')} />
           </div>
         )}
 
@@ -273,7 +271,7 @@ export function DeliveryAddressModal({
           <div className={styles.mapPreviewWrap}>
             <StaticMapImage
               src={placeMapSrc(selectedPlaceId)}
-              alt="Bản đồ vị trí giao xe"
+              alt={t('mapAlt')}
               className={styles.mapImage}
             />
           </div>
@@ -282,52 +280,57 @@ export function DeliveryAddressModal({
         {/* Kết quả tính khoảng cách và phí */}
         {deliveryResult && (
           <div className={styles.estimateCard}>
-            {deliveryResult.status === 'auto' && (
+            {deliveryResult.status === DELIVERY_DISTANCE_STATUS.AUTO && (
               <>
                 <div className={styles.estimateRow}>
-                  <span className={styles.estimateLabel}>Phí giao xe dự kiến:</span>
+                  <span className={styles.estimateLabel}>{t('feeLabel')}</span>
                   <span
-                    className={`${styles.estimateFee} ${
-                      isZeroMoney(deliveryResult.fee ?? '0') ? styles.freeFee : ''
-                    }`}
+                    className={cx(
+                      styles.estimateFee,
+                      isZeroMoney(deliveryResult.fee ?? '0') && styles.freeFee,
+                    )}
                   >
                     {isZeroMoney(deliveryResult.fee ?? '0')
-                      ? 'Miễn phí'
+                      ? t('free')
                       : fmt.money(deliveryResult.fee ?? '0')}
                   </span>
                 </div>
                 {deliveryResult.distanceKm != null && (
                   <div className={styles.estimateMeta}>
-                    Khoảng cách đường bộ dự kiến: ~{fmt.distanceKm(deliveryResult.distanceKm)}
+                    {t('distance', { distance: fmt.distanceKm(deliveryResult.distanceKm) })}
                   </div>
                 )}
                 {deliveryResult.formattedAddress && (
                   <div className={styles.estimateMeta}>
-                    Địa điểm xác nhận: {deliveryResult.formattedAddress}
+                    {t('confirmedPlace', { address: deliveryResult.formattedAddress })}
                   </div>
                 )}
               </>
             )}
 
-            {deliveryResult.status === 'manual' && (
+            {deliveryResult.status === DELIVERY_DISTANCE_STATUS.MANUAL && (
               <Alert
                 type="warning"
                 showIcon
-                message="Cần thỏa thuận phí giao xe"
+                title={t('manualTitle')}
                 description={
-                  deliveryResult.manualReason === 'outside_auto_radius'
-                    ? `Địa chỉ này nằm ngoài bán kính tự động báo giá (${deliveryResult.maxRadiusKm ?? 10} km). Chủ xe sẽ báo phí giao cụ thể sau khi nhận yêu cầu.`
-                    : 'Phí giao xe sẽ được chủ xe xác nhận trực tiếp khi duyệt yêu cầu thuê.'
+                  deliveryResult.manualReason === DELIVERY_MANUAL_REASON.OUTSIDE_AUTO_RADIUS
+                    ? deliveryResult.maxRadiusKm
+                      ? t('manualOutsideRadius', {
+                          distance: fmt.distanceKm(deliveryResult.maxRadiusKm),
+                        })
+                      : t('manualOutsideRadiusUnknown')
+                    : t('manualDefault')
                 }
               />
             )}
 
-            {deliveryResult.status === 'address_not_found' && (
+            {deliveryResult.status === DELIVERY_DISTANCE_STATUS.ADDRESS_NOT_FOUND && (
               <Alert
                 type="info"
                 showIcon
-                message="Không tra được tuyến đường tự động"
-                description="Hệ thống không tính được cự ly tự động cho địa chỉ này. Phí giao xe sẽ do chủ xe thông báo sau."
+                title={t('notFoundTitle')}
+                description={t('notFoundBody')}
               />
             )}
           </div>
@@ -336,7 +339,7 @@ export function DeliveryAddressModal({
         {/* Nút hành động */}
         <div className={styles.footerActions}>
           <Button className={styles.cancelBtn} onClick={onClose} size="large">
-            Hủy
+            {tCommon('cancel')}
           </Button>
           <Button
             type="primary"
@@ -345,7 +348,7 @@ export function DeliveryAddressModal({
             disabled={!selectedAddress.trim()}
             size="large"
           >
-            Xác nhận địa chỉ
+            {t('confirm')}
           </Button>
         </div>
       </div>

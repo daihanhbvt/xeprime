@@ -167,24 +167,34 @@
   color: #98a2b3 !important;
 }
 
-
 /* ── Giao diện tối ─────────────────────────────────────────────────────────
    Hộp thoại AntD đã tối theo theme; đây là các mảng nền/viền xám nhạt viết thẳng ở trên. */
-:global([data-theme="dark"]) .mapPreviewWrap,
-:global([data-theme="dark"]) .estimateCard {
+:global([data-theme='dark']) .mapPreviewWrap,
+:global([data-theme='dark']) .estimateCard {
   background: var(--xp-color-bg-muted);
 }
 
-:global([data-theme="dark"]) .estimateCard {
+:global([data-theme='dark']) .estimateCard {
   border-color: var(--xp-color-border);
 }
 
-:global([data-theme="dark"]) .footerActions {
+:global([data-theme='dark']) .footerActions {
   border-top-color: var(--xp-color-border);
 }
 
-:global([data-theme="dark"]) .confirmBtn:disabled {
+:global([data-theme='dark']) .confirmBtn:disabled {
   background-color: var(--xp-color-bg-muted) !important;
   border-color: var(--xp-color-border) !important;
   color: var(--xp-color-text-placeholder) !important;
+}
+
+/* Icon kính lúp trong ô tìm — màu chữ gợi ý, không hex viết thẳng trong JSX. */
+.searchIcon {
+  color: var(--xp-color-text-placeholder);
+}
+
+/* Đang định vị địa chỉ / tính quãng đường. */
+.locating {
+  padding: var(--xp-space-md) 0;
+  text-align: center;
 }

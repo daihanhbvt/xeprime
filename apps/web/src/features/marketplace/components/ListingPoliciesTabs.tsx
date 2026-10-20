@@ -1,20 +1,22 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { useTranslations } from 'next-intl';
+import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import {
-  COLLATERAL_ASSET_TYPE_LABEL,
   COLLATERAL_MODE,
-  CUSTOMER_DOCUMENT_TYPE_LABEL,
-  DRIVER_SURCHARGE_KIND_SPEC,
+  HOLD_FREE_CANCEL_HOURS,
+  HOLD_PAYMENT_WINDOW_MINUTES,
+  IDENTITY_VERIFY_METHOD,
   SERVICE_TYPE,
   appliesExcessMileage,
   requiredIdentityDocuments,
-  type CollateralAssetType,
-  type CustomerDocumentType,
-  type DriverSurchargeKind,
+  serviceRequiresDriverLicence,
 } from '@xeprime/types';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
+import { cx } from '@/lib/cx';
+import { isZeroMoney } from '@/lib/money';
+import { useDriverSurchargeLine } from '../hooks/use-driver-surcharge-line';
 import type { PublicListingDetail } from '../types';
 import styles from './ListingPoliciesTabs.module.css';
 
@@ -23,20 +25,60 @@ interface ListingPoliciesTabsProps {
   activeService: string;
 }
 
+const TABS = ['general', 'documents', 'collateral', 'cancellation'] as const;
+type PolicyTab = (typeof TABS)[number];
+
+/**
+ * Bốn tab "Quy định & Chính sách" của trang chi tiết xe — Figma v2 `19707:83494`.
+ *
+ * Câu chữ là của nền tảng, SỐ LIỆU là của tin đăng: khung giờ, phụ phí, hạn mức km, giấy tờ, thế chấp
+ * đọc từ `listing`; hai mốc thời gian của khoản giữ chỗ đọc từ hằng số dùng chung với server
+ * (`HOLD_FREE_CANCEL_HOURS`, `HOLD_PAYMENT_WINDOW_MINUTES`) — không gõ lại "4 tiếng", "120 phút".
+ * Huỷ miễn phí tính XUÔI từ lúc chủ xe nhận chuyến (ADR 0032 · ADR 0044), không ngược từ giờ nhận xe.
+ *
+ * Thanh tab theo mẫu WAI-ARIA Tabs: tab và panel nối nhau bằng id, mũi tên trái/phải/Home/End đổi
+ * tab, chỉ tab đang chọn nằm trong thứ tự Tab của bàn phím.
+ */
 export function ListingPoliciesTabs({ listing, activeService }: ListingPoliciesTabsProps) {
+  const t = useTranslations('Listings.detail');
+  const tp = useTranslations('Listings.detail.policies');
+  const baseId = useId();
   const vatTitleId = useId();
-  const [activeTab, setActiveTab] = useState<'general' | 'documents' | 'collateral' | 'cancellation'>('general');
+  const [activeTab, setActiveTab] = useState<PolicyTab>('general');
+  const tabRefs = useRef<Partial<Record<PolicyTab, HTMLButtonElement | null>>>({});
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
+
+  const tabId = (tab: PolicyTab) => `${baseId}-tab-${tab}`;
+  const panelId = (tab: PolicyTab) => `${baseId}-panel-${tab}`;
+
+  const selectTab = (tab: PolicyTab, focus = false) => {
+    setActiveTab(tab);
+    if (focus) tabRefs.current[tab]?.focus();
+  };
+
+  const handleTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    const index = TABS.indexOf(activeTab);
+    const next =
+      event.key === 'ArrowRight'
+        ? TABS[(index + 1) % TABS.length]
+        : event.key === 'ArrowLeft'
+          ? TABS[(index - 1 + TABS.length) % TABS.length]
+          : event.key === 'Home'
+            ? TABS[0]
+            : event.key === 'End'
+              ? TABS[TABS.length - 1]
+              : null;
+    if (!next) return;
+    event.preventDefault();
+    selectTab(next, true);
+  };
 
   const activeTerms =
     listing.rentalTerms?.find((term) => term.serviceType === activeService) ?? null;
 
-  const thresholdKindOf = (kind: string) =>
-    DRIVER_SURCHARGE_KIND_SPEC[kind as DriverSurchargeKind]?.threshold ?? null;
-
   const windowLabels = (windows: ReadonlyArray<{ start: string; end: string }>) =>
-    windows.map((window) => `${window.start}–${window.end}`);
+    windows.map((window) => `${window.start}–${window.end}`).join(', ');
   const pickupWindows = windowLabels(listing.handover?.pickupWindows ?? []);
   const returnWindows = windowLabels(listing.handover?.returnWindows ?? []);
 
@@ -45,260 +87,285 @@ export function ListingPoliciesTabs({ listing, activeService }: ListingPoliciesT
       ? activeTerms.requiredDocuments
       : requiredIdentityDocuments(activeService);
 
-  return (
-    <section className={styles.wrap} aria-label="Quy định thuê xe">
-      <h2 className={styles.title}>Quy định & Chính sách</h2>
+  const surchargeLine = useDriverSurchargeLine();
 
-      <div className={styles.tabList} role="tablist">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'general'}
-          className={`${styles.tabButton} ${activeTab === 'general' ? styles.tabActive : ''}`}
-          onClick={() => setActiveTab('general')}
-        >
-          Quy định chung
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'documents'}
-          className={`${styles.tabButton} ${activeTab === 'documents' ? styles.tabActive : ''}`}
-          onClick={() => setActiveTab('documents')}
-        >
-          Giấy tờ thuê xe
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'collateral'}
-          className={`${styles.tabButton} ${activeTab === 'collateral' ? styles.tabActive : ''}`}
-          onClick={() => setActiveTab('collateral')}
-        >
-          Tài sản thế chấp
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'cancellation'}
-          className={`${styles.tabButton} ${activeTab === 'cancellation' ? styles.tabActive : ''}`}
-          onClick={() => setActiveTab('cancellation')}
-        >
-          Điều khoản huỷ
-        </button>
+  const collateralMode = (() => {
+    const collateral = listing.collateral;
+    if (!collateral) return null;
+    if (collateral.mode === COLLATERAL_MODE.CASH) return tp('collateral.modeCash');
+    const types = (collateral.assetTypes ?? []).map((type) =>
+      domainLabel('collateralAssetType', type),
+    );
+    return types.length > 0
+      ? tp('collateral.modeAssetTypes', { types: types.join(', ') })
+      : tp('collateral.modeAsset');
+  })();
+
+  const strong = (chunks: ReactNode) => <strong>{chunks}</strong>;
+
+  const tabButton = (tab: PolicyTab) => (
+    <button
+      key={tab}
+      ref={(el) => {
+        tabRefs.current[tab] = el;
+      }}
+      type="button"
+      role="tab"
+      id={tabId(tab)}
+      aria-controls={panelId(tab)}
+      aria-selected={activeTab === tab}
+      tabIndex={activeTab === tab ? 0 : -1}
+      className={cx(styles.tabButton, activeTab === tab && styles.tabActive)}
+      onClick={() => selectTab(tab)}
+      onKeyDown={handleTabKeyDown}
+    >
+      {tp(`tabs.${tab}`)}
+    </button>
+  );
+
+  const panelProps = (tab: PolicyTab) => ({
+    role: 'tabpanel' as const,
+    id: panelId(tab),
+    'aria-labelledby': tabId(tab),
+    hidden: activeTab !== tab,
+    tabIndex: 0,
+  });
+
+  return (
+    <section className={styles.wrap} aria-label={tp('label')}>
+      <h2 className={styles.title}>{tp('title')}</h2>
+
+      <div className={styles.tabList} role="tablist" aria-label={tp('title')}>
+        {TABS.map(tabButton)}
       </div>
 
       <div className={styles.content}>
         {/* TAB 1: QUY ĐỊNH CHUNG */}
-        <div role="tabpanel" aria-labelledby="tab-general" hidden={activeTab !== 'general'}>
-          <div className={styles.ruleItem}>
-            <span className={styles.bullet} />
-            <span>Sử dụng xe đúng mục đích, không vận chuyển hàng cấm, chất cháy nổ hoặc gia súc, gia cầm.</span>
-          </div>
-          <div className={styles.ruleItem}>
-            <span className={styles.bullet} />
-            <span>Nghiêm cấm hút thuốc, kẹo cao su hoặc xả rác bừa bãi trong khoang xe (phụ phí vệ sinh nếu vi phạm).</span>
-          </div>
-          <div className={styles.ruleItem}>
-            <span className={styles.bullet} />
-            <span>Bàn giao và trả xe đúng khung giờ đã thỏa thuận, giữ gìn xe trong tình trạng ban đầu.</span>
-          </div>
+        <div {...panelProps('general')}>
+          {(['purpose', 'noSmoking', 'handover'] as const).map((key) => (
+            <div key={key} className={styles.ruleItem}>
+              <span className={styles.bullet} />
+              <span>{tp(`general.${key}`)}</span>
+            </div>
+          ))}
 
-          {/* Hạn mức quãng đường */}
-          {appliesExcessMileage(activeService) && listing.mileagePolicy && (
+          {/* Hạn mức quãng đường — chỉ dịch vụ có tính km vượt */}
+          {appliesExcessMileage(activeService) && listing.mileagePolicy ? (
             <div className={styles.subSection}>
-              <h3 className={styles.subSectionTitle}>Hạn mức quãng đường</h3>
+              <h3 className={styles.subSectionTitle}>{t('mileage.title')}</h3>
               <div className={styles.ruleItem}>
                 <span className={styles.bullet} />
                 <span>
-                  Bao gồm {fmt.km(listing.mileagePolicy.includedKmPerDay)}/ngày. Phụ phí {fmt.money(listing.mileagePolicy.excessFeePerKm)}/km vượt hạn mức.
+                  {t('mileage.included', {
+                    km: fmt.km(listing.mileagePolicy.includedKmPerDay),
+                    fee: fmt.money(listing.mileagePolicy.excessFeePerKm),
+                  })}
                 </span>
               </div>
               <div className={styles.ruleItem}>
                 <span className={styles.bullet} />
-                <span>
-                  Hạn mức quãng đường tính theo tổng số ngày thuê có tính phí. Phí vượt quãng đường được thanh toán trực tiếp cho chủ xe khi hoàn tất trả xe.
-                </span>
+                <span>{t('mileage.note')}</span>
               </div>
             </div>
-          )}
+          ) : null}
 
           {/* Khung giờ giao nhận */}
-          {(pickupWindows.length > 0 || returnWindows.length > 0) && (
+          {pickupWindows || returnWindows ? (
             <div className={styles.subSection}>
-              <h3 className={styles.subSectionTitle}>Khung giờ giao nhận</h3>
-              {pickupWindows.length > 0 && (
+              <h3 className={styles.subSectionTitle}>{t('handover.title')}</h3>
+              {pickupWindows ? (
                 <div className={styles.ruleItem}>
                   <span className={styles.bullet} />
-                  <span>Khung giờ nhận xe: {pickupWindows.join(', ')}</span>
+                  <span>{t('handover.pickup', { windows: pickupWindows })}</span>
                 </div>
-              )}
-              {returnWindows.length > 0 && (
+              ) : null}
+              {returnWindows ? (
                 <div className={styles.ruleItem}>
                   <span className={styles.bullet} />
-                  <span>Khung giờ trả xe: {returnWindows.join(', ')}</span>
+                  <span>{t('handover.return', { windows: returnWindows })}</span>
                 </div>
-              )}
+              ) : null}
             </div>
-          )}
+          ) : null}
 
-          {/* Phụ phí tài xế nếu có */}
-          {activeService === SERVICE_TYPE.WITH_DRIVER && (
+          {/* Phụ phí tài xế — chỉ khi khách đang xem dịch vụ CÓ TÀI XẾ */}
+          {activeService === SERVICE_TYPE.WITH_DRIVER ? (
             <div className={styles.subSection}>
-              <h3 className={styles.subSectionTitle}>Phụ phí có thể phát sinh</h3>
-              {(listing.driverSurchargeRules?.length ?? 0) > 0 && (
+              <h3 className={styles.subSectionTitle}>{t('surcharges.title')}</h3>
+              {(listing.driverSurchargeRules?.length ?? 0) > 0 ? (
                 <ul className={styles.surchargeList}>
-                  {listing.driverSurchargeRules!.map((rule) => (
-                    <li key={rule.kind}>
-                      {domainLabel('driverSurchargeKind', rule.kind)}: {fmt.money(rule.amount)} / {domainLabel('driverSurchargeUnit', rule.unit)}
-                      {rule.thresholdValue != null && thresholdKindOf(rule.kind)
-                        ? ` · Ngưỡng: ${rule.thresholdValue} ${domainLabel('driverSurchargeThresholdKind', thresholdKindOf(rule.kind) ?? '')}`
-                        : ''}
-                    </li>
+                  {listing.driverSurchargeRules.map((rule) => (
+                    <li key={rule.kind}>{surchargeLine(rule)}</li>
                   ))}
                 </ul>
-              )}
-              {activeTerms?.depositMode && (
+              ) : null}
+              {activeTerms?.depositMode ? (
                 <div className={styles.ruleItem}>
                   <span className={styles.bullet} />
                   <span>
                     {activeTerms.depositMode === 'none'
-                      ? 'Không cần cọc giữ chuyến đối với dịch vụ có tài xế.'
-                      : `Cọc dịch vụ có tài xế: ${domainLabel('driverDepositMode', activeTerms.depositMode)}`}
+                      ? t('terms.driverDepositNone')
+                      : t('terms.driverDeposit', {
+                          mode: domainLabel('driverDepositMode', activeTerms.depositMode),
+                        })}
                   </span>
                 </div>
-              )}
+              ) : null}
             </div>
-          )}
+          ) : null}
 
-          {/* Hoá đơn VAT */}
-          {listing.vatInvoiceSupported && (
+          {/* Hoá đơn VAT (ADR 0059) */}
+          {listing.vatInvoiceSupported ? (
             <section className={styles.subSection} aria-labelledby={vatTitleId}>
-              <h3 id={vatTitleId} className={styles.subSectionTitle}>Hoá đơn VAT</h3>
+              <h3 id={vatTitleId} className={styles.subSectionTitle}>
+                {t('vatInvoice.title')}
+              </h3>
               <div className={styles.ruleItem}>
                 <span className={styles.bullet} />
-                <span>
-                  Chủ xe hỗ trợ xuất hoá đơn VAT cho tiền thuê xe trả cho chủ xe. Bạn trao đổi thông tin xuất hoá đơn và xác nhận trực tiếp với chủ xe.
-                </span>
+                <span>{t('vatInvoice.body')}</span>
               </div>
               <div className={styles.ruleItem}>
                 <span className={styles.bullet} />
-                <span>
-                  Đây là thoả thuận giữa bạn và chủ xe: XePrime không xuất hoá đơn thay chủ xe, và các khoản bạn trả cho XePrime (như phí dịch vụ) không nằm trong hoá đơn này.
-                </span>
+                <span>{t('vatInvoice.disclaimer')}</span>
               </div>
             </section>
-          )}
+          ) : null}
 
           <div className={styles.noteBox}>
-            💡 Mẹo: Chụp ảnh tình trạng xe (ngoại thất & công tơ mét) lúc nhận và trả xe để đối chiếu minh bạch.
+            <span aria-hidden="true">💡 </span>
+            {tp('general.tip')}
           </div>
         </div>
 
         {/* TAB 2: GIẤY TỜ THUÊ XE */}
-        <div role="tabpanel" aria-labelledby="tab-documents" hidden={activeTab !== 'documents'}>
-          {activeTerms && (
+        <div {...panelProps('documents')}>
+          {activeTerms ? (
             <>
-              <h3 className={styles.subSectionTitle}>Thủ tục & điều kiện thuê</h3>
+              <h3 className={styles.subSectionTitle}>{t('terms.title')}</h3>
 
-              {activeTerms.instantBookEnabled && (
+              {activeTerms.instantBookEnabled ? (
                 <div className={styles.ruleItem}>
                   <span className={styles.bullet} />
                   <span>
-                    <span className={styles.instantBadge}>Đặt ngay</span>
-                    Yêu cầu hợp lệ trong khung giờ cho phép sẽ được xác nhận tự động.
+                    <span className={styles.instantBadge}>{t('terms.instantBook')}</span>
+                    {t('terms.instantBookHint')}
                   </span>
                 </div>
-              )}
+              ) : null}
 
               <div className={styles.ruleItem}>
                 <span className={styles.bullet} />
                 <span>
-                  Giấy tờ cần có: {requiredDocs.map((doc) => domainLabel('customerDocumentType', doc, CUSTOMER_DOCUMENT_TYPE_LABEL[doc as CustomerDocumentType] ?? doc)).join(', ')}.
+                  {t('terms.documents', {
+                    documents: requiredDocs
+                      .map((doc) => domainLabel('customerDocumentType', doc))
+                      .join(', '),
+                  })}
                 </span>
               </div>
 
+              {/*
+                Nhãn `identityVerifyMethod` đã là cả câu ("Đối chiếu qua VNeID") — không ghép thêm
+                "Đối chiếu:" phía trước. Chưa khai thì là đối chiếu bản gốc tại chỗ.
+              */}
               <div className={styles.ruleItem}>
                 <span className={styles.bullet} />
                 <span>
-                  <strong>Đối chiếu:</strong> {activeTerms.identityVerifyMethod ? domainLabel('identityVerifyMethod', activeTerms.identityVerifyMethod) : 'Đối chiếu bản gốc trực tiếp khi nhận xe'}.
+                  {domainLabel(
+                    'identityVerifyMethod',
+                    activeTerms.identityVerifyMethod ?? IDENTITY_VERIFY_METHOD.IN_PERSON,
+                  )}
                 </span>
               </div>
 
-              {activeTerms.termsText && (
+              {activeTerms.termsText ? (
                 <div className={styles.ruleItem}>
                   <span className={styles.bullet} />
                   <span>{activeTerms.termsText}</span>
                 </div>
-              )}
+              ) : null}
 
-              {activeTerms.requireTermsAcceptance && (
+              {activeTerms.requireTermsAcceptance ? (
                 <div className={styles.ruleItem}>
                   <span className={styles.bullet} />
-                  <span>Yêu cầu ký cam kết / đồng ý với điều khoản thuê xe riêng của chủ xe trước khi nhận bàn giao.</span>
+                  <span>{t('terms.acceptanceRequired')}</span>
                 </div>
-              )}
+              ) : null}
 
-              <div className={styles.noteBox}>
-                📌 Tài khoản của bạn cần xác thực bằng lái trước khi gửi yêu cầu thuê để được duyệt nhanh nhất.
-              </div>
+              {/* Tự lái / dài hạn cần bằng lái ĐÃ XÁC THỰC của tài khoản khách (ADR 0057). */}
+              {serviceRequiresDriverLicence(activeService) ? (
+                <div className={styles.noteBox}>
+                  <span aria-hidden="true">📌 </span>
+                  {tp('documents.licenceRequired')}
+                </div>
+              ) : null}
             </>
+          ) : (
+            <p className={styles.empty}>{tp('documents.empty')}</p>
           )}
         </div>
 
         {/* TAB 3: TÀI SẢN THẾ CHẤP */}
-        <div role="tabpanel" aria-labelledby="tab-collateral" hidden={activeTab !== 'collateral'}>
-          <h3 className={styles.subSectionTitle}>Bảo đảm & giấy tờ cần có</h3>
+        <div {...panelProps('collateral')}>
+          <h3 className={styles.subSectionTitle}>{t('collateralTitle')}</h3>
 
           {listing.noCollateral ? (
             <div className={styles.ruleItem}>
               <span className={styles.bullet} />
-              <span><strong>Không yêu cầu đặt cọc hay thế chấp tài sản:</strong> Xe này miễn thế chấp tài sản / cọc xe máy khi nhận xe.</span>
+              <span>{tp.rich('collateral.none', { strong })}</span>
             </div>
           ) : listing.collateral ? (
             <>
               <div className={styles.ruleItem}>
                 <span className={styles.bullet} />
-                <span>
-                  <strong>Hình thức thế chấp:</strong> {listing.collateral.mode === COLLATERAL_MODE.CASH ? 'Tiền mặt' : listing.collateral.assetTypes && listing.collateral.assetTypes.length > 0 ? `Xe máy hoặc tài sản có giá trị tương đương (${listing.collateral.assetTypes.map((type) => domainLabel('collateralAssetType', type, COLLATERAL_ASSET_TYPE_LABEL[type as CollateralAssetType] ?? type)).join(', ')})` : 'Xe máy hoặc tài sản có giá trị tương đương'}.
-                </span>
+                <span>{tp.rich('collateral.mode', { strong, mode: collateralMode ?? '' })}</span>
               </div>
-              <div className={styles.ruleItem}>
-                <span className={styles.bullet} />
-                <span>
-                  <strong>Giá trị thế chấp yêu cầu:</strong> {listing.collateral.depositAmount && Number(listing.collateral.depositAmount) > 0 ? fmt.money(listing.collateral.depositAmount) : '0 đ'}
-                </span>
-              </div>
+              {listing.collateral.depositAmount &&
+              !isZeroMoney(listing.collateral.depositAmount) ? (
+                <div className={styles.ruleItem}>
+                  <span className={styles.bullet} />
+                  <span>
+                    {tp.rich('collateral.amount', {
+                      strong,
+                      amount: fmt.money(listing.collateral.depositAmount),
+                    })}
+                  </span>
+                </div>
+              ) : null}
             </>
           ) : (
             <div className={styles.ruleItem}>
               <span className={styles.bullet} />
-              <span>Không yêu cầu thế chấp tài sản hoặc trao đổi trực tiếp với chủ xe khi nhận bàn giao.</span>
+              <span>{tp('collateral.unknown')}</span>
             </div>
           )}
 
           <div className={styles.noteBox}>
-            ⚠️ Tiền thế chấp (cọc nhận xe) được giao trực tiếp cho chủ xe khi nhận xe và hoàn trả 100% khi trả xe nguyên vẹn.
+            <span aria-hidden="true">⚠️ </span>
+            {tp('collateral.note')}
           </div>
         </div>
 
         {/* TAB 4: ĐIỀU KHOẢN HUỶ */}
-        <div role="tabpanel" aria-labelledby="tab-cancellation" hidden={activeTab !== 'cancellation'}>
-          <h3 className={styles.subSectionTitle}>Chính sách huỷ chuyến & giữ chỗ</h3>
+        <div {...panelProps('cancellation')}>
+          <h3 className={styles.subSectionTitle}>{tp('cancellation.title')}</h3>
           <div className={styles.ruleItem}>
             <span className={styles.bullet} />
-            <span><strong>Huỷ miễn phí:</strong> Khách hàng được huỷ chuyến miễn phí trước giờ nhận xe tối thiểu 4 tiếng.</span>
+            <span>{tp.rich('cancellation.free', { strong, hours: HOLD_FREE_CANCEL_HOURS })}</span>
           </div>
           <div className={styles.ruleItem}>
             <span className={styles.bullet} />
-            <span><strong>Thời gian giữ chỗ:</strong> Sau khi chủ xe chấp thuận, bạn có 120 phút để thanh toán tiền giữ chỗ để chốt xe.</span>
+            <span>
+              {tp.rich('cancellation.hold', { strong, minutes: HOLD_PAYMENT_WINDOW_MINUTES })}
+            </span>
           </div>
           <div className={styles.ruleItem}>
             <span className={styles.bullet} />
-            <span>Nếu quá thời gian giữ chỗ mà chưa thanh toán, yêu cầu sẽ tự động giải phóng trên lịch cho khách khác.</span>
+            <span>{tp('cancellation.release')}</span>
           </div>
           <div className={styles.noteBox}>
-            🛡️ Chính sách bảo vệ người thuê: Nếu chủ xe huỷ chuyến sau khi đã nhận tiền giữ chỗ, bạn sẽ được hoàn tiền 100% vào tài khoản.
+            <span aria-hidden="true">🛡️ </span>
+            {tp('cancellation.protection')}
           </div>
         </div>
       </div>

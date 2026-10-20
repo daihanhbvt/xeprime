@@ -32,7 +32,10 @@ const SHOWCASE_PREVIEW_RATIO = 16 / 9;
 const schema = yup.object({
   key: yup.string().trim().required('keyRequired').matches(CATALOG_KEY_PATTERN, 'keyPattern'),
   label: yup.string().trim().required('labelRequired').max(120),
+  /** Bản tiếng Anh (ADR 0012) — bỏ trống thì giao diện tiếng Anh dùng tên gốc (tên hãng là tên riêng). */
+  labelEn: yup.string().trim().max(120).default(''),
   description: yup.string().trim().max(255).default(''),
+  descriptionEn: yup.string().trim().max(255).default(''),
   iconUrl: yup.string().nullable().default(null),
   /** Rỗng = áp dụng cho MỌI loại xe — xem `catalog_items.vehicle_types` trong schema. */
   vehicleTypes: yup.array(yup.string().oneOf(VEHICLE_TYPE_VALUES).required()).default([]),
@@ -92,7 +95,9 @@ export function CatalogItemFormModal({
       ? {
           key: item.key,
           label: item.label,
+          labelEn: item.labelEn ?? '',
           description: item.description ?? '',
+          descriptionEn: item.descriptionEn ?? '',
           iconUrl: item.iconUrl ?? null,
           vehicleTypes: item.vehicleTypes as FormValues['vehicleTypes'],
           active: item.active,
@@ -103,7 +108,9 @@ export function CatalogItemFormModal({
       : {
           key: '',
           label: '',
+          labelEn: '',
           description: '',
+          descriptionEn: '',
           iconUrl: null,
           vehicleTypes: [],
           active: true,
@@ -122,7 +129,10 @@ export function CatalogItemFormModal({
     if (pending) return;
     const shared = {
       label: values.label.trim(),
+      // Rỗng = gỡ bản dịch (NULL) — server cũng quy chuỗi trắng về NULL.
+      labelEn: values.labelEn?.trim() || null,
       description: values.description?.trim() || null,
+      descriptionEn: values.descriptionEn?.trim() || null,
       iconUrl: withIcon ? values.iconUrl || null : null,
       vehicleTypes: values.vehicleTypes ?? [],
       active: values.active,
@@ -176,10 +186,23 @@ export function CatalogItemFormModal({
         />
         <TextField
           control={control}
+          name="labelEn"
+          label={t('labelEn')}
+          placeholder={t('labelEnPlaceholder')}
+          help={t('labelEnHelp')}
+        />
+        <TextField
+          control={control}
           name="description"
           label={t('description')}
           placeholder={t('descriptionPlaceholder')}
           help={t('descriptionHelp')}
+        />
+        <TextField
+          control={control}
+          name="descriptionEn"
+          label={t('descriptionEn')}
+          placeholder={t('descriptionEnPlaceholder')}
         />
         {/*
           Chiều áp dụng: hãng chỉ bán xe máy, tiện nghi chỉ có ở ô tô… Bỏ trống = mọi loại xe,

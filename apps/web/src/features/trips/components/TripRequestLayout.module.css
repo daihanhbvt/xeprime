@@ -42,17 +42,49 @@
 }
 
 .main,
-.aside {
+.aside,
+.group {
   display: flex;
   flex-direction: column;
   gap: var(--xp-space-20);
   min-width: 0;
 }
 
+/* Nhóm chỉ chứa một khối tự im lặng (vd `TripGatewayReturn` không có tham số) ⇒ không để lại khe. */
+.group:empty {
+  display: none;
+}
+
+/*
+ * Một cột: hai cột "tan" ra (`display: contents`) để bốn nhóm xếp lại theo việc khách cần làm —
+ * trạng thái → việc chính → chi tiết chuyến → chi phí + thay đổi kế hoạch (xem `TripColumns`).
+ */
 @container (max-width: 820px) {
   .columns {
-    grid-template-columns: minmax(0, 1fr);
+    display: flex;
+    flex-direction: column;
     gap: var(--xp-space-20);
+  }
+
+  .main,
+  .aside {
+    display: contents;
+  }
+
+  .lead {
+    order: 1;
+  }
+
+  .priority {
+    order: 2;
+  }
+
+  .body {
+    order: 3;
+  }
+
+  .asideBody {
+    order: 4;
   }
 }
 

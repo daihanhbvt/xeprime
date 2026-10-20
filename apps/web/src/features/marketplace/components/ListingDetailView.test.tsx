@@ -1,10 +1,78 @@
-import { cleanup, screen, fireEvent } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { ReactElement } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { EMPTY_CATALOG } from '@/features/catalog/types';
-import { renderWithIntl } from '@/i18n/test-utils';
+import { renderWithIntl as renderIntlOnly } from '@/i18n/test-utils';
+import type { PublicQuote } from '@/features/rental-policies/types';
 import type { PublicListingDetail } from '../types';
 import { ListingDetailView } from './ListingDetailView';
+
+/*
+ * Thẻ "Thành tiền" hỏi báo giá SERVER (`/public/listings/:id/quote`) qua TanStack Query — mỗi lần dựng
+ * trang là một QueryClient mới (không lẫn cache giữa các bài), và báo giá là một bảng kê kiểu server.
+ */
+const fetchPublicQuote = vi.hoisted(() => vi.fn());
+vi.mock('@/features/rental-policies/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/features/rental-policies/api')>()),
+  fetchPublicQuote,
+}));
+
+function renderWithIntl(ui: ReactElement) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return renderIntlOnly(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+}
+
+/** Báo giá 1 ngày tự lái của chiếc Fadil: tiền thuê 408k, phí dịch vụ 10%, thuế (CHỦ XE chịu) 10%. */
+const QUOTE = {
+  breakdown: {
+    days: 1,
+    longTerm: null,
+    rows: [
+      { key: 'base', label: 'Tiền thuê gốc', sublabel: '1 ngày × 480.000đ/ngày', amount: '480000' },
+      { key: 'discount', label: 'Khuyến mãi trực tiếp (15%)', sublabel: null, amount: '-72000' },
+      { key: 'subtotal', label: 'Tạm tính', sublabel: null, amount: '408000' },
+    ],
+    totalAmount: '408000',
+    depositAmount: '0',
+    policySource: 'vehicle',
+    estimateNote: null,
+    fees: {
+      billingMode: 'commission',
+      policy: {},
+      baseAmount: '408000',
+      lines: [
+        {
+          key: 'service_fee',
+          beneficiary: 'xeprime',
+          bearer: 'customer',
+          percent: 10,
+          amount: '40800',
+        },
+        { key: 'tax', beneficiary: 'state', bearer: 'owner', percent: 10, amount: '40800' },
+      ],
+      customerFeeTotal: '40800',
+      customerTotalAmount: '448800',
+      depositAmount: '40800',
+      grossOnlineAmount: '81600',
+      promoDiscountAmount: '0',
+      onlineAmount: '81600',
+      payAtPickupAmount: '367200',
+      taxAmount: '40800',
+      ownerPayableAmount: '367200',
+      ownerNetAmount: '326400',
+      holdAmount: '81600',
+    },
+  },
+  delivery: { enabled: false, maxRadiusKm: null, tiers: [] },
+  autoAccept: null,
+} as unknown as PublicQuote;
+
+beforeEach(() => {
+  fetchPublicQuote.mockReset();
+  fetchPublicQuote.mockResolvedValue(QUOTE);
+});
 
 vi.mock('@/features/booking-requests/components/RequestBookingButton', () => ({
   RequestBookingButton: () => <button type="button">Chọn thuê</button>,
@@ -62,6 +130,7 @@ vi.mock('@/features/promo-codes/use-promo-code', () => ({
 
 vi.mock('@/features/promo-codes/components/PromoCodeField', () => ({
   PromoPicker: () => null,
+  PromoStatusNote: () => null,
   PromoCodeField: () => null,
 }));
 
@@ -257,7 +326,12 @@ describe('ListingDetailView — điều kiện thuê công bố', () => {
       }),
     );
     expect(screen.getByText('Phụ phí có thể phát sinh')).toBeTruthy();
-    expect(screen.getByText(/Phụ phí chờ đợi/)).toBeTruthy();
+    // Cùng một câu ở thẻ đặt xe và tab "Quy định chung" — soát trong khối điều khoản. Ngưỡng đọc
+    // theo LOẠI của nó (số phút chờ miễn phí), không in con số trần; không lặp ký hiệu tiền tệ.
+    const policies = within(screen.getByRole('region', { name: 'Quy định thuê xe' }));
+    expect(
+      policies.getByText('Phụ phí chờ đợi: 30.000 ₫/30 phút · tính sau 30 phút chờ miễn phí'),
+    ).toBeTruthy();
     fireEvent.click(screen.getByRole('tab', { name: 'Tài sản thế chấp' }));
     expect(screen.getByText(/Không cần cọc giữ chuyến/)).toBeTruthy();
   });
@@ -360,7 +434,12 @@ describe('ListingDetailView — thẻ gian hàng', () => {
    * hẳn. Component phải im lặng phần đó, không vỡ cả trang.
    */
   it('body cũ thiếu shopRatingAvg/shopRatingCount/shopCompletedTripCount: trang vẫn dựng', async () => {
-    const { shopRatingAvg: _a, shopRatingCount: _b, shopCompletedTripCount: _c, ...stale } = LISTING;
+    const {
+      shopRatingAvg: _a,
+      shopRatingCount: _b,
+      shopCompletedTripCount: _c,
+      ...stale
+    } = LISTING;
     renderWithIntl(
       await ListingDetailView({
         listing: stale as unknown as PublicListingDetail,
@@ -415,5 +494,280 @@ describe('ListingDetailView — hạn mức quãng đường', () => {
 
     expect(screen.queryByText('Hạn mức quãng đường')).toBeNull();
     expect(screen.queryByText(/Bao gồm 0 km/)).toBeNull();
+  });
+});
+
+/**
+ * Bản mobile (Figma `19771:71482`) dùng chung cây với PC — các luật dưới đây đúng ở mọi khổ.
+ * Trang này là nơi khách QUYẾT thuê: không một con số nào được là số mẫu của bản vẽ.
+ */
+describe('ListingDetailView — không có dữ liệu giả', () => {
+  it('gian hàng chưa đủ mẫu: hàng ba chỉ số nói "chưa có yêu cầu", không hiện 100% / 10 phút', async () => {
+    renderWithIntl(await ListingDetailView({ listing: LISTING, catalog: EMPTY_CATALOG }));
+
+    expect(screen.getByText(/Chưa có yêu cầu thuê nào/)).toBeTruthy();
+    expect(screen.queryByText('10 phút')).toBeNull();
+    expect(screen.queryByText('100%')).toBeNull();
+  });
+
+  it('thông số chưa khai thì bỏ hẳn ô đó, không điền "5 chỗ · Xăng · 2023"', async () => {
+    const bare = {
+      ...LISTING,
+      seatCount: null,
+      fuelType: null,
+      bodyType: null,
+      manufactureYear: null,
+    } as unknown as PublicListingDetail;
+    renderWithIntl(await ListingDetailView({ listing: bare, catalog: EMPTY_CATALOG }));
+
+    expect(screen.queryByText('Số chỗ')).toBeNull();
+    expect(screen.queryByText('Đời xe')).toBeNull();
+    expect(screen.queryByText('5 chỗ')).toBeNull();
+    expect(screen.queryByText('2023')).toBeNull();
+  });
+
+  it('nhãn "Xe mới" theo cùng luật với thẻ xe: chỉ khi chiếc xe chưa có đánh giá nào', async () => {
+    renderWithIntl(await ListingDetailView({ listing: LISTING, catalog: EMPTY_CATALOG }));
+    expect(screen.getByText('Xe mới')).toBeTruthy();
+    cleanup();
+
+    const reviewed = { ...LISTING, ratingAvg: '4.8', ratingCount: 3 } as PublicListingDetail;
+    renderWithIntl(await ListingDetailView({ listing: reviewed, catalog: EMPTY_CATALOG }));
+    expect(screen.queryByText('Xe mới')).toBeNull();
+  });
+
+  it('nút quay lại (mobile) về trang kết quả MANG LẠI ngữ cảnh tìm kiếm', async () => {
+    renderWithIntl(
+      await ListingDetailView({
+        listing: LISTING,
+        catalog: EMPTY_CATALOG,
+        pickupAt: '2026-11-01T01:00:00.000Z',
+        returnAt: '2026-11-03T01:00:00.000Z',
+        serviceType: 'self_drive',
+        searchProvinceCode: '79',
+      }),
+    );
+
+    const back = screen.getByRole('link', { name: 'Quay lại danh sách xe' });
+    const href = new URL(back.getAttribute('href') ?? '', 'http://x');
+    expect(href.pathname).toBe('/search');
+    expect(href.searchParams.get('pickupAt')).toBe('2026-11-01T01:00:00.000Z');
+    expect(href.searchParams.get('serviceType')).toBe('self_drive');
+    expect(href.searchParams.get('provinceCode')).toBe('79');
+  });
+
+  it('hãng + màu đầu khối mô tả đọc từ tin đăng, thiếu thì bỏ', async () => {
+    renderWithIntl(await ListingDetailView({ listing: LISTING, catalog: EMPTY_CATALOG }));
+    // Danh mục rỗng ⇒ hãng hiện bằng khoá, màu là chữ tự do của chủ xe.
+    expect(screen.getByText('vinfast')).toBeTruthy();
+    expect(screen.getByText('Trắng')).toBeTruthy();
+    cleanup();
+
+    const noColor = { ...LISTING, color: null } as unknown as PublicListingDetail;
+    renderWithIntl(await ListingDetailView({ listing: noColor, catalog: EMPTY_CATALOG }));
+    expect(screen.queryByText(/Màu sắc/)).toBeNull();
+  });
+});
+
+/**
+ * "Tự nhận xe" (Figma `19707:83510` / mobile `19771:72529`) chỉ hứa điều ĐÚNG với chiếc xe này: bản vẽ
+ * in ba cam kết cho mọi xe, nhưng "không cần chờ chủ xe duyệt" là sai khi xe không bật Đặt ngay
+ * (ADR 0044).
+ */
+describe('ListingDetailView — thẻ "Tự nhận xe"', () => {
+  it('xe KHÔNG bật Đặt ngay: không hứa "không cần chờ duyệt"; có giá giờ thì vẫn nói gói giờ', async () => {
+    const listing = { ...LISTING, instantBookServiceTypes: [] } as unknown as PublicListingDetail;
+    renderWithIntl(await ListingDetailView({ listing, catalog: EMPTY_CATALOG }));
+
+    expect(screen.getByText('Tối ưu chi phí khi thuê gói theo giờ')).toBeTruthy();
+    expect(screen.queryByText(/không cần chờ chủ xe duyệt/)).toBeNull();
+  });
+
+  it('xe bật Đặt ngay cho tự lái: có cam kết "không cần chờ duyệt"', async () => {
+    const listing = {
+      ...LISTING,
+      instantBookServiceTypes: ['self_drive'],
+    } as unknown as PublicListingDetail;
+    renderWithIntl(await ListingDetailView({ listing, catalog: EMPTY_CATALOG }));
+
+    expect(screen.getByText(/không cần chờ chủ xe duyệt/)).toBeTruthy();
+  });
+
+  it('không còn cam kết nào đúng (không giá giờ, không Đặt ngay): không vẽ thẻ', async () => {
+    const listing = {
+      ...LISTING,
+      hourlyPrice: null,
+      instantBookServiceTypes: [],
+    } as unknown as PublicListingDetail;
+    renderWithIntl(await ListingDetailView({ listing, catalog: EMPTY_CATALOG }));
+
+    expect(screen.queryByText('Tự nhận xe')).toBeNull();
+  });
+
+  it('đang xem dịch vụ CÓ TÀI XẾ: không có chuyện "tự nhận xe"', async () => {
+    const listing = {
+      ...LISTING,
+      serviceTypes: ['self_drive', 'with_driver'],
+      instantBookServiceTypes: ['self_drive'],
+    } as unknown as PublicListingDetail;
+    renderWithIntl(
+      await ListingDetailView({ listing, catalog: EMPTY_CATALOG, serviceType: 'with_driver' }),
+    );
+
+    expect(screen.queryByText('Tự nhận xe')).toBeNull();
+  });
+});
+
+describe('ListingDetailView — tab "Quy định & Chính sách"', () => {
+  it('điều khoản huỷ: miễn phí tính XUÔI từ lúc chủ xe nhận chuyến, cửa sổ giữ chỗ theo hằng số', async () => {
+    renderWithIntl(await ListingDetailView({ listing: LISTING, catalog: EMPTY_CATALOG }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Điều khoản huỷ' }));
+
+    const panel = screen.getByRole('tabpanel', { name: 'Điều khoản huỷ' });
+    // ADR 0032 · 0044: 4 giờ kể từ khi được nhận — KHÔNG phải "trước giờ nhận xe 4 tiếng".
+    expect(within(panel).getByText(/trong 4 giờ kể từ lúc chủ xe nhận chuyến/)).toBeTruthy();
+    expect(within(panel).queryByText(/trước giờ nhận xe/)).toBeNull();
+    expect(within(panel).getByText(/120 phút để thanh toán tiền giữ chỗ/)).toBeTruthy();
+  });
+
+  it('tab và panel nối nhau bằng id; mũi tên phải/trái/End chuyển tab', async () => {
+    renderWithIntl(await ListingDetailView({ listing: LISTING, catalog: EMPTY_CATALOG }));
+
+    const general = screen.getByRole('tab', { name: 'Quy định chung' });
+    expect(general.getAttribute('aria-selected')).toBe('true');
+    expect(document.getElementById(general.getAttribute('aria-controls') ?? '')).toBeTruthy();
+
+    fireEvent.keyDown(general, { key: 'ArrowRight' });
+    expect(screen.getByRole('tab', { name: 'Giấy tờ thuê xe' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'Giấy tờ thuê xe' }), { key: 'End' });
+    expect(screen.getByRole('tab', { name: 'Điều khoản huỷ' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+  });
+});
+
+describe('ListingDetailView — khuyến mãi trực tiếp chỉ của tự lái', () => {
+  it('đang xem CÓ TÀI XẾ: không nhãn giảm giá, không dòng "Khuyến mãi trực tiếp" (ADR 0011)', async () => {
+    const listing = {
+      ...LISTING,
+      serviceTypes: ['self_drive', 'with_driver'],
+      withDriverDailyPrice: '1300000',
+    } as unknown as PublicListingDetail;
+    renderWithIntl(
+      await ListingDetailView({ listing, catalog: EMPTY_CATALOG, serviceType: 'with_driver' }),
+    );
+
+    expect(screen.queryByLabelText('Giảm 15%')).toBeNull();
+    expect(screen.queryByText(/Khuyến mãi trực tiếp/)).toBeNull();
+    expect(screen.getByText('1.300.000 ₫')).toBeTruthy();
+  });
+});
+
+describe('ListingDetailView — thẻ "Thành tiền" đọc báo giá SERVER', () => {
+  it('mọi con số là của báo giá: tiền thuê, phí dịch vụ, tiền giữ chỗ, phần trả chủ xe, tổng', async () => {
+    renderWithIntl(await ListingDetailView({ listing: LISTING, catalog: EMPTY_CATALOG }));
+
+    await waitFor(() => expect(screen.getByText('Tiền thuê gốc')).toBeTruthy());
+    expect(fetchPublicQuote).toHaveBeenCalledWith(
+      'listing-1',
+      expect.objectContaining({ serviceType: 'self_drive' }),
+    );
+    const costs = within(screen.getByRole('region', { name: 'Thành tiền' }));
+    expect(costs.getByText('480.000 ₫')).toBeTruthy();
+    expect(costs.getByText('−72.000 ₫')).toBeTruthy();
+    expect(costs.getByText('40.800 ₫')).toBeTruthy();
+    // Tiền giữ chỗ = D + S của SERVER (81.600), không phải 30% tiền thuê ở trình duyệt.
+    expect(costs.getByText('Tiền giữ chỗ (trả trước)')).toBeTruthy();
+    expect(costs.getByText('81.600 ₫')).toBeTruthy();
+    expect(costs.getByText('367.200 ₫')).toBeTruthy();
+    expect(costs.getByText('Tổng bạn trả')).toBeTruthy();
+    expect(costs.getByText('448.800 ₫')).toBeTruthy();
+  });
+
+  it('thuế do CHỦ XE chịu không bao giờ hiện trong bảng của khách (ADR 0032 điều 3)', async () => {
+    const listing = { ...LISTING, vatInvoiceSupported: true } as PublicListingDetail;
+    renderWithIntl(await ListingDetailView({ listing, catalog: EMPTY_CATALOG }));
+
+    await waitFor(() => expect(screen.getByText('Tiền thuê gốc')).toBeTruthy());
+    expect(screen.queryByText('Thuế VAT')).toBeNull();
+    expect(screen.queryByText(/Thuế khấu trừ|Thuế/)).toBeNull();
+  });
+
+  it('xe không có thông tin cọc: KHÔNG có dòng cọc mặc định 3.000.000', async () => {
+    const listing = {
+      ...LISTING,
+      noCollateral: false,
+      collateral: null,
+    } as unknown as PublicListingDetail;
+    renderWithIntl(await ListingDetailView({ listing, catalog: EMPTY_CATALOG }));
+
+    await waitFor(() => expect(screen.getByText('Tiền thuê gốc')).toBeTruthy());
+    expect(screen.queryByText('3.000.000 ₫')).toBeNull();
+    expect(screen.queryByText('Cọc thế chấp khi nhận xe')).toBeNull();
+  });
+
+  it('báo giá không về: nói thẳng, không bịa số — vẫn đặt được', async () => {
+    fetchPublicQuote.mockRejectedValue(new Error('network'));
+    renderWithIntl(await ListingDetailView({ listing: LISTING, catalog: EMPTY_CATALOG }));
+
+    await waitFor(() => expect(screen.getByText(/Chưa tải được giá tạm tính/)).toBeTruthy());
+    expect(screen.queryByText('Tổng bạn trả')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Chọn thuê' })).toBeTruthy();
+  });
+
+  it('báo giá không có tiền giữ chỗ: không mời áp mã khuyến mãi (ADR 0046 điều 2)', async () => {
+    fetchPublicQuote.mockResolvedValue({
+      ...QUOTE,
+      breakdown: { ...QUOTE.breakdown, fees: { ...QUOTE.breakdown.fees!, holdAmount: null } },
+    });
+    renderWithIntl(await ListingDetailView({ listing: LISTING, catalog: EMPTY_CATALOG }));
+
+    await waitFor(() => expect(screen.getByText('Tiền thuê gốc')).toBeTruthy());
+    expect(screen.queryByText('Áp dụng mã khuyến mãi / giới thiệu')).toBeNull();
+    expect(screen.queryByText('Tiền giữ chỗ (trả trước)')).toBeNull();
+  });
+});
+
+describe('ListingDetailView — thuê dài hạn chưa có gói', () => {
+  it('không bịa gói 1/3/6/12, không hiện 0 ₫, không hỏi báo giá — nói "Liên hệ báo giá"', async () => {
+    const listing = {
+      ...LISTING,
+      serviceTypes: ['self_drive', 'long_term'],
+      monthlyPrice: null,
+      longTermPackages: [],
+    } as unknown as PublicListingDetail;
+    renderWithIntl(
+      await ListingDetailView({ listing, catalog: EMPTY_CATALOG, serviceType: 'long_term' }),
+    );
+
+    expect(screen.getAllByText('Liên hệ báo giá').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: /3 tháng/ })).toBeNull();
+    expect(screen.queryByText('0 ₫')).toBeNull();
+    expect(fetchPublicQuote).not.toHaveBeenCalledWith(
+      'listing-1',
+      expect.objectContaining({ serviceType: 'long_term' }),
+    );
+  });
+});
+
+describe('ListingDetailView — tiếng Anh', () => {
+  it('nhãn dòng tiền dịch theo MÃ dòng, không lọt câu tiếng Việt của server', async () => {
+    renderIntlOnly(
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        {await ListingDetailView({ listing: LISTING, catalog: EMPTY_CATALOG })}
+      </QueryClientProvider>,
+      { locale: 'en' },
+    );
+
+    const costs = within(await screen.findByRole('region', { name: 'Total' }));
+    await waitFor(() => expect(costs.getByText('Base rental')).toBeTruthy());
+    expect(costs.getByText('Direct discount')).toBeTruthy();
+    expect(costs.queryByText('Tiền thuê gốc')).toBeNull();
+    expect(costs.queryByText(/ngày ×/)).toBeNull();
   });
 });

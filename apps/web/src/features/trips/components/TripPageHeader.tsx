@@ -1,24 +1,20 @@
 'use client';
 
-import { LeftOutlined } from '@ant-design/icons';
-import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
+import { PageBreadcrumb, type PageCrumb } from '@/components/navigation/PageBreadcrumb';
 import { ROUTES, listingPath } from '@/constants/routes';
 import styles from './TripPageHeader.module.css';
 
 /** Một mắt của đường dẫn — có `href` thì là liên kết, mắt cuối (trang đang xem) thì không. */
-export interface TripCrumb {
-  key: string;
-  label: string;
-  href?: string;
-}
+export type TripCrumb = PageCrumb;
 
 /**
  * Đầu trang của các màn sau khi gửi yêu cầu thuê — Figma "Search Fields" (`19759:40223` ở màn đã
  * xác nhận, cùng khuôn ở màn chờ phản hồi, chờ giữ chỗ và thanh toán): nút quay lại tròn + đường dẫn
- * "Trang chủ / … / trang hiện tại", tiêu đề trang (`h1` DUY NHẤT của trang) + một câu dẫn, và tiến
- * trình hành trình đặt xe ở bên phải.
+ * "Trang chủ / … / trang hiện tại" (`PageBreadcrumb`, chung với trang chi tiết xe — ở mobile là
+ * thanh trắng tràn mép), tiêu đề trang (`h1` DUY NHẤT của trang) + một câu dẫn, và tiến trình
+ * hành trình đặt xe ở bên phải.
  *
  * "Trang chủ" luôn là mắt đầu, nên nơi gọi chỉ truyền phần sau nó. Mắt cuối tô vàng — trang khách
  * đang đứng — và mang `aria-current`.
@@ -42,40 +38,24 @@ export function TripPageHeader({
   aside?: ReactNode;
 }) {
   const t = useTranslations('Trips.pageHeader');
-  const trail: TripCrumb[] = [{ key: 'home', label: t('home'), href: ROUTES.HOME }, ...crumbs];
+  /*
+   * Mobile chỉ giữ "Trang chủ / trang hiện tại" như thanh 390px của bản vẽ (`19771:72105`): các mắt
+   * giữa ẩn đi, nút tròn đã là lối về bước trước.
+   */
+  const trail: TripCrumb[] = [
+    { key: 'home', label: t('home'), href: ROUTES.HOME },
+    ...crumbs.map((crumb, index) =>
+      index < crumbs.length - 1 ? { ...crumb, hideOnMobile: true } : crumb,
+    ),
+  ];
 
   return (
     <header className={styles.header}>
-      <nav className={styles.breadcrumb} aria-label={t('breadcrumbLabel')}>
-        <Link href={backHref} className={styles.back} aria-label={backLabel}>
-          <LeftOutlined aria-hidden />
-        </Link>
-        <ol className={styles.trail}>
-          {trail.map((crumb, index) => {
-            const last = index === trail.length - 1;
-            return (
-              <li key={crumb.key} className={styles.crumb}>
-                {last ? (
-                  <span className={styles.current} aria-current="page">
-                    {crumb.label}
-                  </span>
-                ) : crumb.href ? (
-                  <Link href={crumb.href} className={styles.link}>
-                    {crumb.label}
-                  </Link>
-                ) : (
-                  <span>{crumb.label}</span>
-                )}
-                {last ? null : (
-                  <span className={styles.separator} aria-hidden>
-                    /
-                  </span>
-                )}
-              </li>
-            );
-          })}
-        </ol>
-      </nav>
+      <PageBreadcrumb
+        ariaLabel={t('breadcrumbLabel')}
+        crumbs={trail}
+        back={{ href: backHref, label: backLabel }}
+      />
 
       <div className={styles.heading}>
         <div className={styles.copy}>

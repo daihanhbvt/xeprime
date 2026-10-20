@@ -1,68 +1,80 @@
-/* Gallery chi tiết xe theo Figma v2 (node 19707:83366): 1200 × 309px */
+/*
+ * Gallery chi tiết xe — PC Figma `19707:83366` (khảm 1200 × 309), mobile `19771:71515` (ảnh trượt
+ * 358 × 170 + hàng chấm). Một danh sách `.slide`, CSS quyết định cách bày.
+ */
 .wrap {
   width: 100%;
   max-width: var(--xp-market-container-max-width, 1200px);
   margin: 0 auto 32px;
 }
 
-.galleryGrid {
-  display: flex;
-  height: 309px;
+/*
+ * ── Khảm PC: ảnh chính 650px chiếm hai hàng, hai cột ảnh nhỏ ──────────────────
+ *
+ * `data-count` = số ảnh ĐƯỢC BÀY (tối đa 5). Ít ảnh hơn thì ảnh nhỏ giãn ra lấp chỗ thay vì để
+ * trống một mảng lưới: 1 ảnh phủ cả khung, 2 ảnh → ảnh phụ chiếm trọn bên phải, 3 ảnh → hai ảnh phụ
+ * mỗi tấm một hàng, 4 ảnh → tấm cuối trải hai cột.
+ */
+.grid {
+  display: grid;
+  grid-template-columns: 650px minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  align-items: stretch;
   width: 100%;
+  height: 309px;
 }
 
-.mainPhotoWrapper {
-  flex: 0 0 650px;
-  height: 100%;
-  border-radius: 12px;
-  overflow: hidden;
-  background: var(--xp-color-bg-muted, #f5f5f5);
+.slide {
   position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--xp-color-bg-muted, #f5f5f5);
+  cursor: pointer;
 }
 
-.mainPhoto {
+.slide:first-child {
+  grid-row: 1 / 3;
+}
+
+.grid[data-count='1'] .slide:first-child {
+  grid-column: 1 / -1;
+}
+
+.grid[data-count='2'] .slide:nth-child(2) {
+  grid-column: 2 / 4;
+  grid-row: 1 / 3;
+}
+
+.grid[data-count='3'] .slide:nth-child(n + 2) {
+  grid-column: 2 / 4;
+}
+
+.grid[data-count='4'] .slide:nth-child(4) {
+  grid-column: 2 / 4;
+}
+
+/* Khảm chỉ bày 5 ảnh; các ảnh sau vẫn trong DOM để trình xem toàn màn hình duyệt được. */
+@media (min-width: 641px) {
+  .slide:nth-child(n + 6) {
+    display: none;
+  }
+}
+
+.photo {
   width: 100%;
   height: 100%;
   object-fit: cover;
   border-radius: 12px;
-  cursor: pointer;
   transition: transform 0.2s ease;
 }
 
-.mainPhoto:hover {
+.slide:first-child:hover .photo {
   transform: scale(1.015);
 }
 
-.thumbCol {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  height: 100%;
-}
-
-.thumbItem {
-  flex: 1;
-  min-height: 0;
-  border-radius: 12px;
-  overflow: hidden;
-  background: var(--xp-color-bg-muted, #f5f5f5);
-  position: relative;
-  cursor: pointer;
-}
-
-.thumbImg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 12px;
-  transition: transform 0.2s ease;
-}
-
-.thumbItem:hover .thumbImg {
+.slide:not(:first-child):hover .photo {
   transform: scale(1.02);
 }
 
@@ -78,47 +90,139 @@
   font-weight: 500;
   border-radius: 12px;
   user-select: none;
+  pointer-events: none;
   backdrop-filter: blur(2px);
   transition: background 0.2s ease;
 }
 
-.thumbItem:hover .overlay {
+.slide:hover .overlay {
   background: rgba(0, 0, 0, 0.6);
 }
 
 .placeholder {
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, var(--xp-color-primary-subtle, #fff9f0), var(--xp-color-bg-muted, #f5f5f5));
+  background: linear-gradient(
+    135deg,
+    var(--xp-color-primary-subtle, #fff9f0),
+    var(--xp-color-bg-muted, #f5f5f5)
+  );
   border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--xp-color-text-tertiary, #8c8c8c);
+}
+
+/* Hàng chấm chỉ dành cho ảnh trượt mobile. */
+.pager {
+  display: none;
 }
 
 @media (max-width: 1024px) {
-  .galleryGrid {
+  .grid {
+    grid-template-columns: 55% minmax(0, 1fr) minmax(0, 1fr);
     height: 240px;
   }
-  .mainPhotoWrapper {
-    flex: 0 0 55%;
-  }
 }
 
-@media (max-width: 768px) {
-  .galleryGrid {
-    flex-direction: column;
-    height: auto;
+/*
+ * ── Mobile (≤640px = `--xp-bp-mobile`): ảnh trượt từng tấm ─────────────────────
+ *
+ * Khung cuộn ngang có `scroll-snap`; mỗi tấm rộng trọn khung, tỉ lệ 358 × 170 của bản vẽ. Khối đệm
+ * 12 trên/dưới, ảnh cách hàng chấm 12 (Figma `19771:71515`).
+ */
+@media (max-width: 640px) {
+  .wrap {
+    margin: 0;
+    padding: var(--xp-space-12) 0;
   }
-  .mainPhotoWrapper {
-    flex: none;
-    width: 100%;
-    aspect-ratio: 16 / 9;
+
+  .grid {
+    display: flex;
+    gap: var(--xp-space-sm);
     height: auto;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
   }
-  .thumbCol {
+
+  .grid::-webkit-scrollbar {
     display: none;
   }
+
+  .slide,
+  .grid[data-count] .slide {
+    flex: 0 0 100%;
+    aspect-ratio: 358 / 170;
+    scroll-snap-align: start;
+  }
+
+  .slide:hover .photo {
+    transform: none;
+  }
+
+  .overlay {
+    display: none;
+  }
+
+  .pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: var(--xp-space-xs) 0 0;
+  }
+
+  /*
+   * Chấm 8px; chấm đang xem là viên thuốc 24 × 8 `Shape/gray-high` (Figma `19771:53869`). Hình chấm vẽ
+   * bằng `::before`; nút thật rộng 24 × 24 (viên thuốc: 32) — vùng chạm tối thiểu của WCAG 2.5.8, nên
+   * các chấm thưa hơn bản vẽ (bước 24 thay vì 14).
+   */
+  .dot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+  }
+
+  .dot::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: var(--xp-border-radius-pill);
+    background: var(--xp-color-border-strong);
+    transition:
+      width 0.2s ease,
+      background-color 0.2s ease;
+  }
+
+  .dotActive {
+    width: 32px;
+  }
+
+  .dotActive::before {
+    width: 24px;
+    background: var(--xp-color-text);
+  }
+
+  .dot:focus-visible {
+    border-radius: var(--xp-border-radius-pill);
+    outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+    outline-offset: 0;
+  }
+
+  .counter {
+    color: var(--xp-color-text-tertiary);
+    font-size: var(--xp-font-size-body-sm);
+    line-height: var(--xp-line-height-body-sm);
+  }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .photo,
+  .dot::before {
+    transition: none;
+  }
+}

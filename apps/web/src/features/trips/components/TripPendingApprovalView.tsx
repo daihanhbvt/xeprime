@@ -96,27 +96,28 @@ export function TripPendingApprovalView({
           </p>
         </TripRequestStatusCard>
       }
+      priority={
+        <section className={layout.card} aria-labelledby={trackId}>
+          <h2 id={trackId} className={layout.cardTitle}>
+            {t('track.title')}
+          </h2>
+          <p className={layout.cardLead}>
+            {data.holdStage
+              ? t('track.bodyHold', { minutes: HOLD_PAYMENT_WINDOW_MINUTES })
+              : t('track.body')}
+          </p>
+          <ChatWithShopButton
+            vehicleId={trip.vehicle.id}
+            appearance="cta"
+            block
+            label={tFlow('done.chatHost')}
+          />
+          <CtaButton href={ROUTES.SEARCH} variant="neutral" size="form" block>
+            {t('track.findOther')}
+          </CtaButton>
+        </section>
+      }
     >
-      <section className={layout.card} aria-labelledby={trackId}>
-        <h2 id={trackId} className={layout.cardTitle}>
-          {t('track.title')}
-        </h2>
-        <p className={layout.cardLead}>
-          {data.holdStage
-            ? t('track.bodyHold', { minutes: HOLD_PAYMENT_WINDOW_MINUTES })
-            : t('track.body')}
-        </p>
-        <ChatWithShopButton
-          vehicleId={trip.vehicle.id}
-          appearance="cta"
-          block
-          label={tFlow('done.chatHost')}
-        />
-        <CtaButton href={ROUTES.SEARCH} variant="neutral" size="form" block>
-          {t('track.findOther')}
-        </CtaButton>
-      </section>
-
       {/*
         Không báo giá được (xe thiếu giá, dài hạn chưa có gói) ⇒ `breakdown = null`: thẻ nói thẳng
         là chưa có số và giá chính thức có lúc chủ xe xác nhận — không mời "liên hệ báo giá" nữa.
