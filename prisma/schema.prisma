@@ -3521,6 +3521,10 @@ model ConversationParticipant {
 model Message {
   id                String   @id @db.Char(26)
   conversationId    String   @map("conversation_id") @db.Char(26)
+  /// Khác NULL ⇔ document của tin này ĐANG nằm trên Firestore. Outbox pump đặt nó sau khi ghi,
+  /// retention xoá về NULL sau khi dọn — nhờ đó worker biết tin nào cần xoá mà không phải đọc
+  /// Firestore. Index một phần `messages_firestore_projection_idx` (viết tay ở migration
+  /// `20261020120000_message_firestore_projection_idx`, Prisma không diễn đạt được `WHERE`).
   firebaseMessageId String?  @map("firebase_message_id") @db.VarChar(160)
   senderUserId      String?  @map("sender_user_id") @db.Char(26)
   /// Khoá chống-gửi-trùng do CLIENT sinh (ULID). Gửi lại sau timeout mạng trả về đúng tin cũ thay
