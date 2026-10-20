@@ -159,14 +159,14 @@
 
 .inlineLabel {
   font-size: 13px;
-  color: #717680;
+  color: var(--xp-color-text-tertiary);
   white-space: nowrap;
 }
 
 .inlineValue {
   font-size: 18px;
   font-weight: 700;
-  color: #0e0f12;
+  color: var(--xp-color-text);
   white-space: nowrap;
 }
 

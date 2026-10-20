@@ -214,6 +214,11 @@
   --xp-color-primary-accent: #d3a94d;
   --xp-color-primary-glow: #e9c336;
   --xp-color-destination-border: #e9bb68;
+  /* Luồng đặt xe v2 (Figma `RHDyFsURFZQ9BC5JCLQzeE`, 19/10/2026) — các bậc màn đó đặt tên rõ. */
+  --xp-color-primary-border: #e8ca8d;
+  --xp-color-success-accent: #12b76a;
+  --xp-color-success-border: #6ce9a6;
+  --xp-color-warning-subtle: #fffaeb;
   --xp-market-footer-bg: #060403;
   --xp-gradient-primary: linear-gradient(90deg, #e9c336 0%, #e8c664 48.077%, #e3b012 100%);
   --xp-gradient-text-hero: linear-gradient(90deg, #eeb924 0%, #ba8b26 100%);
@@ -419,6 +424,34 @@
   --xp-color-bg-active: rgba(255, 255, 255, 0.1);
   --xp-color-primary-subtle: rgba(233, 172, 41, 0.12);
 
+  /*
+   * Nền nhạt dưới chữ — bản sáng là màu pastel đặc, đặt lên nền tối thì thành mảng sáng chói
+   * với chữ trắng ở trên không đọc được. Bản tối là CHÍNH sắc đó pha trong suốt, để nó ăn theo
+   * mọi bậc nền (`bg` · `bg-container` · `bg-elevated`) mà không phải khai ba màu.
+   * `primary-muted` (viền/hover vàng) lấy từ Figma tối: `Stroke/primary-100` = #946e1f.
+   */
+  --xp-color-primary-light: rgba(233, 172, 41, 0.16);
+  --xp-color-primary-muted: #946e1f;
+  --xp-color-success-bg: rgba(3, 152, 85, 0.16);
+  --xp-color-success-subtle: rgba(3, 152, 85, 0.08);
+  --xp-color-warning-bg: rgba(224, 123, 38, 0.16);
+  --xp-color-error-bg: rgba(217, 45, 32, 0.16);
+  --xp-color-info-bg: rgba(37, 99, 235, 0.18);
+  --xp-color-processing-bg: rgba(14, 116, 144, 0.2);
+  --xp-color-neutral: #d5d7da;
+  --xp-color-neutral-bg: #1a2230;
+
+  /* Giá khách trả: `primary-strong` (#6e5117) là vàng đọc được trên nền SÁNG, trên nền tối thì
+     chìm hẳn. Figma tối tô giá bằng gold chính. KHÔNG đảo `primary-strong` — nó còn làm nền
+     (AppBanner, AuthBrandPanel) ở chính trang chủ tối. */
+  --xp-color-price: var(--xp-color-primary);
+
+  /* Luồng đặt xe v2: viền vàng nhạt (`Stroke/primary-300`) thành vàng tối của bản tối
+     (`Stroke/primary-100` tối); hai nền pastel thành chính sắc đó pha trong suốt. */
+  --xp-color-primary-border: #946e1f;
+  --xp-color-success-border: rgba(108, 233, 166, 0.45);
+  --xp-color-warning-subtle: rgba(247, 144, 9, 0.1);
+
   /* Chữ sáng trên nền tối */
   --xp-color-text: #ffffff;
   --xp-color-text-secondary: #d5d7da;
@@ -437,4 +470,3 @@
   --xp-elevation-card: 0 1px 3px rgba(10, 13, 18, 0.3), 0 1px 2px rgba(10, 13, 18, 0.2);
   --xp-elevation-panel: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
-

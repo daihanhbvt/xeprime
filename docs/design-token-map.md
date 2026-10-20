@@ -492,6 +492,10 @@ code của màn trang chủ Figma `19695:40693`.
 | | `--xp-color-primary-accent` | `#d3a94d` | viền thẻ khi hover, gạch tab |
 | | `--xp-color-primary-glow` | `#e9c336` | viền avatar gian hàng đã xác thực |
 | | `--xp-color-destination-border` | `#e9bb68` | viền thẻ địa điểm |
+| Luồng đặt xe v2 | `--xp-color-primary-border` | `#e8ca8d` (`Stroke/primary-300`; tối `#946e1f`) | viền thẻ tiền, thẻ giữ chỗ, phương thức thanh toán đang mở |
+| | `--xp-color-success-accent` | `#12b76a` (`Status/success-500`) | viền nét đứt thẻ "chuyến đã xác nhận" |
+| | `--xp-color-success-border` | `#6ce9a6` (`Status/success-300`) | viền nhãn trạng thái xanh |
+| | `--xp-color-warning-subtle` | `#fffaeb` (`Status/warning-low`) | nền hộp lưu ý của trang thanh toán |
 | Gradient | `--xp-gradient-primary` | `#e9c336 → #e8c664 → #e3b012` (90°) | nút chính, pill "Khám phá" |
 | | `--xp-gradient-text-hero` / `-text-gold` / `-text-destination` | — | chữ nhấn hero / dải đối tác / tên thành phố |
 | | `--xp-gradient-gold-soft` | `#edd3a4 → #d6a439` | huy hiệu giảm giá |

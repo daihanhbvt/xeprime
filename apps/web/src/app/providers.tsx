@@ -2,7 +2,7 @@
 
 import { AntdRegistry } from '@ant-design/nextjs-registry';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { App as AntdApp, ConfigProvider, theme as antdThemeEngine } from 'antd';
+import { App as AntdApp, ConfigProvider, theme as antdThemeEngine, type ThemeConfig } from 'antd';
 import enUS from 'antd/locale/en_US';
 import viVN from 'antd/locale/vi_VN';
 import type { Locale as AntdLocale } from 'antd/lib/locale';
@@ -19,7 +19,7 @@ import type { NavPreferences } from '@/lib/ui-preferences';
 import { ThemeProvider, useTheme, type ThemeMode } from '@/lib/theme';
 import { WorkspaceProvider } from '@/hooks/use-workspace';
 import { makeStore } from '@/store/make-store';
-import { antdTheme } from '@/styles/theme';
+import { antdDarkTokens, antdTheme } from '@/styles/theme';
 import type { Zone } from '@/zones';
 
 /**
@@ -37,6 +37,19 @@ import type { Zone } from '@/zones';
 const ANTD_LOCALE: Readonly<Record<AppLocale, AntdLocale>> = {
   vi: viVN,
   en: enUS,
+};
+
+/**
+ * Theme AntD theo giao diện. Bản tối phải ghi đè cả token MÀU, không chỉ đổi `algorithm`:
+ * `antdTheme` set tường minh màu sáng và token tường minh thắng thuật toán (xem `XP_DARK_TOKENS`).
+ */
+const ANTD_THEME: Readonly<Record<ThemeMode, ThemeConfig>> = {
+  light: antdTheme,
+  dark: {
+    ...antdTheme,
+    algorithm: antdThemeEngine.darkAlgorithm,
+    token: { ...antdTheme.token, ...antdDarkTokens },
+  },
 };
 
 export interface ProvidersProps {
@@ -82,17 +95,9 @@ function ProvidersInner({
   // MỘT QueryClient cho MỖI khu — mỗi site là một tài khoản riêng (ADR 0053), xem `useZoneQueryClient`.
   const queryClient = useZoneQueryClient(hostZone);
 
-  const activeTheme = {
-    ...antdTheme,
-    algorithm:
-      currentTheme === 'dark'
-        ? antdThemeEngine.darkAlgorithm
-        : antdThemeEngine.defaultAlgorithm,
-  };
-
   return (
     <AntdRegistry>
-      <ConfigProvider theme={activeTheme} locale={ANTD_LOCALE[locale]}>
+      <ConfigProvider theme={ANTD_THEME[currentTheme]} locale={ANTD_LOCALE[locale]}>
         <ReduxProvider store={store}>
           <QueryClientProvider client={queryClient}>
             <AntdApp>

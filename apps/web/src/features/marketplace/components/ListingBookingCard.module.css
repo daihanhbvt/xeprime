@@ -89,8 +89,8 @@
 }
 
 .discountBadge {
-  background: #ecfdf3;
-  color: #039855;
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
   font-size: 13px;
   font-weight: 600;
   padding: 4px 8px;
@@ -172,7 +172,7 @@
 }
 
 .toggleBtnActive {
-  background: #ffffff;
+  background: var(--xp-color-bg-container);
   border-color: var(--xp-color-primary, #e9ac29);
   box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
 }
@@ -186,13 +186,13 @@
 .toggleSub {
   font-size: 12px;
   font-style: italic;
-  color: #039855;
+  color: var(--xp-color-success);
 }
 
 .toggleSubDanger {
   font-size: 12px;
   font-style: italic;
-  color: #d92d20;
+  color: var(--xp-color-error);
 }
 
 .addressBox {
@@ -350,11 +350,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #f6fef9;
-  border: 1px solid #039855;
+  background: var(--xp-color-success-subtle);
+  border: 1px solid var(--xp-color-success);
   border-radius: 12px;
   padding: 12px 14px;
-  color: #039855;
+  color: var(--xp-color-success);
   cursor: pointer;
   width: 100%;
   font-size: 14px;
@@ -363,7 +363,7 @@
 }
 
 .promoCodeButton:hover {
-  background: #ecfdf3;
+  background: var(--xp-color-success-bg);
 }
 
 .promoCodeLeft {
@@ -511,7 +511,7 @@
 }
 
 .routeBtnActive {
-  background: #ffffff;
+  background: var(--xp-color-bg-container);
   color: var(--xp-color-text, #0e0f12);
   border-color: var(--xp-color-primary, #e9ac29);
   box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
@@ -555,7 +555,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 14px;
-  background: #f6fef9;
+  background: var(--xp-color-success-subtle);
   border: 1px solid #d1fadf;
   border-radius: 10px;
 }
@@ -567,8 +567,8 @@
 }
 
 .promoTag {
-  background: #ecfdf3;
-  color: #039855;
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
   font-size: 12px;
   font-weight: 700;
   padding: 2px 8px;
@@ -578,13 +578,13 @@
 .promoDiscountText {
   font-size: 13px;
   font-weight: 600;
-  color: #039855;
+  color: var(--xp-color-success);
 }
 
 .promoRemoveBtn {
   background: none;
   border: none;
-  color: #717680;
+  color: var(--xp-color-text-tertiary);
   cursor: pointer;
   padding: 4px;
   font-size: 14px;
@@ -595,7 +595,7 @@
 }
 
 .promoRemoveBtn:hover {
-  color: #d92d20;
+  color: var(--xp-color-error);
 }
 
 /* Badge giảm giá gói dài hạn */
@@ -603,8 +603,8 @@
   display: block;
   font-size: 11px;
   font-weight: 700;
-  color: #039855;
-  background: #ecfdf3;
+  color: var(--xp-color-success);
+  background: var(--xp-color-success-bg);
   border-radius: 4px;
   padding: 1px 4px;
   margin-top: 2px;
@@ -745,7 +745,7 @@
   gap: 6px;
   margin-top: 10px;
   padding: 10px 12px;
-  background: #f6fef9;
+  background: var(--xp-color-success-subtle);
   border: 1px solid #d1fadf;
   border-radius: 8px;
   font-size: 12px;
@@ -755,7 +755,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #039855;
+  color: var(--xp-color-success);
   font-weight: 500;
 }
 
@@ -780,3 +780,34 @@
 }
 
 
+
+/* ── Giao diện tối ─────────────────────────────────────────────────────────
+   Chỉ những màu KHÔNG có token tương đương ở bản sáng; phần còn lại đã đi qua `--xp-*`.
+   `--xp-color-bg-subtle` chưa từng được khai báo nên hai hộp dùng nó luôn rơi về fallback sáng. */
+:global([data-theme="dark"]) .discountBadge,
+:global([data-theme="dark"]) .promoAppliedRow,
+:global([data-theme="dark"]) .longTermBenefits {
+  border-color: color-mix(in srgb, var(--xp-color-success) 35%, transparent);
+}
+
+:global([data-theme="dark"]) .deliveryAddressCard {
+  background: var(--xp-color-bg-muted);
+  border-color: var(--xp-color-border);
+}
+
+:global([data-theme="dark"]) .deliveryAddressTitle {
+  color: var(--xp-color-text-secondary);
+}
+
+:global([data-theme="dark"]) .deliveryDistanceInfo {
+  color: var(--xp-color-text-tertiary);
+}
+
+:global([data-theme="dark"]) .chooseAddressBtn:hover {
+  background: var(--xp-color-bg-selected);
+}
+
+:global([data-theme="dark"]) .driverRulesBox,
+:global([data-theme="dark"]) .expectedReturnBox {
+  background: var(--xp-color-bg-muted);
+}

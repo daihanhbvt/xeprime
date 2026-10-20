@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { theme } from 'antd';
 import { describe, expect, it } from 'vitest';
 
-import { XP_BREAKPOINTS, XP_TOKENS, antdTheme } from './theme';
+import { XP_BREAKPOINTS, XP_DARK_TOKENS, XP_TOKENS, antdDarkTokens, antdTheme } from './theme';
 
 /**
  * ADR 0003: `theme.ts` và `tokens.css` là hai bản của cùng một bộ token. Không có test này
@@ -69,6 +69,25 @@ function readCssTokens(): Map<string, string> {
   const tokens = new Map<string, string>();
 
   for (const match of css.matchAll(DECLARATION_RE)) {
+    const name = match[1];
+    const value = match[2];
+    if (name && value) {
+      tokens.set(name, normalize(value));
+    }
+  }
+
+  return tokens;
+}
+
+/** Khối `[data-theme="dark"] { … }` của tokens.css — khai báo ĐẦU TIÊN có selector đó. */
+function readDarkCssTokens(): Map<string, string> {
+  const css = readFileSync(CSS_PATH, 'utf8');
+  const start = css.indexOf('[data-theme="dark"] {');
+  expect(start, 'tokens.css không còn khối giao diện tối').toBeGreaterThan(-1);
+  const block = css.slice(start, css.indexOf('\n}', start));
+  const tokens = new Map<string, string>();
+
+  for (const match of block.matchAll(DECLARATION_RE)) {
     const name = match[1];
     const value = match[2];
     if (name && value) {
@@ -374,6 +393,57 @@ describe('design token', () => {
       expect(
         contrastRatio(XP_TOKENS['color-primary'], XP_TOKENS['color-primary-contrast']),
       ).toBeGreaterThanOrEqual(4.5);
+    });
+  });
+
+  /**
+   * Giao diện tối: khối `[data-theme="dark"]` của tokens.css (CSS Module đọc) và `XP_DARK_TOKENS`
+   * (AntD đọc) là hai bản của cùng một bộ màu — lệch nhau là nút AntD một màu, thẻ bên cạnh
+   * một màu.
+   */
+  describe('giao diện tối', () => {
+    const darkCss = readDarkCssTokens();
+    const dark = XP_DARK_TOKENS as Readonly<Record<string, string>>;
+
+    it('mọi token MÀU của khối tối đều có trong XP_DARK_TOKENS, và ngược lại', () => {
+      const fromCss = [...darkCss.keys()].filter((name) => name.startsWith('--xp-color-')).sort();
+      const fromTs = Object.keys(dark)
+        .map((key) => `--xp-${key}`)
+        .sort();
+      expect(fromTs).toEqual(fromCss);
+    });
+
+    it('giá trị khớp nhau', () => {
+      for (const [key, value] of Object.entries(dark)) {
+        expect(darkCss.get(`--xp-${key}`), `token tối --xp-${key}`).toBe(normalize(value));
+      }
+    });
+
+    it('chỉ ghi đè token đã có ở khối sáng', () => {
+      for (const key of Object.keys(dark)) {
+        expect(cssTokens.has(`--xp-${key}`), `--xp-${key} không có ở :root`).toBe(true);
+      }
+    });
+
+    it.each([
+      ['text trên nền trang', 'color-bg', 'color-text'],
+      ['text trên container', 'color-bg-container', 'color-text'],
+      ['text-secondary trên container', 'color-bg-container', 'color-text-secondary'],
+      ['text-tertiary trên container', 'color-bg-container', 'color-text-tertiary'],
+      ['text-secondary trên nền nổi', 'color-bg-elevated', 'color-text-secondary'],
+    ] as const)('%s đạt AA', (_label, bg, fg) => {
+      expect(contrastRatio(XP_DARK_TOKENS[bg], XP_DARK_TOKENS[fg])).toBeGreaterThanOrEqual(4.5);
+    });
+
+    it('AntD tối dẫn xuất được và dùng đúng màu của khối tối', () => {
+      const derived = theme.getDesignToken({
+        ...antdTheme,
+        algorithm: theme.darkAlgorithm,
+        token: { ...antdTheme.token, ...antdDarkTokens },
+      });
+      expect(derived.colorBgContainer).toBe(XP_DARK_TOKENS['color-bg-container']);
+      expect(derived.colorText).toBe(XP_DARK_TOKENS['color-text']);
+      expect(derived.colorBorder).toBe(XP_DARK_TOKENS['color-border']);
     });
   });
 
