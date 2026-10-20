@@ -709,7 +709,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       expect(screen.queryByText('Hạn mức quãng đường')).toBeNull();
     });
 
-    it('gửi payload đúng (KHÔNG họ tên/SĐT, KHÔNG có trường giao nhận)', async () => {
+    it('gửi payload đúng (họ tên/SĐT từ tài khoản, KHÔNG có trường giao nhận)', async () => {
       renderModal();
       await advanceToReview();
 
@@ -724,15 +724,13 @@ describe('RequestBookingModal — luồng đặt xe', () => {
         returnAt: '2026-09-03T02:00:00.000Z',
         // Dịch vụ của chuyến luôn đi kèm (17/08) — mặc định tự lái.
         serviceType: 'self_drive',
+        // Danh tính người thuê mặc định từ tài khoản (ADR 0063) — khách không sửa thì gửi nguyên.
+        customerName: LOGGED_IN_ME.displayName,
+        customerPhone: LOGGED_IN_ME.phone,
       });
       // Chủ xe không có điều khoản riêng ⇒ ô đồng ý chỉ là văn bản của XePrime: KHÔNG khai
       // `acceptedTerms` (server hiểu nó là "đã đồng ý điều khoản thuê của chủ xe").
       expect(payload).not.toHaveProperty('acceptedTerms');
-      // Danh tính người thuê mặc định từ tài khoản (ADR 0063).
-      expect(payload).toMatchObject({
-        customerName: LOGGED_IN_ME.displayName,
-        customerPhone: LOGGED_IN_ME.phone,
-      });
       // Không gõ lời nhắn ⇒ không có trường `note`, không phải chuỗi rỗng.
       expect(payload).not.toHaveProperty('note');
     });
@@ -767,7 +765,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       expect(within(trip).getByText('Toyota Vios 2022')).toBeTruthy();
       expect(within(trip).getByText('01/09/2026 09:00')).toBeTruthy();
       expect(within(trip).getByText('03/09/2026 09:00')).toBeTruthy();
-      expect(within(trip).getByText('Tự nhận và trả xe tại điểm hẹn của chủ xe')).toBeTruthy();
+      expect(within(trip).getByText('Tự nhận và trả xe tại chủ xe')).toBeTruthy();
       expect(within(trip).getByText('Gian hàng Demo XePrime')).toBeTruthy();
       expect(within(trip).getByText('Thuê theo ngày · 2 ngày')).toBeTruthy();
 
@@ -824,11 +822,12 @@ describe('RequestBookingModal — luồng đặt xe', () => {
         target: { value: '0988776655' },
       });
 
-      // Hiện gợi ý số tài khoản khi nhập số khác
+      // Nhập số khác số tài khoản ⇒ báo khách rằng chủ xe sẽ thấy thêm số tài khoản.
       expect(
-        within(renter).getByText(/Chủ xe sẽ liên hệ số này và thấy thêm số tài khoản/i),
+        within(renter).getByText(/Số liên hệ chưa xác thực — chủ xe sẽ thấy thêm số tài khoản/i),
       ).toBeTruthy();
 
+      api.submitBookingRequest.mockResolvedValue({ id: 'R1', status: 'pending_host_approval' });
       submitFromReview();
       await screen.findByText('Đã gửi yêu cầu');
       const payload = api.submitBookingRequest.mock.calls[0]![0];
