@@ -64,6 +64,7 @@ docker compose -p xeprime-<env> -f docker-compose.prod.yml exec worker \
 | `loops["chiếu huy hiệu"].lastSuccessAgoMs` | vài giây. Lớn hoặc `null` ⇒ vòng lặp không chạy |
 | `loops[*].consecutiveFailures` | > 0 kéo dài ⇒ đọc `lastError` rồi xem log |
 | `gauges.badgeQueueLagMs` | độ trễ hàng đợi. `null` = rỗng. Vượt 60.000 ⇒ degraded |
+| `gauges.pushConfigFailures1h` | số thông báo đẩy MẤT trong giờ qua vì nhà cung cấp từ chối xác thực (`provider_auth`). > 0 ⇒ degraded. Hay gặp nhất: khoá APNs của app iOS — `docs/push-notifications.md` §8 |
 
 `badgeQueueLagMs` là số đo quan trọng nhất và cũng là số đo dễ bị bỏ qua nhất: vòng lặp vẫn báo
 thành công đều đặn kể cả khi nó không bao giờ đuổi kịp. "Vòng lặp có chạy không" và "hàng đợi có

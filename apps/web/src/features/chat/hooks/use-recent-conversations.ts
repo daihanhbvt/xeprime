@@ -3,8 +3,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ChatInbox } from '@xeprime/types';
 import { unreadSignalOf } from './use-conversations';
-import { useBadgeRealtime } from '@/features/badges/BadgeRealtimeProvider';
-import { useOnBadgeChange } from '@/features/badges/hooks/use-on-badge-change';
+import { useOnBadgeSignal } from '@/features/badges/hooks/use-on-badge-signal';
 import { queryKeys } from '@/services/query-keys';
 import { chatApi } from '../api';
 import type { ConversationListResult } from '../types';
@@ -26,13 +25,12 @@ export const RECENT_CONVERSATIONS_LIMIT = 6;
  *     trang chat, vì hai bên có hình dạng dữ liệu khác nhau (`InfiniteData` vs một trang).
  */
 export function useRecentConversations(side: ChatInbox, enabled: boolean) {
-  const { counts } = useBadgeRealtime();
   const queryClient = useQueryClient();
 
   const key = queryKeys.chat.conversations(side, { preview: true });
 
   // Popup ĐANG mở mà có tin mới thì danh sách phải tự đổi, không phải đóng rồi mở lại.
-  useOnBadgeChange(unreadSignalOf(side, counts), () => {
+  useOnBadgeSignal((counts) => unreadSignalOf(side, counts), () => {
     void queryClient.invalidateQueries({ queryKey: key });
   });
 

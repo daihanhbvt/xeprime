@@ -1,8 +1,7 @@
 'use client';
 
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useBadgeRealtime } from '@/features/badges/BadgeRealtimeProvider';
-import { useOnBadgeChange } from '@/features/badges/hooks/use-on-badge-change';
+import { useOnBadgeSignal } from '@/features/badges/hooks/use-on-badge-signal';
 import { queryKeys } from '@/services/query-keys';
 import { fetchNotifications, filtersToParams } from '../api';
 import type { NotificationFilters } from '../types';
@@ -19,10 +18,9 @@ import type { NotificationFilters } from '../types';
  *  2. Tín hiệu từ bản chiếu — để một popover ĐANG MỞ cũng cập nhật, không phải đóng rồi mở lại.
  */
 export function useNotifications(filters: NotificationFilters, enabled: boolean) {
-  const { counts } = useBadgeRealtime();
   const queryClient = useQueryClient();
 
-  useOnBadgeChange(counts.notificationsUnread, () => {
+  useOnBadgeSignal((counts) => counts.notificationsUnread, () => {
     void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
   });
 

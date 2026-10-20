@@ -161,6 +161,29 @@ export class WorkerHealth {
 }
 
 /**
+ * Đếm sự kiện trong một cửa sổ trượt — cho những số đo kiểu "bao nhiêu lần hỏng trong một giờ
+ * qua". Khác một bộ đếm cộng dồn: sự cố đã qua thì con số tự về 0, nên trạng thái `degraded` mà
+ * nó gây ra cũng tự gỡ thay vì đứng đó tới lần khởi động lại.
+ *
+ * Sống trong bộ nhớ của tiến trình: khởi động lại là mất. Chấp nhận được — health nói về tiến
+ * trình ĐANG chạy, và sự cố còn tiếp diễn thì sẽ đếm lại ngay ở lượt kế tiếp.
+ */
+export class RecentEventCounter {
+  private readonly events: { at: number; count: number }[] = [];
+
+  constructor(private readonly windowMs: number) {}
+
+  record(count: number, now = Date.now()): void {
+    if (count > 0) this.events.push({ at: now, count });
+  }
+
+  total(now = Date.now()): number {
+    while (this.events.length > 0 && now - this.events[0]!.at > this.windowMs) this.events.shift();
+    return this.events.reduce((sum, e) => sum + e.count, 0);
+  }
+}
+
+/**
  * Server sức khoẻ nội bộ. Trả **503 chỉ khi `unhealthy`** (một vòng lặp quan trọng đã chết);
  * `degraded` vẫn là 200 — xem docblock của `HealthStatus` về vòng luẩn quẩn mà nó tránh.
  *

@@ -3,6 +3,7 @@ import { cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CHAT_SIDE } from '@xeprime/types';
 import type { ReactNode } from 'react';
+import { queryKeys } from '@/services/query-keys';
 
 /**
  * Huy hiệu: MỘT nguồn cho mọi con số ở khung ứng dụng, và một luật rõ ràng khi hai nguồn nói
@@ -112,6 +113,26 @@ describe('useBadges', () => {
     // Không có listener nào báo live ⇒ nhịp dự phòng 30s. Sau 35s phải là ĐÚNG một lượt nữa.
     await vi.advanceTimersByTimeAsync(35_000);
     expect(badgesApi.fetchBadges).toHaveBeenCalledTimes(2);
+  });
+
+  it('lượt REST ĐẦU TIÊN có thông báo chưa đọc KHÔNG làm mới rộng; thông báo MỚI thì có', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const invalidate = vi.spyOn(client, 'invalidateQueries');
+    const touchedTrips = () =>
+      invalidate.mock.calls.some(
+        ([filters]) => JSON.stringify(filters?.queryKey) === JSON.stringify(queryKeys.trips.all),
+      );
+    const { container } = render(wrapper(<Probe />, client));
+
+    // Bootstrap: 0 hiển thị tạm → 4 từ REST là "biết được con số", không phải 0 → 4.
+    await waitFor(() => expect(container.textContent).toBe('2/3/4'));
+    expect(touchedTrips()).toBe(false);
+
+    // Một thông báo mới thật sự tới qua bản chiếu ⇒ màn đang mở phải được làm mới.
+    listener.onNext?.(
+      snapshotOf({ chatCustomer: 2, chatShop: 3, notificationsUnread: 5, updatedAt: 2_000 }),
+    );
+    await waitFor(() => expect(touchedTrips()).toBe(true));
   });
 
   it('chưa đăng nhập thì không gọi API', async () => {
