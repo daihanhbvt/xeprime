@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render } from '@testing-library/react-native';
-import { SERVICE_TYPE } from '@xeprime/types';
+import { DRIVER_LICENCE_STATE, SERVICE_TYPE } from '@xeprime/types';
 import { driversApi } from '@/features/drivers/api';
 import { withIntl } from '@/i18n/test-utils';
 import type { AssignableDriver, BookingDetail } from '../api';
@@ -17,7 +17,7 @@ function driver(overrides: Partial<AssignableDriver> = {}): AssignableDriver {
     name: 'Nguyễn Văn Tuấn',
     phone: '0901234567',
     busy: false,
-    licenseExpired: false,
+    licenceState: DRIVER_LICENCE_STATE.VERIFIED,
     ...overrides,
   } as AssignableDriver;
 }
@@ -87,17 +87,15 @@ describe('AssignDriverSheet — người không khả dụng', () => {
   it('bận: VẪN hiện kèm lý do, nhưng không chọn được', async () => {
     const view = await renderSheet([driver({ busy: true })]);
 
-    expect(await view.findByText('bận khung giờ này')).toBeTruthy();
+    expect(await view.findByText('Bận')).toBeTruthy();
     await fireEvent.press(view.getByText('Nguyễn Văn Tuấn'));
     expect(view.onSelect).not.toHaveBeenCalled();
   });
 
-  it('GPLX hết hạn: cũng hiện kèm lý do và không chọn được', async () => {
-    const view = await renderSheet([driver({ licenseExpired: true })]);
+  it('hiện trạng thái bằng lái của tài khoản tài xế (ADR 0063)', async () => {
+    const view = await renderSheet([driver({ licenceState: DRIVER_LICENCE_STATE.PENDING })]);
 
-    expect(await view.findByText('GPLX hết hạn')).toBeTruthy();
-    await fireEvent.press(view.getByText('Nguyễn Văn Tuấn'));
-    expect(view.onSelect).not.toHaveBeenCalled();
+    expect(await view.findByText('Bằng lái chờ xác thực')).toBeTruthy();
   });
 
   it('khả dụng: chọn được và trả đúng id', async () => {
@@ -141,7 +139,7 @@ describe('AssignDriverSheet — tìm trong danh sách', () => {
     await fireEvent.changeText(await view.findByLabelText('Tìm tài xế'), 'zzz');
 
     expect(view.getByText('Không có tài xế nào khớp “zzz”')).toBeTruthy();
-    expect(view.queryByText('Chưa có tài xế nào đang hoạt động')).toBeNull();
+    expect(view.queryByText('Chưa có tài xế nào đang liên kết')).toBeNull();
   });
 });
 

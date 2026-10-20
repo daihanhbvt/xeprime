@@ -159,6 +159,8 @@ const COMMISSION_PAGES: ReadonlyArray<{ readonly href: string; readonly exact?: 
   { href: ROUTES.MANAGE.BOOKINGS },
   { href: ROUTES.MANAGE.CHAT },
   { href: ROUTES.MANAGE.BALANCE },
+  // Tài xế mở cho cả chủ xe tuyến hoa hồng (ADR 0063).
+  { href: ROUTES.MANAGE.DRIVERS },
   // `/subscription`, `/tax`, `/bank-accounts` KHÔNG ở đây (07/10/2026): chúng là alias, và đích của
   // chúng là `commissionEquivalent` — một lần chuyển, cùng một luật cho gõ URL lẫn `next`.
   { href: ROUTES.MANAGE.HOST_GUIDE },

@@ -456,7 +456,10 @@ export class BookingRequestsService {
     const route = normalizeRouteContext({
       serviceType,
       routeType: dto.routeType,
-      pickupAddress: dto.pickupAddress,
+      // Web chỉ gửi phần "số nhà, đường" (`pickupAddressLine`, ADR 0035) — chuỗi hiển thị do server
+      // ghép. Đọc cả hai ngả như `deliveryText` bên dưới, nếu không mọi chuyến có tài xế từ web
+      // đều bị từ chối "chưa nhập địa chỉ đón".
+      pickupAddress: dto.pickupAddress?.trim() || dto.pickupAddressLine?.trim() || null,
       destination: dto.destination,
     });
 
@@ -1021,17 +1024,23 @@ export class BookingRequestsService {
         return null;
       }
 
-      let driverId: string | null = null;
+      /*
+       * Chuyến có tài xế chỉ tự nhận khi bên thuê có ít nhất một tài xế liên kết RẢNH khung giờ
+       * này. Đơn ra đời ĐÃ GÁN người đó ở trạng thái chờ nhận (`pickDriverForAutoAssign`, ADR 0063):
+       * hệ thống không thay tài xế đồng ý — tài xế nhận/từ chối ở app khách, bên thuê đổi ở màn đơn.
+       */
+      let autoAssignDriverId: string | null = null;
       if (req.serviceType === SERVICE_TYPE.WITH_DRIVER) {
-        const driver = await this.settings.pickAssignableDriver(this.prisma, tenantId, {
+        const driver = await this.settings.pickDriverForAutoAssign(this.prisma, tenantId, {
           pickupAt: schedule.pickupAt,
           returnAt: schedule.returnAt,
+          excludeUserId: req.customerUserId,
         });
+        autoAssignDriverId = driver?.id ?? null;
         if (!driver) {
           await this.recordAutoAcceptSkip(tenantId, id, AUTO_ACCEPT_BLOCKER.NO_DRIVER);
           return null;
         }
-        driverId = driver.id;
       }
 
       const snapshot = this.pricing.buildSnapshot(breakdown, policy, fees);
@@ -1044,7 +1053,7 @@ export class BookingRequestsService {
         snapshot,
         fees,
         deposit,
-        { driverId, promoDropped },
+        { promoDropped, autoAssignDriverId },
       );
       return { status: row.status, bookingId: row.bookingId };
     } catch (err) {
@@ -1661,9 +1670,6 @@ export class BookingRequestsService {
    *    Đơn thuê chỉ ra đời khi đối soát xác nhận đã nhận đủ tiền (webhook / khớp tay).
    *  - KHÔNG (chính sách không thu, hoặc báo giá còn tạm tính nên không có số tiền nào chốt
    *    được) → tạo đơn NGAY tại đây. Không có QR giả, không có chặng chờ tiền rỗng.
-   *
-   * `opts.driverId`: tài xế hệ thống chọn khi tự nhận chuyến có tài xế — gán TRONG transaction
-   * tạo đơn để `bookings_driver_schedule_excl` gác; duyệt tay không dùng (gán sau ở đơn).
    */
   private async commitDecision(
     tenantId: string,
@@ -1675,7 +1681,8 @@ export class BookingRequestsService {
     fees: CustomerFeeBreakdown | null,
     deposit: DepositPolicyResolution,
     opts: {
-      driverId?: string | null;
+      /** Tài xế tự gán (chỉ khi HỆ THỐNG tự nhận chuyến có tài xế) — `pending`, chờ tài xế nhận. */
+      autoAssignDriverId?: string | null;
       /**
        * Mã khuyến mãi đã đóng băng trên yêu cầu KHÔNG còn áp được lúc chốt giá (ADR 0046 điều 7).
        * Lượt được nhả trong chính transaction của lượt duyệt, ở CẢ HAI nhánh — một yêu cầu đã
@@ -1765,7 +1772,7 @@ export class BookingRequestsService {
         // Yêu cầu LEGACY (trước migration) không có id thì `createWithinTx` tự tìm-hoặc-tạo.
         req.tenantCustomerId,
         {
-          driverId: opts.driverId ?? null,
+          autoAssignDriverId: opts.autoAssignDriverId ?? null,
           // Điều kiện thuê đã đóng băng lúc khách gửi — đi nguyên sang đơn.
           rentalTerms: (req.rentalTerms as unknown as RentalTermsSnapshot | null) ?? null,
           depositCollectionMode,
@@ -1829,7 +1836,7 @@ export class BookingRequestsService {
           action: isSystem ? 'booking_request.auto_accept' : 'booking_request.approve',
           targetType: 'booking_request',
           targetId: id,
-          after: { bookingId: booking.id, ...(opts.driverId ? { driverId: opts.driverId } : {}) },
+          after: { bookingId: booking.id },
         },
         tx,
       );

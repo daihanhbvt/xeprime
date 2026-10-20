@@ -55,6 +55,16 @@ const NOTIFICATION_AFFECTED: readonly QueryKey[] = [
    * của `usePendingInvoice` chỉ còn là lưới an toàn khi đang nghe được bản chiếu.
    */
   queryKeys.subscription.all,
+  /**
+   * Tài xế liên kết (ADR 0063) — HAI phía của cùng một sự kiện:
+   *  - phía TÀI XẾ (tài khoản khách): lời mời mới / bị gỡ khỏi chuyến / được gán chuyến làm đổi
+   *    "Nơi tôi làm tài xế", "Chuyến tôi lái" và con số chờ trả lời (`driving`);
+   *  - phía BÊN THUÊ: tài xế đồng ý / từ chối lời mời hay rời đi làm đổi trang Tài xế và bộ chọn
+   *    gán (`drivers`); tài xế nhận / từ chối chuyến thì khối Tài xế của đơn đi theo `bookings`
+   *    ở trên.
+   */
+  queryKeys.driving.all,
+  queryKeys.drivers.all,
 ];
 
 /**

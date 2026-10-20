@@ -42,7 +42,8 @@
     "reject": "Decline",
     "estimated": "Estimate · final on approval",
     "estimatedClosed": "Quote at request time",
-    "cancel": "Cancel trip"
+    "cancel": "Cancel trip",
+    "driver": "Driver"
   },
   "pickup": {
     "delivery": "Delivered to you",

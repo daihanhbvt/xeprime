@@ -74,7 +74,11 @@ export class VehicleOperationSettingsDto {
   @ApiProperty({ type: [HandoverWindowDto], description: 'Rỗng = nhận lại mọi giờ' })
   returnWindows!: HandoverWindowDto[];
 
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO — null khi chưa lưu lần nào' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'ISO — null khi chưa lưu lần nào',
+  })
   updatedAt!: string | null;
 }
 
@@ -108,7 +112,9 @@ export class SaveVehicleOperationSettingsDto {
  * để một toggle bật lên rồi không bao giờ có tác dụng.
  */
 export class WithDriverAutoAcceptCapabilityDto {
-  @ApiProperty({ description: 'Gói hiện hành có tính năng Tài xế và gian hàng có tài xế đang hoạt động' })
+  @ApiProperty({
+    description: 'Gói hiện hành có tính năng Tài xế và gian hàng có tài xế đang hoạt động',
+  })
   available!: boolean;
 
   @ApiProperty({ description: 'Số tài xế đang hoạt động (0 = không gán được ai)' })
@@ -226,13 +232,15 @@ export class PatchVehicleServiceSettingDto {
 
 export class DriverSurchargeRuleDto {
   @ApiProperty({ enum: DRIVER_SURCHARGE_KIND_VALUES }) kind!: string;
-  @ApiProperty({ enum: DRIVER_SURCHARGE_UNIT_VALUES, description: 'Cố định theo loại' }) unit!: string;
+  @ApiProperty({ enum: DRIVER_SURCHARGE_UNIT_VALUES, description: 'Cố định theo loại' })
+  unit!: string;
   @ApiProperty() enabled!: boolean;
   @ApiProperty({ description: 'VND string — ADR 0007' }) amount!: string;
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
-    description: 'Ngưỡng theo loại: phút-trong-ngày · phút chờ miễn phí · km/ngày; null với overnight',
+    description:
+      'Ngưỡng theo loại: phút-trong-ngày · phút chờ miễn phí · km/ngày; null với overnight',
   })
   thresholdValue!: number | null;
 }
@@ -255,7 +263,12 @@ export class SaveDriverSurchargeRuleDto {
   @Matches(MONEY_PATTERN, { message: 'Số tiền phụ phí không hợp lệ' })
   amount!: string;
 
-  @ApiPropertyOptional({ type: Number, nullable: true, minimum: 0, maximum: DRIVER_SURCHARGE_THRESHOLD_MAX })
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    minimum: 0,
+    maximum: DRIVER_SURCHARGE_THRESHOLD_MAX,
+  })
   @IsOptional()
   @IsInt()
   @Min(0)
@@ -277,10 +290,16 @@ export class SaveDriverSurchargeRulesDto {
 
 const HISTORY_DEFAULT_LIMIT = 20;
 const HISTORY_MAX_LIMIT = 50;
-export { HISTORY_DEFAULT_LIMIT as TRIP_HISTORY_DEFAULT_LIMIT, HISTORY_MAX_LIMIT as TRIP_HISTORY_MAX_LIMIT };
+export {
+  HISTORY_DEFAULT_LIMIT as TRIP_HISTORY_DEFAULT_LIMIT,
+  HISTORY_MAX_LIMIT as TRIP_HISTORY_MAX_LIMIT,
+};
 
 export class VehicleTripHistoryQueryDto {
-  @ApiPropertyOptional({ enum: VEHICLE_TRIP_HISTORY_FILTER_VALUES, default: VEHICLE_TRIP_HISTORY_FILTER.ALL })
+  @ApiPropertyOptional({
+    enum: VEHICLE_TRIP_HISTORY_FILTER_VALUES,
+    default: VEHICLE_TRIP_HISTORY_FILTER.ALL,
+  })
   @IsOptional()
   @IsIn(VEHICLE_TRIP_HISTORY_FILTER_VALUES)
   filter?: VehicleTripHistoryFilter;
@@ -306,29 +325,48 @@ export class VehicleTripHistoryQueryDto {
  * đơn CHỈ xuất hiện một lần dưới dạng đơn. Không có SĐT/email khách ở đây: thẻ chỉ cần tên.
  */
 export class VehicleTripHistoryItemDto {
-  @ApiProperty({ description: 'Khoá ổn định của dòng: `booking:<id>` hoặc `request:<id>`' }) key!: string;
+  @ApiProperty({ description: 'Khoá ổn định của dòng: `booking:<id>` hoặc `request:<id>`' })
+  key!: string;
   @ApiProperty({ enum: VEHICLE_TRIP_HISTORY_KIND_VALUES }) kind!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) bookingId!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) requestId!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Mã đơn — chỉ có ở đơn' }) code!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, enum: BOOKING_STATUS_VALUES }) bookingStatus!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Mã đơn — chỉ có ở đơn' })
+  code!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, enum: BOOKING_STATUS_VALUES })
+  bookingStatus!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, enum: BOOKING_REQUEST_STATUS_LIVE_VALUES })
   requestStatus!: string | null;
-  @ApiProperty({ enum: CUSTOMER_TRIP_STAGE_LIVE_VALUES, description: 'Chặng gộp — cùng phép chiếu với Chuyến của tôi' })
+  @ApiProperty({
+    enum: CUSTOMER_TRIP_STAGE_LIVE_VALUES,
+    description: 'Chặng gộp — cùng phép chiếu với Chuyến của tôi',
+  })
   stage!: string;
   @ApiProperty({ enum: SERVICE_TYPE_VALUES }) serviceType!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) routeType!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO — null với yêu cầu dài hạn chưa chốt' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'ISO — null với yêu cầu dài hạn chưa chốt',
+  })
   pickupAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) returnAt!: string | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) longTermPackageMonths!: number | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'VND string — null khi chưa có số chốt' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'VND string — null khi chưa có số chốt',
+  })
   totalAmount!: string | null;
   @ApiProperty() customerName!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) customerAvatarUrl!: string | null;
-  @ApiProperty({ description: 'ISO — lần xử lý gần nhất (duyệt/từ chối/đổi trạng thái)' }) happenedAt!: string;
+  @ApiProperty({ description: 'ISO — lần xử lý gần nhất (duyệt/từ chối/đổi trạng thái)' })
+  happenedAt!: string;
   @ApiProperty({ description: 'ISO' }) createdAt!: string;
-  @ApiPropertyOptional({ type: String, nullable: true, enum: BOOKING_REQUEST_DECISION_SOURCE_VALUES })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    enum: BOOKING_REQUEST_DECISION_SOURCE_VALUES,
+  })
   decisionSource!: string | null;
 }
 
@@ -341,7 +379,9 @@ export class VehicleTripHistoryPageDto {
 
 /** Khả năng tự động nhận cho một yêu cầu CỤ THỂ — server quyết, client chỉ hiển thị. */
 export class AutoAcceptPreviewDto {
-  @ApiProperty({ description: 'true = nếu gửi ngay bây giờ, hệ thống sẽ tự nhận (trừ khi lịch vừa bị chiếm)' })
+  @ApiProperty({
+    description: 'true = nếu gửi ngay bây giờ, hệ thống sẽ tự nhận (trừ khi lịch vừa bị chiếm)',
+  })
   eligible!: boolean;
 
   @ApiPropertyOptional({ type: String, nullable: true, enum: AUTO_ACCEPT_BLOCKER_VALUES })

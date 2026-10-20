@@ -16,6 +16,7 @@ import { AppTopBar } from '@/components/layout/AppTopBar';
 import { CountBadge } from '@/components/ui/CountBadge';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { useBadges } from '@/features/badges/hooks/use-badges';
+import { useDriverPendingCounts } from '@/features/driving/hooks';
 import { FONT_FAMILY } from '@/theme/fonts';
 import { colors, fontSize, iconSize, space } from '@/theme/tokens';
 
@@ -188,6 +189,9 @@ export default function TabsLayout() {
    * hiệu menu, không còn một lời gọi `/conversations/unread-count?side=customer` riêng.
    */
   const { chatCustomer } = useBadges();
+  /* Chuyến được gán chờ TÔI nhận (ADR 0063) — việc cần làm, nên gắn lên tab Chuyến. */
+  const driverCounts = useDriverPendingCounts(Boolean(user));
+  const pendingDriverTrips = driverCounts.data?.trips ?? 0;
 
   return (
     <SafeAreaView edges={['top']} style={{ backgroundColor: colors.background, flex: 1 }}>
@@ -264,7 +268,9 @@ export default function TabsLayout() {
           options={{
             ...authOnly,
             title: t('tripsShort'),
-            tabBarIcon: ({ color }) => <TabIcon name="calendar-outline" color={color} />,
+            tabBarIcon: ({ color }) => (
+              <TabIcon name="calendar-outline" color={color} badge={pendingDriverTrips} />
+            ),
           }}
         />
         <Tabs.Screen

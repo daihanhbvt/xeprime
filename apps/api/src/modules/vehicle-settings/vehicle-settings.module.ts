@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { OccupancyService } from '../calendar/occupancy.service';
 import { ListingsSyncModule } from '../public-listings/listings-sync.module';
+import { DriversModule } from '../drivers/drivers.module';
 import { VehicleSettingsController } from './vehicle-settings.controller';
 import { VehicleSettingsService } from './vehicle-settings.service';
 import { VehicleTripHistoryService } from './vehicle-trip-history.service';
@@ -18,7 +19,7 @@ import { VehicleTripHistoryService } from './vehicle-trip-history.service';
  */
 @Module({
   // ListingsSyncModule cũng là module LÁ (chỉ cần PrismaService) nên import nó không dựng vòng.
-  imports: [ListingsSyncModule],
+  imports: [ListingsSyncModule, DriversModule],
   controllers: [VehicleSettingsController],
   providers: [VehicleSettingsService, VehicleTripHistoryService, OccupancyService],
   exports: [VehicleSettingsService],

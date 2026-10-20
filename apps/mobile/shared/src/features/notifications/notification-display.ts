@@ -105,6 +105,16 @@ const ICONS: Readonly<Record<NotificationType, IconName>> = {
   [NOTIFICATION_TYPE.SELLER_PROFILE_REJECTED]: 'shield-checkmark-outline',
   [NOTIFICATION_TYPE.SUPPORT_CASE_UPDATED]: 'chatbubble-ellipses-outline',
   [NOTIFICATION_TYPE.CHAT_MESSAGE_RECEIVED]: 'chatbubble-ellipses-outline',
+  // Tài xế liên kết (ADR 0063) — gương bộ icon web: thẻ cho lời mời, xe cho chuyến được gán.
+  [NOTIFICATION_TYPE.DRIVER_INVITED]: 'id-card-outline',
+  [NOTIFICATION_TYPE.DRIVER_INVITE_ACCEPTED]: 'checkmark-circle-outline',
+  [NOTIFICATION_TYPE.DRIVER_INVITE_DECLINED]: 'close-circle-outline',
+  [NOTIFICATION_TYPE.DRIVER_LINK_ENDED]: 'person-remove-outline',
+  [NOTIFICATION_TYPE.DRIVER_TRIP_ASSIGNED]: 'car-outline',
+  [NOTIFICATION_TYPE.DRIVER_TRIP_UNASSIGNED]: 'arrow-undo-outline',
+  [NOTIFICATION_TYPE.DRIVER_TRIP_COMPLETED]: 'checkmark-done-outline',
+  [NOTIFICATION_TYPE.DRIVER_TRIP_ACCEPTED]: 'checkmark-circle-outline',
+  [NOTIFICATION_TYPE.DRIVER_TRIP_DECLINED]: 'close-circle-outline',
 };
 
 export function notificationIcon(type: string): IconName {

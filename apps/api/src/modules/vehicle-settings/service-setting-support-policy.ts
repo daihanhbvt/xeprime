@@ -18,13 +18,17 @@ import type { PatchVehicleServiceSettingDto } from './dto/vehicle-settings.dto';
  * xe), điều khoản thuê (tác động pháp lý), chế độ cọc (tiền). Form gửi cả khối, nên ba nhóm đó có
  * mặt được nếu GIỐNG HỆT bản đang lưu — server so, không tin form đã khoá ô.
  */
-const ALLOWED = new Set([...SUPPORT_SERVICE_SETTING_FIELDS, ...SUPPORT_SERVICE_SETTING_PINNED_FIELDS]);
+const ALLOWED = new Set([
+  ...SUPPORT_SERVICE_SETTING_FIELDS,
+  ...SUPPORT_SERVICE_SETTING_PINNED_FIELDS,
+]);
 
 export function supportServiceSettingCapabilities(
   req: RequestContext,
 ): readonly SupportCapability[] | SupportActionDenial {
   const body: unknown = req.body;
-  const keys = body !== null && typeof body === 'object' && !Array.isArray(body) ? Object.keys(body) : null;
+  const keys =
+    body !== null && typeof body === 'object' && !Array.isArray(body) ? Object.keys(body) : null;
   const rejected = keys ? keys.filter((key) => !ALLOWED.has(key)) : [];
   if (!keys || rejected.length > 0) {
     return {

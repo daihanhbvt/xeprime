@@ -4,7 +4,6 @@ import {
 } from '@xeprime/types';
 import { LIST_SEPARATOR, mapExternalUrl, toGeoPoint } from '@xeprime/domain';
 import { catalogLabel, type CatalogMap } from '@/features/catalog/types';
-import { MapLink } from '@/components/data-display/MapLink';
 import { StaticMapImage } from '@/components/data-display/StaticMapImage';
 import { ShopQuickInfoCard } from '@/components/shop/ShopQuickInfoCard';
 import { ListingHeaderActions } from './ListingHeaderActions';
@@ -21,9 +20,7 @@ import { ListingBenefitsCard } from './ListingBenefitsCard';
 import { ListingBookingCard } from './ListingBookingCard';
 import { ListingPoliciesTabs } from './ListingPoliciesTabs';
 import styles from './ListingDetailView.module.css';
-import { getAppFormat } from '@/i18n/server-format';
 import { getTranslations } from 'next-intl/server';
-import { createDomainLabel } from '@/i18n/domain';
 
 /**
  * Trang chi tiết một xe trên Marketplace theo chuẩn Figma v2 (node 19707:83357).
@@ -51,19 +48,13 @@ export async function ListingDetailView({
   /** Tỉnh đang lọc ở trang tìm xe — prefill ô địa chỉ giao xe của luồng đặt (ADR 0035). */
   searchProvinceCode?: string;
 }) {
-  const [fmt, t, tCard, tDomain, tAddress] = await Promise.all([
-    getAppFormat(),
+  const [t, tCard] = await Promise.all([
     getTranslations('Listings.detail'),
     getTranslations('Listings.card'),
-    getTranslations('Domain'),
-    getTranslations('Address'),
   ]);
-  const domainLabel = createDomainLabel(tDomain as never);
   const pickupGeo = listing.pickupPoint
     ? toGeoPoint(listing.pickupPoint.latitude, listing.pickupPoint.longitude)
     : null;
-
-  const brand = catalogLabel(catalog[CATALOG_TYPE.VEHICLE_BRAND], listing.brand);
 
   // 4 thông số tiêu biểu dạng card icon 48px theo Figma v2
   const specs = [

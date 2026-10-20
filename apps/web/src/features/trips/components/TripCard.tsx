@@ -13,6 +13,7 @@ import {
 } from '@xeprime/types';
 import { LIST_SEPARATOR } from '@xeprime/domain';
 import { StatusTag } from '@/components/data-display/StatusTag';
+import { BookingDriverCell } from '@/features/bookings/components/BookingDriverCell';
 import { RespondDeadline } from '@/features/booking-requests/components/RespondDeadline';
 import { tripPath } from '@/constants/routes';
 import { cx } from '@/lib/cx';
@@ -155,6 +156,13 @@ export function TripCard({
               : `${dl('serviceType', trip.serviceType)} · ${trip.deliveryRequested ? t('pickup.delivery') : t('pickup.agency')}`}
           </span>
         </p>
+        {/* Chủ xe theo dõi tài xế của chuyến có tài xế ngay trên thẻ — giống cột "Tài xế" ở bảng đơn. */}
+        {isHost && trip.bookingId && trip.serviceType === SERVICE_TYPE.WITH_DRIVER ? (
+          <p className={styles.meta}>
+            <span>{t('card.driver')}:</span>
+            <BookingDriverCell booking={trip} />
+          </p>
+        ) : null}
       </div>
 
       <div className={styles.side}>

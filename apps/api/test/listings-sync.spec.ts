@@ -4,16 +4,12 @@ import {
   APPROVAL_STATUS,
   APPROVAL_TARGET_TYPE,
   COLLATERAL_MODE,
-  FEATURE_STATE,
   LISTING_STATUS,
   MEMBERSHIP_STATUS,
-  PLAN_FEATURE_VALUES,
   SERVICE_TYPE,
   TENANT_ROLE,
   TENANT_STATUS,
   VEHICLE_TYPE,
-  type FeatureState,
-  type PlanFeature,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
@@ -29,6 +25,7 @@ import {
   makeVehiclesService,
   seedBranch,
   seedProvince,
+  makeDriversService,
 } from './helpers/service-factory';
 import { TEST_PROVINCE } from './helpers/test-provinces';
 import { requiredVehicleImageRows } from './helpers/vehicle-media';
@@ -53,6 +50,7 @@ const vehicleSettings = new VehicleSettingsService(
   audit,
   new OccupancyService(asService),
   listings,
+  makeDriversService(asService),
 );
 
 /**
@@ -287,9 +285,6 @@ describe('public_listings sync (ADR 0008)', () => {
   maybe(
     'bật tự động nhận chuyến → thẻ xe mang cờ "Không cần xác nhận" của đúng dịch vụ',
     async () => {
-      const featureMap = Object.fromEntries(
-        PLAN_FEATURE_VALUES.map((f) => [f, FEATURE_STATE.HIDDEN]),
-      ) as Record<PlanFeature, FeatureState>;
       const toggle = (autoAcceptEnabled: boolean) =>
         vehicleSettings.patchServiceSetting(
           tenantId,
@@ -297,7 +292,6 @@ describe('public_listings sync (ADR 0008)', () => {
           SERVICE_TYPE.SELF_DRIVE,
           ownerId,
           { autoAcceptEnabled },
-          featureMap,
         );
       const flags = async () =>
         (

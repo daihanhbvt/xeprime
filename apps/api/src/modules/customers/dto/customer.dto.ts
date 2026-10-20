@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { BookingDriverSummaryDto } from '../../drivers/dto/driver.dto';
 import {
   ADDRESS_LINE_MAX_LENGTH,
   BOOKING_STATUS_VALUES,
@@ -307,6 +308,9 @@ export class CustomerBookingItemDto {
   @ApiPropertyOptional({ type: String, nullable: true }) totalAmount!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) paidAmount!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) debtAmount!: string | null;
+  /** Tài xế của đơn `with_driver` (ADR 0063) — cột "Tài xế" của bảng lịch sử thuê. */
+  @ApiPropertyOptional({ type: () => BookingDriverSummaryDto, nullable: true })
+  driver!: BookingDriverSummaryDto | null;
 }
 
 export class CustomerBookingPageDto {

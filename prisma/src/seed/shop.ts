@@ -24,7 +24,7 @@ import {
   COLLATERAL_ASSET_TYPE,
   COLLATERAL_MODE,
   DOCUMENT_STATUS,
-  DRIVER_STATUS,
+  DRIVER_LINK_STATUS,
   DRIVER_TYPE,
   MEMBERSHIP_STATUS,
   NOTIFICATION_TYPE,
@@ -35,7 +35,12 @@ import {
   VEHICLE_TYPE,
   resolveStorefrontKind,
 } from '@xeprime/types';
-import { upsertPasswordUser, type CustomerAccounts, type PlatformAccounts } from './accounts';
+import {
+  upsertPasswordUser,
+  type CustomerAccounts,
+  type DriverAccounts,
+  type PlatformAccounts,
+} from './accounts';
 import { VEHICLE_MODEL_BY_KEY } from './catalog';
 import { Prisma } from '../index';
 import { DEMO_PASSWORD, daysFromToday, log, prisma, seedId } from './context';
@@ -56,6 +61,8 @@ import type { FinanceCategoryIds, PlanIds } from './system';
 export interface ShopBuildDeps {
   platform: PlatformAccounts;
   customers: CustomerAccounts;
+  /** Tài khoản khách của tài xế (ADR 0063). */
+  drivers: DriverAccounts;
   financeCategoryIds: FinanceCategoryIds;
   planIds: PlanIds;
   /** Nhãn hiển thị của hãng xe, đọc từ `catalog_items` — tên xe dựng từ danh mục thật. */
@@ -101,11 +108,12 @@ const PACKAGE_PLAN_CODES: ReadonlySet<string> = new Set(Object.values(SHOP_PLAN_
 const PACKAGE_DEMO_NEGOTIATED_PRICE = 6_000_000;
 
 /** Tài xế mẫu — đủ ba loại hình, kèm một người đã nghỉ để thử lọc "chỉ tài xế đang làm". */
-const DRIVER_POOL = [
-  { name: 'Nguyễn Văn Dũng', phone: '0921000001', type: DRIVER_TYPE.STAFF, licence: 'B2' },
-  { name: 'Trần Hữu Phước', phone: '0921000002', type: DRIVER_TYPE.STAFF, licence: 'D' },
-  { name: 'Lê Minh Trí', phone: '0921000003', type: DRIVER_TYPE.COLLABORATOR, licence: 'B2' },
-  { name: 'Phạm Văn Lộc', phone: '0921000004', type: DRIVER_TYPE.TEMPORARY, licence: 'C' },
+/** Loại tài xế theo vị trí trong `DRIVER_ACCOUNTS` — đủ cả ba loại cho bộ lọc. */
+const DRIVER_TYPES = [
+  DRIVER_TYPE.STAFF,
+  DRIVER_TYPE.STAFF,
+  DRIVER_TYPE.COLLABORATOR,
+  DRIVER_TYPE.TEMPORARY,
 ] as const;
 
 export async function buildShop(spec: ShopSpec, deps: ShopBuildDeps): Promise<ShopBuildResult> {
@@ -293,30 +301,32 @@ export async function buildShop(spec: ShopSpec, deps: ShopBuildDeps): Promise<Sh
   await buildBankAccount(spec, tenantId);
   await buildRentalPolicies(spec, tenantId);
 
-  // ── Tài xế ──────────────────────────────────────────────────────────────
-  const driverIds: string[] = [];
+  // ── Tài xế liên kết (ADR 0063) ──────────────────────────────────────────
+  /*
+   * Mỗi tài xế là một TÀI KHOẢN KHÁCH đã đồng ý liên kết. Bên thuê có từ 2 tài xế trở lên giữ
+   * người cuối ở `invited` — cần một lời mời đang chờ thật để thử màn "Nơi tôi làm tài xế".
+   * Chỉ liên kết `active` được gán vào đơn.
+   */
+  const driverLinks: { id: string; userId: string }[] = [];
+  const driverOffset = spec.driverPoolOffset ?? 0;
   for (let i = 0; i < spec.driverCount; i += 1) {
-    const driver = DRIVER_POOL[i % DRIVER_POOL.length]!;
-    const id = seedId(`${spec.key}:driver:${driver.phone}`);
+    const account = deps.drivers[(driverOffset + i) % deps.drivers.length]!;
+    const id = seedId(`${spec.key}:driver-link:${account.phone}`);
+    const invited = i === spec.driverCount - 1 && spec.driverCount > 1;
     const fields = {
-      name: driver.name,
-      phone: driver.phone,
-      driverType: driver.type,
-      licenseNo: `${driver.licence}-${String(120000 + i * 37)}`,
-      licenseExpiresAt: daysFromToday(600 + i * 40),
-      // Người cuối trong danh sách đã nghỉ — cần một tài xế `inactive` thật để thử bộ lọc và
-      // để kiểm chứng rằng đơn mới không gán được cho người đã nghỉ.
-      status:
-        i === spec.driverCount - 1 && spec.driverCount > 2
-          ? DRIVER_STATUS.INACTIVE
-          : DRIVER_STATUS.ACTIVE,
+      name: account.name,
+      phone: normalizeSeedPhone(account.phone),
+      driverType: DRIVER_TYPES[(driverOffset + i) % DRIVER_TYPES.length]!,
+      linkStatus: invited ? DRIVER_LINK_STATUS.INVITED : DRIVER_LINK_STATUS.ACTIVE,
+      respondedAt: invited ? null : daysFromToday(-30),
+      invitedBy: ownerUserId,
     };
     await prisma.driver.upsert({
       where: { id },
       update: fields,
-      create: { id, tenantId, ...fields },
+      create: { id, tenantId, userId: account.userId, invitedAt: daysFromToday(-31), ...fields },
     });
-    if (fields.status === DRIVER_STATUS.ACTIVE) driverIds.push(id);
+    if (!invited) driverLinks.push({ id, userId: account.userId });
   }
 
   // ── Đội xe ──────────────────────────────────────────────────────────────
@@ -348,7 +358,7 @@ export async function buildShop(spec: ShopSpec, deps: ShopBuildDeps): Promise<Sh
   const bookings =
     spec.depth === 'minimal' || spec.depth === 'none'
       ? []
-      : await buildBookings(spec, opsDeps, units, customers, driverIds);
+      : await buildBookings(spec, opsDeps, units, customers, driverLinks);
 
   await buildContracts(spec, opsDeps, bookings);
   await buildHandovers(spec, opsDeps, bookings);
@@ -956,4 +966,9 @@ async function buildNotifications(
       },
     });
   }
+}
+
+/** `users.phone` lưu dạng `84xxxxxxxxx` — bản chụp SĐT trên liên kết khớp cùng dạng. */
+function normalizeSeedPhone(phone: string): string {
+  return phone.startsWith('0') ? `84${phone.slice(1)}` : phone;
 }

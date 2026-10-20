@@ -17,6 +17,8 @@ import {
   ShopOutlined,
   StarOutlined,
   ThunderboltOutlined,
+  IdcardOutlined,
+  SolutionOutlined,
 } from '@ant-design/icons';
 import { NOTIFICATION_TARGET_TYPE, NOTIFICATION_TYPE, type NotificationType } from '@xeprime/types';
 import {
@@ -25,6 +27,7 @@ import {
   listingPath,
   ROUTES,
   tripPath,
+  drivingTripPath,
 } from '@/constants/routes';
 
 /**
@@ -98,6 +101,16 @@ const ICONS: Readonly<Record<NotificationType, ReactNode>> = {
   [NOTIFICATION_TYPE.SELLER_PROFILE_REJECTED]: <SafetyCertificateOutlined />,
   [NOTIFICATION_TYPE.SUPPORT_CASE_UPDATED]: <MessageOutlined />,
   [NOTIFICATION_TYPE.CHAT_MESSAGE_RECEIVED]: <MessageOutlined />,
+  // Tài xế (ADR 0063): lời mời/liên kết = thẻ tài xế · chuyến được gán = xe.
+  [NOTIFICATION_TYPE.DRIVER_INVITED]: <IdcardOutlined />,
+  [NOTIFICATION_TYPE.DRIVER_INVITE_ACCEPTED]: <CheckCircleOutlined />,
+  [NOTIFICATION_TYPE.DRIVER_INVITE_DECLINED]: <CloseCircleOutlined />,
+  [NOTIFICATION_TYPE.DRIVER_LINK_ENDED]: <SolutionOutlined />,
+  [NOTIFICATION_TYPE.DRIVER_TRIP_ASSIGNED]: <CarOutlined />,
+  [NOTIFICATION_TYPE.DRIVER_TRIP_UNASSIGNED]: <RollbackOutlined />,
+  [NOTIFICATION_TYPE.DRIVER_TRIP_COMPLETED]: <CheckCircleOutlined />,
+  [NOTIFICATION_TYPE.DRIVER_TRIP_ACCEPTED]: <CheckCircleOutlined />,
+  [NOTIFICATION_TYPE.DRIVER_TRIP_DECLINED]: <CloseCircleOutlined />,
 };
 
 export function notificationIcon(type: string): ReactNode {
@@ -149,6 +162,13 @@ export function notificationHref(
       // `targetId` của review là id ĐÁNH GIÁ, không phải id chuyến — dừng ở danh sách.
       case NOTIFICATION_TARGET_TYPE.REVIEW:
         return ROUTES.TRIPS;
+      // Tài xế là tài khoản KHÁCH (ADR 0063) — cùng đích với `notification-delivery.ts`.
+      case NOTIFICATION_TARGET_TYPE.DRIVER_TRIP:
+        return notification.targetId
+          ? drivingTripPath.detail(notification.targetId)
+          : drivingTripPath.list;
+      case NOTIFICATION_TARGET_TYPE.DRIVER_LINK:
+        return ROUTES.ACCOUNT.DRIVING;
       // Thông báo về XE/GIAN HÀNG chỉ tới tài khoản đối tác — khách không bao giờ nhận.
       default:
         return null;
@@ -177,6 +197,9 @@ export function notificationHref(
       return ROUTES.MANAGE.SHOP;
     case NOTIFICATION_TARGET_TYPE.VEHICLE:
       return ROUTES.MANAGE.VEHICLES;
+    // Cả hai tuyến quản lý tài xế ở cùng một trang (ADR 0063).
+    case NOTIFICATION_TARGET_TYPE.DRIVER_LINK:
+      return ROUTES.MANAGE.DRIVERS;
     default:
       return null;
   }

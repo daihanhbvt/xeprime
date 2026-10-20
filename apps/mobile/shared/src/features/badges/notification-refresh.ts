@@ -38,6 +38,19 @@ const SHOP_BRANCHES = [queryKeys.shop.all, queryKeys.tenants.all] as const;
 const SUBSCRIPTION_BRANCHES = [queryKeys.subscription.all, queryKeys.billing.all] as const;
 
 /**
+ * Tài xế liên kết (ADR 0063). Một sự kiện đụng HAI phía: tài xế (`driving` — lời mời, chuyến
+ * được gán, huy hiệu chờ trả lời) và bên thuê (`drivers` — sổ tài xế, bộ chọn gán; đơn thuê mang
+ * tài xế). Cùng luật `invalidateQueries` rẻ như mọi nhánh khác: chỉ màn đang mở tải lại.
+ */
+const DRIVER_LINK_BRANCHES = [queryKeys.driving.all, queryKeys.drivers.all] as const;
+/**
+ * Chuyến có tài xế đổi (gán / gỡ / nhận / từ chối / hoàn thành) — đủ các nhánh chuyến như mọi thông
+ * báo chuyến khác: "Chuyến cho thuê" của chủ xe cá nhân (`trips`) hiện tài xế + trạng thái nhận,
+ * đơn và lịch của gian hàng (`bookings`, `calendar`), "việc cần làm" (`dashboard`). Gương web.
+ */
+const DRIVER_TRIP_BRANCHES = [...DRIVER_LINK_BRANCHES, ...TRIP_BRANCHES] as const;
+
+/**
  * KHÔNG làm mới gì.
  *
  * Dùng cho hai nhóm, vì hai lý do khác nhau:
@@ -119,6 +132,17 @@ const BY_TYPE: Record<NotificationType, readonly QueryKey[]> = {
 
   // Chat tự lo — xem `NONE`.
   [NOTIFICATION_TYPE.CHAT_MESSAGE_RECEIVED]: NONE,
+
+  // Tài xế liên kết (ADR 0063).
+  [NOTIFICATION_TYPE.DRIVER_INVITED]: DRIVER_LINK_BRANCHES,
+  [NOTIFICATION_TYPE.DRIVER_INVITE_ACCEPTED]: DRIVER_LINK_BRANCHES,
+  [NOTIFICATION_TYPE.DRIVER_INVITE_DECLINED]: DRIVER_LINK_BRANCHES,
+  [NOTIFICATION_TYPE.DRIVER_LINK_ENDED]: DRIVER_TRIP_BRANCHES,
+  [NOTIFICATION_TYPE.DRIVER_TRIP_ASSIGNED]: DRIVER_TRIP_BRANCHES,
+  [NOTIFICATION_TYPE.DRIVER_TRIP_UNASSIGNED]: DRIVER_TRIP_BRANCHES,
+  [NOTIFICATION_TYPE.DRIVER_TRIP_COMPLETED]: DRIVER_TRIP_BRANCHES,
+  [NOTIFICATION_TYPE.DRIVER_TRIP_ACCEPTED]: DRIVER_TRIP_BRANCHES,
+  [NOTIFICATION_TYPE.DRIVER_TRIP_DECLINED]: DRIVER_TRIP_BRANCHES,
 };
 
 /**

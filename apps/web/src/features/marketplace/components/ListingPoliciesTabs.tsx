@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import {
   COLLATERAL_ASSET_TYPE_LABEL,
   COLLATERAL_MODE,
@@ -25,6 +25,7 @@ interface ListingPoliciesTabsProps {
 }
 
 export function ListingPoliciesTabs({ listing, activeService }: ListingPoliciesTabsProps) {
+  const vatTitleId = useId();
   const [activeTab, setActiveTab] = useState<'general' | 'documents' | 'collateral' | 'cancellation'>('general');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -112,7 +113,7 @@ export function ListingPoliciesTabs({ listing, activeService }: ListingPoliciesT
                 <div className={styles.ruleItem}>
                   <span className={styles.bullet} />
                   <span>
-                    Bao gồm {fmt.km(listing.mileagePolicy.includedKmPerDay)} km/ngày. Phụ phí {fmt.money(listing.mileagePolicy.excessFeePerKm)}/km vượt hạn mức.
+                    Bao gồm {fmt.km(listing.mileagePolicy.includedKmPerDay)}/ngày. Phụ phí {fmt.money(listing.mileagePolicy.excessFeePerKm)}/km vượt hạn mức.
                   </span>
                 </div>
                 <div className={styles.ruleItem}>
@@ -162,8 +163,8 @@ export function ListingPoliciesTabs({ listing, activeService }: ListingPoliciesT
 
             {/* Hoá đơn VAT */}
             {listing.vatInvoiceSupported && (
-              <div className={styles.subSection}>
-                <h3 className={styles.subSectionTitle}>Hoá đơn VAT</h3>
+              <section className={styles.subSection} aria-labelledby={vatTitleId}>
+                <h3 id={vatTitleId} className={styles.subSectionTitle}>Hoá đơn VAT</h3>
                 <div className={styles.ruleItem}>
                   <span className={styles.bullet} />
                   <span>
@@ -176,7 +177,7 @@ export function ListingPoliciesTabs({ listing, activeService }: ListingPoliciesT
                     Đây là thoả thuận giữa bạn và chủ xe: XePrime không xuất hoá đơn thay chủ xe, và các khoản bạn trả cho XePrime (như phí dịch vụ) không nằm trong hoá đơn này.
                   </span>
                 </div>
-              </div>
+              </section>
             )}
 
             <div className={styles.noteBox}>

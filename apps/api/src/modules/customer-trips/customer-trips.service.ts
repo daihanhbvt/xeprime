@@ -1,5 +1,6 @@
 import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma, releasePromoRedemption } from '@xeprime/prisma';
+import { BOOKING_DRIVER_SELECT, toBookingDriverSummary } from '../drivers/booking-driver-summary';
 import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
@@ -948,6 +949,8 @@ const FILTER_STATUSES: FilterStatuses = Object.fromEntries(
 
 const BOOKING_SELECT = {
   id: true,
+  // Tài xế + trạng thái lượt gán — chủ xe theo dõi chuyến có tài xế ngay trên danh sách (ADR 0063).
+  ...BOOKING_DRIVER_SELECT,
   tenantId: true,
   code: true,
   status: true,
@@ -1094,6 +1097,8 @@ function toListItem(
         ? row.respondBy.toISOString()
         : null,
     canContact,
+    // Chỉ phía CHỦ XE thấy tài xế đang gán — khách nhìn chuyến của mình không cần lượt gán nội bộ.
+    driver: role === TRIP_ROLE.HOST && booking ? toBookingDriverSummary(booking) : null,
     vehicle: {
       id: row.vehicle.id,
       name: row.vehicle.name,

@@ -10,9 +10,9 @@ import {
 } from '@/services/api-client';
 import type {
   AssignableDriver,
-  CreateDriverInput,
   Driver,
   DriverFilters,
+  InviteDriverInput,
   UpdateDriverInput,
 } from './types';
 
@@ -23,7 +23,7 @@ export type DriverListResult = Paged<Driver>;
 export function filtersToParams(filters: DriverFilters): QueryParams {
   return {
     q: filters.q ?? null,
-    status: filters.status ?? null,
+    linkStatus: filters.linkStatus ?? null,
     driverType: filters.driverType ?? null,
     page: filters.page ?? 1,
     limit: filters.limit ?? DRIVERS_DEFAULT_LIMIT,
@@ -33,16 +33,23 @@ export function filtersToParams(filters: DriverFilters): QueryParams {
 export const fetchDrivers = (filters: DriverFilters): Promise<DriverListResult> =>
   fetchPage<Driver>('/drivers', filtersToParams(filters), DRIVERS_DEFAULT_LIMIT);
 
-export const createDriver = (body: CreateDriverInput): Promise<Driver> =>
+/** Mời một TÀI KHOẢN KHÁCH đã xác minh SĐT làm tài xế (ADR 0063). */
+export const inviteDriver = (body: InviteDriverInput): Promise<Driver> =>
   apiPost<Driver>('/drivers', body);
 
 export const updateDriver = (id: string, body: UpdateDriverInput): Promise<Driver> =>
   apiPatch<Driver>(`/drivers/${id}`, body);
 
-export const deleteDriver = (id: string): Promise<{ ok: true }> =>
-  apiDelete<{ ok: true }>(`/drivers/${id}`);
+export const suspendDriver = (id: string): Promise<Driver> =>
+  apiPost<Driver>(`/drivers/${id}/suspend`);
 
-/** Tài xế cho bộ chọn gán đơn — kèm cờ bận khung giờ / GPLX hết hạn (17/08). */
+export const resumeDriver = (id: string): Promise<Driver> =>
+  apiPost<Driver>(`/drivers/${id}/resume`);
+
+/** Thu hồi lời mời / kết thúc liên kết — server chặn khi tài xế đang chạy chuyến. */
+export const endDriver = (id: string): Promise<unknown> => apiDelete<unknown>(`/drivers/${id}`);
+
+/** Tài xế cho bộ chọn gán đơn — kèm cờ bận khung giờ + trạng thái bằng lái. */
 export const fetchAssignableDrivers = (window: {
   pickupAt: string;
   returnAt: string;

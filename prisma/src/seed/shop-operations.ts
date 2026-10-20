@@ -13,6 +13,7 @@
  *     làm công nợ tụt giả.
  */
 import {
+  DRIVER_ASSIGNMENT_STATUS,
   BOOKING_REQUEST_STATUS,
   BOOKING_STATUS,
   bookingRequestRespondBy,
@@ -420,7 +421,7 @@ export async function buildBookings(
   deps: OperationsDeps,
   units: readonly VehicleUnit[],
   customers: readonly ShopCustomer[],
-  driverIds: readonly string[],
+  drivers: readonly { id: string; userId: string }[],
 ): Promise<BookingResult[]> {
   if (customers.length === 0) return [];
 
@@ -434,7 +435,7 @@ export async function buildBookings(
    * Mốc thời gian của đơn neo vào ngày chạy seed, còn vòng lặp dưới đây upsert từng đơn một.
    * Giữa chừng vòng lặp, đơn vừa nhận ngày MỚI phải sống chung với đơn chưa tới lượt còn giữ
    * ngày CŨ; hai đơn của cùng một tài xế chồng giờ nhau ở đúng khoảnh khắc đó là đủ để
-   * `bookings_driver_schedule_excl` bắn, dù trạng thái cuối cùng hoàn toàn hợp lệ.
+   * `bookings_driver_user_schedule_excl` bắn, dù trạng thái cuối cùng hoàn toàn hợp lệ.
    *
    * Gỡ trước rồi gán lại nghĩa là vòng lặp luôn viết lên một lịch tài xế TRỐNG. Cùng lý do
    * `vehicle_occupancies` bị xoá-dựng-lại ở `shop.ts` — khác ở chỗ đơn thì KHÔNG xoá: lịch sử
@@ -442,7 +443,13 @@ export async function buildBookings(
    */
   await prisma.booking.updateMany({
     where: { tenantId: deps.tenantId, driverId: { not: null } },
-    data: { driverId: null },
+    data: {
+      driverId: null,
+      driverUserId: null,
+      driverAssignmentStatus: null,
+      driverAssignedAt: null,
+      driverRespondedAt: null,
+    },
   });
 
   for (const [n, plan] of plans.entries()) {
@@ -450,13 +457,31 @@ export async function buildBookings(
     const bookingId = seedId(`${spec.key}:booking:${code}`);
     const money = computeMoney(plan);
     const withDriver = plan.serviceType === SERVICE_TYPE.WITH_DRIVER;
-    // Tài xế chỉ gán cho đơn CÓ TÀI XẾ. Exclusion constraint `bookings_driver_schedule_excl`
-    // cấm một tài xế nhận hai đơn chồng giờ, nên đơn còn giữ chỗ mới gán — đơn đã xong/huỷ
-    // để trống, khỏi đụng ràng buộc vì lịch sử.
-    const driverId =
-      withDriver && driverIds.length > 0 && OCCUPYING.includes(plan.status)
-        ? driverIds[plan.unit.index % driverIds.length]!
+    // Tài xế chỉ gán cho đơn CÓ TÀI XẾ còn chiếm lịch — `bookings_driver_user_schedule_excl`
+    // cấm một NGƯỜI nhận hai đơn chồng giờ. Đơn đang chạy là đã nhận; đơn sắp tới xen kẽ
+    // "chờ nhận" để màn "Chuyến tôi lái" có việc cần trả lời.
+    const driver =
+      withDriver && drivers.length > 0 && OCCUPYING.includes(plan.status)
+        ? drivers[plan.unit.index % drivers.length]!
         : null;
+    const driverAccepted = plan.status === BOOKING_STATUS.ACTIVE || plan.unit.index % 2 === 0;
+    const driverFields = driver
+      ? {
+          driverId: driver.id,
+          driverUserId: driver.userId,
+          driverAssignmentStatus: driverAccepted
+            ? DRIVER_ASSIGNMENT_STATUS.ACCEPTED
+            : DRIVER_ASSIGNMENT_STATUS.PENDING,
+          driverAssignedAt: daysFromToday(-1),
+          driverRespondedAt: driverAccepted ? daysFromToday(-1) : null,
+        }
+      : {
+          driverId: null,
+          driverUserId: null,
+          driverAssignmentStatus: null,
+          driverAssignedAt: null,
+          driverRespondedAt: null,
+        };
 
     const fields = {
       vehicleId: plan.unit.id,
@@ -486,7 +511,7 @@ export async function buildBookings(
       totalAmount: money.totalAmount,
       depositAmount: money.depositAmount,
       priceSnapshot: priceSnapshot(plan, money),
-      driverId,
+      ...driverFields,
       note: null,
     };
 

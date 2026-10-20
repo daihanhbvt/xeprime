@@ -4,63 +4,113 @@
     "tableLabel": "Danh sách tài xế",
     "loadError": "Không tải được danh sách tài xế",
     "empty": "Chưa có tài xế nào",
-    "emptyHint": "Thêm tài xế để gán vào các đơn thuê xe có tài xế.",
+    "emptyHint": "Mời tài xế bằng số điện thoại tài khoản XePrime của họ để gán vào các chuyến có tài xế.",
     "total": "{count, plural, other {# tài xế}}",
     "forbidden": {
       "title": "Không có quyền truy cập",
-      "description": "Bạn cần quyền xem tài xế của gian hàng. Liên hệ chủ gian hàng để được cấp quyền."
+      "description": "Bạn cần quyền xem tài xế. Liên hệ chủ gian hàng để được cấp quyền."
     }
   },
   "filters": {
     "search": "Tìm tài xế",
-    "searchPlaceholder": "Tìm theo tên, SĐT, số GPLX",
-    "status": "Trạng thái",
+    "searchPlaceholder": "Tìm theo tên hoặc SĐT",
+    "status": "Trạng thái liên kết",
+    "openLinks": "Đang mời / liên kết",
+    "type": "Loại tài xế",
+    "allTypes": "Tất cả loại",
     "allStatuses": "Tất cả trạng thái"
   },
   "columns": {
     "driver": "Tài xế",
+    "accountName": "Tài khoản: {name}",
     "type": "Loại",
-    "papers": "GPLX / CCCD",
-    "activeBookings": "Đơn đang gán",
-    "status": "Trạng thái"
+    "licence": "Bằng lái",
+    "activeBookings": "Chuyến đang gán",
+    "status": "Liên kết"
   },
-  "license": {
-    "expired": "GPLX hết hạn {date}",
-    "validUntil": "GPLX đến {date}"
+  "licence": {
+    "classes": "Hạng {classes}",
+    "validUntil": "Hạn đến {date}",
+    "noExpiry": "Không thời hạn",
+    "holder": "Tên trên bằng: {name}",
+    "kind": "Loại: {kind}",
+    "nameMismatch": "Tên trên bằng khác tên bạn đã nhập — hãy đối chiếu giấy tờ khi giao xe"
   },
-  "activeBookings": "{count, plural, other {# đơn}}",
+  "activeBookings": "{count, plural, other {# chuyến}}",
   "actions": {
-    "add": "Thêm tài xế",
-    "deactivate": "Ngừng hoạt động",
-    "activate": "Bật lại",
-    "deactivateConfirm": "Ngừng hoạt động tài xế này? Sẽ không gán được vào đơn mới.",
-    "deactivateOk": "Ngừng",
-    "removeConfirm": "Xoá tài xế này? Đơn cũ vẫn giữ lịch sử; còn đơn chưa hoàn tất sẽ bị chặn."
+    "invite": "Mời tài xế",
+    "sendInvite": "Gửi lời mời",
+    "suspend": "Tạm khoá",
+    "suspendConfirm": "Tạm khoá tài xế này? Liên kết vẫn giữ, nhưng không gán được vào chuyến mới.",
+    "resume": "Mở khoá",
+    "end": "Kết thúc liên kết",
+    "endConfirm": "Kết thúc liên kết với tài xế này? Các chuyến sắp tới đang gán cho họ sẽ được gỡ tài xế.",
+    "revoke": "Thu hồi lời mời",
+    "revokeConfirm": "Thu hồi lời mời này?",
+    "reinvite": "Mời lại",
+    "endConfirmWithTrips": "Tài xế này đang được gán {count, plural, other {# chuyến}} sắp tới. Kết thúc liên kết sẽ gỡ tài xế khỏi các chuyến đó — bạn cần gán người khác. Tiếp tục?"
   },
   "toast": {
-    "activated": "Đã bật lại tài xế",
-    "deactivated": "Đã ngừng hoạt động tài xế",
-    "removed": "Đã xoá tài xế",
-    "created": "Đã thêm tài xế",
-    "updated": "Đã cập nhật tài xế"
+    "invited": "Đã gửi lời mời — tài xế sẽ nhận thông báo để đồng ý",
+    "updated": "Đã cập nhật tài xế",
+    "suspended": "Đã tạm khoá tài xế",
+    "resumed": "Đã mở khoá tài xế",
+    "ended": "Đã kết thúc liên kết",
+    "revoked": "Đã thu hồi lời mời"
   },
   "form": {
-    "titleCreate": "Thêm tài xế",
-    "titleEdit": "Sửa hồ sơ tài xế",
-    "name": "Họ và tên",
+    "titleInvite": "Mời tài xế",
+    "inviteHint": "Tài xế cần có tài khoản XePrime (xeprime.vn) đã xác minh bằng chính số điện thoại này. Họ sẽ nhận thông báo và đồng ý trước khi bạn gán chuyến.",
+    "titleEdit": "Sửa thông tin tài xế",
+    "name": "Tên gọi",
     "namePlaceholder": "Trần Văn B",
-    "phone": "Số điện thoại",
+    "phone": "Số điện thoại tài khoản",
     "phonePlaceholder": "0901234567",
     "type": "Loại tài xế",
-    "licenseNo": "Số GPLX (không bắt buộc)",
-    "licenseExpiresAt": "Hạn GPLX",
-    "licenseExpiresAtPlaceholder": "Hết hạn thì không gán được vào đơn mới",
-    "idNo": "Số CCCD (không bắt buộc)",
     "note": "Ghi chú",
     "errors": {
       "nameRequired": "Nhập tên tài xế",
       "phoneRequired": "Nhập số điện thoại",
       "phoneInvalid": "Số điện thoại không hợp lệ"
-    }
+    },
+    "titleReinvite": "Mời lại tài xế"
+  },
+  "booking": {
+    "title": "Tài xế",
+    "pickup": "Đón: {address}",
+    "destination": "→ {destination}",
+    "unassigned": "Chưa phân công tài xế",
+    "assign": "Gán tài xế",
+    "change": "Đổi tài xế",
+    "unassign": "Bỏ gán",
+    "unassignConfirm": "Bỏ gán tài xế khỏi chuyến này?",
+    "close": "Đóng",
+    "pickerPlaceholder": "Chọn tài xế cho khung giờ của đơn",
+    "pickerLabel": "Chọn tài xế cho đơn",
+    "pickerEmpty": "Chưa có tài xế nào đang liên kết",
+    "busy": "Bận",
+    "assigned": "Đã gán tài xế — chờ tài xế nhận chuyến",
+    "unassignedToast": "Đã bỏ gán tài xế",
+    "assignedAt": "Gán lúc {time}",
+    "respondedAt": "Nhận lúc {time}",
+    "legacyHint": "Đơn này không phải chuyến có tài xế."
+  },
+  "endedBy": {
+    "driver": "Tài xế ngừng",
+    "employer": "Bạn kết thúc"
+  },
+  "reinvite": {
+    "alreadyInvited": "Đã mời lại · chờ đồng ý",
+    "alreadyLinked": "Đang có liên kết mới"
+  },
+  "history": {
+    "title": "Lịch sử gán tài xế",
+    "empty": "Chưa có lượt gán nào",
+    "loadError": "Không tải được lịch sử gán",
+    "assignedBy": "Gán bởi {name} · {time}",
+    "assignedBySystem": "Hệ thống tự gán (Đặt ngay) · {time}",
+    "acceptedAt": "Tài xế nhận lúc {time}",
+    "endedBy": "{name} · {time}",
+    "endedAt": "Kết thúc lúc {time}"
   }
 }

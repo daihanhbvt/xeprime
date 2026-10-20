@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { BookingDriverSummaryDto } from '../../drivers/dto/driver.dto';
 import {
   CUSTOMER_TRIP_FILTER_DEFAULT,
   CUSTOMER_TRIP_FILTER_VALUES,
@@ -244,6 +245,13 @@ export class CustomerTripListItemDto {
    */
   @ApiProperty({ description: 'Được lộ SĐT và mở hội thoại chưa' })
   canContact!: boolean;
+
+  @ApiPropertyOptional({
+    type: BookingDriverSummaryDto,
+    nullable: true,
+    description: 'Tài xế đang gán + trạng thái lượt gán — chỉ phía chủ xe, chỉ khi đã có đơn',
+  })
+  driver!: BookingDriverSummaryDto | null;
 
   /**
    * `totalAmount` là số TẠM TÍNH, chưa được đóng băng vào đơn (ADR 0024).

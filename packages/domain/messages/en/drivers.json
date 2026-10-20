@@ -2,65 +2,115 @@
   "page": {
     "title": "Drivers",
     "tableLabel": "Driver list",
-    "loadError": "Couldn't load the driver list",
+    "loadError": "Couldn't load drivers",
     "empty": "No drivers yet",
-    "emptyHint": "Add a driver so you can assign one to chauffeured bookings.",
+    "emptyHint": "Invite drivers by the phone number of their XePrime account to assign them to chauffeured trips.",
     "total": "{count, plural, one {# driver} other {# drivers}}",
     "forbidden": {
-      "title": "No access",
-      "description": "You need permission to view shop drivers. Ask the shop owner to grant it."
+      "title": "Access denied",
+      "description": "You need permission to view drivers. Ask the shop owner to grant it."
     }
   },
   "filters": {
     "search": "Search drivers",
-    "searchPlaceholder": "Search by name, phone or licence number",
-    "status": "Status",
+    "searchPlaceholder": "Search by name or phone",
+    "status": "Link status",
+    "openLinks": "Invited / linked",
+    "type": "Driver type",
+    "allTypes": "All types",
     "allStatuses": "All statuses"
   },
   "columns": {
     "driver": "Driver",
+    "accountName": "Account: {name}",
     "type": "Type",
-    "papers": "Licence / ID",
-    "activeBookings": "Assigned bookings",
-    "status": "Status"
+    "licence": "Licence",
+    "activeBookings": "Assigned trips",
+    "status": "Link"
   },
-  "license": {
-    "expired": "Licence expired {date}",
-    "validUntil": "Licence valid to {date}"
+  "licence": {
+    "classes": "Class {classes}",
+    "validUntil": "Valid until {date}",
+    "noExpiry": "No expiry",
+    "holder": "Name on licence: {name}",
+    "kind": "Type: {kind}",
+    "nameMismatch": "Name on the licence differs from the name you entered — check the documents at handover"
   },
-  "activeBookings": "{count, plural, one {# booking} other {# bookings}}",
+  "activeBookings": "{count, plural, one {# trip} other {# trips}}",
   "actions": {
-    "add": "Add driver",
-    "deactivate": "Deactivate",
-    "activate": "Reactivate",
-    "deactivateConfirm": "Deactivate this driver? They can't be assigned to new bookings.",
-    "deactivateOk": "Deactivate",
-    "removeConfirm": "Delete this driver? Past bookings keep their history; unfinished ones will block the delete."
+    "invite": "Invite driver",
+    "sendInvite": "Send invitation",
+    "suspend": "Suspend",
+    "suspendConfirm": "Suspend this driver? The link is kept, but they can't be assigned to new trips.",
+    "resume": "Reactivate",
+    "end": "End link",
+    "endConfirm": "End the link with this driver? Upcoming trips assigned to them will have their driver removed.",
+    "revoke": "Revoke invitation",
+    "revokeConfirm": "Revoke this invitation?",
+    "reinvite": "Invite again",
+    "endConfirmWithTrips": "This driver is assigned to {count, plural, one {# upcoming trip} other {# upcoming trips}}. Ending the link removes them from those trips — you will need to assign someone else. Continue?"
   },
   "toast": {
-    "activated": "Driver reactivated",
-    "deactivated": "Driver deactivated",
-    "removed": "Driver deleted",
-    "created": "Driver added",
-    "updated": "Driver updated"
+    "invited": "Invitation sent — the driver will be notified to accept",
+    "updated": "Driver updated",
+    "suspended": "Driver suspended",
+    "resumed": "Driver reactivated",
+    "ended": "Link ended",
+    "revoked": "Invitation revoked"
   },
   "form": {
-    "titleCreate": "Add driver",
-    "titleEdit": "Edit driver profile",
-    "name": "Full name",
-    "namePlaceholder": "Tran Van B",
-    "phone": "Phone number",
+    "titleInvite": "Invite a driver",
+    "inviteHint": "The driver needs a XePrime account (xeprime.vn) verified with this exact phone number. They'll be notified and must accept before you can assign trips.",
+    "titleEdit": "Edit driver",
+    "name": "Display name",
+    "namePlaceholder": "John Smith",
+    "phone": "Account phone number",
     "phonePlaceholder": "0901234567",
     "type": "Driver type",
-    "licenseNo": "Licence number (optional)",
-    "licenseExpiresAt": "Licence expiry",
-    "licenseExpiresAtPlaceholder": "Once expired, they can't be assigned to new bookings",
-    "idNo": "ID number (optional)",
-    "note": "Notes",
+    "note": "Note",
     "errors": {
       "nameRequired": "Enter the driver's name",
       "phoneRequired": "Enter a phone number",
-      "phoneInvalid": "That phone number isn't valid"
-    }
+      "phoneInvalid": "Invalid phone number"
+    },
+    "titleReinvite": "Invite driver again"
+  },
+  "booking": {
+    "title": "Driver",
+    "pickup": "Pickup: {address}",
+    "destination": "→ {destination}",
+    "unassigned": "No driver assigned",
+    "assign": "Assign driver",
+    "change": "Change driver",
+    "unassign": "Unassign",
+    "unassignConfirm": "Remove the driver from this trip?",
+    "close": "Close",
+    "pickerPlaceholder": "Pick a driver for this booking's time window",
+    "pickerLabel": "Choose a driver for the booking",
+    "pickerEmpty": "No linked drivers yet",
+    "busy": "Busy",
+    "assigned": "Driver assigned — waiting for them to accept",
+    "unassignedToast": "Driver removed",
+    "assignedAt": "Assigned {time}",
+    "respondedAt": "Accepted {time}",
+    "legacyHint": "This booking isn't a chauffeured trip."
+  },
+  "endedBy": {
+    "driver": "Driver left",
+    "employer": "Ended by you"
+  },
+  "reinvite": {
+    "alreadyInvited": "Re-invited · awaiting reply",
+    "alreadyLinked": "Has a newer link"
+  },
+  "history": {
+    "title": "Driver assignment history",
+    "empty": "No assignments yet",
+    "loadError": "Could not load the assignment history",
+    "assignedBy": "Assigned by {name} · {time}",
+    "assignedBySystem": "Auto-assigned by the system (Instant book) · {time}",
+    "acceptedAt": "Driver accepted at {time}",
+    "endedBy": "{name} · {time}",
+    "endedAt": "Ended at {time}"
   }
 }

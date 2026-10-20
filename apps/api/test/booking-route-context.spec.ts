@@ -1,3 +1,6 @@
+import { BadRequestException } from '@nestjs/common';
+import { createValidationPipe } from '../src/bootstrap';
+import { UpdateBookingDto } from '../src/modules/bookings/dto/booking.dto';
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import { giveTenantPlan } from './helpers/billing-fixture';
 import {
@@ -267,7 +270,11 @@ describe('Đơn lập tay: hành trình theo đúng điều kiện dịch vụ',
     expect(selfDrive.destination).toBeNull();
   });
 
-  maybe('rời with_driver khi sửa đơn → hành trình bị clear (CHECK DB không cho lệch)', async () => {
+  /*
+   * 19/10/2026: Sửa đơn chỉ còn tên/SĐT khách, cọc và ghi chú — dịch vụ + hành trình đóng băng
+   * lúc tạo. Pipe từ chối trường lạ ở cửa HTTP; service bỏ qua nếu ai gọi thẳng.
+   */
+  maybe('sửa đơn KHÔNG đổi được dịch vụ / hành trình (đóng băng lúc tạo)', async () => {
     const created = await bookings.create(tenantId, ownerId, {
       vehicleId,
       customerName: 'Khách E',
@@ -278,13 +285,21 @@ describe('Đơn lập tay: hành trình theo đúng điều kiện dịch vụ',
       returnAt: hours(524).toISOString(),
     });
 
+    await expect(
+      createValidationPipe().transform(
+        { serviceType: SERVICE_TYPE.SELF_DRIVE, customerName: 'Khách E2' },
+        { type: 'body', metatype: UpdateBookingDto },
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
     const updated = await bookings.update(tenantId, created.id, {
       serviceType: SERVICE_TYPE.SELF_DRIVE,
-    });
-    expect(updated.serviceType).toBe(SERVICE_TYPE.SELF_DRIVE);
-    expect(updated.routeType).toBeNull();
-    expect(updated.pickupAddress).toBeNull();
-    expect(updated.destination).toBeNull();
+      customerName: 'Khách E2',
+    } as UpdateBookingDto);
+    expect(updated.customerName).toBe('Khách E2');
+    expect(updated.serviceType).toBe(SERVICE_TYPE.WITH_DRIVER);
+    expect(updated.routeType).toBe(ROUTE_TYPE.IN_CITY);
+    expect(updated.pickupAddress).toContain('Nguyễn Huệ');
   });
 });
 

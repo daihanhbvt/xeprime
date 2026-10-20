@@ -137,6 +137,8 @@ export interface ShopSpec {
   planCode: string | null;
   depth: ShopDepth;
   driverCount: number;
+  /** Vị trí bắt đầu trong `DRIVER_ACCOUNTS` — các bên thuê lấy đoạn không chồng nhau. */
+  driverPoolOffset?: number;
   customerCount: number;
   /** Cứ mỗi N xe thì để 1 xe chưa duyệt public. 0 = duyệt hết. */
   unapprovedEvery: number;
@@ -258,6 +260,7 @@ const HANDWRITTEN_SHOPS: readonly ShopSpec[] = [
     planCode: SHOP_PLAN_CODE.PRO,
     depth: 'full',
     driverCount: 2,
+    driverPoolOffset: 0,
     customerCount: 8,
     unapprovedEvery: 6,
   },
@@ -330,6 +333,7 @@ const HANDWRITTEN_SHOPS: readonly ShopSpec[] = [
     planCode: SHOP_PLAN_CODE.ADVANCED,
     depth: 'medium',
     driverCount: 1,
+    driverPoolOffset: 2,
     customerCount: 5,
     unapprovedEvery: 0,
   },

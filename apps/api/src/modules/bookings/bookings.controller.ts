@@ -1,3 +1,4 @@
+import { BookingDriverHistoryItemDto } from '../drivers/dto/driver.dto';
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
@@ -115,6 +116,20 @@ export class BookingsController {
     @Body() dto: AssignBookingDriverDto,
   ): Promise<BookingDetailDto> {
     return this.bookings.assignDriver(tenant.tenantId, id, user.id, dto.driverId);
+  }
+
+  /** Lịch sử gán tài xế của đơn (ADR 0063) — mỗi lượt một dòng, cũ nhất trước. */
+  @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)
+  @Get(':id/driver-history')
+  @RequirePermissions(PERMISSION.BOOKING_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.BOOKING_VIEW)
+  @ApiOperation({ summary: 'Lịch sử gán tài xế của một đơn thuê' })
+  @ApiOkResponse({ type: [BookingDriverHistoryItemDto] })
+  driverHistory(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('id') id: string,
+  ): Promise<BookingDriverHistoryItemDto[]> {
+    return this.bookings.driverHistory(tenant.tenantId, id);
   }
 
   @BranchScoped(BRANCH_SCOPED_RESOURCE.BOOKING)

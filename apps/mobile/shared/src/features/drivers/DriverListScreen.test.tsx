@@ -3,13 +3,10 @@ import { Provider as ReduxProvider } from 'react-redux';
 import { fireEvent, render, renderHook, waitFor } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 import {
-  DRIVER_STATUS,
+  DRIVER_LICENCE_STATE,
+  DRIVER_LINK_STATUS,
   DRIVER_TYPE,
-  FEATURE_STATE,
-  type FeatureState,
   PERMISSION,
-  PLAN_FEATURE,
-  type PlanFeature,
   type Permission,
 } from '@xeprime/types';
 import * as authApi from '@/features/auth/api';
@@ -19,9 +16,6 @@ import { store } from '@/store';
 import { driversApi, type Driver } from './api';
 import { DriverListScreen } from './DriverListScreen';
 
-/** Cờ NĂNG LỰC THEO GÓI đi kèm phiên — union, không phải chuỗi trần (ADR 0005). */
-type TenantFeature = { feature: PlanFeature; state: FeatureState };
-
 jest.mock('expo-router', () => ({
   useNavigation: () => ({ isFocused: () => true }),
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
@@ -29,13 +23,12 @@ jest.mock('expo-router', () => ({
 
 jest.mock('@/features/shell/ManageHeader', () => ({ ManageHeader: () => null }));
 
-function currentUser(
-  permissions: Permission[],
-  features: TenantFeature[] = [],
-): authApi.CurrentUser {
+const DRIVER_ID = '01JQZX0000000000000000000D';
+
+function currentUser(permissions: Permission[]): authApi.CurrentUser {
   return {
     id: '01JQZX0000000000000000000U',
-    displayName: 'Chủ shop',
+    displayName: 'Chủ xe',
     email: 'owner@xeprime.test',
     avatarUrl: null,
     phone: '0901111111',
@@ -43,18 +36,19 @@ function currentUser(
     hasPassword: true,
     tenant: {
       id: '01JQZX0000000000000000000T',
-      name: 'Gian hàng Đà Nẵng',
+      name: 'Chủ xe Đà Nẵng',
       slug: 'da-nang',
       status: 'active',
       onboardingState: 'commission',
       branchScope: 'all',
       logoUrl: null,
       roleKey: 'shop_owner',
-      features,
+      // Tuyến hoa hồng, KHÔNG có cờ gói nào — tài xế vẫn dùng được (ADR 0063).
+      features: [],
       planCode: null,
       planName: null,
       serviceFeePercent: null,
-      billingMode: 'package',
+      billingMode: 'commission',
       planEndsAt: null,
       billingPhase: 'current',
       graceEndsAt: null,
@@ -63,24 +57,26 @@ function currentUser(
     openRenterTripCount: 0,
     platformRole: null,
     permissions,
-  };
+  } as authApi.CurrentUser;
 }
 
 function driver(overrides: Partial<Driver> = {}): Driver {
   return {
-    id: '01JQZX0000000000000000000D',
+    id: DRIVER_ID,
     name: 'Trần Văn B',
     phone: '0901234567',
     driverType: DRIVER_TYPE.STAFF,
-    status: DRIVER_STATUS.ACTIVE,
-    licenseNo: 'B2-123456',
-    licenseExpiresAt: null,
-    idNo: null,
     note: null,
+    linkStatus: DRIVER_LINK_STATUS.ACTIVE,
+    invitedAt: '2026-10-01T00:00:00.000Z',
+    respondedAt: '2026-10-01T01:00:00.000Z',
+    endedAt: null,
+    endedByParty: null,
+    account: { displayName: 'Trần Văn B', avatarUrl: null },
+    licence: { state: DRIVER_LICENCE_STATE.NONE, classes: [], expiresOn: null },
     activeBookingCount: 0,
-    createdAt: '2026-01-01T00:00:00.000Z',
     ...overrides,
-  };
+  } as Driver;
 }
 
 function makeClient() {
@@ -89,19 +85,16 @@ function makeClient() {
   });
 }
 
-async function renderScreen(
-  permissions: Permission[],
-  items: Driver[] = [driver()],
-  features: TenantFeature[] = [],
-) {
-  jest.spyOn(authApi, 'fetchCurrentUser').mockResolvedValue(currentUser(permissions, features));
+async function renderScreen(permissions: Permission[], items: Driver[] = [driver()]) {
+  jest.spyOn(authApi, 'fetchCurrentUser').mockResolvedValue(currentUser(permissions));
   const listSpy = jest.spyOn(driversApi, 'list').mockResolvedValue({
     items,
     meta: { page: 1, limit: 10, total: items.length, hasNext: false },
   });
-  const createSpy = jest.spyOn(driversApi, 'create').mockResolvedValue(driver());
-  const updateSpy = jest.spyOn(driversApi, 'update').mockResolvedValue(driver());
-  const removeSpy = jest.spyOn(driversApi, 'remove').mockResolvedValue({ ok: true });
+  const inviteSpy = jest.spyOn(driversApi, 'invite').mockResolvedValue(driver());
+  const suspendSpy = jest.spyOn(driversApi, 'suspend').mockResolvedValue(driver());
+  const resumeSpy = jest.spyOn(driversApi, 'resume').mockResolvedValue(driver());
+  const endSpy = jest.spyOn(driversApi, 'end').mockResolvedValue({});
 
   const queryClient = makeClient();
   const view = await render(
@@ -113,12 +106,12 @@ async function renderScreen(
       </ReduxProvider>,
     ),
   );
-  return { ...view, listSpy, createSpy, updateSpy, removeSpy, queryClient };
+  return { ...view, listSpy, inviteSpy, suspendSpy, resumeSpy, endSpy };
 }
 
 beforeEach(() => jest.restoreAllMocks());
 
-describe('DriverListScreen — quyền và gói', () => {
+describe('DriverListScreen — quyền', () => {
   it('thiếu `drivers.view`: màn thiếu quyền, KHÔNG gọi API', async () => {
     const view = await renderScreen([PERMISSION.BOOKING_VIEW]);
 
@@ -126,145 +119,125 @@ describe('DriverListScreen — quyền và gói', () => {
     expect(view.listSpy).not.toHaveBeenCalled();
   });
 
-  it('chỉ `drivers.view`: xem được, không thêm/sửa/xoá', async () => {
+  it('chỉ `drivers.view`: xem được, không mời/sửa', async () => {
     const view = await renderScreen([PERMISSION.DRIVER_VIEW]);
 
     await view.findByText('Trần Văn B');
-    expect(view.queryByLabelText('Thêm tài xế')).toBeNull();
+    expect(view.queryByLabelText('Mời tài xế')).toBeNull();
     expect(view.queryByText('Sửa')).toBeNull();
   });
 
-  it('gói hết hạn (`read_only`): VẪN xem lại hồ sơ, chỉ không thêm/sửa', async () => {
-    const view = await renderScreen(
-      [PERMISSION.DRIVER_VIEW, PERMISSION.DRIVER_MANAGE],
-      [driver()],
-      [{ feature: PLAN_FEATURE.DRIVERS, state: FEATURE_STATE.READ_ONLY }],
-    );
+  it('tuyến hoa hồng không cờ gói: thao tác vẫn mở (không sau cờ gói)', async () => {
+    const view = await renderScreen([PERMISSION.DRIVER_VIEW, PERMISSION.DRIVER_MANAGE]);
 
-    expect(await view.findByText('Trần Văn B')).toBeTruthy();
-    /*
-     * Nút Thêm và thao tác trên thẻ vẫn HIỆN (đúng quyền `drivers.manage`) nhưng bị khoá — ẩn
-     * hẳn sẽ trông như thiếu quyền, trong khi lý do thật là gói hết hạn (ADR 0027 điều 3).
-     */
-    const addButton = await view.findByLabelText('Thêm tài xế');
-    expect(addButton.props.accessibilityState?.disabled).toBe(true);
-    const editAction = await view.findByLabelText('Sửa');
-    expect(editAction.props.accessibilityState?.disabled).toBe(true);
-    expect(await view.findByText(/chế độ chỉ xem/)).toBeTruthy();
+    const invite = await view.findByLabelText('Mời tài xế');
+    expect(invite.props.accessibilityState?.disabled).not.toBe(true);
   });
 });
 
-describe('DriverListScreen — CRUD và vòng đời', () => {
+describe('DriverListScreen — mời và vòng đời liên kết', () => {
   const manage: Permission[] = [PERMISSION.DRIVER_VIEW, PERMISSION.DRIVER_MANAGE];
 
   it('thiếu tên/SĐT: chặn ở client, KHÔNG gọi API', async () => {
     const view = await renderScreen(manage);
 
-    await fireEvent.press(await view.findByLabelText('Thêm tài xế'));
-    await fireEvent.press(await view.findByRole('button', { name: 'Thêm' }));
+    await fireEvent.press(await view.findByLabelText('Mời tài xế'));
+    await fireEvent.press(await view.findByRole('button', { name: 'Gửi lời mời' }));
 
     expect(await view.findByText('Nhập tên tài xế')).toBeTruthy();
     expect(view.getByText('Nhập số điện thoại')).toBeTruthy();
-    expect(view.createSpy).not.toHaveBeenCalled();
+    expect(view.inviteSpy).not.toHaveBeenCalled();
   });
 
-  it('SĐT sai định dạng: chặn bằng ĐÚNG luật dùng chung với web', async () => {
+  it('mời đủ trường: gửi đúng payload', async () => {
     const view = await renderScreen(manage);
 
-    await fireEvent.press(await view.findByLabelText('Thêm tài xế'));
-    await fireEvent.changeText(await view.findByLabelText('Họ và tên'), 'Nguyễn Văn C');
-    await fireEvent.changeText(view.getByLabelText('Số điện thoại'), '12345');
-    await fireEvent.press(view.getByRole('button', { name: 'Thêm' }));
+    await fireEvent.press(await view.findByLabelText('Mời tài xế'));
+    await fireEvent.changeText(await view.findByLabelText('Số điện thoại tài khoản'), '0912345678');
+    await fireEvent.changeText(view.getByLabelText('Tên gọi'), 'Nguyễn Văn C');
+    await fireEvent.press(view.getByRole('button', { name: 'Gửi lời mời' }));
 
-    expect(await view.findByText('Số điện thoại không hợp lệ')).toBeTruthy();
-    expect(view.createSpy).not.toHaveBeenCalled();
-  });
-
-  it('thêm tài xế đủ trường: gửi đúng payload', async () => {
-    const view = await renderScreen(manage);
-
-    await fireEvent.press(await view.findByLabelText('Thêm tài xế'));
-    await fireEvent.changeText(await view.findByLabelText('Họ và tên'), 'Nguyễn Văn C');
-    await fireEvent.changeText(view.getByLabelText('Số điện thoại'), '0912345678');
-    await fireEvent.press(view.getByRole('button', { name: 'Thêm' }));
-
-    await waitFor(() => expect(view.createSpy).toHaveBeenCalled());
-    expect(view.createSpy.mock.calls[0]?.[0]).toMatchObject({
-      name: 'Nguyễn Văn C',
+    await waitFor(() => expect(view.inviteSpy).toHaveBeenCalled());
+    expect(view.inviteSpy.mock.calls[0]?.[0]).toEqual({
       phone: '0912345678',
+      name: 'Nguyễn Văn C',
       driverType: DRIVER_TYPE.STAFF,
     });
   });
 
-  it('NGỪNG hoạt động phải xác nhận (không gán vào đơn mới được nữa)', async () => {
+  it('TẠM KHOÁ phải xác nhận', async () => {
     const view = await renderScreen(manage);
 
-    await fireEvent.press(await view.findByText('Ngừng hoạt động'));
-
+    await fireEvent.press(await view.findByText('Tạm khoá'));
     expect(
-      await view.findByText('Ngừng hoạt động tài xế này? Sẽ không gán được vào đơn mới.'),
+      await view.findByText(
+        'Tạm khoá tài xế này? Liên kết vẫn giữ, nhưng không gán được vào chuyến mới.',
+      ),
     ).toBeTruthy();
-    expect(view.updateSpy).not.toHaveBeenCalled();
+    expect(view.suspendSpy).not.toHaveBeenCalled();
 
-    await fireEvent.press(view.getByRole('button', { name: 'Ngừng' }));
-    await waitFor(() =>
-      expect(view.updateSpy).toHaveBeenCalledWith('01JQZX0000000000000000000D', {
-        status: DRIVER_STATUS.INACTIVE,
-      }),
-    );
+    const buttons = view.getAllByRole('button', { name: 'Tạm khoá' });
+    await fireEvent.press(buttons[buttons.length - 1]!);
+    await waitFor(() => expect(view.suspendSpy).toHaveBeenCalledWith(DRIVER_ID));
   });
 
-  it('BẬT LẠI thì không hỏi — bật lại không lấy mất gì của ai', async () => {
-    const view = await renderScreen(manage, [driver({ status: DRIVER_STATUS.INACTIVE })]);
+  it('MỞ KHOÁ thì không hỏi', async () => {
+    const view = await renderScreen(manage, [driver({ linkStatus: DRIVER_LINK_STATUS.SUSPENDED })]);
 
-    await fireEvent.press(await view.findByText('Bật lại'));
+    await fireEvent.press(await view.findByText('Mở khoá'));
+    await waitFor(() => expect(view.resumeSpy).toHaveBeenCalledWith(DRIVER_ID));
+  });
 
-    await waitFor(() =>
-      expect(view.updateSpy).toHaveBeenCalledWith('01JQZX0000000000000000000D', {
-        status: DRIVER_STATUS.ACTIVE,
-      }),
-    );
+  it('lời mời đang chờ: "Thu hồi lời mời" (không phải "Kết thúc liên kết")', async () => {
+    const view = await renderScreen(manage, [driver({ linkStatus: DRIVER_LINK_STATUS.INVITED })]);
+
+    await fireEvent.press(await view.findByText('Thu hồi lời mời'));
+    expect(await view.findByText('Thu hồi lời mời này?')).toBeTruthy();
+    expect(view.queryByText('Kết thúc liên kết')).toBeNull();
+  });
+
+  it('liên kết đã kết thúc: không còn thao tác nào', async () => {
+    const view = await renderScreen(manage, [driver({ linkStatus: DRIVER_LINK_STATUS.ENDED })]);
+
+    await view.findByText('Trần Văn B');
+    expect(view.queryByText('Sửa')).toBeNull();
+    expect(view.queryByText('Kết thúc liên kết')).toBeNull();
   });
 });
 
-describe('DriverListScreen — hạn GPLX', () => {
-  it('GPLX hết hạn: nói ra ngay trên thẻ', async () => {
+describe('DriverListScreen — bằng lái', () => {
+  it('hiện TRẠNG THÁI bằng lái của tài khoản, kèm hạng + hạn khi đã xác thực', async () => {
     const view = await renderScreen(
       [PERMISSION.DRIVER_VIEW],
-      [driver({ licenseExpiresAt: '2020-01-01' })],
+      [
+        driver({
+          licence: {
+            state: DRIVER_LICENCE_STATE.VERIFIED,
+            classes: ['B'],
+            expiresOn: '2030-01-01',
+          },
+        }),
+      ],
     );
 
-    expect(await view.findByText(/GPLX hết hạn/)).toBeTruthy();
-  });
-
-  it('chưa khai hạn: KHÔNG bịa nhãn nào', async () => {
-    const view = await renderScreen([PERMISSION.DRIVER_VIEW], [driver({ licenseExpiresAt: null })]);
-
-    await view.findByText('Trần Văn B');
-    expect(view.queryByText(/GPLX/)).toBeNull();
+    expect(await view.findByText('Bằng lái đã xác thực')).toBeTruthy();
+    expect(view.getByText(/Hạng B/)).toBeTruthy();
   });
 });
 
 describe('Điểm nối Booking — bộ chọn gán tài xế', () => {
-  it('tài xế INACTIVE không nằm trong danh sách gán được, và khả dụng do SERVER chấm', async () => {
+  it('khả dụng do SERVER chấm — bộ chọn đọc `assignable`, không đọc `list`', async () => {
     jest
       .spyOn(authApi, 'fetchCurrentUser')
       .mockResolvedValue(currentUser([PERMISSION.DRIVER_VIEW, PERMISSION.BOOKING_UPDATE]));
-    /*
-     * `/drivers/assignable` là endpoint RIÊNG: nó chỉ trả tài xế còn hoạt động và tự chấm
-     * "bận / GPLX hết hạn" cho khung giờ của đơn. Client KHÔNG lọc lại theo `status`, và cũng
-     * không tự tính lịch bận — đó là lý do bộ chọn không đọc `driversApi.list`.
-     */
     const spy = jest.spyOn(driversApi, 'assignable').mockResolvedValue([
       {
-        id: '01JQZX0000000000000000000D',
+        id: DRIVER_ID,
         name: 'Trần Văn B',
         phone: '0901234567',
-        driverType: DRIVER_TYPE.STAFF,
-        available: true,
-        licenseExpired: false,
         busy: false,
-      } as never,
+        licenceState: DRIVER_LICENCE_STATE.VERIFIED,
+      },
     ]);
     const listSpy = jest.spyOn(driversApi, 'list');
 

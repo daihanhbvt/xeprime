@@ -781,7 +781,6 @@ describe('navForZone — menu theo tuyến ở site partner', () => {
       ROUTES.MANAGE.DEBTS,
       ROUTES.MANAGE.MEMBERS,
       ROUTES.MANAGE.SHOP,
-      ROUTES.MANAGE.DRIVERS,
       ROUTES.MANAGE.MAINTENANCE,
       ROUTES.MANAGE.VEHICLE_NEW,
     ]) {

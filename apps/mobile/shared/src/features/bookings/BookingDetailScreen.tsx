@@ -9,6 +9,8 @@ import {
   BOOKING_STATUS,
   BOOKING_STATUS_META,
   canTransitionBooking,
+  DRIVER_ASSIGNMENT_STATUS_META,
+  isDriverReassignable,
   HANDOVER_TYPE,
   isBookingFinal,
   isNoShowGracePassed,
@@ -21,6 +23,7 @@ import {
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
+import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Card } from '@/components/ui/Card';
 import { DataRow } from '@/components/ui/DataRow';
 import { IconButton } from '@/components/ui/IconButton';
@@ -46,6 +49,7 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { AssignDriverSheet } from './components/AssignDriverSheet';
+import { BookingDriverHistory } from './components/BookingDriverHistory';
 import { BookingMoneyCard } from './components/BookingMoneyCard';
 import { BookingStatusSheet, type Decision } from './components/BookingStatusSheet';
 import { BookingSettlementCard } from './components/BookingSettlementCard';
@@ -203,34 +207,42 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
   const transition = useTransitionBooking(booking.id);
   const assignDriver = useAssignDriver(booking.id);
 
-  /*
-   * Bỏ gán KHÔNG hỏi lại, đúng như web: nó gỡ một liên kết, không xoá gì, và gán lại chỉ mất
-   * hai chạm. Một hộp xác nhận cho việc hoàn tác được là một bước thừa lặp mỗi ngày.
-   */
+  const tDriver = useTranslations('Drivers.booking');
+  const [confirmingUnassign, setConfirmingUnassign] = useState(false);
+
+  /** Bỏ gán HỎI LẠI, đúng `Popconfirm` của web: tài xế đã nhận chuyến sẽ mất chuyến đó (ADR 0063). */
   const unassignDriver = useCallback(
     () =>
       assignDriver.mutate(null, {
-        onSuccess: () => toast.showSuccess(t('driver.unassignSuccess')),
-        onError: (error) => toast.showError(getErrorMessage(error)),
+        onSuccess: () => {
+          setConfirmingUnassign(false);
+          toast.showSuccess(t('driver.unassignSuccess'));
+        },
+        onError: (error) => {
+          setConfirmingUnassign(false);
+          toast.showError(getErrorMessage(error));
+        },
       }),
     [assignDriver, t, toast],
   );
   const updateFee = useUpdateDeliveryFee(booking.id);
-  /*
-   * Tài xế là năng lực của gói (`drivers`, ADR 0027): tuyến hoa hồng không có sổ tài xế, và
-   * `GET drivers/assignable` trả 403 cho họ. Khối vẫn hiện khi đơn ĐÃ có tài xế (đọc được), còn
-   * nút gán/đổi/bỏ chỉ khi có năng lực + `drivers.view` (server dò danh sách bằng quyền đó).
-   */
-  const driversFeature = useFeature(PLAN_FEATURE.DRIVERS);
-
   const status = booking.status as BookingStatus;
   const meta = BOOKING_STATUS_META[status];
   const closed = isBookingFinal(status);
 
   const canUpdate = permissions.has(PERMISSION.BOOKING_UPDATE);
-  const canAssignDriver =
-    canUpdate && driversFeature.isVisible && permissions.has(PERMISSION.DRIVER_VIEW);
   const withDriver = booking.serviceType === SERVICE_TYPE.WITH_DRIVER;
+  /*
+   * Tài xế mở cho CẢ HAI tuyến, không sau cờ gói (ADR 0063) — chỉ gác bằng quyền. Và CHỈ đơn
+   * `with_driver` mới nhận tài xế: đơn khác chỉ còn đọc tài xế gán từ trước (dữ liệu cũ).
+   */
+  const canAssignDriver =
+    canUpdate &&
+    withDriver &&
+    !closed &&
+    // Đã giao xe ⇒ người cầm lái đã chốt: chỉ đọc (server chặn — DRIVER_ASSIGNMENT_LOCKED).
+    isDriverReassignable(booking.status) &&
+    permissions.has(PERMISSION.DRIVER_VIEW);
 
   /**
    * NHÓM lý do đi kèm CHỈ khi huỷ — `TransitionBookingDto` đòi nó ở đúng nhánh đó (ADR 0045
@@ -443,31 +455,24 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
           />
 
           {/*
-            Năng lực `drivers` (ADR 0027): tuyến hoa hồng không có tài xế — khối chỉ hiện khi
-            gói có năng lực đó, hoặc đơn đã mang sẵn một tài xế (đọc được, không gán lại).
-
-            Khối Tài xế hiện trên MỌI đơn, không chỉ đơn `with_driver` — đúng như
-            `BookingDriverSection` của web, vốn không có nhánh nào chặn theo `serviceType`.
-
-            Gate theo `withDriver` là lệch nghiệp vụ: backend cho gán tài xế cho bất kỳ đơn nào
-            (giao xe tận nơi vẫn cần người lái đi giao), nên ẩn khối đi là khoá một việc server
-            vẫn cho phép. `withDriver` chỉ quyết định có hiện thêm dòng lộ trình hay không.
+            Khối "Tài xế" (ADR 0063) — gương `BookingDriverSection` của web: chỉ đơn `with_driver`
+            có tài xế; đơn khác ẩn hẳn khối, trừ khi còn một tài xế gán từ trước (chỉ-đọc, để không
+            ai mất dấu người đang cầm xe). Gán xong là "chờ tài xế nhận" tới khi họ nhận ở app khách.
           */}
-          {driversFeature.isVisible || booking.driver ? (
+          {withDriver || booking.driver ? (
             <Card>
               <YStack gap={space.sm}>
                 <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
                   {t('driver.title')}
                 </Text>
 
-                {/*
-                Hành trình NHẮC LẠI ngay tại khối phân công, dù khối thông tin đơn phía trên đã
-                có đủ ba dòng đó — web cũng lặp đúng như vậy, và có lý do: người trực chọn tài xế
-                theo tuyến ("đi Huế thì giao anh Tuấn"), nên hỏi "chạy đâu" mà phải cuộn ngược
-                lên là chỗ dễ gán nhầm nhất.
+                {!withDriver ? (
+                  <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                    {tDriver('legacyHint')}
+                  </Text>
+                ) : null}
 
-                Chỉ đơn CÓ TÀI XẾ mới có tuyến để nhắc.
-              */}
+                {/* Người trực chọn tài xế theo tuyến — hành trình nhắc lại ngay tại khối phân công. */}
                 {withDriver && booking.routeType ? (
                   <Text col={colors.textMuted} fos={fontSize.bodySm}>
                     {[
@@ -490,14 +495,23 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
                       size={iconSize.lg}
                       color={colors.textMuted}
                     />
-                    <YStack f={1} gap={1}>
-                      <Text col={colors.text} fos={fontSize.body} fow={fontWeight.medium}>
-                        {booking.driver.name}
-                      </Text>
-                      {/*
-                      SĐT là một liên kết GỌI ĐƯỢC, đúng như `<a href="tel:">` của web: đây là
-                      con số người trực bấm để gọi, không phải một chú thích cạnh tên.
-                    */}
+                    <YStack f={1} gap={2} minWidth={0}>
+                      <XStack ai="center" gap={space.xs} flexWrap="wrap">
+                        <Text col={colors.text} fos={fontSize.body} fow={fontWeight.medium}>
+                          {booking.driver.name}
+                        </Text>
+                        <StatusBadge
+                          label={domainLabel(
+                            'driverAssignmentStatus',
+                            booking.driver.assignmentStatus,
+                            DRIVER_ASSIGNMENT_STATUS_META[booking.driver.assignmentStatus].label,
+                          )}
+                          color={
+                            DRIVER_ASSIGNMENT_STATUS_META[booking.driver.assignmentStatus].color
+                          }
+                          size="sm"
+                        />
+                      </XStack>
                       {booking.driver.phone ? (
                         <Pressable
                           onPress={() => void Linking.openURL(`tel:${booking.driver?.phone}`)}
@@ -509,21 +523,19 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
                           </Text>
                         </Pressable>
                       ) : null}
+                      <Text col={colors.textMuted} fos={fontSize.label}>
+                        {booking.driver.respondedAt
+                          ? tDriver('respondedAt', {
+                              time: fmt.dateTime(booking.driver.respondedAt),
+                            })
+                          : tDriver('assignedAt', {
+                              time: fmt.dateTime(booking.driver.assignedAt),
+                            })}
+                      </Text>
                     </YStack>
 
-                    {/*
-                    HAI nút, đúng như web: "Đổi" mở lại danh sách, "Bỏ gán" gỡ hẳn người khỏi đơn.
-                    Chúng là hai việc khác nhau — gỡ tài xế mà không thay ai là một trạng thái hợp
-                    lệ (đơn hoãn, người nghỉ), và bắt phải chọn người mới mới gỡ được là bịa thêm
-                    một ràng buộc server không có. "Bỏ gán" không hỏi lại (xem `unassignDriver`
-                    phía trên) nên tự nó cần một chỉ báo đang chạy — `IconButton` gánh việc đó
-                    bằng `loading`, không qua `AlertDialog`.
-
-                    Icon-only, đứng NGAY hàng với tên: vùng chạm 44dp cố định của `IconButton` nhỏ
-                    hơn nhiều so với `Button` mang chữ, nên hai nút cộng tên tài xế cộng số điện
-                    thoại vừa một hàng ở 360dp mà không phải bóp nút.
-                  */}
-                    {canAssignDriver && !closed ? (
+                    {/* Icon-only, NGAY hàng với tên: "Đổi" mở lại danh sách, "Bỏ gán" gỡ hẳn (hỏi lại). */}
+                    {canAssignDriver ? (
                       <XStack gap={space.xs}>
                         <IconButton
                           icon="swap-horizontal-outline"
@@ -536,7 +548,7 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
                           label={t('driver.unassign')}
                           tone="dangerSurface"
                           loading={assignDriver.isPending}
-                          onPress={unassignDriver}
+                          onPress={() => setConfirmingUnassign(true)}
                         />
                       </XStack>
                     ) : null}
@@ -548,23 +560,14 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
                       size={iconSize.lg}
                       color={colors.textMuted}
                     />
-                    {/*
-                    Đơn CÓ TÀI XẾ mà chưa phân công thì nhắc bằng MÀU CẢNH BÁO, không phải chữ xám
-                    cho qua — đúng `.missing` của web. Đơn tự lái vốn không cần ai nên chỉ là một
-                    dòng ghi chú (`.meta`). Hai sự thật khác nhau, hai cách đọc khác nhau.
-                  */}
-                    <Text
-                      f={1}
-                      col={withDriver ? colors.warning : colors.textMuted}
-                      fos={fontSize.bodySm}
-                      {...(withDriver ? { fow: fontWeight.medium } : {})}
-                    >
-                      {withDriver ? t('driver.noneWithDriver') : t('driver.none')}
+                    {/* Đơn có tài xế chưa phân công là chưa chạy được — nhắc bằng màu cảnh báo. */}
+                    <Text f={1} col={colors.warning} fos={fontSize.bodySm} fow={fontWeight.medium}>
+                      {t('driver.noneWithDriver')}
                     </Text>
-                    {canAssignDriver && !closed ? (
+                    {canAssignDriver ? (
                       <Button
                         label={t('driver.assign')}
-                        variant={withDriver ? 'primary' : 'secondary'}
+                        variant="primary"
                         size="sm"
                         block={false}
                         onPress={() => setAssigningDriver(true)}
@@ -572,6 +575,7 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
                     ) : null}
                   </XStack>
                 )}
+                {withDriver ? <BookingDriverHistory bookingId={booking.id} /> : null}
               </YStack>
             </Card>
           ) : null}
@@ -601,12 +605,23 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
         onSelect={(driverId) =>
           assignDriver.mutate(driverId, {
             onSuccess: () => {
-              toast.showSuccess(t('driver.assignSuccess'));
+              toast.showSuccess(tDriver('assigned'));
               setAssigningDriver(false);
             },
             onError: (error) => toast.showError(getErrorMessage(error)),
           })
         }
+      />
+
+      <AlertDialog
+        open={confirmingUnassign}
+        title={tDriver('unassignConfirm')}
+        confirmLabel={t('driver.unassign')}
+        cancelLabel={tDriver('close')}
+        destructive
+        loading={assignDriver.isPending}
+        onConfirm={unassignDriver}
+        onCancel={() => setConfirmingUnassign(false)}
       />
 
       {/* Mount có điều kiện — xem ghi chú ở `SettlementScreen`: `useForm` chốt mặc định một lần. */}

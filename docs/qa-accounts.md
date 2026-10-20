@@ -67,6 +67,10 @@ buộc của phương án thiết kế mới. Việc còn dở: [`completion-roa
 | Khách | `khach.an@xeprime.test` | `0901000001` | khách quen, nhiều chuyến đã xong, có đánh giá; **bằng lái B2 đã xác thực** |
 | Khách | `khach.binh@xeprime.test` | `0901000002` | đang thuê dài hạn theo gói tháng; **bằng lái A1 + B2 đã xác thực** |
 | Khách | `khach.cuong@xeprime.test` | `0901000003` | thuê có tài xế; bị gian hàng Sài Gòn đưa vào danh sách chặn (chỉ ở gian hàng đó); **chưa có bằng lái** — tài khoản để thử luồng nộp/xác thực bằng lái (ADR 0057) |
+| Tài xế (khách) | `taixe.dung@xeprime.test` | `0921000001` | tài xế ĐÃ liên kết với gian hàng gói lớn nhất; có chuyến chờ nhận + đã nhận ở "Chuyến tôi lái" (ADR 0063) |
+| Tài xế (khách) | `taixe.phuoc@xeprime.test` | `0921000002` | có LỜI MỜI đang chờ từ gian hàng gói lớn nhất — thử chấp nhận/từ chối |
+| Tài xế (khách) | `taixe.tri@xeprime.test` | `0921000003` | tài xế liên kết với gian hàng gói thứ hai |
+| Tài xế (khách) | `taixe.loc@xeprime.test` | `0921000004` | chưa liên kết ai — dùng để thử mời từ chủ xe cá nhân |
 
 **Tài khoản song sinh** (cùng email + SĐT, khác site, mật khẩu như nhau ở seed — nên cùng một SĐT
 đăng nhập được ở cả hai site, vào HAI tài khoản khác nhau):

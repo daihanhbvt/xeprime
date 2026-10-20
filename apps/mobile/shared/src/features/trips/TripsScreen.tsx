@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { FlatList, RefreshControl, StyleSheet, type ListRenderItemInfo } from 'react-native';
 import type { Href } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
@@ -74,6 +74,7 @@ export const STAGE_FILTER_MIN_ROWS = 6;
 export function TripsScreen({
   detailHref = ROUTES.booking.detail,
   heading = false,
+  header,
 }: {
   /** Đích của một thẻ chuyến. */
   detailHref?: (id: string) => Href;
@@ -83,6 +84,8 @@ export function TripsScreen({
    * khác nói người dùng đang ở đâu.
    */
   heading?: boolean;
+  /** Khối đứng trên cùng màn — bộ chuyển "thuê / lái" của app khách (ADR 0063). */
+  header?: ReactNode;
 } = {}) {
   const t = useTranslations('Trips');
   const domainLabel = useDomainLabel();
@@ -199,6 +202,7 @@ export function TripsScreen({
         một dải trống đứng im ngay trên thanh tab, và danh sách không bao giờ chạm tới đáy.
       */}
       <Screen edges={['left', 'right']} scroll={false} padded={false}>
+        {header}
         {heading ? <ManagePageTitle title={t('list.heading')} subtitle={t('list.sub')} /> : null}
         {/* Chuyến đang giữ chưa trả — việc phải làm NGAY, nên đứng trên mọi tab (web `TripsView`). */}
         {rendersList ? null : (

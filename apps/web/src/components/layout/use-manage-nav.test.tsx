@@ -684,7 +684,7 @@ describe('useManageNav — trục NĂNG LỰC theo gói (ADR 0027)', () => {
     features.states = { drivers: FEATURE_STATE.HIDDEN, members: FEATURE_STATE.HIDDEN };
     renderMenu();
 
-    expect(itemLabels()).not.toContain('Tài xế');
+    expect(itemLabels()).toContain('Tài xế'); // ADR 0063: tài xế không còn sau cờ gói
     expect(itemLabels()).not.toContain('Người dùng & phân quyền');
   });
 
@@ -838,6 +838,8 @@ describe('useManageNav — menu theo tuyến ở site partner', () => {
       'Xe của tôi',
       'Lịch thuê',
       'Chuyến cho thuê',
+      // Tài xế mở cho cả chủ xe tuyến hoa hồng (ADR 0063).
+      'Tài xế',
       'Trò chuyện',
       'Số dư & rút tiền',
       'Hồ sơ chủ xe',

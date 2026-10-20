@@ -11,6 +11,7 @@ import {
   BOOKING_STATUS_SELECTABLE_VALUES,
   PERMISSION,
   type BookingListPreset,
+  SERVICE_TYPE_VALUES,
 } from '@xeprime/types';
 import { FilterBar, type FilterField, type FilterValues } from '@/components/filter/FilterBar';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
@@ -97,7 +98,7 @@ export function BookingsListView({ preset }: BookingsListViewProps) {
   const canCreate = has(PERMISSION.BOOKING_CREATE);
   const items = data?.items ?? [];
   const meta = data?.meta ?? { page: 1, limit: BOOKINGS_DEFAULT_LIMIT, total: 0, hasNext: false };
-  const hasFilters = Boolean(filters.q || filters.status || filters.branchId);
+  const hasFilters = Boolean(filters.q || filters.status || filters.branchId || filters.serviceType);
 
   /*
    * ADR 0047: "Chờ giao xe" đã LÀ một nhóm việc lọc sẵn — ô lọc trạng thái ở đây là thừa, và
@@ -136,6 +137,17 @@ export function BookingsListView({ preset }: BookingsListViewProps) {
             ],
           },
         ]),
+    // Loại dịch vụ của ĐƠN — có ở CẢ hai nhóm việc (19/10/2026): ca trực lọc riêng chuyến có tài xế.
+    {
+      kind: 'select',
+      key: 'serviceType',
+      label: t('list.serviceLabel'),
+      allowClear: false,
+      options: [
+        { value: ALL_FILTER, label: t('list.serviceAll') },
+        ...SERVICE_TYPE_VALUES.map((value) => ({ value, label: label('serviceType', value) })),
+      ],
+    },
     {
       kind: 'select',
       key: 'sort',
@@ -155,6 +167,9 @@ export function BookingsListView({ preset }: BookingsListViewProps) {
     if ('status' in patch) next.status = patch.status === 'all' ? undefined : patch.status;
     if ('sort' in patch) next.sort = patch.sort as BookingSort | undefined;
     if ('branchId' in patch) next.branchId = patch.branchId === ALL_FILTER ? undefined : patch.branchId;
+    if ('serviceType' in patch) {
+      next.serviceType = patch.serviceType === ALL_FILTER ? undefined : patch.serviceType;
+    }
     setFilters(next);
   }
 
@@ -182,6 +197,7 @@ export function BookingsListView({ preset }: BookingsListViewProps) {
           q: filters.q,
           status: filters.status ?? ALL_FILTER,
           branchId: filters.branchId ?? ALL_FILTER,
+          serviceType: filters.serviceType ?? ALL_FILTER,
           sort,
         }}
         onChange={changeFilters}
@@ -196,7 +212,7 @@ export function BookingsListView({ preset }: BookingsListViewProps) {
         error={isError && !data ? { onRetry: () => void refetch() } : null}
         filtered={hasFilters}
         onClearFilters={() => {
-          setFilters({ q: undefined, status: undefined, branchId: undefined });
+          setFilters({ q: undefined, status: undefined, branchId: undefined, serviceType: undefined });
         }}
         emptyAction={
           awaitingPickup ? (

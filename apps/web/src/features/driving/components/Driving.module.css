@@ -1,0 +1,168 @@
+/* Khu tài xế ở site khách (ADR 0063) — cùng nhịp với `TripsView.module.css`. */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  width: 100%;
+  max-width: var(--xp-container-max-width);
+  margin-inline: auto;
+  padding: var(--xp-space-lg) var(--xp-space-md);
+  min-width: 0;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--xp-font-size-h1);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.sub {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  min-width: 0;
+}
+
+/* Thẻ cần trả lời — vạch cảnh báo ở mép trái. */
+.cardPending {
+  border-left: 3px solid var(--xp-color-warning);
+}
+
+.cardLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.cardHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-xs);
+}
+
+.title {
+  margin: 0;
+  font-weight: var(--xp-font-weight-semibold, 600);
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.warn {
+  margin: 0;
+  color: var(--xp-color-warning);
+  font-weight: var(--xp-font-weight-medium, 500);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs);
+}
+
+/* Nút Nhận / Từ chối của thẻ — góc phải dưới. */
+.cardActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--xp-space-xs);
+}
+
+.pager {
+  display: flex;
+  justify-content: center;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold, 600);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  margin: 0;
+}
+
+/* Nhãn giữ một cột cố định; giá trị dài (địa chỉ đón) xuống dòng TRONG cột của nó, không rơi xuống
+   dưới nhãn rồi căn phải lệch. */
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--xp-space-md);
+}
+
+.row dt {
+  flex: 0 0 auto;
+  color: var(--xp-color-text-secondary);
+}
+
+.row dd {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.backLink {
+  color: var(--xp-color-primary-active);
+}
+
+/** 640px = `--xp-bp-mobile`; custom property không dùng được trong `@media`. */
+@media (max-width: 640px) {
+  .page {
+    padding: var(--xp-space-md) var(--xp-space-sm);
+    padding-bottom: var(--xp-space-xl);
+  }
+
+  .heading {
+    font-size: var(--xp-font-size-h2);
+  }
+}

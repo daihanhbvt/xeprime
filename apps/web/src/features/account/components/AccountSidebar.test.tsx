@@ -17,6 +17,11 @@ import { AccountSidebar } from './AccountSidebar';
 const logout = vi.hoisted(() => vi.fn(async () => undefined));
 const pathname = vi.hoisted(() => ({ value: '/account' }));
 
+/** Khu tài xế (ADR 0063) — tài khoản này chưa từng được mời làm tài xế nên không có tab/mục tài xế. */
+vi.mock('@/features/driving/hooks', () => ({
+  useDriverPendingCounts: () => ({ data: { invites: 0, trips: 0, hasLinks: false } }),
+}));
+
 vi.mock('next/navigation', () => ({
   usePathname: () => pathname.value,
 }));

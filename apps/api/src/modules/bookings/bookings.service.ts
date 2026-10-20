@@ -1,3 +1,4 @@
+import type { BookingDriverHistoryItemDto } from '../drivers/dto/driver.dto';
 import {
   BadRequestException,
   ConflictException,
@@ -46,6 +47,7 @@ import { bookingDebt } from '../../common/money';
 import { piiSearch } from '../../common/support/support-search';
 import { addressViewOf, pinOf } from '../../common/address-view';
 import { normalizeRouteContext } from '../../common/route-context';
+import { BOOKING_DRIVER_SELECT, toBookingDriverSummary } from '../drivers/booking-driver-summary';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationService } from '../notification/notification.service';
@@ -55,7 +57,7 @@ import { InsuranceService } from '../insurance/insurance.service';
 import { TaxService } from '../tax/tax.service';
 import { CancellationsService } from '../cancellations/cancellations.service';
 import { AddressService } from '../locations/address.service';
-import { DriversService } from '../drivers/drivers.service';
+import { DriversService, driverBusy, isDriverScheduleConflict } from '../drivers/drivers.service';
 import { VehicleSettingsService } from '../vehicle-settings/vehicle-settings.service';
 import { HoldSettlementService } from '../holds/hold-settlement.service';
 import {
@@ -97,7 +99,7 @@ const LIST_SELECT = {
   vehicle: {
     select: { name: true, plateNumber: true, branch: { select: { name: true } } },
   },
-  driver: { select: { id: true, name: true, phone: true } },
+  ...BOOKING_DRIVER_SELECT,
   /*
    * Biên bản GIAO XE còn hiệu lực. `take: 1` là chính xác chứ không phải phỏng đoán: partial
    * unique `(booking_id, type) WHERE status <> 'canceled'` bảo đảm mỗi đơn chỉ có tối đa một
@@ -163,12 +165,14 @@ export type BookingCreateSource = 'direct' | 'from_request';
 /**
  * Phần đi kèm một đơn tạo TRONG transaction của luồng gọi (08/09/2026) — không nằm trong
  * `CreateBookingDto` vì client không được gửi hai thứ này:
- *  - `driverId`: tài xế do hệ thống chọn khi TỰ ĐỘNG nhận chuyến có tài xế — gán ngay lúc INSERT
- *    để `bookings_driver_schedule_excl` gác trong cùng transaction;
  *  - `rentalTerms`: điều kiện thuê đã đóng băng trên yêu cầu — copy nguyên, không tính lại.
  */
 export interface BookingCreateExtras {
-  driverId?: string | null;
+  /**
+   * Liên kết tài xế hệ thống TỰ GÁN khi "Đặt ngay" nhận chuyến có tài xế (19/10/2026) — gán
+   * NGAY sau INSERT, trong cùng transaction, ở trạng thái `pending` (tài xế phải tự nhận).
+   */
+  autoAssignDriverId?: string | null;
   rentalTerms?: RentalTermsSnapshot | null;
   /**
    * AI thu cọc `D` của đơn này — ĐÓNG BĂNG lúc tạo (ADR 0025 ràng buộc 4, Phase 6).
@@ -217,8 +221,8 @@ export class BookingsService {
   async list(
     tenantId: string,
     query: BookingListQueryDto,
-  /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
-  allowedBranchIds: readonly string[] | null,
+    /** Chi nhánh người gọi được giao — `null` = toàn gian hàng (ADR 0052). */
+    allowedBranchIds: readonly string[] | null,
   ): Promise<{ data: BookingListItemDto[]; meta: PaginationMeta }> {
     const paging = resolvePaging(query, BOOKING_DEFAULT_LIMIT, BOOKING_MAX_LIMIT);
 
@@ -227,6 +231,7 @@ export class BookingsService {
       deletedAt: null,
       ...(query.status ? { status: query.status } : {}),
       ...(query.vehicleId ? { vehicleId: query.vehicleId } : {}),
+      ...(query.serviceType ? { serviceType: query.serviceType } : {}),
       // Lọc qua quan hệ xe → chi nhánh; `tenantId` vẫn là ranh giới thật.
       ...vehicleBranchWhere(resolveBranchScope(query.branchId, allowedBranchIds)),
       ...(query.returnFrom || query.returnTo
@@ -429,15 +434,6 @@ export class BookingsService {
       }));
 
     /*
-     * Tài xế gán ngay lúc tạo (chỉ khi HỆ THỐNG tự nhận chuyến có tài xế): cùng ba điều kiện
-     * của gán tay (`findAssignable`), và INSERT ngay dưới đây chạy qua
-     * `bookings_driver_schedule_excl` — hai chuyến đua nhau thì DB từ chối kẻ đến sau.
-     */
-    const driver = extras.driverId
-      ? await this.drivers.findAssignable(tenantId, extras.driverId, { pickupAt, returnAt }, tx)
-      : null;
-
-    /*
      * Điều kiện thuê ĐÓNG BĂNG (08/09/2026): luồng duyệt yêu cầu truyền snapshot đã ghi lúc khách
      * gửi; đơn gian hàng tự lập chụp thiết lập hiệu lực NGAY LÚC NÀY. Chủ xe đổi thiết lập về sau
      * không viết lại cột này.
@@ -497,7 +493,6 @@ export class BookingsService {
         ...feeColumns(priceSnapshot),
         depositCollectionMode: extras.depositCollectionMode ?? null,
         rentalTerms: rentalTerms as unknown as Prisma.InputJsonValue,
-        driverId: driver?.id ?? null,
         note: dto.note ?? null,
         createdBy: userId,
       },
@@ -518,6 +513,15 @@ export class BookingsService {
       snapshot: priceSnapshot,
       consent: extras.insuranceConsent ?? null,
     });
+
+    if (extras.autoAssignDriverId) {
+      await this.drivers.assignWithinTx(tx, {
+        tenantId,
+        bookingId: id,
+        driverId: extras.autoAssignDriverId,
+        actorUserId: null,
+      });
+    }
 
     await this.occupancy.reserve(tx, {
       tenantId,
@@ -544,7 +548,6 @@ export class BookingsService {
           vehicleId: dto.vehicleId,
           pickupAt,
           returnAt,
-          ...(driver ? { driverId: driver.id, driverName: driver.name } : {}),
         },
       },
       tx,
@@ -571,182 +574,29 @@ export class BookingsService {
   }
 
   /**
-   * Sửa đơn. Đổi khung giờ thì reschedule lịch (chỉ khi đơn còn chiếm lịch); constraint vẫn
-   * là chốt chặn nếu khung mới trùng đơn khác.
+   * Sửa đơn — CHỈ tên/SĐT khách, cọc tài sản và ghi chú (19/10/2026). Dịch vụ, lịch, lộ trình và
+   * tiền thuê đóng băng lúc tạo (ADR 0024) nên không còn đường nào ở đây đổi chúng — kéo theo
+   * không còn chuyện đổi đơn sang dịch vụ xe không chào, dời lịch đè lịch tài xế, hay gỡ ngầm tài
+   * xế đã nhận chuyến. Đơn đã khép (completed/cancelled/no_show) không sửa được.
    */
   async update(tenantId: string, id: string, dto: UpdateBookingDto): Promise<BookingDetailDto> {
     const current = await this.prisma.booking.findFirst({
       where: { id, tenantId, deletedAt: null },
-      select: {
-        id: true,
-        vehicleId: true,
-        status: true,
-        serviceType: true,
-        longTermPackageMonths: true,
-        routeType: true,
-        pickupAddress: true,
-        pickupAddressLine: true,
-        pickupProvinceCode: true,
-        pickupWardCode: true,
-        pickupPlaceId: true,
-        pickupLatitude: true,
-        pickupLongitude: true,
-        destination: true,
-        pickupAt: true,
-        returnAt: true,
-        baseAmount: true,
-        deliveryFee: true,
-        discountAmount: true,
-      },
+      select: { id: true, status: true },
     });
     if (!current) throw notFound();
     assertMutable(current.status as BookingStatus);
 
-    /*
-     * Hành trình được validate lại mỗi khi đơn đụng tới dịch vụ HOẶC một trường hành trình:
-     * đổi sang with_driver phải nộp đủ lộ trình/địa chỉ đón, rời with_driver thì cả ba trường
-     * bị clear (CHECK DB không cho with_driver-context sống trên dịch vụ khác).
-     */
-    const nextServiceType = dto.serviceType ?? current.serviceType;
-    const routeTouched =
-      dto.serviceType !== undefined ||
-      dto.routeType !== undefined ||
-      dto.pickupAddress !== undefined ||
-      dto.pickupAddressLine !== undefined ||
-      dto.pickupProvinceCode !== undefined ||
-      dto.pickupWardCode !== undefined ||
-      dto.pickupLatitude !== undefined ||
-      dto.pickupLongitude !== undefined ||
-      dto.pickupPlaceId !== undefined ||
-      dto.destination !== undefined ||
-      dto.destinationLatitude !== undefined ||
-      dto.destinationLongitude !== undefined ||
-      dto.destinationPlaceId !== undefined;
-    const route = routeTouched
-      ? normalizeRouteContext({
-          serviceType: nextServiceType,
-          routeType: dto.routeType !== undefined ? dto.routeType : current.routeType,
-          pickupAddress:
-            dto.pickupAddress !== undefined ? dto.pickupAddress : current.pickupAddress,
-          destination: dto.destination !== undefined ? dto.destination : current.destination,
-        })
-      : null;
-
-    /*
-     * Địa chỉ đón dựng LẠI CẢ CỤM từ (giá trị mới ?? giá trị cũ), không vá từng cột: chuỗi hiển
-     * thị, mã xã và ghim phải luôn nói cùng một chuyện. `route` trả `pickupAddress = null` khi
-     * đơn rời khỏi dịch vụ có tài xế — khi đó cả cụm bị xoá theo, không để lại một mã xã mồ côi.
-     *
-     * `skipGeocode`: hàm update chạy ngoài transaction ở chỗ này, nhưng tra bản đồ cho một lần
-     * sửa đơn hành chính là đốt hạn mức mà không ai đang nhìn bản đồ — giữ ghim cũ hoặc ghim
-     * người dùng vừa gửi.
-     */
-    const pickupLocation =
-      route && route.pickupAddress
-        ? await this.address.resolveOptional(
-            {
-              provinceCode: dto.pickupProvinceCode ?? current.pickupProvinceCode,
-              wardCode: dto.pickupWardCode ?? current.pickupWardCode,
-              addressLine: dto.pickupAddressLine ?? dto.pickupAddress ?? current.pickupAddressLine,
-              placeId: dto.pickupPlaceId ?? current.pickupPlaceId,
-              latitude: dto.pickupLatitude ?? numberOrNull(current.pickupLatitude),
-              longitude: dto.pickupLongitude ?? numberOrNull(current.pickupLongitude),
-            },
-            { skipGeocode: true, requireSelectable: false },
-          )
-        : null;
-
-    /*
-     * Đơn THUÊ DÀI HẠN có độ dài cố định bằng gói: dời giờ nhận thì giờ trả dịch theo bằng
-     * tháng lịch, và không ai được nhập tay giờ trả — nếu cho, đơn sẽ dài/ngắn hơn gói khách
-     * đã mua mà không có dấu vết nào (ADR 0011).
-     */
-    const pickupAt = dto.pickupAt ? new Date(dto.pickupAt) : current.pickupAt;
-    let returnAt: Date;
-    if (current.longTermPackageMonths != null) {
-      if (dto.returnAt) {
-        throw new BadRequestException({
-          code: API_ERROR_CODE.VALIDATION_FAILED,
-          message: 'Đơn thuê dài hạn có ngày trả tính theo gói — chỉ đổi được ngày nhận',
-        });
-      }
-      returnAt = longTermReturnAt(pickupAt, current.longTermPackageMonths);
-    } else {
-      returnAt = dto.returnAt ? new Date(dto.returnAt) : current.returnAt;
-    }
-    if (dto.pickupAt || dto.returnAt) assertRange(pickupAt, returnAt);
-
-    // Tính lại total nếu bất kỳ khoản cấu thành đổi.
-    const base = dto.baseAmount !== undefined ? money(dto.baseAmount) : current.baseAmount;
-    const delivery = dto.deliveryFee !== undefined ? money(dto.deliveryFee) : current.deliveryFee;
-    const discount =
-      dto.discountAmount !== undefined ? money(dto.discountAmount) : current.discountAmount;
-    const total = new Prisma.Decimal(base).plus(delivery).minus(discount);
-
-    const rescheduled =
-      (Boolean(dto.pickupAt) || returnAt.getTime() !== current.returnAt.getTime()) &&
-      occupiesSchedule(current.status as BookingStatus);
-
-    const row = await this.prisma.$transaction(async (tx) => {
-      const updated = await tx.booking.update({
-        where: { id: current.id },
-        data: {
-          ...(dto.customerName !== undefined ? { customerName: dto.customerName } : {}),
-          ...(dto.customerPhone !== undefined ? { customerPhone: dto.customerPhone } : {}),
-          ...(dto.serviceType !== undefined ? { serviceType: dto.serviceType } : {}),
-          ...(route
-            ? {
-                routeType: route.routeType,
-                pickupAddress: pickupLocation?.displayAddress ?? route.pickupAddress,
-                pickupAddressLine: pickupLocation?.addressLine ?? null,
-                pickupProvinceCode: pickupLocation?.provinceCode ?? null,
-                pickupWardCode: pickupLocation?.wardCode ?? null,
-                pickupPlaceId: pickupLocation?.placeId ?? null,
-                pickupLatitude: pickupLocation?.latitude ?? null,
-                pickupLongitude: pickupLocation?.longitude ?? null,
-                destination: route.destination,
-                destinationPlaceId: route.destination
-                  ? (dto.destinationPlaceId ?? undefined)
-                  : null,
-                destinationLatitude: route.destination
-                  ? (dto.destinationLatitude ?? undefined)
-                  : null,
-                destinationLongitude: route.destination
-                  ? (dto.destinationLongitude ?? undefined)
-                  : null,
-              }
-            : {}),
-          ...(dto.pickupAt ? { pickupAt } : {}),
-          ...(dto.returnAt ? { returnAt } : {}),
-          ...(dto.baseAmount !== undefined ? { baseAmount: base } : {}),
-          ...(dto.deliveryFee !== undefined ? { deliveryFee: delivery } : {}),
-          ...(dto.discountAmount !== undefined ? { discountAmount: discount } : {}),
-          ...(dto.depositAmount !== undefined ? { depositAmount: money(dto.depositAmount) } : {}),
-          ...(dto.baseAmount !== undefined ||
-          dto.deliveryFee !== undefined ||
-          dto.discountAmount !== undefined
-            ? { totalAmount: total }
-            : {}),
-          ...(dto.note !== undefined ? { note: dto.note } : {}),
-        },
-        select: DETAIL_SELECT,
-      });
-
-      if (rescheduled) {
-        // Dời lịch = occupancy MỚI theo ADR 0006 → nhận thời gian chết hiện hành của xe.
-        await this.occupancy.reschedule(
-          tx,
-          OCCUPANCY_SOURCE_TYPE.BOOKING,
-          id,
-          pickupAt,
-          returnAt,
-          await this.settings.turnaroundBufferFor(tx, current.vehicleId),
-        );
-      }
-
-      return updated;
+    const row = await this.prisma.booking.update({
+      where: { id: current.id },
+      data: {
+        ...(dto.customerName !== undefined ? { customerName: dto.customerName.trim() } : {}),
+        ...(dto.customerPhone !== undefined ? { customerPhone: dto.customerPhone } : {}),
+        ...(dto.depositAmount !== undefined ? { depositAmount: money(dto.depositAmount) } : {}),
+        ...(dto.note !== undefined ? { note: dto.note } : {}),
+      },
+      select: DETAIL_SELECT,
     });
-
     return this.withMoneyOne(toDetail(row));
   }
 
@@ -841,13 +691,22 @@ export class BookingsService {
   }
 
   /**
-   * Gán/bỏ gán tài xế cho đơn (17/08 — nghiệp vụ xe có tài xế). "Tài xế gán được" định nghĩa
-   * MỘT nơi ở `DriversService.findAssignable` (cùng tenant + active + chưa xoá + GPLX còn hạn
-   * + KHÔNG trùng khung giờ với đơn sống khác — kiểm TRONG transaction, không tin FE);
-   * composite FK `(driver_id, tenant_id)` chặn gán chéo tenant, và exclusion constraint
-   * `bookings_driver_schedule_excl` là chốt chặn cuối cho hai request đua nhau (ADR 0006).
+   * Gán / đổi / bỏ gán tài xế của đơn (ADR 0063). Luật nằm ở `DriversService.assignWithinTx`
+   * (writer duy nhất): chỉ đơn có tài xế, chỉ liên kết đang `active`, không tự lái đơn mình thuê,
+   * lượt mới ở `pending` chờ tài xế nhận. Chốt chặn trùng lịch theo NGƯỜI là
+   * `bookings_driver_user_schedule_excl` — đua nhau thì 409 `DRIVER_BUSY`.
    * Đơn đã khép (completed/cancelled/no_show) không sửa được — hồ sơ chuyến đã đóng băng.
    */
+  /** Lịch sử gán tài xế của đơn (ADR 0063) — 404 khi đơn không thuộc tenant. */
+  async driverHistory(tenantId: string, id: string): Promise<BookingDriverHistoryItemDto[]> {
+    const exists = await this.prisma.booking.findFirst({
+      where: { id, tenantId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!exists) throw notFound();
+    return this.drivers.history(tenantId, id);
+  }
+
   async assignDriver(
     tenantId: string,
     id: string,
@@ -856,61 +715,25 @@ export class BookingsService {
   ): Promise<BookingDetailDto> {
     const current = await this.prisma.booking.findFirst({
       where: { id, tenantId, deletedAt: null },
-      select: { id: true, status: true, driverId: true, pickupAt: true, returnAt: true },
+      select: { id: true, status: true },
     });
     if (!current) throw notFound();
     assertMutable(current.status as BookingStatus);
 
     try {
       const row = await this.prisma.$transaction(async (tx) => {
-        // Kiểm khả dụng trong CÙNG transaction với lệnh ghi — cửa sổ đua thu về constraint.
-        const driver = driverId
-          ? await this.drivers.findAssignable(
-              tenantId,
-              driverId,
-              {
-                pickupAt: current.pickupAt,
-                returnAt: current.returnAt,
-                excludeBookingId: current.id,
-              },
-              tx,
-            )
-          : null;
-
-        const updated = await tx.booking.update({
-          where: { id: current.id },
-          data: { driverId: driver?.id ?? null },
-          select: DETAIL_SELECT,
+        await this.drivers.assignWithinTx(tx, {
+          tenantId,
+          bookingId: id,
+          driverId,
+          actorUserId: userId,
         });
-
-        await this.audit.record(
-          {
-            tenantId,
-            actorUserId: userId,
-            actorScope: 'tenant',
-            action: 'booking.driver_assign',
-            targetType: 'booking',
-            targetId: id,
-            before: { driverId: current.driverId },
-            after: {
-              driverId: driver?.id ?? null,
-              ...(driver ? { driverName: driver.name } : {}),
-            },
-          },
-          tx,
-        );
-
-        return updated;
+        return tx.booking.findFirstOrThrow({ where: { id, tenantId }, select: DETAIL_SELECT });
       });
       return this.withMoneyOne(toDetail(row));
     } catch (err) {
       // Hai request đua qua được bước kiểm — exclusion constraint từ chối kẻ đến sau (23P01).
-      if (isDriverScheduleConflict(err)) {
-        throw new ConflictException({
-          code: API_ERROR_CODE.CONFLICT,
-          message: 'Tài xế vừa được gán vào một đơn giao nhau — tải lại rồi chọn người khác',
-        });
-      }
+      if (isDriverScheduleConflict(err)) throw driverBusy();
       throw err;
     }
   }
@@ -1038,6 +861,10 @@ export class BookingsService {
     if (!occupiesSchedule(to)) {
       await this.occupancy.release(tx, OCCUPANCY_SOURCE_TYPE.BOOKING, id);
     }
+
+    // Đơn huỷ / khách không đến / hoàn thành → báo tài xế đang mang chuyến (ADR 0063). Cột tài xế giữ làm
+    // lịch sử; đơn hết chiếm lịch nên EXCLUDE tự nhả người đó.
+    await this.drivers.onBookingClosedWithinTx(tx, id, to);
 
     /*
      * MỘT dòng `booking_cancellations` cho mỗi lượt huỷ — nguồn của chỉ số uy tín công khai
@@ -1322,19 +1149,6 @@ function manualSnapshot(amounts: {
   };
 }
 
-/**
- * Vi phạm exclusion `bookings_driver_schedule_excl` (23P01) — Prisma bọc trong
- * PrismaClientKnownRequestError hoặc lỗi thô tuỳ đường đi; nhận diện theo TÊN constraint để
- * không nuốt nhầm 23P01 của lịch xe (occupancy).
- */
-function isDriverScheduleConflict(err: unknown): boolean {
-  const text =
-    err instanceof Error
-      ? `${err.message} ${JSON.stringify((err as { meta?: unknown }).meta ?? '')}`
-      : '';
-  return text.includes('bookings_driver_schedule_excl');
-}
-
 function assertRange(pickupAt: Date, returnAt: Date): void {
   if (!(returnAt.getTime() > pickupAt.getTime())) {
     throw new BadRequestException({
@@ -1512,7 +1326,7 @@ function toListItem(b: BookingListRow): BookingListItemDto {
     collectedAmount: b.paidAmount as unknown as string,
     debtAmount: bookingDebt(b.totalAmount, b.paidAmount) as unknown as string,
     depositAmount: b.depositAmount as unknown as string,
-    driver: b.driver,
+    driver: toBookingDriverSummary(b),
     createdAt: b.createdAt as unknown as string,
     pickupHandoverStatus: b.handovers[0]?.status ?? null,
     ...handoverPlaceOf(b),
@@ -1576,14 +1390,4 @@ function assertMutable(status: BookingStatus): void {
     code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
     message: `Đơn đã ở trạng thái "${BOOKING_STATUS_META[status].label}" nên không sửa được nữa`,
   });
-}
-
-/**
- * `Decimal | null` đọc lên từ Prisma → `number | undefined` để ghép vào đầu vào địa chỉ.
- *
- * `undefined` chứ không `null`: ở `AddressInput`, `null` nghĩa là "bỏ ghim" còn `undefined`
- * nghĩa là "không có gì để nói" — và hai câu đó dẫn tới hai kết quả khác nhau.
- */
-function numberOrNull(value: Prisma.Decimal | null): number | undefined {
-  return value == null ? undefined : Number(value);
 }

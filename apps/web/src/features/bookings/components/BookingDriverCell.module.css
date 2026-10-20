@@ -1,0 +1,20 @@
+.cell {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-xs);
+}
+
+.name {
+  color: var(--xp-color-text);
+  font-weight: 500;
+}
+
+.missing {
+  color: var(--xp-color-warning);
+  font-weight: 500;
+}
+
+.muted {
+  color: var(--xp-color-text-tertiary);
+}

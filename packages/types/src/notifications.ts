@@ -158,6 +158,30 @@ export const NOTIFICATION_TYPE = {
    * tin nhắn mới"; muốn đọc thì phải mở app (ADR 0009).
    */
   CHAT_MESSAGE_RECEIVED: 'chat_message_received',
+
+  // Tài xế liên kết (ADR 0063). Tài xế là TÀI KHOẢN KHÁCH — tin cho tài xế đi `emitToUser`
+  // (bề mặt khách), tin cho bên thuê đi `emitToTenantMembers` (khu quản lý).
+  /** Bên thuê mời một tài khoản làm tài xế — gửi TÀI XẾ, cần chấp nhận/từ chối. */
+  DRIVER_INVITED: 'driver_invited',
+  /** Tài xế chấp nhận lời mời — gửi BÊN THUÊ. */
+  DRIVER_INVITE_ACCEPTED: 'driver_invite_accepted',
+  /** Tài xế từ chối lời mời — gửi BÊN THUÊ. */
+  DRIVER_INVITE_DECLINED: 'driver_invite_declined',
+  /**
+   * Liên kết chấm dứt — gửi PHÍA KIA của người chấm dứt (bên thuê gỡ ⇒ tài xế; tài xế rời ⇒
+   * bên thuê). Một loại cho hai chiều: câu chữ khác nhau do nơi phát dựng.
+   */
+  DRIVER_LINK_ENDED: 'driver_link_ended',
+  /** Được gán vào một chuyến — gửi TÀI XẾ, cần nhận/từ chối. */
+  DRIVER_TRIP_ASSIGNED: 'driver_trip_assigned',
+  /** Bị gỡ khỏi một chuyến (đổi người / bỏ gán / đơn huỷ) — gửi TÀI XẾ. */
+  DRIVER_TRIP_UNASSIGNED: 'driver_trip_unassigned',
+  /** Tài xế nhận chuyến — gửi BÊN THUÊ. */
+  DRIVER_TRIP_ACCEPTED: 'driver_trip_accepted',
+  /** Tài xế từ chối chuyến, đơn quay về chưa có tài xế — gửi BÊN THUÊ. */
+  DRIVER_TRIP_DECLINED: 'driver_trip_declined',
+  /** Chuyến tài xế đang lái đã HOÀN THÀNH (bên thuê xác nhận trả xe) — gửi TÀI XẾ. */
+  DRIVER_TRIP_COMPLETED: 'driver_trip_completed',
 } as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPE)[keyof typeof NOTIFICATION_TYPE];
@@ -196,6 +220,10 @@ export const NOTIFICATION_TARGET_TYPE = {
   SUPPORT_CASE: 'support_case',
   /** Hội thoại chat — `targetId` là `conversations.id` (ADR 0009). */
   CONVERSATION: 'conversation',
+  /** Liên kết tài xế — `targetId` là `drivers.id` (ADR 0063). */
+  DRIVER_LINK: 'driver_link',
+  /** Chuyến được gán, nhìn từ phía TÀI XẾ — `targetId` là `bookings.id`. */
+  DRIVER_TRIP: 'driver_trip',
 } as const;
 
 export type NotificationTargetType =
@@ -332,6 +360,39 @@ export const NOTIFICATION_TYPE_META: Readonly<Record<NotificationType, Notificat
   [NOTIFICATION_TYPE.CHAT_MESSAGE_RECEIVED]: {
     label: 'Tin nhắn mới',
     color: STATUS_COLOR.PROCESSING,
+  },
+  [NOTIFICATION_TYPE.DRIVER_INVITED]: { label: 'Lời mời làm tài xế', color: STATUS_COLOR.WAITING },
+  [NOTIFICATION_TYPE.DRIVER_INVITE_ACCEPTED]: {
+    label: 'Tài xế đã đồng ý liên kết',
+    color: STATUS_COLOR.SUCCESS,
+  },
+  [NOTIFICATION_TYPE.DRIVER_INVITE_DECLINED]: {
+    label: 'Tài xế từ chối liên kết',
+    color: STATUS_COLOR.DANGER,
+  },
+  [NOTIFICATION_TYPE.DRIVER_LINK_ENDED]: {
+    label: 'Liên kết tài xế đã kết thúc',
+    color: STATUS_COLOR.NEUTRAL,
+  },
+  [NOTIFICATION_TYPE.DRIVER_TRIP_ASSIGNED]: {
+    label: 'Chuyến mới cần xác nhận',
+    color: STATUS_COLOR.WAITING,
+  },
+  [NOTIFICATION_TYPE.DRIVER_TRIP_UNASSIGNED]: {
+    label: 'Chuyến đã được gỡ khỏi bạn',
+    color: STATUS_COLOR.NEUTRAL,
+  },
+  [NOTIFICATION_TYPE.DRIVER_TRIP_ACCEPTED]: {
+    label: 'Tài xế đã nhận chuyến',
+    color: STATUS_COLOR.SUCCESS,
+  },
+  [NOTIFICATION_TYPE.DRIVER_TRIP_DECLINED]: {
+    label: 'Tài xế từ chối chuyến',
+    color: STATUS_COLOR.DANGER,
+  },
+  [NOTIFICATION_TYPE.DRIVER_TRIP_COMPLETED]: {
+    label: 'Chuyến đã hoàn thành',
+    color: STATUS_COLOR.SUCCESS,
   },
 };
 

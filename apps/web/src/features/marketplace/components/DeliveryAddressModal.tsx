@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   EnvironmentOutlined,
   InfoCircleOutlined,
@@ -74,15 +74,16 @@ export function DeliveryAddressModal({
     enabled: open && query.trim().length >= 3,
   });
 
-  // Khi mở modal, nạp lại địa chỉ ban đầu nếu có
-  useEffect(() => {
-    if (open) {
-      if (initialAddress) {
-        setQuery(initialAddress);
-        setSelectedAddress(initialAddress);
-      }
+  // Khi modal vừa MỞ, nạp lại địa chỉ ban đầu nếu có — chỉnh state ngay lúc render khi `open` đổi
+  // (https://react.dev/learn/you-might-not-need-an-effect), không setState trong effect.
+  const [wasOpen, setWasOpen] = useState(false);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open && initialAddress) {
+      setQuery(initialAddress);
+      setSelectedAddress(initialAddress);
     }
-  }, [open, initialAddress]);
+  }
 
   // Hàm tính toán khoảng cách và phí giao xe dự kiến
   const calculateDistance = async (

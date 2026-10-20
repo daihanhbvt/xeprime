@@ -19,6 +19,7 @@ import { refreshListingRankScore } from './listing-rank';
 import {
   seedCrossRealmTwins,
   seedCustomerAccounts,
+  seedDriverAccounts,
   seedCustomerDriverLicences,
   seedPlatformAccounts,
   seedPlatformAdmin,
@@ -111,6 +112,7 @@ async function main(): Promise<void> {
   await cleanupLegacySeedData();
   const platform = await seedPlatformAccounts(adminUserId);
   const customers = await seedCustomerAccounts();
+  const drivers = await seedDriverAccounts();
   await seedCustomerDriverLicences(customers, adminUserId);
   await seedDemoPromoBanners();
 
@@ -122,6 +124,7 @@ async function main(): Promise<void> {
       await buildShop(spec, {
         platform,
         customers,
+        drivers,
         financeCategoryIds: system.financeCategoryIds,
         planIds: system.planIds,
         brandLabels,

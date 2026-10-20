@@ -180,7 +180,7 @@ describe('Đơn đã khép là CHỈ ĐỌC', () => {
     for (const status of CLOSED) {
       const id = await seedBooking(status);
       await expect(
-        bookings.update(tenantId, id, { baseAmount: '9999000', customerName: 'Đổi tên' }),
+        bookings.update(tenantId, id, { depositAmount: '9999000', customerName: 'Đổi tên' }),
       ).rejects.toMatchObject({ status: 409 });
     }
   });

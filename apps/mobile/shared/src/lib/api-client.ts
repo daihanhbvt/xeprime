@@ -31,6 +31,7 @@ export {
   fetchPage,
   getApiBaseUrl,
   getErrorCode,
+  getErrorDetails,
   isRetriableError,
   isUnauthenticated,
   type ApiRequestOptions,

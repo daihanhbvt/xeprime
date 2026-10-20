@@ -93,6 +93,7 @@ export const MESSAGE_NAMESPACES = [
   { file: 'bank-transactions', namespace: 'BankTransactions' },
   { file: 'members', namespace: 'Members' },
   { file: 'drivers', namespace: 'Drivers' },
+  { file: 'driving', namespace: 'Driving' },
   { file: 'maintenance', namespace: 'Maintenance' },
   // "Gói của tôi" phía gian hàng — W2 (ADR 0015/0026).
   { file: 'subscription', namespace: 'Subscription' },

@@ -13,6 +13,7 @@ import {
 } from '@/constants/account-nav';
 import type { CurrentUser } from '@/hooks/use-current-user';
 import { useAccountIdentityLabel } from '@/features/account/hooks/use-account-identity-label';
+import { useDriverPendingCounts } from '@/features/driving/hooks';
 import { cx } from '@/lib/cx';
 import { initialOf } from '@/lib/initials';
 
@@ -44,7 +45,9 @@ export function AccountSidebar({ user }: { user: CurrentUser }) {
   const identityLabel = useAccountIdentityLabel();
   const pathname = usePathname();
 
-  const groups = useMemo(() => resolveAccountNav(), []);
+  // Cờ đọc từ server (`/driver/pending-counts`) — chưa từng có liên kết tài xế thì ẩn mục tài xế.
+  const hasDriverLinks = useDriverPendingCounts().data?.hasLinks ?? false;
+  const groups = useMemo(() => resolveAccountNav({ hasDriverLinks }), [hasDriverLinks]);
   const activeKey = matchAccountNavKey(pathname, flattenAccountNav(groups));
 
   const name = user.displayName || user.email || tAccount('profile.accountLabel');

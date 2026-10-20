@@ -21,7 +21,11 @@
  * Thuần (không DB) — seed (`plan-guide-templates.ts`) và script xem trước dùng chung.
  */
 
-import { PLAN_GUIDE_VARIANT, PLAN_GUIDE_VARIANT_VALUES, type PlanGuideVariant } from '@xeprime/types';
+import {
+  PLAN_GUIDE_VARIANT,
+  PLAN_GUIDE_VARIANT_VALUES,
+  type PlanGuideVariant,
+} from '@xeprime/types';
 
 interface Locale {
   subject: string;
@@ -178,7 +182,13 @@ function highlights(
 /** Ba bước có số trong vòng tròn màu + đường nối — chỉ là bảng, không ảnh. */
 function steps(
   items: readonly string[],
-  o: { circle: string; circleGradient?: string | undefined; number: string; text: string; line: string },
+  o: {
+    circle: string;
+    circleGradient?: string | undefined;
+    number: string;
+    text: string;
+    line: string;
+  },
 ): string {
   const image = o.circleGradient ? `background-image:${o.circleGradient};` : '';
   const cells = items
@@ -206,7 +216,10 @@ function checklist(items: readonly string[], color: string): string {
 }
 
 /** Khối hỗ trợ — Hotline/Zalo (icon tròn màu) chỉ hiện khi admin đã khai. */
-function support(c: Copy, o: { title: string; text: string; link: string; chipBg: string }): string {
+function support(
+  c: Copy,
+  o: { title: string; text: string; link: string; chipBg: string },
+): string {
   const chip = (file: string, label: string, value: string, href: string | null) =>
     `<td class="xp-col" valign="middle" style="padding:6px 12px 6px 0"><table role="presentation" cellpadding="0" cellspacing="0" border="0" bgcolor="${o.chipBg}" style="background:${o.chipBg};border-radius:24px"><tr>
 <td style="padding:6px 6px 6px 6px">${icon(file, 30, label)}</td>
@@ -228,7 +241,10 @@ function wordmark(xe: string, prime: string, size = 20): string {
 }
 
 /** Chân thư chung: thương hiệu + câu giới thiệu + ghi chú + bản quyền. */
-function footer(c: Copy, o: { xe: string; prime: string; text: string; muted: string; rule: string }): string {
+function footer(
+  c: Copy,
+  o: { xe: string; prime: string; text: string; muted: string; rule: string },
+): string {
   return `<tr><td class="xp-pad" align="center" style="padding:28px 28px 4px;text-align:center">
 <div style="width:56px;height:3px;line-height:3px;font-size:0;background:${o.rule};margin:0 auto 18px">&nbsp;</div>
 ${wordmark(o.xe, o.prime, 18)}
@@ -668,14 +684,22 @@ ${footer(c, { xe: C.primaryActive, prime: C.dark, text: C.text2, muted: C.text2,
 
 const WHY_VI: Highlights = {
   items: [
-    ['percent.png', '{{packageCommissionPercent}} hoa hồng', 'Hoa hồng XePrime trên mỗi chuyến của gói gian hàng'],
+    [
+      'percent.png',
+      '{{packageCommissionPercent}} hoa hồng',
+      'Hoa hồng XePrime trên mỗi chuyến của gói gian hàng',
+    ],
     ['car.png', 'Quản lý đội xe', 'Lịch xe, đơn thuê, thu chi trong một nơi'],
     ['bolt.png', 'Kích hoạt tự động', 'Gói mở ngay khi tiền chuyển khoản về'],
   ],
 };
 const WHY_EN: Highlights = {
   items: [
-    ['percent.png', '{{packageCommissionPercent}} commission', 'XePrime commission per trip on a shop plan'],
+    [
+      'percent.png',
+      '{{packageCommissionPercent}} commission',
+      'XePrime commission per trip on a shop plan',
+    ],
     ['car.png', 'Fleet management', 'Calendar, bookings and finances in one place'],
     ['bolt.png', 'Instant activation', 'Your plan opens as soon as the transfer lands'],
   ],
