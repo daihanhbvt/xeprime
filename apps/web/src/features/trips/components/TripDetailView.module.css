@@ -403,6 +403,16 @@
     padding: var(--xp-space-md) var(--xp-space-sm) var(--xp-space-xl);
   }
 
+  /*
+   * Màn hành trình đặt xe: lề ngang 16 (`--xp-space-lg` ở mobile) như trang chi tiết xe mobile
+   * (Figma `19771:71482`), không đệm trên — thanh đường dẫn của `TripPageHeader` tràn mép ngay dưới
+   * header site, đọc `--page-gutter`.
+   */
+  .flowPage {
+    --page-gutter: var(--xp-space-lg);
+    padding: 0 var(--page-gutter) var(--xp-space-xl);
+  }
+
   /* Nút quay lại và dòng thời gian xếp dọc; dòng thời gian vẫn một hàng ngang của riêng nó. */
   .topBar {
     flex-direction: column;

@@ -170,3 +170,30 @@
   white-space: nowrap;
 }
 
+/*
+ * Hàng ba chỉ số inline ở MOBILE (≤640px = `--xp-bp-mobile`) — Figma `19771:72773`: trải hết bề
+ * ngang, nhãn `14px` `Text/Gray/low`, giá trị `16px/Medium`, nhãn cách giá trị 8.
+ */
+@media (max-width: 640px) {
+  .inlineList {
+    justify-content: space-between;
+    gap: var(--xp-space-sm);
+    width: 100%;
+  }
+
+  .inlineItem {
+    gap: var(--xp-space-sm);
+    min-width: 0;
+  }
+
+  .inlineLabel {
+    font-size: var(--xp-font-size-body);
+    line-height: var(--xp-line-height-body);
+  }
+
+  .inlineValue {
+    font-size: var(--xp-font-size-body-lg);
+    font-weight: var(--xp-font-weight-medium);
+    line-height: var(--xp-line-height-body-lg);
+  }
+}

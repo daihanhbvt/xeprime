@@ -162,7 +162,12 @@
   line-height: 1.2;
 }
 
+/*
+ * `max-width: 100%`: cột cha canh `flex-start` nên thiếu nó mốc giờ tự co theo nội dung, tràn khỏi cột
+ * và đè lên viên thời lượng — `text-overflow` không bao giờ được dùng tới.
+ */
 .stackedValue {
+  max-width: 100%;
   font-size: 16px;
   font-weight: 700;
   color: var(--xp-color-text, #0e0f12);
@@ -170,6 +175,22 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/*
+ * Màn hẹp (≤640px = `--xp-bp-mobile`): hai mốc giữ đủ bề rộng chữ của mình; không đủ chỗ cho cả
+ * viên thời lượng thì VIÊN xuống hàng dưới — cắt mất giờ nhận/trả để nhường chỗ cho "1 ngày" là sai
+ * thứ tự ưu tiên (mốc tiếng Anh "Wed, 10/21 · 21:00" dài hơn bản tiếng Việt).
+ */
+@media (max-width: 640px) {
+  .triggerStacked {
+    flex-wrap: wrap;
+    row-gap: var(--xp-space-xs);
+  }
+
+  .endpointStacked {
+    flex: 1 0 auto;
+  }
 }
 
 .stackedDivider {

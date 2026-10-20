@@ -294,7 +294,8 @@
       "savings": "Tiết kiệm {amount} nhờ ưu đãi thời hạn {months, plural, other {# tháng}}.",
       "finalNote": "Giá chốt cuối cùng do chủ xe xác nhận khi duyệt yêu cầu.",
       "deliveryNote": "Phí giao nhận chưa nằm trong tổng trên.",
-      "loadError": "Chưa tải được giá tạm tính. Bạn vẫn tiếp tục được; chủ xe sẽ xác nhận giá."
+      "loadError": "Chưa tải được giá tạm tính. Bạn vẫn tiếp tục được; chủ xe sẽ xác nhận giá.",
+      "durationDiscount": "Ưu đãi cam kết thời hạn"
     },
     "done": {
       "title": "Đã gửi yêu cầu",

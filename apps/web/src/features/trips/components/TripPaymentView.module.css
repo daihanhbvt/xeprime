@@ -21,3 +21,14 @@
   gap: var(--xp-space-md);
   max-width: 720px;
 }
+
+/*
+ * Mobile (≤640px = `--xp-bp-mobile`): lề ngang 16 (`--xp-space-lg` ở mobile) như các màn chuyến — thanh
+ * đường dẫn tràn mép đọc `--page-gutter`.
+ */
+@media (max-width: 640px) {
+  .page {
+    --page-gutter: var(--xp-space-lg);
+    padding-inline: var(--page-gutter);
+  }
+}

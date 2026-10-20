@@ -20,7 +20,9 @@
     "source": "Nguồn",
     "retiredOption": "{key} (đã ngừng dùng)",
     "home": "Trang chủ",
-    "onHome": "Đang hiện"
+    "onHome": "Đang hiện",
+    "labelEnValue": "EN: {label}",
+    "labelEnMissing": "EN: chưa dịch"
   },
   "status": {
     "active": "Đang bật",
@@ -70,7 +72,12 @@
     "showcaseImageRequired": "Tải ảnh trang chủ để hiện kiểu dáng này ở trang chủ",
     "showcaseExamples": "Dòng ví dụ",
     "showcaseExamplesPlaceholder": "vd: Toyota Vios, Honda City",
-    "showcaseExamplesHelp": "Vài mẫu xe tiêu biểu, hiện nhỏ dưới tên trên thẻ trang chủ. Bỏ trống cũng được."
+    "showcaseExamplesHelp": "Vài mẫu xe tiêu biểu, hiện nhỏ dưới tên trên thẻ trang chủ. Bỏ trống cũng được.",
+    "labelEn": "Tên tiếng Anh",
+    "labelEnPlaceholder": "vd: Coupe",
+    "labelEnHelp": "Hiện khi khách xem web bằng tiếng Anh. Bỏ trống thì dùng tên hiển thị ở trên — hợp với tên riêng như tên hãng.",
+    "descriptionEn": "Dòng mô tả phụ (tiếng Anh)",
+    "descriptionEnPlaceholder": "vd: 2 seats · sporty"
   },
   "models": {
     "title": "Mẫu xe",

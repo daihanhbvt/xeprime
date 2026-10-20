@@ -18,6 +18,8 @@
  *    và nó dùng `Prisma.Decimal`/`Prisma.sql`.
  */
 
+export { isNewListing, type ListingRatingLike } from './listing-flags';
+
 export {
   packageShopListingGateFrom,
   isLogoOnlyGate,

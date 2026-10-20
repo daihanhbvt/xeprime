@@ -76045,10 +76045,22 @@
             "type": "string",
             "example": "SUV"
           },
+          "labelEn": {
+            "type": "string",
+            "nullable": true,
+            "example": "SUV",
+            "description": "Nhãn tiếng Anh (ADR 0012). NULL = chưa dịch hoặc là tên riêng (hãng xe) — client dùng `label`."
+          },
           "description": {
             "type": "string",
             "nullable": true,
             "example": "7 chỗ · gầm cao"
+          },
+          "descriptionEn": {
+            "type": "string",
+            "nullable": true,
+            "example": "7 seats · high clearance",
+            "description": "Dòng phụ tiếng Anh. NULL = client dùng `description`."
           },
           "iconUrl": {
             "type": "string",
@@ -76098,7 +76110,9 @@
           "type",
           "key",
           "label",
+          "labelEn",
           "description",
+          "descriptionEn",
           "iconUrl",
           "showOnHome",
           "showcaseImageUrl",
@@ -76132,10 +76146,22 @@
             "type": "string",
             "example": "SUV"
           },
+          "labelEn": {
+            "type": "string",
+            "nullable": true,
+            "example": "SUV",
+            "description": "Nhãn tiếng Anh (ADR 0012). NULL = chưa dịch hoặc là tên riêng (hãng xe) — client dùng `label`."
+          },
           "description": {
             "type": "string",
             "nullable": true,
             "example": "7 chỗ · gầm cao"
+          },
+          "descriptionEn": {
+            "type": "string",
+            "nullable": true,
+            "example": "7 seats · high clearance",
+            "description": "Dòng phụ tiếng Anh. NULL = client dùng `description`."
           },
           "iconUrl": {
             "type": "string",
@@ -76181,7 +76207,9 @@
           "type",
           "key",
           "label",
+          "labelEn",
           "description",
+          "descriptionEn",
           "iconUrl",
           "showOnHome",
           "showcaseImageUrl",
@@ -77602,9 +77630,20 @@
             "type": "string",
             "example": "Coupe"
           },
+          "labelEn": {
+            "type": "string",
+            "nullable": true,
+            "example": "Coupe",
+            "description": "Nhãn tiếng Anh — bỏ trống thì giao diện tiếng Anh dùng `label`"
+          },
           "description": {
             "type": "object",
             "example": "2 chỗ · thể thao"
+          },
+          "descriptionEn": {
+            "type": "string",
+            "nullable": true,
+            "example": "2 seats · sporty"
           },
           "iconUrl": {
             "type": "object",
@@ -98257,7 +98296,16 @@
           "label": {
             "type": "string"
           },
+          "labelEn": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nhãn tiếng Anh — chuỗi rỗng/null = bỏ bản dịch, dùng lại `label`"
+          },
           "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "descriptionEn": {
             "type": "string",
             "nullable": true
           },

@@ -20,7 +20,9 @@
     "source": "Source",
     "retiredOption": "{key} (retired)",
     "home": "Home page",
-    "onHome": "Shown"
+    "onHome": "Shown",
+    "labelEnValue": "EN: {label}",
+    "labelEnMissing": "EN: not translated"
   },
   "status": {
     "active": "Enabled",
@@ -70,7 +72,12 @@
     "showcaseImageRequired": "Upload a home image to show this body type on the home page",
     "showcaseExamples": "Example line",
     "showcaseExamplesPlaceholder": "e.g. Toyota Vios, Honda City",
-    "showcaseExamplesHelp": "A few typical models, shown small under the name on the home card. Optional."
+    "showcaseExamplesHelp": "A few typical models, shown small under the name on the home card. Optional.",
+    "labelEn": "English name",
+    "labelEnPlaceholder": "e.g. Coupe",
+    "labelEnHelp": "Shown when customers browse in English. Leave empty to use the display name above — fine for proper names such as brands.",
+    "descriptionEn": "Secondary line (English)",
+    "descriptionEnPlaceholder": "e.g. 2 seats · sporty"
   },
   "models": {
     "title": "Vehicle models",

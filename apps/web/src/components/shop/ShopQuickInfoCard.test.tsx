@@ -138,3 +138,38 @@ describe('ShopQuickInfoCard — variant="compact"', () => {
     expect(screen.getByRole('link', { name: 'Xem gian hàng' })).toBeTruthy();
   });
 });
+
+describe('ShopQuickInfoCard — variant="inline" (trang chi tiết xe)', () => {
+  it('chưa đủ mẫu: nói "chưa có yêu cầu", KHÔNG vẽ ba con số mẫu của bản vẽ (ADR 0045 điều 3)', () => {
+    renderWithIntl(
+      <ShopQuickInfoCard shop={SHOP} metrics={INSUFFICIENT_METRICS} variant="inline" />,
+    );
+
+    expect(screen.getByText(/Chưa có yêu cầu thuê nào/)).toBeTruthy();
+    expect(screen.queryByText('100%')).toBeNull();
+    expect(screen.queryByText('10 phút')).toBeNull();
+  });
+
+  it('nhãn theo tuyến: gian hàng đã xác minh là "Gian hàng", chủ xe cá nhân là "Chủ xe"', () => {
+    renderWithIntl(<ShopQuickInfoCard shop={SHOP} metrics={READY_GOOD_METRICS} variant="inline" />);
+    expect(screen.getByText('Gian hàng')).toBeTruthy();
+    cleanup();
+
+    renderWithIntl(
+      <ShopQuickInfoCard
+        shop={{ ...SHOP, verified: false }}
+        metrics={READY_GOOD_METRICS}
+        variant="inline"
+      />,
+    );
+    expect(screen.getByText('Chủ xe')).toBeTruthy();
+    expect(screen.queryByText('Gian hàng')).toBeNull();
+  });
+
+  it('đủ mẫu: hàng ba chỉ số dùng nhãn ngắn đã dịch', () => {
+    renderWithIntl(<ShopQuickInfoCard shop={SHOP} metrics={READY_GOOD_METRICS} variant="inline" />);
+    expect(screen.getByText('Tỉ lệ phản hồi')).toBeTruthy();
+    expect(screen.getByText('95%')).toBeTruthy();
+    expect(screen.getByText('Tỉ lệ đồng ý')).toBeTruthy();
+  });
+});

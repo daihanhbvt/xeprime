@@ -8,7 +8,10 @@ import type { CatalogItem, CatalogItemAdmin } from './types';
 
 export interface CatalogItemInput {
   label: string;
+  /** Bản tiếng Anh (ADR 0012) — `null` = chưa dịch, giao diện tiếng Anh dùng `label`. */
+  labelEn?: string | null;
   description?: string | null;
+  descriptionEn?: string | null;
   iconUrl?: string | null;
   /** Loại xe mục này áp dụng — rỗng = mọi loại. */
   vehicleTypes?: string[];

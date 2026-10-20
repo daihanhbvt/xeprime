@@ -16,6 +16,7 @@ import { DiscountTag } from '@/components/data-display/DiscountTag';
 import { ShopQuickInfoCard } from '@/components/shop/ShopQuickInfoCard';
 import { useListingSpecSummary } from '../hooks/use-listing-spec-summary';
 import { pickupPointText } from '../pickup-point';
+import { cx } from '@/lib/cx';
 import styles from './VehicleSummaryPanel.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
@@ -34,6 +35,11 @@ interface VehicleSummaryPanelProps {
   serviceType?: string;
   /** Gói dài hạn đang chọn — có gói thì hiện giá gói thật thay cho giá cơ sở /tháng. */
   packageMonths?: number | null;
+  /**
+   * Mobile: thu thành thẻ gọn (ảnh nhỏ cạnh tên, bỏ điểm nhận + bảng thông số). Chỉ luồng của KHÁCH
+   * bật — khách vừa rời trang chi tiết xe; nhân viên gian hàng tạo đơn hộ thì chưa thấy những thứ đó.
+   */
+  compactOnMobile?: boolean;
 }
 
 /**
@@ -57,6 +63,7 @@ export function VehicleSummaryPanel({
   loading,
   serviceType,
   packageMonths = null,
+  compactOnMobile = false,
 }: VehicleSummaryPanelProps) {
   const t = useTranslations('BookingRequests.flow');
   const dl = useDomainLabel();
@@ -127,7 +134,10 @@ export function VehicleSummaryPanel({
    * hàng) mới là skeleton.
    */
   return (
-    <aside className={styles.panel} aria-busy={pending || undefined}>
+    <aside
+      className={cx(styles.panel, compactOnMobile && styles.compactMobile)}
+      aria-busy={pending || undefined}
+    >
       <div className={styles.hero}>
         {mainImage ? (
           <PreviewImage src={mainImage} alt={name} className={styles.heroImg} />

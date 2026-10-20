@@ -61,8 +61,45 @@
   }
 }
 
+/*
+ * Mobile (≤640px = `--xp-bp-mobile`) — Figma `19771:72494`: lưới 2 × 2, hàng cách 16, mỗi ô là vòng
+ * icon 48 (đệm 12 + icon 24, nền `BG/primary-25`) + nhãn `14px` `Text/Gray/low` + giá trị
+ * `16px/Medium` `Text/Gray/medium`.
+ */
+@media (max-width: 640px) {
+  .card {
+    gap: var(--xp-space-lg) 0;
+    padding: 0;
+  }
+
+  .item {
+    min-width: 0;
+  }
+
+  .iconWrapper {
+    width: 48px;
+    height: 48px;
+    background: var(--xp-color-primary-subtle);
+    font-size: 24px;
+  }
+
+  .label {
+    font-size: var(--xp-font-size-body);
+    line-height: var(--xp-line-height-body);
+  }
+
+  .value {
+    overflow: hidden;
+    color: var(--xp-color-text-secondary);
+    font-size: var(--xp-font-size-body-lg);
+    font-weight: var(--xp-font-weight-medium);
+    line-height: var(--xp-line-height-body-lg);
+    text-overflow: ellipsis;
+  }
+}
+
 /* ── Giao diện tối ─────────────────────────────────────────────────────────
    Vòng icon kem `#fef6ee` thành một đốm sáng chói trên nền tối — đổi sang vàng pha trong suốt. */
-:global([data-theme="dark"]) .iconWrapper {
+:global([data-theme='dark']) .iconWrapper {
   background: var(--xp-color-primary-light);
 }

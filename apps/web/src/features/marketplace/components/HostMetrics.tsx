@@ -81,28 +81,11 @@ export function HostMetrics({
   if (!metrics) return null;
 
   if (hostMetricState(metrics.sampleCount) !== HOST_METRIC_STATE.READY) {
-    if (variant === 'inline') {
-      return (
-        <div className={[styles.block, styles.inlineBlock, className].filter(Boolean).join(' ')}>
-          <ul className={styles.inlineList} aria-label={t('sectionLabel')}>
-            <li className={styles.inlineItem}>
-              <span className={styles.inlineLabel}>Tỉ lệ phản hồi</span>
-              <span className={styles.inlineValue}>100%</span>
-            </li>
-            <li className={styles.inlineItem}>
-              <span className={styles.inlineLabel}>Phản hồi trong</span>
-              <span className={styles.inlineValue}>10 phút</span>
-            </li>
-            <li className={styles.inlineItem}>
-              <span className={styles.inlineLabel}>Tỉ lệ đồng ý</span>
-              <span className={styles.inlineValue}>100%</span>
-            </li>
-          </ul>
-        </div>
-      );
-    }
-
     /*
+     * CẢ HAI biến thể nói cùng một câu "chưa đủ mẫu" — biến thể `inline` từng vẽ ba con số mẫu của
+     * bản vẽ (100% · 10 phút · 100%) cho mọi gian hàng chưa đủ mẫu, tức bịa ra uy tín (ADR 0045
+     * điều 3).
+     *
      * "Đặt ngay" KHÔNG cần chờ đủ mẫu: nó là một CÀI ĐẶT của gian hàng chứ không phải một phép
      * đo thống kê, nên nó đúng ngay từ yêu cầu đầu tiên và là thông tin khách cần nhất khi chưa
      * có gì khác để đọc.
@@ -173,18 +156,19 @@ export function HostMetrics({
   if (items.length === 0) return null;
 
   if (variant === 'inline') {
-    const INLINE_LABELS: Record<string, string> = {
-      responseRate: 'Tỉ lệ phản hồi',
-      responseTime: 'Phản hồi trong',
-      instant: 'Phản hồi trong',
-      acceptKeep: 'Tỉ lệ đồng ý',
-    };
+    // Nhãn ngắn của hàng ba ô (Figma "Chủ xe") — dấu "i" chỉ có ở biến thể đầy đủ.
+    const inlineLabel = (key: string) =>
+      key === 'responseRate'
+        ? t('inlineLabel.responseRate')
+        : key === 'acceptKeep'
+          ? t('inlineLabel.acceptKeep')
+          : t('inlineLabel.responseTime');
     return (
       <div className={[styles.block, styles.inlineBlock, className].filter(Boolean).join(' ')}>
         <ul className={styles.inlineList} aria-label={t('sectionLabel')}>
           {items.map((item) => (
             <li key={item.key} className={styles.inlineItem}>
-              <span className={styles.inlineLabel}>{INLINE_LABELS[item.key] ?? item.label}</span>
+              <span className={styles.inlineLabel}>{inlineLabel(item.key)}</span>
               <span className={styles.inlineValue}>{item.value}</span>
             </li>
           ))}

@@ -1610,5 +1610,13 @@
     "bank_transfer": "chuyển khoản",
     "momo": "Ví MoMo",
     "vnpay": "VNPAY"
+  },
+  "priceRow": {
+    "base": "Tiền thuê gốc",
+    "discount": "Khuyến mãi trực tiếp",
+    "subtotal": "Tạm tính",
+    "delivery": "Phí giao nhận xe",
+    "overtime": "Phí quá giờ",
+    "extras": "Dịch vụ cộng thêm"
   }
 }

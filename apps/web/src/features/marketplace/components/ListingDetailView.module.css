@@ -1,4 +1,7 @@
-/* Trang chi tiết xe Marketplace theo chuẩn Figma v2 (node 19707:83357): 1200px container */
+/*
+ * Trang chi tiết xe Marketplace theo chuẩn Figma v2 — PC `19707:83357` (khung 1200), mobile
+ * `19771:71482` (khung 390). Thứ tự một cột: xem docblock của `ListingDetailView`.
+ */
 
 .wrap {
   max-width: var(--xp-market-container-max-width, 1200px);
@@ -6,28 +9,9 @@
   padding: 24px var(--xp-space-md, 16px) 64px;
 }
 
+/* Đường dẫn (`PageBreadcrumb`) — mobile tự thành thanh trắng tràn mép có nút quay lại. */
 .breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: var(--xp-color-text-tertiary, #717680);
   margin-bottom: 20px;
-}
-
-.breadcrumb a {
-  color: var(--xp-color-text-secondary, #414651);
-  text-decoration: none;
-  transition: color 0.15s ease;
-}
-
-.breadcrumb a:hover {
-  color: var(--xp-color-primary, #e9ac29);
-}
-
-.breadcrumbCurrent {
-  color: var(--xp-color-text, #0e0f12);
-  font-weight: 500;
 }
 
 /* Lưới thân trang 2 cột: Trái 728px, Phải 440px, khe 32px */
@@ -40,6 +24,14 @@
 
 /* Cột trái (728px) */
 .leftCol {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  min-width: 0;
+}
+
+/* Tên + vị trí + thông số — một nhóm để luôn đứng đầu khi các cột tan ra ở khổ một cột. */
+.intro {
   display: flex;
   flex-direction: column;
   gap: 32px;
@@ -108,8 +100,10 @@
   margin-top: 4px;
 }
 
+/* Icon ghim tô bằng `currentColor` — màu đi theo token, tự đổi ở giao diện tối. */
 .locationPinIcon {
   flex-shrink: 0;
+  color: var(--xp-color-text-tertiary);
 }
 
 .headerDivider {
@@ -262,6 +256,7 @@
 
 .addressPinIcon {
   flex-shrink: 0;
+  color: var(--xp-color-text-tertiary);
 }
 
 .pickupMeta {
@@ -289,41 +284,228 @@
   align-self: start;
 }
 
-/* Responsive */
+/*
+ * ── Một cột (≤1024px = `--xp-bp-tablet`) ─────────────────────────────────────
+ *
+ * Cột trái tan ra (`display: contents`) để các khối của nó và cột phải xếp chung một hàng dọc theo
+ * `order` — thẻ đặt xe đứng ngay sau tên + thông số thay vì bị đẩy xuống dưới đánh giá. Thứ tự theo
+ * Figma mobile `19771:71482`: vị trí xe đứng TRƯỚC chủ xe (PC thì ngược lại).
+ */
 @media (max-width: 1024px) {
+  /* `stretch`: lưới PC canh `start`; giữ nó thì mỗi khối co theo nội dung và thanh tab dài đẩy trang tràn ngang. */
   .layout {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
   }
+
+  .leftCol {
+    display: contents;
+  }
+
+  /* Mặc định cho khối mới thêm vào cột trái mà chưa khai thứ tự: xuống cuối, không nhảy lên trên tên xe. */
+  .leftCol > * {
+    order: 6;
+  }
+
+  .intro {
+    order: 1;
+  }
+
+  /* `align-self: start` của cột sticky PC làm khối co theo nội dung trong hàng dọc — trả về trải ngang. */
   .rightCol {
     position: static;
+    align-self: stretch;
+    order: 2;
   }
+
+  .descriptionSection,
+  .featuresSection {
+    order: 3;
+  }
+
+  .locationSection {
+    order: 4;
+  }
+
+  .hostSection {
+    order: 5;
+  }
+
+  .policiesSection,
+  .reviewsSection {
+    order: 6;
+  }
+
   .featuresGrid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
+/*
+ * ── Mobile (≤640px = `--xp-bp-mobile`) — Figma `19771:71482` ─────────────────
+ *
+ * Số đo 16 của bản vẽ viết bằng `--xp-space-lg` — ở ≤640px tầng token đã hạ `md` xuống 12 và `lg`
+ * xuống 16 (`tokens.css` "Mật độ mobile"). Lề ngang khai ở `--page-gutter`: thanh đường dẫn và thẻ đặt
+ * xe tràn mép đọc CHÍNH biến này, không chép lại con số. Không đệm trên — thanh đường dẫn nằm sát
+ * header site. Khối cách nhau 16; tiêu đề khối `18px/Semibold` cách nội dung 8.
+ */
+@media (max-width: 640px) {
+  .wrap {
+    --page-gutter: var(--xp-space-lg);
+    padding: 0 var(--page-gutter) var(--xp-space-xl);
+  }
+
+  .breadcrumb {
+    margin-bottom: 0;
+  }
+
+  .layout {
+    gap: var(--xp-space-lg);
+  }
+
+  /* Khối thông tin: đệm trên 16 (dưới ảnh), tên → thông số → "Tự nhận xe" cách nhau 20. */
+  .intro {
+    gap: var(--xp-space-20);
+    padding-top: var(--xp-space-lg);
+  }
+
+  .rightCol {
+    gap: var(--xp-space-lg);
+  }
+
+  .headerBlock {
+    gap: var(--xp-space-sm);
+  }
+
+  .titleRow {
+    align-items: flex-start;
+    gap: var(--xp-space-12);
+  }
+
+  .titleWithBadge {
+    gap: var(--xp-space-sm);
+    min-width: 0;
+  }
+
+  /* `24px/Semibold` (Figma `19771:72411`) — bậc `h1` của thang mobile là đúng 24/32. */
+  .title {
+    font-size: var(--xp-font-size-h1);
+    font-weight: var(--xp-font-weight-semibold);
+    line-height: var(--xp-line-height-h1);
+    letter-spacing: 0;
+    overflow-wrap: anywhere;
+  }
+
+  /* Nút chia sẻ — tròn 32 (đệm 8 + icon 16), viền `Stroke/gray-low200`; vùng chạm vẫn 44 (`::after`). */
+  .actionIcons {
+    gap: var(--xp-space-12);
+  }
+
+  .actionBtn {
+    position: relative;
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+
+  .actionBtn::after {
+    content: '';
+    position: absolute;
+    inset: calc((32px - var(--xp-touch-target-min)) / 2);
+  }
+
+  .locationRow {
+    align-items: flex-start;
+    gap: var(--xp-space-sm);
+    margin-top: 0;
+    color: var(--xp-color-text-secondary);
+    line-height: var(--xp-line-height-body);
+  }
+
+  .locationPinIcon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .headerDivider {
+    display: none;
+  }
+
+  .sectionTitle {
+    margin-bottom: var(--xp-space-sm);
+    font-weight: var(--xp-font-weight-semibold);
+    line-height: var(--xp-line-height-h3);
+  }
+
+  .sectionHeaderRow {
+    margin-bottom: var(--xp-space-sm);
+  }
+
+  /* Tiện ích: hai cột, khe 12, chữ `16px/Regular` (Figma `19771:72667`). */
+  .featuresGrid {
+    gap: var(--xp-space-12);
+  }
+
+  .featureItem {
+    gap: var(--xp-space-sm);
+    min-width: 0;
+    font-size: var(--xp-font-size-body-lg);
+    line-height: var(--xp-line-height-body-lg);
+  }
+
+  .featureLabel {
+    font-weight: var(--xp-font-weight-regular);
+  }
+
+  /* Vị trí xe: "Mở bản đồ" `16px/Semibold` vàng; bản vẽ mobile không có bản đồ tĩnh. */
+  .openMapLink {
+    gap: var(--xp-space-sm);
+    color: var(--xp-color-primary);
+    font-size: var(--xp-font-size-body-lg);
+    line-height: var(--xp-line-height-body-lg);
+  }
+
+  .mapIcon {
+    color: var(--xp-color-primary);
+  }
+
+  .pickupAddress {
+    align-items: flex-start;
+    margin-bottom: 0;
+    color: var(--xp-color-text-secondary);
+    font-size: var(--xp-font-size-body-lg);
+    font-weight: var(--xp-font-weight-regular);
+    line-height: var(--xp-line-height-body-lg);
+  }
+
+  .addressPinIcon {
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+  }
+
+  .pickupMap {
+    display: none;
+  }
+}
+
 /* ── Giao diện tối ─────────────────────────────────────────────────────────
    Chỉ những màu KHÔNG có token tương đương ở bản sáng (xám `#475467`/`#344054`, viền xanh/xám
-   nhạt) — phần còn lại đã đi qua `--xp-*` nên tự đổi theo khối tối của tokens.css. Icon ghim là
-   SVG có `stroke` viết thẳng trong JSX; thuộc tính trình bày đó thua mọi luật CSS nên đè được ở đây. */
-:global([data-theme="dark"]) .badgeNew {
+   nhạt) — phần còn lại đã đi qua `--xp-*` nên tự đổi theo khối tối của tokens.css. */
+:global([data-theme='dark']) .badgeNew {
   border-color: color-mix(in srgb, #12b76a 35%, transparent);
 }
 
-:global([data-theme="dark"]) .locationRow,
-:global([data-theme="dark"]) .pickupAddress {
+:global([data-theme='dark']) .locationRow,
+:global([data-theme='dark']) .pickupAddress {
   color: var(--xp-color-text-secondary);
 }
 
-:global([data-theme="dark"]) .locationPinIcon,
-:global([data-theme="dark"]) .addressPinIcon {
-  stroke: var(--xp-color-text-tertiary);
-}
-
-:global([data-theme="dark"]) .headerDivider {
+:global([data-theme='dark']) .headerDivider {
   border-top-color: var(--xp-color-border);
 }
 
-:global([data-theme="dark"]) .featureIcon {
+:global([data-theme='dark']) .featureIcon {
   color: var(--xp-color-text-secondary);
 }

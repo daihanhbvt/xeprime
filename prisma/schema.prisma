@@ -1583,8 +1583,13 @@ model CatalogItem {
   /// Bất biến sau khi tạo — sửa key là mồ côi toàn bộ xe đang trỏ vào.
   key              String   @db.VarChar(80)
   label            String   @db.VarChar(120)
+  /// Nhãn tiếng Anh (ADR 0012) — NULL = chưa dịch / tên riêng (hãng xe), giao diện rơi về `label`.
+  /// Có giá trị thì không được trắng — CHECK ở migration.
+  labelEn          String?  @map("label_en") @db.VarChar(120)
   /// Dòng phụ dưới nhãn ở picker/bộ lọc ("5 chỗ · gầm cao").
   description      String?  @db.VarChar(255)
+  /// Dòng phụ tiếng Anh — cùng luật với `labelEn`.
+  descriptionEn    String?  @map("description_en") @db.VarChar(255)
   /// Icon NHỎ ở picker/bộ lọc (kiểu dáng, logo hãng). Admin upload lên R2; dữ liệu nền cũ trỏ file
   /// tĩnh `/body-types/*.png`, `/brands/*.svg`.
   iconUrl          String?  @map("icon_url") @db.Text
@@ -3516,6 +3521,10 @@ model ConversationParticipant {
 model Message {
   id                String   @id @db.Char(26)
   conversationId    String   @map("conversation_id") @db.Char(26)
+  /// Khác NULL ⇔ document của tin này ĐANG nằm trên Firestore. Outbox pump đặt nó sau khi ghi,
+  /// retention xoá về NULL sau khi dọn — nhờ đó worker biết tin nào cần xoá mà không phải đọc
+  /// Firestore. Index một phần `messages_firestore_projection_idx` (viết tay ở migration
+  /// `20261020120000_message_firestore_projection_idx`, Prisma không diễn đạt được `WHERE`).
   firebaseMessageId String?  @map("firebase_message_id") @db.VarChar(160)
   senderUserId      String?  @map("sender_user_id") @db.Char(26)
   /// Khoá chống-gửi-trùng do CLIENT sinh (ULID). Gửi lại sau timeout mạng trả về đúng tin cũ thay

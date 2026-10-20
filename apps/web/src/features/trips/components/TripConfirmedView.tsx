@@ -124,20 +124,21 @@ export function TripConfirmedView({
           aside={<BookingJourney current="confirmed" hasHoldStage={hold != null} complete />}
         />
       }
+      lead={
+        <TripRequestStatusCard
+          variant="confirmed"
+          tag={t('status.tag')}
+          tone="success"
+          title={t('status.title')}
+          body={t('status.body', { vehicle: trip.vehicle.name, owner: trip.shop.name })}
+        >
+          <a href={`#${checklistId}`} className={styles.guideLink}>
+            {t('status.guide')}
+          </a>
+        </TripRequestStatusCard>
+      }
       main={
         <>
-          <TripRequestStatusCard
-            variant="confirmed"
-            tag={t('status.tag')}
-            tone="success"
-            title={t('status.title')}
-            body={t('status.body', { vehicle: trip.vehicle.name, owner: trip.shop.name })}
-          >
-            <a href={`#${checklistId}`} className={styles.guideLink}>
-              {t('status.guide')}
-            </a>
-          </TripRequestStatusCard>
-
           <TripRequestTripCard trip={trip} data={data} ownerAction={ownerAction} />
 
           <PickupChecklist trip={trip} data={data} anchorId={checklistId} />
@@ -145,7 +146,7 @@ export function TripConfirmedView({
           <TripRequestRenterCard trip={trip} />
         </>
       }
-      aside={
+      priority={
         <>
           {/*
             Quay về từ MoMo/VNPAY (ADR 0058) bằng liên kết CŨ `/trips/:id?paymentOrder=` — lượt mở trước
@@ -173,7 +174,10 @@ export function TripConfirmedView({
               description={tDetail('directDeposit.body')}
             />
           ) : null}
-
+        </>
+      }
+      aside={
+        <>
           {breakdown ? (
             <BookingReviewCosts
               listing={data.listing}

@@ -23,7 +23,9 @@ const SELECT = {
   type: true,
   key: true,
   label: true,
+  labelEn: true,
   description: true,
+  descriptionEn: true,
   iconUrl: true,
   showOnHome: true,
   showcaseImageUrl: true,
@@ -57,11 +59,11 @@ function resolveShowcase(
   const next = {
     showOnHome: dto.showOnHome ?? current?.showOnHome ?? false,
     showcaseImageUrl:
-      'showcaseImageUrl' in dto
+      dto.showcaseImageUrl !== undefined
         ? dto.showcaseImageUrl?.trim() || null
         : (current?.showcaseImageUrl ?? null),
     showcaseExamples:
-      'showcaseExamples' in dto
+      dto.showcaseExamples !== undefined
         ? dto.showcaseExamples?.trim() || null
         : (current?.showcaseExamples ?? null),
   };
@@ -162,7 +164,9 @@ export class CatalogService {
           type: dto.type,
           key: dto.key,
           label: dto.label.trim(),
+          labelEn: dto.labelEn?.trim() || null,
           description: dto.description?.trim() || null,
+          descriptionEn: dto.descriptionEn?.trim() || null,
           iconUrl: dto.iconUrl?.trim() || null,
           ...showcase,
           sortOrder: dto.sortOrder ?? (await this.nextSortOrder(dto.type)),
@@ -182,6 +186,7 @@ export class CatalogService {
             type: dto.type,
             key: dto.key,
             label: created.label,
+            labelEn: created.labelEn,
             showOnHome: created.showOnHome,
           },
         },
@@ -204,9 +209,22 @@ export class CatalogService {
       const updated = await tx.catalogItem.update({
         where: { id },
         data: {
+          /*
+           * "Có gửi trường này không" là `!== undefined`, KHÔNG phải `'x' in dto`: `ValidationPipe`
+           * (`transform: true`, target ES2023) dựng instance DTO có ĐỦ mọi khoá — trường không gửi mang
+           * `undefined`. Kiểm bằng `in` thì một lượt bật/tắt `{ active }` xoá trắng mô tả, icon, ảnh
+           * trang chủ và bản dịch. `null` vẫn là "xoá giá trị".
+           */
           ...(dto.label !== undefined ? { label: dto.label.trim() } : {}),
-          ...('description' in dto ? { description: dto.description?.trim() || null } : {}),
-          ...('iconUrl' in dto ? { iconUrl: dto.iconUrl?.trim() || null } : {}),
+          // Chuỗi rỗng / chỉ khoảng trắng = gỡ bản dịch (NULL) — CHECK ở DB không nhận chuỗi trắng.
+          ...(dto.labelEn !== undefined ? { labelEn: dto.labelEn?.trim() || null } : {}),
+          ...(dto.description !== undefined
+            ? { description: dto.description?.trim() || null }
+            : {}),
+          ...(dto.descriptionEn !== undefined
+            ? { descriptionEn: dto.descriptionEn?.trim() || null }
+            : {}),
+          ...(dto.iconUrl !== undefined ? { iconUrl: dto.iconUrl?.trim() || null } : {}),
           ...showcase,
           ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
           ...(dto.vehicleTypes !== undefined ? { vehicleTypes: dto.vehicleTypes } : {}),
@@ -223,6 +241,7 @@ export class CatalogService {
           targetId: id,
           before: {
             label: current.label,
+            labelEn: current.labelEn,
             active: current.active,
             iconUrl: current.iconUrl,
             showOnHome: current.showOnHome,
@@ -230,6 +249,7 @@ export class CatalogService {
           },
           after: {
             label: updated.label,
+            labelEn: updated.labelEn,
             active: updated.active,
             iconUrl: updated.iconUrl,
             showOnHome: updated.showOnHome,
