@@ -314,6 +314,50 @@ describe('PurchaseModal — một loại xe mỗi lần mua (ADR 0065)', () => {
   });
 });
 
+describe('PurchaseModal — Phương án B (Nâng gói ngay)', () => {
+  it('đang có kỳ cùng loại xe: chọn nâng gói ngay hiển thị cảnh báo huỷ ngày còn lại và gửi timing: now', () => {
+    renderModal(vi.fn(), {
+      subscriptionId: 'S1',
+      planId: 'plan-basic',
+      planCode: 'moto_5',
+      planName: 'Xe máy 5 xe',
+      vehicleScope: 'motorbike',
+      phase: 'current',
+      endsAt: '2026-12-01T00:00:00.000Z',
+    });
+
+    pickTier('Chọn gói');
+    fireEvent.click(termCards()[1]!);
+
+    // Ban đầu mặc định nối tiếp sau khi hết hạn, nút ghi "Tạo hoá đơn"
+    expect(screen.queryByText(/Kỳ hiện tại kết thúc ngay hôm nay/)).toBeNull();
+    expect(screen.getByRole('button', { name: /Tạo hoá đơn/ })).toBeTruthy();
+
+    // Chọn "Nâng gói ngay hôm nay"
+    const radioNow = screen.getByRole('radio', { name: /Nâng gói ngay hôm nay/ });
+    fireEvent.click(radioNow);
+
+    // Cảnh báo không hoàn tiền ngày còn lại xuất hiện
+    expect(
+      screen.getByText(
+        /Kỳ hiện tại kết thúc ngay hôm nay. Bạn thanh toán đầy đủ giá gói mới, không hoàn tiền ngày còn lại./,
+      ),
+    ).toBeTruthy();
+
+    // Nút đổi thành "Nâng gói ngay"
+    const submitBtn = screen.getByRole('button', { name: /Nâng gói ngay/ });
+    expect(submitBtn).toBeTruthy();
+
+    fireEvent.click(submitBtn);
+
+    // Gửi đúng body kèm timing: 'now'
+    expect(purchase.mutate).toHaveBeenCalledWith(
+      { planId: 'plan-basic', termMonths: 3, timing: 'now' },
+      expect.anything(),
+    );
+  });
+});
+
 describe('PurchaseModal — lỗi khi tạo hoá đơn', () => {
   it('bậc vừa về "chưa mở bán" (CONFLICT · planStatus=draft) ⇒ câu riêng mời chọn bậc khác', async () => {
     purchase.mutate.mockImplementation((_b: unknown, opts: { onError?: (e: unknown) => void }) =>

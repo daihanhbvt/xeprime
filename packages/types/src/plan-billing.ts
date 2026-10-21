@@ -12,6 +12,10 @@
  */
 
 import { isPlanFeature, type PlanFeature } from './status/billing';
+import {
+  SUBSCRIPTION_CHANGE_TIMING,
+  type SubscriptionChangeTiming,
+} from './subscription-term';
 
 // ── Kỳ hạn ──────────────────────────────────────────────────────────────────
 
@@ -306,6 +310,11 @@ export interface PlanInvoiceSnapshot {
    * parser đọc `all` — đúng phạm vi của mọi bậc thời đó.
    */
   vehicleScope: PlanVehicleScope;
+  /**
+   * Thời điểm bắt đầu gói: 'next_term' (mặc định) = nối đuôi kỳ còn hạn; 'now' = nâng gói ngay
+   * và huỷ các kỳ còn hạn của cùng loại xe (ADR 0065 điều 8).
+   */
+  timing?: SubscriptionChangeTiming;
   /** Hạn mức sẽ ghi lên dòng thuê bao khi hoá đơn này kích hoạt gói (ADR 0041 điều 3). */
   quota: PlanQuotaSnapshot;
   lines: PlanInvoiceLine[];
@@ -462,6 +471,10 @@ export function parsePlanInvoiceSnapshot(value: unknown): PlanInvoiceSnapshot | 
     planCode,
     termMonths,
     vehicleScope: planVehicleScopeOf(raw['vehicleScope']),
+    timing:
+      raw['timing'] === SUBSCRIPTION_CHANGE_TIMING.NOW
+        ? SUBSCRIPTION_CHANGE_TIMING.NOW
+        : SUBSCRIPTION_CHANGE_TIMING.NEXT_TERM,
     quota: invoiceQuota(raw),
     lines,
   };

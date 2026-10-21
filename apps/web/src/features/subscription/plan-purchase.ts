@@ -4,8 +4,10 @@ import { useState } from 'react';
 import { buildPlanPricingCards, sumMoney, type PlanPricingCard } from '@xeprime/domain';
 import {
   PLAN_VEHICLE_SCOPE,
+  SUBSCRIPTION_CHANGE_TIMING,
   type MoneyString,
   type PlanLimitsJson,
+  type SubscriptionChangeTiming,
   type SubscriptionTermMonths,
 } from '@xeprime/types';
 
@@ -75,11 +77,14 @@ export interface PlanPurchaseState {
   planId: string | null;
   selected: PlanTier | undefined;
   termMonths: SubscriptionTermMonths | null;
+  /** Thời điểm áp dụng gói mới: next_term (nối đuôi) hoặc now (nâng gói ngay, ADR 0065). */
+  timing: SubscriptionChangeTiming;
   total: MoneyString | null;
   /** `null` = chưa đủ để mua (chưa chọn bậc/kỳ hạn, hoặc bậc đang chọn bán bằng tư vấn). */
   selection: PlanPurchaseSelection | null;
   selectPlan: (id: string) => void;
   setTermMonths: (months: SubscriptionTermMonths) => void;
+  setTiming: (timing: SubscriptionChangeTiming) => void;
   /**
    * Xoá sạch lựa chọn — cho vỏ dùng lại được instance này (hộp thoại mở/đóng nhiều lần).
    *
@@ -94,6 +99,9 @@ export interface PlanPurchaseState {
 export function usePlanPurchase(plans: readonly TenantPlan[]): PlanPurchaseState {
   const [planId, setPlanId] = useState<string | null>(null);
   const [termMonths, setTermMonths] = useState<SubscriptionTermMonths | null>(null);
+  const [timing, setTiming] = useState<SubscriptionChangeTiming>(
+    SUBSCRIPTION_CHANGE_TIMING.NEXT_TERM,
+  );
 
   /*
    * Lọc theo CHẾ ĐỘ THU PHÍ — PHÒNG THỦ TẦNG HAI, không phải luật.
@@ -144,18 +152,28 @@ export function usePlanPurchase(plans: readonly TenantPlan[]): PlanPurchaseState
     planId,
     selected,
     termMonths,
+    timing,
     total,
     // Bậc tư vấn không bao giờ dựng được `selection`: nút của nó là "Liên hệ tư vấn", không phải
     // "Tạo hoá đơn" (ADR 0041 điều 5).
     selection:
       selected?.selfServe && termMonths != null && total != null
-        ? { body: { planId: selected.plan.id, termMonths }, total }
+        ? {
+            body: {
+              planId: selected.plan.id,
+              termMonths,
+              ...(timing === SUBSCRIPTION_CHANGE_TIMING.NOW ? { timing } : {}),
+            },
+            total,
+          }
         : null,
     selectPlan,
     setTermMonths,
+    setTiming,
     reset: () => {
       setPlanId(null);
       setTermMonths(null);
+      setTiming(SUBSCRIPTION_CHANGE_TIMING.NEXT_TERM);
     },
   };
 }

@@ -261,6 +261,11 @@ describe('phạm vi loại xe của bậc gói (ADR 0065)', () => {
       lines: [],
     });
     expect(snap?.vehicleScope).toBe('all');
+    expect(snap?.timing).toBe('next_term');
+    expect(
+      parsePlanInvoiceSnapshot({ planId: 'P', planCode: 'car_5', termMonths: 1, vehicleScope: 'car', timing: 'now' })
+        ?.timing,
+    ).toBe('now');
     expect(
       parsePlanInvoiceSnapshot({ planId: 'P', planCode: 'car_5', termMonths: 1, vehicleScope: 'car' })
         ?.vehicleScope,

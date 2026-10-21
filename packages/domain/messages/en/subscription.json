@@ -106,7 +106,13 @@
     "chainsAfter": "You are on {plan} until {date}. The new plan starts right after that, so you lose no days of the current term.",
     "startsOnPayment": "The plan starts as soon as XePrime receives your payment.",
     "replacesPending": "Invoice {code} for this vehicle type is awaiting payment. Creating a new invoice cancels that code. If you already transferred with the old code, do not create a new one.",
-    "planNotOnSale": "This plan has just stopped taking new purchases. Choose another plan or reload the price list."
+    "planNotOnSale": "This plan has just stopped taking new purchases. Choose another plan or reload the price list.",
+    "submitNow": "Upgrade now",
+    "timingLabel": "Effective timing",
+    "timingNextTerm": "Queue after current term",
+    "timingNow": "Upgrade immediately today",
+    "timingNowDesc": "Starts as soon as payment is confirmed",
+    "timingNowWarning": "The current term ends today. You pay the full price of the new tier, with no refund for remaining days."
   },
   "payment": {
     "title": "Transfer to activate your plan",

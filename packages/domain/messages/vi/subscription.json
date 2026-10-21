@@ -106,7 +106,13 @@
     "chainsAfter": "Bạn đang dùng {plan} tới {date}. Gói mới bắt đầu ngay sau ngày đó — không mất ngày nào của kỳ đang chạy.",
     "startsOnPayment": "Gói bắt đầu ngay khi XePrime nhận được tiền.",
     "replacesPending": "Hoá đơn {code} của loại xe này đang chờ thanh toán. Tạo hoá đơn mới sẽ huỷ mã đó — nếu bạn đã chuyển khoản theo mã cũ, đừng tạo mã mới.",
-    "planNotOnSale": "Gói này vừa ngừng nhận mua mới. Chọn một gói khác hoặc tải lại bảng giá."
+    "planNotOnSale": "Gói này vừa ngừng nhận mua mới. Chọn một gói khác hoặc tải lại bảng giá.",
+    "submitNow": "Nâng gói ngay",
+    "timingLabel": "Thời điểm áp dụng",
+    "timingNextTerm": "Nối tiếp sau khi hết hạn",
+    "timingNow": "Nâng gói ngay hôm nay",
+    "timingNowDesc": "Bắt đầu ngay khi thanh toán thành công",
+    "timingNowWarning": "Kỳ hiện tại kết thúc ngay hôm nay. Bạn thanh toán đầy đủ giá gói mới, không hoàn tiền ngày còn lại."
   },
   "payment": {
     "title": "Chuyển khoản để kích hoạt gói",

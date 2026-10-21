@@ -580,6 +580,15 @@ export class PurchaseSubscriptionDto {
   @Type(() => Number)
   @IsIn([...SUBSCRIPTION_TERM_MONTHS])
   termMonths!: number;
+
+  @ApiPropertyOptional({
+    enum: SUBSCRIPTION_CHANGE_TIMING_VALUES,
+    description:
+      'Bỏ trống hoặc next_term = nối đuôi kỳ còn hạn; now = huỷ các kỳ còn hạn và bắt đầu ngay',
+  })
+  @IsOptional()
+  @IsIn(SUBSCRIPTION_CHANGE_TIMING_VALUES)
+  timing?: SubscriptionChangeTiming;
 }
 
 /**
