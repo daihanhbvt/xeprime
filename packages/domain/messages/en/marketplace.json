@@ -168,6 +168,7 @@
     "sort": "Sort",
     "priceRange": "Price / day",
     "vehicleType": "Vehicle type",
+    "bodyType": "Body type",
     "brand": "Brand",
     "transmission": "Transmission",
     "seats": "Seats",

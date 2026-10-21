@@ -57,6 +57,21 @@ export function QuickFilterPills({
   const bodyTypeItems = catalog[CATALOG_TYPE.BODY_TYPE] ?? [];
   const brandItems = catalog[CATALOG_TYPE.VEHICLE_BRAND] ?? [];
 
+  const displayedBrandItems = useMemo(() => {
+    if (isMotorbike) {
+      const MOTORBIKE_BRAND_KEYS = new Set([
+        'honda', 'yamaha', 'piaggio', 'vespa', 'vinfast', 'suzuki', 'sym',
+        'ducati', 'kawasaki', 'bmw', 'ktm', 'triumph', 'harley-davidson',
+        'gogoro', 'yadea', 'datbike', 'kymco',
+      ]);
+      const filtered = brandItems.filter((b) => MOTORBIKE_BRAND_KEYS.has(b.key.toLowerCase()));
+      return filtered.length > 0 ? filtered : brandItems;
+    }
+    const NON_CAR_BRAND_KEYS = new Set(['yamaha', 'piaggio', 'vespa', 'sym', 'datbike', 'kymco', 'yadea']);
+    const filtered = brandItems.filter((b) => !NON_CAR_BRAND_KEYS.has(b.key.toLowerCase()));
+    return filtered.length > 0 ? filtered : brandItems;
+  }, [brandItems, isMotorbike]);
+
   // Local state for popovers to control open/close
   const [openKey, setOpenKey] = useState<string | null>(null);
 
@@ -164,7 +179,7 @@ export function QuickFilterPills({
         placement="bottomLeft"
         content={
           <div className={styles.popoverBody}>
-            {brandItems.slice(0, 8).map((b) => {
+            {displayedBrandItems.slice(0, 8).map((b) => {
               const checked = (filters.brand ?? []).includes(b.key);
               return (
                 <label key={b.key} className={styles.checkboxItem}>
@@ -200,7 +215,7 @@ export function QuickFilterPills({
         </button>
       </Popover>
 
-      {/* 3. Kiểu xe (BodyType for Car, MotorbikeCategory for Motorbike) */}
+      {/* 3. Kiểu dáng (BodyType for Car, MotorbikeCategory for Motorbike) */}
       <Popover
         trigger="click"
         open={openKey === 'bodyType'}
@@ -254,7 +269,15 @@ export function QuickFilterPills({
           <span className={styles.pillIcon}>
             <CarOutlined />
           </span>
-          <span>{tFilters('vehicleType')}</span>
+          <span>
+            {isMotorbike
+              ? (filters.motorbikeCategory?.length ?? 0) > 0
+                ? `${filters.motorbikeCategory!.length} ${tFilters('bodyType')}`
+                : tFilters('bodyType')
+              : (filters.bodyType?.length ?? 0) > 0
+                ? `${filters.bodyType!.length} ${tFilters('bodyType')}`
+                : tFilters('bodyType')}
+          </span>
           <DownOutlined className={styles.pillArrow} />
         </button>
       </Popover>
@@ -284,54 +307,141 @@ export function QuickFilterPills({
                 <CheckOutlined className={styles.checkIcon} />
               ) : null}
             </button>
-            <button
-              type="button"
-              className={cx(
-                styles.menuItem,
-                filters.priceMax === 500_000 && styles.menuItemActive,
-              )}
-              onClick={() => {
-                setFilters({ priceMin: undefined, priceMax: 500_000 });
-                setOpenKey(null);
-              }}
-            >
-              <span>Dưới 500k</span>
-              {filters.priceMax === 500_000 ? (
-                <CheckOutlined className={styles.checkIcon} />
-              ) : null}
-            </button>
-            <button
-              type="button"
-              className={cx(
-                styles.menuItem,
-                filters.priceMin === 500_000 && filters.priceMax === 1_000_000 && styles.menuItemActive,
-              )}
-              onClick={() => {
-                setFilters({ priceMin: 500_000, priceMax: 1_000_000 });
-                setOpenKey(null);
-              }}
-            >
-              <span>500k – 1 triệu</span>
-              {filters.priceMin === 500_000 && filters.priceMax === 1_000_000 ? (
-                <CheckOutlined className={styles.checkIcon} />
-              ) : null}
-            </button>
-            <button
-              type="button"
-              className={cx(
-                styles.menuItem,
-                filters.priceMin === 1_000_000 && styles.menuItemActive,
-              )}
-              onClick={() => {
-                setFilters({ priceMin: 1_000_000, priceMax: undefined });
-                setOpenKey(null);
-              }}
-            >
-              <span>Trên 1 triệu</span>
-              {filters.priceMin === 1_000_000 ? (
-                <CheckOutlined className={styles.checkIcon} />
-              ) : null}
-            </button>
+            {isMotorbike ? (
+              <>
+                <button
+                  type="button"
+                  className={cx(
+                    styles.menuItem,
+                    filters.priceMin == null && filters.priceMax === 150_000 && styles.menuItemActive,
+                  )}
+                  onClick={() => {
+                    setFilters({ priceMin: undefined, priceMax: 150_000 });
+                    setOpenKey(null);
+                  }}
+                >
+                  <span>Dưới 150k</span>
+                  {filters.priceMin == null && filters.priceMax === 150_000 ? (
+                    <CheckOutlined className={styles.checkIcon} />
+                  ) : null}
+                </button>
+                <button
+                  type="button"
+                  className={cx(
+                    styles.menuItem,
+                    filters.priceMin === 150_000 && filters.priceMax === 250_000 && styles.menuItemActive,
+                  )}
+                  onClick={() => {
+                    setFilters({ priceMin: 150_000, priceMax: 250_000 });
+                    setOpenKey(null);
+                  }}
+                >
+                  <span>150k – 250k</span>
+                  {filters.priceMin === 150_000 && filters.priceMax === 250_000 ? (
+                    <CheckOutlined className={styles.checkIcon} />
+                  ) : null}
+                </button>
+                <button
+                  type="button"
+                  className={cx(
+                    styles.menuItem,
+                    filters.priceMin === 250_000 && filters.priceMax === 400_000 && styles.menuItemActive,
+                  )}
+                  onClick={() => {
+                    setFilters({ priceMin: 250_000, priceMax: 400_000 });
+                    setOpenKey(null);
+                  }}
+                >
+                  <span>250k – 400k</span>
+                  {filters.priceMin === 250_000 && filters.priceMax === 400_000 ? (
+                    <CheckOutlined className={styles.checkIcon} />
+                  ) : null}
+                </button>
+                <button
+                  type="button"
+                  className={cx(
+                    styles.menuItem,
+                    filters.priceMin === 400_000 && filters.priceMax == null && styles.menuItemActive,
+                  )}
+                  onClick={() => {
+                    setFilters({ priceMin: 400_000, priceMax: undefined });
+                    setOpenKey(null);
+                  }}
+                >
+                  <span>Trên 400k</span>
+                  {filters.priceMin === 400_000 && filters.priceMax == null ? (
+                    <CheckOutlined className={styles.checkIcon} />
+                  ) : null}
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className={cx(
+                    styles.menuItem,
+                    filters.priceMin == null && filters.priceMax === 800_000 && styles.menuItemActive,
+                  )}
+                  onClick={() => {
+                    setFilters({ priceMin: undefined, priceMax: 800_000 });
+                    setOpenKey(null);
+                  }}
+                >
+                  <span>Dưới 800k</span>
+                  {filters.priceMin == null && filters.priceMax === 800_000 ? (
+                    <CheckOutlined className={styles.checkIcon} />
+                  ) : null}
+                </button>
+                <button
+                  type="button"
+                  className={cx(
+                    styles.menuItem,
+                    filters.priceMin === 800_000 && filters.priceMax === 1_500_000 && styles.menuItemActive,
+                  )}
+                  onClick={() => {
+                    setFilters({ priceMin: 800_000, priceMax: 1_500_000 });
+                    setOpenKey(null);
+                  }}
+                >
+                  <span>800k – 1.5 triệu</span>
+                  {filters.priceMin === 800_000 && filters.priceMax === 1_500_000 ? (
+                    <CheckOutlined className={styles.checkIcon} />
+                  ) : null}
+                </button>
+                <button
+                  type="button"
+                  className={cx(
+                    styles.menuItem,
+                    filters.priceMin === 1_500_000 && filters.priceMax === 2_500_000 && styles.menuItemActive,
+                  )}
+                  onClick={() => {
+                    setFilters({ priceMin: 1_500_000, priceMax: 2_500_000 });
+                    setOpenKey(null);
+                  }}
+                >
+                  <span>1.5 triệu – 2.5 triệu</span>
+                  {filters.priceMin === 1_500_000 && filters.priceMax === 2_500_000 ? (
+                    <CheckOutlined className={styles.checkIcon} />
+                  ) : null}
+                </button>
+                <button
+                  type="button"
+                  className={cx(
+                    styles.menuItem,
+                    filters.priceMin === 2_500_000 && filters.priceMax == null && styles.menuItemActive,
+                  )}
+                  onClick={() => {
+                    setFilters({ priceMin: 2_500_000, priceMax: undefined });
+                    setOpenKey(null);
+                  }}
+                >
+                  <span>Trên 2.5 triệu</span>
+                  {filters.priceMin === 2_500_000 && filters.priceMax == null ? (
+                    <CheckOutlined className={styles.checkIcon} />
+                  ) : null}
+                </button>
+              </>
+            )}
           </div>
         }
       >

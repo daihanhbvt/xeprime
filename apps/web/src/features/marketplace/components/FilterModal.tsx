@@ -293,10 +293,10 @@ export function FilterModal({ open, onClose }: FilterModalProps) {
                 ) : null}
               </div>
 
-              {/* Kiểu xe (BodyType cho ô tô, Phân khúc cho xe máy) */}
+              {/* Kiểu dáng (BodyType cho ô tô, Phân khúc cho xe máy) */}
               <div className={styles.section}>
                 <div className={styles.sectionHeader}>
-                  <h3 className={styles.sectionTitle}>{t('vehicleType')}</h3>
+                  <h3 className={styles.sectionTitle}>{t('bodyType')}</h3>
                   <span className={styles.sectionHint}>{t('multiple')}</span>
                 </div>
                 <div className={styles.optionsGrid}>

@@ -41,6 +41,8 @@ export const antdTheme: ThemeConfig = {
     // MỘT token với nền "đang chọn" của CSS Module, để hai nơi không trôi khỏi nhau.
     colorPrimaryBg: XP_TOKENS['color-bg-selected'],
     colorPrimaryBgHover: XP_TOKENS['color-primary-muted'],
+    controlItemBgHover: 'rgba(233, 172, 41, 0.08)',
+    controlItemBgActive: XP_TOKENS['color-bg-selected'],
     // `colorLink` KHÔNG set: Figma chưa định nghĩa màu link, để AntD dẫn xuất từ `colorInfo`
     // như hiện tại. Đổi link sang gold là quyết định thiết kế, không phải ánh xạ token (P19).
 
