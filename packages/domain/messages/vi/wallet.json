@@ -136,6 +136,7 @@
       "returnAt": "Ngày về",
       "unitAmount": "Đơn giá",
       "revenue": "Doanh thu",
+      "commission": "Hoa hồng",
       "tax": "Thuế KD",
       "balanceChange": "Thay đổi SD"
     },
@@ -148,13 +149,14 @@
       "payAtPickup": "Khách trả trực tiếp khi nhận xe",
       "payAtPickupHint": "Phần này khách đưa thẳng cho bạn, không đi qua XePrime.",
       "subscriptionFee": "Phí quản lý & vận hành gói nền tảng",
+      "commission": "Tổng hoa hồng XePrime giữ lại",
       "tax": "Tổng thuế KD khấu trừ hộ",
       "ownerIncome": "Thu nhập chủ gian hàng",
-      "ownerIncomeHint": "Doanh thu trừ thuế và phí gói — gồm cả phần khách trả trực tiếp.",
+      "ownerIncomeHint": "Doanh thu trừ hoa hồng, thuế và phí gói — gồm cả phần khách trả trực tiếp.",
       "ownerIncomeCommission": "Thu nhập chủ xe",
       "ownerIncomeGeneric": "Thu nhập",
       "appSubscriptionFee": "Phí quản lý & vận hành nền tảng",
-      "appOwnerIncomeHint": "Doanh thu trừ thuế và phí nền tảng — gồm cả phần khách trả trực tiếp."
+      "appOwnerIncomeHint": "Doanh thu trừ hoa hồng, thuế và phí nền tảng — gồm cả phần khách trả trực tiếp."
     }
   },
   "pill": {

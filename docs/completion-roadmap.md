@@ -1,6 +1,6 @@
 # XePrime — Completion Roadmap
 
-> Cập nhật: 14/10/2026 (ADR 0060 — đăng nhập SĐT, đặt xe cần tài khoản) · 06/10/2026 (dọn tài liệu · trạng thái staging thật · tiến độ ADR 0043–0053)
+> Cập nhật: 21/10/2026 (ADR 0064 luồng tiền v2 · ADR 0065 gói theo loại xe) · 14/10/2026 (ADR 0060 — đăng nhập SĐT, đặt xe cần tài khoản) · 06/10/2026 (dọn tài liệu · trạng thái staging thật · tiến độ ADR 0043–0053)
 > Trạng thái: **Canonical — tiến độ và thứ tự thực hiện**
 > Tầm nhìn: [`design/02_PRODUCT_VISION.md`](design/02_PRODUCT_VISION.md)
 > Khoảng trống chi tiết: [`design/03_PRODUCT_GAP_ANALYSIS.md`](design/03_PRODUCT_GAP_ANALYSIS.md)
@@ -23,6 +23,7 @@ Trạng thái dưới đây phân biệt rõ **đã có trong source/feature bra
 | SePay subscription W4   | **Đã merge vào `develop` và lên staging**; chưa vượt Gate R2 | Có VietQR, webhook, bank matching, xử lý thiếu/thừa/trùng và admin match tay; còn cần cấu hình môi trường thật và UAT gate                                              |
 | Cổng MoMo · VNPAY (ADR 0058) | **Đủ mã, chưa merge (09/10/2026), mặc định TẮT; chưa vượt gate nào** | Phương thức bổ sung cho hoá đơn gói và tiền giữ chỗ: sổ `payment_gateway_orders` + nhật ký kết quả, IPN có chữ ký, truy vấn phía server, bộ quét định kỳ, hàng đợi người xử lý (hỏi lại · đóng · ghi nhận tay). CHƯA CÓ: bộ khoá sandbox thật + UAT staging (third-party-keys §8c.4), hợp đồng merchant, quyết định phí cổng/hoàn tiền/đối soát (ADR 0058 Q1–Q8). Cả hai luồng bị mã chặn ở production cho tới khi ADR 0058 Accepted; app native chưa có lối này |
 | Marketplace money       | **Đủ mã, đã lên staging; chưa vượt gate nào** | Mọi mảnh của luồng tiền ADR 0032/0033/0044 đã có mã + test và đã được deploy lên staging (mục 8.1). CHƯA CÓ: một lượt UAT tiền có bằng chứng trên staging, đối tác bảo hiểm thật, ý kiến thuế, ý kiến pháp lý thu hộ. Bảo hiểm và thuế đang BẬT bằng **số tham khảo thị trường** theo chỉ đạo 14/09 — xem mục 5 quyết định 4 và 5 |
+| Luồng tiền v2 + gói theo loại xe (ADR 0064 · 0065) | **Đang triển khai (21/10/2026)** | Lõi tính tiền v2 đã có trong `@xeprime/types` + API (commit `a140472f`, migration `20261020170000_financial_flow_v2`, chính sách phí v7): phí sàn cố định, hoa hồng lũy tiến, tiền giữ chỗ 30% có sàn, cửa sổ động, `MicMockInsurancePartner`. ĐANG LÀM: bỏ phí giao xe khỏi cơ sở thuế; gỡ trường phía chủ xe khỏi báo giá công khai; cổng `INSURANCE_PARTNER` cho `IV`/`IP` + ẩn ô tích ở production; form admin chính sách phí v2; màn danh mục sản phẩm MIC + hàng đợi chứng nhận (tab Bảo hiểm `/admin/money`); bậc giao xe theo km; gói theo loại xe ở backend (phạm vi, EXCLUDE, hoá đơn mở theo phạm vi, migration chuyển miễn phí) + web (`/manage/subscription`, onboarding, admin gán gói); UX cửa sổ động và huỷ (mốc huỷ miễn phí trước khi trả). CHƯA LÀM: app native theo v2 + gói theo loại (đội mobile); chi trả tài xế (hoãn, cần ADR riêng) |
 | Basic-owner experience  | **Đã tách ở code (ADR 0038 · 0053); chưa vượt gate** | Ranh giới hai tuyến chặn ở server (ADR 0038 điều 1, 3, 4, 5). Theo ADR 0053: **ví theo TÀI KHOẢN** (tài khoản khách có ví riêng, ví gian hàng thuộc tenant; tiền hoàn chuyến đi thuê luôn về ví tài khoản khách qua `resolveRefundWalletOwner`), **tài khoản đối tác/quản trị không đặt xe** (đặt xe chỉ ở realm `customer`), **chặn tự đặt xe** bằng phép so SĐT ĐÃ XÁC MINH giữa tài khoản khách và chủ/thành viên gian hàng ở backend (`CANNOT_BOOK_OWN_VEHICLE`). CHƯA CÓ: smoke test có bằng chứng cho bốn nhóm người dùng trên staging |
 | Khuyến mãi nền tảng     | **Đã có mã (ADR 0046); chưa vượt gate R3**    | Mã do XePrime tài trợ: admin phát hành, khách áp ở web + app, dòng tiền khép kín qua hold/đơn/hoàn. CHƯA CÓ: một chiến dịch chạy thật và một lần đối soát ngân sách tài trợ trên staging |
 | Xếp hạng chợ xe (ADR 0043) | **Đã có mã, đã lên staging (22/09)**     | `rank_score` denormalize trên listing (`prisma/src/listing-rank.ts`) + job ngày `apps/worker/src/jobs/listing-rank-refresh.ts` + `GET /public/listings/recommended` (bậc địa lý, trần 2 xe/gian hàng). CHƯA CÓ: đo tác động lên conversion ở pilot |
@@ -39,23 +40,23 @@ Trạng thái dưới đây phân biệt rõ **đã có trong source/feature bra
 
 Không dùng phần trăm hoàn thành tổng dự án: một màn hình đơn giản và một luồng giữ tiền không có cùng trọng số. Mỗi release chỉ được coi là xong khi vượt gate tương ứng.
 
-## 2. Định hướng hiện hành (chốt 07/09/2026, sửa theo ADR 0032 và ADR 0041)
+## 2. Định hướng hiện hành (chốt 07/09/2026, sửa theo ADR 0032, ADR 0041, rồi ADR 0064/0065 ngày 21/10/2026)
 
 1. XePrime là một marketplace đăng/thuê xe và bán phần mềm quản lý cho thuê xe.
 2. Một chủ xe có hai lựa chọn:
-   - **Basic owner:** không trả thuê bao; booking on-platform áp dụng phí dịch vụ XePrime ở **phía khách thuê**; dùng Owner Lite.
-   - **Gian hàng thuê bao:** trả theo số xe/kỳ hạn; 0% phí dịch vụ XePrime cộng vào giá khách trong thời gian gói hiệu lực; dùng đầy đủ Manage.
-3. Gói gian hàng bán theo **BA BẬC trần SỐ XE** (tổng ô tô + xe máy, không chia theo loại) và kỳ hạn 1/3/6/12 tháng — ADR 0041: **Cơ bản** 3 xe / 1 chi nhánh (100.000đ · 250.000đ · 450.000đ · 800.000đ), **Nâng cao** 10 xe / 3 chi nhánh (250.000đ · 650.000đ · 1.200.000đ · 2.000.000đ), **Chuyên nghiệp** không giới hạn, bán bằng tư vấn. Giá mỗi kỳ là con số tuyệt đối admin cấu hình ở `limits.termPrices`; giá theo chỗ ô tô/xe máy của ADR 0029 điều 3 đã bị ghi đè. Đây vẫn là giá pilot, chưa phải giá production.
-4. Định hướng bảo hiểm là hợp tác với **PVI**. Theo ADR 0032 điều 2, **khách** trả cả `IV` (bảo hiểm xe/chuyến, bắt buộc) lẫn `IP` (bảo hiểm tai nạn người, tùy chọn) trong khoản thanh toán online; chủ xe không chịu và không bị khấu trừ khoản này. Bảo hiểm chỉ phát hành ở mốc bàn giao (ADR 0032 điều 4). Thu tiền khách thật chỉ khi đã có thỏa thuận, sản phẩm và biểu phí thật (gate L2).
+   - **Basic owner:** không trả thuê bao; mỗi đơn khách trả phí sàn cố định (50.000đ ô tô / 30.000đ xe máy), chủ xe chịu hoa hồng lũy tiến theo ngày (10/7/3/0%) — ADR 0064; dùng Owner Lite.
+   - **Gian hàng thuê bao:** trả gói theo loại xe/kỳ hạn; khách vẫn trả phí sàn cố định, hoa hồng 0% trong thời gian gói hiệu lực; dùng đầy đủ Manage.
+3. Gói gian hàng bán theo **LOẠI XE** — ADR 0065 (thay ba bậc tổng số xe của ADR 0041): `moto_1/5/10`, `car_1/5/10`, `enterprise_contact` (không giới hạn, bán bằng tư vấn); tối đa một gói xe máy + một gói ô tô cùng lúc; kỳ hạn 1/3/6/12 tháng; bỏ trần chi nhánh. Giá mỗi kỳ là con số tuyệt đối admin cấu hình ở `limits.termPrices`; giá theo chỗ ô tô/xe máy của ADR 0029 điều 3 đã bị ghi đè. Đây vẫn là giá pilot, chưa phải giá production.
+4. Định hướng bảo hiểm là hợp tác với **MIC** (trước đây PVI). Theo ADR 0064 điều 10, `IV` (vật chất xe) và `IP` (tai nạn người) đều **tuỳ chọn**, do **khách** trả trong tiền giữ chỗ, và server chỉ cộng khi `INSURANCE_PARTNER` khác `none` — production ẩn và không thu cho tới khi có hợp đồng; staging phát GCN TEST. Bảo hiểm chỉ phát hành ở mốc bàn giao (ADR 0032 điều 4). Thu tiền khách thật chỉ khi đã có thỏa thuận, sản phẩm và biểu phí thật (gate L2).
 5. Basic owner bắt buộc có khoản giữ chỗ với booking đủ điều kiện.
 6. Tiền còn lại có thể trả trực tiếp chủ xe; phương án nền tảng thu hộ toàn bộ chỉ mở khi đã đủ legal/payment/operations gate.
 7. Số tiền chờ trả chủ xe là sổ công nợ nội bộ, không phải ví điện tử đa dụng.
 8. Gian hàng có thể nhận liên hệ/giao dịch trực tiếp; UI phải nói rõ giới hạn bảo vệ của XePrime ngoài nền tảng.
 9. Gói có thể tăng ưu tiên hiển thị trong nhóm kết quả phù hợp, không mua quyền đứng trên một kết quả kém chất lượng.
 
-Với tuyến Basic, tổng giá khách thấy gồm giá thuê do chủ xe đặt và các dòng phụ phí chuyến hợp lệ. Pilot khởi đầu chỉ bật **phí dịch vụ XePrime 10%** theo policy; khoản này không bị khấu trừ khỏi tiền thuê của chủ xe. Thuế và bảo hiểm chỉ được bật bằng số thực sau khi vượt gate tương ứng. `commissionPercent` trong code cũ phải được hiểu là tỷ lệ phí dịch vụ cộng vào giá khách, không phải tỷ lệ trừ vào owner earning.
+Tổng khách thấy = tiền thuê + phí sàn + bảo hiểm đã chọn (+ phí giao xe trả tay lúc nhận). Tiền giữ chỗ là 30% của phần đó (có sàn), phí giao xe nằm ngoài; hoa hồng và thuế (10%, cơ sở không gồm phí giao xe) trừ vào tiền chủ xe, không hiện ở báo giá công khai. Chi tiết: [ADR 0064](decisions/0064-financial-flow-v2.md), bảng ví dụ ở [`financial-system-architecture.md`](financial-system-architecture.md). *(Mô hình "phí dịch vụ 10% phía khách" của ADR 0029 điều 1 đã bị ADR 0064 thay.)*
 
-Chi tiết và quan hệ ghi đè ADR cũ: [ADR 0028](decisions/0028-marketplace-subscription-fees-and-custodied-funds.md), [ADR 0029](decisions/0029-per-vehicle-flat-pricing-and-customer-side-fees.md) và [ADR 0041](decisions/0041-plan-tiers-by-vehicle-count.md). Trong phạm vi NGƯỜI trả phí dịch vụ, ADR 0029 (điều 1–2) được ưu tiên; trong phạm vi CÁCH ĐÓNG GÓI và ĐỊNH GIÁ tuyến gói, ADR 0041 ghi đè giá theo chỗ của ADR 0029 điều 3.
+Chi tiết và quan hệ ghi đè ADR cũ: [ADR 0028](decisions/0028-marketplace-subscription-fees-and-custodied-funds.md), [ADR 0029](decisions/0029-per-vehicle-flat-pricing-and-customer-side-fees.md) và [ADR 0041](decisions/0041-plan-tiers-by-vehicle-count.md). Trong phạm vi NGƯỜI trả từng dòng phí, ADR 0064 thắng ADR 0029 điều 1–2; trong phạm vi CÁCH ĐÓNG GÓI tuyến gói, ADR 0065 thắng ADR 0041 điều 1/4/7 (giá tuyệt đối từng kỳ của ADR 0041 điều 2 giữ nguyên).
 
 ## 3. Lộ trình hiện hành
 
@@ -233,16 +234,19 @@ Backlog/acceptance criteria đầy đủ: [`design/03_PRODUCT_GAP_ANALYSIS.md`](
 | #   | Quyết định                                                       | Phương án đã chốt / gate còn lại                                                                                                                                                                                     |
 | --- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1   | Basic owner trả phần còn lại trực tiếp hay qua XePrime mặc định? | Trực tiếp trong R3; thu hộ tùy chọn ở R4                                                                                                                                                                             |
-| 2   | Ai trả phí dịch vụ XePrime theo chuyến?                          | Khách thuê trả qua phụ phí cộng vào báo giá ở tuyến Basic; không khấu trừ phí này khỏi tiền thuê của chủ xe. Pilot bắt đầu 10%; tuyến gói 0%                                                                         |
-| 3   | Mức gói và kỳ hạn?                                               | Ba bậc theo trần SỐ XE (3 / 10 / không giới hạn), bán kỳ 1/3/6/12 tháng với giá tuyệt đối từng kỳ (ADR 0041); bậc không giới hạn bán bằng tư vấn. Admin cấu hình động và đo trước khi chốt giá production            |
-| 4   | Bảo hiểm nào, ai cung cấp, ai trả?                               | Dự kiến PVI; **khách** trả `IV` + `IP` (ADR 0032 điều 2 ghi đè câu "chủ xe chịu" ở đây); phát hành ở mốc bàn giao. **ĐÃ BẬT 14/09/2026 bằng số tham khảo thị trường theo chỉ đạo** — xem ghi chú rủi ro dưới bảng |
-| 5   | Thuế cho thuê xe được phân loại và nộp thay thế nào?             | Thuế do **chủ xe** chịu, khấu trừ khỏi khoản phải trả, không cộng vào tổng khách. **ĐÃ BẬT 14/09/2026 ở 10% (5% VAT + 5% TNCN) bằng số tham khảo thị trường theo chỉ đạo**, chưa có tư vấn thuế — xem ghi chú rủi ro dưới bảng |
+| 2   | Ai trả phí dịch vụ XePrime theo chuyến?                          | ADR 0064: khách trả phí sàn cố định mỗi đơn (cả hai tuyến); chủ xe tuyến Basic chịu hoa hồng lũy tiến theo ngày 10/7/3/0%; tuyến gói 0% |
+| 3   | Mức gói và kỳ hạn?                                               | ADR 0065: bảy bậc theo LOẠI xe (`moto_1/5/10`, `car_1/5/10`, `enterprise_contact` bán bằng tư vấn), kỳ 1/3/6/12 tháng giá tuyệt đối từng kỳ (ADR 0041 điều 2). Admin cấu hình động và đo trước khi chốt giá production |
+| 4   | Bảo hiểm nào, ai cung cấp, ai trả?                               | Dự kiến **MIC**; `IV` + `IP` tuỳ chọn, **khách** trả, phát hành ở mốc bàn giao. Từ 21/10/2026 (ADR 0064 điều 10) chỉ cộng khi `INSURANCE_PARTNER` khác `none`: production không thu, staging dùng GCN TEST — xem ghi chú rủi ro dưới bảng |
+| 5   | Thuế cho thuê xe được phân loại và nộp thay thế nào?             | Thuế do **chủ xe** chịu, khấu trừ khỏi khoản phải trả, không cộng vào tổng khách; cơ sở tính là tiền thuê, KHÔNG gồm phí giao xe (ADR 0064 điều 4). **ĐÃ BẬT 14/09/2026 ở 10% (5% VAT + 5% TNCN) bằng số tham khảo thị trường theo chỉ đạo**, chưa có tư vấn thuế — xem ghi chú rủi ro dưới bảng |
 | 6   | Giao dịch ngoài nền tảng được hưởng hỗ trợ tới đâu?              | Chỉ hỗ trợ thông tin/listing; không cam kết tiền/hoàn cho phần giao dịch không ghi nhận                                                                                                                              |
 
 > ⚠️ **Rủi ro đã được chấp nhận có chủ đích (quyết định 14/09/2026).** Hai dòng 4 và 5 trước đây
 > nói "chỉ bật khi có hợp đồng/tư vấn". Chủ dự án đã chỉ đạo bật cả hai ngay bằng số tham khảo thị
 > trường để luồng tiền chạy trọn vẹn được trên máy dev, và fee policy v4 hiện hành mang
 > `tax_percent = 10`, `tax_label = 'VAT 5% + TNCN 5%'`, `vehicle_protection 2%`, `trip_insurance 1%`.
+> *(Sửa 21/10/2026: chính sách v7 của ADR 0064 giữ thuế 10% và đổi bảo hiểm sang biểu phí THEO NGÀY —
+> ô tô 50.000đ/20.000đ, xe máy 15.000đ/5.000đ; dòng bảo hiểm nay còn bị cổng `INSURANCE_PARTNER` chặn ở
+> production, nên điểm 2 dưới đây được thi hành bằng cả cổng lẫn adapter.)*
 > Ghi lại đúng ba điều này để không ai đọc con số ở trên như một kết luận pháp lý:
 >
 > 1. **Các con số là giả thuyết thị trường, chưa qua tư vấn thuế và chưa có hợp đồng bảo hiểm.**

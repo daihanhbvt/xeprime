@@ -298,8 +298,10 @@ async function resolveBilling(
   tenantId: string,
 ): Promise<{ billingMode: string; serviceFeePercent: Prisma.Decimal | null }> {
   const now = new Date();
-  const [sub, policy] = await Promise.all([
-    tx.tenantSubscription.findFirst({
+  // Mọi dòng hiệu lực (ADR 0065): còn một kỳ gói ở BẤT KỲ phạm vi loại xe nào là cả gian hàng ở
+  // tuyến gói — card chợ phải nói cùng một tuyến với báo giá.
+  const [subs, policy] = await Promise.all([
+    tx.tenantSubscription.findMany({
       where: { tenantId, ...effectiveSubscriptionWhere(now) },
       ...EFFECTIVE_SUBSCRIPTION_ARGS,
     }),
@@ -317,7 +319,7 @@ async function resolveBilling(
    * một dòng phí cho một tenant chưa xác định được tuyến là hứa với khách một con số mà đường
    * ghi tiền đang từ chối tạo đơn.
    */
-  const billing = resolveEffectiveBilling(sub, now);
+  const billing = resolveEffectiveBilling(subs, now);
   const billingMode = billing.billingMode ?? BILLING_MODE.PACKAGE;
   return {
     billingMode,

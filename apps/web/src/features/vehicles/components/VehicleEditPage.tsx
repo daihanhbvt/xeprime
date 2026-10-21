@@ -15,7 +15,7 @@ import { withBranchReturn } from '@/features/branches/branch-link';
 import { useSupportSession } from '@/features/tenant-support/support-session';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useWorkspace } from '@/hooks/use-workspace';
-import { useErrorMessage } from '@/i18n/use-error-message';
+import { usePlanAwareErrorMessage } from '@/features/subscription/use-plan-quota-gate-message';
 import { getErrorCode } from '@/services/api-client';
 import { useVehicle } from '../hooks/use-vehicle';
 import { useUpdateVehicle } from '../hooks/use-vehicle-mutations';
@@ -32,7 +32,8 @@ import { VehicleEditWorkspace } from './VehicleEditWorkspace';
  */
 export function VehicleEditPage({ vehicleId }: { vehicleId: string }) {
   const t = useTranslations('Vehicles');
-  const errorMessage = useErrorMessage();
+  // Đổi loại xe / bật lại trên chợ có thể chạm cổng gói (ADR 0065) — câu nói đúng loại xe + con số.
+  const errorMessage = usePlanAwareErrorMessage();
   const router = useRouter();
   const { message } = App.useApp();
   const { paths, vehicles: vehiclePaths } = useWorkspace();
@@ -104,9 +105,7 @@ export function VehicleEditPage({ vehicleId }: { vehicleId: string }) {
         description={notFound ? t('detail.notFoundBody') : t('detail.loadErrorBody')}
         // Không retry cho 404 (EmptyState R10) — thử lại một bản ghi không tồn tại là ngõ cụt.
         onRetry={notFound ? undefined : () => void vehicle.refetch()}
-        action={
-          <Button onClick={() => router.push(listHref)}>{t('detail.backToList')}</Button>
-        }
+        action={<Button onClick={() => router.push(listHref)}>{t('detail.backToList')}</Button>}
       />
     );
   }

@@ -8,6 +8,11 @@ import {
   planSellableTerms,
   planTermPrice,
   planTermSavingPercent,
+  planScopeCoversVehicleType,
+  planScopesConflict,
+  planVehicleScopeOf,
+  smallestSelfServePlanFor,
+  type PlanLimitsJson,
 } from './plan-billing';
 
 describe('parsePlanLimits — parser phòng thủ cho plans.limits_json', () => {
@@ -224,5 +229,60 @@ describe('phép đọc bảng giá', () => {
     expect(isSubscriptionTermMonths(12)).toBe(true);
     expect(isSubscriptionTermMonths(2)).toBe(false);
     expect(isSubscriptionTermMonths('3')).toBe(false);
+  });
+});
+
+describe('phạm vi loại xe của bậc gói (ADR 0065)', () => {
+  it('thiếu/lạ ⇒ all — đúng phạm vi của dữ liệu trước ADR 0065', () => {
+    expect(planVehicleScopeOf(undefined)).toBe('all');
+    expect(planVehicleScopeOf('truck')).toBe('all');
+    expect(planVehicleScopeOf('car')).toBe('car');
+  });
+
+  it('all phủ mọi loại; car chỉ phủ ô tô', () => {
+    expect(planScopeCoversVehicleType('all', 'motorbike')).toBe(true);
+    expect(planScopeCoversVehicleType('car', 'car')).toBe(true);
+    expect(planScopeCoversVehicleType('car', 'motorbike')).toBe(false);
+  });
+
+  it('ô tô và xe máy chạy song song được; all xung đột với mọi phạm vi', () => {
+    expect(planScopesConflict('car', 'motorbike')).toBe(false);
+    expect(planScopesConflict('car', 'car')).toBe(true);
+    expect(planScopesConflict('all', 'motorbike')).toBe(true);
+    expect(planScopesConflict('car', 'all')).toBe(true);
+  });
+
+  it('hoá đơn thiếu vehicleScope (trước ADR 0065) đọc là all', () => {
+    const snap = parsePlanInvoiceSnapshot({
+      planId: 'P1',
+      planCode: 'shop-basic',
+      termMonths: 3,
+      quota: { maxVehicles: 3, maxBranches: 1, maxMembers: null },
+      lines: [],
+    });
+    expect(snap?.vehicleScope).toBe('all');
+    expect(
+      parsePlanInvoiceSnapshot({ planId: 'P', planCode: 'car_5', termMonths: 1, vehicleScope: 'car' })
+        ?.vehicleScope,
+    ).toBe('car');
+  });
+
+  it('smallestSelfServePlanFor chọn bậc nhỏ nhất còn chứa được đội xe, bỏ bậc tư vấn', () => {
+    const limits = (maxVehicles: number | null, salesOnly = false): PlanLimitsJson => ({
+      ...parsePlanLimits({ termPrices: salesOnly ? [] : [{ months: 1, price: '1000' }] }),
+      maxVehicles,
+      salesOnly,
+    });
+    const plans = [
+      { code: 'car_10', vehicleScope: 'car', limits: limits(10) },
+      { code: 'car_1', vehicleScope: 'car', limits: limits(1) },
+      { code: 'car_5', vehicleScope: 'car', limits: limits(5) },
+      { code: 'moto_1', vehicleScope: 'motorbike', limits: limits(1) },
+      { code: 'ent', vehicleScope: 'all', limits: limits(null, true) },
+    ];
+    expect(smallestSelfServePlanFor(plans, 'car', 4)?.code).toBe('car_5');
+    expect(smallestSelfServePlanFor(plans, 'car', 1)?.code).toBe('car_1');
+    expect(smallestSelfServePlanFor(plans, 'car', 11)).toBeNull();
+    expect(smallestSelfServePlanFor(plans, 'motorbike', 0)?.code).toBe('moto_1');
   });
 });

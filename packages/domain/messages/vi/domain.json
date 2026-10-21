@@ -448,6 +448,7 @@
     "escrow_hold": "Thu giữ chỗ qua sàn"
   },
   "planStatus": {
+    "draft": "Chưa mở bán",
     "active": "Đang hoạt động",
     "archived": "Ngừng hoạt động"
   },
@@ -732,7 +733,8 @@
     "trip_insurance": "Bảo hiểm tai nạn người ngồi trên xe",
     "vehicle_protection": "Bảo hiểm vật chất xe",
     "deposit": "Cọc đặt chuyến",
-    "promo": "Mã khuyến mãi XePrime"
+    "promo": "Mã khuyến mãi XePrime",
+    "rent_prepaid": "Phần tiền thuê trả trước"
   },
   "promoCodeState": {
     "disabled": "Đã tắt",
@@ -841,7 +843,9 @@
     "owner_cancel": "Chủ xe huỷ chuyến",
     "overpaid": "Chuyển thừa",
     "hold_expired": "Hết hạn thanh toán giữ chỗ",
-    "admin_decision": "Quyết định của XePrime"
+    "admin_decision": "Quyết định của XePrime",
+    "late_cancel": "Khách huỷ sau mốc miễn phí",
+    "no_show": "Khách không đến nhận xe"
   },
   "supportCaseStatus": {
     "open": "Mới",

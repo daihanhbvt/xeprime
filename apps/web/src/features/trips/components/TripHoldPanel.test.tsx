@@ -28,6 +28,8 @@ const BASE: Hold = {
   remainingAmount: '100000',
   expiresAt: '2026-09-08T03:00:00.000Z',
   freeCancelUntil: '2026-09-16T03:00:00.000Z',
+  freeCancelAvailable: true,
+  lateCancelRefundAmount: '0',
   paidAt: null,
   allocation: [],
   refund: null,

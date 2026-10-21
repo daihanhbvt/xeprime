@@ -329,6 +329,10 @@
   cursor: pointer;
 }
 
+.chipCloseIcon {
+  font-size: 10px;
+}
+
 .resetIconBtn {
   border: none;
   background: transparent;

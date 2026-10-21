@@ -74,7 +74,7 @@
           "items": {
             "request": "Bạn gửi yêu cầu thuê kèm khung giờ và nơi nhận xe. Bước này chưa thu tiền và chưa giữ chỗ — chiếc xe vẫn mở cho khách khác.",
             "decision": "Gian hàng nhận hoặc từ chối yêu cầu. Với xe bật “Đặt ngay”, hệ thống nhận tự động. Chỉ khi được nhận thì lịch mới được giữ, giá mới được chốt.",
-            "holdPayment": "Bạn chuyển tiền giữ chỗ trong cửa sổ thanh toán — hiện là 120 phút kể từ lúc gian hàng nhận chuyến, và không vượt quá giờ nhận xe. Chúng tôi nhắc bạn hai lần trước khi hết giờ. Hết hạn là hết, không có gia hạn.",
+            "holdPayment": "Bạn chuyển tiền giữ chỗ trong cửa sổ thanh toán, tính từ lúc gian hàng nhận chuyến và không vượt quá giờ nhận xe. Cửa sổ dài 120 phút khi nhận xe sau từ 24 giờ trở lên và ngắn hơn khi đặt sát giờ (tối thiểu 15 phút) — xem Chính sách huỷ và hoàn tiền. Chúng tôi nhắc bạn trước khi hết giờ. Hết hạn là hết, không có gia hạn.",
             "bookingCreated": "Đơn thuê chỉ hình thành khi hệ thống đối soát xác nhận đã nhận đủ tiền giữ chỗ — không phải khi bạn bấm một nút hay quét mã.",
             "slotLost": "Nếu khung giờ đã thuộc về khách khác, các yêu cầu còn chờ cho khung giờ đó được đóng lại và báo cho bạn. Đây không phải là gian hàng từ chối bạn."
           }
@@ -309,24 +309,36 @@
           "body": "Gửi yêu cầu thuê không thu tiền và không giữ chỗ. Bạn rút yêu cầu bất cứ lúc nào trước khi gian hàng quyết định mà không mất gì, và lượt rút đó không bị tính vào chỉ số uy tín của gian hàng."
         },
         "paymentWindow": {
-          "heading": "3. Cửa sổ thanh toán tiền giữ chỗ",
-          "body": "Khi gian hàng nhận chuyến, bạn có một cửa sổ để chuyển tiền giữ chỗ — hiện là 120 phút kể từ lúc nhận chuyến, và không bao giờ vượt quá giờ nhận xe. Bạn được nhắc hai lần trước khi hết giờ. Hết cửa sổ mà chưa nhận được tiền thì chỗ được nhả cho khách khác và chuyến không thành; bạn không mất khoản nào vì chưa chuyển khoản nào. Cửa sổ này không được gia hạn."
+          "heading": "3. Cửa sổ thanh toán và huỷ miễn phí",
+          "body": "Khi gian hàng nhận chuyến, bạn có một cửa sổ để chuyển tiền giữ chỗ và một cửa sổ huỷ miễn phí. Độ dài của cả hai phụ thuộc khoảng thời gian từ lúc gian hàng nhận chuyến tới giờ nhận xe; cả hai tính XUÔI từ lúc nhận chuyến và không bao giờ vượt quá giờ nhận xe. Mức hiện hành:",
+          "items": {
+            "far": "Nhận xe sau từ 24 giờ trở lên: 120 phút để thanh toán, huỷ miễn phí trong 4 giờ.",
+            "near": "Nhận xe sau từ 2 đến dưới 24 giờ: thời gian thanh toán bằng 40% khoảng thời gian còn lại tới giờ nhận xe (tối thiểu 15 phút, tối đa 120 phút); huỷ miễn phí bằng 30% khoảng đó (tối đa 4 giờ).",
+            "urgent": "Nhận xe sau dưới 2 giờ: thời gian thanh toán tính như trên (tối thiểu 15 phút) và KHÔNG có thời gian huỷ miễn phí. Nếu thời gian còn lại quá ngắn để kịp thanh toán, chuyến không thể giữ chỗ qua XePrime.",
+            "expiry": "Bạn được nhắc trước khi hết giờ thanh toán. Hết cửa sổ mà chưa nhận đủ tiền thì chỗ được nhả cho khách khác và chuyến không thành; phần bạn đã chuyển (nếu có) được hoàn đủ vào Ví điểm. Cửa sổ thanh toán không được gia hạn."
+          }
         },
         "freeCancel": {
-          "heading": "4. Huỷ miễn phí trong 4 giờ đầu",
-          "body": "Sau khi đã chuyển tiền giữ chỗ, bạn được huỷ và hoàn lại 100% số đã chuyển nếu huỷ trong vòng 4 giờ kể từ lúc gian hàng nhận chuyến. Mốc này tính XUÔI từ lúc nhận chuyến chứ không tính ngược từ giờ nhận xe, nên mọi khách đều có đúng một cửa sổ như nhau; với chuyến sát giờ, mốc bị kẹp bởi chính giờ nhận xe. Mốc chính xác của chuyến bạn hiển thị ngay trên đơn."
+          "heading": "4. Huỷ miễn phí",
+          "body": "Sau khi đã chuyển tiền giữ chỗ, bạn được huỷ và hoàn 100% số đã chuyển vào Ví điểm nếu huỷ trước mốc huỷ miễn phí của chuyến (mục 3). Mốc này được chốt một lần khi gian hàng nhận chuyến: thanh toán xong hay gian hàng dời giờ nhận xe đều không làm nó thay đổi. Mốc chính xác của chuyến bạn — hoặc dòng báo chuyến không có thời gian huỷ miễn phí — hiển thị trước khi bạn thanh toán."
         },
         "afterFreeCancel": {
-          "heading": "5. Huỷ sau cửa sổ miễn phí",
-          "body": "Quá cửa sổ miễn phí, phần được hoàn phụ thuộc chính sách đã ghi trên đơn tại thời điểm chốt chuyến — hãy đọc mục này trên đơn trước khi chuyển tiền. Không đến nhận xe mà không báo được xử lý như huỷ sát giờ. Phần tiền trả trực tiếp cho chủ xe lúc nhận xe thì chưa phát sinh, nên không có gì để hoàn."
+          "heading": "5. Huỷ sau mốc huỷ miễn phí",
+          "body": "Huỷ sau mốc huỷ miễn phí, hoặc huỷ sau khi thanh toán một chuyến không có thời gian huỷ miễn phí, được xử lý như sau. Hộp xác nhận huỷ luôn cho bạn thấy số được hoàn và số không được hoàn trước khi bấm.",
+          "items": {
+            "insurance": "Tiền bảo hiểm (nếu bạn đã chọn) được hoàn 100% vào Ví điểm, vì hợp đồng bảo hiểm chỉ phát hành lúc giao xe.",
+            "split": "Phần còn lại của tiền giữ chỗ không được hoàn: một nửa đền cho chủ xe vì đã giữ xe cho bạn, một nửa thuộc về XePrime.",
+            "noShow": "Không đến nhận xe mà không báo được xử lý như huỷ sau mốc huỷ miễn phí.",
+            "direct": "Phần tiền trả trực tiếp cho chủ xe lúc nhận xe chưa phát sinh, nên không có gì để hoàn."
+          }
         },
         "ownerCancel": {
           "heading": "6. Khi chủ xe huỷ",
           "body": "Quyền huỷ của chủ xe khác nhau theo chặng, và chặng càng muộn thì hậu quả với khách càng lớn nên ràng buộc càng chặt.",
           "items": {
             "beforeDecision": "Chưa quyết định: gian hàng có thể TỪ CHỐI yêu cầu. Không ai mất tiền vì chưa có khoản nào được chuyển.",
-            "beforePayment": "Đã nhận chuyến nhưng bạn chưa chuyển đủ tiền: gian hàng có thể huỷ chuyến. Lịch được nhả và phần bạn đã chuyển (nếu có) được hoàn lại.",
-            "afterBooking": "Đã thành đơn thuê: gian hàng huỷ thì bạn được hoàn 100% số đã chuyển, và lượt huỷ đó được ghi nhận vào chỉ số uy tín của gian hàng.",
+            "beforePayment": "Đã nhận chuyến nhưng bạn chưa chuyển đủ tiền: gian hàng có thể huỷ chuyến. Lịch được nhả và phần bạn đã chuyển (nếu có) được hoàn đủ vào Ví điểm.",
+            "afterBooking": "Đã thành đơn thuê: gian hàng huỷ thì bạn được hoàn 100% số đã chuyển vào Ví điểm — kể cả khi đã qua mốc huỷ miễn phí — và lượt huỷ đó được ghi nhận vào chỉ số uy tín của gian hàng.",
             "duringTrip": "Chuyến đang chạy: không huỷ được. Xe đang ở ngoài đường với khách, nên việc kết thúc sớm phải đi qua bàn giao trả xe rồi quyết toán."
           }
         },
@@ -336,7 +348,7 @@
         },
         "refund": {
           "heading": "8. Cách hoàn tiền",
-          "body": "Khoản được hoàn là phần bạn đã CHUYỂN KHOẢN cho XePrime, hoàn về tài khoản ngân hàng bạn cung cấp. Phần trả trực tiếp cho chủ xe lúc nhận xe và cọc thế chấp nhận xe do hai bên tự trao nhận, nên cũng do hai bên tự hoàn cho nhau. Nếu bạn dùng mã khuyến mãi của XePrime, phần được hoàn không bao gồm giá trị mã — mã là khoản nền tảng tài trợ, không phải tiền bạn đã bỏ ra."
+          "body": "Khoản được hoàn là phần bạn đã chuyển cho XePrime, ghi ngay vào Ví điểm của tài khoản đã đặt chuyến (1 điểm = 1đ, không hết hạn); bạn rút Ví điểm về tài khoản ngân hàng bất cứ lúc nào. Phần trả trực tiếp cho chủ xe lúc nhận xe và cọc thế chấp nhận xe do hai bên tự trao nhận, nên cũng do hai bên tự hoàn cho nhau. Nếu bạn dùng mã khuyến mãi của XePrime, phần được hoàn không bao gồm giá trị mã — mã là khoản nền tảng tài trợ, không phải tiền bạn đã bỏ ra."
         },
         "dispute": {
           "heading": "9. Khi hai bên không thống nhất",

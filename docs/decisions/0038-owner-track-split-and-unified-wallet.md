@@ -6,6 +6,8 @@ Ngày: 15/09/2026 · Trạng thái: **Partially superseded bởi [ADR 0053](0053
 [ADR 0033](0033-money-ledger-and-deposit-allocation.md) (điều 2, cột chủ ví) ·
 Liên quan: 0002, 0014, 0028, 0031, 0032, 0033
 
+> ⚠️ **[ADR 0065](0065-per-vehicle-type-shop-plans.md) (21/10/2026)** sửa hàng `package` của điều 12 lần nữa: trần tuyến gói đếm theo LOẠI xe trong phạm vi của từng gói (tối đa một gói xe máy + một gói ô tô). Hàng `commission`/`unconfigured` giữ nguyên.
+
 > ⚠️ **[ADR 0053](0053-separate-account-realms.md) (02/10/2026) ghi đè điều 2, 6, 7, 8, 9, 10.** Khách
 > và chủ xe/gian hàng là hai tài khoản ở hai realm: một TÀI KHOẢN một ví (tenant vẫn một ví); tài
 > khoản `partner` không gọi được endpoint đặt xe; bỏ khu `/account` của tài khoản gian hàng, `/trips`

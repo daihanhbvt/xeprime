@@ -185,6 +185,8 @@ describe('nav — cấu trúc khối', () => {
         // `ADMIN_BANK_TRANSACTIONS` không mất mà được GỘP (01/10/2026): hàng đợi tiền vào sống
         // trong màn Tài chính, URL cũ chuyển tiếp về `ADMIN_MONEY?queue=bank-in`.
         ROUTES.ADMIN.MONEY,
+        // Bảo hiểm chuyến (ADR 0064): danh mục sản phẩm + hàng đợi giấy chứng nhận.
+        ROUTES.ADMIN.INSURANCE,
         ROUTES.ADMIN.SUPPORT,
         ROUTES.ADMIN.PLANS,
         ROUTES.ADMIN.FEE_POLICIES,

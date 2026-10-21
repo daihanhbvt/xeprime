@@ -109,6 +109,26 @@ function flattenValidationErrors(
   });
 }
 
+/** Tên ràng buộc của `@IsMoneyStep` — `registerDecorator({ name })` ở `money-step.validator.ts`. */
+const MONEY_STEP_CONSTRAINT = 'isMoneyStep';
+
+/**
+ * Mọi lỗi của request đều chỉ là "không phải bội 1.000đ"? Khi đó mã trả về là `MONEY_STEP_1000` —
+ * câu hiển thị nói đúng việc chủ xe phải sửa, thay vì "dữ liệu chưa hợp lệ" chung chung. Có thêm
+ * BẤT KỲ lỗi nào khác ⇒ vẫn `VALIDATION_FAILED` (không giấu lỗi kia sau một câu hẹp hơn).
+ */
+export function isOnlyMoneyStepViolation(errors: ValidationError[]): boolean {
+  let seen = false;
+  const walk = (list: ValidationError[]): boolean =>
+    list.every((error) => {
+      const keys = Object.keys(error.constraints ?? {});
+      if (keys.some((key) => key !== MONEY_STEP_CONSTRAINT)) return false;
+      if (keys.length > 0) seen = true;
+      return walk(error.children ?? []);
+    });
+  return walk(errors) && seen;
+}
+
 export function createValidationPipe(): ValidationPipe {
   return new ValidationPipe({
     whitelist: true,
@@ -118,11 +138,17 @@ export function createValidationPipe(): ValidationPipe {
     // Giữ nguyên convention lỗi. PHẢI throw một HttpException, không trả plain object —
     // trả object khiến exception filter không nhận ra và rơi vào INTERNAL_ERROR.
     exceptionFactory: (errors) =>
-      new BadRequestException({
-        code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Dữ liệu gửi lên không hợp lệ',
-        details: flattenValidationErrors(errors),
-      }),
+      isOnlyMoneyStepViolation(errors)
+        ? new BadRequestException({
+            code: API_ERROR_CODE.MONEY_STEP_1000,
+            message: 'Giá phải là bội số 1.000đ',
+            details: flattenValidationErrors(errors),
+          })
+        : new BadRequestException({
+            code: API_ERROR_CODE.VALIDATION_FAILED,
+            message: 'Dữ liệu gửi lên không hợp lệ',
+            details: flattenValidationErrors(errors),
+          }),
   });
 }
 

@@ -124,7 +124,8 @@
     "pickupWishDate": "{label}: {date}",
     "pickupWishWindow": "{label}: {start} – {end}",
     "pickupWishShopDecides": "Gian hàng chốt ngày giờ nhận khi duyệt",
-    "dateTime": "{date} {time}"
+    "dateTime": "{date} {time}",
+    "hourAndMinute": "{hours, plural, other {# giờ}} {minutes, plural, other {# phút}}"
   },
   "pagination": {
     "total": "{count, plural, other {# mục}}",
@@ -187,7 +188,8 @@
       "viewDetails": "Xem chi tiết giá",
       "collapse": "Thu gọn",
       "depositHintLabel": "Cọc thế chấp khi nhận xe là gì",
-      "holdHintLabel": "Tiền giữ chỗ là gì"
+      "holdHintLabel": "Tiền giữ chỗ là gì",
+      "dailyRate": "{days, plural, other {# ngày}} × {amount}"
     },
     "filterBar": {
       "allOf": "{label}: Tất cả",

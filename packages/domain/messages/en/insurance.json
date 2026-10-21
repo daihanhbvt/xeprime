@@ -1,0 +1,46 @@
+{
+  "option": {
+    "dailyRate": "+{price}",
+    "benefits": "Coverage details"
+  },
+  "benefits": {
+    "coverage": "What's covered",
+    "deductible": "Deductible",
+    "deductiblePerIncident": "{amount} per incident",
+    "noDeductible": "No deductible",
+    "maxPayout": "Maximum payout",
+    "maxPayoutWithNote": "{amount} · {note}"
+  },
+  "certificate": {
+    "title": "Insurance certificate",
+    "number": "Certificate number",
+    "copyNumber": "Copy certificate number",
+    "coverage": "Valid",
+    "partner": "Insurer",
+    "view": "View insurance certificate",
+    "testTag": "TEST",
+    "testNote": "Test certificate — it provides no insurance cover.",
+    "loadError": "Couldn't load the insurance certificate."
+  },
+  "coverage": {
+    "title": "Trip insurance",
+    "premium": "Premium paid",
+    "status": {
+      "pending_issue": "Awaiting issue",
+      "issuing": "Issuing",
+      "issued": "Issued",
+      "failed": "Issuance failed",
+      "voided": "Revoked",
+      "refunded": "Premium refunded"
+    },
+    "note": {
+      "pending_issue": "The certificate is issued at vehicle handover.",
+      "issuing": "XePrime is issuing the certificate — this usually takes a few minutes.",
+      "issued": "The certificate has been issued.",
+      "failed": "Issuance failed — XePrime is handling it. You don't need to do anything.",
+      "voided": "The certificate has been revoked.",
+      "refunded": "The trip was cancelled before handover — the insurance premium has been refunded."
+    },
+    "loadError": "Couldn't load the insurance details."
+  }
+}

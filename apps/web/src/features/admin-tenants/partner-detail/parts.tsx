@@ -11,6 +11,7 @@ import {
   VEHICLE_ALERT_SEVERITY,
   VEHICLE_OPERATION_STATUS_META,
   VEHICLE_PUBLIC_STATUS_META,
+  VEHICLE_TYPE,
   type BookingStatus,
   type VehicleOperationStatus,
   type VehiclePublicStatus,
@@ -25,7 +26,12 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { cx } from '@/lib/cx';
 import { isForbiddenError } from '@/lib/http-status';
-import type { PartnerBooking, PartnerQuotaItem, PartnerVehicle } from './api';
+import type {
+  PartnerBooking,
+  PartnerQuotaItem,
+  PartnerVehicle,
+  PartnerVehicleTypeQuotas,
+} from './api';
 import styles from './PartnerDetail.module.css';
 
 /** Trạng thái chung của một tab: tải / không quyền / lỗi. `null` = đã có dữ liệu, render tiếp. */
@@ -114,6 +120,10 @@ export function QuotaValue({
   if (quota.kind === PARTNER_QUOTA_KIND.NOT_APPLICABLE) {
     return <span className={styles.muted}>{t('notApplicable', { used: quota.used })}</span>;
   }
+  // Gian hàng tuyến gói chưa có gói cho loại xe này (ADR 0065) — tạo xe / lên chợ bị chặn.
+  if (quota.kind === PARTNER_QUOTA_KIND.NOT_COVERED) {
+    return <span className={styles.warning}>{t('notCovered', { used: quota.used })}</span>;
+  }
   if (quota.kind !== PARTNER_QUOTA_KIND.TOTAL || quota.limit == null) {
     return <span>{t('unlimited', { used: quota.used })}</span>;
   }
@@ -137,6 +147,30 @@ export function QuotaValue({
         size="small"
         status={quota.used >= quota.limit ? 'exception' : 'normal'}
       />
+    </span>
+  );
+}
+
+/**
+ * Hạn mức xe THEO LOẠI (ADR 0065) — hai dòng xe máy / ô tô, mỗi dòng một trần do server cưỡng chế.
+ * Gói theo loại gác đúng loại đó; bậc doanh nghiệp / Owner Lite dùng chung một trần (hai dòng cùng
+ * con số là đúng — server đếm gộp).
+ */
+export function VehicleQuotaByType({ quotas }: { quotas: PartnerVehicleTypeQuotas }) {
+  const t = useTranslations('AdminTenants.partnerDetail.quota');
+  return (
+    <span className={styles.quotaByType}>
+      {(
+        [
+          [VEHICLE_TYPE.MOTORBIKE, quotas.motorbike],
+          [VEHICLE_TYPE.CAR, quotas.car],
+        ] as const
+      ).map(([type, quota]) => (
+        <span key={type} className={styles.quotaByTypeRow}>
+          <span className={styles.muted}>{t(`type.${type}`)}</span>
+          <QuotaValue quota={quota} unit="vehicles" />
+        </span>
+      ))}
     </span>
   );
 }

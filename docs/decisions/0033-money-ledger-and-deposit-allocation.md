@@ -2,6 +2,8 @@
 
 Ngày: 10/09/2026 · Trạng thái: **Accepted; điều 2 (cột chủ ví) bị [ADR 0038](0038-owner-track-split-and-unified-wallet.md) rồi [ADR 0053](0053-separate-account-realms.md) ghi đè — chủ ví nay theo TÀI KHOẢN** · Ghi đè một phần: 0023 (ràng buộc 1, điều 5 — ADR 0023 đã gỡ, điều còn hiệu lực chép ở điều 6), [0025](0025-shop-escrow-hold-and-payout.md) (điều 1–4), [0028](0028-marketplace-subscription-fees-and-custodied-funds.md) (điều 6, điều 8 phần tên gọi) · Liên quan: 0016, 0022, 0024, 0027, 0032
 
+> ⚠️ **[ADR 0064](0064-financial-flow-v2.md) (21/10/2026)** thêm dòng tiền thứ năm `H` (hoa hồng lũy tiến) vào điều 3–4: `booking_holds` có năm cột tiền, `H` nằm trong phần chia 50/50 khi huỷ muộn/no-show và về doanh thu XePrime khi chuyến hoàn thành. Quy tắc 50/50 và hoàn 100% bảo hiểm giữ nguyên.
+
 > ⚠️ **Cột "Chủ ví" của điều 2 bị [ADR 0038](0038-owner-track-split-and-unified-wallet.md) ghi đè
 > (15/09/2026).**
 >

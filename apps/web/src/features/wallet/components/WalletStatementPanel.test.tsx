@@ -15,6 +15,8 @@ import { WalletStatementPanel } from './WalletStatementPanel';
  *     dư" nhỏ hơn "doanh thu" rồi tin rằng XePrime đang giữ tiền của mình.
  *  3. Đơn dài hạn hiện đơn giá THÁNG, không phải giá ngày suy ra từ chia 30 (ADR 0011).
  *  4. Chưa ai đánh giá / chưa yêu cầu nào tới hạn ⇒ dấu gạch, KHÔNG phải "0 sao" hay "0%".
+ *  5. Hoa hồng `H` (tuyến hoa hồng — ADR 0064 điều 3) CHỦ XE chịu thật: kỳ có hoa hồng thì có
+ *     cột riêng và dòng tổng riêng, hiện như một khoản trừ.
  */
 const query = vi.hoisted(() => ({
   data: undefined as WalletStatement | undefined,
@@ -45,6 +47,7 @@ function trip(overrides: Partial<WalletStatementTrip> = {}): WalletStatementTrip
     unitAmount: '1350000',
     unitKind: WALLET_STATEMENT_UNIT.DAY,
     revenueAmount: '4050000',
+    ownerCommissionAmount: '0',
     taxAmount: '0',
     payAtPickupAmount: '2835000',
     balanceChange: '1215000',
@@ -65,6 +68,7 @@ function statement(overrides: Partial<WalletStatement> = {}): WalletStatement {
     },
     totals: {
       revenueTotal: '4050000',
+      ownerCommissionTotal: '0',
       taxTotal: '0',
       payAtPickupTotal: '2835000',
       balanceChangeTotal: '1215000',
@@ -250,6 +254,35 @@ describe('WalletStatementPanel', () => {
     renderWithIntl(<WalletStatementPanel filters={filters} onFiltersChange={vi.fn()} />);
 
     expect(screen.getByText('Thu nhập')).toBeTruthy();
+  });
+
+  it('kỳ có hoa hồng ⇒ cột Hoa hồng + dòng tổng, hiện như khoản TRỪ', () => {
+    session.tenant = { roleKey: TENANT_ROLE.SHOP_OWNER, billingMode: BILLING_MODE.COMMISSION };
+    query.data = statement({
+      items: [trip({ ownerCommissionAmount: '140000', taxAmount: '200000' })],
+      totals: {
+        ...statement().totals,
+        ownerCommissionTotal: '140000',
+        taxTotal: '200000',
+        subscriptionFeeTotal: '0',
+        ownerIncome: '3710000',
+      },
+    });
+    renderWithIntl(
+      <WalletStatementPanel filters={filters} onFiltersChange={vi.fn()} variant="compact" />,
+    );
+
+    expect(screen.getAllByText('Hoa hồng').length).toBeGreaterThan(0);
+    expect(screen.getByText('Tổng hoa hồng XePrime giữ lại')).toBeTruthy();
+    // Một lần ở ô của chuyến (bảng + thẻ mobile) và một lần ở dòng tổng.
+    expect(screen.getAllByText(/^−140\.000\s*₫$/).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('kỳ không có hoa hồng (tuyến gói) ⇒ không có cột toàn số 0', () => {
+    renderWithIntl(<WalletStatementPanel filters={filters} onFiltersChange={vi.fn()} />);
+
+    expect(screen.queryByText('Hoa hồng')).toBeNull();
+    expect(screen.queryByText('Tổng hoa hồng XePrime giữ lại')).toBeNull();
   });
 
   it('lỗi tải lần đầu hiện màn lỗi có nút thử lại, không phải bảng trắng', () => {

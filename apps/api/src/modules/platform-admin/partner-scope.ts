@@ -49,7 +49,7 @@ export async function loadPartner(
       message: 'Không tìm thấy đối tác',
     });
   }
-  const billing = resolveEffectiveBilling(tenant.subscriptions[0] ?? null, now);
+  const billing = resolveEffectiveBilling(tenant.subscriptions, now);
   return {
     tenantId: tenant.id,
     tenantStatus: tenant.status,

@@ -117,6 +117,10 @@ export const MESSAGE_NAMESPACES = [
   { file: 'promo-codes', namespace: 'PromoCodes' },
   // Money operations của nền tảng: hàng đợi giữ chỗ, chuyển trả, đối chiếu ngày (R3).
   { file: 'platform-money', namespace: 'PlatformMoney' },
+  // Bảo hiểm chuyến phía KHÁCH + GIAN HÀNG (ADR 0064): quyền lợi cạnh ô chọn, GCN đã cấp.
+  { file: 'insurance', namespace: 'Insurance' },
+  // Màn Bảo hiểm của admin nền tảng (ADR 0064): danh mục sản phẩm MIC + hàng đợi GCN.
+  { file: 'admin-insurance', namespace: 'AdminInsurance' },
   // Hàng đợi xác minh người bán của nền tảng (R3 — ADR 0028 release gate 1).
   { file: 'platform-sellers', namespace: 'PlatformSellers' },
   // Hàng đợi bằng lái của khách (ADR 0057) — chỉ site quản trị.

@@ -8,8 +8,10 @@ import {
   normalizeNumberInput,
   parseNumberInput,
   isNegativeMoney,
+  isPositiveMoney,
   isZeroMoney,
   subtractMoney,
+  sumMoney,
   wholeUnits,
   type MoneySeparators,
 } from './money';
@@ -54,12 +56,46 @@ describe('subtractMoney — số nguyên xu, không float', () => {
   });
 });
 
+describe('sumMoney — tổng trên bigint xu', () => {
+  it('cộng nhiều khoản, kể cả số lẻ và số lớn', () => {
+    expect(sumMoney(['199000', '900000'])).toBe('1099000');
+    expect(sumMoney(['0.10', '0.20'])).toBe('0.30');
+    expect(sumMoney(['9007199254740993', '1'])).toBe('9007199254740994');
+  });
+
+  it('rỗng/null coi như 0, danh sách rỗng ra 0', () => {
+    expect(sumMoney([])).toBe('0');
+    expect(sumMoney(['500000', null, undefined, ''])).toBe('500000');
+    expect(sumMoney(['-200', '100'])).toBe('-100');
+  });
+});
+
 describe('isNegativeMoney · absoluteMoney · isZeroMoney · wholeUnits', () => {
   it('nhận đúng số âm', () => {
     expect(isNegativeMoney('-1')).toBe(true);
     expect(isNegativeMoney('-0.01')).toBe(true);
     expect(isNegativeMoney('0')).toBe(false);
     expect(isNegativeMoney(null)).toBe(false);
+  });
+
+  it('nhận đúng số dương trên CHUỖI, không qua Number', () => {
+    for (const positive of ['1', '0.01', '20000.00', '99999999999999.99', ' 5 ']) {
+      expect(isPositiveMoney(positive)).toBe(true);
+    }
+    for (const notPositive of [
+      '0',
+      '0.00',
+      '-0',
+      '-1',
+      '-0.01',
+      '',
+      null,
+      undefined,
+      'abc',
+      '1e3',
+    ]) {
+      expect(isPositiveMoney(notPositive)).toBe(false);
+    }
   });
 
   it('trị tuyệt đối bỏ dấu, giữ null cho giá trị vắng', () => {

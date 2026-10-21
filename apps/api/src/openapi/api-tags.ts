@@ -79,6 +79,12 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
         description: 'Banner khuyến mãi hiển thị ở trang chủ marketplace.',
       },
       {
+        name: 'public-insurance',
+        description:
+          'Mô tả sản phẩm bảo hiểm chuyến (quyền lợi, khấu trừ, bồi thường tối đa) cho một loại ' +
+          'xe — ADR 0064. Phí ngày và việc có chào bảo hiểm hay không đến từ báo giá, không từ đây.',
+      },
+      {
         name: 'catalog',
         description: 'Danh mục hãng/dòng xe dùng chung khi đăng xe và khi lọc tìm kiếm.',
       },

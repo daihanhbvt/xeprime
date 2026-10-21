@@ -16,10 +16,12 @@ import {
   ROUTE_TYPE,
   routeTypeLabel,
   SERVICE_TYPE,
+  MONEY_STEP_VND,
+  normalizeDeliveryTiers,
+  toPublicFeeBreakdown,
   type BookingPriceSnapshot,
   type CollateralAssetType,
   type CollateralMode,
-  type DeliveryTier,
   type DiscountTier,
   type LegacyDiscountTier,
   type PolicySource,
@@ -27,13 +29,19 @@ import {
   type ServiceType,
   type VehicleType,
 } from '@xeprime/types';
-import { computeCustomerFees, type CustomerFeeBreakdown } from '@xeprime/types';
+import {
+  computeCustomerFees,
+  type CustomerFeeBreakdown,
+  type InsuranceOfferedByKind,
+} from '@xeprime/types';
+import { deliveryTierFee } from '@xeprime/domain';
 import { AuditService } from '../audit/audit.service';
 import { DepositPolicyService } from '../deposit-policy/deposit-policy.service';
 import { FeePoliciesService } from '../fee-policies/fee-policies.service';
 import { ListingsService } from '../public-listings/listings.service';
 import { marketplaceVehicleWhere } from '../../common/marketplace-vehicle-scope';
 import { PrismaService } from '../../prisma/prisma.service';
+import { InsuranceOfferService } from '../insurance/insurance-offer.service';
 import {
   DeliverySummaryDto,
   LongTermPackageOptionDto,
@@ -115,6 +123,21 @@ export interface EffectivePolicy {
   source: PolicySource;
 }
 
+/**
+ * Báo giá NỘI BỘ của một xe ngoài chợ — bảng phí ĐẦY ĐỦ (gồm kinh tế của chủ xe).
+ *
+ * Chỉ các đường tính tiền phía server đọc nó (ngữ cảnh áp mã, đặt nhanh). Thứ đi ra dây cho khách là
+ * `PublicQuoteDto`, cắt qua `toPublicFeeBreakdown` (ADR 0064).
+ */
+export interface ListingQuote {
+  breakdown: QuoteBreakdownDto;
+  delivery: DeliverySummaryDto;
+  /** Có bán ÍT NHẤT một sản phẩm bảo hiểm không. */
+  insuranceOffered: boolean;
+  /** Theo từng sản phẩm (ADR 0064) — ô chọn nào được hiện. */
+  insuranceOfferedByKind: InsuranceOfferedByKind;
+}
+
 /** Kết quả tra phí giao nhận theo khoảng cách. */
 export type DeliveryFeeResult =
   { kind: 'auto'; fee: string } | { kind: 'manual_required' } | { kind: 'disabled' };
@@ -144,6 +167,7 @@ export class PricingService {
     private readonly listings: ListingsService,
     private readonly depositPolicy: DepositPolicyService,
     private readonly feePolicies: FeePoliciesService,
+    private readonly insuranceOffer: InsuranceOfferService,
   ) {}
 
   // -------------------------------------------------------------------------
@@ -185,6 +209,12 @@ export class PricingService {
        * dùng được máy giá mà máy giá không cần biết mã khuyến mãi tồn tại.
        */
       promo?: PromoCodeSnapshot | null;
+      /**
+       * Câu trả lời của `InsuranceOfferService` mà caller ĐÃ hỏi trong cùng lượt (báo giá công
+       * khai cần nó cho cả `insuranceOfferedByKind` của response) — truyền vào để một lượt báo
+       * giá hỏi đúng MỘT lần và hai con số không thể lệch nhau. Bỏ trống ⇒ tự hỏi.
+       */
+      insuranceOffered?: InsuranceOfferedByKind;
     } = {},
   ): Promise<CustomerFeeBreakdown | null> {
     const policy = await this.feePolicies.findEffective();
@@ -213,6 +243,16 @@ export class PricingService {
       policy,
       vehicleType: trip.vehicleType as VehicleType,
       baseAmount: trip.breakdown.totalAmount,
+      /*
+       * Phí giao nằm TRONG `totalAmount` nhưng không phải tiền thuê: tách ra để thuế, hoa hồng và
+       * cọc 30% không tính trên nó và để nó rơi trọn vào phần khách trả tận tay (ADR 0064).
+       */
+      deliveryAmount: deliveryAmountOf(trip.breakdown.rows),
+      /*
+       * Cổng bảo hiểm của NỀN TẢNG — có đối tác phát hành thật hay chưa. Hỏi ở đây, một chỗ, cho
+       * mọi đường tính tiền (báo giá, xem trước mã, duyệt yêu cầu): không caller nào được tự quyết.
+       */
+      insuranceOffered: opts.insuranceOffered ?? (await this.insuranceOffer.offeredByKind()),
       rentalDays,
       dayAmounts,
       quoteIsEstimate,
@@ -264,9 +304,10 @@ export class PricingService {
     });
     if (!vehicle) return null;
 
-    let quote: PublicQuoteDto;
+    let quote: ListingQuote;
     try {
-      quote = await this.publicQuote(vehicleId, query);
+      // Báo giá NỘI BỘ: trần tài trợ cần `sponsorableAmount` (D + S + H) — thứ bản công khai cắt đi.
+      quote = await this.listingQuote(vehicleId, query);
     } catch {
       return null;
     }
@@ -532,6 +573,27 @@ export class PricingService {
       if (dto.deliveryMaxRadiusKm == null) {
         throw invalid('Bật giao nhận thì phải nhập bán kính hỗ trợ tối đa');
       }
+      /*
+       * Mỗi bậc đúng MỘT dạng (ADR 0064): trọn gói (`fee`) hoặc theo km (`perKm`). Có cả hai thì
+       * không ai biết dạng nào thắng; bậc theo km 0đ/km là "miễn phí" viết kiểu khó đọc — miễn phí
+       * thì dùng bậc trọn gói `fee = '0'`, đúng dạng mà vùng miễn phí đầu được nhận diện.
+       */
+      for (const tier of dto.deliveryTiers) {
+        const hasFee = tier.fee != null && tier.fee !== '';
+        const hasPerKm = tier.perKm != null && tier.perKm !== '';
+        if (hasFee === hasPerKm) {
+          throw invalid(
+            hasFee
+              ? `Bậc ${formatKm(tier.toKm)} km chỉ được chọn MỘT cách tính: trọn gói hoặc theo km`
+              : `Bậc ${formatKm(tier.toKm)} km chưa có phí giao nhận`,
+          );
+        }
+        if (hasPerKm && !(Number(tier.perKm) > 0)) {
+          throw invalid(
+            `Đơn giá theo km của bậc ${formatKm(tier.toKm)} km phải lớn hơn 0 — miễn phí thì chọn trọn gói 0đ`,
+          );
+        }
+      }
       for (let i = 1; i < dto.deliveryTiers.length; i++) {
         const prev = dto.deliveryTiers[i - 1]!.toKm;
         const curr = dto.deliveryTiers[i]!.toKm;
@@ -782,7 +844,8 @@ export class PricingService {
     }
     const tier = policy.deliveryTiers.find((t) => distanceKm <= t.toKm);
     if (!tier) return { kind: 'manual_required' };
-    return { kind: 'auto', fee: tier.fee };
+    // Bậc trọn gói trả nguyên phí; bậc theo km nhân khoảng cách rồi làm tròn 1.000đ (ADR 0064).
+    return { kind: 'auto', fee: deliveryTierFee(tier, distanceKm) };
   }
 
   /**
@@ -935,10 +998,13 @@ export class PricingService {
         ? Math.min(100, Math.trunc(input.discountPercent))
         : null;
     if (directDiscountPercent) {
-      discount = base
-        .mul(directDiscountPercent)
-        .div(100)
-        .toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP);
+      /*
+       * Bước giá 1.000đ (ADR 0064): số giảm đi thẳng vào tổng khách trả và mẫu số cọc — một số lẻ
+       * ở đây là một số lẻ trên mã QR. `roundToThousand` (nửa bước LÊN), cùng luật với mọi phép
+       * chia tỷ lệ của luồng tiền v2: đây là tiền CHỦ XE tự bớt, không bị trần nào chặn trên, nên
+       * khác mã khuyến mãi nền tảng (làm tròn XUỐNG để không vượt trần đã hứa).
+       */
+      discount = roundDecimalToThousand(base.mul(directDiscountPercent).div(100));
       rows.push({
         key: PRICE_ROW.DISCOUNT,
         label: `Khuyến mãi trực tiếp (${directDiscountPercent}%)`,
@@ -1004,8 +1070,9 @@ export class PricingService {
     tier: DiscountTier | null,
   ): LongTermPackageOptionDto {
     const basePackage = monthly.mul(months).toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP);
+    // Bước giá 1.000đ — cùng luật với khuyến mãi trực tiếp tự lái (xem `buildDailyQuote`).
     const discount = tier
-      ? basePackage.mul(tier.percent).div(100).toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP)
+      ? roundDecimalToThousand(basePackage.mul(tier.percent).div(100))
       : new Prisma.Decimal(0);
     const finalPackage = basePackage.minus(discount);
     return {
@@ -1311,7 +1378,40 @@ export class PricingService {
       packageMonths?: number;
     },
   ): Promise<PublicQuoteDto> {
+    const quote = await this.listingQuote(vehicleId, query);
+    /*
+     * Khách KHÔNG thấy kinh tế của chủ xe (ADR 0064): hoa hồng, thuế, phần chủ xe trong cọc, số
+     * chủ xe thực nhận, nấc hoa hồng. Cắt bằng allow-list ở `toPublicFeeBreakdown` — một trường
+     * mới thêm vào bảng phí đầy đủ mặc định KHÔNG lọt ra đây.
+     */
+    const fees = quote.breakdown.fees
+      ? toPublicFeeBreakdown(quote.breakdown.fees as CustomerFeeBreakdown)
+      : null;
+    return {
+      breakdown: { ...quote.breakdown, fees },
+      delivery: quote.delivery,
+      insuranceOffered: quote.insuranceOffered,
+      insuranceOfferedByKind: quote.insuranceOfferedByKind,
+    };
+  }
+
+  /**
+   * Báo giá ĐẦY ĐỦ của một xe ngoài chợ — chỉ cho các đường server (ngữ cảnh áp mã). Cùng một phép
+   * tính với `publicQuote`; khác ở chỗ bảng phí còn nguyên kinh tế của chủ xe.
+   */
+  async listingQuote(
+    vehicleId: string,
+    query: InsuranceSelection & {
+      pickupAt?: string;
+      returnAt?: string;
+      serviceType?: string;
+      routeType?: string;
+      packageMonths?: number;
+    },
+  ): Promise<ListingQuote> {
     const { serviceType, routeType } = query;
+    const offeredByKind = await this.insuranceOffer.offeredByKind();
+    const insuranceOffered = offeredByKind.vehicleProtection || offeredByKind.tripInsurance;
     const insurance: InsuranceSelection = {
       vehicleProtectionSelected: query.vehicleProtectionSelected === true,
       personalAccidentSelected: query.personalAccidentSelected === true,
@@ -1376,10 +1476,12 @@ export class PricingService {
             vehicle.tenantId,
             { vehicleType: vehicle.vehicleType, breakdown: longTermBreakdown },
             true,
-            insurance,
+            { ...insurance, insuranceOffered: offeredByKind },
           ),
         },
         delivery,
+        insuranceOffered,
+        insuranceOfferedByKind: offeredByKind,
       };
     }
 
@@ -1419,12 +1521,33 @@ export class PricingService {
           vehicle.tenantId,
           { vehicleType: vehicle.vehicleType, breakdown },
           breakdown.estimateNote != null,
-          insurance,
+          { ...insurance, insuranceOffered: offeredByKind },
         ),
       },
       delivery,
+      insuranceOffered,
+      insuranceOfferedByKind: offeredByKind,
     };
   }
+}
+
+/** `G` — tổng các dòng phí giao nhận của bảng kê (`PRICE_ROW.DELIVERY`), VND nguyên. */
+export function deliveryAmountOf(rows: ReadonlyArray<{ key: string; amount: string }>): string {
+  return rows
+    .filter((row) => row.key === PRICE_ROW.DELIVERY)
+    .reduce((sum, row) => sum.plus(row.amount), new Prisma.Decimal(0))
+    .toFixed(0);
+}
+
+/**
+ * Làm tròn tới bước giá 1.000đ trên `Prisma.Decimal` — cùng luật `roundToThousand` của
+ * `@xeprime/types` (nửa bước LÊN), nhưng không rời Decimal (tiền không đi qua float).
+ */
+function roundDecimalToThousand(value: Prisma.Decimal): Prisma.Decimal {
+  return value
+    .div(MONEY_STEP_VND)
+    .toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP)
+    .mul(MONEY_STEP_VND);
 }
 
 /**
@@ -1505,7 +1628,8 @@ function toValues(row: PolicyRow): RentalPolicyValuesDto {
     depositAmount: row.depositAmount.toFixed(0),
     deliveryEnabled: row.deliveryEnabled,
     deliveryMaxRadiusKm: row.deliveryMaxRadiusKm ? Number(row.deliveryMaxRadiusKm) : null,
-    deliveryTiers: (row.deliveryTiers as unknown as DeliveryTier[]) ?? [],
+    // jsonb chứa cả bậc cũ `{toKm, fee}` lẫn bậc theo km `{toKm, perKm}` (ADR 0064).
+    deliveryTiers: normalizeDeliveryTiers(row.deliveryTiers),
     overtimeFeePerHour: row.overtimeFeePerHour ? row.overtimeFeePerHour.toFixed(0) : null,
     overtimeGraceMinutes: row.overtimeGraceMinutes,
     overtimeRoundingMinutes: row.overtimeRoundingMinutes,
@@ -1538,7 +1662,8 @@ export function policyData(dto: SaveRentalPolicyDto) {
     depositAmount: new Prisma.Decimal(dto.depositAmount),
     deliveryEnabled: dto.deliveryEnabled,
     deliveryMaxRadiusKm: dto.deliveryEnabled ? new Prisma.Decimal(dto.deliveryMaxRadiusKm!) : null,
-    deliveryTiers: dto.deliveryTiers as unknown as Prisma.InputJsonValue,
+    // Chuẩn hoá trước khi ghi: mỗi bậc đúng một dạng, không mang khoá rỗng sang jsonb.
+    deliveryTiers: normalizeDeliveryTiers(dto.deliveryTiers) as unknown as Prisma.InputJsonValue,
     overtimeFeePerHour:
       dto.overtimeFeePerHour != null ? new Prisma.Decimal(dto.overtimeFeePerHour) : null,
     overtimeGraceMinutes: dto.overtimeGraceMinutes ?? null,

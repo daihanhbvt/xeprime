@@ -3849,6 +3849,11 @@ model Plan {
   billingMode       String   @default("commission") @map("billing_mode") @db.VarChar(30)
   /// BẮT BUỘC (1–20, CHECK) khi `billing_mode = 'commission'`; NULL khi `package`.
   commissionPercent Decimal? @map("commission_percent") @db.Decimal(5, 2)
+  /// @xeprime/types → PlanVehicleScope (motorbike | car | all) — ADR 0065. Bậc bán cho loại xe nào;
+  /// CHECK ở DB, và bậc `commission` luôn `all` (CHECK `plans_commission_scope_all`). KHÔNG đổi sau
+  /// khi tạo: dòng thuê bao snapshot nó và trigger `tenant_subscriptions_vehicle_scope_matches_plan`
+  /// đòi hai bên khớp.
+  vehicleScope      String   @default("all") @map("vehicle_scope") @db.VarChar(20)
   /// @xeprime/types → PlanStatus (active | archived)
   status            String   @default("active") @db.VarChar(50)
   sortOrder         Int      @default(0) @map("sort_order")
@@ -3889,6 +3894,14 @@ model TenantSubscription {
   billingMode          String?   @map("billing_mode") @db.VarChar(30)
   /// SNAPSHOT % hoa hồng lúc gán, đi cùng `billing_mode` (ADR 0024 điều 2).
   commissionPercent    Decimal?  @map("commission_percent") @db.Decimal(5, 2)
+  /// SNAPSHOT phạm vi loại xe của bậc lúc gán (ADR 0065) — motorbike | car | all. Trigger
+  /// `tenant_subscriptions_vehicle_scope_matches_plan` đòi nó KHỚP `plans.vehicle_scope`.
+  ///
+  /// ⚠️ CÓ MỘT EXCLUDE PRISMA KHÔNG MÔ TẢ ĐƯỢC: `tenant_subscriptions_package_scope_no_overlap`
+  /// — hai kỳ `package` `active` của cùng tenant không chồng thời gian ở phạm vi xung đột
+  /// (cùng phạm vi, hoặc một bên là `all`). Migration `20261021110000_per_vehicle_type_plans`;
+  /// `prisma migrate dev` sẽ sinh lệnh DROP cho nó — đọc diff và giữ lại.
+  vehicleScope         String    @default("all") @map("vehicle_scope") @db.VarChar(20)
   startsAt             DateTime  @map("starts_at") @db.Timestamptz(3)
   endsAt               DateTime  @map("ends_at") @db.Timestamptz(3)
   /// Ba cột CLAIM của job vòng đời (cùng khuôn `booking_requests.first_reminded_at`):
@@ -3930,11 +3943,12 @@ model TenantSubscription {
 /// hình dạng hàng khoá bằng `@xeprime/types`). Không có người ghi thứ ba.
 ///
 /// ⚠️ CÓ MỘT INDEX PRISMA KHÔNG MÔ TẢ ĐƯỢC, và nó là ràng buộc về tiền:
-/// `subscription_invoices_one_payable_per_tenant` — UNIQUE `(tenant_id)` WHERE
-/// `status IN ('issued','partially_paid')`, tức mỗi tenant tối đa MỘT hoá đơn còn nhận được
-/// tiền (migration `20260916150000_subscription_invoice_single_payable`). Ngôn ngữ schema không
-/// có index-có-điều-kiện, nên `prisma migrate dev` sẽ sinh lệnh DROP cho nó ở migration kế
-/// tiếp — đọc diff và giữ lại, y như các FK tổ hợp mà header của migration baseline cảnh báo.
+/// `subscription_invoices_one_payable_per_tenant_scope` — UNIQUE `(tenant_id, vehicle_scope)`
+/// WHERE `status IN ('issued','partially_paid')`, tức mỗi tenant tối đa MỘT hoá đơn còn nhận được
+/// tiền CHO MỖI PHẠM VI loại xe (migration `20261021110000_per_vehicle_type_plans`, nới từ
+/// `…_subscription_invoice_single_payable`). Ngôn ngữ schema không có index-có-điều-kiện, nên
+/// `prisma migrate dev` sẽ sinh lệnh DROP cho nó ở migration kế tiếp — đọc diff và giữ lại, y
+/// như các FK tổ hợp mà header của migration baseline cảnh báo.
 model SubscriptionInvoice {
   id             String    @id @db.Char(26)
   tenantId       String    @map("tenant_id") @db.Char(26)
@@ -3955,6 +3969,9 @@ model SubscriptionInvoice {
   paidAmount     Decimal   @default(0) @map("paid_amount") @db.Decimal(14, 2)
   /// @xeprime/types → SubscriptionInvoiceStatus; DB canh bằng CHECK.
   status         String    @default("issued") @db.VarChar(50)
+  /// Phạm vi loại xe của bậc lúc phát hành (ADR 0065) — motorbike | car | all, CHECK ở DB. Khoá
+  /// của unique "một hoá đơn trả được mỗi phạm vi" (xem docblock model).
+  vehicleScope   String    @default("all") @map("vehicle_scope") @db.VarChar(20)
   paidAt         DateTime? @map("paid_at") @db.Timestamptz(3)
   /// Hạn chuyển khoản của hoá đơn `issued`; quá hạn job lật `void`. NULL = không hết hạn (đã trả).
   expiresAt      DateTime? @map("expires_at") @db.Timestamptz(3)
@@ -4596,6 +4613,12 @@ model BookingHold {
   vehicleId        String  @map("vehicle_id") @db.Char(26)
   /// @xeprime/types → BookingHoldPurpose. R3 chỉ `commission`; `escrow` là ADR 0025 (chưa mở).
   purpose          String  @default("commission") @db.VarChar(20)
+  /// Chuyến này có thu CỌC qua XePrime không — `DepositPolicyResolution.required` lúc duyệt, ĐÓNG
+  /// BĂNG (ADR 0025 ràng buộc 4). Có hold KHÔNG có nghĩa là có cọc: tuyến gói tắt công tắc vẫn có
+  /// hold cho `S + H + IV + IP + T` (ADR 0064 điều 5). Lượt tiền về đọc cột này để đóng băng
+  /// `bookings.deposit_collection_mode` (`platform` / `direct`). Không DEFAULT — người ghi phải tự
+  /// nói (migration `20261021140000_hold_deposit_required`).
+  depositRequired  Boolean @map("deposit_required")
   /// @xeprime/types → BookingHoldStatus; DB canh CHECK.
   status           String  @default("pending") @db.VarChar(20)
   /// @xeprime/types → BookingHoldOutcome; NULL tới khi chốt. CHECK theo purpose (ADR 0025 điều 4).
@@ -4749,6 +4772,14 @@ model BookingInsurancePolicy {
   requestPayloadJson  Json? @map("request_payload_json") @db.JsonB
   responsePayloadJson Json? @map("response_payload_json") @db.JsonB
 
+  /// SNAPSHOT sản phẩm (`insurance_products`) lúc đơn ra đời — tên, quyền lợi, khấu trừ, mẫu URL
+  /// GCN (ADR 0064). Admin sửa danh mục sau đó KHÔNG viết lại quyền lợi đã hứa với khách. NULL
+  /// với hợp đồng tạo trước khi có danh mục.
+  productSnapshotJson Json? @map("product_snapshot_json") @db.JsonB
+  /// GCN do adapter GIẢ LẬP cấp (`INSURANCE_PARTNER=mic_mock`) — KHÔNG có hiệu lực bảo hiểm. Mọi
+  /// bề mặt hiện nhãn THỬ NGHIỆM khi cờ này bật. CHECK: chỉ `true` khi số GCN mang tiền tố `TEST-`.
+  isTest              Boolean @default(false) @map("is_test")
+
   /// Bằng chứng khách CHỌN `IP` (ADR 0028 điều 5). NULL với `IV` — nó bắt buộc, không phải chọn.
   consentAt     DateTime? @map("consent_at") @db.Timestamptz(3)
   /// @xeprime/types → InsuranceConsentSource
@@ -4768,7 +4799,49 @@ model BookingInsurancePolicy {
   @@index([nextAttemptAt], map: "booking_insurance_policies_due_idx")
   @@index([status, createdAt], map: "booking_insurance_policies_status_created_idx")
   @@index([tenantId, createdAt], map: "booking_insurance_policies_tenant_idx")
+  /// Hàng đợi GCN của admin khi xem TẤT CẢ trạng thái — sắp theo ngày tạo, không lọc status.
+  @@index([createdAt], map: "booking_insurance_policies_created_idx")
   @@map("booking_insurance_policies")
+}
+
+/// Danh mục SẢN PHẨM bảo hiểm chuyến — ADR 0064.
+///
+/// Biểu phí NGÀY không nằm ở đây: nó có phiên bản ở `fee_policies` (IV/IP theo loại xe), vì giá
+/// là thứ đóng băng vào đơn và cần lịch sử. Bảng này giữ phần MÔ TẢ sản phẩm — tên, quyền lợi,
+/// mức khấu trừ, mức bồi thường tối đa, mẫu URL tra cứu GCN — và công tắc bật/tắt hiển thị.
+///
+/// Một hãng có tối đa một sản phẩm mỗi loại (`UNIQUE (provider, kind)`). Không xoá: tắt bằng
+/// `is_active`. Hợp đồng đã bán mang snapshot riêng (`booking_insurance_policies.product_snapshot_json`).
+model InsuranceProduct {
+  id                 String   @id @db.Char(26)
+  /// @xeprime/types → InsuranceProductKind; DB canh CHECK.
+  kind               String   @db.VarChar(30)
+  /// @xeprime/types → InsuranceProvider; DB canh CHECK.
+  provider           String   @db.VarChar(30)
+  partnerProductCode String   @map("partner_product_code") @db.VarChar(100)
+  nameVi             String   @map("name_vi") @db.VarChar(255)
+  nameEn             String   @map("name_en") @db.VarChar(255)
+  coverageVi         String   @map("coverage_vi") @db.Text
+  coverageEn         String   @map("coverage_en") @db.Text
+  /// Mức khấu trừ mỗi vụ theo loại xe. NULL = không áp dụng khấu trừ. CHECK ≥ 0, bội số 1.000.
+  deductibleCar       Decimal? @map("deductible_car") @db.Decimal(14, 2)
+  deductibleMotorbike Decimal? @map("deductible_motorbike") @db.Decimal(14, 2)
+  /// Mức bồi thường tối đa theo loại xe. NULL = theo giá trị thực tế (ghi ở `max_payout_note_*`).
+  maxPayoutCar        Decimal? @map("max_payout_car") @db.Decimal(14, 2)
+  maxPayoutMotorbike  Decimal? @map("max_payout_motorbike") @db.Decimal(14, 2)
+  maxPayoutNoteVi     String?  @map("max_payout_note_vi") @db.VarChar(255)
+  maxPayoutNoteEn     String?  @map("max_payout_note_en") @db.VarChar(255)
+  /// Mẫu URL tra cứu GCN, `{certCode}` là chỗ thay số chứng nhận. CHECK có placeholder + https.
+  certificateUrlTemplate String  @map("certificate_url_template") @db.Text
+  displayOrder           Int     @default(0) @map("display_order")
+  isActive               Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([provider, kind], map: "insurance_products_provider_kind_key")
+  @@index([isActive, displayOrder], map: "insurance_products_active_order_idx")
+  @@map("insurance_products")
 }
 
 /// Sổ THUẾ KHẤU TRỪ của từng chuyến — ADR 0032 điều 3, ADR 0028 điều 3–4 (Phase 8).

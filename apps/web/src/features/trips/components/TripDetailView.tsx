@@ -52,6 +52,7 @@ import { TripFinanceCard } from './TripFinanceCard';
 import { TripHoldPanel } from './TripHoldPanel';
 import { TripHostDecisions } from './TripHostDecisions';
 import { TripHandoverEvidence } from './TripHandoverEvidence';
+import { InsuranceCoverageList } from '@/features/insurance/components/InsuranceCoverageList';
 import { TripAwaitingHoldView } from './TripAwaitingHoldView';
 import { TripConfirmedView } from './TripConfirmedView';
 import { TripPendingApprovalView } from './TripPendingApprovalView';
@@ -488,6 +489,13 @@ export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailVi
             tripId={tripId}
             enabled={Boolean(data.actualPickupAt || data.actualReturnAt)}
           />
+
+          {/*
+            Bảo hiểm chuyến theo TỪNG sản phẩm khách đã trả (ADR 0064): chờ phát hành → đang phát
+            hành → đã cấp (thẻ GCN, nhãn THỬ NGHIỆM ở dev/staging) hoặc lỗi/đã hoàn. Rỗng ⇒ chuyến
+            không mua bảo hiểm, không render gì.
+          */}
+          <InsuranceCoverageList coverage={data.insuranceCoverage ?? []} className={styles.block} />
 
           {data.customerNote ? (
             <section className={styles.block}>

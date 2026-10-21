@@ -88,6 +88,7 @@ export function SettleHoldDrawer({
         ? adminSettleOutcomes(hold.purpose as BookingHoldPurpose, {
             deposit: hold.depositAmount,
             serviceFee: hold.serviceFeeAmount,
+            ownerCommission: hold.ownerCommissionAmount,
             vehicleInsurance: hold.vehicleInsuranceAmount,
             personalInsurance: hold.personalInsuranceAmount,
           })
@@ -230,6 +231,7 @@ function HoldFile({ hold }: { hold: PlatformHold }) {
   const lines = [
     { key: FEE_LINE.DEPOSIT, amount: hold.depositAmount },
     { key: FEE_LINE.SERVICE_FEE, amount: hold.serviceFeeAmount },
+    { key: FEE_LINE.OWNER_COMMISSION, amount: hold.ownerCommissionAmount },
     { key: FEE_LINE.VEHICLE_PROTECTION, amount: hold.vehicleInsuranceAmount },
     { key: FEE_LINE.TRIP_INSURANCE, amount: hold.personalInsuranceAmount },
   ].filter((line) => Number(line.amount) > 0);
@@ -278,6 +280,16 @@ function HoldFile({ hold }: { hold: PlatformHold }) {
             <dt>{t('settle.paidTotal')}</dt>
             <dd>{fmt.money(hold.paidAmount)}</dd>
           </div>
+          {/*
+            Thuế `T` NẰM TRONG phần cọc của chủ xe (không phải một dòng thu thêm) và chỉ khấu trừ khi
+            chuyến hoàn thành — nói ngay dưới tổng để người chốt đọc đúng phần "quyết toán" bên phải.
+          */}
+          {Number(hold.taxAmount) > 0 ? (
+            <div className={styles.line}>
+              <dt>{t('settle.taxWithheld')}</dt>
+              <dd>{fmt.money(hold.taxAmount)}</dd>
+            </div>
+          ) : null}
         </dl>
       </section>
     </>
@@ -315,6 +327,8 @@ function OutcomePicker({
         {
           deposit: hold.depositAmount,
           serviceFee: hold.serviceFeeAmount,
+          // `H` — thiếu nó thì phần xem trước nhỏ hơn số đã nhận đúng bằng hoa hồng.
+          ownerCommission: hold.ownerCommissionAmount,
           vehicleInsurance: hold.vehicleInsuranceAmount,
           personalInsurance: hold.personalInsuranceAmount,
           promoDiscount: hold.promoDiscountAmount,

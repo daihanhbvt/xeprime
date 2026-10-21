@@ -22,6 +22,8 @@ import {
   cancellationReasonNeedsText,
   bookingRequestRespondBy,
   DEPOSIT_COLLECTION_MODE,
+  holdWindowsPreview,
+  toHoldWindowsPreviewDto,
   hostSeesCustomerContact,
   isBookingRequestEngaged,
   isBookingRequestPastDue,
@@ -92,6 +94,7 @@ import {
   BOOKING_REQUEST_DEFAULT_LIMIT,
   CancelBookingRequestDto,
   BOOKING_REQUEST_MAX_LIMIT,
+  BookingRequestApprovalPreviewDto,
   BookingRequestDto,
   BookingRequestListQueryDto,
   BookingRequestPageMetaDto,
@@ -175,9 +178,10 @@ const SELECT = {
       code: true,
       vehicleType: true,
       mainImageUrl: true,
-      // Bốn giá + khuyến mãi — CHỈ để ước TẠM TÍNH cho yêu cầu còn `pending_host_approval` chưa
-      // từng có hold (`resolvePricing`). Không kéo `monthlyPrice`: dài hạn bị loại khỏi ước giá
-      // ngay từ `resolvePricing` (chưa chốt lịch thì chưa có giá — ADR 0011), giống `approve`.
+      // Giá + khuyến mãi — CHỈ để ước TẠM TÍNH cho yêu cầu còn `pending_host_approval` chưa
+      // từng có hold (`estimateFees`). `monthlyPrice` nuôi XEM TRƯỚC lượt duyệt dài hạn (giá gói
+      // không phụ thuộc giờ nhận — ADR 0011); thẻ `pricing` của dài hạn vẫn để trống như cũ.
+      monthlyPrice: true,
       weekdayPrice: true,
       weekendPrice: true,
       withDriverDailyPrice: true,
@@ -1155,10 +1159,8 @@ export class BookingRequestsService {
    *
    * BA nhánh, THEO ĐÚNG THỨ TỰ đóng băng (ADR 0024 — không bao giờ tính lại một con số đã chốt):
    *
-   *  1. Đã tạo đơn ⇒ cột phẳng trên `Booking` (`row.booking`) — nguồn DUY NHẤT, bất kể đơn đi
-   *     qua đường có hold hay không.
-   *  2. Có hold (`row.hold`) — kể cả yêu cầu đã huỷ/từ chối/hết hạn SAU khi đã cọc — đọc
-   *     snapshot đóng băng lúc hold sinh ra, không đọc lại policy hôm nay.
+   *  1–2. Đã có đơn hoặc có hold ⇒ số ĐÃ ĐÓNG BĂNG, giao cho `resolvePricing`. Không có bản xem
+   *     trước lượt duyệt: chuyến đã được nhận rồi.
    *  3. Còn lại: CHỈ khi vẫn `pending_host_approval` và có đủ lịch (tự lái/có tài xế — dài hạn bỏ
    *     qua, cùng lý do `approve()` phải chốt lịch trước) mới ước TẠM TÍNH, bằng ĐÚNG máy giá nó
    *     dùng. Yêu cầu đã chết (từ chối/huỷ/hết hạn) mà CHƯA TỪNG có hold thì không có gì để tính
@@ -1166,6 +1168,103 @@ export class BookingRequestsService {
    *
    * Bounded theo trang: chỉ nhánh (3) gọi thêm dịch vụ giá, và chỉ cho hàng `pending_host_approval`
    * trong ĐÚNG trang đang xem (`limit` tối đa `BOOKING_REQUEST_MAX_LIMIT`) — không quét toàn bảng.
+   */
+  private async resolveMoney(
+    tenantId: string,
+    r: BookingRequestRow,
+  ): Promise<{
+    pricing: BookingRequestPricingDto | null;
+    approvalPreview: BookingRequestApprovalPreviewDto | null;
+  }> {
+    if (r.status !== BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL || r.booking || r.hold) {
+      return { pricing: await this.resolvePricing(tenantId, r), approvalPreview: null };
+    }
+    try {
+      const estimate = await this.estimateFees(tenantId, r);
+      const pricing: BookingRequestPricingDto | null =
+        estimate && r.serviceType !== SERVICE_TYPE.LONG_TERM
+          ? {
+              isEstimate: true,
+              rentalTotal: estimate.breakdown.totalAmount,
+              customerTotalAmount:
+                estimate.fees?.customerTotalAmount ?? estimate.breakdown.totalAmount,
+              paidAmount: null,
+              remainingAmount: null,
+            }
+          : null;
+      return {
+        pricing,
+        approvalPreview: estimate?.fees
+          ? approvalPreviewOf(estimate.fees, r.serviceType === SERVICE_TYPE.LONG_TERM ? null : r.pickupAt)
+          : null,
+      };
+    } catch (err) {
+      // Không sập cả trang inbox vì MỘT yêu cầu không ước được giá — thiếu tiền trên một thẻ còn
+      // hơn thiếu cả danh sách (cùng kỷ luật `tryAutoAccept`).
+      this.logger.warn(
+        `Không ước được giá tạm tính cho yêu cầu ${r.id}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      return { pricing: null, approvalPreview: null };
+    }
+  }
+
+  /**
+   * Bảng kê + bảng phí TẠM TÍNH của một yêu cầu còn chờ duyệt — bằng ĐÚNG máy giá lượt duyệt dùng.
+   *
+   * Dài hạn: giá GÓI không phụ thuộc giờ nhận (ADR 0011), nên ước được trước khi gian hàng chốt
+   * lịch; số ngày lịch của gói đếm từ hôm nay (`feeDaysOf` không có lịch) — đủ cho một ƯỚC TÍNH,
+   * lượt duyệt tính lại trên lịch thật. `null` khi thiếu lịch / thiếu giá.
+   */
+  private async estimateFees(
+    tenantId: string,
+    r: BookingRequestRow,
+  ): Promise<{ breakdown: QuoteBreakdownDto; fees: CustomerFeeBreakdown | null } | null> {
+    const policy = await this.pricing.effectivePolicy(tenantId, r.vehicleId);
+    let breakdown: QuoteBreakdownDto;
+    if (r.serviceType === SERVICE_TYPE.LONG_TERM) {
+      if (!r.longTermPackageMonths || !r.vehicle.monthlyPrice) return null;
+      breakdown = this.pricing.buildLongTermPackageQuote({
+        monthlyPrice: r.vehicle.monthlyPrice.toFixed(0),
+        packageMonths: r.longTermPackageMonths,
+        policy,
+        delivery: null,
+      });
+    } else {
+      if (!r.pickupAt || !r.returnAt) return null;
+      breakdown = await this.quoteFor(
+        r,
+        { pickupAt: r.pickupAt, returnAt: r.returnAt, packageMonths: null },
+        policy,
+      );
+    }
+    /*
+     * Mã đã đóng băng trên yêu cầu đi cùng ước tính này. Bỏ nó ra thì thẻ trong hộp thư của
+     * gian hàng hiện một con số khác với thứ khách đang nhìn, và khác cả với số sẽ chốt lúc
+     * duyệt — ba màn, ba giá (lỗi 24/09/2026).
+     */
+    const frozen = this.promos.frozenTermsOf(r);
+    const fees = await this.pricing.customerFeesFor(
+      tenantId,
+      { vehicleType: r.vehicle.vehicleType, breakdown },
+      breakdown.estimateNote != null,
+      {
+        vehicleProtectionSelected: r.vehicleProtectionSelected,
+        personalAccidentSelected: r.personalAccidentSelected,
+        ...(frozen ? { promo: frozen } : {}),
+      },
+    );
+    return { breakdown, fees };
+  }
+
+  /**
+   * Nhánh (1) và (2) của `resolveMoney` — tiền ĐÃ ĐÓNG BĂNG của một yêu cầu (ADR 0024):
+   *
+   *  1. Đã tạo đơn ⇒ cột phẳng trên `Booking` (`row.booking`) — nguồn DUY NHẤT, bất kể đơn đi
+   *     qua đường có hold hay không.
+   *  2. Có hold (`row.hold`) — kể cả yêu cầu đã huỷ/từ chối/hết hạn SAU khi đã cọc — đọc
+   *     snapshot đóng băng lúc hold sinh ra, không đọc lại policy hôm nay.
+   *
+   * Còn lại ⇒ `null`: yêu cầu đã chết mà chưa từng có hold không có con số nào để kể.
    */
   private async resolvePricing(
     tenantId: string,
@@ -1202,54 +1301,9 @@ export class BookingRequestsService {
       };
     }
 
-    if (
-      r.status !== BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL ||
-      r.serviceType === SERVICE_TYPE.LONG_TERM ||
-      !r.pickupAt ||
-      !r.returnAt
-    ) {
-      return null;
-    }
-
-    try {
-      const policy = await this.pricing.effectivePolicy(tenantId, r.vehicleId);
-      const schedule: ApprovalSchedule = {
-        pickupAt: r.pickupAt,
-        returnAt: r.returnAt,
-        packageMonths: null,
-      };
-      const breakdown = await this.quoteFor(r, schedule, policy);
-      /*
-       * Mã đã đóng băng trên yêu cầu đi cùng ước tính này. Bỏ nó ra thì thẻ trong hộp thư của
-       * gian hàng hiện một con số khác với thứ khách đang nhìn, và khác cả với số sẽ chốt lúc
-       * duyệt — ba màn, ba giá (lỗi 24/09/2026).
-       */
-      const frozen = this.promos.frozenTermsOf(r);
-      const fees = await this.pricing.customerFeesFor(
-        tenantId,
-        { vehicleType: r.vehicle.vehicleType, breakdown },
-        breakdown.estimateNote != null,
-        {
-          vehicleProtectionSelected: r.vehicleProtectionSelected,
-          personalAccidentSelected: r.personalAccidentSelected,
-          ...(frozen ? { promo: frozen } : {}),
-        },
-      );
-      return {
-        isEstimate: true,
-        rentalTotal: breakdown.totalAmount,
-        customerTotalAmount: fees?.customerTotalAmount ?? breakdown.totalAmount,
-        paidAmount: null,
-        remainingAmount: null,
-      };
-    } catch (err) {
-      // Không sập cả trang inbox vì MỘT yêu cầu không ước được giá — thiếu tiền trên một thẻ còn
-      // hơn thiếu cả danh sách (cùng kỷ luật `tryAutoAccept`).
-      this.logger.warn(
-        `Không ước được giá tạm tính cho yêu cầu ${r.id}: ${err instanceof Error ? err.message : String(err)}`,
-      );
-      return null;
-    }
+    // Yêu cầu đã chết mà CHƯA TỪNG có hold: không đoán một con số theo chính sách hôm nay.
+    // (Yêu cầu còn chờ duyệt đi qua `resolveMoney` → `estimateFees`.)
+    return null;
   }
 
   /**
@@ -1540,7 +1594,7 @@ export class BookingRequestsService {
     const data = await Promise.all(
       rows.map(async (row) => ({
         ...toDto(row, packageTrack),
-        pricing: await this.resolvePricing(tenantId, row),
+        ...(await this.resolveMoney(tenantId, row)),
       })),
     );
 
@@ -1566,7 +1620,7 @@ export class BookingRequestsService {
     if (!row) throw notFound();
     return {
       ...toDto(row, await this.isPackageTrack(tenantId)),
-      pricing: await this.resolvePricing(tenantId, row),
+      ...(await this.resolveMoney(tenantId, row)),
     };
   }
 
@@ -1587,7 +1641,7 @@ export class BookingRequestsService {
       },
     });
     return tenantUsesManagePortal({
-      billingMode: resolveEffectiveBilling(tenant?.subscriptions[0] ?? null, now).billingMode,
+      billingMode: resolveEffectiveBilling(tenant?.subscriptions, now).billingMode,
     });
   }
 
@@ -1751,6 +1805,9 @@ export class BookingRequestsService {
         schedule,
         snapshot,
         fees.holdAmount,
+        // Cùng `deposit.required` đã tính khoản online của `fees` — đóng băng trên hold để lượt
+        // tiền về biết cọc do XePrime giữ (`platform`) hay chủ xe tự thu (`direct`).
+        deposit.required,
         opts,
       );
     }
@@ -1945,6 +2002,7 @@ export class BookingRequestsService {
     schedule: ApprovalSchedule,
     snapshot: BookingPriceSnapshot,
     holdAmount: string,
+    depositRequired: boolean,
     opts: { promoDropped?: boolean },
   ): Promise<BookingRequestRow> {
     const isSystem = actor.source === BOOKING_REQUEST_DECISION_SOURCE.SYSTEM;
@@ -1970,6 +2028,7 @@ export class BookingRequestsService {
         snapshot,
         acceptedAt,
         actorUserId: actor.userId,
+        depositRequired,
       });
 
       await this.claimPending(tx, tenantId, id, {
@@ -2633,6 +2692,41 @@ const PENDING_SELECT = {
 type PendingRequestRow = Prisma.BookingRequestGetPayload<{ select: typeof PENDING_SELECT }>;
 
 type BookingRequestRow = Prisma.BookingRequestGetPayload<{ select: typeof SELECT }>;
+
+/**
+ * Xem trước lượt duyệt từ bảng phí TẠM TÍNH — tiền của chủ xe + hai cửa sổ của khoản giữ chỗ NẾU
+ * duyệt ngay (`holdWindowsFor` với `acceptedAt = now`, CÙNG hàm lượt tạo hold dùng). `pickupAt`
+ * null ⇒ chưa có giờ nhận (dài hạn: gian hàng chốt lúc duyệt) ⇒ không có cửa sổ để ước.
+ */
+function approvalPreviewOf(
+  fees: CustomerFeeBreakdown,
+  pickupAt: Date | null,
+  now: Date = new Date(),
+): BookingRequestApprovalPreviewDto {
+  const collectsHold = fees.holdAmount != null;
+  const windows =
+    collectsHold && pickupAt
+      ? holdWindowsPreview({
+          now,
+          pickupAt,
+          freeCancelHours: fees.policy.freeCancelHours,
+          paymentWindowMinutes: fees.policy.holdPaymentWindowMinutes,
+        })
+      : null;
+  return {
+    isEstimate: true,
+    collectsHold,
+    onlineAmount: fees.holdAmount,
+    payAtPickupAmount: fees.payAtPickupAmount,
+    ownerCommissionAmount: fees.ownerCommissionAmount,
+    taxAmount: fees.taxAmount,
+    ownerPayableAmount: fees.ownerPayableAmount,
+    ownerNetAmount: fees.ownerNetAmount,
+    policyFreeCancelHours: fees.policy.freeCancelHours,
+    policyPaymentWindowMinutes: fees.policy.holdPaymentWindowMinutes,
+    windows: windows ? toHoldWindowsPreviewDto(windows) : null,
+  };
+}
 
 /**
  * Wave 9: `deliveryQuote` chỉ còn là **dữ liệu lịch sử đọc-được** của các yêu cầu đã báo giá

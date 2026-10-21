@@ -1,6 +1,7 @@
 import type { Prisma } from '@xeprime/prisma';
 import {
   changedLockedVehicleFields,
+  normalizeDeliveryTiers,
   resolveEffectiveBilling,
   resolveStorefrontKind,
   SERVICE_TYPE,
@@ -70,7 +71,7 @@ export async function buildVehicleReviewSnapshot(
   ]);
   if (!vehicle) return null;
 
-  const billing = resolveEffectiveBilling(vehicle.tenant.subscriptions[0] ?? null, args.now);
+  const billing = resolveEffectiveBilling(vehicle.tenant.subscriptions, args.now);
   const branch = vehicle.branch;
 
   return {
@@ -319,7 +320,8 @@ function policySnapshot(policy: EffectivePolicy): VehicleReviewPolicySnapshot {
     deliveryEnabled: v.deliveryEnabled,
     deliveryMaxRadiusKm: v.deliveryEnabled ? v.deliveryMaxRadiusKm : null,
     deliveryTiers: v.deliveryEnabled
-      ? v.deliveryTiers.map((tier) => ({ toKm: tier.toKm, fee: tier.fee }))
+      ? // Bản sao mới, mỗi bậc đúng một dạng — trọn gói hoặc theo km (ADR 0064).
+        normalizeDeliveryTiers(v.deliveryTiers)
       : [],
     includedDistanceKmPerDay: v.includedDistanceKmPerDay,
     excessDistanceFeePerKm: v.excessDistanceFeePerKm,

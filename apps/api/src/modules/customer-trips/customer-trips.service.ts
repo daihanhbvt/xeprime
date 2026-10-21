@@ -10,7 +10,12 @@ import {
   BOOKING_STATUS,
   CANCELLATION_REASON_CATEGORY,
   CANCELLATION_STAGE,
+  CUSTOMER_CANCEL_PREVIEW_KIND,
   CUSTOMER_TRIP_FILTER,
+  BOOKING_HOLD_OUTCOME,
+  BOOKING_HOLD_STATUS,
+  hasFreeCancelWindow,
+  type CustomerCancelPreviewKind,
   WALLET_OWNER_TYPE,
   CUSTOMER_TRIP_FILTER_DEFAULT,
   CUSTOMER_TRIP_FILTER_STAGES,
@@ -39,6 +44,7 @@ import {
   resolveEffectiveBilling,
   resolveRefundWalletOwner,
   tenantUsesManagePortal,
+  toPublicFeeBreakdown,
   isHandoverPhotoAddedAfterConfirmation,
   type BookingRequestStatus,
   type BookingStatus,
@@ -67,6 +73,7 @@ import { BookingsService } from '../bookings/bookings.service';
 import { BankAccountsService, type BankAccountOwner } from '../bank-accounts/bank-accounts.service';
 import { BookingHoldsService } from '../holds/booking-holds.service';
 import { HoldSettlementService } from '../holds/hold-settlement.service';
+import { InsuranceReadService } from '../insurance/insurance-read.service';
 import { NotificationService } from '../notification/notification.service';
 import { PricingService } from '../pricing/pricing.service';
 import { SettlementService } from '../bookings/settlement/settlement.service';
@@ -79,6 +86,7 @@ import {
 import {
   CUSTOMER_TRIP_DEFAULT_LIMIT,
   CUSTOMER_TRIP_MAX_LIMIT,
+  CustomerTripCancelPreviewDto,
   CustomerTripCountsDto,
   CustomerTripDetailDto,
   CustomerTripEstimateDto,
@@ -158,6 +166,8 @@ export class CustomerTripsService {
     private readonly audit: AuditService,
     /** Writer DUY NHẤT của `booking_cancellations` (ADR 0045 điều 1). */
     private readonly cancellations: CancellationsService,
+    /** GCN bảo hiểm đã cấp của chuyến (ADR 0064) — chỉ đọc. */
+    private readonly insuranceRead: InsuranceReadService,
   ) {}
 
   /**
@@ -259,7 +269,7 @@ export class CustomerTripsService {
       // một chủ xe không thể nói hai câu khác nhau về việc có được thấy SĐT khách hay không.
       hostPackageTrack: membership
         ? tenantUsesManagePortal({
-            billingMode: resolveEffectiveBilling(membership.tenant.subscriptions[0] ?? null, now)
+            billingMode: resolveEffectiveBilling(membership.tenant.subscriptions, now)
               .billingMode,
           })
         : false,
@@ -389,10 +399,16 @@ export class CustomerTripsService {
     if (!row) throw tripNotFound();
 
     const booking = row.booking;
-    const [surcharges, estimates] = await Promise.all([
+    const [surcharges, estimates, insuranceCoverage] = await Promise.all([
       this.surchargeTotals([row.bookingId]),
       this.estimateQuotes([row]),
+      // Quyền sở hữu chuyến đã nằm trong truy vấn `row` phía trên — chỉ đọc bảo hiểm của ĐÚNG đơn đó.
+      row.bookingId ? this.insuranceRead.coverageForBooking(row.bookingId) : Promise.resolve([]),
     ]);
+    // Bản cũ (chỉ GCN đã cấp) suy từ CÙNG một lượt đọc — hai trường không thể kể khác nhau.
+    const insuranceCertificates = insuranceCoverage.flatMap((c) =>
+      c.certificate ? [c.certificate] : [],
+    );
     const base = toListItem(row, surcharges, scope, estimates, now);
 
     return {
@@ -411,7 +427,7 @@ export class CustomerTripsService {
        * Loại trừ với `finance`: có đơn thì tiền đã đóng băng ở đó. Chưa có đơn thì trưng bảng
        * kê tạm tính — khách vừa xem đúng những dòng này trước khi bấm gửi yêu cầu.
        */
-      estimate: booking ? null : toEstimate(estimates.get(row.id)),
+      estimate: booking ? null : toEstimate(estimates.get(row.id), base.role as TripRole),
       /*
        * Khoản giữ chỗ là tiền của KHÁCH, nên chỉ khách nhìn thấy nó — service tự khoá thêm một
        * lần theo `customerUserId`. Chủ xe xem cùng chuyến này thì `null`: cọc và tiền thuê giữa
@@ -435,7 +451,103 @@ export class CustomerTripsService {
             createdAt: booking.review.createdAt.toISOString(),
           }
         : null,
+      insuranceCertificates,
+      insuranceCoverage,
     };
+  }
+
+  /**
+   * XEM TRƯỚC lượt khách tự huỷ — tiền đi QUA XePrime sẽ về đâu nếu khách bấm huỷ NGAY BÂY GIỜ
+   * (ADR 0064). Chỉ đọc.
+   *
+   * Ba nhánh, cùng thứ tự với `cancel()` để hai đường không bao giờ hiểu khác nhau về một chuyến:
+   *
+   *  - **Có đơn** ⇒ `HoldSettlementService.previewCustomerCancel` — CÙNG `decideOutcome` + phép chia
+   *    mà hook chốt kết cục của `transitionWithinTx` sẽ chạy khi khách bấm.
+   *  - **Đã nhận, chờ tiền** (`awaiting_hold`) ⇒ phần đã chuyển (nếu có) hoàn đủ — đúng việc
+   *    `BookingHoldsService.cancelForRequestWithinTx` làm.
+   *  - **Chờ duyệt** ⇒ chưa có đồng nào, huỷ không mất gì.
+   *
+   * Quyền sở hữu nằm trong truy vấn (`customerUserId`) — chuyến của người khác là 404.
+   */
+  async cancelPreview(customerUserId: string, id: string): Promise<CustomerTripCancelPreviewDto> {
+    const row = await this.prisma.bookingRequest.findFirst({
+      where: { customerUserId, OR: [{ id }, { bookingId: id }] },
+      select: {
+        status: true,
+        // Mốc NHẬN chuyến đã đóng băng — `acceptedAt` mà `freeCancelUntil` tính xuôi từ đó.
+        decidedAt: true,
+        booking: { select: { id: true, tenantId: true, status: true } },
+        hold: {
+          select: { status: true, paidAmount: true, freeCancelUntil: true, createdAt: true },
+        },
+      },
+    });
+    if (!row) throw tripNotFound();
+
+    const stage = customerTripStage({
+      requestStatus: row.status as BookingRequestStatus,
+      bookingStatus: (row.booking?.status as BookingStatus | undefined) ?? null,
+    });
+    const hold = row.hold;
+    const base = {
+      paidAmount: '0',
+      refundAmount: '0',
+      insuranceRefundAmount: '0',
+      forfeitAmount: '0',
+      ownerCompensationAmount: '0',
+      freeCancelUntil: hold?.freeCancelUntil.toISOString() ?? null,
+      freeCancelAvailable: hold
+        ? hasFreeCancelWindow(hold.freeCancelUntil, row.decidedAt ?? hold.createdAt)
+        : true,
+      deferred: false,
+    };
+    const result = (
+      kind: CustomerCancelPreviewKind,
+      patch: Partial<typeof base> = {},
+    ): CustomerTripCancelPreviewDto => ({
+      allowed: kind !== CUSTOMER_CANCEL_PREVIEW_KIND.NOT_ALLOWED,
+      kind,
+      ...base,
+      ...patch,
+    });
+
+    if (!canCustomerCancelTrip(stage)) return result(CUSTOMER_CANCEL_PREVIEW_KIND.NOT_ALLOWED);
+
+    if (row.booking) {
+      const preview = await this.holdSettlement.previewCustomerCancel(
+        row.booking.id,
+        row.booking.tenantId,
+      );
+      // Đơn không có khoản giữ chỗ đã trả chờ chốt — không có đồng nào qua XePrime để chia.
+      if (!preview || Number(preview.paidAmount) <= 0) {
+        return result(CUSTOMER_CANCEL_PREVIEW_KIND.NO_CHARGE);
+      }
+      return result(
+        preview.outcome === BOOKING_HOLD_OUTCOME.REFUNDED
+          ? CUSTOMER_CANCEL_PREVIEW_KIND.FULL_REFUND
+          : CUSTOMER_CANCEL_PREVIEW_KIND.LATE_CANCEL,
+        {
+          paidAmount: preview.paidAmount,
+          refundAmount: preview.refundAmount,
+          insuranceRefundAmount: preview.insuranceRefundAmount,
+          forfeitAmount: preview.forfeitAmount,
+          ownerCompensationAmount: preview.ownerCompensationAmount,
+          freeCancelUntil: preview.freeCancelUntil.toISOString(),
+          deferred: preview.deferred,
+        },
+      );
+    }
+
+    // Đã nhận, đang chờ tiền: phần đã chuyển (trả thiếu) hoàn đủ — `cancelForRequestWithinTx`.
+    const paid =
+      hold &&
+      (hold.status === BOOKING_HOLD_STATUS.PENDING || hold.status === BOOKING_HOLD_STATUS.UNDERPAID)
+        ? hold.paidAmount.toFixed(0)
+        : '0';
+    return Number(paid) > 0
+      ? result(CUSTOMER_CANCEL_PREVIEW_KIND.FULL_REFUND, { paidAmount: paid, refundAmount: paid })
+      : result(CUSTOMER_CANCEL_PREVIEW_KIND.NO_CHARGE);
   }
 
   /**
@@ -1235,13 +1347,18 @@ function customerTotalOf(estimate: TripEstimate | undefined): string | null {
   return estimate.fees?.customerTotalAmount ?? estimate.breakdown.totalAmount;
 }
 
-function toEstimate(estimate: TripEstimate | undefined): CustomerTripEstimateDto | null {
+function toEstimate(
+  estimate: TripEstimate | undefined,
+  role: TripRole,
+): CustomerTripEstimateDto | null {
   if (!estimate) return null;
   return {
     rows: estimate.breakdown.rows,
     rentalTotal: estimate.breakdown.totalAmount,
     depositAmount: estimate.breakdown.depositAmount,
-    fees: estimate.fees,
+    // Bản CÔNG KHAI cho mọi vai (ADR 0064); chủ xe nhận thêm đúng một số của mình bên dưới.
+    fees: estimate.fees ? toPublicFeeBreakdown(estimate.fees) : null,
+    ownerNetAmount: role === TRIP_ROLE.HOST ? (estimate.fees?.ownerNetAmount ?? null) : null,
     estimateNote: estimate.breakdown.estimateNote ?? null,
     longTerm: estimate.breakdown.longTerm ?? null,
   };
@@ -1267,7 +1384,8 @@ function frozenBreakdown(
   return {
     rows: snapshot.rows.map((line) => ({ ...line, sublabel: line.sublabel ?? null })),
     depositAmount: snapshot.depositAmount,
-    fees: snapshot.fees ?? null,
+    // Bản CÔNG KHAI — kinh tế chủ xe không ra phía khách (ADR 0064).
+    fees: snapshot.fees ? toPublicFeeBreakdown(snapshot.fees) : null,
     longTerm: snapshot.longTerm ?? null,
   };
 }

@@ -1,9 +1,14 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
   ACCOUNT_REALM,
+  BILLING_MODE,
   BOOKING_STATUS,
   type BookingPriceSnapshot,
+  computeCustomerFees,
+  FEE_SCHEDULE_DEFAULTS,
+  type FeePolicySnapshot,
   SELLER_ENTITY_TYPE,
+  VEHICLE_TYPE,
   TAX_WITHHOLDING_STATUS,
   taxPeriodKeyVn,
   TENANT_STATUS,
@@ -222,6 +227,62 @@ describe('Phát sinh nghĩa vụ', () => {
     // Hồ sơ người bán chụp TẠI ĐÂY: tỷ lệ phụ thuộc loại chủ thể, và loại đó đổi được về sau.
     expect(row.sellerProfileId).toBe(sellerProfileId);
     expect(row.periodKey).toBe(taxPeriodKeyVn(row.accruedAt));
+  });
+
+  /**
+   * Phí giao `G` nằm trong `baseAmount` nhưng KHÔNG chịu thuế (ADR 0064 điều 4): mẫu số ghi vào
+   * sổ phải đúng là con số đã nhân 10% — một sổ ghi `B` gồm `G` cạnh `amount = 10% × (B − G)`
+   * là một tờ khai tự mâu thuẫn (tỷ lệ suy ra từ hai cột không còn là 10%).
+   */
+  maybe('chuyến CÓ phí giao: taxableBase = tiền thuê (B − G), khớp đúng phép nhân %', async () => {
+    const policy: FeePolicySnapshot = {
+      ...FEE_SCHEDULE_DEFAULTS,
+      policyId,
+      version: 1,
+      serviceFeePercent: 0,
+      holdMinAmount: '20000',
+      holdPaymentWindowMinutes: 120,
+      freeCancelHours: 4,
+      depositMinAmount: '50000',
+      depositMaxPercent: 50,
+      taxEnabled: true,
+      taxPercent: TAX_PERCENT,
+      taxLabel: 'VAT 5% + TNCN 5%',
+      tripInsuranceEnabled: false,
+      tripInsurancePercent: null,
+      vehicleProtectionEnabled: false,
+      vehicleProtectionPercent: null,
+      insurancePartnerName: null,
+    };
+    const fees = computeCustomerFees({
+      billingMode: BILLING_MODE.COMMISSION,
+      policy,
+      vehicleType: VEHICLE_TYPE.CAR,
+      baseAmount: '1600000', // 1.400.000 tiền thuê + 200.000 giao xe
+      deliveryAmount: '200000',
+      rentalDays: 2,
+      insuranceOffered: false,
+    });
+    expect(fees.taxAmount).toBe(TAX_AMOUNT);
+    const bookingId = await makeBooking({
+      rows: [],
+      depositAmount: fees.depositAmount,
+      totalAmount: fees.baseAmount,
+      fees,
+    } as unknown as BookingPriceSnapshot);
+    await accrue(bookingId);
+
+    const row = await prisma.taxWithholding.findFirstOrThrow({ where: { bookingId } });
+    expect(row.amount.toFixed(0)).toBe(TAX_AMOUNT);
+    expect(row.taxableBase.toFixed(0)).toBe(BASE); // KHÔNG phải 1.600.000
+    expect(row.taxableBase.mul(row.percent).div(100).toFixed(0)).toBe(row.amount.toFixed(0));
+  });
+
+  maybe('snapshot CŨ (trước 21/10, không deliveryAmount) → mẫu số là cả baseAmount', async () => {
+    const bookingId = await makeBooking();
+    await accrue(bookingId);
+    const row = await prisma.taxWithholding.findFirstOrThrow({ where: { bookingId } });
+    expect(row.taxableBase.toFixed(0)).toBe(BASE);
   });
 
   maybe('cổng thuế TẮT (thuế 0) → KHÔNG dòng nào', async () => {

@@ -8,6 +8,7 @@ import { SourceContractDownloadDto } from '../vehicles/dto/vehicle-source.dto';
 import { CustomerTripsService } from './customer-trips.service';
 import { CustomerTripHandoverEvidenceDto } from './dto/customer-trip-evidence.dto';
 import {
+  CustomerTripCancelPreviewDto,
   CustomerTripDetailDto,
   CustomerTripListQueryDto,
   CustomerTripPageDto,
@@ -122,6 +123,27 @@ export class CustomerTripsController {
       handoverTypeParam(type),
       handoverPhotoSlotParam(slot),
     );
+  }
+
+  /**
+   * Hộp xác nhận huỷ gọi đây TRƯỚC khi khách bấm: số được hoàn / số mất do server tính bằng đúng
+   * luật mà `POST :id/cancel` sẽ áp (ADR 0064). Chỉ realm khách — chỉ người đi thuê mới tự huỷ.
+   */
+  @Get(':id/cancel-preview')
+  @Realms(ACCOUNT_REALM.CUSTOMER)
+  @ApiOperation({
+    summary: 'Xem trước số được hoàn nếu khách huỷ chuyến ngay bây giờ',
+    description:
+      'Chỉ nói về tiền đi qua XePrime (khoản giữ chỗ). Huỷ trong cửa sổ miễn phí: hoàn đủ vào ví ' +
+      'điểm. Huỷ sau mốc: bảo hiểm hoàn đủ, phần còn lại chia đôi chủ xe / XePrime. Mốc so với ' +
+      'giờ server lúc gọi.',
+  })
+  @ApiOkResponse({ type: CustomerTripCancelPreviewDto })
+  cancelPreview(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<CustomerTripCancelPreviewDto> {
+    return this.trips.cancelPreview(user.id, id);
   }
 
   @Post(':id/cancel')

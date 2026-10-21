@@ -41,6 +41,7 @@ import {
   VEHICLE_PUBLIC_STATUS_SUBMITTABLE,
   type PaginationMeta,
   type VehiclePublicStatus,
+  type VehicleType,
 } from '@xeprime/types';
 import { ConfigService } from '@nestjs/config';
 import { SupportRequestStore } from '../../common/support/support-request.store';
@@ -542,9 +543,10 @@ export class VehiclesService {
      */
     const support = this.supportStore.current();
     if (support) stripSupportCreateFields(dto);
-    // Trần TỔNG số xe của bậc gói / Owner Lite (ADR 0041 điều 4, điểm chặn 1) —
-    // chạm trần thì PLAN_LIMIT_REACHED, và thông điệp nói đúng lối đi tiếp theo NGUỒN của trần.
-    await this.billing.assertVehicleQuota(tenantId);
+    // Trần số xe THEO LOẠI của gói / trần TỔNG Owner Lite (ADR 0041 điều 4 · ADR 0065, điểm
+    // chặn 1) — chạm trần thì PLAN_LIMIT_REACHED; gian hàng tuyến gói chưa có gói cho loại xe này
+    // thì PLAN_SCOPE_REQUIRED. Thông điệp nói đúng lối đi tiếp theo NGUỒN của trần.
+    await this.billing.assertVehicleQuota(tenantId, dto.vehicleType as VehicleType);
     const id = newId();
     const code = dto.code?.trim() || `XP-${id.slice(-8).toUpperCase()}`;
     await this.assertCodeFree(tenantId, code);
@@ -663,6 +665,17 @@ export class VehiclesService {
     });
     if (!current) throw notFound();
     const vehicleType = dto.vehicleType ?? current.vehicleType;
+    /*
+     * Đổi LOẠI xe = thêm một chiếc vào trần của loại mới (ADR 0065: hạn mức đếm theo loại). Không
+     * gác thì một gian hàng chỉ mua gói ô tô tạo ô tô rồi sửa thành xe máy là lách được cả trần lẫn
+     * cổng PLAN_SCOPE_REQUIRED. Trừ chính chiếc này để trần TỔNG (Owner Lite, bậc `all`) không tự
+     * chặn một lượt đổi loại không làm tăng số xe.
+     */
+    if (dto.vehicleType !== undefined && dto.vehicleType !== current.vehicleType) {
+      await this.billing.assertVehicleQuota(tenantId, dto.vehicleType as VehicleType, {
+        excludeVehicleId: id,
+      });
+    }
     // Chỉ tra lại danh mục khi lệnh ghi ĐỘNG tới mẫu xe — sửa giá không phải là lý do để đi
     // một round-trip vào bảng danh mục.
     const canonical =
@@ -1300,7 +1313,10 @@ export class VehiclesService {
      *
      * Trừ chính chiếc này để gửi-lại-duyệt không tự chặn mình.
      */
-    await this.billing.assertVehicleQuota(tenantId, { scope: 'marketplace', excludeVehicleId: id });
+    await this.billing.assertVehicleQuota(tenantId, vehicle.vehicleType as VehicleType, {
+      scope: 'marketplace',
+      excludeVehicleId: id,
+    });
 
     const isResubmit = status !== VEHICLE_PUBLIC_STATUS.DRAFT;
 

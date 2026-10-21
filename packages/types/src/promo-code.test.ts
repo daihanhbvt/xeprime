@@ -164,10 +164,43 @@ describe('computePromoDiscount — công thức và bốn cái trần', () => {
     expect(r).toEqual({ ok: true, discountAmount: '100000', clamped: false });
   });
 
-  it('mã PHẦN TRĂM tính trên tiền thuê đủ điều kiện, làm tròn HALF_UP', () => {
+  it('mã PHẦN TRĂM tính trên tiền thuê đủ điều kiện, theo bước 1.000đ', () => {
     // 8% × 1.400.000 = 112.000 — dưới trần 400.000 nên không bị kẹp.
     const r = computePromoDiscount({ terms: percentTerms(8, null), ...TRIP });
     expect(r).toEqual({ ok: true, discountAmount: '112000', clamped: false });
+  });
+
+  it('mã PHẦN TRĂM làm tròn XUỐNG bước 1.000đ — không bao giờ giảm quá số đã hứa', () => {
+    /*
+     * 7% × 1.264.500 = 88.515 ⇒ 88.000 — không phải 88.515đ (số lẻ trên mã QR), cũng không phải
+     * 89.000đ (làm tròn lên là giảm quá 7% đã hứa). Số này đi thẳng vào mã QR (ADR 0064).
+     */
+    const r = computePromoDiscount({
+      terms: percentTerms(7, null),
+      ...TRIP,
+      eligibleAmount: '1264500',
+    });
+    expect(r).toEqual({ ok: true, discountAmount: '88000', clamped: false });
+  });
+
+  it('% làm tròn XUỐNG không bao giờ vượt trần, kể cả khi trần nằm giữa hai bước', () => {
+    // 10% × 505.900 = 50.590 ⇒ 50.000 (làm tròn lên sẽ ra 51.000 — vượt trần 50.500 vừa kẹp nó).
+    const r = computePromoDiscount({
+      terms: percentTerms(10, '50500'),
+      ...TRIP,
+      eligibleAmount: '505900',
+    });
+    expect(r.ok && Number(r.discountAmount) % 1000).toBe(0);
+    expect(r.ok && Number(r.discountAmount) <= 50500).toBe(true);
+  });
+
+  it('% quá nhỏ để đủ một bước 1.000đ ⇒ từ chối, không phát mã "giảm 0đ"', () => {
+    const r = computePromoDiscount({
+      terms: percentTerms(1, null),
+      ...TRIP,
+      eligibleAmount: '90000',
+    });
+    expect(r).toEqual({ ok: false, reason: PROMO_INELIGIBLE_REASON.DISCOUNT_BELOW_FLOOR });
   });
 
   it('mã PHẦN TRĂM bị TRẦN của chính nó kẹp, và nói rõ là đã kẹp', () => {
@@ -401,6 +434,7 @@ describe('computeCustomerFees + mã khuyến mãi — BẤT BIẾN TIỀN', () =
     vehicleType: VEHICLE_TYPE.CAR,
     baseAmount: '1400000',
     rentalDays: 2,
+    insuranceOffered: true,
   } as const;
 
   it('KHÔNG có mã: grossOnline == online, và không có dòng promo nào', () => {

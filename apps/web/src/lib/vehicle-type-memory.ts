@@ -1,4 +1,4 @@
-import { VEHICLE_TYPE, VEHICLE_TYPE_VALUES, type VehicleType } from '@xeprime/types';
+import { VEHICLE_TYPE_VALUES, type VehicleType } from '@xeprime/types';
 
 /**
  * Loại xe người dùng đã TỰ CHỌN gần nhất (ô tô hoặc xe máy), nhớ lại giữa các màn hình và qua F5.

@@ -508,7 +508,7 @@ export class TenantSupportService {
       writeRestriction: derived.writeRestriction,
       createdAt: row.createdAt,
       tenantName: tenantRow.name,
-      planName: resolveTenantFeatures(tenantRow.subscriptions[0] ?? null, tenantRow.usedFeatures, now)
+      planName: resolveTenantFeatures(tenantRow.subscriptions, tenantRow.usedFeatures, now)
         .planName,
     };
   }

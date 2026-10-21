@@ -226,12 +226,6 @@
     },
     "insurance": {
       "title": "Trip Insurance (MIC)",
-      "vehicleProtection": "MIC Vehicle damage insurance",
-      "vehicleProtectionHintCar": "+50,000 đ/day",
-      "vehicleProtectionHintMoto": "+15,000 đ/day",
-      "personalAccident": "MIC Personal accident insurance",
-      "personalAccidentHintCar": "+20,000 đ/day",
-      "personalAccidentHintMoto": "+5,000 đ/day",
       "note": "Optional comprehensive protection for your trip."
     },
     "contact": {
@@ -496,6 +490,13 @@
         "hold": "The owner reviews and responds to your request. Once they accept, you have {minutes} minutes to pay the holding amount — the trip is confirmed only when XePrime receives it in full.",
         "general": "XePrime or the owner will contact you to check your details, confirm the car's condition and guide you through the next step. The trip is confirmed only after those steps are completed."
       }
+    },
+    "nearPickup": {
+      "title": "You are booking close to pickup time",
+      "short": "If the owner accepts right away, you will have about {payment} to pay the reservation payment and can cancel for free for about {freeCancel} after they accept. The later the owner accepts, the shorter both windows get.",
+      "noFreeCancel": "If the owner accepts right away, you will have about {payment} to pay the reservation payment and there is no free-cancellation window: cancelling after you pay only refunds the insurance (if any).",
+      "tooShort": "Pickup is too close to pay the reservation payment through XePrime in time — the owner may not be able to accept this trip. Please pick a later pickup time.",
+      "estimate": "This is an estimate; the exact deadlines appear as soon as the owner accepts."
     }
   },
   "approved": {
@@ -566,5 +567,22 @@
   },
   "contactNote": {
     "differentPhone": "The renter left a contact number that differs from their account number. The account number {phone} is verified; the contact number is not."
+  },
+  "approvalPreview": {
+    "title": "If you approve now",
+    "estimate": "Estimate",
+    "online": "Customer pays by QR (reservation payment)",
+    "payAtPickup": "Customer pays you at pickup",
+    "commission": "XePrime commission",
+    "tax": "Tax withheld",
+    "walletCredit": "Credited to your Points wallet when the trip completes",
+    "ownerNet": "You receive for the rental",
+    "noHold": "This trip has no online reservation payment — the booking is created as soon as you approve, with no QR code.",
+    "paymentWindow": "The customer has {duration} to transfer the reservation payment (until about {time}); after that the slot is released automatically.",
+    "freeCancel": "The customer can cancel for free for {duration} after you approve (until about {time}).",
+    "noFreeCancel": "Pickup is very soon, so the customer gets no free-cancellation window.",
+    "lateCancel": "If the customer cancels after the free window, half of the reservation payment (excluding insurance) goes to your Points wallet as compensation. If you cancel, the customer is refunded 100%.",
+    "tooShort": "Pickup is too close for the customer to transfer the reservation payment in time — approval will fail. Contact the customer to arrange it directly.",
+    "longTermPickPickup": "Pick a pickup time to see how long the customer has to pay. The reservation QR code is only sent to the customer after you confirm the schedule and approve."
   }
 }

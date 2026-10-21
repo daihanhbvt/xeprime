@@ -232,12 +232,6 @@
       },
       "insurance": {
         "title": "Trip Insurance (MIC)",
-        "vehicleProtection": "MIC Vehicle damage insurance",
-        "vehicleProtectionHintCar": "+50,000 đ/day",
-        "vehicleProtectionHintMoto": "+15,000 đ/day",
-        "personalAccident": "MIC Personal accident insurance",
-        "personalAccidentHintCar": "+20,000 đ/day",
-        "personalAccidentHintMoto": "+5,000 đ/day",
         "note": "Optional comprehensive protection for your trip."
       },
       "costs": {

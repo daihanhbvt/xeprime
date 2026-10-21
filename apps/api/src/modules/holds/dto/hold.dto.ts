@@ -74,6 +74,19 @@ export class CustomerHoldDto {
   expiresAt!: string;
   @ApiProperty({ description: 'ISO — huỷ trước mốc này được hoàn toàn bộ' })
   freeCancelUntil!: string;
+  /**
+   * Chuyến này CÓ cửa sổ huỷ miễn phí không — `false` khi đặt gấp (nhận xe dưới 2 giờ sau lúc được
+   * nhận chuyến), khi đó `freeCancelUntil` trùng mốc nhận chuyến và mọi lượt huỷ sau khi trả là
+   * huỷ muộn (ADR 0064). Server suy từ hai mốc ĐÃ LƯU, client không tự so.
+   */
+  @ApiProperty({ description: 'false = đặt gấp, không có thời gian huỷ miễn phí' })
+  freeCancelAvailable!: boolean;
+  /**
+   * Số được hoàn vào ví điểm nếu huỷ SAU mốc miễn phí khi đã trả đủ — `IV + IP` hoàn đủ, `D + S + H`
+   * chia đôi (`resolveHoldAllocation`, cùng phép chia lượt huỷ thật dùng). VND string.
+   */
+  @ApiProperty({ description: 'Hoàn vào ví nếu huỷ muộn (đã trả đủ) — VND string' })
+  lateCancelRefundAmount!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) paidAt!: string | null;
   /**
    * Tiền đã vào bằng KÊNH nào — để màn "Thanh toán thành công" kể đúng ("…qua VNPAY"). Suy từ sổ

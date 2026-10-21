@@ -676,7 +676,14 @@ describe('Drawer chi tiết đối tác — quyền', () => {
         limit: 30,
         reason: 'plan',
       });
-      expect(shop.quota.branches).toMatchObject({ kind: PARTNER_QUOTA_KIND.TOTAL, limit: 5 });
+      // ADR 0065 điều 1: trần chi nhánh không còn là hạn mức — kể cả khi snapshot cũ ghi 5.
+      expect(shop.quota.branches).toMatchObject({ kind: PARTNER_QUOTA_KIND.UNLIMITED, limit: null });
+      // Phạm vi `all` (bậc cũ) ⇒ hai loại dùng CHUNG trần 30.
+      expect(shop.quota.vehiclesByType.car).toMatchObject({ kind: PARTNER_QUOTA_KIND.TOTAL, limit: 30 });
+      expect(shop.quota.vehiclesByType.motorbike).toMatchObject({
+        kind: PARTNER_QUOTA_KIND.TOTAL,
+        limit: 30,
+      });
       expect(shop.quota.members).toMatchObject({ kind: PARTNER_QUOTA_KIND.TOTAL, limit: 10 });
 
       const lite = (await get(`${ids.lite}/billing`, ids.superAdmin)).body;

@@ -35,7 +35,9 @@
     "parties": "Gian hàng · Khách",
     "payee": "Khách · Gian hàng",
     "lines": "Cọc {deposit} · Phí {fee}",
-    "noAccount": "Chưa khai tài khoản"
+    "noAccount": "Chưa khai tài khoản",
+    "commission": "Hoa hồng {amount}",
+    "tax": "Thuế {amount}"
   },
   "settle": {
     "title": "Chốt kết cục khoản giữ chỗ {code}",
@@ -69,7 +71,8 @@
       "released_to_shop": "Chuyến hoàn thành: trả khoản tiền về ví gian hàng."
     },
     "previous": "Khoản giữ chỗ trước",
-    "next": "Khoản giữ chỗ sau"
+    "next": "Khoản giữ chỗ sau",
+    "taxWithheld": "Trong phần của chủ xe: thuế khấu trừ khi hoàn thành"
   },
   "refundPaid": {
     "title": "Ghi nhận đã chuyển trả",
@@ -131,44 +134,6 @@
     "varianceOff": "Cần kiểm tra",
     "varianceBalanced": "Khớp",
     "countChip": "{count, plural, other {# khoản}}"
-  },
-  "insurance": {
-    "title": "Hàng đợi bảo hiểm",
-    "loadError": "Không tải được hàng đợi bảo hiểm",
-    "total": "{count, plural, other {# hợp đồng}}",
-    "noCertificate": "chưa có",
-    "noAutoRetry": "không tự thử lại",
-    "attemptCount": "{count, plural, other {# lần}}",
-    "partnerMissing": {
-      "title": "Chưa cấu hình đối tác bảo hiểm",
-      "body": "Phí bảo hiểm đang được thu và giữ hộ, nhưng chưa có hãng nào cấp chứng nhận — khách CHƯA thực sự có bảo hiểm. Bấm thử lại sẽ không đổi được gì cho tới khi cắm đối tác thật. Đây là việc cấu hình của nền tảng, không phải sự cố của từng chuyến."
-    },
-    "columns": {
-      "booking": "Chuyến",
-      "tenant": "Gian hàng",
-      "product": "Sản phẩm",
-      "premium": "Phí đã thu",
-      "status": "Trạng thái",
-      "certificate": "Số chứng nhận",
-      "attempts": "Đã thử / lần tới"
-    },
-    "actions": {
-      "retry": "Thử lại",
-      "retryQueued": "Đã xếp lịch thử lại — worker sẽ chạy trong vòng một phút",
-      "void": "Thu hồi"
-    },
-    "empty": {
-      "title": "Không có hợp đồng nào đang lỗi",
-      "description": "Mọi phí bảo hiểm đã thu đều đã được xử lý."
-    },
-    "voidModal": {
-      "title": "Thu hồi hợp đồng bảo hiểm",
-      "hint": "Thu hồi là quyết định tiền và đi vào audit. Nếu hợp đồng đã được cấp, nhớ làm việc với đối tác trước — thu hồi ở đây chỉ đóng sổ phía XePrime.",
-      "reasonLabel": "Lý do thu hồi",
-      "reasonPlaceholder": "Vì sao thu hồi hợp đồng này",
-      "done": "Đã thu hồi hợp đồng",
-      "reasonRequired": "Nhập lý do thu hồi (tối thiểu 5 ký tự)."
-    }
   },
   "tax": {
     "title": "Sổ thuế theo kỳ",

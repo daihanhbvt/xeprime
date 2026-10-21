@@ -1,0 +1,178 @@
+{
+  "page": {
+    "title": "Trip insurance",
+    "subtitle": "The MIC product catalogue shown to customers and the queue of certificates sold.",
+    "tabsLabel": "Insurance admin areas"
+  },
+  "tabs": {
+    "products": "Products",
+    "certificates": "Certificates"
+  },
+  "products": {
+    "tableLabel": "Insurance product catalogue",
+    "feePolicyNote": "Daily rates (car / motorbike) are configured in Fee policies and are versioned. Here you only edit the description customers see and switch products on or off.",
+    "openFeePolicies": "Open Fee policies",
+    "columns": {
+      "product": "Product",
+      "deductible": "Deductible / incident",
+      "maxPayout": "Maximum payout",
+      "status": "Status",
+      "updatedAt": "Updated"
+    },
+    "perVehicle": "Car {car} · Motorbike {motorbike}",
+    "noDeductible": "Not applicable",
+    "active": "On",
+    "inactive": "Off",
+    "edit": "Edit",
+    "empty": {
+      "title": "No insurance products yet",
+      "description": "The catalogue is loaded by the base data seed (SEED_MODE=system)."
+    },
+    "loadError": "Could not load the product catalogue."
+  },
+  "form": {
+    "title": "Edit product · {name}",
+    "submit": "Save changes",
+    "intro": "Policies already sold keep their own snapshot of the product — changes here only apply to trips from now on.",
+    "sections": {
+      "naming": "Display name",
+      "coverage": "Coverage",
+      "amounts": "Deductible & payout",
+      "operation": "Operations"
+    },
+    "fields": {
+      "nameVi": "Name (Vietnamese)",
+      "nameEn": "Name (English)",
+      "coverageVi": "What is covered (Vietnamese)",
+      "coverageEn": "What is covered (English)",
+      "deductibleCar": "Deductible / incident — car",
+      "deductibleMotorbike": "Deductible / incident — motorbike",
+      "maxPayoutCar": "Maximum payout — car",
+      "maxPayoutMotorbike": "Maximum payout — motorbike",
+      "maxPayoutNoteVi": "Payout note (Vietnamese)",
+      "maxPayoutNoteEn": "Payout note (English)",
+      "partnerProductCode": "Partner product code",
+      "certificateUrlTemplate": "Certificate lookup URL template",
+      "displayOrder": "Display order",
+      "isActive": "On",
+      "isActiveDescription": "When off, customers no longer see this option. Policies already sold are not affected."
+    },
+    "help": {
+      "amountEmpty": "Leave empty if not applicable.",
+      "maxPayoutNote": "For example: “Up to the vehicle’s actual value”, “Per person, per incident”.",
+      "certificateUrlTemplate": "Starts with https:// and contains '{certCode}' — where the certificate number goes."
+    },
+    "validation": {
+      "required": "Required.",
+      "tooShort": "At least {min} characters.",
+      "tooLong": "At most {max} characters.",
+      "amountStep": "The amount must be a multiple of 1,000 VND.",
+      "amountMin": "The amount cannot be negative.",
+      "urlTemplate": "The template must start with https:// and contain '{certCode}'.",
+      "displayOrder": "Order must be between {min} and {max}.",
+      "amountMax": "The amount is too large."
+    },
+    "saved": "Saved product {name}."
+  },
+  "certificates": {
+    "tableLabel": "Insurance certificate queue",
+    "filters": {
+      "search": "Search",
+      "searchPlaceholder": "Booking code or certificate number",
+      "status": "Status",
+      "productKind": "Product"
+    },
+    "defaultViewHint": "Showing FAILED policies — the work queue. Switch to \"All\" to see history.",
+    "columns": {
+      "booking": "Booking",
+      "tenant": "Shop · vehicle",
+      "product": "Product",
+      "premium": "Premium collected",
+      "status": "Status",
+      "certificate": "Certificate",
+      "attempts": "Attempts",
+      "open": "Open details"
+    },
+    "testTag": "TEST",
+    "noCertificate": "None yet",
+    "attemptCount": "{count, plural, =0 {Not tried} one {# attempt} other {# attempts}}",
+    "noAutoRetry": "No automatic retry",
+    "nextAttempt": "Retries at {time}",
+    "empty": {
+      "title": "No policies need attention",
+      "description": "Policies that fail to issue show up here."
+    },
+    "noResults": "No policies match the filters.",
+    "loadError": "Could not load the certificate queue.",
+    "total": "{count, plural, one {# policy} other {# policies}}",
+    "partnerMissing": {
+      "title": "No insurance partner connected",
+      "body": "This environment has no issuing partner, so policies stop in the failed state. Collected premiums are held in custody; retrying will not issue a certificate until a partner is connected."
+    },
+    "view": {
+      "label": "Queue view",
+      "todo": "Needs action",
+      "all": "All"
+    },
+    "emptyAll": {
+      "title": "No insurance policies yet",
+      "description": "Insurance policies for trips will appear here."
+    }
+  },
+  "drawer": {
+    "title": "Insurance policy",
+    "previous": "Previous policy",
+    "next": "Next policy",
+    "sideLabel": "Evidence exchanged with the partner",
+    "loadError": "Could not load the policy.",
+    "facts": {
+      "booking": "Booking",
+      "tenant": "Shop",
+      "customer": "Customer",
+      "vehicle": "Vehicle",
+      "product": "Product",
+      "premium": "Premium collected",
+      "partner": "Partner",
+      "partnerProductCode": "Partner product code",
+      "certificate": "Certificate number",
+      "coverage": "Valid",
+      "issuedAt": "Issued at",
+      "consentAt": "Customer opted in at",
+      "attempts": "Partner calls",
+      "lastAttemptAt": "Last call",
+      "nextAttemptAt": "Next retry",
+      "lastError": "Last error",
+      "idempotencyKey": "Idempotency key",
+      "createdAt": "Created at",
+      "cancelledAt": "Cancelled at",
+      "voidedAt": "Voided at"
+    },
+    "payload": {
+      "request": "Request sent to the partner",
+      "response": "Partner response",
+      "product": "Product snapshot at sale",
+      "empty": "None"
+    },
+    "testNote": "TEST certificate issued by the mock adapter — it provides no insurance cover.",
+    "copy": "Copy",
+    "openBooking": "Open booking",
+    "viewCertificate": "View certificate",
+    "footer": {
+      "failed": "Failed policy: retry issuing, or void it if it cannot be issued.",
+      "issued": "Certificate issued. Void it if the trip is cancelled after handover.",
+      "other": "No actions are available for this status."
+    },
+    "retry": "Retry issuing",
+    "retryQueued": "Queued for re-issue — the worker picks it up within about a minute.",
+    "void": "Void",
+    "voidDialog": {
+      "title": "Void insurance policy",
+      "summary": "The {amount} premium for booking {code} will be settled separately with the partner.",
+      "hint": "The reason is written to the system log and the partner case file.",
+      "reasonLabel": "Reason for voiding",
+      "reasonPlaceholder": "e.g. Trip cancelled after handover, partner confirmed cancellation",
+      "reasonRequired": "Enter a reason (at least 5 characters).",
+      "done": "Policy voided."
+    }
+  }
+}

@@ -5,6 +5,8 @@ Ngày: 17/09/2026 · Trạng thái: **Accepted** · Ghi đè [ADR 0029](0029-per
 điều 12 ở phần CÁCH ĐẾM của tuyến gói · ADR 0015 đã gỡ khỏi repo (06/10/2026); các điều còn hiệu
 lực của nó chép ở điều 9
 
+> ⚠️ **[ADR 0065](0065-per-vehicle-type-shop-plans.md) (21/10/2026) ghi đè điều 1, 4 (hàng `plan`), 7, 8 và gạch "`maxBranches` thành hạn mức THẬT":** bảy bậc theo LOẠI xe (`moto_1/5/10`, `car_1/5/10`, `enterprise_contact`), trần đếm theo loại, bỏ trần chi nhánh. Điều 2, 3, 5, 6, 9 còn hiệu lực.
+
 ## Bối cảnh
 
 ADR 0029 chốt giá pilot theo CHỖ: `100.000đ/chỗ ô tô/tháng`, `40.000đ/chỗ xe máy/tháng`, phí nền

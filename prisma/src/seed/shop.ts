@@ -89,10 +89,10 @@ export interface ShopBuildResult {
 const PACKAGE_DEMO_TERM_MONTHS = 3;
 
 /**
- * Ba BẬC gian hàng (ADR 0041 điều 7) — dùng để suy cửa vào onboarding từ `planCode`.
+ * Các BẬC gian hàng (ADR 0065) — dùng để suy cửa vào onboarding từ `planCodes`.
  *
- * Một `Set` thay vì so chuỗi với một hằng: từ ADR 0041 tuyến gói có ba mã, và một phép so đơn
- * lẻ sẽ lặng lẽ xếp hai bậc còn lại vào tuyến hoa hồng — gian hàng demo 40 xe sẽ ra đời với
+ * Một `Set` thay vì so chuỗi với một hằng: tuyến gói có bảy mã (ADR 0065), và một phép so đơn
+ * lẻ sẽ lặng lẽ xếp các bậc còn lại vào tuyến hoa hồng — gian hàng demo 40 xe sẽ ra đời với
  * `onboarding_state = commission` và mọi màn đọc tuyến sẽ nói sai về nó.
  */
 const PACKAGE_PLAN_CODES: ReadonlySet<string> = new Set(Object.values(SHOP_PLAN_CODE));
@@ -140,7 +140,7 @@ export async function buildShop(spec: ShopSpec, deps: ShopBuildDeps): Promise<Sh
     tenantType: spec.tenantType,
     status: spec.status,
     /*
-     * Trục ĐĂNG KÝ (ADR 0040) — SUY từ `planCode`, không khai tay trong `ShopSpec`.
+     * Trục ĐĂNG KÝ (ADR 0040) — SUY từ `planCodes`, không khai tay trong `ShopSpec`.
      *
      * Bản khai đã nói gian hàng này dùng gói nào; một trường thứ hai nói "cửa vào" chỉ là cơ hội
      * để hai chỗ lệch nhau (đúng loại lỗi mà docblock của `commission-owners.ts` kể lại). Gian
@@ -151,7 +151,7 @@ export async function buildShop(spec: ShopSpec, deps: ShopBuildDeps): Promise<Sh
      * `package_pending` là một gian hàng chưa dùng được gì cả. Muốn thử màn onboarding thì đi
      * đúng luồng thật ("Đăng ký gian hàng" → bước 2), vì đó chính là thứ cần thử.
      */
-    onboardingState: PACKAGE_PLAN_CODES.has(spec.planCode ?? '')
+    onboardingState: spec.planCodes.some((code) => PACKAGE_PLAN_CODES.has(code))
       ? SHOP_ONBOARDING_STATE.PACKAGE_ACTIVE
       : SHOP_ONBOARDING_STATE.COMMISSION,
     ownerUserId,
@@ -560,7 +560,7 @@ async function buildVehicleApprovals(
   });
   const byId = new Map(vehicles.map((v) => [v.id, v]));
   const storefrontKind = resolveStorefrontKind(
-    PACKAGE_PLAN_CODES.has(spec.planCode ?? '') ? BILLING_MODE.PACKAGE : null,
+    spec.planCodes.some((code) => PACKAGE_PLAN_CODES.has(code)) ? BILLING_MODE.PACKAGE : null,
   );
 
   for (const unit of picked) {
@@ -608,7 +608,8 @@ async function buildVehicleApprovals(
 // ---------------------------------------------------------------------------
 
 /**
- * Dòng thuê bao hiệu lực của gian hàng demo — MỘT dòng, hội tụ về bản khai ở mọi lần chạy.
+ * Các dòng thuê bao hiệu lực của gian hàng demo — MỘT dòng cho mỗi bậc trong bản khai (ADR 0065:
+ * gói ô tô + gói xe máy song song), hội tụ về bản khai ở mọi lần chạy.
  *
  * ## `update` KHÔNG rỗng, có lý do
  *
@@ -622,7 +623,7 @@ async function buildVehicleApprovals(
  *
  * Tuyến gói: kỳ `PACKAGE_DEMO_TERM_MONTHS`, tiền = GIÁ NIÊM YẾT của kỳ đó trong bảng giá của
  * bậc (ADR 0041 điều 2) — không phép nhân nào. Bậc `salesOnly` không có bảng giá, nên dòng demo
- * của nó mang giá 0đ và một ghi chú nói rõ đó là gói cấp tay: đúng hình dạng mà
+ * của nó mang giá ĐÀM PHÁN `PACKAGE_DEMO_NEGOTIATED_PRICE` và một ghi chú nói rõ đó là gói cấp tay: đúng hình dạng mà
  * `BillingService.assign` ghi khi admin gán một hợp đồng đàm phán.
  *
  * Tuyến hoa hồng: `COMMISSION_TRACK_TERM_MONTHS` (12 tháng), 0đ, KHÔNG có `slots_json`. Kỳ 12
@@ -638,75 +639,82 @@ async function buildSubscription(
   tenantId: string,
   deps: ShopBuildDeps,
 ): Promise<void> {
-  if (!spec.planCode) {
-    /*
-     * Bản khai nói "không gói" ⇒ database cũng phải nói vậy. Bỏ qua sớm mà không dọn sẽ để lại mọi
-     * dòng thuê bao lạc của lần seed trước — và một gian hàng lẽ ra ở pha `unconfigured` lại mang
-     * một tuyến từ đời trước.
-     */
-    await prisma.tenantSubscription.deleteMany({ where: { tenantId } });
-    return;
-  }
-  const plan = deps.planIds.get(spec.planCode);
-  if (!plan) {
-    throw new Error(
-      `Bản khai gian hàng "${spec.slug}" trỏ tới gói "${spec.planCode}" không có trong danh mục seed. ` +
-        'Sửa `planCode` trong shops.ts hoặc thêm bậc gói đó vào PLANS.',
-    );
-  }
-
-  const isPackage = plan.billingMode === BILLING_MODE.PACKAGE;
-  const termMonths = isPackage ? PACKAGE_DEMO_TERM_MONTHS : COMMISSION_TRACK_TERM_MONTHS;
-  const listed = plan.termPrices.find((t) => t.months === termMonths)?.price ?? null;
-  const price = isPackage ? (listed ? Number(listed) : PACKAGE_DEMO_NEGOTIATED_PRICE) : 0;
-
-  const startsAt = daysFromToday(-15, 0);
-  const fields = {
-    tenantId,
-    planId: plan.id,
-    status: SUBSCRIPTION_STATUS.ACTIVE,
-    // `price` là tiền CẢ KỲ — cùng ngữ nghĩa với `BillingService.assign` (pricing.total).
-    price,
-    termMonths,
-    // Snapshot HẠN MỨC từ bậc gói (ADR 0041 điều 3) — cùng hình dạng dòng mà
-    // BillingService.assign ghi, để dữ liệu demo không khác dữ liệu thật.
-    // `DbNull` chứ không phải `null`: cột jsonb nullable, và dòng tuyến hoa hồng phải GHI ĐÈ về
-    // NULL khi seed hội tụ một gian hàng từ tuyến gói về hoa hồng — bỏ khoá đi thì hạn mức cũ ở
-    // lại và trở thành trần của một tenant không còn mua bậc nào.
-    quotaJson: isPackage ? plan.quota : Prisma.DbNull,
-    billingMode: plan.billingMode,
-    commissionPercent: plan.commissionPercent,
-    startsAt,
-    endsAt: addCalendarMonthsVn(startsAt, termMonths),
-    note:
-      isPackage && !listed
-        ? 'Gói cấp tay theo hợp đồng tư vấn (seed demo) — bậc này không bán tự động.'
-        : 'Gói đang hiệu lực (seed demo).',
-    createdBy: deps.platform.adminUserId,
-  };
-
-  const id = seedId(`${spec.key}:subscription`);
-  await prisma.tenantSubscription.upsert({
-    where: { id },
-    update: fields,
-    create: { id, ...fields },
-  });
+  /*
+   * Mỗi BẬC trong bản khai một dòng thuê bao (ADR 0065: gói ô tô + gói xe máy chạy song song).
+   * Dòng đầu giữ id cũ (`<key>:subscription`) để seed chạy lại trên DB cũ cập nhật đúng dòng đã
+   * có thay vì đẻ dòng mới; dòng sau mang mã bậc trong khoá.
+   */
+  const ids = spec.planCodes.map((code, index) =>
+    index === 0 ? seedId(`${spec.key}:subscription`) : seedId(`${spec.key}:subscription:${code}`),
+  );
 
   /*
-   * Dọn dòng thuê bao LẠC: gian hàng demo chỉ được có đúng dòng ở trên.
+   * Dọn dòng thuê bao LẠC TRƯỚC khi ghi — gian hàng demo chỉ được có đúng các dòng trong bản khai.
    *
-   * Nguồn của chúng là đời trước của chính seed này (`update: {}` để lại dòng cũ) và những lần
-   * bấm thử "mua gói"/"gán gói" trên máy dev. Nhiều dòng `active` cùng lúc phá đúng bất biến mà
-   * `findCurrent`/`resolveEffectiveBilling` dựa vào ("MỘT dòng hiệu lực tại một thời điểm"), và
-   * triệu chứng là tuyến của một tài khoản QA đổi theo dòng nào có `ends_at` lớn hơn.
+   * Phải đứng TRƯỚC upsert (không phải sau như bản một-dòng): EXCLUDE
+   * `tenant_subscriptions_package_scope_no_overlap` chặn hai kỳ gói chồng nhau ở phạm vi xung đột,
+   * nên một dòng lạc (dòng anh em do migration ADR 0065 sinh, một lần bấm thử "gán gói" trên máy
+   * dev) còn nằm đó là làm upsert của dòng hợp lệ đổ ngay.
    *
    * `deleteMany` chứ không lật `cancelled`: đây là dữ liệu demo do seed sở hữu, không phải lịch
    * sử của một khách hàng thật. Hoá đơn gói KHÔNG trỏ FK sang `tenant_subscriptions` (ADR 0022
    * điều 6 cấm nối FK đó), nên không có gì mồ côi.
    */
-  await prisma.tenantSubscription.deleteMany({ where: { tenantId, id: { not: id } } });
-}
+  await prisma.tenantSubscription.deleteMany({ where: { tenantId, id: { notIn: ids } } });
+  if (spec.planCodes.length === 0) {
+    // Bản khai nói "không gói" ⇒ database cũng phải nói vậy (pha `unconfigured`).
+    return;
+  }
 
+  const startsAt = daysFromToday(-15, 0);
+  for (const [index, code] of spec.planCodes.entries()) {
+    const plan = deps.planIds.get(code);
+    if (!plan) {
+      throw new Error(
+        `Bản khai gian hàng "${spec.slug}" trỏ tới gói "${code}" không có trong danh mục seed. ` +
+          'Sửa `planCodes` trong shops.ts hoặc thêm bậc gói đó vào PLANS.',
+      );
+    }
+
+    const isPackage = plan.billingMode === BILLING_MODE.PACKAGE;
+    const termMonths = isPackage ? PACKAGE_DEMO_TERM_MONTHS : COMMISSION_TRACK_TERM_MONTHS;
+    const listed = plan.termPrices.find((t) => t.months === termMonths)?.price ?? null;
+    const price = !isPackage ? 0 : listed ? Number(listed) : PACKAGE_DEMO_NEGOTIATED_PRICE;
+
+    const fields = {
+      tenantId,
+      planId: plan.id,
+      status: SUBSCRIPTION_STATUS.ACTIVE,
+      // `price` là tiền CẢ KỲ — cùng ngữ nghĩa với `BillingService.assign` (pricing.total).
+      price,
+      termMonths,
+      // SNAPSHOT phạm vi loại xe (ADR 0065) — trigger ở DB đòi khớp phạm vi của bậc.
+      vehicleScope: plan.vehicleScope,
+      // Snapshot HẠN MỨC từ bậc gói (ADR 0041 điều 3) — cùng hình dạng dòng mà
+      // BillingService.assign ghi, để dữ liệu demo không khác dữ liệu thật.
+      // `DbNull` chứ không phải `null`: cột jsonb nullable, và dòng tuyến hoa hồng phải GHI ĐÈ về
+      // NULL khi seed hội tụ một gian hàng từ tuyến gói về hoa hồng — bỏ khoá đi thì hạn mức cũ ở
+      // lại và trở thành trần của một tenant không còn mua bậc nào.
+      quotaJson: isPackage ? plan.quota : Prisma.DbNull,
+      billingMode: plan.billingMode,
+      commissionPercent: plan.commissionPercent,
+      startsAt,
+      endsAt: addCalendarMonthsVn(startsAt, termMonths),
+      note:
+        isPackage && !listed
+          ? 'Gói cấp tay theo hợp đồng tư vấn (seed demo) — bậc này không bán tự động.'
+          : 'Gói đang hiệu lực (seed demo).',
+      createdBy: deps.platform.adminUserId,
+    };
+
+    const id = ids[index]!;
+    await prisma.tenantSubscription.upsert({
+      where: { id },
+      update: fields,
+      create: { id, ...fields },
+    });
+  }
+}
 // ---------------------------------------------------------------------------
 // Ví điểm của gian hàng
 // ---------------------------------------------------------------------------

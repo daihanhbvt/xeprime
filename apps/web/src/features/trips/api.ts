@@ -2,6 +2,7 @@ import type { HandoverPhotoSlot, HandoverType, PaginationMeta } from '@xeprime/t
 import { apiGet, apiRequest, type QueryParams } from '@/services/api-client';
 import type {
   CustomerTrip,
+  CustomerTripCancelPreview,
   CustomerTripCounts,
   CustomerTripDetail,
   CustomerTripHandoverEvidence,
@@ -101,6 +102,14 @@ export function fetchTripHandoverPhotoUrl(
   return apiGet<PrivateFileTicket>(
     `/trips/${id}/handover-evidence/${type}/photos/${slot}/download`,
   );
+}
+
+/**
+ * Xem trước lượt huỷ — số được hoàn vào Ví điểm / số mất, do server tính bằng đúng luật lượt huỷ
+ * thật áp (ADR 0064). Client không cộng trừ gì.
+ */
+export function fetchTripCancelPreview(id: string): Promise<CustomerTripCancelPreview> {
+  return apiGet<CustomerTripCancelPreview>(`/trips/${id}/cancel-preview`);
 }
 
 /**

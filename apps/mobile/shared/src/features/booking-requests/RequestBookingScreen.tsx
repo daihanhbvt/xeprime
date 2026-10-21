@@ -981,8 +981,8 @@ const REVIEW_STEP_INDEX = 2;
 
 /** Thanh tiến trình hai bước — bước đã qua hiện DẤU TÍCH thay cho số. */
 function StepIndicator({ current }: { current: number }) {
-  const t = useTranslations('BookingRequests.flow.steps');
-  const labels = [t('trip'), t('review')];
+  const t = useTranslations('BookingRequests.flow.journey.steps');
+  const labels = [t('trip'), t('request')];
 
   return (
     <XStack

@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Luồng Tiền XePrime v2.2</title>
+  <meta name="description" content="Bản thiết kế kỹ thuật luồng tiền XePrime theo ADR 0064 (luồng tiền v2) và ADR 0065 (gói theo loại xe) — đang triển khai.">
+  
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- KaTeX for LaTeX Math -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" 
+          onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+
+  <!-- Mermaid.js for Diagrams -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: 'neutral',
+        fontFamily: 'Inter, sans-serif'
+      });
+    });
+  </script>
+
+  <style>
+    :root {
+      --primary: #d97706;
+      --primary-hover: #b45309;
+      --primary-light: #fef3c7;
+      --secondary: #2563eb;
+      --success: #16a34a;
+      --success-light: #dcfce7;
+      --danger: #dc2626;
+      --danger-light: #fee2e2;
+      --dark: #0f172a;
+      --gray-50: #f8fafc;
+      --gray-100: #f1f5f9;
+      --gray-200: #e2e8f0;
+      --gray-300: #cbd5e1;
+      --gray-600: #475569;
+      --gray-700: #334155;
+      --gray-800: #1e293b;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--gray-800);
+      background-color: var(--gray-50);
+      line-height: 1.65;
+      font-size: 15px;
+    }
+
+    code, pre {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Header & Navigation */
+    header.top-bar {
+      background: #0f172a;
+      color: white;
+      padding: 16px 32px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      box-shadow: var(--shadow-md);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      background: var(--primary);
+      color: white;
+      font-weight: 800;
+      font-size: 18px;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-sm);
+    }
+
+    .brand-title {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .brand-sub {
+      font-size: 12px;
+      color: var(--gray-300);
+      font-weight: 400;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: white;
+      border: 1px solid var(--gray-600);
+    }
+    .btn-outline:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Main Container with Sidebar */
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      gap: 32px;
+      padding: 32px 24px;
+    }
+
+    /* Sidebar Navigation */
+    aside.sidebar {
+      width: 280px;
+      flex-shrink: 0;
+      position: sticky;
+      top: 90px;
+      height: calc(100vh - 120px);
+      overflow-y: auto;
+      background: white;
+      border-radius: var(--radius-md);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--gray-200);
+    }
+
+    .sidebar-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--gray-600);
+      margin-bottom: 12px;
+    }
+
+    .nav-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .nav-list a {
+      display: block;
+      padding: 7px 12px;
+      border-radius: var(--radius-sm);
+      color: var(--gray-700);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+
+    .nav-list a:hover {
+      background: var(--gray-100);
+      color: var(--primary);
+    }
+
+    /* Content Area */
+    main.content {
+      flex: 1;
+      min-width: 0;
+      background: white;
+      border-radius: var(--radius-lg);
+      padding: 40px;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--gray-200);
+    }
+
+    .doc-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      background: var(--success-light);
+      color: var(--success);
+      margin-bottom: 16px;
+    }
+
+    h1.doc-title {
+      font-size: 30px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--dark);
+      line-height: 1.25;
+      margin-bottom: 8px;
+    }
+
+    h2.doc-subtitle {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--gray-600);
+      margin-bottom: 24px;
+    }
+
+    .meta-box {
+      background: var(--gray-50);
+      border-left: 4px solid var(--primary);
+      padding: 14px 18px;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      margin-bottom: 32px;
+      font-size: 14px;
+      color: var(--gray-700);
+    }
+
+    section {
+      margin-bottom: 48px;
+      scroll-margin-top: 100px;
+    }
+
+    h2.section-heading {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--dark);
+      border-bottom: 2px solid var(--gray-100);
+      padding-bottom: 10px;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    h3.sub-heading {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--gray-800);
+      margin: 20px 0 10px;
+    }
+
+    p {
+      margin-bottom: 12px;
+      color: var(--gray-700);
+    }
+
+    ul, ol {
+      margin-left: 20px;
+      margin-bottom: 16px;
+      color: var(--gray-700);
+    }
+
+    li {
+      margin-bottom: 6px;
+    }
+
+    /* Tables */
+    .table-responsive {
+      overflow-x: auto;
+      margin: 20px 0;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--gray-200);
+      box-shadow: var(--shadow-sm);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13.5px;
+    }
+
+    th {
+      background: var(--gray-100);
+      color: var(--gray-800);
+      font-weight: 600;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--gray-300);
+    }
+
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--gray-200);
+      color: var(--gray-700);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: var(--gray-50);
+    }
+
+    .badge-highlight {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 12px;
+    }
+    .badge-orange { background: #ffedd5; color: #c2410c; }
+    .badge-green { background: #dcfce7; color: #15803d; }
+    .badge-blue { background: #dbeafe; color: #1d4ed8; }
+
+    /* Interactive Calculator Card */
+    .calculator-card {
+      background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+      border: 1px solid #fde68a;
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin: 32px 0;
+      box-shadow: var(--shadow-md);
+    }
+
+    .calc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    .calc-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: #92400e;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .calc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-group label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #78350f;
+    }
+
+    .form-control {
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid #d1d5db;
+      font-size: 14px;
+      font-family: inherit;
+      background: white;
+    }
+
+    .calc-checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      grid-column: 1 / -1;
+      background: rgba(255, 255, 255, 0.7);
+      padding: 12px;
+      border-radius: var(--radius-sm);
+    }
+
+    .calc-checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13.5px;
+      font-weight: 500;
+      color: #78350f;
+      cursor: pointer;
+    }
+
+    .calc-result-box {
+      background: white;
+      border-radius: var(--radius-md);
+      padding: 18px;
+      border: 1px solid #fbbf24;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+    }
+
+    .res-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .res-label {
+      font-size: 12px;
+      color: var(--gray-600);
+      font-weight: 500;
+    }
+
+    .res-val {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--dark);
+    }
+
+    .res-val.highlight {
+      color: var(--primary);
+    }
+    .res-val.success {
+      color: var(--success);
+    }
+
+    /* Mermaid diagrams container */
+    .diagram-wrap {
+      background: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      margin: 20px 0;
+      display: flex;
+      justify-content: center;
+    }
+
+    /* Checklist Status */
+    .checklist {
+      list-style: none;
+      margin-left: 0;
+    }
+    .checklist li {
+      position: relative;
+      padding-left: 28px;
+      margin-bottom: 10px;
+    }
+    .checklist li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      top: 0;
+      color: white;
+      background: var(--success);
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: bold;
+    }
+
+    /* Trạng thái tài liệu + checklist nhiều trạng thái (v2.2) */
+    .doc-badge-progress {
+      background: var(--primary-light);
+      color: var(--primary-hover);
+    }
+    .checklist li.todo::before {
+      content: '…';
+      background: var(--primary);
+    }
+    .checklist li.deferred::before {
+      content: '–';
+      background: var(--gray-600);
+    }
+    .calc-note {
+      margin-top: 12px;
+      font-size: 13px;
+      color: var(--gray-600);
+    }
+
+    /* Print Styles */
+    @media print {
+      header.top-bar, aside.sidebar, .btn, .calculator-card {
+        display: none !important;
+      }
+      .container {
+        padding: 0;
+        max-width: 100%;
+      }
+      main.content {
+        box-shadow: none;
+        border: none;
+        padding: 0;
+      }
+      body {
+        background: white;
+        font-size: 12pt;
+      }
+      section {
+        page-break-inside: avoid;
+      }
+      table {
+        font-size: 10pt;
+      }
+    }
+
+    /* Responsive */
+    @media (max-width: 992px) {
+      .container {
+        flex-direction: column;
+      }
+      aside.sidebar {
+        width: 100%;
+        position: static;
+        height: auto;
+      }
+      main.content {
+        padding: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header -->
+  <header class="top-bar">
+    <div class="brand">
+      <div class="brand-logo">XP</div>
+      <div>
+        <div class="brand-title">XePrime Architecture Documentation</div>
+        <div class="brand-sub">Luồng tiền v2.2 — theo ADR 0064 / 0065</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-outline" onclick="window.print()">🖨️ In / Xuất PDF</button>
+      <a class="btn btn-primary" href="#simulator">⚡ Thử Bộ Tính Giá</a>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-title">Mục Lục Tài Liệu</div>
+      <ul class="nav-list">
+        <li><a href="#simulator">⚡ Bộ Mô Phỏng Dòng Tiền</a></li>
+        <li><a href="#section-1">1. Nguyên Tắc & Kỷ Luật Tiền Tệ</a></li>
+        <li><a href="#section-2">2. Công Thức & Dòng Tiền Lõi</a></li>
+        <li><a href="#section-3">3. Xe Có Tài Xế & Phí Giao Xe</a></li>
+        <li><a href="#section-4">4. Thù Lao Tài Xế (Hoãn)</a></li>
+        <li><a href="#section-5">5. Bảng Phân Bổ Chi Tiết Chuẩn</a></li>
+        <li><a href="#section-6">6. 7 Gói Thuê Bao Theo Loại Xe</a></li>
+        <li><a href="#section-7">7. Cửa Sổ Thanh Toán & Huỷ Động</a></li>
+        <li><a href="#section-8">8. Bảo Hiểm MIC (IV & IP)</a></li>
+        <li><a href="#section-9">9. Ma Trận UI Trên 3 Site</a></li>
+        <li><a href="#section-10">10. Tiến Độ — Danh Sách Trung Thực</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="content">
+      <div class="doc-badge doc-badge-progress">◔ ĐANG TRIỂN KHAI — THEO ADR 0064 / 0065</div>
+      <h1 class="doc-title">BẢN THIẾT KẾ KỸ THUẬT TỔNG THỂ LUỒNG TIỀN XEPRIME</h1>
+      <h2 class="doc-subtitle">(XEPRIME MASTER FINANCIAL ARCHITECTURE SPECIFICATION — V2.2 · rà soát 21/10/2026)</h2>
+
+      <div class="meta-box">
+        <strong>Nguồn sự thật:</strong> <code>docs/decisions/0064-financial-flow-v2.md</code> và <code>docs/decisions/0065-per-vehicle-type-shop-plans.md</code>. Tài liệu này giải thích và cho ví dụ; khi lệch nhau, ADR thắng. Bản HTML dựng lại từ <code>docs/financial-system-architecture.md</code>.<br>
+        <strong>Phạm vi:</strong> tính giá, tiền giữ chỗ online, phân bổ và giải ngân ví điểm, cửa sổ thanh toán/huỷ động, phí giao xe, bảo hiểm (MIC — chưa có hợp đồng) và gói gian hàng theo loại xe, trên ba site: <strong>Khách</strong> (xeprime.vn), <strong>Partner</strong> (partner.xeprime.vn), <strong>Admin</strong> (admin.xeprime.vn).
+      </div>
+
+      <!-- Live Interactive Simulator -->
+      <section id="simulator">
+        <div class="calculator-card">
+          <div class="calc-header">
+            <div class="calc-title">
+              <span>⚡</span> BỘ MÔ PHỎNG DÒNG TIỀN (CHÍNH SÁCH v7)
+            </div>
+            <span class="badge-highlight badge-orange">Làm tròn 1.000đ · thuế 10% trên tiền thuê</span>
+          </div>
+
+          <div class="calc-grid">
+            <div class="form-group">
+              <label for="calc-vehicle-type">Loại xe:</label>
+              <select id="calc-vehicle-type" class="form-control" onchange="runSimulation()">
+                <option value="car">Ô tô (Phí sàn 50k · Bảo hiểm 50k/20k mỗi ngày)</option>
+                <option value="motorbike">Xe máy (Phí sàn 30k · Bảo hiểm 15k/5k mỗi ngày)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="calc-days">Số ngày thuê:</label>
+              <input type="number" id="calc-days" class="form-control" value="5" min="1" max="60" onchange="runSimulation()" onkeyup="runSimulation()">
+            </div>
+
+            <div class="form-group">
+              <label for="calc-daily-price">Đơn giá thuê (VND/ngày, sau khuyến mãi của xe):</label>
+              <input type="number" id="calc-daily-price" class="form-control" value="1000000" step="50000" onchange="runSimulation()" onkeyup="runSimulation()">
+            </div>
+
+            <div class="form-group">
+              <label for="calc-delivery-fee">Phí giao xe (trả tay, ngoài tiền giữ chỗ):</label>
+              <input type="number" id="calc-delivery-fee" class="form-control" value="200000" step="10000" onchange="runSimulation()" onkeyup="runSimulation()">
+            </div>
+
+            <div class="form-group">
+              <label for="calc-plan-type">Tuyến của chủ xe:</label>
+              <select id="calc-plan-type" class="form-control" onchange="runSimulation()">
+                <option value="commission">Tuyến hoa hồng (lũy tiến theo ngày)</option>
+                <option value="subscription">Tuyến gói — gian hàng bật thu cọc</option>
+                <option value="subscription-nodeposit">Tuyến gói — gian hàng tắt thu cọc</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="calc-promo">Mã khuyến mãi nền tảng (VND):</label>
+              <input type="number" id="calc-promo" class="form-control" value="0" step="10000" min="0" onchange="runSimulation()" onkeyup="runSimulation()">
+            </div>
+
+            <div class="calc-checkbox-group">
+              <label class="calc-checkbox-label">
+                <input type="checkbox" id="calc-iv" onchange="runSimulation()">
+                <span>Bảo hiểm vật chất xe (IV) — chỉ khi có đối tác</span>
+              </label>
+              <label class="calc-checkbox-label">
+                <input type="checkbox" id="calc-ip" onchange="runSimulation()">
+                <span>Bảo hiểm tai nạn người (IP) — chỉ khi có đối tác</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Realtime Output -->
+          <div class="calc-result-box">
+            <div class="res-item">
+              <span class="res-label">1. Tổng khách trả (gồm giao xe, trừ mã):</span>
+              <span class="res-val highlight" id="res-total">0 đ</span>
+            </div>
+            <div class="res-item">
+              <span class="res-label">2. Tiền giữ chỗ (QR):</span>
+              <span class="res-val" id="res-deposit">0 đ</span>
+            </div>
+            <div class="res-item">
+              <span class="res-label">3. Trả tay lúc nhận xe:</span>
+              <span class="res-val" id="res-pickup">0 đ</span>
+            </div>
+            <div class="res-item">
+              <span class="res-label">4. Hoa hồng H · Thuế T:</span>
+              <span class="res-val" id="res-commission">0 đ</span>
+            </div>
+            <div class="res-item">
+              <span class="res-label">5. XePrime giữ (S + H − P):</span>
+              <span class="res-val" id="res-platform">0 đ</span>
+            </div>
+            <div class="res-item">
+              <span class="res-label">6. Ghi có ví chủ xe (D − T):</span>
+              <span class="res-val" id="res-wallet">0 đ</span>
+            </div>
+            <div class="res-item">
+              <span class="res-label">7. Chủ xe THỰC NHẬN (B − H − T + giao xe):</span>
+              <span class="res-val success" id="res-owner-total">0 đ</span>
+            </div>
+          </div>
+          <p class="calc-note">Giả định sàn cọc = 0đ và holdMinAmount = 20.000đ. Con số thật đọc từ chính sách phí đang hiệu lực.</p>
+        </div>
+      </section>
+
+      <!-- Section 1 -->
+      <section id="section-1">
+        <h2 class="section-heading">1. NGUYÊN TẮC THIẾT KẾ & KỶ LUẬT TIỀN TỆ</h2>
+        <p>1. <strong>Bước giá 1.000đ:</strong> lưu <code>Decimal(14,2)</code>, chuỗi trong JSON (ADR 0007). Mọi số XePrime tính ra là bội 1.000đ qua đúng một hàm; số cấu hình trong <code>fee_policies</code> cũng phải là bội 1.000đ (CHECK <code>fee_policies_v2_amounts_thousand_step_check</code>).</p>
+        $$\text{roundToThousand}(x) = \text{Math.round}(x / 1000) \times 1000$$
+        <p>2. <strong>Năm đẳng thức bảo toàn</strong> (G = phí giao xe, P = mã khuyến mãi nền tảng):</p>
+        $$\begin{aligned}
+        \text{Tổng khách trả} &= B + S + IV + IP + G - P \\
+        D &= \text{grossOnline} - S - H - IV - IP \\
+        \text{Trả tay khi nhận xe} &= (B + S + IV + IP) - \text{grossOnline} + G \\
+        \text{Ví chủ xe khi chuyến xong} &= D - T \\
+        \text{Chủ xe nhận cho tiền thuê} &= B - H - T
+        \end{aligned}$$
+        <p>3. <strong>Snapshot thương mại (ADR 0024):</strong> breakdown + phiên bản chính sách đóng băng lúc chuyến được NHẬN (ADR 0044). Sửa chính sách sau đó không hồi tố; đơn tạo trước chính sách v7 giữ snapshot cũ.</p>
+        <p>4. <strong>Tách quỹ đọc từ cột tiền:</strong> <code>booking_holds</code> có năm cột D/S/H/IV/IP + <code>promo_discount_amount</code>, CHECK D + S + H + IV + IP − P = amount. Không hàm nào đọc <code>purpose</code> để quyết định tiền của ai (ADR 0033 điều 4).</p>
+      </section>
+
+      <!-- Section 2 -->
+      <section id="section-2">
+        <h2 class="section-heading">2. CÔNG THỨC & CÁC DÒNG TIỀN CỐT LÕI</h2>
+        <div class="diagram-wrap">
+          <pre class="mermaid">
+flowchart TD
+    subgraph Khach ["1. Phía khách (báo giá công khai)"]
+        Rent["Tiền thuê B (sau khuyến mãi của xe, không gồm giao xe)"]
+        Fee["+ Phí sàn S cố định: 50k ô tô / 30k xe máy"]
+        Ins["+ Bảo hiểm IV / IP (tuỳ chọn, chỉ khi có đối tác)"]
+        Gross["Cơ sở tiền giữ chỗ = B + S + IV + IP"]
+        Deliv["Phí giao xe G (dự kiến) — trả tay lúc nhận"]
+        Rent & Fee & Ins --> Gross
+    end
+
+    subgraph Online ["2. Tiền giữ chỗ (QR SePay)"]
+        Pct["30% × (B + S + IV + IP), làm tròn 1.000đ"]
+        Floor["Sàn: S + H + IV + IP + T · sàn cọc · holdMinAmount"]
+        GOnline["grossOnline = max(...), kẹp ≤ B + S + IV + IP"]
+        Promo["− P (mã nền tảng, trừ SAU, trần D + S + H)"]
+        QR["Số in lên QR = grossOnline − P"]
+        Gross --> Pct --> GOnline
+        Floor --> GOnline --> Promo --> QR
+    end
+
+    subgraph Pickup ["3. Trả tay cho chủ xe lúc nhận"]
+        Rest["(B + S + IV + IP) − grossOnline"]
+        PlusG["+ G"]
+        Gross --> Rest
+        Deliv --> PlusG
+    end
+
+    subgraph Settle ["4. Chuyến hoàn thành"]
+        Plat["XePrime: S + H − P"]
+        Tax["Sổ thuế: T (10% × B)"]
+        Insurer["Hãng bảo hiểm: IV + IP (khi GCN issued)"]
+        Wallet["Ví chủ xe: D − T"]
+        GOnline --> Plat & Tax & Insurer & Wallet
+    end
+          </pre>
+        </div>
+
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr><th>Ký hiệu</th><th>Dòng</th><th>Ai trả</th><th>Ai hưởng</th><th>Qua XePrime?</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>$B$</td><td>Tiền thuê (sau khuyến mãi trực tiếp của xe, <strong>không gồm giao xe</strong>)</td><td>Khách</td><td>Chủ xe</td><td>Một phần, qua $D$</td></tr>
+              <tr><td>$S$</td><td>Phí sàn (phí đặt xe)</td><td>Khách</td><td>XePrime</td><td>Có</td></tr>
+              <tr><td>$H$</td><td>Hoa hồng lũy tiến (chỉ tuyến hoa hồng)</td><td>Chủ xe</td><td>XePrime</td><td>Có — trừ từ $D$</td></tr>
+              <tr><td>$T$</td><td>Thuế khấu trừ/nộp thay 10%</td><td>Chủ xe</td><td>Ngân sách</td><td>Có — trừ từ $D$</td></tr>
+              <tr><td>$IV$ · $IP$</td><td>Bảo hiểm vật chất xe · tai nạn người (tuỳ chọn)</td><td>Khách</td><td>Hãng bảo hiểm</td><td>Có, giữ hộ</td></tr>
+              <tr><td>$G$</td><td>Phí giao nhận xe</td><td>Khách</td><td>Chủ xe</td><td><strong>Không</strong></td></tr>
+              <tr><td>$P$</td><td>Mã khuyến mãi nền tảng</td><td>XePrime tài trợ</td><td>Khách</td><td>Trừ vào QR</td></tr>
+              <tr><td>$D$</td><td>Phần của chủ xe trong tiền giữ chỗ</td><td>—</td><td>Chủ xe</td><td>Có</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="sub-heading">2.1. Phí sàn cố định phía khách (S — customerPlatformFee)</h3>
+        <ul>
+          <li><strong>Ô tô:</strong> <code>50.000đ / đơn</code> · <strong>Xe máy:</strong> <code>30.000đ / đơn</code> (chính sách v7, dữ liệu admin sửa được).</li>
+          <li>Như nhau cho đơn 1 ngày hay 30 ngày, và như nhau ở <strong>cả hai tuyến</strong>.</li>
+        </ul>
+
+        <h3 class="sub-heading">2.2. Hoa hồng lũy tiến theo ngày thuê (H — ownerCommissionTiers)</h3>
+        <p>Chỉ <strong>tuyến hoa hồng</strong>; tuyến gói H = 0 và không sinh dòng.</p>
+        <ul>
+          <li><strong>Ngày 1 – 2:</strong> <code>10%</code> giá thuê ngày đó</li>
+          <li><strong>Ngày 3 – 7:</strong> <code>7%</code></li>
+          <li><strong>Ngày 8 – 30:</strong> <code>3%</code></li>
+          <li><strong>Từ ngày 31:</strong> <code>0%</code></li>
+        </ul>
+        $$H = \text{roundToThousand}\Big(\sum_i \text{giá ngày}_i \times \%\text{nấc}(i)\Big)$$
+        <p>Làm tròn <strong>một lần</strong> trên tổng (<code>computeTieredOwnerCommission</code>). Giao xe, bảo hiểm, S không vào mẫu số.</p>
+
+        <h3 class="sub-heading">2.3. Thuế (T)</h3>
+        <ul>
+          <li>10% (VAT 5% + TNCN 5%), <strong>cả hai tuyến</strong>, trừ vào tiền chủ xe, không cộng vào khách.</li>
+          <li><strong>Cơ sở tính = B</strong>, không gồm G, S, IV, IP. <em>(Code hiện vẫn tính cả phí giao xe — đang sửa.)</em></li>
+          <li>Chỉ phát sinh khi chuyến bắt đầu; huỷ trước chuyến không có thuế. Tỷ lệ là giả thuyết thị trường, chưa qua tư vấn thuế.</li>
+        </ul>
+
+        <h3 class="sub-heading">2.4. Tiền giữ chỗ (khoản online qua QR)</h3>
+        $$\text{grossOnline} = \min\Big(B{+}S{+}IV{+}IP,\ \max\big(\text{roundToThousand}(30\% \times (B{+}S{+}IV{+}IP)),\ \text{depositMinAmount},\ S{+}H{+}IV{+}IP{+}T,\ \text{holdMinAmount}\big)\Big)$$
+        <ul>
+          <li>Sàn S + H + IV + IP + T bảo đảm D ≥ T — ví chủ xe không bao giờ nhận khoản âm.</li>
+          <li>Tuyến gói <strong>tắt</strong> công tắc thu cọc: grossOnline = max(S + IV + IP + T, holdMinAmount), kẹp như trên.</li>
+          <li>Báo giá tạm tính / dài hạn chưa chốt lịch ⇒ không thu online, không có QR.</li>
+          <li>Giao diện luôn gọi là <strong>"tiền giữ chỗ"</strong>, không bao giờ "cọc" (ADR 0044 điều 9).</li>
+        </ul>
+
+        <h3 class="sub-heading">2.5. Thứ tự áp mã khuyến mãi</h3>
+        <ol>
+          <li>Tính grossOnline <strong>không mã</strong> (30% và các sàn ở 2.4).</li>
+          <li>Trừ P: QR = grossOnline − P, với P ≤ min(trần của mã, tiền thuê đủ điều kiện, grossOnline − holdMinAmount, D + S + H).</li>
+          <li>B, S, H, T, IV, IP, D, phần trả tay và ví chủ xe <strong>không đổi</strong>; XePrime gánh P (doanh thu S + H − P có thể âm).</li>
+        </ol>
+      </section>
+
+      <!-- Section 3 -->
+      <section id="section-3">
+        <h2 class="section-heading">3. XE CÓ TÀI XẾ & PHÍ GIAO XE TẬN NƠI</h2>
+        <h3 class="sub-heading">3.1. Xe có tài xế</h3>
+        <ul>
+          <li>Ba ô giá trên từng xe: <code>withDriverDailyPrice</code> (nội thành), <code>withDriverInterCityPrice</code> (liên tỉnh 2 chiều), <code>withDriverOneWayPrice</code> (liên tỉnh 1 chiều).</li>
+          <li>Phụ phí tài xế theo quy tắc (<code>DRIVER_SURCHARGE_KIND</code>): ngoài giờ, chờ đợi, quá km, lưu đêm.</li>
+          <li>Tiền tài xế nằm trong B ⇒ chịu H (tuyến hoa hồng) và T như tiền thuê; S vẫn cố định; tiền giữ chỗ vẫn 30%.</li>
+          <li>Tài xế là tài khoản khách được bên thuê mời liên kết (ADR 0063).</li>
+        </ul>
+
+        <h3 class="sub-heading">3.2. Phí giao nhận xe (G) — theo Wave 9</h3>
+        <ul>
+          <li><strong>Không nằm trong tiền giữ chỗ.</strong> Chủ xe chốt phí đã thoả thuận <strong>sau khi duyệt</strong>; khách trả <strong>trực tiếp chủ xe lúc nhận xe</strong>. XePrime không thu hộ, không đối soát.</li>
+          <li>Không vào cơ sở 30%, không chịu H, không chịu T, không đủ điều kiện mã khuyến mãi. Chủ xe hưởng 100%.</li>
+          <li>Báo giá cho khách hiện G là dòng <em>dự kiến, trả khi nhận xe</em> khi có ước lượng khoảng cách (ADR 0018/0061).</li>
+          <li>Bảng bậc <code>deliveryTiers</code> có <strong>hai dạng loại trừ nhau</strong>: trọn gói <code>{ toKm, fee }</code> (ví dụ ≤ 5 km: 0đ; ≤ 10 km: 100.000đ) và <strong>theo km</strong> <code>{ toKm, perKm }</code> — phí = perKm × khoảng cách, làm tròn 1.000đ (ví dụ ≤ 15 km: 10.000đ/km).</li>
+        </ul>
+      </section>
+
+      <!-- Section 4 -->
+      <section id="section-4">
+        <h2 class="section-heading">4. QUẢN TRỊ THÙ LAO TÀI XẾ — HOÃN</h2>
+        <p>Thù lao/công nợ tài xế trong Manage (khoán theo cuốc, chia %, lương biên chế, phiếu chi <code>driver_wage</code>) <strong>không thuộc đợt này</strong>. Quyết định 21/10/2026: làm ở giai đoạn sau, <strong>chỉ cho tuyến gói</strong>, và cần <strong>ADR riêng</strong> (nó chạm sổ thu chi của gian hàng, không chạm đường tiền qua XePrime). Hiện không có màn hình, bảng hay endpoint nào cho phần này.</p>
+      </section>
+
+      <!-- Section 5 -->
+      <section id="section-5">
+        <h2 class="section-heading">5. BẢNG PHÂN BỔ DÒNG TIỀN (VÍ DỤ CHUẨN)</h2>
+        <p><em>Kịch bản: ô tô 5 ngày × 1.000.000đ/ngày, giao xe 200.000đ (trả tay), thuế 10% trên tiền thuê, chính sách v7 (30%; sàn cọc và holdMinAmount nhỏ hơn mọi số dưới đây). Không mã khuyến mãi.</em></p>
+        <p>Hoa hồng 5 ngày: 2 × 1.000.000 × 10% + 3 × 1.000.000 × 7% = 200.000 + 210.000 = <strong>410.000đ</strong>. Thuế: T = 10% × 5.000.000 = <strong>500.000đ</strong> (không tính trên 200.000đ giao xe).</p>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Mục</th>
+                <th>Công thức</th>
+                <th>1. Hoa hồng · không bảo hiểm</th>
+                <th>2. Hoa hồng · có IV 50k/ngày</th>
+                <th>3. Tuyến gói · cọc bật</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><strong>Tiền thuê (B)</strong></td><td>1.000.000 × 5</td><td>5.000.000đ</td><td>5.000.000đ</td><td>5.000.000đ</td></tr>
+              <tr><td><strong>Phí sàn (S)</strong></td><td>cố định ô tô</td><td>+ 50.000đ</td><td>+ 50.000đ</td><td>+ 50.000đ</td></tr>
+              <tr><td><strong>Bảo hiểm (IV + IP)</strong></td><td>chỉ khi có đối tác</td><td>0đ</td><td>+ 250.000đ (50.000 × 5)</td><td>0đ</td></tr>
+              <tr><td><strong>Cơ sở tiền giữ chỗ</strong></td><td>B + S + IV + IP</td><td>5.050.000đ</td><td>5.300.000đ</td><td>5.050.000đ</td></tr>
+              <tr><td><strong>Phí giao xe (G)</strong></td><td>trả tay, ngoài cơ sở</td><td>+ 200.000đ</td><td>+ 200.000đ</td><td>+ 200.000đ</td></tr>
+              <tr style="background: var(--gray-100); font-weight: bold;"><td>Tổng khách trả</td><td>cơ sở + G</td><td>5.250.000đ</td><td>5.500.000đ</td><td>5.250.000đ</td></tr>
+              <tr><td>30% cơ sở</td><td>roundTo1k(30% × cơ sở)</td><td>1.515.000đ</td><td>1.590.000đ</td><td>1.515.000đ</td></tr>
+              <tr><td>Sàn không-phải-tiền-chủ-xe</td><td>S + H + IV + IP + T</td><td>960.000đ (50k + 410k + 500k)</td><td>1.210.000đ (50k + 410k + 250k + 500k)</td><td>550.000đ (50k + 0 + 500k)</td></tr>
+              <tr><td><strong>Tiền giữ chỗ (QR)</strong></td><td>max(30%, sàn)</td><td><span class="badge-highlight badge-orange">1.515.000đ</span></td><td><span class="badge-highlight badge-orange">1.590.000đ</span></td><td><span class="badge-highlight badge-orange">1.515.000đ</span></td></tr>
+              <tr><td><strong>Trả tay lúc nhận xe</strong></td><td>cơ sở − QR + G</td><td>3.735.000đ (3.535.000 + 200.000)</td><td>3.910.000đ (3.710.000 + 200.000)</td><td>3.735.000đ (3.535.000 + 200.000)</td></tr>
+              <tr><td>Hoa hồng (H)</td><td>lũy tiến trên B</td><td>410.000đ</td><td>410.000đ</td><td><span class="badge-highlight badge-green">0đ</span></td></tr>
+              <tr><td>Thuế (T)</td><td>10% × B</td><td>500.000đ</td><td>500.000đ</td><td>500.000đ</td></tr>
+              <tr><td>D (phần chủ xe trong QR)</td><td>QR − S − H − IV − IP</td><td>1.055.000đ (1.515.000 − 50.000 − 410.000)</td><td>880.000đ (1.590.000 − 50.000 − 410.000 − 250.000)</td><td>1.465.000đ (1.515.000 − 50.000)</td></tr>
+              <tr><td><strong>XePrime giữ</strong></td><td>S + H</td><td>460.000đ</td><td>460.000đ</td><td>50.000đ</td></tr>
+              <tr><td><strong>Giữ hộ hãng bảo hiểm</strong></td><td>IV + IP</td><td>0đ</td><td>250.000đ</td><td>0đ</td></tr>
+              <tr><td><strong>Nộp ngân sách</strong></td><td>T</td><td>500.000đ</td><td>500.000đ</td><td>500.000đ</td></tr>
+              <tr><td><strong>Ghi có ví chủ xe</strong></td><td>D − T</td><td>555.000đ</td><td>380.000đ</td><td>965.000đ</td></tr>
+              <tr><td>Chủ xe nhận cho tiền thuê</td><td>trả tay (phần thuê) + ví = B − H − T</td><td>4.090.000đ (3.535.000 + 555.000)</td><td>4.090.000đ (3.710.000 + 380.000)</td><td>4.500.000đ (3.535.000 + 965.000)</td></tr>
+              <tr style="background: var(--success-light); font-weight: bold; color: var(--success);"><td>Chủ xe THỰC NHẬN</td><td>+ G</td><td>4.290.000đ</td><td>4.290.000đ</td><td>4.700.000đ</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><strong>Kiểm tra bảo toàn</strong> (tổng khách trả = chủ xe + XePrime + bảo hiểm + thuế):</p>
+        <ul>
+          <li>Cột 1: 4.290.000 + 460.000 + 0 + 500.000 = 5.250.000 ✓ · khách: 1.515.000 + 3.735.000 = 5.250.000 ✓</li>
+          <li>Cột 2: 4.290.000 + 460.000 + 250.000 + 500.000 = 5.500.000 ✓ · khách: 1.590.000 + 3.910.000 = 5.500.000 ✓</li>
+          <li>Cột 3: 4.700.000 + 50.000 + 0 + 500.000 = 5.250.000 ✓ · khách: 1.515.000 + 3.735.000 = 5.250.000 ✓</li>
+        </ul>
+        <p><strong>Biến thể:</strong></p>
+        <ul>
+          <li><em>Cột 3, gian hàng TẮT thu cọc:</em> QR = max(S + T, holdMin) = 550.000đ; D = 500.000đ; ví = D − T = 0đ; trả tay = 5.050.000 − 550.000 + 200.000 = 4.700.000đ; chủ xe vẫn nhận 4.500.000đ tiền thuê (B − T).</li>
+          <li><em>Cột 1 với mã 100.000đ:</em> QR = 1.515.000 − 100.000 = 1.415.000đ; tổng khách 5.150.000đ; trả tay, D, ví chủ xe <strong>không đổi</strong>; XePrime giữ S + H − P = 360.000đ.</li>
+        </ul>
+        <p>Báo giá công khai chỉ hiện các dòng phía khách (tiền thuê, phí sàn, bảo hiểm, giao xe dự kiến, tiền giữ chỗ, phần trả khi nhận). Hoa hồng, thuế, D, ví chủ xe chỉ hiện ở bề mặt đối tác và quản trị (ADR 0064 điều 11).</p>
+      </section>
+
+      <!-- Section 6 -->
+      <section id="section-6">
+        <h2 class="section-heading">6. DANH MỤC 7 GÓI THUÊ BAO GIAN HÀNG (ADR 0065)</h2>
+        <p>Gian hàng giữ <strong>tối đa một gói xe máy VÀ một gói ô tô</strong> cùng lúc; <code>enterprise_contact</code> loại trừ cả hai. Trần đếm <strong>theo loại xe</strong> trong phạm vi của từng gói. Có một gói hiện hành bất kỳ ⇒ <strong>cả gian hàng</strong> ở tuyến gói (0% hoa hồng, Full Manage). Loại xe không có gói ⇒ không tạo được, không gửi chợ được — <strong>không rơi về hoa hồng</strong>. Không còn trần chi nhánh.</p>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr><th>Mã gói</th><th>Phạm vi</th><th>Trần xe</th><th>Hoa hồng</th><th>Giá</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>moto_1</code></td><td>Xe máy</td><td>1</td><td><strong>0%</strong></td><td>Số tuyệt đối từng kỳ 1/3/6/12 tháng, admin nhập</td></tr>
+              <tr><td><code>moto_5</code></td><td>Xe máy</td><td>5</td><td><strong>0%</strong></td><td>như trên</td></tr>
+              <tr><td><code>moto_10</code></td><td>Xe máy</td><td>10</td><td><strong>0%</strong></td><td>như trên</td></tr>
+              <tr><td><code>car_1</code></td><td>Ô tô</td><td>1</td><td><strong>0%</strong></td><td>như trên</td></tr>
+              <tr><td><code>car_5</code></td><td>Ô tô</td><td>5</td><td><strong>0%</strong></td><td>như trên</td></tr>
+              <tr><td><code>car_10</code></td><td>Ô tô</td><td>10</td><td><strong>0%</strong></td><td>như trên</td></tr>
+              <tr><td><code>enterprise_contact</code></td><td>Cả hai</td><td>Không giới hạn</td><td><strong>0%</strong></td><td>Bán bằng tư vấn — admin gán, giá đàm phán bắt buộc</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Bảo đảm ở DB: không hai kỳ gói chồng nhau trên cùng (tenant, phạm vi); <code>all</code> chồng được với cả <code>car</code> lẫn <code>motorbike</code> nên bị loại trừ; một hoá đơn mở mỗi (tenant, phạm vi). Thuê bao <code>shop-basic</code>/<code>shop-advanced</code> hiện có được chuyển <strong>miễn phí</strong> sang cặp bậc nhỏ nhất vừa đội xe từng loại (loại &gt; 10 xe ⇒ <code>enterprise_contact</code>), giữ ngày hết hạn; <code>shop-pro</code> ⇒ <code>enterprise_contact</code>.</p>
+      </section>
+
+      <!-- Section 7 -->
+      <section id="section-7">
+        <h2 class="section-heading">7. CỬA SỔ THANH TOÁN & HUỶ MIỄN PHÍ ĐỘNG</h2>
+        <p>Hai mốc tính <strong>xuôi từ acceptedAt</strong>, kẹp bởi pickupAt, server lưu, client chỉ đọc (<code>holdWindowsFor</code>). Không gia hạn; nhắc ở mốc còn 60′ và 15′ (mốc nào dài hơn cả cửa sổ thì bỏ qua).</p>
+        <div class="diagram-wrap">
+          <pre class="mermaid">
+flowchart TD
+    Accept["Chủ xe duyệt / Đặt ngay: acceptedAt"] --> Delta["ΔT = pickupAt − acceptedAt"]
+    Delta --> Far["ΔT ≥ 24h"]
+    Far --> F1["Huỷ miễn phí: 4 giờ"]
+    Far --> F2["Hạn thanh toán: 120 phút"]
+    Delta --> Near["2h ≤ ΔT < 24h"]
+    Near --> N1["Huỷ miễn phí: min(4h, 30% × ΔT)"]
+    Near --> N2["Hạn thanh toán: clamp(40% × ΔT, 15′, 120′)"]
+    Delta --> Urgent["ΔT < 2h"]
+    Urgent --> U1["Không có huỷ miễn phí"]
+    Urgent --> U2["Hạn thanh toán: clamp(40% × ΔT, 15′, 48′)"]
+    Accept --> Short{"Cửa sổ còn lại < 15′?"}
+    Short -- có --> Reject["HOLD_WINDOW_TOO_SHORT — thoả thuận trực tiếp"]
+          </pre>
+        </div>
+
+        <h3 class="sub-heading">7.1. Công thức</h3>
+        $$T_{\text{cancel}} = \begin{cases}
+        4\text{ giờ} & \Delta T \ge 24\text{ giờ} \\
+        \min(4\text{ giờ}, \text{round}(\Delta T \times 30\%)) & 2\text{ giờ} \le \Delta T < 24\text{ giờ} \\
+        0 & \Delta T < 2\text{ giờ}
+        \end{cases}
+        \qquad
+        T_{\text{pay}} = \begin{cases}
+        120\text{ phút} & \Delta T \ge 24\text{ giờ} \\
+        \min(120, \max(15, \text{round}(\Delta T \times 40\%)))\text{ phút} & \Delta T < 24\text{ giờ}
+        \end{cases}$$
+        <p>Khi ΔT &lt; 24 giờ, T<sub>pay</sub> (40%) <strong>dài hơn</strong> T<sub>cancel</sub> (30%): khách trả ở cuối hạn đã qua mốc huỷ miễn phí. Màn thanh toán phải nêu mốc huỷ miễn phí <strong>trước</strong> khi khách trả.</p>
+
+        <h3 class="sub-heading">7.2. Bảng tình huống</h3>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr><th>Tình huống</th><th>ΔT</th><th>Huỷ miễn phí</th><th>Hạn thanh toán</th><th>Khách huỷ sau mốc miễn phí (trước bàn giao)</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><strong>Đặt trước 3 ngày</strong></td><td>72 giờ</td><td><strong>4 giờ</strong></td><td><strong>120 phút</strong></td><td>D + S + H chia 50/50 chủ xe ↔ XePrime; IV + IP hoàn 100%</td></tr>
+              <tr><td><strong>Đặt trước 1 ngày</strong></td><td>24 giờ</td><td><strong>4 giờ</strong></td><td><strong>120 phút</strong></td><td>như trên</td></tr>
+              <tr><td><strong>Đặt trước 10 tiếng</strong></td><td>10 giờ</td><td><strong>3 giờ</strong> (600′ × 30%)</td><td><strong>120 phút</strong> (600′ × 40% = 240′, kẹp 120′)</td><td>như trên</td></tr>
+              <tr><td><strong>Đặt trước 4 tiếng</strong></td><td>4 giờ (240′)</td><td><strong>72 phút</strong></td><td><strong>96 phút</strong></td><td>như trên — trả ở phút 80 là đã qua mốc 72′</td></tr>
+              <tr><td><strong>Đặt gấp trước 90 phút</strong></td><td>1,5 giờ</td><td><span class="badge-highlight badge-orange">0</span></td><td><strong>36 phút</strong> (90′ × 40%)</td><td>huỷ ngay sau khi trả đã là huỷ muộn</td></tr>
+              <tr><td><strong>Đặt gấp, ΔT &lt; 2 giờ nói chung</strong></td><td>15′ – 120′</td><td><span class="badge-highlight badge-orange">0</span></td><td><strong>15 – 48 phút</strong></td><td>như trên</td></tr>
+              <tr><td><strong>Giờ nhận còn dưới 15′</strong></td><td>&lt; 15′</td><td>—</td><td>—</td><td>Không phát QR: <code>HOLD_WINDOW_TOO_SHORT</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="sub-heading">7.3. Phân bổ khi huỷ (theo ví dụ §5)</h3>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr><th>Sự kiện</th><th>Cột 1</th><th>Cột 2</th><th>Cột 3</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Phần chia D + S + H</td><td>1.515.000đ</td><td>1.340.000đ (880k + 50k + 410k)</td><td>1.515.000đ (1.465k + 50k)</td></tr>
+              <tr><td>Huỷ muộn / no-show → ví chủ xe (nửa, làm tròn xuống 1.000đ)</td><td>757.000đ</td><td>670.000đ</td><td>757.000đ</td></tr>
+              <tr><td>→ XePrime (phần dư, trừ P)</td><td>758.000đ</td><td>670.000đ</td><td>758.000đ</td></tr>
+              <tr><td>→ ví khách (IV + IP)</td><td>0đ</td><td>250.000đ</td><td>0đ</td></tr>
+              <tr><td>Huỷ trong mốc miễn phí / chủ xe huỷ → ví khách</td><td>1.515.000đ</td><td>1.590.000đ</td><td>1.515.000đ</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Hoàn toàn bộ chỉ hoàn <strong>đúng số khách đã chuyển</strong> (không hoàn phần P nền tảng tài trợ). Tiền hoàn luôn vào ví <strong>tài khoản khách</strong> (ADR 0053 điều 8). Thuế không phát sinh ở mọi nhánh huỷ.</p>
+      </section>
+
+      <!-- Section 8 -->
+      <section id="section-8">
+        <h2 class="section-heading">8. BẢO HIỂM MIC — THIẾT KẾ & GIẢ LẬP</h2>
+        <h3 class="sub-heading">8.1. Cổng thu phí (ADR 0064 điều 10)</h3>
+        <ul>
+          <li>IV và IP <strong>đều tuỳ chọn</strong>, mặc định <strong>không</strong> chọn, khách tự tích.</li>
+          <li>Server chỉ cộng phí khi <strong>(a)</strong> dòng chính sách bật <strong>và (b)</strong> <code>INSURANCE_PARTNER</code> khác <code>none</code>. Thiếu một trong hai: không cộng dù client gửi lựa chọn; giao diện <strong>ẩn hẳn</strong> hai ô tích.</li>
+          <li><strong>Production:</strong> <code>INSURANCE_PARTNER = none</code> cho tới khi có hợp đồng + adapter thật ⇒ không ô tích, không thu đồng nào. <code>mic_mock</code> bị env schema từ chối boot ở production.</li>
+          <li><strong>Dev/staging:</strong> <code>INSURANCE_PARTNER = mic_mock</code> ⇒ <code>MicMockInsurancePartner</code> phát GCN giả lập qua worker ở mốc bàn giao; mọi GCN phải mang nhãn <strong>TEST</strong> và không có hiệu lực bảo hiểm.</li>
+          <li>Phát hành chỉ ở bàn giao/bắt đầu chuyến, job idempotent có retry, không gọi HTTP đối tác trong transaction DB. Huỷ trước nhận xe ⇒ hoàn 100% IV + IP.</li>
+        </ul>
+
+        <h3 class="sub-heading">8.2. Danh mục sản phẩm (bản nháp — chờ hợp đồng MIC xác nhận)</h3>
+        <p>Mô tả sản phẩm sống ở <strong>màn danh mục sản phẩm MIC</strong> của admin (đang làm); biểu phí ngày sống ở <code>fee_policies</code> (có phiên bản).</p>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr><th>Tiêu chí</th><th>Vật chất xe (IV)</th><th>Tai nạn người trên xe (IP)</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><strong>Phạm vi bảo vệ (nháp)</strong></td><td>Đâm va, lật đổ, chìm, rơi, hoả hoạn, ngập nước, mất cắp bộ phận</td><td>Tử vong, thương tật do tai nạn khi lưu hành trên xe thuê</td></tr>
+              <tr><td><strong>Mức bồi thường tối đa (nháp)</strong></td><td>Giá trị thực tế của xe</td><td>Ô tô 50.000.000đ/người/vụ · Xe máy 20.000.000đ/người/vụ</td></tr>
+              <tr><td><strong>Mức khấu trừ (nháp)</strong></td><td>Ô tô 2.000.000đ/vụ · Xe máy 500.000đ/vụ</td><td>Không</td></tr>
+              <tr><td><strong>Biểu phí ngày — ô tô (v7)</strong></td><td><strong>50.000đ / ngày</strong></td><td><strong>20.000đ / ngày</strong></td></tr>
+              <tr><td><strong>Biểu phí ngày — xe máy (v7)</strong></td><td><strong>15.000đ / ngày</strong></td><td><strong>5.000đ / ngày</strong></td></tr>
+              <tr><td><strong>Tiền tố GCN giả lập</strong></td><td><code>MIC-VCX-…</code></td><td><code>MIC-NNTX-…</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="sub-heading">8.3. Adapter giả lập (MicMockInsurancePartner)</h3>
+        <ul>
+          <li>Số GCN suy tất định từ <code>idempotencyKey</code> — worker thử lại nhận đúng số cũ.</li>
+          <li>Khi có hợp đồng: viết adapter thật cạnh adapter giả lập, đổi nhánh trong <code>InsuranceModule</code>; <code>InsuranceService</code> và luồng kế toán không đổi.</li>
+          <li><strong>Còn phải sửa:</strong> số GCN giả lập chưa mang nhãn TEST, và URL tra cứu đang trỏ một tên miền của MIC (<code>staging-cert.mic.vn</code>) — phải thay bằng mẫu URL từ danh mục sản phẩm / trang GCN TEST do XePrime tự phục vụ.</li>
+        </ul>
+      </section>
+
+      <!-- Section 9 -->
+      <section id="section-9">
+        <h2 class="section-heading">9. MA TRẬN GIAO DIỆN TRÊN 3 SITE</h2>
+        <h3 class="sub-heading">9.1. Site khách (xeprime.vn)</h3>
+        <ol>
+          <li><strong>Trang xe <code>/listings/[id]</code></strong> — <code>ListingBookingCard</code>: báo giá tạm tính (giá ngày, phí sàn, phí giao xe dự kiến theo địa chỉ, ô tích bảo hiểm <strong>chỉ khi cổng mở</strong>, tiền giữ chỗ và phần trả khi nhận).</li>
+          <li><strong>Gửi yêu cầu</strong> — <code>RequestBookingModal</code> / <code>RequestBookingFlow</code> + <code>BookingReviewCosts</code>: tách <strong>"Tiền giữ chỗ (sau khi được duyệt)"</strong> và <strong>"Trả chủ xe khi nhận xe"</strong>. Gửi yêu cầu không thu tiền (ADR 0044).</li>
+          <li><strong>Thanh toán tiền giữ chỗ ở <code>/trips/[id]</code></strong> — <code>TripPaymentCheckout</code>: VietQR SePay đúng số tiền, đồng hồ T<sub>pay</sub> đọc từ <code>expires_at</code>, mốc huỷ miễn phí đọc từ <code>free_cancel_until</code>; tự lật khi tiền về (không có nút "Tôi đã chuyển khoản").</li>
+          <li><strong><code>/trips</code> · <code>/trips/[id]</code></strong> — tiền giữ chỗ đã trả, phần còn trả khi nhận xe, GCN bảo hiểm sau bàn giao (nếu có).</li>
+        </ol>
+        <h3 class="sub-heading">9.2. Site partner (partner.xeprime.vn)</h3>
+        <ol>
+          <li><strong>Hộp thư yêu cầu <code>/booking-requests</code></strong> — <code>ApproveBookingRequestDialog</code>: tiền giữ chỗ khách sẽ chuyển, tiền thu tại chỗ, hoa hồng, thuế, số sẽ vào ví điểm; cửa sổ thanh toán/huỷ dự kiến theo ΔT.</li>
+          <li><strong>Chi tiết đơn <code>/bookings/[id]</code></strong> — tóm tắt tài chính chuyến, nhập phí giao xe đã thoả thuận.</li>
+          <li><strong>Ví điểm <code>/balance</code></strong> — ghi có D − T khi chuyến xong, phần chia khi khách huỷ muộn; yêu cầu rút về tài khoản ngân hàng.</li>
+          <li><strong>Gói thuê bao <code>/subscription</code></strong> (+ onboarding tuyến gói) — chọn tối đa một bậc mỗi loại xe; <code>enterprise_contact</code> là thẻ "Liên hệ tư vấn".</li>
+        </ol>
+        <p><em>URL hiển thị không mang tiền tố <code>/manage</code>; thư mục nội bộ là <code>app/(manage)/manage/*</code> (ADR 0051).</em></p>
+        <h3 class="sub-heading">9.3. Site admin (admin.xeprime.vn)</h3>
+        <ol>
+          <li><strong>Chính sách phí <code>/fee-policies</code></strong> — bản v2: hai ô S, bảng nấc H, % tiền giữ chỗ + sàn, thuế, biểu phí bảo hiểm theo ngày <em>(form v2 đang làm)</em>.</li>
+          <li><strong>Gói <code>/plans</code></strong> — bảy bậc, giá tuyệt đối từng kỳ; gán gói cho gian hàng theo phạm vi.</li>
+          <li><strong>Tài chính <code>/money</code></strong> — <code>FinanceView</code>: giữ chỗ và quyết toán, hoàn tiền, yêu cầu rút, đơn cổng thanh toán, <strong>tab Bảo hiểm</strong> (hàng đợi chứng nhận).</li>
+          <li><strong>Mã khuyến mãi <code>/promo-codes</code></strong> · <strong>Giao dịch ngân hàng <code>/bank-transactions</code></strong>.</li>
+          <li><strong>Danh mục sản phẩm MIC</strong> — <em>đang làm</em>.</li>
+        </ol>
+      </section>
+
+      <!-- Section 10 -->
+      <section id="section-10">
+        <h2 class="section-heading">10. TIẾN ĐỘ — DANH SÁCH TRUNG THỰC</h2>
+        <p>Rà soát 21/10/2026. Bản trước của mục này ghi "đã triển khai &amp; nghiệm thu" kèm số test; các con số đó <strong>không được kiểm chứng lại</strong> ở lần rà soát này và không được dùng làm bằng chứng.</p>
+        <h3 class="sub-heading">Đã có trong code (commit a140472f, migration 20261020170000_financial_flow_v2, chính sách phí v7)</h3>
+        <ul class="checklist">
+          <li><code>@xeprime/types</code>: <code>computeCustomerFees</code> (phí sàn cố định, hoa hồng lũy tiến, tiền giữ chỗ 30% có sàn, trần mã D + S + H), <code>computeTieredOwnerCommission</code>, <code>roundToThousand</code>, <code>resolveHoldAllocation</code> với dòng H, <code>holdWindowsFor</code> (cửa sổ động).</li>
+          <li>DB: cột v2 trên <code>fee_policies</code>, <code>booking_holds.owner_commission_amount</code> + bốn CHECK viết lại, <code>bookings.owner_commission_amount</code>, lựa chọn bảo hiểm trên <code>booking_requests</code>.</li>
+          <li><code>MicMockInsurancePartner</code> + chặn <code>mic_mock</code> ở production trong env schema.</li>
+          <li>Web: <code>ListingBookingCard</code>, <code>RequestBookingFlow</code>/<code>BookingReviewCosts</code>, <code>ApproveBookingRequestDialog</code> đọc breakdown v2.</li>
+        </ul>
+        <h3 class="sub-heading">Đang làm</h3>
+        <ul class="checklist">
+          <li class="todo">Bỏ phí giao xe khỏi cơ sở thuế (code hiện vẫn tính).</li>
+          <li class="todo">Gỡ trường phía chủ xe (ownerCommissionAmount, ownerNetAmount, ownerPayableAmount, platformRetainedAmount, taxAmount) khỏi báo giá công khai — web + mobile.</li>
+          <li class="todo">Cổng <code>INSURANCE_PARTNER</code> cho IV/IP ở server + ẩn ô tích khi đóng; nhãn TEST và URL GCN không dùng tên miền MIC.</li>
+          <li class="todo">Form admin chính sách phí v2; màn danh mục sản phẩm MIC; hàng đợi chứng nhận.</li>
+          <li class="todo">Bậc giao xe theo km (dạng <code>{ toKm, perKm }</code> đã có trong types; còn form + hiển thị).</li>
+          <li class="todo">Gói theo loại xe (ADR 0065): backend (phạm vi, EXCLUDE, hoá đơn mở theo phạm vi, chuyển đổi miễn phí) + web (<code>/subscription</code>, onboarding, admin gán gói).</li>
+          <li class="todo">UX cửa sổ động và huỷ: hiện mốc huỷ miễn phí trước khi trả, câu chữ cho ΔT &lt; 2 giờ.</li>
+        </ul>
+        <h3 class="sub-heading">Hoãn / chưa thuộc đợt này</h3>
+        <ul class="checklist">
+          <li class="deferred">App native (khách + Partner) theo v2 và gói theo loại xe — việc của đội mobile.</li>
+          <li class="deferred">Thù lao tài xế (§4) — giai đoạn sau, tuyến gói, cần ADR riêng.</li>
+          <li class="deferred">Release gate ADR 0028: tư vấn thuế cho mức 10%, hợp đồng MIC thật, ý kiến pháp lý thu hộ — không mở được bằng mã.</li>
+        </ul>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    function fmt(n) {
+      return new Intl.NumberFormat('vi-VN').format(n) + ' đ';
+    }
+
+    function roundToThousand(n) {
+      return Math.round(n / 1000) * 1000;
+    }
+
+    // Chính sách v7 — giá trị minh hoạ; số thật đọc từ fee_policies đang hiệu lực.
+    var POLICY = {
+      depositPercent: 30,
+      depositMinAmount: 0,
+      holdMinAmount: 20000,
+      taxPercent: 10,
+      platformFee: { car: 50000, motorbike: 30000 },
+      vehicleDaily: { car: 50000, motorbike: 15000 },
+      personalDaily: { car: 20000, motorbike: 5000 },
+      tiers: [
+        { fromDay: 1, percent: 10 },
+        { fromDay: 3, percent: 7 },
+        { fromDay: 8, percent: 3 },
+        { fromDay: 31, percent: 0 }
+      ]
+    };
+
+    function percentForDay(day) {
+      var p = 0;
+      POLICY.tiers.forEach(function (t) { if (t.fromDay <= day) p = t.percent; });
+      return p;
+    }
+
+    function runSimulation() {
+      var vehicleType = document.getElementById('calc-vehicle-type').value;
+      var days = Math.max(1, parseInt(document.getElementById('calc-days').value, 10) || 1);
+      var dailyPrice = Math.max(0, parseInt(document.getElementById('calc-daily-price').value, 10) || 0);
+      var delivery = Math.max(0, parseInt(document.getElementById('calc-delivery-fee').value, 10) || 0);
+      var plan = document.getElementById('calc-plan-type').value;
+      var promoInput = Math.max(0, parseInt(document.getElementById('calc-promo').value, 10) || 0);
+      var ivSelected = document.getElementById('calc-iv').checked;
+      var ipSelected = document.getElementById('calc-ip').checked;
+
+      var commissionTrack = plan === 'commission';
+      var depositRequired = plan !== 'subscription-nodeposit';
+
+      var B = dailyPrice * days;
+      var S = POLICY.platformFee[vehicleType];
+      var IV = ivSelected ? POLICY.vehicleDaily[vehicleType] * days : 0;
+      var IP = ipSelected ? POLICY.personalDaily[vehicleType] * days : 0;
+
+      // H — lũy tiến theo ngày, làm tròn MỘT lần trên tổng.
+      var H = 0;
+      if (commissionTrack) {
+        var weighted = 0;
+        for (var d = 1; d <= days; d++) weighted += dailyPrice * percentForDay(d);
+        H = roundToThousand(weighted / 100);
+      }
+      // T — 10% trên tiền thuê B, KHÔNG gồm phí giao xe.
+      var T = roundToThousand(B * POLICY.taxPercent / 100);
+
+      var gross = B + S + IV + IP;            // cơ sở tiền giữ chỗ (không gồm giao xe)
+      var notOwners = S + H + IV + IP + T;    // sàn: mọi thứ không phải tiền chủ xe
+      var floor = depositRequired
+        ? Math.max(roundToThousand(gross * POLICY.depositPercent / 100), POLICY.depositMinAmount, notOwners)
+        : notOwners;
+      var grossOnline = floor > 0 ? Math.min(gross, Math.max(floor, POLICY.holdMinAmount)) : 0;
+      var D = grossOnline - S - H - IV - IP;
+
+      // Mã khuyến mãi — trừ SAU, trần: grossOnline − holdMin và D + S + H.
+      var sponsorable = grossOnline - IV - IP;
+      var promoRoom = Math.max(0, Math.min(grossOnline - POLICY.holdMinAmount, sponsorable));
+      var P = Math.min(promoInput, promoRoom);
+      var qr = grossOnline - P;
+
+      var pickup = gross - grossOnline + delivery;
+      var wallet = D - T;
+      var ownerTotal = (gross - grossOnline) + wallet + delivery; // = B − H − T + G
+      var platform = S + H - P;
+      var customerTotal = gross + delivery - P;
+
+      document.getElementById('res-total').textContent = fmt(customerTotal);
+      document.getElementById('res-deposit').textContent = fmt(qr) + (P > 0 ? ' (đã trừ mã ' + fmt(P) + ')' : '');
+      document.getElementById('res-pickup').textContent = fmt(pickup);
+      document.getElementById('res-commission').textContent = fmt(H) + ' · ' + fmt(T);
+      document.getElementById('res-platform').textContent = fmt(platform);
+      document.getElementById('res-wallet').textContent = fmt(wallet);
+      document.getElementById('res-owner-total').textContent = fmt(ownerTotal);
+    }
+
+    // Run on init
+    runSimulation();
+  </script>
+</body>
+</html>

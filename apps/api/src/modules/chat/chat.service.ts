@@ -228,7 +228,7 @@ export class ChatService {
       },
     });
     const kind = resolveStorefrontKind(
-      resolveEffectiveBilling(tenant?.subscriptions[0] ?? null, now).billingMode,
+      resolveEffectiveBilling(tenant?.subscriptions, now).billingMode,
     );
     if (storefrontAllowsPublicChat(kind)) return true;
 

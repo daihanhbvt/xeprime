@@ -4,6 +4,8 @@ import {
   BILLING_PHASE,
   billingModeForMoney,
   isSubscriptionTrack,
+  packageTermCovering,
+  resolveActivePackageTerms,
   resolveEffectiveBilling,
   type EffectiveSubscriptionRow,
 } from './effective-billing';
@@ -164,5 +166,91 @@ describe('kỳ hoa hồng 12 tháng — cửa sổ F1 không còn tồn tại �
       expect(billing.billingMode).toBe(BILLING_MODE.COMMISSION);
       expect(isSubscriptionTrack(billing)).toBe(false);
     }
+  });
+});
+
+describe('resolveEffectiveBilling — gói theo LOẠI XE (ADR 0065)', () => {
+  const pkg = (scope: string, endsAt: Date, code = `${scope}_1`): EffectiveSubscriptionRow => ({
+    billingMode: BILLING_MODE.PACKAGE,
+    endsAt,
+    vehicleScope: scope,
+    plan: { code, name: code, limitsJson: { graceDays: 7, features: ['finance'] } },
+  });
+  const future = new Date(NOW.getTime() + 30 * DAY);
+  const inGrace = new Date(NOW.getTime() - 2 * DAY);
+  const lapsed = new Date(NOW.getTime() - 30 * DAY);
+
+  it('ô tô + xe máy cùng còn hạn ⇒ một tuyến gói, đủ hai phạm vi, nhãn nói cả hai', () => {
+    const billing = resolveEffectiveBilling([pkg('motorbike', future), pkg('car', future)], NOW);
+    expect(billing.phase).toBe(BILLING_PHASE.CURRENT);
+    expect(billing.billingMode).toBe(BILLING_MODE.PACKAGE);
+    expect(billing.packageScopes).toEqual(['car', 'motorbike']);
+    expect(billing.planName).toBe('car_1 + motorbike_1');
+  });
+
+  it('một phạm vi đã qua ân hạn, phạm vi kia còn hạn ⇒ VẪN tuyến gói (chỉ phạm vi kia)', () => {
+    const billing = resolveEffectiveBilling([pkg('car', future), pkg('motorbike', lapsed)], NOW);
+    expect(billing.phase).toBe(BILLING_PHASE.CURRENT);
+    expect(billing.packageScopes).toEqual(['car']);
+  });
+
+  it('mọi phạm vi đang ân hạn ⇒ grace, mốc hết ân hạn MUỘN NHẤT', () => {
+    const early = new Date(NOW.getTime() - 5 * DAY);
+    const billing = resolveEffectiveBilling([pkg('car', inGrace), pkg('motorbike', early)], NOW);
+    expect(billing.phase).toBe(BILLING_PHASE.GRACE);
+    expect(billing.graceEndsAt).toEqual(new Date(inGrace.getTime() + 7 * DAY));
+  });
+
+  it('không còn phạm vi nào giữ gói ⇒ lapsed về hoa hồng', () => {
+    const billing = resolveEffectiveBilling([pkg('car', lapsed), pkg('motorbike', lapsed)], NOW);
+    expect(billing.phase).toBe(BILLING_PHASE.LAPSED);
+    expect(billing.billingMode).toBe(BILLING_MODE.COMMISSION);
+    expect(billing.packageScopes).toEqual([]);
+  });
+
+  it('kỳ gói đang ÂN HẠN nhường dòng hoa hồng đang chạy (đã được hạ tuyến)', () => {
+    const commission = row({ billingMode: BILLING_MODE.COMMISSION, endsAt: future });
+    const billing = resolveEffectiveBilling([commission, pkg('car', inGrace)], NOW);
+    expect(billing.billingMode).toBe(BILLING_MODE.COMMISSION);
+  });
+
+  it('kỳ gói CÒN HẠN thắng dòng hoa hồng còn sót', () => {
+    const commission = row({ billingMode: BILLING_MODE.COMMISSION, endsAt: future });
+    const billing = resolveEffectiveBilling([commission, pkg('motorbike', future)], NOW);
+    expect(billing.billingMode).toBe(BILLING_MODE.PACKAGE);
+  });
+
+  it('dòng thiếu vehicleScope đọc là `all` (dữ liệu trước ADR 0065)', () => {
+    const legacy = { ...pkg('car', future), vehicleScope: null };
+    expect(resolveEffectiveBilling(legacy, NOW).packageScopes).toEqual(['all']);
+  });
+});
+
+describe('packageTermCovering — kỳ nào gác loại xe nào', () => {
+  const pkg = (scope: string, endsAt: Date): EffectiveSubscriptionRow => ({
+    billingMode: BILLING_MODE.PACKAGE,
+    endsAt,
+    vehicleScope: scope,
+    plan: { code: scope, limitsJson: { graceDays: 7 } },
+  });
+  const future = new Date(NOW.getTime() + 30 * DAY);
+
+  it('loại xe không có kỳ ⇒ null (cổng PLAN_SCOPE_REQUIRED)', () => {
+    const terms = resolveActivePackageTerms([pkg('car', future)], NOW);
+    expect(packageTermCovering(terms, 'car')?.vehicleScope).toBe('car');
+    expect(packageTermCovering(terms, 'motorbike')).toBeNull();
+  });
+
+  it('kỳ `all` phủ cả hai loại', () => {
+    const terms = resolveActivePackageTerms([pkg('all', future)], NOW);
+    expect(packageTermCovering(terms, 'motorbike')?.vehicleScope).toBe('all');
+    expect(packageTermCovering(terms, 'car')?.vehicleScope).toBe('all');
+  });
+
+  it('kỳ còn hạn thắng kỳ ân hạn khi cả hai cùng phủ một loại', () => {
+    const grace = pkg('all', new Date(NOW.getTime() - DAY));
+    const terms = resolveActivePackageTerms([grace, pkg('car', future)], NOW);
+    expect(packageTermCovering(terms, 'car')?.vehicleScope).toBe('car');
+    expect(packageTermCovering(terms, 'motorbike')?.vehicleScope).toBe('all');
   });
 });

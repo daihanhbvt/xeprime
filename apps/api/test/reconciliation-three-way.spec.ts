@@ -195,6 +195,7 @@ async function paidHold(deposit: number, serviceFee: number): Promise<string> {
       bookingRequestId: requestId,
       vehicleId,
       purpose: BOOKING_HOLD_PURPOSE.COMMISSION,
+      depositRequired: true,
       status: BOOKING_HOLD_STATUS.PAID,
       amount: new Prisma.Decimal(amount),
       paidAmount: new Prisma.Decimal(amount),

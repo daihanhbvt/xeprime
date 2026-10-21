@@ -8,10 +8,12 @@
  * là một phần của lược đồ (mọi môi trường có ngay sau `migrate deploy`, không đợi ai chạy seed).
  */
 import { seedPlanGuideTemplates } from './plan-guide-templates';
+import { seedInsuranceProducts } from './insurance-products';
 import {
   BANNER_PLACEMENT,
   DEFAULT_COMMISSION_PLAN_CODE,
   RETIRED_PER_VEHICLE_PLAN_CODE,
+  RETIRED_SHOP_PLAN_CODE,
   SHOP_PLAN_CODE,
   BILLING_MODE,
   DEFAULT_PLATFORM_ROLE_PERMISSIONS,
@@ -21,6 +23,9 @@ import {
   OWNER_LITE_FEATURES,
   PERMISSION_VALUES,
   PLAN_STATUS,
+  PLAN_VEHICLE_SCOPE,
+  parsePlanLimits,
+  planVehicleScopeOf,
   PLATFORM_ROLE,
   PLATFORM_ROLE_LABEL,
   PROMO_AUDIENCE,
@@ -34,6 +39,8 @@ import {
   type BillingMode,
   type Permission,
   type PlanLimitsJson,
+  type PlanStatus,
+  type PlanVehicleScope,
   type SystemFinanceCategoryKey,
 } from '@xeprime/types';
 import { Prisma } from '../index';
@@ -234,51 +241,80 @@ const FEATURES_BY_TIER = {
 };
 
 /**
- * Gói dịch vụ nền tảng (ADR 0041). Không phải dữ liệu demo: màn quản trị gói và màn chọn gói
- * của gian hàng cần danh mục này ở mọi môi trường.
+ * Gói dịch vụ nền tảng (ADR 0041 · ADR 0065). Không phải dữ liệu demo: màn quản trị gói và màn
+ * chọn gói của gian hàng cần danh mục này ở mọi môi trường.
  *
  * KHÔNG đổi mã đã phát hành — đổi mã là mồ côi mọi `tenant_subscriptions` đang trỏ tới; gói
- * hết vai trò thì lật `archived`, không xoá. Giá là DỮ LIỆU pilot cho admin chỉnh sau.
+ * hết vai trò thì lật `archived`, không xoá. Mã bậc sống ở `SHOP_PLAN_CODE`.
  *
- * ## Danh mục có BỐN hàng, và chúng không cùng một loại thứ
+ * ## Danh mục có TÁM hàng, và chúng không cùng một loại thứ
  *
  * `free` (`DEFAULT_COMMISSION_PLAN_CODE`) **không phải một SKU**. Nó là TUYẾN vào cửa: mọi
  * chủ xe cá nhân được gán nó lúc mở gian hàng, giá 0đ, không kỳ hạn nào để mua, không gì để
  * gia hạn. Backend giữ nó là duy nhất và không cho archive (`BillingService` —
  * `COMMISSION_PLAN_IS_SINGLETON` / `DEFAULT_PLAN_PROTECTED`), còn `listPlansForTenant` lọc nó
  * ra khỏi màn chọn gói. Phí dịch vụ 10% nằm PHÍA KHÁCH, cộng vào khoản giữ chỗ (ADR 0029
- * điều 2) — không phải khoản khấu trừ của chủ xe.
+ * điều 2) — không phải khoản khấu trừ của chủ xe. Phạm vi `all` (CHECK `plans_commission_scope_all`).
  *
- * Ba hàng còn lại là BA BẬC gian hàng (ADR 0041 điều 7), khác nhau ở QUY MÔ: trần xe, trần chi
- * nhánh, và giá.
+ * Bảy hàng còn lại là bậc gian hàng THEO LOẠI XE (ADR 0065, chủ sản phẩm chốt 21/10/2026):
  *
- * ## Vì sao BA bậc bây giờ, khi ADR 0029 chốt một
+ * | Mã | Phạm vi | Trần xe (loại đó) |
+ * | --- | --- | --- |
+ * | `moto_1` / `moto_5` / `moto_10` | `motorbike` | 1 / 5 / 10 xe máy |
+ * | `car_1` / `car_5` / `car_10` | `car` | 1 / 5 / 10 ô tô |
+ * | `enterprise_contact` | `all` | không giới hạn — bán bằng tư vấn (`salesOnly`) |
  *
- * Ở mô hình chỗ xe, quy mô là một con số người mua tự gõ, nên một hàng plan là đủ và ba hàng
- * chỉ khác nhau `months` sẽ là ba chỗ để giá trôi. ADR 0041 đổi thứ được bán: người mua chọn
- * một BẬC, và ba bậc khác nhau ở trần xe (3 / 10 / ∞), trần chi nhánh (1 / 3 / ∞) và bảng giá.
- * Đó là KHÁC BIỆT THẬT — đúng điều kiện mà bản trước của chú thích này đặt ra để một hàng plan
- * thứ hai xứng đáng ra đời.
+ * Một gian hàng giữ TỐI ĐA một gói xe máy VÀ một gói ô tô cùng lúc; gói doanh nghiệp thay cả hai
+ * (EXCLUDE `tenant_subscriptions_package_scope_no_overlap`). Chi nhánh không còn giới hạn ở bậc nào.
  *
- * Bốn kỳ hạn của MỘT bậc thì vẫn là bốn lựa chọn MUA trong `limits.termPrices`, không phải bốn
- * hàng plan: chúng cùng trần, cùng cờ năng lực, cùng `graceDays`.
+ * ## ⚠️ GIÁ LÀ SỐ GIỮ CHỖ ⇒ sáu bậc tự mua ra đời ở `draft` (CHƯA MỞ BÁN)
  *
- * ## Cả ba bậc mở CÙNG bộ tính năng
+ * Bảng giá dưới đây là con số tạm (bội số 1.000đ). Sáu bậc tự mua được TẠO ở trạng thái `draft`:
+ * không hiện ở bảng giá gian hàng, không tự mua được, gán tay phải nhập giá. Admin sửa giá thật
+ * rồi bấm Mở bán. Seed chỉ TẠO, không ghi đè lúc chạy lại (xem `seedPlans`); dữ liệu demo mở bán
+ * chúng bằng `publishDraftPlansForDemo`. Giá cả kỳ là số TUYỆT ĐỐI, giảm dần theo
+ * tháng (ADR 0041 điều 2) — % tiết kiệm hiển thị được tính ra, không lưu ở đâu.
  *
- * Ranh giới năng lực là giữa hai TUYẾN (ADR 0027 · ADR 0038), không phải giữa ba bậc. Gian hàng
- * trả 100.000đ/tháng vẫn là gian hàng trả phí: họ có đủ bộ quản lý, chỉ nhỏ hơn về quy mô. Cắt
- * bớt tính năng theo bậc sẽ dựng một bậc thứ ba của ADR 0027 mà không ADR nào định nghĩa.
+ * Migration `20261021110000_per_vehicle_type_plans` chèn đúng bảy hàng này (cùng id `seedId`) để
+ * ánh xạ thuê bao đang chạy; seed là nguồn NỘI DUNG và ghi đè các trường ở đó.
+ *
+ * ## Cả bảy bậc mở CÙNG bộ tính năng
+ *
+ * Ranh giới năng lực là giữa hai TUYẾN (ADR 0027 · ADR 0038), không phải giữa các bậc. Bậc khác
+ * nhau ở LOẠI XE và QUY MÔ.
  */
+const PLAN_FULL_MANAGE = {
+  maxBranches: null,
+  maxMembers: null,
+  salesOnly: false,
+  graceDays: 7,
+  features: FEATURES_BY_TIER.fullManage,
+} as const;
+
+/** Bảng giá giữ chỗ của một bậc — tiền CẢ KỲ cho 1 / 3 / 6 / 12 tháng (ADR 0041 điều 2). */
+function termPrices(m1: number, m3: number, m6: number, m12: number): PlanLimitsJson['termPrices'] {
+  return [
+    { months: 1, price: String(m1) },
+    { months: 3, price: String(m3) },
+    { months: 6, price: String(m6) },
+    { months: 12, price: String(m12) },
+  ];
+}
+
 const PLANS: ReadonlyArray<{
   code: string;
   name: string;
   description: string;
   billingMode: BillingMode;
   commissionPercent: number | null;
+  vehicleScope: PlanVehicleScope;
   limits: PlanLimitsJson;
   sortOrder: number;
-  /** 'archived' = gói lịch sử, giữ hàng cho subscription cũ nhưng không bán nữa. */
-  status?: 'active' | 'archived';
+  /**
+   * Trạng thái LÚC TẠO (seed không ghi đè sau đó). `draft` = chưa mở bán — sáu bậc giá giữ chỗ
+   * (ADR 0065); `archived` = gói lịch sử. Bỏ trống = `active`.
+   */
+  status?: PlanStatus;
 }> = [
   {
     code: DEFAULT_COMMISSION_PLAN_CODE,
@@ -288,26 +324,22 @@ const PLANS: ReadonlyArray<{
       'Nền tảng thu phí dịch vụ 10% ở PHÍA KHÁCH qua khoản giữ chỗ khi đặt xe. Tối đa 3 xe (Owner Lite).',
     billingMode: BILLING_MODE.COMMISSION,
     commissionPercent: 10,
+    vehicleScope: PLAN_VEHICLE_SCOPE.ALL,
     limits: {
       /*
        * `maxVehicles` NULL có chủ đích — và nó KHÔNG có nghĩa "không giới hạn" ở đây.
        *
        * Trần của tuyến hoa hồng là `OWNER_LITE_VEHICLE_LIMIT` = 3, một quy tắc SẢN PHẨM viết
        * trong code (ADR 0038 điều 12). `vehicleQuotaFor` nhận ra tuyến này trước khi đọc tới
-       * `limits`, nên con số ở đây không bao giờ được dùng. Chép 3 vào đây là dựng một trần DỮ
-       * LIỆU cạnh một trần QUY TẮC, và hai thứ đó sẽ trôi khỏi nhau ở lần đầu ai đó sửa một bên.
+       * `limits`, nên con số ở đây không bao giờ được dùng.
        */
       maxVehicles: null,
       maxBranches: null,
       maxMembers: null,
       /*
        * RỖNG có chủ đích: `termPrices` là bảng giá VÀ danh sách kỳ hạn ĐƯỢC BÁN (ADR 0041 điều
-       * 2), và tuyến hoa hồng không bán gì cả — không hoá đơn, không gia hạn, không ngày hết gói
-       * trong sản phẩm. Khai một bảng giá cho nó là bày một biểu giá cho thứ không có giá, và
-       * màn quản trị sẽ hiện nó như một SKU.
-       *
-       * Dòng thuê bao kỹ thuật vẫn dài `COMMISSION_TRACK_TERM_MONTHS` (12 tháng) và được job
-       * vòng đời nối liền từ `ends_at` — đó là chuyện của DỮ LIỆU, không phải của bảng giá.
+       * 2), và tuyến hoa hồng không bán gì cả. Dòng thuê bao kỹ thuật vẫn dài
+       * `COMMISSION_TRACK_TERM_MONTHS` (12 tháng) và được job vòng đời nối liền từ `ends_at`.
        */
       termPrices: [],
       salesOnly: false,
@@ -318,78 +350,121 @@ const PLANS: ReadonlyArray<{
     sortOrder: 0,
   },
   {
-    code: SHOP_PLAN_CODE.BASIC,
-    name: 'Gói cơ bản',
-    description: 'Phù hợp cho cá nhân hoặc cửa hàng nhỏ, dễ dàng bắt đầu và quản lý.',
+    code: SHOP_PLAN_CODE.MOTO_1,
+    status: PLAN_STATUS.DRAFT,
+    name: 'Xe máy · 1 xe',
+    description: 'Gói xe máy cho chủ xe vừa bắt đầu — đăng 1 xe máy, đủ bộ quản lý gian hàng.',
     billingMode: BILLING_MODE.PACKAGE,
     commissionPercent: null,
+    vehicleScope: PLAN_VEHICLE_SCOPE.MOTORBIKE,
     limits: {
-      maxVehicles: 3,
-      maxBranches: 1,
-      maxMembers: null,
-      // Giá TUYỆT ĐỐI từng kỳ (ADR 0041 điều 2) — % tiết kiệm hiển thị được tính ra từ chính
-      // bảng này, không lưu ở đâu cả.
-      termPrices: [
-        { months: 1, price: '100000' },
-        { months: 3, price: '250000' },
-        { months: 6, price: '450000' },
-        { months: 12, price: '800000' },
-      ],
-      salesOnly: false,
+      ...PLAN_FULL_MANAGE,
+      maxVehicles: 1,
+      termPrices: termPrices(49_000, 139_000, 269_000, 499_000),
       recommended: false,
-      graceDays: 7,
-      features: FEATURES_BY_TIER.fullManage,
     },
     sortOrder: 1,
   },
   {
-    code: SHOP_PLAN_CODE.ADVANCED,
-    name: 'Gói nâng cao',
-    description: 'Dành cho chủ xe quy mô nhỏ: nhiều xe hơn, nhiều chi nhánh hơn.',
+    code: SHOP_PLAN_CODE.MOTO_5,
+    status: PLAN_STATUS.DRAFT,
+    name: 'Xe máy · 5 xe',
+    description: 'Gói xe máy cho cửa hàng nhỏ — tối đa 5 xe máy.',
     billingMode: BILLING_MODE.PACKAGE,
     commissionPercent: null,
+    vehicleScope: PLAN_VEHICLE_SCOPE.MOTORBIKE,
     limits: {
-      maxVehicles: 10,
-      maxBranches: 3,
-      maxMembers: null,
-      termPrices: [
-        { months: 1, price: '250000' },
-        { months: 3, price: '650000' },
-        { months: 6, price: '1200000' },
-        { months: 12, price: '2000000' },
-      ],
-      salesOnly: false,
+      ...PLAN_FULL_MANAGE,
+      maxVehicles: 5,
+      termPrices: termPrices(149_000, 419_000, 799_000, 1_490_000),
       recommended: true,
-      graceDays: 7,
-      features: FEATURES_BY_TIER.fullManage,
     },
     sortOrder: 2,
   },
   {
-    code: SHOP_PLAN_CODE.PRO,
-    name: 'Gói chuyên nghiệp',
-    description:
-      'Hệ thống quản lý quy mô lớn, không giới hạn xe và chi nhánh. Liên hệ để được tư vấn và báo giá riêng.',
+    code: SHOP_PLAN_CODE.MOTO_10,
+    status: PLAN_STATUS.DRAFT,
+    name: 'Xe máy · 10 xe',
+    description: 'Gói xe máy cho đội xe vừa — tối đa 10 xe máy.',
     billingMode: BILLING_MODE.PACKAGE,
     commissionPercent: null,
+    vehicleScope: PLAN_VEHICLE_SCOPE.MOTORBIKE,
     limits: {
+      ...PLAN_FULL_MANAGE,
+      maxVehicles: 10,
+      termPrices: termPrices(249_000, 699_000, 1_339_000, 2_490_000),
+      recommended: false,
+    },
+    sortOrder: 3,
+  },
+  {
+    code: SHOP_PLAN_CODE.CAR_1,
+    status: PLAN_STATUS.DRAFT,
+    name: 'Ô tô · 1 xe',
+    description: 'Gói ô tô cho chủ xe vừa bắt đầu — đăng 1 ô tô, đủ bộ quản lý gian hàng.',
+    billingMode: BILLING_MODE.PACKAGE,
+    commissionPercent: null,
+    vehicleScope: PLAN_VEHICLE_SCOPE.CAR,
+    limits: {
+      ...PLAN_FULL_MANAGE,
+      maxVehicles: 1,
+      termPrices: termPrices(99_000, 279_000, 539_000, 990_000),
+      recommended: false,
+    },
+    sortOrder: 4,
+  },
+  {
+    code: SHOP_PLAN_CODE.CAR_5,
+    status: PLAN_STATUS.DRAFT,
+    name: 'Ô tô · 5 xe',
+    description: 'Gói ô tô cho cửa hàng nhỏ — tối đa 5 ô tô.',
+    billingMode: BILLING_MODE.PACKAGE,
+    commissionPercent: null,
+    vehicleScope: PLAN_VEHICLE_SCOPE.CAR,
+    limits: {
+      ...PLAN_FULL_MANAGE,
+      maxVehicles: 5,
+      termPrices: termPrices(299_000, 849_000, 1_619_000, 2_990_000),
+      recommended: true,
+    },
+    sortOrder: 5,
+  },
+  {
+    code: SHOP_PLAN_CODE.CAR_10,
+    status: PLAN_STATUS.DRAFT,
+    name: 'Ô tô · 10 xe',
+    description: 'Gói ô tô cho đội xe vừa — tối đa 10 ô tô.',
+    billingMode: BILLING_MODE.PACKAGE,
+    commissionPercent: null,
+    vehicleScope: PLAN_VEHICLE_SCOPE.CAR,
+    limits: {
+      ...PLAN_FULL_MANAGE,
+      maxVehicles: 10,
+      termPrices: termPrices(499_000, 1_419_000, 2_699_000, 4_990_000),
+      recommended: false,
+    },
+    sortOrder: 6,
+  },
+  {
+    code: SHOP_PLAN_CODE.ENTERPRISE,
+    name: 'Doanh nghiệp',
+    description:
+      'Không giới hạn ô tô, xe máy và chi nhánh. Liên hệ XePrime để được tư vấn và báo giá riêng.',
+    billingMode: BILLING_MODE.PACKAGE,
+    commissionPercent: null,
+    vehicleScope: PLAN_VEHICLE_SCOPE.ALL,
+    limits: {
+      ...PLAN_FULL_MANAGE,
       maxVehicles: null,
-      maxBranches: null,
-      maxMembers: null,
       /*
-       * Không bảng giá VÀ `salesOnly` — hai thứ đi đôi (ADR 0041 điều 5).
-       *
-       * `salesOnly` là thứ backend đọc để từ chối `purchase()` (`PLAN_NOT_SELF_SERVE`) và để
-       * bắt admin nhập giá đàm phán lúc gán. `termPrices` rỗng là hệ quả: một giá niêm yết cạnh
-       * nút "Liên hệ tư vấn" là bày một con số rồi chặn người bấm vào nó.
+       * Không bảng giá VÀ `salesOnly` — hai thứ đi đôi (ADR 0041 điều 5): backend từ chối
+       * `purchase()` (`PLAN_NOT_SELF_SERVE`) và bắt admin nhập giá đàm phán lúc gán.
        */
       termPrices: [],
       salesOnly: true,
       recommended: false,
-      graceDays: 7,
-      features: FEATURES_BY_TIER.fullManage,
     },
-    sortOrder: 3,
+    sortOrder: 7,
   },
 ];
 
@@ -400,6 +475,8 @@ export type PlanIds = Map<
     id: string;
     billingMode: BillingMode;
     commissionPercent: number | null;
+    /** Phạm vi loại xe (ADR 0065) — dòng thuê bao demo snapshot nó, trigger ở DB đòi khớp. */
+    vehicleScope: PlanVehicleScope;
     /** Bảng giá cả kỳ (ADR 0041 điều 2) — gian hàng demo lấy đúng giá niêm yết của kỳ nó mua. */
     termPrices: PlanLimitsJson['termPrices'];
     /** Hạn mức SNAPSHOT lên dòng thuê bao demo — cùng hình dạng `BillingService.assign` ghi. */
@@ -408,23 +485,28 @@ export type PlanIds = Map<
 >;
 
 /**
- * Bậc gói của các mô hình TRƯỚC — `standard`/`pro` (phí nền, ADR 0015/0020) và `per-vehicle`
- * (giá theo chỗ, ADR 0029).
+ * Bậc gói của các mô hình TRƯỚC — `standard`/`pro` (phí nền, ADR 0015/0020), `per-vehicle`
+ * (giá theo chỗ, ADR 0029) và ba bậc theo trần TỔNG của ADR 0041 (`shop-*`, nghỉ hưu bởi ADR 0065).
  *
- * Lý do gỡ khỏi danh mục là màn quản trị gói, không phải sự sạch sẽ: một bảng có sáu hàng trong
- * đó ba hàng thuộc hai mô hình định giá đã chết buộc admin phải đọc TÊN để đoán hàng nào còn
- * bán, và cột "Ngừng bán" bị đọc nhầm thành "thuê bao của gian hàng này đã bị huỷ".
+ * Lý do gỡ khỏi danh mục là màn quản trị gói, không phải sự sạch sẽ: một bảng mà nửa số hàng
+ * thuộc những mô hình định giá đã chết buộc admin phải đọc TÊN để đoán hàng nào còn bán.
  */
-const RETIRED_PLAN_CODES = ['standard', 'pro', RETIRED_PER_VEHICLE_PLAN_CODE] as const;
+const RETIRED_PLAN_CODES = [
+  'standard',
+  'pro',
+  RETIRED_PER_VEHICLE_PLAN_CODE,
+  RETIRED_SHOP_PLAN_CODE.BASIC,
+  RETIRED_SHOP_PLAN_CODE.ADVANCED,
+  RETIRED_SHOP_PLAN_CODE.PRO,
+] as const;
 
 /**
- * Gỡ hai bậc cũ khỏi danh mục — XOÁ khi không còn ai trỏ tới, ARCHIVE khi còn.
+ * Gỡ các bậc cũ khỏi danh mục — XOÁ khi không còn gì trỏ tới, ARCHIVE khi còn.
  *
- * Không bao giờ xoá cứng một bậc còn thuê bao: `tenant_subscriptions.plan_id` là
- * `ON DELETE RESTRICT`, và kể cả nếu không thì xoá nó là xoá mất mã gói mà một hoá đơn đã
- * phát hành đang nhắc tới. Ở DB đã reset thì nhánh xoá chạy; ở một môi trường còn thuê bao cũ
- * thì seed để lại bậc đó, lật `archived`, và NÓI RA — im lặng ở đây là admin mở màn gói ra
- * thấy một hàng mà tài liệu bảo là đã bỏ.
+ * "Còn gì trỏ tới" là thuê bao (`tenant_subscriptions.plan_id` là `ON DELETE RESTRICT`) HOẶC hoá
+ * đơn (`subscription_invoices.lines_json.planId`, không có FK): xoá một bậc mà hoá đơn đã phát hành
+ * còn nhắc tới là để một hoá đơn `issued` không bao giờ kích hoạt được khi tiền về. Ở DB đã reset
+ * thì nhánh xoá chạy; ở môi trường còn dữ liệu cũ thì seed lật `archived` và NÓI RA.
  */
 async function retireLegacyPlans(): Promise<void> {
   for (const code of RETIRED_PLAN_CODES) {
@@ -433,15 +515,17 @@ async function retireLegacyPlans(): Promise<void> {
       select: { id: true, _count: { select: { subscriptions: true } } },
     });
     if (!plan) continue;
-    if (plan._count.subscriptions > 0) {
+    const counted = await prisma.$queryRaw<{ n: bigint }[]>`
+      SELECT count(*) AS n FROM subscription_invoices WHERE lines_json->>'planId' = ${plan.id}`;
+    const invoices = counted[0]?.n ?? 0n;
+    if (plan._count.subscriptions > 0 || Number(invoices) > 0) {
       await prisma.plan.update({
         where: { id: plan.id },
         data: { status: PLAN_STATUS.ARCHIVED },
       });
       log(
-        `  ⚠️  gói cũ "${code}" còn ${plan._count.subscriptions} thuê bao trỏ tới — giữ lại và ` +
-          'lật NGỪNG BÁN thay vì xoá. Chạy lại seed một lượt nữa: lượt này vừa dọn xong các dòng ' +
-          'thuê bao lạc của gian hàng demo, nên lượt sau sẽ xoá được hàng gói cũ.',
+        `  ⚠️  gói cũ "${code}" còn ${plan._count.subscriptions} thuê bao / ${Number(invoices)} hoá đơn ` +
+          'trỏ tới — giữ lại và lật NGỪNG BÁN thay vì xoá.',
       );
       continue;
     }
@@ -454,44 +538,80 @@ async function seedPlans(): Promise<PlanIds> {
   await retireLegacyPlans();
   for (const plan of PLANS) {
     const id = seedId(`plan:${plan.code}`);
-    const fields = {
-      name: plan.name,
-      description: plan.description,
-      billingMode: plan.billingMode,
-      commissionPercent: plan.commissionPercent,
-      /*
-       * Cast sang `InputJsonObject`: `PlanLimitsJson` là một interface CÓ HÌNH DẠNG (đó là
-       * điểm mạnh của nó — `parsePlanLimits` đọc lại đúng các khoá), còn Prisma đòi một kiểu
-       * có index signature. Hai yêu cầu loại trừ nhau trong TypeScript; giữ hình dạng ở tầng
-       * types và cast ở đúng một điểm ghi là đánh đổi rẻ hơn nới lỏng kiểu.
-       */
-      limitsJson: plan.limits as unknown as Prisma.InputJsonObject,
-      sortOrder: plan.sortOrder,
-      // Trạng thái do seed quyết cả ở UPDATE: chạy lại seed trên DB cũ phải lật được
-      // standard/pro sang archived (ADR 0029), không chỉ với hàng tạo mới.
-      status: plan.status ?? PLAN_STATUS.ACTIVE,
-    };
+    /*
+     * TẠO-MỘT-LẦN (ADR 0065): `update` RỖNG có chủ đích — cùng kỷ luật với banner bên dưới.
+     *
+     * Sau khi tạo, tên / mô tả / bảng giá / hạn mức / % hoa hồng / trạng thái là của ADMIN (màn
+     * quản trị gói, có audit). Seed chạy lại ở MỌI môi trường (cả production với `SEED_MODE=system`)
+     * mà ghi đè chúng là xoá giá thật admin vừa chốt bằng số giữ chỗ trong repo, và lật một bậc vừa
+     * mở bán về `draft`. Muốn đổi danh mục thì đổi ở màn quản trị, hoặc viết migration dữ liệu.
+     */
     const row = await prisma.plan.upsert({
       where: { code: plan.code },
-      update: fields,
-      create: { id, code: plan.code, ...fields },
-      select: { id: true },
+      update: {},
+      create: {
+        id,
+        code: plan.code,
+        name: plan.name,
+        description: plan.description,
+        billingMode: plan.billingMode,
+        commissionPercent: plan.commissionPercent,
+        // Phạm vi không đổi sau khi tạo (dòng thuê bao snapshot nó, trigger ở DB đòi khớp).
+        vehicleScope: plan.vehicleScope,
+        /*
+         * Cast sang `InputJsonObject`: `PlanLimitsJson` là một interface CÓ HÌNH DẠNG, còn Prisma
+         * đòi một kiểu có index signature — cast ở đúng một điểm ghi.
+         */
+        limitsJson: plan.limits as unknown as Prisma.InputJsonObject,
+        sortOrder: plan.sortOrder,
+        status: plan.status ?? PLAN_STATUS.ACTIVE,
+      },
+      select: {
+        id: true,
+        vehicleScope: true,
+        billingMode: true,
+        commissionPercent: true,
+        limitsJson: true,
+      },
     });
+    if (row.vehicleScope !== plan.vehicleScope) {
+      throw new Error(
+        `Bậc "${plan.code}" trong DB có phạm vi "${row.vehicleScope}" nhưng seed khai "${plan.vehicleScope}" — ` +
+          'phạm vi không đổi được sau khi tạo; sửa dữ liệu bằng tay trước khi seed lại.',
+      );
+    }
+    // Gian hàng demo chụp ĐÚNG thứ đang ở DB (admin có thể đã sửa), không chụp bản khai trong repo.
+    const limits = parsePlanLimits(row.limitsJson);
     byCode.set(plan.code, {
       id: row.id,
-      billingMode: plan.billingMode,
-      commissionPercent: plan.commissionPercent,
-      termPrices: plan.limits.termPrices,
+      billingMode: row.billingMode as BillingMode,
+      commissionPercent: row.commissionPercent === null ? null : Number(row.commissionPercent),
+      vehicleScope: planVehicleScopeOf(row.vehicleScope),
+      termPrices: limits.termPrices,
       quota: {
-        maxVehicles: plan.limits.maxVehicles,
-        maxBranches: plan.limits.maxBranches,
-        maxMembers: plan.limits.maxMembers,
+        maxVehicles: limits.maxVehicles,
+        maxBranches: limits.maxBranches,
+        maxMembers: limits.maxMembers,
       },
     });
   }
   return byCode;
 }
 
+/**
+ * CHỈ dữ liệu DEMO (`SEED_MODE=demo` — máy dev, staging demo): mở bán sáu bậc giá giữ chỗ để màn
+ * chọn gói có gì để thử. Không bao giờ chạy ở `SEED_MODE=system`: ở production chúng chờ admin
+ * chốt giá thật rồi tự bấm Mở bán (ADR 0065). Chỉ lật `draft → active`; bậc admin đã ngừng bán thì
+ * để nguyên.
+ */
+export async function publishDraftPlansForDemo(): Promise<void> {
+  const codes = PLANS.filter((plan) => plan.status === PLAN_STATUS.DRAFT).map((plan) => plan.code);
+  const { count } = await prisma.plan.updateMany({
+    where: { code: { in: codes }, status: PLAN_STATUS.DRAFT },
+    data: { status: PLAN_STATUS.ACTIVE },
+  });
+  if (count > 0) log(`  mở bán ${count} bậc gói giá giữ chỗ (chỉ dữ liệu demo)`);
+}
 /**
  * Banner hero trang chủ. Upsert với `update` RỖNG có chủ đích: admin sửa nội dung banner rồi
  * chạy lại seed thì nội dung đó phải còn — seed không đè lên thứ người dùng đã đụng tay vào.
@@ -805,6 +925,9 @@ export async function seedSystemData(): Promise<SystemSeedResult> {
   // Mẫu email "Hướng dẫn đăng ký và gia hạn gói" — admin quản lý; seed chỉ TẠO MỚI, không ghi đè.
   await seedPlanGuideTemplates();
   log(`  mã khuyến mãi nền tảng: ${PROMO_CODES.length}`);
+
+  // Danh mục sản phẩm bảo hiểm MIC (ADR 0064) — chỉ TẠO MỚI, admin sửa ở màn "Bảo hiểm".
+  log(`  sản phẩm bảo hiểm: ${await seedInsuranceProducts()}`);
 
   return { permissionIds, financeCategoryIds, planIds };
 }

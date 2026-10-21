@@ -1,11 +1,15 @@
 'use client';
 
 import { LIST_SEPARATOR } from '@xeprime/domain';
+import { useQuery } from '@tanstack/react-query';
 import { Alert, Modal } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { toAppTz } from '@/lib/datetime';
+import { queryKeys } from '@/services/query-keys';
+import { fetchBookingRequest } from '../api';
 import type { BookingRequestDecisionTarget } from '../types';
+import { ApprovalPreviewSummary } from './ApprovalPreviewSummary';
 import styles from './ApproveBookingRequestDialog.module.css';
 
 interface Props {
@@ -28,10 +32,32 @@ interface Props {
  * Trùng lịch trả 409: hộp thoại KHÔNG đóng — constraint DB mới là chỗ quyết định (ADR 0006),
  * và người trực cần thấy vì sao mình vừa không duyệt được.
  */
-function ApproveForm({ request, submitting, error, onCancel, onConfirm }: Props & { request: BookingRequestDecisionTarget }) {
+function ApproveForm({
+  request,
+  submitting,
+  error,
+  onCancel,
+  onConfirm,
+}: Props & { request: BookingRequestDecisionTarget }) {
   const t = useTranslations('BookingRequests');
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
+
+  /*
+   * Đọc LẠI yêu cầu mỗi lần mở hộp thoại: hai cửa sổ của khách (`approvalPreview.windows`) được
+   * server ước theo "duyệt NGAY" lúc trả dòng hộp thư — một dòng tải từ 20 phút trước sẽ hứa với
+   * người trực một cửa sổ thanh toán dài hơn thật, hoặc giấu cảnh báo `tooShort`. Cùng khoá với
+   * panel chi tiết chuyến, nên mọi quyết định (invalidate tiền tố) làm mới luôn bản này. Trong lúc
+   * chờ thì hiện bản của dòng đang có — không chặn người trực đọc lịch.
+   */
+  const fresh = useQuery({
+    queryKey: queryKeys.bookingRequests.detail(request.id),
+    queryFn: () => fetchBookingRequest(request.id),
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
+  const approvalPreview =
+    fresh.data?.id === request.id ? fresh.data.approvalPreview : request.approvalPreview;
 
   const pickup = request.pickupAt ? toAppTz(request.pickupAt) : null;
   const dropoff = request.returnAt ? toAppTz(request.returnAt) : null;
@@ -89,6 +115,13 @@ function ApproveForm({ request, submitting, error, onCancel, onConfirm }: Props 
             </>
           ) : null}
         </dl>
+
+        {/*
+          Xem trước lượt duyệt (ADR 0064): khách chuyển bao nhiêu qua QR, trả bạn bao nhiêu lúc nhận
+          xe, hoa hồng/thuế, ví điểm nhận gì — và khách có bao lâu để trả / huỷ miễn phí nếu duyệt
+          NGAY. Ước tính của server; số chốt đóng băng lúc duyệt.
+        */}
+        {approvalPreview ? <ApprovalPreviewSummary preview={approvalPreview} /> : null}
 
         <p className={styles.effect}>{t('approve.effect')}</p>
 

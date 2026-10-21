@@ -35,7 +35,9 @@
     "parties": "Shop · Customer",
     "payee": "Customer · Shop",
     "lines": "Deposit {deposit} · Fee {fee}",
-    "noAccount": "No account on file"
+    "noAccount": "No account on file",
+    "commission": "Commission {amount}",
+    "tax": "Tax {amount}"
   },
   "settle": {
     "title": "Settle booking hold {code}",
@@ -69,7 +71,8 @@
       "released_to_shop": "Trip completed: the amount is returned to the shop wallet."
     },
     "previous": "Previous hold",
-    "next": "Next hold"
+    "next": "Next hold",
+    "taxWithheld": "Within the owner's share: tax withheld on completion"
   },
   "refundPaid": {
     "title": "Record refund transfer",
@@ -131,44 +134,6 @@
     "varianceOff": "Needs review",
     "varianceBalanced": "Balanced",
     "countChip": "{count, plural, one {# item} other {# items}}"
-  },
-  "insurance": {
-    "title": "Insurance queue",
-    "loadError": "Could not load the insurance queue",
-    "total": "{count, plural, one {# policy} other {# policies}}",
-    "noCertificate": "none yet",
-    "noAutoRetry": "no automatic retry",
-    "attemptCount": "{count, plural, one {# attempt} other {# attempts}}",
-    "partnerMissing": {
-      "title": "No insurance partner configured",
-      "body": "Premiums are being collected and held, but no insurer is issuing certificates — customers do NOT actually have cover. Retrying changes nothing until a real partner is connected. This is a platform configuration task, not a per-trip incident."
-    },
-    "columns": {
-      "booking": "Trip",
-      "tenant": "Shop",
-      "product": "Product",
-      "premium": "Premium collected",
-      "status": "Status",
-      "certificate": "Certificate no.",
-      "attempts": "Attempts / next"
-    },
-    "actions": {
-      "retry": "Retry",
-      "retryQueued": "Retry queued — the worker picks it up within a minute",
-      "void": "Void"
-    },
-    "empty": {
-      "title": "No failing policies",
-      "description": "Every premium collected has been dealt with."
-    },
-    "voidModal": {
-      "title": "Void insurance policy",
-      "hint": "Voiding is a money decision and goes into the audit log. If the certificate was already issued, settle it with the partner first — voiding here only closes the XePrime side.",
-      "reasonLabel": "Reason for voiding",
-      "reasonPlaceholder": "Why this policy is being voided",
-      "done": "Policy voided",
-      "reasonRequired": "Enter a reason for voiding (at least 5 characters)."
-    }
   },
   "tax": {
     "title": "Tax ledger by period",

@@ -36,7 +36,7 @@ import { CROSS_REALM_TWINS, CUSTOMER_ACCOUNTS, PLATFORM_ACCOUNTS } from './seed/
 import { buildShop } from './seed/shop';
 import { SHOP_SPECS } from './seed/shops';
 import { seedVehicleCatalog } from './seed/catalog-sync';
-import { seedDemoPromoBanners, seedSystemData } from './seed/system';
+import { publishDraftPlansForDemo, seedDemoPromoBanners, seedSystemData } from './seed/system';
 
 /**
  * Gian hàng và tài khoản của SEED ĐỜI TRƯỚC (một gian hàng `xeprime-demo` duy nhất).
@@ -115,6 +115,8 @@ async function main(): Promise<void> {
   const drivers = await seedDriverAccounts();
   await seedCustomerDriverLicences(customers, adminUserId);
   await seedDemoPromoBanners();
+  // Sáu bậc gói giá giữ chỗ chờ admin mở bán ở production (ADR 0065) — dữ liệu demo mở sẵn.
+  await publishDraftPlansForDemo();
 
   log('\nGian hàng:');
   const brandLabels = await loadBrandLabels();

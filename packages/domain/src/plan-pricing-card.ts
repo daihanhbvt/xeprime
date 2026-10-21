@@ -4,8 +4,11 @@ import {
   parsePlanLimits,
   planTermPrice,
   planTermSavingPercent,
+  planVehicleScopeOf,
+  PLAN_VEHICLE_SCOPE,
   type PlanFeature,
   type PlanLimitsJson,
+  type PlanVehicleScope,
 } from '@xeprime/types';
 
 /**
@@ -36,16 +39,48 @@ const TIER_ICON_ORDER: readonly PlanTierIcon[] = [
 ];
 
 /**
- * Số dòng NĂNG LỰC in dưới hai dòng hạn mức — cắt ở 2 để các thẻ cao bằng nhau và so ngang được;
+ * Số dòng NĂNG LỰC in dưới dòng hạn mức xe — cắt ở 2 để các thẻ cao bằng nhau và so ngang được;
  * danh sách đầy đủ thuộc về trang bảng giá công khai.
  */
 export const PLAN_CARD_FEATURE_LINES = 2;
 
-/** Một dòng quyền lợi — nơi vẽ tự dịch (web: `t()`, email: cùng file message). */
+/**
+ * Một dòng quyền lợi — nơi vẽ tự dịch (web: `t()`, email: cùng file message).
+ *
+ * Dòng trần xe mang PHẠM VI của bậc (ADR 0065 điều 3): "Tối đa 5 xe máy", không phải "5 xe" chung
+ * chung — đọc "5 xe" trên một bậc ô tô là tưởng được thêm xe máy. Không còn dòng chi nhánh: trần chi
+ * nhánh thôi là hạn mức từ ADR 0065 điều 1, in nó ra là hứa một giới hạn không tồn tại.
+ */
 export type PlanBenefitLine =
-  | { kind: 'vehicles'; count: number | null }
-  | { kind: 'branches'; count: number | null }
+  | { kind: 'vehicles'; count: number | null; scope: PlanVehicleScope }
   | { kind: 'feature'; feature: PlanFeature };
+
+/**
+ * Khoá message của dòng trần xe, trong `Subscription.purchase` (một file message cho web, app và
+ * email hướng dẫn gói). Một bảng để mọi nơi vẽ không tự rẽ nhánh theo phạm vi.
+ */
+export const PLAN_VEHICLES_LINE_MESSAGE = {
+  [PLAN_VEHICLE_SCOPE.MOTORBIKE]: {
+    capped: 'limitMotorbikes',
+    unlimited: 'limitMotorbikesUnlimited',
+  },
+  [PLAN_VEHICLE_SCOPE.CAR]: { capped: 'limitCars', unlimited: 'limitCarsUnlimited' },
+  [PLAN_VEHICLE_SCOPE.ALL]: { capped: 'limitVehicles', unlimited: 'limitVehiclesUnlimited' },
+} as const satisfies Record<PlanVehicleScope, { capped: string; unlimited: string }>;
+
+type VehiclesLineKeys = (typeof PLAN_VEHICLES_LINE_MESSAGE)[PlanVehicleScope];
+export type PlanVehiclesLineMessageKey = VehiclesLineKeys['capped'] | VehiclesLineKeys['unlimited'];
+
+/** Dòng trần xe → khoá message + biến (`{count}` chỉ có ở khoá có trần). */
+export function planVehiclesLineMessage(line: Extract<PlanBenefitLine, { kind: 'vehicles' }>): {
+  key: PlanVehiclesLineMessageKey;
+  values: { count: number } | undefined;
+} {
+  const keys = PLAN_VEHICLES_LINE_MESSAGE[line.scope];
+  return line.count == null
+    ? { key: keys.unlimited, values: undefined }
+    : { key: keys.capped, values: { count: line.count } };
+}
 
 export interface PlanCardTerm {
   months: number;
@@ -76,16 +111,20 @@ export interface PlanPricingCard<P> {
 export interface PlanCardSource {
   billingMode: string;
   limits: unknown;
+  /** Phạm vi loại xe của bậc (ADR 0065) — thiếu/lạ đọc là `all` (`planVehicleScopeOf`). */
+  vehicleScope?: unknown;
 }
 
 export function planTierIcon(index: number): PlanTierIcon {
   return TIER_ICON_ORDER[Math.min(index, TIER_ICON_ORDER.length - 1)] ?? PLAN_TIER_ICON.CROWN;
 }
 
-export function planBenefitLines(limits: PlanLimitsJson): PlanBenefitLine[] {
+export function planBenefitLines(
+  limits: PlanLimitsJson,
+  scope: PlanVehicleScope = PLAN_VEHICLE_SCOPE.ALL,
+): PlanBenefitLine[] {
   return [
-    { kind: 'vehicles', count: limits.maxVehicles },
-    { kind: 'branches', count: limits.maxBranches },
+    { kind: 'vehicles', count: limits.maxVehicles, scope },
     ...limits.features
       .slice(0, PLAN_CARD_FEATURE_LINES)
       .map((feature): PlanBenefitLine => ({ kind: 'feature', feature })),
@@ -116,7 +155,7 @@ export function buildPlanPricingCards<P extends PlanCardSource>(
         selfServe,
         recommended: limits.recommended,
         icon: planTierIcon(index),
-        benefits: planBenefitLines(limits),
+        benefits: planBenefitLines(limits, planVehicleScopeOf(plan.vehicleScope)),
         terms,
         headline: selfServe && monthly ? { months: monthly.months, price: monthly.price } : null,
       };

@@ -121,22 +121,25 @@ export const STATEMENT_MAX_LIMIT = 100;
 /**
  * Một CHUYẾN trong bảng tổng hợp của gian hàng.
  *
- * Ba con số tiền trả lời ba câu khác nhau, và gộp chúng lại là sai bản chất (ADR 0032 điều 2–4):
+ * Các con số tiền trả lời những câu khác nhau, và gộp chúng lại là sai bản chất (ADR 0032 điều 2–4
+ * · ADR 0064 điều 1):
  *
  *  - `revenueAmount` (`B`) — DOANH THU của chuyến, tiền thuê gian hàng thu được.
+ *  - `ownerCommissionAmount` (`H`) — hoa hồng lũy tiến XePrime giữ lại từ phần của chủ xe
+ *    (ADR 0064 điều 3). CHỦ XE chịu, KHÔNG cộng vào tổng khách; 0 ở tuyến gói.
  *  - `taxAmount` (`T`) — thuế khấu trừ khỏi phần XePrime phải trả. CHỦ XE chịu, KHÔNG cộng vào
  *    tổng khách.
  *  - `balanceChange` — số ví THẬT SỰ nhúc nhích vì chuyến này (`hold_release` cộng vào, dòng đảo
- *    trừ ra). Bằng `D − T` ở đường đi bình thường, nhưng đọc từ SỔ chứ không tính lại: một lần
- *    đảo bút toán phải hiện ra ở đây, không được che.
+ *    trừ ra). Bằng `D − T` ở đường đi bình thường (`D` đã là phần SAU `H` — ADR 0064 điều 5),
+ *    nhưng đọc từ SỔ chứ không tính lại: một lần đảo bút toán phải hiện ra ở đây, không được che.
  *
  * Phần còn lại `payAtPickupAmount = B − D` khách trả TRỰC TIẾP chủ xe lúc nhận xe — XePrime
  * không thu hộ, nên nó không bao giờ đi qua ví. Trường này có mặt để bảng tự giải thích được vì
  * sao `balanceChange` nhỏ hơn `revenueAmount`; thiếu nó thì chủ xe đọc bảng và tưởng bị giữ tiền.
  *
- * KHÔNG có cột "phí sàn": phí dịch vụ XePrime do KHÁCH trả thêm (`FEE_BEARER.CUSTOMER`) và
- * không trừ vào doanh thu gian hàng, nên đặt nó vào bảng thu nhập của chủ xe là bịa ra một
- * khoản khấu trừ không tồn tại.
+ * KHÔNG có cột "phí sàn": phí sàn `S` do KHÁCH trả thêm (`FEE_BEARER.CUSTOMER`) và không trừ
+ * vào doanh thu gian hàng, nên đặt nó vào bảng thu nhập của chủ xe là bịa ra một khoản khấu trừ
+ * không tồn tại. Hoa hồng `H` thì NGƯỢC lại — chủ xe chịu thật, nên nó có cột riêng.
  */
 export class WalletStatementTripDto {
   @ApiProperty() bookingId!: string;
@@ -163,6 +166,12 @@ export class WalletStatementTripDto {
   unitKind!: WalletStatementUnit | null;
 
   @ApiProperty({ description: 'Doanh thu chuyến `B` (VND string)' }) revenueAmount!: string;
+  @ApiProperty({
+    description:
+      'Hoa hồng lũy tiến `H` XePrime giữ lại — chủ xe chịu (ADR 0064 điều 3). Đọc từ cột đã ' +
+      'đóng băng `bookings.owner_commission_amount`; 0 ở tuyến gói và đơn trước luồng tiền v2.',
+  })
+  ownerCommissionAmount!: string;
   @ApiProperty({ description: 'Thuế khấu trừ `T` — chủ xe chịu' }) taxAmount!: string;
   @ApiProperty({ description: '`B − D` — khách trả trực tiếp chủ xe, không qua ví' })
   payAtPickupAmount!: string;
@@ -210,12 +219,17 @@ export class WalletStatementStatsDto {
 /**
  * Cộng dồn của KỲ — tính trên toàn bộ kỳ, không phải trên trang đang xem.
  *
- * `ownerIncome = revenueTotal − taxTotal − subscriptionFeeTotal`: đây là thu nhập thật của gian
+ * `ownerIncome = revenueTotal − ownerCommissionTotal − taxTotal − subscriptionFeeTotal` (ADR 0064
+ * điều 5: `ownerNet = B − H − T`, rồi trừ phí gói): đây là thu nhập thật của gian
  * hàng, gồm CẢ phần khách trả tay lúc nhận xe. Nó cố ý KHÁC `balanceChangeTotal` (phần chảy qua
  * ví XePrime) — đánh đồng hai con số là điều khiến chủ xe tin rằng mình bị giữ mất tiền.
  */
 export class WalletStatementTotalsDto {
   @ApiProperty({ description: 'Σ doanh thu các chuyến hoàn thành trong kỳ' }) revenueTotal!: string;
+  @ApiProperty({
+    description: 'Σ hoa hồng `H` XePrime giữ lại trong kỳ (số dương). 0 với tuyến gói.',
+  })
+  ownerCommissionTotal!: string;
   @ApiProperty({ description: 'Σ thuế đã khấu trừ hộ trong kỳ (số dương)' }) taxTotal!: string;
   @ApiProperty({ description: 'Σ phần khách trả trực tiếp khi nhận xe' }) payAtPickupTotal!: string;
   @ApiProperty({ description: 'Σ thay đổi số dư ví do các chuyến của kỳ' })
@@ -225,7 +239,7 @@ export class WalletStatementTotalsDto {
       'Phí quản lý & vận hành gói nền tảng ĐÃ TRẢ trong kỳ (số dương). 0 với tuyến hoa hồng.',
   })
   subscriptionFeeTotal!: string;
-  @ApiProperty({ description: 'Thu nhập chủ gian hàng = doanh thu − thuế − phí gói' })
+  @ApiProperty({ description: 'Thu nhập chủ gian hàng = doanh thu − hoa hồng − thuế − phí gói' })
   ownerIncome!: string;
 }
 

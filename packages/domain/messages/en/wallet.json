@@ -136,6 +136,7 @@
       "returnAt": "Return",
       "unitAmount": "Unit price",
       "revenue": "Revenue",
+      "commission": "Commission",
       "tax": "Business tax",
       "balanceChange": "Balance change"
     },
@@ -148,13 +149,14 @@
       "payAtPickup": "Paid to you directly at pick-up",
       "payAtPickupHint": "The customer hands you this part; it never passes through XePrime.",
       "subscriptionFee": "Platform plan management fee",
+      "commission": "XePrime commission withheld",
       "tax": "Business tax withheld on your behalf",
       "ownerIncome": "Shop owner income",
-      "ownerIncomeHint": "Revenue minus tax and plan fee — includes what the customer paid you directly.",
+      "ownerIncomeHint": "Revenue minus commission, tax and plan fee — includes what the customer paid you directly.",
       "ownerIncomeCommission": "Car owner income",
       "ownerIncomeGeneric": "Income",
       "appSubscriptionFee": "Platform management & operation fee",
-      "appOwnerIncomeHint": "Revenue minus tax and platform fees — including what customers paid you directly."
+      "appOwnerIncomeHint": "Revenue minus commission, tax and platform fees — including what customers paid you directly."
     }
   },
   "pill": {

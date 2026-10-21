@@ -11,7 +11,8 @@ import AdminPlansPage from './page';
  * Đặc tả `/manage/admin/plans` — danh mục gói dịch vụ.
  *
  * Danh mục **không phân trang** (API trả cả danh sách) nhưng bộ lọc nằm trên **URL** (ADR 0004):
- * `q` / `kind` / `status`. Bật/tắt bán đi qua **công tắc có xác nhận** ở cả hai chiều.
+ * `q` / `kind` + view `view` (đang bán ↔ đã ngừng). Bảng CHIA NHÓM theo phạm vi loại xe (ADR 0065).
+ * Bật/tắt bán đi qua **công tắc có xác nhận** ở cả hai chiều.
  */
 
 const nav = vi.hoisted(() => ({
@@ -90,6 +91,7 @@ function plan(over: Partial<Plan> = {}, limits: Partial<Plan['limits']> = {}): P
     description: 'Cho shop nhỏ',
     billingMode: 'package',
     commissionPercent: null,
+    vehicleScope: 'motorbike',
     limits: {
       maxVehicles: 10,
       maxBranches: null,
@@ -120,6 +122,7 @@ const COMMISSION = plan({
   name: 'Tuyến hoa hồng mặc định',
   billingMode: 'commission',
   commissionPercent: 10,
+  vehicleScope: 'all',
 });
 
 function setQuery(over: Partial<typeof query> = {}) {
@@ -142,8 +145,9 @@ function renderPageWith(plans: Plan[]) {
   return renderPage();
 }
 
-function table() {
-  return within(screen.getByRole('table'));
+/** Bảng của MỘT nhóm — mặc định nhóm đầu tiên (đa số ca chỉ dựng một nhóm). */
+function table(index = 0) {
+  return within(screen.getAllByRole('table')[index]!);
 }
 
 function bodyRows(): HTMLElement[] {
@@ -228,7 +232,7 @@ describe('/manage/admin/plans — bảng', () => {
   it('hiện STT, tên, mô tả và mã gói', () => {
     renderPageWith([plan()]);
 
-    expect(table().getByText('1')).toBeTruthy();
+    expect(table().getAllByText('1').length).toBeGreaterThan(0);
     expect(table().getByText('Gói cơ bản')).toBeTruthy();
     expect(table().getByText('Cho shop nhỏ')).toBeTruthy();
     expect(table().getByText('Mã: shop-basic')).toBeTruthy();
@@ -261,7 +265,8 @@ describe('/manage/admin/plans — bảng', () => {
     expect(table().getByText('10%')).toBeTruthy();
     expect(table().getByText('/ chuyến')).toBeTruthy();
     expect(table().getByText('Tối đa 3 xe')).toBeTruthy();
-    expect(table().getByText('Tối đa 1 chi nhánh')).toBeTruthy();
+    // Trần chi nhánh thôi là hạn mức (ADR 0065 điều 1).
+    expect(table().queryByText(/chi nhánh/)).toBeNull();
     expect(table().queryByText(/Không giới hạn/)).toBeNull();
   });
 
@@ -269,7 +274,7 @@ describe('/manage/admin/plans — bảng', () => {
     renderPageWith([plan({}, { maxVehicles: null, maxBranches: null })]);
 
     expect(table().getByText('Không giới hạn số xe')).toBeTruthy();
-    expect(table().getByText('Không giới hạn chi nhánh')).toBeTruthy();
+    expect(table().queryByText(/chi nhánh/)).toBeNull();
   });
 
   it('bậc bán qua tư vấn: loại "Liên hệ báo giá", không có giá niêm yết', () => {
@@ -287,13 +292,14 @@ describe('/manage/admin/plans — bộ lọc trên URL', () => {
     COMMISSION,
   ];
 
-  it('mặc định hiện hết', () => {
+  it('mặc định là sổ ĐANG BÁN — gói đã tắt không lẫn vào', () => {
     renderPageWith(plans);
-    expect(bodyRows()).toHaveLength(3);
+    expect(bodyRows()).toHaveLength(2);
+    expect(screen.queryByText('Gói B')).toBeNull();
   });
 
-  it('đọc bộ lọc từ URL: ?status=archived chỉ giữ gói đã tắt', () => {
-    nav.params = new URLSearchParams('status=archived');
+  it('?view=retired (sổ "Đã ngừng") chỉ giữ gói đã tắt', () => {
+    nav.params = new URLSearchParams('view=retired');
     renderPageWith(plans);
 
     expect(table().getByText('Gói B')).toBeTruthy();
@@ -392,6 +398,7 @@ describe('/manage/admin/plans — công tắc bật/tắt gói', () => {
   });
 
   it('gói đã tắt MỞ LẠI được — cũng qua hộp xác nhận', async () => {
+    nav.params = new URLSearchParams('view=retired');
     renderPageWith([plan({ id: 'p-8', name: 'Gói cũ', status: 'archived' })]);
 
     const toggle = table().getByRole('switch', { name: 'Bật hoặc tắt gói Gói cũ' });
@@ -405,6 +412,7 @@ describe('/manage/admin/plans — công tắc bật/tắt gói', () => {
   });
 
   it('thành công thì báo; lỗi thì báo theo MÃ', async () => {
+    nav.params = new URLSearchParams('view=retired');
     renderPageWith([plan({ id: 'p-9', name: 'Gói X', status: 'archived' })]);
 
     fireEvent.click(table().getByRole('switch', { name: 'Bật hoặc tắt gói Gói X' }));
@@ -446,5 +454,68 @@ describe('/manage/admin/plans — công tắc bật/tắt gói', () => {
 
     expect(screen.getByRole('button', { name: 'Giải thích về các loại gói' })).toBeTruthy();
     expect(screen.getByText(/chỉ chặn việc mua MỚI/)).toBeTruthy();
+  });
+});
+
+describe('/manage/admin/plans — nhóm theo phạm vi loại xe (ADR 0065)', () => {
+  it('bốn nhóm theo thứ tự xe máy → ô tô → doanh nghiệp → hoa hồng, mỗi nhóm một bảng có tiêu đề', () => {
+    renderPageWith([
+      COMMISSION,
+      plan({ id: 'car', name: 'Ô tô 5 xe', vehicleScope: 'car' }, { maxVehicles: 5 }),
+      plan(
+        { id: 'ent', name: 'Doanh nghiệp', vehicleScope: 'all' },
+        { salesOnly: true, termPrices: [] },
+      ),
+      plan({ id: 'moto', name: 'Xe máy 1 xe' }, { maxVehicles: 1 }),
+    ]);
+
+    const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
+    expect(headings).toEqual(['Xe máy1', 'Ô tô1', 'Doanh nghiệp1', 'Hoa hồng1']);
+    expect(screen.getAllByRole('table')).toHaveLength(4);
+    // Trần đọc theo phạm vi của bậc.
+    expect(table(0).getByText('Tối đa 1 xe máy')).toBeTruthy();
+    expect(table(1).getByText('Tối đa 5 ô tô')).toBeTruthy();
+  });
+
+  it('bật sổ "Đã ngừng" ghi `view=retired` lên URL', () => {
+    renderPageWith([plan()]);
+    fireEvent.click(screen.getByText('Đã ngừng'));
+    expect(lastUrlParams().get('view')).toBe('retired');
+  });
+
+  it('sổ "Đã ngừng" rỗng: câu riêng, không mời tạo gói', () => {
+    nav.params = new URLSearchParams('view=retired');
+    renderPageWith([plan()]);
+    expect(screen.getByText('Chưa có gói nào đã ngừng')).toBeTruthy();
+  });
+});
+
+describe('/manage/admin/plans — gói chưa mở bán (draft)', () => {
+  it('sổ "Chưa mở bán": lời nhắc nhập giá + nút "Mở bán" đi qua hộp xác nhận rồi gọi activate', async () => {
+    nav.params = new URLSearchParams('view=draft');
+    renderPageWith([plan({ id: 'p-d', name: 'Ô tô 5 xe', status: 'draft' })]);
+
+    expect(screen.getByText(/Nhập bảng giá cho gói/)).toBeTruthy();
+    fireEvent.click(table().getByRole('button', { name: 'Mở bán' }));
+    expect(await screen.findAllByText('Mở bán gói “Ô tô 5 xe”?')).not.toHaveLength(0);
+    const ok = screen.getAllByRole('button', { name: 'Mở bán' }).at(-1)!;
+    fireEvent.click(ok);
+    await waitFor(() => expect(setStatus.mutate).toHaveBeenCalledTimes(1));
+    expect(setStatus.mutate.mock.calls[0]![0]).toEqual({ id: 'p-d', status: 'active' });
+  });
+
+  it('bậc nháp CHƯA có giá: nút "Mở bán" bị khoá', () => {
+    nav.params = new URLSearchParams('view=draft');
+    renderPageWith([plan({ id: 'p-d', status: 'draft' }, { termPrices: [] })]);
+    const button = table().getByRole('button', { name: 'Mở bán' }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+  });
+
+  it('sổ mặc định không hiện bậc nháp', () => {
+    renderPageWith([
+      plan({ id: 'a', name: 'Gói A' }),
+      plan({ id: 'd', name: 'Gói D', status: 'draft' }),
+    ]);
+    expect(screen.queryByText('Gói D')).toBeNull();
   });
 });

@@ -1,9 +1,11 @@
 import { BadRequestException, ConflictException, Injectable, Logger } from '@nestjs/common';
-import { newId, Prisma, redeemPromoRedemption } from '@xeprime/prisma';
+import { freezeInsuranceProducts, newId, Prisma, redeemPromoRedemption } from '@xeprime/prisma';
 import {
+  ALLOCATION_TARGET,
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
   BANK_DIRECTION,
+  BOOKING_HOLD_OUTCOME,
   BANK_MATCH_STATUS,
   BANK_MATCH_TARGET_TYPE,
   BOOKING_HOLD_PURPOSE,
@@ -30,6 +32,9 @@ import {
   BOOKING_HOLD_STATUS_AWAITING,
   HOLD_MAX_OPEN_PER_CUSTOMER,
   HOLD_MIN_USABLE_WINDOW_MINUTES,
+  allocationTotals,
+  customerHoldAllocation,
+  hasFreeCancelWindow,
   holdWindowsFor,
   isHoldPastDue,
   maskAccountNumber,
@@ -51,7 +56,11 @@ import { VehicleSettingsService } from '../vehicle-settings/vehicle-settings.ser
 import { NotificationService } from '../notification/notification.service';
 import { InsuranceReadService } from '../insurance/insurance-read.service';
 import { TaxReadService } from '../tax/tax-read.service';
-import { HoldSettlementService, taxFromSnapshot } from './hold-settlement.service';
+import {
+  HoldSettlementService,
+  allocationForHold,
+  taxFromSnapshot,
+} from './hold-settlement.service';
 import {
   CustomerHoldDto,
   DailyReconciliationDto,
@@ -99,6 +108,22 @@ const CUSTOMER_SELECT = {
   freeCancelUntil: true,
   paidAt: true,
   allocationJson: true,
+  /*
+   * Mốc NHẬN chuyến đã đóng băng (`booking_requests.decided_at` — `acceptedAt` mà `holdWindowsFor`
+   * dùng để tính `freeCancelUntil`) — so với `freeCancelUntil` để biết chuyến có cửa sổ huỷ miễn
+   * phí không (`freeCancelAvailable`). `createdAt` của hold chỉ là dự phòng cho hàng cũ thiếu
+   * `decided_at`: nó ghi SAU `acceptedAt` vài mili-giây, và so với nó là so với một mốc khác.
+   */
+  createdAt: true,
+  bookingRequest: { select: { decidedAt: true } },
+  // Năm dòng tiền + tài trợ — nuôi `lateCancelRefundAmount` bằng ĐÚNG phép chia lượt huỷ thật dùng.
+  depositAmount: true,
+  serviceFeeAmount: true,
+  ownerCommissionAmount: true,
+  vehicleInsuranceAmount: true,
+  personalInsuranceAmount: true,
+  promoDiscountAmount: true,
+  priceSnapshotJson: true,
   refund: {
     select: {
       id: true,
@@ -200,13 +225,25 @@ export class BookingHoldsService {
       /**
        * Mốc "đặt xe thành công" — lúc chủ xe duyệt, hoặc lúc hệ thống tự nhận (ADR 0032 điều 2).
        *
-       * CẢ HAI cửa sổ (trả tiền 2 giờ, huỷ miễn phí 4 giờ) đếm xuôi từ đây, nên caller phải
-       * truyền ĐÚNG mốc đã ghi vào `booking_requests.decided_at` — hai mốc lệch nhau là hai
-       * đồng hồ khác nhau cho cùng một chuyến.
+       * CẢ HAI cửa sổ ĐỘNG (`holdWindowsFor` — hạn trả tiền và hạn huỷ miễn phí, co theo khoảng
+       * cách tới giờ nhận xe; đặt gấp dưới 2 giờ thì không có huỷ miễn phí) đếm xuôi từ đây, nên
+       * caller phải truyền ĐÚNG mốc đã ghi vào `booking_requests.decided_at` — hai mốc lệch nhau
+       * là hai đồng hồ khác nhau cho cùng một chuyến.
        */
       acceptedAt: Date;
       /** `null` khi hệ thống tự động nhận chuyến — audit ghi `actorScope: system`. */
       actorUserId: string | null;
+      /**
+       * Chuyến này có thu CỌC qua XePrime không — ĐÚNG giá trị `DepositPolicyResolution.required`
+       * đã dùng để tính khoản online của `snapshot.fees` (ADR 0064 điều 5).
+       *
+       * Có hold KHÔNG có nghĩa là có cọc: tuyến gói tắt công tắc vẫn có hold cho phần không phải
+       * tiền chủ xe (`S + H + IV + IP + T`). Đóng băng ở đây để lượt tiền về ghi đúng
+       * `bookings.deposit_collection_mode` — công tắc đổi sau lúc duyệt không viết lại câu trả
+       * lời (ADR 0025 ràng buộc 4). Bắt buộc, không mặc định: mặc định `true` là nói thay caller
+       * rằng XePrime đã giữ cọc của khách.
+       */
+      depositRequired: boolean;
     },
   ): Promise<{ id: string; code: string; amount: string; expiresAt: Date }> {
     const fees = input.snapshot.fees;
@@ -348,6 +385,12 @@ export class BookingHoldsService {
       },
     ].filter((line) => Number(line.amount) > 0);
 
+    /*
+     * Sản phẩm bảo hiểm khách đã chọn ĐÓNG BĂNG cùng giá, ngay lượt duyệt này (ADR 0024 · 0064):
+     * khách trả sau đó tới 120 phút, và hợp đồng sinh lúc tiền về phải mang đúng tên/quyền lợi/
+     * khấu trừ khách đã thấy — kể cả khi admin sửa hay tắt sản phẩm ở giữa.
+     */
+    const frozenSnapshot = await freezeInsuranceProducts(tx, input.snapshot);
     const id = newId();
     const code = await this.uniqueCode(tx);
     await tx.bookingHold.create({
@@ -359,6 +402,7 @@ export class BookingHoldsService {
         customerUserId: input.customerUserId,
         vehicleId: input.vehicleId,
         purpose: BOOKING_HOLD_PURPOSE.COMMISSION,
+        depositRequired: input.depositRequired,
         status: BOOKING_HOLD_STATUS.PENDING,
         amount: new Prisma.Decimal(fees.holdAmount),
         depositAmount: new Prisma.Decimal(depositAmount),
@@ -369,7 +413,7 @@ export class BookingHoldsService {
         promoDiscountAmount: new Prisma.Decimal(promoDiscountAmount),
         feePolicyId: fees.policy.policyId,
         allocationJson: allocation as unknown as Prisma.InputJsonValue,
-        priceSnapshotJson: input.snapshot as unknown as Prisma.InputJsonValue,
+        priceSnapshotJson: frozenSnapshot as unknown as Prisma.InputJsonValue,
         scheduleJson: {
           pickupAt: input.schedule.pickupAt.toISOString(),
           returnAt: input.schedule.returnAt.toISOString(),
@@ -722,6 +766,7 @@ export class BookingHoldsService {
         tenantId: true,
         bookingRequestId: true,
         customerUserId: true,
+        depositRequired: true,
         priceSnapshotJson: true,
         scheduleJson: true,
         paidAmount: true,
@@ -784,11 +829,19 @@ export class BookingHoldsService {
         // Điều kiện thuê đã đóng băng trên yêu cầu — copy nguyên sang đơn (08/09/2026).
         rentalTerms: (req.rentalTerms as unknown as RentalTermsSnapshot | null) ?? null,
         /*
-         * Đơn này ra đời VÌ tiền cọc đã về tài khoản XePrime — không có nhánh nào khác dẫn tới
-         * đây. `platform` đóng băng tại đây, và công tắc của gian hàng đổi sau đó không viết lại
-         * (ADR 0025 ràng buộc 4).
+         * AI GIỮ CỌC — đọc quyết định ĐÃ ĐÓNG BĂNG trên hold lúc duyệt, không hỏi lại công tắc
+         * hôm nay (ADR 0025 ràng buộc 4).
+         *
+         * Tiền về KHÔNG có nghĩa là cọc về: tuyến gói tắt công tắc vẫn có hold cho phần không
+         * phải tiền chủ xe (`S + H + IV + IP + T` — ADR 0064 điều 5), và trong khoản đó không có
+         * đồng cọc nào. Ghi `platform` cho đơn ấy là nói với khách rằng XePrime đang giữ cọc của
+         * họ, trong khi cọc do chủ xe thu trực tiếp ⇒ `direct` (ADR 0028 điều 9). Phân bổ tiền
+         * của hold (`HoldSettlementService`) đọc năm cột số tiền, không đọc cột này — `S`/`H`/
+         * `IV`/`IP`/`T` vẫn đi đúng chỗ ở cả hai chế độ.
          */
-        depositCollectionMode: DEPOSIT_COLLECTION_MODE.PLATFORM,
+        depositCollectionMode: hold.depositRequired
+          ? DEPOSIT_COLLECTION_MODE.PLATFORM
+          : DEPOSIT_COLLECTION_MODE.DIRECT,
         /*
          * Hợp đồng bảo hiểm truy ngược về CHÍNH khoản giữ chỗ đã thu phí của nó (Phase 7). Khi
          * quyết toán với đối tác, câu hỏi đầu tiên là "tiền này vào bằng giao dịch nào" — không
@@ -986,9 +1039,22 @@ export class BookingHoldsService {
       remainingAmount: remaining.toFixed(0),
       expiresAt: row.expiresAt.toISOString(),
       freeCancelUntil: row.freeCancelUntil.toISOString(),
+      freeCancelAvailable: hasFreeCancelWindow(
+        row.freeCancelUntil,
+        row.bookingRequest.decidedAt ?? row.createdAt,
+      ),
+      lateCancelRefundAmount: allocationTotals(
+        allocationForHold(row, BOOKING_HOLD_OUTCOME.SPLIT_LATE_CANCEL) ?? [],
+      )[ALLOCATION_TARGET.CUSTOMER_BALANCE],
       paidAt: row.paidAt?.toISOString() ?? null,
       paidVia: await this.paidVia(row.id, row.paidAmount),
-      allocation: (row.allocationJson as unknown as CustomerHoldDto['allocation']) ?? [],
+      /*
+       * Bản PHÍA KHÁCH: `D` và `H` gộp thành một dòng "phần tiền thuê trả trước" — lọc riêng `H`
+       * không đủ, vì nó suy ngược được từ `amount` và các dòng còn lại (ADR 0064 điều 11).
+       */
+      allocation: customerHoldAllocation(
+        row.allocationJson as unknown as CustomerHoldDto['allocation'] | null,
+      ),
       paymentInfo: this.billing.paymentInfo(),
       refund: row.refund
         ? {

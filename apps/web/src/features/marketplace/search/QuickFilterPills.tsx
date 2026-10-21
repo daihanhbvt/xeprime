@@ -8,29 +8,28 @@ import {
   DollarOutlined,
   DownOutlined,
   FilterOutlined,
-  LikeOutlined,
   StarOutlined,
   TeamOutlined,
 } from '@ant-design/icons';
-import { Button, Checkbox, InputNumber, Popover, Radio } from 'antd';
+import { Button, Checkbox, Popover } from 'antd';
 import { useTranslations } from 'next-intl';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState } from 'react';
 import {
   CATALOG_TYPE,
   MOTORBIKE_CATEGORY_VALUES,
   SEAT_BUCKET_LABEL,
   SEAT_BUCKET_VALUES,
   SERVICE_TYPE,
-  SERVICE_TYPE_LABEL,
-  TRANSMISSION_TYPE_EXT_VALUES,
+  TRANSMISSION_TYPE_EXT_LABEL,
   VEHICLE_TYPE,
-  type SeatBucket,
-  type ServiceType,
 } from '@xeprime/types';
-import { useCatalog, useCatalogLabels } from '@/features/catalog/use-catalog';
+import { catalogItemAppliesTo } from '@/features/catalog/types';
+import { useCatalog } from '@/features/catalog/use-catalog';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { cx } from '@/lib/cx';
+import { isPriceBandSelected, priceBandsFor, quickTransmissionsFor } from '../constants';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
+import { usePriceBandLabel } from './use-price-band-label';
 import styles from './QuickFilterPills.module.css';
 
 interface QuickFilterPillsProps {
@@ -51,31 +50,35 @@ export function QuickFilterPills({
   const domainLabel = useDomainLabel();
   const { filters, setFilters } = useMarketplaceFilters();
   const { catalog } = useCatalog();
-  const { brandLabel } = useCatalogLabels();
 
   const isMotorbike = filters.vehicleType === VEHICLE_TYPE.MOTORBIKE;
-  const bodyTypeItems = catalog[CATALOG_TYPE.BODY_TYPE] ?? [];
-  const brandItems = catalog[CATALOG_TYPE.VEHICLE_BRAND] ?? [];
+  const bodyTypeItems = catalog[CATALOG_TYPE.BODY_TYPE];
+  const brandItems = catalog[CATALOG_TYPE.VEHICLE_BRAND];
 
+  /*
+   * Hãng theo loại xe đọc từ CHÍNH danh mục (`catalog_items.vehicle_types`, admin khai) — không
+   * giữ một danh sách hãng tay song song. Hãng ĐANG CHỌN luôn còn trong danh sách dù không áp
+   * dụng cho loại xe hiện tại, để khách bỏ chọn được thay vì mang một bộ lọc vô hình.
+   */
   const displayedBrandItems = useMemo(() => {
-    if (isMotorbike) {
-      const MOTORBIKE_BRAND_KEYS = new Set([
-        'honda', 'yamaha', 'piaggio', 'vespa', 'vinfast', 'suzuki', 'sym',
-        'ducati', 'kawasaki', 'bmw', 'ktm', 'triumph', 'harley-davidson',
-        'gogoro', 'yadea', 'datbike', 'kymco',
-      ]);
-      const filtered = brandItems.filter((b) => MOTORBIKE_BRAND_KEYS.has(b.key.toLowerCase()));
-      return filtered.length > 0 ? filtered : brandItems;
-    }
-    const NON_CAR_BRAND_KEYS = new Set(['yamaha', 'piaggio', 'vespa', 'sym', 'datbike', 'kymco', 'yadea']);
-    const filtered = brandItems.filter((b) => !NON_CAR_BRAND_KEYS.has(b.key.toLowerCase()));
-    return filtered.length > 0 ? filtered : brandItems;
-  }, [brandItems, isMotorbike]);
+    const selected = new Set(filters.brand ?? []);
+    return brandItems.filter(
+      (b) => selected.has(b.key) || catalogItemAppliesTo(b, filters.vehicleType),
+    );
+  }, [brandItems, filters.brand, filters.vehicleType]);
+  const priceBands = priceBandsFor(filters.vehicleType);
+  const transmissions = quickTransmissionsFor(filters.vehicleType);
+  const priceBandLabel = usePriceBandLabel();
+  const withCount = (label: string, count: number | undefined) =>
+    count ? tFilters('labelWithCount', { label, count }) : label;
 
   // Local state for popovers to control open/close
   const [openKey, setOpenKey] = useState<string | null>(null);
 
-  const toggleArrayFilter = (field: 'brand' | 'bodyType' | 'motorbikeCategory' | 'seats' | 'features' | 'transmission', val: string) => {
+  const toggleArrayFilter = (
+    field: 'brand' | 'bodyType' | 'motorbikeCategory' | 'seats' | 'features' | 'transmission',
+    val: string,
+  ) => {
     const list = (filters[field] as string[]) ?? [];
     const next = list.includes(val) ? list.filter((x) => x !== val) : [...list, val];
     setFilters({ [field]: next.length > 0 ? next : undefined });
@@ -154,17 +157,12 @@ export function QuickFilterPills({
           </div>
         }
       >
-        <button
-          type="button"
-          className={cx(styles.pill, filters.serviceType && styles.pillActive)}
-        >
+        <button type="button" className={cx(styles.pill, filters.serviceType && styles.pillActive)}>
           <span className={styles.pillIcon}>
             <ControlOutlined />
           </span>
           <span>
-            {filters.serviceType
-              ? domainLabel('serviceType', filters.serviceType)
-              : t('demand')}
+            {filters.serviceType ? domainLabel('serviceType', filters.serviceType) : t('demand')}
           </span>
           <DownOutlined className={styles.pillArrow} />
         </button>
@@ -183,10 +181,7 @@ export function QuickFilterPills({
               const checked = (filters.brand ?? []).includes(b.key);
               return (
                 <label key={b.key} className={styles.checkboxItem}>
-                  <Checkbox
-                    checked={checked}
-                    onChange={() => toggleArrayFilter('brand', b.key)}
-                  />
+                  <Checkbox checked={checked} onChange={() => toggleArrayFilter('brand', b.key)} />
                   <span>{b.label}</span>
                 </label>
               );
@@ -206,11 +201,7 @@ export function QuickFilterPills({
           <span className={styles.pillIcon}>
             <AppstoreOutlined />
           </span>
-          <span>
-            {(filters.brand?.length ?? 0) > 0
-              ? `${filters.brand!.length} ${tFilters('brand')}`
-              : tFilters('brand')}
-          </span>
+          <span>{withCount(tFilters('brand'), filters.brand?.length)}</span>
           <DownOutlined className={styles.pillArrow} />
         </button>
       </Popover>
@@ -261,8 +252,7 @@ export function QuickFilterPills({
           type="button"
           className={cx(
             styles.pill,
-            ((filters.bodyType?.length ?? 0) > 0 ||
-              (filters.motorbikeCategory?.length ?? 0) > 0) &&
+            ((filters.bodyType?.length ?? 0) > 0 || (filters.motorbikeCategory?.length ?? 0) > 0) &&
               styles.pillActive,
           )}
         >
@@ -270,13 +260,10 @@ export function QuickFilterPills({
             <CarOutlined />
           </span>
           <span>
-            {isMotorbike
-              ? (filters.motorbikeCategory?.length ?? 0) > 0
-                ? `${filters.motorbikeCategory!.length} ${tFilters('bodyType')}`
-                : tFilters('bodyType')
-              : (filters.bodyType?.length ?? 0) > 0
-                ? `${filters.bodyType!.length} ${tFilters('bodyType')}`
-                : tFilters('bodyType')}
+            {withCount(
+              tFilters('bodyType'),
+              isMotorbike ? filters.motorbikeCategory?.length : filters.bodyType?.length,
+            )}
           </span>
           <DownOutlined className={styles.pillArrow} />
         </button>
@@ -307,141 +294,23 @@ export function QuickFilterPills({
                 <CheckOutlined className={styles.checkIcon} />
               ) : null}
             </button>
-            {isMotorbike ? (
-              <>
+            {priceBands.map((band) => {
+              const active = isPriceBandSelected(band, filters.priceMin, filters.priceMax);
+              return (
                 <button
+                  key={`${band.min ?? ''}-${band.max ?? ''}`}
                   type="button"
-                  className={cx(
-                    styles.menuItem,
-                    filters.priceMin == null && filters.priceMax === 150_000 && styles.menuItemActive,
-                  )}
+                  className={cx(styles.menuItem, active && styles.menuItemActive)}
                   onClick={() => {
-                    setFilters({ priceMin: undefined, priceMax: 150_000 });
+                    setFilters({ priceMin: band.min, priceMax: band.max });
                     setOpenKey(null);
                   }}
                 >
-                  <span>Dưới 150k</span>
-                  {filters.priceMin == null && filters.priceMax === 150_000 ? (
-                    <CheckOutlined className={styles.checkIcon} />
-                  ) : null}
+                  <span>{priceBandLabel(band)}</span>
+                  {active ? <CheckOutlined className={styles.checkIcon} /> : null}
                 </button>
-                <button
-                  type="button"
-                  className={cx(
-                    styles.menuItem,
-                    filters.priceMin === 150_000 && filters.priceMax === 250_000 && styles.menuItemActive,
-                  )}
-                  onClick={() => {
-                    setFilters({ priceMin: 150_000, priceMax: 250_000 });
-                    setOpenKey(null);
-                  }}
-                >
-                  <span>150k – 250k</span>
-                  {filters.priceMin === 150_000 && filters.priceMax === 250_000 ? (
-                    <CheckOutlined className={styles.checkIcon} />
-                  ) : null}
-                </button>
-                <button
-                  type="button"
-                  className={cx(
-                    styles.menuItem,
-                    filters.priceMin === 250_000 && filters.priceMax === 400_000 && styles.menuItemActive,
-                  )}
-                  onClick={() => {
-                    setFilters({ priceMin: 250_000, priceMax: 400_000 });
-                    setOpenKey(null);
-                  }}
-                >
-                  <span>250k – 400k</span>
-                  {filters.priceMin === 250_000 && filters.priceMax === 400_000 ? (
-                    <CheckOutlined className={styles.checkIcon} />
-                  ) : null}
-                </button>
-                <button
-                  type="button"
-                  className={cx(
-                    styles.menuItem,
-                    filters.priceMin === 400_000 && filters.priceMax == null && styles.menuItemActive,
-                  )}
-                  onClick={() => {
-                    setFilters({ priceMin: 400_000, priceMax: undefined });
-                    setOpenKey(null);
-                  }}
-                >
-                  <span>Trên 400k</span>
-                  {filters.priceMin === 400_000 && filters.priceMax == null ? (
-                    <CheckOutlined className={styles.checkIcon} />
-                  ) : null}
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  className={cx(
-                    styles.menuItem,
-                    filters.priceMin == null && filters.priceMax === 800_000 && styles.menuItemActive,
-                  )}
-                  onClick={() => {
-                    setFilters({ priceMin: undefined, priceMax: 800_000 });
-                    setOpenKey(null);
-                  }}
-                >
-                  <span>Dưới 800k</span>
-                  {filters.priceMin == null && filters.priceMax === 800_000 ? (
-                    <CheckOutlined className={styles.checkIcon} />
-                  ) : null}
-                </button>
-                <button
-                  type="button"
-                  className={cx(
-                    styles.menuItem,
-                    filters.priceMin === 800_000 && filters.priceMax === 1_500_000 && styles.menuItemActive,
-                  )}
-                  onClick={() => {
-                    setFilters({ priceMin: 800_000, priceMax: 1_500_000 });
-                    setOpenKey(null);
-                  }}
-                >
-                  <span>800k – 1.5 triệu</span>
-                  {filters.priceMin === 800_000 && filters.priceMax === 1_500_000 ? (
-                    <CheckOutlined className={styles.checkIcon} />
-                  ) : null}
-                </button>
-                <button
-                  type="button"
-                  className={cx(
-                    styles.menuItem,
-                    filters.priceMin === 1_500_000 && filters.priceMax === 2_500_000 && styles.menuItemActive,
-                  )}
-                  onClick={() => {
-                    setFilters({ priceMin: 1_500_000, priceMax: 2_500_000 });
-                    setOpenKey(null);
-                  }}
-                >
-                  <span>1.5 triệu – 2.5 triệu</span>
-                  {filters.priceMin === 1_500_000 && filters.priceMax === 2_500_000 ? (
-                    <CheckOutlined className={styles.checkIcon} />
-                  ) : null}
-                </button>
-                <button
-                  type="button"
-                  className={cx(
-                    styles.menuItem,
-                    filters.priceMin === 2_500_000 && filters.priceMax == null && styles.menuItemActive,
-                  )}
-                  onClick={() => {
-                    setFilters({ priceMin: 2_500_000, priceMax: undefined });
-                    setOpenKey(null);
-                  }}
-                >
-                  <span>Trên 2.5 triệu</span>
-                  {filters.priceMin === 2_500_000 && filters.priceMax == null ? (
-                    <CheckOutlined className={styles.checkIcon} />
-                  ) : null}
-                </button>
-              </>
-            )}
+              );
+            })}
           </div>
         }
       >
@@ -469,134 +338,47 @@ export function QuickFilterPills({
         placement="bottomLeft"
         content={
           <div className={styles.popoverBody}>
-            {!isMotorbike ? (
-              <>
+            <button
+              type="button"
+              className={cx(
+                styles.menuItem,
+                !filters.transmission?.length && styles.menuItemActive,
+              )}
+              onClick={() => {
+                setFilters({ transmission: undefined });
+                setOpenKey(null);
+              }}
+            >
+              <span>{tFilters('any')}</span>
+              {!filters.transmission?.length ? (
+                <CheckOutlined className={styles.checkIcon} />
+              ) : null}
+            </button>
+            {transmissions.map((code) => {
+              const active = filters.transmission?.includes(code) ?? false;
+              return (
                 <button
+                  key={code}
                   type="button"
-                  className={cx(
-                    styles.menuItem,
-                    !(filters.transmission?.length) && styles.menuItemActive,
-                  )}
+                  className={cx(styles.menuItem, active && styles.menuItemActive)}
                   onClick={() => {
-                    setFilters({ transmission: undefined });
+                    setFilters({ transmission: [code] });
                     setOpenKey(null);
                   }}
                 >
-                  <span>{tFilters('any')}</span>
-                  {!(filters.transmission?.length) ? (
-                    <CheckOutlined className={styles.checkIcon} />
-                  ) : null}
+                  <span>
+                    {domainLabel('transmissionType', code, TRANSMISSION_TYPE_EXT_LABEL[code])}
+                  </span>
+                  {active ? <CheckOutlined className={styles.checkIcon} /> : null}
                 </button>
-                <button
-                  type="button"
-                  className={cx(
-                    styles.menuItem,
-                    filters.transmission?.includes('automatic') && styles.menuItemActive,
-                  )}
-                  onClick={() => {
-                    setFilters({ transmission: ['automatic'] });
-                    setOpenKey(null);
-                  }}
-                >
-                  <span>Số tự động</span>
-                  {filters.transmission?.includes('automatic') ? (
-                    <CheckOutlined className={styles.checkIcon} />
-                  ) : null}
-                </button>
-                <button
-                  type="button"
-                  className={cx(
-                    styles.menuItem,
-                    filters.transmission?.includes('manual') && styles.menuItemActive,
-                  )}
-                  onClick={() => {
-                    setFilters({ transmission: ['manual'] });
-                    setOpenKey(null);
-                  }}
-                >
-                  <span>Số sàn</span>
-                  {filters.transmission?.includes('manual') ? (
-                    <CheckOutlined className={styles.checkIcon} />
-                  ) : null}
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  className={cx(
-                    styles.menuItem,
-                    !(filters.transmission?.length) && styles.menuItemActive,
-                  )}
-                  onClick={() => {
-                    setFilters({ transmission: undefined });
-                    setOpenKey(null);
-                  }}
-                >
-                  <span>{tFilters('any')}</span>
-                  {!(filters.transmission?.length) ? (
-                    <CheckOutlined className={styles.checkIcon} />
-                  ) : null}
-                </button>
-                <button
-                  type="button"
-                  className={cx(
-                    styles.menuItem,
-                    filters.transmission?.includes('automatic_cvt') && styles.menuItemActive,
-                  )}
-                  onClick={() => {
-                    setFilters({ transmission: ['automatic_cvt'] });
-                    setOpenKey(null);
-                  }}
-                >
-                  <span>Tự động (tay ga)</span>
-                  {filters.transmission?.includes('automatic_cvt') ? (
-                    <CheckOutlined className={styles.checkIcon} />
-                  ) : null}
-                </button>
-                <button
-                  type="button"
-                  className={cx(
-                    styles.menuItem,
-                    filters.transmission?.includes('semi_automatic') && styles.menuItemActive,
-                  )}
-                  onClick={() => {
-                    setFilters({ transmission: ['semi_automatic'] });
-                    setOpenKey(null);
-                  }}
-                >
-                  <span>Bán tự động</span>
-                  {filters.transmission?.includes('semi_automatic') ? (
-                    <CheckOutlined className={styles.checkIcon} />
-                  ) : null}
-                </button>
-                <button
-                  type="button"
-                  className={cx(
-                    styles.menuItem,
-                    filters.transmission?.includes('manual_clutch') && styles.menuItemActive,
-                  )}
-                  onClick={() => {
-                    setFilters({ transmission: ['manual_clutch'] });
-                    setOpenKey(null);
-                  }}
-                >
-                  <span>Côn tay</span>
-                  {filters.transmission?.includes('manual_clutch') ? (
-                    <CheckOutlined className={styles.checkIcon} />
-                  ) : null}
-                </button>
-              </>
-            )}
+              );
+            })}
           </div>
         }
       >
         <button
           type="button"
-          className={cx(
-            styles.pill,
-            (filters.transmission?.length ?? 0) > 0 && styles.pillActive,
-          )}
+          className={cx(styles.pill, (filters.transmission?.length ?? 0) > 0 && styles.pillActive)}
         >
           <span className={styles.pillIcon}>
             <ControlOutlined />
@@ -620,10 +402,7 @@ export function QuickFilterPills({
                 const checked = (filters.seats ?? []).includes(sb);
                 return (
                   <label key={sb} className={styles.checkboxItem}>
-                    <Checkbox
-                      checked={checked}
-                      onChange={() => toggleArrayFilter('seats', sb)}
-                    />
+                    <Checkbox checked={checked} onChange={() => toggleArrayFilter('seats', sb)} />
                     <span>{domainLabel('seatBucket', sb, SEAT_BUCKET_LABEL[sb])}</span>
                   </label>
                 );
@@ -638,10 +417,7 @@ export function QuickFilterPills({
         >
           <button
             type="button"
-            className={cx(
-              styles.pill,
-              (filters.seats?.length ?? 0) > 0 && styles.pillActive,
-            )}
+            className={cx(styles.pill, (filters.seats?.length ?? 0) > 0 && styles.pillActive)}
           >
             <span className={styles.pillIcon}>
               <TeamOutlined />
@@ -680,7 +456,7 @@ export function QuickFilterPills({
                 checked={Boolean(filters.vatInvoice)}
                 onChange={(e) => setFilters({ vatInvoice: e.target.checked || undefined })}
               />
-              <span>Xuất hoá đơn VAT</span>
+              <span>{tFilters('vatInvoice')}</span>
             </label>
             <label className={styles.checkboxItem}>
               <Checkbox
@@ -713,58 +489,11 @@ export function QuickFilterPills({
         </button>
       </Popover>
 
-      {/* 8. Đánh giá (Rating) */}
-      <Popover
-        trigger="click"
-        open={openKey === 'rating'}
-        onOpenChange={(v) => setOpenKey(v ? 'rating' : null)}
-        getPopupContainer={popupContainer}
-        placement="bottomLeft"
-        content={
-          <div className={styles.popoverBody}>
-            <button
-              type="button"
-              className={styles.menuItem}
-              onClick={() => {
-                setFilters({ sort: 'recommended' });
-                setOpenKey(null);
-              }}
-            >
-              <span>★ 4.5 trở lên (Được đánh giá cao)</span>
-            </button>
-            <button
-              type="button"
-              className={styles.menuItem}
-              onClick={() => {
-                setFilters({ sort: 'recommended' });
-                setOpenKey(null);
-              }}
-            >
-              <span>★ 4.0 trở lên</span>
-            </button>
-          </div>
-        }
-      >
-        <button type="button" className={styles.pill}>
-          <span className={styles.pillIcon}>
-            <LikeOutlined />
-          </span>
-          <span>{tFilters('rating')}</span>
-          <DownOutlined className={styles.pillArrow} />
-        </button>
-      </Popover>
-
       {/* 9. Nút Bộ lọc (Action Button) */}
-      <button
-        type="button"
-        className={styles.filterBtn}
-        onClick={onOpenFilterModal}
-      >
+      <button type="button" className={styles.filterBtn} onClick={onOpenFilterModal}>
         <FilterOutlined />
         <span>{tFilters('title')}</span>
-        {appliedCount > 0 ? (
-          <span className={styles.filterBadge}>{appliedCount}</span>
-        ) : null}
+        {appliedCount > 0 ? <span className={styles.filterBadge}>{appliedCount}</span> : null}
       </button>
     </div>
   );

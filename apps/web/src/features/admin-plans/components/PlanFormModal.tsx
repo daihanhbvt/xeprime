@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  ApartmentOutlined,
   AppstoreOutlined,
   CalendarOutlined,
   CarOutlined,
@@ -29,8 +28,12 @@ import {
   BILLING_MODE,
   OWNER_LITE_VEHICLE_LIMIT,
   PLAN_FEATURE_VALUES,
+  PLAN_VEHICLE_SCOPE,
+  PLAN_VEHICLE_SCOPE_VALUES,
   SUBSCRIPTION_TERM_MONTHS,
   isPlanFeature,
+  planVehicleScopeOf,
+  type PlanVehicleScope,
 } from '@xeprime/types';
 import { InfoHint } from '@/components/data-display/InfoHint';
 import { CheckboxGroupField } from '@/components/form/CheckboxGroupField';
@@ -46,7 +49,7 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { cx } from '@/lib/cx';
 import { decorativeIcon } from '@/lib/decorative-icon';
 import { useCreatePlan, useDeletePlan, useUpdatePlan } from '../hooks/use-plan-mutations';
-import { COMMISSION_TRACK_BRANCH_LIMIT, toPlanCode } from '../plan-catalog';
+import { toPlanCode } from '../plan-catalog';
 import type { CreatePlanInput, Plan } from '../types';
 import styles from './PlanFormModal.module.css';
 
@@ -65,6 +68,13 @@ const TERM_FIELDS = [
 ] as const;
 
 type TermField = (typeof TERM_FIELDS)[number][0];
+
+/** Thứ tự lựa chọn phạm vi trên form — cùng thứ tự nhóm của bảng giá: xe máy → ô tô → doanh nghiệp. */
+const SCOPE_OPTIONS: readonly PlanVehicleScope[] = [
+  PLAN_VEHICLE_SCOPE.MOTORBIKE,
+  PLAN_VEHICLE_SCOPE.CAR,
+  PLAN_VEHICLE_SCOPE.ALL,
+];
 
 /** Các ô của phần "Cài đặt nâng cao" — lỗi ở đây phải tự mở phần đó ra, không thì không ai thấy. */
 const ADVANCED_FIELDS = ['maxMembers', 'graceDays', 'sortOrder', 'features'] as const;
@@ -140,8 +150,7 @@ export function PlanFormModal({
         .defined()
         .integer(t('form.validation.integer'))
         .min(0, t('form.validation.nonNegative'));
-    const money = () =>
-      yup.number().nullable().defined().min(0, t('form.validation.nonNegative'));
+    const money = () => yup.number().nullable().defined().min(0, t('form.validation.nonNegative'));
     return yup.object({
       code: yup
         .string()
@@ -164,8 +173,11 @@ export function PlanFormModal({
           then: (s) =>
             s.test('required', t('form.validation.commissionRequired'), (v) => v != null),
         }),
+      vehicleScope: yup
+        .string()
+        .oneOf([...PLAN_VEHICLE_SCOPE_VALUES])
+        .required(),
       maxVehicles: int(yup.number()),
-      maxBranches: int(yup.number()),
       maxMembers: int(yup.number()),
       priceM1: money(),
       priceM3: money(),
@@ -190,8 +202,8 @@ export function PlanFormModal({
           description: source.description ?? '',
           billingMode: source.billingMode as FormValues['billingMode'],
           commissionPercent: source.commissionPercent,
+          vehicleScope: planVehicleScopeOf(source.vehicleScope),
           maxVehicles: source.limits.maxVehicles ?? null,
-          maxBranches: source.limits.maxBranches ?? null,
           maxMembers: source.limits.maxMembers ?? null,
           priceM1: termPriceOf(source, 1),
           priceM3: termPriceOf(source, 3),
@@ -218,8 +230,9 @@ export function PlanFormModal({
            */
           billingMode: BILLING_MODE.PACKAGE,
           commissionPercent: null,
+          // Bậc mới mặc định là bậc XE MÁY — làn đầu tiên của bảng giá (ADR 0065). Đổi được tới lúc lưu.
+          vehicleScope: PLAN_VEHICLE_SCOPE.MOTORBIKE,
           maxVehicles: null,
-          maxBranches: null,
           maxMembers: null,
           priceM1: null,
           priceM3: null,
@@ -292,7 +305,6 @@ export function PlanFormModal({
           ? {
               limits: {
                 maxVehicles: values.maxVehicles,
-                maxBranches: values.maxBranches,
                 maxMembers: values.maxMembers,
                 // Bậc tư vấn không có bảng giá (ADR 0041 điều 5) — service cũng xoá, nhưng gửi
                 // đúng ngay từ đây thì cái admin thấy sau khi lưu bằng cái họ vừa bấm.
@@ -322,7 +334,21 @@ export function PlanFormModal({
         onError: (err: unknown) => message.error(errorMessage(err)),
       };
       if (plan) update.mutate({ id: plan.id, ...shared }, done);
-      else create.mutate({ code: values.code.trim(), ...shared }, done);
+      else
+        create.mutate(
+          {
+            code: values.code.trim(),
+            /*
+             * Phạm vi chỉ gửi lúc TẠO (`CreatePlanDto.vehicleScope`) — sửa thì server không nhận nó.
+             * Tuyến hoa hồng luôn `all` (CHECK `plans_commission_scope_all`).
+             */
+            vehicleScope: isPkg
+              ? (values.vehicleScope as PlanVehicleScope)
+              : PLAN_VEHICLE_SCOPE.ALL,
+            ...shared,
+          },
+          done,
+        );
     },
     (errors) => {
       if (ADVANCED_FIELDS.some((field) => errors[field])) setAdvancedOpen(true);
@@ -449,6 +475,31 @@ export function PlanFormModal({
               disabled={modeOptions.length < 2}
               required
             />
+            {/*
+              PHẠM VI loại xe của bậc (ADR 0065 điều 1) — chọn LÚC TẠO, khoá khi sửa: thuê bao đã chụp
+              phạm vi lên dòng của nó, và đổi phạm vi một bậc đang bán là đổi thứ khách đã mua.
+              Tuyến hoa hồng không có ô này — nó luôn phủ mọi loại xe.
+            */}
+            {isPackage ? (
+              <div className={styles.hinted}>
+                <SelectField
+                  control={control}
+                  name="vehicleScope"
+                  label={<FieldLabel icon={<CarOutlined />}>{t('form.vehicleScope')}</FieldLabel>}
+                  options={SCOPE_OPTIONS.map((scope) => ({
+                    value: scope,
+                    label: t(`form.scopeOption.${scope}`),
+                  }))}
+                  disabled={isEdit}
+                  required
+                />
+                <InfoHint
+                  className={styles.hintCorner}
+                  label={t('form.vehicleScopeHintLabel')}
+                  content={t('form.vehicleScopeHint')}
+                />
+              </div>
+            ) : null}
             {!isEdit ? (
               <div className={styles.hinted}>
                 <TextField
@@ -470,9 +521,7 @@ export function PlanFormModal({
               <TextAreaField
                 control={control}
                 name="description"
-                label={
-                  <FieldLabel icon={<FileTextOutlined />}>{t('form.description')}</FieldLabel>
-                }
+                label={<FieldLabel icon={<FileTextOutlined />}>{t('form.description')}</FieldLabel>}
                 placeholder={t('form.descriptionPlaceholder')}
                 rows={3}
                 maxLength={200}
@@ -514,19 +563,6 @@ export function PlanFormModal({
                   />
                   {unlimitedHint}
                 </div>
-                <div className={styles.hinted}>
-                  <NumberField
-                    control={control}
-                    name="maxBranches"
-                    label={
-                      <FieldLabel icon={<ApartmentOutlined />}>{t('form.maxBranches')}</FieldLabel>
-                    }
-                    min={0}
-                    addonAfter={t('form.branchesUnit')}
-                    placeholder={t('form.unlimitedPlaceholder')}
-                  />
-                  {unlimitedHint}
-                </div>
               </>
             )}
           </div>
@@ -542,21 +578,16 @@ export function PlanFormModal({
                 icon={<CarOutlined />}
                 title={t('form.ownerLiteTitle')}
                 hint={
-                  <InfoHint label={t('form.ownerLiteHintLabel')} content={t('form.ownerLiteHint')} />
+                  <InfoHint
+                    label={t('form.ownerLiteHintLabel')}
+                    content={t('form.ownerLiteHint')}
+                  />
                 }
               />
               <dl className={styles.readonlyGrid}>
                 <div>
                   <dt>{t('form.maxVehicles')}</dt>
                   <dd>{t('form.vehiclesValue', { count: OWNER_LITE_VEHICLE_LIMIT })}</dd>
-                </div>
-                <div>
-                  <dt>{t('form.maxBranches')}</dt>
-                  <dd>
-                    {COMMISSION_TRACK_BRANCH_LIMIT == null
-                      ? t('form.unlimitedPlaceholder')
-                      : t('form.branchesValue', { count: COMMISSION_TRACK_BRANCH_LIMIT })}
-                  </dd>
                 </div>
               </dl>
             </section>
@@ -569,7 +600,10 @@ export function PlanFormModal({
                     name="salesOnly"
                     label={t('form.salesOnly')}
                     labelExtra={
-                      <InfoHint label={t('form.salesOnlyHintLabel')} content={t('form.salesOnlyHint')} />
+                      <InfoHint
+                        label={t('form.salesOnlyHintLabel')}
+                        content={t('form.salesOnlyHint')}
+                      />
                     }
                   />
                 </OptionRow>
@@ -595,7 +629,10 @@ export function PlanFormModal({
                     icon={<CalendarOutlined />}
                     title={t('form.sectionPricing')}
                     hint={
-                      <InfoHint label={t('form.pricingHintLabel')} content={t('form.pricingHint')} />
+                      <InfoHint
+                        label={t('form.pricingHintLabel')}
+                        content={t('form.pricingHint')}
+                      />
                     }
                   />
                   {/* Nhãn kỳ hạn nằm BÊN TRÁI ô giá — ngữ cảnh bố cục ngang chỉ cho khối này. */}
@@ -655,7 +692,9 @@ export function PlanFormModal({
                             control={control}
                             name="maxMembers"
                             label={
-                              <FieldLabel icon={<TeamOutlined />}>{t('form.maxMembers')}</FieldLabel>
+                              <FieldLabel icon={<TeamOutlined />}>
+                                {t('form.maxMembers')}
+                              </FieldLabel>
                             }
                             min={0}
                             placeholder={t('form.unlimitedPlaceholder')}
@@ -666,7 +705,9 @@ export function PlanFormModal({
                           control={control}
                           name="graceDays"
                           label={
-                            <FieldLabel icon={<CalendarOutlined />}>{t('form.graceDays')}</FieldLabel>
+                            <FieldLabel icon={<CalendarOutlined />}>
+                              {t('form.graceDays')}
+                            </FieldLabel>
                           }
                           min={0}
                           addonAfter={t('form.graceDaysUnit')}
@@ -690,7 +731,9 @@ export function PlanFormModal({
                             control={control}
                             name="features"
                             label={
-                              <FieldLabel icon={<AppstoreOutlined />}>{t('form.features')}</FieldLabel>
+                              <FieldLabel icon={<AppstoreOutlined />}>
+                                {t('form.features')}
+                              </FieldLabel>
                             }
                             options={PLAN_FEATURE_VALUES.map((feature) => ({
                               value: feature,

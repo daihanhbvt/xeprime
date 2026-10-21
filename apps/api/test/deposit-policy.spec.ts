@@ -5,6 +5,7 @@ import {
   API_ERROR_CODE,
   BILLING_MODE,
   BOOKING_HOLD_STATUS,
+  BOOKING_REQUEST_DECISION_SOURCE,
   BOOKING_REQUEST_STATUS,
   DEPOSIT_COLLECTION_MODE,
   DEPOSIT_POLICY_REASON,
@@ -463,13 +464,78 @@ describe('PATCH /shop/payment-settings — chặn thật ở service (khi giai �
 /*
  * BA KHỐI DƯỚI ĐÂY chạy trên `twoAxisRequests` — tức luật HAI TRỤC của ADR 0027 điều 2.
  *
- * Trong giai đoạn cả sàn thu cọc chúng KHÔNG mô tả hành vi đang chạy (mọi gian hàng đều có
- * hold), nhưng chúng mô tả hành vi sẽ quay lại nguyên vẹn khi `platformMandatory` về `false` —
- * và nhánh `direct`/`none` của `commitDecision` vẫn còn nguyên trong mã để phục vụ nó.
+ * Trong giai đoạn cả sàn thu cọc chúng KHÔNG mô tả hành vi đang chạy (mọi gian hàng đều thu cọc),
+ * nhưng chúng mô tả hành vi sẽ quay lại nguyên vẹn khi `platformMandatory` về `false`.
  * Hành vi ĐANG chạy được khoá ở khối "GIAI ĐOẠN cả sàn thu cọc" phía trên.
+ *
+ * LUỒNG TIỀN v2 (ADR 0064, chính sách phí v7) đổi nghĩa của "TẮT cọc": nó không còn là "không thu
+ * đồng nào" nữa. Phí sàn `S` áp ở CẢ HAI tuyến và thuế `T` khấu trừ từ chủ xe ở cả hai tuyến, nên
+ * XePrime vẫn phải cầm phần KHÔNG phải tiền của chủ xe (`S + H + IV + IP + T`) — tắt cọc chỉ bỏ
+ * phần 30%, không bỏ sàn đó (ADR 0064 điều 5). Hệ quả: chuyến tuyến gói tắt cọc VẪN đi qua
+ * `awaiting_hold` với một mã QR, chỉ là nhỏ hơn. Nhánh `direct` của `commitDecision` chỉ còn cho
+ * chuyến không có số tiền online nào (báo giá tạm tính, hoặc chính sách mà sàn đó bằng 0).
+ *
+ * Số liệu chung của fixture (chính sách v7 đang active):
+ *   ô tô, 700.000đ/ngày × 2 ngày ⇒ B = 1.400.000 · không phí giao (G = 0)
+ *   S = 50.000 (phí sàn cố định ô tô, cả hai tuyến)
+ *   T = 10% × B = 140.000 (khấu trừ từ chủ xe, không cộng vào tổng khách)
+ *   H = 10% × B = 140.000 ở tuyến hoa hồng (cả 2 ngày nằm ở nấc 1–2) · 0 ở tuyến gói
+ *   IV = IP = 0 — khách KHÔNG tích bảo hiểm nào (tuỳ chọn, mặc định không chọn — ADR 0064 điều 10)
+ *   Tổng trước mã (không gồm G) = B + S = 1.450.000 ⇒ 30% = 435.000
  */
+
+/** Hold DUY NHẤT của một gian hàng trong ca đang chạy (`afterEach` dọn sạch giữa các ca). */
+async function onlyHold(tenantId: string) {
+  expect(await prisma.bookingHold.count({ where: { tenantId } })).toBe(1);
+  return prisma.bookingHold.findFirstOrThrow({ where: { tenantId } });
+}
+
+/**
+ * Tuyến gói KHÔNG thu cọc (tắt công tắc, hoặc gói thiếu `escrow_hold`): khoản online đúng bằng
+ * sàn và không hơn.
+ *
+ *   sàn = S + H + IV + IP + T = 50.000 + 0 + 0 + 0 + 140.000 = 190.000 (> holdMin 20.000)
+ *   D   = 190.000 − S − H − IV − IP = 140.000 = T   ⇒ ví chủ xe nhận D − T = 0 cho phần online
+ */
+function expectPackageFloorOnly(hold: {
+  depositAmount: Prisma.Decimal;
+  serviceFeeAmount: Prisma.Decimal;
+  ownerCommissionAmount: Prisma.Decimal;
+  vehicleInsuranceAmount: Prisma.Decimal;
+  personalInsuranceAmount: Prisma.Decimal;
+  amount: Prisma.Decimal;
+}) {
+  expect(hold.depositAmount.toFixed(0)).toBe('140000');
+  expect(hold.serviceFeeAmount.toFixed(0)).toBe('50000');
+  expect(hold.ownerCommissionAmount.toFixed(0)).toBe('0');
+  expect(hold.vehicleInsuranceAmount.toFixed(0)).toBe('0');
+  expect(hold.personalInsuranceAmount.toFixed(0)).toBe('0');
+  expect(hold.amount.toFixed(0)).toBe('190000');
+}
+
+/** Các dòng tiền đã ĐÓNG BĂNG trên một đơn — so trước/sau một lượt đổi công tắc. */
+function bookingMoney(b: {
+  serviceFeeAmount: Prisma.Decimal;
+  ownerCommissionAmount: Prisma.Decimal;
+  taxAmount: Prisma.Decimal;
+  depositAmountOnline: Prisma.Decimal | null;
+  ownerPayableAmount: Prisma.Decimal | null;
+  customerTotalAmount: Prisma.Decimal | null;
+  depositCollectionMode: string | null;
+}) {
+  return {
+    serviceFee: b.serviceFeeAmount.toFixed(0),
+    commission: b.ownerCommissionAmount.toFixed(0),
+    tax: b.taxAmount.toFixed(0),
+    online: b.depositAmountOnline?.toFixed(0) ?? null,
+    ownerPayable: b.ownerPayableAmount?.toFixed(0) ?? null,
+    customerTotal: b.customerTotalAmount?.toFixed(0) ?? null,
+    mode: b.depositCollectionMode,
+  };
+}
+
 describe('Duyệt TAY áp đúng chính sách (khi giai đoạn kết thúc)', () => {
-  maybe('gói + TẮT cọc → đơn ra đời ngay, không hold, mode = direct', async () => {
+  maybe('gói + TẮT cọc → vẫn awaiting_hold, nhưng hold chỉ = S + T (không có phần 30%)', async () => {
     const receipt = await submit(packagePlus, 5, twoAxisRequests);
     const approved = await twoAxisRequests.approve(
       packagePlus.tenant,
@@ -477,14 +543,13 @@ describe('Duyệt TAY áp đúng chính sách (khi giai đoạn kết thúc)', (
       receipt.id,
     );
 
-    expect(approved.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
-    expect(await prisma.bookingHold.count({ where: { tenantId: packagePlus.tenant } })).toBe(0);
-
-    const booking = await prisma.booking.findUniqueOrThrow({ where: { id: approved.bookingId! } });
-    expect(booking.depositCollectionMode).toBe(DEPOSIT_COLLECTION_MODE.DIRECT);
+    // Sàn `S + T` > 0 nên vẫn có khoản online ⇒ hold, CHƯA có đơn (ADR 0044 điều 2).
+    expect(approved.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
+    expect(approved.bookingId).toBeNull();
+    expectPackageFloorOnly(await onlyHold(packagePlus.tenant));
   });
 
-  maybe('gói + BẬT cọc → duyệt ra awaiting_hold, hold sinh ra, CHƯA có đơn', async () => {
+  maybe('gói + BẬT cọc → duyệt ra awaiting_hold, hold = 30% tổng, CHƯA có đơn', async () => {
     await setToggle(packagePlus.tenant, true);
     // Có thu tiền giữ chỗ ⇒ hold sinh lúc DUYỆT (ADR 0044 điều 2), không phải lúc gửi.
     const receipt = await submit(packagePlus, 8, twoAxisRequests);
@@ -497,40 +562,44 @@ describe('Duyệt TAY áp đúng chính sách (khi giai đoạn kết thúc)', (
     expect(approved.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
     expect(approved.bookingId).toBeNull();
 
-    const hold = await prisma.bookingHold.findFirstOrThrow({
-      where: { tenantId: packagePlus.tenant },
-    });
+    const hold = await onlyHold(packagePlus.tenant);
     /*
-     * Tuyến GÓI: phí dịch vụ 0, nhưng bảo hiểm xe `IV` vẫn áp (chính sách v4 bật nó cho CẢ HAI
-     * tuyến — nó là điều kiện của chuyến, không phải phí của tuyến). `IP` không có vì khách
-     * không giữ lựa chọn: nó TUỲ CHỌN, mặc định không thu (ADR 0032 điều 4).
+     * Tuyến GÓI: H = 0, nhưng S vẫn có (phí sàn áp cả hai tuyến — ADR 0064 điều 2).
      *
-     *   D = 20% × 1.400.000 = 280.000 · S = 0 · IV = 2% × 1.400.000 = 28.000  ⇒  308.000
+     *   online = max(30% × 1.450.000 = 435.000, depositMin 50.000, sàn S + T = 190.000) = 435.000
+     *   D      = 435.000 − S 50.000 = 385.000
      */
-    expect(hold.depositAmount.toFixed(0)).toBe('280000');
-    expect(hold.serviceFeeAmount.toFixed(0)).toBe('0');
-    expect(hold.vehicleInsuranceAmount.toFixed(0)).toBe('28000');
+    expect(hold.depositAmount.toFixed(0)).toBe('385000');
+    expect(hold.serviceFeeAmount.toFixed(0)).toBe('50000');
+    expect(hold.ownerCommissionAmount.toFixed(0)).toBe('0');
+    expect(hold.vehicleInsuranceAmount.toFixed(0)).toBe('0');
     expect(hold.personalInsuranceAmount.toFixed(0)).toBe('0');
-    expect(hold.amount.toFixed(0)).toBe('308000');
+    expect(hold.amount.toFixed(0)).toBe('435000');
   });
 
-  maybe('hoa hồng → luôn có hold, kể cả khi công tắc bị đặt tắt', async () => {
+  maybe('hoa hồng → luôn thu cọc 30%, kể cả khi công tắc bị đặt tắt', async () => {
     await setToggle(commission.tenant, false);
     const receipt = await submit(commission, 11, twoAxisRequests);
     const approved = await twoAxisRequests.approve(commission.tenant, commission.owner, receipt.id);
 
     expect(approved.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
-    const hold = await prisma.bookingHold.findFirstOrThrow({
-      where: { tenantId: commission.tenant },
-    });
-    // `D + S + IV` = (20% + 10% + 2%) × 1.400.000 = 280.000 + 140.000 + 28.000.
-    expect(hold.depositAmount.toFixed(0)).toBe('280000');
-    expect(hold.serviceFeeAmount.toFixed(0)).toBe('140000');
-    expect(hold.vehicleInsuranceAmount.toFixed(0)).toBe('28000');
-    expect(hold.amount.toFixed(0)).toBe('448000');
+    const hold = await onlyHold(commission.tenant);
+    /*
+     * Công tắc `false` bị BỎ QUA: nếu nó có tiếng nói, khoản online sẽ chỉ là sàn
+     * S + H + T = 50.000 + 140.000 + 140.000 = 330.000.
+     *
+     *   online = max(30% × 1.450.000 = 435.000, 50.000, 330.000) = 435.000
+     *   D      = 435.000 − S 50.000 − H 140.000 = 245.000   (≥ T 140.000 — ví chủ xe không âm)
+     */
+    expect(hold.depositAmount.toFixed(0)).toBe('245000');
+    expect(hold.serviceFeeAmount.toFixed(0)).toBe('50000');
+    expect(hold.ownerCommissionAmount.toFixed(0)).toBe('140000');
+    expect(hold.vehicleInsuranceAmount.toFixed(0)).toBe('0');
+    expect(hold.personalInsuranceAmount.toFixed(0)).toBe('0');
+    expect(hold.amount.toFixed(0)).toBe('435000');
   });
 
-  maybe('gói THIẾU cờ → không thu, mode = direct (gian hàng tự thoả thuận)', async () => {
+  maybe('gói THIẾU cờ → bật lén không có hiệu lực: hold chỉ = S + T', async () => {
     await setToggle(packageBasic.tenant, true); // bật lén: không có hiệu lực
     const receipt = await submit(packageBasic, 14, twoAxisRequests);
     const approved = await twoAxisRequests.approve(
@@ -539,15 +608,15 @@ describe('Duyệt TAY áp đúng chính sách (khi giai đoạn kết thúc)', (
       receipt.id,
     );
 
-    expect(approved.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
-    expect(await prisma.bookingHold.count({ where: { tenantId: packageBasic.tenant } })).toBe(0);
-    const booking = await prisma.booking.findUniqueOrThrow({ where: { id: approved.bookingId! } });
-    expect(booking.depositCollectionMode).toBe(DEPOSIT_COLLECTION_MODE.DIRECT);
+    // Nếu công tắc lén có hiệu lực, hold sẽ là 435.000 như ca "gói + BẬT cọc".
+    expect(approved.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
+    expect(approved.bookingId).toBeNull();
+    expectPackageFloorOnly(await onlyHold(packageBasic.tenant));
   });
 });
 
 describe('TỰ NHẬN đơn áp CÙNG chính sách với duyệt tay (khi giai đoạn kết thúc)', () => {
-  maybe('gói + BẬT cọc → tự nhận cũng dừng ở awaiting_hold', async () => {
+  maybe('gói + BẬT cọc → tự nhận cũng dừng ở awaiting_hold, hold = 30% tổng', async () => {
     await settings.patchServiceSetting(
       packagePlus.tenant,
       packagePlus.vehicle,
@@ -561,10 +630,12 @@ describe('TỰ NHẬN đơn áp CÙNG chính sách với duyệt tay (khi giai �
     const row = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: receipt.id } });
 
     expect(row.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
-    expect(await prisma.bookingHold.count({ where: { tenantId: packagePlus.tenant } })).toBe(1);
+    expect(row.decisionSource).toBe(BOOKING_REQUEST_DECISION_SOURCE.SYSTEM);
+    // Cùng con số với duyệt tay: 30% × 1.450.000 = 435.000 (xem ca "gói + BẬT cọc").
+    expect((await onlyHold(packagePlus.tenant)).amount.toFixed(0)).toBe('435000');
   });
 
-  maybe('gói + TẮT cọc → tự nhận tạo đơn ngay, mode = direct', async () => {
+  maybe('gói + TẮT cọc → tự nhận cũng chỉ thu S + T, giống hệt duyệt tay', async () => {
     await settings.patchServiceSetting(
       packagePlus.tenant,
       packagePlus.vehicle,
@@ -576,27 +647,110 @@ describe('TỰ NHẬN đơn áp CÙNG chính sách với duyệt tay (khi giai �
     const receipt = await submit(packagePlus, 20, twoAxisRequests);
     const row = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: receipt.id } });
 
-    expect(row.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
-    const booking = await prisma.booking.findUniqueOrThrow({ where: { id: row.bookingId! } });
-    expect(booking.depositCollectionMode).toBe(DEPOSIT_COLLECTION_MODE.DIRECT);
+    expect(row.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
+    expect(row.decisionSource).toBe(BOOKING_REQUEST_DECISION_SOURCE.SYSTEM);
+    expectPackageFloorOnly(await onlyHold(packagePlus.tenant));
   });
 });
 
 describe('Đóng băng — ADR 0025 ràng buộc 4 (khi giai đoạn kết thúc)', () => {
-  maybe('bật công tắc SAU khi đơn đã tạo không viết lại đơn đó', async () => {
+  /*
+   * Bản v2 của "bật công tắc sau khi đơn đã tạo": tắt cọc nay vẫn sinh hold (S + T), nên đơn ra
+   * đời từ tiền về chứ không ngay lúc duyệt. Thứ cần khoá vẫn y nguyên — lượt BẬT công tắc sau đó
+   * không được viết lại số tiền đã chốt: hold không phình thành 435.000, khoản 190.000 khách
+   * chuyển vẫn đủ để mở đơn, và đơn giữ nguyên các dòng tiền + `deposit_collection_mode` của nó.
+   */
+  maybe('bật công tắc SAU khi đã chốt (tắt cọc) không viết lại hold lẫn đơn', async () => {
     const receipt = await submit(packagePlus, 23, twoAxisRequests);
     const approved = await twoAxisRequests.approve(
       packagePlus.tenant,
       packagePlus.owner,
       receipt.id,
     );
-    const bookingId = approved.bookingId!;
+    expect(approved.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
+    const hold = await onlyHold(packagePlus.tenant);
+    expectPackageFloorOnly(hold);
+    // Quyết định "có thu cọc không" đóng băng trên hold cùng lúc với số tiền.
+    expect(hold.depositRequired).toBe(false);
 
+    // Gian hàng BẬT cọc trong lúc khách đang cầm mã 190.000.
     await twoAxis.updateSettings(packagePlus.tenant, packagePlus.owner, true);
     expect((await twoAxis.resolveForTenant(packagePlus.tenant)).required).toBe(true);
+    const stillOff = await prisma.bookingHold.findUniqueOrThrow({ where: { id: hold.id } });
+    expectPackageFloorOnly(stillOff);
+    expect(stillOff.depositRequired).toBe(false);
 
-    const after = await prisma.booking.findUniqueOrThrow({ where: { id: bookingId } });
-    expect(after.depositCollectionMode).toBe(DEPOSIT_COLLECTION_MODE.DIRECT);
+    // Khách chuyển đúng số trên QR cũ — không bị coi là thiếu so với 435.000 của luật mới.
+    const applied = await prisma.$transaction((tx) =>
+      holds.applyBankPaymentWithinTx(tx, {
+        code: hold.code,
+        amount: new Prisma.Decimal('190000'),
+        providerTxId: `deposit-freeze-on-${hold.code}`,
+      }),
+    );
+    expect(applied.outcome).toBe('activated');
+
+    const booking = await prisma.booking.findFirstOrThrow({
+      where: { tenantId: packagePlus.tenant },
+    });
+    const frozen = bookingMoney(booking);
+    /*
+     *   S = 50.000 · H = 0 · T = 140.000 · D (phần online của chủ xe) = 140.000
+     *   ownerPayable = D − T = 0 · tổng khách = B + S = 1.450.000
+     *   `direct`: khoản XePrime thu chỉ là phần KHÔNG phải tiền chủ xe (S + T), không có đồng cọc
+     *   nào — cọc do chủ xe tự thu (ADR 0028 điều 9). Đọc từ quyết định đóng băng trên HOLD lúc
+     *   duyệt, không từ công tắc lúc tiền về (lúc đó đã BẬT) — ADR 0025 ràng buộc 4.
+     */
+    expect(frozen).toEqual({
+      serviceFee: '50000',
+      commission: '0',
+      tax: '140000',
+      online: '140000',
+      ownerPayable: '0',
+      customerTotal: '1450000',
+      mode: DEPOSIT_COLLECTION_MODE.DIRECT,
+    });
+
+    // Đổi công tắc thêm một vòng nữa SAU khi đơn đã có: đơn vẫn đọc ra đúng chính nó.
+    await setToggle(packagePlus.tenant, false);
+    await setToggle(packagePlus.tenant, true);
+    const after = await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } });
+    expect(bookingMoney(after)).toEqual(frozen);
+  });
+
+  /*
+   * Chiều ngược lại, cũng ở luật hai trục: chốt khi công tắc BẬT (hold có cọc 30%), rồi TẮT trước
+   * khi tiền về. Đơn phải mang `platform` — XePrime đang giữ cọc thật của khách.
+   */
+  maybe('tắt công tắc SAU khi đã chốt (bật cọc) — tiền về vẫn đóng băng `platform`', async () => {
+    await setToggle(packagePlus.tenant, true);
+    const receipt = await submit(packagePlus, 29, twoAxisRequests);
+    const approved = await twoAxisRequests.approve(
+      packagePlus.tenant,
+      packagePlus.owner,
+      receipt.id,
+    );
+    expect(approved.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
+    const hold = await onlyHold(packagePlus.tenant);
+    expect(hold.amount.toFixed(0)).toBe('435000');
+    expect(hold.depositRequired).toBe(true);
+
+    await setToggle(packagePlus.tenant, false);
+    expect((await twoAxis.resolveForTenant(packagePlus.tenant)).required).toBe(false);
+
+    const applied = await prisma.$transaction((tx) =>
+      holds.applyBankPaymentWithinTx(tx, {
+        code: hold.code,
+        amount: new Prisma.Decimal('435000'),
+        providerTxId: `deposit-freeze-off-${hold.code}`,
+      }),
+    );
+    expect(applied.outcome).toBe('activated');
+
+    const booking = await prisma.booking.findFirstOrThrow({
+      where: { tenantId: packagePlus.tenant },
+    });
+    expect(booking.depositCollectionMode).toBe(DEPOSIT_COLLECTION_MODE.PLATFORM);
   });
 });
 
@@ -660,9 +814,11 @@ describe('Công tắc đổi SAU khi hold đã sinh — đường tiền không 
         where: { tenantId: packagePlus.tenant },
       });
       /*
-       * `platform` chứ không phải `direct`: đơn này ra đời VÌ tiền đã vào tài khoản XePrime. Đọc
-       * công tắc của hôm nay để suy ra "ai thu cọc" sẽ nói sai về một khoản tiền có thật.
+       * `platform` chứ không phải `direct`: lúc chốt chuyến có thu cọc, và quyết định đó đóng
+       * băng trên hold (`deposit_required`). Đọc công tắc của hôm nay để suy ra "ai thu cọc" sẽ
+       * nói sai về một khoản tiền có thật.
        */
+      expect(still.depositRequired).toBe(true);
       expect(booking.depositCollectionMode).toBe(DEPOSIT_COLLECTION_MODE.PLATFORM);
       expect(
         (await prisma.bookingRequest.findUniqueOrThrow({ where: { id: receipt.id } })).status,

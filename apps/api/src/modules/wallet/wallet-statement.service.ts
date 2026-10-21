@@ -34,6 +34,7 @@ const TRIP_SELECT = {
   returnAt: true,
   actualReturnAt: true,
   totalAmount: true,
+  ownerCommissionAmount: true,
   taxAmount: true,
   depositAmountOnline: true,
   priceSnapshot: true,
@@ -85,6 +86,9 @@ export function completedTripsInPeriodWhere(
  * ra một khoản họ không hề mất, và CLAUDE.md cấm dùng một con số đại diện cho cả phí dịch vụ lẫn
  * thuế lẫn tiền phải trả chủ xe.
  *
+ * Hoa hồng `H` (ADR 0064 điều 3) thì khác: CHỦ XE chịu, XePrime giữ lại từ khoản online — nên nó
+ * là một dòng khấu trừ thật, có cột riêng, và `ownerIncome` trừ nó ra.
+ *
  * ## Ba con số tiền KHÔNG được gộp
  *
  * `revenueTotal` là tiền thuê thu được; `balanceChangeTotal` là phần chảy qua ví XePrime
@@ -124,7 +128,12 @@ export class WalletStatementService {
       this.prisma.booking.aggregate({
         where,
         _count: { _all: true },
-        _sum: { totalAmount: true, taxAmount: true, depositAmountOnline: true },
+        _sum: {
+          totalAmount: true,
+          ownerCommissionAmount: true,
+          taxAmount: true,
+          depositAmountOnline: true,
+        },
       }),
       this.prisma.booking.findMany({
         where,
@@ -146,16 +155,26 @@ export class WalletStatementService {
 
     const zero = new Prisma.Decimal(0);
     const revenueTotal = aggregate._sum.totalAmount ?? zero;
+    const ownerCommissionTotal = aggregate._sum.ownerCommissionAmount ?? zero;
     const taxTotal = aggregate._sum.taxAmount ?? zero;
     const depositOnlineTotal = aggregate._sum.depositAmountOnline ?? zero;
 
     const totals: WalletStatementTotalsDto = {
       revenueTotal: revenueTotal.toFixed(0),
+      ownerCommissionTotal: ownerCommissionTotal.toFixed(0),
       taxTotal: taxTotal.toFixed(0),
       payAtPickupTotal: revenueTotal.minus(depositOnlineTotal).toFixed(0),
       balanceChangeTotal: balanceChangeTotal.toFixed(0),
       subscriptionFeeTotal: subscriptionFeeTotal.toFixed(0),
-      ownerIncome: revenueTotal.minus(taxTotal).minus(subscriptionFeeTotal).toFixed(0),
+      /*
+       * `B − H − T` (ADR 0064 điều 5), rồi trừ phí gói. Thiếu `H` thì chủ xe tuyến hoa hồng đọc
+       * một thu nhập lớn hơn số họ thật sự nhận — hoa hồng đã bị XePrime giữ lại từ khoản online.
+       */
+      ownerIncome: revenueTotal
+        .minus(ownerCommissionTotal)
+        .minus(taxTotal)
+        .minus(subscriptionFeeTotal)
+        .toFixed(0),
     };
 
     const total = aggregate._count._all;
@@ -318,6 +337,7 @@ function toTripDto(row: TripRow, balanceChange: Prisma.Decimal): WalletStatement
     unitAmount: unit?.amount ?? null,
     unitKind: unit?.kind ?? null,
     revenueAmount: row.totalAmount.toFixed(0),
+    ownerCommissionAmount: row.ownerCommissionAmount.toFixed(0),
     taxAmount: row.taxAmount.toFixed(0),
     payAtPickupAmount: row.totalAmount.minus(depositOnline).toFixed(0),
     balanceChange: balanceChange.toFixed(0),

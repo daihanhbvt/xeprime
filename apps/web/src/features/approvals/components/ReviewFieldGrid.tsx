@@ -83,7 +83,13 @@ function useReviewValueFormatter(): (value: ReviewValue) => ReactNode {
                 {t('values.tier', {
                   from: decimal(tier.fromKm),
                   to: decimal(tier.toKm),
-                  fee: tier.free ? t('values.free') : fmt.money(tier.fee),
+                  // Bậc theo km mang đơn giá, không có phí trọn gói (ADR 0064).
+                  fee:
+                    tier.perKm != null
+                      ? t('values.perKm', { amount: fmt.money(tier.perKm) })
+                      : tier.free
+                        ? t('values.free')
+                        : fmt.money(tier.fee),
                 })}
               </li>
             ))}

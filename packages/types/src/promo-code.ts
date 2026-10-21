@@ -32,6 +32,7 @@
  * Framework-free: api tính, web/mobile hiển thị, worker đọc — MỘT phép tính.
  */
 
+import { floorToThousand } from './fee-policy';
 import { PRICE_ROW } from './pricing';
 import { STATUS_COLOR, type StatusMeta } from './status/meta';
 import { SERVICE_TYPE, VEHICLE_TYPE, type ServiceType, type VehicleType } from './status/vehicle';
@@ -467,11 +468,6 @@ export type PromoLockedField = (typeof PROMO_LOCKED_FIELDS_AFTER_USE)[number];
 
 // ── Phép tính số giảm ───────────────────────────────────────────────────────
 
-/** Làm tròn HALF_UP tới đồng — CÙNG quy tắc với `computeCustomerFees` và `@xeprime/domain`. */
-function roundHalfUp(value: number): number {
-  return Math.round(value + Number.EPSILON);
-}
-
 /**
  * TIỀN THUÊ ĐỦ ĐIỀU KIỆN của một bảng kê giá — `base − |discount|` (ADR 0046 điều 3).
  *
@@ -549,7 +545,7 @@ export function computePromoDiscount(input: PromoDiscountInput): PromoDiscountRe
   const raw =
     input.terms.discountType === PROMO_DISCOUNT_TYPE.FIXED
       ? Number(input.terms.discountAmount ?? 0)
-      : roundHalfUp((eligible * (input.terms.discountPercent ?? 0)) / 100);
+      : floorToThousand((eligible * (input.terms.discountPercent ?? 0)) / 100);
   if (!(raw > 0)) return { ok: false, reason: PROMO_INELIGIBLE_REASON.DISCOUNT_BELOW_FLOOR };
 
   const percentCap =
@@ -564,7 +560,17 @@ export function computePromoDiscount(input: PromoDiscountInput): PromoDiscountRe
     return { ok: false, reason: PROMO_INELIGIBLE_REASON.DISCOUNT_BELOW_FLOOR };
   }
 
-  const applied = Math.min(raw, percentCap, eligible, onlineCap, sponsorCap);
+  /*
+   * BƯỚC GIÁ 1.000đ, làm tròn XUỐNG (ADR 0064). Số này đi thẳng vào mã QR (`holdAmount = grossOnline − P`)
+   * và vào tổng khách trả, nên nó phải là bội 1.000đ như mọi khoản tiền khác.
+   *
+   * XUỐNG chứ không phải `roundToThousand` (nửa bước LÊN) vì mọi đại lượng ở đây là một TRẦN: làm
+   * tròn lên có thể đẩy số giảm vượt `maxDiscountAmount` hay phần tài trợ được mà nó vừa bị kẹp vào
+   * — nền tảng hứa "giảm tối đa 50.000đ" rồi giảm 50.500đ. Làm tròn xuống thì không bao giờ vượt
+   * cam kết, và khách thiệt tối đa 999đ trên một khoản giảm theo %. Số cấu hình (giảm tiền cố định,
+   * trần) đã bị chặn bội 1.000đ ở DTO; `floor` ở cuối là lưới cho tiền thuê/cọc cũ còn số lẻ.
+   */
+  const applied = floorToThousand(Math.min(raw, percentCap, eligible, onlineCap, sponsorCap));
   if (!(applied > 0)) return { ok: false, reason: PROMO_INELIGIBLE_REASON.DISCOUNT_BELOW_FLOOR };
 
   return { ok: true, discountAmount: String(applied), clamped: applied < raw };

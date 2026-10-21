@@ -49,7 +49,9 @@ vi.mock('@/hooks/use-permissions', () => ({
 
 const messages = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
 vi.mock('antd', async (importOriginal) =>
-  (await import('@/test-utils/antd-mock')).antdWithApp(importOriginal, () => ({ message: messages })),
+  (await import('@/test-utils/antd-mock')).antdWithApp(importOriginal, () => ({
+    message: messages,
+  })),
 );
 
 /** Xe ĐỦ điều kiện theo `publishChecklist` — mỗi test tự bỏ đi thứ nó cần thiếu. */
@@ -295,6 +297,53 @@ describe('VehiclePublicationTaskItem — lỗi khi gửi duyệt', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Gửi duyệt' }));
 
     await waitFor(() => expect(screen.getByRole('link', { name: /Tải logo/ })).toBeTruthy());
+    expect(messages.error).not.toHaveBeenCalled();
+  });
+
+  /** ADR 0065: gói chưa phủ loại xe này — dải có nút tới ĐÚNG làn gói, không phải toast chung. */
+  it('chưa có gói cho loại xe: DẢI nói đúng loại xe + nút mua gói của làn đó', async () => {
+    submit.mutate.mockImplementation((_b: unknown, opts: { onError?: (e: unknown) => void }) =>
+      opts.onError?.(
+        new ApiClientError({
+          code: API_ERROR_CODE.PLAN_SCOPE_REQUIRED,
+          message: 'Gian hàng chưa có gói cho Ô TÔ.',
+          status: 403,
+          details: { vehicleType: 'car' },
+        }),
+      ),
+    );
+    renderTask();
+    fireEvent.click(screen.getByRole('button', { name: 'Gửi duyệt' }));
+
+    const cta = await screen.findByRole('link', { name: 'Mua gói ô tô' });
+    expect(cta.getAttribute('href')).toContain('lane=car');
+    expect(screen.getByText(/chưa có gói ô tô/)).toBeTruthy();
+    expect(messages.error).not.toHaveBeenCalled();
+  });
+
+  it('hết suất trên chợ của gói xe máy: dải nói con số + "Nâng gói xe máy"', async () => {
+    submit.mutate.mockImplementation((_b: unknown, opts: { onError?: (e: unknown) => void }) =>
+      opts.onError?.(
+        new ApiClientError({
+          code: API_ERROR_CODE.PLAN_LIMIT_REACHED,
+          message: 'Đã đạt giới hạn.',
+          status: 403,
+          details: {
+            scope: 'marketplace',
+            reason: 'plan',
+            vehicleType: 'motorbike',
+            countedScope: 'motorbike',
+            used: 5,
+            limit: 5,
+          },
+        }),
+      ),
+    );
+    renderTask();
+    fireEvent.click(screen.getByRole('button', { name: 'Gửi duyệt' }));
+
+    expect(await screen.findByRole('link', { name: 'Nâng gói xe máy' })).toBeTruthy();
+    expect(screen.getByText(/5\/5 suất trên chợ/)).toBeTruthy();
     expect(messages.error).not.toHaveBeenCalled();
   });
 

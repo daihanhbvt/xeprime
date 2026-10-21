@@ -4,13 +4,13 @@
  * Bộ demo gọn (05/10/2026): mỗi loại tài khoản khoảng BA bản, đủ để mở mọi màn hình với dữ liệu
  * thật mà không chìm trong dữ liệu mẫu.
  *
- * ## Gian hàng tuyến GÓI (3) — mỗi bậc gói một gian hàng (ADR 0041)
+ * ## Gian hàng tuyến GÓI (3) — gói theo loại xe (ADR 0065)
  *
- * | Gian hàng | Đội xe | Bậc | Ghi chú |
+ * | Gian hàng | Đội xe | Gói | Ghi chú |
  * | --- | --- | --- | --- |
- * | `owner.saigon@` | 12 xe · 2 chi nhánh | Chuyên nghiệp | 3 nhân viên (quản lý · nhân viên · người xem), đủ dữ liệu vận hành |
- * | `owner.hanoi@` | 5 xe · 2 chi nhánh | Nâng cao | đơn, khách, thu chi |
- * | `owner.danang@` | 2 xe · 1 chi nhánh | Cơ bản | vài đơn |
+ * | `owner.saigon@` | 11 ô tô + 1 xe máy · 2 chi nhánh | Doanh nghiệp (giá đàm phán) | 3 nhân viên (quản lý · nhân viên · người xem), đủ dữ liệu vận hành |
+ * | `owner.hanoi@` | 4 ô tô + 1 xe máy · 2 chi nhánh | Ô tô 5 + Xe máy 1 | đơn, khách, thu chi |
+ * | `owner.danang@` | 1 ô tô + 1 xe máy · 1 chi nhánh | Ô tô 1 + Xe máy 1 | vài đơn |
  *
  * ## Chủ xe CÁ NHÂN tuyến hoa hồng (3) — khai ở `commission-owners.ts`
  *
@@ -133,8 +133,12 @@ export interface ShopSpec {
   seller: { entityType: SellerEntityType; legalName: string; taxId: string } | null;
   branches: readonly BranchSpec[];
   fleet: readonly FleetEntry[];
-  /** Mã BẬC gói đang dùng (ADR 0041) — null = chưa gán gói. Trần xe/chi nhánh đi theo bậc. */
-  planCode: string | null;
+  /**
+   * Mã các BẬC gói đang dùng — rỗng = chưa gán gói. Từ ADR 0065 gian hàng tuyến gói có thể chạy
+   * song song MỘT gói ô tô và MỘT gói xe máy (hoặc một gói doanh nghiệp `all`); trần xe đếm theo
+   * loại trong phạm vi của từng gói. Phần tử đầu là kỳ mang GIÁ của hợp đồng demo.
+   */
+  planCodes: readonly string[];
   depth: ShopDepth;
   driverCount: number;
   /** Vị trí bắt đầu trong `DRIVER_ACCOUNTS` — các bên thuê lấy đoạn không chồng nhau. */
@@ -164,9 +168,9 @@ const SHOP_COVER = {
   road: photo('1469854523086-cc02fe5d8800'),
 } as const;
 
-/** Ba gian hàng tuyến gói viết TAY — mỗi bậc gói một gian hàng. */
+/** Ba gian hàng tuyến gói viết TAY — ba tổ hợp gói theo loại xe. */
 const HANDWRITTEN_SHOPS: readonly ShopSpec[] = [
-  // ── 1. Gian hàng lớn: 12 xe, 2 chi nhánh — bậc Chuyên nghiệp ────────────
+  // ── 1. Gian hàng lớn: 11 ô tô + 1 xe máy, 2 chi nhánh — bậc Doanh nghiệp ─
   {
     key: 'saigon',
     code: 'SG-PRIME',
@@ -256,8 +260,9 @@ const HANDWRITTEN_SHOPS: readonly ShopSpec[] = [
       { model: 'kia-carnival', count: 1 },
       { model: 'honda-sh', count: 1 },
     ],
-    // 12 xe vượt trần 10 xe của bậc nâng cao ⇒ chỉ bậc không giới hạn chứa nổi (ADR 0041 điều 7).
-    planCode: SHOP_PLAN_CODE.PRO,
+    // 11 ô tô vượt trần 10 xe của bậc ô tô lớn nhất ⇒ chỉ bậc doanh nghiệp (`all`, không giới hạn,
+    // giá đàm phán) chứa nổi — nó phủ luôn chiếc xe máy (ADR 0065).
+    planCodes: [SHOP_PLAN_CODE.ENTERPRISE],
     depth: 'full',
     driverCount: 2,
     driverPoolOffset: 0,
@@ -265,7 +270,7 @@ const HANDWRITTEN_SHOPS: readonly ShopSpec[] = [
     unapprovedEvery: 6,
   },
 
-  // ── 2. Gian hàng vừa: 5 xe, 2 chi nhánh — bậc Nâng cao ──────────────────
+  // ── 2. Gian hàng vừa: 4 ô tô + 1 xe máy — gói ô tô 5 + gói xe máy 1 ──────
   {
     key: 'hanoi',
     code: 'HN-VIET',
@@ -329,8 +334,8 @@ const HANDWRITTEN_SHOPS: readonly ShopSpec[] = [
       { model: 'mitsubishi-xpander', count: 1 },
       { model: 'honda-vision', count: 1 },
     ],
-    // 5 xe / 2 chi nhánh — vượt trần 3 xe của bậc cơ bản, nằm gọn trong bậc nâng cao (10 / 3).
-    planCode: SHOP_PLAN_CODE.ADVANCED,
+    // 4 ô tô + 1 xe máy ⇒ gói ô tô 5 xe + gói xe máy 1 xe chạy song song (ADR 0065).
+    planCodes: [SHOP_PLAN_CODE.CAR_5, SHOP_PLAN_CODE.MOTO_1],
     depth: 'medium',
     driverCount: 1,
     driverPoolOffset: 2,
@@ -338,7 +343,7 @@ const HANDWRITTEN_SHOPS: readonly ShopSpec[] = [
     unapprovedEvery: 0,
   },
 
-  // ── 3. Gian hàng nhỏ: 2 xe — bậc Cơ bản ─────────────────────────────────
+  // ── 3. Gian hàng nhỏ: 1 ô tô + 1 xe máy — gói ô tô 1 + gói xe máy 1 ─────
   {
     key: 'danang',
     code: 'DN-MINI',
@@ -382,8 +387,8 @@ const HANDWRITTEN_SHOPS: readonly ShopSpec[] = [
       { model: 'hyundai-i10', count: 1 },
       { model: 'honda-sh', count: 1 },
     ],
-    // 2 xe / 1 chi nhánh — trong trần bậc cơ bản (3 xe / 1 chi nhánh).
-    planCode: SHOP_PLAN_CODE.BASIC,
+    // 1 ô tô + 1 xe máy ⇒ hai gói nhỏ nhất của hai loại xe (ADR 0065).
+    planCodes: [SHOP_PLAN_CODE.CAR_1, SHOP_PLAN_CODE.MOTO_1],
     depth: 'light',
     driverCount: 0,
     customerCount: 3,

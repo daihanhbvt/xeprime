@@ -34,7 +34,6 @@ import {
 } from '@/lib/vehicle-type-memory';
 import { VEHICLE_TYPE } from '@xeprime/types';
 import { XP_TOKENS } from '@/styles/theme';
-import { applyFilterPatch } from '../filter-params';
 import { useAllDestinations } from '../hooks/use-destinations';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import { provinceLabelOf } from '../province-options';
@@ -164,8 +163,19 @@ export function SearchExperienceProvider({ children }: { children: ReactNode }) 
     serverRememberedVehicleTypeSnapshot,
   );
 
+  /*
+   * Loại xe và tỉnh đã nhớ CHỈ điền ngoài trang KẾT QUẢ. Ở `/search` thẻ tìm kiếm LÀ bộ lọc và
+   * URL quyết định danh sách: điền "Xe máy" mà URL không mang nghĩa là nút chọn nói "Xe máy" trong
+   * khi kết quả bên dưới vẫn là mọi loại xe — và lần sửa kế tiếp sẽ ghi nó lên URL, tức là lọc hộ
+   * khách một thứ họ chưa bấm. Không bật `userEditedRef`: đây là điền sẵn, không phải thao tác.
+   */
   const [restoredVehicleType, setRestoredVehicleType] = useState(false);
-  if (!restoredVehicleType && rememberedVehicleType && !filters.vehicleType) {
+  if (
+    !restoredVehicleType &&
+    rememberedVehicleType &&
+    !isResultsPage &&
+    !filters.vehicleType
+  ) {
     setRestoredVehicleType(true);
     setDraft((prev) => ({
       ...prev,
@@ -199,11 +209,19 @@ export function SearchExperienceProvider({ children }: { children: ReactNode }) 
     serverRememberedProvinceSnapshot,
   );
 
+  /*
+   * Bộ nhớ tỉnh có HAI người ghi chọn từ HAI danh mục: bộ chọn địa điểm ở đây (tỉnh ĐANG CÓ XE,
+   * `/public/destinations`) và ô địa chỉ trong form (`AddressField`, mọi tỉnh). Nên bộ nhớ chỉ là
+   * GỢI Ý: chỉ điền khi danh mục của chính bề mặt này tra ra được tên tỉnh, và phải đợi
+   * `destinations` về mới quyết. Không xoá bộ nhớ khi tra hụt — mã vẫn đúng cho các form địa chỉ.
+   * Không điền ở trang kết quả — cùng lý do với loại xe ngay trên.
+   */
   const [restoredProvince, setRestoredProvince] = useState(false);
   if (
     !restoredProvince &&
     rememberedProvince &&
     !destinationsLoading &&
+    !isResultsPage &&
     !filters.provinceCode
   ) {
     setRestoredProvince(true);
@@ -215,9 +233,14 @@ export function SearchExperienceProvider({ children }: { children: ReactNode }) 
   }
 
   /*
-   * Nháp → URL:
-   *  - Trang KẾT QUẢ: luôn đồng bộ khi urlSignature khác draftSignature (kể cả khi vừa phục hồi từ bộ nhớ)
-   *  - Trang CHỦ: chỉ khi chính người dùng chạm vào thẻ tìm kiếm (userEditedRef)
+   * Nháp → URL, **chỉ khi chính người dùng chạm vào thẻ tìm kiếm** (`userEditedRef`):
+   *  - Trang KẾT QUẢ: ghi qua `setFilters` khi nháp khác URL — facet của panel Bộ lọc giữ
+   *    nguyên, danh sách nạp lại tại chỗ.
+   *  - Trang CHỦ: cũng `setFilters` (shallow `replaceState`) để khối "Xe khả dụng" đọc ngữ cảnh.
+   *
+   * `userEdited` là cờ Ý ĐỊNH, không phải cờ "đã mount": nháp còn được nạp lại từ URL do NGƯỜI
+   * KHÁC đổi (bấm "Địa điểm nổi bật"); nếu lần nạp đó cũng kích hoạt ghi, khách chưa chạm thẻ sẽ
+   * bị đóng dấu khoảng thuê MẶC ĐỊNH lên URL như một bộ lọc ẩn.
    */
   useEffect(() => {
     if (!userEditedRef.current) return;
@@ -228,13 +251,13 @@ export function SearchExperienceProvider({ children }: { children: ReactNode }) 
     }
     if (pathname !== ROUTES.HOME) return;
 
-    const params = new URLSearchParams(window.location.search);
-    applyFilterPatch(params, draftToFilterPatch(draft));
-    const qs = params.toString();
-    const next = qs ? `${pathname}?${qs}` : pathname;
-    if (`${window.location.pathname}${window.location.search}` !== next) {
-      window.history.replaceState(null, '', next);
-    }
+    /*
+     * Ghi qua `setFilters`, KHÔNG gọi `history.replaceState` trực tiếp: hook bộ lọc đọc URL qua
+     * một external store và chỉ `setFilters` báo cho store biết URL vừa đổi. Ghi lén ở đây thì
+     * phải tới lần render KẾ TIẾP (do một cú bấm khác) mới thấy URL mới, coi đó là "URL bị người
+     * khác đổi" và nạp đè đúng lựa chọn khách vừa bấm — đổi Ô tô → Xe máy mà thẻ vẫn tìm Ô tô.
+     */
+    setFilters(draftToFilterPatch(draft));
   }, [pathname, draft, isResultsPage, setFilters, urlSignature, draftSignature]);
 
   const value = useMemo<SearchExperienceValue>(() => {

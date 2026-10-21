@@ -427,7 +427,8 @@
       "imageUrlInvalid": "Đường dẫn ảnh không hợp lệ",
       "imagesMax": "Tối đa 20 ảnh",
       "seatCountCarOnly": "Số chỗ ngồi chỉ áp dụng cho ô tô",
-      "motorbikeCategoryMotorbikeOnly": "Phân khúc chỉ áp dụng cho xe máy"
+      "motorbikeCategoryMotorbikeOnly": "Phân khúc chỉ áp dụng cho xe máy",
+      "priceThousandStep": "Giá phải là bội số 1.000đ"
     }
   },
   "publish": {
@@ -1072,7 +1073,14 @@
       "removeTierAt": "Xoá bậc {index}",
       "maxRadiusTipLabel": "Giải thích bán kính hỗ trợ tối đa",
       "unitKm": "km",
-      "summaryQuote": "Báo giá thủ công theo thỏa thuận"
+      "summaryQuote": "Báo giá thủ công theo thỏa thuận",
+      "feeModeLabel": "Cách tính phí của bậc {index}",
+      "feeModeFlat": "Trọn gói",
+      "feeModePerKm": "Theo km",
+      "tierPerKmLabel": "Đơn giá mỗi km của bậc {index}",
+      "perKmUnit": "đ / km",
+      "perKmHint": "Phí = đơn giá × khoảng cách một chiều, làm tròn tới 1.000đ.",
+      "perKmSummary": "{amount}/km"
     },
     "overtime": {
       "title": "Phí trả xe quá giờ thỏa thuận",
@@ -1215,7 +1223,9 @@
       "mileageMin": "Hạn mức tối thiểu là 50 km/ngày",
       "mileageMax": "Hạn mức tối đa là 2000 km/ngày",
       "excessFeeRequired": "Nhập phí cho mỗi km vượt",
-      "excessFeeMax": "Phí vượt km quá lớn"
+      "excessFeeMax": "Phí vượt km quá lớn",
+      "moneyThousandStep": "Số tiền phải là bội của 1.000đ",
+      "perKmRequired": "Nhập đơn giá mỗi km lớn hơn 0 — miễn phí thì chọn \"Trọn gói\" 0đ"
     },
     "calendarLink": "Tuỳ chỉnh giá theo lịch",
     "calendarHint": "Giá riêng theo ngày (lễ, cuối tuần, mùa cao điểm) đặt trực tiếp trên lịch xe — một nguồn giá, không có bảng giá mùa vụ thứ hai.",

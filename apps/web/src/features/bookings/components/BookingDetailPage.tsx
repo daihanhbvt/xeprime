@@ -8,6 +8,7 @@ import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { ROUTES } from '@/constants/routes';
 import { useBranchReturnHref } from '@/features/branches/hooks/use-branch-return';
 import { BookingDetailContent } from '@/features/bookings/components/BookingDetailContent';
+import { BookingInsuranceCertificatesPanel } from '@/features/bookings/components/BookingInsuranceCertificatesPanel';
 import { useBooking } from '@/features/bookings/hooks/use-booking';
 import { usePermissions } from '@/hooks/use-permissions';
 import styles from './BookingDetailPage.module.css';
@@ -50,6 +51,8 @@ export function BookingDetailPage() {
           onClick: () => router.push(listHref),
         }}
       />
+      {/* Bảo hiểm chuyến theo từng sản phẩm (ADR 0064) — có ngay khi có đơn, chỉ đọc. */}
+      <BookingInsuranceCertificatesPanel bookingId={bookingId} enabled={Boolean(data)} />
     </div>
   );
 }

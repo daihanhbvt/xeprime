@@ -67,19 +67,140 @@ export const COMMISSION_TRACK_TERM_MONTHS = 12;
  */
 export const DEFAULT_COMMISSION_PLAN_CODE = 'free';
 
+// ── Phạm vi loại xe của một bậc gói (ADR 0065) ─────────────────────────────
+
 /**
- * Ba bậc gian hàng mà SEED tạo ra (ADR 0041 điều 7) — mã để seed, migration và tài liệu gọi
- * cùng một thứ bằng cùng một tên.
+ * Một bậc gói bán cho LOẠI XE nào — ADR 0065 (chủ sản phẩm chốt 21/10/2026).
+ *
+ * Gian hàng mua gói theo từng loại xe: tối đa MỘT gói `motorbike` và MỘT gói `car` chạy song
+ * song; gói `all` (bậc doanh nghiệp, và mọi bậc trước ADR 0065) phủ cả hai loại và LOẠI TRỪ hai
+ * gói kia. DB canh bất biến đó bằng EXCLUDE `tenant_subscriptions_package_scope_no_overlap`
+ * (migration `20261021110000_per_vehicle_type_plans`) — đổi danh sách ở đây thì sửa CẢ hàm
+ * `plan_vehicle_scope_span()` và các CHECK ở đó.
+ *
+ * Bậc tuyến hoa hồng LUÔN là `all` (CHECK `plans_commission_scope_all`): tuyến đó không bán gì
+ * theo loại xe, trần Owner Lite là TỔNG (ADR 0038 điều 12).
+ */
+export const PLAN_VEHICLE_SCOPE = {
+  MOTORBIKE: 'motorbike',
+  CAR: 'car',
+  /** Phủ mọi loại xe — bậc doanh nghiệp, tuyến hoa hồng, và mọi dòng trước ADR 0065. */
+  ALL: 'all',
+} as const;
+
+export type PlanVehicleScope = (typeof PLAN_VEHICLE_SCOPE)[keyof typeof PLAN_VEHICLE_SCOPE];
+
+/** Thứ tự đọc/hiển thị: bậc phủ-hết trước, rồi ô tô, rồi xe máy. "Bậc doanh nghiệp thắng". */
+export const PLAN_VEHICLE_SCOPE_VALUES: readonly PlanVehicleScope[] = [
+  PLAN_VEHICLE_SCOPE.ALL,
+  PLAN_VEHICLE_SCOPE.CAR,
+  PLAN_VEHICLE_SCOPE.MOTORBIKE,
+];
+
+export function isPlanVehicleScope(value: unknown): value is PlanVehicleScope {
+  return typeof value === 'string' && (PLAN_VEHICLE_SCOPE_VALUES as readonly string[]).includes(value);
+}
+
+/**
+ * Đọc phạm vi của một dòng — thiếu/lạ ⇒ `all`.
+ *
+ * `all` là cách đọc ĐÚNG của dữ liệu trước ADR 0065 (mọi bậc khi đó phủ cả hai loại, trần TỔNG),
+ * không phải một mặc định cho tiện: migration backfill đúng giá trị này cho mọi dòng cũ.
+ */
+export function planVehicleScopeOf(value: unknown): PlanVehicleScope {
+  return isPlanVehicleScope(value) ? value : PLAN_VEHICLE_SCOPE.ALL;
+}
+
+/** Bậc phạm vi `scope` có phủ loại xe `vehicleType` không. */
+export function planScopeCoversVehicleType(scope: PlanVehicleScope, vehicleType: string): boolean {
+  return scope === PLAN_VEHICLE_SCOPE.ALL || scope === vehicleType;
+}
+
+/**
+ * Hai kỳ ở hai phạm vi này có ĐƯỢC chạy chồng thời gian không — `true` = KHÔNG được (xung đột).
+ *
+ * Cùng phạm vi thì xung đột; `all` xung đột với mọi phạm vi. Ô tô và xe máy thì không. Đây đúng là
+ * phép `&&` của `plan_vehicle_scope_span()` ở DB — chuỗi kỳ (`planSubscriptionChain`) và khoá chuỗi
+ * kỳ dùng chung luật này để không bao giờ đề xuất một lượt gán mà EXCLUDE sẽ từ chối.
+ */
+export function planScopesConflict(a: PlanVehicleScope, b: PlanVehicleScope): boolean {
+  return a === b || a === PLAN_VEHICLE_SCOPE.ALL || b === PLAN_VEHICLE_SCOPE.ALL;
+}
+
+/**
+ * Thứ tự TRÌNH BÀY phạm vi cho người dùng: xe máy → ô tô → doanh nghiệp (`all`).
+ *
+ * Khác `PLAN_VEHICLE_SCOPE_VALUES` (thứ tự ĐỌC "bậc phủ-hết thắng" của server) có chủ đích: bảng giá,
+ * danh mục `GET /subscription/plan-catalog`, các làn mua ở web và danh sách kỳ ở màn quản trị đều
+ * đi từ bậc nhỏ nhất lên — một nguồn để bốn nơi đó không xếp lệch nhau.
+ */
+export const PLAN_VEHICLE_SCOPE_DISPLAY_ORDER: readonly PlanVehicleScope[] = [
+  PLAN_VEHICLE_SCOPE.MOTORBIKE,
+  PLAN_VEHICLE_SCOPE.CAR,
+  PLAN_VEHICLE_SCOPE.ALL,
+];
+
+/** Hạng trình bày của một phạm vi — khoá sắp xếp theo `PLAN_VEHICLE_SCOPE_DISPLAY_ORDER`. */
+export function planVehicleScopeDisplayRank(scope: unknown): number {
+  return PLAN_VEHICLE_SCOPE_DISPLAY_ORDER.indexOf(planVehicleScopeOf(scope));
+}
+
+/**
+ * Hình dạng hạn mức THEO LOẠI xe (`VehicleTypeQuotaDto.kind` — `BillingService.vehicleQuotaFor`).
+ *
+ * Khác `PARTNER_QUOTA_KIND` (drawer quản trị, có thêm "không áp dụng"): đây là ba trạng thái mà
+ * cổng tạo xe / gửi chợ thật sự thi hành (ADR 0065 điều 3–4).
+ */
+export const VEHICLE_QUOTA_KIND = {
+  UNLIMITED: 'unlimited',
+  TOTAL: 'total',
+  /** Gian hàng tuyến gói chưa có gói phủ loại xe này — tạo xe / lên chợ bị chặn `PLAN_SCOPE_REQUIRED`. */
+  SCOPE_REQUIRED: 'scope_required',
+} as const;
+export type VehicleQuotaKind = (typeof VEHICLE_QUOTA_KIND)[keyof typeof VEHICLE_QUOTA_KIND];
+export const VEHICLE_QUOTA_KIND_VALUES = Object.values(VEHICLE_QUOTA_KIND) as VehicleQuotaKind[];
+
+/**
+ * ĐIỂM THI HÀNH của trần xe — `PLAN_LIMIT_REACHED.details.scope` (`BillingService.assertVehicleQuota`).
+ *
+ * `fleet` = tạo hồ sơ xe; `marketplace` = gửi / đưa thêm xe lên chợ. Trần không trả tiền (Owner
+ * Lite, `billing_unconfigured`) chỉ gác `fleet` (ADR 0038 điều 12); trần đã trả gác cả hai.
+ */
+export const PLAN_QUOTA_GATE_POINT = {
+  FLEET: 'fleet',
+  MARKETPLACE: 'marketplace',
+} as const;
+export type PlanQuotaGatePoint = (typeof PLAN_QUOTA_GATE_POINT)[keyof typeof PLAN_QUOTA_GATE_POINT];
+
+/**
+ * Bảy bậc gian hàng mà SEED tạo ra (ADR 0065, thay ba bậc của ADR 0041 điều 7) — mã để seed,
+ * migration và tài liệu gọi cùng một thứ bằng cùng một tên.
  *
  * Khác `DEFAULT_COMMISSION_PLAN_CODE` ở một điểm quan trọng: đây **không** phải bất biến. Danh
- * mục được phép có nhiều hơn hoặc ít hơn ba bậc `package`, và `BillingService` không đếm bậc,
- * không biết tên nào — nơi nào cần "bậc nào đang bán" thì hỏi `listPlansForTenant`, không hỏi
- * hằng này. Bất biến duy nhất của danh mục là ĐÚNG MỘT bậc `commission` (ADR 0038 điều 13).
+ * mục được phép có nhiều hơn hoặc ít hơn, và `BillingService` không đếm bậc, không biết tên nào —
+ * nơi nào cần "bậc nào đang bán" thì hỏi `listPlansForTenant`, không hỏi hằng này. Bất biến duy
+ * nhất của danh mục là ĐÚNG MỘT bậc `commission` (ADR 0038 điều 13). Trần xe, phạm vi loại xe và
+ * giá đọc từ `plans`, không từ mã.
  */
 export const SHOP_PLAN_CODE = {
+  MOTO_1: 'moto_1',
+  MOTO_5: 'moto_5',
+  MOTO_10: 'moto_10',
+  CAR_1: 'car_1',
+  CAR_5: 'car_5',
+  CAR_10: 'car_10',
+  /** Bậc doanh nghiệp — phạm vi `all`, `salesOnly`, admin gán tay với giá đàm phán (ADR 0041 điều 5). */
+  ENTERPRISE: 'enterprise_contact',
+} as const;
+
+/**
+ * Ba bậc của ADR 0041 — nghỉ hưu bởi ADR 0065. Seed ARCHIVE chúng (còn thuê bao lịch sử + hoá đơn
+ * đã phát hành trỏ tới), migration `20261021110000_per_vehicle_type_plans` ánh xạ thuê bao còn hạn
+ * sang bảy bậc mới. Hoá đơn `issued` của chúng vẫn kích hoạt được (phạm vi `all`, trần TỔNG).
+ */
+export const RETIRED_SHOP_PLAN_CODE = {
   BASIC: 'shop-basic',
   ADVANCED: 'shop-advanced',
-  /** Bậc doanh nghiệp — `salesOnly`, admin gán tay với giá đàm phán (ADR 0041 điều 5). */
   PRO: 'shop-pro',
 } as const;
 
@@ -180,6 +301,11 @@ export interface PlanInvoiceSnapshot {
   planId: string;
   planCode: string;
   termMonths: number;
+  /**
+   * Phạm vi loại xe của bậc lúc phát hành (ADR 0065). Hoá đơn trước ADR 0065 không có khoá này ⇒
+   * parser đọc `all` — đúng phạm vi của mọi bậc thời đó.
+   */
+  vehicleScope: PlanVehicleScope;
   /** Hạn mức sẽ ghi lên dòng thuê bao khi hoá đơn này kích hoạt gói (ADR 0041 điều 3). */
   quota: PlanQuotaSnapshot;
   lines: PlanInvoiceLine[];
@@ -331,7 +457,14 @@ export function parsePlanInvoiceSnapshot(value: unknown): PlanInvoiceSnapshot | 
         .filter((l): l is PlanInvoiceLine => l !== null)
     : [];
 
-  return { planId, planCode, termMonths, quota: invoiceQuota(raw), lines };
+  return {
+    planId,
+    planCode,
+    termMonths,
+    vehicleScope: planVehicleScopeOf(raw['vehicleScope']),
+    quota: invoiceQuota(raw),
+    lines,
+  };
 }
 
 /** `quota` của hoá đơn mới; hoá đơn trước ADR 0041 suy từ `slots` cũ. */
@@ -367,6 +500,29 @@ export function planTermPrice(limits: PlanLimitsJson, termMonths: number): strin
  */
 export function isPlanSelfServe(limits: PlanLimitsJson): boolean {
   return !limits.salesOnly && limits.termPrices.length > 0;
+}
+
+/**
+ * Bậc TỰ MUA được nhỏ nhất của phạm vi `scope` còn chứa nổi `count` xe — `null` khi không có bậc
+ * nào (đội xe vượt trần mọi bậc tự phục vụ ⇒ lối đi tiếp là bậc tư vấn). Bậc không giới hạn
+ * (`maxVehicles = null`) xếp sau mọi bậc có trần.
+ *
+ * Hàm chọn để GỢI Ý (lời chào gói của job vòng đời, màn chọn gói) — không bao giờ để tự gán.
+ */
+export function smallestSelfServePlanFor<P extends { vehicleScope: string; limits: PlanLimitsJson }>(
+  plans: readonly P[],
+  scope: PlanVehicleScope,
+  count: number,
+): P | null {
+  const capOf = (plan: P) => plan.limits.maxVehicles ?? Number.POSITIVE_INFINITY;
+  return (
+    plans
+      .filter(
+        (plan) =>
+          plan.vehicleScope === scope && isPlanSelfServe(plan.limits) && capOf(plan) >= count,
+      )
+      .sort((a, b) => capOf(a) - capOf(b))[0] ?? null
+  );
 }
 
 /**

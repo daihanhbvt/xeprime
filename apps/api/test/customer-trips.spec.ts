@@ -8,12 +8,16 @@ import {
   bookingRequestRespondBy,
   CUSTOMER_TRIP_FILTER,
   CUSTOMER_TRIP_STAGE,
+  CUSTOMER_CANCEL_PREVIEW_KIND,
   type CustomerTripStage,
   DEPOSIT_STATUS,
   HANDOVER_CONDITION,
   HANDOVER_PHOTO_SLOT,
   HANDOVER_STATUS,
   HANDOVER_TYPE,
+  INSURANCE_COVERAGE_STATUS,
+  INSURANCE_POLICY_STATUS,
+  INSURANCE_PRODUCT_KIND,
   isCustomerTripClosed,
   MEMBERSHIP_STATUS,
   NOTIFICATION_TYPE,
@@ -32,6 +36,7 @@ import {
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { CancellationsService } from '../src/modules/cancellations/cancellations.service';
+import { InsuranceReadService } from '../src/modules/insurance/insurance-read.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { CustomerTripsService } from '../src/modules/customer-trips/customer-trips.service';
 import { ReceiptsService } from '../src/modules/finance/receipts.service';
@@ -101,6 +106,7 @@ const trips = new CustomerTripsService(
   notifications,
   audit,
   new CancellationsService(),
+  new InsuranceReadService(asService),
 );
 
 let dbAvailable = false;
@@ -1222,6 +1228,42 @@ describe('Đánh giá', () => {
  * nó nhưng không endpoint nào ghi ra nó, nên một yêu cầu bị gian hàng bỏ quên sẽ nằm ở
  * "Chờ xác nhận" vĩnh viễn và khách không có lối nào thoát ra.
  */
+describe('Xem trước lượt khách huỷ (ADR 0064)', () => {
+  maybe('chờ duyệt: chưa có đồng nào qua XePrime — `no_charge`', async () => {
+    const { requestId } = await seedTrip({ bookingStatus: null });
+    const preview = await trips.cancelPreview(customerId, requestId);
+    expect(preview).toMatchObject({
+      allowed: true,
+      kind: CUSTOMER_CANCEL_PREVIEW_KIND.NO_CHARGE,
+      refundAmount: '0',
+      forfeitAmount: '0',
+      freeCancelUntil: null,
+    });
+  });
+
+  maybe('đơn không có khoản giữ chỗ (đơn lập tay) — `no_charge`, không bịa con số', async () => {
+    const { bookingId } = await seedTrip({ bookingStatus: BOOKING_STATUS.RESERVED });
+    const preview = await trips.cancelPreview(customerId, bookingId!);
+    expect(preview.kind).toBe(CUSTOMER_CANCEL_PREVIEW_KIND.NO_CHARGE);
+  });
+
+  maybe('đã giao xe: không huỷ được — `not_allowed`', async () => {
+    const { requestId } = await seedTrip({ bookingStatus: BOOKING_STATUS.ACTIVE });
+    const preview = await trips.cancelPreview(customerId, requestId);
+    expect(preview).toMatchObject({
+      allowed: false,
+      kind: CUSTOMER_CANCEL_PREVIEW_KIND.NOT_ALLOWED,
+    });
+  });
+
+  maybe('chuyến của người khác → 404, như mọi đường đọc', async () => {
+    const { requestId } = await seedTrip({ bookingStatus: null, customerUserId: strangerId });
+    await expect(trips.cancelPreview(customerId, requestId)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.NOT_FOUND },
+    });
+  });
+});
+
 describe('Khách tự huỷ chuyến', () => {
   maybe('yêu cầu còn chờ duyệt → huỷ được, chuyển sang cancelled_by_customer', async () => {
     const { requestId } = await seedTrip({ bookingStatus: null });
@@ -1339,5 +1381,71 @@ describe('Khách tự huỷ chuyến', () => {
         where: { targetId: requestId, type: NOTIFICATION_TYPE.BOOKING_REQUEST_CANCELLED },
       }),
     ).toBe(1);
+  });
+});
+
+/**
+ * Khách đã trả `IV`/`IP` phải thấy bảo hiểm của mình ĐANG Ở ĐÂU — kể cả khi GCN chưa có (lỗi phát
+ * hành sau bàn giao). Trước đây chi tiết chuyến chỉ mang GCN đã cấp, nên một hợp đồng `failed`
+ * hiện ra là… không gì cả (ADR 0064).
+ */
+describe('Tình trạng bảo hiểm theo từng sản phẩm (ADR 0064)', () => {
+  maybe('failed + issued ⇒ hai dòng coverage; GCN chỉ ở dòng đã cấp; bản cũ khớp', async () => {
+    const { requestId, bookingId } = await seedTrip({ bookingStatus: BOOKING_STATUS.ACTIVE });
+    const base = {
+      bookingId: bookingId!,
+      tenantId,
+      partnerName: 'MIC (giả lập)',
+      premiumAmount: new Prisma.Decimal(50_000),
+    };
+    await prisma.bookingInsurancePolicy.createMany({
+      data: [
+        {
+          ...base,
+          id: newId(),
+          productKind: INSURANCE_PRODUCT_KIND.VEHICLE_TRIP,
+          status: INSURANCE_POLICY_STATUS.FAILED,
+          idempotencyKey: `${bookingId}:vehicle_trip`,
+          lastErrorCode: 'partner_unavailable',
+        },
+        {
+          ...base,
+          id: newId(),
+          productKind: INSURANCE_PRODUCT_KIND.PERSONAL_ACCIDENT,
+          status: INSURANCE_POLICY_STATUS.ISSUED,
+          premiumAmount: new Prisma.Decimal(20_000),
+          idempotencyKey: `${bookingId}:personal_accident`,
+          certificateNumber: 'TEST-MIC-NNTX-ABCD1234',
+          isTest: true,
+          issuedAt: new Date(),
+        },
+      ],
+    });
+
+    const trip = await trips.detail(customerId, requestId);
+    expect(trip.insuranceCoverage).toEqual([
+      expect.objectContaining({
+        kind: INSURANCE_PRODUCT_KIND.VEHICLE_TRIP,
+        status: INSURANCE_COVERAGE_STATUS.FAILED,
+        premiumAmount: '50000',
+        certificate: null,
+      }),
+      expect.objectContaining({
+        kind: INSURANCE_PRODUCT_KIND.PERSONAL_ACCIDENT,
+        status: INSURANCE_COVERAGE_STATUS.ISSUED,
+        premiumAmount: '20000',
+        certificate: expect.objectContaining({ certificateNumber: 'TEST-MIC-NNTX-ABCD1234' }),
+      }),
+    ]);
+    // Không mang mã lỗi nội bộ sang phía khách.
+    expect(JSON.stringify(trip.insuranceCoverage)).not.toContain('partner_unavailable');
+    expect(trip.insuranceCertificates.map((c) => c.certificateNumber)).toEqual([
+      'TEST-MIC-NNTX-ABCD1234',
+    ]);
+  });
+
+  maybe('chuyến không mua bảo hiểm ⇒ danh sách rỗng', async () => {
+    const { requestId } = await seedTrip({ bookingStatus: BOOKING_STATUS.RESERVED });
+    expect((await trips.detail(customerId, requestId)).insuranceCoverage).toEqual([]);
   });
 });

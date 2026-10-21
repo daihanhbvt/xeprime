@@ -1,0 +1,93 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  min-width: 0;
+}
+
+.item:hover,
+.item[data-checked] {
+  border-color: var(--xp-color-primary);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  cursor: pointer;
+  min-width: 0;
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--xp-font-size-body);
+  font-weight: 500;
+  color: var(--xp-color-text);
+  overflow-wrap: anywhere;
+}
+
+.rate {
+  font-size: var(--xp-font-size-sm);
+  font-weight: 600;
+  color: var(--xp-color-primary);
+  white-space: nowrap;
+}
+
+.toggle {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  /* Thẳng hàng với tên sản phẩm, không với ô chọn. */
+  margin-left: 24px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+  cursor: pointer;
+}
+
+.toggle:hover,
+.toggle:focus-visible {
+  color: var(--xp-color-primary);
+}
+
+.benefits {
+  margin-left: 24px;
+}
+
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  margin: 0;
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.fact {
+  display: flex;
+  flex-direction: column;
+}
+
+.fact dt {
+  font-weight: 600;
+  color: var(--xp-color-text);
+}
+
+.fact dd {
+  margin: 0;
+}

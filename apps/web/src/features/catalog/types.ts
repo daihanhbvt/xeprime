@@ -76,3 +76,18 @@ export function catalogLabel(
   // đúng như lời hứa ở trên, thay vì nổ giữa lúc render.
   return items?.find((item) => item.key === key)?.label ?? key;
 }
+
+/**
+ * Mục danh mục có áp dụng cho loại phương tiện này không. `vehicleTypes` RỖNG = áp dụng mọi loại
+ * (cột `catalog_items.vehicle_types`); chưa biết loại xe (`undefined`) thì mọi mục đều hợp lệ.
+ *
+ * Đây là câu trả lời của DỮ LIỆU cho "Piaggio chỉ có xe máy, Honda có cả hai" — không nơi nào
+ * được giữ một danh sách hãng tay song song với nó.
+ */
+export function catalogItemAppliesTo(
+  item: Pick<CatalogItem, 'vehicleTypes'>,
+  vehicleType: string | null | undefined,
+): boolean {
+  if (!vehicleType || item.vehicleTypes.length === 0) return true;
+  return (item.vehicleTypes as readonly string[]).includes(vehicleType);
+}

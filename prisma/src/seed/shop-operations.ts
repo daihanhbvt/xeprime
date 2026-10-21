@@ -50,7 +50,7 @@ import {
 import type { Prisma } from '../index';
 import type { CustomerAccounts } from './accounts';
 import { dateOnlyFromToday, daysFromToday, pick, prisma, seedId } from './context';
-import type { VehicleUnit } from './shop-fleet';
+import { completedMaintenanceSeedId, type VehicleUnit } from './shop-fleet';
 import type { ShopSpec } from './shops';
 
 /** Cọc tiền mặt theo loại xe — khớp chính sách gian hàng dựng ở `shop.ts`. */
@@ -982,10 +982,24 @@ export async function buildMoney(
   }
 
   // ── Phiếu chi cho bảo dưỡng đã hoàn tất ──────────────────────────────────
-  const maintenanceRecords = await prisma.vehicleMaintenanceRecord.findMany({
-    where: { tenantId: deps.tenantId, completedAt: { not: null }, cost: { not: null } },
-    select: { id: true, vehicleId: true, cost: true, completedAt: true },
-  });
+  /*
+   * CHỈ phiếu bảo dưỡng do seed dựng (id tất định từ `completedMaintenanceSeedId`). Phiếu người
+   * dùng tạo trên DB dev đã có phiếu chi do app lập, cùng khoá `(tenant, maintenance, record.id)`
+   * — lập thêm ở đây là vỡ `receipts_source_ref_uniq`, và seed cũng không có quyền ghi vào dữ
+   * liệu người dùng tự tạo.
+   */
+  const maintenanceRecords = (
+    await prisma.vehicleMaintenanceRecord.findMany({
+      where: { tenantId: deps.tenantId, completedAt: { not: null }, cost: { not: null } },
+      select: {
+        id: true,
+        vehicleId: true,
+        cost: true,
+        completedAt: true,
+        vehicle: { select: { code: true } },
+      },
+    })
+  ).filter((record) => record.id === completedMaintenanceSeedId(spec.key, record.vehicle.code));
   for (const record of maintenanceRecords) {
     await upsertReceipt(spec, deps, {
       key: `maintenance:${record.id}`,

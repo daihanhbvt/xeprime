@@ -21,6 +21,7 @@
 
 import { applicablePublishRequirements, missingPublishRequirements } from './vehicle-publication';
 import type { PublishRequirement, VehiclePublicationInput } from './vehicle-publication';
+import type { DeliveryTier } from './pricing';
 import type { StorefrontKind } from './shop-storefront';
 import { VEHICLE_LOCKED_AFTER_APPROVAL_FIELDS, type VehicleLockedField } from './status/vehicle';
 import { requiredVehicleImageTypes } from './status/vehicle-settings';
@@ -145,8 +146,11 @@ export interface VehicleReviewPolicySnapshot {
   depositAmount: string;
   deliveryEnabled: boolean;
   deliveryMaxRadiusKm: number | null;
-  /** Bậc phí theo khoảng cách, `toKm` tăng dần; `fee = '0'` là vùng miễn phí. */
-  deliveryTiers: Array<{ toKm: number; fee: string }>;
+  /**
+   * Bậc phí theo khoảng cách, `toKm` tăng dần; trọn gói `fee = '0'` là vùng miễn phí, bậc theo km
+   * mang `perKm` (ADR 0064). Snapshot cũ chỉ có dạng trọn gói.
+   */
+  deliveryTiers: DeliveryTier[];
   /** `null` cùng `excessDistanceFeePerKm` = không giới hạn quãng đường. */
   includedDistanceKmPerDay: number | null;
   excessDistanceFeePerKm: string | null;

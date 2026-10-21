@@ -116,20 +116,16 @@
   color: var(--xp-color-warning);
 }
 
-/* ── Ba ô số ───────────────────────────────────────────────────────────── */
+/* ── Ô số: hạn mức theo loại xe (hoặc một ô trần chung) + phí dịch vụ ───────── */
 
 /*
- * Ô đầu (hạn mức) RỘNG GẤP ĐÔI ba ô còn lại: nó mang cả con số, dòng phụ và thanh mức dùng, còn
- * ba ô kia chỉ có một con số. Chia đều bốn phần làm ô quan trọng nhất chật nhất.
- *
- * Cột khai TƯỜNG MINH thay vì `auto-fit`: `auto-fit` chia đều rồi mới bù `span 2`, nên ô cuối
- * ("10% / chuyến") tụt xuống dưới 150px và con số gãy làm hai dòng — đúng lỗi nhìn thấy trên
- * ảnh. Dưới 900px thì xếp hai cột, dưới 560px thì một cột.
+ * Hai–ba ô cùng trọng lượng (xe máy · ô tô · phí dịch vụ) — `auto-fit` với sàn 180px để con số
+ * "10% / chuyến" không gãy dòng. Dưới 900px hai cột, dưới 560px một cột.
  */
 .tiles {
   display: grid;
   min-width: 0;
-  grid-template-columns: 1.7fr 1fr 1fr 1.3fr;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: var(--xp-space-sm);
 }
 
@@ -268,5 +264,19 @@
   .termPill {
     flex: 1 1 auto;
     align-items: flex-start;
+  }
+}
+
+/*
+ * Trần CHUNG (tuyến hoa hồng / doanh nghiệp): một ô tổng rộng gấp đôi ô phí dịch vụ đứng cạnh.
+ * Theo loại xe thì `auto-fit` chia đều hai–ba ô.
+ */
+.tilesShared {
+  grid-template-columns: 1.7fr 1.3fr;
+}
+
+@media (max-width: 559px) {
+  .tilesShared {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

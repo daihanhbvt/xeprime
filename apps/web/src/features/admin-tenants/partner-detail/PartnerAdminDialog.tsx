@@ -55,7 +55,11 @@ export function PartnerAdminDialog({
         {detail.data ? (
           <>
             <StatusSection tenantId={tenantId} status={detail.data.status} />
-            <TenantPlanSection tenantId={tenantId} currentPlan={detail.data.currentPlan ?? null} />
+            <TenantPlanSection
+              tenantId={tenantId}
+              currentPlan={detail.data.currentPlan ?? null}
+              terms={detail.data.plan.terms}
+            />
           </>
         ) : detail.isError ? (
           <span className={styles.muted}>{tTab('states.loadError')}</span>

@@ -448,6 +448,7 @@
     "escrow_hold": "Reservation holds via the platform"
   },
   "planStatus": {
+    "draft": "Not on sale yet",
     "active": "Active",
     "archived": "Inactive"
   },
@@ -732,7 +733,8 @@
     "trip_insurance": "Passenger accident insurance",
     "vehicle_protection": "Vehicle damage insurance",
     "deposit": "Booking deposit",
-    "promo": "XePrime promo code"
+    "promo": "XePrime promo code",
+    "rent_prepaid": "Rent paid in advance"
   },
   "promoCodeState": {
     "disabled": "Paused",
@@ -841,7 +843,9 @@
     "owner_cancel": "Owner cancelled the trip",
     "overpaid": "Overpaid",
     "hold_expired": "Reservation payment window expired",
-    "admin_decision": "XePrime decision"
+    "admin_decision": "XePrime decision",
+    "late_cancel": "Cancelled after free-cancel deadline",
+    "no_show": "Customer did not show up"
   },
   "supportCaseStatus": {
     "open": "New",

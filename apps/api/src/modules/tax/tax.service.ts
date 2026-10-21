@@ -8,6 +8,7 @@ import {
   canTransitionTax,
   isTaxPeriodKey,
   taxPeriodKeyVn,
+  taxableBaseOf,
   type BookingPriceSnapshot,
   type TaxWithholdingStatus,
 } from '@xeprime/types';
@@ -313,8 +314,11 @@ export function taxFromSnapshot(
 
   return {
     amount,
-    // Mẫu số `B` — giá trị thuê chịu thuế, KHÔNG gồm bảo hiểm (ADR 0032 điều 3).
-    taxableBase: new Prisma.Decimal(fees.baseAmount),
+    /*
+     * Mẫu số — đúng con số `computeCustomerFees` đã nhân %: tiền thuê `R = B − G`, KHÔNG gồm phí
+     * giao, bảo hiểm hay phí sàn (ADR 0064 điều 4). Đọc từ snapshot, không suy lại ở đây.
+     */
+    taxableBase: new Prisma.Decimal(taxableBaseOf(fees)),
     percent: new Prisma.Decimal(line.percent ?? fees.policy.taxPercent ?? 0),
     label: (fees.policy.taxLabel ?? 'Thuế khấu trừ').slice(0, 100),
     feePolicyId,

@@ -148,3 +148,7 @@
     display: none;
   }
 }
+
+.calendarIcon {
+  color: var(--xp-color-primary);
+}

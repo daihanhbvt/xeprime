@@ -58,12 +58,13 @@ export function TripEstimateCard({
         <div className={styles.footer}>
           {/*
             Chỉ chủ xe: tổng khách trả không phải doanh thu của họ. `ownerNetAmount` do server
-            tính theo đúng công thức của ADR 0029 — client không tự trừ ra.
+            tính và CHỈ trả cho vai chủ xe — bảng phí `fees` là bản công khai, không mang kinh tế
+            của chủ xe (ADR 0064). Client không tự trừ ra.
           */}
-          {isHost && estimate.fees ? (
+          {isHost && estimate.ownerNetAmount ? (
             <p className={styles.net}>
               <span className={styles.netLabel}>{t('ownerNet')}</span>
-              <span className={styles.netValue}>{fmt.money(estimate.fees.ownerNetAmount)}</span>
+              <span className={styles.netValue}>{fmt.money(estimate.ownerNetAmount)}</span>
             </p>
           ) : null}
           <p className={styles.note}>

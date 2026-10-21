@@ -5,8 +5,10 @@ import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { ACCOUNT_TRACK, WALLET_STATEMENT_UNIT, resolveAccountTrack } from '@xeprime/types';
 import { DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
+import { DeductedAmount } from '@/components/data-display/DeductedAmount';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { dayjs, nowInAppTz } from '@/lib/datetime';
+import { absoluteMoney, isNegativeMoney, isPositiveMoney, isZeroMoney } from '@/lib/money';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { WALLET_STATEMENT_PAGE_SIZE } from '../api';
@@ -26,6 +28,8 @@ const MIN_TABLE_WIDTH: Readonly<Record<StatementVariant, number>> = {
   full: 880,
   compact: 640,
 };
+/** Cột hoa hồng `H` thêm vào thì bảng cần thêm chừng ấy bề ngang để không bóp các cột tiền. */
+const COMMISSION_COLUMN_WIDTH = 96;
 
 /**
  * Hai hình thái của bảng.
@@ -44,11 +48,15 @@ export type StatementVariant = 'full' | 'compact';
 /**
  * BẢNG TỔNG HỢP GIAO DỊCH — một tháng làm ăn của gian hàng, đọc từ `/shop/wallet/statement`.
  *
- * ## Vì sao không có cột "phí sàn"
+ * ## Vì sao không có cột "phí sàn" — nhưng có cột "hoa hồng"
  *
- * Phí dịch vụ XePrime do KHÁCH trả thêm (ADR 0032 điều 2), không trừ vào doanh thu gian hàng.
- * Dựng nó thành một dòng khấu trừ trong bảng thu nhập của chủ xe là bịa ra một khoản họ không
- * hề mất. Với gian hàng tuyến gói thì con số đó còn luôn bằng 0 — một cột trắng chiếm chỗ.
+ * Phí sàn `S` do KHÁCH trả thêm (ADR 0064 điều 2), không trừ vào doanh thu gian hàng. Dựng nó
+ * thành một dòng khấu trừ trong bảng thu nhập của chủ xe là bịa ra một khoản họ không hề mất.
+ *
+ * Hoa hồng `H` thì ngược lại: CHỦ XE chịu, XePrime giữ lại từ khoản online (ADR 0064 điều 3), nên
+ * nó là một khoản trừ thật và thu nhập đã trừ nó. Cột chỉ hiện khi KỲ có hoa hồng
+ * (`ownerCommissionTotal > 0` — số của cả kỳ, nên lật trang không làm cột nhảy ra nhảy vào):
+ * tuyến gói luôn `H = 0`, và một cột toàn số 0 chỉ chiếm chỗ.
  *
  * ## Vì sao "thay đổi số dư" nhỏ hơn "doanh thu"
  *
@@ -98,6 +106,7 @@ export function WalletStatementPanel({
   const items = useMemo(() => data?.items ?? [], [data]);
 
   const compact = variant === 'compact';
+  const showCommission = isPositiveMoney(data?.totals.ownerCommissionTotal);
 
   const columns = useMemo<DataTableColumn<WalletStatementTrip>[]>(() => {
     /*
@@ -131,12 +140,16 @@ export function WalletStatementPanel({
       {
         key: 'pickupAt',
         title: t('columns.pickupAt'),
-        render: (_, row) => <span className={styles.number}>{fmt.shortDateTime(row.pickupAt)}</span>,
+        render: (_, row) => (
+          <span className={styles.number}>{fmt.shortDateTime(row.pickupAt)}</span>
+        ),
       },
       {
         key: 'returnAt',
         title: t('columns.returnAt'),
-        render: (_, row) => <span className={styles.number}>{fmt.shortDateTime(row.returnAt)}</span>,
+        render: (_, row) => (
+          <span className={styles.number}>{fmt.shortDateTime(row.returnAt)}</span>
+        ),
       },
       {
         key: 'unit',
@@ -161,15 +174,18 @@ export function WalletStatementPanel({
         render: (_, row) => <span className={styles.strong}>{fmt.money(row.revenueAmount)}</span>,
       },
       {
+        key: 'commission',
+        title: t('columns.commission'),
+        align: 'right',
+        hidden: !showCommission,
+        render: (_, row) => <DeductedAmount emphasis value={row.ownerCommissionAmount} />,
+      },
+      {
         key: 'tax',
         title: t('columns.tax'),
         align: 'right',
-        render: (_, row) => (
-          /* Thuế là khoản TRỪ khỏi tiền chủ xe — hiện dấu trừ, không chỉ là một số nhỏ. */
-          <span className={Number(row.taxAmount) > 0 ? styles.negative : styles.muted}>
-            {Number(row.taxAmount) > 0 ? `−${fmt.money(row.taxAmount)}` : fmt.money('0')}
-          </span>
-        ),
+        /* Thuế là khoản TRỪ khỏi tiền chủ xe — hiện dấu trừ, không chỉ là một số nhỏ. */
+        render: (_, row) => <DeductedAmount emphasis value={row.taxAmount} />,
       },
       {
         key: 'balanceChange',
@@ -179,7 +195,7 @@ export function WalletStatementPanel({
       },
     ];
     return all.filter((column) => !column.hidden);
-  }, [t, tCommon, fmt, domainLabel, compact]);
+  }, [t, tCommon, fmt, domainLabel, compact, showCommission]);
 
   const stats = data?.stats;
   const totals = data?.totals;
@@ -237,9 +253,7 @@ export function WalletStatementPanel({
                 </>
               )}
             </dd>
-            <dt className={styles.statLabel}>
-              {t('stats.rating', { count: stats.ratingCount })}
-            </dt>
+            <dt className={styles.statLabel}>{t('stats.rating', { count: stats.ratingCount })}</dt>
           </div>
           <div className={styles.stat}>
             <dd className={styles.statValue}>
@@ -265,7 +279,7 @@ export function WalletStatementPanel({
         columns={columns}
         items={items}
         rowKey={(row) => row.bookingId}
-        minWidth={MIN_TABLE_WIDTH[variant]}
+        minWidth={MIN_TABLE_WIDTH[variant] + (showCommission ? COMMISSION_COLUMN_WIDTH : 0)}
         loading={query.isFetching}
         striped={false}
         empty={{ title: t('empty.title'), description: t('empty.body') }}
@@ -283,20 +297,23 @@ export function WalletStatementPanel({
 
       {totals ? (
         <dl className={styles.totals}>
-          <SummaryRow label={t('totals.balanceChange')} value={<SignedAmount value={totals.balanceChangeTotal} />} />
+          <SummaryRow
+            label={t('totals.balanceChange')}
+            value={<SignedAmount value={totals.balanceChangeTotal} />}
+          />
           {/*
             Phần khách trả TAY: chỉ hiện khi thật sự có. Ở gian hàng tắt thu cọc qua sàn thì
             `D = 0` và toàn bộ tiền thuê đi thẳng cho chủ xe — dòng này khi đó là cả doanh thu,
             và giấu nó đi sẽ khiến "thu nhập" trông như từ trên trời rơi xuống.
           */}
-          {Number(totals.payAtPickupTotal) !== 0 ? (
+          {!isZeroMoney(totals.payAtPickupTotal) ? (
             <SummaryRow
               label={t('totals.payAtPickup')}
               hint={t('totals.payAtPickupHint')}
               value={<span className={styles.number}>{fmt.money(totals.payAtPickupTotal)}</span>}
             />
           ) : null}
-          {Number(totals.subscriptionFeeTotal) !== 0 ? (
+          {!isZeroMoney(totals.subscriptionFeeTotal) ? (
             <SummaryRow
               label={t('totals.subscriptionFee')}
               value={
@@ -304,15 +321,15 @@ export function WalletStatementPanel({
               }
             />
           ) : null}
+          {showCommission ? (
+            <SummaryRow
+              label={t('totals.commission')}
+              value={<DeductedAmount emphasis value={totals.ownerCommissionTotal} />}
+            />
+          ) : null}
           <SummaryRow
             label={t('totals.tax')}
-            value={
-              Number(totals.taxTotal) > 0 ? (
-                <span className={styles.negative}>−{fmt.money(totals.taxTotal)}</span>
-              ) : (
-                <span className={styles.muted}>{fmt.money('0')}</span>
-              )
-            }
+            value={<DeductedAmount emphasis value={totals.taxTotal} />}
           />
           <SummaryRow
             highlight
@@ -377,13 +394,12 @@ function SummaryRow({
  */
 function SignedAmount({ value }: { value: string }) {
   const fmt = useAppFormat();
-  const amount = Number(value);
-  if (amount === 0) return <span className={styles.muted}>{fmt.money('0')}</span>;
-  const positive = amount > 0;
+  if (isZeroMoney(value)) return <span className={styles.muted}>{fmt.money('0')}</span>;
+  const positive = !isNegativeMoney(value);
   return (
     <span className={positive ? styles.positive : styles.negative}>
       {positive ? '+' : '−'}
-      {fmt.money(String(Math.abs(amount)))}
+      {fmt.money(absoluteMoney(value))}
     </span>
   );
 }

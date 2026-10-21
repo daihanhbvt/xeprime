@@ -144,7 +144,8 @@
       "shop": "Theo chính sách chung của gian hàng",
       "vehicle": "Chính sách riêng của xe"
     },
-    "free": "Miễn phí"
+    "free": "Miễn phí",
+    "perKm": "{amount}/km"
   },
   "pickup": {
     "branch": "Điểm nhận xe",

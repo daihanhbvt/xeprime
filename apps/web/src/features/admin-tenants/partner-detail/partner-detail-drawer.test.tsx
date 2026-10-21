@@ -125,6 +125,12 @@ function overview(
           endsAt: '2099-08-12T00:00:00.000Z',
           graceEndsAt: null,
           vehicleQuota: { used: 24, kind: 'total', limit: 30, reason: 'plan' },
+          // Theo LOẠI (ADR 0065): gói ô tô 30 xe, chưa có gói xe máy.
+          vehicleQuotaByType: {
+            car: { used: 24, kind: 'total', limit: 30, reason: 'plan' },
+            motorbike: { used: 0, kind: 'not_covered' },
+          },
+          packageScopes: ['car'],
         }
       : null,
     branches: isPackage
@@ -171,10 +177,19 @@ const BILLING: PartnerBilling = {
     endsAt: '2099-08-12T00:00:00.000Z',
     graceEndsAt: null,
     vehicleQuota: { used: 24, kind: 'total', limit: 30, reason: 'plan' },
+    vehicleQuotaByType: {
+      car: { used: 24, kind: 'total', limit: 30, reason: 'plan' },
+      motorbike: { used: 0, kind: 'not_covered' },
+    },
+    packageScopes: ['car'],
   },
   termStartsAt: '2025-08-12T00:00:00.000Z',
   quota: {
     vehicles: { used: 24, kind: 'total', limit: 30, reason: 'plan' },
+    vehiclesByType: {
+      car: { used: 24, kind: 'total', limit: 30, reason: 'plan' },
+      motorbike: { used: 0, kind: 'not_covered' },
+    },
     branches: { used: 1, kind: 'total', limit: 3 },
     members: { used: 2, kind: 'unlimited' },
   },
@@ -186,6 +201,7 @@ const BILLING: PartnerBilling = {
       id: 'sub-1',
       planName: 'Business',
       planCode: 'business',
+      vehicleScope: 'car',
       billingMode: BILLING_MODE.PACKAGE,
       price: '3000000.00',
       termMonths: 12,
@@ -465,13 +481,27 @@ describe('Drawer chi tiết đối tác — dữ liệu theo quyền và luật'
       ...lapsed.plan!,
       phase: 'lapsed',
       vehicleQuota: { used: 5, kind: 'total', limit: 3, reason: 'owner_lite' },
+      vehicleQuotaByType: {
+        car: { used: 5, kind: 'total', limit: 3, reason: 'owner_lite' },
+        motorbike: { used: 5, kind: 'total', limit: 3, reason: 'owner_lite' },
+      },
+      packageScopes: [],
     };
     overviews['t-shop'] = lapsed;
     renderDrawer({ tenantId: 't-shop' });
 
-    await screen.findByText('5 / 3 xe');
-    expect(screen.getByText(/trần Owner Lite/)).toBeTruthy();
+    // Trần TỔNG Owner Lite ⇒ cả hai dòng theo loại cùng nói đúng con số đang cưỡng chế.
+    expect(await screen.findAllByText('5 / 3 xe')).toHaveLength(2);
+    expect(screen.getAllByText(/trần Owner Lite/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/không giới hạn/)).toBeNull();
+  });
+
+  it('hạn mức THEO LOẠI xe (ADR 0065): loại chưa có gói nói "chưa có gói", không phải một con số', async () => {
+    overviews['t-shop'] = overview(PLATFORM_PARTNER_KIND.PACKAGE_SHOP);
+    renderDrawer({ tenantId: 't-shop' });
+
+    expect(await screen.findByText('24 / 30 xe')).toBeTruthy();
+    expect(screen.getByText('0 xe · chưa có gói cho loại xe này')).toBeTruthy();
   });
 
   it('server bỏ cảnh báo (thiếu quyền xem xe): không có banner, thẻ số hay khối "Cần xử lý"', async () => {

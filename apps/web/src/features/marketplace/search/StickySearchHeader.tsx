@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { RentalDateTimeRangeField } from '@/components/form/RentalDateTimeRangeField';
+import { APP_NAME } from '@/constants/app-name';
 import { ROUTES } from '@/constants/routes';
 import { cx } from '@/lib/cx';
 import { useTheme } from '@/lib/theme';
@@ -65,7 +66,7 @@ export function StickySearchHeader({
     >
       <div className={styles.inner}>
         <div className={styles.topRow}>
-          <Link href={ROUTES.HOME} className={styles.logoLink} aria-label="XePrime Home">
+          <Link href={ROUTES.HOME} className={styles.logoLink} aria-label={APP_NAME}>
             <Image
               src={logoSrc}
               alt="XePrime"
@@ -111,7 +112,7 @@ export function StickySearchHeader({
                 onChange={setRentalRange}
                 mode={draft.rental.mode}
                 onModeChange={setRentalMode}
-                prefix={<CalendarOutlined style={{ color: 'var(--xp-color-primary)' }} aria-hidden />}
+                prefix={<CalendarOutlined className={styles.calendarIcon} aria-hidden />}
                 compactPoint
                 getPopupContainer={popupContainer}
               />

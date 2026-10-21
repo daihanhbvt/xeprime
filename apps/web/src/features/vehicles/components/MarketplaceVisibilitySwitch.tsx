@@ -14,7 +14,7 @@ import {
 import { InfoHint } from '@/components/data-display/InfoHint';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { usePermissions } from '@/hooks/use-permissions';
-import { useErrorMessage } from '@/i18n/use-error-message';
+import { usePlanAwareErrorMessage } from '@/features/subscription/use-plan-quota-gate-message';
 import { useSetVehicleMarketplaceVisibility } from '../hooks/use-vehicle-mutations';
 import type { VehicleDetail } from '../types';
 import { cx } from '@/lib/cx';
@@ -60,7 +60,8 @@ export function MarketplaceVisibilitySwitch({
   const rowClass = cx(styles.row, bare && styles.bare);
   const t = useTranslations('Vehicles.publish.visibility');
   const { message } = App.useApp();
-  const errorMessage = useErrorMessage();
+  // Đổi loại xe / bật lại trên chợ có thể chạm cổng gói (ADR 0065) — câu nói đúng loại xe + con số.
+  const errorMessage = usePlanAwareErrorMessage();
   const { has } = usePermissions();
   const toggle = useSetVehicleMarketplaceVisibility(vehicle.id);
 

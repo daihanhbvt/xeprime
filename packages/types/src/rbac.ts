@@ -329,6 +329,13 @@ export const PERMISSION = {
   PLATFORM_DRIVER_LICENCE_REVIEW: 'platform.driver_licences.review',
   /** Money operations: hàng đợi giữ chỗ, chuyển trả, đối chiếu ngày. */
   PLATFORM_MONEY_MANAGE: 'platform.money.manage',
+  /**
+   * Bảo hiểm chuyến (ADR 0064): danh mục sản phẩm MIC (tên, quyền lợi, khấu trừ, bật/tắt) và
+   * hàng đợi giấy chứng nhận (thử phát hành lại, thu hồi). Quyền RIÊNG, không gộp vào
+   * `platform.money.manage`: sửa quyền lợi hiện cho khách là việc nội dung sản phẩm, không phải
+   * vận hành tiền — finance_admin vẫn được cấp vì hàng đợi GCN là phí khách đang được giữ hộ.
+   */
+  PLATFORM_INSURANCE_MANAGE: 'platform.insurance.manage',
   /** Support case / tranh chấp toàn sàn: nhận, phân công, kết luận. */
   PLATFORM_SUPPORT_MANAGE: 'platform.support.manage',
   /** Cấu hình app bật/tắt từ xa (`isPlanPromotionEnabled` của app Partner) — app đọc lại khi màn được focus. */
@@ -512,6 +519,8 @@ export const DEFAULT_PLATFORM_ROLE_PERMISSIONS: Readonly<
     // Ngân sách tài trợ mã khuyến mãi là một dòng chi — cùng người chịu trách nhiệm với dòng thu.
     PERMISSION.PLATFORM_PROMO_CODE_MANAGE,
     PERMISSION.PLATFORM_MONEY_MANAGE,
+    // Hàng đợi GCN bảo hiểm là phí khách đã trả đang giữ hộ — cùng ca trực tiền (ADR 0064).
+    PERMISSION.PLATFORM_INSURANCE_MANAGE,
     PERMISSION.PLATFORM_SELLER_VERIFY,
   ],
 };

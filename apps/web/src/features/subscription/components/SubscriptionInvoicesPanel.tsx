@@ -4,7 +4,11 @@ import { DownOutlined } from '@ant-design/icons';
 import { Alert, Button } from 'antd';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { SUBSCRIPTION_INVOICE_STATUS_META, type SubscriptionInvoiceStatus } from '@xeprime/types';
+import {
+  SUBSCRIPTION_INVOICE_STATUS_META,
+  planVehicleScopeOf,
+  type SubscriptionInvoiceStatus,
+} from '@xeprime/types';
 
 import { CopyButton } from '@/components/data-display/CopyButton';
 import { DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
@@ -13,12 +17,12 @@ import { useUrlFilters, positiveIntParam } from '@/hooks/use-url-filters';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { cx } from '@/lib/cx';
 
-import { usePendingInvoice, useSubscriptionInvoices } from '../hooks/use-subscription';
+import { usePendingInvoices, useSubscriptionInvoices } from '../hooks/use-subscription';
 import type { SubscriptionInvoice } from '../types';
 import { InvoicePaymentPanel } from './InvoicePaymentPanel';
 import styles from './SubscriptionInvoicesPanel.module.css';
 
-const INVOICE_TABLE_MIN_WIDTH = 760;
+const INVOICE_TABLE_MIN_WIDTH = 890;
 
 /**
  * HOÁ ĐƠN THANH TOÁN — khoản cần trả trước, lịch sử sau (và lịch sử thì gập lại).
@@ -38,9 +42,9 @@ const INVOICE_TABLE_MIN_WIDTH = 760;
  * ## Hoá đơn chờ đến từ ENDPOINT RIÊNG, không từ trang lịch sử
  *
  * Bản trước lọc nó ra khỏi `items` của trang hiện tại, nên rời sang trang 2 là khối QR biến mất
- * — đúng lúc người dùng đang đi tìm mã để chuyển khoản. `usePendingInvoice` hỏi thẳng
- * `GET /subscription/invoices/pending` (ADR 0040): bất biến "mỗi gian hàng tối đa MỘT hoá đơn
- * trả được" do server giữ, nên câu trả lời phải đến từ đó, và nó tự HỎI LẠI theo nhịp trong lúc
+ * — đúng lúc người dùng đang đi tìm mã để chuyển khoản. `usePendingInvoices` hỏi thẳng
+ * `GET /subscription/invoices/pending` (ADR 0040 · ADR 0065): bất biến "mỗi loại xe tối đa MỘT hoá
+ * đơn trả được" do server giữ, nên câu trả lời phải đến từ đó, và nó tự HỎI LẠI theo nhịp trong lúc
  * chờ đối soát — tiền về là trạng thái tự đổi, không cần F5.
  */
 export function SubscriptionInvoicesPanel({
@@ -69,7 +73,7 @@ export function SubscriptionInvoicesPanel({
 
   const items = invoices.data?.items ?? [];
   // Không hiện thì không hỏi — khi đang nâng cấp, luồng nâng cấp tự giữ query này.
-  const pendingInvoice = usePendingInvoice(showPending).data ?? null;
+  const pendingInvoices = usePendingInvoices(showPending).data ?? [];
   const hasHistory = items.length > 0;
 
   const invoiceColumns: DataTableColumn<SubscriptionInvoice>[] = [
@@ -83,6 +87,12 @@ export function SubscriptionInvoicesPanel({
           <CopyButton value={inv.code} label={t('invoices.copyCode')} />
         </span>
       ),
+    },
+    {
+      title: t('invoices.columns.scope'),
+      key: 'scope',
+      width: 130,
+      render: (_, inv) => t(`lanes.title.${planVehicleScopeOf(inv.vehicleScope)}`),
     },
     {
       title: t('invoices.columns.period'),
@@ -136,7 +146,12 @@ export function SubscriptionInvoicesPanel({
         />
       ) : null}
 
-      {showPending && pendingInvoice ? <InvoicePaymentPanel invoice={pendingInvoice} /> : null}
+      {/* Tối đa MỘT hoá đơn chờ mỗi loại xe (ADR 0065) — mỗi mã một thẻ, mỗi thẻ một nút thanh toán. */}
+      {showPending
+        ? pendingInvoices.map((invoice) => (
+            <InvoicePaymentPanel key={invoice.id} invoice={invoice} />
+          ))
+        : null}
 
       {!invoices.isPending && !invoices.isError && !hasHistory ? (
         <p className={styles.empty}>

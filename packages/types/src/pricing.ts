@@ -1,6 +1,7 @@
 import type { DiscountTier, LegacyDiscountTier } from './long-term';
 import type { BillingMode } from './status/billing';
 import type { CustomerFeeBreakdown } from './fee-policy';
+import type { InsuranceProductKind, InsuranceProductSnapshot } from './status/insurance';
 import { STATUS_COLOR, type StatusMeta } from './status/meta';
 import { SERVICE_TYPE } from './status/vehicle';
 
@@ -119,11 +120,73 @@ export const COLLATERAL_ASSET_TYPE_LABEL: Readonly<Record<CollateralAssetType, s
   [COLLATERAL_ASSET_TYPE.PASSPORT]: 'Hộ chiếu',
 };
 
-/** Một bậc phí giao nhận: áp cho khoảng cách ≤ `toKm` (mốc "từ" suy từ bậc liền trước). */
-export interface DeliveryTier {
+/**
+ * Một bậc phí giao nhận: áp cho khoảng cách ≤ `toKm` (mốc "từ" suy từ bậc liền trước).
+ *
+ * Hai DẠNG, loại trừ nhau (ADR 0064 — 21/10/2026):
+ *
+ *  - **Trọn gói** `{ toKm, fee }` — một số tiền cho cả bậc, `'0'` = miễn phí. Đây là dạng DUY NHẤT
+ *    trước 21/10/2026, nên mọi dòng `delivery_tiers_json` cũ vẫn đọc đúng mà không cần migration.
+ *  - **Theo km** `{ toKm, perKm }` — `phí = perKm × khoảng cách`, làm tròn tới bước giá 1.000đ
+ *    (`deliveryTierFee` ở `@xeprime/domain`). Dùng cho bậc xa, nơi một con số trọn gói hoặc lỗ ở
+ *    đầu xa hoặc đắt ở đầu gần.
+ *
+ * `fee`/`perKm` đều là VND string bội 1.000đ (ADR 0007). Union có `?: undefined` ở nhánh kia để
+ * `tier.fee`/`tier.perKm` đọc được mà không phải thu hẹp kiểu trước.
+ */
+export type DeliveryTier = DeliveryFlatTier | DeliveryPerKmTier;
+
+export interface DeliveryFlatTier {
   toKm: number;
-  /** Phí VND dạng string — '0' = miễn phí. */
+  /** Phí VND dạng string cho CẢ bậc — '0' = miễn phí. */
   fee: string;
+  perKm?: undefined;
+}
+
+export interface DeliveryPerKmTier {
+  toKm: number;
+  /** Đơn giá VND mỗi km (một chiều) — nhân với khoảng cách thật của chuyến. */
+  perKm: string;
+  fee?: undefined;
+}
+
+/**
+ * Cách tính phí của MỘT bậc — trường của FORM (radio Trọn gói / Theo km), không đi lên dây: trên
+ * dây dạng bậc suy từ việc nó mang `fee` hay `perKm`.
+ */
+export const DELIVERY_TIER_FEE_MODE = {
+  FLAT: 'flat',
+  PER_KM: 'per_km',
+} as const;
+export type DeliveryTierFeeMode =
+  (typeof DELIVERY_TIER_FEE_MODE)[keyof typeof DELIVERY_TIER_FEE_MODE];
+export const DELIVERY_TIER_FEE_MODE_VALUES = Object.values(
+  DELIVERY_TIER_FEE_MODE,
+) as DeliveryTierFeeMode[];
+
+/** Bậc tính THEO KM — đọc `perKm`, không đọc `fee`. */
+export function isPerKmDeliveryTier<T extends { perKm?: string | null | undefined }>(
+  tier: T,
+): tier is T & DeliveryPerKmTier {
+  return tier.perKm != null && tier.perKm !== '';
+}
+
+/**
+ * `delivery_tiers_json` thô → bậc đã chuẩn hoá. jsonb không có schema: một phần tử lạ (thiếu
+ * `toKm`, thiếu cả `fee` lẫn `perKm`) bị BỎ, không được đoán thành "miễn phí" — một bậc 0đ bịa
+ * ra là một lời hứa giao xe không công với khách.
+ */
+export function normalizeDeliveryTiers(raw: unknown): DeliveryTier[] {
+  if (!Array.isArray(raw)) return [];
+  const out: DeliveryTier[] = [];
+  for (const item of raw) {
+    if (item == null || typeof item !== 'object') continue;
+    const { toKm, fee, perKm } = item as { toKm?: unknown; fee?: unknown; perKm?: unknown };
+    if (typeof toKm !== 'number' || !Number.isFinite(toKm)) continue;
+    if (perKm != null && perKm !== '') out.push({ toKm, perKm: String(perKm) });
+    else if (fee != null && fee !== '') out.push({ toKm, fee: String(fee) });
+  }
+  return out;
 }
 
 /*
@@ -338,6 +401,12 @@ export interface BookingPriceSnapshot {
    * điều 9) HOẶC đơn trước đợt này. Đọc ra `undefined` là "không có phụ phí", KHÔNG suy ngược.
    */
   fees?: CustomerFeeBreakdown;
+  /**
+   * Sản phẩm bảo hiểm đã bán, ĐÓNG BĂNG lúc duyệt cùng với giá (ADR 0024 · 0064) — chỉ cho loại
+   * có phí `> 0` trong `fees.lines`. Lúc đơn ra đời, hợp đồng chép đúng bản này; worker phát hành
+   * không bao giờ đọc lại danh mục khi bản này có mặt. Vắng mặt ⇒ snapshot trước 21/10/2026.
+   */
+  insuranceProducts?: Partial<Record<InsuranceProductKind, InsuranceProductSnapshot>>;
   /** Chính sách hiệu lực lúc chốt (bản sao nguyên trạng) — null khi source = manual. */
   policy: {
     source: PolicySource;

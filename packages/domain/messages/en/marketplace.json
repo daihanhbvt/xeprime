@@ -119,7 +119,7 @@
     "loadMore": "Load more vehicles",
     "endNote": "Showing all {count, plural, one {# vehicle} other {# vehicles}}",
     "title": "Search vehicles for rent",
-    "bannerTitle": "Choose your vehicle & travel needs",
+    "bannerTitle": "Choose your vehicle",
     "foundCount": "Found {count, plural, one {# result} other {# results}}",
     "sortRelevant": "Most relevant",
     "allViewed": "You've viewed all vehicles",
@@ -188,7 +188,11 @@
     "priceRangeValue": "{from} – {to}",
     "countSuffix": "vehicles",
     "applyWithCount": "Apply ({count, plural, one {# vehicle} other {# vehicles}})",
-    "motorbikeCategory": "Motorbike category"
+    "motorbikeCategory": "Motorbike category",
+    "priceUnder": "Under {max}",
+    "priceOver": "Over {min}",
+    "vatInvoice": "VAT invoice available",
+    "labelWithCount": "{label} ({count})"
   },
   "searchDialog": {
     "title": "Search",

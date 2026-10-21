@@ -265,7 +265,10 @@ export function PriceBreakdown({
                         : line.percent != null
                           ? `${line.percent}%`
                           : line.unitAmount && line.quantity
-                            ? `${line.quantity} ngày × ${fmt.money(line.unitAmount)}`
+                            ? tCommon('components.price.dailyRate', {
+                                days: line.quantity,
+                                amount: fmt.money(line.unitAmount),
+                              })
                             : ''}
                       {line.partnerName ? ` · ${line.partnerName}` : ''}
                     </span>

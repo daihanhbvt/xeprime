@@ -127,9 +127,13 @@ export const LEGAL_SECTIONS: Readonly<Record<LegalDoc, readonly LegalSection[]>>
   [LEGAL_DOC.CANCELLATION]: [
     { key: 'principle' },
     { key: 'beforeDecision' },
-    { key: 'paymentWindow' },
+    /*
+     * Cửa sổ ĐỘNG theo khoảng cách tới giờ nhận xe (ADR 0064 · `holdWindowsFor`): ba bậc thời gian
+     * + luật hết hạn. Luật tiền và chính sách công bố đi cùng một lần phát hành.
+     */
+    { key: 'paymentWindow', items: ['far', 'near', 'urgent', 'expiry'] },
     { key: 'freeCancel' },
-    { key: 'afterFreeCancel' },
+    { key: 'afterFreeCancel', items: ['insurance', 'split', 'noShow', 'direct'] },
     {
       key: 'ownerCancel',
       items: ['beforeDecision', 'beforePayment', 'afterBooking', 'duringTrip'],

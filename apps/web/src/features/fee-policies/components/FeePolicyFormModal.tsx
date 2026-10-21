@@ -3,18 +3,9 @@
 import { App, Alert, Divider } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch, type Resolver } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
-import * as yup from 'yup';
-import {
-  DEPOSIT_PERCENT_MAX,
-  DEPOSIT_PERCENT_MIN,
-  HOLD_FREE_CANCEL_HOURS,
-  HOLD_MIN_USABLE_WINDOW_MINUTES,
-  HOLD_PAYMENT_WINDOW_MINUTES,
-  SERVICE_FEE_PERCENT_MAX,
-  SERVICE_FEE_PERCENT_MIN,
-} from '@xeprime/types';
+import { DEPOSIT_PERCENT_MAX, DEPOSIT_PERCENT_MIN } from '@xeprime/types';
 import { DialogForm } from '@/components/form/DialogForm';
 import { NumberField } from '@/components/form/NumberField';
 import { SwitchField } from '@/components/form/SwitchField';
@@ -23,24 +14,41 @@ import { TextField } from '@/components/form/TextField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import {
+  FEE_POLICY_AMOUNT_MAX,
+  FEE_POLICY_VEHICLE_TYPES,
+  buildFeePolicySchema,
+  feePolicyFormDefaults,
+  toUpsertFeePolicyBody,
+  type FeePolicyFormValues,
+} from '../form';
 import { useCreateFeePolicyDraft, useUpdateFeePolicyDraft } from '../hooks/use-fee-policies';
-import type { FeePolicy, UpsertFeePolicyInput } from '../types';
+import type { FeePolicy } from '../types';
+import { CommissionTiersField } from './CommissionTiersField';
+import styles from './FeePolicyFormModal.module.css';
 
 /**
- * Tạo/sửa BẢN NHÁP chính sách phí — ADR 0028 điều 2–5, ADR 0029 (R3).
+ * Tạo/sửa BẢN NHÁP chính sách phí — luồng tiền v2 trên nền ADR 0028 điều 2–5, ADR 0029 (R3).
  *
- * Bản đang hiệu lực là BẤT BIẾN (backend chặn PATCH sau khi active), nên modal này chỉ dùng cho
- * `status = draft`. Kích hoạt là hành động RIÊNG (nút ở trang danh sách), không nằm trong form —
- * hai việc "sửa số" và "cho số này chạy thật" phải là hai cú bấm khác nhau.
+ * Bản đang hiệu lực là BẤT BIẾN (backend chặn PATCH sau khi active), nên modal này chỉ SỬA bản
+ * `draft`. Nhân bản (`duplicateFrom`) dựng một bản nháp MỚI mang bộ số của phiên bản nguồn — đường
+ * đúng để đổi vài con số của bản đang chạy. Kích hoạt là hành động RIÊNG ở trang danh sách: "sửa
+ * số" và "cho số này chạy thật" phải là hai cú bấm khác nhau.
+ *
+ * Nơi gọi phải đổi `key` theo bản ghi: form giữ state RHF suốt vòng đời, và một modal tái dùng sẽ
+ * gửi số của bản A lên bản B.
  */
 export function FeePolicyFormModal({
   open,
   policy,
+  duplicateFrom = null,
   onClose,
 }: {
   open: boolean;
-  /** null = tạo mới; có giá trị = sửa bản nháp đó. */
+  /** Bản nháp đang sửa; `null` = tạo bản nháp mới. */
   policy: FeePolicy | null;
+  /** Tạo mới bằng cách sao bộ số của phiên bản này. Bỏ qua khi `policy` có giá trị. */
+  duplicateFrom?: FeePolicy | null;
   onClose: () => void;
 }) {
   const t = useTranslations('FeePolicies');
@@ -51,169 +59,53 @@ export function FeePolicyFormModal({
   const create = useCreateFeePolicyDraft();
   const update = useUpdateFeePolicyDraft();
   const isEdit = Boolean(policy);
+  const source = policy ?? duplicateFrom;
   const pending = create.isPending || update.isPending;
 
-  const schema = useMemo(() => {
-    return yup.object({
-      name: yup.string().trim().required(t('form.validation.nameRequired')).max(120),
-      note: yup.string().trim().max(2000).default(''),
-      serviceFeePercent: yup
-        .number()
-        .required()
-        .min(SERVICE_FEE_PERCENT_MIN, t('form.validation.range'))
-        .max(SERVICE_FEE_PERCENT_MAX, t('form.validation.range')),
-      holdMinAmount: yup.number().required().min(0, t('form.validation.nonNegative')),
-      holdPaymentWindowMinutes: yup
-        .number()
-        .required()
-        .integer(t('form.validation.integer'))
-        // Cùng sàn với `feePolicyActivationBlockers`: dưới ngưỡng này không hold nào phát được QR.
-        .min(HOLD_MIN_USABLE_WINDOW_MINUTES)
-        .max(7 * 24 * 60),
-      freeCancelHours: yup
-        .number()
-        .required()
-        .integer(t('form.validation.integer'))
-        .min(0)
-        .max(24 * 30),
-      depositPercent: yup
-        .number()
-        .required()
-        .min(DEPOSIT_PERCENT_MIN, t('form.validation.range'))
-        .max(DEPOSIT_PERCENT_MAX, t('form.validation.range')),
-      depositMinAmount: yup.number().required().min(0, t('form.validation.nonNegative')),
-      depositMaxPercent: yup
-        .number()
-        .required()
-        .min(DEPOSIT_PERCENT_MIN, t('form.validation.range'))
-        .max(DEPOSIT_PERCENT_MAX, t('form.validation.range')),
-      taxEnabled: yup.boolean().required(),
-      taxPercent: yup
-        .number()
-        .nullable()
-        .defined()
-        .min(0)
-        .max(50)
-        .when('taxEnabled', {
-          is: true,
-          then: (s) => s.test('required', t('form.validation.taxPercentRequired'), (v) => v != null),
-        }),
-      taxLabel: yup
-        .string()
-        .trim()
-        .max(120)
-        .default('')
-        .when('taxEnabled', {
-          is: true,
-          then: (s) => s.test('required', t('form.validation.taxLabelRequired'), (v) => Boolean(v)),
-        }),
-      tripInsuranceEnabled: yup.boolean().required(),
-      tripInsurancePercent: yup
-        .number()
-        .nullable()
-        .defined()
-        .min(0)
-        .max(50)
-        .when('tripInsuranceEnabled', {
-          is: true,
-          then: (s) =>
-            s.test('required', t('form.validation.percentRequired'), (v) => v != null),
-        }),
-      vehicleProtectionEnabled: yup.boolean().required(),
-      vehicleProtectionPercent: yup
-        .number()
-        .nullable()
-        .defined()
-        .min(0)
-        .max(50)
-        .when('vehicleProtectionEnabled', {
-          is: true,
-          then: (s) =>
-            s.test('required', t('form.validation.percentRequired'), (v) => v != null),
-        }),
-      insurancePartnerName: yup
-        .string()
-        .trim()
-        .max(120)
-        .default('')
-        .when(['tripInsuranceEnabled', 'vehicleProtectionEnabled'], {
-          is: (a: boolean, b: boolean) => a || b,
-          then: (s) =>
-            s.test('required', t('form.validation.partnerRequired'), (v) => Boolean(v)),
-        }),
-    });
-  }, [t]);
+  const schema = useMemo(
+    () =>
+      buildFeePolicySchema({
+        nameRequired: t('form.validation.nameRequired'),
+        required: t('form.validation.required'),
+        range: t('form.validation.range'),
+        nonNegative: t('form.validation.nonNegative'),
+        integer: t('form.validation.integer'),
+        thousandStep: t('form.validation.thousandStep'),
+        ratePositive: t('form.validation.ratePositive'),
+        taxPercentRequired: t('form.validation.taxPercentRequired'),
+        taxLabelRequired: t('form.validation.taxLabelRequired'),
+        partnerRequired: t('form.validation.partnerRequired'),
+        blocker: (code) => domainLabel('feePolicyActivationBlocker', code),
+      }),
+    [t, domainLabel],
+  );
 
-  type FormValues = yup.InferType<typeof schema>;
+  const defaultValues = useMemo(() => {
+    const values = feePolicyFormDefaults(source);
+    if (!policy && duplicateFrom) {
+      values.name = t('form.duplicateName', { name: duplicateFrom.name });
+    }
+    return values;
+    // Giá trị khởi tạo chỉ đọc một lần — nơi gọi đổi `key` khi đổi bản ghi.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const { control, handleSubmit, watch } = useForm<FormValues>({
-    resolver: yupResolver(schema),
-    defaultValues: policy
-      ? {
-          name: policy.name,
-          note: policy.note ?? '',
-          serviceFeePercent: policy.serviceFeePercent,
-          holdMinAmount: Number(policy.holdMinAmount),
-          holdPaymentWindowMinutes: policy.holdPaymentWindowMinutes,
-          depositPercent: policy.depositPercent,
-          depositMinAmount: Number(policy.depositMinAmount),
-          depositMaxPercent: policy.depositMaxPercent,
-          freeCancelHours: policy.freeCancelHours,
-          taxEnabled: policy.taxEnabled,
-          taxPercent: policy.taxPercent,
-          taxLabel: policy.taxLabel ?? '',
-          tripInsuranceEnabled: policy.tripInsuranceEnabled,
-          tripInsurancePercent: policy.tripInsurancePercent,
-          vehicleProtectionEnabled: policy.vehicleProtectionEnabled,
-          vehicleProtectionPercent: policy.vehicleProtectionPercent,
-          insurancePartnerName: policy.insurancePartnerName ?? '',
-        }
-      : {
-          name: '',
-          note: '',
-          serviceFeePercent: 10,
-          holdMinAmount: 20_000,
-          holdPaymentWindowMinutes: HOLD_PAYMENT_WINDOW_MINUTES,
-          freeCancelHours: HOLD_FREE_CANCEL_HOURS,
-          depositPercent: 20,
-          depositMinAmount: 50_000,
-          depositMaxPercent: 30,
-          taxEnabled: false,
-          taxPercent: null,
-          taxLabel: '',
-          tripInsuranceEnabled: false,
-          tripInsurancePercent: null,
-          vehicleProtectionEnabled: false,
-          vehicleProtectionPercent: null,
-          insurancePartnerName: '',
-        },
+  const { control, handleSubmit } = useForm<FeePolicyFormValues>({
+    // `yup.InferType` của schema có `.when` không khớp từng chữ với interface tay; schema vẫn là
+    // nguồn kiểm, interface là hình dạng form.
+    resolver: yupResolver(schema) as unknown as Resolver<FeePolicyFormValues>,
+    defaultValues,
   });
 
-  const taxEnabled = watch('taxEnabled');
-  const tripInsuranceEnabled = watch('tripInsuranceEnabled');
-  const vehicleProtectionEnabled = watch('vehicleProtectionEnabled');
+  const taxEnabled = useWatch({ control, name: 'taxEnabled' });
+  const tripInsuranceEnabled = useWatch({ control, name: 'tripInsuranceEnabled' });
+  const vehicleProtectionEnabled = useWatch({ control, name: 'vehicleProtectionEnabled' });
   const insuranceOn = tripInsuranceEnabled || vehicleProtectionEnabled;
 
   const onSubmit = handleSubmit((values) => {
-    const body: UpsertFeePolicyInput = {
-      name: values.name.trim(),
-      note: values.note?.trim() || null,
-      serviceFeePercent: values.serviceFeePercent,
-      holdMinAmount: String(values.holdMinAmount),
-      holdPaymentWindowMinutes: values.holdPaymentWindowMinutes,
-      freeCancelHours: values.freeCancelHours,
-      taxEnabled: values.taxEnabled,
-      depositPercent: values.depositPercent,
-      depositMinAmount: String(values.depositMinAmount),
-      depositMaxPercent: values.depositMaxPercent,
-      taxPercent: values.taxEnabled ? values.taxPercent : null,
-      taxLabel: values.taxEnabled ? values.taxLabel?.trim() || null : null,
-      tripInsuranceEnabled: values.tripInsuranceEnabled,
-      tripInsurancePercent: values.tripInsuranceEnabled ? values.tripInsurancePercent : null,
-      vehicleProtectionEnabled: values.vehicleProtectionEnabled,
-      vehicleProtectionPercent: values.vehicleProtectionEnabled ? values.vehicleProtectionPercent : null,
-      insurancePartnerName: insuranceOn ? values.insurancePartnerName?.trim() || null : null,
-    };
+    // Enter vẫn gửi form khi nút OK đang quay — chặn lượt gửi thứ hai.
+    if (pending) return;
+    const body = toUpsertFeePolicyBody(values);
     const done = {
       onSuccess: () => {
         message.success(isEdit ? t('form.updatedSuccess') : t('form.createdSuccess'));
@@ -225,50 +117,46 @@ export function FeePolicyFormModal({
     else create.mutate(body, done);
   });
 
+  const title = policy
+    ? t('form.titleEdit', { version: policy.version })
+    : duplicateFrom
+      ? t('form.titleDuplicate', { version: duplicateFrom.version })
+      : t('form.titleCreate');
+
+  const vehicleLabel = (type: string) => domainLabel('vehicleType', type);
+
   return (
     <ResponsiveDialog
-      title={isEdit ? t('form.titleEdit', { version: policy?.version ?? 0 }) : t('form.titleCreate')}
+      title={title}
       open={open}
       onClose={onClose}
+      size="lg"
       okText={tCommon('actions.save')}
       onOk={() => void onSubmit()}
       confirmLoading={pending}
     >
       <DialogForm onSubmit={onSubmit} labelWidth="lg">
-        <TextField control={control} name="name" label={t('form.name')} />
+        <TextField control={control} name="name" label={t('form.name')} required />
         <TextAreaField control={control} name="note" label={t('form.note')} rows={2} />
 
-        <Divider plain>{t('form.sectionService')}</Divider>
-        <NumberField
-          control={control}
-          name="serviceFeePercent"
-          label={t('form.serviceFeePercent')}
-          percent
-          min={SERVICE_FEE_PERCENT_MIN}
-          max={SERVICE_FEE_PERCENT_MAX}
-          precision={2}
-        />
-        <NumberField
-          control={control}
-          name="holdMinAmount"
-          label={t('form.holdMinAmount')}
-          money
-          min={0}
-        />
-        <NumberField
-          control={control}
-          name="holdPaymentWindowMinutes"
-          label={t('form.holdPaymentWindowMinutes')}
-          min={5}
-          addonAfter={t('form.minutesUnit')}
-        />
-        <NumberField
-          control={control}
-          name="freeCancelHours"
-          label={t('form.freeCancelHours')}
-          min={0}
-          addonAfter={t('form.hoursUnit')}
-        />
+        <Divider plain>{t('form.sectionPlatformFee')}</Divider>
+        <p className={styles.hint}>{t('form.platformFeeHint')}</p>
+        {FEE_POLICY_VEHICLE_TYPES.map((type) => (
+          <NumberField
+            key={type}
+            control={control}
+            name={`customerPlatformFee.${type}`}
+            label={t('form.platformFeeFor', { type: vehicleLabel(type) })}
+            money
+            min={0}
+            max={FEE_POLICY_AMOUNT_MAX}
+            required
+          />
+        ))}
+
+        <Divider plain>{t('form.sectionCommission')}</Divider>
+        <p className={styles.hint}>{t('form.commissionHint')}</p>
+        <CommissionTiersField control={control} />
 
         <Divider plain>{t('form.sectionDeposit')}</Divider>
         <NumberField
@@ -278,7 +166,8 @@ export function FeePolicyFormModal({
           percent
           min={DEPOSIT_PERCENT_MIN}
           max={DEPOSIT_PERCENT_MAX}
-          precision={2}
+          precision={0}
+          required
         />
         <NumberField
           control={control}
@@ -286,6 +175,8 @@ export function FeePolicyFormModal({
           label={t('form.depositMinAmount')}
           money
           min={0}
+          max={FEE_POLICY_AMOUNT_MAX}
+          required
         />
         <NumberField
           control={control}
@@ -294,65 +185,117 @@ export function FeePolicyFormModal({
           percent
           min={DEPOSIT_PERCENT_MIN}
           max={DEPOSIT_PERCENT_MAX}
-          precision={2}
+          precision={0}
+          required
         />
-
-        <Divider plain>{t('form.sectionTax')}</Divider>
-        <SwitchField control={control} name="taxEnabled" label={t('form.taxEnabled')} description={t('form.taxEnabledHint')} />
-        {taxEnabled ? (
-          <>
-            <NumberField control={control} name="taxPercent" label={t('form.taxPercent')} percent min={0} max={50} precision={2} />
-            <TextField control={control} name="taxLabel" label={t('form.taxLabel')} />
-          </>
-        ) : null}
+        <NumberField
+          control={control}
+          name="holdMinAmount"
+          label={t('form.holdMinAmount')}
+          money
+          min={0}
+          max={FEE_POLICY_AMOUNT_MAX}
+          required
+        />
+        <NumberField
+          control={control}
+          name="holdPaymentWindowMinutes"
+          label={t('form.holdPaymentWindowMinutes')}
+          min={0}
+          precision={0}
+          addonAfter={t('form.minutesUnit')}
+          required
+        />
+        <NumberField
+          control={control}
+          name="freeCancelHours"
+          label={t('form.freeCancelHours')}
+          min={0}
+          precision={0}
+          addonAfter={t('form.hoursUnit')}
+          required
+        />
 
         <Divider plain>{t('form.sectionInsurance')}</Divider>
-        <Alert type="info" showIcon title={t('form.insuranceHint')} />
-        <SwitchField
-          control={control}
-          name="tripInsuranceEnabled"
-          label={t('form.tripInsuranceEnabled')}
-        />
-        {tripInsuranceEnabled ? (
-          <NumberField
-            control={control}
-            name="tripInsurancePercent"
-            label={t('form.tripInsurancePercent')}
-            percent
-            min={0}
-            max={50}
-            precision={2}
-          />
-        ) : null}
+        <Alert type="info" showIcon title={t('form.insuranceHint')} className={styles.alert} />
         <SwitchField
           control={control}
           name="vehicleProtectionEnabled"
           label={t('form.vehicleProtectionEnabled')}
+          description={t('form.insuranceProductHint')}
         />
-        {vehicleProtectionEnabled ? (
-          <NumberField
-            control={control}
-            name="vehicleProtectionPercent"
-            label={t('form.vehicleProtectionPercent')}
-            percent
-            min={0}
-            max={50}
-            precision={2}
-          />
-        ) : null}
+        {vehicleProtectionEnabled
+          ? FEE_POLICY_VEHICLE_TYPES.map((type) => (
+              <NumberField
+                key={type}
+                control={control}
+                name={`vehicleProtectionDailyAmount.${type}`}
+                label={t('form.dailyRateFor', { type: vehicleLabel(type) })}
+                money
+                min={0}
+                max={FEE_POLICY_AMOUNT_MAX}
+                required
+              />
+            ))
+          : null}
+        <SwitchField
+          control={control}
+          name="tripInsuranceEnabled"
+          label={t('form.tripInsuranceEnabled')}
+          description={t('form.insuranceProductHint')}
+        />
+        {tripInsuranceEnabled
+          ? FEE_POLICY_VEHICLE_TYPES.map((type) => (
+              <NumberField
+                key={type}
+                control={control}
+                name={`tripInsuranceDailyAmount.${type}`}
+                label={t('form.dailyRateFor', { type: vehicleLabel(type) })}
+                money
+                min={0}
+                max={FEE_POLICY_AMOUNT_MAX}
+                required
+              />
+            ))
+          : null}
         {insuranceOn ? (
           <TextField
             control={control}
             name="insurancePartnerName"
             label={t('form.insurancePartnerName')}
             help={t('form.insurancePartnerNameHint')}
+            required
           />
+        ) : null}
+
+        <Divider plain>{t('form.sectionTax')}</Divider>
+        <SwitchField
+          control={control}
+          name="taxEnabled"
+          label={t('form.taxEnabled')}
+          description={t('form.taxEnabledHint')}
+        />
+        {taxEnabled ? (
+          <>
+            <NumberField
+              control={control}
+              name="taxPercent"
+              label={t('form.taxPercent')}
+              percent
+              min={0}
+              max={50}
+              precision={2}
+              required
+            />
+            <TextField control={control} name="taxLabel" label={t('form.taxLabel')} required />
+          </>
         ) : null}
 
         {policy && policy.activationBlockers.length > 0 ? (
           <Alert
             type="warning"
             showIcon
+            className={styles.alert}
             title={t('form.activationBlocked')}
             description={policy.activationBlockers
               .map((code) => domainLabel('feePolicyActivationBlocker', code))

@@ -6,7 +6,9 @@ import {
   isPlanFeature,
   parsePlanLimits,
   isSubscriptionTrack,
+  resolveActivePackageTerms,
   resolveEffectiveBilling,
+  type PlanVehicleScope,
   type BillingMode,
   type BillingPhase,
   type EffectiveBilling,
@@ -72,13 +74,26 @@ export function effectiveSubscriptionWhere(now: Date): Prisma.TenantSubscription
  */
 export const EFFECTIVE_SUBSCRIPTION_ARGS = {
   orderBy: { endsAt: 'desc' },
-  take: 1,
+  take: 12,
   select: {
     endsAt: true,
     billingMode: true,
+    vehicleScope: true,
     plan: { select: { code: true, name: true, limitsJson: true } },
   },
 } as const;
+/*
+ * `take: 12` — CỬA SỔ dòng gần nhất, không phải "một dòng" (ADR 0065).
+ *
+ * Từ khi gói bán theo loại xe, một tenant có thể chạy song song kỳ ô tô + kỳ xe máy (+ dòng hoa
+ * hồng còn sót/đã xếp), nên phép chấm tuyến cần MỌI dòng còn hạn hoặc đang ân hạn — không chỉ dòng
+ * `ends_at` muộn nhất. Sắp `ends_at desc` nên các dòng còn hạn (≤ một mỗi phạm vi nhờ EXCLUDE
+ * `tenant_subscriptions_package_scope_no_overlap`, cộng dòng hoa hồng) đứng đầu, rồi tới các dòng
+ * vừa hết hạn. Kỳ ngắn nhất là MỘT tháng lịch, nên trong một cửa sổ ân hạn mỗi phạm vi chỉ có
+ * một-hai dòng kết thúc: 12 dòng phủ dư mọi tổ hợp hợp lệ, và vẫn là một index scan nhỏ trên
+ * `(tenant_id, ends_at)` cho guard toàn cục. Nơi gọi đưa CẢ MẢNG cho `resolveEffectiveBilling`,
+ * không bao giờ `[0]`.
+ */
 
 /**
  * Cờ tính năng của một bậc gói, đọc từ `plans.limits_json.features` (ADR 0027 điều 4).
@@ -135,6 +150,28 @@ export function featureStatesFrom(
 /** Hình dạng dòng gói hiệu lực mà guard/`me()` cần — `select` khai ở nơi gọi phải khớp cái này. */
 export type CurrentPlanFeatureRow = EffectiveSubscriptionRow;
 
+/**
+ * Cờ năng lực đang có hiệu lực của tenant (ADR 0027 · ADR 0065).
+ *
+ * Tuyến gói: HỢP cờ của mọi kỳ gói còn hiệu lực (`resolveActivePackageTerms`) — gói ô tô và gói
+ * xe máy cùng mở bộ Full Manage, và bậc doanh nghiệp (tập cha) thắng tự nhiên. Ngoài tuyến gói:
+ * cờ của dòng hiệu lực gần nhất khi nó còn hiệu lực (tuyến hoa hồng: rỗng). Hết ân hạn thì bậc
+ * gói cũ không nói gì nữa.
+ */
+function activePlanFeatureFlags(
+  rows: readonly CurrentPlanFeatureRow[],
+  billing: EffectiveBilling,
+  now: Date,
+): Set<PlanFeature> {
+  if (!billing.featuresActive) return new Set();
+  const terms = resolveActivePackageTerms(rows, now);
+  if (terms.length > 0) {
+    return new Set(terms.flatMap((term) => [...planFeatureFlags(term.row.plan.limitsJson)]));
+  }
+  const latest = [...rows].sort((a, b) => b.endsAt.getTime() - a.endsAt.getTime())[0];
+  return planFeatureFlags(latest?.plan.limitsJson ?? null);
+}
+
 /** Thứ mà guard và `me()` cần biết về gói của một tenant, giải đúng MỘT lần cho mỗi request. */
 export interface TenantPlanContext {
   features: Record<PlanFeature, FeatureState>;
@@ -146,26 +183,35 @@ export interface TenantPlanContext {
   billingMode: BillingMode | null;
   phase: BillingPhase;
   graceEndsAt: Date | null;
+  /** Phạm vi loại xe đang có kỳ gói hiệu lực (ADR 0065) — rỗng ngoài tuyến gói. */
+  packageScopes: PlanVehicleScope[];
   billing: EffectiveBilling;
 }
 
 /**
- * Dòng thuê bao hiệu lực + `used_features` → toàn bộ ngữ cảnh gói của một tenant.
+ * Các dòng thuê bao hiệu lực + `used_features` → toàn bộ ngữ cảnh gói của một tenant.
  *
  * Gộp thành một hàm vì cả `TenantScopeGuard` lẫn `AuthService.me()` cần **đúng những giá trị
  * này** từ **đúng hai đầu vào này** — tách ra là mời hai nơi tính lệch nhau.
+ *
+ * Nhận cả MẢNG dòng (`EFFECTIVE_SUBSCRIPTION_ARGS`, ADR 0065) lẫn một dòng đơn (cách gọi cũ).
  */
 export function resolveTenantFeatures(
-  subscription: CurrentPlanFeatureRow | null,
+  subscriptions: CurrentPlanFeatureRow | readonly CurrentPlanFeatureRow[] | null | undefined,
   usedFeatures: readonly string[],
   now: Date = new Date(),
 ): TenantPlanContext {
-  const billing = resolveEffectiveBilling(subscription, now);
+  const rows: readonly CurrentPlanFeatureRow[] = !subscriptions
+    ? []
+    : Array.isArray(subscriptions)
+      ? subscriptions
+      : [subscriptions as CurrentPlanFeatureRow];
+  const billing = resolveEffectiveBilling(rows, now);
   return {
     features: featureStatesFrom(
       // Cờ chỉ đọc được khi gói còn hiệu lực (`current` hoặc `grace`); hết ân hạn thì bậc gói cũ
       // không nói gì nữa. `allowReadOnly` là câu hỏi KHÁC — xem docblock `featureStatesFrom`.
-      planFeatureFlags(billing.featuresActive ? (subscription?.plan.limitsJson ?? null) : null),
+      activePlanFeatureFlags(rows, billing, now),
       usedFeatures,
       isSubscriptionTrack(billing),
     ),
@@ -175,6 +221,7 @@ export function resolveTenantFeatures(
     billingMode: billing.billingMode,
     phase: billing.phase,
     graceEndsAt: billing.graceEndsAt,
+    packageScopes: billing.packageScopes,
     billing,
   };
 }
