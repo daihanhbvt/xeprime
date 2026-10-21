@@ -13,6 +13,7 @@ import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import { LocationPicker } from './LocationPicker';
 import { QuickFilterPills } from './QuickFilterPills';
 import { useSearchExperience } from './search-context';
+import { VehicleTypePicker } from './VehicleTypePicker';
 import styles from './StickySearchHeader.module.css';
 
 interface StickySearchHeaderProps {
@@ -88,6 +89,12 @@ export function StickySearchHeader({
                 onKeyDown={handleKeyDown}
                 aria-label={t('keyword.ariaLabel')}
               />
+            </div>
+
+            <span className={styles.divider} aria-hidden />
+
+            <div className={styles.vehicleTypeWrap}>
+              <VehicleTypePicker />
             </div>
 
             <span className={styles.divider} aria-hidden />

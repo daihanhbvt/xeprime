@@ -52,9 +52,9 @@
   background: var(--xp-color-bg-muted);
   border: 1px solid var(--xp-color-border);
   border-radius: 9999px;
-  padding: 3px 5px 3px 16px;
+  padding: 3px 5px 3px 14px;
   flex: 1;
-  max-width: 820px;
+  max-width: 920px;
   min-width: 0;
   transition: border-color 0.16s ease, background 0.16s ease;
 }
@@ -68,8 +68,12 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  flex: 1.2;
-  min-width: 160px;
+  flex: 1;
+  min-width: 130px;
+}
+
+.vehicleTypeWrap {
+  flex: none;
 }
 
 .searchIcon {
@@ -79,11 +83,19 @@
 
 .keywordInput {
   width: 100%;
-  border: none;
-  outline: none;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
   background: transparent;
   font-size: var(--xp-font-size-label);
   color: var(--xp-color-text);
+}
+
+.keywordInput:focus,
+.keywordInput:focus-visible {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .divider {

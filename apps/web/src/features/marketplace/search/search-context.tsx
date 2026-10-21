@@ -26,6 +26,13 @@ import {
   serverRememberedRentalRangeSnapshot,
   subscribeRememberedRentalRange,
 } from '@/lib/rental-range-memory';
+import {
+  rememberVehicleType,
+  rememberedVehicleTypeSnapshot,
+  serverRememberedVehicleTypeSnapshot,
+  subscribeRememberedVehicleType,
+} from '@/lib/vehicle-type-memory';
+import { VEHICLE_TYPE } from '@xeprime/types';
 import { XP_TOKENS } from '@/styles/theme';
 import { applyFilterPatch } from '../filter-params';
 import { useAllDestinations } from '../hooks/use-destinations';
@@ -129,6 +136,7 @@ export function SearchExperienceProvider({ children }: { children: ReactNode }) 
         const fromUrl = draftFromFilters(filters);
         return {
           ...fromUrl,
+          vehicleType: filters.vehicleType ? fromUrl.vehicleType : prev.vehicleType,
           rental: filters.pickupAt && filters.returnAt ? fromUrl.rental : prev.rental,
           routeType: filters.routeType ? fromUrl.routeType : prev.routeType,
         };
@@ -150,28 +158,28 @@ export function SearchExperienceProvider({ children }: { children: ReactNode }) 
    * thứ `react-hooks/set-state-in-effect` chặn, vì nó là một vòng render xếp tầng sau khi thẻ
    * tìm kiếm đã hiện ra với ô trống.
    */
+  const rememberedVehicleType = useSyncExternalStore(
+    subscribeRememberedVehicleType,
+    rememberedVehicleTypeSnapshot,
+    serverRememberedVehicleTypeSnapshot,
+  );
+
+  const [restoredVehicleType, setRestoredVehicleType] = useState(false);
+  if (!restoredVehicleType && rememberedVehicleType && !filters.vehicleType) {
+    setRestoredVehicleType(true);
+    setDraft((prev) => ({
+      ...prev,
+      vehicleType: rememberedVehicleType,
+      serviceType: resolveServiceType(rememberedVehicleType, prev.serviceType),
+    }));
+  }
+
   const remembered = useSyncExternalStore(
     subscribeRememberedRentalRange,
     rememberedRentalRangeSnapshot,
     serverRememberedRentalRangeSnapshot,
   );
 
-  /*
-   * Điền vào nháp NGAY TRONG RENDER — cùng kiểu "điều chỉnh state khi đầu vào đổi" với khối
-   * "URL → nháp" phía trên, nên không có khung hình nào hiện ra mang ô trống rồi mới nhảy số.
-   *
-   * Hai guard:
-   *   - `filters.pickupAt && filters.returnAt` ⇒ URL đang nói, và URL luôn thắng (link chia sẻ
-   *     phải mở ra đúng thứ người gửi thấy, không bị lựa chọn cũ của người nhận đè lên);
-   *   - `restoredRemembered` ⇒ đúng MỘT lần, để không giật lại ô sau khi khách đã tự sửa.
-   *
-   * Không cần kiểm `userEditedRef` như bản trước: lần chạy duy nhất của khối này là lần render
-   * ngay sau hydration, lúc khách chưa kịp chạm vào thẻ.
-   *
-   * Cố ý KHÔNG bật `userEditedRef`: đây là điền sẵn, không phải một thao tác mới. Bật lên là
-   * khoảng ngày này bị đóng dấu lên URL trang chủ và trở thành một bộ lọc ẩn mà khách chưa hề
-   * bấm "Tìm xe" để xác nhận.
-   */
   const [restoredRemembered, setRestoredRemembered] = useState(false);
   if (!restoredRemembered && remembered && !(filters.pickupAt && filters.returnAt)) {
     setRestoredRemembered(true);
@@ -185,50 +193,17 @@ export function SearchExperienceProvider({ children }: { children: ReactNode }) 
     }));
   }
 
-  /*
-   * Tỉnh/thành khách đã TỰ CHỌN ở lượt trước → điền vào nháp. Cùng cơ chế `useSyncExternalStore`
-   * và cùng lý do hydration với khoảng thuê ngay trên.
-   *
-   * Khác một điểm quan trọng: **chỉ điền ngoài trang KẾT QUẢ**. Ở `/search`, thẻ tìm kiếm LÀ bộ
-   * lọc, và URL là thứ quyết định danh sách. Điền một tỉnh mà URL không mang nghĩa là viên địa
-   * điểm hiện "Bắc Ninh" trong khi kết quả bên dưới vẫn là toàn quốc — một lời nói dối, và cách
-   * duy nhất để chữa là tự ghi tỉnh đó vào URL, tức là lọc hộ người dùng một thứ họ chưa bấm.
-   *
-   * Cố ý KHÔNG bật `userEditedRef`: đây là điền sẵn, không phải một thao tác mới.
-   */
   const rememberedProvince = useSyncExternalStore(
     subscribeRememberedProvince,
     rememberedProvinceSnapshot,
     serverRememberedProvinceSnapshot,
   );
 
-  /*
-   * ⚠️ Bộ nhớ tỉnh có HAI người ghi, và họ chọn từ HAI danh mục khác nhau:
-   *
-   *   - bộ chọn địa điểm ở đây ghi mã lấy từ `/public/destinations` — chỉ những tỉnh ĐANG CÓ XE;
-   *   - ô địa chỉ trong các form (`AddressField`) ghi mã lấy từ `/provinces` — MỌI tỉnh đang mở.
-   *
-   * Người đọc thì chỉ hiển thị được mã có trong `destinations`. Nên một người vừa khai địa chỉ
-   * gian hàng ở một tỉnh chưa có xe nào sẽ quay lại trang chủ và thấy viên địa điểm ghi "Địa
-   * điểm không còn khả dụng" — một câu đúng nghĩa đen nhưng nói về một lựa chọn họ chưa hề làm
-   * ở đây. Cùng chuyện đó xảy ra khi tỉnh từng có xe rồi hết xe.
-   *
-   * Vì vậy: bộ nhớ là một GỢI Ý, và bề mặt nào cũng có quyền không nhận nó. Chỉ điền khi danh
-   * mục của CHÍNH bề mặt này tra ra được tên tỉnh; không tra ra thì để nguyên "Toàn quốc".
-   *
-   * KHÔNG xoá bộ nhớ trong nhánh đó: mã vẫn đúng và vẫn hữu ích cho các form địa chỉ — nó chỉ
-   * không dùng được để TÌM XE lúc này.
-   *
-   * Phải đợi `destinations` về mới quyết (`destinationsLoading`), nếu không lần render đầu luôn
-   * tra hụt và bộ nhớ không bao giờ được dùng. Danh mục lỗi cũng rơi vào nhánh không điền — bộ
-   * chọn đã có thông báo lỗi riêng của nó.
-   */
   const [restoredProvince, setRestoredProvince] = useState(false);
   if (
     !restoredProvince &&
     rememberedProvince &&
     !destinationsLoading &&
-    !isResultsPage &&
     !filters.provinceCode
   ) {
     setRestoredProvince(true);
@@ -240,19 +215,9 @@ export function SearchExperienceProvider({ children }: { children: ReactNode }) 
   }
 
   /*
-   * Nháp → URL, **chỉ khi chính người dùng chạm vào thẻ tìm kiếm**.
-   *
-   *  - Trang KẾT QUẢ: ghi qua `setFilters` (cũng `replaceState`, các lần ghi cộng dồn) — facet
-   *    của panel Bộ lọc giữ nguyên, `page` về 1, danh sách nạp lại. Thẻ tìm kiếm ở đây LÀ bộ
-   *    lọc, không phải bản nháp.
-   *  - Trang CHỦ: `history.replaceState` (shallow — Next đồng bộ `useSearchParams`) để khối "Xe
-   *    khả dụng" đọc `?serviceType=`; không re-render server component, không thêm entry lịch sử.
-   *
-   * `userEdited` là cờ Ý ĐỊNH, không phải cờ "đã mount". Hai lý do nó phải như vậy:
-   *   - `reactStrictMode` bật ⇒ effect chạy hai lần lúc mount, cờ "bỏ qua lần đầu" để lọt lần hai;
-   *   - nháp còn được nạp lại từ URL do NGƯỜI KHÁC đổi (bấm "Địa điểm nổi bật"). Nếu lần nạp đó
-   *     cũng kích hoạt ghi, một khách chưa hề chạm vào thẻ sẽ bị đóng dấu khoảng thuê MẶC ĐỊNH
-   *     lên URL, và "Xe khả dụng" âm thầm lọc theo một khoảng ngày khách không hề chọn.
+   * Nháp → URL:
+   *  - Trang KẾT QUẢ: luôn đồng bộ khi urlSignature khác draftSignature (kể cả khi vừa phục hồi từ bộ nhớ)
+   *  - Trang CHỦ: chỉ khi chính người dùng chạm vào thẻ tìm kiếm (userEditedRef)
    */
   useEffect(() => {
     if (!userEditedRef.current) return;
@@ -286,12 +251,30 @@ export function SearchExperienceProvider({ children }: { children: ReactNode }) 
        * đổi theo: xe máy không có "có tài xế" (`resolveServiceType`), nên đứng ở tab đó rồi
        * chuyển sang xe máy sẽ rơi về tự lái thay vì để lại một tab không tồn tại.
        */
-      setVehicleType: (vehicleType) =>
+      setVehicleType: (vehicleType) => {
+        rememberVehicleType(vehicleType);
         edit((prev) => ({
           ...prev,
           vehicleType,
           serviceType: resolveServiceType(vehicleType, prev.serviceType),
-        })),
+        }));
+        if (isResultsPage) {
+          if (vehicleType === VEHICLE_TYPE.MOTORBIKE) {
+            setFilters({
+              vehicleType,
+              serviceType: resolveServiceType(vehicleType, draft.serviceType),
+              seats: undefined,
+              bodyType: undefined,
+            });
+          } else {
+            setFilters({
+              vehicleType,
+              serviceType: resolveServiceType(vehicleType, draft.serviceType),
+              motorbikeCategory: undefined,
+            });
+          }
+        }
+      },
       /*
        * Đổi dịch vụ KHÔNG dọn form: loại xe, địa điểm, khoảng thuê và lộ trình đều còn nguyên
        * trong bộ nhớ. Cái thay đổi là những gì được PHÁT ra URL — việc đó do `draftToFilterPatch`
@@ -308,6 +291,9 @@ export function SearchExperienceProvider({ children }: { children: ReactNode }) 
       setProvinceCode: (provinceCode) => {
         rememberProvince(provinceCode);
         edit((prev) => ({ ...prev, provinceCode }));
+        if (isResultsPage) {
+          setFilters({ provinceCode: provinceCode || undefined });
+        }
       },
       setRouteType: (routeType) => edit((prev) => ({ ...prev, routeType })),
       /*
@@ -322,6 +308,12 @@ export function SearchExperienceProvider({ children }: { children: ReactNode }) 
           ...prev,
           rental: { ...prev.rental, pickupAt: range.pickupAt, returnAt: range.returnAt },
         }));
+        if (isResultsPage) {
+          setFilters({
+            pickupAt: range.pickupAt ? range.pickupAt.toISOString() : undefined,
+            returnAt: range.returnAt ? range.returnAt.toISOString() : undefined,
+          });
+        }
       },
       setRentalMode: (mode) => {
         rememberRentalRange({ ...draft.rental, mode });

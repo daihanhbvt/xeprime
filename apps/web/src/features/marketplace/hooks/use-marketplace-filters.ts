@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { applyFilterPatch, parseFilters } from '../filter-params';
 import type { MarketplaceFilters } from '../types';
@@ -14,19 +14,50 @@ import type { MarketplaceFilters } from '../types';
  *
  * ## Ghi: `history.replaceState`, dựng từ URL HIỆN TẠI của trình duyệt
  *
- * Không dựng từ `searchParams` của lần render trước và không qua `router.replace`: router chỉ
- * cập nhật `searchParams` khi lượt điều hướng xong (sau một vòng server), nên hai lần ghi liền
- * nhau — gõ từ khoá rồi bấm chip trước khi URL kịp đổi — cùng dựng từ bản CŨ và lần sau xoá
- * mất lần trước. `replaceState` đồng bộ ngay, nên mọi lần ghi cộng dồn lên nhau. Next đồng bộ
- * `useSearchParams` theo nó (cùng cách khối "Xe khả dụng" ở trang chủ đã ghi, `search-context`),
- * và không trang nào ở đây đọc searchParams phía server — không có gì để render lại.
+ * `replaceState` cập nhật URL tức thì và notify các component dùng `useSyncExternalStore`
+ * để re-render ngay trong cùng frame, không bị trễ qua roundtrip router.
  */
+
+const listeners = new Set<() => void>();
+function notifyFilterChange() {
+  for (const fn of listeners) fn();
+}
+
+function subscribeFilterChange(callback: () => void): () => void {
+  listeners.add(callback);
+  if (typeof window !== 'undefined') {
+    window.addEventListener('popstate', callback);
+  }
+  return () => {
+    listeners.delete(callback);
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('popstate', callback);
+    }
+  };
+}
+
+function getSearchStringSnapshot(): string {
+  return typeof window !== 'undefined' ? window.location.search : '';
+}
+
+function getServerSearchStringSnapshot(): string {
+  return '';
+}
+
 export function useMarketplaceFilters() {
   const searchParams = useSearchParams();
+  const clientSearch = useSyncExternalStore(
+    subscribeFilterChange,
+    getSearchStringSnapshot,
+    getServerSearchStringSnapshot,
+  );
+
+  // Khi ở client đã hydrate, ưu tiên đọc window.location.search được cập nhật liên tục bởi replaceState
+  const searchString = typeof window !== 'undefined' && clientSearch !== '' ? clientSearch : searchParams.toString();
 
   const filters = useMemo<MarketplaceFilters>(
-    () => parseFilters(new URLSearchParams(searchParams.toString())),
-    [searchParams],
+    () => parseFilters(new URLSearchParams(searchString.startsWith('?') ? searchString.slice(1) : searchString)),
+    [searchString],
   );
 
   const setFilters = useCallback((patch: Partial<MarketplaceFilters>) => {
@@ -35,8 +66,12 @@ export function useMarketplaceFilters() {
     applyFilterPatch(params, patch);
     const qs = params.toString();
     const next = qs ? `${pathname}?${qs}` : pathname;
-    if (`${pathname}${search}` !== next) window.history.replaceState(null, '', next);
+    if (`${pathname}${search}` !== next) {
+      window.history.replaceState(null, '', next);
+      notifyFilterChange();
+    }
   }, []);
 
   return { filters, setFilters };
 }
+

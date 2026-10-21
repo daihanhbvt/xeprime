@@ -53,19 +53,23 @@
   height: 52px;
   background: #ffffff;
   border-radius: 9999px;
-  padding: 4px 6px 4px 18px;
+  padding: 4px 6px 4px 16px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
   flex: 1;
-  max-width: 820px;
+  max-width: 920px;
   min-width: 0;
 }
 
 .inputGroup {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex: 1.2;
-  min-width: 160px;
+  gap: 8px;
+  flex: 1;
+  min-width: 130px;
+}
+
+.vehicleTypeWrap {
+  flex: none;
 }
 
 .searchIcon {
@@ -75,11 +79,19 @@
 
 .keywordInput {
   width: 100%;
-  border: none;
-  outline: none;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
   background: transparent;
   font-size: var(--xp-font-size-body);
   color: var(--xp-color-text);
+}
+
+.keywordInput:focus,
+.keywordInput:focus-visible {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .keywordInput::placeholder {
